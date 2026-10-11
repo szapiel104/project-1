@@ -123,6 +123,17 @@ describe('praca chłopów', () => {
     expect(stateHash(loaded)).toBe(stateHash(g));
   });
 
+  it('złoże kamienia wyczerpuje się po kilku wydobyciach', () => {
+    const g = createGame(5);
+    const stoneBefore = g.map.tiles.filter((t) => t === Terrain.Stone).length;
+    expect(stoneBefore).toBeGreaterThan(0);
+    run(g, 9000, [build(g, 'quarry')]);
+    expect(res(g, 'stone')).toBeGreaterThan(RULES.startResources.stone!);
+    expect(g.map.tiles.filter((t) => t === Terrain.Stone).length).toBeLessThan(stoneBefore);
+    const loaded = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!;
+    expect(stateHash(loaded)).toBe(stateHash(g));
+  });
+
   it('rybak łowi na brzegu i przynosi ryby', () => {
     // szukamy mapy, na której przy twierdzy jest woda
     for (let seed = 1; seed < 200; seed++) {

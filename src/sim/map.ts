@@ -82,8 +82,9 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
         t = Terrain.Mountain;
         e = Math.min(255, 170 + (rim - edge) * 9 + (hash2(x, y, seed) & 15));
       } else if (h < preset.waterLevel) t = Terrain.Water;
-      else if (h > 172 && ore > 150) t = Terrain.Iron;
-      else if (h > 160) t = Terrain.Stone;
+      // kamień i żelazo tylko u podnóża gór, w niedużych złożach; żelazo rzadsze i bliżej skał
+      else if (edge < rim + 4 && ore > 178) t = Terrain.Iron;
+      else if (edge < rim + 7 && valueNoise(x, y, 6, seed ^ 0x1b873593) > 158) t = Terrain.Stone;
       else if (forest > 146) t = Terrain.Forest;
       tiles[i] = t;
       elevation[i] = e;
@@ -104,8 +105,8 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
     const dir = s.team === 0 ? 1 : -1;
     clearCircle(tiles, elevation, width, height, s.x, s.y, preset.startRadius, preset.waterLevel);
     stamp(tiles, width, height, s.x - dir * (preset.startRadius + 1), s.y + dir * 3, 3, Terrain.Forest);
-    stamp(tiles, width, height, s.x + dir * 2, s.y - dir * (preset.startRadius + 1), 2, Terrain.Stone);
-    stamp(tiles, width, height, s.x - dir * 4, s.y - dir * (preset.startRadius + 1), 1, Terrain.Iron);
+    stamp(tiles, width, height, s.x + dir * 2, s.y - dir * (preset.startRadius + 2), 1, Terrain.Stone);
+    stamp(tiles, width, height, s.x - dir * 5, s.y - dir * (preset.startRadius + 2), 0, Terrain.Iron);
   }
 
   return { seed, width, height, tiles, elevation, starts };

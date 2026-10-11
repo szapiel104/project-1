@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.3.15 — złoża w górach (2026-10-11)
+
+- Kamień i żelazo leżą teraz u podnóża gór w niedużych złożach, żelazo rzadziej i bliżej skał; przy twierdzy zostaje mała odkrywka na start
+- Złoża się wyczerpują: po pięciu wydobyciach pole jest puste i skała znika
+
 ## 0.3.14 — tartak (2026-10-11)
 
 - Chata drwala przebudowana na tartak: chata naprzeciw wejścia, obok wiata z kozłem i piłą, stos desek, trociny, pieniek z siekierą

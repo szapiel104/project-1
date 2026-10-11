@@ -23,6 +23,8 @@ export const RULES = {
   /** Prędkość chłopa: 256 = jedno pole na tick */
   unitSpeed: 28,
   unitSpeedDiagonal: 20,
+  /** Ile razy można wydobyć surowiec z jednego pola złoża, zanim się wyczerpie */
+  depositYields: 5,
   /** Po tylu dostawach chłop idzie odpocząć do najbliższej chaty */
   restEvery: 3,
   /** Ile ticków siedzi w chacie */

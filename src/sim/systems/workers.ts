@@ -169,6 +169,10 @@ export function workerSystem(g: GameState): void {
         // ścięte drzewo znika: pole lasu zamienia się w polanę, na której można budować
         const tile = tileOf(g, u);
         if (g.map.tiles[tile] === Terrain.Forest) { g.map.tiles[tile] = Terrain.Grass; g.cut.push(tile); }
+      } else if (u.phase === Phase.WorkingSite && (prod.site === Terrain.Stone || prod.site === Terrain.Iron)) {
+        // złoże się zużywa: po kilku wydobyciach pole jest puste i zostaje zwykła ziemia
+        const tile = tileOf(g, u);
+        if (g.map.tiles[tile] === prod.site && ++g.wear[tile]! >= RULES.depositYields) { g.map.tiles[tile] = Terrain.Grass; g.cut.push(tile); }
       }
       u.carryRes = resIndex(prod.output.res);
       u.carryAmt = prod.output.amount;

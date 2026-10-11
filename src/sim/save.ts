@@ -7,7 +7,7 @@ import { Rng } from './rng';
 import type { Building, GameState, PlayerState, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 
 export interface SaveData {
   v: number;
@@ -19,6 +19,8 @@ export interface SaveData {
   rng: number;
   nextId: number;
   cut: number[];
+  /** Zużycie złóż jako pary [pole, liczba wydobyć] */
+  wear: [number, number][];
   players: (Omit<PlayerState, 'res'> & { res: number[] })[];
   buildings: Building[];
   units: Unit[];
@@ -29,7 +31,7 @@ const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
 /** Zapis gry jako zwykłe dane (JSON). Mapy nie zapisujemy: odtwarza się z ziarna. */
 export function serialize(g: GameState, preset: MapPresetId): SaveData {
   return {
-    v: SAVE_VERSION, shape: shape(), seed: g.map.seed, preset, tick: g.tick, rng: g.rng.state, nextId: g.nextId, cut: [...g.cut],
+    v: SAVE_VERSION, shape: shape(), seed: g.map.seed, preset, tick: g.tick, rng: g.rng.state, nextId: g.nextId, cut: [...g.cut], wear: [...g.wear].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     players: g.players.map((p) => ({ ...p, res: [...p.res] })),
     buildings: g.buildings.map((b) => ({ ...b })),
     units: g.units.map((u) => ({ ...u, path: [...u.path] })),
@@ -47,8 +49,9 @@ export function deserialize(d: SaveData): GameState | null {
       players: d.players.map((p) => ({ ...p, res: Int32Array.from(p.res) })),
       buildings: d.buildings.map((b) => ({ ...b })),
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
-      occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [...d.cut],
+      occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size),
     };
+    for (const [t, n] of d.wear) g.wear[t] = n;
     for (const t of g.cut) map.tiles[t] = 0; // wycięty las to łąka
     for (const b of g.buildings) {
       const def = BUILDINGS[b.type];

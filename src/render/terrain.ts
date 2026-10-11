@@ -245,17 +245,19 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const trees = new Map<number, { meshes: THREE.InstancedMesh[]; index: number; item: Item }[]>();
   const stumpItems: Item[] = [];
   const stumpOf = new Map<Item, number>();
-  const plant = (list: Item[], trunk: THREE.InstancedMesh | null, crown: THREE.InstancedMesh | null): void => {
+  const plant = (list: Item[], trunk: THREE.InstancedMesh | null, crown: THREE.InstancedMesh | null, stump = true): void => {
     list.forEach((item, index) => {
       const here = trees.get(item.tile) ?? [];
       here.push({ meshes: [trunk, crown].filter((x): x is THREE.InstancedMesh => !!x), index, item });
       trees.set(item.tile, here);
-      stumpOf.set(item, stumpItems.length);
-      stumpItems.push(item);
+      if (stump) { stumpOf.set(item, stumpItems.length); stumpItems.push(item); }
     });
   };
   plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark'), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles'));
   plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark'), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves'));
+  // skały i rudy też znikają, gdy złoże się wyczerpie (bez pniaka)
+  plant(rocks, instanced(models.rock(), 0xa9a498, rocks), null, false);
+  plant(ores, instanced(models.rock(), 0x8a4a2c, ores), null, false);
   const stumps = instanced(new THREE.CylinderGeometry(0.1, 0.13, 0.14, 7).translate(0, 0.07, 0), 0x8a6a45, stumpItems, 'bark', false);
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
   if (stumps) { stumpItems.forEach((_, i) => stumps.setMatrixAt(i, zero)); }
@@ -271,12 +273,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const clear = (tile: number): void => {
     for (const t of trees.get(tile) ?? []) {
       for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, zero); mesh.instanceMatrix.needsUpdate = true; }
-      if (stumps) { stumps.setMatrixAt(stumpOf.get(t.item)!, m.compose(t.item.pos, t.item.q, t.item.s)); stumps.instanceMatrix.needsUpdate = true; }
+      const si = stumpOf.get(t.item);
+      if (stumps && si !== undefined) { stumps.setMatrixAt(si, m.compose(t.item.pos, t.item.q, t.item.s)); stumps.instanceMatrix.needsUpdate = true; }
     }
     trees.delete(tile);
   };
-  instanced(models.rock(), 0xa9a498, rocks);
-  instanced(models.rock(), 0x8a4a2c, ores);
+
   instanced(models.tuft(), 0x7fae45, tufts, undefined, false);
 
   return {
