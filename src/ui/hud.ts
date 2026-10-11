@@ -20,6 +20,9 @@ export interface HudView {
   pop: number;
   housing: number;
   popularity: number;
+  day: number;
+  hour: number;
+  night: boolean;
   idle: number;
   idleSlots: number;
   stock: number;
@@ -124,7 +127,29 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const idleVal = el('strong');
   const idleBox = el('div');
   idleBox.append(el('span', 'name', t('hud.idle')), idleVal);
-  people.append(stockBox, foodBox, popBox, idleBox, popularBox);
+  // zegar: dzień gry, godzina i znak pory dnia
+  const clockBox = el('div', 'clock');
+  // tarcza analogowa: połowa jasna ze słońcem, połowa ciemna z księżycem; obraca się, a wskazówka u góry stoi
+  const clockIcon = el('span', 'dial');
+  clockIcon.setAttribute('aria-hidden', 'true');
+  clockIcon.innerHTML = `<svg viewBox="-24 -24 48 48" width="46" height="46">
+    <g class="dial-disc">
+      <path d="M-20 0A20 20 0 0 1 20 0Z" fill="#f3d98a"/>
+      <path d="M-20 0A20 20 0 0 0 20 0Z" fill="#1f2a50"/>
+      <circle cx="0" cy="-11" r="4.5" fill="#f2a51f" stroke="#7a4a0c"/>
+      <g stroke="#7a4a0c" stroke-width="1.2"><path d="M0-19v2.500M-7.500-15.500l1.800 1.800M7.500-15.500l-1.800 1.800M-9.500-9h2.500M9.500-9h-2.500"/></g>
+      <path d="M3 8a5 5 0 1 1-6.500 6.500A6.500 6.500 0 0 0 3 8Z" fill="#f4f6ff" stroke="#0e1530" stroke-width=".6"/>
+      <circle cx="-10" cy="6" r=".9" fill="#f4f6ff"/><circle cx="9" cy="5" r=".9" fill="#f4f6ff"/><circle cx="-5" cy="15" r=".7" fill="#f4f6ff"/><circle cx="11" cy="12" r=".7" fill="#f4f6ff"/>
+      <path d="M-20 0h40" stroke="#2a1c10" stroke-width="1"/>
+    </g>
+    <circle r="21" fill="none" stroke="#2a1c10" stroke-width="2.500"/>
+    <circle r="22.500" fill="none" stroke="#9a7a2a" stroke-width="1"/>
+    <path d="M0-24l3.500 6h-7z" fill="#8c1f18" stroke="#2a1c10" stroke-width=".8"/>
+  </svg>`.replace(/(\d)\.(\d)00/g, '$1.$2');
+  const disc = clockIcon.querySelector<SVGGElement>('.dial-disc')!;
+  const clockVal = el('strong');
+  clockBox.append(clockIcon, clockVal);
+  people.append(clockBox, stockBox, foodBox, popBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');
   const stepper = (label: string, onStep: (dir: number) => void): HTMLElement => {
@@ -342,6 +367,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     setHash(hash) { setText(hashLine, `${t('hud.hash')}: ${hash.toString(16).padStart(8, '0')}`); },
     update(v) {
       resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
+      const hh = Math.floor(v.hour), mm = Math.floor(((v.hour - hh) * 60) / 10) * 10;
+      setText(clockVal, `${t('hud.day')} ${v.day}, ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+      // południe na górze o 12:00, północ o 24:00
+      disc.setAttribute('transform', `rotate(${(-(v.hour - 12) / 24) * 360})`);
       setText(popVal, `${v.pop} / ${v.housing}`);
       setText(idleVal, `${v.idle} / ${v.idleSlots}`);
       idleBox.classList.toggle('full', v.idle >= v.idleSlots);

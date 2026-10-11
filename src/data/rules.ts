@@ -4,6 +4,10 @@ import type { ResourceId } from './resources';
 export const RULES = {
   /** Długość „miesiąca” w tickach: co tyle rozliczane są racje, podatki i popularność */
   monthTicks: 100,
+  /** Długość doby w tickach (24 godziny gry). 2400 = 4 minuty przy tempie 1× */
+  dayTicks: 2400,
+  /** Godzina, o której zaczyna się gra */
+  startHour: 8,
   /** Co ile ticków przybywa lub ubywa chłop */
   migrationTicks: 30,
   startPeasants: 6,

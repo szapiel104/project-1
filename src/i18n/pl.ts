@@ -14,6 +14,7 @@ export const pl = {
   'cat.industry': 'Przemysł',
   'hud.map': 'Mapa',
   'hud.population': 'Ludność',
+  'hud.day': 'Dzień',
   'hud.idle': 'Bez pracy',
   'hud.stockpile': 'Skład',
   'hud.granary': 'Spichlerz',

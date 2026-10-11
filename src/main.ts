@@ -2,6 +2,7 @@ import { BUILDINGS, buildingIndex } from './data/buildings';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { t } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
+import { clockAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
 import { TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
@@ -141,7 +142,9 @@ function refresh(): void {
   warnedLeaving = p.popularity < 50;
   const affordable = new Set<string>();
   for (const def of BUILDINGS) if (canAfford(game, ME, def)) affordable.add(def.id);
+  const clock = clockAt(game.tick);
   hud.update({
+    day: clock.day, hour: clock.hour, night: clock.night,
     res: p.res, pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),

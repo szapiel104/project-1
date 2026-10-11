@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.3.10 — dzień i noc (2026-10-11)
+
+- Doba gry trwa 4 minuty przy tempie 1×: świt, dzień, zachód słońca i noc z chłodnym światłem księżyca
+- Słońce wędruje po niebie, więc cienie obracają się i wydłużają
+- Zegar na górnym pasku: obracająca się tarcza z jasną połową ze słońcem i ciemną z księżycem, obok dzień gry i godzina
+
 ## 0.3.9 — materiały i tartak (2026-10-11)
 
 - Materiały fizyczne zamiast płaskich: tekstury 512 px z ziarnem, wypukłość fug, desek i strzechy, filmowe odwzorowanie tonów, chłodniejsze niebo i cieplejsze słońce

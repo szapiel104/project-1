@@ -6,6 +6,7 @@ import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
 import { FP, Phase, type GameState } from '../sim/state';
+import { clockAt } from '../sim/clock';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { Figures } from './peasants';
@@ -16,6 +17,19 @@ export interface TileRef { x: number; y: number }
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number }
 
 const MAX_UNITS = 2048;
+const tmpColor = new THREE.Color();
+/** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
+const DAY = [
+  { h: 0, sun: 0x9db4ff, power: 1.0, sky: 0.75, haze: 0x222c4c },
+  { h: 4.5, sun: 0x9db4ff, power: 1.0, sky: 0.75, haze: 0x2a3558 },
+  { h: 6, sun: 0xff9a5a, power: 1.6, sky: 0.9, haze: 0xd9a27c },
+  { h: 8, sun: 0xffd9a0, power: 3.2, sky: 1.4, haze: 0xd6cdb4 },
+  { h: 12, sun: 0xfff0d0, power: 3.8, sky: 1.55, haze: 0xcfd3c4 },
+  { h: 17, sun: 0xffd9a0, power: 3.3, sky: 1.4, haze: 0xd6cdb4 },
+  { h: 19.5, sun: 0xff8a4a, power: 1.7, sky: 0.9, haze: 0xcf8e68 },
+  { h: 21, sun: 0x9db4ff, power: 1.0, sky: 0.75, haze: 0x2a3558 },
+  { h: 24, sun: 0x9db4ff, power: 1.0, sky: 0.75, haze: 0x222c4c },
+];
 const WOOD = RESOURCES.indexOf('wood');
 
 /** Renderer: czyta stan symulacji, nigdy go nie zmienia. */
@@ -27,6 +41,8 @@ export class GameRenderer {
   private state: GameState | null = null;
   private ray = new THREE.Raycaster();
   private sun: THREE.DirectionalLight;
+  private hemi: THREE.HemisphereLight;
+  private sunDir = new THREE.Vector3(-55, 85, 40);
 
   private cursor: THREE.Mesh;
   private ghost: THREE.Mesh;
@@ -65,7 +81,8 @@ export class GameRenderer {
     this.renderer.toneMappingExposure = 1.15;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    this.scene.add(new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5));
+    this.hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5);
+    this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xffe2ad, 3.6);
     sun.castShadow = true;
     sun.shadow.mapSize.setScalar(phone ? 1024 : 2048);
@@ -190,6 +207,7 @@ export class GameRenderer {
   frame(dt: number, alpha: number): void {
     this.cam.update(dt);
     this.time += dt;
+    if (this.state) this.setDaylight(clockAt(this.state.tick).hour);
     this.aimSun();
     if (this.state && this.view) {
       this.animate(this.state, this.calm ? 0 : dt);
@@ -229,6 +247,24 @@ export class GameRenderer {
     }
   }
 
+  /** Pora dnia: kolor i siła słońca, światło nieba, barwa mgły. W nocy świeci chłodny księżyc. */
+  private setDaylight(hour: number): void {
+    let i = 0;
+    while (i < DAY.length - 2 && hour >= DAY[i + 1]!.h) i++;
+    const a = DAY[i]!, b = DAY[i + 1]!;
+    const k = Math.max(0, Math.min(1, (hour - a.h) / (b.h - a.h)));
+    this.sun.color.setHex(a.sun).lerp(tmpColor.setHex(b.sun), k);
+    this.sun.intensity = a.power + (b.power - a.power) * k;
+    this.hemi.intensity = a.sky + (b.sky - a.sky) * k;
+    const bg = this.scene.background as THREE.Color;
+    bg.setHex(a.haze).lerp(tmpColor.setHex(b.haze), k);
+    (this.scene.fog as THREE.Fog).color.copy(bg);
+    // słońce wędruje ze wschodu na zachód; nocą tę samą drogę robi księżyc
+    const dayTime = hour >= 6 && hour < 20;
+    const arc = (((dayTime ? hour - 6 : (hour + 4) % 24) / (dayTime ? 14 : 10)) * 0.84 + 0.08) * Math.PI;
+    this.sunDir.set(-Math.cos(arc) * 80, 30 + Math.sin(arc) * 70, 40);
+  }
+
   /** Przesuwa słońce i obszar cienia za kamerą; im dalej kamera, tym większy obszar. */
   private aimSun(): void {
     const f = this.cam.focus;
@@ -237,7 +273,7 @@ export class GameRenderer {
     const grid = (half * 2) / this.sun.shadow.mapSize.x * 8;
     const x = Math.round(f.x / grid) * grid, z = Math.round(f.z / grid) * grid;
     this.sun.target.position.set(x, 0, z);
-    this.sun.position.set(x - 55, 85, z + 40);
+    this.sun.position.set(x + this.sunDir.x, this.sunDir.y, z + this.sunDir.z);
     const c = this.sun.shadow.camera;
     if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
   }
