@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 import { BUILDINGS } from '../data/buildings';
-import { setStockFill } from './buildings';
+import { animateBuilding, setStockFill } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { TEAM_COLORS } from '../data/teams';
-import { FP, type GameState } from '../sim/state';
+import { FP, Phase, type GameState } from '../sim/state';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
@@ -12,6 +12,7 @@ export interface TileRef { x: number; y: number }
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number }
 
 const MAX_UNITS = 2048;
+const WOOD = RESOURCES.indexOf('wood');
 
 /** Renderer: czyta stan symulacji, nigdy go nie zmienia. */
 export class GameRenderer {
@@ -33,6 +34,9 @@ export class GameRenderer {
   private bodies: THREE.InstancedMesh;
   private heads: THREE.InstancedMesh;
   private loads: THREE.InstancedMesh;
+  private logs: THREE.InstancedMesh;
+  private time = 0;
+  private calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   private prevPos = new Map<number, [number, number]>();
   private storesTick = -1;
   private tmp = new THREE.Object3D();
@@ -71,7 +75,10 @@ export class GameRenderer {
     this.bodies = new THREE.InstancedMesh(body, unitMat(), MAX_UNITS);
     this.heads = new THREE.InstancedMesh(head, new THREE.MeshLambertMaterial({ color: 0xe2bd94, flatShading: true }), MAX_UNITS);
     this.loads = new THREE.InstancedMesh(load, unitMat(), MAX_UNITS);
-    for (const m of [this.bodies, this.heads, this.loads]) { m.count = 0; m.frustumCulled = false; this.scene.add(m); }
+    // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
+    const log = new THREE.CylinderGeometry(0.07, 0.07, 0.62, 6); log.rotateX(Math.PI / 2); log.translate(0.13, 0.44, 0);
+    this.logs = new THREE.InstancedMesh(log, new THREE.MeshLambertMaterial({ color: RESOURCE_DEFS.wood.color, flatShading: true }), MAX_UNITS);
+    for (const m of [this.bodies, this.heads, this.loads, this.logs]) { m.count = 0; m.frustumCulled = false; this.scene.add(m); }
 
     this.cam = new StrategyCamera(canvas);
     canvas.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') this.hover(this.pick(e)); });
@@ -155,7 +162,9 @@ export class GameRenderer {
 
   frame(dt: number, alpha: number): void {
     this.cam.update(dt);
-    if (this.state && this.view) { this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
+    this.time += dt;
+    if (this.state && this.view) {
+      if (!this.calm) this.animate(this.state, dt); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
   }
 
@@ -185,7 +194,13 @@ export class GameRenderer {
     }
   }
 
-  /** Zapełnia składy po kolei: najpierw twierdza (niewidoczna), potem składy w kolejności budowy. */
+  private animate(g: GameState, dt: number): void {
+    const working = new Set<number>();
+    for (const u of g.units) if (u.phase === Phase.Working) working.add(u.job);
+    for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id), this.time, dt);
+  }
+
+  /** Zapełnia najpierw widoczne składy w kolejności budowy, a twierdzę na końcu, żeby było widać każdą dostawę. */
   private syncStores(g: GameState): void {
     if (g.tick === this.storesTick) return;
     this.storesTick = g.tick;
@@ -195,10 +210,10 @@ export class GameRenderer {
       RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile') sum += p.res[i]!; });
       RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile' && p.res[i]! > 0) colors.push({ color: RESOURCE_DEFS[r].color, share: p.res[i]! / sum }); });
       left = sum;
-      for (const b of g.buildings) {
-        if (b.owner !== p.id) continue;
-        const cap = BUILDINGS[b.type]!.capacity?.stockpile ?? 0;
-        if (!cap) continue;
+      const stores = g.buildings.filter((b) => b.owner === p.id && BUILDINGS[b.type]!.capacity?.stockpile);
+      stores.sort((a, b) => Number(BUILDINGS[a.type]!.id === 'keep') - Number(BUILDINGS[b.type]!.id === 'keep') || a.id - b.id);
+      for (const b of stores) {
+        const cap = BUILDINGS[b.type]!.capacity!.stockpile!;
         const here = Math.min(cap, left);
         left -= here;
         const mesh = this.buildingMeshes.get(b.id);
@@ -226,12 +241,20 @@ export class GameRenderer {
       this.bodies.setMatrixAt(i, t.matrix);
       this.heads.setMatrixAt(i, t.matrix);
       this.bodies.setColorAt(i, this.color.setHex(TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888));
-      if (u.carryRes < 0) t.scale.setScalar(0);
+      const wood = u.carryRes === WOOD;
+      // kłoda leży wzdłuż kierunku marszu
+      const next = u.path[0];
+      if (wood && next !== undefined) t.rotation.y = Math.atan2((next % g.map.width) + 0.5 - u.px / FP, Math.floor(next / g.map.width) + 0.5 - u.py / FP);
+      t.scale.setScalar(wood ? 1 : 0);
+      t.updateMatrix();
+      this.logs.setMatrixAt(i, t.matrix);
+      t.rotation.y = 0;
+      t.scale.setScalar(u.carryRes < 0 || wood ? 0 : 1);
       t.updateMatrix();
       this.loads.setMatrixAt(i, t.matrix);
       this.loads.setColorAt(i, this.color.setHex(u.carryRes >= 0 ? RESOURCE_DEFS[RESOURCES[u.carryRes]!].color : 0));
     }
-    for (const m of [this.bodies, this.heads, this.loads]) {
+    for (const m of [this.bodies, this.heads, this.loads, this.logs]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;

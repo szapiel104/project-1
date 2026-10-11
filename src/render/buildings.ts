@@ -5,6 +5,7 @@ const M = {
   stone: mat(0xb9b2a0), stoneDark: mat(0x8f8877), wood: mat(0x6b4a2b), woodDark: mat(0x4a3320),
   plaster: mat(0xe6d9b8), thatch: mat(0xb8973f), soil: mat(0x6e5232), wheat: mat(0xd9b84a),
   leaf: mat(0x3f7a33), apple: mat(0xb3261e), iron: mat(0x4a4038), white: mat(0xf1ead8),
+  smoke: new THREE.MeshLambertMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
 function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
@@ -57,6 +58,21 @@ export function setStockFill(model: THREE.Object3D, ratio: number, colors: { col
     if (!m) { m = mat(color); resMats.set(color, m); }
     (child as THREE.Mesh).material = m;
   });
+}
+
+/** Animacje budynków: kręcące się skrzydła młyna i dym z komina, tylko gdy ktoś w środku pracuje. */
+export function animateBuilding(model: THREE.Object3D, active: boolean, time: number, dt: number): void {
+  const spin = model.getObjectByName('spin');
+  if (spin && active) spin.rotation.z -= dt * 1.6;
+  const smoke = model.getObjectByName('smoke');
+  if (smoke) {
+    smoke.visible = active;
+    if (active) smoke.children.forEach((puff, i) => {
+      const k = (time * 0.35 + i / smoke.children.length) % 1;
+      puff.position.set(Math.sin((k + i) * 5) * 0.12 + k * 0.25, k * 1.5, 0);
+      puff.scale.setScalar(0.5 + k * 1.1);
+    });
+  }
 }
 
 type Builder = (g: THREE.Group, team: THREE.Material) => void;
@@ -149,17 +165,29 @@ const BUILDERS: Record<string, Builder> = {
     tower.position.y = 0.85;
     g.add(tower);
     pyramid(g, M.woodDark, 0.65, 0.6, 0, 1.7, 0, 8);
+    // skrzydła w osobnej grupie, żeby mogły się kręcić, gdy młynarz pracuje
+    const spin = new THREE.Group();
+    spin.name = 'spin';
+    spin.position.set(0, 1.35, 0.62);
     for (let i = 0; i < 4; i++) {
-      const blade = box(g, M.white, 0.16, 1.25, 0.03, 0, 0, 0);
+      const blade = box(spin, M.white, 0.16, 1.25, 0.03, 0, 0, 0);
       blade.geometry.translate(0, 0.62, 0);
-      blade.position.set(0, 1.35, 0.62);
-      blade.rotation.z = (Math.PI / 2) * i + 0.4;
+      blade.position.set(0, 0, 0);
+      blade.rotation.z = (Math.PI / 2) * i;
     }
+    g.add(spin);
   },
   bakery(g, team) {
     hut(g, M.plaster, mat(0x9c4a2a), 1.4, 1.2, 0.8);
     box(g, M.stoneDark, 0.3, 1.0, 0.3, -0.45, 0.8, -0.3);
     box(g, team, 0.3, 0.3, 0.04, -0.45, 0.35, 0.62);
+    // dym z komina, widoczny tylko gdy piekarz piecze
+    const smoke = new THREE.Group();
+    smoke.name = 'smoke';
+    smoke.position.set(-0.45, 1.85, -0.3);
+    for (let i = 0; i < 4; i++) smoke.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), M.smoke));
+    smoke.visible = false;
+    g.add(smoke);
   },
 };
 

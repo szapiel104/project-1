@@ -2,7 +2,7 @@
 
 Plan projektu. Repo: szapiel104/project-1, Supabase: https://psccakqdinwqloozdsyf.supabase.co. Etapy 1 i 2 są zrobione (patrz CHANGELOG.md).
 
-Zasada pracy: małe partie. Jedna rzecz, wdrożenie pod link, opinia, dopiero potem następna.
+Zasada pracy: małe partie. Jedna rzecz, wdrożenie pod link, opinia, dopiero potem następna. Po zmianie wystarczą szybkie testy (`npm test`) i kompilacja; wygląd i rozgrywkę sprawdza Michał w grze.
 
 ---
 

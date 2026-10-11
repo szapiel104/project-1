@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.2.4 — życie w osadzie (2026-10-11)
+
+- Skrzydła młyna kręcą się, a z komina piekarni leci dym, gdy ktoś tam pracuje
+- Drwal niesie kłodę na ramieniu zamiast klocka
+- Skład zapełnia się przed twierdzą, więc każda dostawa jest od razu widoczna
+
 ## 0.2.3 — dolne menu budowy (2026-10-11)
 
 - Pasek budowy na dole ekranu z kategoriami: Osada, Żywność, Przemysł
