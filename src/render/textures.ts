@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass';
+type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -48,8 +48,34 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
       }
   },
   grass(c, n, r) {
-    c.fillStyle = gray(0.92); c.fillRect(0, 0, n, n);
-    for (let i = 0; i < 420; i++) { c.fillStyle = gray(0.8 + r() * 0.2); c.fillRect(r() * n, r() * n, 1.5, 2 + r() * 4); }
+    c.fillStyle = gray(0.86); c.fillRect(0, 0, n, n);
+    // plamy jaśniejszej i ciemniejszej darni, potem pojedyncze źdźbła
+    for (let i = 0; i < 26; i++) { c.fillStyle = gray(0.78 + r() * 0.2); c.beginPath(); c.arc(r() * n, r() * n, 5 + r() * 12, 0, 6.3); c.fill(); }
+    for (let i = 0; i < 900; i++) {
+      c.strokeStyle = gray(0.66 + r() * 0.34); c.lineWidth = 1;
+      const x = r() * n, y = r() * n;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 4, y - 3 - r() * 6); c.stroke();
+    }
+  },
+  leaves(c, n, r) {
+    c.fillStyle = gray(0.7); c.fillRect(0, 0, n, n);
+    for (let i = 0; i < 420; i++) { c.fillStyle = gray(0.62 + r() * 0.38); c.beginPath(); c.ellipse(r() * n, r() * n, 2 + r() * 3, 1.5 + r() * 2, r() * 3, 0, 6.3); c.fill(); }
+  },
+  needles(c, n, r) {
+    c.fillStyle = gray(0.72); c.fillRect(0, 0, n, n);
+    for (let i = 0; i < 700; i++) {
+      c.strokeStyle = gray(0.58 + r() * 0.42); c.lineWidth = 1.2;
+      const x = r() * n, y = r() * n;
+      c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 5, y + 4 + r() * 7); c.stroke();
+    }
+  },
+  bark(c, n, r) {
+    c.fillStyle = gray(0.8); c.fillRect(0, 0, n, n);
+    for (let i = 0; i < 70; i++) { c.fillStyle = gray(0.55 + r() * 0.4); c.fillRect(r() * n, r() * n, 2 + r() * 3, 10 + r() * 30); }
+  },
+  soil(c, n, r) {
+    c.fillStyle = gray(0.85); c.fillRect(0, 0, n, n);
+    for (let i = 0; i < 500; i++) { c.fillStyle = gray(0.65 + r() * 0.35); c.fillRect(r() * n, r() * n, 1 + r() * 3, 1 + r() * 2); }
   },
 };
 
@@ -61,12 +87,14 @@ export function pattern(kind: Kind): THREE.Texture | null {
   let t = cache.get(kind);
   if (t) return t;
   if (typeof document === 'undefined') return null;
-  const n = 64;
+  const n = kind === 'grass' ? 256 : 128;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d');
   if (!ctx) return null;
-  PAINT[kind](ctx, n, noise(kind.length * 7919));
+  const old = ['bricks', 'planks', 'thatch', 'plaster', 'tiles'].includes(kind);
+  if (old) ctx.scale(n / 64, n / 64); // starsze wzory były rysowane dla 64 px
+  PAINT[kind](ctx, old ? 64 : n, noise(kind.length * 7919));
   t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;

@@ -133,40 +133,48 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
 
   // obiekty na polach: jedna siatka instancjonowana na rodzaj
-  const trees: THREE.Matrix4[] = [];
-  const rocks: THREE.Matrix4[] = [];
-  const ores: THREE.Matrix4[] = [];
+  type Item = { m: THREE.Matrix4; shade: number };
+  const pines: Item[] = [], leafy: Item[] = [], rocks: Item[] = [], ores: Item[] = [], tufts: Item[] = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
-  const put = (list: THREE.Matrix4[], x: number, y: number, n: number, scaleBase: number): void => {
+  const put = (list: Item[], x: number, y: number, n: number, scaleBase: number, spread = 0.7): void => {
     const r = hash2(x * 7 + n, y * 13 - n, map.seed ^ 0xabcdef);
-    const jx = ((r & 255) / 255 - 0.5) * 0.7;
-    const jz = (((r >>> 8) & 255) / 255 - 0.5) * 0.7;
+    const jx = ((r & 255) / 255 - 0.5) * spread;
+    const jz = (((r >>> 8) & 255) / 255 - 0.5) * spread;
     const s = scaleBase * (0.75 + (((r >>> 16) & 255) / 255) * 0.6);
     q.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
-    m.compose(new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz), q, new THREE.Vector3(s, s, s));
-    list.push(m.clone());
+    m.compose(new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz), q, new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60), s));
+    list.push({ m: m.clone(), shade: 0.8 + (((r >>> 20) & 15) / 15) * 0.4 });
   };
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const t = map.tiles[y * w + x] as Terrain;
-      if (t === Terrain.Forest) { put(trees, x, y, 0, 1); if (hash2(x, y, map.seed) & 1) put(trees, x, y, 1, 0.8); }
-      else if (t === Terrain.Stone) put(rocks, x, y, 0, 1.1);
+      const r = hash2(x, y, map.seed);
+      if (t === Terrain.Forest) {
+        // las mieszany: głównie świerki, co czwarte drzewo liściaste
+        put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, 1);
+        if (r & 1) put((r >>> 5) % 4 === 0 ? leafy : pines, x, y, 1, 0.8);
+      } else if (t === Terrain.Stone) put(rocks, x, y, 0, 1.1);
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
+      else if (t === Terrain.Grass && (r >>> 7) % 3 === 0) { put(tufts, x, y, 2, 1, 0.9); if ((r >>> 9) & 1) put(tufts, x, y, 3, 0.8, 0.9); }
     }
   }
-  const instanced = (g: THREE.BufferGeometry, color: number, list: THREE.Matrix4[]): void => {
+  const tint = new THREE.Color();
+  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): void => {
     if (!list.length) return;
-    const mesh = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color, flatShading: true }), list.length);
-    list.forEach((mm, i) => mesh.setMatrixAt(i, mm));
-    mesh.castShadow = true;
+    const mesh = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, map: tex ? pattern(tex) : null }), list.length);
+    list.forEach((it, i) => { mesh.setMatrixAt(i, it.m); mesh.setColorAt(i, tint.setHex(color).multiplyScalar(it.shade)); });
+    mesh.castShadow = shadow;
     mesh.receiveShadow = true;
     group.add(mesh);
   };
-  instanced(models.treeTrunk(), 0x4a3320, trees);
-  instanced(models.treeCrown(), 0x2f5a2a, trees);
+  instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark');
+  instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles');
+  instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark');
+  instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves');
   instanced(models.rock(), 0xa9a498, rocks);
   instanced(models.rock(), 0x8a4a2c, ores);
+  instanced(models.tuft(), 0x7fae45, tufts, undefined, false);
 
   return {
     group,

@@ -7,9 +7,11 @@ const mat = (color: number, tex?: Pattern): THREE.MeshLambertMaterial =>
   new THREE.MeshLambertMaterial({ color, flatShading: true, map: tex ? pattern(tex) : null });
 const M = {
   stone: mat(0xcfc7b3, 'bricks'), stoneDark: mat(0xa39b88, 'bricks'), wood: mat(0x85603a, 'planks'), woodDark: mat(0x5e4329, 'planks'),
-  plaster: mat(0xf0e4c4, 'plaster'), thatch: mat(0xd1ad4c, 'thatch'), soil: mat(0x6e5232), wheat: mat(0xd9b84a),
-  leaf: mat(0x3f7a33), apple: mat(0xb3261e), iron: mat(0x4a4038), white: mat(0xf1ead8),
-  plank: mat(0xd9b27a, 'planks'), bread: mat(0xb97a3a),
+  plaster: mat(0xf0e4c4, 'plaster'), thatch: mat(0xd1ad4c, 'thatch'), soil: mat(0x86633d, 'soil'), wheat: mat(0xd9b84a),
+  leaf: mat(0x5c9a3c, 'leaves'), apple: mat(0xd0281f), iron: mat(0x4a4038), white: mat(0xf1ead8),
+  plank: mat(0xd9b27a, 'planks'),
+  orchardGrass: mat(0x86b54a, 'grass'), bark: mat(0x7a5a3a, 'bark'), leafLight: mat(0x7fb548, 'leaves'),
+  appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xb97a3a),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
   smoke: new THREE.MeshLambertMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
@@ -223,14 +225,40 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.wood, 0.85, 0.1, 0.12, 0, 0.72, 0.5);
   },
   orchard(g) {
-    box(g, M.soil, 2.8, 0.05, 2.8).material = mat(0x5f8a3a);
-    for (const [x, z] of [[-0.85, -0.85], [0.85, -0.85], [-0.85, 0.85], [0.85, 0.85], [0, 0]] as const) {
-      box(g, M.woodDark, 0.12, 0.45, 0.12, x, 0, z);
-      const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 0), M.leaf);
-      crown.position.set(x, 0.75, z);
-      g.add(crown);
-      box(g, M.apple, 0.1, 0.1, 0.1, x + 0.28, 0.62, z + 0.2);
-      box(g, M.apple, 0.1, 0.1, 0.1, x - 0.2, 0.8, z + 0.3);
+    box(g, M.orchardGrass, 2.8, 0.05, 2.8);
+    // płotek dookoła z przerwą na wejście
+    for (const [x, z, w, d] of [[0, -1.38, 2.8, 0.04], [-1.38, 0, 0.04, 2.8], [1.38, 0, 0.04, 2.8], [-0.85, 1.38, 1.1, 0.04], [0.85, 1.38, 1.1, 0.04]] as const) {
+      box(g, M.wood, w, 0.05, d, x, 0.2, z);
+      box(g, M.wood, w, 0.05, d, x, 0.36, z);
+    }
+    for (const [x, z] of [[-1.38, -1.38], [1.38, -1.38], [-1.38, 1.38], [1.38, 1.38], [-0.3, 1.38], [0.3, 1.38], [0, -1.38], [-1.38, 0], [1.38, 0]] as const) box(g, M.woodDark, 0.08, 0.45, 0.08, x, 0.05, z);
+    // jabłonie: krzywy pień, korona z kilku kul liści i jabłka na gałęziach
+    const spots = [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.7], [0.8, 0.7], [0, -0.05]] as const;
+    spots.forEach(([x, z], n) => {
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 0.5, 6), M.bark);
+      trunk.position.set(x, 0.3, z);
+      trunk.rotation.z = (n % 2 ? 1 : -1) * 0.12;
+      g.add(trunk);
+      for (const [dx, dy, dz, r] of [[0, 0.82, 0, 0.33], [-0.22, 0.7, 0.08, 0.22], [0.22, 0.72, -0.06, 0.23], [0.02, 0.7, 0.22, 0.2], [0, 0.72, -0.22, 0.2]] as const) {
+        const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), n % 2 ? M.leaf : M.leafLight);
+        blob.position.set(x + dx, dy, z + dz);
+        g.add(blob);
+      }
+      for (let k = 0; k < 9; k++) {
+        const a = k * 2.4 + n, rad = 0.28 + (k % 3) * 0.05;
+        const apple = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 1), k % 4 === 0 ? M.appleGreen : M.apple);
+        apple.position.set(x + Math.cos(a) * rad, 0.58 + (k % 4) * 0.09, z + Math.sin(a) * rad);
+        g.add(apple);
+      }
+    });
+    // kosz z zebranymi jabłkami przy wejściu
+    const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.16, 8), M.basket);
+    basket.position.set(0.45, 0.13, 1.0);
+    g.add(basket);
+    for (let k = 0; k < 6; k++) {
+      const apple = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 1), M.apple);
+      apple.position.set(0.45 + Math.cos(k * 1.05) * 0.08, 0.23, 1.0 + Math.sin(k * 1.05) * 0.08);
+      g.add(apple);
     }
   },
   farm(g) {

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.3.2 — trawa, drzewa i sady (2026-10-11)
+
+- Trawa: bogatsza tekstura z plamami darni i źdźbłami oraz kępki trawy na łąkach
+- Las mieszany: piętrowe świerki z korą i igłami oraz drzewa liściaste, każde w nieco innym odcieniu
+- Sad: jabłonie z rozłożystą koroną i jabłkami na gałęziach, płotek, kosz z jabłkami
+
 ## 0.3.1 — postacie i tekstury (2026-10-11)
 
 - Chłopi to teraz postacie: nogi, tunika w barwach drużyny, ręce, głowa, słomkowy kapelusz
