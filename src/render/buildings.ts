@@ -106,7 +106,7 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; color: number }> = {
   },
   apples: {
     color: 0xd0281f,
-    geo: mergeGeometries([part(new THREE.CylinderGeometry(0.19, 0.15, 0.2, 8), 0, -0.04, 0), ...[0, 1, 2, 3, 4].map((k) => part(new THREE.IcosahedronGeometry(0.07, 0), Math.cos(k * 1.26) * 0.09, 0.08, Math.sin(k * 1.26) * 0.09))]),
+    geo: mergeGeometries([part(new THREE.CylinderGeometry(0.19, 0.15, 0.2, 8).toNonIndexed(), 0, -0.04, 0), ...[0, 1, 2, 3, 4].map((k) => part(new THREE.IcosahedronGeometry(0.07, 0), Math.cos(k * 1.26) * 0.09, 0.08, Math.sin(k * 1.26) * 0.09))]),
   },
   flour: {
     color: 0xf1ead8,
@@ -135,7 +135,7 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
     while (items > 0 && slot < STOCK_SLOTS) {
       for (let layer = 0; layer < STOCK_LAYERS && items > 0; layer++, items--) {
         const mesh = fill.children[layer * STOCK_SLOTS + slot] as THREE.Mesh;
-        mesh.geometry = pile.geo;
+        if (pile.geo) mesh.geometry = pile.geo;
         mesh.material = m;
         mesh.visible = true;
       }
