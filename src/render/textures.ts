@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window';
+type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -90,6 +90,15 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     c.fillStyle = gray(0.4); c.fillRect(n * 0.16, n * 0.16, n * 0.3, n * 0.3);
     c.fillStyle = gray(0.95); c.fillRect(n * 0.46, n * 0.12, n * 0.08, n * 0.76); c.fillRect(n * 0.12, n * 0.46, n * 0.76, n * 0.08);
   },
+  water(c, n, r) {
+    // drobne fale: jasne łuki na ciemniejszym tle
+    c.fillStyle = gray(0.5); c.fillRect(0, 0, n, n);
+    for (let i = 0; i < 150; i++) {
+      c.strokeStyle = gray(0.55 + r() * 0.45); c.lineWidth = 1 + r() * 1.5;
+      const x = r() * n, y = r() * n, w = 6 + r() * 16;
+      c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + w / 2, y - 2 - r() * 3, x + w, y); c.stroke();
+    }
+  },
   soil(c, n, r) {
     c.fillStyle = gray(0.85); c.fillRect(0, 0, n, n);
     for (let i = 0; i < 500; i++) { c.fillStyle = gray(0.65 + r() * 0.35); c.fillRect(r() * n, r() * n, 1 + r() * 3, 1 + r() * 2); }
@@ -110,7 +119,7 @@ export function pattern(kind: Kind): THREE.Texture | null {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window'].includes(kind) ? 128 : 64;
+  const base = kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));

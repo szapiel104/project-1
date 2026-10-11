@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.3.13 — woda, ryby i rybak (2026-10-11)
+
+- Woda z falami, połyskiem słońca i jaśniejszą płycizną
+- W wodzie pływają ryby, co jakiś czas któraś wyskakuje
+- Chata rybaka (kategoria Żywność, blisko wody): rybak staje na brzegu z wędką i odnosi ryby do spichlerza
+- Ryby jako nowa żywność w racjach
+
 ## 0.3.12 — noc z pochodniami (2026-10-11)
 
 - Noc jest naprawdę ciemna: słabe, chłodne światło księżyca

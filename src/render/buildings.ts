@@ -17,6 +17,7 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
+  fish: mat(0x9cc3d6),
   castle: mat(0xd9c59a, 'bricks'), castleDark: mat(0xb39f78, 'bricks'),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
@@ -111,6 +112,10 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; color: number }> = {
   apples: {
     color: 0xd0281f,
     geo: mergeGeometries([part(new THREE.CylinderGeometry(0.19, 0.15, 0.2, 8).toNonIndexed(), 0, -0.04, 0), ...[0, 1, 2, 3, 4].map((k) => part(new THREE.IcosahedronGeometry(0.07, 0), Math.cos(k * 1.26) * 0.09, 0.08, Math.sin(k * 1.26) * 0.09))]),
+  },
+  fish: {
+    color: 0x9cc3d6,
+    geo: mergeGeometries([-0.13, 0, 0.13].map((z) => part(new THREE.IcosahedronGeometry(0.1, 0).scale(1.9, 0.5, 0.6), 0, -0.08, z))),
   },
   flour: {
     color: 0xf1ead8,
@@ -380,6 +385,30 @@ const BUILDERS: Record<string, Builder> = {
     inside.add(goods, food);
     g.add(inside);
     pennant(g, flag, -1.25, 1.75, 0);
+  },
+  fisher(g, _team, flag) {
+    // chata rybaka na palach, z suszarnią ryb, beczką i łódką wyciągniętą na brzeg
+    for (const [x, z] of [[-0.75, -0.6], [0.15, -0.6], [-0.75, 0.1], [0.15, 0.1]] as const) box(g, M.woodDark, 0.09, 0.3, 0.09, x, 0, z);
+    box(g, M.plank, 1.15, 0.06, 0.95, -0.3, 0.3, -0.25);
+    box(g, M.wood, 0.95, 0.6, 0.75, -0.3, 0.36, -0.25);
+    gable(g, M.thatch, 1.1, 0.5, 0.95, 0.96, -0.3, -0.25);
+    box(g, M.woodDark, 0.22, 0.42, 0.04, -0.3, 0.36, 0.13);
+    box(g, M.window, 0.2, 0.2, 0.03, 0.18, 0.55, -0.25).rotation.y = Math.PI / 2;
+    // suszarnia: dwa słupki, żerdź i wiszące ryby
+    box(g, M.woodDark, 0.05, 0.6, 0.05, 0.45, 0, 0.75);
+    box(g, M.woodDark, 0.05, 0.6, 0.05, 0.9, 0, 0.75);
+    box(g, M.woodDark, 0.55, 0.04, 0.04, 0.675, 0.58, 0.75);
+    for (let k = 0; k < 4; k++) box(g, M.fish, 0.05, 0.2, 0.03, 0.5 + k * 0.12, 0.36, 0.75);
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.12, 0.3, 8), M.wood);
+    barrel.position.set(-0.75, 0.15, 0.7);
+    g.add(barrel);
+    // łódka
+    const boat = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.85, 6, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(Math.PI), M.woodDark);
+    boat.scale.set(1, 0.6, 1);
+    boat.position.set(0.55, 0.14, -0.55);
+    boat.rotation.y = 0.5;
+    g.add(boat);
+    pennant(g, flag, -0.8, 0.9, -0.6);
   },
   camp(g) {
     box(g, M.soil, 1.9, 0.04, 1.9);

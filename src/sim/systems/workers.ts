@@ -53,6 +53,16 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.ToSite: {
       const site = prod?.site;
       if (site === undefined || site === 'home') return null;
+      if (site === 'shore') {
+        // brzeg: wolne pole, które sąsiaduje z wodą
+        const w = g.map.width, h = g.map.height;
+        return (t) => {
+          if (g.occupancy[t] !== 0) return false;
+          const x = t % w, y = (t - x) / w;
+          return (x > 0 && g.map.tiles[t - 1] === Terrain.Water) || (x < w - 1 && g.map.tiles[t + 1] === Terrain.Water) ||
+            (y > 0 && g.map.tiles[t - w] === Terrain.Water) || (y < h - 1 && g.map.tiles[t + w] === Terrain.Water);
+        };
+      }
       return (t) => g.map.tiles[t] === site && g.occupancy[t] === 0;
     }
     default:

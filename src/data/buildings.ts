@@ -6,7 +6,8 @@ export interface ProductionDef {
   input?: { res: ResourceId; amount: number };
   output: { res: ResourceId; amount: number };
   /** 'home' = praca w budynku, teren = chłop idzie do najbliższego pola tego typu */
-  site: 'home' | Terrain;
+  /** 'shore' = chłop idzie nad najbliższą wodę i pracuje na brzegu */
+  site: 'home' | 'shore' | Terrain;
   /** Czas pracy w tickach */
   workTicks: number;
   /** Po pracy w terenie chłop wraca do budynku i tyle ticków przerabia surowiec (np. kłody na deski) */
@@ -91,6 +92,11 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'camp', category: 'settlement', name: 'b.camp', w: 2, h: 2, cost: { wood: 15 }, idleSlots: 6, buildable: true },
   // Stodoła stoi od początku obok twierdzy i mieści zapasy startowe; można ją rozebrać i postawić gdzie indziej
   { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 30 }, stores: ['stockpile', 'granary'], capacity: { stockpile: 250, granary: 120 }, buildable: true },
+  {
+    id: 'fisher', category: 'food', name: 'b.fisher', w: 2, h: 2, cost: { wood: 15 }, buildable: true,
+    needsTerrain: { terrain: Terrain.Water, radius: 7 },
+    production: { output: { res: 'fish', amount: 8 }, site: 'shore', workTicks: 110 },
+  },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

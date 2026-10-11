@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { ModelFactory } from './models';
 import { bump, pattern } from './textures';
 
@@ -28,6 +29,8 @@ export interface TerrainView {
   fell(tile: number, k: number): void;
   /** Usuwa drzewa z pola i zostawia pniaki */
   clear(tile: number): void;
+  /** Animacje otoczenia: fale i ryby */
+  animate(time: number): void;
   dispose(): void;
 }
 
@@ -99,13 +102,62 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(ground);
 
-  const water = new THREE.Mesh(
-    new THREE.PlaneGeometry(w, h),
-    new THREE.MeshStandardMaterial({ color: 0x3f7f96, transparent: true, opacity: 0.85, roughness: 0.15, metalness: 0.1 }),
-  );
+  // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca
+  const ripples = bump('water')?.clone() ?? null;
+  if (ripples) { ripples.repeat.set(w / 6, h / 6); ripples.needsUpdate = true; }
+  const waterMat = new THREE.MeshStandardMaterial({
+    color: 0x2c6f8f, transparent: true, opacity: 0.86, roughness: 0.18, metalness: 0.35, bumpMap: ripples, bumpScale: 2.2,
+  });
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(w, h), waterMat);
   water.rotation.x = -Math.PI / 2;
   water.position.y = -0.08;
+  water.receiveShadow = true;
   group.add(water);
+  // jaśniejsza płycizna przy brzegu: druga, niższa tafla o cieplejszej barwie prześwituje przez wodę
+  const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x6fae9a, roughness: 1 }));
+  shallow.rotation.x = -Math.PI / 2;
+  shallow.position.y = -0.32;
+  group.add(shallow);
+
+  // Ryby: pływają po małych okręgach tuż pod powierzchnią, co jakiś czas któraś wyskakuje
+  const waterTiles: number[] = [];
+  for (let i = 0; i < map.tiles.length; i++) if (map.tiles[i] === Terrain.Water) waterTiles.push(i);
+  const fishCount = Math.min(90, Math.floor(waterTiles.length / 5));
+  const fishGeo = mergeGeometries([
+    new THREE.IcosahedronGeometry(0.09, 1).scale(0.55, 0.75, 1.9),
+    new THREE.ConeGeometry(0.07, 0.14, 4).toNonIndexed().rotateX(-Math.PI / 2).translate(0, 0, -0.2),
+  ]);
+  const fishMesh = fishCount && fishGeo ? new THREE.InstancedMesh(fishGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.4, flatShading: true }), fishCount) : null;
+  const fish: { x: number; z: number; r: number; speed: number; phase: number }[] = [];
+  if (fishMesh) {
+    const fc = new THREE.Color();
+    for (let i = 0; i < fishCount; i++) {
+      const rr = hash2(i * 31, i * 17 + 5, map.seed ^ 0x1f123bb5);
+      const tile = waterTiles[rr % waterTiles.length]!;
+      fish.push({ x: (tile % w) + 0.5 + ox, z: Math.floor(tile / w) + 0.5 + oz, r: 0.25 + ((rr >>> 8) & 15) / 40, speed: 0.6 + ((rr >>> 12) & 15) / 20, phase: ((rr >>> 16) & 255) / 40 });
+      fishMesh.setColorAt(i, fc.setHex((rr >>> 24) % 4 === 0 ? 0xe08a3c : 0xb9c9d4));
+    }
+    group.add(fishMesh);
+  }
+  const fm = new THREE.Matrix4();
+  const fq = new THREE.Quaternion();
+  const fe = new THREE.Euler();
+  const fp = new THREE.Vector3();
+  const fs = new THREE.Vector3(1, 1, 1);
+  const animate = (time: number): void => {
+    if (ripples) ripples.offset.set(time * 0.012, time * 0.02);
+    if (!fishMesh) return;
+    fish.forEach((f, i) => {
+      const a = time * f.speed + f.phase;
+      // skok: przez krótki ułamek cyklu ryba wyskakuje łukiem nad wodę
+      const cycle = (time * 0.11 + f.phase) % 1;
+      const jump = cycle < 0.06 ? Math.sin((cycle / 0.06) * Math.PI) : 0;
+      fp.set(f.x + Math.cos(a) * f.r, -0.16 + jump * 0.42, f.z + Math.sin(a) * f.r);
+      fq.setFromEuler(fe.set(jump ? Math.cos((cycle / 0.06) * Math.PI) * -0.9 : 0, -a, 0, 'YXZ'));
+      fishMesh.setMatrixAt(i, fm.compose(fp, fq, fs));
+    });
+    fishMesh.instanceMatrix.needsUpdate = true;
+  };
 
   // Za mapą: skalne podłoże i pasma gór ginące we mgle, żeby nie było widać końca świata.
   const beyond = new THREE.Mesh(new THREE.PlaneGeometry(w + 400, h + 400), new THREE.MeshLambertMaterial({ color: 0x77746c }));
@@ -233,6 +285,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     heightAt,
     fell,
     clear,
+    animate,
     dispose() {
       group.traverse((o) => {
         const mesh = o as THREE.Mesh;

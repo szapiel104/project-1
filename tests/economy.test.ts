@@ -123,6 +123,30 @@ describe('praca chłopów', () => {
     expect(stateHash(loaded)).toBe(stateHash(g));
   });
 
+  it('rybak łowi na brzegu i przynosi ryby', () => {
+    // szukamy mapy, na której przy twierdzy jest woda
+    for (let seed = 1; seed < 200; seed++) {
+      const g = createGame(seed);
+      const keep = playerKeep(g, 0)!;
+      const type = buildingIndex('fisher');
+      let spotFound: { x: number; y: number } | null = null;
+      for (let r = 3; r < RULES.buildRadius && !spotFound; r++)
+        for (let dy = -r; dy <= r && !spotFound; dy++)
+          for (let dx = -r; dx <= r; dx++) if (canPlace(g, 0, type, keep.x + dx, keep.y + dy) === null) { spotFound = { x: keep.x + dx, y: keep.y + dy }; break; }
+      if (!spotFound) continue;
+      step(g, [{ type: 'build', player: 0, building: 'fisher', ...spotFound }]);
+      let caught = 0;
+      for (let i = 0; i < 3000; i++) {
+        step(g, []);
+        caught = Math.max(caught, res(g, 'fish'));
+        for (const u of g.units) expect(g.map.tiles[(u.py >> 8) * g.map.width + (u.px >> 8)]).not.toBe(Terrain.Water);
+      }
+      expect(caught).toBeGreaterThan(0);
+      return;
+    }
+    throw new Error('brak mapy z wodą przy twierdzy');
+  });
+
   it('łańcuch farma → młyn → piekarnia daje chleb', () => {
     const g = createGame(5);
     g.players[0]!.res[resIndex('apples')] = 110; // zapas, żeby głód nie przerwał testu (mieści się w spichlerzu twierdzy)

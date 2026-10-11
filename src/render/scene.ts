@@ -32,6 +32,7 @@ const DAY = [
   { h: 24, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x0f1529 },
 ];
 const WOOD = RESOURCES.indexOf('wood');
+const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 
 /** Renderer: czyta stan symulacji, nigdy go nie zmienia. */
 export class GameRenderer {
@@ -49,6 +50,7 @@ export class GameRenderer {
   private lamps: THREE.PointLight[] = [];
   private lampSpots: THREE.Vector3[] = [];
   private handTorches: THREE.InstancedMesh;
+  private rods: THREE.InstancedMesh;
   private frameNo = 0;
 
   private cursor: THREE.Mesh;
@@ -126,6 +128,16 @@ export class GameRenderer {
       tint(new THREE.ConeGeometry(0.05, 0.16, 5).translate(0.17, 0.72, 0.1), 0xffa53a),
     ]);
     this.handTorches = new THREE.InstancedMesh(hand, new THREE.MeshBasicMaterial({ vertexColors: true }), MAX_UNITS);
+    // wędka rybaka: kij, żyłka i spławik
+    const rod = mergeGeometries([
+      tint(new THREE.CylinderGeometry(0.012, 0.02, 1.1, 5).rotateX(1.05).translate(0.12, 0.72, 0.6), 0x6b4a2e),
+      tint(new THREE.CylinderGeometry(0.004, 0.004, 0.75, 3).translate(0.12, 0.62, 1.07), 0xe8e4d8),
+      tint(new THREE.IcosahedronGeometry(0.035, 0).translate(0.12, 0.24, 1.07), 0xd0281f),
+    ]);
+    this.rods = new THREE.InstancedMesh(rod, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true }), MAX_UNITS);
+    this.rods.count = 0;
+    this.rods.frustumCulled = false;
+    this.scene.add(this.rods);
     this.handTorches.count = 0;
     this.handTorches.frustumCulled = false;
     this.scene.add(this.handTorches);
@@ -238,7 +250,8 @@ export class GameRenderer {
     if (this.state && this.view) {
       this.animate(this.state, this.calm ? 0 : dt);
       this.syncForest(this.state, this.view);
-      this.syncLamps(this.state); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
+      this.syncLamps(this.state);
+      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
   }
 
@@ -472,9 +485,17 @@ export class GameRenderer {
         t.rotation.set(0, Math.atan2(-Math.cos(a), -Math.sin(a)), 0);
         swing = 0;
       }
-      if (u.phase === Phase.WorkingSite && !this.calm) swing = Math.sin(this.time * 9 + u.id) * 1.1; // zamachy siekierą lub kilofem
+      // rybak stoi twarzą do wody z wędką; pozostali na stanowisku machają siekierą lub kilofem
+      const fishing = u.phase === Phase.WorkingSite && u.job !== 0 && jobs.get(u.job)?.type === FISHER;
+      if (fishing) {
+        const tx = u.px >> 8, ty = u.py >> 8;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
+          if (g.map.tiles[(ty + dy) * width + tx + dx] === Terrain.Water) { t.rotation.set(0, Math.atan2(dx, dy), 0); break; }
+        swing = 0;
+      } else if (u.phase === Phase.WorkingSite && !this.calm) swing = Math.sin(this.time * 9 + u.id) * 1.1;
       t.scale.setScalar(1);
       t.updateMatrix();
+      this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
       const wood = u.carryRes === WOOD;
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
@@ -495,6 +516,8 @@ export class GameRenderer {
       }
     }
     this.figures.finish(n);
+    this.rods.count = n;
+    this.rods.instanceMatrix.needsUpdate = true;
     this.handTorches.count = n;
     this.handTorches.instanceMatrix.needsUpdate = true;
     for (const m of [...this.loads.values(), this.logs, this.planks]) {
