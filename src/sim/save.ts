@@ -1,4 +1,4 @@
-import { BUILDINGS } from '../data/buildings';
+import { BUILDINGS, footprint } from '../data/buildings';
 import type { MapPresetId } from '../data/maps';
 import { MAP_PRESETS } from '../data/maps';
 import { RESOURCES } from '../data/resources';
@@ -7,7 +7,7 @@ import { Rng } from './rng';
 import type { Building, GameState, PlayerState, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
-export const SAVE_VERSION = 7;
+export const SAVE_VERSION = 8;
 
 export interface SaveData {
   v: number;
@@ -59,7 +59,8 @@ export function deserialize(d: SaveData): GameState | null {
     for (const b of g.buildings) {
       const def = BUILDINGS[b.type];
       if (!def) return null;
-      for (let y = b.y; y < b.y + def.h; y++) for (let x = b.x; x < b.x + def.w; x++) g.occupancy[y * map.width + x] = b.id;
+      const fp = footprint(def, b.rot);
+      for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * map.width + x] = b.id;
       if (b.door >= 0) g.reserved[b.door]!++;
     }
     return g;

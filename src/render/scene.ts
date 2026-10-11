@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BUILDINGS } from '../data/buildings';
+import { BUILDINGS, footprint } from '../data/buildings';
 import { animateBuilding, roadMaterials, setNight, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
@@ -14,7 +14,7 @@ import { createLoads, tint } from './loads';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 
 export interface TileRef { x: number; y: number }
-export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number }
+export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number }
 
 const MAX_UNITS = 2048;
 const tmpColor = new THREE.Color();
@@ -233,6 +233,7 @@ export class GameRenderer {
       this.scene.add(model);
     }
     model.position.set(this.ghost.position.x, top, this.ghost.position.z);
+    model.rotation.y = (g.rot * Math.PI) / 2;
     model.traverse((o) => {
       const mesh = o as THREE.Mesh;
       // fundament dzieli materiał z prawdziwymi budynkami, więc go nie barwimy
@@ -247,8 +248,8 @@ export class GameRenderer {
     const b = this.state?.buildings.find((x) => x.id === buildingId);
     const mesh = this.buildingMeshes.get(buildingId);
     if (!b || !mesh) { this.selection.visible = false; return; }
-    const def = BUILDINGS[b.type]!;
-    this.selection.scale.set(def.w, def.h, 1);
+    const fp = footprint(BUILDINGS[b.type]!, b.rot);
+    this.selection.scale.set(fp.w, fp.h, 1);
     this.selection.position.set(mesh.position.x, mesh.position.y + 0.07, mesh.position.z);
     this.selection.visible = true;
   }
@@ -278,11 +279,13 @@ export class GameRenderer {
       const team = g.players[b.owner]?.team ?? 0;
       const mesh = this.models.building(def.id, TEAM_COLORS[team] ?? 0x888888);
       let top = -99, low = 99;
-      for (let y = b.y; y <= b.y + def.h; y++)
-        for (let x = b.x; x <= b.x + def.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
+      const fp = footprint(def, b.rot);
+      for (let y = b.y; y <= b.y + fp.h; y++)
+        for (let x = b.x; x <= b.x + fp.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
       // budynek siada lekko poniżej najwyższego punktu działki, wtopiony w teren, bez cokołu
       const ground = low + (top - low) * 0.35;
-      mesh.position.set(b.x + def.w / 2 - width / 2, ground, b.y + def.h / 2 - height / 2);
+      mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
+      mesh.rotation.y = (b.rot * Math.PI) / 2;
       const base = mesh.getObjectByName('base');
       const patch = mesh.getObjectByName('patch');
       if (patch) { patch.scale.set(def.w * 0.62, 1, def.h * 0.62); patch.position.y = top - ground + 0.015; patch.receiveShadow = true; }
@@ -365,7 +368,8 @@ export class GameRenderer {
       for (const [id, mesh] of this.buildingMeshes) {
         const torch = mesh.getObjectByName('torch');
         if (!torch || !lit.has(id)) continue;
-        const v = new THREE.Vector3(mesh.position.x + torch.position.x, mesh.position.y + 1.25, mesh.position.z + torch.position.z);
+        const v = torch.getWorldPosition(new THREE.Vector3());
+        v.y += 1.25;
         spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2, k: 1 });
       }
       const { width, height } = g.map;
@@ -486,19 +490,23 @@ export class GameRenderer {
       if (job && mode) {
         const def = BUILDINGS[job.type]!;
         const mesh = this.buildingMeshes.get(job.id);
-        const cx = job.x + def.w / 2, cy = job.y + def.h / 2;
+        const fp = footprint(def, job.rot);
+        const cx = job.x + fp.w / 2, cy = job.y + fp.h / 2;
+        const turn = (job.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
         const k = this.calm ? 0 : this.time;
         if (mode === 'field') {
-          const wx = cx + Math.sin(k * 0.5 + u.id) * def.w * 0.3, wy = cy + Math.cos(k * 0.37 + u.id * 2) * def.h * 0.3;
+          const wx = cx + Math.sin(k * 0.5 + u.id) * fp.w * 0.3, wy = cy + Math.cos(k * 0.37 + u.id * 2) * fp.h * 0.3;
           t.position.set(wx - width / 2, (mesh?.position.y ?? 0) + 0.05, wy - height / 2);
           t.rotation.set(Math.max(0, Math.sin(k * 5)) * 0.5, k * 0.4 + u.id, 0, 'YXZ'); // schyla się przy pracy
           swing = Math.sin(k * 5) * 0.4;
         } else {
           const m = mesh?.getObjectByName('interior')?.children[0];
-          const lx = m ? m.position.x : 0, lz = m ? m.position.z : 0;
+          // miejsce we wnętrzu jest zapisane w układzie modelu, więc obracamy je razem z budynkiem
+          const mx = m ? m.position.x : 0, mz = (m ? m.position.z : 0) + (resting ? 0.3 : 0.12);
+          const lx = mx * cosT + mz * sinT, lz = -mx * sinT + mz * cosT;
           // odpoczywający siedzą przy stole obok siebie, pracujący krzątają się przy warsztacie
           const side = resting ? ((u.id % 3) - 1) * 0.28 : Math.sin(k * 2) * 0.12;
-          t.position.set(cx + lx - width / 2 + side, (mesh?.position.y ?? 0) + (resting ? -0.03 : 0.05), cy + lz - height / 2 + (resting ? 0.3 : 0.12));
+          t.position.set(cx + lx - width / 2 + side, (mesh?.position.y ?? 0) + (resting ? -0.03 : 0.05), cy + lz - height / 2);
           t.rotation.set(0, resting ? 0 : Math.PI + Math.sin(k * 2) * 0.6, 0);
           if (!resting) swing = Math.sin(k * 6) * 0.35;
         }

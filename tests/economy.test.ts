@@ -264,6 +264,35 @@ describe('ludność i popularność', () => {
   });
 });
 
+describe('obracanie budynków', () => {
+  it('obrót zamienia wymiary działki i przenosi wejście na inną stronę', () => {
+    const g = createGame(5);
+    const keep = playerKeep(g, 0)!;
+    const w = g.map.width;
+    const type = buildingIndex('barn'); // 3 x 2
+    step(g, [{ type: 'demolish', player: 0, id: g.buildings.find((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'barn')!.id }]);
+    // pierwsze miejsce przy twierdzy, w którym mieści się obrócona stodoła z wejściem od prawej
+    let x = -1, y = -1;
+    for (let r = 4; r < 14 && x < 0; r++)
+      for (let dy = -r; dy <= r && x < 0; dy++)
+        for (let dx = -r; dx <= r; dx++) {
+          const tx = keep.x + dx, ty = keep.y + dy;
+          if (canPlace(g, 0, type, tx, ty, false, 1) === null && g.occupancy[(ty + 1) * w + tx + 2] === 0 && g.map.tiles[(ty + 1) * w + tx + 2] === Terrain.Grass) { x = tx; y = ty; break; }
+        }
+    expect(x).toBeGreaterThanOrEqual(0);
+    step(g, [{ type: 'build', player: 0, building: 'barn', x, y, rot: 1 }]);
+    const b = g.buildings.find((q) => q.owner === 0 && q.type === type)!;
+    expect(b.rot).toBe(1);
+    expect(g.occupancy[(y + 2) * w + x]).toBe(b.id); // po obrocie działka ma 2 x 3
+    expect(g.occupancy[y * w + x + 2]).toBe(0);
+    expect(b.door % w).toBe(x + 2); // wejście z prawej strony
+    const loaded = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!;
+    expect(stateHash(loaded)).toBe(stateHash(g));
+    step(g, [{ type: 'demolish', player: 0, id: b.id }]);
+    expect(g.occupancy[(y + 2) * w + x]).toBe(0);
+  });
+});
+
 describe('drogi', () => {
   it('droga kosztuje kamień, nie blokuje przejścia i znika pod budynkiem', () => {
     const g = createGame(5);

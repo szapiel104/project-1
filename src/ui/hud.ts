@@ -13,6 +13,7 @@ export interface HudEvents {
   onSpeed(speed: number): void;
   onDemolish(id: number): void;
   onCloseInfo(): void;
+  onRotate(): void;
 }
 
 export interface HudView {
@@ -301,7 +302,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   cancel.type = 'button';
   cancel.hidden = true;
   cancel.addEventListener('click', () => events.onPickBuilding(null));
-  buildFoot.append(buildHint, cancel);
+  const turn = el('button', 'btn-plain', t('hud.rotate'));
+  turn.type = 'button';
+  turn.addEventListener('click', () => events.onRotate());
+  const footButtons = el('div', 'actions');
+  footButtons.append(turn, cancel);
+  buildFoot.append(buildHint, footButtons);
   barhead.append(cats, cards, tabs);
   buildbar.append(barhead, buildFoot);
 

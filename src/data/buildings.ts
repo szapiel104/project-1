@@ -107,3 +107,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
+
+/** Wymiary działki po obrocie: przy obrocie o 90° i 270° szerokość zamienia się z głębokością. */
+export function footprint(def: BuildingDef, rot = 0): { w: number; h: number } {
+  return rot % 2 ? { w: def.h, h: def.w } : { w: def.w, h: def.h };
+}

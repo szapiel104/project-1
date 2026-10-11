@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.4.7 — obracanie budynków (2026-10-11)
+
+- Podczas budowy klawisz R albo przycisk „Obróć” obraca budynek co 90°; wejście przenosi się razem z frontem
+
 ## 0.4.6 — kopalnia i spichlerz (2026-10-11)
 
 - Kopalnia żelaza: skalny garb z żyłami rudy, sztolnia w drewnianej obudowie, tory z wózkiem pełnym rudy, kołowrót, hałda urobku, latarnia

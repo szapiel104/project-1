@@ -1,4 +1,4 @@
-import { BUILDINGS, buildingIndex } from './data/buildings';
+import { BUILDINGS, buildingIndex, footprint } from './data/buildings';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { t } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
@@ -27,6 +27,8 @@ let picked: string | null = null;
 let hoverTile: TileRef | null = null;
 let touchTile: TileRef | null = null;
 let selected = 0;
+/** Obrót stawianego budynku: 0..3, co 90° */
+let placeRot = 0;
 let currentPreset: MapPresetId = '1v1';
 let currentSeedText = 'project-1';
 const SAVE_KEY = 'project1.save';
@@ -50,6 +52,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onSpeed: (s) => { speed = s; },
   onDemolish: (id) => { pending.push({ type: 'demolish', player: ME, id }); select(0); },
   onCloseInfo: () => select(0),
+  onRotate: () => rotate(),
 }, renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
@@ -78,6 +81,12 @@ function pick(id: string | null): void {
   updateGhost();
 }
 
+/** Obraca stawiany budynek o 90° w prawo. Drogi i pochodnie są symetryczne, więc ich to nie dotyczy. */
+function rotate(): void {
+  placeRot = (placeRot + 1) % 4;
+  updateGhost();
+}
+
 function select(id: number): void {
   selected = id;
   const b = game.buildings.find((x) => x.id === id);
@@ -87,17 +96,17 @@ function select(id: number): void {
 
 /** Lewy górny róg działki tak, żeby budynek był wyśrodkowany na wskazanym polu. */
 function origin(tile: TileRef, type: number): TileRef {
-  const def = BUILDINGS[type]!;
-  return { x: tile.x - ((def.w - 1) >> 1), y: tile.y - ((def.h - 1) >> 1) };
+  const fp = footprint(BUILDINGS[type]!, placeRot);
+  return { x: tile.x - ((fp.w - 1) >> 1), y: tile.y - ((fp.h - 1) >> 1) };
 }
 
 function updateGhost(): void {
   const tile = touchTile ?? hoverTile;
   if (!picked || !tile) { renderer.setGhost(null); return; }
   const type = buildingIndex(picked);
-  const def = BUILDINGS[type]!;
+  const fp = footprint(BUILDINGS[type]!, placeRot);
   const o = origin(tile, type);
-  renderer.setGhost({ ...o, w: def.w, h: def.h, ok: canPlace(game, ME, type, o.x, o.y) === null, id: picked, team: game.players[ME]!.team });
+  renderer.setGhost({ ...o, w: fp.w, h: fp.h, ok: canPlace(game, ME, type, o.x, o.y, true, placeRot) === null, id: picked, team: game.players[ME]!.team, rot: placeRot });
 }
 
 renderer.onHover = (tile) => { hoverTile = tile; if (!touchTile) updateGhost(); };
@@ -125,9 +134,9 @@ renderer.onClick = (tile, touch) => {
   }
   const type = buildingIndex(picked);
   const o = origin(tile, type);
-  const error = canPlace(game, ME, type, o.x, o.y);
+  const error = canPlace(game, ME, type, o.x, o.y, true, placeRot);
   if (error) { hud.toast(t(error)); return; }
-  pending.push({ type: 'build', player: ME, building: picked, x: o.x, y: o.y });
+  pending.push({ type: 'build', player: ME, building: picked, x: o.x, y: o.y, rot: placeRot });
   touchTile = null;
 };
 
@@ -135,6 +144,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (picked) pick(null); else select(0); }
   const tag = (e.target as HTMLElement | null)?.tagName;
   if (tag === 'INPUT' || tag === 'SELECT' || e.ctrlKey || e.metaKey) return;
+  if (e.code === 'KeyR' && picked) rotate();
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
   if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);
 });
