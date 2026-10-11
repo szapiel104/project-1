@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.3.0 — cienie i światło (2026-10-11)
+
+- Budynki, drzewa, skały, góry i ludzie rzucają miękkie cienie
+- Cieplejsze słońce i mocniejszy kontrast światła
+- Na telefonach cienie w niższej rozdzielczości, żeby gra chodziła płynnie
+- Poprawka: fundamenty budynków robiły się czerwone po czerwonym podglądzie budowy
+
 ## 0.2.11 — osada nie wymiera (2026-10-11)
 
 - Przy twierdzy zawsze zostaje czterech chłopów, a pusta osada sama się odradza

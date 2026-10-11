@@ -31,6 +31,10 @@ export class StrategyCamera {
     this.apply();
   }
 
+  /** Punkt na ziemi, na który patrzy kamera */
+  get focus(): THREE.Vector3 { return this.target; }
+  get distance(): number { return this.dist; }
+
   /** Kamera nie wyjedzie poza grywalny środek mapy, więc nie widać końca świata. */
   setBounds(width: number, height: number, margin: number): void {
     this.bounds = { x: Math.max(4, width / 2 - margin), z: Math.max(4, height / 2 - margin) };

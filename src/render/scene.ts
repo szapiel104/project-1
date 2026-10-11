@@ -22,6 +22,7 @@ export class GameRenderer {
   private view: TerrainView | null = null;
   private state: GameState | null = null;
   private ray = new THREE.Raycaster();
+  private sun: THREE.DirectionalLight;
 
   private cursor: THREE.Mesh;
   private ghost: THREE.Mesh;
@@ -51,10 +52,20 @@ export class GameRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.scene.background = new THREE.Color(HAZE);
     this.scene.fog = new THREE.Fog(HAZE, 55, 150);
-    this.scene.add(new THREE.HemisphereLight(0xfff4d6, 0x4a4433, 1.5));
-    const sun = new THREE.DirectionalLight(0xfff0cc, 2.1);
-    sun.position.set(-40, 70, 30);
-    this.scene.add(sun);
+    // Cienie: jedno słońce, którego obszar cienia podąża za kamerą. Na telefonach mniejsza mapa cieni.
+    const phone = matchMedia('(pointer: coarse)').matches;
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    this.scene.add(new THREE.HemisphereLight(0xfff1cf, 0x55503c, 1.15));
+    const sun = new THREE.DirectionalLight(0xffe9b8, 2.6);
+    sun.castShadow = true;
+    sun.shadow.mapSize.setScalar(phone ? 1024 : 2048);
+    sun.shadow.bias = -0.0006;
+    sun.shadow.normalBias = 0.25;
+    sun.shadow.camera.near = 1;
+    sun.shadow.camera.far = 260;
+    this.scene.add(sun, sun.target);
+    this.sun = sun;
     this.scene.add(this.buildingLayer);
 
     const flat = (geo: THREE.BufferGeometry, color: number, opacity = 1): THREE.Mesh => {
@@ -81,7 +92,7 @@ export class GameRenderer {
     this.logs = new THREE.InstancedMesh(log, new THREE.MeshLambertMaterial({ color: RESOURCE_DEFS.wood.color, flatShading: true }), MAX_UNITS);
     const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.13, 0.45, 0);
     this.planks = new THREE.InstancedMesh(plank, new THREE.MeshLambertMaterial({ color: 0xc9a26b, flatShading: true }), MAX_UNITS);
-    for (const m of [this.bodies, this.heads, this.loads, this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; this.scene.add(m); }
+    for (const m of [this.bodies, this.heads, this.loads, this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
 
     this.cam = new StrategyCamera(canvas);
     canvas.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') this.hover(this.pick(e)); });
@@ -147,7 +158,8 @@ export class GameRenderer {
     model.position.set(this.ghost.position.x, top, this.ghost.position.z);
     model.traverse((o) => {
       const mesh = o as THREE.Mesh;
-      if (mesh.isMesh) (mesh.material as THREE.MeshLambertMaterial).emissive?.setHex(g.ok ? 0x000000 : 0x7a0f0a);
+      // fundament dzieli materiał z prawdziwymi budynkami, więc go nie barwimy
+      if (mesh.isMesh && mesh.name !== 'base') (mesh.material as THREE.MeshLambertMaterial).emissive?.setHex(g.ok ? 0x000000 : 0x7a0f0a);
     });
     model.visible = true;
     this.ghostModel = model;
@@ -166,6 +178,7 @@ export class GameRenderer {
   frame(dt: number, alpha: number): void {
     this.cam.update(dt);
     this.time += dt;
+    this.aimSun();
     if (this.state && this.view) {
       if (!this.calm) this.animate(this.state, dt); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
@@ -187,6 +200,12 @@ export class GameRenderer {
       mesh.position.set(b.x + def.w / 2 - width / 2, top, b.y + def.h / 2 - height / 2);
       const base = mesh.getObjectByName('base');
       if (base) { const depth = top - low + 0.3; base.scale.set(def.w * 0.96, depth, def.h * 0.96); base.position.y = -depth / 2; }
+      mesh.traverse((o) => {
+        const part = o as THREE.Mesh;
+        if (!part.isMesh || o.parent?.name === 'smoke') return;
+        part.castShadow = true;
+        part.receiveShadow = true;
+      });
       this.buildingLayer.add(mesh);
       this.buildingMeshes.set(b.id, mesh);
     }
@@ -195,6 +214,19 @@ export class GameRenderer {
       this.buildingLayer.remove(mesh);
       this.buildingMeshes.delete(id);
     }
+  }
+
+  /** Przesuwa słońce i obszar cienia za kamerą; im dalej kamera, tym większy obszar. */
+  private aimSun(): void {
+    const f = this.cam.focus;
+    const half = Math.max(22, Math.min(70, this.cam.distance * 1.15));
+    // skok o stałą siatkę, żeby cienie nie migotały przy przesuwaniu kamery
+    const grid = (half * 2) / this.sun.shadow.mapSize.x * 8;
+    const x = Math.round(f.x / grid) * grid, z = Math.round(f.z / grid) * grid;
+    this.sun.target.position.set(x, 0, z);
+    this.sun.position.set(x - 55, 85, z + 40);
+    const c = this.sun.shadow.camera;
+    if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
   }
 
   private animate(g: GameState, dt: number): void {

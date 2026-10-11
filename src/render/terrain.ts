@@ -72,6 +72,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.computeVertexNormals();
   const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  ground.receiveShadow = true;
+  ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(ground);
 
   const water = new THREE.Mesh(
@@ -152,6 +154,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     if (!list.length) return;
     const mesh = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color, flatShading: true }), list.length);
     list.forEach((mm, i) => mesh.setMatrixAt(i, mm));
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
     group.add(mesh);
   };
   instanced(models.treeTrunk(), 0x4a3320, trees);
