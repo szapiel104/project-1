@@ -43,40 +43,54 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           tileHeight(map, x - 1, y, waterLevel) + tileHeight(map, x, y, waterLevel)) / 4;
   const corner = (x: number, y: number): number => corners[y * (w + 1) + x]!;
 
+  // Kolor i normalna liczone w narożnikach i dzielone przez sąsiednie pola: teren przechodzi płynnie,
+  // bez widocznej szachownicy. Kolor narożnika to średnia z czterech pól dookoła plus łagodne plamy.
+  const snow = new THREE.Color(0xf2efe6);
+  const tmp = new THREE.Color();
+  const cornerCol = new Float32Array((w + 1) * (h + 1) * 3);
+  const cornerNor = new Float32Array((w + 1) * (h + 1) * 3);
+  const tileColor = (x: number, y: number): THREE.Color =>
+    tmp.setHex(TERRAIN[map.tiles[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))] as Terrain].color);
+  const nv = new THREE.Vector3();
+  for (let y = 0; y <= h; y++) {
+    for (let x = 0; x <= w; x++) {
+      let r = 0, g = 0, b = 0;
+      for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) { const c = tileColor(x + dx, y + dy); r += c.r; g += c.g; b += c.b; }
+      const patch = 0.9 + ((hash2(x >> 2, y >> 2, map.seed) & 63) / 63) * 0.12 + ((hash2(x, y, map.seed ^ 0x55) & 15) / 15) * 0.06;
+      tmp.setRGB((r / 4) * patch, (g / 4) * patch, (b / 4) * patch);
+      const hh = corner(x, y);
+      if (hh > 5) tmp.lerp(snow, Math.max(0, Math.min(1, (hh - 6.5) / 3)));
+      const i = (y * (w + 1) + x) * 3;
+      cornerCol[i] = tmp.r; cornerCol[i + 1] = tmp.g; cornerCol[i + 2] = tmp.b;
+      nv.set(corner(Math.max(0, x - 1), y) - corner(Math.min(w, x + 1), y), 2, corner(x, Math.max(0, y - 1)) - corner(x, Math.min(h, y + 1))).normalize();
+      cornerNor[i] = nv.x; cornerNor[i + 1] = nv.y; cornerNor[i + 2] = nv.z;
+    }
+  }
   const pos = new Float32Array(w * h * 18);
   const col = new Float32Array(w * h * 18);
+  const nor = new Float32Array(w * h * 18);
   const uv = new Float32Array(w * h * 12);
-  const c = new THREE.Color();
-  const snow = new THREE.Color(0xf2efe6);
   let p = 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      const t = map.tiles[y * w + x] as Terrain;
-      const shade = 0.9 + ((hash2(x, y, map.seed) & 31) / 31) * 0.2;
-      c.setHex(TERRAIN[t].color).multiplyScalar(shade);
-      const h00 = corner(x, y), h10 = corner(x + 1, y), h01 = corner(x, y + 1), h11 = corner(x + 1, y + 1);
-      if (t === Terrain.Mountain) c.lerp(snow, Math.max(0, Math.min(1, ((h00 + h11) / 2 - 6.5) / 3)));
-      const quad = [
-        x, h00, y, x, h01, y + 1, x + 1, h10, y,
-        x + 1, h10, y, x, h01, y + 1, x + 1, h11, y + 1,
-      ];
-      for (let i = 0; i < 18; i += 3) {
-        pos[p + i] = quad[i]! + ox;
-        pos[p + i + 1] = quad[i + 1]!;
-        pos[p + i + 2] = quad[i + 2]! + oz;
-        col[p + i] = c.r; col[p + i + 1] = c.g; col[p + i + 2] = c.b;
-        // wzór trawy powtarza się co pole
-        uv[(p / 3 + i / 3) * 2] = quad[i]!; uv[(p / 3 + i / 3) * 2 + 1] = quad[i + 2]!;
-      }
+      const quad = [[x, y], [x, y + 1], [x + 1, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]] as const;
+      quad.forEach(([qx, qy], k) => {
+        const ci = (qy * (w + 1) + qx) * 3, o = p + k * 3;
+        pos[o] = qx + ox; pos[o + 1] = corner(qx, qy); pos[o + 2] = qy + oz;
+        col[o] = cornerCol[ci]!; col[o + 1] = cornerCol[ci + 1]!; col[o + 2] = cornerCol[ci + 2]!;
+        nor[o] = cornerNor[ci]!; nor[o + 1] = cornerNor[ci + 1]!; nor[o + 2] = cornerNor[ci + 2]!;
+        // wzór trawy powtarza się co 5 pól, więc nie widać siatki
+        uv[(o / 3) * 2] = qx / 5; uv[(o / 3) * 2 + 1] = qy / 5;
+      });
       p += 18;
     }
   }
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  geo.computeVertexNormals();
-  const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: pattern('grass') }));
+  const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, map: pattern('grass') }));
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(ground);

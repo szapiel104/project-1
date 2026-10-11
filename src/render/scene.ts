@@ -43,6 +43,7 @@ export class GameRenderer {
   private calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   private prevPos = new Map<number, [number, number]>();
   private storesTick = -1;
+  private selectedId = 0;
   private tmp = new THREE.Object3D();
   private color = new THREE.Color();
 
@@ -166,6 +167,7 @@ export class GameRenderer {
   }
 
   setSelection(buildingId: number): void {
+    this.selectedId = buildingId;
     const b = this.state?.buildings.find((x) => x.id === buildingId);
     const mesh = this.buildingMeshes.get(buildingId);
     if (!b || !mesh) { this.selection.visible = false; return; }
@@ -180,7 +182,7 @@ export class GameRenderer {
     this.time += dt;
     this.aimSun();
     if (this.state && this.view) {
-      if (!this.calm) this.animate(this.state, dt); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
+      this.animate(this.state, this.calm ? 0 : dt); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
   }
 
@@ -199,7 +201,7 @@ export class GameRenderer {
         for (let x = b.x; x <= b.x + def.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
       mesh.position.set(b.x + def.w / 2 - width / 2, top, b.y + def.h / 2 - height / 2);
       const base = mesh.getObjectByName('base');
-      if (base) { const depth = top - low + 0.3; base.scale.set(def.w * 0.96, depth, def.h * 0.96); base.position.y = -depth / 2; }
+      if (base) { const depth = top - low + 0.3; base.scale.set(def.w * 0.96, depth, def.h * 0.96); base.position.y = -depth / 2 + 0.03; } // 3 cm nad terenem, żeby nie migotał z podłożem
       mesh.traverse((o) => {
         const part = o as THREE.Mesh;
         if (!part.isMesh || o.parent?.name === 'smoke') return;
@@ -236,7 +238,8 @@ export class GameRenderer {
       else if (u.phase === Phase.Resting) working.add(u.home);
       else if (u.phase === Phase.Idle && u.path.length === 0) { const camp = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8)); if (camp) working.add(camp.id); }
     }
-    for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id), this.time, dt);
+    // kliknięty budynek też odsłania wnętrze, żeby dało się zajrzeć do środka
+    for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id) || id === this.selectedId, this.time, dt);
   }
 
   /** Zapełnia najpierw otwarte składy w kolejności budowy, a zamkniętą stodołę na końcu, żeby było widać każdą dostawę. */
@@ -244,19 +247,21 @@ export class GameRenderer {
     if (g.tick === this.storesTick) return;
     this.storesTick = g.tick;
     for (const p of g.players) {
-      let left = 0, sum = 0;
-      const colors: { id: string; share: number }[] = [];
-      RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile') sum += p.res[i]!; });
-      RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile' && p.res[i]! > 0) colors.push({ id: r, share: p.res[i]! / sum }); });
-      left = sum;
-      const stores = g.buildings.filter((b) => b.owner === p.id && BUILDINGS[b.type]!.capacity?.stockpile);
-      stores.sort((a, b) => Number(BUILDINGS[a.type]!.id === 'barn') - Number(BUILDINGS[b.type]!.id === 'barn') || a.id - b.id);
-      for (const b of stores) {
-        const cap = BUILDINGS[b.type]!.capacity!.stockpile!;
-        const here = Math.min(cap, left);
-        left -= here;
-        const mesh = this.buildingMeshes.get(b.id);
-        if (mesh) setStockFill(mesh, here / cap, colors);
+      for (const [kind, group] of [['stockpile', 'fill'], ['granary', 'foodfill']] as const) {
+        let sum = 0;
+        const stock: { id: string; share: number }[] = [];
+        RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === kind) sum += p.res[i]!; });
+        RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === kind && p.res[i]! > 0) stock.push({ id: r, share: p.res[i]! / sum }); });
+        let left = sum;
+        const stores = g.buildings.filter((b) => b.owner === p.id && BUILDINGS[b.type]!.capacity?.[kind]);
+        stores.sort((a, b) => Number(BUILDINGS[a.type]!.id === 'barn') - Number(BUILDINGS[b.type]!.id === 'barn') || a.id - b.id);
+        for (const b of stores) {
+          const cap = BUILDINGS[b.type]!.capacity![kind]!;
+          const here = Math.min(cap, left);
+          left -= here;
+          const mesh = this.buildingMeshes.get(b.id);
+          if (mesh) setStockFill(mesh, here / cap, stock, group);
+        }
       }
     }
   }

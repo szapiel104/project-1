@@ -68,6 +68,20 @@ function hut(g: THREE.Group, wall: THREE.Material, roof: THREE.Material, w: numb
 }
 
 export const STOCK_LAYERS = 3;
+
+/** Pusta siatka miejsc na stosy (9 miejsc w 3 warstwach), wypełniana przez setStockFill. */
+function fillSlots(name: string, x: number, z: number, step = 0.54): THREE.Group {
+  const fill = new THREE.Group();
+  fill.name = name;
+  for (let layer = 0; layer < STOCK_LAYERS; layer++)
+    for (let i = 0; i < 9; i++) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.3, 0.46), M.wood);
+      m.position.set(x + ((i % 3) - 1) * step, 0.06 + 0.15 + layer * 0.31, z + (Math.floor(i / 3) - 1) * step);
+      m.visible = false;
+      fill.add(m);
+    }
+  return fill;
+}
 const STOCK_SLOTS = 9;
 
 const part = (geo: THREE.BufferGeometry, x: number, y: number, z: number): THREE.BufferGeometry => geo.translate(x, y, z);
@@ -86,6 +100,14 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; color: number }> = {
     color: 0xd9b84a,
     geo: mergeGeometries([-0.11, 0.11].map((x) => part(new THREE.ConeGeometry(0.12, 0.3, 6), x, 0, 0))),
   },
+  bread: {
+    color: 0xc9843d,
+    geo: mergeGeometries([-0.12, 0.12].map((z) => part(new THREE.IcosahedronGeometry(0.12, 0).scale(1.6, 0.8, 0.9), 0, -0.04, z))),
+  },
+  apples: {
+    color: 0xd0281f,
+    geo: mergeGeometries([part(new THREE.CylinderGeometry(0.19, 0.15, 0.2, 8), 0, -0.04, 0), ...[0, 1, 2, 3, 4].map((k) => part(new THREE.IcosahedronGeometry(0.07, 0), Math.cos(k * 1.26) * 0.09, 0.08, Math.sin(k * 1.26) * 0.09))]),
+  },
   flour: {
     color: 0xf1ead8,
     geo: mergeGeometries([-0.11, 0.11].map((x) => part(new THREE.IcosahedronGeometry(0.13, 0).scale(0.95, 1.05, 1.3), x, -0.01, 0))),
@@ -97,8 +119,8 @@ const pileMats = new Map<string, THREE.MeshLambertMaterial>();
  * Układa w składzie stosy surowców. Każdy surowiec dostaje własne miejsca i rośnie w górę,
  * więc widać osobno deski, kamień, żelazo, zboże i mąkę.
  */
-export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: string; share: number }[]): void {
-  const fill = model.getObjectByName('fill');
+export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: string; share: number }[], group = 'fill'): void {
+  const fill = model.getObjectByName(group);
   if (!fill) return;
   const total = STOCK_SLOTS * STOCK_LAYERS;
   const shown = ratio <= 0 ? 0 : Math.max(1, Math.round(Math.min(1, ratio) * total));
@@ -216,24 +238,27 @@ const BUILDERS: Record<string, Builder> = {
   stockpile(g) {
     box(g, M.soil, 1.9, 0.06, 1.9);
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) box(g, M.woodDark, 0.1, 0.5, 0.1, sx * 0.9, 0.06, sz * 0.9);
-    // skrzynie pojawiają się w miarę zapełniania: 9 miejsc w 3 warstwach
-    const fill = new THREE.Group();
-    fill.name = 'fill';
-    for (let layer = 0; layer < STOCK_LAYERS; layer++)
-      for (let i = 0; i < 9; i++) {
-        const m = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.3, 0.46), M.wood);
-        m.position.set(((i % 3) - 1) * 0.54, 0.06 + 0.15 + layer * 0.31, (Math.floor(i / 3) - 1) * 0.54);
-        m.visible = false;
-        fill.add(m);
-      }
-    g.add(fill);
+    g.add(fillSlots('fill', 0, 0));
   },
   granary(g, _team, flag) {
-    box(g, M.wood, 1.4, 1.1, 1.4, 0, 0.25, 0);
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) box(g, M.woodDark, 0.14, 0.25, 0.14, sx * 0.6, 0, sz * 0.6);
-    pyramid(g, M.thatch, 1.2, 0.8, 0, 1.35, 0);
-    box(g, M.window, 0.3, 0.3, 0.04, 0, 0.7, 0.71);
-    pennant(g, flag, 0, 2.1, 0);
+    box(g, M.wood, 1.4, 1.1, 1.4, 0, 0.25, 0).name = 'shell';
+    const top = new THREE.Group();
+    top.name = 'roof';
+    pyramid(top, M.thatch, 1.2, 0.8, 0, 1.35, 0);
+    box(top, M.window, 0.3, 0.3, 0.04, 0, 0.7, 0.71);
+    g.add(top);
+    // wnętrze: podłoga, niskie ściany i zapasy żywności, których przybywa
+    const inside = new THREE.Group();
+    inside.name = 'interior';
+    inside.visible = false;
+    box(inside, M.plank, 1.4, 0.06, 1.4, 0, 0.25, 0);
+    for (const [x, z, w, d] of [[0, -0.67, 1.4, 0.06], [-0.67, 0, 0.06, 1.4], [0.67, 0, 0.06, 1.4]] as const) box(inside, M.wood, w, 0.4, d, x, 0.25, z);
+    const food = fillSlots('foodfill', 0, 0, 0.4);
+    food.position.y = 0.25;
+    inside.add(food);
+    g.add(inside);
+    pennant(g, flag, 0.62, 1.2, 0.62);
   },
   woodcutter(g) {
     const inside = hut(g, M.wood, M.woodDark, 1.0, 0.9, 0.65, -0.3, -0.2, true);
@@ -271,14 +296,33 @@ const BUILDERS: Record<string, Builder> = {
   barn(g, _team, flag) {
     // duża drewniana stodoła na kamiennej podmurówce, z wrotami i sianem
     box(g, M.stoneDark, 2.7, 0.2, 1.7);
-    box(g, M.wood, 2.6, 0.95, 1.6, 0, 0.2, 0);
-    gable(g, M.thatch, 2.85, 0.95, 1.95, 1.15);
-    box(g, M.woodDark, 0.8, 0.85, 0.05, 0, 0.2, 0.81);
-    box(g, M.plank, 0.04, 0.85, 0.06, 0, 0.2, 0.82);
-    for (const s of [-1, 1]) { box(g, M.plank, 0.75, 0.05, 0.06, 0, 0.45 + s * 0.25, 0.83); box(g, M.window, 0.26, 0.26, 0.04, s * 0.95, 0.6, 0.81); }
-    box(g, M.woodDark, 0.4, 0.4, 0.05, 0, 1.35, 0.99);
+    const shell = new THREE.Group();
+    shell.name = 'shell';
+    box(shell, M.wood, 2.6, 0.95, 1.6, 0, 0.2, 0);
+    box(shell, M.woodDark, 0.8, 0.85, 0.05, 0, 0.2, 0.81);
+    box(shell, M.plank, 0.04, 0.85, 0.06, 0, 0.2, 0.82);
+    for (const s of [-1, 1]) { box(shell, M.plank, 0.75, 0.05, 0.06, 0, 0.45 + s * 0.25, 0.83); box(shell, M.window, 0.26, 0.26, 0.04, s * 0.95, 0.6, 0.81); }
+    g.add(shell);
+    const top = new THREE.Group();
+    top.name = 'roof';
+    gable(top, M.thatch, 2.85, 0.95, 1.95, 1.15);
+    box(top, M.woodDark, 0.4, 0.4, 0.05, 0, 1.35, 0.99);
+    g.add(top);
     box(g, M.wheat, 0.5, 0.3, 0.4, 1.0, 0, 1.0);
     box(g, M.wheat, 0.35, 0.22, 0.35, 0.75, 0.3, 1.0);
+    // wnętrze: klepisko, niskie ściany, po lewej surowce, po prawej żywność
+    const inside = new THREE.Group();
+    inside.name = 'interior';
+    inside.visible = false;
+    box(inside, M.plank, 2.6, 0.05, 1.6, 0, 0.2, 0);
+    for (const [x, z, w, d] of [[0, -0.77, 2.6, 0.06], [-1.27, 0, 0.06, 1.6], [1.27, 0, 0.06, 1.6]] as const) box(inside, M.wood, w, 0.45, d, x, 0.2, z);
+    box(inside, M.woodDark, 0.06, 0.45, 1.5, 0.08, 0.2, 0);
+    const goods = fillSlots('fill', -0.6, 0, 0.42);
+    goods.position.y = 0.2;
+    const food = fillSlots('foodfill', 0.7, 0, 0.36);
+    food.position.y = 0.2;
+    inside.add(goods, food);
+    g.add(inside);
     pennant(g, flag, -1.25, 1.75, 0);
   },
   camp(g) {

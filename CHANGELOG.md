@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.3.6 — zaglądanie do budynków (2026-10-11)
+
+- Kliknięcie w budynek odsłania jego wnętrze
+- Teren bez szachownicy: kolory i światło przechodzą płynnie między polami, a wzór trawy nie powtarza się co pole
+- Poprawka: podłoże pod młynem i innymi budynkami przestało migotać
+- Stodoła i spichlerz mają wnętrza, w których widać zapasy: surowce na stosach, kosze jabłek, bochenki; przybywa ich w miarę zapełniania
+
 ## 0.3.5 — średniowieczny interfejs (2026-10-11)
 
 - Panele jak pergamin w okutej drewnianej ramie ze złotą żyłką i ćwiekami
