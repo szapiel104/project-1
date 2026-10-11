@@ -144,7 +144,10 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
           gr.addColorStop(0, gray(tone + 0.14)); gr.addColorStop(0.55, gray(tone)); gr.addColorStop(1, gray(tone - 0.3));
           c.fillStyle = gr; c.fill();
           c.clip();
-          for (let k = 0; k < 6; k++) { c.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${0.05 + r() * 0.1})`; c.fillRect((r() - 0.5) * w, (r() - 0.5) * h, 1 + r() * 4, 1 + r() * 3); }
+          // powierzchnia kamienia: ziarno, jaśniejsze i ciemniejsze plamy, czasem rysa albo odprysk
+          for (let k = 0; k < 28; k++) { c.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${0.04 + r() * 0.1})`; c.fillRect((r() - 0.5) * w, (r() - 0.5) * h, s * (0.01 + r() * 0.05), s * (0.01 + r() * 0.035)); }
+          for (let k = 0; k < 3; k++) { const br = s * (0.08 + r() * 0.16), bx = (r() - 0.5) * w * 0.8, by = (r() - 0.5) * h * 0.8; const gb = c.createRadialGradient(bx, by, 0, bx, by, br); gb.addColorStop(0, `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},0.12)`); gb.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gb; c.fillRect(bx - br, by - br, br * 2, br * 2); }
+          if (r() > 0.7) { c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = Math.max(1, s * 0.012); c.beginPath(); c.moveTo((r() - 0.5) * w, -h / 2); c.lineTo((r() - 0.5) * w * 0.6, (r() - 0.5) * h * 0.4); c.lineTo((r() - 0.5) * w, h / 2); c.stroke(); }
           c.restore();
         }
       }
@@ -168,13 +171,15 @@ export function pattern(kind: Kind): THREE.Texture | null {
   let t = cache.get(kind);
   if (t) return t;
   if (typeof document === 'undefined') return null;
-  const n = kind === 'ashlar' || kind === 'cobble' ? 1024 : 512;
+  // bruk w 2048 px na komputerach (1024 na telefonach), mur twierdzy 1024, reszta 512
+  const phone = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+  const n = kind === 'cobble' ? (phone ? 1024 : 2048) : kind === 'ashlar' ? 1024 : 512;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'ashlar' ? 1024 : kind === 'cobble' ? 1024 : kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
+  const base = kind === 'ashlar' ? 1024 : kind === 'cobble' ? n : kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));

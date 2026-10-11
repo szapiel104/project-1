@@ -1,5 +1,17 @@
 # Dziennik zmian
 
+## 0.5.4 — góry, krok, bruk (2026-10-11)
+
+- Góry dookoła mapy: rzeźbione szczyty z graniami, żlebami, warstwami skały i czapami śniegu o nierównej linii; dalsze pasma wyższe
+- Góry na krańcach mapy wyższe, z warstwami skały i śniegiem na wierzchołkach
+- Nogi chłopów chodzą w tempie marszu (krok zależy od przebytej drogi, także przy przyspieszonej grze)
+- Bruk w 2048 px z ziarnem, plamami i rysami na każdym kamieniu
+- Ramka pola pod kursorem widoczna tylko przy malowaniu dróg i wyburzaniu
+
+## 0.5.3 — wiata (2026-10-11)
+
+- Obozowisko przebudowane: ciesielska altana z zastrzałami i dwuspadową strzechą, pleciona ściana od wiatru, ławy, beczka, stos drewna, trójnóg z kociołkiem nad ogniem
+
 ## 0.5.2 — bogatszy teren (2026-10-11)
 
 - Las w różnym wieku: młode drzewka, zwykłe drzewa i z rzadka stare olbrzymy; w lesie i na łąkach krzewy

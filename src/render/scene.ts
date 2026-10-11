@@ -63,6 +63,8 @@ export class GameRenderer {
 
   private figures: Figures;
   private facing = new Map<number, number>();
+  /** Faza kroku każdego chłopa: rośnie z przebytą drogą, więc nogi chodzą w tempie marszu przy każdej prędkości gry */
+  private strides = new Map<number, { x: number; y: number; phase: number }>();
   private camps = new Map<number, GameState['buildings'][number]>();
   private loads: Map<number, THREE.InstancedMesh>;
   private logs: THREE.InstancedMesh;
@@ -198,6 +200,7 @@ export class GameRenderer {
     this.dying = [];
     this.prevPos.clear();
     this.facing.clear();
+    this.strides.clear();
     this.storesTick = -1;
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
@@ -528,8 +531,13 @@ export class GameRenderer {
         this.facing.set(u.id, heading);
       }
       const walking = !still && !this.calm;
-      const stride = walking ? this.time * 9 + u.id : 0;
-      let swing = walking ? Math.sin(stride) * 0.7 : 0;
+      let st = this.strides.get(u.id);
+      if (!st) { st = { x: fx, y: fy, phase: u.id }; this.strides.set(u.id, st); }
+      // jeden pełny krok (obie nogi) na około 0,8 pola
+      st.phase += Math.min(0.5, Math.hypot(fx - st.x, fy - st.y)) * 7.5;
+      st.x = fx; st.y = fy;
+      const stride = walking ? st.phase : 0;
+      let swing = walking ? Math.sin(stride) * 0.55 : 0;
       t.position.set(fx + ox - width / 2, view.heightAt(fx + ox, fy + oz) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), fy + oz - height / 2);
       t.rotation.set(0, heading, 0);
       // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
@@ -673,7 +681,8 @@ export class GameRenderer {
     if (tile && this.view && this.state) {
       const { width, height } = this.state.map;
       this.cursor.position.set(tile.x + 0.5 - width / 2, Math.max(this.view.heightAt(tile.x + 0.5, tile.y + 0.5), 0) + 0.06, tile.y + 0.5 - height / 2);
-      this.cursor.visible = !this.ghost.visible;
+      // ramka pola pokazuje się tylko przy malowaniu dróg i wyburzaniu; przy zwykłym ruchu myszy nic nie zaznaczamy
+      this.cursor.visible = this.painting && !this.ghost.visible;
     } else this.cursor.visible = false;
     this.onHover(tile);
   }

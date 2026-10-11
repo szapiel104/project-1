@@ -15,7 +15,7 @@ function tileHeight(map: GameMap, x: number, y: number, waterLevel: number): num
   const cy = Math.min(map.height - 1, Math.max(0, y));
   const e = map.elevation[cy * map.width + cx]!;
   const t = map.tiles[cy * map.width + cx] as Terrain;
-  if (t === Terrain.Mountain) return 1.2 + (e - 170) * 0.13;
+  if (t === Terrain.Mountain) return 1.4 + (e - 170) * 0.2;
   const h = (e - waterLevel) * HEIGHT_SCALE;
   return t === Terrain.Water ? Math.min(h, -0.25) : Math.max(h, 0.12);
 }
@@ -68,7 +68,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const patch = 0.9 + ((hash2(x >> 2, y >> 2, map.seed) & 63) / 63) * 0.12 + ((hash2(x, y, map.seed ^ 0x55) & 15) / 15) * 0.06;
       tmp.setRGB((r / 4) * patch, (g / 4) * patch, (b / 4) * patch);
       const hh = corner(x, y);
-      if (hh > 5) tmp.lerp(snow, Math.max(0, Math.min(1, (hh - 6.5) / 3)));
+      if (hh > 3) {
+        // skała: ciemniejsze i jaśniejsze warstwy, powyżej nierównej linii śniegu biało
+        const strata = 0.82 + ((hash2(x >> 1, Math.round(hh * 2.2), map.seed ^ 0x99) & 31) / 31) * 0.3;
+        tmp.setRGB(0.47 * strata, 0.45 * strata, 0.43 * strata);
+        const line = 8.5 + ((hash2(x >> 2, y >> 2, map.seed ^ 0x4d) & 63) / 63) * 3;
+        tmp.lerp(snow, Math.max(0, Math.min(1, (hh - line) / 1.6)));
+      }
       const i = (y * (w + 1) + x) * 3;
       cornerCol[i] = tmp.r; cornerCol[i + 1] = tmp.g; cornerCol[i + 2] = tmp.b;
       nv.set(corner(Math.max(0, x - 1), y) - corner(Math.min(w, x + 1), y), 2, corner(x, Math.max(0, y - 1)) - corner(x, Math.min(h, y + 1))).normalize();
@@ -166,13 +172,46 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   beyond.rotation.x = -Math.PI / 2;
   beyond.position.y = -0.3;
   group.add(beyond);
-  const peaks: THREE.Matrix4[] = [];
+  // Szczyty rzeźbione: stożek o wielu ściankach z poszarpanymi graniami, żlebami i czapą śniegu.
+  // Trzy różne bryły, powielane z innym obrotem, wysokością i szerokością.
+  const peakGeo = (variant: number): THREE.BufferGeometry => {
+    const geo = new THREE.ConeGeometry(1, 1, 22, 14, true).toNonIndexed();
+    geo.translate(0, 0.5, 0);
+    const pos2 = geo.getAttribute('position');
+    const colors = new Float32Array(pos2.count * 3);
+    const c2 = new THREE.Color(), rock = new THREE.Color(), dark = new THREE.Color(0x4a4744), white = new THREE.Color(0xf4f2ec);
+    const n2 = (a: number, b2: number, salt: number): number => (hash2(Math.round(a * 1000), Math.round(b2 * 1000), map.seed ^ (salt + variant * 7919)) & 1023) / 1023;
+    for (let i = 0; i < pos2.count; i++) {
+      const x = pos2.getX(i), y = pos2.getY(i), z = pos2.getZ(i);
+      const ang = Math.atan2(z, x);
+      const ridges = 5 + variant;
+      // granie i żleby: promień faluje wokół szczytu, mocniej u podstawy
+      const ridge = Math.sin(ang * ridges + variant * 2) * 0.16 + Math.sin(ang * (ridges * 2 + 1) + y * 5) * 0.07;
+      const rough = (n2(Math.round(ang * 6) / 6, Math.round(y * 9) / 9, 1) - 0.5) * 0.14;
+      const k = 1 + (ridge + rough) * (1 - y * 0.6);
+      const drop = (n2(Math.round(ang * 4) / 4, 0, 2) - 0.5) * 0.12 * y; // nierówny wierzchołek
+      pos2.setXYZ(i, x * k, y + drop * (1 - y) * 2, z * k);
+      const strata = 0.75 + n2(0, Math.round(y * 16) / 16, 3) * 0.4;
+      rock.setRGB(0.5 * strata, 0.48 * strata, 0.46 * strata);
+      c2.copy(rock).lerp(dark, ridge < -0.08 ? 0.45 : 0); // żleby w cieniu
+      const snowLine = 0.52 + Math.sin(ang * 3 + variant) * 0.08 + (n2(Math.round(ang * 8) / 8, 0, 4) - 0.5) * 0.14;
+      // śnieg leży wyżej na graniach i schodzi żlebami w dół
+      const snowK = Math.max(0, Math.min(1, (y - snowLine + (ridge < 0 ? 0.1 : 0)) / 0.1));
+      c2.lerp(white, snowK);
+      colors[i * 3] = c2.r; colors[i * 3 + 1] = c2.g; colors[i * 3 + 2] = c2.b;
+    }
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.computeVertexNormals();
+    return geo;
+  };
+  const peakMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, bumpMap: bump('soil'), bumpScale: 1.5 });
+  const variants: THREE.Matrix4[][] = [[], [], []];
   const pm = new THREE.Matrix4();
   const pq = new THREE.Quaternion();
   const yAxis = new THREE.Vector3(0, 1, 0);
   const ringStep = 5;
-  for (let ring = 0; ring < 6; ring++) {
-    const d = 1 + ring * 6;
+  for (let ring = 0; ring < 7; ring++) {
+    const d = 2 + ring * 6;
     for (let side = 0; side < 4; side++) {
       const len = (side % 2 === 0 ? w : h) + d * 2;
       for (let i = 0; i < len; i += ringStep) {
@@ -181,19 +220,21 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const out = d + (((r >>> 4) & 15) / 15) * 4;
         const px = side === 0 ? along : side === 2 ? along : side === 1 ? w / 2 + out : -w / 2 - out;
         const pz = side === 0 ? -h / 2 - out : side === 2 ? h / 2 + out : along;
-        const height = 9 + ring * 2.5 + (((r >>> 8) & 255) / 255) * 9;
-        const radius = 5 + (((r >>> 16) & 255) / 255) * 5;
-        pq.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI);
-        pm.compose(new THREE.Vector3(px, -0.3, pz), pq, new THREE.Vector3(radius, height, radius));
-        peaks.push(pm.clone());
+        // dalsze pasma wyższe, żeby za pierwszym rzędem było widać kolejne
+        const height = 12 + ring * 4.5 + (((r >>> 8) & 255) / 255) * 12;
+        const radius = 6 + (((r >>> 16) & 255) / 255) * 6 + ring * 0.6;
+        pq.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
+        pm.compose(new THREE.Vector3(px, -0.4, pz), pq, new THREE.Vector3(radius, height, radius));
+        variants[r % 3]!.push(pm.clone());
       }
     }
   }
-  const peakGeo = new THREE.ConeGeometry(1, 1, 5);
-  peakGeo.translate(0, 0.5, 0);
-  const peakMesh = new THREE.InstancedMesh(peakGeo, new THREE.MeshLambertMaterial({ color: 0x8b8880, flatShading: true }), peaks.length);
-  peaks.forEach((m, i) => peakMesh.setMatrixAt(i, m));
-  group.add(peakMesh);
+  variants.forEach((list, v) => {
+    if (!list.length) return;
+    const mesh = new THREE.InstancedMesh(peakGeo(v), peakMat, list.length);
+    list.forEach((mm, i) => mesh.setMatrixAt(i, mm));
+    group.add(mesh);
+  });
 
   const heightAt = (fx: number, fy: number): number => {
     const x = Math.max(0, Math.min(w - 1.001, fx)), y = Math.max(0, Math.min(h - 1.001, fy));

@@ -49,6 +49,7 @@ const M = {
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
   hay: mat(0xe0c466, 'thatch'),
   ore: mat(0x8a4a2c),
+  wattle: mat(0x9a7a4a, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
   castle: mat(0xf2e2ba, 'ashlar'), castleDark: mat(0xcdb98e, 'ashlar'), castlePlain: mat(0xd6c49a),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
@@ -750,22 +751,54 @@ const BUILDERS: Record<string, Builder> = {
   roadSand(g) { box(g, M.roadSand, 0.96, 0.04, 0.96); },
   roadStone(g) { box(g, M.roadStone, 0.96, 0.05, 0.96); },
   camp(g) {
-    box(g, M.soil, 1.9, 0.04, 1.9);
-    // wiata: cztery słupy i skośny dach nad ławami
-    for (const [x, z] of [[-0.85, -0.85], [0.85, -0.85]] as const) box(g, M.woodDark, 0.09, 1.0, 0.09, x, 0, z);
-    for (const [x, z] of [[-0.85, -0.1], [0.85, -0.1]] as const) box(g, M.woodDark, 0.09, 0.75, 0.09, x, 0, z);
-    const roof = box(g, M.thatch, 1.95, 0.06, 1.0, 0, 0.88, -0.48);
-    roof.rotation.x = 0.33;
-    box(g, M.wood, 1.5, 0.06, 0.2, 0, 0.2, -0.62);
-    box(g, M.woodDark, 0.08, 0.2, 0.16, -0.6, 0, -0.62);
-    box(g, M.woodDark, 0.08, 0.2, 0.16, 0.6, 0, -0.62);
-    // kłody do siedzenia wokół ogniska
-    for (const [x, z, rot] of [[-0.62, 0.45, 0.5], [0.62, 0.45, -0.5]] as const) {
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.6, 7), M.bark);
-      log.rotation.set(Math.PI / 2, 0, rot);
-      log.position.set(x, 0.12, z);
+    // Wiata dla ludzi bez pracy: ciesielska altana z dwuspadową strzechą, plecioną ścianą od wiatru,
+    // ławami, beczką i zapasem drewna; ognisko z kociołkiem przed nią
+    box(g, M.soil, 1.9, 0.03, 1.9);
+    const px = 0.82, back = -0.9, front = -0.05, top = 0.95;
+    for (const sx of [-1, 1]) for (const z of [back, front]) {
+      box(g, M.woodDark, 0.09, top, 0.09, sx * px, 0, z);
+      // zastrzały pod płatwią
+      const brace = box(g, M.woodDark, 0.05, 0.36, 0.05, sx * (px - 0.13), top - 0.33, z);
+      brace.rotation.z = sx * 0.8;
+    }
+    for (const z of [back, front]) box(g, M.woodDark, 1.8, 0.07, 0.08, 0, top, z);
+    for (const sx of [-1, 1]) box(g, M.woodDark, 0.08, 0.07, 0.95, sx * px, top, (back + front) / 2);
+    layeredRoof(g, M.thatch, 2.0, 0.55, 1.2, top + 0.05, 0, (back + front) / 2);
+    // pleciona ścianka z tyłu i z jednego boku
+    box(g, M.wattle, 1.6, 0.55, 0.04, 0, 0.05, back);
+    box(g, M.wattle, 0.04, 0.55, 0.8, -px, 0.05, (back + front) / 2);
+    // ławy pod dachem
+    box(g, M.plank, 1.3, 0.05, 0.22, 0.05, 0.22, back + 0.2);
+    for (const x of [-0.5, 0.6]) box(g, M.woodDark, 0.06, 0.2, 0.18, x, 0.03, back + 0.2);
+    box(g, M.plank, 0.2, 0.05, 0.6, -px + 0.18, 0.22, -0.45);
+    box(g, M.woodDark, 0.16, 0.2, 0.06, -px + 0.18, 0.03, -0.45);
+    // beczka z wodą, kubki i stos drewna na opał
+    const barrel = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.34, 10), M.wood), 0.14, 0.34);
+    barrel.position.set(0.68, 0.2, -0.3);
+    g.add(barrel);
+    for (const y of [0.1, 0.3]) { const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.148, 0.01, 4, 12), M.iron); hoop.rotation.x = Math.PI / 2; hoop.position.set(0.68, y, -0.3); g.add(hoop); }
+    for (let row = 0; row < 3; row++) for (let k = 0; k < 4 - row; k++) {
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.4, 6), row % 2 ? M.bark : M.wood);
+      log.rotation.x = Math.PI / 2;
+      log.position.set(0.5 + k * 0.1 + row * 0.05, 0.08 + row * 0.09, 0.75);
       g.add(log);
     }
+    // kłody do siedzenia wokół ogniska
+    for (const [x, z, rot] of [[-0.6, 0.5, 0.5], [0.52, 0.42, -0.6], [-0.05, 0.86, 1.57]] as const) {
+      const seat = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.55, 8), M.bark);
+      seat.rotation.set(Math.PI / 2, 0, rot);
+      seat.position.set(x, 0.11, z);
+      g.add(seat);
+    }
+    // trójnóg z kociołkiem nad ogniem
+    for (let k = 0; k < 3; k++) {
+      const a2 = k * 2.094 + 0.5;
+      const leg = box(g, M.woodDark, 0.025, 0.72, 0.025, Math.cos(a2) * 0.2, 0, 0.35 + Math.sin(a2) * 0.2);
+      leg.rotation.set(Math.sin(a2) * -0.27, 0, Math.cos(a2) * 0.27);
+    }
+    const pot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 8, 6, 0, Math.PI * 2, Math.PI * 0.35), M.iron);
+    pot.position.set(0, 0.42, 0.35);
+    g.add(pot);
     // ognisko: krąg nieregularnych polnych kamieni, popiół, polana ułożone w stożek, żar i płomienie
     const ash = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.03, 10), M.ash);
     ash.position.set(0, 0.055, 0.35);
