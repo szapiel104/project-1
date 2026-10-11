@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.3.8 — ładunki (2026-10-11)
+
+- Chłopi niosą przed sobą to, co faktycznie niosą: kosz jabłek, kosz z bochenkami, snop zboża, worek mąki, blok kamienia, sztaby żelaza
+
 ## 0.3.7 — wycinka lasu i sala tronowa (2026-10-11)
 
 - Drwal rąbie drzewo, które przewraca się i znika; zostaje pniak i polana, na której można budować

@@ -37,8 +37,8 @@ export class Figures {
     add(limb(0.075, 0.23, 0.085), 0x5a4632, -0.055, 0.23, 0, (s) => s);
     add(limb(0.075, 0.23, 0.085), 0x5a4632, 0.055, 0.23, 0, (s) => -s);
     add(new THREE.BoxGeometry(0.2, 0.25, 0.13).translate(0, 0.125, 0), null, 0, 0.22, 0, still);
-    add(limb(0.06, 0.21, 0.065), null, -0.135, 0.45, 0, (s, up) => (up ? -2.5 : -s * 0.8));
-    add(limb(0.06, 0.21, 0.065), null, 0.135, 0.45, 0, (s, up) => (up ? -2.5 : s * 0.8));
+    add(limb(0.06, 0.21, 0.065), null, -0.135, 0.45, 0, (s, up) => (up ? -1.35 : -s * 0.8));
+    add(limb(0.06, 0.21, 0.065), null, 0.135, 0.45, 0, (s, up) => (up ? -1.35 : s * 0.8));
     add(new THREE.IcosahedronGeometry(0.085, 1), 0xe2bd94, 0, 0.555, 0, still);
     const hat = mergeGeometries([
       new THREE.CylinderGeometry(0.15, 0.15, 0.018, 10).translate(0, 0.0, 0),

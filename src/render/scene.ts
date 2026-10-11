@@ -9,6 +9,7 @@ import { FP, Phase, type GameState } from '../sim/state';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { Figures } from './peasants';
+import { createLoads } from './loads';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 
 export interface TileRef { x: number; y: number }
@@ -38,7 +39,7 @@ export class GameRenderer {
   private figures: Figures;
   private facing = new Map<number, number>();
   private camps = new Map<number, GameState['buildings'][number]>();
-  private loads: THREE.InstancedMesh;
+  private loads: Map<number, THREE.InstancedMesh>;
   private logs: THREE.InstancedMesh;
   private planks: THREE.InstancedMesh;
   private time = 0;
@@ -48,7 +49,6 @@ export class GameRenderer {
   private selectedId = 0;
   private cutSeen = 0;
   private tmp = new THREE.Object3D();
-  private color = new THREE.Color();
 
   onHover: (tile: TileRef | null) => void = () => {};
   onClick: (tile: TileRef, touch: boolean) => void = () => {};
@@ -86,16 +86,14 @@ export class GameRenderer {
     this.ghost = flat(new THREE.PlaneGeometry(1, 1), 0x3f9b3f, 0.4);
     this.selection = flat(new THREE.RingGeometry(0.62, 0.72, 4, 1, Math.PI / 4), 0xfff3c4);
 
-    const unitMat = (): THREE.MeshLambertMaterial => new THREE.MeshLambertMaterial({ flatShading: true });
-    const load = new THREE.BoxGeometry(0.2, 0.16, 0.2); load.translate(0, 0.76, 0.02);
     this.figures = new Figures(MAX_UNITS, this.scene);
-    this.loads = new THREE.InstancedMesh(load, unitMat(), MAX_UNITS);
+    this.loads = createLoads(MAX_UNITS, this.scene);
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
     const log = mergeGeometries([new THREE.CylinderGeometry(0.06, 0.06, 0.62, 6).rotateX(Math.PI / 2).translate(0.14, 0.52, 0), new THREE.CylinderGeometry(0.055, 0.055, 0.56, 6).rotateX(Math.PI / 2).translate(-0.14, 0.52, 0)]);
     this.logs = new THREE.InstancedMesh(log, new THREE.MeshLambertMaterial({ color: RESOURCE_DEFS.wood.color, flatShading: true }), MAX_UNITS);
     const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.14, 0.53, 0);
     this.planks = new THREE.InstancedMesh(plank, new THREE.MeshLambertMaterial({ color: 0xc9a26b, flatShading: true }), MAX_UNITS);
-    for (const m of [this.loads, this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
+    for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
 
     this.cam = new StrategyCamera(canvas);
     canvas.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') this.hover(this.pick(e)); });
@@ -358,13 +356,15 @@ export class GameRenderer {
       t.scale.setScalar(wood && u.phase !== Phase.ToHome ? 1 : 0);
       t.updateMatrix();
       this.planks.setMatrixAt(i, t.matrix);
-      t.scale.setScalar(u.carryRes < 0 || wood ? 0 : 1);
-      t.updateMatrix();
-      this.loads.setMatrixAt(i, t.matrix);
-      this.loads.setColorAt(i, this.color.setHex(u.carryRes >= 0 ? RESOURCE_DEFS[RESOURCES[u.carryRes]!].color : 0));
+      // każdy surowiec ma własny wygląd: kosz jabłek, bochenki, snop, worek, blok, sztaby
+      for (const [res, mesh] of this.loads) {
+        t.scale.setScalar(u.carryRes === res ? 1 : 0);
+        t.updateMatrix();
+        mesh.setMatrixAt(i, t.matrix);
+      }
     }
     this.figures.finish(n);
-    for (const m of [this.loads, this.logs, this.planks]) {
+    for (const m of [...this.loads.values(), this.logs, this.planks]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;
