@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.4.5 — dachy, kostka, bez cokołów (2026-10-11)
+
+- Droga kamienna jako rzymska kostka: drobne, obłe kamienie w falujących rzędach
+- Dachy chat, tartaku, piekarni i chaty rybaka zrobione jak na stodole: ciemny okap, gruba warstwa, kalenica
+- Pod budynkami nie ma już żadnego podniesienia: budynek jest lekko wtopiony w teren
+
 ## 0.4.4 — łagodniejsze światło (2026-10-11)
 
 - Dzień: słabsze, mniej żółte słońce i więcej rozproszonego światła nieba, więc cienie są miększe i nic się nie przepala

@@ -45,7 +45,7 @@ const M = {
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
   ash: mat(0x4a4540), rock: mat(0x9a968c), rockDark: mat(0x77736a),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
-  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xc4c3bf, 'cobble'),
+  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xb9b6b0, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
   hay: mat(0xe0c466, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
@@ -88,11 +88,19 @@ function pyramid(g: THREE.Group, m: THREE.Material, r: number, h: number, x: num
   g.add(mesh);
 }
 
+/** Dach jak na stodole: ciemniejszy okap pod spodem, gruba warstwa na wierzchu i kalenica z żerdzi. */
+function layeredRoof(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, y: number, x = 0, z = 0): void {
+  const eave = m === M.thatch ? M.thatchDark : M.woodDark;
+  gable(g, eave, w * 1.06, h * 0.9, d * 1.1, y - 0.035, x, z);
+  gable(g, m, w, h, d, y + 0.02, x, z);
+  box(g, M.woodDark, w * 1.03, 0.05, 0.07, x, y + h - 0.01, z);
+}
+
 /** Chata. Z `open` dach i ściany dają się zdjąć, żeby pokazać wnętrze, gdy ktoś w środku pracuje. */
 function hut(g: THREE.Group, wall: THREE.Material, roof: THREE.Material, w: number, d: number, h: number, x = 0, z = 0, open = false): THREE.Group {
   const shell = box(g, wall, w, h, d, x, 0, z);
   const top = new THREE.Group();
-  gable(top, roof, w * 1.12, h * 0.75, d * 1.15, h, x, z);
+  layeredRoof(top, roof, w * 1.14, h * 0.8, d * 1.18, h, x, z);
   g.add(top);
   box(g, M.woodDark, w * 0.22, h * 0.6, 0.05, x, 0, z + d / 2 + 0.01);
   const interior = new THREE.Group();
@@ -587,7 +595,7 @@ const BUILDERS: Record<string, Builder> = {
     for (const [x, z] of [[-0.75, -0.6], [0.15, -0.6], [-0.75, 0.1], [0.15, 0.1]] as const) box(g, M.woodDark, 0.09, 0.3, 0.09, x, 0, z);
     box(g, M.plank, 1.15, 0.06, 0.95, -0.3, 0.3, -0.25);
     box(g, M.wood, 0.95, 0.6, 0.75, -0.3, 0.36, -0.25);
-    gable(g, M.thatch, 1.1, 0.5, 0.95, 0.96, -0.3, -0.25);
+    layeredRoof(g, M.thatch, 1.12, 0.52, 0.98, 0.96, -0.3, -0.25);
     box(g, M.woodDark, 0.22, 0.42, 0.04, -0.3, 0.36, 0.13);
     box(g, M.window, 0.2, 0.2, 0.03, 0.18, 0.55, -0.25).rotation.y = Math.PI / 2;
     // suszarnia: dwa słupki, żerdź i wiszące ryby
