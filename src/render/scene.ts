@@ -84,6 +84,11 @@ export class GameRenderer {
 
   onHover: (tile: TileRef | null) => void = () => {};
   onClick: (tile: TileRef, touch: boolean) => void = () => {};
+  /** Kliknięto w chłopa o tym numerze */
+  onUnit: (id: number) => void = () => {};
+  private unitSpots: { id: number; x: number; z: number }[] = [];
+  private selectedUnit = 0;
+  private unitY = new Map<number, number>();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
@@ -173,6 +178,8 @@ export class GameRenderer {
     canvas.addEventListener('pointerleave', () => this.hover(null));
     canvas.addEventListener('pointerup', (e) => {
       if (e.button !== 0 || (this.cam.dragged && !this.painting)) return;
+      // najpierw sprawdzamy, czy kliknięto w człowieka (nie w trybie malowania dróg i wyburzania)
+      if (!this.painting) { const id = this.pickUnit(e); if (id) { this.onUnit(id); return; } }
       // kliknięcie w dach albo ścianę liczy się jako kliknięcie w ten budynek, a nie w ziemię za nim
       const tile = this.pickBuilding(e) ?? this.pick(e);
       if (tile) this.onClick(tile, e.pointerType === 'touch');
@@ -253,6 +260,7 @@ export class GameRenderer {
 
   setSelection(buildingId: number): void {
     this.selectedId = buildingId;
+    if (buildingId) this.selectedUnit = 0;
     const b = this.state?.buildings.find((x) => x.id === buildingId);
     const mesh = this.buildingMeshes.get(buildingId);
     if (!b || !mesh) { this.selection.visible = false; return; }
@@ -492,6 +500,8 @@ export class GameRenderer {
     const { width, height } = g.map;
     const n = Math.min(g.units.length, MAX_UNITS);
     const t = this.tmp;
+    this.unitSpots.length = 0;
+    this.unitY.clear();
     const jobs = new Map<number, GameState['buildings'][number]>();
     this.camps.clear();
     for (const b of g.buildings) { jobs.set(b.id, b); if (BUILDINGS[b.type]!.idleSlots && b.door >= 0) this.camps.set(b.door, b); }
@@ -565,6 +575,9 @@ export class GameRenderer {
           if (g.map.tiles[(ty + dy) * width + tx + dx] === Terrain.Water) { t.rotation.set(0, Math.atan2(dx, dy), 0); break; }
         swing = 0;
       } else if (u.phase === Phase.WorkingSite && !this.calm) swing = Math.sin(this.time * 9 + u.id) * 1.1;
+      this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
+      this.unitY.set(u.id, t.position.y);
+      if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
       t.scale.setScalar(1);
       t.updateMatrix();
       this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
@@ -572,7 +585,7 @@ export class GameRenderer {
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
       if (torchOn) this.handTorches.setMatrixAt(i, t.matrix); else this.handTorches.setMatrixAt(i, ZERO);
-      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !(wood && u.phase === Phase.ToHome), TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !(wood && u.phase === Phase.ToHome), TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(wood && u.phase === Phase.ToHome ? 1 : 0);
       t.updateMatrix();
@@ -604,6 +617,25 @@ export class GameRenderer {
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
     this.cam.resize(w, h);
+  }
+
+  /** Zaznacza chłopa: pierścień chodzi za nim. 0 zdejmuje zaznaczenie. */
+  setUnitSelection(id: number): void { this.selectedUnit = id; if (id) this.selectedId = 0; else if (!this.selectedId) this.selection.visible = false; }
+
+  private pickUnit(e: PointerEvent): number {
+    if (!this.view) return 0;
+    const r = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    this.ray.setFromCamera(ndc, this.cam.camera);
+    // odległość promienia od środka sylwetki; wygrywa najbliższa postać w zasięgu
+    let best = 0, bestD = 0.3;
+    const p = new THREE.Vector3();
+    for (const u of this.unitSpots) {
+      p.set(u.x, (this.unitY.get(u.id) ?? 0) + 0.33, u.z);
+      const d = this.ray.ray.distanceToPoint(p);
+      if (d < bestD) { bestD = d; best = u.id; }
+    }
+    return best;
   }
 
   private pickBuilding(e: PointerEvent): TileRef | null {

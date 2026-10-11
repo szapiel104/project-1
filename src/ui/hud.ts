@@ -47,6 +47,8 @@ export interface Hud {
   update(v: HudView): void;
   setPicked(id: string | null): void;
   showInfo(info: BuildingInfo | null): void;
+  /** Karta mieszkańca: imię i kilka wierszy opisu */
+  showPerson(person: { name: string; lines: string[] } | null): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
@@ -421,6 +423,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       buildFoot.hidden = id === null;
       if (id) open(-1);
       if (id && phone()) showCategory(null);
+    },
+    showPerson(person) {
+      info.hidden = !person;
+      if (!person) return;
+      infoId = 0;
+      setText(infoName, person.name);
+      setText(infoDesc, person.lines[0] ?? '');
+      infoWorker.hidden = person.lines.length < 2;
+      infoWorker.textContent = '';
+      person.lines.slice(1).forEach((line, k) => { if (k) infoWorker.append(document.createElement('br')); infoWorker.append(line); });
+      demolish.hidden = true;
     },
     showInfo(i) {
       info.hidden = !i;

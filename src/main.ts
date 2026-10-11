@@ -1,5 +1,6 @@
 import { BUILDINGS, buildingIndex, footprint } from './data/buildings';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
+import { BYNAMES, FIRST_NAMES } from './data/names';
 import { t } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt } from './sim/clock';
@@ -62,7 +63,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
   onSpeed: (s) => { speed = s; },
   onDemolish: (id) => { pending.push({ type: 'demolish', player: ME, id }); select(0); },
-  onCloseInfo: () => select(0),
+  onCloseInfo: () => { selectUnit(0); select(0); },
   onRotate: () => rotate(),
   onWreck: () => setWreck(!wrecking),
 }, renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
@@ -75,6 +76,8 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState): void 
   renderer.setState(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME);
   hud.setSeed(seedText, preset);
   pick(null);
+  selectedUnit = 0;
+  renderer.setUnitSelection(0);
   select(0);
   try { history.replaceState(null, '', `#${preset}/${encodeURIComponent(seedText)}`); } catch { /* podgląd bez dostępu do historii */ }
   refresh();
@@ -99,7 +102,34 @@ function rotate(): void {
   updateGhost();
 }
 
+let selectedUnit = 0;
+
+/** Imię, przydomek i wiek wynikają na stałe z numeru chłopa i ziarna mapy. */
+function personCard(id: number): { name: string; lines: string[] } | null {
+  const u = game.units.find((x) => x.id === id);
+  if (!u) return null;
+  const h = (salt: number): number => { let v = (id * 2654435761 + game.map.seed + salt * 40503) >>> 0; v ^= v >>> 15; v = Math.imul(v, 0x2c1b3c6d); return (v ^ (v >>> 12)) >>> 0; };
+  const job = game.buildings.find((b) => b.id === u.job);
+  const guild = job ? t(`guild.${BUILDINGS[job.type]!.id}`) : '';
+  return {
+    name: `${FIRST_NAMES[h(1) % FIRST_NAMES.length]} ${BYNAMES[h(2) % BYNAMES.length]}`,
+    lines: [
+      `${16 + (h(3) % 45)} ${t('person.age')}`,
+      job ? `${t('person.guild')} ${guild}` : t('person.none'),
+      `${t('person.doing')}: ${t(`phase.${u.phase}`)}`,
+    ],
+  };
+}
+
+function selectUnit(id: number): void {
+  selectedUnit = id;
+  if (id) { selected = 0; renderer.setSelection(0); }
+  renderer.setUnitSelection(id);
+  hud.showPerson(id ? personCard(id) : null);
+}
+
 function select(id: number): void {
+  if (id && selectedUnit) { selectedUnit = 0; renderer.setUnitSelection(0); }
   selected = id;
   const b = game.buildings.find((x) => x.id === id);
   renderer.setSelection(b ? id : 0);
@@ -135,6 +165,8 @@ renderer.onPaint = (tile) => {
     pending.push({ type: 'build', player: ME, building: picked, x: tile.x, y: tile.y });
 };
 
+renderer.onUnit = (id) => { if (!picked && !wrecking) selectUnit(id === selectedUnit ? 0 : id); };
+
 renderer.onClick = (tile, touch) => {
   if (wrecking) {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
@@ -144,6 +176,7 @@ renderer.onClick = (tile, touch) => {
     return;
   }
   if (!picked) {
+    if (selectedUnit) selectUnit(0);
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
     select(id === selected ? 0 : id);
     return;
@@ -195,6 +228,10 @@ function refresh(): void {
     delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable,
   });
   hud.setHash(stateHash(game));
+  if (selectedUnit) {
+    const card = personCard(selectedUnit);
+    if (card) hud.showPerson(card); else selectUnit(0); // odszedł z osady
+  }
   if (selected) {
     const b = game.buildings.find((x) => x.id === selected);
     if (!b) select(0);

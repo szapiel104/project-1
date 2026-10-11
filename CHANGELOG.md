@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.5.1 — mieszkańcy (2026-10-11)
+
+- Chłopi różnią się wyglądem: buty, pas, dłonie, kolor włosów i skóry, odcień tuniki, broda, fartuch, wzrost oraz nakrycie głowy (słomkowy kapelusz, kaptur, czapka, chustka albo goła głowa)
+- Kliknięcie w chłopa pokazuje jego kartę: imię z przydomkiem, wiek, cech i to, co właśnie robi
+
 ## 0.5.0 — wyburzanie i gruz (2026-10-11)
 
 - Tryb „Wyburzanie”: kliknięcie usuwa budynek, przeciągnięcie usuwa drogę
