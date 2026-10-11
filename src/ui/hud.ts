@@ -188,10 +188,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const src = thumbs.get(def.id);
     if (src) {
       const img = el('img');
-      img.src = src; img.alt = ''; img.width = 80; img.height = 80; img.draggable = false;
+      img.src = src; img.alt = ''; img.width = 44; img.height = 44; img.draggable = false;
       b.append(img);
     }
-    b.append(el('span', 'build-name', t(def.name)), el('span', 'build-cost', costText(def)));
+    const text = el('span', 'card-text');
+    text.append(el('span', 'build-name', t(def.name)), el('span', 'build-cost', costText(def)));
+    b.append(text);
     b.addEventListener('click', () => events.onPickBuilding(picked === def.id ? null : def.id));
     buildButtons.set(def.id, b);
     cards.append(b);
@@ -203,8 +205,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   cancel.hidden = true;
   cancel.addEventListener('click', () => events.onPickBuilding(null));
   buildFoot.append(buildHint, cancel);
-  barhead.append(cats, tabs);
-  buildbar.append(barhead, cards, buildFoot);
+  barhead.append(cats, cards, tabs);
+  buildbar.append(barhead, buildFoot);
 
   // Dwór
   const court = section(t('hud.court'), 'court');
