@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.4.6 — kopalnia i spichlerz (2026-10-11)
+
+- Kopalnia żelaza: skalny garb z żyłami rudy, sztolnia w drewnianej obudowie, tory z wózkiem pełnym rudy, kołowrót, hałda urobku, latarnia
+- Spichlerz: na kamiennych grzybkach, ściany szachulcowe z zastrzałami, dach jak na stodole, luk z żurawikiem, drabinka i worki
+
 ## 0.4.5 — dachy, kostka, bez cokołów (2026-10-11)
 
 - Droga kamienna jako rzymska kostka: drobne, obłe kamienie w falujących rzędach
