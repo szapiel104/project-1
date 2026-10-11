@@ -8,7 +8,7 @@ type Pattern = Parameters<typeof pattern>[0];
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone];
 const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 1.15, bricks: 1.3, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
 const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
-  const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: tex === 'ashlar' ? 0.9 : 1.4 });
+  const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: tex === 'ashlar' ? 0.9 : tex === 'cobble' ? 0.6 : 1.4 });
   m.userData.tile = (tex && TILE[tex]) || 0;
   return m;
 };
@@ -45,7 +45,7 @@ const M = {
   trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
   ash: mat(0x4a4540), rock: mat(0x9a968c), rockDark: mat(0x77736a),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
-  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xb3ada0, 'cobble'),
+  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xc9c2b2, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
   hay: mat(0xe0c466, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),

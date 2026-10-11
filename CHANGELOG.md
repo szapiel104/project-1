@@ -5,6 +5,7 @@
 - Twierdza po kliknięciu pokazuje komnaty: salę lorda z tronem i kominkiem, jadalnię z długim stołem, komnatę z łożem; w środku lord na tronie, biesiadnicy przy stole, krążący służący i strażnik
 - Górny pasek jak w strategiach: rząd osobnych drewnianych tabliczek (zegar, surowce jako ikona z liczbą, stan osady, sterowanie), bez wielkiego panelu
 - Blanki twierdzy z tego samego kamienia co mur, na basztach ustawione po okręgu; słabszy blask okien
+- Droga kamienna z płyt o krzywych, dopasowanych bokach i wąskiej fudze zamiast okrągłych kamyków
 - Droga piaskowa wygląda jak wydeptana ścieżka o miękkich, nierównych brzegach; kamienna zostaje równym brukiem
 - Przy stodole okrągłe bele siana z powrósłami i kopka z widłami
 

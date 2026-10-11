@@ -122,18 +122,32 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     for (let k = 0; k < 14; k++) { const sx = r() * n, len = n * (0.15 + r() * 0.3); const gr = c.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(sx, 0, n * (0.01 + r() * 0.02), len); }
   },
   cobble(c, n, r) {
-    // bruk: okrągławe kamienie różnej wielkości ciasno obok siebie, ciemna ziemia w szczelinach
-    c.fillStyle = gray(0.38); c.fillRect(0, 0, n, n);
-    const cells = 7, s = n / cells;
-    for (let y = -1; y <= cells; y++)
-      for (let x = -1; x <= cells; x++) {
-        const cx = (x + 0.5 + (y % 2 ? 0.5 : 0) + (r() - 0.5) * 0.3) * s, cy = (y + 0.5 + (r() - 0.5) * 0.3) * s;
-        const rx = s * (0.4 + r() * 0.12), ry = s * (0.36 + r() * 0.12), tone = 0.7 + r() * 0.3;
-        for (const [ox, oy] of [[0, 0], [n, 0], [-n, 0], [0, n], [0, -n]] as const) {
-          const gr = c.createRadialGradient(cx + ox - rx * 0.3, cy + oy - ry * 0.3, 1, cx + ox, cy + oy, rx);
-          gr.addColorStop(0, gray(tone + 0.12)); gr.addColorStop(0.7, gray(tone)); gr.addColorStop(1, gray(tone - 0.22));
-          c.fillStyle = gr; c.beginPath(); c.ellipse(cx + ox, cy + oy, rx, ry, r() * 3, 0, 6.3); c.fill();
-        }
+    // płyty kamienne: nieregularne czworoboki ciasno dopasowane, wąska ciemna fuga, płaska powierzchnia z lekkim zużyciem
+    c.fillStyle = gray(0.36); c.fillRect(0, 0, n, n);
+    const cells = 5, s = n / cells;
+    // wspólne, przesunięte narożniki siatki dają płyty o krzywych bokach, które do siebie pasują
+    const px: number[][] = [], py: number[][] = [];
+    for (let y = 0; y <= cells; y++) {
+      px.push([]); py.push([]);
+      for (let x = 0; x <= cells; x++) { px[y]!.push((r() - 0.5) * s * 0.34); py[y]!.push((r() - 0.5) * s * 0.34); }
+    }
+    for (let x = 0; x <= cells; x++) { px[cells]![x] = px[0]![x]!; py[cells]![x] = py[0]![x]!; }
+    for (let y = 0; y <= cells; y++) { px[y]![cells] = px[y]![0]!; py[y]![cells] = py[y]![0]!; }
+    const gap = n * 0.012;
+    for (let y = 0; y < cells; y++)
+      for (let x = 0; x < cells; x++) {
+        const pts = [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]].map(([gx, gy]) => [gx! * s + px[gy!]![gx!]!, gy! * s + py[gy!]![gx!]!] as [number, number]);
+        const cx = (pts[0]![0] + pts[2]![0]) / 2, cy = (pts[0]![1] + pts[2]![1]) / 2;
+        const tone = 0.76 + r() * 0.22;
+        c.fillStyle = gray(tone);
+        c.beginPath();
+        pts.forEach(([qx, qy], i) => { const ix = qx + Math.sign(cx - qx) * gap, iy = qy + Math.sign(cy - qy) * gap; if (i) c.lineTo(ix, iy); else c.moveTo(ix, iy); });
+        c.closePath(); c.fill();
+        // wytarty środek i ciemniejsze brzegi
+        const gr = c.createRadialGradient(cx, cy, s * 0.1, cx, cy, s * 0.62);
+        gr.addColorStop(0, 'rgba(255,255,255,0.1)'); gr.addColorStop(1, 'rgba(0,0,0,0.16)');
+        c.fillStyle = gr; c.fill();
+        for (let k = 0; k < 10; k++) { c.fillStyle = `rgba(0,0,0,${0.05 + r() * 0.08})`; c.fillRect(cx + (r() - 0.5) * s * 0.7, cy + (r() - 0.5) * s * 0.7, 1 + r() * 3, 1 + r() * 2); }
       }
   },
   water(c, n) {
