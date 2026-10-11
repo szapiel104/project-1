@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 
 const mat = (color: number): THREE.MeshLambertMaterial => new THREE.MeshLambertMaterial({ color, flatShading: true });
 const M = {
@@ -61,24 +62,58 @@ function hut(g: THREE.Group, wall: THREE.Material, roof: THREE.Material, w: numb
 }
 
 export const STOCK_LAYERS = 3;
-const resMats = new Map<number, THREE.MeshLambertMaterial>();
+const STOCK_SLOTS = 9;
 
-/** Pokazuje w składzie tyle skrzyń, ile wynika z zapełnienia; kolory według rodzaju surowca. */
-export function setStockFill(model: THREE.Object3D, ratio: number, colors: { color: number; share: number }[]): void {
+const part = (geo: THREE.BufferGeometry, x: number, y: number, z: number): THREE.BufferGeometry => geo.translate(x, y, z);
+/** Jak wygląda jedna porcja surowca w składzie: deski leżą na deskach, worki na workach. Klucz = id surowca. */
+const PILES: Record<string, { geo: THREE.BufferGeometry; color: number }> = {
+  wood: {
+    color: 0xc9a26b,
+    geo: mergeGeometries([0, 1, 2].flatMap((layer) => [-0.12, 0.12].map((z) => part(new THREE.BoxGeometry(0.46, 0.075, 0.21), 0, -0.1 + layer * 0.095, z)))),
+  },
+  stone: { color: 0xb5b0a2, geo: new THREE.BoxGeometry(0.42, 0.28, 0.42) },
+  iron: {
+    color: 0x5a5560,
+    geo: mergeGeometries([0, 1].flatMap((layer) => [-0.11, 0.11].map((x) => part(new THREE.BoxGeometry(0.17, 0.11, 0.4), x, -0.08 + layer * 0.14, 0)))),
+  },
+  wheat: {
+    color: 0xd9b84a,
+    geo: mergeGeometries([-0.11, 0.11].map((x) => part(new THREE.ConeGeometry(0.12, 0.3, 6), x, 0, 0))),
+  },
+  flour: {
+    color: 0xf1ead8,
+    geo: mergeGeometries([-0.11, 0.11].map((x) => part(new THREE.IcosahedronGeometry(0.13, 0).scale(0.95, 1.05, 1.3), x, -0.01, 0))),
+  },
+};
+const pileMats = new Map<string, THREE.MeshLambertMaterial>();
+
+/**
+ * Układa w składzie stosy surowców. Każdy surowiec dostaje własne miejsca i rośnie w górę,
+ * więc widać osobno deski, kamień, żelazo, zboże i mąkę.
+ */
+export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: string; share: number }[]): void {
   const fill = model.getObjectByName('fill');
   if (!fill) return;
-  const total = fill.children.length;
+  const total = STOCK_SLOTS * STOCK_LAYERS;
   const shown = ratio <= 0 ? 0 : Math.max(1, Math.round(Math.min(1, ratio) * total));
-  let k = 0, acc = 0;
-  fill.children.forEach((child, i) => {
-    child.visible = i < shown;
-    if (i >= shown) return;
-    while (k < colors.length - 1 && (i + 0.5) / shown > acc + colors[k]!.share) { acc += colors[k]!.share; k++; }
-    const color = colors[k]?.color ?? 0x8a5a2b;
-    let m = resMats.get(color);
-    if (!m) { m = mat(color); resMats.set(color, m); }
-    (child as THREE.Mesh).material = m;
-  });
+  for (const child of fill.children) child.visible = false;
+  let slot = 0;
+  for (const r of stock) {
+    const pile = PILES[r.id];
+    if (!pile || slot >= STOCK_SLOTS) continue;
+    let items = Math.max(1, Math.round(r.share * shown));
+    let m = pileMats.get(r.id);
+    if (!m) { m = mat(pile.color); pileMats.set(r.id, m); }
+    while (items > 0 && slot < STOCK_SLOTS) {
+      for (let layer = 0; layer < STOCK_LAYERS && items > 0; layer++, items--) {
+        const mesh = fill.children[layer * STOCK_SLOTS + slot] as THREE.Mesh;
+        mesh.geometry = pile.geo;
+        mesh.material = m;
+        mesh.visible = true;
+      }
+      slot++;
+    }
+  }
 }
 
 /** Animacje budynków: kręcące się skrzydła młyna i dym z komina, tylko gdy ktoś w środku pracuje. */

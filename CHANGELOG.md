@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.2.10 — stosy w składzie (2026-10-11)
+
+- Każdy surowiec leży w składzie na własnym stosie i wygląda inaczej: deski, bloki kamienia, sztaby żelaza, snopy zboża, worki mąki
+
 ## 0.2.9 — chaty i dłuższa praca (2026-10-11)
 
 - Co trzy dostawy chłop idzie do najbliższej chaty odpocząć; chata odsłania wtedy izbę ze stołem i łóżkiem

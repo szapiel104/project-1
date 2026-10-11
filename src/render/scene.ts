@@ -212,9 +212,9 @@ export class GameRenderer {
     this.storesTick = g.tick;
     for (const p of g.players) {
       let left = 0, sum = 0;
-      const colors: { color: number; share: number }[] = [];
+      const colors: { id: string; share: number }[] = [];
       RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile') sum += p.res[i]!; });
-      RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile' && p.res[i]! > 0) colors.push({ color: RESOURCE_DEFS[r].color, share: p.res[i]! / sum }); });
+      RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile' && p.res[i]! > 0) colors.push({ id: r, share: p.res[i]! / sum }); });
       left = sum;
       const stores = g.buildings.filter((b) => b.owner === p.id && BUILDINGS[b.type]!.capacity?.stockpile);
       stores.sort((a, b) => Number(BUILDINGS[a.type]!.id === 'keep') - Number(BUILDINGS[b.type]!.id === 'keep') || a.id - b.id);
