@@ -1,5 +1,19 @@
 # Dziennik zmian
 
+## 0.3.19 — latarnicy, zegar i dach stodoły (2026-10-11)
+
+- Pochodnie zapalają ludzie: o zmierzchu chłopi bez pracy obchodzą budynki i pochodnie na słupach, a gdy ich brakuje, robią to wracający pracownicy; o świcie pochodnie gasną
+- Zegar: tarcza obraca się we właściwą stronę, godzina co kwadrans, a liczby na pasku mają stałą szerokość i nie przesuwają sąsiadów
+- Stodoła: gruba strzecha z ciemnym okapem, kalenica z żerdzi, wiatrownice i daszek nad wrotami
+- Jaśniejszy mur twierdzy
+- Ognisko z kręgiem polnych kamieni, popiołem, polanami w stożek i kilkoma językami ognia
+- Stawiana pochodnia to sam słup, bez wydeptanego placu
+
+## 0.3.18 — kamień w prawdziwej skali (2026-10-11)
+
+- Tekstury układają się według prawdziwych wymiarów ścian: ciosy muru, deski i gonty mają tę samą wielkość na małej i dużej powierzchni, nic się nie rozciąga
+- Mur twierdzy: większe, wyraźniejsze ciosy, mocniejsza wypukłość, cokół i gzyms na donżonie, gładsze baszty
+
 ## 0.3.17 — światło i pochodnie (2026-10-11)
 
 - Pochodnie przy budynkach: słup stoi cały czas, płomień zapala się o zmierzchu i gaśnie o świcie

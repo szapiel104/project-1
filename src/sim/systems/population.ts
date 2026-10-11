@@ -8,7 +8,7 @@ export function spawnPeasant(g: GameState, player: number): Unit | null {
   const x = keep.door % w, y = (keep.door - x) / w;
   const u: Unit = {
     id: g.nextId++, owner: player, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [],
-    job: 0, phase: Phase.Idle, timer: 0, wait: 0, carryRes: -1, carryAmt: 0, trips: 0, home: 0, batches: 0,
+    job: 0, phase: Phase.Idle, timer: 0, wait: 0, carryRes: -1, carryAmt: 0, trips: 0, home: 0, batches: 0, target: 0,
   };
   g.units.push(u);
   return u;

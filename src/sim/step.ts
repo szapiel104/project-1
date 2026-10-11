@@ -4,6 +4,7 @@ import type { GameState } from './state';
 import { economySystem } from './systems/economy';
 import { demolish, placeBuilding } from './systems/placement';
 import { migrationSystem } from './systems/population';
+import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
 
 /** Komendy graczy. To jedyna droga, którą gracz (albo bot, albo sieć) wpływa na grę. */
@@ -42,6 +43,7 @@ function apply(g: GameState, c: Command): void {
 export function step(g: GameState, commands: readonly Command[]): void {
   for (const c of commands) apply(g, c);
   g.tick++;
+  torchSystem(g);
   workerSystem(g);
   migrationSystem(g);
   economySystem(g);

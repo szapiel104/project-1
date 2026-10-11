@@ -35,6 +35,8 @@ export interface Building {
   door: number;
   /** Id pracującego chłopa albo 0 */
   worker: number;
+  /** Czy pochodnia przy budynku jest zapalona (zapalają ją ludzie o zmierzchu, gaśnie o świcie) */
+  lit: boolean;
 }
 
 export const enum Phase {
@@ -50,6 +52,8 @@ export const enum Phase {
   /** Idzie odpocząć do chaty */
   ToRest = 8,
   Resting = 9,
+  /** Idzie zapalić pochodnię przy budynku `target` */
+  ToLight = 10,
 }
 
 export interface Unit {
@@ -74,6 +78,8 @@ export interface Unit {
   trips: number;
   /** Id chaty, w której właśnie odpoczywa, albo 0 */
   home: number;
+  /** Id budynku, przy którym ma zapalić pochodnię, albo 0 */
+  target: number;
 }
 
 export interface GameState {
@@ -196,10 +202,10 @@ export function stateHash(g: GameState): number {
     add(p.id); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait);
-    add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.path.length);
+    add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length);
     for (const t of u.path) add(t);
   }
   return h >>> 0;

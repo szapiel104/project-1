@@ -368,10 +368,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     setHash(hash) { setText(hashLine, `${t('hud.hash')}: ${hash.toString(16).padStart(8, '0')}`); },
     update(v) {
       resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
-      const hh = Math.floor(v.hour), mm = Math.floor(((v.hour - hh) * 60) / 10) * 10;
+      // godzina co kwadrans, stałej szerokości, żeby pasek nie skakał
+      const hh = Math.floor(v.hour), mm = Math.floor(((v.hour - hh) * 60) / 15) * 15;
       setText(clockVal, `${t('hud.day')} ${v.day}, ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
       // południe na górze o 12:00, północ o 24:00
-      disc.setAttribute('transform', `rotate(${(-(v.hour - 12) / 24) * 360})`);
+      disc.setAttribute('transform', `rotate(${((v.hour - 12) / 24) * 360})`);
       setText(popVal, `${v.pop} / ${v.housing}`);
       setText(idleVal, `${v.idle} / ${v.idleSlots}`);
       idleBox.classList.toggle('full', v.idle >= v.idleSlots);

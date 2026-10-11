@@ -4,8 +4,33 @@ import { bump, pattern } from './textures';
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
-const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial =>
-  new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.4 });
+/** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
+const TILE: Partial<Record<Pattern, number>> = { ashlar: 1.15, bricks: 1.3, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
+const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
+  const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: tex === 'ashlar' ? 0.9 : 1.4 });
+  m.userData.tile = (tex && TILE[tex]) || 0;
+  return m;
+};
+
+/** Skaluje współrzędne tekstury ścian pudełka do ich prawdziwych wymiarów. Ściany idą w kolejności: ±X, ±Y, ±Z. */
+function tileBox(geo: THREE.BufferGeometry, w: number, h: number, d: number, k: number): void {
+  const uv = geo.getAttribute('uv');
+  const size: [number, number][] = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
+  for (let f = 0; f < 6; f++)
+    for (let v = 0; v < 4; v++) {
+      const i = f * 4 + v;
+      uv.setXY(i, uv.getX(i) * size[f]![0] * k, uv.getY(i) * size[f]![1] * k);
+    }
+}
+
+/** To samo dla walca: obwód w poziomie, wysokość w pionie. */
+function tileRound(mesh: THREE.Mesh, radius: number, height: number): THREE.Mesh {
+  const k = ((mesh.material as THREE.Material).userData.tile as number) || 0;
+  if (!k) return mesh;
+  const uv = mesh.geometry.getAttribute('uv');
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * Math.PI * 2 * radius * k, uv.getY(i) * height * k);
+  return mesh;
+}
 const M = {
   stone: mat(0xcfc7b3, 'bricks'), stoneDark: mat(0xa39b88, 'bricks'), wood: mat(0x85603a, 'planks'), woodDark: mat(0x5e4329, 'planks'),
   plaster: mat(0xf0e4c4, 'plaster'), thatch: mat(0xd1ad4c, 'thatch'), soil: mat(0x86633d, 'soil'), wheat: mat(0xd9b84a),
@@ -17,13 +42,18 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
-  fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
-  castle: mat(0xe0cfa6, 'ashlar'), castleDark: mat(0xb8a47c, 'ashlar'), castlePlain: mat(0xd6c49a),
+  ash: mat(0x4a4540), rock: mat(0x9a968c), rockDark: mat(0x77736a),
+  flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
+  thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
+  castle: mat(0xf2e2ba, 'ashlar'), castleDark: mat(0xcdb98e, 'ashlar'), castlePlain: mat(0xd6c49a),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
 function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
-  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const k = (m.userData.tile as number) || 0;
+  if (k) tileBox(geo, w, h, d, k);
+  const mesh = new THREE.Mesh(geo, m);
   mesh.position.set(x, y + h / 2, z);
   g.add(mesh);
   return mesh;
@@ -34,6 +64,13 @@ function gable(g: THREE.Group, m: THREE.Material, w: number, h: number, d: numbe
   const geo = new THREE.CylinderGeometry(1, 1, 1, 3, 1);
   geo.rotateX(-Math.PI / 2); // trójkąt pionowo, wierzchołkiem do góry
   geo.rotateY(Math.PI / 2); // kalenica wzdłuż osi X
+  // wzór w prawdziwej skali: w poprzek obwód dachu, wzdłuż jego długość
+  const k = (m.userData.tile as number) || 0;
+  if (k) {
+    const uv = geo.getAttribute('uv');
+    const around = d + 2 * Math.hypot(d / 2, h);
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * around * k, uv.getY(i) * w * k);
+  }
   const mesh = new THREE.Mesh(geo, m);
   mesh.scale.set(w, h / 1.5, d / 1.732);
   mesh.position.set(x, y + h / 3, z);
@@ -229,6 +266,8 @@ const BUILDERS: Record<string, Builder> = {
     const gg = g;
     g = don;
     box(g, S, 1.25, 1.75, 1.25, 0, 1.2, -0.25);
+    box(g, D, 1.31, 0.07, 1.31, 0, 1.95, -0.25);
+    box(g, D, 1.33, 0.12, 1.33, 0, 1.2, -0.25);
     box(g, M.woodDark, 1.5, 0.08, 1.5, 0, 2.9, -0.25);
     box(g, M.wood, 1.48, 0.42, 1.48, 0, 2.98, -0.25);
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, M.woodDark, 0.07, 0.42, 0.07, sx * 0.72, 2.98, -0.25 + sz * 0.72);
@@ -256,10 +295,10 @@ const BUILDERS: Record<string, Builder> = {
     // cztery baszty narożne: lekko zwężane, z gzymsem, blankami i gontowym hełmem
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
       const x = sx * 1.22, z = sz * 1.22;
-      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1.95, 12), S);
+      const t = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1.95, 16), S), 0.45, 1.95);
       t.position.set(x, 0.975, z);
       g.add(t);
-      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.42, 0.2, 12), D);
+      const rim = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.42, 0.2, 16), D), 0.46, 0.2);
       rim.position.set(x, 2.05, z);
       g.add(rim);
       for (let k = 0; k < 8; k += 2) box(g, M.castlePlain, 0.13, 0.14, 0.13, x + Math.cos(k * 0.785) * 0.43, 2.15, z + Math.sin(k * 0.785) * 0.43);
@@ -392,10 +431,16 @@ const BUILDERS: Record<string, Builder> = {
     box(shell, M.plank, 0.04, 0.85, 0.06, 0, 0.2, 0.82);
     for (const s of [-1, 1]) { box(shell, M.plank, 0.75, 0.05, 0.06, 0, 0.45 + s * 0.25, 0.83); box(shell, M.window, 0.26, 0.26, 0.04, s * 0.95, 0.6, 0.81); }
     g.add(shell);
+    // dach: gruba strzecha z ciemniejszym okapem, kalenica z żerdzi, wiatrownice na szczytach i daszek nad wrotami
     const top = new THREE.Group();
     top.name = 'roof';
-    gable(top, M.thatch, 2.85, 0.95, 1.95, 1.15);
-    box(top, M.woodDark, 0.4, 0.4, 0.05, 0, 1.35, 0.99);
+    gable(top, M.thatchDark, 2.95, 0.9, 2.1, 1.1);
+    gable(top, M.thatch, 2.8, 1.0, 1.9, 1.16);
+    box(top, M.woodDark, 2.9, 0.07, 0.09, 0, 2.12, 0);
+    box(top, M.woodDark, 0.36, 0.36, 0.05, 0, 1.4, 0.93);
+    box(top, M.woodDark, 0.07, 0.07, 0.4, 0, 1.82, 1.1);
+    const porch = box(top, M.thatchDark, 1.1, 0.05, 0.45, 0, 1.12, 1.05);
+    porch.rotation.x = 0.45;
     g.add(top);
     box(g, M.wheat, 0.5, 0.3, 0.4, 1.0, 0, 1.0);
     box(g, M.wheat, 0.35, 0.22, 0.35, 0.75, 0.3, 1.0);
@@ -458,17 +503,33 @@ const BUILDERS: Record<string, Builder> = {
       log.position.set(x, 0.12, z);
       g.add(log);
     }
-    // ognisko: krąg kamieni, polana, żar i dym
-    for (let k = 0; k < 7; k++) box(g, M.stoneDark, 0.11, 0.09, 0.11, Math.cos(k * 0.9) * 0.24, 0.04, 0.35 + Math.sin(k * 0.9) * 0.24);
-    for (const rot of [0.4, -0.6, 1.5]) {
-      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.34, 5), M.woodDark);
-      stick.rotation.set(Math.PI / 2 - 0.5, rot, 0);
-      stick.position.set(0, 0.13, 0.35);
+    // ognisko: krąg nieregularnych polnych kamieni, popiół, polana ułożone w stożek, żar i płomienie
+    const ash = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.24, 0.03, 10), M.ash);
+    ash.position.set(0, 0.055, 0.35);
+    g.add(ash);
+    for (let k = 0; k < 9; k++) {
+      const a2 = (k / 9) * Math.PI * 2 + 0.2;
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(0.075 + (k % 3) * 0.012, 0), k % 2 ? M.rock : M.rockDark);
+      rock.scale.set(1 + (k % 2) * 0.25, 0.7 + (k % 3) * 0.12, 1 + ((k + 1) % 2) * 0.2);
+      rock.rotation.set(k * 1.3, k * 2.1, k * 0.7);
+      rock.position.set(Math.cos(a2) * 0.27, 0.07, 0.35 + Math.sin(a2) * 0.27);
+      g.add(rock);
+    }
+    for (let k = 0; k < 5; k++) {
+      const a2 = (k / 5) * Math.PI * 2;
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.032, 0.36, 5), M.bark);
+      stick.position.set(Math.cos(a2) * 0.09, 0.2, 0.35 + Math.sin(a2) * 0.09);
+      stick.rotation.set(Math.sin(a2) * -0.55, 0, Math.cos(a2) * 0.55);
       g.add(stick);
     }
-    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 5), M.ember);
-    flame.position.set(0, 0.26, 0.35);
+    const flame = new THREE.Group();
     flame.name = 'flame';
+    flame.position.set(0, 0.16, 0.35);
+    for (const [x, z, r, hgt, m] of [[0, 0, 0.1, 0.34, M.ember], [0.05, 0.03, 0.06, 0.24, M.flameLight], [-0.05, -0.02, 0.055, 0.2, M.flameLight], [0, 0, 0.05, 0.16, M.flameCore]] as const) {
+      const tongue = new THREE.Mesh(new THREE.ConeGeometry(r, hgt, 6), m);
+      tongue.position.set(x, hgt / 2, z);
+      flame.add(tongue);
+    }
     g.add(flame);
     const smoke = new THREE.Group();
     smoke.name = 'smoke';
@@ -520,7 +581,7 @@ const BUILDERS: Record<string, Builder> = {
     hut(g, M.plaster, M.thatch, 0.7, 0.7, 0.5, -0.95, -0.9);
   },
   mill(g) {
-    const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.7, 8), M.plaster);
+    const tower = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.7, 10), M.plaster), 0.6, 1.7);
     tower.position.y = 0.85;
     tower.name = 'shell';
     g.add(tower);
@@ -590,6 +651,7 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   if (!flag) { flag = mat(teamColor); flagMats.set(teamColor, flag); }
   (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team, flag);
   // fundament, żeby budynek nie wisiał nad nierównym terenem
+  if (id === 'torch') return g; // sama pochodnia: zwykły słup wbity w ziemię, bez wydeptanego placu
   const base = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), M.turf);
   base.name = 'base';
   g.add(base);

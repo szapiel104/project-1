@@ -93,13 +93,13 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
   ashlar(c, n, r) {
     // Mur twierdzy rysowany od razu w pełnej rozdzielczości: ciosy różnej długości, głęboka fuga,
     // każdy kamień z własnym odcieniem, jasną górną krawędzią, cieniem u dołu, wyszczerbieniami i rysami
-    c.fillStyle = gray(0.3); c.fillRect(0, 0, n, n);
-    const rows = 8, h = n / rows, gap = n * 0.006;
+    c.fillStyle = gray(0.44); c.fillRect(0, 0, n, n);
+    const rows = 6, h = n / rows, gap = n * 0.008;
     for (let y = 0; y < rows; y++) {
       let x = -r() * n * 0.12;
       while (x < n) {
-        const w = n * (0.1 + r() * 0.13);
-        const tone = 0.68 + r() * 0.28;
+        const w = n * (0.14 + r() * 0.2);
+        const tone = 0.8 + r() * 0.2;
         const bx = x + gap, by = y * h + gap, bw = w - gap * 2, bh = h - gap * 2;
         c.fillStyle = gray(tone); c.fillRect(bx, by, bw, bh);
         // wypukłość kamienia: jaśniejszy środek, ciemniejące brzegi
@@ -112,7 +112,7 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
         // dziobata powierzchnia po dłucie
         for (let k = 0; k < 26; k++) { c.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${0.05 + r() * 0.1})`; c.fillRect(bx + r() * bw, by + r() * bh, 1 + r() * n * 0.006, 1 + r() * n * 0.004); }
         // wyszczerbiony narożnik
-        if (r() > 0.55) { c.fillStyle = gray(0.3); c.beginPath(); const cx = r() > 0.5 ? bx : bx + bw, cy = r() > 0.5 ? by : by + bh; c.arc(cx, cy, n * (0.006 + r() * 0.01), 0, 6.3); c.fill(); }
+        if (r() > 0.55) { c.fillStyle = gray(0.44); c.beginPath(); const cx = r() > 0.5 ? bx : bx + bw, cy = r() > 0.5 ? by : by + bh; c.arc(cx, cy, n * (0.006 + r() * 0.01), 0, 6.3); c.fill(); }
         // rysa
         if (r() > 0.75) { c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 1; c.beginPath(); let px = bx + r() * bw, py = by; c.moveTo(px, py); for (let k = 0; k < 4; k++) { px += (r() - 0.5) * bw * 0.15; py += bh / 4; c.lineTo(px, py); } c.stroke(); }
         x += w;

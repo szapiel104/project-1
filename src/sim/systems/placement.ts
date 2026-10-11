@@ -107,7 +107,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
 export function addBuilding(g: GameState, type: number, owner: number, x: number, y: number): Building {
   const def = BUILDINGS[type]!;
   const door = findDoor(g, x, y, def.w, def.h);
-  const b: Building = { id: g.nextId++, type, owner, x, y, door, worker: 0 };
+  const b: Building = { id: g.nextId++, type, owner, x, y, door, worker: 0, lit: false };
   for (let ty = y; ty < y + def.h; ty++)
     for (let tx = x; tx < x + def.w; tx++) g.occupancy[ty * g.map.width + tx] = b.id;
   if (door >= 0) g.reserved[door]!++;
@@ -136,6 +136,8 @@ export function demolish(g: GameState, player: number, id: number): boolean {
   g.buildings.splice(i, 1);
   for (const u of g.units) {
     if (u.job === id) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.home = 0; u.batches = 0; }
+    if (u.target === id) { u.target = 0; if (u.phase === Phase.ToLight) u.phase = u.job ? Phase.Returning : Phase.Idle; }
+    if (u.job === id) continue;
     else if (u.home === id) { u.home = 0; u.timer = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
   }
   const p = g.players[player]!;

@@ -45,6 +45,10 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const doors = storeDoors(g, u.owner, kind);
       return (t) => doors.has(t);
     }
+    case Phase.ToLight: {
+      const target = g.buildings.find((b) => b.id === u.target);
+      return target ? (t) => t === target.door : null;
+    }
     case Phase.ToRest: {
       const doors = new Set<number>();
       for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && b.type === HOUSE) doors.add(b.door);
@@ -116,6 +120,13 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       // co kilka dostaw idzie posiedzieć w chacie, o ile jakaś stoi
       if (++u.trips >= RULES.restEvery && g.buildings.some((b) => b.owner === u.owner && b.type === HOUSE)) { u.trips = 0; u.phase = Phase.ToRest; }
       break;
+    case Phase.ToLight: {
+      const target = g.buildings.find((b) => b.id === u.target);
+      if (target) target.lit = true;
+      u.target = 0;
+      u.phase = u.job ? Phase.Returning : Phase.Idle;
+      break;
+    }
     case Phase.ToRest: {
       const here = tileOf(g, u);
       const house = g.buildings.find((b) => b.owner === u.owner && b.type === HOUSE && b.door === here);
@@ -184,7 +195,7 @@ export function workerSystem(g: GameState): void {
     if (u.path.length) { move(g, u); continue; }
 
     const goal = goalFor(g, u, job, prod);
-    if (!goal) { if (u.phase === Phase.ToRest) u.phase = u.job ? Phase.Returning : Phase.Idle; continue; }
+    if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
     const here = tileOf(g, u);
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal);

@@ -264,6 +264,19 @@ describe('ludność i popularność', () => {
   });
 });
 
+describe('pochodnie', () => {
+  it('o zmierzchu ludzie zapalają pochodnie przy budynkach, a o świcie gasną', () => {
+    const g = createGame(5);
+    expect(g.buildings.some((b) => b.lit)).toBe(false);
+    run(g, 1700); // start o 8:00, noc zaczyna się 20:30, czyli po 1250 tickach
+    const mine = g.buildings.filter((b) => b.owner === 0);
+    expect(mine.every((b) => b.lit)).toBe(true);
+    expect(g.units.every((u) => u.target === 0)).toBe(true);
+    run(g, 900); // po świcie
+    expect(g.buildings.some((b) => b.lit)).toBe(false);
+  });
+});
+
 describe('odpoczynek', () => {
   it('po kilku dostawach chłop idzie do chaty, siedzi tam i wraca do pracy', () => {
     const g = createGame(5);

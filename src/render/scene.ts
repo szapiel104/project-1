@@ -333,12 +333,14 @@ export class GameRenderer {
   private syncLamps(g: GameState): void {
     const on = this.night > 0.15;
     const flicker = this.calm ? 1 : 0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07;
-    for (const mesh of this.buildingMeshes.values()) {
+    const lit = new Set<number>();
+    for (const b of g.buildings) if (b.lit) lit.add(b.id);
+    for (const [id, mesh] of this.buildingMeshes) {
       const torch = mesh.getObjectByName('torch');
       if (!torch) continue;
-      // słup stoi cały czas, płomień zapala się o zmierzchu i gaśnie o świcie
+      // słup stoi cały czas; płomień pali się dopiero, gdy ktoś podejdzie i zapali pochodnię
       const flame = torch.getObjectByName('torchflame');
-      if (flame) { flame.visible = on; flame.scale.set(1, 0.8 + flicker * 0.4, 1); }
+      if (flame) { flame.visible = lit.has(id); flame.scale.set(1, 0.8 + flicker * 0.4, 1); }
     }
     this.handTorches.visible = on;
     if (!on) { for (const lamp of this.lamps) lamp.intensity = 0; return; }
@@ -346,9 +348,9 @@ export class GameRenderer {
     if (this.frameNo++ % 6 === 0) {
       const f = this.cam.focus;
       const spots: { v: THREE.Vector3; d: number; k: number }[] = [];
-      for (const mesh of this.buildingMeshes.values()) {
+      for (const [id, mesh] of this.buildingMeshes) {
         const torch = mesh.getObjectByName('torch');
-        if (!torch) continue;
+        if (!torch || !lit.has(id)) continue;
         const v = new THREE.Vector3(mesh.position.x + torch.position.x, mesh.position.y + 1.25, mesh.position.z + torch.position.z);
         spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2, k: 1 });
       }
