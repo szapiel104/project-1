@@ -35,6 +35,7 @@ export class GameRenderer {
   private heads: THREE.InstancedMesh;
   private loads: THREE.InstancedMesh;
   private logs: THREE.InstancedMesh;
+  private planks: THREE.InstancedMesh;
   private time = 0;
   private calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
   private prevPos = new Map<number, [number, number]>();
@@ -78,7 +79,9 @@ export class GameRenderer {
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
     const log = new THREE.CylinderGeometry(0.07, 0.07, 0.62, 6); log.rotateX(Math.PI / 2); log.translate(0.13, 0.44, 0);
     this.logs = new THREE.InstancedMesh(log, new THREE.MeshLambertMaterial({ color: RESOURCE_DEFS.wood.color, flatShading: true }), MAX_UNITS);
-    for (const m of [this.bodies, this.heads, this.loads, this.logs]) { m.count = 0; m.frustumCulled = false; this.scene.add(m); }
+    const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.13, 0.45, 0);
+    this.planks = new THREE.InstancedMesh(plank, new THREE.MeshLambertMaterial({ color: 0xc9a26b, flatShading: true }), MAX_UNITS);
+    for (const m of [this.bodies, this.heads, this.loads, this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; this.scene.add(m); }
 
     this.cam = new StrategyCamera(canvas);
     canvas.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') this.hover(this.pick(e)); });
@@ -144,7 +147,7 @@ export class GameRenderer {
     model.position.set(this.ghost.position.x, top, this.ghost.position.z);
     model.traverse((o) => {
       const mesh = o as THREE.Mesh;
-      if (mesh.isMesh) (mesh.material as THREE.MeshLambertMaterial).emissive.setHex(g.ok ? 0x000000 : 0x7a0f0a);
+      if (mesh.isMesh) (mesh.material as THREE.MeshLambertMaterial).emissive?.setHex(g.ok ? 0x000000 : 0x7a0f0a);
     });
     model.visible = true;
     this.ghostModel = model;
@@ -226,6 +229,8 @@ export class GameRenderer {
     const { width, height } = g.map;
     const n = Math.min(g.units.length, MAX_UNITS);
     const t = this.tmp;
+    const jobs = new Map<number, GameState['buildings'][number]>();
+    for (const b of g.buildings) if (b.worker) jobs.set(b.id, b);
     for (let i = 0; i < n; i++) {
       const u = g.units[i]!;
       const prev = this.prevPos.get(u.id);
@@ -236,6 +241,26 @@ export class GameRenderer {
       const ox = still ? (((u.id * 7) % 5) - 2) * 0.17 : 0;
       const oz = still ? (((u.id * 11) % 5) - 2) * 0.17 : 0;
       t.position.set(fx + ox - width / 2, view.heightAt(fx + ox, fy + oz), fy + oz - height / 2);
+      t.rotation.set(0, 0, 0);
+      // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
+      const job = u.phase === Phase.Working && u.job ? jobs.get(u.job) : undefined;
+      const mode = job ? BUILDINGS[job.type]!.workView : undefined;
+      if (job && mode) {
+        const def = BUILDINGS[job.type]!;
+        const mesh = this.buildingMeshes.get(job.id);
+        const cx = job.x + def.w / 2, cy = job.y + def.h / 2;
+        const k = this.calm ? 0 : this.time;
+        if (mode === 'field') {
+          const wx = cx + Math.sin(k * 0.5 + u.id) * def.w * 0.3, wy = cy + Math.cos(k * 0.37 + u.id * 2) * def.h * 0.3;
+          t.position.set(wx - width / 2, (mesh?.position.y ?? 0) + 0.05, wy - height / 2);
+          t.rotation.x = Math.max(0, Math.sin(k * 5)) * 0.5; // schyla się przy pracy
+        } else {
+          const m = mesh?.getObjectByName('interior')?.children[0];
+          const lx = m ? m.position.x : 0, lz = m ? m.position.z : 0;
+          t.position.set(cx + lx - width / 2 + Math.sin(k * 2) * 0.12, (mesh?.position.y ?? 0) + 0.05, cy + lz - height / 2 + 0.12);
+          t.rotation.y = Math.sin(k * 2) * 0.6;
+        }
+      }
       t.scale.setScalar(1);
       t.updateMatrix();
       this.bodies.setMatrixAt(i, t.matrix);
@@ -245,16 +270,20 @@ export class GameRenderer {
       // kłoda leży wzdłuż kierunku marszu
       const next = u.path[0];
       if (wood && next !== undefined) t.rotation.y = Math.atan2((next % g.map.width) + 0.5 - u.px / FP, Math.floor(next / g.map.width) + 0.5 - u.py / FP);
-      t.scale.setScalar(wood ? 1 : 0);
+      // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
+      t.scale.setScalar(wood && u.phase === Phase.ToHome ? 1 : 0);
       t.updateMatrix();
       this.logs.setMatrixAt(i, t.matrix);
+      t.scale.setScalar(wood && u.phase !== Phase.ToHome ? 1 : 0);
+      t.updateMatrix();
+      this.planks.setMatrixAt(i, t.matrix);
       t.rotation.y = 0;
       t.scale.setScalar(u.carryRes < 0 || wood ? 0 : 1);
       t.updateMatrix();
       this.loads.setMatrixAt(i, t.matrix);
       this.loads.setColorAt(i, this.color.setHex(u.carryRes >= 0 ? RESOURCE_DEFS[RESOURCES[u.carryRes]!].color : 0));
     }
-    for (const m of [this.bodies, this.heads, this.loads, this.logs]) {
+    for (const m of [this.bodies, this.heads, this.loads, this.logs, this.planks]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;

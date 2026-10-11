@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.2.5 — widać, kto pracuje (2026-10-11)
+
+- Drwal niesie kłodę z lasu do chaty, tam tnie ją na deski i dopiero deski odnosi do składu
+- Rolnik i sadownik chodzą po polu i schylają się przy pracy
+- Gdy piekarz albo drwal pracuje w środku, budynek odsłania wnętrze: piec z żarem, stół z bochenkami, kozioł z kłodą
+- Pasek budowy zajmuje jeden niski rząd
+
 ## 0.2.4 — życie w osadzie (2026-10-11)
 
 - Skrzydła młyna kręcą się, a z komina piekarni leci dym, gdy ktoś tam pracuje

@@ -73,7 +73,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
     }
     case Phase.ToHome:
       u.carryRes = -1; u.carryAmt = 0;
-      u.phase = Phase.Working; u.timer = prod?.workTicks ?? 0;
+      u.phase = Phase.Working; u.timer = (prod?.input ? prod.workTicks : prod?.processTicks) ?? prod?.workTicks ?? 0;
       break;
     case Phase.ToSite:
       u.phase = Phase.WorkingSite; u.timer = prod?.workTicks ?? 0;
@@ -131,7 +131,8 @@ export function workerSystem(g: GameState): void {
       if (--u.timer > 0 || !prod) continue;
       u.carryRes = resIndex(prod.output.res);
       u.carryAmt = prod.output.amount;
-      u.phase = Phase.ToStore;
+      // z lasu drwal niesie kłodę najpierw do chaty, tam robi deski i dopiero je odnosi do składu
+      u.phase = u.phase === Phase.WorkingSite && prod.processTicks ? Phase.ToHome : Phase.ToStore;
       continue;
     }
     if (u.path.length) { move(g, u); continue; }

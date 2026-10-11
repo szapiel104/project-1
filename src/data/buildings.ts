@@ -9,6 +9,8 @@ export interface ProductionDef {
   site: 'home' | Terrain;
   /** Czas pracy w tickach */
   workTicks: number;
+  /** Po pracy w terenie chłop wraca do budynku i tyle ticków przerabia surowiec (np. kłody na deski) */
+  processTicks?: number;
 }
 
 /** Kategorie w menu budowy. Nowa kategoria = wpis tutaj i nazwa w i18n. */
@@ -31,6 +33,8 @@ export interface BuildingDef {
   production?: ProductionDef;
   /** Budynek wymaga terenu danego typu w pobliżu */
   needsTerrain?: { terrain: Terrain; radius: number };
+  /** Jak pokazać pracującego: 'inside' = odsłonięte wnętrze budynku, 'field' = chodzi po polu */
+  workView?: 'inside' | 'field';
   /** Czy gracz może go postawić (twierdza powstaje sama) */
   buildable: boolean;
 }
@@ -46,7 +50,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 150 }, buildable: true },
   {
     id: 'woodcutter', category: 'industry', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 10 }, buildable: true,
-    production: { output: { res: 'wood', amount: 8 }, site: Terrain.Forest, workTicks: 50 },
+    workView: 'inside',
+    production: { output: { res: 'wood', amount: 8 }, site: Terrain.Forest, workTicks: 50, processTicks: 40 },
   },
   {
     id: 'quarry', category: 'industry', name: 'b.quarry', w: 2, h: 2, cost: { wood: 20 }, buildable: true,
@@ -60,10 +65,12 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   {
     id: 'orchard', category: 'food', name: 'b.orchard', w: 3, h: 3, cost: { wood: 10 }, buildable: true,
+    workView: 'field',
     production: { output: { res: 'apples', amount: 8 }, site: 'home', workTicks: 80 },
   },
   {
     id: 'farm', category: 'food', name: 'b.farm', w: 3, h: 3, cost: { wood: 20 }, buildable: true,
+    workView: 'field',
     production: { output: { res: 'wheat', amount: 8 }, site: 'home', workTicks: 110 },
   },
   {
@@ -72,6 +79,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   {
     id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, cost: { wood: 20, stone: 10 }, buildable: true,
+    workView: 'inside',
     production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 12 }, site: 'home', workTicks: 60 },
   },
 ];
