@@ -63,8 +63,24 @@ function costText(def: BuildingDef): string {
   return parts.length ? parts.join(' · ') : t('hud.free');
 }
 
-function hex(color: number): string {
-  return `#${color.toString(16).padStart(6, '0')}`;
+/** Proste ikony surowców (SVG 20x20), rysowane ręcznie w jednym stylu. */
+const ICONS: Record<string, string> = {
+  wood: '<rect x="2" y="7" width="16" height="6" rx="3" fill="#8a5a2b" stroke="#2a1c10"/><circle cx="16" cy="10" r="2.6" fill="#d9b27a" stroke="#2a1c10"/><path d="M5 9h6M6 11.5h5" stroke="#5e4329"/>',
+  stone: '<path d="M3 15l2-7 5-4 6 3 1 8z" fill="#b5b0a2" stroke="#2a1c10"/><path d="M5 8l5 2 6-3M10 10l-1 5" stroke="#6f6a5e" fill="none"/>',
+  iron: '<path d="M3 14l2-5h10l2 5z" fill="#6a6570" stroke="#2a1c10"/><path d="M5 9l1-2h8l1 2" fill="#8f8a96" stroke="#2a1c10"/>',
+  wheat: '<path d="M10 18V6" stroke="#8a6a1f" stroke-width="1.5"/><path d="M10 4l2.5 2.5L10 9 7.5 6.500zM10 8l3 2.5-3 2.5-3-2.500zM10 12l3 2.5-3 2.5-3-2.500z" fill="#e2bf4a" stroke="#2a1c10" stroke-width=".8"/>',
+  flour: '<path d="M6 6c1-2 7-2 8 0l2 9c0 3-12 3-12 0z" fill="#f4eedc" stroke="#2a1c10"/><path d="M7 6c1 1.5 5 1.5 6 0" stroke="#2a1c10" fill="none"/><path d="M8 10h4M8 12.500h4" stroke="#b9ae90"/>',
+  bread: '<path d="M2.5 13c0-5 3-7 7.5-7s7.5 2 7.5 7z" fill="#c9843d" stroke="#2a1c10"/><path d="M7 8.500l1.5 2M10.5 8l1.5 2M14 9l1 1.5" stroke="#7a4a1c"/>',
+  apples: '<path d="M10 7c-4-2-7 1-6 5 1 4 4 5 6 4 2 1 5 0 6-4 1-4-2-7-6-5z" fill="#d0281f" stroke="#2a1c10"/><path d="M10 7c0-2 1-3 2-4" stroke="#2a1c10" fill="none"/><path d="M12 4c2-1 3 0 3 1-1 1-2 1-3-1z" fill="#5c9a3c" stroke="#2a1c10" stroke-width=".7"/>',
+  gold: '<circle cx="10" cy="10" r="7" fill="#e9c145" stroke="#2a1c10"/><circle cx="10" cy="10" r="4.5" fill="none" stroke="#9a7a1a"/><path d="M10 7v6M8 8.500h3.500a1.3 1.3 0 010 2.600H8" stroke="#7a5d10" fill="none"/>',
+};
+
+function icon(id: string): HTMLElement {
+  const span = document.createElement('span');
+  span.className = 'ico';
+  span.setAttribute('aria-hidden', 'true');
+  span.innerHTML = `<svg viewBox="0 0 20 20" width="22" height="22">${ICONS[id] ?? ''}</svg>`;
+  return span;
 }
 
 const SPEEDS = [0, 1, 2, 3, 5];
@@ -79,10 +95,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const resVals: HTMLElement[] = [];
   for (const id of RESOURCES) {
     const li = el('li');
-    const sw = el('span', 'swatch');
-    sw.style.background = hex(RESOURCE_DEFS[id].color);
     const val = el('strong', '', '0');
-    li.append(sw, el('span', 'name', t(RESOURCE_DEFS[id].name)), val);
+    li.title = t(RESOURCE_DEFS[id].name);
+    li.append(icon(id), el('span', 'name', t(RESOURCE_DEFS[id].name)), val);
     resVals.push(val);
     resList.append(li);
   }
@@ -93,7 +108,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const popBox = el('div');
   popBox.append(el('span', 'name', t('hud.population')), popVal);
   const popularBox = el('div');
-  popularBox.append(el('span', 'name', t('hud.popularity')), popularVal, deltaVal);
+  // pasek popularności ze znacznikiem progu, od którego przybywa ludzi
+  const meter = el('span', 'meter');
+  meter.setAttribute('aria-hidden', 'true');
+  const meterFill = el('span', 'meter-fill');
+  meter.append(meterFill, el('span', 'meter-mark'));
+  popularBox.classList.add('popular');
+  popularBox.append(el('span', 'name', t('hud.popularity')), meter, popularVal, deltaVal);
   const stockVal = el('strong');
   const stockBox = el('div');
   stockBox.append(el('span', 'name', t('hud.stockpile')), stockVal);
@@ -329,6 +350,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(foodVal, `${v.food} / ${v.foodCap}`);
       foodBox.classList.toggle('full', v.food >= v.foodCap);
       setText(popularVal, `${v.popularity} / ${RULES.maxPopularity}`);
+      meterFill.style.width = `${(v.popularity / RULES.maxPopularity) * 100}%`;
+      meterFill.dataset.low = String(v.popularity < RULES.migrationThreshold);
       setText(deltaVal, `${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}`);
       deltaVal.dataset.sign = v.delta < 0 ? 'neg' : 'pos';
       rationsNow = v.rations; taxNow = v.tax;

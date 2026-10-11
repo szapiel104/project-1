@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.3.5 — średniowieczny interfejs (2026-10-11)
+
+- Panele jak pergamin w okutej drewnianej ramie ze złotą żyłką i ćwiekami
+- Kroje pisma: Cinzel w nagłówkach i przyciskach, Alegreya w tekście i liczbach (oba z polskimi znakami)
+- Ikony surowców zamiast kolorowych kwadratów, pasek popularności ze znacznikiem progu 50
+- Przyciski jak deski i lak, z wyraźnym najechaniem, wciśnięciem i fokusem klawiatury
+
 ## 0.3.4 — nowa twierdza i stodoła (2026-10-11)
 
 - Twierdza: mur z blankami, wysoki donżon ze strzelnicami, baszty z hełmami, przedbramie z kratą, sztandar i chorągwie
