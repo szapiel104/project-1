@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.4.3 — podłoże budynków (2026-10-11)
+
+- Koniec kwadratowego podniesienia pod budynkami: fundament chowa się w ziemi i widać go tylko na zboczu
+- Wokół budynku delikatna, półprzezroczysta plama wydeptanej trawy; drogi zawsze leżą nad nią
+
 ## 0.4.2 — życie na murach (2026-10-11)
 
 - Twierdza żyje cały czas: trzech strażników obchodzi mury, wartownik z włócznią stoi w bramie, czatownik rozgląda się ze szczytu, przy wejściu płoną kosze z ogniem

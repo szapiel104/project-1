@@ -282,7 +282,9 @@ export class GameRenderer {
         for (let x = b.x; x <= b.x + def.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
       mesh.position.set(b.x + def.w / 2 - width / 2, top, b.y + def.h / 2 - height / 2);
       const base = mesh.getObjectByName('base');
-      if (base) { const depth = top - low + 0.3; base.scale.set(def.w * 0.9, depth, def.h * 0.9); base.position.y = -depth / 2 + 0.03; } // 3 cm nad terenem, żeby nie migotał z podłożem
+      const patch = mesh.getObjectByName('patch');
+      if (patch) { patch.scale.set(def.w * 0.62, 1, def.h * 0.62); patch.position.y = 0.015; patch.receiveShadow = true; }
+      if (base) { const depth = top - low + 0.3; base.scale.set(def.w * 0.9, depth, def.h * 0.9); base.position.y = -depth / 2 - 0.02; } // tuż pod najwyższym punktem terenu: na płaskim go nie widać, na zboczu wypełnia szczelinę
       mesh.traverse((o) => {
         const part = o as THREE.Mesh;
         if (!part.isMesh || o.parent?.name === 'smoke' || o.name === 'patch') return;

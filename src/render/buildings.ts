@@ -42,7 +42,7 @@ const M = {
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
-  trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
+  trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
   ash: mat(0x4a4540), rock: mat(0x9a968c), rockDark: mat(0x77736a),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xc4c3bf, 'cobble'),
@@ -780,5 +780,19 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   const base = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), M.turf);
   base.name = 'base';
   g.add(base);
+  // delikatnie wydeptana trawa wokół budynku: miękka, półprzezroczysta plama, zawsze pod drogami
+  const shape = new THREE.Shape();
+  const seed = id.length * 17 + id.charCodeAt(0);
+  for (let i = 0; i <= 20; i++) {
+    const a = ((i % 20) / 20) * Math.PI * 2;
+    const r = 0.84 + ((Math.sin(seed + i * 2.7) + Math.sin(seed * 1.3 + i * 5.1)) * 0.5) * 0.1;
+    const c = Math.cos(a), s2 = Math.sin(a);
+    const x = Math.sign(c) * Math.pow(Math.abs(c), 0.6) * r, y = Math.sign(s2) * Math.pow(Math.abs(s2), 0.6) * r;
+    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+  }
+  const patch = new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2), M.trodden);
+  patch.name = 'patch';
+  patch.renderOrder = -1;
+  g.add(patch);
   return g;
 }
