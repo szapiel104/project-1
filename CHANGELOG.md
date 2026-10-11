@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.3.11 — twierdza i lżejszy interfejs (2026-10-11)
+
+- Twierdza w ciepłym piaskowcu, z drewnianą hurdycją, gontowymi hełmami, oknami i daszkiem nad bramą, żeby pasowała do reszty osady
+- Interfejs mniej klockowaty: niższy górny pasek, mniejsze przyciski, a karty budynków z dużym obrazkiem
+- Jaśniejsza noc
+- Pod budynkami wydeptana trawa o nierównych brzegach zamiast prostokąta gołej ziemi
+- Drwal ciągnie całe drzewo z gałęziami i koroną; pień leży potem przed chatą i skraca się z każdą partią desek
+
 ## 0.3.10 — dzień i noc (2026-10-11)
 
 - Doba gry trwa 4 minuty przy tempie 1×: świt, dzień, zachód słońca i noc z chłodnym światłem księżyca

@@ -10,7 +10,7 @@ import { clockAt } from '../sim/clock';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { Figures } from './peasants';
-import { createLoads } from './loads';
+import { createLoads, tint } from './loads';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 
 export interface TileRef { x: number; y: number }
@@ -109,13 +109,17 @@ export class GameRenderer {
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.loads = createLoads(MAX_UNITS, this.scene);
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
-    // cały pień ciągnięty po ziemi za drwalem, z kilkoma sękami
+    // całe ścięte drzewo ciągnięte po ziemi za drwalem: pień z gałęziami i koroną na końcu
     const log = mergeGeometries([
-      new THREE.CylinderGeometry(0.07, 0.1, 1.3, 7).rotateX(Math.PI / 2 - 0.12).translate(0, 0.16, -0.72),
-      new THREE.CylinderGeometry(0.025, 0.035, 0.22, 5).rotateZ(0.9).translate(0.1, 0.2, -0.9),
-      new THREE.CylinderGeometry(0.025, 0.035, 0.2, 5).rotateZ(-0.9).translate(-0.1, 0.16, -0.6),
+      tint(new THREE.CylinderGeometry(0.06, 0.1, 1.3, 7).rotateX(Math.PI / 2 - 0.1).translate(0, 0.15, -0.72), 0x6b4a2e),
+      tint(new THREE.CylinderGeometry(0.02, 0.035, 0.3, 5).rotateZ(0.9).translate(0.13, 0.2, -0.95), 0x6b4a2e),
+      tint(new THREE.CylinderGeometry(0.02, 0.035, 0.28, 5).rotateZ(-0.9).translate(-0.13, 0.17, -0.75), 0x6b4a2e),
+      tint(new THREE.ConeGeometry(0.3, 0.6, 7).rotateX(-Math.PI / 2).translate(0, 0.2, -1.25), 0x3c7a3a),
+      tint(new THREE.ConeGeometry(0.22, 0.5, 7).rotateX(-Math.PI / 2).translate(0, 0.2, -1.6), 0x44883f),
+      tint(new THREE.IcosahedronGeometry(0.16, 0).translate(0.16, 0.2, -1.05), 0x4c8f44),
+      tint(new THREE.IcosahedronGeometry(0.15, 0).translate(-0.17, 0.18, -0.98), 0x3c7a3a),
     ]);
-    this.logs = new THREE.InstancedMesh(log, new THREE.MeshLambertMaterial({ color: RESOURCE_DEFS.wood.color, flatShading: true }), MAX_UNITS);
+    this.logs = new THREE.InstancedMesh(log, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }), MAX_UNITS);
     const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.14, 0.53, 0);
     this.planks = new THREE.InstancedMesh(plank, new THREE.MeshLambertMaterial({ color: 0xc9a26b, flatShading: true }), MAX_UNITS);
     for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
@@ -230,10 +234,12 @@ export class GameRenderer {
         for (let x = b.x; x <= b.x + def.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
       mesh.position.set(b.x + def.w / 2 - width / 2, top, b.y + def.h / 2 - height / 2);
       const base = mesh.getObjectByName('base');
-      if (base) { const depth = top - low + 0.3; base.scale.set(def.w * 0.96, depth, def.h * 0.96); base.position.y = -depth / 2 + 0.03; } // 3 cm nad terenem, żeby nie migotał z podłożem
+      const patch = mesh.getObjectByName('patch');
+      if (patch) { patch.scale.set(def.w * 0.66, 1, def.h * 0.66); patch.position.y = 0.045; patch.receiveShadow = true; }
+      if (base) { const depth = top - low + 0.3; base.scale.set(def.w * 0.9, depth, def.h * 0.9); base.position.y = -depth / 2 + 0.03; } // 3 cm nad terenem, żeby nie migotał z podłożem
       mesh.traverse((o) => {
         const part = o as THREE.Mesh;
-        if (!part.isMesh || o.parent?.name === 'smoke') return;
+        if (!part.isMesh || o.parent?.name === 'smoke' || o.name === 'patch') return;
         part.castShadow = true;
         part.receiveShadow = true;
       });
@@ -296,6 +302,15 @@ export class GameRenderer {
       else if (u.phase === Phase.Idle && u.path.length === 0) { const camp = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8)); if (camp) working.add(camp.id); }
     }
     // kliknięty budynek też odsłania wnętrze, żeby dało się zajrzeć do środka
+    for (const u of g.units) {
+      if (!u.job) continue;
+      const yard = this.buildingMeshes.get(u.job)?.getObjectByName('yardlog');
+      if (!yard) continue;
+      // pień leży pod chatą, dopóki zostały z niego partie do pocięcia
+      const left = u.phase === Phase.ToHome ? 0 : u.batches;
+      yard.visible = left > 0;
+      yard.scale.x = Math.max(0.25, left / 4);
+    }
     for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id) || id === this.selectedId, this.time, dt);
   }
 

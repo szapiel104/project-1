@@ -50,7 +50,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onSpeed: (s) => { speed = s; },
   onDemolish: (id) => { pending.push({ type: 'demolish', player: ME, id }); select(0); },
   onCloseInfo: () => select(0),
-}, renderThumbnails(proceduralModels, TEAM_COLORS[0]!));
+}, renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
   game = loaded ?? createGame(seedFromText(seedText), preset);

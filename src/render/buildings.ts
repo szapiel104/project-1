@@ -15,6 +15,9 @@ const M = {
   appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xb97a3a),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
+  turf: mat(0x7f9a48, 'grass'),
+  trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
+  castle: mat(0xd9c59a, 'bricks'), castleDark: mat(0xb39f78, 'bricks'),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
@@ -180,41 +183,44 @@ function pennant(g: THREE.Group, flag: THREE.Material, x: number, y: number, z: 
 const BUILDERS: Record<string, Builder> = {
   keep(root, team, flag) {
     let g = root;
-    // blanki: rząd zębów na krawędzi muru
+    // Twierdza z ciepłego piaskowca, z drewnianymi hurdycjami i gontem jak reszta osady
+    const S = M.castle, D = M.castleDark;
     const merlons = (cx: number, cz: number, len: number, y: number, alongX: boolean, m: THREE.Material): void => {
-      const n = Math.max(2, Math.round(len / 0.3));
+      const n = Math.max(3, Math.round(len / 0.26) | 1);
       for (let i = 0; i < n; i += 2) {
         const o = -len / 2 + (i + 0.5) * (len / n);
-        box(g, m, alongX ? len / n : 0.12, 0.16, alongX ? 0.12 : len / n, cx + (alongX ? o : 0), y, cz + (alongX ? 0 : o));
+        box(g, m, alongX ? len / n : 0.1, 0.14, alongX ? 0.1 : len / n, cx + (alongX ? o : 0), y, cz + (alongX ? 0 : o));
       }
     };
-    // mur obwodowy z blankami
-    box(g, M.stone, 2.5, 1.15, 2.5);
-    box(g, M.stoneDark, 2.6, 0.12, 2.6, 0, 1.15, 0);
-    for (const s of [-1, 1]) { merlons(0, s * 1.24, 2.5, 1.27, true, M.stone); merlons(s * 1.24, 0, 2.5, 1.27, false, M.stone); }
-    // donżon: wysoka wieża mieszkalna ze strzelnicami, blankami i spiczastym dachem (zdejmowany, żeby zajrzeć do sali)
+    // mur: szersza podstawa, ściana, gzyms i blanki
+    box(g, D, 2.66, 0.25, 2.66);
+    box(g, S, 2.5, 1.0, 2.5, 0, 0.2, 0);
+    box(g, D, 2.6, 0.1, 2.6, 0, 1.2, 0);
+    for (const s of [-1, 1]) { merlons(0, s * 1.25, 2.5, 1.3, true, S); merlons(s * 1.25, 0, 2.5, 1.3, false, S); }
+    // dziedziniec wyłożony deskami
+    box(g, M.plank, 2.3, 0.03, 2.3, 0, 1.2, 0);
+    // donżon: wieża mieszkalna z drewnianą hurdycją pod dachem (zdejmowany, żeby zajrzeć do sali)
     const don = new THREE.Group();
     don.name = 'shell';
     const gg = g;
     g = don;
-    box(g, M.stone, 1.3, 1.9, 1.3, 0, 1.15, -0.25);
-    box(g, M.stoneDark, 1.45, 0.14, 1.45, 0, 3.05, -0.25);
-    for (const s of [-1, 1]) { merlons(0, -0.25 + s * 0.67, 1.45, 3.19, true, M.stone); merlons(s * 0.67, -0.25, 1.45, 3.19, false, M.stone); }
-    pyramid(g, team, 0.8, 1.0, 0, 3.19, -0.25);
-    for (const [x, z, w, d] of [[0, 0.41, 0.12, 0.03], [-0.3, 0.41, 0.12, 0.03], [0.3, 0.41, 0.12, 0.03], [0.66, -0.25, 0.03, 0.12], [-0.66, -0.25, 0.03, 0.12]] as const) {
-      box(g, M.dark, w, 0.36, d, x, 2.3, z);
-      box(g, M.dark, w, 0.3, d, x, 1.6, z);
-    }
-    box(g, M.woodDark, 0.04, 0.9, 0.04, 0, 4.15, -0.25);
-    box(g, flag, 0.55, 0.3, 0.02, 0.3, 4.72, -0.25);
+    box(g, S, 1.25, 1.75, 1.25, 0, 1.2, -0.25);
+    box(g, M.woodDark, 1.5, 0.08, 1.5, 0, 2.9, -0.25);
+    box(g, M.wood, 1.48, 0.42, 1.48, 0, 2.98, -0.25);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, M.woodDark, 0.07, 0.42, 0.07, sx * 0.72, 2.98, -0.25 + sz * 0.72);
+    pyramid(g, team, 1.12, 1.15, 0, 3.4, -0.25);
+    for (const x of [-0.3, 0.3]) { box(g, M.window, 0.2, 0.3, 0.03, x, 2.2, 0.385); box(g, M.window, 0.2, 0.3, 0.03, x, 1.55, 0.385); }
+    for (const sx of [-1, 1]) box(g, M.window, 0.03, 0.3, 0.2, sx * 0.635, 2.0, -0.25);
+    box(g, M.woodDark, 0.04, 0.8, 0.04, 0, 4.5, -0.25);
+    box(g, flag, 0.5, 0.28, 0.02, 0.27, 5.0, -0.25);
     g = gg;
     g.add(don);
     // sala tronowa: posadzka, dywan, tron, stół i chorągwie na ścianach
     const hall = new THREE.Group();
     hall.name = 'interior';
     hall.visible = false;
-    box(hall, M.stoneDark, 1.3, 0.05, 1.3, 0, 1.15, -0.25);
-    for (const [x, z, w, d] of [[0, -0.87, 1.3, 0.07], [-0.62, -0.25, 0.07, 1.3], [0.62, -0.25, 0.07, 1.3]] as const) box(hall, M.stone, w, 0.55, d, x, 1.15, z);
+    box(hall, M.plank, 1.25, 0.05, 1.25, 0, 1.2, -0.25);
+    for (const [x, z, w, d] of [[0, -0.87, 1.3, 0.07], [-0.62, -0.25, 0.07, 1.3], [0.62, -0.25, 0.07, 1.3]] as const) box(hall, M.castle, w, 0.55, d, x, 1.2, z);
     box(hall, flag, 0.34, 0.02, 1.0, 0, 1.2, -0.2);
     box(hall, M.woodDark, 0.3, 0.12, 0.26, 0, 1.2, -0.68);
     box(hall, M.woodDark, 0.3, 0.5, 0.06, 0, 1.2, -0.79);
@@ -223,28 +229,29 @@ const BUILDERS: Record<string, Builder> = {
     box(hall, M.bread, 0.1, 0.05, 0.14, 0.38, 1.4, -0.2);
     for (const sx of [-1, 1]) box(hall, flag, 0.02, 0.36, 0.22, sx * 0.57, 1.3, -0.5);
     g.add(hall);
-    // cztery baszty narożne z blankami i stożkowymi hełmami
+    // cztery baszty narożne: lekko zwężane, z gzymsem, blankami i gontowym hełmem
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
-      const x = sx * 1.2, z = sz * 1.2;
-      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.47, 2.0, 10), M.stone);
-      t.position.set(x, 1.0, z);
+      const x = sx * 1.22, z = sz * 1.22;
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1.95, 12), S);
+      t.position.set(x, 0.975, z);
       g.add(t);
-      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.42, 0.22, 10), M.stoneDark);
-      rim.position.set(x, 2.1, z);
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.42, 0.2, 12), D);
+      rim.position.set(x, 2.05, z);
       g.add(rim);
-      for (let k = 0; k < 6; k++) box(g, M.stone, 0.13, 0.15, 0.13, x + Math.cos(k * 1.047) * 0.42, 2.21, z + Math.sin(k * 1.047) * 0.42);
-      pyramid(g, team, 0.36, 0.85, x, 2.21, z, 10);
-      box(g, M.dark, 0.07, 0.3, 0.03, x, 1.3, z + sz * 0.45);
+      for (let k = 0; k < 8; k += 2) box(g, S, 0.13, 0.14, 0.13, x + Math.cos(k * 0.785) * 0.43, 2.15, z + Math.sin(k * 0.785) * 0.43);
+      pyramid(g, team, 0.4, 0.95, x, 2.15, z, 12);
+      box(g, M.window, 0.12, 0.26, 0.03, x, 1.2, z + sz * 0.46);
     }
-    // brama: wysunięty przedbramie, łuk, krata i most
-    box(g, M.stoneDark, 0.95, 1.4, 0.3, 0, 0, 1.3);
-    merlons(0, 1.42, 0.95, 1.4, true, M.stoneDark);
-    box(g, M.dark, 0.5, 0.8, 0.06, 0, 0, 1.44);
-    for (let k = 0; k < 4; k++) box(g, M.iron, 0.03, 0.8, 0.02, -0.18 + k * 0.12, 0, 1.47);
-    box(g, M.iron, 0.5, 0.03, 0.02, 0, 0.5, 1.47);
-    box(g, M.wood, 0.6, 0.04, 0.3, 0, 0, 1.6);
-    // chorągwie przy bramie
-    for (const s of [-1, 1]) box(g, flag, 0.16, 0.5, 0.02, s * 0.36, 0.7, 1.46);
+    // brama: przedbramie z daszkiem, wrota z kratą, most
+    box(g, D, 0.95, 1.35, 0.32, 0, 0, 1.3);
+    box(g, M.woodDark, 1.1, 0.07, 0.5, 0, 1.35, 1.32);
+    gable(g, team, 1.15, 0.4, 0.55, 1.42, 0, 1.32);
+    box(g, M.dark, 0.52, 0.85, 0.06, 0, 0, 1.45);
+    box(g, M.woodDark, 0.24, 0.8, 0.03, -0.13, 0, 1.49);
+    box(g, M.woodDark, 0.24, 0.8, 0.03, 0.13, 0, 1.49);
+    for (let k = 0; k < 3; k++) box(g, M.iron, 0.5, 0.03, 0.02, 0, 0.18 + k * 0.25, 1.51);
+    box(g, M.plank, 0.62, 0.05, 0.36, 0, 0, 1.66);
+    for (const s of [-1, 1]) box(g, flag, 0.14, 0.42, 0.02, s * 0.37, 0.75, 1.47);
   },
   house(g, _team, flag) {
     const inside = hut(g, M.plaster, M.thatch, 1.5, 1.3, 0.8, 0, 0, true);
@@ -291,6 +298,14 @@ const BUILDERS: Record<string, Builder> = {
     sawn.position.set(-0.45, 0.33, -0.35);
     inside.add(sawn);
     for (let i = 0; i < 3; i++) box(inside, M.plank, 0.5, 0.04, 0.16, -0.05, 0.05 + i * 0.045, -0.45);
+    // przyciągnięty pień leży przed chatą i skraca się z każdą partią desek
+    const yard = new THREE.Group();
+    yard.name = 'yardlog';
+    yard.position.set(-0.75, 0.1, 0.62);
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 1.3, 7).rotateZ(Math.PI / 2).translate(0.65, 0, 0), M.bark);
+    yard.add(trunk);
+    yard.visible = false;
+    g.add(yard);
     for (let i = 0; i < 3; i++) {
       const log = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6), M.wood);
       log.rotation.z = Math.PI / 2;
@@ -496,8 +511,22 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   if (!flag) { flag = mat(teamColor); flagMats.set(teamColor, flag); }
   (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team, flag);
   // fundament, żeby budynek nie wisiał nad nierównym terenem
-  const base = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), M.soil);
+  const base = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), M.turf);
   base.name = 'base';
   g.add(base);
+  // wydeptana trawa dookoła: nieregularna plama zamiast prostokąta gołej ziemi
+  const shape = new THREE.Shape();
+  const seed = id.length * 17 + id.charCodeAt(0);
+  for (let i = 0; i <= 18; i++) {
+    const a = (i % 18) / 18 * Math.PI * 2;
+    const r = 0.86 + ((Math.sin(seed + i * 2.7) + Math.sin(seed * 1.3 + i * 5.1)) * 0.5) * 0.11;
+    // superelipsa: plama trzyma się kształtu działki, ale ma miękkie, poszarpane brzegi
+    const c = Math.cos(a), s2 = Math.sin(a);
+    const x = Math.sign(c) * Math.pow(Math.abs(c), 0.55) * r, y = Math.sign(s2) * Math.pow(Math.abs(s2), 0.55) * r;
+    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+  }
+  const patch = new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2), M.trodden);
+  patch.name = 'patch';
+  g.add(patch);
   return g;
 }

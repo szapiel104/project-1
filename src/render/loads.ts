@@ -3,7 +3,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RESOURCES } from '../data/resources';
 
 /** Maluje całą bryłę jednym kolorem (kolor siedzi w wierzchołkach, więc jeden model może mieć kilka barw). */
-function tint(geo: THREE.BufferGeometry, hex: number): THREE.BufferGeometry {
+export function tint(geo: THREE.BufferGeometry, hex: number): THREE.BufferGeometry {
   const g = geo.index ? geo.toNonIndexed() : geo;
   const c = new THREE.Color(hex);
   const n = g.getAttribute('position').count;

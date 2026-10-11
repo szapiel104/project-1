@@ -282,7 +282,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const src = thumbs.get(def.id);
     if (src) {
       const img = el('img');
-      img.src = src; img.alt = ''; img.width = 44; img.height = 44; img.draggable = false;
+      img.src = src; img.alt = ''; img.width = 72; img.height = 72; img.draggable = false;
       b.append(img);
     }
     const text = el('span', 'card-text');
