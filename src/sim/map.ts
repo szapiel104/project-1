@@ -83,8 +83,8 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
         e = Math.min(255, 170 + (rim - edge) * 9 + (hash2(x, y, seed) & 15));
       } else if (h < preset.waterLevel) t = Terrain.Water;
       // kamień i żelazo tylko u podnóża gór, w niedużych złożach; żelazo rzadsze i bliżej skał
-      else if (edge < rim + 4 && ore > 178) t = Terrain.Iron;
-      else if (edge < rim + 7 && valueNoise(x, y, 6, seed ^ 0x1b873593) > 158) t = Terrain.Stone;
+      else if (edge < rim + 3 && ore > 208) t = Terrain.Iron;
+      else if (edge < rim + 5 && valueNoise(x, y, 6, seed ^ 0x1b873593) > 186) t = Terrain.Stone;
       else if (forest > 146) t = Terrain.Forest;
       tiles[i] = t;
       elevation[i] = e;
