@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.2.7 — zapis gry (2026-10-11)
+
+- Gra zapisuje się sama w przeglądarce co 5 sekund i przy zamykaniu karty; po odświeżeniu wraca stan sprzed odświeżenia
+- „Nowa gra” w zakładce Mapa zaczyna od zera
+- Zapis z niezgodnej wersji gry jest pomijany
+
 ## 0.2.6 — sterowanie na górnym pasku (2026-10-11)
 
 - Przyciski minus i plus na górze: tempo gry (pauza, 1×, 2×, 3×, 5×), podatki i racje żywności

@@ -5,7 +5,8 @@
 export class Rng {
   private s: number;
 
-  constructor(seed: number) {
+  /** `raw` = podajemy zapisany stan wewnętrzny (wczytywanie gry), a nie ziarno */
+  constructor(seed: number, _raw = false) {
     this.s = seed >>> 0;
   }
 

@@ -22,3 +22,9 @@
 - **Lasy i złoża się nie wyczerpują.** Do zmiany, gdy będzie potrzebne dla balansu.
 - **Droga:** Dijkstra po siatce, 8 kierunków, remisy rozstrzyga numer pola. Wystarcza na dziesiątki chłopów; przy wojsku (etap 4) dojdą pola przepływu albo wspólne ścieżki dla grup.
 - **Góry na krańcach** to osobny typ terenu (nie do przejścia). Kamera nie wyjeżdża poza grywalny środek, a za mapą stoją ozdobne szczyty we mgle.
+
+## Zapis gry
+
+- `sim/save.ts` zamienia stan na zwykłe dane i z powrotem. Mapy nie zapisujemy, odtwarza się z ziarna.
+- Na razie zapis leży w pamięci przeglądarki (`localStorage`). Ten sam format pójdzie później do Supabase i do powtórek.
+- **Przy każdej zmianie kształtu stanu trzeba podbić `SAVE_VERSION`**, inaczej stary zapis wczyta się błędnie. Dopisanie budynku albo surowca unieważnia zapis samo.

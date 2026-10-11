@@ -4,6 +4,7 @@ import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { Terrain } from '../src/data/terrain';
 import { findPath, walkable } from '../src/sim/path';
+import { deserialize, serialize } from '../src/sim/save';
 import { createGame, housing, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
 import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
@@ -184,6 +185,25 @@ describe('ludność i popularność', () => {
     expect(res(g, 'gold')).toBeGreaterThan(gold);
     expect(g.players[0]!.popDelta).toBeLessThan(0);
     expect(g.players[0]!.rations).toBe(RULES.defaultRations);
+  });
+});
+
+describe('zapis gry', () => {
+  it('wczytana gra ma ten sam skrót i dalej toczy się identycznie jak niezapisana', () => {
+    const a = createGame(77);
+    run(a, 3, [build(a, 'woodcutter')]);
+    run(a, 700, [build(a, 'orchard')]);
+    const b = deserialize(JSON.parse(JSON.stringify(serialize(a, '1v1'))))!;
+    expect(stateHash(b)).toBe(stateHash(a));
+    run(a, 2000); run(b, 2000);
+    expect(stateHash(b)).toBe(stateHash(a));
+    expect(canPlace(b, 0, buildingIndex('house'), playerKeep(b, 0)!.x, playerKeep(b, 0)!.y)).toBe('place.occupied');
+  });
+
+  it('zapis z innej wersji jest odrzucany', () => {
+    const d = serialize(createGame(1), '1v1');
+    expect(deserialize({ ...d, v: 0 })).toBeNull();
+    expect(deserialize({ ...d, shape: 'x' })).toBeNull();
   });
 });
 

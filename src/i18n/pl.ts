@@ -4,6 +4,7 @@ export const pl = {
   'hud.mode': 'Tryb',
   'hud.newMap': 'Losuj mapę',
   'hud.generate': 'Nowa gra',
+  'hud.saved': 'Gra zapisuje się sama co kilka sekund. „Nowa gra” zaczyna od zera.',
   'hud.help': 'Sterowanie',
   'hud.hash': 'Skrót stanu',
   'hud.build': 'Budowa',

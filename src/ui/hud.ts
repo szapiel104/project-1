@@ -290,7 +290,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   rnd.type = 'button';
   formActions.append(gen, rnd);
   const hashLine = el('p', 'hint');
-  form.append(seedWrap, modeWrap, formActions, hashLine);
+  form.append(seedWrap, modeWrap, formActions, el('p', 'hint', t('hud.saved')), hashLine);
   const preset = (): MapPresetId => mode.value as MapPresetId;
   form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim(), preset()); });
   rnd.addEventListener('click', () => events.onRandom(preset()));

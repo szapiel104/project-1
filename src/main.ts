@@ -3,6 +3,7 @@ import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { t } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
 import { seedFromText } from './sim/rng';
+import { deserialize, serialize, type SaveData } from './sim/save';
 import { TICKS_PER_SECOND, createGame, housing, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
 import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
@@ -25,6 +26,18 @@ let picked: string | null = null;
 let hoverTile: TileRef | null = null;
 let touchTile: TileRef | null = null;
 let selected = 0;
+let currentPreset: MapPresetId = '1v1';
+let currentSeedText = 'project-1';
+const SAVE_KEY = 'project1.save';
+
+/** Zapis w pamięci przeglądarki, żeby odświeżenie strony nie zaczynało gry od zera. */
+function save(): void {
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seedText: currentSeedText, data: serialize(game, currentPreset) })); } catch { /* brak dostępu do pamięci przeglądarki */ }
+}
+
+function loadSave(): { seedText: string; data: SaveData } | null {
+  try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null'); } catch { return null; }
+}
 
 const hud = createHud(document.getElementById('ui')!, {
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
@@ -38,8 +51,10 @@ const hud = createHud(document.getElementById('ui')!, {
   onCloseInfo: () => select(0),
 }, renderThumbnails(proceduralModels, TEAM_COLORS[0]!));
 
-function start(seedText: string, preset: MapPresetId): void {
-  game = createGame(seedFromText(seedText), preset);
+function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
+  game = loaded ?? createGame(seedFromText(seedText), preset);
+  currentPreset = preset;
+  currentSeedText = seedText;
   pending = [];
   renderer.setState(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME);
   hud.setSeed(seedText, preset);
@@ -47,6 +62,7 @@ function start(seedText: string, preset: MapPresetId): void {
   select(0);
   try { history.replaceState(null, '', `#${preset}/${encodeURIComponent(seedText)}`); } catch { /* podgląd bez dostępu do historii */ }
   refresh();
+  save();
 }
 
 function pick(id: string | null): void {
@@ -140,6 +156,7 @@ function loop(now: number): void {
     pending = [];
     acc -= TICK_MS;
     steps++;
+    if (game.tick % 50 === 0) save();
   }
   if (steps === 6) acc = 0;
   if (steps) { refresh(); updateGhost(); }
@@ -149,7 +166,12 @@ function loop(now: number): void {
 
 // adres strony może nieść mapę: #tryb/ziarno
 const [hashPreset, hashSeed] = decodeURIComponent(location.hash.slice(1)).split('/');
-start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1');
+const saved = loadSave();
+const restored = saved ? deserialize(saved.data) : null;
+if (saved && restored) start(saved.seedText, saved.data.preset, restored);
+else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1');
+window.addEventListener('pagehide', save);
+document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 requestAnimationFrame(loop);
 
 // podgląd stanu dla testów w przeglądarce
