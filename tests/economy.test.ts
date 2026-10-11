@@ -176,6 +176,11 @@ describe('ludność i popularność', () => {
     run(g, RULES.monthTicks * 6);
     expect(g.players[0]!.popularity).toBeLessThan(50);
     expect(population(g, 0)).toBeLessThan(6);
+    run(g, RULES.monthTicks * 30);
+    expect(population(g, 0)).toBe(RULES.minPeasants); // garstka zawsze zostaje
+    g.units.length = 0; // nawet całkiem pusta osada (np. ze starego zapisu) sama się odradza
+    run(g, RULES.migrationTicks * 6);
+    expect(population(g, 0)).toBe(RULES.minPeasants);
   });
 
   it('podatki dają złoto kosztem popularności; błędne poziomy są ignorowane', () => {

@@ -359,7 +359,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(toast, text);
       toast.hidden = false;
       clearTimeout(toastTimer);
-      toastTimer = window.setTimeout(() => { toast.hidden = true; }, 3500);
+      toastTimer = window.setTimeout(() => { toast.hidden = true; }, 6000);
     },
   };
 }

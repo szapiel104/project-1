@@ -34,7 +34,8 @@ export function migrationSystem(g: GameState): void {
   if (g.tick % RULES.migrationTicks !== 0) return;
   for (const p of g.players) {
     const pop = population(g, p.id);
-    if (p.popularity >= RULES.migrationThreshold) { if (pop < housing(g, p.id)) spawnPeasant(g, p.id); }
-    else if (pop > 0) removePeasant(g, p.id);
+    if (pop < RULES.minPeasants) spawnPeasant(g, p.id);
+    else if (p.popularity >= RULES.migrationThreshold) { if (pop < housing(g, p.id)) spawnPeasant(g, p.id); }
+    else if (pop > RULES.minPeasants) removePeasant(g, p.id);
   }
 }

@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.2.11 — osada nie wymiera (2026-10-11)
+
+- Przy twierdzy zawsze zostaje czterech chłopów, a pusta osada sama się odradza
+- Ostrzeżenie, gdy kończy się żywność i gdy ludzie zaczynają odchodzić
+
 ## 0.2.10 — stosy w składzie (2026-10-11)
 
 - Każdy surowiec leży w składzie na własnym stosie i wygląda inaczej: deski, bloki kamienia, sztaby żelaza, snopy zboża, worki mąki

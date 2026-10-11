@@ -35,6 +35,8 @@ export const pl = {
   'hud.placing': 'Wskaż miejsce na mapie',
   'hud.tapAgain': 'Dotknij jeszcze raz w tym samym miejscu, żeby postawić',
   'hud.hungry': 'Brakuje żywności na racje',
+  'warn.hungry': 'Skończyła się żywność. Zbuduj sad albo zmniejsz racje, bo ludzie zaczną odchodzić',
+  'warn.leaving': 'Popularność spadła poniżej 50: ludzie odchodzą z osady',
   'hud.noGold': 'Brakuje złota na rozdawanie',
   'help.move': 'Przesuwanie: W A S D, strzałki albo przeciąganie',
   'help.rotate': 'Obrót: Q i E albo prawy przycisk myszy',

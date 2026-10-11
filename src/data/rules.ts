@@ -7,6 +7,8 @@ export const RULES = {
   /** Co ile ticków przybywa lub ubywa chłop */
   migrationTicks: 30,
   startPeasants: 6,
+  /** Tylu chłopów zostaje przy twierdzy zawsze, nawet przy głodzie, żeby dało się odbudować osadę */
+  minPeasants: 4,
   startPopularity: 75,
   maxPopularity: 100,
   /** Od tej popularności przybywa ludzi, poniżej odchodzą */

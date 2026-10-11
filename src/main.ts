@@ -128,9 +128,17 @@ window.addEventListener('keydown', (e) => {
 });
 canvas.addEventListener('contextmenu', () => { if (picked) pick(null); });
 
+let warnedHungry = false;
+let warnedLeaving = false;
+
 function refresh(): void {
   const p = game.players[ME]!;
   const f = monthlyForecast(game, p);
+  // ostrzeżenia pokazujemy raz, w chwili gdy problem się zaczyna
+  if (!f.fed && !warnedHungry) hud.toast(t('warn.hungry'));
+  else if (p.popularity < 50 && !warnedLeaving) hud.toast(t('warn.leaving'));
+  warnedHungry = !f.fed;
+  warnedLeaving = p.popularity < 50;
   const affordable = new Set<string>();
   for (const def of BUILDINGS) if (canAfford(game, ME, def)) affordable.add(def.id);
   hud.update({
