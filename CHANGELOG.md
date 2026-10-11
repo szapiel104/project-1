@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.2.3 — dolne menu budowy (2026-10-11)
+
+- Pasek budowy na dole ekranu z kategoriami: Osada, Żywność, Przemysł
+- Karty budynków z obrazkiem renderowanym z tego samego modelu, który staje na mapie
+- Dwór, Mapa i Sterowanie jako wysuwane panele nad paskiem
+
 ## 0.2.2 — pojemność składów (2026-10-11)
 
 - Składy i spichlerze mają limit: twierdza 250 surowców i 120 żywności, skład +200, spichlerz +150

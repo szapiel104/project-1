@@ -8,6 +8,9 @@ import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace } from './sim/systems/placement';
 import { createHud } from './ui/hud';
+import { proceduralModels } from './render/models';
+import { renderThumbnails } from './render/thumbnails';
+import { TEAM_COLORS } from './data/teams';
 
 const ME = 0; // gracz sterowany lokalnie
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -33,7 +36,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onSpeed: (s) => { speed = s; },
   onDemolish: (id) => { pending.push({ type: 'demolish', player: ME, id }); select(0); },
   onCloseInfo: () => select(0),
-});
+}, renderThumbnails(proceduralModels, TEAM_COLORS[0]!));
 
 function start(seedText: string, preset: MapPresetId): void {
   game = createGame(seedFromText(seedText), preset);

@@ -1,4 +1,4 @@
-import { BUILDINGS, type BuildingDef } from '../data/buildings';
+import { BUILDINGS, CATEGORIES, type BuildingDef, type CategoryId } from '../data/buildings';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, type ResourceId } from '../data/resources';
 import { RULES } from '../data/rules';
@@ -63,7 +63,7 @@ function hex(color: number): string {
   return `#${color.toString(16).padStart(6, '0')}`;
 }
 
-export function createHud(root: HTMLElement, events: HudEvents): Hud {
+export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
   root.replaceChildren();
 
   // ---- pasek zasobów ----
@@ -121,8 +121,9 @@ export function createHud(root: HTMLElement, events: HudEvents): Hud {
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
 
-  // ---- dolny dok z zakładkami ----
-  const dock = el('div', 'dock');
+  // ---- dół ekranu: wysuwane panele, a pod nimi pasek budowy ----
+  const bottom = el('div', 'bottom');
+  const floaters = el('div', 'floaters');
   const drawer = el('div', 'panel drawer');
   drawer.hidden = true;
   const tabs = el('div', 'tabs');
@@ -151,28 +152,59 @@ export function createHud(root: HTMLElement, events: HudEvents): Hud {
     return body;
   };
 
-  // Budowa
-  const build = section(t('hud.build'), 'build');
-  const buildGrid = el('div', 'build-grid');
+  // Pasek budowy: kategorie i karty budynków z obrazkami
+  const buildbar = el('div', 'panel buildbar');
+  const barhead = el('div', 'barhead');
+  const cats = el('div', 'cats');
+  cats.setAttribute('role', 'group');
+  cats.setAttribute('aria-label', t('hud.build'));
+  const cards = el('div', 'cards');
+  cards.id = 'build-cards';
+  const catButtons = new Map<CategoryId, HTMLButtonElement>();
   const buildButtons = new Map<string, HTMLButtonElement>();
   let picked: string | null = null;
+  let category: CategoryId | null = null;
+  const showCategory = (id: CategoryId | null): void => {
+    category = id;
+    for (const [cid, b] of catButtons) b.setAttribute('aria-expanded', String(cid === id));
+    for (const [bid, b] of buildButtons) b.hidden = BUILDINGS.find((d) => d.id === bid)?.category !== id;
+    cards.hidden = id === null;
+  };
+  for (const id of CATEGORIES) {
+    const b = el('button', 'cat', t(`cat.${id}`));
+    b.type = 'button';
+    b.setAttribute('aria-expanded', 'false');
+    b.setAttribute('aria-controls', cards.id);
+    b.addEventListener('click', () => showCategory(category === id ? null : id));
+    catButtons.set(id, b);
+    cats.append(b);
+  }
   for (const def of BUILDINGS) {
     if (!def.buildable) continue;
-    const b = el('button', 'build-btn');
+    const b = el('button', 'card');
     b.type = 'button';
     b.title = t(`d.${def.id}`);
     b.setAttribute('aria-pressed', 'false');
+    const src = thumbs.get(def.id);
+    if (src) {
+      const img = el('img');
+      img.src = src; img.alt = ''; img.width = 80; img.height = 80; img.draggable = false;
+      b.append(img);
+    }
     b.append(el('span', 'build-name', t(def.name)), el('span', 'build-cost', costText(def)));
     b.addEventListener('click', () => events.onPickBuilding(picked === def.id ? null : def.id));
     buildButtons.set(def.id, b);
-    buildGrid.append(b);
+    cards.append(b);
   }
+  const buildFoot = el('div', 'buildfoot');
   const buildHint = el('p', 'hint');
-  const cancel = el('button', 'btn-plain', t('hud.cancel'));
+  const cancel = el('button', 'btn-main', t('hud.cancel'));
   cancel.type = 'button';
   cancel.hidden = true;
   cancel.addEventListener('click', () => events.onPickBuilding(null));
-  build.append(buildGrid, buildHint, cancel);
+  buildFoot.append(buildHint, cancel);
+  barhead.append(cats, tabs);
+  buildbar.append(barhead, cards, buildFoot);
 
   // Dwór
   const court = section(t('hud.court'), 'court');
@@ -244,9 +276,11 @@ export function createHud(root: HTMLElement, events: HudEvents): Hud {
   for (const k of ['help.move', 'help.rotate', 'help.zoom', 'help.build']) list.append(el('li', '', t(k)));
   help.append(list);
 
-  dock.append(drawer, tabs);
-  root.append(bar, toast, info, dock);
-  if (!matchMedia('(max-width: 640px)').matches) open(0);
+  floaters.append(drawer, info);
+  bottom.append(floaters, buildbar);
+  root.append(bar, toast, bottom);
+  const phone = (): boolean => matchMedia('(max-width: 640px)').matches;
+  showCategory(phone() ? null : 'settlement');
 
   return {
     setSeed(text, presetId) { seed.value = text; mode.value = presetId; },
@@ -266,6 +300,7 @@ export function createHud(root: HTMLElement, events: HudEvents): Hud {
       const warn = [v.fed ? '' : t('hud.hungry'), v.bribed ? '' : t('hud.noGold')].filter(Boolean).join('. ');
       setText(forecast, `${t('hud.popularity')}: ${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}${warn ? `. ${warn}.` : ''}`);
       for (const [id, b] of buildButtons) b.classList.toggle('poor', !v.affordable.has(id));
+      buildFoot.hidden = picked === null;
     },
     setPicked(id) {
       picked = id;
@@ -273,7 +308,9 @@ export function createHud(root: HTMLElement, events: HudEvents): Hud {
       cancel.hidden = id === null;
       setText(buildHint, id ? t('hud.placing') : '');
       // na telefonie menu zasłania mapę, więc po wyborze budynku chowa się samo
-      if (id && matchMedia('(max-width: 640px)').matches) { open(-1); this.toast(t('hud.placing')); }
+      buildFoot.hidden = id === null;
+      if (id) open(-1);
+      if (id && phone()) showCategory(null);
     },
     showInfo(i) {
       info.hidden = !i;

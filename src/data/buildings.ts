@@ -11,8 +11,13 @@ export interface ProductionDef {
   workTicks: number;
 }
 
+/** Kategorie w menu budowy. Nowa kategoria = wpis tutaj i nazwa w i18n. */
+export const CATEGORIES = ['settlement', 'food', 'industry'] as const;
+export type CategoryId = (typeof CATEGORIES)[number];
+
 export interface BuildingDef {
   id: string;
+  category?: CategoryId;
   name: string;
   w: number;
   h: number;
@@ -36,37 +41,37 @@ export interface BuildingDef {
  */
 export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'keep', name: 'b.keep', w: 3, h: 3, cost: {}, housing: 8, stores: ['stockpile', 'granary'], capacity: { stockpile: 250, granary: 120 }, buildable: false },
-  { id: 'house', name: 'b.house', w: 2, h: 2, cost: { wood: 20 }, housing: 8, buildable: true },
-  { id: 'stockpile', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 10 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
-  { id: 'granary', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 150 }, buildable: true },
+  { id: 'house', category: 'settlement', name: 'b.house', w: 2, h: 2, cost: { wood: 20 }, housing: 8, buildable: true },
+  { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 10 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
+  { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 150 }, buildable: true },
   {
-    id: 'woodcutter', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 10 }, buildable: true,
+    id: 'woodcutter', category: 'industry', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 10 }, buildable: true,
     production: { output: { res: 'wood', amount: 8 }, site: Terrain.Forest, workTicks: 50 },
   },
   {
-    id: 'quarry', name: 'b.quarry', w: 2, h: 2, cost: { wood: 20 }, buildable: true,
+    id: 'quarry', category: 'industry', name: 'b.quarry', w: 2, h: 2, cost: { wood: 20 }, buildable: true,
     needsTerrain: { terrain: Terrain.Stone, radius: 6 },
     production: { output: { res: 'stone', amount: 6 }, site: Terrain.Stone, workTicks: 70 },
   },
   {
-    id: 'mine', name: 'b.mine', w: 2, h: 2, cost: { wood: 30 }, buildable: true,
+    id: 'mine', category: 'industry', name: 'b.mine', w: 2, h: 2, cost: { wood: 30 }, buildable: true,
     needsTerrain: { terrain: Terrain.Iron, radius: 6 },
     production: { output: { res: 'iron', amount: 4 }, site: Terrain.Iron, workTicks: 90 },
   },
   {
-    id: 'orchard', name: 'b.orchard', w: 3, h: 3, cost: { wood: 10 }, buildable: true,
+    id: 'orchard', category: 'food', name: 'b.orchard', w: 3, h: 3, cost: { wood: 10 }, buildable: true,
     production: { output: { res: 'apples', amount: 8 }, site: 'home', workTicks: 80 },
   },
   {
-    id: 'farm', name: 'b.farm', w: 3, h: 3, cost: { wood: 20 }, buildable: true,
+    id: 'farm', category: 'food', name: 'b.farm', w: 3, h: 3, cost: { wood: 20 }, buildable: true,
     production: { output: { res: 'wheat', amount: 8 }, site: 'home', workTicks: 110 },
   },
   {
-    id: 'mill', name: 'b.mill', w: 2, h: 2, cost: { wood: 25, stone: 10 }, buildable: true,
+    id: 'mill', category: 'food', name: 'b.mill', w: 2, h: 2, cost: { wood: 25, stone: 10 }, buildable: true,
     production: { input: { res: 'wheat', amount: 8 }, output: { res: 'flour', amount: 8 }, site: 'home', workTicks: 50 },
   },
   {
-    id: 'bakery', name: 'b.bakery', w: 2, h: 2, cost: { wood: 20, stone: 10 }, buildable: true,
+    id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, cost: { wood: 20, stone: 10 }, buildable: true,
     production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 12 }, site: 'home', workTicks: 60 },
   },
 ];
