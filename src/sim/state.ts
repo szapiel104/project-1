@@ -105,9 +105,34 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       rations: RULES.defaultRations, tax: RULES.defaultTax,
     });
     addBuilding(g, keep, s.player, s.x - 1, s.y - 1);
+    placeCamp(g, s.player, s.x, s.y);
     for (let i = 0; i < RULES.startPeasants; i++) spawnPeasant(g, s.player);
   }
   return g;
+}
+
+const CAMP = buildingIndex('camp');
+
+/** Stawia obozowisko na pierwszym wolnym miejscu przy twierdzy (stała kolejność szukania). */
+function placeCamp(g: GameState, player: number, cx: number, cy: number): void {
+  const w = g.map.width;
+  for (let r = 3; r <= 7; r++)
+    for (let dy = -r; dy <= r; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = cx + dx, y = cy + dy;
+        let free = true;
+        for (let ty = y - 1; ty <= y + 2 && free; ty++)
+          for (let tx = x - 1; tx <= x + 2; tx++) {
+            const t = ty * w + tx;
+            if (tx < 0 || ty < 0 || tx >= w || ty >= g.map.height || g.map.tiles[t] !== 0 || g.occupancy[t] !== 0 || g.reserved[t] !== 0) { free = false; break; }
+          }
+        if (free) { addBuilding(g, CAMP, player, x, y); return; }
+      }
+}
+
+export function playerCamp(g: GameState, player: number): Building | undefined {
+  return g.buildings.find((b) => b.owner === player && b.type === CAMP);
 }
 
 export function playerKeep(g: GameState, player: number): Building | undefined {

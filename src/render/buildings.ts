@@ -13,6 +13,7 @@ const M = {
   orchardGrass: mat(0x86b54a, 'grass'), bark: mat(0x7a5a3a, 'bark'), leafLight: mat(0x7fb548, 'leaves'),
   appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xb97a3a),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
+  window: mat(0xb08a5a, 'window'),
   smoke: new THREE.MeshLambertMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
@@ -129,6 +130,8 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
     interior.visible = active;
     for (const name of ['roof', 'shell', 'chimney']) { const part = model.getObjectByName(name); if (part) part.visible = !active; }
   }
+  const flame = model.getObjectByName('flame');
+  if (flame) { flame.visible = active; flame.scale.set(1, 0.8 + Math.abs(Math.sin(time * 9)) * 0.5, 1); }
   const spin = model.getObjectByName('spin');
   if (spin && active) spin.rotation.z -= dt * 1.6;
   const smoke = model.getObjectByName('smoke');
@@ -142,11 +145,17 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   }
 }
 
-type Builder = (g: THREE.Group, team: THREE.Material) => void;
+type Builder = (g: THREE.Group, team: THREE.Material, flag: THREE.Material) => void;
+
+/** Mała chorągiewka w barwie drużyny (gładka, bez wzoru dachówek) */
+function pennant(g: THREE.Group, flag: THREE.Material, x: number, y: number, z: number): void {
+  box(g, M.woodDark, 0.03, 0.4, 0.03, x, y, z);
+  box(g, flag, 0.24, 0.14, 0.02, x + 0.13, y + 0.25, z);
+}
 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
 const BUILDERS: Record<string, Builder> = {
-  keep(g, team) {
+  keep(g, team, flag) {
     box(g, M.stone, 2.5, 1.4, 2.5);
     box(g, M.stoneDark, 1.5, 1.3, 1.5, 0, 1.4, 0);
     pyramid(g, team, 1.25, 1.0, 0, 2.7, 0);
@@ -158,9 +167,9 @@ const BUILDERS: Record<string, Builder> = {
     }
     box(g, M.woodDark, 0.6, 0.85, 0.08, 0, 0, 1.27);
     box(g, M.woodDark, 0.05, 1.2, 0.05, 0, 3.7, 0);
-    box(g, team, 0.6, 0.34, 0.03, 0.32, 4.5, 0);
+    box(g, flag, 0.6, 0.34, 0.03, 0.32, 4.5, 0);
   },
-  house(g, team) {
+  house(g, _team, flag) {
     const inside = hut(g, M.plaster, M.thatch, 1.5, 1.3, 0.8, 0, 0, true);
     // izba: stół z miską, ławy i łóżko
     box(inside, M.wood, 0.45, 0.22, 0.3, 0.15, 0.05, 0.1);
@@ -168,7 +177,8 @@ const BUILDERS: Record<string, Builder> = {
     box(inside, M.woodDark, 0.4, 0.12, 0.1, 0.15, 0.05, 0.36);
     box(inside, M.woodDark, 0.6, 0.14, 0.3, -0.38, 0.05, -0.42);
     box(inside, M.white, 0.5, 0.06, 0.26, -0.38, 0.19, -0.42);
-    box(g, team, 0.3, 0.3, 0.04, 0.45, 0.35, 0.67);
+    box(g, M.window, 0.3, 0.3, 0.04, 0.45, 0.32, 0.66);
+    pennant(g, flag, 0.62, 1.15, 0);
   },
   stockpile(g) {
     box(g, M.soil, 1.9, 0.06, 1.9);
@@ -185,11 +195,12 @@ const BUILDERS: Record<string, Builder> = {
       }
     g.add(fill);
   },
-  granary(g, team) {
+  granary(g, _team, flag) {
     box(g, M.wood, 1.4, 1.1, 1.4, 0, 0.25, 0);
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) box(g, M.woodDark, 0.14, 0.25, 0.14, sx * 0.6, 0, sz * 0.6);
     pyramid(g, M.thatch, 1.2, 0.8, 0, 1.35, 0);
-    box(g, team, 0.3, 0.3, 0.04, 0, 0.7, 0.72);
+    box(g, M.window, 0.3, 0.3, 0.04, 0, 0.7, 0.71);
+    pennant(g, flag, 0, 2.1, 0);
   },
   woodcutter(g) {
     const inside = hut(g, M.wood, M.woodDark, 1.0, 0.9, 0.65, -0.3, -0.2, true);
@@ -223,6 +234,42 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.wood, 0.1, 0.75, 0.12, -0.36, 0, 0.5);
     box(g, M.wood, 0.1, 0.75, 0.12, 0.36, 0, 0.5);
     box(g, M.wood, 0.85, 0.1, 0.12, 0, 0.72, 0.5);
+  },
+  camp(g) {
+    box(g, M.soil, 1.9, 0.04, 1.9);
+    // wiata: cztery słupy i skośny dach nad ławami
+    for (const [x, z] of [[-0.85, -0.85], [0.85, -0.85]] as const) box(g, M.woodDark, 0.09, 1.0, 0.09, x, 0, z);
+    for (const [x, z] of [[-0.85, -0.1], [0.85, -0.1]] as const) box(g, M.woodDark, 0.09, 0.75, 0.09, x, 0, z);
+    const roof = box(g, M.thatch, 1.95, 0.06, 1.0, 0, 0.88, -0.48);
+    roof.rotation.x = 0.33;
+    box(g, M.wood, 1.5, 0.06, 0.2, 0, 0.2, -0.62);
+    box(g, M.woodDark, 0.08, 0.2, 0.16, -0.6, 0, -0.62);
+    box(g, M.woodDark, 0.08, 0.2, 0.16, 0.6, 0, -0.62);
+    // kłody do siedzenia wokół ogniska
+    for (const [x, z, rot] of [[-0.62, 0.45, 0.5], [0.62, 0.45, -0.5]] as const) {
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.6, 7), M.bark);
+      log.rotation.set(Math.PI / 2, 0, rot);
+      log.position.set(x, 0.12, z);
+      g.add(log);
+    }
+    // ognisko: krąg kamieni, polana, żar i dym
+    for (let k = 0; k < 7; k++) box(g, M.stoneDark, 0.11, 0.09, 0.11, Math.cos(k * 0.9) * 0.24, 0.04, 0.35 + Math.sin(k * 0.9) * 0.24);
+    for (const rot of [0.4, -0.6, 1.5]) {
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.34, 5), M.woodDark);
+      stick.rotation.set(Math.PI / 2 - 0.5, rot, 0);
+      stick.position.set(0, 0.13, 0.35);
+      g.add(stick);
+    }
+    const flame = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.3, 5), M.ember);
+    flame.position.set(0, 0.26, 0.35);
+    flame.name = 'flame';
+    g.add(flame);
+    const smoke = new THREE.Group();
+    smoke.name = 'smoke';
+    smoke.position.set(0, 0.5, 0.35);
+    for (let i = 0; i < 4; i++) smoke.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.1, 0), M.smoke));
+    smoke.visible = false;
+    g.add(smoke);
   },
   orchard(g) {
     box(g, M.orchardGrass, 2.8, 0.05, 2.8);
@@ -306,7 +353,7 @@ const BUILDERS: Record<string, Builder> = {
     }
     g.add(spin);
   },
-  bakery(g, team) {
+  bakery(g, _team, flag) {
     const inside = hut(g, M.plaster, mat(0xb5562f, 'tiles'), 1.4, 1.2, 0.8, 0, 0, true);
     // piec z żarem, stół i bochenki
     box(inside, M.stoneDark, 0.5, 0.55, 0.45, -0.4, 0.05, -0.33);
@@ -314,7 +361,8 @@ const BUILDERS: Record<string, Builder> = {
     box(inside, M.wood, 0.5, 0.25, 0.3, 0.35, 0.05, -0.35);
     for (let i = 0; i < 3; i++) box(inside, M.bread, 0.12, 0.07, 0.18, 0.2 + i * 0.15, 0.3, -0.35);
     box(g, M.stoneDark, 0.3, 1.0, 0.3, -0.45, 0.8, -0.3).name = 'chimney';
-    box(g, team, 0.3, 0.3, 0.04, -0.45, 0.35, 0.62);
+    box(g, M.window, 0.3, 0.3, 0.04, 0.45, 0.32, 0.61);
+    pennant(g, flag, 0.6, 1.2, 0);
     // dym z komina, widoczny tylko gdy piekarz piecze
     const smoke = new THREE.Group();
     smoke.name = 'smoke';
@@ -326,12 +374,15 @@ const BUILDERS: Record<string, Builder> = {
 };
 
 const teamMats = new Map<number, THREE.MeshLambertMaterial>();
+const flagMats = new Map<number, THREE.MeshLambertMaterial>();
 
 export function buildingModel(id: string, teamColor: number): THREE.Group {
   let team = teamMats.get(teamColor);
   if (!team) { team = mat(teamColor, 'tiles'); teamMats.set(teamColor, team); }
   const g = new THREE.Group();
-  (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team);
+  let flag = flagMats.get(teamColor);
+  if (!flag) { flag = mat(teamColor); flagMats.set(teamColor, flag); }
+  (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team, flag);
   // fundament, żeby budynek nie wisiał nad nierównym terenem
   const base = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), M.soil);
   base.name = 'base';

@@ -66,7 +66,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'orchard', category: 'food', name: 'b.orchard', w: 3, h: 3, cost: { wood: 10 }, buildable: true,
     workView: 'field',
-    production: { output: { res: 'apples', amount: 10 }, site: 'home', workTicks: 80 },
+    production: { output: { res: 'apples', amount: 12 }, site: 'home', workTicks: 80 },
   },
   {
     id: 'farm', category: 'food', name: 'b.farm', w: 3, h: 3, cost: { wood: 20 }, buildable: true,
@@ -83,6 +83,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
     workView: 'inside',
     production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 16 }, site: 'home', workTicks: 110 },
   },
+  // Obozowisko powstaje samo przy twierdzy: tu czekają chłopi bez pracy
+  { id: 'camp', name: 'b.camp', w: 2, h: 2, cost: {}, buildable: false },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

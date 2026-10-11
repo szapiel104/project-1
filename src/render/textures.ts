@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil';
+type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -72,6 +72,13 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
   bark(c, n, r) {
     c.fillStyle = gray(0.8); c.fillRect(0, 0, n, n);
     for (let i = 0; i < 70; i++) { c.fillStyle = gray(0.55 + r() * 0.4); c.fillRect(r() * n, r() * n, 2 + r() * 3, 10 + r() * 30); }
+  },
+  window(c, n) {
+    // ciemna szyba w drewnianej ramie ze szprosami
+    c.fillStyle = gray(0.95); c.fillRect(0, 0, n, n);
+    c.fillStyle = gray(0.22); c.fillRect(n * 0.12, n * 0.12, n * 0.76, n * 0.76);
+    c.fillStyle = gray(0.4); c.fillRect(n * 0.16, n * 0.16, n * 0.3, n * 0.3);
+    c.fillStyle = gray(0.95); c.fillRect(n * 0.46, n * 0.12, n * 0.08, n * 0.76); c.fillRect(n * 0.12, n * 0.46, n * 0.76, n * 0.08);
   },
   soil(c, n, r) {
     c.fillStyle = gray(0.85); c.fillRect(0, 0, n, n);

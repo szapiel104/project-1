@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.3.3 — obozowisko (2026-10-11)
+
+- Okna z szybą i ramą zamiast czerwonych kwadratów; barwę drużyny pokazuje chorągiewka
+- Przy twierdzy stoi wiata z ławami i ogniskiem; chłopi bez pracy siadają wokół ognia zamiast stać pod bramą
+
 ## 0.3.2 — trawa, drzewa i sady (2026-10-11)
 
 - Trawa: bogatsza tekstura z plamami darni i źdźbłami oraz kępki trawy na łąkach

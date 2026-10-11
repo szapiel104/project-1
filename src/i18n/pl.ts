@@ -68,6 +68,8 @@ export const pl = {
   'b.farm': 'Farma zboża',
   'b.mill': 'Młyn',
   'b.bakery': 'Piekarnia',
+  'b.camp': 'Obozowisko',
+  'd.camp': 'Wiata z ławami i ogniskiem. Tu czekają chłopi bez pracy.',
   'd.keep': 'Siedziba władcy. Mieszka tu 8 osób. Mieści 250 surowców i 120 żywności.',
   'd.house': 'Miejsce dla 8 kolejnych mieszkańców. Chłopi przychodzą tu odpocząć po pracy.',
   'd.stockpile': 'Mieści 200 surowców: drewno, kamień, żelazo, zboże i mąkę. Gdy składy są pełne, chłopi czekają z towarem.',

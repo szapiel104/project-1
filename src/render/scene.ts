@@ -35,6 +35,7 @@ export class GameRenderer {
 
   private figures: Figures;
   private facing = new Map<number, number>();
+  private camps = new Map<number, GameState['buildings'][number]>();
   private loads: THREE.InstancedMesh;
   private logs: THREE.InstancedMesh;
   private planks: THREE.InstancedMesh;
@@ -233,6 +234,7 @@ export class GameRenderer {
     for (const u of g.units) {
       if (u.phase === Phase.Working) working.add(u.job);
       else if (u.phase === Phase.Resting) working.add(u.home);
+      else if (u.phase === Phase.Idle && u.path.length === 0) { const camp = this.camps.get(u.owner); if (camp) working.add(camp.id); }
     }
     for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id), this.time, dt);
   }
@@ -264,7 +266,8 @@ export class GameRenderer {
     const n = Math.min(g.units.length, MAX_UNITS);
     const t = this.tmp;
     const jobs = new Map<number, GameState['buildings'][number]>();
-    for (const b of g.buildings) jobs.set(b.id, b);
+    this.camps.clear();
+    for (const b of g.buildings) { jobs.set(b.id, b); if (BUILDINGS[b.type]!.id === 'camp') this.camps.set(b.owner, b); }
     for (let i = 0; i < n; i++) {
       const u = g.units[i]!;
       const prev = this.prevPos.get(u.id);
@@ -313,6 +316,15 @@ export class GameRenderer {
           t.rotation.set(0, resting ? 0 : Math.PI + Math.sin(k * 2) * 0.6, 0);
           if (!resting) swing = Math.sin(k * 6) * 0.35;
         }
+      }
+      // bezrobotni siadają wokół ogniska w obozowisku
+      const camp = u.phase === Phase.Idle && still ? this.camps.get(u.owner) : undefined;
+      if (camp && (u.py >> 8) * width + (u.px >> 8) === camp.door) {
+        const mesh = this.buildingMeshes.get(camp.id);
+        const a = (u.id * 2.39996) % (Math.PI * 2), rad = 0.5 + (u.id % 3) * 0.14;
+        t.position.set(camp.x + 1 + Math.cos(a) * rad - width / 2, (mesh?.position.y ?? 0) + 0.02, camp.y + 1.35 + Math.sin(a) * rad * 0.8 - height / 2);
+        t.rotation.set(0, Math.atan2(-Math.cos(a), -Math.sin(a)), 0);
+        swing = 0;
       }
       t.scale.setScalar(1);
       t.updateMatrix();

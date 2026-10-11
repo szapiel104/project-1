@@ -47,7 +47,7 @@ describe('budowanie', () => {
     const g = createGame(5);
     const c = build(g, 'house') as Extract<Command, { type: 'build' }>;
     step(g, [c]);
-    expect(g.buildings.length).toBe(3);
+    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(3);
     expect(res(g, 'wood')).toBe(RULES.startResources.wood! - 20);
     expect(g.occupancy[c.y * g.map.width + c.x]).toBeGreaterThan(0);
     expect(canPlace(g, 0, buildingIndex('house'), c.x, c.y)).toBe('place.occupied');
@@ -57,7 +57,9 @@ describe('budowanie', () => {
     const g = createGame(5);
     const enemy = playerKeep(g, 1)!;
     const house = buildingIndex('house');
-    expect(canPlace(g, 0, house, enemy.x + 4, enemy.y)).toBe('place.far');
+    let far = false; // gdzieś przy wrogiej twierdzy jest wolna łąka, ale to za daleko od własnej
+    for (let d = 4; d < 12 && !far; d++) far = canPlace(g, 0, house, enemy.x - d, enemy.y - d) === 'place.far';
+    expect(far).toBe(true);
     expect(canPlace(g, 0, house, 0, 0)).toBe('place.terrain'); // góry na krańcu mapy
     expect(canPlace(g, 0, buildingIndex('keep'), 20, 20)).toBe('place.unknown');
     g.players[0]!.res[resIndex('wood')] = 5;
@@ -65,7 +67,7 @@ describe('budowanie', () => {
     expect(canPlace(g, 0, house, s.x, s.y)).toBe('place.cost');
     const before = stateHash(g);
     step(g, [{ type: 'build', player: 0, building: 'house', ...s }, { type: 'build', player: 7, building: 'house', ...s }]);
-    expect(g.buildings.length).toBe(2);
+    expect(g.buildings.filter((b) => BUILDINGS[b.type]!.buildable).length).toBe(0);
     expect(before).not.toBe(stateHash(g)); // tick poszedł dalej, ale nic nie zbudowano
   });
 
@@ -81,7 +83,7 @@ describe('budowanie', () => {
     expect(canPlace(g, 0, house, cx, cy + 5)).toBe('place.blocks'); // zatkałby przejście
     expect(canPlace(g, 0, house, cx - 4, cy + 2)).toBeNull(); // w środku jest miejsce i nic nie odcina
     step(g, [{ type: 'build', player: 0, building: 'house', x: cx, y: cy + 5 }]);
-    expect(g.buildings.length).toBe(2); // komenda też została odrzucona
+    expect(g.buildings.filter((b) => BUILDINGS[b.type]!.buildable).length).toBe(0); // komenda też została odrzucona
   });
 
   it('rozbiórka zwraca połowę kosztu i zwalnia pracownika; cudzego budynku nie da się rozebrać', () => {
