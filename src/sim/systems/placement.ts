@@ -93,7 +93,8 @@ export function demolish(g: GameState, player: number, id: number): boolean {
   if (b.door >= 0) g.reserved[b.door]!--;
   g.buildings.splice(i, 1);
   for (const u of g.units) {
-    if (u.job === id) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; u.timer = 0; }
+    if (u.job === id) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.home = 0; }
+    else if (u.home === id) { u.home = 0; u.timer = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
   }
   const p = g.players[player]!;
   for (const [k, v] of Object.entries(def.cost))

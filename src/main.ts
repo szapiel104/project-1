@@ -121,6 +121,10 @@ renderer.onClick = (tile, touch) => {
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (picked) pick(null); else select(0); }
+  const tag = (e.target as HTMLElement | null)?.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || e.ctrlKey || e.metaKey) return;
+  if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
+  if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);
 });
 canvas.addEventListener('contextmenu', () => { if (picked) pick(null); });
 

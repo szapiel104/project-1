@@ -121,7 +121,13 @@ const BUILDERS: Record<string, Builder> = {
     box(g, team, 0.6, 0.34, 0.03, 0.32, 4.5, 0);
   },
   house(g, team) {
-    hut(g, M.plaster, M.thatch, 1.5, 1.3, 0.8);
+    const inside = hut(g, M.plaster, M.thatch, 1.5, 1.3, 0.8, 0, 0, true);
+    // izba: stół z miską, ławy i łóżko
+    box(inside, M.wood, 0.45, 0.22, 0.3, 0.15, 0.05, 0.1);
+    box(inside, M.bread, 0.12, 0.05, 0.12, 0.15, 0.27, 0.1);
+    box(inside, M.woodDark, 0.4, 0.12, 0.1, 0.15, 0.05, 0.36);
+    box(inside, M.woodDark, 0.6, 0.14, 0.3, -0.38, 0.05, -0.42);
+    box(inside, M.white, 0.5, 0.06, 0.26, -0.38, 0.19, -0.42);
     box(g, team, 0.3, 0.3, 0.04, 0.45, 0.35, 0.67);
   },
   stockpile(g) {
@@ -197,8 +203,31 @@ const BUILDERS: Record<string, Builder> = {
   mill(g) {
     const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.7, 8), M.plaster);
     tower.position.y = 0.85;
+    tower.name = 'shell';
     g.add(tower);
-    pyramid(g, M.woodDark, 0.65, 0.6, 0, 1.7, 0, 8);
+    const cap = new THREE.Group();
+    cap.name = 'roof';
+    pyramid(cap, M.woodDark, 0.65, 0.6, 0, 1.7, 0, 8);
+    g.add(cap);
+    // wnętrze: niski mur, kamienie młyńskie i worki z mąką; słup trzyma skrzydła, gdy wieża jest odsłonięta
+    const inside = new THREE.Group();
+    inside.name = 'interior';
+    inside.visible = false;
+    const floor = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.05, 8), M.wood);
+    floor.position.set(0.2, 0.025, 0.1);
+    inside.add(floor);
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.7, 0.4, 8, 1, true, Math.PI * 0.75, Math.PI * 1.5), new THREE.MeshLambertMaterial({ color: 0xe6d9b8, flatShading: true, side: THREE.DoubleSide }));
+    wall.position.y = 0.2;
+    inside.add(wall);
+    for (let i = 0; i < 2; i++) {
+      const stoneWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.12, 10), i ? M.stone : M.stoneDark);
+      stoneWheel.position.set(-0.2, 0.11 + i * 0.13, -0.15);
+      inside.add(stoneWheel);
+    }
+    box(inside, M.white, 0.2, 0.26, 0.16, 0.3, 0.05, -0.3);
+    box(inside, M.white, 0.2, 0.2, 0.16, 0.42, 0.05, -0.12);
+    box(inside, M.woodDark, 0.1, 1.4, 0.1, 0, 0, 0.5);
+    g.add(inside);
     // skrzydła w osobnej grupie, żeby mogły się kręcić, gdy młynarz pracuje
     const spin = new THREE.Group();
     spin.name = 'spin';

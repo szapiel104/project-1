@@ -5,6 +5,7 @@ import { findPath, walkable } from '../path';
 import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 
 const RETRY_TICKS = 20;
+const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
 
 function tileOf(g: GameState, u: Unit): number {
   return (u.py >> 8) * g.map.width + (u.px >> 8);
@@ -38,6 +39,11 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       if (!kind) return null;
       const doors = storeDoors(g, u.owner, kind);
       return (t) => doors.has(t);
+    }
+    case Phase.ToRest: {
+      const doors = new Set<number>();
+      for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && b.type === HOUSE) doors.add(b.door);
+      return doors.size ? (t) => doors.has(t) : null;
     }
     case Phase.ToSite: {
       const site = prod?.site;
@@ -90,7 +96,16 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       }
       u.carryRes = -1; u.carryAmt = 0;
       u.phase = u.job ? Phase.Returning : Phase.Idle;
+      // co kilka dostaw idzie posiedzieć w chacie, o ile jakaś stoi
+      if (++u.trips >= RULES.restEvery && g.buildings.some((b) => b.owner === u.owner && b.type === HOUSE)) { u.trips = 0; u.phase = Phase.ToRest; }
       break;
+    case Phase.ToRest: {
+      const here = tileOf(g, u);
+      const house = g.buildings.find((b) => b.owner === u.owner && b.type === HOUSE && b.door === here);
+      if (house) { u.home = house.id; u.phase = Phase.Resting; u.timer = RULES.restTicks; }
+      else u.phase = u.job ? Phase.Returning : Phase.Idle;
+      break;
+    }
     default:
       break;
   }
@@ -127,6 +142,10 @@ export function workerSystem(g: GameState): void {
     const job = u.job ? byId.get(u.job) : undefined;
     const prod = job ? BUILDINGS[job.type]!.production : undefined;
 
+    if (u.phase === Phase.Resting) {
+      if (--u.timer <= 0) { u.home = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
+      continue;
+    }
     if (u.phase === Phase.Working || u.phase === Phase.WorkingSite) {
       if (--u.timer > 0 || !prod) continue;
       u.carryRes = resIndex(prod.output.res);
@@ -138,7 +157,7 @@ export function workerSystem(g: GameState): void {
     if (u.path.length) { move(g, u); continue; }
 
     const goal = goalFor(g, u, job, prod);
-    if (!goal) continue;
+    if (!goal) { if (u.phase === Phase.ToRest) u.phase = u.job ? Phase.Returning : Phase.Idle; continue; }
     const here = tileOf(g, u);
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal);

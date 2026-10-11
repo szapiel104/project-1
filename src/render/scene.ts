@@ -199,7 +199,10 @@ export class GameRenderer {
 
   private animate(g: GameState, dt: number): void {
     const working = new Set<number>();
-    for (const u of g.units) if (u.phase === Phase.Working) working.add(u.job);
+    for (const u of g.units) {
+      if (u.phase === Phase.Working) working.add(u.job);
+      else if (u.phase === Phase.Resting) working.add(u.home);
+    }
     for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id), this.time, dt);
   }
 
@@ -230,7 +233,7 @@ export class GameRenderer {
     const n = Math.min(g.units.length, MAX_UNITS);
     const t = this.tmp;
     const jobs = new Map<number, GameState['buildings'][number]>();
-    for (const b of g.buildings) if (b.worker) jobs.set(b.id, b);
+    for (const b of g.buildings) jobs.set(b.id, b);
     for (let i = 0; i < n; i++) {
       const u = g.units[i]!;
       const prev = this.prevPos.get(u.id);
@@ -243,8 +246,9 @@ export class GameRenderer {
       t.position.set(fx + ox - width / 2, view.heightAt(fx + ox, fy + oz), fy + oz - height / 2);
       t.rotation.set(0, 0, 0);
       // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
-      const job = u.phase === Phase.Working && u.job ? jobs.get(u.job) : undefined;
-      const mode = job ? BUILDINGS[job.type]!.workView : undefined;
+      const resting = u.phase === Phase.Resting;
+      const job = resting ? jobs.get(u.home) : u.phase === Phase.Working && u.job ? jobs.get(u.job) : undefined;
+      const mode = resting ? 'inside' : job ? BUILDINGS[job.type]!.workView : undefined;
       if (job && mode) {
         const def = BUILDINGS[job.type]!;
         const mesh = this.buildingMeshes.get(job.id);
@@ -257,8 +261,10 @@ export class GameRenderer {
         } else {
           const m = mesh?.getObjectByName('interior')?.children[0];
           const lx = m ? m.position.x : 0, lz = m ? m.position.z : 0;
-          t.position.set(cx + lx - width / 2 + Math.sin(k * 2) * 0.12, (mesh?.position.y ?? 0) + 0.05, cy + lz - height / 2 + 0.12);
-          t.rotation.y = Math.sin(k * 2) * 0.6;
+          // odpoczywający siedzą przy stole obok siebie, pracujący krzątają się przy warsztacie
+          const side = resting ? ((u.id % 3) - 1) * 0.28 : Math.sin(k * 2) * 0.12;
+          t.position.set(cx + lx - width / 2 + side, (mesh?.position.y ?? 0) + (resting ? -0.03 : 0.05), cy + lz - height / 2 + (resting ? 0.3 : 0.12));
+          t.rotation.y = resting ? Math.PI : Math.sin(k * 2) * 0.6;
         }
       }
       t.scale.setScalar(1);

@@ -47,6 +47,9 @@ export const enum Phase {
   ToSite = 5,
   WorkingSite = 6,
   ToStore = 7,
+  /** Idzie odpocząć do chaty */
+  ToRest = 8,
+  Resting = 9,
 }
 
 export interface Unit {
@@ -65,6 +68,10 @@ export interface Unit {
   /** Indeks niesionego surowca albo -1 */
   carryRes: number;
   carryAmt: number;
+  /** Dostawy od ostatniego odpoczynku */
+  trips: number;
+  /** Id chaty, w której właśnie odpoczywa, albo 0 */
+  home: number;
 }
 
 export interface GameState {
@@ -148,7 +155,7 @@ export function stateHash(g: GameState): number {
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait);
-    add(u.carryRes); add(u.carryAmt); add(u.path.length);
+    add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.path.length);
     for (const t of u.path) add(t);
   }
   return h >>> 0;

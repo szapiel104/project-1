@@ -188,6 +188,37 @@ describe('ludność i popularność', () => {
   });
 });
 
+describe('odpoczynek', () => {
+  it('po kilku dostawach chłop idzie do chaty, siedzi tam i wraca do pracy', () => {
+    const g = createGame(5);
+    step(g, [build(g, 'orchard')]);
+    step(g, [build(g, 'house')]);
+    const house = g.buildings.find((b) => BUILDINGS[b.type]!.id === 'house')!;
+    let rested = 0, backToWork = false;
+    for (let i = 0; i < 4000; i++) {
+      step(g, []);
+      const resting = g.units.some((u) => u.home === house.id);
+      if (resting) rested++;
+      else if (rested && g.units.some((u) => u.job && u.phase === 4)) backToWork = true;
+    }
+    expect(rested).toBeGreaterThanOrEqual(RULES.restTicks);
+    expect(backToWork).toBe(true);
+  });
+
+  it('bez chaty nikt nie odpoczywa, a rozbiórka chaty wygania odpoczywających', () => {
+    const g = createGame(5);
+    step(g, [build(g, 'orchard')]);
+    run(g, 2500);
+    expect(g.units.every((u) => u.home === 0 && u.phase !== 8 && u.phase !== 9)).toBe(true);
+    step(g, [build(g, 'house')]);
+    const house = g.buildings.find((b) => BUILDINGS[b.type]!.id === 'house')!;
+    for (let i = 0; i < 4000 && !g.units.some((u) => u.home === house.id); i++) step(g, []);
+    expect(g.units.some((u) => u.home === house.id)).toBe(true);
+    step(g, [{ type: 'demolish', player: 0, id: house.id }]);
+    expect(g.units.every((u) => u.home === 0)).toBe(true);
+  });
+});
+
 describe('zapis gry', () => {
   it('wczytana gra ma ten sam skrót i dalej toczy się identycznie jak niezapisana', () => {
     const a = createGame(77);

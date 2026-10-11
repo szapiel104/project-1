@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.2.9 — chaty i dłuższa praca (2026-10-11)
+
+- Co trzy dostawy chłop idzie do najbliższej chaty odpocząć; chata odsłania wtedy izbę ze stołem i łóżkiem
+- Cięcie desek, mielenie i pieczenie trwają dłużej, żeby było je widać
+- Tempo gry pod klawiszami + i −
+
+## 0.2.8 — wnętrze młyna (2026-10-11)
+
+- Gdy młynarz miele, młyn odsłania wnętrze: kamienie młyńskie i worki z mąką, skrzydła kręcą się dalej
+
 ## 0.2.7 — zapis gry (2026-10-11)
 
 - Gra zapisuje się sama w przeglądarce co 5 sekund i przy zamykaniu karty; po odświeżeniu wraca stan sprzed odświeżenia

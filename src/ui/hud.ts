@@ -41,6 +41,8 @@ export interface Hud {
   setPicked(id: string | null): void;
   showInfo(info: BuildingInfo | null): void;
   toast(text: string): void;
+  /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
+  stepSpeed(dir: number): void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
@@ -120,11 +122,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   };
   let speedIndex = 1;
   let rationsNow = 0, taxNow = 0;
-  const speedVal = stepper(t('hud.speed'), (dir) => {
+  const stepSpeed = (dir: number): void => {
     speedIndex = Math.max(0, Math.min(SPEEDS.length - 1, speedIndex + dir));
     showSpeed();
     events.onSpeed(SPEEDS[speedIndex]!);
-  });
+  };
+  const speedVal = stepper(t('hud.speed'), stepSpeed);
   const showSpeed = (): void => setText(speedVal, SPEEDS[speedIndex] === 0 ? t('hud.pause') : `${SPEEDS[speedIndex]}×`);
   showSpeed();
   const taxVal = stepper(t('hud.tax'), (dir) => {
@@ -299,7 +302,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // Sterowanie
   const help = section(t('hud.help'), 'help');
   const list = el('ul', 'help-list');
-  for (const k of ['help.move', 'help.rotate', 'help.zoom', 'help.build']) list.append(el('li', '', t(k)));
+  for (const k of ['help.move', 'help.rotate', 'help.zoom', 'help.build', 'help.speed']) list.append(el('li', '', t(k)));
   help.append(list);
 
   floaters.append(drawer, info);
@@ -351,6 +354,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(infoWorker, `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
       demolish.hidden = !i.own || !i.def.buildable;
     },
+    stepSpeed,
     toast(text) {
       setText(toast, text);
       toast.hidden = false;

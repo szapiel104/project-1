@@ -17,6 +17,10 @@ export const RULES = {
   /** Prędkość chłopa: 256 = jedno pole na tick */
   unitSpeed: 28,
   unitSpeedDiagonal: 20,
+  /** Po tylu dostawach chłop idzie odpocząć do najbliższej chaty */
+  restEvery: 3,
+  /** Ile ticków siedzi w chacie */
+  restTicks: 80,
   /** Przy rozbiórce wraca tyle procent kosztu */
   refundPercent: 50,
   /** Kara do popularności za brak miejsc w domach */

@@ -51,7 +51,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'woodcutter', category: 'industry', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 10 }, buildable: true,
     workView: 'inside',
-    production: { output: { res: 'wood', amount: 8 }, site: Terrain.Forest, workTicks: 50, processTicks: 40 },
+    production: { output: { res: 'wood', amount: 8 }, site: Terrain.Forest, workTicks: 60, processTicks: 100 },
   },
   {
     id: 'quarry', category: 'industry', name: 'b.quarry', w: 2, h: 2, cost: { wood: 20 }, buildable: true,
@@ -75,12 +75,13 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   {
     id: 'mill', category: 'food', name: 'b.mill', w: 2, h: 2, cost: { wood: 25, stone: 10 }, buildable: true,
-    production: { input: { res: 'wheat', amount: 8 }, output: { res: 'flour', amount: 8 }, site: 'home', workTicks: 50 },
+    workView: 'inside',
+    production: { input: { res: 'wheat', amount: 8 }, output: { res: 'flour', amount: 8 }, site: 'home', workTicks: 90 },
   },
   {
     id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, cost: { wood: 20, stone: 10 }, buildable: true,
     workView: 'inside',
-    production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 12 }, site: 'home', workTicks: 60 },
+    production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 12 }, site: 'home', workTicks: 110 },
   },
 ];
 
