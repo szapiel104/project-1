@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.3.12 — noc z pochodniami (2026-10-11)
+
+- Noc jest naprawdę ciemna: słabe, chłodne światło księżyca
+- Przy każdym budynku stoi pochodnia, okna świecą, a idący ludzie niosą pochodnie
+- Pochodnie rzucają migoczące, ciepłe światło na ziemię, ściany i ludzi (12 świateł na komputerze, 5 na telefonie, przydzielane najbliższym środka ekranu)
+
 ## 0.3.11 — twierdza i lżejszy interfejs (2026-10-11)
 
 - Twierdza w ciepłym piaskowcu, z drewnianą hurdycją, gontowymi hełmami, oknami i daszkiem nad bramą, żeby pasowała do reszty osady

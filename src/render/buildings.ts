@@ -148,6 +148,25 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
   }
 }
 
+/** Noc: okna zaczynają świecić ciepłym światłem. `k` od 0 (dzień) do 1 (środek nocy). */
+export function setNight(k: number): void {
+  M.window.emissive.setHex(0xffb050);
+  M.window.emissiveIntensity = k * 1.6;
+}
+
+/** Pochodnia na słupie: stawiana przy każdym budynku, płonie tylko nocą. */
+export function torchModel(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = 'torch';
+  box(g, M.woodDark, 0.06, 0.95, 0.06);
+  box(g, M.iron, 0.12, 0.08, 0.12, 0, 0.92, 0);
+  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 6), M.ember);
+  flame.position.y = 1.15;
+  flame.name = 'torchflame';
+  g.add(flame);
+  return g;
+}
+
 /** Animacje budynków: kręcące się skrzydła młyna i dym z komina, tylko gdy ktoś w środku pracuje. */
 export function animateBuilding(model: THREE.Object3D, active: boolean, time: number, dt: number): void {
   const interior = model.getObjectByName('interior');

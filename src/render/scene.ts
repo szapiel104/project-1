@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS } from '../data/buildings';
-import { animateBuilding, setStockFill } from './buildings';
+import { animateBuilding, setNight, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
@@ -18,17 +18,18 @@ export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean
 
 const MAX_UNITS = 2048;
 const tmpColor = new THREE.Color();
+const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
 const DAY = [
-  { h: 0, sun: 0x9db4ff, power: 1.0, sky: 0.75, haze: 0x222c4c },
-  { h: 4.5, sun: 0x9db4ff, power: 1.0, sky: 0.75, haze: 0x2a3558 },
+  { h: 0, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x0f1529 },
+  { h: 4.5, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x141b33 },
   { h: 6, sun: 0xff9a5a, power: 1.6, sky: 0.9, haze: 0xd9a27c },
   { h: 8, sun: 0xffd9a0, power: 3.2, sky: 1.4, haze: 0xd6cdb4 },
   { h: 12, sun: 0xfff0d0, power: 3.8, sky: 1.55, haze: 0xcfd3c4 },
   { h: 17, sun: 0xffd9a0, power: 3.3, sky: 1.4, haze: 0xd6cdb4 },
   { h: 19.5, sun: 0xff8a4a, power: 1.7, sky: 0.9, haze: 0xcf8e68 },
-  { h: 21, sun: 0x9db4ff, power: 1.0, sky: 0.75, haze: 0x2a3558 },
-  { h: 24, sun: 0x9db4ff, power: 1.0, sky: 0.75, haze: 0x222c4c },
+  { h: 21.5, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x141b33 },
+  { h: 24, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x0f1529 },
 ];
 const WOOD = RESOURCES.indexOf('wood');
 
@@ -43,6 +44,12 @@ export class GameRenderer {
   private sun: THREE.DirectionalLight;
   private hemi: THREE.HemisphereLight;
   private sunDir = new THREE.Vector3(-55, 85, 40);
+  /** 0 w dzień, 1 w środku nocy */
+  private night = 0;
+  private lamps: THREE.PointLight[] = [];
+  private lampSpots: THREE.Vector3[] = [];
+  private handTorches: THREE.InstancedMesh;
+  private frameNo = 0;
 
   private cursor: THREE.Mesh;
   private ghost: THREE.Mesh;
@@ -107,6 +114,21 @@ export class GameRenderer {
     this.selection = flat(new THREE.RingGeometry(0.62, 0.72, 4, 1, Math.PI / 4), 0xfff3c4);
 
     this.figures = new Figures(MAX_UNITS, this.scene);
+    // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
+    // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
+    for (let i = 0; i < (phone ? 5 : 12); i++) {
+      const lamp = new THREE.PointLight(0xff9a3c, 0, 11, 1.7);
+      this.scene.add(lamp);
+      this.lamps.push(lamp);
+    }
+    const hand = mergeGeometries([
+      tint(new THREE.CylinderGeometry(0.018, 0.022, 0.3, 5).translate(0.17, 0.5, 0.1), 0x4a3320),
+      tint(new THREE.ConeGeometry(0.05, 0.16, 5).translate(0.17, 0.72, 0.1), 0xffa53a),
+    ]);
+    this.handTorches = new THREE.InstancedMesh(hand, new THREE.MeshBasicMaterial({ vertexColors: true }), MAX_UNITS);
+    this.handTorches.count = 0;
+    this.handTorches.frustumCulled = false;
+    this.scene.add(this.handTorches);
     this.loads = createLoads(MAX_UNITS, this.scene);
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
     // całe ścięte drzewo ciągnięte po ziemi za drwalem: pień z gałęziami i koroną na końcu
@@ -215,7 +237,8 @@ export class GameRenderer {
     this.aimSun();
     if (this.state && this.view) {
       this.animate(this.state, this.calm ? 0 : dt);
-      this.syncForest(this.state, this.view); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
+      this.syncForest(this.state, this.view);
+      this.syncLamps(this.state); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
   }
 
@@ -243,6 +266,10 @@ export class GameRenderer {
         part.castShadow = true;
         part.receiveShadow = true;
       });
+      const torch = torchModel();
+      torch.position.set(def.w / 2 - 0.08, 0, def.h / 2 - 0.08);
+      torch.visible = false;
+      mesh.add(torch);
       this.buildingLayer.add(mesh);
       this.buildingMeshes.set(b.id, mesh);
     }
@@ -265,6 +292,10 @@ export class GameRenderer {
     const bg = this.scene.background as THREE.Color;
     bg.setHex(a.haze).lerp(tmpColor.setHex(b.haze), k);
     (this.scene.fog as THREE.Fog).color.copy(bg);
+    // płynne przejście: zmierzch 19:30–21:30, świt 4:30–6:30
+    const dusk = Math.max(0, Math.min(1, (hour - 19.5) / 2)), dawn = Math.max(0, Math.min(1, (6.5 - hour) / 2));
+    this.night = hour >= 12 ? dusk : dawn;
+    setNight(this.night);
     // słońce wędruje ze wschodu na zachód; nocą tę samą drogę robi księżyc
     const dayTime = hour >= 6 && hour < 20;
     const arc = (((dayTime ? hour - 6 : (hour + 4) % 24) / (dayTime ? 14 : 10)) * 0.84 + 0.08) * Math.PI;
@@ -282,6 +313,44 @@ export class GameRenderer {
     this.sun.position.set(x + this.sunDir.x, this.sunDir.y, z + this.sunDir.z);
     const c = this.sun.shadow.camera;
     if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
+  }
+
+  /** Nocą zapala pochodnie przy budynkach i w rękach ludzi oraz rozdaje światła najbliższym z nich. */
+  private syncLamps(g: GameState): void {
+    const on = this.night > 0.15;
+    const flicker = this.calm ? 1 : 0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07;
+    for (const mesh of this.buildingMeshes.values()) {
+      const torch = mesh.getObjectByName('torch');
+      if (!torch) continue;
+      torch.visible = on;
+      if (on) torch.getObjectByName('torchflame')?.scale.set(1, 0.8 + flicker * 0.4, 1);
+    }
+    this.handTorches.visible = on;
+    if (!on) { for (const lamp of this.lamps) lamp.intensity = 0; return; }
+    // co kilka klatek wybieramy źródła światła najbliższe środkowi ekranu
+    if (this.frameNo++ % 6 === 0) {
+      const f = this.cam.focus;
+      const spots: { v: THREE.Vector3; d: number }[] = [];
+      for (const mesh of this.buildingMeshes.values()) {
+        const torch = mesh.getObjectByName('torch');
+        if (!torch) continue;
+        const v = new THREE.Vector3(mesh.position.x + torch.position.x, mesh.position.y + 1.25, mesh.position.z + torch.position.z);
+        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 });
+      }
+      const { width, height } = g.map;
+      for (const u of g.units) {
+        if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
+        const v = new THREE.Vector3(u.px / FP - width / 2, (this.view?.heightAt(u.px / FP, u.py / FP) ?? 0) + 0.8, u.py / FP - height / 2);
+        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4 });
+      }
+      spots.sort((a, b) => a.d - b.d);
+      this.lampSpots = spots.slice(0, this.lamps.length).map((s) => s.v);
+    }
+    this.lamps.forEach((lamp, i) => {
+      const spot = this.lampSpots[i];
+      lamp.intensity = spot ? this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
+      if (spot) lamp.position.copy(spot);
+    });
   }
 
   /** Drzewo przechyla się pod koniec rąbania, a po ścięciu znika i zostaje pniak. */
@@ -407,6 +476,9 @@ export class GameRenderer {
       t.scale.setScalar(1);
       t.updateMatrix();
       const wood = u.carryRes === WOOD;
+      // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
+      const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
+      if (torchOn) this.handTorches.setMatrixAt(i, t.matrix); else this.handTorches.setMatrixAt(i, ZERO);
       this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !(wood && u.phase === Phase.ToHome), TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(wood && u.phase === Phase.ToHome ? 1 : 0);
@@ -423,6 +495,8 @@ export class GameRenderer {
       }
     }
     this.figures.finish(n);
+    this.handTorches.count = n;
+    this.handTorches.instanceMatrix.needsUpdate = true;
     for (const m of [...this.loads.values(), this.logs, this.planks]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;
