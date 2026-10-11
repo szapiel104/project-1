@@ -234,12 +234,12 @@ export class GameRenderer {
     for (const u of g.units) {
       if (u.phase === Phase.Working) working.add(u.job);
       else if (u.phase === Phase.Resting) working.add(u.home);
-      else if (u.phase === Phase.Idle && u.path.length === 0) { const camp = this.camps.get(u.owner); if (camp) working.add(camp.id); }
+      else if (u.phase === Phase.Idle && u.path.length === 0) { const camp = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8)); if (camp) working.add(camp.id); }
     }
     for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id), this.time, dt);
   }
 
-  /** Zapełnia najpierw widoczne składy w kolejności budowy, a twierdzę na końcu, żeby było widać każdą dostawę. */
+  /** Zapełnia najpierw otwarte składy w kolejności budowy, a zamkniętą stodołę na końcu, żeby było widać każdą dostawę. */
   private syncStores(g: GameState): void {
     if (g.tick === this.storesTick) return;
     this.storesTick = g.tick;
@@ -250,7 +250,7 @@ export class GameRenderer {
       RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile' && p.res[i]! > 0) colors.push({ id: r, share: p.res[i]! / sum }); });
       left = sum;
       const stores = g.buildings.filter((b) => b.owner === p.id && BUILDINGS[b.type]!.capacity?.stockpile);
-      stores.sort((a, b) => Number(BUILDINGS[a.type]!.id === 'keep') - Number(BUILDINGS[b.type]!.id === 'keep') || a.id - b.id);
+      stores.sort((a, b) => Number(BUILDINGS[a.type]!.id === 'barn') - Number(BUILDINGS[b.type]!.id === 'barn') || a.id - b.id);
       for (const b of stores) {
         const cap = BUILDINGS[b.type]!.capacity!.stockpile!;
         const here = Math.min(cap, left);
@@ -267,7 +267,7 @@ export class GameRenderer {
     const t = this.tmp;
     const jobs = new Map<number, GameState['buildings'][number]>();
     this.camps.clear();
-    for (const b of g.buildings) { jobs.set(b.id, b); if (BUILDINGS[b.type]!.id === 'camp') this.camps.set(b.owner, b); }
+    for (const b of g.buildings) { jobs.set(b.id, b); if (BUILDINGS[b.type]!.idleSlots && b.door >= 0) this.camps.set(b.door, b); }
     for (let i = 0; i < n; i++) {
       const u = g.units[i]!;
       const prev = this.prevPos.get(u.id);
@@ -318,8 +318,8 @@ export class GameRenderer {
         }
       }
       // bezrobotni siadają wokół ogniska w obozowisku
-      const camp = u.phase === Phase.Idle && still ? this.camps.get(u.owner) : undefined;
-      if (camp && (u.py >> 8) * width + (u.px >> 8) === camp.door) {
+      const camp = u.phase === Phase.Idle && still ? this.camps.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
+      if (camp && camp.owner === u.owner) {
         const mesh = this.buildingMeshes.get(camp.id);
         const a = (u.id * 2.39996) % (Math.PI * 2), rad = 0.5 + (u.id % 3) * 0.14;
         t.position.set(camp.x + 1 + Math.cos(a) * rad - width / 2, (mesh?.position.y ?? 0) + 0.02, camp.y + 1.35 + Math.sin(a) * rad * 0.8 - height / 2);

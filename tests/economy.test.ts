@@ -47,7 +47,7 @@ describe('budowanie', () => {
     const g = createGame(5);
     const c = build(g, 'house') as Extract<Command, { type: 'build' }>;
     step(g, [c]);
-    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(3);
+    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(4);
     expect(res(g, 'wood')).toBe(RULES.startResources.wood! - 20);
     expect(g.occupancy[c.y * g.map.width + c.x]).toBeGreaterThan(0);
     expect(canPlace(g, 0, buildingIndex('house'), c.x, c.y)).toBe('place.occupied');
@@ -67,7 +67,7 @@ describe('budowanie', () => {
     expect(canPlace(g, 0, house, s.x, s.y)).toBe('place.cost');
     const before = stateHash(g);
     step(g, [{ type: 'build', player: 0, building: 'house', ...s }, { type: 'build', player: 7, building: 'house', ...s }]);
-    expect(g.buildings.filter((b) => BUILDINGS[b.type]!.buildable).length).toBe(0);
+    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(3);
     expect(before).not.toBe(stateHash(g)); // tick poszedł dalej, ale nic nie zbudowano
   });
 
@@ -83,7 +83,7 @@ describe('budowanie', () => {
     expect(canPlace(g, 0, house, cx, cy + 5)).toBe('place.blocks'); // zatkałby przejście
     expect(canPlace(g, 0, house, cx - 4, cy + 2)).toBeNull(); // w środku jest miejsce i nic nie odcina
     step(g, [{ type: 'build', player: 0, building: 'house', x: cx, y: cy + 5 }]);
-    expect(g.buildings.filter((b) => BUILDINGS[b.type]!.buildable).length).toBe(0); // komenda też została odrzucona
+    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(3); // komenda też została odrzucona
   });
 
   it('rozbiórka zwraca połowę kosztu i zwalnia pracownika; cudzego budynku nie da się rozebrać', () => {
@@ -169,18 +169,26 @@ describe('pojemność składów', () => {
   it('spichlerz ma osobny limit na żywność', () => {
     const g = createGame(5);
     expect(storeCapacity(g, 0, 'granary')).toBe(120);
+    // rozbiórka stodoły zabiera jej pojemność: zapasy trzeba mieć gdzie trzymać
+    step(g, [{ type: 'demolish', player: 0, id: g.buildings.find((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'barn')!.id }]);
+    expect(storeCapacity(g, 0, 'granary')).toBe(0);
+    step(g, [build(g, 'barn')]);
     step(g, [build(g, 'granary')]);
     expect(storeCapacity(g, 0, 'granary')).toBe(270);
   });
 });
 
 describe('ludność i popularność', () => {
-  it('nowa chata przyciąga mieszkańców', () => {
+  it('ludzie przychodzą, gdy jest dach i wolne miejsce w obozowisku', () => {
     const g = createGame(5);
-    run(g, 200);
-    expect(population(g, 0)).toBe(8);
-    run(g, 300, [build(g, 'house')]);
-    expect(population(g, 0)).toBeGreaterThan(8);
+    run(g, 300);
+    expect(population(g, 0)).toBe(6); // obozowisko pełne bezrobotnych: nikt nowy nie przyjdzie
+    step(g, [build(g, 'woodcutter')]);
+    run(g, 300, [build(g, 'orchard')]);
+    expect(population(g, 0)).toBe(8); // dwóch dostało pracę, więc dwóch doszło (do limitu miejsc w twierdzy)
+    step(g, [build(g, 'house')]);
+    run(g, 400, [build(g, 'camp')]);
+    expect(population(g, 0)).toBeGreaterThan(8); // nowa chata i drugie obozowisko
     expect(population(g, 0)).toBeLessThanOrEqual(16);
   });
 
@@ -254,12 +262,12 @@ describe('balans żywności', () => {
       if (g.tick % RULES.monthTicks === 0 && g.players[0]!.popDelta < 0) hungryMonths++;
     }
     expect(hungryMonths).toBe(0);
-    expect(population(g, 0)).toBe(16);
+    expect(population(g, 0)).toBe(9); // trzech pracujących i pełne obozowisko
   });
 
   it('gdy żywności jest za mało na wybrane racje, ludzie jedzą mniejsze zamiast głodować całkiem', () => {
     const g = createGame(5);
-    g.players[0]!.res[resIndex('apples')] = 3; // starczy na połowę racji dla 6 osób
+    g.players[0]!.res[resIndex('apples')] = 2; // starczy na połowę racji dla 6 osób
     run(g, RULES.monthTicks);
     expect(g.players[0]!.popDelta).toBe(RULES.rations[1].effect + RULES.taxes[RULES.defaultTax].effect);
   });

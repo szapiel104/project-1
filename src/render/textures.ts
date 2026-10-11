@@ -13,13 +13,21 @@ const gray = (v: number): string => { const c = Math.round(Math.max(0, Math.min(
 
 const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => number) => void> = {
   bricks(c, n, r) {
-    c.fillStyle = gray(0.62); c.fillRect(0, 0, n, n); // fuga
-    const rows = 4, h = n / rows, w = n / 2;
-    for (let y = 0; y < rows; y++)
-      for (let x = -1; x < 2; x++) {
-        c.fillStyle = gray(0.82 + r() * 0.18);
-        c.fillRect(x * w + (y % 2 ? w / 2 : 0) + 2, y * h + 2, w - 4, h - 4);
+    // ciosany kamień: nierówne bloki, ciemna fuga, jasna górna krawędź i cień u dołu każdego bloku
+    c.fillStyle = gray(0.45); c.fillRect(0, 0, n, n);
+    const rows = 4, h = n / rows;
+    for (let y = 0; y < rows; y++) {
+      let x = y % 2 ? -n * 0.18 : 0;
+      while (x < n) {
+        const w = n * (0.28 + r() * 0.22);
+        const tone = 0.74 + r() * 0.24;
+        c.fillStyle = gray(tone); c.fillRect(x + 1.5, y * h + 1.5, w - 3, h - 3);
+        c.fillStyle = gray(tone + 0.1); c.fillRect(x + 1.5, y * h + 1.5, w - 3, 2);
+        c.fillStyle = gray(tone - 0.14); c.fillRect(x + 1.5, y * h + h - 3.5, w - 3, 2);
+        for (let k = 0; k < 3; k++) { c.fillStyle = gray(tone - 0.08 + r() * 0.12); c.fillRect(x + 3 + r() * (w - 8), y * h + 4 + r() * (h - 9), 2, 1.5); }
+        x += w;
       }
+    }
   },
   planks(c, n, r) {
     const boards = 4, w = n / boards;
@@ -39,12 +47,14 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     for (let i = 0; i < 90; i++) { c.fillStyle = gray(0.84 + r() * 0.14); c.fillRect(r() * n, r() * n, 2 + r() * 5, 2 + r() * 4); }
   },
   tiles(c, n, r) {
-    const rows = 4, h = n / rows, w = n / 4;
-    for (let y = 0; y < rows; y++)
-      for (let x = -1; x < 5; x++) {
-        c.fillStyle = gray(0.78 + r() * 0.22);
-        c.fillRect(x * w + (y % 2 ? w / 2 : 0) + 1, y * h, w - 2, h - 2);
-        c.fillStyle = gray(0.58); c.fillRect(x * w + (y % 2 ? w / 2 : 0), y * h + h - 3, w, 3);
+    // gonty: zaokrąglone dachówki w przesuniętych rzędach z cieniem pod każdym rzędem
+    c.fillStyle = gray(0.5); c.fillRect(0, 0, n, n);
+    const rows = 5, h = n / rows, w = n / 5;
+    for (let y = rows; y >= 0; y--)
+      for (let x = -1; x < 6; x++) {
+        const px = x * w + (y % 2 ? w / 2 : 0), py = y * h;
+        c.fillStyle = gray(0.74 + r() * 0.26);
+        c.beginPath(); c.moveTo(px + 0.5, py - h * 0.4); c.lineTo(px + w - 0.5, py - h * 0.4); c.lineTo(px + w - 0.5, py + h * 0.55); c.arc(px + w / 2, py + h * 0.55, w / 2 - 0.5, 0, Math.PI); c.closePath(); c.fill();
       }
   },
   grass(c, n, r) {

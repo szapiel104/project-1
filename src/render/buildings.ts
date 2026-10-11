@@ -13,7 +13,7 @@ const M = {
   orchardGrass: mat(0x86b54a, 'grass'), bark: mat(0x7a5a3a, 'bark'), leafLight: mat(0x7fb548, 'leaves'),
   appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xb97a3a),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
-  window: mat(0xb08a5a, 'window'),
+  window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
   smoke: new THREE.MeshLambertMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
@@ -156,18 +156,51 @@ function pennant(g: THREE.Group, flag: THREE.Material, x: number, y: number, z: 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
 const BUILDERS: Record<string, Builder> = {
   keep(g, team, flag) {
-    box(g, M.stone, 2.5, 1.4, 2.5);
-    box(g, M.stoneDark, 1.5, 1.3, 1.5, 0, 1.4, 0);
-    pyramid(g, team, 1.25, 1.0, 0, 2.7, 0);
-    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
-      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.48, 2.3, 8), M.stone);
-      t.position.set(sx * 1.2, 1.15, sz * 1.2);
-      g.add(t);
-      pyramid(g, team, 0.56, 0.75, sx * 1.2, 2.3, sz * 1.2, 8);
+    // blanki: rząd zębów na krawędzi muru
+    const merlons = (cx: number, cz: number, len: number, y: number, alongX: boolean, m: THREE.Material): void => {
+      const n = Math.max(2, Math.round(len / 0.3));
+      for (let i = 0; i < n; i += 2) {
+        const o = -len / 2 + (i + 0.5) * (len / n);
+        box(g, m, alongX ? len / n : 0.12, 0.16, alongX ? 0.12 : len / n, cx + (alongX ? o : 0), y, cz + (alongX ? 0 : o));
+      }
+    };
+    // mur obwodowy z blankami
+    box(g, M.stone, 2.5, 1.15, 2.5);
+    box(g, M.stoneDark, 2.6, 0.12, 2.6, 0, 1.15, 0);
+    for (const s of [-1, 1]) { merlons(0, s * 1.24, 2.5, 1.27, true, M.stone); merlons(s * 1.24, 0, 2.5, 1.27, false, M.stone); }
+    // donżon: wysoka wieża mieszkalna ze strzelnicami, blankami i spiczastym dachem
+    box(g, M.stone, 1.3, 1.9, 1.3, 0, 1.15, -0.25);
+    box(g, M.stoneDark, 1.45, 0.14, 1.45, 0, 3.05, -0.25);
+    for (const s of [-1, 1]) { merlons(0, -0.25 + s * 0.67, 1.45, 3.19, true, M.stone); merlons(s * 0.67, -0.25, 1.45, 3.19, false, M.stone); }
+    pyramid(g, team, 0.8, 1.0, 0, 3.19, -0.25);
+    for (const [x, z, w, d] of [[0, 0.41, 0.12, 0.03], [-0.3, 0.41, 0.12, 0.03], [0.3, 0.41, 0.12, 0.03], [0.66, -0.25, 0.03, 0.12], [-0.66, -0.25, 0.03, 0.12]] as const) {
+      box(g, M.dark, w, 0.36, d, x, 2.3, z);
+      box(g, M.dark, w, 0.3, d, x, 1.6, z);
     }
-    box(g, M.woodDark, 0.6, 0.85, 0.08, 0, 0, 1.27);
-    box(g, M.woodDark, 0.05, 1.2, 0.05, 0, 3.7, 0);
-    box(g, flag, 0.6, 0.34, 0.03, 0.32, 4.5, 0);
+    // cztery baszty narożne z blankami i stożkowymi hełmami
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+      const x = sx * 1.2, z = sz * 1.2;
+      const t = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.47, 2.0, 10), M.stone);
+      t.position.set(x, 1.0, z);
+      g.add(t);
+      const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.42, 0.22, 10), M.stoneDark);
+      rim.position.set(x, 2.1, z);
+      g.add(rim);
+      for (let k = 0; k < 6; k++) box(g, M.stone, 0.13, 0.15, 0.13, x + Math.cos(k * 1.047) * 0.42, 2.21, z + Math.sin(k * 1.047) * 0.42);
+      pyramid(g, team, 0.36, 0.85, x, 2.21, z, 10);
+      box(g, M.dark, 0.07, 0.3, 0.03, x, 1.3, z + sz * 0.45);
+    }
+    // brama: wysunięty przedbramie, łuk, krata i most
+    box(g, M.stoneDark, 0.95, 1.4, 0.3, 0, 0, 1.3);
+    merlons(0, 1.42, 0.95, 1.4, true, M.stoneDark);
+    box(g, M.dark, 0.5, 0.8, 0.06, 0, 0, 1.44);
+    for (let k = 0; k < 4; k++) box(g, M.iron, 0.03, 0.8, 0.02, -0.18 + k * 0.12, 0, 1.47);
+    box(g, M.iron, 0.5, 0.03, 0.02, 0, 0.5, 1.47);
+    box(g, M.wood, 0.6, 0.04, 0.3, 0, 0, 1.6);
+    // sztandar na szczycie i chorągwie przy bramie
+    box(g, M.woodDark, 0.04, 0.9, 0.04, 0, 4.15, -0.25);
+    box(g, flag, 0.55, 0.3, 0.02, 0.3, 4.72, -0.25);
+    for (const s of [-1, 1]) box(g, flag, 0.16, 0.5, 0.02, s * 0.36, 0.7, 1.46);
   },
   house(g, _team, flag) {
     const inside = hut(g, M.plaster, M.thatch, 1.5, 1.3, 0.8, 0, 0, true);
@@ -234,6 +267,19 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.wood, 0.1, 0.75, 0.12, -0.36, 0, 0.5);
     box(g, M.wood, 0.1, 0.75, 0.12, 0.36, 0, 0.5);
     box(g, M.wood, 0.85, 0.1, 0.12, 0, 0.72, 0.5);
+  },
+  barn(g, _team, flag) {
+    // duża drewniana stodoła na kamiennej podmurówce, z wrotami i sianem
+    box(g, M.stoneDark, 2.7, 0.2, 1.7);
+    box(g, M.wood, 2.6, 0.95, 1.6, 0, 0.2, 0);
+    gable(g, M.thatch, 2.85, 0.95, 1.95, 1.15);
+    box(g, M.woodDark, 0.8, 0.85, 0.05, 0, 0.2, 0.81);
+    box(g, M.plank, 0.04, 0.85, 0.06, 0, 0.2, 0.82);
+    for (const s of [-1, 1]) { box(g, M.plank, 0.75, 0.05, 0.06, 0, 0.45 + s * 0.25, 0.83); box(g, M.window, 0.26, 0.26, 0.04, s * 0.95, 0.6, 0.81); }
+    box(g, M.woodDark, 0.4, 0.4, 0.05, 0, 1.35, 0.99);
+    box(g, M.wheat, 0.5, 0.3, 0.4, 1.0, 0, 1.0);
+    box(g, M.wheat, 0.35, 0.22, 0.35, 0.75, 0.3, 1.0);
+    pennant(g, flag, -1.25, 1.75, 0);
   },
   camp(g) {
     box(g, M.soil, 1.9, 0.04, 1.9);

@@ -105,7 +105,8 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       rations: RULES.defaultRations, tax: RULES.defaultTax,
     });
     addBuilding(g, keep, s.player, s.x - 1, s.y - 1);
-    placeCamp(g, s.player, s.x, s.y);
+    placeNear(g, buildingIndex('barn'), s.player, s.x, s.y);
+    placeNear(g, CAMP, s.player, s.x, s.y);
     for (let i = 0; i < RULES.startPeasants; i++) spawnPeasant(g, s.player);
   }
   return g;
@@ -113,26 +114,37 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
 
 const CAMP = buildingIndex('camp');
 
-/** Stawia obozowisko na pierwszym wolnym miejscu przy twierdzy (stała kolejność szukania). */
-function placeCamp(g: GameState, player: number, cx: number, cy: number): void {
+/** Stawia budynek startowy na pierwszym wolnym miejscu przy twierdzy (stała kolejność szukania). */
+function placeNear(g: GameState, type: number, player: number, cx: number, cy: number): void {
+  const def = BUILDINGS[type]!;
   const w = g.map.width;
-  for (let r = 3; r <= 7; r++)
+  for (let r = 3; r <= 8; r++)
     for (let dy = -r; dy <= r; dy++)
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const x = cx + dx, y = cy + dy;
         let free = true;
-        for (let ty = y - 1; ty <= y + 2 && free; ty++)
-          for (let tx = x - 1; tx <= x + 2; tx++) {
+        // z wolnym pasem dookoła, żeby nic nie zatkało przejść
+        for (let ty = y - 1; ty <= y + def.h && free; ty++)
+          for (let tx = x - 1; tx <= x + def.w; tx++) {
             const t = ty * w + tx;
             if (tx < 0 || ty < 0 || tx >= w || ty >= g.map.height || g.map.tiles[t] !== 0 || g.occupancy[t] !== 0 || g.reserved[t] !== 0) { free = false; break; }
           }
-        if (free) { addBuilding(g, CAMP, player, x, y); return; }
+        if (free) { addBuilding(g, type, player, x, y); return; }
       }
 }
 
-export function playerCamp(g: GameState, player: number): Building | undefined {
-  return g.buildings.find((b) => b.owner === player && b.type === CAMP);
+/** Miejsca dla bezrobotnych we wszystkich obozowiskach gracza. */
+export function idleSlots(g: GameState, player: number): number {
+  let n = 0;
+  for (const b of g.buildings) if (b.owner === player) n += BUILDINGS[b.type]!.idleSlots ?? 0;
+  return n;
+}
+
+export function idleCount(g: GameState, player: number): number {
+  let n = 0;
+  for (const u of g.units) if (u.owner === player && u.job === 0) n++;
+  return n;
 }
 
 export function playerKeep(g: GameState, player: number): Building | undefined {

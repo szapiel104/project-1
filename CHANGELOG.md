@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.3.4 — nowa twierdza i stodoła (2026-10-11)
+
+- Twierdza: mur z blankami, wysoki donżon ze strzelnicami, baszty z hełmami, przedbramie z kratą, sztandar i chorągwie
+- Stodoła obok twierdzy trzyma zapasy startowe (250 surowców, 120 żywności); można ją rozebrać i postawić gdzie indziej albo dobudować kolejne
+- Twierdza sama nie przechowuje już surowców
+- Obozowisko ma 6 miejsc dla bezrobotnych: gdy są zajęte, nowi ludzie nie przychodzą. Można je rozebrać, przenieść i dobudować kolejne
+- Kamień jako ciosane bloki z fugą i cieniem, dachy z zaokrąglonych gontów
+
 ## 0.3.3 — obozowisko (2026-10-11)
 
 - Okna z szybą i ramą zamiast czerwonych kwadratów; barwę drużyny pokazuje chorągiewka

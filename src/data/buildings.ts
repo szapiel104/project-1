@@ -33,6 +33,8 @@ export interface BuildingDef {
   production?: ProductionDef;
   /** Budynek wymaga terenu danego typu w pobliżu */
   needsTerrain?: { terrain: Terrain; radius: number };
+  /** Ilu chłopów bez pracy może tu czekać */
+  idleSlots?: number;
   /** Jak pokazać pracującego: 'inside' = odsłonięte wnętrze budynku, 'field' = chodzi po polu */
   workView?: 'inside' | 'field';
   /** Czy gracz może go postawić (twierdza powstaje sama) */
@@ -44,7 +46,7 @@ export interface BuildingDef {
  * KOLEJNOŚĆ MA ZNACZENIE: indeks trafia do stanu gry i skrótu, nowe wpisy dopisujemy na końcu.
  */
 export const BUILDINGS: readonly BuildingDef[] = [
-  { id: 'keep', name: 'b.keep', w: 3, h: 3, cost: {}, housing: 8, stores: ['stockpile', 'granary'], capacity: { stockpile: 250, granary: 120 }, buildable: false },
+  { id: 'keep', name: 'b.keep', w: 3, h: 3, cost: {}, housing: 8, buildable: false },
   { id: 'house', category: 'settlement', name: 'b.house', w: 2, h: 2, cost: { wood: 20 }, housing: 8, buildable: true },
   { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 10 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
   { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 150 }, buildable: true },
@@ -83,8 +85,10 @@ export const BUILDINGS: readonly BuildingDef[] = [
     workView: 'inside',
     production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 16 }, site: 'home', workTicks: 110 },
   },
-  // Obozowisko powstaje samo przy twierdzy: tu czekają chłopi bez pracy
-  { id: 'camp', name: 'b.camp', w: 2, h: 2, cost: {}, buildable: false },
+  // Obozowisko stoi od początku przy twierdzy: tu czekają chłopi bez pracy. Ma limit miejsc, więc bez wolnego miejsca nowi nie przyjdą
+  { id: 'camp', category: 'settlement', name: 'b.camp', w: 2, h: 2, cost: { wood: 15 }, idleSlots: 6, buildable: true },
+  // Stodoła stoi od początku obok twierdzy i mieści zapasy startowe; można ją rozebrać i postawić gdzie indziej
+  { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 30 }, stores: ['stockpile', 'granary'], capacity: { stockpile: 250, granary: 120 }, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

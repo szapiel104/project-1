@@ -2,7 +2,7 @@ import { BUILDINGS, type ProductionDef } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { findPath, walkable } from '../path';
-import { FP, Phase, playerCamp, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
+import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 
 const RETRY_TICKS = 20;
 const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
@@ -23,8 +23,11 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
   switch (u.phase) {
     case Phase.Idle: {
       // bezrobotni czekają w obozowisku przy ognisku, a gdy go nie ma, pod twierdzą
-      const spot = playerCamp(g, u.owner) ?? playerKeep(g, u.owner);
-      return spot && spot.door >= 0 ? (t) => t === spot.door : null;
+      const doors = new Set<number>();
+      for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots) doors.add(b.door);
+      if (doors.size) return (t) => doors.has(t);
+      const keep = playerKeep(g, u.owner);
+      return keep && keep.door >= 0 ? (t) => t === keep.door : null;
     }
     case Phase.Returning:
     case Phase.ToHome:

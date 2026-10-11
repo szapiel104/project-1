@@ -20,6 +20,8 @@ export interface HudView {
   pop: number;
   housing: number;
   popularity: number;
+  idle: number;
+  idleSlots: number;
   stock: number;
   stockCap: number;
   food: number;
@@ -98,7 +100,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const foodVal = el('strong');
   const foodBox = el('div');
   foodBox.append(el('span', 'name', t('hud.granary')), foodVal);
-  people.append(stockBox, foodBox, popBox, popularBox);
+  const idleVal = el('strong');
+  const idleBox = el('div');
+  idleBox.append(el('span', 'name', t('hud.idle')), idleVal);
+  people.append(stockBox, foodBox, popBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');
   const stepper = (label: string, onStep: (dir: number) => void): HTMLElement => {
@@ -317,6 +322,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     update(v) {
       resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
       setText(popVal, `${v.pop} / ${v.housing}`);
+      setText(idleVal, `${v.idle} / ${v.idleSlots}`);
+      idleBox.classList.toggle('full', v.idle >= v.idleSlots);
       setText(stockVal, `${v.stock} / ${v.stockCap}`);
       stockBox.classList.toggle('full', v.stock >= v.stockCap);
       setText(foodVal, `${v.food} / ${v.foodCap}`);

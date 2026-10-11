@@ -1,5 +1,5 @@
 import { RULES } from '../../data/rules';
-import { FP, Phase, housing, playerKeep, population, type GameState, type Unit } from '../state';
+import { FP, Phase, housing, idleCount, idleSlots, playerKeep, population, type GameState, type Unit } from '../state';
 
 export function spawnPeasant(g: GameState, player: number): Unit | null {
   const keep = playerKeep(g, player);
@@ -35,7 +35,10 @@ export function migrationSystem(g: GameState): void {
   for (const p of g.players) {
     const pop = population(g, p.id);
     if (pop < RULES.minPeasants) spawnPeasant(g, p.id);
-    else if (p.popularity >= RULES.migrationThreshold) { if (pop < housing(g, p.id)) spawnPeasant(g, p.id); }
+    else if (p.popularity >= RULES.migrationThreshold) {
+      // nowi przychodzą tylko wtedy, gdy jest dla nich dach w chacie i wolne miejsce w obozowisku
+      if (pop < housing(g, p.id) && idleCount(g, p.id) < idleSlots(g, p.id)) spawnPeasant(g, p.id);
+    }
     else if (pop > RULES.minPeasants) removePeasant(g, p.id);
   }
 }
