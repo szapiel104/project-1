@@ -15,6 +15,10 @@ export interface ModelFactory {
   leafCrown(): THREE.BufferGeometry;
   /** Kępka trawy */
   tuft(): THREE.BufferGeometry;
+  /** Krzew */
+  bush(): THREE.BufferGeometry;
+  /** Kwiat polny (sama główka z łodyżką) */
+  flower(): THREE.BufferGeometry;
   rock(): THREE.BufferGeometry;
   building(id: string, teamColor: number): THREE.Group;
 }
@@ -49,9 +53,24 @@ export const proceduralModels: ModelFactory = {
     ]);
   },
   tuft() {
-    const blade = (rot: number, lean: number): THREE.BufferGeometry =>
-      new THREE.ConeGeometry(0.035, 0.22, 3).translate(0, 0.11, 0).rotateZ(lean).rotateY(rot);
-    return mergeGeometries([blade(0, 0.25), blade(2.1, -0.3), blade(4.2, 0.15), blade(1, -0.1)]);
+    // gęstsza kępa: siedem źdźbeł różnej długości rozchylonych na boki
+    const blade = (rot: number, lean: number, len: number): THREE.BufferGeometry =>
+      new THREE.ConeGeometry(0.03, len, 3).translate(0, len / 2, 0).rotateZ(lean).rotateY(rot);
+    return mergeGeometries([blade(0, 0.28, 0.24), blade(0.9, -0.2, 0.3), blade(1.8, 0.35, 0.2), blade(2.7, -0.3, 0.26), blade(3.6, 0.18, 0.32), blade(4.5, -0.38, 0.2), blade(5.4, 0.1, 0.27)]);
+  },
+  bush() {
+    return mergeGeometries([
+      at(new THREE.IcosahedronGeometry(0.24, 1), 0, 0.2, 0),
+      at(new THREE.IcosahedronGeometry(0.18, 1), -0.2, 0.15, 0.06),
+      at(new THREE.IcosahedronGeometry(0.19, 1), 0.19, 0.16, -0.05),
+      at(new THREE.IcosahedronGeometry(0.15, 1), 0.03, 0.14, 0.2),
+    ]);
+  },
+  flower() {
+    return mergeGeometries([
+      new THREE.CylinderGeometry(0.008, 0.008, 0.16, 3).translate(0, 0.08, 0).toNonIndexed(),
+      new THREE.IcosahedronGeometry(0.04, 0).scale(1, 0.6, 1).translate(0, 0.17, 0),
+    ]);
   },
   rock() {
     const g = new THREE.DodecahedronGeometry(0.34, 0);

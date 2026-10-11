@@ -207,6 +207,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // obiekty na polach: jedna siatka instancjonowana na rodzaj
   type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3 };
   const pines: Item[] = [], leafy: Item[] = [], rocks: Item[] = [], ores: Item[] = [], tufts: Item[] = [];
+  const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const put = (list: Item[], x: number, y: number, n: number, scaleBase: number, spread = 0.7): void => {
@@ -225,12 +226,22 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const t = map.tiles[y * w + x] as Terrain;
       const r = hash2(x, y, map.seed);
       if (t === Terrain.Forest) {
-        // las mieszany: głównie świerki, co czwarte drzewo liściaste
-        put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, 1);
-        if (r & 1) put((r >>> 5) % 4 === 0 ? leafy : pines, x, y, 1, 0.8);
-      } else if (t === Terrain.Stone) put(rocks, x, y, 0, 1.1);
+        // las mieszany o różnym wieku: większość zwykłych drzew, sporo młodych, czasem stary olbrzym
+        const age = (r >>> 11) % 20;
+        const size = age === 0 ? 2.1 : age < 3 ? 1.5 : age < 8 ? 0.6 : 1;
+        put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, size, age === 0 ? 0.2 : 0.7);
+        if ((r & 1) && age !== 0) put((r >>> 5) % 4 === 0 ? leafy : pines, x, y, 1, age < 8 ? 0.5 : 0.8);
+        if ((r >>> 17) % 5 === 0) put(bushes, x, y, 4, 0.8, 0.9);
+      } else if (t === Terrain.Stone) { put(rocks, x, y, 0, 1.1); if ((r >>> 6) & 1) put(pebbles, x, y, 5, 0.5, 0.9); }
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
-      else if (t === Terrain.Grass && (r >>> 7) % 3 === 0) { put(tufts, x, y, 2, 1, 0.9); if ((r >>> 9) & 1) put(tufts, x, y, 3, 0.8, 0.9); }
+      else if (t === Terrain.Grass) {
+        // łąka: gęste kępy trawy, kwiaty, pojedyncze krzewy, kamyki i z rzadka większy głaz
+        if ((r >>> 7) % 2 === 0) { put(tufts, x, y, 2, 1, 0.9); if ((r >>> 9) & 1) put(tufts, x, y, 3, 0.8, 0.9); if ((r >>> 10) & 1) put(tufts, x, y, 6, 1.2, 0.9); }
+        if ((r >>> 13) % 9 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
+        if ((r >>> 16) % 23 === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
+        if ((r >>> 19) % 31 === 0) put(pebbles, x, y, 5, 0.35 + ((r >>> 24) & 7) / 20, 0.8);
+        if ((r >>> 21) % 173 === 0) put(pebbles, x, y, 10, 1.5, 0.4);
+      }
     }
   }
   const tint = new THREE.Color();
@@ -257,6 +268,16 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
   plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark'), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles'));
   plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark'), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves'));
+  // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
+  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
+  plant(pebbles, instanced(models.rock(), 0x9d9a92, pebbles), null, false);
+  plant(tufts, instanced(models.tuft(), 0x7fae45, tufts, undefined, false), null, false);
+  {
+    const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false);
+    const palette = [0xf4f1e6, 0xf2d24a, 0xb07ad6, 0xe8687a, 0x7fb2e6];
+    if (mesh) flowers.forEach((it, i) => mesh.setColorAt(i, tint.setHex(palette[(it.tile * 7 + i) % palette.length]!)));
+    plant(flowers, mesh, null, false);
+  }
   // skały i rudy też znikają, gdy złoże się wyczerpie (bez pniaka)
   plant(rocks, instanced(models.rock(), 0xa9a498, rocks), null, false);
   plant(ores, instanced(models.rock(), 0x8a4a2c, ores), null, false);
@@ -281,11 +302,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     trees.delete(tile);
   };
 
-  instanced(models.tuft(), 0x7fae45, tufts, undefined, false);
 
   // Drogi. Kamienna to równe pola bruku. Piaskowa to wydeptana ścieżka: każde pole dostaje miękką,
   // nieregularną plamę większą od pola, a sąsiednie plamy zlewają się w jeden trakt o poszarpanych brzegach.
   const roadMeshes: THREE.Mesh[] = [];
+  const curbMat = new THREE.MeshStandardMaterial({ color: 0xd6d2c6, roughness: 0.95 });
   let pathMat: THREE.MeshStandardMaterial | null = null;
   const pathMaterial = (): THREE.MeshStandardMaterial => {
     if (pathMat) return pathMat;
@@ -314,12 +335,23 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     for (const old of roadMeshes) { group.remove(old); old.geometry.dispose(); }
     roadMeshes.length = 0;
     for (let kind = 1; kind <= materials.length; kind++) {
-      const p3: number[] = [], uv2: number[] = [];
+      const p3: number[] = [], uv2: number[] = [], curb: number[] = [];
       const soft = kind === 1;
       const grow = soft ? 0.42 : 0;
       for (let y = 0; y < h; y++)
         for (let x = 0; x < w; x++) {
           if (roads[y * w + x] !== kind) continue;
+          clear(y * w + x); // na drodze nie rośnie trawa ani krzewy
+          if (!soft) {
+            // lekki krawężnik tam, gdzie bruk graniczy z trawą: wąski, jaśniejszy pasek odrobinę wyżej
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind) continue;
+              const cw = 0.09;
+              const ax = dx > 0 ? x + 1 - cw : x, bx = dx < 0 ? x + cw : x + 1, ay = dy > 0 ? y + 1 - cw : y, by = dy < 0 ? y + cw : y + 1;
+              for (const [qx, qy] of [[ax, ay], [ax, by], [bx, ay], [bx, ay], [ax, by], [bx, by]] as const) curb.push(qx + ox, heightAt(qx, qy) + 0.085, qy + oz);
+            }
+          }
           // lekkie przesunięcie każdej plamy, żeby ścieżka nie szła jak po linijce
           const r = hash2(x, y, map.seed ^ 0x77);
           const jx = soft ? ((r & 15) / 15 - 0.5) * 0.22 : 0, jy = soft ? (((r >>> 4) & 15) / 15 - 0.5) * 0.22 : 0;
@@ -339,6 +371,15 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       mesh.renderOrder = soft ? 1 : 0;
       group.add(mesh);
       roadMeshes.push(mesh);
+      if (curb.length) {
+        const cg = new THREE.BufferGeometry();
+        cg.setAttribute('position', new THREE.Float32BufferAttribute(curb, 3));
+        cg.computeVertexNormals();
+        const cm = new THREE.Mesh(cg, curbMat);
+        cm.receiveShadow = true;
+        group.add(cm);
+        roadMeshes.push(cm);
+      }
     }
   };
 

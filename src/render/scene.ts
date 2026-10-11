@@ -297,6 +297,8 @@ export class GameRenderer {
       const mesh = this.models.building(def.id, TEAM_COLORS[team] ?? 0x888888);
       let top = -99, low = 99;
       const fp = footprint(def, b.rot);
+      // pod budynkiem nie rośnie trawa, krzewy ani nie leżą kamyki
+      for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) view.clear(y * width + x);
       for (let y = b.y; y <= b.y + fp.h; y++)
         for (let x = b.x; x <= b.x + fp.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
       // budynek siada lekko poniżej najwyższego punktu działki, wtopiony w teren, bez cokołu

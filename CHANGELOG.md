@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.5.2 — bogatszy teren (2026-10-11)
+
+- Las w różnym wieku: młode drzewka, zwykłe drzewa i z rzadka stare olbrzymy; w lesie i na łąkach krzewy
+- Łąki: gęstsze kępy trawy, polne kwiaty w pięciu kolorach, kamyki i pojedyncze głazy
+- Droga kamienna ma lekki, jaśniejszy krawężnik wszędzie tam, gdzie graniczy z trawą
+- Trawa, krzewy i kamyki znikają pod budynkami i drogami
+
 ## 0.5.1 — mieszkańcy (2026-10-11)
 
 - Chłopi różnią się wyglądem: buty, pas, dłonie, kolor włosów i skóry, odcień tuniki, broda, fartuch, wzrost oraz nakrycie głowy (słomkowy kapelusz, kaptur, czapka, chustka albo goła głowa)
