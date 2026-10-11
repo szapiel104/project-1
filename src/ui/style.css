@@ -48,38 +48,41 @@ ul { list-style: none; }
 .panel::before { left: -4px; }
 .panel::after { right: -4px; }
 
-/* górny pasek */
-.bar { position: fixed; top: 8px; left: 8px; right: 8px; padding: 4px 12px 6px; display: flex; flex-wrap: wrap; gap: 2px 18px; align-items: center; }
-.res { display: flex; flex-wrap: wrap; gap: 2px 16px; }
-.res li, .people > div { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
-.ico { display: inline-flex; flex: none; filter: drop-shadow(1px 1px 0 rgba(42, 28, 16, .35)); }
-.ico svg { display: block; }
-.name { font-family: var(--display); font-weight: 600; font-size: 13.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-soft); }
-.res strong, .people strong { font-weight: 700; font-size: 18px; font-variant-numeric: tabular-nums lining-nums; min-width: 2.4ch; }
-.people { display: flex; flex-wrap: wrap; gap: 2px 12px; }
-.people .name { font-size: 12.5px; }
-.people .full strong { color: var(--bad); }
-.people .full .name::after { content: ' (pełny)'; color: var(--bad); }
-.dial { display: inline-flex; flex: none; filter: drop-shadow(1px 2px 0 rgba(42, 28, 16, .4)); }
-.dial svg { display: block; }
-.clock strong { display: inline-block; width: 12.5ch; font-size: 18px; }
-/* liczby stałej szerokości i zarezerwowane miejsce: zmiana wartości nie przesuwa sąsiadów */
-.res strong { display: inline-block; min-width: 3.4ch; }
-
-.meter { position: relative; width: 90px; height: 12px; background: var(--parchment-dark); border: 2px solid var(--wood); box-shadow: inset 0 1px 3px rgba(42, 28, 16, .5); flex: none; }
-.meter-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#3f8a36, #24551f); }
-.meter-fill[data-low='true'] { background: linear-gradient(#b3332a, #8c1f18); }
-.meter-mark { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--ink); }
-.delta { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--good); }
-.delta[data-sign='neg'] { color: var(--bad); }
-.controls { display: flex; flex-wrap: wrap; gap: 4px 10px; }
-.stepper { display: flex; align-items: center; gap: 4px; background: rgba(120, 85, 35, .16); border: 1px solid var(--gold-dark); padding: 2px; }
-.step { min-width: 34px; min-height: 34px; padding: 0; font-family: var(--text); font-size: 20px; line-height: 1; }
-.step-text { display: flex; gap: 6px; align-items: baseline; min-width: 118px; justify-content: center; white-space: nowrap; }
+/* górny pasek jak w strategiach: rząd osobnych drewnianych tabliczek, bez wielkiego panelu */
+.bar { position: fixed; top: 6px; left: 6px; right: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: stretch; pointer-events: none; }
+.bar > * { pointer-events: auto; }
+.res, .people, .controls { display: flex; flex-wrap: wrap; gap: 4px; }
+.controls { margin-left: auto; }
+.res li, .people > div, .clock, .stepper {
+  display: flex; align-items: center; gap: 5px; white-space: nowrap; min-height: 34px; padding: 2px 9px;
+  color: var(--parchment-light); background: linear-gradient(#4a321c, #2e1d0f);
+  border: 1px solid var(--gold-dark); box-shadow: inset 0 1px 0 rgba(255, 220, 160, .25), 0 0 0 1px var(--wood-edge), 2px 3px 0 rgba(30, 18, 8, .45);
+}
+.ico { display: inline-flex; flex: none; }
+.ico svg { display: block; width: 20px; height: 20px; }
+.name { font-family: var(--display); font-weight: 600; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--gold); }
+.res strong, .people strong, .clock strong, .stepper strong { font-weight: 700; font-size: 16.5px; font-variant-numeric: tabular-nums lining-nums; }
+.res strong { display: inline-block; min-width: 3ch; text-align: right; }
+.clock { padding-left: 3px; }
+.clock strong { display: inline-block; width: 12ch; }
+.dial { display: inline-flex; flex: none; }
+.dial svg { display: block; width: 30px; height: 30px; }
+.people .full { border-color: #c9584c; }
+.people .full strong { color: #ffab9d; }
+.people .full .name::after { content: ' (pełny)'; color: #ffab9d; }
+.meter { position: relative; width: 60px; height: 10px; background: #1c120a; border: 1px solid var(--gold-dark); flex: none; }
+.meter-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(#6fc45f, #3f8a36); }
+.meter-fill[data-low='true'] { background: linear-gradient(#e0655a, #b3332a); }
+.meter-mark { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: var(--parchment-light); }
+.delta { font-variant-numeric: tabular-nums; font-weight: 700; font-size: 15px; color: #a6e695; }
+.delta[data-sign='neg'] { color: #ffab9d; }
+.stepper { padding: 2px; gap: 2px; }
+.step { min-width: 28px; min-height: 28px; padding: 0; font-family: var(--text); font-size: 18px; line-height: 1; background: linear-gradient(#6d4a2a, #4a321c); }
+.step-text { display: flex; gap: 5px; align-items: baseline; min-width: 92px; justify-content: center; white-space: nowrap; }
 
 /* komunikat jak tabliczka ogłoszeń */
 .toast {
-  position: fixed; top: 96px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 16px);
+  position: fixed; top: 62px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 16px);
   padding: 10px 22px; color: var(--parchment-light); font-weight: 700; text-align: center;
   background: linear-gradient(#4a321c, #2e1d0f); border: 2px solid var(--gold); box-shadow: 0 0 0 2px var(--wood-edge), 3px 4px 0 rgba(30, 18, 8, .5);
 }
@@ -150,20 +153,15 @@ input, select {
 .hint:empty { display: none; }
 .help-list { display: grid; gap: 4px; list-style: disc; padding-left: 20px; }
 
-@media (max-width: 1100px) { .res .name { display: none; } }
 @media (max-width: 640px) {
   body { font-size: 16px; }
-  .bar { top: 6px; left: 6px; right: 6px; padding: 6px 10px 8px; gap: 6px; }
-  .res { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px 8px; width: 100%; }
-  .people { width: 100%; margin: 0; justify-content: space-between; border-top: 1px solid var(--gold-dark); padding-top: 6px; gap: 2px 12px; }
-  .meter { width: 60px; }
+  .res li, .people > div, .clock, .stepper { min-height: 30px; padding: 1px 6px; }
+  .res strong { min-width: 2.4ch; }
   /* na telefonie u góry zostaje samo tempo; podatki i racje są w zakładce Dwór */
-  .controls { width: 100%; }
-  .stepper { justify-content: space-between; width: 100%; }
-  .step { min-width: 40px; min-height: 40px; }
+  .controls { margin-left: 0; }
   .stepper:not(:first-child) { display: none; }
-  .step-text { flex: 1; }
-  .toast { top: 250px; width: calc(100vw - 12px); }
+  .step { min-width: 36px; min-height: 36px; }
+  .toast { top: 170px; width: calc(100vw - 12px); }
   .bottom { left: 6px; right: 6px; bottom: 6px; }
   .floaters { flex-direction: column; align-items: stretch; }
   .drawer, .info { width: auto; margin-left: 0; max-height: 40vh; }

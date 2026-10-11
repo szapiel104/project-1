@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.4.1 — życie w twierdzy, lekki pasek (2026-10-11)
+
+- Twierdza po kliknięciu pokazuje komnaty: salę lorda z tronem i kominkiem, jadalnię z długim stołem, komnatę z łożem; w środku lord na tronie, biesiadnicy przy stole, krążący służący i strażnik
+- Górny pasek jak w strategiach: rząd osobnych drewnianych tabliczek (zegar, surowce jako ikona z liczbą, stan osady, sterowanie), bez wielkiego panelu
+- Blanki twierdzy z tego samego kamienia co mur, na basztach ustawione po okręgu; słabszy blask okien
+- Droga piaskowa wygląda jak wydeptana ścieżka o miękkich, nierównych brzegach; kamienna zostaje równym brukiem
+- Przy stodole okrągłe bele siana z powrósłami i kopka z widłami
+
 ## 0.4.0 — drogi (2026-10-11)
 
 - Nowa kategoria Drogi: piaskowa (za darmo, +25% do chodzenia) i kamienna (1 kamień za pole, +55%)

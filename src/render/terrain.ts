@@ -283,19 +283,50 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
 
   instanced(models.tuft(), 0x7fae45, tufts, undefined, false);
 
-  // Drogi: płaty leżące tuż nad terenem, po jednym na rodzaj nawierzchni
+  // Drogi. Kamienna to równe pola bruku. Piaskowa to wydeptana ścieżka: każde pole dostaje miękką,
+  // nieregularną plamę większą od pola, a sąsiednie plamy zlewają się w jeden trakt o poszarpanych brzegach.
   const roadMeshes: THREE.Mesh[] = [];
+  let pathMat: THREE.MeshStandardMaterial | null = null;
+  const pathMaterial = (): THREE.MeshStandardMaterial => {
+    if (pathMat) return pathMat;
+    const n = 128;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = n;
+    const c2 = cv.getContext('2d')!;
+    const img = c2.createImageData(n, n);
+    for (let y = 0; y < n; y++)
+      for (let x = 0; x < n; x++) {
+        const dx = (x / n - 0.5) * 2, dy = (y / n - 0.5) * 2;
+        const wob = (hash2(x >> 3, y >> 3, 77) & 255) / 255 * 0.18 + (hash2(x >> 1, y >> 1, 91) & 255) / 255 * 0.08;
+        const d = Math.hypot(dx, dy) + wob;
+        const alpha = Math.max(0, Math.min(1, (0.98 - d) / 0.4));
+        const tone = 0.82 + ((hash2(x, y, 5) & 255) / 255) * 0.18;
+        const i = (y * n + x) * 4;
+        img.data[i] = 205 * tone; img.data[i + 1] = 176 * tone; img.data[i + 2] = 118 * tone; img.data[i + 3] = alpha * 235;
+      }
+    c2.putImageData(img, 0, 0);
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    pathMat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -3 });
+    return pathMat;
+  };
   const setRoads = (roads: Uint8Array, materials: THREE.Material[]): void => {
     for (const old of roadMeshes) { group.remove(old); old.geometry.dispose(); }
     roadMeshes.length = 0;
     for (let kind = 1; kind <= materials.length; kind++) {
       const p3: number[] = [], uv2: number[] = [];
+      const soft = kind === 1;
+      const grow = soft ? 0.42 : 0;
       for (let y = 0; y < h; y++)
         for (let x = 0; x < w; x++) {
           if (roads[y * w + x] !== kind) continue;
-          for (const [qx, qy] of [[x, y], [x, y + 1], [x + 1, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]] as const) {
-            p3.push(qx + ox, corner(qx, qy) + 0.035, qy + oz);
-            uv2.push(qx / 2, qy / 2);
+          // lekkie przesunięcie każdej plamy, żeby ścieżka nie szła jak po linijce
+          const r = hash2(x, y, map.seed ^ 0x77);
+          const jx = soft ? ((r & 15) / 15 - 0.5) * 0.22 : 0, jy = soft ? (((r >>> 4) & 15) / 15 - 0.5) * 0.22 : 0;
+          const x0 = x - grow + jx, x1 = x + 1 + grow + jx, y0 = y - grow + jy, y1 = y + 1 + grow + jy;
+          for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
+            p3.push(qx + ox, heightAt(qx, qy) + (soft ? 0.03 : 0.045), qy + oz);
+            if (soft) uv2.push(u, v); else uv2.push(qx / 2, qy / 2);
           }
         }
       if (!p3.length) continue;
@@ -303,8 +334,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       g2.setAttribute('position', new THREE.Float32BufferAttribute(p3, 3));
       g2.setAttribute('uv', new THREE.Float32BufferAttribute(uv2, 2));
       g2.computeVertexNormals();
-      const mesh = new THREE.Mesh(g2, materials[kind - 1]);
+      const mesh = new THREE.Mesh(g2, soft ? pathMaterial() : materials[kind - 1]);
       mesh.receiveShadow = true;
+      mesh.renderOrder = soft ? 1 : 0;
       group.add(mesh);
       roadMeshes.push(mesh);
     }

@@ -93,7 +93,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   root.replaceChildren();
 
   // ---- pasek zasobów ----
-  const bar = el('div', 'panel bar');
+  const bar = el('div', 'bar');
   const resList = el('ul', 'res');
   resList.setAttribute('aria-label', 'Zasoby');
   const resVals: HTMLElement[] = [];
@@ -101,7 +101,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const li = el('li');
     const val = el('strong', '', '0');
     li.title = t(RESOURCE_DEFS[id].name);
-    li.append(icon(id), el('span', 'name', t(RESOURCE_DEFS[id].name)), val);
+    li.setAttribute('aria-label', t(RESOURCE_DEFS[id].name));
+    li.append(icon(id), val);
     resVals.push(val);
     resList.append(li);
   }
@@ -150,7 +151,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const disc = clockIcon.querySelector<SVGGElement>('.dial-disc')!;
   const clockVal = el('strong');
   clockBox.append(clockIcon, clockVal);
-  people.append(clockBox, stockBox, foodBox, popBox, idleBox, popularBox);
+  people.append(stockBox, foodBox, popBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');
   const stepper = (label: string, onStep: (dir: number) => void): HTMLElement => {
@@ -190,7 +191,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const next = Math.max(0, Math.min(RULES.rations.length - 1, rationsNow + dir));
     if (next !== rationsNow) events.onRations(next);
   });
-  bar.append(resList, people, controls);
+  // jeden wąski pasek: zegar, surowce jako ikony z liczbą, stan osady, sterowanie
+  bar.append(clockBox, resList, people, controls);
 
   // ---- komunikaty ----
   const toast = el('div', 'toast');
