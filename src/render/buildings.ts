@@ -1,12 +1,15 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { pattern } from './textures';
 
-const mat = (color: number): THREE.MeshLambertMaterial => new THREE.MeshLambertMaterial({ color, flatShading: true });
+type Pattern = Parameters<typeof pattern>[0];
+const mat = (color: number, tex?: Pattern): THREE.MeshLambertMaterial =>
+  new THREE.MeshLambertMaterial({ color, flatShading: true, map: tex ? pattern(tex) : null });
 const M = {
-  stone: mat(0xb9b2a0), stoneDark: mat(0x8f8877), wood: mat(0x6b4a2b), woodDark: mat(0x4a3320),
-  plaster: mat(0xe6d9b8), thatch: mat(0xb8973f), soil: mat(0x6e5232), wheat: mat(0xd9b84a),
+  stone: mat(0xcfc7b3, 'bricks'), stoneDark: mat(0xa39b88, 'bricks'), wood: mat(0x85603a, 'planks'), woodDark: mat(0x5e4329, 'planks'),
+  plaster: mat(0xf0e4c4, 'plaster'), thatch: mat(0xd1ad4c, 'thatch'), soil: mat(0x6e5232), wheat: mat(0xd9b84a),
   leaf: mat(0x3f7a33), apple: mat(0xb3261e), iron: mat(0x4a4038), white: mat(0xf1ead8),
-  plank: mat(0xc9a26b), bread: mat(0xb97a3a),
+  plank: mat(0xd9b27a, 'planks'), bread: mat(0xb97a3a),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
   smoke: new THREE.MeshLambertMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
@@ -276,7 +279,7 @@ const BUILDERS: Record<string, Builder> = {
     g.add(spin);
   },
   bakery(g, team) {
-    const inside = hut(g, M.plaster, mat(0x9c4a2a), 1.4, 1.2, 0.8, 0, 0, true);
+    const inside = hut(g, M.plaster, mat(0xb5562f, 'tiles'), 1.4, 1.2, 0.8, 0, 0, true);
     // piec z żarem, stół i bochenki
     box(inside, M.stoneDark, 0.5, 0.55, 0.45, -0.4, 0.05, -0.33);
     box(inside, M.ember, 0.26, 0.2, 0.03, -0.4, 0.15, -0.1);
@@ -298,7 +301,7 @@ const teamMats = new Map<number, THREE.MeshLambertMaterial>();
 
 export function buildingModel(id: string, teamColor: number): THREE.Group {
   let team = teamMats.get(teamColor);
-  if (!team) { team = mat(teamColor); teamMats.set(teamColor, team); }
+  if (!team) { team = mat(teamColor, 'tiles'); teamMats.set(teamColor, team); }
   const g = new THREE.Group();
   (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team);
   // fundament, żeby budynek nie wisiał nad nierównym terenem

@@ -3,6 +3,7 @@ import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import type { ModelFactory } from './models';
+import { pattern } from './textures';
 
 const HEIGHT_SCALE = 0.03;
 export const HAZE = 0xcfc9b4;
@@ -44,6 +45,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
 
   const pos = new Float32Array(w * h * 18);
   const col = new Float32Array(w * h * 18);
+  const uv = new Float32Array(w * h * 12);
   const c = new THREE.Color();
   const snow = new THREE.Color(0xf2efe6);
   let p = 0;
@@ -63,6 +65,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         pos[p + i + 1] = quad[i + 1]!;
         pos[p + i + 2] = quad[i + 2]! + oz;
         col[p + i] = c.r; col[p + i + 1] = c.g; col[p + i + 2] = c.b;
+        // wzór trawy powtarza się co pole
+        uv[(p / 3 + i / 3) * 2] = quad[i]!; uv[(p / 3 + i / 3) * 2 + 1] = quad[i + 2]!;
       }
       p += 18;
     }
@@ -70,8 +74,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.computeVertexNormals();
-  const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true }));
+  const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true, map: pattern('grass') }));
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(ground);

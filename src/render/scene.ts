@@ -6,6 +6,7 @@ import { TEAM_COLORS } from '../data/teams';
 import { FP, Phase, type GameState } from '../sim/state';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
+import { Figures } from './peasants';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 
 export interface TileRef { x: number; y: number }
@@ -32,8 +33,8 @@ export class GameRenderer {
   private buildingLayer = new THREE.Group();
   private buildingMeshes = new Map<number, THREE.Group>();
 
-  private bodies: THREE.InstancedMesh;
-  private heads: THREE.InstancedMesh;
+  private figures: Figures;
+  private facing = new Map<number, number>();
   private loads: THREE.InstancedMesh;
   private logs: THREE.InstancedMesh;
   private planks: THREE.InstancedMesh;
@@ -81,18 +82,15 @@ export class GameRenderer {
     this.selection = flat(new THREE.RingGeometry(0.62, 0.72, 4, 1, Math.PI / 4), 0xfff3c4);
 
     const unitMat = (): THREE.MeshLambertMaterial => new THREE.MeshLambertMaterial({ flatShading: true });
-    const body = new THREE.CylinderGeometry(0.1, 0.15, 0.4, 6); body.translate(0, 0.2, 0);
-    const head = new THREE.IcosahedronGeometry(0.1, 0); head.translate(0, 0.5, 0);
-    const load = new THREE.BoxGeometry(0.2, 0.16, 0.2); load.translate(0, 0.7, 0);
-    this.bodies = new THREE.InstancedMesh(body, unitMat(), MAX_UNITS);
-    this.heads = new THREE.InstancedMesh(head, new THREE.MeshLambertMaterial({ color: 0xe2bd94, flatShading: true }), MAX_UNITS);
+    const load = new THREE.BoxGeometry(0.2, 0.16, 0.2); load.translate(0, 0.76, 0.02);
+    this.figures = new Figures(MAX_UNITS, this.scene);
     this.loads = new THREE.InstancedMesh(load, unitMat(), MAX_UNITS);
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
-    const log = new THREE.CylinderGeometry(0.07, 0.07, 0.62, 6); log.rotateX(Math.PI / 2); log.translate(0.13, 0.44, 0);
+    const log = new THREE.CylinderGeometry(0.07, 0.07, 0.62, 6); log.rotateX(Math.PI / 2); log.translate(0.14, 0.52, 0);
     this.logs = new THREE.InstancedMesh(log, new THREE.MeshLambertMaterial({ color: RESOURCE_DEFS.wood.color, flatShading: true }), MAX_UNITS);
-    const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.13, 0.45, 0);
+    const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.14, 0.53, 0);
     this.planks = new THREE.InstancedMesh(plank, new THREE.MeshLambertMaterial({ color: 0xc9a26b, flatShading: true }), MAX_UNITS);
-    for (const m of [this.bodies, this.heads, this.loads, this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
+    for (const m of [this.loads, this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
 
     this.cam = new StrategyCamera(canvas);
     canvas.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') this.hover(this.pick(e)); });
@@ -111,6 +109,7 @@ export class GameRenderer {
     for (const g of this.buildingMeshes.values()) this.buildingLayer.remove(g);
     this.buildingMeshes.clear();
     this.prevPos.clear();
+    this.facing.clear();
     this.storesTick = -1;
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
@@ -275,8 +274,22 @@ export class GameRenderer {
       const still = u.path.length === 0;
       const ox = still ? (((u.id * 7) % 5) - 2) * 0.17 : 0;
       const oz = still ? (((u.id * 11) % 5) - 2) * 0.17 : 0;
-      t.position.set(fx + ox - width / 2, view.heightAt(fx + ox, fy + oz), fy + oz - height / 2);
-      t.rotation.set(0, 0, 0);
+      // postać patrzy w stronę marszu; gdy stoi, zachowuje ostatni kierunek
+      const next = u.path[0];
+      let heading = this.facing.get(u.id) ?? ((u.id * 2.4) % 6.28);
+      if (next !== undefined) {
+        const want = Math.atan2((next % width) + 0.5 - fx, Math.floor(next / width) + 0.5 - fy);
+        let diff = want - heading;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        heading += diff * 0.25; // płynny obrót
+        this.facing.set(u.id, heading);
+      }
+      const walking = !still && !this.calm;
+      const stride = walking ? this.time * 9 + u.id : 0;
+      let swing = walking ? Math.sin(stride) * 0.7 : 0;
+      t.position.set(fx + ox - width / 2, view.heightAt(fx + ox, fy + oz) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), fy + oz - height / 2);
+      t.rotation.set(0, heading, 0);
       // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
       const resting = u.phase === Phase.Resting;
       const job = resting ? jobs.get(u.home) : u.phase === Phase.Working && u.job ? jobs.get(u.job) : undefined;
@@ -289,25 +302,22 @@ export class GameRenderer {
         if (mode === 'field') {
           const wx = cx + Math.sin(k * 0.5 + u.id) * def.w * 0.3, wy = cy + Math.cos(k * 0.37 + u.id * 2) * def.h * 0.3;
           t.position.set(wx - width / 2, (mesh?.position.y ?? 0) + 0.05, wy - height / 2);
-          t.rotation.x = Math.max(0, Math.sin(k * 5)) * 0.5; // schyla się przy pracy
+          t.rotation.set(Math.max(0, Math.sin(k * 5)) * 0.5, k * 0.4 + u.id, 0, 'YXZ'); // schyla się przy pracy
+          swing = Math.sin(k * 5) * 0.4;
         } else {
           const m = mesh?.getObjectByName('interior')?.children[0];
           const lx = m ? m.position.x : 0, lz = m ? m.position.z : 0;
           // odpoczywający siedzą przy stole obok siebie, pracujący krzątają się przy warsztacie
           const side = resting ? ((u.id % 3) - 1) * 0.28 : Math.sin(k * 2) * 0.12;
           t.position.set(cx + lx - width / 2 + side, (mesh?.position.y ?? 0) + (resting ? -0.03 : 0.05), cy + lz - height / 2 + (resting ? 0.3 : 0.12));
-          t.rotation.y = resting ? Math.PI : Math.sin(k * 2) * 0.6;
+          t.rotation.set(0, resting ? 0 : Math.PI + Math.sin(k * 2) * 0.6, 0);
+          if (!resting) swing = Math.sin(k * 6) * 0.35;
         }
       }
       t.scale.setScalar(1);
       t.updateMatrix();
-      this.bodies.setMatrixAt(i, t.matrix);
-      this.heads.setMatrixAt(i, t.matrix);
-      this.bodies.setColorAt(i, this.color.setHex(TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888));
       const wood = u.carryRes === WOOD;
-      // kłoda leży wzdłuż kierunku marszu
-      const next = u.path[0];
-      if (wood && next !== undefined) t.rotation.y = Math.atan2((next % g.map.width) + 0.5 - u.px / FP, Math.floor(next / g.map.width) + 0.5 - u.py / FP);
+      this.figures.set(i, t.matrix, swing, u.carryRes >= 0, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(wood && u.phase === Phase.ToHome ? 1 : 0);
       t.updateMatrix();
@@ -315,13 +325,13 @@ export class GameRenderer {
       t.scale.setScalar(wood && u.phase !== Phase.ToHome ? 1 : 0);
       t.updateMatrix();
       this.planks.setMatrixAt(i, t.matrix);
-      t.rotation.y = 0;
       t.scale.setScalar(u.carryRes < 0 || wood ? 0 : 1);
       t.updateMatrix();
       this.loads.setMatrixAt(i, t.matrix);
       this.loads.setColorAt(i, this.color.setHex(u.carryRes >= 0 ? RESOURCE_DEFS[RESOURCES[u.carryRes]!].color : 0));
     }
-    for (const m of [this.bodies, this.heads, this.loads, this.logs, this.planks]) {
+    this.figures.finish(n);
+    for (const m of [this.loads, this.logs, this.planks]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;

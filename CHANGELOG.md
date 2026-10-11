@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.3.1 — postacie i tekstury (2026-10-11)
+
+- Chłopi to teraz postacie: nogi, tunika w barwach drużyny, ręce, głowa, słomkowy kapelusz
+- Chodzą, wymachując rękami i nogami, obracają się w stronę marszu, unoszą ręce z ładunkiem
+- Tekstury rysowane kodem: cegły na kamieniu, deski, strzecha, tynk, dachówki, trawa
+
 ## 0.3.0 — cienie i światło (2026-10-11)
 
 - Budynki, drzewa, skały, góry i ludzie rzucają miękkie cienie
