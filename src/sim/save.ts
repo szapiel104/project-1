@@ -7,7 +7,7 @@ import { Rng } from './rng';
 import type { Building, GameState, PlayerState, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 
 export interface SaveData {
   v: number;

@@ -3,7 +3,7 @@ import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import type { ModelFactory } from './models';
-import { pattern } from './textures';
+import { bump, pattern } from './textures';
 
 const HEIGHT_SCALE = 0.03;
 export const HAZE = 0xcfc9b4;
@@ -94,14 +94,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  const ground = new THREE.Mesh(geo, new THREE.MeshLambertMaterial({ vertexColors: true, map: pattern('grass') }));
+  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 1.2 }));
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(ground);
 
   const water = new THREE.Mesh(
     new THREE.PlaneGeometry(w, h),
-    new THREE.MeshLambertMaterial({ color: 0x3f7f96, transparent: true, opacity: 0.82 }),
+    new THREE.MeshStandardMaterial({ color: 0x3f7f96, transparent: true, opacity: 0.85, roughness: 0.15, metalness: 0.1 }),
   );
   water.rotation.x = -Math.PI / 2;
   water.position.y = -0.08;
@@ -182,7 +182,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const tint = new THREE.Color();
   const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): THREE.InstancedMesh | null => {
     if (!list.length) return null;
-    const mesh = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, map: tex ? pattern(tex) : null }), list.length);
+    const mesh = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2 }), list.length);
     list.forEach((it, i) => { mesh.setMatrixAt(i, it.m); mesh.setColorAt(i, tint.setHex(color).multiplyScalar(it.shade)); });
     mesh.castShadow = shadow;
     mesh.receiveShadow = true;

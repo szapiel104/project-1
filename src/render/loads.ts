@@ -35,7 +35,7 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
 /** Tworzy po jednej siatce instancjonowanej na surowiec. Zwraca indeks surowca → siatka. */
 export function createLoads(max: number, scene: THREE.Scene): Map<number, THREE.InstancedMesh> {
   const out = new Map<number, THREE.InstancedMesh>();
-  const mat = new THREE.MeshLambertMaterial({ vertexColors: true, flatShading: true });
+  const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 });
   RESOURCES.forEach((id, index) => {
     const parts = SHAPES[id]?.();
     const geo = parts ? mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p))) : null;

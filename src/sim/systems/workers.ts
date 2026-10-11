@@ -61,6 +61,8 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
 }
 
 function beginCycle(u: Unit, prod: ProductionDef): void {
+  // z przyniesionego pnia zostały jeszcze partie do pocięcia: najpierw one, potem następne drzewo
+  if (u.batches > 0 && prod.processTicks) { u.phase = Phase.Working; u.timer = prod.processTicks; return; }
   if (prod.input) u.phase = Phase.ToInputStore;
   else if (prod.site !== 'home') u.phase = Phase.ToSite;
   else { u.phase = Phase.Working; u.timer = prod.workTicks; }
@@ -161,7 +163,8 @@ export function workerSystem(g: GameState): void {
       u.carryRes = resIndex(prod.output.res);
       u.carryAmt = prod.output.amount;
       // z lasu drwal niesie kłodę najpierw do chaty, tam robi deski i dopiero je odnosi do składu
-      u.phase = u.phase === Phase.WorkingSite && prod.processTicks ? Phase.ToHome : Phase.ToStore;
+      if (u.phase === Phase.WorkingSite && prod.processTicks) { u.phase = Phase.ToHome; u.batches = prod.batches ?? 1; }
+      else { u.phase = Phase.ToStore; if (u.batches > 0) u.batches--; }
       continue;
     }
     if (u.path.length) { move(g, u); continue; }

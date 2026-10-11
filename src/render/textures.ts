@@ -104,18 +104,72 @@ export function pattern(kind: Kind): THREE.Texture | null {
   let t = cache.get(kind);
   if (t) return t;
   if (typeof document === 'undefined') return null;
-  const n = kind === 'grass' ? 256 : 128;
+  const n = 512;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
-  const old = ['bricks', 'planks', 'thatch', 'plaster', 'tiles'].includes(kind);
-  if (old) ctx.scale(n / 64, n / 64); // starsze wzory były rysowane dla 64 px
-  PAINT[kind](ctx, old ? 64 : n, noise(kind.length * 7919));
+  // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
+  const base = kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window'].includes(kind) ? 128 : 64;
+  ctx.save();
+  ctx.scale(n / base, n / base);
+  PAINT[kind](ctx, base, noise(kind.length * 7919));
+  ctx.restore();
+  if (kind !== 'window') grain(ctx, n, kind.length * 31);
   t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 4;
+  t.anisotropy = 8;
   cache.set(kind, t);
   return t;
+}
+
+const bumps = new Map<Kind, THREE.CanvasTexture>();
+/** Ta sama tekstura jako mapa wypukłości: jasne miejsca wystają, fugi i szpary są wgłębione. */
+export function bump(kind: Kind): THREE.Texture | null {
+  let b = bumps.get(kind);
+  if (b) return b;
+  const src = pattern(kind);
+  if (!src) return null;
+  b = new THREE.CanvasTexture(src.image as HTMLCanvasElement);
+  b.wrapS = b.wrapT = THREE.RepeatWrapping;
+  bumps.set(kind, b);
+  return b;
+}
+
+/**
+ * Ziarno powierzchni: kilka oktaw płynnego szumu nałożone na gotowy wzór, piksel po pikselu.
+ * Daje nierówny, „ręczny” materiał zamiast płaskich plam koloru. Szum zawija się na krawędziach, więc tekstura się kafelkuje.
+ */
+function grain(ctx: CanvasRenderingContext2D, n: number, seed: number): void {
+  const img = ctx.getImageData(0, 0, n, n);
+  const d = img.data;
+  const lattice = (cells: number): Float32Array => {
+    const r = noise(seed + cells * 131);
+    const a = new Float32Array(cells * cells);
+    for (let i = 0; i < a.length; i++) a[i] = r();
+    return a;
+  };
+  const octaves = [8, 24, 72, 200].map((cells) => ({ cells, v: lattice(cells) }));
+  const weights = [0.42, 0.28, 0.2, 0.1];
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      let k = 0;
+      for (let o = 0; o < octaves.length; o++) {
+        const { cells, v } = octaves[o]!;
+        const fx = (x / n) * cells, fy = (y / n) * cells;
+        const x0 = Math.floor(fx), y0 = Math.floor(fy);
+        const tx = fx - x0, ty = fy - y0;
+        const sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+        const x1 = (x0 + 1) % cells, y1 = (y0 + 1) % cells;
+        const top = v[y0 * cells + x0]! * (1 - sx) + v[y0 * cells + x1]! * sx;
+        const bot = v[y1 * cells + x0]! * (1 - sx) + v[y1 * cells + x1]! * sx;
+        k += (top * (1 - sy) + bot * sy) * weights[o]!;
+      }
+      const m = 0.72 + k * 0.56;
+      const i = (y * n + x) * 4;
+      d[i] = Math.min(255, d[i]! * m); d[i + 1] = Math.min(255, d[i + 1]! * m); d[i + 2] = Math.min(255, d[i + 2]! * m);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
 }

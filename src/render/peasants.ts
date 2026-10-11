@@ -25,7 +25,7 @@ export class Figures {
 
   constructor(max: number, scene: THREE.Scene) {
     const add = (geo: THREE.BufferGeometry, color: number | null, x: number, y: number, z: number, rot: Part['rot']): void => {
-      const mesh = new THREE.InstancedMesh(geo, new THREE.MeshLambertMaterial({ color: color ?? 0xffffff, flatShading: true }), max);
+      const mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: color ?? 0xffffff, flatShading: true, roughness: 0.9 }), max);
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.castShadow = true;

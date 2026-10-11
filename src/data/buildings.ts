@@ -11,6 +11,8 @@ export interface ProductionDef {
   workTicks: number;
   /** Po pracy w terenie chłop wraca do budynku i tyle ticków przerabia surowiec (np. kłody na deski) */
   processTicks?: number;
+  /** Ile partii towaru powstaje z jednej przyniesionej sztuki surowca (np. cztery partie desek z jednego pnia) */
+  batches?: number;
 }
 
 /** Kategorie w menu budowy. Nowa kategoria = wpis tutaj i nazwa w i18n. */
@@ -53,7 +55,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'woodcutter', category: 'industry', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 10 }, buildable: true,
     workView: 'inside',
-    production: { output: { res: 'wood', amount: 8 }, site: Terrain.Forest, workTicks: 60, processTicks: 100 },
+    production: { output: { res: 'wood', amount: 3 }, site: Terrain.Forest, workTicks: 130, processTicks: 60, batches: 4 },
   },
   {
     id: 'quarry', category: 'industry', name: 'b.quarry', w: 2, h: 2, cost: { wood: 20 }, buildable: true,

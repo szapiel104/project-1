@@ -1,10 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { pattern } from './textures';
+import { bump, pattern } from './textures';
 
 type Pattern = Parameters<typeof pattern>[0];
-const mat = (color: number, tex?: Pattern): THREE.MeshLambertMaterial =>
-  new THREE.MeshLambertMaterial({ color, flatShading: true, map: tex ? pattern(tex) : null });
+/** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
+const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial =>
+  new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.4 });
 const M = {
   stone: mat(0xcfc7b3, 'bricks'), stoneDark: mat(0xa39b88, 'bricks'), wood: mat(0x85603a, 'planks'), woodDark: mat(0x5e4329, 'planks'),
   plaster: mat(0xf0e4c4, 'plaster'), thatch: mat(0xd1ad4c, 'thatch'), soil: mat(0x86633d, 'soil'), wheat: mat(0xd9b84a),
@@ -14,7 +15,7 @@ const M = {
   appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xb97a3a),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
-  smoke: new THREE.MeshLambertMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
+  smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
 function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
@@ -113,7 +114,7 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; color: number }> = {
     geo: mergeGeometries([-0.11, 0.11].map((x) => part(new THREE.IcosahedronGeometry(0.13, 0).scale(0.95, 1.05, 1.3), x, -0.01, 0))),
   },
 };
-const pileMats = new Map<string, THREE.MeshLambertMaterial>();
+const pileMats = new Map<string, THREE.MeshStandardMaterial>();
 
 /**
  * Układa w składzie stosy surowców. Każdy surowiec dostaje własne miejsca i rośnie w górę,
@@ -440,7 +441,7 @@ const BUILDERS: Record<string, Builder> = {
     const floor = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.05, 8), M.wood);
     floor.position.set(0.2, 0.025, 0.1);
     inside.add(floor);
-    const wall = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.7, 0.4, 8, 1, true, Math.PI * 0.75, Math.PI * 1.5), new THREE.MeshLambertMaterial({ color: 0xe6d9b8, flatShading: true, side: THREE.DoubleSide }));
+    const wall = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.7, 0.4, 8, 1, true, Math.PI * 0.75, Math.PI * 1.5), new THREE.MeshStandardMaterial({ color: 0xe6d9b8, flatShading: true, side: THREE.DoubleSide }));
     wall.position.y = 0.2;
     inside.add(wall);
     for (let i = 0; i < 2; i++) {
@@ -484,8 +485,8 @@ const BUILDERS: Record<string, Builder> = {
   },
 };
 
-const teamMats = new Map<number, THREE.MeshLambertMaterial>();
-const flagMats = new Map<number, THREE.MeshLambertMaterial>();
+const teamMats = new Map<number, THREE.MeshStandardMaterial>();
+const flagMats = new Map<number, THREE.MeshStandardMaterial>();
 
 export function buildingModel(id: string, teamColor: number): THREE.Group {
   let team = teamMats.get(teamColor);

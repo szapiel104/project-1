@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.3.9 — materiały i tartak (2026-10-11)
+
+- Materiały fizyczne zamiast płaskich: tekstury 512 px z ziarnem, wypukłość fug, desek i strzechy, filmowe odwzorowanie tonów, chłodniejsze niebo i cieplejsze słońce
+- Drwal rąbie dłużej, drzewo przewraca się wolniej, potem ciągnie cały pień do chaty
+- Jeden pień daje cztery partie desek: drwal tnie, odnosi, wraca i tnie dalej, a po następne drzewo idzie dopiero po ostatniej partii
+
 ## 0.3.8 — ładunki (2026-10-11)
 
 - Chłopi niosą przed sobą to, co faktycznie niosą: kosz jabłek, kosz z bochenkami, snop zboża, worek mąki, blok kamienia, sztaby żelaza

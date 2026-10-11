@@ -60,10 +60,13 @@ export class GameRenderer {
     this.scene.fog = new THREE.Fog(HAZE, 55, 150);
     // Cienie: jedno słońce, którego obszar cienia podąża za kamerą. Na telefonach mniejsza mapa cieni.
     const phone = matchMedia('(pointer: coarse)').matches;
+    // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.15;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
-    this.scene.add(new THREE.HemisphereLight(0xfff1cf, 0x55503c, 1.15));
-    const sun = new THREE.DirectionalLight(0xffe9b8, 2.6);
+    this.scene.add(new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5));
+    const sun = new THREE.DirectionalLight(0xffe2ad, 3.6);
     sun.castShadow = true;
     sun.shadow.mapSize.setScalar(phone ? 1024 : 2048);
     sun.shadow.bias = -0.0006;
@@ -89,7 +92,12 @@ export class GameRenderer {
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.loads = createLoads(MAX_UNITS, this.scene);
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
-    const log = mergeGeometries([new THREE.CylinderGeometry(0.06, 0.06, 0.62, 6).rotateX(Math.PI / 2).translate(0.14, 0.52, 0), new THREE.CylinderGeometry(0.055, 0.055, 0.56, 6).rotateX(Math.PI / 2).translate(-0.14, 0.52, 0)]);
+    // cały pień ciągnięty po ziemi za drwalem, z kilkoma sękami
+    const log = mergeGeometries([
+      new THREE.CylinderGeometry(0.07, 0.1, 1.3, 7).rotateX(Math.PI / 2 - 0.12).translate(0, 0.16, -0.72),
+      new THREE.CylinderGeometry(0.025, 0.035, 0.22, 5).rotateZ(0.9).translate(0.1, 0.2, -0.9),
+      new THREE.CylinderGeometry(0.025, 0.035, 0.2, 5).rotateZ(-0.9).translate(-0.1, 0.16, -0.6),
+    ]);
     this.logs = new THREE.InstancedMesh(log, new THREE.MeshLambertMaterial({ color: RESOURCE_DEFS.wood.color, flatShading: true }), MAX_UNITS);
     const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.14, 0.53, 0);
     this.planks = new THREE.InstancedMesh(plank, new THREE.MeshLambertMaterial({ color: 0xc9a26b, flatShading: true }), MAX_UNITS);
@@ -237,9 +245,9 @@ export class GameRenderer {
   /** Drzewo przechyla się pod koniec rąbania, a po ścięciu znika i zostaje pniak. */
   private syncForest(g: GameState, view: TerrainView): void {
     for (const u of g.units) {
-      if (u.phase !== Phase.WorkingSite || u.timer > 14) continue;
+      if (u.phase !== Phase.WorkingSite || u.timer > 40) continue;
       const tile = (u.py >> 8) * g.map.width + (u.px >> 8);
-      if (g.map.tiles[tile] === Terrain.Forest) view.fell(tile, 1 - u.timer / 14);
+      if (g.map.tiles[tile] === Terrain.Forest) { const k = 1 - u.timer / 40; view.fell(tile, k * k); } // powoli rusza, potem wali się coraz szybciej
     }
     for (; this.cutSeen < g.cut.length; this.cutSeen++) view.clear(g.cut[this.cutSeen]!);
   }
@@ -348,7 +356,7 @@ export class GameRenderer {
       t.scale.setScalar(1);
       t.updateMatrix();
       const wood = u.carryRes === WOOD;
-      this.figures.set(i, t.matrix, swing, u.carryRes >= 0, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !(wood && u.phase === Phase.ToHome), TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(wood && u.phase === Phase.ToHome ? 1 : 0);
       t.updateMatrix();
