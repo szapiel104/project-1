@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.4.2 — życie na murach (2026-10-11)
+
+- Twierdza żyje cały czas: trzech strażników obchodzi mury, wartownik z włócznią stoi w bramie, czatownik rozgląda się ze szczytu, przy wejściu płoną kosze z ogniem
+- We wnętrzu więcej ludzi: czwarty biesiadnik, druga służąca, skryba przy pulpicie
+- Bruk 1024 px z łamanego kamienia: plamy, żyłki, fazowane krawędzie, wąska fuga
+- Usunięta wydeptana plama pod budynkami (psuła drogi)
+- Tempo, podatki i racje w jednym rzędzie z resztą tabliczek
+
 ## 0.4.1 — życie w twierdzy, lekki pasek (2026-10-11)
 
 - Twierdza po kliknięciu pokazuje komnaty: salę lorda z tronem i kominkiem, jadalnię z długim stołem, komnatę z łożem; w środku lord na tronie, biesiadnicy przy stole, krążący służący i strażnik

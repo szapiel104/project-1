@@ -326,7 +326,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const x0 = x - grow + jx, x1 = x + 1 + grow + jx, y0 = y - grow + jy, y1 = y + 1 + grow + jy;
           for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
             p3.push(qx + ox, heightAt(qx, qy) + (soft ? 0.03 : 0.045), qy + oz);
-            if (soft) uv2.push(u, v); else uv2.push(qx / 2, qy / 2);
+            if (soft) uv2.push(u, v); else uv2.push(qx / 3, qy / 3); // wzór bruku rozciąga się na 3 pola: po dwie płyty na pole
           }
         }
       if (!p3.length) continue;

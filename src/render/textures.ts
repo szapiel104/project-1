@@ -122,33 +122,62 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     for (let k = 0; k < 14; k++) { const sx = r() * n, len = n * (0.15 + r() * 0.3); const gr = c.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(sx, 0, n * (0.01 + r() * 0.02), len); }
   },
   cobble(c, n, r) {
-    // płyty kamienne: nieregularne czworoboki ciasno dopasowane, wąska ciemna fuga, płaska powierzchnia z lekkim zużyciem
-    c.fillStyle = gray(0.36); c.fillRect(0, 0, n, n);
-    const cells = 5, s = n / cells;
-    // wspólne, przesunięte narożniki siatki dają płyty o krzywych bokach, które do siebie pasują
+    // Bruk z łamanego kamienia w pełnej rozdzielczości: płyty o krzywych, dopasowanych bokach,
+    // głęboka fuga z ziemią, a na każdej płycie plamy, żyłki, odpryski i fazowane krawędzie
+    c.fillStyle = gray(0.34); c.fillRect(0, 0, n, n);
+    const cells = 6, s = n / cells;
     const px: number[][] = [], py: number[][] = [];
     for (let y = 0; y <= cells; y++) {
       px.push([]); py.push([]);
-      for (let x = 0; x <= cells; x++) { px[y]!.push((r() - 0.5) * s * 0.34); py[y]!.push((r() - 0.5) * s * 0.34); }
+      for (let x = 0; x <= cells; x++) { px[y]!.push((r() - 0.5) * s * 0.42); py[y]!.push((r() - 0.5) * s * 0.42); }
     }
     for (let x = 0; x <= cells; x++) { px[cells]![x] = px[0]![x]!; py[cells]![x] = py[0]![x]!; }
     for (let y = 0; y <= cells; y++) { px[y]![cells] = px[y]![0]!; py[y]![cells] = py[y]![0]!; }
-    const gap = n * 0.012;
+    const gap = n * 0.004;
     for (let y = 0; y < cells; y++)
       for (let x = 0; x < cells; x++) {
-        const pts = [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]].map(([gx, gy]) => [gx! * s + px[gy!]![gx!]!, gy! * s + py[gy!]![gx!]!] as [number, number]);
-        const cx = (pts[0]![0] + pts[2]![0]) / 2, cy = (pts[0]![1] + pts[2]![1]) / 2;
-        const tone = 0.76 + r() * 0.22;
-        c.fillStyle = gray(tone);
-        c.beginPath();
-        pts.forEach(([qx, qy], i) => { const ix = qx + Math.sign(cx - qx) * gap, iy = qy + Math.sign(cy - qy) * gap; if (i) c.lineTo(ix, iy); else c.moveTo(ix, iy); });
-        c.closePath(); c.fill();
-        // wytarty środek i ciemniejsze brzegi
-        const gr = c.createRadialGradient(cx, cy, s * 0.1, cx, cy, s * 0.62);
-        gr.addColorStop(0, 'rgba(255,255,255,0.1)'); gr.addColorStop(1, 'rgba(0,0,0,0.16)');
-        c.fillStyle = gr; c.fill();
-        for (let k = 0; k < 10; k++) { c.fillStyle = `rgba(0,0,0,${0.05 + r() * 0.08})`; c.fillRect(cx + (r() - 0.5) * s * 0.7, cy + (r() - 0.5) * s * 0.7, 1 + r() * 3, 1 + r() * 2); }
+        const raw = [[x, y], [x + 1, y], [x + 1, y + 1], [x, y + 1]].map(([gx, gy]) => [gx! * s + px[gy!]![gx!]!, gy! * s + py[gy!]![gx!]!] as [number, number]);
+        const cx = (raw[0]![0] + raw[1]![0] + raw[2]![0] + raw[3]![0]) / 4, cy = (raw[0]![1] + raw[1]![1] + raw[2]![1] + raw[3]![1]) / 4;
+        // wciągnięcie narożników do środka daje fugę; ścięte rogi dają kształt łamanego kamienia
+        const pts: [number, number][] = [];
+        raw.forEach(([qx, qy], i) => {
+          const ix = qx + (cx - qx) * 0.025 + Math.sign(cx - qx) * gap, iy = qy + (cy - qy) * 0.025 + Math.sign(cy - qy) * gap;
+          const [nx, ny] = raw[(i + 1) % 4]!;
+          pts.push([ix, iy]);
+          if (r() > 0.45) pts.push([ix + (nx - qx) * (0.12 + r() * 0.1) + (cx - ix) * 0.05, iy + (ny - qy) * (0.12 + r() * 0.1) + (cy - iy) * 0.05]);
+        });
+        const path = (): void => { c.beginPath(); pts.forEach(([qx, qy], i) => (i ? c.lineTo(qx, qy) : c.moveTo(qx, qy))); c.closePath(); };
+        const tone = 0.72 + r() * 0.24;
+        c.save(); path(); c.clip();
+        c.fillStyle = gray(tone); c.fillRect(cx - s, cy - s, s * 2, s * 2);
+        // plamy minerału: kilka dużych, miękkich i wiele drobnych
+        for (let k = 0; k < 7; k++) {
+          const bx = cx + (r() - 0.5) * s, by = cy + (r() - 0.5) * s, br = s * (0.12 + r() * 0.3);
+          const gr = c.createRadialGradient(bx, by, 0, bx, by, br);
+          const light = r() > 0.5;
+          gr.addColorStop(0, `rgba(${light ? '255,255,255' : '0,0,0'},${0.1 + r() * 0.12})`); gr.addColorStop(1, 'rgba(0,0,0,0)');
+          c.fillStyle = gr; c.fillRect(bx - br, by - br, br * 2, br * 2);
+        }
+        for (let k = 0; k < 90; k++) { c.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${0.04 + r() * 0.1})`; c.fillRect(cx + (r() - 0.5) * s * 1.2, cy + (r() - 0.5) * s * 1.2, 1 + r() * 4, 1 + r() * 3); }
+        // żyłka albo pęknięcie
+        if (r() > 0.5) {
+          c.strokeStyle = `rgba(${r() > 0.6 ? '0,0,0' : '255,255,255'},0.28)`; c.lineWidth = 1 + r() * 1.5;
+          c.beginPath(); let vx = cx + (r() - 0.5) * s * 0.9, vy = cy - s * 0.5; c.moveTo(vx, vy);
+          for (let k = 0; k < 6; k++) { vx += (r() - 0.5) * s * 0.22; vy += s / 6; c.lineTo(vx, vy); }
+          c.stroke();
+        }
+        c.restore();
+        // faza: jasna krawędź od góry i lewej, ciemna od dołu i prawej
+        pts.forEach(([qx, qy], i) => {
+          const [nx, ny] = pts[(i + 1) % pts.length]!;
+          const lit = (ny - qy) - (nx - qx) < 0;
+          c.strokeStyle = lit ? 'rgba(255,255,255,0.32)' : 'rgba(0,0,0,0.42)';
+          c.lineWidth = n * 0.006;
+          c.beginPath(); c.moveTo(qx, qy); c.lineTo(nx, ny); c.stroke();
+        });
       }
+    // ziemia i mech w fugach
+    for (let k = 0; k < 500; k++) { c.fillStyle = `rgba(0,0,0,${0.1 + r() * 0.15})`; c.fillRect(r() * n, r() * n, 1 + r() * 3, 1 + r() * 3); }
   },
   water(c, n) {
     // gładka tafla: same miękkie plamy z szumu (dokłada je ziarno), bez rysowanych kresek
@@ -168,13 +197,13 @@ export function pattern(kind: Kind): THREE.Texture | null {
   let t = cache.get(kind);
   if (t) return t;
   if (typeof document === 'undefined') return null;
-  const n = kind === 'ashlar' ? 1024 : 512;
+  const n = kind === 'ashlar' || kind === 'cobble' ? 1024 : 512;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'ashlar' ? 1024 : kind === 'cobble' ? 512 : kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
+  const base = kind === 'ashlar' ? 1024 : kind === 'cobble' ? 1024 : kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));

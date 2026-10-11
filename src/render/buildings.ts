@@ -8,7 +8,7 @@ type Pattern = Parameters<typeof pattern>[0];
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone];
 const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 1.15, bricks: 1.3, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
 const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
-  const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: tex === 'ashlar' ? 0.9 : tex === 'cobble' ? 0.6 : 1.4 });
+  const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: tex === 'ashlar' ? 0.9 : tex === 'cobble' ? 1.6 : 1.4 });
   m.userData.tile = (tex && TILE[tex]) || 0;
   return m;
 };
@@ -45,7 +45,7 @@ const M = {
   trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
   ash: mat(0x4a4540), rock: mat(0x9a968c), rockDark: mat(0x77736a),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
-  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xc9c2b2, 'cobble'),
+  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xc4c3bf, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
   hay: mat(0xe0c466, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
@@ -223,6 +223,23 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   }
   const flame = model.getObjectByName('flame');
   if (flame) { flame.visible = active; flame.scale.set(1, 0.8 + Math.abs(Math.sin(time * 9)) * 0.5, 1); }
+  // życie na murach, niezależnie od tego, czy budynek jest otwarty
+  const life = model.getObjectByName('life');
+  if (life && dt > 0) {
+    const R = 1.02, Y = 1.25;
+    for (const p of life.children) {
+      if (p.name === 'patrol') {
+        // obchód po obwodzie muru: cztery proste odcinki, strażnik patrzy w kierunku marszu
+        const k = ((time * 0.045 + (p.userData.phase as number)) % 1) * 4;
+        const side = Math.floor(k), f = (k - side) * 2 - 1;
+        const [x, z, face] = side === 0 ? [f * R, -R, Math.PI / 2] : side === 1 ? [R, f * R, 0] : side === 2 ? [-f * R, R, -Math.PI / 2] : [-R, -f * R, Math.PI];
+        p.position.set(x, Y + Math.abs(Math.sin(time * 7 + side)) * 0.012, z);
+        p.rotation.y = face;
+      } else if (p.name === 'sentry') p.rotation.y = Math.sin(time * 0.4) * 0.5;
+      else if (p.name === 'lookout') { p.rotation.y = time * 0.25; p.visible = !active; }
+      else if (p.name === 'brazier') p.scale.set(1, 0.8 + Math.abs(Math.sin(time * 10 + p.position.x * 9)) * 0.5, 1);
+    }
+  }
   // życie we wnętrzu: służący krąży między kuchnią a stołem, biesiadnicy jedzą, strażnik się rozgląda
   if (interior && active && dt > 0) {
     let n = 0;
@@ -238,6 +255,8 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
         p.position.y += Math.abs(Math.sin(time * 8)) * 0.0;
       } else if (p.name === 'diner' && arm) arm.rotation.x = -1.2 - Math.max(0, Math.sin(time * 2.2 + n * 2)) * 1.1;
       else if (p.name === 'guard') p.rotation.y = Math.sin(time * 0.5) * 0.8;
+      else if (p.name === 'servant2') { p.position.z = 0.6 + Math.sin(time * 0.5) * 0.3; p.rotation.y = Math.cos(time * 0.5) > 0 ? 0 : Math.PI; }
+      else if (p.name === 'scribe' && arm) arm.rotation.x = -1.3 + Math.sin(time * 6) * 0.15;
       else if (p.name === 'lord' && arm) arm.rotation.x = -0.6 + Math.sin(time * 0.9) * 0.3;
     }
   }
@@ -331,7 +350,7 @@ const BUILDERS: Record<string, Builder> = {
     box(hall, flag, 0.16, 0.06, 0.3, 0.9, Y + 0.18, 0.3);
     box(hall, M.wood, 0.26, 0.16, 0.18, 0.5, Y + 0.05, 0.85);
     // mieszkańcy: lord na tronie, biesiadnicy przy stole, służący z tacą, strażnik przy bramie
-    const person = (name: string, tunic: THREE.Material, x: number, z: number, turn: number, hatMat?: THREE.Material): THREE.Group => {
+    const person = (name: string, tunic: THREE.Material, x: number, z: number, turn: number, hatMat?: THREE.Material, into: THREE.Group = hall): THREE.Group => {
       const p = new THREE.Group();
       p.name = name;
       box(p, M.trousers, 0.07, 0.1, 0.06, 0, 0, 0);
@@ -345,7 +364,7 @@ const BUILDERS: Record<string, Builder> = {
       p.position.set(x, Y + 0.05, z);
       p.rotation.y = turn;
       p.userData = { x, z };
-      hall.add(p);
+      into.add(p);
       return p;
     };
     person('lord', flag, 0, -0.88, 0, M.gold).position.y = Y + 0.24;
@@ -354,7 +373,31 @@ const BUILDERS: Record<string, Builder> = {
     person('diner', M.thatch, -0.5, 0.76, Math.PI);
     person('servant', M.plaster, 0.3, 0.2, 0);
     person('guard', M.iron, 0.28, 0.98, 0, M.iron);
+    person('diner', flag, -0.9, 0.76, Math.PI);
+    person('servant2', M.thatch, 0.75, 0.6, 0);
+    person('scribe', M.plaster, 0.55, -0.6, Math.PI / 2);
+    box(hall, M.wood, 0.2, 0.16, 0.3, 0.75, Y + 0.05, -0.6);
+    box(hall, M.white, 0.12, 0.01, 0.16, 0.75, Y + 0.215, -0.6);
     g.add(hall);
+    // Życie widoczne z zewnątrz, cały czas: straże obchodzą mury, wartownik stoi w bramie, kosze z ogniem przy wejściu
+    const life = new THREE.Group();
+    life.name = 'life';
+    for (let k = 0; k < 3; k++) { const guard = person('patrol', M.iron, 0, 0, 0, M.iron, life); guard.userData.phase = k / 3; guard.scale.setScalar(1.25); }
+    const sentry = person('sentry', flag, 0.45, 1.78, 0, M.iron, life);
+    sentry.position.y = 0;
+    sentry.scale.setScalar(1.3);
+    box(sentry, M.woodDark, 0.012, 0.5, 0.012, 0.09, 0, 0.03);
+    const lookout = person('lookout', M.iron, 0, -0.25, 0, M.iron, life);
+    lookout.position.y = 3.02;
+    lookout.userData.top = true;
+    for (const sx of [-1, 1]) {
+      box(life, M.iron, 0.12, 0.3, 0.12, sx * 0.62, 0, 1.62);
+      const fire = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 5), M.ember);
+      fire.name = 'brazier';
+      fire.position.set(sx * 0.62, 0.4, 1.62);
+      life.add(fire);
+    }
+    g.add(life);
     // cztery baszty narożne: lekko zwężane, z gzymsem, blankami i gontowym hełmem
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
       const x = sx * 1.22, z = sz * 1.22;
@@ -737,19 +780,5 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   const base = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), M.turf);
   base.name = 'base';
   g.add(base);
-  // wydeptana trawa dookoła: nieregularna plama zamiast prostokąta gołej ziemi
-  const shape = new THREE.Shape();
-  const seed = id.length * 17 + id.charCodeAt(0);
-  for (let i = 0; i <= 18; i++) {
-    const a = (i % 18) / 18 * Math.PI * 2;
-    const r = 0.86 + ((Math.sin(seed + i * 2.7) + Math.sin(seed * 1.3 + i * 5.1)) * 0.5) * 0.11;
-    // superelipsa: plama trzyma się kształtu działki, ale ma miękkie, poszarpane brzegi
-    const c = Math.cos(a), s2 = Math.sin(a);
-    const x = Math.sign(c) * Math.pow(Math.abs(c), 0.55) * r, y = Math.sign(s2) * Math.pow(Math.abs(s2), 0.55) * r;
-    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
-  }
-  const patch = new THREE.Mesh(new THREE.ShapeGeometry(shape).rotateX(-Math.PI / 2), M.trodden);
-  patch.name = 'patch';
-  g.add(patch);
   return g;
 }

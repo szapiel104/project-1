@@ -52,7 +52,6 @@ ul { list-style: none; }
 .bar { position: fixed; top: 6px; left: 6px; right: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: stretch; pointer-events: none; }
 .bar > * { pointer-events: auto; }
 .res, .people, .controls { display: flex; flex-wrap: wrap; gap: 4px; }
-.controls { margin-left: auto; }
 .res li, .people > div, .clock, .stepper {
   display: flex; align-items: center; gap: 5px; white-space: nowrap; min-height: 34px; padding: 2px 9px;
   color: var(--parchment-light); background: linear-gradient(#4a321c, #2e1d0f);
