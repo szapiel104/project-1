@@ -14,10 +14,10 @@ export function torchSystem(g: GameState): void {
     return;
   }
   const taken = new Set<number>();
-  for (const u of g.units) if (u.target) taken.add(u.target);
+  for (const u of g.units) if (u.target && u.phase === Phase.ToLight) taken.add(u.target);
   for (const b of g.buildings) {
     if (b.lit || b.door < 0 || taken.has(b.id)) continue;
-    const u = g.units.find((x) => x.owner === b.owner && x.target === 0 && x.phase === Phase.Idle)
+    const u = g.units.find((x) => x.owner === b.owner && x.target === 0 && x.phase === Phase.Idle && x.job === 0)
       ?? g.units.find((x) => x.owner === b.owner && x.target === 0 && x.phase === Phase.Returning);
     if (!u) continue;
     u.target = b.id; u.phase = Phase.ToLight; u.path = []; u.wait = 0;

@@ -160,8 +160,25 @@ export function demolish(g: GameState, player: number, id: number): boolean {
     if (u.job === id) continue;
     else if (u.home === id) { u.home = 0; u.timer = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
   }
-  const p = g.players[player]!;
-  for (const [k, v] of Object.entries(def.cost))
-    p.res[resIndex(k as ResourceId)]! += Math.floor((v * RULES.refundPercent) / 100);
+  // Zwrot połowy kosztu nie wpada od razu: leży w gruzie i wraca do składu ładunek po ładunku
+  const loads: [number, number][] = [];
+  for (const [k, v] of Object.entries(def.cost)) {
+    let left = Math.floor((v * RULES.refundPercent) / 100);
+    while (left > 0) { const n = Math.min(left, RULES.rubbleLoad); loads.push([resIndex(k as ResourceId), n]); left -= n; }
+  }
+  if (!loads.length) loads.push([-1, 0]); // nawet bezwartościowy gruz trzeba raz wynieść
+  g.rubble.push({ id: g.nextId++, owner: player, type: b.type, x: b.x, y: b.y, w: fp.w, h: fp.h, loads, total: loads.length });
+  // na gruzie nie da się budować, ale można po nim przejść
+  for (let ty = b.y; ty < b.y + fp.h; ty++)
+    for (let tx = b.x; tx < b.x + fp.w; tx++) g.reserved[ty * g.map.width + tx]!++;
+  return true;
+}
+
+/** Usuwa drogę z pola (od razu, bez gruzu). */
+export function removeRoad(g: GameState, player: number, x: number, y: number): boolean {
+  if (!g.players[player] || x < 0 || y < 0 || x >= g.map.width || y >= g.map.height) return false;
+  const t = y * g.map.width + x;
+  if (!g.roads[t]) return false;
+  g.roads[t] = 0;
   return true;
 }

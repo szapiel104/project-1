@@ -41,6 +41,22 @@ export interface Building {
   lit: boolean;
 }
 
+/** Gruz po rozebranym budynku. Leży na działce, dopóki ludzie nie wyniosą wszystkich ładunków. */
+export interface Rubble {
+  id: number;
+  owner: number;
+  /** Typ rozebranego budynku (dla wyglądu gruzu) */
+  type: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  /** Pozostałe ładunki: [indeks surowca albo -1 dla bezwartościowego gruzu, ilość] */
+  loads: [number, number][];
+  /** Ile ładunków było na początku (żeby stos malał na oczach) */
+  total: number;
+}
+
 export const enum Phase {
   Idle = 0,
   /** Wraca do swojego budynku, żeby zacząć cykl pracy */
@@ -56,6 +72,8 @@ export const enum Phase {
   Resting = 9,
   /** Idzie zapalić pochodnię przy budynku `target` */
   ToLight = 10,
+  /** Idzie po ładunek gruzu z rozbiórki `target` */
+  ToRubble = 11,
 }
 
 export interface Unit {
@@ -101,6 +119,7 @@ export interface GameState {
   wear: Uint8Array;
   /** Drogi na polach: 0 brak, 1 piaskowa, 2 kamienna */
   roads: Uint8Array;
+  rubble: Rubble[];
   nextId: number;
 }
 
@@ -109,7 +128,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const size = map.width * map.height;
   const g: GameState = {
     tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [],
-    occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), nextId: 1,
+    occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), rubble: [], nextId: 1,
   };
   const keep = buildingIndex('keep');
   const starts = [...map.starts].sort((a, b) => a.player - b.player);
@@ -203,6 +222,7 @@ export function stateHash(g: GameState): number {
   for (let i = 0; i < g.map.tiles.length; i++) { h ^= g.map.tiles[i]!; h = Math.imul(h, 0x01000193); }
   for (let i = 0; i < g.wear.length; i++) if (g.wear[i]) { add(i); add(g.wear[i]!); }
   for (let i = 0; i < g.roads.length; i++) if (g.roads[i]) { add(i); add(g.roads[i]! + 100); }
+  for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
     add(p.id); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);

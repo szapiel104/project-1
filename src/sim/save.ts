@@ -4,10 +4,10 @@ import { MAP_PRESETS } from '../data/maps';
 import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
-import type { Building, GameState, PlayerState, Unit } from './state';
+import type { Building, GameState, PlayerState, Rubble, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
-export const SAVE_VERSION = 8;
+export const SAVE_VERSION = 9;
 
 export interface SaveData {
   v: number;
@@ -22,6 +22,7 @@ export interface SaveData {
   /** Zużycie złóż jako pary [pole, liczba wydobyć] */
   wear: [number, number][];
   roads: [number, number][];
+  rubble: Rubble[];
   players: (Omit<PlayerState, 'res'> & { res: number[] })[];
   buildings: Building[];
   units: Unit[];
@@ -34,6 +35,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
   return {
     v: SAVE_VERSION, shape: shape(), seed: g.map.seed, preset, tick: g.tick, rng: g.rng.state, nextId: g.nextId, cut: [...g.cut], wear: [...g.wear].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roads: [...g.roads].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
+    rubble: g.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     players: g.players.map((p) => ({ ...p, res: [...p.res] })),
     buildings: g.buildings.map((b) => ({ ...b })),
     units: g.units.map((u) => ({ ...u, path: [...u.path] })),
@@ -52,7 +54,9 @@ export function deserialize(d: SaveData): GameState | null {
       buildings: d.buildings.map((b) => ({ ...b })),
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
       occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size),
+      rubble: d.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     };
+    for (const r of g.rubble) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g.reserved[y * map.width + x]!++;
     for (const [t, n] of d.wear) g.wear[t] = n;
     for (const [t, n] of d.roads) g.roads[t] = n;
     for (const t of g.cut) map.tiles[t] = 0; // wycięty las to łąka

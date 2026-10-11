@@ -2,8 +2,9 @@ import { buildingIndex } from '../data/buildings';
 import { RULES } from '../data/rules';
 import type { GameState } from './state';
 import { economySystem } from './systems/economy';
-import { demolish, placeBuilding } from './systems/placement';
+import { demolish, placeBuilding, removeRoad } from './systems/placement';
 import { migrationSystem } from './systems/population';
+import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
 
@@ -12,6 +13,7 @@ export type Command =
   | { type: 'noop'; player: number }
   | { type: 'build'; player: number; building: string; x: number; y: number; rot?: number }
   | { type: 'demolish'; player: number; id: number }
+  | { type: 'unroad'; player: number; x: number; y: number }
   | { type: 'setRations'; player: number; level: number }
   | { type: 'setTax'; player: number; level: number };
 
@@ -24,6 +26,9 @@ function apply(g: GameState, c: Command): void {
       break;
     case 'demolish':
       demolish(g, c.player, c.id);
+      break;
+    case 'unroad':
+      if (Number.isInteger(c.x) && Number.isInteger(c.y)) removeRoad(g, c.player, c.x, c.y);
       break;
     case 'setRations':
       if (Number.isInteger(c.level) && c.level >= 0 && c.level < RULES.rations.length) p.rations = c.level;
@@ -44,6 +49,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   for (const c of commands) apply(g, c);
   g.tick++;
   torchSystem(g);
+  rubbleSystem(g);
   workerSystem(g);
   migrationSystem(g);
   economySystem(g);

@@ -38,6 +38,8 @@ export interface BuildingDef {
   needsTerrain?: { terrain: Terrain; radius: number };
   /** Droga zamiast budynku: 1 = piaskowa, 2 = kamienna. Nie blokuje przejścia, przyspiesza chodzenie */
   road?: 1 | 2;
+  /** Budynek ma pracownika, choć nic nie produkuje (np. inżynier z cechu, który wynosi gruz) */
+  staff?: boolean;
   /** Ilu chłopów bez pracy może tu czekać */
   idleSlots?: number;
   /** Jak pokazać pracującego: 'inside' = odsłonięte wnętrze budynku, 'field' = chodzi po polu */
@@ -104,6 +106,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Drogi: maluje się je po polach. Ludzie chodzą po nich szybciej i chętniej je wybierają
   { id: 'roadSand', category: 'roads', name: 'b.roadSand', w: 1, h: 1, cost: {}, road: 1, buildable: true },
   { id: 'roadStone', category: 'roads', name: 'b.roadStone', w: 1, h: 1, cost: { stone: 1 }, road: 2, buildable: true },
+  // Cech inżynierów: jego człowiek wynosi gruz po rozbiórkach, gdy brakuje chłopów bez pracy
+  { id: 'engineers', category: 'settlement', name: 'b.engineers', w: 2, h: 2, cost: { wood: 30, stone: 10 }, staff: true, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

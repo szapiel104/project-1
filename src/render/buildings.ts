@@ -203,6 +203,33 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
   }
 }
 
+/** Stos gruzu po rozbiórce: kamienie, połamane belki i deski rozsypane po działce. */
+export function rubbleModel(w: number, h: number, seed: number): THREE.Group {
+  const g = new THREE.Group();
+  const count = Math.round(9 * w * h);
+  let s = seed * 9301 + 49297;
+  const r = (): number => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
+  for (let i = 0; i < count; i++) {
+    const x = (r() - 0.5) * w * 0.85, z = (r() - 0.5) * h * 0.85;
+    const kind = i % 3;
+    let m: THREE.Mesh;
+    if (kind === 0) { m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.1 + r() * 0.1, 0), r() > 0.5 ? M.rock : M.rockDark); m.position.set(x, 0.07 + r() * 0.12, z); }
+    else if (kind === 1) { m = new THREE.Mesh(new THREE.BoxGeometry(0.5 + r() * 0.4, 0.06, 0.08), M.woodDark); m.position.set(x, 0.08 + r() * 0.2, z); }
+    else { m = new THREE.Mesh(new THREE.BoxGeometry(0.4 + r() * 0.3, 0.035, 0.16), M.plank); m.position.set(x, 0.05 + r() * 0.15, z); }
+    m.rotation.set((r() - 0.5) * 0.9, r() * 6.3, (r() - 0.5) * 0.9);
+    m.castShadow = true;
+    m.receiveShadow = true;
+    g.add(m);
+  }
+  return g;
+}
+
+/** Pokazuje tyle gruzu, ile jeszcze zostało do wyniesienia. */
+export function setRubble(model: THREE.Object3D, ratio: number): void {
+  const shown = Math.max(1, Math.ceil(model.children.length * ratio));
+  model.children.forEach((c, i) => { c.visible = i < shown; });
+}
+
 /** Noc: okna zaczynają świecić ciepłym światłem. `k` od 0 (dzień) do 1 (środek nocy). */
 export function setNight(k: number): void {
   M.window.emissive.setHex(0xffb050);
@@ -694,6 +721,31 @@ const BUILDERS: Record<string, Builder> = {
   },
   torch(g) {
     g.add(torchModel());
+  },
+  engineers(g, _team, flag) {
+    // Cech inżynierów: warsztat z daszkiem nad stołem kreślarskim, dźwig z blokiem kamienia, taczka i narzędzia
+    hut(g, M.plaster, M.thatch, 0.95, 0.9, 0.72, 0.42, -0.35);
+    box(g, M.window, 0.2, 0.2, 0.03, 0.72, 0.36, 0.11);
+    for (const [x, z] of [[-0.9, -0.8], [-0.15, -0.8], [-0.9, -0.1], [-0.15, -0.1]] as const) box(g, M.woodDark, 0.07, 0.7, 0.07, x, 0, z);
+    box(g, M.plank, 0.95, 0.05, 0.9, -0.52, 0.7, -0.45).rotation.x = 0.2;
+    box(g, M.wood, 0.55, 0.05, 0.35, -0.52, 0.32, -0.5);
+    for (const sx of [-1, 1]) box(g, M.woodDark, 0.05, 0.32, 0.3, -0.52 + sx * 0.23, 0, -0.5);
+    box(g, M.white, 0.3, 0.01, 0.22, -0.52, 0.375, -0.5);
+    // dźwig: dwie skośne nogi, wysięgnik, lina i podwieszony blok
+    for (const sz of [-1, 1]) { const leg = box(g, M.woodDark, 0.06, 1.25, 0.06, -0.55, 0, 0.55 + sz * 0.22); leg.rotation.x = sz * -0.2; }
+    const boom = box(g, M.woodDark, 0.9, 0.06, 0.06, -0.2, 1.15, 0.55);
+    boom.rotation.z = 0.25;
+    box(g, M.plank, 0.012, 0.6, 0.012, 0.2, 0.62, 0.55);
+    box(g, M.rock, 0.26, 0.2, 0.22, 0.2, 0.42, 0.55);
+    // taczka i skrzynia z narzędziami
+    box(g, M.wood, 0.28, 0.12, 0.2, 0.65, 0.1, 0.62);
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.04, 8), M.woodDark);
+    wheel.rotation.x = Math.PI / 2;
+    wheel.position.set(0.85, 0.07, 0.62);
+    g.add(wheel);
+    box(g, M.woodDark, 0.3, 0.03, 0.03, 0.45, 0.2, 0.55);
+    box(g, M.woodDark, 0.3, 0.03, 0.03, 0.45, 0.2, 0.69);
+    pennant(g, flag, 0.8, 1.25, -0.7);
   },
   roadSand(g) { box(g, M.roadSand, 0.96, 0.04, 0.96); },
   roadStone(g) { box(g, M.roadStone, 0.96, 0.05, 0.96); },

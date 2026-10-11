@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.5.0 — wyburzanie i gruz (2026-10-11)
+
+- Tryb „Wyburzanie”: kliknięcie usuwa budynek, przeciągnięcie usuwa drogę
+- Rozebrany budynek zapada się, a na działce zostaje gruz; dopóki leży, nie da się tam budować
+- Gruz wynoszą do składu chłopi bez pracy, po dwóch naraz; połowa kosztu budynku wraca ładunek po ładunku
+- Cech inżynierów (Osada): gdy brakuje bezrobotnych, gruz wynosi inżynier
+
 ## 0.4.7 — obracanie budynków (2026-10-11)
 
 - Podczas budowy klawisz R albo przycisk „Obróć” obraca budynek co 90°; wejście przenosi się razem z frontem

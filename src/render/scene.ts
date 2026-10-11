@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
-import { animateBuilding, roadMaterials, setNight, setStockFill, torchModel } from './buildings';
+import { animateBuilding, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
@@ -74,6 +74,9 @@ export class GameRenderer {
   private selectedId = 0;
   private cutSeen = 0;
   private roadSum = -1;
+  private rubbleMeshes = new Map<number, THREE.Group>();
+  /** Budynki w trakcie zawalania się po rozbiórce */
+  private dying: { mesh: THREE.Group; t: number }[] = [];
   /** Gdy prawda, przeciąganie lewym przyciskiem maluje (np. drogę) zamiast przesuwać kamerę */
   painting = false;
   onPaint: (tile: TileRef) => void = () => {};
@@ -170,7 +173,8 @@ export class GameRenderer {
     canvas.addEventListener('pointerleave', () => this.hover(null));
     canvas.addEventListener('pointerup', (e) => {
       if (e.button !== 0 || (this.cam.dragged && !this.painting)) return;
-      const tile = this.pick(e);
+      // kliknięcie w dach albo ścianę liczy się jako kliknięcie w ten budynek, a nie w ziemię za nim
+      const tile = this.pickBuilding(e) ?? this.pick(e);
       if (tile) this.onClick(tile, e.pointerType === 'touch');
     });
     new ResizeObserver(() => this.resize()).observe(canvas);
@@ -181,6 +185,10 @@ export class GameRenderer {
     if (this.view) { this.scene.remove(this.view.group); this.view.dispose(); }
     for (const g of this.buildingMeshes.values()) this.buildingLayer.remove(g);
     this.buildingMeshes.clear();
+    for (const pile of this.rubbleMeshes.values()) this.scene.remove(pile);
+    this.rubbleMeshes.clear();
+    for (const d of this.dying) this.buildingLayer.remove(d.mesh);
+    this.dying = [];
     this.prevPos.clear();
     this.facing.clear();
     this.storesTick = -1;
@@ -263,6 +271,7 @@ export class GameRenderer {
       this.animate(this.state, this.calm ? 0 : dt);
       this.syncForest(this.state, this.view);
       this.syncRoads(this.state, this.view);
+      this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
       if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
@@ -306,9 +315,37 @@ export class GameRenderer {
     }
     for (const [id, mesh] of this.buildingMeshes) {
       if (alive.has(id)) continue;
-      this.buildingLayer.remove(mesh);
+      // rozebrany budynek nie znika od razu: zapada się i przechyla, a pod nim zostaje gruz
+      this.dying.push({ mesh, t: 0 });
       this.buildingMeshes.delete(id);
     }
+  }
+
+  /** Zawalanie się rozebranych budynków i stosy gruzu, które maleją z każdym wyniesionym ładunkiem. */
+  private syncRubble(g: GameState, view: TerrainView, dt: number): void {
+    for (let i = this.dying.length - 1; i >= 0; i--) {
+      const d = this.dying[i]!;
+      d.t += Math.max(dt, 0.016);
+      const k = Math.min(1, d.t / 1.1);
+      d.mesh.scale.y = Math.max(0.04, 1 - k * k);
+      d.mesh.rotation.z = k * 0.18;
+      d.mesh.rotation.x = k * -0.1;
+      if (k >= 1) { this.buildingLayer.remove(d.mesh); this.dying.splice(i, 1); }
+    }
+    const { width, height } = g.map;
+    const alive = new Set<number>();
+    for (const r of g.rubble) {
+      alive.add(r.id);
+      let pile = this.rubbleMeshes.get(r.id);
+      if (!pile) {
+        pile = rubbleModel(r.w, r.h, r.id);
+        pile.position.set(r.x + r.w / 2 - width / 2, view.heightAt(r.x + r.w / 2, r.y + r.h / 2), r.y + r.h / 2 - height / 2);
+        this.scene.add(pile);
+        this.rubbleMeshes.set(r.id, pile);
+      }
+      setRubble(pile, r.loads.length / r.total);
+    }
+    for (const [id, pile] of this.rubbleMeshes) if (!alive.has(id)) { this.scene.remove(pile); this.rubbleMeshes.delete(id); }
   }
 
   /** Pora dnia: kolor i siła słońca, światło nieba, barwa mgły. W nocy świeci chłodny księżyc. */
@@ -567,6 +604,23 @@ export class GameRenderer {
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
     this.cam.resize(w, h);
+  }
+
+  private pickBuilding(e: PointerEvent): TileRef | null {
+    if (!this.state) return null;
+    const r = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
+    this.ray.setFromCamera(ndc, this.cam.camera);
+    const hit = this.ray.intersectObjects([...this.buildingMeshes.values()], true)[0];
+    if (!hit) return null;
+    let o: THREE.Object3D | null = hit.object;
+    while (o && o.parent !== this.buildingLayer) o = o.parent;
+    for (const [id, mesh] of this.buildingMeshes) {
+      if (mesh !== o) continue;
+      const b = this.state.buildings.find((x) => x.id === id);
+      return b ? { x: b.x, y: b.y } : null;
+    }
+    return null;
   }
 
   private pick(e: PointerEvent): TileRef | null {

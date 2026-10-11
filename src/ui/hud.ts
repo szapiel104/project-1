@@ -14,6 +14,7 @@ export interface HudEvents {
   onDemolish(id: number): void;
   onCloseInfo(): void;
   onRotate(): void;
+  onWreck(): void;
 }
 
 export interface HudView {
@@ -49,6 +50,8 @@ export interface Hud {
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
+  /** Zaznacza, że trwa tryb wyburzania */
+  setWreck(on: boolean): void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
@@ -308,6 +311,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const footButtons = el('div', 'actions');
   footButtons.append(turn, cancel);
   buildFoot.append(buildHint, footButtons);
+  // wyburzanie: osobny tryb, w którym klikanie usuwa budynki, a przeciąganie drogi
+  const wreck = el('button', 'btn-main wreck', t('hud.wreck'));
+  wreck.type = 'button';
+  wreck.setAttribute('aria-pressed', 'false');
+  wreck.addEventListener('click', () => events.onWreck());
+  tabs.append(wreck);
   barhead.append(cats, cards, tabs);
   buildbar.append(barhead, buildFoot);
 
@@ -401,7 +410,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       const warn = [v.fed ? '' : t('hud.hungry'), v.bribed ? '' : t('hud.noGold')].filter(Boolean).join('. ');
       setText(forecast, `${t('hud.popularity')}: ${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}${warn ? `. ${warn}.` : ''}`);
       for (const [id, b] of buildButtons) b.classList.toggle('poor', !v.affordable.has(id));
-      buildFoot.hidden = picked === null;
+      if (wreck.getAttribute('aria-pressed') !== 'true') buildFoot.hidden = picked === null;
     },
     setPicked(id) {
       picked = id;
@@ -424,6 +433,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       demolish.hidden = !i.own || !i.def.buildable;
     },
     stepSpeed,
+    setWreck(on) {
+      wreck.setAttribute('aria-pressed', String(on));
+      if (on) { buildFoot.hidden = false; turn.hidden = true; cancel.hidden = true; setText(buildHint, t('hud.wrecking')); }
+      else { turn.hidden = false; buildFoot.hidden = picked === null; }
+    },
     toast(text) {
       setText(toast, text);
       toast.hidden = false;

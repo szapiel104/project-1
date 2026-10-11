@@ -23,6 +23,8 @@ function storeDoors(g: GameState, owner: number, kind: StoreKind): Set<number> {
 function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: ProductionDef | undefined): ((t: number) => boolean) | null {
   switch (u.phase) {
     case Phase.Idle: {
+      // inżynier bez zajęcia czeka przy swoim cechu
+      if (job) return job.door >= 0 ? (t) => t === job.door : null;
       // bezrobotni czekają w obozowisku przy ognisku, a gdy go nie ma, pod twierdzą
       const doors = new Set<number>();
       for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots) doors.add(b.door);
@@ -48,6 +50,12 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.ToLight: {
       const target = g.buildings.find((b) => b.id === u.target);
       return target ? (t) => t === target.door : null;
+    }
+    case Phase.ToRubble: {
+      const r = g.rubble.find((x) => x.id === u.target);
+      if (!r) return null;
+      const w = g.map.width;
+      return (t) => { const x = t % w, y = (t - x) / w; return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; };
     }
     case Phase.ToRest: {
       const doors = new Set<number>();
@@ -120,6 +128,21 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       // co kilka dostaw idzie posiedzieć w chacie, o ile jakaś stoi
       if (++u.trips >= RULES.restEvery && g.buildings.some((b) => b.owner === u.owner && b.type === HOUSE)) { u.trips = 0; u.phase = Phase.ToRest; }
       break;
+    case Phase.ToRubble: {
+      const i = g.rubble.findIndex((x) => x.id === u.target);
+      const r = g.rubble[i];
+      u.target = 0;
+      u.phase = u.job ? Phase.Returning : Phase.Idle;
+      const load = r?.loads.pop();
+      if (!r || !load) break;
+      if (load[0] >= 0) { u.carryRes = load[0]; u.carryAmt = load[1]; u.phase = Phase.ToStore; }
+      if (!r.loads.length) {
+        // ostatni ładunek zabrany: działka jest znowu wolna
+        for (let ty = r.y; ty < r.y + r.h; ty++) for (let tx = r.x; tx < r.x + r.w; tx++) g.reserved[ty * g.map.width + tx]!--;
+        g.rubble.splice(i, 1);
+      }
+      break;
+    }
     case Phase.ToLight: {
       const target = g.buildings.find((b) => b.id === u.target);
       if (target) target.lit = true;
@@ -159,7 +182,7 @@ export function workerSystem(g: GameState): void {
   for (const b of g.buildings) byId.set(b.id, b);
 
   for (const b of g.buildings) {
-    if (b.worker !== 0 || !BUILDINGS[b.type]!.production) continue;
+    if (b.worker !== 0 || !(BUILDINGS[b.type]!.production || BUILDINGS[b.type]!.staff)) continue;
     const u = g.units.find((x) => x.owner === b.owner && x.job === 0);
     if (!u) continue;
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0;
@@ -196,7 +219,7 @@ export function workerSystem(g: GameState): void {
     if (u.path.length) { move(g, u); continue; }
 
     const goal = goalFor(g, u, job, prod);
-    if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
+    if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
     const here = tileOf(g, u);
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal);

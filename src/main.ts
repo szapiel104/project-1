@@ -29,6 +29,17 @@ let touchTile: TileRef | null = null;
 let selected = 0;
 /** Obrót stawianego budynku: 0..3, co 90° */
 let placeRot = 0;
+/** Tryb wyburzania: kliknięcie usuwa budynek, przeciąganie usuwa drogę */
+let wrecking = false;
+
+function setWreck(on: boolean): void {
+  wrecking = on;
+  if (on) pick(null);
+  hud.setWreck(on);
+  renderer.setPainting(on);
+  canvas.classList.toggle('placing', on);
+  if (on) hud.toast(t('hud.wrecking'));
+}
 let currentPreset: MapPresetId = '1v1';
 let currentSeedText = 'project-1';
 const SAVE_KEY = 'project1.save';
@@ -46,13 +57,14 @@ const hud = createHud(document.getElementById('ui')!, {
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
   // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
   onRandom: (preset) => start(`${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`, preset),
-  onPickBuilding: (id) => pick(id),
+  onPickBuilding: (id) => { if (wrecking) setWreck(false); pick(id); },
   onRations: (level) => pending.push({ type: 'setRations', player: ME, level }),
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
   onSpeed: (s) => { speed = s; },
   onDemolish: (id) => { pending.push({ type: 'demolish', player: ME, id }); select(0); },
   onCloseInfo: () => select(0),
   onRotate: () => rotate(),
+  onWreck: () => setWreck(!wrecking),
 }, renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
@@ -113,6 +125,10 @@ renderer.onHover = (tile) => { hoverTile = tile; if (!touchTile) updateGhost(); 
 
 // malowanie drogi: każde pole pod kursorem przy wciśniętym przycisku dostaje nawierzchnię
 renderer.onPaint = (tile) => {
+  if (wrecking) {
+    if (game.roads[tile.y * game.map.width + tile.x] && !pending.some((c) => c.type === 'unroad' && c.x === tile.x && c.y === tile.y)) pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y });
+    return;
+  }
   if (!picked) return;
   const type = buildingIndex(picked);
   if (canPlace(game, ME, type, tile.x, tile.y) === null && !pending.some((c) => c.type === 'build' && c.x === tile.x && c.y === tile.y))
@@ -120,6 +136,13 @@ renderer.onPaint = (tile) => {
 };
 
 renderer.onClick = (tile, touch) => {
+  if (wrecking) {
+    const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
+    const b = game.buildings.find((x) => x.id === id);
+    if (b && b.owner === ME && BUILDINGS[b.type]!.buildable) pending.push({ type: 'demolish', player: ME, id });
+    else if (game.roads[tile.y * game.map.width + tile.x]) pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y });
+    return;
+  }
   if (!picked) {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
     select(id === selected ? 0 : id);
@@ -141,14 +164,14 @@ renderer.onClick = (tile, touch) => {
 };
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if (picked) pick(null); else select(0); }
+  if (e.key === 'Escape') { if (wrecking) setWreck(false); else if (picked) pick(null); else select(0); }
   const tag = (e.target as HTMLElement | null)?.tagName;
   if (tag === 'INPUT' || tag === 'SELECT' || e.ctrlKey || e.metaKey) return;
   if (e.code === 'KeyR' && picked) rotate();
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
   if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);
 });
-canvas.addEventListener('contextmenu', () => { if (picked) pick(null); });
+canvas.addEventListener('contextmenu', () => { if (wrecking) setWreck(false); else if (picked) pick(null); });
 
 let warnedHungry = false;
 let warnedLeaving = false;

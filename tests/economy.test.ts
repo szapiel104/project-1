@@ -86,20 +86,56 @@ describe('budowanie', () => {
     expect(g.buildings.filter((b) => b.owner === 0).length).toBe(3); // komenda też została odrzucona
   });
 
-  it('rozbiórka zwraca połowę kosztu i zwalnia pracownika; cudzego budynku nie da się rozebrać', () => {
+  it('rozbiórka zostawia gruz, a połowa kosztu wraca dopiero, gdy ludzie go wyniosą', () => {
     const g = createGame(5);
-    run(g, 5, [build(g, 'woodcutter')]);
-    const b = g.buildings.find((x) => BUILDINGS[x.type]!.id === 'woodcutter')!;
-    expect(b.worker).toBeGreaterThan(0);
+    run(g, 5, [build(g, 'house')]);
+    const b = g.buildings.find((x) => BUILDINGS[x.type]!.id === 'house')!;
+    const w = g.map.width;
     step(g, [{ type: 'demolish', player: 1, id: b.id }]);
-    expect(g.buildings.includes(b)).toBe(true);
+    expect(g.buildings.includes(b)).toBe(true); // cudzego budynku nie da się rozebrać
     const wood = res(g, 'wood');
     step(g, [{ type: 'demolish', player: 0, id: b.id }]);
     expect(g.buildings.includes(b)).toBe(false);
-    expect(res(g, 'wood')).toBe(wood + 5);
-    expect(g.units.every((u) => u.job === 0)).toBe(true);
+    expect(res(g, 'wood')).toBe(wood); // jeszcze nic nie wróciło
+    expect(g.rubble.length).toBe(1);
+    expect(g.occupancy[b.y * w + b.x]).toBe(0);
+    expect(canPlace(g, 0, buildingIndex('house'), b.x, b.y)).toBe('place.occupied'); // na gruzie nie da się budować
+    run(g, 1500);
+    expect(g.rubble.length).toBe(0);
+    expect(res(g, 'wood')).toBe(wood + 10);
+    expect(canPlace(g, 0, buildingIndex('house'), b.x, b.y)).toBeNull();
+    expect(g.units.every((u) => u.target === 0 && u.carryRes < 0)).toBe(true);
     step(g, [{ type: 'demolish', player: 0, id: playerKeep(g, 0)!.id }]);
     expect(playerKeep(g, 0)).toBeDefined();
+  });
+
+  it('gdy nie ma bezrobotnych, gruz wynosi inżynier z cechu; zapis pamięta gruz', () => {
+    const g = createGame(5);
+    g.players[0]!.res[resIndex('wood')] = 200;
+    step(g, [build(g, 'engineers')]);
+    step(g, [build(g, 'house')]);
+    run(g, 60);
+    const guild = g.buildings.find((x) => BUILDINGS[x.type]!.id === 'engineers')!;
+    expect(guild.worker).toBeGreaterThan(0);
+    // wszyscy poza inżynierem znikają, więc bezrobotnych nie ma
+    g.units = g.units.filter((u) => u.owner !== 0 || u.id === guild.worker);
+    const house = g.buildings.find((x) => BUILDINGS[x.type]!.id === 'house')!;
+    const wood = res(g, 'wood');
+    step(g, [{ type: 'demolish', player: 0, id: house.id }]);
+    expect(stateHash(deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!)).toBe(stateHash(g));
+    for (let i = 0; i < 1500 && g.rubble.length; i++) { step(g, []); if (g.units.filter((u) => u.owner === 0).length > 1) g.units = g.units.filter((u) => u.owner !== 0 || u.id === guild.worker); }
+    expect(g.rubble.length).toBe(0);
+    run(g, 400); // ostatni ładunek jest jeszcze w drodze do składu
+    expect(res(g, 'wood')).toBe(wood + 10);
+  });
+
+  it('drogę da się usunąć', () => {
+    const g = createGame(5);
+    const s = spot(g, 'house');
+    step(g, [{ type: 'build', player: 0, building: 'roadSand', x: s.x, y: s.y }]);
+    expect(g.roads[s.y * g.map.width + s.x]).toBe(1);
+    step(g, [{ type: 'unroad', player: 0, x: s.x, y: s.y }]);
+    expect(g.roads[s.y * g.map.width + s.x]).toBe(0);
   });
 });
 

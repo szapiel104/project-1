@@ -33,6 +33,10 @@ export const RULES = {
   restEvery: 3,
   /** Ile ticków siedzi w chacie */
   restTicks: 80,
+  /** Ile surowca mieści jeden kurs z gruzem */
+  rubbleLoad: 8,
+  /** Ilu ludzi naraz wynosi gruz z jednej rozbiórki */
+  rubbleHaulers: 2,
   /** Przy rozbiórce wraca tyle procent kosztu */
   refundPercent: 50,
   /** Kara do popularności za brak miejsc w domach */
