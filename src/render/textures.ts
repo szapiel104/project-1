@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water';
+type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -90,6 +90,37 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     c.fillStyle = gray(0.4); c.fillRect(n * 0.16, n * 0.16, n * 0.3, n * 0.3);
     c.fillStyle = gray(0.95); c.fillRect(n * 0.46, n * 0.12, n * 0.08, n * 0.76); c.fillRect(n * 0.12, n * 0.46, n * 0.76, n * 0.08);
   },
+  ashlar(c, n, r) {
+    // Mur twierdzy rysowany od razu w pełnej rozdzielczości: ciosy różnej długości, głęboka fuga,
+    // każdy kamień z własnym odcieniem, jasną górną krawędzią, cieniem u dołu, wyszczerbieniami i rysami
+    c.fillStyle = gray(0.3); c.fillRect(0, 0, n, n);
+    const rows = 8, h = n / rows, gap = n * 0.006;
+    for (let y = 0; y < rows; y++) {
+      let x = -r() * n * 0.12;
+      while (x < n) {
+        const w = n * (0.1 + r() * 0.13);
+        const tone = 0.68 + r() * 0.28;
+        const bx = x + gap, by = y * h + gap, bw = w - gap * 2, bh = h - gap * 2;
+        c.fillStyle = gray(tone); c.fillRect(bx, by, bw, bh);
+        // wypukłość kamienia: jaśniejszy środek, ciemniejące brzegi
+        const g1 = c.createLinearGradient(0, by, 0, by + bh);
+        g1.addColorStop(0, 'rgba(255,255,255,0.22)'); g1.addColorStop(0.18, 'rgba(255,255,255,0)'); g1.addColorStop(0.8, 'rgba(0,0,0,0)'); g1.addColorStop(1, 'rgba(0,0,0,0.3)');
+        c.fillStyle = g1; c.fillRect(bx, by, bw, bh);
+        const g2 = c.createLinearGradient(bx, 0, bx + bw, 0);
+        g2.addColorStop(0, 'rgba(255,255,255,0.14)'); g2.addColorStop(0.12, 'rgba(255,255,255,0)'); g2.addColorStop(0.9, 'rgba(0,0,0,0)'); g2.addColorStop(1, 'rgba(0,0,0,0.2)');
+        c.fillStyle = g2; c.fillRect(bx, by, bw, bh);
+        // dziobata powierzchnia po dłucie
+        for (let k = 0; k < 26; k++) { c.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${0.05 + r() * 0.1})`; c.fillRect(bx + r() * bw, by + r() * bh, 1 + r() * n * 0.006, 1 + r() * n * 0.004); }
+        // wyszczerbiony narożnik
+        if (r() > 0.55) { c.fillStyle = gray(0.3); c.beginPath(); const cx = r() > 0.5 ? bx : bx + bw, cy = r() > 0.5 ? by : by + bh; c.arc(cx, cy, n * (0.006 + r() * 0.01), 0, 6.3); c.fill(); }
+        // rysa
+        if (r() > 0.75) { c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 1; c.beginPath(); let px = bx + r() * bw, py = by; c.moveTo(px, py); for (let k = 0; k < 4; k++) { px += (r() - 0.5) * bw * 0.15; py += bh / 4; c.lineTo(px, py); } c.stroke(); }
+        x += w;
+      }
+    }
+    // zacieki pod koroną muru
+    for (let k = 0; k < 14; k++) { const sx = r() * n, len = n * (0.15 + r() * 0.3); const gr = c.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(sx, 0, n * (0.01 + r() * 0.02), len); }
+  },
   water(c, n) {
     // gładka tafla: same miękkie plamy z szumu (dokłada je ziarno), bez rysowanych kresek
     c.fillStyle = gray(0.6); c.fillRect(0, 0, n, n);
@@ -108,13 +139,13 @@ export function pattern(kind: Kind): THREE.Texture | null {
   let t = cache.get(kind);
   if (t) return t;
   if (typeof document === 'undefined') return null;
-  const n = 512;
+  const n = kind === 'ashlar' ? 1024 : 512;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
+  const base = kind === 'ashlar' ? 1024 : kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));

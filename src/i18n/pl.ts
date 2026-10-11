@@ -72,6 +72,8 @@ export const pl = {
   'b.mill': 'Młyn',
   'b.bakery': 'Piekarnia',
   'b.camp': 'Obozowisko',
+  'b.torch': 'Pochodnia',
+  'd.torch': 'Pochodnia na słupie. Zapala się o zmierzchu i oświetla okolicę. Postaw ją przy drodze albo przy budynku.',
   'b.fisher': 'Chata rybaka',
   'd.fisher': 'Rybak łowi na brzegu najbliższej wody i odnosi ryby do spichlerza. Musi stać blisko wody.',
   'b.barn': 'Stodoła',

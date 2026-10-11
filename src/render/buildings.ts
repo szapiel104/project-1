@@ -18,7 +18,7 @@ const M = {
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
   fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
-  castle: mat(0xd9c59a, 'bricks'), castleDark: mat(0xb39f78, 'bricks'),
+  castle: mat(0xe0cfa6, 'ashlar'), castleDark: mat(0xb8a47c, 'ashlar'), castlePlain: mat(0xd6c49a),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
@@ -220,7 +220,7 @@ const BUILDERS: Record<string, Builder> = {
     box(g, D, 2.66, 0.25, 2.66);
     box(g, S, 2.5, 1.0, 2.5, 0, 0.2, 0);
     box(g, D, 2.6, 0.1, 2.6, 0, 1.2, 0);
-    for (const s of [-1, 1]) { merlons(0, s * 1.25, 2.5, 1.3, true, S); merlons(s * 1.25, 0, 2.5, 1.3, false, S); }
+    for (const s of [-1, 1]) { merlons(0, s * 1.25, 2.5, 1.3, true, M.castlePlain); merlons(s * 1.25, 0, 2.5, 1.3, false, M.castlePlain); }
     // dziedziniec wyłożony deskami
     box(g, M.plank, 2.3, 0.03, 2.3, 0, 1.2, 0);
     // donżon: wieża mieszkalna z drewnianą hurdycją pod dachem (zdejmowany, żeby zajrzeć do sali)
@@ -262,7 +262,7 @@ const BUILDERS: Record<string, Builder> = {
       const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.42, 0.2, 12), D);
       rim.position.set(x, 2.05, z);
       g.add(rim);
-      for (let k = 0; k < 8; k += 2) box(g, S, 0.13, 0.14, 0.13, x + Math.cos(k * 0.785) * 0.43, 2.15, z + Math.sin(k * 0.785) * 0.43);
+      for (let k = 0; k < 8; k += 2) box(g, M.castlePlain, 0.13, 0.14, 0.13, x + Math.cos(k * 0.785) * 0.43, 2.15, z + Math.sin(k * 0.785) * 0.43);
       pyramid(g, team, 0.4, 0.95, x, 2.15, z, 12);
       box(g, M.window, 0.12, 0.26, 0.03, x, 1.2, z + sz * 0.46);
     }
@@ -339,21 +339,27 @@ const BUILDERS: Record<string, Builder> = {
     const block = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.18, 8), M.bark);
     block.position.set(-0.05, 0.09, 0.35);
     g.add(block);
-    box(g, M.woodDark, 0.03, 0.3, 0.03, -0.05, 0.18, 0.35).rotation.z = 0.5;
-    box(g, M.iron, 0.1, 0.07, 0.02, 0.04, 0.42, 0.35);
+    // siekiera wbita w pieniek: trzonek i ostrze w jednej grupie, pochylone razem
+    const axe = new THREE.Group();
+    axe.position.set(-0.05, 0.17, 0.35);
+    axe.rotation.z = -0.45;
+    box(axe, M.woodDark, 0.03, 0.34, 0.03);
+    box(axe, M.iron, 0.11, 0.08, 0.025, 0.045, 0.02, 0);
+    g.add(axe);
     // przyciągnięte drzewo: pień z sękami, gałęziami i resztką listowia; skraca się z każdą partią desek
     const yard = new THREE.Group();
     yard.name = 'yardlog';
     yard.position.set(-0.98, 0.1, 0.68);
     yard.add(new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.1, 0.95, 7).rotateZ(Math.PI / 2).translate(0.475, 0, 0), M.bark));
-    for (const [x, rot, len] of [[0.25, 0.9, 0.3], [0.5, -1.0, 0.26], [0.7, 0.8, 0.24], [0.85, -0.7, 0.2]] as const) {
-      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.03, len, 5).translate(0, len / 2, 0), M.bark);
-      branch.position.set(x, 0.04, 0);
-      branch.rotation.x = rot;
+    // krótkie gałęzie odstające na boki i kępki igliwia przy ich końcach, nisko przy pniu
+    for (const [x, side, len] of [[0.3, 1, 0.22], [0.5, -1, 0.2], [0.68, 1, 0.18], [0.84, -1, 0.16]] as const) {
+      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.026, len, 5).translate(0, len / 2, 0), M.bark);
+      branch.position.set(x, 0.02, 0);
+      branch.rotation.x = side * 1.25;
       yard.add(branch);
-      const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 5), M.needle);
-      tuft.position.set(x, 0.04 + Math.cos(rot) * len, Math.sin(rot) * len);
-      tuft.rotation.x = rot;
+      const tuft = new THREE.Mesh(new THREE.IcosahedronGeometry(0.075, 0), M.needle);
+      tuft.scale.set(1.3, 0.6, 1);
+      tuft.position.set(x + 0.02, 0.02 + Math.cos(1.25) * len, side * Math.sin(1.25) * len);
       yard.add(tuft);
     }
     yard.visible = false;
@@ -431,6 +437,9 @@ const BUILDERS: Record<string, Builder> = {
     boat.rotation.y = 0.5;
     g.add(boat);
     pennant(g, flag, -0.8, 0.9, -0.6);
+  },
+  torch(g) {
+    g.add(torchModel());
   },
   camp(g) {
     box(g, M.soil, 1.9, 0.04, 1.9);

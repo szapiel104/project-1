@@ -24,9 +24,9 @@ const DAY = [
   { h: 0, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x0f1529 },
   { h: 4.5, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x141b33 },
   { h: 6, sun: 0xff9a5a, power: 1.6, sky: 0.9, haze: 0xd9a27c },
-  { h: 8, sun: 0xffd9a0, power: 3.2, sky: 1.4, haze: 0xd6cdb4 },
-  { h: 12, sun: 0xfff0d0, power: 3.8, sky: 1.55, haze: 0xcfd3c4 },
-  { h: 17, sun: 0xffd9a0, power: 3.3, sky: 1.4, haze: 0xd6cdb4 },
+  { h: 8, sun: 0xffd9a0, power: 2.5, sky: 1.15, haze: 0xd6cdb4 },
+  { h: 12, sun: 0xfff0d0, power: 2.7, sky: 1.2, haze: 0xcfd3c4 },
+  { h: 17, sun: 0xffd9a0, power: 2.5, sky: 1.15, haze: 0xd6cdb4 },
   { h: 19.5, sun: 0xff8a4a, power: 1.7, sky: 0.9, haze: 0xcf8e68 },
   { h: 21.5, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x141b33 },
   { h: 24, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x0f1529 },
@@ -48,7 +48,7 @@ export class GameRenderer {
   /** 0 w dzień, 1 w środku nocy */
   private night = 0;
   private lamps: THREE.PointLight[] = [];
-  private lampSpots: THREE.Vector3[] = [];
+  private lampSpots: { v: THREE.Vector3; k: number }[] = [];
   private handTorches: THREE.InstancedMesh;
   private rods: THREE.InstancedMesh;
   private frameNo = 0;
@@ -87,7 +87,7 @@ export class GameRenderer {
     const phone = matchMedia('(pointer: coarse)').matches;
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.15;
+    this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5);
@@ -279,9 +279,11 @@ export class GameRenderer {
         part.castShadow = true;
         part.receiveShadow = true;
       });
-      const torch = torchModel();
-      torch.position.set(def.w / 2 - 0.08, 0, def.h / 2 - 0.08);
-      mesh.add(torch);
+      if (def.id !== 'torch') {
+        const torch = torchModel();
+        torch.position.set(def.w / 2 - 0.08, 0, def.h / 2 - 0.08);
+        mesh.add(torch);
+      }
       this.buildingLayer.add(mesh);
       this.buildingMeshes.set(b.id, mesh);
     }
@@ -334,35 +336,35 @@ export class GameRenderer {
     for (const mesh of this.buildingMeshes.values()) {
       const torch = mesh.getObjectByName('torch');
       if (!torch) continue;
-      // pochodnie stoją i płoną przez cały czas; nocą dodatkowo oświetlają okolicę
-      torch.visible = true;
-      torch.getObjectByName('torchflame')?.scale.set(1, 0.8 + flicker * 0.4, 1);
+      // słup stoi cały czas, płomień zapala się o zmierzchu i gaśnie o świcie
+      const flame = torch.getObjectByName('torchflame');
+      if (flame) { flame.visible = on; flame.scale.set(1, 0.8 + flicker * 0.4, 1); }
     }
     this.handTorches.visible = on;
     if (!on) { for (const lamp of this.lamps) lamp.intensity = 0; return; }
     // co kilka klatek wybieramy źródła światła najbliższe środkowi ekranu
     if (this.frameNo++ % 6 === 0) {
       const f = this.cam.focus;
-      const spots: { v: THREE.Vector3; d: number }[] = [];
+      const spots: { v: THREE.Vector3; d: number; k: number }[] = [];
       for (const mesh of this.buildingMeshes.values()) {
         const torch = mesh.getObjectByName('torch');
         if (!torch) continue;
         const v = new THREE.Vector3(mesh.position.x + torch.position.x, mesh.position.y + 1.25, mesh.position.z + torch.position.z);
-        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 });
+        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2, k: 1 });
       }
       const { width, height } = g.map;
       for (const u of g.units) {
         if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
         const v = new THREE.Vector3(u.px / FP - width / 2, (this.view?.heightAt(u.px / FP, u.py / FP) ?? 0) + 0.8, u.py / FP - height / 2);
-        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4 });
+        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.3 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
       }
       spots.sort((a, b) => a.d - b.d);
-      this.lampSpots = spots.slice(0, this.lamps.length).map((s) => s.v);
+      this.lampSpots = spots.slice(0, this.lamps.length);
     }
     this.lamps.forEach((lamp, i) => {
       const spot = this.lampSpots[i];
-      lamp.intensity = spot ? this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
-      if (spot) lamp.position.copy(spot);
+      lamp.intensity = spot ? spot.k * this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
+      if (spot) lamp.position.copy(spot.v);
     });
   }
 

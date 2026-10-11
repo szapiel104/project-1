@@ -97,6 +97,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
     needsTerrain: { terrain: Terrain.Water, radius: 7 },
     production: { output: { res: 'fish', amount: 8 }, site: 'shore', workTicks: 110 },
   },
+  // Wolnostojąca pochodnia: gracz stawia ją, gdzie chce, żeby rozświetlić osadę nocą
+  { id: 'torch', category: 'settlement', name: 'b.torch', w: 1, h: 1, cost: { wood: 2 }, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

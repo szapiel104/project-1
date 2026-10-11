@@ -1,5 +1,16 @@
 # Dziennik zmian
 
+## 0.3.17 — światło i pochodnie (2026-10-11)
+
+- Pochodnie przy budynkach: słup stoi cały czas, płomień zapala się o zmierzchu i gaśnie o świcie
+- Nowy obiekt „Pochodnia” (Osada, 2 drewna): stawiasz ją, gdzie chcesz
+- Ręczna pochodnia chłopa świeci dużo słabiej; południe mniej prześwietlone
+- Poprawki tartaku: siekiera wbita w pieniek, gałęzie i igliwie przy pniu zamiast sterczących stożków
+
+## 0.3.16 — mur twierdzy (2026-10-11)
+
+- Mur twierdzy z osobną teksturą 1024 px: ciosy różnej długości, głęboka fuga, wypukłość każdego kamienia, wyszczerbienia, rysy i zacieki
+
 ## 0.3.15 — złoża w górach (2026-10-11)
 
 - Kamień i żelazo leżą teraz u podnóża gór w niedużych złożach, żelazo rzadziej i bliżej skał; przy twierdzy zostaje mała odkrywka na start
