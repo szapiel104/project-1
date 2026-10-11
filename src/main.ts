@@ -191,3 +191,9 @@ requestAnimationFrame(loop);
 
 // podgląd stanu dla testów w przeglądarce
 (window as unknown as { __game: () => GameState }).__game = () => game;
+
+declare const __BUILD__: string;
+const badge = document.createElement('div');
+badge.className = 'build';
+badge.textContent = `wersja ${__BUILD__}`;
+document.body.append(badge);

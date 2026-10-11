@@ -84,6 +84,9 @@ ul { list-style: none; }
   background: linear-gradient(#4a321c, #2e1d0f); border: 2px solid var(--gold); box-shadow: 0 0 0 2px var(--wood-edge), 3px 4px 0 rgba(30, 18, 8, .5);
 }
 
+/* znacznik wersji w prawym dolnym rogu */
+.build { position: fixed; right: 10px; bottom: 6px; padding: 2px 8px; font-size: 14px; color: var(--parchment-light); background: rgba(35, 22, 11, .78); border: 1px solid var(--gold-dark); pointer-events: none; }
+
 /* dół ekranu */
 .bottom { position: fixed; left: 8px; right: 8px; bottom: 8px; display: grid; gap: 8px; pointer-events: none; }
 .bottom > *, .floaters > * { pointer-events: auto; }
