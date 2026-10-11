@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.5.5 — naturalniejszy bruk (2026-10-11)
+
+- Droga kamienna bez równych krawędzi i krawężnika: kamienie nierówno wchodzą w trawę, pola są lekko przesunięte
+- Każde pole bruku ma trochę inny odcień, co piąte jest omszałe
+- Poprawka gór: szerokie masywy zamiast cienkich igieł, pierwszy rząd zachodzi na krawędź mapy (znika szczelina), niższa ściana gór na samej mapie
+
 ## 0.5.4 — góry, krok, bruk (2026-10-11)
 
 - Góry dookoła mapy: rzeźbione szczyty z graniami, żlebami, warstwami skały i czapami śniegu o nierównej linii; dalsze pasma wyższe

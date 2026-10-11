@@ -15,7 +15,7 @@ function tileHeight(map: GameMap, x: number, y: number, waterLevel: number): num
   const cy = Math.min(map.height - 1, Math.max(0, y));
   const e = map.elevation[cy * map.width + cx]!;
   const t = map.tiles[cy * map.width + cx] as Terrain;
-  if (t === Terrain.Mountain) return 1.4 + (e - 170) * 0.2;
+  if (t === Terrain.Mountain) return 1.3 + (e - 170) * 0.15;
   const h = (e - waterLevel) * HEIGHT_SCALE;
   return t === Terrain.Water ? Math.min(h, -0.25) : Math.max(h, 0.12);
 }
@@ -168,14 +168,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
 
   // Za mapą: skalne podłoże i pasma gór ginące we mgle, żeby nie było widać końca świata.
-  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(w + 400, h + 400), new THREE.MeshLambertMaterial({ color: 0x77746c }));
+  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(w + 400, h + 400), new THREE.MeshStandardMaterial({ color: 0x6f6c66, roughness: 1 }));
   beyond.rotation.x = -Math.PI / 2;
   beyond.position.y = -0.3;
   group.add(beyond);
   // Szczyty rzeźbione: stożek o wielu ściankach z poszarpanymi graniami, żlebami i czapą śniegu.
   // Trzy różne bryły, powielane z innym obrotem, wysokością i szerokością.
   const peakGeo = (variant: number): THREE.BufferGeometry => {
-    const geo = new THREE.ConeGeometry(1, 1, 22, 14, true).toNonIndexed();
+    const geo = new THREE.ConeGeometry(1, 1, 22, 14, false).toNonIndexed();
     geo.translate(0, 0.5, 0);
     const pos2 = geo.getAttribute('position');
     const colors = new Float32Array(pos2.count * 3);
@@ -189,8 +189,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const ridge = Math.sin(ang * ridges + variant * 2) * 0.16 + Math.sin(ang * (ridges * 2 + 1) + y * 5) * 0.07;
       const rough = (n2(Math.round(ang * 6) / 6, Math.round(y * 9) / 9, 1) - 0.5) * 0.14;
       const k = 1 + (ridge + rough) * (1 - y * 0.6);
-      const drop = (n2(Math.round(ang * 4) / 4, 0, 2) - 0.5) * 0.12 * y; // nierówny wierzchołek
-      pos2.setXYZ(i, x * k, y + drop * (1 - y) * 2, z * k);
+      pos2.setXYZ(i, x * k, y, z * k);
       const strata = 0.75 + n2(0, Math.round(y * 16) / 16, 3) * 0.4;
       rock.setRGB(0.5 * strata, 0.48 * strata, 0.46 * strata);
       c2.copy(rock).lerp(dark, ridge < -0.08 ? 0.45 : 0); // żleby w cieniu
@@ -209,9 +208,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const pm = new THREE.Matrix4();
   const pq = new THREE.Quaternion();
   const yAxis = new THREE.Vector3(0, 1, 0);
-  const ringStep = 5;
+  const ringStep = 7;
   for (let ring = 0; ring < 7; ring++) {
-    const d = 2 + ring * 6;
+    // pierwszy rząd szczytów zachodzi na krawędź mapy, żeby między nią a górami nie było szczeliny
+    const d = -4 + ring * 6;
     for (let side = 0; side < 4; side++) {
       const len = (side % 2 === 0 ? w : h) + d * 2;
       for (let i = 0; i < len; i += ringStep) {
@@ -221,8 +221,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const px = side === 0 ? along : side === 2 ? along : side === 1 ? w / 2 + out : -w / 2 - out;
         const pz = side === 0 ? -h / 2 - out : side === 2 ? h / 2 + out : along;
         // dalsze pasma wyższe, żeby za pierwszym rzędem było widać kolejne
-        const height = 12 + ring * 4.5 + (((r >>> 8) & 255) / 255) * 12;
-        const radius = 6 + (((r >>> 16) & 255) / 255) * 6 + ring * 0.6;
+        // szerokie masywy zamiast igieł: podstawa zawsze wyraźnie szersza niż połowa wysokości
+        const height = 11 + ring * 3 + (((r >>> 8) & 255) / 255) * 8;
+        const radius = 10 + (((r >>> 16) & 255) / 255) * 7 + ring * 0.8;
         pq.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
         pm.compose(new THREE.Vector3(px, -0.4, pz), pq, new THREE.Vector3(radius, height, radius));
         variants[r % 3]!.push(pm.clone());
@@ -347,7 +348,6 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Drogi. Kamienna to równe pola bruku. Piaskowa to wydeptana ścieżka: każde pole dostaje miękką,
   // nieregularną plamę większą od pola, a sąsiednie plamy zlewają się w jeden trakt o poszarpanych brzegach.
   const roadMeshes: THREE.Mesh[] = [];
-  const curbMat = new THREE.MeshStandardMaterial({ color: 0xd6d2c6, roughness: 0.95 });
   let pathMat: THREE.MeshStandardMaterial | null = null;
   const pathMaterial = (): THREE.MeshStandardMaterial => {
     if (pathMat) return pathMat;
@@ -372,55 +372,77 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     pathMat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -3 });
     return pathMat;
   };
+  // Bruk też nie ma równych brzegów: maska o poszarpanej krawędzi wycina go tak, że kamienie
+  // nierówno wchodzą w trawę, a każde pole ma trochę inny odcień (jaśniejsze, ciemniejsze, omszałe).
+  let paveMat: THREE.MeshStandardMaterial | null = null;
+  const paveMaterial = (base: THREE.Material): THREE.MeshStandardMaterial => {
+    if (paveMat) return paveMat;
+    const n = 256;
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = n;
+    const c2 = cv.getContext('2d')!;
+    const img = c2.createImageData(n, n);
+    for (let y = 0; y < n; y++)
+      for (let x = 0; x < n; x++) {
+        const dx = Math.abs(x / n - 0.5) * 2, dy = Math.abs(y / n - 0.5) * 2;
+        // kształt zbliżony do kwadratu z zaokrąglonymi rogami, brzeg wyszczerbiony na wielkość pojedynczych kamieni
+        const d = Math.pow(Math.pow(dx, 4) + Math.pow(dy, 4), 0.25);
+        const lump = ((hash2(x >> 4, y >> 4, 311) & 255) / 255 - 0.5) * 0.22 + ((hash2(x >> 2, y >> 2, 419) & 255) / 255 - 0.5) * 0.08;
+        const v = d + lump < 0.86 ? 255 : 0;
+        const i = (y * n + x) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = v; img.data[i + 3] = 255;
+      }
+    c2.putImageData(img, 0, 0);
+    const mask = new THREE.CanvasTexture(cv);
+    mask.channel = 1; // maska używa drugiego zestawu współrzędnych: 0..1 na każdym polu
+    paveMat = (base as THREE.MeshStandardMaterial).clone();
+    paveMat.alphaMap = mask;
+    paveMat.alphaTest = 0.5;
+    paveMat.vertexColors = true;
+    paveMat.polygonOffset = true;
+    paveMat.polygonOffsetFactor = -2;
+    return paveMat;
+  };
   const setRoads = (roads: Uint8Array, materials: THREE.Material[]): void => {
     for (const old of roadMeshes) { group.remove(old); old.geometry.dispose(); }
     roadMeshes.length = 0;
+    const shade = new THREE.Color();
     for (let kind = 1; kind <= materials.length; kind++) {
-      const p3: number[] = [], uv2: number[] = [], curb: number[] = [];
+      const p3: number[] = [], uv2: number[] = [], uvMask: number[] = [], col3: number[] = [];
       const soft = kind === 1;
-      const grow = soft ? 0.42 : 0;
+      const grow = soft ? 0.42 : 0.3;
       for (let y = 0; y < h; y++)
         for (let x = 0; x < w; x++) {
           if (roads[y * w + x] !== kind) continue;
           clear(y * w + x); // na drodze nie rośnie trawa ani krzewy
-          if (!soft) {
-            // lekki krawężnik tam, gdzie bruk graniczy z trawą: wąski, jaśniejszy pasek odrobinę wyżej
-            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-              const nx = x + dx, ny = y + dy;
-              if (nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind) continue;
-              const cw = 0.09;
-              const ax = dx > 0 ? x + 1 - cw : x, bx = dx < 0 ? x + cw : x + 1, ay = dy > 0 ? y + 1 - cw : y, by = dy < 0 ? y + cw : y + 1;
-              for (const [qx, qy] of [[ax, ay], [ax, by], [bx, ay], [bx, ay], [ax, by], [bx, by]] as const) curb.push(qx + ox, heightAt(qx, qy) + 0.085, qy + oz);
-            }
-          }
-          // lekkie przesunięcie każdej plamy, żeby ścieżka nie szła jak po linijce
+          // lekkie przesunięcie każdego płata, żeby droga nie szła jak po linijce
           const r = hash2(x, y, map.seed ^ 0x77);
-          const jx = soft ? ((r & 15) / 15 - 0.5) * 0.22 : 0, jy = soft ? (((r >>> 4) & 15) / 15 - 0.5) * 0.22 : 0;
+          const jx = ((r & 15) / 15 - 0.5) * (soft ? 0.22 : 0.16), jy = (((r >>> 4) & 15) / 15 - 0.5) * (soft ? 0.22 : 0.16);
           const x0 = x - grow + jx, x1 = x + 1 + grow + jx, y0 = y - grow + jy, y1 = y + 1 + grow + jy;
+          // odcień pola: większość szara, część jaśniejsza albo ciemniejsza, niektóre zielonkawe od mchu
+          const tone = 0.82 + (((r >>> 8) & 31) / 31) * 0.3;
+          const moss = (r >>> 14) % 5 === 0 ? 0.12 : 0;
+          shade.setRGB(tone * (1 - moss), tone * (1 + moss * 0.3), tone * (1 - moss * 1.4));
           for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
             p3.push(qx + ox, heightAt(qx, qy) + (soft ? 0.03 : 0.045), qy + oz);
-            if (soft) uv2.push(u, v); else uv2.push(qx / 2.5, qy / 2.5); // wzór rozciąga się na 2,5 pola: sześć drobnych kamieni w poprzek pola
+            if (soft) uv2.push(u, v);
+            else { uv2.push(qx / 2.5, qy / 2.5); uvMask.push(u, v); col3.push(shade.r, shade.g, shade.b); }
           }
         }
       if (!p3.length) continue;
       const g2 = new THREE.BufferGeometry();
       g2.setAttribute('position', new THREE.Float32BufferAttribute(p3, 3));
       g2.setAttribute('uv', new THREE.Float32BufferAttribute(uv2, 2));
+      if (!soft) {
+        g2.setAttribute('uv1', new THREE.Float32BufferAttribute(uvMask, 2));
+        g2.setAttribute('color', new THREE.Float32BufferAttribute(col3, 3));
+      }
       g2.computeVertexNormals();
-      const mesh = new THREE.Mesh(g2, soft ? pathMaterial() : materials[kind - 1]);
+      const mesh = new THREE.Mesh(g2, soft ? pathMaterial() : paveMaterial(materials[kind - 1]!));
       mesh.receiveShadow = true;
       mesh.renderOrder = soft ? 1 : 0;
       group.add(mesh);
       roadMeshes.push(mesh);
-      if (curb.length) {
-        const cg = new THREE.BufferGeometry();
-        cg.setAttribute('position', new THREE.Float32BufferAttribute(curb, 3));
-        cg.computeVertexNormals();
-        const cm = new THREE.Mesh(cg, curbMat);
-        cm.receiveShadow = true;
-        group.add(cm);
-        roadMeshes.push(cm);
-      }
     }
   };
 
