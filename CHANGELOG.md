@@ -3,6 +3,8 @@
 ## 0.3.14 — tartak (2026-10-11)
 
 - Chata drwala przebudowana na tartak: chata naprzeciw wejścia, obok wiata z kozłem i piłą, stos desek, trociny, pieniek z siekierą
+- Pochodnie przy budynkach stoją i płoną także w dzień
+- Woda: gładka tafla z miękkim falowaniem zamiast rysowanych kresek
 - Przyciągnięte drzewo ma gałęzie i resztki igliwia i leży z boku, więc drwal nie chodzi po deskach
 
 ## 0.3.13 — woda, ryby i rybak (2026-10-11)

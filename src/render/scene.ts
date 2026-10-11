@@ -281,7 +281,6 @@ export class GameRenderer {
       });
       const torch = torchModel();
       torch.position.set(def.w / 2 - 0.08, 0, def.h / 2 - 0.08);
-      torch.visible = false;
       mesh.add(torch);
       this.buildingLayer.add(mesh);
       this.buildingMeshes.set(b.id, mesh);
@@ -335,8 +334,9 @@ export class GameRenderer {
     for (const mesh of this.buildingMeshes.values()) {
       const torch = mesh.getObjectByName('torch');
       if (!torch) continue;
-      torch.visible = on;
-      if (on) torch.getObjectByName('torchflame')?.scale.set(1, 0.8 + flicker * 0.4, 1);
+      // pochodnie stoją i płoną przez cały czas; nocą dodatkowo oświetlają okolicę
+      torch.visible = true;
+      torch.getObjectByName('torchflame')?.scale.set(1, 0.8 + flicker * 0.4, 1);
     }
     this.handTorches.visible = on;
     if (!on) { for (const lamp of this.lamps) lamp.intensity = 0; return; }

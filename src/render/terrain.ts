@@ -104,9 +104,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
 
   // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca
   const ripples = bump('water')?.clone() ?? null;
-  if (ripples) { ripples.repeat.set(w / 6, h / 6); ripples.needsUpdate = true; }
+  if (ripples) { ripples.repeat.set(w / 14, h / 14); ripples.needsUpdate = true; }
   const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x2c6f8f, transparent: true, opacity: 0.86, roughness: 0.18, metalness: 0.35, bumpMap: ripples, bumpScale: 2.2,
+    color: 0x2c6f8f, transparent: true, opacity: 0.86, roughness: 0.22, metalness: 0.3, bumpMap: ripples, bumpScale: 0.7,
   });
   const water = new THREE.Mesh(new THREE.PlaneGeometry(w, h), waterMat);
   water.rotation.x = -Math.PI / 2;
@@ -145,7 +145,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const fp = new THREE.Vector3();
   const fs = new THREE.Vector3(1, 1, 1);
   const animate = (time: number): void => {
-    if (ripples) ripples.offset.set(time * 0.012, time * 0.02);
+    if (ripples) ripples.offset.set(time * 0.006, time * 0.009);
     if (!fishMesh) return;
     fish.forEach((f, i) => {
       const a = time * f.speed + f.phase;

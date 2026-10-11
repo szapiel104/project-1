@@ -90,14 +90,9 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     c.fillStyle = gray(0.4); c.fillRect(n * 0.16, n * 0.16, n * 0.3, n * 0.3);
     c.fillStyle = gray(0.95); c.fillRect(n * 0.46, n * 0.12, n * 0.08, n * 0.76); c.fillRect(n * 0.12, n * 0.46, n * 0.76, n * 0.08);
   },
-  water(c, n, r) {
-    // drobne fale: jasne łuki na ciemniejszym tle
-    c.fillStyle = gray(0.5); c.fillRect(0, 0, n, n);
-    for (let i = 0; i < 150; i++) {
-      c.strokeStyle = gray(0.55 + r() * 0.45); c.lineWidth = 1 + r() * 1.5;
-      const x = r() * n, y = r() * n, w = 6 + r() * 16;
-      c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + w / 2, y - 2 - r() * 3, x + w, y); c.stroke();
-    }
+  water(c, n) {
+    // gładka tafla: same miękkie plamy z szumu (dokłada je ziarno), bez rysowanych kresek
+    c.fillStyle = gray(0.6); c.fillRect(0, 0, n, n);
   },
   soil(c, n, r) {
     c.fillStyle = gray(0.85); c.fillRect(0, 0, n, n);
