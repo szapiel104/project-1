@@ -391,7 +391,7 @@ export class GameRenderer {
       // pień leży pod chatą, dopóki zostały z niego partie do pocięcia
       const left = u.phase === Phase.ToHome ? 0 : u.batches;
       yard.visible = left > 0;
-      yard.scale.x = Math.max(0.25, left / 4);
+      yard.scale.x = Math.max(0.3, left / 4);
     }
     for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id) || id === this.selectedId, this.time, dt);
   }

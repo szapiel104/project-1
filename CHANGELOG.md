@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.3.14 — tartak (2026-10-11)
+
+- Chata drwala przebudowana na tartak: chata naprzeciw wejścia, obok wiata z kozłem i piłą, stos desek, trociny, pieniek z siekierą
+- Przyciągnięte drzewo ma gałęzie i resztki igliwia i leży z boku, więc drwal nie chodzi po deskach
+
 ## 0.3.13 — woda, ryby i rybak (2026-10-11)
 
 - Woda z falami, połyskiem słońca i jaśniejszą płycizną

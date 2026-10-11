@@ -17,7 +17,7 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
-  fish: mat(0x9cc3d6),
+  fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
   castle: mat(0xd9c59a, 'bricks'), castleDark: mat(0xb39f78, 'bricks'),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
@@ -314,28 +314,50 @@ const BUILDERS: Record<string, Builder> = {
     pennant(g, flag, 0.62, 1.2, 0.62);
   },
   woodcutter(g) {
-    const inside = hut(g, M.wood, M.woodDark, 1.0, 0.9, 0.65, -0.3, -0.2, true);
-    // kozioł z kłodą i gotowe deski
-    box(inside, M.woodDark, 0.5, 0.2, 0.12, -0.45, 0.05, -0.35);
-    const sawn = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.6, 6), M.wood);
+    // Tartak: chata po prawej (naprzeciw wejścia), po lewej wiata z kozłem do cięcia, z tyłu stos desek.
+    // Plac z pniem leży z boku, więc droga do drzwi jest wolna.
+    const inside = hut(g, M.wood, M.thatch, 0.95, 0.9, 0.7, 0.42, -0.3, true);
+    box(inside, M.woodDark, 0.4, 0.2, 0.12, 0.3, 0.05, -0.45);
+    box(inside, M.plank, 0.4, 0.04, 0.3, 0.6, 0.05, -0.5);
+    box(g, M.window, 0.2, 0.2, 0.03, 0.72, 0.36, 0.16);
+    // wiata: cztery słupy i skośny dach
+    for (const [x, z, hgt] of [[-0.9, -0.75, 0.85], [-0.15, -0.75, 0.85], [-0.9, 0.05, 0.62], [-0.15, 0.05, 0.62]] as const) box(g, M.woodDark, 0.07, hgt, 0.07, x, 0, z);
+    const shed = box(g, M.thatch, 0.95, 0.05, 1.0, -0.52, 0.76, -0.35);
+    shed.rotation.x = 0.28;
+    // kozioł: dwa krzyżaki, na nich kłoda i piła
+    for (const x of [-0.75, -0.3]) for (const r of [0.5, -0.5]) { const leg = box(g, M.woodDark, 0.05, 0.42, 0.05, x, 0, -0.35); leg.rotation.x = r; }
+    const sawn = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.7, 7), M.bark);
     sawn.rotation.z = Math.PI / 2;
-    sawn.position.set(-0.45, 0.33, -0.35);
-    inside.add(sawn);
-    for (let i = 0; i < 3; i++) box(inside, M.plank, 0.5, 0.04, 0.16, -0.05, 0.05 + i * 0.045, -0.45);
-    // przyciągnięty pień leży przed chatą i skraca się z każdą partią desek
+    sawn.position.set(-0.52, 0.36, -0.35);
+    g.add(sawn);
+    box(g, M.iron, 0.02, 0.2, 0.34, -0.45, 0.36, -0.35);
+    box(g, M.woodDark, 0.03, 0.06, 0.08, -0.45, 0.52, -0.2);
+    // stos gotowych desek przy tylnej ścianie wiaty i trociny na ziemi
+    for (let i = 0; i < 4; i++) box(g, M.plank, 0.62, 0.045, 0.16 + (i % 2) * 0.03, -0.52, 0.02 + i * 0.05, -0.82);
+    box(g, M.sawdust, 0.5, 0.015, 0.4, -0.52, 0.035, -0.3);
+    // pieniek z siekierą
+    const block = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.18, 8), M.bark);
+    block.position.set(-0.05, 0.09, 0.35);
+    g.add(block);
+    box(g, M.woodDark, 0.03, 0.3, 0.03, -0.05, 0.18, 0.35).rotation.z = 0.5;
+    box(g, M.iron, 0.1, 0.07, 0.02, 0.04, 0.42, 0.35);
+    // przyciągnięte drzewo: pień z sękami, gałęziami i resztką listowia; skraca się z każdą partią desek
     const yard = new THREE.Group();
     yard.name = 'yardlog';
-    yard.position.set(-0.75, 0.1, 0.62);
-    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.1, 1.3, 7).rotateZ(Math.PI / 2).translate(0.65, 0, 0), M.bark);
-    yard.add(trunk);
+    yard.position.set(-0.98, 0.1, 0.68);
+    yard.add(new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.1, 0.95, 7).rotateZ(Math.PI / 2).translate(0.475, 0, 0), M.bark));
+    for (const [x, rot, len] of [[0.25, 0.9, 0.3], [0.5, -1.0, 0.26], [0.7, 0.8, 0.24], [0.85, -0.7, 0.2]] as const) {
+      const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.015, 0.03, len, 5).translate(0, len / 2, 0), M.bark);
+      branch.position.set(x, 0.04, 0);
+      branch.rotation.x = rot;
+      yard.add(branch);
+      const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.2, 5), M.needle);
+      tuft.position.set(x, 0.04 + Math.cos(rot) * len, Math.sin(rot) * len);
+      tuft.rotation.x = rot;
+      yard.add(tuft);
+    }
     yard.visible = false;
     g.add(yard);
-    for (let i = 0; i < 3; i++) {
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.8, 6), M.wood);
-      log.rotation.z = Math.PI / 2;
-      log.position.set(0.45, 0.1 + (i === 2 ? 0.17 : 0), 0.45 + (i === 2 ? 0.1 : i * 0.21));
-      g.add(log);
-    }
   },
   quarry(g) {
     box(g, M.stoneDark, 1.8, 0.1, 1.8);
