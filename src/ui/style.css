@@ -36,6 +36,8 @@ ul { list-style: none; }
 .name { font-weight: 400; }
 .res strong, .people strong { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 2.2ch; }
 .people { display: flex; flex-wrap: wrap; gap: 4px 18px; }
+.people .full strong { color: var(--bad); }
+.people .full .name::after { content: ' (pełny)'; color: var(--bad); font-weight: 700; }
 .delta { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--good); }
 .delta[data-sign='neg'] { color: var(--bad); }
 

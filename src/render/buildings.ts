@@ -38,6 +38,27 @@ function hut(g: THREE.Group, wall: THREE.Material, roof: THREE.Material, w: numb
   box(g, M.woodDark, w * 0.22, h * 0.6, 0.05, x, 0, z + d / 2 + 0.01);
 }
 
+export const STOCK_LAYERS = 3;
+const resMats = new Map<number, THREE.MeshLambertMaterial>();
+
+/** Pokazuje w składzie tyle skrzyń, ile wynika z zapełnienia; kolory według rodzaju surowca. */
+export function setStockFill(model: THREE.Object3D, ratio: number, colors: { color: number; share: number }[]): void {
+  const fill = model.getObjectByName('fill');
+  if (!fill) return;
+  const total = fill.children.length;
+  const shown = ratio <= 0 ? 0 : Math.max(1, Math.round(Math.min(1, ratio) * total));
+  let k = 0, acc = 0;
+  fill.children.forEach((child, i) => {
+    child.visible = i < shown;
+    if (i >= shown) return;
+    while (k < colors.length - 1 && (i + 0.5) / shown > acc + colors[k]!.share) { acc += colors[k]!.share; k++; }
+    const color = colors[k]?.color ?? 0x8a5a2b;
+    let m = resMats.get(color);
+    if (!m) { m = mat(color); resMats.set(color, m); }
+    (child as THREE.Mesh).material = m;
+  });
+}
+
 type Builder = (g: THREE.Group, team: THREE.Material) => void;
 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
@@ -61,11 +82,19 @@ const BUILDERS: Record<string, Builder> = {
     box(g, team, 0.3, 0.3, 0.04, 0.45, 0.35, 0.67);
   },
   stockpile(g) {
-    box(g, M.soil, 1.8, 0.06, 1.8);
-    for (let i = 0; i < 3; i++) box(g, M.wood, 0.75, 0.16, 0.16, -0.4, 0.06 + i * 0.16, -0.5 + i * 0.05);
-    box(g, M.stone, 0.5, 0.35, 0.5, 0.45, 0.06, -0.4);
-    box(g, M.stoneDark, 0.4, 0.3, 0.4, 0.5, 0.06, 0.4);
-    box(g, M.iron, 0.4, 0.22, 0.3, -0.45, 0.06, 0.45);
+    box(g, M.soil, 1.9, 0.06, 1.9);
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) box(g, M.woodDark, 0.1, 0.5, 0.1, sx * 0.9, 0.06, sz * 0.9);
+    // skrzynie pojawiają się w miarę zapełniania: 9 miejsc w 3 warstwach
+    const fill = new THREE.Group();
+    fill.name = 'fill';
+    for (let layer = 0; layer < STOCK_LAYERS; layer++)
+      for (let i = 0; i < 9; i++) {
+        const m = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.3, 0.46), M.wood);
+        m.position.set(((i % 3) - 1) * 0.54, 0.06 + 0.15 + layer * 0.31, (Math.floor(i / 3) - 1) * 0.54);
+        m.visible = false;
+        fill.add(m);
+      }
+    g.add(fill);
   },
   granary(g, team) {
     box(g, M.wood, 1.4, 1.1, 1.4, 0, 0.25, 0);

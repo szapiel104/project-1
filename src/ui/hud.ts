@@ -20,6 +20,10 @@ export interface HudView {
   pop: number;
   housing: number;
   popularity: number;
+  stock: number;
+  stockCap: number;
+  food: number;
+  foodCap: number;
   delta: number;
   fed: boolean;
   bribed: boolean;
@@ -84,7 +88,13 @@ export function createHud(root: HTMLElement, events: HudEvents): Hud {
   popBox.append(el('span', 'name', t('hud.population')), popVal);
   const popularBox = el('div');
   popularBox.append(el('span', 'name', t('hud.popularity')), popularVal, deltaVal);
-  people.append(popBox, popularBox);
+  const stockVal = el('strong');
+  const stockBox = el('div');
+  stockBox.append(el('span', 'name', t('hud.stockpile')), stockVal);
+  const foodVal = el('strong');
+  const foodBox = el('div');
+  foodBox.append(el('span', 'name', t('hud.granary')), foodVal);
+  people.append(stockBox, foodBox, popBox, popularBox);
   bar.append(resList, people);
 
   // ---- komunikaty ----
@@ -244,6 +254,10 @@ export function createHud(root: HTMLElement, events: HudEvents): Hud {
     update(v) {
       resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
       setText(popVal, `${v.pop} / ${v.housing}`);
+      setText(stockVal, `${v.stock} / ${v.stockCap}`);
+      stockBox.classList.toggle('full', v.stock >= v.stockCap);
+      setText(foodVal, `${v.food} / ${v.foodCap}`);
+      foodBox.classList.toggle('full', v.food >= v.foodCap);
       setText(popularVal, `${v.popularity} / ${RULES.maxPopularity}`);
       setText(deltaVal, `${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}`);
       deltaVal.dataset.sign = v.delta < 0 ? 'neg' : 'pos';

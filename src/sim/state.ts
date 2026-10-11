@@ -1,6 +1,6 @@
 import { BUILDINGS, buildingIndex } from '../data/buildings';
 import type { MAP_PRESETS } from '../data/maps';
-import { RESOURCES, resIndex, type ResourceId } from '../data/resources';
+import { RESOURCES, RESOURCE_DEFS, resIndex, type ResourceId, type StoreKind } from '../data/resources';
 import { RULES } from '../data/rules';
 import { generateMap, type GameMap } from './map';
 import { Rng } from './rng';
@@ -110,6 +110,20 @@ export function playerKeep(g: GameState, player: number): Building | undefined {
 export function housing(g: GameState, player: number): number {
   let n = 0;
   for (const b of g.buildings) if (b.owner === player) n += BUILDINGS[b.type]!.housing ?? 0;
+  return n;
+}
+
+/** Łączna pojemność składów albo spichlerzy gracza. */
+export function storeCapacity(g: GameState, player: number, kind: StoreKind): number {
+  let n = 0;
+  for (const b of g.buildings) if (b.owner === player) n += BUILDINGS[b.type]!.capacity?.[kind] ?? 0;
+  return n;
+}
+
+/** Ile surowców danego rodzaju gracz ma teraz w składach albo spichlerzach. */
+export function storeUsed(p: PlayerState, kind: StoreKind): number {
+  let n = 0;
+  for (let i = 0; i < RESOURCES.length; i++) if (RESOURCE_DEFS[RESOURCES[i]!].store === kind) n += p.res[i]!;
   return n;
 }
 

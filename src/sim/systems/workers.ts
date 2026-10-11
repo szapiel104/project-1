@@ -2,7 +2,7 @@ import { BUILDINGS, type ProductionDef } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { findPath, walkable } from '../path';
-import { FP, Phase, playerKeep, type Building, type GameState, type Unit } from '../state';
+import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 
 const RETRY_TICKS = 20;
 
@@ -79,7 +79,15 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.phase = Phase.WorkingSite; u.timer = prod?.workTicks ?? 0;
       break;
     case Phase.ToStore:
-      if (u.carryRes >= 0) p.res[u.carryRes]! += u.carryAmt;
+      if (u.carryRes >= 0) {
+        // oddaje tyle, ile się zmieści; z resztą czeka przy składzie, aż zwolni się miejsce
+        const kind = RESOURCE_DEFS[RESOURCES[u.carryRes]!].store;
+        const free = kind ? storeCapacity(g, u.owner, kind) - storeUsed(p, kind) : u.carryAmt;
+        const put = Math.max(0, Math.min(u.carryAmt, free));
+        p.res[u.carryRes]! += put;
+        u.carryAmt -= put;
+        if (u.carryAmt > 0) { u.wait = RETRY_TICKS; break; }
+      }
       u.carryRes = -1; u.carryAmt = 0;
       u.phase = u.job ? Phase.Returning : Phase.Idle;
       break;

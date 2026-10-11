@@ -3,7 +3,7 @@ import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { t } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
 import { seedFromText } from './sim/rng';
-import { TICKS_PER_SECOND, createGame, housing, population, stateHash, type GameState } from './sim/state';
+import { TICKS_PER_SECOND, createGame, housing, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
 import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace } from './sim/systems/placement';
@@ -112,6 +112,8 @@ function refresh(): void {
   for (const def of BUILDINGS) if (canAfford(game, ME, def)) affordable.add(def.id);
   hud.update({
     res: p.res, pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity,
+    stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
+    food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
     delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable,
   });
   hud.setHash(stateHash(game));

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { BUILDINGS } from '../data/buildings';
+import { setStockFill } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { TEAM_COLORS } from '../data/teams';
 import { FP, type GameState } from '../sim/state';
@@ -33,6 +34,7 @@ export class GameRenderer {
   private heads: THREE.InstancedMesh;
   private loads: THREE.InstancedMesh;
   private prevPos = new Map<number, [number, number]>();
+  private storesTick = -1;
   private tmp = new THREE.Object3D();
   private color = new THREE.Color();
 
@@ -88,6 +90,7 @@ export class GameRenderer {
     for (const g of this.buildingMeshes.values()) this.buildingLayer.remove(g);
     this.buildingMeshes.clear();
     this.prevPos.clear();
+    this.storesTick = -1;
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
     this.scene.add(this.view.group);
@@ -152,7 +155,7 @@ export class GameRenderer {
 
   frame(dt: number, alpha: number): void {
     this.cam.update(dt);
-    if (this.state && this.view) { this.syncBuildings(this.state, this.view); this.syncUnits(this.state, this.view, alpha); }
+    if (this.state && this.view) { this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
   }
 
@@ -179,6 +182,28 @@ export class GameRenderer {
       if (alive.has(id)) continue;
       this.buildingLayer.remove(mesh);
       this.buildingMeshes.delete(id);
+    }
+  }
+
+  /** Zapełnia składy po kolei: najpierw twierdza (niewidoczna), potem składy w kolejności budowy. */
+  private syncStores(g: GameState): void {
+    if (g.tick === this.storesTick) return;
+    this.storesTick = g.tick;
+    for (const p of g.players) {
+      let left = 0, sum = 0;
+      const colors: { color: number; share: number }[] = [];
+      RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile') sum += p.res[i]!; });
+      RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === 'stockpile' && p.res[i]! > 0) colors.push({ color: RESOURCE_DEFS[r].color, share: p.res[i]! / sum }); });
+      left = sum;
+      for (const b of g.buildings) {
+        if (b.owner !== p.id) continue;
+        const cap = BUILDINGS[b.type]!.capacity?.stockpile ?? 0;
+        if (!cap) continue;
+        const here = Math.min(cap, left);
+        left -= here;
+        const mesh = this.buildingMeshes.get(b.id);
+        if (mesh) setStockFill(mesh, here / cap, colors);
+      }
     }
   }
 

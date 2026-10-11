@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.2.2 — pojemność składów (2026-10-11)
+
+- Składy i spichlerze mają limit: twierdza 250 surowców i 120 żywności, skład +200, spichlerz +150
+- Gdy brakuje miejsca, chłopi czekają z towarem przy składzie, więc trzeba dobudowywać
+- W składzie widać skrzynie, których przybywa w miarę zapełniania, w kolorach surowców
+- Pasek u góry pokazuje zapełnienie składu i spichlerza
+
 ## 0.2.1 — poprawki po etapie 2 (2026-10-11)
 
 - Podgląd budowli przy wybieraniu miejsca (półprzezroczysty model nad działką, czerwony gdy nie da się budować)

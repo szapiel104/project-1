@@ -21,6 +21,8 @@ export interface BuildingDef {
   housing?: number;
   /** Jakie surowce można tu odnosić */
   stores?: StoreKind[];
+  /** Ile surowców danego rodzaju mieści budynek */
+  capacity?: Partial<Record<StoreKind, number>>;
   production?: ProductionDef;
   /** Budynek wymaga terenu danego typu w pobliżu */
   needsTerrain?: { terrain: Terrain; radius: number };
@@ -33,10 +35,10 @@ export interface BuildingDef {
  * KOLEJNOŚĆ MA ZNACZENIE: indeks trafia do stanu gry i skrótu, nowe wpisy dopisujemy na końcu.
  */
 export const BUILDINGS: readonly BuildingDef[] = [
-  { id: 'keep', name: 'b.keep', w: 3, h: 3, cost: {}, housing: 8, stores: ['stockpile', 'granary'], buildable: false },
+  { id: 'keep', name: 'b.keep', w: 3, h: 3, cost: {}, housing: 8, stores: ['stockpile', 'granary'], capacity: { stockpile: 250, granary: 120 }, buildable: false },
   { id: 'house', name: 'b.house', w: 2, h: 2, cost: { wood: 20 }, housing: 8, buildable: true },
-  { id: 'stockpile', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 10 }, stores: ['stockpile'], buildable: true },
-  { id: 'granary', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], buildable: true },
+  { id: 'stockpile', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 10 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
+  { id: 'granary', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 150 }, buildable: true },
   {
     id: 'woodcutter', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 10 }, buildable: true,
     production: { output: { res: 'wood', amount: 8 }, site: Terrain.Forest, workTicks: 50 },

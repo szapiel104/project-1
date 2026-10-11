@@ -4,7 +4,7 @@ import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { Terrain } from '../src/data/terrain';
 import { findPath, walkable } from '../src/sim/path';
-import { createGame, housing, playerKeep, population, stateHash, type GameState } from '../src/sim/state';
+import { createGame, housing, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
 import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
 
@@ -96,9 +96,7 @@ describe('praca chłopów', () => {
 
   it('łańcuch farma → młyn → piekarnia daje chleb', () => {
     const g = createGame(5);
-    g.players[0]!.res[resIndex('wood')] = 500;
-    g.players[0]!.res[resIndex('stone')] = 500;
-    g.players[0]!.res[resIndex('apples')] = 5000; // żeby głód nie przerwał testu
+    g.players[0]!.res[resIndex('apples')] = 110; // zapas, żeby głód nie przerwał testu (mieści się w spichlerzu twierdzy)
     step(g, [build(g, 'farm')]);
     step(g, [build(g, 'mill')]);
     step(g, [build(g, 'bakery')]);
@@ -110,7 +108,6 @@ describe('praca chłopów', () => {
 
   it('chłopi nie wchodzą na wodę, góry ani w budynki', () => {
     const g = createGame(31);
-    g.players[0]!.res[resIndex('wood')] = 500;
     for (const id of ['woodcutter', 'orchard', 'house', 'stockpile']) step(g, [build(g, id)]);
     for (let i = 0; i < 1200; i++) {
       step(g, []);
@@ -132,6 +129,30 @@ describe('praca chłopów', () => {
     expect(path.length).toBeGreaterThan(6);
     for (const t of path) expect(g.occupancy[t]).toBe(0);
     expect(findPath(g, from, () => false, 200)).toBeNull();
+  });
+});
+
+describe('pojemność składów', () => {
+  it('pełny skład nie przyjmuje surowców, a nowy skład zwiększa pojemność', () => {
+    const g = createGame(5);
+    const p = g.players[0]!;
+    const cap = storeCapacity(g, 0, 'stockpile');
+    expect(cap).toBe(250);
+    step(g, [build(g, 'woodcutter')]);
+    p.res[resIndex('wood')] = cap - storeUsed(p, 'stockpile') + p.res[resIndex('wood')]! - 3; // zostają 3 wolne miejsca
+    run(g, 1500);
+    expect(storeUsed(p, 'stockpile')).toBe(cap);
+    expect(g.units.some((u) => u.carryAmt > 0)).toBe(true); // drwal czeka z resztą drewna
+    run(g, 1500, [build(g, 'stockpile')]);
+    expect(storeCapacity(g, 0, 'stockpile')).toBe(450);
+    expect(storeUsed(p, 'stockpile')).toBeGreaterThan(cap);
+  });
+
+  it('spichlerz ma osobny limit na żywność', () => {
+    const g = createGame(5);
+    expect(storeCapacity(g, 0, 'granary')).toBe(120);
+    step(g, [build(g, 'granary')]);
+    expect(storeCapacity(g, 0, 'granary')).toBe(270);
   });
 });
 
