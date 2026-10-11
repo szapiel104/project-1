@@ -74,12 +74,19 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
       const forest = fractal(x, y, seed ^ 0x51ed270b);
       const ore = valueNoise(x, y, 7, seed ^ 0x2545f491);
       let t: Terrain = Terrain.Grass;
-      if (h < preset.waterLevel) t = Terrain.Water;
-      else if (h > 168 && ore > 150) t = Terrain.Iron;
-      else if (h > 150) t = Terrain.Stone;
-      else if (forest > 138) t = Terrain.Forest;
+      let e = h;
+      // pas gór na krańcach: nierówna krawędź z szumu, im bliżej brzegu, tym wyżej
+      const edge = Math.min(x, y, width - 1 - x, height - 1 - y);
+      const rim = preset.rim + Math.floor((valueNoise(x, y, 9, seed ^ 0x3c6ef372) * 5) / 256) - 2;
+      if (edge < rim) {
+        t = Terrain.Mountain;
+        e = Math.min(255, 170 + (rim - edge) * 9 + (hash2(x, y, seed) & 15));
+      } else if (h < preset.waterLevel) t = Terrain.Water;
+      else if (h > 172 && ore > 150) t = Terrain.Iron;
+      else if (h > 160) t = Terrain.Stone;
+      else if (forest > 146) t = Terrain.Forest;
       tiles[i] = t;
-      elevation[i] = h;
+      elevation[i] = e;
     }
   }
 

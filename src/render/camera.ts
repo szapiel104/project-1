@@ -31,8 +31,9 @@ export class StrategyCamera {
     this.apply();
   }
 
-  setBounds(width: number, height: number): void {
-    this.bounds = { x: width / 2, z: height / 2 };
+  /** Kamera nie wyjedzie poza grywalny środek mapy, więc nie widać końca świata. */
+  setBounds(width: number, height: number, margin: number): void {
+    this.bounds = { x: Math.max(4, width / 2 - margin), z: Math.max(4, height / 2 - margin) };
   }
 
   lookAt(x: number, z: number, dist = this.dist): void {
@@ -69,7 +70,7 @@ export class StrategyCamera {
   }
 
   private zoom(factor: number): void {
-    this.dist = Math.max(12, Math.min(110, this.dist * factor));
+    this.dist = Math.max(12, Math.min(58, this.dist * factor));
   }
 
   private apply(): void {

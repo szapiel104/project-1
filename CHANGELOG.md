@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.2.0 — etap 2: gospodarka (2026-10-11)
+
+- Budowanie na siatce: 10 budynków do postawienia (chata, skład, spichlerz, drwal, kamieniołom, kopalnia, sad, farma, młyn, piekarnia), rozbiórka ze zwrotem połowy kosztu
+- Chłopi z wyszukiwaniem drogi: sami biorą pracę, chodzą do lasu i złóż, noszą surowce do składu
+- Łańcuch zboże → mąka → chleb, jabłka jako prosta żywność
+- Ludność, racje żywności, podatki i popularność rozliczane co miesiąc gry
+- Większe mapy z pasmem gór na krańcach, mgłą i blokadą kamery
+- Mapa w adresie strony (`#tryb/ziarno`), tempo gry: pauza, 1×, 3×
+
 ## 0.1.0 — etap 1: fundament (2026-10-11)
 
 - Projekt Vite + TypeScript (strict) + Three.js, podział na warstwy `sim` / `data` / `render` / `ui`

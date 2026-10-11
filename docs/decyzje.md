@@ -11,3 +11,14 @@
 - **Ścieżki względne** (`base: './'` w Vite), żeby ten sam build działał na GitHub Pages, Cloudflare Pages i własnej domenie.
 - **Krok symulacji:** 10 ticków na sekundę (`TICKS_PER_SECOND`).
 - **Brak licencji** w repo celowo: kod jest publiczny do wglądu, ale bez prawa do użycia.
+
+## Etap 2
+
+- **Komendy.** Gracz wpływa na grę wyłącznie przez `Command` (`sim/step.ts`). Symulacja sama sprawdza każdą komendę (właściciel, koszt, miejsce), bo w grze sieciowej nie wolno ufać klientowi.
+- **Budynki jako dane.** `data/buildings.ts`: rozmiar, koszt, miejsca dla ludności, produkcja. Indeks budynku trafia do stanu i skrótu, więc nowe wpisy dopisujemy tylko na końcu listy.
+- **Zasady gospodarki** (racje, podatki, tempo) w `data/rules.ts`. Balans zmienia się tam, nie w systemach.
+- **Budowa natychmiastowa**, jak w Twierdzy. Koszt znika od razu.
+- **Zasoby są wspólne dla gracza**, nie leżą fizycznie w konkretnym składzie. Skład i spichlerz to bliższe punkty odbioru; twierdza przyjmuje wszystko.
+- **Lasy i złoża się nie wyczerpują.** Do zmiany, gdy będzie potrzebne dla balansu.
+- **Droga:** Dijkstra po siatce, 8 kierunków, remisy rozstrzyga numer pola. Wystarcza na dziesiątki chłopów; przy wojsku (etap 4) dojdą pola przepływu albo wspólne ścieżki dla grup.
+- **Góry na krańcach** to osobny typ terenu (nie do przejścia). Kamera nie wyjeżdża poza grywalny środek, a za mapą stoją ozdobne szczyty we mgle.

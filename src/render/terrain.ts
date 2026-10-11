@@ -1,19 +1,19 @@
 import * as THREE from 'three';
 import { TERRAIN, Terrain } from '../data/terrain';
-import { TEAM_COLORS } from '../data/teams';
-import { MAP_PRESETS } from '../data/maps';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import type { ModelFactory } from './models';
 
 const HEIGHT_SCALE = 0.03;
+export const HAZE = 0xcfc9b4;
 
-/** Wysokość pola w świecie 3D. Woda leży poniżej zera. */
+/** Wysokość pola w świecie 3D. Woda leży poniżej zera, góry wyrastają stromo. */
 function tileHeight(map: GameMap, x: number, y: number, waterLevel: number): number {
   const cx = Math.min(map.width - 1, Math.max(0, x));
   const cy = Math.min(map.height - 1, Math.max(0, y));
   const e = map.elevation[cy * map.width + cx]!;
   const t = map.tiles[cy * map.width + cx] as Terrain;
+  if (t === Terrain.Mountain) return 1.2 + (e - 170) * 0.13;
   const h = (e - waterLevel) * HEIGHT_SCALE;
   return t === Terrain.Water ? Math.min(h, -0.25) : Math.max(h, 0.12);
 }
@@ -21,12 +21,12 @@ function tileHeight(map: GameMap, x: number, y: number, waterLevel: number): num
 export interface TerrainView {
   group: THREE.Group;
   ground: THREE.Mesh;
-  /** Wysokość terenu w środku pola */
+  /** Wysokość terenu w dowolnym punkcie (współrzędne w polach, mogą być ułamkowe) */
   heightAt(x: number, y: number): number;
   dispose(): void;
 }
 
-/** Buduje widok mapy: podłoże, wodę, drzewa, skały i twierdze startowe. Tylko czyta stan. */
+/** Buduje widok mapy: podłoże, wodę, drzewa, skały i góry na horyzoncie. Tylko czyta stan. */
 export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: number): TerrainView {
   const group = new THREE.Group();
   const { width: w, height: h } = map;
@@ -34,13 +34,18 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const oz = -h / 2;
 
   // wysokości narożników = średnia z czterech sąsiednich pól
-  const corner = (x: number, y: number): number =>
-    (tileHeight(map, x - 1, y - 1, waterLevel) + tileHeight(map, x, y - 1, waterLevel) +
-      tileHeight(map, x - 1, y, waterLevel) + tileHeight(map, x, y, waterLevel)) / 4;
+  const corners = new Float32Array((w + 1) * (h + 1));
+  for (let y = 0; y <= h; y++)
+    for (let x = 0; x <= w; x++)
+      corners[y * (w + 1) + x] =
+        (tileHeight(map, x - 1, y - 1, waterLevel) + tileHeight(map, x, y - 1, waterLevel) +
+          tileHeight(map, x - 1, y, waterLevel) + tileHeight(map, x, y, waterLevel)) / 4;
+  const corner = (x: number, y: number): number => corners[y * (w + 1) + x]!;
 
   const pos = new Float32Array(w * h * 18);
   const col = new Float32Array(w * h * 18);
   const c = new THREE.Color();
+  const snow = new THREE.Color(0xf2efe6);
   let p = 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -48,6 +53,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const shade = 0.9 + ((hash2(x, y, map.seed) & 31) / 31) * 0.2;
       c.setHex(TERRAIN[t].color).multiplyScalar(shade);
       const h00 = corner(x, y), h10 = corner(x + 1, y), h01 = corner(x, y + 1), h11 = corner(x + 1, y + 1);
+      if (t === Terrain.Mountain) c.lerp(snow, Math.max(0, Math.min(1, ((h00 + h11) / 2 - 6.5) / 3)));
       const quad = [
         x, h00, y, x, h01, y + 1, x + 1, h10, y,
         x + 1, h10, y, x, h01, y + 1, x + 1, h11, y + 1,
@@ -69,30 +75,69 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   group.add(ground);
 
   const water = new THREE.Mesh(
-    new THREE.PlaneGeometry(w + 60, h + 60),
+    new THREE.PlaneGeometry(w, h),
     new THREE.MeshLambertMaterial({ color: 0x3f7f96, transparent: true, opacity: 0.82 }),
   );
   water.rotation.x = -Math.PI / 2;
   water.position.y = -0.08;
   group.add(water);
 
-  const heightAt = (x: number, y: number): number =>
-    (corner(x, y) + corner(x + 1, y) + corner(x, y + 1) + corner(x + 1, y + 1)) / 4;
+  // Za mapą: skalne podłoże i pasma gór ginące we mgle, żeby nie było widać końca świata.
+  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(w + 400, h + 400), new THREE.MeshLambertMaterial({ color: 0x77746c }));
+  beyond.rotation.x = -Math.PI / 2;
+  beyond.position.y = -0.3;
+  group.add(beyond);
+  const peaks: THREE.Matrix4[] = [];
+  const pm = new THREE.Matrix4();
+  const pq = new THREE.Quaternion();
+  const yAxis = new THREE.Vector3(0, 1, 0);
+  const ringStep = 5;
+  for (let ring = 0; ring < 6; ring++) {
+    const d = 1 + ring * 6;
+    for (let side = 0; side < 4; side++) {
+      const len = (side % 2 === 0 ? w : h) + d * 2;
+      for (let i = 0; i < len; i += ringStep) {
+        const r = hash2(i + ring * 131, side * 17 + ring, map.seed ^ 0x6a09e667);
+        const along = -len / 2 + i + ((r & 15) / 15) * 3;
+        const out = d + (((r >>> 4) & 15) / 15) * 4;
+        const px = side === 0 ? along : side === 2 ? along : side === 1 ? w / 2 + out : -w / 2 - out;
+        const pz = side === 0 ? -h / 2 - out : side === 2 ? h / 2 + out : along;
+        const height = 9 + ring * 2.5 + (((r >>> 8) & 255) / 255) * 9;
+        const radius = 5 + (((r >>> 16) & 255) / 255) * 5;
+        pq.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI);
+        pm.compose(new THREE.Vector3(px, -0.3, pz), pq, new THREE.Vector3(radius, height, radius));
+        peaks.push(pm.clone());
+      }
+    }
+  }
+  const peakGeo = new THREE.ConeGeometry(1, 1, 5);
+  peakGeo.translate(0, 0.5, 0);
+  const peakMesh = new THREE.InstancedMesh(peakGeo, new THREE.MeshLambertMaterial({ color: 0x8b8880, flatShading: true }), peaks.length);
+  peaks.forEach((m, i) => peakMesh.setMatrixAt(i, m));
+  group.add(peakMesh);
 
-  // obiekty na polach: liczymy, potem jedna siatka instancjonowana na rodzaj
+  const heightAt = (fx: number, fy: number): number => {
+    const x = Math.max(0, Math.min(w - 1.001, fx)), y = Math.max(0, Math.min(h - 1.001, fy));
+    const ix = Math.floor(x), iy = Math.floor(y);
+    const tx = x - ix, ty = y - iy;
+    const top = corner(ix, iy) * (1 - tx) + corner(ix + 1, iy) * tx;
+    const bot = corner(ix, iy + 1) * (1 - tx) + corner(ix + 1, iy + 1) * tx;
+    return top * (1 - ty) + bot * ty;
+  };
+
+  // obiekty na polach: jedna siatka instancjonowana na rodzaj
   const trees: THREE.Matrix4[] = [];
   const rocks: THREE.Matrix4[] = [];
   const ores: THREE.Matrix4[] = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
-  const up = new THREE.Vector3(0, 1, 0);
   const put = (list: THREE.Matrix4[], x: number, y: number, n: number, scaleBase: number): void => {
     const r = hash2(x * 7 + n, y * 13 - n, map.seed ^ 0xabcdef);
     const jx = ((r & 255) / 255 - 0.5) * 0.7;
     const jz = (((r >>> 8) & 255) / 255 - 0.5) * 0.7;
     const s = scaleBase * (0.75 + (((r >>> 16) & 255) / 255) * 0.6);
-    q.setFromAxisAngle(up, ((r >>> 24) / 255) * Math.PI * 2);
-    m.compose(new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x, y), y + 0.5 + jz + oz), q, new THREE.Vector3(s, s, s));
+    q.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
+    m.compose(new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz), q, new THREE.Vector3(s, s, s));
     list.push(m.clone());
   };
   for (let y = 0; y < h; y++) {
@@ -114,13 +159,6 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   instanced(models.rock(), 0xa9a498, rocks);
   instanced(models.rock(), 0x8a4a2c, ores);
 
-  for (const s of map.starts) {
-    const keep = models.keep(TEAM_COLORS[s.team]!);
-    keep.position.set(s.x + 0.5 + ox, heightAt(s.x, s.y), s.y + 0.5 + oz);
-    keep.rotation.y = s.team === 0 ? Math.PI * 0.25 : Math.PI * 1.25;
-    group.add(keep);
-  }
-
   return {
     group,
     ground,
@@ -132,8 +170,4 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       });
     },
   };
-}
-
-export function waterLevelFor(presetId: keyof typeof MAP_PRESETS): number {
-  return MAP_PRESETS[presetId].waterLevel;
 }

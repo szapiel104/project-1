@@ -4,6 +4,8 @@ export enum Terrain {
   Stone = 2,
   Iron = 3,
   Water = 4,
+  /** Góry na krańcach mapy: nie do przejścia, zasłaniają koniec świata */
+  Mountain = 5,
 }
 
 export interface TerrainDef {
@@ -23,4 +25,5 @@ export const TERRAIN: Record<Terrain, TerrainDef> = {
   [Terrain.Stone]: { name: 'terrain.stone', color: 0x8d8778, walkable: true, buildable: false },
   [Terrain.Iron]: { name: 'terrain.iron', color: 0x7a5a48, walkable: true, buildable: false },
   [Terrain.Water]: { name: 'terrain.water', color: 0x3b6f86, walkable: false, buildable: false },
+  [Terrain.Mountain]: { name: 'terrain.mountain', color: 0x7d7a74, walkable: false, buildable: false },
 };

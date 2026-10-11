@@ -1,6 +1,8 @@
 # Prompt: przeglądarkowa strategia multiplayer w stylu Twierdzy
 
-Wklej całość jako pierwszą wiadomość. Miejsca w nawiasach kwadratowych uzupełnij przed startem.
+Plan projektu. Repo: szapiel104/project-1, Supabase: https://psccakqdinwqloozdsyf.supabase.co. Etapy 1 i 2 są zrobione (patrz CHANGELOG.md).
+
+Zasada pracy: małe partie. Jedna rzecz, wdrożenie pod link, opinia, dopiero potem następna.
 
 ---
 
@@ -125,12 +127,13 @@ Test obowiązkowy: ten sam zestaw komend uruchomiony dwa razy daje identyczny sk
 
 1. **Fundament:** repo, Vite, testy, wdrożenie na GitHub Pages, pusta scena z kamerą i mapą z ziarna.
 2. **Gospodarka:** budowanie na siatce, chłopi, surowce, popularność. Kryterium: da się rozwinąć osadę od zera.
-3. **Wojsko i boty:** jednostki, walka, mury, bot przeciwnik. Kryterium: pełny mecz offline z botem od startu do zwycięstwa, test determinizmu przechodzi.
-4. **Konta:** rejestracja, logowanie, profil, migracje, RLS.
-5. **Multiplayer 1v1:** pokoje, lockstep przez Realtime, wykrywanie desynchronizacji, rozłączenia.
-6. **Drużyny:** 2v2 i 4v4, uzupełnianie botami. Pomiar liczby wiadomości względem limitu z `docs/limity.md`.
-7. **Postęp:** monety, ulepszenia, ranking, szybki mecz z dobieraniem.
-8. **Szlif:** dźwięk, samouczek, powtórki, balans.
+3. **Menu główne i ekran ładowania (ważne):** po wejściu w link pasek ładowania, potem menu w klimacie Twierdzy: Graj (wybór trybu i mapy), Ustawienia (dźwięk, grafika, sterowanie), Jak grać. Kolejne etapy dokładają do tego samego menu konto, ulepszenia, ranking i lobby. Gra nie startuje już od razu na mapie.
+4. **Wojsko i boty:** jednostki, walka, mury, bot przeciwnik. Kryterium: pełny mecz offline z botem od startu do zwycięstwa, test determinizmu przechodzi.
+5. **Konta:** rejestracja, logowanie, profil, migracje, RLS.
+6. **Multiplayer 1v1:** pokoje, lockstep przez Realtime, wykrywanie desynchronizacji, rozłączenia.
+7. **Drużyny:** 2v2 i 4v4, uzupełnianie botami. Pomiar liczby wiadomości względem limitu z `docs/limity.md`.
+8. **Postęp:** poziomy graczy, monety, ulepszenia, ranking, szybki mecz z dobieraniem.
+9. **Szlif:** dźwięk, samouczek, powtórki, balans.
 
 Mikropłatności i reklamy są poza zakresem. Nie implementuj ich, ale nie blokuj: waluta w rejestrze po stronie serwera, sklep sterowany danymi.
 

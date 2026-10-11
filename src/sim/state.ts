@@ -1,41 +1,141 @@
-import { generateMap, type GameMap } from './map';
-import { hashBytes } from './hash';
-import { Rng } from './rng';
+import { BUILDINGS, buildingIndex } from '../data/buildings';
 import type { MAP_PRESETS } from '../data/maps';
+import { RESOURCES, resIndex, type ResourceId } from '../data/resources';
+import { RULES } from '../data/rules';
+import { generateMap, type GameMap } from './map';
+import { Rng } from './rng';
+import { addBuilding } from './systems/placement';
+import { spawnPeasant } from './systems/population';
 
 /** Częstotliwość symulacji. Render interpoluje między tickami. */
 export const TICKS_PER_SECOND = 10;
+/** Stały przecinek pozycji jednostek: 256 = jedno pole */
+export const FP = 256;
 
-/** Komenda gracza. Kolejne etapy dodają tu budowę, rozkazy itd. */
-export type Command = { type: 'noop'; player: number };
+export interface PlayerState {
+  id: number;
+  team: number;
+  /** Zasoby, indeksy jak w RESOURCES */
+  res: Int32Array;
+  popularity: number;
+  /** Ostatnia miesięczna zmiana popularności (do interfejsu) */
+  popDelta: number;
+  rations: number;
+  tax: number;
+}
+
+export interface Building {
+  id: number;
+  /** Indeks w BUILDINGS */
+  type: number;
+  owner: number;
+  x: number;
+  y: number;
+  /** Pole, z którego chłopi wchodzą do budynku */
+  door: number;
+  /** Id pracującego chłopa albo 0 */
+  worker: number;
+}
+
+export const enum Phase {
+  Idle = 0,
+  /** Wraca do swojego budynku, żeby zacząć cykl pracy */
+  Returning = 1,
+  ToInputStore = 2,
+  ToHome = 3,
+  Working = 4,
+  ToSite = 5,
+  WorkingSite = 6,
+  ToStore = 7,
+}
+
+export interface Unit {
+  id: number;
+  owner: number;
+  /** Pozycja w stałym przecinku (środek pola = pole * 256 + 128) */
+  px: number;
+  py: number;
+  path: number[];
+  /** Id budynku, w którym pracuje, albo 0 */
+  job: number;
+  phase: Phase;
+  timer: number;
+  /** Ile ticków czeka przed kolejną próbą znalezienia drogi */
+  wait: number;
+  /** Indeks niesionego surowca albo -1 */
+  carryRes: number;
+  carryAmt: number;
+}
 
 export interface GameState {
   tick: number;
   map: GameMap;
   rng: Rng;
+  players: PlayerState[];
+  buildings: Building[];
+  units: Unit[];
+  /** Id budynku na polu albo 0 */
+  occupancy: Int32Array;
+  /** Ile wejść do budynków leży na polu (takiego pola nie wolno zabudować) */
+  reserved: Uint8Array;
+  nextId: number;
 }
 
 export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1'): GameState {
-  return { tick: 0, map: generateMap(seed, preset), rng: new Rng(seed) };
-}
-
-/**
- * Jeden krok symulacji. Jedyny sposób zmiany stanu gry:
- * te same komendy w tej samej kolejności dają zawsze ten sam stan.
- */
-export function step(state: GameState, commands: readonly Command[]): void {
-  for (const c of commands) {
-    switch (c.type) {
-      case 'noop':
-        break;
-    }
+  const map = generateMap(seed, preset);
+  const size = map.width * map.height;
+  const g: GameState = {
+    tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [],
+    occupancy: new Int32Array(size), reserved: new Uint8Array(size), nextId: 1,
+  };
+  const keep = buildingIndex('keep');
+  const starts = [...map.starts].sort((a, b) => a.player - b.player);
+  for (const s of starts) {
+    const res = new Int32Array(RESOURCES.length);
+    for (const [k, v] of Object.entries(RULES.startResources)) res[resIndex(k as ResourceId)] = v;
+    g.players.push({
+      id: s.player, team: s.team, res, popularity: RULES.startPopularity, popDelta: 0,
+      rations: RULES.defaultRations, tax: RULES.defaultTax,
+    });
+    addBuilding(g, keep, s.player, s.x - 1, s.y - 1);
+    for (let i = 0; i < RULES.startPeasants; i++) spawnPeasant(g, s.player);
   }
-  state.rng.nextU32();
-  state.tick++;
+  return g;
 }
 
-/** Skrót całego stanu — klienci porównują go, żeby wykryć rozjazd symulacji. */
-export function stateHash(state: GameState): number {
-  const meta = new Uint8Array(new Uint32Array([state.tick, state.rng.state]).buffer);
-  return hashBytes(meta, state.map.tiles, state.map.elevation);
+export function playerKeep(g: GameState, player: number): Building | undefined {
+  return g.buildings.find((b) => b.owner === player && b.type === 0);
+}
+
+export function housing(g: GameState, player: number): number {
+  let n = 0;
+  for (const b of g.buildings) if (b.owner === player) n += BUILDINGS[b.type]!.housing ?? 0;
+  return n;
+}
+
+export function population(g: GameState, player: number): number {
+  let n = 0;
+  for (const u of g.units) if (u.owner === player) n++;
+  return n;
+}
+
+/** Skrót całego stanu (FNV‑1a). Klienci porównują go, żeby wykryć rozjazd symulacji. */
+export function stateHash(g: GameState): number {
+  let h = 0x811c9dc5;
+  const add = (v: number): void => {
+    for (let i = 0; i < 4; i++) { h ^= (v >>> (i * 8)) & 255; h = Math.imul(h, 0x01000193); }
+  };
+  add(g.tick); add(g.rng.state); add(g.nextId);
+  for (let i = 0; i < g.map.tiles.length; i++) { h ^= g.map.tiles[i]!; h = Math.imul(h, 0x01000193); }
+  for (const p of g.players) {
+    add(p.id); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
+    for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
+  }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); }
+  for (const u of g.units) {
+    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait);
+    add(u.carryRes); add(u.carryAmt); add(u.path.length);
+    for (const t of u.path) add(t);
+  }
+  return h >>> 0;
 }
