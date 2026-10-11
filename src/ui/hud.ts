@@ -244,7 +244,7 @@ export function createHud(root: HTMLElement, events: HudEvents): Hud {
     update(v) {
       resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
       setText(popVal, `${v.pop} / ${v.housing}`);
-      setText(popularVal, String(v.popularity));
+      setText(popularVal, `${v.popularity} / ${RULES.maxPopularity}`);
       setText(deltaVal, `${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}`);
       deltaVal.dataset.sign = v.delta < 0 ? 'neg' : 'pos';
       if (document.activeElement !== rationSel) rationSel.value = String(v.rations);

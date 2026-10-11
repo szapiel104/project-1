@@ -16,7 +16,7 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const pop = population(g, p.id);
   const ration = RULES.rations[p.rations] ?? RULES.rations[0];
   const tax = RULES.taxes[p.tax] ?? RULES.taxes[1];
-  const food = Math.ceil((pop * ration.foodPer4) / 4);
+  const food = Math.ceil((pop * ration.foodPer8) / 8);
   const fed = foodTotal(p) >= food;
   const gold = Math.trunc((pop * tax.goldPer2) / 2);
   const bribed = gold >= 0 || p.res[GOLD]! >= -gold;
@@ -38,6 +38,6 @@ export function economySystem(g: GameState): void {
     }
     if (f.bribed) p.res[GOLD]! += f.gold;
     p.popDelta = f.delta;
-    p.popularity = Math.max(0, Math.min(100, p.popularity + f.delta));
+    p.popularity = Math.max(0, Math.min(RULES.maxPopularity, p.popularity + f.delta));
   }
 }

@@ -74,7 +74,7 @@ function updateGhost(): void {
   const type = buildingIndex(picked);
   const def = BUILDINGS[type]!;
   const o = origin(tile, type);
-  renderer.setGhost({ ...o, w: def.w, h: def.h, ok: canPlace(game, ME, type, o.x, o.y) === null });
+  renderer.setGhost({ ...o, w: def.w, h: def.h, ok: canPlace(game, ME, type, o.x, o.y) === null, id: picked, team: game.players[ME]!.team });
 }
 
 renderer.onHover = (tile) => { hoverTile = tile; if (!touchTile) updateGhost(); };

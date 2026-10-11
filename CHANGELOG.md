@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.2.1 — poprawki po etapie 2 (2026-10-11)
+
+- Podgląd budowli przy wybieraniu miejsca (półprzezroczysty model nad działką, czerwony gdy nie da się budować)
+- Popularność pokazywana ze skalą, np. 75 / 100
+- Balans żywności: pełne racje to 6 jednostek na 8 chłopów miesięcznie, sad daje 8 jabłek
+- Plik `docs/pomysly.md` na nowe pomysły i braki do zrobienia później
+
 ## 0.2.0 — etap 2: gospodarka (2026-10-11)
 
 - Budowanie na siatce: 10 budynków do postawienia (chata, skład, spichlerz, drwal, kamieniołom, kopalnia, sad, farma, młyn, piekarnia), rozbiórka ze zwrotem połowy kosztu

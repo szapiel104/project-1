@@ -8,7 +8,7 @@ import { proceduralModels, type ModelFactory } from './models';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 
 export interface TileRef { x: number; y: number }
-export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean }
+export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number }
 
 const MAX_UNITS = 2048;
 
@@ -24,6 +24,8 @@ export class GameRenderer {
   private cursor: THREE.Mesh;
   private ghost: THREE.Mesh;
   private selection: THREE.Mesh;
+  private ghostModels = new Map<string, THREE.Group>();
+  private ghostModel: THREE.Group | null = null;
   private buildingLayer = new THREE.Group();
   private buildingMeshes = new Map<number, THREE.Group>();
 
@@ -57,7 +59,7 @@ export class GameRenderer {
       return m;
     };
     this.cursor = flat(new THREE.RingGeometry(0.5, 0.66, 4, 1, Math.PI / 4), 0xfff3c4);
-    this.ghost = flat(new THREE.PlaneGeometry(1, 1), 0x3f9b3f, 0.55);
+    this.ghost = flat(new THREE.PlaneGeometry(1, 1), 0x3f9b3f, 0.4);
     this.selection = flat(new THREE.RingGeometry(0.62, 0.72, 4, 1, Math.PI / 4), 0xfff3c4);
 
     const unitMat = (): THREE.MeshLambertMaterial => new THREE.MeshLambertMaterial({ flatShading: true });
@@ -104,6 +106,7 @@ export class GameRenderer {
   }
 
   setGhost(g: Ghost | null): void {
+    if (this.ghostModel) this.ghostModel.visible = false;
     if (!g || !this.view || !this.state) { this.ghost.visible = false; return; }
     const { width, height } = this.state.map;
     let top = 0;
@@ -112,6 +115,29 @@ export class GameRenderer {
     this.ghost.position.set(g.x + g.w / 2 - width / 2, top + 0.08, g.y + g.h / 2 - height / 2);
     (this.ghost.material as THREE.MeshBasicMaterial).color.setHex(g.ok ? 0x3f9b3f : 0xb3261e);
     this.ghost.visible = true;
+    // półprzezroczysty podgląd samej budowli nad działką
+    const key = `${g.id}:${g.team}`;
+    let model = this.ghostModels.get(key);
+    if (!model) {
+      model = this.models.building(g.id, TEAM_COLORS[g.team] ?? 0x888888);
+      model.traverse((o) => {
+        const mesh = o as THREE.Mesh;
+        if (!mesh.isMesh) return;
+        if (mesh.name === 'base') { mesh.visible = false; return; }
+        const m = (mesh.material as THREE.MeshLambertMaterial).clone();
+        m.transparent = true; m.opacity = 0.85; m.depthWrite = false;
+        mesh.material = m;
+      });
+      this.ghostModels.set(key, model);
+      this.scene.add(model);
+    }
+    model.position.set(this.ghost.position.x, top, this.ghost.position.z);
+    model.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (mesh.isMesh) (mesh.material as THREE.MeshLambertMaterial).emissive.setHex(g.ok ? 0x000000 : 0x7a0f0a);
+    });
+    model.visible = true;
+    this.ghostModel = model;
   }
 
   setSelection(buildingId: number): void {

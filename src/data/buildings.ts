@@ -53,7 +53,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   {
     id: 'orchard', name: 'b.orchard', w: 3, h: 3, cost: { wood: 10 }, buildable: true,
-    production: { output: { res: 'apples', amount: 10 }, site: 'home', workTicks: 80 },
+    production: { output: { res: 'apples', amount: 8 }, site: 'home', workTicks: 80 },
   },
   {
     id: 'farm', name: 'b.farm', w: 3, h: 3, cost: { wood: 20 }, buildable: true,
