@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.4.4 — łagodniejsze światło (2026-10-11)
+
+- Dzień: słabsze, mniej żółte słońce i więcej rozproszonego światła nieba, więc cienie są miększe i nic się nie przepala
+- Noc: pochodnie świecą ponad dwa razy słabiej i na krótszy dystans, cieplejszym, mniej pomarańczowym kolorem; trochę jaśniejsze tło nocy
+
 ## 0.4.3 — podłoże budynków (2026-10-11)
 
 - Koniec kwadratowego podniesienia pod budynkami: fundament chowa się w ziemi i widać go tylko na zboczu

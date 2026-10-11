@@ -21,15 +21,15 @@ const tmpColor = new THREE.Color();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
 const DAY = [
-  { h: 0, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x0f1529 },
-  { h: 4.5, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x141b33 },
-  { h: 6, sun: 0xff9a5a, power: 1.6, sky: 0.9, haze: 0xd9a27c },
-  { h: 8, sun: 0xffd9a0, power: 2.5, sky: 1.15, haze: 0xd6cdb4 },
-  { h: 12, sun: 0xfff0d0, power: 2.7, sky: 1.2, haze: 0xcfd3c4 },
-  { h: 17, sun: 0xffd9a0, power: 2.5, sky: 1.15, haze: 0xd6cdb4 },
-  { h: 19.5, sun: 0xff8a4a, power: 1.7, sky: 0.9, haze: 0xcf8e68 },
-  { h: 21.5, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x141b33 },
-  { h: 24, sun: 0x8fa8ff, power: 0.4, sky: 0.28, haze: 0x0f1529 },
+  { h: 0, sun: 0x9fb2e8, power: 0.5, sky: 0.42, haze: 0x141b33 },
+  { h: 4.5, sun: 0x9fb2e8, power: 0.5, sky: 0.42, haze: 0x182039 },
+  { h: 6, sun: 0xffb37a, power: 1.1, sky: 0.85, haze: 0xd6a887 },
+  { h: 8, sun: 0xffe6c2, power: 1.8, sky: 1.25, haze: 0xd4cdb8 },
+  { h: 12, sun: 0xfff4e0, power: 2.0, sky: 1.35, haze: 0xcdd2c6 },
+  { h: 17, sun: 0xffe6c2, power: 1.8, sky: 1.25, haze: 0xd4cdb8 },
+  { h: 19.5, sun: 0xff9d66, power: 1.1, sky: 0.85, haze: 0xc98f6e },
+  { h: 21.5, sun: 0x9fb2e8, power: 0.5, sky: 0.42, haze: 0x182039 },
+  { h: 24, sun: 0x9fb2e8, power: 0.5, sky: 0.42, haze: 0x141b33 },
 ];
 const WOOD = RESOURCES.indexOf('wood');
 const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
@@ -91,7 +91,7 @@ export class GameRenderer {
     const phone = matchMedia('(pointer: coarse)').matches;
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 1.0;
+    this.renderer.toneMappingExposure = 0.95;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5);
@@ -123,7 +123,7 @@ export class GameRenderer {
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
     for (let i = 0; i < (phone ? 5 : 12); i++) {
-      const lamp = new THREE.PointLight(0xff9a3c, 0, 11, 1.7);
+      const lamp = new THREE.PointLight(0xffb469, 0, 8, 2);
       this.scene.add(lamp);
       this.lamps.push(lamp);
     }
@@ -370,14 +370,14 @@ export class GameRenderer {
       for (const u of g.units) {
         if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
         const v = new THREE.Vector3(u.px / FP - width / 2, (this.view?.heightAt(u.px / FP, u.py / FP) ?? 0) + 0.8, u.py / FP - height / 2);
-        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.3 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
+        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.2 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
       }
       spots.sort((a, b) => a.d - b.d);
       this.lampSpots = spots.slice(0, this.lamps.length);
     }
     this.lamps.forEach((lamp, i) => {
       const spot = this.lampSpots[i];
-      lamp.intensity = spot ? spot.k * this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
+      lamp.intensity = spot ? spot.k * this.night * 5 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
       if (spot) lamp.position.copy(spot.v);
     });
   }

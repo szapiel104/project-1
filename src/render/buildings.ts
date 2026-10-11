@@ -197,7 +197,7 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
 /** Noc: okna zaczynają świecić ciepłym światłem. `k` od 0 (dzień) do 1 (środek nocy). */
 export function setNight(k: number): void {
   M.window.emissive.setHex(0xffb050);
-  M.window.emissiveIntensity = k * 0.8;
+  M.window.emissiveIntensity = k * 0.45;
 }
 
 /** Pochodnia na słupie: stawiana przy każdym budynku, płonie tylko nocą. */
