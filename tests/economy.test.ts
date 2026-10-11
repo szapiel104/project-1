@@ -112,6 +112,17 @@ describe('praca chłopów', () => {
     expect(res(g, 'wood')).toBeGreaterThan(wood);
   });
 
+  it('ścięty las zamienia się w polanę, na której można budować, i zostaje w zapisie', () => {
+    const g = createGame(5);
+    const forestBefore = g.map.tiles.filter((t) => t === Terrain.Forest).length;
+    run(g, 2500, [build(g, 'woodcutter')]);
+    expect(g.cut.length).toBeGreaterThan(0);
+    expect(g.map.tiles.filter((t) => t === Terrain.Forest).length).toBe(forestBefore - g.cut.length);
+    for (const t of g.cut) expect(g.map.tiles[t]).toBe(Terrain.Grass);
+    const loaded = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!;
+    expect(stateHash(loaded)).toBe(stateHash(g));
+  });
+
   it('łańcuch farma → młyn → piekarnia daje chleb', () => {
     const g = createGame(5);
     g.players[0]!.res[resIndex('apples')] = 110; // zapas, żeby głód nie przerwał testu (mieści się w spichlerzu twierdzy)

@@ -1,6 +1,7 @@
 import { BUILDINGS, type ProductionDef } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/resources';
 import { RULES } from '../../data/rules';
+import { Terrain } from '../../data/terrain';
 import { findPath, walkable } from '../path';
 import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 
@@ -152,6 +153,11 @@ export function workerSystem(g: GameState): void {
     }
     if (u.phase === Phase.Working || u.phase === Phase.WorkingSite) {
       if (--u.timer > 0 || !prod) continue;
+      if (u.phase === Phase.WorkingSite && prod.site === Terrain.Forest) {
+        // ścięte drzewo znika: pole lasu zamienia się w polanę, na której można budować
+        const tile = tileOf(g, u);
+        if (g.map.tiles[tile] === Terrain.Forest) { g.map.tiles[tile] = Terrain.Grass; g.cut.push(tile); }
+      }
       u.carryRes = resIndex(prod.output.res);
       u.carryAmt = prod.output.amount;
       // z lasu drwal niesie kłodę najpierw do chaty, tam robi deski i dopiero je odnosi do składu

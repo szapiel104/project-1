@@ -24,6 +24,10 @@ export interface TerrainView {
   ground: THREE.Mesh;
   /** Wysokość terenu w dowolnym punkcie (współrzędne w polach, mogą być ułamkowe) */
   heightAt(x: number, y: number): number;
+  /** Przechyla drzewa na polu podczas ścinania (0 = stoi, 1 = leży) */
+  fell(tile: number, k: number): void;
+  /** Usuwa drzewa z pola i zostawia pniaki */
+  clear(tile: number): void;
   dispose(): void;
 }
 
@@ -147,7 +151,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
 
   // obiekty na polach: jedna siatka instancjonowana na rodzaj
-  type Item = { m: THREE.Matrix4; shade: number };
+  type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3 };
   const pines: Item[] = [], leafy: Item[] = [], rocks: Item[] = [], ores: Item[] = [], tufts: Item[] = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -157,8 +161,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const jz = (((r >>> 8) & 255) / 255 - 0.5) * spread;
     const s = scaleBase * (0.75 + (((r >>> 16) & 255) / 255) * 0.6);
     q.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
-    m.compose(new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz), q, new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60), s));
-    list.push({ m: m.clone(), shade: 0.8 + (((r >>> 20) & 15) / 15) * 0.4 });
+    const pos = new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz);
+    const scale = new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60), s);
+    m.compose(pos, q, scale);
+    list.push({ m: m.clone(), shade: 0.8 + (((r >>> 20) & 15) / 15) * 0.4, tile: y * w + x, pos, q: q.clone(), s: scale });
   };
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -174,18 +180,49 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   }
   const tint = new THREE.Color();
-  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): void => {
-    if (!list.length) return;
+  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): THREE.InstancedMesh | null => {
+    if (!list.length) return null;
     const mesh = new THREE.InstancedMesh(g, new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true, map: tex ? pattern(tex) : null }), list.length);
     list.forEach((it, i) => { mesh.setMatrixAt(i, it.m); mesh.setColorAt(i, tint.setHex(color).multiplyScalar(it.shade)); });
     mesh.castShadow = shadow;
     mesh.receiveShadow = true;
     group.add(mesh);
+    return mesh;
   };
-  instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark');
-  instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles');
-  instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark');
-  instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves');
+  // drzewa zapamiętujemy według pola, żeby drwal mógł je ściąć
+  const trees = new Map<number, { meshes: THREE.InstancedMesh[]; index: number; item: Item }[]>();
+  const stumpItems: Item[] = [];
+  const stumpOf = new Map<Item, number>();
+  const plant = (list: Item[], trunk: THREE.InstancedMesh | null, crown: THREE.InstancedMesh | null): void => {
+    list.forEach((item, index) => {
+      const here = trees.get(item.tile) ?? [];
+      here.push({ meshes: [trunk, crown].filter((x): x is THREE.InstancedMesh => !!x), index, item });
+      trees.set(item.tile, here);
+      stumpOf.set(item, stumpItems.length);
+      stumpItems.push(item);
+    });
+  };
+  plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark'), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles'));
+  plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark'), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves'));
+  const stumps = instanced(new THREE.CylinderGeometry(0.1, 0.13, 0.14, 7).translate(0, 0.07, 0), 0x8a6a45, stumpItems, 'bark', false);
+  const zero = new THREE.Matrix4().makeScale(0, 0, 0);
+  if (stumps) { stumpItems.forEach((_, i) => stumps.setMatrixAt(i, zero)); }
+  const tilt = new THREE.Quaternion();
+  const xAxis = new THREE.Vector3(1, 0, 0);
+  const fell = (tile: number, k: number): void => {
+    for (const t of trees.get(tile) ?? []) {
+      tilt.copy(t.item.q).multiply(q.setFromAxisAngle(xAxis, Math.min(1, k) * 1.45));
+      m.compose(t.item.pos, tilt, t.item.s);
+      for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, m); mesh.instanceMatrix.needsUpdate = true; }
+    }
+  };
+  const clear = (tile: number): void => {
+    for (const t of trees.get(tile) ?? []) {
+      for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, zero); mesh.instanceMatrix.needsUpdate = true; }
+      if (stumps) { stumps.setMatrixAt(stumpOf.get(t.item)!, m.compose(t.item.pos, t.item.q, t.item.s)); stumps.instanceMatrix.needsUpdate = true; }
+    }
+    trees.delete(tile);
+  };
   instanced(models.rock(), 0xa9a498, rocks);
   instanced(models.rock(), 0x8a4a2c, ores);
   instanced(models.tuft(), 0x7fae45, tufts, undefined, false);
@@ -194,6 +231,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     group,
     ground,
     heightAt,
+    fell,
+    clear,
     dispose() {
       group.traverse((o) => {
         const mesh = o as THREE.Mesh;

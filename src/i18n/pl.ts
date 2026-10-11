@@ -77,7 +77,7 @@ export const pl = {
   'd.house': 'Miejsce dla 8 kolejnych mieszkańców. Chłopi przychodzą tu odpocząć po pracy.',
   'd.stockpile': 'Mieści 200 surowców: drewno, kamień, żelazo, zboże i mąkę. Gdy składy są pełne, chłopi czekają z towarem.',
   'd.granary': 'Mieści 150 żywności: chleb i jabłka.',
-  'd.woodcutter': 'Drwal ścina drzewo, w chacie tnie kłodę na deski i odnosi je do składu.',
+  'd.woodcutter': 'Drwal ścina drzewo, niesie kłody do chaty, tnie je na deski i odnosi do składu. Wycięty las zostaje polaną.',
   'd.quarry': 'Wydobywa kamień. Musi stać blisko skał.',
   'd.mine': 'Wydobywa żelazo. Musi stać blisko złoża.',
   'd.orchard': 'Jabłka: najprostsza żywność.',

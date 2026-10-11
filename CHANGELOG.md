@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.3.7 — wycinka lasu i sala tronowa (2026-10-11)
+
+- Drwal rąbie drzewo, które przewraca się i znika; zostaje pniak i polana, na której można budować
+- Z drzewa drwal niesie dwie kłody do chaty i tam tnie je na deski
+- Twierdza po kliknięciu odsłania salę tronową
+- Poprawka: gra zawieszała się po kliknięciu w stodołę
+
 ## 0.3.6 — zaglądanie do budynków (2026-10-11)
 
 - Kliknięcie w budynek odsłania jego wnętrze

@@ -177,7 +177,8 @@ function pennant(g: THREE.Group, flag: THREE.Material, x: number, y: number, z: 
 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
 const BUILDERS: Record<string, Builder> = {
-  keep(g, team, flag) {
+  keep(root, team, flag) {
+    let g = root;
     // blanki: rząd zębów na krawędzi muru
     const merlons = (cx: number, cz: number, len: number, y: number, alongX: boolean, m: THREE.Material): void => {
       const n = Math.max(2, Math.round(len / 0.3));
@@ -190,7 +191,11 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.stone, 2.5, 1.15, 2.5);
     box(g, M.stoneDark, 2.6, 0.12, 2.6, 0, 1.15, 0);
     for (const s of [-1, 1]) { merlons(0, s * 1.24, 2.5, 1.27, true, M.stone); merlons(s * 1.24, 0, 2.5, 1.27, false, M.stone); }
-    // donżon: wysoka wieża mieszkalna ze strzelnicami, blankami i spiczastym dachem
+    // donżon: wysoka wieża mieszkalna ze strzelnicami, blankami i spiczastym dachem (zdejmowany, żeby zajrzeć do sali)
+    const don = new THREE.Group();
+    don.name = 'shell';
+    const gg = g;
+    g = don;
     box(g, M.stone, 1.3, 1.9, 1.3, 0, 1.15, -0.25);
     box(g, M.stoneDark, 1.45, 0.14, 1.45, 0, 3.05, -0.25);
     for (const s of [-1, 1]) { merlons(0, -0.25 + s * 0.67, 1.45, 3.19, true, M.stone); merlons(s * 0.67, -0.25, 1.45, 3.19, false, M.stone); }
@@ -199,6 +204,24 @@ const BUILDERS: Record<string, Builder> = {
       box(g, M.dark, w, 0.36, d, x, 2.3, z);
       box(g, M.dark, w, 0.3, d, x, 1.6, z);
     }
+    box(g, M.woodDark, 0.04, 0.9, 0.04, 0, 4.15, -0.25);
+    box(g, flag, 0.55, 0.3, 0.02, 0.3, 4.72, -0.25);
+    g = gg;
+    g.add(don);
+    // sala tronowa: posadzka, dywan, tron, stół i chorągwie na ścianach
+    const hall = new THREE.Group();
+    hall.name = 'interior';
+    hall.visible = false;
+    box(hall, M.stoneDark, 1.3, 0.05, 1.3, 0, 1.15, -0.25);
+    for (const [x, z, w, d] of [[0, -0.87, 1.3, 0.07], [-0.62, -0.25, 0.07, 1.3], [0.62, -0.25, 0.07, 1.3]] as const) box(hall, M.stone, w, 0.55, d, x, 1.15, z);
+    box(hall, flag, 0.34, 0.02, 1.0, 0, 1.2, -0.2);
+    box(hall, M.woodDark, 0.3, 0.12, 0.26, 0, 1.2, -0.68);
+    box(hall, M.woodDark, 0.3, 0.5, 0.06, 0, 1.2, -0.79);
+    box(hall, flag, 0.22, 0.03, 0.2, 0, 1.32, -0.67);
+    box(hall, M.wood, 0.3, 0.2, 0.5, 0.38, 1.2, -0.1);
+    box(hall, M.bread, 0.1, 0.05, 0.14, 0.38, 1.4, -0.2);
+    for (const sx of [-1, 1]) box(hall, flag, 0.02, 0.36, 0.22, sx * 0.57, 1.3, -0.5);
+    g.add(hall);
     // cztery baszty narożne z blankami i stożkowymi hełmami
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
       const x = sx * 1.2, z = sz * 1.2;
@@ -219,9 +242,7 @@ const BUILDERS: Record<string, Builder> = {
     for (let k = 0; k < 4; k++) box(g, M.iron, 0.03, 0.8, 0.02, -0.18 + k * 0.12, 0, 1.47);
     box(g, M.iron, 0.5, 0.03, 0.02, 0, 0.5, 1.47);
     box(g, M.wood, 0.6, 0.04, 0.3, 0, 0, 1.6);
-    // sztandar na szczycie i chorągwie przy bramie
-    box(g, M.woodDark, 0.04, 0.9, 0.04, 0, 4.15, -0.25);
-    box(g, flag, 0.55, 0.3, 0.02, 0.3, 4.72, -0.25);
+    // chorągwie przy bramie
     for (const s of [-1, 1]) box(g, flag, 0.16, 0.5, 0.02, s * 0.36, 0.7, 1.46);
   },
   house(g, _team, flag) {

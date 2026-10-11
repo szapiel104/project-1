@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS } from '../data/buildings';
 import { animateBuilding, setStockFill } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
+import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
 import { FP, Phase, type GameState } from '../sim/state';
 import { StrategyCamera } from './camera';
@@ -44,6 +46,7 @@ export class GameRenderer {
   private prevPos = new Map<number, [number, number]>();
   private storesTick = -1;
   private selectedId = 0;
+  private cutSeen = 0;
   private tmp = new THREE.Object3D();
   private color = new THREE.Color();
 
@@ -88,7 +91,7 @@ export class GameRenderer {
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.loads = new THREE.InstancedMesh(load, unitMat(), MAX_UNITS);
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
-    const log = new THREE.CylinderGeometry(0.07, 0.07, 0.62, 6); log.rotateX(Math.PI / 2); log.translate(0.14, 0.52, 0);
+    const log = mergeGeometries([new THREE.CylinderGeometry(0.06, 0.06, 0.62, 6).rotateX(Math.PI / 2).translate(0.14, 0.52, 0), new THREE.CylinderGeometry(0.055, 0.055, 0.56, 6).rotateX(Math.PI / 2).translate(-0.14, 0.52, 0)]);
     this.logs = new THREE.InstancedMesh(log, new THREE.MeshLambertMaterial({ color: RESOURCE_DEFS.wood.color, flatShading: true }), MAX_UNITS);
     const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.14, 0.53, 0);
     this.planks = new THREE.InstancedMesh(plank, new THREE.MeshLambertMaterial({ color: 0xc9a26b, flatShading: true }), MAX_UNITS);
@@ -121,6 +124,7 @@ export class GameRenderer {
     const s = starts.find((p) => p.player === focusPlayer) ?? starts[0];
     if (s) this.cam.lookAt(s.x + 0.5 - width / 2, s.y + 0.5 - height / 2, 30);
     this.cursor.visible = this.ghost.visible = this.selection.visible = false;
+    this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie
   }
 
   /** Zapamiętuje pozycje jednostek przed krokiem symulacji, żeby ruch był płynny między tickami. */
@@ -182,7 +186,8 @@ export class GameRenderer {
     this.time += dt;
     this.aimSun();
     if (this.state && this.view) {
-      this.animate(this.state, this.calm ? 0 : dt); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
+      this.animate(this.state, this.calm ? 0 : dt);
+      this.syncForest(this.state, this.view); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
   }
 
@@ -229,6 +234,16 @@ export class GameRenderer {
     this.sun.position.set(x - 55, 85, z + 40);
     const c = this.sun.shadow.camera;
     if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
+  }
+
+  /** Drzewo przechyla się pod koniec rąbania, a po ścięciu znika i zostaje pniak. */
+  private syncForest(g: GameState, view: TerrainView): void {
+    for (const u of g.units) {
+      if (u.phase !== Phase.WorkingSite || u.timer > 14) continue;
+      const tile = (u.py >> 8) * g.map.width + (u.px >> 8);
+      if (g.map.tiles[tile] === Terrain.Forest) view.fell(tile, 1 - u.timer / 14);
+    }
+    for (; this.cutSeen < g.cut.length; this.cutSeen++) view.clear(g.cut[this.cutSeen]!);
   }
 
   private animate(g: GameState, dt: number): void {
@@ -331,6 +346,7 @@ export class GameRenderer {
         t.rotation.set(0, Math.atan2(-Math.cos(a), -Math.sin(a)), 0);
         swing = 0;
       }
+      if (u.phase === Phase.WorkingSite && !this.calm) swing = Math.sin(this.time * 9 + u.id) * 1.1; // zamachy siekierą lub kilofem
       t.scale.setScalar(1);
       t.updateMatrix();
       const wood = u.carryRes === WOOD;
