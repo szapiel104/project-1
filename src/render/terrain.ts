@@ -29,6 +29,8 @@ export interface TerrainView {
   fell(tile: number, k: number): void;
   /** Usuwa drzewa z pola i zostawia pniaki */
   clear(tile: number): void;
+  /** Odbudowuje nawierzchnię dróg z tablicy pól (0 brak, 1 piasek, 2 bruk) */
+  setRoads(roads: Uint8Array, materials: THREE.Material[]): void;
   /** Animacje otoczenia: fale i ryby */
   animate(time: number): void;
   dispose(): void;
@@ -281,9 +283,37 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
 
   instanced(models.tuft(), 0x7fae45, tufts, undefined, false);
 
+  // Drogi: płaty leżące tuż nad terenem, po jednym na rodzaj nawierzchni
+  const roadMeshes: THREE.Mesh[] = [];
+  const setRoads = (roads: Uint8Array, materials: THREE.Material[]): void => {
+    for (const old of roadMeshes) { group.remove(old); old.geometry.dispose(); }
+    roadMeshes.length = 0;
+    for (let kind = 1; kind <= materials.length; kind++) {
+      const p3: number[] = [], uv2: number[] = [];
+      for (let y = 0; y < h; y++)
+        for (let x = 0; x < w; x++) {
+          if (roads[y * w + x] !== kind) continue;
+          for (const [qx, qy] of [[x, y], [x, y + 1], [x + 1, y], [x + 1, y], [x, y + 1], [x + 1, y + 1]] as const) {
+            p3.push(qx + ox, corner(qx, qy) + 0.035, qy + oz);
+            uv2.push(qx / 2, qy / 2);
+          }
+        }
+      if (!p3.length) continue;
+      const g2 = new THREE.BufferGeometry();
+      g2.setAttribute('position', new THREE.Float32BufferAttribute(p3, 3));
+      g2.setAttribute('uv', new THREE.Float32BufferAttribute(uv2, 2));
+      g2.computeVertexNormals();
+      const mesh = new THREE.Mesh(g2, materials[kind - 1]);
+      mesh.receiveShadow = true;
+      group.add(mesh);
+      roadMeshes.push(mesh);
+    }
+  };
+
   return {
     group,
     ground,
+    setRoads,
     heightAt,
     fell,
     clear,

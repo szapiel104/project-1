@@ -5,7 +5,8 @@ import { bump, pattern } from './textures';
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
 /** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
-const TILE: Partial<Record<Pattern, number>> = { ashlar: 1.15, bricks: 1.3, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
+export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone];
+const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 1.15, bricks: 1.3, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
 const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: tex === 'ashlar' ? 0.9 : 1.4 });
   m.userData.tile = (tex && TILE[tex]) || 0;
@@ -44,6 +45,7 @@ const M = {
   trodden: new THREE.MeshStandardMaterial({ color: 0x8f8f52, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.9, polygonOffset: true, polygonOffsetFactor: -2 }),
   ash: mat(0x4a4540), rock: mat(0x9a968c), rockDark: mat(0x77736a),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
+  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xb3ada0, 'cobble'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
   castle: mat(0xf2e2ba, 'ashlar'), castleDark: mat(0xcdb98e, 'ashlar'), castlePlain: mat(0xd6c49a),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
@@ -486,6 +488,8 @@ const BUILDERS: Record<string, Builder> = {
   torch(g) {
     g.add(torchModel());
   },
+  roadSand(g) { box(g, M.roadSand, 0.96, 0.04, 0.96); },
+  roadStone(g) { box(g, M.roadStone, 0.96, 0.05, 0.96); },
   camp(g) {
     box(g, M.soil, 1.9, 0.04, 1.9);
     // wiata: cztery słupy i skośny dach nad ławami
@@ -651,7 +655,7 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   if (!flag) { flag = mat(teamColor); flagMats.set(teamColor, flag); }
   (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team, flag);
   // fundament, żeby budynek nie wisiał nad nierównym terenem
-  if (id === 'torch') return g; // sama pochodnia: zwykły słup wbity w ziemię, bez wydeptanego placu
+  if (id === 'torch' || id.startsWith('road')) return g; // sama pochodnia: zwykły słup wbity w ziemię, bez wydeptanego placu
   const base = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), M.turf);
   base.name = 'base';
   g.add(base);

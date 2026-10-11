@@ -1,3 +1,4 @@
+import { RULES } from '../data/rules';
 import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameState } from './state';
 
@@ -73,7 +74,8 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
         const nt = ny * w + nx;
         if (!walkable(g, nt)) continue;
         if (dx && dy && (!walkable(g, y * w + nx) || !walkable(g, ny * w + x))) continue;
-        const nc = cost + (dx && dy ? 14 : 10);
+        // po drodze idzie się taniej, więc ścieżka chętnie nią prowadzi
+        const nc = cost + Math.round(((dx && dy ? 14 : 10) * RULES.roadPathCost[g.roads[nt]!]!) / 100);
         if (mark[nt] === generation && dist[nt]! <= nc) continue;
         mark[nt] = generation; dist[nt] = nc; prev[nt] = tile;
         push(nc * K + nt);

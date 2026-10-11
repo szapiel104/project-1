@@ -16,6 +16,8 @@ export class StrategyCamera {
   private bounds = { x: 36, z: 36 };
   /** Czy ostatni gest był przeciąganiem (żeby nie mylić go z kliknięciem). */
   dragged = false;
+  /** Lewy przycisk nie przesuwa kamery (używany przy malowaniu dróg); klawisze i prawy przycisk działają dalej */
+  panLocked = false;
 
   constructor(private el: HTMLElement) {
     this.camera = new THREE.PerspectiveCamera(38, 1, 0.5, 600);
@@ -115,6 +117,8 @@ export class StrategyCamera {
     } else if (p.button === 2 || p.button === 1) {
       this.yaw -= dx * 0.006;
       this.dragged = true;
+    } else if (this.panLocked && e.pointerType !== 'touch') {
+      return;
     } else {
       if (Math.abs(dx) + Math.abs(dy) > 2) this.dragged = true;
       const scale = (this.dist / this.el.clientHeight) * 1.1;

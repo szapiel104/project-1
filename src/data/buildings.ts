@@ -17,7 +17,7 @@ export interface ProductionDef {
 }
 
 /** Kategorie w menu budowy. Nowa kategoria = wpis tutaj i nazwa w i18n. */
-export const CATEGORIES = ['settlement', 'food', 'industry'] as const;
+export const CATEGORIES = ['settlement', 'food', 'industry', 'roads'] as const;
 export type CategoryId = (typeof CATEGORIES)[number];
 
 export interface BuildingDef {
@@ -36,6 +36,8 @@ export interface BuildingDef {
   production?: ProductionDef;
   /** Budynek wymaga terenu danego typu w pobliżu */
   needsTerrain?: { terrain: Terrain; radius: number };
+  /** Droga zamiast budynku: 1 = piaskowa, 2 = kamienna. Nie blokuje przejścia, przyspiesza chodzenie */
+  road?: 1 | 2;
   /** Ilu chłopów bez pracy może tu czekać */
   idleSlots?: number;
   /** Jak pokazać pracującego: 'inside' = odsłonięte wnętrze budynku, 'field' = chodzi po polu */
@@ -99,6 +101,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   // Wolnostojąca pochodnia: gracz stawia ją, gdzie chce, żeby rozświetlić osadę nocą
   { id: 'torch', category: 'settlement', name: 'b.torch', w: 1, h: 1, cost: { wood: 2 }, buildable: true },
+  // Drogi: maluje się je po polach. Ludzie chodzą po nich szybciej i chętniej je wybierają
+  { id: 'roadSand', category: 'roads', name: 'b.roadSand', w: 1, h: 1, cost: {}, road: 1, buildable: true },
+  { id: 'roadStone', category: 'roads', name: 'b.roadStone', w: 1, h: 1, cost: { stone: 1 }, road: 2, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

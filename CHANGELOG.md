@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.4.0 — drogi (2026-10-11)
+
+- Nowa kategoria Drogi: piaskowa (za darmo, +25% do chodzenia) i kamienna (1 kamień za pole, +55%)
+- Drogę wytycza się przeciągając myszą po mapie; na telefonie dotykając kolejnych pól
+- Ludzie chętniej wybierają trasę po drodze; budynek postawiony na drodze ją zastępuje
+- Znacznik wersji z godziną zbudowania w prawym dolnym rogu
+
 ## 0.3.19 — latarnicy, zegar i dach stodoły (2026-10-11)
 
 - Pochodnie zapalają ludzie: o zmierzchu chłopi bez pracy obchodzą budynki i pochodnie na słupach, a gdy ich brakuje, robią to wracający pracownicy; o świcie pochodnie gasną

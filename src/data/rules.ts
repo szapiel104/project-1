@@ -23,6 +23,10 @@ export const RULES = {
   /** Prędkość chłopa: 256 = jedno pole na tick */
   unitSpeed: 28,
   unitSpeedDiagonal: 20,
+  /** O ile procent szybciej idzie się po drodze: [brak, piaskowa, kamienna] */
+  roadSpeedBonus: [0, 25, 55],
+  /** Koszt przejścia pola przy szukaniu drogi w procentach zwykłego: ludzie wolą iść drogą */
+  roadPathCost: [100, 75, 55],
   /** Ile razy można wydobyć surowiec z jednego pola złoża, zanim się wyczerpie */
   depositYields: 5,
   /** Po tylu dostawach chłop idzie odpocząć do najbliższej chaty */

@@ -78,6 +78,16 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
   if (!def || !def.buildable || !g.players[player]) return 'place.unknown';
   const { width, height } = g.map;
   if (x < 0 || y < 0 || x + def.w > width || y + def.h > height) return 'place.outside';
+  if (def.road) {
+    // droga: wystarczy wolne pole, po którym da się chodzić; nie blokuje i nie potrzebuje wejścia
+    const t = y * width + x;
+    if (!TERRAIN[g.map.tiles[t] as Terrain].walkable) return 'place.terrain';
+    if (g.occupancy[t] !== 0 || g.roads[t] === def.road) return 'place.occupied';
+    const k = playerKeep(g, player);
+    if (!k || Math.max(Math.abs(x - (k.x + 1)), Math.abs(y - (k.y + 1))) > RULES.buildRadius + 10) return 'place.far';
+    if (checkCost && !canAfford(g, player, def)) return 'place.cost';
+    return null;
+  }
   for (let ty = y; ty < y + def.h; ty++) {
     for (let tx = x; tx < x + def.w; tx++) {
       const t = ty * width + tx;
@@ -109,7 +119,7 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
   const door = findDoor(g, x, y, def.w, def.h);
   const b: Building = { id: g.nextId++, type, owner, x, y, door, worker: 0, lit: false };
   for (let ty = y; ty < y + def.h; ty++)
-    for (let tx = x; tx < x + def.w; tx++) g.occupancy[ty * g.map.width + tx] = b.id;
+    for (let tx = x; tx < x + def.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
   if (door >= 0) g.reserved[door]!++;
   g.buildings.push(b);
   return b;
@@ -120,6 +130,7 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   const def = BUILDINGS[type]!;
   const p = g.players[player]!;
   for (const [k, v] of Object.entries(def.cost)) p.res[resIndex(k as ResourceId)]! -= v;
+  if (def.road) { g.roads[y * g.map.width + x] = def.road; return true; }
   addBuilding(g, type, player, x, y);
   return true;
 }

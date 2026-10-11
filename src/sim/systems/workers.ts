@@ -146,7 +146,8 @@ function move(g: GameState, u: Unit): void {
   const nx = next % w, ny = (next - nx) / w;
   const tx = nx * FP + FP / 2, ty = ny * FP + FP / 2;
   const dx = tx - u.px, dy = ty - u.py;
-  const speed = dx !== 0 && dy !== 0 ? RULES.unitSpeedDiagonal : RULES.unitSpeed;
+  const base = dx !== 0 && dy !== 0 ? RULES.unitSpeedDiagonal : RULES.unitSpeed;
+  const speed = Math.round((base * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, u)]!]!)) / 100);
   u.px += Math.max(-speed, Math.min(speed, dx));
   u.py += Math.max(-speed, Math.min(speed, dy));
   if (u.px === tx && u.py === ty) u.path.shift();

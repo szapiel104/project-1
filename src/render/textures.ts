@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar';
+type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -121,6 +121,21 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     // zacieki pod koroną muru
     for (let k = 0; k < 14; k++) { const sx = r() * n, len = n * (0.15 + r() * 0.3); const gr = c.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(sx, 0, n * (0.01 + r() * 0.02), len); }
   },
+  cobble(c, n, r) {
+    // bruk: okrągławe kamienie różnej wielkości ciasno obok siebie, ciemna ziemia w szczelinach
+    c.fillStyle = gray(0.38); c.fillRect(0, 0, n, n);
+    const cells = 7, s = n / cells;
+    for (let y = -1; y <= cells; y++)
+      for (let x = -1; x <= cells; x++) {
+        const cx = (x + 0.5 + (y % 2 ? 0.5 : 0) + (r() - 0.5) * 0.3) * s, cy = (y + 0.5 + (r() - 0.5) * 0.3) * s;
+        const rx = s * (0.4 + r() * 0.12), ry = s * (0.36 + r() * 0.12), tone = 0.7 + r() * 0.3;
+        for (const [ox, oy] of [[0, 0], [n, 0], [-n, 0], [0, n], [0, -n]] as const) {
+          const gr = c.createRadialGradient(cx + ox - rx * 0.3, cy + oy - ry * 0.3, 1, cx + ox, cy + oy, rx);
+          gr.addColorStop(0, gray(tone + 0.12)); gr.addColorStop(0.7, gray(tone)); gr.addColorStop(1, gray(tone - 0.22));
+          c.fillStyle = gr; c.beginPath(); c.ellipse(cx + ox, cy + oy, rx, ry, r() * 3, 0, 6.3); c.fill();
+        }
+      }
+  },
   water(c, n) {
     // gładka tafla: same miękkie plamy z szumu (dokłada je ziarno), bez rysowanych kresek
     c.fillStyle = gray(0.6); c.fillRect(0, 0, n, n);
@@ -145,7 +160,7 @@ export function pattern(kind: Kind): THREE.Texture | null {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'ashlar' ? 1024 : kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
+  const base = kind === 'ashlar' ? 1024 : kind === 'cobble' ? 512 : kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));

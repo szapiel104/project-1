@@ -264,6 +264,43 @@ describe('ludność i popularność', () => {
   });
 });
 
+describe('drogi', () => {
+  it('droga kosztuje kamień, nie blokuje przejścia i znika pod budynkiem', () => {
+    const g = createGame(5);
+    const s = spot(g, 'house');
+    const stone = res(g, 'stone');
+    step(g, [{ type: 'build', player: 0, building: 'roadStone', x: s.x, y: s.y }, { type: 'build', player: 0, building: 'roadSand', x: s.x + 1, y: s.y }]);
+    const w = g.map.width;
+    expect(g.roads[s.y * w + s.x]).toBe(2);
+    expect(g.roads[s.y * w + s.x + 1]).toBe(1);
+    expect(res(g, 'stone')).toBe(stone - 1);
+    expect(g.occupancy[s.y * w + s.x]).toBe(0);
+    expect(walkable(g, s.y * w + s.x)).toBe(true);
+    expect(canPlace(g, 0, buildingIndex('roadStone'), 0, 0)).toBe('place.terrain');
+    step(g, [{ type: 'build', player: 0, building: 'house', ...s }]);
+    expect(g.roads[s.y * w + s.x]).toBe(0);
+  });
+
+  it('po drodze idzie się szybciej, a zapis ją pamięta', () => {
+    const walk = (road: boolean): number => {
+      const g = createGame(5);
+      const keep = playerKeep(g, 0)!;
+      const w = g.map.width;
+      const u = g.units[0]!;
+      const y = keep.y + 5;
+      if (road) for (let x = keep.x - 6; x <= keep.x + 8; x++) g.roads[y * w + x] = 2;
+      u.px = (keep.x - 6) * 256 + 128; u.py = y * 256 + 128;
+      u.path = []; for (let x = keep.x - 5; x <= keep.x + 8; x++) u.path.push(y * w + x);
+      u.phase = 0;
+      let n = 0;
+      while (u.path.length && n < 2000) { step(g, []); n++; }
+      if (road) expect(stateHash(deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!)).toBe(stateHash(g));
+      return n;
+    };
+    expect(walk(true)).toBeLessThan(walk(false) * 0.75);
+  });
+});
+
 describe('pochodnie', () => {
   it('o zmierzchu ludzie zapalają pochodnie przy budynkach, a o świcie gasną', () => {
     const g = createGame(5);

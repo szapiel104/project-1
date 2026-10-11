@@ -71,6 +71,9 @@ function pick(id: string | null): void {
   touchTile = null;
   hud.setPicked(id);
   canvas.classList.toggle('placing', id !== null);
+  const road = id !== null && !!BUILDINGS[buildingIndex(id)]?.road;
+  renderer.setPainting(road);
+  if (road) hud.toast(t('hud.paintRoad'));
   if (id) select(0);
   updateGhost();
 }
@@ -99,6 +102,14 @@ function updateGhost(): void {
 
 renderer.onHover = (tile) => { hoverTile = tile; if (!touchTile) updateGhost(); };
 
+// malowanie drogi: każde pole pod kursorem przy wciśniętym przycisku dostaje nawierzchnię
+renderer.onPaint = (tile) => {
+  if (!picked) return;
+  const type = buildingIndex(picked);
+  if (canPlace(game, ME, type, tile.x, tile.y) === null && !pending.some((c) => c.type === 'build' && c.x === tile.x && c.y === tile.y))
+    pending.push({ type: 'build', player: ME, building: picked, x: tile.x, y: tile.y });
+};
+
 renderer.onClick = (tile, touch) => {
   if (!picked) {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
@@ -106,7 +117,7 @@ renderer.onClick = (tile, touch) => {
     return;
   }
   // na ekranie dotykowym pierwsze dotknięcie pokazuje działkę, drugie w tym samym miejscu stawia budynek
-  if (touch && (!touchTile || touchTile.x !== tile.x || touchTile.y !== tile.y)) {
+  if (touch && !BUILDINGS[buildingIndex(picked)]?.road && (!touchTile || touchTile.x !== tile.x || touchTile.y !== tile.y)) {
     touchTile = tile;
     updateGhost();
     hud.toast(t('hud.tapAgain'));

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS } from '../data/buildings';
-import { animateBuilding, setNight, setStockFill, torchModel } from './buildings';
+import { animateBuilding, roadMaterials, setNight, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
@@ -73,6 +73,10 @@ export class GameRenderer {
   private storesTick = -1;
   private selectedId = 0;
   private cutSeen = 0;
+  private roadSum = -1;
+  /** Gdy prawda, przeciąganie lewym przyciskiem maluje (np. drogę) zamiast przesuwać kamerę */
+  painting = false;
+  onPaint: (tile: TileRef) => void = () => {};
   private tmp = new THREE.Object3D();
 
   onHover: (tile: TileRef | null) => void = () => {};
@@ -159,10 +163,13 @@ export class GameRenderer {
     for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
 
     this.cam = new StrategyCamera(canvas);
-    canvas.addEventListener('pointermove', (e) => { if (e.pointerType !== 'touch') this.hover(this.pick(e)); });
+    canvas.addEventListener('pointermove', (e) => {
+      if (e.pointerType !== 'touch') this.hover(this.pick(e));
+      if (this.painting && e.buttons === 1) { const tile = this.pick(e); if (tile) this.onPaint(tile); }
+    });
     canvas.addEventListener('pointerleave', () => this.hover(null));
     canvas.addEventListener('pointerup', (e) => {
-      if (e.button !== 0 || this.cam.dragged) return;
+      if (e.button !== 0 || (this.cam.dragged && !this.painting)) return;
       const tile = this.pick(e);
       if (tile) this.onClick(tile, e.pointerType === 'touch');
     });
@@ -185,6 +192,7 @@ export class GameRenderer {
     const s = starts.find((p) => p.player === focusPlayer) ?? starts[0];
     if (s) this.cam.lookAt(s.x + 0.5 - width / 2, s.y + 0.5 - height / 2, 30);
     this.cursor.visible = this.ghost.visible = this.selection.visible = false;
+    this.roadSum = -1;
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie
   }
 
@@ -194,6 +202,9 @@ export class GameRenderer {
     this.prevPos.clear();
     for (const u of this.state.units) this.prevPos.set(u.id, [u.px, u.py]);
   }
+
+  /** Blokuje przesuwanie kamery myszą na czas malowania */
+  setPainting(on: boolean): void { this.painting = on; this.cam.panLocked = on; }
 
   setGhost(g: Ghost | null): void {
     if (this.ghostModel) this.ghostModel.visible = false;
@@ -250,6 +261,7 @@ export class GameRenderer {
     if (this.state && this.view) {
       this.animate(this.state, this.calm ? 0 : dt);
       this.syncForest(this.state, this.view);
+      this.syncRoads(this.state, this.view);
       this.syncLamps(this.state);
       if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
     this.renderer.render(this.scene, this.cam.camera);
@@ -368,6 +380,15 @@ export class GameRenderer {
       lamp.intensity = spot ? spot.k * this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
       if (spot) lamp.position.copy(spot.v);
     });
+  }
+
+  private syncRoads(g: GameState, view: TerrainView): void {
+    if (g.tick % 3 !== 0 && this.roadSum >= 0) return;
+    let sum = 0;
+    for (let i = 0; i < g.roads.length; i++) if (g.roads[i]) sum = (sum * 31 + i * 3 + g.roads[i]!) | 0;
+    if (sum === this.roadSum) return;
+    this.roadSum = sum;
+    view.setRoads(g.roads, roadMaterials());
   }
 
   /** Drzewo przechyla się pod koniec rąbania, a po ścięciu znika i zostaje pniak. */
