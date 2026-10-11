@@ -63,6 +63,8 @@ function hex(color: number): string {
   return `#${color.toString(16).padStart(6, '0')}`;
 }
 
+const SPEEDS = [0, 1, 2, 3, 5];
+
 export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
   root.replaceChildren();
 
@@ -95,7 +97,45 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const foodBox = el('div');
   foodBox.append(el('span', 'name', t('hud.granary')), foodVal);
   people.append(stockBox, foodBox, popBox, popularBox);
-  bar.append(resList, people);
+  // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
+  const controls = el('div', 'controls');
+  const stepper = (label: string, onStep: (dir: number) => void): HTMLElement => {
+    const wrap = el('div', 'stepper');
+    wrap.setAttribute('role', 'group');
+    wrap.setAttribute('aria-label', label);
+    const minus = el('button', 'step', '−');
+    minus.type = 'button';
+    minus.setAttribute('aria-label', `${label}: ${t('hud.less')}`);
+    const plus = el('button', 'step', '+');
+    plus.type = 'button';
+    plus.setAttribute('aria-label', `${label}: ${t('hud.more')}`);
+    const text = el('span', 'step-text');
+    const value = el('strong');
+    text.append(el('span', 'name', label), value);
+    minus.addEventListener('click', () => onStep(-1));
+    plus.addEventListener('click', () => onStep(1));
+    wrap.append(minus, text, plus);
+    controls.append(wrap);
+    return value;
+  };
+  let speedIndex = 1;
+  let rationsNow = 0, taxNow = 0;
+  const speedVal = stepper(t('hud.speed'), (dir) => {
+    speedIndex = Math.max(0, Math.min(SPEEDS.length - 1, speedIndex + dir));
+    showSpeed();
+    events.onSpeed(SPEEDS[speedIndex]!);
+  });
+  const showSpeed = (): void => setText(speedVal, SPEEDS[speedIndex] === 0 ? t('hud.pause') : `${SPEEDS[speedIndex]}×`);
+  showSpeed();
+  const taxVal = stepper(t('hud.tax'), (dir) => {
+    const next = Math.max(0, Math.min(RULES.taxes.length - 1, taxNow + dir));
+    if (next !== taxNow) events.onTax(next);
+  });
+  const rationVal = stepper(t('hud.rations'), (dir) => {
+    const next = Math.max(0, Math.min(RULES.rations.length - 1, rationsNow + dir));
+    if (next !== rationsNow) events.onRations(next);
+  });
+  bar.append(resList, people, controls);
 
   // ---- komunikaty ----
   const toast = el('div', 'toast');
@@ -225,23 +265,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const rationSel = mkSelect('rations', t('hud.rations'), RULES.rations, events.onRations);
   const taxSel = mkSelect('tax', t('hud.tax'), RULES.taxes, events.onTax);
   const forecast = el('p', 'hint');
-  const speedWrap = el('div', 'field');
-  speedWrap.append(el('span', 'label', t('hud.speed')));
-  const speedRow = el('div', 'speed');
-  const speedButtons: HTMLButtonElement[] = [];
-  for (const [label, value] of [[t('hud.pause'), 0], ['1×', 1], ['3×', 3]] as const) {
-    const b = el('button', 'btn-plain', label);
-    b.type = 'button';
-    b.setAttribute('aria-pressed', String(value === 1));
-    b.addEventListener('click', () => {
-      speedButtons.forEach((x) => x.setAttribute('aria-pressed', String(x === b)));
-      events.onSpeed(value);
-    });
-    speedButtons.push(b);
-    speedRow.append(b);
-  }
-  speedWrap.append(speedRow);
-  court.append(forecast, speedWrap);
+  court.append(forecast);
 
   // Mapa
   const mapSec = section(t('hud.map'), 'map');
@@ -297,6 +321,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(popularVal, `${v.popularity} / ${RULES.maxPopularity}`);
       setText(deltaVal, `${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}`);
       deltaVal.dataset.sign = v.delta < 0 ? 'neg' : 'pos';
+      rationsNow = v.rations; taxNow = v.tax;
+      setText(rationVal, t(RULES.rations[v.rations]?.name ?? ''));
+      setText(taxVal, t(RULES.taxes[v.tax]?.name ?? ''));
       if (document.activeElement !== rationSel) rationSel.value = String(v.rations);
       if (document.activeElement !== taxSel) taxSel.value = String(v.tax);
       const warn = [v.fed ? '' : t('hud.hungry'), v.bribed ? '' : t('hud.noGold')].filter(Boolean).join('. ');

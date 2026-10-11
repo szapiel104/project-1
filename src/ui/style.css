@@ -38,11 +38,15 @@ ul { list-style: none; }
 .people { display: flex; flex-wrap: wrap; gap: 4px 18px; }
 .people .full strong { color: var(--bad); }
 .people .full .name::after { content: ' (pełny)'; color: var(--bad); font-weight: 700; }
+.controls { display: flex; flex-wrap: wrap; gap: 6px 14px; width: 100%; border-top: 1px solid var(--wood); padding-top: 6px; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.step { min-width: 44px; padding: 0; font-size: 22px; line-height: 1; }
+.step-text { display: flex; gap: 6px; align-items: baseline; min-width: 150px; justify-content: center; white-space: nowrap; }
 .delta { font-variant-numeric: tabular-nums; font-weight: 700; color: var(--good); }
 .delta[data-sign='neg'] { color: var(--bad); }
 
 .toast {
-  position: fixed; top: 76px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 20px);
+  position: fixed; top: 140px; left: 50%; transform: translateX(-50%); max-width: calc(100vw - 20px);
   padding: 10px 16px; background: var(--wood); color: var(--parchment); border: 2px solid var(--gold); font-weight: 700; text-align: center;
 }
 
@@ -99,7 +103,11 @@ input, select { width: 100%; min-height: 44px; padding: 8px 10px; font: inherit;
   .res li { justify-content: flex-start; }
   .res strong { margin-left: auto; }
   .people { width: 100%; justify-content: space-between; border-top: 1px solid var(--wood); padding-top: 6px; }
-  .toast { top: 192px; width: calc(100vw - 12px); }
+  /* na telefonie u góry zostaje samo tempo; podatki i racje są w zakładce Dwór */
+  .stepper { justify-content: space-between; width: 100%; }
+  .stepper:not(:first-child) { display: none; }
+  .step-text { flex: 1; }
+  .toast { top: 246px; width: calc(100vw - 12px); }
   .bottom { left: 6px; right: 6px; bottom: 6px; }
   .floaters { flex-direction: column; align-items: stretch; }
   .drawer, .info { width: auto; margin-left: 0; max-height: 40vh; }

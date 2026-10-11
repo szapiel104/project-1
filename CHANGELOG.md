@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.2.6 — sterowanie na górnym pasku (2026-10-11)
+
+- Przyciski minus i plus na górze: tempo gry (pauza, 1×, 2×, 3×, 5×), podatki i racje żywności
+
 ## 0.2.5 — widać, kto pracuje (2026-10-11)
 
 - Drwal niesie kłodę z lasu do chaty, tam tnie ją na deski i dopiero deski odnosi do składu
