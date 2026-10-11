@@ -7,7 +7,7 @@ import { Phase, playerKeep, type Building, type GameState } from '../state';
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
@@ -30,6 +30,47 @@ export function findDoor(g: GameState, x: number, y: number, w: number, h: numbe
     if (g.occupancy[t] === 0 && TERRAIN[g.map.tiles[t] as Terrain].walkable) return t;
   }
   return -1;
+}
+
+let seen = new Uint8Array(0);
+let queue = new Int32Array(0);
+
+/**
+ * Czy budynek w tym miejscu odciąłby drogę: po postawieniu z wejścia twierdzy musi dać się dojść
+ * do wejścia każdego budynku gracza (także nowego) i do każdego jego chłopa.
+ */
+function wouldBlock(g: GameState, player: number, x: number, y: number, w: number, h: number): boolean {
+  const keep = playerKeep(g, player);
+  if (!keep || keep.door < 0) return false;
+  const { width, height } = g.map;
+  const size = width * height;
+  if (seen.length < size) { seen = new Uint8Array(size); queue = new Int32Array(size); }
+  seen.fill(0, 0, size);
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = -1;
+  const door = findDoor(g, x, y, w, h);
+  let head = 0, tail = 0;
+  if (g.occupancy[keep.door] === 0) { queue[tail++] = keep.door; seen[keep.door] = 1; }
+  while (head < tail) {
+    const t = queue[head++]!;
+    const cx = t % width, cy = (t - cx) / width;
+    for (let d = 0; d < 4; d++) {
+      const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0), ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
+      if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      const nt = ny * width + nx;
+      if (seen[nt] || g.occupancy[nt] !== 0 || !TERRAIN[g.map.tiles[nt] as Terrain].walkable) continue;
+      seen[nt] = 1; queue[tail++] = nt;
+    }
+  }
+  let blocked = door < 0 || !seen[door];
+  if (!blocked) for (const b of g.buildings) if (b.owner === player && b.door >= 0 && !seen[b.door]) { blocked = true; break; }
+  if (!blocked) for (const u of g.units) {
+    if (u.owner !== player) continue;
+    const ux = u.px >> 8, uy = u.py >> 8;
+    if (ux >= x && ux < x + w && uy >= y && uy < y + h) continue; // stoi na działce: wyjdzie sam
+    if (!seen[uy * width + ux]) { blocked = true; break; }
+  }
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = 0;
+  return blocked;
 }
 
 export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true): PlaceError | null {
@@ -57,6 +98,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     if (!found) return 'place.needTerrain';
   }
   if (findDoor(g, x, y, def.w, def.h) < 0) return 'place.noAccess';
+  if (wouldBlock(g, player, x, y, def.w, def.h)) return 'place.blocks';
   if (checkCost && !canAfford(g, player, def)) return 'place.cost';
   return null;
 }

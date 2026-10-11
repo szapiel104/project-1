@@ -13,7 +13,7 @@ export const RULES = {
   maxPopularity: 100,
   /** Od tej popularności przybywa ludzi, poniżej odchodzą */
   migrationThreshold: 50,
-  startResources: { wood: 150, stone: 40, apples: 80, gold: 100 } as Partial<Record<ResourceId, number>>,
+  startResources: { wood: 150, stone: 40, apples: 100, gold: 100 } as Partial<Record<ResourceId, number>>,
   /** Jak daleko od własnej twierdzy wolno budować (w polach) */
   buildRadius: 24,
   /** Prędkość chłopa: 256 = jedno pole na tick */
@@ -30,10 +30,10 @@ export const RULES = {
   /** Racje: ile żywności miesięcznie na 8 chłopów i wpływ na popularność */
   rations: [
     { name: 'rations.none', foodPer8: 0, effect: -8 },
-    { name: 'rations.half', foodPer8: 3, effect: -4 },
-    { name: 'rations.full', foodPer8: 6, effect: 0 },
-    { name: 'rations.extra', foodPer8: 9, effect: 4 },
-    { name: 'rations.double', foodPer8: 12, effect: 8 },
+    { name: 'rations.half', foodPer8: 2, effect: -4 },
+    { name: 'rations.full', foodPer8: 4, effect: 0 },
+    { name: 'rations.extra', foodPer8: 6, effect: 4 },
+    { name: 'rations.double', foodPer8: 8, effect: 8 },
   ],
   /** Podatki: złoto miesięcznie na 2 chłopów (ujemne = rozdawanie złota) i wpływ na popularność */
   taxes: [

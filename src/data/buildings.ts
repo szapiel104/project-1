@@ -66,7 +66,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'orchard', category: 'food', name: 'b.orchard', w: 3, h: 3, cost: { wood: 10 }, buildable: true,
     workView: 'field',
-    production: { output: { res: 'apples', amount: 8 }, site: 'home', workTicks: 80 },
+    production: { output: { res: 'apples', amount: 10 }, site: 'home', workTicks: 80 },
   },
   {
     id: 'farm', category: 'food', name: 'b.farm', w: 3, h: 3, cost: { wood: 20 }, buildable: true,
@@ -81,7 +81,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, cost: { wood: 20, stone: 10 }, buildable: true,
     workView: 'inside',
-    production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 12 }, site: 'home', workTicks: 110 },
+    production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 16 }, site: 'home', workTicks: 110 },
   },
 ];
 

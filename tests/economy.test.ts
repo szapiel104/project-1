@@ -69,6 +69,21 @@ describe('budowanie', () => {
     expect(before).not.toBe(stateHash(g)); // tick poszedł dalej, ale nic nie zbudowano
   });
 
+  it('nie pozwala zamurować ludzi: budynek w jedynym przejściu jest odrzucany', () => {
+    const g = createGame(5);
+    const keep = playerKeep(g, 0)!;
+    const w = g.map.width, cx = keep.x + 1, cy = keep.y + 1;
+    // sztuczny mur dookoła twierdzy z jednym przejściem szerokości chaty
+    for (let dy = -5; dy <= 5; dy++)
+      for (let dx = -5; dx <= 5; dx++)
+        if (Math.max(Math.abs(dx), Math.abs(dy)) === 5 && !(dy === 5 && (dx === 0 || dx === 1))) g.occupancy[(cy + dy) * w + cx + dx] = 9999;
+    const house = buildingIndex('house');
+    expect(canPlace(g, 0, house, cx, cy + 5)).toBe('place.blocks'); // zatkałby przejście
+    expect(canPlace(g, 0, house, cx - 4, cy + 2)).toBeNull(); // w środku jest miejsce i nic nie odcina
+    step(g, [{ type: 'build', player: 0, building: 'house', x: cx, y: cy + 5 }]);
+    expect(g.buildings.length).toBe(2); // komenda też została odrzucona
+  });
+
   it('rozbiórka zwraca połowę kosztu i zwalnia pracownika; cudzego budynku nie da się rozebrać', () => {
     const g = createGame(5);
     run(g, 5, [build(g, 'woodcutter')]);
@@ -173,7 +188,7 @@ describe('ludność i popularność', () => {
     run(g, RULES.monthTicks);
     expect(res(g, 'apples')).toBeLessThan(apples);
     g.players[0]!.res[resIndex('apples')] = 0;
-    run(g, RULES.monthTicks * 6);
+    run(g, RULES.monthTicks * 8);
     expect(g.players[0]!.popularity).toBeLessThan(50);
     expect(population(g, 0)).toBeLessThan(6);
     run(g, RULES.monthTicks * 30);
@@ -221,6 +236,30 @@ describe('odpoczynek', () => {
     expect(g.units.some((u) => u.home === house.id)).toBe(true);
     step(g, [{ type: 'demolish', player: 0, id: house.id }]);
     expect(g.units.every((u) => u.home === 0)).toBe(true);
+  });
+});
+
+describe('balans żywności', () => {
+  it('dwa sady i chata utrzymują osadę bez głodu przez pół godziny gry', () => {
+    const g = createGame(5);
+    step(g, [build(g, 'orchard')]);
+    step(g, [build(g, 'orchard')]);
+    step(g, [build(g, 'woodcutter')]);
+    step(g, [build(g, 'house')]);
+    let hungryMonths = 0;
+    for (let i = 0; i < 18_000; i++) {
+      step(g, []);
+      if (g.tick % RULES.monthTicks === 0 && g.players[0]!.popDelta < 0) hungryMonths++;
+    }
+    expect(hungryMonths).toBe(0);
+    expect(population(g, 0)).toBe(16);
+  });
+
+  it('gdy żywności jest za mało na wybrane racje, ludzie jedzą mniejsze zamiast głodować całkiem', () => {
+    const g = createGame(5);
+    g.players[0]!.res[resIndex('apples')] = 3; // starczy na połowę racji dla 6 osób
+    run(g, RULES.monthTicks);
+    expect(g.players[0]!.popDelta).toBe(RULES.rations[1].effect + RULES.taxes[RULES.defaultTax].effect);
   });
 });
 

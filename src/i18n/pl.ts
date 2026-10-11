@@ -86,6 +86,7 @@ export const pl = {
   'place.cost': 'Za mało surowców',
   'place.needTerrain': 'Za daleko od złoża',
   'place.noAccess': 'Brak dojścia do budynku',
+  'place.blocks': 'Tu budynek zablokowałby ludziom przejście',
   'place.unknown': 'Nie można tego zbudować',
   'rations.none': 'Brak',
   'rations.half': 'Połowa',

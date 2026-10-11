@@ -4,6 +4,9 @@
 
 - Przy twierdzy zawsze zostaje czterech chłopów, a pusta osada sama się odradza
 - Ostrzeżenie, gdy kończy się żywność i gdy ludzie zaczynają odchodzić
+- Nie da się postawić budynku, który odciąłby ludziom drogę do twierdzy albo do innego budynku
+- Balans żywności: pełne racje to 4 jednostki na 8 chłopów, sad daje 10 jabłek, piekarnia 16 chlebów, na start 100 jabłek
+- Gdy żywności jest za mało na wybrane racje, ludzie jedzą mniejsze racje zamiast głodować całkiem, więc osada nie wpada w pętlę przychodzenia i odchodzenia
 
 ## 0.2.10 — stosy w składzie (2026-10-11)
 
