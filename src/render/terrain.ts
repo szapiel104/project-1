@@ -299,12 +299,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
   const tint = new THREE.Color();
   /**
-   * Roślinność i kamienie w kawałkach 24×24 pola: każdy kawałek to osobna siatka z własną sferą ograniczającą,
+   * Roślinność i kamienie w kawałkach 40×40 pól: każdy kawałek to osobna siatka z własną sferą ograniczającą,
    * więc karta graficzna pomija to, czego nie widać (także w cieniach). Na dużych mapach to kilkukrotnie mniej trójkątów.
    * Na zewnątrz zachowuje się jak jedna siatka instancji (indeksy jak w liście).
    */
   type Inst = { setMatrixAt(i: number, m: THREE.Matrix4): void; setColorAt(i: number, c: THREE.Color): void; instanceMatrix: { needsUpdate: boolean } };
-  const CHUNK = 24;
+  const CHUNK = 40;
   const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): Inst | null => {
     if (!list.length) return null;
     const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2 });
