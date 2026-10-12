@@ -1,5 +1,5 @@
 import type { Command } from '../sim/step';
-import { gameChannel, type NetMsg } from './supa';
+import type { NetMsg, RoomLink } from './supa';
 
 /**
  * Gra przez sieć bez serwera gry: każdy gracz liczy tę samą, deterministyczną symulację.
@@ -13,22 +13,21 @@ export const DELAY = 2;
 export class Lockstep {
   private inbox = new Map<number, Map<number, Command[]>>();
   private myHash = new Map<number, number>();
-  private chan: ReturnType<typeof gameChannel>;
+  /** Gracze, którzy wyszli: numer ostatniej tury, na którą zdążyli wysłać polecenia */
+  private gone = new Map<number, number>();
+  private off: () => void;
+  private lastSent = DELAY - 1;
   waitingSince = 0;
   desync = false;
-  peerLeft = false;
-  onStart: () => void = () => {};
-  onPeer: () => void = () => {};
+  /** Ktoś wyszedł (do komunikatu na ekranie) */
+  left: number[] = [];
 
-  constructor(roomId: string, readonly me: number, readonly players: number[]) {
-    this.chan = gameChannel(roomId, (m) => this.receive(m));
+  constructor(private link: Pick<RoomLink, 'send' | 'on'>, readonly me: number, readonly players: number[]) {
+    this.off = link.on((m) => this.receive(m));
   }
-  get ready(): Promise<void> { return this.chan.ready; }
 
   private receive(m: NetMsg): void {
-    if (m.k === 'start') { this.onStart(); return; }
-    if (m.k === 'hello') { this.onPeer(); return; }
-    if (m.k === 'bye') { this.peerLeft = true; return; }
+    if (m.k === 'bye') { if (this.players.includes(m.from) && m.from !== this.me && !this.gone.has(m.from)) { this.gone.set(m.from, m.last); this.left.push(m.from); } return; }
     if (m.k !== 'turn' || !this.players.includes(m.from) || m.from === this.me) return;
     let t = this.inbox.get(m.turn);
     if (!t) { t = new Map(); this.inbox.set(m.turn, t); }
@@ -40,13 +39,13 @@ export class Lockstep {
     }
   }
 
-  send(m: NetMsg): void { this.chan.send(m); }
+  send(m: NetMsg): void { this.link.send(m); }
 
-  /** Czy można zacząć turę (mamy polecenia od wszystkich) */
+  /** Czy można zacząć turę (mamy polecenia od wszystkich, którzy na nią jeszcze grają) */
   canRun(turn: number): boolean {
     if (turn < DELAY) return true;
     const t = this.inbox.get(turn);
-    return this.players.every((p) => p === this.me || t?.has(p));
+    return this.players.every((p) => p === this.me || t?.has(p) || (this.gone.has(p) && turn > this.gone.get(p)!));
   }
 
   /**
@@ -60,7 +59,8 @@ export class Lockstep {
     if (!t) { t = new Map(); this.inbox.set(target, t); }
     t.set(this.me, mine);
     this.myHash.set(turn, hash);
-    this.chan.send({ k: 'turn', turn: target, from: this.me, cmds: mine, hash, hashTurn: turn });
+    this.link.send({ k: 'turn', turn: target, from: this.me, cmds: mine, hash, hashTurn: turn });
+    this.lastSent = target;
     const now = this.inbox.get(turn);
     this.inbox.delete(turn);
     this.myHash.delete(turn - 20);
@@ -69,5 +69,6 @@ export class Lockstep {
     return out;
   }
 
-  close(): void { this.chan.send({ k: 'bye', from: this.me }); this.chan.close(); }
+  /** Wyjście z meczu: inni czekają jeszcze na już wysłane tury, potem grają dalej bez nas */
+  close(): void { this.link.send({ k: 'bye', from: this.me, last: this.lastSent }); this.off(); }
 }

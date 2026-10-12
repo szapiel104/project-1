@@ -17,7 +17,8 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { Lockstep, TURN } from './net/lockstep';
-import { setRoomStatus, type Room } from './net/supa';
+import { me as netMe, updateRoom } from './net/supa';
+import type { OnlineStart } from './ui/online';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
@@ -37,8 +38,8 @@ let pending: Command[] = [];
 let speed = 1;
 /** Mecz przez sieć (null = gra sama z botami) */
 let net: Lockstep | null = null;
-let netRoom: Room | null = null;
-let netNotes = { desync: false, left: false };
+let netGame: OnlineStart | null = null;
+let netNotes = { desync: false, left: 0 };
 const netWait = document.createElement('div');
 netWait.className = 'net-wait';
 netWait.textContent = 'Czekam na przeciwnika…';
@@ -125,13 +126,13 @@ const menu = createMenu(document.body, {
   onVolume: (v) => setVolume(v),
   onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
   onSettings: (st) => applySettings(st),
-  onOnlineStart: (room, meIdx, ls) => {
+  onOnlineStart: (st) => {
     const cover = document.createElement('div');
     cover.id = 'loading';
     cover.innerHTML = `<div class="loading-card"><p class="loading-title">Project‑1</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${t('load.map')}</span><strong></strong></p></div>`;
     document.body.append(cover);
     requestAnimationFrame(() => setTimeout(() => {
-      startOnline(room, meIdx, ls);
+      startOnline(st);
       renderer.warmup();
       menu.close();
       (cover.querySelector('.loading-bar span') as HTMLElement).style.width = '100%';
@@ -142,16 +143,17 @@ const menu = createMenu(document.body, {
 });
 
 /** Mecz 1 na 1 przez sieć: obie przeglądarki stawiają tę samą mapę z tego samego ziarna, bez botów na miejscach graczy. */
-function startOnline(room: Room, meIdx: number, ls: Lockstep): void {
-  net?.close();
-  start(room.seed, (room.preset in MAP_PRESETS ? room.preset : '1v1') as MapPresetId, undefined, 1, false, { room, me: meIdx, ls });
-  hud.toast(`Mecz przez sieć: ${room.host_nick} vs ${room.guest_nick ?? '?'} — grasz ${meIdx === 0 ? 'jako gospodarz' : 'jako gość'}.`);
+function startOnline(st: OnlineStart): void {
+  start(st.seed, st.preset, undefined, st.level, false, st);
+  const names = st.slots.map((x) => (x.kind === 'human' ? x.nick : null)).filter(Boolean);
+  hud.toast(`Mecz przez sieć (${st.preset}): ${names.join(', ')}${st.slots.some((x) => x.kind === 'bot') ? ' + boty' : ''}.`);
 }
 function endOnline(): void {
-  if (!net) return;
+  if (!net || !netGame) return;
   net.close();
-  if (netRoom && ME === 0) void setRoomStatus(netRoom.id, 'done');
-  net = null; netRoom = null; netWait.hidden = true;
+  netGame.link.close();
+  if (netMe()?.id === netGame.room.host) void updateRoom(netGame.room.id, { status: 'done' });
+  net = null; netGame = null; netWait.hidden = true;
 }
 window.addEventListener('beforeunload', () => endOnline());
 let titleScreen = true;
@@ -164,14 +166,13 @@ function applySettings(st: Settings): void {
 }
 applySettings(loadSettings());
 
-function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: { room: Room; me: number; ls: Lockstep }): void {
+function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart): void {
   endShown = false;
   endOnline();
   ME = online ? online.me : 0;
-  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev);
+  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans);
   if (online) {
-    net = online.ls; netRoom = online.room; netNotes = { desync: false, left: false };
-    for (const p of online.ls.players) if (game.players[p]) game.players[p]!.bot = false;
+    net = online.net; netGame = online; netNotes = { desync: false, left: 0 };
     speed = 1; acc = 0;
   }
   currentPreset = preset;
@@ -761,7 +762,11 @@ function loop(now: number): void {
   if (steps === 6) acc = 0;
   if (net) {
     if (net.desync && !netNotes.desync) { netNotes.desync = true; hud.toast('Uwaga: gry u Was się rozjechały (różny stan). Wyniki mogą się nie zgadzać — zacznijcie nowy mecz.'); }
-    if (net.peerLeft && !netNotes.left) { netNotes.left = true; netWait.hidden = true; hud.toast('Przeciwnik wyszedł z meczu.'); endOnline(); }
+    if (net.left.length > netNotes.left) {
+      const who = net.left.slice(netNotes.left).map((i) => { const x = netGame?.slots[i]; return x?.kind === 'human' ? x.nick : `gracz ${i + 1}`; });
+      netNotes.left = net.left.length;
+      hud.toast(`${who.join(', ')} ${who.length > 1 ? 'wyszli' : 'wyszedł'} z meczu.`);
+    }
   }
   const tu = performance.now();
   if (steps) { refresh(); updateGhost(); }

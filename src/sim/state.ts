@@ -230,7 +230,11 @@ export interface GameState {
 }
 
 /** Poziom trudności botów: 0 pokojowy (tylko się bronią), 1 łatwy, 2 średni, 3 trudny */
-export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false): GameState {
+/**
+ * Nowa gra. `humans` = numery graczy-ludzi w meczu przez sieć: wszyscy zaczynają na równych zasadach,
+ * reszta miejsc to boty. Bez `humans` człowiekiem jest gracz 0 i dostaje premię zależną od poziomu.
+ */
+export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[]): GameState {
   const map = generateMap(seed, preset);
   const size = map.width * map.height;
   const g: GameState = {
@@ -242,18 +246,18 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   for (const s of starts) {
     const res = new Int32Array(RESOURCES.length);
     // gracz-człowiek dostaje na start tym więcej, im łatwiejszy poziom (pokojowy ×3, łatwy ×2, średni ×1, trudny ×0,75)
-    const bonus = s.player === 0 ? [3, 2, 1, 0.75][level] ?? 1 : 1;
+    const bonus = !humans && s.player === 0 ? [3, 2, 1, 0.75][level] ?? 1 : 1;
     for (const [k, v] of Object.entries(RULES.startResources)) res[resIndex(k as ResourceId)] = Math.round(v * bonus);
     g.players.push({
       id: s.player, team: s.team, res, popularity: RULES.startPopularity, popDelta: 0,
-      rations: RULES.defaultRations, tax: RULES.defaultTax, bot: s.player !== 0, defeated: false, level, stats: { gathered: 0, trained: 0, kills: 0, lost: 0, built: 0, razed: 0 },
+      rations: RULES.defaultRations, tax: RULES.defaultTax, bot: humans ? !humans.includes(s.player) : s.player !== 0, defeated: false, level, stats: { gathered: 0, trained: 0, kills: 0, lost: 0, built: 0, razed: 0 },
     });
     addBuilding(g, keep, s.player, s.x - 1, s.y - 1);
     placeNear(g, buildingIndex('barn'), s.player, s.x, s.y);
     // stodoła trzyma tylko towary, jedzenie idzie do spichlerza
     placeNear(g, buildingIndex('granary'), s.player, s.x, s.y);
     placeNear(g, CAMP, s.player, s.x, s.y);
-    const extra = s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0;
+    const extra = !humans && s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0;
     for (let i = 0; i < RULES.startPeasants + extra; i++) spawnPeasant(g, s.player);
     if (dev && s.player === 0) {
       // do testów: każdy budynek gotowy przy twierdzy, dużo ludzi i zapasów

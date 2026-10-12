@@ -1,5 +1,6 @@
-import { createRoom, deleteRoom, joinRoom, listRooms, me as netMe, restore, setRoomStatus, signIn, signOut, signUp, watchRooms, type Room } from '../net/supa';
-import { Lockstep } from '../net/lockstep';
+import { me as netMe, onAccount, restore } from '../net/supa';
+import { createOnline, type OnlineStart } from './online';
+import { avatarSvg } from './avatars';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { t } from '../i18n';
 
@@ -25,8 +26,8 @@ export interface MenuEvents {
   onVolume(v: number): void;
   onMute(): boolean;
   onSettings(s: Settings): void;
-  /** Mecz przez sieć się zaczyna: pokój, mój numer gracza i kanał gry */
-  onOnlineStart(room: Room, me: number, net: Lockstep): void;
+  /** Mecz przez sieć się zaczyna: pokój, skład, mój numer gracza i kanał gry */
+  onOnlineStart(s: OnlineStart): void;
 }
 
 export interface Menu {
@@ -139,116 +140,43 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     return box;
   };
 
-  // ---- gra przez sieć: konto, lista pokojów, pokój ----
-  let stopWatch: (() => void) | null = null;
-  let roomNet: Lockstep | null = null;
-  const msg = (text: string, bad = false): HTMLElement => { const p = el('p', bad ? 'net-msg bad' : 'net-msg', text); p.setAttribute('role', 'status'); return p; };
-  const field = (label: string, type: string, auto: string): [HTMLElement, HTMLInputElement] => {
-    const w = el('div', 'field'); const id = `net-${label.replace(/\W+/g, '')}`;
-    const l = el('label', '', label); l.htmlFor = id;
-    const i = el('input'); i.type = type; i.id = id; i.setAttribute('autocomplete', auto); i.required = true;
-    w.append(l, i); return [w, i];
+  // ---- gra przez sieć i konto ----
+  const online = createOnline({
+    el, button, screen,
+    showMain: () => showMain(),
+    onStart: (st) => events.onOnlineStart(st),
+  });
+  /** Pasek konta nad menu: herb, nick i przycisk konta albo zaproszenie do logowania */
+  const account = el('div', 'menu-account');
+  const paintAccount = (): void => {
+    const m = netMe();
+    account.replaceChildren();
+    if (m) {
+      const who = el('button', 'acc-me');
+      who.type = 'button';
+      who.setAttribute('aria-label', `Konto: ${m.nick}`);
+      const s = el('span', 'net-shield'); s.innerHTML = avatarSvg(m.avatar, 34);
+      const txt = el('span', 'acc-text');
+      txt.append(el('strong', '', m.nick), el('span', '', 'zalogowany · konto'));
+      who.append(s, txt);
+      who.addEventListener('click', () => online.showAccount());
+      account.append(who);
+    } else {
+      account.append(button('Zaloguj się', () => online.showLogin(false), 'link-btn acc-link'), el('span', 'acc-sep', '·'), button('Załóż konto', () => online.showLogin(true), 'link-btn acc-link'));
+    }
   };
-  async function showOnline(): Promise<void> {
-    stopWatch?.(); stopWatch = null;
-    body.replaceChildren(el('p', 'menu-heading', 'Gra przez sieć'), msg('Łączenie…'));
-    await restore();
-    if (!netMe()) { showLogin(); return; }
-    showRooms();
-  }
-  function showLogin(register = false, info = ''): void {
-    const form = el('form', 'menu-form net-form');
-    const [we, email] = field('E-mail', 'email', 'email');
-    const [wp, pass] = field('Hasło (min. 6 znaków)', 'password', register ? 'new-password' : 'current-password');
-    const [wn, nick] = field('Nick w grze (3–20 znaków)', 'text', 'nickname');
-    wn.hidden = !register; nick.required = register;
-    const note = msg(info, !!info && !info.startsWith('Konto'));
-    const go = el('button', 'menu-btn', register ? 'Załóż konto' : 'Zaloguj'); go.type = 'submit';
-    const swap = button(register ? 'Mam już konto — zaloguj' : 'Nie mam konta — zarejestruj', () => showLogin(!register), 'menu-btn menu-back');
-    form.append(we, wp, wn, note, go, swap);
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault(); go.disabled = true; note.textContent = 'Chwila…';
-      const err = register ? await signUp(email.value.trim(), pass.value, nick.value) : await signIn(email.value.trim(), pass.value);
-      go.disabled = false;
-      if (err && !(register && err.startsWith('Konto'))) { note.textContent = err; note.classList.add('bad'); return; }
-      if (err) { showLogin(false, err); return; }
-      showRooms();
-    });
-    screen(register ? 'Nowe konto' : 'Logowanie', false, form, back());
-  }
-  async function showRooms(): Promise<void> {
-    const m = netMe()!;
-    const wrap = el('div', 'net-rooms');
-    const who = el('p', 'net-who'); who.append(`Grasz jako `, el('strong', '', m.nick), ' · ');
-    const out = el('button', 'link-btn', 'wyloguj'); out.type = 'button';
-    out.addEventListener('click', async () => { await signOut(); showLogin(); });
-    who.append(out);
-    const list = el('div', 'net-list');
-    const draw = async (): Promise<void> => {
-      const rooms = await listRooms();
-      list.replaceChildren(...(rooms.length ? rooms.map((r) => {
-        const row = el('div', 'net-room');
-        const info = el('div', 'net-room-info');
-        info.append(el('strong', '', r.name), el('span', '', `${r.host_nick}${r.guest_nick ? ` vs ${r.guest_nick}` : ''} · ${r.preset} · ${r.status === 'open' ? (r.guest ? 'pełny' : 'czeka na gracza') : 'trwa mecz'}`));
-        row.append(info);
-        if (r.status === 'open' && !r.guest && r.host !== m.id) row.append(button('Dołącz', async () => { const res = await joinRoom(r.id); if (typeof res === 'string') { list.prepend(msg(res, true)); return; } enterRoom(res); }, 'menu-btn net-join'));
-        if (r.host === m.id && r.status === 'open') row.append(button('Wejdź', () => enterRoom(r), 'menu-btn net-join'));
-        return row;
-      }) : [msg('Nie ma otwartych pokojów. Załóż swój — znajomy zobaczy go na liście.')]));
-    };
-    const create = el('form', 'net-create');
-    const name = el('input'); name.placeholder = 'Nazwa pokoju'; name.maxLength = 40; name.value = `Gra ${m.nick}`; name.setAttribute('aria-label', 'Nazwa pokoju');
-    const mk = el('button', 'menu-btn', 'Załóż pokój'); mk.type = 'submit';
-    create.append(name, mk);
-    create.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const seed = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
-      const res = await createRoom(name.value.trim() || `Gra ${m.nick}`, '1v1', seed);
-      if (typeof res === 'string') { list.prepend(msg(res, true)); return; }
-      enterRoom(res);
-    });
-    wrap.append(who, create, list);
-    screen('Gra przez sieć', true, wrap, back());
-    await draw();
-    stopWatch = watchRooms(() => void draw());
-  }
-  function enterRoom(room: Room): void {
-    stopWatch?.(); stopWatch = null;
-    const m = netMe()!;
-    const meIdx = room.host === m.id ? 0 : 1;
-    roomNet?.close();
-    const net = new Lockstep(room.id, meIdx, [0, 1]);
-    roomNet = net;
-    const box = el('div', 'net-roombox');
-    const status = el('p', 'net-who');
-    const start = el('button', 'menu-btn', 'Rozpocznij mecz'); start.type = 'button';
-    const leave = button('Wyjdź z pokoju', async () => { net.close(); roomNet = null; if (meIdx === 0) await deleteRoom(room.id); stopWatch?.(); stopWatch = null; void showOnline(); }, 'menu-btn menu-back');
-    let current = room;
-    const paint = (): void => {
-      status.textContent = '';
-      status.append(el('strong', '', current.host_nick), ' (gospodarz) vs ', current.guest_nick ? el('strong', '', current.guest_nick) : 'czekam na drugiego gracza…');
-      start.hidden = meIdx !== 0;
-      start.disabled = !current.guest;
-    };
-    paint();
-    // gospodarz widzi, kiedy ktoś dołączy (zmiana w tabeli pokojów)
-    stopWatch = watchRooms(async () => { const r = (await listRooms()).find((x) => x.id === room.id); if (r) { current = r; paint(); } });
-    net.onPeer = async () => { const r = (await listRooms()).find((x) => x.id === room.id); if (r) { current = r; paint(); } };
-    const go = (): void => { stopWatch?.(); stopWatch = null; roomNet = null; events.onOnlineStart(current, meIdx, net); };
-    net.onStart = go;
-    start.addEventListener('click', async () => { await setRoomStatus(room.id, 'playing'); net.send({ k: 'start' }); go(); });
-    void net.ready.then(() => { if (meIdx === 1) net.send({ k: 'hello', from: 1 }); });
-    box.append(el('p', '', `Pokój: ${room.name} · mapa ${room.preset} · ${room.seed}`), status, msg(meIdx === 0 ? 'Gdy drugi gracz dołączy, kliknij „Rozpocznij mecz”.' : 'Czekasz, aż gospodarz rozpocznie mecz.'), start, leave);
-    screen('Pokój', false, box);
-  }
+  onAccount(paintAccount);
+  void restore();
+  panel.prepend(account);
+  paintAccount();
 
   function showMain(): void {
-    stopWatch?.(); stopWatch = null;
+    online.leave();
     panel.classList.remove('wide');
     const list = el('div', 'menu-list');
     if (inGame) list.append(button(t('menu.resume'), () => events.onContinue()));
     else if (canContinue) list.append(button(t('menu.continue'), () => events.onContinue()));
-    list.append(button(t('menu.newGame'), showNew), button('Gra przez sieć', () => void showOnline()), button(t('menu.settings'), showSettings), button(t('menu.howTo'), showHelp));
+    list.append(button(t('menu.newGame'), showNew), button('Gra przez sieć', () => online.showOnline()), button(t('menu.settings'), showSettings), button(t('menu.howTo'), showHelp));
     body.replaceChildren(list);
     list.querySelector('button')?.focus();
   }
