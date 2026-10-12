@@ -315,9 +315,12 @@ export function palisadeLogs(links: [boolean, boolean, boolean, boolean], seed: 
   return out;
 }
 
+/** Czy materiał to szyba okna (świeci nocą) */
+export const isWindowMat = (m: THREE.Material): boolean => m === M.window;
+
 export function setNight(k: number): void {
   M.window.emissive.setHex(0xffb050);
-  M.window.emissiveIntensity = k * 0.45;
+  M.window.emissiveIntensity = k * 0.95;
 }
 
 /** Pochodnia na słupie: stawiana przy każdym budynku, płonie tylko nocą. */

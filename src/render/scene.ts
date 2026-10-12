@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { hash2 } from '../sim/rng';
 import { UNITS } from '../data/units';
 import { RULES } from '../data/rules';
 import { playAt, pluck, type WorldSound } from '../audio/sfx';
@@ -6,7 +7,8 @@ import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
-import { animateBuilding, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
+import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
+import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
@@ -34,6 +36,9 @@ const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
  * wywołań rysowania na budynek jest kilka. Części nazwane (dach, wnętrze, skrzydła młyna, pochodnia…)
  * zostają osobno, bo animacje i podgląd wnętrza ich szukają.
  */
+/** Budynki, w których pali się w piecu: z komina idzie dym */
+const SMOKY = new Set(['house', 'bakery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter']);
+
 function mergeStatic(root: THREE.Object3D): void {
   root.updateMatrixWorld(true);
   const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
@@ -210,6 +215,10 @@ export class GameRenderer {
   private ghostModels = new Map<string, THREE.Group>();
   private ghostModel: THREE.Group | null = null;
   private buildingLayer = new THREE.Group();
+  /** Dym z kominów, iskry, blask okien, mgła przy ziemi */
+  private ambience = new Ambience();
+  private fxAt = 0;
+  private mistLevel = 0;
   private buildingMeshes = new Map<number, THREE.Group>();
 
   private figures: Figures;
@@ -285,6 +294,7 @@ export class GameRenderer {
     this.scene.add(sun, sun.target);
     this.sun = sun;
     this.scene.add(this.buildingLayer);
+    this.scene.add(this.ambience.group);
 
     const flat = (geo: THREE.BufferGeometry, color: number, opacity = 1): THREE.Mesh => {
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: opacity < 1, opacity, depthWrite: false }));
@@ -971,6 +981,7 @@ export class GameRenderer {
       T('budynki', () => { this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
       T('chłopi', () => this.syncUnits(g, v, alpha));
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
+      T('klimat', () => this.syncAmbience(g, v, dt));
       T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); });
     }
     const tg = performance.now();
@@ -978,6 +989,36 @@ export class GameRenderer {
     this.composer.render();
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + performance.now() - tg;
     this.timingFrames++;
+  }
+  /** Dym, iskry, okna i mgła: źródła odświeżane dwa razy na sekundę, cząstki co klatkę */
+  private syncAmbience(g: GameState, v: TerrainView, dt: number): void {
+    const { width, height } = g.map;
+    const focus = this.focusPoint;
+    if (this.time > this.fxAt) {
+      this.fxAt = this.time + 0.5;
+      const list: FxSource[] = [];
+      for (const b of g.buildings) {
+        const mesh = this.buildingMeshes.get(b.id);
+        const fx = mesh?.userData.fx as BuildingFx | undefined;
+        if (!mesh || !fx || b.build || b.ruined) continue;
+        const fire = mesh.getObjectByName('fire');
+        list.push({ mesh, fx, smoke: SMOKY.has(BUILDINGS[b.type]!.id), burning: !!fire?.visible });
+      }
+      this.ambience.setSources(list, focus);
+      // chłopi wydeptują ścieżki tam, gdzie chodzą najczęściej
+      let n = 0;
+      for (const u of g.units) {
+        if (u.path.length === 0) continue;
+        v.wear(Math.round(u.px / 256), Math.round(u.py / 256), 0.012, 0.6);
+        if (++n > 400) break;
+      }
+    }
+    const cam = this.cam.camera;
+    this.ambience.update(dt, {
+      night: this.night, mist: this.mistLevel, rain: this.rain, fog: (this.scene.fog as THREE.Fog).color, focus, calm: this.calm,
+      ground: (x, z) => v.heightAt(x + width / 2, z + height / 2),
+      scale: this.renderer.domElement.height / (2 * Math.tan((cam.fov * Math.PI) / 360)),
+    });
   }
   /** Czas poszczególnych etapów klatki (ms na klatkę) od ostatniego odczytu */
   readTiming(): Record<string, number> {
@@ -1327,6 +1368,7 @@ export class GameRenderer {
       const def = BUILDINGS[b.type]!;
       const team = g.players[b.owner]?.team ?? 0;
       const mesh = this.models.building(def.id, TEAM_COLORS[team] ?? 0x888888);
+      mesh.userData.fx = collectFx(mesh, isWindowMat);
       mergeStatic(mesh);
       let top = -99, low = 99;
       const fp = footprint(def, b.rot);
@@ -1338,6 +1380,17 @@ export class GameRenderer {
       const ground = low + (top - low) * 0.35;
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
       mesh.rotation.y = (b.rot * Math.PI) / 2;
+      // ziemia wokół domu wydeptana do gołej gleby, najmocniej przy drzwiach
+      if (!def.wall && !def.gate && !def.road && def.id !== 'torch') {
+        for (let cy = b.y - 1; cy <= b.y + fp.h + 1; cy++) for (let cx = b.x - 1; cx <= b.x + fp.w + 1; cx++) {
+          const d = Math.max(b.x - cx, cx - (b.x + fp.w), b.y - cy, cy - (b.y + fp.h), 0);
+          view.wear(cx, cy, d === 0 ? 0.7 : 0.25 + (hash2(cx, cy, b.id) & 7) / 30);
+        }
+        if (b.door >= 0) {
+          const dx = b.door % width, dy = Math.floor(b.door / width);
+          for (let cy = dy - 1; cy <= dy + 2; cy++) for (let cx = dx - 1; cx <= dx + 2; cx++) view.wear(cx, cy, cx >= dx && cx <= dx + 1 && cy >= dy && cy <= dy + 1 ? 0.8 : 0.45);
+        }
+      }
       const base = mesh.getObjectByName('base');
       const patch = mesh.getObjectByName('patch');
       if (patch) patch.visible = false; // udeptana ziemia wisiała nad pochyłym terenem; teren pod budynkiem i tak jest czysty
@@ -1416,6 +1469,7 @@ export class GameRenderer {
     const mist = Math.max(0, Math.min(1, hour < 4 ? 0 : hour < 6 ? (hour - 4) / 2 : (8.5 - hour) / 2.5));
     const fog = this.scene.fog as THREE.Fog;
     const m = Math.min(1, mist + this.dayMist);
+    this.mistLevel = m;
     // pogodny dzień: daleka widoczność; mgła rano i w mgliste dni, gęsta w deszczu
     // mgła liczy się od kamery: zaczyna się zawsze dopiero za ziemią, na którą patrzymy, więc osady nie zakrywa
     const cd = this.walk ? 2 : this.cam.distance;

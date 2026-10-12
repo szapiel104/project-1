@@ -41,6 +41,8 @@ export interface TerrainView {
   animate(time: number): void;
   /** Mokro po deszczu: 0 sucho, 1 błoto i połyskujące drogi */
   setWet(k: number): void;
+  /** Wydeptuje ziemię w narożniku pola (x, y): trawa brązowieje do gołej ziemi, do progu cap */
+  wear(x: number, y: number, amount: number, cap?: number): void;
   dispose(): void;
 }
 
@@ -113,6 +115,43 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  // Wydeptana ziemia: kolor narożnika przechodzi od trawy do brunatnej, ubitej gleby (przy domach, na ścieżkach chłopów)
+  const baseCol = cornerCol.slice();
+  const worn = new Float32Array((w + 1) * (h + 1));
+  const dirtA = new THREE.Color(0x5e4a33), dirtB = new THREE.Color(0x7a6446), dc = new THREE.Color();
+  let dirtyLo = Infinity, dirtyHi = -1;
+  // narożnik (dx, dy) względem pola → numery wierzchołków w kwadracie pola
+  const SLOTS: Record<string, number[]> = { '0,0': [0], '0,1': [1, 4], '1,0': [2, 3], '1,1': [5] };
+  const wear = (cx: number, cy: number, amount: number, cap = 0.8): void => {
+    if (cx < 0 || cy < 0 || cx > w || cy > h) return;
+    const ci = cy * (w + 1) + cx;
+    const hh = corner(cx, cy);
+    if (hh > 3 || hh < 0.02) return; // skały i brzegi wody zostają
+    const nv2 = Math.min(cap, worn[ci]! + amount);
+    if (nv2 <= worn[ci]!) return;
+    worn[ci] = nv2;
+    dc.copy(dirtA).lerp(dirtB, (hash2(cx, cy, map.seed ^ 0x3131) & 255) / 255);
+    const k = nv2 * nv2 * (3 - 2 * nv2) * 0.9;
+    const r0 = baseCol[ci * 3]! + (dc.r - baseCol[ci * 3]!) * k, g0 = baseCol[ci * 3 + 1]! + (dc.g - baseCol[ci * 3 + 1]!) * k, b0 = baseCol[ci * 3 + 2]! + (dc.b - baseCol[ci * 3 + 2]!) * k;
+    for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) {
+      const tx = cx - dx, ty = cy - dy;
+      if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
+      for (const slot of SLOTS[`${dx},${dy}`]!) {
+        const o = (ty * w + tx) * 18 + slot * 3;
+        col[o] = r0; col[o + 1] = g0; col[o + 2] = b0;
+        dirtyLo = Math.min(dirtyLo, o); dirtyHi = Math.max(dirtyHi, o + 3);
+      }
+    }
+    queueMicrotask(flushWear);
+  };
+  const flushWear = (): void => {
+    if (dirtyHi < 0) return;
+    const attr = geo.getAttribute('color') as THREE.BufferAttribute;
+    attr.clearUpdateRanges();
+    attr.addUpdateRange(dirtyLo, dirtyHi - dirtyLo);
+    attr.needsUpdate = true;
+    dirtyLo = Infinity; dirtyHi = -1;
+  };
   const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7 }));
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
@@ -693,6 +732,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const gm = ground.material as THREE.MeshStandardMaterial;
       gm.color.copy(dryC).lerp(new THREE.Color(0x8a917c), k * 0.6);
     },
+    wear,
     dispose() {
       group.traverse((o) => {
         const mesh = o as THREE.Mesh;
