@@ -20,6 +20,26 @@ import { N8AOPass } from 'n8ao';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 
 export interface TileRef { x: number; y: number }
+let noWorkerMat: THREE.SpriteMaterial | null = null;
+/** Znak „brak pracownika”: ludzik w złotym kole przekreślony na czerwono, rysowany raz na płótnie */
+function noWorkerMaterial(): THREE.SpriteMaterial {
+  if (noWorkerMat) return noWorkerMat;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d')!;
+  x.fillStyle = 'rgba(30,18,8,0.85)'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
+  x.lineWidth = 8; x.strokeStyle = '#e9c145'; x.stroke();
+  x.fillStyle = '#f6ecd0';
+  x.beginPath(); x.arc(64, 40, 13, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.moveTo(40, 98); x.quadraticCurveTo(42, 60, 64, 58); x.quadraticCurveTo(86, 60, 88, 98); x.closePath(); x.fill();
+  x.strokeStyle = '#d6372b'; x.lineWidth = 12; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(26, 26); x.lineTo(102, 102); x.stroke();
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  noWorkerMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  return noWorkerMat;
+}
+
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number }
 
 const MAX_UNITS = 2048;
@@ -253,7 +273,11 @@ export class GameRenderer {
     this.resize();
   }
 
+  /** Gracz przy tym ekranie (znaki „brak pracownika” tylko nad jego budynkami) */
+  private me = 0;
+
   setState(state: GameState, waterLevel: number, rim: number, focusPlayer = 0): void {
+    this.me = focusPlayer;
     if (this.view) { this.scene.remove(this.view.group); this.view.dispose(); }
     for (const g of this.buildingMeshes.values()) this.buildingLayer.remove(g);
     this.buildingMeshes.clear();
@@ -577,6 +601,25 @@ export class GameRenderer {
       yard.scale.x = Math.max(0.3, left / 4);
     }
     for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id) || id === this.selectedId, this.time, dt);
+    // budynek bez pracownika: nad dachem kołysze się mały znak przekreślonego człowieka
+    for (const b of g.buildings) {
+      const mesh = this.buildingMeshes.get(b.id);
+      if (!mesh) continue;
+      const def = BUILDINGS[b.type]!;
+      const needs = b.owner === this.me && (def.production || def.staff) && b.worker === 0;
+      let sign = mesh.getObjectByName('noworker') as THREE.Sprite | undefined;
+      if (!needs) { if (sign) sign.visible = false; continue; }
+      if (!sign) {
+        sign = new THREE.Sprite(noWorkerMaterial());
+        sign.name = 'noworker';
+        sign.scale.setScalar(0.55);
+        sign.renderOrder = 4;
+        mesh.add(sign);
+      }
+      sign.visible = true;
+      sign.position.set(0, 2.3 + Math.sin(this.time * 2 + b.id) * 0.06, 0);
+      (sign.material as THREE.SpriteMaterial).rotation = Math.sin(this.time * 1.6 + b.id) * 0.18;
+    }
   }
 
   /** Zapełnia najpierw otwarte składy w kolejności budowy, a zamkniętą stodołę na końcu, żeby było widać każdą dostawę. */

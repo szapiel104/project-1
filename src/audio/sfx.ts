@@ -3,7 +3,7 @@
  * zastępczy dźwięk syntezowany w przeglądarce. Do tego tło: szum otoczenia w pętli.
  * Przeglądarka pozwala grać dopiero po pierwszym kliknięciu, więc kontekst powstaje leniwie.
  */
-export type Sound = 'click' | 'build' | 'demolish' | 'collapse' | 'error' | 'road' | 'rotate' | 'select';
+export type Sound = 'babble' | 'click' | 'build' | 'demolish' | 'collapse' | 'error' | 'road' | 'rotate' | 'select';
 
 /** Nagrania dla każdego dźwięku; przy kilku wariantach losujemy jeden, żeby się nie powtarzało. */
 const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
@@ -157,6 +157,23 @@ export function play(sound: Sound): void {
   const t = c.currentTime + 0.01;
   out = (sound === 'click' || sound === 'select' || sound === 'rotate' || sound === 'error' ? busGain.ui : busGain.sfx) ?? master;
   if (sample(c, sound, t)) return;
+  if (sound === 'babble') {
+    // skryba „mówi”: seria krótkich sylab o skaczącej wysokości, jak bełkot w starych strategiach
+    const n = 7 + Math.floor(Math.random() * 5);
+    for (let i = 0; i < n; i++) {
+      const at = t + i * 0.085 + Math.random() * 0.02;
+      const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+      o.type = 'sawtooth';
+      o.frequency.setValueAtTime(150 + Math.random() * 90, at);
+      f.type = 'bandpass'; f.frequency.value = 700 + Math.random() * 900; f.Q.value = 5;
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.28, at + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.001, at + 0.07);
+      o.connect(f).connect(g).connect(busGain.ui ?? master!);
+      o.start(at); o.stop(at + 0.09);
+    }
+    return;
+  }
   switch (sound) {
     case 'click':
     case 'rotate':

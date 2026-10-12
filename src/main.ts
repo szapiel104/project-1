@@ -13,6 +13,7 @@ import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace, maxHp } from './sim/systems/placement';
 import { createHud } from './ui/hud';
+import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
@@ -435,6 +436,9 @@ function showEnd(win: boolean): void {
   play(win ? 'build' : 'collapse');
 }
 
+const scribe = createScribe(() => play('babble'));
+let wasNight = false, wasComing = false, stockFull = false;
+
 let warnedHungry = false;
 let warnedLeaving = false;
 
@@ -442,8 +446,21 @@ function refresh(): void {
   const p = game.players[ME]!;
   const f = monthlyForecast(game, p);
   // ostrzeżenia pokazujemy raz, w chwili gdy problem się zaczyna
-  if (!f.fed && !warnedHungry) hud.toast(t('warn.hungry'));
-  else if (p.popularity < 50 && !warnedLeaving) hud.toast(t('warn.leaving'));
+  // skryba: ważne wiadomości w lewym górnym rogu, z „mową”
+  const food = storeUsed(p, 'granary');
+  if (!f.fed && !warnedHungry) scribe.say('hungry', t('warn.hungry'), true);
+  else if (f.fed && food < 15 && population(game, ME) > 0) scribe.say('foodLow', t('scribe.foodLow'));
+  if (p.popularity < 50 && !warnedLeaving) scribe.say('leaving', t('warn.leaving'), true);
+  const full = storeUsed(p, 'stockpile') >= storeCapacity(game, ME, 'stockpile');
+  if (full && !stockFull) scribe.say('stockFull', t('scribe.stockFull'));
+  stockFull = full;
+  const hour = clockAt(game.tick).hour;
+  const night = hour >= 19.5 || hour < 6;
+  if (night !== wasNight) scribe.say(night ? 'dusk' : 'dawn', t(night ? 'scribe.dusk' : 'scribe.dawn'));
+  wasNight = night;
+  const coming = alarm.dataset.state === 'coming';
+  if (coming && !wasComing) scribe.say('coming', t('alarm.coming'), true);
+  wasComing = coming;
   warnedHungry = !f.fed;
   warnedLeaving = p.popularity < 50;
   const affordable = new Set<string>();
