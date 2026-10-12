@@ -63,7 +63,7 @@ export interface Hud {
   /** Karta mieszkańca: imię i kilka wierszy opisu */
   showPerson(person: { name: string; lines: string[] } | null): void;
   /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
-  showArmy(army: { name: string; hp: number; max: number }[]): void;
+  showArmy(army: { name: string; hp: number; max: number; kind?: string }[]): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
@@ -654,10 +654,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       roster.hidden = false;
       hpLine.hidden = true;
       recruit.hidden = true;
+      towerBox.hidden = true;
+      gateBox.hidden = true;
       roster.replaceChildren(...army.slice(0, 24).map((u) => {
         const card = el('span', 'roster-card');
         card.title = u.name;
-        card.innerHTML = PORTRAIT;
+        card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
         const bar = el('span', 'roster-hp');
         const fill = el('span');
         fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;
@@ -666,7 +668,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         return card;
       }));
       if (army.length > 24) roster.append(el('span', 'roster-more', `+${army.length - 24}`));
-      setText(infoDesc, `${army[0]!.name} × ${army.length}`);
+      const counts = new Map<string, number>();
+      for (const u of army) counts.set(u.name, (counts.get(u.name) ?? 0) + 1);
+      setText(infoDesc, [...counts].map(([n, k]) => `${n} × ${k}`).join(', '));
       infoWorker.hidden = false;
       setText(infoWorker, t('hud.orderHint'));
       demolish.hidden = true;

@@ -419,7 +419,7 @@ function chooseSoldiers(ids: number[], add: boolean): void {
 function showArmy(): void {
   const list = game.soldiers.filter((s) => chosen.has(s.id));
   if (list.length !== chosen.size) { chosen.clear(); for (const s of list) chosen.add(s.id); renderer.setSoldierSelection(chosen); }
-  hud.showArmy(list.map((s) => ({ name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp })));
+  hud.showArmy(list.map((s) => ({ name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })));
 }
 
 canvas.addEventListener('pointerdown', (e) => {
