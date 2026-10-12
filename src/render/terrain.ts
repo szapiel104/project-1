@@ -451,7 +451,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     color.wrapS = THREE.RepeatWrapping;
     color.colorSpace = THREE.SRGBColorSpace;
     color.anisotropy = 16;
-    ditchMat = new THREE.MeshStandardMaterial({ map: color, transparent: true, depthWrite: false, roughness: 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: -3 });
+    ditchMat = new THREE.MeshStandardMaterial({ map: color, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: -3 });
     return ditchMat;
   };
   let pathMat: THREE.MeshStandardMaterial | null = null;
@@ -520,44 +520,6 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         for (let x = 0; x < w; x++) {
           if (roads[y * w + x] !== kind) continue;
           clear(y * w + x); // na drodze nie rośnie trawa ani krzewy
-          if (!soft) {
-            // Rów odwadniający tuż za krawędzią bruku: pas szerokości ćwierć pola, dokładnie wzdłuż pola,
-            // a na wypukłych narożnikach dodatkowy kwadrat, żeby rów skręcał razem z drogą.
-            const open = (dx: number, dy: number): boolean => { const nx = x + dx, ny = y + dy; return nx < 0 || ny < 0 || nx >= w || ny >= h || roads[ny * w + nx] !== kind; };
-            const D = 0.24;
-            const quad = (ax: number, ay: number, bx: number, by: number, across: 'x' | 'y', flip: boolean): void => {
-              // v biegnie w poprzek rowu (0 przy bruku, 1 przy trawie), u wzdłuż niego
-              const corners = [[ax, ay], [ax, by], [bx, ay], [bx, ay], [ax, by], [bx, by]] as const;
-              for (const [qx, qy] of corners) {
-                ditch.push(qx + ox, heightAt(qx, qy) + 0.035, qy + oz);
-                const v = across === 'x' ? (qx - ax) / (bx - ax) : (qy - ay) / (by - ay);
-                ditchUv.push((across === 'x' ? qy : qx) / 2, flip ? 1 - v : v);
-              }
-            };
-            if (open(1, 0)) quad(x + 1, y, x + 1 + D, y + 1, 'x', false);
-            if (open(-1, 0)) quad(x - D, y, x, y + 1, 'x', true);
-            if (open(0, 1)) quad(x, y + 1, x + 1, y + 1 + D, 'y', false);
-            if (open(0, -1)) quad(x, y - D, x + 1, y, 'y', true);
-            for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const)
-              if (open(dx, 0) && open(0, dy)) {
-                // narożnik jako ćwiartka koła wokół rogu bruku: tekstura biegnie promieniście,
-                // więc rów płynnie skręca i łączy się z odcinkami po obu stronach
-                const px = dx > 0 ? x + 1 : x, py = dy > 0 ? y + 1 : y;
-                const seg = 6;
-                for (let k = 0; k < seg; k++) {
-                  const a0 = (k / seg) * Math.PI / 2, a1 = ((k + 1) / seg) * Math.PI / 2;
-                  const ax = px + Math.cos(a0) * D * dx, ay = py + Math.sin(a0) * D * dy;
-                  const bx = px + Math.cos(a1) * D * dx, by = py + Math.sin(a1) * D * dy;
-                  const u0 = (py + a0 * D) / 2, u1 = (py + a1 * D) / 2;
-                  // kolejność wierzchołków zależna od ćwiartki, żeby trójkąt zawsze był zwrócony do góry
-                  const A = [ax, ay, u0, 1] as const, B = [bx, by, u1, 1] as const;
-                  for (const [qx, qy, u, v] of [[px, py, (u0 + u1) / 2, 0] as const, ...(dx * dy > 0 ? [B, A] : [A, B])]) {
-                    ditch.push(qx + ox, heightAt(qx, qy) + 0.035, qy + oz);
-                    ditchUv.push(u, v);
-                  }
-                }
-              }
-          }
           // lekkie przesunięcie każdego płata, żeby droga nie szła jak po linijce
           const r = hash2(x, y, map.seed ^ 0x77);
           const jx = soft ? ((r & 15) / 15 - 0.5) * 0.22 : 0, jy = soft ? (((r >>> 4) & 15) / 15 - 0.5) * 0.22 : 0;
@@ -572,6 +534,54 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             else { uv2.push(qx / 2.5, qy / 2.5); uvMask.push(u, v); col3.push(shade.r, shade.g, shade.b); }
           }
         }
+      // Rów liczony od strony trawy: każde pole bez bruku dostaje pas wzdłuż boków, którymi dotyka bruku.
+      // Gdy bruk jest z dwóch stron (wewnętrzny róg), pasy schodzą się na ukos; przy zewnętrznym rogu bruku
+      // rów zakręca łukiem. Dzięki temu nic się nie nakłada nawet wokół pojedynczego pola trawy.
+      if (!soft) {
+        const pave = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind;
+        const D = 0.24;
+        const put = (qx: number, qy: number, u: number, v: number): void => { ditch.push(qx + ox, heightAt(qx, qy) + 0.035, qy + oz); ditchUv.push(u, v); };
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            if (pave(x, y)) continue;
+            const L = pave(x - 1, y), R = pave(x + 1, y), T = pave(x, y - 1), B = pave(x, y + 1);
+            if (L || R || T || B) {
+              const y0 = y + (T ? D : 0), y1 = y + 1 - (B ? D : 0), x0 = x + (L ? D : 0), x1 = x + 1 - (R ? D : 0);
+              // pas pionowy (przy lewym albo prawym boku): v rośnie od bruku w stronę trawy
+              const vert = (edgeX: number, inX: number): void => {
+                for (const [qx, qy] of [[edgeX, y0], [inX, y0], [edgeX, y1], [edgeX, y1], [inX, y0], [inX, y1]] as const) put(qx, qy, qy / 2, Math.abs(qx - edgeX) / D);
+              };
+              const horiz = (edgeY: number, inY: number): void => {
+                for (const [qx, qy] of [[x0, edgeY], [x0, inY], [x1, edgeY], [x1, edgeY], [x0, inY], [x1, inY]] as const) put(qx, qy, qx / 2, Math.abs(qy - edgeY) / D);
+              };
+              if (L) vert(x, x + D);
+              if (R) vert(x + 1, x + 1 - D);
+              if (T) horiz(y, y + D);
+              if (B) horiz(y + 1, y + 1 - D);
+              // wewnętrzne rogi: kwadrat D×D dzielony po przekątnej, każda połowa należy do swojego pasa
+              for (const [sx, sy, on] of [[-1, -1, L && T], [1, -1, R && T], [-1, 1, L && B], [1, 1, R && B]] as const) {
+                if (!on) continue;
+                const cx = sx < 0 ? x : x + 1, cy = sy < 0 ? y : y + 1;
+                const ix = cx - sx * D, iy = cy - sy * D;
+                put(cx, cy, cy / 2, 0); put(cx, iy, iy / 2, 0); put(ix, iy, iy / 2, 1);
+                put(cx, cy, cx / 2, 0); put(ix, cy, ix / 2, 0); put(ix, iy, ix / 2, 1);
+              }
+            }
+            // zewnętrzne rogi bruku: bruk tylko po skosie, rów skręca ćwiartką koła wokół rogu
+            for (const [sx, sy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+              if (!pave(x + sx, y + sy) || pave(x + sx, y) || pave(x, y + sy)) continue;
+              const px = sx < 0 ? x : x + 1, py = sy < 0 ? y : y + 1;
+              const seg = 6;
+              for (let k = 0; k < seg; k++) {
+                const a0 = (k / seg) * Math.PI / 2, a1 = ((k + 1) / seg) * Math.PI / 2;
+                const u0 = (py + a0 * D) / 2, u1 = (py + a1 * D) / 2;
+                put(px, py, (u0 + u1) / 2, 0);
+                put(px - Math.cos(a0) * D * sx, py - Math.sin(a0) * D * sy, u0, 1);
+                put(px - Math.cos(a1) * D * sx, py - Math.sin(a1) * D * sy, u1, 1);
+              }
+            }
+          }
+      }
       if (!p3.length) continue;
       const g2 = new THREE.BufferGeometry();
       g2.setAttribute('position', new THREE.Float32BufferAttribute(p3, 3));
@@ -590,7 +600,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const dg = new THREE.BufferGeometry();
         dg.setAttribute('position', new THREE.Float32BufferAttribute(ditch, 3));
         dg.setAttribute('uv', new THREE.Float32BufferAttribute(ditchUv, 2));
-        dg.computeVertexNormals();
+        // rów leży płasko na terenie: normalne w górę, a trójkąty widoczne z obu stron niezależnie od kolejności wierzchołków
+        dg.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(ditch.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
         const dm = new THREE.Mesh(dg, ditchMaterial());
         dm.receiveShadow = true;
         group.add(dm);

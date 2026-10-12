@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.6.7 — rów bez nakładek (2026-10-12)
+
+- Rów liczony od strony trawy: na wewnętrznych rogach pasy schodzą się na ukos, na zewnętrznych skręcają łukiem; nic się nie nakłada, także wokół pojedynczego pola otoczonego brukiem
+
 ## 0.6.6 — ostrzejsze tekstury (2026-10-12)
 
 - Tekstury w wyższej rozdzielczości: bruk, mur twierdzy i trawa 2048 px, reszta 1024 px (wcześniej 512); dodatkowa drobna warstwa ziarna, filtrowanie anizotropowe 16×
