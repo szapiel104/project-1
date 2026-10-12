@@ -308,8 +308,24 @@ function repairSystem(g: GameState): void {
   for (const u of g.units) {
     if (u.phase === Phase.Repairing) {
       const b = g.buildings.find((x) => x.id === u.target);
+      // budowa: każdy robotnik dokłada swoją część, ostatni kończy
+      if (b && b.build > 0) { b.build = Math.max(0, b.build - 12); continue; }
+      if (b && !u.job) { u.target = 0; u.phase = Phase.Idle; continue; }
       if (!b || b.hp >= maxHp(b.type)) { u.target = 0; u.phase = Phase.Returning; continue; }
       b.hp = Math.min(maxHp(b.type), b.hp + 15);
+    }
+  }
+  // place budowy: same z siebie rosną powoli, a do każdej przychodzi do trzech wolnych chłopów z młotkami
+  for (const b of g.buildings) {
+    if (!b.build) continue;
+    b.build = Math.max(0, b.build - 1);
+    if (b.door < 0) continue;
+    let crew = 0;
+    for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing)) crew++;
+    while (crew < 3) {
+      const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.target === 0 && x.carryRes < 0);
+      if (!u) break;
+      u.target = b.id; u.phase = Phase.ToRepair; u.path = []; crew++;
     }
   }
   for (const guild of g.buildings) {

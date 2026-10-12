@@ -117,6 +117,7 @@ describe('budowanie', () => {
     g.players[0]!.res[resIndex('wood')] = 200;
     step(g, [build(g, 'engineers')]);
     step(g, [build(g, 'house')]);
+    for (const b of g.buildings) b.build = 0; // budowa skończona
     run(g, 60);
     const guild = g.buildings.find((x) => BUILDINGS[x.type]!.id === 'engineers')!;
     expect(guild.worker).toBeGreaterThan(0);
@@ -259,6 +260,7 @@ describe('pojemność składów', () => {
     expect(storeCapacity(g, 0, 'granary')).toBe(0);
     step(g, [build(g, 'barn')]);
     step(g, [build(g, 'granary')]);
+    for (const b of g.buildings) b.build = 0; // budowa skończona
     expect(storeCapacity(g, 0, 'granary')).toBe(270);
   });
 });

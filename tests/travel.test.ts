@@ -17,3 +17,19 @@ describe('wędrowcy', () => {
     expect(back?.travelers.length).toBe(g.travelers.length);
   });
 });
+
+describe('budowa', () => {
+  it('nowy budynek najpierw stoi w budowie, robotnicy go kończą', async () => {
+    const { placeBuilding } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const g = createGame(5, '1v1', 2);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings[0]!;
+    let placed = false;
+    for (let r = 4; r < 14 && !placed; r++) for (let d = -r; d <= r && !placed; d++) placed = placeBuilding(g, 0, buildingIndex('house'), keep.x + d, keep.y + r);
+    const b = g.buildings[g.buildings.length - 1]!;
+    expect(b.build).toBeGreaterThan(0);
+    for (let i = 0; i < 2000 && b.build; i++) step(g, []);
+    expect(b.build).toBe(0);
+  });
+});

@@ -137,12 +137,18 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
   const def = BUILDINGS[type]!;
   const fp = footprint(def, rot);
   const door = findDoor(g, x, y, fp.w, fp.h, rot);
-  const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false, hp: maxHp(type) };
+  const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false, hp: maxHp(type), build: 0 };
   for (let ty = y; ty < y + fp.h; ty++)
     for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
   if (door >= 0) g.reserved[door]!++;
   g.buildings.push(b);
   return b;
+}
+
+/** Ile pracy wymaga postawienie budynku (rośnie z wielkością działki) */
+export function buildWork(type: number): number {
+  const def = BUILDINGS[type]!;
+  return Math.min(900, def.w * def.h * 30);
 }
 
 export function placeBuilding(g: GameState, player: number, type: number, x: number, y: number, rot = 0): boolean {
@@ -151,7 +157,9 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   const p = g.players[player]!;
   for (const [k, v] of Object.entries(def.cost)) p.res[resIndex(k as ResourceId)]! -= v;
   if (def.road) { g.roads[y * g.map.width + x] = def.road; return true; }
-  addBuilding(g, type, player, x, y, rot);
+  const b = addBuilding(g, type, player, x, y, rot);
+  // budowa trwa: robotnicy z obozowiska przychodzą i stawiają budynek (pochodnia stoi od razu)
+  if (b && def.id !== 'torch') b.build = buildWork(type);
   p.stats.built++;
   return true;
 }

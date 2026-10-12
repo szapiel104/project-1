@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RULES } from '../data/rules';
 import { playAt, type WorldSound } from '../audio/sfx';
+import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
@@ -118,12 +119,16 @@ export class GameRenderer {
     if (this.time < due) return;
     this.soundAt.set(k, this.time + every * (0.85 + Math.random() * 0.3));
     if (due === 0) return; // pierwszy raz tylko ustawiamy zegar, żeby wszystkie źródła nie ruszyły naraz
-    const cam = this.cam.camera, f = this.cam.focus;
-    const reach = cam.position.distanceTo(f) * 0.9;
-    const d = Math.hypot(x - f.x, z - f.z);
+    // słychać jak w rzeczywistości: z odległości od kamery (ucha), nie od środka ekranu;
+    // blisko — głośno, przy zwykłym widoku cicho, a z daleka od osady wcale
+    const cam = this.cam.camera;
+    const src = new THREE.Vector3(x, this.view?.heightAt(x + (this.state?.map.width ?? 0) / 2, z + (this.state?.map.height ?? 0) / 2) ?? 0, z);
+    const d = cam.position.distanceTo(src);
+    const near = Math.max(0, Math.min(1, 1 - (d - 10) / 42));
+    const rel = src.sub(cam.position);
     const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
-    const pan = ((x - f.x) * right.x + (z - f.z) * right.z) / Math.max(1, reach);
-    playAt(kind, Math.max(0, 1 - d / reach), pan, gain);
+    const pan = (rel.dot(right) / Math.max(1, d)) * 1.4;
+    playAt(kind, near, pan, gain);
   }
   /** Pora i pogoda dla dźwięków otoczenia */
   get weather(): { night: number; rain: number } { return { night: this.night, rain: this.rain }; }
@@ -600,8 +605,27 @@ export class GameRenderer {
       this.syncRoads(this.state, this.view);
       this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
-      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); }
+      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); }
     this.composer.render();
+  }
+
+  private dustAt = new Map<number, number>();
+  /** Budynki w budowie rosną od fundamentów w górę, a nad placem co chwilę wzbija się kurz */
+  private syncSites(g: GameState): void {
+    for (const b of g.buildings) {
+      const mesh = this.buildingMeshes.get(b.id);
+      if (!mesh) continue;
+      if (!b.build) { if (mesh.scale.y !== 1) { mesh.scale.y = 1; this.roadDust(b.x, b.y, false); } continue; }
+      const k = 1 - b.build / buildWork(b.type);
+      mesh.scale.y = 0.06 + 0.94 * k;
+      if (this.calm) continue;
+      const next = this.dustAt.get(b.id) ?? 0;
+      if (this.time > next) {
+        const fp = footprint(BUILDINGS[b.type]!, b.rot);
+        this.roadDust(b.x + Math.floor(Math.random() * fp.w), b.y + Math.floor(Math.random() * fp.h), false);
+        this.dustAt.set(b.id, this.time + 0.9 + Math.random() * 1.2);
+      }
+    }
   }
 
   private syncBuildings(g: GameState, view: TerrainView): void {
@@ -626,7 +650,7 @@ export class GameRenderer {
       mesh.rotation.y = (b.rot * Math.PI) / 2;
       const base = mesh.getObjectByName('base');
       const patch = mesh.getObjectByName('patch');
-      if (patch) { patch.scale.set(def.w * 0.62, 1, def.h * 0.62); patch.position.y = top - ground + 0.015; patch.receiveShadow = true; }
+      if (patch) patch.visible = false; // udeptana ziemia wisiała nad pochyłym terenem; teren pod budynkiem i tak jest czysty
       if (base) base.visible = false; // żadnego podniesienia pod budynkiem
       mesh.traverse((o) => {
         const part = o as THREE.Mesh;
@@ -1122,8 +1146,9 @@ export class GameRenderer {
         } else if (u.phase === Phase.Working) {
           if (jid === 'woodcutter' || jid === 'poleturner') this.sfxAt('plank', t.position.x, t.position.z, u.id, 1.3, 0.7);
           else if (jid === 'mill') this.sfxAt('creak', t.position.x, t.position.z, u.id, 3.5, 0.8);
-        } else if (u.phase === Phase.Repairing) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.8);
+        }
       }
+      if (u.phase === Phase.Repairing && !this.calm) { this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.7); swing = Math.sin(this.time * 10 + u.id) * 1.1; }
       this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }

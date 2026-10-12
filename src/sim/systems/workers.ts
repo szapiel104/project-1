@@ -227,7 +227,7 @@ export function workerSystem(g: GameState): void {
   for (const b of g.buildings) byId.set(b.id, b);
 
   for (const b of g.buildings) {
-    if (b.worker !== 0 || !(BUILDINGS[b.type]!.production || BUILDINGS[b.type]!.staff)) continue;
+    if (b.worker !== 0 || b.build || !(BUILDINGS[b.type]!.production || BUILDINGS[b.type]!.staff)) continue;
     const u = g.units.find((x) => x.owner === b.owner && x.job === 0);
     if (!u) continue;
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0;

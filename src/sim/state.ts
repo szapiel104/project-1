@@ -49,6 +49,8 @@ export interface Building {
   lit: boolean;
   /** Wytrzymałość; spada od ciosów wroga, naprawia ją inżynier */
   hp: number;
+  /** Ile pracy zostało do końca budowy; 0 = budynek gotowy i działa */
+  build: number;
 }
 
 /** Gruz po rozebranym budynku. Leży na działce, dopóki ludzie nie wyniosą wszystkich ładunków. */
@@ -240,7 +242,7 @@ function placeNear(g: GameState, type: number, player: number, cx: number, cy: n
 /** Miejsca dla bezrobotnych we wszystkich obozowiskach gracza. */
 export function idleSlots(g: GameState, player: number): number {
   let n = 0;
-  for (const b of g.buildings) if (b.owner === player) n += BUILDINGS[b.type]!.idleSlots ?? 0;
+  for (const b of g.buildings) if (b.owner === player && !b.build) n += BUILDINGS[b.type]!.idleSlots ?? 0;
   return n;
 }
 
@@ -257,14 +259,14 @@ export function playerKeep(g: GameState, player: number): Building | undefined {
 
 export function housing(g: GameState, player: number): number {
   let n = 0;
-  for (const b of g.buildings) if (b.owner === player) n += BUILDINGS[b.type]!.housing ?? 0;
+  for (const b of g.buildings) if (b.owner === player && !b.build) n += BUILDINGS[b.type]!.housing ?? 0;
   return n;
 }
 
 /** Łączna pojemność składów albo spichlerzy gracza. */
 export function storeCapacity(g: GameState, player: number, kind: StoreKind): number {
   let n = 0;
-  for (const b of g.buildings) if (b.owner === player) n += BUILDINGS[b.type]!.capacity?.[kind] ?? 0;
+  for (const b of g.buildings) if (b.owner === player && !b.build) n += BUILDINGS[b.type]!.capacity?.[kind] ?? 0;
   return n;
 }
 
@@ -297,7 +299,7 @@ export function stateHash(g: GameState): number {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length);
