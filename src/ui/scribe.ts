@@ -37,20 +37,31 @@ export function createScribe(onSpeak: () => void): Scribe {
   box.setAttribute('aria-live', 'polite');
   document.body.append(box);
   const last = new Map<string, number>();
+  // kolejka: na ekranie zawsze tylko jedna wiadomość; następna wchodzi, gdy poprzednia zniknie
+  const queue: { text: string; urgent: boolean; who: Speaker }[] = [];
+  let busy = false;
+  const next = (): void => {
+    const m = queue.shift();
+    if (!m) { busy = false; return; }
+    busy = true;
+    const card = document.createElement('div');
+    card.className = `scribe-card ${m.who}${m.urgent ? ' urgent' : ''}`;
+    card.innerHTML = `<span class="scribe-face">${m.who === 'herald' ? HERALD : FACE}</span><span class="scribe-body"><span class="scribe-name">${NAMES[m.who]}</span><span class="scribe-text"></span></span>`;
+    card.querySelector('.scribe-text')!.textContent = m.text;
+    box.replaceChildren(card);
+    onSpeak();
+    setTimeout(() => card.classList.add('out'), 5000);
+    setTimeout(() => { card.remove(); next(); }, 5700);
+  };
   return {
     say(key, text, urgent = false, who: Speaker = 'scribe') {
       const now = performance.now();
       if ((last.get(key) ?? -1e9) > now - 60000) return;
       last.set(key, now);
-      const card = document.createElement('div');
-      card.className = `scribe-card ${who}${urgent ? ' urgent' : ''}`;
-      card.innerHTML = `<span class="scribe-face">${who === 'herald' ? HERALD : FACE}</span><span class="scribe-body"><span class="scribe-name">${NAMES[who]}</span><span class="scribe-text"></span></span>`;
-      card.querySelector('.scribe-text')!.textContent = text;
-      box.prepend(card);
-      while (box.children.length > 4) box.lastElementChild!.remove();
-      onSpeak();
-      setTimeout(() => card.classList.add('out'), 6500);
-      setTimeout(() => card.remove(), 7200);
+      // pilne wiadomości wskakują na początek kolejki; kolejka nie rośnie w nieskończoność
+      if (urgent) queue.unshift({ text, urgent, who }); else queue.push({ text, urgent, who });
+      if (queue.length > 4) queue.length = 4;
+      if (!busy) next();
     },
   };
 }
