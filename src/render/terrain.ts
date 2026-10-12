@@ -111,7 +111,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
-  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 1.2 }));
+  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7 }));
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(ground);

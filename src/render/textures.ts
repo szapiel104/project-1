@@ -79,14 +79,30 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
       }
   },
   grass(c, n, r) {
-    c.fillStyle = gray(0.86); c.fillRect(0, 0, n, n);
-    // plamy jaśniejszej i ciemniejszej darni, potem pojedyncze źdźbła
-    for (let i = 0; i < 26; i++) { c.fillStyle = gray(0.78 + r() * 0.2); c.beginPath(); c.arc(r() * n, r() * n, 5 + r() * 12, 0, 6.3); c.fill(); }
-    for (let i = 0; i < 900; i++) {
-      c.strokeStyle = gray(0.66 + r() * 0.34); c.lineWidth = 1;
-      const x = r() * n, y = r() * n;
-      c.beginPath(); c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * 4, y - 3 - r() * 6); c.stroke();
+    // rysowane w pełnej rozdzielczości: drobna, gęsta darń zamiast grubych kresek
+    const k = n / 256;
+    c.fillStyle = gray(0.84); c.fillRect(0, 0, n, n);
+    // miękkie plamy jaśniejszej i ciemniejszej darni (zawijane na brzegach, żeby nie było szwów)
+    for (let i = 0; i < 40; i++) {
+      const x = r() * n, y = r() * n, rad = (10 + r() * 28) * k, v = 0.74 + r() * 0.22;
+      for (const [ox, oy] of [[0, 0], [-n, 0], [n, 0], [0, -n], [0, n]] as const) {
+        const g = c.createRadialGradient(x + ox, y + oy, 0, x + ox, y + oy, rad);
+        g.addColorStop(0, `rgba(${v * 255 | 0},${v * 255 | 0},${v * 255 | 0},0.55)`); g.addColorStop(1, 'rgba(0,0,0,0)');
+        c.fillStyle = g; c.fillRect(x + ox - rad, y + oy - rad, rad * 2, rad * 2);
+      }
     }
+    // gęste, cienkie źdźbła w kępkach, lekko pochylone w jedną stronę
+    c.lineCap = 'round';
+    for (let t = 0; t < 2600; t++) {
+      const cx = r() * n, cy = r() * n, blades = 6 + (r() * 10 | 0), lean = (r() - 0.3) * 2;
+      for (let i = 0; i < blades; i++) {
+        const x = cx + (r() - 0.5) * 6 * k, y = cy + (r() - 0.5) * 6 * k, len = (2.5 + r() * 5) * k;
+        c.strokeStyle = gray(0.6 + r() * 0.42); c.lineWidth = (0.35 + r() * 0.35) * k;
+        c.beginPath(); c.moveTo(x, y); c.quadraticCurveTo(x + lean * len * 0.2, y - len * 0.6, x + lean * len * 0.5 + (r() - 0.5) * k, y - len); c.stroke();
+      }
+    }
+    // drobne listki koniczyny i ciemne szczeliny między kępami
+    for (let i = 0; i < 1400; i++) { c.fillStyle = gray(r() < 0.5 ? 0.55 + r() * 0.1 : 0.95); c.beginPath(); c.arc(r() * n, r() * n, (0.4 + r() * 0.6) * k, 0, 6.3); c.fill(); }
   },
   leaves(c, n, r) {
     c.fillStyle = gray(0.7); c.fillRect(0, 0, n, n);
@@ -228,7 +244,7 @@ export function pattern(kind: Kind): THREE.Texture | null {
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'ashlar' ? 1024 : kind === 'cobble' ? n : kind === 'grass' ? 256 : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock'].includes(kind) ? 128 : 64;
+  const base = kind === 'ashlar' ? 1024 : kind === 'cobble' || kind === 'grass' ? n : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));
