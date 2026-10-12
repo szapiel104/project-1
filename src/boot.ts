@@ -7,6 +7,7 @@ const mobileAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
 
 if (touchOnly || mobileAgent) {
   document.getElementById('game')?.remove();
+  document.getElementById('loading')?.remove();
   const ui = document.getElementById('ui')!;
   ui.innerHTML = `<div class="desktop-only panel" role="alert">
     <p class="info-name">Tylko na komputerze</p>
@@ -14,6 +15,48 @@ if (touchOnly || mobileAgent) {
     <p>Otwórz ten adres na komputerze.</p>
   </div>`;
 } else {
-  // najpierw gotowe modele, potem gra (budynki tworzą się od razu przy starcie)
-  void import('./render/assets').then((m) => m.preloadAssets()).then(() => import('./main'));
+  void load();
+}
+
+/**
+ * Wczytywanie z paskiem: silnik 3D, każda tekstura osobno (rysowane w przeglądarce, to trwa najdłużej),
+ * na końcu budowa świata. Między krokami oddajemy przeglądarce klatkę, żeby pasek się odświeżył.
+ */
+async function load(): Promise<void> {
+  const fill = document.getElementById('loading-fill');
+  const label = document.getElementById('loading-label');
+  const count = document.getElementById('loading-count');
+  const frame = (): Promise<void> => new Promise((ok) => requestAnimationFrame(() => setTimeout(ok, 0)));
+  let done = 0, total = 3;
+  const step = async (text: string): Promise<void> => {
+    if (label) label.textContent = text;
+    if (count) count.textContent = `${done} / ${total}`;
+    if (fill) fill.style.width = `${Math.round((done / total) * 100)}%`;
+    await frame();
+  };
+  await step('Wczytywanie silnika gry…');
+  const tex = await import('./render/textures');
+  const kinds = tex.KINDS();
+  total = 2 + kinds.length + 1;
+  done = 1;
+  const names: Record<string, string> = {
+    bricks: 'kamień', planks: 'deski', thatch: 'strzecha', plaster: 'tynk', tiles: 'dachówki', grass: 'trawa', leaves: 'liście',
+    needles: 'igliwie', bark: 'kora', soil: 'ziemia', window: 'okna', water: 'woda', ashlar: 'mur', cobble: 'bruk', rock: 'skała',
+  };
+  for (const kind of kinds) {
+    await step(`Tekstury: ${names[kind] ?? kind}`);
+    tex.pattern(kind);
+    tex.bump(kind);
+    done++;
+  }
+  await step('Modele…');
+  const assets = await import('./render/assets');
+  await assets.preloadAssets();
+  done++;
+  await step('Budowanie świata i osady…');
+  await import('./main');
+  done = total;
+  await step('Gotowe');
+  document.getElementById('loading')?.classList.add('done');
+  setTimeout(() => document.getElementById('loading')?.remove(), 600);
 }

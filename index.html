@@ -13,6 +13,13 @@
 <body>
 <canvas id="game" tabindex="0" aria-label="Mapa gry"></canvas>
 <div id="ui"></div>
+<div id="loading" role="status" aria-live="polite">
+  <div class="loading-card">
+    <p class="loading-title">Project‑1</p>
+    <div class="loading-bar"><span id="loading-fill"></span></div>
+    <p class="loading-line"><span id="loading-label">Wczytywanie gry…</span> <strong id="loading-count"></strong></p>
+  </div>
+</div>
 <script type="module" src="./src/boot.ts"></script>
 </body>
 </html>

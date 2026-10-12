@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.7.3 — ekran wczytywania (2026-10-12)
+
+- Zamiast pustego beżowego ekranu: ekran wczytywania z paskiem i licznikiem zasobów (silnik, każda tekstura po kolei, modele, budowa świata)
+
 ## 0.7.2 — nowa chata (2026-10-12)
 
 - Chata z szachulcem: podmurówka z polnych kamieni, bielone ściany z ręcznie ciosanymi belkami, wycięte otwory drzwi i okien z szybkami, parapetami i okiennicami, gruba nierówna strzecha z kalenicą, kamienny komin, skrzynka z kwiatami, beczka i stos drewna; każda chata trochę inna (strona komina i drewna, odcienie belek)
