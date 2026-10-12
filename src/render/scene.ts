@@ -233,6 +233,7 @@ export class GameRenderer {
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.95;
+    this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5);
@@ -460,6 +461,12 @@ export class GameRenderer {
     return { sx: r.left + ((v.x + 1) / 2) * r.width, sy: r.top + ((1 - v.y) / 2) * r.height, front: v.z < 1 };
   }
 
+  /** Liczniki karty graficznej z ostatniej klatki (do okna wydajności) */
+  get stats(): { calls: number; triangles: number; geometries: number; textures: number } {
+    const i = this.renderer.info;
+    return { calls: i.render.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures };
+  }
+
   lookAt(x: number, y: number, dist = 40): void {
     if (!this.state) return;
     this.cam.lookAt(x - this.state.map.width / 2, y - this.state.map.height / 2, dist);
@@ -672,6 +679,7 @@ export class GameRenderer {
       this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
       if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncGates(this.state, dt); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); this.syncWolves(this.state, this.view, alpha); this.syncCrows(this.state, this.view); this.syncForestEyes(this.state, this.view); }
+    this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
     this.composer.render();
   }
 

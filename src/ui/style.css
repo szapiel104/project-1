@@ -493,3 +493,6 @@ body.menu-open .scribe { display: none; }
 .confirm p { margin: 0; }
 .confirm-title { font-family: var(--display); font-weight: 800; font-size: 24px; color: var(--seal); }
 .confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }
+/* okno wydajności (F3) */
+.perf { position: fixed; top: 60px; right: 12px; z-index: 61; margin: 0; padding: 10px 14px; font: 600 14px/1.45 ui-monospace, Consolas, monospace;
+  color: #e8f5d8; background: rgba(10, 12, 8, .82); border: 1px solid var(--gold-dark); pointer-events: none; white-space: pre; }

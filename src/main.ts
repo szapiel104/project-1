@@ -670,15 +670,23 @@ function loop(now: number): void {
   let steps = 0;
   while (acc >= TICK_MS && steps < 6) {
     renderer.snapshot();
+    const ts = performance.now();
     step(game, pending);
+    perf.sim += performance.now() - ts; perf.ticks++;
     pending = [];
     acc -= TICK_MS;
     steps++;
     if (game.tick % 50 === 0) save();
   }
   if (steps === 6) acc = 0;
+  const tu = performance.now();
   if (steps) { refresh(); updateGhost(); }
+  perf.ui += performance.now() - tu;
+  const tr = performance.now();
   renderer.frame(elapsed / 1000, speed ? acc / TICK_MS : 1);
+  perf.render += performance.now() - tr;
+  perf.frames++; perf.worst = Math.max(perf.worst, elapsed);
+  if (now - perf.since > 1000) showPerf(now);
   updateHoverFoe();
   updateBars();
   if (steps) updateAlarm();
@@ -935,3 +943,30 @@ function confirmDemolish(id: number): void {
   box.querySelector<HTMLButtonElement>('[data-no]')!.focus();
 }
 const RULES_REFUND = 50;
+
+// --- wydajność: F3 pokazuje FPS, czasy symulacji i rysowania, liczniki sceny; window.__perf() zwraca to samo dla testów ---
+const perf = { frames: 0, sim: 0, ticks: 0, render: 0, ui: 0, worst: 0, since: performance.now(), last: {} as Record<string, number | string> };
+const perfBox = document.createElement('pre');
+perfBox.className = 'perf';
+perfBox.hidden = true;
+document.body.append(perfBox);
+window.addEventListener('keydown', (e) => { if (e.key === 'F3') { e.preventDefault(); perfBox.hidden = !perfBox.hidden; } });
+function showPerf(now: number): void {
+  const secs = (now - perf.since) / 1000;
+  const r = renderer.stats;
+  const mem = (performance as unknown as { memory?: { usedJSHeapSize: number } }).memory;
+  perf.last = {
+    fps: Math.round(perf.frames / secs),
+    'najgorsza klatka ms': Math.round(perf.worst),
+    'rysowanie ms/klatkę': +(perf.render / Math.max(1, perf.frames)).toFixed(2),
+    'symulacja ms/tick': +(perf.sim / Math.max(1, perf.ticks)).toFixed(2),
+    'ticki/s': Math.round(perf.ticks / secs),
+    'interfejs ms/klatkę': +(perf.ui / Math.max(1, perf.frames)).toFixed(2),
+    'wywołania rysowania': r.calls, 'trójkąty': r.triangles, 'geometrie': r.geometries, 'tekstury': r.textures,
+    mapa: `${game.map.width}×${game.map.height}`, budynki: game.buildings.length, chłopi: game.units.length, żołnierze: game.soldiers.length, wilki: game.wolves.length, ciała: game.corpses.length,
+    'pamięć MB': mem ? Math.round(mem.usedJSHeapSize / 1048576) : '—',
+  };
+  if (!perfBox.hidden) perfBox.textContent = Object.entries(perf.last).map(([k, v]) => `${k.padEnd(22)} ${v}`).join('\n');
+  perf.frames = 0; perf.sim = 0; perf.ticks = 0; perf.render = 0; perf.ui = 0; perf.worst = 0; perf.since = now;
+}
+(window as unknown as { __perf: () => Record<string, number | string> }).__perf = () => perf.last;
