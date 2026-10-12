@@ -541,7 +541,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(infoName, t(i.def.name));
       setText(infoDesc, t(`d.${i.def.id}`));
       infoWorker.hidden = !i.def.production;
-      setText(infoWorker, `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
+      // co produkuje, z czego i jak szybko (czas samej pracy, bez chodzenia po surowiec)
+      const pr = i.def.production;
+      if (pr) {
+        const secs = Math.round(((pr.workTicks + (pr.processTicks ?? 0)) / 10));
+        const from = pr.input ? ` ${t('hud.from')} ${pr.input.amount} × ${t(RESOURCE_DEFS[pr.input.res].name).toLowerCase()}` : '';
+        infoWorker.textContent = '';
+        infoWorker.append(`${t('hud.makes')}: ${pr.output.amount} × ${t(RESOURCE_DEFS[pr.output.res].name).toLowerCase()}${from}, ${t('hud.every')} ${secs} s`, document.createElement('br'), `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
+      }
       demolish.hidden = !i.own || !i.def.buildable;
       // koszary: szkolenie żołnierza z informacją, co kosztuje albo czego brakuje
       const barracks = i.own && i.def.id === 'barracks';
