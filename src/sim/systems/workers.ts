@@ -59,6 +59,10 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const w = g.map.width;
       return (t) => { const x = t % w, y = (t - x) / w; return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; };
     }
+    case Phase.ToRepair: {
+      const b = g.buildings.find((x) => x.id === u.target);
+      return b && b.door >= 0 ? (t) => t === b.door : null;
+    }
     case Phase.ToCorpse: {
       const c = g.corpses.find((x) => x.id === u.target);
       if (!c) return null;
@@ -159,6 +163,9 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.phase = u.job ? Phase.Returning : Phase.Idle;
       break;
     }
+    case Phase.ToRepair:
+      u.phase = Phase.Repairing;
+      break;
     case Phase.ToCorpse: {
       // grabarz bierze ciało na ramię i niesie je na cmentarz
       g.corpses = g.corpses.filter((x) => x.id !== u.target);
@@ -236,7 +243,7 @@ export function workerSystem(g: GameState): void {
     if (u.path.length) { move(g, u); continue; }
 
     const goal = goalFor(g, u, job, prod);
-    if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
+    if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
     const here = tileOf(g, u);
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal);

@@ -125,7 +125,7 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
   const def = BUILDINGS[type]!;
   const fp = footprint(def, rot);
   const door = findDoor(g, x, y, fp.w, fp.h, rot);
-  const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false };
+  const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false, hp: maxHp(type) };
   for (let ty = y; ty < y + fp.h; ty++)
     for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
   if (door >= 0) g.reserved[door]!++;
@@ -143,12 +143,19 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   return true;
 }
 
-export function demolish(g: GameState, player: number, id: number): boolean {
+/** Wytrzymałość budynku: twierdza dużo, reszta według wielkości działki */
+export function maxHp(type: number): number {
+  const def = BUILDINGS[type]!;
+  return def.hp ?? def.w * def.h * 40;
+}
+
+/** `destroyed` = zburzony przez wroga: bez zwrotu kosztu i bez sprawdzania, czy wolno go rozebrać */
+export function demolish(g: GameState, player: number, id: number, destroyed = false): boolean {
   const i = g.buildings.findIndex((b) => b.id === id);
   const b = g.buildings[i];
-  if (!b || b.owner !== player) return false;
+  if (!b || (!destroyed && b.owner !== player)) return false;
   const def = BUILDINGS[b.type]!;
-  if (!def.buildable) return false;
+  if (!def.buildable && !destroyed) return false;
   const fp = footprint(def, b.rot);
   for (let ty = b.y; ty < b.y + fp.h; ty++)
     for (let tx = b.x; tx < b.x + fp.w; tx++) g.occupancy[ty * g.map.width + tx] = 0;
@@ -162,12 +169,12 @@ export function demolish(g: GameState, player: number, id: number): boolean {
   }
   // Zwrot połowy kosztu nie wpada od razu: leży w gruzie i wraca do składu ładunek po ładunku
   const loads: [number, number][] = [];
-  for (const [k, v] of Object.entries(def.cost)) {
+  if (!destroyed) for (const [k, v] of Object.entries(def.cost)) {
     let left = Math.floor((v * RULES.refundPercent) / 100);
     while (left > 0) { const n = Math.min(left, RULES.rubbleLoad); loads.push([resIndex(k as ResourceId), n]); left -= n; }
   }
   if (!loads.length) loads.push([-1, 0]); // nawet bezwartościowy gruz trzeba raz wynieść
-  g.rubble.push({ id: g.nextId++, owner: player, type: b.type, x: b.x, y: b.y, w: fp.w, h: fp.h, loads, total: loads.length });
+  g.rubble.push({ id: g.nextId++, owner: b.owner, type: b.type, x: b.x, y: b.y, w: fp.w, h: fp.h, loads, total: loads.length });
   // na gruzie nie da się budować, ale można po nim przejść
   for (let ty = b.y; ty < b.y + fp.h; ty++)
     for (let tx = b.x; tx < b.x + fp.w; tx++) g.reserved[ty * g.map.width + tx]!++;

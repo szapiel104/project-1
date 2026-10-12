@@ -616,22 +616,24 @@ export class GameRenderer {
 
   /** Ruch myszy zajęty przez ramkę zaznaczenia: kliknięcie na końcu nie liczy się jako kliknięcie w mapę */
   markDragged(): void { this.cam.dragged = true; }
+  /** Wysokość punktu nad żołnierzem, dla którego liczymy położenie na ekranie */
+  barLift = 0.45;
   /** Czy ostatni ruch myszy obracał albo przesuwał kamerę */
   get dragged(): boolean { return this.cam.dragged; }
 
   /** Żołnierze gracza z położeniem na ekranie (piksele w oknie) */
-  soldiersOnScreen(player: number): { id: number; x: number; y: number }[] {
+  soldiersOnScreen(player: number): { id: number; x: number; y: number; owner: number; hp: number }[] {
     if (!this.state) return [];
-    const out: { id: number; x: number; y: number }[] = [];
+    const out: { id: number; x: number; y: number; owner: number; hp: number }[] = [];
     const r = this.canvas.getBoundingClientRect();
     const v = new THREE.Vector3();
     for (const s of this.state.soldiers) {
-      if (s.owner !== player) continue;
+      if (player >= 0 && s.owner !== player) continue;
       const p = this.soldierPos.get(s.id);
       if (!p) continue;
-      v.copy(p).setY(p.y + 0.45).project(this.cam.camera);
+      v.copy(p).setY(p.y + this.barLift).project(this.cam.camera);
       if (v.z > 1) continue;
-      out.push({ id: s.id, x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height });
+      out.push({ id: s.id, owner: s.owner, hp: s.hp, x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height });
     }
     return out;
   }

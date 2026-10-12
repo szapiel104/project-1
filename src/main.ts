@@ -11,7 +11,7 @@ import { deserialize, serialize, type SaveData } from './sim/save';
 import { TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
 import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
-import { canAfford, canPlace } from './sim/systems/placement';
+import { canAfford, canPlace, maxHp } from './sim/systems/placement';
 import { createHud } from './ui/hud';
 import { TEST } from './testmode';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
@@ -96,6 +96,7 @@ function applySettings(st: Settings): void {
 applySettings(loadSettings());
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
+  endShown = false;
   game = loaded ?? createGame(seedFromText(seedText), preset);
   currentPreset = preset;
   currentSeedText = seedText;
@@ -162,7 +163,7 @@ function select(id: number): void {
   selected = id;
   const b = game.buildings.find((x) => x.id === id);
   renderer.setSelection(b ? id : 0);
-  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain() } : null);
+  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type) } : null);
 }
 
 /** Lewy górny róg działki tak, żeby budynek był wyśrodkowany na wskazanym polu. */
@@ -254,7 +255,10 @@ window.addEventListener('keydown', (e) => {
 canvas.addEventListener('contextmenu', () => {
   if (wrecking) setWreck(false);
   else if (picked) pick(null);
-  else if (chosen.size && hoverTile && !renderer.dragged) {
+  else if (chosen.size && hoverFoe) {
+    pending.push({ type: 'attack', player: ME, ids: [...chosen], target: hoverFoe });
+    play('select');
+  } else if (chosen.size && hoverTile && !renderer.dragged) {
     pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y });
     renderer.orderMarker(hoverTile);
     play('rotate');
@@ -328,6 +332,67 @@ canvas.addEventListener('pointerup', (e) => {
   else if (chosen.size && !e.shiftKey) chooseSoldiers([], false);
 }, { capture: true });
 
+// ---- wróg pod kursorem: miecz zamiast strzałki, prawy przycisk = atak ----
+let hoverFoe = 0;
+let mouseX = -1, mouseY = -1;
+window.addEventListener('pointermove', (e) => { mouseX = e.clientX; mouseY = e.clientY; });
+function updateHoverFoe(): void {
+  hoverFoe = 0;
+  if (chosen.size && mouseX >= 0) {
+    let bd = 26 * 26;
+    for (const s of renderer.soldiersOnScreen(-1)) {
+      if (game.players[s.owner]?.team === game.players[ME]!.team) continue;
+      const d = (s.x - mouseX) ** 2 + (s.y - mouseY) ** 2;
+      if (d < bd) { bd = d; hoverFoe = s.id; }
+    }
+    if (!hoverFoe && hoverTile) {
+      const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
+      if (b && game.players[b.owner]?.team !== game.players[ME]!.team) hoverFoe = b.id;
+    }
+  }
+  canvas.classList.toggle('attack', hoverFoe !== 0);
+}
+
+// ---- paski zdrowia nad żołnierzami: ranni, zaznaczeni i wróg pod kursorem ----
+const barLayer = document.createElement('div');
+barLayer.className = 'hpbars';
+document.body.append(barLayer);
+const bars: HTMLElement[] = [];
+function updateBars(): void {
+  renderer.barLift = 0.95;
+  const list = renderer.soldiersOnScreen(-1);
+  renderer.barLift = 0.45;
+  let n = 0;
+  for (const s of list) {
+    const max = UNITS[game.soldiers.find((x) => x.id === s.id)?.kind ?? 0]!.hp;
+    if (s.hp >= max && !chosen.has(s.id) && s.id !== hoverFoe) continue;
+    let bar = bars[n];
+    if (!bar) { bar = document.createElement('div'); bar.className = 'hpbar'; bar.append(document.createElement('span')); barLayer.append(bar); bars.push(bar); }
+    bar.hidden = false;
+    bar.style.transform = `translate(${Math.round(s.x - 17)}px, ${Math.round(s.y - 4)}px)`;
+    bar.dataset.team = game.players[s.owner]?.team === game.players[ME]!.team ? 'own' : 'foe';
+    const fill = bar.firstChild as HTMLElement;
+    fill.style.width = `${Math.max(0, (s.hp / max) * 100)}%`;
+    fill.dataset.low = String(s.hp < max * 0.35);
+    n++;
+  }
+  for (let i = n; i < bars.length; i++) bars[i]!.hidden = true;
+}
+
+let endShown = false;
+function showEnd(win: boolean): void {
+  endShown = true;
+  const box = document.createElement('div');
+  box.className = 'end';
+  box.innerHTML = `<div class="panel end-panel"><p class="menu-title">${t(win ? 'end.win' : 'end.lose')}</p><p class="menu-sub">${t(win ? 'end.winText' : 'end.loseText')}</p><div class="menu-list"></div></div>`;
+  const list = box.querySelector('.menu-list')!;
+  const btn = (text: string, fn: () => void): void => { const b = document.createElement('button'); b.type = 'button'; b.className = 'menu-btn'; b.textContent = text; b.addEventListener('click', () => { box.remove(); fn(); }); list.append(b); };
+  btn(t('end.menu'), () => menu.open(true));
+  btn(t('end.watch'), () => {});
+  document.body.append(box);
+  play(win ? 'build' : 'collapse');
+}
+
 let warnedHungry = false;
 let warnedLeaving = false;
 
@@ -351,6 +416,10 @@ function refresh(): void {
   });
   hud.setHash(stateHash(game));
   if (chosen.size) showArmy();
+  // koniec gry: zburzona twierdza gracza albo wszystkich wrogów
+  const meP = game.players[ME]!;
+  const foesLeft = game.players.some((o) => o.team !== meP.team && !o.defeated);
+  if (!endShown && (meP.defeated || !foesLeft)) showEnd(!meP.defeated);
   if (selectedUnit) {
     const card = personCard(selectedUnit);
     if (card) hud.showPerson(card); else selectUnit(0); // odszedł z osady
@@ -358,7 +427,7 @@ function refresh(): void {
   if (selected) {
     const b = game.buildings.find((x) => x.id === selected);
     if (!b) select(0);
-    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain() });
+    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type) });
   }
 }
 
@@ -388,6 +457,8 @@ function loop(now: number): void {
   if (steps === 6) acc = 0;
   if (steps) { refresh(); updateGhost(); }
   renderer.frame(elapsed / 1000, speed ? acc / TICK_MS : 1);
+  updateHoverFoe();
+  updateBars();
   requestAnimationFrame(loop);
 }
 

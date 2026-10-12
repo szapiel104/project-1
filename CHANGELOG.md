@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.11.0 — oblężenie i koniec gry (2026-10-12)
+
+- Budynki mają wytrzymałość (twierdza 1500); widać ją w oknie budynku z paskiem
+- Żołnierze bez wroga w pobliżu biją najbliższy wrogi budynek; zburzona twierdza = gracz odpada; ekran Zwycięstwo / Porażka
+- Inżynier z cechu naprawia uszkodzone budynki
+- Z zaznaczonym wojskiem kursor nad wrogiem zmienia się w miecz, prawy przycisk = atak na tego żołnierza albo budynek
+- Paski zdrowia nad rannymi, zaznaczonymi i wskazanymi żołnierzami
+- Zapis w nowej wersji
+
 ## 0.10.0 — bot przeciwnik (2026-10-12)
 
 - Drugi zamek gra sam: buduje osadę według planu (drwale, sady, chaty, skład, warsztat włóczniarza, koszary, kamieniołom, spichlerz, cmentarz), pobiera podatek, szkoli włóczników

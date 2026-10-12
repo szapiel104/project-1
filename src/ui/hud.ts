@@ -43,7 +43,7 @@ export interface HudView {
   affordable: Set<string>;
 }
 
-export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean }
+export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -258,10 +258,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   trainBtn.hidden = true;
   trainBtn.addEventListener('click', () => events.onTrain(infoId));
   const trainNote = el('p', 'hint');
+  const hpLine = el('div', 'hp-line');
+  const hpBar = el('span', 'hp-bar');
+  const hpFill = el('span');
+  hpBar.append(hpFill);
+  const hpText = el('span');
+  hpLine.append(hpText, hpBar);
   const roster = el('div', 'roster');
   roster.hidden = true;
   infoActions.append(demolish, close);
-  info.append(infoName, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -506,6 +512,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       trainBtn.hidden = true;
       trainNote.hidden = true;
       roster.hidden = true;
+      hpLine.hidden = true;
     },
     showArmy(army) {
       info.hidden = army.length === 0;
@@ -514,6 +521,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(infoName, `${t('hud.soldiers')}: ${army.length}`);
       // portrety jak w klasycznych strategiach: hełm na tarczy w barwie drużyny i pasek zdrowia pod spodem
       roster.hidden = false;
+      hpLine.hidden = true;
       roster.replaceChildren(...army.slice(0, 24).map((u) => {
         const card = el('span', 'roster-card');
         card.title = u.name;
@@ -539,6 +547,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       infoId = i.id;
       roster.hidden = true;
       setText(infoName, t(i.def.name));
+      hpLine.hidden = i.hp === undefined;
+      if (i.hp !== undefined && i.maxHp) { setText(hpText, `${t('hud.hp')}: ${i.hp} / ${i.maxHp}`); hpFill.style.width = `${Math.max(0, (i.hp / i.maxHp) * 100)}%`; hpFill.dataset.low = String(i.hp < i.maxHp * 0.35); }
       setText(infoDesc, t(`d.${i.def.id}`));
       infoWorker.hidden = !i.def.production;
       // co produkuje, z czego i jak szybko (czas samej pracy, bez chodzenia po surowiec)

@@ -83,3 +83,26 @@ describe('walka', () => {
     expect(g.soldiers[0]!.hp).toBeLessThan(60);
   });
 });
+
+describe('oblężenie', () => {
+  it('żołnierz burzy wrogi budynek, a zburzona twierdza wyklucza gracza', () => {
+    const { g, id } = withBarracks();
+    step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
+    const enemyKeep = playerKeep(g, 1)!;
+    enemyKeep.hp = 30;
+    const s = g.soldiers[0]!;
+    s.px = (enemyKeep.x + 1) * 256 + 128; s.py = (enemyKeep.y + 4) * 256 + 128; s.path = []; s.goal = -1;
+    for (let i = 0; i < 400; i++) step(g, []);
+    expect(playerKeep(g, 1)).toBeUndefined();
+    expect(g.players[1]!.defeated).toBe(true);
+  });
+
+  it('inżynier naprawia uszkodzony budynek', () => {
+    const { g } = withBarracks();
+    step(g, [{ type: 'build', player: 0, building: 'engineers', ...spot(g, 'engineers') }]);
+    const keep = playerKeep(g, 0)!;
+    keep.hp = 1000;
+    for (let i = 0; i < 3000; i++) step(g, []);
+    expect(keep.hp).toBeGreaterThan(1000);
+  });
+});

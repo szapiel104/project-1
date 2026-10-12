@@ -3,7 +3,10 @@ import { type ResourceId, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
-import { FP, Phase, type Corpse, type GameState, type Soldier } from '../state';
+import { FP, Phase, type Building, type Corpse, type GameState, type Soldier } from '../state';
+import { BUILDINGS, footprint } from '../../data/buildings';
+import { demolish, maxHp } from './placement';
+import type { UnitDef } from '../../data/units';
 
 const BARRACKS = buildingIndex('barracks');
 const RETRY = 15;
@@ -57,6 +60,15 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   return true;
 }
 
+/** Rozkaz ataku: zaznaczeni idą na wskazanego wroga (żołnierza albo budynek). */
+export function orderAttack(g: GameState, player: number, ids: readonly number[], target: number): void {
+  const foeSoldier = g.soldiers.find((s) => s.id === target);
+  const foeBuilding = foeSoldier ? undefined : g.buildings.find((b) => b.id === target);
+  const owner = foeSoldier?.owner ?? foeBuilding?.owner;
+  if (owner === undefined || team(g, owner) === team(g, player)) return;
+  for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.target = target; s.goal = -1; s.path = []; s.wait = 0; }
+}
+
 /** Rozkaz marszu: zaznaczeni żołnierze idą w szyku na wskazane miejsce. */
 export function orderMove(g: GameState, player: number, ids: readonly number[], target: number): void {
   if (!Number.isInteger(target) || target < 0 || target >= g.map.tiles.length) return;
@@ -103,8 +115,10 @@ export function armySystem(g: GameState): void {
     const def = UNITS[s.kind]!;
     // walka: tylko gdy nie maszeruje na rozkaz
     if (s.goal < 0) {
+      // rozkaz ataku na budynek ma pierwszeństwo przed szukaniem żołnierzy
+      if (s.target && !byId.has(s.target) && g.buildings.some((b) => b.id === s.target) && siege(g, s, def, taken)) continue;
       let foe = s.target ? byId.get(s.target) : undefined;
-      if (!foe || foe.hp <= 0 || gap(s, foe) > (def.sight + 2) * FP) {
+      if (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP) {
         foe = undefined;
         let best = def.sight * FP + 1;
         for (const o of g.soldiers) {
@@ -132,6 +146,8 @@ export function armySystem(g: GameState): void {
         if (s.path.length) step(g, s);
         continue;
       }
+      // brak wrogich żołnierzy w pobliżu: bierze się za najbliższy wrogi budynek
+      if (siege(g, s, def, taken)) continue;
     }
     if (s.wait > 0) { s.wait--; continue; }
     if (s.path.length) { step(g, s); continue; }
@@ -157,6 +173,7 @@ export function armySystem(g: GameState): void {
     g.soldiers = g.soldiers.filter((s) => s.hp > 0);
   }
   graveSystem(g);
+  repairSystem(g);
 }
 
 const CEMETERY = buildingIndex('cemetery');
@@ -181,5 +198,77 @@ function graveSystem(g: GameState): void {
     best.taken = true;
     u.target = best.id;
     u.phase = Phase.ToCorpse;
+  }
+}
+
+/** Odległość pola od działki budynku (0 = na działce, 1 = tuż obok) */
+function rectGap(g: GameState, t: number, b: Building): number {
+  const w = g.map.width, x = t % w, y = (t - x) / w;
+  const fp = footprint(BUILDINGS[b.type]!, b.rot);
+  return Math.max(b.x - x, 0, x - (b.x + fp.w - 1), b.y - y, 0, y - (b.y + fp.h - 1));
+}
+
+/** Oblężenie: podchodzi pod najbliższy wrogi budynek i bije w niego. Zburzona twierdza = gracz odpada. */
+function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): boolean {
+  const here = tileOf(g, s);
+  let b = s.target ? g.buildings.find((x) => x.id === s.target) : undefined;
+  if (!b || team(g, b.owner) === team(g, s.owner)) {
+    b = undefined;
+    let best = def.sight + 1;
+    for (const o of g.buildings) {
+      if (team(g, o.owner) === team(g, s.owner) || BUILDINGS[o.type]!.road) continue;
+      const d = rectGap(g, here, o);
+      if (d < best) { best = d; b = o; }
+    }
+    s.target = b ? b.id : 0;
+  }
+  if (!b) return false;
+  if (rectGap(g, here, b) <= 1 && !s.path.length) {
+    if (s.cd === 0) {
+      b.hp -= def.attack;
+      s.cd = def.cooldown;
+      if (b.hp <= 0) {
+        const keep = BUILDINGS[b.type]!.id === 'keep';
+        const owner = g.players[b.owner];
+        demolish(g, b.owner, b.id, true);
+        s.target = 0;
+        if (keep && owner) owner.defeated = true;
+      }
+    }
+    return true;
+  }
+  if (!s.path.length || g.tick % 8 === s.id % 8) {
+    const target = b;
+    const path = findPath(g, here, (t) => rectGap(g, t, target) === 1 && (t === here || !taken.has(t)), 600);
+    s.path = path ?? [];
+    if (s.path.length) taken.add(s.path[s.path.length - 1]!);
+  }
+  if (s.path.length) step(g, s);
+  return true;
+}
+
+const ENGINEERS = buildingIndex('engineers');
+
+/** Inżynier z cechu naprawia uszkodzone budynki swojego gracza (najbliższy pierwszy). */
+function repairSystem(g: GameState): void {
+  if (g.tick % 10 !== 0) return;
+  for (const u of g.units) {
+    if (u.phase === Phase.Repairing) {
+      const b = g.buildings.find((x) => x.id === u.target);
+      if (!b || b.hp >= maxHp(b.type)) { u.target = 0; u.phase = Phase.Returning; continue; }
+      b.hp = Math.min(maxHp(b.type), b.hp + 15);
+    }
+  }
+  for (const guild of g.buildings) {
+    if (guild.type !== ENGINEERS || !guild.worker) continue;
+    const u = g.units.find((x) => x.id === guild.worker);
+    if (!u || u.phase !== Phase.Idle || u.path.length) continue;
+    let best: Building | undefined, bd = Infinity;
+    for (const b of g.buildings) {
+      if (b.owner !== guild.owner || b.hp >= maxHp(b.type) || b.door < 0) continue;
+      const d = Math.abs(b.x - guild.x) + Math.abs(b.y - guild.y);
+      if (d < bd) { bd = d; best = b; }
+    }
+    if (best) { u.target = best.id; u.phase = Phase.ToRepair; }
   }
 }

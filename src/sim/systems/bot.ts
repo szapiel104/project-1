@@ -39,7 +39,7 @@ function spot(g: GameState, player: number, type: number): { x: number; y: numbe
 export function botSystem(g: GameState): void {
   if (g.tick % THINK !== 0) return;
   for (const p of g.players) {
-    if (!p.bot || !playerKeep(g, p.id)) continue;
+    if (!p.bot || p.defeated || !playerKeep(g, p.id)) continue;
     // budowa: następny budynek z listy, którego jeszcze brakuje (rzadziej, bo szukanie miejsca kosztuje)
     if (g.tick % (THINK * 5) === 0) {
     const have = new Map<string, number>();
@@ -62,7 +62,7 @@ export function botSystem(g: GameState): void {
     if (g.tick >= FIRST_WAVE && (g.tick - FIRST_WAVE) % WAVE_EVERY < THINK) {
       const army = g.soldiers.filter((s) => s.owner === p.id);
       const wave = 4 + Math.floor((g.tick - FIRST_WAVE) / WAVE_EVERY) * 2;
-      const foe = g.players.filter((o) => o.team !== p.team).map((o) => playerKeep(g, o.id)).find((k) => k);
+      const foe = g.players.filter((o) => o.team !== p.team && !o.defeated).map((o) => playerKeep(g, o.id)).find((k) => k);
       if (foe && army.length >= Math.min(wave, 12) && foe.door >= 0) {
         const w = g.map.width;
         orderMove(g, p.id, army.map((s) => s.id), foe.door + 2 * w);

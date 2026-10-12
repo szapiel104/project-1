@@ -44,6 +44,8 @@ export interface BuildingDef {
   idleSlots?: number;
   /** Jak pokazać pracującego: 'inside' = odsłonięte wnętrze budynku, 'field' = chodzi po polu */
   workView?: 'inside' | 'field';
+  /** Wytrzymałość (domyślnie 40 na pole działki) */
+  hp?: number;
   /** Czy gracz może go postawić (twierdza powstaje sama) */
   buildable: boolean;
 }
@@ -53,7 +55,7 @@ export interface BuildingDef {
  * KOLEJNOŚĆ MA ZNACZENIE: indeks trafia do stanu gry i skrótu, nowe wpisy dopisujemy na końcu.
  */
 export const BUILDINGS: readonly BuildingDef[] = [
-  { id: 'keep', name: 'b.keep', w: 3, h: 3, cost: {}, housing: 8, buildable: false },
+  { id: 'keep', name: 'b.keep', w: 3, h: 3, cost: {}, housing: 8, hp: 1500, buildable: false },
   { id: 'house', category: 'settlement', name: 'b.house', w: 2, h: 2, cost: { wood: 20 }, housing: 8, buildable: true },
   { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 10 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
   { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 150 }, buildable: true },
