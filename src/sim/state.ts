@@ -115,6 +115,10 @@ export interface Soldier {
   /** Pole, na które ma dojść, albo -1 */
   goal: number;
   wait: number;
+  /** Id wroga, z którym walczy, albo 0 */
+  target: number;
+  /** Ticki do następnego ciosu */
+  cd: number;
 }
 
 export interface GameState {
@@ -249,6 +253,6 @@ export function stateHash(g: GameState): number {
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length);
     for (const t of u.path) add(t);
   }
-  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.path.length); for (const t of s.path) add(t); }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.path.length); for (const t of s.path) add(t); }
   return h >>> 0;
 }

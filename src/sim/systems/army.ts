@@ -52,7 +52,7 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   // nowi żołnierze ustawiają się w szyku przed koszarami
   const here = g.soldiers.filter((s) => s.owner === player).length;
   const spots = formation(g, b.door, here % 25 + 1);
-  const s: Soldier = { id: g.nextId++, owner: player, kind, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: def.hp, goal: spots[spots.length - 1] ?? -1, wait: 0 };
+  const s: Soldier = { id: g.nextId++, owner: player, kind, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: def.hp, goal: spots[spots.length - 1] ?? -1, wait: 0, target: 0, cd: 0 };
   g.soldiers.push(s);
   return true;
 }
@@ -62,7 +62,7 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
   if (!Number.isInteger(target) || target < 0 || target >= g.map.tiles.length) return;
   const chosen = g.soldiers.filter((s) => s.owner === player && ids.includes(s.id)).slice(0, MAX_ORDER);
   const spots = formation(g, target, chosen.length);
-  chosen.forEach((s, i) => { s.goal = spots[i] ?? -1; s.path = []; s.wait = 0; });
+  chosen.forEach((s, i) => { s.goal = spots[i] ?? -1; s.path = []; s.wait = 0; s.target = 0; });
 }
 
 function tileOf(g: GameState, s: Soldier): number {
@@ -83,9 +83,50 @@ function step(g: GameState, s: Soldier): void {
   if (s.px === tx && s.py === ty) s.path.shift();
 }
 
-/** Ruch wojska: każdy żołnierz idzie do swojego pola w szyku. */
+const team = (g: GameState, player: number): number => g.players[player]?.team ?? player;
+/** Odległość w stałym przecinku (metryka szachowa, wystarcza do walki wręcz) */
+const gap = (a: Soldier, b: Soldier): number => Math.max(Math.abs(a.px - b.px), Math.abs(a.py - b.py));
+
+/**
+ * Ruch i walka. Żołnierz z rozkazem marszu idzie, nie oglądając się na wroga.
+ * Stojący wypatruje najbliższego wroga w zasięgu wzroku, podchodzi i bije co kilka ticków. Martwi znikają.
+ */
 export function armySystem(g: GameState): void {
+  const byId = new Map<number, Soldier>();
+  for (const s of g.soldiers) byId.set(s.id, s);
   for (const s of g.soldiers) {
+    if (s.hp <= 0) continue;
+    if (s.cd > 0) s.cd--;
+    const def = UNITS[s.kind]!;
+    // walka: tylko gdy nie maszeruje na rozkaz
+    if (s.goal < 0) {
+      let foe = s.target ? byId.get(s.target) : undefined;
+      if (!foe || foe.hp <= 0 || gap(s, foe) > (def.sight + 2) * FP) {
+        foe = undefined;
+        let best = def.sight * FP + 1;
+        for (const o of g.soldiers) {
+          if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner)) continue;
+          const d = gap(s, o);
+          if (d < best) { best = d; foe = o; }
+        }
+        s.target = foe ? foe.id : 0;
+      }
+      if (foe) {
+        if (gap(s, foe) <= FP + FP / 4) {
+          s.path = [];
+          if (s.cd === 0) { foe.hp -= def.attack; s.cd = def.cooldown; }
+          continue;
+        }
+        // podchodzi do wroga; drogę odświeża co kilka ticków, bo wróg się rusza
+        if (!s.path.length || g.tick % 8 === s.id % 8) {
+          const ft = tileOf(g, foe);
+          const path = findPath(g, tileOf(g, s), (t) => t === ft, 600);
+          s.path = path ?? [];
+        }
+        if (s.path.length) step(g, s);
+        continue;
+      }
+    }
     if (s.wait > 0) { s.wait--; continue; }
     if (s.path.length) { step(g, s); continue; }
     if (s.goal < 0) continue;
@@ -96,5 +137,6 @@ export function armySystem(g: GameState): void {
     if (path && path.length) s.path = path;
     else { s.goal = -1; s.wait = RETRY; }
   }
+  // polegli schodzą z pola bitwy
+  if (g.soldiers.some((s) => s.hp <= 0)) g.soldiers = g.soldiers.filter((s) => s.hp > 0);
 }
-

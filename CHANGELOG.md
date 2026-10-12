@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.9.1 — walka (2026-10-12)
+
+- Żołnierze mają zdrowie i atak: stojący wypatrują wroga w promieniu 6 pól, podchodzą i biją; polegli znikają
+- Marsz na rozkaz ma pierwszeństwo przed walką (można wycofać oddział)
+- Złota fala w miejscu rozkazu, migające kropki celu, portrety zaznaczonych z paskami zdrowia
+
 ## 0.9.0 — pierwsze wojsko (2026-10-12)
 
 - Nowa kategoria Wojsko: warsztat włóczniarza (z drewna robi włócznie do składu) i koszary (wolny chłop + włócznia + 8 złota = włócznik)

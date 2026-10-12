@@ -653,7 +653,10 @@ export class GameRenderer {
       st.phase += Math.min(0.5, Math.hypot(fx - st.x, fy - st.y)) * 7.5;
       st.x = fx; st.y = fy;
       const walking = s.path.length > 0 && !this.calm;
-      const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
+      // w walce zwraca się do wroga i wyprowadza pchnięcie zaraz po ciosie
+      const foe = s.target ? g.soldiers.find((o) => o.id === s.target) : undefined;
+      if (foe && !walking) { heading = Math.atan2((foe.px - s.px) / FP, (foe.py - s.py) / FP); this.facing.set(s.id, heading); }
+      const swing = walking ? Math.sin(st.phase) * 0.5 : foe && s.cd > 8 ? 0.7 : 0;
       const y = view.heightAt(fx, fy);
       t.position.set(fx - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), fy - height / 2);
       t.rotation.set(0, heading, 0);

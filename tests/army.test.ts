@@ -65,3 +65,18 @@ describe('wojsko', () => {
     expect(stateHash(back)).toBe(stateHash(g));
   });
 });
+
+describe('walka', () => {
+  it('wrogowie stojący blisko walczą, aż jeden padnie', () => {
+    const { g, id } = withBarracks();
+    step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
+    for (let i = 0; i < 200; i++) step(g, []);
+    const mine = g.soldiers[0]!;
+    // wróg dostawiony dwa pola obok
+    g.soldiers.push({ ...mine, id: g.nextId++, owner: 1, px: mine.px + 2 * 256, path: [], goal: -1, target: 0, cd: 0, hp: 30 });
+    for (let i = 0; i < 400; i++) step(g, []);
+    expect(g.soldiers.length).toBe(1);
+    expect(g.soldiers[0]!.owner).toBe(0);
+    expect(g.soldiers[0]!.hp).toBeLessThan(60);
+  });
+});
