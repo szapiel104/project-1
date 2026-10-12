@@ -462,3 +462,9 @@ body.menu-open .scribe { display: none; }
 .status .meter { width: 64px; }
 .status .delta { font-size: 15px; }
 .status .dial svg { width: 34px; height: 34px; }
+.report { right: auto; }
+.report::after { content: ''; position: absolute; left: 50%; bottom: -12px; margin-left: -10px; border: 10px solid transparent; border-top-color: var(--wood-edge); border-bottom: 0; }
+.report-x { position: absolute; top: 6px; right: 6px; width: 30px; height: 30px; min-height: 0; padding: 0; display: grid; place-items: center; font-size: 22px; line-height: 1;
+  color: #fbe7b0; background: linear-gradient(#a8281f, #6e1711); border: 2px solid #3a0c08; box-shadow: 0 0 0 1px var(--gold-dark); cursor: pointer; }
+.report-x:hover { background: linear-gradient(#c23228, #8c1f18); }
+.report-x:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }

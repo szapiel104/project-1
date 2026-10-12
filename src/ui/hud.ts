@@ -18,7 +18,7 @@ export interface HudEvents {
   onVolume(v: number): void;
   onMute(): void;
   onMenu(): void;
-  onTrain(building: number, count: number): void;
+  onTrain(building: number, count: number, unit?: string): void;
   onGate(building: number, open: boolean): void;
 }
 
@@ -49,7 +49,8 @@ export interface HudView {
   affordable: Set<string>;
 }
 
-export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; recruit?: { spears: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number } }
+export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; recruit?: RecruitUnit[] }
+export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -96,6 +97,7 @@ const ICONS: Record<string, string> = {
   bread: '<path d="M2.5 13c0-5 3-7 7.5-7s7.5 2 7.5 7z" fill="#c9843d" stroke="#2a1c10"/><path d="M7 8.500l1.5 2M10.5 8l1.5 2M14 9l1 1.5" stroke="#7a4a1c"/>',
   apples: '<path d="M10 7c-4-2-7 1-6 5 1 4 4 5 6 4 2 1 5 0 6-4 1-4-2-7-6-5z" fill="#d0281f" stroke="#2a1c10"/><path d="M10 7c0-2 1-3 2-4" stroke="#2a1c10" fill="none"/><path d="M12 4c2-1 3 0 3 1-1 1-2 1-3-1z" fill="#5c9a3c" stroke="#2a1c10" stroke-width=".7"/>',
   fish: '<path d="M2 10c3-5 9-5 12 0-3 5-9 5-12 0z" fill="#9cc3d6" stroke="#2a1c10"/><path d="M14 10l4-3v6z" fill="#7aa6bd" stroke="#2a1c10"/><circle cx="5.5" cy="9" r=".9" fill="#2a1c10"/><path d="M8 7.500c1 1.500 1 3.500 0 5" stroke="#4f7f96" fill="none"/>',
+  bow: '<path d="M6 2c8 3 8 13 0 16" fill="none" stroke="#8a5a2b" stroke-width="2"/><path d="M6 2v16" stroke="#e8e0c8" stroke-width="1"/><path d="M4 10h12l-2-2m2 2-2 2" stroke="#2a1c10" fill="none"/>',
   spear: '<path d="M3 17L15 5" stroke="#8a5a2b" stroke-width="2"/><path d="M14 3l4-1-1 4-3 1z" fill="#b9bec6" stroke="#2a1c10"/>',
   crown: '<path d="M3 15l1-9 4 4 2-6 2 6 4-4 1 9z" fill="#e9c145" stroke="#2a1c10"/><rect x="3" y="15" width="14" height="2.5" fill="#c9a23a" stroke="#2a1c10"/>',
   store: '<rect x="3" y="6" width="14" height="10" fill="#a8743a" stroke="#2a1c10"/><path d="M3 6l2-3h10l2 3M3 11h14M10 6v10" stroke="#2a1c10" fill="none"/>',
@@ -181,7 +183,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     report.hidden = false;
     const rows = reportKind === 'popularity' ? lastReport.popularity : reportKind === 'army' ? lastReport.army : lastReport.people;
     const sum = reportKind === 'popularity' ? rows.reduce((n, r) => n + r.value, 0) : 0;
-    report.innerHTML = `<p class="report-title">${reportKind === 'popularity' ? 'Popularność — co miesiąc' : reportKind === 'army' ? 'Wojsko' : 'Mieszkańcy'}</p>`;
+    report.innerHTML = `<button type="button" class="report-x" aria-label="Zamknij">×</button><p class="report-title">${reportKind === 'popularity' ? 'Popularność — co miesiąc' : reportKind === 'army' ? 'Wojsko' : 'Mieszkańcy'}</p>`;
     const list = el('dl', 'report-list');
     for (const r of rows) {
       const dt = el('dt', '', r.label);
@@ -191,6 +193,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     }
     if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', 'Razem'), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
     report.append(list);
+    report.querySelector('.report-x')?.addEventListener('click', () => { reportKind = null; drawReport(); });
+    // okienko wyskakuje tuż nad przyciskiem, który je otworzył
+    const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : popBox;
+    const r = anchor.getBoundingClientRect();
+    report.style.bottom = `${window.innerHeight - r.top + 10}px`;
+    report.style.left = `${Math.max(8, Math.min(window.innerWidth - 360, r.left + r.width / 2 - 170))}px`;
+    report.style.right = 'auto';
     if (reportKind === 'popularity') report.append(el('p', 'report-hint', 'W górę: większe racje, niższe podatki albo rozdawanie złota. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.'));
   };
   const toggleReport = (k: 'popularity' | 'people' | 'army'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
@@ -308,6 +317,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // koszary: karta jednostki z portretem, co jest potrzebne, ile mamy i ile można wyszkolić
   const recruit = el('div', 'recruit');
   recruit.hidden = true;
+  // wybór jednostki: zakładki nad kartą
+  const rTabs = el('div', 'recruit-tabs');
+  let rUnit = 'spearman';
+  let lastRecruit: RecruitUnit[] = [];
   const rTop = el('div', 'recruit-top');
   const rPortrait = el('span', 'roster-card big');
   rPortrait.innerHTML = PORTRAIT;
@@ -316,9 +329,21 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const rNeeds = el('div', 'recruit-needs');
   const rMax = el('p', 'recruit-max');
   const rBtns = el('div', 'actions');
-  const rb = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n === 0 ? 999 : n)); rBtns.append(b); return b; };
+  const rb = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n === 0 ? 999 : n, rUnit)); rBtns.append(b); return b; };
   const r1 = rb(1, t('hud.train1')), r5 = rb(5, t('hud.train5')), rAll = rb(0, t('hud.trainAll'));
-  recruit.append(rTop, rNeeds, rMax, rBtns);
+  recruit.append(rTabs, rTop, rNeeds, rMax, rBtns);
+  const drawRecruit = (): void => {
+    const list = lastRecruit;
+    rTabs.replaceChildren(...list.map((u) => { const b = el('button', 'recruit-tab', u.name); b.type = 'button'; b.setAttribute('aria-pressed', String(u.id === rUnit)); b.addEventListener('click', () => { rUnit = u.id; drawRecruit(); }); return b; }));
+    const r = list.find((u) => u.id === rUnit) ?? list[0];
+    if (!r) return;
+    rName.innerHTML = `<strong>${r.name}</strong><span>${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · zasięg ${r.range} (z wieży ${r.range + 3})` : ''}</span>`;
+    const row = (icon: string, label: string, have: number, need: number): string => `<div class="need${have < need ? ' short' : ''}"><span class="ico"><svg viewBox="0 0 20 20" width="20" height="20">${ICONS[icon] ?? ''}</svg></span><span>${label}</span><strong>${have}</strong><em>/ ${need}</em></div>`;
+    rNeeds.innerHTML = row(r.weapon, t(`res.${r.weapon}`), r.have, 1) + row('gold', t('res.gold'), r.gold, r.cost) + row('idle', t('hud.idleFree'), r.idle, 1);
+    setText(rMax, `${t('hud.canTrain')}: ${r.max}`);
+    r1.disabled = r.max < 1; r5.disabled = r.max < 5; rAll.disabled = r.max < 1;
+    rAll.textContent = `${t('hud.trainAll')} (${r.max})`;
+  };
   const hpLine = el('div', 'hp-line');
   const hpBar = el('span', 'hp-bar');
   const hpFill = el('span');
@@ -652,13 +677,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       trainNote.hidden = true;
       recruit.hidden = !(i.own && i.recruit);
       if (i.own && i.recruit) {
-        const r = i.recruit;
-        rName.innerHTML = `<strong>${t('u.spearman')}</strong><span>${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}</span>`;
-        const row = (icon: string, label: string, have: number, need: number): string => `<div class="need${have < need ? ' short' : ''}"><span class="ico"><svg viewBox="0 0 20 20" width="20" height="20">${ICONS[icon] ?? ''}</svg></span><span>${label}</span><strong>${have}</strong><em>/ ${need}</em></div>`;
-        rNeeds.innerHTML = row('spear', t('res.spear'), r.spears, 1) + row('gold', t('res.gold'), r.gold, r.cost) + row('idle', t('hud.idleFree'), r.idle, 1);
-        setText(rMax, `${t('hud.canTrain')}: ${r.max}`);
-        r1.disabled = r.max < 1; r5.disabled = r.max < 5; rAll.disabled = r.max < 1;
-        rAll.textContent = `${t('hud.trainAll')} (${r.max})`;
+        lastRecruit = i.recruit;
+        drawRecruit();
       }
     },
     stepSpeed,

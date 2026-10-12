@@ -12,7 +12,7 @@ import { TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population
 import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace, maxHp } from './sim/systems/placement';
-import { createHud, type HudView } from './ui/hud';
+import { createHud, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
@@ -80,7 +80,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onMute: () => hud.setMuted(toggleMute()),
   onMenu: () => menu.open(true),
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
-  onTrain: (id, n) => { const k = Math.min(n, recruitInfo().max); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit: 'spearman' }); if (k) play('build'); },
+  onTrain: (id, n, unit = 'spearman') => { const k = Math.min(n, recruitInfo().find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
 }, TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
@@ -380,13 +380,15 @@ selBox.hidden = true;
 document.body.append(selBox);
 let boxStart: { x: number; y: number } | null = null;
 
-function recruitInfo(): { spears: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number } {
+function recruitInfo(): RecruitUnit[] {
   const p = game.players[ME]!;
-  const def = UNITS[0]!;
-  const spears = p.res[resIndex('spear')]!, gold = p.res[resIndex('gold')]!;
+  const gold = p.res[resIndex('gold')]!;
   const idle = game.units.filter((u) => u.owner === ME && u.job === 0).length;
-  const cost = def.cost.gold ?? 0;
-  return { spears, gold, idle, cost, hp: def.hp, attack: def.attack, max: Math.max(0, Math.min(spears, cost ? Math.floor(gold / cost) : 999, idle)) };
+  return UNITS.map((def) => {
+    const have = p.res[resIndex(def.weapon)]!;
+    const cost = def.cost.gold ?? 0;
+    return { id: def.id, name: t(def.name), weapon: def.weapon, have, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, max: Math.max(0, Math.min(have, cost ? Math.floor(gold / cost) : 999, idle)) };
+  });
 }
 
 function canTrain(): boolean {
