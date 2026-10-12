@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.6.1 — deski na ramieniu (2026-10-12)
+
+- Drwal niesie wiązkę cienkich desek z przewiązkami i usłojeniem zamiast jednego klocka
+
 ## 0.6.0 — interfejs na dole (2026-10-12)
 
 - Cały interfejs na dole ekranu, jak w grach miejskich: belka z zakładkami Dwór/Mapa/Sterowanie, kategoriami budowy z obrazkami, tempem, podatkami, racjami i wyburzaniem, a pod nią pas stanu z zegarem, surowcami i osadą

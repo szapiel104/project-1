@@ -12,6 +12,7 @@ import { proceduralModels, type ModelFactory } from './models';
 import { Figures } from './peasants';
 import { createLoads, tint } from './loads';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
+import { pattern } from './textures';
 
 export interface TileRef { x: number; y: number }
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number }
@@ -170,8 +171,17 @@ export class GameRenderer {
       tint(new THREE.IcosahedronGeometry(0.15, 0).translate(-0.17, 0.18, -0.98), 0x3c7a3a),
     ]);
     this.logs = new THREE.InstancedMesh(log, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }), MAX_UNITS);
-    const plank = new THREE.BoxGeometry(0.2, 0.1, 0.6); plank.translate(0.14, 0.53, 0);
-    this.planks = new THREE.InstancedMesh(plank, new THREE.MeshLambertMaterial({ color: 0xc9a26b, flatShading: true }), MAX_UNITS);
+    // wiązka desek na ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami
+    const boards: THREE.BufferGeometry[] = [];
+    [[-0.045, 0, 0.02, 0xd2ab74], [0.045, 0, -0.03, 0xc49a63], [0, 0.03, 0.04, 0xdcb886], [-0.045, 0.06, -0.02, 0xcca26c], [0.045, 0.06, 0.01, 0xd8b07a]].forEach(([x, y, z, c]) => {
+      const b = new THREE.BoxGeometry(0.085, 0.024, 0.66); b.translate(x!, y!, z!); boards.push(tint(b, c!));
+    });
+    for (const z of [-0.2, 0.2]) { const tie = new THREE.BoxGeometry(0.2, 0.1, 0.025); tie.translate(0, 0.03, z); boards.push(tint(tie, 0x8a6a3a)); }
+    const plank = mergeGeometries(boards.map((b) => (b.index ? b.toNonIndexed() : b)))!;
+    plank.translate(0.14, 0.53, 0);
+    const plankMap = pattern('planks')?.clone() ?? null;
+    if (plankMap) { plankMap.repeat.set(0.25, 1); plankMap.needsUpdate = true; }
+    this.planks = new THREE.InstancedMesh(plank, new THREE.MeshStandardMaterial({ vertexColors: true, map: plankMap, roughness: 0.9 }), MAX_UNITS);
     for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
 
     this.cam = new StrategyCamera(canvas);
