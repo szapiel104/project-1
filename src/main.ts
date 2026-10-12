@@ -206,7 +206,8 @@ renderer.onHover = (tile) => { hoverTile = tile; if (!touchTile) updateGhost(); 
 // malowanie drogi: każde pole pod kursorem przy wciśniętym przycisku dostaje nawierzchnię
 renderer.onPaint = (tile) => {
   if (wrecking) {
-    if (game.roads[tile.y * game.map.width + tile.x] && !pending.some((c) => c.type === 'unroad' && c.x === tile.x && c.y === tile.y)) pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y });
+    const kind = game.roads[tile.y * game.map.width + tile.x];
+    if (kind && !pending.some((c) => c.type === 'unroad' && c.x === tile.x && c.y === tile.y)) { pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y }); roadBroken(tile, kind); }
     return;
   }
   if (!picked || plan.state !== 'drag') return;
@@ -214,6 +215,14 @@ renderer.onPaint = (tile) => {
   plan.end = tile;
   showPlan();
 };
+
+/** Efekt i dźwięk rozbijanej drogi; dźwięk nie częściej niż co 120 ms, żeby przeciąganie nie trzeszczało */
+let lastBreak = 0;
+function roadBroken(tile: TileRef, kind: number): void {
+  renderer.roadDust(tile.x, tile.y, kind === 2);
+  const now = performance.now();
+  if (now - lastBreak > 120) { play('demolish'); lastBreak = now; }
+}
 
 // --- planowanie drogi: przeciągnij, zobacz podgląd i koszt; lewy przycisk buduje, prawy anuluje ---
 const plan = { state: 'none' as 'none' | 'drag' | 'wait' | 'done', start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, tiles: [] as { x: number; y: number; ok: boolean }[] };
@@ -290,7 +299,7 @@ renderer.onClick = (tile, touch) => {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
     const b = game.buildings.find((x) => x.id === id);
     if (b && b.owner === ME && BUILDINGS[b.type]!.buildable) { pending.push({ type: 'demolish', player: ME, id }); play('demolish'); }
-    else if (game.roads[tile.y * game.map.width + tile.x]) pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y });
+    else if (game.roads[tile.y * game.map.width + tile.x]) { roadBroken(tile, game.roads[tile.y * game.map.width + tile.x]!); pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y }); }
     return;
   }
   if (!picked) {

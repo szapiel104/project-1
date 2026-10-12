@@ -461,9 +461,60 @@ export class GameRenderer {
   /** Koniec ujęcia z menu: wraca zwykły widok strategiczny */
   endOrbit(): void { this.cam.cinematic(false); }
 
+  private puffs: { group: THREE.Group; age: number; bits: { m: THREE.Mesh; v: THREE.Vector3 }[] }[] = [];
+  private static puffGeo = new THREE.IcosahedronGeometry(0.16, 1);
+  private static chipGeo = new THREE.DodecahedronGeometry(0.05, 0);
+  /** Rozbita droga: kłąb kurzu i odpryski kamieni lub grudki ziemi rozlatują się i opadają */
+  roadDust(x: number, y: number, stone: boolean): void {
+    const g = this.state;
+    if (!g || !this.view) return;
+    const { width, height } = g.map;
+    const group = new THREE.Group();
+    group.position.set(x + 0.5 - width / 2, Math.max(this.view.heightAt(x + 0.5, y + 0.5), 0) + 0.05, y + 0.5 - height / 2);
+    const bits: { m: THREE.Mesh; v: THREE.Vector3 }[] = [];
+    for (let i = 0; i < 7; i++) {
+      const m = new THREE.Mesh(GameRenderer.puffGeo, new THREE.MeshStandardMaterial({ color: stone ? 0xbdb3a0 : 0xa08660, transparent: true, opacity: 0.7, depthWrite: false, roughness: 1 }));
+      const a = (i / 7) * Math.PI * 2;
+      m.position.set(Math.cos(a) * 0.15, 0.05, Math.sin(a) * 0.15);
+      bits.push({ m, v: new THREE.Vector3(Math.cos(a) * 0.5, 0.5 + (i % 3) * 0.15, Math.sin(a) * 0.5) });
+      group.add(m);
+    }
+    const chipMat = new THREE.MeshStandardMaterial({ color: stone ? 0x9a9182 : 0x6b5236, roughness: 0.9 });
+    for (let i = 0; i < 8; i++) {
+      const m = new THREE.Mesh(GameRenderer.chipGeo, chipMat);
+      const a = i * 2.4;
+      bits.push({ m, v: new THREE.Vector3(Math.cos(a) * (0.6 + (i % 3) * 0.3), 1.6 + (i % 4) * 0.35, Math.sin(a) * (0.6 + (i % 3) * 0.3)) });
+      group.add(m);
+    }
+    this.scene.add(group);
+    this.puffs.push({ group, age: 0, bits });
+  }
+
+  private updatePuffs(dt: number): void {
+    for (let i = this.puffs.length - 1; i >= 0; i--) {
+      const p = this.puffs[i]!;
+      p.age += dt;
+      for (const b of p.bits) {
+        const chip = b.m.geometry === GameRenderer.chipGeo;
+        if (chip) { b.v.y -= 6 * dt; b.m.position.addScaledVector(b.v, dt); if (b.m.position.y < 0) { b.m.position.y = 0; b.v.set(0, 0, 0); } b.m.rotation.x += dt * 8; }
+        else {
+          b.m.position.addScaledVector(b.v, dt); b.v.multiplyScalar(1 - dt * 2.5);
+          b.m.scale.setScalar(1 + p.age * 3);
+          (b.m.material as THREE.MeshStandardMaterial).opacity = Math.max(0, 0.7 * (1 - p.age / 1.2));
+        }
+      }
+      if (p.age > 1.4) {
+        this.scene.remove(p.group);
+        for (const b of p.bits) if (b.m.geometry !== GameRenderer.chipGeo || b === p.bits[p.bits.length - 1]) (b.m.material as THREE.Material).dispose();
+        this.puffs.splice(i, 1);
+      }
+    }
+  }
+
   frame(dt: number, alpha: number): void {
     this.cam.update(dt);
     this.time += dt;
+    this.updatePuffs(dt);
     if (this.state) this.setDaylight(this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     this.aimSun();
     if (this.state && this.view) {
