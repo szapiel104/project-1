@@ -193,7 +193,6 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     }
     if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', 'Razem'), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
     report.append(list);
-    report.querySelector('.report-x')?.addEventListener('click', () => { reportKind = null; drawReport(); });
     // okienko wyskakuje tuż nad przyciskiem, który je otworzył
     const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : popBox;
     const r = anchor.getBoundingClientRect();
@@ -210,6 +209,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     box.addEventListener('click', () => toggleReport(k));
     box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleReport(k); } });
   }
+  // zamykanie przy wciśnięciu (pointerdown): zawartość odświeża się co chwilę, więc zwykły click potrafił się zgubić
+  report.addEventListener('pointerdown', (e) => { if ((e.target as HTMLElement).closest('.report-x')) { e.preventDefault(); reportKind = null; drawReport(); } });
+  report.addEventListener('keydown', (e) => { if (e.key === 'Escape' || ((e.key === 'Enter' || e.key === ' ') && (e.target as HTMLElement).closest('.report-x'))) { reportKind = null; drawReport(); } });
   document.body.append(report);
   const stockVal = el('strong');
   const stockBox = el('div');
