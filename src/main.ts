@@ -617,6 +617,8 @@ let endShown = false;
 function showEnd(win: boolean): void {
   endShown = true;
   speed = 0;
+  // mecz przez sieć się skończył: zamykamy kanał i pokój, żeby nie dało się do niego wrócić
+  endOnline();
   const p = game.players[ME]!;
   const st = p.stats;
   const mins = Math.floor(game.tick / TICKS_PER_SECOND / 60);
@@ -730,7 +732,8 @@ function loop(now: number): void {
   if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
   music(renderer.weather.night, alerts.length > 0 || alarmComing, menu.isOpen());
   // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
-  if (menu.isOpen()) {
+  // w meczu przez sieć menu nie zatrzymuje czasu — inni gracze grają dalej
+  if (menu.isOpen() && !net) {
     if (titleScreen) renderer.orbit(elapsed / 1000);
     renderer.frame(elapsed / 1000, 1);
     requestAnimationFrame(loop);
@@ -766,7 +769,7 @@ function loop(now: number): void {
     if (net.left.length > netNotes.left) {
       const who = net.left.slice(netNotes.left).map((i) => { const x = netGame?.slots[i]; return x?.kind === 'human' ? x.nick : `gracz ${i + 1}`; });
       netNotes.left = net.left.length;
-      hud.toast(`${who.join(', ')} ${who.length > 1 ? 'wyszli' : 'wyszedł'} z meczu.`);
+      hud.toast(`${who.join(', ')} ${who.length > 1 ? 'wyszli' : 'wyszedł'} z meczu — to oznacza poddanie się.`);
     }
   }
   const tu = performance.now();

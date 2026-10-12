@@ -57,8 +57,27 @@ describe('lockstep', () => {
     const c = new Lockstep(link() as never, 2, [0, 1, 2]);
     for (let t = 0; t < 3; t++) for (const x of [a, b, c]) { expect(x.canRun(t)).toBe(true); x.beginTurn(t, [], 0); }
     c.close(); // c wysłał polecenia do tury 4
-    for (const t of [3, 4]) for (const x of [a, b]) { expect(x.canRun(t)).toBe(true); x.beginTurn(t, [], 0); }
+    for (const t of [3, 4]) for (const x of [a, b]) { expect(x.canRun(t)).toBe(true); expect(x.beginTurn(t, [], 0)).toEqual([]); }
     expect(a.canRun(5)).toBe(true);
+    // w turze 5 obaj dostają kapitulację gracza 2
+    expect(a.beginTurn(5, [], 0)).toEqual([{ type: 'surrender', player: 2 }]);
+    expect(b.beginTurn(5, [], 0)).toEqual([{ type: 'surrender', player: 2 }]);
     expect(a.left).toEqual([2]);
+  });
+});
+
+describe('wyjście z meczu', () => {
+  it('1 na 1: kto wyjdzie, przegrywa', () => {
+    const g = createGame(7, '1v1', 2, false, [0, 1]);
+    step(g, [{ type: 'surrender', player: 1 }]);
+    expect(g.players[1]!.defeated).toBe(true);
+  });
+  it('2 na 2: zamek gracza, który wyszedł, zostaje, dopóki jest sojusznik', () => {
+    const g = createGame(7, '2v2', 2, false, [0, 1, 2, 3]);
+    step(g, [{ type: 'surrender', player: 1 }]);
+    expect(g.players[1]!.defeated).toBe(false);
+    expect(g.players[1]!.left).toBe(true);
+    step(g, [{ type: 'surrender', player: 3 }]); // drugi z tej samej drużyny też wyszedł
+    expect(g.players[3]!.defeated).toBe(true);
   });
 });

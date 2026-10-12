@@ -36,6 +36,8 @@ export interface PlayerState {
   /** Liczniki do podsumowania meczu */
   /** Ilu ludzi zagryzły wilki (do powiadomień) */
   wolfKills?: number;
+  /** Gracz wyszedł z meczu przez sieć: jego zamek stoi bez gospodarza, trzeba go zburzyć */
+  left?: boolean;
   /** Tryb deweloperski: wszystko postawione, pełne zapasy, budowa natychmiast */
   dev?: boolean;
   stats: { gathered: number; trained: number; kills: number; lost: number; built: number; razed: number };
@@ -400,7 +402,7 @@ export function stateHash(g: GameState): number {
   for (let i = 0; i < g.roads.length; i++) if (g.roads[i]) { add(i); add(g.roads[i]! + 100); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
-    add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
+    add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); }

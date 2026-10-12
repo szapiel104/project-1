@@ -2,7 +2,7 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { TEAM_COLORS } from '../data/teams';
 import { Lockstep } from '../net/lockstep';
 import {
-  createRoom, deleteRoom, listRooms, me, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
+  closeMyStaleRooms, createRoom, deleteRoom, listRooms, me, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
   type Member, type NetMsg, type Room, type RoomLink, type Slot,
 } from '../net/supa';
 import { AVATAR_COUNT, avatarSvg } from './avatars';
@@ -156,6 +156,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     await restore();
     const m = me();
     if (!m) { showLogin(false, 'Zaloguj się, żeby grać przez sieć.', () => void showOnline()); return; }
+    // wchodzę do listy, więc żaden mój pokój nie jest już aktywny
+    await closeMyStaleRooms();
     const wrap = el('div', 'net-lobby');
     // pasek: kim jestem
     const bar = el('div', 'net-bar');

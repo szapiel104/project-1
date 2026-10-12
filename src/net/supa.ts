@@ -102,8 +102,17 @@ export async function setAvatar(avatar: number): Promise<string | null> {
 }
 
 export async function listRooms(): Promise<Room[]> {
-  const { data } = await supa.from('rooms').select('*').in('status', ['open', 'playing']).order('created_at', { ascending: false }).limit(30);
-  return (data as Room[] | null) ?? [];
+  const { data } = await supa.from('rooms').select('*').in('status', ['open', 'playing']).order('created_at', { ascending: false }).limit(40);
+  // pokoje sprzed kilku godzin to porzucone mecze (np. zamknięta karta) — nie pokazujemy ich
+  const old = Date.now() - 4 * 3600_000;
+  return ((data as Room[] | null) ?? []).filter((r) => Date.parse(r.created_at) > old);
+}
+
+/** Moje stare pokoje (zostały po zamkniętej karcie albo zerwanym połączeniu) oznacza jako zakończone */
+export async function closeMyStaleRooms(): Promise<void> {
+  const m = me();
+  if (!m) return;
+  await supa.from('rooms').update({ status: 'done' }).eq('host', m.id).in('status', ['open', 'playing']);
 }
 
 export async function createRoom(name: string, preset: string, seed: string): Promise<Room | string> {

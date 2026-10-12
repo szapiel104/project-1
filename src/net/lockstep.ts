@@ -65,7 +65,11 @@ export class Lockstep {
     this.inbox.delete(turn);
     this.myHash.delete(turn - 20);
     const out: Command[] = [];
-    for (const p of [...this.players].sort((a, b) => a - b)) out.push(...(now?.get(p) ?? []));
+    for (const p of [...this.players].sort((a, b) => a - b)) {
+      out.push(...(now?.get(p) ?? []));
+      // gracz, który wyszedł, poddaje się w pierwszej turze po swoich ostatnich poleceniach — u wszystkich w tej samej turze
+      if (this.gone.get(p) === turn - 1) out.push({ type: 'surrender', player: p });
+    }
     return out;
   }
 

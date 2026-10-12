@@ -26,12 +26,22 @@ export type Command =
   | { type: 'attack'; player: number; ids: number[]; target: number }
   | { type: 'gate'; player: number; id: number; open: boolean }
   | { type: 'garrison'; player: number; ids: number[]; tower: number }
-  | { type: 'dismount'; player: number; tower: number };
+  | { type: 'dismount'; player: number; tower: number }
+  /** Gracz wyszedł z meczu przez sieć: przegrywa (wysyła ją lockstep, nie gracz) */
+  | { type: 'surrender'; player: number };
 
 function apply(g: GameState, c: Command): void {
   const p = g.players[c.player];
   if (!p) return;
   switch (c.type) {
+    case 'surrender': {
+      // wyszedł ostatni człowiek drużyny, która nie ma już nikogo w grze → drużyna przegrywa od razu (np. 1 na 1);
+      // gdy zostają sojusznicy, opuszczony zamek stoi dalej i trzeba go zburzyć
+      p.left = true;
+      const mates = g.players.filter((o) => o.team === p.team && o.id !== p.id && !o.defeated && !o.left);
+      if (!mates.length) p.defeated = true;
+      break;
+    }
     case 'build':
       if (Number.isInteger(c.x) && Number.isInteger(c.y)) placeBuilding(g, c.player, buildingIndex(c.building), c.x, c.y, Number.isInteger(c.rot) ? ((c.rot! % 4) + 4) % 4 : 0);
       break;
