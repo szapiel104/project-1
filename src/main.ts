@@ -52,6 +52,7 @@ const SAVE_KEY = 'project1.save';
 
 /** Zapis w pamięci przeglądarki, żeby odświeżenie strony nie zaczynało gry od zera. */
 function save(): void {
+  if (TEST) return; // tryb testowy nie nadpisuje prawdziwego zapisu gracza
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seedText: currentSeedText, data: serialize(game, currentPreset) })); } catch { /* brak dostępu do pamięci przeglądarki */ }
 }
 
@@ -385,7 +386,7 @@ function loop(now: number): void {
 const [hashPreset, hashSeed] = decodeURIComponent(location.hash.slice(1)).split('/');
 hud.setMuted(isMuted());
 hud.setVolume(getVolume());
-const saved = loadSave();
+const saved = TEST ? null : loadSave(); // test zawsze na świeżej mapie
 const restored = saved ? deserialize(saved.data) : null;
 if (saved && restored) start(saved.seedText, saved.data.preset, restored);
 else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1');
