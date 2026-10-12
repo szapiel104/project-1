@@ -76,14 +76,14 @@ const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
 const DAY = [
   // mroczniejszy, bardziej szary świat: ciemne noce, mglisty świt, zgaszone południe
-  { h: 0, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x0b0f1c },
-  { h: 4.5, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x10162a },
+  { h: 0, sun: 0x8095c8, power: 0.36, sky: 0.32, haze: 0x0b0f1c },
+  { h: 4.5, sun: 0x8095c8, power: 0.36, sky: 0.32, haze: 0x10162a },
   { h: 6, sun: 0xe0a070, power: 0.9, sky: 0.7, haze: 0x9a8f86 },
   { h: 8, sun: 0xf2dcb8, power: 1.55, sky: 1.05, haze: 0xa9aa9f },
   { h: 12, sun: 0xfaeedc, power: 1.8, sky: 1.15, haze: 0xb4b7ae },
   { h: 17, sun: 0xf2dcb8, power: 1.6, sky: 1.05, haze: 0xaaa79a },
   { h: 19.5, sun: 0xe88a58, power: 0.95, sky: 0.7, haze: 0x8a6650 },
-  { h: 21.5, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x10162a },
+  { h: 21.5, sun: 0x8095c8, power: 0.36, sky: 0.32, haze: 0x10162a },
   { h: 24, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x0b0f1c },
 ];
 const WOOD = RESOURCES.indexOf('wood');
@@ -239,8 +239,8 @@ export class GameRenderer {
     this.scene.add(this.wave);
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
-    for (let i = 0; i < 12; i++) {
-      const lamp = new THREE.PointLight(0xffb469, 0, 8, 2);
+    for (let i = 0; i < 18; i++) {
+      const lamp = new THREE.PointLight(0xffa35a, 0, 11, 1.4);
       this.scene.add(lamp);
       this.lamps.push(lamp);
     }
@@ -310,7 +310,7 @@ export class GameRenderer {
           c = mix(vec3(l), c, 0.72 - rain * 0.15);                       // przygaszone barwy
           c = mix(c * vec3(1.06, 0.98, 0.86), c, smoothstep(0.0, 0.6, l)); // brązowe cienie
           c = (c - 0.5) * 1.08 + 0.5;                                   // trochę kontrastu
-          c = mix(c, c * vec3(0.62, 0.72, 1.05), night * 0.55);          // chłodna, ciemna noc
+          c = mix(c, c * vec3(0.72, 0.8, 1.05), night * 0.35);          // chłodna, ciemna noc
           c *= 1.0 - rain * 0.12;
           vec2 d = vUv - 0.5;
           c *= 1.0 - dot(d, d) * (0.85 + night * 0.6);                  // winieta
@@ -732,14 +732,14 @@ export class GameRenderer {
       for (const u of g.units) {
         if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
         const v = new THREE.Vector3(u.px / FP - width / 2, (this.view?.heightAt(u.px / FP, u.py / FP) ?? 0) + 0.8, u.py / FP - height / 2);
-        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.2 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
+        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.3 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
       }
       spots.sort((a, b) => a.d - b.d);
       this.lampSpots = spots.slice(0, this.lamps.length);
     }
     this.lamps.forEach((lamp, i) => {
       const spot = this.lampSpots[i];
-      lamp.intensity = spot ? spot.k * this.night * 5 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
+      lamp.intensity = spot ? spot.k * this.night * 16 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
       if (spot) lamp.position.copy(spot.v);
     });
   }
