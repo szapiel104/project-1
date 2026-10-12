@@ -140,7 +140,7 @@ export function collectFx(root: THREE.Object3D, isWindow: (m: THREE.Material) =>
     n.applyQuaternion(m.getWorldQuaternion(q));
     const p = m.getWorldPosition(new THREE.Vector3());
     if (n.x * p.x + n.z * p.z < 0) n.negate();
-    fx.windows.push(p.addScaledVector(n, 0.2));
+    fx.windows.push(p.addScaledVector(n, 0.12));
   });
   return fx;
 }
@@ -195,7 +195,7 @@ export class Ambience {
         m.localToWorld(w.copy(o));
         G.pos[gi * 3] = w.x; G.pos[gi * 3 + 1] = w.y; G.pos[gi * 3 + 2] = w.z;
         G.base[gi] = (gi * 0.618) % 1; // przesunięcie migotania
-        G.tint[gi * 3] = 1; G.tint[gi * 3 + 1] = 0.62; G.tint[gi * 3 + 2] = 0.26;
+        G.tint[gi * 3] = 1; G.tint[gi * 3 + 1] = 0.48; G.tint[gi * 3 + 2] = 0.12;
         gi++;
       }
     }
@@ -263,8 +263,8 @@ export class Ambience {
     const lit = Math.max(0, (night - 0.1) / 0.9);
     for (let i = 0; i < nWin; i++) {
       const fl = 0.82 + 0.1 * Math.sin(this.time * 6 + G.base[i]! * 50) + 0.08 * Math.sin(this.time * 13.7 + G.base[i]! * 31);
-      G.size[i] = lit > 0 ? 0.9 : 0;
-      G.alpha[i] = lit * fl * 0.7;
+      G.size[i] = lit > 0 ? 0.32 : 0;
+      G.alpha[i] = lit * fl * 0.45;
     }
     G.points.geometry.attributes.size!.needsUpdate = true;
     G.points.geometry.attributes.alpha!.needsUpdate = true;
