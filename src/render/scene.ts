@@ -126,7 +126,7 @@ export class GameRenderer {
     const cam = this.cam.camera;
     const src = new THREE.Vector3(x, this.view?.heightAt(x + (this.state?.map.width ?? 0) / 2, z + (this.state?.map.height ?? 0) / 2) ?? 0, z);
     const d = cam.position.distanceTo(src);
-    const near = Math.max(0, Math.min(1, 1 - (d - 10) / 42));
+    const near = Math.max(0, Math.min(1, 1 - (d - 8) / 30)); // ok. 38 jednostek = cisza
     const rel = src.sub(cam.position);
     const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
     const pan = (rel.dot(right) / Math.max(1, d)) * 1.4;
