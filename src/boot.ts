@@ -26,7 +26,8 @@ async function load(): Promise<void> {
   const fill = document.getElementById('loading-fill');
   const label = document.getElementById('loading-label');
   const count = document.getElementById('loading-count');
-  const frame = (): Promise<void> => new Promise((ok) => requestAnimationFrame(() => setTimeout(ok, 0)));
+  // klatka do odświeżenia paska; w karcie w tle przeglądarka wstrzymuje klatki, więc jest też zapasowy zegar
+  const frame = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
   let done = 0, total = 3;
   const step = async (text: string): Promise<void> => {
     if (label) label.textContent = text;
