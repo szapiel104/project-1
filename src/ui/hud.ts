@@ -334,9 +334,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const rb = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n === 0 ? 999 : n, rUnit)); rBtns.append(b); return b; };
   const r1 = rb(1, t('hud.train1')), r5 = rb(5, t('hud.train5')), rAll = rb(0, t('hud.trainAll'));
   recruit.append(rTabs, rTop, rNeeds, rMax, rBtns);
+  rTabs.addEventListener('pointerdown', (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>('.recruit-tab'); if (b?.dataset.unit) { rUnit = b.dataset.unit; drawRecruit(); } });
+  rTabs.addEventListener('keydown', (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>('.recruit-tab'); if (b?.dataset.unit && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); rUnit = b.dataset.unit; drawRecruit(); } });
   const drawRecruit = (): void => {
     const list = lastRecruit;
-    rTabs.replaceChildren(...list.map((u) => { const b = el('button', 'recruit-tab', u.name); b.type = 'button'; b.setAttribute('aria-pressed', String(u.id === rUnit)); b.addEventListener('click', () => { rUnit = u.id; drawRecruit(); }); return b; }));
+    // zakładki tworzymy raz; przy odświeżaniu panelu zmienia się tylko zaznaczenie (inaczej kliknięcie się gubiło)
+    if (rTabs.childElementCount !== list.length) rTabs.replaceChildren(...list.map((u) => { const b = el('button', 'recruit-tab', u.name); b.type = 'button'; b.dataset.unit = u.id; return b; }));
+    for (const b of Array.from(rTabs.children) as HTMLElement[]) b.setAttribute('aria-pressed', String(b.dataset.unit === rUnit));
     const r = list.find((u) => u.id === rUnit) ?? list[0];
     if (!r) return;
     rName.innerHTML = `<strong>${r.name}</strong><span>${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · zasięg ${r.range} (z wieży ${r.range + 3})` : ''}</span>`;
