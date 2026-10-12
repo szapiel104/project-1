@@ -2,14 +2,26 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { t } from '../i18n';
 
 /** Ustawienia zapamiętywane w przeglądarce */
-export interface Settings { ao: boolean; shadows: number }
+export interface Settings {
+  ao: 'off' | 'low' | 'medium' | 'high';
+  shadows: number;
+  scale: number;
+  dayNight: boolean;
+  camSpeed: number;
+  edgeScroll: boolean;
+  sfx: number;
+  ui: number;
+  amb: number;
+}
+
+export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6 };
 
 export interface MenuEvents {
   onContinue(): void;
   onNewGame(seedText: string, preset: MapPresetId): void;
   onVolume(v: number): void;
   onMute(): boolean;
-  onGraphics(s: Settings): void;
+  onSettings(s: Settings): void;
 }
 
 export interface Menu {
@@ -24,8 +36,12 @@ export interface Menu {
 const SETTINGS_KEY = 'project1.settings';
 
 export function loadSettings(): Settings {
-  const def: Settings = { ao: true, shadows: 4096 };
-  try { return { ...def, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') }; } catch { return def; }
+  try {
+    const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Partial<Settings> & { ao?: unknown };
+    // starsze zapisy trzymały cieniowanie jako tak/nie
+    if (typeof raw.ao === 'boolean') raw.ao = raw.ao ? 'medium' : 'off';
+    return { ...DEFAULT_SETTINGS, ...(raw as Partial<Settings>) };
+  } catch { return { ...DEFAULT_SETTINGS }; }
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
@@ -37,9 +53,19 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''):
 
 const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota', 'las', 'skala', 'rzeka', 'brod'];
 
+/** Rozdziały „Jak grać”: tytuł i akapity (klucze tłumaczeń) */
+const HELP: [string, string[]][] = [
+  ['help.t.start', ['help.start1', 'help.start2', 'help.start3']],
+  ['help.t.economy', ['help.eco1', 'help.eco2', 'help.eco3', 'help.eco4']],
+  ['help.t.food', ['help.food1', 'help.food2', 'help.food3']],
+  ['help.t.people', ['help.pop1', 'help.pop2', 'help.pop3', 'help.pop4']],
+  ['help.t.build', ['help.bld1', 'help.bld2', 'help.bld3', 'help.bld4']],
+  ['help.t.controls', ['help.move', 'help.rotate', 'help.zoom', 'help.build', 'help.speed', 'help.sound', 'help.menu']],
+];
+
 /**
  * Menu główne w klimacie gry: pergaminowa tablica na tle osady, która powoli obraca się za nim.
- * Ekrany: główny, nowa gra, ustawienia, jak grać. To samo menu otwiera się w trakcie gry klawiszem Esc.
+ * Ekrany: główny, nowa gra, ustawienia (zakładki), jak grać (rozdziały). W trakcie gry otwiera je Esc.
  */
 export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   const wrap = el('div', 'menu');
@@ -60,6 +86,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   let volume = 0.6;
   let muted = false;
   const settings = loadSettings();
+  const save = (): void => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* nic */ } events.onSettings(settings); };
 
   const button = (text: string, onClick: () => void, cls = 'menu-btn'): HTMLButtonElement => {
     const b = el('button', cls, text);
@@ -68,12 +95,37 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     return b;
   };
   const back = (): HTMLButtonElement => button(t('menu.back'), showMain, 'menu-btn menu-back');
-  const screen = (heading: string, ...nodes: Node[]): void => {
+  /** Ekran z nagłówkiem; szeroki = dwie kolumny (zakładki po lewej, treść po prawej) */
+  const screen = (heading: string, wide: boolean, ...nodes: Node[]): void => {
+    panel.classList.toggle('wide', wide);
     body.replaceChildren(el('p', 'menu-heading', heading), ...nodes);
     body.querySelector<HTMLElement>('button, input, select')?.focus();
   };
+  /** Zakładki: lista przycisków po lewej, wybrana treść po prawej */
+  const tabbed = (tabs: [string, () => Node[]][]): HTMLElement => {
+    const box = el('div', 'menu-tabs');
+    const nav = el('div', 'menu-nav');
+    nav.setAttribute('role', 'tablist');
+    const pane = el('div', 'menu-pane');
+    pane.setAttribute('role', 'tabpanel');
+    const buttons: HTMLButtonElement[] = [];
+    const show = (i: number): void => {
+      buttons.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); });
+      pane.replaceChildren(...tabs[i]![1]());
+    };
+    tabs.forEach(([name], i) => {
+      const b = button(name, () => show(i), 'menu-tab');
+      b.setAttribute('role', 'tab');
+      buttons.push(b);
+      nav.append(b);
+    });
+    box.append(nav, pane);
+    show(0);
+    return box;
+  };
 
   function showMain(): void {
+    panel.classList.remove('wide');
     const list = el('div', 'menu-list');
     if (inGame) list.append(button(t('menu.resume'), () => events.onContinue()));
     else if (canContinue) list.append(button(t('menu.continue'), () => events.onContinue()));
@@ -112,45 +164,87 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     start.type = 'submit';
     form.append(modes, seedWrap, warn, start);
     form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim() || 'project-1', preset); });
-    screen(t('menu.newGame'), form, back());
+    screen(t('menu.newGame'), false, form, back());
   }
 
+  /** Suwak 0–100 % z wartością obok */
+  const slider = (label: string, value: number, onInput: (v: number) => void, min = 0, max = 100, unit = '%'): HTMLElement => {
+    const row = el('div', 'set-row');
+    const lab = el('label', 'set-name', label);
+    const id = `set-${label.replace(/\W+/g, '-')}`;
+    lab.htmlFor = id;
+    const input = el('input');
+    input.id = id; input.type = 'range'; input.min = String(min); input.max = String(max); input.step = '5';
+    input.value = String(Math.round(value));
+    const out = el('output', 'set-val', `${input.value}${unit}`);
+    input.addEventListener('input', () => { out.textContent = `${input.value}${unit}`; onInput(Number(input.value)); });
+    row.append(lab, input, out);
+    return row;
+  };
+  /** Lista wyboru z opisem */
+  const choice = <T extends string | number>(label: string, value: T, options: [T, string][], onChange: (v: T) => void): HTMLElement => {
+    const row = el('div', 'set-row');
+    const lab = el('label', 'set-name', label);
+    const id = `set-${label.replace(/\W+/g, '-')}`;
+    lab.htmlFor = id;
+    const sel = el('select');
+    sel.id = id;
+    for (const [v, name] of options) sel.append(new Option(name, String(v)));
+    sel.value = String(value);
+    sel.addEventListener('change', () => { const found = options.find(([v]) => String(v) === sel.value); if (found) onChange(found[0]); });
+    row.append(lab, sel);
+    return row;
+  };
+  const check = (label: string, value: boolean, onChange: (v: boolean) => void): HTMLElement => {
+    const lab = el('label', 'menu-check');
+    const box = el('input');
+    box.type = 'checkbox'; box.checked = value;
+    box.addEventListener('change', () => onChange(box.checked));
+    lab.append(box, el('span', '', label));
+    return lab;
+  };
+
   function showSettings(): void {
-    const box = el('div', 'menu-form');
-    // dźwięk
-    const vWrap = el('div', 'field');
-    const vLab = el('label', '', t('hud.volume'));
-    vLab.htmlFor = 'menu-volume';
-    const vol = el('input');
-    vol.id = 'menu-volume'; vol.type = 'range'; vol.min = '0'; vol.max = '100'; vol.step = '5'; vol.value = String(Math.round(volume * 100));
-    vol.addEventListener('input', () => { volume = Number(vol.value) / 100; events.onVolume(volume); });
-    const mute = button(t(muted ? 'hud.unmute' : 'hud.mute'), () => { muted = events.onMute(); mute.textContent = t(muted ? 'hud.unmute' : 'hud.mute'); mute.setAttribute('aria-pressed', String(muted)); }, 'btn-plain');
-    mute.setAttribute('aria-pressed', String(muted));
-    vWrap.append(vLab, vol, mute);
-    // grafika
-    const save = (): void => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* nic */ } events.onGraphics(settings); };
-    const aoWrap = el('label', 'menu-check');
-    const ao = el('input');
-    ao.type = 'checkbox'; ao.checked = settings.ao;
-    ao.addEventListener('change', () => { settings.ao = ao.checked; save(); });
-    aoWrap.append(ao, el('span', '', t('menu.ao')));
-    const shWrap = el('div', 'field');
-    const shLab = el('label', '', t('menu.shadows'));
-    shLab.htmlFor = 'menu-shadows';
-    const sh = el('select');
-    sh.id = 'menu-shadows';
-    for (const [v, name] of [[2048, t('menu.medium')], [4096, t('menu.high')]] as const) sh.append(new Option(name, String(v)));
-    sh.value = String(settings.shadows);
-    sh.addEventListener('change', () => { settings.shadows = Number(sh.value); save(); });
-    shWrap.append(shLab, sh);
-    box.append(el('p', 'label', t('menu.sound')), vWrap, el('p', 'label', t('menu.graphics')), aoWrap, shWrap);
-    screen(t('menu.settings'), box, back());
+    const tabs = tabbed([
+      [t('menu.sound'), () => {
+        const mute = button(t(muted ? 'hud.unmute' : 'hud.mute'), () => { muted = events.onMute(); mute.textContent = t(muted ? 'hud.unmute' : 'hud.mute'); mute.setAttribute('aria-pressed', String(muted)); }, 'btn-plain');
+        mute.setAttribute('aria-pressed', String(muted));
+        return [
+          slider(t('set.master'), volume * 100, (v) => { volume = v / 100; events.onVolume(volume); }),
+          slider(t('set.sfx'), settings.sfx * 100, (v) => { settings.sfx = v / 100; save(); }),
+          slider(t('set.ui'), settings.ui * 100, (v) => { settings.ui = v / 100; save(); }),
+          slider(t('set.amb'), settings.amb * 100, (v) => { settings.amb = v / 100; save(); }),
+          mute,
+        ];
+      }],
+      [t('menu.graphics'), () => [
+        choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; save(); }),
+        choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; save(); }),
+        choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; save(); }),
+        check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
+        el('p', 'hint', t('set.graphicsHint')),
+      ]],
+      [t('set.controls'), () => [
+        slider(t('set.camSpeed'), settings.camSpeed * 100, (v) => { settings.camSpeed = v / 100; save(); }, 50, 200),
+        check(t('set.edge'), settings.edgeScroll, (v) => { settings.edgeScroll = v; save(); }),
+        el('p', 'hint', t('set.controlsHint')),
+      ]],
+    ]);
+    const reset = button(t('set.reset'), () => { Object.assign(settings, DEFAULT_SETTINGS); save(); showSettings(); }, 'btn-plain');
+    const foot = el('div', 'menu-foot');
+    foot.append(reset, back());
+    screen(t('menu.settings'), true, tabs, foot);
   }
 
   function showHelp(): void {
-    const list = el('ul', 'help-list');
-    for (const k of ['help.move', 'help.rotate', 'help.zoom', 'help.build', 'help.speed', 'help.sound', 'help.menu', 'help.economy', 'help.food', 'help.people']) list.append(el('li', '', t(k)));
-    screen(t('menu.howTo'), list, back());
+    const tabs = tabbed(HELP.map(([name, lines]) => [t(name), () => {
+      const list = el('ul', 'help-list');
+      for (const k of lines) list.append(el('li', '', t(k)));
+      return [list];
+    }]));
+    const foot = el('div', 'menu-foot');
+    foot.append(back());
+    screen(t('menu.howTo'), true, tabs, foot);
   }
 
   return {

@@ -21,6 +21,11 @@ let ambienceOn = false;
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
+/** Osobne suwaki: efekty (budowa, burzenie), interfejs (kliknięcia), otoczenie (szum w tle) */
+export type Bus = 'sfx' | 'ui' | 'amb';
+const busGain: Partial<Record<Bus, GainNode>> = {};
+const busLevel: Record<Bus, number> = { sfx: 1, ui: 1, amb: 1 };
+let out: GainNode | null = null;
 let noise: AudioBuffer | null = null;
 let volume = 0.6;
 let muted = false;
@@ -39,6 +44,7 @@ function audio(): AudioContext | null {
   master = ctx.createGain();
   master.gain.value = muted ? 0 : volume;
   master.connect(ctx.destination);
+  for (const b of ['sfx', 'ui', 'amb'] as Bus[]) { const gn = ctx.createGain(); gn.gain.value = busLevel[b]; gn.connect(master); busGain[b] = gn; }
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -66,6 +72,13 @@ export function setVolume(v: number): void {
   try { localStorage.setItem('project1.volume', String(volume)); } catch { /* nic */ }
 }
 
+/** Głośność jednej grupy dźwięków (0..1) */
+export function setBusVolume(bus: Bus, v: number): void {
+  busLevel[bus] = Math.max(0, Math.min(1, v));
+  const gn = busGain[bus];
+  if (gn) gn.gain.value = busLevel[bus];
+}
+
 export function toggleMute(): boolean {
   muted = !muted;
   if (master) master.gain.value = muted ? 0 : volume;
@@ -85,7 +98,7 @@ function knock(c: AudioContext, at: number, freq: number, len: number, gain: num
   o.frequency.exponentialRampToValueAtTime(freq * 0.55, at + len);
   g.gain.setValueAtTime(gain, at);
   g.gain.exponentialRampToValueAtTime(0.001, at + len);
-  o.connect(g).connect(master!);
+  o.connect(g).connect(out ?? master!);
   o.start(at);
   o.stop(at + len + 0.02);
 }
@@ -103,7 +116,7 @@ function rumble(c: AudioContext, at: number, len: number, gain: number, freq: nu
   g.gain.setValueAtTime(0.0001, at);
   g.gain.exponentialRampToValueAtTime(gain, at + attack);
   g.gain.exponentialRampToValueAtTime(0.001, at + len);
-  src.connect(f).connect(g).connect(master!);
+  src.connect(f).connect(g).connect(out ?? master!);
   src.start(at, Math.random() * 0.5);
   src.stop(at + len + 0.05);
 }
@@ -118,7 +131,7 @@ function startAmbience(): void {
   src.loop = true;
   const g = ctx.createGain();
   g.gain.value = 0.35;
-  src.connect(g).connect(master);
+  src.connect(g).connect(busGain.amb ?? master);
   src.start();
 }
 
@@ -133,7 +146,7 @@ function sample(c: AudioContext, sound: Sound, t: number): boolean {
   src.playbackRate.value = (sound === 'road' ? 0.8 : sound === 'select' ? 1.35 : 1) * (0.94 + Math.random() * 0.12);
   const g = c.createGain();
   g.gain.value = sound === 'road' ? 0.5 : sound === 'click' ? 0.6 : sound === 'select' ? 0.45 : 1;
-  src.connect(g).connect(master!);
+  src.connect(g).connect(out ?? master!);
   src.start(t);
   return true;
 }
@@ -142,6 +155,7 @@ export function play(sound: Sound): void {
   const c = audio();
   if (!c || !master || muted || c.state !== 'running') return;
   const t = c.currentTime + 0.01;
+  out = (sound === 'click' || sound === 'select' || sound === 'rotate' || sound === 'error' ? busGain.ui : busGain.sfx) ?? master;
   if (sample(c, sound, t)) return;
   switch (sound) {
     case 'click':

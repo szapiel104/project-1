@@ -19,6 +19,11 @@ export class StrategyCamera {
   private pointers = new Map<number, { x: number; y: number; button: number }>();
   private pinch = 0;
   private bounds = { x: 36, z: 36 };
+  /** Mnożnik szybkości przesuwania i obrotu (ustawienia) */
+  speed = 1;
+  /** Przesuwanie kamery, gdy kursor dotknie krawędzi ekranu */
+  edgeScroll = true;
+  private mouse = { x: -1, y: -1 };
   /** Czy ostatni gest był przeciąganiem (żeby nie mylić go z kliknięciem). */
   dragged = false;
   /** Lewy przycisk nie przesuwa kamery (używany przy malowaniu dróg); klawisze i prawy przycisk działają dalej */
@@ -35,6 +40,8 @@ export class StrategyCamera {
     window.addEventListener('keydown', this.onKey);
     window.addEventListener('keyup', (e) => this.keys.delete(e.code));
     window.addEventListener('blur', () => this.keys.clear());
+    window.addEventListener('mousemove', (e) => { this.mouse.x = e.clientX; this.mouse.y = e.clientY; });
+    document.addEventListener('mouseleave', () => { this.mouse.x = -1; });
     this.apply();
   }
 
@@ -67,12 +74,18 @@ export class StrategyCamera {
     if (k.has('KeyD') || k.has('ArrowRight')) fx += 1;
     if (k.has('KeyQ')) rot += 1;
     if (k.has('KeyE')) rot -= 1;
+    // krawędź ekranu: kursor przy brzegu okna przesuwa mapę (jak w klasycznych strategiach)
+    if (this.edgeScroll && this.mouse.x >= 0 && !document.body.classList.contains('menu-open') && !this.pointers.size) {
+      const m = 6, W = window.innerWidth, Hh = window.innerHeight;
+      if (this.mouse.x <= m) fx -= 1; else if (this.mouse.x >= W - 1 - m) fx += 1;
+      if (this.mouse.y <= m) fz -= 1; else if (this.mouse.y >= Hh - 1 - m) fz += 1;
+    }
     let tilt = 0;
     if (k.has('PageUp') || k.has('KeyT')) tilt += 1;
     if (k.has('PageDown') || k.has('KeyG')) tilt -= 1;
     if (tilt) this.tilt(tilt * dt * 1.2);
-    if (fx || fz) this.pan(fx * this.dist * dt * 0.9, fz * this.dist * dt * 0.9);
-    if (rot) this.yaw += rot * dt * 1.6;
+    if (fx || fz) this.pan(fx * this.dist * dt * 0.9 * this.speed, fz * this.dist * dt * 0.9 * this.speed);
+    if (rot) this.yaw += rot * dt * 1.6 * this.speed;
     if (fx || fz || rot || tilt) this.apply();
   }
 

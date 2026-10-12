@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.8.1 — rozbudowane ustawienia i poradnik (2026-10-12)
+
+- Ustawienia w zakładkach: Dźwięk (głośność ogólna, budowa i praca, interfejs, otoczenie, wyciszenie), Grafika (cienie od wyłączonych do wysokich, cieniowanie zagłębień w czterech poziomach, rozdzielczość obrazu, cykl dnia i nocy), Sterowanie (szybkość kamery, przesuwanie mapy kursorem przy krawędzi ekranu); przycisk przywracania domyślnych
+- Jak grać w sześciu rozdziałach: pierwsze kroki, surowce, jedzenie, ludzie i popularność, budowa i burzenie, sterowanie
+- Menu i belka budowy bez pasków przewijania
+
 ## 0.8.0 — menu główne (2026-10-12)
 
 - Po wczytaniu menu główne na tle osady, nad którą powoli krąży kamera; gra stoi, dopóki menu jest otwarte

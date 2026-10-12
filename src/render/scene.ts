@@ -310,15 +310,29 @@ export class GameRenderer {
     this.selection.visible = true;
   }
 
-  /** Ustawienia grafiki: cieniowanie zagłębień i rozdzielczość mapy cieni */
-  setGraphics(ao: boolean, shadowSize: number): void {
-    this.ao.enabled = ao;
-    this.plain.enabled = !ao;
-    if (this.sun.shadow.mapSize.x !== shadowSize) {
-      this.sun.shadow.mapSize.setScalar(shadowSize);
+  /** Zawsze dzień zamiast cyklu dnia i nocy (ustawienie gracza) */
+  private alwaysDay = false;
+
+  /** Ustawienia grafiki i kamery z menu */
+  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean }): void {
+    this.ao.enabled = o.ao !== 'off';
+    this.plain.enabled = o.ao === 'off';
+    if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
+    this.sun.castShadow = o.shadows > 0;
+    if (o.shadows > 0 && this.sun.shadow.mapSize.x !== o.shadows) {
+      this.sun.shadow.mapSize.setScalar(o.shadows);
       this.sun.shadow.map?.dispose();
       (this.sun.shadow as { map: unknown }).map = null;
     }
+    const ratio = Math.min(window.devicePixelRatio, o.scale);
+    if (this.renderer.getPixelRatio() !== ratio) {
+      this.renderer.setPixelRatio(ratio);
+      this.composer.setPixelRatio(ratio);
+      this.resize();
+    }
+    this.alwaysDay = !o.dayNight;
+    this.cam.speed = o.camSpeed;
+    this.cam.edgeScroll = o.edgeScroll;
   }
 
   /** Powolny obrót kamery wokół osady, gdy otwarte jest menu */
@@ -327,7 +341,7 @@ export class GameRenderer {
   frame(dt: number, alpha: number): void {
     this.cam.update(dt);
     this.time += dt;
-    if (this.state) this.setDaylight(clockAt(this.state.tick).hour);
+    if (this.state) this.setDaylight(this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     this.aimSun();
     if (this.state && this.view) {
       this.animate(this.state, this.calm ? 0 : dt);

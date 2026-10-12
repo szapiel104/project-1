@@ -11,8 +11,8 @@ import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace } from './sim/systems/placement';
 import { createHud } from './ui/hud';
-import { createMenu, loadSettings } from './ui/menu';
-import { getVolume, isMuted, play, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { createMenu, loadSettings, type Settings } from './ui/menu';
+import { getVolume, isMuted, play, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
 import { TEAM_COLORS } from './data/teams';
@@ -79,13 +79,16 @@ const menu = createMenu(document.body, {
   onNewGame: (seedText, preset) => { start(seedText, preset); menu.close(); },
   onVolume: (v) => setVolume(v),
   onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
-  onGraphics: (st) => renderer.setGraphics(st.ao, st.shadows),
+  onSettings: (st) => applySettings(st),
 });
 let titleScreen = true;
-{
-  const st = loadSettings();
-  renderer.setGraphics(st.ao, st.shadows);
+function applySettings(st: Settings): void {
+  renderer.setGraphics(st);
+  setBusVolume('sfx', st.sfx);
+  setBusVolume('ui', st.ui);
+  setBusVolume('amb', st.amb);
 }
+applySettings(loadSettings());
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
   game = loaded ?? createGame(seedFromText(seedText), preset);

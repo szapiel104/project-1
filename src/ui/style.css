@@ -214,3 +214,22 @@ input, select {
 .menu-check { display: flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; text-transform: none; letter-spacing: 0; font-family: var(--text); font-size: 16px; font-weight: 500; }
 .menu-check input { width: 22px; height: 22px; min-height: 0; accent-color: var(--seal); }
 body.menu-open #ui .bottom, body.menu-open #ui .toast, body.menu-open .build { display: none; }
+
+/* szerokie ekrany menu (ustawienia, jak grać): zakładki po lewej, treść po prawej, bez przewijania */
+.menu-panel { overflow: hidden; }
+.menu-panel.wide { width: min(860px, calc(100vw - 48px)); }
+.menu-tabs { display: grid; grid-template-columns: 210px 1fr; gap: 18px; min-height: 330px; }
+.menu-nav { display: grid; align-content: start; gap: 6px; }
+.menu-tab { min-height: 44px; text-align: left; padding: 6px 14px; font-size: 15px; }
+.menu-tab[aria-selected='true'] { background: var(--parchment-light); color: var(--ink); text-shadow: none; border-color: var(--gold-dark); box-shadow: inset 4px 0 0 var(--seal), inset 0 0 0 1px var(--gold); }
+.menu-pane { display: grid; align-content: start; gap: 12px; border-left: 1px solid var(--gold-dark); padding-left: 18px; }
+.menu-pane .help-list { gap: 10px; font-size: 17px; line-height: 1.4; }
+.set-row { display: grid; grid-template-columns: 200px 1fr auto; align-items: center; gap: 12px; min-height: 44px; }
+.set-row select { grid-column: 2 / 4; }
+.set-name { text-transform: none; letter-spacing: 0; font-family: var(--text); font-size: 16px; font-weight: 700; }
+.set-val { min-width: 4.5ch; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
+.menu-foot { display: flex; justify-content: space-between; gap: 10px; }
+.menu-foot .menu-back { margin-left: auto; min-width: 180px; }
+/* belka budowy i inne listy przewijane w bok: bez widocznego paska przewijania */
+.cards, .menu-panel { scrollbar-width: none; }
+.cards::-webkit-scrollbar, .menu-panel::-webkit-scrollbar { display: none; }
