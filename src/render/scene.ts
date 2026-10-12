@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { animateBuilding, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
@@ -328,6 +329,7 @@ export class GameRenderer {
 
   /** Ustawienia grafiki i kamery z menu */
   setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean }): void {
+    if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false };
     this.ao.enabled = o.ao !== 'off';
     this.plain.enabled = o.ao === 'off';
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');

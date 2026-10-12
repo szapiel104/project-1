@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { TEST } from '../testmode';
 
 export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock';
 const cache = new Map<Kind, THREE.CanvasTexture>();
@@ -221,7 +222,7 @@ export function pattern(kind: Kind): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
   // bruk w 2048 px, mur twierdzy 1024, reszta 512
   // tylko komputery: wysoka rozdzielczość wszędzie (bruk, mur, trawa 2048, reszta 1024)
-  const n = kind === 'cobble' || kind === 'ashlar' || kind === 'grass' ? 2048 : 1024;
+  const n = TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'grass' ? 2048 : 1024;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });

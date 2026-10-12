@@ -13,6 +13,7 @@ import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace } from './sim/systems/placement';
 import { createHud } from './ui/hud';
+import { TEST } from './testmode';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
 import { getVolume, isMuted, play, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
@@ -74,7 +75,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onMute: () => hud.setMuted(toggleMute()),
   onMenu: () => menu.open(true),
   onTrain: (id) => { pending.push({ type: 'train', player: ME, building: id, unit: 'spearman' }); play('build'); },
-}, renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
+}, TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
 const menu = createMenu(document.body, {
@@ -391,7 +392,7 @@ else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (h
 menu.setVolume(getVolume());
 menu.setMuted(isMuted());
 menu.setCanContinue(!!(saved && restored));
-menu.open(false);
+if (!TEST) menu.open(false); // w trybie testowym od razu gra
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 requestAnimationFrame(loop);
@@ -399,6 +400,32 @@ requestAnimationFrame(loop);
 // podgląd stanu dla testów w przeglądarce
 (window as unknown as { __game: () => GameState }).__game = () => game;
 (window as unknown as { __cmd: (c: Command) => void }).__cmd = (c) => pending.push(c);
+// Skróty do testów w przeglądarce: znajdź miejsce i postaw budynek, dodaj surowce, wyszkol wojsko, przewiń czas
+(window as unknown as { __test: unknown }).__test = {
+  /** Stawia budynek na pierwszym wolnym miejscu przy twierdzy; zwraca pole albo null */
+  build(id: string, player = ME): { x: number; y: number } | null {
+    const type = buildingIndex(id);
+    const keep = game.buildings.find((b) => b.owner === player && b.type === 0);
+    if (!keep || type < 0) return null;
+    for (let r = 3; r < 24; r++)
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          const x = keep.x + dx, y = keep.y + dy;
+          if (canPlace(game, player, type, x, y, false) === null) { step(game, [{ type: 'build', player, building: id, x, y }]); refresh(); return { x, y }; }
+        }
+    return null;
+  },
+  /** Dodaje po `n` każdego surowca */
+  give(n = 300, player = ME): void { const p = game.players[player]!; for (let i = 0; i < p.res.length; i++) p.res[i]! += n; },
+  /** Szkoli `n` włóczników w pierwszych koszarach gracza */
+  train(n = 1, player = ME): number { const b = game.buildings.find((x) => x.owner === player && BUILDINGS[x.type]!.id === 'barracks'); if (!b) return 0; for (let i = 0; i < n; i++) pending.push({ type: 'train', player, building: b.id, unit: 'spearman' }); return n; },
+  /** Przewija symulację o `ticks` kroków bez rysowania */
+  run(ticks: number): void { for (let i = 0; i < ticks; i++) { step(game, pending); pending = []; } refresh(); },
+  /** Kamera nad budynkiem danego typu */
+  look(id: string, dist = 14): void { const b = game.buildings.find((x) => BUILDINGS[x.type]!.id === id); if (b) renderer.lookAt(b.x + 1, b.y + 1, dist); },
+  state: () => game,
+};
 (window as unknown as { __look: (x: number, y: number, d?: number) => void }).__look = (x, y, d) => renderer.lookAt(x, y, d);
 
 declare const __BUILD__: string;

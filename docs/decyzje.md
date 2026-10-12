@@ -36,3 +36,9 @@ Gra powstaje na komputery (mysz i klawiatura, duży ekran). Telefonów i dotyku 
 ## Modele z kodu zostają (12.10.2026)
 
 Próba gotowych modeli KayKit odrzucona (styl zbyt bajkowy). Budynki dalej składamy w kodzie. Pomocnicze biblioteki: n8ao (cieniowanie zagłębień), three-bvh-csg (wycinanie otworów: okna, drzwi, łuki), simplex-noise (naturalne nierówności brył). Wersja z próbą KayKit: gałąź kaykit-przekroje.
+
+## Testy w przeglądarce (12.10.2026)
+
+- `?test=1` w adresie: tekstury 256 px, bez cieni, bez cieniowania zagłębień, bez miniatur, mała puszcza, bez menu. Start w ~1,5 s zamiast minut w przeglądarce bez karty graficznej.
+- `window.__test`: `build(id)` stawia budynek na pierwszym wolnym miejscu, `give(n)` dodaje surowce, `train(n)` szkoli włóczników, `run(ticks)` przewija symulację, `look(id)` ustawia kamerę, `state()` zwraca stan.
+- Wygląd sprawdzamy w Chrome Michała (rozszerzenie Claude in Chrome, prawdziwa karta graficzna) albo na stronie podglad.html (jeden model, serwer deweloperski Vite).
