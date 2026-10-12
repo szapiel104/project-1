@@ -28,9 +28,21 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       // inżynier bez zajęcia czeka przy swoim cechu
       if (job) return job.door >= 0 ? (t) => t === job.door : null;
       // bezrobotni czekają w obozowisku przy ognisku, a gdy go nie ma, pod twierdzą
-      const doors = new Set<number>();
-      for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots) doors.add(b.door);
-      if (doors.size) return (t) => doors.has(t);
+      // każde obozowisko ma ograniczoną liczbę miejsc: idą tylko tam, gdzie jeszcze jest miejsce
+      const camps = g.buildings.filter((b) => b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots);
+      if (camps.length) {
+        const w = g.map.width;
+        const used = new Map<number, number>();
+        for (const o of g.units) {
+          if (o === u || o.owner !== u.owner || o.job || o.phase !== Phase.Idle) continue;
+          const at = o.path.length ? o.path[o.path.length - 1]! : (o.py >> 8) * w + (o.px >> 8);
+          used.set(at, (used.get(at) ?? 0) + 1);
+        }
+        const doors = new Set<number>();
+        for (const b of camps) if ((used.get(b.door) ?? 0) < BUILDINGS[b.type]!.idleSlots!) doors.add(b.door);
+        if (!doors.size) for (const b of camps) doors.add(b.door);
+        return (t) => doors.has(t);
+      }
       const keep = playerKeep(g, u.owner);
       return keep && keep.door >= 0 ? (t) => t === keep.door : null;
     }
