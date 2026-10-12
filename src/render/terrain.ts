@@ -540,8 +540,22 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             if (open(0, -1)) quad(x, y - D, x + 1, y, 'y', true);
             for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const)
               if (open(dx, 0) && open(0, dy)) {
-                const cx = dx > 0 ? x + 1 : x - D, cy = dy > 0 ? y + 1 : y - D;
-                quad(cx, cy, cx + D, cy + D, 'x', dx < 0);
+                // narożnik jako ćwiartka koła wokół rogu bruku: tekstura biegnie promieniście,
+                // więc rów płynnie skręca i łączy się z odcinkami po obu stronach
+                const px = dx > 0 ? x + 1 : x, py = dy > 0 ? y + 1 : y;
+                const seg = 6;
+                for (let k = 0; k < seg; k++) {
+                  const a0 = (k / seg) * Math.PI / 2, a1 = ((k + 1) / seg) * Math.PI / 2;
+                  const ax = px + Math.cos(a0) * D * dx, ay = py + Math.sin(a0) * D * dy;
+                  const bx = px + Math.cos(a1) * D * dx, by = py + Math.sin(a1) * D * dy;
+                  const u0 = (py + a0 * D) / 2, u1 = (py + a1 * D) / 2;
+                  // kolejność wierzchołków zależna od ćwiartki, żeby trójkąt zawsze był zwrócony do góry
+                  const A = [ax, ay, u0, 1] as const, B = [bx, by, u1, 1] as const;
+                  for (const [qx, qy, u, v] of [[px, py, (u0 + u1) / 2, 0] as const, ...(dx * dy > 0 ? [B, A] : [A, B])]) {
+                    ditch.push(qx + ox, heightAt(qx, qy) + 0.035, qy + oz);
+                    ditchUv.push(u, v);
+                  }
+                }
               }
           }
           // lekkie przesunięcie każdego płata, żeby droga nie szła jak po linijce
