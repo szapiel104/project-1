@@ -44,16 +44,20 @@ Czeka:
 - Leśniczy (sadzi drzewa; lasy się nie odnawiają)
 - Bot dalej: kamienne mury, taran, lepszy wybór celów, poziomy trudności dopracowane (zrobione: palisada, wieże, łucznicy na wieżach, karczma, atak z dwóch stron, wypady)
 - Ulepszanie budynków (wyżej)
-- Konta i gra przez sieć (Supabase)
 
 ## Klimat i poprawki (12.10, popołudnie)
 Zrobione: muzyka w tle (dzień/noc/bębny przy ataku), księżyc, gwiazdy i chmury w deszczu, wnętrza drwala/włóczniarza/łuczarza/piekarni/inżynierów w stylu chaty, karczma, spacer oczami chłopa, okno wydajności (F3).
 
+Zrobione wieczorem: mgła przy ziemi, dym z kominów (nocą podświetlony), iskry nad ogniskami i pożarami, świecące okna, wydeptana ziemia przy domach i ścieżki chłopów; konta, lobby gier 1v1/2v2/4v4 z botami, mecz przez sieć.
+
 Czeka — klimat:
-- Mgła przy ziemi (smugi nad łąką i przy lesie o świcie i nocą)
-- Dym z kominów i ognisk podświetlony nocą, iskry nad ogniskiem
-- Okna świecące nocą ciepłym światłem (chaty, karczma, piekarnia)
-- Brud wokół domów: wydeptana ziemia przy drzwiach, śmieci, beczki, worki, siano
+- Śmieci, beczki, worki i siano przy domach (sama wydeptana ziemia już jest)
+
+Czeka — gra przez sieć:
+- Czat w pokoju i w meczu
+- Ranking i historia meczów przy koncie (potrzebna tabela w bazie)
+- Dołączanie z linku, zaproszenia znajomych
+- Gracz, który wyszedł z meczu, oddaje miasto botowi
 
 Czeka — poprawki:
 - Animacje pracy (drwal rąbie siekierą, kamieniarz kilofem, piekarz przy piecu)
