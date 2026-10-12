@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.10.0 — bot przeciwnik (2026-10-12)
+
+- Drugi zamek gra sam: buduje osadę według planu (drwale, sady, chaty, skład, warsztat włóczniarza, koszary, kamieniołom, spichlerz, cmentarz), pobiera podatek, szkoli włóczników
+- Pierwsza fala ataku po ok. 12 minutach gry, kolejne co ok. 6 minut i coraz większe
+- Bot działa w symulacji: te same rozkazy dają zawsze ten sam przebieg (gotowe pod grę przez sieć)
+- Obozowisko: po kliknięciu widać posłania pod wiatą; płaski teren
+
 ## 0.9.2 — ciała, cmentarz, pchnięcia (2026-10-12)
 
 - Polegli zostają na polu: ciało w barwach drużyny z ciemną plamą, z czasem ciemnieje i zapada się; po ok. 10 minutach gry rozkłada się do końca

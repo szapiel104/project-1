@@ -3,9 +3,12 @@ import { buildingIndex } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { deserialize, serialize } from '../src/sim/save';
-import { createGame, playerKeep, population, stateHash, type GameState } from '../src/sim/state';
+import { createGame as realGame, playerKeep, population, stateHash, type GameState } from '../src/sim/state';
 import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
+
+/** Testy gospodarki i wojska bez bota: drugi gracz stoi bezczynnie */
+const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => { const g = realGame(...a); for (const p of g.players) p.bot = false; return g; };
 
 function spot(g: GameState, id: string): { x: number; y: number } {
   const keep = playerKeep(g, 0)!;

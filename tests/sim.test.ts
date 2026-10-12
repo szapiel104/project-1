@@ -3,8 +3,11 @@ import { MAP_PRESETS, type MapPresetId } from '../src/data/maps';
 import { Terrain } from '../src/data/terrain';
 import { generateMap, tileAt } from '../src/sim/map';
 import { Rng, seedFromText } from '../src/sim/rng';
-import { createGame, stateHash } from '../src/sim/state';
+import { createGame as realGame, stateHash } from '../src/sim/state';
 import { step } from '../src/sim/step';
+
+/** Testy gospodarki i wojska bez bota: drugi gracz stoi bezczynnie */
+const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => { const g = realGame(...a); for (const p of g.players) p.bot = false; return g; };
 
 describe('generator losowy', () => {
   it('to samo ziarno daje ten sam ciąg', () => {

@@ -8,6 +8,7 @@ import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
 import { armySystem, orderMove, train } from './systems/army';
+import { botSystem } from './systems/bot';
 
 /** Komendy graczy. To jedyna droga, którą gracz (albo bot, albo sieć) wpływa na grę. */
 export type Command =
@@ -58,6 +59,7 @@ function apply(g: GameState, c: Command): void {
 export function step(g: GameState, commands: readonly Command[]): void {
   for (const c of commands) apply(g, c);
   g.tick++;
+  botSystem(g);
   torchSystem(g);
   rubbleSystem(g);
   workerSystem(g);

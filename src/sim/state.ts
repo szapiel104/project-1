@@ -22,6 +22,8 @@ export interface PlayerState {
   popDelta: number;
   rations: number;
   tax: number;
+  /** Gracz sterowany przez bota w symulacji */
+  bot: boolean;
 }
 
 export interface Building {
@@ -173,7 +175,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
     for (const [k, v] of Object.entries(RULES.startResources)) res[resIndex(k as ResourceId)] = v;
     g.players.push({
       id: s.player, team: s.team, res, popularity: RULES.startPopularity, popDelta: 0,
-      rations: RULES.defaultRations, tax: RULES.defaultTax,
+      rations: RULES.defaultRations, tax: RULES.defaultTax, bot: s.player !== 0,
     });
     addBuilding(g, keep, s.player, s.x - 1, s.y - 1);
     placeNear(g, buildingIndex('barn'), s.player, s.x, s.y);
@@ -260,7 +262,7 @@ export function stateHash(g: GameState): number {
   for (let i = 0; i < g.roads.length; i++) if (g.roads[i]) { add(i); add(g.roads[i]! + 100); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
-    add(p.id); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
+    add(p.id); add(p.bot ? 1 : 0); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); }

@@ -5,9 +5,12 @@ import { RULES } from '../src/data/rules';
 import { Terrain } from '../src/data/terrain';
 import { findPath, walkable } from '../src/sim/path';
 import { deserialize, serialize } from '../src/sim/save';
-import { createGame, housing, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
+import { createGame as realGame, housing, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
 import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
+
+/** Testy gospodarki i wojska bez bota: drugi gracz stoi bezczynnie */
+const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => { const g = realGame(...a); for (const p of g.players) p.bot = false; return g; };
 
 const run = (g: GameState, ticks: number, cmds: Command[] = []): void => {
   step(g, cmds);
