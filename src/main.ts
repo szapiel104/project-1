@@ -1009,6 +1009,6 @@ function showPerf(now: number): void {
 const walkHint = document.createElement('p');
 walkHint.className = 'walk-hint';
 walkHint.hidden = true;
-walkHint.textContent = 'W A S D — idź · mysz — rozglądaj się · Shift — biegnij · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)';
+walkHint.textContent = 'W A S D — idź · mysz — rozglądaj się · Shift — biegnij · F — pochodnia · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)';
 document.body.append(walkHint);
 renderer.onWalkEnd = () => { document.body.classList.remove('walking'); walkHint.hidden = true; };

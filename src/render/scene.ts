@@ -688,7 +688,7 @@ export class GameRenderer {
     mat.opacity = this.rain * 0.45;
     this.rainLines.visible = this.rain > 0.02;
     if (this.rainLines.visible) {
-      const f = this.cam.focus;
+      const f = this.focusPoint;
       const fall = (this.time * 22) % 25;
       this.rainLines.position.set(f.x, f.y - fall - 2, f.z);
     }
@@ -720,13 +720,43 @@ export class GameRenderer {
   /** Wywoływane, gdy spacer się skończy (Esc) */
   onWalkEnd: () => void = () => {};
   get walking(): boolean { return !!this.walk; }
+  private walkFocus = new THREE.Vector3();
+  /** Środek uwagi: przy spacerze miejsce, gdzie stoi chłop (światła, cienie i deszcz liczą się wokół niego) */
+  private get focusPoint(): THREE.Vector3 {
+    if (!this.walk || !this.state) return this.cam.focus;
+    const c = this.cam.camera.position;
+    return this.walkFocus.set(c.x, c.y - 0.58, c.z);
+  }
+  // pochodnia w ręce podczas spaceru: F zapala i gasi
+  private handLight: THREE.PointLight | null = null;
+  private handTorch: THREE.Group | null = null;
+  private torchOn = false;
+  private toggleHandTorch(): void {
+    if (!this.handLight) {
+      this.handLight = new THREE.PointLight(0xffa35a, 0, 13, 1.3);
+      this.handLight.position.set(0.22, -0.12, -0.35);
+      const g = new THREE.Group();
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.32, 6), new THREE.MeshStandardMaterial({ color: 0x4a3320, roughness: 1 }));
+      stick.rotation.x = -0.5;
+      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.12, 6), new THREE.MeshBasicMaterial({ color: 0xffb04a }));
+      flame.position.set(0, 0.17, -0.08); flame.name = 'flame';
+      g.add(stick, flame);
+      g.position.set(0.22, -0.22, -0.4);
+      this.handTorch = g;
+      this.cam.camera.add(this.handLight, g);
+      if (!this.cam.camera.parent) this.scene.add(this.cam.camera);
+    }
+    this.torchOn = !this.torchOn;
+    this.handTorch!.visible = this.torchOn;
+    if (this.torchOn) playAt('creak', 1, 0.3, 0.4);
+  }
   startWalk(tileX: number, tileY: number, heading = 0): void {
     if (!this.state) return;
     const keys = new Set<string>();
     this.walk = { x: tileX, z: tileY, yaw: heading, pitch: -0.05, keys, bob: 0 };
     const cam = this.cam.camera;
     cam.fov = 70; cam.near = 0.05; cam.updateProjectionMatrix();
-    const down = (e: KeyboardEvent): void => { if (this.walk) { keys.add(e.code); if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'].includes(e.code)) e.stopImmediatePropagation(); } };
+    const down = (e: KeyboardEvent): void => { if (this.walk) { if (e.code === 'KeyF' && !e.repeat) this.toggleHandTorch(); keys.add(e.code); if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyF'].includes(e.code)) e.stopImmediatePropagation(); } };
     const up = (e: KeyboardEvent): void => { keys.delete(e.code); };
     const move = (e: MouseEvent): void => {
       if (!this.walk || document.pointerLockElement !== this.canvas) return;
@@ -739,6 +769,7 @@ export class GameRenderer {
       window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true);
       window.removeEventListener('mousemove', move); document.removeEventListener('pointerlockchange', lock); this.canvas.removeEventListener('click', click);
       this.walk = null;
+      if (this.torchOn) this.toggleHandTorch();
       cam.fov = 38; cam.near = 0.5; cam.updateProjectionMatrix();
       this.cam.lookAt(tileX - this.state!.map.width / 2, tileY - this.state!.map.height / 2, 22);
       this.onWalkEnd();
@@ -778,6 +809,12 @@ export class GameRenderer {
     const ground = this.view ? this.view.heightAt(w.x, w.z) : 0;
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.58 + Math.sin(w.bob) * 0.02, w.z - height / 2);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
+    if (this.handLight) {
+      const fl = 0.85 + Math.sin(this.time * 13) * 0.08 + Math.sin(this.time * 29.3) * 0.07;
+      this.handLight.intensity = this.torchOn ? 9 * fl : 0;
+      const flame = this.handTorch?.getObjectByName('flame');
+      if (flame) flame.scale.set(1, 0.8 + fl * 0.4, 1);
+    }
   }
 
   frame(dt: number, alpha: number): void {
@@ -1250,7 +1287,7 @@ export class GameRenderer {
 
   /** Przesuwa słońce i obszar cienia za kamerą; im dalej kamera, tym większy obszar. */
   private aimSun(): void {
-    const f = this.cam.focus;
+    const f = this.focusPoint;
     const half = Math.max(22, Math.min(70, this.cam.distance * 1.15));
     // skok o stałą siatkę, żeby cienie nie migotały przy przesuwaniu kamery
     const grid = (half * 2) / this.sun.shadow.mapSize.x * 8;
@@ -1278,7 +1315,7 @@ export class GameRenderer {
     if (!on) { for (const lamp of this.lamps) lamp.intensity = 0; return; }
     // co kilka klatek wybieramy źródła światła najbliższe środkowi ekranu
     if (this.frameNo++ % 6 === 0) {
-      const f = this.cam.focus;
+      const f = this.focusPoint;
       const spots: { v: THREE.Vector3; d: number; k: number }[] = [];
       for (const [id, mesh] of this.buildingMeshes) {
         const torch = mesh.getObjectByName('torch');
