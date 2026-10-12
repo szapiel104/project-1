@@ -167,15 +167,77 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     fishMesh.instanceMatrix.needsUpdate = true;
   };
 
-  // Za mapą: leśne runo z otworem na planszę. Same drzewa sadzimy niżej, gdy gotowe są modele.
+  // Za mapą teren ciągnie się dalej tą samą siatką i teksturą: brzeg planszy przechodzi płynnie w puszczę.
+  // Góry przy krawędzi opadają łagodnie na zewnątrz, woda się kończy, a dalej są niskie pagórki pod lasem.
   const D = matchMedia('(pointer: coarse)').matches ? 34 : 56;
-  const floorShape = new THREE.Shape([new THREE.Vector2(-w / 2 - D - 40, -h / 2 - D - 40), new THREE.Vector2(w / 2 + D + 40, -h / 2 - D - 40), new THREE.Vector2(w / 2 + D + 40, h / 2 + D + 40), new THREE.Vector2(-w / 2 - D - 40, h / 2 + D + 40)]);
-  floorShape.holes.push(new THREE.Path([new THREE.Vector2(-w / 2, -h / 2), new THREE.Vector2(-w / 2, h / 2), new THREE.Vector2(w / 2, h / 2), new THREE.Vector2(w / 2, -h / 2)]));
-  const beyond = new THREE.Mesh(new THREE.ShapeGeometry(floorShape), new THREE.MeshStandardMaterial({ color: 0x34401f, roughness: 1, map: pattern('grass') }));
-  beyond.rotation.x = -Math.PI / 2;
-  beyond.position.y = 0.1;
-  beyond.receiveShadow = true;
-  group.add(beyond);
+  const floorCol = new THREE.Color(0x46612a);
+  const outerH = (X: number, Y: number): number => {
+    if (X >= 0 && X <= w && Y >= 0 && Y <= h) return corner(X, Y);
+    const cx = Math.max(0, Math.min(w, X)), cy = Math.max(0, Math.min(h, Y));
+    const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
+    const base = Math.max(0.12, corner(cx, cy));
+    const fade = Math.max(0, 1 - d / 9);
+    const hills = (Math.sin(X * 0.19 + map.seed) + Math.cos(Y * 0.23 - map.seed) + 2) * 0.25 * Math.min(1, d / 5);
+    return 0.12 + (base - 0.12) * fade * fade * (3 - 2 * fade) + hills;
+  };
+  {
+    const W2 = w + 2 * D, H2 = h + 2 * D;
+    const hs = new Float32Array((W2 + 1) * (H2 + 1));
+    const cs = new Float32Array((W2 + 1) * (H2 + 1) * 3);
+    const c3 = new THREE.Color();
+    for (let j = 0; j <= H2; j++)
+      for (let i = 0; i <= W2; i++) {
+        const X = i - D, Y = j - D;
+        const k = j * (W2 + 1) + i;
+        hs[k] = outerH(X, Y);
+        const cx = Math.max(0, Math.min(w, X)), cy = Math.max(0, Math.min(h, Y));
+        const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
+        const ci = (cy * (w + 1) + cx) * 3;
+        c3.setRGB(cornerCol[ci]!, cornerCol[ci + 1]!, cornerCol[ci + 2]!);
+        if (corner(cx, cy) < 0) c3.copy(floorCol); // za jeziorem przy brzegu od razu ląd
+        const patch = 0.92 + ((hash2(X >> 2, Y >> 2, map.seed) & 63) / 63) * 0.12;
+        c3.lerp(tmp.copy(floorCol).multiplyScalar(patch), Math.min(1, d / 10));
+        cs[k * 3] = c3.r; cs[k * 3 + 1] = c3.g; cs[k * 3 + 2] = c3.b;
+      }
+    const hAt = (i: number, j: number): number => hs[Math.max(0, Math.min(H2, j)) * (W2 + 1) + Math.max(0, Math.min(W2, i))]!;
+    const P: number[] = [], C: number[] = [], N: number[] = [], U: number[] = [];
+    const nv2 = new THREE.Vector3();
+    for (let j = 0; j < H2; j++)
+      for (let i = 0; i < W2; i++) {
+        const X = i - D, Y = j - D;
+        if (X >= 0 && X < w && Y >= 0 && Y < h) continue; // plansza ma własną siatkę
+        for (const [qi, qj] of [[i, j], [i, j + 1], [i + 1, j], [i + 1, j], [i, j + 1], [i + 1, j + 1]] as const) {
+          const X2 = qi - D, Y2 = qj - D;
+          const inside = X2 >= 0 && X2 <= w && Y2 >= 0 && Y2 <= h;
+          const k = qj * (W2 + 1) + qi;
+          P.push(X2 + ox, hs[k]!, Y2 + oz);
+          if (inside) {
+            const ci = (Y2 * (w + 1) + X2) * 3;
+            C.push(cornerCol[ci]!, cornerCol[ci + 1]!, cornerCol[ci + 2]!);
+            N.push(cornerNor[ci]!, cornerNor[ci + 1]!, cornerNor[ci + 2]!);
+          } else {
+            C.push(cs[k * 3]!, cs[k * 3 + 1]!, cs[k * 3 + 2]!);
+            nv2.set(hAt(qi - 1, qj) - hAt(qi + 1, qj), 2, hAt(qi, qj - 1) - hAt(qi, qj + 1)).normalize();
+            N.push(nv2.x, nv2.y, nv2.z);
+          }
+          U.push(X2 / 5, Y2 / 5);
+        }
+      }
+    const og = new THREE.BufferGeometry();
+    og.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    og.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+    og.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+    og.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+    const outer = new THREE.Mesh(og, ground.material);
+    outer.receiveShadow = true;
+    outer.castShadow = true;
+    group.add(outer);
+    // daleko za lasem płaska ciemna równina, którą i tak zakrywa mgła
+    const far = new THREE.Mesh(new THREE.PlaneGeometry(W2 + 600, H2 + 600), new THREE.MeshStandardMaterial({ color: 0x2c3a1c, roughness: 1 }));
+    far.rotation.x = -Math.PI / 2;
+    far.position.y = -0.2;
+    group.add(far);
+  }
 
   const yAxis = new THREE.Vector3(0, 1, 0);
   const heightAt = (fx: number, fy: number): number => {
@@ -265,10 +327,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const pz = gz + (((r >>> 8) & 255) / 255 - 0.5) * step * 0.9;
         const dist = Math.max(Math.abs(px) - w / 2, Math.abs(pz) - h / 2);
         if (dist < 0.9) continue;
+        const groundY = outerH(Math.round(px - ox), Math.round(pz - oz));
+        if (groundY > 2.2) continue; // na zboczach gór za mapą bez drzew
         const k = Math.min(1, dist / D);
         const size = (1.25 + k * 1.6) * (0.8 + ((r >>> 16) & 255) / 255 * 0.5);
         const leafTree = (r >>> 24) % 4 === 0;
-        const pos = new THREE.Vector3(px, 0.1, pz);
+        const pos = new THREE.Vector3(px, groundY - 0.05, pz);
         const qq = new THREE.Quaternion().setFromEuler(e3.set(0, ((r >>> 4) & 63) / 10, 0));
         const sc = new THREE.Vector3(size, size * (leafTree ? 1 : 1.15), size);
         const item = { m: new THREE.Matrix4().compose(pos, qq, sc), shade: (1 - k * 0.7) * (0.82 + ((r >>> 12) & 15) / 60), tile: -1, pos, q: qq, s: sc } as Item;

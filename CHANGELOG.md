@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.5.11 — jedna plansza (2026-10-12)
+
+- Teren za krawędzią to ta sama siatka i tekstura co plansza: góry łagodnie opadają na zewnątrz, łąka przechodzi w ciemniejsze runo puszczy, bez szczeliny i niebieskiego paska
+
 ## 0.5.10 — kamieniołom (2026-10-12)
 
 - Nowy model kamieniołomu: skalna ściana ze świeżo wyciętymi stopniami, żuraw z blokiem na linie i kołowrotem, ławka kamieniarza z młotkiem i dłutem, stos ciosów na podkładach, odłamki i pył
