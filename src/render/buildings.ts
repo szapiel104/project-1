@@ -1314,7 +1314,8 @@ const BUILDERS: Record<string, Builder> = {
     for (const side of [-1, 1]) {
       const leaf = new THREE.Group();
       leaf.position.set(side * 0.4, 0, 0);
-      leaf.rotation.y = side * 0.5; // uchylone do środka
+      leaf.name = side < 0 ? 'leafL' : 'leafR';
+      leaf.rotation.y = side * 1.3; // otwarte do środka; scena domyka je przy zamknięciu
       box(leaf, M.wood, 0.4, 1.1, 0.06, -side * 0.2, 0.05, 0);
       for (const y of [0.3, 0.85]) box(leaf, M.iron, 0.38, 0.05, 0.075, -side * 0.2, y, 0);
       g.add(leaf);

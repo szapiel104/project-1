@@ -78,7 +78,7 @@ export function deserialize(d: SaveData): GameState | null {
       const fp = footprint(def, b.rot);
       for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * map.width + x] = b.id;
       if (b.door >= 0) g.reserved[b.door]!++;
-      if (def.gate) g.gates[b.y * map.width + b.x] = b.owner + 1;
+      if (def.gate && !b.shut) g.gates[b.y * map.width + b.x] = b.owner + 1;
     }
     return g;
   } catch {

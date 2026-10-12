@@ -112,6 +112,7 @@ export class GameRenderer {
   private grade!: ShaderPass;
   private rain = 0;
   private hammers!: THREE.InstancedMesh;
+  private soldierTorches!: THREE.InstancedMesh;
   private armM = new THREE.Matrix4();
   private soundAt = new Map<string, number>();
   /** Dźwięk z miejsca na mapie, nie częściej niż co `every` sekund dla danego źródła; głośność z odległości od środka ekranu */
@@ -274,6 +275,10 @@ export class GameRenderer {
       tint(new THREE.ConeGeometry(0.05, 0.16, 5).translate(0.17, 0.72, 0.1), 0xffa53a),
     ]);
     this.handTorches = new THREE.InstancedMesh(hand, new THREE.MeshBasicMaterial({ vertexColors: true }), MAX_UNITS);
+    // co piąty żołnierz nocą niesie pochodnię w lewej ręce (prawa trzyma włócznię)
+    this.soldierTorches = new THREE.InstancedMesh(hand.clone().translate(-0.34, 0, 0), new THREE.MeshBasicMaterial({ vertexColors: true }), 256);
+    this.soldierTorches.count = 0; this.soldierTorches.frustumCulled = false;
+    this.scene.add(this.soldierTorches);
     // wędka rybaka: kij, żyłka i spławik
     const rod = mergeGeometries([
       tint(new THREE.CylinderGeometry(0.012, 0.02, 1.1, 5).rotateX(1.05).translate(0.12, 0.72, 0.6), 0x6b4a2e),
@@ -618,7 +623,7 @@ export class GameRenderer {
       this.syncRoads(this.state, this.view);
       this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
-      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); this.syncWolves(this.state, this.view, alpha); }
+      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncGates(this.state, dt); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); this.syncWolves(this.state, this.view, alpha); }
     this.composer.render();
   }
 
@@ -726,6 +731,31 @@ export class GameRenderer {
     }
     this.wolfMesh.count = n; this.wolfEyes!.count = n;
     this.wolfMesh.instanceMatrix.needsUpdate = true; this.wolfEyes!.instanceMatrix.needsUpdate = true;
+  }
+
+  private gateAngle = new Map<number, number>();
+  private gateShut = new Map<number, boolean>();
+  /** Wrota bramy płynnie się otwierają i zamykają; skrzypienie przy ruchu, łomot przy domknięciu */
+  private syncGates(g: GameState, dt: number): void {
+    for (const b of g.buildings) {
+      if (!BUILDINGS[b.type]!.gate) continue;
+      const mesh = this.buildingMeshes.get(b.id);
+      if (!mesh) continue;
+      const shut = !!b.shut;
+      const was = this.gateShut.get(b.id);
+      const want = shut ? 0 : 1.3;
+      let a = this.gateAngle.get(b.id) ?? want;
+      if (was !== undefined && was !== shut) this.sfxAt('creak', mesh.position.x, mesh.position.z, `g${b.id}`, 0.1, 1.6);
+      this.gateShut.set(b.id, shut);
+      const before = a;
+      a += Math.max(-dt * 1.1, Math.min(dt * 1.1, want - a)); // ok. 1,2 s na pełny ruch
+      if (this.calm) a = want;
+      if (before > 0.02 && a <= 0.02 && shut) this.sfxAt('plank', mesh.position.x, mesh.position.z, `gt${b.id}`, 0.1, 1.8);
+      this.gateAngle.set(b.id, a);
+      const l = mesh.getObjectByName('leafL'), r = mesh.getObjectByName('leafR');
+      if (l) l.rotation.y = -a;
+      if (r) r.rotation.y = a;
+    }
   }
 
   private dustAt = new Map<number, number>();
@@ -896,6 +926,11 @@ export class GameRenderer {
         if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
         const v = new THREE.Vector3(u.px / FP - width / 2, (this.view?.heightAt(u.px / FP, u.py / FP) ?? 0) + 0.8, u.py / FP - height / 2);
         spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.3 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
+      }
+      for (const s of g.soldiers) {
+        if (s.id % 5 !== 0 || s.owner !== this.me) continue;
+        const v = new THREE.Vector3(s.px / FP - width / 2, (this.view?.heightAt(s.px / FP, s.py / FP) ?? 0) + 0.8, s.py / FP - height / 2);
+        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.35 });
       }
       spots.sort((a, b) => a.d - b.d);
       this.lampSpots = spots.slice(0, this.lamps.length);
@@ -1074,7 +1109,8 @@ export class GameRenderer {
   private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
     const { width, height } = g.map;
     const t = this.tmp;
-    let n = 0, rings = 0, dots = 0;
+    let n = 0, rings = 0, dots = 0, torches = 0;
+    const torchesOn = this.night > 0.15;
     const m = new THREE.Matrix4();
     const byId = new Map<number, (typeof g.soldiers)[number]>();
     for (const x of g.soldiers) byId.set(x.id, x);
@@ -1123,6 +1159,7 @@ export class GameRenderer {
         this.sfxAt('swing', t.position.x, t.position.z, s.id, 1.1, 0.6);
         if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
       }
+      if (torchesOn && s.id % 5 === 0 && s.owner === this.me && torches < 256) this.soldierTorches.setMatrixAt(torches++, t.matrix);
       this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id);
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
@@ -1148,6 +1185,8 @@ export class GameRenderer {
     this.wave.visible = this.waveAge < 0.6;
     if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
     this.spearmen.finish(n);
+    this.soldierTorches.count = torches;
+    this.soldierTorches.instanceMatrix.needsUpdate = true;
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();

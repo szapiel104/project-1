@@ -60,6 +60,10 @@ export interface Building {
   hp: number;
   /** Ile pracy zostało do końca budowy; 0 = budynek gotowy i działa */
   build: number;
+  /** Brama: gracz chce ją mieć otwartą (domyślnie tak) */
+  gateOpen?: boolean;
+  /** Brama jest teraz zamknięta (na rozkaz albo bo wróg blisko) */
+  shut?: boolean;
 }
 
 /** Gruz po rozebranym budynku. Leży na działce, dopóki ludzie nie wyniosą wszystkich ładunków. */
@@ -374,7 +378,7 @@ export function stateHash(g: GameState): number {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length);

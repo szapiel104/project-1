@@ -95,3 +95,27 @@ describe('tryb deweloperski', () => {
     expect(g.players[0]!.dev).toBe(true);
   });
 });
+
+describe('brama', () => {
+  it('zamknięta nie przepuszcza nikogo, otwarta swoich; zamyka się sama, gdy wilk blisko', async () => {
+    const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const { walkable } = await import('../src/sim/path');
+    const g = createGame(5, '1v1', 0);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings[0]!;
+    let gate = null as null | (typeof g.buildings)[number];
+    for (let r = 4; r < 15 && !gate; r++) for (let d = -r; d <= r && !gate; d++) if (canPlace(g, 0, buildingIndex('gate'), keep.x + d, keep.y + r) === null) { placeBuilding(g, 0, buildingIndex('gate'), keep.x + d, keep.y + r); gate = g.buildings[g.buildings.length - 1]!; }
+    gate!.build = 0;
+    const t = gate!.y * g.map.width + gate!.x;
+    step(g, [{ type: 'gate', player: 0, id: gate!.id, open: false }]);
+    for (let i = 0; i < 5; i++) step(g, []);
+    expect(walkable(g, t, 0)).toBe(false);
+    step(g, [{ type: 'gate', player: 0, id: gate!.id, open: true }]);
+    for (let i = 0; i < 5; i++) step(g, []);
+    expect(walkable(g, t, 0)).toBe(true);
+    g.wolves.push({ id: 99999, px: gate!.x * 256 + 128, py: (gate!.y + 3) * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
+    for (let i = 0; i < 5; i++) step(g, []);
+    expect(gate!.shut).toBe(true);
+  });
+});

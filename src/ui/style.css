@@ -405,3 +405,7 @@ body.menu-open .scribe { display: none; }
 /* opisy w kafelkach zwykłym pismem, nie kapitalikami */
 .pick .pick-small, .dev-switch .dev-hint { font-family: var(--text); font-variant: normal; text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 500; }
 .pick-big { font-variant: normal; }
+.gate-box { display: grid; gap: 4px; }
+.gate-btn { min-height: 44px; font-size: 16px; }
+.gate-state { margin: 0; font-size: 15px; }
+.gate-state[data-shut='true'] { color: #b5342a; font-weight: 700; }

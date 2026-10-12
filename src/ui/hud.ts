@@ -19,6 +19,7 @@ export interface HudEvents {
   onMute(): void;
   onMenu(): void;
   onTrain(building: number, count: number): void;
+  onGate(building: number, open: boolean): void;
 }
 
 export interface HudView {
@@ -45,7 +46,7 @@ export interface HudView {
   affordable: Set<string>;
 }
 
-export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; recruit?: { spears: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number } }
+export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; recruit?: { spears: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number } }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -287,8 +288,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   hpLine.append(hpText, hpBar);
   const roster = el('div', 'roster');
   roster.hidden = true;
+  // brama: jeden duży przycisk otwórz/zamknij i stan pod spodem
+  const gateBox = el('div', 'gate-box');
+  const gateBtn = el('button', 'btn-main gate-btn');
+  gateBtn.type = 'button';
+  const gateState = el('p', 'gate-state');
+  let gateWant = true;
+  gateBtn.addEventListener('click', () => events.onGate(infoId, !gateWant));
+  gateBox.append(gateBtn, gateState);
+  gateBox.hidden = true;
   infoActions.append(demolish, close);
-  info.append(infoName, hpLine, recruit, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, recruit, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -588,6 +598,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const from = pr.input ? ` ${t('hud.from')} ${pr.input.amount} × ${t(RESOURCE_DEFS[pr.input.res].name).toLowerCase()}` : '';
         infoWorker.textContent = '';
         infoWorker.append(`${t('hud.makes')}: ${pr.output.amount} × ${t(RESOURCE_DEFS[pr.output.res].name).toLowerCase()}${from}, ${t('hud.every')} ${secs} s`, document.createElement('br'), `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
+      }
+      gateBox.hidden = !(i.own && i.gate);
+      if (i.gate) {
+        gateWant = i.gate.open;
+        setText(gateBtn, i.gate.open ? 'Zamknij bramę' : 'Otwórz bramę');
+        setText(gateState, i.gate.shut ? (i.gate.open ? 'Zamknięta — wróg w pobliżu, otworzy się sama' : 'Zamknięta') : 'Otwarta — swoi przechodzą');
+        gateState.dataset.shut = String(i.gate.shut);
       }
       demolish.hidden = !i.own || !i.def.buildable;
       trainBtn.hidden = true;

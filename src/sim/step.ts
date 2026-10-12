@@ -1,9 +1,11 @@
+import { BUILDINGS } from '../data/buildings';
 import { buildingIndex } from '../data/buildings';
 import { RULES } from '../data/rules';
 import type { GameState } from './state';
 import { economySystem } from './systems/economy';
 import { demolish, placeBuilding, removeRoad } from './systems/placement';
 import { wolfSystem } from './systems/wolves';
+import { gateSystem } from './systems/gates';
 import { migrationSystem, travelSystem } from './systems/population';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
@@ -21,7 +23,8 @@ export type Command =
   | { type: 'setTax'; player: number; level: number }
   | { type: 'train'; player: number; building: number; unit: string }
   | { type: 'move'; player: number; ids: number[]; x: number; y: number }
-  | { type: 'attack'; player: number; ids: number[]; target: number };
+  | { type: 'attack'; player: number; ids: number[]; target: number }
+  | { type: 'gate'; player: number; id: number; open: boolean };
 
 function apply(g: GameState, c: Command): void {
   const p = g.players[c.player];
@@ -52,6 +55,11 @@ function apply(g: GameState, c: Command): void {
     case 'attack':
       if (Array.isArray(c.ids) && Number.isInteger(c.target)) orderAttack(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.target);
       break;
+    case 'gate': {
+      const b = g.buildings.find((x) => x.id === c.id);
+      if (b && b.owner === c.player && BUILDINGS[b.type]!.gate) b.gateOpen = !!c.open;
+      break;
+    }
     case 'noop':
       break;
   }
@@ -71,6 +79,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   armySystem(g);
   migrationSystem(g);
   travelSystem(g);
+  gateSystem(g);
   wolfSystem(g);
   economySystem(g);
 }

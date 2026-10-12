@@ -142,7 +142,7 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
   for (let ty = y; ty < y + fp.h; ty++)
     for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
   if (door >= 0) g.reserved[door]!++;
-  if (def.gate) g.gates[y * g.map.width + x] = owner + 1;
+  if (def.gate) { b.gateOpen = true; b.shut = false; g.gates[y * g.map.width + x] = owner + 1; }
   g.buildings.push(b);
   return b;
 }
