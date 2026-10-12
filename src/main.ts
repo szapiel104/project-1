@@ -90,7 +90,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
   onTrain: (id, n, unit = 'spearman') => { const k = Math.min(n, recruitInfo().find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
-}, TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
+}, TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288));
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
 mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
