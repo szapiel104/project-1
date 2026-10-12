@@ -126,8 +126,9 @@ describe('wilki polują naprawdę', () => {
     for (const p of g.players) p.bot = false;
     // noc, wataha na brzegu mapy
     while (!(((g.tick + 800) % 2400) >= 2250)) step(g, []);
-    g.wolves.push({ id: 99001, px: 2 * 256 + 128, py: 30 * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
+    for (let i = 0; i < 3; i++) g.wolves.push({ id: 99001 + i, px: 2 * 256 + 128, py: (29 + i) * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
     for (let i = 0; i < 900; i++) step(g, []);
     expect(g.players.reduce((n, p) => n + p.stats.lost, 0)).toBeGreaterThan(0);
+    expect(g.corpses.some((c) => c.kind === -1)).toBe(true);
   });
 });

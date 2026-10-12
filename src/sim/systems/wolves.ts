@@ -12,6 +12,9 @@ import { demolish } from './placement';
 const SPEED = 30;
 const SIGHT = 9;
 const BITE = 14; // ticki między ugryzieniami
+const PEASANT_HP = 30, WOLF_BITE = 11;
+/** Chłop broni się kijem albo narzędziem: słabo, ale kilku razem przegoni wilka */
+const PEASANT_HIT = 3, PEASANT_CD = 20;
 
 function edgeOut(g: GameState, w: Wolf): number {
   const { width, height } = g.map;
@@ -57,9 +60,15 @@ export function wolfSystem(g: GameState): void {
         if (w.cd === 0) {
           w.cd = BITE;
           const ui = g.units.findIndex((u) => u.id === prey);
-          if (ui >= 0) {
-            // chłop nie ma czym się bronić: wilk go zagryza
+          if (ui >= 0 && (g.units[ui]!.hp ?? PEASANT_HP) - WOLF_BITE > 0) {
+            // ugryziony: traci zdrowie, staje i odgania wilka (patrz niżej)
             const u = g.units[ui]!;
+            u.hp = (u.hp ?? PEASANT_HP) - WOLF_BITE;
+            u.wait = 20; u.path = [];
+          } else if (ui >= 0) {
+            // trzecie ugryzienie zabija; ciało zostaje, zabierze je grabarz albo wolny chłop
+            const u = g.units[ui]!;
+            g.corpses.push({ id: u.id, owner: u.owner, kind: -1, px: u.px, py: u.py, at: g.tick, taken: false });
             if (u.job) { const b = g.buildings.find((x) => x.id === u.job); if (b) b.worker = 0; }
             for (const b of g.buildings) if (b.worker === u.id) b.worker = 0;
             g.units.splice(ui, 1);
@@ -113,6 +122,15 @@ export function wolfSystem(g: GameState): void {
     w.px += Math.max(-SPEED, Math.min(SPEED, tx - w.px));
     w.py += Math.max(-SPEED, Math.min(SPEED, ty - w.py));
     if (w.px === tx && w.py === ty) w.path.shift();
+  }
+  // chłopi z wilkiem tuż obok odganiają go czym mają pod ręką
+  for (const u of g.units) {
+    if ((g.tick + u.id) % PEASANT_CD !== 0) continue;
+    for (const w of g.wolves) {
+      if (w.hp <= 0 || w.leaving) continue;
+      const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP;
+      if (dx * dx + dy * dy <= 2.2) { w.hp -= PEASANT_HIT; u.wait = Math.max(u.wait, 10); break; }
+    }
   }
   // żołnierze bronią się i gonią wilki w pobliżu
   for (const s of g.soldiers) {

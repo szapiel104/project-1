@@ -113,6 +113,7 @@ export class GameRenderer {
   private rain = 0;
   private hammers!: THREE.InstancedMesh;
   private soldierTorches!: THREE.InstancedMesh;
+  private peasantBodies!: Figures;
   private armM = new THREE.Matrix4();
   private soundAt = new Map<string, number>();
   /** Dźwięk z miejsca na mapie, nie częściej niż co `every` sekund dla danego źródła; głośność z odległości od środka ekranu */
@@ -250,6 +251,7 @@ export class GameRenderer {
     this.rings.renderOrder = 3;
     this.scene.add(this.rings);
     this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
+    this.peasantBodies = new Figures(MAX_UNITS, this.scene);
     this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);
     this.stains.count = 0;
     this.stains.frustumCulled = false;
@@ -727,9 +729,18 @@ export class GameRenderer {
         h += d * 0.2; this.wolfHeading.set(w.id, h);
       }
       const run = next !== undefined && !this.calm;
+      // atak: wilk skacze do przodu i cofa się, łeb w dół
+      let lunge = 0;
+      if (w.target && !run && !this.calm) {
+        const prey = g.units.find((u) => u.id === w.target) ?? g.soldiers.find((s) => s.id === w.target);
+        if (prey && (prey.px - w.px) ** 2 + (prey.py - w.py) ** 2 < (1.5 * FP) ** 2) {
+          h = Math.atan2(prey.px / FP - fx, prey.py / FP - fy); this.wolfHeading.set(w.id, h);
+          lunge = Math.max(0, Math.sin(this.time * 9 + w.id));
+        }
+      }
       const bob = run ? Math.abs(Math.sin(this.time * 12 + w.id)) * 0.05 : 0;
-      t.position.set(fx - width / 2, view.heightAt(fx, fy) + bob, fy - height / 2);
-      t.rotation.set(run ? Math.sin(this.time * 12 + w.id) * 0.06 : 0, h, 0, 'YXZ');
+      t.position.set(fx - width / 2 + Math.sin(h) * lunge * 0.3, view.heightAt(fx, fy) + bob + lunge * 0.12, fy - height / 2 + Math.cos(h) * lunge * 0.3);
+      t.rotation.set(run ? Math.sin(this.time * 12 + w.id) * 0.06 : -lunge * 0.25, h, 0, 'YXZ');
       t.scale.setScalar(1.15);
       t.updateMatrix();
       this.wolfMesh.setMatrixAt(n, t.matrix);
@@ -1199,6 +1210,7 @@ export class GameRenderer {
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
+    let pc = 0;
     for (const body of g.corpses) {
       if (c >= MAX_UNITS) break;
       const fx = body.px / FP, fy = body.py / FP;
@@ -1209,12 +1221,14 @@ export class GameRenderer {
       m.compose(new THREE.Vector3(fx - width / 2, y + 0.06 - age * 0.04, fy - height / 2), lay, sc);
       const team = TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
       const rot = new THREE.Color(team).lerp(new THREE.Color(0x3b3226), 0.3 + age * 0.6).getHex();
-      this.bodies.set(c, m, 0.3, false, rot, body.id);
+      if (body.kind < 0) { this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); this.bodies.set(c, ZERO, 0, false, rot, body.id); }
+      else this.bodies.set(c, m, 0.3, false, rot, body.id);
       m.compose(new THREE.Vector3(fx - width / 2, y + 0.02, fy - height / 2), new THREE.Quaternion(), sc.set(1 + age * 0.4, 1, 1 + age * 0.4));
       this.stains.setMatrixAt(c, m);
       c++;
     }
     this.bodies.finish(c);
+    this.peasantBodies.finish(pc);
     this.stains.count = c;
     this.stains.instanceMatrix.needsUpdate = true;
     this.rings.count = rings;
@@ -1316,6 +1330,14 @@ export class GameRenderer {
           if (jid === 'woodcutter' || jid === 'poleturner') this.sfxAt('plank', t.position.x, t.position.z, u.id, 1.3, 0.7);
           else if (jid === 'mill') this.sfxAt('creak', t.position.x, t.position.z, u.id, 3.5, 0.8);
         }
+      }
+      // wilk tuż obok: chłop staje do niego twarzą i macha rękami
+      if (!this.calm && g.wolves.length) for (const w of g.wolves) {
+        if ((w.px - u.px) ** 2 + (w.py - u.py) ** 2 > (1.5 * FP) ** 2) continue;
+        t.rotation.set(0, Math.atan2(w.px - u.px, w.py - u.py), 0);
+        swing = Math.sin(this.time * 14 + u.id) * 1.4;
+        if ((u.hp ?? 30) < 30) this.sfxAt('hit', t.position.x, t.position.z, `bite${u.id}`, 0.9, 0.8);
+        break;
       }
       const hammering = u.phase === Phase.Repairing;
       if (hammering) {

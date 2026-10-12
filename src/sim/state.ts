@@ -128,6 +128,8 @@ export interface Unit {
   trips: number;
   /** Id chaty, w której właśnie odpoczywa, albo 0 */
   home: number;
+  /** Zdrowie chłopa (brak = pełne 30); wilki go ranią, a on się broni */
+  hp?: number;
   /** Id budynku, przy którym ma zapalić pochodnię, albo 0 */
   target: number;
 }
@@ -383,7 +385,7 @@ export function stateHash(g: GameState): number {
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait);
-    add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length);
+    add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
   for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.path.length); for (const t of s.path) add(t); }
