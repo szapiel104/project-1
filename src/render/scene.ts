@@ -109,6 +109,8 @@ function noWorkerMaterial(): THREE.SpriteMaterial {
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number }
 
 const MAX_UNITS = 2048;
+/** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
+const FIG = 0.76;
 const tmpColor = new THREE.Color();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
@@ -725,7 +727,7 @@ export class GameRenderer {
   private get focusPoint(): THREE.Vector3 {
     if (!this.walk || !this.state) return this.cam.focus;
     const c = this.cam.camera.position;
-    return this.walkFocus.set(c.x, c.y - 0.58, c.z);
+    return this.walkFocus.set(c.x, c.y - 0.46, c.z);
   }
   // pochodnia w ręce podczas spaceru: F zapala i gasi
   private handLight: THREE.PointLight | null = null;
@@ -807,7 +809,7 @@ export class GameRenderer {
     const cam = this.cam.camera;
     const { width, height } = g.map;
     const ground = this.view ? this.view.heightAt(w.x, w.z) : 0;
-    cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.58 + Math.sin(w.bob) * 0.02, w.z - height / 2);
+    cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
     if (this.handLight) {
       const fl = 0.85 + Math.sin(this.time * 13) * 0.08 + Math.sin(this.time * 29.3) * 0.07;
@@ -973,7 +975,7 @@ export class GameRenderer {
       const bob = run ? Math.abs(Math.sin(this.time * 12 + w.id)) * 0.05 : 0;
       t.position.set(fx - width / 2 + Math.sin(h) * lunge * 0.3, view.heightAt(fx, fy) + bob + lunge * 0.12, fy - height / 2 + Math.cos(h) * lunge * 0.3);
       t.rotation.set(run ? Math.sin(this.time * 12 + w.id) * 0.06 : -lunge * 0.25, h, 0, 'YXZ');
-      t.scale.setScalar(1.25);
+      t.scale.setScalar(1.0);
       t.updateMatrix();
       this.wolfMesh.setMatrixAt(n, t.matrix);
       // kłus: łapy po przekątnej razem; w ataku przednie wyrzucone do przodu
@@ -1583,7 +1585,7 @@ export class GameRenderer {
       }
       this.lastCd.set(s.id, s.cd);
       t.rotation.set(0, heading, 0);
-      t.scale.setScalar(1.08);
+      t.scale.setScalar(1.08 * FIG);
       t.updateMatrix();
       t.scale.setScalar(1);
       if (striking && !this.calm) {
@@ -1632,7 +1634,7 @@ export class GameRenderer {
       const age = Math.min(1, (g.tick - body.at) / 6000);
       const y = view.heightAt(fx, fy);
       lay.setFromEuler(new THREE.Euler(-Math.PI / 2 + 0.08, ((body.id * 2.39) % 6.28), 0, 'YXZ'));
-      sc.set(1.05, 1.05, 1.05 * (1 - age * 0.55));
+      sc.set(1.05 * FIG, 1.05 * FIG, 1.05 * FIG * (1 - age * 0.55));
       m.compose(new THREE.Vector3(fx - width / 2, y + 0.06 - age * 0.04, fy - height / 2), lay, sc);
       const team = TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
       const rot = new THREE.Color(team).lerp(new THREE.Color(0x3b3226), 0.3 + age * 0.6).getHex();
@@ -1794,7 +1796,7 @@ export class GameRenderer {
       this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
-      t.scale.setScalar(1);
+      t.scale.setScalar(FIG);
       t.updateMatrix();
       this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
       if (hammering) {
@@ -1811,15 +1813,15 @@ export class GameRenderer {
       if (torchOn) this.handTorches.setMatrixAt(i, t.matrix); else this.handTorches.setMatrixAt(i, ZERO);
       this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
-      t.scale.setScalar(log ? 1 : 0);
+      t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();
       this.logs.setMatrixAt(i, t.matrix);
-      t.scale.setScalar(wood && !log ? 1 : 0);
+      t.scale.setScalar(wood && !log ? FIG : 0);
       t.updateMatrix();
       this.planks.setMatrixAt(i, t.matrix);
       // każdy surowiec ma własny wygląd: kosz jabłek, bochenki, snop, worek, blok, sztaby
       for (const [res, mesh] of this.loads) {
-        t.scale.setScalar(u.carryRes === res ? 1 : 0);
+        t.scale.setScalar(u.carryRes === res ? FIG : 0);
         t.updateMatrix();
         mesh.setMatrixAt(i, t.matrix);
       }
@@ -1839,7 +1841,7 @@ export class GameRenderer {
       const y = view.heightAt(fx, fy);
       t.position.set(fx - width / 2, y + (this.calm ? 0 : Math.abs(Math.cos(st.phase)) * 0.025), fy - height / 2);
       t.rotation.set(tr.leaving ? 0.12 : 0, heading, 0, 'YXZ'); // odchodzący idzie ze spuszczoną głową
-      t.scale.setScalar(1);
+      t.scale.setScalar(FIG);
       t.updateMatrix();
       this.figures.set(k, t.matrix, this.calm ? 0 : Math.sin(st.phase) * 0.55, false, TEAM_COLORS[g.players[tr.owner]?.team ?? 0] ?? 0x888888, tr.id);
       if (tr.leaving) {

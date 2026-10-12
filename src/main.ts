@@ -509,7 +509,7 @@ barLayer.className = 'hpbars';
 document.body.append(barLayer);
 const bars: HTMLElement[] = [];
 function updateBars(): void {
-  renderer.barLift = 0.95;
+  renderer.barLift = 0.78;
   const list = renderer.soldiersOnScreen(-1);
   renderer.barLift = 0.45;
   const kinds = new Map<number, number>();
