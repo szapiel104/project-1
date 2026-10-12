@@ -68,7 +68,7 @@ const SAVE_KEY = 'project1.save';
 
 /** Zapis w pamięci przeglądarki, żeby odświeżenie strony nie zaczynało gry od zera. */
 function save(): void {
-  if (TEST || net) return; // gra przez sieć nie nadpisuje zapisu; tryb testowy nie nadpisuje prawdziwego zapisu gracza
+  if (TEST || net || gameOver) return; // skończona gra i gra przez sieć nie nadpisuje zapisu; tryb testowy nie nadpisuje prawdziwego zapisu gracza
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seedText: currentSeedText, data: serialize(game, currentPreset) })); } catch { /* brak dostępu do pamięci przeglądarki */ }
 }
 
@@ -90,7 +90,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onWreck: () => setWreck(!wrecking),
   onVolume: (v) => setVolume(v),
   onMute: () => hud.setMuted(toggleMute()),
-  onMenu: () => menu.open(true),
+  onMenu: () => menu.open(!gameOver),
   onAccount: () => menu.account(true),
   onWalk: () => {
     const u = game.units.find((x) => x.id === selectedUnit);
@@ -177,6 +177,7 @@ applySettings(loadSettings());
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart): void {
   endShown = false;
+  gameOver = false;
   endOnline();
   ME = online ? online.me : 0;
   game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans);
@@ -414,7 +415,7 @@ window.addEventListener('keydown', (e) => {
     else if (picked) pick(null);
     else if (chosen.size) chooseSoldiers([], false);
     else if (selected || selectedUnit) { select(0); selectUnit(0); }
-    else menu.open(true);
+    else menu.open(!gameOver);
     return;
   }
   if (menu.isOpen()) return;
@@ -622,11 +623,17 @@ function updateAlarm(): void {
 }
 
 let endShown = false;
+/** Gra się skończyła: nie zapisujemy jej i nie da się do niej wrócić */
+let gameOver = false;
 function showEnd(win: boolean): void {
   endShown = true;
   speed = 0;
   // mecz przez sieć się skończył: zamykamy kanał i pokój, żeby nie dało się do niego wrócić
   endOnline();
+  // skończona gra (wygrana, porażka, poddanie) znika z zapisu: w menu nie ma już „Kontynuuj”
+  gameOver = true;
+  try { localStorage.removeItem(SAVE_KEY); } catch { /* brak dostępu do pamięci */ }
+  menu.setCanContinue(false);
   const p = game.players[ME]!;
   const st = p.stats;
   const mins = Math.floor(game.tick / TICKS_PER_SECOND / 60);
@@ -799,7 +806,14 @@ const [hashPreset, hashSeed] = decodeURIComponent(location.hash.slice(1)).split(
 hud.setMuted(isMuted());
 hud.setVolume(getVolume());
 const saved = TEST ? null : loadSave(); // test zawsze na świeżej mapie
-const restored = saved ? deserialize(saved.data) : null;
+const loadedGame = saved ? deserialize(saved.data) : null;
+// zapis skończonej gry (porażka, poddanie, wygrana) to nie gra do kontynuowania — wyrzucamy go
+const finished = (g: GameState | null): boolean => {
+  const meP = g?.players[0];
+  return !!meP && (meP.defeated || !g!.players.some((o) => o.team !== meP.team && !o.defeated));
+};
+const restored = finished(loadedGame) ? null : loadedGame;
+if (loadedGame && !restored) { try { localStorage.removeItem(SAVE_KEY); } catch { /* nic */ } }
 const T1 = performance.now();
 if (saved && restored) start(saved.seedText, saved.data.preset, restored);
 else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1', undefined, 1, TEST && new URLSearchParams(location.search).has('dev'));

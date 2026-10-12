@@ -143,6 +143,23 @@ describe('budowanie', () => {
 });
 
 describe('praca chłopów', () => {
+  it('gdy nie ma wolnych ludzi, drwale rzucają robotę w lesie i stawiają budynek', () => {
+    const g = createGame(5);
+    // dwa tartaki, budowa do końca, potem wszyscy wolni odchodzą — zostają tylko drwale
+    run(g, 1, [build(g, 'woodcutter')]);
+    run(g, 1, [build(g, 'woodcutter')]);
+    run(g, 800);
+    const cutters = g.units.filter((u) => u.owner === 0 && u.job !== 0);
+    expect(cutters.length).toBeGreaterThan(0);
+    g.units = g.units.filter((u) => u.owner !== 0 || u.job !== 0);
+    run(g, 60); // drwale są w lesie albo w drodze
+    run(g, 1, [build(g, 'house')]);
+    const site = g.buildings[g.buildings.length - 1]!;
+    expect(site.build).toBeGreaterThan(0);
+    run(g, 2500);
+    expect(site.build).toBe(0);
+  });
+
   it('drwal przynosi drewno', () => {
     const g = createGame(5);
     run(g, 1, [build(g, 'woodcutter')]);

@@ -399,6 +399,8 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
 }
 
 const ENGINEERS = buildingIndex('engineers');
+/** Zajęcia, które pracownik może rzucić, żeby iść na budowę */
+const DROPPABLE = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.Working, Phase.ToSite, Phase.WorkingSite, Phase.ToInputStore, Phase.ToRest, Phase.Resting]);
 
 /** Inżynier z cechu naprawia uszkodzone budynki swojego gracza (najbliższy pierwszy). */
 function repairSystem(g: GameState): void {
@@ -423,11 +425,12 @@ function repairSystem(g: GameState): void {
       if (!u) break;
       u.target = b.id; u.phase = Phase.ToRepair; u.path = []; crew++;
     }
-    // nikt wolny nie przyszedł: jeden pracownik rzuca swoją robotę (bez ładunku w rękach), buduje i potem wraca
-    if (crew === 0) {
-      const u = g.units.find((x) => x.owner === b.owner && x.job !== 0 && x.target === 0 && x.carryRes < 0 &&
-        (x.phase === Phase.Working || x.phase === Phase.Returning || x.phase === Phase.Idle));
-      if (u) { u.target = b.id; u.phase = Phase.ToRepair; u.path = []; u.timer = 0; }
+    // brak wolnych chłopów: do dwóch pracowników rzuca robotę (drwal w lesie, kamieniarz w kamieniołomie, ktoś w warsztacie
+    // albo na odpoczynku), byle nie mieli nic w rękach — budują, a potem wracają do siebie
+    while (crew < 2) {
+      const u = g.units.find((x) => x.owner === b.owner && x.job !== 0 && x.target === 0 && x.carryRes < 0 && DROPPABLE.has(x.phase));
+      if (!u) break;
+      u.target = b.id; u.phase = Phase.ToRepair; u.path = []; u.timer = 0; u.wait = 0; crew++;
     }
   }
   for (const guild of g.buildings) {
