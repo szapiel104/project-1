@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.5.8 — zapasy w składzie (2026-10-12)
+
+- Stosy w składzie i stodole z teksturami: deski z usłojeniem na przekładkach, ciosane bloki kamienia, sztaby żelaza, snopki zboża z przewiązką i kłosami, płócienne worki mąki, kosze bochenków i jabłek, skrzynka ryb
+
 ## 0.5.7 — rów przy drodze (2026-10-12)
 
 - Wzdłuż drogi kamiennej płytki rów tuż przy krawędzi bruku: brudny piasek przy brzegach, wilgotne zbocza i lśniąca strużka wody na dnie; rów skręca razem z drogą

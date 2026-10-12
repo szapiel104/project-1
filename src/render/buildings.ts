@@ -142,35 +142,74 @@ const STOCK_SLOTS = 9;
 
 const part = (geo: THREE.BufferGeometry, x: number, y: number, z: number): THREE.BufferGeometry => geo.translate(x, y, z);
 /** Jak wygląda jedna porcja surowca w składzie: deski leżą na deskach, worki na workach. Klucz = id surowca. */
-const PILES: Record<string, { geo: THREE.BufferGeometry; color: number }> = {
+/** Barwi bryłę kolorem w wierzchołkach (żeby jeden stos mógł mieć np. kosz i jabłka) */
+function paint(geo: THREE.BufferGeometry, hex: number): THREE.BufferGeometry {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  const c = new THREE.Color(hex);
+  const n = g.getAttribute('position').count;
+  const col = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) { col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b; }
+  g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  return g;
+}
+const merge = (parts: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries(parts.map((p2) => (p2.index ? p2.toNonIndexed() : p2)))!;
+
+/**
+ * Jak wygląda jedna porcja surowca w składzie. Każda ma własny kształt i teksturę:
+ * deski z usłojeniem, ciosany kamień, snopki zboża ze związanymi kłosami, worki z płótna, sztaby, kosze.
+ */
+const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean }> = {
   wood: {
-    color: 0xc9a26b,
-    geo: mergeGeometries([0, 1, 2].flatMap((layer) => [-0.12, 0.12].map((z) => part(new THREE.BoxGeometry(0.46, 0.075, 0.21), 0, -0.1 + layer * 0.095, z)))),
+    tex: 'planks',
+    geo: merge([0, 1, 2].flatMap((layer) => [-0.115, 0.115].map((z) => paint(part(new THREE.BoxGeometry(0.46, 0.07, 0.21), (layer % 2 ? 0.015 : -0.01), -0.1 + layer * 0.088, z), layer === 2 ? 0xe2bf8a : 0xd2ab74)))
+      .concat([-0.18, 0.18].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.03, 0.46), x, -0.135, 0), 0x6b4a2e)))),
   },
-  stone: { color: 0xb5b0a2, geo: new THREE.BoxGeometry(0.42, 0.28, 0.42) },
+  stone: {
+    tex: 'ashlar',
+    geo: merge([
+      paint(part(new THREE.BoxGeometry(0.4, 0.17, 0.38), 0, -0.065, 0), 0xc9c4b6),
+      paint(part(new THREE.BoxGeometry(0.22, 0.13, 0.2).rotateY(0.3), -0.07, 0.09, -0.05), 0xb9b3a4),
+      paint(part(new THREE.BoxGeometry(0.17, 0.11, 0.16).rotateY(-0.4), 0.1, 0.08, 0.08), 0xd6d0c2),
+    ]),
+  },
   iron: {
-    color: 0x5a5560,
-    geo: mergeGeometries([0, 1].flatMap((layer) => [-0.11, 0.11].map((x) => part(new THREE.BoxGeometry(0.17, 0.11, 0.4), x, -0.08 + layer * 0.14, 0)))),
+    metal: true,
+    geo: merge([0, 1].flatMap((layer) => [-0.1, 0.1].map((x) => paint(part(new THREE.CylinderGeometry(0.06, 0.07, 0.38, 6).rotateX(Math.PI / 2), layer ? x * 0.5 : x, -0.08 + layer * 0.12, 0), 0x6a6670)))),
   },
   wheat: {
-    color: 0xd9b84a,
-    geo: mergeGeometries([-0.11, 0.11].map((x) => part(new THREE.ConeGeometry(0.12, 0.3, 6), x, 0, 0))),
-  },
-  bread: {
-    color: 0xc9843d,
-    geo: mergeGeometries([-0.12, 0.12].map((z) => part(new THREE.IcosahedronGeometry(0.12, 0).scale(1.6, 0.8, 0.9), 0, -0.04, z))),
-  },
-  apples: {
-    color: 0xd0281f,
-    geo: mergeGeometries([part(new THREE.CylinderGeometry(0.19, 0.15, 0.2, 8).toNonIndexed(), 0, -0.04, 0), ...[0, 1, 2, 3, 4].map((k) => part(new THREE.IcosahedronGeometry(0.07, 0), Math.cos(k * 1.26) * 0.09, 0.08, Math.sin(k * 1.26) * 0.09))]),
-  },
-  fish: {
-    color: 0x9cc3d6,
-    geo: mergeGeometries([-0.13, 0, 0.13].map((z) => part(new THREE.IcosahedronGeometry(0.1, 0).scale(1.9, 0.5, 0.6), 0, -0.08, z))),
+    tex: 'thatch',
+    // snopek: wiązka źdźbeł z przewiązką i rozchylone kłosy na górze
+    geo: merge([-0.11, 0.11].flatMap((x) => [
+      paint(part(new THREE.CylinderGeometry(0.065, 0.05, 0.22, 8), x, -0.05, 0), 0xd9b452),
+      paint(part(new THREE.CylinderGeometry(0.07, 0.07, 0.03, 8), x, -0.02, 0), 0x9a7a2a),
+      ...[0, 1, 2, 3, 4].map((k) => paint(part(new THREE.ConeGeometry(0.03, 0.12, 4).rotateZ(Math.cos(k * 1.26) * 0.4).rotateX(Math.sin(k * 1.26) * 0.4), x + Math.cos(k * 1.26) * 0.035, 0.11, Math.sin(k * 1.26) * 0.035), 0xe8c766)),
+    ])),
   },
   flour: {
-    color: 0xf1ead8,
-    geo: mergeGeometries([-0.11, 0.11].map((x) => part(new THREE.IcosahedronGeometry(0.13, 0).scale(0.95, 1.05, 1.3), x, -0.01, 0))),
+    tex: 'plaster',
+    geo: merge([-0.11, 0.11].flatMap((x) => [
+      paint(new THREE.IcosahedronGeometry(0.12, 1).scale(0.9, 1.15, 0.8).translate(x, -0.02, 0), 0xf2ebd6),
+      paint(part(new THREE.CylinderGeometry(0.035, 0.05, 0.06, 6), x, 0.12, 0), 0xd8cdb0),
+    ])),
+  },
+  bread: {
+    geo: merge([
+      paint(part(new THREE.CylinderGeometry(0.2, 0.16, 0.12, 10), 0, -0.07, 0), 0x9a7442),
+      ...[[-0.07, -0.05], [0.07, -0.04], [0, 0.07]].map(([x, z]) => paint(new THREE.IcosahedronGeometry(0.075, 1).scale(1.5, 0.75, 1).translate(x!, 0.02, z!), 0xc98a45)),
+      paint(new THREE.IcosahedronGeometry(0.07, 1).scale(1.4, 0.7, 1).translate(0.02, 0.09, 0), 0xd99c55),
+    ]),
+  },
+  apples: {
+    geo: merge([
+      paint(part(new THREE.CylinderGeometry(0.2, 0.15, 0.14, 10), 0, -0.07, 0), 0x9a7442),
+      ...[0, 1, 2, 3, 4, 5, 6].map((k) => paint(new THREE.IcosahedronGeometry(0.055, 1).translate(Math.cos(k * 0.9) * (k ? 0.11 : 0), 0.03 + (k ? 0 : 0.04), Math.sin(k * 0.9) * (k ? 0.11 : 0)), k % 3 === 2 ? 0x9fbf3a : 0xc8261d)),
+    ]),
+  },
+  fish: {
+    geo: merge([
+      paint(part(new THREE.BoxGeometry(0.38, 0.1, 0.3), 0, -0.08, 0), 0x8a6a45),
+      ...[-0.08, 0, 0.08].map((z) => paint(new THREE.IcosahedronGeometry(0.06, 1).scale(2.6, 0.55, 0.8).translate(0, 0.0, z), 0x9cc3d6)),
+    ]),
   },
 };
 const pileMats = new Map<string, THREE.MeshStandardMaterial>();
@@ -191,7 +230,10 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
     if (!pile || slot >= STOCK_SLOTS) continue;
     let items = Math.max(1, Math.round(r.share * shown));
     let m = pileMats.get(r.id);
-    if (!m) { m = mat(pile.color); pileMats.set(r.id, m); }
+    if (!m) {
+      m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: pile.metal ? 0.45 : 0.92, metalness: pile.metal ? 0.6 : 0, map: pile.tex ? pattern(pile.tex) : null, bumpMap: pile.tex ? bump(pile.tex) : null, bumpScale: 1.2 });
+      pileMats.set(r.id, m);
+    }
     while (items > 0 && slot < STOCK_SLOTS) {
       for (let layer = 0; layer < STOCK_LAYERS && items > 0; layer++, items--) {
         const mesh = fill.children[layer * STOCK_SLOTS + slot] as THREE.Mesh;
