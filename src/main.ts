@@ -91,6 +91,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onVolume: (v) => setVolume(v),
   onMute: () => hud.setMuted(toggleMute()),
   onMenu: () => menu.open(true),
+  onAccount: () => menu.account(true),
   onWalk: () => {
     const u = game.units.find((x) => x.id === selectedUnit);
     if (!u) return;

@@ -592,3 +592,10 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .net-slot-act { margin-left: auto; display: flex; gap: 10px; }
 .net-slot-act .link-btn { font-size: 13px; }
 @media (max-width: 700px) { .net-cols, .net-teams { grid-template-columns: 1fr; } }
+
+/* konto na dolnym pasku gry */
+.hud-acc { display: flex; align-items: center; gap: 6px; min-height: 32px; padding: 2px 10px 2px 4px; margin-right: 4px; background: rgba(20, 12, 6, .55); border: 1px solid var(--gold-dark); color: var(--parchment-light); cursor: pointer; font: inherit; }
+.hud-acc:hover { background: rgba(60, 38, 18, .8); }
+.hud-acc:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.hud-acc-nick { font-family: var(--display); font-size: 13px; letter-spacing: .04em; max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.net-shield.guest { filter: grayscale(1) opacity(.6); }

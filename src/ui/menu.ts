@@ -32,6 +32,8 @@ export interface MenuEvents {
 
 export interface Menu {
   open(inGame: boolean): void;
+  /** Otwiera menu od razu na koncie (albo logowaniu, gdy nikt nie jest zalogowany) */
+  account(inGame: boolean): void;
   close(): void;
   isOpen(): boolean;
   setVolume(v: number): void;
@@ -321,6 +323,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
 
   return {
     open(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); },
+    account(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); if (netMe()) online.showAccount(); else online.showLogin(false); },
     close() { wrap.hidden = true; document.body.classList.remove('menu-open'); },
     isOpen: () => !wrap.hidden,
     setVolume(v) { volume = v; },

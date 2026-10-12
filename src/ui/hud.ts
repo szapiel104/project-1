@@ -1,3 +1,5 @@
+import { me, onAccount } from '../net/supa';
+import { avatarSvg } from './avatars';
 import { BUILDINGS, CATEGORIES, type BuildingDef, type CategoryId } from '../data/buildings';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, type ResourceId } from '../data/resources';
@@ -18,6 +20,8 @@ export interface HudEvents {
   onVolume(v: number): void;
   onMute(): void;
   onMenu(): void;
+  /** Klik w herb na dolnym pasku: konto */
+  onAccount(): void;
   onTrain(building: number, count: number, unit?: string): void;
   onGate(building: number, open: boolean): void;
   onDismount(building: number): void;
@@ -501,6 +505,22 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   menuBtn.type = 'button';
   menuBtn.addEventListener('click', () => events.onMenu());
   tabs.prepend(menuBtn);
+  // konto na dolnym pasku: herb i nick (albo zaproszenie do logowania)
+  const acc = el('button', 'hud-acc');
+  acc.type = 'button';
+  acc.addEventListener('click', () => events.onAccount());
+  const paintAcc = (): void => {
+    const m = me();
+    acc.replaceChildren();
+    const sh = el('span', 'net-shield');
+    sh.innerHTML = avatarSvg(m ? m.avatar : 0, 22);
+    if (!m) sh.classList.add('guest');
+    acc.append(sh, el('span', 'hud-acc-nick', m ? m.nick : 'Gość · zaloguj'));
+    acc.setAttribute('aria-label', m ? `Konto: ${m.nick}` : 'Zaloguj się');
+  };
+  onAccount(paintAcc);
+  paintAcc();
+  tabs.prepend(acc);
   const right = el('div', 'tools-right');
   right.append(controls, wreck);
   toolbar.append(tabs, cats, right);
