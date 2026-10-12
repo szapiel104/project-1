@@ -1,4 +1,4 @@
-# Dźwięki
+# Zasoby zewnętrzne (dźwięki i modele)
 
 Nagrania w `public/sounds/` pochodzą z darmowych zestawów startowych Kenneya (kenney.nl), wydanych na licencji MIT:
 
@@ -7,3 +7,7 @@ Nagrania w `public/sounds/` pochodzą z darmowych zestawów startowych Kenneya (
 
 Licencja MIT pozwala używać ich także komercyjnie; wymaga zachowania informacji o prawach autorskich (ten plik).
 Gdy nagranie się nie wczyta, gra odtwarza zastępczy dźwięk syntezowany (src/audio/sfx.ts).
+
+## Modele
+
+- Budynki: KayKit Medieval Hexagon Pack 1.0 (Kay Lousberg, CC0) — public/models/kaykit, licencja w public/models/kaykit/LICENSE.txt. Na razie chata, chata drwala, kopalnia i młyn; reszta z kodu.

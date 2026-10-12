@@ -20,3 +20,7 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Budynki nie mają paska stanu ani informacji, co produkują i jak szybko
 - Przy dużych bitwach wyszukiwanie drogi trzeba będzie przerobić na wspólne ścieżki dla grup
 - Akcje GitHub używają wersji z ostrzeżeniem o Node 20, do podbicia
+
+## Ulepszanie budynków (12.10.2026)
+- Budynki będą miały poziomy ulepszeń; każdy poziom musi być widać na modelu: dochodzą detale (płot, skrzynie, beczki, flagi, dobudówki, lepszy dach, kamienna podmurówka).
+- Model bazowy z paczki KayKit + detale z tej samej paczki (crate, barrel, fence, flag) i z kodu; poziom zapisany w stanie budynku, model składany z części zależnie od poziomu.

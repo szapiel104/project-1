@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.7.0 — gotowe modele: próba (2026-10-12)
+
+- Pierwsze budynki z gotowej paczki KayKit Medieval Hexagon (CC0): chata (dwa warianty), chata drwala, kopalnia, młyn; wariant kolorystyczny według barwy drużyny
+- Nasze wnętrza, kłoda przy tartaku i animacje zostają; skrzydła wiatraka kręcą się przy pracy
+- Modele wczytują się przed startem gry; gdy plik się nie wczyta, zostaje model z kodu
+
 ## 0.6.7 — rów bez nakładek (2026-10-12)
 
 - Rów liczony od strony trawy: na wewnętrznych rogach pasy schodzą się na ukos, na zewnętrznych skręcają łukiem; nic się nie nakłada, także wokół pojedynczego pola otoczonego brukiem

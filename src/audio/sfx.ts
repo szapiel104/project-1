@@ -1,5 +1,5 @@
 /**
- * Dźwięki gry: nagrania Kenney (public/sounds, licencja w docs/dzwieki.md), a gdy plik się jeszcze nie wczytał,
+ * Dźwięki gry: nagrania Kenney (public/sounds, licencja w docs/zasoby.md), a gdy plik się jeszcze nie wczytał,
  * zastępczy dźwięk syntezowany w przeglądarce. Do tego tło: szum otoczenia w pętli.
  * Przeglądarka pozwala grać dopiero po pierwszym kliknięciu, więc kontekst powstaje leniwie.
  */

@@ -14,5 +14,6 @@ if (touchOnly || mobileAgent) {
     <p>Otwórz ten adres na komputerze.</p>
   </div>`;
 } else {
-  void import('./main');
+  // najpierw gotowe modele, potem gra (budynki tworzą się od razu przy starcie)
+  void import('./render/assets').then((m) => m.preloadAssets()).then(() => import('./main'));
 }

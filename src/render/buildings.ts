@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { assetModel } from './assets';
+import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { bump, pattern } from './textures';
 
@@ -1141,6 +1143,9 @@ const BUILDERS: Record<string, Builder> = {
 const teamMats = new Map<number, THREE.MeshStandardMaterial>();
 const flagMats = new Map<number, THREE.MeshStandardMaterial>();
 
+/** Części modelu z kodu, które zostają także przy gotowym modelu: wnętrze, zapasy, dym, ogień, życie */
+const KEEP = ['interior', 'yardlog', 'smoke', 'flame', 'fill', 'life'];
+
 export function buildingModel(id: string, teamColor: number): THREE.Group {
   let team = teamMats.get(teamColor);
   if (!team) { team = mat(teamColor, 'tiles'); teamMats.set(teamColor, team); }
@@ -1148,6 +1153,17 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   let flag = flagMats.get(teamColor);
   if (!flag) { flag = mat(teamColor); flagMats.set(teamColor, flag); }
   (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team, flag);
+  // gotowy model z paczki zastępuje bryłę z kodu; nasze wnętrze i animowane części zostają
+  const def = BUILDINGS.find((d) => d.id === id);
+  const asset = def ? assetModel(id, teamColor, def.w, def.h) : null;
+  if (asset) {
+    const keep = g.children.filter((c) => KEEP.includes(c.name));
+    g.clear();
+    asset.name = 'shell';
+    g.add(asset, ...keep);
+    // skrzydła wiatraka z paczki kręcą się tak jak nasze
+    asset.traverse((o) => { if (/fan/i.test(o.name)) o.name = 'spin'; });
+  }
   // fundament, żeby budynek nie wisiał nad nierównym terenem
   if (id === 'torch' || id.startsWith('road')) return g; // sama pochodnia: zwykły słup wbity w ziemię, bez wydeptanego placu
   const base = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), M.turf);
