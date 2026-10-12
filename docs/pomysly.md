@@ -42,7 +42,7 @@ Czeka:
 - Wojsko: łucznik + wytwórca łuków (strzelanie z murów/wież), zbrojny, taran; kamienne mury i wieże później
 - Wnętrza pozostałych budynków w stylu nowej chaty
 - Leśniczy (sadzi drzewa; lasy się nie odnawiają)
-- Pełny mecz z botem (bot buduje palisadę, łuczników, atakuje z kilku stron)
+- Bot dalej: kamienne mury, taran, lepszy wybór celów, poziomy trudności dopracowane (zrobione: palisada, wieże, łucznicy na wieżach, karczma, atak z dwóch stron, wypady)
 - Ulepszanie budynków (wyżej)
 - Konta i gra przez sieć (Supabase)
 
