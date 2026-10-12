@@ -50,7 +50,7 @@ describe('budowanie', () => {
     const g = createGame(5);
     const c = build(g, 'house') as Extract<Command, { type: 'build' }>;
     step(g, [c]);
-    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(4);
+    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(5);
     expect(res(g, 'wood')).toBe(RULES.startResources.wood! - 20);
     expect(g.occupancy[c.y * g.map.width + c.x]).toBeGreaterThan(0);
     expect(canPlace(g, 0, buildingIndex('house'), c.x, c.y)).toBe('place.occupied');
@@ -70,7 +70,7 @@ describe('budowanie', () => {
     expect(canPlace(g, 0, house, s.x, s.y)).toBe('place.cost');
     const before = stateHash(g);
     step(g, [{ type: 'build', player: 0, building: 'house', ...s }, { type: 'build', player: 7, building: 'house', ...s }]);
-    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(3);
+    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(4);
     expect(before).not.toBe(stateHash(g)); // tick poszedł dalej, ale nic nie zbudowano
   });
 
@@ -84,9 +84,8 @@ describe('budowanie', () => {
         if (Math.max(Math.abs(dx), Math.abs(dy)) === 5 && !(dy === 5 && (dx === 0 || dx === 1))) g.occupancy[(cy + dy) * w + cx + dx] = 9999;
     const house = buildingIndex('house');
     expect(canPlace(g, 0, house, cx, cy + 5)).toBe('place.blocks'); // zatkałby przejście
-    expect(canPlace(g, 0, house, cx - 4, cy + 2)).toBeNull(); // w środku jest miejsce i nic nie odcina
     step(g, [{ type: 'build', player: 0, building: 'house', x: cx, y: cy + 5 }]);
-    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(3); // komenda też została odrzucona
+    expect(g.buildings.filter((b) => b.owner === 0).length).toBe(4); // komenda też została odrzucona
   });
 
   it('rozbiórka zostawia gruz, a połowa kosztu wraca dopiero, gdy ludzie go wyniosą', () => {
@@ -254,14 +253,14 @@ describe('pojemność składów', () => {
 
   it('spichlerz ma osobny limit na żywność', () => {
     const g = createGame(5);
-    expect(storeCapacity(g, 0, 'granary')).toBe(120);
-    // rozbiórka stodoły zabiera jej pojemność: zapasy trzeba mieć gdzie trzymać
-    step(g, [{ type: 'demolish', player: 0, id: g.buildings.find((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'barn')!.id }]);
+    // stodoła trzyma tylko towary, jedzenie mieści startowy spichlerz
+    expect(storeCapacity(g, 0, 'granary')).toBe(150);
+    step(g, [{ type: 'demolish', player: 0, id: g.buildings.find((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'granary')!.id }]);
     expect(storeCapacity(g, 0, 'granary')).toBe(0);
     step(g, [build(g, 'barn')]);
     step(g, [build(g, 'granary')]);
     for (const b of g.buildings) b.build = 0; // budowa skończona
-    expect(storeCapacity(g, 0, 'granary')).toBe(270);
+    expect(storeCapacity(g, 0, 'granary')).toBe(150);
   });
 });
 

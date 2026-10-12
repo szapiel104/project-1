@@ -201,7 +201,7 @@ export function armySystem(g: GameState): void {
     // walka: tylko gdy nie maszeruje na rozkaz
     if (s.goal < 0) {
       // rozkaz ataku na budynek ma pierwszeństwo przed szukaniem żołnierzy
-      if (s.target && !byId.has(s.target) && g.buildings.some((b) => b.id === s.target) && siege(g, s, def, taken)) continue;
+      if (s.target && !byId.has(s.target) && g.buildings.some((b) => b.id === s.target && !b.ruined) && siege(g, s, def, taken)) continue;
       let foe = s.target ? byId.get(s.target) : undefined;
       if (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP) {
         foe = undefined;
@@ -268,6 +268,7 @@ export function armySystem(g: GameState): void {
         if (dist < best) { best = dist; wall = o; }
       }
       if (wall) { s.target = wall.id; s.goal = -1; }
+      else { s.goal = -1; s.wait = RETRY; } // cel nieosiągalny i nie ma czego rozbijać: nie szukamy drogi co tick
     }
     else { s.goal = -1; s.wait = RETRY; }
   }
@@ -325,9 +326,10 @@ function rectGap(g: GameState, t: number, b: Building): number {
 
 /** Oblężenie: podchodzi pod najbliższy wrogi budynek i bije w niego. Zburzona twierdza = gracz odpada. */
 function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): boolean {
+  if (s.wait > 0) return false; // odpoczywa po nieudanym podejściu
   const here = tileOf(g, s);
   let b = s.target ? g.buildings.find((x) => x.id === s.target) : undefined;
-  if (!b || team(g, b.owner) === team(g, s.owner)) {
+  if (!b || b.ruined || team(g, b.owner) === team(g, s.owner)) {
     b = undefined;
     let best = def.sight + 1;
     for (const o of g.buildings) {
@@ -359,6 +361,8 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
     const path = findPath(g, here, (t) => rectGap(g, t, target) === 1 && (t === here || !taken.has(t)), 600, s.owner);
     s.path = path ?? [];
     if (s.path.length) taken.add(s.path[s.path.length - 1]!);
+    // nie da się podejść (zajęte miejsca, zamknięte przejście): odpuszcza ten cel na chwilę, zamiast szukać drogi co tick
+    else { s.target = 0; s.wait = RETRY; return false; }
   }
   if (s.path.length) step(g, s);
   return true;
