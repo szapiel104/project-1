@@ -325,3 +325,17 @@ body.menu-open .scribe { display: none; }
 .trend[data-sign='pos'] { color: #8ee07a; }
 .trend[data-sign='neg'] { color: #ff8a7a; }
 .res li[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); white-space: nowrap; padding: 6px 12px; font-size: 15px; font-weight: 700; color: var(--ink); background: var(--parchment-light); border: 2px solid var(--wood); box-shadow: 0 0 0 1px var(--gold-dark), 2px 3px 0 rgba(30, 18, 8, .45); pointer-events: none; z-index: 30; }
+
+/* dolny pas: wszystko wyraźnie większe, żeby było czytelne z daleka */
+.status { padding: 6px 12px 8px; gap: 8px; }
+.status .res li, .status .people > div, .status .clock { min-height: 48px; padding: 3px 12px; gap: 8px; }
+.status .res .ico svg, .status .people .ico svg { width: 34px; height: 34px; }
+.status .res strong, .status .people strong, .status .clock strong { font-size: 24px; }
+.status .trend { font-size: 15px; }
+.status .dial svg { width: 40px; height: 40px; }
+.status .meter { width: 90px; height: 14px; }
+.status .delta { font-size: 18px; }
+.toolbar .cat { min-height: 52px; font-size: 16px; }
+.toolbar .cat img { width: 44px; height: 44px; }
+.toolbar .stepper strong { font-size: 19px; }
+.toolbar .step { min-width: 34px; min-height: 34px; font-size: 22px; }
