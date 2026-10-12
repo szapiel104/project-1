@@ -299,7 +299,7 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   if (interior) {
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
     interior.visible = active;
-    for (const name of ['roof', 'shell', 'chimney']) { const part = model.getObjectByName(name); if (part) part.visible = !active; }
+    for (const name of ['roof', 'shell', 'chimney', 'spin']) { const part = model.getObjectByName(name); if (part) part.visible = !active; }
   }
   const flame = model.getObjectByName('flame');
   if (flame) { flame.visible = active; flame.scale.set(1, 0.8 + Math.abs(Math.sin(time * 9)) * 0.5, 1); }
@@ -329,8 +329,8 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
       const arm = p.getObjectByName('arm');
       if (p.name === 'servant') {
         const k = (Math.sin(time * 0.7) + 1) / 2;
-        p.position.x = 0.3 - k * 0.55;
-        p.position.z = 0.2 - Math.sin(k * Math.PI) * 0.15;
+        p.position.x = 0.3 - k * 0.38;
+        p.position.z = -0.08 - Math.sin(k * Math.PI) * 0.1;
         p.rotation.y = Math.cos(time * 0.7) > 0 ? -Math.PI / 2 : Math.PI / 2;
         p.position.y += Math.abs(Math.sin(time * 8)) * 0.0;
       } else if (p.name === 'diner' && arm) arm.rotation.x = -1.2 - Math.max(0, Math.sin(time * 2.2 + n * 2)) * 1.1;
@@ -342,6 +342,10 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   }
   const spin = model.getObjectByName('spin');
   if (spin && active) spin.rotation.z -= dt * 1.6;
+  const crops = (model.userData.crops ?? model.children[0]?.userData.crops) as THREE.Object3D[] | undefined;
+  if (crops) for (const o of crops) o.rotation.x = Math.sin(time * 1.3 + o.position.z * 3) * 0.06;
+  const runner = model.getObjectByName('runner');
+  if (runner && active) runner.rotation.y += dt * 2.2;
   const smoke = model.getObjectByName('smoke');
   if (smoke) {
     smoke.visible = active;
@@ -359,6 +363,33 @@ type Builder = (g: THREE.Group, team: THREE.Material, flag: THREE.Material) => v
 function pennant(g: THREE.Group, flag: THREE.Material, x: number, y: number, z: number): void {
   box(g, M.woodDark, 0.03, 0.4, 0.03, x, y, z);
   box(g, flag, 0.24, 0.14, 0.02, x + 0.13, y + 0.25, z);
+}
+
+/** Jeden rząd zboża jako wspólna bryła: kilkadziesiąt źdźbeł różnej wysokości z kłosami, barwy w wierzchołkach. */
+const wheatMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
+const wheatRows = new Map<number, THREE.BufferGeometry>();
+function wheatRow(variant: number): THREE.BufferGeometry {
+  const v = variant % 3;
+  const hit = wheatRows.get(v);
+  if (hit) return hit;
+  const parts: THREE.BufferGeometry[] = [];
+  let r = 1234 + v * 977;
+  const rnd = (): number => { r = (r * 1103515245 + 12345) & 0x7fffffff; return r / 0x7fffffff; };
+  for (let x = -0.86; x <= 0.86; x += 0.045)
+    for (const lane of [-0.08, 0, 0.08]) {
+      const px = x + (rnd() - 0.5) * 0.04, pz = lane + (rnd() - 0.5) * 0.05;
+      const h = 0.26 + rnd() * 0.14;
+      const lean = (rnd() - 0.5) * 0.25;
+      const shade = 0.85 + rnd() * 0.25;
+      const stalk = new THREE.CylinderGeometry(0.006, 0.009, h, 3).translate(0, h / 2, 0).rotateX(lean).translate(px, 0, pz);
+      parts.push(paint(stalk, new THREE.Color(0xb89a3c).multiplyScalar(shade).getHex()));
+      const ear = new THREE.ConeGeometry(0.018, 0.09, 4).rotateX(Math.PI).translate(0, h + 0.03, 0).rotateZ((rnd() - 0.5) * 0.5).rotateX(lean).translate(px, 0, pz);
+      parts.push(paint(ear, new THREE.Color(0xe6c55c).multiplyScalar(shade).getHex()));
+      if (rnd() < 0.35) parts.push(paint(new THREE.PlaneGeometry(0.02, 0.12).translate(0, h * 0.4, 0).rotateY(rnd() * 3).rotateZ(0.6).translate(px, 0, pz), 0x9aa046));
+    }
+  const geo = merge(parts);
+  wheatRows.set(v, geo);
+  return geo;
 }
 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
@@ -404,31 +435,36 @@ const BUILDERS: Record<string, Builder> = {
     hall.name = 'interior';
     hall.visible = false;
     const Y = 1.2;
-    box(hall, M.plank, 2.3, 0.05, 2.3, 0, Y, 0);
-    // ściany zewnętrzne i działowe (niskie, żeby było widać środek)
-    for (const [x, z, w, d] of [[0, -1.12, 2.3, 0.07], [-1.12, 0, 0.07, 2.3], [1.12, 0, 0.07, 2.3], [-0.75, 1.12, 0.8, 0.07], [0.75, 1.12, 0.8, 0.07]] as const) box(hall, M.castle, w, 0.5, d, x, Y, z);
-    box(hall, M.castle, 1.0, 0.42, 0.06, -0.62, Y, -0.15);
-    box(hall, M.castle, 0.75, 0.42, 0.06, 0.75, Y, -0.15);
-    box(hall, M.castle, 0.06, 0.42, 0.85, 0.2, Y, 0.66);
-    // SALA LORDA (tył): dywan, podest, tron, chorągwie, kominek
-    box(hall, flag, 0.4, 0.02, 0.85, 0, Y + 0.05, -0.62);
-    box(hall, M.stoneDark, 0.7, 0.06, 0.34, 0, Y + 0.05, -0.92);
-    box(hall, M.woodDark, 0.26, 0.14, 0.24, 0, Y + 0.11, -0.93);
-    box(hall, M.woodDark, 0.26, 0.5, 0.05, 0, Y + 0.11, -1.04);
-    box(hall, flag, 0.2, 0.03, 0.18, 0, Y + 0.25, -0.92);
-    for (const sx of [-1, 1]) box(hall, flag, 0.22, 0.34, 0.02, sx * 0.6, Y + 0.14, -1.07);
-    box(hall, M.stoneDark, 0.36, 0.3, 0.14, -0.9, Y + 0.05, -1.02);
-    box(hall, M.ember, 0.2, 0.14, 0.03, -0.9, Y + 0.08, -0.94);
-    // JADALNIA (przód, lewa): długi stół, ławy, misy i bochny
-    box(hall, M.wood, 0.9, 0.05, 0.3, -0.5, Y + 0.2, 0.5);
-    for (const sx of [-1, 1]) box(hall, M.woodDark, 0.05, 0.16, 0.24, -0.5 + sx * 0.38, Y + 0.05, 0.5);
-    for (const sz of [-1, 1]) box(hall, M.woodDark, 0.85, 0.04, 0.1, -0.5, Y + 0.13, 0.5 + sz * 0.27);
-    for (let k = 0; k < 4; k++) box(hall, k % 2 ? M.bread : M.apple, 0.08, 0.04, 0.08, -0.82 + k * 0.21, Y + 0.25, 0.5);
-    // KOMNATA (przód, prawa): łoże, skrzynia, beczka
-    box(hall, M.woodDark, 0.5, 0.12, 0.34, 0.72, Y + 0.05, 0.3);
-    box(hall, M.white, 0.42, 0.05, 0.3, 0.72, Y + 0.17, 0.3);
-    box(hall, flag, 0.16, 0.06, 0.3, 0.9, Y + 0.18, 0.3);
-    box(hall, M.wood, 0.26, 0.16, 0.18, 0.5, Y + 0.05, 0.85);
+    // Sala zajmuje dokładnie obrys donżonu: te same ściany z piaskowca i te same okna, tylko ucięte nisko,
+    // a dziedziniec dookoła zostaje taki, jak widać go z zewnątrz.
+    const CZ = -0.25, HW = 0.625;
+    box(hall, D, 1.25, 0.05, 1.25, 0, Y, CZ);
+    box(hall, M.plank, 1.1, 0.02, 1.1, 0, Y + 0.05, CZ);
+    // ściany: tył i boki w całości, przód z otworem na drzwi; okna w tych samych miejscach co na zewnątrz
+    box(hall, S, 1.25, 0.55, 0.1, 0, Y, CZ - HW + 0.05);
+    for (const sx of [-1, 1]) box(hall, S, 0.1, 0.55, 1.25, sx * (HW - 0.05), Y, CZ);
+    for (const sx of [-1, 1]) box(hall, S, 0.45, 0.55, 0.1, sx * 0.4, Y, CZ + HW - 0.05);
+    box(hall, D, 1.31, 0.06, 1.31, 0, Y + 0.55, CZ).scale.set(1, 1, 1);
+    for (const x of [-0.3, 0.3]) box(hall, M.window, 0.2, 0.22, 0.03, x, Y + 0.3, CZ + HW + 0.01);
+    for (const sx of [-1, 1]) box(hall, M.window, 0.03, 0.22, 0.2, sx * (HW + 0.01), Y + 0.3, CZ);
+    box(hall, M.woodDark, 0.3, 0.42, 0.04, 0, Y + 0.05, CZ + HW + 0.02);
+    // tron na podeście pod tylną ścianą, dywan do drzwi, chorągwie i kominek w rogu
+    box(hall, flag, 0.26, 0.02, 0.85, 0, Y + 0.07, CZ + 0.05);
+    box(hall, M.stoneDark, 0.5, 0.06, 0.26, 0, Y + 0.07, CZ - 0.43);
+    box(hall, M.woodDark, 0.22, 0.12, 0.2, 0, Y + 0.13, CZ - 0.44);
+    box(hall, M.woodDark, 0.22, 0.42, 0.05, 0, Y + 0.13, CZ - 0.53);
+    box(hall, flag, 0.17, 0.03, 0.15, 0, Y + 0.25, CZ - 0.43);
+    for (const sx of [-1, 1]) box(hall, flag, 0.16, 0.3, 0.02, sx * 0.3, Y + 0.15, CZ - 0.565);
+    box(hall, M.stoneDark, 0.26, 0.28, 0.12, -0.45, Y + 0.07, CZ - 0.5);
+    box(hall, M.ember, 0.14, 0.12, 0.03, -0.45, Y + 0.09, CZ - 0.435);
+    // stół biesiadny wzdłuż lewej ściany
+    box(hall, M.wood, 0.22, 0.04, 0.55, -0.32, Y + 0.2, CZ + 0.15);
+    for (const sz of [-1, 1]) box(hall, M.woodDark, 0.18, 0.15, 0.04, -0.32, Y + 0.06, CZ + 0.15 + sz * 0.22);
+    box(hall, M.woodDark, 0.07, 0.04, 0.5, -0.5, Y + 0.13, CZ + 0.15);
+    for (let k = 0; k < 3; k++) box(hall, k % 2 ? M.bread : M.apple, 0.07, 0.04, 0.07, -0.32, Y + 0.24, CZ - 0.03 + k * 0.17);
+    // pulpit pisarza po prawej
+    box(hall, M.wood, 0.16, 0.15, 0.24, 0.42, Y + 0.07, CZ - 0.2);
+    box(hall, M.white, 0.1, 0.01, 0.14, 0.42, Y + 0.225, CZ - 0.2);
     // mieszkańcy: lord na tronie, biesiadnicy przy stole, służący z tacą, strażnik przy bramie
     const person = (name: string, tunic: THREE.Material, x: number, z: number, turn: number, hatMat?: THREE.Material, into: THREE.Group = hall): THREE.Group => {
       const p = new THREE.Group();
@@ -447,17 +483,14 @@ const BUILDERS: Record<string, Builder> = {
       into.add(p);
       return p;
     };
-    person('lord', flag, 0, -0.88, 0, M.gold).position.y = Y + 0.24;
-    person('diner', M.plaster, -0.72, 0.24, 0);
-    person('diner', M.wood, -0.3, 0.24, 0);
-    person('diner', M.thatch, -0.5, 0.76, Math.PI);
-    person('servant', M.plaster, 0.3, 0.2, 0);
-    person('guard', M.iron, 0.28, 0.98, 0, M.iron);
-    person('diner', flag, -0.9, 0.76, Math.PI);
+    person('lord', flag, 0, CZ - 0.43, 0, M.gold).position.y = Y + 0.22;
+    person('diner', M.plaster, -0.5, CZ + 0.03, Math.PI / 2);
+    person('diner', M.wood, -0.5, CZ + 0.27, Math.PI / 2);
+    person('diner', M.thatch, -0.14, CZ + 0.15, -Math.PI / 2);
+    person('servant', M.plaster, 0.3, CZ + 0.2, 0);
+    person('guard', M.iron, 0.2, CZ + 0.45, 0, M.iron);
     person('servant2', M.thatch, 0.75, 0.6, 0);
-    person('scribe', M.plaster, 0.55, -0.6, Math.PI / 2);
-    box(hall, M.wood, 0.2, 0.16, 0.3, 0.75, Y + 0.05, -0.6);
-    box(hall, M.white, 0.12, 0.01, 0.16, 0.75, Y + 0.215, -0.6);
+    person('scribe', M.plaster, 0.27, CZ - 0.2, Math.PI / 2);
     g.add(hall);
     // Życie widoczne z zewnątrz, cały czas: straże obchodzą mury, wartownik stoi w bramie, kosze z ogniem przy wejściu
     const life = new THREE.Group();
@@ -954,10 +987,22 @@ const BUILDERS: Record<string, Builder> = {
   },
   farm(g) {
     box(g, M.soil, 2.8, 0.05, 2.8);
-    for (let i = 0; i < 6; i++) box(g, M.wheat, 1.7, 0.28, 0.2, 0.45, 0.05, -1.1 + i * 0.44);
+    // zagony: usypane grzędy z ziemi, na nich gęste źdźbła z pochylonymi kłosami, każdy rząd lekko faluje na wietrze
+    for (let i = 0; i < 6; i++) {
+      const z = -1.1 + i * 0.44;
+      box(g, M.soil, 1.8, 0.06, 0.3, 0.45, 0.04, z);
+      const row = new THREE.Group();
+      row.name = 'crop';
+      row.position.set(0.45, 0.1, z);
+      row.add(new THREE.Mesh(wheatRow(i), wheatMat));
+      g.add(row);
+      ((g.userData.crops ??= []) as THREE.Object3D[]).push(row);
+    }
     hut(g, M.plaster, M.thatch, 0.7, 0.7, 0.5, -0.95, -0.9);
   },
   mill(g) {
+    const millWall = M.plaster.clone();
+    millWall.side = THREE.DoubleSide;
     const tower = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.7, 10), M.plaster), 0.6, 1.7);
     tower.position.y = 0.85;
     tower.name = 'shell';
@@ -966,24 +1011,43 @@ const BUILDERS: Record<string, Builder> = {
     cap.name = 'roof';
     pyramid(cap, M.woodDark, 0.65, 0.6, 0, 1.7, 0, 8);
     g.add(cap);
-    // wnętrze: niski mur, kamienie młyńskie i worki z mąką; słup trzyma skrzydła, gdy wieża jest odsłonięta
+    // wnętrze: ta sama wieża ucięta nisko, w środku żarna z lejem, wał, worki i skrzynia na ziarno
     const inside = new THREE.Group();
     inside.name = 'interior';
     inside.visible = false;
-    const floor = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.05, 8), M.wood);
-    floor.position.set(0.2, 0.025, 0.1);
+    const floor = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.04, 10), M.wood);
+    floor.position.y = 0.04;
     inside.add(floor);
-    const wall = new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.7, 0.4, 8, 1, true, Math.PI * 0.75, Math.PI * 1.5), new THREE.MeshStandardMaterial({ color: 0xe6d9b8, flatShading: true, side: THREE.DoubleSide }));
-    wall.position.y = 0.2;
-    inside.add(wall);
+    // mur z tego samego tynku co wieża, z otworem na drzwi od frontu
+    const low = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.7, 0.4, 10, 1, true, Math.PI * 0.12, Math.PI * 1.76), millWall), 0.68, 0.4);
+    low.position.y = 0.2;
+    inside.add(low);
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(0.67, 0.035, 4, 20, Math.PI * 1.76), M.woodDark);
+    lip.rotation.set(Math.PI / 2, 0, Math.PI / 2 + Math.PI * 0.12);
+    lip.position.y = 0.4;
+    inside.add(lip);
+    // żarna na drewnianej skrzyni, lej z ziarnem nad nimi i pionowy wał
+    box(inside, M.woodDark, 0.5, 0.16, 0.5, 0, 0.04, -0.22);
     for (let i = 0; i < 2; i++) {
-      const stoneWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.12, 10), i ? M.stone : M.stoneDark);
-      stoneWheel.position.set(-0.2, 0.11 + i * 0.13, -0.15);
+      const stoneWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.08, 14), i ? M.stone : M.stoneDark);
+      stoneWheel.name = i ? 'runner' : '';
+      stoneWheel.position.set(0, 0.24 + i * 0.085, -0.22);
       inside.add(stoneWheel);
     }
-    box(inside, M.white, 0.2, 0.26, 0.16, 0.3, 0.05, -0.3);
-    box(inside, M.white, 0.2, 0.2, 0.16, 0.42, 0.05, -0.12);
-    box(inside, M.woodDark, 0.1, 1.4, 0.1, 0, 0, 0.5);
+    const hopper = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.04, 0.16, 4), M.wood);
+    hopper.position.set(0, 0.5, -0.22);
+    hopper.rotation.y = Math.PI / 4;
+    inside.add(hopper);
+    box(inside, M.woodDark, 0.05, 0.7, 0.05, 0, 0.32, -0.22);
+    // worki mąki i skrzynia z ziarnem
+    for (const [x, z, h2] of [[0.38, 0.12, 0.22], [0.43, -0.12, 0.18], [0.24, 0.3, 0.2]] as const) {
+      const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.1, 1), M.white);
+      sack.scale.set(0.9, h2 / 0.17, 0.8);
+      sack.position.set(x, 0.04 + h2 / 2, z);
+      inside.add(sack);
+    }
+    box(inside, M.wood, 0.3, 0.2, 0.22, -0.36, 0.04, 0.2);
+    box(inside, M.wheat, 0.26, 0.03, 0.18, -0.36, 0.24, 0.2);
     g.add(inside);
     // skrzydła w osobnej grupie, żeby mogły się kręcić, gdy młynarz pracuje
     const spin = new THREE.Group();

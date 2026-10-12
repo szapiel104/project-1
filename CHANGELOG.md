@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.5.12 — wnętrza i pole (2026-10-12)
+
+- Pole: zamiast żółtych belek rosnące zboże — gęste źdźbła z kłosami na usypanych grzędach, falujące na wietrze
+- Wnętrze młyna dopasowane do wieży: ten sam tynk ucięty nisko, żarna z lejem i obracającym się kamieniem, worki i skrzynia ziarna; skrzydła chowają się, gdy zaglądamy do środka
+- Wnętrze twierdzy mieści się w obrysie donżonu, z tymi samymi ścianami i oknami co z zewnątrz; dziedziniec zostaje bez zmian
+
 ## 0.5.11 — jedna plansza (2026-10-12)
 
 - Teren za krawędzią to ta sama siatka i tekstura co plansza: góry łagodnie opadają na zewnątrz, łąka przechodzi w ciemniejsze runo puszczy, bez szczeliny i niebieskiego paska
