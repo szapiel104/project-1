@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.6.5 — rów jak wykopany szpadlem (2026-10-12)
+
+- Rów przy bruku: płytki pas wilgotnej ziemi, od strony trawy nierówna krawędź z kolejnych wbić szpadla, która miękko znika w trawie; grudki, kamyczki i źdźbła zwisające z brzegu, bez wody i bez prostej listwy
+
 ## 0.6.4 — tylko komputer (2026-10-12)
 
 - Na telefonie i tablecie gra się nie uruchamia, pokazuje tablicę „Tylko na komputerze”

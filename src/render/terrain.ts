@@ -386,48 +386,72 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Drogi. Kamienna to równe pola bruku. Piaskowa to wydeptana ścieżka: każde pole dostaje miękką,
   // nieregularną plamę większą od pola, a sąsiednie plamy zlewają się w jeden trakt o poszarpanych brzegach.
   const roadMeshes: THREE.Mesh[] = [];
-  // Rów: w poprzek jasny, brudny piasek przy brzegach, ciemniejące wilgotne zbocza i lśniąca strużka wody na dnie.
-  // Głębokość udaje cieniowanie w teksturze; połysk wody daje mapa szorstkości (gładko tylko na dnie).
+  // Rów: płytki, wykopany szpadlem pas wilgotnej ziemi przy bruku. Od strony trawy krawędź jest nierówna
+  // (kolejne wbicia szpadla, grudki, zwisające źdźbła) i przechodzi w przezroczystość, więc rów nie wygląda jak listwa.
   let ditchMat: THREE.MeshStandardMaterial | null = null;
   const ditchMaterial = (): THREE.MeshStandardMaterial => {
     if (ditchMat) return ditchMat;
-    const W = 128, H = 128;
-    const make = (paint: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture => {
-      const cv = document.createElement('canvas');
-      cv.width = W; cv.height = H;
-      paint(cv.getContext('2d')!);
-      const t = new THREE.CanvasTexture(cv);
-      t.wrapS = THREE.RepeatWrapping;
-      return t;
+    const W = 512, H = 128;
+    const rnd = (i: number, salt: number): number => (hash2(i, salt, 0x5eed) & 0xffff) / 0xffff;
+    // linia krawędzi od strony trawy: odcinki po jednym wbiciu szpadla, każdy lekko pochylony i na innej głębokości
+    const edge = new Float32Array(W);
+    {
+      let x = 0, k = 0;
+      const cuts: { x0: number; len: number; a: number; b: number }[] = [];
+      while (x < W) { const len = 26 + rnd(k, 1) * 30; cuts.push({ x0: x, len, a: 0.6 + rnd(k, 2) * 0.22, b: 0.6 + rnd(k, 3) * 0.22 }); x += len; k++; }
+      const last = cuts[cuts.length - 1]!; last.b = cuts[0]!.a; // zawija się bez skoku
+      for (const c of cuts) for (let i = 0; i < c.len && c.x0 + i < W; i++) {
+        const t = i / c.len;
+        edge[Math.floor(c.x0 + i)] = c.a + (c.b - c.a) * t + Math.sin(t * Math.PI) * 0.03 + (rnd(c.x0 + i, 4) - 0.5) * 0.025;
+      }
+    }
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const c = cv.getContext('2d')!;
+    const img = c.createImageData(W, H);
+    for (let y = 0; y < H; y++)
+      for (let x = 0; x < W; x++) {
+        const v = y / (H - 1), e = edge[x]!;
+        const i = (y * W + x) * 4;
+        if (v > e + 0.04) { img.data[i + 3] = 0; continue; }
+        // głębia: najciemniej w jednej trzeciej szerokości, jaśniej przy bruku i przy skarpie od trawy
+        const depth = Math.sin(Math.min(1, v / e) * Math.PI);
+        const damp = Math.max(0, 1 - Math.abs(v / e - 0.38) * 3.2);
+        const n = (rnd(x * 131 + y, 5) - 0.5) * 18;
+        let r = 128 - depth * 34 - damp * 16 + n, g = 102 - depth * 30 - damp * 14 + n * 0.85, b = 72 - depth * 24 - damp * 10 + n * 0.7;
+        if (v < 0.07) { r *= 0.78; g *= 0.78; b *= 0.78; } // cień pod krawędzią kostki
+        if (v > e - 0.06) { const k = (v - (e - 0.06)) / 0.06; r += 22 * k; g += 18 * k; b += 12 * k; } // świeżo odcięta skarpa
+        img.data[i] = r; img.data[i + 1] = g; img.data[i + 2] = b;
+        img.data[i + 3] = v > e ? Math.round(255 * (1 - (v - e) / 0.04)) : 255;
+      }
+    c.putImageData(img, 0, 0);
+    // grudki ziemi i kamyczki na dnie, rysowane też przy krawędziach tekstury, żeby się zawijały
+    const dot = (x: number, y: number, rx: number, ry: number, fill: string): void => {
+      for (const ox of [0, W, -W]) { c.fillStyle = fill; c.beginPath(); c.ellipse(x + ox, y, rx, ry, 0, 0, Math.PI * 2); c.fill(); }
     };
-    const color = make((c) => {
-      for (let y = 0; y < H; y++) {
-        const v = y / (H - 1), d = Math.abs(v - 0.5) * 2; // 0 na dnie, 1 przy brzegu
-        const sand = [168, 146, 108], mud = [86, 70, 50], water = [52, 70, 74];
-        const k = Math.min(1, Math.max(0, (d - 0.15) / 0.75));
-        let rgb = mud.map((m, i) => m + (sand[i]! - m) * k * k);
-        if (d < 0.14) rgb = water.map((m, i) => m + (rgb[i]! - m) * (d / 0.14));
-        // jasna krawędź skarpy przy bruku i przy trawie
-        if (d > 0.9) rgb = rgb.map((c2) => c2 * 1.08);
-        c.fillStyle = `rgb(${rgb.map((n) => Math.round(n)).join(',')})`;
-        c.fillRect(0, y, W, 1);
+    for (let k = 0; k < 70; k++) {
+      const x = rnd(k, 6) * W, e = edge[Math.floor(x)]!, y = (0.1 + rnd(k, 7) * (e - 0.15)) * H;
+      const rr = 1.5 + rnd(k, 8) * 3.5;
+      dot(x, y + rr * 0.4, rr, rr * 0.7, 'rgba(40,28,16,0.45)');
+      dot(x, y, rr, rr * 0.7, rnd(k, 9) < 0.3 ? 'rgb(150,146,136)' : 'rgb(124,98,66)');
+      dot(x - rr * 0.3, y - rr * 0.25, rr * 0.4, rr * 0.3, 'rgba(255,240,210,0.35)');
+    }
+    // źdźbła trawy zwisające z krawędzi do rowu
+    c.lineCap = 'round';
+    for (let k = 0; k < 90; k++) {
+      const x = rnd(k, 10) * W, y = edge[Math.floor(x)]! * H;
+      const len = 4 + rnd(k, 11) * 9, lean = (rnd(k, 12) - 0.5) * 8;
+      for (const ox of [0, W, -W]) {
+        c.strokeStyle = rnd(k, 13) < 0.5 ? 'rgb(96,140,48)' : 'rgb(120,162,60)';
+        c.lineWidth = 1.2 + rnd(k, 14);
+        c.beginPath(); c.moveTo(x + ox, y + 2); c.quadraticCurveTo(x + ox + lean * 0.3, y - len * 0.6, x + ox + lean, y - len); c.stroke();
       }
-      for (let i = 0; i < 900; i++) {
-        const x = (hash2(i, 1, 9) % W), y = (hash2(i, 2, 9) % H);
-        c.fillStyle = `rgba(${hash2(i, 3, 9) & 1 ? '255,240,210' : '30,22,14'},${0.08 + (hash2(i, 4, 9) & 31) / 200})`;
-        c.fillRect(x, y, 1 + (hash2(i, 5, 9) % 3), 1 + (hash2(i, 6, 9) % 2));
-      }
-    });
+    }
+    const color = new THREE.CanvasTexture(cv);
+    color.wrapS = THREE.RepeatWrapping;
     color.colorSpace = THREE.SRGBColorSpace;
-    const rough = make((c) => {
-      for (let y = 0; y < H; y++) {
-        const d = Math.abs(y / (H - 1) - 0.5) * 2;
-        const g2 = d < 0.12 ? 30 : d < 0.35 ? 150 : 245;
-        c.fillStyle = `rgb(${g2},${g2},${g2})`;
-        c.fillRect(0, y, W, 1);
-      }
-    });
-    ditchMat = new THREE.MeshStandardMaterial({ map: color, roughnessMap: rough, roughness: 1, metalness: 0.15, polygonOffset: true, polygonOffsetFactor: -3 });
+    color.anisotropy = 8;
+    ditchMat = new THREE.MeshStandardMaterial({ map: color, transparent: true, depthWrite: false, roughness: 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: -3 });
     return ditchMat;
   };
   let pathMat: THREE.MeshStandardMaterial | null = null;
@@ -500,12 +524,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             // Rów odwadniający tuż za krawędzią bruku: pas szerokości ćwierć pola, dokładnie wzdłuż pola,
             // a na wypukłych narożnikach dodatkowy kwadrat, żeby rów skręcał razem z drogą.
             const open = (dx: number, dy: number): boolean => { const nx = x + dx, ny = y + dy; return nx < 0 || ny < 0 || nx >= w || ny >= h || roads[ny * w + nx] !== kind; };
-            const D = 0.26;
+            const D = 0.24;
             const quad = (ax: number, ay: number, bx: number, by: number, across: 'x' | 'y', flip: boolean): void => {
               // v biegnie w poprzek rowu (0 przy bruku, 1 przy trawie), u wzdłuż niego
               const corners = [[ax, ay], [ax, by], [bx, ay], [bx, ay], [ax, by], [bx, by]] as const;
               for (const [qx, qy] of corners) {
-                ditch.push(qx + ox, heightAt(qx, qy) + 0.03, qy + oz);
+                ditch.push(qx + ox, heightAt(qx, qy) + 0.035, qy + oz);
                 const v = across === 'x' ? (qx - ax) / (bx - ax) : (qy - ay) / (by - ay);
                 ditchUv.push((across === 'x' ? qy : qx) / 2, flip ? 1 - v : v);
               }
