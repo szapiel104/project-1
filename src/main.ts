@@ -177,6 +177,7 @@ function selectUnit(id: number): void {
   if (id) { selected = 0; renderer.setSelection(0); }
   renderer.setUnitSelection(id);
   hud.showPerson(id ? personCard(id) : null);
+  if (id) speak(id);
 }
 
 function select(id: number): void {
@@ -810,3 +811,60 @@ function drawAlerts(): void {
   }
 }
 (function alertLoop(): void { drawAlerts(); requestAnimationFrame(alertLoop); })();
+
+// --- odzywki ludzi: krótko, szorstko, zależnie od tego, co robią i jak im się żyje ---
+const SAY: Record<string, string[]> = {
+  idle: ['Czego?', 'Roboty by się znalazło jakiej…', 'Siedzę i czekam. Jak każdy.', 'Panie, daj jaką robotę.', 'Zimno przy tym ognisku.'],
+  work: ['Robię, robię.', 'Nie przeszkadzaj, panie.', 'Robota sama się nie zrobi.', 'Ano, pracuje się.', 'Znowu ja?'],
+  woodcutter: ['Drzewa nie zetną się same.', 'Siekiera tępa jak wójt.', 'Las daleko, nogi bolą.'],
+  quarry: ['Kamień i kamień. Całe życie.', 'Plecy mi pękną od tego.'],
+  mine: ['Ciemno tam jak w grobie.', 'Ruda sama nie wyjdzie.'],
+  farm: ['Byle deszcz nie zbił zboża.', 'Ziemia dobra, tylko ręce bolą.'],
+  orchard: ['Jabłka w tym roku jak pięść.', 'Robaki w połowie, ale jeść można.'],
+  fisher: ['Dziś nie biorą.', 'Woda zimna jak serce poborcy.'],
+  build: ['Stuk, stuk, i stoi.', 'Kto to projektował, ten nie nosił belek.', 'Jeszcze jedna belka i fajrant.'],
+  carry: ['Ciężkie to cholerstwo.', 'Niosę, niosę.', 'Z drogi!'],
+  hungry: ['Głodno w osadzie, panie.', 'Brzuch mi do krzyża przyrasta.', 'Z pustym brzuchem nie popracuję.'],
+  angry: ['Podatki nas wykończą.', 'Inni pany lepiej płacą.', 'Jeszcze trochę i pójdę stąd.'],
+  night: ['Wilki dziś wyją, słyszysz?', 'Po ciemku lepiej nie łazić za palisadę.', 'Spać by się chciało.'],
+  wolves: ['Wilki! Ratujcie!', 'Bierz kij, idą!', 'Matko Boska, wilki!'],
+  rain: ['Leje i leje.', 'Błoto po kolana.'],
+};
+const bubble = document.createElement('div');
+bubble.className = 'say';
+bubble.hidden = true;
+document.body.append(bubble);
+let sayUnit = 0, sayUntil = 0;
+function lineFor(id: number): string {
+  const u = game.units.find((x) => x.id === id);
+  const p = game.players[ME]!;
+  const pick = (k: string): string => { const l = SAY[k]!; return l[Math.floor(Math.random() * l.length)]!; };
+  if (!u) return pick('work');
+  if (game.wolves.some((w) => (w.px - u.px) ** 2 + (w.py - u.py) ** 2 < (5 * 256) ** 2)) return pick('wolves');
+  if (!monthlyForecast(game, p).fed) return pick('hungry');
+  if (p.popularity < 45 && Math.random() < 0.6) return pick('angry');
+  if (renderer.weather.rain > 0.4 && Math.random() < 0.4) return pick('rain');
+  if (renderer.weather.night > 0.5 && Math.random() < 0.4) return pick('night');
+  if (u.phase === 13 || u.phase === 14) return pick('build');
+  if (u.carryRes >= 0 && Math.random() < 0.5) return pick('carry');
+  if (!u.job) return pick('idle');
+  const job = game.buildings.find((b) => b.id === u.job);
+  const jid = job ? BUILDINGS[job.type]!.id : '';
+  return SAY[jid] && Math.random() < 0.7 ? pick(jid) : pick('work');
+}
+function speak(id: number): void {
+  bubble.textContent = lineFor(id);
+  bubble.hidden = false;
+  sayUnit = id;
+  sayUntil = performance.now() + 3200;
+  play('babble');
+}
+function sayLoop(): void {
+  if (!bubble.hidden) {
+    const u = game.units.find((x) => x.id === sayUnit);
+    if (!u || performance.now() > sayUntil || menu.isOpen()) bubble.hidden = true;
+    else { const p = renderer.project(u.px / 256, u.py / 256); bubble.style.transform = `translate(${p.sx}px, ${p.sy - 40}px) translate(-50%, -100%)`; }
+  }
+  requestAnimationFrame(sayLoop);
+}
+requestAnimationFrame(sayLoop);
