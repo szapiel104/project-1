@@ -43,7 +43,7 @@ const M = {
   orchardGrass: mat(0x86b54a, 'grass'), bark: mat(0x7a5a3a, 'bark'), leafLight: mat(0x7fb548, 'leaves'),
   appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xa8652c),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
-  window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
+  window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611), pane: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
   ash: mat(0x4a4540), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
@@ -316,11 +316,14 @@ export function palisadeLogs(links: [boolean, boolean, boolean, boolean], seed: 
 }
 
 /** Czy materiał to szyba okna (świeci nocą) */
-export const isWindowMat = (m: THREE.Material): boolean => m === M.window;
+export const isWindowMat = (m: THREE.Material): boolean => m === M.window || m === M.pane;
 
 export function setNight(k: number): void {
   M.window.emissive.setHex(0xffb050);
   M.window.emissiveIntensity = k * 0.95;
+  // szyby chat: w dzień ciemna wnęka, nocą ciepłe światło ze środka
+  M.pane.emissive.setHex(0xff9a3c);
+  M.pane.emissiveIntensity = k * 1.3;
 }
 
 /** Pochodnia na słupie: stawiana przy każdym budynku, płonie tylko nocą. */
@@ -496,7 +499,7 @@ function cottage(g: THREE.Group, seed: number): THREE.Group {
   const glass = (x: number, y: number, z: number, nx: number, nz: number, w: number, h: number): void => {
     const deep = 0.085;
     const px = x - nx * deep, pz = z - nz * deep;
-    const pane = box(shell, M.dark, nx ? 0.01 : w, h, nz ? 0.01 : w, px, y - h / 2, pz);
+    const pane = box(shell, M.pane, nx ? 0.01 : w, h, nz ? 0.01 : w, px, y - h / 2, pz);
     pane.name = 'pane';
     box(shell, M.woodDark, nx ? 0.02 : w, 0.025, nz ? 0.02 : w, px + nx * 0.01, y - 0.012, pz + nz * 0.01);
     box(shell, M.woodDark, nx ? 0.02 : 0.025, h, nz ? 0.02 : 0.025, px + nx * 0.01, y - h / 2, pz + nz * 0.01);
