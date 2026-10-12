@@ -104,7 +104,7 @@ ul { list-style: none; }
 }
 
 /* znacznik wersji w prawym dolnym rogu */
-.build { position: fixed; right: 10px; top: 6px; padding: 2px 8px; font-size: 14px; color: var(--parchment-light); background: rgba(35, 22, 11, .78); border: 1px solid var(--gold-dark); pointer-events: none; }
+.build { position: fixed; right: 12px; top: 10px; z-index: 60; padding: 6px 14px; font-size: 20px; font-weight: 700; letter-spacing: .03em; border-width: 2px; color: var(--parchment-light); background: rgba(35, 22, 11, .78); border: 1px solid var(--gold-dark); pointer-events: none; }
 
 /* dół ekranu */
 .bottom { position: fixed; left: 0; right: 0; bottom: 0; display: grid; gap: 8px; pointer-events: none; }

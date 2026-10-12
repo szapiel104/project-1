@@ -256,7 +256,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const trainBtn = el('button', 'btn-main', t('hud.train'));
   trainBtn.type = 'button';
   trainBtn.hidden = true;
-  trainBtn.addEventListener('click', () => events.onTrain(infoId));
+  trainBtn.addEventListener('click', () => events.onTrain(infoId, 1));
   const trainNote = el('p', 'hint');
   // koszary: karta jednostki z portretem, co jest potrzebne, ile mamy i ile można wyszkolić
   const recruit = el('div', 'recruit');
