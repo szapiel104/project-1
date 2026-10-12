@@ -18,7 +18,10 @@ function tileHeight(map: GameMap, x: number, y: number, waterLevel: number): num
   const t = map.tiles[cy * map.width + cx] as Terrain;
   if (t === Terrain.Mountain) return 1.3 + (e - 170) * 0.15;
   const h = (e - waterLevel) * HEIGHT_SCALE;
-  return t === Terrain.Water ? Math.min(h, -0.25) : Math.max(h, 0.12);
+  if (t === Terrain.Water) return Math.min(h, -0.25);
+  // ląd w większości płaski: łagodne falowanie, a wyraźne pagórki tylko tam, gdzie teren jest naprawdę wysoko
+  const d = e - waterLevel;
+  return 0.12 + Math.max(0, d) * 0.004 + Math.max(0, d - 120) * HEIGHT_SCALE;
 }
 
 export interface TerrainView {
