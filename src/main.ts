@@ -552,6 +552,7 @@ function showEnd(win: boolean): void {
 }
 
 const scribe = createScribe(() => play('babble'));
+let wolvesSeen = false, wolfKillsSeen = 0;
 let wasNight = false, wasComing = false, stockFull = false;
 
 // historia zapasów co 5 sekund gry: trend = różnica wobec stanu sprzed minuty
@@ -583,6 +584,10 @@ function refresh(): void {
   stockFull = full;
   const hour = clockAt(game.tick).hour;
   const night = hour >= 19.5 || hour < 6;
+  if (game.wolves.length && !wolvesSeen) scribe.say('wolves', 'Wilki wyszły z lasu! Trzymajcie ludzi za palisadą.', true, 'herald');
+  wolvesSeen = game.wolves.length > 0;
+  if ((p.wolfKills ?? 0) > wolfKillsSeen) scribe.say('wolfKill', 'Wilki zagryzły naszego człowieka…', true);
+  wolfKillsSeen = p.wolfKills ?? 0;
   if (night !== wasNight) scribe.say(night ? 'dusk' : 'dawn', t(night ? 'scribe.dusk' : 'scribe.dawn'));
   wasNight = night;
   const coming = alarm.dataset.state === 'coming';
@@ -628,7 +633,7 @@ let acc = 0;
 function loop(now: number): void {
   const elapsed = Math.min(250, now - last);
   last = now;
-  nature(renderer.weather.night, renderer.weather.rain, menu.isOpen());
+  nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
   // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
   if (menu.isOpen()) {
     if (titleScreen) renderer.orbit(elapsed / 1000);

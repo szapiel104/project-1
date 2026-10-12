@@ -57,3 +57,18 @@ describe('palisada i brama', () => {
     expect(walkable(back, (y + 1) * w + x, 0)).toBe(true);
   });
 });
+
+describe('wilki', () => {
+  it('nocą przychodzi wataha, o świcie znika; gra pokojowa jest bez wilków', () => {
+    const g = createGame(9, '1v1', 2);
+    for (const p of g.players) p.bot = false;
+    let most = 0;
+    for (let i = 0; i < 2400 * 4; i++) { step(g, []); most = Math.max(most, g.wolves.length); }
+    expect(most).toBeGreaterThan(1);
+    expect(g.wolves.length).toBe(0); // po świcie
+    const calm = createGame(9, '1v1', 0);
+    for (const p of calm.players) p.bot = false;
+    for (let i = 0; i < 2400 * 4; i++) step(calm, []);
+    expect(calm.wolves.length + calm.players[0]!.stats.lost).toBe(0);
+  });
+});

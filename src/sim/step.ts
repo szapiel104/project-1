@@ -3,6 +3,7 @@ import { RULES } from '../data/rules';
 import type { GameState } from './state';
 import { economySystem } from './systems/economy';
 import { demolish, placeBuilding, removeRoad } from './systems/placement';
+import { wolfSystem } from './systems/wolves';
 import { migrationSystem, travelSystem } from './systems/population';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
@@ -70,5 +71,6 @@ export function step(g: GameState, commands: readonly Command[]): void {
   armySystem(g);
   migrationSystem(g);
   travelSystem(g);
+  wolfSystem(g);
   economySystem(g);
 }

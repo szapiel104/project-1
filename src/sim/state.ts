@@ -29,6 +29,8 @@ export interface PlayerState {
   /** Poziom trudności bota (0 pokojowy … 3 trudny) */
   level: number;
   /** Liczniki do podsumowania meczu */
+  /** Ilu ludzi zagryzły wilki (do powiadomień) */
+  wolfKills?: number;
   stats: { gathered: number; trained: number; kills: number; lost: number; built: number; razed: number };
 }
 
@@ -165,6 +167,18 @@ export interface Traveler {
   path: number[];
 }
 
+/** Wilk z lasu: poluje nocą, o świcie wraca za mapę */
+export interface Wolf {
+  id: number;
+  px: number;
+  py: number;
+  hp: number;
+  path: number[];
+  target: number;
+  cd: number;
+  leaving: boolean;
+}
+
 export interface GameState {
   tick: number;
   map: GameMap;
@@ -175,6 +189,7 @@ export interface GameState {
   soldiers: Soldier[];
   corpses: Corpse[];
   travelers: Traveler[];
+  wolves: Wolf[];
   /** Brama na polu: właściciel + 1 (0 = brak). Swoi przechodzą, obcy nie */
   gates: Uint8Array;
   /** Id budynku na polu albo 0 */
@@ -196,7 +211,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const map = generateMap(seed, preset);
   const size = map.width * map.height;
   const g: GameState = {
-    tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [], corpses: [], travelers: [],
+    tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [], corpses: [], travelers: [], wolves: [],
     occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), rubble: [], nextId: 1,
   };
   const keep = buildingIndex('keep');
@@ -308,6 +323,7 @@ export function stateHash(g: GameState): number {
     for (const t of u.path) add(t);
   }
   for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.path.length); for (const t of s.path) add(t); }
+  for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }
   for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); }
   return h >>> 0;

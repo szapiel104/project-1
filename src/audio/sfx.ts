@@ -294,6 +294,35 @@ function forestEcho(c: AudioContext): ConvolverNode {
   return echo;
 }
 
+/** Szczeknięcia i skowyt: krótkie, wysokie „jip” kilku wilków, jak wataha w pogoni */
+function yips(c: AudioContext, at: number, pan: number): void {
+  const p = c.createStereoPanner(); p.pan.value = pan; p.connect(busGain.amb ?? master!); p.connect(forestEcho(c));
+  const n = 5 + Math.floor(Math.random() * 6);
+  for (let i = 0; i < n; i++) {
+    const t = at + i * (0.12 + Math.random() * 0.2);
+    const o = c.createOscillator(); o.type = 'triangle';
+    const f0 = 600 + Math.random() * 350;
+    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * (Math.random() < 0.5 ? 1.5 : 0.6), t + 0.12);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.015); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 1.5;
+    o.connect(f).connect(g).connect(p); o.start(t); o.stop(t + 0.18);
+  }
+}
+
+/** Warczenie: niski, chropowaty szum drgający jak oddech zwierzęcia tuż za palisadą */
+function snarl(c: AudioContext, at: number, pan: number): void {
+  if (!noise) return;
+  const p = c.createStereoPanner(); p.pan.value = pan; p.connect(busGain.amb ?? master!);
+  const len = 1.2 + Math.random() * 1.2;
+  const src = c.createBufferSource(); src.buffer = noise; src.loop = true; src.playbackRate.value = 0.4;
+  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 170 + Math.random() * 60; f.Q.value = 4;
+  const am = c.createGain(); am.gain.value = 0;
+  const lfo = c.createOscillator(); lfo.frequency.value = 22 + Math.random() * 10; const lg = c.createGain(); lg.gain.value = 0.5; lfo.connect(lg).connect(am.gain);
+  const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(1.4, at + 0.2); g.gain.setValueAtTime(1.4, at + len * 0.7); g.gain.exponentialRampToValueAtTime(0.001, at + len);
+  src.connect(f).connect(am).connect(g).connect(p);
+  src.start(at); lfo.start(at); src.stop(at + len + 0.05); lfo.stop(at + len + 0.05);
+}
+
 function wolf(c: AudioContext, at: number, pan: number): void {
   const p = c.createStereoPanner(); p.pan.value = pan;
   const dry = c.createGain(); dry.gain.value = 0.6;
@@ -330,7 +359,7 @@ function wolf(c: AudioContext, at: number, pan: number): void {
  * Wołane co klatkę: `night` 0..1, `rain` 0..1. Wiatr zawsze szumi (mocniej w deszczu i nocą, z porywami),
  * wrony kraczą co kilkanaście sekund za dnia, wilki wyją co pół minuty–minutę nocą.
  */
-export function nature(night: number, rain: number, paused: boolean): void {
+export function nature(night: number, rain: number, paused: boolean, wolvesNear = 0): void {
   const c = ctx;
   if (!c || muted || c.state !== 'running') return;
   startWind(c);
@@ -348,7 +377,13 @@ export function nature(night: number, rain: number, paused: boolean): void {
   if (!nextCrow) nextCrow = now + 6 + Math.random() * 10;
   if (!nextWolf) nextWolf = now + 15 + Math.random() * 20;
   if (now > nextCrow) { if (night < 0.3 && rain < 0.5) crow(c, now, Math.random() * 1.6 - 0.8); nextCrow = now + 12 + Math.random() * 25; }
-  if (now > nextWolf) { if (night > 0.6) wolf(c, now, Math.random() * 1.6 - 0.8); nextWolf = now + 25 + Math.random() * 30; }
+  if (now > nextWolf) {
+    // gdy wataha jest na mapie, słychać ją dużo częściej i bliżej: wycie, ujadanie, warczenie
+    const pan = Math.random() * 1.6 - 0.8, pick = Math.random();
+    if (wolvesNear) { if (pick < 0.4) wolf(c, now, pan); else if (pick < 0.7) yips(c, now, pan); else snarl(c, now, pan); }
+    else if (night > 0.6) { if (pick < 0.75) wolf(c, now, pan); else yips(c, now, pan); }
+    nextWolf = now + (wolvesNear ? 7 + Math.random() * 9 : 25 + Math.random() * 30);
+  }
 }
 
 /**

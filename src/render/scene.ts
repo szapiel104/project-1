@@ -410,6 +410,7 @@ export class GameRenderer {
     for (const u of this.state.units) this.prevPos.set(u.id, [u.px, u.py]);
     for (const x of this.state.soldiers) this.prevPos.set(x.id, [x.px, x.py]);
     for (const x of this.state.travelers) this.prevPos.set(x.id, [x.px, x.py]);
+    for (const x of this.state.wolves) this.prevPos.set(x.id, [x.px, x.py]);
   }
 
   /** Ustawia kamerę nad wskazanym punktem mapy (w polach); używane też przy testach wyglądu */
@@ -617,7 +618,7 @@ export class GameRenderer {
       this.syncRoads(this.state, this.view);
       this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
-      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); }
+      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); this.syncWolves(this.state, this.view, alpha); }
     this.composer.render();
   }
 
@@ -670,6 +671,61 @@ export class GameRenderer {
     }
     this.wallShafts.count = n; this.wallTips!.count = n;
     this.wallShafts.instanceMatrix.needsUpdate = true; this.wallTips!.instanceMatrix.needsUpdate = true;
+  }
+
+  private wolfMesh: THREE.InstancedMesh | null = null;
+  private wolfEyes: THREE.InstancedMesh | null = null;
+  private wolfHeading = new Map<number, number>();
+  get wolvesNear(): number { return this.state?.wolves.length ?? 0; }
+  /** Wilki: szare, przygarbione, w kłusie; nocą świecą im oczy */
+  private syncWolves(g: GameState, view: TerrainView, alpha: number): void {
+    if (!this.wolfMesh) {
+      const fur = 0x5d5a55, dark = 0x3a3733;
+      const parts = [
+        tint(new THREE.BoxGeometry(0.16, 0.15, 0.46).translate(0, 0.3, 0), fur),
+        tint(new THREE.BoxGeometry(0.17, 0.17, 0.16).translate(0, 0.33, 0.17), fur), // kark, grzbiet wyżej z przodu
+        tint(new THREE.BoxGeometry(0.12, 0.12, 0.15).translate(0, 0.38, 0.32), fur),
+        tint(new THREE.BoxGeometry(0.07, 0.06, 0.12).translate(0, 0.35, 0.44), dark), // pysk
+        tint(new THREE.ConeGeometry(0.03, 0.07, 4).translate(-0.04, 0.47, 0.3), dark),
+        tint(new THREE.ConeGeometry(0.03, 0.07, 4).translate(0.04, 0.47, 0.3), dark),
+        tint(new THREE.BoxGeometry(0.05, 0.05, 0.25).rotateX(0.6).translate(0, 0.27, -0.3), dark), // ogon w dół
+      ];
+      for (const [x, z] of [[-0.05, 0.16], [0.05, 0.16], [-0.05, -0.16], [0.05, -0.16]] as const) parts.push(tint(new THREE.BoxGeometry(0.045, 0.24, 0.05).translate(x, 0.12, z), dark));
+      this.wolfMesh = new THREE.InstancedMesh(mergeGeometries(parts)!, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }), 64);
+      this.wolfMesh.castShadow = true; this.wolfMesh.frustumCulled = false;
+      const eyes = mergeGeometries([new THREE.SphereGeometry(0.013, 6, 4).translate(-0.035, 0.41, 0.395), new THREE.SphereGeometry(0.013, 6, 4).translate(0.035, 0.41, 0.395)])!;
+      this.wolfEyes = new THREE.InstancedMesh(eyes, new THREE.MeshBasicMaterial({ color: 0xffd24a }), 64);
+      this.wolfEyes.frustumCulled = false;
+      this.scene.add(this.wolfMesh, this.wolfEyes);
+    }
+    const { width, height } = g.map;
+    const t = this.tmp;
+    let n = 0;
+    for (const w of g.wolves) {
+      if (n >= 64) break;
+      const prev = this.prevPos.get(w.id);
+      const fx = (prev ? prev[0] + (w.px - prev[0]) * alpha : w.px) / FP, fy = (prev ? prev[1] + (w.py - prev[1]) * alpha : w.py) / FP;
+      const next = w.path[0];
+      let h = this.wolfHeading.get(w.id) ?? 0;
+      if (next !== undefined) {
+        const want = Math.atan2((next % width) + 0.5 - fx, Math.floor(next / width) + 0.5 - fy);
+        let d = want - h; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+        h += d * 0.2; this.wolfHeading.set(w.id, h);
+      }
+      const run = next !== undefined && !this.calm;
+      const bob = run ? Math.abs(Math.sin(this.time * 12 + w.id)) * 0.05 : 0;
+      t.position.set(fx - width / 2, view.heightAt(fx, fy) + bob, fy - height / 2);
+      t.rotation.set(run ? Math.sin(this.time * 12 + w.id) * 0.06 : 0, h, 0, 'YXZ');
+      t.scale.setScalar(1.15);
+      t.updateMatrix();
+      this.wolfMesh.setMatrixAt(n, t.matrix);
+      this.wolfEyes!.setMatrixAt(n, this.night > 0.2 ? t.matrix : ZERO);
+      // warczenie z bliska, kłapnięcie przy ataku
+      if (!this.calm && w.target) this.sfxAt('growl', t.position.x, t.position.z, `w${w.id}`, 2.6 + (w.id % 3), 1.4);
+      n++;
+    }
+    this.wolfMesh.count = n; this.wolfEyes!.count = n;
+    this.wolfMesh.instanceMatrix.needsUpdate = true; this.wolfEyes!.instanceMatrix.needsUpdate = true;
   }
 
   private dustAt = new Map<number, number>();
