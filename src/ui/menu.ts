@@ -77,7 +77,17 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   const title = el('p', 'menu-title', 'Project‑1');
   const sub = el('p', 'menu-sub', t('menu.subtitle'));
   const body = el('div', 'menu-body');
-  panel.append(title, sub, body);
+  // herb nad nazwą: tarcza z wieżą i skrzyżowanymi włóczniami
+  const crest = el('div', 'menu-crest');
+  crest.innerHTML = `<svg viewBox="0 0 120 120" aria-hidden="true">
+    <path d="M18 34 L102 86 M102 34 L18 86" stroke="#5a3a1c" stroke-width="5" stroke-linecap="round"/>
+    <path d="M14 30 l8 2 -2 8z M106 30 l-8 2 2 8z" fill="#b9b2a2"/>
+    <path d="M60 12 L96 22 V56 C96 82 78 98 60 108 C42 98 24 82 24 56 V22 Z" fill="#8c1f18" stroke="#e9c145" stroke-width="4"/>
+    <path d="M60 18 L90 26 V56 C90 78 75 92 60 101 Z" fill="#6e1711"/>
+    <path d="M46 84 V52 h4 v-6 h5 v6 h10 v-6 h5 v6 h4 V84 Z" fill="#e9c145"/>
+    <path d="M56 84 v-12 a4 4 0 0 1 8 0 v12z" fill="#6e1711"/>
+  </svg>`;
+  panel.append(crest, title, sub, body);
   wrap.append(panel);
   root.append(wrap);
 
@@ -135,38 +145,32 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   }
 
   function showNew(): void {
-    const form = el('form', 'menu-form');
-    const modes = el('fieldset', 'menu-modes');
-    modes.append(el('legend', '', t('hud.mode')));
+    const form = el('form', 'menu-form newgame');
+    /** Kafelek wyboru: duży napis, opis pod spodem, zaznaczony ma złotą ramkę i pieczęć */
+    const tile = (group: string, checked: boolean, big: string, small: string, onPick: () => void, extra = ''): HTMLLabelElement => {
+      const lab = el('label', `pick ${extra}`);
+      const radio = el('input');
+      radio.type = 'radio'; radio.name = group; radio.checked = checked;
+      radio.addEventListener('change', onPick);
+      lab.append(radio, el('strong', 'pick-big', big), el('span', 'pick-small', small));
+      return lab;
+    };
+    const section = (name: string, ...kids: Node[]): HTMLElement => { const f = el('fieldset', 'pick-group'); f.append(el('legend', '', name), ...kids); return f; };
+
     let preset: MapPresetId = '1v1';
+    const modeRow = el('div', 'pick-row');
     for (const id of Object.keys(MAP_PRESETS) as MapPresetId[]) {
-      const lab = el('label', 'menu-mode');
-      const radio = el('input');
-      radio.type = 'radio'; radio.name = 'mode'; radio.value = id; radio.checked = id === preset;
-      radio.addEventListener('change', () => { preset = id; });
       const p = MAP_PRESETS[id];
-      lab.append(radio, el('strong', '', id), el('span', '', `${t(`menu.mode.${id}`)} · ${p.width} × ${p.height}`));
-      modes.append(lab);
+      const [a, b] = id.split('v');
+      modeRow.append(tile('mode', id === preset, `${a} na ${b}`, `${t(`menu.mode.${id}`)} · mapa ${p.width}×${p.height}`, () => { preset = id; }, `mode-${id}`));
     }
-    // poziom trudności: domyślnie łatwy
     let level = 1;
-    const levels = el('fieldset', 'menu-modes');
-    levels.append(el('legend', '', t('menu.level')));
+    const levelRow = el('div', 'pick-row four');
     for (const lv of [0, 1, 2, 3]) {
-      const lab = el('label', 'menu-mode menu-level');
-      const radio = el('input');
-      radio.type = 'radio'; radio.name = 'level'; radio.checked = lv === level;
-      radio.addEventListener('change', () => { level = lv; });
-      lab.append(radio, el('span', '', t(`level.${lv}`)));
-      levels.append(lab);
+      const [name, desc] = t(`level.${lv}`).split(' — ');
+      levelRow.append(tile('level', lv === level, name ?? '', desc ?? '', () => { level = lv; }, `lvl-${lv}`));
     }
-    // tryb dla dewelopera: wszystkie budynki gotowe, pełne zapasy, budowa bez czekania
-    let dev = false;
-    const devLab = el('label', 'menu-mode menu-dev');
-    const devBox = el('input');
-    devBox.type = 'checkbox';
-    devBox.addEventListener('change', () => { dev = devBox.checked; });
-    devLab.append(devBox, el('span', '', 'Tryb deweloperski — wszystko zbudowane, pełne zapasy, budowa od razu'));
+
     const seedWrap = el('div', 'field');
     const seedLabel = el('label', '', t('menu.mapName'));
     seedLabel.htmlFor = 'menu-seed';
@@ -178,12 +182,23 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     roll();
     row.append(seed, button(t('hud.newMap'), roll, 'btn-plain'));
     seedWrap.append(seedLabel, row);
+
+    // tryb dla dewelopera: przełącznik w jednej linii
+    let dev = false;
+    const devLab = el('label', 'dev-switch');
+    const devBox = el('input');
+    devBox.type = 'checkbox'; devBox.setAttribute('role', 'switch');
+    devBox.addEventListener('change', () => { dev = devBox.checked; });
+    devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Tryb deweloperski'), el('span', 'dev-hint', 'miasto w murach, wojsko, pełne zapasy, budowa od razu'));
+
     const warn = el('p', 'hint', canContinue || inGame ? t('menu.overwrite') : '');
     const start = el('button', 'menu-btn', t('menu.start'));
     start.type = 'submit';
-    form.append(modes, levels, devLab, seedWrap, warn, start);
+    const foot = el('div', 'newgame-foot');
+    foot.append(back(), start);
+    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, devLab, warn, foot);
     form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev); });
-    screen(t('menu.newGame'), false, form, back());
+    screen(t('menu.newGame'), true, form);
   }
 
   /** Suwak 0–100 % z wartością obok */
