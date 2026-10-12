@@ -194,6 +194,7 @@ export class Figures {
   finish(count: number): void {
     for (const p of this.parts) {
       p.mesh.count = count;
+      p.mesh.visible = count > 0; // pusta grupa nie kosztuje wywołania rysowania
       p.mesh.instanceMatrix.needsUpdate = true;
       if (p.mesh.instanceColor) p.mesh.instanceColor.needsUpdate = true;
     }
