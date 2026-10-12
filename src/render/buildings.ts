@@ -451,6 +451,24 @@ let houseSeed = 1;
  * prawdziwe otwory na drzwi i okna (z okiennicami), gruba nierówna strzecha, komin z kamienia,
  * drewno pod ścianą. Zwraca grupę wnętrza (widoczną, gdy zaglądamy do środka).
  */
+/**
+ * Chata w nowym stylu (szachulec, strzecha, podmurówka, wnętrze) w dowolnym rozmiarze i miejscu działki.
+ * Zwraca grupę wnętrza w układzie działki (te same współrzędne co dawny hut()), więc wyposażenie wstawia się jak wcześniej.
+ */
+function cottageAt(g: THREE.Group, seed: number, w: number, d: number, h: number, x: number, z: number): THREE.Group {
+  const sub = new THREE.Group();
+  const inside = cottage(sub, seed);
+  const sx = w / 1.5, sy = h / 0.92, sz = d / 1.2;
+  sub.scale.set(sx, sy, sz);
+  sub.position.set(x, 0, z);
+  g.add(sub);
+  const local = new THREE.Group();
+  local.scale.set(1 / sx, 1 / sy, 1 / sz);
+  local.position.set(-x / sx, 0, -z / sz);
+  inside.add(local);
+  return local;
+}
+
 function cottage(g: THREE.Group, seed: number): THREE.Group {
   const r = rng(seed * 7919 + 13);
   const W = 1.5, D = 1.2, H = 0.92, RH = 0.6, EAVE = 0.15, GABLE = 0.12;
@@ -977,7 +995,7 @@ const BUILDERS: Record<string, Builder> = {
   woodcutter(g) {
     // Tartak: chata po prawej (naprzeciw wejścia), po lewej wiata z kozłem do cięcia, z tyłu stos desek.
     // Plac z pniem leży z boku, więc droga do drzwi jest wolna.
-    const inside = hut(g, M.wood, M.thatch, 0.95, 0.9, 0.7, 0.42, -0.3, true);
+    const inside = cottageAt(g, 21, 1.0, 0.95, 0.75, 0.42, -0.3);
     box(inside, M.woodDark, 0.4, 0.2, 0.12, 0.3, 0.05, -0.45);
     box(inside, M.plank, 0.4, 0.04, 0.3, 0.6, 0.05, -0.5);
     box(g, M.window, 0.2, 0.2, 0.03, 0.72, 0.36, 0.16);
@@ -1219,7 +1237,12 @@ const BUILDERS: Record<string, Builder> = {
   },
   engineers(g, _team, flag) {
     // Cech inżynierów: warsztat z daszkiem nad stołem kreślarskim, dźwig z blokiem kamienia, taczka i narzędzia
-    hut(g, M.plaster, M.thatch, 0.95, 0.9, 0.72, 0.42, -0.35);
+    const eng = cottageAt(g, 24, 1.0, 0.95, 0.78, 0.42, -0.35);
+    // warsztat inżyniera: stół z planami, skrzynia narzędzi, belki pod ścianą
+    box(eng, M.wood, 0.4, 0.2, 0.25, 0.3, 0.05, -0.4);
+    box(eng, M.white, 0.3, 0.01, 0.2, 0.3, 0.26, -0.4);
+    box(eng, M.woodDark, 0.25, 0.15, 0.15, 0.6, 0.05, -0.15);
+    for (let k = 0; k < 3; k++) box(eng, M.plank, 0.05, 0.05, 0.6, 0.12 + k * 0.06, 0.05, -0.35);
     box(g, M.window, 0.2, 0.2, 0.03, 0.72, 0.36, 0.11);
     for (const [x, z] of [[-0.9, -0.8], [-0.15, -0.8], [-0.9, -0.1], [-0.15, -0.1]] as const) box(g, M.woodDark, 0.07, 0.7, 0.07, x, 0, z);
     box(g, M.plank, 0.95, 0.05, 0.9, -0.52, 0.7, -0.45).rotation.x = 0.2;
@@ -1263,7 +1286,7 @@ const BUILDERS: Record<string, Builder> = {
   },
   fletcher(g, _team, flag) {
     // Warsztat łuczarza: otwarta chata, na ścianie wiszą łuki, na stole drewno na łęczyska, kosz strzał
-    const inside = hut(g, M.plaster, M.thatch, 1.4, 1.1, 0.75, 0, -0.15, true);
+    const inside = cottageAt(g, 22, 1.4, 1.1, 0.8, 0, -0.15);
     box(inside, M.wood, 0.7, 0.05, 0.22, -0.1, 0.32, -0.25);
     for (const sx of [-1, 1]) box(inside, M.woodDark, 0.05, 0.32, 0.18, -0.1 + sx * 0.3, 0.0, -0.25);
     for (let k = 0; k < 3; k++) {
@@ -1278,7 +1301,7 @@ const BUILDERS: Record<string, Builder> = {
   },
   poleturner(g, _team, flag) {
     // Warsztat włóczniarza: otwarta chata z kozłem do strugania, stojak z gotowymi włóczniami i kosz z grotami
-    const inside = hut(g, M.plaster, M.thatch, 1.4, 1.1, 0.75, 0, -0.15, true);
+    const inside = cottageAt(g, 22, 1.4, 1.1, 0.8, 0, -0.15);
     box(inside, M.wood, 0.7, 0.05, 0.22, -0.1, 0.32, -0.25);
     for (const sx of [-1, 1]) box(inside, M.woodDark, 0.05, 0.32, 0.18, -0.1 + sx * 0.3, 0.0, -0.25);
     box(inside, M.plank, 0.9, 0.03, 0.03, -0.05, 0.38, -0.25).rotation.y = 0.15;
@@ -1655,7 +1678,7 @@ const BUILDERS: Record<string, Builder> = {
     g.add(spin);
   },
   bakery(g, _team, flag) {
-    const inside = hut(g, M.plaster, mat(0xb5562f, 'tiles'), 1.4, 1.2, 0.8, 0, 0, true);
+    const inside = cottageAt(g, 23, 1.4, 1.2, 0.85, 0, 0);
     // podłoga z desek, kopulasty piec chlebowy z żarem w łukowym otworze, stół z bochenkami, dzieża i worek mąki
     box(inside, M.wood, 1.3, 0.03, 1.1, 0, 0.02, 0);
     box(inside, M.stoneDark, 0.56, 0.22, 0.5, -0.38, 0.05, -0.3);
