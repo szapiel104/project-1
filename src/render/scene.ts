@@ -646,6 +646,33 @@ export class GameRenderer {
     }
   }
 
+  private hl = 0;
+  private hlMats = new Map<THREE.Material, THREE.Material>();
+  /** Wrogi budynek pod kursorem przy zaznaczonym wojsku: delikatnie czerwienieje (0 = bez podświetlenia) */
+  setAttackHighlight(id: number): void {
+    if (id === this.hl) return;
+    const swap = (bid: number, on: boolean): void => {
+      this.buildingMeshes.get(bid)?.traverse((o) => {
+        const m = o as THREE.Mesh;
+        if (!m.isMesh || Array.isArray(m.material) || o.name === 'patch') return;
+        if (on) {
+          let red = this.hlMats.get(m.material);
+          if (!red) {
+            red = m.material.clone();
+            const st = red as THREE.MeshStandardMaterial;
+            if (st.emissive) { st.emissive = new THREE.Color(0xff2a1a); st.emissiveIntensity = 0.35; }
+            this.hlMats.set(m.material, red);
+            red.userData.orig = m.material;
+          }
+          m.material = red;
+        } else if (m.material.userData.orig) m.material = m.material.userData.orig as THREE.Material;
+      });
+    };
+    if (this.hl) swap(this.hl, false);
+    this.hl = id;
+    if (id) swap(id, true);
+  }
+
   /** Rozkaz marszu: rozchodząca się złota fala w klikniętym miejscu */
   orderMarker(tile: { x: number; y: number }): void {
     if (!this.state || !this.view) return;

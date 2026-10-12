@@ -362,6 +362,7 @@ function updateHoverFoe(): void {
     }
   }
   canvas.classList.toggle('attack', hoverFoe !== 0);
+  renderer.setAttackHighlight(game.buildings.some((b) => b.id === hoverFoe) ? hoverFoe : 0);
 }
 
 // ---- paski zdrowia nad żołnierzami: ranni, zaznaczeni i wróg pod kursorem ----
