@@ -11,6 +11,7 @@ import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace } from './sim/systems/placement';
 import { createHud } from './ui/hud';
+import { getVolume, isMuted, play, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
 import { TEAM_COLORS } from './data/teams';
@@ -62,10 +63,12 @@ const hud = createHud(document.getElementById('ui')!, {
   onRations: (level) => pending.push({ type: 'setRations', player: ME, level }),
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
   onSpeed: (s) => { speed = s; },
-  onDemolish: (id) => { pending.push({ type: 'demolish', player: ME, id }); select(0); },
+  onDemolish: (id) => { pending.push({ type: 'demolish', player: ME, id }); play('demolish'); select(0); },
   onCloseInfo: () => { selectUnit(0); select(0); },
   onRotate: () => rotate(),
   onWreck: () => setWreck(!wrecking),
+  onVolume: (v) => setVolume(v),
+  onMute: () => hud.setMuted(toggleMute()),
 }, renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
@@ -162,7 +165,7 @@ renderer.onPaint = (tile) => {
   if (!picked) return;
   const type = buildingIndex(picked);
   if (canPlace(game, ME, type, tile.x, tile.y) === null && !pending.some((c) => c.type === 'build' && c.x === tile.x && c.y === tile.y))
-    pending.push({ type: 'build', player: ME, building: picked, x: tile.x, y: tile.y });
+    { pending.push({ type: 'build', player: ME, building: picked, x: tile.x, y: tile.y }); play('road'); }
 };
 
 renderer.onUnit = (id) => { if (!picked && !wrecking) selectUnit(id === selectedUnit ? 0 : id); };
@@ -171,7 +174,7 @@ renderer.onClick = (tile, touch) => {
   if (wrecking) {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
     const b = game.buildings.find((x) => x.id === id);
-    if (b && b.owner === ME && BUILDINGS[b.type]!.buildable) pending.push({ type: 'demolish', player: ME, id });
+    if (b && b.owner === ME && BUILDINGS[b.type]!.buildable) { pending.push({ type: 'demolish', player: ME, id }); play('demolish'); }
     else if (game.roads[tile.y * game.map.width + tile.x]) pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y });
     return;
   }
@@ -191,16 +194,24 @@ renderer.onClick = (tile, touch) => {
   const type = buildingIndex(picked);
   const o = origin(tile, type);
   const error = canPlace(game, ME, type, o.x, o.y, true, placeRot);
-  if (error) { hud.toast(t(error)); return; }
+  if (error) { hud.toast(t(error)); play('error'); return; }
   pending.push({ type: 'build', player: ME, building: picked, x: o.x, y: o.y, rot: placeRot });
+  play('build');
   touchTile = null;
 };
+
+// dźwięk rusza po pierwszym kliknięciu albo klawiszu; każdy przycisk interfejsu stuka
+window.addEventListener('pointerdown', unlockAudio);
+window.addEventListener('keydown', unlockAudio);
+document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('button')) play('click'); });
+renderer.onCollapse = () => play('collapse');
 
 window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') { if (wrecking) setWreck(false); else if (picked) pick(null); else select(0); }
   const tag = (e.target as HTMLElement | null)?.tagName;
   if (tag === 'INPUT' || tag === 'SELECT' || e.ctrlKey || e.metaKey) return;
   if (e.code === 'KeyR' && picked) rotate();
+  if (e.code === 'KeyM') hud.setMuted(toggleMute());
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
   if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);
 });
@@ -262,6 +273,8 @@ function loop(now: number): void {
 
 // adres strony może nieść mapę: #tryb/ziarno
 const [hashPreset, hashSeed] = decodeURIComponent(location.hash.slice(1)).split('/');
+hud.setMuted(isMuted());
+hud.setVolume(getVolume());
 const saved = loadSave();
 const restored = saved ? deserialize(saved.data) : null;
 if (saved && restored) start(saved.seedText, saved.data.preset, restored);
@@ -272,6 +285,7 @@ requestAnimationFrame(loop);
 
 // podgląd stanu dla testów w przeglądarce
 (window as unknown as { __game: () => GameState }).__game = () => game;
+(window as unknown as { __look: (x: number, y: number, d?: number) => void }).__look = (x, y, d) => renderer.lookAt(x, y, d);
 
 declare const __BUILD__: string;
 const badge = document.createElement('div');

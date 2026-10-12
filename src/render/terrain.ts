@@ -175,11 +175,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Szczyty rzeźbione: stożek o wielu ściankach z poszarpanymi graniami, żlebami i czapą śniegu.
   // Trzy różne bryły, powielane z innym obrotem, wysokością i szerokością.
   const peakGeo = (variant: number): THREE.BufferGeometry => {
-    const geo = new THREE.ConeGeometry(1, 1, 22, 14, false).toNonIndexed();
+    // gęsta siatka i wspólne wierzchołki: zbocza są gładkie, a nie pocięte na trójkąty
+    const geo = new THREE.ConeGeometry(1, 1, 36, 22, false);
     geo.translate(0, 0.5, 0);
     const pos2 = geo.getAttribute('position');
     const colors = new Float32Array(pos2.count * 3);
-    const c2 = new THREE.Color(), rock = new THREE.Color(), dark = new THREE.Color(0x4a4744), white = new THREE.Color(0xf4f2ec);
+    const c2 = new THREE.Color(), rock = new THREE.Color(), dark = new THREE.Color(0x3e3a35), white = new THREE.Color(0xe9eaec);
     const n2 = (a: number, b2: number, salt: number): number => (hash2(Math.round(a * 1000), Math.round(b2 * 1000), map.seed ^ (salt + variant * 7919)) & 1023) / 1023;
     for (let i = 0; i < pos2.count; i++) {
       const x = pos2.getX(i), y = pos2.getY(i), z = pos2.getZ(i);
@@ -191,9 +192,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const k = 1 + (ridge + rough) * (1 - y * 0.6);
       pos2.setXYZ(i, x * k, y, z * k);
       const strata = 0.75 + n2(0, Math.round(y * 16) / 16, 3) * 0.4;
-      rock.setRGB(0.5 * strata, 0.48 * strata, 0.46 * strata);
+      // skała ciemniejsza u podnóża, jaśniejsza wyżej, z poziomymi warstwami
+      rock.setRGB(0.36 * strata, 0.34 * strata, 0.32 * strata).lerp(dark, Math.max(0, 0.4 - y));
       c2.copy(rock).lerp(dark, ridge < -0.08 ? 0.45 : 0); // żleby w cieniu
-      const snowLine = 0.52 + Math.sin(ang * 3 + variant) * 0.08 + (n2(Math.round(ang * 8) / 8, 0, 4) - 0.5) * 0.14;
+      const snowLine = 0.74 + Math.sin(ang * 3 + variant) * 0.06 + (n2(Math.round(ang * 8) / 8, 0, 4) - 0.5) * 0.1;
       // śnieg leży wyżej na graniach i schodzi żlebami w dół
       const snowK = Math.max(0, Math.min(1, (y - snowLine + (ridge < 0 ? 0.1 : 0)) / 0.1));
       c2.lerp(white, snowK);
@@ -203,7 +205,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     geo.computeVertexNormals();
     return geo;
   };
-  const peakMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95, bumpMap: bump('soil'), bumpScale: 1.5 });
+  const peakMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
   const variants: THREE.Matrix4[][] = [[], [], []];
   const pm = new THREE.Matrix4();
   const pq = new THREE.Quaternion();
@@ -211,7 +213,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const ringStep = 7;
   for (let ring = 0; ring < 7; ring++) {
     // pierwszy rząd szczytów zachodzi na krawędź mapy, żeby między nią a górami nie było szczeliny
-    const d = -4 + ring * 6;
+    // szczyty stoją wyłącznie za krawędzią mapy, więc nigdy nie zasłaniają terenu gry
+    const d = 8 + ring * 7;
     for (let side = 0; side < 4; side++) {
       const len = (side % 2 === 0 ? w : h) + d * 2;
       for (let i = 0; i < len; i += ringStep) {
@@ -222,8 +225,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const pz = side === 0 ? -h / 2 - out : side === 2 ? h / 2 + out : along;
         // dalsze pasma wyższe, żeby za pierwszym rzędem było widać kolejne
         // szerokie masywy zamiast igieł: podstawa zawsze wyraźnie szersza niż połowa wysokości
-        const height = 11 + ring * 3 + (((r >>> 8) & 255) / 255) * 8;
-        const radius = 10 + (((r >>> 16) & 255) / 255) * 7 + ring * 0.8;
+        const height = 14 + ring * 4 + (((r >>> 8) & 255) / 255) * 9;
+        const radius = 11 + (((r >>> 16) & 255) / 255) * 7 + ring * 1.2;
         pq.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
         pm.compose(new THREE.Vector3(px, -0.4, pz), pq, new THREE.Vector3(radius, height, radius));
         variants[r % 3]!.push(pm.clone());

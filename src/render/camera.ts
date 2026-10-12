@@ -114,10 +114,11 @@ export class StrategyCamera {
       if (this.pinch) this.zoom(this.pinch / d);
       this.pinch = d;
       this.dragged = true;
-    } else if (p.button === 2 || p.button === 1) {
+    } else if (p.button === 2 || p.button === 1 || (p.button === 0 && e.ctrlKey)) {
+      // obrót: prawy albo środkowy przycisk, a także lewy z wciśniętym Ctrl
       this.yaw -= dx * 0.006;
       this.dragged = true;
-    } else if (this.panLocked && e.pointerType !== 'touch') {
+    } else if (this.panLocked && e.pointerType !== 'touch' && !e.ctrlKey) {
       return;
     } else {
       if (Math.abs(dx) + Math.abs(dy) > 2) this.dragged = true;

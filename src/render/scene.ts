@@ -88,6 +88,8 @@ export class GameRenderer {
   onClick: (tile: TileRef, touch: boolean) => void = () => {};
   /** Kliknięto w chłopa o tym numerze */
   onUnit: (id: number) => void = () => {};
+  /** Budynek zaczął się zawalać po rozbiórce */
+  onCollapse: () => void = () => {};
   private unitSpots: { id: number; x: number; z: number }[] = [];
   private selectedUnit = 0;
   private unitY = new Map<number, number>();
@@ -221,6 +223,12 @@ export class GameRenderer {
     for (const u of this.state.units) this.prevPos.set(u.id, [u.px, u.py]);
   }
 
+  /** Ustawia kamerę nad wskazanym punktem mapy (w polach); używane też przy testach wyglądu */
+  lookAt(x: number, y: number, dist = 40): void {
+    if (!this.state) return;
+    this.cam.lookAt(x - this.state.map.width / 2, y - this.state.map.height / 2, dist);
+  }
+
   /** Blokuje przesuwanie kamery myszą na czas malowania */
   setPainting(on: boolean): void { this.painting = on; this.cam.panLocked = on; }
 
@@ -330,6 +338,7 @@ export class GameRenderer {
       if (alive.has(id)) continue;
       // rozebrany budynek nie znika od razu: zapada się i przechyla, a pod nim zostaje gruz
       this.dying.push({ mesh, t: 0 });
+      this.onCollapse();
       this.buildingMeshes.delete(id);
     }
   }

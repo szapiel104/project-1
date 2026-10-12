@@ -15,6 +15,8 @@ export interface HudEvents {
   onCloseInfo(): void;
   onRotate(): void;
   onWreck(): void;
+  onVolume(v: number): void;
+  onMute(): void;
 }
 
 export interface HudView {
@@ -54,6 +56,8 @@ export interface Hud {
   stepSpeed(dir: number): void;
   /** Zaznacza, że trwa tryb wyburzania */
   setWreck(on: boolean): void;
+  setMuted(muted: boolean): void;
+  setVolume(v: number): void;
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
@@ -370,10 +374,22 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   rnd.addEventListener('click', () => events.onRandom(preset()));
   mapSec.append(form);
 
-  // Sterowanie
+  // Sterowanie i dźwięk
   const help = section(t('hud.help'), 'help');
+  const soundWrap = el('div', 'field');
+  const volLabel = el('label', '', t('hud.volume'));
+  volLabel.htmlFor = 'volume';
+  const vol = el('input');
+  vol.id = 'volume'; vol.type = 'range'; vol.min = '0'; vol.max = '100'; vol.step = '5';
+  vol.addEventListener('input', () => events.onVolume(Number(vol.value) / 100));
+  const mute = el('button', 'btn-plain', t('hud.mute'));
+  mute.type = 'button';
+  mute.setAttribute('aria-pressed', 'false');
+  mute.addEventListener('click', () => events.onMute());
+  soundWrap.append(volLabel, vol, mute);
+  help.append(soundWrap);
   const list = el('ul', 'help-list');
-  for (const k of ['help.move', 'help.rotate', 'help.zoom', 'help.build', 'help.speed']) list.append(el('li', '', t(k)));
+  for (const k of ['help.move', 'help.rotate', 'help.zoom', 'help.build', 'help.speed', 'help.sound']) list.append(el('li', '', t(k)));
   help.append(list);
 
   floaters.append(drawer, info);
@@ -446,6 +462,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       demolish.hidden = !i.own || !i.def.buildable;
     },
     stepSpeed,
+    setMuted(m) { mute.setAttribute('aria-pressed', String(m)); setText(mute, t(m ? 'hud.unmute' : 'hud.mute')); },
+    setVolume(v) { vol.value = String(Math.round(v * 100)); },
     setWreck(on) {
       wreck.setAttribute('aria-pressed', String(on));
       if (on) { buildFoot.hidden = false; turn.hidden = true; cancel.hidden = true; setText(buildHint, t('hud.wrecking')); }

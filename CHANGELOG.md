@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.5.6 — dźwięki i góry (2026-10-12)
+
+- Dźwięki syntezowane w przeglądarce: budowa (deski i młotek), układanie drogi, burzenie (kilof), zawalenie budynku (łoskot i sypiący się gruz), kliknięcia przycisków, sygnał błędu
+- Głośność i wyciszanie w zakładce Sterowanie, klawisz M wycisza
+- Obrót kamery także lewym przyciskiem myszy z wciśniętym Ctrl
+- Góry poprawione: gładkie zbocza, ciemniejsza skała, śnieg tylko na wierzchołkach, szczyty stoją wyłącznie za krawędzią mapy
+
 ## 0.5.5 — naturalniejszy bruk (2026-10-11)
 
 - Droga kamienna bez równych krawędzi i krawężnika: kamienie nierówno wchodzą w trawę, pola są lekko przesunięte
