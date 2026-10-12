@@ -83,7 +83,21 @@ const hud = createHud(document.getElementById('ui')!, {
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
 const menu = createMenu(document.body, {
   onContinue: () => menu.close(),
-  onNewGame: (seedText, preset, level) => { start(seedText, preset, undefined, level); menu.close(); },
+  onNewGame: (seedText, preset, level) => {
+    // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
+    const cover = document.createElement('div');
+    cover.id = 'loading';
+    cover.innerHTML = `<div class="loading-card"><p class="loading-title">Project‑1</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${t('load.map')}</span><strong></strong></p></div>`;
+    document.body.append(cover);
+    requestAnimationFrame(() => setTimeout(() => {
+      start(seedText, preset, undefined, level);
+      renderer.warmup();
+      menu.close();
+      (cover.querySelector('.loading-bar span') as HTMLElement).style.width = '100%';
+      cover.classList.add('done');
+      setTimeout(() => cover.remove(), 500);
+    }, 30));
+  },
   onVolume: (v) => setVolume(v),
   onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
   onSettings: (st) => applySettings(st),
@@ -609,3 +623,6 @@ const badge = document.createElement('div');
 badge.className = 'build';
 badge.textContent = `wersja ${__BUILD__}`;
 document.body.append(badge);
+
+/** Wywoływane z ekranu wczytywania: kompilacja shaderów i pierwsza klatka jeszcze przed menu */
+export function warmup(): void { renderer.warmup(); }

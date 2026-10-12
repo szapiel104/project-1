@@ -401,6 +401,9 @@ export class GameRenderer {
     this.cam.edgeScroll = o.edgeScroll;
   }
 
+  /** Kompiluje z góry wszystkie shadery sceny, żeby gra nie przycinała przy pierwszym widoku */
+  warmup(): void { this.renderer.compile(this.scene, this.cam.camera); this.composer.render(); }
+
   /** Powolny obrót kamery wokół osady, gdy otwarte jest menu */
   orbit(dt: number): void { this.cam.spin(dt * 0.05); }
 

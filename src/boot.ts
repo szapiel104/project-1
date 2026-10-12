@@ -55,7 +55,9 @@ async function load(): Promise<void> {
   await assets.preloadAssets();
   done++;
   await step('Budowanie świata i osady…');
-  await import('./main');
+  const game = await import('./main');
+  await step('Przygotowanie grafiki…');
+  game.warmup();
   done = total;
   await step('Gotowe');
   document.getElementById('loading')?.classList.add('done');

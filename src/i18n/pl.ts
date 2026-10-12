@@ -85,6 +85,7 @@ export const pl = {
   'menu.high': 'Wysoka',
   'hud.menu': 'Menu',
   'hud.hp': 'Wytrzymałość',
+  'load.map': 'Budowanie nowej mapy…',
   'hud.perMinute': 'na minutę',
   'alarm.coming': 'Wróg nadciąga!',
   'herald.proud': 'Panie, lud raduje się na widok silnej drużyny. Czują się bezpieczni.',
