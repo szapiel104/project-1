@@ -237,7 +237,7 @@ export function armySystem(g: GameState): void {
         continue;
       }
       // brak wrogich żołnierzy w pobliżu: bierze się za najbliższy wrogi budynek
-      if (!s.up && siege(g, s, def, taken)) continue;
+      if (!s.up && !range && siege(g, s, def, taken)) continue; // łucznicy sami nie strzelają w budynki, tylko na rozkaz
     }
     if (s.up) continue;
     if (s.wait > 0) { s.wait--; continue; }
@@ -340,7 +340,8 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
     s.target = b ? b.id : 0;
   }
   if (!b) return false;
-  if (rectGap(g, here, b) <= 1 && !s.path.length) {
+  const reach = def.range ? def.range + (s.up ? 3 : 0) : 1;
+  if (rectGap(g, here, b) <= reach && !s.path.length) {
     if (s.cd === 0) {
       b.hp -= def.attack;
       s.cd = def.cooldown;
@@ -358,7 +359,7 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
   if (!s.path.length && budget > 0) {
     budget--;
     const target = b;
-    const path = findPath(g, here, (t) => rectGap(g, t, target) === 1 && (t === here || !taken.has(t)), 600, s.owner);
+    const path = findPath(g, here, (t) => rectGap(g, t, target) <= reach && rectGap(g, t, target) >= 1 && (t === here || !taken.has(t)), 600, s.owner);
     s.path = path ?? [];
     if (s.path.length) taken.add(s.path[s.path.length - 1]!);
     // nie da się podejść (zajęte miejsca, zamknięte przejście): odpuszcza ten cel na chwilę, zamiast szukać drogi co tick

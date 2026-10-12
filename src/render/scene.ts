@@ -1339,9 +1339,11 @@ export class GameRenderer {
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
       const pc = this.lastCd.get(s.id) ?? 0;
-      if (ranged && foe && s.cd > pc && !this.calm && this.arrows.length < 256) {
-        const tx = foe.px / FP, ty = foe.py / FP;
-        this.arrows.push({ from: new THREE.Vector3(fx - width / 2, y + 0.5, fy - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + (foe.up ? 2.3 : 0.4), ty - height / 2), t: 0 });
+      if (ranged && (foe || wall) && s.cd > pc && !this.calm && this.arrows.length < 256) {
+        let tx: number, ty: number, th: number;
+        if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : 0.4; }
+        else { const fp = footprint(BUILDINGS[wall!.type]!, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; }
+        this.arrows.push({ from: new THREE.Vector3(fx - width / 2, y + 0.5, fy - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0 });
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
       this.lastCd.set(s.id, s.cd);
