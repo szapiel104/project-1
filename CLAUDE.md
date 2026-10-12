@@ -10,3 +10,6 @@
    - Bez Chrome: Playwright + `?test=1` (start ~1,5 s). Pełna grafika w Playwright jest bardzo wolna — unikać.
    - Pojedynczy model: `podglad.html?id=house` na serwerze deweloperskim Vite.
 3. Nie robić serii zrzutów „na wszelki wypadek”; jeden zrzut na zmianę wyglądu wystarczy.
+
+## Pomysły
+- Lista kolejnych partii jest w `docs/pomysly.md`. Gdy Michał pyta „co dalej”, podpowiadaj z niej (i dopisuj tam nowe pomysły, zdejmuj zrobione).
