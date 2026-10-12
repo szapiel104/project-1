@@ -102,9 +102,10 @@ export async function setAvatar(avatar: number): Promise<string | null> {
 }
 
 export async function listRooms(): Promise<Room[]> {
-  const { data } = await supa.from('rooms').select('*').in('status', ['open', 'playing']).order('created_at', { ascending: false }).limit(40);
-  // pokoje sprzed kilku godzin to porzucone mecze (np. zamknięta karta) — nie pokazujemy ich
-  const old = Date.now() - 4 * 3600_000;
+  const { data } = await supa.from('rooms').select('*').eq('status', 'open').order('created_at', { ascending: false }).limit(40);
+  // na liście tylko gry, do których da się dołączyć; trwające mecze są zamknięte dla nowych.
+  // Pokoje sprzed kilku godzin to porzucone lobby (np. zamknięta karta) — nie pokazujemy ich
+  const old = Date.now() - 3 * 3600_000;
   return ((data as Room[] | null) ?? []).filter((r) => Date.parse(r.created_at) > old);
 }
 

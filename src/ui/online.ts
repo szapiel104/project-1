@@ -351,6 +351,12 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       link.close();
     };
     void link.ready.then(() => { if (!host) link.send({ k: 'hello', who: self }); else sync(); });
+    // gość: gdy gospodarz nie odpowiada, pokój jest porzucony (zamknięta karta) — nie czekamy w nieskończoność
+    if (!host) setTimeout(() => {
+      if (hostSeen || started) return;
+      note.textContent = 'Gospodarz nie odpowiada — ten pokój jest porzucony. Wróć do listy gier.';
+      note.classList.add('bad');
+    }, 6000);
     paint();
     screen('Pokój', true, box, foot);
   }
