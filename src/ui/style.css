@@ -300,8 +300,8 @@ body.menu-open .alarm { display: none; }
 .scribe-card.urgent .scribe-face { box-shadow: 0 0 0 2px #e0655a; }
 .scribe-body { display: grid; gap: 1px; }
 .scribe-name { font-family: var(--display); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
-.scribe-card.herald { border-color: #b5463a; background: linear-gradient(90deg, rgba(74, 15, 11, .95), rgba(46, 29, 15, .85)); }
-.scribe-card.herald .scribe-face { box-shadow: 0 0 0 2px #e0a04a, 0 0 0 4px #4a0f0b; }
+.scribe-card.by-herald { border-color: #b5463a; background: linear-gradient(90deg, rgba(74, 15, 11, .95), rgba(46, 29, 15, .85)); }
+.scribe-card.by-herald .scribe-face { box-shadow: 0 0 0 2px #e0a04a, 0 0 0 4px #4a0f0b; }
 .scribe-face { display: block; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex: none; box-shadow: 0 0 0 2px var(--gold); }
 .scribe-card.out { opacity: 0; transform: translateX(-30px); }
 @keyframes scribe-in { from { opacity: 0; transform: translateX(-40px); } }

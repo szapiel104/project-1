@@ -40,7 +40,7 @@ export function createScribe(onSpeak: () => void): Scribe {
   // nowa wiadomość pojawia się na górze, starsze zjeżdżają niżej, bledną i znikają
   const show = (text: string, urgent: boolean, who: Speaker): void => {
     const card = document.createElement('div');
-    card.className = `scribe-card ${who}${urgent ? ' urgent' : ''}`;
+    card.className = `scribe-card by-${who}${urgent ? ' urgent' : ''}`;
     card.innerHTML = `<span class="scribe-face">${who === 'herald' ? HERALD : FACE}</span><span class="scribe-body"><span class="scribe-name">${NAMES[who]}</span><span class="scribe-text"></span></span>`;
     card.querySelector('.scribe-text')!.textContent = text;
     for (const old of Array.from(box.children) as HTMLElement[]) {
