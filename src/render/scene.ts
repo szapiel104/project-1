@@ -714,18 +714,28 @@ export class GameRenderer {
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
       const stars = new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0, fog: false, depthWrite: false }));
-      // księżyc: tarcza z kraterami i miękka poświata, rysowane na płótnie
-      const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+      // księżyc jak prawdziwy: tarcza z ciemnymi „morzami”, drobnymi kraterami, ciemniejszym brzegiem i szeroką, słabą poświatą
+      const cv = document.createElement('canvas'); cv.width = cv.height = 512;
       const x = cv.getContext('2d')!;
-      const glow = x.createRadialGradient(128, 128, 30, 128, 128, 128);
-      glow.addColorStop(0, 'rgba(220,230,255,0.55)'); glow.addColorStop(0.35, 'rgba(180,200,255,0.15)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = glow; x.fillRect(0, 0, 256, 256);
-      x.fillStyle = '#e9ecf2'; x.beginPath(); x.arc(128, 128, 34, 0, Math.PI * 2); x.fill();
-      x.fillStyle = 'rgba(160,170,190,0.55)';
-      for (const [cx, cy, r] of [[118, 120, 8], [140, 136, 6], [126, 146, 5], [138, 114, 4], [112, 140, 3]] as const) { x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill(); }
+      const glow = x.createRadialGradient(256, 256, 40, 256, 256, 256);
+      glow.addColorStop(0, 'rgba(200,215,255,0.35)'); glow.addColorStop(0.3, 'rgba(160,180,230,0.10)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = glow; x.fillRect(0, 0, 512, 512);
+      const R = 46;
+      x.save(); x.beginPath(); x.arc(256, 256, R, 0, Math.PI * 2); x.clip();
+      x.fillStyle = '#e6e4dc'; x.fillRect(256 - R, 256 - R, R * 2, R * 2);
+      const rnd = (k: number): number => { const v = Math.sin(k * 91.7) * 43758.5; return v - Math.floor(v); };
+      // morza: duże, nieregularne, szarawe plamy
+      for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(120,124,132,${0.18 + rnd(i) * 0.2})`; x.beginPath(); x.ellipse(232 + rnd(i + 3) * 40, 236 + rnd(i + 7) * 36, 4 + rnd(i + 11) * 13, 3 + rnd(i + 13) * 10, rnd(i + 17) * 3, 0, Math.PI * 2); x.fill(); }
+      // kratery: jasny brzeg, ciemny środek
+      for (let i = 0; i < 40; i++) { const cx = 214 + rnd(i + 50) * 84, cy = 214 + rnd(i + 70) * 84, cr = 0.8 + rnd(i + 90) * 3.2; x.fillStyle = 'rgba(95,98,106,0.45)'; x.beginPath(); x.arc(cx, cy, cr, 0, Math.PI * 2); x.fill(); x.strokeStyle = 'rgba(250,250,245,0.35)'; x.lineWidth = 0.7; x.stroke(); }
+      // ciemniejszy brzeg tarczy (kula, nie płaski krążek)
+      const limb = x.createRadialGradient(250, 250, R * 0.2, 256, 256, R);
+      limb.addColorStop(0, 'rgba(0,0,0,0)'); limb.addColorStop(0.85, 'rgba(0,0,10,0.12)'); limb.addColorStop(1, 'rgba(0,0,20,0.35)');
+      x.fillStyle = limb; x.fillRect(256 - R, 256 - R, R * 2, R * 2);
+      x.restore();
       const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
       const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, fog: false, depthWrite: false }));
-      moon.scale.setScalar(70);
+      moon.scale.setScalar(110);
       // chmury: miękkie, ciemne kłęby
       const cc = document.createElement('canvas'); cc.width = cc.height = 128;
       const y = cc.getContext('2d')!;
@@ -748,15 +758,16 @@ export class GameRenderer {
         side: THREE.BackSide, depthWrite: false, fog: false,
       }));
       dome.renderOrder = -20;
-      // słońce: jasna tarcza z poświatą
-      const sc = document.createElement('canvas'); sc.width = sc.height = 128;
+      // słońce jak prawdziwe: mała, oślepiająca tarcza, wokół szeroka mgiełka; kolor ociepla się przy horyzoncie
+      const sc = document.createElement('canvas'); sc.width = sc.height = 256;
       const sx2 = sc.getContext('2d')!;
-      const sg = sx2.createRadialGradient(64, 64, 6, 64, 64, 64);
-      sg.addColorStop(0, 'rgba(255,250,230,1)'); sg.addColorStop(0.18, 'rgba(255,240,200,0.9)'); sg.addColorStop(0.45, 'rgba(255,220,160,0.25)'); sg.addColorStop(1, 'rgba(255,220,160,0)');
-      sx2.fillStyle = sg; sx2.fillRect(0, 0, 128, 128);
+      const sg = sx2.createRadialGradient(128, 128, 0, 128, 128, 128);
+      sg.addColorStop(0, 'rgba(255,255,250,1)'); sg.addColorStop(0.07, 'rgba(255,253,240,1)'); sg.addColorStop(0.1, 'rgba(255,240,210,0.65)');
+      sg.addColorStop(0.25, 'rgba(255,225,180,0.22)'); sg.addColorStop(0.6, 'rgba(255,215,170,0.06)'); sg.addColorStop(1, 'rgba(255,215,170,0)');
+      sx2.fillStyle = sg; sx2.fillRect(0, 0, 256, 256);
       const stex = new THREE.CanvasTexture(sc); stex.colorSpace = THREE.SRGBColorSpace;
-      const sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex, transparent: true, fog: false, depthWrite: false }));
-      sunDisc.scale.setScalar(90);
+      const sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex, transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
+      sunDisc.scale.setScalar(160);
       group.add(dome, stars, moon, sunDisc);
       for (const o of [stars, moon, sunDisc]) o.renderOrder = -10;
       this.scene.add(group);
@@ -779,7 +790,9 @@ export class GameRenderer {
     // słońce widać tylko w dzień i bez deszczu
     const sd = this.sunDir.clone().normalize();
     sk.sunDisc.position.set(sd.x * 360, Math.max(30, sd.y * 360), sd.z * 360);
-    (sk.sunDisc.material as THREE.SpriteMaterial).opacity = (1 - this.night) * (1 - this.rain) * (sd.y > 0.1 ? 1 : 0);
+    const sm2 = sk.sunDisc.material as THREE.SpriteMaterial;
+    sm2.opacity = (1 - this.night) * (1 - this.rain * 0.9) * Math.min(1, Math.max(0, (sd.y - 0.02) * 6));
+    sm2.color.set(0xffffff).lerp(new THREE.Color(0xff9a50), Math.max(0, 1 - sd.y * 2.5)); // nisko nad horyzontem pomarańczowe
     for (const [i, c] of sk.clouds.entries()) {
       // w dzień białe obłoki, w deszczu ciemne i gęste, nocą prawie niewidoczne
       const m2 = c.material as THREE.SpriteMaterial;
