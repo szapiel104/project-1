@@ -28,3 +28,7 @@
 - `sim/save.ts` zamienia stan na zwykłe dane i z powrotem. Mapy nie zapisujemy, odtwarza się z ziarna.
 - Na razie zapis leży w pamięci przeglądarki (`localStorage`). Ten sam format pójdzie później do Supabase i do powtórek.
 - **Przy każdej zmianie kształtu stanu trzeba podbić `SAVE_VERSION`**, inaczej stary zapis wczyta się błędnie. Dopisanie budynku albo surowca unieważnia zapis samo.
+
+## Platforma: komputer (12.10.2026)
+
+Gra powstaje na komputery (mysz i klawiatura, duży ekran). Telefonów i dotyku nie wspieramy ani nie testujemy; nie dokładamy osobnych układów i wariantów graficznych pod telefon.
