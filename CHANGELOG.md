@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.5.9 — puszcza za mapą (2026-10-12)
+
+- Zamiast pasma gór za krawędzią mapy rośnie ogromny las: im dalej, tym drzewa większe i ciemniejsze, a w końcu znikają we mgle. Robotnicy go nie wytną, kamera tam nie wyjedzie
+- Góry na planszy tylko w kilku masywach przy krawędzi, a kamień i żelazo przy nich; między masywami łąka i las dochodzą do puszczy
+- Zapis gry w nowej wersji (stare zapisy nie wczytają się, bo zmieniła się mapa)
+
 ## 0.5.8 — zapasy w składzie (2026-10-12)
 
 - Stosy w składzie i stodole z teksturami: deski z usłojeniem na przekładkach, ciosane bloki kamienia, sztaby żelaza, snopki zboża z przewiązką i kłosami, płócienne worki mąki, kosze bochenków i jabłek, skrzynka ryb

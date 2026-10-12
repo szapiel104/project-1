@@ -78,13 +78,15 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
       // pas gór na krańcach: nierówna krawędź z szumu, im bliżej brzegu, tym wyżej
       const edge = Math.min(x, y, width - 1 - x, height - 1 - y);
       const rim = preset.rim + Math.floor((valueNoise(x, y, 9, seed ^ 0x3c6ef372) * 5) / 256) - 2;
-      if (edge < rim) {
+      // góry tylko w masywach przy krawędzi, a między nimi teren dochodzi do puszczy za mapą
+      const massif = valueNoise(x, y, 13, seed ^ 0x6a09e667);
+      if (edge < rim && massif > 150) {
         t = Terrain.Mountain;
-        e = Math.min(255, 170 + (rim - edge) * 9 + (hash2(x, y, seed) & 15));
+        e = Math.min(255, 170 + Math.min(rim - edge, (massif - 150) >> 3) * 9 + (hash2(x, y, seed) & 15));
       } else if (h < preset.waterLevel) t = Terrain.Water;
       // kamień i żelazo tylko u podnóża gór, w niedużych złożach; żelazo rzadsze i bliżej skał
-      else if (edge < rim + 3 && ore > 208) t = Terrain.Iron;
-      else if (edge < rim + 5 && valueNoise(x, y, 6, seed ^ 0x1b873593) > 186) t = Terrain.Stone;
+      else if (edge < rim + 3 && massif > 120 && ore > 208) t = Terrain.Iron;
+      else if (edge < rim + 5 && massif > 105 && valueNoise(x, y, 6, seed ^ 0x1b873593) > 186) t = Terrain.Stone;
       else if (forest > 146) t = Terrain.Forest;
       tiles[i] = t;
       elevation[i] = e;

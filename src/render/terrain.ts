@@ -167,79 +167,17 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     fishMesh.instanceMatrix.needsUpdate = true;
   };
 
-  // Za mapą: skalne podłoże i pasma gór ginące we mgle, żeby nie było widać końca świata.
-  const beyond = new THREE.Mesh(new THREE.PlaneGeometry(w + 400, h + 400), new THREE.MeshStandardMaterial({ color: 0x6f6c66, roughness: 1 }));
+  // Za mapą: leśne runo z otworem na planszę. Same drzewa sadzimy niżej, gdy gotowe są modele.
+  const D = matchMedia('(pointer: coarse)').matches ? 34 : 56;
+  const floorShape = new THREE.Shape([new THREE.Vector2(-w / 2 - D - 40, -h / 2 - D - 40), new THREE.Vector2(w / 2 + D + 40, -h / 2 - D - 40), new THREE.Vector2(w / 2 + D + 40, h / 2 + D + 40), new THREE.Vector2(-w / 2 - D - 40, h / 2 + D + 40)]);
+  floorShape.holes.push(new THREE.Path([new THREE.Vector2(-w / 2, -h / 2), new THREE.Vector2(-w / 2, h / 2), new THREE.Vector2(w / 2, h / 2), new THREE.Vector2(w / 2, -h / 2)]));
+  const beyond = new THREE.Mesh(new THREE.ShapeGeometry(floorShape), new THREE.MeshStandardMaterial({ color: 0x34401f, roughness: 1, map: pattern('grass') }));
   beyond.rotation.x = -Math.PI / 2;
-  beyond.position.y = -0.3;
+  beyond.position.y = 0.1;
+  beyond.receiveShadow = true;
   group.add(beyond);
-  // Szczyty rzeźbione: stożek o wielu ściankach z poszarpanymi graniami, żlebami i czapą śniegu.
-  // Trzy różne bryły, powielane z innym obrotem, wysokością i szerokością.
-  const peakGeo = (variant: number): THREE.BufferGeometry => {
-    // gęsta siatka i wspólne wierzchołki: zbocza są gładkie, a nie pocięte na trójkąty
-    const geo = new THREE.ConeGeometry(1, 1, 36, 22, false);
-    geo.translate(0, 0.5, 0);
-    const pos2 = geo.getAttribute('position');
-    const colors = new Float32Array(pos2.count * 3);
-    const c2 = new THREE.Color(), rock = new THREE.Color(), dark = new THREE.Color(0x3e3a35), white = new THREE.Color(0xe9eaec);
-    const n2 = (a: number, b2: number, salt: number): number => (hash2(Math.round(a * 1000), Math.round(b2 * 1000), map.seed ^ (salt + variant * 7919)) & 1023) / 1023;
-    for (let i = 0; i < pos2.count; i++) {
-      const x = pos2.getX(i), y = pos2.getY(i), z = pos2.getZ(i);
-      const ang = Math.atan2(z, x);
-      const ridges = 5 + variant;
-      // granie i żleby: promień faluje wokół szczytu, mocniej u podstawy
-      const ridge = Math.sin(ang * ridges + variant * 2) * 0.16 + Math.sin(ang * (ridges * 2 + 1) + y * 5) * 0.07;
-      const rough = (n2(Math.round(ang * 6) / 6, Math.round(y * 9) / 9, 1) - 0.5) * 0.14;
-      const k = 1 + (ridge + rough) * (1 - y * 0.6);
-      pos2.setXYZ(i, x * k, y, z * k);
-      const strata = 0.75 + n2(0, Math.round(y * 16) / 16, 3) * 0.4;
-      // skała ciemniejsza u podnóża, jaśniejsza wyżej, z poziomymi warstwami
-      rock.setRGB(0.36 * strata, 0.34 * strata, 0.32 * strata).lerp(dark, Math.max(0, 0.4 - y));
-      c2.copy(rock).lerp(dark, ridge < -0.08 ? 0.45 : 0); // żleby w cieniu
-      const snowLine = 0.74 + Math.sin(ang * 3 + variant) * 0.06 + (n2(Math.round(ang * 8) / 8, 0, 4) - 0.5) * 0.1;
-      // śnieg leży wyżej na graniach i schodzi żlebami w dół
-      const snowK = Math.max(0, Math.min(1, (y - snowLine + (ridge < 0 ? 0.1 : 0)) / 0.1));
-      c2.lerp(white, snowK);
-      colors[i * 3] = c2.r; colors[i * 3 + 1] = c2.g; colors[i * 3 + 2] = c2.b;
-    }
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    geo.computeVertexNormals();
-    return geo;
-  };
-  const peakMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95 });
-  const variants: THREE.Matrix4[][] = [[], [], []];
-  const pm = new THREE.Matrix4();
-  const pq = new THREE.Quaternion();
-  const yAxis = new THREE.Vector3(0, 1, 0);
-  const ringStep = 7;
-  for (let ring = 0; ring < 7; ring++) {
-    // pierwszy rząd szczytów zachodzi na krawędź mapy, żeby między nią a górami nie było szczeliny
-    // szczyty stoją wyłącznie za krawędzią mapy, więc nigdy nie zasłaniają terenu gry
-    const d = 8 + ring * 7;
-    for (let side = 0; side < 4; side++) {
-      const len = (side % 2 === 0 ? w : h) + d * 2;
-      for (let i = 0; i < len; i += ringStep) {
-        const r = hash2(i + ring * 131, side * 17 + ring, map.seed ^ 0x6a09e667);
-        const along = -len / 2 + i + ((r & 15) / 15) * 3;
-        const out = d + (((r >>> 4) & 15) / 15) * 4;
-        const px = side === 0 ? along : side === 2 ? along : side === 1 ? w / 2 + out : -w / 2 - out;
-        const pz = side === 0 ? -h / 2 - out : side === 2 ? h / 2 + out : along;
-        // dalsze pasma wyższe, żeby za pierwszym rzędem było widać kolejne
-        // szerokie masywy zamiast igieł: podstawa zawsze wyraźnie szersza niż połowa wysokości
-        const height = 14 + ring * 4 + (((r >>> 8) & 255) / 255) * 9;
-        const radius = 11 + (((r >>> 16) & 255) / 255) * 7 + ring * 1.2;
-        pq.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
-        pm.compose(new THREE.Vector3(px, -0.4, pz), pq, new THREE.Vector3(radius, height, radius));
-        variants[r % 3]!.push(pm.clone());
-      }
-    }
-  }
-  variants.forEach((list, v) => {
-    if (!list.length) return;
-    const mesh = new THREE.InstancedMesh(peakGeo(v), peakMat, list.length);
-    list.forEach((mm, i) => mesh.setMatrixAt(i, mm));
-    group.add(mesh);
-  });
 
+  const yAxis = new THREE.Vector3(0, 1, 0);
   const heightAt = (fx: number, fy: number): number => {
     const x = Math.max(0, Math.min(w - 1.001, fx)), y = Math.max(0, Math.min(h - 1.001, fy));
     const ix = Math.floor(x), iy = Math.floor(y);
@@ -313,6 +251,39 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
   plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark'), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles'));
   plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark'), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves'));
+  // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
+  // Im dalej, tym drzewa większe i ciemniejsze, a resztę gasi mgła.
+  {
+    const near: { pine: Item[]; leaf: Item[] } = { pine: [], leaf: [] };
+    const far: { pine: Item[]; leaf: Item[] } = { pine: [], leaf: [] };
+    const step = D > 40 ? 1.7 : 2.2;
+    const e3 = new THREE.Euler();
+    for (let gz = -h / 2 - D; gz < h / 2 + D; gz += step)
+      for (let gx = -w / 2 - D; gx < w / 2 + D; gx += step) {
+        const r = hash2(Math.round(gx * 10), Math.round(gz * 10), map.seed ^ 0x7f4a7c15);
+        const px = gx + ((r & 255) / 255 - 0.5) * step * 0.9;
+        const pz = gz + (((r >>> 8) & 255) / 255 - 0.5) * step * 0.9;
+        const dist = Math.max(Math.abs(px) - w / 2, Math.abs(pz) - h / 2);
+        if (dist < 0.9) continue;
+        const k = Math.min(1, dist / D);
+        const size = (1.25 + k * 1.6) * (0.8 + ((r >>> 16) & 255) / 255 * 0.5);
+        const leafTree = (r >>> 24) % 4 === 0;
+        const pos = new THREE.Vector3(px, 0.1, pz);
+        const qq = new THREE.Quaternion().setFromEuler(e3.set(0, ((r >>> 4) & 63) / 10, 0));
+        const sc = new THREE.Vector3(size, size * (leafTree ? 1 : 1.15), size);
+        const item = { m: new THREE.Matrix4().compose(pos, qq, sc), shade: (1 - k * 0.7) * (0.82 + ((r >>> 12) & 15) / 60), tile: -1, pos, q: qq, s: sc } as Item;
+        const bucket = dist < 9 ? near : far;
+        (leafTree ? bucket.leaf : bucket.pine).push(item);
+      }
+    instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark');
+    instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles');
+    instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark');
+    instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves');
+    instanced(models.treeTrunk(), 0x5a3e26, far.pine, undefined, false);
+    instanced(models.treeCrown(), 0x35703a, far.pine, 'needles', false);
+    instanced(models.leafTrunk(), 0x5a3e26, far.leaf, undefined, false);
+    instanced(models.leafCrown(), 0x55903a, far.leaf, 'leaves', false);
+  }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
   plant(pebbles, instanced(models.rock(), 0x9d9a92, pebbles), null, false);
