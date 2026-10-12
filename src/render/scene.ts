@@ -1627,11 +1627,14 @@ export class GameRenderer {
         const turn = (inn.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
         const slot = (u.id >> 1) % 6;
         const drunk = slot === 5;
-        let lx = -0.95 + (slot % 3) * 0.3, lz = slot < 3 ? 0.62 : 1.28;
+        // trzech w izbie przy stole (widać po zdjęciu dachu), dwóch na ławie przed karczmą, jeden pijak przed wejściem
+        const SEATS: [number, number, number][] = [[0.2, 0.05, -Math.PI / 2], [0.85, 0.05, Math.PI / 2], [-0.35, -0.5, 0], [-0.8, 0.72, 0], [-0.45, 1.18, Math.PI]];
+        const seat = SEATS[Math.min(slot, 4)]!;
+        let lx = seat[0], lz = seat[1];
         if (drunk) { lx = 0.1 + Math.sin(this.time * 0.6 + u.id) * 0.5; lz = 1.5 + Math.cos(this.time * 0.45) * 0.25; }
         const wx = lx * cosT + lz * sinT, wz = -lx * sinT + lz * cosT;
         t.position.set(inn.x + 1.5 + wx - width / 2, (mesh?.position.y ?? 0) + 0.02, inn.y + 1 + wz - height / 2);
-        t.rotation.set(drunk ? Math.sin(this.time * 2.3 + u.id) * 0.25 : 0, drunk ? this.time * 0.7 : (slot < 3 ? 0 : Math.PI) - turn, drunk ? Math.cos(this.time * 1.9) * 0.2 : 0);
+        t.rotation.set(drunk ? Math.sin(this.time * 2.3 + u.id) * 0.25 : 0, drunk ? this.time * 0.7 : seat[2] + turn, drunk ? Math.cos(this.time * 1.9) * 0.2 : 0);
         swing = drunk ? Math.sin(this.time * 3) * 0.4 : Math.max(0, Math.sin(this.time * 1.3 + u.id * 2)) * -1.2;
         if (slot === 0 && !this.calm) this.lutePlay(t.position.x, t.position.z);
       } else if (camp && camp.owner === u.owner) {
