@@ -28,11 +28,13 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 ## Lista na kolejne partie (12.10.2026) — Claude podpowiada z niej, gdy Michał pyta „co dalej”
 Kierunek: klimat Gothic 1/2 — surowo, brudno, mroczno, żywy świat.
 
-Robione teraz: palisada + brama + wieża strażnicza, wilki z lasu nocą, odzywki ludzi.
+Zrobione 12.10: palisada, brama (otwieranie, sama się zamyka), wieża, wilki (polują, przegryzają mur), ruiny do odbudowy, odzywki ludzi, błoto i kałuże, kruki na ciałach, alarmy ataku, tryb deweloperski.
 
 Czeka:
 - Karczma i życie wieczorem (lutnia, pijacy, popularność)
-- Brud i bieda: błoto przy drogach, kałuże po deszczu, kości przy cmentarzu, kruki na poległych
+- Kości przy cmentarzu, więcej brudu (śmieci, gnój przy chlewie)
+- Wilki boją się światła pochodni (gotowe w git stash)
+- Ładniejszy model wilka (smukły, ruchome łapy i ogon)
 - Codzienność NPC: rano do pracy, wieczorem ognisko, nocą sen
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
 - Kopalnia rudy z prawdziwego zdarzenia (szyb, wózki)
