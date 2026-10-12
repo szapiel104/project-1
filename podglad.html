@@ -1,0 +1,22 @@
+<!doctype html><meta charset="utf-8"><title>podgląd</title>
+<body style="margin:0;background:#9fb07a"><canvas id="c" width="900" height="640"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { buildingModel } from './src/render/buildings.ts';
+const q = new URLSearchParams(location.search);
+const id = q.get('id') ?? 'house', yaw = Number(q.get('yaw') ?? 0.6), pitch = Number(q.get('pitch') ?? 0.55), dist = Number(q.get('d') ?? 4.2);
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+r.shadowMap.enabled = true; r.toneMapping = THREE.ACESFilmicToneMapping;
+const s = new THREE.Scene(); s.background = new THREE.Color(0x9fb07a);
+s.add(new THREE.HemisphereLight(0xdfe8ff, 0x5a6a3a, 1.2));
+const sun = new THREE.DirectionalLight(0xfff1d6, 2.4); sun.position.set(4, 7, 5); sun.castShadow = true; sun.shadow.mapSize.setScalar(2048);
+Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3 }); s.add(sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshStandardMaterial({ color: 0x7f9a48 })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; s.add(ground);
+const m = buildingModel(id, 0xa32a22); m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+const base = m.getObjectByName('base'); if (base) base.visible = false;
+if (q.get('open')) { const i = m.getObjectByName('interior'); if (i) i.visible = true; for (const n of ['shell', 'roof', 'chimney']) { const o = m.getObjectByName(n); if (o) o.visible = false; } }
+s.add(m);
+const cam = new THREE.PerspectiveCamera(35, 900 / 640, 0.1, 100);
+cam.position.set(Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 0.4, Math.cos(yaw) * Math.cos(pitch) * dist); cam.lookAt(0, 0.55, 0);
+r.render(s, cam); document.title = 'gotowe';
+</script>

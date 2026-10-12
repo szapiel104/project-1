@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.7.2 — nowa chata (2026-10-12)
+
+- Chata z szachulcem: podmurówka z polnych kamieni, bielone ściany z ręcznie ciosanymi belkami, wycięte otwory drzwi i okien z szybkami, parapetami i okiennicami, gruba nierówna strzecha z kalenicą, kamienny komin, skrzynka z kwiatami, beczka i stos drewna; każda chata trochę inna (strona komina i drewna, odcienie belek)
+- Narzędzia rzemieślnicze w kodzie (src/render/craft.ts): belki, podmurówki, strzecha, ściany z otworami — do kolejnych budynków
+
 ## 0.7.1 — powrót do naszych modeli, cieniowanie zagłębień (2026-10-12)
 
 - Wycofane modele KayKit (zbyt bajkowe); wszystkie budynki znów z kodu
