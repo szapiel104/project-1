@@ -205,3 +205,88 @@ export function play(sound: Sound): void {
       break;
   }
 }
+
+// --- przyroda: wiatr przez cały czas, wrony za dnia, wilki nocą (wszystko syntezowane, bez plików) ---
+let wind: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null = null;
+let nextCrow = 0, nextWolf = 0;
+
+function startWind(c: AudioContext): void {
+  if (wind || !noise) return;
+  const src = c.createBufferSource();
+  src.buffer = noise;
+  src.loop = true;
+  src.playbackRate.value = 0.35;
+  const filter = c.createBiquadFilter();
+  filter.type = 'lowpass';
+  filter.frequency.value = 400;
+  filter.Q.value = 1.2;
+  const gain = c.createGain();
+  gain.gain.value = 0;
+  src.connect(filter).connect(gain).connect(busGain.amb ?? master!);
+  src.start();
+  wind = { src, filter, gain };
+}
+
+/** Kracz wrony: chrapliwy, krótki „kraa” opadający w tonie, 1–3 razy */
+function crow(c: AudioContext, at: number, pan: number): void {
+  const n = 1 + Math.floor(Math.random() * 3);
+  const p = c.createStereoPanner(); p.pan.value = pan; p.connect(busGain.amb ?? master!);
+  for (let i = 0; i < n; i++) {
+    const t = at + i * (0.38 + Math.random() * 0.12);
+    const o = c.createOscillator(); o.type = 'sawtooth';
+    const base = 620 + Math.random() * 120;
+    o.frequency.setValueAtTime(base, t); o.frequency.exponentialRampToValueAtTime(base * 0.72, t + 0.26);
+    // chrypa: szybkie drgania częstotliwości
+    const lfo = c.createOscillator(); lfo.frequency.value = 55; const lg = c.createGain(); lg.gain.value = 90; lfo.connect(lg).connect(o.frequency);
+    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1300; f.Q.value = 2.5;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.07, t + 0.03); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+    o.connect(f).connect(g).connect(p);
+    o.start(t); lfo.start(t); o.stop(t + 0.32); lfo.stop(t + 0.32);
+  }
+}
+
+/** Wycie wilka z daleka: długi ton wznoszący się i opadający, z drżeniem, mocno wytłumiony */
+function wolf(c: AudioContext, at: number, pan: number): void {
+  const p = c.createStereoPanner(); p.pan.value = pan; p.connect(busGain.amb ?? master!);
+  const voices = Math.random() < 0.4 ? 2 : 1;
+  for (let v = 0; v < voices; v++) {
+    const t = at + v * (0.8 + Math.random());
+    const len = 2.6 + Math.random() * 1.2;
+    const base = 330 + Math.random() * 60 + v * 70;
+    const o = c.createOscillator(); o.type = 'triangle';
+    o.frequency.setValueAtTime(base * 0.7, t);
+    o.frequency.exponentialRampToValueAtTime(base * 1.25, t + len * 0.3);
+    o.frequency.setValueAtTime(base * 1.25, t + len * 0.65);
+    o.frequency.exponentialRampToValueAtTime(base * 0.8, t + len);
+    const vib = c.createOscillator(); vib.frequency.value = 5.5; const vg = c.createGain(); vg.gain.value = 6; vib.connect(vg).connect(o.frequency);
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.5);
+    g.gain.setValueAtTime(0.05, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    o.connect(f).connect(g).connect(p);
+    o.start(t); vib.start(t); o.stop(t + len + 0.05); vib.stop(t + len + 0.05);
+  }
+}
+
+/**
+ * Wołane co klatkę: `night` 0..1, `rain` 0..1. Wiatr zawsze szumi (mocniej w deszczu i nocą, z porywami),
+ * wrony kraczą co kilkanaście sekund za dnia, wilki wyją co pół minuty–minutę nocą.
+ */
+export function nature(night: number, rain: number, paused: boolean): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running') return;
+  startWind(c);
+  const now = c.currentTime;
+  if (wind) {
+    const gust = 0.5 + 0.5 * Math.sin(now * 0.31) * Math.sin(now * 0.17 + 1);
+    const level = (0.05 + gust * 0.07 + rain * 0.1 + night * 0.03) * (paused ? 0.5 : 1);
+    wind.gain.gain.setTargetAtTime(level, now, 0.5);
+    wind.filter.frequency.setTargetAtTime(280 + gust * 420 + rain * 500, now, 0.5);
+  }
+  if (paused) return;
+  if (!nextCrow) nextCrow = now + 6 + Math.random() * 10;
+  if (!nextWolf) nextWolf = now + 15 + Math.random() * 20;
+  if (now > nextCrow) { if (night < 0.3 && rain < 0.5) crow(c, now, Math.random() * 1.6 - 0.8); nextCrow = now + 12 + Math.random() * 25; }
+  if (now > nextWolf) { if (night > 0.6) wolf(c, now, Math.random() * 1.6 - 0.8); nextWolf = now + 30 + Math.random() * 40; }
+}

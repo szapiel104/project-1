@@ -17,7 +17,7 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
-import { getVolume, isMuted, play, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { getVolume, isMuted, nature, play, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
 import { TEAM_COLORS } from './data/teams';
@@ -628,6 +628,7 @@ let acc = 0;
 function loop(now: number): void {
   const elapsed = Math.min(250, now - last);
   last = now;
+  nature(renderer.weather.night, renderer.weather.rain, menu.isOpen());
   // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
   if (menu.isOpen()) {
     if (titleScreen) renderer.orbit(elapsed / 1000);

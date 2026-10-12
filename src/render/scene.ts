@@ -109,6 +109,8 @@ export class GameRenderer {
   private night = 0;
   private grade!: ShaderPass;
   private rain = 0;
+  /** Pora i pogoda dla dźwięków otoczenia */
+  get weather(): { night: number; rain: number } { return { night: this.night, rain: this.rain }; }
   private rainLines: THREE.LineSegments | null = null;
   private sadFaces: THREE.Sprite[] = [];
   private lamps: THREE.PointLight[] = [];
