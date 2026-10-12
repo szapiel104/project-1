@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 
 
 export interface MenuEvents {
   onContinue(): void;
-  onNewGame(seedText: string, preset: MapPresetId, level: number): void;
+  onNewGame(seedText: string, preset: MapPresetId, level: number, dev: boolean): void;
   onVolume(v: number): void;
   onMute(): boolean;
   onSettings(s: Settings): void;
@@ -160,6 +160,13 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       lab.append(radio, el('span', '', t(`level.${lv}`)));
       levels.append(lab);
     }
+    // tryb dla dewelopera: wszystkie budynki gotowe, pełne zapasy, budowa bez czekania
+    let dev = false;
+    const devLab = el('label', 'menu-mode menu-dev');
+    const devBox = el('input');
+    devBox.type = 'checkbox';
+    devBox.addEventListener('change', () => { dev = devBox.checked; });
+    devLab.append(devBox, el('span', '', 'Tryb deweloperski — wszystko zbudowane, pełne zapasy, budowa od razu'));
     const seedWrap = el('div', 'field');
     const seedLabel = el('label', '', t('menu.mapName'));
     seedLabel.htmlFor = 'menu-seed';
@@ -174,8 +181,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const warn = el('p', 'hint', canContinue || inGame ? t('menu.overwrite') : '');
     const start = el('button', 'menu-btn', t('menu.start'));
     start.type = 'submit';
-    form.append(modes, levels, seedWrap, warn, start);
-    form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim() || 'project-1', preset, level); });
+    form.append(modes, levels, devLab, seedWrap, warn, start);
+    form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev); });
     screen(t('menu.newGame'), false, form, back());
   }
 

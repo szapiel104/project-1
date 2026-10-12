@@ -1,4 +1,4 @@
-import { BUILDINGS, type ProductionDef } from '../../data/buildings';
+import { BUILDINGS, footprint, type ProductionDef } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { Terrain } from '../../data/terrain';
@@ -81,7 +81,11 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     }
     case Phase.ToRepair: {
       const b = g.buildings.find((x) => x.id === u.target);
-      return b && b.door >= 0 ? (t) => t === b.door : null;
+      if (!b) return null;
+      if (b.door >= 0 && !b.build) return (t) => t === b.door;
+      // plac budowy (i umocnienia bez wejścia): wystarczy stanąć tuż obok działki
+      const fp = footprint(BUILDINGS[b.type]!, b.rot), w = g.map.width;
+      return (t) => { const x = t % w, y = (t - x) / w; const dx = Math.max(b.x - x, 0, x - (b.x + fp.w - 1)), dy = Math.max(b.y - y, 0, y - (b.y + fp.h - 1)); return Math.max(dx, dy) === 1; };
     }
     case Phase.ToCorpse: {
       const c = g.corpses.find((x) => x.id === u.target);

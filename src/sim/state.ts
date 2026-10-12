@@ -31,6 +31,8 @@ export interface PlayerState {
   /** Liczniki do podsumowania meczu */
   /** Ilu ludzi zagryzły wilki (do powiadomień) */
   wolfKills?: number;
+  /** Tryb deweloperski: wszystko postawione, pełne zapasy, budowa natychmiast */
+  dev?: boolean;
   stats: { gathered: number; trained: number; kills: number; lost: number; built: number; razed: number };
 }
 
@@ -207,7 +209,7 @@ export interface GameState {
 }
 
 /** Poziom trudności botów: 0 pokojowy (tylko się bronią), 1 łatwy, 2 średni, 3 trudny */
-export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2): GameState {
+export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false): GameState {
   const map = generateMap(seed, preset);
   const size = map.width * map.height;
   const g: GameState = {
@@ -230,6 +232,18 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
     placeNear(g, CAMP, s.player, s.x, s.y);
     const extra = s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0;
     for (let i = 0; i < RULES.startPeasants + extra; i++) spawnPeasant(g, s.player);
+    if (dev && s.player === 0) {
+      // do testów: każdy budynek gotowy przy twierdzy, dużo ludzi i zapasów
+      const p = g.players[g.players.length - 1]!;
+      p.dev = true;
+      for (let i = 0; i < res.length; i++) res[i] = 2000;
+      const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate']);
+      for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.road && !skip.has(d.id)) placeNear(g, i, s.player, s.x, s.y, 14);
+      placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
+      placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
+      placeNear(g, CAMP, s.player, s.x, s.y, 14);
+      for (let i = 0; i < 30; i++) spawnPeasant(g, s.player);
+    }
   }
   return g;
 }
@@ -237,10 +251,10 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
 const CAMP = buildingIndex('camp');
 
 /** Stawia budynek startowy na pierwszym wolnym miejscu przy twierdzy (stała kolejność szukania). */
-function placeNear(g: GameState, type: number, player: number, cx: number, cy: number): void {
+function placeNear(g: GameState, type: number, player: number, cx: number, cy: number, reach = 8): void {
   const def = BUILDINGS[type]!;
   const w = g.map.width;
-  for (let r = 3; r <= 8; r++)
+  for (let r = 3; r <= reach; r++)
     for (let dy = -r; dy <= r; dy++)
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;

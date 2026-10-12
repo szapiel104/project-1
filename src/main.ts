@@ -86,14 +86,14 @@ const hud = createHud(document.getElementById('ui')!, {
 mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
 const menu = createMenu(document.body, {
   onContinue: () => menu.close(),
-  onNewGame: (seedText, preset, level) => {
+  onNewGame: (seedText, preset, level, dev) => {
     // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
     const cover = document.createElement('div');
     cover.id = 'loading';
     cover.innerHTML = `<div class="loading-card"><p class="loading-title">Project‑1</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${t('load.map')}</span><strong></strong></p></div>`;
     document.body.append(cover);
     requestAnimationFrame(() => setTimeout(() => {
-      start(seedText, preset, undefined, level);
+      start(seedText, preset, undefined, level, dev);
       renderer.warmup();
       menu.close();
       (cover.querySelector('.loading-bar span') as HTMLElement).style.width = '100%';
@@ -114,9 +114,9 @@ function applySettings(st: Settings): void {
 }
 applySettings(loadSettings());
 
-function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2): void {
+function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false): void {
   endShown = false;
-  game = loaded ?? createGame(seedFromText(seedText), preset, level);
+  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev);
   currentPreset = preset;
   currentSeedText = seedText;
   pending = [];
@@ -584,6 +584,11 @@ function refresh(): void {
   stockFull = full;
   const hour = clockAt(game.tick).hour;
   const night = hour >= 19.5 || hour < 6;
+  // dlaczego nikt nie przychodzi: skryba mówi wprost, co blokuje nowych osadników
+  const pop = population(game, ME);
+  if (p.popularity < 50 && pop <= 6) scribe.say('noComers', `Nikt nie chce tu przyjść — popularność ${p.popularity}. Daj więcej jedzenia albo obniż podatki.`, true);
+  else if (p.popularity >= 50 && pop >= housing(game, ME)) scribe.say('noComers', 'Ludzie by przyszli, ale nie ma dla nich dachu. Postaw chatę.');
+  else if (p.popularity >= 50 && idleCount(game, ME) >= idleSlots(game, ME)) scribe.say('noComers', 'Obozowisko pełne — nowi nie mają gdzie czekać. Daj im pracę albo postaw drugie obozowisko.');
   if (game.wolves.length && !wolvesSeen) scribe.say('wolves', 'Wilki wyszły z lasu! Trzymajcie ludzi za palisadą.', true, 'herald');
   wolvesSeen = game.wolves.length > 0;
   if ((p.wolfKills ?? 0) > wolfKillsSeen) scribe.say('wolfKill', 'Wilki zagryzły naszego człowieka…', true);

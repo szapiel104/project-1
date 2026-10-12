@@ -329,13 +329,18 @@ function repairSystem(g: GameState): void {
   // do każdego placu budowy przychodzi do trzech wolnych chłopów z młotkami
   for (const b of g.buildings) {
     if (!b.build) continue; // budowa rusza dopiero, gdy robotnicy dojdą na plac
-    if (b.door < 0) continue;
     let crew = 0;
     for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing)) crew++;
     while (crew < 3) {
       const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.target === 0 && x.carryRes < 0);
       if (!u) break;
       u.target = b.id; u.phase = Phase.ToRepair; u.path = []; crew++;
+    }
+    // nikt wolny nie przyszedł: jeden pracownik rzuca swoją robotę (bez ładunku w rękach), buduje i potem wraca
+    if (crew === 0) {
+      const u = g.units.find((x) => x.owner === b.owner && x.job !== 0 && x.target === 0 && x.carryRes < 0 &&
+        (x.phase === Phase.Working || x.phase === Phase.Returning || x.phase === Phase.Idle));
+      if (u) { u.target = b.id; u.phase = Phase.ToRepair; u.path = []; u.timer = 0; }
     }
   }
   for (const guild of g.buildings) {
@@ -344,7 +349,7 @@ function repairSystem(g: GameState): void {
     if (!u || u.phase !== Phase.Idle || u.path.length) continue;
     let best: Building | undefined, bd = Infinity;
     for (const b of g.buildings) {
-      if (b.owner !== guild.owner || b.hp >= maxHp(b.type) || b.door < 0) continue;
+      if (b.owner !== guild.owner || b.hp >= maxHp(b.type) || b.build) continue;
       const d = Math.abs(b.x - guild.x) + Math.abs(b.y - guild.y);
       if (d < bd) { bd = d; best = b; }
     }

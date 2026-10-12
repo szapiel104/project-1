@@ -161,7 +161,7 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   if (def.road) { g.roads[y * g.map.width + x] = def.road; return true; }
   const b = addBuilding(g, type, player, x, y, rot);
   // budowa trwa: robotnicy z obozowiska przychodzą i stawiają budynek (pochodnia stoi od razu)
-  if (b && def.id !== 'torch') b.build = buildWork(type);
+  if (b && def.id !== 'torch' && !p.dev) b.build = buildWork(type);
   p.stats.built++;
   return true;
 }

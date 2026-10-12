@@ -72,3 +72,26 @@ describe('wilki', () => {
     expect(calm.wolves.length + calm.players[0]!.stats.lost).toBe(0);
   });
 });
+
+describe('budowa palisady', () => {
+  it('robotnicy stawiają też umocnienia bez wejścia', async () => {
+    const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const g = createGame(5, '1v1', 2);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings[0]!;
+    let b = null as null | (typeof g.buildings)[number];
+    for (let r = 4; r < 15 && !b; r++) for (let d = -r; d <= r && !b; d++) if (canPlace(g, 0, buildingIndex('palisade'), keep.x + d, keep.y + r) === null) { placeBuilding(g, 0, buildingIndex('palisade'), keep.x + d, keep.y + r); b = g.buildings[g.buildings.length - 1]!; }
+    for (let i = 0; i < 1500 && b!.build; i++) step(g, []);
+    expect(b!.build).toBe(0);
+  });
+});
+
+describe('tryb deweloperski', () => {
+  it('stawia budynki od razu gotowe i daje zapasy', () => {
+    const g = createGame(5, '1v1', 1, true);
+    expect(g.buildings.filter((b) => b.owner === 0).length).toBeGreaterThan(8);
+    expect(g.buildings.every((b) => !b.build)).toBe(true);
+    expect(g.players[0]!.dev).toBe(true);
+  });
+});
