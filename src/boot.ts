@@ -50,6 +50,8 @@ async function load(): Promise<void> {
     needles: 'igliwie', bark: 'kora', soil: 'ziemia', window: 'okna', water: 'woda', ashlar: 'mur', cobble: 'bruk', rock: 'skała',
   };
   for (const kind of kinds) {
+    // zapamiętana z poprzedniej wizyty wczytuje się od razu, bez klatki przerwy
+    if (await tex.restore(kind)) { tex.pattern(kind); tex.bump(kind); done++; continue; }
     await step(`Tekstury: ${names[kind] ?? kind}`);
     tex.pattern(kind);
     tex.bump(kind);

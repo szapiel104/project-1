@@ -232,13 +232,9 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
  * Tekstury rysowane kodem, w odcieniach szarości: kolor nadaje materiał, tekstura tylko wzór.
  * Dzięki temu jeden wzór cegieł służy jasnemu i ciemnemu kamieniowi oraz barwom drużyn.
  */
-export function pattern(kind: Kind): THREE.Texture | null {
-  let t = cache.get(kind);
-  if (t) return t;
-  if (typeof document === 'undefined') return null;
-  // bruk w 2048 px, mur twierdzy 1024, reszta 512
-  // tylko komputery: wysoka rozdzielczość wszędzie (bruk, mur, trawa 2048, reszta 1024)
-  const n = TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'grass' ? 2048 : 1024;
+/** Rysuje teksturę od zera (wolne: ziarno liczone piksel po pikselu). */
+const size = (kind: Kind): number => (TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'grass' ? 2048 : 1024);
+function paint(kind: Kind, n: number): HTMLCanvasElement | null {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -250,6 +246,67 @@ export function pattern(kind: Kind): THREE.Texture | null {
   PAINT[kind](ctx, base, noise(kind.length * 7919));
   ctx.restore();
   if (kind !== 'window') grain(ctx, n, kind.length * 31);
+  return canvas;
+}
+
+// --- pamięć gotowych tekstur w przeglądarce (IndexedDB): drugie wejście nie rysuje ich od nowa ---
+const stored = new Map<Kind, HTMLCanvasElement>();
+const DB = 'project1-tex';
+/** Klucz zmienia się razem z kodem rysującym, więc po zmianie wyglądu tekstura rysuje się na nowo */
+function keyOf(kind: Kind, n: number): string {
+  const src = String(PAINT[kind]) + String(grain);
+  let h = 2166136261;
+  for (let i = 0; i < src.length; i++) h = Math.imul(h ^ src.charCodeAt(i), 16777619);
+  return `${kind}-${n}-${(h >>> 0).toString(36)}`;
+}
+function openDb(): Promise<IDBDatabase | null> {
+  return new Promise((ok) => {
+    try {
+      const rq = indexedDB.open(DB, 1);
+      rq.onupgradeneeded = () => rq.result.createObjectStore('t');
+      rq.onsuccess = () => ok(rq.result);
+      rq.onerror = () => ok(null);
+    } catch { ok(null); }
+  });
+}
+let dbp: Promise<IDBDatabase | null> | null = null;
+const db = (): Promise<IDBDatabase | null> => (dbp ??= TEST ? Promise.resolve(null) : openDb());
+function remember(kind: Kind, n: number, canvas: HTMLCanvasElement): void {
+  canvas.toBlob(async (blob) => {
+    const d = await db();
+    if (!blob || !d) return;
+    try { d.transaction('t', 'readwrite').objectStore('t').put(blob, keyOf(kind, n)); } catch { /* brak miejsca: trudno */ }
+  }, 'image/png');
+}
+/** Wczytuje zapamiętaną teksturę, jeśli jest; zwraca true, gdy nie trzeba jej rysować */
+export async function restore(kind: Kind): Promise<boolean> {
+  const n = size(kind);
+  const d = await db();
+  if (!d) return false;
+  const blob = await new Promise<Blob | undefined>((ok) => {
+    try { const rq = d.transaction('t').objectStore('t').get(keyOf(kind, n)); rq.onsuccess = () => ok(rq.result as Blob | undefined); rq.onerror = () => ok(undefined); } catch { ok(undefined); }
+  });
+  if (!blob) return false;
+  try {
+    const bmp = await createImageBitmap(blob);
+    const c = document.createElement('canvas');
+    c.width = c.height = n;
+    c.getContext('2d')!.drawImage(bmp, 0, 0);
+    stored.set(kind, c);
+    return true;
+  } catch { return false; }
+}
+
+export function pattern(kind: Kind): THREE.Texture | null {
+  let t = cache.get(kind);
+  if (t) return t;
+  if (typeof document === 'undefined') return null;
+  // bruk w 2048 px, mur twierdzy 1024, reszta 512
+  // tylko komputery: wysoka rozdzielczość wszędzie (bruk, mur, trawa 2048, reszta 1024)
+  const n = size(kind);
+  const canvas = stored.get(kind) ?? paint(kind, n);
+  if (!canvas) return null;
+  if (!stored.has(kind)) remember(kind, n, canvas);
   t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;

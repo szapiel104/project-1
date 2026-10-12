@@ -344,3 +344,4 @@ body.menu-open .scribe { display: none; }
 .scribe-card { max-width: 560px; min-height: 84px; gap: 16px; padding: 6px 24px 6px 6px; font-size: 20px; border-radius: 44px 8px 8px 44px; box-sizing: border-box; }
 .scribe-name { font-size: 14px; }
 .scribe-face, .scribe-face svg { width: 72px; height: 72px; }
+.toast { top: 66px; z-index: 22; }
