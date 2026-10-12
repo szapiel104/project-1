@@ -14,7 +14,7 @@ Object.assign(sun.shadow.camera, { left: -3, right: 3, top: 3, bottom: -3 }); s.
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshStandardMaterial({ color: 0x7f9a48 })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; s.add(ground);
 const m = buildingModel(id, 0xa32a22); m.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
 const base = m.getObjectByName('base'); if (base) base.visible = false;
-if (q.get('open')) { const i = m.getObjectByName('interior'); if (i) i.visible = true; for (const n of ['shell', 'roof', 'chimney']) { const o = m.getObjectByName(n); if (o) o.visible = false; } }
+if (q.get('open')) { const i = m.getObjectByName('interior'); if (i) i.visible = true; m.traverse((o) => { if (['shell', 'roof', 'chimney', 'spin'].includes(o.name)) o.visible = false; }); }
 s.add(m);
 const cam = new THREE.PerspectiveCamera(35, 900 / 640, 0.1, 100);
 cam.position.set(Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 0.4, Math.cos(yaw) * Math.cos(pitch) * dist); cam.lookAt(0, 0.55, 0);

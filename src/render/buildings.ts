@@ -313,7 +313,9 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   if (interior) {
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
     interior.visible = active;
-    for (const name of ['roof', 'shell', 'chimney', 'spin']) { const part = model.getObjectByName(name); if (part) part.visible = !active; }
+    // wszystkie części o tych nazwach (np. twierdza ma kilka warstw „shell”: donżon i bryłę murów z dziedzińcem)
+    const parts = (model.userData.lids ??= (() => { const l: THREE.Object3D[] = []; model.traverse((o) => { if (o !== model && ['roof', 'shell', 'chimney', 'spin'].includes(o.name)) l.push(o); }); return l; })()) as THREE.Object3D[];
+    for (const part of parts) part.visible = !active;
   }
   const flame = model.getObjectByName('flame');
   if (flame) { flame.visible = active; flame.scale.set(1, 0.8 + Math.abs(Math.sin(time * 9)) * 0.5, 1); }
@@ -589,9 +591,13 @@ const BUILDERS: Record<string, Builder> = {
     box(g, D, 2.72, 0.18, 2.72);
     box(g, D, 2.62, 0.14, 2.62, 0, 0.18, 0);
     g.add(new THREE.Mesh(stoneSkirt(2.78, 2.78, 0.16, r, new THREE.Color(0xb9ae98)), craft().stones));
-    box(g, S, 2.5, 0.88, 2.5, 0, 0.32, 0);
-    box(g, D, 2.58, 0.08, 2.58, 0, 0.62, 0); // gzyms w połowie wysokości
-    box(g, D, 2.6, 0.1, 2.6, 0, 1.2, 0);
+    // bryła murów z dziedzińcem: przy podglądzie wnętrza znika i odsłania podziemia
+    const outer = new THREE.Group();
+    outer.name = 'shell';
+    g.add(outer);
+    box(outer, S, 2.5, 0.88, 2.5, 0, 0.32, 0);
+    box(outer, D, 2.58, 0.08, 2.58, 0, 0.62, 0); // gzyms w połowie wysokości
+    box(outer, D, 2.6, 0.1, 2.6, 0, 1.2, 0);
     for (const sx of [-1, 1]) { merlons(0, sx * 1.25, 2.5, 1.3, true, S); merlons(sx * 1.25, 0, 2.5, 1.3, false, S); }
     // przypory i strzelnice na każdym boku muru
     for (const [nx, nz] of [[0, 1], [0, -1], [1, 0], [-1, 0]] as const) {
@@ -603,17 +609,17 @@ const BUILDERS: Record<string, Builder> = {
       }
     }
     // dziedziniec wyłożony kamieniem, ze studnią, beczkami i stogiem siana
-    box(g, M.roadStone, 2.3, 0.03, 2.3, 0, 1.2, 0);
+    box(outer, M.roadStone, 2.3, 0.03, 2.3, 0, 1.2, 0);
     const well = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.16, 12), M.stone), 0.13, 0.16);
     well.position.set(0.72, 1.31, 0.62);
-    g.add(well);
-    box(g, M.dark, 0.16, 0.01, 0.16, 0.72, 1.39, 0.62);
-    for (const sx of [-1, 1]) box(g, M.woodDark, 0.03, 0.26, 0.03, 0.72 + sx * 0.12, 1.23, 0.62);
-    box(g, M.woodDark, 0.3, 0.03, 0.04, 0.72, 1.48, 0.62);
-    for (const [x, z] of [[-0.85, 0.75], [-0.72, 0.82]] as const) { const bl = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.15, 10), M.wood), 0.07, 0.15); bl.position.set(x, 1.3, z); g.add(bl); }
+    outer.add(well);
+    box(outer, M.dark, 0.16, 0.01, 0.16, 0.72, 1.39, 0.62);
+    for (const sx of [-1, 1]) box(outer, M.woodDark, 0.03, 0.26, 0.03, 0.72 + sx * 0.12, 1.23, 0.62);
+    box(outer, M.woodDark, 0.3, 0.03, 0.04, 0.72, 1.48, 0.62);
+    for (const [x, z] of [[-0.85, 0.75], [-0.72, 0.82]] as const) { const bl = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.15, 10), M.wood), 0.07, 0.15); bl.position.set(x, 1.3, z); outer.add(bl); }
     const hay = new THREE.Mesh(new THREE.SphereGeometry(0.16, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2), M.hay);
     hay.position.set(-0.85, 1.22, 0.45);
-    g.add(hay);
+    outer.add(hay);
     // donżon: wieża mieszkalna na skarpowej podstawie, okna z wnękami, drewniana hurdycja i spiczasty dach (zdejmowany przy wnętrzu)
     const don = new THREE.Group();
     don.name = 'shell';
@@ -666,7 +672,8 @@ const BUILDERS: Record<string, Builder> = {
     box(hall, S, 1.25, 0.55, 0.1, 0, Y, CZ - HW + 0.05);
     for (const sx of [-1, 1]) box(hall, S, 0.1, 0.55, 1.25, sx * (HW - 0.05), Y, CZ);
     for (const sx of [-1, 1]) box(hall, S, 0.45, 0.55, 0.1, sx * 0.4, Y, CZ + HW - 0.05);
-    box(hall, D, 1.31, 0.06, 1.31, 0, Y + 0.55, CZ).scale.set(1, 1, 1);
+    // gzyms na ściętych ścianach sali: tylko obwódka, środek otwarty
+    for (const [x, z, w2, d2] of [[0, CZ - HW + 0.05, 1.31, 0.12], [0, CZ + HW - 0.05, 1.31, 0.12], [-HW + 0.05, CZ, 0.12, 1.31], [HW - 0.05, CZ, 0.12, 1.31]] as const) box(hall, D, w2, 0.05, d2, x, Y + 0.55, z);
     for (const x of [-0.3, 0.3]) box(hall, M.window, 0.2, 0.22, 0.03, x, Y + 0.3, CZ + HW + 0.01);
     for (const sx of [-1, 1]) box(hall, M.window, 0.03, 0.22, 0.2, sx * (HW + 0.01), Y + 0.3, CZ);
     box(hall, M.woodDark, 0.3, 0.42, 0.04, 0, Y + 0.05, CZ + HW + 0.02);
@@ -713,6 +720,51 @@ const BUILDERS: Record<string, Builder> = {
     person('guard', M.iron, 0.2, CZ + 0.45, 0, M.iron);
     person('servant2', M.thatch, 0.75, 0.6, 0);
     person('scribe', M.plaster, 0.27, CZ - 0.2, Math.PI / 2);
+    // PODZIEMIA pod dziedzińcem (widać je w przekroju): lochy z kratami, wartownia, piwnica ze skarbcem
+    const L = 0.32;
+    box(hall, D, 2.42, 0.04, 2.42, 0, L - 0.02, 0);
+    box(hall, M.roadStone, 2.3, 0.02, 2.3, 0, L + 0.01, 0);
+    for (const [x, z, w, d] of [[0, -1.18, 2.4, 0.08], [-1.18, 0, 0.08, 2.4], [1.18, 0, 0.08, 2.4], [-0.65, 1.18, 1.1, 0.08], [0.65, 1.18, 1.1, 0.08]] as const) box(hall, S, w, 0.5, d, x, L, z).name = 'iwall';
+    box(hall, S, 0.08, 0.42, 1.0, 0, L, 0.65);
+    box(hall, S, 2.3, 0.42, 0.08, 0, L, 0.12);
+    // lochy (przód, lewo): trzy cele z żelaznymi kratami, słoma, łańcuchy, więzień
+    for (let c = 0; c < 3; c++) {
+      const cx = -1.0 + c * 0.32;
+      if (c) box(hall, S, 0.05, 0.42, 0.5, cx - 0.16, L, 0.42);
+      for (let k = 0; k < 5; k++) box(hall, M.iron, 0.015, 0.42, 0.015, cx - 0.12 + k * 0.06, L, 0.68);
+      box(hall, M.iron, 0.3, 0.02, 0.02, cx, L + 0.4, 0.68);
+      box(hall, M.hay, 0.22, 0.02, 0.18, cx, L + 0.02, 0.3);
+    }
+    for (const y of [0.15, 0.25]) box(hall, M.iron, 0.012, 0.012, 0.12, -0.74, L + y, 0.2);
+    const prisoner = person('prisoner', M.trousers, -0.68, 0.32, Math.PI);
+    prisoner.position.y = L + 0.02;
+    prisoner.rotation.x = -0.25;
+    box(hall, M.wood, 0.14, 0.08, 0.1, -1.0, L + 0.02, 0.32); // miska i dzban
+    // wartownia (przód, prawo): stół, kości do gry, stojak z bronią, koksownik
+    box(hall, M.wood, 0.4, 0.04, 0.24, 0.6, L + 0.18, 0.62);
+    for (const sx of [-1, 1]) box(hall, M.woodDark, 0.04, 0.18, 0.2, 0.6 + sx * 0.16, L, 0.62);
+    for (const x of [0.52, 0.58, 0.66]) box(hall, M.white, 0.025, 0.025, 0.025, x, L + 0.22, 0.6);
+    const jailer = person('guard', M.iron, 0.62, 0.86, Math.PI, M.iron);
+    jailer.position.y = L + 0.02;
+    for (let k = 0; k < 4; k++) { const sp = box(hall, M.plank, 0.02, 0.5, 0.02, 1.0, L, 0.3 + k * 0.08); sp.rotation.x = 0.08; }
+    box(hall, M.iron, 0.1, 0.12, 0.1, 0.25, L, 0.95);
+    const glow = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.12, 5), M.ember);
+    glow.name = 'brazier';
+    glow.position.set(0.25, L + 0.18, 0.95);
+    hall.add(glow);
+    // piwnica i skarbiec (tył, pod donżonem): beczki wina w stojakach, worki, skrzynia ze złotem, schody na górę
+    for (let k = 0; k < 4; k++) {
+      const bl = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.22, 10), M.wood), 0.09, 0.22);
+      bl.rotation.z = Math.PI / 2;
+      bl.position.set(-0.95 + k * 0.24, L + 0.1, -0.95);
+      hall.add(bl);
+      box(hall, M.woodDark, 0.05, 0.04, 0.2, -0.95 + k * 0.24, L, -0.95);
+    }
+    for (const [x, z] of [[-0.9, -0.55], [-0.75, -0.5], [-0.82, -0.38]] as const) { const sk = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 1), M.white); sk.scale.set(0.9, 1.2, 0.8); sk.position.set(x, L + 0.09, z); hall.add(sk); }
+    box(hall, M.woodDark, 0.3, 0.16, 0.18, 0.75, L, -0.8);
+    box(hall, M.gold, 0.26, 0.04, 0.14, 0.75, L + 0.16, -0.8);
+    for (let k = 0; k < 6; k++) { const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.01, 8), M.gold); coin.position.set(0.6 + (k % 3) * 0.05, L + 0.02, -0.55 + Math.floor(k / 3) * 0.05); hall.add(coin); }
+    for (let k = 0; k < 6; k++) box(hall, D, 0.3, 0.06, 0.12, 1.0, L + k * 0.07, -0.2 - k * 0.12);
     g.add(hall);
     // Życie widoczne z zewnątrz, cały czas: straże obchodzą mury, wartownik stoi w bramie, kosze z ogniem przy wejściu
     const life = new THREE.Group();
