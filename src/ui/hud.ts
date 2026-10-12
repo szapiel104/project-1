@@ -128,6 +128,14 @@ const PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="t
   <path d="M27 4v18" stroke="#8a6a42" stroke-width="1.6"/><path d="M27 1l2 4h-4z" fill="#b9bec6"/>
 </svg>`;
 
+const ARCHER_PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true">
+  <rect width="32" height="32" fill="#3b2716"/>
+  <path d="M6 32c0-7 4-10 10-10s10 3 10 10z" fill="#3f6a2e" stroke="#1c120a"/>
+  <circle cx="16" cy="16" r="5.5" fill="#e2bd94" stroke="#1c120a"/>
+  <path d="M8.5 18c0-9 15-9 15 0l-2-5c-2-3-9-3-11 0z" fill="#3f6a2e" stroke="#1c120a"/>
+  <path d="M26 3c5 7 5 19 0 26" fill="none" stroke="#7a5232" stroke-width="1.8"/><path d="M26 3v26" stroke="#e8e0c8" stroke-width=".6"/>
+</svg>`;
+
 export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
   root.replaceChildren();
 
@@ -316,40 +324,39 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   trainBtn.hidden = true;
   trainBtn.addEventListener('click', () => events.onTrain(infoId, 1));
   const trainNote = el('p', 'hint');
-  // koszary: karta jednostki z portretem, co jest potrzebne, ile mamy i ile można wyszkolić
+  // koszary: obok siebie karty jednostek z dużym portretem; na każdej przyciski +1, +5 i „+ wszystkie”
   const recruit = el('div', 'recruit');
   recruit.hidden = true;
-  // wybór jednostki: zakładki nad kartą
-  const rTabs = el('div', 'recruit-tabs');
-  let rUnit = 'spearman';
   let lastRecruit: RecruitUnit[] = [];
-  const rTop = el('div', 'recruit-top');
-  const rPortrait = el('span', 'roster-card big');
-  rPortrait.innerHTML = PORTRAIT;
-  const rName = el('div', 'recruit-name');
-  rTop.append(rPortrait, rName);
-  const rNeeds = el('div', 'recruit-needs');
-  const rMax = el('p', 'recruit-max');
-  const rBtns = el('div', 'actions');
-  const rb = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n === 0 ? 999 : n, rUnit)); rBtns.append(b); return b; };
-  const r1 = rb(1, t('hud.train1')), r5 = rb(5, t('hud.train5')), rAll = rb(0, t('hud.trainAll'));
-  recruit.append(rTabs, rTop, rNeeds, rMax, rBtns);
-  rTabs.addEventListener('pointerdown', (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>('.recruit-tab'); if (b?.dataset.unit) { rUnit = b.dataset.unit; drawRecruit(); } });
-  rTabs.addEventListener('keydown', (e) => { const b = (e.target as HTMLElement).closest<HTMLElement>('.recruit-tab'); if (b?.dataset.unit && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); rUnit = b.dataset.unit; drawRecruit(); } });
+  const unitCards = new Map<string, { card: HTMLElement; stats: HTMLElement; needs: HTMLElement; b1: HTMLButtonElement; b5: HTMLButtonElement; bAll: HTMLButtonElement }>();
+  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT };
   const drawRecruit = (): void => {
-    const list = lastRecruit;
-    // zakładki tworzymy raz; przy odświeżaniu panelu zmienia się tylko zaznaczenie (inaczej kliknięcie się gubiło)
-    if (rTabs.childElementCount !== list.length) rTabs.replaceChildren(...list.map((u) => { const b = el('button', 'recruit-tab', u.name); b.type = 'button'; b.dataset.unit = u.id; return b; }));
-    for (const b of Array.from(rTabs.children) as HTMLElement[]) b.setAttribute('aria-pressed', String(b.dataset.unit === rUnit));
-    const r = list.find((u) => u.id === rUnit) ?? list[0];
-    if (!r) return;
-    rName.innerHTML = `<strong>${r.name}</strong><span>${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · zasięg ${r.range} (z wieży ${r.range + 3})` : ''}</span>`;
-    const row = (icon: string, label: string, have: number, need: number): string => `<div class="need${have < need ? ' short' : ''}"><span class="ico"><svg viewBox="0 0 20 20" width="20" height="20">${ICONS[icon] ?? ''}</svg></span><span>${label}</span><strong>${have}</strong><em>/ ${need}</em></div>`;
-    rNeeds.innerHTML = row(r.weapon, t(`res.${r.weapon}`), r.have, 1) + row('gold', t('res.gold'), r.gold, r.cost) + row('idle', t('hud.idleFree'), r.idle, 1);
-    setText(rMax, `${t('hud.canTrain')}: ${r.max}`);
-    r1.disabled = r.max < 1; r5.disabled = r.max < 5; rAll.disabled = r.max < 1;
-    rAll.textContent = `${t('hud.trainAll')} (${r.max})`;
+    for (const r of lastRecruit) {
+      let c = unitCards.get(r.id);
+      if (!c) {
+        const card = el('div', 'unit-card');
+        const pic = el('span', 'unit-pic');
+        pic.innerHTML = PORTRAITS[r.id] ?? PORTRAIT;
+        const name = el('strong', 'unit-name', r.name);
+        const stats = el('span', 'unit-stats');
+        const needs = el('div', 'unit-needs');
+        const btns = el('div', 'unit-btns');
+        const mk = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n, r.id)); btns.append(b); return b; };
+        const b1 = mk(1, '+1'), b5 = mk(5, '+5'), bAll = mk(999, '+ wszyscy');
+        card.append(pic, name, stats, needs, btns);
+        recruit.append(card);
+        c = { card, stats, needs, b1, b5, bAll };
+        unitCards.set(r.id, c);
+      }
+      setText(c.stats, `${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · zasięg ${r.range}` : ''}`);
+      const row = (icon: string, have: number, need: number): string => `<span class="need${have < need ? ' short' : ''}"><svg viewBox="0 0 20 20" width="22" height="22">${ICONS[icon] ?? ''}</svg><strong>${need}</strong><em>(${have})</em></span>`;
+      c.needs.innerHTML = row(r.weapon, r.have, 1) + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
+      c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;
+      setText(c.bAll, `+ wszyscy (${r.max})`);
+      c.card.classList.toggle('cant', r.max < 1);
+    }
   };
+
   const hpLine = el('div', 'hp-line');
   const hpBar = el('span', 'hp-bar');
   const hpFill = el('span');
