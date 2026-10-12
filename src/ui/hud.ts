@@ -18,7 +18,7 @@ export interface HudEvents {
   onVolume(v: number): void;
   onMute(): void;
   onMenu(): void;
-  onTrain(building: number): void;
+  onTrain(building: number, count: number): void;
 }
 
 export interface HudView {
@@ -43,7 +43,7 @@ export interface HudView {
   affordable: Set<string>;
 }
 
-export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number }
+export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; recruit?: { spears: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number } }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -258,6 +258,20 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   trainBtn.hidden = true;
   trainBtn.addEventListener('click', () => events.onTrain(infoId));
   const trainNote = el('p', 'hint');
+  // koszary: karta jednostki z portretem, co jest potrzebne, ile mamy i ile można wyszkolić
+  const recruit = el('div', 'recruit');
+  recruit.hidden = true;
+  const rTop = el('div', 'recruit-top');
+  const rPortrait = el('span', 'roster-card big');
+  rPortrait.innerHTML = PORTRAIT;
+  const rName = el('div', 'recruit-name');
+  rTop.append(rPortrait, rName);
+  const rNeeds = el('div', 'recruit-needs');
+  const rMax = el('p', 'recruit-max');
+  const rBtns = el('div', 'actions');
+  const rb = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n === 0 ? 999 : n)); rBtns.append(b); return b; };
+  const r1 = rb(1, t('hud.train1')), r5 = rb(5, t('hud.train5')), rAll = rb(0, t('hud.trainAll'));
+  recruit.append(rTop, rNeeds, rMax, rBtns);
   const hpLine = el('div', 'hp-line');
   const hpBar = el('span', 'hp-bar');
   const hpFill = el('span');
@@ -267,7 +281,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const roster = el('div', 'roster');
   roster.hidden = true;
   infoActions.append(demolish, close);
-  info.append(infoName, hpLine, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, recruit, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -513,6 +527,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       trainNote.hidden = true;
       roster.hidden = true;
       hpLine.hidden = true;
+      recruit.hidden = true;
     },
     showArmy(army) {
       info.hidden = army.length === 0;
@@ -522,6 +537,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       // portrety jak w klasycznych strategiach: hełm na tarczy w barwie drużyny i pasek zdrowia pod spodem
       roster.hidden = false;
       hpLine.hidden = true;
+      recruit.hidden = true;
       roster.replaceChildren(...army.slice(0, 24).map((u) => {
         const card = el('span', 'roster-card');
         card.title = u.name;
@@ -560,11 +576,18 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         infoWorker.append(`${t('hud.makes')}: ${pr.output.amount} × ${t(RESOURCE_DEFS[pr.output.res].name).toLowerCase()}${from}, ${t('hud.every')} ${secs} s`, document.createElement('br'), `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
       }
       demolish.hidden = !i.own || !i.def.buildable;
-      // koszary: szkolenie żołnierza z informacją, co kosztuje albo czego brakuje
-      const barracks = i.own && i.def.id === 'barracks';
-      trainBtn.hidden = !barracks;
-      trainNote.hidden = !barracks;
-      if (barracks) { trainBtn.disabled = !i.canTrain; setText(trainNote, t(i.canTrain ? 'hud.trainCost' : 'hud.trainNo')); }
+      trainBtn.hidden = true;
+      trainNote.hidden = true;
+      recruit.hidden = !(i.own && i.recruit);
+      if (i.own && i.recruit) {
+        const r = i.recruit;
+        rName.innerHTML = `<strong>${t('u.spearman')}</strong><span>${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}</span>`;
+        const row = (icon: string, label: string, have: number, need: number): string => `<div class="need${have < need ? ' short' : ''}"><span class="ico"><svg viewBox="0 0 20 20" width="20" height="20">${ICONS[icon] ?? ''}</svg></span><span>${label}</span><strong>${have}</strong><em>/ ${need}</em></div>`;
+        rNeeds.innerHTML = row('spear', t('res.spear'), r.spears, 1) + row('gold', t('res.gold'), r.gold, r.cost) + row('idle', t('hud.idleFree'), r.idle, 1);
+        setText(rMax, `${t('hud.canTrain')}: ${r.max}`);
+        r1.disabled = r.max < 1; r5.disabled = r.max < 5; rAll.disabled = r.max < 1;
+        rAll.textContent = `${t('hud.trainAll')} (${r.max})`;
+      }
     },
     stepSpeed,
     setMuted(m) { mute.setAttribute('aria-pressed', String(m)); setText(mute, t(m ? 'hud.unmute' : 'hud.mute')); },

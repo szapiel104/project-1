@@ -75,7 +75,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onVolume: (v) => setVolume(v),
   onMute: () => hud.setMuted(toggleMute()),
   onMenu: () => menu.open(true),
-  onTrain: (id) => { pending.push({ type: 'train', player: ME, building: id, unit: 'spearman' }); play('build'); },
+  onTrain: (id, n) => { const k = Math.min(n, recruitInfo().max); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit: 'spearman' }); if (k) play('build'); },
 }, TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
@@ -163,7 +163,7 @@ function select(id: number): void {
   selected = id;
   const b = game.buildings.find((x) => x.id === id);
   renderer.setSelection(b ? id : 0);
-  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type) } : null);
+  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), recruit: BUILDINGS[b.type]!.id === 'barracks' ? recruitInfo() : undefined } : null);
 }
 
 /** Lewy górny róg działki tak, żeby budynek był wyśrodkowany na wskazanym polu. */
@@ -272,6 +272,15 @@ selBox.className = 'selbox';
 selBox.hidden = true;
 document.body.append(selBox);
 let boxStart: { x: number; y: number } | null = null;
+
+function recruitInfo(): { spears: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number } {
+  const p = game.players[ME]!;
+  const def = UNITS[0]!;
+  const spears = p.res[resIndex('spear')]!, gold = p.res[resIndex('gold')]!;
+  const idle = game.units.filter((u) => u.owner === ME && u.job === 0).length;
+  const cost = def.cost.gold ?? 0;
+  return { spears, gold, idle, cost, hp: def.hp, attack: def.attack, max: Math.max(0, Math.min(spears, cost ? Math.floor(gold / cost) : 999, idle)) };
+}
 
 function canTrain(): boolean {
   const p = game.players[ME]!;
@@ -427,7 +436,7 @@ function refresh(): void {
   if (selected) {
     const b = game.buildings.find((x) => x.id === selected);
     if (!b) select(0);
-    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type) });
+    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), recruit: BUILDINGS[b.type]!.id === 'barracks' ? recruitInfo() : undefined });
   }
 }
 
