@@ -110,7 +110,7 @@ export class GameRenderer {
     this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xffe2ad, 3.6);
     sun.castShadow = true;
-    sun.shadow.mapSize.setScalar(2048);
+    sun.shadow.mapSize.setScalar(4096);
     sun.shadow.bias = -0.0006;
     sun.shadow.normalBias = 0.25;
     sun.shadow.camera.near = 1;

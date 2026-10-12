@@ -217,7 +217,8 @@ export function pattern(kind: Kind): THREE.Texture | null {
   if (t) return t;
   if (typeof document === 'undefined') return null;
   // bruk w 2048 px, mur twierdzy 1024, reszta 512
-  const n = kind === 'cobble' ? 2048 : kind === 'ashlar' ? 1024 : 512;
+  // tylko komputery: wysoka rozdzielczość wszędzie (bruk, mur, trawa 2048, reszta 1024)
+  const n = kind === 'cobble' || kind === 'ashlar' || kind === 'grass' ? 2048 : 1024;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -232,7 +233,7 @@ export function pattern(kind: Kind): THREE.Texture | null {
   t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.colorSpace = THREE.SRGBColorSpace;
-  t.anisotropy = 8;
+  t.anisotropy = 16;
   cache.set(kind, t);
   return t;
 }
@@ -263,8 +264,10 @@ function grain(ctx: CanvasRenderingContext2D, n: number, seed: number): void {
     for (let i = 0; i < a.length; i++) a[i] = r();
     return a;
   };
-  const octaves = [8, 24, 72, 200].map((cells) => ({ cells, v: lattice(cells) }));
-  const weights = [0.42, 0.28, 0.2, 0.1];
+  // przy dużych teksturach dochodzi najdrobniejsza oktawa: ziarno widać też z bliska
+  const cellsList = n >= 1024 ? [8, 24, 72, 200, 480] : [8, 24, 72, 200];
+  const octaves = cellsList.map((cells) => ({ cells, v: lattice(cells) }));
+  const weights = n >= 1024 ? [0.4, 0.26, 0.18, 0.1, 0.06] : [0.42, 0.28, 0.2, 0.1];
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {
       let k = 0;

@@ -391,14 +391,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   let ditchMat: THREE.MeshStandardMaterial | null = null;
   const ditchMaterial = (): THREE.MeshStandardMaterial => {
     if (ditchMat) return ditchMat;
-    const W = 512, H = 128;
+    const W = 1024, H = 256;
     const rnd = (i: number, salt: number): number => (hash2(i, salt, 0x5eed) & 0xffff) / 0xffff;
     // linia krawędzi od strony trawy: odcinki po jednym wbiciu szpadla, każdy lekko pochylony i na innej głębokości
     const edge = new Float32Array(W);
     {
       let x = 0, k = 0;
       const cuts: { x0: number; len: number; a: number; b: number }[] = [];
-      while (x < W) { const len = 26 + rnd(k, 1) * 30; cuts.push({ x0: x, len, a: 0.6 + rnd(k, 2) * 0.22, b: 0.6 + rnd(k, 3) * 0.22 }); x += len; k++; }
+      while (x < W) { const len = 52 + rnd(k, 1) * 60; cuts.push({ x0: x, len, a: 0.6 + rnd(k, 2) * 0.22, b: 0.6 + rnd(k, 3) * 0.22 }); x += len; k++; }
       const last = cuts[cuts.length - 1]!; last.b = cuts[0]!.a; // zawija się bez skoku
       for (const c of cuts) for (let i = 0; i < c.len && c.x0 + i < W; i++) {
         const t = i / c.len;
@@ -429,28 +429,28 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const dot = (x: number, y: number, rx: number, ry: number, fill: string): void => {
       for (const ox of [0, W, -W]) { c.fillStyle = fill; c.beginPath(); c.ellipse(x + ox, y, rx, ry, 0, 0, Math.PI * 2); c.fill(); }
     };
-    for (let k = 0; k < 70; k++) {
+    for (let k = 0; k < 120; k++) {
       const x = rnd(k, 6) * W, e = edge[Math.floor(x)]!, y = (0.1 + rnd(k, 7) * (e - 0.15)) * H;
-      const rr = 1.5 + rnd(k, 8) * 3.5;
+      const rr = 3 + rnd(k, 8) * 7;
       dot(x, y + rr * 0.4, rr, rr * 0.7, 'rgba(40,28,16,0.45)');
       dot(x, y, rr, rr * 0.7, rnd(k, 9) < 0.3 ? 'rgb(150,146,136)' : 'rgb(124,98,66)');
       dot(x - rr * 0.3, y - rr * 0.25, rr * 0.4, rr * 0.3, 'rgba(255,240,210,0.35)');
     }
     // źdźbła trawy zwisające z krawędzi do rowu
     c.lineCap = 'round';
-    for (let k = 0; k < 90; k++) {
+    for (let k = 0; k < 160; k++) {
       const x = rnd(k, 10) * W, y = edge[Math.floor(x)]! * H;
-      const len = 4 + rnd(k, 11) * 9, lean = (rnd(k, 12) - 0.5) * 8;
+      const len = 8 + rnd(k, 11) * 18, lean = (rnd(k, 12) - 0.5) * 16;
       for (const ox of [0, W, -W]) {
         c.strokeStyle = rnd(k, 13) < 0.5 ? 'rgb(96,140,48)' : 'rgb(120,162,60)';
-        c.lineWidth = 1.2 + rnd(k, 14);
+        c.lineWidth = 2.2 + rnd(k, 14) * 1.6;
         c.beginPath(); c.moveTo(x + ox, y + 2); c.quadraticCurveTo(x + ox + lean * 0.3, y - len * 0.6, x + ox + lean, y - len); c.stroke();
       }
     }
     const color = new THREE.CanvasTexture(cv);
     color.wrapS = THREE.RepeatWrapping;
     color.colorSpace = THREE.SRGBColorSpace;
-    color.anisotropy = 8;
+    color.anisotropy = 16;
     ditchMat = new THREE.MeshStandardMaterial({ map: color, transparent: true, depthWrite: false, roughness: 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: -3 });
     return ditchMat;
   };
