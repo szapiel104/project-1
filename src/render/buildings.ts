@@ -116,11 +116,11 @@ function hut(g: THREE.Group, wall: THREE.Material, roof: THREE.Material, w: numb
     interior.visible = false;
     box(interior, M.wood, w, 0.05, d, x, 0, z);
     const t = 0.07, low = h * 0.45;
-    box(interior, wall, w, low, t, x, 0, z - d / 2 + t / 2);
-    box(interior, wall, t, low, d, x - w / 2 + t / 2, 0, z);
-    box(interior, wall, t, low, d, x + w / 2 - t / 2, 0, z);
-    box(interior, wall, w * 0.3, low, t, x - w * 0.35, 0, z + d / 2 - t / 2);
-    box(interior, wall, w * 0.3, low, t, x + w * 0.35, 0, z + d / 2 - t / 2);
+    box(interior, wall, w, low, t, x, 0, z - d / 2 + t / 2).name = 'iwall';
+    box(interior, wall, t, low, d, x - w / 2 + t / 2, 0, z).name = 'iwall';
+    box(interior, wall, t, low, d, x + w / 2 - t / 2, 0, z).name = 'iwall';
+    box(interior, wall, w * 0.3, low, t, x - w * 0.35, 0, z + d / 2 - t / 2).name = 'iwall';
+    box(interior, wall, w * 0.3, low, t, x + w * 0.35, 0, z + d / 2 - t / 2).name = 'iwall';
     g.add(interior);
   }
   return interior;
@@ -295,9 +295,16 @@ export function torchModel(): THREE.Group {
   return g;
 }
 
+const _cutPos = new THREE.Vector3();
+
 /** Animacje budynków: kręcące się skrzydła młyna i dym z komina, tylko gdy ktoś w środku pracuje. */
 export function animateBuilding(model: THREE.Object3D, active: boolean, time: number, dt: number): void {
   const interior = model.getObjectByName('interior');
+  const cut = interior?.getObjectByName('cutaway');
+  if (cut && active) {
+    const plane = cut.userData.plane as THREE.Plane;
+    plane.constant = model.getWorldPosition(_cutPos).y + (cut.userData.cutAt as number);
+  }
   if (interior) {
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
     interior.visible = active;
@@ -443,10 +450,10 @@ const BUILDERS: Record<string, Builder> = {
     box(hall, D, 1.25, 0.05, 1.25, 0, Y, CZ);
     box(hall, M.plank, 1.1, 0.02, 1.1, 0, Y + 0.05, CZ);
     // ściany: tył i boki w całości, przód z otworem na drzwi; okna w tych samych miejscach co na zewnątrz
-    box(hall, S, 1.25, 0.55, 0.1, 0, Y, CZ - HW + 0.05);
-    for (const sx of [-1, 1]) box(hall, S, 0.1, 0.55, 1.25, sx * (HW - 0.05), Y, CZ);
-    for (const sx of [-1, 1]) box(hall, S, 0.45, 0.55, 0.1, sx * 0.4, Y, CZ + HW - 0.05);
-    box(hall, D, 1.31, 0.06, 1.31, 0, Y + 0.55, CZ).scale.set(1, 1, 1);
+    box(hall, S, 1.25, 0.55, 0.1, 0, Y, CZ - HW + 0.05).name = 'iwall';
+    for (const sx of [-1, 1]) box(hall, S, 0.1, 0.55, 1.25, sx * (HW - 0.05), Y, CZ).name = 'iwall';
+    for (const sx of [-1, 1]) box(hall, S, 0.45, 0.55, 0.1, sx * 0.4, Y, CZ + HW - 0.05).name = 'iwall';
+    box(hall, D, 1.31, 0.06, 1.31, 0, Y + 0.55, CZ).name = 'iwall';
     for (const x of [-0.3, 0.3]) box(hall, M.window, 0.2, 0.22, 0.03, x, Y + 0.3, CZ + HW + 0.01);
     for (const sx of [-1, 1]) box(hall, M.window, 0.03, 0.22, 0.2, sx * (HW + 0.01), Y + 0.3, CZ);
     box(hall, M.woodDark, 0.3, 0.42, 0.04, 0, Y + 0.05, CZ + HW + 0.02);
@@ -1042,10 +1049,12 @@ const BUILDERS: Record<string, Builder> = {
     // mur z tego samego tynku co wieża, z otworem na drzwi od frontu
     const low = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.66, 0.7, 0.4, 10, 1, true, Math.PI * 0.12, Math.PI * 1.76), millWall), 0.68, 0.4);
     low.position.y = 0.2;
+    low.name = 'iwall';
     inside.add(low);
     const lip = new THREE.Mesh(new THREE.TorusGeometry(0.67, 0.035, 4, 20, Math.PI * 1.76), M.woodDark);
     lip.rotation.set(Math.PI / 2, 0, Math.PI / 2 + Math.PI * 0.12);
     lip.position.y = 0.4;
+    lip.name = 'iwall';
     inside.add(lip);
     // żarna na drewnianej skrzyni, lej z ziarnem nad nimi i pionowy wał
     box(inside, M.woodDark, 0.5, 0.16, 0.5, 0, 0.04, -0.22);
@@ -1157,12 +1166,19 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   const def = BUILDINGS.find((d) => d.id === id);
   const asset = def ? assetModel(id, teamColor, def.w, def.h) : null;
   if (asset) {
-    const keep = g.children.filter((c) => KEEP.includes(c.name));
+    // straże na murach pasowały do naszej twierdzy, przy innym kształcie zamku wisiałyby w powietrzu
+    const keep = g.children.filter((c) => KEEP.includes(c.name) && !(id === 'keep' && c.name === 'life'));
     g.clear();
-    asset.name = 'shell';
-    g.add(asset, ...keep);
+    asset.shell.name = 'shell';
+    g.add(asset.shell, ...keep);
     // skrzydła wiatraka z paczki kręcą się tak jak nasze
-    asset.traverse((o) => { if (/fan/i.test(o.name)) o.name = 'spin'; });
+    asset.shell.traverse((o) => { if (/fan/i.test(o.name)) o.name = 'spin'; });
+    const interior = g.getObjectByName('interior');
+    if (interior) {
+      // we wnętrzu nasze niskie ściany zastępuje przekrój gotowego modelu, meble zostają
+      interior.children.filter((c) => c.name === 'iwall').forEach((c) => c.removeFromParent());
+      interior.add(asset.cut);
+    }
   }
   // fundament, żeby budynek nie wisiał nad nierównym terenem
   if (id === 'torch' || id.startsWith('road')) return g; // sama pochodnia: zwykły słup wbity w ziemię, bez wydeptanego placu

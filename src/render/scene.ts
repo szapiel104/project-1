@@ -98,6 +98,7 @@ export class GameRenderer {
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    this.renderer.localClippingEnabled = true; // przekroje budynków przy podglądzie wnętrza
     this.scene.background = new THREE.Color(HAZE);
     this.scene.fog = new THREE.Fog(HAZE, 55, 150);
     // Cienie: jedno słońce, którego obszar cienia podąża za kamerą.
