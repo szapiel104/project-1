@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.12.0 — poziomy trudności, skryba, podsumowanie (2026-10-12)
+
+- Nowa gra: poziom trudności — pokojowy (wróg tylko się broni), łatwy (domyślny), średni, trudny
+- Pasek u góry odlicza czas do ataku wroga i alarmuje, gdy fala nadciąga
+- Skryba w lewym górnym rogu: okrągły portret, wiadomość i „mowa” (brak i koniec żywności, pełny skład, zmrok i świt, ucieczka ludzi, nadciągający wróg)
+- Nad budynkiem bez pracownika kołysze się znak przekreślonego człowieka
+- Koniec gry zatrzymuje grę i pokazuje podsumowanie: czas, zebrane surowce, budynki, wyszkoleni, zabici, polegli, zburzone budynki wroga
+- Zapis w nowej wersji
+
 ## 0.11.0 — oblężenie i koniec gry (2026-10-12)
 
 - Budynki mają wytrzymałość (twierdza 1500); widać ją w oknie budynku z paskiem

@@ -57,6 +57,7 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   const spots = formation(g, b.door, here % 25 + 1);
   const s: Soldier = { id: g.nextId++, owner: player, kind, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: def.hp, goal: spots[spots.length - 1] ?? -1, wait: 0, target: 0, cd: 0 };
   g.soldiers.push(s);
+  p.stats.trained++;
   return true;
 }
 
@@ -130,7 +131,10 @@ export function armySystem(g: GameState): void {
       }
       if (foe) {
         if (gap(s, foe) <= FP + FP / 2 && !s.path.length) {
-          if (s.cd === 0) { foe.hp -= def.attack; s.cd = def.cooldown; }
+          if (s.cd === 0) {
+            foe.hp -= def.attack; s.cd = def.cooldown;
+            if (foe.hp <= 0) { g.players[s.owner]!.stats.kills++; g.players[foe.owner]!.stats.lost++; }
+          }
           continue;
         }
         // podchodzi na wolne pole obok wroga (nie tam, gdzie stoi już ktoś inny); drogę odświeża co kilka ticków
@@ -242,6 +246,7 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
         const keep = BUILDINGS[b.type]!.id === 'keep';
         const owner = g.players[b.owner];
         demolish(g, b.owner, b.id, true);
+        g.players[s.owner]!.stats.razed++;
         s.target = 0;
         if (keep && owner) owner.defeated = true;
       }

@@ -7,7 +7,7 @@ import { Rng } from './rng';
 import type { Building, Corpse, GameState, PlayerState, Rubble, Soldier, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
-export const SAVE_VERSION = 15;
+export const SAVE_VERSION = 16;
 
 export interface SaveData {
   v: number;
@@ -38,7 +38,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     v: SAVE_VERSION, shape: shape(), seed: g.map.seed, preset, tick: g.tick, rng: g.rng.state, nextId: g.nextId, cut: [...g.cut], wear: [...g.wear].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roads: [...g.roads].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     rubble: g.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
-    players: g.players.map((p) => ({ ...p, res: [...p.res] })),
+    players: g.players.map((p) => ({ ...p, res: [...p.res], stats: { ...p.stats } })),
     buildings: g.buildings.map((b) => ({ ...b })),
     units: g.units.map((u) => ({ ...u, path: [...u.path] })),
     soldiers: g.soldiers.map((x) => ({ ...x, path: [...x.path] })),
@@ -54,7 +54,7 @@ export function deserialize(d: SaveData): GameState | null {
     const size = map.width * map.height;
     const g: GameState = {
       tick: d.tick, map, rng: new Rng(d.rng, true), nextId: d.nextId,
-      players: d.players.map((p) => ({ ...p, res: Int32Array.from(p.res) })),
+      players: d.players.map((p) => ({ ...p, res: Int32Array.from(p.res), stats: { ...p.stats } })),
       buildings: d.buildings.map((b) => ({ ...b })),
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
       soldiers: (d.soldiers ?? []).map((x) => ({ ...x, path: [...x.path] })),

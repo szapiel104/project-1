@@ -83,7 +83,7 @@ const hud = createHud(document.getElementById('ui')!, {
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
 const menu = createMenu(document.body, {
   onContinue: () => menu.close(),
-  onNewGame: (seedText, preset) => { start(seedText, preset); menu.close(); },
+  onNewGame: (seedText, preset, level) => { start(seedText, preset, undefined, level); menu.close(); },
   onVolume: (v) => setVolume(v),
   onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
   onSettings: (st) => applySettings(st),
@@ -97,9 +97,9 @@ function applySettings(st: Settings): void {
 }
 applySettings(loadSettings());
 
-function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
+function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2): void {
   endShown = false;
-  game = loaded ?? createGame(seedFromText(seedText), preset);
+  game = loaded ?? createGame(seedFromText(seedText), preset, level);
   currentPreset = preset;
   currentSeedText = seedText;
   pending = [];
@@ -415,7 +415,8 @@ function updateAlarm(): void {
     alarm.innerHTML = `<strong>${t('alarm.coming')}</strong><span>${coming.length} ${t('alarm.soldiers')} · ${Math.round(near)} ${t('alarm.fields')}</span><span class="alarm-bar"><span style="width:${Math.max(4, Math.min(100, 100 - near))}%"></span></span>`;
     return;
   }
-  const w = nextWave(game.tick);
+  const w = nextWave(game.tick, enemies[0]!.level);
+  if (!w) { alarm.dataset.state = 'calm'; alarm.innerHTML = `<strong>${t('alarm.peace')}</strong><span>${t('alarm.has')} ${foes.length}</span>`; return; }
   const secs = Math.max(0, Math.round((w.at - game.tick) / TICKS_PER_SECOND));
   const army = foes.length;
   alarm.dataset.state = secs < 60 ? 'soon' : 'calm';
@@ -425,13 +426,21 @@ function updateAlarm(): void {
 let endShown = false;
 function showEnd(win: boolean): void {
   endShown = true;
+  speed = 0;
+  const p = game.players[ME]!;
+  const st = p.stats;
+  const mins = Math.floor(game.tick / TICKS_PER_SECOND / 60);
+  const rows: [string, string | number][] = [
+    [t('sum.time'), `${mins} min`], [t('sum.gathered'), st.gathered], [t('sum.built'), st.built], [t('sum.trained'), st.trained],
+    [t('sum.kills'), st.kills], [t('sum.lost'), st.lost], [t('sum.razed'), st.razed], [t('sum.people'), population(game, ME)],
+  ];
   const box = document.createElement('div');
   box.className = 'end';
-  box.innerHTML = `<div class="panel end-panel"><p class="menu-title">${t(win ? 'end.win' : 'end.lose')}</p><p class="menu-sub">${t(win ? 'end.winText' : 'end.loseText')}</p><div class="menu-list"></div></div>`;
+  box.innerHTML = `<div class="panel end-panel"><p class="menu-title">${t(win ? 'end.win' : 'end.lose')}</p><p class="menu-sub">${t(win ? 'end.winText' : 'end.loseText')}</p>
+    <dl class="summary">${rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl><div class="menu-list"></div></div>`;
   const list = box.querySelector('.menu-list')!;
   const btn = (text: string, fn: () => void): void => { const b = document.createElement('button'); b.type = 'button'; b.className = 'menu-btn'; b.textContent = text; b.addEventListener('click', () => { box.remove(); fn(); }); list.append(b); };
-  btn(t('end.menu'), () => menu.open(true));
-  btn(t('end.watch'), () => {});
+  btn(t('end.again'), () => { menu.open(false); });
   document.body.append(box);
   play(win ? 'build' : 'collapse');
 }

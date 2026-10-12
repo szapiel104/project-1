@@ -302,3 +302,7 @@ body.menu-open .alarm { display: none; }
 .scribe-card.out { opacity: 0; transform: translateX(-30px); }
 @keyframes scribe-in { from { opacity: 0; transform: translateX(-40px); } }
 body.menu-open .scribe { display: none; }
+.menu-level { grid-template-columns: auto 1fr; }
+.summary { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; margin: 6px 0 10px; padding: 10px 0; border-top: 1px solid var(--gold-dark); border-bottom: 1px solid var(--gold-dark); font-size: 17px; }
+.summary dt { margin: 0; }
+.summary dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }

@@ -141,6 +141,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
         const free = kind ? storeCapacity(g, u.owner, kind) - storeUsed(p, kind) : u.carryAmt;
         const put = Math.max(0, Math.min(u.carryAmt, free));
         p.res[u.carryRes]! += put;
+        p.stats.gathered += put;
         u.carryAmt -= put;
         if (u.carryAmt > 0) { u.wait = RETRY_TICKS; break; }
       }

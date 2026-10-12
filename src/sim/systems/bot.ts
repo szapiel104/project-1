@@ -15,9 +15,19 @@ const THINK = 40;
 export const FIRST_WAVE = 15000;
 export const WAVE_EVERY = 4800;
 /** Kiedy wyruszy następna fala i jak duża ma być (do paska ostrzeżeń w interfejsie) */
-export function nextWave(tick: number): { at: number; size: number } {
-  const at = tick < FIRST_WAVE ? FIRST_WAVE : FIRST_WAVE + Math.ceil((tick - FIRST_WAVE) / WAVE_EVERY) * WAVE_EVERY;
-  return { at, size: Math.min(4 + Math.floor((at - FIRST_WAVE) / WAVE_EVERY) * 2, 12) };
+/** Poziomy trudności: kiedy pierwsza fala, co ile kolejne, ile żołnierzy najwyżej. Poziom 0 nie atakuje wcale. */
+const LEVELS = [
+  { first: Infinity, every: Infinity, base: 0, grow: 0, cap: 0 },
+  { first: 21000, every: 6000, base: 3, grow: 1, cap: 6 },
+  { first: FIRST_WAVE, every: WAVE_EVERY, base: 4, grow: 2, cap: 12 },
+  { first: 9000, every: 3600, base: 6, grow: 3, cap: 20 },
+];
+
+export function nextWave(tick: number, level = 2): { at: number; size: number } | null {
+  const L = LEVELS[level] ?? LEVELS[2]!;
+  if (!Number.isFinite(L.first)) return null;
+  const at = tick < L.first ? L.first : L.first + Math.ceil((tick - L.first) / L.every) * L.every;
+  return { at, size: Math.min(L.base + Math.floor((at - L.first) / L.every) * L.grow, L.cap) };
 }
 
 function affordable(p: PlayerState, type: number): boolean {
@@ -63,12 +73,12 @@ export function botSystem(g: GameState): void {
     // wojsko: szkoli jednego włócznika naraz, gdy ma broń, złoto i wolnego chłopa
     const barracks = g.buildings.find((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks');
     if (barracks) train(g, p.id, barracks.id, UNITS[0]!.id);
-    // atak falami: im później, tym większa fala
-    if (g.tick >= FIRST_WAVE && (g.tick - FIRST_WAVE) % WAVE_EVERY < THINK) {
+    // atak falami: im później, tym większa fala; na poziomie pokojowym bot tylko się broni
+    const wave = nextWave(g.tick, p.level);
+    if (wave && wave.at - g.tick < THINK && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first) {
       const army = g.soldiers.filter((s) => s.owner === p.id);
-      const wave = 4 + Math.floor((g.tick - FIRST_WAVE) / WAVE_EVERY) * 2;
       const foe = g.players.filter((o) => o.team !== p.team && !o.defeated).map((o) => playerKeep(g, o.id)).find((k) => k);
-      if (foe && army.length >= Math.min(wave, 12) && foe.door >= 0) {
+      if (foe && army.length >= wave.size && foe.door >= 0) {
         const w = g.map.width;
         orderMove(g, p.id, army.map((s) => s.id), foe.door + 2 * w);
       }

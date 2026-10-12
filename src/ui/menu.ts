@@ -18,7 +18,7 @@ export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 
 
 export interface MenuEvents {
   onContinue(): void;
-  onNewGame(seedText: string, preset: MapPresetId): void;
+  onNewGame(seedText: string, preset: MapPresetId, level: number): void;
   onVolume(v: number): void;
   onMute(): boolean;
   onSettings(s: Settings): void;
@@ -148,6 +148,18 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       lab.append(radio, el('strong', '', id), el('span', '', `${t(`menu.mode.${id}`)} · ${p.width} × ${p.height}`));
       modes.append(lab);
     }
+    // poziom trudności: domyślnie łatwy
+    let level = 1;
+    const levels = el('fieldset', 'menu-modes');
+    levels.append(el('legend', '', t('menu.level')));
+    for (const lv of [0, 1, 2, 3]) {
+      const lab = el('label', 'menu-mode menu-level');
+      const radio = el('input');
+      radio.type = 'radio'; radio.name = 'level'; radio.checked = lv === level;
+      radio.addEventListener('change', () => { level = lv; });
+      lab.append(radio, el('span', '', t(`level.${lv}`)));
+      levels.append(lab);
+    }
     const seedWrap = el('div', 'field');
     const seedLabel = el('label', '', t('menu.mapName'));
     seedLabel.htmlFor = 'menu-seed';
@@ -162,8 +174,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const warn = el('p', 'hint', canContinue || inGame ? t('menu.overwrite') : '');
     const start = el('button', 'menu-btn', t('menu.start'));
     start.type = 'submit';
-    form.append(modes, seedWrap, warn, start);
-    form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim() || 'project-1', preset); });
+    form.append(modes, levels, seedWrap, warn, start);
+    form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim() || 'project-1', preset, level); });
     screen(t('menu.newGame'), false, form, back());
   }
 

@@ -140,6 +140,7 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   for (const [k, v] of Object.entries(def.cost)) p.res[resIndex(k as ResourceId)]! -= v;
   if (def.road) { g.roads[y * g.map.width + x] = def.road; return true; }
   addBuilding(g, type, player, x, y, rot);
+  p.stats.built++;
   return true;
 }
 
