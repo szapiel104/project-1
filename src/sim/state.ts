@@ -2,6 +2,11 @@ import { BUILDINGS, buildingIndex } from '../data/buildings';
 import type { MAP_PRESETS } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type ResourceId, type StoreKind } from '../data/resources';
 import { RULES } from '../data/rules';
+import { TERRAIN, type Terrain } from '../data/terrain';
+import { UNITS } from '../data/units';
+const TERRAIN_BUILDABLE = (t: number): boolean => TERRAIN[t as Terrain].buildable;
+const TERRAIN_WALK = (t: number): boolean => TERRAIN[t as Terrain].walkable;
+const UNIT_HP = (): number => UNITS[0]?.hp ?? 60;
 import { generateMap, type GameMap } from './map';
 import { Rng } from './rng';
 import { addBuilding } from './systems/placement';
@@ -238,17 +243,56 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       p.dev = true;
       for (let i = 0; i < res.length; i++) res[i] = 2000;
       const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate']);
-      for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.road && !skip.has(d.id)) placeNear(g, i, s.player, s.x, s.y, 14);
+      for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.road && !skip.has(d.id)) placeNear(g, i, s.player, s.x, s.y, 20);
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
       placeNear(g, CAMP, s.player, s.x, s.y, 14);
       for (let i = 0; i < 30; i++) spawnPeasant(g, s.player);
+      devFortify(g, s.player);
     }
   }
   return g;
 }
 
 const CAMP = buildingIndex('camp');
+
+/** Tryb deweloperski: miasto otoczone palisadą z bramami pośrodku boków, wieże w narożnikach, oddział włóczników */
+function devFortify(g: GameState, player: number): void {
+  const { width: w, height: h } = g.map;
+  let x0 = w, y0 = h, x1 = 0, y1 = 0;
+  for (const b of g.buildings) {
+    if (b.owner !== player) continue;
+    const d = BUILDINGS[b.type]!;
+    const fw = b.rot % 2 ? d.h : d.w, fh = b.rot % 2 ? d.w : d.h;
+    x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + fw - 1); y1 = Math.max(y1, b.y + fh - 1);
+  }
+  x0 = Math.max(1, x0 - 3); y0 = Math.max(1, y0 - 3); x1 = Math.min(w - 2, x1 + 3); y1 = Math.min(h - 2, y1 + 3);
+  const free = (x: number, y: number): boolean => {
+    const t = y * w + x;
+    return g.occupancy[t] === 0 && g.reserved[t] === 0 && TERRAIN_BUILDABLE(g.map.tiles[t]!);
+  };
+  const put = (id: string, x: number, y: number): void => { if (free(x, y)) addBuilding(g, buildingIndex(id), player, x, y); };
+  const mx = (x0 + x1) >> 1, my = (y0 + y1) >> 1;
+  for (let x = x0; x <= x1; x++) for (const y of [y0, y1]) put(Math.abs(x - mx) <= 0 ? 'gate' : 'palisade', x, y);
+  for (let y = y0 + 1; y < y1; y++) for (const x of [x0, x1]) put(Math.abs(y - my) <= 0 ? 'gate' : 'palisade', x, y);
+  // wieże tuż za narożnikami, w środku
+  const tower = buildingIndex('watchtower');
+  for (const [x, y] of [[x0 + 1, y0 + 1], [x1 - 2, y0 + 1], [x0 + 1, y1 - 2], [x1 - 2, y1 - 2]] as const)
+    if (free(x, y) && free(x + 1, y) && free(x, y + 1) && free(x + 1, y + 1)) addBuilding(g, tower, player, x, y);
+  // dwudziestu włóczników przy twierdzy
+  const keep = g.buildings.find((b) => b.owner === player && b.type === 0);
+  if (!keep) return;
+  let n = 0;
+  for (let r = 2; r < 10 && n < 20; r++)
+    for (let dy = -r; dy <= r && n < 20; dy++)
+      for (let dx = -r; dx <= r && n < 20; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = keep.x + 1 + dx, y = keep.y + 1 + dy;
+        if (x < 0 || y < 0 || x >= w || y >= h || g.occupancy[y * w + x] !== 0 || !TERRAIN_WALK(g.map.tiles[y * w + x]!)) continue;
+        g.soldiers.push({ id: g.nextId++, owner: player, kind: 0, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: UNIT_HP(), goal: -1, wait: 0, target: 0, cd: 0 });
+        n++;
+      }
+}
 
 /** Stawia budynek startowy na pierwszym wolnym miejscu przy twierdzy (stała kolejność szukania). */
 function placeNear(g: GameState, type: number, player: number, cx: number, cy: number, reach = 8): void {

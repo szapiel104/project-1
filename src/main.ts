@@ -675,7 +675,7 @@ const saved = TEST ? null : loadSave(); // test zawsze na świeżej mapie
 const restored = saved ? deserialize(saved.data) : null;
 const T1 = performance.now();
 if (saved && restored) start(saved.seedText, saved.data.preset, restored);
-else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1');
+else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1', undefined, 1, TEST && new URLSearchParams(location.search).has('dev'));
 mark.push(['start świata', Math.round(performance.now() - T1)]);
 console.info('[main]', mark.map(([a, b]) => `${a} ${b} ms`).join(' | '));
 menu.setVolume(getVolume());
