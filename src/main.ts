@@ -13,6 +13,7 @@ import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace, maxHp } from './sim/systems/placement';
 import { createHud } from './ui/hud';
+import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
 import { getVolume, isMuted, play, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
@@ -388,6 +389,38 @@ function updateBars(): void {
   for (let i = n; i < bars.length; i++) bars[i]!.hidden = true;
 }
 
+// ---- pasek ostrzeżeń u góry: kiedy wróg wyśle wojsko i czy już nadciąga ----
+const alarm = document.createElement('div');
+alarm.className = 'alarm';
+alarm.setAttribute('role', 'status');
+document.body.append(alarm);
+function updateAlarm(): void {
+  const me = game.players[ME]!;
+  const enemies = game.players.filter((p) => p.team !== me.team && p.bot && !p.defeated);
+  if (!enemies.length || me.defeated) { alarm.hidden = true; return; }
+  alarm.hidden = false;
+  const keep = game.buildings.find((b) => b.owner === ME && b.type === 0);
+  const foes = game.soldiers.filter((s) => game.players[s.owner]!.team !== me.team);
+  // nadciąga: wrogowie w marszu, bliżej naszej twierdzy niż swojej
+  const coming = keep ? foes.filter((s) => {
+    const own = game.buildings.find((b) => b.owner === s.owner && b.type === 0);
+    const dMe = Math.hypot((s.px >> 8) - keep.x, (s.py >> 8) - keep.y);
+    const dHome = own ? Math.hypot((s.px >> 8) - own.x, (s.py >> 8) - own.y) : 99;
+    return s.path.length > 0 && dMe < dHome + 30 && dHome > 12;
+  }) : [];
+  if (coming.length && keep) {
+    const near = Math.min(...coming.map((s) => Math.hypot((s.px >> 8) - keep.x, (s.py >> 8) - keep.y)));
+    alarm.dataset.state = 'coming';
+    alarm.innerHTML = `<strong>${t('alarm.coming')}</strong><span>${coming.length} ${t('alarm.soldiers')} · ${Math.round(near)} ${t('alarm.fields')}</span><span class="alarm-bar"><span style="width:${Math.max(4, Math.min(100, 100 - near))}%"></span></span>`;
+    return;
+  }
+  const w = nextWave(game.tick);
+  const secs = Math.max(0, Math.round((w.at - game.tick) / TICKS_PER_SECOND));
+  const army = foes.length;
+  alarm.dataset.state = secs < 60 ? 'soon' : 'calm';
+  alarm.innerHTML = `<strong>${t('alarm.next')} ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</strong><span>${t('alarm.wave')} ${w.size} · ${t('alarm.has')} ${army}</span>`;
+}
+
 let endShown = false;
 function showEnd(win: boolean): void {
   endShown = true;
@@ -468,6 +501,7 @@ function loop(now: number): void {
   renderer.frame(elapsed / 1000, speed ? acc / TICK_MS : 1);
   updateHoverFoe();
   updateBars();
+  if (steps) updateAlarm();
   requestAnimationFrame(loop);
 }
 

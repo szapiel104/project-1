@@ -278,3 +278,15 @@ body.menu-open .hpbars { display: none; }
 .need em { font-style: normal; color: var(--ink-soft); }
 .need.short strong { color: var(--bad); }
 .recruit-max { font-weight: 700; font-family: var(--display); letter-spacing: .03em; }
+
+/* pasek ostrzeżeń u góry ekranu */
+.alarm { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); z-index: 20; display: flex; align-items: center; gap: 14px; padding: 8px 18px; pointer-events: none;
+  color: var(--parchment-light); background: linear-gradient(#4a321c, #2e1d0f); border: 2px solid var(--gold-dark); box-shadow: 0 0 0 2px var(--wood-edge), 3px 4px 0 rgba(30, 18, 8, .5); font-variant-numeric: tabular-nums; }
+.alarm strong { font-family: var(--display); font-size: 18px; letter-spacing: .04em; color: var(--gold); }
+.alarm[data-state='soon'] { border-color: #e0a04a; }
+.alarm[data-state='coming'] { border-color: #e0655a; background: linear-gradient(#7a1d16, #4a0f0b); animation: alarm-pulse 1s ease-in-out infinite; }
+.alarm[data-state='coming'] strong { color: #fff; }
+.alarm-bar { width: 120px; height: 8px; background: #1c120a; border: 1px solid #e0655a; }
+.alarm-bar span { display: block; height: 100%; background: #ff8a7a; }
+@keyframes alarm-pulse { 50% { box-shadow: 0 0 0 2px var(--wood-edge), 0 0 18px rgba(255, 90, 70, .7); } }
+body.menu-open .alarm { display: none; }

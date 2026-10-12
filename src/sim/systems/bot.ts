@@ -11,9 +11,14 @@ import { canPlace, placeBuilding } from './placement';
  */
 const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'orchard', 'house', 'poleturner', 'barracks', 'quarry', 'house', 'granary', 'orchard', 'poleturner', 'house', 'cemetery', 'house'];
 const THINK = 40;
-/** Pierwszy atak po ok. 12 minutach gry, kolejne co ok. 6 minut */
-const FIRST_WAVE = 7200;
-const WAVE_EVERY = 3600;
+/** Pierwszy atak po ok. 25 minutach gry, kolejne co ok. 8 minut */
+export const FIRST_WAVE = 15000;
+export const WAVE_EVERY = 4800;
+/** Kiedy wyruszy następna fala i jak duża ma być (do paska ostrzeżeń w interfejsie) */
+export function nextWave(tick: number): { at: number; size: number } {
+  const at = tick < FIRST_WAVE ? FIRST_WAVE : FIRST_WAVE + Math.ceil((tick - FIRST_WAVE) / WAVE_EVERY) * WAVE_EVERY;
+  return { at, size: Math.min(4 + Math.floor((at - FIRST_WAVE) / WAVE_EVERY) * 2, 12) };
+}
 
 function affordable(p: PlayerState, type: number): boolean {
   for (const [res, n] of Object.entries(BUILDINGS[type]!.cost)) if (p.res[resIndex(res as ResourceId)]! < n!) return false;
