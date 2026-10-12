@@ -17,7 +17,7 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { Lockstep, TURN } from './net/lockstep';
-import { me as netMe, updateRoom } from './net/supa';
+import { deleteRoom, me as netMe } from './net/supa';
 import type { OnlineStart } from './ui/online';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
@@ -161,7 +161,8 @@ function endOnline(): void {
   if (!net || !netGame) return;
   net.close();
   netGame.link.close();
-  if (netMe()?.id === netGame.room.host) void updateRoom(netGame.room.id, { status: 'done' });
+  // koniec meczu: gospodarz usuwa pokój z bazy (nic po meczu nie zostaje)
+  if (netMe()?.id === netGame.room.host) void deleteRoom(netGame.room.id);
   net = null; netGame = null; netWait.hidden = true;
 }
 window.addEventListener('beforeunload', () => endOnline());

@@ -109,11 +109,11 @@ export async function listRooms(): Promise<Room[]> {
   return ((data as Room[] | null) ?? []).filter((r) => Date.parse(r.created_at) > old);
 }
 
-/** Moje stare pokoje (zostały po zamkniętej karcie albo zerwanym połączeniu) oznacza jako zakończone */
+/** Usuwa wszystkie moje pokoje (zostały po zamkniętej karcie, zerwanym połączeniu albo skończonym meczu) — baza się nie zapycha */
 export async function closeMyStaleRooms(): Promise<void> {
   const m = me();
   if (!m) return;
-  await supa.from('rooms').update({ status: 'done' }).eq('host', m.id).in('status', ['open', 'playing']);
+  await supa.from('rooms').delete().eq('host', m.id);
 }
 
 export async function createRoom(name: string, preset: string, seed: string): Promise<Room | string> {
