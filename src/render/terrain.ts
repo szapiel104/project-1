@@ -298,23 +298,47 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   }
   const tint = new THREE.Color();
-  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): THREE.InstancedMesh | null => {
+  /**
+   * Roślinność i kamienie w kawałkach 24×24 pola: każdy kawałek to osobna siatka z własną sferą ograniczającą,
+   * więc karta graficzna pomija to, czego nie widać (także w cieniach). Na dużych mapach to kilkukrotnie mniej trójkątów.
+   * Na zewnątrz zachowuje się jak jedna siatka instancji (indeksy jak w liście).
+   */
+  type Inst = { setMatrixAt(i: number, m: THREE.Matrix4): void; setColorAt(i: number, c: THREE.Color): void; instanceMatrix: { needsUpdate: boolean } };
+  const CHUNK = 24;
+  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): Inst | null => {
     if (!list.length) return null;
-    const mesh = new THREE.InstancedMesh(g, new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2 }), list.length);
-    list.forEach((it, i) => { mesh.setMatrixAt(i, it.m); mesh.setColorAt(i, tint.setHex(color).multiplyScalar(it.shade)); });
-    mesh.castShadow = shadow;
-    mesh.receiveShadow = true;
-    group.add(mesh);
-    return mesh;
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2 });
+    const buckets = new Map<number, number[]>();
+    list.forEach((it, i) => {
+      const k = Math.floor((it.pos.x + 512) / CHUNK) * 4096 + Math.floor((it.pos.z + 512) / CHUNK);
+      let b = buckets.get(k); if (!b) { b = []; buckets.set(k, b); } b.push(i);
+    });
+    const where: [THREE.InstancedMesh, number][] = new Array(list.length);
+    const dirty = new Set<THREE.InstancedMesh>();
+    for (const idx of buckets.values()) {
+      const mesh = new THREE.InstancedMesh(g, mat, idx.length);
+      idx.forEach((i, j) => { const it = list[i]!; mesh.setMatrixAt(j, it.m); mesh.setColorAt(j, tint.setHex(color).multiplyScalar(it.shade)); where[i] = [mesh, j]; });
+      mesh.computeBoundingSphere();
+      if (mesh.boundingSphere) mesh.boundingSphere.radius += 3; // zapas na ścinane, przechylające się drzewa
+      mesh.castShadow = shadow;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+    }
+    const flag = { get needsUpdate() { return dirty.size > 0; }, set needsUpdate(v: boolean) { if (v) { for (const m of dirty) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } dirty.clear(); } } };
+    return {
+      setMatrixAt(i, m) { const w = where[i]; if (w) { w[0].setMatrixAt(w[1], m); dirty.add(w[0]); } },
+      setColorAt(i, c) { const w = where[i]; if (w) { w[0].setColorAt(w[1], c); dirty.add(w[0]); flag.needsUpdate = true; } },
+      instanceMatrix: flag,
+    };
   };
   // drzewa zapamiętujemy według pola, żeby drwal mógł je ściąć
-  const trees = new Map<number, { meshes: THREE.InstancedMesh[]; index: number; item: Item }[]>();
+  const trees = new Map<number, { meshes: Inst[]; index: number; item: Item }[]>();
   const stumpItems: Item[] = [];
   const stumpOf = new Map<Item, number>();
-  const plant = (list: Item[], trunk: THREE.InstancedMesh | null, crown: THREE.InstancedMesh | null, stump = true): void => {
+  const plant = (list: Item[], trunk: Inst | null, crown: Inst | null, stump = true): void => {
     list.forEach((item, index) => {
       const here = trees.get(item.tile) ?? [];
-      here.push({ meshes: [trunk, crown].filter((x): x is THREE.InstancedMesh => !!x), index, item });
+      here.push({ meshes: [trunk, crown].filter((x): x is Inst => !!x), index, item });
       trees.set(item.tile, here);
       if (stump) { stumpOf.set(item, stumpItems.length); stumpItems.push(item); }
     });
@@ -363,7 +387,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   {
     const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false);
     const palette = [0xf4f1e6, 0xf2d24a, 0xb07ad6, 0xe8687a, 0x7fb2e6];
-    if (mesh) flowers.forEach((it, i) => mesh.setColorAt(i, tint.setHex(palette[(it.tile * 7 + i) % palette.length]!)));
+    if (mesh) { flowers.forEach((it, i) => mesh.setColorAt(i, tint.setHex(palette[(it.tile * 7 + i) % palette.length]!))); mesh.instanceMatrix.needsUpdate = true; }
     plant(flowers, mesh, null, false);
   }
   // skały i rudy też znikają, gdy złoże się wyczerpie (bez pniaka)
@@ -371,7 +395,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   plant(ores, instanced(models.rock(), 0xa05a36, ores, 'rock'), null, false);
   const stumps = instanced(new THREE.CylinderGeometry(0.1, 0.13, 0.14, 7).translate(0, 0.07, 0), 0x8a6a45, stumpItems, 'bark', false);
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
-  if (stumps) { stumpItems.forEach((_, i) => stumps.setMatrixAt(i, zero)); }
+  if (stumps) { stumpItems.forEach((_, i) => stumps.setMatrixAt(i, zero)); stumps.instanceMatrix.needsUpdate = true; }
   const tilt = new THREE.Quaternion();
   const xAxis = new THREE.Vector3(1, 0, 0);
   const fell = (tile: number, k: number): void => {
