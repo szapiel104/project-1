@@ -43,7 +43,7 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
-  ash: mat(0x4a4540), rock: mat(0x9a968c), rockDark: mat(0x77736a),
+  ash: mat(0x4a4540), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xb9b6b0, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
@@ -850,16 +850,35 @@ const BUILDERS: Record<string, Builder> = {
     for (const sz of [-1, 1]) { const leg = box(g, M.woodDark, 0.06, 1.25, 0.06, -0.55, 0, 0.55 + sz * 0.22); leg.rotation.x = sz * -0.2; }
     const boom = box(g, M.woodDark, 0.9, 0.06, 0.06, -0.2, 1.15, 0.55);
     boom.rotation.z = 0.25;
-    box(g, M.plank, 0.012, 0.6, 0.012, 0.2, 0.62, 0.55);
-    box(g, M.rock, 0.26, 0.2, 0.22, 0.2, 0.42, 0.55);
-    // taczka i skrzynia z narzędziami
-    box(g, M.wood, 0.28, 0.12, 0.2, 0.65, 0.1, 0.62);
-    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.04, 8), M.woodDark);
+    // krążek na końcu wysięgnika, lina i ciosany blok w linowym oplocie
+    const pulley = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.04, 10), M.wood);
+    pulley.rotation.x = Math.PI / 2;
+    pulley.position.set(0.22, 1.27, 0.55);
+    g.add(pulley);
+    box(g, M.rope, 0.014, 0.58, 0.014, 0.22, 0.66, 0.55);
+    box(g, M.cut, 0.28, 0.2, 0.24, 0.22, 0.42, 0.55);
+    for (const r of [0.6, -0.6]) { const sling = box(g, M.rope, 0.012, 0.3, 0.012, 0.22, 0.58, 0.55); sling.rotation.z = r; }
+    box(g, M.rope, 0.29, 0.015, 0.25, 0.22, 0.61, 0.55);
+    // taczka z kamieniami: skrzynia, koło z przodu, rączki i nóżki z tyłu
+    const barrow = new THREE.Group();
+    barrow.position.set(0.62, 0, 0.66);
+    barrow.rotation.y = -0.4;
+    box(barrow, M.wood, 0.3, 0.1, 0.22, 0, 0.12, 0);
+    box(barrow, M.woodDark, 0.31, 0.02, 0.23, 0, 0.12, 0);
+    const wheel = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.035, 10), M.woodDark);
     wheel.rotation.x = Math.PI / 2;
-    wheel.position.set(0.85, 0.07, 0.62);
-    g.add(wheel);
-    box(g, M.woodDark, 0.3, 0.03, 0.03, 0.45, 0.2, 0.55);
-    box(g, M.woodDark, 0.3, 0.03, 0.03, 0.45, 0.2, 0.69);
+    wheel.position.set(0.2, 0.075, 0);
+    barrow.add(wheel);
+    for (const sz of [-1, 1]) {
+      box(barrow, M.woodDark, 0.5, 0.025, 0.025, -0.05, 0.14, sz * 0.12).rotation.z = -0.15;
+      box(barrow, M.woodDark, 0.025, 0.13, 0.025, -0.12, 0, sz * 0.1);
+    }
+    for (const [x, z, r] of [[-0.06, -0.04, 0.06], [0.06, 0.03, 0.055], [0, 0.06, 0.05], [-0.05, 0.06, 0.045]] as const) {
+      const lump = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), M.rock);
+      lump.position.set(x, 0.23, z);
+      barrow.add(lump);
+    }
+    g.add(barrow);
     pennant(g, flag, 0.8, 1.25, -0.7);
   },
   roadSand(g) { box(g, M.roadSand, 0.96, 0.04, 0.96); },

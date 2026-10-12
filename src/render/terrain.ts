@@ -350,7 +350,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
-  plant(pebbles, instanced(models.rock(), 0x9d9a92, pebbles), null, false);
+  plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock'), null, false);
   plant(tufts, instanced(models.tuft(), 0x7fae45, tufts, undefined, false), null, false);
   {
     const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false);
@@ -359,8 +359,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     plant(flowers, mesh, null, false);
   }
   // skały i rudy też znikają, gdy złoże się wyczerpie (bez pniaka)
-  plant(rocks, instanced(models.rock(), 0xa9a498, rocks), null, false);
-  plant(ores, instanced(models.rock(), 0x8a4a2c, ores), null, false);
+  plant(rocks, instanced(models.rock(), 0xc4bfb1, rocks, 'rock'), null, false);
+  plant(ores, instanced(models.rock(), 0xa05a36, ores, 'rock'), null, false);
   const stumps = instanced(new THREE.CylinderGeometry(0.1, 0.13, 0.14, 7).translate(0, 0.07, 0), 0x8a6a45, stumpItems, 'bark', false);
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
   if (stumps) { stumpItems.forEach((_, i) => stumps.setMatrixAt(i, zero)); }

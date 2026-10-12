@@ -73,7 +73,15 @@ export const proceduralModels: ModelFactory = {
     ]);
   },
   rock() {
-    const g = new THREE.DodecahedronGeometry(0.34, 0);
+    // głaz z nierównymi ścianami: wierzchołki przesunięte zależnie od położenia, więc bryła pozostaje szczelna
+    const g = new THREE.IcosahedronGeometry(0.34, 1);
+    const p = g.getAttribute('position');
+    for (let i = 0; i < p.count; i++) {
+      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+      const k = 0.82 + (Math.sin(x * 37.1 + y * 11.7) * Math.cos(z * 29.3 - x * 5.1) + 1) * 0.16;
+      p.setXYZ(i, x * k, Math.max(y * k, -0.12), z * k);
+    }
+    g.computeVertexNormals();
     g.scale(1, 0.7, 1);
     g.translate(0, 0.12, 0);
     return g;

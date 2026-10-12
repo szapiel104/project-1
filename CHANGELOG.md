@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.5.14 — kamienie (2026-10-12)
+
+- Luźne głazy, kamyki i złoża mają nieregularną bryłę i teksturę skały (plamy, pęknięcia, porost); ta sama skała w kopalni i kamieniołomie
+- Cech inżynierów: na dźwigu ciosany blok w linowym oplocie z krążkiem, nowa taczka z kamieniami
+
 ## 0.5.13 — piekarnia (2026-10-12)
 
 - Wnętrze piekarni: podłoga z desek, kopulasty piec z żarem w łukowym otworze, łopata, stół z prawdziwymi bochenkami z nacięciem, dzieża z ciastem i worek mąki
