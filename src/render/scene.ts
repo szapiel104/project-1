@@ -24,6 +24,28 @@ export interface TileRef { x: number; y: number }
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
 
+let sadMat: THREE.SpriteMaterial | null = null;
+/** Smutna minka nad głową chłopa, który opuszcza osadę */
+function sadMaterial(): THREE.SpriteMaterial {
+  if (sadMat) return sadMat;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d')!;
+  x.fillStyle = 'rgba(30,18,8,0.85)'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
+  x.lineWidth = 7; x.strokeStyle = '#e9c145'; x.stroke();
+  x.fillStyle = '#f2d27a'; x.beginPath(); x.arc(64, 64, 44, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#3a2410';
+  x.beginPath(); x.arc(48, 54, 6, 0, Math.PI * 2); x.fill();
+  x.beginPath(); x.arc(80, 54, 6, 0, Math.PI * 2); x.fill();
+  x.strokeStyle = '#3a2410'; x.lineWidth = 6; x.lineCap = 'round';
+  x.beginPath(); x.arc(64, 96, 20, Math.PI * 1.15, Math.PI * 1.85); x.stroke(); // usta w podkówkę
+  x.fillStyle = '#6fb6ff'; x.beginPath(); x.ellipse(84, 70, 4, 7, 0, 0, Math.PI * 2); x.fill(); // łza
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  sadMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  return sadMat;
+}
+
 let noWorkerMat: THREE.SpriteMaterial | null = null;
 /** Znak „brak pracownika”: ludzik w złotym kole przekreślony na czerwono, rysowany raz na płótnie */
 function noWorkerMaterial(): THREE.SpriteMaterial {
@@ -82,6 +104,7 @@ export class GameRenderer {
   private sunDir = new THREE.Vector3(-55, 85, 40);
   /** 0 w dzień, 1 w środku nocy */
   private night = 0;
+  private sadFaces: THREE.Sprite[] = [];
   private lamps: THREE.PointLight[] = [];
   private lampSpots: { v: THREE.Vector3; k: number }[] = [];
   private handTorches: THREE.InstancedMesh;
@@ -315,6 +338,7 @@ export class GameRenderer {
     this.prevPos.clear();
     for (const u of this.state.units) this.prevPos.set(u.id, [u.px, u.py]);
     for (const x of this.state.soldiers) this.prevPos.set(x.id, [x.px, x.py]);
+    for (const x of this.state.travelers) this.prevPos.set(x.id, [x.px, x.py]);
   }
 
   /** Ustawia kamerę nad wskazanym punktem mapy (w polach); używane też przy testach wyglądu */
@@ -948,7 +972,35 @@ export class GameRenderer {
         mesh.setMatrixAt(i, t.matrix);
       }
     }
-    this.figures.finish(n);
+    // wędrowcy: przychodzący z lasu i odchodzący za mapę (ci drudzy ze smutną minką nad głową)
+    let k = n, sad = 0;
+    for (const tr of g.travelers) {
+      if (k >= MAX_UNITS) break;
+      const prev = this.prevPos.get(tr.id);
+      const fx = (prev ? prev[0] + (tr.px - prev[0]) * alpha : tr.px) / FP;
+      const fy = (prev ? prev[1] + (tr.py - prev[1]) * alpha : tr.py) / FP;
+      let st = this.strides.get(tr.id);
+      if (!st) { st = { x: fx, y: fy, phase: tr.id }; this.strides.set(tr.id, st); }
+      st.phase += Math.min(0.5, Math.hypot(fx - st.x, fy - st.y)) * 7.5;
+      st.x = fx; st.y = fy;
+      const heading = Math.atan2(tr.tx / FP - fx, tr.ty / FP - fy);
+      const y = view.heightAt(fx, fy);
+      t.position.set(fx - width / 2, y + (this.calm ? 0 : Math.abs(Math.cos(st.phase)) * 0.025), fy - height / 2);
+      t.rotation.set(tr.leaving ? 0.12 : 0, heading, 0, 'YXZ'); // odchodzący idzie ze spuszczoną głową
+      t.scale.setScalar(1);
+      t.updateMatrix();
+      this.figures.set(k, t.matrix, this.calm ? 0 : Math.sin(st.phase) * 0.55, false, TEAM_COLORS[g.players[tr.owner]?.team ?? 0] ?? 0x888888, tr.id);
+      if (tr.leaving) {
+        let face = this.sadFaces[sad];
+        if (!face) { face = new THREE.Sprite(sadMaterial()); face.scale.setScalar(0.42); face.renderOrder = 5; this.scene.add(face); this.sadFaces.push(face); }
+        face.visible = true;
+        face.position.set(t.position.x, y + 0.95, t.position.z);
+        sad++;
+      }
+      k++;
+    }
+    for (let i = sad; i < this.sadFaces.length; i++) this.sadFaces[i]!.visible = false;
+    this.figures.finish(k);
     this.rods.count = n;
     this.rods.instanceMatrix.needsUpdate = true;
     this.handTorches.count = n;
