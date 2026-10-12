@@ -17,6 +17,7 @@ export interface HudEvents {
   onWreck(): void;
   onVolume(v: number): void;
   onMute(): void;
+  onMenu(): void;
 }
 
 export interface HudView {
@@ -344,6 +345,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   wreck.setAttribute('aria-pressed', 'false');
   wreck.addEventListener('click', () => events.onWreck());
   const toolbar = el('div', 'toolbar');
+  const menuBtn = el('button', 'btn-plain', t('hud.menu'));
+  menuBtn.type = 'button';
+  menuBtn.addEventListener('click', () => events.onMenu());
+  tabs.prepend(menuBtn);
   const right = el('div', 'tools-right');
   right.append(controls, wreck);
   toolbar.append(tabs, cats, right);
@@ -369,7 +374,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   court.append(forecast);
 
   // Mapa
-  const mapSec = section(t('hud.map'), 'map');
+  const mapSec = el('div'); // nowa gra przeniesiona do menu głównego
   const form = el('form', 'map-form');
   const seedWrap = el('div', 'field');
   const seedLabel = el('label', '', t('hud.seed'));
@@ -398,7 +403,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   mapSec.append(form);
 
   // Sterowanie i dźwięk
-  const help = section(t('hud.help'), 'help');
+  const help = el('div'); // dźwięk i sterowanie przeniesione do menu głównego
   const soundWrap = el('div', 'field');
   const volLabel = el('label', '', t('hud.volume'));
   volLabel.htmlFor = 'volume';

@@ -84,6 +84,8 @@ export class StrategyCamera {
     this.target.z = Math.max(-this.bounds.z, Math.min(this.bounds.z, this.target.z));
   }
 
+  spin(d: number): void { this.yaw += d; this.apply(); }
+
   private tilt(d: number): void {
     this.pitch = Math.max(StrategyCamera.MIN_PITCH, Math.min(StrategyCamera.MAX_PITCH, this.pitch + d));
   }

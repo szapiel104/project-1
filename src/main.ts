@@ -11,6 +11,7 @@ import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace } from './sim/systems/placement';
 import { createHud } from './ui/hud';
+import { createMenu, loadSettings } from './ui/menu';
 import { getVolume, isMuted, play, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
@@ -69,7 +70,22 @@ const hud = createHud(document.getElementById('ui')!, {
   onWreck: () => setWreck(!wrecking),
   onVolume: (v) => setVolume(v),
   onMute: () => hud.setMuted(toggleMute()),
+  onMenu: () => menu.open(true),
 }, renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
+
+// Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
+const menu = createMenu(document.body, {
+  onContinue: () => menu.close(),
+  onNewGame: (seedText, preset) => { start(seedText, preset); menu.close(); },
+  onVolume: (v) => setVolume(v),
+  onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
+  onGraphics: (st) => renderer.setGraphics(st.ao, st.shadows),
+});
+let titleScreen = true;
+{
+  const st = loadSettings();
+  renderer.setGraphics(st.ao, st.shadows);
+}
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState): void {
   game = loaded ?? createGame(seedFromText(seedText), preset);
@@ -210,7 +226,15 @@ document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closes
 renderer.onCollapse = () => play('collapse');
 
 window.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') { if (wrecking) setWreck(false); else if (picked) pick(null); else select(0); }
+  if (e.key === 'Escape') {
+    if (menu.isOpen()) { if (!titleScreen) menu.close(); return; }
+    if (wrecking) setWreck(false);
+    else if (picked) pick(null);
+    else if (selected || selectedUnit) { select(0); selectUnit(0); }
+    else menu.open(true);
+    return;
+  }
+  if (menu.isOpen()) return;
   const tag = (e.target as HTMLElement | null)?.tagName;
   if (tag === 'INPUT' || tag === 'SELECT' || e.ctrlKey || e.metaKey) return;
   if (e.code === 'KeyR' && picked) rotate();
@@ -258,6 +282,14 @@ let acc = 0;
 function loop(now: number): void {
   const elapsed = Math.min(250, now - last);
   last = now;
+  // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
+  if (menu.isOpen()) {
+    if (titleScreen) renderer.orbit(elapsed / 1000);
+    renderer.frame(elapsed / 1000, 1);
+    requestAnimationFrame(loop);
+    return;
+  }
+  titleScreen = false;
   acc += elapsed * speed;
   let steps = 0;
   while (acc >= TICK_MS && steps < 6) {
@@ -282,6 +314,10 @@ const saved = loadSave();
 const restored = saved ? deserialize(saved.data) : null;
 if (saved && restored) start(saved.seedText, saved.data.preset, restored);
 else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1');
+menu.setVolume(getVolume());
+menu.setMuted(isMuted());
+menu.setCanContinue(!!(saved && restored));
+menu.open(false);
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 requestAnimationFrame(loop);

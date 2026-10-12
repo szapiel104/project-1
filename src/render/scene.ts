@@ -16,6 +16,7 @@ import { pattern } from './textures';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { N8AOPass } from 'n8ao';
+import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 
 export interface TileRef { x: number; y: number }
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number }
@@ -46,6 +47,8 @@ export class GameRenderer {
   /** Obraz przechodzi przez cieniowanie zagłębień (AO): ciemniejsze kąty, styki ścian z ziemią, szczeliny */
   private composer!: EffectComposer;
   private ao!: N8AOPass;
+  /** Zwykłe renderowanie, gdy cieniowanie zagłębień jest wyłączone w ustawieniach */
+  private plain!: RenderPass;
   private view: TerrainView | null = null;
   private state: GameState | null = null;
   private ray = new THREE.Raycaster();
@@ -194,6 +197,9 @@ export class GameRenderer {
     this.ao = new N8AOPass(this.scene, this.cam.camera, canvas.clientWidth || 1, canvas.clientHeight || 1);
     Object.assign(this.ao.configuration, { aoRadius: 1.6, distanceFalloff: 0.6, intensity: 2.2, gammaCorrection: false, color: new THREE.Color(0x1a120a) });
     this.ao.setQualityMode('Medium');
+    this.plain = new RenderPass(this.scene, this.cam.camera);
+    this.plain.enabled = false;
+    this.composer.addPass(this.plain);
     this.composer.addPass(this.ao);
     this.composer.addPass(new OutputPass());
     canvas.addEventListener('pointermove', (e) => {
@@ -303,6 +309,20 @@ export class GameRenderer {
     this.selection.position.set(mesh.position.x, mesh.position.y + 0.07, mesh.position.z);
     this.selection.visible = true;
   }
+
+  /** Ustawienia grafiki: cieniowanie zagłębień i rozdzielczość mapy cieni */
+  setGraphics(ao: boolean, shadowSize: number): void {
+    this.ao.enabled = ao;
+    this.plain.enabled = !ao;
+    if (this.sun.shadow.mapSize.x !== shadowSize) {
+      this.sun.shadow.mapSize.setScalar(shadowSize);
+      this.sun.shadow.map?.dispose();
+      (this.sun.shadow as { map: unknown }).map = null;
+    }
+  }
+
+  /** Powolny obrót kamery wokół osady, gdy otwarte jest menu */
+  orbit(dt: number): void { this.cam.spin(dt * 0.05); }
 
   frame(dt: number, alpha: number): void {
     this.cam.update(dt);

@@ -127,7 +127,7 @@ Test obowiązkowy: ten sam zestaw komend uruchomiony dwa razy daje identyczny sk
 
 1. **Fundament:** repo, Vite, testy, wdrożenie na GitHub Pages, pusta scena z kamerą i mapą z ziarna.
 2. **Gospodarka:** budowanie na siatce, chłopi, surowce, popularność. Kryterium: da się rozwinąć osadę od zera.
-3. **Menu główne i ekran ładowania (ważne):** po wejściu w link pasek ładowania, potem menu w klimacie Twierdzy: Graj (wybór trybu i mapy), Ustawienia (dźwięk, grafika, sterowanie), Jak grać. Kolejne etapy dokładają do tego samego menu konto, ulepszenia, ranking i lobby. Gra nie startuje już od razu na mapie.
+3. **Menu główne i ekran ładowania (ważne) — zrobione 12.10.2026 (0.8.0):** po wejściu w link pasek ładowania, potem menu w klimacie Twierdzy: Graj (wybór trybu i mapy), Ustawienia (dźwięk, grafika, sterowanie), Jak grać. Kolejne etapy dokładają do tego samego menu konto, ulepszenia, ranking i lobby. Gra nie startuje już od razu na mapie.
 4. **Wojsko i boty:** jednostki, walka, mury, bot przeciwnik. Kryterium: pełny mecz offline z botem od startu do zwycięstwa, test determinizmu przechodzi.
 5. **Konta:** rejestracja, logowanie, profil, migracje, RLS.
 6. **Multiplayer 1v1:** pokoje, lockstep przez Realtime, wykrywanie desynchronizacji, rozłączenia.

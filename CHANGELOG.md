@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.8.0 — menu główne (2026-10-12)
+
+- Po wczytaniu menu główne na tle osady, nad którą powoli krąży kamera; gra stoi, dopóki menu jest otwarte
+- Kontynuuj (gdy jest zapis), Nowa gra (tryb 1v1/2v2/4v4, nazwa mapy z losowaniem, ostrzeżenie o zastąpieniu osady), Ustawienia (głośność, wyciszenie, cieniowanie zagłębień, jakość cieni — zapamiętywane), Jak grać
+- W trakcie gry Esc albo przycisk Menu otwiera to samo menu z opcją Wróć do gry; zakładki Mapa i Sterowanie zniknęły z belki
+
 ## 0.7.3 — ekran wczytywania (2026-10-12)
 
 - Zamiast pustego beżowego ekranu: ekran wczytywania z paskiem i licznikiem zasobów (silnik, każda tekstura po kolei, modele, budowa świata)

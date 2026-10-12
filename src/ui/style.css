@@ -191,3 +191,26 @@ input, select {
 .loading-bar span { display: block; height: 100%; width: 0; background: linear-gradient(#c23228, #8c1f18); box-shadow: inset 0 1px 0 rgba(255, 220, 160, .35); transition: width .25s; }
 .loading-line { display: flex; justify-content: space-between; gap: 12px; font-size: 17px; }
 .loading-line strong { font-variant-numeric: tabular-nums; color: var(--gold); }
+
+/* Menu główne: pergaminowa tablica na tle osady, przyciemnione brzegi ekranu */
+.menu { position: fixed; inset: 0; z-index: 40; display: grid; place-items: center start; padding-left: clamp(24px, 8vw, 140px);
+  background: radial-gradient(ellipse at 70% 50%, rgba(20, 12, 5, 0) 30%, rgba(20, 12, 5, .78) 100%), linear-gradient(90deg, rgba(20, 12, 5, .7), rgba(20, 12, 5, 0) 60%); }
+.menu-panel { width: min(460px, calc(100vw - 48px)); padding: 26px 30px 30px; display: grid; gap: 6px; max-height: calc(100vh - 48px); overflow-y: auto; }
+.menu-title { font-family: var(--display); font-weight: 800; font-size: 44px; letter-spacing: .1em; line-height: 1; color: var(--seal); text-align: center; }
+.menu-sub { text-align: center; font-style: italic; color: var(--ink-soft); padding-bottom: 12px; border-bottom: 1px solid var(--gold-dark); margin-bottom: 8px; }
+.menu-body { display: grid; gap: 12px; }
+.menu-heading { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: .06em; }
+.menu-list { display: grid; gap: 10px; }
+.menu-btn { min-height: 52px; font-size: 18px; letter-spacing: .08em; background: linear-gradient(#a8281f, #8c1f18 60%, #6e1711); color: #fff; border-color: #4a0f0b; }
+.menu-btn:hover { background: linear-gradient(#c23228, #a8281f 60%, #8c1f18); }
+.menu-back { min-height: 44px; font-size: 15px; background: linear-gradient(#5a3d22, #3b2716 60%, #2e1d0f); border-color: var(--wood-edge); }
+.menu-back:hover { background: linear-gradient(#6d4a2a, #4a321c 60%, #3b2716); }
+.menu-form { display: grid; gap: 12px; }
+.menu-modes { border: 1px solid var(--gold-dark); padding: 8px 12px 10px; display: grid; gap: 6px; margin: 0; }
+.menu-modes legend { font-family: var(--display); font-weight: 600; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; padding: 0 6px; }
+.menu-mode { display: grid; grid-template-columns: auto 48px 1fr; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; text-transform: none; letter-spacing: 0; font-family: var(--text); font-size: 16px; font-weight: 500; }
+.menu-mode input { width: 20px; height: 20px; min-height: 0; accent-color: var(--seal); }
+.menu-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.menu-check { display: flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; text-transform: none; letter-spacing: 0; font-family: var(--text); font-size: 16px; font-weight: 500; }
+.menu-check input { width: 22px; height: 22px; min-height: 0; accent-color: var(--seal); }
+body.menu-open #ui .bottom, body.menu-open #ui .toast, body.menu-open .build { display: none; }
