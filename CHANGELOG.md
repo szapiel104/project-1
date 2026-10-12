@@ -2,7 +2,8 @@
 
 ## 0.5.7 — rów przy drodze (2026-10-12)
 
-- Wzdłuż drogi kamiennej, po bokach, płytki rów odwadniający z wilgotnym błotem i strużką wody na dnie
+- Wzdłuż drogi kamiennej płytki rów tuż przy krawędzi bruku: brudny piasek przy brzegach, wilgotne zbocza i lśniąca strużka wody na dnie; rów skręca razem z drogą
+- Kostka kryje dokładnie swoje pole i równo dochodzi do rowu
 
 ## 0.5.6 — dźwięki i góry (2026-10-12)
 

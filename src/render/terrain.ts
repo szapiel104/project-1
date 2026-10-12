@@ -351,9 +351,50 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Drogi. Kamienna to równe pola bruku. Piaskowa to wydeptana ścieżka: każde pole dostaje miękką,
   // nieregularną plamę większą od pola, a sąsiednie plamy zlewają się w jeden trakt o poszarpanych brzegach.
   const roadMeshes: THREE.Mesh[] = [];
-  // rów: ciemne, wilgotne błoto, a na dnie wąska strużka wody z połyskiem nieba
-  const ditchMat = new THREE.MeshStandardMaterial({ color: 0x3a3127, roughness: 1, map: pattern('soil'), polygonOffset: true, polygonOffsetFactor: -3 });
-  const streamMat = new THREE.MeshStandardMaterial({ color: 0x3f6470, roughness: 0.08, metalness: 0.5, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -4 });
+  // Rów: w poprzek jasny, brudny piasek przy brzegach, ciemniejące wilgotne zbocza i lśniąca strużka wody na dnie.
+  // Głębokość udaje cieniowanie w teksturze; połysk wody daje mapa szorstkości (gładko tylko na dnie).
+  let ditchMat: THREE.MeshStandardMaterial | null = null;
+  const ditchMaterial = (): THREE.MeshStandardMaterial => {
+    if (ditchMat) return ditchMat;
+    const W = 128, H = 128;
+    const make = (paint: (c: CanvasRenderingContext2D) => void): THREE.CanvasTexture => {
+      const cv = document.createElement('canvas');
+      cv.width = W; cv.height = H;
+      paint(cv.getContext('2d')!);
+      const t = new THREE.CanvasTexture(cv);
+      t.wrapS = THREE.RepeatWrapping;
+      return t;
+    };
+    const color = make((c) => {
+      for (let y = 0; y < H; y++) {
+        const v = y / (H - 1), d = Math.abs(v - 0.5) * 2; // 0 na dnie, 1 przy brzegu
+        const sand = [168, 146, 108], mud = [86, 70, 50], water = [52, 70, 74];
+        const k = Math.min(1, Math.max(0, (d - 0.15) / 0.75));
+        let rgb = mud.map((m, i) => m + (sand[i]! - m) * k * k);
+        if (d < 0.14) rgb = water.map((m, i) => m + (rgb[i]! - m) * (d / 0.14));
+        // jasna krawędź skarpy przy bruku i przy trawie
+        if (d > 0.9) rgb = rgb.map((c2) => c2 * 1.08);
+        c.fillStyle = `rgb(${rgb.map((n) => Math.round(n)).join(',')})`;
+        c.fillRect(0, y, W, 1);
+      }
+      for (let i = 0; i < 900; i++) {
+        const x = (hash2(i, 1, 9) % W), y = (hash2(i, 2, 9) % H);
+        c.fillStyle = `rgba(${hash2(i, 3, 9) & 1 ? '255,240,210' : '30,22,14'},${0.08 + (hash2(i, 4, 9) & 31) / 200})`;
+        c.fillRect(x, y, 1 + (hash2(i, 5, 9) % 3), 1 + (hash2(i, 6, 9) % 2));
+      }
+    });
+    color.colorSpace = THREE.SRGBColorSpace;
+    const rough = make((c) => {
+      for (let y = 0; y < H; y++) {
+        const d = Math.abs(y / (H - 1) - 0.5) * 2;
+        const g2 = d < 0.12 ? 30 : d < 0.35 ? 150 : 245;
+        c.fillStyle = `rgb(${g2},${g2},${g2})`;
+        c.fillRect(0, y, W, 1);
+      }
+    });
+    ditchMat = new THREE.MeshStandardMaterial({ map: color, roughnessMap: rough, roughness: 1, metalness: 0.15, polygonOffset: true, polygonOffsetFactor: -3 });
+    return ditchMat;
+  };
   let pathMat: THREE.MeshStandardMaterial | null = null;
   const pathMaterial = (): THREE.MeshStandardMaterial => {
     if (pathMat) return pathMat;
@@ -402,8 +443,6 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const mask = new THREE.CanvasTexture(cv);
     mask.channel = 1; // maska używa drugiego zestawu współrzędnych: 0..1 na każdym polu
     paveMat = (base as THREE.MeshStandardMaterial).clone();
-    paveMat.alphaMap = mask;
-    paveMat.alphaTest = 0.5;
     paveMat.vertexColors = true;
     paveMat.polygonOffset = true;
     paveMat.polygonOffsetFactor = -2;
@@ -414,34 +453,44 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     roadMeshes.length = 0;
     const shade = new THREE.Color();
     for (let kind = 1; kind <= materials.length; kind++) {
-      const p3: number[] = [], uv2: number[] = [], uvMask: number[] = [], col3: number[] = [], ditch: number[] = [], stream: number[] = [];
+      const p3: number[] = [], uv2: number[] = [], uvMask: number[] = [], col3: number[] = [], ditch: number[] = [], ditchUv: number[] = [];
       const soft = kind === 1;
-      const grow = soft ? 0.42 : 0.3;
+      // bruk kryje dokładnie swoje pole, żeby kostka równo dochodziła do rowu; piaskowa ścieżka rozlewa się poza pole
+      const grow = soft ? 0.42 : 0;
       for (let y = 0; y < h; y++)
         for (let x = 0; x < w; x++) {
           if (roads[y * w + x] !== kind) continue;
           clear(y * w + x); // na drodze nie rośnie trawa ani krzewy
           if (!soft) {
-            // wzdłuż bruku, tam gdzie kończy się droga, płytki rów odwadniający z wodą na dnie
-            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-              const nx = x + dx, ny = y + dy;
-              if (nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind) continue;
-              const strip = (from: number, to: number, out: number[], lift: number): void => {
-                // pas równoległy do krawędzi pola, odsunięty od niej o from..to na zewnątrz
-                const a = dx ? (dx > 0 ? x + 1 + from : x - to) : x - 0.05, b2 = dx ? (dx > 0 ? x + 1 + to : x - from) : x + 1.05;
-                const c = dy ? (dy > 0 ? y + 1 + from : y - to) : y - 0.05, d = dy ? (dy > 0 ? y + 1 + to : y - from) : y + 1.05;
-                for (const [qx, qy] of [[a, c], [a, d], [b2, c], [b2, c], [a, d], [b2, d]] as const) out.push(qx + ox, heightAt(qx, qy) + lift, qy + oz);
-              };
-              strip(0.3, 0.52, ditch, 0.012);
-              strip(0.36, 0.46, stream, 0.02);
-            }
+            // Rów odwadniający tuż za krawędzią bruku: pas szerokości ćwierć pola, dokładnie wzdłuż pola,
+            // a na wypukłych narożnikach dodatkowy kwadrat, żeby rów skręcał razem z drogą.
+            const open = (dx: number, dy: number): boolean => { const nx = x + dx, ny = y + dy; return nx < 0 || ny < 0 || nx >= w || ny >= h || roads[ny * w + nx] !== kind; };
+            const D = 0.26;
+            const quad = (ax: number, ay: number, bx: number, by: number, across: 'x' | 'y', flip: boolean): void => {
+              // v biegnie w poprzek rowu (0 przy bruku, 1 przy trawie), u wzdłuż niego
+              const corners = [[ax, ay], [ax, by], [bx, ay], [bx, ay], [ax, by], [bx, by]] as const;
+              for (const [qx, qy] of corners) {
+                ditch.push(qx + ox, heightAt(qx, qy) + 0.03, qy + oz);
+                const v = across === 'x' ? (qx - ax) / (bx - ax) : (qy - ay) / (by - ay);
+                ditchUv.push((across === 'x' ? qy : qx) / 2, flip ? 1 - v : v);
+              }
+            };
+            if (open(1, 0)) quad(x + 1, y, x + 1 + D, y + 1, 'x', false);
+            if (open(-1, 0)) quad(x - D, y, x, y + 1, 'x', true);
+            if (open(0, 1)) quad(x, y + 1, x + 1, y + 1 + D, 'y', false);
+            if (open(0, -1)) quad(x, y - D, x + 1, y, 'y', true);
+            for (const [dx, dy] of [[1, 1], [1, -1], [-1, 1], [-1, -1]] as const)
+              if (open(dx, 0) && open(0, dy)) {
+                const cx = dx > 0 ? x + 1 : x - D, cy = dy > 0 ? y + 1 : y - D;
+                quad(cx, cy, cx + D, cy + D, 'x', dx < 0);
+              }
           }
           // lekkie przesunięcie każdego płata, żeby droga nie szła jak po linijce
           const r = hash2(x, y, map.seed ^ 0x77);
-          const jx = ((r & 15) / 15 - 0.5) * (soft ? 0.22 : 0.16), jy = (((r >>> 4) & 15) / 15 - 0.5) * (soft ? 0.22 : 0.16);
+          const jx = soft ? ((r & 15) / 15 - 0.5) * 0.22 : 0, jy = soft ? (((r >>> 4) & 15) / 15 - 0.5) * 0.22 : 0;
           const x0 = x - grow + jx, x1 = x + 1 + grow + jx, y0 = y - grow + jy, y1 = y + 1 + grow + jy;
           // odcień pola: większość szara, część jaśniejsza albo ciemniejsza, niektóre zielonkawe od mchu
-          const tone = 0.82 + (((r >>> 8) & 31) / 31) * 0.3;
+          const tone = 0.9 + (((r >>> 8) & 31) / 31) * 0.16;
           const moss = (r >>> 14) % 5 === 0 ? 0.12 : 0;
           shade.setRGB(tone * (1 - moss), tone * (1 + moss * 0.3), tone * (1 - moss * 1.4));
           for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
@@ -464,14 +513,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       mesh.renderOrder = soft ? 1 : 0;
       group.add(mesh);
       roadMeshes.push(mesh);
-      for (const [pts, matx] of [[ditch, ditchMat], [stream, streamMat]] as const) {
-        if (!pts.length) continue;
+      if (ditch.length) {
         const dg = new THREE.BufferGeometry();
-        dg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+        dg.setAttribute('position', new THREE.Float32BufferAttribute(ditch, 3));
+        dg.setAttribute('uv', new THREE.Float32BufferAttribute(ditchUv, 2));
         dg.computeVertexNormals();
-        const dm = new THREE.Mesh(dg, matx);
+        const dm = new THREE.Mesh(dg, ditchMaterial());
         dm.receiveShadow = true;
-        dm.renderOrder = 2;
         group.add(dm);
         roadMeshes.push(dm);
       }
