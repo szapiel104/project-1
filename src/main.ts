@@ -1008,6 +1008,8 @@ function showPerf(now: number): void {
 }
 (window as unknown as { __perf: () => Record<string, number | string> }).__perf = () => perf.last;
 (window as unknown as { __heavy: (n?: number) => unknown }).__heavy = (n) => renderer.heavy(n);
+// do testów wyglądu: spacer bez blokady kursora (kamera z oczu chłopa)
+(window as unknown as { __walk: (x: number, y: number, yaw?: number, pitch?: number) => void }).__walk = (x, y, yaw = 0, pitch = 0.2) => { renderer.startWalk(x, y, yaw); renderer.setWalkPitch(pitch); };
 
 // podpowiedź podczas spaceru oczami chłopa
 const walkHint = document.createElement('p');

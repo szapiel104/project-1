@@ -764,7 +764,7 @@ export class GameRenderer {
         uniforms: { top: { value: new THREE.Color(0x5b7fae) }, horizon: { value: new THREE.Color(0xb4b7ae) } },
         vertexShader: 'varying float h; void main() { h = normalize(position).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
         fragmentShader: 'uniform vec3 top; uniform vec3 horizon; varying float h; void main() { float k = smoothstep(-0.05, 0.6, h); gl_FragColor = vec4(mix(horizon, top, k), 1.0); }',
-        side: THREE.BackSide, depthWrite: false, fog: false,
+        side: THREE.BackSide, depthWrite: true, fog: false, // kopuła zapisuje głębię, inaczej efekt cieni (AO) traktuje niebo jak puste tło i je zamalowuje
       }));
       dome.renderOrder = -20;
       // słońce jak prawdziwe: mała, oślepiająca tarcza, wokół szeroka mgiełka; kolor ociepla się przy horyzoncie
@@ -840,6 +840,7 @@ export class GameRenderer {
   /** Wywoływane, gdy spacer się skończy (Esc) */
   onWalkEnd: () => void = () => {};
   get walking(): boolean { return !!this.walk; }
+  setWalkPitch(p: number): void { if (this.walk) this.walk.pitch = p; }
   private walkFocus = new THREE.Vector3();
   /** Środek uwagi: przy spacerze miejsce, gdzie stoi chłop (światła, cienie i deszcz liczą się wokół niego) */
   private get focusPoint(): THREE.Vector3 {
