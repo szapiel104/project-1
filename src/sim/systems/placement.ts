@@ -46,7 +46,7 @@ let queue = new Int32Array(0);
  * do wejścia każdego budynku gracza (także nowego) i do każdego jego chłopa.
  */
 /** Zalewanie od drzwi twierdzy: które pola są osiągalne pieszo. */
-function flood(g: GameState, start: number, out: Uint8Array): void {
+function flood(g: GameState, start: number, out: Uint8Array, player: number): void {
   const { width, height } = g.map;
   out.fill(0, 0, width * height);
   let head = 0, tail = 0;
@@ -58,7 +58,7 @@ function flood(g: GameState, start: number, out: Uint8Array): void {
       const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0), ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
       const nt = ny * width + nx;
-      if (out[nt] || g.occupancy[nt] !== 0 || !TERRAIN[g.map.tiles[nt] as Terrain].walkable) continue;
+      if (out[nt] || (g.occupancy[nt] !== 0 && g.gates[nt] !== player + 1) || !TERRAIN[g.map.tiles[nt] as Terrain].walkable) continue;
       out[nt] = 1; queue[tail++] = nt;
     }
   }
@@ -68,18 +68,18 @@ function flood(g: GameState, start: number, out: Uint8Array): void {
  * Czy nowy budynek odetnie coś, do czego dziś da się dojść. Liczy się tylko różnica przed/po:
  * to, co już było odcięte (np. ludzie w środku budynków), nie blokuje budowy.
  */
-function wouldBlock(g: GameState, player: number, x: number, y: number, w: number, h: number, rot: number): boolean {
+function wouldBlock(g: GameState, player: number, x: number, y: number, w: number, h: number, rot: number, needDoor = true, passable = false): boolean {
   const keep = playerKeep(g, player);
   if (!keep || keep.door < 0) return false;
   const { width, height } = g.map;
   const size = width * height;
   if (seen.length < size) { seen = new Uint8Array(size); before = new Uint8Array(size); queue = new Int32Array(size); }
-  flood(g, keep.door, before);
-  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = -1;
+  flood(g, keep.door, before, player);
+  if (!passable) for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = -1;
   const door = findDoor(g, x, y, w, h, rot);
-  flood(g, keep.door, seen);
+  flood(g, keep.door, seen, player);
   const lost = (t: number): boolean => before[t] === 1 && seen[t] === 0;
-  let blocked = door < 0 || !seen[door];
+  let blocked = needDoor && (door < 0 || !seen[door]);
   if (!blocked) for (const b of g.buildings) if (b.owner === player && b.door >= 0 && lost(b.door)) { blocked = true; break; }
   if (!blocked) for (const u of g.units) {
     if (u.owner !== player) continue;
@@ -126,8 +126,8 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
         if (g.map.tiles[ty * width + tx] === def.needsTerrain.terrain) { found = true; break; }
     if (!found) return 'place.needTerrain';
   }
-  if (findDoor(g, x, y, fw, fh, rot) < 0) return 'place.noAccess';
-  if (wouldBlock(g, player, x, y, fw, fh, rot)) return 'place.blocks';
+  if (!def.wall && !def.gate && findDoor(g, x, y, fw, fh, rot) < 0) return 'place.noAccess';
+  if (wouldBlock(g, player, x, y, fw, fh, rot, !def.wall && !def.gate, !!def.gate)) return 'place.blocks';
   if (checkCost && !canAfford(g, player, def)) return 'place.cost';
   return null;
 }
@@ -136,11 +136,13 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
 export function addBuilding(g: GameState, type: number, owner: number, x: number, y: number, rot = 0): Building {
   const def = BUILDINGS[type]!;
   const fp = footprint(def, rot);
-  const door = findDoor(g, x, y, fp.w, fp.h, rot);
+  // umocnienia nie mają wejścia; brama sama jest przejściem
+  const door = def.wall || def.gate ? -1 : findDoor(g, x, y, fp.w, fp.h, rot);
   const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false, hp: maxHp(type), build: 0 };
   for (let ty = y; ty < y + fp.h; ty++)
     for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
   if (door >= 0) g.reserved[door]!++;
+  if (def.gate) g.gates[y * g.map.width + x] = owner + 1;
   g.buildings.push(b);
   return b;
 }
@@ -179,7 +181,7 @@ export function demolish(g: GameState, player: number, id: number, destroyed = f
   if (!def.buildable && !destroyed) return false;
   const fp = footprint(def, b.rot);
   for (let ty = b.y; ty < b.y + fp.h; ty++)
-    for (let tx = b.x; tx < b.x + fp.w; tx++) g.occupancy[ty * g.map.width + tx] = 0;
+    for (let tx = b.x; tx < b.x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = 0; g.gates[ty * g.map.width + tx] = 0; }
   if (b.door >= 0) g.reserved[b.door]!--;
   g.buildings.splice(i, 1);
   for (const u of g.units) {

@@ -136,7 +136,7 @@ function pick(id: string | null): void {
   touchTile = null;
   hud.setPicked(id);
   canvas.classList.toggle('placing', id !== null);
-  const road = id !== null && !!BUILDINGS[buildingIndex(id)]?.road;
+  const road = id !== null && (!!BUILDINGS[buildingIndex(id)]?.road || !!BUILDINGS[buildingIndex(id)]?.line);
   if (plan.state !== 'none') cancelPlan();
   renderer.setPainting(road);
   if (road) hud.toast(t('hud.paintRoad'));
@@ -253,7 +253,7 @@ function showPlan(): void {
   for (const res of Object.keys(def.cost) as ResourceId[]) left.set(res, p.res[resIndex(res)]!);
   let count = 0;
   plan.tiles = planLine(plan.start, plan.end).map(({ x, y }) => {
-    let ok = !game.roads[y * game.map.width + x] && canPlace(game, ME, type, x, y, false) === null;
+    let ok = (!def.road || !game.roads[y * game.map.width + x]) && canPlace(game, ME, type, x, y, false) === null;
     if (ok) for (const [res, n] of Object.entries(def.cost) as [ResourceId, number][]) if ((left.get(res) ?? 0) < n) ok = false;
     if (ok) { for (const [res, n] of Object.entries(def.cost) as [ResourceId, number][]) left.set(res, left.get(res)! - n); count++; }
     return { x, y, ok };
@@ -310,7 +310,7 @@ renderer.onClick = (tile, touch) => {
     return;
   }
   // na ekranie dotykowym pierwsze dotknięcie pokazuje działkę, drugie w tym samym miejscu stawia budynek
-  if (BUILDINGS[buildingIndex(picked)]?.road) {
+  if (BUILDINGS[buildingIndex(picked)]?.road || BUILDINGS[buildingIndex(picked)]?.line) {
     // puszczenie przycisku po przeciągnięciu: plan czeka na decyzję
     if (plan.state === 'drag') { plan.state = 'wait'; showPlan(); }
     else if (plan.state === 'done') plan.state = 'none';

@@ -344,7 +344,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   };
   // panel z kartami wyskakuje nad paskiem narzędzi tylko wtedy, gdy jest co pokazać
   const syncPicker = (): void => { buildbar.hidden = cards.hidden && buildFoot.hidden; };
-  const CAT_ICON: Record<string, string> = { settlement: 'house', food: 'farm', industry: 'woodcutter', military: 'barracks', roads: 'roadStone' };
+  const CAT_ICON: Record<string, string> = { settlement: 'house', food: 'farm', industry: 'woodcutter', military: 'barracks', defense: 'watchtower', roads: 'roadStone' };
   for (const id of CATEGORIES) {
     const b = el('button', 'cat');
     const src = thumbs.get(CAT_ICON[id] ?? '');

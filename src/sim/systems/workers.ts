@@ -209,7 +209,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
 
 function move(g: GameState, u: Unit): void {
   const next = u.path[0]!;
-  if (!walkable(g, next)) { u.path = []; return; } // ktoś postawił budynek na drodze
+  if (!walkable(g, next, u.owner)) { u.path = []; return; } // ktoś postawił budynek na drodze
   const w = g.map.width;
   const nx = next % w, ny = (next - nx) / w;
   const tx = nx * FP + FP / 2, ty = ny * FP + FP / 2;
@@ -267,7 +267,7 @@ export function workerSystem(g: GameState): void {
     if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
     const here = tileOf(g, u);
     if (goal(here)) { arrive(g, u, prod); continue; }
-    const path = findPath(g, here, goal);
+    const path = findPath(g, here, goal, 900, u.owner);
     if (path && path.length) u.path = path;
     else u.wait = RETRY_TICKS;
   }

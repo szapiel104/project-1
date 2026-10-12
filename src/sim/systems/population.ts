@@ -32,7 +32,7 @@ function removePeasant(g: GameState, player: number): void {
   const { width: w, height: h } = g.map;
   const from = (u.py >> 8) * w + (u.px >> 8);
   const edge = (t: number): boolean => { const x = t % w, y = (t - x) / w; return x === 0 || y === 0 || x === w - 1 || y === h - 1; };
-  const path = findPath(g, from, edge, 4000) ?? [];
+  const path = findPath(g, from, edge, 4000, player) ?? [];
   g.travelers.push({ id: u.id, owner: player, px: u.px, py: u.py, tx: u.px, ty: u.py, leaving: true, path: path.slice().reverse() });
 }
 
@@ -43,7 +43,7 @@ function arrive(g: GameState, player: number): void {
   const { width: w, height: h } = g.map;
   // brzeg najbliższy twierdzy, potem szukamy drogi od bramy do niego i idziemy nią w odwrotną stronę
   const edge = (t: number): boolean => { const x = t % w, y = (t - x) / w; return x === 0 || y === 0 || x === w - 1 || y === h - 1; };
-  const path = findPath(g, keep.door, edge, 4000);
+  const path = findPath(g, keep.door, edge, 4000, player);
   if (!path || !path.length) { spawnPeasant(g, player); return; }
   const start = path[path.length - 1]!;
   const sx = start % w, sy = (start - sx) / w;

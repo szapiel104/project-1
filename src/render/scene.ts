@@ -5,7 +5,7 @@ import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
-import { animateBuilding, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
+import { animateBuilding, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
@@ -617,8 +617,59 @@ export class GameRenderer {
       this.syncRoads(this.state, this.view);
       this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
-      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); }
+      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); }
     this.composer.render();
+  }
+
+  private wallKey = '';
+  private wallShafts: THREE.InstancedMesh | null = null;
+  private wallTips: THREE.InstancedMesh | null = null;
+  /** Częstokół: bale łączą się z sąsiednimi palisadami, bramami i wieżami; brama obraca się w linii muru */
+  private syncWalls(g: GameState, view: TerrainView): void {
+    const { width, height } = g.map;
+    const walls = g.buildings.filter((b) => { const d = BUILDINGS[b.type]!; return d.wall || d.gate; });
+    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 8) : 9}`).join(',');
+    if (key === this.wallKey) return;
+    this.wallKey = key;
+    const solid = new Map<number, GameState['buildings'][number]>();
+    for (const b of walls) { const fp = footprint(BUILDINGS[b.type]!, b.rot); for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) solid.set(y * width + x, b); }
+    const at = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && solid.has(y * width + x);
+    if (!this.wallShafts) {
+      const bark = (new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.95, map: pattern('bark') }));
+      this.wallShafts = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.1, 1, 7).translate(0, 0.5, 0), bark, 4096);
+      this.wallTips = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7).translate(0, 0.5, 0), bark, 4096);
+      for (const m of [this.wallShafts, this.wallTips]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); }
+    }
+    const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
+    let n = 0;
+    for (const b of walls) {
+      const def = BUILDINGS[b.type]!;
+      if (def.gate) {
+        // brama staje w poprzek muru: gdy sąsiedzi są po bokach w osi x, wrota idą wzdłuż x
+        const mesh = this.buildingMeshes.get(b.id);
+        if (mesh) mesh.rotation.y = at(b.x - 1, b.y) || at(b.x + 1, b.y) ? 0 : Math.PI / 2;
+        continue;
+      }
+      if (!def.line) continue;
+      const grow = b.build ? 0.15 + 0.85 * (1 - b.build / buildWork(b.type)) : 1;
+      const links: [boolean, boolean, boolean, boolean] = [at(b.x + 1, b.y), at(b.x - 1, b.y), at(b.x, b.y + 1), at(b.x, b.y - 1)];
+      const cx = b.x + 0.5, cz = b.y + 0.5;
+      for (const log of palisadeLogs(links, b.id)) {
+        if (n >= 4096) break;
+        const lx = cx + log.x, lz = cz + log.z;
+        const y = view.heightAt(lx, lz) - 0.05;
+        const h = log.h * grow;
+        e.set((log.x * 7 % 1) * 0.05, 0, (log.z * 5 % 1) * 0.05);
+        q.setFromEuler(e);
+        M4.compose(p.set(lx - width / 2, y, lz - height / 2), q, sc.set(log.r, h, log.r));
+        this.wallShafts.setMatrixAt(n, M4);
+        M4.compose(p.set(lx - width / 2, y + h, lz - height / 2), q, sc.set(log.r, log.r * 2.2, log.r));
+        this.wallTips!.setMatrixAt(n, M4);
+        n++;
+      }
+    }
+    this.wallShafts.count = n; this.wallTips!.count = n;
+    this.wallShafts.instanceMatrix.needsUpdate = true; this.wallTips!.instanceMatrix.needsUpdate = true;
   }
 
   private dustAt = new Map<number, number>();
@@ -664,6 +715,8 @@ export class GameRenderer {
       const patch = mesh.getObjectByName('patch');
       if (patch) patch.visible = false; // udeptana ziemia wisiała nad pochyłym terenem; teren pod budynkiem i tak jest czysty
       if (base) base.visible = false; // żadnego podniesienia pod budynkiem
+      const preview = mesh.getObjectByName('preview');
+      if (preview) preview.visible = false; // bale częstokołu rysuje syncWalls
       mesh.traverse((o) => {
         const part = o as THREE.Mesh;
         if (!part.isMesh || o.parent?.name === 'smoke' || o.name === 'patch') return;

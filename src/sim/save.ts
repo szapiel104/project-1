@@ -62,7 +62,7 @@ export function deserialize(d: SaveData): GameState | null {
       soldiers: (d.soldiers ?? []).map((x) => ({ ...x, path: [...x.path] })),
       corpses: (d.corpses ?? []).map((c) => ({ ...c })),
       travelers: (d.travelers ?? []).map((t) => ({ ...t, path: [...t.path] })),
-      occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size),
+      occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size),
       rubble: d.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     };
     for (const r of g.rubble) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g.reserved[y * map.width + x]!++;
@@ -75,6 +75,7 @@ export function deserialize(d: SaveData): GameState | null {
       const fp = footprint(def, b.rot);
       for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * map.width + x] = b.id;
       if (b.door >= 0) g.reserved[b.door]!++;
+      if (def.gate) g.gates[b.y * map.width + b.x] = b.owner + 1;
     }
     return g;
   } catch {

@@ -8,8 +8,9 @@ let mark = new Int32Array(0);
 let generation = 0;
 
 /** Czy po polu da się przejść (teren i brak budynku). */
-export function walkable(g: GameState, tile: number): boolean {
-  return g.occupancy[tile] === 0 && TERRAIN[g.map.tiles[tile] as Terrain].walkable;
+export function walkable(g: GameState, tile: number, player = -1): boolean {
+  // brama przepuszcza tylko swoich
+  return (g.occupancy[tile] === 0 || (player >= 0 && g.gates[tile] === player + 1)) && TERRAIN[g.map.tiles[tile] as Terrain].walkable;
 }
 
 /**
@@ -17,7 +18,7 @@ export function walkable(g: GameState, tile: number): boolean {
  * do najbliższego pola spełniającego `isGoal`. Zwraca listę pól bez startu albo null.
  * Remisy rozstrzyga numer pola, więc wynik jest identyczny u każdego gracza.
  */
-export function findPath(g: GameState, from: number, isGoal: (tile: number) => boolean, maxCost = 900): number[] | null {
+export function findPath(g: GameState, from: number, isGoal: (tile: number) => boolean, maxCost = 900, player = -1): number[] | null {
   const { width: w, height: h } = g.map;
   const size = w * h;
   if (dist.length < size) { dist = new Int32Array(size); prev = new Int32Array(size); mark = new Int32Array(size); }
@@ -72,8 +73,8 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
         const nx = x + dx, ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
         const nt = ny * w + nx;
-        if (!walkable(g, nt)) continue;
-        if (dx && dy && (!walkable(g, y * w + nx) || !walkable(g, ny * w + x))) continue;
+        if (!walkable(g, nt, player)) continue;
+        if (dx && dy && (!walkable(g, y * w + nx, player) || !walkable(g, ny * w + x, player))) continue;
         // po drodze idzie się taniej, więc ścieżka chętnie nią prowadzi
         const nc = cost + Math.round(((dx && dy ? 14 : 10) * RULES.roadPathCost[g.roads[nt]!]!) / 100);
         if (mark[nt] === generation && dist[nt]! <= nc) continue;

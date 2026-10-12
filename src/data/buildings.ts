@@ -17,7 +17,7 @@ export interface ProductionDef {
 }
 
 /** Kategorie w menu budowy. Nowa kategoria = wpis tutaj i nazwa w i18n. */
-export const CATEGORIES = ['settlement', 'food', 'industry', 'military', 'roads'] as const;
+export const CATEGORIES = ['settlement', 'food', 'industry', 'military', 'defense', 'roads'] as const;
 export type CategoryId = (typeof CATEGORIES)[number];
 
 export interface BuildingDef {
@@ -46,6 +46,12 @@ export interface BuildingDef {
   workView?: 'inside' | 'field';
   /** Wytrzymałość (domyślnie 40 na pole działki) */
   hp?: number;
+  /** Umocnienie bez wejścia (palisada, wieża): nie potrzebuje drzwi */
+  wall?: boolean;
+  /** Brama: swoi przechodzą, wrogowie muszą ją rozbić */
+  gate?: boolean;
+  /** Stawiany przeciąganiem w linii, jak droga */
+  line?: boolean;
   /** Czy gracz może go postawić (twierdza powstaje sama) */
   buildable: boolean;
 }
@@ -120,6 +126,10 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 30, stone: 30 }, buildable: true },
   // Cmentarz: grabarz znosi tu ciała poległych z pola bitwy
   { id: 'cemetery', category: 'military', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 15, stone: 10 }, staff: true, buildable: true },
+  // Umocnienia z bali: częstokół stawiany przeciąganiem, brama dla swoich, drewniana wieża strażnicza
+  { id: 'palisade', category: 'defense', name: 'b.palisade', w: 1, h: 1, cost: { wood: 1 }, hp: 260, wall: true, line: true, buildable: true },
+  { id: 'gate', category: 'defense', name: 'b.gate', w: 1, h: 1, cost: { wood: 8 }, hp: 600, gate: true, buildable: true },
+  { id: 'watchtower', category: 'defense', name: 'b.watchtower', w: 2, h: 2, cost: { wood: 16 }, hp: 700, wall: true, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

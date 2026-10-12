@@ -33,3 +33,27 @@ describe('budowa', () => {
     expect(b.build).toBe(0);
   });
 });
+
+describe('palisada i brama', () => {
+  it('brama przepuszcza swoich, a obcych nie; palisada nie potrzebuje wejścia', async () => {
+    const { placeBuilding } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const { walkable } = await import('../src/sim/path');
+    const g = createGame(5, '1v1', 2);
+    const keep = g.buildings[0]!;
+    let x = 0, y = 0;
+    const { canPlace: cp } = await import('../src/sim/systems/placement');
+    for (let r = 4; r < 15 && !x; r++) for (let d = -r; d <= r && !x; d++) if (cp(g, 0, buildingIndex('palisade'), keep.x + d, keep.y + r) === null && cp(g, 0, buildingIndex('gate'), keep.x + d, keep.y + r + 1) === null) { x = keep.x + d; y = keep.y + r; }
+    const { canPlace } = await import('../src/sim/systems/placement');
+    expect(canPlace(g, 0, buildingIndex('palisade'), x, y)).toBe(null);
+    expect(placeBuilding(g, 0, buildingIndex('palisade'), x, y)).toBe(true);
+    expect(canPlace(g, 0, buildingIndex('gate'), x, y + 1)).toBe(null);
+    expect(placeBuilding(g, 0, buildingIndex('gate'), x, y + 1)).toBe(true);
+    const w = g.map.width;
+    expect(walkable(g, y * w + x, 0)).toBe(false);
+    expect(walkable(g, (y + 1) * w + x, 0)).toBe(true);
+    expect(walkable(g, (y + 1) * w + x, 1)).toBe(false);
+    const back = deserialize(serialize(g, '1v1'))!;
+    expect(walkable(back, (y + 1) * w + x, 0)).toBe(true);
+  });
+});

@@ -289,6 +289,21 @@ export function setRubble(model: THREE.Object3D, ratio: number): void {
 }
 
 /** Noc: okna zaczynają świecić ciepłym światłem. `k` od 0 (dzień) do 1 (środek nocy). */
+/** Bale częstokołu dla pola: środkowy pal i pół przęsła w stronę każdego sąsiada z umocnieniem */
+export function palisadeLogs(links: [boolean, boolean, boolean, boolean], seed: number): { x: number; z: number; h: number; r: number }[] {
+  const out: { x: number; z: number; h: number; r: number }[] = [];
+  const rand = (i: number): number => { const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453; return v - Math.floor(v); };
+  out.push({ x: 0, z: 0, h: 1.25 + rand(0) * 0.2, r: 0.1 });
+  const dirs: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  let n = 1;
+  dirs.forEach(([dx, dz], k) => {
+    if (!links[k]) return;
+    for (const t of [0.2, 0.4]) { out.push({ x: dx * t, z: dz * t, h: 1.15 + rand(n) * 0.25, r: 0.085 + rand(n + 7) * 0.02 }); n++; }
+  });
+  if (n === 1) for (const [dx, dz] of dirs) { out.push({ x: dx * 0.2, z: dz * 0.2, h: 1.1 + rand(n) * 0.2, r: 0.09 }); n++; }
+  return out;
+}
+
 export function setNight(k: number): void {
   M.window.emissive.setHex(0xffb050);
   M.window.emissiveIntensity = k * 0.45;
@@ -1272,6 +1287,68 @@ const BUILDERS: Record<string, Builder> = {
     // sztandar w barwach drużyny przy wejściu
     box(g, M.woodDark, 0.06, 1.5, 0.06, -1.3, 0, 0.2);
     box(g, flag, 0.04, 0.6, 0.36, -1.3, 0.85, 0.4);
+  },
+  palisade(g) {
+    // na mapie częstokół rysuje scena jako jeden zestaw bali łączący sąsiednie pola (palisadeLogs);
+    // tu tylko podgląd do miniatury i ducha przy stawianiu
+    const preview = new THREE.Group();
+    preview.name = 'preview';
+    for (const log of palisadeLogs([true, true, false, false], 3)) {
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(log.r, log.r * 1.1, log.h, 7), M.bark);
+      shaft.position.set(log.x, log.h / 2, log.z); preview.add(shaft);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(log.r, log.r * 2.2, 7), M.bark);
+      tip.position.set(log.x, log.h + log.r * 1.1, log.z); preview.add(tip);
+    }
+    g.add(preview);
+  },
+  gate(g, _team, flag) {
+    // Brama w częstokole: dwa grube słupy, belka z daszkiem, dwuskrzydłowe wrota z okuciami, uchylone
+    for (const x of [-0.46, 0.46]) {
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 1.55, 8), M.bark);
+      post.position.set(x, 0.775, 0); g.add(post);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.22, 8), M.bark);
+      tip.position.set(x, 1.66, 0); g.add(tip);
+    }
+    box(g, M.woodDark, 1.1, 0.12, 0.16, 0, 1.28, 0);
+    box(g, M.wood, 1.2, 0.04, 0.42, 0, 1.4, 0).rotation.x = 0.12;
+    for (const side of [-1, 1]) {
+      const leaf = new THREE.Group();
+      leaf.position.set(side * 0.4, 0, 0);
+      leaf.rotation.y = side * 0.5; // uchylone do środka
+      box(leaf, M.wood, 0.4, 1.1, 0.06, -side * 0.2, 0.05, 0);
+      for (const y of [0.3, 0.85]) box(leaf, M.iron, 0.38, 0.05, 0.075, -side * 0.2, y, 0);
+      g.add(leaf);
+    }
+    box(g, flag, 0.3, 0.22, 0.02, 0, 1.0, 0.1);
+  },
+  watchtower(g, _team, flag) {
+    // Drewniana wieża strażnicza: cztery nogi z bali, zastrzały, pomost z balustradą, dach ze strzechy, drabina
+    const r = 0.68, H = 1.9;
+    for (const [x, z] of [[-r, -r], [r, -r], [-r, r], [r, r]] as const) {
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.09, H + 0.9, 7), M.bark);
+      leg.position.set(x, (H + 0.9) / 2, z); g.add(leg);
+    }
+    // zastrzały na krzyż
+    for (const [x, z, ry] of [[0, -r, 0], [0, r, 0], [-r, 0, Math.PI / 2], [r, 0, Math.PI / 2]] as const) {
+      const brace = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 2.0, 5), M.woodDark);
+      brace.position.set(x, H * 0.48, z); brace.rotation.set(0, ry, 0.72); g.add(brace);
+    }
+    box(g, M.wood, 1.65, 0.1, 1.65, 0, H, 0);
+    // balustrada z bali
+    for (const [x, z, w, d] of [[0, -r, 1.5, 0.07], [0, r, 1.5, 0.07], [-r, 0, 0.07, 1.5], [r, 0, 0.07, 1.5]] as const) {
+      box(g, M.woodDark, w, 0.07, d, x, H + 0.42, z);
+      box(g, M.woodDark, w, 0.06, d, x, H + 0.2, z);
+    }
+    const roof = new THREE.Mesh(new THREE.ConeGeometry(1.25, 0.8, 4), M.thatch);
+    roof.rotation.y = Math.PI / 4; roof.position.set(0, H + 1.22, 0); roof.name = 'roof'; g.add(roof);
+    // drabina
+    const ladder = new THREE.Group();
+    ladder.position.set(0.25, 0, r + 0.35); ladder.rotation.x = -0.18;
+    for (const x of [-0.13, 0.13]) box(ladder, M.wood, 0.04, H + 0.1, 0.04, x, 0, 0);
+    for (let y = 0.2; y < H; y += 0.25) box(ladder, M.wood, 0.28, 0.03, 0.04, 0, y, 0);
+    g.add(ladder);
+    box(g, M.woodDark, 0.04, 0.7, 0.04, -r, H + 0.9, -r);
+    box(g, flag, 0.02, 0.22, 0.34, -r, H + 1.35, -r + 0.18);
   },
   cemetery(g, _team, flag) {
     // Cmentarz: płot z żerdzi, rzędy mogił z drewnianymi krzyżami, kamienny nagrobek, kaplica z dzwonkiem, łopata grabarza

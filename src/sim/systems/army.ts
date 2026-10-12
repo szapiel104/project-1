@@ -84,7 +84,7 @@ function tileOf(g: GameState, s: Soldier): number {
 
 function step(g: GameState, s: Soldier): void {
   const next = s.path[0]!;
-  if (!walkable(g, next)) { s.path = []; return; }
+  if (!walkable(g, next, s.owner)) { s.path = []; return; }
   const w = g.map.width;
   const nx = next % w, ny = (next - nx) / w;
   const tx = nx * FP + FP / 2, ty = ny * FP + FP / 2;
@@ -99,7 +99,7 @@ function step(g: GameState, s: Soldier): void {
 let budget = 10;
 
 /** Jeden krok w stronę celu: sąsiednie przechodnie pole (bez ścinania rogów), wolne, najbliżej celu; -1 gdy brak */
-function greedy(g: GameState, from: number, to: number, taken: Set<number>): number {
+function greedy(g: GameState, from: number, to: number, taken: Set<number>, player: number): number {
   const w = g.map.width, h = g.map.height;
   const fx = from % w, fy = (from - fx) / w, tx = to % w, ty = (to - tx) / w;
   let best = -1, bd = (fx - tx) ** 2 + (fy - ty) ** 2;
@@ -109,8 +109,8 @@ function greedy(g: GameState, from: number, to: number, taken: Set<number>): num
       const x = fx + dx, y = fy + dy;
       if (x < 0 || y < 0 || x >= w || y >= h) continue;
       const t = y * w + x;
-      if (t === to || taken.has(t) || !walkable(g, t)) continue;
-      if (dx && dy && (!walkable(g, fy * w + x) || !walkable(g, y * w + fx))) continue;
+      if (t === to || taken.has(t) || !walkable(g, t, player)) continue;
+      if (dx && dy && (!walkable(g, fy * w + x, player) || !walkable(g, y * w + fx, player))) continue;
       const d = (x - tx) ** 2 + (y - ty) ** 2;
       if (d < bd) { bd = d; best = t; }
     }
@@ -178,7 +178,7 @@ export function armySystem(g: GameState): void {
         // podchodzi na wolne pole obok wroga (nie tam, gdzie stoi już ktoś inny); drogę odświeża co kilka ticków
         // bez szukania drogi: krok na sąsiednie wolne pole najbliżej wroga (tanie nawet przy setkach walczących)
         if (!s.path.length) {
-          const next = greedy(g, tileOf(g, s), tileOf(g, foe), taken);
+          const next = greedy(g, tileOf(g, s), tileOf(g, foe), taken, s.owner);
           if (next >= 0) { s.path = [next]; taken.add(next); }
         }
         if (s.path.length) step(g, s);
@@ -194,7 +194,7 @@ export function armySystem(g: GameState): void {
       const here = tileOf(g, s);
       if ((standing.get(here) ?? 0) > 1) {
         const free = formation(g, here, 9).find((t) => !taken.has(t) && t !== here);
-        if (free !== undefined) { const n = greedy(g, here, free, taken); if (n >= 0) { s.path = [n]; taken.add(n); standing.set(here, standing.get(here)! - 1); } }
+        if (free !== undefined) { const n = greedy(g, here, free, taken, s.owner); if (n >= 0) { s.path = [n]; taken.add(n); standing.set(here, standing.get(here)! - 1); } }
       }
       continue;
     }
@@ -203,8 +203,19 @@ export function armySystem(g: GameState): void {
     const goal = s.goal;
     if (budget <= 0) continue; // ruszy w następnym ticku
     budget--;
-    const path = findPath(g, here, (t) => t === goal, 2400);
+    const path = findPath(g, here, (t) => t === goal, 2400, s.owner);
     if (path && path.length) s.path = path;
+    else if (!path) {
+      // droga zamknięta (palisada, brama): bierze na cel najbliższe wrogie umocnienie i je rozbija
+      let best = Infinity, wall: Building | undefined;
+      for (const o of g.buildings) {
+        const d = BUILDINGS[o.type]!;
+        if (!(d.wall || d.gate) || team(g, o.owner) === team(g, s.owner)) continue;
+        const dist = Math.abs(o.x - (here % g.map.width)) + Math.abs(o.y - Math.floor(here / g.map.width));
+        if (dist < best) { best = dist; wall = o; }
+      }
+      if (wall) { s.target = wall.id; s.goal = -1; }
+    }
     else { s.goal = -1; s.wait = RETRY; }
   }
   // polegli zostają na polu jako ciała, aż zabierze je grabarz
@@ -292,7 +303,7 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
   if (!s.path.length && budget > 0) {
     budget--;
     const target = b;
-    const path = findPath(g, here, (t) => rectGap(g, t, target) === 1 && (t === here || !taken.has(t)), 600);
+    const path = findPath(g, here, (t) => rectGap(g, t, target) === 1 && (t === here || !taken.has(t)), 600, s.owner);
     s.path = path ?? [];
     if (s.path.length) taken.add(s.path[s.path.length - 1]!);
   }

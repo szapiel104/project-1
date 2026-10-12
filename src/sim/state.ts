@@ -175,6 +175,8 @@ export interface GameState {
   soldiers: Soldier[];
   corpses: Corpse[];
   travelers: Traveler[];
+  /** Brama na polu: właściciel + 1 (0 = brak). Swoi przechodzą, obcy nie */
+  gates: Uint8Array;
   /** Id budynku na polu albo 0 */
   occupancy: Int32Array;
   /** Ile wejść do budynków leży na polu (takiego pola nie wolno zabudować) */
@@ -195,7 +197,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const size = map.width * map.height;
   const g: GameState = {
     tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [], corpses: [], travelers: [],
-    occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), rubble: [], nextId: 1,
+    occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), rubble: [], nextId: 1,
   };
   const keep = buildingIndex('keep');
   const starts = [...map.starts].sort((a, b) => a.player - b.player);
