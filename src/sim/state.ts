@@ -365,6 +365,7 @@ export function housing(g: GameState, player: number): number {
 /** Łączna pojemność składów albo spichlerzy gracza. */
 export function storeCapacity(g: GameState, player: number, kind: StoreKind): number {
   let n = 0;
+  if (g.players[player]?.dev) return 1_000_000; // tryb deweloperski: składy bez limitu
   for (const b of g.buildings) if (b.owner === player && !b.build) n += BUILDINGS[b.type]!.capacity?.[kind] ?? 0;
   return n;
 }

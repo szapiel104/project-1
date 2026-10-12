@@ -159,7 +159,9 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
         p.res[u.carryRes]! += put;
         p.stats.gathered += put;
         u.carryAmt -= put;
-        if (u.carryAmt > 0) { u.wait = RETRY_TICKS; break; }
+        // skład pełny: chwilę czeka, a gdy dalej nie ma miejsca, zostawia ładunek i wraca do pracy (nie stoi w nieskończoność)
+        if (u.carryAmt > 0 && ++u.timer < 6) { u.wait = RETRY_TICKS; break; }
+        u.timer = 0;
       }
       u.carryRes = -1; u.carryAmt = 0;
       u.phase = u.job ? Phase.Returning : Phase.Idle;
