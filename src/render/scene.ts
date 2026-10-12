@@ -697,7 +697,7 @@ export class GameRenderer {
   }
 
   // --- niebo nocą: gwiazdy, księżyc z poświatą; w deszczu ciemne chmury zasłaniają niebo ---
-  private sky: { group: THREE.Group; stars: THREE.Points; moon: THREE.Sprite; clouds: THREE.Sprite[] } | null = null;
+  private sky: { group: THREE.Group; stars: THREE.Points; moon: THREE.Sprite; clouds: THREE.Sprite[]; dome: THREE.Mesh; sunDisc: THREE.Sprite } | null = null;
   private updateSky(): void {
     if (!this.sky) {
       const group = new THREE.Group();
@@ -729,7 +729,7 @@ export class GameRenderer {
       // chmury: miękkie, ciemne kłęby
       const cc = document.createElement('canvas'); cc.width = cc.height = 128;
       const y = cc.getContext('2d')!;
-      for (let i = 0; i < 9; i++) { const g2 = y.createRadialGradient(30 + Math.random() * 68, 50 + Math.random() * 30, 0, 64, 64, 40 + Math.random() * 20); g2.addColorStop(0, 'rgba(60,64,72,0.5)'); g2.addColorStop(1, 'rgba(60,64,72,0)'); y.fillStyle = g2; y.fillRect(0, 0, 128, 128); }
+      for (let i = 0; i < 9; i++) { const g2 = y.createRadialGradient(30 + Math.random() * 68, 50 + Math.random() * 30, 0, 64, 64, 40 + Math.random() * 20); g2.addColorStop(0, 'rgba(255,255,255,0.55)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); y.fillStyle = g2; y.fillRect(0, 0, 128, 128); }
       const ctex = new THREE.CanvasTexture(cc);
       const clouds: THREE.Sprite[] = [];
       for (let i = 0; i < 14; i++) {
@@ -739,10 +739,28 @@ export class GameRenderer {
         c2.scale.set(260, 120, 1);
         clouds.push(c2); group.add(c2);
       }
-      group.add(stars, moon);
-      for (const o of [stars, moon]) o.renderOrder = -10;
+      // kopuła nieba: u góry głęboki błękit, przy horyzoncie kolor mgły (płynne przejście w krajobraz)
+      const domeGeo = new THREE.SphereGeometry(420, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2 + 0.15);
+      const dome = new THREE.Mesh(domeGeo, new THREE.ShaderMaterial({
+        uniforms: { top: { value: new THREE.Color(0x5b7fae) }, horizon: { value: new THREE.Color(0xb4b7ae) } },
+        vertexShader: 'varying float h; void main() { h = normalize(position).y; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: 'uniform vec3 top; uniform vec3 horizon; varying float h; void main() { float k = smoothstep(-0.05, 0.6, h); gl_FragColor = vec4(mix(horizon, top, k), 1.0); }',
+        side: THREE.BackSide, depthWrite: false, fog: false,
+      }));
+      dome.renderOrder = -20;
+      // słońce: jasna tarcza z poświatą
+      const sc = document.createElement('canvas'); sc.width = sc.height = 128;
+      const sx2 = sc.getContext('2d')!;
+      const sg = sx2.createRadialGradient(64, 64, 6, 64, 64, 64);
+      sg.addColorStop(0, 'rgba(255,250,230,1)'); sg.addColorStop(0.18, 'rgba(255,240,200,0.9)'); sg.addColorStop(0.45, 'rgba(255,220,160,0.25)'); sg.addColorStop(1, 'rgba(255,220,160,0)');
+      sx2.fillStyle = sg; sx2.fillRect(0, 0, 128, 128);
+      const stex = new THREE.CanvasTexture(sc); stex.colorSpace = THREE.SRGBColorSpace;
+      const sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex, transparent: true, fog: false, depthWrite: false }));
+      sunDisc.scale.setScalar(90);
+      group.add(dome, stars, moon, sunDisc);
+      for (const o of [stars, moon, sunDisc]) o.renderOrder = -10;
       this.scene.add(group);
-      this.sky = { group, stars, moon, clouds };
+      this.sky = { group, stars, moon, clouds, dome, sunDisc };
     }
     const sk = this.sky;
     const clear = 1 - this.rain;
@@ -752,8 +770,21 @@ export class GameRenderer {
     const d = this.sunDir.clone().normalize();
     sk.moon.position.set(d.x * 340, Math.max(60, d.y * 340), d.z * 340); // nocą kierunek „słońca” to droga księżyca
     (sk.moon.material as THREE.SpriteMaterial).opacity = Math.max(0, (this.night - 0.15) / 0.85) * (0.3 + 0.7 * clear);
+    // kolory kopuły: zenit zależny od pory (dzień błękit, świt/zmierzch cieplej, noc granat), horyzont = mgła
+    const bg = this.scene.background as THREE.Color;
+    const u = (this.sky.dome.material as THREE.ShaderMaterial).uniforms;
+    (u.horizon!.value as THREE.Color).copy(bg);
+    const dayTop = new THREE.Color(0x4f76a8).lerp(new THREE.Color(0x6a6f78), this.rain * 0.8);
+    (u.top!.value as THREE.Color).copy(dayTop).lerp(new THREE.Color(0x070b18), this.night);
+    // słońce widać tylko w dzień i bez deszczu
+    const sd = this.sunDir.clone().normalize();
+    sk.sunDisc.position.set(sd.x * 360, Math.max(30, sd.y * 360), sd.z * 360);
+    (sk.sunDisc.material as THREE.SpriteMaterial).opacity = (1 - this.night) * (1 - this.rain) * (sd.y > 0.1 ? 1 : 0);
     for (const [i, c] of sk.clouds.entries()) {
-      (c.material as THREE.SpriteMaterial).opacity = this.rain * 0.85;
+      // w dzień białe obłoki, w deszczu ciemne i gęste, nocą prawie niewidoczne
+      const m2 = c.material as THREE.SpriteMaterial;
+      m2.color.set(0xf2f0ea).lerp(new THREE.Color(0x5a5e66), Math.max(this.rain, this.night * 0.8));
+      m2.opacity = Math.max(this.rain * 0.85, (1 - this.night) * 0.35 * (i % 2 ? 1 : 0.6));
       c.position.x += Math.sin(i) * 0.02; // powoli dryfują
     }
   }
