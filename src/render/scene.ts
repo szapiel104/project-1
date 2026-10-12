@@ -405,7 +405,9 @@ export class GameRenderer {
   warmup(): void { this.renderer.compile(this.scene, this.cam.camera); this.composer.render(); }
 
   /** Powolny obrót kamery wokół osady, gdy otwarte jest menu */
-  orbit(dt: number): void { this.cam.spin(dt * 0.05); }
+  orbit(dt: number): void { this.cam.cinematic(true); this.cam.spin(dt * 0.035); }
+  /** Koniec ujęcia z menu: wraca zwykły widok strategiczny */
+  endOrbit(): void { this.cam.cinematic(false); }
 
   frame(dt: number, alpha: number): void {
     this.cam.update(dt);

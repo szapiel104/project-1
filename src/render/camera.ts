@@ -97,6 +97,14 @@ export class StrategyCamera {
     this.target.z = Math.max(-this.bounds.z, Math.min(this.bounds.z, this.target.z));
   }
 
+  private saved: { pitch: number; dist: number } | null = null;
+  /** Ujęcie filmowe do menu: nisko nad ziemią i bliżej; wyłączenie przywraca widok gracza */
+  cinematic(on: boolean): void {
+    if (on && !this.saved) { this.saved = { pitch: this.pitch, dist: this.dist }; this.pitch = (20 * Math.PI) / 180; this.dist = 24; }
+    else if (!on && this.saved) { this.pitch = this.saved.pitch; this.dist = this.saved.dist; this.saved = null; }
+    this.apply();
+  }
+
   spin(d: number): void { this.yaw += d; this.apply(); }
 
   private tilt(d: number): void {

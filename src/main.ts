@@ -549,6 +549,7 @@ function loop(now: number): void {
     requestAnimationFrame(loop);
     return;
   }
+  if (titleScreen) renderer.endOrbit();
   titleScreen = false;
   acc += elapsed * speed;
   let steps = 0;
