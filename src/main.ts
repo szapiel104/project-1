@@ -17,7 +17,7 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
-import { getVolume, isMuted, nature, play, talk, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { alarmBell, daySounds, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
 import { TEAM_COLORS } from './data/teams';
@@ -611,7 +611,7 @@ function refresh(): void {
   if (night !== wasNight) scribe.say(night ? 'dusk' : 'dawn', t(night ? 'scribe.dusk' : 'scribe.dawn'));
   wasNight = night;
   const coming = alarm.dataset.state === 'coming';
-  if (coming && !wasComing) scribe.say('coming', t('alarm.coming'), true, 'herald');
+  if (coming && !wasComing) { scribe.say('coming', t('alarm.coming'), true, 'herald'); warHorn(); }
   // nastroje ludzi wobec wojska
   const mine = game.soldiers.filter((x) => x.owner === ME).length;
   const theirs = game.soldiers.length - mine;
@@ -656,6 +656,7 @@ function loop(now: number): void {
   const elapsed = Math.min(250, now - last);
   last = now;
   nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
+  if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
   // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
   if (menu.isOpen()) {
     if (titleScreen) renderer.orbit(elapsed / 1000);
@@ -754,6 +755,7 @@ alertLayer.className = 'alerts';
 document.body.append(alertLayer);
 type Alert = { x: number; y: number; until: number; kind: 'wolf' | 'enemy'; el: HTMLButtonElement };
 const alerts: Alert[] = [];
+let lastAlarmBell = -1e9;
 const hpBefore = new Map<number, number>();
 function raiseAlert(x: number, y: number, kind: Alert['kind']): void {
   const now = performance.now();
@@ -769,6 +771,7 @@ function raiseAlert(x: number, y: number, kind: Alert['kind']): void {
   alertLayer.append(el);
   alerts.push(a);
   play('error');
+  if (performance.now() - lastAlarmBell > 20000) { alarmBell(); lastAlarmBell = performance.now(); }
 }
 function scanAttacks(): void {
   const mineAt: [number, number][] = [];

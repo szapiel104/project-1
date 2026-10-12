@@ -434,3 +434,127 @@ export function talk(text: string, voice: number): void {
     o.start(at); o.stop(at + 0.1);
   }
 }
+
+// --- więcej przyrody i osady: ptaki o świcie, świerszcze wieczorem, puszczyk nocą, grzmot w burzy, dzwon, róg ---
+let nextBird = 0, nextCricket = 0, nextOwl = 0, nextThunder = 0, lastBellHour = -1;
+
+function out2(c: AudioContext, pan: number, gain: number): GainNode {
+  const p = c.createStereoPanner(); p.pan.value = pan; p.connect(busGain.amb ?? master!);
+  const g = c.createGain(); g.gain.value = gain; g.connect(p);
+  return g;
+}
+
+/** Ptak: kilka szybkich, wysokich ćwierknięć z glissandem */
+function bird(c: AudioContext, at: number): void {
+  const o = out2(c, Math.random() * 1.6 - 0.8, 0.06);
+  const n = 3 + Math.floor(Math.random() * 5), base = 2600 + Math.random() * 1600;
+  for (let i = 0; i < n; i++) {
+    const t = at + i * (0.07 + Math.random() * 0.06);
+    const s = c.createOscillator(); s.type = 'sine';
+    s.frequency.setValueAtTime(base * (0.9 + Math.random() * 0.3), t);
+    s.frequency.exponentialRampToValueAtTime(base * (1.2 + Math.random() * 0.4), t + 0.05);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 0.06);
+    s.connect(g).connect(o); s.start(t); s.stop(t + 0.07);
+  }
+}
+
+/** Świerszcz: szybkie cykanie wysokiego tonu w seriach */
+function cricket(c: AudioContext, at: number): void {
+  const o = out2(c, Math.random() * 1.8 - 0.9, 0.025);
+  const f = 4200 + Math.random() * 600;
+  for (let burst = 0; burst < 3; burst++)
+    for (let i = 0; i < 6; i++) {
+      const t = at + burst * 0.45 + i * 0.035;
+      const s = c.createOscillator(); s.type = 'square'; s.frequency.value = f;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.004); g.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
+      s.connect(g).connect(o); s.start(t); s.stop(t + 0.03);
+    }
+}
+
+/** Puszczyk: „hu… huuu-hu-hu” nisko, miękko */
+function owl(c: AudioContext, at: number): void {
+  const o = out2(c, Math.random() * 1.6 - 0.8, 0.12);
+  const notes: [number, number, number][] = [[0, 0.35, 420], [0.7, 0.6, 400], [1.4, 0.18, 380], [1.65, 0.3, 370]];
+  for (const [dt, len, f] of notes) {
+    const t = at + dt;
+    const s = c.createOscillator(); s.type = 'sine'; s.frequency.setValueAtTime(f * 1.03, t); s.frequency.linearRampToValueAtTime(f * 0.94, t + len);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(1, t + 0.06); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    s.connect(g).connect(o); s.start(t); s.stop(t + len + 0.05);
+  }
+}
+
+/** Grzmot: trzask i długi, toczący się niski pomruk */
+function thunder(c: AudioContext, at: number): void {
+  if (!noise) return;
+  const o = out2(c, Math.random() * 1.2 - 0.6, 1);
+  const src = c.createBufferSource(); src.buffer = noise; src.loop = true; src.playbackRate.value = 0.25;
+  const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.setValueAtTime(900, at); f.frequency.exponentialRampToValueAtTime(90, at + 3.5);
+  const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.9, at + 0.05); g.gain.exponentialRampToValueAtTime(0.35, at + 0.6);
+  g.gain.setValueAtTime(0.35, at + 1.2); g.gain.exponentialRampToValueAtTime(0.001, at + 4.5);
+  src.connect(f).connect(g).connect(o); src.start(at); src.stop(at + 4.6);
+}
+
+/** Dzwon: metaliczne uderzenie z nieharmonicznymi tonami i długim wybrzmieniem */
+function bell(c: AudioContext, at: number, strikes: number): void {
+  const o = out2(c, 0, 0.18);
+  for (let k = 0; k < strikes; k++) {
+    const t = at + k * 1.6;
+    for (const [mul, amp] of [[1, 1], [2.4, 0.5], [3.0, 0.35], [4.2, 0.2], [0.5, 0.5]] as const) {
+      const s = c.createOscillator(); s.type = 'sine'; s.frequency.value = 320 * mul;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(amp, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 3.2 / mul + 0.6);
+      s.connect(g).connect(o); s.start(t); s.stop(t + 4);
+    }
+  }
+}
+
+/** Róg wojenny: niski, chropowaty dźwięk narastający i opadający — wróg wyrusza */
+export function warHorn(): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running') return;
+  const at = c.currentTime + 0.05;
+  const o = c.createGain(); o.gain.value = 0.5; o.connect(busGain.sfx ?? master!);
+  for (const [mul, det] of [[1, 0], [1.005, 3], [2, 0]] as const) {
+    const s = c.createOscillator(); s.type = 'sawtooth';
+    s.frequency.setValueAtTime(110 * mul, at); s.frequency.linearRampToValueAtTime(130 * mul, at + 0.4); s.frequency.setValueAtTime(130 * mul, at + 2.2); s.frequency.linearRampToValueAtTime(118 * mul, at + 2.8);
+    s.detune.value = det;
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(mul === 2 ? 0.15 : 0.35, at + 0.35); g.gain.setValueAtTime(mul === 2 ? 0.15 : 0.35, at + 2.3); g.gain.exponentialRampToValueAtTime(0.001, at + 3);
+    s.connect(f).connect(g).connect(o); s.start(at); s.stop(at + 3.1);
+  }
+}
+
+/** Dzwon alarmowy: szybkie, nerwowe uderzenia — atak na osadę */
+export function alarmBell(): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running') return;
+  const at = c.currentTime + 0.02;
+  const o = c.createGain(); o.gain.value = 0.25; o.connect(busGain.sfx ?? master!);
+  for (let k = 0; k < 6; k++) {
+    const t = at + k * 0.28;
+    for (const [mul, amp] of [[1, 1], [2.7, 0.4], [4.1, 0.2]] as const) {
+      const s = c.createOscillator(); s.type = 'sine'; s.frequency.value = 880 * mul;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(amp, t + 0.005); g.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
+      s.connect(g).connect(o); s.start(t); s.stop(t + 0.55);
+    }
+  }
+}
+
+/** Woła się co klatkę z godziną gry: pora dnia decyduje, co słychać */
+export function daySounds(hour: number, rain: number, paused: boolean): boolean {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running' || paused) return false;
+  const now = c.currentTime;
+  if (!nextBird) { nextBird = now + 3; nextCricket = now + 4; nextOwl = now + 20; nextThunder = now + 10; }
+  // świt i ranek: ptaki, gęsto o świcie, rzadziej w dzień, nie w deszczu
+  if (now > nextBird) { if (hour >= 4.5 && hour < 18 && rain < 0.4) bird(c, now); nextBird = now + (hour < 8 ? 1.5 + Math.random() * 3 : 6 + Math.random() * 10); }
+  // wieczór i noc: świerszcze
+  if (now > nextCricket) { if ((hour >= 19 || hour < 4) && rain < 0.4) cricket(c, now); nextCricket = now + 1.5 + Math.random() * 2.5; }
+  if (now > nextOwl) { if (hour >= 21 || hour < 4) owl(c, now); nextOwl = now + 25 + Math.random() * 30; }
+  // burza: przy mocnym deszczu grzmot co kilkanaście sekund; zwraca true, żeby scena błysnęła
+  let flash = false;
+  if (now > nextThunder) { if (rain > 0.6) { thunder(c, now + 0.4 + Math.random() * 1.2); flash = true; } nextThunder = now + 12 + Math.random() * 18; }
+  // dzwon w południe (3 uderzenia) i o zmierzchu (5)
+  const h = Math.floor(hour);
+  if (h !== lastBellHour) { if (lastBellHour >= 0 && (h === 12 || h === 19)) bell(c, now, h === 12 ? 3 : 5); lastBellHour = h; }
+  return flash;
+}

@@ -141,6 +141,9 @@ export class GameRenderer {
     playAt(kind, near, pan, gain);
   }
   /** Pora i pogoda dla dźwięków otoczenia */
+  private flash = 0;
+  /** Błyskawica: na ułamek sekundy rozjaśnia całą scenę */
+  lightning(): void { this.flash = 1; }
   get weather(): { night: number; rain: number } { return { night: this.night, rain: this.rain }; }
   private rainLines: THREE.LineSegments | null = null;
   private sadFaces: THREE.Sprite[] = [];
@@ -646,6 +649,7 @@ export class GameRenderer {
     this.updatePuffs(dt);
     this.updateRain(dt);
     if (this.state) this.setDaylight(this.menuNight ? 23 : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
+    if (this.flash > 0) { this.flash = Math.max(0, this.flash - dt * 4); this.hemi.intensity += this.flash * 3 * (Math.random() < 0.7 ? 1 : 0.3); }
     this.aimSun();
     if (this.state && this.view) {
       this.animate(this.state, this.calm ? 0 : dt);
