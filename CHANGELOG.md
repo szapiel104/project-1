@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.6.0 — interfejs na dole (2026-10-12)
+
+- Cały interfejs na dole ekranu, jak w grach miejskich: belka z zakładkami Dwór/Mapa/Sterowanie, kategoriami budowy z obrazkami, tempem, podatkami, racjami i wyburzaniem, a pod nią pas stanu z zegarem, surowcami i osadą
+- Karty budynków wyskakują nad belką na środku ekranu po wybraniu kategorii; góra ekranu jest wolna
+- Stan osady z ikonami (skład, spichlerz, ludność, bezrobotni, popularność), opisy w podpowiedziach
+
 ## 0.5.14 — kamienie (2026-10-12)
 
 - Luźne głazy, kamyki i złoża mają nieregularną bryłę i teksturę skały (plamy, pęknięcia, porost); ta sama skała w kopalni i kamieniołomie

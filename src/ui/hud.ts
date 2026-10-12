@@ -86,6 +86,11 @@ const ICONS: Record<string, string> = {
   bread: '<path d="M2.5 13c0-5 3-7 7.5-7s7.5 2 7.5 7z" fill="#c9843d" stroke="#2a1c10"/><path d="M7 8.500l1.5 2M10.5 8l1.5 2M14 9l1 1.5" stroke="#7a4a1c"/>',
   apples: '<path d="M10 7c-4-2-7 1-6 5 1 4 4 5 6 4 2 1 5 0 6-4 1-4-2-7-6-5z" fill="#d0281f" stroke="#2a1c10"/><path d="M10 7c0-2 1-3 2-4" stroke="#2a1c10" fill="none"/><path d="M12 4c2-1 3 0 3 1-1 1-2 1-3-1z" fill="#5c9a3c" stroke="#2a1c10" stroke-width=".7"/>',
   fish: '<path d="M2 10c3-5 9-5 12 0-3 5-9 5-12 0z" fill="#9cc3d6" stroke="#2a1c10"/><path d="M14 10l4-3v6z" fill="#7aa6bd" stroke="#2a1c10"/><circle cx="5.5" cy="9" r=".9" fill="#2a1c10"/><path d="M8 7.500c1 1.500 1 3.500 0 5" stroke="#4f7f96" fill="none"/>',
+  crown: '<path d="M3 15l1-9 4 4 2-6 2 6 4-4 1 9z" fill="#e9c145" stroke="#2a1c10"/><rect x="3" y="15" width="14" height="2.5" fill="#c9a23a" stroke="#2a1c10"/>',
+  store: '<rect x="3" y="6" width="14" height="10" fill="#a8743a" stroke="#2a1c10"/><path d="M3 6l2-3h10l2 3M3 11h14M10 6v10" stroke="#2a1c10" fill="none"/>',
+  granary: '<path d="M4 9l6-5 6 5v8H4z" fill="#c9a24a" stroke="#2a1c10"/><rect x="8" y="12" width="4" height="5" fill="#5e4329" stroke="#2a1c10"/>',
+  pop: '<circle cx="10" cy="6" r="3" fill="#e2bd94" stroke="#2a1c10"/><path d="M4 18c0-5 3-8 6-8s6 3 6 8z" fill="#a8281f" stroke="#2a1c10"/>',
+  idle: '<path d="M3 13h14M5 13v4M15 13v4M4 10h12" stroke="#c9a24a" stroke-width="2"/><path d="M12 3h4l-4 4h4" stroke="#f6ecd0" fill="none"/>',
   gold: '<circle cx="10" cy="10" r="7" fill="#e9c145" stroke="#2a1c10"/><circle cx="10" cy="10" r="4.5" fill="none" stroke="#9a7a1a"/><path d="M10 7v6M8 8.500h3.500a1.3 1.3 0 010 2.600H8" stroke="#7a5d10" fill="none"/>',
 };
 
@@ -103,7 +108,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   root.replaceChildren();
 
   // ---- pasek zasobów ----
-  const bar = el('div', 'bar');
+  // dolny pas stanu (jak w grach miejskich): zegar i tempo z lewej, surowce w środku, osada i dwór z prawej
+  const bar = el('div', 'status');
   const resList = el('ul', 'res');
   resList.setAttribute('aria-label', 'Zasoby');
   const resVals: HTMLElement[] = [];
@@ -121,7 +127,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const popularVal = el('strong');
   const deltaVal = el('span', 'delta');
   const popBox = el('div');
-  popBox.append(el('span', 'name', t('hud.population')), popVal);
+  popBox.title = t('hud.population');
+  popBox.setAttribute('aria-label', t('hud.population'));
+  popBox.append(icon('pop'), popVal);
   const popularBox = el('div');
   // pasek popularności ze znacznikiem progu, od którego przybywa ludzi
   const meter = el('span', 'meter');
@@ -129,16 +137,23 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const meterFill = el('span', 'meter-fill');
   meter.append(meterFill, el('span', 'meter-mark'));
   popularBox.classList.add('popular');
-  popularBox.append(el('span', 'name', t('hud.popularity')), meter, popularVal, deltaVal);
+  popularBox.title = t('hud.popularity');
+  popularBox.append(icon('crown'), meter, popularVal, deltaVal);
   const stockVal = el('strong');
   const stockBox = el('div');
-  stockBox.append(el('span', 'name', t('hud.stockpile')), stockVal);
+  stockBox.title = t('hud.stockpile');
+  stockBox.setAttribute('aria-label', t('hud.stockpile'));
+  stockBox.append(icon('store'), stockVal);
   const foodVal = el('strong');
   const foodBox = el('div');
-  foodBox.append(el('span', 'name', t('hud.granary')), foodVal);
+  foodBox.title = t('hud.granary');
+  foodBox.setAttribute('aria-label', t('hud.granary'));
+  foodBox.append(icon('granary'), foodVal);
   const idleVal = el('strong');
   const idleBox = el('div');
-  idleBox.append(el('span', 'name', t('hud.idle')), idleVal);
+  idleBox.title = t('hud.idle');
+  idleBox.setAttribute('aria-label', t('hud.idle'));
+  idleBox.append(icon('idle'), idleVal);
   // zegar: dzień gry, godzina i znak pory dnia
   const clockBox = el('div', 'clock');
   // tarcza analogowa: połowa jasna ze słońcem, połowa ciemna z księżycem; obraca się, a wskazówka u góry stoi
@@ -202,7 +217,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     if (next !== rationsNow) events.onRations(next);
   });
   // jeden wąski pasek: zegar, surowce jako ikony z liczbą, stan osady, sterowanie
-  bar.append(clockBox, resList, people, controls);
+  bar.append(clockBox, resList, people);
 
   // ---- komunikaty ----
   const toast = el('div', 'toast');
@@ -261,7 +276,6 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
 
   // Pasek budowy: kategorie i karty budynków z obrazkami
   const buildbar = el('div', 'panel buildbar');
-  const barhead = el('div', 'barhead');
   const cats = el('div', 'cats');
   cats.setAttribute('role', 'group');
   cats.setAttribute('aria-label', t('hud.build'));
@@ -276,9 +290,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     for (const [cid, b] of catButtons) b.setAttribute('aria-expanded', String(cid === id));
     for (const [bid, b] of buildButtons) b.hidden = BUILDINGS.find((d) => d.id === bid)?.category !== id;
     cards.hidden = id === null;
+    syncPicker();
   };
+  // panel z kartami wyskakuje nad paskiem narzędzi tylko wtedy, gdy jest co pokazać
+  const syncPicker = (): void => { buildbar.hidden = cards.hidden && buildFoot.hidden; };
+  const CAT_ICON: Record<string, string> = { settlement: 'house', food: 'farm', industry: 'woodcutter', roads: 'roadStone' };
   for (const id of CATEGORIES) {
-    const b = el('button', 'cat', t(`cat.${id}`));
+    const b = el('button', 'cat');
+    const src = thumbs.get(CAT_ICON[id] ?? '');
+    if (src) { const img = el('img'); img.src = src; img.alt = ''; img.width = 34; img.height = 34; img.draggable = false; b.append(img); }
+    b.append(el('span', 'cat-name', t(`cat.${id}`)));
     b.type = 'button';
     b.setAttribute('aria-expanded', 'false');
     b.setAttribute('aria-controls', cards.id);
@@ -322,9 +343,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   wreck.type = 'button';
   wreck.setAttribute('aria-pressed', 'false');
   wreck.addEventListener('click', () => events.onWreck());
-  tabs.append(wreck);
-  barhead.append(cats, cards, tabs);
-  buildbar.append(barhead, buildFoot);
+  const toolbar = el('div', 'toolbar');
+  const right = el('div', 'tools-right');
+  right.append(controls, wreck);
+  toolbar.append(tabs, cats, right);
+  buildbar.append(cards, buildFoot);
 
   // Dwór
   const court = section(t('hud.court'), 'court');
@@ -393,10 +416,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   help.append(list);
 
   floaters.append(drawer, info);
-  bottom.append(floaters, buildbar);
-  root.append(bar, toast, bottom);
+  const dock = el('div', 'dock');
+  dock.append(toolbar, bar);
+  bottom.append(floaters, buildbar, dock);
+  root.append(toast, bottom);
   const phone = (): boolean => matchMedia('(max-width: 640px)').matches;
-  showCategory(phone() ? null : 'settlement');
+  showCategory(null);
 
   return {
     setSeed(text, presetId) { seed.value = text; mode.value = presetId; },
@@ -418,7 +443,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(popularVal, `${v.popularity} / ${RULES.maxPopularity}`);
       meterFill.style.width = `${(v.popularity / RULES.maxPopularity) * 100}%`;
       meterFill.dataset.low = String(v.popularity < RULES.migrationThreshold);
-      setText(deltaVal, `${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}`);
+      setText(deltaVal, `${v.delta > 0 ? '+' : ''}${v.delta}`);
+      deltaVal.title = `${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}`;
       deltaVal.dataset.sign = v.delta < 0 ? 'neg' : 'pos';
       rationsNow = v.rations; taxNow = v.tax;
       setText(rationVal, t(RULES.rations[v.rations]?.name ?? ''));
@@ -429,6 +455,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(forecast, `${t('hud.popularity')}: ${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}${warn ? `. ${warn}.` : ''}`);
       for (const [id, b] of buildButtons) b.classList.toggle('poor', !v.affordable.has(id));
       if (wreck.getAttribute('aria-pressed') !== 'true') buildFoot.hidden = picked === null;
+      syncPicker();
     },
     setPicked(id) {
       picked = id;
@@ -439,6 +466,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       buildFoot.hidden = id === null;
       if (id) open(-1);
       if (id && phone()) showCategory(null);
+      syncPicker();
     },
     showPerson(person) {
       info.hidden = !person;
@@ -468,6 +496,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       wreck.setAttribute('aria-pressed', String(on));
       if (on) { buildFoot.hidden = false; turn.hidden = true; cancel.hidden = true; setText(buildHint, t('hud.wrecking')); }
       else { turn.hidden = false; buildFoot.hidden = picked === null; }
+      syncPicker();
     },
     toast(text) {
       setText(toast, text);
