@@ -184,7 +184,9 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const starts = [...map.starts].sort((a, b) => a.player - b.player);
   for (const s of starts) {
     const res = new Int32Array(RESOURCES.length);
-    for (const [k, v] of Object.entries(RULES.startResources)) res[resIndex(k as ResourceId)] = v;
+    // gracz-człowiek dostaje na start tym więcej, im łatwiejszy poziom (pokojowy ×3, łatwy ×2, średni ×1, trudny ×0,75)
+    const bonus = s.player === 0 ? [3, 2, 1, 0.75][level] ?? 1 : 1;
+    for (const [k, v] of Object.entries(RULES.startResources)) res[resIndex(k as ResourceId)] = Math.round(v * bonus);
     g.players.push({
       id: s.player, team: s.team, res, popularity: RULES.startPopularity, popDelta: 0,
       rations: RULES.defaultRations, tax: RULES.defaultTax, bot: s.player !== 0, defeated: false, level, stats: { gathered: 0, trained: 0, kills: 0, lost: 0, built: 0, razed: 0 },
@@ -192,7 +194,8 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
     addBuilding(g, keep, s.player, s.x - 1, s.y - 1);
     placeNear(g, buildingIndex('barn'), s.player, s.x, s.y);
     placeNear(g, CAMP, s.player, s.x, s.y);
-    for (let i = 0; i < RULES.startPeasants; i++) spawnPeasant(g, s.player);
+    const extra = s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0;
+    for (let i = 0; i < RULES.startPeasants + extra; i++) spawnPeasant(g, s.player);
   }
   return g;
 }

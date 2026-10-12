@@ -110,7 +110,7 @@ export const pl = {
   'sum.time': 'Czas gry', 'sum.gathered': 'Zebrane surowce', 'sum.built': 'Postawione budynki', 'sum.trained': 'Wyszkoleni żołnierze',
   'sum.kills': 'Zabici wrogowie', 'sum.lost': 'Polegli', 'sum.razed': 'Zburzone budynki wroga', 'sum.people': 'Ludność na koniec',
   'alarm.peace': 'Wróg nie atakuje (gra pokojowa)',
-  'menu.level': 'Poziom trudności', 'level.0': 'Pokojowy — wróg tylko się broni', 'level.1': 'Łatwy — rzadkie, małe ataki', 'level.2': 'Średni', 'level.3': 'Trudny — wcześnie i dużo',
+  'menu.level': 'Poziom trudności', 'level.0': 'Pokojowy — wróg tylko się broni, ×3 surowców, +4 ludzi', 'level.1': 'Łatwy — rzadkie ataki, ×2 surowców, +2 ludzi', 'level.2': 'Średni — zwykły start', 'level.3': 'Trudny — wczesne ataki, mniej surowców',
   'end.watch': 'Zostań na mapie',
   'hud.makes': 'Wytwarza',
   'hud.from': 'z',
