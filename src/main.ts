@@ -79,6 +79,13 @@ const hud = createHud(document.getElementById('ui')!, {
   onVolume: (v) => setVolume(v),
   onMute: () => hud.setMuted(toggleMute()),
   onMenu: () => menu.open(true),
+  onWalk: () => {
+    const u = game.units.find((x) => x.id === selectedUnit);
+    if (!u) return;
+    document.body.classList.add('walking');
+    walkHint.hidden = false;
+    renderer.startWalk(u.px / 256, u.py / 256);
+  },
   onDismount: (id) => { pending.push({ type: 'dismount', player: ME, tower: id }); play('rotate'); },
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
@@ -342,6 +349,7 @@ document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closes
 renderer.onCollapse = () => play('collapse');
 
 window.addEventListener('keydown', (e) => {
+  if (renderer.walking) return; // spacer oczami chłopa: klawisze należą do spaceru
   if (e.key === 'Escape' && plan.state !== 'none') { cancelPlan(); return; }
   if (e.key === 'Escape') {
     if (menu.isOpen()) { if (!titleScreen) menu.close(); return; }
@@ -996,3 +1004,11 @@ function showPerf(now: number): void {
 }
 (window as unknown as { __perf: () => Record<string, number | string> }).__perf = () => perf.last;
 (window as unknown as { __heavy: (n?: number) => unknown }).__heavy = (n) => renderer.heavy(n);
+
+// podpowiedź podczas spaceru oczami chłopa
+const walkHint = document.createElement('p');
+walkHint.className = 'walk-hint';
+walkHint.hidden = true;
+walkHint.textContent = 'W A S D — idź · mysz — rozglądaj się · Shift — biegnij · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)';
+document.body.append(walkHint);
+renderer.onWalkEnd = () => { document.body.classList.remove('walking'); walkHint.hidden = true; };

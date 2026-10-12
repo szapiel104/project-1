@@ -504,3 +504,8 @@ body.menu-open .scribe { display: none; }
 .fps-tag:focus-visible { outline: 3px solid var(--gold); }
 .perf { top: 92px; }
 body.menu-open .fps-tag { display: none; }
+/* spacer oczami chłopa: bez interfejsu, tylko podpowiedź na dole */
+body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbars, body.walking .alerts, body.walking .report, body.walking .fps-tag, body.walking .perf { display: none !important; }
+.walk-hint { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 40; margin: 0; padding: 8px 18px; font-size: 17px; font-weight: 700;
+  color: var(--parchment-light); background: rgba(35, 22, 11, .8); border: 1px solid var(--gold-dark); pointer-events: none; }
+.walk-btn { width: 100%; min-height: 44px; }

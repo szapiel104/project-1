@@ -21,6 +21,7 @@ export interface HudEvents {
   onTrain(building: number, count: number, unit?: string): void;
   onGate(building: number, open: boolean): void;
   onDismount(building: number): void;
+  onWalk(): void;
   onSelectGarrison(building: number): void;
 }
 
@@ -387,8 +388,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   towerBtns.append(tSel, tDown);
   towerBox.append(towerState, towerBtns);
   towerBox.hidden = true;
+  const walkBtn = el('button', 'btn-main walk-btn', 'Przejdź się jego oczami'); walkBtn.type = 'button'; walkBtn.hidden = true;
+  walkBtn.addEventListener('click', () => events.onWalk());
   infoActions.append(demolish, close);
-  info.append(infoName, hpLine, gateBox, towerBox, recruit, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -644,6 +647,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       roster.hidden = true;
       hpLine.hidden = true;
       recruit.hidden = true;
+      towerBox.hidden = true;
+      gateBox.hidden = true;
+      walkBtn.hidden = false;
     },
     showArmy(army) {
       info.hidden = army.length === 0;
@@ -656,6 +662,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
+      walkBtn.hidden = true;
       roster.replaceChildren(...army.slice(0, 24).map((u) => {
         const card = el('span', 'roster-card');
         card.title = u.name;
@@ -678,6 +685,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       trainNote.hidden = true;
     },
     showInfo(i) {
+      walkBtn.hidden = true;
       info.hidden = !i;
       if (!i) return;
       infoId = i.id;

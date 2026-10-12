@@ -433,6 +433,7 @@ export class GameRenderer {
     canvas.addEventListener('pointerleave', () => this.hover(null));
     canvas.addEventListener('pointerdown', (e) => { if (this.painting && e.button === 0) { const tile = this.pick(e); if (tile) this.onPaintDown(tile); } });
     canvas.addEventListener('pointerup', (e) => {
+      if (this.walk) return; // podczas spaceru klik tylko łapie kursor
       if (e.button !== 0 || (this.cam.dragged && !this.painting)) return;
       // najpierw sprawdzamy, czy kliknięto w człowieka (nie w trybie malowania dróg i wyburzania)
       if (!this.painting) { const id = this.pickUnit(e); if (id) { this.onUnit(id); return; } }
@@ -714,8 +715,73 @@ export class GameRenderer {
     }
   }
 
+  // --- spacer oczami chłopa: kamera na wysokości głowy, WASD i mysz, zderzenia z budynkami i wodą ---
+  private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number } | null = null;
+  /** Wywoływane, gdy spacer się skończy (Esc) */
+  onWalkEnd: () => void = () => {};
+  get walking(): boolean { return !!this.walk; }
+  startWalk(tileX: number, tileY: number, heading = 0): void {
+    if (!this.state) return;
+    const keys = new Set<string>();
+    this.walk = { x: tileX, z: tileY, yaw: heading, pitch: -0.05, keys, bob: 0 };
+    const cam = this.cam.camera;
+    cam.fov = 70; cam.near = 0.05; cam.updateProjectionMatrix();
+    const down = (e: KeyboardEvent): void => { if (this.walk) { keys.add(e.code); if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space'].includes(e.code)) e.stopImmediatePropagation(); } };
+    const up = (e: KeyboardEvent): void => { keys.delete(e.code); };
+    const move = (e: MouseEvent): void => {
+      if (!this.walk || document.pointerLockElement !== this.canvas) return;
+      this.walk.yaw -= e.movementX * 0.0025;
+      this.walk.pitch = Math.max(-1.2, Math.min(1.2, this.walk.pitch - e.movementY * 0.0025));
+    };
+    const lock = (): void => { if (document.pointerLockElement !== this.canvas) end(); };
+    const click = (): void => { if (this.walk && document.pointerLockElement !== this.canvas) void this.canvas.requestPointerLock(); };
+    const end = (): void => {
+      window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true);
+      window.removeEventListener('mousemove', move); document.removeEventListener('pointerlockchange', lock); this.canvas.removeEventListener('click', click);
+      this.walk = null;
+      cam.fov = 38; cam.near = 0.5; cam.updateProjectionMatrix();
+      this.cam.lookAt(tileX - this.state!.map.width / 2, tileY - this.state!.map.height / 2, 22);
+      this.onWalkEnd();
+    };
+    window.addEventListener('keydown', down, true); window.addEventListener('keyup', up, true);
+    window.addEventListener('mousemove', move);
+    this.canvas.addEventListener('click', click);
+    void this.canvas.requestPointerLock();
+    // pointerlockchange przychodzi chwilę po zablokowaniu kursora; dopiero potem słuchamy wyjścia (Esc)
+    setTimeout(() => document.addEventListener('pointerlockchange', lock), 300);
+  }
+  private stepWalk(dt: number): void {
+    const w = this.walk!, g = this.state!;
+    const k = w.keys;
+    const run = k.has('ShiftLeft') || k.has('ShiftRight');
+    const sp = (run ? 4.2 : 2.1) * dt;
+    let fx = 0, fz = 0;
+    if (k.has('KeyW') || k.has('ArrowUp')) fz += 1;
+    if (k.has('KeyS') || k.has('ArrowDown')) fz -= 1;
+    if (k.has('KeyA') || k.has('ArrowLeft')) fx -= 1;
+    if (k.has('KeyD') || k.has('ArrowRight')) fx += 1;
+    const len = Math.hypot(fx, fz) || 1;
+    const sx = Math.sin(w.yaw), cz = Math.cos(w.yaw);
+    // przód kamery to -z w jej układzie: yaw=0 patrzy w -z świata
+    const dx = (-sx * fz + cz * fx) / len * sp, dz = (-cz * fz - sx * fx) / len * sp;
+    const free = (x: number, z: number): boolean => {
+      const tx = Math.floor(x), ty = Math.floor(z);
+      if (tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height) return false;
+      const t = ty * g.map.width + tx;
+      return (g.occupancy[t] === 0 || g.gates[t] !== 0) && g.map.tiles[t] !== Terrain.Water && g.map.tiles[t] !== Terrain.Mountain;
+    };
+    if (free(w.x + dx, w.z)) w.x += dx;
+    if (free(w.x, w.z + dz)) w.z += dz;
+    if (fx || fz) w.bob += sp * 5;
+    const cam = this.cam.camera;
+    const { width, height } = g.map;
+    const ground = this.view ? this.view.heightAt(w.x, w.z) : 0;
+    cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.58 + Math.sin(w.bob) * 0.02, w.z - height / 2);
+    cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
+  }
+
   frame(dt: number, alpha: number): void {
-    this.cam.update(dt);
+    if (this.walk && this.state) this.stepWalk(dt); else this.cam.update(dt);
     this.time += dt;
     this.updatePuffs(dt);
     this.updateRain(dt);
