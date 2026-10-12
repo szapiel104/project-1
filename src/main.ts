@@ -16,13 +16,15 @@ import { createHud, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
+import { Lockstep, TURN } from './net/lockstep';
+import { setRoomStatus, type Room } from './net/supa';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
 import { TEAM_COLORS } from './data/teams';
 
-const ME = 0; // gracz sterowany lokalnie
+let ME = 0; // gracz sterowany lokalnie (w grze przez sieć gość ma 1)
 const TICK_MS = 1000 / TICKS_PER_SECOND;
 const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota', 'las', 'skala', 'rzeka', 'brod'];
 
@@ -33,6 +35,15 @@ const mark: [string, number][] = [['renderer', Math.round(performance.now() - T0
 let game: GameState;
 let pending: Command[] = [];
 let speed = 1;
+/** Mecz przez sieć (null = gra sama z botami) */
+let net: Lockstep | null = null;
+let netRoom: Room | null = null;
+let netNotes = { desync: false, left: false };
+const netWait = document.createElement('div');
+netWait.className = 'net-wait';
+netWait.textContent = 'Czekam na przeciwnika…';
+netWait.hidden = true;
+document.body.append(netWait);
 let picked: string | null = null;
 let hoverTile: TileRef | null = null;
 let touchTile: TileRef | null = null;
@@ -56,7 +67,7 @@ const SAVE_KEY = 'project1.save';
 
 /** Zapis w pamięci przeglądarki, żeby odświeżenie strony nie zaczynało gry od zera. */
 function save(): void {
-  if (TEST) return; // tryb testowy nie nadpisuje prawdziwego zapisu gracza
+  if (TEST || net) return; // gra przez sieć nie nadpisuje zapisu; tryb testowy nie nadpisuje prawdziwego zapisu gracza
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seedText: currentSeedText, data: serialize(game, currentPreset) })); } catch { /* brak dostępu do pamięci przeglądarki */ }
 }
 
@@ -71,7 +82,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onPickBuilding: (id) => { if (wrecking) setWreck(false); pick(id); },
   onRations: (level) => pending.push({ type: 'setRations', player: ME, level }),
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
-  onSpeed: (s) => { speed = s; },
+  onSpeed: (s) => { if (!net) speed = s; else hud.toast('W grze przez sieć czas płynie tak samo dla obu graczy.'); },
   onDemolish: (id) => confirmDemolish(id),
   onCloseInfo: () => { selectUnit(0); select(0); },
   onRotate: () => rotate(),
@@ -114,7 +125,35 @@ const menu = createMenu(document.body, {
   onVolume: (v) => setVolume(v),
   onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
   onSettings: (st) => applySettings(st),
+  onOnlineStart: (room, meIdx, ls) => {
+    const cover = document.createElement('div');
+    cover.id = 'loading';
+    cover.innerHTML = `<div class="loading-card"><p class="loading-title">Project‑1</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${t('load.map')}</span><strong></strong></p></div>`;
+    document.body.append(cover);
+    requestAnimationFrame(() => setTimeout(() => {
+      startOnline(room, meIdx, ls);
+      renderer.warmup();
+      menu.close();
+      (cover.querySelector('.loading-bar span') as HTMLElement).style.width = '100%';
+      cover.classList.add('done');
+      setTimeout(() => cover.remove(), 500);
+    }, 30));
+  },
 });
+
+/** Mecz 1 na 1 przez sieć: obie przeglądarki stawiają tę samą mapę z tego samego ziarna, bez botów na miejscach graczy. */
+function startOnline(room: Room, meIdx: number, ls: Lockstep): void {
+  net?.close();
+  start(room.seed, (room.preset in MAP_PRESETS ? room.preset : '1v1') as MapPresetId, undefined, 1, false, { room, me: meIdx, ls });
+  hud.toast(`Mecz przez sieć: ${room.host_nick} vs ${room.guest_nick ?? '?'} — grasz ${meIdx === 0 ? 'jako gospodarz' : 'jako gość'}.`);
+}
+function endOnline(): void {
+  if (!net) return;
+  net.close();
+  if (netRoom && ME === 0) void setRoomStatus(netRoom.id, 'done');
+  net = null; netRoom = null; netWait.hidden = true;
+}
+window.addEventListener('beforeunload', () => endOnline());
 let titleScreen = true;
 function applySettings(st: Settings): void {
   renderer.setGraphics(st);
@@ -125,9 +164,16 @@ function applySettings(st: Settings): void {
 }
 applySettings(loadSettings());
 
-function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false): void {
+function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: { room: Room; me: number; ls: Lockstep }): void {
   endShown = false;
+  endOnline();
+  ME = online ? online.me : 0;
   game = loaded ?? createGame(seedFromText(seedText), preset, level, dev);
+  if (online) {
+    net = online.ls; netRoom = online.room; netNotes = { desync: false, left: false };
+    for (const p of online.ls.players) if (game.players[p]) game.players[p]!.bot = false;
+    speed = 1; acc = 0;
+  }
   currentPreset = preset;
   currentSeedText = seedText;
   pending = [];
@@ -693,16 +739,30 @@ function loop(now: number): void {
   acc += elapsed * speed;
   let steps = 0;
   while (acc >= TICK_MS && steps < 6) {
+    let cmds: Command[] = [];
+    if (net) {
+      // tura zaczyna się co TURN ticków; bez poleceń przeciwnika na tę turę gra stoi
+      if (game.tick % TURN === 0) {
+        const turn = game.tick / TURN;
+        if (!net.canRun(turn)) { netWait.hidden = !(net.waitingSince && now - net.waitingSince > 400); if (!net.waitingSince) net.waitingSince = now; acc = Math.min(acc, TICK_MS); break; }
+        net.waitingSince = 0; netWait.hidden = true;
+        cmds = net.beginTurn(turn, pending, stateHash(game));
+        pending = [];
+      }
+    } else { cmds = pending; pending = []; }
     renderer.snapshot();
     const ts = performance.now();
-    step(game, pending);
+    step(game, cmds);
     perf.sim += performance.now() - ts; perf.ticks++;
-    pending = [];
     acc -= TICK_MS;
     steps++;
     if (game.tick % 50 === 0) save();
   }
   if (steps === 6) acc = 0;
+  if (net) {
+    if (net.desync && !netNotes.desync) { netNotes.desync = true; hud.toast('Uwaga: gry u Was się rozjechały (różny stan). Wyniki mogą się nie zgadzać — zacznijcie nowy mecz.'); }
+    if (net.peerLeft && !netNotes.left) { netNotes.left = true; netWait.hidden = true; hud.toast('Przeciwnik wyszedł z meczu.'); endOnline(); }
+  }
   const tu = performance.now();
   if (steps) { refresh(); updateGhost(); }
   perf.ui += performance.now() - tu;

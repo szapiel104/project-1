@@ -513,3 +513,20 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .card { width: 150px; padding: 4px 8px 6px; }
 .card img { width: 124px; height: 124px; margin: -6px 0 -4px; }
 .card .card-text { font-size: 15px; }
+
+/* ---- gra przez sieć ---- */
+.net-msg { margin: 0; font-style: italic; color: var(--ink-soft); }
+.net-msg.bad { color: #9b1c12; font-style: normal; font-weight: 600; }
+.net-who { margin: 0 0 6px; }
+.link-btn { background: none; border: 0; padding: 0; color: #9b1c12; text-decoration: underline; cursor: pointer; font: inherit; min-height: 0; box-shadow: none; }
+.net-create { display: flex; gap: 8px; margin-bottom: 10px; }
+.net-create input { flex: 1; min-width: 0; font-size: 16px; padding: 8px 10px; }
+.net-create .menu-btn { min-height: 44px; font-size: 15px; padding: 0 16px; }
+.net-list { display: grid; gap: 6px; max-height: 42vh; overflow-y: auto; }
+.net-room { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--gold-dark); background: rgba(255, 240, 200, .35); }
+.net-room-info { display: grid; flex: 1; min-width: 0; }
+.net-room-info span { font-size: 13px; color: var(--ink-soft); }
+.net-join { min-height: 38px; font-size: 14px; padding: 0 14px; }
+.net-roombox { display: grid; gap: 12px; }
+.net-form .field input { font-size: 16px; padding: 8px 10px; }
+.net-wait { position: fixed; left: 50%; top: 22%; transform: translateX(-50%); z-index: 80; padding: 10px 22px; font-family: var(--display); font-size: 20px; letter-spacing: .05em; color: var(--gold); background: rgba(20, 12, 6, .82); border: 1px solid var(--gold-dark); pointer-events: none; }
