@@ -153,6 +153,37 @@ export function buildWork(type: number): number {
   return Math.min(1800, def.w * def.h * 60);
 }
 
+/**
+ * Zniszczenie przez wroga albo wilki: budynek nie znika, tylko zamienia się w ruinę do odbudowy
+ * (robotnicy i inżynierowie odbudowują ją jak budowę). Wyłom w murze da się przejść, dopóki go nie załatają.
+ * Twierdza nadal pada naprawdę — to koniec gracza.
+ */
+export function ruin(g: GameState, b: Building): void {
+  const def = BUILDINGS[b.type]!;
+  if (def.id === 'keep') { demolish(g, b.owner, b.id, true); return; }
+  b.build = buildWork(b.type);
+  b.hp = maxHp(b.type);
+  b.ruined = true;
+  if (b.worker) { const u = g.units.find((x) => x.id === b.worker); if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; } b.worker = 0; }
+  if (def.wall || def.gate) {
+    const fp = footprint(def, b.rot);
+    for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { g.occupancy[y * g.map.width + x] = 0; g.gates[y * g.map.width + x] = 0; }
+  }
+}
+
+/** Koniec odbudowy ruiny: mur znów zamyka przejście (o ile nikt na nim akurat nie stoi) */
+export function restore(g: GameState, b: Building): boolean {
+  const def = BUILDINGS[b.type]!;
+  if (def.wall || def.gate) {
+    const fp = footprint(def, b.rot), w = g.map.width;
+    for (const u of g.units) { const x = u.px >> 8, y = u.py >> 8; if (x >= b.x && x < b.x + fp.w && y >= b.y && y < b.y + fp.h) return false; }
+    for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * w + x] = b.id;
+    if (def.gate) g.gates[b.y * w + b.x] = b.owner + 1;
+  }
+  b.ruined = false;
+  return true;
+}
+
 export function placeBuilding(g: GameState, player: number, type: number, x: number, y: number, rot = 0): boolean {
   if (canPlace(g, player, type, x, y, true, rot) !== null) return false;
   const def = BUILDINGS[type]!;

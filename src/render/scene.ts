@@ -577,6 +577,10 @@ export class GameRenderer {
     const want = phase < 0.16 ? Math.sin((phase / 0.16) * Math.PI) : 0;
     this.rain += (Math.min(1, want * 1.6) - this.rain) * Math.min(1, dt * 0.5);
     this.grade.uniforms.rain!.value = this.rain;
+    // po deszczu długo jest mokro: błoto i kałuże schną powoli
+    this.wet = Math.max(0, Math.min(1, this.wet + (this.rain > 0.25 ? dt * 0.06 : -dt * 0.004)));
+    if (Math.abs(this.wet - this.wetShown) > 0.01) { this.view?.setWet(this.wet); this.wetShown = this.wet; }
+    if (g && this.view) this.syncPuddles(g, this.view);
     if (!this.rainLines) {
       // dwie identyczne warstwy jedna nad drugą: przesuwanie o 25 w kółko jest niewidoczne
       const n = 1500, pos = new Float32Array(n * 12);
@@ -634,7 +638,7 @@ export class GameRenderer {
       this.syncRoads(this.state, this.view);
       this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
-      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncGates(this.state, dt); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); this.syncWolves(this.state, this.view, alpha); }
+      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncGates(this.state, dt); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); this.syncWolves(this.state, this.view, alpha); this.syncCrows(this.state, this.view); }
     this.composer.render();
   }
 
@@ -776,6 +780,84 @@ export class GameRenderer {
       if (l) l.rotation.y = -a;
       if (r) r.rotation.y = a;
     }
+  }
+
+  private wet = 0;
+  private wetShown = -1;
+  private puddles: THREE.InstancedMesh | null = null;
+  private puddleKey = '';
+  /** Kałuże na ścieżkach gruntowych (co któreś pole), widoczne tylko gdy mokro */
+  private syncPuddles(g: GameState, view: TerrainView): void {
+    if (!this.puddles) {
+      this.puddles = new THREE.InstancedMesh(new THREE.CircleGeometry(0.5, 18).rotateX(-Math.PI / 2),
+        new THREE.MeshStandardMaterial({ color: 0x3a3c38, roughness: 0.05, metalness: 0.5, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }), 1024);
+      this.puddles.frustumCulled = false; this.puddles.renderOrder = 1;
+      this.scene.add(this.puddles);
+    }
+    (this.puddles.material as THREE.MeshStandardMaterial).opacity = Math.min(0.75, this.wet * 1.1);
+    this.puddles.visible = this.wet > 0.03;
+    if (!this.puddles.visible) return;
+    const key = `${this.roadSum}`;
+    if (key === this.puddleKey) return;
+    this.puddleKey = key;
+    const { width, height } = g.map;
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3();
+    let n = 0;
+    for (let t = 0; t < g.roads.length && n < 1024; t++) {
+      if (g.roads[t] !== 1) continue;
+      const hsh = (t * 2654435761) >>> 0;
+      if (hsh % 5 !== 0) continue;
+      const x = (t % width) + 0.3 + ((hsh >>> 8) & 255) / 640, y = Math.floor(t / width) + 0.3 + ((hsh >>> 16) & 255) / 640;
+      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (hsh & 63) / 10);
+      m.compose(p.set(x - width / 2, view.heightAt(x, y) + 0.05, y - height / 2), q, sc.set(0.5 + ((hsh >>> 4) & 15) / 30, 1, 0.3 + ((hsh >>> 12) & 15) / 40));
+      this.puddles.setMatrixAt(n++, m);
+    }
+    this.puddles.count = n;
+    this.puddles.instanceMatrix.needsUpdate = true;
+  }
+
+  private crows: THREE.InstancedMesh | null = null;
+  /** Kruki na ciałach poległych: dziobią, podskakują; płoszą się, gdy ktoś podejdzie */
+  private syncCrows(g: GameState, view: TerrainView): void {
+    if (!this.crows) {
+      const black = 0x15151a;
+      const geo = mergeGeometries([
+        tint(new THREE.SphereGeometry(0.07, 8, 6).scale(1, 0.8, 1.5).translate(0, 0.08, 0), black),
+        tint(new THREE.SphereGeometry(0.045, 8, 6).translate(0, 0.13, 0.09), black),
+        tint(new THREE.ConeGeometry(0.018, 0.07, 5).rotateX(Math.PI / 2).translate(0, 0.125, 0.15), 0x2a2a2a),
+        tint(new THREE.BoxGeometry(0.06, 0.012, 0.1).translate(0, 0.08, -0.12), black),
+        tint(new THREE.BoxGeometry(0.01, 0.05, 0.01).translate(-0.02, 0.025, 0), 0x333333),
+        tint(new THREE.BoxGeometry(0.01, 0.05, 0.01).translate(0.02, 0.025, 0), 0x333333),
+      ])!;
+      this.crows = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }), 256);
+      this.crows.frustumCulled = false; this.crows.castShadow = true;
+      this.scene.add(this.crows);
+    }
+    const { width, height } = g.map;
+    const t = this.tmp;
+    let n = 0;
+    for (const body of g.corpses) {
+      if (n >= 250) break;
+      if (body.taken || g.tick - body.at < 150) continue; // przylatują chwilę po śmierci
+      const near = g.units.some((u) => Math.abs(u.px - body.px) < 2.5 * FP && Math.abs(u.py - body.py) < 2.5 * FP)
+        || g.soldiers.some((s) => Math.abs(s.px - body.px) < 2.5 * FP && Math.abs(s.py - body.py) < 2.5 * FP);
+      if (near) continue; // spłoszone
+      const count = 1 + (body.id % 3);
+      for (let i = 0; i < count; i++) {
+        const a = body.id * 1.7 + i * 2.3, r = 0.28 + (i % 2) * 0.12;
+        const k = this.calm ? 0 : this.time * 3 + body.id + i * 1.9;
+        const hop = Math.max(0, Math.sin(k * 0.7)) > 0.97 ? 0.06 : 0;
+        const x = body.px / FP + Math.cos(a) * r, y = body.py / FP + Math.sin(a) * r;
+        t.position.set(x - width / 2, view.heightAt(x, y) + hop, y - height / 2);
+        // dziobanie: tułów pochyla się do ciała
+        t.rotation.set(Math.max(0, Math.sin(k * 2.3)) * 0.6, Math.atan2(-Math.cos(a), -Math.sin(a)), 0, 'YXZ');
+        t.scale.setScalar(1.25);
+        t.updateMatrix();
+        this.crows.setMatrixAt(n++, t.matrix);
+      }
+    }
+    this.crows.count = n;
+    this.crows.instanceMatrix.needsUpdate = true;
   }
 
   private dustAt = new Map<number, number>();

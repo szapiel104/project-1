@@ -132,3 +132,25 @@ describe('wilki polują naprawdę', () => {
     expect(g.corpses.some((c) => c.kind === -1)).toBe(true);
   });
 });
+
+describe('ruiny', () => {
+  it('zniszczony mur zostaje ruiną z wyłomem, a robotnicy go odbudowują', async () => {
+    const { placeBuilding, canPlace, ruin } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const { walkable } = await import('../src/sim/path');
+    const g = createGame(5, '1v1', 0);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings[0]!;
+    let b = null as null | (typeof g.buildings)[number];
+    for (let r = 4; r < 15 && !b; r++) for (let d = -r; d <= r && !b; d++) if (canPlace(g, 0, buildingIndex('palisade'), keep.x + d, keep.y + r) === null) { placeBuilding(g, 0, buildingIndex('palisade'), keep.x + d, keep.y + r); b = g.buildings[g.buildings.length - 1]!; }
+    b!.build = 0;
+    const t = b!.y * g.map.width + b!.x;
+    g.occupancy[t] = b!.id;
+    ruin(g, b!);
+    expect(g.buildings.includes(b!)).toBe(true);
+    expect(walkable(g, t, 1)).toBe(true);
+    for (let i = 0; i < 2000 && b!.ruined; i++) step(g, []);
+    expect(b!.ruined).toBe(false);
+    expect(walkable(g, t, 1)).toBe(false);
+  });
+});

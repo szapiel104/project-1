@@ -3,7 +3,7 @@ import { clockAt } from '../clock';
 import { WOLF, findPath, walkable } from '../path';
 import { BUILDINGS } from '../../data/buildings';
 import { FP, type GameState, type Wolf } from '../state';
-import { demolish } from './placement';
+import { ruin } from './placement';
 
 /**
  * Wilki: nocą z lasu za mapą wychodzi wataha i poluje na ludzi poza osadą. Palisada je zatrzymuje,
@@ -84,7 +84,7 @@ export function wolfSystem(g: GameState): void {
         const wall = g.buildings.find((x) => x.id === w.gnaw);
         if (!wall) w.gnaw = 0;
         else if (Math.max(Math.abs((w.px >> 8) - wall.x), Math.abs((w.py >> 8) - wall.y)) <= 1 && !w.path.length) {
-          if (w.cd === 0) { w.cd = BITE; wall.hp -= 6; if (wall.hp <= 0) { demolish(g, wall.owner, wall.id, true); w.gnaw = 0; } }
+          if (w.cd === 0) { w.cd = BITE; wall.hp -= 6; if (wall.hp <= 0) { ruin(g, wall); w.gnaw = 0; } }
           continue;
         }
       }
@@ -101,7 +101,7 @@ export function wolfSystem(g: GameState): void {
           let bestWall: (typeof g.buildings)[number] | undefined, bd = Infinity;
           for (const o of g.buildings) {
             const d = BUILDINGS[o.type]!;
-            if (!(d.line || d.gate)) continue;
+            if (!(d.line || d.gate) || o.ruined) continue;
             const dist = (o.x - (w.px >> 8)) ** 2 + (o.y - (w.py >> 8)) ** 2;
             if (dist < bd) { bd = dist; bestWall = o; }
           }
@@ -134,6 +134,11 @@ export function wolfSystem(g: GameState): void {
   }
   // żołnierze bronią się i gonią wilki w pobliżu
   for (const s of g.soldiers) {
+    if (s.hunt) {
+      const prey = g.wolves.find((w) => w.id === s.hunt && w.hp > 0);
+      if (!prey) s.hunt = 0;
+      else if ((g.tick + s.id) % 15 === 0 && ((s.px - prey.px) / FP) ** 2 + ((s.py - prey.py) / FP) ** 2 > 2.2) { s.goal = (prey.py >> 8) * width + (prey.px >> 8); s.path = []; }
+    }
     let best = 36, wolf: Wolf | undefined;
     for (const w of g.wolves) { if (w.hp <= 0) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; wolf = w; } }
     if (!wolf) continue;

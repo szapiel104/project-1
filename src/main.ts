@@ -460,6 +460,13 @@ function updateHoverFoe(): void {
       const d = (s.x - mouseX) ** 2 + (s.y - mouseY) ** 2;
       if (d < bd) { bd = d; hoverFoe = s.id; }
     }
+    // wilki pod kursorem też można zaatakować
+    for (const w of game.wolves) {
+      const p = renderer.project(w.px / 256, w.py / 256);
+      if (!p.front) continue;
+      const d = (p.sx - mouseX) ** 2 + (p.sy - 10 - mouseY) ** 2;
+      if (d < bd) { bd = d; hoverFoe = w.id; }
+    }
     if (!hoverFoe && hoverTile) {
       const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
       if (b && game.players[b.owner]?.team !== game.players[ME]!.team) hoverFoe = b.id;

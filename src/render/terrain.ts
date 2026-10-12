@@ -39,6 +39,8 @@ export interface TerrainView {
   setRoads(roads: Uint8Array, materials: THREE.Material[]): void;
   /** Animacje otoczenia: fale i ryby */
   animate(time: number): void;
+  /** Mokro po deszczu: 0 sucho, 1 błoto i połyskujące drogi */
+  setWet(k: number): void;
   dispose(): void;
 }
 
@@ -657,6 +659,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     fell,
     clear,
     animate,
+    setWet(k: number) {
+      // błoto: ciemniejsza, błyszcząca ziemia na ścieżkach, mokry połysk bruku, trochę ciemniejsza trawa
+      const dryC = new THREE.Color(0xffffff);
+      if (sandMat) { sandMat.color.copy(dryC).lerp(new THREE.Color(0x6b5238), k * 0.75); sandMat.roughness = 1 - k * 0.55; }
+      if (paveMat) { paveMat.roughness = 0.9 - k * 0.5; paveMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
+      const gm = ground.material as THREE.MeshStandardMaterial;
+      gm.color.copy(dryC).lerp(new THREE.Color(0xa9b09a), k * 0.5);
+    },
     dispose() {
       group.traverse((o) => {
         const mesh = o as THREE.Mesh;

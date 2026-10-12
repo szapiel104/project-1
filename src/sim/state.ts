@@ -64,6 +64,8 @@ export interface Building {
   gateOpen?: boolean;
   /** Brama jest teraz zamknięta (na rozkaz albo bo wróg blisko) */
   shut?: boolean;
+  /** Ruina po zniszczeniu: nie działa, a mur w tym miejscu da się przejść, dopóki go nie odbudują */
+  ruined?: boolean;
 }
 
 /** Gruz po rozebranym budynku. Leży na działce, dopóki ludzie nie wyniosą wszystkich ładunków. */
@@ -151,6 +153,8 @@ export interface Soldier {
   target: number;
   /** Ticki do następnego ciosu */
   cd: number;
+  /** Id wilka, na którego gracz go posłał */
+  hunt?: number;
 }
 
 /** Ciało poległego: leży, aż zabierze je grabarz z cmentarza */

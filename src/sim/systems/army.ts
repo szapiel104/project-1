@@ -5,7 +5,7 @@ import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
 import { FP, Phase, type Building, type Corpse, type GameState, type Soldier } from '../state';
 import { BUILDINGS, footprint } from '../../data/buildings';
-import { demolish, maxHp } from './placement';
+import { maxHp, restore, ruin } from './placement';
 import type { UnitDef } from '../../data/units';
 
 const BARRACKS = buildingIndex('barracks');
@@ -63,6 +63,12 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
 
 /** Rozkaz ataku: zaznaczeni idą na wskazanego wroga (żołnierza albo budynek). */
 export function orderAttack(g: GameState, player: number, ids: readonly number[], target: number): void {
+  const wolf = g.wolves.find((w) => w.id === target);
+  if (wolf) {
+    // polowanie na wilka: idą za nim, aż go dopadną albo ucieknie do lasu
+    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.hunt = wolf.id; s.target = 0; s.goal = (wolf.py >> 8) * g.map.width + (wolf.px >> 8); s.path = []; s.wait = 0; }
+    return;
+  }
   const foeSoldier = g.soldiers.find((s) => s.id === target);
   const foeBuilding = foeSoldier ? undefined : g.buildings.find((b) => b.id === target);
   const owner = foeSoldier?.owner ?? foeBuilding?.owner;
@@ -210,7 +216,7 @@ export function armySystem(g: GameState): void {
       let best = Infinity, wall: Building | undefined;
       for (const o of g.buildings) {
         const d = BUILDINGS[o.type]!;
-        if (!(d.wall || d.gate) || team(g, o.owner) === team(g, s.owner)) continue;
+        if (!(d.wall || d.gate) || o.ruined || team(g, o.owner) === team(g, s.owner)) continue;
         const dist = Math.abs(o.x - (here % g.map.width)) + Math.abs(o.y - Math.floor(here / g.map.width));
         if (dist < best) { best = dist; wall = o; }
       }
@@ -278,7 +284,7 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
     b = undefined;
     let best = def.sight + 1;
     for (const o of g.buildings) {
-      if (team(g, o.owner) === team(g, s.owner) || BUILDINGS[o.type]!.road) continue;
+      if (team(g, o.owner) === team(g, s.owner) || BUILDINGS[o.type]!.road || o.ruined) continue;
       const d = rectGap(g, here, o);
       if (d < best) { best = d; b = o; }
     }
@@ -292,7 +298,7 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
       if (b.hp <= 0) {
         const keep = BUILDINGS[b.type]!.id === 'keep';
         const owner = g.players[b.owner];
-        demolish(g, b.owner, b.id, true);
+        ruin(g, b);
         g.players[s.owner]!.stats.razed++;
         s.target = 0;
         if (keep && owner) owner.defeated = true;
@@ -320,7 +326,7 @@ function repairSystem(g: GameState): void {
     if (u.phase === Phase.Repairing) {
       const b = g.buildings.find((x) => x.id === u.target);
       // budowa: każdy robotnik dokłada swoją część, ostatni kończy
-      if (b && b.build > 0) { b.build = Math.max(0, b.build - 12); continue; }
+      if (b && b.build > 0) { b.build = Math.max(0, b.build - 12); if (!b.build && b.ruined && !restore(g, b)) b.build = 1; continue; }
       if (b && !u.job) { u.target = 0; u.phase = Phase.Idle; continue; }
       if (!b || b.hp >= maxHp(b.type)) { u.target = 0; u.phase = Phase.Returning; continue; }
       b.hp = Math.min(maxHp(b.type), b.hp + 15);
