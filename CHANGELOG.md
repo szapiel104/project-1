@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.5.10 — kamieniołom (2026-10-12)
+
+- Nowy model kamieniołomu: skalna ściana ze świeżo wyciętymi stopniami, żuraw z blokiem na linie i kołowrotem, ławka kamieniarza z młotkiem i dłutem, stos ciosów na podkładach, odłamki i pył
+
 ## 0.5.9 — puszcza za mapą (2026-10-12)
 
 - Zamiast pasma gór za krawędzią mapy rośnie ogromny las: im dalej, tym drzewa większe i ciemniejsze, a w końcu znikają we mgle. Robotnicy go nie wytną, kamera tam nie wyjedzie
