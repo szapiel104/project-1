@@ -153,10 +153,12 @@ describe('praca chłopów', () => {
     expect(cutters.length).toBeGreaterThan(0);
     g.units = g.units.filter((u) => u.owner !== 0 || u.job !== 0);
     run(g, 60); // drwale są w lesie albo w drodze
+    for (const u of g.units) if (u.owner === 0) u.target = 999999; // stary, nieaktualny cel (jak w zgłoszonym zapisie gry)
     run(g, 1, [build(g, 'house')]);
     const site = g.buildings[g.buildings.length - 1]!;
     expect(site.build).toBeGreaterThan(0);
-    run(g, 2500);
+    // nowi przybysze też od razu odchodzą — budować mogą tylko drwale
+    for (let i = 0; i < 30 && site.build; i++) { g.units = g.units.filter((u) => u.owner !== 0 || u.job !== 0); run(g, 100); }
     expect(site.build).toBe(0);
   });
 

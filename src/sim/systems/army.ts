@@ -421,14 +421,15 @@ function repairSystem(g: GameState): void {
     let crew = 0;
     for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing)) crew++;
     while (crew < 3) {
-      const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.target === 0 && x.carryRes < 0);
+      const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0);
       if (!u) break;
       u.target = b.id; u.phase = Phase.ToRepair; u.path = []; crew++;
     }
     // brak wolnych chłopów: do dwóch pracowników rzuca robotę (drwal w lesie, kamieniarz w kamieniołomie, ktoś w warsztacie
     // albo na odpoczynku), byle nie mieli nic w rękach — budują, a potem wracają do siebie
     while (crew < 2) {
-      const u = g.units.find((x) => x.owner === b.owner && x.job !== 0 && x.target === 0 && x.carryRes < 0 && DROPPABLE.has(x.phase));
+      // te zajęcia nie używają celu, więc stary cel (np. po przerwanym zapalaniu pochodni) nie blokuje
+      const u = g.units.find((x) => x.owner === b.owner && x.job !== 0 && x.carryRes < 0 && DROPPABLE.has(x.phase));
       if (!u) break;
       u.target = b.id; u.phase = Phase.ToRepair; u.path = []; u.timer = 0; u.wait = 0; crew++;
     }

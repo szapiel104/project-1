@@ -234,9 +234,12 @@ export function workerSystem(g: GameState): void {
 
   for (const b of g.buildings) {
     if (b.worker !== 0 || b.build || !(BUILDINGS[b.type]!.production || BUILDINGS[b.type]!.staff)) continue;
-    const u = g.units.find((x) => x.owner === b.owner && x.job === 0);
+    // najpierw ktoś, kto nic nie robi; budowniczego, latarnika czy tragarza gruzu zabieramy dopiero, gdy nie ma innych,
+    // a nikogo z ładunkiem w rękach. Stare zadanie (target) się kasuje, żeby nie blokowało go później.
+    const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0)
+      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && x.phase !== Phase.ToCorpse);
     if (!u) continue;
-    u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0;
+    u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0;
     b.worker = u.id;
   }
 
