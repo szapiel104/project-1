@@ -96,6 +96,27 @@ function step(g: GameState, s: Soldier): void {
   if (s.px === tx && s.py === ty) s.path.shift();
 }
 
+let budget = 10;
+
+/** Jeden krok w stronę celu: sąsiednie przechodnie pole (bez ścinania rogów), wolne, najbliżej celu; -1 gdy brak */
+function greedy(g: GameState, from: number, to: number, taken: Set<number>): number {
+  const w = g.map.width, h = g.map.height;
+  const fx = from % w, fy = (from - fx) / w, tx = to % w, ty = (to - tx) / w;
+  let best = -1, bd = (fx - tx) ** 2 + (fy - ty) ** 2;
+  for (let dy = -1; dy <= 1; dy++)
+    for (let dx = -1; dx <= 1; dx++) {
+      if (!dx && !dy) continue;
+      const x = fx + dx, y = fy + dy;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      const t = y * w + x;
+      if (t === to || taken.has(t) || !walkable(g, t)) continue;
+      if (dx && dy && (!walkable(g, fy * w + x) || !walkable(g, y * w + fx))) continue;
+      const d = (x - tx) ** 2 + (y - ty) ** 2;
+      if (d < bd) { bd = d; best = t; }
+    }
+  return best;
+}
+
 const team = (g: GameState, player: number): number => g.players[player]?.team ?? player;
 /** Odległość w stałym przecinku (metryka szachowa, wystarcza do walki wręcz) */
 const gap = (a: Soldier, b: Soldier): number => Math.max(Math.abs(a.px - b.px), Math.abs(a.py - b.py));
@@ -110,6 +131,18 @@ export function armySystem(g: GameState): void {
   // pola zajęte przez stojących albo docelowe pola maszerujących: nikt nie staje na drugim
   const taken = new Set<number>();
   for (const s of g.soldiers) taken.add(s.path.length ? s.path[s.path.length - 1]! : tileOf(g, s));
+  // siatka kubełków 8×8 pól: szukanie wroga patrzy tylko na sąsiednie kubełki, nie na całą armię
+  const W = g.map.width, CELL = 8, cw = Math.ceil(W / CELL);
+  const grid = new Map<number, Soldier[]>();
+  const standing = new Map<number, number>();
+  for (const o of g.soldiers) {
+    const t = tileOf(g, o), x = t % W, y = (t - x) / W;
+    const k = Math.floor(y / CELL) * cw + Math.floor(x / CELL);
+    let list = grid.get(k); if (!list) { list = []; grid.set(k, list); } list.push(o);
+    if (!o.path.length) standing.set(t, (standing.get(t) ?? 0) + 1);
+  }
+  // limit drogi szukanej na tick: przy setkach żołnierzy reszta poczeka chwilę, gra się nie zatnie
+  budget = 10;
   for (const s of g.soldiers) {
     if (s.hp <= 0) continue;
     if (s.cd > 0) s.cd--;
@@ -122,11 +155,16 @@ export function armySystem(g: GameState): void {
       if (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP) {
         foe = undefined;
         let best = def.sight * FP + 1;
-        for (const o of g.soldiers) {
-          if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner)) continue;
-          const d = gap(s, o);
-          if (d < best) { best = d; foe = o; }
-        }
+        const t = tileOf(g, s), x = t % W, y = (t - x) / W;
+        const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+        for (let gy = cy - 1; gy <= cy + 1; gy++)
+          for (let gx = cx - 1; gx <= cx + 1; gx++) {
+            for (const o of grid.get(gy * cw + gx) ?? []) {
+              if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner)) continue;
+              const d = gap(s, o);
+              if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
+            }
+          }
         s.target = foe ? foe.id : 0;
       }
       if (foe) {
@@ -138,14 +176,10 @@ export function armySystem(g: GameState): void {
           continue;
         }
         // podchodzi na wolne pole obok wroga (nie tam, gdzie stoi już ktoś inny); drogę odświeża co kilka ticków
-        if (!s.path.length || g.tick % 8 === s.id % 8) {
-          const ft = tileOf(g, foe), w = g.map.width;
-          const fx = ft % w, fy = (ft - fx) / w;
-          const mine = tileOf(g, s);
-          const near = (t: number): boolean => { const x = t % w, y = (t - x) / w; return Math.max(Math.abs(x - fx), Math.abs(y - fy)) === 1 && (t === mine || !taken.has(t)); };
-          const path = near(mine) ? [] : findPath(g, mine, near, 600);
-          s.path = path ?? [];
-          if (s.path.length) taken.add(s.path[s.path.length - 1]!);
+        // bez szukania drogi: krok na sąsiednie wolne pole najbliżej wroga (tanie nawet przy setkach walczących)
+        if (!s.path.length) {
+          const next = greedy(g, tileOf(g, s), tileOf(g, foe), taken);
+          if (next >= 0) { s.path = [next]; taken.add(next); }
         }
         if (s.path.length) step(g, s);
         continue;
@@ -158,15 +192,17 @@ export function armySystem(g: GameState): void {
     if (s.goal < 0) {
       // stoi na polu razem z kimś: odsuwa się na najbliższe wolne
       const here = tileOf(g, s);
-      if (g.soldiers.some((o) => o !== s && o.hp > 0 && !o.path.length && tileOf(g, o) === here && o.id < s.id)) {
-        const free = formation(g, here, 9).find((t) => !taken.has(t));
-        if (free !== undefined) { s.path = findPath(g, here, (t) => t === free, 60) ?? []; taken.add(free); }
+      if ((standing.get(here) ?? 0) > 1) {
+        const free = formation(g, here, 9).find((t) => !taken.has(t) && t !== here);
+        if (free !== undefined) { const n = greedy(g, here, free, taken); if (n >= 0) { s.path = [n]; taken.add(n); standing.set(here, standing.get(here)! - 1); } }
       }
       continue;
     }
     const here = tileOf(g, s);
     if (here === s.goal) { s.goal = -1; continue; }
     const goal = s.goal;
+    if (budget <= 0) continue; // ruszy w następnym ticku
+    budget--;
     const path = findPath(g, here, (t) => t === goal, 2400);
     if (path && path.length) s.path = path;
     else { s.goal = -1; s.wait = RETRY; }
@@ -253,7 +289,8 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
     }
     return true;
   }
-  if (!s.path.length || g.tick % 8 === s.id % 8) {
+  if (!s.path.length && budget > 0) {
+    budget--;
     const target = b;
     const path = findPath(g, here, (t) => rectGap(g, t, target) === 1 && (t === here || !taken.has(t)), 600);
     s.path = path ?? [];

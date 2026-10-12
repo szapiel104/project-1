@@ -373,9 +373,11 @@ function updateBars(): void {
   renderer.barLift = 0.95;
   const list = renderer.soldiersOnScreen(-1);
   renderer.barLift = 0.45;
+  const kinds = new Map<number, number>();
+  for (const x of game.soldiers) kinds.set(x.id, x.kind);
   let n = 0;
   for (const s of list) {
-    const max = UNITS[game.soldiers.find((x) => x.id === s.id)?.kind ?? 0]!.hp;
+    const max = UNITS[kinds.get(s.id) ?? 0]!.hp;
     if (s.hp >= max && !chosen.has(s.id) && s.id !== hoverFoe) continue;
     let bar = bars[n];
     if (!bar) { bar = document.createElement('div'); bar.className = 'hpbar'; bar.append(document.createElement('span')); barLayer.append(bar); bars.push(bar); }

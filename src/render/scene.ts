@@ -686,6 +686,8 @@ export class GameRenderer {
     const t = this.tmp;
     let n = 0, rings = 0, dots = 0;
     const m = new THREE.Matrix4();
+    const byId = new Map<number, (typeof g.soldiers)[number]>();
+    for (const x of g.soldiers) byId.set(x.id, x);
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
       const prev = this.prevPos.get(s.id);
@@ -707,7 +709,7 @@ export class GameRenderer {
       st.x = fx; st.y = fy;
       const walking = s.path.length > 0 && !this.calm;
       // w walce zwraca się do wroga i wyprowadza pchnięcie zaraz po ciosie
-      const foe = s.target ? g.soldiers.find((o) => o.id === s.target) : undefined;
+      const foe = s.target ? byId.get(s.target) : undefined;
       if (foe && !walking) { heading = Math.atan2((foe.px - s.px) / FP, (foe.py - s.py) / FP); this.facing.set(s.id, heading); }
       const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
       const striking = !!foe && !walking && s.cd > 6;

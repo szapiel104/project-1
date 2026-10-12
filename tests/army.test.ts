@@ -106,3 +106,20 @@ describe('oblężenie', () => {
     expect(keep.hp).toBeGreaterThan(1000);
   });
 });
+
+describe('wydajność', () => {
+  it('bitwa 200 na 200 liczy się szybko', () => {
+    const { g } = withBarracks();
+    const k = playerKeep(g, 0)!;
+    for (let i = 0; i < 400; i++) {
+      const owner = i < 200 ? 0 : 1;
+      const x = k.x + 6 + (i % 20), y = k.y + 10 + Math.floor((i % 200) / 20) + (owner ? 14 : 0);
+      g.soldiers.push({ id: g.nextId++, owner, kind: 0, px: x * 256 + 128, py: y * 256 + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 });
+    }
+    const t0 = performance.now();
+    for (let i = 0; i < 300; i++) step(g, []);
+    const ms = (performance.now() - t0) / 300;
+    expect(ms).toBeLessThan(20);
+    expect(g.corpses.length).toBeGreaterThan(0);
+  });
+});
