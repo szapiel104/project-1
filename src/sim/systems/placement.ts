@@ -148,7 +148,7 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
 /** Ile pracy wymaga postawienie budynku (rośnie z wielkością działki) */
 export function buildWork(type: number): number {
   const def = BUILDINGS[type]!;
-  return Math.min(900, def.w * def.h * 30);
+  return Math.min(1800, def.w * def.h * 60);
 }
 
 export function placeBuilding(g: GameState, player: number, type: number, x: number, y: number, rot = 0): boolean {
