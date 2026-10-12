@@ -12,7 +12,7 @@ export function foodTotal(p: PlayerState): number {
 }
 
 /** Miesięczna zmiana popularności przy obecnych ustawieniach (także jako prognoza dla interfejsu). */
-export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; food: number; gold: number; fed: boolean; bribed: boolean } {
+export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; food: number; gold: number; fed: boolean; bribed: boolean; parts: { key: string; value: number; level?: string }[] } {
   const pop = population(g, p.id);
   const tax = RULES.taxes[p.tax] ?? RULES.taxes[1];
   const have = foodTotal(p);
@@ -24,10 +24,13 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const food = need(level);
   const gold = Math.trunc((pop * tax.goldPer2) / 2);
   const bribed = gold >= 0 || p.res[GOLD]! >= -gold;
-  let delta = RULES.rations[level]!.effect;
-  delta += bribed ? tax.effect : RULES.taxes[1].effect;
-  if (pop > housing(g, p.id)) delta += RULES.crowdingPenalty;
-  return { delta, food, gold, fed, bribed };
+  // rozbicie na składniki, żeby gracz widział, co podnosi, a co obniża popularność
+  const parts: { key: string; value: number; level?: string }[] = [];
+  parts.push({ key: 'food', value: RULES.rations[level]!.effect, level: RULES.rations[level]!.name });
+  parts.push({ key: 'tax', value: bribed ? tax.effect : RULES.taxes[1].effect, level: bribed ? tax.name : RULES.taxes[1].name });
+  if (pop > housing(g, p.id)) parts.push({ key: 'crowd', value: RULES.crowdingPenalty });
+  const delta = parts.reduce((n, x) => n + x.value, 0);
+  return { delta, food, gold, fed, bribed, parts };
 }
 
 /** Co „miesiąc”: chłopi zjadają racje, płacą podatki, a popularność się zmienia. */

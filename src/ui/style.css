@@ -426,3 +426,15 @@ body.menu-open .scribe { display: none; }
 .say { position: fixed; left: 0; top: 0; z-index: 26; pointer-events: none; max-width: 260px; padding: 8px 14px; font-size: 17px; font-weight: 700; line-height: 1.3;
   color: var(--ink); background: var(--parchment-light); border: 2px solid var(--wood-edge); box-shadow: 3px 4px 0 rgba(30, 18, 8, .45); }
 .say::after { content: ''; position: absolute; left: 50%; bottom: -12px; margin-left: -8px; border: 8px solid transparent; border-top-color: var(--wood-edge); border-bottom: 0; }
+/* rozpiski nad dolnym paskiem: popularność i ludność */
+.status .clickable { cursor: pointer; }
+.status .clickable:hover, .status .clickable:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+.report { position: fixed; right: 16px; bottom: 132px; z-index: 27; width: 340px; padding: 14px 18px; }
+.report-title { margin: 0 0 8px; font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--gold); }
+.report-list { display: grid; grid-template-columns: 1fr auto; gap: 4px 14px; margin: 0; font-size: 17px; }
+.report-list dt { margin: 0; }
+.report-list dt small { opacity: .75; font-size: 14px; }
+.report-list dd { margin: 0; font-weight: 800; text-align: right; font-variant-numeric: tabular-nums; }
+.report-list .plus { color: #7fd06a; }
+.report-list .minus { color: #ff8a7a; }
+.report-list .report-sum { border-top: 1px solid var(--gold-dark); padding-top: 6px; margin-top: 4px; font-weight: 800; }

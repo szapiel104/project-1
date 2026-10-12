@@ -23,6 +23,8 @@ export interface HudEvents {
 }
 
 export interface HudView {
+  /** Rozpiska popularności (składniki z plusem i minusem) i ludności (kto co robi) */
+  report?: { popularity: { label: string; value: number; note?: string }[]; people: { label: string; value: number }[] };
   res: ArrayLike<number>;
   /** Zmiana zapasu każdego surowca w ciągu ostatniej minuty gry */
   trend: ArrayLike<number>;
@@ -163,6 +165,36 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   popularBox.classList.add('popular');
   popularBox.title = t('hud.popularity');
   popularBox.append(icon('crown'), meter, popularVal, deltaVal);
+  // rozwijane rozpiski nad dolnym paskiem: klik w koronę = popularność, klik w ludzi = kto co robi
+  const report = el('div', 'report panel');
+  report.hidden = true;
+  let reportKind: 'popularity' | 'people' | null = null;
+  let lastReport: HudView['report'];
+  const drawReport = (): void => {
+    if (!reportKind || !lastReport) { report.hidden = true; return; }
+    report.hidden = false;
+    const rows = reportKind === 'popularity' ? lastReport.popularity : lastReport.people;
+    const sum = reportKind === 'popularity' ? rows.reduce((n, r) => n + r.value, 0) : 0;
+    report.innerHTML = `<p class="report-title">${reportKind === 'popularity' ? 'Popularność — co miesiąc' : 'Ludzie i wojsko'}</p>`;
+    const list = el('dl', 'report-list');
+    for (const r of rows) {
+      const dt = el('dt', '', r.label);
+      if ('note' in r && r.note) dt.append(el('small', '', ` ${r.note}`));
+      const dd = el('dd', reportKind === 'popularity' ? (r.value > 0 ? 'plus' : r.value < 0 ? 'minus' : '') : '', reportKind === 'popularity' ? `${r.value > 0 ? '+' : ''}${r.value}` : String(r.value));
+      list.append(dt, dd);
+    }
+    if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', 'Razem'), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
+    report.append(list);
+  };
+  const toggleReport = (k: 'popularity' | 'people'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
+  for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people']] as const) {
+    box.classList.add('clickable');
+    box.tabIndex = 0;
+    box.setAttribute('role', 'button');
+    box.addEventListener('click', () => toggleReport(k));
+    box.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleReport(k); } });
+  }
+  document.body.append(report);
   const stockVal = el('strong');
   const stockBox = el('div');
   stockBox.title = t('hud.stockpile');
@@ -490,6 +522,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     setSeed(text, presetId) { seed.value = text; mode.value = presetId; },
     setHash(hash) { setText(hashLine, `${t('hud.hash')}: ${hash.toString(16).padStart(8, '0')}`); },
     update(v) {
+      if (v.report) { lastReport = v.report; if (reportKind) drawReport(); }
       resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
       // trend: ile przybyło albo ubyło w ostatniej minucie gry (zielone na plus, czerwone na minus)
       resTrends.forEach((node, i) => {

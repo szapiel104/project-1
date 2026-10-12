@@ -12,7 +12,7 @@ import { TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population
 import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace, maxHp } from './sim/systems/placement';
-import { createHud } from './ui/hud';
+import { createHud, type HudView } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
@@ -624,6 +624,7 @@ function refresh(): void {
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
     delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable,
+    report: buildReport(f),
   });
   hud.setHash(stateHash(game));
   if (chosen.size) showArmy();
@@ -868,3 +869,27 @@ function sayLoop(): void {
   requestAnimationFrame(sayLoop);
 }
 requestAnimationFrame(sayLoop);
+
+/** Rozpiska do panelu: składniki popularności i podział ludności */
+function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
+  const LBL: Record<string, string> = { food: 'Jedzenie', tax: 'Podatki', crowd: 'Ciasnota — brak miejsc w chatach' };
+  const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
+  if (!f.fed) popularity.push({ label: 'Brak jedzenia na wybrane racje', value: 0, note: '(jedzą mniej)' });
+  const mine = game.units.filter((u) => u.owner === ME);
+  const jobs = new Map<string, number>();
+  let idle = 0, builders = 0;
+  for (const u of mine) {
+    if (u.phase === 13 || u.phase === 14) { builders++; continue; }
+    if (!u.job) { idle++; continue; }
+    const b = game.buildings.find((x) => x.id === u.job);
+    const name = b ? t(BUILDINGS[b.type]!.name) : '?';
+    jobs.set(name, (jobs.get(name) ?? 0) + 1);
+  }
+  const people: { label: string; value: number }[] = [{ label: 'Wszyscy chłopi', value: mine.length }, { label: 'Bez pracy', value: idle }, { label: 'Na budowie', value: builders }];
+  for (const [k, v] of [...jobs.entries()].sort((a, b) => b[1] - a[1])) people.push({ label: k, value: v });
+  people.push({ label: 'Żołnierze', value: game.soldiers.filter((s) => s.owner === ME).length });
+  const coming = game.travelers.filter((x) => x.owner === ME && !x.leaving).length, going = game.travelers.filter((x) => x.owner === ME && x.leaving).length;
+  if (coming) people.push({ label: 'W drodze do osady', value: coming });
+  if (going) people.push({ label: 'Odchodzą', value: going });
+  return { popularity, people };
+}
