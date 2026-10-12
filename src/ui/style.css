@@ -341,6 +341,6 @@ body.menu-open .scribe { display: none; }
 .toolbar .step { min-width: 34px; min-height: 34px; font-size: 22px; }
 /* skryba: większy, odsunięty od krawędzi, żeby obwódka nie była ucięta */
 .scribe { top: 18px; left: 18px; gap: 12px; }
-.scribe-card { max-width: 560px; min-height: 84px; gap: 16px; padding: 6px 24px 6px 6px; font-size: 20px; border-radius: 48px; box-sizing: border-box; }
+.scribe-card { max-width: 560px; min-height: 84px; gap: 16px; padding: 6px 24px 6px 6px; font-size: 20px; border-radius: 44px 8px 8px 44px; box-sizing: border-box; }
 .scribe-name { font-size: 14px; }
 .scribe-face, .scribe-face svg { width: 72px; height: 72px; }
