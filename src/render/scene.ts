@@ -29,6 +29,41 @@ export interface TileRef { x: number; y: number }
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
 
+/**
+ * Łączy nieruchome części budynku o tym samym materiale w jedną siatkę: zamiast kilkudziesięciu
+ * wywołań rysowania na budynek jest kilka. Części nazwane (dach, wnętrze, skrzydła młyna, pochodnia…)
+ * zostają osobno, bo animacje i podgląd wnętrza ich szukają.
+ */
+function mergeStatic(root: THREE.Object3D): void {
+  root.updateMatrixWorld(true);
+  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const groups = new Map<THREE.Material, { geos: THREE.BufferGeometry[]; meshes: THREE.Mesh[] }>();
+  root.traverse((o) => {
+    const m = o as THREE.Mesh;
+    if (!m.isMesh || (m as THREE.InstancedMesh).isInstancedMesh || Array.isArray(m.material) || m.name || !m.visible) return;
+    // wszystko pod nazwaną grupą zostaje nietknięte (animacje, wnętrza, zapasy w składzie, ludzie w twierdzy)
+    for (let p: THREE.Object3D | null = m.parent; p && p !== root; p = p.parent) if (p.name || !p.visible) return;
+    const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
+    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
+    let e = groups.get(m.material); if (!e) { e = { geos: [], meshes: [] }; groups.set(m.material, e); }
+    e.geos.push(g); e.meshes.push(m);
+  });
+  for (const [mat, e] of groups) {
+    if (e.meshes.length < 2) continue;
+    // wspólne atrybuty muszą się zgadzać; inaczej zostawiamy jak jest
+    const keys = Object.keys(e.geos[0]!.attributes).sort().join();
+    if (e.geos.some((g) => Object.keys(g.attributes).sort().join() !== keys)) continue;
+    for (const g of e.geos) g.morphAttributes = {};
+    const merged = mergeGeometries(e.geos);
+    if (!merged) continue;
+    const one = new THREE.Mesh(merged, mat);
+    one.castShadow = e.meshes.some((m) => m.castShadow);
+    one.receiveShadow = true;
+    root.add(one);
+    for (const m of e.meshes) m.parent?.remove(m);
+  }
+}
+
 let sadMat: THREE.SpriteMaterial | null = null;
 /** Smutna minka nad głową chłopa, który opuszcza osadę */
 function sadMaterial(): THREE.SpriteMaterial {
@@ -1030,6 +1065,7 @@ export class GameRenderer {
       const def = BUILDINGS[b.type]!;
       const team = g.players[b.owner]?.team ?? 0;
       const mesh = this.models.building(def.id, TEAM_COLORS[team] ?? 0x888888);
+      mergeStatic(mesh);
       let top = -99, low = 99;
       const fp = footprint(def, b.rot);
       // pod budynkiem nie rośnie trawa, krzewy ani nie leżą kamyki
