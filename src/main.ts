@@ -17,7 +17,7 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
-import { getVolume, isMuted, nature, play, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { getVolume, isMuted, nature, play, talk, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
 import { TEAM_COLORS } from './data/teams';
@@ -858,7 +858,7 @@ function speak(id: number): void {
   bubble.hidden = false;
   sayUnit = id;
   sayUntil = performance.now() + 3200;
-  play('babble');
+  talk(bubble.textContent ?? '', id);
 }
 function sayLoop(): void {
   if (!bubble.hidden) {
