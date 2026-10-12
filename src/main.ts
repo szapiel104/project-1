@@ -1,4 +1,6 @@
 import { BUILDINGS, buildingIndex, footprint } from './data/buildings';
+import { resIndex, type ResourceId } from './data/resources';
+import { UNITS } from './data/units';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { BYNAMES, FIRST_NAMES } from './data/names';
 import { t } from './i18n';
@@ -71,6 +73,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onVolume: (v) => setVolume(v),
   onMute: () => hud.setMuted(toggleMute()),
   onMenu: () => menu.open(true),
+  onTrain: (id) => { pending.push({ type: 'train', player: ME, building: id, unit: 'spearman' }); play('build'); },
 }, renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
@@ -157,7 +160,7 @@ function select(id: number): void {
   selected = id;
   const b = game.buildings.find((x) => x.id === id);
   renderer.setSelection(b ? id : 0);
-  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME } : null);
+  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain() } : null);
 }
 
 /** Lewy górny róg działki tak, żeby budynek był wyśrodkowany na wskazanym polu. */
@@ -233,6 +236,7 @@ window.addEventListener('keydown', (e) => {
     if (menu.isOpen()) { if (!titleScreen) menu.close(); return; }
     if (wrecking) setWreck(false);
     else if (picked) pick(null);
+    else if (chosen.size) chooseSoldiers([], false);
     else if (selected || selectedUnit) { select(0); selectUnit(0); }
     else menu.open(true);
     return;
@@ -245,7 +249,74 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
   if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);
 });
-canvas.addEventListener('contextmenu', () => { if (wrecking) setWreck(false); else if (picked) pick(null); });
+canvas.addEventListener('contextmenu', () => {
+  if (wrecking) setWreck(false);
+  else if (picked) pick(null);
+  else if (chosen.size && hoverTile && !renderer.dragged) {
+    pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y });
+    play('rotate');
+  }
+});
+
+// ---- wojsko: zaznaczanie ramką lub kliknięciem, rozkaz marszu prawym przyciskiem ----
+const chosen = new Set<number>();
+const selBox = document.createElement('div');
+selBox.className = 'selbox';
+selBox.hidden = true;
+document.body.append(selBox);
+let boxStart: { x: number; y: number } | null = null;
+
+function canTrain(): boolean {
+  const p = game.players[ME]!;
+  const def = UNITS[0]!;
+  for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
+  return game.units.some((u) => u.owner === ME && u.job === 0);
+}
+
+function chooseSoldiers(ids: number[], add: boolean): void {
+  if (!add) chosen.clear();
+  for (const id of ids) chosen.add(id);
+  renderer.setSoldierSelection(chosen);
+  if (chosen.size) {
+    select(0);
+    selectUnit(0);
+    hud.showPerson({ name: `${t('hud.soldiers')}: ${chosen.size}`, lines: [`${t('u.spearman')} × ${chosen.size}`, t('hud.orderHint')] });
+  } else hud.showPerson(null);
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.button !== 0 || e.ctrlKey || picked || wrecking || menu.isOpen()) return;
+  boxStart = { x: e.clientX, y: e.clientY };
+});
+window.addEventListener('pointermove', (e) => {
+  if (!boxStart || !(e.buttons & 1)) return;
+  const x0 = Math.min(boxStart.x, e.clientX), y0 = Math.min(boxStart.y, e.clientY);
+  const w = Math.abs(e.clientX - boxStart.x), h = Math.abs(e.clientY - boxStart.y);
+  if (w + h < 8 && selBox.hidden) return;
+  selBox.hidden = false;
+  Object.assign(selBox.style, { left: `${x0}px`, top: `${y0}px`, width: `${w}px`, height: `${h}px` });
+});
+// w fazie przechwytywania, żeby zadziałało przed zwykłym kliknięciem w mapę
+canvas.addEventListener('pointerup', (e) => {
+  if (e.button !== 0 || !boxStart) return;
+  const start = boxStart;
+  boxStart = null;
+  const onScreen = renderer.soldiersOnScreen(ME);
+  if (!selBox.hidden) {
+    selBox.hidden = true;
+    const x0 = Math.min(start.x, e.clientX), x1 = Math.max(start.x, e.clientX), y0 = Math.min(start.y, e.clientY), y1 = Math.max(start.y, e.clientY);
+    const ids = onScreen.filter((s) => s.x >= x0 && s.x <= x1 && s.y >= y0 && s.y <= y1).map((s) => s.id);
+    chooseSoldiers(ids, e.shiftKey);
+    if (ids.length) play('select');
+    renderer.markDragged();
+    return;
+  }
+  // zwykłe kliknięcie: najbliższy żołnierz pod kursorem
+  let best = 0, bestD = 22 * 22;
+  for (const s of onScreen) { const d = (s.x - e.clientX) ** 2 + (s.y - e.clientY) ** 2; if (d < bestD) { bestD = d; best = s.id; } }
+  if (best) { chooseSoldiers([best], e.shiftKey); play('select'); renderer.markDragged(); }
+  else if (chosen.size && !e.shiftKey) chooseSoldiers([], false);
+}, { capture: true });
 
 let warnedHungry = false;
 let warnedLeaving = false;
@@ -276,7 +347,7 @@ function refresh(): void {
   if (selected) {
     const b = game.buildings.find((x) => x.id === selected);
     if (!b) select(0);
-    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME });
+    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain() });
   }
 }
 
@@ -327,6 +398,7 @@ requestAnimationFrame(loop);
 
 // podgląd stanu dla testów w przeglądarce
 (window as unknown as { __game: () => GameState }).__game = () => game;
+(window as unknown as { __cmd: (c: Command) => void }).__cmd = (c) => pending.push(c);
 (window as unknown as { __look: (x: number, y: number, d?: number) => void }).__look = (x, y, d) => renderer.lookAt(x, y, d);
 
 declare const __BUILD__: string;

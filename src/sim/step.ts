@@ -7,6 +7,7 @@ import { migrationSystem } from './systems/population';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
+import { armySystem, orderMove, train } from './systems/army';
 
 /** Komendy graczy. To jedyna droga, którą gracz (albo bot, albo sieć) wpływa na grę. */
 export type Command =
@@ -15,7 +16,9 @@ export type Command =
   | { type: 'demolish'; player: number; id: number }
   | { type: 'unroad'; player: number; x: number; y: number }
   | { type: 'setRations'; player: number; level: number }
-  | { type: 'setTax'; player: number; level: number };
+  | { type: 'setTax'; player: number; level: number }
+  | { type: 'train'; player: number; building: number; unit: string }
+  | { type: 'move'; player: number; ids: number[]; x: number; y: number };
 
 function apply(g: GameState, c: Command): void {
   const p = g.players[c.player];
@@ -36,6 +39,13 @@ function apply(g: GameState, c: Command): void {
     case 'setTax':
       if (Number.isInteger(c.level) && c.level >= 0 && c.level < RULES.taxes.length) p.tax = c.level;
       break;
+    case 'train':
+      if (Number.isInteger(c.building) && typeof c.unit === 'string') train(g, c.player, c.building, c.unit);
+      break;
+    case 'move':
+      if (Array.isArray(c.ids) && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.y >= 0 && c.x < g.map.width && c.y < g.map.height)
+        orderMove(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.y * g.map.width + c.x);
+      break;
     case 'noop':
       break;
   }
@@ -51,6 +61,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   torchSystem(g);
   rubbleSystem(g);
   workerSystem(g);
+  armySystem(g);
   migrationSystem(g);
   economySystem(g);
 }

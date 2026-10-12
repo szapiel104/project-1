@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.9.0 — pierwsze wojsko (2026-10-12)
+
+- Nowa kategoria Wojsko: warsztat włóczniarza (z drewna robi włócznie do składu) i koszary (wolny chłop + włócznia + 8 złota = włócznik)
+- Włócznik: kolczuga, tunika w barwach drużyny, kapalin, tarcza i długa włócznia; żołnierze nie liczą się do ludności osady
+- Zaznaczanie: lewy przycisk przeciągnięty = ramka, kliknięcie = jeden żołnierz, Shift dodaje; prawy przycisk na mapie = marsz w szyku; Esc odznacza
+- Mapa przesuwa się środkowym przyciskiem, klawiszami i kursorem przy krawędzi (lewy przycisk służy teraz do zaznaczania)
+- Zapis w nowej wersji (stare zapisy się nie wczytają)
+
 ## 0.8.1 — rozbudowane ustawienia i poradnik (2026-10-12)
 
 - Ustawienia w zakładkach: Dźwięk (głośność ogólna, budowa i praca, interfejs, otoczenie, wyciszenie), Grafika (cienie od wyłączonych do wysokich, cieniowanie zagłębień w czterech poziomach, rozdzielczość obrazu, cykl dnia i nocy), Sterowanie (szybkość kamery, przesuwanie mapy kursorem przy krawędzi ekranu); przycisk przywracania domyślnych

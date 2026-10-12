@@ -17,7 +17,7 @@ export interface ProductionDef {
 }
 
 /** Kategorie w menu budowy. Nowa kategoria = wpis tutaj i nazwa w i18n. */
-export const CATEGORIES = ['settlement', 'food', 'industry', 'roads'] as const;
+export const CATEGORIES = ['settlement', 'food', 'industry', 'military', 'roads'] as const;
 export type CategoryId = (typeof CATEGORIES)[number];
 
 export interface BuildingDef {
@@ -108,6 +108,14 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'roadStone', category: 'roads', name: 'b.roadStone', w: 1, h: 1, cost: { stone: 1 }, road: 2, buildable: true },
   // Cech inżynierów: jego człowiek wynosi gruz po rozbiórkach, gdy brakuje chłopów bez pracy
   { id: 'engineers', category: 'settlement', name: 'b.engineers', w: 2, h: 2, cost: { wood: 30, stone: 10 }, staff: true, buildable: true },
+  // Warsztat włóczniarza: z drewna ze składu struga drzewca i oprawia groty
+  {
+    id: 'poleturner', category: 'military', name: 'b.poleturner', w: 2, h: 2, cost: { wood: 20 }, buildable: true,
+    workView: 'inside',
+    production: { input: { res: 'wood', amount: 2 }, output: { res: 'spear', amount: 1 }, site: 'home', workTicks: 120 },
+  },
+  // Koszary: tu wolny chłop dostaje broń ze składu i staje się żołnierzem
+  { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 30, stone: 30 }, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

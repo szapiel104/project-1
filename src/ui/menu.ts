@@ -60,7 +60,7 @@ const HELP: [string, string[]][] = [
   ['help.t.food', ['help.food1', 'help.food2', 'help.food3']],
   ['help.t.people', ['help.pop1', 'help.pop2', 'help.pop3', 'help.pop4']],
   ['help.t.build', ['help.bld1', 'help.bld2', 'help.bld3', 'help.bld4']],
-  ['help.t.controls', ['help.move', 'help.rotate', 'help.zoom', 'help.build', 'help.speed', 'help.sound', 'help.menu']],
+  ['help.t.controls', ['help.move', 'help.select', 'help.rotate', 'help.zoom', 'help.build', 'help.speed', 'help.sound', 'help.menu']],
 ];
 
 /**

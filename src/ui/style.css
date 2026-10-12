@@ -233,3 +233,6 @@ body.menu-open #ui .bottom, body.menu-open #ui .toast, body.menu-open .build { d
 /* belka budowy i inne listy przewijane w bok: bez widocznego paska przewijania */
 .cards, .menu-panel { scrollbar-width: none; }
 .cards::-webkit-scrollbar, .menu-panel::-webkit-scrollbar { display: none; }
+
+/* ramka zaznaczania wojska */
+.selbox { position: fixed; z-index: 30; pointer-events: none; border: 1px solid #ffe08a; background: rgba(255, 224, 138, .12); box-shadow: 0 0 0 1px rgba(0, 0, 0, .4); }

@@ -16,7 +16,7 @@ export class StrategyCamera {
   /** Wysokość terenu w punkcie świata; kamera nigdy nie zejdzie pod ziemię */
   ground: (x: number, z: number) => number = () => 0;
   private keys = new Set<string>();
-  private pointers = new Map<number, { x: number; y: number; button: number }>();
+  private pointers = new Map<number, { x: number; y: number; button: number; moved?: number }>();
   private pinch = 0;
   private bounds = { x: 36, z: 36 };
   /** Mnożnik szybkości przesuwania i obrotu (ustawienia) */
@@ -148,17 +148,21 @@ export class StrategyCamera {
       if (this.pinch) this.zoom(this.pinch / d);
       this.pinch = d;
       this.dragged = true;
-    } else if (p.button === 2 || p.button === 1 || (p.button === 0 && e.ctrlKey)) {
-      // obrót: prawy albo środkowy przycisk, a także lewy z wciśniętym Ctrl; ruch w górę i w dół zmienia kąt patrzenia
-      this.yaw -= dx * 0.006;
+    } else if (p.button === 2 || (p.button === 0 && e.ctrlKey)) {
+      // obrót: prawy przycisk albo lewy z Ctrl; ruch w górę i w dół zmienia kąt patrzenia
+      this.yaw -= dx * 0.006 * this.speed;
       this.tilt(dy * 0.005);
       this.dragged = true;
-    } else if (this.panLocked && e.pointerType !== 'touch' && !e.ctrlKey) {
-      return;
-    } else {
+    } else if (p.button === 1) {
+      // środkowy przycisk przesuwa mapę
       if (Math.abs(dx) + Math.abs(dy) > 2) this.dragged = true;
       const scale = (this.dist / this.el.clientHeight) * 1.1;
       this.pan(-dx * scale, -dy * scale * 1.3);
+    } else {
+      // lewy przycisk należy do gry (ramka zaznaczenia, malowanie dróg); kamera tylko notuje, że był ruch
+      p.moved = (p.moved ?? 0) + Math.abs(dx) + Math.abs(dy);
+      if (p.moved > 5) this.dragged = true;
+      return;
     }
     this.apply();
   };

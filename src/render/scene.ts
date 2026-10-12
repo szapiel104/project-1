@@ -72,6 +72,12 @@ export class GameRenderer {
   private buildingMeshes = new Map<number, THREE.Group>();
 
   private figures: Figures;
+  /** Żołnierze: osobny zestaw postaci w zbrojach */
+  private spearmen: Figures;
+  private rings: THREE.InstancedMesh;
+  private soldierSel = new Set<number>();
+  /** Położenie żołnierzy na ekranie z ostatniej klatki (do zaznaczania ramką) */
+  private soldierPos = new Map<number, THREE.Vector3>();
   private facing = new Map<number, number>();
   /** Faza kroku każdego chłopa: rośnie z przebytą drogą, więc nogi chodzą w tempie marszu przy każdej prędkości gry */
   private strides = new Map<number, { x: number; y: number; phase: number }>();
@@ -141,6 +147,12 @@ export class GameRenderer {
     this.selection = flat(new THREE.RingGeometry(0.62, 0.72, 4, 1, Math.PI / 4), 0xfff3c4);
 
     this.figures = new Figures(MAX_UNITS, this.scene);
+    this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
+    this.rings = new THREE.InstancedMesh(new THREE.RingGeometry(0.2, 0.27, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false }), MAX_UNITS);
+    this.rings.count = 0;
+    this.rings.frustumCulled = false;
+    this.rings.renderOrder = 3;
+    this.scene.add(this.rings);
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
     for (let i = 0; i < 12; i++) {
@@ -250,6 +262,7 @@ export class GameRenderer {
     if (!this.state) return;
     this.prevPos.clear();
     for (const u of this.state.units) this.prevPos.set(u.id, [u.px, u.py]);
+    for (const x of this.state.soldiers) this.prevPos.set(x.id, [x.px, x.py]);
   }
 
   /** Ustawia kamerę nad wskazanym punktem mapy (w polach); używane też przy testach wyglądu */
@@ -349,7 +362,7 @@ export class GameRenderer {
       this.syncRoads(this.state, this.view);
       this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
-      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
+      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); }
     this.composer.render();
   }
 
@@ -565,6 +578,75 @@ export class GameRenderer {
         }
       }
     }
+  }
+
+  /** Zaznaczeni żołnierze dostają złoty pierścień pod stopami */
+  setSoldierSelection(ids: Set<number>): void { this.soldierSel = ids; }
+
+  /** Ruch myszy zajęty przez ramkę zaznaczenia: kliknięcie na końcu nie liczy się jako kliknięcie w mapę */
+  markDragged(): void { this.cam.dragged = true; }
+  /** Czy ostatni ruch myszy obracał albo przesuwał kamerę */
+  get dragged(): boolean { return this.cam.dragged; }
+
+  /** Żołnierze gracza z położeniem na ekranie (piksele w oknie) */
+  soldiersOnScreen(player: number): { id: number; x: number; y: number }[] {
+    if (!this.state) return [];
+    const out: { id: number; x: number; y: number }[] = [];
+    const r = this.canvas.getBoundingClientRect();
+    const v = new THREE.Vector3();
+    for (const s of this.state.soldiers) {
+      if (s.owner !== player) continue;
+      const p = this.soldierPos.get(s.id);
+      if (!p) continue;
+      v.copy(p).setY(p.y + 0.45).project(this.cam.camera);
+      if (v.z > 1) continue;
+      out.push({ id: s.id, x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height });
+    }
+    return out;
+  }
+
+  private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
+    const { width, height } = g.map;
+    const t = this.tmp;
+    let n = 0, rings = 0;
+    const m = new THREE.Matrix4();
+    for (const s of g.soldiers) {
+      if (n >= MAX_UNITS) break;
+      const prev = this.prevPos.get(s.id);
+      const fx = (prev ? prev[0] + (s.px - prev[0]) * alpha : s.px) / FP;
+      const fy = (prev ? prev[1] + (s.py - prev[1]) * alpha : s.py) / FP;
+      const next = s.path[0];
+      let heading = this.facing.get(s.id) ?? Math.PI;
+      if (next !== undefined) {
+        const want = Math.atan2((next % width) + 0.5 - fx, Math.floor(next / width) + 0.5 - fy);
+        let diff = want - heading;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        heading += diff * 0.25;
+        this.facing.set(s.id, heading);
+      }
+      let st = this.strides.get(s.id);
+      if (!st) { st = { x: fx, y: fy, phase: s.id }; this.strides.set(s.id, st); }
+      st.phase += Math.min(0.5, Math.hypot(fx - st.x, fy - st.y)) * 7.5;
+      st.x = fx; st.y = fy;
+      const walking = s.path.length > 0 && !this.calm;
+      const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
+      const y = view.heightAt(fx, fy);
+      t.position.set(fx - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), fy - height / 2);
+      t.rotation.set(0, heading, 0);
+      t.scale.setScalar(1.08);
+      t.updateMatrix();
+      t.scale.setScalar(1);
+      this.spearmen.set(n, t.matrix, swing, false, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id);
+      let pos = this.soldierPos.get(s.id);
+      if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
+      pos.set(fx - width / 2, y, fy - height / 2);
+      if (this.soldierSel.has(s.id)) { m.makeTranslation(pos.x, y + 0.03, pos.z); this.rings.setMatrixAt(rings++, m); }
+      n++;
+    }
+    this.spearmen.finish(n);
+    this.rings.count = rings;
+    this.rings.instanceMatrix.needsUpdate = true;
   }
 
   private syncUnits(g: GameState, view: TerrainView, alpha: number): void {

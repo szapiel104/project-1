@@ -18,6 +18,7 @@ export interface HudEvents {
   onVolume(v: number): void;
   onMute(): void;
   onMenu(): void;
+  onTrain(building: number): void;
 }
 
 export interface HudView {
@@ -42,7 +43,7 @@ export interface HudView {
   affordable: Set<string>;
 }
 
-export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean }
+export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -87,6 +88,7 @@ const ICONS: Record<string, string> = {
   bread: '<path d="M2.5 13c0-5 3-7 7.5-7s7.5 2 7.5 7z" fill="#c9843d" stroke="#2a1c10"/><path d="M7 8.500l1.5 2M10.5 8l1.5 2M14 9l1 1.5" stroke="#7a4a1c"/>',
   apples: '<path d="M10 7c-4-2-7 1-6 5 1 4 4 5 6 4 2 1 5 0 6-4 1-4-2-7-6-5z" fill="#d0281f" stroke="#2a1c10"/><path d="M10 7c0-2 1-3 2-4" stroke="#2a1c10" fill="none"/><path d="M12 4c2-1 3 0 3 1-1 1-2 1-3-1z" fill="#5c9a3c" stroke="#2a1c10" stroke-width=".7"/>',
   fish: '<path d="M2 10c3-5 9-5 12 0-3 5-9 5-12 0z" fill="#9cc3d6" stroke="#2a1c10"/><path d="M14 10l4-3v6z" fill="#7aa6bd" stroke="#2a1c10"/><circle cx="5.5" cy="9" r=".9" fill="#2a1c10"/><path d="M8 7.500c1 1.500 1 3.500 0 5" stroke="#4f7f96" fill="none"/>',
+  spear: '<path d="M3 17L15 5" stroke="#8a5a2b" stroke-width="2"/><path d="M14 3l4-1-1 4-3 1z" fill="#b9bec6" stroke="#2a1c10"/>',
   crown: '<path d="M3 15l1-9 4 4 2-6 2 6 4-4 1 9z" fill="#e9c145" stroke="#2a1c10"/><rect x="3" y="15" width="14" height="2.5" fill="#c9a23a" stroke="#2a1c10"/>',
   store: '<rect x="3" y="6" width="14" height="10" fill="#a8743a" stroke="#2a1c10"/><path d="M3 6l2-3h10l2 3M3 11h14M10 6v10" stroke="#2a1c10" fill="none"/>',
   granary: '<path d="M4 9l6-5 6 5v8H4z" fill="#c9a24a" stroke="#2a1c10"/><rect x="8" y="12" width="4" height="5" fill="#5e4329" stroke="#2a1c10"/>',
@@ -238,8 +240,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   demolish.type = 'button';
   const close = el('button', 'btn-plain', t('hud.close'));
   close.type = 'button';
+  const trainBtn = el('button', 'btn-main', t('hud.train'));
+  trainBtn.type = 'button';
+  trainBtn.hidden = true;
+  trainBtn.addEventListener('click', () => events.onTrain(infoId));
+  const trainNote = el('p', 'hint');
   infoActions.append(demolish, close);
-  info.append(infoName, infoDesc, infoWorker, infoActions);
+  info.append(infoName, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -295,7 +302,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   };
   // panel z kartami wyskakuje nad paskiem narzędzi tylko wtedy, gdy jest co pokazać
   const syncPicker = (): void => { buildbar.hidden = cards.hidden && buildFoot.hidden; };
-  const CAT_ICON: Record<string, string> = { settlement: 'house', food: 'farm', industry: 'woodcutter', roads: 'roadStone' };
+  const CAT_ICON: Record<string, string> = { settlement: 'house', food: 'farm', industry: 'woodcutter', military: 'barracks', roads: 'roadStone' };
   for (const id of CATEGORIES) {
     const b = el('button', 'cat');
     const src = thumbs.get(CAT_ICON[id] ?? '');
@@ -481,6 +488,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       infoWorker.textContent = '';
       person.lines.slice(1).forEach((line, k) => { if (k) infoWorker.append(document.createElement('br')); infoWorker.append(line); });
       demolish.hidden = true;
+      trainBtn.hidden = true;
+      trainNote.hidden = true;
     },
     showInfo(i) {
       info.hidden = !i;
@@ -491,6 +500,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       infoWorker.hidden = !i.def.production;
       setText(infoWorker, `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
       demolish.hidden = !i.own || !i.def.buildable;
+      // koszary: szkolenie żołnierza z informacją, co kosztuje albo czego brakuje
+      const barracks = i.own && i.def.id === 'barracks';
+      trainBtn.hidden = !barracks;
+      trainNote.hidden = !barracks;
+      if (barracks) { trainBtn.disabled = !i.canTrain; setText(trainNote, t(i.canTrain ? 'hud.trainCost' : 'hud.trainNo')); }
     },
     stepSpeed,
     setMuted(m) { mute.setAttribute('aria-pressed', String(m)); setText(mute, t(m ? 'hud.unmute' : 'hud.mute')); },

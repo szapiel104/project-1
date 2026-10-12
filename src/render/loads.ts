@@ -30,6 +30,7 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
   flour: () => [ball(0.13, 0, 0.04, 0, 0xf4eedc, 1.25, 0.95, 0.9), block(0.06, 0.05, 0.06, 0.15, 0.1, 0, 0xcfc4a4)],
   stone: () => [block(0.24, 0.17, 0.2, 0, 0.03, 0, 0xb5b0a2), block(0.14, 0.1, 0.14, 0.03, 0.16, 0.01, 0x9d978a)],
   fish: () => [basket(), ...[-0.05, 0.05].map((x, k) => ball(0.05, x, 0.09, k ? 0.03 : -0.03, 0x9cc3d6, 0.7, 0.6, 2.2)), ball(0.045, 0, 0.13, 0, 0x7aa6bd, 2.2, 0.6, 0.7)],
+  spear: () => [0, 1, 2].flatMap((k) => [tint(new THREE.CylinderGeometry(0.014, 0.014, 0.7, 5).rotateX(Math.PI / 2).translate((k - 1) * 0.04, 0.02, 0.05), 0xc9a26b), tint(new THREE.ConeGeometry(0.024, 0.08, 4).rotateX(Math.PI / 2).translate((k - 1) * 0.04, 0.02, 0.44), 0x8a8f96)]),
   iron: () => [block(0.3, 0.07, 0.11, 0, 0, -0.07, 0x6a6570), block(0.3, 0.07, 0.11, 0, 0, 0.07, 0x6a6570), block(0.3, 0.07, 0.11, 0, 0.08, 0, 0x7c7784)],
 };
 

@@ -209,6 +209,17 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
       ...[0, 1, 2, 3, 4, 5, 6].map((k) => paint(new THREE.IcosahedronGeometry(0.055, 1).translate(Math.cos(k * 0.9) * (k ? 0.11 : 0), 0.03 + (k ? 0 : 0.04), Math.sin(k * 0.9) * (k ? 0.11 : 0)), k % 3 === 2 ? 0x9fbf3a : 0xc8261d)),
     ]),
   },
+  spear: {
+    tex: 'planks',
+    // pęk włóczni na kozłach: drzewca jasne, groty z żelaza
+    geo: merge([
+      ...[-0.16, 0.16].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.12, 0.3), x, -0.1, 0), 0x6b4a2e)),
+      ...[0, 1, 2, 3, 4].flatMap((k) => [
+        paint(new THREE.CylinderGeometry(0.014, 0.016, 0.5, 5).rotateZ(Math.PI / 2).translate(0, -0.02 + (k % 2) * 0.03, -0.1 + k * 0.05), 0xc9a26b),
+        paint(new THREE.ConeGeometry(0.025, 0.08, 4).rotateZ(-Math.PI / 2).translate(0.29, -0.02 + (k % 2) * 0.03, -0.1 + k * 0.05), 0x8a8f96),
+      ]),
+    ]),
+  },
   fish: {
     geo: merge([
       paint(part(new THREE.BoxGeometry(0.38, 0.1, 0.3), 0, -0.08, 0), 0x8a6a45),
@@ -1048,6 +1059,72 @@ const BUILDERS: Record<string, Builder> = {
     }
     g.add(barrow);
     pennant(g, flag, 0.8, 1.25, -0.7);
+  },
+  poleturner(g, _team, flag) {
+    // Warsztat włóczniarza: otwarta chata z kozłem do strugania, stojak z gotowymi włóczniami i kosz z grotami
+    const inside = hut(g, M.plaster, M.thatch, 1.4, 1.1, 0.75, 0, -0.15, true);
+    box(inside, M.wood, 0.7, 0.05, 0.22, -0.1, 0.32, -0.25);
+    for (const sx of [-1, 1]) box(inside, M.woodDark, 0.05, 0.32, 0.18, -0.1 + sx * 0.3, 0.0, -0.25);
+    box(inside, M.plank, 0.9, 0.03, 0.03, -0.05, 0.38, -0.25).rotation.y = 0.15;
+    box(inside, M.sawdust, 0.6, 0.012, 0.4, -0.1, 0.03, 0.05);
+    // stojak pod ścianą od frontu
+    box(g, M.woodDark, 0.06, 0.6, 0.06, 0.45, 0, 0.62);
+    box(g, M.woodDark, 0.06, 0.6, 0.06, 0.85, 0, 0.62);
+    box(g, M.woodDark, 0.5, 0.05, 0.06, 0.65, 0.55, 0.62);
+    for (let k = 0; k < 5; k++) {
+      const sp = new THREE.Group();
+      sp.position.set(0.5 + k * 0.08, 0, 0.6);
+      sp.rotation.z = -0.12;
+      box(sp, M.plank, 0.025, 0.95, 0.025, 0, 0, 0);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.12, 4), M.iron);
+      tip.position.y = 1.0;
+      sp.add(tip);
+      g.add(sp);
+    }
+    const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.14, 8), M.basket);
+    basket.position.set(-0.7, 0.07, 0.62);
+    g.add(basket);
+    pennant(g, flag, -0.62, 0.95, -0.6);
+  },
+  barracks(g, _team, flag) {
+    // Koszary: długi dom z kamienną podmurówką i strzechą, plac ćwiczeń z kukłami, stojak z bronią, ławka i sztandar
+    box(g, M.soil, 2.9, 0.03, 2.9);
+    box(g, M.stoneDark, 2.6, 0.3, 1.2, 0, 0, -0.75);
+    box(g, M.wood, 2.5, 0.65, 1.1, 0, 0.3, -0.75);
+    for (const x of [-1.2, -0.4, 0.4, 1.2]) box(g, M.woodDark, 0.08, 0.66, 0.08, x, 0.3, -0.19);
+    box(g, M.woodDark, 2.55, 0.07, 0.08, 0, 0.92, -0.19);
+    box(g, M.woodDark, 0.34, 0.5, 0.04, 0, 0.3, -0.18);
+    for (const x of [-0.8, 0.8]) box(g, M.window, 0.26, 0.22, 0.04, x, 0.55, -0.18);
+    layeredRoof(g, M.thatch, 2.8, 0.75, 1.5, 0.95, 0, -0.75);
+    // plac: dwie kukły ze słomy na palach i stojak z włóczniami
+    for (const x of [-0.9, -0.3]) {
+      box(g, M.woodDark, 0.05, 0.7, 0.05, x, 0, 0.6);
+      box(g, M.woodDark, 0.4, 0.04, 0.04, x, 0.5, 0.6);
+      const dummy = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.34, 8), M.hay);
+      dummy.position.set(x, 0.5, 0.6);
+      g.add(dummy);
+      const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 1), M.hay);
+      head.position.set(x, 0.78, 0.6);
+      g.add(head);
+    }
+    box(g, M.woodDark, 0.06, 0.55, 0.06, 0.55, 0, 0.75);
+    box(g, M.woodDark, 0.06, 0.55, 0.06, 1.15, 0, 0.75);
+    box(g, M.woodDark, 0.66, 0.05, 0.06, 0.85, 0.5, 0.75);
+    for (let k = 0; k < 6; k++) {
+      const sp = new THREE.Group();
+      sp.position.set(0.6 + k * 0.1, 0, 0.73);
+      sp.rotation.z = -0.1;
+      box(sp, M.plank, 0.025, 1.0, 0.025, 0, 0, 0);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.12, 4), M.iron);
+      tip.position.y = 1.05;
+      sp.add(tip);
+      g.add(sp);
+    }
+    box(g, M.wood, 0.9, 0.05, 0.22, 0.6, 0.22, 0.05);
+    for (const x of [0.25, 0.95]) box(g, M.woodDark, 0.05, 0.22, 0.2, x, 0, 0.05);
+    // sztandar w barwach drużyny przy wejściu
+    box(g, M.woodDark, 0.06, 1.5, 0.06, -1.3, 0, 0.2);
+    box(g, flag, 0.04, 0.6, 0.36, -1.3, 0.85, 0.4);
   },
   roadSand(g) { box(g, M.roadSand, 0.96, 0.04, 0.96); },
   roadStone(g) { box(g, M.roadStone, 0.96, 0.05, 0.96); },

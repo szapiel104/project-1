@@ -102,6 +102,21 @@ export interface Unit {
   target: number;
 }
 
+/** Żołnierz: osobno od chłopów, bo nie pracuje, nie mieszka i nie liczy się do ludności osady */
+export interface Soldier {
+  id: number;
+  owner: number;
+  /** Indeks w data/units.ts */
+  kind: number;
+  px: number;
+  py: number;
+  path: number[];
+  hp: number;
+  /** Pole, na które ma dojść, albo -1 */
+  goal: number;
+  wait: number;
+}
+
 export interface GameState {
   tick: number;
   map: GameMap;
@@ -109,6 +124,7 @@ export interface GameState {
   players: PlayerState[];
   buildings: Building[];
   units: Unit[];
+  soldiers: Soldier[];
   /** Id budynku na polu albo 0 */
   occupancy: Int32Array;
   /** Ile wejść do budynków leży na polu (takiego pola nie wolno zabudować) */
@@ -127,7 +143,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const map = generateMap(seed, preset);
   const size = map.width * map.height;
   const g: GameState = {
-    tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [],
+    tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [],
     occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), rubble: [], nextId: 1,
   };
   const keep = buildingIndex('keep');
@@ -233,5 +249,6 @@ export function stateHash(g: GameState): number {
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length);
     for (const t of u.path) add(t);
   }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.path.length); for (const t of s.path) add(t); }
   return h >>> 0;
 }

@@ -70,7 +70,7 @@ export class Figures {
   private none = new THREE.Matrix4().makeScale(0, 0, 0);
   private color = new THREE.Color();
 
-  constructor(max: number, scene: THREE.Scene) {
+  constructor(max: number, scene: THREE.Scene, kind: 'peasant' | 'spearman' = 'peasant') {
     const always = (): boolean => true;
     const add = (geo: THREE.BufferGeometry, color: number | Part['color'], x: number, y: number, z: number, rot: Part['rot'], shown: Part['shown'] = always): void => {
       const fixed = typeof color === 'number';
@@ -85,6 +85,37 @@ export class Figures {
     const still = (): number => 0;
     const legL = (s: number): number => s, legR = (s: number): number => -s;
     const armL = (s: number, up: boolean): number => (up ? -1.35 : -s * 0.8), armR = (s: number, up: boolean): number => (up ? -1.35 : s * 0.8);
+    if (kind === 'spearman') {
+      // Włócznik: kolczuga pod tuniką w barwach drużyny, hełm z rondem (kapalin), okrągła tarcza i długa włócznia
+      const MAIL = 0x7c8088, IRON = 0x5a5e66;
+      for (const [x, rot] of [[-0.055, legL], [0.055, legR]] as const) {
+        add(limb(0.078, 0.17, 0.088), 0x4a3a2a, x, 0.23, 0, rot);
+        add(new THREE.BoxGeometry(0.088, 0.075, 0.125).translate(0, -0.2, 0.015), 0x2a1e14, x, 0.23, 0, rot);
+      }
+      add(new THREE.BoxGeometry(0.21, 0.26, 0.14).translate(0, 0.125, 0), MAIL, 0, 0.22, 0, still);
+      add(new THREE.BoxGeometry(0.18, 0.3, 0.02).translate(0, 0.09, 0.075), (l) => l.tunic, 0, 0.22, 0, still);
+      add(new THREE.BoxGeometry(0.18, 0.3, 0.02).translate(0, 0.09, -0.075), (l) => l.tunic, 0, 0.22, 0, still);
+      add(new THREE.BoxGeometry(0.22, 0.035, 0.15), 0x3a2a1c, 0, 0.3, 0, still);
+      add(limb(0.065, 0.16, 0.07), MAIL, -0.14, 0.45, 0, armL);
+      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, -0.14, 0.45, 0, armL);
+      // prawa ręka trzyma włócznię pionowo przy boku
+      add(limb(0.065, 0.16, 0.07), MAIL, 0.14, 0.45, 0, () => -0.25);
+      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, 0.14, 0.45, 0, () => -0.25);
+      add(mergeGeometries([
+        new THREE.CylinderGeometry(0.012, 0.014, 1.15, 5).translate(0, 0.32, 0),
+        new THREE.ConeGeometry(0.026, 0.12, 4).translate(0, 0.95, 0),
+      ].map((g) => g.toNonIndexed())), 0x8a6a42, 0.165, 0.26, 0.08, still);
+      add(new THREE.ConeGeometry(0.027, 0.12, 4).translate(0, 0.95, 0), 0xb9bec6, 0.165, 0.26, 0.08, still);
+      // tarcza na lewym przedramieniu
+      add(new THREE.CylinderGeometry(0.11, 0.11, 0.02, 12).rotateZ(Math.PI / 2).translate(-0.03, -0.1, 0.02), (l) => l.tunic, -0.16, 0.45, 0, armL);
+      add(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 8).rotateZ(Math.PI / 2).translate(-0.045, -0.1, 0.02), IRON, -0.16, 0.45, 0, armL);
+      add(new THREE.IcosahedronGeometry(0.085, 1), (l) => l.skin, 0, 0.555, 0, still);
+      add(mergeGeometries([
+        new THREE.SphereGeometry(0.095, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.01, 0).toNonIndexed(),
+        new THREE.CylinderGeometry(0.15, 0.15, 0.016, 12).translate(0, 0.0, 0).toNonIndexed(),
+      ]), IRON, 0, 0.575, 0, still);
+      return;
+    }
     // nogi z butami (but jest częścią nogi, więc macha razem z nią)
     for (const [x, rot] of [[-0.055, legL], [0.055, legR]] as const) {
       add(limb(0.075, 0.17, 0.085), (l) => l.trousers, x, 0.23, 0, rot);
