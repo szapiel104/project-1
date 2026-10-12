@@ -462,6 +462,20 @@ export class GameRenderer {
   }
 
   /** Liczniki karty graficznej z ostatniej klatki (do okna wydajności) */
+  /** Do diagnozy wydajności: które siatki mają najwięcej trójkątów (z instancjami) */
+  heavy(top = 15): { name: string; tris: number; count: number; culled: boolean }[] {
+    const out: { name: string; tris: number; count: number; culled: boolean }[] = [];
+    this.scene.traverse((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh || !m.visible) return;
+      const geo = m.geometry;
+      const per = (geo.index ? geo.index.count : geo.getAttribute('position')?.count ?? 0) / 3;
+      const count = (m as THREE.InstancedMesh).isInstancedMesh ? (m as THREE.InstancedMesh).count : 1;
+      out.push({ name: `${m.parent?.name || ''}/${m.name || m.type}`, tris: Math.round(per * count), count, culled: m.frustumCulled });
+    });
+    return out.sort((a, b) => b.tris - a.tris).slice(0, top);
+  }
+
   get stats(): { calls: number; triangles: number; geometries: number; textures: number } {
     const i = this.renderer.info;
     return { calls: i.render.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures };

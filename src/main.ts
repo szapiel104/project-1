@@ -993,3 +993,4 @@ function showPerf(now: number): void {
   perf.frames = 0; perf.sim = 0; perf.ticks = 0; perf.render = 0; perf.ui = 0; perf.worst = 0; perf.since = now;
 }
 (window as unknown as { __perf: () => Record<string, number | string> }).__perf = () => perf.last;
+(window as unknown as { __heavy: (n?: number) => unknown }).__heavy = (n) => renderer.heavy(n);
