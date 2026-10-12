@@ -26,6 +26,10 @@ export interface MenuEvents {
   onVolume(v: number): void;
   onMute(): boolean;
   onSettings(s: Settings): void;
+  /** Gracz się poddaje (mecz kończy się porażką) */
+  onSurrender(): void;
+  /** Czy to mecz przez sieć (inny opis poddania) */
+  isOnline(): boolean;
   /** Mecz przez sieć się zaczyna: pokój, skład, mój numer gracza i kanał gry */
   onOnlineStart(s: OnlineStart): void;
 }
@@ -178,9 +182,22 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const list = el('div', 'menu-list');
     if (inGame) list.append(button(t('menu.resume'), () => events.onContinue()));
     else if (canContinue) list.append(button(t('menu.continue'), () => events.onContinue()));
+    if (inGame) list.append(button('Poddaj się', showSurrender, 'menu-btn menu-back'));
     list.append(button(t('menu.newGame'), showNew), button('Gra przez sieć', () => online.showOnline()), button(t('menu.settings'), showSettings), button(t('menu.howTo'), showHelp));
     body.replaceChildren(list);
     list.querySelector('button')?.focus();
+  }
+
+  function showSurrender(): void {
+    const box = el('div', 'menu-form');
+    box.append(el('p', '', events.isOnline()
+      ? 'Mecz skończy się dla Ciebie porażką. Twój zamek zostanie na mapie bez gospodarza — jeśli to 1 na 1 albo nie masz w drużynie nikogo w grze, przeciwnicy od razu wygrają.'
+      : 'Mecz skończy się porażką. Tej decyzji nie da się cofnąć.'));
+    const yes = button('Tak, poddaję się', () => { events.onSurrender(); }, 'menu-btn');
+    const no = button('Nie, gram dalej', showMain, 'menu-btn menu-back');
+    box.append(yes, no);
+    screen('Poddać się?', false, box);
+    no.focus();
   }
 
   function showNew(): void {

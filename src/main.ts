@@ -127,6 +127,14 @@ const menu = createMenu(document.body, {
   onVolume: (v) => setVolume(v),
   onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
   onSettings: (st) => applySettings(st),
+  isOnline: () => !!net,
+  onSurrender: () => {
+    // w sieci: wyjście = kapitulacja u wszystkich (lockstep wyśle ją w tej samej turze); lokalnie od razu porażka
+    endOnline();
+    game.players[ME]!.defeated = true;
+    menu.close();
+    showEnd(false);
+  },
   onOnlineStart: (st) => {
     const cover = document.createElement('div');
     cover.id = 'loading';
