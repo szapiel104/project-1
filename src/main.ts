@@ -365,6 +365,10 @@ canvas.addEventListener('contextmenu', () => {
   else if (chosen.size && hoverFoe) {
     pending.push({ type: 'attack', player: ME, ids: [...chosen], target: hoverFoe });
     play('select');
+  } else if (chosen.size && hoverTile && !renderer.dragged && (() => { const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]); return b && b.owner === ME && BUILDINGS[b.type]!.id === 'watchtower'; })()) {
+    // łucznicy na wieżę
+    pending.push({ type: 'garrison', player: ME, ids: [...chosen], tower: game.occupancy[hoverTile.y * game.map.width + hoverTile.x]! });
+    play('rotate');
   } else if (chosen.size && hoverTile && !renderer.dragged) {
     pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y });
     renderer.orderMarker(hoverTile);

@@ -70,7 +70,7 @@ export class Figures {
   private none = new THREE.Matrix4().makeScale(0, 0, 0);
   private color = new THREE.Color();
 
-  constructor(max: number, scene: THREE.Scene, kind: 'peasant' | 'spearman' = 'peasant') {
+  constructor(max: number, scene: THREE.Scene, kind: 'peasant' | 'spearman' | 'archer' = 'peasant') {
     const always = (): boolean => true;
     const add = (geo: THREE.BufferGeometry, color: number | Part['color'], x: number, y: number, z: number, rot: Part['rot'], shown: Part['shown'] = always): void => {
       const fixed = typeof color === 'number';
@@ -85,6 +85,32 @@ export class Figures {
     const still = (): number => 0;
     const legL = (s: number): number => s, legR = (s: number): number => -s;
     const armL = (s: number, up: boolean): number => (up ? -1.35 : -s * 0.8), armR = (s: number, up: boolean): number => (up ? -1.35 : s * 0.8);
+    if (kind === 'archer') {
+      // Łucznik: przeszywanica w barwach drużyny, kaptur, kołczan na plecach, łuk w lewej ręce.
+      // Strzał (armsUp): lewa ręka z łukiem wyciągnięta do przodu, prawa naciąga cięciwę
+      const LEATHER = 0x6a4a2e;
+      for (const [x, rot] of [[-0.055, legL], [0.055, legR]] as const) {
+        add(limb(0.075, 0.17, 0.085), 0x4a3a2a, x, 0.23, 0, rot);
+        add(new THREE.BoxGeometry(0.085, 0.07, 0.12).translate(0, -0.2, 0.015), 0x2a1e14, x, 0.23, 0, rot);
+      }
+      add(new THREE.BoxGeometry(0.2, 0.27, 0.13).translate(0, 0.125, 0), (l) => l.tunic, 0, 0.22, 0, still);
+      add(new THREE.BoxGeometry(0.21, 0.035, 0.14), LEATHER, 0, 0.3, 0, still);
+      // kołczan ze strzałami na plecach
+      add(new THREE.CylinderGeometry(0.035, 0.03, 0.24, 7).rotateZ(0.35).translate(0.05, 0.14, -0.09), LEATHER, 0, 0.22, 0, still);
+      for (const dx of [-0.015, 0.01, 0.03]) add(new THREE.BoxGeometry(0.012, 0.06, 0.012).translate(0.09 + dx, 0.29, -0.09), 0xe8e0c8, 0, 0.22, 0, still);
+      const bowArm = (s: number, up: boolean): number => (up ? -1.5 : -s * 0.6);
+      const drawArm = (s: number, up: boolean): number => (up ? -1.35 : s * 0.6);
+      add(limb(0.06, 0.16, 0.065), (l) => l.tunic, -0.135, 0.45, 0, bowArm);
+      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, -0.135, 0.45, 0, bowArm);
+      add(new THREE.TorusGeometry(0.2, 0.012, 4, 14, Math.PI * 0.9).rotateY(Math.PI / 2).rotateX(Math.PI / 2 + Math.PI * 0.05).translate(0, -0.19, 0.03), 0x6b4626, -0.135, 0.45, 0, bowArm);
+      add(limb(0.06, 0.16, 0.065), (l) => l.tunic, 0.135, 0.45, 0, drawArm);
+      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, 0.135, 0.45, 0, drawArm);
+      add(new THREE.IcosahedronGeometry(0.085, 1), (l) => l.skin, 0, 0.555, 0, still);
+      // kaptur z pelerynką
+      add(new THREE.SphereGeometry(0.1, 10, 7, 0, Math.PI * 2, 0, Math.PI * 0.62).translate(0, 0.005, -0.008), (l) => l.tunic, 0, 0.56, 0, still);
+      add(new THREE.CylinderGeometry(0.11, 0.15, 0.06, 10).translate(0, -0.09, 0), (l) => l.tunic, 0, 0.56, 0, still);
+      return;
+    }
     if (kind === 'spearman') {
       // Włócznik: kolczuga pod tuniką w barwach drużyny, hełm z rondem (kapalin), okrągła tarcza i długa włócznia
       const MAIL = 0x7c8088, IRON = 0x5a5e66;

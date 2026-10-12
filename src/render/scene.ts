@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { UNITS } from '../data/units';
 import { RULES } from '../data/rules';
 import { playAt, type WorldSound } from '../audio/sfx';
 import { buildWork } from '../sim/systems/placement';
@@ -114,6 +115,10 @@ export class GameRenderer {
   private hammers!: THREE.InstancedMesh;
   private soldierTorches!: THREE.InstancedMesh;
   private peasantBodies!: Figures;
+  private archers!: Figures;
+  private arrowMesh!: THREE.InstancedMesh;
+  private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
+  private lastCd = new Map<number, number>();
   private armM = new THREE.Matrix4();
   private soundAt = new Map<string, number>();
   /** Dźwięk z miejsca na mapie, nie częściej niż co `every` sekund dla danego źródła; głośność z odległości od środka ekranu */
@@ -245,6 +250,13 @@ export class GameRenderer {
 
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
+    this.archers = new Figures(MAX_UNITS, this.scene, 'archer');
+    this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
+      tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
+      tint(new THREE.ConeGeometry(0.02, 0.07, 4).rotateX(Math.PI / 2).translate(0, 0, 0.27), 0x6a6e76),
+      tint(new THREE.BoxGeometry(0.04, 0.002, 0.08).translate(0, 0, -0.22), 0xe8e0c8),
+    ])!, new THREE.MeshStandardMaterial({ vertexColors: true }), 256);
+    this.arrowMesh.count = 0; this.arrowMesh.frustumCulled = false; this.scene.add(this.arrowMesh);
     this.rings = new THREE.InstancedMesh(new THREE.RingGeometry(0.2, 0.27, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false }), MAX_UNITS);
     this.rings.count = 0;
     this.rings.frustumCulled = false;
@@ -860,6 +872,25 @@ export class GameRenderer {
     this.crows.instanceMatrix.needsUpdate = true;
   }
 
+  /** Strzały w locie: łuk balistyczny od łucznika do celu, ok. 0,45 s */
+  private flyArrows(): void {
+    const dt = this.calm ? 1 : 1 / 60;
+    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), nx = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
+    let n = 0;
+    this.arrows = this.arrows.filter((a) => (a.t += dt / 0.45) < 1);
+    for (const a of this.arrows) {
+      const arc = Math.sin(a.t * Math.PI) * a.from.distanceTo(a.to) * 0.12;
+      p.lerpVectors(a.from, a.to, a.t); p.y += arc;
+      nx.lerpVectors(a.from, a.to, Math.min(1, a.t + 0.05)); nx.y += Math.sin(Math.min(1, a.t + 0.05) * Math.PI) * a.from.distanceTo(a.to) * 0.12;
+      m.lookAt(nx, p, new THREE.Vector3(0, 1, 0));
+      q.setFromRotationMatrix(m);
+      m.compose(p, q, one);
+      this.arrowMesh.setMatrixAt(n++, m);
+    }
+    this.arrowMesh.count = n;
+    this.arrowMesh.instanceMatrix.needsUpdate = true;
+  }
+
   private dustAt = new Map<number, number>();
   /** Budynki w budowie rosną od fundamentów w górę, a nad placem co chwilę wzbija się kurz */
   private syncSites(g: GameState): void {
@@ -1249,9 +1280,21 @@ export class GameRenderer {
         this.facing.set(s.id, heading);
       }
       const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
-      const striking = (!!foe || !!wall) && !walking && s.cd > 6;
-      const y = view.heightAt(fx, fy);
+      const udef = UNITS[s.kind]!;
+      const ranged = !!udef.range;
+      const striking = (!!foe || !!wall) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
+      // łucznik na wieży stoi na pomoście
+      const lift = s.up ? 1.95 : 0;
+      const y = view.heightAt(fx, fy) + lift;
       t.position.set(fx - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), fy - height / 2);
+      // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
+      const pc = this.lastCd.get(s.id) ?? 0;
+      if (ranged && foe && s.cd > pc && !this.calm && this.arrows.length < 256) {
+        const tx = foe.px / FP, ty = foe.py / FP;
+        this.arrows.push({ from: new THREE.Vector3(fx - width / 2, y + 0.5, fy - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + (foe.up ? 2.3 : 0.4), ty - height / 2), t: 0 });
+        this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
+      }
+      this.lastCd.set(s.id, s.cd);
       t.rotation.set(0, heading, 0);
       t.scale.setScalar(1.08);
       t.updateMatrix();
@@ -1262,7 +1305,8 @@ export class GameRenderer {
         if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
       }
       if (torchesOn && s.id % 5 === 0 && s.owner === this.me && torches < 256) this.soldierTorches.setMatrixAt(torches++, t.matrix);
-      this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id);
+      if (ranged) { this.archers.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); this.spearmen.set(n, ZERO, 0, false, 0, s.id); }
+      else { this.archers.set(n, ZERO, 0, false, 0, s.id); this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); }
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
       pos.set(fx - width / 2, y, fy - height / 2);
@@ -1287,6 +1331,8 @@ export class GameRenderer {
     this.wave.visible = this.waveAge < 0.6;
     if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
     this.spearmen.finish(n);
+    this.archers.finish(n);
+    this.flyArrows();
     this.soldierTorches.count = torches;
     this.soldierTorches.instanceMatrix.needsUpdate = true;
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
