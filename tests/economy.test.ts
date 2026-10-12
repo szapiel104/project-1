@@ -341,7 +341,8 @@ describe('drogi', () => {
     expect(res(g, 'stone')).toBe(stone - 1);
     expect(g.occupancy[s.y * w + s.x]).toBe(0);
     expect(walkable(g, s.y * w + s.x)).toBe(true);
-    expect(canPlace(g, 0, buildingIndex('roadStone'), 0, 0)).toBe('place.terrain');
+    const rock = g.map.tiles.findIndex((t) => t === Terrain.Mountain);
+    expect(canPlace(g, 0, buildingIndex('roadStone'), rock % w, Math.floor(rock / w))).toBe('place.terrain');
     step(g, [{ type: 'build', player: 0, building: 'house', ...s }]);
     expect(g.roads[s.y * w + s.x]).toBe(0);
   });
