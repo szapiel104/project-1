@@ -37,31 +37,29 @@ export function createScribe(onSpeak: () => void): Scribe {
   box.setAttribute('aria-live', 'polite');
   document.body.append(box);
   const last = new Map<string, number>();
-  // kolejka: na ekranie zawsze tylko jedna wiadomość; następna wchodzi, gdy poprzednia zniknie
-  const queue: { text: string; urgent: boolean; who: Speaker }[] = [];
-  let busy = false;
-  const next = (): void => {
-    const m = queue.shift();
-    if (!m) { busy = false; return; }
-    busy = true;
+  // nowa wiadomość pojawia się na górze, starsze zjeżdżają niżej, bledną i znikają
+  const show = (text: string, urgent: boolean, who: Speaker): void => {
     const card = document.createElement('div');
-    card.className = `scribe-card ${m.who}${m.urgent ? ' urgent' : ''}`;
-    card.innerHTML = `<span class="scribe-face">${m.who === 'herald' ? HERALD : FACE}</span><span class="scribe-body"><span class="scribe-name">${NAMES[m.who]}</span><span class="scribe-text"></span></span>`;
-    card.querySelector('.scribe-text')!.textContent = m.text;
-    box.replaceChildren(card);
+    card.className = `scribe-card ${who}${urgent ? ' urgent' : ''}`;
+    card.innerHTML = `<span class="scribe-face">${who === 'herald' ? HERALD : FACE}</span><span class="scribe-body"><span class="scribe-name">${NAMES[who]}</span><span class="scribe-text"></span></span>`;
+    card.querySelector('.scribe-text')!.textContent = text;
+    for (const old of Array.from(box.children) as HTMLElement[]) {
+      old.classList.add('older');
+      setTimeout(() => old.classList.add('out'), 2500);
+      setTimeout(() => old.remove(), 3100);
+    }
+    box.prepend(card);
+    while (box.children.length > 3) box.lastElementChild!.remove();
     onSpeak();
-    setTimeout(() => card.classList.add('out'), 5000);
-    setTimeout(() => { card.remove(); next(); }, 5700);
+    setTimeout(() => card.classList.add('out'), 6500);
+    setTimeout(() => card.remove(), 7100);
   };
   return {
     say(key, text, urgent = false, who: Speaker = 'scribe') {
       const now = performance.now();
       if ((last.get(key) ?? -1e9) > now - 60000) return;
       last.set(key, now);
-      // pilne wiadomości wskakują na początek kolejki; kolejka nie rośnie w nieskończoność
-      if (urgent) queue.unshift({ text, urgent, who }); else queue.push({ text, urgent, who });
-      if (queue.length > 4) queue.length = 4;
-      if (!busy) next();
+      show(text, urgent, who);
     },
   };
 }
