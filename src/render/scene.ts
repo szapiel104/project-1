@@ -720,7 +720,17 @@ export class GameRenderer {
       const geo = new THREE.BufferGeometry();
       geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
       geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      const stars = new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+      // każda gwiazda mruga we własnym rytmie (faza i tempo w atrybucie), jasne bywają większe
+      const ph = new Float32Array(n), sz = new Float32Array(n);
+      for (let i = 0; i < n; i++) { ph[i] = Math.random() * 6.28; sz[i] = Math.random() < 0.08 ? 3.2 : 1.4 + Math.random() * 1.2; }
+      geo.setAttribute('phase', new THREE.BufferAttribute(ph, 1));
+      geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
+      const stars = new THREE.Points(geo, new THREE.ShaderMaterial({
+        uniforms: { time: { value: 0 }, opacity: { value: 0 } },
+        vertexShader: 'attribute float phase; attribute float size; attribute vec3 color; uniform float time; varying vec3 vC; varying float vA; void main() { vC = color; float tw = 0.55 + 0.45 * sin(time * (1.5 + fract(phase * 7.1) * 3.0) + phase); vA = tw; gl_PointSize = size * (0.7 + tw * 0.5); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+        fragmentShader: 'uniform float opacity; varying vec3 vC; varying float vA; void main() { vec2 d = gl_PointCoord - 0.5; float r = length(d); if (r > 0.5) discard; float a = smoothstep(0.5, 0.0, r); gl_FragColor = vec4(vC, a * vA * opacity); }',
+        transparent: true, depthWrite: false, fog: false,
+      }));
       // księżyc jak prawdziwy: tarcza z ciemnymi „morzami”, drobnymi kraterami, ciemniejszym brzegiem i szeroką, słabą poświatą
       const cv = document.createElement('canvas'); cv.width = cv.height = 512;
       const x = cv.getContext('2d')!;
@@ -785,9 +795,9 @@ export class GameRenderer {
     const sk = this.sky;
     const clear = 1 - this.rain;
     sk.group.position.copy(this.cam.camera.position);
-    const stm = sk.stars.material as THREE.PointsMaterial;
-    stm.opacity = Math.max(0, (this.night - 0.2) / 0.8) * (1 - this.cover * 0.8) * (0.85 + Math.sin(this.time * 3) * 0.05);
-    stm.size = 2.4;
+    const su = (sk.stars.material as THREE.ShaderMaterial).uniforms;
+    su.opacity!.value = Math.max(0, (this.night - 0.2) / 0.8) * (1 - this.cover * 0.8);
+    su.time!.value = this.time;
     // księżyc idzie łukiem po nocnym niebie
     const d = this.sunDir.clone().normalize();
     sk.moon.position.set(d.x * 340, Math.max(60, d.y * 340), d.z * 340); // nocą kierunek „słońca” to droga księżyca
@@ -1405,8 +1415,10 @@ export class GameRenderer {
     const fog = this.scene.fog as THREE.Fog;
     const m = Math.min(1, mist + this.dayMist);
     // pogodny dzień: daleka widoczność; mgła rano i w mgliste dni, gęsta w deszczu
-    fog.near = 90 - m * 70 - this.rain * 40;
-    fog.far = 260 - m * 180 - this.rain * 120;
+    // mgła liczy się od kamery: zaczyna się zawsze dopiero za ziemią, na którą patrzymy, więc osady nie zakrywa
+    const cd = this.walk ? 2 : this.cam.distance;
+    fog.near = cd * 0.95 + 70 * (1 - m * 0.8) - this.rain * 20;
+    fog.far = Math.max(fog.near + 45, cd + 220 - m * 140 - this.rain * 90);
     // słońce wędruje ze wschodu na zachód; nocą tę samą drogę robi księżyc
     const dayTime = hour >= 6 && hour < 20;
     const arc = (((dayTime ? hour - 6 : (hour + 4) % 24) / (dayTime ? 14 : 10)) * 0.84 + 0.08) * Math.PI;
