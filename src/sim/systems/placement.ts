@@ -38,24 +38,19 @@ export function findDoor(g: GameState, x: number, y: number, w: number, h: numbe
   return -1;
 }
 
-let seen = new Uint8Array(0);
+let seen = new Uint8Array(0), before = new Uint8Array(0);
 let queue = new Int32Array(0);
 
 /**
  * Czy budynek w tym miejscu odciąłby drogę: po postawieniu z wejścia twierdzy musi dać się dojść
  * do wejścia każdego budynku gracza (także nowego) i do każdego jego chłopa.
  */
-function wouldBlock(g: GameState, player: number, x: number, y: number, w: number, h: number, rot: number): boolean {
-  const keep = playerKeep(g, player);
-  if (!keep || keep.door < 0) return false;
+/** Zalewanie od drzwi twierdzy: które pola są osiągalne pieszo. */
+function flood(g: GameState, start: number, out: Uint8Array): void {
   const { width, height } = g.map;
-  const size = width * height;
-  if (seen.length < size) { seen = new Uint8Array(size); queue = new Int32Array(size); }
-  seen.fill(0, 0, size);
-  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = -1;
-  const door = findDoor(g, x, y, w, h, rot);
+  out.fill(0, 0, width * height);
   let head = 0, tail = 0;
-  if (g.occupancy[keep.door] === 0) { queue[tail++] = keep.door; seen[keep.door] = 1; }
+  if (g.occupancy[start] === 0) { queue[tail++] = start; out[start] = 1; }
   while (head < tail) {
     const t = queue[head++]!;
     const cx = t % width, cy = (t - cx) / width;
@@ -63,17 +58,34 @@ function wouldBlock(g: GameState, player: number, x: number, y: number, w: numbe
       const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0), ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
       const nt = ny * width + nx;
-      if (seen[nt] || g.occupancy[nt] !== 0 || !TERRAIN[g.map.tiles[nt] as Terrain].walkable) continue;
-      seen[nt] = 1; queue[tail++] = nt;
+      if (out[nt] || g.occupancy[nt] !== 0 || !TERRAIN[g.map.tiles[nt] as Terrain].walkable) continue;
+      out[nt] = 1; queue[tail++] = nt;
     }
   }
+}
+
+/**
+ * Czy nowy budynek odetnie coś, do czego dziś da się dojść. Liczy się tylko różnica przed/po:
+ * to, co już było odcięte (np. ludzie w środku budynków), nie blokuje budowy.
+ */
+function wouldBlock(g: GameState, player: number, x: number, y: number, w: number, h: number, rot: number): boolean {
+  const keep = playerKeep(g, player);
+  if (!keep || keep.door < 0) return false;
+  const { width, height } = g.map;
+  const size = width * height;
+  if (seen.length < size) { seen = new Uint8Array(size); before = new Uint8Array(size); queue = new Int32Array(size); }
+  flood(g, keep.door, before);
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = -1;
+  const door = findDoor(g, x, y, w, h, rot);
+  flood(g, keep.door, seen);
+  const lost = (t: number): boolean => before[t] === 1 && seen[t] === 0;
   let blocked = door < 0 || !seen[door];
-  if (!blocked) for (const b of g.buildings) if (b.owner === player && b.door >= 0 && !seen[b.door]) { blocked = true; break; }
+  if (!blocked) for (const b of g.buildings) if (b.owner === player && b.door >= 0 && lost(b.door)) { blocked = true; break; }
   if (!blocked) for (const u of g.units) {
     if (u.owner !== player) continue;
     const ux = u.px >> 8, uy = u.py >> 8;
     if (ux >= x && ux < x + w && uy >= y && uy < y + h) continue; // stoi na działce: wyjdzie sam
-    if (!seen[uy * width + ux]) { blocked = true; break; }
+    if (lost(uy * width + ux)) { blocked = true; break; }
   }
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = 0;
   return blocked;

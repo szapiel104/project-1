@@ -394,6 +394,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const roadMeshes: THREE.Mesh[] = [];
   // Rów: płytki, wykopany szpadlem pas wilgotnej ziemi przy bruku. Od strony trawy krawędź jest nierówna
   // (kolejne wbicia szpadla, grudki, zwisające źdźbła) i przechodzi w przezroczystość, więc rów nie wygląda jak listwa.
+  /** Rowy wzdłuż bruku wyłączone (Michał: „wywal z drogi te rowy”) */
+  const SHOW_DITCH = false as boolean;
   let ditchMat: THREE.MeshStandardMaterial | null = null;
   const ditchMaterial = (): THREE.MeshStandardMaterial => {
     if (ditchMat) return ditchMat;
@@ -526,7 +528,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       // Rów liczony od strony trawy: każde pole bez bruku dostaje pas wzdłuż boków, którymi dotyka bruku.
       // Gdy bruk jest z dwóch stron (wewnętrzny róg), pasy schodzą się na ukos; przy zewnętrznym rogu bruku
       // rów zakręca łukiem. Dzięki temu nic się nie nakłada nawet wokół pojedynczego pola trawy.
-      if (!soft) {
+      if (!soft && SHOW_DITCH) {
         const pave = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind;
         const D = 0.24;
         const put = (qx: number, qy: number, u: number, v: number): void => { ditch.push(qx + ox, heightAt(qx, qy) + 0.035, qy + oz); ditchUv.push(u, v); };
