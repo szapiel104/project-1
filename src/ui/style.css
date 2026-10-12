@@ -496,3 +496,5 @@ body.menu-open .scribe { display: none; }
 /* okno wydajności (F3) */
 .perf { position: fixed; top: 60px; right: 12px; z-index: 61; margin: 0; padding: 10px 14px; font: 600 14px/1.45 ui-monospace, Consolas, monospace;
   color: #e8f5d8; background: rgba(10, 12, 8, .82); border: 1px solid var(--gold-dark); pointer-events: none; white-space: pre; }
+/* kursor „wejdź na wieżę”: złota drabina ze strzałką w górę */
+#game.enter { cursor: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='32' height='32'><path d='M9 30V8M21 30V8' stroke='%232a1c10' stroke-width='5'/><path d='M9 30V8M21 30V8' stroke='%23e9c145' stroke-width='2.5'/><path d='M9 14h12M9 20h12M9 26h12' stroke='%23e9c145' stroke-width='2.5'/><path d='M15 1l7 7h-4v4h-6V8H8z' fill='%2342b24a' stroke='%23102a10'/></svg>") 15 2, pointer; }

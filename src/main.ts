@@ -482,6 +482,16 @@ function updateHoverFoe(): void {
     }
   }
   canvas.classList.toggle('attack', hoverFoe !== 0);
+  // zaznaczeni łucznicy nad własną wieżą z wolnym miejscem: kursor „wejdź”
+  let enter = false;
+  if (!hoverFoe && chosen.size && hoverTile) {
+    const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
+    if (b && b.owner === ME && !b.build && BUILDINGS[b.type]!.id === 'watchtower') {
+      const room = 4 - game.soldiers.filter((s) => s.post === b.id).length;
+      enter = room > 0 && game.soldiers.some((s) => chosen.has(s.id) && !!UNITS[s.kind]!.range && s.post !== b.id);
+    }
+  }
+  canvas.classList.toggle('enter', enter);
   renderer.setAttackHighlight(game.buildings.some((b) => b.id === hoverFoe) ? hoverFoe : 0);
 }
 
