@@ -111,6 +111,8 @@ export class GameRenderer {
   private night = 0;
   private grade!: ShaderPass;
   private rain = 0;
+  private hammers!: THREE.InstancedMesh;
+  private armM = new THREE.Matrix4();
   private soundAt = new Map<string, number>();
   /** Dźwięk z miejsca na mapie, nie częściej niż co `every` sekund dla danego źródła; głośność z odległości od środka ekranu */
   private sfxAt(kind: WorldSound, x: number, z: number, key: string | number, every: number, gain = 1): void {
@@ -278,6 +280,16 @@ export class GameRenderer {
       tint(new THREE.CylinderGeometry(0.004, 0.004, 0.75, 3).translate(0.12, 0.62, 1.07), 0xe8e4d8),
       tint(new THREE.IcosahedronGeometry(0.035, 0).translate(0.12, 0.24, 1.07), 0xd0281f),
     ]);
+    // młotek w prawej dłoni: trzonek w przód z dłoni, obuch na końcu (układ ramienia: oś w barku)
+    const hammer = mergeGeometries([
+      tint(new THREE.CylinderGeometry(0.014, 0.016, 0.26, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.11), 0x7a5232),
+      tint(new THREE.BoxGeometry(0.11, 0.05, 0.05).translate(0, -0.19, 0.24), 0x55585e),
+    ]);
+    this.hammers = new THREE.InstancedMesh(hammer, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
+    this.hammers.count = 0;
+    this.hammers.frustumCulled = false;
+    this.hammers.castShadow = true;
+    this.scene.add(this.hammers);
     this.rods = new THREE.InstancedMesh(rod, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true }), MAX_UNITS);
     this.rods.count = 0;
     this.rods.frustumCulled = false;
@@ -1148,13 +1160,33 @@ export class GameRenderer {
           else if (jid === 'mill') this.sfxAt('creak', t.position.x, t.position.z, u.id, 3.5, 0.8);
         }
       }
-      if (u.phase === Phase.Repairing && !this.calm) { this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.7); swing = Math.sin(this.time * 10 + u.id) * 1.1; }
+      const hammering = u.phase === Phase.Repairing;
+      if (hammering) {
+        // robotnicy rozstawiają się wokół budowy, twarzą do ścian, a nie tłoczą przy drzwiach
+        const site = g.buildings.find((b) => b.id === u.target);
+        if (site) {
+          const fp = footprint(BUILDINGS[site.type]!, site.rot);
+          const a = (u.id * 2.39996) % (Math.PI * 2);
+          const cx = site.x + fp.w / 2, cy = site.y + fp.h / 2;
+          const rx = fp.w / 2 + 0.25, ry = fp.h / 2 + 0.25;
+          const px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
+          t.position.set(px - width / 2, view.heightAt(px, py), py - height / 2);
+          t.rotation.set(0, Math.atan2(cx - px, cy - py), 0);
+        }
+        swing = this.calm ? 0 : -0.6 - Math.abs(Math.sin(this.time * 7 + u.id)) * 1.3;
+        if (!this.calm) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.45);
+      }
       this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
       t.scale.setScalar(1);
       t.updateMatrix();
       this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
+      if (hammering) {
+        // ramię obraca się w barku tak jak prawa ręka postaci (kąt = swing * 0.8)
+        this.armM.makeRotationX(swing * 0.8).setPosition(0.135, 0.45, 0);
+        this.hammers.setMatrixAt(i, this.armM.premultiply(t.matrix));
+      } else this.hammers.setMatrixAt(i, ZERO);
       const wood = u.carryRes === WOOD;
       // kłodę ciągnie tylko drwal z lasu; włóczniarz niesie ze składu zwykłe deski
       const jb = u.job ? jobs.get(u.job) : undefined;
@@ -1207,6 +1239,8 @@ export class GameRenderer {
     for (let i = sad; i < this.sadFaces.length; i++) this.sadFaces[i]!.visible = false;
     this.figures.finish(k);
     this.rods.count = n;
+    this.hammers.count = n;
+    this.hammers.instanceMatrix.needsUpdate = true;
     this.rods.instanceMatrix.needsUpdate = true;
     this.handTorches.count = n;
     this.handTorches.instanceMatrix.needsUpdate = true;

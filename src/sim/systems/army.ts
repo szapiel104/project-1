@@ -315,10 +315,9 @@ function repairSystem(g: GameState): void {
       b.hp = Math.min(maxHp(b.type), b.hp + 15);
     }
   }
-  // place budowy: same z siebie rosną powoli, a do każdej przychodzi do trzech wolnych chłopów z młotkami
+  // do każdego placu budowy przychodzi do trzech wolnych chłopów z młotkami
   for (const b of g.buildings) {
-    if (!b.build) continue;
-    b.build = Math.max(0, b.build - 1);
+    if (!b.build) continue; // budowa rusza dopiero, gdy robotnicy dojdą na plac
     if (b.door < 0) continue;
     let crew = 0;
     for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing)) crew++;
