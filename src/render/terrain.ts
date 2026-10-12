@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
+import { createNoise2D } from 'simplex-noise';
+import { rng } from './craft';
 import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
@@ -458,29 +460,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     ditchMat = new THREE.MeshStandardMaterial({ map: color, transparent: true, depthWrite: false, side: THREE.DoubleSide, roughness: 0.95, metalness: 0, polygonOffset: true, polygonOffsetFactor: -3 });
     return ditchMat;
   };
-  let pathMat: THREE.MeshStandardMaterial | null = null;
-  const pathMaterial = (): THREE.MeshStandardMaterial => {
-    if (pathMat) return pathMat;
-    const n = 128;
-    const cv = document.createElement('canvas');
-    cv.width = cv.height = n;
-    const c2 = cv.getContext('2d')!;
-    const img = c2.createImageData(n, n);
-    for (let y = 0; y < n; y++)
-      for (let x = 0; x < n; x++) {
-        const dx = (x / n - 0.5) * 2, dy = (y / n - 0.5) * 2;
-        const wob = (hash2(x >> 3, y >> 3, 77) & 255) / 255 * 0.18 + (hash2(x >> 1, y >> 1, 91) & 255) / 255 * 0.08;
-        const d = Math.hypot(dx, dy) + wob;
-        const alpha = Math.max(0, Math.min(1, (0.98 - d) / 0.4));
-        const tone = 0.82 + ((hash2(x, y, 5) & 255) / 255) * 0.18;
-        const i = (y * n + x) * 4;
-        img.data[i] = 205 * tone; img.data[i + 1] = 176 * tone; img.data[i + 2] = 118 * tone; img.data[i + 3] = alpha * 235;
-      }
-    c2.putImageData(img, 0, 0);
-    const tex = new THREE.CanvasTexture(cv);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    pathMat = new THREE.MeshStandardMaterial({ map: tex, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -3 });
-    return pathMat;
+  const pathNoise = createNoise2D(rng(map.seed ^ 0x51a7));
+  let sandMat: THREE.MeshStandardMaterial | null = null;
+  const sandMaterial = (): THREE.MeshStandardMaterial => {
+    if (!sandMat) sandMat = new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, depthWrite: false, roughness: 1, map: pattern('soil'), bumpMap: bump('soil'), bumpScale: 1.2, polygonOffset: true, polygonOffsetFactor: -3 });
+    return sandMat;
   };
   // Bruk też nie ma równych brzegów: maska o poszarpanej krawędzi wycina go tak, że kamienie
   // nierówno wchodzą w trawę, a każde pole ma trochę inny odcień (jaśniejsze, ciemniejsze, omszałe).
@@ -524,6 +508,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         for (let x = 0; x < w; x++) {
           if (roads[y * w + x] !== kind) continue;
           clear(y * w + x); // na drodze nie rośnie trawa ani krzewy
+          if (soft) continue; // ścieżka gruntowa powstaje niżej jako jedna ciągła powierzchnia
           // lekkie przesunięcie każdego płata, żeby droga nie szła jak po linijce
           const r = hash2(x, y, map.seed ^ 0x77);
           const jx = soft ? ((r & 15) / 15 - 0.5) * 0.22 : 0, jy = soft ? (((r >>> 4) & 15) / 15 - 0.5) * 0.22 : 0;
@@ -586,16 +571,64 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             }
           }
       }
+      // Ścieżka gruntowa: jedna ciągła powierzchnia na drobnej siatce (4×4 na pole). Przezroczystość liczona
+      // z odległości do najbliższego pola drogi plus płynny szum, więc brzeg jest miękki i nieregularny,
+      // bez placków z nakładających się kół i bez schodków.
+      const sand: number[] = [];
+      if (soft) {
+        const isRoad = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && roads[y * w + x] === 1;
+        const edge = (fx: number, fy: number): number => {
+          // odległość od punktu do najbliższego pola drogi (0 w środku pola)
+          let best = 9;
+          const cx = Math.floor(fx), cy = Math.floor(fy);
+          for (let yy = cy - 1; yy <= cy + 1; yy++)
+            for (let xx = cx - 1; xx <= cx + 1; xx++) {
+              if (!isRoad(xx, yy)) continue;
+              const dx = Math.max(xx - fx, 0, fx - (xx + 1)), dy = Math.max(yy - fy, 0, fy - (yy + 1));
+              best = Math.min(best, Math.hypot(dx, dy));
+            }
+          return best;
+        };
+        const S = 4, done = new Set<number>();
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            if (!isRoad(x, y)) continue;
+            for (let yy = y - 1; yy <= y + 1; yy++)
+              for (let xx = x - 1; xx <= x + 1; xx++) {
+                if (xx < 0 || yy < 0 || xx >= w || yy >= h || done.has(yy * w + xx)) continue;
+                done.add(yy * w + xx);
+                for (let sy = 0; sy < S; sy++)
+                  for (let sx = 0; sx < S; sx++) {
+                    const ax = xx + sx / S, ay = yy + sy / S, bx = ax + 1 / S, by = ay + 1 / S;
+                    const pts = [[ax, ay], [ax, by], [bx, ay], [bx, ay], [ax, by], [bx, by]] as const;
+                    const alpha = pts.map(([px, py]) => {
+                      const wob = (pathNoise(px * 0.9, py * 0.9) * 0.22 + pathNoise(px * 3.1, py * 3.1) * 0.08);
+                      return Math.max(0, Math.min(1, (0.32 + wob - edge(px, py)) / 0.3));
+                    });
+                    if (alpha.every((a) => a <= 0)) continue;
+                    pts.forEach(([px, py], k) => {
+                      p3.push(px + ox, heightAt(px, py) + 0.03, py + oz);
+                      uv2.push(px / 2, py / 2);
+                      // środek ścieżki jaśniejszy i ubity, brzegi ciemniejsze, wilgotniejsze
+                      const a = alpha[k]!;
+                      const t = 0.78 + a * 0.22 + pathNoise(px * 6, py * 6) * 0.05;
+                      sand.push(0.82 * t, 0.68 * t, 0.46 * t, a);
+                    });
+                  }
+              }
+          }
+      }
       if (!p3.length) continue;
       const g2 = new THREE.BufferGeometry();
       g2.setAttribute('position', new THREE.Float32BufferAttribute(p3, 3));
       g2.setAttribute('uv', new THREE.Float32BufferAttribute(uv2, 2));
+      if (soft) g2.setAttribute('color', new THREE.Float32BufferAttribute(sand, 4));
       if (!soft) {
         g2.setAttribute('uv1', new THREE.Float32BufferAttribute(uvMask, 2));
         g2.setAttribute('color', new THREE.Float32BufferAttribute(col3, 3));
       }
       g2.computeVertexNormals();
-      const mesh = new THREE.Mesh(g2, soft ? pathMaterial() : paveMaterial(materials[kind - 1]!));
+      const mesh = new THREE.Mesh(g2, soft ? sandMaterial() : paveMaterial(materials[kind - 1]!));
       mesh.receiveShadow = true;
       mesh.renderOrder = soft ? 1 : 0;
       group.add(mesh);
