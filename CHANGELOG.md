@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.5.13 — piekarnia (2026-10-12)
+
+- Wnętrze piekarni: podłoga z desek, kopulasty piec z żarem w łukowym otworze, łopata, stół z prawdziwymi bochenkami z nacięciem, dzieża z ciastem i worek mąki
+
 ## 0.5.12 — wnętrza i pole (2026-10-12)
 
 - Pole: zamiast żółtych belek rosnące zboże — gęste źdźbła z kłosami na usypanych grzędach, falujące na wietrze

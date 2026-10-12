@@ -38,7 +38,7 @@ const M = {
   leaf: mat(0x5c9a3c, 'leaves'), apple: mat(0xd0281f), iron: mat(0x4a4038), white: mat(0xf1ead8),
   plank: mat(0xd9b27a, 'planks'),
   orchardGrass: mat(0x86b54a, 'grass'), bark: mat(0x7a5a3a, 'bark'), leafLight: mat(0x7fb548, 'leaves'),
-  appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xb97a3a),
+  appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xa8652c),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
@@ -48,7 +48,7 @@ const M = {
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xb9b6b0, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
   hay: mat(0xe0c466, 'thatch'),
-  ore: mat(0x8a4a2c),
+  ore: mat(0x8a4a2c), crust: mat(0xe2b06a),
   cut: mat(0xe6dfcf, 'ashlar'), cutDark: mat(0xc9c1ae, 'ashlar'), rope: mat(0xb89a64), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
@@ -1063,11 +1063,49 @@ const BUILDERS: Record<string, Builder> = {
   },
   bakery(g, _team, flag) {
     const inside = hut(g, M.plaster, mat(0xb5562f, 'tiles'), 1.4, 1.2, 0.8, 0, 0, true);
-    // piec z żarem, stół i bochenki
-    box(inside, M.stoneDark, 0.5, 0.55, 0.45, -0.4, 0.05, -0.33);
-    box(inside, M.ember, 0.26, 0.2, 0.03, -0.4, 0.15, -0.1);
-    box(inside, M.wood, 0.5, 0.25, 0.3, 0.35, 0.05, -0.35);
-    for (let i = 0; i < 3; i++) box(inside, M.bread, 0.12, 0.07, 0.18, 0.2 + i * 0.15, 0.3, -0.35);
+    // podłoga z desek, kopulasty piec chlebowy z żarem w łukowym otworze, stół z bochenkami, dzieża i worek mąki
+    box(inside, M.wood, 1.3, 0.03, 1.1, 0, 0.02, 0);
+    box(inside, M.stoneDark, 0.56, 0.22, 0.5, -0.38, 0.05, -0.3);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 7, 0, Math.PI * 2, 0, Math.PI / 2), M.stone);
+    dome.scale.set(1, 0.85, 0.95);
+    dome.position.set(-0.38, 0.27, -0.3);
+    inside.add(dome);
+    const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 10, 1, false, 0, Math.PI), M.dark);
+    mouth.rotation.set(Math.PI / 2, 0, Math.PI / 2);
+    mouth.position.set(-0.38, 0.28, -0.04);
+    inside.add(mouth);
+    box(inside, M.ember, 0.14, 0.04, 0.03, -0.38, 0.28, -0.02);
+    // łopata piekarska oparta o piec
+    const peel = new THREE.Group();
+    peel.position.set(-0.1, 0.05, -0.12);
+    peel.rotation.z = 0.35;
+    box(peel, M.wood, 0.025, 0.5, 0.025);
+    box(peel, M.wood, 0.14, 0.14, 0.012, 0, -0.02, 0);
+    inside.add(peel);
+    // stół z bochenkami: owalne, wypieczone, z jaśniejszym nacięciem na grzbiecie
+    box(inside, M.wood, 0.5, 0.04, 0.3, 0.32, 0.26, -0.3);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(inside, M.woodDark, 0.04, 0.26, 0.04, 0.32 + sx * 0.21, 0, -0.3 + sz * 0.11);
+    for (const [x, z, r] of [[0.17, -0.36, 0.3], [0.32, -0.24, -0.2], [0.47, -0.35, 0.1], [0.3, -0.38, 0.6]] as const) {
+      const loaf = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 6), M.bread);
+      loaf.scale.set(1.35, 0.62, 0.9);
+      loaf.rotation.y = r;
+      loaf.position.set(x, 0.33, z);
+      inside.add(loaf);
+      const cut = box(inside, M.crust, 0.12, 0.012, 0.016, x, 0.365, z);
+      cut.rotation.y = r;
+    }
+    // dzieża z ciastem i worek mąki
+    const trough = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.11, 0.14, 10), M.woodDark);
+    trough.position.set(0.38, 0.1, 0.18);
+    inside.add(trough);
+    const dough = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.white);
+    dough.scale.y = 0.4;
+    dough.position.set(0.38, 0.16, 0.18);
+    inside.add(dough);
+    const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 1), M.white);
+    sack.scale.set(0.9, 1.3, 0.8);
+    sack.position.set(-0.45, 0.17, 0.25);
+    inside.add(sack);
     box(g, M.stoneDark, 0.3, 1.0, 0.3, -0.45, 0.8, -0.3).name = 'chimney';
     box(g, M.window, 0.3, 0.3, 0.04, 0.45, 0.32, 0.61);
     pennant(g, flag, 0.6, 1.2, 0);
