@@ -714,28 +714,42 @@ export class GameRenderer {
 
   private wolfMesh: THREE.InstancedMesh | null = null;
   private wolfEyes: THREE.InstancedMesh | null = null;
+  private wolfLegs!: THREE.InstancedMesh;
+  private wolfTails!: THREE.InstancedMesh;
+  private wolfPart = new THREE.Matrix4();
+  private wolfRot = new THREE.Matrix4();
   private wolfHeading = new Map<number, number>();
   get wolvesNear(): number { return this.state?.wolves.length ?? 0; }
   /** Wilki: szare, przygarbione, w kłusie; nocą świecą im oczy */
   private syncWolves(g: GameState, view: TerrainView, alpha: number): void {
     if (!this.wolfMesh) {
-      const fur = 0x5d5a55, dark = 0x3a3733;
-      const parts = [
-        tint(new THREE.BoxGeometry(0.16, 0.15, 0.46).translate(0, 0.3, 0), fur),
-        tint(new THREE.BoxGeometry(0.17, 0.17, 0.16).translate(0, 0.33, 0.17), fur), // kark, grzbiet wyżej z przodu
-        tint(new THREE.BoxGeometry(0.12, 0.12, 0.15).translate(0, 0.38, 0.32), fur),
-        tint(new THREE.BoxGeometry(0.07, 0.06, 0.12).translate(0, 0.35, 0.44), dark), // pysk
-        tint(new THREE.ConeGeometry(0.03, 0.07, 4).translate(-0.04, 0.47, 0.3), dark),
-        tint(new THREE.ConeGeometry(0.03, 0.07, 4).translate(0.04, 0.47, 0.3), dark),
-        tint(new THREE.BoxGeometry(0.05, 0.05, 0.25).rotateX(0.6).translate(0, 0.27, -0.3), dark), // ogon w dół
-      ];
-      for (const [x, z] of [[-0.05, 0.16], [0.05, 0.16], [-0.05, -0.16], [0.05, -0.16]] as const) parts.push(tint(new THREE.BoxGeometry(0.045, 0.24, 0.05).translate(x, 0.12, z), dark));
-      this.wolfMesh = new THREE.InstancedMesh(mergeGeometries(parts)!, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 }), 64);
-      this.wolfMesh.castShadow = true; this.wolfMesh.frustumCulled = false;
-      const eyes = mergeGeometries([new THREE.SphereGeometry(0.013, 6, 4).translate(-0.035, 0.41, 0.395), new THREE.SphereGeometry(0.013, 6, 4).translate(0.035, 0.41, 0.395)])!;
+      // smukły wilk: głęboka klatka, wcięty brzuch, długi pysk, stojące uszy; łapy i ogon osobno, żeby się ruszały
+      const fur = 0x6a655d, back = 0x4a4640, belly = 0x8f8778, dark = 0x2e2b27;
+      const body = mergeGeometries([
+        tint(new THREE.CylinderGeometry(0.075, 0.095, 0.22, 8).rotateX(Math.PI / 2).translate(0, 0.33, 0.1), fur), // klatka
+        tint(new THREE.CylinderGeometry(0.06, 0.075, 0.24, 8).rotateX(Math.PI / 2).translate(0, 0.335, -0.12), fur), // zad, wcięty
+        tint(new THREE.BoxGeometry(0.1, 0.03, 0.44).translate(0, 0.41, 0), back), // ciemny grzbiet
+        tint(new THREE.BoxGeometry(0.09, 0.03, 0.18).translate(0, 0.25, 0.1), belly), // jasna pierś
+        tint(new THREE.CylinderGeometry(0.05, 0.07, 0.16, 7).rotateX(-0.9).translate(0, 0.42, 0.25), fur), // kark
+        tint(new THREE.BoxGeometry(0.11, 0.1, 0.11).translate(0, 0.47, 0.33), fur), // łeb
+        tint(new THREE.BoxGeometry(0.055, 0.05, 0.13).translate(0, 0.44, 0.44), belly), // pysk
+        tint(new THREE.BoxGeometry(0.03, 0.025, 0.02).translate(0, 0.455, 0.505), dark), // nos
+        tint(new THREE.ConeGeometry(0.025, 0.07, 4).translate(-0.035, 0.55, 0.31), back),
+        tint(new THREE.ConeGeometry(0.025, 0.07, 4).translate(0.035, 0.55, 0.31), back),
+      ])!;
+      const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
+      this.wolfMesh = new THREE.InstancedMesh(body, mat, 64);
+      // łapa: oś w biodrze/barku, od góry do ziemi, z ciemną stopą
+      const leg = mergeGeometries([tint(new THREE.BoxGeometry(0.035, 0.26, 0.04).translate(0, -0.13, 0), fur), tint(new THREE.BoxGeometry(0.04, 0.03, 0.05).translate(0, -0.26, 0.01), dark)])!;
+      this.wolfLegs = new THREE.InstancedMesh(leg, mat, 256);
+      // ogon: krzaczasty, oś u nasady
+      const tail = mergeGeometries([tint(new THREE.CylinderGeometry(0.035, 0.015, 0.26, 6).translate(0, -0.13, 0), back)])!;
+      this.wolfTails = new THREE.InstancedMesh(tail, mat, 64);
+      for (const m of [this.wolfMesh, this.wolfLegs, this.wolfTails]) { m.castShadow = true; m.frustumCulled = false; this.scene.add(m); }
+      const eyes = mergeGeometries([new THREE.SphereGeometry(0.012, 6, 4).translate(-0.032, 0.49, 0.39), new THREE.SphereGeometry(0.012, 6, 4).translate(0.032, 0.49, 0.39)])!;
       this.wolfEyes = new THREE.InstancedMesh(eyes, new THREE.MeshBasicMaterial({ color: 0xffd24a }), 64);
       this.wolfEyes.frustumCulled = false;
-      this.scene.add(this.wolfMesh, this.wolfEyes);
+      this.scene.add(this.wolfEyes);
     }
     const { width, height } = g.map;
     const t = this.tmp;
@@ -764,15 +778,30 @@ export class GameRenderer {
       const bob = run ? Math.abs(Math.sin(this.time * 12 + w.id)) * 0.05 : 0;
       t.position.set(fx - width / 2 + Math.sin(h) * lunge * 0.3, view.heightAt(fx, fy) + bob + lunge * 0.12, fy - height / 2 + Math.cos(h) * lunge * 0.3);
       t.rotation.set(run ? Math.sin(this.time * 12 + w.id) * 0.06 : -lunge * 0.25, h, 0, 'YXZ');
-      t.scale.setScalar(1.15);
+      t.scale.setScalar(1.25);
       t.updateMatrix();
       this.wolfMesh.setMatrixAt(n, t.matrix);
+      // kłus: łapy po przekątnej razem; w ataku przednie wyrzucone do przodu
+      const ph = this.time * 12 + w.id;
+      const hips: [number, number, number][] = [[-0.045, 0.32, 0.17], [0.045, 0.32, 0.17], [-0.045, 0.32, -0.17], [0.045, 0.32, -0.17]];
+      hips.forEach(([hx, hy, hz], k) => {
+        const diag = k === 0 || k === 3 ? 1 : -1;
+        const front = hz > 0;
+        const ang = run ? Math.sin(ph) * 0.55 * diag : lunge ? (front ? -0.7 * lunge : 0.35 * lunge) : 0;
+        this.wolfRot.makeRotationX(ang).setPosition(hx, hy, hz);
+        this.wolfLegs.setMatrixAt(n * 4 + k, this.wolfPart.multiplyMatrices(t.matrix, this.wolfRot));
+      });
+      // ogon: w biegu prosto za sobą i lekko faluje, w miejscu zwieszony, w ataku sztywno
+      const tailUp = run ? 1.9 + Math.sin(ph * 0.5) * 0.15 : lunge ? 2.2 : 0.5;
+      this.wolfRot.makeRotationX(tailUp).setPosition(0, 0.37, -0.23);
+      this.wolfTails.setMatrixAt(n, this.wolfPart.multiplyMatrices(t.matrix, this.wolfRot));
       this.wolfEyes!.setMatrixAt(n, this.night > 0.2 ? t.matrix : ZERO);
       // warczenie z bliska, kłapnięcie przy ataku
       if (!this.calm && w.target) this.sfxAt('growl', t.position.x, t.position.z, `w${w.id}`, 2.6 + (w.id % 3), 1.4);
       n++;
     }
-    this.wolfMesh.count = n; this.wolfEyes!.count = n;
+    this.wolfMesh.count = n; this.wolfEyes!.count = n; this.wolfTails.count = n; this.wolfLegs.count = n * 4;
+    this.wolfLegs.instanceMatrix.needsUpdate = true; this.wolfTails.instanceMatrix.needsUpdate = true;
     this.wolfMesh.instanceMatrix.needsUpdate = true; this.wolfEyes!.instanceMatrix.needsUpdate = true;
   }
 
