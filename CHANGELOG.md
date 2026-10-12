@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.6.2 — prawdziwe dźwięki (2026-10-12)
+
+- Nagrania Kenneya zamiast syntezy: stawianie budynku i drogi (4 warianty), wyburzanie (4 warianty), zawalenie, obrót, kliknięcie; wysokość lekko losowana przy każdym odtworzeniu
+- Cichy szum otoczenia w pętli
+- Źródła i licencja w docs/dzwieki.md; gdy plik się nie wczyta, gra wraca do dźwięku syntezowanego
+
 ## 0.6.1 — deski na ramieniu (2026-10-12)
 
 - Drwal niesie wiązkę cienkich desek z przewiązkami i usłojeniem zamiast jednego klocka

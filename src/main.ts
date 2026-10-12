@@ -101,6 +101,7 @@ function pick(id: string | null): void {
 
 /** Obraca stawiany budynek o 90° w prawo. Drogi i pochodnie są symetryczne, więc ich to nie dotyczy. */
 function rotate(): void {
+  play('rotate');
   placeRot = (placeRot + 1) % 4;
   updateGhost();
 }

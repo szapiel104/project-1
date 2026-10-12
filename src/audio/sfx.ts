@@ -1,9 +1,22 @@
 /**
- * Dźwięki gry syntezowane w przeglądarce (Web Audio), bez plików: stuk drewna i młotka przy budowie,
- * łoskot i sypiący się gruz przy burzeniu, kliknięcia menu i krótki sygnał błędu.
+ * Dźwięki gry: nagrania Kenney (public/sounds, licencja w docs/dzwieki.md), a gdy plik się jeszcze nie wczytał,
+ * zastępczy dźwięk syntezowany w przeglądarce. Do tego tło: szum otoczenia w pętli.
  * Przeglądarka pozwala grać dopiero po pierwszym kliknięciu, więc kontekst powstaje leniwie.
  */
-export type Sound = 'click' | 'build' | 'demolish' | 'collapse' | 'error' | 'road';
+export type Sound = 'click' | 'build' | 'demolish' | 'collapse' | 'error' | 'road' | 'rotate';
+
+/** Nagrania dla każdego dźwięku; przy kilku wariantach losujemy jeden, żeby się nie powtarzało. */
+const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
+  click: ['toggle'],
+  build: ['placement-a', 'placement-b', 'placement-c', 'placement-d'],
+  road: ['placement-a', 'placement-c'],
+  demolish: ['removal-a', 'removal-b', 'removal-c', 'removal-d'],
+  collapse: ['break'],
+  rotate: ['rotate'],
+  ambience: ['ambience'],
+};
+const buffers = new Map<string, AudioBuffer>();
+let ambienceOn = false;
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -28,6 +41,15 @@ function audio(): AudioContext | null {
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  const c = ctx;
+  const names = new Set(Object.values(FILES).flat());
+  for (const name of names) {
+    fetch(`sounds/${name}.ogg`)
+      .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(name))))
+      .then((data) => c.decodeAudioData(data))
+      .then((buf) => { buffers.set(name, buf); if (name === 'ambience') startAmbience(); })
+      .catch(() => { /* zostaje dźwięk syntezowany */ });
+  }
   return ctx;
 }
 
@@ -85,12 +107,44 @@ function rumble(c: AudioContext, at: number, len: number, gain: number, freq: nu
   src.stop(at + len + 0.05);
 }
 
+/** Szum otoczenia w pętli, cicho pod resztą dźwięków. */
+function startAmbience(): void {
+  const buf = buffers.get('ambience');
+  if (!ctx || !master || !buf || ambienceOn) return;
+  ambienceOn = true;
+  const src = ctx.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  const g = ctx.createGain();
+  g.gain.value = 0.35;
+  src.connect(g).connect(master);
+  src.start();
+}
+
+function sample(c: AudioContext, sound: Sound, t: number): boolean {
+  const list = FILES[sound];
+  const name = list?.[Math.floor(Math.random() * list.length)];
+  const buf = name ? buffers.get(name) : undefined;
+  if (!buf) return false;
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  // lekko zmieniona wysokość przy każdym odtworzeniu; droga brzmi niżej i ciszej niż budynek
+  src.playbackRate.value = (sound === 'road' ? 0.8 : 1) * (0.94 + Math.random() * 0.12);
+  const g = c.createGain();
+  g.gain.value = sound === 'road' ? 0.5 : sound === 'click' ? 0.6 : 1;
+  src.connect(g).connect(master!);
+  src.start(t);
+  return true;
+}
+
 export function play(sound: Sound): void {
   const c = audio();
   if (!c || !master || muted || c.state !== 'running') return;
   const t = c.currentTime + 0.01;
+  if (sample(c, sound, t)) return;
   switch (sound) {
     case 'click':
+    case 'rotate':
       knock(c, t, 900, 0.05, 0.12);
       break;
     case 'build':
