@@ -20,6 +20,8 @@ export interface HudEvents {
   onMenu(): void;
   onTrain(building: number, count: number, unit?: string): void;
   onGate(building: number, open: boolean): void;
+  onDismount(building: number): void;
+  onSelectGarrison(building: number): void;
 }
 
 export interface HudView {
@@ -49,7 +51,7 @@ export interface HudView {
   affordable: Set<string>;
 }
 
-export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; recruit?: RecruitUnit[] }
+export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number; recruit?: RecruitUnit[] }
 export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number }
 
 export interface Hud {
@@ -374,8 +376,19 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   gateBtn.addEventListener('click', () => events.onGate(infoId, !gateWant));
   gateBox.append(gateBtn, gateState);
   gateBox.hidden = true;
+  // wieża: ilu łuczników stoi na pomoście, zaznacz ich albo każ zejść
+  const towerBox = el('div', 'gate-box');
+  const towerState = el('p', 'gate-state');
+  const towerBtns = el('div', 'actions');
+  const tSel = el('button', 'btn-main', 'Zaznacz łuczników'); tSel.type = 'button';
+  const tDown = el('button', 'btn-main', 'Zejdźcie z wieży'); tDown.type = 'button';
+  tSel.addEventListener('click', () => events.onSelectGarrison(infoId));
+  tDown.addEventListener('click', () => events.onDismount(infoId));
+  towerBtns.append(tSel, tDown);
+  towerBox.append(towerState, towerBtns);
+  towerBox.hidden = true;
   infoActions.append(demolish, close);
-  info.append(infoName, hpLine, gateBox, recruit, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, towerBox, recruit, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -677,6 +690,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const from = pr.input ? ` ${t('hud.from')} ${pr.input.amount} × ${t(RESOURCE_DEFS[pr.input.res].name).toLowerCase()}` : '';
         infoWorker.textContent = '';
         infoWorker.append(`${t('hud.makes')}: ${pr.output.amount} × ${t(RESOURCE_DEFS[pr.output.res].name).toLowerCase()}${from}, ${t('hud.every')} ${secs} s`, document.createElement('br'), `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
+      }
+      towerBox.hidden = !(i.own && i.garrison !== undefined);
+      if (i.garrison !== undefined) {
+        setText(towerState, i.garrison ? `Na wieży: ${i.garrison} / 4 łuczników` : 'Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.');
+        tSel.disabled = tDown.disabled = !i.garrison;
       }
       gateBox.hidden = !(i.own && i.gate);
       if (i.gate) {

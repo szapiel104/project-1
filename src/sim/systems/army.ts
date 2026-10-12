@@ -105,6 +105,11 @@ function besideTower(g: GameState, b: Building): number {
   return -1;
 }
 
+/** Wszyscy z wieży schodzą na ziemię obok niej */
+export function orderDismount(g: GameState, player: number, towerId: number): void {
+  for (const s of g.soldiers) if (s.owner === player && s.post === towerId) { leavePost(g, s); s.goal = -1; s.path = []; s.target = 0; }
+}
+
 /** Łucznicy wchodzą na wieżę strażniczą (najwyżej czterech); inni żołnierze stają przy niej */
 export function orderGarrison(g: GameState, player: number, ids: readonly number[], towerId: number): void {
   const tower = g.buildings.find((b) => b.id === towerId);

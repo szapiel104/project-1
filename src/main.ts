@@ -79,6 +79,8 @@ const hud = createHud(document.getElementById('ui')!, {
   onVolume: (v) => setVolume(v),
   onMute: () => hud.setMuted(toggleMute()),
   onMenu: () => menu.open(true),
+  onDismount: (id) => { pending.push({ type: 'dismount', player: ME, tower: id }); play('rotate'); },
+  onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
   onTrain: (id, n, unit = 'spearman') => { const k = Math.min(n, recruitInfo().find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
 }, TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
@@ -185,7 +187,7 @@ function select(id: number): void {
   selected = id;
   const b = game.buildings.find((x) => x.id === id);
   renderer.setSelection(b ? id : 0);
-  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), recruit: BUILDINGS[b.type]!.id === 'barracks' ? recruitInfo() : undefined, gate: BUILDINGS[b.type]!.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined } : null);
+  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), recruit: BUILDINGS[b.type]!.id === 'barracks' ? recruitInfo() : undefined, gate: BUILDINGS[b.type]!.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined, garrison: BUILDINGS[b.type]!.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined } : null);
 }
 
 /** Lewy górny róg działki tak, żeby budynek był wyśrodkowany na wskazanym polu. */
@@ -646,7 +648,7 @@ function refresh(): void {
   if (selected) {
     const b = game.buildings.find((x) => x.id === selected);
     if (!b) select(0);
-    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), recruit: BUILDINGS[b.type]!.id === 'barracks' ? recruitInfo() : undefined, gate: BUILDINGS[b.type]!.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined });
+    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), recruit: BUILDINGS[b.type]!.id === 'barracks' ? recruitInfo() : undefined, gate: BUILDINGS[b.type]!.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined, garrison: BUILDINGS[b.type]!.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined });
   }
 }
 

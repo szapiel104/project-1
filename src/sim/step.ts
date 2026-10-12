@@ -10,7 +10,7 @@ import { migrationSystem, travelSystem } from './systems/population';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
-import { armySystem, orderAttack, orderMove, train , orderGarrison } from './systems/army';
+import { armySystem, orderAttack, orderMove, train , orderDismount, orderGarrison } from './systems/army';
 import { botSystem } from './systems/bot';
 
 /** Komendy graczy. To jedyna droga, którą gracz (albo bot, albo sieć) wpływa na grę. */
@@ -25,7 +25,8 @@ export type Command =
   | { type: 'move'; player: number; ids: number[]; x: number; y: number }
   | { type: 'attack'; player: number; ids: number[]; target: number }
   | { type: 'gate'; player: number; id: number; open: boolean }
-  | { type: 'garrison'; player: number; ids: number[]; tower: number };
+  | { type: 'garrison'; player: number; ids: number[]; tower: number }
+  | { type: 'dismount'; player: number; tower: number };
 
 function apply(g: GameState, c: Command): void {
   const p = g.players[c.player];
@@ -55,6 +56,9 @@ function apply(g: GameState, c: Command): void {
       break;
     case 'attack':
       if (Array.isArray(c.ids) && Number.isInteger(c.target)) orderAttack(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.target);
+      break;
+    case 'dismount':
+      if (Number.isInteger(c.tower)) orderDismount(g, c.player, c.tower);
       break;
     case 'garrison':
       if (Array.isArray(c.ids) && Number.isInteger(c.tower)) orderGarrison(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.tower);
