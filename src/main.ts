@@ -471,7 +471,13 @@ function refresh(): void {
   if (night !== wasNight) scribe.say(night ? 'dusk' : 'dawn', t(night ? 'scribe.dusk' : 'scribe.dawn'));
   wasNight = night;
   const coming = alarm.dataset.state === 'coming';
-  if (coming && !wasComing) scribe.say('coming', t('alarm.coming'), true);
+  if (coming && !wasComing) scribe.say('coming', t('alarm.coming'), true, 'herald');
+  // nastroje ludzi wobec wojska
+  const mine = game.soldiers.filter((x) => x.owner === ME).length;
+  const theirs = game.soldiers.length - mine;
+  if (mine >= 10 && mine >= theirs) scribe.say('proud', t('herald.proud'), false, 'herald');
+  else if (mine === 0 && theirs >= 3) scribe.say('afraid', t('herald.afraid'), true, 'herald');
+  else if (theirs > mine * 2 && theirs >= 6) scribe.say('weaker', t('herald.weaker'), false, 'herald');
   wasComing = coming;
   warnedHungry = !f.fed;
   warnedLeaving = p.popularity < 50;
