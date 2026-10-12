@@ -731,3 +731,75 @@ document.body.append(badge);
 
 /** Wywoływane z ekranu wczytywania: kompilacja shaderów i pierwsza klatka jeszcze przed menu */
 export function warmup(): void { renderer.warmup(); }
+
+// --- alarmy na mapie: czerwony trójkąt z wykrzyknikiem nad miejscem ataku, a gdy poza ekranem, strzałka przy krawędzi ---
+const alertLayer = document.createElement('div');
+alertLayer.className = 'alerts';
+document.body.append(alertLayer);
+type Alert = { x: number; y: number; until: number; kind: 'wolf' | 'enemy'; el: HTMLButtonElement };
+const alerts: Alert[] = [];
+const hpBefore = new Map<number, number>();
+function raiseAlert(x: number, y: number, kind: Alert['kind']): void {
+  const now = performance.now();
+  const near = alerts.find((a) => Math.abs(a.x - x) < 8 && Math.abs(a.y - y) < 8);
+  if (near) { near.until = now + 4000; near.x = x; near.y = y; return; }
+  const el = document.createElement('button');
+  el.type = 'button';
+  el.className = `alert alert-${kind}`;
+  el.title = kind === 'wolf' ? 'Wilki atakują — pokaż' : 'Atak wroga — pokaż';
+  el.innerHTML = '<span class="alert-tri">!</span>';
+  const a: Alert = { x, y, until: now + 4000, kind, el };
+  el.addEventListener('click', () => renderer.lookAt(a.x, a.y, 26));
+  alertLayer.append(el);
+  alerts.push(a);
+  play('error');
+}
+function scanAttacks(): void {
+  const mineAt: [number, number][] = [];
+  for (const u of game.units) if (u.owner === ME) mineAt.push([u.px / 256, u.py / 256]);
+  for (const s of game.soldiers) if (s.owner === ME) mineAt.push([s.px / 256, s.py / 256]);
+  const close = (x: number, y: number, r: number): boolean => mineAt.some(([a, b]) => Math.abs(a - x) <= r && Math.abs(b - y) <= r);
+  for (const w of game.wolves) {
+    const x = w.px / 256, y = w.py / 256;
+    const wall = w.gnaw ? game.buildings.find((b) => b.id === w.gnaw && b.owner === ME) : undefined;
+    if (close(x, y, 2.5) || wall) raiseAlert(x, y, 'wolf');
+  }
+  const myTeam = game.players[ME]!.team;
+  for (const s of game.soldiers) {
+    if (game.players[s.owner]?.team === myTeam) continue;
+    const x = s.px / 256, y = s.py / 256;
+    if (close(x, y, 3)) raiseAlert(x, y, 'enemy');
+  }
+  for (const b of game.buildings) {
+    if (b.owner !== ME) continue;
+    const prev = hpBefore.get(b.id);
+    if (prev !== undefined && b.hp < prev) raiseAlert(b.x + 1, b.y + 1, game.wolves.some((w) => w.gnaw === b.id) ? 'wolf' : 'enemy');
+    hpBefore.set(b.id, b.hp);
+  }
+}
+let alertTick = 0;
+function drawAlerts(): void {
+  if (++alertTick % 10 === 0 && !menu.isOpen()) scanAttacks();
+  const now = performance.now();
+  const W = window.innerWidth, H = window.innerHeight, M = 46;
+  for (let i = alerts.length - 1; i >= 0; i--) {
+    const a = alerts[i]!;
+    if (now > a.until || menu.isOpen()) { a.el.remove(); alerts.splice(i, 1); continue; }
+    const p = renderer.project(a.x, a.y);
+    const top = 70, bottom = H - 150; // nie wchodzimy na alarm u góry ani na dolny pasek
+    const inside = p.front && p.sx > M && p.sx < W - M && p.sy > top && p.sy < bottom;
+    if (inside) {
+      a.el.classList.remove('edge');
+      a.el.style.transform = `translate(${p.sx}px, ${p.sy - 30}px)`;
+    } else {
+      // strzałka przy krawędzi w stronę ataku
+      let dx = p.sx - W / 2, dy = p.sy - H / 2;
+      if (!p.front) { dx = -dx; dy = -dy; }
+      const k = Math.min((W / 2 - M) / Math.max(1, Math.abs(dx)), ((bottom - top) / 2) / Math.max(1, Math.abs(dy)));
+      const ex = W / 2 + dx * k, ey = (top + bottom) / 2 + dy * k;
+      a.el.classList.add('edge');
+      a.el.style.transform = `translate(${ex}px, ${ey}px) rotate(${Math.atan2(dy, dx) + Math.PI / 2}rad)`;
+    }
+  }
+}
+(function alertLoop(): void { drawAlerts(); requestAnimationFrame(alertLoop); })();
