@@ -547,9 +547,11 @@ export class GameRenderer {
   warmup(): void { this.renderer.compile(this.scene, this.cam.camera); this.composer.render(); }
 
   /** Powolny obrót kamery wokół osady, gdy otwarte jest menu */
-  orbit(dt: number): void { this.cam.cinematic(true); this.cam.spin(dt * 0.035); }
+  orbit(dt: number): void { this.cam.cinematic(true); this.cam.spin(dt * 0.035); this.menuNight = true; }
   /** Koniec ujęcia z menu: wraca zwykły widok strategiczny */
-  endOrbit(): void { this.cam.cinematic(false); }
+  endOrbit(): void { this.cam.cinematic(false); this.menuNight = false; }
+  /** Menu główne zawsze nocą, z zapalonymi pochodniami */
+  private menuNight = false;
 
   private puffs: { group: THREE.Group; age: number; bits: { m: THREE.Mesh; v: THREE.Vector3 }[] }[] = [];
   private static puffGeo = new THREE.IcosahedronGeometry(0.16, 1);
@@ -642,7 +644,7 @@ export class GameRenderer {
     this.time += dt;
     this.updatePuffs(dt);
     this.updateRain(dt);
-    if (this.state) this.setDaylight(this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
+    if (this.state) this.setDaylight(this.menuNight ? 23 : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     this.aimSun();
     if (this.state && this.view) {
       this.animate(this.state, this.calm ? 0 : dt);
@@ -1071,7 +1073,7 @@ export class GameRenderer {
     const on = this.night > 0.15;
     const flicker = this.calm ? 1 : 0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07;
     const lit = new Set<number>();
-    for (const b of g.buildings) if (b.lit) lit.add(b.id);
+    for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
     for (const [id, mesh] of this.buildingMeshes) {
       const torch = mesh.getObjectByName('torch');
       if (!torch) continue;
