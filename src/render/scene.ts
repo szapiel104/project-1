@@ -219,6 +219,8 @@ export class GameRenderer {
     this.scene.add(this.view.group);
     const { width, height, starts } = state.map;
     this.cam.setBounds(width, height, rim + 8);
+    const view = this.view;
+    this.cam.ground = (x, z) => view.heightAt(x + width / 2, z + height / 2);
     const s = starts.find((p) => p.player === focusPlayer) ?? starts[0];
     if (s) this.cam.lookAt(s.x + 0.5 - width / 2, s.y + 0.5 - height / 2, 30);
     this.cursor.visible = this.ghost.visible = this.selection.visible = false;

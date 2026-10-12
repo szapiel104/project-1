@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.6.3 — kamera i bruk (2026-10-12)
+
+- Kamera: kąt patrzenia od prawie poziomego do pionowego (prawy przycisk w górę/dół albo T i G); nie wchodzi pod ziemię ani w pagórki
+- Nowy bruk: drobne, jasne kamienie w rysunkowym stylu, z ciemnymi spoinami i mchem
+- Dźwięk przy kliknięciu w budynek lub mieszkańca
+- Na węższych ekranach belka narzędzi w dwóch rzędach
+
 ## 0.6.2 — prawdziwe dźwięki (2026-10-12)
 
 - Nagrania Kenneya zamiast syntezy: stawianie budynku i drogi (4 warianty), wyburzanie (4 warianty), zawalenie, obrót, kliknięcie; wysokość lekko losowana przy każdym odtworzeniu

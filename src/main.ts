@@ -126,6 +126,7 @@ function personCard(id: number): { name: string; lines: string[] } | null {
 }
 
 function selectUnit(id: number): void {
+  if (id && id !== selectedUnit) play('select');
   selectedUnit = id;
   if (id) { selected = 0; renderer.setSelection(0); }
   renderer.setUnitSelection(id);
@@ -182,6 +183,7 @@ renderer.onClick = (tile, touch) => {
   if (!picked) {
     if (selectedUnit) selectUnit(0);
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
+    if (id && id !== selected) play('select');
     select(id === selected ? 0 : id);
     return;
   }

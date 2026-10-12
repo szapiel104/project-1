@@ -3,7 +3,7 @@
  * zastępczy dźwięk syntezowany w przeglądarce. Do tego tło: szum otoczenia w pętli.
  * Przeglądarka pozwala grać dopiero po pierwszym kliknięciu, więc kontekst powstaje leniwie.
  */
-export type Sound = 'click' | 'build' | 'demolish' | 'collapse' | 'error' | 'road' | 'rotate';
+export type Sound = 'click' | 'build' | 'demolish' | 'collapse' | 'error' | 'road' | 'rotate' | 'select';
 
 /** Nagrania dla każdego dźwięku; przy kilku wariantach losujemy jeden, żeby się nie powtarzało. */
 const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
@@ -13,6 +13,7 @@ const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
   demolish: ['removal-a', 'removal-b', 'removal-c', 'removal-d'],
   collapse: ['break'],
   rotate: ['rotate'],
+  select: ['placement-b', 'placement-d'],
   ambience: ['ambience'],
 };
 const buffers = new Map<string, AudioBuffer>();
@@ -129,9 +130,9 @@ function sample(c: AudioContext, sound: Sound, t: number): boolean {
   const src = c.createBufferSource();
   src.buffer = buf;
   // lekko zmieniona wysokość przy każdym odtworzeniu; droga brzmi niżej i ciszej niż budynek
-  src.playbackRate.value = (sound === 'road' ? 0.8 : 1) * (0.94 + Math.random() * 0.12);
+  src.playbackRate.value = (sound === 'road' ? 0.8 : sound === 'select' ? 1.35 : 1) * (0.94 + Math.random() * 0.12);
   const g = c.createGain();
-  g.gain.value = sound === 'road' ? 0.5 : sound === 'click' ? 0.6 : 1;
+  g.gain.value = sound === 'road' ? 0.5 : sound === 'click' ? 0.6 : sound === 'select' ? 0.45 : 1;
   src.connect(g).connect(master!);
   src.start(t);
   return true;
@@ -145,6 +146,7 @@ export function play(sound: Sound): void {
   switch (sound) {
     case 'click':
     case 'rotate':
+    case 'select':
       knock(c, t, 900, 0.05, 0.12);
       break;
     case 'build':

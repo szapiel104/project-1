@@ -9,7 +9,12 @@ export class StrategyCamera {
   private target = new THREE.Vector3();
   private yaw = Math.PI / 4;
   private dist = 38;
-  private readonly pitch = (52 * Math.PI) / 180;
+  /** Kąt patrzenia: od prawie poziomego (widok z ziemi) do pionowego (z lotu ptaka) */
+  private pitch = (52 * Math.PI) / 180;
+  private static readonly MIN_PITCH = (6 * Math.PI) / 180;
+  private static readonly MAX_PITCH = (89 * Math.PI) / 180;
+  /** Wysokość terenu w punkcie świata; kamera nigdy nie zejdzie pod ziemię */
+  ground: (x: number, z: number) => number = () => 0;
   private keys = new Set<string>();
   private pointers = new Map<number, { x: number; y: number; button: number }>();
   private pinch = 0;
@@ -62,9 +67,13 @@ export class StrategyCamera {
     if (k.has('KeyD') || k.has('ArrowRight')) fx += 1;
     if (k.has('KeyQ')) rot += 1;
     if (k.has('KeyE')) rot -= 1;
+    let tilt = 0;
+    if (k.has('PageUp') || k.has('KeyT')) tilt += 1;
+    if (k.has('PageDown') || k.has('KeyG')) tilt -= 1;
+    if (tilt) this.tilt(tilt * dt * 1.2);
     if (fx || fz) this.pan(fx * this.dist * dt * 0.9, fz * this.dist * dt * 0.9);
     if (rot) this.yaw += rot * dt * 1.6;
-    if (fx || fz || rot) this.apply();
+    if (fx || fz || rot || tilt) this.apply();
   }
 
   private pan(dx: number, dz: number): void {
@@ -75,17 +84,27 @@ export class StrategyCamera {
     this.target.z = Math.max(-this.bounds.z, Math.min(this.bounds.z, this.target.z));
   }
 
+  private tilt(d: number): void {
+    this.pitch = Math.max(StrategyCamera.MIN_PITCH, Math.min(StrategyCamera.MAX_PITCH, this.pitch + d));
+  }
+
   private zoom(factor: number): void {
     this.dist = Math.max(12, Math.min(58, this.dist * factor));
   }
 
   private apply(): void {
+    // punkt na ziemi leży na wysokości terenu, żeby przy niskim kącie nie patrzeć w głąb pagórka
+    this.target.y = this.ground(this.target.x, this.target.z);
     const flat = Math.cos(this.pitch) * this.dist;
-    this.camera.position.set(
-      this.target.x + Math.sin(this.yaw) * flat,
-      Math.sin(this.pitch) * this.dist,
-      this.target.z + Math.cos(this.yaw) * flat,
-    );
+    const x = this.target.x + Math.sin(this.yaw) * flat, z = this.target.z + Math.cos(this.yaw) * flat;
+    let y = this.target.y + Math.sin(this.pitch) * this.dist;
+    // nie wchodzimy pod ziemię: kamera zawsze co najmniej trochę nad terenem pod sobą i na linii do celu
+    for (let k = 0.25; k <= 1; k += 0.25) {
+      const gx = this.target.x + (x - this.target.x) * k, gz = this.target.z + (z - this.target.z) * k;
+      const need = this.target.y + (this.ground(gx, gz) + 1.2 - this.target.y) / k;
+      if (y < need) y = need;
+    }
+    this.camera.position.set(x, y, z);
     this.camera.lookAt(this.target);
   }
 
@@ -115,8 +134,9 @@ export class StrategyCamera {
       this.pinch = d;
       this.dragged = true;
     } else if (p.button === 2 || p.button === 1 || (p.button === 0 && e.ctrlKey)) {
-      // obrót: prawy albo środkowy przycisk, a także lewy z wciśniętym Ctrl
+      // obrót: prawy albo środkowy przycisk, a także lewy z wciśniętym Ctrl; ruch w górę i w dół zmienia kąt patrzenia
       this.yaw -= dx * 0.006;
+      this.tilt(dy * 0.005);
       this.dragged = true;
     } else if (this.panLocked && e.pointerType !== 'touch' && !e.ctrlKey) {
       return;

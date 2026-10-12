@@ -55,7 +55,7 @@ export const pl = {
   'warn.leaving': 'Popularność spadła poniżej 50: ludzie odchodzą z osady',
   'hud.noGold': 'Brakuje złota na rozdawanie',
   'help.move': 'Przesuwanie: W A S D, strzałki albo przeciąganie',
-  'help.rotate': 'Obrót: Q i E, prawy przycisk myszy albo Ctrl + lewy przycisk',
+  'help.rotate': 'Obrót: Q i E, prawy przycisk myszy albo Ctrl + lewy przycisk. Kąt patrzenia: przeciągnij w górę lub w dół z prawym przyciskiem, albo T i G',
   'help.zoom': 'Zbliżenie: kółko myszy albo dwa palce',
   'help.build': 'Budowa: wybierz budynek, kliknij pole. R obraca, Esc anuluje',
   'help.speed': 'Tempo gry: klawisze + i −',

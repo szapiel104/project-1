@@ -169,10 +169,13 @@ input, select {
 .hint:empty { display: none; }
 .help-list { display: grid; gap: 4px; list-style: disc; padding-left: 20px; }
 
-@media (max-width: 1100px) {
+@media (max-width: 1340px) {
   .status { justify-content: center; }
-  .toolbar { grid-template-columns: 1fr; justify-items: center; }
-  .tabs, .tools-right { justify-self: center; flex-wrap: wrap; justify-content: center; }
+  /* węższy ekran: kategorie w pierwszym rzędzie, zakładki i sterowanie pod nimi po bokach */
+  .toolbar { grid-template-columns: auto auto; grid-template-areas: 'cats cats' 'tabs right'; justify-content: space-between; }
+  .cats { grid-area: cats; }
+  .tabs { grid-area: tabs; }
+  .tools-right { grid-area: right; }
 }
 @media (max-width: 640px) {
   body { font-size: 16px; }
@@ -185,7 +188,7 @@ input, select {
   .floaters { flex-direction: column; align-items: stretch; }
   .drawer, .info { width: auto; margin-left: 0; max-height: 40vh; }
   .buildbar { padding: 6px; }
-  .toolbar { grid-template-columns: 1fr; justify-items: stretch; padding: 4px 6px; }
+  .toolbar { grid-template-columns: 1fr; grid-template-areas: 'tabs' 'cats' 'right'; justify-items: stretch; padding: 4px 6px; }
   .tabs, .tools-right { justify-self: stretch; }
   .tabs button, .tools-right button { flex: 1; min-height: 40px; padding: 6px 4px; font-size: 13px; }
   .cats { display: grid; grid-template-columns: repeat(4, 1fr); }

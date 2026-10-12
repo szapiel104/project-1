@@ -139,35 +139,63 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     for (let k = 0; k < 14; k++) { const sx = r() * n, len = n * (0.15 + r() * 0.3); const gr = c.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(sx, 0, n * (0.01 + r() * 0.02), len); }
   },
   cobble(c, n, r) {
-    // Rzymska kostka: drobne, obłe kamienie ułożone ciasno w lekko falujących rzędach,
-    // każdy trochę inny w rozmiarze, odcieniu i obrocie, wypukły, z ziemią w szczelinach
-    c.fillStyle = gray(0.24); c.fillRect(0, 0, n, n);
-    const rows = 15, s = n / rows;
-    for (let y = -1; y <= rows; y++) {
-      for (let x = -1; x <= rows; x++) {
-        // rząd faluje i jest przesunięty o pół kamienia względem sąsiedniego
-        const cx = (x + 0.5 + (y % 2 ? 0.5 : 0)) * s + (r() - 0.5) * s * 0.14;
-        const cy = (y + 0.5) * s + Math.sin(((x + (y % 2 ? 0.5 : 0)) / rows) * Math.PI * 4) * s * 0.16 + (r() - 0.5) * s * 0.12;
-        const w = s * (0.8 + r() * 0.16), h = s * (0.74 + r() * 0.18), rot = (r() - 0.5) * 0.5;
-        const tone = 0.62 + r() * 0.34;
-        for (const [ox, oy] of [[0, 0], [n, 0], [-n, 0], [0, n], [0, -n]] as const) {
-          if (cx + ox < -s || cx + ox > n + s || cy + oy < -s || cy + oy > n + s) continue;
-          c.save();
-          c.translate(cx + ox, cy + oy); c.rotate(rot);
-          const rad = Math.min(w, h) * 0.32;
-          c.beginPath(); c.roundRect(-w / 2, -h / 2, w, h, rad);
-          // wypukłość: światło z lewej góry, cień u dołu po prawej
-          const gr = c.createRadialGradient(-w * 0.18, -h * 0.2, s * 0.05, 0, 0, Math.max(w, h) * 0.62);
-          gr.addColorStop(0, gray(tone + 0.14)); gr.addColorStop(0.55, gray(tone)); gr.addColorStop(1, gray(tone - 0.3));
-          c.fillStyle = gr; c.fill();
-          c.clip();
-          // powierzchnia kamienia: ziarno, jaśniejsze i ciemniejsze plamy, czasem rysa albo odprysk
-          for (let k = 0; k < 28; k++) { c.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${0.04 + r() * 0.1})`; c.fillRect((r() - 0.5) * w, (r() - 0.5) * h, s * (0.01 + r() * 0.05), s * (0.01 + r() * 0.035)); }
-          for (let k = 0; k < 3; k++) { const br = s * (0.08 + r() * 0.16), bx = (r() - 0.5) * w * 0.8, by = (r() - 0.5) * h * 0.8; const gb = c.createRadialGradient(bx, by, 0, bx, by, br); gb.addColorStop(0, `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},0.12)`); gb.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gb; c.fillRect(bx - br, by - br, br * 2, br * 2); }
-          if (r() > 0.7) { c.strokeStyle = 'rgba(0,0,0,0.3)'; c.lineWidth = Math.max(1, s * 0.012); c.beginPath(); c.moveTo((r() - 0.5) * w, -h / 2); c.lineTo((r() - 0.5) * w * 0.6, (r() - 0.5) * h * 0.4); c.lineTo((r() - 0.5) * w, h / 2); c.stroke(); }
-          c.restore();
-        }
+    // Bruk w rysunkowym stylu: drobne, prostokątne kamienie o zaokrąglonych rogach, w rzędach różnej długości,
+    // jasny piaskowiec z refleksem u góry i cieniem u dołu, ciemne szczeliny i mech wyrastający ze spoin.
+    c.fillStyle = 'rgb(58,60,32)'; c.fillRect(0, 0, n, n);
+    const rows = 12, s = n / rows, gap = s * 0.07;
+    const wrap = (draw: (ox: number, oy: number) => void, x: number, y: number, ext: number): void => {
+      for (const ox of [0, n, -n]) for (const oy of [0, n, -n]) {
+        if (x + ox < -ext || x + ox > n + ext || y + oy < -ext || y + oy > n + ext) continue;
+        draw(ox, oy);
       }
+    };
+    const stone = (x: number, y: number, w: number, h: number): void => {
+      const base = 0.82 + r() * 0.18, warm = r() * 14;
+      const col = (k: number): string => `rgb(${Math.round((228 + warm) * base * k)},${Math.round(208 * base * k)},${Math.round((182 - warm) * base * k)})`;
+      const rad = Math.min(w, h) * 0.28;
+      const specks = Array.from({ length: 10 }, () => [r() * w, r() * h, s * (0.012 + r() * 0.02)] as const);
+      wrap((ox, oy) => {
+        const X = x + ox + gap / 2, Y = y + oy + gap / 2, W = w - gap, H = h - gap;
+        // cień od spodu, potem bryła, refleks i ciemniejszy dół
+        c.fillStyle = col(0.62); c.beginPath(); c.roundRect(X, Y + gap * 0.5, W, H, rad); c.fill();
+        c.fillStyle = col(1); c.beginPath(); c.roundRect(X, Y, W, H - gap * 0.4, rad); c.fill();
+        c.fillStyle = col(1.08); c.beginPath(); c.roundRect(X + W * 0.06, Y + H * 0.07, W * 0.7, H * 0.38, rad * 0.9); c.fill();
+        c.fillStyle = col(0.86); c.beginPath(); c.roundRect(X + W * 0.35, Y + H * 0.55, W * 0.58, H * 0.36, rad * 0.7); c.fill();
+        c.fillStyle = col(0.78);
+        for (const [sx, sy, sr] of specks) { c.beginPath(); c.arc(X + sx * 0.9 + W * 0.05, Y + sy * 0.85 + H * 0.05, sr, 0, Math.PI * 2); c.fill(); }
+      }, x, y, w + s);
+    };
+    // rzędy kamieni różnej długości, przesunięte względem siebie
+    for (let row = 0; row < rows; row++) {
+      const x0 = -r() * s;
+      let x = x0;
+      while (x < x0 + n - 1) {
+        // rząd ma dokładnie szerokość tekstury, żeby po zawinięciu kamienie nie nachodziły na siebie
+        let w = s * (0.9 + r() * 1.1);
+        if (x0 + n - x - w < s * 0.8) w = x0 + n - x;
+        if (r() < 0.18 && row < rows - 1) {
+          // czasem dwa kamienie postawione pionowo w jednym miejscu
+          stone(x, row * s, w * 0.5, s); stone(x + w * 0.5, row * s, w * 0.5, s);
+        } else stone(x, row * s, w, s);
+        x += w;
+      }
+    }
+    // mech w spoinach: nieregularne kępy wyrastające ze szczelin i zachodzące na krawędzie kamieni
+    for (let k = 0; k < 30; k++) {
+      let x = r() * n, y = Math.round(r() * rows) * s;
+      const horizontal = r() < 0.6;
+      const len = 2 + Math.floor(r() * 7);
+      for (let j = 0; j < len; j++) {
+        const blobs = Array.from({ length: 3 }, () => [(r() - 0.5) * s * 0.12, (r() - 0.5) * s * 0.12, s * (0.025 + r() * 0.06)] as const);
+        wrap((ox, oy) => {
+          for (const [bx, by, br] of blobs) { c.fillStyle = 'rgb(70,96,18)'; c.beginPath(); c.arc(x + ox + bx, y + oy + by + br * 0.3, br * 1.15, 0, Math.PI * 2); c.fill(); }
+          for (const [bx, by, br] of blobs) { c.fillStyle = 'rgb(140,178,38)'; c.beginPath(); c.arc(x + ox + bx, y + oy + by, br, 0, Math.PI * 2); c.fill(); }
+          for (const [bx, by, br] of blobs) { c.fillStyle = 'rgba(200,226,90,0.8)'; c.beginPath(); c.arc(x + ox + bx - br * 0.3, y + oy + by - br * 0.35, br * 0.35, 0, Math.PI * 2); c.fill(); }
+        }, x, y, s);
+        if (horizontal) { x += s * (0.05 + r() * 0.1); y += (r() - 0.5) * s * 0.05; } else { y += s * (0.05 + r() * 0.1); x += (r() - 0.5) * s * 0.05; }
+      }
+      // pojedyncze kropki mchu obok kępy
+      for (let j = 0; j < 4; j++) { const dx = x + (r() - 0.5) * s * 0.5, dy = y + (r() - 0.5) * s * 0.3, dr = s * (0.012 + r() * 0.02); wrap((ox, oy) => { c.fillStyle = 'rgb(140,178,38)'; c.beginPath(); c.arc(dx + ox, dy + oy, dr, 0, Math.PI * 2); c.fill(); }, dx, dy, s); }
     }
   },
   water(c, n) {
