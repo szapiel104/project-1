@@ -55,7 +55,7 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
     return top;
   };
 
-  const K = 65536; // klucz = koszt * K + pole (mapy mają najwyżej 256 x 256 pól)
+  const K = 1 << 20; // klucz = koszt * K + pole (do 1024 x 1024 pól; koszt najwyżej kilka tysięcy, więc mieści się w liczbie)
   dist[from] = 0; mark[from] = generation; prev[from] = -1;
   push(from);
   while (heap.length) {
