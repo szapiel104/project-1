@@ -1,6 +1,6 @@
 import { RULES } from '../../data/rules';
 import { clockAt } from '../clock';
-import { findPath, walkable } from '../path';
+import { WOLF, findPath, walkable } from '../path';
 import { FP, type GameState, type Wolf } from '../state';
 
 /**
@@ -43,7 +43,7 @@ export function wolfSystem(g: GameState): void {
     if (w.leaving) {
       const x = w.px >> 8, y = w.py >> 8;
       if (x <= 0 || y <= 0 || x >= width - 1 || y >= height - 1) { w.hp = 0; continue; } // zniknął w lesie
-      if (!w.path.length && (g.tick + w.id) % 20 === 0) { const out = edgeOut(g, w); w.path = findPath(g, here, (t) => t === out, 3000) ?? []; }
+      if (!w.path.length && (g.tick + w.id) % 20 === 0) { const out = edgeOut(g, w); w.path = findPath(g, here, (t) => t === out, 3000, WOLF) ?? []; }
     } else {
       // ofiara: najbliższy człowiek albo żołnierz w zasięgu wzroku
       let best = SIGHT * SIGHT, prey = 0, px = 0, py = 0;
@@ -68,18 +68,18 @@ export function wolfSystem(g: GameState): void {
         continue;
       }
       if (!w.path.length && (g.tick + w.id) % 15 === 0) {
-        if (prey) { const t = (py >> 8) * width + (px >> 8); w.path = findPath(g, here, (x) => Math.abs((x % width) - (t % width)) <= 1 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 1, 500) ?? []; }
+        if (prey) { const t = (py >> 8) * width + (px >> 8); w.path = findPath(g, here, (x) => Math.abs((x % width) - (t % width)) <= 1 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 1, 500, WOLF) ?? []; }
         else {
           // węszy w stronę najbliższej osady
           const keep = g.buildings.find((b) => b.type === 0);
-          if (keep) { const t = (keep.y + 4) * width + keep.x + 1; w.path = findPath(g, here, (x) => Math.abs((x % width) - (t % width)) <= 6 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 6, 1500) ?? []; }
+          if (keep) { const t = (keep.y + 4) * width + keep.x + 1; w.path = findPath(g, here, (x) => Math.abs((x % width) - (t % width)) <= 6 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 6, 1500, WOLF) ?? []; }
         }
       }
     }
     // krok
     const next = w.path[0];
     if (next === undefined) continue;
-    if (!walkable(g, next)) { w.path = []; continue; }
+    if (!walkable(g, next, WOLF)) { w.path = []; continue; }
     const tx = (next % width) * FP + FP / 2, ty = Math.floor(next / width) * FP + FP / 2;
     w.px += Math.max(-SPEED, Math.min(SPEED, tx - w.px));
     w.py += Math.max(-SPEED, Math.min(SPEED, ty - w.py));

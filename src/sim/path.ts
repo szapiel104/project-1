@@ -8,7 +8,10 @@ let mark = new Int32Array(0);
 let generation = 0;
 
 /** Czy po polu da się przejść (teren i brak budynku). */
+/** Gracz -2 = wilk: chodzi też przez las */
+export const WOLF = -2;
 export function walkable(g: GameState, tile: number, player = -1): boolean {
+  if (player === WOLF) return g.occupancy[tile] === 0 && (TERRAIN[g.map.tiles[tile] as Terrain].walkable || g.map.tiles[tile] === Terrain.Forest);
   // brama przepuszcza tylko swoich
   return (g.occupancy[tile] === 0 || (player >= 0 && g.gates[tile] === player + 1)) && TERRAIN[g.map.tiles[tile] as Terrain].walkable;
 }
