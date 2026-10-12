@@ -14,7 +14,7 @@ export const pl = {
   'cat.industry': 'Przemysł',
   'cat.roads': 'Drogi',
   'cat.military': 'Wojsko',
-  'hud.paintRoad': 'Przeciągnij po mapie, żeby wytyczyć drogę',
+  'hud.paintRoad': 'Przeciągnij, żeby wytyczyć drogę. Lewy przycisk buduje, prawy anuluje',
   'hud.map': 'Mapa',
   'hud.population': 'Ludność',
   'hud.day': 'Dzień',

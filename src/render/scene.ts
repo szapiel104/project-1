@@ -152,6 +152,9 @@ export class GameRenderer {
   private dying: { mesh: THREE.Group; t: number }[] = [];
   /** Gdy prawda, przeciąganie lewym przyciskiem maluje (np. drogę) zamiast przesuwać kamerę */
   painting = false;
+  private plan!: THREE.InstancedMesh;
+  /** Wciśnięcie lewego przycisku w trybie malowania (początek drogi albo zatwierdzenie planu) */
+  onPaintDown: (tile: TileRef) => void = () => {};
   onPaint: (tile: TileRef) => void = () => {};
   private tmp = new THREE.Object3D();
 
@@ -200,6 +203,12 @@ export class GameRenderer {
     this.cursor = flat(new THREE.RingGeometry(0.5, 0.66, 4, 1, Math.PI / 4), 0xfff3c4);
     this.ghost = flat(new THREE.PlaneGeometry(1, 1), 0x3f9b3f, 0.4);
     this.selection = flat(new THREE.RingGeometry(0.62, 0.72, 4, 1, Math.PI / 4), 0xfff3c4);
+    // podgląd planowanej drogi: zielone pola da się wybudować, czerwone nie
+    this.plan = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.92, 0.92).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false }), 512);
+    this.plan.count = 0;
+    this.plan.frustumCulled = false;
+    this.plan.renderOrder = 3;
+    this.scene.add(this.plan);
 
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
@@ -288,6 +297,7 @@ export class GameRenderer {
       if (this.painting && e.buttons === 1) { const tile = this.pick(e); if (tile) this.onPaint(tile); }
     });
     canvas.addEventListener('pointerleave', () => this.hover(null));
+    canvas.addEventListener('pointerdown', (e) => { if (this.painting && e.button === 0) { const tile = this.pick(e); if (tile) this.onPaintDown(tile); } });
     canvas.addEventListener('pointerup', (e) => {
       if (e.button !== 0 || (this.cam.dragged && !this.painting)) return;
       // najpierw sprawdzamy, czy kliknięto w człowieka (nie w trybie malowania dróg i wyburzania)
@@ -348,6 +358,24 @@ export class GameRenderer {
   }
 
   /** Blokuje przesuwanie kamery myszą na czas malowania */
+  /** Pokazuje planowaną drogę (pusta lista chowa podgląd) */
+  setRoadPlan(tiles: { x: number; y: number; ok: boolean }[]): void {
+    const g = this.state;
+    if (!g || !this.view) { this.plan.count = 0; return; }
+    const { width, height } = g.map;
+    const m = new THREE.Matrix4(), c = new THREE.Color();
+    const n = Math.min(tiles.length, 512);
+    for (let i = 0; i < n; i++) {
+      const t = tiles[i]!;
+      m.makeTranslation(t.x + 0.5 - width / 2, Math.max(this.view.heightAt(t.x + 0.5, t.y + 0.5), 0) + 0.08, t.y + 0.5 - height / 2);
+      this.plan.setMatrixAt(i, m);
+      this.plan.setColorAt(i, c.set(t.ok ? 0x6fd05a : 0xe0503a));
+    }
+    this.plan.count = n;
+    this.plan.instanceMatrix.needsUpdate = true;
+    if (this.plan.instanceColor) this.plan.instanceColor.needsUpdate = true;
+  }
+
   setPainting(on: boolean): void { this.painting = on; this.cam.panLocked = on; }
 
   setGhost(g: Ghost | null): void {

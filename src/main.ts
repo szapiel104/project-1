@@ -137,6 +137,7 @@ function pick(id: string | null): void {
   hud.setPicked(id);
   canvas.classList.toggle('placing', id !== null);
   const road = id !== null && !!BUILDINGS[buildingIndex(id)]?.road;
+  if (plan.state !== 'none') cancelPlan();
   renderer.setPainting(road);
   if (road) hud.toast(t('hud.paintRoad'));
   if (id) select(0);
@@ -208,10 +209,78 @@ renderer.onPaint = (tile) => {
     if (game.roads[tile.y * game.map.width + tile.x] && !pending.some((c) => c.type === 'unroad' && c.x === tile.x && c.y === tile.y)) pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y });
     return;
   }
-  if (!picked) return;
+  if (!picked || plan.state !== 'drag') return;
+  if (plan.end.x === tile.x && plan.end.y === tile.y) return;
+  plan.end = tile;
+  showPlan();
+};
+
+// --- planowanie drogi: przeciągnij, zobacz podgląd i koszt; lewy przycisk buduje, prawy anuluje ---
+const plan = { state: 'none' as 'none' | 'drag' | 'wait' | 'done', start: { x: 0, y: 0 }, end: { x: 0, y: 0 }, tiles: [] as { x: number; y: number; ok: boolean }[] };
+const planTip = document.createElement('div');
+planTip.className = 'plan-tip';
+planTip.hidden = true;
+document.body.append(planTip);
+
+/** Pola drogi od początku do końca: najpierw wzdłuż dłuższej osi, potem zakręt (jak w Twierdzy) */
+function planLine(a: { x: number; y: number }, b: { x: number; y: number }): { x: number; y: number }[] {
+  const out: { x: number; y: number }[] = [];
+  const sx = Math.sign(b.x - a.x), sy = Math.sign(b.y - a.y);
+  const xFirst = Math.abs(b.x - a.x) >= Math.abs(b.y - a.y);
+  let x = a.x, y = a.y;
+  out.push({ x, y });
+  if (xFirst) { while (x !== b.x) { x += sx; out.push({ x, y }); } while (y !== b.y) { y += sy; out.push({ x, y }); } }
+  else { while (y !== b.y) { y += sy; out.push({ x, y }); } while (x !== b.x) { x += sx; out.push({ x, y }); } }
+  return out;
+}
+
+function showPlan(): void {
+  if (!picked || plan.state === 'none' || plan.state === 'done') { renderer.setRoadPlan([]); planTip.hidden = true; return; }
   const type = buildingIndex(picked);
-  if (canPlace(game, ME, type, tile.x, tile.y) === null && !pending.some((c) => c.type === 'build' && c.x === tile.x && c.y === tile.y))
-    { pending.push({ type: 'build', player: ME, building: picked, x: tile.x, y: tile.y }); play('road'); }
+  const def = BUILDINGS[type]!;
+  const p = game.players[ME]!;
+  // koszt liczymy narastająco: gdy zabraknie surowca, dalsze pola są czerwone
+  const left = new Map<ResourceId, number>();
+  for (const res of Object.keys(def.cost) as ResourceId[]) left.set(res, p.res[resIndex(res)]!);
+  let count = 0;
+  plan.tiles = planLine(plan.start, plan.end).map(({ x, y }) => {
+    let ok = !game.roads[y * game.map.width + x] && canPlace(game, ME, type, x, y, false) === null;
+    if (ok) for (const [res, n] of Object.entries(def.cost) as [ResourceId, number][]) if ((left.get(res) ?? 0) < n) ok = false;
+    if (ok) { for (const [res, n] of Object.entries(def.cost) as [ResourceId, number][]) left.set(res, left.get(res)! - n); count++; }
+    return { x, y, ok };
+  });
+  renderer.setRoadPlan(plan.tiles);
+  const costs = (Object.entries(def.cost) as [ResourceId, number][]).map(([res, n]) => {
+    const need = n * count, have = p.res[resIndex(res)]!;
+    return `<span class="${need > have ? 'bad' : ''}">${t(`res.${res}`)}: ${need} <small>(masz ${have})</small></span>`;
+  });
+  const bad = plan.tiles.length - count;
+  planTip.innerHTML = `<strong>${t(def.name)}: ${count} ${count === 1 ? 'pole' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'pola' : 'pól'}</strong>`
+    + (costs.length ? costs.join('') : '<span>za darmo</span>')
+    + (bad ? `<span class="bad">${bad} poza zasięgiem / zajęte</span>` : '')
+    + (plan.state === 'wait' ? '<em>Lewy przycisk — buduj · prawy — anuluj</em>' : '<em>Puść, żeby zobaczyć plan</em>');
+  planTip.hidden = false;
+  planTip.style.left = `${mouseX + 18}px`;
+  planTip.style.top = `${mouseY + 18}px`;
+}
+
+function cancelPlan(): void { plan.state = 'none'; plan.tiles = []; showPlan(); }
+
+renderer.onPaintDown = (tile) => {
+  if (wrecking || !picked) return;
+  if (plan.state === 'wait') {
+    // zatwierdzenie: stawiamy tylko zielone pola
+    let n = 0;
+    for (const x of plan.tiles) if (x.ok) { pending.push({ type: 'build', player: ME, building: picked, x: x.x, y: x.y }); n++; }
+    if (n) play('road'); else play('error');
+    plan.state = 'done';
+    plan.tiles = [];
+    showPlan();
+    return;
+  }
+  plan.state = 'drag';
+  plan.start = tile; plan.end = tile;
+  showPlan();
 };
 
 renderer.onUnit = (id) => { if (!picked && !wrecking) selectUnit(id === selectedUnit ? 0 : id); };
@@ -232,6 +301,12 @@ renderer.onClick = (tile, touch) => {
     return;
   }
   // na ekranie dotykowym pierwsze dotknięcie pokazuje działkę, drugie w tym samym miejscu stawia budynek
+  if (BUILDINGS[buildingIndex(picked)]?.road) {
+    // puszczenie przycisku po przeciągnięciu: plan czeka na decyzję
+    if (plan.state === 'drag') { plan.state = 'wait'; showPlan(); }
+    else if (plan.state === 'done') plan.state = 'none';
+    return;
+  }
   if (touch && !BUILDINGS[buildingIndex(picked)]?.road && (!touchTile || touchTile.x !== tile.x || touchTile.y !== tile.y)) {
     touchTile = tile;
     updateGhost();
@@ -254,6 +329,7 @@ document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closes
 renderer.onCollapse = () => play('collapse');
 
 window.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && plan.state !== 'none') { cancelPlan(); return; }
   if (e.key === 'Escape') {
     if (menu.isOpen()) { if (!titleScreen) menu.close(); return; }
     if (wrecking) setWreck(false);
@@ -272,6 +348,7 @@ window.addEventListener('keydown', (e) => {
   if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);
 });
 canvas.addEventListener('contextmenu', () => {
+  if (plan.state !== 'none') { cancelPlan(); play('rotate'); return; }
   if (wrecking) setWreck(false);
   else if (picked) pick(null);
   else if (chosen.size && hoverFoe) {

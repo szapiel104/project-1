@@ -345,3 +345,10 @@ body.menu-open .scribe { display: none; }
 .scribe-name { font-size: 14px; }
 .scribe-face, .scribe-face svg { width: 72px; height: 72px; }
 .toast { top: 66px; z-index: 22; }
+/* podgląd planowanej drogi przy kursorze */
+.plan-tip { position: fixed; z-index: 30; pointer-events: none; display: grid; gap: 2px; padding: 8px 14px; font-size: 16px; color: var(--parchment-light);
+  background: linear-gradient(#4a321c, #2e1d0f); border: 2px solid var(--gold); box-shadow: 0 0 0 2px var(--wood-edge), 3px 4px 0 rgba(30, 18, 8, .5); }
+.plan-tip strong { font-family: var(--display); color: var(--gold); font-size: 17px; }
+.plan-tip small { opacity: .75; }
+.plan-tip .bad { color: #ff9a8a; }
+.plan-tip em { font-size: 14px; opacity: .85; }
