@@ -159,10 +159,6 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const wrap = el('div', 'net-lobby');
     // pasek: kim jestem
     const bar = el('div', 'net-bar');
-    const meBox = el('button', 'net-me');
-    meBox.type = 'button';
-    meBox.append(shield(m.avatar, 30), el('strong', '', m.nick), el('span', '', 'konto'));
-    meBox.addEventListener('click', showAccount);
     const tabs = el('div', 'net-filters');
     tabs.setAttribute('role', 'tablist');
     const list = el('div', 'net-list');
@@ -172,7 +168,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       b.setAttribute('aria-selected', String(filter === id));
       tabs.append(b);
     }
-    bar.append(tabs, meBox);
+    bar.append(tabs);
     // zakładanie gry
     const create = el('form', 'net-create');
     const name = el('input'); name.placeholder = 'Nazwa gry'; name.maxLength = 40; name.value = `Gra ${m.nick}`; name.setAttribute('aria-label', 'Nazwa gry');

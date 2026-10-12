@@ -269,8 +269,8 @@ export class Ambience {
     G.points.geometry.attributes.size!.needsUpdate = true;
     G.points.geometry.attributes.alpha!.needsUpdate = true;
     // --- mgła przy ziemi: płaskie smugi dryfujące z wiatrem wokół środka widoku; gęsta o świcie, wyraźna nocą
-    const level = Math.min(1, o.mist * 0.9 + night * 0.28 + o.rain * 0.3);
-    this.mistMat.opacity = level * 0.42;
+    const level = Math.min(1, o.mist * 0.7 + night * 0.3 + o.rain * 0.3);
+    this.mistMat.opacity = level * 0.34;
     this.mist.visible = level > 0.02;
     if (this.mist.visible) {
       this.mistMat.color.copy(o.fog).lerp(WHITE, 0.1 + (1 - night) * 0.3);
