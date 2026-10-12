@@ -119,6 +119,7 @@ export class GameRenderer {
   private arrowMesh!: THREE.InstancedMesh;
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
   private lastCd = new Map<number, number>();
+  private pullNow = new Map<number, [number, number]>();
   private armM = new THREE.Matrix4();
   private soundAt = new Map<string, number>();
   /** Dźwięk z miejsca na mapie, nie częściej niż co `every` sekund dla danego źródła; głośność z odległości od środka ekranu */
@@ -1285,7 +1286,7 @@ export class GameRenderer {
     let n = 0, rings = 0, dots = 0, torches = 0;
     // stojący oddział zbija się ciaśniej: każdy przysuwa się do środka swojej grupy (tylko wygląd, pola w symulacji bez zmian)
     const pull = new Map<number, [number, number]>();
-    const still = g.soldiers.filter((x) => !x.path.length && !x.up && !x.target);
+    const still = g.soldiers.filter((x) => !x.path.length && !x.up && !x.target && x.goal < 0);
     for (const a of still) {
       let sx = 0, sy = 0, k = 0;
       for (const b of still) if (b.owner === a.owner && Math.abs(b.px - a.px) < 3 * FP && Math.abs(b.py - a.py) < 3 * FP) { sx += b.px; sy += b.py; k++; }
@@ -1333,8 +1334,13 @@ export class GameRenderer {
       const striking = (!!foe || !!wall) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
       const lift = s.up ? 1.95 : 0;
-      const pl = pull.get(s.id);
-      const px = fx + (pl ? pl[0] : 0), pz = fy + (pl ? pl[1] : 0);
+      // przesunięcie do środka grupy narasta i znika płynnie, więc po dojściu nikt nie „doskakuje” do kolegów
+      const want = pull.get(s.id) ?? [0, 0];
+      const cur = this.pullNow.get(s.id) ?? [0, 0];
+      const k = this.calm ? 1 : 0.06;
+      cur[0] += (want[0] - cur[0]) * k; cur[1] += (want[1] - cur[1]) * k;
+      this.pullNow.set(s.id, cur);
+      const px = fx + cur[0], pz = fy + cur[1];
       const y = view.heightAt(px, pz) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
