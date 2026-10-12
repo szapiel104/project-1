@@ -31,7 +31,7 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
   stone: () => [block(0.24, 0.17, 0.2, 0, 0.03, 0, 0xb5b0a2), block(0.14, 0.1, 0.14, 0.03, 0.16, 0.01, 0x9d978a)],
   fish: () => [basket(), ...[-0.05, 0.05].map((x, k) => ball(0.05, x, 0.09, k ? 0.03 : -0.03, 0x9cc3d6, 0.7, 0.6, 2.2)), ball(0.045, 0, 0.13, 0, 0x7aa6bd, 2.2, 0.6, 0.7)],
   spear: () => [0, 1, 2].flatMap((k) => [tint(new THREE.CylinderGeometry(0.014, 0.014, 0.7, 5).rotateX(Math.PI / 2).translate((k - 1) * 0.04, 0.02, 0.05), 0xc9a26b), tint(new THREE.ConeGeometry(0.024, 0.08, 4).rotateX(Math.PI / 2).translate((k - 1) * 0.04, 0.02, 0.44), 0x8a8f96)]),
-  bow: () => [0, 1].flatMap((k) => [tint(new THREE.TorusGeometry(0.2, 0.012, 4, 10, Math.PI * 0.9).rotateY(Math.PI / 2).translate((k - 0.5) * 0.06, 0.12, 0), 0x7a5232)]),
+  bow: () => [0, 1].flatMap((k) => [tint(new THREE.TorusGeometry(0.18, 0.012, 4, 10, Math.PI * 0.9).rotateX(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.05), 0x7a5232), tint(new THREE.CylinderGeometry(0.004, 0.004, 0.34, 3).rotateZ(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.03), 0xe8e0c8)]),
   iron: () => [block(0.3, 0.07, 0.11, 0, 0, -0.07, 0x6a6570), block(0.3, 0.07, 0.11, 0, 0, 0.07, 0x6a6570), block(0.3, 0.07, 0.11, 0, 0.08, 0, 0x7c7784)],
 };
 
@@ -43,7 +43,7 @@ export function createLoads(max: number, scene: THREE.Scene): Map<number, THREE.
     const parts = SHAPES[id]?.();
     const geo = parts ? mergeGeometries(parts.map((p) => (p.index ? p.toNonIndexed() : p))) : null;
     if (!geo) return;
-    geo.translate(0, 0.72, 0.16); // niesione przed sobą, na wysokości piersi
+    geo.translate(0, 0.43, 0.21); // niesione oburącz przed sobą, na wysokości piersi (dłonie wyciągnięte do przodu)
     const mesh = new THREE.InstancedMesh(geo, mat, max);
     mesh.count = 0;
     mesh.frustumCulled = false;
@@ -57,7 +57,7 @@ export function createLoads(max: number, scene: THREE.Scene): Map<number, THREE.
     tint(new THREE.TorusGeometry(0.092, 0.012, 4, 10).rotateY(Math.PI / 2).translate(-0.12, 0.05, 0), 0x6b5a3c),
     tint(new THREE.TorusGeometry(0.092, 0.012, 4, 10).rotateY(Math.PI / 2).translate(0.14, 0.05, 0), 0x6b5a3c),
   ].map((p) => (p.index ? p.toNonIndexed() : p)))!;
-  shroud.translate(0.1, 0.62, 0);
+  shroud.translate(0.1, 0.5, 0);
   const sm = new THREE.InstancedMesh(shroud, mat, max);
   sm.count = 0; sm.frustumCulled = false; sm.castShadow = true;
   scene.add(sm);
