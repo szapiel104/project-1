@@ -987,6 +987,8 @@ function showPerf(now: number): void {
     mapa: `${game.map.width}×${game.map.height}`, budynki: game.buildings.length, chłopi: game.units.length, żołnierze: game.soldiers.length, wilki: game.wolves.length, ciała: game.corpses.length,
     'pamięć MB': mem ? Math.round(mem.usedJSHeapSize / 1048576) : '—',
   };
+  for (const [k, v] of Object.entries(renderer.readTiming())) perf.last[`  ${k} ms`] = v;
+  perf.last['jakość'] = renderer.quality;
   fpsTag.textContent = `FPS ${perf.last.fps}`;
   fpsTag.dataset.low = String(Number(perf.last.fps) < 40);
   if (!perfBox.hidden) perfBox.textContent = Object.entries(perf.last).map(([k, v]) => `${k.padEnd(22)} ${v}`).join('\n');

@@ -597,6 +597,7 @@ export class GameRenderer {
   /** Ustawienia grafiki i kamery z menu */
   setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean }): void {
     if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false };
+    this.quality = `AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}`;
     this.ao.enabled = o.ao !== 'off';
     this.plain.enabled = o.ao === 'off';
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
@@ -722,15 +723,35 @@ export class GameRenderer {
     if (this.flash > 0) { this.flash = Math.max(0, this.flash - dt * 4); this.hemi.intensity += this.flash * 3 * (Math.random() < 0.7 ? 1 : 0.3); }
     this.aimSun();
     if (this.state && this.view) {
-      this.animate(this.state, this.calm ? 0 : dt);
-      this.syncForest(this.state, this.view);
-      this.syncRoads(this.state, this.view);
-      this.syncRubble(this.state, this.view, dt);
-      this.syncLamps(this.state);
-      if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncSites(this.state); this.syncWalls(this.state, this.view); this.syncGates(this.state, dt); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); this.syncSoldiers(this.state, this.view, alpha); this.syncWolves(this.state, this.view, alpha); this.syncCrows(this.state, this.view); this.syncForestEyes(this.state, this.view); }
+      const g = this.state, v = this.view;
+      // każdy etap mierzony osobno: okno wydajności pokazuje, co zjada czas klatki
+      const T = (name: string, fn: () => void): void => { const t0 = performance.now(); fn(); this.timing[name] = (this.timing[name] ?? 0) + performance.now() - t0; };
+      T('animacje', () => { this.animate(g, this.calm ? 0 : dt); if (!this.calm) v.animate(this.time); });
+      T('las', () => this.syncForest(g, v));
+      T('drogi', () => this.syncRoads(g, v));
+      T('gruz', () => this.syncRubble(g, v, dt));
+      T('światła', () => this.syncLamps(g));
+      T('budynki', () => { this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
+      T('chłopi', () => this.syncUnits(g, v, alpha));
+      T('wojsko', () => this.syncSoldiers(g, v, alpha));
+      T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); });
+    }
+    const tg = performance.now();
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
     this.composer.render();
+    this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + performance.now() - tg;
+    this.timingFrames++;
   }
+  /** Czas poszczególnych etapów klatki (ms na klatkę) od ostatniego odczytu */
+  readTiming(): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const [k, v] of Object.entries(this.timing)) out[k] = +(v / Math.max(1, this.timingFrames)).toFixed(2);
+    this.timing = {}; this.timingFrames = 0;
+    return out;
+  }
+  private timing: Record<string, number> = {};
+  private timingFrames = 0;
+  quality = '';
 
   private wallKey = '';
   private wallShafts: THREE.InstancedMesh | null = null;
