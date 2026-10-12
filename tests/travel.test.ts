@@ -119,3 +119,15 @@ describe('brama', () => {
     expect(gate!.shut).toBe(true);
   });
 });
+
+describe('wilki polują naprawdę', () => {
+  it('dochodzą do człowieka daleko od miejsca, gdzie wyszły, i go zagryzają', () => {
+    const g = createGame(9, '1v1', 2);
+    for (const p of g.players) p.bot = false;
+    // noc, wataha na brzegu mapy
+    while (!(((g.tick + 800) % 2400) >= 2250)) step(g, []);
+    g.wolves.push({ id: 99001, px: 2 * 256 + 128, py: 30 * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
+    for (let i = 0; i < 900; i++) step(g, []);
+    expect(g.players.reduce((n, p) => n + p.stats.lost, 0)).toBeGreaterThan(0);
+  });
+});

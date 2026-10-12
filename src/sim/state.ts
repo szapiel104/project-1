@@ -188,6 +188,8 @@ export interface Wolf {
   target: number;
   cd: number;
   leaving: boolean;
+  /** Id palisady, którą przegryza, gdy ludzie są za murem */
+  gnaw?: number;
 }
 
 export interface GameState {

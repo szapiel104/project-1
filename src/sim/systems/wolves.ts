@@ -1,7 +1,9 @@
 import { RULES } from '../../data/rules';
 import { clockAt } from '../clock';
 import { WOLF, findPath, walkable } from '../path';
+import { BUILDINGS } from '../../data/buildings';
 import { FP, type GameState, type Wolf } from '../state';
+import { demolish } from './placement';
 
 /**
  * Wilki: nocą z lasu za mapą wychodzi wataha i poluje na ludzi poza osadą. Palisada je zatrzymuje,
@@ -46,9 +48,9 @@ export function wolfSystem(g: GameState): void {
       if (!w.path.length && (g.tick + w.id) % 20 === 0) { const out = edgeOut(g, w); w.path = findPath(g, here, (t) => t === out, 3000, WOLF) ?? []; }
     } else {
       // ofiara: najbliższy człowiek albo żołnierz w zasięgu wzroku
-      let best = SIGHT * SIGHT, prey = 0, px = 0, py = 0;
-      for (const u of g.units) { const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = u.id; px = u.px; py = u.py; } }
-      for (const s of g.soldiers) { const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = s.id; px = s.px; py = s.py; } }
+      let best = SIGHT * SIGHT, prey = 0;
+      for (const u of g.units) { const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = u.id; } }
+      for (const s of g.soldiers) { const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = s.id; } }
       w.target = prey;
       if (prey && best <= 1.2) {
         w.path = [];
@@ -63,16 +65,43 @@ export function wolfSystem(g: GameState): void {
             g.units.splice(ui, 1);
             const p = g.players[u.owner];
             if (p) { p.stats.lost++; p.wolfKills = (p.wolfKills ?? 0) + 1; }
+            w.cd = 160; // pożera ofiarę, chwilę nie poluje
           } else { const s = g.soldiers.find((x) => x.id === prey); if (s) s.hp -= 7; }
         }
         continue;
       }
+      // obgryza palisadę, przy której stoi
+      if (w.gnaw) {
+        const wall = g.buildings.find((x) => x.id === w.gnaw);
+        if (!wall) w.gnaw = 0;
+        else if (Math.max(Math.abs((w.px >> 8) - wall.x), Math.abs((w.py >> 8) - wall.y)) <= 1 && !w.path.length) {
+          if (w.cd === 0) { w.cd = BITE; wall.hp -= 6; if (wall.hp <= 0) { demolish(g, wall.owner, wall.id, true); w.gnaw = 0; } }
+          continue;
+        }
+      }
       if (!w.path.length && (g.tick + w.id) % 15 === 0) {
-        if (prey) { const t = (py >> 8) * width + (px >> 8); w.path = findPath(g, here, (x) => Math.abs((x % width) - (t % width)) <= 1 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 1, 500, WOLF) ?? []; }
-        else {
-          // węszy w stronę najbliższej osady
-          const keep = g.buildings.find((b) => b.type === 0);
-          if (keep) { const t = (keep.y + 4) * width + keep.x + 1; w.path = findPath(g, here, (x) => Math.abs((x % width) - (t % width)) <= 6 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 6, 1500, WOLF) ?? []; }
+        // poluje na najbliższego człowieka na całej mapie, do którego da się dojść (drwale, rybacy, ci za murem)
+        const cands: { d: number; t: number }[] = [];
+        for (const u of g.units) cands.push({ d: (u.px - w.px) ** 2 + (u.py - w.py) ** 2, t: (u.py >> 8) * width + (u.px >> 8) });
+        for (const v of g.soldiers) cands.push({ d: (v.px - w.px) ** 2 + (v.py - w.py) ** 2, t: (v.py >> 8) * width + (v.px >> 8) });
+        cands.sort((a, b) => a.d - b.d);
+        const near = (t: number) => (x: number): boolean => Math.abs((x % width) - (t % width)) <= 1 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 1;
+        for (const c of cands.slice(0, 3)) { const p = findPath(g, here, near(c.t), 3000, WOLF); if (p && p.length) { w.path = p; w.gnaw = 0; break; } }
+        if (!w.path.length && cands.length) {
+          // wszyscy za palisadą: wataha podchodzi pod najbliższy kawałek muru i go przegryza
+          let bestWall: (typeof g.buildings)[number] | undefined, bd = Infinity;
+          for (const o of g.buildings) {
+            const d = BUILDINGS[o.type]!;
+            if (!(d.line || d.gate)) continue;
+            const dist = (o.x - (w.px >> 8)) ** 2 + (o.y - (w.py >> 8)) ** 2;
+            if (dist < bd) { bd = dist; bestWall = o; }
+          }
+          if (bestWall) {
+            const wall = bestWall;
+            const p = findPath(g, here, (x) => Math.max(Math.abs((x % width) - wall.x), Math.abs(Math.floor(x / width) - wall.y)) === 1, 3000, WOLF);
+            w.gnaw = wall.id;
+            w.path = p ?? [];
+          }
         }
       }
     }
