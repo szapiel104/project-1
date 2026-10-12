@@ -858,15 +858,18 @@ export class GameRenderer {
       t.updateMatrix();
       this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
       const wood = u.carryRes === WOOD;
+      // kłodę ciągnie tylko drwal z lasu; włóczniarz niesie ze składu zwykłe deski
+      const jb = u.job ? jobs.get(u.job) : undefined;
+      const log = wood && u.phase === Phase.ToHome && !!jb && BUILDINGS[jb.type]!.production?.site === Terrain.Forest;
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
       if (torchOn) this.handTorches.setMatrixAt(i, t.matrix); else this.handTorches.setMatrixAt(i, ZERO);
-      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !(wood && u.phase === Phase.ToHome), TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
+      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
-      t.scale.setScalar(wood && u.phase === Phase.ToHome ? 1 : 0);
+      t.scale.setScalar(log ? 1 : 0);
       t.updateMatrix();
       this.logs.setMatrixAt(i, t.matrix);
-      t.scale.setScalar(wood && u.phase !== Phase.ToHome ? 1 : 0);
+      t.scale.setScalar(wood && !log ? 1 : 0);
       t.updateMatrix();
       this.planks.setMatrixAt(i, t.matrix);
       // każdy surowiec ma własny wygląd: kosz jabłek, bochenki, snop, worek, blok, sztaby
