@@ -402,3 +402,6 @@ body.menu-open .scribe { display: none; }
 .newgame-foot { display: grid; grid-template-columns: 1fr 2fr; gap: 12px; }
 .newgame .hint:empty { display: none; }
 @media (prefers-reduced-motion: reduce) { .pick, .menu-btn, .dev-knob, .dev-knob::after { transition: none; } }
+/* opisy w kafelkach zwykłym pismem, nie kapitalikami */
+.pick .pick-small, .dev-switch .dev-hint { font-family: var(--text); font-variant: normal; text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 500; }
+.pick-big { font-variant: normal; }
