@@ -446,3 +446,19 @@ body.menu-open .scribe { display: none; }
 .report-list .plus { color: #2f6e22; }
 .report-list .minus { color: #a8281f; }
 .report-hint { margin: 10px 0 0; font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
+/* dolny pasek w jednej linii: zapasy węższe (zmiana pod liczbą), liczniki osady zwarte, bez zawijania */
+.status { flex-wrap: nowrap; gap: 6px; }
+.status .res { flex-wrap: nowrap; gap: 3px; min-width: 0; }
+.status .people { flex-wrap: nowrap; gap: 3px; }
+.status .res li { min-height: 46px; padding: 2px 7px; gap: 5px; }
+.status .res .ico svg { width: 26px; height: 26px; }
+.status .res strong { font-size: 19px; min-width: 0; line-height: 1; }
+.status .res li { display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; align-items: center; column-gap: 5px; }
+.status .res li .ico { grid-row: span 2; }
+.status .trend { font-size: 12px; line-height: 1; }
+.status .people > div, .status .clock { min-height: 46px; padding: 2px 8px; gap: 6px; }
+.status .people .ico svg { width: 28px; height: 28px; }
+.status .people strong, .status .clock strong { font-size: 20px; }
+.status .meter { width: 64px; }
+.status .delta { font-size: 15px; }
+.status .dial svg { width: 34px; height: 34px; }

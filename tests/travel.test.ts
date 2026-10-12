@@ -154,3 +154,29 @@ describe('ruiny', () => {
     expect(walkable(g, t, 1)).toBe(false);
   });
 });
+
+describe('łucznicy', () => {
+  it('strzelają z daleka i wchodzą na wieżę', async () => {
+    const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const { unitIndex } = await import('../src/data/units');
+    const g = createGame(5, '1v1', 0);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings[0]!;
+    let tower = null as null | (typeof g.buildings)[number];
+    for (let r = 4; r < 15 && !tower; r++) for (let d = -r; d <= r && !tower; d++) if (canPlace(g, 0, buildingIndex('watchtower'), keep.x + d, keep.y + r) === null) { placeBuilding(g, 0, buildingIndex('watchtower'), keep.x + d, keep.y + r); tower = g.buildings[g.buildings.length - 1]!; }
+    tower!.build = 0;
+    const A = unitIndex('archer');
+    const ax = (tower!.x - 2) * 256 + 128, ay = tower!.y * 256 + 128;
+    g.soldiers.push({ id: 70001, owner: 0, kind: A, px: ax, py: ay, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0 });
+    step(g, [{ type: 'garrison', player: 0, ids: [70001], tower: tower!.id }]);
+    for (let i = 0; i < 200; i++) step(g, []);
+    const a = g.soldiers.find((s) => s.id === 70001)!;
+    expect(a.up).toBe(true);
+    // wróg 7 pól dalej: z wieży (zasięg 6+3) trafia, wręcz go nie dosięgną
+    g.soldiers.push({ id: 70002, owner: 1, kind: 0, px: a.px + 7 * 256, py: a.py, path: [], hp: 60, goal: -1, wait: 999, target: 0, cd: 0 });
+    for (let i = 0; i < 60; i++) step(g, []);
+    const foe = g.soldiers.find((s) => s.id === 70002);
+    expect(!foe || foe.hp < 60).toBe(true);
+  });
+});

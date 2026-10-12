@@ -2,6 +2,7 @@ import { RULES } from '../../data/rules';
 import { clockAt } from '../clock';
 import { WOLF, findPath, walkable } from '../path';
 import { BUILDINGS } from '../../data/buildings';
+import { UNITS } from '../../data/units';
 import { FP, type GameState, type Wolf } from '../state';
 import { ruin } from './placement';
 
@@ -53,7 +54,7 @@ export function wolfSystem(g: GameState): void {
       // ofiara: najbliższy człowiek albo żołnierz w zasięgu wzroku
       let best = SIGHT * SIGHT, prey = 0;
       for (const u of g.units) { const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = u.id; } }
-      for (const s of g.soldiers) { const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = s.id; } }
+      for (const s of g.soldiers) { if (s.up) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = s.id; } }
       w.target = prey;
       if (prey && best <= 1.2) {
         w.path = [];
@@ -139,11 +140,13 @@ export function wolfSystem(g: GameState): void {
       if (!prey) s.hunt = 0;
       else if ((g.tick + s.id) % 15 === 0 && ((s.px - prey.px) / FP) ** 2 + ((s.py - prey.py) / FP) ** 2 > 2.2) { s.goal = (prey.py >> 8) * width + (prey.px >> 8); s.path = []; }
     }
-    let best = 36, wolf: Wolf | undefined;
+    const def = UNITS[s.kind]!;
+    const reach = def.range ? (def.range + (s.up ? 3 : 0)) ** 2 : 2.2;
+    let best = Math.max(36, reach), wolf: Wolf | undefined;
     for (const w of g.wolves) { if (w.hp <= 0) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; wolf = w; } }
     if (!wolf) continue;
-    if (best <= 2.2) { if ((g.tick + s.id) % 12 === 0) wolf.hp -= 9; }
-    else if (s.goal < 0 && !s.target && !s.path.length) s.goal = (wolf.py >> 8) * width + (wolf.px >> 8);
+    if (best <= reach) { if ((g.tick + s.id) % def.cooldown === 0) wolf.hp -= def.attack; }
+    else if (!s.up && s.goal < 0 && !s.target && !s.path.length) s.goal = (wolf.py >> 8) * width + (wolf.px >> 8);
   }
   g.wolves = g.wolves.filter((w) => w.hp > 0);
 }

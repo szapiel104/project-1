@@ -81,7 +81,42 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
   if (!Number.isInteger(target) || target < 0 || target >= g.map.tiles.length) return;
   const chosen = g.soldiers.filter((s) => s.owner === player && ids.includes(s.id)).slice(0, MAX_ORDER);
   const spots = formation(g, target, chosen.length);
-  chosen.forEach((s, i) => { s.goal = spots[i] ?? -1; s.path = []; s.wait = 0; s.target = 0; });
+  chosen.forEach((s, i) => { leavePost(g, s); s.goal = spots[i] ?? -1; s.path = []; s.wait = 0; s.target = 0; });
+}
+
+/** Schodzi z wieży na wolne pole obok niej */
+function leavePost(g: GameState, s: Soldier): void {
+  if (s.up) {
+    const tower = g.buildings.find((b) => b.id === s.post);
+    const spot = tower ? besideTower(g, tower) : -1;
+    if (spot >= 0) { s.px = (spot % g.map.width) * FP + FP / 2; s.py = Math.floor(spot / g.map.width) * FP + FP / 2; }
+  }
+  s.up = false; s.post = 0;
+}
+
+function besideTower(g: GameState, b: Building): number {
+  const fp = footprint(BUILDINGS[b.type]!, b.rot), w = g.map.width;
+  for (let y = b.y - 1; y <= b.y + fp.h; y++)
+    for (let x = b.x - 1; x <= b.x + fp.w; x++) {
+      if (x >= b.x && x < b.x + fp.w && y >= b.y && y < b.y + fp.h) continue;
+      if (x < 0 || y < 0 || x >= w || y >= g.map.height) continue;
+      if (walkable(g, y * w + x, b.owner)) return y * w + x;
+    }
+  return -1;
+}
+
+/** Łucznicy wchodzą na wieżę strażniczą (najwyżej czterech); inni żołnierze stają przy niej */
+export function orderGarrison(g: GameState, player: number, ids: readonly number[], towerId: number): void {
+  const tower = g.buildings.find((b) => b.id === towerId);
+  if (!tower || tower.owner !== player || BUILDINGS[tower.type]!.id !== 'watchtower' || tower.build) return;
+  let room = 4 - g.soldiers.filter((s) => s.post === towerId).length;
+  const spot = besideTower(g, tower);
+  for (const s of g.soldiers) {
+    if (s.owner !== player || !ids.includes(s.id) || s.post === towerId) continue;
+    const ranged = !!UNITS[s.kind]!.range;
+    if (ranged && room > 0) { leavePost(g, s); s.post = towerId; room--; }
+    s.goal = spot; s.path = []; s.wait = 0; s.target = 0; s.hunt = 0;
+  }
 }
 
 function tileOf(g: GameState, s: Soldier): number {
@@ -153,6 +188,16 @@ export function armySystem(g: GameState): void {
     if (s.hp <= 0) continue;
     if (s.cd > 0) s.cd--;
     const def = UNITS[s.kind]!;
+    // wieża: łucznik przy niej wchodzi na górę; gdy wieżę zniszczą, spada na ziemię
+    if (s.post) {
+      const tower = g.buildings.find((b) => b.id === s.post);
+      if (!tower || tower.ruined) { s.up = false; s.post = 0; }
+      else if (!s.up && s.goal < 0 && !s.path.length && rectGap(g, tileOf(g, s), tower) <= 1) {
+        const fp = footprint(BUILDINGS[tower.type]!, tower.rot);
+        s.up = true; s.px = tower.x * FP + (fp.w * FP) / 2; s.py = tower.y * FP + (fp.h * FP) / 2;
+      }
+    }
+    const range = def.range ? def.range + (s.up ? 3 : 0) : 0;
     // walka: tylko gdy nie maszeruje na rozkaz
     if (s.goal < 0) {
       // rozkaz ataku na budynek ma pierwszeństwo przed szukaniem żołnierzy
@@ -160,13 +205,13 @@ export function armySystem(g: GameState): void {
       let foe = s.target ? byId.get(s.target) : undefined;
       if (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP) {
         foe = undefined;
-        let best = def.sight * FP + 1;
+        let best = (def.sight + (s.up ? 3 : 0)) * FP + 1;
         const t = tileOf(g, s), x = t % W, y = (t - x) / W;
         const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
         for (let gy = cy - 1; gy <= cy + 1; gy++)
           for (let gx = cx - 1; gx <= cx + 1; gx++) {
             for (const o of grid.get(gy * cw + gx) ?? []) {
-              if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner)) continue;
+              if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (o.up && !range)) continue; // na wieżę wręcz nie sięgnie
               const d = gap(s, o);
               if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
             }
@@ -174,13 +219,14 @@ export function armySystem(g: GameState): void {
         s.target = foe ? foe.id : 0;
       }
       if (foe) {
-        if (gap(s, foe) <= FP + FP / 2 && !s.path.length) {
+        if (gap(s, foe) <= (range ? range * FP : FP + FP / 2) && !s.path.length) {
           if (s.cd === 0) {
             foe.hp -= def.attack; s.cd = def.cooldown;
             if (foe.hp <= 0) { g.players[s.owner]!.stats.kills++; g.players[foe.owner]!.stats.lost++; }
           }
           continue;
         }
+        if (s.up) continue; // z wieży nie schodzi za wrogiem
         // podchodzi na wolne pole obok wroga (nie tam, gdzie stoi już ktoś inny); drogę odświeża co kilka ticków
         // bez szukania drogi: krok na sąsiednie wolne pole najbliżej wroga (tanie nawet przy setkach walczących)
         if (!s.path.length) {
@@ -191,8 +237,9 @@ export function armySystem(g: GameState): void {
         continue;
       }
       // brak wrogich żołnierzy w pobliżu: bierze się za najbliższy wrogi budynek
-      if (siege(g, s, def, taken)) continue;
+      if (!s.up && siege(g, s, def, taken)) continue;
     }
+    if (s.up) continue;
     if (s.wait > 0) { s.wait--; continue; }
     if (s.path.length) { step(g, s); continue; }
     if (s.goal < 0) {

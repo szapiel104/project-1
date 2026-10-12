@@ -155,6 +155,10 @@ export interface Soldier {
   cd: number;
   /** Id wilka, na którego gracz go posłał */
   hunt?: number;
+  /** Wieża strażnicza, na którą idzie albo na której stoi */
+  post?: number;
+  /** Stoi na wieży: strzela dalej, wręcz nikt go nie dosięgnie */
+  up?: boolean;
 }
 
 /** Ciało poległego: leży, aż zabierze je grabarz z cmentarza */
