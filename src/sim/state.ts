@@ -295,6 +295,12 @@ function devFortify(g: GameState, player: number): void {
   const tower = buildingIndex('watchtower');
   for (const [x, y] of [[x0 + 1, y0 + 1], [x1 - 2, y0 + 1], [x0 + 1, y1 - 2], [x1 - 2, y1 - 2]] as const)
     if (free(x, y) && free(x + 1, y) && free(x, y + 1) && free(x + 1, y + 1)) addBuilding(g, tower, player, x, y);
+  // po dwóch łuczników na każdej wieży
+  const archer = UNITS.findIndex((u) => u.id === 'archer');
+  for (const b of g.buildings) {
+    if (b.owner !== player || b.type !== tower) continue;
+    for (let k = 0; k < 2; k++) g.soldiers.push({ id: g.nextId++, owner: player, kind: archer, px: b.x * FP + FP, py: b.y * FP + FP, path: [], hp: UNITS[archer]!.hp, goal: -1, wait: 0, target: 0, cd: 0, post: b.id, up: true });
+  }
   // dwudziestu włóczników przy twierdzy
   const keep = g.buildings.find((b) => b.owner === player && b.type === 0);
   if (!keep) return;
