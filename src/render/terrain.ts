@@ -270,7 +270,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const s = scaleBase * (0.75 + (((r >>> 16) & 255) / 255) * 0.6);
     q.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
     const pos = new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz);
-    const scale = new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60), s);
+    // drzewa w prawdziwej skali względem ludzi: wyraźnie wyższe od chłopa (korona nad głową), trochę szersze
+    const tree = list === pines || list === leafy;
+    const scale = tree ? new THREE.Vector3(s * 1.25, s * 1.6 * (0.9 + ((r >>> 12) & 15) / 60), s * 1.25) : new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60), s);
     m.compose(pos, q, scale);
     list.push({ m: m.clone(), shade: 0.8 + (((r >>> 20) & 15) / 15) * 0.4, tile: y * w + x, pos, q: q.clone(), s: scale });
   };
@@ -366,7 +368,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const leafTree = (r >>> 24) % 4 === 0;
         const pos = new THREE.Vector3(px, groundY - 0.05, pz);
         const qq = new THREE.Quaternion().setFromEuler(e3.set(0, ((r >>> 4) & 63) / 10, 0));
-        const sc = new THREE.Vector3(size, size * (leafTree ? 1 : 1.15), size);
+        const sc = new THREE.Vector3(size * 1.25, size * 1.6 * (leafTree ? 1 : 1.15), size * 1.25);
         const item = { m: new THREE.Matrix4().compose(pos, qq, sc), shade: (1 - k * 0.7) * (0.82 + ((r >>> 12) & 15) / 60), tile: -1, pos, q: qq, s: sc } as Item;
         const bucket = dist < 9 ? near : far;
         (leafTree ? bucket.leaf : bucket.pine).push(item);
