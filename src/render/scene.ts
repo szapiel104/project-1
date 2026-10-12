@@ -76,6 +76,10 @@ export class GameRenderer {
   /** Żołnierze: osobny zestaw postaci w zbrojach */
   private spearmen: Figures;
   private rings: THREE.InstancedMesh;
+  /** Migające kropki na polach, do których idą zaznaczeni żołnierze, i fala w miejscu rozkazu */
+  private dots: THREE.InstancedMesh;
+  private wave: THREE.Mesh;
+  private waveAge = 99;
   private soldierSel = new Set<number>();
   /** Położenie żołnierzy na ekranie z ostatniej klatki (do zaznaczania ramką) */
   private soldierPos = new Map<number, THREE.Vector3>();
@@ -154,6 +158,15 @@ export class GameRenderer {
     this.rings.frustumCulled = false;
     this.rings.renderOrder = 3;
     this.scene.add(this.rings);
+    this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.1, 12).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false }), MAX_UNITS);
+    this.dots.count = 0;
+    this.dots.frustumCulled = false;
+    this.dots.renderOrder = 3;
+    this.scene.add(this.dots);
+    this.wave = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.5, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false }));
+    this.wave.visible = false;
+    this.wave.renderOrder = 3;
+    this.scene.add(this.wave);
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
     for (let i = 0; i < 12; i++) {
@@ -582,6 +595,14 @@ export class GameRenderer {
     }
   }
 
+  /** Rozkaz marszu: rozchodząca się złota fala w klikniętym miejscu */
+  orderMarker(tile: { x: number; y: number }): void {
+    if (!this.state || !this.view) return;
+    const { width, height } = this.state.map;
+    this.wave.position.set(tile.x + 0.5 - width / 2, this.view.heightAt(tile.x + 0.5, tile.y + 0.5) + 0.04, tile.y + 0.5 - height / 2);
+    this.waveAge = 0;
+  }
+
   /** Zaznaczeni żołnierze dostają złoty pierścień pod stopami */
   setSoldierSelection(ids: Set<number>): void { this.soldierSel = ids; }
 
@@ -610,7 +631,7 @@ export class GameRenderer {
   private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
     const { width, height } = g.map;
     const t = this.tmp;
-    let n = 0, rings = 0;
+    let n = 0, rings = 0, dots = 0;
     const m = new THREE.Matrix4();
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
@@ -643,9 +664,26 @@ export class GameRenderer {
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
       pos.set(fx - width / 2, y, fy - height / 2);
-      if (this.soldierSel.has(s.id)) { m.makeTranslation(pos.x, y + 0.03, pos.z); this.rings.setMatrixAt(rings++, m); }
+      if (this.soldierSel.has(s.id)) {
+        m.makeTranslation(pos.x, y + 0.03, pos.z); this.rings.setMatrixAt(rings++, m);
+        // kropka na polu docelowym, póki żołnierz idzie
+        const dest = s.path.length ? s.path[s.path.length - 1]! : s.goal;
+        if (dest >= 0) {
+          const dx = dest % width, dy = (dest - dx) / width;
+          const pulse = 0.75 + Math.sin(this.time * 6 + s.id) * 0.25;
+          m.makeScale(pulse, 1, pulse).setPosition(dx + 0.5 - width / 2, view.heightAt(dx + 0.5, dy + 0.5) + 0.035, dy + 0.5 - height / 2);
+          this.dots.setMatrixAt(dots++, m);
+        }
+      }
       n++;
     }
+    this.dots.count = dots;
+    this.dots.instanceMatrix.needsUpdate = true;
+    (this.dots.material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(this.time * 6) * 0.35;
+    // fala rozkazu: rośnie i blednie przez pół sekundy
+    this.waveAge += 1 / 60;
+    this.wave.visible = this.waveAge < 0.6;
+    if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
     this.spearmen.finish(n);
     this.rings.count = rings;
     this.rings.instanceMatrix.needsUpdate = true;

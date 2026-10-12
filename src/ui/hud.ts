@@ -53,6 +53,8 @@ export interface Hud {
   showInfo(info: BuildingInfo | null): void;
   /** Karta mieszkańca: imię i kilka wierszy opisu */
   showPerson(person: { name: string; lines: string[] } | null): void;
+  /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
+  showArmy(army: { name: string; hp: number; max: number }[]): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
@@ -106,6 +108,17 @@ function icon(id: string): HTMLElement {
 }
 
 const SPEEDS = [0, 1, 2, 3, 5];
+
+/** Portret włócznika: twarz pod kapalinem, tunika w barwie drużyny, grot włóczni */
+const PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true">
+  <rect width="32" height="32" fill="#3b2716"/>
+  <path d="M6 32c0-7 4-10 10-10s10 3 10 10z" fill="#a32a22" stroke="#1c120a"/>
+  <path d="M10 26h12" stroke="#7c8088" stroke-width="2"/>
+  <circle cx="16" cy="15" r="6" fill="#e2bd94" stroke="#1c120a"/>
+  <path d="M8 13c1-6 15-6 16 0z" fill="#5a5e66" stroke="#1c120a"/>
+  <path d="M5 13.5h22" stroke="#5a5e66" stroke-width="2.4" stroke-linecap="round"/>
+  <path d="M27 4v18" stroke="#8a6a42" stroke-width="1.6"/><path d="M27 1l2 4h-4z" fill="#b9bec6"/>
+</svg>`;
 
 export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
   root.replaceChildren();
@@ -245,8 +258,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   trainBtn.hidden = true;
   trainBtn.addEventListener('click', () => events.onTrain(infoId));
   const trainNote = el('p', 'hint');
+  const roster = el('div', 'roster');
+  roster.hidden = true;
   infoActions.append(demolish, close);
-  info.append(infoName, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -490,11 +505,39 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       demolish.hidden = true;
       trainBtn.hidden = true;
       trainNote.hidden = true;
+      roster.hidden = true;
+    },
+    showArmy(army) {
+      info.hidden = army.length === 0;
+      if (!army.length) return;
+      infoId = 0;
+      setText(infoName, `${t('hud.soldiers')}: ${army.length}`);
+      // portrety jak w klasycznych strategiach: hełm na tarczy w barwie drużyny i pasek zdrowia pod spodem
+      roster.hidden = false;
+      roster.replaceChildren(...army.slice(0, 24).map((u) => {
+        const card = el('span', 'roster-card');
+        card.title = u.name;
+        card.innerHTML = PORTRAIT;
+        const bar = el('span', 'roster-hp');
+        const fill = el('span');
+        fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;
+        bar.append(fill);
+        card.append(bar);
+        return card;
+      }));
+      if (army.length > 24) roster.append(el('span', 'roster-more', `+${army.length - 24}`));
+      setText(infoDesc, `${army[0]!.name} × ${army.length}`);
+      infoWorker.hidden = false;
+      setText(infoWorker, t('hud.orderHint'));
+      demolish.hidden = true;
+      trainBtn.hidden = true;
+      trainNote.hidden = true;
     },
     showInfo(i) {
       info.hidden = !i;
       if (!i) return;
       infoId = i.id;
+      roster.hidden = true;
       setText(infoName, t(i.def.name));
       setText(infoDesc, t(`d.${i.def.id}`));
       infoWorker.hidden = !i.def.production;

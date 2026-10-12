@@ -256,6 +256,7 @@ canvas.addEventListener('contextmenu', () => {
   else if (picked) pick(null);
   else if (chosen.size && hoverTile && !renderer.dragged) {
     pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y });
+    renderer.orderMarker(hoverTile);
     play('rotate');
   }
 });
@@ -282,8 +283,15 @@ function chooseSoldiers(ids: number[], add: boolean): void {
   if (chosen.size) {
     select(0);
     selectUnit(0);
-    hud.showPerson({ name: `${t('hud.soldiers')}: ${chosen.size}`, lines: [`${t('u.spearman')} × ${chosen.size}`, t('hud.orderHint')] });
-  } else hud.showPerson(null);
+    showArmy();
+  } else hud.showArmy([]);
+}
+
+/** Karta zaznaczonego wojska: portrety ze zdrowiem; znika, gdy żołnierze zginą */
+function showArmy(): void {
+  const list = game.soldiers.filter((s) => chosen.has(s.id));
+  if (list.length !== chosen.size) { chosen.clear(); for (const s of list) chosen.add(s.id); renderer.setSoldierSelection(chosen); }
+  hud.showArmy(list.map((s) => ({ name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp })));
 }
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -342,6 +350,7 @@ function refresh(): void {
     delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable,
   });
   hud.setHash(stateHash(game));
+  if (chosen.size) showArmy();
   if (selectedUnit) {
     const card = personCard(selectedUnit);
     if (card) hud.showPerson(card); else selectUnit(0); // odszedł z osady

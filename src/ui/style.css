@@ -236,3 +236,11 @@ body.menu-open #ui .bottom, body.menu-open #ui .toast, body.menu-open .build { d
 
 /* ramka zaznaczania wojska */
 .selbox { position: fixed; z-index: 30; pointer-events: none; border: 1px solid #ffe08a; background: rgba(255, 224, 138, .12); box-shadow: 0 0 0 1px rgba(0, 0, 0, .4); }
+
+/* karta wojska: portrety żołnierzy z paskami zdrowia */
+.roster { display: flex; flex-wrap: wrap; gap: 4px; }
+.roster-card { position: relative; display: grid; width: 36px; border: 1px solid var(--gold-dark); background: #3b2716; box-shadow: 0 0 0 1px var(--wood-edge); }
+.roster-card svg { display: block; }
+.roster-hp { height: 4px; background: #1c120a; }
+.roster-hp span { display: block; height: 100%; background: linear-gradient(#6fc45f, #3f8a36); }
+.roster-more { align-self: center; font-weight: 700; padding: 0 6px; }
