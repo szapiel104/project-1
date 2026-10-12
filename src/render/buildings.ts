@@ -1176,9 +1176,22 @@ const BUILDERS: Record<string, Builder> = {
       const brace = box(g, M.woodDark, 0.05, 0.36, 0.05, sx * (px - 0.13), top - 0.33, z);
       brace.rotation.z = sx * 0.8;
     }
-    for (const z of [back, front]) box(g, M.woodDark, 1.8, 0.07, 0.08, 0, top, z);
-    for (const sx of [-1, 1]) box(g, M.woodDark, 0.08, 0.07, 0.95, sx * px, top, (back + front) / 2);
-    layeredRoof(g, M.thatch, 2.0, 0.55, 1.2, top + 0.05, 0, (back + front) / 2);
+    // dach i płatwie w osobnej grupie: po kliknięciu znikają i widać, kto siedzi pod wiatą
+    const roof = new THREE.Group();
+    roof.name = 'roof';
+    for (const z of [back, front]) box(roof, M.woodDark, 1.8, 0.07, 0.08, 0, top, z);
+    for (const sx of [-1, 1]) box(roof, M.woodDark, 0.08, 0.07, 0.95, sx * px, top, (back + front) / 2);
+    layeredRoof(roof, M.thatch, 2.0, 0.55, 1.2, top + 0.05, 0, (back + front) / 2);
+    g.add(roof);
+    // pod dachem: posłania ze słomy i koce, widoczne po zdjęciu dachu
+    const inside = new THREE.Group();
+    inside.name = 'interior';
+    inside.visible = false;
+    for (const [x, c] of [[-0.35, M.hay], [0.15, M.hay], [0.55, M.hay]] as const) {
+      box(inside, c, 0.34, 0.04, 0.5, x, 0.03, -0.5);
+      box(inside, x > 0 ? M.white : M.wattle, 0.3, 0.025, 0.28, x, 0.07, -0.42);
+    }
+    g.add(inside);
     // pleciona ścianka z tyłu i z jednego boku
     box(g, M.wattle, 1.6, 0.55, 0.04, 0, 0.05, back);
     box(g, M.wattle, 0.04, 0.55, 0.8, -px, 0.05, (back + front) / 2);
