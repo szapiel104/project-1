@@ -8,6 +8,7 @@ import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
 import { FP, Phase, type GameState } from '../sim/state';
 import { clockAt } from '../sim/clock';
+import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { Figures } from './peasants';
@@ -20,6 +21,9 @@ import { N8AOPass } from 'n8ao';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 
 export interface TileRef { x: number; y: number }
+const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
+const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
+
 let noWorkerMat: THREE.SpriteMaterial | null = null;
 /** Znak „brak pracownika”: ludzik w złotym kole przekreślony na czerwono, rysowany raz na płótnie */
 function noWorkerMaterial(): THREE.SpriteMaterial {
@@ -275,6 +279,8 @@ export class GameRenderer {
 
   /** Gracz przy tym ekranie (znaki „brak pracownika” tylko nad jego budynkami) */
   private me = 0;
+  private hpSeen = new Map<number, number>();
+  private shake = new Map<number, number>();
 
   setState(state: GameState, waterLevel: number, rim: number, focusPlayer = 0): void {
     this.me = focusPlayer;
@@ -605,6 +611,26 @@ export class GameRenderer {
     for (const b of g.buildings) {
       const mesh = this.buildingMeshes.get(b.id);
       if (!mesh) continue;
+      // trafiony budynek drży, a mocno uszkodzony płonie
+      const prevHp = this.hpSeen.get(b.id) ?? b.hp;
+      if (b.hp < prevHp) this.shake.set(b.id, 0.25);
+      this.hpSeen.set(b.id, b.hp);
+      const sk = this.shake.get(b.id) ?? 0;
+      // drganie: lekkie kołysanie całej bryły, które wygasa po ćwierć sekundy
+      if (sk > 0) { this.shake.set(b.id, sk - dt); mesh.rotation.z = Math.sin(this.time * 60) * 0.012 * (sk / 0.25); }
+      else if (mesh.rotation.z !== 0) { mesh.rotation.z = 0; this.shake.delete(b.id); }
+      const hurt = 1 - b.hp / maxHp(b.type);
+      let fire = mesh.getObjectByName('fire') as THREE.Group | undefined;
+      if (hurt > 0.4 && !fire) {
+        fire = new THREE.Group();
+        fire.name = 'fire';
+        for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 6), k % 2 ? FIRE_A : FIRE_B); f.position.set(Math.sin(k * 2.4) * 0.5, 1.0 + (k % 3) * 0.2, Math.cos(k * 2.4) * 0.5); fire.add(f); }
+        mesh.add(fire);
+      }
+      if (fire) {
+        fire.visible = hurt > 0.4;
+        fire.children.forEach((f, k) => { f.scale.set(1, 0.7 + Math.abs(Math.sin(this.time * 9 + k)) * 0.6 * (0.5 + hurt), 1); });
+      }
       const def = BUILDINGS[b.type]!;
       const needs = b.owner === this.me && (def.production || def.staff) && b.worker === 0;
       let sign = mesh.getObjectByName('noworker') as THREE.Sprite | undefined;
@@ -715,6 +741,8 @@ export class GameRenderer {
     const m = new THREE.Matrix4();
     const byId = new Map<number, (typeof g.soldiers)[number]>();
     for (const x of g.soldiers) byId.set(x.id, x);
+    const bById = new Map<number, (typeof g.buildings)[number]>();
+    for (const b of g.buildings) bById.set(b.id, b);
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
       const prev = this.prevPos.get(s.id);
@@ -738,8 +766,15 @@ export class GameRenderer {
       // w walce zwraca się do wroga i wyprowadza pchnięcie zaraz po ciosie
       const foe = s.target ? byId.get(s.target) : undefined;
       if (foe && !walking) { heading = Math.atan2((foe.px - s.px) / FP, (foe.py - s.py) / FP); this.facing.set(s.id, heading); }
+      // oblężenie: zwraca się do budynku i bije w niego włócznią
+      const wall = !foe && s.target ? bById.get(s.target) : undefined;
+      if (wall && !walking) {
+        const fp = footprint(BUILDINGS[wall.type]!, wall.rot);
+        heading = Math.atan2(wall.x + fp.w / 2 - fx, wall.y + fp.h / 2 - fy);
+        this.facing.set(s.id, heading);
+      }
       const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
-      const striking = !!foe && !walking && s.cd > 6;
+      const striking = (!!foe || !!wall) && !walking && s.cd > 6;
       const y = view.heightAt(fx, fy);
       t.position.set(fx - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), fy - height / 2);
       t.rotation.set(0, heading, 0);

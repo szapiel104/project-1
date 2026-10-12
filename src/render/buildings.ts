@@ -1130,7 +1130,25 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.woodDark, 0.05, 0.6, 0.05, 0.45, 0, 0.75);
     box(g, M.woodDark, 0.05, 0.6, 0.05, 0.9, 0, 0.75);
     box(g, M.woodDark, 0.55, 0.04, 0.04, 0.675, 0.58, 0.75);
-    for (let k = 0; k < 4; k++) box(g, M.fish, 0.05, 0.2, 0.03, 0.5 + k * 0.12, 0.36, 0.75);
+    // ryby suszone na żerdzi: srebrzyste tułowie, ogon i sznurek, każda trochę inna
+    for (let k = 0; k < 4; k++) {
+      const fish = new THREE.Group();
+      fish.position.set(0.5 + k * 0.12, 0.5, 0.75);
+      fish.rotation.z = (k % 2 ? 1 : -1) * 0.08;
+      box(fish, M.woodDark, 0.008, 0.06, 0.008, 0, -0.06, 0);
+      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045, 1), M.fish);
+      body.scale.set(0.55, 1.9, 0.8);
+      body.position.y = -0.13;
+      fish.add(body);
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.06, 4), M.fish);
+      tail.scale.set(1, 1, 0.35);
+      tail.position.y = -0.24;
+      fish.add(tail);
+      const eye = new THREE.Mesh(new THREE.IcosahedronGeometry(0.008, 0), M.dark);
+      eye.position.set(0, -0.075, 0.03);
+      fish.add(eye);
+      g.add(fish);
+    }
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.12, 0.3, 8), M.wood);
     barrel.position.set(-0.75, 0.15, 0.7);
     g.add(barrel);
