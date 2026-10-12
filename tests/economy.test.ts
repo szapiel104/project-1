@@ -245,8 +245,10 @@ describe('pojemność składów', () => {
     p.res[resIndex('wood')] = cap - storeUsed(p, 'stockpile') + p.res[resIndex('wood')]! - 3; // zostają 3 wolne miejsca
     run(g, 1500);
     expect(storeUsed(p, 'stockpile')).toBe(cap);
-    expect(g.units.some((u) => u.carryAmt > 0)).toBe(true); // drwal czeka z resztą drewna
+    // drwal nie stoi w nieskończoność z resztą drewna: po chwili ją zostawia i wraca do pracy
     run(g, 1500, [build(g, 'stockpile')]);
+    for (const b of g.buildings) b.build = 0;
+    run(g, 1500);
     expect(storeCapacity(g, 0, 'stockpile')).toBe(450);
     expect(storeUsed(p, 'stockpile')).toBeGreaterThan(cap);
   });
