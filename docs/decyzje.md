@@ -32,3 +32,7 @@
 ## Platforma: komputer (12.10.2026)
 
 Gra powstaje na komputery (mysz i klawiatura, duży ekran). Telefonów i dotyku nie wspieramy ani nie testujemy; nie dokładamy osobnych układów i wariantów graficznych pod telefon.
+
+## Modele z kodu zostają (12.10.2026)
+
+Próba gotowych modeli KayKit odrzucona (styl zbyt bajkowy). Budynki dalej składamy w kodzie. Pomocnicze biblioteki: n8ao (cieniowanie zagłębień), three-bvh-csg (wycinanie otworów: okna, drzwi, łuki), simplex-noise (naturalne nierówności brył). Wersja z próbą KayKit: gałąź kaykit-przekroje.

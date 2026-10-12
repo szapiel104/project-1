@@ -6,12 +6,9 @@ import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
  * Klucz = id budynku z data/buildings.ts; kilka plików = losowy wariant wyglądu.
  * Gdy plik się nie wczyta, budynek zostaje przy modelu składanym w kodzie.
  */
-const MODELS: Record<string, string[]> = {
-  house: ['building_home_A', 'building_home_B'],
-  woodcutter: ['building_lumbermill'],
-  mine: ['building_mine'],
-  mill: ['building_windmill'],
-};
+// Wyłączone 12.10.2026: styl paczki KayKit był zbyt bajkowy, gra zostaje przy modelach z kodu.
+// Wpisy do przywrócenia: house: building_home_A/B, woodcutter: building_lumbermill, mine: building_mine, mill: building_windmill.
+const MODELS: Record<string, string[]> = {};
 
 /** Barwa drużyny → wariant kolorystyczny paczki */
 const VARIANT: Record<number, string> = { 0xa32a22: 'red', 0x24508f: 'blue' };

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.7.1 — powrót do naszych modeli, cieniowanie zagłębień (2026-10-12)
+
+- Wycofane modele KayKit (zbyt bajkowe); wszystkie budynki znów z kodu
+- Cieniowanie zagłębień (AO): ciemniejsze kąty, styki ścian z ziemią, szczeliny między budynkami i pod drzewami
+- Nowe narzędzia do budowy modeli: wycinanie otworów w bryłach i szum do naturalnych nierówności
+
 ## 0.7.0 — gotowe modele: próba (2026-10-12)
 
 - Pierwsze budynki z gotowej paczki KayKit Medieval Hexagon (CC0): chata (dwa warianty), chata drwala, kopalnia, młyn; wariant kolorystyczny według barwy drużyny

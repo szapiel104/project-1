@@ -13,6 +13,9 @@ import { Figures } from './peasants';
 import { createLoads, tint } from './loads';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 import { pattern } from './textures';
+import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
+import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { N8AOPass } from 'n8ao';
 
 export interface TileRef { x: number; y: number }
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number }
@@ -40,6 +43,9 @@ export class GameRenderer {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
   private cam: StrategyCamera;
+  /** Obraz przechodzi przez cieniowanie zagłębień (AO): ciemniejsze kąty, styki ścian z ziemią, szczeliny */
+  private composer!: EffectComposer;
+  private ao!: N8AOPass;
   private view: TerrainView | null = null;
   private state: GameState | null = null;
   private ray = new THREE.Raycaster();
@@ -184,6 +190,12 @@ export class GameRenderer {
     for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
 
     this.cam = new StrategyCamera(canvas);
+    this.composer = new EffectComposer(this.renderer);
+    this.ao = new N8AOPass(this.scene, this.cam.camera, canvas.clientWidth || 1, canvas.clientHeight || 1);
+    Object.assign(this.ao.configuration, { aoRadius: 1.6, distanceFalloff: 0.6, intensity: 2.2, gammaCorrection: false, color: new THREE.Color(0x1a120a) });
+    this.ao.setQualityMode('Medium');
+    this.composer.addPass(this.ao);
+    this.composer.addPass(new OutputPass());
     canvas.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'touch') this.hover(this.pick(e));
       if (this.painting && e.buttons === 1) { const tile = this.pick(e); if (tile) this.onPaint(tile); }
@@ -304,7 +316,7 @@ export class GameRenderer {
       this.syncRubble(this.state, this.view, dt);
       this.syncLamps(this.state);
       if (!this.calm) this.view.animate(this.time); this.syncBuildings(this.state, this.view); this.syncStores(this.state); this.syncUnits(this.state, this.view, alpha); }
-    this.renderer.render(this.scene, this.cam.camera);
+    this.composer.render();
   }
 
   private syncBuildings(g: GameState, view: TerrainView): void {
@@ -646,6 +658,7 @@ export class GameRenderer {
     const w = this.canvas.clientWidth, h = this.canvas.clientHeight;
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
+    this.composer?.setSize(w, h);
     this.cam.resize(w, h);
   }
 
