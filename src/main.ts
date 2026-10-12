@@ -962,7 +962,16 @@ const perfBox = document.createElement('pre');
 perfBox.className = 'perf';
 perfBox.hidden = true;
 document.body.append(perfBox);
-window.addEventListener('keydown', (e) => { if (e.key === 'F3') { e.preventDefault(); perfBox.hidden = !perfBox.hidden; } });
+// mały licznik FPS zawsze widoczny pod wersją; klik albo F3 rozwija pełne statystyki
+const fpsTag = document.createElement('button');
+fpsTag.type = 'button';
+fpsTag.className = 'fps-tag';
+fpsTag.title = 'Wydajność — kliknij albo F3';
+fpsTag.textContent = 'FPS —';
+document.body.append(fpsTag);
+const togglePerf = (): void => { perfBox.hidden = !perfBox.hidden; fpsTag.setAttribute('aria-pressed', String(!perfBox.hidden)); };
+fpsTag.addEventListener('click', togglePerf);
+window.addEventListener('keydown', (e) => { if (e.key === 'F3') { e.preventDefault(); togglePerf(); } });
 function showPerf(now: number): void {
   const secs = (now - perf.since) / 1000;
   const r = renderer.stats;
@@ -978,6 +987,8 @@ function showPerf(now: number): void {
     mapa: `${game.map.width}×${game.map.height}`, budynki: game.buildings.length, chłopi: game.units.length, żołnierze: game.soldiers.length, wilki: game.wolves.length, ciała: game.corpses.length,
     'pamięć MB': mem ? Math.round(mem.usedJSHeapSize / 1048576) : '—',
   };
+  fpsTag.textContent = `FPS ${perf.last.fps}`;
+  fpsTag.dataset.low = String(Number(perf.last.fps) < 40);
   if (!perfBox.hidden) perfBox.textContent = Object.entries(perf.last).map(([k, v]) => `${k.padEnd(22)} ${v}`).join('\n');
   perf.frames = 0; perf.sim = 0; perf.ticks = 0; perf.render = 0; perf.ui = 0; perf.worst = 0; perf.since = now;
 }
