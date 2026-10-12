@@ -451,6 +451,18 @@ function showEnd(win: boolean): void {
 const scribe = createScribe(() => play('babble'));
 let wasNight = false, wasComing = false, stockFull = false;
 
+// historia zapasów co 5 sekund gry: trend = różnica wobec stanu sprzed minuty
+const resHistory: { tick: number; res: number[] }[] = [];
+function resTrend(res: ArrayLike<number>): number[] {
+  if (!resHistory.length || game.tick - resHistory[resHistory.length - 1]!.tick >= 50 || game.tick < resHistory[resHistory.length - 1]!.tick) {
+    if (resHistory.length && game.tick < resHistory[resHistory.length - 1]!.tick) resHistory.length = 0;
+    resHistory.push({ tick: game.tick, res: Array.from(res) });
+    while (resHistory.length > 13) resHistory.shift();
+  }
+  const old = resHistory[0]!;
+  return Array.from(res, (v, i) => v - (old.res[i] ?? v));
+}
+
 let warnedHungry = false;
 let warnedLeaving = false;
 
@@ -486,7 +498,7 @@ function refresh(): void {
   const clock = clockAt(game.tick);
   hud.update({
     day: clock.day, hour: clock.hour, night: clock.night,
-    res: p.res, pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
+    res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
     delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable,

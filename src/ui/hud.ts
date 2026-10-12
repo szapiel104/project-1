@@ -23,6 +23,8 @@ export interface HudEvents {
 
 export interface HudView {
   res: ArrayLike<number>;
+  /** Zmiana zapasu każdego surowca w ciągu ostatniej minuty gry */
+  trend: ArrayLike<number>;
   pop: number;
   housing: number;
   popularity: number;
@@ -129,13 +131,18 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const resList = el('ul', 'res');
   resList.setAttribute('aria-label', 'Zasoby');
   const resVals: HTMLElement[] = [];
+  const resTrends: HTMLElement[] = [];
+  const resItems: HTMLElement[] = [];
   for (const id of RESOURCES) {
     const li = el('li');
     const val = el('strong', '', '0');
-    li.title = t(RESOURCE_DEFS[id].name);
+    const tr = el('span', 'trend');
+    li.dataset.tip = t(RESOURCE_DEFS[id].name);
     li.setAttribute('aria-label', t(RESOURCE_DEFS[id].name));
-    li.append(icon(id), val);
+    li.append(icon(id), val, tr);
     resVals.push(val);
+    resTrends.push(tr);
+    resItems.push(li);
     resList.append(li);
   }
   const people = el('div', 'people');
@@ -474,6 +481,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     setHash(hash) { setText(hashLine, `${t('hud.hash')}: ${hash.toString(16).padStart(8, '0')}`); },
     update(v) {
       resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
+      // trend: ile przybyło albo ubyło w ostatniej minucie gry (zielone na plus, czerwone na minus)
+      resTrends.forEach((node, i) => {
+        const d = v.trend[i] ?? 0;
+        setText(node, d ? `${d > 0 ? '+' : '−'}${Math.abs(d)}` : '');
+        node.dataset.sign = d > 0 ? 'pos' : d < 0 ? 'neg' : '';
+        resItems[i]!.dataset.tip = `${t(RESOURCE_DEFS[RESOURCES[i]!].name)}: ${v.res[i] ?? 0}${d ? ` (${d > 0 ? '+' : '−'}${Math.abs(d)} ${t('hud.perMinute')})` : ''}`;
+      });
       // godzina co kwadrans, stałej szerokości, żeby pasek nie skakał
       const hh = Math.floor(v.hour), mm = Math.floor(((v.hour - hh) * 60) / 15) * 15;
       setText(clockVal, `${t('hud.day')} ${v.day}, ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);

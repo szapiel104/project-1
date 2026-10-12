@@ -85,6 +85,7 @@ export const pl = {
   'menu.high': 'Wysoka',
   'hud.menu': 'Menu',
   'hud.hp': 'Wytrzymałość',
+  'hud.perMinute': 'na minutę',
   'alarm.coming': 'Wróg nadciąga!',
   'herald.proud': 'Panie, lud raduje się na widok silnej drużyny. Czują się bezpieczni.',
   'herald.afraid': 'Ludzie się boją. Wróg ma wojsko, a my nie mamy kim bronić twierdzy.',
