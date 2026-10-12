@@ -29,7 +29,12 @@ async function load(): Promise<void> {
   // klatka do odświeżenia paska; w karcie w tle przeglądarka wstrzymuje klatki, więc jest też zapasowy zegar
   const frame = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
   let done = 0, total = 3;
+  const times: [string, number][] = [];
+  let last = performance.now(), lastText = '';
   const step = async (text: string): Promise<void> => {
+    const now = performance.now();
+    if (lastText) times.push([lastText, Math.round(now - last)]);
+    last = now; lastText = text;
     if (label) label.textContent = text;
     if (count) count.textContent = `${done} / ${total}`;
     if (fill) fill.style.width = `${Math.round((done / total) * 100)}%`;
@@ -60,6 +65,8 @@ async function load(): Promise<void> {
   game.warmup();
   done = total;
   await step('Gotowe');
+  (window as unknown as { __loadTimes: unknown }).__loadTimes = times;
+  console.info('[wczytywanie]', times.map(([t, ms]) => `${t} ${ms} ms`).join(' | '));
   document.getElementById('loading')?.classList.add('done');
   setTimeout(() => document.getElementById('loading')?.remove(), 600);
 }

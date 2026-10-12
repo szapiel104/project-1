@@ -27,7 +27,9 @@ const TICK_MS = 1000 / TICKS_PER_SECOND;
 const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota', 'las', 'skala', 'rzeka', 'brod'];
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
+const T0 = performance.now();
 const renderer = new GameRenderer(canvas);
+const mark: [string, number][] = [['renderer', Math.round(performance.now() - T0)]];
 let game: GameState;
 let pending: Command[] = [];
 let speed = 1;
@@ -81,6 +83,7 @@ const hud = createHud(document.getElementById('ui')!, {
 }, TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 192));
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
+mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
 const menu = createMenu(document.body, {
   onContinue: () => menu.close(),
   onNewGame: (seedText, preset, level) => {
@@ -572,8 +575,11 @@ hud.setMuted(isMuted());
 hud.setVolume(getVolume());
 const saved = TEST ? null : loadSave(); // test zawsze na świeżej mapie
 const restored = saved ? deserialize(saved.data) : null;
+const T1 = performance.now();
 if (saved && restored) start(saved.seedText, saved.data.preset, restored);
 else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1');
+mark.push(['start świata', Math.round(performance.now() - T1)]);
+console.info('[main]', mark.map(([a, b]) => `${a} ${b} ms`).join(' | '));
 menu.setVolume(getVolume());
 menu.setMuted(isMuted());
 menu.setCanContinue(!!(saved && restored));
