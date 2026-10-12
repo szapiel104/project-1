@@ -1,9 +1,11 @@
 import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
+import { BUILDINGS } from '../../data/buildings';
 import { housing, population, type GameState, type PlayerState } from '../state';
 
 const FOOD = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 const GOLD = resIndex('gold');
+const WHEAT = resIndex('wheat');
 
 export function foodTotal(p: PlayerState): number {
   let n = 0;
@@ -12,7 +14,7 @@ export function foodTotal(p: PlayerState): number {
 }
 
 /** Miesięczna zmiana popularności przy obecnych ustawieniach (także jako prognoza dla interfejsu). */
-export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; food: number; gold: number; fed: boolean; bribed: boolean; parts: { key: string; value: number; level?: string }[] } {
+export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; food: number; gold: number; fed: boolean; bribed: boolean; ale: number; parts: { key: string; value: number; level?: string }[] } {
   const pop = population(g, p.id);
   const tax = RULES.taxes[p.tax] ?? RULES.taxes[1];
   const have = foodTotal(p);
@@ -28,9 +30,13 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const parts: { key: string; value: number; level?: string }[] = [];
   parts.push({ key: 'food', value: RULES.rations[level]!.effect, level: RULES.rations[level]!.name });
   parts.push({ key: 'tax', value: bribed ? tax.effect : RULES.taxes[1].effect, level: bribed ? tax.name : RULES.taxes[1].name });
+  // karczmy z karczmarzem i pszenicą na piwo: wieczory przy kuflu poprawiają nastroje
+  const taverns = g.buildings.filter((b) => b.owner === p.id && !b.build && b.worker && BUILDINGS[b.type]!.id === 'tavern').length;
+  const ale = Math.min(taverns, 2, Math.floor(p.res[WHEAT]! / 2));
+  parts.push({ key: 'tavern', value: ale === 0 ? 0 : ale === 1 ? 3 : 5 });
   parts.push({ key: 'crowd', value: pop > housing(g, p.id) ? RULES.crowdingPenalty : 0 });
   const delta = parts.reduce((n, x) => n + x.value, 0);
-  return { delta, food, gold, fed, bribed, parts };
+  return { delta, food, gold, fed, bribed, parts, ale };
 }
 
 /** Co „miesiąc”: chłopi zjadają racje, płacą podatki, a popularność się zmienia. */
@@ -44,6 +50,7 @@ export function economySystem(g: GameState): void {
       p.res[i]! -= eat; toEat -= eat;
     }
     if (f.bribed) p.res[GOLD]! += f.gold;
+    p.res[WHEAT]! -= f.ale * 2; // piwo wypite
     p.popDelta = f.delta;
     p.popularity = Math.max(0, Math.min(RULES.maxPopularity, p.popularity + f.delta));
   }

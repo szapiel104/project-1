@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { UNITS } from '../data/units';
 import { RULES } from '../data/rules';
-import { playAt, type WorldSound } from '../audio/sfx';
+import { playAt, pluck, type WorldSound } from '../audio/sfx';
 import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -119,6 +119,20 @@ export class GameRenderer {
   private arrowMesh!: THREE.InstancedMesh;
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
   private lastCd = new Map<number, number>();
+  private evening = false;
+  private taverns = new Map<number, GameState['buildings'][number]>();
+  private luteAt = 0;
+  private luteNote = 0;
+  /** Lutnia przed karczmą: prosta melodia nuta po nucie, słyszalna z bliska */
+  private lutePlay(x: number, z: number): void {
+    if (this.time < this.luteAt) return;
+    const tune = [0, 3, 5, 7, 5, 3, 0, -2, 0, 3, 7, 10, 7, 5, 3, 0];
+    const len = [0.3, 0.3, 0.3, 0.6, 0.3, 0.3, 0.6, 0.3, 0.3, 0.3, 0.3, 0.6, 0.3, 0.3, 0.3, 0.9];
+    const i = this.luteNote++ % tune.length;
+    this.luteAt = this.time + len[i]!;
+    const d = this.cam.camera.position.distanceTo(new THREE.Vector3(x, 0.5, z));
+    pluck(tune[i]!, Math.max(0, Math.min(1, 1 - (d - 8) / 30)));
+  }
   private pullNow = new Map<number, [number, number]>();
   private armM = new THREE.Matrix4();
   private soundAt = new Map<string, number>();
@@ -1455,6 +1469,11 @@ export class GameRenderer {
   }
 
   private syncUnits(g: GameState, view: TerrainView, alpha: number): void {
+    // karczmy z karczmarzem: wieczorem schodzą się do nich ludzie
+    const hourNow = this.menuNight ? 23 : clockAt(g.tick).hour;
+    this.evening = hourNow >= 18 && hourNow < 23.5;
+    this.taverns.clear();
+    for (const b of g.buildings) if (BUILDINGS[b.type]!.id === 'tavern' && b.worker && !b.build && !this.taverns.has(b.owner)) this.taverns.set(b.owner, b);
     const { width, height } = g.map;
     const n = Math.min(g.units.length, MAX_UNITS);
     const t = this.tmp;
@@ -1521,9 +1540,22 @@ export class GameRenderer {
           if (!resting) swing = Math.sin(k * 6) * 0.35;
         }
       }
-      // bezrobotni siadają wokół ogniska w obozowisku
+      // wieczorem (18–23) połowa bezrobotnych z obozowiska siedzi przed karczmą przy kuflu, a jeden się zatacza
       const camp = u.phase === Phase.Idle && still ? this.camps.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
-      if (camp && camp.owner === u.owner) {
+      const inn = camp && camp.owner === u.owner && this.evening && u.id % 2 === 0 ? this.taverns.get(u.owner) : undefined;
+      if (inn) {
+        const mesh = this.buildingMeshes.get(inn.id);
+        const turn = (inn.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
+        const slot = (u.id >> 1) % 6;
+        const drunk = slot === 5;
+        let lx = -0.95 + (slot % 3) * 0.3, lz = slot < 3 ? 0.62 : 1.28;
+        if (drunk) { lx = 0.1 + Math.sin(this.time * 0.6 + u.id) * 0.5; lz = 1.5 + Math.cos(this.time * 0.45) * 0.25; }
+        const wx = lx * cosT + lz * sinT, wz = -lx * sinT + lz * cosT;
+        t.position.set(inn.x + 1.5 + wx - width / 2, (mesh?.position.y ?? 0) + 0.02, inn.y + 1 + wz - height / 2);
+        t.rotation.set(drunk ? Math.sin(this.time * 2.3 + u.id) * 0.25 : 0, drunk ? this.time * 0.7 : (slot < 3 ? 0 : Math.PI) - turn, drunk ? Math.cos(this.time * 1.9) * 0.2 : 0);
+        swing = drunk ? Math.sin(this.time * 3) * 0.4 : Math.max(0, Math.sin(this.time * 1.3 + u.id * 2)) * -1.2;
+        if (slot === 0 && !this.calm) this.lutePlay(t.position.x, t.position.z);
+      } else if (camp && camp.owner === u.owner) {
         const mesh = this.buildingMeshes.get(camp.id);
         const a = (u.id * 2.39996) % (Math.PI * 2), rad = 0.5 + (u.id % 3) * 0.14;
         t.position.set(camp.x + 1 + Math.cos(a) * rad - width / 2, (mesh?.position.y ?? 0) + 0.02, camp.y + 1.35 + Math.sin(a) * rad * 0.8 - height / 2);

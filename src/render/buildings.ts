@@ -874,6 +874,34 @@ const BUILDERS: Record<string, Builder> = {
     for (const s2 of [-1, 1]) { const ch = box(g, M.iron, 0.015, 0.75, 0.015, s2 * 0.2, 0.08, 1.85); ch.rotation.x = -0.75; }
     for (const s2 of [-1, 1]) box(g, flag, 0.14, 0.5, 0.02, s2 * 0.42, 0.55, 1.62);
   },
+  tavern(g, _team, flag) {
+    // Karczma: duża chata z bali i strzechy, w izbie szynkwas i beczki; przed wejściem ławy z kuflami, beczki i szyld
+    const hall = new THREE.Group();
+    const inside = cottage(hall, 7);
+    hall.scale.set(1.75, 1.15, 1.35);
+    hall.position.z = -0.15;
+    g.add(hall);
+    box(inside, M.woodDark, 0.8, 0.28, 0.14, 0, 0.05, -0.3); // szynkwas
+    for (const x of [-0.5, -0.32]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.2, 10).rotateZ(Math.PI / 2), M.wood); b.position.set(x, 0.12, -0.42); inside.add(b); }
+    box(inside, M.wood, 0.35, 0.18, 0.25, 0.3, 0.05, 0.15);
+    // przed karczmą: dwie ławy ze stołem, kufle, beczki
+    box(g, M.wood, 0.7, 0.05, 0.28, -0.6, 0.26, 0.95);
+    for (const z of [0.75, 1.15]) box(g, M.woodDark, 0.7, 0.04, 0.1, -0.6, 0.16, z);
+    for (const x of [-0.8, -0.55, -0.4]) { const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.028, 0.07, 8), M.woodDark); mug.position.set(x, 0.33, 0.95); g.add(mug); }
+    for (const [x, z] of [[0.75, 0.85], [0.95, 0.95], [0.85, 1.12]] as const) {
+      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.28, 10), M.wood);
+      barrel.position.set(x, 0.14, z); g.add(barrel);
+      const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.01, 4, 12).rotateX(Math.PI / 2), M.iron);
+      hoop.position.set(x, 0.2, z); g.add(hoop);
+    }
+    // szyld na wysięgniku: kufel na desce
+    box(g, M.woodDark, 0.05, 1.25, 0.05, 0.3, 0, 0.62);
+    box(g, M.woodDark, 0.4, 0.04, 0.04, 0.45, 1.15, 0.62);
+    box(g, M.wood, 0.3, 0.22, 0.03, 0.55, 0.88, 0.62);
+    const sign = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.1, 8), M.wheat);
+    sign.position.set(0.55, 0.9, 0.645); sign.rotation.x = Math.PI / 2; g.add(sign);
+    pennant(g, flag, -1.3, 0.2, 0.7);
+  },
   house(g, _team, flag) {
     const inside = cottage(g, houseSeed++);
     // izba: stół z miską, ławy i łóżko

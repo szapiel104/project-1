@@ -180,3 +180,19 @@ describe('łucznicy', () => {
     expect(!foe || foe.hp < 60).toBe(true);
   });
 });
+
+describe('karczma', () => {
+  it('z karczmarzem i pszenicą podnosi popularność i zużywa pszenicę', async () => {
+    const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const { monthlyForecast } = await import('../src/sim/systems/economy');
+    const g = createGame(5, '1v1', 0, true);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings[0]!;
+    let done = false;
+    for (let r = 4; r < 22 && !done; r++) for (let d = -r; d <= r && !done; d++) if (canPlace(g, 0, buildingIndex('tavern'), keep.x + d, keep.y + r) === null) done = placeBuilding(g, 0, buildingIndex('tavern'), keep.x + d, keep.y + r);
+    for (let i = 0; i < 50; i++) step(g, []);
+    const f = monthlyForecast(g, g.players[0]!);
+    expect(f.parts.find((x) => x.key === 'tavern')!.value).toBeGreaterThan(0);
+  });
+});

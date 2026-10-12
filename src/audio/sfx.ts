@@ -558,3 +558,17 @@ export function daySounds(hour: number, rain: number, paused: boolean): boolean 
   if (h !== lastBellHour) { if (lastBellHour >= 0 && (h === 12 || h === 19)) bell(c, now, h === 12 ? 3 : 5); lastBellHour = h; }
   return flash;
 }
+
+/** Szarpnięta struna lutni (półtony od D), głośność z odległości */
+export function pluck(semi: number, near: number): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running' || near < 0.05) return;
+  const at = c.currentTime + 0.01;
+  const f = 293.66 * Math.pow(2, semi / 12);
+  const o = c.createGain(); o.gain.value = near * near * 0.35; o.connect(busGain.amb ?? master!);
+  for (const [mul, amp, type] of [[1, 1, 'triangle'], [2, 0.35, 'sine'], [3, 0.15, 'sine']] as const) {
+    const s = c.createOscillator(); s.type = type; s.frequency.value = f * mul;
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(amp, at + 0.004); g.gain.exponentialRampToValueAtTime(0.001, at + 0.9 / mul + 0.3);
+    s.connect(g).connect(o); s.start(at); s.stop(at + 1.3);
+  }
+}
