@@ -35,6 +35,14 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return keep && keep.door >= 0 ? (t) => t === keep.door : null;
     }
     case Phase.Returning:
+      // wolny chłop z ciałem na ramieniu niesie je na cmentarz, a gdy go nie ma — do obozowiska
+      if (!job && u.carryRes === CORPSE) {
+        const doors = new Set<number>();
+        for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.id === 'cemetery') doors.add(b.door);
+        if (!doors.size) for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots) doors.add(b.door);
+        return doors.size ? (t) => doors.has(t) : null;
+      }
+      return job ? (t) => t === job.door : null;
     case Phase.ToHome:
       return job ? (t) => t === job.door : null;
     case Phase.ToInputStore: {
