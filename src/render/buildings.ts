@@ -584,29 +584,72 @@ const BUILDERS: Record<string, Builder> = {
         box(g, m, alongX ? len / n : 0.1, 0.14, alongX ? 0.1 : len / n, cx + (alongX ? o : 0), y, cz + (alongX ? 0 : o));
       }
     };
-    // mur: szersza podstawa, ściana, gzyms i blanki
-    box(g, D, 2.66, 0.25, 2.66);
-    box(g, S, 2.5, 1.0, 2.5, 0, 0.2, 0);
+    const r = rng(7331);
+    // Podstawa: skarpa z ciosów (szersza u dołu), polne kamienie u stóp, mur z gzymsem i blankami
+    box(g, D, 2.72, 0.18, 2.72);
+    box(g, D, 2.62, 0.14, 2.62, 0, 0.18, 0);
+    g.add(new THREE.Mesh(stoneSkirt(2.78, 2.78, 0.16, r, new THREE.Color(0xb9ae98)), craft().stones));
+    box(g, S, 2.5, 0.88, 2.5, 0, 0.32, 0);
+    box(g, D, 2.58, 0.08, 2.58, 0, 0.62, 0); // gzyms w połowie wysokości
     box(g, D, 2.6, 0.1, 2.6, 0, 1.2, 0);
-    for (const s of [-1, 1]) { merlons(0, s * 1.25, 2.5, 1.3, true, S); merlons(s * 1.25, 0, 2.5, 1.3, false, S); }
-    // dziedziniec wyłożony deskami
-    box(g, M.plank, 2.3, 0.03, 2.3, 0, 1.2, 0);
-    // donżon: wieża mieszkalna z drewnianą hurdycją pod dachem (zdejmowany, żeby zajrzeć do sali)
+    for (const sx of [-1, 1]) { merlons(0, sx * 1.25, 2.5, 1.3, true, S); merlons(sx * 1.25, 0, 2.5, 1.3, false, S); }
+    // przypory i strzelnice na każdym boku muru
+    for (const [nx, nz] of [[0, 1], [0, -1], [1, 0], [-1, 0]] as const) {
+      for (const o of [-0.55, 0.55]) {
+        if (nz === 1 && Math.abs(o) < 0.6) continue; // z przodu stoi brama
+        const px = nx ? nx * 1.27 : o, pz = nz ? nz * 1.27 : o;
+        box(g, D, nx ? 0.12 : 0.22, 0.9, nx ? 0.22 : 0.12, px, 0.3, pz);
+        box(g, M.dark, nx ? 0.02 : 0.05, 0.2, nx ? 0.05 : 0.02, nx ? nx * 1.255 : o + 0.25 * (o > 0 ? -1 : 1), 0.78, nz ? nz * 1.255 : o + 0.25 * (o > 0 ? -1 : 1));
+      }
+    }
+    // dziedziniec wyłożony kamieniem, ze studnią, beczkami i stogiem siana
+    box(g, M.roadStone, 2.3, 0.03, 2.3, 0, 1.2, 0);
+    const well = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.14, 0.16, 12), M.stone), 0.13, 0.16);
+    well.position.set(0.72, 1.31, 0.62);
+    g.add(well);
+    box(g, M.dark, 0.16, 0.01, 0.16, 0.72, 1.39, 0.62);
+    for (const sx of [-1, 1]) box(g, M.woodDark, 0.03, 0.26, 0.03, 0.72 + sx * 0.12, 1.23, 0.62);
+    box(g, M.woodDark, 0.3, 0.03, 0.04, 0.72, 1.48, 0.62);
+    for (const [x, z] of [[-0.85, 0.75], [-0.72, 0.82]] as const) { const bl = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.15, 10), M.wood), 0.07, 0.15); bl.position.set(x, 1.3, z); g.add(bl); }
+    const hay = new THREE.Mesh(new THREE.SphereGeometry(0.16, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2), M.hay);
+    hay.position.set(-0.85, 1.22, 0.45);
+    g.add(hay);
+    // donżon: wieża mieszkalna na skarpowej podstawie, okna z wnękami, drewniana hurdycja i spiczasty dach (zdejmowany przy wnętrzu)
     const don = new THREE.Group();
     don.name = 'shell';
     const gg = g;
     g = don;
-    box(g, S, 1.25, 1.75, 1.25, 0, 1.2, -0.25);
-    box(g, D, 1.31, 0.07, 1.31, 0, 1.95, -0.25);
-    box(g, D, 1.33, 0.12, 1.33, 0, 1.2, -0.25);
-    box(g, M.woodDark, 1.5, 0.08, 1.5, 0, 2.9, -0.25);
-    box(g, M.wood, 1.48, 0.42, 1.48, 0, 2.98, -0.25);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, M.woodDark, 0.07, 0.42, 0.07, sx * 0.72, 2.98, -0.25 + sz * 0.72);
-    pyramid(g, team, 1.12, 1.15, 0, 3.4, -0.25);
-    for (const x of [-0.3, 0.3]) { box(g, M.window, 0.2, 0.3, 0.03, x, 2.2, 0.385); box(g, M.window, 0.2, 0.3, 0.03, x, 1.55, 0.385); }
-    for (const sx of [-1, 1]) box(g, M.window, 0.03, 0.3, 0.2, sx * 0.635, 2.0, -0.25);
-    box(g, M.woodDark, 0.04, 0.8, 0.04, 0, 4.5, -0.25);
-    box(g, flag, 0.5, 0.28, 0.02, 0.27, 5.0, -0.25);
+    box(g, D, 1.37, 0.16, 1.37, 0, 1.2, -0.25);
+    const tower = cutBox(1.25, 1.62, 1.25, [
+      { w: 0.18, h: 0.3, d: 0.16, x: -0.3, y: 1.05, z: 0.625 }, { w: 0.18, h: 0.3, d: 0.16, x: 0.3, y: 1.05, z: 0.625 },
+      { w: 0.18, h: 0.3, d: 0.16, x: -0.3, y: 0.45, z: 0.625 }, { w: 0.18, h: 0.3, d: 0.16, x: 0.3, y: 0.45, z: 0.625 },
+      { w: 0.16, h: 0.28, d: 0.18, x: 0.625, y: 0.85, z: 0 }, { w: 0.16, h: 0.28, d: 0.18, x: -0.625, y: 0.85, z: 0 },
+    ], S, 1.15);
+    tower.position.set(0, 1.3, -0.25);
+    g.add(tower);
+    for (const [x, y] of [[-0.3, 2.35], [0.3, 2.35], [-0.3, 1.75], [0.3, 1.75]] as const) {
+      box(g, M.dark, 0.18, 0.3, 0.02, x, y - 0.15, 0.315);
+      box(g, M.woodDark, 0.02, 0.3, 0.02, x, y - 0.15, 0.33);
+      box(g, D, 0.24, 0.04, 0.06, x, y - 0.19, 0.39);
+    }
+    for (const sx of [-1, 1]) box(g, M.dark, 0.02, 0.28, 0.18, sx * 0.535, 2.01, -0.25);
+    box(g, D, 1.33, 0.08, 1.33, 0, 1.95, -0.25); // gzyms piętra
+    // hurdycja: wysunięta drewniana galeria na belkach, z otworami między deskami
+    const HB: THREE.BufferGeometry[] = [];
+    for (let k = -2; k <= 2; k++) for (const [nx, nz] of [[0, 1], [0, -1], [1, 0], [-1, 0]] as const) {
+      const along = k * 0.29;
+      const bx = nx ? nx * 0.62 : along, bz = -0.25 + (nz ? nz * 0.62 : along);
+      HB.push(beam(new THREE.Vector3(bx, 2.82, bz), new THREE.Vector3(bx + nx * 0.16, 2.9, bz + nz * 0.16), 0.05, r));
+    }
+    g.add(new THREE.Mesh(mergeGeometries(HB.map((x) => paintGeo(x, new THREE.Color(0x4a3220)).toNonIndexed()))!, craft().timber));
+    box(g, M.woodDark, 1.6, 0.06, 1.6, 0, 2.9, -0.25);
+    box(g, M.wood, 1.56, 0.4, 1.56, 0, 2.96, -0.25);
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, M.woodDark, 0.07, 0.42, 0.07, sx * 0.77, 2.96, -0.25 + sz * 0.77);
+    for (let k = -2; k <= 2; k++) { box(g, M.dark, 0.08, 0.14, 0.02, k * 0.28, 3.1, 0.54); box(g, M.dark, 0.02, 0.14, 0.08, 0.79, 3.1, -0.25 + k * 0.28); }
+    pyramid(g, team, 1.18, 1.25, 0, 3.36, -0.25);
+    box(g, M.gold, 0.06, 0.12, 0.06, 0, 4.6, -0.25);
+    box(g, M.woodDark, 0.04, 0.85, 0.04, 0, 4.6, -0.25);
+    box(g, flag, 0.55, 0.3, 0.02, 0.29, 5.1, -0.25);
     g = gg;
     g.add(don);
     // Wnętrze po zdjęciu donżonu: cały poziom dziedzińca podzielony na komnaty, w których toczy się życie
@@ -690,34 +733,68 @@ const BUILDERS: Record<string, Builder> = {
       life.add(fire);
     }
     g.add(life);
-    // cztery baszty narożne: lekko zwężane, z gzymsem, blankami i gontowym hełmem
+    // cztery baszty narożne: skarpowa podstawa, strzelnice, machikuły na kroksztynach, blanki i stożkowy hełm z chorągiewką
     for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
       const x = sx * 1.22, z = sz * 1.22;
-      const t = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.5, 1.95, 16), S), 0.45, 1.95);
-      t.position.set(x, 0.975, z);
+      const foot = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.6, 0.35, 18), D), 0.55, 0.35);
+      foot.position.set(x, 0.175, z);
+      g.add(foot);
+      const t = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.5, 1.75, 18), S), 0.46, 1.75);
+      t.position.set(x, 0.35 + 0.875, z);
       g.add(t);
-      const rim = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.42, 0.2, 16), D), 0.46, 0.2);
-      rim.position.set(x, 2.05, z);
+      // kroksztyny pod wysuniętym gankiem
+      for (let k = 0; k < 12; k++) {
+        const a = (k / 12) * Math.PI * 2;
+        const c = box(g, D, 0.07, 0.12, 0.1, x + Math.sin(a) * 0.44, 1.95, z + Math.cos(a) * 0.44);
+        c.rotation.y = a;
+      }
+      const rim = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.52, 0.47, 0.16, 18), D), 0.5, 0.16);
+      rim.position.set(x, 2.13, z);
       g.add(rim);
-      // blanki baszty: osiem zębów ustawionych po okręgu, licem na zewnątrz, z tego samego kamienia co mur
       for (let k = 0; k < 8; k++) {
         const a = k * 0.785 + 0.39;
-        const tooth = box(g, S, 0.16, 0.15, 0.09, x + Math.sin(a) * 0.44, 2.15, z + Math.cos(a) * 0.44);
+        const tooth = box(g, S, 0.17, 0.16, 0.1, x + Math.sin(a) * 0.46, 2.21, z + Math.cos(a) * 0.46);
         tooth.rotation.y = a;
       }
-      pyramid(g, team, 0.4, 0.95, x, 2.15, z, 12);
-      box(g, M.window, 0.12, 0.26, 0.03, x, 1.2, z + sz * 0.46);
+      pyramid(g, team, 0.44, 1.05, x, 2.25, z, 14);
+      box(g, M.woodDark, 0.025, 0.35, 0.025, x, 3.28, z);
+      box(g, flag, 0.2, 0.11, 0.015, x + 0.1, 3.5, z);
+      // strzelnice na zewnątrz
+      for (const [ox, oz] of [[sx, 0], [0, sz]] as const) {
+        const sl = box(g, M.dark, ox ? 0.02 : 0.045, 0.24, ox ? 0.045 : 0.02, x + ox * 0.48, 1.05, z + oz * 0.48);
+        sl.rotation.y = 0;
+      }
     }
-    // brama: przedbramie z daszkiem, wrota z kratą, most
-    box(g, D, 0.95, 1.35, 0.32, 0, 0, 1.3);
-    box(g, M.woodDark, 1.1, 0.07, 0.5, 0, 1.35, 1.32);
-    gable(g, team, 1.15, 0.4, 0.55, 1.42, 0, 1.32);
-    box(g, M.dark, 0.52, 0.85, 0.06, 0, 0, 1.45);
-    box(g, M.woodDark, 0.24, 0.8, 0.03, -0.13, 0, 1.49);
-    box(g, M.woodDark, 0.24, 0.8, 0.03, 0.13, 0, 1.49);
-    for (let k = 0; k < 3; k++) box(g, M.iron, 0.5, 0.03, 0.02, 0, 0.18 + k * 0.25, 1.51);
-    box(g, M.plank, 0.62, 0.05, 0.36, 0, 0, 1.66);
-    for (const s of [-1, 1]) box(g, flag, 0.14, 0.42, 0.02, s * 0.37, 0.75, 1.47);
+    // brama: dwie półokrągłe wieżyczki, łukowy przejazd, krata, wrota, zwodzony most na łańcuchach
+    for (const s2 of [-1, 1]) {
+      const gt = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 1.45, 14), D), 0.26, 1.45);
+      gt.position.set(s2 * 0.48, 0.725, 1.35);
+      g.add(gt);
+      pyramid(g, team, 0.27, 0.5, s2 * 0.48, 1.45, 1.35, 12);
+      box(g, M.dark, 0.035, 0.2, 0.02, s2 * 0.48, 0.9, 1.63);
+    }
+    const gate = cutBox(0.72, 1.38, 0.36, [{ w: 0.42, h: 0.62, d: 0.5, x: 0, y: 0.31, z: 0 }], D, 1.15);
+    gate.position.set(0, 0, 1.32);
+    g.add(gate);
+    const arch = new THREE.Mesh(new THREE.CylinderGeometry(0.21, 0.21, 0.37, 16, 1, false, -Math.PI / 2, Math.PI), M.dark);
+    arch.rotation.x = Math.PI / 2;
+    arch.position.set(0, 0.62, 1.32);
+    g.add(arch);
+    box(g, M.dark, 0.42, 0.62, 0.02, 0, 0, 1.2);
+    box(g, M.woodDark, 0.19, 0.58, 0.03, -0.1, 0, 1.22);
+    box(g, M.woodDark, 0.19, 0.58, 0.03, 0.1, 0, 1.22);
+    for (let k = 0; k < 5; k++) box(g, M.iron, 0.018, 0.5, 0.018, -0.16 + k * 0.08, 0.32, 1.47);
+    for (let k = 0; k < 3; k++) box(g, M.iron, 0.36, 0.018, 0.018, 0, 0.42 + k * 0.14, 1.47);
+    merlons(0, 1.48, 0.72, 1.38, true, S);
+    box(g, M.woodDark, 0.16, 0.16, 0.05, 0, 1.0, 1.51);
+    box(g, flag, 0.12, 0.12, 0.02, 0, 1.02, 1.54);
+    const bridge = new THREE.Group();
+    bridge.position.set(0, 0.05, 1.5);
+    box(bridge, M.plank, 0.46, 0.05, 0.5, 0, 0, 0.25);
+    for (let k = 0; k < 4; k++) box(bridge, M.woodDark, 0.48, 0.02, 0.03, 0, 0.05, 0.08 + k * 0.12);
+    g.add(bridge);
+    for (const s2 of [-1, 1]) { const ch = box(g, M.iron, 0.015, 0.75, 0.015, s2 * 0.2, 0.08, 1.85); ch.rotation.x = -0.75; }
+    for (const s2 of [-1, 1]) box(g, flag, 0.14, 0.5, 0.02, s2 * 0.42, 0.55, 1.62);
   },
   house(g, _team, flag) {
     const inside = cottage(g, houseSeed++);

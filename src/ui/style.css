@@ -213,7 +213,7 @@ input, select {
 .menu-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
 .menu-check { display: flex; align-items: center; gap: 10px; min-height: 40px; cursor: pointer; text-transform: none; letter-spacing: 0; font-family: var(--text); font-size: 16px; font-weight: 500; }
 .menu-check input { width: 22px; height: 22px; min-height: 0; accent-color: var(--seal); }
-body.menu-open #ui .bottom, body.menu-open #ui .toast, body.menu-open .build { display: none; }
+body.menu-open #ui .bottom, body.menu-open #ui .toast { display: none; }
 
 /* szerokie ekrany menu (ustawienia, jak grać): zakładki po lewej, treść po prawej, bez przewijania */
 .menu-panel { overflow: hidden; }
