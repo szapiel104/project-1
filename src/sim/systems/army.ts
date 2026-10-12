@@ -3,7 +3,7 @@ import { type ResourceId, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
-import { FP, type GameState, type Soldier } from '../state';
+import { FP, Phase, type Corpse, type GameState, type Soldier } from '../state';
 
 const BARRACKS = buildingIndex('barracks');
 const RETRY = 15;
@@ -94,6 +94,9 @@ const gap = (a: Soldier, b: Soldier): number => Math.max(Math.abs(a.px - b.px), 
 export function armySystem(g: GameState): void {
   const byId = new Map<number, Soldier>();
   for (const s of g.soldiers) byId.set(s.id, s);
+  // pola zajęte przez stojących albo docelowe pola maszerujących: nikt nie staje na drugim
+  const taken = new Set<number>();
+  for (const s of g.soldiers) taken.add(s.path.length ? s.path[s.path.length - 1]! : tileOf(g, s));
   for (const s of g.soldiers) {
     if (s.hp <= 0) continue;
     if (s.cd > 0) s.cd--;
@@ -112,16 +115,19 @@ export function armySystem(g: GameState): void {
         s.target = foe ? foe.id : 0;
       }
       if (foe) {
-        if (gap(s, foe) <= FP + FP / 4) {
-          s.path = [];
+        if (gap(s, foe) <= FP + FP / 2 && !s.path.length) {
           if (s.cd === 0) { foe.hp -= def.attack; s.cd = def.cooldown; }
           continue;
         }
-        // podchodzi do wroga; drogę odświeża co kilka ticków, bo wróg się rusza
+        // podchodzi na wolne pole obok wroga (nie tam, gdzie stoi już ktoś inny); drogę odświeża co kilka ticków
         if (!s.path.length || g.tick % 8 === s.id % 8) {
-          const ft = tileOf(g, foe);
-          const path = findPath(g, tileOf(g, s), (t) => t === ft, 600);
+          const ft = tileOf(g, foe), w = g.map.width;
+          const fx = ft % w, fy = (ft - fx) / w;
+          const mine = tileOf(g, s);
+          const near = (t: number): boolean => { const x = t % w, y = (t - x) / w; return Math.max(Math.abs(x - fx), Math.abs(y - fy)) === 1 && (t === mine || !taken.has(t)); };
+          const path = near(mine) ? [] : findPath(g, mine, near, 600);
           s.path = path ?? [];
+          if (s.path.length) taken.add(s.path[s.path.length - 1]!);
         }
         if (s.path.length) step(g, s);
         continue;
@@ -129,7 +135,15 @@ export function armySystem(g: GameState): void {
     }
     if (s.wait > 0) { s.wait--; continue; }
     if (s.path.length) { step(g, s); continue; }
-    if (s.goal < 0) continue;
+    if (s.goal < 0) {
+      // stoi na polu razem z kimś: odsuwa się na najbliższe wolne
+      const here = tileOf(g, s);
+      if (g.soldiers.some((o) => o !== s && o.hp > 0 && !o.path.length && tileOf(g, o) === here && o.id < s.id)) {
+        const free = formation(g, here, 9).find((t) => !taken.has(t));
+        if (free !== undefined) { s.path = findPath(g, here, (t) => t === free, 60) ?? []; taken.add(free); }
+      }
+      continue;
+    }
     const here = tileOf(g, s);
     if (here === s.goal) { s.goal = -1; continue; }
     const goal = s.goal;
@@ -137,6 +151,35 @@ export function armySystem(g: GameState): void {
     if (path && path.length) s.path = path;
     else { s.goal = -1; s.wait = RETRY; }
   }
-  // polegli schodzą z pola bitwy
-  if (g.soldiers.some((s) => s.hp <= 0)) g.soldiers = g.soldiers.filter((s) => s.hp > 0);
+  // polegli zostają na polu jako ciała, aż zabierze je grabarz
+  if (g.soldiers.some((s) => s.hp <= 0)) {
+    for (const s of g.soldiers) if (s.hp <= 0) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false });
+    g.soldiers = g.soldiers.filter((s) => s.hp > 0);
+  }
+  graveSystem(g);
+}
+
+const CEMETERY = buildingIndex('cemetery');
+/** Ciało nieodebrane przez tak długo rozkłada się do końca i znika samo */
+const ROT_TICKS = 6000;
+
+/** Grabarz z cmentarza idzie po najbliższe ciało, zabiera je i wraca. */
+function graveSystem(g: GameState): void {
+  if (g.corpses.some((c) => g.tick - c.at > ROT_TICKS && !c.taken)) g.corpses = g.corpses.filter((c) => c.taken || g.tick - c.at <= ROT_TICKS);
+  if (g.tick % 10 !== 0) return;
+  for (const b of g.buildings) {
+    if (b.type !== CEMETERY || !b.worker) continue;
+    const u = g.units.find((x) => x.id === b.worker);
+    if (!u || u.phase !== Phase.Idle || u.path.length) continue;
+    let best: Corpse | undefined, bd = Infinity;
+    for (const c of g.corpses) {
+      if (c.taken) continue;
+      const d = Math.abs(c.px - u.px) + Math.abs(c.py - u.py);
+      if (d < bd) { bd = d; best = c; }
+    }
+    if (!best) continue;
+    best.taken = true;
+    u.target = best.id;
+    u.phase = Phase.ToCorpse;
+  }
 }

@@ -76,6 +76,9 @@ export class GameRenderer {
   /** Żołnierze: osobny zestaw postaci w zbrojach */
   private spearmen: Figures;
   private rings: THREE.InstancedMesh;
+  /** Ciała poległych i ciemne plamy pod nimi */
+  private bodies: Figures;
+  private stains: THREE.InstancedMesh;
   /** Migające kropki na polach, do których idą zaznaczeni żołnierze, i fala w miejscu rozkazu */
   private dots: THREE.InstancedMesh;
   private wave: THREE.Mesh;
@@ -158,6 +161,11 @@ export class GameRenderer {
     this.rings.frustumCulled = false;
     this.rings.renderOrder = 3;
     this.scene.add(this.rings);
+    this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
+    this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);
+    this.stains.count = 0;
+    this.stains.frustumCulled = false;
+    this.scene.add(this.stains);
     this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.1, 12).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false }), MAX_UNITS);
     this.dots.count = 0;
     this.dots.frustumCulled = false;
@@ -656,14 +664,15 @@ export class GameRenderer {
       // w walce zwraca się do wroga i wyprowadza pchnięcie zaraz po ciosie
       const foe = s.target ? g.soldiers.find((o) => o.id === s.target) : undefined;
       if (foe && !walking) { heading = Math.atan2((foe.px - s.px) / FP, (foe.py - s.py) / FP); this.facing.set(s.id, heading); }
-      const swing = walking ? Math.sin(st.phase) * 0.5 : foe && s.cd > 8 ? 0.7 : 0;
+      const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
+      const striking = !!foe && !walking && s.cd > 6;
       const y = view.heightAt(fx, fy);
       t.position.set(fx - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), fy - height / 2);
       t.rotation.set(0, heading, 0);
       t.scale.setScalar(1.08);
       t.updateMatrix();
       t.scale.setScalar(1);
-      this.spearmen.set(n, t.matrix, swing, false, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id);
+      this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id);
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
       pos.set(fx - width / 2, y, fy - height / 2);
@@ -688,6 +697,27 @@ export class GameRenderer {
     this.wave.visible = this.waveAge < 0.6;
     if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
     this.spearmen.finish(n);
+    // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
+    let c = 0;
+    const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
+    for (const body of g.corpses) {
+      if (c >= MAX_UNITS) break;
+      const fx = body.px / FP, fy = body.py / FP;
+      const age = Math.min(1, (g.tick - body.at) / 6000);
+      const y = view.heightAt(fx, fy);
+      lay.setFromEuler(new THREE.Euler(-Math.PI / 2 + 0.08, ((body.id * 2.39) % 6.28), 0, 'YXZ'));
+      sc.set(1.05, 1.05, 1.05 * (1 - age * 0.55));
+      m.compose(new THREE.Vector3(fx - width / 2, y + 0.06 - age * 0.04, fy - height / 2), lay, sc);
+      const team = TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
+      const rot = new THREE.Color(team).lerp(new THREE.Color(0x3b3226), 0.3 + age * 0.6).getHex();
+      this.bodies.set(c, m, 0.3, false, rot, body.id);
+      m.compose(new THREE.Vector3(fx - width / 2, y + 0.02, fy - height / 2), new THREE.Quaternion(), sc.set(1 + age * 0.4, 1, 1 + age * 0.4));
+      this.stains.setMatrixAt(c, m);
+      c++;
+    }
+    this.bodies.finish(c);
+    this.stains.count = c;
+    this.stains.instanceMatrix.needsUpdate = true;
     this.rings.count = rings;
     this.rings.instanceMatrix.needsUpdate = true;
   }

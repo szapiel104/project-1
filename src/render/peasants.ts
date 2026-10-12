@@ -99,13 +99,16 @@ export class Figures {
       add(limb(0.065, 0.16, 0.07), MAIL, -0.14, 0.45, 0, armL);
       add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, -0.14, 0.45, 0, armL);
       // prawa ręka trzyma włócznię pionowo przy boku
-      add(limb(0.065, 0.16, 0.07), MAIL, 0.14, 0.45, 0, () => -0.25);
-      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, 0.14, 0.45, 0, () => -0.25);
+      // pchnięcie: ręka wychodzi do przodu, a włócznia kładzie się poziomo grotem we wroga
+      const thrustArm = (_s: number, up: boolean): number => (up ? -1.25 : -0.25);
+      const thrustSpear = (_s: number, up: boolean): number => (up ? 1.45 : 0);
+      add(limb(0.065, 0.16, 0.07), MAIL, 0.14, 0.45, 0, thrustArm);
+      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, 0.14, 0.45, 0, thrustArm);
       add(mergeGeometries([
         new THREE.CylinderGeometry(0.012, 0.014, 1.15, 5).translate(0, 0.32, 0),
         new THREE.ConeGeometry(0.026, 0.12, 4).translate(0, 0.95, 0),
-      ].map((g) => g.toNonIndexed())), 0x8a6a42, 0.165, 0.26, 0.08, still);
-      add(new THREE.ConeGeometry(0.027, 0.12, 4).translate(0, 0.95, 0), 0xb9bec6, 0.165, 0.26, 0.08, still);
+      ].map((g) => g.toNonIndexed()).map((g) => g.translate(0, -0.1, 0))), 0x8a6a42, 0.165, 0.36, 0.08, thrustSpear);
+      add(new THREE.ConeGeometry(0.027, 0.12, 4).translate(0, 0.85, 0), 0xb9bec6, 0.165, 0.36, 0.08, thrustSpear);
       // tarcza na lewym przedramieniu
       add(new THREE.CylinderGeometry(0.11, 0.11, 0.02, 12).rotateZ(Math.PI / 2).translate(-0.03, -0.1, 0.02), (l) => l.tunic, -0.16, 0.45, 0, armL);
       add(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 8).rotateZ(Math.PI / 2).translate(-0.045, -0.1, 0.02), IRON, -0.16, 0.45, 0, armL);

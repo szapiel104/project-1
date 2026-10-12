@@ -1126,6 +1126,43 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.woodDark, 0.06, 1.5, 0.06, -1.3, 0, 0.2);
     box(g, flag, 0.04, 0.6, 0.36, -1.3, 0.85, 0.4);
   },
+  cemetery(g, _team, flag) {
+    // Cmentarz: płot z żerdzi, rzędy mogił z drewnianymi krzyżami, kamienny nagrobek, kaplica z dzwonkiem, łopata grabarza
+    box(g, M.soil, 2.9, 0.025, 2.9);
+    for (const [x, z, w, d] of [[0, -1.42, 2.9, 0.05], [-1.42, 0, 0.05, 2.9], [1.42, 0, 0.05, 2.9], [-0.95, 1.42, 1.0, 0.05], [0.95, 1.42, 1.0, 0.05]] as const) {
+      box(g, M.woodDark, w, 0.05, d, x, 0.32, z);
+      box(g, M.woodDark, w, 0.05, d, x, 0.16, z);
+    }
+    for (let k = -1.4; k <= 1.41; k += 0.35) for (const [x, z] of [[k, -1.42], [-1.42, k], [1.42, k]] as const) box(g, M.woodDark, 0.06, 0.4, 0.06, x, 0, z);
+    for (let row = 0; row < 3; row++)
+      for (let col = 0; col < 4; col++) {
+        const x = -1.05 + col * 0.5, z = -0.15 + row * 0.5;
+        const mound = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.soil);
+        mound.scale.set(1, 0.5, 1.7);
+        mound.position.set(x, 0.02, z);
+        g.add(mound);
+        const tilt = ((row * 4 + col) % 3 - 1) * 0.08;
+        const cross = new THREE.Group();
+        cross.position.set(x, 0, z - 0.24);
+        cross.rotation.z = tilt;
+        box(cross, M.wood, 0.035, 0.34, 0.035, 0, 0, 0);
+        box(cross, M.wood, 0.18, 0.035, 0.035, 0, 0.22, 0);
+        g.add(cross);
+      }
+    box(g, M.castleDark, 0.24, 0.32, 0.08, 1.0, 0, 0.85);
+    // kaplica w rogu
+    hut(g, M.castle, M.thatchDark, 0.8, 0.7, 0.6, 0.85, -0.85);
+    box(g, M.woodDark, 0.06, 0.4, 0.06, 0.85, 1.25, -0.85);
+    box(g, M.woodDark, 0.24, 0.05, 0.05, 0.85, 1.48, -0.85);
+    // łopata wbita w ziemię przy świeżej mogile
+    const sh = new THREE.Group();
+    sh.position.set(0.55, 0, 1.05);
+    sh.rotation.z = 0.25;
+    box(sh, M.woodDark, 0.03, 0.55, 0.03, 0, 0.12, 0);
+    box(sh, M.iron, 0.12, 0.16, 0.02, 0, 0.0, 0);
+    g.add(sh);
+    pennant(g, flag, -1.3, 0.4, 1.3);
+  },
   roadSand(g) { box(g, M.roadSand, 0.96, 0.04, 0.96); },
   roadStone(g) { box(g, M.roadStone, 0.96, 0.05, 0.96); },
   camp(g) {

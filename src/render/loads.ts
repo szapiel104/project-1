@@ -50,5 +50,16 @@ export function createLoads(max: number, scene: THREE.Scene): Map<number, THREE.
     scene.add(mesh);
     out.set(index, mesh);
   });
+  // grabarz niesie ciało owinięte w płótno (znacznik poza listą surowców)
+  const shroud = mergeGeometries([
+    tint(new THREE.CapsuleGeometry(0.09, 0.42, 3, 8).rotateZ(Math.PI / 2).translate(0, 0.05, 0), 0xd8cfb8),
+    tint(new THREE.TorusGeometry(0.092, 0.012, 4, 10).rotateY(Math.PI / 2).translate(-0.12, 0.05, 0), 0x6b5a3c),
+    tint(new THREE.TorusGeometry(0.092, 0.012, 4, 10).rotateY(Math.PI / 2).translate(0.14, 0.05, 0), 0x6b5a3c),
+  ].map((p) => (p.index ? p.toNonIndexed() : p)))!;
+  shroud.translate(0.1, 0.62, 0);
+  const sm = new THREE.InstancedMesh(shroud, mat, max);
+  sm.count = 0; sm.frustumCulled = false; sm.castShadow = true;
+  scene.add(sm);
+  out.set(RESOURCES.length, sm);
   return out;
 }

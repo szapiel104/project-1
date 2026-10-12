@@ -74,6 +74,8 @@ export const enum Phase {
   ToLight = 10,
   /** Idzie po ładunek gruzu z rozbiórki `target` */
   ToRubble = 11,
+  /** Grabarz idzie po ciało poległego `target` */
+  ToCorpse = 12,
 }
 
 export interface Unit {
@@ -121,6 +123,19 @@ export interface Soldier {
   cd: number;
 }
 
+/** Ciało poległego: leży, aż zabierze je grabarz z cmentarza */
+export interface Corpse {
+  id: number;
+  owner: number;
+  kind: number;
+  px: number;
+  py: number;
+  /** Tick śmierci (do rozkładu w wyglądzie) */
+  at: number;
+  /** Grabarz już po nie idzie */
+  taken: boolean;
+}
+
 export interface GameState {
   tick: number;
   map: GameMap;
@@ -129,6 +144,7 @@ export interface GameState {
   buildings: Building[];
   units: Unit[];
   soldiers: Soldier[];
+  corpses: Corpse[];
   /** Id budynku na polu albo 0 */
   occupancy: Int32Array;
   /** Ile wejść do budynków leży na polu (takiego pola nie wolno zabudować) */
@@ -147,7 +163,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const map = generateMap(seed, preset);
   const size = map.width * map.height;
   const g: GameState = {
-    tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [],
+    tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [], corpses: [],
     occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), rubble: [], nextId: 1,
   };
   const keep = buildingIndex('keep');
@@ -254,5 +270,6 @@ export function stateHash(g: GameState): number {
     for (const t of u.path) add(t);
   }
   for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.path.length); for (const t of s.path) add(t); }
+  for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); }
   return h >>> 0;
 }

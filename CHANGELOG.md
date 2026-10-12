@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.9.2 — ciała, cmentarz, pchnięcia (2026-10-12)
+
+- Polegli zostają na polu: ciało w barwach drużyny z ciemną plamą, z czasem ciemnieje i zapada się; po ok. 10 minutach gry rozkłada się do końca
+- Cmentarz (Wojsko): grabarz chodzi po ciała, niesie je owinięte w płótno i chowa
+- Pchnięcie włócznią widać: ręka wychodzi do przodu, włócznia kładzie się poziomo grotem we wroga
+- Żołnierze nie stoją na jednym polu: w walce zajmują wolne pola wokół wroga, a stojący na zajętym polu odsuwają się
+- Zapis w nowej wersji
+
 ## 0.9.1 — walka (2026-10-12)
 
 - Żołnierze mają zdrowie i atak: stojący wypatrują wroga w promieniu 6 pól, podchodzą i biją; polegli znikają

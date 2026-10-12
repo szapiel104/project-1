@@ -7,6 +7,8 @@ import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type Ga
 
 const RETRY_TICKS = 20;
 const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
+/** Znacznik „niesie ciało” w polu carryRes (poza listą surowców) */
+export const CORPSE = RESOURCES.length;
 
 function tileOf(g: GameState, u: Unit): number {
   return (u.py >> 8) * g.map.width + (u.px >> 8);
@@ -57,6 +59,12 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const w = g.map.width;
       return (t) => { const x = t % w, y = (t - x) / w; return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; };
     }
+    case Phase.ToCorpse: {
+      const c = g.corpses.find((x) => x.id === u.target);
+      if (!c) return null;
+      const ct = (c.py >> 8) * g.map.width + (c.px >> 8);
+      return (t) => t === ct;
+    }
     case Phase.ToRest: {
       const doors = new Set<number>();
       for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && b.type === HOUSE) doors.add(b.door);
@@ -94,6 +102,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
   const p = g.players[u.owner]!;
   switch (u.phase) {
     case Phase.Returning:
+      if (u.carryRes === CORPSE) { u.carryRes = -1; u.carryAmt = 0; }
       if (prod) beginCycle(u, prod); else u.phase = Phase.Idle;
       break;
     case Phase.ToInputStore: {
@@ -148,6 +157,14 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       if (target) target.lit = true;
       u.target = 0;
       u.phase = u.job ? Phase.Returning : Phase.Idle;
+      break;
+    }
+    case Phase.ToCorpse: {
+      // grabarz bierze ciało na ramię i niesie je na cmentarz
+      g.corpses = g.corpses.filter((x) => x.id !== u.target);
+      u.target = 0;
+      u.carryRes = CORPSE; u.carryAmt = 1;
+      u.phase = Phase.Returning;
       break;
     }
     case Phase.ToRest: {
@@ -219,7 +236,7 @@ export function workerSystem(g: GameState): void {
     if (u.path.length) { move(g, u); continue; }
 
     const goal = goalFor(g, u, job, prod);
-    if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
+    if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
     const here = tileOf(g, u);
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal);

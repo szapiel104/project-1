@@ -116,6 +116,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   // Koszary: tu wolny chłop dostaje broń ze składu i staje się żołnierzem
   { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 30, stone: 30 }, buildable: true },
+  // Cmentarz: grabarz znosi tu ciała poległych z pola bitwy
+  { id: 'cemetery', category: 'military', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 15, stone: 10 }, staff: true, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

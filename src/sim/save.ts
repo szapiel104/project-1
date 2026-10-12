@@ -4,10 +4,10 @@ import { MAP_PRESETS } from '../data/maps';
 import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
-import type { Building, GameState, PlayerState, Rubble, Soldier, Unit } from './state';
+import type { Building, Corpse, GameState, PlayerState, Rubble, Soldier, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
-export const SAVE_VERSION = 12;
+export const SAVE_VERSION = 13;
 
 export interface SaveData {
   v: number;
@@ -27,6 +27,7 @@ export interface SaveData {
   buildings: Building[];
   units: Unit[];
   soldiers: Soldier[];
+  corpses: Corpse[];
 }
 
 const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
@@ -41,6 +42,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     buildings: g.buildings.map((b) => ({ ...b })),
     units: g.units.map((u) => ({ ...u, path: [...u.path] })),
     soldiers: g.soldiers.map((x) => ({ ...x, path: [...x.path] })),
+    corpses: g.corpses.map((c) => ({ ...c })),
   };
 }
 
@@ -56,6 +58,7 @@ export function deserialize(d: SaveData): GameState | null {
       buildings: d.buildings.map((b) => ({ ...b })),
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
       soldiers: (d.soldiers ?? []).map((x) => ({ ...x, path: [...x.path] })),
+      corpses: (d.corpses ?? []).map((c) => ({ ...c })),
       occupancy: new Int32Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size),
       rubble: d.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     };
