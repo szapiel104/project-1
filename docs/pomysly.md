@@ -45,3 +45,19 @@ Czeka:
 - Pełny mecz z botem (bot buduje palisadę, łuczników, atakuje z kilku stron)
 - Ulepszanie budynków (wyżej)
 - Konta i gra przez sieć (Supabase)
+
+## Klimat i poprawki (12.10, popołudnie)
+Zrobione: muzyka w tle (dzień/noc/bębny przy ataku), księżyc, gwiazdy i chmury w deszczu, wnętrza drwala/włóczniarza/łuczarza/piekarni/inżynierów w stylu chaty, karczma, spacer oczami chłopa, okno wydajności (F3).
+
+Czeka — klimat:
+- Mgła przy ziemi (smugi nad łąką i przy lesie o świcie i nocą)
+- Dym z kominów i ognisk podświetlony nocą, iskry nad ogniskiem
+- Okna świecące nocą ciepłym światłem (chaty, karczma, piekarnia)
+- Brud wokół domów: wydeptana ziemia przy drzwiach, śmieci, beczki, worki, siano
+
+Czeka — poprawki:
+- Animacje pracy (drwal rąbie siekierą, kamieniarz kilofem, piekarz przy piecu)
+- Chodzenie ludzi: płynniejsze skręty, omijanie się zamiast przenikania
+- Czytelność nocy: pochodnie o większym zasięgu jako opcja
+- Wszystkie panele w jednym stylu (World of Warcraft — Michałowi się podoba)
+- Dźwięki kroków: bruk / ziemia / błoto

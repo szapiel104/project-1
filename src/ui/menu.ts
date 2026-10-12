@@ -12,9 +12,10 @@ export interface Settings {
   sfx: number;
   ui: number;
   amb: number;
+  music: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6 };
+export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45 };
 
 export interface MenuEvents {
   onContinue(): void;
@@ -248,6 +249,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           slider(t('set.sfx'), settings.sfx * 100, (v) => { settings.sfx = v / 100; save(); }),
           slider(t('set.ui'), settings.ui * 100, (v) => { settings.ui = v / 100; save(); }),
           slider(t('set.amb'), settings.amb * 100, (v) => { settings.amb = v / 100; save(); }),
+          slider('Muzyka', (settings.music ?? 0.45) * 100, (v) => { settings.music = v / 100; save(); }),
           mute,
         ];
       }],

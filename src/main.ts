@@ -17,7 +17,7 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
-import { alarmBell, daySounds, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
 import { TEAM_COLORS } from './data/teams';
@@ -121,6 +121,7 @@ function applySettings(st: Settings): void {
   setBusVolume('sfx', st.sfx);
   setBusVolume('ui', st.ui);
   setBusVolume('amb', st.amb);
+  setBusVolume('music', st.music ?? 0.45);
 }
 applySettings(loadSettings());
 
@@ -589,6 +590,7 @@ function showEnd(win: boolean): void {
 const scribe = createScribe(() => play('babble'));
 let wolvesSeen = false, wolfKillsSeen = 0;
 let wasNight = false, wasComing = false, stockFull = false;
+let alarmComing = false;
 
 // historia zapasów co 5 sekund gry: trend = różnica wobec stanu sprzed minuty
 const resHistory: { tick: number; res: number[] }[] = [];
@@ -639,6 +641,7 @@ function refresh(): void {
   else if (mine === 0 && theirs >= 3) scribe.say('afraid', t('herald.afraid'), true, 'herald');
   else if (theirs > mine * 2 && theirs >= 6) scribe.say('weaker', t('herald.weaker'), false, 'herald');
   wasComing = coming;
+  alarmComing = coming;
   warnedHungry = !f.fed;
   warnedLeaving = p.popularity < 50;
   const affordable = new Set<string>();
@@ -677,6 +680,7 @@ function loop(now: number): void {
   last = now;
   nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
   if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
+  music(renderer.weather.night, alerts.length > 0 || alarmComing, menu.isOpen());
   // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
   if (menu.isOpen()) {
     if (titleScreen) renderer.orbit(elapsed / 1000);

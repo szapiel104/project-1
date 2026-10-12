@@ -29,9 +29,9 @@ let ambienceOn = false;
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 /** Osobne suwaki: efekty (budowa, burzenie), interfejs (kliknięcia), otoczenie (szum w tle) */
-export type Bus = 'sfx' | 'ui' | 'amb';
+export type Bus = 'sfx' | 'ui' | 'amb' | 'music';
 const busGain: Partial<Record<Bus, GainNode>> = {};
-const busLevel: Record<Bus, number> = { sfx: 1, ui: 1, amb: 1 };
+const busLevel: Record<Bus, number> = { sfx: 1, ui: 1, amb: 1, music: 0.5 };
 let out: GainNode | null = null;
 let noise: AudioBuffer | null = null;
 let volume = 0.6;
@@ -51,7 +51,7 @@ function audio(): AudioContext | null {
   master = ctx.createGain();
   master.gain.value = muted ? 0 : volume;
   master.connect(ctx.destination);
-  for (const b of ['sfx', 'ui', 'amb'] as Bus[]) { const gn = ctx.createGain(); gn.gain.value = busLevel[b]; gn.connect(master); busGain[b] = gn; }
+  for (const b of ['sfx', 'ui', 'amb', 'music'] as Bus[]) { const gn = ctx.createGain(); gn.gain.value = busLevel[b]; gn.connect(master); busGain[b] = gn; }
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -571,4 +571,93 @@ export function pluck(semi: number, near: number): void {
     const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(amp, at + 0.004); g.gain.exponentialRampToValueAtTime(0.001, at + 0.9 / mul + 0.3);
     s.connect(g).connect(o); s.start(at); s.stop(at + 1.3);
   }
+}
+
+// --- muzyka w tle: posępny, średniowieczny motyw składany na bieżąco (bez plików) ---
+// Dzień: bordun (kwinta) i melodia w skali doryckiej na „flecie” i „lutni”, spokojnie.
+// Noc: niżej, wolniej, w skali eolskiej, sam bordun z rzadkimi nutami. Atak: bębny i niski róg.
+let musicNext = 0, musicStep = 0, drone: { o: OscillatorNode[]; g: GainNode } | null = null, droneRoot = 0;
+const DORIAN = [0, 2, 3, 5, 7, 9, 10, 12, 14];
+const AEOLIAN = [0, 2, 3, 5, 7, 8, 10, 12];
+// motywy: indeksy w skali, -1 = pauza
+const PHRASES = [[0, 2, 3, 4, 3, 2, 1, 0, -1, -1], [4, 3, 4, 5, 4, 2, 3, -1, 1, 0], [2, 4, 6, 5, 4, 3, 2, 1, 0, -1], [0, -1, 3, 2, -1, 1, 0, -1, -1, -1]];
+let phrase = 0;
+
+function setDrone(c: AudioContext, root: number, level: number): void {
+  if (!drone) {
+    const g = c.createGain(); g.gain.value = 0; g.connect(busGain.music ?? master!);
+    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 600; f.connect(g);
+    const o = [0, 7, 12].map((_semi, i) => {
+      const s = c.createOscillator(); s.type = i === 2 ? 'triangle' : 'sawtooth';
+      const sg = c.createGain(); sg.gain.value = i === 2 ? 0.25 : 0.18; s.connect(sg).connect(f); s.start(); s.detune.value = (i - 1) * 4;
+      return s;
+    });
+    drone = { o, g };
+  }
+  if (root !== droneRoot) {
+    droneRoot = root;
+    [0, 7, 12].forEach((semi, i) => drone!.o[i]!.frequency.setTargetAtTime(root * Math.pow(2, semi / 12), c.currentTime, 2));
+  }
+  drone.g.gain.setTargetAtTime(level, c.currentTime, 2.5);
+}
+
+function voice(c: AudioContext, at: number, f: number, len: number, kind: 'flute' | 'lute', gain: number): void {
+  const out = busGain.music ?? master!;
+  const g = c.createGain();
+  if (kind === 'flute') {
+    const s = c.createOscillator(); s.type = 'sine'; s.frequency.value = f;
+    const vib = c.createOscillator(); vib.frequency.value = 5; const vg = c.createGain(); vg.gain.value = f * 0.006; vib.connect(vg).connect(s.frequency);
+    const breath = c.createBiquadFilter(); breath.type = 'lowpass'; breath.frequency.value = 2400;
+    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(gain, at + 0.12); g.gain.setValueAtTime(gain, at + len * 0.8); g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+    s.connect(breath).connect(g).connect(out); s.start(at); vib.start(at); s.stop(at + len + 0.05); vib.stop(at + len + 0.05);
+  } else {
+    for (const [mul, amp] of [[1, 1], [2, 0.4], [3, 0.15]] as const) {
+      const s = c.createOscillator(); s.type = mul === 1 ? 'triangle' : 'sine'; s.frequency.value = f * mul;
+      const sg = c.createGain(); sg.gain.setValueAtTime(0.0001, at); sg.gain.exponentialRampToValueAtTime(gain * amp, at + 0.005); sg.gain.exponentialRampToValueAtTime(0.0001, at + len * 1.6);
+      s.connect(sg).connect(out); s.start(at); s.stop(at + len * 1.7);
+    }
+  }
+}
+
+function drum(c: AudioContext, at: number, low: boolean): void {
+  const s = c.createOscillator(); s.type = 'sine';
+  s.frequency.setValueAtTime(low ? 90 : 140, at); s.frequency.exponentialRampToValueAtTime(low ? 45 : 70, at + 0.25);
+  const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(low ? 0.9 : 0.5, at + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.4);
+  s.connect(g).connect(busGain.music ?? master!); s.start(at); s.stop(at + 0.45);
+  if (noise) {
+    const n = c.createBufferSource(); n.buffer = noise; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900;
+    const ng = c.createGain(); ng.gain.setValueAtTime(0.25, at); ng.gain.exponentialRampToValueAtTime(0.001, at + 0.08);
+    n.connect(f).connect(ng).connect(busGain.music ?? master!); n.start(at, Math.random() * 0.5); n.stop(at + 0.1);
+  }
+}
+
+/** Woła się co klatkę: night 0..1, danger = wróg nadchodzi albo trwa atak; w menu gra cicho sam bordun */
+export function music(night: number, danger: boolean, inMenu: boolean): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running') return;
+  const now = c.currentTime;
+  const root = night > 0.5 || danger ? 110 : 146.83; // A nocą i w boju, D za dnia
+  setDrone(c, root, inMenu ? 0.05 : danger ? 0.09 : 0.06);
+  if (now < musicNext - 0.2) return;
+  const t = Math.max(now, musicNext);
+  if (danger) {
+    // bębny wojenne: ciężkie „bum — bum-bum”, co takt niski róg
+    const beat = 0.42;
+    drum(c, t, true); drum(c, t + beat, false); drum(c, t + beat * 1.5, false);
+    if (musicStep % 4 === 0) voice(c, t, 110, beat * 3.5, 'flute', 0.05);
+    musicStep++;
+    musicNext = t + beat * 4;
+    return;
+  }
+  const scale = night > 0.5 ? AEOLIAN : DORIAN;
+  const p = PHRASES[phrase]!;
+  const idx = p[musicStep % p.length]!;
+  const len = night > 0.5 ? 1.4 : 0.75;
+  if (idx >= 0 && !(night > 0.5 && Math.random() < 0.45)) {
+    const f = root * 2 * Math.pow(2, scale[idx % scale.length]! / 12);
+    voice(c, t, f, len, night > 0.5 || musicStep % 8 < 4 ? 'lute' : 'flute', night > 0.5 ? 0.05 : 0.07);
+  }
+  musicStep++;
+  if (musicStep % p.length === 0) { phrase = (phrase + 1 + Math.floor(Math.random() * 2)) % PHRASES.length; musicNext = t + len * (2 + Math.random() * 4); }
+  else musicNext = t + len;
 }

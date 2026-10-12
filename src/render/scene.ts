@@ -696,6 +696,68 @@ export class GameRenderer {
     }
   }
 
+  // --- niebo nocą: gwiazdy, księżyc z poświatą; w deszczu ciemne chmury zasłaniają niebo ---
+  private sky: { group: THREE.Group; stars: THREE.Points; moon: THREE.Sprite; clouds: THREE.Sprite[] } | null = null;
+  private updateSky(): void {
+    if (!this.sky) {
+      const group = new THREE.Group();
+      const n = 1400, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
+      for (let i = 0; i < n; i++) {
+        // tylko górna półkula, gęściej nad horyzontem nie trzeba
+        const u = Math.random(), v = Math.random() * 0.95;
+        const th = u * Math.PI * 2, ph = Math.acos(v);
+        pos.set([Math.sin(ph) * Math.cos(th) * 380, Math.cos(ph) * 380, Math.sin(ph) * Math.sin(th) * 380], i * 3);
+        const b = 0.6 + Math.random() * 0.4, warm = Math.random() < 0.2;
+        col.set([b, b * (warm ? 0.9 : 1), b * (warm ? 0.75 : 1.05)], i * 3);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      const stars = new THREE.Points(geo, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+      // księżyc: tarcza z kraterami i miękka poświata, rysowane na płótnie
+      const cv = document.createElement('canvas'); cv.width = cv.height = 256;
+      const x = cv.getContext('2d')!;
+      const glow = x.createRadialGradient(128, 128, 30, 128, 128, 128);
+      glow.addColorStop(0, 'rgba(220,230,255,0.55)'); glow.addColorStop(0.35, 'rgba(180,200,255,0.15)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+      x.fillStyle = glow; x.fillRect(0, 0, 256, 256);
+      x.fillStyle = '#e9ecf2'; x.beginPath(); x.arc(128, 128, 34, 0, Math.PI * 2); x.fill();
+      x.fillStyle = 'rgba(160,170,190,0.55)';
+      for (const [cx, cy, r] of [[118, 120, 8], [140, 136, 6], [126, 146, 5], [138, 114, 4], [112, 140, 3]] as const) { x.beginPath(); x.arc(cx, cy, r, 0, Math.PI * 2); x.fill(); }
+      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
+      const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, fog: false, depthWrite: false }));
+      moon.scale.setScalar(70);
+      // chmury: miękkie, ciemne kłęby
+      const cc = document.createElement('canvas'); cc.width = cc.height = 128;
+      const y = cc.getContext('2d')!;
+      for (let i = 0; i < 9; i++) { const g2 = y.createRadialGradient(30 + Math.random() * 68, 50 + Math.random() * 30, 0, 64, 64, 40 + Math.random() * 20); g2.addColorStop(0, 'rgba(60,64,72,0.5)'); g2.addColorStop(1, 'rgba(60,64,72,0)'); y.fillStyle = g2; y.fillRect(0, 0, 128, 128); }
+      const ctex = new THREE.CanvasTexture(cc);
+      const clouds: THREE.Sprite[] = [];
+      for (let i = 0; i < 14; i++) {
+        const c2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctex, transparent: true, opacity: 0, fog: false, depthWrite: false, color: 0x8a8f99 }));
+        const a = (i / 14) * Math.PI * 2;
+        c2.position.set(Math.cos(a) * 300, 90 + (i % 3) * 30, Math.sin(a) * 300);
+        c2.scale.set(260, 120, 1);
+        clouds.push(c2); group.add(c2);
+      }
+      group.add(stars, moon);
+      for (const o of [stars, moon]) o.renderOrder = -10;
+      this.scene.add(group);
+      this.sky = { group, stars, moon, clouds };
+    }
+    const sk = this.sky;
+    const clear = 1 - this.rain;
+    sk.group.position.copy(this.cam.camera.position);
+    (sk.stars.material as THREE.PointsMaterial).opacity = Math.max(0, (this.night - 0.2) / 0.8) * clear;
+    // księżyc idzie łukiem po nocnym niebie
+    const d = this.sunDir.clone().normalize();
+    sk.moon.position.set(d.x * 340, Math.max(60, d.y * 340), d.z * 340); // nocą kierunek „słońca” to droga księżyca
+    (sk.moon.material as THREE.SpriteMaterial).opacity = Math.max(0, (this.night - 0.15) / 0.85) * (0.3 + 0.7 * clear);
+    for (const [i, c] of sk.clouds.entries()) {
+      (c.material as THREE.SpriteMaterial).opacity = this.rain * 0.85;
+      c.position.x += Math.sin(i) * 0.02; // powoli dryfują
+    }
+  }
+
   private updatePuffs(dt: number): void {
     for (let i = this.puffs.length - 1; i >= 0; i--) {
       const p = this.puffs[i]!;
@@ -824,6 +886,7 @@ export class GameRenderer {
     this.time += dt;
     this.updatePuffs(dt);
     this.updateRain(dt);
+    this.updateSky();
     if (this.state) this.setDaylight(this.menuNight ? 23 : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     if (this.flash > 0) { this.flash = Math.max(0, this.flash - dt * 4); this.hemi.intensity += this.flash * 3 * (Math.random() < 0.7 ? 1 : 0.3); }
     this.aimSun();
