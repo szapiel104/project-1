@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { RULES } from '../data/rules';
+import { playAt, type WorldSound } from '../audio/sfx';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
@@ -109,6 +110,21 @@ export class GameRenderer {
   private night = 0;
   private grade!: ShaderPass;
   private rain = 0;
+  private soundAt = new Map<string, number>();
+  /** Dźwięk z miejsca na mapie, nie częściej niż co `every` sekund dla danego źródła; głośność z odległości od środka ekranu */
+  private sfxAt(kind: WorldSound, x: number, z: number, key: string | number, every: number, gain = 1): void {
+    const k = `${kind}${key}`;
+    const due = this.soundAt.get(k) ?? 0;
+    if (this.time < due) return;
+    this.soundAt.set(k, this.time + every * (0.85 + Math.random() * 0.3));
+    if (due === 0) return; // pierwszy raz tylko ustawiamy zegar, żeby wszystkie źródła nie ruszyły naraz
+    const cam = this.cam.camera, f = this.cam.focus;
+    const reach = cam.position.distanceTo(f) * 0.9;
+    const d = Math.hypot(x - f.x, z - f.z);
+    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+    const pan = ((x - f.x) * right.x + (z - f.z) * right.z) / Math.max(1, reach);
+    playAt(kind, Math.max(0, 1 - d / reach), pan, gain);
+  }
   /** Pora i pogoda dla dźwięków otoczenia */
   get weather(): { night: number; rain: number } { return { night: this.night, rain: this.rain }; }
   private rainLines: THREE.LineSegments | null = null;
@@ -957,6 +973,11 @@ export class GameRenderer {
       t.scale.setScalar(1.08);
       t.updateMatrix();
       t.scale.setScalar(1);
+      if (striking && !this.calm) {
+        // zamach włócznią i uderzenie: w człowieka głucho, w mur jak w drewno
+        this.sfxAt('swing', t.position.x, t.position.z, s.id, 1.1, 0.6);
+        if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
+      }
       this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id);
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
@@ -1091,6 +1112,18 @@ export class GameRenderer {
           if (g.map.tiles[(ty + dy) * width + tx + dx] === Terrain.Water) { t.rotation.set(0, Math.atan2(dx, dy), 0); break; }
         swing = 0;
       } else if (u.phase === Phase.WorkingSite && !this.calm) swing = Math.sin(this.time * 9 + u.id) * 1.1;
+      // odgłosy pracy z miejsca, gdzie pracuje
+      if (!this.calm && u.job) {
+        const jt = jobs.get(u.job);
+        const jid = jt ? BUILDINGS[jt.type]!.id : '';
+        if (u.phase === Phase.WorkingSite) {
+          if (jid === 'woodcutter') this.sfxAt('chop', t.position.x, t.position.z, u.id, 0.9);
+          else if (jid === 'quarry' || jid === 'mine') this.sfxAt('mine', t.position.x, t.position.z, u.id, 1.0);
+        } else if (u.phase === Phase.Working) {
+          if (jid === 'woodcutter' || jid === 'poleturner') this.sfxAt('plank', t.position.x, t.position.z, u.id, 1.3, 0.7);
+          else if (jid === 'mill') this.sfxAt('creak', t.position.x, t.position.z, u.id, 3.5, 0.8);
+        } else if (u.phase === Phase.Repairing) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.8);
+      }
       this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }

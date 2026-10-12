@@ -16,6 +16,13 @@ const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
   select: ['placement-b', 'placement-d'],
   ambience: ['ambience'],
 };
+/** Dźwięki świata (CC0, Kenney i OpenGameArt — docs/zasoby.md), grane z miejsca na mapie */
+export type WorldSound = 'chop' | 'mine' | 'smith' | 'plank' | 'creak' | 'coins' | 'hit' | 'swing' | 'clang' | 'growl';
+const WORLD: Record<WorldSound, string[]> = {
+  chop: ['chop'], mine: ['mine-0', 'mine-1', 'mine-2'], smith: ['smith-0', 'smith-1', 'smith-2'], plank: ['plank-0', 'plank-1', 'plank-2'],
+  creak: ['creak-1', 'creak-2', 'creak-3'], coins: ['coins'], hit: ['hit-0', 'hit-1', 'hit-2'], swing: ['swing-0', 'swing-1', 'swing-2'],
+  clang: ['clang-0', 'clang-1'], growl: ['wolf'],
+};
 const buffers = new Map<string, AudioBuffer>();
 let ambienceOn = false;
 
@@ -49,7 +56,7 @@ function audio(): AudioContext | null {
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   const c = ctx;
-  const names = new Set(Object.values(FILES).flat());
+  const names = new Set([...Object.values(FILES).flat(), ...Object.values(WORLD).flat()]);
   for (const name of names) {
     fetch(`sounds/${name}.ogg`)
       .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(name))))
@@ -208,7 +215,35 @@ export function play(sound: Sound): void {
 
 // --- przyroda: wiatr przez cały czas, wrony za dnia, wilki nocą (wszystko syntezowane, bez plików) ---
 let wind: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null = null;
-let nextCrow = 0, nextWolf = 0;
+let nextCrow = 0, nextWolf = 0, nextDrop = 0;
+let rainNoise: { gain: GainNode } | null = null;
+
+/** Deszcz: dwie warstwy szumu (szelest kropel i niski szum ulewy) plus pojedyncze krople o dachy */
+function startRain(c: AudioContext): void {
+  if (rainNoise || !noise) return;
+  const gain = c.createGain(); gain.gain.value = 0;
+  gain.connect(busGain.amb ?? master!);
+  const hiSrc = c.createBufferSource(); hiSrc.buffer = noise; hiSrc.loop = true; hiSrc.playbackRate.value = 1;
+  const hi = c.createBiquadFilter(); hi.type = 'highpass'; hi.frequency.value = 2200;
+  const hiG = c.createGain(); hiG.gain.value = 0.55;
+  hiSrc.connect(hi).connect(hiG).connect(gain);
+  const loSrc = c.createBufferSource(); loSrc.buffer = noise; loSrc.loop = true; loSrc.playbackRate.value = 0.5;
+  const lo = c.createBiquadFilter(); lo.type = 'bandpass'; lo.frequency.value = 600; lo.Q.value = 0.5;
+  const loG = c.createGain(); loG.gain.value = 0.8;
+  loSrc.connect(lo).connect(loG).connect(gain);
+  hiSrc.start(); loSrc.start(0, 0.37);
+  rainNoise = { gain };
+}
+
+function drop(c: AudioContext, at: number): void {
+  const o = c.createOscillator(); o.type = 'sine';
+  const f0 = 1800 + Math.random() * 2500;
+  o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f0 * 0.5, at + 0.04);
+  const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.05, at + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
+  const p = c.createStereoPanner(); p.pan.value = Math.random() * 2 - 1;
+  o.connect(g).connect(p).connect(busGain.amb ?? master!);
+  o.start(at); o.stop(at + 0.06);
+}
 
 function startWind(c: AudioContext): void {
   if (wind || !noise) return;
@@ -247,13 +282,35 @@ function crow(c: AudioContext, at: number, pan: number): void {
 }
 
 /** Wycie wilka z daleka: długi ton wznoszący się i opadający, z drżeniem, mocno wytłumiony */
+let echo: ConvolverNode | null = null;
+/** Pogłos lasu: długi, ciemny ogon, żeby wycie niosło się po okolicy */
+function forestEcho(c: AudioContext): ConvolverNode {
+  if (echo) return echo;
+  const len = c.sampleRate * 3.2, ir = c.createBuffer(2, len, c.sampleRate);
+  for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+  echo = c.createConvolver(); echo.buffer = ir;
+  const g = c.createGain(); g.gain.value = 0.9;
+  echo.connect(g).connect(busGain.amb ?? master!);
+  return echo;
+}
+
 function wolf(c: AudioContext, at: number, pan: number): void {
-  const p = c.createStereoPanner(); p.pan.value = pan; p.connect(busGain.amb ?? master!);
-  const voices = Math.random() < 0.4 ? 2 : 1;
+  const p = c.createStereoPanner(); p.pan.value = pan;
+  const dry = c.createGain(); dry.gain.value = 0.6;
+  p.connect(dry).connect(busGain.amb ?? master!);
+  p.connect(forestEcho(c));
+  // wataha: kilka głosów jeden po drugim, a na koniec warknięcie blisko
+  const voices = 2 + Math.floor(Math.random() * 3);
+  const growl = buffers.get('wolf');
+  if (growl && Math.random() < 0.6) {
+    const src = c.createBufferSource(); src.buffer = growl; src.playbackRate.value = 0.75;
+    const g = c.createGain(); g.gain.value = 0.9;
+    src.connect(g).connect(p); src.start(at + 3.5 + Math.random() * 2);
+  }
   for (let v = 0; v < voices; v++) {
     const t = at + v * (0.8 + Math.random());
     const len = 2.6 + Math.random() * 1.2;
-    const base = 330 + Math.random() * 60 + v * 70;
+    const base = 300 + Math.random() * 60 + v * 55;
     const o = c.createOscillator(); o.type = 'triangle';
     o.frequency.setValueAtTime(base * 0.7, t);
     o.frequency.exponentialRampToValueAtTime(base * 1.25, t + len * 0.3);
@@ -262,8 +319,8 @@ function wolf(c: AudioContext, at: number, pan: number): void {
     const vib = c.createOscillator(); vib.frequency.value = 5.5; const vg = c.createGain(); vg.gain.value = 6; vib.connect(vg).connect(o.frequency);
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
     const g = c.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 0.5);
-    g.gain.setValueAtTime(0.05, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.5);
+    g.gain.setValueAtTime(0.32, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.001, t + len);
     o.connect(f).connect(g).connect(p);
     o.start(t); vib.start(t); o.stop(t + len + 0.05); vib.stop(t + len + 0.05);
   }
@@ -284,9 +341,31 @@ export function nature(night: number, rain: number, paused: boolean): void {
     wind.gain.gain.setTargetAtTime(level, now, 0.5);
     wind.filter.frequency.setTargetAtTime(280 + gust * 420 + rain * 500, now, 0.5);
   }
+  startRain(c);
+  if (rainNoise) rainNoise.gain.gain.setTargetAtTime(rain * 0.22, now, 0.8);
+  if (rain > 0.1 && now > nextDrop) { for (let i = 0; i < 3; i++) drop(c, now + Math.random() * 0.1); nextDrop = now + 0.05 + (1 - rain) * 0.3; }
   if (paused) return;
   if (!nextCrow) nextCrow = now + 6 + Math.random() * 10;
   if (!nextWolf) nextWolf = now + 15 + Math.random() * 20;
   if (now > nextCrow) { if (night < 0.3 && rain < 0.5) crow(c, now, Math.random() * 1.6 - 0.8); nextCrow = now + 12 + Math.random() * 25; }
-  if (now > nextWolf) { if (night > 0.6) wolf(c, now, Math.random() * 1.6 - 0.8); nextWolf = now + 30 + Math.random() * 40; }
+  if (now > nextWolf) { if (night > 0.6) wolf(c, now, Math.random() * 1.6 - 0.8); nextWolf = now + 25 + Math.random() * 30; }
+}
+
+/**
+ * Dźwięk z miejsca na mapie: `near` 0..1 (1 = przy środku ekranu), `pan` -1..1 (lewo/prawo).
+ * Daleko — cicho i bez wysokich tonów nie ma sensu grać, więc poniżej progu po prostu milczymy.
+ */
+export function playAt(kind: WorldSound, near: number, pan: number, gain = 1): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running' || near < 0.05) return;
+  const list = WORLD[kind];
+  const buf = buffers.get(list[Math.floor(Math.random() * list.length)]!);
+  if (!buf) return;
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  src.playbackRate.value = 0.92 + Math.random() * 0.16;
+  const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
+  const g = c.createGain(); g.gain.value = near * near * 0.7 * gain;
+  src.connect(g).connect(p).connect(busGain.sfx ?? master!);
+  src.start();
 }
