@@ -668,6 +668,13 @@ export class GameRenderer {
     const phase = (day / 3 + 0.37) % 1;
     const want = phase < 0.16 ? Math.sin((phase / 0.16) * Math.PI) : 0;
     this.rain += (Math.min(1, want * 1.6) - this.rain) * Math.min(1, dt * 0.5);
+    // pogoda dnia: pogodnie, pochmurno albo mglisto (z ziarna mapy, więc u każdego taka sama); przejścia płynne w ciągu dnia
+    const seed = g?.map.seed ?? 1;
+    const dayW = (d: number): [number, number] => { const h = Math.sin((Math.floor(d) + seed * 0.013) * 12.9898) * 43758.5453; const v = h - Math.floor(h); return v < 0.45 ? [0.12, 0] : v < 0.8 ? [0.55, 0.15] : [0.35, 0.8]; };
+    const [c0, f0] = dayW(day), [c1, f1] = dayW(day + 1), fr = day - Math.floor(day);
+    const wantCover = Math.max(this.rain, c0 + (c1 - c0) * fr), wantMist = f0 + (f1 - f0) * fr;
+    this.cover += (wantCover - this.cover) * Math.min(1, dt * 0.3);
+    this.dayMist += (wantMist - this.dayMist) * Math.min(1, dt * 0.3);
     this.grade.uniforms.rain!.value = this.rain;
     // po deszczu długo jest mokro: błoto i kałuże schną powoli
     this.wet = Math.max(0, Math.min(1, this.wet + (this.rain > 0.15 ? dt * 0.12 : -dt * 0.003)));
@@ -742,11 +749,13 @@ export class GameRenderer {
       for (let i = 0; i < 9; i++) { const g2 = y.createRadialGradient(30 + Math.random() * 68, 50 + Math.random() * 30, 0, 64, 64, 40 + Math.random() * 20); g2.addColorStop(0, 'rgba(255,255,255,0.55)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); y.fillStyle = g2; y.fillRect(0, 0, 128, 128); }
       const ctex = new THREE.CanvasTexture(cc);
       const clouds: THREE.Sprite[] = [];
-      for (let i = 0; i < 14; i++) {
+      for (let i = 0; i < 40; i++) {
         const c2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctex, transparent: true, opacity: 0, fog: false, depthWrite: false, color: 0x8a8f99 }));
-        const a = (i / 14) * Math.PI * 2;
-        c2.position.set(Math.cos(a) * 300, 90 + (i % 3) * 30, Math.sin(a) * 300);
-        c2.scale.set(260, 120, 1);
+        // rozrzucone po całym niebie: część nad głową, część przy horyzoncie
+        const a = i * 2.39996, rr = 60 + ((i * 37) % 100) / 100 * 260;
+        c2.position.set(Math.cos(a) * rr, 170 + ((i * 53) % 100) * 0.9, Math.sin(a) * rr);
+        c2.scale.set(150 + (i % 5) * 40, 70 + (i % 3) * 25, 1);
+        c2.userData.k = i / 40; // próg pojawiania się: im większe zachmurzenie, tym więcej chmur
         clouds.push(c2); group.add(c2);
       }
       // kopuła nieba: u góry głęboki błękit, przy horyzoncie kolor mgły (płynne przejście w krajobraz)
@@ -776,7 +785,9 @@ export class GameRenderer {
     const sk = this.sky;
     const clear = 1 - this.rain;
     sk.group.position.copy(this.cam.camera.position);
-    (sk.stars.material as THREE.PointsMaterial).opacity = Math.max(0, (this.night - 0.2) / 0.8) * clear;
+    const stm = sk.stars.material as THREE.PointsMaterial;
+    stm.opacity = Math.max(0, (this.night - 0.2) / 0.8) * (1 - this.cover * 0.8) * (0.85 + Math.sin(this.time * 3) * 0.05);
+    stm.size = 2.4;
     // księżyc idzie łukiem po nocnym niebie
     const d = this.sunDir.clone().normalize();
     sk.moon.position.set(d.x * 340, Math.max(60, d.y * 340), d.z * 340); // nocą kierunek „słońca” to droga księżyca
@@ -785,20 +796,21 @@ export class GameRenderer {
     const bg = this.scene.background as THREE.Color;
     const u = (this.sky.dome.material as THREE.ShaderMaterial).uniforms;
     (u.horizon!.value as THREE.Color).copy(bg);
-    const dayTop = new THREE.Color(0x4f76a8).lerp(new THREE.Color(0x6a6f78), this.rain * 0.8);
+    const dayTop = new THREE.Color(0x3d6fb4).lerp(new THREE.Color(0x7c8189), Math.max(this.rain * 0.9, this.cover * 0.55, this.dayMist * 0.7));
     (u.top!.value as THREE.Color).copy(dayTop).lerp(new THREE.Color(0x070b18), this.night);
     // słońce widać tylko w dzień i bez deszczu
     const sd = this.sunDir.clone().normalize();
     sk.sunDisc.position.set(sd.x * 360, Math.max(30, sd.y * 360), sd.z * 360);
     const sm2 = sk.sunDisc.material as THREE.SpriteMaterial;
-    sm2.opacity = (1 - this.night) * (1 - this.rain * 0.9) * Math.min(1, Math.max(0, (sd.y - 0.02) * 6));
+    sm2.opacity = (1 - this.night) * (1 - Math.max(this.rain * 0.9, this.cover * 0.6)) * Math.min(1, Math.max(0, (sd.y - 0.02) * 6));
     sm2.color.set(0xffffff).lerp(new THREE.Color(0xff9a50), Math.max(0, 1 - sd.y * 2.5)); // nisko nad horyzontem pomarańczowe
-    for (const [i, c] of sk.clouds.entries()) {
+    for (const c of sk.clouds) {
       // w dzień białe obłoki, w deszczu ciemne i gęste, nocą prawie niewidoczne
       const m2 = c.material as THREE.SpriteMaterial;
       m2.color.set(0xf2f0ea).lerp(new THREE.Color(0x5a5e66), Math.max(this.rain, this.night * 0.8));
-      m2.opacity = Math.max(this.rain * 0.85, (1 - this.night) * 0.35 * (i % 2 ? 1 : 0.6));
-      c.position.x += Math.sin(i) * 0.02; // powoli dryfują
+      const shown = c.userData.k < this.cover ? 1 : 0;
+      m2.opacity = shown * (0.25 + this.cover * 0.6) * (1 - this.night * 0.6);
+      c.position.x += 0.03 + this.cover * 0.05; if (c.position.x > 360) c.position.x = -360; // wiatr pcha chmury
     }
   }
 
@@ -1135,6 +1147,10 @@ export class GameRenderer {
   }
 
   private wet = 0;
+  /** Zachmurzenie 0..1 i mglistość dnia 0..1 (zmienna pogoda) */
+  private cover = 0.2;
+  private dayMist = 0;
+  get weatherText(): string { return this.rain > 0.3 ? 'deszcz' : this.dayMist > 0.4 ? 'mgła' : this.cover > 0.4 ? 'pochmurno' : 'pogodnie'; }
   private wetShown = -1;
   private puddles: THREE.InstancedMesh | null = null;
   private puddleKey = '';
@@ -1386,8 +1402,10 @@ export class GameRenderer {
     // mgła: gęsta o świcie (4–8), rzadsza w dzień; w deszczu gęstsza
     const mist = Math.max(0, Math.min(1, hour < 4 ? 0 : hour < 6 ? (hour - 4) / 2 : (8.5 - hour) / 2.5));
     const fog = this.scene.fog as THREE.Fog;
-    fog.near = 50 - mist * 38 - this.rain * 22;
-    fog.far = 150 - mist * 85 - this.rain * 55;
+    const m = Math.min(1, mist + this.dayMist);
+    // pogodny dzień: daleka widoczność; mgła rano i w mgliste dni, gęsta w deszczu
+    fog.near = 90 - m * 70 - this.rain * 40;
+    fog.far = 260 - m * 180 - this.rain * 120;
     // słońce wędruje ze wschodu na zachód; nocą tę samą drogę robi księżyc
     const dayTime = hour >= 6 && hour < 20;
     const arc = (((dayTime ? hour - 6 : (hour + 4) % 24) / (dayTime ? 14 : 10)) * 0.84 + 0.08) * Math.PI;
