@@ -420,7 +420,6 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   dock.append(toolbar, bar);
   bottom.append(floaters, buildbar, dock);
   root.append(toast, bottom);
-  const phone = (): boolean => matchMedia('(max-width: 640px)').matches;
   showCategory(null);
 
   return {
@@ -465,7 +464,6 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       // na telefonie menu zasłania mapę, więc po wyborze budynku chowa się samo
       buildFoot.hidden = id === null;
       if (id) open(-1);
-      if (id && phone()) showCategory(null);
       syncPicker();
     },
     showPerson(person) {

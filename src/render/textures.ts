@@ -216,9 +216,8 @@ export function pattern(kind: Kind): THREE.Texture | null {
   let t = cache.get(kind);
   if (t) return t;
   if (typeof document === 'undefined') return null;
-  // bruk w 2048 px na komputerach (1024 na telefonach), mur twierdzy 1024, reszta 512
-  const phone = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
-  const n = kind === 'cobble' ? (phone ? 1024 : 2048) : kind === 'ashlar' ? 1024 : 512;
+  // bruk w 2048 px, mur twierdzy 1024, reszta 512
+  const n = kind === 'cobble' ? 2048 : kind === 'ashlar' ? 1024 : 512;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });

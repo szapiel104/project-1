@@ -177,24 +177,7 @@ input, select {
   .tabs { grid-area: tabs; }
   .tools-right { grid-area: right; }
 }
-@media (max-width: 640px) {
-  body { font-size: 16px; }
-  .res li, .people > div, .clock, .stepper { min-height: 30px; padding: 1px 6px; }
-  .res strong { min-width: 2.4ch; }
-  /* na telefonie zostaje samo tempo; podatki i racje są w zakładce Dwór */
-  .stepper:not(:first-child) { display: none; }
-  .step { min-width: 36px; min-height: 36px; }
-  .toast { width: calc(100vw - 12px); }
-  .floaters { flex-direction: column; align-items: stretch; }
-  .drawer, .info { width: auto; margin-left: 0; max-height: 40vh; }
-  .buildbar { padding: 6px; }
-  .toolbar { grid-template-columns: 1fr; grid-template-areas: 'tabs' 'cats' 'right'; justify-items: stretch; padding: 4px 6px; }
-  .tabs, .tools-right { justify-self: stretch; }
-  .tabs button, .tools-right button { flex: 1; min-height: 40px; padding: 6px 4px; font-size: 13px; }
-  .cats { display: grid; grid-template-columns: repeat(4, 1fr); }
-  .cat { flex-direction: column; gap: 0; padding: 2px; font-size: 11px; }
-  .cat img { width: 28px; height: 28px; }
-  .card { width: 100px; }
-  .people .name { display: none; }
-}
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } button:active { transform: none; } }
+
+/* zamiast gry na telefonie: tablica z informacją na środku ekranu */
+.desktop-only { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, calc(100vw - 32px)); padding: 20px 22px; display: grid; gap: 10px; }

@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.6.4 — tylko komputer (2026-10-12)
+
+- Na telefonie i tablecie gra się nie uruchamia, pokazuje tablicę „Tylko na komputerze”
+- Usunięte uproszczenia pod telefony: zawsze pełna rozdzielczość bruku, pełna mapa cieni, 12 świateł pochodni, pełna puszcza; usunięty układ interfejsu na telefon
+
 ## 0.6.3 — kamera i bruk (2026-10-12)
 
 - Kamera: kąt patrzenia od prawie poziomego do pionowego (prawy przycisk w górę/dół albo T i G); nie wchodzi pod ziemię ani w pagórki

@@ -100,8 +100,7 @@ export class GameRenderer {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.scene.background = new THREE.Color(HAZE);
     this.scene.fog = new THREE.Fog(HAZE, 55, 150);
-    // Cienie: jedno słońce, którego obszar cienia podąża za kamerą. Na telefonach mniejsza mapa cieni.
-    const phone = matchMedia('(pointer: coarse)').matches;
+    // Cienie: jedno słońce, którego obszar cienia podąża za kamerą.
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 0.95;
@@ -111,7 +110,7 @@ export class GameRenderer {
     this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xffe2ad, 3.6);
     sun.castShadow = true;
-    sun.shadow.mapSize.setScalar(phone ? 1024 : 2048);
+    sun.shadow.mapSize.setScalar(2048);
     sun.shadow.bias = -0.0006;
     sun.shadow.normalBias = 0.25;
     sun.shadow.camera.near = 1;
@@ -135,7 +134,7 @@ export class GameRenderer {
     this.figures = new Figures(MAX_UNITS, this.scene);
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
-    for (let i = 0; i < (phone ? 5 : 12); i++) {
+    for (let i = 0; i < 12; i++) {
       const lamp = new THREE.PointLight(0xffb469, 0, 8, 2);
       this.scene.add(lamp);
       this.lamps.push(lamp);

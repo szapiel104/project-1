@@ -169,7 +169,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
 
   // Za mapą teren ciągnie się dalej tą samą siatką i teksturą: brzeg planszy przechodzi płynnie w puszczę.
   // Góry przy krawędzi opadają łagodnie na zewnątrz, woda się kończy, a dalej są niskie pagórki pod lasem.
-  const D = matchMedia('(pointer: coarse)').matches ? 34 : 56;
+  const D = 56;
   const floorCol = new THREE.Color(0x46612a);
   const outerH = (X: number, Y: number): number => {
     if (X >= 0 && X <= w && Y >= 0 && Y <= h) return corner(X, Y);
