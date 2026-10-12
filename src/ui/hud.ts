@@ -24,7 +24,8 @@ export interface HudEvents {
 
 export interface HudView {
   /** Rozpiska popularności (składniki z plusem i minusem) i ludności (kto co robi) */
-  report?: { popularity: { label: string; value: number; note?: string }[]; people: { label: string; value: number }[] };
+  report?: { popularity: { label: string; value: number; note?: string }[]; people: { label: string; value: number }[]; army: { label: string; value: number }[] };
+  soldiers?: number;
   res: ArrayLike<number>;
   /** Zmiana zapasu każdego surowca w ciągu ostatniej minuty gry */
   trend: ArrayLike<number>;
@@ -156,6 +157,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   popBox.title = t('hud.population');
   popBox.setAttribute('aria-label', t('hud.population'));
   popBox.append(icon('pop'), popVal);
+  const armyVal = el('strong');
+  const armyBox = el('div');
+  armyBox.title = 'Wojsko';
+  armyBox.setAttribute('aria-label', 'Wojsko');
+  armyBox.append(icon('spear'), armyVal);
   const popularBox = el('div');
   // pasek popularności ze znacznikiem progu, od którego przybywa ludzi
   const meter = el('span', 'meter');
@@ -168,14 +174,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // rozwijane rozpiski nad dolnym paskiem: klik w koronę = popularność, klik w ludzi = kto co robi
   const report = el('div', 'report panel');
   report.hidden = true;
-  let reportKind: 'popularity' | 'people' | null = null;
+  let reportKind: 'popularity' | 'people' | 'army' | null = null;
   let lastReport: HudView['report'];
   const drawReport = (): void => {
     if (!reportKind || !lastReport) { report.hidden = true; return; }
     report.hidden = false;
-    const rows = reportKind === 'popularity' ? lastReport.popularity : lastReport.people;
+    const rows = reportKind === 'popularity' ? lastReport.popularity : reportKind === 'army' ? lastReport.army : lastReport.people;
     const sum = reportKind === 'popularity' ? rows.reduce((n, r) => n + r.value, 0) : 0;
-    report.innerHTML = `<p class="report-title">${reportKind === 'popularity' ? 'Popularność — co miesiąc' : 'Ludzie i wojsko'}</p>`;
+    report.innerHTML = `<p class="report-title">${reportKind === 'popularity' ? 'Popularność — co miesiąc' : reportKind === 'army' ? 'Wojsko' : 'Mieszkańcy'}</p>`;
     const list = el('dl', 'report-list');
     for (const r of rows) {
       const dt = el('dt', '', r.label);
@@ -187,8 +193,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     report.append(list);
     if (reportKind === 'popularity') report.append(el('p', 'report-hint', 'W górę: większe racje, niższe podatki albo rozdawanie złota. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.'));
   };
-  const toggleReport = (k: 'popularity' | 'people'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
-  for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people']] as const) {
+  const toggleReport = (k: 'popularity' | 'people' | 'army'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
+  for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people'], [armyBox, 'army']] as const) {
     box.classList.add('clickable');
     box.tabIndex = 0;
     box.setAttribute('role', 'button');
@@ -233,7 +239,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const disc = clockIcon.querySelector<SVGGElement>('.dial-disc')!;
   const clockVal = el('strong');
   clockBox.append(clockIcon, clockVal);
-  people.append(stockBox, foodBox, popBox, idleBox, popularBox);
+  people.append(stockBox, foodBox, popBox, armyBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');
   const stepper = (label: string, onStep: (dir: number) => void): HTMLElement => {
@@ -524,6 +530,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     setHash(hash) { setText(hashLine, `${t('hud.hash')}: ${hash.toString(16).padStart(8, '0')}`); },
     update(v) {
       if (v.report) { lastReport = v.report; if (reportKind) drawReport(); }
+      setText(armyVal, String(v.soldiers ?? 0));
       resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
       // trend: ile przybyło albo ubyło w ostatniej minucie gry (zielone na plus, czerwone na minus)
       resTrends.forEach((node, i) => {

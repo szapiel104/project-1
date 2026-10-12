@@ -625,6 +625,7 @@ function refresh(): void {
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
     delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable,
     report: buildReport(f),
+    soldiers: game.soldiers.filter((s) => s.owner === ME).length,
   });
   hud.setHash(stateHash(game));
   if (chosen.size) showArmy();
@@ -887,9 +888,16 @@ function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
   }
   const people: { label: string; value: number }[] = [{ label: 'Wszyscy chłopi', value: mine.length }, { label: 'Bez pracy', value: idle }, { label: 'Na budowie', value: builders }];
   for (const [k, v] of [...jobs.entries()].sort((a, b) => b[1] - a[1])) people.push({ label: k, value: v });
-  people.push({ label: 'Żołnierze', value: game.soldiers.filter((s) => s.owner === ME).length });
   const coming = game.travelers.filter((x) => x.owner === ME && !x.leaving).length, going = game.travelers.filter((x) => x.owner === ME && x.leaving).length;
   if (coming) people.push({ label: 'W drodze do osady', value: coming });
   if (going) people.push({ label: 'Odchodzą', value: going });
-  return { popularity, people };
+  const mySoldiers = game.soldiers.filter((s) => s.owner === ME);
+  const army: { label: string; value: number }[] = [{ label: 'Razem', value: mySoldiers.length }];
+  for (const [k, def] of UNITS.entries()) { const n = mySoldiers.filter((s) => s.kind === k).length; if (n) army.push({ label: t(def.name), value: n }); }
+  const hurt = mySoldiers.filter((s) => s.hp < UNITS[s.kind]!.hp).length;
+  army.push({ label: 'Ranni', value: hurt });
+  army.push({ label: 'W walce', value: mySoldiers.filter((s) => s.target || s.hunt).length });
+  const p0 = game.players[ME]!;
+  army.push({ label: 'Polegli od początku', value: p0.stats.lost }, { label: 'Zabici wrogowie', value: p0.stats.kills });
+  return { popularity, people, army };
 }
