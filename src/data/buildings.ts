@@ -103,7 +103,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Obozowisko stoi od początku przy twierdzy: tu czekają chłopi bez pracy. Ma limit miejsc, więc bez wolnego miejsca nowi nie przyjdą
   { id: 'camp', category: 'settlement', name: 'b.camp', w: 2, h: 2, cost: { wood: 15 }, idleSlots: 6, buildable: true },
   // Stodoła stoi od początku obok twierdzy i mieści zapasy startowe; można ją rozebrać i postawić gdzie indziej
-  { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 30 }, stores: ['stockpile', 'granary'], capacity: { stockpile: 250, granary: 120 }, buildable: true },
+  { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 30 }, stores: ['stockpile'], capacity: { stockpile: 250 }, buildable: true },
   {
     id: 'fisher', category: 'food', name: 'b.fisher', w: 2, h: 2, cost: { wood: 15 }, buildable: true,
     needsTerrain: { terrain: Terrain.Water, radius: 7 },

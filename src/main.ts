@@ -72,7 +72,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onRations: (level) => pending.push({ type: 'setRations', player: ME, level }),
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
   onSpeed: (s) => { speed = s; },
-  onDemolish: (id) => { pending.push({ type: 'demolish', player: ME, id }); play('demolish'); select(0); },
+  onDemolish: (id) => confirmDemolish(id),
   onCloseInfo: () => { selectUnit(0); select(0); },
   onRotate: () => rotate(),
   onWreck: () => setWreck(!wrecking),
@@ -907,3 +907,28 @@ function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
   army.push({ label: 'Polegli od początku', value: p0.stats.lost }, { label: 'Zabici wrogowie', value: p0.stats.kills });
   return { popularity, people, army };
 }
+
+/** Okno na środku ekranu: czy na pewno rozebrać, co wróci do składu (połowa kosztu, wynoszona z gruzu) */
+function confirmDemolish(id: number): void {
+  const b = game.buildings.find((x) => x.id === id);
+  if (!b) return;
+  const def = BUILDINGS[b.type]!;
+  const back = (Object.entries(def.cost) as [ResourceId, number][]).map(([r, n]) => `${Math.floor((n * RULES_REFUND) / 100)} × ${t(`res.${r}`).toLowerCase()}`);
+  const box = document.createElement('div');
+  box.className = 'confirm-wrap';
+  box.innerHTML = `<div class="panel confirm" role="alertdialog" aria-modal="true" aria-labelledby="cf-t">
+    <p class="confirm-title" id="cf-t">Rozebrać: ${t(def.name)}?</p>
+    <p>${back.length ? `Odzyskasz <strong>${back.join(', ')}</strong> — ludzie wyniosą to z gruzu do składu.` : 'Nic nie odzyskasz.'}</p>
+    ${b.worker ? '<p>Pracownik straci robotę i wróci do obozowiska.</p>' : ''}
+    <div class="confirm-btns"><button type="button" class="menu-btn menu-back" data-no>Nie</button><button type="button" class="menu-btn" data-yes>Tak, rozbierz</button></div>
+  </div>`;
+  const close = (): void => { box.remove(); window.removeEventListener('keydown', key); };
+  const key = (e: KeyboardEvent): void => { if (e.key === 'Escape') close(); };
+  box.querySelector('[data-no]')!.addEventListener('click', close);
+  box.querySelector('[data-yes]')!.addEventListener('click', () => { pending.push({ type: 'demolish', player: ME, id }); play('demolish'); select(0); close(); });
+  box.addEventListener('pointerdown', (e) => { if (e.target === box) close(); });
+  window.addEventListener('keydown', key);
+  document.body.append(box);
+  box.querySelector<HTMLButtonElement>('[data-no]')!.focus();
+}
+const RULES_REFUND = 50;

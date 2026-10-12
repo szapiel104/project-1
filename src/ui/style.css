@@ -487,3 +487,9 @@ body.menu-open .scribe { display: none; }
 .unit-btns button { min-height: 44px; font-size: 18px; padding: 4px; }
 .unit-btns button:last-child { grid-column: span 2; font-size: 15px; }
 .info:has(.recruit:not([hidden])) { width: 440px; }
+/* potwierdzenie rozbiórki na środku ekranu */
+.confirm-wrap { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: rgba(10, 6, 2, .45); }
+.confirm { width: min(440px, calc(100vw - 32px)); padding: 22px 26px; display: grid; gap: 10px; font-size: 18px; text-align: center; }
+.confirm p { margin: 0; }
+.confirm-title { font-family: var(--display); font-weight: 800; font-size: 24px; color: var(--seal); }
+.confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 6px; }

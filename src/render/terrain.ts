@@ -662,10 +662,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     setWet(k: number) {
       // błoto: ciemniejsza, błyszcząca ziemia na ścieżkach, mokry połysk bruku, trochę ciemniejsza trawa
       const dryC = new THREE.Color(0xffffff);
-      if (sandMat) { sandMat.color.copy(dryC).lerp(new THREE.Color(0x6b5238), k * 0.75); sandMat.roughness = 1 - k * 0.55; }
+      if (sandMat) { sandMat.color.copy(dryC).lerp(new THREE.Color(0x3e2c1c), k * 0.85); sandMat.roughness = 1 - k * 0.7; }
       if (paveMat) { paveMat.roughness = 0.9 - k * 0.5; paveMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
       const gm = ground.material as THREE.MeshStandardMaterial;
-      gm.color.copy(dryC).lerp(new THREE.Color(0xa9b09a), k * 0.5);
+      gm.color.copy(dryC).lerp(new THREE.Color(0x8a917c), k * 0.6);
     },
     dispose() {
       group.traverse((o) => {

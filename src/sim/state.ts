@@ -250,6 +250,8 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
     });
     addBuilding(g, keep, s.player, s.x - 1, s.y - 1);
     placeNear(g, buildingIndex('barn'), s.player, s.x, s.y);
+    // stodoła trzyma tylko towary, jedzenie idzie do spichlerza
+    placeNear(g, buildingIndex('granary'), s.player, s.x, s.y);
     placeNear(g, CAMP, s.player, s.x, s.y);
     const extra = s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0;
     for (let i = 0; i < RULES.startPeasants + extra; i++) spawnPeasant(g, s.player);

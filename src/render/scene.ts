@@ -592,7 +592,7 @@ export class GameRenderer {
     this.rain += (Math.min(1, want * 1.6) - this.rain) * Math.min(1, dt * 0.5);
     this.grade.uniforms.rain!.value = this.rain;
     // po deszczu długo jest mokro: błoto i kałuże schną powoli
-    this.wet = Math.max(0, Math.min(1, this.wet + (this.rain > 0.25 ? dt * 0.06 : -dt * 0.004)));
+    this.wet = Math.max(0, Math.min(1, this.wet + (this.rain > 0.15 ? dt * 0.12 : -dt * 0.003)));
     if (Math.abs(this.wet - this.wetShown) > 0.01) { this.view?.setWet(this.wet); this.wetShown = this.wet; }
     if (g && this.view) this.syncPuddles(g, this.view);
     if (!this.rainLines) {
@@ -808,7 +808,7 @@ export class GameRenderer {
       this.puddles.frustumCulled = false; this.puddles.renderOrder = 1;
       this.scene.add(this.puddles);
     }
-    (this.puddles.material as THREE.MeshStandardMaterial).opacity = Math.min(0.75, this.wet * 1.1);
+    (this.puddles.material as THREE.MeshStandardMaterial).opacity = Math.min(0.85, this.wet * 1.6);
     this.puddles.visible = this.wet > 0.03;
     if (!this.puddles.visible) return;
     const key = `${this.roadSum}`;
@@ -820,7 +820,7 @@ export class GameRenderer {
     for (let t = 0; t < g.roads.length && n < 1024; t++) {
       if (g.roads[t] !== 1) continue;
       const hsh = (t * 2654435761) >>> 0;
-      if (hsh % 5 !== 0) continue;
+      if (hsh % 3 !== 0) continue;
       const x = (t % width) + 0.3 + ((hsh >>> 8) & 255) / 640, y = Math.floor(t / width) + 0.3 + ((hsh >>> 16) & 255) / 640;
       q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (hsh & 63) / 10);
       m.compose(p.set(x - width / 2, view.heightAt(x, y) + 0.05, y - height / 2), q, sc.set(0.5 + ((hsh >>> 4) & 15) / 30, 1, 0.3 + ((hsh >>> 12) & 15) / 40));
@@ -1283,6 +1283,14 @@ export class GameRenderer {
     const { width, height } = g.map;
     const t = this.tmp;
     let n = 0, rings = 0, dots = 0, torches = 0;
+    // stojący oddział zbija się ciaśniej: każdy przysuwa się do środka swojej grupy (tylko wygląd, pola w symulacji bez zmian)
+    const pull = new Map<number, [number, number]>();
+    const still = g.soldiers.filter((x) => !x.path.length && !x.up && !x.target);
+    for (const a of still) {
+      let sx = 0, sy = 0, k = 0;
+      for (const b of still) if (b.owner === a.owner && Math.abs(b.px - a.px) < 3 * FP && Math.abs(b.py - a.py) < 3 * FP) { sx += b.px; sy += b.py; k++; }
+      if (k > 1) pull.set(a.id, [(sx / k - a.px) / FP * 0.45, (sy / k - a.py) / FP * 0.45]);
+    }
     const torchesOn = this.night > 0.15;
     const m = new THREE.Matrix4();
     const byId = new Map<number, (typeof g.soldiers)[number]>();
@@ -1325,8 +1333,10 @@ export class GameRenderer {
       const striking = (!!foe || !!wall) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
       const lift = s.up ? 1.95 : 0;
-      const y = view.heightAt(fx, fy) + lift;
-      t.position.set(fx - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), fy - height / 2);
+      const pl = pull.get(s.id);
+      const px = fx + (pl ? pl[0] : 0), pz = fy + (pl ? pl[1] : 0);
+      const y = view.heightAt(px, pz) + lift;
+      t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
       const pc = this.lastCd.get(s.id) ?? 0;
       if (ranged && foe && s.cd > pc && !this.calm && this.arrows.length < 256) {
