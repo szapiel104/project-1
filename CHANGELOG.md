@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.5.7 — rów przy drodze (2026-10-12)
+
+- Wzdłuż drogi kamiennej, po bokach, płytki rów odwadniający z wilgotnym błotem i strużką wody na dnie
+
 ## 0.5.6 — dźwięki i góry (2026-10-12)
 
 - Dźwięki syntezowane w przeglądarce: budowa (deski i młotek), układanie drogi, burzenie (kilof), zawalenie budynku (łoskot i sypiący się gruz), kliknięcia przycisków, sygnał błędu

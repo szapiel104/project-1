@@ -351,6 +351,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Drogi. Kamienna to równe pola bruku. Piaskowa to wydeptana ścieżka: każde pole dostaje miękką,
   // nieregularną plamę większą od pola, a sąsiednie plamy zlewają się w jeden trakt o poszarpanych brzegach.
   const roadMeshes: THREE.Mesh[] = [];
+  // rów: ciemne, wilgotne błoto, a na dnie wąska strużka wody z połyskiem nieba
+  const ditchMat = new THREE.MeshStandardMaterial({ color: 0x3a3127, roughness: 1, map: pattern('soil'), polygonOffset: true, polygonOffsetFactor: -3 });
+  const streamMat = new THREE.MeshStandardMaterial({ color: 0x3f6470, roughness: 0.08, metalness: 0.5, transparent: true, opacity: 0.85, polygonOffset: true, polygonOffsetFactor: -4 });
   let pathMat: THREE.MeshStandardMaterial | null = null;
   const pathMaterial = (): THREE.MeshStandardMaterial => {
     if (pathMat) return pathMat;
@@ -411,13 +414,28 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     roadMeshes.length = 0;
     const shade = new THREE.Color();
     for (let kind = 1; kind <= materials.length; kind++) {
-      const p3: number[] = [], uv2: number[] = [], uvMask: number[] = [], col3: number[] = [];
+      const p3: number[] = [], uv2: number[] = [], uvMask: number[] = [], col3: number[] = [], ditch: number[] = [], stream: number[] = [];
       const soft = kind === 1;
       const grow = soft ? 0.42 : 0.3;
       for (let y = 0; y < h; y++)
         for (let x = 0; x < w; x++) {
           if (roads[y * w + x] !== kind) continue;
           clear(y * w + x); // na drodze nie rośnie trawa ani krzewy
+          if (!soft) {
+            // wzdłuż bruku, tam gdzie kończy się droga, płytki rów odwadniający z wodą na dnie
+            for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind) continue;
+              const strip = (from: number, to: number, out: number[], lift: number): void => {
+                // pas równoległy do krawędzi pola, odsunięty od niej o from..to na zewnątrz
+                const a = dx ? (dx > 0 ? x + 1 + from : x - to) : x - 0.05, b2 = dx ? (dx > 0 ? x + 1 + to : x - from) : x + 1.05;
+                const c = dy ? (dy > 0 ? y + 1 + from : y - to) : y - 0.05, d = dy ? (dy > 0 ? y + 1 + to : y - from) : y + 1.05;
+                for (const [qx, qy] of [[a, c], [a, d], [b2, c], [b2, c], [a, d], [b2, d]] as const) out.push(qx + ox, heightAt(qx, qy) + lift, qy + oz);
+              };
+              strip(0.3, 0.52, ditch, 0.012);
+              strip(0.36, 0.46, stream, 0.02);
+            }
+          }
           // lekkie przesunięcie każdego płata, żeby droga nie szła jak po linijce
           const r = hash2(x, y, map.seed ^ 0x77);
           const jx = ((r & 15) / 15 - 0.5) * (soft ? 0.22 : 0.16), jy = (((r >>> 4) & 15) / 15 - 0.5) * (soft ? 0.22 : 0.16);
@@ -446,6 +464,17 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       mesh.renderOrder = soft ? 1 : 0;
       group.add(mesh);
       roadMeshes.push(mesh);
+      for (const [pts, matx] of [[ditch, ditchMat], [stream, streamMat]] as const) {
+        if (!pts.length) continue;
+        const dg = new THREE.BufferGeometry();
+        dg.setAttribute('position', new THREE.Float32BufferAttribute(pts, 3));
+        dg.computeVertexNormals();
+        const dm = new THREE.Mesh(dg, matx);
+        dm.receiveShadow = true;
+        dm.renderOrder = 2;
+        group.add(dm);
+        roadMeshes.push(dm);
+      }
     }
   };
 
