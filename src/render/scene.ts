@@ -795,6 +795,8 @@ export class GameRenderer {
     const sk = this.sky;
     const clear = 1 - this.rain;
     sk.group.position.copy(this.cam.camera.position);
+    // niebo zawsze tuż przed granicą widzenia kamery (kopuła ma promień 420)
+    sk.group.scale.setScalar(Math.min(1, (this.cam.camera.far * 0.92) / 420));
     const su = (sk.stars.material as THREE.ShaderMaterial).uniforms;
     su.opacity!.value = Math.max(0, (this.night - 0.2) / 0.8) * (1 - this.cover * 0.8);
     su.time!.value = this.time;
@@ -1419,6 +1421,9 @@ export class GameRenderer {
     const cd = this.walk ? 2 : this.cam.distance;
     fog.near = cd * 0.95 + 70 * (1 - m * 0.8) - this.rain * 20;
     fog.far = Math.max(fog.near + 45, cd + 220 - m * 140 - this.rain * 90);
+    // za mgłą i tak nic nie widać: kamera nie rysuje dalej niż mgła (dużo mniej trójkątów w gęstej pogodzie i przy niskim kącie)
+    const cam = this.cam.camera, wantFar = fog.far + 15;
+    if (Math.abs(cam.far - wantFar) > 8) { cam.far = wantFar; cam.updateProjectionMatrix(); }
     // słońce wędruje ze wschodu na zachód; nocą tę samą drogę robi księżyc
     const dayTime = hour >= 6 && hour < 20;
     const arc = (((dayTime ? hour - 6 : (hour + 4) % 24) / (dayTime ? 14 : 10)) * 0.84 + 0.08) * Math.PI;
