@@ -438,3 +438,11 @@ body.menu-open .scribe { display: none; }
 .report-list .plus { color: #7fd06a; }
 .report-list .minus { color: #ff8a7a; }
 .report-list .report-sum { border-top: 1px solid var(--gold-dark); padding-top: 6px; margin-top: 4px; font-weight: 800; }
+/* rozpiska na pergaminie: ciemny, czytelny tekst */
+.report { color: var(--ink); font-size: 18px; }
+.report-title { color: var(--seal); text-shadow: none; }
+.report-list { font-size: 18px; }
+.report-list dt small { color: var(--ink-soft); opacity: 1; }
+.report-list .plus { color: #2f6e22; }
+.report-list .minus { color: #a8281f; }
+.report-hint { margin: 10px 0 0; font-size: 15px; color: var(--ink-soft); line-height: 1.35; }

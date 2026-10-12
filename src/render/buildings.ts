@@ -220,6 +220,17 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
       ]),
     ]),
   },
+  bow: {
+    tex: 'planks',
+    // łuki oparte o kozioł, cięciwy jasne
+    geo: merge([
+      ...[-0.16, 0.16].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.12, 0.3), x, -0.1, 0), 0x6b4a2e)),
+      ...[0, 1, 2, 3].flatMap((k) => [
+        paint(new THREE.TorusGeometry(0.2, 0.012, 4, 12, Math.PI * 0.9).rotateZ(Math.PI * 0.05).translate(0, 0.02, -0.09 + k * 0.06), 0x7a5232),
+        paint(new THREE.CylinderGeometry(0.004, 0.004, 0.39, 3).rotateZ(Math.PI / 2).translate(0, 0.03, -0.09 + k * 0.06), 0xe8e0c8),
+      ]),
+    ]),
+  },
   fish: {
     geo: merge([
       paint(part(new THREE.BoxGeometry(0.38, 0.1, 0.3), 0, -0.08, 0), 0x8a6a45),
@@ -1221,6 +1232,21 @@ const BUILDERS: Record<string, Builder> = {
     }
     g.add(barrow);
     pennant(g, flag, 0.8, 1.25, -0.7);
+  },
+  fletcher(g, _team, flag) {
+    // Warsztat łuczarza: otwarta chata, na ścianie wiszą łuki, na stole drewno na łęczyska, kosz strzał
+    const inside = hut(g, M.plaster, M.thatch, 1.4, 1.1, 0.75, 0, -0.15, true);
+    box(inside, M.wood, 0.7, 0.05, 0.22, -0.1, 0.32, -0.25);
+    for (const sx of [-1, 1]) box(inside, M.woodDark, 0.05, 0.32, 0.18, -0.1 + sx * 0.3, 0.0, -0.25);
+    for (let k = 0; k < 3; k++) {
+      const bow = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.014, 5, 14, Math.PI * 0.85), M.woodDark);
+      bow.rotation.z = Math.PI * 0.07; bow.position.set(-0.45 + k * 0.32, 0.55, -0.62); inside.add(bow);
+    }
+    const quiver = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.3, 8), M.wood);
+    quiver.position.set(0.55, 0.15, 0.25); g.add(quiver);
+    for (let k = 0; k < 5; k++) box(g, M.plank, 0.012, 0.22, 0.012, 0.52 + (k % 3) * 0.03, 0.28, 0.22 + (k >> 1) * 0.03);
+    box(g, M.woodDark, 0.06, 1.3, 0.06, 0.75, 0, 0.55);
+    box(g, flag, 0.04, 0.4, 0.3, 0.75, 0.85, 0.72);
   },
   poleturner(g, _team, flag) {
     // Warsztat włóczniarza: otwarta chata z kozłem do strugania, stojak z gotowymi włóczniami i kosz z grotami

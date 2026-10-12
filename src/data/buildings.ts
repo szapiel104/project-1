@@ -126,6 +126,12 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 30, stone: 30 }, buildable: true },
   // Cmentarz: grabarz znosi tu ciała poległych z pola bitwy
   { id: 'cemetery', category: 'military', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 15, stone: 10 }, staff: true, buildable: true },
+  // Warsztat łuczarza: z drewna ze składu wygina łuki i plecie cięciwy
+  {
+    id: 'fletcher', category: 'military', name: 'b.fletcher', w: 2, h: 2, cost: { wood: 25 }, buildable: true,
+    workView: 'inside',
+    production: { input: { res: 'wood', amount: 2 }, output: { res: 'bow', amount: 1 }, site: 'home', workTicks: 140 },
+  },
   // Umocnienia z bali: częstokół stawiany przeciąganiem, brama dla swoich, drewniana wieża strażnicza
   { id: 'palisade', category: 'defense', name: 'b.palisade', w: 1, h: 1, cost: { wood: 1 }, hp: 260, wall: true, line: true, buildable: true },
   { id: 'gate', category: 'defense', name: 'b.gate', w: 1, h: 1, cost: { wood: 8 }, hp: 600, gate: true, buildable: true },

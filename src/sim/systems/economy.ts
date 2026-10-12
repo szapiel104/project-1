@@ -28,7 +28,7 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const parts: { key: string; value: number; level?: string }[] = [];
   parts.push({ key: 'food', value: RULES.rations[level]!.effect, level: RULES.rations[level]!.name });
   parts.push({ key: 'tax', value: bribed ? tax.effect : RULES.taxes[1].effect, level: bribed ? tax.name : RULES.taxes[1].name });
-  if (pop > housing(g, p.id)) parts.push({ key: 'crowd', value: RULES.crowdingPenalty });
+  parts.push({ key: 'crowd', value: pop > housing(g, p.id) ? RULES.crowdingPenalty : 0 });
   const delta = parts.reduce((n, x) => n + x.value, 0);
   return { delta, food, gold, fed, bribed, parts };
 }

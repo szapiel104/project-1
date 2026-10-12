@@ -1,4 +1,4 @@
-export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear'] as const;
+export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow'] as const;
 export type ResourceId = (typeof RESOURCES)[number];
 export type StoreKind = 'stockpile' | 'granary';
 
@@ -22,6 +22,7 @@ export const RESOURCE_DEFS: Record<ResourceId, ResourceDef> = {
   gold: { name: 'res.gold', color: 0xe2b93b, store: null },
   fish: { name: 'res.fish', color: 0x8fb4c9, store: 'granary', food: true },
   spear: { name: 'res.spear', color: 0x9a7a4a, store: 'stockpile' },
+  bow: { name: 'res.bow', color: 0x7a5232, store: 'stockpile' },
 };
 
 export const resIndex = (id: ResourceId): number => RESOURCES.indexOf(id);

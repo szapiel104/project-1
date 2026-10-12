@@ -15,10 +15,16 @@ export interface UnitDef {
   cooldown: number;
   /** Z jakiej odległości (w polach) wypatruje wroga */
   sight: number;
+  /** Strzelec: z ilu pól trafia (brak = walczy wręcz) */
+  range?: number;
+  /** Broń ze składu potrzebna do wyszkolenia (do wyświetlania) */
+  weapon: ResourceId;
 }
 
 export const UNITS: readonly UnitDef[] = [
-  { id: 'spearman', name: 'u.spearman', cost: { spear: 1, gold: 8 }, hp: 60, speed: 110, attack: 9, cooldown: 12, sight: 6 },
+  { id: 'spearman', name: 'u.spearman', cost: { spear: 1, gold: 8 }, hp: 60, speed: 110, attack: 9, cooldown: 12, sight: 6, weapon: 'spear' },
+  // Łucznik: słabszy w zwarciu, ale strzela z daleka; z wieży strażniczej widzi i trafia dalej
+  { id: 'archer', name: 'u.archer', cost: { bow: 1, gold: 12 }, hp: 40, speed: 105, attack: 7, cooldown: 24, sight: 8, range: 6, weapon: 'bow' },
 ];
 
 export const unitIndex = (id: string): number => UNITS.findIndex((u) => u.id === id);

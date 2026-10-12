@@ -185,6 +185,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     }
     if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', 'Razem'), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
     report.append(list);
+    if (reportKind === 'popularity') report.append(el('p', 'report-hint', 'W górę: większe racje, niższe podatki albo rozdawanie złota. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.'));
   };
   const toggleReport = (k: 'popularity' | 'people'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
   for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people']] as const) {
