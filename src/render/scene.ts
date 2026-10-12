@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { RULES } from '../data/rules';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
@@ -17,6 +18,7 @@ import { HAZE, buildTerrain, type TerrainView } from './terrain';
 import { pattern } from './textures';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
+import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { N8AOPass } from 'n8ao';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 
@@ -73,15 +75,16 @@ const tmpColor = new THREE.Color();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
 const DAY = [
-  { h: 0, sun: 0x9fb2e8, power: 0.5, sky: 0.42, haze: 0x141b33 },
-  { h: 4.5, sun: 0x9fb2e8, power: 0.5, sky: 0.42, haze: 0x182039 },
-  { h: 6, sun: 0xffb37a, power: 1.1, sky: 0.85, haze: 0xd6a887 },
-  { h: 8, sun: 0xffe6c2, power: 1.8, sky: 1.25, haze: 0xd4cdb8 },
-  { h: 12, sun: 0xfff4e0, power: 2.0, sky: 1.35, haze: 0xcdd2c6 },
-  { h: 17, sun: 0xffe6c2, power: 1.8, sky: 1.25, haze: 0xd4cdb8 },
-  { h: 19.5, sun: 0xff9d66, power: 1.1, sky: 0.85, haze: 0xc98f6e },
-  { h: 21.5, sun: 0x9fb2e8, power: 0.5, sky: 0.42, haze: 0x182039 },
-  { h: 24, sun: 0x9fb2e8, power: 0.5, sky: 0.42, haze: 0x141b33 },
+  // mroczniejszy, bardziej szary świat: ciemne noce, mglisty świt, zgaszone południe
+  { h: 0, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x0b0f1c },
+  { h: 4.5, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x10162a },
+  { h: 6, sun: 0xe0a070, power: 0.9, sky: 0.7, haze: 0x9a8f86 },
+  { h: 8, sun: 0xf2dcb8, power: 1.55, sky: 1.05, haze: 0xa9aa9f },
+  { h: 12, sun: 0xfaeedc, power: 1.8, sky: 1.15, haze: 0xb4b7ae },
+  { h: 17, sun: 0xf2dcb8, power: 1.6, sky: 1.05, haze: 0xaaa79a },
+  { h: 19.5, sun: 0xe88a58, power: 0.95, sky: 0.7, haze: 0x8a6650 },
+  { h: 21.5, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x10162a },
+  { h: 24, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x0b0f1c },
 ];
 const WOOD = RESOURCES.indexOf('wood');
 const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
@@ -104,6 +107,9 @@ export class GameRenderer {
   private sunDir = new THREE.Vector3(-55, 85, 40);
   /** 0 w dzień, 1 w środku nocy */
   private night = 0;
+  private grade!: ShaderPass;
+  private rain = 0;
+  private rainLines: THREE.LineSegments | null = null;
   private sadFaces: THREE.Sprite[] = [];
   private lamps: THREE.PointLight[] = [];
   private lampSpots: { v: THREE.Vector3; k: number }[] = [];
@@ -292,6 +298,26 @@ export class GameRenderer {
     this.composer.addPass(this.plain);
     this.composer.addPass(this.ao);
     this.composer.addPass(new OutputPass());
+    // gradacja koloru w klimacie surowego średniowiecza: mniej nasycenia, ciepłe brudne cienie, chłodna noc, winieta
+    this.grade = new ShaderPass({
+      uniforms: { tDiffuse: { value: null }, night: { value: 0 }, rain: { value: 0 } },
+      vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `
+        uniform sampler2D tDiffuse; uniform float night; uniform float rain; varying vec2 vUv;
+        void main() {
+          vec3 c = texture2D(tDiffuse, vUv).rgb;
+          float l = dot(c, vec3(0.299, 0.587, 0.114));
+          c = mix(vec3(l), c, 0.72 - rain * 0.15);                       // przygaszone barwy
+          c = mix(c * vec3(1.06, 0.98, 0.86), c, smoothstep(0.0, 0.6, l)); // brązowe cienie
+          c = (c - 0.5) * 1.08 + 0.5;                                   // trochę kontrastu
+          c = mix(c, c * vec3(0.62, 0.72, 1.05), night * 0.55);          // chłodna, ciemna noc
+          c *= 1.0 - rain * 0.12;
+          vec2 d = vUv - 0.5;
+          c *= 1.0 - dot(d, d) * (0.85 + night * 0.6);                  // winieta
+          gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
+        }`,
+    });
+    this.composer.addPass(this.grade);
     canvas.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'touch') this.hover(this.pick(e));
       if (this.painting && e.buttons === 1) { const tile = this.pick(e); if (tile) this.onPaint(tile); }
@@ -490,6 +516,38 @@ export class GameRenderer {
     this.puffs.push({ group, age: 0, bits });
   }
 
+  /** Deszcz: przychodzi i odchodzi co kilka dni gry (czysto wizualnie, z zegara gry, więc bez losowania) */
+  private updateRain(dt: number): void {
+    const g = this.state;
+    const day = g ? g.tick / RULES.dayTicks : 0;
+    // co ~3 dni pada przez około pół dnia
+    const phase = (day / 3 + 0.37) % 1;
+    const want = phase < 0.16 ? Math.sin((phase / 0.16) * Math.PI) : 0;
+    this.rain += (Math.min(1, want * 1.6) - this.rain) * Math.min(1, dt * 0.5);
+    this.grade.uniforms.rain!.value = this.rain;
+    if (!this.rainLines) {
+      // dwie identyczne warstwy jedna nad drugą: przesuwanie o 25 w kółko jest niewidoczne
+      const n = 1500, pos = new Float32Array(n * 12);
+      for (let i = 0; i < n; i++) {
+        const x = (Math.random() - 0.5) * 60, y = Math.random() * 25, z = (Math.random() - 0.5) * 60;
+        pos.set([x, y, z, x + 0.06, y - 0.55, z + 0.03, x, y + 25, z, x + 0.06, y + 24.45, z + 0.03], i * 12);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      this.rainLines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xaab4c4, transparent: true, opacity: 0, depthWrite: false }));
+      this.rainLines.frustumCulled = false;
+      this.scene.add(this.rainLines);
+    }
+    const mat = this.rainLines.material as THREE.LineBasicMaterial;
+    mat.opacity = this.rain * 0.45;
+    this.rainLines.visible = this.rain > 0.02;
+    if (this.rainLines.visible) {
+      const f = this.cam.focus;
+      const fall = (this.time * 22) % 25;
+      this.rainLines.position.set(f.x, f.y - fall - 2, f.z);
+    }
+  }
+
   private updatePuffs(dt: number): void {
     for (let i = this.puffs.length - 1; i >= 0; i--) {
       const p = this.puffs[i]!;
@@ -515,6 +573,7 @@ export class GameRenderer {
     this.cam.update(dt);
     this.time += dt;
     this.updatePuffs(dt);
+    this.updateRain(dt);
     if (this.state) this.setDaylight(this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     this.aimSun();
     if (this.state && this.view) {
@@ -610,6 +669,7 @@ export class GameRenderer {
     this.sun.color.setHex(a.sun).lerp(tmpColor.setHex(b.sun), k);
     this.sun.intensity = a.power + (b.power - a.power) * k;
     this.hemi.intensity = a.sky + (b.sky - a.sky) * k;
+    this.sun.intensity *= 1 - this.rain * 0.55; // w deszczu słońce przygasa
     const bg = this.scene.background as THREE.Color;
     bg.setHex(a.haze).lerp(tmpColor.setHex(b.haze), k);
     (this.scene.fog as THREE.Fog).color.copy(bg);
@@ -617,6 +677,12 @@ export class GameRenderer {
     const dusk = Math.max(0, Math.min(1, (hour - 19.5) / 2)), dawn = Math.max(0, Math.min(1, (6.5 - hour) / 2));
     this.night = hour >= 12 ? dusk : dawn;
     setNight(this.night);
+    this.grade.uniforms.night!.value = this.night;
+    // mgła: gęsta o świcie (4–8), rzadsza w dzień; w deszczu gęstsza
+    const mist = Math.max(0, Math.min(1, hour < 4 ? 0 : hour < 6 ? (hour - 4) / 2 : (8.5 - hour) / 2.5));
+    const fog = this.scene.fog as THREE.Fog;
+    fog.near = 50 - mist * 38 - this.rain * 22;
+    fog.far = 150 - mist * 85 - this.rain * 55;
     // słońce wędruje ze wschodu na zachód; nocą tę samą drogę robi księżyc
     const dayTime = hour >= 6 && hour < 20;
     const arc = (((dayTime ? hour - 6 : (hour + 4) % 24) / (dayTime ? 14 : 10)) * 0.84 + 0.08) * Math.PI;
