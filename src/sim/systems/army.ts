@@ -3,7 +3,7 @@ import { type ResourceId, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
-import { FP, Phase, type Building, type Corpse, type GameState, type Soldier } from '../state';
+import { FP, Phase, type Building, type Corpse, type GameState, type Soldier, type Unit } from '../state';
 import { BUILDINGS, footprint } from '../../data/buildings';
 import { maxHp, restore, ruin } from './placement';
 import type { UnitDef } from '../../data/units';
@@ -236,6 +236,30 @@ export function armySystem(g: GameState): void {
         if (s.path.length) step(g, s);
         continue;
       }
+      // brak wrogich żołnierzy: atakuje wrogich chłopów (łucznik z daleka); każdy zabity obniża popularność ich pana
+      {
+        let best = (def.sight + (s.up ? 3 : 0)) ** 2 + 0.1, prey: Unit | undefined;
+        for (const u of g.units) {
+          if (team(g, u.owner) === team(g, s.owner)) continue;
+          const dx = (u.px - s.px) / FP, dy = (u.py - s.py) / FP, d = dx * dx + dy * dy;
+          if (d < best) { best = d; prey = u; }
+        }
+        if (prey) {
+          const reach = range ? range : 1.5;
+          if (best <= reach * reach) {
+            s.path = [];
+            if (s.cd === 0) {
+              s.cd = def.cooldown;
+              prey.hp = (prey.hp ?? 30) - def.attack;
+              prey.wait = Math.max(prey.wait, 6);
+              if (prey.hp <= 0) killPeasant(g, prey, s.owner);
+            }
+            continue;
+          }
+          if (!s.up && !s.path.length) { const next = greedy(g, tileOf(g, s), (prey.py >> 8) * W + (prey.px >> 8), taken, s.owner); if (next >= 0) { s.path = [next]; taken.add(next); } }
+          if (s.path.length) { step(g, s); continue; }
+        }
+      }
       // brak wrogich żołnierzy w pobliżu: bierze się za najbliższy wrogi budynek
       if (!s.up && !range && siege(g, s, def, taken)) continue; // łucznicy sami nie strzelają w budynki, tylko na rozkaz
     }
@@ -413,4 +437,17 @@ function repairSystem(g: GameState): void {
     }
     if (best) { u.target = best.id; u.phase = Phase.ToRepair; }
   }
+}
+
+/** Śmierć chłopa z ręki wroga: ciało zostaje, zwalnia się jego praca, a ludzie tracą zaufanie do pana */
+function killPeasant(g: GameState, u: Unit, killer: number): void {
+  const i = g.units.indexOf(u);
+  if (i < 0) return;
+  for (const b of g.buildings) if (b.worker === u.id) b.worker = 0;
+  g.units.splice(i, 1);
+  g.corpses.push({ id: u.id, owner: u.owner, kind: -1, px: u.px, py: u.py, at: g.tick, taken: false });
+  const p = g.players[u.owner];
+  if (p) { p.stats.lost++; p.popularity = Math.max(0, p.popularity - 2); }
+  const k = g.players[killer];
+  if (k) k.stats.kills++;
 }

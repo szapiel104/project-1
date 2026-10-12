@@ -13,11 +13,11 @@ export interface MapPreset {
 
 /** Nowy tryb = nowy wpis tutaj. Silnik nie zna liczby graczy na sztywno. */
 export const MAP_PRESETS = {
-  '1v1': { width: 112, height: 112, waterLevel: 62, startRadius: 7, rim: 9, starts: [{ x: 26, y: 28 }] },
-  '2v2': { width: 144, height: 144, waterLevel: 62, startRadius: 7, rim: 10, starts: [{ x: 20, y: 34 }, { x: 36, y: 19 }] },
+  '1v1': { width: 160, height: 160, waterLevel: 62, startRadius: 7, rim: 10, starts: [{ x: 36, y: 40 }] },
+  '2v2': { width: 208, height: 208, waterLevel: 62, startRadius: 7, rim: 11, starts: [{ x: 30, y: 50 }, { x: 52, y: 28 }] },
   '4v4': {
-    width: 184, height: 184, waterLevel: 60, startRadius: 7, rim: 11,
-    starts: [{ x: 14, y: 42 }, { x: 24, y: 28 }, { x: 36, y: 18 }, { x: 50, y: 12 }],
+    width: 272, height: 272, waterLevel: 60, startRadius: 7, rim: 12,
+    starts: [{ x: 22, y: 64 }, { x: 36, y: 42 }, { x: 54, y: 27 }, { x: 76, y: 18 }],
   },
 } satisfies Record<string, MapPreset>;
 
