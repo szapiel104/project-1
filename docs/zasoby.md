@@ -26,3 +26,12 @@ Z repozytorium gry [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) (`sounds/cha
 - scream-0…4 — „human male scream multi”, [JohnsonBrandEditing](https://freesound.org/people/JohnsonBrandEditing/sounds/173944/) (CC0): krzyk uciekającego chłopa i poległego
 - alert-0 — „Huh? - Vocal”, [davdud101](https://freesound.org/people/davdud101/sounds/150505/) (CC0); alert-1 — „Huh_male.wav”, [Adam_N](https://freesound.org/people/Adam_N/sounds/166129/) (CC0): odważny chłop na widok wroga
 - Zmiany: mono 32 kHz, wyrównana głośność, krótsze wybrzmienie.
+
+## Muzyka (CC0, bez wymogu podpisu) — `public/music/`
+Pobrane przez Michała z OpenGameArt, przekonwertowane do OGG i wyrównane głośnościowo:
+- kings-feast.ogg — „Medieval: King's Feast”, RandomMind — https://opengameart.org/content/medieval-kings-feast (menu, dzień)
+- minstrel-dance.ogg — „Medieval: Minstrel Dance”, RandomMind — https://opengameart.org/node/92393 (dzień)
+- old-tower-inn.ogg — „Medieval: The Old Tower Inn”, RandomMind — https://opengameart.org/content/medieval-the-old-tower-inn (noc, menu)
+- battle.ogg — „Medieval Battle”, RandomMind — https://opengameart.org/content/medieval-battle (bitwa)
+- peasantry.ogg — „Peasant Theme”, nihilocrat — https://opengameart.org/content/peasant-theme (dzień)
+Gdy pliku brak albo nastrój nie ma utworu, gra składa muzykę sama (src/audio/sfx.ts).

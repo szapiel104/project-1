@@ -699,7 +699,13 @@ function newPiece(night: boolean): Piece {
 // --- utwory z plików: public/music/<plik>.ogg, nastrój wybiera, kiedy grają; między utworami chwila ciszy ---
 type Mood = 'day' | 'night' | 'battle' | 'menu';
 /** Lista utworów (darmowe, CC0 — źródła w docs/zasoby.md). Pusta lista = muzyka generowana. */
-export const MUSIC_TRACKS: { file: string; moods: Mood[] }[] = [];
+export const MUSIC_TRACKS: { file: string; moods: Mood[] }[] = [
+  { file: 'kings-feast.ogg', moods: ['menu', 'day'] },
+  { file: 'minstrel-dance.ogg', moods: ['day'] },
+  { file: 'peasantry.ogg', moods: ['day'] },
+  { file: 'old-tower-inn.ogg', moods: ['night', 'menu'] },
+  { file: 'battle.ogg', moods: ['battle'] },
+];
 let trackEl: HTMLAudioElement | null = null, trackGain: GainNode | null = null, trackMood: Mood | null = null, trackFile = '', trackRestUntil = 0;
 function playTracks(c: AudioContext, mood: Mood, inMenu: boolean): boolean {
   const want: Mood = inMenu ? 'menu' : mood;

@@ -31,3 +31,6 @@ Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://g
 - Mapy normalnych `*_n.jpg` policzone z jasności zdjęć.
 - Rock 026 → `cliff.jpg` (poszarpane turnie w górach)
 - Ground 079 S → `sand.jpg` (plaże nad jeziorami i morzem)
+
+## Muzyka (CC0)
+RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old Tower Inn”, „Medieval Battle”; nihilocrat — „Peasant Theme”. Wszystkie z OpenGameArt na licencji CC0 (szczegóły w docs/zasoby.md). Dziękujemy autorom.
