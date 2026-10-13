@@ -502,15 +502,9 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   if (crops) for (const o of crops) o.rotation.x = Math.sin(time * 1.3 + o.position.z * 3) * 0.06;
   const runner = model.getObjectByName('runner');
   if (runner && active) runner.rotation.y += dt * 2.2;
+  // stary dym z brył (kanciaste kule) wyłączony: dym z kominów i ognisk rysuje teraz system cząstek (ambience)
   const smoke = model.getObjectByName('smoke');
-  if (smoke) {
-    smoke.visible = active;
-    if (active) smoke.children.forEach((puff, i) => {
-      const k = (time * 0.35 + i / smoke.children.length) % 1;
-      puff.position.set(Math.sin((k + i) * 5) * 0.12 + k * 0.25, k * 1.5, 0);
-      puff.scale.setScalar(0.5 + k * 1.1);
-    });
-  }
+  if (smoke && smoke.visible) smoke.visible = false;
 }
 
 type Builder = (g: THREE.Group, team: THREE.Material, flag: THREE.Material) => void;
