@@ -34,8 +34,7 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x2a2118);
-  scene.fog = new THREE.Fog(0x2a2118, 4, 9);
+  scene.background = new THREE.Color(0x120d08);
   scene.add(new THREE.HemisphereLight(0xe8e0d0, 0x3a3020, 1.3));
   const sun = new THREE.DirectionalLight(0xffe2b8, 2.6);
   sun.position.set(2, 4, 3);
@@ -44,7 +43,14 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
   Object.assign(sun.shadow.camera, { left: -1.5, right: 1.5, top: 1.5, bottom: -1.5 });
   scene.add(sun);
   // kawałek ubitej łąki pod postaciami
-  const ground = new THREE.Mesh(new THREE.CircleGeometry(1.6, 40), new THREE.MeshStandardMaterial({ color: 0x5d6a3a, roughness: 1 }));
+  // brzeg placka rozmywa się w ciemne tło (bez twardego koła)
+  const fade = document.createElement('canvas');
+  fade.width = fade.height = 128;
+  const fc = fade.getContext('2d')!;
+  const grad = fc.createRadialGradient(64, 64, 10, 64, 64, 64);
+  grad.addColorStop(0, '#fff'); grad.addColorStop(0.55, '#bbb'); grad.addColorStop(1, '#000');
+  fc.fillStyle = grad; fc.fillRect(0, 0, 128, 128);
+  const ground = new THREE.Mesh(new THREE.CircleGeometry(1.6, 40), new THREE.MeshStandardMaterial({ color: 0x4a4a2c, roughness: 1, alphaMap: new THREE.CanvasTexture(fade), transparent: true, depthWrite: false }));
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
