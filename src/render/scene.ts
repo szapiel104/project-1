@@ -7,6 +7,7 @@ import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
+import { Clutter } from './clutter';
 import { crowGeometry, WOLF_HIPS, wolfParts } from './creatures';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
@@ -218,6 +219,8 @@ export class GameRenderer {
   private buildingLayer = new THREE.Group();
   /** Dym z kominów, iskry, blask okien, mgła przy ziemi */
   private ambience = new Ambience();
+  /** Beczki, worki, siano i śmieci przy domach */
+  private clutter = new Clutter();
   private fxAt = 0;
   private mistLevel = 0;
   private buildingMeshes = new Map<number, THREE.Group>();
@@ -296,6 +299,7 @@ export class GameRenderer {
     this.sun = sun;
     this.scene.add(this.buildingLayer);
     this.scene.add(this.ambience.group);
+    this.scene.add(this.clutter.group);
 
     const flat = (geo: THREE.BufferGeometry, color: number, opacity = 1): THREE.Mesh => {
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: opacity < 1, opacity, depthWrite: false }));
@@ -476,6 +480,7 @@ export class GameRenderer {
     this.facing.clear();
     this.strides.clear();
     this.storesTick = -1;
+    this.clutter.reset();
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
     this.scene.add(this.view.group);
@@ -1006,6 +1011,7 @@ export class GameRenderer {
         list.push({ mesh, fx, smoke: SMOKY.has(BUILDINGS[b.type]!.id), burning: !!fire?.visible });
       }
       this.ambience.setSources(list, focus);
+      this.clutter.sync(g, (x, y) => v.heightAt(x, y));
       // chłopi wydeptują ścieżki tam, gdzie chodzą najczęściej
       let n = 0;
       for (const u of g.units) {
