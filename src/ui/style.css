@@ -229,7 +229,7 @@ body.menu-open #ui .bottom, body.menu-open #ui .toast { display: none; }
 .set-name { text-transform: none; letter-spacing: 0; font-family: var(--text); font-size: 16px; font-weight: 700; }
 .set-val { min-width: 4.5ch; text-align: right; font-variant-numeric: tabular-nums; font-weight: 700; }
 .menu-foot { display: flex; justify-content: space-between; gap: 10px; }
-.menu-foot .menu-back { margin-left: auto; min-width: 180px; }
+.menu-foot .menu-back { min-width: 180px; }
 /* belka budowy i inne listy przewijane w bok: bez widocznego paska przewijania */
 .cards, .menu-panel { scrollbar-width: none; }
 .cards::-webkit-scrollbar, .menu-panel::-webkit-scrollbar { display: none; }
@@ -764,3 +764,47 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
   .menu-panel, .menu-panel.wide { max-height: none; padding-top: 14px; padding-bottom: 18px; }
   .newgame-foot { bottom: -18px; padding-bottom: 18px; }
 }
+
+/* ===== Zakładki u góry (ustawienia, jak grać): cała szerokość panelu zostaje na treść ===== */
+.menu-tabs.top { grid-template-columns: 1fr; gap: 14px; min-height: 0; }
+.menu-tabs.top .menu-nav { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 2px solid var(--wood); }
+.menu-tabs.top .menu-tab { flex: 1 1 auto; min-height: 42px; margin: 0 -1px -2px 0; text-align: center; padding: 6px 12px; font-size: 14px;
+  background: linear-gradient(#5a3d22, #3b2716); border: 1px solid var(--wood-edge); border-bottom: 2px solid var(--wood); color: var(--parchment-light); }
+.menu-tabs.top .menu-tab:hover { background: linear-gradient(#6d4a2a, #4a321c); }
+.menu-tabs.top .menu-tab[aria-selected='true'] { background: var(--parchment-light); color: var(--ink); text-shadow: none;
+  border-color: var(--wood); border-bottom-color: var(--parchment-light); box-shadow: inset 0 3px 0 var(--seal); }
+.menu-tabs.top .menu-pane { border-left: 0; padding-left: 0; gap: 0; }
+.menu-tabs.top .menu-pane > .hint { margin: 12px 0 0; }
+
+/* wiersze ustawień: nazwa z lewej, wartość z prawej, kontrolka na całą szerokość pod spodem */
+.menu-tabs.top .set-row, .set-toggle { padding: 10px 2px; border-bottom: 1px solid rgba(122, 86, 40, .28); min-height: 0; }
+.set-row.slide { grid-template-columns: 1fr auto; row-gap: 6px; }
+.set-row.slide input[type='range'] { grid-column: 1 / -1; width: 100%; min-height: 28px; accent-color: var(--seal); cursor: pointer; }
+.set-row.seg-row { grid-template-columns: 1fr; row-gap: 8px; }
+.seg { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; border: 1px solid var(--wood-edge); }
+.seg-btn { min-height: 38px; padding: 4px 8px; font-size: 14px; letter-spacing: .02em; text-transform: none; font-family: var(--text); font-weight: 600;
+  background: rgba(60, 38, 18, .07); color: var(--ink); border: 0; border-right: 1px solid rgba(91, 62, 33, .45); box-shadow: none; text-shadow: none; cursor: pointer; }
+.seg-btn:last-child { border-right: 0; }
+.seg-btn:hover { background: rgba(60, 38, 18, .16); }
+.seg-btn[aria-pressed='true'] { background: linear-gradient(#a8281f, #6e1711); color: #fff; }
+.seg-btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; position: relative; z-index: 1; }
+.set-toggle { position: relative; display: grid; grid-template-columns: 1fr 48px; align-items: center; gap: 12px; cursor: pointer; }
+.set-toggle input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.set-toggle input:checked + .dev-knob { background: #3f8a3a; }
+.set-toggle input:checked + .dev-knob::after { transform: translateX(22px); }
+.set-toggle input:focus-visible + .dev-knob { outline: 3px solid var(--ink); outline-offset: 2px; }
+
+/* stopka ustawień: Wstecz po lewej, Przywróć w innym kolorze, Zapisz na zielono po prawej */
+.set-foot { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin-top: 10px; }
+.set-foot .menu-back { margin: 0; min-width: 0; padding: 0 20px; }
+.set-foot .menu-reset { justify-self: center; min-height: 44px; padding: 0 16px; font-size: 14px; letter-spacing: .04em;
+  background: linear-gradient(#efe0b8, #d9c08a); color: var(--ink); border: 1px solid var(--wood); text-shadow: none; box-shadow: 0 2px 0 var(--wood-edge); }
+.set-foot .menu-reset:hover { background: linear-gradient(#f8ecc8, #e4cd98); }
+.set-foot .menu-save { min-height: 48px; min-width: 150px; padding: 0 22px; background: linear-gradient(#3f8a3a, #2d6a2a 60%, #24551f); border-color: #173a14; box-shadow: inset 0 1px 0 rgba(200, 255, 190, .3), 0 3px 0 #10290e; }
+.set-foot .menu-save:hover { background: linear-gradient(#4a9c44, #357a31 60%, #2a6224); }
+
+/* jak grać: galeria na pełną szerokość — lista i podgląd obok siebie bez ściskania */
+.menu-tabs.top .gallery { grid-template-columns: minmax(170px, 210px) 1fr; padding-top: 12px; }
+.menu-tabs.top .gallery-list { max-height: min(460px, calc(100vh / var(--ui, 1) - 360px)); }
+.menu-tabs.top .gallery-canvas { height: 300px; }
+.menu-tabs.top .help-list { padding-top: 12px; }

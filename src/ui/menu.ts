@@ -133,8 +133,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     body.querySelector<HTMLElement>('button, input, select')?.focus();
   };
   /** Zakładki: lista przycisków po lewej, wybrana treść po prawej */
-  const tabbed = (tabs: [string, () => Node[]][]): HTMLElement => {
-    const box = el('div', 'menu-tabs');
+  const tabbed = (tabs: [string, () => Node[]][], top = false): HTMLElement => {
+    const box = el('div', top ? 'menu-tabs top' : 'menu-tabs');
     const nav = el('div', 'menu-nav');
     nav.setAttribute('role', 'tablist');
     const pane = el('div', 'menu-pane');
@@ -315,44 +315,51 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     input.value = String(Math.round(value));
     const out = el('output', 'set-val', `${input.value}${unit}`);
     input.addEventListener('input', () => { out.textContent = `${input.value}${unit}`; onInput(Number(input.value)); });
-    row.append(lab, input, out);
+    row.classList.add('slide');
+    row.append(lab, out, input);
     return row;
   };
-  /** Lista wyboru z opisem */
+  /** Wybór z kilku opcji: rząd przycisków, wybrany podświetlony (widać od razu wszystkie możliwości) */
   const choice = <T extends string | number>(label: string, value: T, options: [T, string][], onChange: (v: T) => void): HTMLElement => {
     const row = el('div', 'set-row');
     const lab = el('label', 'set-name', label);
     const id = `set-${label.replace(/\W+/g, '-')}`;
     lab.htmlFor = id;
-    const sel = el('select');
-    sel.id = id;
-    for (const [v, name] of options) sel.append(new Option(name, String(v)));
-    sel.value = String(value);
-    sel.addEventListener('change', () => { const found = options.find(([v]) => String(v) === sel.value); if (found) onChange(found[0]); });
-    row.append(lab, sel);
+    row.classList.add('seg-row');
+    const name = el('span', 'set-name', label);
+    name.id = id;
+    const seg = el('div', 'seg');
+    seg.setAttribute('role', 'group');
+    seg.setAttribute('aria-labelledby', id);
+    const bs = options.map(([v, text]) => {
+      const b = button(text, () => { bs.forEach((x) => x.setAttribute('aria-pressed', String(x === b))); onChange(v); }, 'seg-btn');
+      b.setAttribute('aria-pressed', String(v === value));
+      return b;
+    });
+    seg.append(...bs);
+    row.append(name, seg);
     return row;
   };
   const check = (label: string, value: boolean, onChange: (v: boolean) => void): HTMLElement => {
-    const lab = el('label', 'menu-check');
+    const lab = el('label', 'set-toggle');
     const box = el('input');
     box.type = 'checkbox'; box.checked = value;
     box.addEventListener('change', () => onChange(box.checked));
-    lab.append(box, el('span', '', label));
+    lab.append(el('span', 'set-name', label), box, el('span', 'dev-knob'));
     return lab;
   };
 
   function showSettings(): void {
     const tabs = tabbed([
       [t('menu.sound'), () => {
-        const mute = button(t(muted ? 'hud.unmute' : 'hud.mute'), () => { muted = events.onMute(); mute.textContent = t(muted ? 'hud.unmute' : 'hud.mute'); mute.setAttribute('aria-pressed', String(muted)); }, 'btn-plain');
-        mute.setAttribute('aria-pressed', String(muted));
+        const mute = check('Wycisz cały dźwięk', muted, (v) => { if (v !== muted) muted = events.onMute(); });
         return [
+          mute,
           slider(t('set.master'), volume * 100, (v) => { volume = v / 100; events.onVolume(volume); }),
           slider(t('set.sfx'), settings.sfx * 100, (v) => { settings.sfx = v / 100; save(); }),
           slider(t('set.ui'), settings.ui * 100, (v) => { settings.ui = v / 100; save(); }),
           slider(t('set.amb'), settings.amb * 100, (v) => { settings.amb = v / 100; save(); }),
           slider('Muzyka', (settings.music ?? 0.45) * 100, (v) => { settings.music = v / 100; save(); }),
-          mute,
         ];
       }],
       [t('menu.graphics'), () => [
@@ -367,10 +374,12 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         check(t('set.edge'), settings.edgeScroll, (v) => { settings.edgeScroll = v; save(); }),
         el('p', 'hint', t('set.controlsHint')),
       ]],
-    ]);
-    const reset = button(t('set.reset'), () => { Object.assign(settings, DEFAULT_SETTINGS); save(); showSettings(); }, 'btn-plain');
-    const foot = el('div', 'menu-foot');
-    foot.append(reset, back());
+    ], true);
+    // zmiany zapisują się od razu; „Zapisz” potwierdza i wraca do menu
+    const reset = button(t('set.reset'), () => { Object.assign(settings, DEFAULT_SETTINGS); save(); showSettings(); }, 'menu-btn menu-reset');
+    const ok = button('Zapisz', () => { save(); showMain(); }, 'menu-btn menu-save');
+    const foot = el('div', 'menu-foot set-foot');
+    foot.append(back(), reset, ok);
     screen(t('menu.settings'), true, tabs, foot);
   }
 
@@ -413,7 +422,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       const list = el('ul', 'help-list');
       for (const k of lines) list.append(el('li', '', t(k)));
       return [list];
-    }]), ['Postacie i zwierzęta', () => [galleryPane(GALLERY.people)]], ['Budynki', () => [galleryPane(GALLERY.buildings)]]]);
+    }]), ['Postacie i zwierzęta', () => [galleryPane(GALLERY.people)]], ['Budynki', () => [galleryPane(GALLERY.buildings)]]], true);
     const foot = el('div', 'menu-foot');
     foot.append(back());
     screen(t('menu.howTo'), true, tabs, foot);
