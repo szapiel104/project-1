@@ -12,7 +12,7 @@ function modelGeo(m: ModelMesh): THREE.BufferGeometry {
   geo.setAttribute('normal', new THREE.BufferAttribute(new Int8Array(nrm.buffer, nrm.byteOffset, nrm.byteLength), 3, true));
   // kolory zapisane w sRGB (jak w Blenderze), a kolory wierzchołków w Three.js są liniowe
   const lin = new Float32Array(col.length);
-  for (let i = 0; i < col.length; i++) lin[i] = THREE.SRGBToLinear(col[i]! / 255);
+  for (let i = 0; i < col.length; i++) { const c = col[i]! / 255; lin[i] = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }
   geo.setAttribute('color', new THREE.BufferAttribute(lin, 3));
   geo.setIndex(new THREE.BufferAttribute(new Uint16Array(idx.buffer.slice(idx.byteOffset, idx.byteOffset + idx.byteLength)), 1));
   geo.computeBoundingSphere();
