@@ -1204,7 +1204,7 @@ export class GameRenderer {
       let n = 0;
       for (const u of g.units) {
         if (u.path.length === 0) continue;
-        v.wear(Math.round(u.px / 256), Math.round(u.py / 256), 0.008, 0.45);
+        v.wear(Math.round(u.px / 256), Math.round(u.py / 256), 0.005, 0.3);
         if (++n > 400) break;
       }
     }
@@ -1799,11 +1799,11 @@ export class GameRenderer {
       if (!def.wall && !def.gate && !def.road && def.id !== 'torch') {
         for (let cy = b.y - 1; cy <= b.y + fp.h + 1; cy++) for (let cx = b.x - 1; cx <= b.x + fp.w + 1; cx++) {
           const d = Math.max(b.x - cx, cx - (b.x + fp.w), b.y - cy, cy - (b.y + fp.h), 0);
-          view.wear(cx, cy, d === 0 ? 0.4 + (hash2(cx, cy, b.id) & 3) / 20 : (hash2(cx, cy, b.id) & 7) / 50);
+          if (d === 0 && (hash2(cx, cy, b.id) & 1)) view.wear(cx, cy, 0.18 + (hash2(cx, cy, b.id) & 6) / 40);
         }
         if (b.door >= 0) {
           const dx = b.door % width, dy = Math.floor(b.door / width);
-          for (let cy = dy - 1; cy <= dy + 2; cy++) for (let cx = dx - 1; cx <= dx + 2; cx++) view.wear(cx, cy, cx >= dx && cx <= dx + 1 && cy >= dy && cy <= dy + 1 ? 0.65 : 0.12);
+          for (let cy = dy - 1; cy <= dy + 2; cy++) for (let cx = dx - 1; cx <= dx + 2; cx++) view.wear(cx, cy, cx >= dx && cx <= dx + 1 && cy >= dy && cy <= dy + 1 ? 0.4 : 0);
         }
       }
       const base = mesh.getObjectByName('base');
