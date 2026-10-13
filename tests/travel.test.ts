@@ -1,3 +1,4 @@
+import { RULES } from '../src/data/rules';
 import { describe, expect, it } from 'vitest';
 import { createGame } from '../src/sim/state';
 import { step } from '../src/sim/step';
@@ -63,12 +64,12 @@ describe('wilki', () => {
     const g = createGame(9, '1v1', 2);
     for (const p of g.players) p.bot = false;
     let most = 0;
-    for (let i = 0; i < 2400 * 4; i++) { step(g, []); most = Math.max(most, g.wolves.length); }
+    for (let i = 0; i < RULES.dayTicks * 3; i++) { step(g, []); most = Math.max(most, g.wolves.length); }
     expect(most).toBeGreaterThan(1);
     expect(g.wolves.length).toBe(0); // po świcie
     const calm = createGame(9, '1v1', 0);
     for (const p of calm.players) p.bot = false;
-    for (let i = 0; i < 2400 * 4; i++) step(calm, []);
+    for (let i = 0; i < RULES.dayTicks * 3; i++) step(calm, []);
     expect(calm.wolves.length + calm.players[0]!.stats.lost).toBe(0);
   });
 });
@@ -125,7 +126,8 @@ describe('wilki polują naprawdę', () => {
     const g = createGame(9, '1v1', 2);
     for (const p of g.players) p.bot = false;
     // noc, wataha na brzegu mapy
-    while (!(((g.tick + 800) % 2400) >= 2250)) step(g, []);
+    const D = RULES.dayTicks;
+    while (!(((g.tick + D / 3) % D) >= D * 0.9375)) step(g, []);
     for (let i = 0; i < 3; i++) g.wolves.push({ id: 99001 + i, px: 2 * 256 + 128, py: (29 + i) * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
     for (let i = 0; i < 900; i++) step(g, []);
     expect(g.players.reduce((n, p) => n + p.stats.lost, 0)).toBeGreaterThan(0);

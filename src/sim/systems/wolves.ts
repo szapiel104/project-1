@@ -30,7 +30,7 @@ export function wolfSystem(g: GameState): void {
   const clock = clockAt(g.tick);
   const peaceful = g.players[0]?.level === 0;
   // nowa wataha: raz na noc (około 22:00), co drugą noc, od trzeciego dnia
-  if (!peaceful && clock.day >= 3 && clock.day % 2 === 1 && (g.tick + (RULES.startHour * RULES.dayTicks) / 24) % RULES.dayTicks === Math.floor((22 / 24) * RULES.dayTicks)) {
+  if (!peaceful && clock.day >= 2 && (g.tick + (RULES.startHour * RULES.dayTicks) / 24) % RULES.dayTicks === Math.floor((22 / 24) * RULES.dayTicks)) {
     const side = g.rng.int(4);
     const along = 4 + g.rng.int((side < 2 ? width : height) - 8);
     const tile = side === 0 ? along : side === 1 ? (height - 1) * width + along : side === 2 ? along * width : along * width + width - 1;

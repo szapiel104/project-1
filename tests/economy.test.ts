@@ -396,11 +396,12 @@ describe('pochodnie', () => {
   it('o zmierzchu ludzie zapalają pochodnie przy budynkach, a o świcie gasną', () => {
     const g = createGame(5);
     expect(g.buildings.some((b) => b.lit)).toBe(false);
-    run(g, 1700); // start o 8:00, noc zaczyna się 20:30, czyli po 1250 tickach
+    const D = RULES.dayTicks;
+    run(g, Math.round(D * 0.71)); // start o 8:00, noc zaczyna się o 20:30 (po 12,5 h), sprawdzamy ok. 1 w nocy
     const mine = g.buildings.filter((b) => b.owner === 0);
     expect(mine.every((b) => b.lit)).toBe(true);
     expect(g.units.every((u) => u.target === 0)).toBe(true);
-    run(g, 900); // po świcie
+    run(g, Math.round(D * 0.375)); // po świcie
     expect(g.buildings.some((b) => b.lit)).toBe(false);
   });
 });

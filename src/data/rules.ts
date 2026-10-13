@@ -4,8 +4,8 @@ import type { ResourceId } from './resources';
 export const RULES = {
   /** Długość „miesiąca” w tickach: co tyle rozliczane są racje, podatki i popularność */
   monthTicks: 100,
-  /** Długość doby w tickach (24 godziny gry). 2400 = 4 minuty przy tempie 1× */
-  dayTicks: 2400,
+  /** Długość doby w tickach (24 godziny gry). 7200 = 12 minut przy tempie 1× (dzień ok. 8 min, noc ok. 4) */
+  dayTicks: 7200,
   /** Godzina, o której zaczyna się gra */
   startHour: 8,
   /** Co ile ticków przybywa lub ubywa chłop */
