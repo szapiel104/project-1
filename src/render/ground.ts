@@ -108,7 +108,7 @@ const FRAG_ALBEDO = /* glsl */ `
   vec3 meadow = texture2D(tMeadow, rot(w, 0.4) / 4.6).rgb;
   vec3 forest = texture2D(tForest, rot(w, 1.3) / 4.2).rgb * vec3(1.04, 0.96, 0.84);
   vec3 pebble = texture2D(tPebble, rot(w, 2.6) / 2.9).rgb;
-  vec3 dirt = texture2D(tDirt, rot(w, 0.2) / 3.8).rgb * vec3(1.06, 0.93, 0.76);
+  vec3 dirt = texture2D(tDirt, rot(w, 0.2) / 4.5).rgb * vec3(0.95, 0.9, 0.84);
   // skała: rzut z boku na stromych ścianach, z góry na płaskim
   vec3 an = abs(vWN);
   vec3 rTop = texture2D(tRock, w / 6.0).rgb;
@@ -119,7 +119,7 @@ const FRAG_ALBEDO = /* glsl */ `
 
   // udziały: łąka w plamach, drobne kamienie i prześwity ziemi rozsiane po trawie
   float wMeadow = smoothstep(0.66, 0.9, nS.g * 0.75 + nD.b * 0.3) * 0.85;
-  float wPeb = clamp(vSplat.y + smoothstep(0.9, 0.99, nD.a * 0.7 + nS.r * 0.4) * 0.7, 0.0, 1.0);
+  float wPeb = clamp(vSplat.y + smoothstep(0.9, 0.99, nD.a * 0.7 + nS.r * 0.4) * 0.7 + vSplat.w * smoothstep(0.55, 0.8, nD.r) * 0.6, 0.0, 1.0);
   float wForest = clamp(vSplat.x * (0.75 + nS.a * 0.5), 0.0, 1.0);
   float wDirt = clamp(vSplat.w * 1.15 + smoothstep(0.95, 1.05, nS.r * 0.6 + nD.g * 0.5) * 0.6, 0.0, 1.0);
   float wRock = clamp(vSplat.z, 0.0, 1.0);
