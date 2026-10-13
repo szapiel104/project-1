@@ -47,6 +47,8 @@ export interface TerrainView {
   setWet(k: number): void;
   /** Gęsta trawa nad punktem (x, z) świata */
   updateGrass(x: number, z: number, time: number, camDist?: number): void;
+  /** Zasięg gęstej trawy (automatyczna jakość) */
+  grassReach(f: number): void;
   /** Pole zabudowane: bez trawy */
   noGrass(tile: number, on?: boolean): void;
   /** Kolor nieba odbijany przez wodę */
@@ -1264,6 +1266,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       attr.needsUpdate = true;
     },
     updateGrass(x: number, z: number, time: number, camDist?: number) { grass?.update(x, z, time, camDist); },
+    grassReach(f: number) { grass?.setReach(f); },
     noGrass(tile: number, on = true) { builtOn[tile] = on ? 1 : 0; regrass(tile); },
     lod(x: number, z: number, reach: number) {
       for (const c of lodChunks) {

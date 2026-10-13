@@ -557,6 +557,7 @@ export class GameRenderer {
     this.clouds.reset();
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
+    this.view.grassReach(this.grassReach);
     this.scene.add(this.view.group);
     const { width, height, starts } = state.map;
     this.cam.setBounds(width, height, rim + 8);
@@ -733,13 +734,17 @@ export class GameRenderer {
     this.selection.visible = true;
   }
 
+  /** Zasięg gęstej trawy wokół kamery (1 = pełny); ustawia jakość grafiki */
+  private grassReach = 1;
   /** Zawsze dzień zamiast cyklu dnia i nocy (ustawienie gracza) */
   private alwaysDay = false;
 
   /** Ustawienia grafiki i kamery z menu */
-  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean }): void {
+  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; label?: string }): void {
     if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false };
-    this.quality = `AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}`;
+    this.quality = `${o.label ? o.label + ': ' : ''}AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}, trawa ${Math.round((o.grass ?? 1) * 100)}%`;
+    this.grassReach = o.grass ?? 1;
+    this.view?.grassReach(this.grassReach);
     this.ao.enabled = o.ao !== 'off';
     this.plain.enabled = o.ao === 'off';
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');

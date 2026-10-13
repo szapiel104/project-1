@@ -21,6 +21,8 @@ export interface GrassField {
   setDensity(tile: number, v: number): void;
   /** Mnoży gęstość pola (np. wydeptanie): 1 bez zmian, 0 łyso */
   setWear(tile: number, worn: number): void;
+  /** Zasięg dywanu (1 = pełny, mniej = mniejszy krąg i mniej kęp do narysowania; automatyczna jakość) */
+  setReach(f: number): void;
   /** Zwalnia tekstury i geometrię dywanu (przy zmianie mapy) */
   dispose(): void;
 }
@@ -59,13 +61,18 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   const geo = new THREE.InstancedBufferGeometry();
   geo.index = card.index;
   for (const k of ['position', 'uv', 'normal'] as const) geo.setAttribute(k, card.getAttribute(k));
+  // kępy ułożone od środka na zewnątrz: mniejsza liczba instancji = mniejszy krąg (zasięg przy niższej jakości)
+  const cells: [number, number, number][] = [];
+  for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++) { const x = i - GRID / 2, y = j - GRID / 2; cells.push([x, y, x * x + y * y]); }
+  cells.sort((a, b) => a[2] - b[2]);
   const off = new Float32Array(GRID * GRID * 2);
-  for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++) { off[(j * GRID + i) * 2] = i - GRID / 2; off[(j * GRID + i) * 2 + 1] = j - GRID / 2; }
+  const dist = new Float32Array(GRID * GRID);
+  cells.forEach((c, k) => { off[k * 2] = c[0]; off[k * 2 + 1] = c[1]; dist[k] = Math.sqrt(c[2]); });
   geo.setAttribute('aCell', new THREE.InstancedBufferAttribute(off, 2));
   geo.instanceCount = GRID * GRID;
 
   const uni = {
-    uOrigin: { value: new THREE.Vector2() }, uTime: { value: 0 }, uMap: { value: new THREE.Vector2(w, h) }, uFade: { value: 1 },
+    uOrigin: { value: new THREE.Vector2() }, uTime: { value: 0 }, uReach: { value: 1 }, uMap: { value: new THREE.Vector2(w, h) }, uFade: { value: 1 },
     tNoise: { value: sharedNoise() }, tGround2: { value: groundGrassTexture2() },
     tH: { value: hTex }, tMask: { value: mTex }, tBlade: { value: bladeTex }, tGround: { value: grassTex },
   };
@@ -74,7 +81,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = /* glsl */ `
       attribute vec2 aCell;
-      uniform vec2 uOrigin; uniform float uTime; uniform vec2 uMap; uniform float uFade;
+      uniform vec2 uOrigin; uniform float uTime; uniform vec2 uMap; uniform float uFade; uniform float uReach;
       uniform sampler2D tH; uniform sampler2D tMask;
       varying vec2 vGUv; varying vec2 vGW; varying float vGTone;
       float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -93,7 +100,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       float dens = texture2D(tMask, (p + 0.5 * vec2(0.0)) / uMap).r;
       // im dalej od środka, tym mniejsze kępy (miękki brzeg dywanu)
       // brzeg dywanu: kępy rzedną i maleją stopniowo przez całą drugą połowę zasięgu (bez widocznego koła)
-      float rr = length(aCell) / ${(GRID / 2).toFixed(1)};
+      float rr = length(aCell) / (${(GRID / 2).toFixed(1)} * uReach);
       float edge = 1.0 - smoothstep(0.35, 0.97, rr + (gHash(cell + 5.5) - 0.5) * 0.25);
       float keep = step(r3, smoothstep(0.25, 0.9, dens) * 1.1) * step(gHash(cell + 7.7), edge);
       float sz = mix(0.17, 0.32, gHash(cell + 3.7)) * keep * mix(0.55, 1.0, edge) * uFade;
@@ -139,6 +146,15 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       mesh.visible = uni.uFade.value > 0.01;
       uni.uTime.value = time;
       if (dirty) { mTex.needsUpdate = true; dirty = false; }
+    },
+    setReach(f: number) {
+      const r = Math.max(0.3, Math.min(1, f));
+      uni.uReach.value = r;
+      // instancje do promienia r·GRID/2 (dalsze i tak mają zerową wielkość)
+      const lim = (GRID / 2) * r;
+      let lo = 0, hi = dist.length;
+      while (lo < hi) { const m = (lo + hi) >> 1; if (dist[m]! <= lim) lo = m + 1; else hi = m; }
+      geo.instanceCount = lo;
     },
     setDensity(tile: number, v: number) { if (base[tile] !== v) { base[tile] = v; write(tile); dirty = true; } },
     dispose() { hTex.dispose(); mTex.dispose(); bladeTex.dispose(); geo.dispose(); card.dispose(); mat.dispose(); },

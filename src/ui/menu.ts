@@ -17,9 +17,13 @@ export interface Settings {
   ui: number;
   amb: number;
   music: number;
+  /** Gra sama dobiera jakość do komputera (mierzy płynność); ręczna zmiana grafiki to wyłącza */
+  auto: boolean;
+  /** Ostatnio dobrany poziom automatycznej jakości (następna sesja zaczyna od niego) */
+  autoTier?: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45 };
+export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true };
 
 export interface MenuEvents {
   onContinue(): void;
@@ -63,6 +67,11 @@ export function loadSettings(): Settings {
     if (typeof raw.ao === 'boolean') raw.ao = raw.ao ? 'medium' : 'off';
     return { ...DEFAULT_SETTINGS, ...(raw as Partial<Settings>) };
   } catch { return { ...DEFAULT_SETTINGS }; }
+}
+
+/** Zapisuje ustawienia w przeglądarce (też automat jakości po zmianie poziomu) */
+export function saveSettings(s: Settings): void {
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch { /* nic */ }
 }
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
@@ -117,7 +126,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   let volume = 0.6;
   let muted = false;
   const settings = loadSettings();
-  const save = (): void => { try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* nic */ } events.onSettings(settings); };
+  const save = (): void => { saveSettings(settings); events.onSettings(settings); };
+  const manual = (): void => { settings.auto = false; save(); };
 
   const button = (text: string, onClick: () => void, cls = 'menu-btn'): HTMLButtonElement => {
     const b = el('button', cls, text);
@@ -363,9 +373,11 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         ];
       }],
       [t('menu.graphics'), () => [
-        choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; save(); }),
-        choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; save(); }),
-        choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; save(); }),
+        check('Automatyczna jakość (gra sama dobiera grafikę do komputera)', settings.auto, (v) => { settings.auto = v; save(); }),
+        // ręczna zmiana wyłącza automat: gracz wie lepiej
+        choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; manual(); }),
+        choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
+        choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
         el('p', 'hint', t('set.graphicsHint')),
       ]],

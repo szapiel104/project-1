@@ -21,7 +21,8 @@ import { Lockstep, TURN } from './net/lockstep';
 import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
 import type { OnlineStart } from './ui/online';
 import { createGameChat } from './ui/chat';
-import { createMenu, loadSettings, type Settings } from './ui/menu';
+import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
+import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
@@ -281,14 +282,20 @@ function endOnline(): void {
 }
 window.addEventListener('beforeunload', () => endOnline());
 let titleScreen = true;
+/** Bieżące ustawienia (te same, które zmienia menu) i automat jakości grafiki */
+let gfx: Settings = loadSettings();
+const autoQ = new AutoQuality(gfx.autoTier ?? TOP_TIER - 1);
 function applySettings(st: Settings): void {
-  renderer.setGraphics(st);
+  gfx = st;
+  // automat: cienie, cieniowanie zagłębień, rozdzielczość i zasięg trawy z poziomu dobranego do komputera
+  if (st.auto) { const q = TIERS[autoQ.tier]!; renderer.setGraphics({ ...st, ...q, label: `automat ${autoQ.tier + 1}/${TIERS.length}` }); }
+  else renderer.setGraphics({ ...st, grass: 1 });
   setBusVolume('sfx', st.sfx);
   setBusVolume('ui', st.ui);
   setBusVolume('amb', st.amb);
   setBusVolume('music', st.music ?? 0.45);
 }
-applySettings(loadSettings());
+applySettings(gfx);
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true): void {
   endShown = false;
@@ -1035,6 +1042,14 @@ let last = performance.now();
 let acc = 0;
 function loop(now: number): void {
   const elapsed = Math.min(250, now - last);
+  if (gfx.auto && !document.hidden) {
+    const tier = autoQ.frame(now - last);
+    if (tier !== null) {
+      gfx.autoTier = tier;
+      if (!SANDBOX) saveSettings(gfx);
+      applySettings(gfx);
+    }
+  }
   last = now;
   nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
   if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
