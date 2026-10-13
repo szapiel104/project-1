@@ -171,8 +171,11 @@ export class Figures {
           const fold = y < 0.29 ? 0.9 + 0.1 * Math.cos(Math.atan2(x, z) * 7) : 1; // fałdy spódnicy pod pasem
           return fold * (0.86 + (y - 0.13) * 0.45);
         }), tunic);
-        // krokiew (odwrócone V) na piersi i plecach: znak pana, czytelny także z daleka
-        for (const z of [0.094, -0.094]) for (const side of [-1, 1]) fix(new THREE.BoxGeometry(0.02, 0.085, 0.006).rotateZ(side * 0.78).translate(side * 0.026, 0.39, z), 0xd8cca8);
+        // krzyż na piersi i plecach
+        for (const z of [0.093, -0.093]) {
+          fix(new THREE.BoxGeometry(0.024, 0.1, 0.006).translate(0, 0.385, z), 0xd8cca8);
+          fix(new THREE.BoxGeometry(0.072, 0.022, 0.006).translate(0, 0.402, z), 0xd8cca8);
+        }
         fix(lathe([[0.107, 0.285], [0.111, 0.296], [0.111, 0.31], [0.106, 0.322]], 16, 0.78), LEATHER, 'leather');
         fix(new THREE.BoxGeometry(0.03, 0.026, 0.012).translate(0, 0.303, 0.087), 0xb38a3a, 'metal');
         // czepiec kolczy: szyja dookoła, wyżej otwarty na twarz
