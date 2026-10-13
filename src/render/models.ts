@@ -10,6 +10,8 @@ export interface ModelFactory {
   /** Świerk: pień i korona z kilku pięter */
   treeTrunk(): THREE.BufferGeometry;
   treeCrown(): THREE.BufferGeometry;
+  /** Uproszczony świerk na daleki plan (pień i korona w jednej, lekkiej bryle) */
+  treeCrownFar(): THREE.BufferGeometry;
   /** Drzewo liściaste */
   leafTrunk(): THREE.BufferGeometry;
   leafCrown(): THREE.BufferGeometry;
@@ -30,12 +32,56 @@ export const proceduralModels: ModelFactory = {
     return at(new THREE.CylinderGeometry(0.06, 0.11, 0.55, 6), 0, 0.27, 0);
   },
   treeCrown() {
-    // trzy piętra gałęzi, każde węższe i lekko obrócone
-    return mergeGeometries([
-      at(new THREE.ConeGeometry(0.42, 0.55, 7), 0, 0.62, 0),
-      at(new THREE.ConeGeometry(0.33, 0.5, 7).rotateY(0.5), 0, 0.95, 0),
-      at(new THREE.ConeGeometry(0.22, 0.5, 7).rotateY(1), 0, 1.28, 0),
-    ]);
+    // Świerk z pięciu pięter gałęzi. Każde piętro to „spódnica” o postrzępionym brzegu: końce gałęzi wystają
+    // i opadają, między nimi wcięcia. Kolor w wierzchołkach: jaśniejsze końce i czubek, ciemne wnętrze przy pniu.
+    const P: number[] = [], C: number[] = [], U: number[] = [];
+    const TIERS = 5, B = 7;
+    let seed = 11;
+    const rnd = (): number => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    for (let t = 0; t < TIERS; t++) {
+      const f = t / (TIERS - 1);
+      const y0 = 0.36 + f * 1.05, R = 0.5 - f * 0.33, hT = 0.42 - f * 0.08;
+      const twist = t * 0.7;
+      const apex = [0, y0 + hT, 0];
+      const ring: number[][] = [];
+      for (let k = 0; k < B * 2; k++) {
+        const a = (k / (B * 2)) * Math.PI * 2 + twist;
+        const tip = k % 2 === 0;
+        const r = tip ? R * (0.9 + rnd() * 0.25) : R * 0.58;
+        ring.push([Math.cos(a) * r, y0 + (tip ? -0.07 * (1 - f * 0.5) : 0.06), Math.sin(a) * r, tip ? 1.25 : 0.78]);
+      }
+      for (let k = 0; k < B * 2; k++) {
+        const p0 = ring[k]!, p1 = ring[(k + 1) % (B * 2)]!;
+        for (const v of [apex, p1, p0]) {
+          P.push(v[0]!, v[1]!, v[2]!);
+          const c = v === apex ? 1.05 + f * 0.1 : v[3]!;
+          C.push(c * 0.92, c, c * 0.9);
+          U.push(v[0]! * 2 + 0.5, v[2]! * 2 + v[1]!);
+        }
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+    g.computeVertexNormals();
+    // normalne wygładzone na zewnątrz i lekko w górę: korona świeci miękko jak gęste igliwie, bez ostrych ścianek
+    const pos = g.attributes.position as THREE.BufferAttribute, nor = g.attributes.normal as THREE.BufferAttribute;
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i), z = pos.getZ(i), l = Math.hypot(x, z) || 1;
+      const n = new THREE.Vector3(x / l * 0.8 + nor.getX(i) * 0.3, 0.75, z / l * 0.8 + nor.getZ(i) * 0.3).normalize();
+      nor.setXYZ(i, n.x, n.y, n.z);
+    }
+    return g;
+  },
+  treeCrownFar() {
+    const crown = new THREE.ConeGeometry(0.46, 1.45, 6).translate(0, 1.0, 0).toNonIndexed();
+    const trunk = new THREE.CylinderGeometry(0.05, 0.08, 0.4, 4).translate(0, 0.2, 0).toNonIndexed();
+    crown.deleteAttribute('uv'); trunk.deleteAttribute('uv');
+    const g = mergeGeometries([crown, trunk])!;
+    const n = (g.attributes.position as THREE.BufferAttribute).count;
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(n * 2), 2));
+    return g;
   },
   leafTrunk() {
     return mergeGeometries([
@@ -76,8 +122,8 @@ export const proceduralModels: ModelFactory = {
         return [bx + lx * bend * t * t + -fz * ww, len * t * (1 - 0.15 * t * t), bz + lz * bend * t * t + fx * ww];
       };
       const col = (t: number): [number, number, number] => {
-        const k = 0.35 + t * 0.75;
-        return yellow ? [k * 1.15, k * 1.05, k * 0.55] : [k * 0.9, k, k * 0.75];
+        const k = 0.6 + t * 0.55;
+        return yellow ? [k * 1.12, k * 1.04, k * 0.6] : [k * 0.88, k, k * 0.72];
       };
       for (let i = 0; i < SEG; i++) {
         const t0 = i / SEG, t1 = (i + 1) / SEG;

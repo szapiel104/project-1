@@ -9,7 +9,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { BUILDINGS, footprint, workArea } from '../data/buildings';
 import { Clutter } from './clutter';
 import { Clouds } from './clouds';
-import { Flames } from './flames';
+import { Flames, flameSprite } from './flames';
 import { crowGeometry, WOLF_HIPS, wolfParts } from './creatures';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
@@ -970,6 +970,7 @@ export class GameRenderer {
   // wszystkie shadery i gra stanęłaby na 1–2 sekundy.
   private handTorch: THREE.Group | null = null;
   private handTip = new THREE.Object3D();
+  private handFlameTime = { value: 0 };
   private torchOn = false;
   private toggleHandTorch(): void {
     if (!this.handTorch) {
@@ -977,7 +978,11 @@ export class GameRenderer {
       const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.32, 6), new THREE.MeshBasicMaterial({ color: 0x3a2818 }));
       const head = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.017, 0.06, 7).translate(0, 0.17, 0), new THREE.MeshBasicMaterial({ color: 0x1e140c }));
       this.handTip.position.set(0, 0.19, 0);
-      g.add(stick, head, this.handTip);
+      // płomień jako płaska siatka przypięta do pochodni w kamerze (billboard świata rozciągał się tuż przy oku)
+      const fl = flameSprite(this.handFlameTime, 0.07, 0.15);
+      fl.position.set(0, 0.18, 0);
+      fl.rotation.x = 0.35;
+      g.add(stick, head, this.handTip, fl);
       g.rotation.x = -0.35;
       g.position.set(0.22, -0.24, -0.42);
       this.handTorch = g;
@@ -1091,7 +1096,7 @@ export class GameRenderer {
     if (dark) for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
     for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
     this.handFlameN = 0;
-    if (this.walk && this.torchOn) { this.cam.camera.updateMatrixWorld(); this.handTip.getWorldPosition(w); F.add(w, 0.13, 0.075, 0.5, 0.25); }
+    this.handFlameTime.value = this.time;
     for (const [id, mesh] of this.buildingMeshes) {
       if ((mesh.position.x - f.x) ** 2 + (mesh.position.z - f.z) ** 2 > 110 * 110) continue;
       const torchFlame = mesh.getObjectByName('torchflame');

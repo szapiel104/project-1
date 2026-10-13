@@ -11,6 +11,7 @@ import { bump, normal, pattern } from './textures';
 import { groundMaterial, waterMaterial } from './ground';
 
 const HEIGHT_SCALE = 0.03;
+const smoothstep = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
 export const HAZE = 0xcfc9b4;
 
 /** Wysokość pola w świecie 3D. Woda leży poniżej zera, góry wyrastają stromo. */
@@ -283,78 +284,114 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     fishMesh.instanceMatrix.needsUpdate = true;
   };
 
-  // Za mapą teren ciągnie się dalej tą samą siatką i teksturą: brzeg planszy przechodzi płynnie w puszczę.
-  // Góry przy krawędzi opadają łagodnie na zewnątrz, woda się kończy, a dalej są niskie pagórki pod lasem.
-  const D = TEST ? 6 : 56;
+  // Za mapą: puszcza i prawdziwe góry. Brzeg planszy przechodzi płynnie w las, dalej wznoszą się pasma
+  // (grzbiety z szumu „ridged”) i 2–3 wielkie masywy z ośnieżonymi szczytami, które giną we mgle.
+  // Siatka indeksowana: każdy wierzchołek raz, gęsta przy planszy, rzadsza daleko (tam i tak mgła).
+  const D = TEST ? 6 : 110;
   const floorCol = PHOTO_GROUND ? new THREE.Color(0.86, 0.88, 0.84) : new THREE.Color(0x46612a);
+  const nz = createNoise2D(rng(map.seed ^ 0x6d0f));
+  const ridged = (x: number, y: number, oct = 4): number => {
+    let v = 0, a = 0.5, f = 1, sum = 0;
+    for (let o = 0; o < oct; o++) { const n = 1 - Math.abs(nz(x * f, y * f)); v += n * n * a; sum += a; a *= 0.5; f *= 2.03; }
+    return v / sum;
+  };
+  // wielkie masywy: losowo po bokach i w rogach, zawsze poza planszą
+  const massifs: { x: number; y: number; r: number; hgt: number }[] = [];
+  {
+    let rs = (map.seed ^ 0x2b7e1516) >>> 0;
+    const rnd = (): number => { rs = (rs * 1664525 + 1013904223) >>> 0; return rs / 4294967296; };
+    const count = 2 + Math.floor(rnd() * 2);
+    for (let i = 0; i < count; i++) {
+      const side = (Math.floor(rnd() * 4) + i) % 4, along = 0.1 + rnd() * 0.8, out = 30 + rnd() * 30;
+      const x = side === 0 ? -out : side === 1 ? w + out : along * w;
+      const y = side === 2 ? -out : side === 3 ? h + out : along * h;
+      massifs.push({ x, y, r: 20 + rnd() * 16, hgt: 26 + rnd() * 18 });
+    }
+  }
   const outerH = (X: number, Y: number): number => {
     if (X >= 0 && X <= w && Y >= 0 && Y <= h) return corner(X, Y);
     const cx = Math.max(0, Math.min(w, X)), cy = Math.max(0, Math.min(h, Y));
     const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
     const base = Math.max(0.12, corner(cx, cy));
     const fade = Math.max(0, 1 - d / 9);
-    const hills = (Math.sin(X * 0.19 + map.seed) + Math.cos(Y * 0.23 - map.seed) + 2) * 0.25 * Math.min(1, d / 5);
-    return 0.12 + (base - 0.12) * fade * fade * (3 - 2 * fade) + hills;
+    let hh = 0.12 + (base - 0.12) * fade * fade * (3 - 2 * fade);
+    // pagórki pod lasem przy brzegu, dalej coraz wyższe zalesione pasma
+    const rr = ridged(X / 46, Y / 46);
+    hh += (0.4 + nz(X / 11, Y / 11) * 0.3) * Math.min(1, d / 5) + Math.pow(rr, 1.6) * 14 * smoothstep(8, 45, d);
+    for (const m of massifs) {
+      const dx = X - m.x, dy = Y - m.y, q = (dx * dx + dy * dy) / (m.r * m.r);
+      if (q > 9) continue;
+      const g = Math.exp(-q * 1.4);
+      hh += m.hgt * g * (0.6 + 0.4 * ridged(X / 13 + m.x, Y / 13 + m.y, 5)) * smoothstep(1, 12, d);
+    }
+    return hh;
   };
   {
     const W2 = w + 2 * D, H2 = h + 2 * D;
-    const hs = new Float32Array((W2 + 1) * (H2 + 1));
-    const cs = new Float32Array((W2 + 1) * (H2 + 1) * 3);
-    const c3 = new THREE.Color();
-    for (let j = 0; j <= H2; j++)
-      for (let i = 0; i <= W2; i++) {
-        const X = i - D, Y = j - D;
-        const k = j * (W2 + 1) + i;
-        hs[k] = outerH(X, Y);
-        const cx = Math.max(0, Math.min(w, X)), cy = Math.max(0, Math.min(h, Y));
-        const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
-        const ci = (cy * (w + 1) + cx) * 3;
-        c3.setRGB(cornerCol[ci]!, cornerCol[ci + 1]!, cornerCol[ci + 2]!);
-        if (corner(cx, cy) < 0) c3.copy(floorCol); // za jeziorem przy brzegu od razu ląd
-        const patch = 0.92 + ((hash2(X >> 2, Y >> 2, map.seed) & 63) / 63) * 0.12;
-        c3.lerp(tmp.copy(floorCol).multiplyScalar(patch), Math.min(1, d / 10));
-        cs[k * 3] = c3.r; cs[k * 3 + 1] = c3.g; cs[k * 3 + 2] = c3.b;
+    // kolumny/wiersze siatki: co 1 pole przy planszy, co 2 dalej niż 30, co 4 dalej niż 70
+    const axis = (size: number): number[] => {
+      const out: number[] = [];
+      for (let v = -D; v <= size + D;) {
+        out.push(v);
+        const dd = v < 0 ? -v : v > size ? v - size : 0;
+        v += dd >= 70 ? 4 : dd >= 30 ? 2 : 1;
       }
-    const hAt = (i: number, j: number): number => hs[Math.max(0, Math.min(H2, j)) * (W2 + 1) + Math.max(0, Math.min(W2, i))]!;
-    const P: number[] = [], C: number[] = [], N: number[] = [], U: number[] = [], S: number[] = [];
-    const nv2 = new THREE.Vector3();
-    for (let j = 0; j < H2; j++)
-      for (let i = 0; i < W2; i++) {
-        const X = i - D, Y = j - D;
-        if (X >= 0 && X < w && Y >= 0 && Y < h) continue; // plansza ma własną siatkę
-        for (const [qi, qj] of [[i, j], [i, j + 1], [i + 1, j], [i + 1, j], [i, j + 1], [i + 1, j + 1]] as const) {
-          const X2 = qi - D, Y2 = qj - D;
-          const inside = X2 >= 0 && X2 <= w && Y2 >= 0 && Y2 <= h;
-          const k = qj * (W2 + 1) + qi;
-          P.push(X2 + ox, hs[k]!, Y2 + oz);
-          if (inside) {
-            const c4 = (Y2 * (w + 1) + X2) * 4;
-            S.push(cornerSplat[c4]!, cornerSplat[c4 + 1]!, cornerSplat[c4 + 2]!, 0);
-            const ci = (Y2 * (w + 1) + X2) * 3;
-            C.push(cornerCol[ci]!, cornerCol[ci + 1]!, cornerCol[ci + 2]!);
-            N.push(cornerNor[ci]!, cornerNor[ci + 1]!, cornerNor[ci + 2]!);
-          } else {
-            // za mapą pod puszczą ściółka, wyżej na zboczach skała
-            const dd = Math.max(Math.abs(X2 - Math.max(0, Math.min(w, X2))), Math.abs(Y2 - Math.max(0, Math.min(h, Y2))));
-            S.push(Math.min(0.9, dd / 4), 0, Math.max(0, Math.min(1, (hs[k]! - 2.4) / 0.9)), 0);
-            C.push(cs[k * 3]!, cs[k * 3 + 1]!, cs[k * 3 + 2]!);
-            nv2.set(hAt(qi - 1, qj) - hAt(qi + 1, qj), 2, hAt(qi, qj - 1) - hAt(qi, qj + 1)).normalize();
-            N.push(nv2.x, nv2.y, nv2.z);
-          }
-          U.push(X2 / 5, Y2 / 5);
+      if (out[out.length - 1] !== size + D) out.push(size + D);
+      return out;
+    };
+    const xs = axis(w), ys = axis(h);
+    const NX = xs.length, NY = ys.length;
+    const P = new Float32Array(NX * NY * 3), C = new Float32Array(NX * NY * 3), N = new Float32Array(NX * NY * 3), U = new Float32Array(NX * NY * 2), S = new Float32Array(NX * NY * 4);
+    const hs = new Float32Array(NX * NY);
+    for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) hs[j * NX + i] = outerH(xs[i]!, ys[j]!);
+    const c3 = new THREE.Color(), nv2 = new THREE.Vector3();
+    for (let j = 0; j < NY; j++)
+      for (let i = 0; i < NX; i++) {
+        const X = xs[i]!, Y = ys[j]!, k = j * NX + i;
+        const inside = X >= 0 && X <= w && Y >= 0 && Y <= h;
+        P[k * 3] = X + ox; P[k * 3 + 1] = hs[k]!; P[k * 3 + 2] = Y + oz;
+        U[k * 2] = X / 5; U[k * 2 + 1] = Y / 5;
+        const cx = Math.max(0, Math.min(w, X)), cy = Math.max(0, Math.min(h, Y));
+        const ci = (cy * (w + 1) + cx) * 3, c4 = (cy * (w + 1) + cx) * 4;
+        if (inside) {
+          C[k * 3] = cornerCol[ci]!; C[k * 3 + 1] = cornerCol[ci + 1]!; C[k * 3 + 2] = cornerCol[ci + 2]!;
+          N[k * 3] = cornerNor[ci]!; N[k * 3 + 1] = cornerNor[ci + 1]!; N[k * 3 + 2] = cornerNor[ci + 2]!;
+          S[k * 4] = cornerSplat[c4]!; S[k * 4 + 1] = cornerSplat[c4 + 1]!; S[k * 4 + 2] = cornerSplat[c4 + 2]!;
+          continue;
         }
+        const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
+        c3.setRGB(cornerCol[ci]!, cornerCol[ci + 1]!, cornerCol[ci + 2]!);
+        if (corner(cx, cy) < 0) c3.copy(floorCol);
+        c3.lerp(tmp.copy(floorCol).multiplyScalar(0.92 + ((hash2(X >> 2, Y >> 2, map.seed) & 63) / 63) * 0.12), Math.min(1, d / 10));
+        C[k * 3] = c3.r; C[k * 3 + 1] = c3.g; C[k * 3 + 2] = c3.b;
+        const iL = Math.max(0, i - 1), iR = Math.min(NX - 1, i + 1), jU = Math.max(0, j - 1), jD = Math.min(NY - 1, j + 1);
+        const sx = (hs[j * NX + iR]! - hs[j * NX + iL]!) / Math.max(1e-3, xs[iR]! - xs[iL]!), sz = (hs[jD * NX + i]! - hs[jU * NX + i]!) / Math.max(1e-3, ys[jD]! - ys[jU]!);
+        nv2.set(-sx, 1, -sz).normalize();
+        N[k * 3] = nv2.x; N[k * 3 + 1] = nv2.y; N[k * 3 + 2] = nv2.z;
+        // pod lasem ściółka; skała, gdzie stromo albo wysoko (śnieg dokłada shader)
+        const rockK = Math.max(smoothstep(0.82, 0.6, nv2.y), smoothstep(13, 17, hs[k]!));
+        S[k * 4] = Math.min(0.9, d / 4) * (1 - rockK); S[k * 4 + 2] = rockK;
+      }
+    const idx: number[] = [];
+    for (let j = 0; j < NY - 1; j++)
+      for (let i = 0; i < NX - 1; i++) {
+        // komórki leżące całe na planszy pomijamy: plansza ma własną siatkę
+        if (xs[i]! >= 0 && xs[i + 1]! <= w && ys[j]! >= 0 && ys[j + 1]! <= h) continue;
+        const a = j * NX + i, b = a + 1, c = a + NX, e = c + 1;
+        idx.push(a, c, b, b, c, e);
       }
     const og = new THREE.BufferGeometry();
-    og.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
-    og.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
-    og.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
-    og.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
-    og.setAttribute('splat', new THREE.Float32BufferAttribute(S, 4));
+    og.setAttribute('position', new THREE.BufferAttribute(P, 3));
+    og.setAttribute('color', new THREE.BufferAttribute(C, 3));
+    og.setAttribute('normal', new THREE.BufferAttribute(N, 3));
+    og.setAttribute('uv', new THREE.BufferAttribute(U, 2));
+    og.setAttribute('splat', new THREE.BufferAttribute(S, 4));
+    og.setIndex(idx);
     const outer = new THREE.Mesh(og, ground.material);
     outer.receiveShadow = true;
     outer.castShadow = true;
     group.add(outer);
-    // daleko za lasem płaska ciemna równina, którą i tak zakrywa mgła
+    // daleko za górami płaska ciemna równina, którą i tak zakrywa mgła
     const far = new THREE.Mesh(new THREE.PlaneGeometry(W2 + 600, H2 + 600), new THREE.MeshStandardMaterial({ color: 0x2c3a1c, roughness: 1 }));
     far.rotation.x = -Math.PI / 2;
     far.position.y = -0.2;
@@ -372,7 +409,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
 
   // obiekty na polach: jedna siatka instancjonowana na rodzaj
-  type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3 };
+  type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3; frost?: number };
+  const FROST = new THREE.Color(0xdfe7ea);
   const pines: Item[] = [], leafy: Item[] = [], rocks: Item[] = [], ores: Item[] = [], tufts: Item[] = [];
   const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [];
   const m = new THREE.Matrix4();
@@ -425,6 +463,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const grassMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
   grassMat.onBeforeCompile = (sh) => {
     sh.uniforms.windTime = windTime;
+    // źdźbło świeci tak samo z obu stron (bez czarnych odwrotów) i lekko prześwituje w słońcu
+    sh.fragmentShader = sh.fragmentShader
+      .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);')
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * 0.12;');
     sh.vertexShader = 'uniform float windTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       #ifdef USE_INSTANCING
         vec2 ip = instanceMatrix[3].xz;
@@ -441,6 +483,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
    */
   type Inst = { setMatrixAt(i: number, m: THREE.Matrix4): void; setColorAt(i: number, c: THREE.Color): void; instanceMatrix: { needsUpdate: boolean } };
   const CHUNK = 40;
+  // korony świerków: kolory z wierzchołków (jasne końce gałęzi, ciemne wnętrze), gładkie cieniowanie, widoczne z obu stron
+  const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: pattern('needles') });
   const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material): Inst | null => {
     if (!list.length) return null;
     const mat = own ?? new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
@@ -453,7 +497,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const dirty = new Set<THREE.InstancedMesh>();
     for (const idx of buckets.values()) {
       const mesh = new THREE.InstancedMesh(g, mat, idx.length);
-      idx.forEach((i, j) => { const it = list[i]!; mesh.setMatrixAt(j, it.m); mesh.setColorAt(j, tint.setHex(color).multiplyScalar(it.shade)); where[i] = [mesh, j]; });
+      idx.forEach((i, j) => { const it = list[i]!; mesh.setMatrixAt(j, it.m); tint.setHex(color).multiplyScalar(it.shade); if (it.frost) tint.lerp(FROST, it.frost); mesh.setColorAt(j, tint); where[i] = [mesh, j]; });
       mesh.computeBoundingSphere();
       if (mesh.boundingSphere) mesh.boundingSphere.radius += 3; // zapas na ścinane, przechylające się drzewa
       mesh.castShadow = shadow;
@@ -480,41 +524,48 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       if (stump) { stumpOf.set(item, stumpItems.length); stumpItems.push(item); }
     });
   };
-  plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark'), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles'));
+  plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark'), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat));
   plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark'), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves'));
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
-  // Im dalej, tym drzewa większe i ciemniejsze, a resztę gasi mgła.
+  // Las wchodzi na zbocza aż pod granicę lasu; wyżej drzewa rzedną, są niższe i oszronione, nad nimi tylko skała i śnieg.
+  // Dalekie drzewa mają uproszczony model (mniej trójkątów), a mgła i tak zaciera szczegóły.
   {
     const near: { pine: Item[]; leaf: Item[] } = { pine: [], leaf: [] };
     const far: { pine: Item[]; leaf: Item[] } = { pine: [], leaf: [] };
-    const step = D > 40 ? 1.7 : 2.2;
     const e3 = new THREE.Euler();
-    for (let gz = -h / 2 - D; gz < h / 2 + D; gz += step)
-      for (let gx = -w / 2 - D; gx < w / 2 + D; gx += step) {
+    const slopeAt = (X: number, Y: number): number => Math.hypot(outerH(X + 1, Y) - outerH(X - 1, Y), outerH(X, Y + 1) - outerH(X, Y - 1)) / 2;
+    for (let gz = -h / 2 - D; gz < h / 2 + D; gz += 1.7)
+      for (let gx = -w / 2 - D; gx < w / 2 + D; gx += 1.7) {
         const r = hash2(Math.round(gx * 10), Math.round(gz * 10), map.seed ^ 0x7f4a7c15);
+        const dist = Math.max(Math.abs(gx) - w / 2, Math.abs(gz) - h / 2);
+        // dalej rzadziej: co drugi punkt za 40 pól, co trzeci za 75 (mgła)
+        if (dist > 75 ? r % 3 !== 0 : dist > 40 ? (r & 1) === 1 : false) continue;
+        const step = dist > 40 ? 3 : 1.7;
         const px = gx + ((r & 255) / 255 - 0.5) * step * 0.9;
         const pz = gz + (((r >>> 8) & 255) / 255 - 0.5) * step * 0.9;
-        const dist = Math.max(Math.abs(px) - w / 2, Math.abs(pz) - h / 2);
-        if (dist < 0.9) continue;
-        const groundY = outerH(Math.round(px - ox), Math.round(pz - oz));
-        if (groundY > 2.2) continue; // na zboczach gór za mapą bez drzew
-        const k = Math.min(1, dist / D);
-        const size = (1.25 + k * 1.6) * (0.8 + ((r >>> 16) & 255) / 255 * 0.5);
-        const leafTree = (r >>> 24) % 4 === 0;
+        const dd = Math.max(Math.abs(px) - w / 2, Math.abs(pz) - h / 2);
+        if (dd < 0.9) continue;
+        const X = px - ox, Y = pz - oz;
+        const groundY = outerH(X, Y);
+        const treeline = 12.5 + nz(X / 30, Y / 30) * 2.5;
+        if (groundY > treeline || slopeAt(X, Y) > 0.9) continue;
+        const alt = smoothstep(treeline - 6, treeline, groundY);
+        if (((r >>> 20) & 255) / 255 < alt * 0.7) continue; // pod granicą lasu coraz rzadziej
+        const k = Math.min(1, dd / 60);
+        const size = (1.25 + k * 1.2) * (0.8 + ((r >>> 16) & 255) / 255 * 0.5) * (1 - alt * 0.45);
+        const leafTree = groundY < 4 && (r >>> 24) % 4 === 0; // wysoko tylko świerki
         const pos = new THREE.Vector3(px, groundY - 0.05, pz);
         const qq = new THREE.Quaternion().setFromEuler(e3.set(0, ((r >>> 4) & 63) / 10, 0));
         const sc = new THREE.Vector3(size * 1.25, size * 1.6 * (leafTree ? 1 : 1.15), size * 1.25);
-        const item = { m: new THREE.Matrix4().compose(pos, qq, sc), shade: (1 - k * 0.7) * (0.82 + ((r >>> 12) & 15) / 60), tile: -1, pos, q: qq, s: sc } as Item;
-        const bucket = dist < 9 ? near : far;
+        const item = { m: new THREE.Matrix4().compose(pos, qq, sc), shade: (1 - k * 0.5) * (0.82 + ((r >>> 12) & 15) / 60), tile: -1, pos, q: qq, s: sc, frost: smoothstep(treeline - 5.5, treeline - 0.5, groundY) * 0.75 } as Item;
+        const bucket = dd < 14 ? near : far;
         (leafTree ? bucket.leaf : bucket.pine).push(item);
       }
     instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark');
-    instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles');
+    instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles', true, pineMat);
     instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark');
     instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves');
-    instanced(models.treeTrunk(), 0x5a3e26, far.pine, undefined, false);
-    instanced(models.treeCrown(), 0x35703a, far.pine, 'needles', false);
-    instanced(models.leafTrunk(), 0x5a3e26, far.leaf, undefined, false);
+    instanced(models.treeCrownFar(), 0x35703a, far.pine, 'needles', false);
     instanced(models.leafCrown(), 0x55903a, far.leaf, 'leaves', false);
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami

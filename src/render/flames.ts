@@ -73,6 +73,20 @@ void main() {
   gl_FragColor = vec4(vec3(1.0, 0.55, 0.18), a);
 }`;
 
+/** Pojedynczy płomień jako zwykła siatka (np. pochodnia w ręce przy kamerze): ten sam shader ognia, płaszczyzna zwrócona do patrzącego */
+export function flameSprite(time: { value: number }, w = 0.06, h = 0.13): THREE.Mesh {
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { time },
+    vertexShader: /* glsl */ `varying vec2 vUv; varying float vSeed; varying float vI;
+      void main() { vUv = uv; vSeed = 0.37; vI = 1.0; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+    fragmentShader: FLAME_FRAG, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+  });
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h).translate(0, h / 2, 0), mat);
+  m.renderOrder = 7;
+  m.frustumCulled = false;
+  return m;
+}
+
 export class Flames {
   readonly group = new THREE.Group();
   private flame: THREE.InstancedMesh;
