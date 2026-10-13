@@ -65,12 +65,13 @@ Czeka — poprawki:
 ## Wydajność — do zrobienia (13.10.2026, gra dla wielu graczy w przeglądarce)
 Zrobione 13.10: kawałki roślinności 40×40 z odrzucaniem poza ekranem, poziomy szczegółów (drobiazgi znikają daleko, świerki i liściaste przełączają się na proste modele), rzadsza puszcza daleko, kępy trawy bez cieni, siatka gór za mapą indeksowana i rzadsza w oddali, tekstury terenu z numerem wersji.
 
+Zrobione 13.10 wieczorem: automatyczna jakość (5 poziomów: cienie, AO, rozdzielczość, zasięg trawy; schodzi przy < 45 FPS, raz na sesję próbuje wyżej, poziom zapamiętany; wyłącza się po ręcznej zmianie grafiki).
+
 Większe rzeczy na później:
 - Impostory drzew: dalekie drzewa jako płaskie obrazki (atlas zdjęć drzewa z 8 stron) — jeden czworokąt zamiast kilkudziesięciu trójkątów
 - Wspólny bufor instancji dla wszystkich kawałków jednego rodzaju (BatchedMesh) — mniej wywołań rysowania
 - Cienie kaskadowe albo cień tylko z budynków i drzew blisko kamery; statyczna mapa cieni dla gór i puszczy
 - Tekstury w formacie KTX2/Basis (kompresja na karcie graficznej: 4–6× mniej pamięci, szybsze wczytanie) i tablica tekstur zamiast 11 osobnych próbek w shaderze terenu
-- Automatyczna jakość: pomiar FPS przez pierwsze sekundy i dobór gęstości trawy, cieni i AO do komputera gracza
 - Prawdziwy 2K/4K dla terenu: paczka ambientCG w 2K/4K (pobrać ręcznie albo wgrać do repo przez Michała — z kontenera serwisy z teksturami są zablokowane)
 - Symulacja w Web Workerze (rysowanie nie czeka na logikę), szczególnie przy grze 4 na 4
 - Wczytywanie zasobów w tle z paskiem postępu i pamięcią podręczną (Service Worker), żeby drugi start był natychmiastowy
