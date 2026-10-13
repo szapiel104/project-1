@@ -20,3 +20,12 @@ Strzecha: [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) z Pol
 Dla tekstur bez mapy normalnych mapa jest liczona z jasności obrazu.
 
 Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://github.com/null3d-engine/sample-assets). Zmiany: kolor zamieniony na odcienie szarości i rozjaśniony (barwę nadaje materiał w grze).
+
+## Podłoże i teren (ambientCG, CC0) — `public/textures/terrain/`
+- Grass 001 → `grass1.jpg`, Grass 004 → `grass2.jpg` (trawa w dwóch odmianach)
+- Ground 003 → `meadow.jpg` (łąka z prześwitami ziemi i kamykami)
+- Ground 015 → `forest.jpg` (ściółka leśna: igliwie, patyki)
+- Ground 062 S → `pebble.jpg` (żwir, złoża kamienia)
+- Ground 036 → `dirt.jpg` (wydeptana ziemia)
+- Rock 022 → `rock.jpg` (skała na zboczach)
+- Mapy normalnych `*_n.jpg` policzone z jasności zdjęć.

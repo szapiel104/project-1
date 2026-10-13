@@ -53,10 +53,44 @@ export const proceduralModels: ModelFactory = {
     ]);
   },
   tuft() {
-    // gęstsza kępa: siedem źdźbeł różnej długości rozchylonych na boki
-    const blade = (rot: number, lean: number, len: number): THREE.BufferGeometry =>
-      new THREE.ConeGeometry(0.03, len, 3).translate(0, len / 2, 0).rotateZ(lean).rotateY(rot);
-    return mergeGeometries([blade(0, 0.28, 0.24), blade(0.9, -0.2, 0.3), blade(1.8, 0.35, 0.2), blade(2.7, -0.3, 0.26), blade(3.6, 0.18, 0.32), blade(4.5, -0.38, 0.2), blade(5.4, 0.1, 0.27)]);
+    // kępa trawy: kilkanaście cienkich, wygiętych źdźbeł (taśma zwężająca się ku górze, trzy odcinki),
+    // u nasady ciemne, na końcach jaśniejsze i żółtawe; normalne w górę, więc kępa świeci jak ziemia pod nią
+    const P: number[] = [], C: number[] = [], N: number[] = [];
+    let seed = 7;
+    const rnd = (): number => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+    const BL = 16, SEG = 3;
+    for (let b = 0; b < BL; b++) {
+      const ang = rnd() * Math.PI * 2;
+      const r0 = rnd() * 0.07;
+      const bx = Math.cos(ang) * r0, bz = Math.sin(ang) * r0;
+      const face = rnd() * Math.PI * 2;
+      const len = 0.13 + rnd() * 0.17;
+      const bend = 0.05 + rnd() * 0.12;
+      const wid = 0.011 + rnd() * 0.008;
+      const fx = Math.cos(face), fz = Math.sin(face);
+      // kierunek pochylenia: na zewnątrz kępy
+      const lx = Math.cos(ang), lz = Math.sin(ang);
+      const yellow = rnd() < 0.3;
+      const pt = (t: number, side: number): [number, number, number] => {
+        const ww = wid * (1 - t) * side;
+        return [bx + lx * bend * t * t + -fz * ww, len * t * (1 - 0.15 * t * t), bz + lz * bend * t * t + fx * ww];
+      };
+      const col = (t: number): [number, number, number] => {
+        const k = 0.35 + t * 0.75;
+        return yellow ? [k * 1.15, k * 1.05, k * 0.55] : [k * 0.9, k, k * 0.75];
+      };
+      for (let i = 0; i < SEG; i++) {
+        const t0 = i / SEG, t1 = (i + 1) / SEG;
+        const a = pt(t0, -1), bb = pt(t0, 1), c = pt(t1, -1), d = pt(t1, 1);
+        const ca = col(t0), cc = col(t1);
+        for (const [v, cl] of [[a, ca], [bb, ca], [c, cc], [c, cc], [bb, ca], [d, cc]] as const) { P.push(...v); C.push(...cl); N.push(lx * 0.25, 0.95, lz * 0.25); }
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    g.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
+    g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+    return g;
   },
   bush() {
     return mergeGeometries([
@@ -67,9 +101,13 @@ export const proceduralModels: ModelFactory = {
     ]);
   },
   flower() {
+    // kwiat polny: cienka łodyżka i mała, płaska główka z pięciu płatków (z góry widać kolorową gwiazdkę, nie kulkę)
+    const petals: THREE.BufferGeometry[] = [];
+    for (let i = 0; i < 5; i++) petals.push(new THREE.SphereGeometry(0.018, 5, 3).scale(1, 0.3, 0.55).translate(0.02, 0.13, 0).rotateY((i / 5) * Math.PI * 2).toNonIndexed());
     return mergeGeometries([
-      new THREE.CylinderGeometry(0.008, 0.008, 0.16, 3).translate(0, 0.08, 0).toNonIndexed(),
-      new THREE.IcosahedronGeometry(0.04, 0).scale(1, 0.6, 1).translate(0, 0.17, 0),
+      new THREE.CylinderGeometry(0.004, 0.005, 0.13, 3).translate(0, 0.065, 0).toNonIndexed(),
+      ...petals,
+      new THREE.SphereGeometry(0.012, 5, 3).translate(0, 0.135, 0).toNonIndexed(),
     ]);
   },
   rock() {

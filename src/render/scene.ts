@@ -1591,6 +1591,7 @@ export class GameRenderer {
     const bg = this.scene.background as THREE.Color;
     bg.setHex(a.haze).lerp(tmpColor.setHex(b.haze), k);
     (this.scene.fog as THREE.Fog).color.copy(bg);
+    this.view?.setSky(bg);
     // płynne przejście: zmierzch 19:30–21:30, świt 4:30–6:30
     const dusk = Math.max(0, Math.min(1, (hour - 19.5) / 2)), dawn = Math.max(0, Math.min(1, (6.5 - hour) / 2));
     this.night = hour >= 12 ? dusk : dawn;

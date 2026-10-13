@@ -8,6 +8,7 @@ import { hash2 } from '../sim/rng';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { ModelFactory } from './models';
 import { bump, normal, pattern } from './textures';
+import { groundMaterial, waterMaterial } from './ground';
 
 const HEIGHT_SCALE = 0.03;
 export const HAZE = 0xcfc9b4;
@@ -41,6 +42,8 @@ export interface TerrainView {
   animate(time: number): void;
   /** Mokro po deszczu: 0 sucho, 1 błoto i połyskujące drogi */
   setWet(k: number): void;
+  /** Kolor nieba odbijany przez wodę */
+  setSky(c: THREE.Color): void;
   /** Wydeptuje ziemię w narożniku pola (x, y): trawa brązowieje do gołej ziemi, do progu cap */
   wear(x: number, y: number, amount: number, cap?: number): void;
   dispose(): void;
@@ -68,23 +71,41 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const tmp = new THREE.Color();
   const cornerCol = new Float32Array((w + 1) * (h + 1) * 3);
   const cornerNor = new Float32Array((w + 1) * (h + 1) * 3);
+  // udziały warstw podłoża w narożniku: las (ściółka), żwir, skała, wydeptanie
+  const cornerSplat = new Float32Array((w + 1) * (h + 1) * 4);
+  const tileAt = (x: number, y: number): Terrain => map.tiles[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))] as Terrain;
+  // zdjęciowe podłoże ma własne barwy: kolor wierzchołka to tylko delikatny mnożnik (ruda, skała, śnieg)
+  const PHOTO_GROUND = !TEST;
+  const MUL: Record<Terrain, [number, number, number]> = {
+    [Terrain.Grass]: [1, 1, 1], [Terrain.Forest]: [0.92, 0.95, 0.9], [Terrain.Stone]: [1, 1, 1], [Terrain.Iron]: [1.12, 0.86, 0.74],
+    [Terrain.Water]: [0.8, 0.8, 0.75], [Terrain.Mountain]: [1, 1, 1],
+  };
   const tileColor = (x: number, y: number): THREE.Color =>
     tmp.setHex(TERRAIN[map.tiles[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))] as Terrain].color);
   const nv = new THREE.Vector3();
   for (let y = 0; y <= h; y++) {
     for (let x = 0; x <= w; x++) {
-      let r = 0, g = 0, b = 0;
-      for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) { const c = tileColor(x + dx, y + dy); r += c.r; g += c.g; b += c.b; }
+      let r = 0, g = 0, b = 0, sf = 0, sp = 0, sr = 0;
+      for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) {
+        const tt = tileAt(x + dx, y + dy);
+        if (PHOTO_GROUND) { const m = MUL[tt]; r += m[0]; g += m[1]; b += m[2]; } else { const c = tileColor(x + dx, y + dy); r += c.r; g += c.g; b += c.b; }
+        if (tt === Terrain.Forest) sf += 0.25;
+        if (tt === Terrain.Stone || tt === Terrain.Iron) sp += 0.25;
+        if (tt === Terrain.Mountain) sr += 0.25;
+        if (tt === Terrain.Water) sp += 0.12; // brzeg: piasek i kamyki
+      }
       const patch = 0.9 + ((hash2(x >> 2, y >> 2, map.seed) & 63) / 63) * 0.12 + ((hash2(x, y, map.seed ^ 0x55) & 15) / 15) * 0.06;
       tmp.setRGB((r / 4) * patch, (g / 4) * patch, (b / 4) * patch);
       const hh = corner(x, y);
       if (hh > 3) {
         // skała: ciemniejsze i jaśniejsze warstwy, powyżej nierównej linii śniegu biało
         const strata = 0.82 + ((hash2(x >> 1, Math.round(hh * 2.2), map.seed ^ 0x99) & 31) / 31) * 0.3;
-        tmp.setRGB(0.47 * strata, 0.45 * strata, 0.43 * strata);
+        if (PHOTO_GROUND) tmp.setRGB(strata, strata * 0.98, strata * 0.95); else tmp.setRGB(0.47 * strata, 0.45 * strata, 0.43 * strata);
         const line = 8.5 + ((hash2(x >> 2, y >> 2, map.seed ^ 0x4d) & 63) / 63) * 3;
         tmp.lerp(snow, Math.max(0, Math.min(1, (hh - line) / 1.6)));
       }
+      const si = (y * (w + 1) + x) * 4;
+      cornerSplat[si] = sf; cornerSplat[si + 1] = sp; cornerSplat[si + 2] = Math.max(sr, Math.min(1, (hh - 2.4) / 0.9)); cornerSplat[si + 3] = 0;
       const i = (y * (w + 1) + x) * 3;
       cornerCol[i] = tmp.r; cornerCol[i + 1] = tmp.g; cornerCol[i + 2] = tmp.b;
       nv.set(corner(Math.max(0, x - 1), y) - corner(Math.min(w, x + 1), y), 2, corner(x, Math.max(0, y - 1)) - corner(x, Math.min(h, y + 1))).normalize();
@@ -95,6 +116,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const col = new Float32Array(w * h * 18);
   const nor = new Float32Array(w * h * 18);
   const uv = new Float32Array(w * h * 12);
+  const spl = new Float32Array(w * h * 24);
   let p = 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -104,6 +126,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         pos[o] = qx + ox; pos[o + 1] = corner(qx, qy); pos[o + 2] = qy + oz;
         col[o] = cornerCol[ci]!; col[o + 1] = cornerCol[ci + 1]!; col[o + 2] = cornerCol[ci + 2]!;
         nor[o] = cornerNor[ci]!; nor[o + 1] = cornerNor[ci + 1]!; nor[o + 2] = cornerNor[ci + 2]!;
+        const so = (p / 3 + k) * 4, cs4 = (qy * (w + 1) + qx) * 4;
+        spl[so] = cornerSplat[cs4]!; spl[so + 1] = cornerSplat[cs4 + 1]!; spl[so + 2] = cornerSplat[cs4 + 2]!; spl[so + 3] = 0;
         // wzór trawy powtarza się co 5 pól, więc nie widać siatki
         uv[(o / 3) * 2] = qx / 5; uv[(o / 3) * 2 + 1] = qy / 5;
       });
@@ -115,6 +139,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.setAttribute('splat', new THREE.BufferAttribute(spl, 4));
   // Wydeptana ziemia: kolor narożnika przechodzi od trawy do brunatnej, ubitej gleby (przy domach, na ścieżkach chłopów)
   const baseCol = cornerCol.slice();
   const worn = new Float32Array((w + 1) * (h + 1));
@@ -130,6 +155,20 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const nv2 = Math.min(cap, worn[ci]! + amount);
     if (nv2 <= worn[ci]!) return;
     worn[ci] = nv2;
+    if (PHOTO_GROUND) {
+      const k2 = nv2 * nv2 * (3 - 2 * nv2);
+      for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) {
+        const tx = cx - dx, ty = cy - dy;
+        if (tx < 0 || ty < 0 || tx >= w || ty >= h) continue;
+        for (const slot of SLOTS[`${dx},${dy}`]!) {
+          const o = ((ty * w + tx) * 6 + slot) * 4 + 3;
+          spl[o] = k2;
+          splLo = Math.min(splLo, o); splHi = Math.max(splHi, o + 1);
+        }
+      }
+      queueMicrotask(flushWear);
+      return;
+    }
     dc.copy(dirtA).lerp(dirtB, (hash2(cx, cy, map.seed ^ 0x3131) & 255) / 255);
     const k = nv2 * nv2 * (3 - 2 * nv2) * 0.9;
     const r0 = baseCol[ci * 3]! + (dc.r - baseCol[ci * 3]!) * k, g0 = baseCol[ci * 3 + 1]! + (dc.g - baseCol[ci * 3 + 1]!) * k, b0 = baseCol[ci * 3 + 2]! + (dc.b - baseCol[ci * 3 + 2]!) * k;
@@ -144,7 +183,15 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
     queueMicrotask(flushWear);
   };
+  let splLo = Infinity, splHi = -1;
   const flushWear = (): void => {
+    if (splHi >= 0) {
+      const sa = geo.getAttribute('splat') as THREE.BufferAttribute;
+      sa.clearUpdateRanges();
+      sa.addUpdateRange(splLo, splHi - splLo);
+      sa.needsUpdate = true;
+      splLo = Infinity; splHi = -1;
+    }
     if (dirtyHi < 0) return;
     const attr = geo.getAttribute('color') as THREE.BufferAttribute;
     attr.clearUpdateRanges();
@@ -152,7 +199,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     attr.needsUpdate = true;
     dirtyLo = Infinity; dirtyHi = -1;
   };
-  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7, normalMap: normal('grass'), normalScale: new THREE.Vector2(0.8, 0.8) }));
+  const ground = new THREE.Mesh(geo, PHOTO_GROUND ? groundMaterial() : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7, normalMap: normal('grass'), normalScale: new THREE.Vector2(0.8, 0.8) }));
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(ground);
@@ -160,16 +207,36 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca
   const ripples = bump('water')?.clone() ?? null;
   if (ripples) { ripples.repeat.set(w / 14, h / 14); ripples.needsUpdate = true; }
-  const waterMat = new THREE.MeshStandardMaterial({
-    color: 0x2c6f8f, transparent: true, opacity: 0.86, roughness: 0.22, metalness: 0.3, bumpMap: ripples, bumpScale: 0.7,
-  });
+  // odległość każdego pola wody od lądu (0 brzeg … 1 głębia), na niej opiera się kolor, przejrzystość i piana
+  const shoreData = new Uint8Array(w * h * 4);
+  {
+    const dist = new Int16Array(w * h).fill(-1);
+    const queue: number[] = [];
+    for (let i = 0; i < w * h; i++) if (map.tiles[i] !== Terrain.Water) { dist[i] = 0; queue.push(i); }
+    for (let qi = 0; qi < queue.length; qi++) {
+      const i = queue[qi]!, x = i % w, y = (i - x) / w;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = ny * w + nx;
+        if (dist[j]! >= 0) continue;
+        dist[j] = dist[i]! + 1; queue.push(j);
+      }
+    }
+    for (let i = 0; i < w * h; i++) { const v = Math.min(255, Math.max(0, (dist[i]! - 0.5) * 255 / 6)); shoreData[i * 4] = v; shoreData[i * 4 + 3] = 255; }
+  }
+  const shoreTex = new THREE.DataTexture(shoreData, w, h, THREE.RGBAFormat);
+  shoreTex.magFilter = THREE.LinearFilter; shoreTex.minFilter = THREE.LinearFilter; shoreTex.needsUpdate = true;
+  const wm = waterMaterial(shoreTex, w, h);
+  const waterMat = wm.mat;
+  if (TEST) { waterMat.bumpMap = ripples; waterMat.bumpScale = 0.7; }
   const water = new THREE.Mesh(new THREE.PlaneGeometry(w, h), waterMat);
   water.rotation.x = -Math.PI / 2;
   water.position.y = -0.08;
   water.receiveShadow = true;
   group.add(water);
   // jaśniejsza płycizna przy brzegu: druga, niższa tafla o cieplejszej barwie prześwituje przez wodę
-  const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x6fae9a, roughness: 1 }));
+  const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x46533f, roughness: 1 }));
   shallow.rotation.x = -Math.PI / 2;
   shallow.position.y = -0.32;
   group.add(shallow);
@@ -201,6 +268,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const fs = new THREE.Vector3(1, 1, 1);
   const animate = (time: number): void => {
     if (ripples) ripples.offset.set(time * 0.006, time * 0.009);
+    windTime.value = time;
+    wm.time.value = time;
     if (!fishMesh) return;
     fish.forEach((f, i) => {
       const a = time * f.speed + f.phase;
@@ -217,7 +286,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Za mapą teren ciągnie się dalej tą samą siatką i teksturą: brzeg planszy przechodzi płynnie w puszczę.
   // Góry przy krawędzi opadają łagodnie na zewnątrz, woda się kończy, a dalej są niskie pagórki pod lasem.
   const D = TEST ? 6 : 56;
-  const floorCol = new THREE.Color(0x46612a);
+  const floorCol = PHOTO_GROUND ? new THREE.Color(0.86, 0.88, 0.84) : new THREE.Color(0x46612a);
   const outerH = (X: number, Y: number): number => {
     if (X >= 0 && X <= w && Y >= 0 && Y <= h) return corner(X, Y);
     const cx = Math.max(0, Math.min(w, X)), cy = Math.max(0, Math.min(h, Y));
@@ -247,7 +316,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         cs[k * 3] = c3.r; cs[k * 3 + 1] = c3.g; cs[k * 3 + 2] = c3.b;
       }
     const hAt = (i: number, j: number): number => hs[Math.max(0, Math.min(H2, j)) * (W2 + 1) + Math.max(0, Math.min(W2, i))]!;
-    const P: number[] = [], C: number[] = [], N: number[] = [], U: number[] = [];
+    const P: number[] = [], C: number[] = [], N: number[] = [], U: number[] = [], S: number[] = [];
     const nv2 = new THREE.Vector3();
     for (let j = 0; j < H2; j++)
       for (let i = 0; i < W2; i++) {
@@ -259,10 +328,15 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const k = qj * (W2 + 1) + qi;
           P.push(X2 + ox, hs[k]!, Y2 + oz);
           if (inside) {
+            const c4 = (Y2 * (w + 1) + X2) * 4;
+            S.push(cornerSplat[c4]!, cornerSplat[c4 + 1]!, cornerSplat[c4 + 2]!, 0);
             const ci = (Y2 * (w + 1) + X2) * 3;
             C.push(cornerCol[ci]!, cornerCol[ci + 1]!, cornerCol[ci + 2]!);
             N.push(cornerNor[ci]!, cornerNor[ci + 1]!, cornerNor[ci + 2]!);
           } else {
+            // za mapą pod puszczą ściółka, wyżej na zboczach skała
+            const dd = Math.max(Math.abs(X2 - Math.max(0, Math.min(w, X2))), Math.abs(Y2 - Math.max(0, Math.min(h, Y2))));
+            S.push(Math.min(0.9, dd / 4), 0, Math.max(0, Math.min(1, (hs[k]! - 2.4) / 0.9)), 0);
             C.push(cs[k * 3]!, cs[k * 3 + 1]!, cs[k * 3 + 2]!);
             nv2.set(hAt(qi - 1, qj) - hAt(qi + 1, qj), 2, hAt(qi, qj - 1) - hAt(qi, qj + 1)).normalize();
             N.push(nv2.x, nv2.y, nv2.z);
@@ -275,6 +349,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     og.setAttribute('color', new THREE.Float32BufferAttribute(C, 3));
     og.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
     og.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+    og.setAttribute('splat', new THREE.Float32BufferAttribute(S, 4));
     const outer = new THREE.Mesh(og, ground.material);
     outer.receiveShadow = true;
     outer.castShadow = true;
@@ -330,8 +405,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
       else if (t === Terrain.Grass) {
         // łąka: gęste kępy trawy, kwiaty, pojedyncze krzewy, kamyki i z rzadka większy głaz
-        if ((r >>> 7) % 2 === 0) { put(tufts, x, y, 2, 1, 0.9); if ((r >>> 9) & 1) put(tufts, x, y, 3, 0.8, 0.9); if ((r >>> 10) & 1) put(tufts, x, y, 6, 1.2, 0.9); }
-        if ((r >>> 13) % 9 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
+        // kępy rosną gęściej tam, gdzie łąka jest bujniejsza (wolny szum), na wydeptanych miejscach znikają razem z polem
+        const lush = (hash2(x >> 3, y >> 3, map.seed ^ 0x6a5d) & 255) / 255;
+        const nT = lush > 0.55 ? 3 : lush > 0.25 ? 2 : 1;
+        for (let k = 0; k < nT; k++) if (((r >>> (7 + k * 3)) & 3) !== 0) put(tufts, x, y, 2 + k * 11, 0.8 + ((r >>> (k * 5)) & 7) / 14, 0.95);
+        if ((r >>> 13) % 15 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
         if ((r >>> 16) % 23 === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
         if ((r >>> 19) % 31 === 0) put(pebbles, x, y, 5, 0.35 + ((r >>> 24) & 7) / 20, 0.8);
         if ((r >>> 21) % 173 === 0) put(pebbles, x, y, 10, 1.5, 0.4);
@@ -339,6 +417,20 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   }
   const tint = new THREE.Color();
+  // trawa: kolory z wierzchołków (ciemna nasada, jasny koniec) i lekki wiatr kołyszący czubki
+  const windTime = { value: 0 };
+  const grassMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
+  grassMat.onBeforeCompile = (sh) => {
+    sh.uniforms.windTime = windTime;
+    sh.vertexShader = 'uniform float windTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      #ifdef USE_INSTANCING
+        vec2 ip = instanceMatrix[3].xz;
+        float gust = sin(windTime * 1.7 + ip.x * 0.35 + ip.y * 0.21) * 0.6 + sin(windTime * 3.1 + ip.x * 1.3) * 0.25;
+        transformed.x += gust * 0.06 * position.y * position.y * 18.0;
+        transformed.z += gust * 0.03 * position.y * position.y * 18.0;
+      #endif`);
+  };
+  grassMat.customProgramCacheKey = () => 'grass-wind';
   /**
    * Roślinność i kamienie w kawałkach 40×40 pól: każdy kawałek to osobna siatka z własną sferą ograniczającą,
    * więc karta graficzna pomija to, czego nie widać (także w cieniach). Na dużych mapach to kilkukrotnie mniej trójkątów.
@@ -346,9 +438,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
    */
   type Inst = { setMatrixAt(i: number, m: THREE.Matrix4): void; setColorAt(i: number, c: THREE.Color): void; instanceMatrix: { needsUpdate: boolean } };
   const CHUNK = 40;
-  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): Inst | null => {
+  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material): Inst | null => {
     if (!list.length) return null;
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
+    const mat = own ?? new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
     const buckets = new Map<number, number[]>();
     list.forEach((it, i) => {
       const k = Math.floor((it.pos.x + 512) / CHUNK) * 4096 + Math.floor((it.pos.z + 512) / CHUNK);
@@ -424,7 +516,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
   plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock'), null, false);
-  plant(tufts, instanced(models.tuft(), 0x7fae45, tufts, undefined, false), null, false);
+  plant(tufts, instanced(models.tuft(), 0x7a9a48, tufts, undefined, false, grassMat), null, false);
   {
     const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false);
     const palette = [0xf4f1e6, 0xf2d24a, 0xb07ad6, 0xe8687a, 0x7fb2e6];
@@ -724,6 +816,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     fell,
     clear,
     animate,
+    setSky(c: THREE.Color) { wm.sky.value.copy(c); },
     setWet(k: number) {
       // błoto: ciemniejsza, błyszcząca ziemia na ścieżkach, mokry połysk bruku, trochę ciemniejsza trawa
       const dryC = new THREE.Color(0xffffff);
