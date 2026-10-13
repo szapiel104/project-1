@@ -837,6 +837,14 @@ function updateHoverFoe(): void {
       const d = (s.x - mouseX) ** 2 + (s.y - mouseY) ** 2;
       if (d < bd) { bd = d; hoverFoe = s.id; }
     }
+    // wrodzy chłopi pod kursorem: prawy klik = żołnierze idą na nich
+    for (const u of game.units) {
+      if (game.players[u.owner]?.team === game.players[ME]!.team) continue;
+      const p = renderer.project(u.px / 256, u.py / 256);
+      if (!p.front) continue;
+      const d = (p.sx - mouseX) ** 2 + (p.sy - 12 - mouseY) ** 2;
+      if (d < bd) { bd = d; hoverFoe = u.id; }
+    }
     // wilki pod kursorem też można zaatakować
     for (const w of game.wolves) {
       const p = renderer.project(w.px / 256, w.py / 256);

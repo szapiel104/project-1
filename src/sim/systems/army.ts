@@ -66,6 +66,13 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
 
 /** Rozkaz ataku: zaznaczeni idą na wskazanego wroga (żołnierza albo budynek). */
 export function orderAttack(g: GameState, player: number, ids: readonly number[], target: number): void {
+  // wrogi chłop: żołnierze gonią go, aż padnie albo schowa się na dobre
+  const peasant = g.units.find((u) => u.id === target);
+  if (peasant) {
+    if (team(g, peasant.owner) === team(g, player)) return;
+    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.prey = peasant.id; s.target = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.amove = false; }
+    return;
+  }
   const wolf = g.wolves.find((w) => w.id === target);
   if (wolf) {
     // polowanie na wilka: idą za nim, aż go dopadną albo ucieknie do lasu
@@ -411,12 +418,16 @@ export function armySystem(g: GameState): void {
       // brak wrogich żołnierzy: atakuje wrogich chłopów (łucznik z daleka); każdy zabity obniża popularność ich pana
       {
         let best = (def.sight + (s.up ? 3 : 0)) ** 2 + 0.1, prey: Unit | undefined;
-        for (const u of g.units) {
+        // chłop wskazany rozkazem: ten jest pierwszy, choćby był daleko (dopóki żyje)
+        const ordered = s.prey ? g.units.find((u) => u.id === s.prey) : undefined;
+        if (s.prey && !ordered) s.prey = 0;
+        if (ordered) { prey = ordered; best = ((ordered.px - s.px) / FP) ** 2 + ((ordered.py - s.py) / FP) ** 2; }
+        else for (const u of g.units) {
           if (team(g, u.owner) === team(g, s.owner)) continue;
           const dx = (u.px - s.px) / FP, dy = (u.py - s.py) / FP, d = dx * dx + dy * dy;
           if (d < best) { best = d; prey = u; }
         }
-        if (prey && (stance === 2 || tooFar((prey.py >> 8) * W + (prey.px >> 8))) && (prey.px - s.px) ** 2 + (prey.py - s.py) ** 2 > ((range || 1.5) * FP) ** 2) prey = undefined;
+        if (prey && prey !== ordered && (stance === 2 || tooFar((prey.py >> 8) * W + (prey.px >> 8))) && (prey.px - s.px) ** 2 + (prey.py - s.py) ** 2 > ((range || 1.5) * FP) ** 2) prey = undefined;
         if (prey) {
           const reach = range ? range : 1.5;
           if (best <= reach * reach) {
@@ -425,7 +436,8 @@ export function armySystem(g: GameState): void {
               s.cd = def.cooldown;
               prey.hp = (prey.hp ?? 30) - def.attack;
               prey.wait = Math.max(prey.wait, 6);
-              if (prey.hp <= 0) killPeasant(g, prey, s.owner);
+              if (prey.hp <= 0) { killPeasant(g, prey, s.owner); s.prey = 0; }
+              else peasantReacts(g, prey, s, !!range);
             }
             continue;
           }
@@ -675,6 +687,32 @@ function repairSystem(g: GameState): void {
     }
     if (best) { u.target = best.id; u.phase = Phase.ToRepair; }
   }
+}
+
+/**
+ * Chłop pod ciosem, jak kopacz w Gothicu: co trzeci (zawsze ten sam, losowo z numeru) staje i oddaje
+ * — kijem czy kilofem, ale słabo; reszta rzuca robotę i ucieka pod swój zamek albo do obozowiska.
+ */
+function peasantReacts(g: GameState, u: Unit, attacker: Soldier, ranged: boolean): void {
+  const brave = hash2(u.id, 7, 0xbad) % 100 < 33;
+  if (brave && !ranged && Math.max(Math.abs(u.px - attacker.px), Math.abs(u.py - attacker.py)) <= FP + FP / 2) {
+    if (hash2(u.id, g.tick, 0xc1b) % 100 < 60) attacker.hp -= 2; // znikome obrażenia
+    u.wait = Math.max(u.wait, 8); // stoi i się broni
+    return;
+  }
+  if ((u.fled ?? 0) > g.tick) return; // już ucieka, nie szuka nowej drogi
+  const keep = g.buildings.find((b) => b.owner === u.owner && BUILDINGS[b.type]!.id === 'keep' && b.door >= 0);
+  const camp = g.buildings.find((b) => b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots);
+  const home = keep?.door ?? camp?.door;
+  if (home === undefined) return;
+  const here = (u.py >> 8) * g.map.width + (u.px >> 8);
+  const path = findPath(g, here, (t) => t === home, 900, u.owner);
+  if (!path || !path.length) return;
+  // rzuca, co niósł, przerywa pracę i biegnie; po dobiegnięciu wraca do swoich zajęć
+  u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.target = 0;
+  u.phase = u.job ? Phase.Returning : Phase.Idle;
+  u.path = path; u.wait = 0;
+  u.fled = g.tick + 60;
 }
 
 /** Śmierć chłopa z ręki wroga: ciało zostaje, zwalnia się jego praca, a ludzie tracą zaufanie do pana */

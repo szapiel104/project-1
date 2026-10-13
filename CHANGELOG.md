@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.16.2 — atak na wrogich chłopów (2026-10-13)
+
+- Prawy klik na wrogim chłopie przy zaznaczonym wojsku = atak (kursor miecza): żołnierze gonią go, aż padnie
+- Chłop pod ciosem jak kopacz w Gothicu, zawsze tak samo dla danej osoby: co trzeci staje i oddaje (znikome obrażenia), reszta rzuca robotę i ładunek i ucieka pod swój zamek albo do obozowiska, a potem wraca do pracy
+- Żołnierze dalej sami biją wrogich chłopów, których zobaczą (każdy zabity obniża popularność ich pana)
+
 ## 0.16.1 — skrzynie i drewniane graty (2026-10-13)
 
 - Skrzynie przy domach zamiast gładkich pudełek: narożne słupki, poziome klepki ze szparami, żelazne okucia na rogach, wieko z desek z listwą; na wierzchu otwarta skrzynka z rzepą i jabłkami

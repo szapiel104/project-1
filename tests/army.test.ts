@@ -275,3 +275,21 @@ describe('walka z charakterem', () => {
   });
 });
 const UNITS_ATTACK_ARCHER = 7;
+
+describe('wrodzy chłopi', () => {
+  it('rozkaz ataku na chłopa: żołnierz go dopada, a chłop ucieka albo się słabo broni', () => {
+    const g = createGame(7);
+    for (const p of g.players) p.bot = false;
+    const u = g.units.find((x) => x.owner === 1)!;
+    const tx = u.px >> 8, ty = u.py >> 8;
+    const s: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('spearman'), px: (tx + 12) * FP + 128, py: ty * FP + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 };
+    g.soldiers.push(s);
+    step(g, [{ type: 'attack', player: 0, ids: [s.id], target: u.id }]);
+    expect(s.prey).toBe(u.id);
+    let hurt = false;
+    for (let i = 0; i < 2500 && g.units.some((x) => x.id === u.id); i++) { step(g, []); if ((g.units.find((x) => x.id === u.id)?.hp ?? 30) < 30) hurt = true; }
+    expect(hurt || !g.units.some((x) => x.id === u.id)).toBe(true);
+    // żołnierz przeżył: chłop bije słabo
+    expect(s.hp).toBeGreaterThan(40);
+  });
+});
