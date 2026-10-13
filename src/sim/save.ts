@@ -4,7 +4,7 @@ import { MAP_PRESETS } from '../data/maps';
 import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
-import type { Building, Corpse, Traveler, Wolf, GameState, PlayerState, Rubble, Soldier, Unit } from './state';
+import type { Building, Corpse, Traveler, Wolf, GameState, March, PlayerState, Rubble, Soldier, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
 export const SAVE_VERSION = 19;
@@ -31,6 +31,7 @@ export interface SaveData {
   corpses: Corpse[];
   travelers?: Traveler[];
   wolves?: Wolf[];
+  marches?: March[];
 }
 
 const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
@@ -50,7 +51,8 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     players: g.players.map((p) => ({ ...p, res: [...p.res], stats: { ...p.stats } })),
     buildings: g.buildings.map((b) => ({ ...b })),
     units: g.units.map((u) => ({ ...u, path: [...u.path] })),
-    soldiers: g.soldiers.map((x) => ({ ...x, path: [...x.path] })),
+    soldiers: g.soldiers.map((x) => ({ ...x, path: [...x.path], ...(x.slot ? { slot: [...x.slot] as [number, number] } : {}) })),
+    marches: (g.marches ?? []).map((m) => ({ ...m, path: [...m.path] })),
     corpses: g.corpses.map((c) => ({ ...c })),
     travelers: g.travelers.map((t) => ({ ...t, path: [...t.path] })),
     wolves: g.wolves.map((w) => ({ ...w, path: [...w.path] })),
@@ -69,6 +71,7 @@ export function deserialize(d: SaveData): GameState | null {
       buildings: d.buildings.map((b) => ({ ...b })),
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
       soldiers: (d.soldiers ?? []).map((x) => ({ ...x, path: [...x.path] })),
+      marches: (d.marches ?? []).map((m) => ({ ...m, path: [...m.path] })),
       corpses: (d.corpses ?? []).map((c) => ({ ...c })),
       travelers: (d.travelers ?? []).map((t) => ({ ...t, path: [...t.path] })),
       wolves: (d.wolves ?? []).map((w) => ({ ...w, path: [...w.path] })),

@@ -88,6 +88,8 @@ Dalej:
 - Dzieci i rodziny w chatach (osada rośnie sama)
 
 ## Wojsko i piechota — do zrobienia (13.10.2026)
+Zrobione 13.10 późnym wieczorem: marsz w zwartym szyku, odwrót rannych i leczenie przy twierdzy.
+
 Zrobione 13.10 wieczorem: kierunek ciosu (bok/plecy), tarcza na strzały, szarża, chybienia i trafianie swoich, odrzut przy trafieniu, padanie poległych.
 
 Zrobione 13.10: niegubione rozkazy, szyk przeciąganiem z kierunkiem, formacje (linia/blok/luźno), postawy (atak/obrona/stój), panel typów jednostek, atak w marszu, wspólne tempo oddziału, grupy pod cyframi, okrzyki na rozkaz, nowy wygląd włóczników, łuczników i chłopów.
@@ -95,8 +97,6 @@ Zrobione 13.10: niegubione rozkazy, szyk przeciąganiem z kierunkiem, formacje (
 Sterowanie:
 - Kolejka rozkazów: Shift + prawy klik dodaje kolejny punkt trasy
 - Patrol między dwoma punktami (np. wzdłuż palisady)
-- Odwrót rannych: żołnierz z małą ilością zdrowia cofa się za szyk (poza postawą „Stój”)
-- Marsz w zwartym szyku przez całą drogę (dziś każdy idzie swoją ścieżką na swoje miejsce, wspólne jest tylko tempo)
 - Numer grupy widoczny nad oddziałem / na portretach
 
 Walka:

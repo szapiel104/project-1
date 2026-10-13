@@ -82,9 +82,11 @@ describe('walka', () => {
     // wróg dostawiony dwa pola obok
     g.soldiers.push({ ...mine, id: g.nextId++, owner: 1, px: mine.px + 2 * 256, path: [], goal: -1, target: 0, cd: 0, hp: 30 });
     for (let i = 0; i < 400; i++) step(g, []);
-    expect(g.soldiers.length).toBe(1);
-    expect(g.soldiers[0]!.owner).toBe(0);
-    expect(g.soldiers[0]!.hp).toBeLessThan(60);
+    // słabszy wróg pada albo ciężko ranny ucieka z walki
+    const foe = g.soldiers.find((s) => s.owner === 1);
+    expect(!foe || !!foe.wounded).toBe(true);
+    expect(mine.hp).toBeGreaterThan(0); // (rany zdążą się zagoić, bo koszary stoją przy twierdzy)
+    if (foe) expect(foe.hp).toBeLessThan(30);
   });
 });
 
@@ -188,8 +190,9 @@ describe('szyk i postawy', () => {
     const c = openField(g);
     const me = soldier(g, 0, 'spearman', c);
     soldier(g, 1, 'spearman', c + 4, { stance: 2 });
-    for (let i = 0; i < 200; i++) step(g, []);
-    expect((me.px >> 8) - (c % g.map.width)).toBeGreaterThan(0);
+    let furthest = 0;
+    for (let i = 0; i < 200; i++) { step(g, []); furthest = Math.max(furthest, (me.px >> 8) - (c % g.map.width)); }
+    expect(furthest).toBeGreaterThan(0); // poszedł na wroga (potem ranny mógł się wycofać)
   });
 
   it('atak w marszu: po drodze bije wroga, a potem idzie dalej na miejsce', () => {

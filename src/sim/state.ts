@@ -216,6 +216,29 @@ export interface Soldier {
   hitting?: number;
   /** Strażnik miejski: numer punktu obchodu, do którego idzie */
   beat?: number;
+  /** Miejsce w zwartym szyku w marszu: [w bok, w tył] w polach względem punktu prowadzącego oddział */
+  slot?: [number, number];
+  /** Ranny: 1 = cofa się za szyk, 2 = idzie do twierdzy i tam się leczy */
+  wounded?: number;
+}
+
+/** Oddział w zwartym marszu: punkt prowadzący idzie jedną drogą, każdy żołnierz trzyma swoje miejsce obok niego */
+export interface March {
+  /** Numer rozkazu (Soldier.grp) */
+  grp: number;
+  owner: number;
+  /** Droga punktu prowadzącego (pola), aż do celu */
+  path: number[];
+  px: number;
+  py: number;
+  /** Kierunek szyku w marszu (0–7) */
+  dir: number;
+  /** Tempo najwolniejszego w oddziale */
+  pace: number;
+  /** Ile ticków czeka na maruderów bez poprawy */
+  stall: number;
+  /** Suma odległości maruderów od miejsc w szyku (do sprawdzania, czy się zbliżają) */
+  lag: number;
 }
 
 /** Ciało poległego: leży, aż zabierze je grabarz z cmentarza */
@@ -286,6 +309,8 @@ export interface GameState {
   roadPlan: Uint8Array;
   rubble: Rubble[];
   nextId: number;
+  /** Oddziały w zwartym marszu */
+  marches?: March[];
 }
 
 /** Poziom trudności botów: 0 pokojowy (tylko się bronią), 1 łatwy, 2 średni, 3 trudny */
@@ -469,7 +494,8 @@ export function stateHash(g: GameState): number {
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
-  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.path.length); for (const t of s.path) add(t); }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.path.length); for (const t of s.path) add(t); }
+  for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }
   for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); }

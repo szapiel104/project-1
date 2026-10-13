@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.17.0 — zwarty szyk i ranni (2026-10-13)
+
+- Marsz w zwartym szyku: oddział (dwóch i więcej, dalej niż 4 pola) idzie jedną drogą za wspólnym punktem prowadzącym, każdy trzyma swoje miejsce obok niego; na starcie oddział się zbiera, po drodze czeka na maruderów, a przeszkody (drzewo, woda) omija, przechodząc za punktem prowadzącym; utknięty maruder po chwili idzie sam
+- Na miejscu każdy dochodzi na swoje pole i obraca się we wskazanym kierunku; atak w marszu zatrzymuje cały oddział, dopóki trwa walka
+- Odwrót rannych: żołnierz z 30% zdrowia albo mniej ustępuje z walki 4 pola za szyk (od wroga), nie walczy; gdy wroga już nie widać, idzie do twierdzy; gdy wróg podchodzi, cofa się dalej
+- Przy własnej twierdzy (do 3 pól) każdy żołnierz odzyskuje 1 punkt zdrowia co 1,5 s; wyleczony do 90% ranny wraca na swoje miejsce w szyku
+- Postawa „Stój”, łucznicy na wieżach i straż miejska się nie wycofują; nowy rozkaz gracza zdejmuje rannemu odwrót
+
 ## 0.16.6 — nowy wilk i kruk (2026-10-13)
 
 - Wilk od nowa: głęboka klatka, wcięty brzuch, kudłaty kark, długi pysk z jasną żuchwą i policzkami, stojące uszy, futro z ciemnym siodłem na grzbiecie i jasnym brzuchem; przednie i tylne łapy różne (tylne z mocnym udem i skokiem), puszysta kita z ciemnym końcem
