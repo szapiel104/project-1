@@ -162,6 +162,14 @@ describe('praca chłopów', () => {
     expect(site.build).toBe(0);
   });
 
+  it('przy wrogim wojsku nie da się budować', () => {
+    const g = createGame(5);
+    const at = spot(g, 'house');
+    expect(canPlace(g, 0, buildingIndex('house'), at.x, at.y, false)).toBe(null);
+    g.soldiers.push({ id: 777777, owner: 1, kind: 0, px: (at.x + 3) * 256 + 128, py: at.y * 256 + 128, path: [], hp: 50, goal: -1, wait: 0, target: 0, cd: 0 });
+    expect(canPlace(g, 0, buildingIndex('house'), at.x, at.y, false)).toBe('place.enemy');
+  });
+
   it('drwal przynosi drewno', () => {
     const g = createGame(5);
     run(g, 1, [build(g, 'woodcutter')]);
