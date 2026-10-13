@@ -153,7 +153,7 @@ export class Figures {
       const LIFT = 0.035;
       const head = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.translate(0, -0.47, 0).scale(0.87, 0.87, 0.87).translate(0, 0.47, 0);
       const legsEnd = this.parts.length + 4;
-      const BOOT = 0x24180f, RED = 0x7a2a1a, DARK = 0x3a1c12, LEATHER = 0x4a2c18, IRON = 0x5f646c, STEEL = 0xb7bcc3, GLOVE = 0x2f2118, BRASS = 0xb08a3a;
+      const BOOT = 0x24180f, RED = 0x7a2a1a, DARK = 0x3a1c12, LEATHER = 0x4a2c18, IRON = 0x80858d, STEEL = 0xb7bcc3, GLOVE = 0x2f2118, BRASS = 0xb08a3a;
       const hair = (l: Look): number => l.hair, beard = (l: Look): boolean => l.beard || l.headwear % 2 === 0;
       for (const [x, rot] of [[-0.052, legL], [0.052, legR]] as const) {
         add(taper(0.047, 0.034, 0.17 + LIFT), DARK, x, 0.235 + LIFT, 0, rot, always, 'leather');
@@ -181,8 +181,8 @@ export class Figures {
       fix(prep(lathe([[0.112, 0.31], [0.116, 0.34], [0.123, 0.39], [0.118, 0.43], [0.09, 0.458]], 16, 0.8), (_x, y) => 0.75 + 0.25 * (((y - 0.31) / 0.03) % 1)), IRON, 'metal');
       // naramienniki: dwie warstwy wypukłych płyt na każdym barku
       for (const sx of [-1, 1]) {
-        fix(new THREE.SphereGeometry(0.058, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.62, 1.05).translate(sx * 0.125, 0.452, 0), IRON, 'metal');
-        fix(new THREE.SphereGeometry(0.06, 12, 4, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.2).scale(1, 0.9, 1.05).translate(sx * 0.13, 0.43, 0), STEEL, 'metal');
+        fix(new THREE.SphereGeometry(0.044, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.55, 1.1).translate(sx * 0.122, 0.452, 0), IRON, 'metal');
+        fix(new THREE.SphereGeometry(0.046, 12, 4, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.2).scale(1, 0.85, 1.1).translate(sx * 0.126, 0.432, 0), STEEL, 'metal');
       }
       // pas z mosiężną klamrą, szarfa w barwach pana przez pierś
       fix(lathe([[0.108, 0.284], [0.112, 0.296], [0.112, 0.31], [0.107, 0.322]], 16, 0.8), LEATHER, 'leather');
