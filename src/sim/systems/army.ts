@@ -5,7 +5,8 @@ import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
 import { FP, Phase, type Building, type Corpse, type GameState, type Soldier, type Unit } from '../state';
 import { BUILDINGS, footprint, workArea } from '../../data/buildings';
-import { enemyNear, maxHp, restore, ruin } from './placement';
+import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
+import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 import type { UnitDef } from '../../data/units';
 
 const BARRACKS = buildingIndex('barracks');
@@ -527,6 +528,31 @@ function siteUnderThreat(g: GameState, b: Building): boolean {
 /** Zajęcia, które pracownik może rzucić, żeby iść na budowę */
 const DROPPABLE = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.Working, Phase.ToSite, Phase.WorkingSite, Phase.ToInputStore, Phase.ToRest, Phase.Resting]);
 
+/** Surowiec, który niesie się na plac jako n-ty ładunek (na zmianę deski, kamień, żelazo — według kosztu budynku) */
+function siteRes(b: Building, n: number): number {
+  const c = BUILDINGS[b.type]!.cost as Record<string, number>;
+  const list = (['wood', 'stone', 'iron'] as const).filter((k) => (c[k] ?? 0) > 0);
+  return list.length ? resIndex(list[n % list.length] as ResourceId) : -1;
+}
+/** Czy gracz ma skład, z którego da się wziąć ten surowiec */
+function hasStoreFor(g: GameState, owner: number, res: number): boolean {
+  const kind = RESOURCE_DEFS[RESOURCES[res]!].store;
+  return !!kind && g.buildings.some((x) => x.owner === owner && x.door >= 0 && !x.build && BUILDINGS[x.type]!.stores?.includes(kind));
+}
+/**
+ * Robotnik idzie po materiał: bierze kolejny ładunek z puli do przyniesienia. Bez składu na ten surowiec
+ * ładunek liczy się od razu jako przyniesiony (nie ma skąd nosić, budowa nie może stanąć).
+ */
+function sendForMaterial(g: GameState, u: Unit, b: Building): boolean {
+  if (!(b.haul ?? 0)) return false;
+  const n = (b.loads ?? 0) - b.haul!;
+  b.haul!--;
+  const res = siteRes(b, n);
+  if (res < 0 || !hasStoreFor(g, b.owner, res)) { b.delivered = (b.delivered ?? 0) + 1; return false; }
+  u.target = b.id; u.phase = Phase.ToFetch; u.path = []; u.timer = res + 1; u.wait = 0;
+  return true;
+}
+
 /** Inżynier z cechu naprawia uszkodzone budynki swojego gracza (najbliższy pierwszy). */
 function repairSystem(g: GameState): void {
   if (g.tick % 10 !== 0) return;
@@ -537,6 +563,15 @@ function repairSystem(g: GameState): void {
       if (b && b.build > 0) {
         // pod okiem wrogiego wojska nikt nie buduje ani nie odbudowuje — robota stoi
         if (siteUnderThreat(g, b)) continue;
+        // materiał: tyle pracy, na ile starcza tego, co leży na placu; gdy brak — idzie po kolejny ładunek do składu
+        const L = b.loads ?? 0;
+        if (L > 0) {
+          const work = buildWork(b.type), done = work - b.build;
+          if (done * L >= work * (b.delivered ?? 0)) {
+            if (sendForMaterial(g, u, b)) continue;
+            if (done * L >= work * (b.delivered ?? 0)) continue; // inni już niosą — czeka na materiał
+          }
+        }
         b.build = Math.max(0, b.build - 12); if (!b.build && b.ruined && !restore(g, b)) b.build = 1; continue;
       }
       if (b && !u.job) { u.target = 0; u.phase = Phase.Idle; continue; }
@@ -548,12 +583,21 @@ function repairSystem(g: GameState): void {
   for (const b of g.buildings) {
     if (!b.build) continue; // budowa rusza dopiero, gdy robotnicy dojdą na plac
     if (siteUnderThreat(g, b)) continue; // ruina pod wrogimi włóczniami czeka, aż wróg odejdzie
+    // ładunki „zgubione” po drodze (niosący dostał inną pracę albo zginął) wracają do puli do przyniesienia
+    if (b.loads) {
+      let inFlight = 0;
+      for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToFetch || (u.phase === Phase.ToRepair && u.carryRes >= 0))) inFlight++;
+      const missing = b.loads - (b.delivered ?? 0) - (b.haul ?? 0) - inFlight;
+      if (missing > 0) b.haul = (b.haul ?? 0) + missing;
+    }
     let crew = 0;
-    for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing)) crew++;
+    for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing || u.phase === Phase.ToFetch)) crew++;
     while (crew < 3) {
       const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0);
       if (!u) break;
-      u.target = b.id; u.phase = Phase.ToRepair; u.path = []; crew++;
+      // najpierw do składu po materiał (o ile jest jeszcze co nosić), potem na plac
+      if (!sendForMaterial(g, u, b)) { u.target = b.id; u.phase = Phase.ToRepair; u.path = []; }
+      crew++;
     }
     // brak wolnych chłopów: do dwóch pracowników rzuca robotę (drwal w lesie, kamieniarz w kamieniołomie, ktoś w warsztacie
     // albo na odpoczynku), byle nie mieli nic w rękach — budują, a potem wracają do siebie
@@ -561,7 +605,8 @@ function repairSystem(g: GameState): void {
       // te zajęcia nie używają celu, więc stary cel (np. po przerwanym zapalaniu pochodni) nie blokuje
       const u = g.units.find((x) => x.owner === b.owner && x.job !== 0 && x.carryRes < 0 && DROPPABLE.has(x.phase));
       if (!u) break;
-      u.target = b.id; u.phase = Phase.ToRepair; u.path = []; u.timer = 0; u.wait = 0; crew++;
+      if (!sendForMaterial(g, u, b)) { u.target = b.id; u.phase = Phase.ToRepair; u.path = []; u.timer = 0; u.wait = 0; }
+      crew++;
     }
   }
   for (const guild of g.buildings) {

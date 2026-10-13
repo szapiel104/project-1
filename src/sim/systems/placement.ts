@@ -169,6 +169,23 @@ export function buildWork(type: number): number {
 }
 
 /**
+ * Ile ładunków materiału robotnicy muszą przynieść ze składu na plac budowy: jeden ładunek na każde 8 sztuk kosztu
+ * (deski, kamień, żelazo), od 1 do 6. Materiał jest już zapłacony przy stawianiu — noszenie to praca, nie koszt.
+ */
+export function siteLoads(type: number): number {
+  const c = BUILDINGS[type]!.cost as Record<string, number>;
+  const sum = (c.wood ?? 0) + (c.stone ?? 0) + (c.iron ?? 0);
+  return sum <= 0 ? 0 : Math.max(1, Math.min(6, Math.ceil(sum / 8)));
+}
+/** Przygotowuje plac budowy: tyle pracy i tyle ładunków do przyniesienia */
+export function startSite(b: Building, loadsFactor = 1): void {
+  b.build = buildWork(b.type);
+  b.loads = Math.ceil(siteLoads(b.type) * loadsFactor);
+  b.delivered = 0;
+  b.haul = b.loads;
+}
+
+/**
  * Zniszczenie przez wroga albo wilki: budynek nie znika, tylko zamienia się w ruinę do odbudowy
  * (robotnicy i inżynierowie odbudowują ją jak budowę). Wyłom w murze da się przejść, dopóki go nie załatają.
  * Twierdza nadal pada naprawdę — to koniec gracza.
@@ -176,7 +193,7 @@ export function buildWork(type: number): number {
 export function ruin(g: GameState, b: Building): void {
   const def = BUILDINGS[b.type]!;
   if (def.id === 'keep') { demolish(g, b.owner, b.id, true); return; }
-  b.build = buildWork(b.type);
+  startSite(b, 0.5); // odbudowa ruiny: część materiału leży w gruzie
   b.hp = maxHp(b.type);
   b.ruined = true;
   if (b.worker) { const u = g.units.find((x) => x.id === b.worker); if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; } b.worker = 0; }
@@ -207,7 +224,7 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   if (def.road) { g.roads[y * g.map.width + x] = def.road; return true; }
   const b = addBuilding(g, type, player, x, y, rot);
   // budowa trwa: robotnicy z obozowiska przychodzą i stawiają budynek (pochodnia stoi od razu)
-  if (b && def.id !== 'torch' && !p.dev) b.build = buildWork(type);
+  if (b && def.id !== 'torch' && !(p.dev && p.instantBuild !== false)) startSite(b);
   p.stats.built++;
   return true;
 }

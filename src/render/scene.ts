@@ -1624,7 +1624,7 @@ export class GameRenderer {
 
   /** Rusztowania, pomosty i stosy materiału przy wszystkich placach budowy (dwie siatki instancji) */
   private syncScaffolds(g: GameState, list: { b: GameState['buildings'][number]; k: number; cut: number; site: { base: number; top: number } }[]): void {
-    const key = list.map((s) => `${s.b.id}:${Math.round(s.k * 20)}`).join(',');
+    const key = list.map((s) => `${s.b.id}:${Math.round(s.k * 20)}:${s.b.delivered ?? 0}`).join(',');
     if (key === this.siteKey) return;
     this.siteKey = key;
     if (!this.scaffold) {
@@ -1646,10 +1646,12 @@ export class GameRenderer {
       const fp = footprint(def, b.rot);
       const x0 = b.x - width / 2 - 0.12, z0 = b.y - height / 2 - 0.12, x1 = x0 + fp.w + 0.24, z1 = z0 + fp.h + 0.24;
       const base = site.base;
-      // stos desek i kamieni przy rogu działki: maleje, im dalej budowa
-      const left = 1 - k;
-      for (let i = 0; i < Math.ceil(5 * left); i++) put(x1 + 0.25, base + i * 0.06, z1 - 0.4, 0.7, 0.05, 0.12 + (i % 2) * 0.02, 0.1 * i);
-      for (let i = 0; i < Math.ceil(4 * left) && ns < 600; i++) {
+      // stos desek i kamieni przy rogu działki: to, co robotnicy przynieśli ze składu, a czego jeszcze nie wbudowali
+      const L = b.loads ?? 0;
+      const onSite = L ? Math.max(0, (b.delivered ?? 0) - Math.floor(k * L)) : Math.ceil(4 * (1 - k));
+      const planks = Math.min(8, Math.ceil(onSite * 1.5)), stones = Math.min(6, onSite);
+      for (let i = 0; i < planks; i++) put(x1 + 0.25, base + i * 0.06, z1 - 0.4, 0.7, 0.05, 0.12 + (i % 2) * 0.02, 0.1 * i);
+      for (let i = 0; i < stones && ns < 600; i++) {
         q.setFromAxisAngle(Y, i * 1.7);
         this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(x0 - 0.3 + (i % 2) * 0.22, base + (i > 1 ? 0.12 : 0), z1 - 0.3 - Math.floor(i / 2) * 0.2), q, sc.setScalar(0.2)));
       }

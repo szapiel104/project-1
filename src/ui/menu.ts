@@ -23,7 +23,7 @@ export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 
 
 export interface MenuEvents {
   onContinue(): void;
-  onNewGame(seedText: string, preset: MapPresetId, level: number, dev: boolean): void;
+  onNewGame(seedText: string, preset: MapPresetId, level: number, dev: boolean, instant: boolean): void;
   onVolume(v: number): void;
   onMute(): boolean;
   onSettings(s: Settings): void;
@@ -281,16 +281,24 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const devLab = el('label', 'dev-switch');
     const devBox = el('input');
     devBox.type = 'checkbox'; devBox.setAttribute('role', 'switch');
-    devBox.addEventListener('change', () => { dev = devBox.checked; preview(); });
-    devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Tryb deweloperski'), el('span', 'dev-hint', 'miasto w murach, wojsko, pełne zapasy, budowa od razu'));
+    devBox.addEventListener('change', () => { dev = devBox.checked; instLab.hidden = !dev; preview(); });
+    devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Tryb deweloperski'), el('span', 'dev-hint', 'miasto w murach, wojsko, pełne zapasy'));
+    // w trybie deweloperskim: budynki od razu gotowe albo zwykła budowa (robotnicy noszą materiał, rusztowania)
+    let instant = true;
+    const instLab = el('label', 'dev-switch');
+    const instBox = el('input');
+    instBox.type = 'checkbox'; instBox.setAttribute('role', 'switch'); instBox.checked = true;
+    instBox.addEventListener('change', () => { instant = instBox.checked; });
+    instLab.append(instBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Budowa od razu'), el('span', 'dev-hint', 'wyłączone: zwykła budowa z noszeniem materiału'));
+    instLab.hidden = true;
 
     const warn = el('p', 'hint', canContinue || inGame ? t('menu.overwrite') : '');
     const start = el('button', 'menu-btn', t('menu.start'));
     start.type = 'submit';
     const foot = el('div', 'newgame-foot');
     foot.append(back(), start);
-    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, status, devLab, warn, foot);
-    form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev); });
+    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, status, devLab, instLab, warn, foot);
+    form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant); });
     screen(t('menu.newGame'), true, form);
     wrap.classList.add('previewing');
     preview();

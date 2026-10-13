@@ -505,3 +505,30 @@ describe('determinizm gospodarki', () => {
     expect(play()).toBe(play());
   });
 });
+
+describe('budowa z noszeniem materiału', () => {
+  it('robotnicy noszą materiał ze składu na plac i dopiero wtedy budują', () => {
+    const g = createGame(5);
+    const c = build(g, 'house');
+    run(g, 1, [c]);
+    const site = g.buildings.find((b) => b.x === (c as { x: number }).x && b.y === (c as { y: number }).y)!;
+    expect(site.build).toBeGreaterThan(0);
+    expect(site.loads).toBeGreaterThan(0);
+    let fetched = false, carried = false;
+    for (let i = 0; i < 4000 && site.build > 0; i++) {
+      step(g, []);
+      for (const u of g.units) if (u.target === site.id) { if (u.phase === 15) fetched = true; if (u.carryRes >= 0 && u.phase === 13) carried = true; }
+    }
+    expect(fetched).toBe(true);
+    expect(carried).toBe(true);
+    expect(site.build).toBe(0);
+    expect(site.delivered).toBe(site.loads);
+  });
+  it('tryb deweloperski: można wyłączyć budowę od razu', () => {
+    const g = createGame(5, '1v1', 2, true, undefined, false);
+    const c = build(g, 'house');
+    run(g, 1, [c]);
+    const site = g.buildings.find((b) => b.x === (c as { x: number }).x && b.y === (c as { y: number }).y)!;
+    expect(site.build).toBeGreaterThan(0);
+  });
+});

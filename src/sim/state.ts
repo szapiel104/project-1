@@ -40,6 +40,8 @@ export interface PlayerState {
   left?: boolean;
   /** Tryb deweloperski: wszystko postawione, pełne zapasy, budowa natychmiast */
   dev?: boolean;
+  /** Tryb deweloperski: budynki stają od razu (false = zwykła budowa z noszeniem materiału) */
+  instantBuild?: boolean;
   stats: { gathered: number; trained: number; kills: number; lost: number; built: number; razed: number };
 }
 
@@ -62,6 +64,12 @@ export interface Building {
   hp: number;
   /** Ile pracy zostało do końca budowy; 0 = budynek gotowy i działa */
   build: number;
+  /** Budowa: ile ładunków materiału trzeba przynieść ze składu w sumie (0/brak = nie nosi się) */
+  loads?: number;
+  /** Budowa: ile ładunków już leży na placu */
+  delivered?: number;
+  /** Budowa: ile ładunków jeszcze nikt nie poszedł przynieść */
+  haul?: number;
   /** Brama: gracz chce ją mieć otwartą (domyślnie tak) */
   gateOpen?: boolean;
   /** Brama jest teraz zamknięta (na rozkaz albo bo wróg blisko) */
@@ -108,6 +116,8 @@ export const enum Phase {
   /** Inżynier idzie naprawić budynek `target` */
   ToRepair = 13,
   Repairing = 14,
+  /** Budowniczy idzie do składu po deski / kamień na plac budowy `target` */
+  ToFetch = 15,
 }
 
 export interface Unit {
@@ -248,7 +258,7 @@ export interface GameState {
  * Nowa gra. `humans` = numery graczy-ludzi w meczu przez sieć: wszyscy zaczynają na równych zasadach,
  * reszta miejsc to boty. Bez `humans` człowiekiem jest gracz 0 i dostaje premię zależną od poziomu.
  */
-export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[]): GameState {
+export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[], instantBuild = true): GameState {
   const map = generateMap(seed, preset);
   const size = map.width * map.height;
   const g: GameState = {
@@ -277,6 +287,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       // do testów: każdy budynek gotowy przy twierdzy, dużo ludzi i zapasów
       const p = g.players[g.players.length - 1]!;
       p.dev = true;
+      p.instantBuild = instantBuild;
       for (let i = 0; i < res.length; i++) res[i] = 2000;
       const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate']);
       for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.road && !skip.has(d.id)) placeNear(g, i, s.player, s.x, s.y, 20);
@@ -417,7 +428,7 @@ export function stateHash(g: GameState): number {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);

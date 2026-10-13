@@ -87,6 +87,14 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const fp = footprint(BUILDINGS[b.type]!, b.rot), w = g.map.width;
       return (t) => { const x = t % w, y = (t - x) / w; const dx = Math.max(b.x - x, 0, x - (b.x + fp.w - 1)), dy = Math.max(b.y - y, 0, y - (b.y + fp.h - 1)); return Math.max(dx, dy) === 1; };
     }
+    case Phase.ToFetch: {
+      // po materiał na budowę: do najbliższego składu, w którym leży ten surowiec
+      const res = u.timer - 1;
+      const kind = res >= 0 ? RESOURCE_DEFS[RESOURCES[res]!].store : null;
+      if (!kind || !g.buildings.some((x) => x.id === u.target)) return null;
+      const doors = storeDoors(g, u.owner, kind);
+      return doors.size ? (t) => doors.has(t) : null;
+    }
     case Phase.ToCorpse: {
       const c = g.corpses.find((x) => x.id === u.target);
       if (!c) return null;
@@ -190,9 +198,21 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.phase = u.job ? Phase.Returning : Phase.Idle;
       break;
     }
-    case Phase.ToRepair:
+    case Phase.ToFetch:
+      // bierze ładunek ze składu (zapłacony już przy stawianiu budynku) i niesie go na plac
+      u.carryRes = u.timer - 1; u.carryAmt = 1; u.timer = 0;
+      u.phase = Phase.ToRepair;
+      break;
+    case Phase.ToRepair: {
+      // przyniesiony materiał kładzie obok budowy, potem bierze się do roboty
+      if (u.carryRes >= 0) {
+        const b = g.buildings.find((x) => x.id === u.target);
+        if (b && b.build && b.loads) b.delivered = (b.delivered ?? 0) + 1;
+        u.carryRes = -1; u.carryAmt = 0;
+      }
       u.phase = Phase.Repairing;
       break;
+    }
     case Phase.ToCorpse: {
       // grabarz bierze ciało na ramię i niesie je na cmentarz
       g.corpses = g.corpses.filter((x) => x.id !== u.target);
@@ -273,7 +293,22 @@ export function workerSystem(g: GameState): void {
     if (u.path.length) { move(g, u); continue; }
 
     const goal = goalFor(g, u, job, prod);
-    if (!goal) { if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; } continue; }
+    if (!goal) {
+      if (u.phase === Phase.ToFetch) {
+        // skład zniknął albo budowa: ładunek liczy się jako przyniesiony, żeby budowa nie stanęła
+        const b = g.buildings.find((x) => x.id === u.target);
+        if (b && b.build && b.loads) b.delivered = (b.delivered ?? 0) + 1;
+        u.timer = 0;
+        u.phase = b && b.build ? Phase.ToRepair : u.job ? Phase.Returning : Phase.Idle;
+        if (!b || !b.build) u.target = 0;
+        continue;
+      }
+      if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair) {
+        if (u.phase === Phase.ToRepair && u.carryRes >= 0) { u.carryRes = -1; u.carryAmt = 0; } // budowa skończona po drodze: materiał zostaje
+        u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0;
+      }
+      continue;
+    }
     const here = tileOf(g, u);
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal, 900, u.owner);

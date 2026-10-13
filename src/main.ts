@@ -143,7 +143,7 @@ const menu = createMenu(document.body, {
     renderer.endPreview();
     renderer.setState(game, MAP_PRESETS[currentPreset].waterLevel, MAP_PRESETS[currentPreset].rim, ME);
   },
-  onNewGame: (seedText, preset, level, dev) => {
+  onNewGame: (seedText, preset, level, dev, instant) => {
     preview = null;
     renderer.endPreview();
     // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
@@ -152,7 +152,7 @@ const menu = createMenu(document.body, {
     cover.innerHTML = `<div class="loading-card"><p class="loading-title">Project‑1</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${t('load.map')}</span><strong></strong></p></div>`;
     document.body.append(cover);
     requestAnimationFrame(() => setTimeout(() => {
-      start(seedText, preset, undefined, level, dev);
+      start(seedText, preset, undefined, level, dev, undefined, instant);
       setStatus({ where: 'solo' });
       renderer.warmup();
       menu.close();
@@ -249,12 +249,12 @@ function applySettings(st: Settings): void {
 }
 applySettings(loadSettings());
 
-function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart): void {
+function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true): void {
   endShown = false;
   gameOver = false;
   endOnline();
   ME = online ? online.me : 0;
-  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans);
+  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant);
   shownAreas.clear(); renderer.setAreas(shownAreas);
   setStatus({ where: online ? 'game' : 'menu' });
   if (online) {
