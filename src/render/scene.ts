@@ -1096,6 +1096,17 @@ export class GameRenderer {
       if ((mesh.position.x - f.x) ** 2 + (mesh.position.z - f.z) ** 2 > 110 * 110) continue;
       const torchFlame = mesh.getObjectByName('torchflame');
       if (torchFlame && lit.has(id)) { torchFlame.getWorldPosition(w); w.y -= 0.12; F.add(w, 0.36, 0.2, (id * 0.137) % 1, glow); }
+      // kosze ogniowe (brama zamku, wartownia): płoną tylko po zmroku i tylko gdy są widoczne
+      if (dark) {
+        let list = mesh.userData.braziers as THREE.Object3D[] | undefined;
+        if (!list) { list = []; mesh.traverse((o) => { if (o.name === 'brazier') list!.push(o); }); mesh.userData.braziers = list; }
+        for (const o of list) {
+          let shown = true;
+          for (let p: THREE.Object3D | null = o; p && p !== mesh; p = p.parent) if (!p.visible) { shown = false; break; }
+          if (!shown) continue;
+          o.getWorldPosition(w); F.add(w, 0.3, 0.17, (o.id * 0.271) % 1, glow);
+        }
+      }
       const camp = mesh.getObjectByName('flame');
       if (camp && camp.visible) {
         camp.getWorldPosition(w);

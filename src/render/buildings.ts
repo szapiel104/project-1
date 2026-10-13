@@ -932,7 +932,7 @@ const BUILDERS: Record<string, Builder> = {
     jailer.position.y = L + 0.02;
     for (let k = 0; k < 4; k++) { const sp = box(hall, M.plank, 0.02, 0.5, 0.02, 1.0, L, 0.3 + k * 0.08); sp.rotation.x = 0.08; }
     box(hall, M.iron, 0.1, 0.12, 0.1, 0.25, L, 0.95);
-    const glow = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.12, 5), M.ember);
+    const glow = new THREE.Object3D();
     glow.name = 'brazier';
     glow.position.set(0.25, L + 0.18, 0.95);
     hall.add(glow);
@@ -961,12 +961,29 @@ const BUILDERS: Record<string, Builder> = {
     const lookout = person('lookout', M.iron, 0, -0.25, 0, M.iron, life);
     lookout.position.y = 3.02;
     lookout.userData.top = true;
+    // kosze ogniowe przy bramie: kuta noga na trzech łapach, żelazna misa z węglem; płomień rysuje system ognia (tylko po zmroku)
     for (const sx of [-1, 1]) {
-      box(life, M.iron, 0.12, 0.3, 0.12, sx * 0.62, 0, 1.62);
-      const fire = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 5), M.ember);
-      fire.name = 'brazier';
-      fire.position.set(sx * 0.62, 0.4, 1.62);
-      life.add(fire);
+      const stand = new THREE.Group();
+      stand.position.set(sx * 0.62, 0, 1.62);
+      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.02, 0.36, 6).translate(0, 0.18, 0), M.iron);
+      stand.add(leg);
+      for (let k = 0; k < 3; k++) {
+        const foot = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.01, 0.12, 4).translate(0, 0.06, 0), M.iron);
+        foot.rotation.z = 0.9; foot.rotation.y = (k / 3) * Math.PI * 2;
+        foot.position.y = 0.01;
+        stand.add(foot);
+      }
+      const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.05, 0.07, 10, 1, true), M.iron);
+      bowl.material = M.iron; bowl.position.y = 0.39;
+      stand.add(bowl);
+      const coal = new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.085, 0.015, 10), M.woodDark);
+      coal.position.y = 0.41;
+      stand.add(coal);
+      const spot = new THREE.Object3D();
+      spot.name = 'brazier';
+      spot.position.y = 0.42;
+      stand.add(spot);
+      life.add(stand);
     }
     g.add(life);
     // cztery baszty narożne: skarpowa podstawa, strzelnice, machikuły na kroksztynach, blanki i stożkowy hełm z chorągiewką
