@@ -75,7 +75,9 @@ export interface HudView {
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
 export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
-export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number; recruit?: RecruitUnit[]; area?: boolean;
+export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number;
+  /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
+  watch?: { have: number; want: number; training: number; note?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
   site?: { pct: number; loads: number; delivered: number; carrying: number; fetching: number; builders: number; state: string } }
 export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number }
@@ -446,6 +448,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   towerBtns.append(tSel, tDown);
   towerBox.append(towerState, towerBtns);
   towerBox.hidden = true;
+  // twierdza: straż miejska
+  const watchState = el('p', 'gate-state');
+  watchState.hidden = true;
   const walkBtn = el('button', 'btn-main walk-btn', 'Przejdź się jego oczami (F)'); walkBtn.type = 'button'; walkBtn.hidden = true;
   walkBtn.addEventListener('click', () => events.onWalk());
   const areaBtn = el('button', 'btn-main', 'Pokaż teren pracy'); areaBtn.type = 'button'; areaBtn.hidden = true;
@@ -462,7 +467,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, armyPanel, roster, siteBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, towerBox, watchState, walkBtn, recruit, armyPanel, roster, siteBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -931,6 +936,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             return [head, bar, grid];
           }));
         }
+      }
+      watchState.hidden = !(i.own && i.watch);
+      if (i.watch) {
+        const w = i.watch;
+        setText(watchState, `Straż miejska: ${w.have} / ${w.want}` + (w.training ? ` · rekrut szkoli się jeszcze ${w.training} s` : w.note ? ` · ${w.note}` : ''));
       }
       towerBox.hidden = !(i.own && i.garrison !== undefined);
       if (i.garrison !== undefined) {

@@ -45,6 +45,8 @@ export interface PlayerState {
   stats: { gathered: number; trained: number; kills: number; lost: number; built: number; razed: number };
   /** Ilu strażników miejskich ma zamek (brak = jeszcze nie wystawieni; na start 6, poległych zastępują chłopi) */
   guards?: number;
+  /** Rekrut straży szkolony w twierdzy: tick, w którym będzie gotowy (0/brak = nikt się nie szkoli) */
+  guardReady?: number;
   /** Ilu ludzi spało ostatniej nocy na słomie pod gołym niebem i ilu z nich zmokło w deszczu */
   rough?: number;
   cold?: number;

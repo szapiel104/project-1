@@ -26,6 +26,7 @@ import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
+import { GUARDS, GUARD_COST } from './sim/systems/guards';
 import { cachedThumbs, saveThumbs } from './render/thumbcache';
 import { texturesReady } from './render/textures';
 import { TEAM_COLORS } from './data/teams';
@@ -415,8 +416,23 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: def.id === 'barracks' ? recruitInfo() : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     garrison: def.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
+    watch: def.id === 'keep' ? watchInfo(b.owner) : undefined,
     area: def.area || def.id === 'watchtower' ? shownAreas.has(b.id) : undefined,
     site: b.build ? siteInfo(b) : undefined };
+}
+
+/** Straż miejska do panelu twierdzy: ilu jest, szkolenie rekruta i co blokuje werbunek */
+function watchInfo(owner: number): BuildingInfo['watch'] {
+  const p = game.players[owner]!;
+  const have = game.soldiers.filter((s) => s.owner === owner && UNITS[s.kind]!.guard).length;
+  const want = p.guards ?? GUARDS;
+  const training = p.guardReady ? Math.max(0, Math.ceil((p.guardReady - game.tick) / TICKS_PER_SECOND)) : 0;
+  let note: string | undefined;
+  if (!training && have < want) {
+    const lack = Object.entries(GUARD_COST).filter(([r, n]) => p.res[resIndex(r as ResourceId)]! < n!).map(([r]) => t(`res.${r}`).toLowerCase());
+    note = lack.length ? `na rekruta brakuje: ${lack.join(', ')}` : !game.units.some((u) => u.owner === owner && u.job === 0) ? 'brak wolnego chłopa na rekruta' : 'werbunek ruszy za dnia, gdy pod zamkiem nie ma wroga';
+  }
+  return { have, want, training, note };
 }
 
 function select(id: number): void {

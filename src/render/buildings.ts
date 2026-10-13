@@ -972,17 +972,10 @@ const BUILDERS: Record<string, Builder> = {
     for (let k = 0; k < 6; k++) { const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.01, 8), M.gold); coin.position.set(0.6 + (k % 3) * 0.05, L + 0.02, -0.55 + Math.floor(k / 3) * 0.05); hall.add(coin); }
     for (let k = 0; k < 6; k++) box(hall, D, 0.3, 0.06, 0.12, 1.0, L + k * 0.07, -0.2 - k * 0.12);
     g.add(hall);
-    // Życie widoczne z zewnątrz, cały czas: straże obchodzą mury, wartownik stoi w bramie, kosze z ogniem przy wejściu
+    // Życie widoczne z zewnątrz: kosze z ogniem przy wejściu. Straż na murach i w bramie to prawdziwi strażnicy miejscy
+    // z symulacji (systems/guards.ts), więc w modelu nie ma już udawanych postaci.
     const life = new THREE.Group();
     life.name = 'life';
-    for (let k = 0; k < 3; k++) { const guard = person('patrol', M.iron, 0, 0, 0, M.iron, life); guard.userData.phase = k / 3; guard.scale.setScalar(1.25); }
-    const sentry = person('sentry', flag, 0.45, 1.78, 0, M.iron, life);
-    sentry.position.y = 0;
-    sentry.scale.setScalar(1.3);
-    box(sentry, M.woodDark, 0.012, 0.5, 0.012, 0.09, 0, 0.03);
-    const lookout = person('lookout', M.iron, 0, -0.25, 0, M.iron, life);
-    lookout.position.y = 3.02;
-    lookout.userData.top = true;
     // kosze ogniowe przy bramie: kuta noga na trzech łapach, żelazna misa z węglem; płomień rysuje system ognia (tylko po zmroku)
     for (const sx of [-1, 1]) {
       const stand = new THREE.Group();

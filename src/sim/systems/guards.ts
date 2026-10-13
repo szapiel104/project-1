@@ -1,4 +1,5 @@
 import { BUILDINGS } from '../../data/buildings';
+import { resIndex, type ResourceId } from '../../data/resources';
 import { GUARD, UNITS } from '../../data/units';
 import { walkable } from '../path';
 import { FP, Phase, playerKeep, type GameState, type Soldier } from '../state';
@@ -6,8 +7,21 @@ import { dayPart } from './workers';
 
 /** Ilu strażników miejskich pilnuje osady */
 export const GUARDS = 6;
-/** Co ile ticków wolny chłop może zostać nowym strażnikiem w miejsce poległego */
-const REPLACE_TICKS = 300;
+/** Ile ticków trwa szkolenie rekruta straży w twierdzy (ok. półtorej minuty przy tempie 1×) */
+export const GUARD_TRAIN_TICKS = 900;
+/** Co kosztuje uzbrojenie rekruta (jak włócznika): włócznia ze składu i żołd */
+export const GUARD_COST: Partial<Record<ResourceId, number>> = { spear: 1, gold: 8 };
+/** W tej odległości od twierdzy wróg albo wilk wstrzymuje werbunek i szkolenie */
+const DANGER = 14;
+
+/** Wróg (żołnierz innej drużyny) albo wilk blisko twierdzy */
+function danger(g: GameState, owner: number, keep: { x: number; y: number }): boolean {
+  const team = g.players[owner]?.team;
+  const near = (px: number, py: number): boolean => Math.max(Math.abs((px >> 8) - keep.x - 1), Math.abs((py >> 8) - keep.y - 1)) <= DANGER;
+  for (const s of g.soldiers) if (s.hp > 0 && g.players[s.owner]?.team !== team && near(s.px, s.py)) return true;
+  for (const w of g.wolves) if (w.hp > 0 && !w.leaving && near(w.px, w.py)) return true;
+  return false;
+}
 
 /** Najbliższe wolne pole, po którym da się chodzić (szukanie po coraz większych kwadratach) */
 function snap(g: GameState, owner: number, x: number, y: number): number {
@@ -24,8 +38,11 @@ function snap(g: GameState, owner: number, x: number, y: number): number {
   return -1;
 }
 
-/** Trasa obchodu: osiem punktów na obwodzie osady (prostokąt wokół budynków gracza, pole dalej) */
-function beatRoute(g: GameState, owner: number): number[] {
+/** Na tyle pól za ostatnie zabudowania strażnik może gonić wroga; dalej zawraca na obchód */
+export const GUARD_LEASH = 6;
+
+/** Prostokąt osady: wszystkie budynki gracza i pole zapasu dookoła */
+function townRect(g: GameState, owner: number): { x0: number; y0: number; x1: number; y1: number } | null {
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (const b of g.buildings) {
     if (b.owner !== owner || b.ruined) continue;
@@ -33,8 +50,14 @@ function beatRoute(g: GameState, owner: number): number[] {
     const w = b.rot % 2 ? d.h : d.w, h = b.rot % 2 ? d.w : d.h;
     x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + w); y1 = Math.max(y1, b.y + h);
   }
-  if (x0 === Infinity) return [];
-  x0 -= 1; y0 -= 1; x1 += 1; y1 += 1;
+  return x0 === Infinity ? null : { x0: x0 - 1, y0: y0 - 1, x1: x1 + 1, y1: y1 + 1 };
+}
+
+/** Trasa obchodu: osiem punktów na obwodzie osady (prostokąt wokół budynków gracza, pole dalej) */
+function beatRoute(g: GameState, owner: number): number[] {
+  const r = townRect(g, owner);
+  if (!r) return [];
+  const { x0, y0, x1, y1 } = r;
   const mx = (x0 + x1) / 2, my = (y0 + y1) / 2;
   const pts: [number, number][] = [[x0, y0], [mx, y0], [x1, y0], [x1, my], [x1, y1], [mx, y1], [x0, y1], [x0, my]];
   return pts.map(([x, y]) => snap(g, owner, x, y)).filter((t) => t >= 0);
@@ -77,22 +100,47 @@ export function guardSystem(g: GameState): void {
         mine.push(s);
       }
     }
-    // poległego zastępuje wolny chłop (za dnia, nie częściej niż co kilkadziesiąt sekund)
-    if (mine.length < p.guards && part === 'work' && g.tick % REPLACE_TICKS === 0) {
+    // poległego zastępuje rekrut: wolny chłop idzie do twierdzy, dostaje włócznię i żołd, szkoli się półtorej minuty.
+    // Jeden naraz; przy wrogu albo wilku pod zamkiem werbunek stoi, a szkolenie się przeciąga.
+    const threat = danger(g, p.id, keep);
+    if (p.guardReady) {
+      if (threat) p.guardReady++;
+      else if (g.tick >= p.guardReady) {
+        p.guardReady = 0;
+        const w = g.map.width, t = keep.door >= 0 ? snap(g, p.id, keep.door % w, Math.floor(keep.door / w) + 1) : -1;
+        if (t >= 0) {
+          const s = newGuard(g, p.id, (t % w) * FP + FP / 2, Math.floor(t / w) * FP + FP / 2);
+          s.beat = mine.length;
+          g.soldiers.push(s);
+          mine.push(s);
+        }
+      }
+    } else if (mine.length < p.guards && part === 'work' && !threat) {
       const ui = g.units.findIndex((u) => u.owner === p.id && u.job === 0 && u.phase === Phase.Idle && u.carryRes < 0 && !u.path.length);
-      if (ui >= 0) {
-        const u = g.units[ui]!;
-        g.units.splice(ui, 1);
-        const s = newGuard(g, p.id, u.px, u.py);
-        s.beat = mine.length;
-        g.soldiers.push(s);
-        mine.push(s);
+      const pay = Object.entries(GUARD_COST).every(([r, n]) => p.res[resIndex(r as ResourceId)]! >= n!);
+      if (ui >= 0 && pay) {
+        for (const [r, n] of Object.entries(GUARD_COST)) p.res[resIndex(r as ResourceId)]! -= n!;
+        g.units.splice(ui, 1); // rekrut jest w twierdzy na szkoleniu
+        p.guardReady = g.tick + GUARD_TRAIN_TICKS;
       }
     }
     if (!mine.length) continue;
     const route = beatRoute(g, p.id);
     const stand = posts(g, p.id);
+    const town = townRect(g, p.id);
     mine.forEach((s, i) => {
+      // za daleko od osady (pogoń za wilkiem albo wrogiem): rzuca pościg i wraca na najbliższy punkt obchodu
+      if (town && route.length) {
+        const sx = s.px >> 8, sy = s.py >> 8;
+        const out = Math.max(town.x0 - sx, 0, sx - town.x1, town.y0 - sy, 0, sy - town.y1);
+        if (out > GUARD_LEASH) {
+          const w = g.map.width;
+          let best = route[0]!, bd = Infinity;
+          for (const t of route) { const d = Math.abs((t % w) - sx) + Math.abs(Math.floor(t / w) - sy); if (d < bd) { bd = d; best = t; } }
+          if (s.goal !== best) { s.target = 0; s.hunt = 0; s.prey = 0; s.amove = false; s.stance = 0; s.hold = -1; s.goal = best; s.path = []; }
+          return;
+        }
+      }
       // w walce albo w drodze: nie przeszkadzamy
       if (s.target || s.path.length || s.goal >= 0 || s.hunt) return;
       const here = (s.py >> 8) * g.map.width + (s.px >> 8);
