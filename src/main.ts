@@ -101,6 +101,13 @@ const hud = createHud(document.getElementById('ui')!, {
     walkHint.hidden = false;
     renderer.startWalk(u.px / 256, u.py / 256);
   },
+  onArea: (id) => {
+    if (!shownAreas.delete(id)) shownAreas.add(id);
+    renderer.setAreas(shownAreas);
+    const b = game.buildings.find((x) => x.id === id);
+    if (b) hud.showInfo(buildingInfo(b));
+    play('select');
+  },
   onDismount: (id) => { pending.push({ type: 'dismount', player: ME, tower: id }); play('rotate'); },
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
@@ -221,6 +228,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   endOnline();
   ME = online ? online.me : 0;
   game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans);
+  shownAreas.clear(); renderer.setAreas(shownAreas);
   setStatus({ where: online ? 'game' : 'menu' });
   if (online) {
     net = online.net; netGame = online; netNotes = { desync: false, left: 0 };
@@ -288,6 +296,9 @@ function selectUnit(id: number): void {
   if (id) speak(id);
 }
 
+/** Budynki, których teren pracy jest pokazany na mapie (zielony kwadrat) */
+const shownAreas = new Set<number>();
+
 /** Wszystko, co panel budynku pokazuje o wybranym budynku (w składach także zapasy z ikonami) */
 function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
   const def = BUILDINGS[b.type]!;
@@ -300,7 +311,8 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     : undefined;
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: def.id === 'barracks' ? recruitInfo() : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
-    garrison: def.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined };
+    garrison: def.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
+    area: def.area ? shownAreas.has(b.id) : undefined };
 }
 
 function select(id: number): void {

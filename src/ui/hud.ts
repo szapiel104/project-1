@@ -26,6 +26,8 @@ export interface HudEvents {
   onGate(building: number, open: boolean): void;
   onDismount(building: number): void;
   onWalk(): void;
+  /** Pokaż / ukryj teren pracy budynku (zielony kwadrat) */
+  onArea(building: number): void;
   onSelectGarrison(building: number): void;
 }
 
@@ -58,7 +60,7 @@ export interface HudView {
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
 export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
-export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number; recruit?: RecruitUnit[] }
+export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number; recruit?: RecruitUnit[]; area?: boolean }
 export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number }
 
 export interface Hud {
@@ -396,7 +398,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   towerBox.hidden = true;
   const walkBtn = el('button', 'btn-main walk-btn', 'Przejdź się jego oczami'); walkBtn.type = 'button'; walkBtn.hidden = true;
   walkBtn.addEventListener('click', () => events.onWalk());
-  infoActions.append(demolish, close);
+  const areaBtn = el('button', 'btn-main', 'Pokaż teren pracy'); areaBtn.type = 'button'; areaBtn.hidden = true;
+  areaBtn.addEventListener('click', () => events.onArea(infoId));
+  infoActions.append(areaBtn, demolish, close);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
   info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, roster, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
@@ -766,6 +770,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         gateState.dataset.shut = String(i.gate.shut);
       }
       demolish.hidden = !i.own || !i.def.buildable;
+      areaBtn.hidden = i.area === undefined;
+      setText(areaBtn, i.area ? 'Ukryj teren pracy' : 'Pokaż teren pracy');
+      areaBtn.setAttribute('aria-pressed', String(!!i.area));
       trainBtn.hidden = true;
       trainNote.hidden = true;
       recruit.hidden = !(i.own && i.recruit);

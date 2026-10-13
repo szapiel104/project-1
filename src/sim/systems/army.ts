@@ -4,7 +4,7 @@ import { RULES } from '../../data/rules';
 import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
 import { FP, Phase, type Building, type Corpse, type GameState, type Soldier, type Unit } from '../state';
-import { BUILDINGS, footprint } from '../../data/buildings';
+import { BUILDINGS, footprint, workArea } from '../../data/buildings';
 import { enemyNear, maxHp, restore, ruin } from './placement';
 import type { UnitDef } from '../../data/units';
 
@@ -314,7 +314,7 @@ const CEMETERY = buildingIndex('cemetery');
 /** Ciało nieodebrane przez tak długo rozkłada się do końca i znika samo */
 const ROT_TICKS = 6000;
 
-/** Grabarz z cmentarza idzie po najbliższe ciało, zabiera je i wraca. */
+/** Grabarz z cmentarza idzie po najbliższe ciało w swoim terenie pracy (kwadrat wokół cmentarza), zabiera je i wraca. */
 function graveSystem(g: GameState): void {
   if (g.corpses.some((c) => g.tick - c.at > ROT_TICKS && !c.taken)) g.corpses = g.corpses.filter((c) => c.taken || g.tick - c.at <= ROT_TICKS);
   if (g.tick % 10 !== 0) return;
@@ -333,9 +333,12 @@ function graveSystem(g: GameState): void {
     if (b.type !== CEMETERY || !b.worker) continue;
     const u = g.units.find((x) => x.id === b.worker);
     if (!u || u.phase !== Phase.Idle || u.path.length) continue;
+    const a = workArea(b);
     let best: Corpse | undefined, bd = Infinity;
     for (const c of g.corpses) {
       if (c.taken) continue;
+      const cx = c.px >> 8, cy = c.py >> 8;
+      if (a && (cx < a.x0 || cx > a.x1 || cy < a.y0 || cy > a.y1)) continue; // poza terenem: pole bitwy u wroga nie jego sprawa
       const d = Math.abs(c.px - u.px) + Math.abs(c.py - u.py);
       if (d < bd) { bd = d; best = c; }
     }

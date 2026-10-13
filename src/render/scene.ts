@@ -6,7 +6,7 @@ import { playAt, pluck, type WorldSound } from '../audio/sfx';
 import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BUILDINGS, footprint } from '../data/buildings';
+import { BUILDINGS, footprint, workArea } from '../data/buildings';
 import { Clutter } from './clutter';
 import { Clouds } from './clouds';
 import { Flames } from './flames';
@@ -209,6 +209,17 @@ export class GameRenderer {
   private sadFaces: THREE.Sprite[] = [];
   private lamps: THREE.PointLight[] = [];
   private lampSpots: { v: THREE.Vector3; k: number }[] = [];
+  /** Czubki pochodni niesionych przez ludzi i żołnierzy w tej klatce (płomienie rysuje system ognia) */
+  private handFlames: THREE.Vector3[] = [];
+  private handFlameN = 0;
+  private pushHandFlame(m: THREE.Matrix4, x: number): void {
+    if (this.handFlameN >= 400) return;
+    const v = this.handFlames[this.handFlameN] ?? (this.handFlames[this.handFlameN] = new THREE.Vector3());
+    const f = this.focusPoint;
+    v.set(x, 0.69, 0.1).applyMatrix4(m);
+    if ((v.x - f.x) ** 2 + (v.z - f.z) ** 2 > 80 * 80) return;
+    this.handFlameN++;
+  }
   private handTorches: THREE.InstancedMesh;
   private rods: THREE.InstancedMesh;
   private frameNo = 0;
@@ -365,7 +376,7 @@ export class GameRenderer {
     }
     const hand = mergeGeometries([
       tint(new THREE.CylinderGeometry(0.018, 0.022, 0.3, 5).translate(0.17, 0.5, 0.1), 0x4a3320),
-      tint(new THREE.ConeGeometry(0.05, 0.16, 5).translate(0.17, 0.72, 0.1), 0xffa53a),
+      tint(new THREE.CylinderGeometry(0.03, 0.022, 0.07, 6).translate(0.17, 0.67, 0.1), 0x2a1c12),
     ]);
     this.handTorches = new THREE.InstancedMesh(hand, new THREE.MeshBasicMaterial({ vertexColors: true }), MAX_UNITS);
     // co piąty żołnierz nocą niesie pochodnię w lewej ręce (prawa trzyma włócznię)
@@ -607,6 +618,51 @@ export class GameRenderer {
     });
     model.visible = true;
     this.ghostModel = model;
+  }
+
+  /** Tereny pracy pokazane na mapie: zielony, półprzezroczysty kwadrat z obwódką, ułożony na ziemi */
+  private areaIds = new Set<number>();
+  private areaKey = '';
+  private areaGroup = new THREE.Group();
+  private areaFill = new THREE.MeshBasicMaterial({ color: 0x4fd06a, transparent: true, opacity: 0.16, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, fog: false });
+  private areaLine = new THREE.LineBasicMaterial({ color: 0x7dff8f, transparent: true, opacity: 0.9, fog: false });
+  setAreas(ids: Set<number>): void { this.areaIds = new Set(ids); this.areaKey = '#'; }
+  private syncAreas(g: GameState, v: TerrainView): void {
+    const list = g.buildings.filter((b) => this.areaIds.has(b.id) && !b.ruined);
+    const key = list.map((b) => `${b.id}:${b.x}:${b.y}:${b.rot}`).join('|');
+    if (key === this.areaKey) return;
+    this.areaKey = key;
+    for (const c of this.areaGroup.children) (c as THREE.Mesh).geometry.dispose();
+    this.areaGroup.clear();
+    if (!this.areaGroup.parent) { this.areaGroup.renderOrder = 4; this.scene.add(this.areaGroup); }
+    const { width, height } = g.map;
+    for (const b of list) {
+      const a = workArea(b);
+      if (!a) continue;
+      const x0 = Math.max(0, a.x0), y0 = Math.max(0, a.y0), x1 = Math.min(width, a.x1 + 1), y1 = Math.min(height, a.y1 + 1);
+      const nx = x1 - x0, ny = y1 - y0;
+      const lift = (x: number, y: number): number => Math.max(0, v.heightAt(Math.min(width - 0.01, x), Math.min(height - 0.01, y))) + 0.09;
+      // wypełnienie: siatka co pole, wierzchołki na wysokości terenu
+      const geo = new THREE.PlaneGeometry(nx, ny, nx, ny).rotateX(-Math.PI / 2);
+      const pos = geo.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const wx = pos.getX(i) + x0 + nx / 2, wy = pos.getZ(i) + y0 + ny / 2;
+        pos.setXYZ(i, wx - width / 2, lift(wx, wy), wy - height / 2);
+      }
+      geo.computeBoundingSphere();
+      const fill = new THREE.Mesh(geo, this.areaFill);
+      fill.renderOrder = 4;
+      // obwódka idzie po krawędzi pole po polu
+      const pts: THREE.Vector3[] = [];
+      const at = (x: number, y: number): void => { pts.push(new THREE.Vector3(x - width / 2, lift(x, y) + 0.03, y - height / 2)); };
+      for (let x = x0; x < x1; x++) at(x, y0);
+      for (let y = y0; y < y1; y++) at(x1, y);
+      for (let x = x1; x > x0; x--) at(x, y1);
+      for (let y = y1; y > y0; y--) at(x0, y);
+      const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), this.areaLine);
+      line.renderOrder = 4;
+      this.areaGroup.add(fill, line);
+    }
   }
 
   setSelection(buildingId: number): void {
@@ -910,26 +966,26 @@ export class GameRenderer {
     return this.walkFocus.set(c.x, c.y - 0.46, c.z);
   }
   // pochodnia w ręce podczas spaceru: F zapala i gasi
-  private handLight: THREE.PointLight | null = null;
+  // Światło pochodni bierze jedną z gotowych lamp: dodanie nowego światła do sceny przekompilowałoby
+  // wszystkie shadery i gra stanęłaby na 1–2 sekundy.
   private handTorch: THREE.Group | null = null;
+  private handTip = new THREE.Object3D();
   private torchOn = false;
   private toggleHandTorch(): void {
-    if (!this.handLight) {
-      this.handLight = new THREE.PointLight(0xffa35a, 0, 13, 1.3);
-      this.handLight.position.set(0.22, -0.12, -0.35);
+    if (!this.handTorch) {
       const g = new THREE.Group();
-      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.32, 6), new THREE.MeshStandardMaterial({ color: 0x4a3320, roughness: 1 }));
-      stick.rotation.x = -0.5;
-      const flame = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.12, 6), new THREE.MeshBasicMaterial({ color: 0xffb04a }));
-      flame.position.set(0, 0.17, -0.08); flame.name = 'flame';
-      g.add(stick, flame);
-      g.position.set(0.22, -0.22, -0.4);
+      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.32, 6), new THREE.MeshBasicMaterial({ color: 0x3a2818 }));
+      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.017, 0.06, 7).translate(0, 0.17, 0), new THREE.MeshBasicMaterial({ color: 0x1e140c }));
+      this.handTip.position.set(0, 0.19, 0);
+      g.add(stick, head, this.handTip);
+      g.rotation.x = -0.35;
+      g.position.set(0.22, -0.24, -0.42);
       this.handTorch = g;
-      this.cam.camera.add(this.handLight, g);
+      this.cam.camera.add(g);
       if (!this.cam.camera.parent) this.scene.add(this.cam.camera);
     }
     this.torchOn = !this.torchOn;
-    this.handTorch!.visible = this.torchOn;
+    this.handTorch.visible = this.torchOn;
     if (this.torchOn) playAt('creak', 1, 0.3, 0.4);
   }
   startWalk(tileX: number, tileY: number, heading = 0): void {
@@ -991,12 +1047,6 @@ export class GameRenderer {
     const ground = this.view ? this.view.heightAt(w.x, w.z) : 0;
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
-    if (this.handLight) {
-      const fl = 0.85 + Math.sin(this.time * 13) * 0.08 + Math.sin(this.time * 29.3) * 0.07;
-      this.handLight.intensity = this.torchOn ? 9 * fl : 0;
-      const flame = this.handTorch?.getObjectByName('flame');
-      if (flame) flame.scale.set(1, 0.8 + fl * 0.4, 1);
-    }
   }
 
   frame(dt: number, alpha: number): void {
@@ -1017,7 +1067,7 @@ export class GameRenderer {
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.syncRubble(g, v, dt));
       T('światła', () => this.syncLamps(g));
-      T('budynki', () => { this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
+      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
       T('chłopi', () => this.syncUnits(g, v, alpha));
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
@@ -1036,7 +1086,12 @@ export class GameRenderer {
     const glow = Math.min(1, this.night * 1.4);
     const f = this.focusPoint;
     const lit = new Set<number>();
-    for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
+    // pochodnia na słupie płonie tylko po zmroku (także gdy cykl dnia jest wyłączony, a symulacja ma noc)
+    const dark = this.night > 0.12 || this.menuNight;
+    if (dark) for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
+    for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
+    this.handFlameN = 0;
+    if (this.walk && this.torchOn) { this.cam.camera.updateMatrixWorld(); this.handTip.getWorldPosition(w); F.add(w, 0.13, 0.075, 0.5, 0.25); }
     for (const [id, mesh] of this.buildingMeshes) {
       if ((mesh.position.x - f.x) ** 2 + (mesh.position.z - f.z) ** 2 > 110 * 110) continue;
       const torchFlame = mesh.getObjectByName('torchflame');
@@ -1578,7 +1633,7 @@ export class GameRenderer {
     const on = this.night > 0.15;
     const flicker = this.calm ? 1 : 0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07;
     const lit = new Set<number>();
-    for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
+    if (on || this.menuNight) for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
     for (const mesh of this.buildingMeshes.values()) {
       const torch = mesh.getObjectByName('torch');
       if (!torch) continue;
@@ -1588,7 +1643,10 @@ export class GameRenderer {
       if (flame) flame.visible = false;
     }
     this.handTorches.visible = on;
-    if (!on) { for (const lamp of this.lamps) lamp.intensity = 0; return; }
+    // pochodnia w ręce przy spacerze świeci zawsze, gdy jest zapalona (pierwsza lampa z puli)
+    const own = this.walk && this.torchOn ? this.lamps[0]! : null;
+    if (own) { this.handTip.getWorldPosition(own.position); own.intensity = (this.night > 0.15 ? 7 : 3) * flicker; }
+    if (!on) { for (const lamp of this.lamps) if (lamp !== own) lamp.intensity = 0; return; }
     // co kilka klatek wybieramy źródła światła najbliższe środkowi ekranu
     if (this.frameNo++ % 6 === 0) {
       const f = this.focusPoint;
@@ -1615,7 +1673,8 @@ export class GameRenderer {
       this.lampSpots = spots.slice(0, this.lamps.length);
     }
     this.lamps.forEach((lamp, i) => {
-      const spot = this.lampSpots[i];
+      if (lamp === own) return;
+      const spot = this.lampSpots[own ? i - 1 : i];
       lamp.intensity = spot ? spot.k * this.night * 16 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
       if (spot) lamp.position.copy(spot.v);
     });
@@ -1868,7 +1927,7 @@ export class GameRenderer {
         this.sfxAt('swing', t.position.x, t.position.z, s.id, 1.1, 0.6);
         if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
       }
-      if (torchesOn && s.id % 5 === 0 && s.owner === this.me && torches < 256) this.soldierTorches.setMatrixAt(torches++, t.matrix);
+      if (torchesOn && s.id % 5 === 0 && s.owner === this.me && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
       if (ranged) { this.archers.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); this.spearmen.set(n, ZERO, 0, false, 0, s.id); }
       else { this.archers.set(n, ZERO, 0, false, 0, s.id); this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); }
       let pos = this.soldierPos.get(s.id);
@@ -2085,7 +2144,7 @@ export class GameRenderer {
       const log = wood && u.phase === Phase.ToHome && !!jb && BUILDINGS[jb.type]!.production?.site === Terrain.Forest;
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
-      if (torchOn) this.handTorches.setMatrixAt(i, t.matrix); else this.handTorches.setMatrixAt(i, ZERO);
+      if (torchOn) { this.handTorches.setMatrixAt(i, t.matrix); this.pushHandFlame(t.matrix, 0.17); } else this.handTorches.setMatrixAt(i, ZERO);
       this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);

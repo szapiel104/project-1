@@ -40,6 +40,8 @@ export interface BuildingDef {
   road?: 1 | 2;
   /** Budynek ma pracownika, choć nic nie produkuje (np. inżynier z cechu, który wynosi gruz) */
   staff?: boolean;
+  /** Teren pracy: ile pól od krawędzi działki sięga praca (np. grabarz zbiera ciała tylko tutaj) */
+  area?: number;
   /** Ilu chłopów bez pracy może tu czekać */
   idleSlots?: number;
   /** Jak pokazać pracującego: 'inside' = odsłonięte wnętrze budynku, 'field' = chodzi po polu */
@@ -125,7 +127,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Koszary: tu wolny chłop dostaje broń ze składu i staje się żołnierzem
   { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 30, stone: 30 }, buildable: true },
   // Cmentarz: grabarz znosi tu ciała poległych z pola bitwy
-  { id: 'cemetery', category: 'military', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 15, stone: 10 }, staff: true, buildable: true },
+  { id: 'cemetery', category: 'military', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 15, stone: 10 }, staff: true, area: 14, buildable: true },
   // Warsztat łuczarza: z drewna ze składu wygina łuki i plecie cięciwy
   {
     id: 'fletcher', category: 'military', name: 'b.fletcher', w: 2, h: 2, cost: { wood: 25 }, buildable: true,
@@ -145,4 +147,12 @@ export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => 
 /** Wymiary działki po obrocie: przy obrocie o 90° i 270° szerokość zamienia się z głębokością. */
 export function footprint(def: BuildingDef, rot = 0): { w: number; h: number } {
   return rot % 2 ? { w: def.h, h: def.w } : { w: def.w, h: def.h };
+}
+
+/** Kwadrat terenu pracy budynku (pola od x0,y0 do x1,y1 włącznie) albo null, gdy budynek go nie ma */
+export function workArea(b: { type: number; x: number; y: number; rot: number }): { x0: number; y0: number; x1: number; y1: number } | null {
+  const def = BUILDINGS[b.type]!;
+  if (!def.area) return null;
+  const fp = footprint(def, b.rot);
+  return { x0: b.x - def.area, y0: b.y - def.area, x1: b.x + fp.w - 1 + def.area, y1: b.y + fp.h - 1 + def.area };
 }
