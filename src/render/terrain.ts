@@ -863,7 +863,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // nierówno wchodzą w trawę, a każde pole ma trochę inny odcień (jaśniejsze, ciemniejsze, omszałe).
   let paveMat: THREE.MeshStandardMaterial | null = null;
   // zdjęcie bruku jest bardzo jasne, więc sam materiał ma barwę kamienia polnego (ciepła, przygaszona szarość)
-  const PAVE_DRY = new THREE.Color(0xa69c8c);
+  const PAVE_DRY = new THREE.Color(0xb8b4aa);
   const paveMaterial = (base: THREE.Material): THREE.MeshStandardMaterial => {
     if (paveMat) return paveMat;
     const n = 256;
@@ -936,9 +936,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const x0 = x - grow + jx, x1 = x + 1 + grow + jx, y0 = y - grow + jy, y1 = y + 1 + grow + jy;
           // odcień pola: większość szara, część jaśniejsza albo ciemniejsza, niektóre zielonkawe od mchu
           // ciepła szarość kamienia polnego zamiast prawie białej tafli
-          const tone = 0.44 + (((r >>> 8) & 31) / 31) * 0.1;
+          const tone = 0.5 + (((r >>> 8) & 31) / 31) * 0.12;
           const moss = (r >>> 14) % 5 === 0 ? 0.08 : 0;
-          shade.setRGB(tone * 1.04 * (1 - moss), tone * 0.98 * (1 + moss * 0.4), tone * 0.86 * (1 - moss * 1.5));
+          shade.setRGB(tone * 1.0 * (1 - moss), tone * 0.98 * (1 + moss * 0.4), tone * 0.94 * (1 - moss * 1.5));
           for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
             p3.push(qx + ox, heightAt(qx, qy) + (soft ? 0.03 : 0.045), qy + oz);
             if (soft) uv2.push(u, v);
