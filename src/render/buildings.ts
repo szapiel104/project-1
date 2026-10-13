@@ -1108,12 +1108,11 @@ const BUILDERS: Record<string, Builder> = {
   },
   house(g, _team, flag) {
     const inside = cottage(g, houseSeed++);
-    // izba: stół z miską, ławy i łóżko
-    box(inside, M.wood, 0.45, 0.22, 0.3, 0.15, 0.05, 0.1);
-    box(inside, M.bread, 0.12, 0.05, 0.12, 0.15, 0.27, 0.1);
-    box(inside, M.woodDark, 0.4, 0.12, 0.1, 0.15, 0.05, 0.36);
-    box(inside, M.woodDark, 0.6, 0.14, 0.3, -0.38, 0.05, -0.38);
-    box(inside, M.white, 0.5, 0.06, 0.26, -0.38, 0.19, -0.38);
+    // izba: cała podłoga to legowiska (siennik pod każdym śpiącym rysuje scena), przy ścianie skrzynia i dzban
+    box(inside, M.woodDark, 0.22, 0.14, 0.14, 0.56, 0.05, 0.42);
+    const jug = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.1, 8), M.rockDark);
+    jug.position.set(0.56, 0.24, 0.42);
+    inside.add(jug);
     // chorągiewka stoi na szczycie dachu, więc znika razem z nim przy podglądzie wnętrza
     pennant(g.getObjectByName('roof') as THREE.Group, flag, 0.86, 1.42, 0);
   },

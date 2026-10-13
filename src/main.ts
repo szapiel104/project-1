@@ -1389,6 +1389,10 @@ const SAY: Record<string, string[]> = {
   night: ['Wilki dziś wyją, słyszysz?', 'Po ciemku lepiej nie łazić za palisadę.', 'Spać by się chciało.'],
   wolves: ['Wilki! Ratujcie!', 'Bierz kij, idą!', 'Matko Boska, wilki!'],
   rain: ['Leje i leje.', 'Błoto po kolana.'],
+  evening: ['Do karczmy, chłopy!', 'Fajrant. Nareszcie.', 'Posiedzimy przy ogniu.', 'Nogi mi odpadają od tej roboty.', 'Kto stawia piwo?'],
+  sleep: ['Ziew… pora do wyra.', 'Starczy na dziś.', 'Idę spać, jutro znowu harówka.', 'Dobranoc, panie.'],
+  sleeping: ['Chrrr…', 'Mmm… jeszcze chwilkę…', 'Chrrr… pchiii…'],
+  outside: ['Ziemia twarda, a dachu ani śladu.', 'Na słomie pod gołym niebem, jak pies.', 'Postaw, panie, chatę, bo tu zimno.'],
 };
 const bubble = document.createElement('div');
 bubble.className = 'say';
@@ -1405,6 +1409,10 @@ function lineFor(id: number): string {
   if (p.popularity < 45 && Math.random() < 0.6) return pick('angry');
   if (renderer.weather.rain > 0.4 && Math.random() < 0.4) return pick('rain');
   if (renderer.weather.night > 0.5 && Math.random() < 0.4) return pick('night');
+  // rytm dnia: wieczór (19, 20), w drodze do łóżka (21), sen (22, pod dachem albo na słomie)
+  if (u.phase === 22) return u.home ? pick('sleeping') : Math.random() < 0.5 ? pick('outside') : pick('sleeping');
+  if (u.phase === 21) return pick('sleep');
+  if (u.phase === 19 || u.phase === 20) return pick('evening');
   if (u.phase === 13 || u.phase === 14) return pick('build');
   if (u.carryRes >= 0 && Math.random() < 0.5) return pick('carry');
   if (!u.job) return pick('idle');

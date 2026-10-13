@@ -11,6 +11,8 @@ const RETRY_TICKS = 20;
 export const PAVE_TICKS = 40;
 const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
 const TAVERN = BUILDINGS.findIndex((b) => b.id === 'tavern');
+/** Wieczór i sen: tych ludzi nikt nie wyciąga do roboty (inaczej wstawaliby w nocy i kładli się od nowa) */
+const OFF_DUTY = new Set<Phase>([Phase.ToEvening, Phase.Evening, Phase.ToSleep, Phase.Sleeping]);
 
 /** Pora dnia dla rytmu ludzi: praca, wieczór przy ogniu, sen */
 export function dayPart(tick: number): 'work' | 'evening' | 'sleep' {
@@ -383,7 +385,7 @@ export function workerSystem(g: GameState): void {
     // najpierw ktoś, kto nic nie robi; budowniczego, latarnika czy tragarza gruzu zabieramy dopiero, gdy nie ma innych,
     // a nikogo z ładunkiem w rękach. Stare zadanie (target) się kasuje, żeby nie blokowało go później.
     const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0)
-      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && x.phase !== Phase.ToCorpse);
+      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && x.phase !== Phase.ToCorpse && !OFF_DUTY.has(x.phase));
     if (!u) continue;
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0;
     b.worker = u.id;

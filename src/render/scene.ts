@@ -433,10 +433,11 @@ export class GameRenderer {
     this.scene.add(this.hammers);
     // posłanie: rozrzucona wiązka słomy z wałkiem pod głowę i kawałkiem zgrzebnego koca na nogach
     const straw = new THREE.MeshStandardMaterial({ color: 0xd6b56a, roughness: 1, map: pattern('thatch'), vertexColors: true });
+    // wymiary pod leżącą postać (ok. 0,48 długości): siennik, wałek pod głową, koc na nogach
     const bed = mergeGeometries([
-      tint(new THREE.BoxGeometry(0.44, 0.035, 0.98).translate(0, 0.0175, 0), 0xffffff),
-      tint(new THREE.CylinderGeometry(0.07, 0.08, 0.36, 7).rotateZ(Math.PI / 2).translate(0, 0.06, -0.42), 0xe8d29a),
-      tint(new THREE.BoxGeometry(0.46, 0.03, 0.42).translate(0, 0.05, 0.24), 0x7d6a52),
+      tint(new THREE.BoxGeometry(0.2, 0.025, 0.58).translate(0, 0.0125, 0), 0xffffff),
+      tint(new THREE.CylinderGeometry(0.035, 0.04, 0.17, 7).rotateZ(Math.PI / 2).translate(0, 0.04, -0.24), 0xe8d29a),
+      tint(new THREE.BoxGeometry(0.21, 0.02, 0.24).translate(0, 0.06, 0.13), 0x7d6a52),
     ]);
     this.bedrolls = new THREE.InstancedMesh(bed, straw, MAX_UNITS);
     this.bedrolls.count = 0;
@@ -2371,6 +2372,38 @@ export class GameRenderer {
     (this.rings.material as THREE.MeshBasicMaterial).opacity = 0.85 + Math.sin(this.time * 4) * 0.15;
   }
 
+  /**
+   * Siennik dla śpiącego: [głowa x, y, z, stopy x, y, z] w świecie. W chacie (i w twierdzy) dwa rzędy po cztery
+   * na podłodze wnętrza, głowami do ścian; pod gołym niebem na polu, na którym leży, w stałym kierunku.
+   */
+  private bedSpot(g: GameState, u: GameState['units'][number], view: TerrainView, sleepers: Map<number, number[]>): [number, number, number, number, number, number] | null {
+    const width = g.map.width, height = g.map.height;
+    const L = 0.48;
+    if (u.home) {
+      const floor = this.buildingMeshes.get(u.home)?.getObjectByName('interior')?.children[0] as THREE.Mesh | undefined;
+      if (!floor?.geometry) return null;
+      floor.geometry.boundingBox ?? floor.geometry.computeBoundingBox();
+      const bb = floor.geometry.boundingBox!;
+      const k = Math.max(0, (sleepers.get(u.home) ?? []).indexOf(u.id)) % 8;
+      const col = k % 2, row = k >> 1;
+      const m = 0.09, dz = (bb.max.z - bb.min.z - 2 * m) / 4;
+      const z = bb.min.z + m + dz * (row + 0.5);
+      const hx = col === 0 ? bb.min.x + m : bb.max.x - m;
+      const fxl = col === 0 ? hx + L : hx - L;
+      floor.updateWorldMatrix(true, false);
+      const h = floor.localToWorld(this.bedA.set(hx, bb.max.y, z));
+      const f = floor.localToWorld(this.bedB.set(fxl, bb.max.y, z));
+      return [h.x, h.y, h.z, f.x, f.y, f.z];
+    }
+    // na słomie: kierunek z numeru chłopa, środek posłania na środku pola
+    const a = ((u.id * 1.618) % 1) * Math.PI * 2, sx = Math.sin(a) * L / 2, sz = Math.cos(a) * L / 2;
+    const cx = u.px / FP, cy = u.py / FP;
+    const y = view.heightAt(cx, cy);
+    return [cx - sx - width / 2, y, cy - sz - height / 2, cx + sx - width / 2, y, cy + sz - height / 2];
+  }
+  private bedA = new THREE.Vector3();
+  private bedB = new THREE.Vector3();
+
   private syncUnits(g: GameState, view: TerrainView, alpha: number): void {
     // karczmy z karczmarzem: wieczorem schodzą się do nich ludzie
     const hourNow = this.menuNight ? 23 : clockAt(g.tick).hour;
@@ -2385,6 +2418,10 @@ export class GameRenderer {
     const jobs = new Map<number, GameState['buildings'][number]>();
     this.camps.clear();
     for (const b of g.buildings) { jobs.set(b.id, b); if (BUILDINGS[b.type]!.idleSlots && b.door >= 0) this.camps.set(b.door, b); }
+    // kto śpi w której chacie: miejsce na podłodze według kolejności (stałej, po numerze chłopa)
+    const sleepers = new Map<number, number[]>();
+    for (const u of g.units) if (u.phase === Phase.Sleeping && u.home) { const l = sleepers.get(u.home); if (l) l.push(u.id); else sleepers.set(u.home, [u.id]); }
+    for (const l of sleepers.values()) l.sort((a, b) => a - b);
     for (let i = 0; i < n; i++) {
       const u = g.units[i]!;
       const prev = this.prevPos.get(u.id);
@@ -2563,26 +2600,27 @@ export class GameRenderer {
         } else work = -0.6;
         swing = 0;
       }
-      // sen: w chacie nikogo nie widać, bez dachu nad głową leży na wznak na słomie obok ogniska
+      // sen: każdy leży na wznak na sienniku — w chacie (widać po kliknięciu, gdy zdejmie się dach)
+      // albo bez dachu nad głową na słomie obok ogniska
       const sleeping = u.phase === Phase.Sleeping;
-      const outdoors = sleeping && !u.home;
-      if (outdoors) {
-        const a = ((u.id * 1.618) % 1) * Math.PI * 2;
-        const ground = view.heightAt(u.px / FP, u.py / FP);
-        t.position.set(u.px / FP - width / 2, ground, u.py / FP - height / 2);
+      const bed = sleeping ? this.bedSpot(g, u, view, sleepers) : null;
+      if (bed) {
+        const [hx, hy, hz, fx2, fy2, fz2] = bed;
+        const a = Math.atan2(fx2 - hx, fz2 - hz);
+        t.position.set((hx + fx2) / 2, (hy + fy2) / 2, (hz + fz2) / 2);
         t.rotation.set(0, a, 0);
         t.scale.setScalar(1);
         t.updateMatrix();
         this.bedrolls.setMatrixAt(i, t.matrix);
-        // postać leży wzdłuż posłania głową na wałku (oś obrotu przy stopach, więc przesuwamy ją ku nogom)
-        t.position.set(u.px / FP - width / 2 + Math.sin(a) * 0.36, ground + 0.07, u.py / FP - height / 2 + Math.cos(a) * 0.36);
+        // postać obraca się wokół stóp, więc stawiamy ją stopami na końcu siennika i kładziemy na plecy
+        t.position.set(fx2, fy2 + 0.045, fz2);
         lean = -Math.PI / 2;
         swing = 0;
       } else this.bedrolls.setMatrixAt(i, ZERO);
       this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
-      t.scale.setScalar(sleeping && u.home ? 0 : FIG);
+      t.scale.setScalar(FIG);
       if (lean) { t.rotation.reorder('YXZ'); t.rotation.x = lean; }
       t.updateMatrix();
       if (lean) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
