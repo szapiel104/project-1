@@ -901,7 +901,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
         if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide + reach;
-        if (c.lod.farGeo) { const want = d > 55 + reach ? c.lod.farGeo : c.near; if (c.mesh.geometry !== want) c.mesh.geometry = want; }
+        if (c.lod.farGeo) { const want = d > 42 + reach ? c.lod.farGeo : c.near; if (c.mesh.geometry !== want) c.mesh.geometry = want; }
       }
     },
     setWet(k: number) {

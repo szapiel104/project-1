@@ -100,12 +100,18 @@ export const proceduralModels: ModelFactory = {
     ])!;
   },
   leafCrown() {
-    return mergeGeometries([
-      at(new THREE.IcosahedronGeometry(0.36, 1), 0, 0.95, 0),
-      at(new THREE.IcosahedronGeometry(0.26, 1), -0.27, 0.8, 0.08),
-      at(new THREE.IcosahedronGeometry(0.27, 1), 0.26, 0.84, -0.06),
-      at(new THREE.IcosahedronGeometry(0.22, 1), 0.02, 0.82, 0.27),
-    ]);
+    // korona z trzech gruzłowatych brył (wierzchołki odsunięte szumem), razem 200 trójkątów zamiast 320
+    const lump = (r: number, detail: number, x: number, y: number, z: number, seed: number): THREE.BufferGeometry => {
+      const g = new THREE.IcosahedronGeometry(r, detail);
+      const p = g.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < p.count; i++) {
+        const vx = p.getX(i), vy = p.getY(i), vz = p.getZ(i);
+        const k = 1 + Math.sin(vx * 17 + seed) * Math.cos(vz * 13 - seed) * 0.12 + Math.sin(vy * 21 + seed * 2) * 0.06;
+        p.setXYZ(i, vx * k + x, vy * k * 0.92 + y, vz * k + z);
+      }
+      return g;
+    };
+    return mergeGeometries([lump(0.4, 1, 0, 0.95, 0, 1), lump(0.29, 1, -0.26, 0.8, 0.1, 2), lump(0.3, 0, 0.25, 0.84, -0.08, 3), lump(0.24, 0, 0.03, 0.82, 0.27, 4)])!;
   },
   tuft() {
     // kępa trawy: kilkanaście cienkich, wygiętych źdźbeł (taśma zwężająca się ku górze, trzy odcinki),
