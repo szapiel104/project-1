@@ -9,6 +9,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { BUILDINGS, footprint } from '../data/buildings';
 import { Clutter } from './clutter';
 import { Clouds } from './clouds';
+import { Flames } from './flames';
 import { crowGeometry, WOLF_HIPS, wolfParts } from './creatures';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
@@ -224,6 +225,8 @@ export class GameRenderer {
   private clutter = new Clutter();
   /** Chmury jako obiekty nad mapą: płyną, rodzą się i rozpływają, rzucają cień */
   private clouds = new Clouds();
+  /** Żywe płomienie pochodni, ognisk i pożarów */
+  private flames = new Flames();
   private fxAt = 0;
   private mistLevel = 0;
   private buildingMeshes = new Map<number, THREE.Group>();
@@ -304,6 +307,7 @@ export class GameRenderer {
     this.scene.add(this.ambience.group);
     this.scene.add(this.clutter.group);
     this.scene.add(this.clouds.group);
+    this.scene.add(this.flames.group);
 
     const flat = (geo: THREE.BufferGeometry, color: number, opacity = 1): THREE.Mesh => {
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: opacity < 1, opacity, depthWrite: false }));
@@ -1016,7 +1020,7 @@ export class GameRenderer {
       T('budynki', () => { this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
       T('chłopi', () => this.syncUnits(g, v, alpha));
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
-      T('klimat', () => this.syncAmbience(g, v, dt));
+      T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
       T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); });
     }
     const tg = performance.now();
@@ -1025,6 +1029,33 @@ export class GameRenderer {
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + performance.now() - tg;
     this.timingFrames++;
   }
+  /** Płomienie: pochodnie przy budynkach (zapalone), ogniska w obozowiskach i karczmach, pożary uszkodzonych budynków */
+  private syncFlames(g: GameState): void {
+    const F = this.flames, w = new THREE.Vector3();
+    F.begin(this.calm ? 0 : this.time);
+    const glow = Math.min(1, this.night * 1.4);
+    const f = this.focusPoint;
+    const lit = new Set<number>();
+    for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
+    for (const [id, mesh] of this.buildingMeshes) {
+      if ((mesh.position.x - f.x) ** 2 + (mesh.position.z - f.z) ** 2 > 110 * 110) continue;
+      const torchFlame = mesh.getObjectByName('torchflame');
+      if (torchFlame && lit.has(id)) { torchFlame.getWorldPosition(w); w.y -= 0.12; F.add(w, 0.36, 0.2, (id * 0.137) % 1, glow); }
+      const camp = mesh.getObjectByName('flame');
+      if (camp && camp.visible) {
+        camp.getWorldPosition(w);
+        for (const ch of camp.children) ch.visible = false;
+        F.add(w, 0.42, 0.3, (id * 0.311) % 1, glow);
+        F.add(w.set(w.x + 0.04, w.y, w.z - 0.03), 0.3, 0.2, (id * 0.731) % 1, 0);
+      }
+      const fire = mesh.getObjectByName('fire');
+      if (fire && fire.visible) {
+        for (const ch of fire.children) { ch.visible = false; ch.getWorldPosition(w); F.add(w.setY(w.y - 0.1), 0.75, 0.5, (ch.id * 0.193) % 1, glow * 0.6 + 0.3); }
+      }
+    }
+    F.end();
+  }
+
   /** Dym, iskry, okna i mgła: źródła odświeżane dwa razy na sekundę, cząstki co klatkę */
   private syncAmbience(g: GameState, v: TerrainView, dt: number): void {
     const { width, height } = g.map;
@@ -1546,12 +1577,13 @@ export class GameRenderer {
     const flicker = this.calm ? 1 : 0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07;
     const lit = new Set<number>();
     for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
-    for (const [id, mesh] of this.buildingMeshes) {
+    for (const mesh of this.buildingMeshes.values()) {
       const torch = mesh.getObjectByName('torch');
       if (!torch) continue;
       // słup stoi cały czas; płomień pali się dopiero, gdy ktoś podejdzie i zapali pochodnię
       const flame = torch.getObjectByName('torchflame');
-      if (flame) { flame.visible = lit.has(id); flame.scale.set(1, 0.8 + flicker * 0.4, 1); }
+      // stary stożek zostaje tylko jako znacznik miejsca; płomień rysuje system ognia
+      if (flame) flame.visible = false;
     }
     this.handTorches.visible = on;
     if (!on) { for (const lamp of this.lamps) lamp.intensity = 0; return; }
