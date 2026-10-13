@@ -13,6 +13,9 @@ export class StrategyCamera {
   private pitch = (52 * Math.PI) / 180;
   private static readonly MIN_PITCH = (6 * Math.PI) / 180;
   private static readonly MAX_PITCH = (89 * Math.PI) / 180;
+  /** Najbliżej, jak da się podjechać kamerą (dawniej 12): z tej odległości widać twarze, hełmy i lotki strzał */
+  private static readonly MIN_DIST = 4;
+  private static readonly MAX_DIST = 58;
   /** Wysokość terenu w punkcie świata; kamera nigdy nie zejdzie pod ziemię */
   ground: (x: number, z: number) => number = () => 0;
   private keys = new Set<string>();
@@ -135,22 +138,31 @@ export class StrategyCamera {
   }
 
   private zoom(factor: number): void {
-    this.dist = Math.max(12, Math.min(58, this.dist * factor));
+    // przy ziemi kroki kółka są drobniejsze, żeby dało się płynnie podjechać do żołnierzy
+    const f = this.dist < 14 ? 1 + (factor - 1) * 0.6 : factor;
+    this.dist = Math.max(StrategyCamera.MIN_DIST, Math.min(StrategyCamera.MAX_DIST, this.dist * f));
   }
 
   private apply(): void {
     // punkt na ziemi leży na wysokości terenu, żeby przy niskim kącie nie patrzeć w głąb pagórka
     this.target.y = this.ground(this.target.x, this.target.z);
-    const flat = Math.cos(this.pitch) * this.dist;
+    // z bliska kamera sama się kładzie niżej (widok bardziej z boku, jak przy patrzeniu na oddział z konia)
+    const close = Math.max(0, Math.min(1, (14 - this.dist) / 10));
+    const pitch = Math.max(StrategyCamera.MIN_PITCH, this.pitch - close * close * 0.35);
+    const flat = Math.cos(pitch) * this.dist;
     const x = this.target.x + Math.sin(this.yaw) * flat, z = this.target.z + Math.cos(this.yaw) * flat;
-    let y = this.target.y + Math.sin(this.pitch) * this.dist;
+    let y = this.target.y + Math.sin(pitch) * this.dist;
+    const clear = 1.2 - close * 0.8;
     // nie wchodzimy pod ziemię: kamera zawsze co najmniej trochę nad terenem pod sobą i na linii do celu
     for (let k = 0.25; k <= 1; k += 0.25) {
       const gx = this.target.x + (x - this.target.x) * k, gz = this.target.z + (z - this.target.z) * k;
-      const need = this.target.y + (this.ground(gx, gz) + 1.2 - this.target.y) / k;
+      const need = this.target.y + (this.ground(gx, gz) + clear - this.target.y) / k;
       if (y < need) y = need;
     }
     this.camera.position.set(x, y, z);
+    // bliska płaszczyzna cięcia: z bliska mniejsza, żeby nie ucinało postaci tuż przed kamerą
+    const near = Math.max(0.12, Math.min(0.5, this.dist * 0.04));
+    if (Math.abs(this.camera.near - near) > 0.01 && this.camera.fov < 60) { this.camera.near = near; this.camera.updateProjectionMatrix(); }
     this.camera.lookAt(this.target);
   }
 
