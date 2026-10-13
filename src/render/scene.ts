@@ -296,6 +296,7 @@ export class GameRenderer {
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    this.renderer.localClippingEnabled = true; // budynki w budowie: model przycięty na wysokości postępu
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.scene.background = new THREE.Color(HAZE);
     this.scene.fog = new THREE.Fog(HAZE, 55, 150);
@@ -1213,7 +1214,7 @@ export class GameRenderer {
   private syncWalls(g: GameState, view: TerrainView): void {
     const { width, height } = g.map;
     const walls = g.buildings.filter((b) => { const d = BUILDINGS[b.type]!; return d.wall || d.gate; });
-    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 8) : 9}`).join(',');
+    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}`).join(',');
     if (key === this.wallKey) return;
     this.wallKey = key;
     const solid = new Map<number, GameState['buildings'][number]>();
@@ -1236,14 +1237,29 @@ export class GameRenderer {
         continue;
       }
       if (!def.line) continue;
-      const grow = b.build ? 0.15 + 0.85 * (1 - b.build / buildWork(b.type)) : 1;
+      // budowa częstokołu: bale stają jeden po drugim (pełnej wysokości), a nie rosną z ziemi
+      const built = b.build ? 1 - b.build / buildWork(b.type) : 1;
       const links: [boolean, boolean, boolean, boolean] = [at(b.x + 1, b.y), at(b.x - 1, b.y), at(b.x, b.y + 1), at(b.x, b.y - 1)];
       const cx = b.x + 0.5, cz = b.y + 0.5;
-      for (const log of palisadeLogs(links, b.id)) {
+      const logs = palisadeLogs(links, b.id);
+      const shown = Math.floor(logs.length * built + 0.001);
+      for (let li = 0; li < logs.length; li++) {
+        const log = logs[li]!;
         if (n >= 4096) break;
+        if (li >= shown) {
+          // miejsce na kolejny bal: wbity kołek znacznikowy
+          if (li === shown) {
+            const lx = cx + log.x, lz = cz + log.z, y = view.heightAt(lx, lz) - 0.05;
+            M4.compose(p.set(lx - width / 2, y, lz - height / 2), q.identity(), sc.set(log.r * 0.4, 0.18, log.r * 0.4));
+            this.wallShafts.setMatrixAt(n, M4);
+            this.wallTips!.setMatrixAt(n, M4.makeScale(0, 0, 0));
+            n++;
+          }
+          continue;
+        }
         const lx = cx + log.x, lz = cz + log.z;
         const y = view.heightAt(lx, lz) - 0.05;
-        const h = log.h * grow;
+        const h = log.h;
         e.set((log.x * 7 % 1) * 0.05, 0, (log.z * 5 % 1) * 0.05);
         q.setFromEuler(e);
         M4.compose(p.set(lx - width / 2, y, lz - height / 2), q, sc.set(log.r, h, log.r));
@@ -1492,8 +1508,49 @@ export class GameRenderer {
   private ruinPiles = new Map<number, THREE.Group>();
   /** Do kiedy (czas sceny) pali się uszkodzony budynek */
   private burnUntil = new Map<number, number>();
-  /** Budynki w budowie rosną od fundamentów w górę, a nad placem co chwilę wzbija się kurz */
+  /**
+   * Plac budowy: budynek nie rośnie ani się nie rozciąga — wznosi się warstwa po warstwie. Model jest przycięty
+   * poziomą płaszczyzną na wysokości postępu (widać mury do połowy, puste wnętrze, potem dach), dookoła stoją
+   * rusztowania z pomostem na bieżącej wysokości, obok leży stos desek i kamieni, nad placem kurz.
+   * Wydajność: osobne kopie materiałów tylko dla budynków właśnie w budowie (zwykle kilka), rusztowania i stosy
+   * to dwie wspólne siatki instancji przeliczane tylko, gdy postęp przeskoczy o 1/20.
+   */
+  private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] }>();
+  private siteKey = '';
+  private scaffold: THREE.InstancedMesh | null = null;
+  private siteStones: THREE.InstancedMesh | null = null;
+  private beginSite(id: number, mesh: THREE.Object3D): void {
+    const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+    mesh.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(mesh);
+    const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
+    const clones = new Map<THREE.Material, THREE.Material>();
+    const clip = (m: THREE.Material): THREE.Material => {
+      let c = clones.get(m);
+      if (!c) { c = m.clone(); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clones.set(m, c); }
+      return c;
+    };
+    mesh.traverse((o) => {
+      const me = o as THREE.Mesh;
+      if (!me.isMesh || !me.material) return;
+      swapped.push([me, me.material]);
+      me.material = Array.isArray(me.material) ? me.material.map(clip) : clip(me.material);
+    });
+    this.sites.set(id, { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped });
+  }
+  private endSite(id: number): void {
+    const s = this.sites.get(id);
+    if (!s) return;
+    const done = new Set<THREE.Material>();
+    for (const [me, orig] of s.swapped) {
+      for (const m of Array.isArray(me.material) ? me.material : [me.material]) if (!done.has(m)) { done.add(m); m.dispose(); }
+      me.material = orig;
+    }
+    this.sites.delete(id);
+  }
   private syncSites(g: GameState): void {
+    const live = new Set<number>();
+    const scaffolds: { b: GameState['buildings'][number]; k: number; cut: number; site: { base: number; top: number } }[] = [];
     for (const b of g.buildings) {
       const mesh = this.buildingMeshes.get(b.id);
       if (!mesh) continue;
@@ -1501,11 +1558,21 @@ export class GameRenderer {
       // ruina po zniszczeniu: kupa gruzu i resztki ścian; dopiero odbudowa podnosi budynek z gruzowiska
       const pile = this.ruinPiles.get(b.id);
       const ruinShown = !!b.ruined && !def.wall && !def.gate;
-      if (!b.build) {
-        if (pile) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
-        if (mesh.scale.y !== 1) { mesh.scale.y = 1; mesh.visible = true; this.roadDust(b.x, b.y, false); }
+      if (mesh.scale.y !== 1) mesh.scale.y = 1;
+      if (b.build && def.line) {
+        // częstokół w budowie: niskie rusztowanie przy odcinku, bale stają jeden po drugim (syncWalls)
+        const k = 1 - b.build / buildWork(b.type);
+        scaffolds.push({ b, k: Math.max(0.1, k), cut: mesh.position.y + 0.7, site: { base: mesh.position.y, top: mesh.position.y + 0.9 } });
         continue;
       }
+      if (!b.build || def.line) {
+        if (pile && !b.build) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
+        if (this.sites.has(b.id)) { this.endSite(b.id); mesh.visible = true; this.roadDust(b.x, b.y, false); }
+        continue;
+      }
+      live.add(b.id);
+      if (!this.sites.has(b.id)) this.beginSite(b.id, mesh);
+      const site = this.sites.get(b.id)!;
       const k = 1 - b.build / buildWork(b.type);
       if (ruinShown) {
         if (!pile) {
@@ -1516,26 +1583,86 @@ export class GameRenderer {
           this.buildingLayer.add(p2);
           this.ruinPiles.set(b.id, p2);
         }
-        // na początku sam gruz (resztki ścian ledwie wystają), w miarę odbudowy budynek rośnie, a gruz znika
-        mesh.visible = k > 0.08;
-        mesh.scale.y = 0.12 + 0.88 * k;
         const pl = this.ruinPiles.get(b.id)!;
         pl.visible = k < 0.7;
         pl.scale.y = 1.6 * (1 - k);
-        if (this.calm) continue;
-      } else {
-        if (pile) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
-        mesh.visible = true;
-        mesh.scale.y = 0.06 + 0.94 * k;
-      }
+      } else if (pile) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
+      // najpierw fundament (pierwsze 10% pracy), potem mury i dach
+      const cut = site.base + 0.04 + Math.max(0, (k - 0.08) / 0.92) * (site.top - site.base) * 1.01;
+      site.plane.constant = cut;
+      mesh.visible = true;
+      scaffolds.push({ b, k, cut, site });
       if (this.calm) continue;
       const next = this.dustAt.get(b.id) ?? 0;
       if (this.time > next) {
-        const fp = footprint(BUILDINGS[b.type]!, b.rot);
+        const fp = footprint(def, b.rot);
         this.roadDust(b.x + Math.floor(Math.random() * fp.w), b.y + Math.floor(Math.random() * fp.h), false);
         this.dustAt.set(b.id, this.time + 0.9 + Math.random() * 1.2);
       }
     }
+    for (const id of [...this.sites.keys()]) if (!live.has(id)) this.endSite(id);
+    this.syncScaffolds(g, scaffolds);
+  }
+
+  /** Rusztowania, pomosty i stosy materiału przy wszystkich placach budowy (dwie siatki instancji) */
+  private syncScaffolds(g: GameState, list: { b: GameState['buildings'][number]; k: number; cut: number; site: { base: number; top: number } }[]): void {
+    const key = list.map((s) => `${s.b.id}:${Math.round(s.k * 20)}`).join(',');
+    if (key === this.siteKey) return;
+    this.siteKey = key;
+    if (!this.scaffold) {
+      const wood = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.95, map: pattern('planks') });
+      this.scaffold = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), wood, 6000);
+      this.siteStones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0).translate(0, 0.35, 0), new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: 1, flatShading: true }), 600);
+      for (const m of [this.scaffold, this.siteStones]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.buildingLayer.add(m); }
+    }
+    const { width, height } = g.map;
+    const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
+    let n = 0, ns = 0;
+    const put = (x: number, y: number, z: number, sx: number, sy: number, sz: number, rot = 0): void => {
+      if (n >= 6000) return;
+      q.setFromAxisAngle(Y, rot);
+      this.scaffold!.setMatrixAt(n++, M4.compose(p.set(x, y, z), q, sc.set(sx, sy, sz)));
+    };
+    for (const { b, k, cut, site } of list) {
+      const def = BUILDINGS[b.type]!;
+      const fp = footprint(def, b.rot);
+      const x0 = b.x - width / 2 - 0.12, z0 = b.y - height / 2 - 0.12, x1 = x0 + fp.w + 0.24, z1 = z0 + fp.h + 0.24;
+      const base = site.base;
+      // stos desek i kamieni przy rogu działki: maleje, im dalej budowa
+      const left = 1 - k;
+      for (let i = 0; i < Math.ceil(5 * left); i++) put(x1 + 0.25, base + i * 0.06, z1 - 0.4, 0.7, 0.05, 0.12 + (i % 2) * 0.02, 0.1 * i);
+      for (let i = 0; i < Math.ceil(4 * left) && ns < 600; i++) {
+        q.setFromAxisAngle(Y, i * 1.7);
+        this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(x0 - 0.3 + (i % 2) * 0.22, base + (i > 1 ? 0.12 : 0), z1 - 0.3 - Math.floor(i / 2) * 0.2), q, sc.setScalar(0.2)));
+      }
+      if (k < 0.08) continue; // fundament: jeszcze bez rusztowań
+      // słupy co ~0,8 pola po obwodzie, sięgają nieco ponad bieżącą wysokość
+      const poleTop = Math.min(site.top + 0.2, cut + 0.45) - base;
+      const posts: [number, number][] = [];
+      const nx = Math.max(1, Math.round((x1 - x0) / 0.8)), nz = Math.max(1, Math.round((z1 - z0) / 0.8));
+      for (let i = 0; i <= nx; i++) { posts.push([x0 + (x1 - x0) * i / nx, z0], [x0 + (x1 - x0) * i / nx, z1]); }
+      for (let i = 1; i < nz; i++) { posts.push([x0, z0 + (z1 - z0) * i / nz], [x1, z0 + (z1 - z0) * i / nz]); }
+      for (const [px, pz] of posts) put(px, base, pz, 0.045, poleTop, 0.045);
+      // poprzeczki co 0,45 i pomost z desek na bieżącej wysokości (tam, gdzie pracują murarze)
+      const levels: number[] = [];
+      for (let y = 0.45; y < poleTop - 0.05; y += 0.45) levels.push(y);
+      const deck = Math.max(0.3, cut - base - 0.1);
+      for (const ly of levels) {
+        put((x0 + x1) / 2, base + ly, z0, x1 - x0, 0.03, 0.03); put((x0 + x1) / 2, base + ly, z1, x1 - x0, 0.03, 0.03);
+        put(x0, base + ly, (z0 + z1) / 2, 0.03, 0.03, z1 - z0); put(x1, base + ly, (z0 + z1) / 2, 0.03, 0.03, z1 - z0);
+      }
+      put((x0 + x1) / 2, base + deck, z0 - 0.12, x1 - x0 + 0.2, 0.035, 0.26); put((x0 + x1) / 2, base + deck, z1 + 0.12, x1 - x0 + 0.2, 0.035, 0.26);
+      put(x0 - 0.12, base + deck, (z0 + z1) / 2, 0.26, 0.035, z1 - z0); put(x1 + 0.12, base + deck, (z0 + z1) / 2, 0.26, 0.035, z1 - z0);
+      // ukośne zastrzały na dwóch bokach i drabina
+      const diag = Math.hypot(x1 - x0, poleTop);
+      put((x0 + x1) / 2, base, z0, 0.03, diag, 0.03); this.scaffold!.setMatrixAt(n - 1, M4.compose(p.set(x0, base, z0 - 0.02), q.setFromAxisAngle(new THREE.Vector3(0, 0, -1), Math.atan2(x1 - x0, poleTop)), sc.set(0.03, diag, 0.03)));
+      put(x1 + 0.3, base, (z0 + z1) / 2, 0.05, poleTop + 0.2, 0.05); put(x1 + 0.3, base, (z0 + z1) / 2 + 0.22, 0.05, poleTop + 0.2, 0.05);
+      for (let y = 0.15; y < poleTop; y += 0.18) put(x1 + 0.3, base + y, (z0 + z1) / 2 + 0.11, 0.025, 0.025, 0.24);
+    }
+    this.scaffold.count = n;
+    this.siteStones!.count = ns;
+    this.scaffold.instanceMatrix.needsUpdate = true;
+    this.siteStones!.instanceMatrix.needsUpdate = true;
   }
 
   private syncBuildings(g: GameState, view: TerrainView): void {
