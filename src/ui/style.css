@@ -733,3 +733,7 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .army-picked .roster-card { width: 34px; flex: none; }
 .army-picked .roster-card svg { width: 32px; height: 32px; }
 .army-picked .roster-more { color: var(--parchment-light); }
+/* plac budowy w panelu budynku */
+.info-site { display: grid; gap: 6px; }
+.site-rows { display: grid; gap: 2px; }
+.site-row { display: flex; justify-content: space-between; gap: 12px; margin: 0; }

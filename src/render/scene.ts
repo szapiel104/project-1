@@ -2348,26 +2348,42 @@ export class GameRenderer {
         break;
       }
       const hammering = u.phase === Phase.Repairing;
+      let lean = 0;
       if (hammering) {
-        // robotnicy rozstawiają się wokół budowy, twarzą do ścian, a nie tłoczą przy drzwiach
+        // robotnicy rozstawiają się wokół budowy, twarzą do ścian; co drugi pracuje na pomoście rusztowania (na wysokości murów)
         const site = g.buildings.find((b) => b.id === u.target);
         if (site) {
           const fp = footprint(BUILDINGS[site.type]!, site.rot);
           const a = (u.id * 2.39996) % (Math.PI * 2);
           const cx = site.x + fp.w / 2, cy = site.y + fp.h / 2;
-          const rx = fp.w / 2 + 0.25, ry = fp.h / 2 + 0.25;
+          const sc = this.sites.get(site.id);
+          const deck = sc ? sc.plane.constant - 0.1 : 0;
+          const onDeck = !!sc && u.id % 2 === 0 && deck - sc.base > 0.35;
+          const rx = fp.w / 2 + (onDeck ? 0.24 : 0.3), ry = fp.h / 2 + (onDeck ? 0.24 : 0.3);
           const px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
-          t.position.set(px - width / 2, view.heightAt(px, py), py - height / 2);
+          t.position.set(px - width / 2, onDeck ? deck + 0.02 : view.heightAt(px, py), py - height / 2);
           t.rotation.set(0, Math.atan2(cx - px, cy - py), 0);
         }
-        swing = this.calm ? 0 : -0.6 - Math.abs(Math.sin(this.time * 7 + u.id)) * 1.3;
-        if (!this.calm) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.45);
+        // uderzenie młotkiem: powolny zamach w górę, szybki cios w dół, krótkie odbicie i chwila przerwy;
+        // przy ciosie tułów pochyla się do przodu, a w chwili trafienia słychać stuk
+        if (!this.calm) {
+          const ph = (this.time * 1.45 + (u.id % 13) * 0.137) % 1;
+          const ease = (x: number): number => x * x * (3 - 2 * x);
+          if (ph < 0.55) swing = -0.3 - ease(ph / 0.55) * 1.9;            // zamach
+          else if (ph < 0.66) swing = -2.2 + ((ph - 0.55) / 0.11) * 2.45;  // cios
+          else if (ph < 0.74) swing = 0.25 - ((ph - 0.66) / 0.08) * 0.2;   // odbicie
+          else swing = 0.05 - ease((ph - 0.74) / 0.26) * 0.35;           // powrót
+          lean = ph > 0.55 && ph < 0.8 ? Math.sin(((ph - 0.55) / 0.25) * Math.PI) * 0.22 : 0;
+          if (ph > 0.64 && ph < 0.7) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
+        } else swing = 0;
       }
       this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
       t.scale.setScalar(FIG);
+      if (lean) { t.rotation.reorder('YXZ'); t.rotation.x = lean; }
       t.updateMatrix();
+      if (lean) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
       this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
       if (hammering) {
         // ramię obraca się w barku tak jak prawa ręka postaci (kąt = swing * 0.8)

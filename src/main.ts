@@ -8,10 +8,10 @@ import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
-import { TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
+import { Phase, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
 import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
-import { canAfford, canPlace, maxHp } from './sim/systems/placement';
+import { buildWork, canAfford, canPlace, maxHp } from './sim/systems/placement';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
@@ -339,6 +339,27 @@ function selectUnit(id: number): void {
 /** Budynki, których teren pracy jest pokazany na mapie (zielony kwadrat) */
 const shownAreas = new Set<number>();
 
+/** Plac budowy w panelu: postęp, materiał, robotnicy i co się teraz dzieje */
+function siteInfo(b: GameState['buildings'][number]): NonNullable<BuildingInfo['site']> {
+  const work = buildWork(b.type);
+  const pct = Math.max(0, Math.min(99, Math.floor((1 - b.build / work) * 100)));
+  let carrying = 0, fetching = 0, builders = 0, hammering = 0;
+  for (const u of game.units) {
+    if (u.target !== b.id) continue;
+    if (u.phase === Phase.ToFetch) fetching++;
+    else if (u.phase === Phase.ToRepair && u.carryRes >= 0) carrying++;
+    if (u.phase === Phase.ToFetch || u.phase === Phase.ToRepair || u.phase === Phase.Repairing) builders++;
+    if (u.phase === Phase.Repairing) hammering++;
+  }
+  const loads = b.loads ?? 0, delivered = b.delivered ?? 0;
+  const starved = loads > 0 && (1 - b.build / work) * loads >= delivered - 0.001;
+  const state = !builders ? 'brak wolnych ludzi — czeka na robotników'
+    : starved && (fetching || carrying) ? 'robotnicy niosą materiał ze składu'
+    : starved ? 'czeka na materiał'
+    : hammering ? 'trwa budowa' : 'robotnicy idą na plac';
+  return { pct, loads, delivered, carrying, fetching, builders, state };
+}
+
 /** Wszystko, co panel budynku pokazuje o wybranym budynku (w składach także zapasy z ikonami) */
 function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
   const def = BUILDINGS[b.type]!;
@@ -352,7 +373,8 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: def.id === 'barracks' ? recruitInfo() : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     garrison: def.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
-    area: def.area ? shownAreas.has(b.id) : undefined };
+    area: def.area ? shownAreas.has(b.id) : undefined,
+    site: b.build ? siteInfo(b) : undefined };
 }
 
 function select(id: number): void {

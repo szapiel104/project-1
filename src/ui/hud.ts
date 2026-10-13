@@ -74,7 +74,9 @@ export interface HudView {
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
 export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
-export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number; recruit?: RecruitUnit[]; area?: boolean }
+export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number; recruit?: RecruitUnit[]; area?: boolean;
+  /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
+  site?: { pct: number; loads: number; delivered: number; carrying: number; fetching: number; builders: number; state: string } }
 export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number }
 
 export interface Hud {
@@ -131,6 +133,7 @@ const ICONS: Record<string, string> = {
   granary: '<path d="M4 9l6-5 6 5v8H4z" fill="#c9a24a" stroke="#2a1c10"/><rect x="8" y="12" width="4" height="5" fill="#5e4329" stroke="#2a1c10"/>',
   pop: '<circle cx="10" cy="6" r="3" fill="#e2bd94" stroke="#2a1c10"/><path d="M4 18c0-5 3-8 6-8s6 3 6 8z" fill="#a8281f" stroke="#2a1c10"/>',
   idle: '<path d="M3 13h14M5 13v4M15 13v4M4 10h12" stroke="#c9a24a" stroke-width="2"/><path d="M12 3h4l-4 4h4" stroke="#f6ecd0" fill="none"/>',
+  hammer: '<path d="M9 8l7 9" stroke="#7a5232" stroke-width="2.4" stroke-linecap="round"/><path d="M3 6l5-4 4 4-5 4z" fill="#8a8e96" stroke="#2a1c10"/>',
   gold: '<circle cx="10" cy="10" r="7" fill="#e9c145" stroke="#2a1c10"/><circle cx="10" cy="10" r="4.5" fill="none" stroke="#9a7a1a"/><path d="M10 7v6M8 8.500h3.500a1.3 1.3 0 010 2.600H8" stroke="#7a5d10" fill="none"/>',
 };
 
@@ -446,9 +449,18 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const areaBtn = el('button', 'btn-main', 'Pokaż teren pracy'); areaBtn.type = 'button'; areaBtn.hidden = true;
   areaBtn.addEventListener('click', () => events.onArea(infoId));
   infoActions.append(areaBtn, demolish, close);
+  // plac budowy: pasek postępu, materiał (przyniesiony / potrzebny, w drodze), robotnicy i co się teraz dzieje
+  const siteBox = el('div', 'info-site');
+  siteBox.hidden = true;
+  const siteHead = el('p', 'stock-head');
+  const siteBar = el('div', 'stock-bar');
+  const siteFill = el('span');
+  siteBar.append(siteFill);
+  const siteRows = el('div', 'site-rows');
+  siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, armyPanel, roster, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, armyPanel, roster, siteBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -877,6 +889,19 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         infoWorker.append(`${t('hud.makes')}: ${pr.output.amount} × ${t(RESOURCE_DEFS[pr.output.res].name).toLowerCase()}${from}, ${t('hud.every')} ${secs} s`, document.createElement('br'), `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
       }
       // skład, stodoła, spichlerz: co leży i ile (zapasy są wspólne dla wszystkich składów danego rodzaju)
+      siteBox.hidden = !i.site;
+      if (i.site) {
+        const st = i.site;
+        siteHead.replaceChildren(icon('hammer'), el('strong', '', `Budowa: ${st.pct}%`), el('span', '', ` · ${st.state}`));
+        siteFill.style.width = `${st.pct}%`;
+        const row = (label: string, value: string): HTMLElement => { const r = el('p', 'site-row'); r.append(el('span', '', label), el('strong', '', value)); return r; };
+        siteRows.replaceChildren(
+          ...(st.loads ? [row('Materiał na placu', `${st.delivered} / ${st.loads} ładunków`), row('W drodze ze składu', `${st.carrying + st.fetching}`)] : []),
+          row('Robotników przy budowie', `${st.builders}`),
+        );
+        infoDesc.hidden = true;
+        infoWorker.hidden = true;
+      } else infoDesc.hidden = false;
       storeBox.hidden = !i.stock?.length;
       if (i.stock?.length) {
         const key = JSON.stringify(i.stock);
