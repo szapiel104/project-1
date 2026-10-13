@@ -1,5 +1,5 @@
 import { BUILDINGS, buildingIndex, footprint } from './data/buildings';
-import { resIndex, type ResourceId } from './data/resources';
+import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } from './data/resources';
 import { UNITS } from './data/units';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { BYNAMES, FIRST_NAMES } from './data/names';
@@ -12,7 +12,7 @@ import { TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population
 import { step, type Command } from './sim/step';
 import { monthlyForecast } from './sim/systems/economy';
 import { canAfford, canPlace, maxHp } from './sim/systems/placement';
-import { createHud, type HudView, type RecruitUnit } from './ui/hud';
+import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
@@ -276,12 +276,27 @@ function selectUnit(id: number): void {
   if (id) speak(id);
 }
 
+/** Wszystko, co panel budynku pokazuje o wybranym budynku (w składach także zapasy z ikonami) */
+function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
+  const def = BUILDINGS[b.type]!;
+  const p = game.players[b.owner]!;
+  const stock = b.owner === ME && def.capacity && !b.build
+    ? (Object.entries(def.capacity) as [StoreKind, number][]).map(([kind, here]) => ({
+      kind, here, used: storeUsed(p, kind), max: storeCapacity(game, b.owner, kind),
+      items: RESOURCES.map((id, i) => ({ id, amount: p.res[i]! })).filter((x) => RESOURCE_DEFS[x.id].store === kind && x.amount > 0),
+    }))
+    : undefined;
+  return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
+    recruit: def.id === 'barracks' ? recruitInfo() : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
+    garrison: def.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined };
+}
+
 function select(id: number): void {
   if (id && selectedUnit) { selectedUnit = 0; renderer.setUnitSelection(0); }
   selected = id;
   const b = game.buildings.find((x) => x.id === id);
   renderer.setSelection(b ? id : 0);
-  hud.showInfo(b ? { id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), recruit: BUILDINGS[b.type]!.id === 'barracks' ? recruitInfo() : undefined, gate: BUILDINGS[b.type]!.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined, garrison: BUILDINGS[b.type]!.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined } : null);
+  hud.showInfo(b ? buildingInfo(b) : null);
 }
 
 /** Lewy górny róg działki tak, żeby budynek był wyśrodkowany na wskazanym polu. */
@@ -766,7 +781,7 @@ function refresh(): void {
   if (selected) {
     const b = game.buildings.find((x) => x.id === selected);
     if (!b) select(0);
-    else hud.showInfo({ id: b.id, def: BUILDINGS[b.type]!, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), recruit: BUILDINGS[b.type]!.id === 'barracks' ? recruitInfo() : undefined, gate: BUILDINGS[b.type]!.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined, garrison: BUILDINGS[b.type]!.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined });
+    else hud.showInfo(buildingInfo(b));
   }
 }
 

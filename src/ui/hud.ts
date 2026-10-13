@@ -56,7 +56,9 @@ export interface HudView {
   affordable: Set<string>;
 }
 
-export interface BuildingInfo { id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number; recruit?: RecruitUnit[] }
+/** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
+export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
+export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number; recruit?: RecruitUnit[] }
 export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number }
 
 export interface Hud {
@@ -395,7 +397,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const walkBtn = el('button', 'btn-main walk-btn', 'Przejdź się jego oczami'); walkBtn.type = 'button'; walkBtn.hidden = true;
   walkBtn.addEventListener('click', () => events.onWalk());
   infoActions.append(demolish, close);
-  info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, roster, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  const storeBox = el('div', 'info-stock');
+  storeBox.hidden = true;
+  info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, roster, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -722,6 +726,32 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const from = pr.input ? ` ${t('hud.from')} ${pr.input.amount} × ${t(RESOURCE_DEFS[pr.input.res].name).toLowerCase()}` : '';
         infoWorker.textContent = '';
         infoWorker.append(`${t('hud.makes')}: ${pr.output.amount} × ${t(RESOURCE_DEFS[pr.output.res].name).toLowerCase()}${from}, ${t('hud.every')} ${secs} s`, document.createElement('br'), `${t('hud.worker')}: ${t(i.hasWorker ? 'hud.workerYes' : 'hud.workerNo')}`);
+      }
+      // skład, stodoła, spichlerz: co leży i ile (zapasy są wspólne dla wszystkich składów danego rodzaju)
+      storeBox.hidden = !i.stock?.length;
+      if (i.stock?.length) {
+        const key = JSON.stringify(i.stock);
+        if (storeBox.dataset.key !== key) {
+          storeBox.dataset.key = key;
+          storeBox.replaceChildren(...i.stock.flatMap((st) => {
+            const head = el('p', 'stock-head');
+            const label = st.kind === 'granary' ? 'Żywność' : 'Towary';
+            head.append(icon(st.kind === 'granary' ? 'granary' : 'store'), el('strong', '', `${label}: ${st.used} / ${st.max}`), el('span', '', ` · ten budynek mieści ${st.here}`));
+            const bar = el('div', 'stock-bar');
+            const fillEl = el('span');
+            fillEl.style.width = `${Math.min(100, (st.used / Math.max(1, st.max)) * 100)}%`;
+            bar.append(fillEl);
+            const grid = el('div', 'stock-grid');
+            if (!st.items.length) grid.append(el('span', 'stock-empty', 'Pusto'));
+            for (const it of st.items) {
+              const cell = el('div', 'stock-item');
+              cell.title = t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name);
+              cell.append(icon(it.id), el('strong', '', String(it.amount)), el('span', '', t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name)));
+              grid.append(cell);
+            }
+            return [head, bar, grid];
+          }));
+        }
       }
       towerBox.hidden = !(i.own && i.garrison !== undefined);
       if (i.garrison !== undefined) {
