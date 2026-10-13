@@ -216,7 +216,7 @@ input, select {
 body.menu-open #ui .bottom, body.menu-open #ui .toast { display: none; }
 
 /* szerokie ekrany menu (ustawienia, jak grać): zakładki po lewej, treść po prawej, bez przewijania */
-.menu-panel { overflow: hidden; }
+.menu-panel { overflow-x: hidden; overflow-y: auto; }
 .menu-panel.wide { width: min(860px, calc(100vw - 48px)); }
 .menu-tabs { display: grid; grid-template-columns: 210px 1fr; gap: 18px; min-height: 330px; }
 .menu-nav { display: grid; align-content: start; gap: 6px; }
@@ -737,3 +737,12 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .info-site { display: grid; gap: 6px; }
 .site-rows { display: grid; gap: 2px; }
 .site-row { display: flex; justify-content: space-between; gap: 12px; margin: 0; }
+
+/* niski ekran: menu przewija się, a przyciski nowej gry zawsze widać przy dolnej krawędzi */
+.newgame-foot { position: sticky; bottom: -30px; padding: 10px 0 30px; background: linear-gradient(rgba(242, 228, 196, 0), var(--parchment, #f2e4c4) 30%); z-index: 2; }
+@media (max-height: 820px) {
+  .menu-panel { max-height: calc(100vh - 16px); padding-top: 14px; }
+  .menu-title { font-size: 32px; }
+  .menu-sub { padding-bottom: 6px; }
+  .newgame .pick-small { display: none; }
+}

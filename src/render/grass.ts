@@ -10,7 +10,7 @@ import { groundGrassTexture2, sharedNoise } from './ground';
  * - Barwa źdźbła pochodzi z tej samej tekstury trawy co ziemia pod nim, więc dywan zlewa się z podłożem,
  *   a tekstura kępy daje tylko kształt źdźbeł, ciemną nasadę i jaśniejsze, miejscami żółte końce.
  */
-const GRID = 260; // kępy w rzędzie: 260×260 ≈ 68 tys.
+const GRID = 210; // kępy w rzędzie: 210×210 ≈ 44 tys. (zasięg ok. 20 pól wokół kamery)
 const STEP = 0.19; // odstęp kęp w polach
 
 export interface GrassField {

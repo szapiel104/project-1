@@ -406,9 +406,10 @@ export class GameRenderer {
     ]);
     // młotek w prawej dłoni: trzonek w przód z dłoni, obuch na końcu (układ ramienia: oś w barku)
     const hammer = mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.016, 0.019, 0.34, 6).rotateX(Math.PI / 2).translate(0, -0.2, 0.14), 0x7a5232),
-      tint(new THREE.BoxGeometry(0.15, 0.07, 0.07).translate(0, -0.2, 0.31), 0x4a4d52),
-      tint(new THREE.BoxGeometry(0.03, 0.075, 0.075).translate(-0.085, -0.2, 0.31), 0x8a8e96),
+      // trzonek wychodzi z dłoni do tyłu ramienia: przy ręce wyciągniętej w przód wisi w dół, obuch na końcu
+      tint(new THREE.CylinderGeometry(0.016, 0.019, 0.34, 6).rotateX(Math.PI / 2).translate(0, -0.2, -0.14), 0x7a5232),
+      tint(new THREE.BoxGeometry(0.15, 0.07, 0.07).translate(0, -0.2, -0.31), 0x4a4d52),
+      tint(new THREE.BoxGeometry(0.03, 0.075, 0.075).translate(-0.085, -0.2, -0.31), 0x8a8e96),
     ]);
     this.hammers = new THREE.InstancedMesh(hammer, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
     this.hammers.count = 0;
@@ -2447,10 +2448,12 @@ export class GameRenderer {
         if (!this.calm) {
           const ph = (this.time * 1.45 + (u.id % 13) * 0.137) % 1;
           const ease = (x: number): number => x * x * (3 - 2 * x);
-          if (ph < 0.55) swing = -0.3 - ease(ph / 0.55) * 1.9;            // zamach
-          else if (ph < 0.66) swing = -2.2 + ((ph - 0.55) / 0.11) * 2.45;  // cios
-          else if (ph < 0.74) swing = 0.25 - ((ph - 0.66) / 0.08) * 0.2;   // odbicie
-          else swing = 0.05 - ease((ph - 0.74) / 0.26) * 0.35;           // powrót
+          // ujemny kąt = ręka w przód i w górę (kąt ramienia = swing·0,8). Uderzenie: ręka wyciągnięta przed siebie,
+          // trzonek skierowany w dół, obuch trafia w mur; zamach unosi młotek nad głowę
+          if (ph < 0.55) swing = -1.7 - ease(ph / 0.55) * 1.65;             // powolny zamach nad głowę
+          else if (ph < 0.66) swing = -3.35 + ((ph - 0.55) / 0.11) * 1.75;  // szybki cios w dół
+          else if (ph < 0.74) swing = -1.6 - ((ph - 0.66) / 0.08) * 0.15;   // odbicie od muru
+          else swing = -1.75 + ease((ph - 0.74) / 0.26) * 0.05;            // chwila przerwy
           lean += ph > 0.55 && ph < 0.8 ? Math.sin(((ph - 0.55) / 0.25) * Math.PI) * 0.22 : 0;
           if (ph > 0.64 && ph < 0.7) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
         } else swing = 0;
