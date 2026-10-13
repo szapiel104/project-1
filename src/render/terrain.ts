@@ -860,6 +860,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Bruk też nie ma równych brzegów: maska o poszarpanej krawędzi wycina go tak, że kamienie
   // nierówno wchodzą w trawę, a każde pole ma trochę inny odcień (jaśniejsze, ciemniejsze, omszałe).
   let paveMat: THREE.MeshStandardMaterial | null = null;
+  // zdjęcie bruku jest bardzo jasne, więc sam materiał ma barwę kamienia polnego (ciepła, przygaszona szarość)
+  const PAVE_DRY = new THREE.Color(0xa69c8c);
   const paveMaterial = (base: THREE.Material): THREE.MeshStandardMaterial => {
     if (paveMat) return paveMat;
     const n = 256;
@@ -882,6 +884,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     mask.channel = 1; // maska używa drugiego zestawu współrzędnych: 0..1 na każdym polu
     paveMat = (base as THREE.MeshStandardMaterial).clone();
     paveMat.vertexColors = true;
+    paveMat.color.copy(PAVE_DRY);
     paveMat.polygonOffset = true;
     paveMat.polygonOffsetFactor = -2;
     return paveMat;
@@ -908,7 +911,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // trawa znika pod budynkami i na drogach (bruk całkiem, ścieżka z piasku prawie)
   const builtOn = new Uint8Array(w * h);
   let roadsNow: Uint8Array | null = null;
-  const regrass = (t: number): void => { if (grass) grass.setDensity(t, builtOn[t] ? 0 : roadsNow?.[t] ? (roadsNow[t] === 1 ? 0.025 : 0) : grassBase[t]!); };
+  const regrass = (t: number): void => { if (grass) grass.setDensity(t, builtOn[t] ? 0 : roadsNow?.[t] ? (roadsNow[t] === 1 ? 0 : 0) : grassBase[t]!); };
   const setRoads = (roads: Uint8Array, materials: THREE.Material[]): void => {
     roadsNow = roads;
     if (grass) for (let t = 0; t < w * h; t++) regrass(t);
@@ -1174,7 +1177,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const dryC = new THREE.Color(0xffffff);
       if (sandMat) { sandMat.color.copy(dryC).lerp(new THREE.Color(0x3e2c1c), k * 0.85); sandMat.roughness = 1 - k * 0.7; }
       if (kerbMat) { kerbMat.roughness = 0.88 - k * 0.45; kerbMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
-      if (paveMat) { paveMat.roughness = 0.9 - k * 0.5; paveMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
+      if (paveMat) { paveMat.roughness = 0.9 - k * 0.5; paveMat.color.copy(PAVE_DRY).lerp(new THREE.Color(0x6e675c), k * 0.4); }
       const gm = ground.material as THREE.MeshStandardMaterial;
       gm.color.copy(dryC).lerp(new THREE.Color(0x8a917c), k * 0.6);
     },
