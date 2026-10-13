@@ -87,6 +87,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onArmyForm: (form) => { armyForm = form; reform(); play('rotate'); },
   onArmyStance: (stance) => { if (chosen.size) { pending.push({ type: 'stance', player: ME, ids: [...chosen], stance }); play('select'); shout('move'); } },
   onArmyMarch: (m) => { armyMarch = m; play('select'); showArmy(); },
+  onArmyUnit: (id, shift) => { if (shift) unchoose(id); else chooseSoldiers([id], false); play('select'); },
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
   // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
   onRandom: (preset) => start(`${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`, preset),
@@ -95,7 +96,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
   onSpeed: (s) => { if (!net) speed = s; else hud.toast('W grze przez sieć czas płynie tak samo dla obu graczy.'); },
   onDemolish: (id) => confirmDemolish(id),
-  onCloseInfo: () => { selectUnit(0); select(0); },
+  onCloseInfo: () => { selectUnit(0); select(0); if (chosen.size) chooseSoldiers([], false); },
   onRotate: () => rotate(),
   onWreck: () => setWreck(!wrecking),
   onVolume: (v) => setVolume(v),
@@ -672,12 +673,19 @@ function chooseSoldiers(ids: number[], add: boolean, quiet = false): void {
   } else hud.showArmy([]);
 }
 
+/** Odznacza jednego żołnierza, reszta zostaje zaznaczona */
+function unchoose(id: number): void {
+  chosen.delete(id);
+  renderer.setSoldierSelection(chosen);
+  if (chosen.size) showArmy(); else hud.showArmy([]);
+}
+
 /** Karta zaznaczonego wojska: portrety ze zdrowiem; znika, gdy żołnierze zginą */
 function showArmy(): void {
   const list = game.soldiers.filter((s) => chosen.has(s.id));
   if (list.length !== chosen.size) { chosen.clear(); for (const s of list) chosen.add(s.id); renderer.setSoldierSelection(chosen); }
   const st = new Set(list.map((s) => s.stance ?? 0));
-  hud.showArmy(list.map((s) => ({ name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1, march: armyMarch, group: groupOf() });
+  hud.showArmy(list.map((s) => ({ id: s.id, name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1, march: armyMarch, group: groupOf() });
 }
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -713,6 +721,8 @@ canvas.addEventListener('pointerup', (e) => {
     const d = Math.min((s.x - e.clientX) ** 2 + (s.y - e.clientY) ** 2, (s.x - e.clientX) ** 2 + (s.y + 14 - e.clientY) ** 2, (s.x - e.clientX) ** 2 + (s.y - 14 - e.clientY) ** 2);
     if (d < bestD) { bestD = d; best = s.id; }
   }
+  // Shift + klik na zaznaczonym: odznacza tylko jego
+  if (best && e.shiftKey && chosen.has(best)) { unchoose(best); play('select'); renderer.markDragged(); return; }
   if (best) {
     // podwójne kliknięcie: wszyscy moi tego samego rodzaju widoczni na ekranie
     const now = performance.now();

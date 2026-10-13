@@ -15,6 +15,8 @@ export interface HudEvents {
   onArmyStance(stance: number): void;
   /** Marsz: 0 zwykły (nie oglądają się na wroga), 1 z walką (biją każdego po drodze) */
   onArmyMarch(march: number): void;
+  /** Portret żołnierza w panelu: zostaw tylko jego (Shift: odznacz go) */
+  onArmyUnit(id: number, shift: boolean): void;
   onNewGame(seedText: string, preset: MapPresetId): void;
   onRandom(preset: MapPresetId): void;
   onPickBuilding(id: string | null): void;
@@ -82,7 +84,7 @@ export interface Hud {
   /** Karta mieszkańca: imię i kilka wierszy opisu */
   showPerson(person: { name: string; lines: string[] } | null): void;
   /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
-  showArmy(army: { name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number; march: number; group?: number }): void;
+  showArmy(army: { id?: number; name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number; march: number; group?: number }): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
@@ -766,12 +768,15 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       marchBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.march ?? 0))));
       setText(infoName, `${t('hud.soldiers')}: ${army.length}${ctl?.group ? ` · grupa ${ctl.group}` : ''}`);
       // portrety odświeżamy tylko, gdy coś się zmieniło (przebudowa co klatkę gubiła kliknięcia)
-      const key = army.slice(0, 24).map((u) => `${u.kind}${Math.round((u.hp / u.max) * 20)}`).join() + army.length;
+      const key = army.slice(0, 24).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}`).join() + army.length;
       if (key !== rosterKey) {
         rosterKey = key;
         roster.replaceChildren(...army.slice(0, 24).map((u) => {
-          const card = el('span', 'roster-card');
-          card.title = u.name;
+          const card = el('button', 'roster-card');
+          card.type = 'button';
+          card.title = `${u.name}. Klik: zostaw tylko jego. Shift + klik: odznacz.`;
+          card.setAttribute('aria-label', `${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%`);
+          if (u.id) { const id = u.id; card.addEventListener('click', (e) => events.onArmyUnit(id, e.shiftKey)); }
           card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
           const bar = el('span', 'roster-hp');
           const fill = el('span');
