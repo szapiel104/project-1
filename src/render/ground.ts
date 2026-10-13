@@ -112,7 +112,12 @@ const FRAG_ALBEDO = /* glsl */ `
   vec3 meadow = texture2D(tMeadow, rot(w, 0.4) / 4.6).rgb * vec3(0.84, 0.86, 0.8);
   vec3 forest = texture2D(tForest, rot(w, 1.3) / 4.2).rgb * vec3(1.04, 0.96, 0.84);
   vec3 pebble = texture2D(tPebble, rot(w, 2.6) / 2.9).rgb;
-  vec3 dirt = texture2D(tDirt, rot(w, 0.2) / 4.5).rgb * vec3(0.95, 0.9, 0.84);
+  // wydeptana ziemia: nie gładkie błoto, tylko ubita glina przetykana żwirem, ściółką i ciemniejszymi koleinami
+  vec3 dirt = texture2D(tDirt, rot(w, 0.2) / 4.5).rgb * vec3(1.02, 0.95, 0.86);
+  vec3 grit = texture2D(tPebble, rot(w, 1.1) / 2.2).rgb * vec3(0.8, 0.74, 0.64);
+  dirt = mix(dirt, grit, smoothstep(0.3, 0.62, nD.a * 0.55 + nS.b * 0.55) * 0.75);
+  dirt = mix(dirt, forest * vec3(0.92, 0.86, 0.8), smoothstep(0.5, 0.78, nS.g * 0.7 + nD.r * 0.4) * 0.45);
+  dirt *= 0.86 + smoothstep(0.3, 0.7, nD.g) * 0.22;
   // skała: rzut z boku na stromych ścianach, z góry na płaskim
   vec3 an = abs(vWN);
   vec3 rTop = texture2D(tRock, w / 6.0).rgb;
@@ -132,6 +137,8 @@ const FRAG_ALBEDO = /* glsl */ `
   float wPeb = clamp(vSplat.y * (vWP.y < 0.1 ? smoothstep(0.35, 0.6, nS.a) * 1.4 : 1.0) + smoothstep(0.99, 1.06, nD.a * 0.7 + nS.r * 0.4) * 0.5, 0.0, 1.0);
   float wForest = clamp(vSplat.x * (0.75 + nS.a * 0.5), 0.0, 1.0);
   float wDirt = clamp(vSplat.w * 1.15 + smoothstep(1.0, 1.08, nS.r * 0.6 + nD.g * 0.5) * 0.5, 0.0, 1.0);
+  // w wydeptanym zostają kępki trawy (nie jednolita plama), krawędź poszarpana
+  wDirt *= mix(1.0, smoothstep(0.18, 0.52, nD.r * 0.8 + nS.a * 0.35), 0.4);
   float wRock = clamp(vSplat.z, 0.0, 1.0);
   float steep = smoothstep(0.82, 0.62, vWN.y);
   wRock = max(wRock, steep);
@@ -157,7 +164,7 @@ const FRAG_ALBEDO = /* glsl */ `
   // z bliska drobna faktura w dużo mniejszej skali: więcej szczegółu na metr (ostrzej, mniej płasko)
   float near = 1.0 - smoothstep(5.0, 24.0, dist);
   float det = lum(texture2D(tGrass2, rot(w, 1.7) / 0.85).rgb);
-  float detD = lum(texture2D(tDirt, rot(w, 2.9) / 0.9).rgb);
+  float detD = lum(texture2D(tPebble, rot(w, 2.9) / 0.9).rgb);
   float dg = (bG + bM) / sum, dd = (bD + bF + bP) / sum;
   alb *= mix(1.0, clamp(det * 2.3, 0.55, 1.45), near * 0.55 * dg) * mix(1.0, clamp(detD * 2.4, 0.6, 1.4), near * 0.45 * dd);
   // normalna z tekstur w tych samych proporcjach
@@ -165,7 +172,7 @@ const FRAG_ALBEDO = /* glsl */ `
   vec3 tnF = texture2D(nForest, rot(w, 1.3) / 4.2).xyz * 2.0 - 1.0;
   vec3 tnP = texture2D(nPebble, rot(w, 2.6) / 2.9).xyz * 2.0 - 1.0;
   vec3 tnR = texture2D(nRock, w / 6.0).xyz * 2.0 - 1.0;
-  gNormal = normalize((tnG * (bG + bM * 0.6) + tnF * (bF + bD + bM * 0.4) + tnP * (bP * 1.4 + bS * 0.5) + tnR * bR * 1.3 + vec3(0.0, 0.0, 1.0) * bS * 0.6) / sum);
+  gNormal = normalize((tnG * (bG + bM * 0.6) + tnF * (bF + bD * 0.4 + bM * 0.4) + tnP * (bP * 1.4 + bD * 0.9 + bS * 0.5) + tnR * bR * 1.3 + vec3(0.0, 0.0, 1.0) * bS * 0.6) / sum);
   vec3 tnDet = texture2D(nGrass, rot(w, 1.7) / 0.85).xyz * 2.0 - 1.0;
   gNormal = normalize(gNormal + vec3(tnDet.xy * near * 0.8 * dg, 0.0));
 
