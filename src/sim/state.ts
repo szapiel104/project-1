@@ -118,6 +118,10 @@ export const enum Phase {
   Repairing = 14,
   /** Budowniczy idzie do składu po deski / kamień na plac budowy `target` */
   ToFetch = 15,
+  /** Idzie na pole zaplanowanej drogi (`target` = pole + 1) */
+  ToPave = 16,
+  /** Układa drogę na polu, na którym stoi */
+  Paving = 17,
 }
 
 export interface Unit {
@@ -249,6 +253,8 @@ export interface GameState {
   wear: Uint8Array;
   /** Drogi na polach: 0 brak, 1 piaskowa, 2 kamienna */
   roads: Uint8Array;
+  /** Drogi zaplanowane, jeszcze nie ułożone (rodzaj na polu, 0 = brak): układają je wolni chłopi */
+  roadPlan: Uint8Array;
   rubble: Rubble[];
   nextId: number;
 }
@@ -263,7 +269,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const size = map.width * map.height;
   const g: GameState = {
     tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [], corpses: [], travelers: [], wolves: [],
-    occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), rubble: [], nextId: 1,
+    occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size), rubble: [], nextId: 1,
   };
   const keep = buildingIndex('keep');
   const starts = [...map.starts].sort((a, b) => a.player - b.player);
@@ -422,7 +428,7 @@ export function stateHash(g: GameState): number {
   add(g.tick); add(g.rng.state); add(g.nextId); add(g.cut.length);
   for (let i = 0; i < g.map.tiles.length; i++) { h ^= g.map.tiles[i]!; h = Math.imul(h, 0x01000193); }
   for (let i = 0; i < g.wear.length; i++) if (g.wear[i]) { add(i); add(g.wear[i]!); }
-  for (let i = 0; i < g.roads.length; i++) if (g.roads[i]) { add(i); add(g.roads[i]! + 100); }
+  for (let i = 0; i < g.roads.length; i++) { if (g.roads[i]) { add(i); add(g.roads[i]! + 100); } if (g.roadPlan[i]) { add(i); add(g.roadPlan[i]! + 200); } }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);

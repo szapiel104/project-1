@@ -212,3 +212,22 @@ describe('szyk i postawy', () => {
     expect(a.pace).toBeDefined();
   });
 });
+
+describe('drogi', () => {
+  it('droga to najpierw plan: kosztuje od razu, a układa ją wolny chłop', () => {
+    const g = createGame(7);
+    const keep = playerKeep(g, 0)!, w = g.map.width;
+    const p = g.players[0]!;
+    p.res[resIndex('wood')] = 50;
+    let x = keep.x + 4, y = keep.y + 5;
+    for (let r = 4; r < 12 && !walkable(g, y * w + x); r++) { x = keep.x + r; y = keep.y + r; }
+    const t = y * w + x;
+    step(g, [{ type: 'build', player: 0, building: 'roadWood', x, y }]);
+    expect(p.res[resIndex('wood')]).toBe(49);
+    expect(g.roads[t]).toBe(0);
+    expect(g.roadPlan[t]).toBe(3);
+    for (let i = 0; i < 1500 && !g.roads[t]; i++) step(g, []);
+    expect(g.roads[t]).toBe(3);
+    expect(g.roadPlan[t]).toBe(0);
+  });
+});

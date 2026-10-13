@@ -861,11 +861,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
   // Bruk też nie ma równych brzegów: maska o poszarpanej krawędzi wycina go tak, że kamienie
   // nierówno wchodzą w trawę, a każde pole ma trochę inny odcień (jaśniejsze, ciemniejsze, omszałe).
-  let paveMat: THREE.MeshStandardMaterial | null = null;
+  // osobny materiał na każdy rodzaj nawierzchni (bruk, dyle): wspólny był tylko, gdy istniał sam bruk
+  const paveMats = new Map<THREE.Material, THREE.MeshStandardMaterial>();
+  const PLANK_DRY = new THREE.Color(0x9a7650);
   // zdjęcie bruku jest bardzo jasne, więc sam materiał ma barwę kamienia polnego (ciepła, przygaszona szarość)
   const PAVE_DRY = new THREE.Color(0xb8b4aa);
-  const paveMaterial = (base: THREE.Material): THREE.MeshStandardMaterial => {
-    if (paveMat) return paveMat;
+  const paveMaterial = (base: THREE.Material, wood = false): THREE.MeshStandardMaterial => {
+    const have = paveMats.get(base);
+    if (have) return have;
     const n = 256;
     const cv = document.createElement('canvas');
     cv.width = cv.height = n;
@@ -884,11 +887,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     c2.putImageData(img, 0, 0);
     const mask = new THREE.CanvasTexture(cv);
     mask.channel = 1; // maska używa drugiego zestawu współrzędnych: 0..1 na każdym polu
-    paveMat = (base as THREE.MeshStandardMaterial).clone();
+    const paveMat = (base as THREE.MeshStandardMaterial).clone();
     paveMat.vertexColors = true;
-    paveMat.color.copy(PAVE_DRY);
+    paveMat.color.copy(wood ? PLANK_DRY : PAVE_DRY);
     paveMat.polygonOffset = true;
     paveMat.polygonOffsetFactor = -2;
+    paveMat.userData.wood = wood;
+    paveMats.set(base, paveMat);
     return paveMat;
   };
   // Krawężnik bruku i kamyki przy ścieżkach: ciosane kamienie w osobnym materiale, każdy w trochę innym odcieniu
@@ -923,6 +928,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     for (let kind = 1; kind <= materials.length; kind++) {
       const p3: number[] = [], uv2: number[] = [], uvMask: number[] = [], col3: number[] = [], ditch: number[] = [], ditchUv: number[] = [];
       const soft = kind === 1;
+      // droga z dyli: drewniane bale, bez rowu i bez krawężnika z kamieni
+      const plank = kind === 3;
       // bruk kryje dokładnie swoje pole, żeby kostka równo dochodziła do rowu; piaskowa ścieżka rozlewa się poza pole
       const grow = soft ? 0.42 : 0;
       for (let y = 0; y < h; y++)
@@ -938,17 +945,18 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           // ciepła szarość kamienia polnego zamiast prawie białej tafli
           const tone = 0.5 + (((r >>> 8) & 31) / 31) * 0.12;
           const moss = (r >>> 14) % 5 === 0 ? 0.08 : 0;
-          shade.setRGB(tone * 1.0 * (1 - moss), tone * 0.98 * (1 + moss * 0.4), tone * 0.94 * (1 - moss * 1.5));
+          if (plank) { const wt = 0.62 + (((r >>> 8) & 31) / 31) * 0.3; shade.setRGB(wt, wt * 0.9, wt * 0.8); }
+          else shade.setRGB(tone * 1.0 * (1 - moss), tone * 0.98 * (1 + moss * 0.4), tone * 0.94 * (1 - moss * 1.5));
           for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
             p3.push(qx + ox, heightAt(qx, qy) + (soft ? 0.03 : 0.045), qy + oz);
             if (soft) uv2.push(u, v);
-            else { uv2.push(qx / 2.5, qy / 2.5); uvMask.push(u, v); col3.push(shade.r, shade.g, shade.b); }
+            else { uv2.push(plank ? qx / 1.2 : qx / 2.5, plank ? qy / 1.2 : qy / 2.5); uvMask.push(u, v); col3.push(shade.r, shade.g, shade.b); }
           }
         }
       // Rów liczony od strony trawy: każde pole bez bruku dostaje pas wzdłuż boków, którymi dotyka bruku.
       // Gdy bruk jest z dwóch stron (wewnętrzny róg), pasy schodzą się na ukos; przy zewnętrznym rogu bruku
       // rów zakręca łukiem. Dzięki temu nic się nie nakłada nawet wokół pojedynczego pola trawy.
-      if (!soft && SHOW_DITCH) {
+      if (!soft && !plank && SHOW_DITCH) {
         const pave = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind;
         const D = 0.24;
         const put = (qx: number, qy: number, u: number, v: number): void => { ditch.push(qx + ox, heightAt(qx, qy) + 0.035, qy + oz); ditchUv.push(u, v); };
@@ -1050,13 +1058,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         g2.setAttribute('color', new THREE.Float32BufferAttribute(col3, 3));
       }
       g2.computeVertexNormals();
-      const mesh = new THREE.Mesh(g2, soft ? sandMaterial() : paveMaterial(materials[kind - 1]!));
+      const mesh = new THREE.Mesh(g2, soft ? sandMaterial() : paveMaterial(materials[kind - 1]!, plank));
       mesh.receiveShadow = true;
       mesh.renderOrder = soft ? 1 : 0;
       group.add(mesh);
       roadMeshes.push(mesh);
       const onRoad = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind;
-      if (!soft) {
+      if (!soft && !plank) {
         // Krawężnik: rząd ciosanych kamieni wzdłuż każdego boku bruku, który styka się z trawą,
         // a za nim pas ubitej, ciemniejszej ziemi, który miękko przechodzi w trawę.
         const kerbs: [number, number, number, number, number][] = []; // x, y, długość, obrót, ziarno
@@ -1195,7 +1203,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const dryC = new THREE.Color(0xffffff);
       if (sandMat) { sandMat.color.copy(dryC).lerp(new THREE.Color(0x3e2c1c), k * 0.85); sandMat.roughness = 1 - k * 0.7; }
       if (kerbMat) { kerbMat.roughness = 0.88 - k * 0.45; kerbMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
-      if (paveMat) { paveMat.roughness = 0.9 - k * 0.5; paveMat.color.copy(PAVE_DRY).lerp(new THREE.Color(0x6e675c), k * 0.4); }
+      // mokra nawierzchnia w deszczu: ciemniejsza i bardziej lśniąca
+      for (const pm of paveMats.values()) { pm.roughness = 0.9 - k * 0.5; pm.color.copy(pm.userData.wood ? PLANK_DRY : PAVE_DRY).lerp(new THREE.Color(0x6e675c), k * 0.4); }
       const gm = ground.material as THREE.MeshStandardMaterial;
       gm.color.copy(dryC).lerp(new THREE.Color(0x8a917c), k * 0.6);
     },

@@ -10,6 +10,7 @@ import { migrationSystem, travelSystem } from './systems/population';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
+import { roadSystem } from './systems/roads';
 import { armySystem, orderAttack, orderMove, orderStance, train , orderDismount, orderGarrison } from './systems/army';
 import { botSystem } from './systems/bot';
 
@@ -99,6 +100,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   botSystem(g);
   torchSystem(g);
   rubbleSystem(g);
+  roadSystem(g);
   workerSystem(g);
   armySystem(g);
   migrationSystem(g);

@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.15.0 — drogi się buduje, droga z dyli, bliższa kamera (2026-10-13)
+
+- Nowa droga z dyli: drewniane bale, 1 drewno za pole, ludzie chodzą po niej o 40% szybciej (piaskowa 25%, kamienna 55%)
+- Drogi się buduje: postawiona droga to półprzezroczysty plan w barwie nawierzchni; wolny chłop z obozowiska podchodzi, pochyla się i układa pole młotkiem (do 4 naraz na gracza); gdy nikt nie siedzi w obozowisku, jeden pracownik odrywa się od roboty i potem wraca; koszt płaci się przy stawianiu
+- Plan drogi da się zdjąć wyburzaniem, a budynek postawiony na planie go kasuje; w trybie deweloperskim drogi powstają od razu
+- Stare zapisy dalej się wczytują (nowy rodzaj dopisany na końcu listy)
+- Kamera podjeżdża do 4 (dawniej 12), z bliska kładzie się niżej
+
 ## 0.14.2 — zapis ustawień (2026-10-13)
 
 - Do zapisu gry trafiają też grupy wojska, wybrany szyk, tryb marszu, tempo gry i kamera; po odświeżeniu strony wszystko wraca

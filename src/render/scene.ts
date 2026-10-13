@@ -275,6 +275,8 @@ export class GameRenderer {
   private selectedId = 0;
   private cutSeen = 0;
   private roadSum = -1;
+  private planSum = -1;
+  private roadPlans!: THREE.InstancedMesh;
   private rubbleMeshes = new Map<number, THREE.Group>();
   /** Budynki w trakcie zawalania się po rozbiórce */
   private dying: { mesh: THREE.Group; t: number }[] = [];
@@ -343,6 +345,12 @@ export class GameRenderer {
     this.plan.frustumCulled = false;
     this.plan.renderOrder = 3;
     this.scene.add(this.plan);
+    // zaplanowane drogi: półprzezroczyste pola w barwie przyszłej nawierzchni, póki chłop ich nie ułoży
+    this.roadPlans = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.82, 0.82).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.5, depthWrite: false }), 4096);
+    this.roadPlans.count = 0;
+    this.roadPlans.frustumCulled = false;
+    this.roadPlans.renderOrder = 2;
+    this.scene.add(this.roadPlans);
 
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
@@ -1964,9 +1972,27 @@ export class GameRenderer {
     if (g.tick % 3 !== 0 && this.roadSum >= 0) return;
     let sum = 0;
     for (let i = 0; i < g.roads.length; i++) if (g.roads[i]) sum = (sum * 31 + i * 3 + g.roads[i]!) | 0;
-    if (sum === this.roadSum) return;
-    this.roadSum = sum;
-    view.setRoads(g.roads, roadMaterials());
+    if (sum !== this.roadSum) { this.roadSum = sum; view.setRoads(g.roads, roadMaterials()); }
+    let ps = 0;
+    for (let i = 0; i < g.roadPlan.length; i++) if (g.roadPlan[i]) ps = (ps * 31 + i * 3 + g.roadPlan[i]!) | 0;
+    if (ps === this.planSum) return;
+    this.planSum = ps;
+    const { width, height } = g.map;
+    const m = new THREE.Matrix4(), c = new THREE.Color();
+    const TONE = [0, 0xe0c38a, 0xd2cdc2, 0xb07a42];
+    let n = 0;
+    for (let i = 0; i < g.roadPlan.length && n < 4096; i++) {
+      const k = g.roadPlan[i]!;
+      if (!k) continue;
+      const x = i % width, y = (i - x) / width;
+      m.makeTranslation(x + 0.5 - width / 2, view.heightAt(x + 0.5, y + 0.5) + 0.05, y + 0.5 - height / 2);
+      this.roadPlans.setMatrixAt(n, m);
+      this.roadPlans.setColorAt(n, c.set(TONE[k] ?? 0xffffff));
+      n++;
+    }
+    this.roadPlans.count = n;
+    this.roadPlans.instanceMatrix.needsUpdate = true;
+    if (this.roadPlans.instanceColor) this.roadPlans.instanceColor.needsUpdate = true;
   }
 
   /** Drzewo przechyla się pod koniec rąbania, a po ścięciu znika i zostaje pniak. */
@@ -2427,11 +2453,12 @@ export class GameRenderer {
         if ((u.hp ?? 30) < 30) this.sfxAt('hit', t.position.x, t.position.z, `bite${u.id}`, 0.9, 0.8);
         break;
       }
-      const hammering = u.phase === Phase.Repairing;
-      let lean = 0, work = 0;
+      // układanie drogi wygląda jak budowa: pochylony chłop bije młotkiem w ziemię
+      const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving;
+      let lean = u.phase === Phase.Paving ? 0.35 : 0, work = 0;
       if (hammering) {
         // robotnicy rozstawiają się wokół budowy, twarzą do ścian; co drugi pracuje na pomoście rusztowania (na wysokości murów)
-        const site = g.buildings.find((b) => b.id === u.target);
+        const site = u.phase === Phase.Repairing ? g.buildings.find((b) => b.id === u.target) : undefined;
         if (site) {
           const fp = footprint(BUILDINGS[site.type]!, site.rot);
           const a = (u.id * 2.39996) % (Math.PI * 2);

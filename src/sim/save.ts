@@ -22,6 +22,7 @@ export interface SaveData {
   /** Zużycie złóż jako pary [pole, liczba wydobyć] */
   wear: [number, number][];
   roads: [number, number][];
+  roadPlan?: [number, number][];
   rubble: Rubble[];
   players: (Omit<PlayerState, 'res'> & { res: number[] })[];
   buildings: Building[];
@@ -33,12 +34,18 @@ export interface SaveData {
 }
 
 const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
+/** Zapis z gry, w której było mniej rodzajów budynków (nowe dopisujemy tylko na końcu listy), nadal się wczyta */
+function shapeOk(s: string): boolean {
+  const [b, r] = String(s).split('/').map(Number);
+  return r === RESOURCES.length && Number.isInteger(b) && b! > 0 && b! <= BUILDINGS.length;
+}
 
 /** Zapis gry jako zwykłe dane (JSON). Mapy nie zapisujemy: odtwarza się z ziarna. */
 export function serialize(g: GameState, preset: MapPresetId): SaveData {
   return {
     v: SAVE_VERSION, shape: shape(), seed: g.map.seed, preset, tick: g.tick, rng: g.rng.state, nextId: g.nextId, cut: [...g.cut], wear: [...g.wear].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roads: [...g.roads].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
+    roadPlan: [...g.roadPlan].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     rubble: g.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     players: g.players.map((p) => ({ ...p, res: [...p.res], stats: { ...p.stats } })),
     buildings: g.buildings.map((b) => ({ ...b })),
@@ -53,7 +60,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
 /** Odtwarza grę z zapisu. Zwraca null, gdy zapis jest z innej wersji albo uszkodzony. */
 export function deserialize(d: SaveData): GameState | null {
   try {
-    if (d.v !== SAVE_VERSION || d.shape !== shape() || !(d.preset in MAP_PRESETS)) return null;
+    if (d.v !== SAVE_VERSION || !shapeOk(d.shape) || !(d.preset in MAP_PRESETS)) return null;
     const map = generateMap(d.seed, d.preset);
     const size = map.width * map.height;
     const g: GameState = {
@@ -65,12 +72,13 @@ export function deserialize(d: SaveData): GameState | null {
       corpses: (d.corpses ?? []).map((c) => ({ ...c })),
       travelers: (d.travelers ?? []).map((t) => ({ ...t, path: [...t.path] })),
       wolves: (d.wolves ?? []).map((w) => ({ ...w, path: [...w.path] })),
-      occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size),
+      occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size),
       rubble: d.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     };
     for (const r of g.rubble) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g.reserved[y * map.width + x]!++;
     for (const [t, n] of d.wear) g.wear[t] = n;
     for (const [t, n] of d.roads) g.roads[t] = n;
+    for (const [t, n] of d.roadPlan ?? []) g.roadPlan[t] = n;
     for (const t of g.cut) map.tiles[t] = 0; // wycięty las to łąka
     for (const b of g.buildings) {
       const def = BUILDINGS[b.type];

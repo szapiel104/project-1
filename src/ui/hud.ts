@@ -550,6 +550,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     buildButtons.set(def.id, b);
     cards.append(b);
   }
+  // droga z dyli stoi na końcu listy budynków (zgodność zapisów), ale na pasku między piaskową a kamienną
+  { const rw = buildButtons.get('roadWood'), rs = buildButtons.get('roadStone'); if (rw && rs) rs.before(rw); }
+
   const buildFoot = el('div', 'buildfoot');
   const buildHint = el('p', 'hint');
   const cancel = el('button', 'btn-main', t('hud.cancel'));

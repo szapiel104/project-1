@@ -136,7 +136,12 @@ describe('budowanie', () => {
     const g = createGame(5);
     const s = spot(g, 'house');
     step(g, [{ type: 'build', player: 0, building: 'roadSand', x: s.x, y: s.y }]);
-    expect(g.roads[s.y * g.map.width + s.x]).toBe(1);
+    // zaplanowana droga: da się ją zdjąć, zanim ktoś ją ułoży
+    expect(g.roadPlan[s.y * g.map.width + s.x]).toBe(1);
+    step(g, [{ type: 'unroad', player: 0, x: s.x, y: s.y }]);
+    expect(g.roadPlan[s.y * g.map.width + s.x]).toBe(0);
+    // ułożona droga też
+    g.roads[s.y * g.map.width + s.x] = 1;
     step(g, [{ type: 'unroad', player: 0, x: s.x, y: s.y }]);
     expect(g.roads[s.y * g.map.width + s.x]).toBe(0);
   });
@@ -369,8 +374,9 @@ describe('drogi', () => {
     const stone = res(g, 'stone');
     step(g, [{ type: 'build', player: 0, building: 'roadStone', x: s.x, y: s.y }, { type: 'build', player: 0, building: 'roadSand', x: s.x + 1, y: s.y }]);
     const w = g.map.width;
-    expect(g.roads[s.y * w + s.x]).toBe(2);
-    expect(g.roads[s.y * w + s.x + 1]).toBe(1);
+    expect(g.roadPlan[s.y * w + s.x]).toBe(2);
+    expect(g.roadPlan[s.y * w + s.x + 1]).toBe(1);
+    g.roads[s.y * w + s.x] = 2; g.roadPlan[s.y * w + s.x] = 0; // jak po ułożeniu
     expect(res(g, 'stone')).toBe(stone - 1);
     expect(g.occupancy[s.y * w + s.x]).toBe(0);
     expect(walkable(g, s.y * w + s.x)).toBe(true);

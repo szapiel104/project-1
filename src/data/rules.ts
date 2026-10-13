@@ -24,9 +24,9 @@ export const RULES = {
   unitSpeed: 28,
   unitSpeedDiagonal: 20,
   /** O ile procent szybciej idzie się po drodze: [brak, piaskowa, kamienna] */
-  roadSpeedBonus: [0, 25, 55],
+  roadSpeedBonus: [0, 25, 55, 40],
   /** Koszt przejścia pola przy szukaniu drogi w procentach zwykłego: ludzie wolą iść drogą */
-  roadPathCost: [100, 75, 55],
+  roadPathCost: [100, 75, 55, 65],
   /** Ile razy można wydobyć surowiec z jednego pola złoża, zanim się wyczerpie */
   depositYields: 5,
   /** Po tylu dostawach chłop idzie odpocząć do najbliższej chaty */

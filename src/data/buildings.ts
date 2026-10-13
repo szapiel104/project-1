@@ -37,7 +37,7 @@ export interface BuildingDef {
   /** Budynek wymaga terenu danego typu w pobliżu */
   needsTerrain?: { terrain: Terrain; radius: number };
   /** Droga zamiast budynku: 1 = piaskowa, 2 = kamienna. Nie blokuje przejścia, przyspiesza chodzenie */
-  road?: 1 | 2;
+  road?: 1 | 2 | 3;
   /** Budynek ma pracownika, choć nic nie produkuje (np. inżynier z cechu, który wynosi gruz) */
   staff?: boolean;
   /** Teren pracy: ile pól od krawędzi działki sięga praca (np. grabarz zbiera ciała tylko tutaj) */
@@ -140,6 +140,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'palisade', category: 'defense', name: 'b.palisade', w: 1, h: 1, cost: { wood: 1 }, hp: 260, wall: true, line: true, buildable: true },
   { id: 'gate', category: 'defense', name: 'b.gate', w: 1, h: 1, cost: { wood: 8 }, hp: 600, gate: true, buildable: true },
   { id: 'watchtower', category: 'defense', name: 'b.watchtower', w: 2, h: 2, cost: { wood: 16 }, hp: 700, wall: true, buildable: true },
+  // Droga z dyli: drewniane bale ułożone w poprzek, między piaskową a brukowaną (na końcu listy, żeby stare zapisy dalej działały)
+  { id: 'roadWood', category: 'roads', name: 'b.roadWood', w: 1, h: 1, cost: { wood: 1 }, road: 3, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

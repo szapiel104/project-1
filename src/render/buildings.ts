@@ -8,7 +8,7 @@ import { beam, cutBox, paintGeo, rng, stoneSkirt, thatchSlab } from './craft';
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
 /** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
-export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone];
+export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone, M.roadWood];
 const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, slate: 1.1, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
 const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   const nm = tex ? normal(tex) : null;
@@ -75,7 +75,7 @@ const M = {
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
   ash: mat(0x4a4540), slate: mat(0x8a8d94, 'slate'), sack: mat(0xbfa77c, 'burlap'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
-  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xf4f0e8, 'cobble'),
+  roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xf4f0e8, 'cobble'), roadWood: mat(0xc49a6a, 'planks'),
   // miniatury dróg w menu: te same barwy co na mapie (ciepła szarość bruku, ubita ziemia)
   pathDirt: mat(0xa8865a, 'soil'), pathCobble: mat(0x9e968a, 'cobble'), kerb: mat(0x8c867c, 'rock'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
@@ -1711,6 +1711,15 @@ const BUILDERS: Record<string, Builder> = {
       p.scale.set(1.3, 0.7, 1);
       g.add(p);
     }
+  },
+  roadWood(g) {
+    // droga z dyli: bale w poprzek na dwóch legarach, nierówne końce
+    for (let k = 0; k < 6; k++) {
+      const z = -0.4 + k * 0.16;
+      const b = box(g, M.roadWood, 0.9 + ((k * 5) % 3) * 0.04, 0.045, 0.14, ((k * 7) % 3 - 1) * 0.02, 0.02, z);
+      b.rotation.y = ((k * 3) % 5 - 2) * 0.015;
+    }
+    for (const x of [-0.3, 0.3]) box(g, M.woodDark, 0.08, 0.04, 0.96, x, 0, 0);
   },
   roadStone(g) {
     box(g, M.pathCobble, 0.96, 0.05, 0.96);

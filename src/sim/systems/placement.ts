@@ -115,7 +115,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     // droga: wystarczy wolne pole, po którym da się chodzić; nie blokuje i nie potrzebuje wejścia
     const t = y * width + x;
     if (!TERRAIN[g.map.tiles[t] as Terrain].walkable) return 'place.terrain';
-    if (g.occupancy[t] !== 0 || g.roads[t] === def.road) return 'place.occupied';
+    if (g.occupancy[t] !== 0 || g.roads[t] === def.road || g.roadPlan[t] === def.road) return 'place.occupied';
     const k = playerKeep(g, player);
     if (!k || Math.max(Math.abs(x - (k.x + 1)), Math.abs(y - (k.y + 1))) > RULES.buildRadius + 10) return 'place.far';
     if (checkCost && !canAfford(g, player, def)) return 'place.cost';
@@ -155,7 +155,7 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
   const door = def.wall || def.gate ? -1 : findDoor(g, x, y, fp.w, fp.h, rot);
   const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false, hp: maxHp(type), build: 0 };
   for (let ty = y; ty < y + fp.h; ty++)
-    for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
+    for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; g.roadPlan[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
   if (door >= 0) g.reserved[door]!++;
   if (def.gate) { b.gateOpen = true; b.shut = false; g.gates[y * g.map.width + x] = owner + 1; }
   g.buildings.push(b);
@@ -221,7 +221,13 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   const def = BUILDINGS[type]!;
   const p = g.players[player]!;
   for (const [k, v] of Object.entries(def.cost)) p.res[resIndex(k as ResourceId)]! -= v;
-  if (def.road) { g.roads[y * g.map.width + x] = def.road; return true; }
+  if (def.road) {
+    // droga powstaje dopiero, gdy chłop ją ułoży; w trybie deweloperskim od razu
+    const t = y * g.map.width + x;
+    if (p.dev && p.instantBuild !== false) { g.roads[t] = def.road; g.roadPlan[t] = 0; }
+    else g.roadPlan[t] = def.road;
+    return true;
+  }
   const b = addBuilding(g, type, player, x, y, rot);
   // budowa trwa: robotnicy z obozowiska przychodzą i stawiają budynek (pochodnia stoi od razu)
   if (b && def.id !== 'torch' && !(p.dev && p.instantBuild !== false)) startSite(b);
@@ -271,6 +277,8 @@ export function demolish(g: GameState, player: number, id: number, destroyed = f
 export function removeRoad(g: GameState, player: number, x: number, y: number): boolean {
   if (!g.players[player] || x < 0 || y < 0 || x >= g.map.width || y >= g.map.height) return false;
   const t = y * g.map.width + x;
+  // zaplanowana, jeszcze nieułożona droga: znika plan (koszt przepada jak przy rozbiórce)
+  if (g.roadPlan[t]) { g.roadPlan[t] = 0; return true; }
   if (!g.roads[t]) return false;
   g.roads[t] = 0;
   return true;

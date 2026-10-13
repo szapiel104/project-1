@@ -6,6 +6,8 @@ import { findPath, walkable } from '../path';
 import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 
 const RETRY_TICKS = 20;
+/** Ile ticków chłop układa jedno pole drogi */
+export const PAVE_TICKS = 40;
 const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
 /** Znacznik „niesie ciało” w polu carryRes (poza listą surowców) */
 export const CORPSE = RESOURCES.length;
@@ -100,6 +102,10 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       if (!c) return null;
       const ct = (c.py >> 8) * g.map.width + (c.px >> 8);
       return (t) => t === ct;
+    }
+    case Phase.ToPave: {
+      const t = u.target - 1;
+      return t >= 0 && g.roadPlan[t] ? (x) => x === t : null;
     }
     case Phase.ToRest: {
       const doors = new Set<number>();
@@ -203,6 +209,9 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.carryRes = u.timer - 1; u.carryAmt = 1; u.timer = 0;
       u.phase = Phase.ToRepair;
       break;
+    case Phase.ToPave:
+      u.phase = Phase.Paving; u.timer = PAVE_TICKS;
+      break;
     case Phase.ToRepair: {
       // przyniesiony materiał kładzie obok budowy, potem bierze się do roboty
       if (u.carryRes >= 0) {
@@ -268,6 +277,15 @@ export function workerSystem(g: GameState): void {
     const job = u.job ? byId.get(u.job) : undefined;
     const prod = job ? BUILDINGS[job.type]!.production : undefined;
 
+    if (u.phase === Phase.Paving) {
+      // układa drogę: po chwili pole jest gotowe (chyba że plan zdjęto w trakcie)
+      if (--u.timer > 0) continue;
+      const t = u.target - 1;
+      if (t >= 0 && g.roadPlan[t]) { g.roads[t] = g.roadPlan[t]!; g.roadPlan[t] = 0; }
+      u.target = 0;
+      u.phase = u.job ? Phase.Returning : Phase.Idle;
+      continue;
+    }
     if (u.phase === Phase.Resting) {
       if (--u.timer <= 0) { u.home = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
       continue;
@@ -303,7 +321,7 @@ export function workerSystem(g: GameState): void {
         if (!b || !b.build) u.target = 0;
         continue;
       }
-      if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair) {
+      if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair || u.phase === Phase.ToPave) {
         if (u.phase === Phase.ToRepair && u.carryRes >= 0) { u.carryRes = -1; u.carryAmt = 0; } // budowa skończona po drodze: materiał zostaje
         u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0;
       }
@@ -313,6 +331,7 @@ export function workerSystem(g: GameState): void {
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal, 900, u.owner);
     if (path && path.length) u.path = path;
+    else if (!path && u.phase === Phase.ToPave) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.wait = RETRY_TICKS; } // pole drogi nieosiągalne
     else u.wait = RETRY_TICKS;
   }
 }
