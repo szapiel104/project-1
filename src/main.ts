@@ -85,7 +85,8 @@ const hud = createHud(document.getElementById('ui')!, {
     if (ids.length) { chooseSoldiers(ids, false); play('select'); }
   },
   onArmyForm: (form) => { armyForm = form; reform(); play('rotate'); },
-  onArmyStance: (stance) => { if (chosen.size) { pending.push({ type: 'stance', player: ME, ids: [...chosen], stance }); play('select'); } },
+  onArmyStance: (stance) => { if (chosen.size) { pending.push({ type: 'stance', player: ME, ids: [...chosen], stance }); play('select'); shout('move'); } },
+  onArmyMarch: (m) => { armyMarch = m; play('select'); showArmy(); },
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
   // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
   onRandom: (preset) => start(`${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`, preset),
@@ -540,10 +541,12 @@ canvas.addEventListener('contextmenu', () => {
 // ---- wojsko: prawy klik = marsz/atak, prawy przeciągnięty = linia frontu i kierunek szyku ----
 /** Wybrana formacja: 0 linia, 1 blok, 2 luźno */
 let armyForm = 0;
+/** Tryb marszu: 0 zwykły, 1 z walką (Ctrl przy rozkazie odwraca) */
+let armyMarch = 0;
 let rDrag: { x: number; y: number; tile: { x: number; y: number } | null; on: boolean } | null = null;
 
 /** Szyk narysowany przeciągnięciem: środek odcinka, twarzą od strony, z której przychodzą, szerokość = długość odcinka */
-function dragOrder(start: { x: number; y: number } | null): { x: number; y: number; face: number; form: number; width: number } | null {
+function dragOrder(start: { x: number; y: number } | null, amove = false): { x: number; y: number; face: number; form: number; width: number; amove: boolean } | null {
   const end = hoverTile;
   if (!start || !end) return null;
   const vx = end.x - start.x, vy = end.y - start.y;
@@ -558,7 +561,7 @@ function dragOrder(start: { x: number; y: number } | null): { x: number; y: numb
   const face = octant(px, py);
   const stepLen = (face % 2 ? Math.SQRT2 : 1) * (armyForm === 2 ? 2 : 1);
   const width = Math.max(1, Math.min(list.length, Math.round(Math.hypot(vx, vy) / stepLen) + 1));
-  return { x: cx, y: cy, face, form: armyForm, width };
+  return { x: cx, y: cy, face, form: armyForm, width, amove };
 }
 
 /** Zmiana formacji w miejscu: oddział przestawia się tam, gdzie stoi albo dokąd idzie */
@@ -575,11 +578,12 @@ function reform(): void {
 }
 
 /** Zwykły prawy klik przy zaznaczonym wojsku: atak na wroga, wejście na wieżę albo marsz */
-function armyRightClick(): void {
+function armyRightClick(amove: boolean): void {
   if (!chosen.size) return;
   if (hoverFoe) {
     pending.push({ type: 'attack', player: ME, ids: [...chosen], target: hoverFoe });
     play('select');
+    shout('attack');
     return;
   }
   if (!hoverTile) return;
@@ -587,11 +591,13 @@ function armyRightClick(): void {
   if (b && b.owner === ME && BUILDINGS[b.type]!.id === 'watchtower') {
     pending.push({ type: 'garrison', player: ME, ids: [...chosen], tower: b.id });
     play('rotate');
+    shout('move');
     return;
   }
-  pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y, form: armyForm });
+  pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y, form: armyForm, amove });
   renderer.orderMarker(hoverTile);
   play('rotate');
+  shout(amove ? 'attack' : 'move');
 }
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -614,14 +620,16 @@ canvas.addEventListener('pointerup', (e) => {
   renderer.lockRotate = false;
   renderer.setFormationPreview(null);
   if (!d || !chosen.size) return;
-  const o = d.on ? dragOrder(d.tile) : null;
+  const amove = (armyMarch === 1) !== e.ctrlKey;
+  const o = d.on ? dragOrder(d.tile, amove) : null;
   if (o) {
     pending.push({ type: 'move', player: ME, ids: [...chosen], ...o });
     renderer.orderMarker(o);
     play('rotate');
+    shout(amove ? 'attack' : 'move');
     return;
   }
-  armyRightClick();
+  armyRightClick(amove);
 }, { capture: true });
 window.addEventListener('blur', () => { rDrag = null; renderer.lockRotate = false; renderer.setFormationPreview(null); });
 
@@ -652,9 +660,10 @@ function canTrain(): boolean {
   return game.units.some((u) => u.owner === ME && u.job === 0);
 }
 
-function chooseSoldiers(ids: number[], add: boolean): void {
+function chooseSoldiers(ids: number[], add: boolean, quiet = false): void {
   if (!add) chosen.clear();
   for (const id of ids) chosen.add(id);
+  if (ids.length && !quiet) shout('select');
   renderer.setSoldierSelection(chosen);
   if (chosen.size) {
     select(0);
@@ -668,7 +677,7 @@ function showArmy(): void {
   const list = game.soldiers.filter((s) => chosen.has(s.id));
   if (list.length !== chosen.size) { chosen.clear(); for (const s of list) chosen.add(s.id); renderer.setSoldierSelection(chosen); }
   const st = new Set(list.map((s) => s.stance ?? 0));
-  hud.showArmy(list.map((s) => ({ name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1 });
+  hud.showArmy(list.map((s) => ({ name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1, march: armyMarch, group: groupOf() });
 }
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -1164,6 +1173,74 @@ function drawAlerts(): void {
 }
 (function alertLoop(): void { drawAlerts(); requestAnimationFrame(alertLoop); })();
 
+// --- grupy oddziałów: Shift + cyfra zapisuje zaznaczonych, cyfra ich wybiera, podwójnie = kamera do grupy ---
+const groups = new Map<number, number[]>();
+let lastGroup = { n: 0, at: 0 };
+/** Numer grupy, którą jest dokładnie obecne zaznaczenie (do nagłówka panelu) */
+function groupOf(): number | undefined {
+  for (const [n, ids] of groups) { const alive = ids.filter((id) => game.soldiers.some((x) => x.id === id)); if (alive.length === chosen.size && alive.every((id) => chosen.has(id))) return n; }
+  return undefined;
+}
+window.addEventListener('keydown', (e) => {
+  if (!e.code.startsWith('Digit') || e.ctrlKey || e.metaKey || e.altKey || renderer.walking || menu.isOpen()) return;
+  const tag = (e.target as HTMLElement | null)?.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  const n = Number(e.code.slice(5));
+  if (!(n >= 1 && n <= 9)) return;
+  e.preventDefault();
+  if (e.shiftKey) {
+    if (!chosen.size) return;
+    groups.set(n, [...chosen]);
+    hud.toast(`Grupa ${n}: ${chosen.size} ${chosen.size === 1 ? 'żołnierz' : 'żołnierzy'}. Wybierasz ją klawiszem ${n}.`);
+    play('select');
+    showArmy();
+    return;
+  }
+  const ids = (groups.get(n) ?? []).filter((id) => game.soldiers.some((x) => x.id === id && x.owner === ME));
+  if (!ids.length) return;
+  const now = performance.now();
+  if (lastGroup.n === n && now - lastGroup.at < 450) {
+    // drugie naciśnięcie: kamera nad środkiem grupy
+    const list = game.soldiers.filter((x) => ids.includes(x.id));
+    renderer.lookAt(list.reduce((a, x) => a + x.px, 0) / list.length / 256, list.reduce((a, x) => a + x.py, 0) / list.length / 256, 26);
+    lastGroup = { n: 0, at: 0 };
+    return;
+  }
+  lastGroup = { n, at: now };
+  chooseSoldiers(ids, false);
+  play('select');
+});
+
+// --- okrzyki wojska: potwierdzenie przy zaznaczeniu i rozkazie (dymek nad jednym żołnierzem i szorstki głos) ---
+const SHOUT: Record<string, Record<'select' | 'move' | 'attack', string[]>> = {
+  spearman: {
+    select: ['Słucham, panie.', 'Rozkazuj.', 'Włócznie gotowe.', 'Czego trzeba?', 'Jesteśmy.'],
+    move: ['Tak jest!', 'Idziemy.', 'Szykiem, marsz!', 'Ruszać się, chłopy!', 'Według rozkazu.'],
+    attack: ['Na nich!', 'Bij!', 'Za pana!', 'Włócznie naprzód!', 'Nie dać im tchu!'],
+  },
+  archer: {
+    select: ['Łuk napięty.', 'Słucham.', 'Strzały gotowe.', 'Cel, panie?', 'Patrzymy.'],
+    move: ['Idziemy, panie.', 'Zmieniamy miejsce.', 'Tak jest.', 'Za mną, chłopy.'],
+    attack: ['Napinaj!', 'Puszczaj!', 'Celuj w gardło!', 'Grad strzał!', 'Ognia, znaczy… strzelaj!'],
+  },
+};
+let shoutAt = 0;
+function shout(kind: 'select' | 'move' | 'attack'): void {
+  const now = performance.now();
+  if (now - shoutAt < 900 || !chosen.size) return;
+  shoutAt = now;
+  const list = game.soldiers.filter((x) => chosen.has(x.id));
+  const s = list[Math.floor(Math.random() * list.length)];
+  if (!s) return;
+  const lines = (SHOUT[UNITS[s.kind]!.id] ?? SHOUT.spearman!)[kind];
+  const text = lines[Math.floor(Math.random() * lines.length)]!;
+  bubble.textContent = text;
+  bubble.hidden = false;
+  sayUnit = s.id;
+  sayUntil = now + 1800;
+  talk(text, s.id, true);
+}
+
 // --- odzywki ludzi: krótko, szorstko, zależnie od tego, co robią i jak im się żyje ---
 const SAY: Record<string, string[]> = {
   idle: ['Czego?', 'Roboty by się znalazło jakiej…', 'Siedzę i czekam. Jak każdy.', 'Panie, daj jaką robotę.', 'Zimno przy tym ognisku.'],
@@ -1213,7 +1290,7 @@ function speak(id: number): void {
 }
 function sayLoop(): void {
   if (!bubble.hidden) {
-    const u = game.units.find((x) => x.id === sayUnit);
+    const u = game.units.find((x) => x.id === sayUnit) ?? game.soldiers.find((x) => x.id === sayUnit);
     if (!u || performance.now() > sayUntil || menu.isOpen()) bubble.hidden = true;
     else { const p = renderer.project(u.px / 256, u.py / 256); bubble.style.transform = `translate(${p.sx}px, ${p.sy - 40}px) translate(-50%, -100%)`; }
   }

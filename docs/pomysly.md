@@ -83,3 +83,25 @@ Większe rzeczy na później:
 - Trawa z teksturą źdźbeł (karty z alfą) zamiast pojedynczych pasków
 - Mgła wysokościowa w dolinach i chmury zahaczające o szczyty
 - Wodospady i strumienie z gór, odbicia brzegu w wodzie
+
+## Wojsko i piechota — do zrobienia (13.10.2026)
+Zrobione 13.10: niegubione rozkazy, szyk przeciąganiem z kierunkiem, formacje (linia/blok/luźno), postawy (atak/obrona/stój), panel typów jednostek, atak w marszu, wspólne tempo oddziału, grupy pod cyframi, okrzyki na rozkaz, nowy wygląd włóczników, łuczników i chłopów.
+
+Sterowanie:
+- Kolejka rozkazów: Shift + prawy klik dodaje kolejny punkt trasy
+- Patrol między dwoma punktami (np. wzdłuż palisady)
+- Odwrót rannych: żołnierz z małą ilością zdrowia cofa się za szyk (poza postawą „Stój”)
+- Marsz w zwartym szyku przez całą drogę (dziś każdy idzie swoją ścieżką na swoje miejsce, wspólne jest tylko tempo)
+- Numer grupy widoczny nad oddziałem / na portretach
+
+Walka:
+- Kierunek ma znaczenie: cios w plecy i bok mocniejszy, tarcza z przodu łapie część strzał
+- Szarża: rozpędzeni włócznicy mocniej uderzają przy pierwszym starciu
+- Strzały mogą chybić (częściej z daleka, rzadziej z wieży); ryzyko trafienia swoich przy strzale w kłąb walki
+
+Wygląd i ruch:
+- Naturalniejszy chód (ręka z tarczą trzymana, kołysanie) i zachowanie w miejscu (opiera się na włóczni, przestępuje z nogi na nogę)
+- Padanie przy śmierci zamiast nagłego zniknięcia, odrzut przy trafieniu
+- Chorąży z proporcem w barwach pana w każdym oddziale
+- Ulepszenia widoczne na modelu (za monety z bitew): płytowe naramienniki, hełm z przyłbicą itd.
+- Prawdziwy głos okrzyków (np. syntezator mowy po polsku) zamiast bełkotu

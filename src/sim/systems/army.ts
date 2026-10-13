@@ -91,7 +91,7 @@ export function octant(dx: number, dy: number): number {
 
 /** Formacje: 0 linia (szeroko, 1–3 szeregi), 1 blok (kwadrat), 2 luźno (co drugie pole, mniej strat od strzał) */
 export const FORMS = 3;
-export interface MoveOpts { face?: number; form?: number; width?: number }
+export interface MoveOpts { face?: number; form?: number; width?: number; amove?: boolean }
 
 /**
  * Plan szyku: które pole dostaje który żołnierz. Wręcz z przodu, łucznicy z tyłu.
@@ -159,12 +159,17 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
   const { spots, face } = planFormation(g, player, ids, target, opts);
   if (!spots.size) return;
   const grp = g.nextId++;
+  // oddział idzie razem: wszyscy tempem najwolniejszego
+  let slow = Infinity, fast = 0;
+  for (const s of g.soldiers) if (spots.has(s.id) && s.owner === player) { const v = UNITS[s.kind]!.speed; slow = Math.min(slow, v); fast = Math.max(fast, v); }
   for (const s of g.soldiers) {
     const spot = spots.get(s.id);
     if (spot === undefined || s.owner !== player) continue;
     leavePost(g, s);
     s.goal = spot; s.hold = spot; s.face = face; s.grp = grp;
     s.path = []; s.wait = 0; s.target = 0; s.hunt = 0;
+    s.amove = !!opts.amove;
+    s.pace = slow < fast ? slow : undefined;
   }
 }
 
@@ -230,7 +235,7 @@ function step(g: GameState, s: Soldier): void {
   const tx = nx * FP + FP / 2, ty = ny * FP + FP / 2;
   const dx = tx - s.px, dy = ty - s.py;
   const base = dx !== 0 && dy !== 0 ? RULES.unitSpeedDiagonal : RULES.unitSpeed;
-  const speed = Math.round((base * UNITS[s.kind]!.speed * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, s)]!]!)) / 10000);
+  const speed = Math.round((base * (s.goal >= 0 && s.pace ? s.pace : UNITS[s.kind]!.speed) * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, s)]!]!)) / 10000);
   s.px += Math.max(-speed, Math.min(speed, dx));
   s.py += Math.max(-speed, Math.min(speed, dy));
   if (s.px === tx && s.py === ty) s.path.shift();
@@ -303,12 +308,12 @@ export function armySystem(g: GameState): void {
     // jak daleko od pilnowanego pola wolno mu odejść za wrogiem
     const leash = stance === 1 ? 6 : stance === 2 ? 0 : Infinity;
     const tooFar = (t: number): boolean => {
-      if (!stance || (s.hold ?? -1) < 0 || s.post) return false;
+      if (!stance || (s.hold ?? -1) < 0 || s.post || s.amove) return false;
       const hx = s.hold! % W, hy = (s.hold! - hx) / W, x = t % W, y = (t - x) / W;
       return Math.max(Math.abs(hx - x), Math.abs(hy - y)) > leash + (range || 1);
     };
-    // walka: tylko gdy nie maszeruje na rozkaz
-    if (s.goal < 0) {
+    // walka: tylko gdy nie maszeruje na rozkaz (albo maszeruje z rozkazem „atak w marszu”)
+    if (s.goal < 0 || s.amove) {
       // rozkaz ataku na budynek ma pierwszeństwo przed szukaniem żołnierzy
       if (s.target && !byId.has(s.target) && g.buildings.some((b) => b.id === s.target && !b.ruined) && siege(g, s, def, taken)) continue;
       let foe = s.target ? byId.get(s.target) : undefined;
@@ -328,6 +333,8 @@ export function armySystem(g: GameState): void {
         s.target = foe ? foe.id : 0;
       }
       if (foe) {
+        // atak w marszu: na widok wroga przerywa marsz (drogę do celu odnajdzie po walce)
+        if (s.amove && s.goal >= 0 && s.path.length > 1) s.path = [];
         if (gap(s, foe) <= (range ? range * FP : FP + FP / 2) && !s.path.length) {
           if (s.cd === 0) {
             foe.hp -= def.attack; s.cd = def.cooldown;
@@ -374,7 +381,7 @@ export function armySystem(g: GameState): void {
         }
       }
       // brak wrogich żołnierzy w pobliżu: bierze się za najbliższy wrogi budynek
-      if (!s.up && !range && !stance && siege(g, s, def, taken)) continue; // obrona i „stój” nie idą same na budynki; łucznicy sami nie strzelają w budynki, tylko na rozkaz
+      if (!s.up && !range && !stance && !s.amove && siege(g, s, def, taken)) continue; // obrona i „stój” nie idą same na budynki; łucznicy sami nie strzelają w budynki, tylko na rozkaz
     }
     if (s.up) continue;
     if (s.wait > 0) { s.wait--; continue; }
@@ -391,7 +398,7 @@ export function armySystem(g: GameState): void {
       continue;
     }
     const here = tileOf(g, s);
-    if (here === s.goal) { s.goal = -1; continue; }
+    if (here === s.goal) { s.goal = -1; s.amove = false; s.pace = undefined; continue; }
     const goal = s.goal;
     if (budget <= 0) continue; // ruszy w następnym ticku
     budget--;

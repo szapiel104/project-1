@@ -13,6 +13,8 @@ export interface HudEvents {
   onArmyForm(form: number): void;
   /** Postawa: 0 atak, 1 obrona, 2 stój */
   onArmyStance(stance: number): void;
+  /** Marsz: 0 zwykły (nie oglądają się na wroga), 1 z walką (biją każdego po drodze) */
+  onArmyMarch(march: number): void;
   onNewGame(seedText: string, preset: MapPresetId): void;
   onRandom(preset: MapPresetId): void;
   onPickBuilding(id: string | null): void;
@@ -80,7 +82,7 @@ export interface Hud {
   /** Karta mieszkańca: imię i kilka wierszy opisu */
   showPerson(person: { name: string; lines: string[] } | null): void;
   /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
-  showArmy(army: { name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number }): void;
+  showArmy(army: { name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number; march: number; group?: number }): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
@@ -411,6 +413,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   };
   armyPanel.append(kindsRow);
   const formBtns = seg('Szyk', [['Linia', 'Szeroki front, 1–3 szeregi. Łucznicy z tyłu.'], ['Blok', 'Zwarty kwadrat: trudny do obejścia.'], ['Luźno', 'Co drugie pole: mniej ofiar od strzał.']], (i) => events.onArmyForm(i));
+  const marchBtns = seg('Marsz', [['Zwykły', 'Idą na miejsce, nie zatrzymując się na wroga.'], ['Z walką', 'Idą na miejsce, ale biją każdego wroga, którego spotkają. Ctrl + prawy klik odwraca wybór dla jednego rozkazu.']], (i) => events.onArmyMarch(i));
   const stanceBtns = seg('Postawa', [['Atak', 'Goni każdego wroga, którego zobaczy.'], ['Obrona', 'Walczy w pobliżu swojego miejsca i do niego wraca.'], ['Stój', 'Nie rusza się z miejsca. Bije tylko tych, których sięgnie.']], (i) => events.onArmyStance(i));
   // brama: jeden duży przycisk otwórz/zamknij i stan pod spodem
   const gateBox = el('div', 'gate-box');
@@ -760,6 +763,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       for (const [k, kb] of kindBtns) if (!byKind.has(k)) kb.b.hidden = true;
       formBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.form ?? 0))));
       stanceBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.stance ?? -1))));
+      marchBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.march ?? 0))));
+      setText(infoName, `${t('hud.soldiers')}: ${army.length}${ctl?.group ? ` · grupa ${ctl.group}` : ''}`);
       // portrety odświeżamy tylko, gdy coś się zmieniło (przebudowa co klatkę gubiła kliknięcia)
       const key = army.slice(0, 24).map((u) => `${u.kind}${Math.round((u.hp / u.max) * 20)}`).join() + army.length;
       if (key !== rosterKey) {

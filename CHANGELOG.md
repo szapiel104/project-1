@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.14.0 — atak w marszu, grupy, okrzyki (2026-10-13)
+
+- Tryb marszu w panelu wojska: zwykły albo z walką (biją każdego wroga po drodze, potem idą dalej na miejsce); Ctrl + prawy klik odwraca tryb dla jednego rozkazu
+- Oddział idzie wspólnym tempem najwolniejszego, więc łucznicy i włócznicy się nie rozjeżdżają
+- Grupy: Shift + cyfra zapisuje zaznaczonych, cyfra ich wybiera, dwa szybkie naciśnięcia = kamera nad grupą; numer grupy w nagłówku panelu
+- Okrzyki: przy zaznaczeniu, marszu i ataku jeden z żołnierzy odpowiada (dymek i szorstki głos), osobne kwestie dla włóczników i łuczników
+
 ## 0.13.1 — nowy wygląd żołnierzy (2026-10-13)
 
 - Włócznik: kolczuga z czepcem, waffenrock w barwach pana z krzyżem, kapalin albo hełm z nosalem, wypukła tarcza z okuciem i guzem, włócznia z liściastym grotem

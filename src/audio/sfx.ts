@@ -409,14 +409,15 @@ export function playAt(kind: WorldSound, near: number, pan: number, gain = 1): v
  * Głos chłopa przy odzywce: bełkot sylab jak w starych strategiach, długi tyle co zdanie.
  * Każdy człowiek ma swoją wysokość głosu (z id), więc dwóch różnych brzmi inaczej.
  */
-export function talk(text: string, voice: number): void {
+export function talk(text: string, voice: number, shout = false): void {
   const c = ctx;
   if (!c || muted || c.state !== 'running') return;
-  const base = 95 + (voice % 7) * 14;
-  const n = Math.min(26, Math.max(4, Math.round(text.length / 2.6)));
+  // okrzyk żołnierza: niżej, krócej, głośniej i ostrzej niż gadanie chłopa
+  const base = (95 + (voice % 7) * 14) * (shout ? 0.82 : 1);
+  const n = Math.min(shout ? 10 : 26, Math.max(shout ? 2 : 4, Math.round(text.length / (shout ? 3.2 : 2.6))));
   const t0 = c.currentTime + 0.02;
   for (let i = 0; i < n; i++) {
-    const at = t0 + i * 0.1 + Math.random() * 0.025;
+    const at = t0 + i * (shout ? 0.085 : 0.1) + Math.random() * 0.025;
     const o = c.createOscillator(), f = c.createBiquadFilter(), f2 = c.createBiquadFilter(), g = c.createGain();
     o.type = 'sawtooth';
     // intonacja: zdanie lekko opada pod koniec, pytanie by rosło
@@ -427,7 +428,7 @@ export function talk(text: string, voice: number): void {
     f.type = 'bandpass'; f.frequency.value = 450 + Math.random() * 500; f.Q.value = 6;
     f2.type = 'bandpass'; f2.frequency.value = 1100 + Math.random() * 900; f2.Q.value = 8;
     g.gain.setValueAtTime(0.0001, at);
-    g.gain.exponentialRampToValueAtTime(0.5, at + 0.02);
+    g.gain.exponentialRampToValueAtTime(shout ? (i === 0 ? 0.95 : 0.75) : 0.5, at + 0.02);
     g.gain.exponentialRampToValueAtTime(0.001, at + 0.09);
     o.connect(f).connect(g); o.connect(f2).connect(g);
     g.connect(busGain.sfx ?? master!);

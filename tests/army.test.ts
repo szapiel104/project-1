@@ -190,4 +190,25 @@ describe('szyk i postawy', () => {
     for (let i = 0; i < 200; i++) step(g, []);
     expect((me.px >> 8) - (c % g.map.width)).toBeGreaterThan(0);
   });
+
+  it('atak w marszu: po drodze bije wroga, a potem idzie dalej na miejsce', () => {
+    const g = createGame(7);
+    const c = openField(g), w = g.map.width;
+    const me = soldier(g, 0, 'spearman', c - 3);
+    const foe = soldier(g, 1, 'spearman', c, { stance: 2, hp: 12 });
+    step(g, [{ type: 'move', player: 0, ids: [me.id], x: (c % w) + 3, y: Math.floor(c / w), amove: true }]);
+    for (let i = 0; i < 900; i++) step(g, []);
+    expect(g.soldiers.some((s) => s.id === foe.id)).toBe(false);
+    expect(me.amove).toBe(false);
+    expect(Math.abs((me.px >> 8) - ((c % w) + 3))).toBeLessThanOrEqual(1);
+  });
+
+  it('oddział z łucznikami i włócznikami idzie wspólnym tempem', () => {
+    const g = createGame(7);
+    const c = openField(g), w = g.map.width;
+    const a = soldier(g, 0, 'spearman', c - 2 * w), b = soldier(g, 0, 'archer', c - 2 * w + 1);
+    step(g, [{ type: 'move', player: 0, ids: [a.id, b.id], x: c % w, y: Math.floor(c / w) + 3 }]);
+    expect(a.pace).toBe(b.pace);
+    expect(a.pace).toBeDefined();
+  });
 });
