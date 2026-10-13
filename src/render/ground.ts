@@ -105,7 +105,7 @@ const FRAG_ALBEDO = /* glsl */ `
   float far = smoothstep(18.0, 60.0, dist);
   vec3 grass = mix(g1a, g1b, clamp(nS.b * 0.8 + far * 0.6 - 0.15, 0.0, 1.0));
   grass = mix(grass, g2 * vec3(0.92, 0.9, 0.8), smoothstep(0.38, 0.72, nM.r) * 0.85);
-  vec3 meadow = texture2D(tMeadow, rot(w, 0.4) / 4.6).rgb;
+  vec3 meadow = texture2D(tMeadow, rot(w, 0.4) / 4.6).rgb * vec3(0.84, 0.86, 0.8);
   vec3 forest = texture2D(tForest, rot(w, 1.3) / 4.2).rgb * vec3(1.04, 0.96, 0.84);
   vec3 pebble = texture2D(tPebble, rot(w, 2.6) / 2.9).rgb;
   vec3 dirt = texture2D(tDirt, rot(w, 0.2) / 4.5).rgb * vec3(0.95, 0.9, 0.84);
@@ -163,12 +163,12 @@ const FRAG_ALBEDO = /* glsl */ `
   // góry: na płaskich półkach trawa i mech, wysoko śnieg (mniej na stromiznach), granica postrzępiona szumem
   float ledge = bR / sum * smoothstep(0.8, 0.95, vWN.y) * smoothstep(0.45, 0.7, nS.b) * (1.0 - smoothstep(5.0, 7.5, vWP.y));
   alb = mix(alb, grass * 0.8, ledge * 0.85);
-  float line = 6.8 + nM.g * 2.4 + (nD.r - 0.5) * 0.8;
+  float line = 8.6 + nM.g * 2.6 + (nD.r - 0.5) * 1.2;
   float snow = smoothstep(line, line + 1.1, vWP.y) * mix(0.3, 1.0, smoothstep(0.35, 0.8, vWN.y));
-  vec3 snowC = vec3(0.8, 0.83, 0.88) * (0.88 + nD.g * 0.18);
+  vec3 snowC = vec3(0.78, 0.81, 0.86) * (0.8 + lum(rock) * 0.45) * (0.9 + nD.g * 0.16);
   snow *= smoothstep(0.0, 0.35, 1.0 - lum(rock) * 0.6 + nD.b * 0.4 - 0.3) * 0.5 + 0.5;
   alb = mix(alb, snowC, clamp(snow, 0.0, 1.0));
-  gNormal = normalize(mix(gNormal, vec3(0.0, 0.0, 1.0), snow * 0.7));
+  gNormal = normalize(mix(gNormal, vec3(0.0, 0.0, 1.0), snow * 0.35));
   // światło i cień w dużej skali: kępy wilgotniejsze i ciemniejsze, suche placki jaśniejsze
   float macro = 0.74 + nM.b * 0.42 + (nS.r - 0.5) * 0.16;
   // wnęki między źdźbłami i kamieniami ciemnieją (fałszywe AO z jasności)
@@ -273,7 +273,7 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           vec2 suv = (vWP.xz + mapSize * 0.5) / mapSize;
           wDepth = texture2D(shore, suv).r;
           float d = smoothstep(0.0, 0.55, wDepth);
-          vec3 shallowC = vec3(0.07, 0.095, 0.075), deepC = vec3(0.008, 0.022, 0.03);
+          vec3 shallowC = vec3(0.08, 0.105, 0.08), deepC = vec3(0.016, 0.04, 0.05);
           diffuseColor.rgb = mix(shallowC, deepC, d);
           diffuseColor.a = mix(0.72, 0.95, smoothstep(0.0, 0.3, wDepth));
           // piana: postrzępiona linia tuż przy brzegu, przesuwa się z falami
@@ -282,10 +282,10 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
         }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         {
-          vec3 n1 = texture2D(wN, vWP.xz / 7.0 + vec2(wTime * 0.021, wTime * 0.013)).xyz * 2.0 - 1.0;
-          vec3 n2 = texture2D(wN, vec2(vWP.z, -vWP.x) / 2.9 - vec2(wTime * 0.016, wTime * 0.027)).xyz * 2.0 - 1.0;
+          vec3 n1 = texture2D(wN, vWP.xz / 4.2 + vec2(wTime * 0.026, wTime * 0.016)).xyz * 2.0 - 1.0;
+          vec3 n2 = texture2D(wN, vec2(vWP.z, -vWP.x) / 2.1 - vec2(wTime * 0.02, wTime * 0.033)).xyz * 2.0 - 1.0;
           vec3 n3 = texture2D(wN, vWP.xz / 19.0 + vec2(-wTime * 0.008, wTime * 0.006)).xyz * 2.0 - 1.0;
-          vec3 wn = normalize(vec3((n1.xy * 0.8 + n2.xy * 0.6 + n3.xy * 0.25) * 0.3, 1.0));
+          vec3 wn = normalize(vec3((n1.xy * 0.8 + n2.xy * 0.7 + n3.xy * 0.15) * 0.5, 1.0));
           vec3 T = normalize((viewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
           vec3 B = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);
           normal = normalize(T * wn.x - B * wn.y + normal * wn.z);
@@ -297,8 +297,8 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           // odbicie nieba zależy od nachylenia fali: grzbiety łapią jasny horyzont, doliny ciemny zenit
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
-          vec3 skyR = mix(skyCol * 0.5, skyCol * 0.28, smoothstep(0.05, 0.6, rWorld.y)) * vec3(0.78, 0.9, 1.0);
-          outgoingLight = mix(outgoingLight, skyR, clamp(fres * 0.9 + 0.1, 0.0, 0.5));
+          vec3 skyR = mix(skyCol * 0.62, skyCol * 0.36, smoothstep(0.1, 0.55, rWorld.y)) * vec3(0.8, 0.9, 1.0);
+          outgoingLight = mix(outgoingLight, skyR, clamp(fres * 0.9 + 0.16, 0.0, 0.55));
           outgoingLight += vec3(0.7, 0.72, 0.68) * wFoam * 0.22 * (0.3 + skyCol.g);
           diffuseColor.a = clamp(max(diffuseColor.a, fres * 0.9) + wFoam * 0.2, 0.0, 1.0);
         }
