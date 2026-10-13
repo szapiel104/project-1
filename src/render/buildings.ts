@@ -50,6 +50,8 @@ const M = {
   ash: mat(0x4a4540), slate: mat(0x8a8d94, 'slate'), sack: mat(0xbfa77c, 'burlap'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xf4f0e8, 'cobble'),
+  // miniatury dróg w menu: te same barwy co na mapie (ciepła szarość bruku, ubita ziemia)
+  pathDirt: mat(0xa8865a, 'soil'), pathCobble: mat(0x9e968a, 'cobble'), kerb: mat(0x8c867c, 'rock'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
   hay: mat(0xe0c466, 'thatch'),
   ore: mat(0x8a4a2c), crust: mat(0xe2b06a),
@@ -1673,8 +1675,28 @@ const BUILDERS: Record<string, Builder> = {
     g.add(sh);
     pennant(g, flag, -1.3, 0.4, 1.3);
   },
-  roadSand(g) { box(g, M.roadSand, 0.96, 0.04, 0.96); },
-  roadStone(g) { box(g, M.roadStone, 0.96, 0.05, 0.96); },
+  roadSand(g) {
+    box(g, M.pathDirt, 0.96, 0.04, 0.96);
+    // kamyki przy brzegu ubitej ścieżki
+    for (const [x, z, r] of [[-0.44, 0.3, 0.035], [0.4, -0.38, 0.03], [0.46, 0.12, 0.025], [-0.2, -0.46, 0.028]] as const) {
+      const p = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 0), M.kerb);
+      p.position.set(x, 0.04 + r * 0.4, z);
+      p.scale.set(1.3, 0.7, 1);
+      g.add(p);
+    }
+  },
+  roadStone(g) {
+    box(g, M.pathCobble, 0.96, 0.05, 0.96);
+    // krawężnik z ciosanych kamieni dookoła płyty, jak na mapie
+    for (const side of [0, 1, 2, 3]) {
+      for (let k = 0; k < 4; k++) {
+        const t = -0.36 + k * 0.24;
+        const [x, z] = side === 0 ? [t, -0.42] : side === 1 ? [t, 0.42] : side === 2 ? [-0.42, t] : [0.42, t];
+        const kb = box(g, M.kerb, side < 2 ? 0.22 : 0.11, 0.08, side < 2 ? 0.11 : 0.22, x, 0.03, z);
+        kb.rotation.y = ((k * 7 + side * 3) % 5 - 2) * 0.02;
+      }
+    }
+  },
   camp(g) {
     // Wiata dla ludzi bez pracy: ciesielska altana z dwuspadową strzechą, plecioną ścianą od wiatru,
     // ławami, beczką i zapasem drewna; ognisko z kociołkiem przed nią

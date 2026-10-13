@@ -6,6 +6,7 @@ import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ModelFactory } from './models';
 import { bump, normal, pattern } from './textures';
 import { groundGrassTexture, groundMaterial, waterMaterial } from './ground';
@@ -885,10 +886,29 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     paveMat.polygonOffsetFactor = -2;
     return paveMat;
   };
+  // Krawężnik bruku i kamyki przy ścieżkach: ciosane kamienie w osobnym materiale, każdy w trochę innym odcieniu
+  let kerbMat: THREE.MeshStandardMaterial | null = null;
+  const kerbMaterial = (): THREE.MeshStandardMaterial => {
+    if (!kerbMat) kerbMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, metalness: 0, map: pattern('rock'), normalMap: normal('rock') });
+    return kerbMat;
+  };
+  const kerbDummy = new THREE.Object3D();
+  const kerbTone = new THREE.Color();
+  /** Ustawia kamień (krawężnik albo kamyk) w instancji i: środek (x, y) w polach mapy, wymiary, obrót i odcień */
+  const placeStone = (im: THREE.InstancedMesh, i: number, x: number, y: number, lift: number, sx: number, sy: number, sz: number, rot: number, tilt: number, r: number): void => {
+    kerbDummy.position.set(x + ox, heightAt(x, y) + lift, y + oz);
+    kerbDummy.rotation.set(tilt * (((r >>> 3) & 7) / 7 - 0.5), rot, tilt * (((r >>> 6) & 7) / 7 - 0.5));
+    kerbDummy.scale.set(sx, sy, sz);
+    kerbDummy.updateMatrix();
+    im.setMatrixAt(i, kerbDummy.matrix);
+    const t = 0.5 + ((r >>> 9) & 31) / 31 * 0.2;
+    const moss = (r >>> 15) % 6 === 0 ? 0.06 : 0;
+    im.setColorAt(i, kerbTone.setRGB(t * 1.02 - moss, t + moss * 0.6, t * 0.92 - moss));
+  };
   // trawa znika pod budynkami i na drogach (bruk całkiem, ścieżka z piasku prawie)
   const builtOn = new Uint8Array(w * h);
   let roadsNow: Uint8Array | null = null;
-  const regrass = (t: number): void => { if (grass) grass.setDensity(t, builtOn[t] ? 0 : roadsNow?.[t] ? (roadsNow[t] === 1 ? 0.08 : 0) : grassBase[t]!); };
+  const regrass = (t: number): void => { if (grass) grass.setDensity(t, builtOn[t] ? 0 : roadsNow?.[t] ? (roadsNow[t] === 1 ? 0.025 : 0) : grassBase[t]!); };
   const setRoads = (roads: Uint8Array, materials: THREE.Material[]): void => {
     roadsNow = roads;
     if (grass) for (let t = 0; t < w * h; t++) regrass(t);
@@ -910,9 +930,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const jx = soft ? ((r & 15) / 15 - 0.5) * 0.22 : 0, jy = soft ? (((r >>> 4) & 15) / 15 - 0.5) * 0.22 : 0;
           const x0 = x - grow + jx, x1 = x + 1 + grow + jx, y0 = y - grow + jy, y1 = y + 1 + grow + jy;
           // odcień pola: większość szara, część jaśniejsza albo ciemniejsza, niektóre zielonkawe od mchu
-          const tone = 0.9 + (((r >>> 8) & 31) / 31) * 0.16;
-          const moss = (r >>> 14) % 5 === 0 ? 0.12 : 0;
-          shade.setRGB(tone * (1 - moss), tone * (1 + moss * 0.3), tone * (1 - moss * 1.4));
+          // ciepła szarość kamienia polnego zamiast prawie białej tafli
+          const tone = 0.58 + (((r >>> 8) & 31) / 31) * 0.12;
+          const moss = (r >>> 14) % 5 === 0 ? 0.08 : 0;
+          shade.setRGB(tone * 1.02 * (1 - moss), tone * (1 + moss * 0.4), tone * 0.9 * (1 - moss * 1.5));
           for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
             p3.push(qx + ox, heightAt(qx, qy) + (soft ? 0.03 : 0.045), qy + oz);
             if (soft) uv2.push(u, v);
@@ -1007,8 +1028,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
                       uv2.push(px / 2, py / 2);
                       // środek ścieżki jaśniejszy i ubity, brzegi ciemniejsze, wilgotniejsze
                       const a = alpha[k]!;
-                      const t = 0.78 + a * 0.22 + pathNoise(px * 6, py * 6) * 0.05;
-                      sand.push(0.82 * t, 0.68 * t, 0.46 * t, a);
+                      const t = 0.62 + a * 0.3 + pathNoise(px * 6, py * 6) * 0.06 + pathNoise(px * 1.7 + 9, py * 1.7) * 0.05;
+                      sand.push(0.74 * t, 0.57 * t, 0.37 * t, Math.min(1, a * 1.08));
                     });
                   }
               }
@@ -1029,6 +1050,93 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       mesh.renderOrder = soft ? 1 : 0;
       group.add(mesh);
       roadMeshes.push(mesh);
+      const onRoad = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind;
+      if (!soft) {
+        // Krawężnik: rząd ciosanych kamieni wzdłuż każdego boku bruku, który styka się z trawą,
+        // a za nim pas ubitej, ciemniejszej ziemi, który miękko przechodzi w trawę.
+        const kerbs: [number, number, number, number, number][] = []; // x, y, długość, obrót, ziarno
+        const shoulder: number[] = [], shoulderUv: number[] = [], shoulderCol: number[] = [];
+        const SH = 0.22;
+        const band = (ax: number, ay: number, bx: number, by: number, nx: number, ny: number): void => {
+          const pts = [[ax, ay, 1], [ax + nx * SH, ay + ny * SH, 0], [bx, by, 1], [bx, by, 1], [ax + nx * SH, ay + ny * SH, 0], [bx + nx * SH, by + ny * SH, 0]] as const;
+          for (const [qx, qy, a] of pts) {
+            shoulder.push(qx + ox, heightAt(qx, qy) + 0.032, qy + oz);
+            shoulderUv.push(qx / 2, qy / 2);
+            const t = 0.55 + pathNoise(qx * 5, qy * 5) * 0.06;
+            shoulderCol.push(0.62 * t, 0.5 * t, 0.36 * t, a * (0.8 + pathNoise(qx * 2.3, qy * 2.3) * 0.2));
+          }
+        };
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            if (!onRoad(x, y)) continue;
+            for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+              if (onRoad(x + dx, y + dy)) continue;
+              // bok pola od punktu A do B, normalna na zewnątrz (dx, dy)
+              const ax = dx === 1 ? x + 1 : x, ay = dy === 1 ? y + 1 : y;
+              const bx = dy !== 0 ? x + 1 : ax, by = dx !== 0 ? y + 1 : ay;
+              band(ax, ay, bx, by, dx, dy);
+              const n = 4;
+              for (let k = 0; k < n; k++) {
+                const r = hash2(x * 4 + k, y * 4 + (dx + 1) * 2 + dy + 1, map.seed ^ 0x6b3e);
+                const f = (k + 0.5) / n + (((r & 15) / 15) - 0.5) * 0.03;
+                const inset = 0.065;
+                kerbs.push([ax + (bx - ax) * f - dx * inset, ay + (by - ay) * f - dy * inset, 1 / n - 0.018 - ((r >>> 4) & 7) * 0.004, dx !== 0 ? Math.PI / 2 : 0, r]);
+              }
+            }
+          }
+        if (kerbs.length) {
+          const geo = new RoundedBoxGeometry(1, 1, 1, 2, 0.18);
+          const im = new THREE.InstancedMesh(geo, kerbMaterial(), kerbs.length);
+          kerbs.forEach(([kx, ky, len, rot, r], i) => placeStone(im, i, kx, ky, 0.058, len, 0.075 + ((r >>> 20) & 7) * 0.004, 0.115, rot + (((r >>> 23) & 7) / 7 - 0.5) * 0.08, 0.06, r));
+          im.instanceMatrix.needsUpdate = true;
+          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          im.castShadow = true;
+          im.receiveShadow = true;
+          group.add(im);
+          roadMeshes.push(im);
+        }
+        if (shoulder.length) {
+          const sg = new THREE.BufferGeometry();
+          sg.setAttribute('position', new THREE.Float32BufferAttribute(shoulder, 3));
+          sg.setAttribute('uv', new THREE.Float32BufferAttribute(shoulderUv, 2));
+          sg.setAttribute('color', new THREE.Float32BufferAttribute(shoulderCol, 4));
+          sg.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(shoulder.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
+          const sm = new THREE.Mesh(sg, sandMaterial());
+          (sm.material as THREE.Material).side = THREE.DoubleSide;
+          sm.receiveShadow = true;
+          sm.renderOrder = 1;
+          group.add(sm);
+          roadMeshes.push(sm);
+        }
+      } else {
+        // kamyki przy brzegach ścieżki: kilka na pole, tylko tam, gdzie ścieżka graniczy z trawą
+        const pebbles: [number, number, number, number][] = [];
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            if (!onRoad(x, y)) continue;
+            for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1]] as const) {
+              if (onRoad(x + dx, y + dy)) continue;
+              const r = hash2(x * 3 + dx + 1, y * 3 + dy + 1, map.seed ^ 0x2e9d);
+              const cnt = r & 3;
+              for (let k = 0; k < cnt; k++) {
+                const rr = hash2(x * 7 + k, y * 5 + dx * 2 + dy, map.seed ^ (0x41 + k));
+                const along = ((rr & 255) / 255) * 0.9 + 0.05, out = 0.22 + (((rr >>> 8) & 255) / 255) * 0.22;
+                const px = dy !== 0 ? x + along : x + 0.5 + dx * (0.5 + out - 0.2);
+                const py = dx !== 0 ? y + along : y + 0.5 + dy * (0.5 + out - 0.2);
+                pebbles.push([px, py, 0.03 + ((rr >>> 16) & 15) / 15 * 0.04, rr]);
+              }
+            }
+          }
+        if (pebbles.length) {
+          const im = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), kerbMaterial(), pebbles.length);
+          pebbles.forEach(([px, py, sz, r], i) => placeStone(im, i, px, py, sz * 0.25, sz * 1.3, sz * 0.7, sz, ((r >>> 4) & 63) / 10, 0.5, r));
+          im.instanceMatrix.needsUpdate = true;
+          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          im.receiveShadow = true;
+          group.add(im);
+          roadMeshes.push(im);
+        }
+      }
       if (ditch.length) {
         const dg = new THREE.BufferGeometry();
         dg.setAttribute('position', new THREE.Float32BufferAttribute(ditch, 3));
@@ -1065,6 +1173,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       // błoto: ciemniejsza, błyszcząca ziemia na ścieżkach, mokry połysk bruku, trochę ciemniejsza trawa
       const dryC = new THREE.Color(0xffffff);
       if (sandMat) { sandMat.color.copy(dryC).lerp(new THREE.Color(0x3e2c1c), k * 0.85); sandMat.roughness = 1 - k * 0.7; }
+      if (kerbMat) { kerbMat.roughness = 0.88 - k * 0.45; kerbMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
       if (paveMat) { paveMat.roughness = 0.9 - k * 0.5; paveMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
       const gm = ground.material as THREE.MeshStandardMaterial;
       gm.color.copy(dryC).lerp(new THREE.Color(0x8a917c), k * 0.6);
