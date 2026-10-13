@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
 
-export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock';
+export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -158,6 +158,40 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     // zacieki pod koroną muru
     for (let k = 0; k < 14; k++) { const sx = r() * n, len = n * (0.15 + r() * 0.3); const gr = c.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(sx, 0, n * (0.01 + r() * 0.02), len); }
   },
+  dressed(c, n, r) {
+    // Świeżo ciosany kamień (bloki w kamieniołomie): jedna gładka płaszczyzna bez fug — plamy piaskowca,
+    // pasma ukośnych śladów dłuta, drobne dziobki po szpicaku, cienkie żyłki
+    c.fillStyle = gray(0.84); c.fillRect(0, 0, n, n);
+    // duże, miękkie plamy jaśniejszego i ciemniejszego kamienia
+    for (let k = 0; k < 46; k++) {
+      const x = r() * n, y = r() * n, rad = n * (0.05 + r() * 0.16);
+      const g = c.createRadialGradient(x, y, 0, x, y, rad);
+      const lite = r() > 0.5;
+      g.addColorStop(0, `rgba(${lite ? '255,255,255' : '40,32,24'},${0.05 + r() * 0.07})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = g; c.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    // ślady dłuta: pasma równoległych, krótkich kresek pod jednym kątem
+    for (let band = 0; band < 34; band++) {
+      const bx = r() * n, by = r() * n, ang = (r() > 0.5 ? 1 : -1) * (0.45 + r() * 0.35), len = n * (0.02 + r() * 0.03), step = n * 0.006;
+      const cnt = 8 + Math.floor(r() * 14);
+      c.lineWidth = n * 0.0016;
+      for (let k = 0; k < cnt; k++) {
+        const ox = bx + Math.cos(ang + Math.PI / 2) * k * step, oy = by + Math.sin(ang + Math.PI / 2) * k * step;
+        c.strokeStyle = `rgba(${k % 2 ? '0,0,0' : '255,255,255'},${0.06 + r() * 0.08})`;
+        c.beginPath(); c.moveTo(ox, oy); c.lineTo(ox + Math.cos(ang) * len, oy + Math.sin(ang) * len); c.stroke();
+      }
+    }
+    // dziobki po szpicaku
+    for (let k = 0; k < 900; k++) { const sz = n * (0.0015 + r() * 0.003); c.fillStyle = `rgba(0,0,0,${0.08 + r() * 0.14})`; c.fillRect(r() * n, r() * n, sz, sz * (0.6 + r() * 0.8)); }
+    for (let k = 0; k < 500; k++) { const sz = n * (0.001 + r() * 0.002); c.fillStyle = `rgba(255,255,255,${0.1 + r() * 0.15})`; c.fillRect(r() * n, r() * n, sz, sz); }
+    // cienkie żyłki w kamieniu
+    for (let k = 0; k < 5; k++) {
+      c.strokeStyle = `rgba(90,70,50,${0.12 + r() * 0.1})`; c.lineWidth = n * 0.0012;
+      c.beginPath(); let x = r() * n, y = r() * n; c.moveTo(x, y);
+      for (let s2 = 0; s2 < 12; s2++) { x += (r() - 0.3) * n * 0.05; y += (r() - 0.5) * n * 0.03; c.lineTo(x, y); }
+      c.stroke();
+    }
+  },
   cobble(c, n, r) {
     // Bruk w rysunkowym stylu: drobne, prostokątne kamienie o zaokrąglonych rogach, w rzędach różnej długości,
     // jasny piaskowiec z refleksem u góry i cieniem u dołu, ciemne szczeliny i mech wyrastający ze spoin.
@@ -233,14 +267,14 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
  * Dzięki temu jeden wzór cegieł służy jasnemu i ciemnemu kamieniowi oraz barwom drużyn.
  */
 /** Rysuje teksturę od zera (wolne: ziarno liczone piksel po pikselu). */
-const size = (kind: Kind): number => (TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'grass' ? 2048 : 1024);
+const size = (kind: Kind): number => (TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'dressed' || kind === 'grass' ? 2048 : 1024);
 function paint(kind: Kind, n: number): HTMLCanvasElement | null {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'ashlar' ? 1024 : kind === 'cobble' || kind === 'grass' ? n : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock'].includes(kind) ? 128 : 64;
+  const base = kind === 'ashlar' || kind === 'dressed' ? 1024 : kind === 'cobble' || kind === 'grass' ? n : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));

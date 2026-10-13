@@ -47,7 +47,7 @@ async function load(): Promise<void> {
   done = 1;
   const names: Record<string, string> = {
     bricks: 'kamień', planks: 'deski', thatch: 'strzecha', plaster: 'tynk', tiles: 'dachówki', grass: 'trawa', leaves: 'liście',
-    needles: 'igliwie', bark: 'kora', soil: 'ziemia', window: 'okna', water: 'woda', ashlar: 'mur', cobble: 'bruk', rock: 'skała',
+    needles: 'igliwie', bark: 'kora', soil: 'ziemia', window: 'okna', water: 'woda', ashlar: 'mur', cobble: 'bruk', rock: 'skała', dressed: 'ciosy',
   };
   for (const kind of kinds) {
     // zapamiętana z poprzedniej wizyty wczytuje się od razu, bez klatki przerwy
