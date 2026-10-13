@@ -160,7 +160,7 @@ export class Ambience {
   private emitAcc = 0;
   private windows = 0;
   private time = 0;
-  private static MIST = 70;
+  private static MIST = 46;
   private mistSeed: { x: number; z: number; s: number; r: number; v: number }[] = [];
 
   enabled = true;
@@ -173,7 +173,7 @@ export class Ambience {
     this.mist.renderOrder = 2;
     for (let i = 0; i < Ambience.MIST; i++) {
       const r = (k: number): number => { const v = Math.sin(i * 91.7 + k * 13.1) * 43758.5453; return v - Math.floor(v); };
-      this.mistSeed.push({ x: r(1) * 130, z: r(2) * 130, s: 7 + r(3) * 9, r: r(4) * Math.PI, v: 0.5 + r(5) * 0.7 });
+      this.mistSeed.push({ x: r(1) * 220, z: r(2) * 220, s: 10 + r(3) * 12, r: r(4) * Math.PI, v: 0.5 + r(5) * 0.7 });
     }
     this.group.add(this.mist, this.smoke.points, this.sparks.points, this.glow.points);
   }
@@ -269,22 +269,25 @@ export class Ambience {
     }
     G.points.geometry.attributes.size!.needsUpdate = true;
     G.points.geometry.attributes.alpha!.needsUpdate = true;
-    // --- mgła przy ziemi: płaskie smugi dryfujące z wiatrem wokół środka widoku; gęsta o świcie, wyraźna nocą
-    const level = Math.min(1, o.mist * 0.7 + night * 0.3 + o.rain * 0.3);
-    this.mistMat.opacity = level * 0.34;
+    // --- mgła przy ziemi: długie, niskie ławice snujące się w oddali (nad lasem, łąkami, wodą), nigdy nad tym, na co patrzymy;
+    // gęstsza o świcie i w deszczu. Blisko środka widoku ich nie ma, dalej rosną płynnie, więc nie zasłaniają wioski.
+    const level = Math.min(1, o.mist * 0.7 + night * 0.25 + o.rain * 0.3);
+    this.mistMat.opacity = level * 0.24;
     this.mist.visible = level > 0.02;
     if (this.mist.visible) {
       this.mistMat.color.copy(o.fog).lerp(WHITE, 0.1 + (1 - night) * 0.3);
       const M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
-      const W = 130;
+      const W = 220;
       const wrap = (v: number): number => ((v % W) + W) % W - W / 2;
       for (let i = 0; i < Ambience.MIST; i++) {
         const s = this.mistSeed[i]!;
         const x = o.focus.x + wrap(s.x + this.time * 0.35 * s.v - o.focus.x);
         const z = o.focus.z + wrap(s.z + this.time * 0.12 * s.v - o.focus.z);
-        p.set(x, o.ground(x, z) + 0.3 + (i % 3) * 0.12, z);
+        const d = Math.hypot(x - o.focus.x, z - o.focus.z);
+        const k = Math.max(0, Math.min(1, (d - 38) / 22));
+        p.set(x, o.ground(x, z) + 0.18 + (i % 3) * 0.08, z);
         q.setFromAxisAngle(Y, s.r + this.time * 0.01 * s.v);
-        sc.set(s.s * 1.6, 1, s.s);
+        sc.set(s.s * 2.4 * k, 1, s.s * 0.8 * k);
         this.mist.setMatrixAt(i, M.compose(p, q, sc));
       }
       this.mist.instanceMatrix.needsUpdate = true;
