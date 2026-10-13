@@ -17,11 +17,13 @@ const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
   ambience: ['ambience'],
 };
 /** Dźwięki świata (CC0, Kenney i OpenGameArt — docs/zasoby.md), grane z miejsca na mapie */
-export type WorldSound = 'chop' | 'mine' | 'smith' | 'plank' | 'creak' | 'coins' | 'hit' | 'swing' | 'clang' | 'growl';
+export type WorldSound = 'chop' | 'mine' | 'smith' | 'plank' | 'creak' | 'coins' | 'hit' | 'swing' | 'clang' | 'growl' | 'scream' | 'alert';
 const WORLD: Record<WorldSound, string[]> = {
   chop: ['chop'], mine: ['mine-0', 'mine-1', 'mine-2'], smith: ['smith-0', 'smith-1', 'smith-2'], plank: ['plank-0', 'plank-1', 'plank-2'],
   creak: ['creak-1', 'creak-2', 'creak-3'], coins: ['coins'], hit: ['hit-0', 'hit-1', 'hit-2'], swing: ['swing-0', 'swing-1', 'swing-2'],
   clang: ['clang-0', 'clang-1'], growl: ['wolf'],
+  // krzyk uciekającego albo poległego i zaskoczone „hę?!” chłopa na widok wroga (CC0, Freesound, przez C-Dogs SDL)
+  scream: ['scream-0', 'scream-1', 'scream-2', 'scream-3', 'scream-4'], alert: ['alert-0', 'alert-1'],
 };
 const buffers = new Map<string, AudioBuffer>();
 let ambienceOn = false;

@@ -490,6 +490,7 @@ export function armySystem(g: GameState): void {
     for (const s of g.soldiers) if (s.hp <= 0) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false });
     g.soldiers = g.soldiers.filter((s) => s.hp > 0);
   }
+  lookout(g);
   graveSystem(g);
   repairSystem(g);
 }
@@ -695,8 +696,36 @@ function repairSystem(g: GameState): void {
  * Chłop pod ciosem, jak kopacz w Gothicu: co trzeci (zawsze ten sam, losowo z numeru) staje i oddaje
  * — kijem czy kilofem, ale słabo; reszta rzuca robotę i ucieka pod swój zamek albo do obozowiska.
  */
+/** Ten chłop staje do walki (co trzeci, zawsze ten sam); reszta ucieka */
+export const isBrave = (id: number): boolean => hash2(id, 7, 0xbad) % 100 < 33;
+
+/**
+ * Chłopi się rozglądają (co pół sekundy): na widok wrogiego żołnierza w promieniu 5 pól tchórz od razu ucieka,
+ * a odważny staje twarzą do wroga i gdy ten podejdzie, okłada go (z marnym skutkiem). Śpiący pod dachem nic nie widzą.
+ */
+function lookout(g: GameState): void {
+  if (g.tick % 5 !== 0) return;
+  const R = 5 * FP;
+  for (const u of g.units) {
+    u.foe = 0;
+    if (u.phase === Phase.Sleeping || u.phase === Phase.Resting) continue;
+    let best: Soldier | undefined, bd = R + 1;
+    for (const s of g.soldiers) {
+      if (s.hp <= 0 || s.up || team(g, s.owner) === team(g, u.owner)) continue;
+      const d = Math.max(Math.abs(s.px - u.px), Math.abs(s.py - u.py));
+      if (d < bd) { bd = d; best = s; }
+    }
+    if (!best) continue;
+    if (!isBrave(u.id)) { peasantReacts(g, u, best, true); continue; }
+    // odważny: stoi i patrzy na wroga; z bliska bije kijem (rzadko i słabo)
+    u.foe = best.id;
+    if (bd <= FP * 2.5) u.wait = Math.max(u.wait, 6);
+    if (bd <= FP + FP / 2 && hash2(u.id, g.tick, 0xc1b) % 100 < 25) best.hp -= 2;
+  }
+}
+
 function peasantReacts(g: GameState, u: Unit, attacker: Soldier, ranged: boolean): void {
-  const brave = hash2(u.id, 7, 0xbad) % 100 < 33;
+  const brave = isBrave(u.id);
   if (brave && !ranged && Math.max(Math.abs(u.px - attacker.px), Math.abs(u.py - attacker.py)) <= FP + FP / 2) {
     if (hash2(u.id, g.tick, 0xc1b) % 100 < 60) attacker.hp -= 2; // znikome obrażenia
     u.wait = Math.max(u.wait, 8); // stoi i się broni

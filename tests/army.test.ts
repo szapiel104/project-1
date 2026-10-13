@@ -311,4 +311,15 @@ describe('wrodzy chłopi', () => {
     // napastnik stoi na zachód (mniejsze x), więc chłop biegnie na wschód
     expect(g.units.find((x) => x.id === u.id)!.px).toBeGreaterThan(start);
   });
+
+  it('na widok wrogiego żołnierza tchórz ucieka sam, a odważny staje twarzą do wroga', () => {
+    const g = createGame(7);
+    for (const p of g.players) p.bot = false;
+    const enemyUnits = g.units.filter((x) => x.owner === 1);
+    const coward = enemyUnits.find((x) => hash2(x.id, 7, 0xbad) % 100 >= 33)!;
+    const s: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('spearman'), px: coward.px + 3 * FP, py: coward.py, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
+    g.soldiers.push(s);
+    for (let i = 0; i < 6; i++) step(g, []);
+    expect((g.units.find((x) => x.id === coward.id)?.fled ?? 0) > g.tick).toBe(true);
+  });
 });

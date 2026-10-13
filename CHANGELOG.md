@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.16.3 — chłopi reagują na wroga, krzyki (2026-10-13)
+
+- Chłopi się rozglądają: na widok wrogiego żołnierza w promieniu 5 pól tchórz (dwóch na trzech) od razu ucieka biegiem w przeciwną stronę, a odważny (co trzeci, zawsze ten sam) staje twarzą do wroga i z bliska okłada go kijem — rzadko i słabo; śpiący pod dachem nic nie widzą
+- Dźwięki (CC0, Freesound przez C-Dogs SDL): krzyk uciekającego chłopa, zaskoczone „hę?!” odważnego na widok wroga, krzyk przy śmierci żołnierza i chłopa; najwyżej trzy krzyki na sekundę, z miejsca, gdzie się dzieją (z daleka cicho)
+
 ## 0.16.2 — atak na wrogich chłopów (2026-10-13)
 
 - Prawy klik na wrogim chłopie przy zaznaczonym wojsku = atak (kursor miecza): żołnierze gonią go, aż padnie

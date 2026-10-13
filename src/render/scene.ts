@@ -175,6 +175,10 @@ export class GameRenderer {
   private hitAt = new Map<number, number>();
   /** Kierunek, w którym patrzył poległy w chwili śmierci (pada do tyłu, nie obraca się w locie) */
   private fallYaw = new Map<number, number>();
+  /** Do dźwięków: kiedy chłop zaczął uciekać, przed kim stanął, którzy polegli już krzyknęli */
+  private fledSeen = new Map<number, number>();
+  private foeSeen = new Map<number, number>();
+  private screamed = new Set<number>();
   private taverns = new Map<number, GameState['buildings'][number]>();
   private innDoors = new Map<number, GameState['buildings'][number]>();
   private luteAt = 0;
@@ -201,6 +205,20 @@ export class GameRenderer {
     if (this.time < due) return;
     this.soundAt.set(k, this.time + every * (0.85 + Math.random() * 0.3));
     if (due === 0) return; // pierwszy raz tylko ustawiamy zegar, żeby wszystkie źródła nie ruszyły naraz
+    this.playHere(kind, x, z, gain);
+  }
+
+  /** Krzyki naraz: najwyżej trzy na sekundę w całej grze, żeby ucieczka tłumu nie zlała się w jeden wrzask */
+  private voiceTimes: number[] = [];
+  /** Dźwięk jednorazowy z miejsca w świecie (krzyk, okrzyk): od razu, bez zegara powtórek */
+  private voiceAt(kind: WorldSound, x: number, z: number, gain = 1): void {
+    this.voiceTimes = this.voiceTimes.filter((t) => this.time - t < 1);
+    if (this.voiceTimes.length >= 3) return;
+    this.voiceTimes.push(this.time);
+    this.playHere(kind, x, z, gain);
+  }
+
+  private playHere(kind: WorldSound, x: number, z: number, gain = 1): void {
     // słychać jak w rzeczywistości: z odległości od kamery (ucha), nie od środka ekranu;
     // blisko — głośno, przy zwykłym widoku cicho, a z daleka od osady wcale
     const cam = this.cam.camera;
@@ -2470,6 +2488,8 @@ export class GameRenderer {
       const y = view.heightAt(fx, fy);
       // padanie: przez 0,7 s przewraca się do tyłu (coraz szybciej, z małym odbiciem przy ziemi), potem leży
       const fall = Math.max(0, Math.min(1, (g.tick - body.at) / (TICKS_PER_SECOND * 0.7)));
+      // krzyk w chwili śmierci (raz)
+      if (fall < 0.3 && !this.calm && !this.screamed.has(body.id)) { this.screamed.add(body.id); this.voiceAt('scream', fx - width / 2, fy - height / 2, 1); }
       const ease = fall < 0.85 ? (fall / 0.85) ** 2 : 1 - Math.sin(((fall - 0.85) / 0.15) * Math.PI) * 0.06;
       const yaw = this.fallYaw.get(body.id) ?? ((body.id * 2.39) % 6.28);
       lay.setFromEuler(new THREE.Euler((-Math.PI / 2 + 0.08) * (this.calm ? 1 : ease), yaw, 0, 'YXZ'));
@@ -2683,6 +2703,21 @@ export class GameRenderer {
         swing = Math.sin(this.time * 14 + u.id) * 1.4;
         if ((u.hp ?? 30) < 30) this.sfxAt('hit', t.position.x, t.position.z, `bite${u.id}`, 0.9, 0.8);
         break;
+      }
+      // odważny chłop przed wrogim żołnierzem: twarzą do niego, z bliska okłada go pięściami i kijem
+      const enemy = u.foe ? g.soldiers.find((x) => x.id === u.foe) : undefined;
+      if (enemy && !this.calm) {
+        t.rotation.set(0, Math.atan2(enemy.px - u.px, enemy.py - u.py), 0);
+        if ((enemy.px - u.px) ** 2 + (enemy.py - u.py) ** 2 < (1.6 * FP) ** 2) swing = Math.sin(this.time * 12 + u.id) * 1.3;
+      }
+      // krzyk przy ucieczce, zaskoczone „hę?!” odważnego na widok wroga
+      if (!this.calm) {
+        const f = u.fled ?? 0, pf = this.fledSeen.get(u.id) ?? 0;
+        if (f > pf && f > g.tick) this.voiceAt('scream', t.position.x, t.position.z, 0.7);
+        this.fledSeen.set(u.id, f);
+        const pe = this.foeSeen.get(u.id) ?? 0;
+        if (u.foe && u.foe !== pe) this.voiceAt('alert', t.position.x, t.position.z, 0.8);
+        this.foeSeen.set(u.id, u.foe ?? 0);
       }
       // układanie drogi wygląda jak budowa: pochylony chłop bije młotkiem w ziemię
       const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving;

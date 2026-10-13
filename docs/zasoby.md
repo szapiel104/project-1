@@ -19,3 +19,10 @@ Pobrane z indeksu [open-game-sfx-index](https://github.com/Mcamento8/open-game-s
 - mine-0…2, smith-0…2, plank-0…2, hit-0…2 — Kenney „Impact Sounds” (CC0)
 - swing-0…2, clang-0…1, wolf (warknięcie z pogłosem) — „RPG Sound Pack”, artisticdude, OpenGameArt (CC0)
 Wiatr, deszcz, wrony i wycie wilków są syntezowane w src/audio/sfx.ts.
+
+## Głosy ludzi (CC0, bez wymogu podpisu)
+
+Z repozytorium gry [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) (`sounds/chars`), które zebrało je z Freesound — w grze tylko nagrania na CC0:
+- scream-0…4 — „human male scream multi”, [JohnsonBrandEditing](https://freesound.org/people/JohnsonBrandEditing/sounds/173944/) (CC0): krzyk uciekającego chłopa i poległego
+- alert-0 — „Huh? - Vocal”, [davdud101](https://freesound.org/people/davdud101/sounds/150505/) (CC0); alert-1 — „Huh_male.wav”, [Adam_N](https://freesound.org/people/Adam_N/sounds/166129/) (CC0): odważny chłop na widok wroga
+- Zmiany: mono 32 kHz, wyrównana głośność, krótsze wybrzmienie.
