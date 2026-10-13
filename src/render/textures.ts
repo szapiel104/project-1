@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
 
-export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic' | 'slate';
+export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic' | 'slate' | 'burlap';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -224,6 +224,12 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
       }
     }
   },
+  burlap(c, n, r) {
+    // zapasowy wzór płótna workowego (gdy zdjęcie się nie wczyta): gęsty splot nici
+    c.fillStyle = gray(0.8); c.fillRect(0, 0, n, n);
+    const s = n / 32;
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) { c.fillStyle = gray((x + y) % 2 ? 0.7 + r() * 0.1 : 0.88 + r() * 0.08); c.fillRect(x * s, y * s, s * 0.9, s * 0.9); }
+  },
   cobble(c, n, r) {
     // Bruk w rysunkowym stylu: drobne, prostokątne kamienie o zaokrąglonych rogach, w rzędach różnej długości,
     // jasny piaskowiec z refleksem u góry i cieniem u dołu, ciemne szczeliny i mech wyrastający ze spoin.
@@ -364,10 +370,10 @@ export async function restore(kind: Kind): Promise<boolean> {
 }
 
 /**
- * Zdjęciowe tekstury CC0 (ambientCG, przez repozytorium null3d-engine/sample-assets) — w odcieniach szarości,
+ * Zdjęciowe tekstury CC0 (ambientCG, Poly Haven) — w odcieniach szarości,
  * żeby barwę nadawał materiał, plus mapy normalnych dające prawdziwą rzeźbę: bruk, deski, tynk.
  */
-const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster' };
+const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster', thatch: 'thatch', slate: 'slate', ashlar: 'ashlar', bricks: 'bricks', burlap: 'burlap' };
 const photoBase = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/cc0/';
 const normals = new Map<Kind, THREE.Texture>();
 const photos = new Map<Kind, THREE.Texture>();

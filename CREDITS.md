@@ -6,4 +6,12 @@ Zdjęciowe tekstury bruku, desek i tynku (`public/textures/cc0/`) pochodzą z [a
 - Planks 039 → `planks.jpg`, `planks_n.jpg`
 - Plaster 007 → `plaster.jpg`, `plaster_n.jpg`
 
-Pobrane przez repozytorium [null3d-engine/sample-assets](https://github.com/null3d-engine/sample-assets). Zmiany: kolor zamieniony na odcienie szarości i rozjaśniony (barwę nadaje materiał w grze).
+Dalsze tekstury ambientCG (CC0), z paczki ambientcg_1024 dostarczonej przez Michała:
+- Roofing Tiles 005 → `slate.jpg` (łupek na wieżach zamku)
+- Bricks 091 → `ashlar.jpg` (mury zamku)
+- Bricks 076 A → `bricks.jpg` (kamienne podmurówki)
+
+Strzecha: [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) z Poly Haven (CC0) → `thatch.jpg`; mapa normalnych liczona z mapy przemieszczeń.
+Dla tekstur bez mapy normalnych mapa jest liczona z jasności obrazu.
+
+Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://github.com/null3d-engine/sample-assets). Zmiany: kolor zamieniony na odcienie szarości i rozjaśniony (barwę nadaje materiał w grze).

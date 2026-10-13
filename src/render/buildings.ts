@@ -47,7 +47,7 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611), pane: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
-  ash: mat(0x4a4540), slate: mat(0x8a8d94, 'slate'), sack: mat(0xe2d6ba, 'thatch'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
+  ash: mat(0x4a4540), slate: mat(0x8a8d94, 'slate'), sack: mat(0xe2d6ba, 'burlap'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xf4f0e8, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
@@ -69,17 +69,27 @@ for (const m of [M.window, M.pane, M.dark]) { m.polygonOffset = true; m.polygonO
  * i zebrana nad nią góra. `s` = wielkość (1 ≈ 0,3 pola wysokości), `rot` = obrót.
  */
 function sack(g: THREE.Object3D, x: number, y: number, z: number, s = 1, rot = 0): void {
-  const w = new THREE.Group();
-  w.position.set(x, y, z);
-  w.rotation.y = rot;
-  w.scale.setScalar(s);
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.1, 0.16, 9), M.sack); body.position.y = 0.1; w.add(body);
-  const bottom = new THREE.Mesh(new THREE.SphereGeometry(0.1, 9, 5, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.sack); bottom.scale.y = 0.45; bottom.position.y = 0.045; w.add(bottom);
-  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.078, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.sack); shoulder.scale.y = 0.55; shoulder.position.y = 0.18; w.add(shoulder);
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.04, 0.05, 7), M.sack); neck.position.y = 0.24; w.add(neck);
-  const tie = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.014, 7), M.rope); tie.position.y = 0.245; w.add(tie);
-  const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.05, 7), M.sack); tuft.rotation.x = Math.PI; tuft.position.y = 0.285; w.add(tuft);
-  g.add(w);
+  const m = new THREE.Mesh(sackGeometry(), M.sack);
+  m.position.set(x, y, z);
+  m.rotation.y = rot;
+  m.scale.setScalar(s);
+  g.add(m);
+  const tie = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.007, 4, 10), M.rope);
+  tie.rotation.x = Math.PI / 2;
+  tie.position.set(x, y + 0.25 * s, z);
+  tie.scale.setScalar(s);
+  g.add(tie);
+}
+let sackGeo: THREE.BufferGeometry | null = null;
+/** Bryła worka: obrócony profil — oklapnięty spód, pękate boki, ramiona, przewiązana szyjka i rozchylona góra */
+export function sackGeometry(): THREE.BufferGeometry {
+  if (sackGeo) return sackGeo;
+  const prof = [[0, 0], [0.075, 0], [0.105, 0.025], [0.116, 0.075], [0.112, 0.14], [0.095, 0.195], [0.06, 0.232], [0.03, 0.248], [0.028, 0.258], [0.046, 0.285], [0.034, 0.3], [0, 0.302]].map(([px, py]) => new THREE.Vector2(px, py));
+  sackGeo = new THREE.LatheGeometry(prof, 16).scale(1.05, 1, 0.92);
+  // drobniejszy splot płótna: wzór powtarza się kilka razy dookoła worka
+  const uv = sackGeo.getAttribute('uv');
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 4, uv.getY(i) * 2);
+  return sackGeo;
 }
 
 function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
@@ -245,21 +255,14 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     })),
   },
   flour: {
-    tex: 'thatch',
-    // worki z płótna: pękaty spód, zwężenie przewiązane sznurkiem, nad nim zebrana góra worka; jeden leży bokiem
+    tex: 'burlap',
+    // worki z płótna: trzy stoją (każdy trochę inaczej obrócony), czwarty leży bokiem z przodu
     geo: merge([
-      ...([[-0.1, -0.05, 0.15], [0.11, -0.06, -0.1]] as const).flatMap(([x, z, rot]) => [
-        paint(new THREE.CylinderGeometry(0.085, 0.11, 0.2, 9).rotateY(rot).translate(x, -0.05, z), 0xe6dcc4), // korpus
-        paint(new THREE.IcosahedronGeometry(0.1, 1).scale(1.05, 0.55, 1.05).translate(x, -0.13, z), 0xddd2b8), // wybrzuszony dół
-        paint(new THREE.IcosahedronGeometry(0.088, 1).scale(1, 0.5, 1).translate(x, 0.05, z), 0xe6dcc4), // ramiona worka
-        paint(new THREE.CylinderGeometry(0.03, 0.045, 0.05, 8).translate(x, 0.1, z), 0xd8cdb0), // szyjka
-        paint(new THREE.CylinderGeometry(0.034, 0.034, 0.014, 8).translate(x, 0.105, z), 0x7a5a32), // sznurek
-        paint(new THREE.ConeGeometry(0.045, 0.06, 7).rotateX(Math.PI).translate(x, 0.15, z), 0xddd2b8), // zebrana góra
-        paint(new THREE.IcosahedronGeometry(0.03, 0).scale(1.6, 0.2, 1.2).translate(x + 0.02, 0.07, z + 0.06), 0xf6f2e8), // mąka na płótnie
+      ...([[-0.1, -0.06, 0.2, 1], [0.1, -0.07, -0.5, 0.95], [0.0, 0.08, 1.1, 0.9]] as const).flatMap(([x, z, rot, sc]) => [
+        paint(sackGeometry().clone().scale(sc, sc, sc).rotateY(rot).translate(x, -0.15, z), 0xe8dcc2),
+        paint(new THREE.TorusGeometry(0.03, 0.007, 4, 10).rotateX(Math.PI / 2).scale(sc, sc, sc).translate(x, -0.15 + 0.25 * sc, z), 0x7a5a32),
       ]),
-      // trzeci worek leży bokiem z przodu
-      paint(new THREE.CylinderGeometry(0.07, 0.085, 0.24, 9).rotateZ(Math.PI / 2).translate(0.0, -0.1, 0.13), 0xe0d6be),
-      paint(new THREE.ConeGeometry(0.04, 0.05, 7).rotateZ(-Math.PI / 2).translate(0.15, -0.1, 0.13), 0xd8cdb0),
+      paint(sackGeometry().clone().scale(0.85, 0.85, 0.7).rotateZ(Math.PI / 2).translate(0.12, -0.055, 0.15), 0xe0d4b8),
     ]),
   },
   bread: {

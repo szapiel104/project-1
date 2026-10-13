@@ -5,7 +5,7 @@ import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
 import { FP, Phase, type Building, type Corpse, type GameState, type Soldier, type Unit } from '../state';
 import { BUILDINGS, footprint } from '../../data/buildings';
-import { maxHp, restore, ruin } from './placement';
+import { enemyNear, maxHp, restore, ruin } from './placement';
 import type { UnitDef } from '../../data/units';
 
 const BARRACKS = buildingIndex('barracks');
@@ -399,6 +399,11 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
 }
 
 const ENGINEERS = buildingIndex('engineers');
+/** Plac budowy albo ruina, przy której stoi wrogie wojsko */
+function siteUnderThreat(g: GameState, b: Building): boolean {
+  const fp = footprint(BUILDINGS[b.type]!, b.rot);
+  return enemyNear(g, b.owner, b.x, b.y, fp.w, fp.h);
+}
 /** Zajęcia, które pracownik może rzucić, żeby iść na budowę */
 const DROPPABLE = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.Working, Phase.ToSite, Phase.WorkingSite, Phase.ToInputStore, Phase.ToRest, Phase.Resting]);
 
@@ -409,7 +414,11 @@ function repairSystem(g: GameState): void {
     if (u.phase === Phase.Repairing) {
       const b = g.buildings.find((x) => x.id === u.target);
       // budowa: każdy robotnik dokłada swoją część, ostatni kończy
-      if (b && b.build > 0) { b.build = Math.max(0, b.build - 12); if (!b.build && b.ruined && !restore(g, b)) b.build = 1; continue; }
+      if (b && b.build > 0) {
+        // pod okiem wrogiego wojska nikt nie buduje ani nie odbudowuje — robota stoi
+        if (siteUnderThreat(g, b)) continue;
+        b.build = Math.max(0, b.build - 12); if (!b.build && b.ruined && !restore(g, b)) b.build = 1; continue;
+      }
       if (b && !u.job) { u.target = 0; u.phase = Phase.Idle; continue; }
       if (!b || b.hp >= maxHp(b.type)) { u.target = 0; u.phase = Phase.Returning; continue; }
       b.hp = Math.min(maxHp(b.type), b.hp + 15);
@@ -418,6 +427,7 @@ function repairSystem(g: GameState): void {
   // do każdego placu budowy przychodzi do trzech wolnych chłopów z młotkami
   for (const b of g.buildings) {
     if (!b.build) continue; // budowa rusza dopiero, gdy robotnicy dojdą na plac
+    if (siteUnderThreat(g, b)) continue; // ruina pod wrogimi włóczniami czeka, aż wróg odejdzie
     let crew = 0;
     for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing)) crew++;
     while (crew < 3) {

@@ -685,4 +685,4 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .stock-empty { font-style: italic; color: var(--ink-soft); }
 
 /* ---- skalowanie interfejsu do wielkości okna (liczone w main.ts: --ui) ---- */
-#ui, .scribe, .alarm, .alerts, .report, .fps-tag, .perf, .invite-toast, .game-chat, .net-wait, .menu-panel, .end-panel { zoom: var(--ui, 1); }
+#ui, .build, .scribe, .alarm, .alerts, .report, .fps-tag, .perf, .invite-toast, .game-chat, .net-wait, .menu-panel, .end-panel { zoom: var(--ui, 1); }

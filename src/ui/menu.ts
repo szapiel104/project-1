@@ -29,6 +29,8 @@ export interface MenuEvents {
   onSettings(s: Settings): void;
   /** Gracz się poddaje (mecz kończy się porażką) */
   onSurrender(): void;
+  /** Wyjście z gry do menu głównego (gra z botami zostaje zapisana; w sieci to opuszczenie meczu) */
+  onQuitToTitle(): void;
   /** Czy to mecz przez sieć (inny opis poddania) */
   isOnline(): boolean;
   /** Mecz przez sieć się zaczyna: pokój, skład, mój numer gracza i kanał gry */
@@ -187,10 +189,21 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const list = el('div', 'menu-list');
     if (inGame) list.append(button(t('menu.resume'), () => events.onContinue()));
     else if (canContinue) list.append(button(t('menu.continue'), () => events.onContinue()));
-    if (inGame) list.append(button('Poddaj się', showSurrender, 'menu-btn menu-back'));
+    if (inGame) list.append(button('Wyjdź do menu głównego', () => showQuit(), 'menu-btn menu-back'), button('Poddaj się', showSurrender, 'menu-btn menu-back'));
     list.append(button(t('menu.newGame'), showNew), button('Gra przez sieć', () => online.showOnline()), button(t('menu.settings'), showSettings), button(t('menu.howTo'), showHelp));
     body.replaceChildren(list);
     list.querySelector('button')?.focus();
+  }
+
+  function showQuit(): void {
+    if (!events.isOnline()) { events.onQuitToTitle(); return; }
+    const box = el('div', 'menu-form');
+    box.append(el('p', '', 'Wyjście z meczu przez sieć oznacza poddanie się. Twój zamek zostanie bez gospodarza.'));
+    const yes = button('Tak, wychodzę', () => events.onQuitToTitle(), 'menu-btn');
+    const no = button('Nie, gram dalej', showMain, 'menu-btn menu-back');
+    box.append(yes, no);
+    screen('Wyjść z meczu?', false, box);
+    no.focus();
   }
 
   function showSurrender(): void {

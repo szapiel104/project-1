@@ -485,6 +485,8 @@ export class GameRenderer {
     this.strides.clear();
     this.storesTick = -1;
     this.clutter.reset();
+    for (const p of this.ruinPiles.values()) this.buildingLayer.remove(p);
+    this.ruinPiles.clear();
     this.clouds.reset();
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
@@ -1351,14 +1353,44 @@ export class GameRenderer {
   }
 
   private dustAt = new Map<number, number>();
+  /** Gruzowiska na miejscu zniszczonych budynków (do odbudowy) */
+  private ruinPiles = new Map<number, THREE.Group>();
   /** Budynki w budowie rosną od fundamentów w górę, a nad placem co chwilę wzbija się kurz */
   private syncSites(g: GameState): void {
     for (const b of g.buildings) {
       const mesh = this.buildingMeshes.get(b.id);
       if (!mesh) continue;
-      if (!b.build) { if (mesh.scale.y !== 1) { mesh.scale.y = 1; this.roadDust(b.x, b.y, false); } continue; }
+      const def = BUILDINGS[b.type]!;
+      // ruina po zniszczeniu: kupa gruzu i resztki ścian; dopiero odbudowa podnosi budynek z gruzowiska
+      const pile = this.ruinPiles.get(b.id);
+      const ruinShown = !!b.ruined && !def.wall && !def.gate;
+      if (!b.build) {
+        if (pile) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
+        if (mesh.scale.y !== 1) { mesh.scale.y = 1; mesh.visible = true; this.roadDust(b.x, b.y, false); }
+        continue;
+      }
       const k = 1 - b.build / buildWork(b.type);
-      mesh.scale.y = 0.06 + 0.94 * k;
+      if (ruinShown) {
+        if (!pile) {
+          const fp = footprint(def, b.rot);
+          const p2 = rubbleModel(fp.w, fp.h, b.id);
+          p2.position.copy(mesh.position);
+          p2.scale.set(1, 1.6, 1);
+          this.buildingLayer.add(p2);
+          this.ruinPiles.set(b.id, p2);
+        }
+        // na początku sam gruz (resztki ścian ledwie wystają), w miarę odbudowy budynek rośnie, a gruz znika
+        mesh.visible = k > 0.08;
+        mesh.scale.y = 0.12 + 0.88 * k;
+        const pl = this.ruinPiles.get(b.id)!;
+        pl.visible = k < 0.7;
+        pl.scale.y = 1.6 * (1 - k);
+        if (this.calm) continue;
+      } else {
+        if (pile) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
+        mesh.visible = true;
+        mesh.scale.y = 0.06 + 0.94 * k;
+      }
       if (this.calm) continue;
       const next = this.dustAt.get(b.id) ?? 0;
       if (this.time > next) {

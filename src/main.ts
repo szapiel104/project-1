@@ -131,6 +131,18 @@ const menu = createMenu(document.body, {
   onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
   onSettings: (st) => applySettings(st),
   isOnline: () => !!net,
+  onQuitToTitle: () => {
+    if (net) {
+      // wyjście z meczu przez sieć: poddanie (porażka trafia do rankingu)
+      game.players[ME]!.defeated = true;
+      showEnd(false);
+      document.querySelector('.end')?.remove();
+    } else save();
+    // ekran tytułowy: osada w tle, menu jak po uruchomieniu gry; gra z botami czeka pod „Kontynuuj”
+    titleScreen = true;
+    menu.setCanContinue(!gameOver && !!loadSave());
+    menu.open(false);
+  },
   onSurrender: () => {
     // w sieci: wyjście = kapitulacja u wszystkich (lockstep wyśle ją w tej samej turze); lokalnie od razu porażka
     // showEnd zapisze porażkę do rankingu i zamknie mecz (inni dostaną kapitulację w tej samej turze)
