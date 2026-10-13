@@ -902,6 +902,16 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     if (!kerbMat) kerbMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.88, metalness: 0, map: pattern('rock'), normalMap: normal('rock') });
     return kerbMat;
   };
+  // bale: zdjęcie desek przycięte tak, że na jednym balu widać jedną deskę ze słojami
+  let plankMat: THREE.MeshStandardMaterial | null = null;
+  const plankMaterial = (): THREE.MeshStandardMaterial => {
+    if (plankMat) return plankMat;
+    const src = pattern('planks'), nrm = normal('planks');
+    const map = src ? src.clone() : null, nmap = nrm ? nrm.clone() : null;
+    for (const t of [map, nmap]) if (t) { t.repeat.set(0.55, 0.3); t.needsUpdate = true; }
+    plankMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0, map, normalMap: nmap });
+    return plankMat;
+  };
   const kerbDummy = new THREE.Object3D();
   const kerbTone = new THREE.Color();
   /** Ustawia kamień (krawężnik albo kamyk) w instancji i: środek (x, y) w polach mapy, wymiary, obrót i odcień */
@@ -945,7 +955,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           // ciepła szarość kamienia polnego zamiast prawie białej tafli
           const tone = 0.5 + (((r >>> 8) & 31) / 31) * 0.12;
           const moss = (r >>> 14) % 5 === 0 ? 0.08 : 0;
-          if (plank) { const wt = 0.62 + (((r >>> 8) & 31) / 31) * 0.3; shade.setRGB(wt, wt * 0.9, wt * 0.8); }
+          if (plank) { const wt = 0.3 + (((r >>> 8) & 31) / 31) * 0.06; shade.setRGB(wt, wt * 0.82, wt * 0.62); } // ciemna ziemia w szparach między balami
           else shade.setRGB(tone * 1.0 * (1 - moss), tone * 0.98 * (1 + moss * 0.4), tone * 0.94 * (1 - moss * 1.5));
           for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
             p3.push(qx + ox, heightAt(qx, qy) + (soft ? 0.03 : 0.045), qy + oz);
@@ -1064,7 +1074,69 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       group.add(mesh);
       roadMeshes.push(mesh);
       const onRoad = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind;
-      if (!soft && !plank) {
+      if (plank) {
+        // Droga z dyli: prawdziwe bale w poprzek drogi na dwóch legarach, każdy trochę inny
+        // (długość, wysokość, przekrzywienie, odcień), a spod szpar prześwituje ciemna ziemia.
+        const boards: [number, number, number, number, number, number][] = []; // x, y, długość, obrót, ziarno, wysokość
+        const rails: [number, number, number, number][] = []; // x, y, długość, obrót
+        const N = 6, BW = 1 / N;
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            if (!onRoad(x, y)) continue;
+            // kierunek drogi: wzdłuż X, gdy sąsiedzi są z lewej/prawej, inaczej wzdłuż Y; bale leżą w poprzek
+            const horiz = (onRoad(x - 1, y) ? 1 : 0) + (onRoad(x + 1, y) ? 1 : 0) >= (onRoad(x, y - 1) ? 1 : 0) + (onRoad(x, y + 1) ? 1 : 0);
+            for (let k = 0; k < N; k++) {
+              const r = hash2(x * 8 + k, y * 8 + 3, map.seed ^ 0x3d1f);
+              const along = (k + 0.5) * BW;
+              const len = 0.94 + ((r & 15) / 15) * 0.12;
+              const shift = (((r >>> 4) & 15) / 15 - 0.5) * 0.08;
+              const rot = (((r >>> 8) & 15) / 15 - 0.5) * 0.07;
+              const hgt = 0.045 + ((r >>> 12) & 7) * 0.003;
+              if (horiz) boards.push([x + along, y + 0.5 + shift, len, rot + Math.PI / 2, r, hgt]);
+              else boards.push([x + 0.5 + shift, y + along, len, rot, r, hgt]);
+            }
+            for (const side of [0.2, 0.8]) {
+              if (horiz) rails.push([x + 0.5, y + side, 1.02, 0]);
+              else rails.push([x + side, y + 0.5, 1.02, Math.PI / 2]);
+            }
+          }
+        if (boards.length) {
+          const boardMat = plankMaterial();
+          const im = new THREE.InstancedMesh(new RoundedBoxGeometry(1, 1, 1, 1, 0.12), boardMat, boards.length);
+          const tone = new THREE.Color();
+          boards.forEach(([bx, by, len, rot, r, hgt], i) => {
+            kerbDummy.position.set(bx + ox, heightAt(bx, by) + 0.05 + hgt / 2, by + oz);
+            kerbDummy.rotation.set((((r >>> 16) & 7) / 7 - 0.5) * 0.04, rot, (((r >>> 19) & 7) / 7 - 0.5) * 0.03);
+            kerbDummy.scale.set(len, hgt, BW * 0.86);
+            kerbDummy.updateMatrix();
+            im.setMatrixAt(i, kerbDummy.matrix);
+            // świeże jaśniejsze, stare szarzejące, czasem ciemny, przegniły bal
+            const t = 0.62 + ((r >>> 22) & 31) / 31 * 0.3;
+            const old = (r >>> 27) % 5 === 0 ? 0.25 : 0;
+            im.setColorAt(i, tone.setRGB(t * (1 - old * 0.4), t * 0.82 * (1 - old * 0.3), t * 0.62 * (1 - old * 0.1)));
+          });
+          im.instanceMatrix.needsUpdate = true;
+          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          im.castShadow = true;
+          im.receiveShadow = true;
+          group.add(im);
+          roadMeshes.push(im);
+          const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), boardMat, rails.length);
+          rails.forEach(([rx, ry, len, rot], i) => {
+            kerbDummy.position.set(rx + ox, heightAt(rx, ry) + 0.045, ry + oz);
+            kerbDummy.rotation.set(0, rot, 0);
+            kerbDummy.scale.set(len, 0.05, 0.09);
+            kerbDummy.updateMatrix();
+            rm.setMatrixAt(i, kerbDummy.matrix);
+            rm.setColorAt(i, tone.setRGB(0.38, 0.29, 0.2));
+          });
+          rm.instanceMatrix.needsUpdate = true;
+          if (rm.instanceColor) rm.instanceColor.needsUpdate = true;
+          rm.receiveShadow = true;
+          group.add(rm);
+          roadMeshes.push(rm);
+        }
+      } else if (!soft) {
         // Krawężnik: rząd ciosanych kamieni wzdłuż każdego boku bruku, który styka się z trawą,
         // a za nim pas ubitej, ciemniejszej ziemi, który miękko przechodzi w trawę.
         const kerbs: [number, number, number, number, number][] = []; // x, y, długość, obrót, ziarno
@@ -1202,6 +1274,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       // błoto: ciemniejsza, błyszcząca ziemia na ścieżkach, mokry połysk bruku, trochę ciemniejsza trawa
       const dryC = new THREE.Color(0xffffff);
       if (sandMat) { sandMat.color.copy(dryC).lerp(new THREE.Color(0x3e2c1c), k * 0.85); sandMat.roughness = 1 - k * 0.7; }
+      if (plankMat) { plankMat.roughness = 0.9 - k * 0.45; plankMat.color.copy(dryC).lerp(new THREE.Color(0x6a5a48), k * 0.45); }
       if (kerbMat) { kerbMat.roughness = 0.88 - k * 0.45; kerbMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
       // mokra nawierzchnia w deszczu: ciemniejsza i bardziej lśniąca
       for (const pm of paveMats.values()) { pm.roughness = 0.9 - k * 0.5; pm.color.copy(pm.userData.wood ? PLANK_DRY : PAVE_DRY).lerp(new THREE.Color(0x6e675c), k * 0.4); }
