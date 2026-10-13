@@ -15,12 +15,12 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
   renderer.setClearColor(0x000000, 0);
   // bez mapowania tonów i bez białego światła otoczenia, bo wypłukują barwy drewna i strzech
   const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xfff2d8, 0x7a6644, 2.7));
-  const sun = new THREE.DirectionalLight(0xfff0cc, 3.4);
+  scene.add(new THREE.HemisphereLight(0xfff4dc, 0x8a7450, 3.1));
+  const sun = new THREE.DirectionalLight(0xfff0cc, 3.9);
   sun.position.set(-3, 6, 4);
   scene.add(sun);
   // doświetlenie od strony kamery, żeby ściany frontowe nie wpadały w czerń
-  const fill = new THREE.DirectionalLight(0xffe2b8, 1.6);
+  const fill = new THREE.DirectionalLight(0xffe2b8, 2.1);
   fill.position.set(6, 4, 6);
   scene.add(fill);
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);
@@ -33,7 +33,7 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
     scene.add(model);
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
-    cam.position.set(center.x + 6, center.y + 6.5, center.z + 6);
+    cam.position.set(center.x + 6.5, center.y + 4, center.z + 5); // niżej i lekko z boku: widać ściany, drzwi i okna, nie tylko dach
     cam.lookAt(center);
     cam.updateMatrixWorld();
     // kadr dopasowany do rzutu narożników bryły na kamerę: budynek wypełnia kafelek i nic nie jest ucięte
