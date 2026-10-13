@@ -3,12 +3,96 @@ import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/r
 import { RULES } from '../../data/rules';
 import { Terrain } from '../../data/terrain';
 import { findPath, walkable } from '../path';
+import { clockAt } from '../clock';
 import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
 export const PAVE_TICKS = 40;
 const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
+const TAVERN = BUILDINGS.findIndex((b) => b.id === 'tavern');
+
+/** Pora dnia dla rytmu ludzi: praca, wieczór przy ogniu, sen */
+export function dayPart(tick: number): 'work' | 'evening' | 'sleep' {
+  const { hour } = clockAt(tick);
+  if (hour >= RULES.sleepHour || hour < RULES.wakeHour) return 'sleep';
+  if (hour >= RULES.eveningHour) return 'evening';
+  return 'work';
+}
+
+/** Miejsca wieczorne gracza: karczmy z karczmarzem i obozowiska z ogniskiem (drzwi) */
+function eveningDoors(g: GameState, owner: number, tavern: boolean): Set<number> {
+  const doors = new Set<number>();
+  for (const b of g.buildings) {
+    if (b.owner !== owner || b.door < 0 || b.build) continue;
+    if (tavern ? b.type === TAVERN && b.worker : BUILDINGS[b.type]!.idleSlots) doors.add(b.door);
+  }
+  return doors;
+}
+
+/**
+ * Łóżko na noc: wolne miejsce w chacie (albo w twierdzy), a gdy wszystkie zajęte — słomiane posłanie na ziemi
+ * obok obozowiska albo twierdzy. Zwraca true, gdy znalazł nocleg.
+ */
+function findBed(g: GameState, u: Unit): void {
+  const used = new Map<number, number>();
+  const mats = new Set<number>();
+  for (const o of g.units) {
+    if (o === u || o.owner !== u.owner || (o.phase !== Phase.ToSleep && o.phase !== Phase.Sleeping)) continue;
+    if (o.home) used.set(o.home, (used.get(o.home) ?? 0) + 1);
+    else if (o.target) mats.add(o.target - 1);
+  }
+  let best: Building | undefined, bd = Infinity;
+  for (const b of g.buildings) {
+    const cap = BUILDINGS[b.type]!.housing ?? 0;
+    if (b.owner !== u.owner || !cap || b.door < 0 || b.build || (used.get(b.id) ?? 0) >= cap) continue;
+    const d = Math.abs((b.door % g.map.width) * FP - u.px) + Math.abs(Math.floor(b.door / g.map.width) * FP - u.py);
+    if (d < bd) { bd = d; best = b; }
+  }
+  if (best) { u.home = best.id; u.target = 0; return; }
+  // pod gołym niebem: najbliższe wolne pole trawy wokół ogniska (albo twierdzy), każdy na swoim posłaniu
+  u.home = 0; u.target = 0;
+  const w = g.map.width, h = g.map.height;
+  const camp = g.buildings.find((b) => b.owner === u.owner && b.door >= 0 && !b.build && BUILDINGS[b.type]!.idleSlots) ?? playerKeep(g, u.owner);
+  if (!camp || camp.door < 0) return;
+  const cx = camp.door % w, cy = Math.floor(camp.door / w);
+  for (let r = 1; r < 9; r++)
+    for (let dy = -r; dy <= r; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = cx + dx, y = cy + dy;
+        if (x < 1 || y < 1 || x >= w - 1 || y >= h - 1) continue;
+        const t = y * w + x;
+        if (mats.has(t) || g.occupancy[t] || g.roads[t] || g.roadPlan[t] || g.map.tiles[t] !== Terrain.Grass || !walkable(g, t, u.owner)) continue;
+        u.target = t + 1;
+        return;
+      }
+}
+
+/**
+ * Rytm dnia: wieczorem do ogniska albo karczmy, nocą spać, o świcie do pracy. Sprawdzane tylko wtedy, gdy chłop
+ * nic nie niesie i stoi między zajęciami (wolny w obozowisku albo pracownik wracający do swojej roboty).
+ * Zwraca true, gdy zmienił zajęcie.
+ */
+function routine(g: GameState, u: Unit, part: 'work' | 'evening' | 'sleep'): boolean {
+  if (u.phase === Phase.Sleeping) {
+    if (part === 'sleep') return true;
+    u.home = 0; u.target = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; u.path = [];
+    return true;
+  }
+  if (u.phase === Phase.ToSleep) return false;
+  if (u.phase === Phase.Evening || u.phase === Phase.ToEvening) {
+    if (part === 'evening') return false;
+    if (part === 'sleep') { u.phase = Phase.ToSleep; u.path = []; findBed(g, u); return true; }
+    u.target = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; u.path = [];
+    return true;
+  }
+  if (part === 'work' || u.carryRes >= 0 || u.path.length) return false;
+  if (u.phase !== Phase.Idle && u.phase !== Phase.Returning) return false;
+  if (part === 'sleep') { u.phase = Phase.ToSleep; findBed(g, u); return true; }
+  u.phase = Phase.ToEvening; u.target = 0;
+  return true;
+}
 /** Znacznik „niesie ciało” w polu carryRes (poza listą surowców) */
 export const CORPSE = RESOURCES.length;
 
@@ -114,6 +198,18 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       if (t < 0 || !g.roadPlan[t] || !kind) return null;
       const doors = storeDoors(g, u.owner, kind);
       return doors.size ? (x) => doors.has(x) : null;
+    }
+    case Phase.ToEvening: {
+      // co drugi idzie do karczmy (o ile jest i ma karczmarza), reszta siada przy ognisku; bez nich — pod twierdzę
+      let doors = u.id % 2 === 0 ? eveningDoors(g, u.owner, true) : new Set<number>();
+      if (!doors.size) doors = eveningDoors(g, u.owner, false);
+      if (!doors.size) { const keep = playerKeep(g, u.owner); if (keep && keep.door >= 0) doors.add(keep.door); }
+      return doors.size ? (t) => doors.has(t) : null;
+    }
+    case Phase.ToSleep: {
+      if (u.home) { const b = g.buildings.find((x) => x.id === u.home); return b && b.door >= 0 ? (t) => t === b.door : null; }
+      const mat = u.target - 1;
+      return mat >= 0 ? (t) => t === mat : null;
     }
     case Phase.ToRest: {
       const doors = new Set<number>();
@@ -245,6 +341,12 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.phase = Phase.Returning;
       break;
     }
+    case Phase.ToEvening:
+      u.phase = Phase.Evening;
+      break;
+    case Phase.ToSleep:
+      u.phase = Phase.Sleeping;
+      break;
     case Phase.ToRest: {
       const here = tileOf(g, u);
       const house = g.buildings.find((b) => b.owner === u.owner && b.type === HOUSE && b.door === here);
@@ -287,8 +389,11 @@ export function workerSystem(g: GameState): void {
     b.worker = u.id;
   }
 
+  const part = dayPart(g.tick);
   for (const u of g.units) {
     if (u.wait > 0) { u.wait--; continue; }
+    if (!u.path.length && routine(g, u, part) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;
+    if (u.phase === Phase.Evening || u.phase === Phase.Sleeping) continue;
     const job = u.job ? byId.get(u.job) : undefined;
     const prod = job ? BUILDINGS[job.type]!.production : undefined;
 
@@ -345,6 +450,13 @@ export function workerSystem(g: GameState): void {
         if (!b || !b.build) u.target = 0;
         continue;
       }
+      if (u.phase === Phase.ToSleep || u.phase === Phase.ToEvening) {
+        // nie ma dokąd iść (chata zniknęła, brak ogniska): kładzie się albo siada tam, gdzie stoi
+        if (u.phase === Phase.ToSleep && u.home) { findBed(g, u); if (!u.home && !u.target) u.target = tileOf(g, u) + 1; continue; }
+        if (u.phase === Phase.ToSleep && !u.target) u.target = tileOf(g, u) + 1;
+        u.phase = u.phase === Phase.ToSleep ? Phase.Sleeping : Phase.Evening;
+        continue;
+      }
       if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair || u.phase === Phase.ToPave) {
         if (u.phase === Phase.ToRepair && u.carryRes >= 0) { u.carryRes = -1; u.carryAmt = 0; } // budowa skończona po drodze: materiał zostaje
         u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0;
@@ -355,7 +467,10 @@ export function workerSystem(g: GameState): void {
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal, 900, u.owner);
     if (path && path.length) u.path = path;
-    else if (!path && (u.phase === Phase.ToPave || u.phase === Phase.ToRoadFetch)) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.timer = 0; u.carryRes = -1; u.carryAmt = 0; u.wait = RETRY_TICKS; } // pole drogi albo skład nieosiągalne
+    else if (!path && (u.phase === Phase.ToSleep || u.phase === Phase.ToEvening)) {
+      // nie da się dojść (np. zamknięty w murach): śpi albo siedzi tam, gdzie stoi
+      if (u.phase === Phase.ToSleep) { u.home = 0; u.target = here + 1; u.phase = Phase.Sleeping; } else u.phase = Phase.Evening;
+    } else if (!path && (u.phase === Phase.ToPave || u.phase === Phase.ToRoadFetch)) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.timer = 0; u.carryRes = -1; u.carryAmt = 0; u.wait = RETRY_TICKS; } // pole drogi albo skład nieosiągalne
     else u.wait = RETRY_TICKS;
   }
 }

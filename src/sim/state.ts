@@ -124,6 +124,14 @@ export const enum Phase {
   Paving = 17,
   /** Idzie do składu po drewno albo kamień na drogę (`target` = pole + 1, `timer` = surowiec + 1) */
   ToRoadFetch = 18,
+  /** Wieczór: idzie do ogniska w obozowisku albo do karczmy (`target` = pole + 1) */
+  ToEvening = 19,
+  /** Siedzi wieczorem przy ogniu albo w karczmie */
+  Evening = 20,
+  /** Idzie spać: do chaty `home` albo na posłanie na polu `target` - 1 */
+  ToSleep = 21,
+  /** Śpi: w chacie (`home`) albo na słomie pod gołym niebem (`target` = pole + 1) */
+  Sleeping = 22,
 }
 
 export interface Unit {

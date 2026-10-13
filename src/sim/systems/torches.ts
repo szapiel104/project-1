@@ -18,7 +18,9 @@ export function torchSystem(g: GameState): void {
   for (const b of g.buildings) {
     if (b.lit || b.door < 0 || taken.has(b.id)) continue;
     const u = g.units.find((x) => x.owner === b.owner && x.target === 0 && x.phase === Phase.Idle && x.job === 0)
-      ?? g.units.find((x) => x.owner === b.owner && x.target === 0 && x.phase === Phase.Returning);
+      ?? g.units.find((x) => x.owner === b.owner && x.target === 0 && x.phase === Phase.Returning)
+      // wieczorem ktoś wstaje od ogniska i zapala pochodnię, potem wraca do reszty
+      ?? g.units.find((x) => x.owner === b.owner && x.phase === Phase.Evening && !x.path.length);
     if (!u) continue;
     u.target = b.id; u.phase = Phase.ToLight; u.path = []; u.wait = 0;
     taken.add(b.id);

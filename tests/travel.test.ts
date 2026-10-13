@@ -1,6 +1,7 @@
 import { RULES } from '../src/data/rules';
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../src/sim/state';
+import { createGame, Phase } from '../src/sim/state';
+import { clockAt } from '../src/sim/clock';
 import { step } from '../src/sim/step';
 import { serialize, deserialize } from '../src/sim/save';
 
@@ -125,13 +126,14 @@ describe('wilki polują naprawdę', () => {
   it('dochodzą do człowieka daleko od miejsca, gdzie wyszły, i go zagryzają', () => {
     const g = createGame(9, '1v1', 2);
     for (const p of g.players) p.bot = false;
-    // noc, wataha na brzegu mapy
-    const D = RULES.dayTicks;
-    while (!(((g.tick + D / 3) % D) >= D * 0.9375)) step(g, []);
+    // noc, wataha na brzegu mapy; ludzie bez dachu nad głową śpią na słomie pod gołym niebem (w chacie wilk ich nie dosięgnie)
+    while (!(clockAt(g.tick).hour >= 22.5 && clockAt(g.tick).hour < 23)) step(g, []);
+    for (const u of g.units) { u.phase = Phase.Sleeping; u.home = 0; u.target = (u.py >> 8) * g.map.width + (u.px >> 8) + 1; u.path = []; }
     for (let i = 0; i < 3; i++) g.wolves.push({ id: 99001 + i, px: 2 * 256 + 128, py: (29 + i) * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
-    for (let i = 0; i < 900; i++) step(g, []);
+    let body = false;
+    for (let i = 0; i < 1500; i++) { step(g, []); body ||= g.corpses.some((c) => c.kind === -1); }
     expect(g.players.reduce((n, p) => n + p.stats.lost, 0)).toBeGreaterThan(0);
-    expect(g.corpses.some((c) => c.kind === -1)).toBe(true);
+    expect(body).toBe(true);
   });
 });
 

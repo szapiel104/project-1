@@ -5,7 +5,8 @@ import { RULES } from '../src/data/rules';
 import { Terrain } from '../src/data/terrain';
 import { findPath, walkable } from '../src/sim/path';
 import { deserialize, serialize } from '../src/sim/save';
-import { createGame as realGame, housing, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
+import { createGame as realGame, housing, Phase, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
+import { clockAt } from '../src/sim/clock';
 import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
 
@@ -410,12 +411,12 @@ describe('pochodnie', () => {
   it('o zmierzchu ludzie zapalają pochodnie przy budynkach, a o świcie gasną', () => {
     const g = createGame(5);
     expect(g.buildings.some((b) => b.lit)).toBe(false);
-    const D = RULES.dayTicks;
-    run(g, Math.round(D * 0.71)); // start o 8:00, noc zaczyna się o 20:30 (po 12,5 h), sprawdzamy ok. 1 w nocy
+    // start o 8:00, noc zaczyna się o 20:30; sprawdzamy ok. 1 w nocy (doba w tickach nie jest równa: noc mija szybko)
+    while (!(clockAt(g.tick).hour >= 1 && clockAt(g.tick).hour < 2)) step(g, []);
     const mine = g.buildings.filter((b) => b.owner === 0);
     expect(mine.every((b) => b.lit)).toBe(true);
-    expect(g.units.every((u) => u.target === 0)).toBe(true);
-    run(g, Math.round(D * 0.375)); // po świcie
+    expect(g.units.every((u) => u.phase !== Phase.ToLight)).toBe(true);
+    while (!(clockAt(g.tick).hour >= 7 && clockAt(g.tick).hour < 8)) step(g, []); // po świcie
     expect(g.buildings.some((b) => b.lit)).toBe(false);
   });
 });
@@ -536,5 +537,38 @@ describe('budowa z noszeniem materiału', () => {
     run(g, 1, [c]);
     const site = g.buildings.find((b) => b.x === (c as { x: number }).x && b.y === (c as { y: number }).y)!;
     expect(site.build).toBeGreaterThan(0);
+  });
+});
+
+describe('rytm dnia', () => {
+  it('wieczorem ludzie siedzą przy ogniu, nocą śpią pod dachem, rano wracają do pracy', () => {
+    const g = createGame(5);
+    step(g, [build(g, 'woodcutter')]);
+    const at = (h0: number, h1: number): void => { while (!(clockAt(g.tick).hour >= h0 && clockAt(g.tick).hour < h1)) step(g, []); };
+    at(21, 21.5);
+    const mine = (): typeof g.units => g.units.filter((u) => u.owner === 0);
+    expect(mine().filter((u) => u.phase === Phase.Evening || u.phase === Phase.ToEvening || u.phase === Phase.ToLight).length).toBeGreaterThan(mine().length / 2);
+    at(2, 3);
+    expect(mine().every((u) => u.phase === Phase.Sleeping)).toBe(true);
+    expect(mine().every((u) => u.home > 0)).toBe(true); // twierdza ma miejsce dla wszystkich
+    at(8, 9);
+    expect(mine().some((u) => u.phase === Phase.Sleeping)).toBe(false);
+    expect(mine().some((u) => u.job && u.phase !== Phase.Idle)).toBe(true);
+  });
+
+  it('bez wolnego łóżka chłop śpi na słomie obok ogniska', () => {
+    const g = createGame(5);
+    const at = (h0: number, h1: number): void => { while (!(clockAt(g.tick).hour >= h0 && clockAt(g.tick).hour < h1)) step(g, []); };
+    at(21, 21.5);
+    // twierdza spłonęła z dachem: nie ma gdzie spać
+    const keep = playerKeep(g, 0)!;
+    const saved = BUILDINGS[keep.type]!.housing;
+    (BUILDINGS[keep.type] as { housing?: number }).housing = 0;
+    try {
+      at(1, 2);
+      const mine = g.units.filter((u) => u.owner === 0);
+      expect(mine.every((u) => u.phase === Phase.Sleeping && u.home === 0 && u.target > 0)).toBe(true);
+      expect(new Set(mine.map((u) => u.target)).size).toBe(mine.length); // każdy na swoim posłaniu
+    } finally { (BUILDINGS[keep.type] as { housing?: number }).housing = saved; }
   });
 });

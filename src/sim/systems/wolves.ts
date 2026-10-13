@@ -1,9 +1,8 @@
-import { RULES } from '../../data/rules';
-import { clockAt } from '../clock';
+import { clockAt, hourStarts } from '../clock';
 import { WOLF, findPath, walkable } from '../path';
 import { BUILDINGS } from '../../data/buildings';
 import { UNITS } from '../../data/units';
-import { FP, type GameState, type Wolf } from '../state';
+import { FP, Phase, type GameState, type Wolf } from '../state';
 import { ruin } from './placement';
 
 /**
@@ -30,7 +29,7 @@ export function wolfSystem(g: GameState): void {
   const clock = clockAt(g.tick);
   const peaceful = g.players[0]?.level === 0;
   // nowa wataha: raz na noc (około 22:00), co drugą noc, od trzeciego dnia
-  if (!peaceful && clock.day >= 2 && (g.tick + (RULES.startHour * RULES.dayTicks) / 24) % RULES.dayTicks === Math.floor((22 / 24) * RULES.dayTicks)) {
+  if (!peaceful && clock.day >= 2 && g.tick > 0 && hourStarts(g.tick, 22)) {
     const side = g.rng.int(4);
     const along = 4 + g.rng.int((side < 2 ? width : height) - 8);
     const tile = side === 0 ? along : side === 1 ? (height - 1) * width + along : side === 2 ? along * width : along * width + width - 1;
@@ -53,7 +52,7 @@ export function wolfSystem(g: GameState): void {
     } else {
       // ofiara: najbliższy człowiek albo żołnierz w zasięgu wzroku
       let best = SIGHT * SIGHT, prey = 0;
-      for (const u of g.units) { const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = u.id; } }
+      for (const u of g.units) { if (u.phase === Phase.Sleeping && u.home) continue; const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = u.id; } }
       for (const s of g.soldiers) { if (s.up) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = s.id; } }
       w.target = prey;
       if (prey && best <= 1.2) {
@@ -92,7 +91,7 @@ export function wolfSystem(g: GameState): void {
       if (!w.path.length && (g.tick + w.id) % 15 === 0) {
         // poluje na najbliższego człowieka na całej mapie, do którego da się dojść (drwale, rybacy, ci za murem)
         const cands: { d: number; t: number }[] = [];
-        for (const u of g.units) cands.push({ d: (u.px - w.px) ** 2 + (u.py - w.py) ** 2, t: (u.py >> 8) * width + (u.px >> 8) });
+        for (const u of g.units) if (!(u.phase === Phase.Sleeping && u.home)) cands.push({ d: (u.px - w.px) ** 2 + (u.py - w.py) ** 2, t: (u.py >> 8) * width + (u.px >> 8) });
         for (const v of g.soldiers) cands.push({ d: (v.px - w.px) ** 2 + (v.py - w.py) ** 2, t: (v.py >> 8) * width + (v.px >> 8) });
         cands.sort((a, b) => a.d - b.d);
         const near = (t: number) => (x: number): boolean => Math.abs((x % width) - (t % width)) <= 1 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 1;

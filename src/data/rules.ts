@@ -29,6 +29,12 @@ export const RULES = {
   roadPathCost: [100, 80, 45, 70],
   /** Ile razy można wydobyć surowiec z jednego pola złoża, zanim się wyczerpie */
   depositYields: 5,
+  /** Rytm dnia: od tej godziny ludzie kończą robotę i idą do ogniska albo do karczmy */
+  eveningHour: 19.5,
+  /** Od tej godziny idą spać: do chaty, a gdy nie ma wolnego miejsca, na słomiane posłanie pod gołym niebem */
+  sleepHour: 22,
+  /** O tej godzinie wstają i wracają do pracy */
+  wakeHour: 5.5,
   /** Po tylu dostawach chłop idzie odpocząć do najbliższej chaty */
   restEvery: 3,
   /** Ile ticków siedzi w chacie */

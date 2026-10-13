@@ -159,6 +159,8 @@ export class GameRenderer {
   private grade!: ShaderPass;
   private rain = 0;
   private hammers!: THREE.InstancedMesh;
+  /** Słomiane posłania pod śpiącymi bez dachu nad głową */
+  private bedrolls!: THREE.InstancedMesh;
   /** Siekiera drwala i kilof kopacza: w prawej dłoni, obracane w barku jak młotek */
   private axes!: THREE.InstancedMesh;
   private picks!: THREE.InstancedMesh;
@@ -429,6 +431,18 @@ export class GameRenderer {
     this.hammers.frustumCulled = false;
     this.hammers.castShadow = true;
     this.scene.add(this.hammers);
+    // posłanie: rozrzucona wiązka słomy z wałkiem pod głowę i kawałkiem zgrzebnego koca na nogach
+    const straw = new THREE.MeshStandardMaterial({ color: 0xd6b56a, roughness: 1, map: pattern('thatch'), vertexColors: true });
+    const bed = mergeGeometries([
+      tint(new THREE.BoxGeometry(0.44, 0.035, 0.98).translate(0, 0.0175, 0), 0xffffff),
+      tint(new THREE.CylinderGeometry(0.07, 0.08, 0.36, 7).rotateZ(Math.PI / 2).translate(0, 0.06, -0.42), 0xe8d29a),
+      tint(new THREE.BoxGeometry(0.46, 0.03, 0.42).translate(0, 0.05, 0.24), 0x7d6a52),
+    ]);
+    this.bedrolls = new THREE.InstancedMesh(bed, straw, MAX_UNITS);
+    this.bedrolls.count = 0;
+    this.bedrolls.frustumCulled = false;
+    this.bedrolls.receiveShadow = true;
+    this.scene.add(this.bedrolls);
     // siekiera: długie stylisko z pięści w przód, żeleźce z ostrzem w dół (w płaszczyźnie zamachu)
     const axe = mergeGeometries([
       tint(new THREE.CylinderGeometry(0.013, 0.016, 0.44, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.17), 0x7a5232),
@@ -2039,7 +2053,7 @@ export class GameRenderer {
     for (const u of g.units) {
       if (u.phase === Phase.Working) working.add(u.job);
       else if (u.phase === Phase.Resting) working.add(u.home);
-      else if (u.phase === Phase.Idle && u.path.length === 0) { const camp = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8)); if (camp) working.add(camp.id); }
+      else if ((u.phase === Phase.Idle || u.phase === Phase.Evening) && u.path.length === 0) { const camp = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8)); if (camp) working.add(camp.id); }
     }
     // kliknięty budynek też odsłania wnętrze, żeby dało się zajrzeć do środka
     for (const u of g.units) {
@@ -2430,8 +2444,12 @@ export class GameRenderer {
         }
       }
       // wieczorem (18–23) połowa bezrobotnych z obozowiska siedzi przed karczmą przy kuflu, a jeden się zatacza
-      const camp = u.phase === Phase.Idle && still ? this.camps.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
-      const inn = camp && camp.owner === u.owner && this.evening && u.id % 2 === 0 ? this.taverns.get(u.owner) : undefined;
+      const evening = u.phase === Phase.Evening && still;
+      const camp = (u.phase === Phase.Idle || evening) && still ? this.camps.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
+      // wieczorem w karczmie: ci, którzy przyszli pod jej drzwi (rytm dnia), i dawny skrót dla wolnych z obozowiska
+      const myInn = this.taverns.get(u.owner);
+      const atInn = evening && !!myInn && myInn.door === (u.py >> 8) * width + (u.px >> 8);
+      const inn = atInn ? myInn : camp && camp.owner === u.owner && this.evening && u.id % 2 === 0 && !evening ? myInn : undefined;
       if (inn) {
         const mesh = this.buildingMeshes.get(inn.id);
         const turn = (inn.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
@@ -2545,10 +2563,26 @@ export class GameRenderer {
         } else work = -0.6;
         swing = 0;
       }
+      // sen: w chacie nikogo nie widać, bez dachu nad głową leży na wznak na słomie obok ogniska
+      const sleeping = u.phase === Phase.Sleeping;
+      const outdoors = sleeping && !u.home;
+      if (outdoors) {
+        const a = ((u.id * 1.618) % 1) * Math.PI * 2;
+        const ground = view.heightAt(u.px / FP, u.py / FP);
+        t.position.set(u.px / FP - width / 2, ground, u.py / FP - height / 2);
+        t.rotation.set(0, a, 0);
+        t.scale.setScalar(1);
+        t.updateMatrix();
+        this.bedrolls.setMatrixAt(i, t.matrix);
+        // postać leży wzdłuż posłania głową na wałku (oś obrotu przy stopach, więc przesuwamy ją ku nogom)
+        t.position.set(u.px / FP - width / 2 + Math.sin(a) * 0.36, ground + 0.07, u.py / FP - height / 2 + Math.cos(a) * 0.36);
+        lean = -Math.PI / 2;
+        swing = 0;
+      } else this.bedrolls.setMatrixAt(i, ZERO);
       this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
-      t.scale.setScalar(FIG);
+      t.scale.setScalar(sleeping && u.home ? 0 : FIG);
       if (lean) { t.rotation.reorder('YXZ'); t.rotation.x = lean; }
       t.updateMatrix();
       if (lean) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
@@ -2618,6 +2652,8 @@ export class GameRenderer {
     for (let i = sad; i < this.sadFaces.length; i++) this.sadFaces[i]!.visible = false;
     this.figures.finish(k);
     this.rods.count = n;
+    this.bedrolls.count = n;
+    this.bedrolls.instanceMatrix.needsUpdate = true;
     this.hammers.count = n;
     this.hammers.instanceMatrix.needsUpdate = true;
     for (const m of [this.axes, this.picks]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
