@@ -2617,7 +2617,8 @@ export class GameRenderer {
         lean = -Math.PI / 2;
         swing = 0;
       } else this.bedrolls.setMatrixAt(i, ZERO);
-      this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
+      // śpiących w chacie nie da się kliknąć przez ściany: kliknięcie trafia w chatę i odsłania wnętrze
+      if (!(sleeping && u.home)) this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
       t.scale.setScalar(FIG);

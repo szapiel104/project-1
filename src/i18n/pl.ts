@@ -43,7 +43,7 @@ export const pl = {
   'person.doing': 'Teraz',
   'phase.0': 'czeka na zajęcie', 'phase.1': 'wraca do pracy', 'phase.2': 'idzie po surowiec', 'phase.3': 'niesie surowiec do warsztatu',
   'phase.4': 'pracuje', 'phase.5': 'idzie do pracy w terenie', 'phase.6': 'pracuje w terenie', 'phase.7': 'niesie towar do składu',
-  'phase.8': 'idzie odpocząć', 'phase.9': 'odpoczywa w chacie', 'phase.10': 'idzie zapalić pochodnię', 'phase.11': 'idzie po gruz', 'phase.12': 'idzie po ciało poległego', 'phase.13': 'idzie naprawić budynek', 'phase.14': 'naprawia budynek', 'phase.15': 'idzie do składu po materiał na budowę', 'phase.16': 'idzie układać drogę', 'phase.17': 'układa drogę', 'phase.18': 'idzie do składu po materiał na drogę',
+  'phase.8': 'idzie odpocząć', 'phase.9': 'odpoczywa w chacie', 'phase.10': 'idzie zapalić pochodnię', 'phase.11': 'idzie po gruz', 'phase.12': 'idzie po ciało poległego', 'phase.13': 'idzie naprawić budynek', 'phase.14': 'naprawia budynek', 'phase.15': 'idzie do składu po materiał na budowę', 'phase.16': 'idzie układać drogę', 'phase.17': 'układa drogę', 'phase.18': 'idzie do składu po materiał na drogę', 'phase.19': 'idzie posiedzieć przy ogniu', 'phase.20': 'odpoczywa po robocie', 'phase.21': 'idzie spać', 'phase.22': 'śpi',
   'guild.woodcutter': 'drwali', 'guild.quarry': 'kopaczy z kamieniołomu', 'guild.mine': 'kopaczy z kopalni', 'guild.orchard': 'sadowników', 'guild.farm': 'rolników',
   'guild.mill': 'młynarzy', 'guild.bakery': 'piekarzy', 'guild.fisher': 'rybaków', 'guild.engineers': 'inżynierów', 'guild.poleturner': 'włóczniarzy', 'guild.cemetery': 'grabarzy',
   'hud.workerYes': 'jest',
