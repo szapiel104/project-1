@@ -122,6 +122,8 @@ export const enum Phase {
   ToPave = 16,
   /** Układa drogę na polu, na którym stoi */
   Paving = 17,
+  /** Idzie do składu po drewno albo kamień na drogę (`target` = pole + 1, `timer` = surowiec + 1) */
+  ToRoadFetch = 18,
 }
 
 export interface Unit {

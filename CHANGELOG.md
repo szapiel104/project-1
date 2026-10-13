@@ -4,6 +4,7 @@
 
 - Nowa droga z dyli: drewniane bale, 1 drewno za pole, ludzie chodzą po niej o 40% szybciej (piaskowa 25%, kamienna 55%)
 - Drogi się buduje: postawiona droga to półprzezroczysty plan w barwie nawierzchni; wolny chłop z obozowiska podchodzi, pochyla się i układa pole młotkiem (do 4 naraz na gracza); gdy nikt nie siedzi w obozowisku, jeden pracownik odrywa się od roboty i potem wraca; koszt płaci się przy stawianiu
+- Na drogę z dyli chłop najpierw idzie do składu po drewno, na kamienną po kamień, i niesie je na pole; piaskowej nie trzeba nic nosić (bez składu na dany surowiec idzie prosto na pole)
 - Plan drogi da się zdjąć wyburzaniem, a budynek postawiony na planie go kasuje; w trybie deweloperskim drogi powstają od razu
 - Stare zapisy dalej się wczytują (nowy rodzaj dopisany na końcu listy)
 - Kamera podjeżdża do 4 (dawniej 12), z bliska kładzie się niżej

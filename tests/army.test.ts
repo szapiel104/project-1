@@ -3,7 +3,7 @@ import { buildingIndex } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { deserialize, serialize } from '../src/sim/save';
-import { FP, createGame as realGame, playerKeep, population, stateHash, type GameState, type Soldier } from '../src/sim/state';
+import { FP, Phase, createGame as realGame, playerKeep, population, stateHash, type GameState, type Soldier } from '../src/sim/state';
 import { planFormation } from '../src/sim/systems/army';
 import { walkable } from '../src/sim/path';
 import { unitIndex } from '../src/data/units';
@@ -226,7 +226,10 @@ describe('drogi', () => {
     expect(p.res[resIndex('wood')]).toBe(49);
     expect(g.roads[t]).toBe(0);
     expect(g.roadPlan[t]).toBe(3);
-    for (let i = 0; i < 1500 && !g.roads[t]; i++) step(g, []);
+    // chłop najpierw idzie po drewno, potem niesie je na pole
+    let carried = false;
+    for (let i = 0; i < 3000 && !g.roads[t]; i++) { step(g, []); if (g.units.some((u) => u.phase === Phase.ToPave && u.carryRes === resIndex('wood'))) carried = true; }
+    expect(carried).toBe(true);
     expect(g.roads[t]).toBe(3);
     expect(g.roadPlan[t]).toBe(0);
   });

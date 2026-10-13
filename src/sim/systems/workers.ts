@@ -107,6 +107,14 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const t = u.target - 1;
       return t >= 0 && g.roadPlan[t] ? (x) => x === t : null;
     }
+    case Phase.ToRoadFetch: {
+      // po materiał na drogę: najbliższe drzwi składu, który trzyma ten surowiec
+      const t = u.target - 1, res = u.timer - 1;
+      const kind = res >= 0 ? RESOURCE_DEFS[RESOURCES[res]!].store : undefined;
+      if (t < 0 || !g.roadPlan[t] || !kind) return null;
+      const doors = storeDoors(g, u.owner, kind);
+      return doors.size ? (x) => doors.has(x) : null;
+    }
     case Phase.ToRest: {
       const doors = new Set<number>();
       for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && b.type === HOUSE) doors.add(b.door);
@@ -210,7 +218,14 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.phase = Phase.ToRepair;
       break;
     case Phase.ToPave:
+      // przyniesiony materiał idzie w drogę
+      u.carryRes = -1; u.carryAmt = 0;
       u.phase = Phase.Paving; u.timer = PAVE_TICKS;
+      break;
+    case Phase.ToRoadFetch:
+      // bierze ze składu deski albo kamień (zapłacone już przy stawianiu drogi) i niesie na pole
+      u.carryRes = u.timer - 1; u.carryAmt = 1; u.timer = 0;
+      u.phase = Phase.ToPave;
       break;
     case Phase.ToRepair: {
       // przyniesiony materiał kładzie obok budowy, potem bierze się do roboty
@@ -312,6 +327,15 @@ export function workerSystem(g: GameState): void {
 
     const goal = goalFor(g, u, job, prod);
     if (!goal) {
+      if (u.phase === Phase.ToRoadFetch) {
+        // skład zniknął: droga i tak powstanie, chłop idzie prosto na pole (plan zdjęty: wraca)
+        const t = u.target - 1;
+        u.timer = 0;
+        if (t >= 0 && g.roadPlan[t]) u.phase = Phase.ToPave;
+        else { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; }
+        continue;
+      }
+      if (u.phase === Phase.ToPave && u.carryRes >= 0) { u.carryRes = -1; u.carryAmt = 0; } // plan zdjęty po drodze: materiał zostaje
       if (u.phase === Phase.ToFetch) {
         // skład zniknął albo budowa: ładunek liczy się jako przyniesiony, żeby budowa nie stanęła
         const b = g.buildings.find((x) => x.id === u.target);
@@ -331,7 +355,7 @@ export function workerSystem(g: GameState): void {
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal, 900, u.owner);
     if (path && path.length) u.path = path;
-    else if (!path && u.phase === Phase.ToPave) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.wait = RETRY_TICKS; } // pole drogi nieosiągalne
+    else if (!path && (u.phase === Phase.ToPave || u.phase === Phase.ToRoadFetch)) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.timer = 0; u.carryRes = -1; u.carryAmt = 0; u.wait = RETRY_TICKS; } // pole drogi albo skład nieosiągalne
     else u.wait = RETRY_TICKS;
   }
 }
