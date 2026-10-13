@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { hash2 } from '../sim/rng';
-import { UNITS } from '../data/units';
+import { TOWER_RANGE, UNITS } from '../data/units';
 import { RULES } from '../data/rules';
 import { playAt, pluck, type WorldSound } from '../audio/sfx';
 import { buildWork } from '../sim/systems/placement';
@@ -703,6 +703,9 @@ export class GameRenderer {
   private areaGroup = new THREE.Group();
   private areaFill = new THREE.MeshBasicMaterial({ color: 0x4fd06a, transparent: true, opacity: 0.16, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, fog: false });
   private areaLine = new THREE.LineBasicMaterial({ color: 0x7dff8f, transparent: true, opacity: 0.9, fog: false });
+  // zasięg strzału wieży: czerwonawe koło zamiast zielonego kwadratu
+  private rangeFill = new THREE.MeshBasicMaterial({ color: 0xd8503a, transparent: true, opacity: 0.14, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, fog: false });
+  private rangeLine = new THREE.LineBasicMaterial({ color: 0xff8a6a, transparent: true, opacity: 0.9, fog: false });
   setAreas(ids: Set<number>): void { this.areaIds = new Set(ids); this.areaKey = '#'; }
   private syncAreas(g: GameState, v: TerrainView): void {
     const list = g.buildings.filter((b) => this.areaIds.has(b.id) && !b.ruined);
@@ -714,6 +717,28 @@ export class GameRenderer {
     if (!this.areaGroup.parent) { this.areaGroup.renderOrder = 4; this.scene.add(this.areaGroup); }
     const { width, height } = g.map;
     for (const b of list) {
+      if (BUILDINGS[b.type]!.id === 'watchtower') {
+        // koło o promieniu zasięgu łucznika na wieży, od środka wieży, ułożone na terenie
+        const fp = footprint(BUILDINGS[b.type]!, b.rot), cx = b.x + fp.w / 2, cy = b.y + fp.h / 2, R = TOWER_RANGE;
+        const lift = (x: number, y: number): number => Math.max(0, v.heightAt(Math.min(width - 0.01, Math.max(0, x)), Math.min(height - 0.01, Math.max(0, y)))) + 0.09;
+        const geo = new THREE.CircleGeometry(R, 72, 0, Math.PI * 2).rotateX(-Math.PI / 2);
+        const pos = geo.attributes.position as THREE.BufferAttribute;
+        for (let i = 0; i < pos.count; i++) { const wx = pos.getX(i) + cx, wy = pos.getZ(i) + cy; pos.setXYZ(i, wx - width / 2, lift(wx, wy), wy - height / 2); }
+        // gęstsza siatka w środku nie jest potrzebna, ale brzeg musi iść po terenie: dokładamy pierścienie
+        const rings = new THREE.RingGeometry(0.5, R, 72, 8).rotateX(-Math.PI / 2);
+        const rp = rings.attributes.position as THREE.BufferAttribute;
+        for (let i = 0; i < rp.count; i++) { const wx = rp.getX(i) + cx, wy = rp.getZ(i) + cy; rp.setXYZ(i, wx - width / 2, lift(wx, wy), wy - height / 2); }
+        geo.dispose();
+        rings.computeBoundingSphere();
+        const fill = new THREE.Mesh(rings, this.rangeFill);
+        fill.renderOrder = 4;
+        const pts: THREE.Vector3[] = [];
+        for (let k = 0; k < 120; k++) { const a = (k / 120) * Math.PI * 2, x = cx + Math.cos(a) * R, y = cy + Math.sin(a) * R; pts.push(new THREE.Vector3(x - width / 2, lift(x, y) + 0.03, y - height / 2)); }
+        const line = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), this.rangeLine);
+        line.renderOrder = 4;
+        this.areaGroup.add(fill, line);
+        continue;
+      }
       const a = workArea(b);
       if (!a) continue;
       const x0 = Math.max(0, a.x0), y0 = Math.max(0, a.y0), x1 = Math.min(width, a.x1 + 1), y1 = Math.min(height, a.y1 + 1);
@@ -1354,6 +1379,80 @@ export class GameRenderer {
   private wolfHeading = new Map<number, number>();
   get wolvesNear(): number { return this.state?.wolves.length ?? 0; }
   /** Wilki: szare, przygarbione, w kłusie; nocą świecą im oczy */
+  /** Znaczki nad wilkami: łapa nad łbem (czerwona, gdy poluje; szara, gdy odchodzi), cienka linia do celu i kółko na ofierze */
+  private wolfIcons: THREE.Sprite[] = [];
+  private wolfAims: THREE.Sprite[] = [];
+  private wolfLines?: THREE.LineSegments;
+  private wolfIconMat?: { hunt: THREE.SpriteMaterial; leave: THREE.SpriteMaterial; aim: THREE.SpriteMaterial };
+  private wolfMarker(i: number, w: GameState['wolves'][number], g: GameState, x: number, y: number, z: number, view: TerrainView): void {
+    if (!this.wolfIconMat) {
+      const icon = (bg: string, fg: string): THREE.Texture => {
+        const c = document.createElement('canvas'); c.width = c.height = 64;
+        const k = c.getContext('2d')!;
+        k.fillStyle = bg; k.strokeStyle = 'rgba(20,10,5,.85)'; k.lineWidth = 4;
+        k.beginPath(); k.arc(32, 32, 27, 0, Math.PI * 2); k.fill(); k.stroke();
+        // łapa: duża poduszka i cztery palce
+        k.fillStyle = fg;
+        k.beginPath(); k.ellipse(32, 39, 10, 8.5, 0, 0, Math.PI * 2); k.fill();
+        for (const [px, py, r] of [[19, 28, 4.6], [27, 21, 4.8], [37, 21, 4.8], [45, 28, 4.6]] as const) { k.beginPath(); k.ellipse(px, py, r * 0.85, r, 0, 0, Math.PI * 2); k.fill(); }
+        const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+      };
+      const ring = (): THREE.Texture => {
+        const c = document.createElement('canvas'); c.width = c.height = 64;
+        const k = c.getContext('2d')!;
+        k.strokeStyle = 'rgba(230,70,50,.95)'; k.lineWidth = 5;
+        k.beginPath(); k.arc(32, 32, 24, 0, Math.PI * 2); k.stroke();
+        for (let a = 0; a < 4; a++) { const r = (a * Math.PI) / 2; k.beginPath(); k.moveTo(32 + Math.cos(r) * 16, 32 + Math.sin(r) * 16); k.lineTo(32 + Math.cos(r) * 30, 32 + Math.sin(r) * 30); k.stroke(); }
+        const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+      };
+      const mk = (map: THREE.Texture, opacity: number): THREE.SpriteMaterial => new THREE.SpriteMaterial({ map, transparent: true, opacity, depthTest: false, depthWrite: false, fog: false });
+      this.wolfIconMat = { hunt: mk(icon('#9b2418', '#f4e3c4'), 0.82), leave: mk(icon('#5c5650', '#d8d0c2'), 0.6), aim: mk(ring(), 0.85) };
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(64 * 6), 3));
+      this.wolfLines = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color: 0xe0503a, transparent: true, opacity: 0.4, depthTest: false, fog: false }));
+      this.wolfLines.frustumCulled = false;
+      this.wolfLines.renderOrder = 9;
+      this.scene.add(this.wolfLines);
+    }
+    const mats = this.wolfIconMat;
+    let icon = this.wolfIcons[i];
+    if (!icon) { icon = new THREE.Sprite(mats.hunt); icon.renderOrder = 10; this.scene.add(icon); this.wolfIcons[i] = icon; }
+    icon.material = w.leaving ? mats.leave : mats.hunt;
+    icon.visible = true;
+    icon.position.set(x, y + 0.72 + (this.calm ? 0 : Math.sin(this.time * 3 + w.id) * 0.03), z);
+    icon.scale.setScalar(0.3);
+    // cel: ofiara (człowiek, żołnierz) albo pole, do którego biegnie
+    let tx: number | undefined, tz = 0;
+    const { width, height } = g.map;
+    if (w.target && !w.leaving) {
+      const prey = g.units.find((u) => u.id === w.target) ?? g.soldiers.find((v) => v.id === w.target);
+      if (prey) { tx = prey.px / FP - width / 2; tz = prey.py / FP - height / 2; }
+    }
+    if (tx === undefined && w.path.length && !w.leaving) { const e = w.path[w.path.length - 1]!; tx = (e % width) + 0.5 - width / 2; tz = Math.floor(e / width) + 0.5 - height / 2; }
+    let aim = this.wolfAims[i];
+    if (!aim) { aim = new THREE.Sprite(mats.aim); aim.renderOrder = 10; this.scene.add(aim); this.wolfAims[i] = aim; }
+    const pos = this.wolfLines!.geometry.attributes.position as THREE.BufferAttribute;
+    if (tx !== undefined) {
+      const ty = view.heightAt(tx + width / 2, tz + height / 2);
+      aim.visible = !!w.target; // kółko tylko na ofierze, sama trasa to linia
+      aim.position.set(tx, ty + 0.35, tz);
+      aim.scale.setScalar(0.34 + (this.calm ? 0 : Math.sin(this.time * 6 + w.id) * 0.04));
+      pos.setXYZ(i * 2, x, y + 0.3, z);
+      pos.setXYZ(i * 2 + 1, tx, ty + 0.3, tz);
+    } else {
+      aim.visible = false;
+      pos.setXYZ(i * 2, 0, -100, 0); pos.setXYZ(i * 2 + 1, 0, -100, 0);
+    }
+  }
+  private wolfMarkersFinish(n: number): void {
+    for (let i = n; i < this.wolfIcons.length; i++) { this.wolfIcons[i]!.visible = false; const a = this.wolfAims[i]; if (a) a.visible = false; }
+    if (this.wolfLines) {
+      this.wolfLines.geometry.setDrawRange(0, n * 2);
+      (this.wolfLines.geometry.attributes.position as THREE.BufferAttribute).needsUpdate = true;
+      this.wolfLines.visible = n > 0;
+    }
+  }
+
   private syncWolves(g: GameState, view: TerrainView, alpha: number): void {
     if (!this.wolfMesh) {
       const { body, leg, tail, eyes, mat } = wolfParts();
@@ -1412,8 +1511,10 @@ export class GameRenderer {
       this.wolfEyes!.setMatrixAt(n, this.night > 0.2 ? t.matrix : ZERO);
       // warczenie z bliska, kłapnięcie przy ataku
       if (!this.calm && w.target) this.sfxAt('growl', t.position.x, t.position.z, `w${w.id}`, 2.6 + (w.id % 3), 1.4);
+      this.wolfMarker(n, w, g, t.position.x, t.position.y, t.position.z, view);
       n++;
     }
+    this.wolfMarkersFinish(n);
     this.wolfMesh.count = n; this.wolfEyes!.count = n; this.wolfTails.count = n; this.wolfLegs.count = n * 4;
     this.wolfLegs.instanceMatrix.needsUpdate = true; this.wolfTails.instanceMatrix.needsUpdate = true;
     this.wolfMesh.instanceMatrix.needsUpdate = true; this.wolfEyes!.instanceMatrix.needsUpdate = true;

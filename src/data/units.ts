@@ -32,3 +32,6 @@ export const UNITS: readonly UnitDef[] = [
 ];
 
 export const unitIndex = (id: string): number => UNITS.findIndex((u) => u.id === id);
+
+/** Zasięg strzału łucznika na wieży (zasięg łuku + 3 pola za wysokość), ten sam co w symulacji */
+export const TOWER_RANGE = (UNITS.find((u) => u.id === 'archer')?.range ?? 6) + 3;

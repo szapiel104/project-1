@@ -415,7 +415,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: def.id === 'barracks' ? recruitInfo() : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     garrison: def.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
-    area: def.area ? shownAreas.has(b.id) : undefined,
+    area: def.area || def.id === 'watchtower' ? shownAreas.has(b.id) : undefined,
     site: b.build ? siteInfo(b) : undefined };
 }
 

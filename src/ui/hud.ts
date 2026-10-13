@@ -946,7 +946,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
       demolish.hidden = !i.own || !i.def.buildable;
       areaBtn.hidden = i.area === undefined;
-      setText(areaBtn, i.area ? 'Ukryj teren pracy' : 'Pokaż teren pracy');
+      const shot = i.def.id === 'watchtower';
+      setText(areaBtn, shot ? (i.area ? 'Ukryj zasięg strzału' : 'Pokaż zasięg strzału') : i.area ? 'Ukryj teren pracy' : 'Pokaż teren pracy');
       areaBtn.setAttribute('aria-pressed', String(!!i.area));
       trainBtn.hidden = true;
       trainNote.hidden = true;
