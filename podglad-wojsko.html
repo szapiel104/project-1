@@ -19,7 +19,14 @@ const at = (x, z, yaw) => M.compose(new THREE.Vector3(x, 0, z), Q.setFromAxisAng
 const sp = new Figures(4, s, 'spearman'), ar = new Figures(4, s, 'archer'), pe = new Figures(1, s);
 sp.set(0, at(-1.0, 0, 0.35), 0, false, red, 3); sp.set(1, at(-0.62, 0, Math.PI - 0.3), 0, false, red, 8); sp.set(2, at(-0.22, 0, 1.2), 0, true, blue, 4); sp.set(3, at(-0.8, -0.5, 0.2), 0.45, false, red, 15); sp.finish(4);
 ar.set(0, at(0.25, 0, 0.35), 0, false, red, 5); ar.set(1, at(0.62, 0, Math.PI - 0.3), 0, false, red, 9); ar.set(2, at(1.0, 0, -1.1), 0, true, blue, 6); ar.set(3, at(0.5, -0.5, 0.2), 0.45, false, red, 12); ar.finish(4);
-pe.set(0, at(1.35, -0.3, 0.4), 0, false, 0x7a6a4a, 2); pe.finish(1);
+pe.set(0, at(1.35, -0.3, 0.4), 0, false, red, 2); pe.finish(1);
+if (q.get('chlopi')) {
+  // sami chłopi: różne nakrycia głowy, fartuchy, brody; jeden niesie (ręce w górze), jeden idzie
+  sp.finish(0); ar.finish(0);
+  const many = new Figures(8, s);
+  [1, 2, 3, 4, 5, 6, 7, 9].forEach((id, i) => many.set(i, at(-1.15 + i * 0.33, i % 2 ? -0.25 : 0.05, 0.3 - (i % 3) * 0.25), i === 5 ? 0.45 : 0, i === 3, i < 4 ? red : blue, id * 3 + 1));
+  many.finish(8); pe.finish(0);
+}
 const cam = new THREE.PerspectiveCamera(30, 1200 / 700, 0.05, 50);
 cam.position.set(0, look + Math.sin(pitch) * dist, Math.cos(pitch) * dist); cam.lookAt(0, look, 0);
 r.render(s, cam); document.title = 'gotowe';
