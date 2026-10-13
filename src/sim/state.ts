@@ -161,6 +161,14 @@ export interface Soldier {
   post?: number;
   /** Stoi na wieży: strzela dalej, wręcz nikt go nie dosięgnie */
   up?: boolean;
+  /** Kierunek, w który ma patrzeć po dojściu (0–7, co 45°; 0 = na +y) */
+  face?: number;
+  /** Postawa: 0/brak = atak (goni wroga), 1 = obrona (krótko i wraca), 2 = stój (nie rusza się z miejsca) */
+  stance?: number;
+  /** Pole, którego pilnuje w obronie i w postawie „stój” (-1 = brak) */
+  hold?: number;
+  /** Numer rozkazu: żołnierze z tego samego rozkazu stoją razem jako jeden oddział */
+  grp?: number;
 }
 
 /** Ciało poległego: leży, aż zabierze je grabarz z cmentarza */
@@ -411,7 +419,7 @@ export function stateHash(g: GameState): number {
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
-  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.path.length); for (const t of s.path) add(t); }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.path.length); for (const t of s.path) add(t); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }
   for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); }

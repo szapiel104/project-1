@@ -26,6 +26,8 @@ export class StrategyCamera {
   private mouse = { x: -1, y: -1 };
   /** Czy ostatni gest był przeciąganiem (żeby nie mylić go z kliknięciem). */
   dragged = false;
+  /** Prawy przycisk należy do gry (rysowanie szyku): kamera się wtedy nie obraca */
+  lockRotate = false;
   /** Lewy przycisk nie przesuwa kamery (używany przy malowaniu dróg); klawisze i prawy przycisk działają dalej */
   panLocked = false;
 
@@ -156,6 +158,10 @@ export class StrategyCamera {
       if (this.pinch) this.zoom(this.pinch / d);
       this.pinch = d;
       this.dragged = true;
+    } else if (p.button === 2 && this.lockRotate) {
+      p.moved = (p.moved ?? 0) + Math.abs(dx) + Math.abs(dy);
+      if (p.moved > 5) this.dragged = true;
+      return;
     } else if (p.button === 2 || (p.button === 0 && e.ctrlKey)) {
       // obrót: prawy przycisk albo lewy z Ctrl; ruch w górę i w dół zmienia kąt patrzenia
       this.yaw -= dx * 0.006 * this.speed;

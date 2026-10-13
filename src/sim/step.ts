@@ -10,7 +10,7 @@ import { migrationSystem, travelSystem } from './systems/population';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
-import { armySystem, orderAttack, orderMove, train , orderDismount, orderGarrison } from './systems/army';
+import { armySystem, orderAttack, orderMove, orderStance, train , orderDismount, orderGarrison } from './systems/army';
 import { botSystem } from './systems/bot';
 
 /** Komendy graczy. To jedyna droga, którą gracz (albo bot, albo sieć) wpływa na grę. */
@@ -22,7 +22,10 @@ export type Command =
   | { type: 'setRations'; player: number; level: number }
   | { type: 'setTax'; player: number; level: number }
   | { type: 'train'; player: number; building: number; unit: string }
-  | { type: 'move'; player: number; ids: number[]; x: number; y: number }
+  /** face 0–7 (kierunek szyku), form 0–2 (linia, blok, luźno), width = ilu w szeregu */
+  | { type: 'move'; player: number; ids: number[]; x: number; y: number; face?: number; form?: number; width?: number }
+  /** 0 atak, 1 obrona, 2 stój */
+  | { type: 'stance'; player: number; ids: number[]; stance: number }
   | { type: 'attack'; player: number; ids: number[]; target: number }
   | { type: 'gate'; player: number; id: number; open: boolean }
   | { type: 'garrison'; player: number; ids: number[]; tower: number }
@@ -62,7 +65,10 @@ function apply(g: GameState, c: Command): void {
       break;
     case 'move':
       if (Array.isArray(c.ids) && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.y >= 0 && c.x < g.map.width && c.y < g.map.height)
-        orderMove(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.y * g.map.width + c.x);
+        orderMove(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.y * g.map.width + c.x, { face: c.face, form: c.form, width: c.width });
+      break;
+    case 'stance':
+      if (Array.isArray(c.ids)) orderStance(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.stance);
       break;
     case 'attack':
       if (Array.isArray(c.ids) && Number.isInteger(c.target)) orderAttack(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.target);

@@ -246,6 +246,8 @@ export class GameRenderer {
   /** Żołnierze: osobny zestaw postaci w zbrojach */
   private spearmen: Figures;
   private rings: THREE.InstancedMesh;
+  /** Podgląd szyku przy przeciąganiu prawym przyciskiem: przyszłe miejsca żołnierzy */
+  private ghostRings!: THREE.InstancedMesh;
   /** Ciała poległych i ciemne plamy pod nimi */
   private bodies: Figures;
   private stains: THREE.InstancedMesh;
@@ -363,6 +365,11 @@ export class GameRenderer {
     this.dots.frustumCulled = false;
     this.dots.renderOrder = 3;
     this.scene.add(this.dots);
+    this.ghostRings = new THREE.InstancedMesh(new THREE.RingGeometry(0.16, 0.26, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.55, depthWrite: false }), MAX_UNITS);
+    this.ghostRings.count = 0;
+    this.ghostRings.frustumCulled = false;
+    this.ghostRings.renderOrder = 3;
+    this.scene.add(this.ghostRings);
     this.wave = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.5, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false }));
     this.wave.visible = false;
     this.wave.renderOrder = 3;
@@ -1840,6 +1847,25 @@ export class GameRenderer {
     this.waveAge = 0;
   }
 
+  /** Podgląd szyku: półprzezroczyste kółka na polach, na których staną żołnierze (null chowa podgląd) */
+  setFormationPreview(tiles: number[] | null): void {
+    if (!this.state || !this.view) return;
+    const { width, height } = this.state.map;
+    const m = new THREE.Matrix4();
+    let n = 0;
+    for (const t of tiles ?? []) {
+      if (n >= MAX_UNITS) break;
+      const x = t % width, y = (t - x) / width;
+      m.makeTranslation(x + 0.5 - width / 2, this.view.heightAt(x + 0.5, y + 0.5) + 0.04, y + 0.5 - height / 2);
+      this.ghostRings.setMatrixAt(n++, m);
+    }
+    this.ghostRings.count = n;
+    this.ghostRings.instanceMatrix.needsUpdate = true;
+  }
+
+  /** Prawy przycisk rysuje szyk zamiast obracać kamerę (gdy zaznaczone jest wojsko) */
+  set lockRotate(v: boolean) { this.cam.lockRotate = v; }
+
   /** Zaznaczeni żołnierze dostają złoty pierścień pod stopami */
   setSoldierSelection(ids: Set<number>): void { this.soldierSel = ids; }
 
@@ -1874,7 +1900,12 @@ export class GameRenderer {
     // stojący oddział zbija się ciaśniej: każdy przysuwa się do środka swojej grupy (tylko wygląd, pola w symulacji bez zmian)
     const pull = new Map<number, [number, number]>();
     const still = g.soldiers.filter((x) => !x.path.length && !x.up && !x.target && x.goal < 0);
+    // oddział z jednego rozkazu ściąga się do swojego środka równo, więc linia zostaje linią, a blok blokiem
+    const mid = new Map<number, [number, number, number]>();
+    for (const a of still) if (a.grp) { const c = mid.get(a.grp) ?? [0, 0, 0]; c[0] += a.px; c[1] += a.py; c[2]++; mid.set(a.grp, c); }
     for (const a of still) {
+      const c = a.grp ? mid.get(a.grp) : undefined;
+      if (c && c[2] > 1) { pull.set(a.id, [(c[0] / c[2] - a.px) / FP * 0.3, (c[1] / c[2] - a.py) / FP * 0.3]); continue; }
       let sx = 0, sy = 0, k = 0;
       for (const b of still) if (b.owner === a.owner && Math.abs(b.px - a.px) < 3 * FP && Math.abs(b.py - a.py) < 3 * FP) { sx += b.px; sy += b.py; k++; }
       if (k > 1) pull.set(a.id, [(sx / k - a.px) / FP * 0.45, (sy / k - a.py) / FP * 0.45]);
@@ -1914,6 +1945,13 @@ export class GameRenderer {
         const fp = footprint(BUILDINGS[wall.type]!, wall.rot);
         heading = Math.atan2(wall.x + fp.w / 2 - fx, wall.y + fp.h / 2 - fy);
         this.facing.set(s.id, heading);
+      }
+      // po dojściu obraca się w kierunek szyku (płynnie, nie skokiem)
+      if (!walking && !foe && !wall && s.face !== undefined && !s.path.length) {
+        let diff = s.face * (Math.PI / 4) - heading;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        if (Math.abs(diff) > 0.01) { heading += this.calm ? diff : diff * 0.15; this.facing.set(s.id, heading); }
       }
       const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
       const udef = UNITS[s.kind]!;

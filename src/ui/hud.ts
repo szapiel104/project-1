@@ -7,6 +7,12 @@ import { RULES } from '../data/rules';
 import { t } from '../i18n';
 
 export interface HudEvents {
+  /** Kliknięto typ jednostki w panelu wojska: zostaw tylko ten typ (Shift: odznacz ten typ) */
+  onArmyKind(kind: string, shift: boolean): void;
+  /** Formacja: 0 linia, 1 blok, 2 luźno */
+  onArmyForm(form: number): void;
+  /** Postawa: 0 atak, 1 obrona, 2 stój */
+  onArmyStance(stance: number): void;
   onNewGame(seedText: string, preset: MapPresetId): void;
   onRandom(preset: MapPresetId): void;
   onPickBuilding(id: string | null): void;
@@ -74,7 +80,7 @@ export interface Hud {
   /** Karta mieszkańca: imię i kilka wierszy opisu */
   showPerson(person: { name: string; lines: string[] } | null): void;
   /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
-  showArmy(army: { name: string; hp: number; max: number; kind?: string }[]): void;
+  showArmy(army: { name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number }): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
@@ -378,6 +384,34 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   hpLine.append(hpText, hpBar);
   const roster = el('div', 'roster');
   roster.hidden = true;
+  let rosterKey = '';
+  // panel wojska: typy jednostek (klik = tylko ten typ), formacja i postawa; budowany raz, potem tylko odświeżany
+  const armyPanel = el('div', 'army-box');
+  armyPanel.hidden = true;
+  const kindsRow = el('div', 'army-kinds');
+  const kindBtns = new Map<string, { b: HTMLButtonElement; n: HTMLElement }>();
+  const seg = (label: string, items: [string, string][], pick: (i: number) => void): HTMLButtonElement[] => {
+    const wrap = el('div', 'army-row');
+    wrap.append(el('span', 'army-label', label));
+    const group = el('div', 'army-seg');
+    group.setAttribute('role', 'group');
+    group.setAttribute('aria-label', label);
+    const out = items.map(([text, tip], i) => {
+      const b = el('button', 'army-btn', text);
+      b.type = 'button';
+      b.title = tip;
+      b.setAttribute('aria-pressed', 'false');
+      b.addEventListener('click', () => pick(i));
+      group.append(b);
+      return b;
+    });
+    wrap.append(group);
+    armyPanel.append(wrap);
+    return out;
+  };
+  armyPanel.append(kindsRow);
+  const formBtns = seg('Szyk', [['Linia', 'Szeroki front, 1–3 szeregi. Łucznicy z tyłu.'], ['Blok', 'Zwarty kwadrat: trudny do obejścia.'], ['Luźno', 'Co drugie pole: mniej ofiar od strzał.']], (i) => events.onArmyForm(i));
+  const stanceBtns = seg('Postawa', [['Atak', 'Goni każdego wroga, którego zobaczy.'], ['Obrona', 'Walczy w pobliżu swojego miejsca i do niego wraca.'], ['Stój', 'Nie rusza się z miejsca. Bije tylko tych, których sięgnie.']], (i) => events.onArmyStance(i));
   // brama: jeden duży przycisk otwórz/zamknij i stan pod spodem
   const gateBox = el('div', 'gate-box');
   const gateBtn = el('button', 'btn-main gate-btn');
@@ -405,7 +439,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   infoActions.append(areaBtn, demolish, close);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, roster, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, towerBox, walkBtn, recruit, armyPanel, roster, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -682,37 +716,67 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       demolish.hidden = true;
       trainBtn.hidden = true;
       trainNote.hidden = true;
-      roster.hidden = true;
+      roster.hidden = true; armyPanel.hidden = true;
       hpLine.hidden = true;
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
       walkBtn.hidden = false;
     },
-    showArmy(army) {
+    showArmy(army, ctl) {
       info.hidden = army.length === 0;
-      if (!army.length) return;
+      if (!army.length) { rosterKey = ''; return; }
       infoId = 0;
       setText(infoName, `${t('hud.soldiers')}: ${army.length}`);
       // portrety jak w klasycznych strategiach: hełm na tarczy w barwie drużyny i pasek zdrowia pod spodem
       roster.hidden = false;
+      armyPanel.hidden = false;
       hpLine.hidden = true;
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
       walkBtn.hidden = true;
-      roster.replaceChildren(...army.slice(0, 24).map((u) => {
-        const card = el('span', 'roster-card');
-        card.title = u.name;
-        card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
-        const bar = el('span', 'roster-hp');
-        const fill = el('span');
-        fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;
-        bar.append(fill);
-        card.append(bar);
-        return card;
-      }));
-      if (army.length > 24) roster.append(el('span', 'roster-more', `+${army.length - 24}`));
+      // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
+      const byKind = new Map<string, { name: string; n: number }>();
+      for (const u of army) { const k = u.kind ?? 'spearman'; const c = byKind.get(k) ?? { name: u.name, n: 0 }; c.n++; byKind.set(k, c); }
+      for (const [k, v] of byKind) {
+        let kb = kindBtns.get(k);
+        if (!kb) {
+          const b = el('button', 'army-kind');
+          b.type = 'button';
+          b.title = 'Kliknij: zostaw zaznaczonych tylko tych. Shift + klik: odznacz ich.';
+          const pic = el('span', 'army-kind-pic');
+          pic.innerHTML = k === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
+          const n = el('span', 'army-kind-n');
+          b.append(pic, el('span', 'army-kind-name', v.name), n);
+          b.addEventListener('click', (e) => events.onArmyKind(k, e.shiftKey));
+          kindsRow.append(b);
+          kb = { b, n };
+          kindBtns.set(k, kb);
+        }
+        kb.b.hidden = false;
+        setText(kb.n, String(v.n));
+      }
+      for (const [k, kb] of kindBtns) if (!byKind.has(k)) kb.b.hidden = true;
+      formBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.form ?? 0))));
+      stanceBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.stance ?? -1))));
+      // portrety odświeżamy tylko, gdy coś się zmieniło (przebudowa co klatkę gubiła kliknięcia)
+      const key = army.slice(0, 24).map((u) => `${u.kind}${Math.round((u.hp / u.max) * 20)}`).join() + army.length;
+      if (key !== rosterKey) {
+        rosterKey = key;
+        roster.replaceChildren(...army.slice(0, 24).map((u) => {
+          const card = el('span', 'roster-card');
+          card.title = u.name;
+          card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
+          const bar = el('span', 'roster-hp');
+          const fill = el('span');
+          fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;
+          bar.append(fill);
+          card.append(bar);
+          return card;
+        }));
+        if (army.length > 24) roster.append(el('span', 'roster-more', `+${army.length - 24}`));
+      }
       const counts = new Map<string, number>();
       for (const u of army) counts.set(u.name, (counts.get(u.name) ?? 0) + 1);
       setText(infoDesc, [...counts].map(([n, k]) => `${n} × ${k}`).join(', '));
@@ -727,7 +791,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       info.hidden = !i;
       if (!i) return;
       infoId = i.id;
-      roster.hidden = true;
+      roster.hidden = true; armyPanel.hidden = true;
       setText(infoName, t(i.def.name));
       hpLine.hidden = i.hp === undefined;
       if (i.hp !== undefined && i.maxHp) { setText(hpText, `${t('hud.hp')}: ${i.hp} / ${i.maxHp}`); hpFill.style.width = `${Math.max(0, (i.hp / i.maxHp) * 100)}%`; hpFill.dataset.low = String(i.hp < i.maxHp * 0.35); }

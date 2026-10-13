@@ -3,7 +3,10 @@ import { buildingIndex } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { deserialize, serialize } from '../src/sim/save';
-import { createGame as realGame, playerKeep, population, stateHash, type GameState } from '../src/sim/state';
+import { FP, createGame as realGame, playerKeep, population, stateHash, type GameState, type Soldier } from '../src/sim/state';
+import { planFormation } from '../src/sim/systems/army';
+import { walkable } from '../src/sim/path';
+import { unitIndex } from '../src/data/units';
 import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
 
@@ -121,5 +124,70 @@ describe('wydajność', () => {
     const ms = (performance.now() - t0) / 300;
     expect(ms).toBeLessThan(20);
     expect(g.corpses.length).toBeGreaterThan(0);
+  });
+});
+
+describe('szyk i postawy', () => {
+  /** Otwarte pole 9×9 przy twierdzy, na którym można postawić oddział */
+  function openField(g: GameState): number {
+    const keep = playerKeep(g, 0)!, w = g.map.width;
+    for (let r = 4; r < 40; r++)
+      for (let dy = -r; dy <= r; dy++)
+        for (let dx = -r; dx <= r; dx++) {
+          const cx = keep.x + dx, cy = keep.y + dy;
+          let ok = true;
+          for (let y = -4; y <= 4 && ok; y++) for (let x = -4; x <= 4 && ok; x++) ok = walkable(g, (cy + y) * w + cx + x);
+          if (ok) return cy * w + cx;
+        }
+    throw new Error('brak pola');
+  }
+  function soldier(g: GameState, owner: number, kind: string, tile: number, extra: Partial<Soldier> = {}): Soldier {
+    const w = g.map.width, x = tile % w, y = (tile - x) / w;
+    const s: Soldier = { id: g.nextId++, owner, kind: unitIndex(kind), px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: 50, goal: -1, wait: 0, target: 0, cd: 0, ...extra };
+    g.soldiers.push(s);
+    return s;
+  }
+
+  it('linia: włócznicy w pierwszym szeregu, łucznicy za nimi, wszyscy na różnych polach', () => {
+    const g = createGame(7);
+    const c = openField(g), w = g.map.width;
+    const spears = [0, 1, 2].map((i) => soldier(g, 0, 'spearman', c - 3 * w + i));
+    const bows = [0, 1, 2].map((i) => soldier(g, 0, 'archer', c - 3 * w - 1 - i));
+    const { spots, face } = planFormation(g, 0, [...spears, ...bows].map((s) => s.id), c, { face: 0, form: 0, width: 3 });
+    expect(face).toBe(0);
+    expect(new Set(spots.values()).size).toBe(6);
+    const row = (s: Soldier): number => Math.floor(spots.get(s.id)! / w);
+    // twarzą na +y: przód ma większe y
+    for (const a of spears) for (const b of bows) expect(row(a)).toBeGreaterThan(row(b));
+  });
+
+  it('rozkaz marszu zapamiętuje kierunek i formację', () => {
+    const g = createGame(7);
+    const c = openField(g), w = g.map.width;
+    const list = [0, 1, 2, 3].map((i) => soldier(g, 0, 'spearman', c - 2 * w + i - 2));
+    step(g, [{ type: 'move', player: 0, ids: list.map((s) => s.id), x: c % w, y: Math.floor(c / w), face: 2, form: 1 }]);
+    for (const s of g.soldiers) expect(s.face).toBe(2);
+    for (let i = 0; i < 600; i++) step(g, []);
+    const tiles = g.soldiers.map((s) => (s.py >> 8) * w + (s.px >> 8));
+    expect(new Set(tiles).size).toBe(4);
+  });
+
+  it('postawa „stój”: nie idzie za wrogiem, którego nie sięgnie', () => {
+    const g = createGame(7);
+    const c = openField(g);
+    const me = soldier(g, 0, 'spearman', c);
+    soldier(g, 1, 'spearman', c + 4, { stance: 2 });
+    step(g, [{ type: 'stance', player: 0, ids: [me.id], stance: 2 }]);
+    for (let i = 0; i < 200; i++) step(g, []);
+    expect((me.py >> 8) * g.map.width + (me.px >> 8)).toBe(c);
+  });
+
+  it('postawa „atak”: idzie na wroga w zasięgu wzroku', () => {
+    const g = createGame(7);
+    const c = openField(g);
+    const me = soldier(g, 0, 'spearman', c);
+    soldier(g, 1, 'spearman', c + 4, { stance: 2 });
+    for (let i = 0; i < 200; i++) step(g, []);
+    expect((me.px >> 8) - (c % g.map.width)).toBeGreaterThan(0);
   });
 });

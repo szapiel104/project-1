@@ -15,6 +15,7 @@ import { canAfford, canPlace, maxHp } from './sim/systems/placement';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
+import { octant, planFormation } from './sim/systems/army';
 import { SANDBOX, TEST } from './testmode';
 import { Lockstep, TURN } from './net/lockstep';
 import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
@@ -79,6 +80,12 @@ function loadSave(): { seedText: string; data: SaveData } | null {
 }
 
 const hud = createHud(document.getElementById('ui')!, {
+  onArmyKind: (kind, shift) => {
+    const ids = game.soldiers.filter((x) => chosen.has(x.id) && (UNITS[x.kind]!.id === kind) !== shift).map((x) => x.id);
+    if (ids.length) { chooseSoldiers(ids, false); play('select'); }
+  },
+  onArmyForm: (form) => { armyForm = form; reform(); play('rotate'); },
+  onArmyStance: (stance) => { if (chosen.size) { pending.push({ type: 'stance', player: ME, ids: [...chosen], stance }); play('select'); } },
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
   // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
   onRandom: (preset) => start(`${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`, preset),
@@ -511,19 +518,96 @@ canvas.addEventListener('contextmenu', () => {
   if (plan.state !== 'none') { cancelPlan(); play('rotate'); return; }
   if (wrecking) setWreck(false);
   else if (picked) pick(null);
-  else if (chosen.size && hoverFoe) {
+  // rozkazy dla wojska idą przy puszczeniu prawego przycisku (niżej), żeby drobne drgnięcie myszy ich nie gubiło
+});
+
+// ---- wojsko: prawy klik = marsz/atak, prawy przeciągnięty = linia frontu i kierunek szyku ----
+/** Wybrana formacja: 0 linia, 1 blok, 2 luźno */
+let armyForm = 0;
+let rDrag: { x: number; y: number; tile: { x: number; y: number } | null; on: boolean } | null = null;
+
+/** Szyk narysowany przeciągnięciem: środek odcinka, twarzą od strony, z której przychodzą, szerokość = długość odcinka */
+function dragOrder(start: { x: number; y: number } | null): { x: number; y: number; face: number; form: number; width: number } | null {
+  const end = hoverTile;
+  if (!start || !end) return null;
+  const vx = end.x - start.x, vy = end.y - start.y;
+  if (!vx && !vy) return null;
+  const cx = Math.round((start.x + end.x) / 2), cy = Math.round((start.y + end.y) / 2);
+  const list = game.soldiers.filter((x) => chosen.has(x.id));
+  if (!list.length) return null;
+  const mx = list.reduce((a, x) => a + (x.px >> 8), 0) / list.length, my = list.reduce((a, x) => a + (x.py >> 8), 0) / list.length;
+  // dwie prostopadłe do odcinka: wybieramy tę, która patrzy dalej od oddziału (idą i stają przodem do celu)
+  let px = -vy, py = vx;
+  if (px * (cx - mx) + py * (cy - my) < 0) { px = -px; py = -py; }
+  const face = octant(px, py);
+  const stepLen = (face % 2 ? Math.SQRT2 : 1) * (armyForm === 2 ? 2 : 1);
+  const width = Math.max(1, Math.min(list.length, Math.round(Math.hypot(vx, vy) / stepLen) + 1));
+  return { x: cx, y: cy, face, form: armyForm, width };
+}
+
+/** Zmiana formacji w miejscu: oddział przestawia się tam, gdzie stoi albo dokąd idzie */
+function reform(): void {
+  const list = game.soldiers.filter((x) => chosen.has(x.id));
+  if (!list.length) return;
+  const W = game.map.width;
+  let sx = 0, sy = 0;
+  for (const x of list) { const t = x.goal >= 0 ? x.goal : (x.py >> 8) * W + (x.px >> 8); sx += t % W; sy += Math.floor(t / W); }
+  const faces = new Map<number, number>();
+  for (const x of list) if (x.face !== undefined) faces.set(x.face, (faces.get(x.face) ?? 0) + 1);
+  const face = [...faces].sort((a, b) => b[1] - a[1])[0]?.[0];
+  pending.push({ type: 'move', player: ME, ids: list.map((x) => x.id), x: Math.round(sx / list.length), y: Math.round(sy / list.length), face, form: armyForm });
+}
+
+/** Zwykły prawy klik przy zaznaczonym wojsku: atak na wroga, wejście na wieżę albo marsz */
+function armyRightClick(): void {
+  if (!chosen.size) return;
+  if (hoverFoe) {
     pending.push({ type: 'attack', player: ME, ids: [...chosen], target: hoverFoe });
     play('select');
-  } else if (chosen.size && hoverTile && !renderer.dragged && (() => { const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]); return b && b.owner === ME && BUILDINGS[b.type]!.id === 'watchtower'; })()) {
-    // łucznicy na wieżę
-    pending.push({ type: 'garrison', player: ME, ids: [...chosen], tower: game.occupancy[hoverTile.y * game.map.width + hoverTile.x]! });
-    play('rotate');
-  } else if (chosen.size && hoverTile && !renderer.dragged) {
-    pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y });
-    renderer.orderMarker(hoverTile);
-    play('rotate');
+    return;
   }
+  if (!hoverTile) return;
+  const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
+  if (b && b.owner === ME && BUILDINGS[b.type]!.id === 'watchtower') {
+    pending.push({ type: 'garrison', player: ME, ids: [...chosen], tower: b.id });
+    play('rotate');
+    return;
+  }
+  pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y, form: armyForm });
+  renderer.orderMarker(hoverTile);
+  play('rotate');
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+  if (e.button !== 2 || !chosen.size || picked || wrecking || plan.state !== 'none' || menu.isOpen()) return;
+  rDrag = { x: e.clientX, y: e.clientY, tile: hoverTile ? { ...hoverTile } : null, on: false };
+  // przy zaznaczonym wojsku prawy przycisk rysuje szyk; kamerę obracają Q/E albo Ctrl + lewy
+  renderer.lockRotate = true;
 });
+window.addEventListener('pointermove', (e) => {
+  if (!rDrag || !(e.buttons & 2)) return;
+  if (!rDrag.on && Math.hypot(e.clientX - rDrag.x, e.clientY - rDrag.y) < 14) return;
+  rDrag.on = true;
+  const o = dragOrder(rDrag.tile);
+  renderer.setFormationPreview(o ? [...planFormation(game, ME, [...chosen], o.y * game.map.width + o.x, o).spots.values()] : null);
+});
+canvas.addEventListener('pointerup', (e) => {
+  if (e.button !== 2) return;
+  const d = rDrag;
+  rDrag = null;
+  renderer.lockRotate = false;
+  renderer.setFormationPreview(null);
+  if (!d || !chosen.size) return;
+  const o = d.on ? dragOrder(d.tile) : null;
+  if (o) {
+    pending.push({ type: 'move', player: ME, ids: [...chosen], ...o });
+    renderer.orderMarker(o);
+    play('rotate');
+    return;
+  }
+  armyRightClick();
+}, { capture: true });
+window.addEventListener('blur', () => { rDrag = null; renderer.lockRotate = false; renderer.setFormationPreview(null); });
 
 // ---- wojsko: zaznaczanie ramką lub kliknięciem, rozkaz marszu prawym przyciskiem ----
 const chosen = new Set<number>();
@@ -532,6 +616,7 @@ selBox.className = 'selbox';
 selBox.hidden = true;
 document.body.append(selBox);
 let boxStart: { x: number; y: number } | null = null;
+let lastPick = { id: 0, at: 0 };
 
 function recruitInfo(): RecruitUnit[] {
   const p = game.players[ME]!;
@@ -566,7 +651,8 @@ function chooseSoldiers(ids: number[], add: boolean): void {
 function showArmy(): void {
   const list = game.soldiers.filter((s) => chosen.has(s.id));
   if (list.length !== chosen.size) { chosen.clear(); for (const s of list) chosen.add(s.id); renderer.setSoldierSelection(chosen); }
-  hud.showArmy(list.map((s) => ({ name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })));
+  const st = new Set(list.map((s) => s.stance ?? 0));
+  hud.showArmy(list.map((s) => ({ name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1 });
 }
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -596,10 +682,27 @@ canvas.addEventListener('pointerup', (e) => {
     renderer.markDragged();
     return;
   }
-  // zwykłe kliknięcie: najbliższy żołnierz pod kursorem
-  let best = 0, bestD = 22 * 22;
-  for (const s of onScreen) { const d = (s.x - e.clientX) ** 2 + (s.y - e.clientY) ** 2; if (d < bestD) { bestD = d; best = s.id; } }
-  if (best) { chooseSoldiers([best], e.shiftKey); play('select'); renderer.markDragged(); }
+  // zwykłe kliknięcie: najbliższy żołnierz pod kursorem (trafia się w całą sylwetkę, od stóp po hełm)
+  let best = 0, bestD = 30 * 30;
+  for (const s of onScreen) {
+    const d = Math.min((s.x - e.clientX) ** 2 + (s.y - e.clientY) ** 2, (s.x - e.clientX) ** 2 + (s.y + 14 - e.clientY) ** 2, (s.x - e.clientX) ** 2 + (s.y - 14 - e.clientY) ** 2);
+    if (d < bestD) { bestD = d; best = s.id; }
+  }
+  if (best) {
+    // podwójne kliknięcie: wszyscy moi tego samego rodzaju widoczni na ekranie
+    const now = performance.now();
+    const kind = game.soldiers.find((x) => x.id === best)?.kind;
+    if (lastPick.id === best && now - lastPick.at < 400) {
+      const kinds = new Map(game.soldiers.map((x) => [x.id, x.kind]));
+      chooseSoldiers(onScreen.filter((o) => kinds.get(o.id) === kind).map((o) => o.id), e.shiftKey);
+      lastPick = { id: 0, at: 0 };
+    } else {
+      chooseSoldiers([best], e.shiftKey);
+      lastPick = { id: best, at: now };
+    }
+    play('select');
+    renderer.markDragged();
+  }
   else if (chosen.size && !e.shiftKey) chooseSoldiers([], false);
 }, { capture: true });
 

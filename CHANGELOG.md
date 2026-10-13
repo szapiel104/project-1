@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.13.0 — sterowanie wojskiem (2026-10-13)
+
+- Prawy klik nie gubi już rozkazów (wcześniej najmniejszy ruch myszy liczył się jako obrót kamery)
+- Prawy przycisk przeciągnięty rysuje linię frontu: szerokość szyku i kierunek, w który staną; podgląd miejsc w trakcie
+- Formacje: linia, blok, luźno; wręcz z przodu, łucznicy z tyłu; po dojściu żołnierze obracają się w kierunek szyku i stoją zwartym oddziałem
+- Postawy: atak (goni wroga), obrona (walczy przy swoim miejscu i wraca), stój (nie rusza się)
+- Panel wojska: przyciski typów jednostek (klik = tylko ci, Shift + klik = bez nich), szyk i postawa; panel nie gubi kliknięć
+- Pewniejsze zaznaczanie kliknięciem (cała sylwetka), podwójny klik = wszyscy tego rodzaju na ekranie
+- Przy zaznaczonym wojsku kamerę obracają Q/E (albo Ctrl + lewy)
+
 ## 0.12.0 — poziomy trudności, skryba, podsumowanie (2026-10-12)
 
 - Nowa gra: poziom trudności — pokojowy (wróg tylko się broni), łatwy (domyślny), średni, trudny

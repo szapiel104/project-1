@@ -222,7 +222,7 @@ export const pl = {
   'hud.trainCost': '1 włócznia, 8 złota, 1 wolny chłop',
   'hud.trainNo': 'Brakuje włóczni, złota albo wolnego chłopa',
   'hud.soldiers': 'Zaznaczeni żołnierze',
-  'hud.orderHint': 'Prawy przycisk na mapie: marsz w to miejsce. Esc odznacza.',
+  'hud.orderHint': 'Prawy klik: marsz albo atak. Prawy przeciągnięty: linia frontu i kierunek. Podwójny klik na żołnierzu: wszyscy tego rodzaju. Kamerę obracasz Q/E. Esc odznacza.',
   'b.roadSand': 'Droga piaskowa',
   'd.roadSand': 'Ubita piaskowa droga. Ludzie chodzą po niej o ćwierć szybciej. Nic nie kosztuje.',
   'b.roadStone': 'Droga kamienna',

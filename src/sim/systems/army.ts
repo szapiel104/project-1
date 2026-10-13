@@ -73,15 +73,109 @@ export function orderAttack(g: GameState, player: number, ids: readonly number[]
   const foeBuilding = foeSoldier ? undefined : g.buildings.find((b) => b.id === target);
   const owner = foeSoldier?.owner ?? foeBuilding?.owner;
   if (owner === undefined || team(g, owner) === team(g, player)) return;
-  for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.target = target; s.goal = -1; s.path = []; s.wait = 0; }
+  for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.target = target; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; }
 }
 
-/** Rozkaz marszu: zaznaczeni żołnierze idą w szyku na wskazane miejsce. */
-export function orderMove(g: GameState, player: number, ids: readonly number[], target: number): void {
-  if (!Number.isInteger(target) || target < 0 || target >= g.map.tiles.length) return;
+/** Kierunki szyku co 45°: 0 = twarzą na +y, dalej tak jak kąt obrotu figur (kąt = numer × 45°) */
+export const DIRS: readonly (readonly [number, number])[] = [[0, 1], [1, 1], [1, 0], [1, -1], [0, -1], [-1, -1], [-1, 0], [-1, 1]];
+
+/** Najbliższy z 8 kierunków dla wektora (same liczby całkowite, bez sin/cos — wynik taki sam w każdej przeglądarce); -1 dla zera */
+export function octant(dx: number, dy: number): number {
+  if (!dx && !dy) return -1;
+  const ax = Math.abs(dx), ay = Math.abs(dy);
+  if (ax * 5 < ay * 2) return dy > 0 ? 0 : 4;
+  if (ay * 5 < ax * 2) return dx > 0 ? 2 : 6;
+  if (dx > 0) return dy > 0 ? 1 : 3;
+  return dy > 0 ? 7 : 5;
+}
+
+/** Formacje: 0 linia (szeroko, 1–3 szeregi), 1 blok (kwadrat), 2 luźno (co drugie pole, mniej strat od strzał) */
+export const FORMS = 3;
+export interface MoveOpts { face?: number; form?: number; width?: number }
+
+/**
+ * Plan szyku: które pole dostaje który żołnierz. Wręcz z przodu, łucznicy z tyłu.
+ * Najbliżsi czoła idą do pierwszego szeregu, w szeregu kolejność z boku na bok, więc oddział nie krzyżuje się w marszu.
+ * Czysta funkcja — z niej korzysta też podgląd szyku w przeglądarce.
+ */
+export function planFormation(g: GameState, player: number, ids: readonly number[], target: number, opts: MoveOpts = {}): { spots: Map<number, number>; face: number; form: number } {
+  const w = g.map.width, h = g.map.height;
   const chosen = g.soldiers.filter((s) => s.owner === player && ids.includes(s.id)).slice(0, MAX_ORDER);
-  const spots = formation(g, target, chosen.length);
-  chosen.forEach((s, i) => { leavePost(g, s); s.goal = spots[i] ?? -1; s.path = []; s.wait = 0; s.target = 0; });
+  const n = chosen.length;
+  const cx = target % w, cy = (target - cx) / w;
+  let face = Number.isInteger(opts.face) && opts.face! >= 0 && opts.face! < 8 ? opts.face! : -1;
+  if (face < 0 && n) {
+    // bez wskazanego kierunku: twarzą w stronę marszu
+    let mx = 0, my = 0;
+    for (const s of chosen) { mx += s.px >> 8; my += s.py >> 8; }
+    face = octant(cx - Math.floor(mx / n), cy - Math.floor(my / n));
+    if (face < 0) face = chosen[0]!.face ?? 0;
+  }
+  if (face < 0) face = 0;
+  const form = Number.isInteger(opts.form) && opts.form! >= 0 && opts.form! < FORMS ? opts.form! : 0;
+  const spots = new Map<number, number>();
+  if (!n) return { spots, face, form };
+  const space = form === 2 ? 2 : 1;
+  let cols = form === 1 ? Math.ceil(Math.sqrt(n)) : form === 2 ? Math.ceil(Math.sqrt(n * 2)) : Math.ceil(n / (n <= 6 ? 1 : n <= 16 ? 2 : 3));
+  if (Number.isInteger(opts.width) && opts.width! > 0) cols = opts.width!;
+  cols = Math.max(1, Math.min(n, cols));
+  const [fx, fy] = DIRS[face]!;
+  const rx = -fy, ry = fx;
+  const fwd = (s: Soldier): number => (s.px >> 8) * fx + (s.py >> 8) * fy;
+  const side = (s: Soldier): number => (s.px >> 8) * rx + (s.py >> 8) * ry;
+  const byFront = (a: Soldier, b: Soldier): number => fwd(b) - fwd(a) || a.id - b.id;
+  const melee = chosen.filter((s) => !UNITS[s.kind]!.range).sort(byFront);
+  const ranged = chosen.filter((s) => !!UNITS[s.kind]!.range).sort(byFront);
+  const order = [...melee, ...ranged];
+  const rows = Math.ceil(n / cols);
+  const used = new Set<number>();
+  for (let k = 0; k < rows; k++) {
+    const row = order.slice(k * cols, (k + 1) * cols).sort((a, b) => side(a) - side(b) || a.id - b.id);
+    const back = (k - ((rows - 1) >> 1)) * space;
+    row.forEach((s, c) => {
+      const off = (c - ((row.length - 1) >> 1)) * space;
+      const x = cx + rx * off - fx * back, y = cy + ry * off - fy * back;
+      let t = x >= 0 && y >= 0 && x < w && y < h ? y * w + x : -1;
+      if (t < 0 || used.has(t) || !walkable(g, t, player)) {
+        // pole zajęte albo nieprzechodnie (drzewo, woda, budynek): najbliższe wolne obok
+        t = -1;
+        const bx = Math.max(0, Math.min(w - 1, x)), by = Math.max(0, Math.min(h - 1, y));
+        for (const [dx, dy] of SPIRAL) {
+          const ax = bx + dx, ay = by + dy;
+          if (ax < 0 || ay < 0 || ax >= w || ay >= h) continue;
+          const q = ay * w + ax;
+          if (!used.has(q) && walkable(g, q, player)) { t = q; break; }
+        }
+      }
+      if (t >= 0) { used.add(t); spots.set(s.id, t); }
+    });
+  }
+  return { spots, face, form };
+}
+
+/** Rozkaz marszu: zaznaczeni żołnierze idą w szyku na wskazane miejsce i stają twarzą w podanym kierunku. */
+export function orderMove(g: GameState, player: number, ids: readonly number[], target: number, opts: MoveOpts = {}): void {
+  if (!Number.isInteger(target) || target < 0 || target >= g.map.tiles.length) return;
+  const { spots, face } = planFormation(g, player, ids, target, opts);
+  if (!spots.size) return;
+  const grp = g.nextId++;
+  for (const s of g.soldiers) {
+    const spot = spots.get(s.id);
+    if (spot === undefined || s.owner !== player) continue;
+    leavePost(g, s);
+    s.goal = spot; s.hold = spot; s.face = face; s.grp = grp;
+    s.path = []; s.wait = 0; s.target = 0; s.hunt = 0;
+  }
+}
+
+/** Postawa oddziału: atak, obrona albo stój. Pilnowane pole to miejsce w szyku albo to, na którym stoi. */
+export function orderStance(g: GameState, player: number, ids: readonly number[], stance: number): void {
+  if (!Number.isInteger(stance) || stance < 0 || stance > 2) return;
+  for (const s of g.soldiers) {
+    if (s.owner !== player || !ids.includes(s.id)) continue;
+    s.stance = stance;
+    s.hold = s.goal >= 0 ? s.goal : tileOf(g, s);
+  }
 }
 
 /** Schodzi z wieży na wolne pole obok niej */
@@ -203,6 +297,16 @@ export function armySystem(g: GameState): void {
       }
     }
     const range = def.range ? def.range + (s.up ? 3 : 0) : 0;
+    // obrona i „stój”: bez celu pilnuje miejsca, w którym stoi (np. po rozkazie ataku albo po szkoleniu)
+    const stance = s.stance ?? 0;
+    if (stance && s.goal < 0 && !s.target && !s.path.length && (s.hold ?? -1) < 0) s.hold = tileOf(g, s);
+    // jak daleko od pilnowanego pola wolno mu odejść za wrogiem
+    const leash = stance === 1 ? 6 : stance === 2 ? 0 : Infinity;
+    const tooFar = (t: number): boolean => {
+      if (!stance || (s.hold ?? -1) < 0 || s.post) return false;
+      const hx = s.hold! % W, hy = (s.hold! - hx) / W, x = t % W, y = (t - x) / W;
+      return Math.max(Math.abs(hx - x), Math.abs(hy - y)) > leash + (range || 1);
+    };
     // walka: tylko gdy nie maszeruje na rozkaz
     if (s.goal < 0) {
       // rozkaz ataku na budynek ma pierwszeństwo przed szukaniem żołnierzy
@@ -232,6 +336,9 @@ export function armySystem(g: GameState): void {
           continue;
         }
         if (s.up) continue; // z wieży nie schodzi za wrogiem
+        if (stance === 2 || tooFar(tileOf(g, foe))) { s.target = 0; foe = undefined; }
+      }
+      if (foe) {
         // podchodzi na wolne pole obok wroga (nie tam, gdzie stoi już ktoś inny); drogę odświeża co kilka ticków
         // bez szukania drogi: krok na sąsiednie wolne pole najbliżej wroga (tanie nawet przy setkach walczących)
         if (!s.path.length) {
@@ -249,6 +356,7 @@ export function armySystem(g: GameState): void {
           const dx = (u.px - s.px) / FP, dy = (u.py - s.py) / FP, d = dx * dx + dy * dy;
           if (d < best) { best = d; prey = u; }
         }
+        if (prey && (stance === 2 || tooFar((prey.py >> 8) * W + (prey.px >> 8))) && (prey.px - s.px) ** 2 + (prey.py - s.py) ** 2 > ((range || 1.5) * FP) ** 2) prey = undefined;
         if (prey) {
           const reach = range ? range : 1.5;
           if (best <= reach * reach) {
@@ -266,14 +374,16 @@ export function armySystem(g: GameState): void {
         }
       }
       // brak wrogich żołnierzy w pobliżu: bierze się za najbliższy wrogi budynek
-      if (!s.up && !range && siege(g, s, def, taken)) continue; // łucznicy sami nie strzelają w budynki, tylko na rozkaz
+      if (!s.up && !range && !stance && siege(g, s, def, taken)) continue; // obrona i „stój” nie idą same na budynki; łucznicy sami nie strzelają w budynki, tylko na rozkaz
     }
     if (s.up) continue;
     if (s.wait > 0) { s.wait--; continue; }
     if (s.path.length) { step(g, s); continue; }
     if (s.goal < 0) {
-      // stoi na polu razem z kimś: odsuwa się na najbliższe wolne
       const here = tileOf(g, s);
+      // obrona: po walce wraca na swoje miejsce w szyku
+      if (stance && (s.hold ?? -1) >= 0 && here !== s.hold && !s.target && !s.post) { s.goal = s.hold!; continue; }
+      // stoi na polu razem z kimś: odsuwa się na najbliższe wolne
       if ((standing.get(here) ?? 0) > 1) {
         const free = formation(g, here, 9).find((t) => !taken.has(t) && t !== here);
         if (free !== undefined) { const n = greedy(g, here, free, taken, s.owner); if (n >= 0) { s.path = [n]; taken.add(n); standing.set(here, standing.get(here)! - 1); } }
