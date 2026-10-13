@@ -14,8 +14,8 @@ export interface GalleryEntry { id: string; name: string; group: string; text: s
 
 const PEOPLE: GalleryEntry[] = [
   { id: 'peasant', group: 'Ludzie', name: 'Chłopi', text: 'Mieszkańcy osady: noszą drewno, kamień i żywność, pracują w warsztatach, stawiają budynki. Każdy wygląda trochę inaczej — czapka, kaptur, broda, fartuch.' },
-  { id: 'spearman', group: 'Ludzie', name: 'Włócznik', text: 'Podstawowy żołnierz: kolczuga, kapalin, okrągła tarcza i długa włócznia. Trzyma szyk i dźga z bliska. Żołnierze noszą barwy swojego pana.' },
-  { id: 'archer', group: 'Ludzie', name: 'Łucznik', text: 'Strzela z daleka, najlepiej z wieży albo zza palisady. Słaby w zwarciu — trzymaj go za włócznikami.' },
+  { id: 'spearman', group: 'Ludzie', name: 'Włócznik', text: 'Podstawowy żołnierz: kolczuga z czepcem pod waffenrockiem z krzyżem, kapalin albo hełm z nosalem, wypukła tarcza z okuciem i włócznia z liściastym grotem. Trzyma szyk i dźga z bliska. Nosi barwy swojego pana.' },
+  { id: 'archer', group: 'Ludzie', name: 'Łucznik', text: 'Pikowana przeszywanica, kaptur z pelerynką, kołczan na plecach, kord u pasa i długi łuk. Strzela z daleka, najlepiej z wieży albo zza palisady. Słaby w zwarciu, więc trzymaj go za włócznikami.' },
   { id: 'wolf', group: 'Zwierzęta', name: 'Wilk', text: 'Wychodzi z lasu nocą. Poluje na samotnych chłopów, przegryza palisadę. W ciemności widać jego świecące oczy.' },
   { id: 'crow', group: 'Zwierzęta', name: 'Kruk', text: 'Zlatuje na ciała poległych po bitwie. Płoszy się, gdy ktoś podejdzie.' },
 ];

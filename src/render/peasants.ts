@@ -10,7 +10,49 @@ interface Part {
   color: ((look: Look) => number) | null;
   /** Czy ta osoba w ogóle ma tę część (np. kaptur zamiast kapelusza) */
   shown: (look: Look) => boolean;
+  /** Druga oś obrotu w dłoni (łuk zostaje pionowo, choć ręka się unosi) */
+  sub?: { at: THREE.Vector3; rot: (swing: number, armsUp: boolean) => number };
 }
+
+type Mat = 'cloth' | 'leather' | 'metal' | 'skin' | 'wood';
+const MATS: Record<Mat, { roughness: number; metalness: number; side?: THREE.Side }> = {
+  cloth: { roughness: 0.95, metalness: 0, side: THREE.DoubleSide },
+  leather: { roughness: 0.72, metalness: 0 },
+  metal: { roughness: 0.48, metalness: 0.3 },
+  skin: { roughness: 0.78, metalness: 0 },
+  wood: { roughness: 0.82, metalness: 0, side: THREE.DoubleSide },
+};
+
+/** Każda siatka dostaje kolory wierzchołków (cieniowanie fałd, pikowania, obrębków); bez nich byłaby czarna */
+function prep(geo: THREE.BufferGeometry, shade?: (x: number, y: number, z: number) => number): THREE.BufferGeometry {
+  const g = geo.index ? geo.toNonIndexed() : geo;
+  g.deleteAttribute('uv');
+  const pos = g.attributes.position!;
+  const c = new Float32Array(pos.count * 3);
+  for (let i = 0; i < pos.count; i++) {
+    const v = shade ? shade(pos.getX(i), pos.getY(i), pos.getZ(i)) : 1;
+    c[i * 3] = c[i * 3 + 1] = c[i * 3 + 2] = v;
+  }
+  g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+  return g;
+}
+
+/** Bryła toczona z profilu [promień, wysokość]; profil zagęszczony, żeby cieniowanie miało gdzie się rozłożyć */
+function lathe(pts: [number, number][], seg = 14, depth = 1, phiStart = 0, phiLength = Math.PI * 2, step = 0.008): THREE.BufferGeometry {
+  const out: THREE.Vector2[] = [];
+  for (let i = 0; i < pts.length - 1; i++) {
+    const [r0, y0] = pts[i]!, [r1, y1] = pts[i + 1]!;
+    const n = Math.max(1, Math.ceil(Math.hypot(r1 - r0, y1 - y0) / step));
+    for (let k = 0; k < n; k++) out.push(new THREE.Vector2(r0 + ((r1 - r0) * k) / n, y0 + ((y1 - y0) * k) / n));
+  }
+  const last = pts[pts.length - 1]!;
+  out.push(new THREE.Vector2(last[0], last[1]));
+  return new THREE.LatheGeometry(out, seg, phiStart, phiLength).scale(1, 1, depth);
+}
+
+/** Kończyna zwężająca się ku dołowi, obracana wokół górnego końca */
+const taper = (rTop: number, rBot: number, h: number, seg = 8): THREE.BufferGeometry => new THREE.CylinderGeometry(rTop, rBot, h, seg).translate(0, -h / 2, 0);
+const merge = (...g: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries(g.map((x) => (x.attributes.color ? x : prep(x))))!;
 
 /** Wygląd jednej osoby, wyliczony raz z jej numeru: każdy chłop wygląda trochę inaczej i zawsze tak samo. */
 interface Look {
@@ -65,6 +107,7 @@ export class Figures {
   private out = new THREE.Matrix4();
   private scaled = new THREE.Matrix4();
   private q = new THREE.Quaternion();
+  private subM = new THREE.Matrix4();
   private e = new THREE.Euler();
   private one = new THREE.Vector3(1, 1, 1);
   private none = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -72,77 +115,151 @@ export class Figures {
 
   constructor(max: number, scene: THREE.Scene, kind: 'peasant' | 'spearman' | 'archer' = 'peasant') {
     const always = (): boolean => true;
-    const add = (geo: THREE.BufferGeometry, color: number | Part['color'], x: number, y: number, z: number, rot: Part['rot'], shown: Part['shown'] = always): void => {
+    const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub']): void => {
       const fixed = typeof color === 'number';
-      const mesh = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ color: fixed ? color : 0xffffff, flatShading: true, roughness: 0.9 }), max);
+      const m = MATS[mat];
+      const mesh = new THREE.InstancedMesh(geo.attributes.color ? geo : prep(geo), new THREE.MeshStandardMaterial({ color: fixed ? color : 0xffffff, vertexColors: true, flatShading: kind === 'peasant', roughness: m.roughness, metalness: m.metalness, side: m.side ?? THREE.FrontSide }), max);
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.castShadow = true;
       scene.add(mesh);
-      this.parts.push({ mesh, pos: new THREE.Vector3(x, y, z), rot, color: fixed ? null : color, shown });
+      this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub });
     };
+    const add = (geo: THREE.BufferGeometry, color: number | Part['color'], x: number, y: number, z: number, rot: Part['rot'], shown: Part['shown'] = always, mat: Mat = 'cloth', sub?: Part['sub']): void =>
+      mk(geo, color, new THREE.Vector3(x, y, z), rot, shown, mat, sub);
+    // części nieruchome (tułów, głowa, hełm) o tym samym kolorze i materiale łączymy w jedną siatkę: mniej wywołań rysowania
+    const stills: { geo: THREE.BufferGeometry[]; color: number | Part['color']; mat: Mat; shown: Part['shown'] }[] = [];
+    const fix = (geo: THREE.BufferGeometry, color: number | Part['color'], mat: Mat = 'cloth', shown: Part['shown'] = always): void => {
+      const g = geo.attributes.color ? geo : prep(geo);
+      const grp = stills.find((x) => x.color === color && x.mat === mat && x.shown === shown);
+      if (grp) grp.geo.push(g); else stills.push({ geo: [g], color, mat, shown });
+    };
+    const flush = (): void => { for (const x of stills) mk(mergeGeometries(x.geo)!, x.color, new THREE.Vector3(), still, x.shown, x.mat); };
     const limb = (w: number, h: number, d: number): THREE.BufferGeometry => new THREE.BoxGeometry(w, h, d).translate(0, -h / 2, 0); // obrót wokół góry
     const still = (): number => 0;
     const legL = (s: number): number => s, legR = (s: number): number => -s;
     const armL = (s: number, up: boolean): number => (up ? -1.35 : -s * 0.8), armR = (s: number, up: boolean): number => (up ? -1.35 : s * 0.8);
-    if (kind === 'archer') {
-      // Łucznik: przeszywanica w barwach drużyny, kaptur, kołczan na plecach, łuk w lewej ręce.
-      // Strzał (armsUp): lewa ręka z łukiem wyciągnięta do przodu, prawa naciąga cięciwę
-      const LEATHER = 0x6a4a2e;
-      for (const [x, rot] of [[-0.055, legL], [0.055, legR]] as const) {
-        add(limb(0.075, 0.17, 0.085), 0x4a3a2a, x, 0.23, 0, rot);
-        add(new THREE.BoxGeometry(0.085, 0.07, 0.12).translate(0, -0.2, 0.015), 0x2a1e14, x, 0.23, 0, rot);
+    const tunic = (l: Look): number => l.tunic, skin = (l: Look): number => l.skin;
+    if (kind === 'spearman' || kind === 'archer') {
+      const archer = kind === 'archer';
+      // dłuższe nogi i mniejsza głowa niż u chłopa: sylwetka żołnierza, a nie figurki
+      const LIFT = 0.035;
+      const head = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.translate(0, -0.47, 0).scale(0.87, 0.87, 0.87).translate(0, 0.47, 0);
+      const legsEnd = this.parts.length + 4;
+      const BOOT = 0x2a1d13, LEATHER = 0x5a3b22, GLOVE = 0x3b2a1b, STEEL = 0xa6abb2, IRON = 0x767b83, WOOD = 0x6e5233;
+      // nogi: nogawice zwężone ku kostce, wysokie buty z cholewą (archer: wywinięty mankiet)
+      for (const [x, rot] of [[-0.052, legL], [0.052, legR]] as const) {
+        add(taper(0.046, 0.033, 0.17 + LIFT), archer ? 0x4a3f2c : 0x3b3226, x, 0.235 + LIFT, 0, rot);
+        add(merge(
+          new THREE.CylinderGeometry(0.037, 0.04, 0.085, 8).translate(0, -0.19, 0),
+          new THREE.BoxGeometry(0.068, 0.04, 0.11).translate(0, -0.215, 0.026),
+          new THREE.SphereGeometry(0.035, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.6, 1).translate(0, -0.235 + 0.02, 0.078),
+          ...(archer ? [new THREE.CylinderGeometry(0.046, 0.042, 0.025, 8).translate(0, -0.145, 0)] : []),
+        ).translate(0, -LIFT, 0), BOOT, x, 0.235 + LIFT, 0, rot, always, 'leather');
       }
-      add(new THREE.BoxGeometry(0.2, 0.27, 0.13).translate(0, 0.125, 0), (l) => l.tunic, 0, 0.22, 0, still);
-      add(new THREE.BoxGeometry(0.21, 0.035, 0.14), LEATHER, 0, 0.3, 0, still);
-      // kołczan ze strzałami na plecach
-      add(new THREE.CylinderGeometry(0.035, 0.03, 0.24, 7).rotateZ(0.35).translate(0.05, 0.14, -0.09), LEATHER, 0, 0.22, 0, still);
-      for (const dx of [-0.015, 0.01, 0.03]) add(new THREE.BoxGeometry(0.012, 0.06, 0.012).translate(0.09 + dx, 0.29, -0.09), 0xe8e0c8, 0, 0.22, 0, still);
+      // twarz: głowa, nos, cień oczodołów
+      fix(head(new THREE.IcosahedronGeometry(0.072, 1).scale(0.95, 1.08, 1).translate(0, 0.555, 0)), skin, 'skin');
+      fix(head(new THREE.BoxGeometry(0.014, 0.026, 0.016).translate(0, 0.548, 0.069)), skin, 'skin');
+      for (const ex of [-0.022, 0.022]) fix(head(new THREE.BoxGeometry(0.013, 0.009, 0.006).translate(ex, 0.564, 0.065)), 0x3a281c, 'skin');
+      // dłonie w skórzanych rękawicach
+      const hand = (): THREE.BufferGeometry => new THREE.IcosahedronGeometry(0.03, 0).scale(1, 1.2, 1.05).translate(0, -0.195, 0.004);
+      if (!archer) {
+        // Włócznik: kolczuga z czepcem pod waffenrockiem w barwach pana, kapalin albo hełm z nosalem, wypukła tarcza i włócznia z liściastym grotem
+        fix(prep(lathe([[0.112, 0.15], [0.108, 0.2], [0.098, 0.28], [0.104, 0.34], [0.118, 0.4], [0.113, 0.445], [0.078, 0.474], [0.046, 0.49]], 14, 0.75, 0, Math.PI * 2, 0.005), (_x, y) => 0.86 + 0.14 * Math.cos((y * Math.PI * 2) / 0.02)), STEEL, 'metal');
+        fix(prep(lathe([[0.123, 0.128], [0.119, 0.2], [0.104, 0.29], [0.11, 0.34], [0.123, 0.4], [0.116, 0.44], [0.086, 0.462]], 16, 0.76), (x, y, z) => {
+          if (y < 0.152) return 0.5; // ciemny obrębek dołu
+          const fold = y < 0.29 ? 0.9 + 0.1 * Math.cos(Math.atan2(x, z) * 7) : 1; // fałdy spódnicy pod pasem
+          return fold * (0.86 + (y - 0.13) * 0.45);
+        }), tunic);
+        // krzyż na piersi i plecach
+        for (const z of [0.093, -0.093]) {
+          fix(new THREE.BoxGeometry(0.024, 0.1, 0.006).translate(0, 0.385, z), 0xd8cca8);
+          fix(new THREE.BoxGeometry(0.072, 0.022, 0.006).translate(0, 0.402, z), 0xd8cca8);
+        }
+        fix(lathe([[0.107, 0.285], [0.111, 0.296], [0.111, 0.31], [0.106, 0.322]], 16, 0.78), LEATHER, 'leather');
+        fix(new THREE.BoxGeometry(0.03, 0.026, 0.012).translate(0, 0.303, 0.087), 0xb38a3a, 'metal');
+        // czepiec kolczy: szyja dookoła, wyżej otwarty na twarz
+        fix(head(lathe([[0.05, 0.468], [0.074, 0.486], [0.079, 0.505]], 12)), STEEL, 'metal');
+        fix(head(lathe([[0.079, 0.505], [0.081, 0.53], [0.079, 0.555], [0.068, 0.575]], 12, 1, 0.95, Math.PI * 2 - 1.9)), STEEL, 'metal');
+        const kettle = (l: Look): boolean => l.headwear % 3 !== 1, nasal = (l: Look): boolean => l.headwear % 3 === 1;
+        // kapalin: kopuła z szerokim, opadającym rondem
+        fix(head(merge(
+          lathe([[0.09, 0.585], [0.089, 0.596], [0.085, 0.617], [0.07, 0.64], [0.04, 0.657], [0, 0.662]], 14),
+          lathe([[0.09, 0.583], [0.151, 0.551], [0.148, 0.558], [0.124, 0.576], [0.09, 0.585]], 18),
+        )), IRON, 'metal', kettle);
+        fix(head(lathe([[0.0905, 0.588], [0.092, 0.598], [0.0905, 0.607]], 14)), 0x4a4d52, 'metal', kettle);
+        // hełm stożkowy z nosalem
+        fix(head(merge(
+          lathe([[0.085, 0.582], [0.082, 0.598], [0.064, 0.627], [0.03, 0.66], [0, 0.684]], 14),
+          lathe([[0.086, 0.576], [0.089, 0.583], [0.089, 0.596], [0.086, 0.6]], 14),
+          new THREE.BoxGeometry(0.017, 0.065, 0.012).translate(0, 0.553, 0.08),
+        )), IRON, 'metal', nasal);
+        // lewa ręka z tarczą
+        add(merge(new THREE.SphereGeometry(0.035, 10, 6).scale(1, 0.85, 1).translate(0, -0.004, 0), taper(0.036, 0.029, 0.175)), STEEL, -0.128, 0.45, 0, armL, always, 'metal');
+        add(hand(), GLOVE, -0.128, 0.45, 0, armL, always, 'leather');
+        const shield = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.rotateY(0.6).translate(-0.02, -0.11, 0.035);
+        add(shield(prep(new THREE.SphereGeometry(0.33, 18, 5, 0, Math.PI * 2, 0, 0.38).rotateZ(Math.PI / 2).translate(0.28, 0, 0), (_x, y, z) => 0.8 + 0.25 * (1 - Math.hypot(y, z) / 0.122))), tunic, -0.128, 0.45, 0, armL, always, 'wood');
+        add(shield(merge(
+          new THREE.TorusGeometry(0.122, 0.008, 4, 22).rotateY(Math.PI / 2).translate(-0.027, 0, 0),
+          new THREE.SphereGeometry(0.03, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2).rotateZ(Math.PI / 2).translate(-0.047, 0, 0),
+        )), IRON, -0.128, 0.45, 0, armL, always, 'metal');
+        // prawa ręka trzyma włócznię pionowo przy boku; pchnięcie: ręka do przodu, włócznia grotem we wroga
+        const thrustArm = (_s: number, up: boolean): number => (up ? -1.25 : -0.25);
+        const thrustSpear = (_s: number, up: boolean): number => (up ? 1.45 : 0);
+        add(merge(new THREE.SphereGeometry(0.035, 10, 6).scale(1, 0.85, 1).translate(0, -0.004, 0), taper(0.036, 0.029, 0.175)), STEEL, 0.128, 0.45, 0, thrustArm, always, 'metal');
+        add(hand(), GLOVE, 0.128, 0.45, 0, thrustArm, always, 'leather');
+        add(merge(
+          new THREE.CylinderGeometry(0.0105, 0.012, 1.2, 6).translate(0, 0.24, 0),
+          new THREE.CylinderGeometry(0.013, 0.011, 0.03, 6).translate(0, -0.37, 0),
+        ), WOOD, 0.15, 0.36, 0.075, thrustSpear, always, 'wood');
+        add(merge(
+          new THREE.OctahedronGeometry(1, 0).scale(0.027, 0.09, 0.008).translate(0, 0.93, 0),
+          new THREE.CylinderGeometry(0.0125, 0.014, 0.05, 6).translate(0, 0.855, 0),
+        ), STEEL, 0.15, 0.36, 0.075, thrustSpear, always, 'metal');
+        flush();
+        for (let i = legsEnd; i < this.parts.length; i++) this.parts[i]!.pos.y += LIFT;
+        return;
+      }
+      // Łucznik: pikowana przeszywanica w barwach pana, kaptur z pelerynką i ogonem, kołczan, kord u pasa i długi łuk
+      fix(prep(lathe([[0.121, 0.138], [0.118, 0.2], [0.1, 0.29], [0.106, 0.34], [0.114, 0.41], [0.104, 0.448], [0.072, 0.474], [0.05, 0.486]], 16, 0.76), (_x, y) => {
+        if (y < 0.158) return 0.55;
+        return (0.86 + 0.14 * Math.cos((y * Math.PI * 2) / 0.034)) * (0.88 + (y - 0.14) * 0.35); // poziome pikowanie
+      }), tunic);
+      fix(lathe([[0.103, 0.284], [0.106, 0.295], [0.106, 0.308], [0.101, 0.32]], 16, 0.78), LEATHER, 'leather');
+      fix(new THREE.BoxGeometry(0.045, 0.05, 0.03).translate(-0.06, 0.262, 0.072), LEATHER, 'leather');
+      // kord w pochwie na prawym biodrze
+      fix(new THREE.BoxGeometry(0.02, 0.13, 0.012).rotateZ(0.35).translate(0.112, 0.235, 0.02), 0x2a1d13, 'leather');
+      fix(merge(new THREE.BoxGeometry(0.05, 0.008, 0.01).rotateZ(0.35).translate(0.087, 0.3, 0.02), new THREE.CylinderGeometry(0.007, 0.007, 0.04, 5).rotateZ(0.35).translate(0.08, 0.322, 0.02)), IRON, 'metal');
+      // pelerynka kaptura na ramionach, kaptur otwarty na twarz, ogon kaptura opada na plecy
+      fix(prep(lathe([[0.138, 0.398], [0.134, 0.428], [0.113, 0.458], [0.079, 0.486], [0.06, 0.5]], 16, 0.86), (_x, y) => (y < 0.405 ? 0.5 : 0.72)), tunic);
+      fix(prep(head(new THREE.SphereGeometry(0.087, 16, 10, Math.PI / 2 + 0.8, Math.PI * 2 - 1.6, 0, Math.PI * 0.66).translate(0, 0.558, -0.004)), () => 0.72), tunic);
+      fix(prep(head(new THREE.ConeGeometry(0.03, 0.13, 7).rotateX(-2.1).translate(0, 0.565, -0.115)), () => 0.66), tunic);
+      // kołczan na plecach, wylotem nad prawym ramieniem, z lotkami strzał
+      fix(new THREE.CylinderGeometry(0.034, 0.029, 0.25, 9).rotateX(-0.15).rotateZ(-0.35).translate(0.06, 0.36, -0.105), LEATHER, 'leather');
+      fix(lathe([[0.036, 0.0], [0.037, 0.02]], 9).rotateX(-0.15).rotateZ(-0.35).translate(0.103, 0.462, -0.124), 0x3a2616, 'leather');
+      const tips: [number, number][] = [[0, 0], [0.016, 0.008], [-0.012, 0.012], [0.006, -0.016], [-0.016, -0.008]];
+      const fletch = (white: boolean): THREE.BufferGeometry => merge(...tips.filter((_, i) => (i % 2 === 0) === white).map(([dx, dz]) => merge(
+        new THREE.BoxGeometry(0.004, 0.05, 0.022).rotateZ(-0.35).translate(0.118 + dx, 0.51, -0.126 + dz),
+        new THREE.BoxGeometry(0.022, 0.05, 0.004).rotateZ(-0.35).translate(0.118 + dx, 0.51, -0.126 + dz),
+      )));
+      fix(fletch(true), 0xe6dfcc);
+      fix(fletch(false), 0x8a2a20);
+      // ręce: rękawy przeszywanicy, na lewym przedramieniu karwasz
       const bowArm = (s: number, up: boolean): number => (up ? -1.5 : -s * 0.6);
       const drawArm = (s: number, up: boolean): number => (up ? -1.35 : s * 0.6);
-      add(limb(0.06, 0.16, 0.065), (l) => l.tunic, -0.135, 0.45, 0, bowArm);
-      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, -0.135, 0.45, 0, bowArm);
-      add(new THREE.TorusGeometry(0.2, 0.012, 4, 14, Math.PI * 0.9).rotateY(Math.PI / 2).rotateX(Math.PI / 2 + Math.PI * 0.05).translate(0, -0.19, 0.03), 0x6b4626, -0.135, 0.45, 0, bowArm);
-      add(limb(0.06, 0.16, 0.065), (l) => l.tunic, 0.135, 0.45, 0, drawArm);
-      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, 0.135, 0.45, 0, drawArm);
-      add(new THREE.IcosahedronGeometry(0.085, 1), (l) => l.skin, 0, 0.555, 0, still);
-      // kaptur z pelerynką
-      add(new THREE.SphereGeometry(0.1, 10, 7, 0, Math.PI * 2, 0, Math.PI * 0.62).translate(0, 0.005, -0.008), (l) => l.tunic, 0, 0.56, 0, still);
-      add(new THREE.CylinderGeometry(0.11, 0.15, 0.06, 10).translate(0, -0.09, 0), (l) => l.tunic, 0, 0.56, 0, still);
-      return;
-    }
-    if (kind === 'spearman') {
-      // Włócznik: kolczuga pod tuniką w barwach drużyny, hełm z rondem (kapalin), okrągła tarcza i długa włócznia
-      const MAIL = 0x7c8088, IRON = 0x5a5e66;
-      for (const [x, rot] of [[-0.055, legL], [0.055, legR]] as const) {
-        add(limb(0.078, 0.17, 0.088), 0x4a3a2a, x, 0.23, 0, rot);
-        add(new THREE.BoxGeometry(0.088, 0.075, 0.125).translate(0, -0.2, 0.015), 0x2a1e14, x, 0.23, 0, rot);
-      }
-      add(new THREE.BoxGeometry(0.21, 0.26, 0.14).translate(0, 0.125, 0), MAIL, 0, 0.22, 0, still);
-      add(new THREE.BoxGeometry(0.18, 0.3, 0.02).translate(0, 0.09, 0.075), (l) => l.tunic, 0, 0.22, 0, still);
-      add(new THREE.BoxGeometry(0.18, 0.3, 0.02).translate(0, 0.09, -0.075), (l) => l.tunic, 0, 0.22, 0, still);
-      add(new THREE.BoxGeometry(0.22, 0.035, 0.15), 0x3a2a1c, 0, 0.3, 0, still);
-      add(limb(0.065, 0.16, 0.07), MAIL, -0.14, 0.45, 0, armL);
-      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, -0.14, 0.45, 0, armL);
-      // prawa ręka trzyma włócznię pionowo przy boku
-      // pchnięcie: ręka wychodzi do przodu, a włócznia kładzie się poziomo grotem we wroga
-      const thrustArm = (_s: number, up: boolean): number => (up ? -1.25 : -0.25);
-      const thrustSpear = (_s: number, up: boolean): number => (up ? 1.45 : 0);
-      add(limb(0.065, 0.16, 0.07), MAIL, 0.14, 0.45, 0, thrustArm);
-      add(new THREE.BoxGeometry(0.05, 0.05, 0.055).translate(0, -0.185, 0), (l) => l.skin, 0.14, 0.45, 0, thrustArm);
-      add(mergeGeometries([
-        new THREE.CylinderGeometry(0.012, 0.014, 1.15, 5).translate(0, 0.32, 0),
-        new THREE.ConeGeometry(0.026, 0.12, 4).translate(0, 0.95, 0),
-      ].map((g) => g.toNonIndexed()).map((g) => g.translate(0, -0.1, 0))), 0x8a6a42, 0.165, 0.36, 0.08, thrustSpear);
-      add(new THREE.ConeGeometry(0.027, 0.12, 4).translate(0, 0.85, 0), 0xb9bec6, 0.165, 0.36, 0.08, thrustSpear);
-      // tarcza na lewym przedramieniu
-      add(new THREE.CylinderGeometry(0.11, 0.11, 0.02, 12).rotateZ(Math.PI / 2).translate(-0.03, -0.1, 0.02), (l) => l.tunic, -0.16, 0.45, 0, armL);
-      add(new THREE.CylinderGeometry(0.03, 0.03, 0.03, 8).rotateZ(Math.PI / 2).translate(-0.045, -0.1, 0.02), IRON, -0.16, 0.45, 0, armL);
-      add(new THREE.IcosahedronGeometry(0.085, 1), (l) => l.skin, 0, 0.555, 0, still);
-      add(mergeGeometries([
-        new THREE.SphereGeometry(0.095, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.01, 0).toNonIndexed(),
-        new THREE.CylinderGeometry(0.15, 0.15, 0.016, 12).translate(0, 0.0, 0).toNonIndexed(),
-      ]), IRON, 0, 0.575, 0, still);
+      const sleeve = (): THREE.BufferGeometry => prep(merge(new THREE.SphereGeometry(0.034, 10, 6).scale(1, 0.85, 1).translate(0, -0.004, 0), taper(0.035, 0.029, 0.17)), (_x, y) => 0.8 + 0.12 * Math.cos((y * Math.PI * 2) / 0.034));
+      add(sleeve(), tunic, -0.126, 0.45, 0, bowArm);
+      add(new THREE.CylinderGeometry(0.035, 0.034, 0.055, 9).translate(0, -0.15, 0), LEATHER, -0.126, 0.45, 0, bowArm, always, 'leather');
+      add(hand(), GLOVE, -0.126, 0.45, 0, bowArm, always, 'leather');
+      add(sleeve(), tunic, 0.126, 0.45, 0, drawArm);
+      add(hand(), GLOVE, 0.126, 0.45, 0, drawArm, always, 'leather');
+      // długi łuk: w dłoni, ale zawsze pionowo (druga oś obrotu znosi uniesienie ręki); cięciwa po stronie łucznika
+      const chord = 0.58, sag = 0.07, R = (chord * chord / 4 + sag * sag) / (2 * sag), arc = 2 * Math.asin(chord / 2 / R);
+      const bowSub = { at: new THREE.Vector3(0, -0.19, 0.005), rot: (s: number, up: boolean): number => -bowArm(s, up) + (up ? 0 : 0.28) };
+      add(new THREE.TorusGeometry(R, 0.0095, 5, 22, arc).rotateZ(-arc / 2).translate(-R, 0, 0).rotateY(-Math.PI / 2), 0x5a3a20, -0.126, 0.45, 0, bowArm, always, 'wood', bowSub);
+      add(new THREE.CylinderGeometry(0.0025, 0.0025, chord, 3).translate(-sag, 0, 0).rotateY(-Math.PI / 2), 0xe6dfcc, -0.126, 0.45, 0, bowArm, always, 'cloth', bowSub);
+      flush();
+      for (let i = legsEnd; i < this.parts.length; i++) this.parts[i]!.pos.y += LIFT;
       return;
     }
     // nogi z butami (but jest częścią nogi, więc macha razem z nią)
@@ -185,6 +302,7 @@ export class Figures {
       if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
       this.q.setFromEuler(this.e.set(p.rot(swing, armsUp), 0, 0));
       this.local.compose(p.pos, this.q, this.one);
+      if (p.sub) { this.q.setFromEuler(this.e.set(p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);
       p.mesh.setMatrixAt(i, this.out);
       if (p.color) p.mesh.setColorAt(i, this.color.setHex(p.color(look)));

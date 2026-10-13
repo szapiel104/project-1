@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.13.1 — nowy wygląd żołnierzy (2026-10-13)
+
+- Włócznik: kolczuga z czepcem, waffenrock w barwach pana z krzyżem, kapalin albo hełm z nosalem, wypukła tarcza z okuciem i guzem, włócznia z liściastym grotem
+- Łucznik: pikowana przeszywanica, kaptur z pelerynką i ogonem, kołczan z lotkami, karwasz, kord u pasa, długi łuk trzymany zawsze pionowo
+- Sylwetki toczone zamiast pudełek, dłuższe nogi i mniejsza głowa; cieniowanie fałd, obrębków i pikowania; metal lekko połyskuje
+- Podgląd samego wojska: podglad-wojsko.html (serwer deweloperski)
+
 ## 0.13.0 — sterowanie wojskiem (2026-10-13)
 
 - Prawy klik nie gubi już rozkazów (wcześniej najmniejszy ruch myszy liczył się jako obrót kamery)

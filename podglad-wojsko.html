@@ -1,0 +1,26 @@
+<!doctype html><meta charset="utf-8"><title>podgląd wojska</title>
+<body style="margin:0;background:#3b4428"><canvas id="c" width="1200" height="700"></canvas>
+<script type="module">
+// Podgląd postaci żołnierzy z bliska: ?d=odległość&pitch=kąt (do porównań wyglądu, bez całej mapy)
+import * as THREE from 'three';
+import { Figures } from './src/render/peasants.ts';
+const q = new URLSearchParams(location.search);
+const dist = Number(q.get('d') ?? 2.6), pitch = Number(q.get('pitch') ?? 0.32), look = Number(q.get('y') ?? 0.32);
+const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+r.shadowMap.enabled = true; r.toneMapping = THREE.ACESFilmicToneMapping; r.outputColorSpace = THREE.SRGBColorSpace;
+const s = new THREE.Scene(); s.background = new THREE.Color(0x56603a);
+s.add(new THREE.HemisphereLight(0xcfd8e8, 0x4a4a30, 1.1));
+const sun = new THREE.DirectionalLight(0xffe6c0, 2.6); sun.position.set(3, 5, 4); sun.castShadow = true; sun.shadow.mapSize.setScalar(2048);
+Object.assign(sun.shadow.camera, { left: -2, right: 2, top: 2, bottom: -2 }); s.add(sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), new THREE.MeshStandardMaterial({ color: 0x5d6a3a, roughness: 1 })); ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; s.add(ground);
+const red = 0xa32a22, blue = 0x2f5aa8;
+const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), Y = new THREE.Vector3(0, 1, 0);
+const at = (x, z, yaw) => M.compose(new THREE.Vector3(x, 0, z), Q.setFromAxisAngle(Y, yaw), new THREE.Vector3(1.08, 1.08, 1.08)).clone();
+const sp = new Figures(4, s, 'spearman'), ar = new Figures(4, s, 'archer'), pe = new Figures(1, s);
+sp.set(0, at(-1.0, 0, 0.35), 0, false, red, 3); sp.set(1, at(-0.62, 0, Math.PI - 0.3), 0, false, red, 8); sp.set(2, at(-0.22, 0, 1.2), 0, true, blue, 4); sp.set(3, at(-0.8, -0.5, 0.2), 0.45, false, red, 15); sp.finish(4);
+ar.set(0, at(0.25, 0, 0.35), 0, false, red, 5); ar.set(1, at(0.62, 0, Math.PI - 0.3), 0, false, red, 9); ar.set(2, at(1.0, 0, -1.1), 0, true, blue, 6); ar.set(3, at(0.5, -0.5, 0.2), 0.45, false, red, 12); ar.finish(4);
+pe.set(0, at(1.35, -0.3, 0.4), 0, false, 0x7a6a4a, 2); pe.finish(1);
+const cam = new THREE.PerspectiveCamera(30, 1200 / 700, 0.05, 50);
+cam.position.set(0, look + Math.sin(pitch) * dist, Math.cos(pitch) * dist); cam.lookAt(0, look, 0);
+r.render(s, cam); document.title = 'gotowe';
+</script>
