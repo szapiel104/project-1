@@ -1386,6 +1386,12 @@ const BUILDERS: Record<string, Builder> = {
     fork.rotation.z = 0.35;
     // wnętrze zawsze widoczne przez otwarte wrota: klepisko ze słomą i zapasy składu (stodoła trzyma tylko surowce)
     box(g, M.plank, 2.5, 0.05, 1.5, 0, 0.2, 0);
+    // po kliknięciu (albo gdy ktoś pracuje) zdejmujemy dach i ściany: zostają niskie ścianki jak w innych budynkach
+    const inside = new THREE.Group();
+    inside.name = 'interior';
+    inside.visible = false;
+    for (const [x, z, w, d] of [[0, -0.77, 2.6, 0.06], [-1.27, 0, 0.06, 1.6], [1.27, 0, 0.06, 1.6]] as const) box(inside, M.wood, w, 0.45, d, x, 0.2, z);
+    g.add(inside);
     const goods = fillSlots('fill', 0, -0.05, 0.42);
     goods.position.y = 0.2;
     g.add(goods);
