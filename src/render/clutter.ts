@@ -53,12 +53,22 @@ function geometry(kind: Kind): THREE.BufferGeometry {
       tint(new THREE.CylinderGeometry(0.045, 0.035, 0.07, 8).translate(0, 0.035, 0), wood),
       tint(new THREE.TorusGeometry(0.04, 0.004, 4, 10, Math.PI).translate(0, 0.07, 0), iron),
     ]);
-    case 'barrow': return merge([
-      tint(new THREE.BoxGeometry(0.16, 0.06, 0.12).translate(0, 0.08, 0), wood),
-      tint(new THREE.CylinderGeometry(0.045, 0.045, 0.02, 10).rotateZ(Math.PI / 2).translate(0.11, 0.045, 0), dark),
-      tint(new THREE.BoxGeometry(0.16, 0.012, 0.012).translate(-0.12, 0.07, 0.045), dark),
-      tint(new THREE.BoxGeometry(0.16, 0.012, 0.012).translate(-0.12, 0.07, -0.045), dark),
-    ]);
+    case 'barrow': {
+      // taczka: skrzynia zwężająca się ku przodowi, koło ze szprychami na osi z przodu, dwa długie uchwyty i nóżki z tyłu
+      const tub = new THREE.CylinderGeometry(0.095, 0.07, 0.07, 4, 1).rotateY(Math.PI / 4).scale(1.25, 1, 0.9);
+      const parts = [
+        tint(tub.translate(0.0, 0.11, 0), wood),
+        tint(new THREE.BoxGeometry(0.17, 0.012, 0.13).translate(0, 0.077, 0), dark), // dno
+        tint(new THREE.TorusGeometry(0.045, 0.01, 5, 14).translate(0.15, 0.047, 0), dark), // obręcz koła
+        tint(new THREE.CylinderGeometry(0.01, 0.01, 0.07, 6).rotateX(Math.PI / 2).translate(0.15, 0.047, 0), iron), // oś
+        ...[0, 1, 2].map((k) => tint(new THREE.BoxGeometry(0.008, 0.088, 0.008).rotateZ((k / 3) * Math.PI).translate(0.15, 0.047, 0), wood)),
+      ];
+      for (const sz of [-0.05, 0.05]) {
+        parts.push(tint(new THREE.BoxGeometry(0.34, 0.016, 0.016).rotateZ(0.12).translate(-0.02, 0.085, sz), dark)); // uchwyt biegnie pod skrzynią do koła
+        parts.push(tint(new THREE.BoxGeometry(0.014, 0.07, 0.014).translate(-0.09, 0.035, sz), dark)); // nóżka
+      }
+      return merge(parts);
+    }
     case 'logs': return merge([0, 1, 2].map((i) => tint(new THREE.CylinderGeometry(0.035, 0.035, 0.26, 7).rotateZ(Math.PI / 2).translate(0, 0.035 + (i === 2 ? 0.06 : 0), (i === 2 ? 0 : i - 0.5) * 0.075), i === 1 ? 0x6b4a2b : 0x7a5535)));
   }
 }

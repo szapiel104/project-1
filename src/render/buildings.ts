@@ -599,8 +599,9 @@ function cottage(g: THREE.Group, seed: number): THREE.Group {
   const wx = (left ? 1 : -1) * (W / 2 + 0.16);
   for (let row = 0; row < 3; row++)
     for (let k = 0; k < 5 - row; k++) {
-      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.32, 7).rotateZ(Math.PI / 2).rotateY(Math.PI / 2), r() < 0.3 ? M.bark : M.plank);
-      log.position.set(wx, 0.05 + row * 0.085, -0.35 + k * 0.095 + row * 0.047);
+      // polano leży w poprzek ściany (czołem do nas), polana obok siebie z odstępem — nie przenikają się
+      const log = new THREE.Mesh(new THREE.CylinderGeometry(0.042, 0.042, 0.3, 7).rotateZ(Math.PI / 2), r() < 0.3 ? M.bark : M.plank);
+      log.position.set(wx, 0.046 + row * 0.08, -0.36 + k * 0.105 + row * 0.0525);
       g.add(log);
     }
   const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.08, 0.22, 10), M.wood);
@@ -1656,7 +1657,7 @@ const BUILDERS: Record<string, Builder> = {
   },
   mill(g, _team, flag) {
     // Wiatrak wieżowy: kamienna podmurówka, zbieżna wieża z tynku przepasana belkami, małe okna, drzwi ze schodkiem,
-    // obiegowa galeria z balustradą (z niej młynarz ustawia płótna), kopulasta czapa ze strzechy z dyszlem i kołem,
+    // obiegowa galeria z balustradą (z niej młynarz ustawia płótna), kopulasta czapa ze strzechy,
     // cztery kratowe skrzydła z płótnem (dwa rozwinięte, dwa zrefowane). Przy drzwiach worki i zapasowy kamień młyński.
     const millWall = M.plaster.clone();
     millWall.side = THREE.DoubleSide;
@@ -1738,15 +1739,6 @@ const BUILDERS: Record<string, Builder> = {
     shaft.rotation.x = Math.PI / 2 - 0.12;
     shaft.position.set(0, top + 0.24, 0.62);
     cap.add(shaft);
-    // dyszel z tyłu: młynarz obraca nim czapę pod wiatr; na końcu koło
-    cap.add(new THREE.Mesh(beam(new THREE.Vector3(0, top + 0.12, -0.5), new THREE.Vector3(0, 0.2, -0.98), 0.055, r), M.woodDark));
-    cap.add(new THREE.Mesh(beam(new THREE.Vector3(-0.18, top + 0.05, -0.42), new THREE.Vector3(0, 0.55, -0.86), 0.03, r), M.woodDark));
-    cap.add(new THREE.Mesh(beam(new THREE.Vector3(0.18, top + 0.05, -0.42), new THREE.Vector3(0, 0.55, -0.86), 0.03, r), M.woodDark));
-    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.022, 5, 14), M.woodDark);
-    wheel.rotation.y = Math.PI / 2;
-    wheel.position.set(0, 0.15, -0.98);
-    cap.add(wheel);
-    for (let k = 0; k < 3; k++) { const sp = box(cap, M.wood, 0.02, 0.24, 0.02, 0, 0, -0.98); sp.rotation.x = (k / 3) * Math.PI; sp.position.y = 0.15; }
     pennant(cap, flag, 0, top + 0.55, 0);
     g.add(cap);
     // wnętrze: ta sama wieża ucięta nisko, w środku żarna z lejem, wał, worki i skrzynia na ziarno
@@ -1818,7 +1810,7 @@ const BUILDERS: Record<string, Builder> = {
     }
     const stoneWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.07, 16), M.stone);
     stoneWheel.rotation.set(Math.PI / 2 - 0.25, 0, 0.2);
-    stoneWheel.position.set(-0.55, 0.2, 0.52);
+    stoneWheel.position.set(-0.7, 0.2, 0.66);
     g.add(stoneWheel);
     const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.075, 8), M.dark);
     eye.rotation.copy(stoneWheel.rotation); eye.position.copy(stoneWheel.position);
