@@ -812,8 +812,8 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 /* jak grać: zakładki w równych kolumnach, galeria wypełnia wysokość panelu, przewijanie w kolorze pergaminu */
 .menu-tabs.top .menu-nav { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
 .menu-tabs.top .menu-tab { white-space: normal; line-height: 1.15; }
-.menu-tabs.top .gallery-list { max-height: calc(100vh / var(--ui, 1) - 400px); min-height: 260px; scrollbar-width: thin; scrollbar-color: var(--wood) transparent; }
-.menu-tabs.top .gallery-canvas { height: min(380px, calc(100vh / var(--ui, 1) - 520px)); min-height: 220px; }
+.menu-tabs.top .gallery-list { max-height: calc(100vh / var(--ui, 1) - 540px); min-height: 200px; scrollbar-width: thin; scrollbar-color: var(--wood) transparent; }
+.menu-tabs.top .gallery-canvas { height: min(360px, calc(100vh / var(--ui, 1) - 640px)); min-height: 200px; }
 .gallery-list::-webkit-scrollbar { width: 8px; }
 .gallery-list::-webkit-scrollbar-thumb { background: var(--wood); }
 .gallery-list::-webkit-scrollbar-track { background: transparent; }
