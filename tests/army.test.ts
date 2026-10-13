@@ -6,6 +6,7 @@ import { deserialize, serialize } from '../src/sim/save';
 import { FP, Phase, createGame as realGame, playerKeep, population, stateHash, type GameState, type Soldier } from '../src/sim/state';
 import { arrowHits, hitDamage, planFormation } from '../src/sim/systems/army';
 import { walkable } from '../src/sim/path';
+import { hash2 } from '../src/sim/rng';
 import { unitIndex } from '../src/data/units';
 import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
@@ -291,5 +292,23 @@ describe('wrodzy chłopi', () => {
     expect(hurt || !g.units.some((x) => x.id === u.id)).toBe(true);
     // żołnierz przeżył: chłop bije słabo
     expect(s.hp).toBeGreaterThan(40);
+  });
+
+  it('uciekający chłop biegnie w przeciwną stronę niż napastnik, szybciej niż zwykle', () => {
+    const g = createGame(7);
+    for (const p of g.players) p.bot = false;
+    // chłop, który nie jest odważny (ucieka)
+    const u = g.units.find((x) => x.owner === 1 && hash2(x.id, 7, 0xbad) % 100 >= 33)!;
+    const tx = u.px >> 8, ty = u.py >> 8;
+    const s: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('spearman'), px: (tx - 1) * FP + 128, py: ty * FP + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 };
+    g.soldiers.push(s);
+    step(g, [{ type: 'attack', player: 0, ids: [s.id], target: u.id }]);
+    let fled = false;
+    for (let i = 0; i < 40 && !fled; i++) { step(g, []); fled = (g.units.find((x) => x.id === u.id)?.fled ?? 0) > g.tick; }
+    expect(fled).toBe(true);
+    const start = u.px;
+    for (let i = 0; i < 12; i++) step(g, []);
+    // napastnik stoi na zachód (mniejsze x), więc chłop biegnie na wschód
+    expect(g.units.find((x) => x.id === u.id)!.px).toBeGreaterThan(start);
   });
 });

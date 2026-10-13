@@ -339,6 +339,7 @@ export function armySystem(g: GameState): void {
   for (const s of g.soldiers) {
     if (s.hp <= 0) continue;
     if (s.cd > 0) s.cd--;
+    s.hitting = 0;
     if (!s.path.length && s.run) s.run = Math.max(0, s.run - 3); // stoi: rozbieg gaśnie
     const def = UNITS[s.kind]!;
     // wieża: łucznik przy niej wchodzi na górę; gdy wieżę zniszczą, spada na ziemię
@@ -432,6 +433,7 @@ export function armySystem(g: GameState): void {
           const reach = range ? range : 1.5;
           if (best <= reach * reach) {
             s.path = [];
+            s.hitting = prey.id;
             if (s.cd === 0) {
               s.cd = def.cooldown;
               prey.hp = (prey.hp ?? 30) - def.attack;
@@ -701,18 +703,29 @@ function peasantReacts(g: GameState, u: Unit, attacker: Soldier, ranged: boolean
     return;
   }
   if ((u.fled ?? 0) > g.tick) return; // już ucieka, nie szuka nowej drogi
+  // najpierw biegiem w przeciwną stronę niż napastnik (kilka pól), potem pod swój dach
+  const w = g.map.width, ux = u.px >> 8, uy = u.py >> 8;
+  const ax = (u.px - attacker.px) / FP, ay = (u.py - attacker.py) / FP, len = Math.hypot(ax, ay) || 1;
+  let away = -1;
+  for (let k = 9; k >= 4 && away < 0; k--)
+    for (const turn of [0, 0.5, -0.5, 1, -1]) {
+      const c = Math.cos(turn), sn = Math.sin(turn);
+      const dx = ((ax * c - ay * sn) / len) * k, dy = ((ax * sn + ay * c) / len) * k;
+      const x = Math.round(ux + dx), y = Math.round(uy + dy);
+      if (x < 0 || y < 0 || x >= w || y >= g.map.height) continue;
+      if (walkable(g, y * w + x, u.owner)) { away = y * w + x; break; }
+    }
   const keep = g.buildings.find((b) => b.owner === u.owner && BUILDINGS[b.type]!.id === 'keep' && b.door >= 0);
   const camp = g.buildings.find((b) => b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots);
-  const home = keep?.door ?? camp?.door;
-  if (home === undefined) return;
-  const here = (u.py >> 8) * g.map.width + (u.px >> 8);
-  const path = findPath(g, here, (t) => t === home, 900, u.owner);
+  const dest = away >= 0 ? away : keep?.door ?? camp?.door;
+  if (dest === undefined) return;
+  const path = findPath(g, uy * w + ux, (t) => t === dest, 900, u.owner);
   if (!path || !path.length) return;
-  // rzuca, co niósł, przerywa pracę i biegnie; po dobiegnięciu wraca do swoich zajęć
+  // rzuca, co niósł, przerywa pracę i biegnie; po dobiegnięciu wraca do swoich zajęć (praca albo obozowisko pod dachem)
   u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.target = 0;
   u.phase = u.job ? Phase.Returning : Phase.Idle;
   u.path = path; u.wait = 0;
-  u.fled = g.tick + 60;
+  u.fled = g.tick + 50;
 }
 
 /** Śmierć chłopa z ręki wroga: ciało zostaje, zwalnia się jego praca, a ludzie tracą zaufanie do pana */

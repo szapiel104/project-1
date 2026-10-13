@@ -2366,6 +2366,9 @@ export class GameRenderer {
       // w walce zwraca się do wroga i wyprowadza pchnięcie zaraz po ciosie
       const foe = s.target ? byId.get(s.target) : undefined;
       if (foe && !walking) { heading = Math.atan2((foe.px - s.px) / FP, (foe.py - s.py) / FP); this.facing.set(s.id, heading); }
+      // bije wrogiego chłopa: zwraca się do niego i dźga albo strzela tak jak do żołnierza
+      const victim = !foe && s.hitting ? g.units.find((u) => u.id === s.hitting) : undefined;
+      if (victim && !walking) { heading = Math.atan2((victim.px - s.px) / FP, (victim.py - s.py) / FP); this.facing.set(s.id, heading); }
       // oblężenie: zwraca się do budynku i bije w niego włócznią
       const wall = !foe && s.target ? bById.get(s.target) : undefined;
       if (wall && !walking) {
@@ -2383,7 +2386,7 @@ export class GameRenderer {
       const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
       const udef = UNITS[s.kind]!;
       const ranged = !!udef.range;
-      const striking = (!!foe || !!wall) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
+      const striking = (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
       const lift = s.up ? 1.95 : 0;
       // przesunięcie do środka grupy narasta i znika płynnie, więc po dojściu nikt nie „doskakuje” do kolegów
@@ -2397,9 +2400,10 @@ export class GameRenderer {
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
       const pc = this.lastCd.get(s.id) ?? 0;
-      if (ranged && (foe || wall) && s.cd > pc && !this.calm && this.arrows.length < 256) {
+      if (ranged && (foe || wall || victim) && s.cd > pc && !this.calm && this.arrows.length < 256) {
         let tx: number, ty: number, th: number;
         if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : 0.4; }
+        else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; }
         else { const fp = footprint(BUILDINGS[wall!.type]!, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; }
         this.arrows.push({ from: new THREE.Vector3(fx - width / 2, y + 0.5, fy - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0 });
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
@@ -2763,7 +2767,10 @@ export class GameRenderer {
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
       if (torchOn) { this.handTorches.setMatrixAt(i, t.matrix); this.pushHandFlame(t.matrix, 0.17); } else this.handTorches.setMatrixAt(i, ZERO);
-      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : crafting ? craftR : undefined, chopping || mining ? toolArm + 0.1 : crafting ? craftL : -0.5);
+      // uciekający w panice: długi, szybki krok i ręce machające nad głową
+      const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
+      const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : crafting ? craftR : panic ? -2.5 + flail : undefined, chopping || mining ? toolArm + 0.1 : crafting ? craftL : panic ? -2.5 - flail : -0.5, panic);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();

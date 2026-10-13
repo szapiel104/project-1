@@ -393,7 +393,8 @@ function move(g: GameState, u: Unit): void {
   const tx = nx * FP + FP / 2, ty = ny * FP + FP / 2;
   const dx = tx - u.px, dy = ty - u.py;
   const base = dx !== 0 && dy !== 0 ? RULES.unitSpeedDiagonal : RULES.unitSpeed;
-  const speed = Math.round((base * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, u)]!]!)) / 100);
+  // uciekający przed wrogiem biegnie co sił (ok. 1,7 raza szybciej)
+  const speed = Math.round((base * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, u)]!]!) * ((u.fled ?? 0) > g.tick ? 170 : 100)) / 10000);
   u.px += Math.max(-speed, Math.min(speed, dx));
   u.py += Math.max(-speed, Math.min(speed, dy));
   if (u.px === tx && u.py === ty) u.path.shift();

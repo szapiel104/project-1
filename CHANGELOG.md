@@ -4,6 +4,8 @@
 
 - Prawy klik na wrogim chłopie przy zaznaczonym wojsku = atak (kursor miecza): żołnierze gonią go, aż padnie
 - Chłop pod ciosem jak kopacz w Gothicu, zawsze tak samo dla danej osoby: co trzeci staje i oddaje (znikome obrażenia), reszta rzuca robotę i ładunek i ucieka pod swój zamek albo do obozowiska, a potem wraca do pracy
+- Uciekający chłop biegnie co sił (ok. 1,7 raza szybciej) najpierw w przeciwną stronę niż napastnik, z rękami machającymi nad głową, potem wraca do swoich zajęć
+- Żołnierz bijący chłopa zwraca się do niego i dźga włócznią, łucznik strzela (wcześniej stał bez ruchu)
 - Żołnierze dalej sami biją wrogich chłopów, których zobaczą (każdy zabity obniża popularność ich pana)
 
 ## 0.16.1 — skrzynie i drewniane graty (2026-10-13)
