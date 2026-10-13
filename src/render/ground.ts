@@ -20,7 +20,7 @@ const cache = new Map<string, THREE.Texture>();
 function tex(name: string, color: boolean): THREE.Texture {
   let t = cache.get(name);
   if (t) return t;
-  t = loader!.load(base() + name + '.jpg');
+  t = loader!.load(base() + name + '.jpg?v=3'); // numer wersji: przeglądarka nie trzyma starego zdjęcia po podmianie
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 8;
   if (color) t.colorSpace = THREE.SRGBColorSpace;
