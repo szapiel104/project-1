@@ -171,11 +171,8 @@ export class Figures {
           const fold = y < 0.29 ? 0.9 + 0.1 * Math.cos(Math.atan2(x, z) * 7) : 1; // fałdy spódnicy pod pasem
           return fold * (0.86 + (y - 0.13) * 0.45);
         }), tunic);
-        // krzyż na piersi i plecach
-        for (const z of [0.093, -0.093]) {
-          fix(new THREE.BoxGeometry(0.024, 0.1, 0.006).translate(0, 0.385, z), 0xd8cca8);
-          fix(new THREE.BoxGeometry(0.072, 0.022, 0.006).translate(0, 0.402, z), 0xd8cca8);
-        }
+        // krokiew (odwrócone V) na piersi i plecach: znak pana, czytelny także z daleka
+        for (const z of [0.094, -0.094]) for (const side of [-1, 1]) fix(new THREE.BoxGeometry(0.02, 0.085, 0.006).rotateZ(side * 0.78).translate(side * 0.026, 0.39, z), 0xd8cca8);
         fix(lathe([[0.107, 0.285], [0.111, 0.296], [0.111, 0.31], [0.106, 0.322]], 16, 0.78), LEATHER, 'leather');
         fix(new THREE.BoxGeometry(0.03, 0.026, 0.012).translate(0, 0.303, 0.087), 0xb38a3a, 'metal');
         // czepiec kolczy: szyja dookoła, wyżej otwarty na twarz
@@ -234,16 +231,19 @@ export class Figures {
       fix(prep(lathe([[0.138, 0.398], [0.134, 0.428], [0.113, 0.458], [0.079, 0.486], [0.06, 0.5]], 16, 0.86), (_x, y) => (y < 0.405 ? 0.5 : 0.72)), tunic);
       fix(prep(head(new THREE.SphereGeometry(0.087, 16, 10, Math.PI / 2 + 0.8, Math.PI * 2 - 1.6, 0, Math.PI * 0.66).translate(0, 0.558, -0.004)), () => 0.72), tunic);
       fix(prep(head(new THREE.ConeGeometry(0.03, 0.13, 7).rotateX(-2.1).translate(0, 0.565, -0.115)), () => 0.66), tunic);
-      // kołczan na plecach, wylotem nad prawym ramieniem, z lotkami strzał
-      fix(new THREE.CylinderGeometry(0.034, 0.029, 0.25, 9).rotateX(-0.15).rotateZ(-0.35).translate(0.06, 0.36, -0.105), LEATHER, 'leather');
-      fix(lathe([[0.036, 0.0], [0.037, 0.02]], 9).rotateX(-0.15).rotateZ(-0.35).translate(0.103, 0.462, -0.124), 0x3a2616, 'leather');
-      const tips: [number, number][] = [[0, 0], [0.016, 0.008], [-0.012, 0.012], [0.006, -0.016], [-0.016, -0.008]];
-      const fletch = (white: boolean): THREE.BufferGeometry => merge(...tips.filter((_, i) => (i % 2 === 0) === white).map(([dx, dz]) => merge(
-        new THREE.BoxGeometry(0.004, 0.05, 0.022).rotateZ(-0.35).translate(0.118 + dx, 0.51, -0.126 + dz),
-        new THREE.BoxGeometry(0.022, 0.05, 0.004).rotateZ(-0.35).translate(0.118 + dx, 0.51, -0.126 + dz),
-      )));
-      fix(fletch(true), 0xe6dfcc);
-      fix(fletch(false), 0x8a2a20);
+      // kołczan na plecach, wylotem nad prawym ramieniem: duży, jasna skóra z ciemnym okuciem, strzały wystają ponad wylot
+      const Q = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.rotateX(-0.18).rotateZ(-0.38).translate(0.055, 0.35, -0.118);
+      fix(Q(prep(new THREE.CylinderGeometry(0.043, 0.035, 0.3, 10), (_x, y) => (Math.abs(y + 0.08) < 0.012 ? 0.6 : 1))), 0x8a5c34, 'leather');
+      fix(Q(merge(lathe([[0.044, 0.135], [0.047, 0.15], [0.046, 0.158]], 10), new THREE.CylinderGeometry(0.036, 0.036, 0.012, 10).translate(0, -0.153, 0))), 0x3a2616, 'leather');
+      // pas kołczanu przez pierś (widać go też od przodu)
+      fix(prep(lathe([[0.117, -0.012], [0.119, 0], [0.117, 0.012]], 18, 0.8).rotateZ(-0.62).translate(0.0, 0.372, 0.0), () => 1), 0x4a3020, 'leather');
+      const tips: [number, number][] = [[0, 0], [0.018, 0.01], [-0.014, 0.013], [0.008, -0.018], [-0.018, -0.008], [0.02, -0.006]];
+      const arrows = (part: 'shaft' | 'white' | 'red'): THREE.BufferGeometry => merge(...tips.filter((_, i) => part === 'shaft' || (i % 2 === 0) === (part === 'white')).map(([dx, dz]) => Q(part === 'shaft'
+        ? new THREE.CylinderGeometry(0.004, 0.004, 0.09, 4).translate(dx, 0.17, dz)
+        : merge(new THREE.BoxGeometry(0.005, 0.06, 0.03).translate(dx, 0.205, dz), new THREE.BoxGeometry(0.03, 0.06, 0.005).translate(dx, 0.205, dz)))));
+      fix(arrows('shaft'), 0x9a7a4e, 'wood');
+      fix(arrows('white'), 0xeae3d0);
+      fix(arrows('red'), 0x9a2a20);
       // ręce: rękawy przeszywanicy, na lewym przedramieniu karwasz
       const bowArm = (s: number, up: boolean): number => (up ? -1.5 : -s * 0.6);
       const drawArm = (s: number, up: boolean): number => (up ? -1.35 : s * 0.6);
