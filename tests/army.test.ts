@@ -290,8 +290,8 @@ describe('wrodzy chłopi', () => {
     let hurt = false;
     for (let i = 0; i < 2500 && g.units.some((x) => x.id === u.id); i++) { step(g, []); if ((g.units.find((x) => x.id === u.id)?.hp ?? 30) < 30) hurt = true; }
     expect(hurt || !g.units.some((x) => x.id === u.id)).toBe(true);
-    // żołnierz przeżył: chłop bije słabo
-    expect(s.hp).toBeGreaterThan(40);
+    // żołnierz przeżył: chłopi biją słabiej niż żołnierz (kilof 3, maczuga 2)
+    expect(s.hp).toBeGreaterThan(20);
   });
 
   it('uciekający chłop biegnie w przeciwną stronę niż napastnik, szybciej niż zwykle', () => {

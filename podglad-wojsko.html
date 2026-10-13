@@ -5,6 +5,7 @@
 import * as THREE from 'three';
 import { Figures } from './src/render/peasants.ts';
 import { clutterModel } from './src/render/clutter.ts';
+import { peasantGear, pickGeometry } from './src/render/gear.ts';
 import { pattern } from './src/render/textures.ts';
 const q = new URLSearchParams(location.search);
 const dist = Number(q.get('d') ?? 2.6), pitch = Number(q.get('pitch') ?? 0.32), look = Number(q.get('y') ?? 0.32);
@@ -22,6 +23,22 @@ const sp = new Figures(4, s, 'spearman'), ar = new Figures(4, s, 'archer'), pe =
 sp.set(0, at(-1.0, 0, 0.35), 0, false, red, 3); sp.set(1, at(-0.62, 0, Math.PI - 0.3), 0, false, red, 8); sp.set(2, at(-0.22, 0, 1.2), 0, true, blue, 4); sp.set(3, at(-0.8, -0.5, 0.2), 0.45, false, red, 15); sp.finish(4);
 ar.set(0, at(0.25, 0, 0.35), 0, false, red, 5); ar.set(1, at(0.62, 0, Math.PI - 0.3), 0, false, red, 9); ar.set(2, at(1.0, 0, -1.1), 0, true, blue, 6); ar.set(3, at(0.5, -0.5, 0.2), 0.45, false, red, 12); ar.finish(4);
 pe.set(0, at(1.35, -0.3, 0.4), 0, false, red, 2); pe.finish(1);
+if (q.get('bron')) {
+  // chłopi z bronią: kilof na plecach i maczuga u pasa (z przodu i z tyłu), dwóch w zamachu
+  sp.finish(0); ar.finish(0); pe.finish(0);
+  const pick = pickGeometry(), gear = peasantGear(pick), mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 });
+  const many = new Figures(6, s);
+  const poses = [[0.4, 'pick', null], [Math.PI + 0.4, 'pick', null], [0.4, 'club', null], [Math.PI + 0.4, 'club', null], [1.2, 'pick', -2.9], [1.2, 'club', -2.3]];
+  poses.forEach(([yaw, w, arm], i) => {
+    const base = at(-1.1 + i * 0.44, 0, yaw);
+    many.set(i, base, 0, false, red, 3 + i * 2, arm ?? undefined, arm !== null && w === 'pick' ? arm + 0.1 : -0.5);
+    const size = many.sizeOf(3 + i * 2, red);
+    const body = base.clone().scale(new THREE.Vector3(size, size, size));
+    if (arm === null) { const m = new THREE.Mesh(w === 'pick' ? gear.backPick : gear.beltClub, mat); m.applyMatrix4(body); s.add(m); }
+    else { const m = new THREE.Mesh(w === 'pick' ? pick : gear.club, mat); m.applyMatrix4(body.clone().multiply(new THREE.Matrix4().makeRotationX(arm).setPosition(0.135, 0.45, 0))); s.add(m); }
+  });
+  many.finish(6);
+}
 if (q.get('chlopi')) {
   // sami chłopi: różne nakrycia głowy, fartuchy, brody; jeden niesie (ręce w górze), jeden idzie
   sp.finish(0); ar.finish(0);

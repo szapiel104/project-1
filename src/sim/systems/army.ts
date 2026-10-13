@@ -696,8 +696,10 @@ function repairSystem(g: GameState): void {
  * Chłop pod ciosem, jak kopacz w Gothicu: co trzeci (zawsze ten sam, losowo z numeru) staje i oddaje
  * — kijem czy kilofem, ale słabo; reszta rzuca robotę i ucieka pod swój zamek albo do obozowiska.
  */
-/** Ten chłop staje do walki (co trzeci, zawsze ten sam); reszta ucieka */
-export const isBrave = (id: number): boolean => hash2(id, 7, 0xbad) % 100 < 33;
+/** Ten chłop staje do walki (sześciu na dziesięciu, zawsze ci sami); reszta ucieka */
+export const isBrave = (id: number): boolean => hash2(id, 7, 0xbad) % 100 < 60;
+/** Czym się bije chłop: kilof noszony na plecach albo drewniana maczuga u pasa (zawsze to samo dla danej osoby) */
+export const peasantWeapon = (id: number): 'pick' | 'club' => (hash2(id, 9, 0x77) & 1 ? 'pick' : 'club');
 
 /**
  * Chłopi się rozglądają (co pół sekundy): na widok wrogiego żołnierza w promieniu 5 pól tchórz od razu ucieka,
@@ -720,14 +722,14 @@ function lookout(g: GameState): void {
     // odważny: stoi i patrzy na wroga; z bliska bije kijem (rzadko i słabo)
     u.foe = best.id;
     if (bd <= FP * 2.5) u.wait = Math.max(u.wait, 6);
-    if (bd <= FP + FP / 2 && hash2(u.id, g.tick, 0xc1b) % 100 < 25) best.hp -= 2;
+    if (bd <= FP + FP / 2 && hash2(u.id, g.tick, 0xc1b) % 100 < 30) best.hp -= peasantWeapon(u.id) === 'pick' ? 3 : 2; // kilof boli trochę bardziej niż maczuga
   }
 }
 
 function peasantReacts(g: GameState, u: Unit, attacker: Soldier, ranged: boolean): void {
   const brave = isBrave(u.id);
   if (brave && !ranged && Math.max(Math.abs(u.px - attacker.px), Math.abs(u.py - attacker.py)) <= FP + FP / 2) {
-    if (hash2(u.id, g.tick, 0xc1b) % 100 < 60) attacker.hp -= 2; // znikome obrażenia
+    if (hash2(u.id, g.tick, 0xc1b) % 100 < 60) attacker.hp -= peasantWeapon(u.id) === 'pick' ? 3 : 2; // znikome obrażenia
     u.wait = Math.max(u.wait, 8); // stoi i się broni
     return;
   }

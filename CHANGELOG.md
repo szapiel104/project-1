@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.16.4 — chłopi z bronią (2026-10-13)
+
+- Więcej chłopów staje do obrony: sześciu na dziesięciu (reszta ucieka)
+- Każdy chłop ma swoją broń: kilof przewieszony skośnie przez plecy albo drewnianą maczugę u pasa (widać ją na co dzień)
+- W walce wyciąga ją do ręki: kilof oburącz z zamachem znad głowy, maczuga jedną ręką, cios z pochyleniem i stuk; kilof boli trochę bardziej (3), maczuga mniej (2), wciąż rzadko
+- Podgląd: podglad-wojsko.html?bron=1
+
 ## 0.16.3 — chłopi reagują na wroga, krzyki (2026-10-13)
 
 - Chłopi się rozglądają: na widok wrogiego żołnierza w promieniu 5 pól tchórz (dwóch na trzech) od razu ucieka biegiem w przeciwną stronę, a odważny (co trzeci, zawsze ten sam) staje twarzą do wroga i z bliska okłada go kijem — rzadko i słabo; śpiący pod dachem nic nie widzą

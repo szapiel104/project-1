@@ -17,6 +17,8 @@ import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
 import { FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
+import { peasantWeapon } from '../sim/systems/army';
+import { peasantGear } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
@@ -164,6 +166,10 @@ export class GameRenderer {
   /** Siekiera drwala i kilof kopacza: w prawej dłoni, obracane w barku jak młotek */
   private axes!: THREE.InstancedMesh;
   private picks!: THREE.InstancedMesh;
+  /** Broń chłopa: maczuga w dłoni w walce, kilof na plecach i maczuga u pasa na co dzień */
+  private clubs!: THREE.InstancedMesh;
+  private backPicks!: THREE.InstancedMesh;
+  private beltClubs!: THREE.InstancedMesh;
   private soldierTorches!: THREE.InstancedMesh;
   private peasantBodies!: Figures;
   private archers!: Figures;
@@ -488,6 +494,11 @@ export class GameRenderer {
     };
     this.axes = tool(axe);
     this.picks = tool(pick);
+    // broń chłopów (osobny plik, żeby podgląd postaci pokazywał to samo)
+    const gear = peasantGear(pick);
+    this.clubs = tool(gear.club);
+    this.backPicks = tool(gear.backPick);
+    this.beltClubs = tool(gear.beltClub);
     this.rods = new THREE.InstancedMesh(rod, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true }), MAX_UNITS);
     this.rods.count = 0;
     this.rods.frustumCulled = false;
@@ -2706,9 +2717,23 @@ export class GameRenderer {
       }
       // odważny chłop przed wrogim żołnierzem: twarzą do niego, z bliska okłada go pięściami i kijem
       const enemy = u.foe ? g.soldiers.find((x) => x.id === u.foe) : undefined;
+      const weapon = peasantWeapon(u.id);
+      let fighting = false, fightArm = -0.4;
       if (enemy && !this.calm) {
         t.rotation.set(0, Math.atan2(enemy.px - u.px, enemy.py - u.py), 0);
-        if ((enemy.px - u.px) ** 2 + (enemy.py - u.py) ** 2 < (1.6 * FP) ** 2) swing = Math.sin(this.time * 12 + u.id) * 1.3;
+        // z bliska wyciąga broń: kilof oburącz z zamachem znad głowy, maczuga jedną ręką, krótszy zamach
+        if ((enemy.px - u.px) ** 2 + (enemy.py - u.py) ** 2 < (1.6 * FP) ** 2) {
+          fighting = true;
+          const ph = (this.time * (weapon === 'pick' ? 1.1 : 1.6) + (u.id % 7) * 0.21) % 1;
+          const ease = (x: number): number => x * x * (3 - 2 * x);
+          const high = weapon === 'pick' ? 2.7 : 2.1;
+          if (ph < 0.5) fightArm = -0.4 - ease(ph / 0.5) * high;
+          else if (ph < 0.62) fightArm = -0.4 - high + ((ph - 0.5) / 0.12) ** 2 * (high + 0.2);
+          else fightArm = -0.3;
+          toolLean = ph > 0.5 && ph < 0.8 ? Math.sin(((ph - 0.5) / 0.3) * Math.PI) * 0.3 : 0.08;
+          if (ph > 0.6 && ph < 0.65) this.sfxAt('hit', t.position.x, t.position.z, `pf${u.id}`, 0.4, 0.6);
+          swing = 0;
+        }
       }
       // krzyk przy ucieczce, zaskoczone „hę?!” odważnego na widok wroga
       if (!this.calm) {
@@ -2794,7 +2819,23 @@ export class GameRenderer {
         this.armM.makeRotationX(toolArm).setPosition(0.135, 0.45, 0);
         (chopping ? this.axes : this.picks).setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
         (chopping ? this.picks : this.axes).setMatrixAt(i, ZERO);
+      } else if (fighting) {
+        // broń z pleców albo zza pasa w dłoni
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armM.makeRotationX(fightArm).setPosition(0.135, 0.45, 0);
+        (weapon === 'pick' ? this.picks : this.clubs).setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
+        (weapon === 'pick' ? this.clubs : this.picks).setMatrixAt(i, ZERO);
+        this.axes.setMatrixAt(i, ZERO);
       } else { this.axes.setMatrixAt(i, ZERO); this.picks.setMatrixAt(i, ZERO); }
+      if (!fighting) this.clubs.setMatrixAt(i, ZERO);
+      // na co dzień broń wisi na plecach albo u pasa (kopacz przy pracy trzyma kilof w rękach)
+      const stowed = !fighting && !(mining && weapon === 'pick');
+      if (stowed) {
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armS.copy(t.matrix).scale(this.armV.setScalar(sz));
+        (weapon === 'pick' ? this.backPicks : this.beltClubs).setMatrixAt(i, this.armS);
+        (weapon === 'pick' ? this.beltClubs : this.backPicks).setMatrixAt(i, ZERO);
+      } else { this.backPicks.setMatrixAt(i, ZERO); this.beltClubs.setMatrixAt(i, ZERO); }
       const wood = u.carryRes === WOOD;
       // kłodę ciągnie tylko drwal z lasu; włóczniarz niesie ze składu zwykłe deski
       const jb = u.job ? jobs.get(u.job) : undefined;
@@ -2805,7 +2846,7 @@ export class GameRenderer {
       // uciekający w panice: długi, szybki krok i ręce machające nad głową
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : crafting ? craftR : panic ? -2.5 + flail : undefined, chopping || mining ? toolArm + 0.1 : crafting ? craftL : panic ? -2.5 - flail : -0.5, panic);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : undefined, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : -0.5, panic);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();
@@ -2854,7 +2895,7 @@ export class GameRenderer {
     this.bedrolls.instanceMatrix.needsUpdate = true;
     this.hammers.count = n;
     this.hammers.instanceMatrix.needsUpdate = true;
-    for (const m of [this.axes, this.picks]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
+    for (const m of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
     this.rods.instanceMatrix.needsUpdate = true;
     this.handTorches.count = n;
     this.handTorches.instanceMatrix.needsUpdate = true;
