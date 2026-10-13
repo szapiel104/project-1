@@ -876,6 +876,14 @@ if (invite && !TEST) {
   try { const u = new URL(location.href); u.searchParams.delete('pokoj'); history.replaceState(null, '', u.toString()); } catch { /* nic */ }
   menu.join(invite);
 }
+// Interfejs skaluje się do okna: na mniejszym ekranie wszystko jest proporcjonalnie mniejsze i nic nie ucieka za krawędź,
+// na dużym monitorze trochę większe. Wzorzec: pełny pasek dolny mieści się w ok. 2000 × 1100 px.
+function fitUi(): void {
+  const k = Math.max(0.6, Math.min(1.2, Math.min(innerWidth / 2000, innerHeight / 1080)));
+  document.documentElement.style.setProperty('--ui', k.toFixed(3));
+}
+fitUi();
+window.addEventListener('resize', fitUi);
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 requestAnimationFrame(loop);
