@@ -13,15 +13,14 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
   }
   renderer.setSize(size, size, false);
   renderer.setClearColor(0x000000, 0);
-  // miniatury mają być czytelne na jasnym pergaminie, więc świecimy dużo mocniej niż na mapie
   // bez mapowania tonów i bez białego światła otoczenia, bo wypłukują barwy drewna i strzech
   const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xfff2d8, 0x6a5a3e, 2.2));
-  const sun = new THREE.DirectionalLight(0xfff0cc, 2.9);
+  scene.add(new THREE.HemisphereLight(0xfff2d8, 0x7a6644, 2.7));
+  const sun = new THREE.DirectionalLight(0xfff0cc, 3.4);
   sun.position.set(-3, 6, 4);
   scene.add(sun);
   // doświetlenie od strony kamery, żeby ściany frontowe nie wpadały w czerń
-  const fill = new THREE.DirectionalLight(0xffe2b8, 1.1);
+  const fill = new THREE.DirectionalLight(0xffe2b8, 1.6);
   fill.position.set(6, 4, 6);
   scene.add(fill);
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);
@@ -34,10 +33,19 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
     scene.add(model);
     const box = new THREE.Box3().setFromObject(model);
     const center = box.getCenter(new THREE.Vector3());
-    const half = Math.max(box.max.x - box.min.x, box.max.z - box.min.z, box.max.y - box.min.y) * 0.78;
-    cam.left = -half; cam.right = half; cam.top = half; cam.bottom = -half;
     cam.position.set(center.x + 6, center.y + 6.5, center.z + 6);
     cam.lookAt(center);
+    cam.updateMatrixWorld();
+    // kadr dopasowany do rzutu narożników bryły na kamerę: budynek wypełnia kafelek i nic nie jest ucięte
+    let half = 0.1;
+    const p = new THREE.Vector3();
+    for (let i = 0; i < 8; i++) {
+      p.set(i & 1 ? box.max.x : box.min.x, i & 2 ? box.max.y : box.min.y, i & 4 ? box.max.z : box.min.z);
+      cam.worldToLocal(p);
+      half = Math.max(half, Math.abs(p.x), Math.abs(p.y));
+    }
+    half *= 1.04;
+    cam.left = -half; cam.right = half; cam.top = half; cam.bottom = -half;
     cam.updateProjectionMatrix();
     renderer.render(scene, cam);
     out.set(def.id, renderer.domElement.toDataURL('image/png'));

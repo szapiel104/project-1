@@ -511,7 +511,7 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .walk-btn { width: 100%; min-height: 44px; }
 /* większe podglądy budynków w pasku budowania */
 .card { width: 150px; padding: 4px 8px 6px; }
-.card img { width: 124px; height: 124px; margin: -6px 0 -4px; }
+.card img { width: 124px; height: 124px; margin: -6px 0 -4px; filter: saturate(1.35) contrast(1.08); }
 .card .card-text { font-size: 15px; }
 
 /* ---- gra przez sieć ---- */
