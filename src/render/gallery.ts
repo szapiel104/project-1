@@ -86,12 +86,12 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
     if (wolf.visible) {
       legs.forEach((l, k) => { l.rotation.x = Math.sin(t * 9) * 0.5 * (k === 0 || k === 3 ? 1 : -1); });
       tail.rotation.x = 1.9 + Math.sin(t * 4) * 0.15;
-      wolf.scale.setScalar(1.4);
+      wolf.scale.setScalar(1.15);
       wolf.position.set(0, 0, 0);
     }
     for (const c of crows) { c.visible = kind === 'crow'; c.rotation.x = Math.max(0, Math.sin(t * 5 + c.position.x * 20)) * 0.6; }
     // kamera powoli krąży; zwierzęta i ptaki z bliska
-    const near = kind === 'crow' ? 0.9 : kind === 'wolf' ? 2.2 : 2.0;
+    const near = kind === 'crow' ? 0.9 : kind === 'wolf' ? 2.6 : 2.0;
     const yaw = t * 0.35;
     const lookY = kind === 'crow' ? 0.08 : kind === 'wolf' ? 0.4 : 0.33;
     camera.position.set(Math.sin(yaw) * near, lookY + near * 0.35, Math.cos(yaw) * near);
