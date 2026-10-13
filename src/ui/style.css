@@ -993,3 +993,14 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 /* pasek na węższych ekranach: boki zawijają się w dwa rzędy zamiast uciekać za krawędź */
 .bar-side { flex-wrap: wrap; row-gap: 0; }
 @media (max-width: 1350px) { .bar-item { font-size: 13px; letter-spacing: .06em; padding: 6px 9px; } .bar-main { font-size: 19px; padding: 10px 24px; } .menu-bar { gap: 10px; } }
+/* Jak grać: czytelny tekst z podtytułami, tabelkami i radami */
+.menu .help-text { display: grid; gap: 10px; max-height: min(52vh, 520px); overflow-y: auto; padding-right: 8px; font-size: 16.5px; line-height: 1.45; color: #e3d4b2; }
+.menu .help-p { margin: 0; }
+.menu .help-h { margin: 8px 0 0; font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #e9c766; }
+.menu .help-tip { margin: 2px 0; padding: 8px 12px; border-left: 3px solid #b0261c; background: rgba(176, 38, 28, .12); font-style: italic; color: #e7d6b2; }
+.menu .help-table { width: 100%; border-collapse: collapse; font-size: 15px; line-height: 1.35; }
+.menu .help-table th { text-align: left; padding: 6px 10px; font-family: var(--display); font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; color: #e9c766; border-bottom: 1px solid #9a7a2a; }
+.menu .help-table td { padding: 6px 10px; border-bottom: 1px solid #2e2314; vertical-align: top; }
+.menu .help-table tr:nth-child(even) td { background: rgba(255, 230, 170, .03); }
+.menu .help-table td:first-child { color: #f1e4c4; font-weight: 700; }
+.menu .help-text::-webkit-scrollbar { width: 8px; } .menu .help-text::-webkit-scrollbar-thumb { background: #4a3a1c; }

@@ -4,6 +4,7 @@ import { avatarSvg } from './avatars';
 import { createGallery, GALLERY, type GalleryEntry } from '../render/gallery';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { t } from '../i18n';
+import { HELP_CHAPTERS, type HelpBlock } from './helpText';
 
 /** Ustawienia zapamiętywane w przeglądarce */
 export interface Settings {
@@ -88,15 +89,6 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''):
 
 const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota', 'las', 'skala', 'rzeka', 'brod'];
 
-/** Rozdziały „Jak grać”: tytuł i akapity (klucze tłumaczeń) */
-const HELP: [string, string[]][] = [
-  ['help.t.start', ['help.start1', 'help.start2', 'help.start3']],
-  ['help.t.economy', ['help.eco1', 'help.eco2', 'help.eco3', 'help.eco4']],
-  ['help.t.food', ['help.food1', 'help.food2', 'help.food3']],
-  ['help.t.people', ['help.pop1', 'help.pop2', 'help.pop3', 'help.pop4']],
-  ['help.t.build', ['help.bld1', 'help.bld2', 'help.bld3', 'help.bld4']],
-  ['help.t.controls', ['help.move', 'help.select', 'help.rotate', 'help.zoom', 'help.build', 'help.speed', 'help.sound', 'help.menu']],
-];
 
 /**
  * Menu główne w klimacie gry: pergaminowa tablica na tle osady, która powoli obraca się za nim.
@@ -500,11 +492,22 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   }
 
   function showHelp(): void {
-    const tabs = tabbed([...HELP.map(([name, lines]): [string, () => Node[]] => [t(name), () => {
-      const list = el('ul', 'help-list');
-      for (const k of lines) list.append(el('li', '', t(k)));
-      return [list];
-    }]), ['Postacie i zwierzęta', () => [galleryPane(GALLERY.people)]], ['Budynki', () => [galleryPane(GALLERY.buildings)]]], true);
+    const block = (b: HelpBlock): Node => {
+      if (typeof b === 'string') return el('p', 'help-p', b);
+      if ('h' in b) return el('h3', 'help-h', b.h);
+      if ('tip' in b) return el('p', 'help-tip', b.tip);
+      const table = el('table', 'help-table');
+      b.table.forEach((row, i) => {
+        const tr = el('tr');
+        for (const cell of row) tr.append(el(i === 0 ? 'th' : 'td', '', cell));
+        table.append(tr);
+      });
+      return table;
+    };
+    const tabs = tabbed([
+      ...HELP_CHAPTERS.map((c): [string, () => Node[]] => [c.title, () => { const box = el('div', 'help-text'); box.append(...c.blocks.map(block)); return [box]; }]),
+      ['Postacie i zwierzęta', () => [galleryPane(GALLERY.people)]], ['Budynki', () => [galleryPane(GALLERY.buildings)]],
+    ], true);
     const foot = el('div', 'menu-foot');
     foot.append(back());
     screen(t('menu.howTo'), true, tabs, foot);
