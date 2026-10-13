@@ -57,7 +57,8 @@ Czeka — gra przez sieć:
 Czeka — poprawki:
 - Chodzenie ludzi: płynniejsze skręty, omijanie się zamiast przenikania
 - Czytelność nocy: pochodnie o większym zasięgu jako opcja
-- Wszystkie panele w jednym stylu (World of Warcraft — Michałowi się podoba)
+- Wszystkie panele w grze (dolna belka, okna budynków, skryba, alarm) w stylu nowego menu: ciemna skóra, złote żyłki, napisy Cinzel (menu i wczytywanie zrobione 13.10)
+- Pełny magazyn: dziś robotnik po chwili wyrzuca nadmiar (przepada) — do decyzji, czy ma czekać
 - Dźwięki kroków: bruk / ziemia / błoto
 
 ## Wydajność — do zrobienia (13.10.2026, gra dla wielu graczy w przeglądarce)
