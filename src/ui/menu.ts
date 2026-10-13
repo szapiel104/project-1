@@ -229,7 +229,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     if (inGame) {
       left.append(barBtn(t('menu.newGame'), showNew), barBtn(t('menu.settings'), showSettings), barBtn(t('menu.howTo'), showHelp));
       main = barBtn(t('menu.resume'), () => events.onContinue(), true);
-      right.append(barBtn('Gra przez sieć', () => online.showOnline()), barBtn('Wyjdź do menu', () => showQuit()), barBtn('Poddaj się', showSurrender));
+      // w trakcie gry bez „Gry przez sieć” (jest w menu głównym po wyjściu): pasek mieści się też na wąskim ekranie
+      right.append(barBtn('Wyjdź do menu', () => showQuit()), barBtn('Poddaj się', showSurrender));
     } else {
       if (canContinue) left.append(barBtn(t('menu.continue'), () => events.onContinue()));
       left.append(barBtn('Gra przez sieć', () => online.showOnline()));
