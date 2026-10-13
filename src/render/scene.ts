@@ -1515,7 +1515,7 @@ export class GameRenderer {
    * Wydajność: osobne kopie materiałów tylko dla budynków właśnie w budowie (zwykle kilka), rusztowania i stosy
    * to dwie wspólne siatki instancji przeliczane tylko, gdy postęp przeskoczy o 1/20.
    */
-  private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] }>();
+  private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material }>();
   private siteKey = '';
   private scaffold: THREE.InstancedMesh | null = null;
   private siteStones: THREE.InstancedMesh | null = null;
@@ -1530,13 +1530,19 @@ export class GameRenderer {
       if (!c) { c = m.clone(); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clones.set(m, c); }
       return c;
     };
+    const site = { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped, clip };
+    this.sites.set(id, site);
+    this.clipNew(mesh, site);
+  }
+  /** Przycina części modelu, które jeszcze nie są przycięte (np. zapasy dodane później) */
+  private clipNew(mesh: THREE.Object3D, site: { swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material }): void {
     mesh.traverse((o) => {
       const me = o as THREE.Mesh;
-      if (!me.isMesh || !me.material) return;
-      swapped.push([me, me.material]);
-      me.material = Array.isArray(me.material) ? me.material.map(clip) : clip(me.material);
+      if (!me.isMesh || !me.material || me.userData.siteClip) return;
+      me.userData.siteClip = true;
+      site.swapped.push([me, me.material]);
+      me.material = Array.isArray(me.material) ? me.material.map(site.clip) : site.clip(me.material);
     });
-    this.sites.set(id, { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped });
   }
   private endSite(id: number): void {
     const s = this.sites.get(id);
@@ -1545,6 +1551,7 @@ export class GameRenderer {
     for (const [me, orig] of s.swapped) {
       for (const m of Array.isArray(me.material) ? me.material : [me.material]) if (!done.has(m)) { done.add(m); m.dispose(); }
       me.material = orig;
+      me.userData.siteClip = false;
     }
     this.sites.delete(id);
   }
@@ -1573,6 +1580,7 @@ export class GameRenderer {
       live.add(b.id);
       if (!this.sites.has(b.id)) this.beginSite(b.id, mesh);
       const site = this.sites.get(b.id)!;
+      if (this.lodTick % 30 === 0) this.clipNew(mesh, site);
       const k = 1 - b.build / buildWork(b.type);
       if (ruinShown) {
         if (!pile) {
