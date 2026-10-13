@@ -125,7 +125,7 @@ const FRAG_ALBEDO = /* glsl */ `
 
   // udziały: łąka w plamach, drobne kamienie i prześwity ziemi rozsiane po trawie
   float wMeadow = smoothstep(0.86, 1.02, nS.g * 0.75 + nD.b * 0.3) * 0.5;
-  float wPeb = clamp(vSplat.y + smoothstep(0.99, 1.06, nD.a * 0.7 + nS.r * 0.4) * 0.5 + vSplat.w * smoothstep(0.6, 0.85, nD.r) * 0.45, 0.0, 1.0);
+  float wPeb = clamp(vSplat.y * (vWP.y < 0.1 ? smoothstep(0.35, 0.6, nS.a) * 1.4 : 1.0) + smoothstep(0.99, 1.06, nD.a * 0.7 + nS.r * 0.4) * 0.5 + vSplat.w * smoothstep(0.6, 0.85, nD.r) * 0.45, 0.0, 1.0);
   float wForest = clamp(vSplat.x * (0.75 + nS.a * 0.5), 0.0, 1.0);
   float wDirt = clamp(vSplat.w * 1.15 + smoothstep(1.0, 1.08, nS.r * 0.6 + nD.g * 0.5) * 0.5, 0.0, 1.0);
   float wRock = clamp(vSplat.z, 0.0, 1.0);
@@ -169,6 +169,9 @@ const FRAG_ALBEDO = /* glsl */ `
   snow *= smoothstep(0.0, 0.35, 1.0 - lum(rock) * 0.6 + nD.b * 0.4 - 0.3) * 0.5 + 0.5;
   alb = mix(alb, snowC, clamp(snow, 0.0, 1.0));
   gNormal = normalize(mix(gNormal, vec3(0.0, 0.0, 1.0), snow * 0.35));
+  // brzeg wody: ziemia tuż przy linii wody mokra i ciemna, kamyki i piasek tylko w niektórych zatoczkach
+  float wetK = 1.0 - smoothstep(-0.12, 0.07, vWP.y);
+  alb = mix(alb, alb * vec3(0.52, 0.5, 0.45), wetK * 0.85);
   // światło i cień w dużej skali: kępy wilgotniejsze i ciemniejsze, suche placki jaśniejsze
   float macro = 0.74 + nM.b * 0.42 + (nS.r - 0.5) * 0.16;
   // wnęki między źdźbłami i kamieniami ciemnieją (fałszywe AO z jasności)
@@ -196,6 +199,9 @@ const FRAG_NORMAL = /* glsl */ `
 let shared: THREE.MeshStandardMaterial | null = null;
 
 /** Materiał podłoża (wspólny dla planszy i terenu za mapą). Geometria musi mieć atrybut `splat` (vec4). */
+/** Zdjęcie trawy podłoża (do barwienia gęstej trawy, żeby zlewała się z ziemią) */
+export function groundGrassTexture(): THREE.Texture | null { return TEST || !loader ? null : tex('grass1', true); }
+
 export function groundMaterial(): THREE.MeshStandardMaterial {
   if (shared) return shared;
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 });
@@ -222,20 +228,24 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
 
 /** Zawijająca się mapa normalnych drobnych fal: suma sinusoid o całkowitych częstotliwościach (bez szwów) */
 function waveNormals(): THREE.DataTexture {
+  // drobna, nieregularna tafla: szum wartości (kilka oktaw, zawija się), bez kratki od sinusoid
   const N = 256;
   const hgt = new Float32Array(N * N);
   let s = 99991;
   const rnd = (): number => { s = (s * 16807) % 2147483647; return s / 2147483647; };
-  const waves = Array.from({ length: 28 }, (_, i) => {
-    const f = 2 + Math.floor(rnd() * (4 + i * 1.2));
-    const a = rnd() * Math.PI * 2;
-    return { kx: Math.round(Math.cos(a) * f), ky: Math.round(Math.sin(a) * f), ph: rnd() * 6.28, amp: 1 / (1 + f * 0.35) };
-  });
+  const octs = [6, 12, 24, 48].map((cells) => { const v = new Float32Array(cells * cells); for (let i = 0; i < v.length; i++) v[i] = rnd(); return { cells, v }; });
   for (let y = 0; y < N; y++)
     for (let x = 0; x < N; x++) {
-      let v = 0;
-      for (const wv of waves) v += Math.sin(((wv.kx * x + wv.ky * y) / N) * Math.PI * 2 + wv.ph) * wv.amp;
-      hgt[y * N + x] = v;
+      let v = 0, a = 1;
+      for (const o of octs) {
+        const fx = (x / N) * o.cells, fy = (y / N) * o.cells, x0 = Math.floor(fx), y0 = Math.floor(fy);
+        const tx = fx - x0, ty = fy - y0, sx = tx * tx * (3 - 2 * tx), sy = ty * ty * (3 - 2 * ty);
+        const x1 = (x0 + 1) % o.cells, y1 = (y0 + 1) % o.cells;
+        const top = o.v[y0 * o.cells + x0]! * (1 - sx) + o.v[y0 * o.cells + x1]! * sx;
+        const bot = o.v[y1 * o.cells + x0]! * (1 - sx) + o.v[y1 * o.cells + x1]! * sx;
+        v += (top * (1 - sy) + bot * sy) * a; a *= 0.55;
+      }
+      hgt[y * N + x] = v * 2.2;
     }
   const data = new Uint8Array(N * N * 4);
   const at = (x: number, y: number): number => hgt[((y + N) % N) * N + ((x + N) % N)]!;
@@ -272,10 +282,14 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
         {
           vec2 suv = (vWP.xz + mapSize * 0.5) / mapSize;
           wDepth = texture2D(shore, suv).r;
+          float wMask = texture2D(shore, suv).g;
           float d = smoothstep(0.0, 0.55, wDepth);
           vec3 shallowC = vec3(0.08, 0.105, 0.08), deepC = vec3(0.016, 0.04, 0.05);
           diffuseColor.rgb = mix(shallowC, deepC, d);
-          diffuseColor.a = mix(0.72, 0.95, smoothstep(0.0, 0.3, wDepth));
+          diffuseColor.a = mix(0.62, 0.95, smoothstep(0.0, 0.3, wDepth));
+          // miękki, nieregularny brzeg: tafla wygasa na ostatnich centymetrach zamiast kończyć się kantem
+          float edgeN = texture2D(wN, vWP.xz / 1.7).r;
+          diffuseColor.a *= smoothstep(0.42, 0.62, wMask + (edgeN - 0.5) * 0.18);
           // piana: postrzępiona linia tuż przy brzegu, przesuwa się z falami
           float fn = texture2D(wN, vWP.xz / 2.3 + vec2(wTime * 0.03, -wTime * 0.02)).r;
           wFoam = smoothstep(0.07, 0.0, wDepth + (fn - 0.5) * 0.06) * (0.5 + 0.5 * sin(wTime * 1.3 + wDepth * 60.0)) * smoothstep(0.35, 0.6, fn);

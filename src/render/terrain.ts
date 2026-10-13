@@ -8,7 +8,8 @@ import { hash2 } from '../sim/rng';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { ModelFactory } from './models';
 import { bump, normal, pattern } from './textures';
-import { groundMaterial, waterMaterial } from './ground';
+import { groundGrassTexture, groundMaterial, waterMaterial } from './ground';
+import { bladeTexture, createGrassField, type GrassField } from './grass';
 
 const HEIGHT_SCALE = 0.03;
 const smoothstep = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -43,6 +44,10 @@ export interface TerrainView {
   animate(time: number): void;
   /** Mokro po deszczu: 0 sucho, 1 błoto i połyskujące drogi */
   setWet(k: number): void;
+  /** Gęsta trawa nad punktem (x, z) świata */
+  updateGrass(x: number, z: number, time: number): void;
+  /** Pole zabudowane: bez trawy */
+  noGrass(tile: number, on?: boolean): void;
   /** Kolor nieba odbijany przez wodę */
   setSky(c: THREE.Color): void;
   /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
@@ -110,7 +115,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if (tt === Terrain.Forest) sf += 0.25;
         if (tt === Terrain.Stone || tt === Terrain.Iron) sp += 0.25;
         if (tt === Terrain.Mountain) sr += 0.25;
-        if (tt === Terrain.Water) sp += 0.12; // brzeg: piasek i kamyki
+        if (tt === Terrain.Water) sp += 0.2; // brzeg: piasek i kamyki (shader zostawia je tylko miejscami)
       }
       const patch = 0.9 + ((hash2(x >> 2, y >> 2, map.seed) & 63) / 63) * 0.12 + ((hash2(x, y, map.seed ^ 0x55) & 15) / 15) * 0.06;
       tmp.setRGB((r / 4) * patch, (g / 4) * patch, (b / 4) * patch);
@@ -173,6 +178,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const nv2 = Math.min(cap, worn[ci]! + amount);
     if (nv2 <= worn[ci]!) return;
     worn[ci] = nv2;
+    if (grass) for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) { const tx = cx - dx, ty = cy - dy; if (tx >= 0 && ty >= 0 && tx < w && ty < h) grass.setWear(ty * w + tx, Math.min(1, nv2 * 1.3)); }
     if (PHOTO_GROUND) {
       const k2 = nv2 * nv2 * (3 - 2 * nv2);
       for (let dy = 0; dy <= 1; dy++) for (let dx = 0; dx <= 1; dx++) {
@@ -226,7 +232,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const ripples = bump('water')?.clone() ?? null;
   if (ripples) { ripples.repeat.set(w / 14, h / 14); ripples.needsUpdate = true; }
   // odległość każdego pola wody od lądu (0 brzeg … 1 głębia), na niej opiera się kolor, przejrzystość i piana
-  const shoreData = new Uint8Array(w * h * 4);
+  // Brzeg wody w 4× gęstszej siatce: R = odległość od lądu (głębia), G = gładka maska wody (rozmyta granica),
+  // dzięki której tafla wygasa miękko i nieregularnie zamiast kończyć się kantem pól.
+  const SS = 4, SW = w * SS, SH = h * SS;
+  const shoreData = new Uint8Array(SW * SH * 4);
   {
     const dist = new Int16Array(w * h).fill(-1);
     const queue: number[] = [];
@@ -241,9 +250,23 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         dist[j] = dist[i]! + 1; queue.push(j);
       }
     }
-    for (let i = 0; i < w * h; i++) { const v = Math.min(255, Math.max(0, (dist[i]! - 0.5) * 255 / 6)); shoreData[i * 4] = v; shoreData[i * 4 + 3] = 255; }
+    let m: Float32Array = new Float32Array(SW * SH), d: Float32Array = new Float32Array(SW * SH);
+    for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+      const t = ((y / SS) | 0) * w + ((x / SS) | 0);
+      m[y * SW + x] = map.tiles[t] === Terrain.Water ? 1 : 0;
+      d[y * SW + x] = Math.max(0, dist[t]! - 0.5) / 6;
+    }
+    // dwa przejścia rozmycia pudełkowego (promień 3 podpola): zaokrąglone, płynne brzegi i płynna głębia
+    const blur = (src: Float32Array): Float32Array => {
+      const tmpB = new Float32Array(src.length), out = new Float32Array(src.length), R = 3;
+      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) { let a = 0, n = 0; for (let k = -R; k <= R; k++) { const xx = x + k; if (xx >= 0 && xx < SW) { a += src[y * SW + xx]!; n++; } } tmpB[y * SW + x] = a / n; }
+      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) { let a = 0, n = 0; for (let k = -R; k <= R; k++) { const yy = y + k; if (yy >= 0 && yy < SH) { a += tmpB[yy * SW + x]!; n++; } } out[y * SW + x] = a / n; }
+      return out;
+    };
+    m = blur(blur(m)); d = blur(d);
+    for (let i = 0; i < SW * SH; i++) { shoreData[i * 4] = Math.min(255, d[i]! * 255); shoreData[i * 4 + 1] = Math.min(255, m[i]! * 255); shoreData[i * 4 + 3] = 255; }
   }
-  const shoreTex = new THREE.DataTexture(shoreData, w, h, THREE.RGBAFormat);
+  const shoreTex = new THREE.DataTexture(shoreData, SW, SH, THREE.RGBAFormat);
   shoreTex.magFilter = THREE.LinearFilter; shoreTex.minFilter = THREE.LinearFilter; shoreTex.needsUpdate = true;
   const wm = waterMaterial(shoreTex, w, h);
   const waterMat = wm.mat;
@@ -409,6 +432,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     group.add(far);
   }
 
+  // gęsta trawa: łąka pełna, las i złoża rzadko, woda i góry bez trawy
+  const grassBase = new Float32Array(w * h);
+  for (let t = 0; t < w * h; t++) {
+    const tt = map.tiles[t] as Terrain;
+    grassBase[t] = tt === Terrain.Grass ? 1 : tt === Terrain.Forest ? 0.35 : tt === Terrain.Stone ? 0.25 : tt === Terrain.Iron ? 0.1 : 0;
+  }
+  const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), bladeTexture(map.seed));
+  if (grass) group.add(grass.mesh);
   const yAxis = new THREE.Vector3(0, 1, 0);
   const heightAt = (fx: number, fy: number): number => {
     const x = Math.max(0, Math.min(w - 1.001, fx)), y = Math.max(0, Math.min(h - 1.001, fy));
@@ -423,7 +454,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3; frost?: number };
   const FROST = new THREE.Color(0xdfe7ea);
   const pines: Item[] = [], leafy: Item[] = [], rocks: Item[] = [], ores: Item[] = [], tufts: Item[] = [];
-  const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [];
+  const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [], reeds: Item[] = [], lilies: Item[] = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const put = (list: Item[], x: number, y: number, n: number, scaleBase: number, spread = 0.7): void => {
@@ -452,12 +483,22 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if ((r >>> 17) % 5 === 0) put(bushes, x, y, 4, 0.8, 0.9);
       } else if (t === Terrain.Stone) { put(rocks, x, y, 0, 1.1); if ((r >>> 6) & 1) put(pebbles, x, y, 5, 0.5, 0.9); }
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
+      // brzeg wody: kępy trzcin i pałek po obu stronach linii wody, na płyciźnie liście grzybieni
+      const isW = (xx: number, yy: number): boolean => xx >= 0 && yy >= 0 && xx < w && yy < h && map.tiles[yy * w + xx] === Terrain.Water;
+      const nearW = isW(x + 1, y) || isW(x - 1, y) || isW(x, y + 1) || isW(x, y - 1);
+      if (t !== Terrain.Water && nearW && (r >>> 9) % 3 !== 0) { put(reeds, x, y, 21, 1, 1.0); if ((r >>> 12) & 1) put(reeds, x, y, 22, 0.8, 1.0); }
+      if (t === Terrain.Water) {
+        const shoreNear = !isW(x + 1, y) || !isW(x - 1, y) || !isW(x, y + 1) || !isW(x, y - 1);
+        if (shoreNear && (r >>> 9) % 2 === 0) put(reeds, x, y, 23, 1.1, 0.9);
+        const near2 = !isW(x + 2, y) || !isW(x - 2, y) || !isW(x, y + 2) || !isW(x, y - 2);
+        if ((shoreNear || near2) && (r >>> 14) % 5 === 0) for (let k = 0; k < 3; k++) put(lilies, x, y, 30 + k, 0.8 + k * 0.2, 0.9);
+      }
       else if (t === Terrain.Grass) {
         // łąka: gęste kępy trawy, kwiaty, pojedyncze krzewy, kamyki i z rzadka większy głaz
         // kępy rosną gęściej tam, gdzie łąka jest bujniejsza (wolny szum), na wydeptanych miejscach znikają razem z polem
         const lush = (hash2(x >> 3, y >> 3, map.seed ^ 0x6a5d) & 255) / 255;
-        const nT = lush > 0.5 ? 2 : 1;
-        for (let k = 0; k < nT; k++) if (((r >>> (7 + k * 3)) & 3) !== 0) put(tufts, x, y, 2 + k * 11, 0.8 + ((r >>> (k * 5)) & 7) / 14, 0.95);
+        // trawę rysuje gęsty dywan (grass.ts); tu tylko pojedyncze wyższe kępy dla urozmaicenia
+        if (TEST && ((r >>> 7) & 3) === 0) put(tufts, x, y, 2, 1, 0.95);
         if ((r >>> 13) % 15 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
         if ((r >>> 16) % 23 === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
         if ((r >>> 19) % 31 === 0) put(pebbles, x, y, 5, 0.35 + ((r >>> 24) & 7) / 20, 0.8);
@@ -471,22 +512,29 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const tint = new THREE.Color();
   // trawa: kolory z wierzchołków (ciemna nasada, jasny koniec) i lekki wiatr kołyszący czubki
   const windTime = { value: 0 };
-  const grassMat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.9, metalness: 0 });
+  // Trawa jak w nowych grach: tekstura z setkami cienkich źdźbeł (rysowana raz na starcie, z przezroczystością)
+  // na trzech skrzyżowanych kartach. Kępa to 6 trójkątów zamiast kilkudziesięciu, a z bliska widać prawdziwe źdźbła.
+  const grassTex = grassCardTexture(map.seed);
+  const grassMat = new THREE.MeshStandardMaterial({ map: grassTex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.92, metalness: 0 });
   grassMat.onBeforeCompile = (sh) => {
     sh.uniforms.windTime = windTime;
-    // źdźbło świeci tak samo z obu stron (bez czarnych odwrotów) i lekko prześwituje w słońcu
     sh.fragmentShader = sh.fragmentShader
+      // ostre krawędzie źdźbeł także z daleka (mipmapy rozmywają przezroczystość, więc ją wyostrzamy)
+      .replace('#include <alphatest_fragment>', 'diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;\n#include <alphatest_fragment>')
+      // źdźbło świeci z obu stron tak samo, nasada ciemniejsza (cień w kępie), trochę światła przechodzi przez liść
       .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * 0.05;');
-    sh.vertexShader = 'uniform float windTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  diffuseColor.rgb *= mix(0.45, 1.0, smoothstep(0.0, 0.55, vGrassH));\n  totalEmissiveRadiance += diffuseColor.rgb * 0.06;');
+    sh.fragmentShader = 'varying float vGrassH;\n' + sh.fragmentShader;
+    sh.vertexShader = 'uniform float windTime;\nvarying float vGrassH;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      vGrassH = uv.y;
       #ifdef USE_INSTANCING
         vec2 ip = instanceMatrix[3].xz;
-        float gust = sin(windTime * 1.7 + ip.x * 0.35 + ip.y * 0.21) * 0.6 + sin(windTime * 3.1 + ip.x * 1.3) * 0.25;
-        transformed.x += gust * 0.06 * position.y * position.y * 18.0;
-        transformed.z += gust * 0.03 * position.y * position.y * 18.0;
+        float gust = sin(windTime * 1.7 + ip.x * 0.35 + ip.y * 0.21) * 0.6 + sin(windTime * 3.3 + ip.x * 1.3 + ip.y) * 0.25;
+        transformed.x += gust * 0.05 * uv.y * uv.y;
+        transformed.z += gust * 0.025 * uv.y * uv.y;
       #endif`);
   };
-  grassMat.customProgramCacheKey = () => 'grass-wind';
+  grassMat.customProgramCacheKey = () => 'grass-cards';
   /**
    * Roślinność i kamienie w kawałkach 40×40 pól: każdy kawałek to osobna siatka z własną sferą ograniczającą,
    * więc karta graficzna pomija to, czego nie widać (także w cieniach). Na dużych mapach to kilkukrotnie mniej trójkątów.
@@ -595,8 +643,17 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
+  // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
+  for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
+  for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
+  const reedMat = new THREE.MeshStandardMaterial({ map: reedTexture(map.seed), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 });
+  reedMat.onBeforeCompile = grassMat.onBeforeCompile;
+  reedMat.customProgramCacheKey = () => 'reeds';
+  plant(reeds, instanced(grassCards(), 0xffffff, reeds, undefined, false, reedMat, { hide: 70 }), null, false);
+  const lilyGeo = new THREE.CircleGeometry(0.13, 12, 0.35, Math.PI * 2 - 0.5).rotateX(-Math.PI / 2);
+  plant(lilies, instanced(lilyGeo, 0x4a7a32, lilies, undefined, false, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0 }), { hide: 70 }), null, false);
   plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock', true, undefined, SMALL_LOD), null, false);
-  plant(tufts, instanced(models.tuft(), 0x9cb860, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
+  plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {
     const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false, undefined, SMALL_LOD);
     const palette = [0xf4f1e6, 0xf2d24a, 0xb07ad6, 0xe8687a, 0x7fb2e6];
@@ -736,7 +793,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     paveMat.polygonOffsetFactor = -2;
     return paveMat;
   };
+  // trawa znika pod budynkami i na drogach (bruk całkiem, ścieżka z piasku prawie)
+  const builtOn = new Uint8Array(w * h);
+  let roadsNow: Uint8Array | null = null;
+  const regrass = (t: number): void => { if (grass) grass.setDensity(t, builtOn[t] ? 0 : roadsNow?.[t] ? (roadsNow[t] === 1 ? 0.08 : 0) : grassBase[t]!); };
   const setRoads = (roads: Uint8Array, materials: THREE.Material[]): void => {
+    roadsNow = roads;
+    if (grass) for (let t = 0; t < w * h; t++) regrass(t);
     for (const old of roadMeshes) { group.remove(old); old.geometry.dispose(); }
     roadMeshes.length = 0;
     const shade = new THREE.Color();
@@ -897,6 +960,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     clear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
+    updateGrass(x: number, z: number, time: number) { grass?.update(x, z, time); },
+    noGrass(tile: number, on = true) { builtOn[tile] = on ? 1 : 0; regrass(tile); },
     lod(x: number, z: number, reach: number) {
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
@@ -920,4 +985,121 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       });
     },
   };
+}
+
+
+/** Trzy skrzyżowane karty kępy trawy (szer. 0,55, wys. 0,34), normalne w górę: kępa świeci jak ziemia pod nią */
+function grassCards(): THREE.BufferGeometry {
+  const P: number[] = [], U: number[] = [], N: number[] = [], I: number[] = [];
+  const W = 0.55, H = 0.34;
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * Math.PI + 0.3, cx = Math.cos(a) * W / 2, cz = Math.sin(a) * W / 2;
+    const b = P.length / 3;
+    // lekko odchylone od pionu na zewnątrz, żeby z góry kępa nie znikała
+    P.push(-cx, 0, -cz, cx, 0, cz, cx * 1.15, H, cz * 1.15 + 0.03, -cx * 1.15, H, -cz * 1.15 + 0.03);
+    U.push(0, 0, 1, 0, 1, 1, 0, 1);
+    for (let i = 0; i < 4; i++) N.push(0, 1, 0);
+    I.push(b, b + 1, b + 2, b, b + 2, b + 3);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  g.setIndex(I);
+  return g;
+}
+
+/**
+ * Tekstura kępy: ok. 220 źdźbeł malowanych krzywymi, zwężających się ku górze, w różnych odcieniach zieleni,
+ * część zżółkła i sucha, kilka kłosków traw. Tło przezroczyste. Rysowana raz, 512×512.
+ */
+function grassCardTexture(seed: number): THREE.Texture {
+  const N = typeof document === 'undefined' ? 0 : 512;
+  if (!N) return new THREE.Texture();
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const ctx = c.getContext('2d')!;
+  let s = (seed ^ 0x9e3779b9) >>> 0;
+  const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  const blades = 220;
+  for (let i = 0; i < blades; i++) {
+    // dalsze źdźbła (rysowane najpierw) ciemniejsze, bliższe jaśniejsze
+    const depth = i / blades;
+    const x0 = N * (0.5 + (rnd() - 0.5) * 0.85 * (0.6 + rnd() * 0.4));
+    const hgt = N * (0.35 + rnd() * 0.62) * (1 - Math.abs(x0 / N - 0.5) * 0.9);
+    const lean = (x0 / N - 0.5) * N * 0.55 + (rnd() - 0.5) * N * 0.25;
+    const w = N * (0.008 + rnd() * 0.012);
+    const dry = rnd() < 0.14;
+    const hue = dry ? 48 + rnd() * 10 : 78 + rnd() * 30;
+    const sat = dry ? 35 + rnd() * 20 : 38 + rnd() * 30;
+    const light = (dry ? 42 : 22) + depth * 22 + rnd() * 8;
+    const x1 = x0 + lean, y1 = N - hgt;
+    const cxp = x0 + lean * 0.25, cyp = N - hgt * 0.6;
+    const grad = ctx.createLinearGradient(0, N, 0, y1);
+    grad.addColorStop(0, `hsl(${hue - 6}, ${sat}%, ${light * 0.55}%)`);
+    grad.addColorStop(0.6, `hsl(${hue}, ${sat}%, ${light}%)`);
+    grad.addColorStop(1, `hsl(${hue - (dry ? 0 : 18)}, ${sat + 5}%, ${light + 12}%)`);
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(x0 - w, N);
+    ctx.quadraticCurveTo(cxp - w * 0.7, cyp, x1, y1);
+    ctx.quadraticCurveTo(cxp + w * 0.7, cyp, x0 + w, N);
+    ctx.closePath();
+    ctx.fill();
+    // jaśniejszy nerw środkiem źdźbła
+    if (w > N * 0.012) {
+      ctx.strokeStyle = `hsla(${hue}, ${sat}%, ${light + 14}%, 0.45)`;
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(x0, N); ctx.quadraticCurveTo(cxp, cyp, x1, y1); ctx.stroke();
+    }
+    // kłosek trawy na niektórych wysokich źdźbłach
+    if (hgt > N * 0.75 && rnd() < 0.25) {
+      ctx.fillStyle = `hsl(${45 + rnd() * 10}, 35%, ${45 + rnd() * 15}%)`;
+      for (let k = 0; k < 6; k++) {
+        ctx.beginPath();
+        ctx.ellipse(x1 + (rnd() - 0.5) * 6, y1 + k * 5, 2.2, 4.5, (rnd() - 0.5) * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.anisotropy = 8;
+  t.generateMipmaps = true;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  return t;
+}
+
+
+/** Tekstura trzcin: proste, wysokie, oliwkowe źdźbła i liście, kilka brązowych pałek na sztywnych łodygach */
+function reedTexture(seed: number): THREE.Texture {
+  if (typeof document === 'undefined') return new THREE.Texture();
+  const N = 256;
+  const c = document.createElement('canvas');
+  c.width = c.height = N;
+  const ctx = c.getContext('2d')!;
+  let s = (seed ^ 0x51ed27) >>> 0;
+  const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
+  for (let i = 0; i < 70; i++) {
+    const depth = i / 70;
+    const x0 = N * (0.2 + rnd() * 0.6), hgt = N * (0.55 + rnd() * 0.43), lean = (rnd() - 0.5) * N * 0.18, wd = N * (0.01 + rnd() * 0.012);
+    const hue = 62 + rnd() * 25, l = 18 + depth * 20 + rnd() * 6;
+    ctx.fillStyle = `hsl(${hue}, ${30 + rnd() * 20}%, ${l}%)`;
+    ctx.beginPath();
+    ctx.moveTo(x0 - wd, N);
+    ctx.quadraticCurveTo(x0 + lean * 0.3 - wd * 0.5, N - hgt * 0.6, x0 + lean, N - hgt);
+    ctx.quadraticCurveTo(x0 + lean * 0.3 + wd * 0.5, N - hgt * 0.6, x0 + wd, N);
+    ctx.fill();
+    // pałka: brązowy walec u szczytu sztywnej łodygi
+    if (rnd() < 0.18) {
+      const tx = x0 + lean * 0.5, ty = N - hgt * 0.85;
+      ctx.fillStyle = `hsl(25, 45%, ${20 + rnd() * 10}%)`;
+      ctx.beginPath(); ctx.ellipse(tx, ty, 3.2, 11, lean / N, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  t.generateMipmaps = true;
+  t.minFilter = THREE.LinearMipmapLinearFilter;
+  return t;
 }

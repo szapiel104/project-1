@@ -1070,6 +1070,7 @@ export class GameRenderer {
       const T = (name: string, fn: () => void): void => { const t0 = performance.now(); fn(); this.timing[name] = (this.timing[name] ?? 0) + performance.now() - t0; };
       T('animacje', () => { this.animate(g, this.calm ? 0 : dt); if (!this.calm) v.animate(this.time); });
       T('las', () => this.syncForest(g, v));
+      { const f = this.focusPoint; v.updateGrass(f.x, f.z, this.calm ? 0 : this.time); }
       if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.syncRubble(g, v, dt));
@@ -1524,7 +1525,7 @@ export class GameRenderer {
       let top = -99, low = 99;
       const fp = footprint(def, b.rot);
       // pod budynkiem nie rośnie trawa, krzewy ani nie leżą kamyki
-      for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) view.clear(y * width + x);
+      for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { view.clear(y * width + x); view.noGrass(y * width + x); }
       for (let y = b.y; y <= b.y + fp.h; y++)
         for (let x = b.x; x <= b.x + fp.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
       // budynek siada lekko poniżej najwyższego punktu działki, wtopiony w teren, bez cokołu
