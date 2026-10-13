@@ -4,6 +4,7 @@ import { MAP_PRESETS } from '../data/maps';
 import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
+import { openWalk } from './systems/placement';
 import type { Building, Corpse, Traveler, Wolf, GameState, March, PlayerState, Rubble, Soldier, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
@@ -90,6 +91,7 @@ export function deserialize(d: SaveData): GameState | null {
       for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * map.width + x] = b.id;
       if (b.door >= 0) g.reserved[b.door]!++;
       if (def.gate && !b.shut) g.gates[b.y * map.width + b.x] = b.owner + 1;
+      openWalk(g, b);
     }
     return g;
   } catch {

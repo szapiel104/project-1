@@ -147,6 +147,13 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
   return null;
 }
 
+/** Pola wewnątrz budynku, po których chodzą ludzie właściciela (brama, dziedziniec, sale zamku) */
+export function openWalk(g: GameState, b: Building): void {
+  const def = BUILDINGS[b.type]!;
+  if (!def.walk || b.rot) return;
+  for (const [dx, dy] of def.walk) g.gates[(b.y + dy) * g.map.width + b.x + dx] = b.owner + 1;
+}
+
 /** Wstawia budynek do stanu bez sprawdzania kosztów (używane też dla twierdzy startowej). */
 export function addBuilding(g: GameState, type: number, owner: number, x: number, y: number, rot = 0): Building {
   const def = BUILDINGS[type]!;
@@ -158,6 +165,7 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
     for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; g.roadPlan[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
   if (door >= 0) g.reserved[door]!++;
   if (def.gate) { b.gateOpen = true; b.shut = false; g.gates[y * g.map.width + x] = owner + 1; }
+  openWalk(g, b);
   g.buildings.push(b);
   return b;
 }

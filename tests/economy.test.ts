@@ -3,7 +3,7 @@ import { BUILDINGS, buildingIndex } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { Terrain } from '../src/data/terrain';
-import { findPath, walkable } from '../src/sim/path';
+import { findPath, walkable, WOLF } from '../src/sim/path';
 import { deserialize, serialize } from '../src/sim/save';
 import { createGame as realGame, housing, Phase, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
 import { clockAt } from '../src/sim/clock';
@@ -242,7 +242,7 @@ describe('praca chłopów', () => {
     expect(g.buildings.filter((b) => b.owner === 0 && b.worker).length).toBe(3);
   });
 
-  it('chłopi nie wchodzą na wodę, góry ani w budynki', () => {
+  it('chłopi nie wchodzą na wodę, góry ani w budynki (poza dziedzińcem i salami własnego zamku)', () => {
     const g = createGame(31);
     for (const id of ['woodcutter', 'orchard', 'house', 'stockpile']) step(g, [build(g, id)]);
     for (let i = 0; i < 1200; i++) {
@@ -251,7 +251,7 @@ describe('praca chłopów', () => {
         const tile = (u.py >> 8) * g.map.width + (u.px >> 8);
         const terrain = g.map.tiles[tile] as Terrain;
         expect(terrain === Terrain.Water || terrain === Terrain.Mountain).toBe(false);
-        if (u.path.length) expect(walkable(g, u.path[u.path.length - 1]!)).toBe(true);
+        if (u.path.length) expect(walkable(g, u.path[u.path.length - 1]!, u.owner)).toBe(true);
       }
     }
   });
@@ -594,5 +594,46 @@ describe('rytm dnia: poprawki', () => {
     const before = g.players[0]!.res.reduce((n, v) => n + v, 0);
     at(g, 4, 5);
     expect(g.players[0]!.res.reduce((n, v) => n + v, 0)).toBe(before);
+  });
+});
+
+describe('zamek', () => {
+  it('ludzie właściciela wchodzą bramą na dziedziniec i do sal, obcy i wilki nie', () => {
+    const g = createGame(5);
+    const keep = playerKeep(g, 0)!;
+    const w = g.map.width;
+    const gate = (keep.y + 2) * w + keep.x + 1, hall = keep.y * w + keep.x + 1, tower = keep.y * w + keep.x;
+    expect(walkable(g, gate, 0)).toBe(true);
+    expect(walkable(g, hall, 0)).toBe(true);
+    expect(walkable(g, tower, 0)).toBe(false);
+    expect(walkable(g, hall, 1)).toBe(false);
+    expect(walkable(g, hall, WOLF)).toBe(false);
+    const outside = (keep.y + 4) * w + keep.x + 1;
+    const path = findPath(g, outside, (t) => t === hall, 400, 0)!;
+    expect(path).not.toBeNull();
+    expect(path).toContain(gate);
+  });
+});
+
+describe('zamek — wojsko', () => {
+  it('włócznicy na rozkaz wchodzą przez bramę na dziedziniec zamku', () => {
+    const g = createGame(5);
+    g.players[0]!.guards = 0;
+    const keep = playerKeep(g, 0)!;
+    const w = g.map.width;
+    const ids: number[] = [];
+    for (let i = 0; i < 3; i++) {
+      const id = g.nextId++;
+      ids.push(id);
+      g.soldiers.push({ id, owner: 0, kind: 0, px: (keep.x + i) * 256 + 128, py: (keep.y + 5) * 256 + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 } as GameState['soldiers'][number]);
+    }
+    step(g, [{ type: 'move', player: 0, ids, x: keep.x + 1, y: keep.y + 1 }]);
+    for (let i = 0; i < 300; i++) step(g, []);
+    const inside = g.soldiers.filter((s) => ids.includes(s.id)).filter((s) => {
+      const tx = s.px >> 8, ty = s.py >> 8;
+      return tx >= keep.x && tx < keep.x + 3 && ty >= keep.y && ty < keep.y + 3;
+    });
+    expect(inside.length).toBeGreaterThan(0);
+    for (const s of inside) expect(walkable(g, (s.py >> 8) * w + (s.px >> 8), 0)).toBe(true);
   });
 });

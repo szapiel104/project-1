@@ -34,6 +34,9 @@ import { N8AOPass } from 'n8ao';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 
 export interface TileRef { x: number; y: number }
+/** Pola zamku, po których się chodzi (dy * 3 + dx): sala donżonu, koszary, dziedziniec, brama; posadzka na tej wysokości */
+const KEEP_WALK = new Set([1, 3, 4, 5, 7]);
+const KEEP_FLOOR = 0.22;
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
 
@@ -1978,6 +1981,7 @@ export class GameRenderer {
       // budynek siada lekko poniżej najwyższego punktu działki, wtopiony w teren, bez cokołu
       const ground = low + (top - low) * 0.35;
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
+      if (def.id === 'keep') this.keepFloors.set(b.id, [b.x + 1.5, b.y + 1.5, ground]);
       mesh.rotation.y = (b.rot * Math.PI) / 2;
       // ziemia wydeptana tylko tuż przy ścianach (z przerwami) i przy drzwiach; dalej trawa ledwo naruszona
       if (!def.wall && !def.gate && !def.road && def.id !== 'torch') {
@@ -2430,7 +2434,7 @@ export class GameRenderer {
       cur[0] += (want[0] - cur[0]) * k; cur[1] += (want[1] - cur[1]) * k;
       this.pullNow.set(s.id, cur);
       const px = fx + cur[0], pz = fy + cur[1];
-      const y = view.heightAt(px, pz) + lift;
+      const y = this.standY(view, px, pz) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
       const pc = this.lastCd.get(s.id) ?? 0;
@@ -2540,6 +2544,23 @@ export class GameRenderer {
    * Siennik dla śpiącego: [głowa x, y, z, stopy x, y, z] w świecie. W chacie (i w twierdzy) dwa rzędy po cztery
    * na podłodze wnętrza, głowami do ścian; pod gołym niebem na polu, na którym leży, w stałym kierunku.
    */
+  /** Zamki: środek działki (pola) i wysokość, na której stoi model — po dziedzińcu i salach chodzi się po posadzce */
+  private keepFloors = new Map<number, [number, number, number]>();
+  /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */
+  private standY(view: TerrainView, x: number, y: number): number {
+    const h = view.heightAt(x, y);
+    for (const [id, [kx, ky, base]] of this.keepFloors) {
+      const lx = x - kx, lz = y - ky;
+      if (Math.abs(lx) > 1.5 || lz < -1.5 || lz > 1.95) continue;
+      if (!this.buildingMeshes.has(id)) { this.keepFloors.delete(id); continue; }
+      const tx = Math.floor(lx + 1.5), ty = Math.floor(lz + 1.5);
+      const inside = lz < 1.5 && KEEP_WALK.has(ty * 3 + tx), bridge = Math.abs(lx) < 0.25 && lz > 1.0;
+      if (!inside && !bridge) continue;
+      return Math.max(h, base + KEEP_FLOOR * Math.min(1, Math.max(0, (1.94 - lz) / 0.5)));
+    }
+    return h;
+  }
+
   private bedSpot(g: GameState, u: GameState['units'][number], view: TerrainView, sleepers: Map<number, number[]>): [number, number, number, number, number, number] | null {
     const width = g.map.width, height = g.map.height;
     const L = 0.48;
@@ -2613,7 +2634,7 @@ export class GameRenderer {
       st.x = fx; st.y = fy;
       const stride = walking ? st.phase : 0;
       let swing = walking ? Math.sin(stride) * 0.55 : 0;
-      t.position.set(fx + ox - width / 2, view.heightAt(fx + ox, fy + oz) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), fy + oz - height / 2);
+      t.position.set(fx + ox - width / 2, this.standY(view, fx + ox, fy + oz) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), fy + oz - height / 2);
       t.rotation.set(0, heading, 0);
       // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
       const resting = u.phase === Phase.Resting;
