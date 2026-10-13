@@ -26,6 +26,8 @@ export interface HudEvents {
   onGate(building: number, open: boolean): void;
   onDismount(building: number): void;
   onWalk(): void;
+  /** Oko: spacer oczami losowego mieszkańca */
+  onRandomWalk(): void;
   /** Pokaż / ukryj teren pracy budynku (zielony kwadrat) */
   onArea(building: number): void;
   onSelectGarrison(building: number): void;
@@ -396,7 +398,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   towerBtns.append(tSel, tDown);
   towerBox.append(towerState, towerBtns);
   towerBox.hidden = true;
-  const walkBtn = el('button', 'btn-main walk-btn', 'Przejdź się jego oczami'); walkBtn.type = 'button'; walkBtn.hidden = true;
+  const walkBtn = el('button', 'btn-main walk-btn', 'Przejdź się jego oczami (F)'); walkBtn.type = 'button'; walkBtn.hidden = true;
   walkBtn.addEventListener('click', () => events.onWalk());
   const areaBtn = el('button', 'btn-main', 'Pokaż teren pracy'); areaBtn.type = 'button'; areaBtn.hidden = true;
   areaBtn.addEventListener('click', () => events.onArea(infoId));
@@ -513,6 +515,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   menuBtn.type = 'button';
   menuBtn.addEventListener('click', () => events.onMenu());
   tabs.prepend(menuBtn);
+  // oko: patrzymy oczami przypadkowego mieszkańca osady
+  const eye = el('button', 'btn-plain hud-eye');
+  eye.type = 'button';
+  eye.title = 'Przejdź się oczami przypadkowego mieszkańca';
+  eye.setAttribute('aria-label', eye.title);
+  eye.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/></svg>';
+  eye.addEventListener('click', () => events.onRandomWalk());
+  tabs.append(eye);
   // konto na dolnym pasku: herb i nick (albo zaproszenie do logowania)
   const acc = el('button', 'hud-acc');
   acc.type = 'button';

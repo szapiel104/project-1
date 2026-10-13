@@ -686,3 +686,7 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 
 /* ---- skalowanie interfejsu do wielkości okna (liczone w main.ts: --ui) ---- */
 #ui, .build, .scribe, .alarm, .alerts, .report, .fps-tag, .perf, .invite-toast, .game-chat, .net-wait, .menu-panel, .end-panel { zoom: var(--ui, 1); }
+
+/* oko na dolnym pasku: spacer oczami przypadkowego mieszkańca */
+.hud-eye { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; }
+.hud-eye:focus-visible { outline: 2px solid #e8c56a; outline-offset: 2px; }

@@ -94,12 +94,14 @@ const hud = createHud(document.getElementById('ui')!, {
   onMute: () => hud.setMuted(toggleMute()),
   onMenu: () => menu.open(!gameOver),
   onAccount: () => menu.account(true),
-  onWalk: () => {
-    const u = game.units.find((x) => x.id === selectedUnit);
-    if (!u) return;
-    document.body.classList.add('walking');
-    walkHint.hidden = false;
-    renderer.startWalk(u.px / 256, u.py / 256);
+  onWalk: () => walkAs(selectedUnit),
+  onRandomWalk: () => {
+    // najchętniej ktoś, kto akurat idzie (więcej widać), inaczej ktokolwiek z mojej osady
+    const mine = game.units.filter((u) => u.owner === ME);
+    const going = mine.filter((u) => u.path.length > 0);
+    const pool = going.length ? going : mine;
+    const u = pool[Math.floor(Math.random() * pool.length)];
+    if (u) { selectUnit(u.id); walkAs(u.id); }
   },
   onArea: (id) => {
     if (!shownAreas.delete(id)) shownAreas.add(id);
@@ -474,6 +476,15 @@ window.addEventListener('keydown', unlockAudio);
 document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('button')) play('click'); });
 renderer.onCollapse = () => play('collapse');
 
+/** Spacer oczami wybranego mieszkańca */
+function walkAs(id: number): void {
+  const u = game.units.find((x) => x.id === id);
+  if (!u || renderer.walking) return;
+  document.body.classList.add('walking');
+  walkHint.hidden = false;
+  renderer.startWalk(u.px / 256, u.py / 256);
+}
+
 window.addEventListener('keydown', (e) => {
   if (renderer.walking) return; // spacer oczami chłopa: klawisze należą do spaceru
   if (e.key === 'Escape' && plan.state !== 'none') { cancelPlan(); return; }
@@ -491,6 +502,7 @@ window.addEventListener('keydown', (e) => {
   if (tag === 'INPUT' || tag === 'SELECT' || e.ctrlKey || e.metaKey) return;
   if (e.key === 'Enter' && chat.active) { e.preventDefault(); chat.open(); return; }
   if (e.code === 'KeyR' && picked) rotate();
+  if (e.code === 'KeyF' && selectedUnit && !e.repeat) { walkAs(selectedUnit); return; } // F przy zaznaczonym mieszkańcu = przejdź się jego oczami
   if (e.code === 'KeyM') hud.setMuted(toggleMute());
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
   if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);

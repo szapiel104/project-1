@@ -22,7 +22,7 @@ function tex(name: string, color: boolean): THREE.Texture {
   if (t) return t;
   t = loader!.load(base() + name + '.jpg?v=4'); // numer wersji: przeglądarka nie trzyma starego zdjęcia po podmianie
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = 8;
+  t.anisotropy = 16;
   if (color) t.colorSpace = THREE.SRGBColorSpace;
   cache.set(name, t);
   return t;
@@ -145,12 +145,20 @@ const FRAG_ALBEDO = /* glsl */ `
   float sum = bG + bM + bF + bP + bD + bR + 1e-4;
   vec3 alb = (grass * bG + meadow * bM + forest * bF + pebble * bP + dirt * bD + rock * bR) / sum;
 
+  // z bliska drobna faktura w dużo mniejszej skali: więcej szczegółu na metr (ostrzej, mniej płasko)
+  float near = 1.0 - smoothstep(5.0, 24.0, dist);
+  float det = lum(texture2D(tGrass2, rot(w, 1.7) / 0.85).rgb);
+  float detD = lum(texture2D(tDirt, rot(w, 2.9) / 0.9).rgb);
+  float dg = (bG + bM) / sum, dd = (bD + bF + bP) / sum;
+  alb *= mix(1.0, clamp(det * 2.3, 0.55, 1.45), near * 0.55 * dg) * mix(1.0, clamp(detD * 2.4, 0.6, 1.4), near * 0.45 * dd);
   // normalna z tekstur w tych samych proporcjach
   vec3 tnG = texture2D(nGrass, w / 3.1).xyz * 2.0 - 1.0;
   vec3 tnF = texture2D(nForest, rot(w, 1.3) / 4.2).xyz * 2.0 - 1.0;
   vec3 tnP = texture2D(nPebble, rot(w, 2.6) / 2.9).xyz * 2.0 - 1.0;
   vec3 tnR = texture2D(nRock, w / 6.0).xyz * 2.0 - 1.0;
   gNormal = normalize((tnG * (bG + bM * 0.6) + tnF * (bF + bD + bM * 0.4) + tnP * bP * 1.4 + tnR * bR * 1.3) / sum);
+  vec3 tnDet = texture2D(nGrass, rot(w, 1.7) / 0.85).xyz * 2.0 - 1.0;
+  gNormal = normalize(gNormal + vec3(tnDet.xy * near * 0.8 * dg, 0.0));
 
   // góry: na płaskich półkach trawa i mech, wysoko śnieg (mniej na stromiznach), granica postrzępiona szumem
   float ledge = bR / sum * smoothstep(0.8, 0.95, vWN.y) * smoothstep(0.45, 0.7, nS.b) * (1.0 - smoothstep(5.0, 7.5, vWP.y));
@@ -180,7 +188,7 @@ const FRAG_NORMAL = /* glsl */ `
   vec3 B = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);
   T = normalize(T - normal * dot(T, normal));
   B = normalize(B - normal * dot(B, normal) - T * dot(B, T));
-  vec3 gn = vec3(gNormal.xy * 0.9, gNormal.z);
+  vec3 gn = vec3(gNormal.xy * 1.35, gNormal.z);
   normal = normalize(T * gn.x - B * gn.y + normal * gn.z);
 }
 `;
