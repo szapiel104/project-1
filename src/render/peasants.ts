@@ -180,15 +180,22 @@ export class Figures {
       // miecz: rękojeść w dłoni, jelec, głowica, prosta klinga; w spoczynku ostrzem w dół i lekko w przód
       const sword = { at: new THREE.Vector3(M.hand[0]!, M.hand[1]!, M.hand[2]!), rot: (_s: number, up: boolean): number => (up ? -0.9 : -0.55) };
       const at = new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!);
-      mk(merge(
-        new THREE.CylinderGeometry(0.008, 0.008, 0.055, 6).translate(0, 0.012, 0),
-        new THREE.SphereGeometry(0.013, 6, 4).translate(0, 0.044, 0),
-      ), 0x3a2416, at.clone(), swordArm, always, 'leather', sword);
-      mk(merge(
-        new THREE.BoxGeometry(0.07, 0.01, 0.015).translate(0, -0.02, 0),
-        new THREE.BoxGeometry(0.024, 0.25, 0.005).translate(0, -0.15, 0),
-        new THREE.ConeGeometry(0.017, 0.035, 4).rotateY(Math.PI / 4).scale(1, 1, 0.3).rotateX(Math.PI).translate(0, -0.292, 0),
-      ), 0xb8bdc4, at.clone(), swordArm, always, 'metal', sword);
+      // rękojeść i klinga w jednej siatce (kolory wierzchołków), jedno wywołanie rysowania
+      const tinted = (g: THREE.BufferGeometry, hex: number): THREE.BufferGeometry => {
+        const n = g.index ? g.toNonIndexed() : g;
+        n.deleteAttribute('uv');
+        const c = new THREE.Color(hex), arr = new Float32Array(n.attributes.position!.count * 3);
+        for (let i = 0; i < arr.length; i += 3) { arr[i] = c.r; arr[i + 1] = c.g; arr[i + 2] = c.b; }
+        n.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+        return n;
+      };
+      mk(mergeGeometries([
+        tinted(new THREE.CylinderGeometry(0.008, 0.008, 0.055, 6).translate(0, 0.012, 0), 0x3a2416),
+        tinted(new THREE.SphereGeometry(0.013, 6, 4).translate(0, 0.044, 0), 0xb08a3a),
+        tinted(new THREE.BoxGeometry(0.07, 0.01, 0.015).translate(0, -0.02, 0), 0x8e939b),
+        tinted(new THREE.BoxGeometry(0.024, 0.25, 0.005).translate(0, -0.15, 0), 0xb8bdc4),
+        tinted(new THREE.ConeGeometry(0.017, 0.035, 4).rotateY(Math.PI / 4).scale(1, 1, 0.3).rotateX(Math.PI).translate(0, -0.292, 0), 0xb8bdc4),
+      ])!, 0xffffff, at.clone(), swordArm, always, 'metal', sword);
       return;
     }
     if (kind === 'spearman' || kind === 'archer') {

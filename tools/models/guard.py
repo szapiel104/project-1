@@ -30,7 +30,7 @@ def leg_col(x, y, z):
         return tuple(c * (0.75 if y > -0.172 else 1.0) for c in BOOT)  # wywinięta cholewa ciemniej
     return DARK
 leg_m = Mesh(evaluated(leg), leg_col, 'leather')
-greave = lathe('greave', [(0.039, -0.168), (0.041, -0.2), (0.036, -0.232), (0.031, -0.25)], seg=10, phi0=-0.95, phi=1.9, subsurf=1)
+greave = lathe('greave', [(0.039, -0.168), (0.041, -0.2), (0.036, -0.232), (0.031, -0.25)], seg=6, phi0=-0.95, phi=1.9, subsurf=0)
 greave_m = Mesh(evaluated(greave), IRON, 'metal')
 
 # ---------- ręka (środek obrotu w barku, wisi w dół) ----------
@@ -65,22 +65,22 @@ skirt_m = Mesh(sb, lambda x, y, z: tuple(c * (0.7 if y < 0.185 else 1) for c in 
 plates = []
 for k in range(4):
     y0 = 0.36 + k * 0.027
-    plates += [(0.097 - k * 0.002, y0), (0.101 - k * 0.002, y0 + 0.006), (0.098 - k * 0.003, y0 + 0.028)]
+    plates += [(0.097 - k * 0.002, y0), (0.101 - k * 0.002, y0 + 0.006)]
 plates += [(0.088, 0.475), (0.062, 0.494)]
-chest = lathe('chest', plates, seg=18, depth=0.74, subsurf=0)
+chest = lathe('chest', plates, seg=14, depth=0.74, subsurf=0)
 chest_m = Mesh(evaluated(chest), lambda x, y, z: tuple(c * (0.85 + 0.15 * ((y - 0.36) % 0.027) / 0.027) for c in IRON), 'metal')
 # naramienniki: dwie warstwy wypukłych płyt
 paul = []
 for sx in (-1, 1):
     for i, (cy, r) in enumerate(((0.494, (0.052, 0.03, 0.054)), (0.472, (0.05, 0.024, 0.051)))):
-        p = sphere(f'paul{sx}{i}', (sx * (0.096 + i * 0.01), cy, 0.0), r, seg=18, rings=14)
+        p = sphere(f'paul{sx}{i}', (sx * (0.096 + i * 0.01), cy, 0.0), r, seg=12, rings=8)
         b = evaluated(p)
         keep_faces(b, lambda x, y, z, cy=cy: y > cy + 1e-5)
         paul.append(Mesh(b, STEEL if i else IRON, 'metal'))
-buckle = sphere('buckle', (0.0, 0.338, 0.053), (0.016, 0.013, 0.006), seg=10, rings=6)
+buckle = sphere('buckle', (0.0, 0.338, 0.053), (0.016, 0.013, 0.006), seg=8, rings=4)
 buckle_m = Mesh(evaluated(buckle), BRASS, 'metal')
 # pochwa miecza u lewego biodra
-sheath = lathe('sheath', [(0.011, 0.13), (0.013, 0.155), (0.013, 0.315), (0.016, 0.325)], seg=8, depth=0.55, subsurf=0)
+sheath = lathe('sheath', [(0.011, 0.13), (0.013, 0.155), (0.013, 0.315), (0.016, 0.325)], seg=6, depth=0.55, subsurf=0)
 sh = evaluated(sheath)
 import bmesh as _bm  # noqa: E402
 from mathutils import Matrix as _M  # noqa: E402
@@ -116,20 +116,24 @@ def face(x, y, z):
     k += 0.04 * bump(u, v, math.pi, 0.25, 0.8, 0.5)  # pełna potylica
     return x * k * (0.92 if z < 0 else 1), y, z * k
 HEAD_C, HEAD_R = (0.0, 0.578, 0.004), (0.046, 0.058, 0.05)
-head = sphere('head', HEAD_C, HEAD_R, seg=28, rings=20, shape=face)
-head_m = Mesh(evaluated(head), WHITE, 'skin', dyn='skin')
-neck = lathe('neck', [(0.024, 0.488), (0.025, 0.53), (0.026, 0.545)], seg=12, subsurf=0)
+head = sphere('head', HEAD_C, HEAD_R, seg=22, rings=16, shape=face)
+# oczy: ciemne zagłębienia wprost w kolorze skóry (bez osobnych siatek gałek)
+def head_col(x, y, z):
+    k = 1.0
+    for sx in (-1, 1):
+        d = math.sqrt(((x - sx * 0.0165) / 0.0085) ** 2 + ((y - 0.5835) / 0.0055) ** 2)
+        if z > 0.03:
+            k = min(k, 0.22 + 0.78 * min(1.0, d))
+    return (k, k, k)
+head_m = Mesh(evaluated(head), head_col, 'skin', dyn='skin')
+neck = lathe('neck', [(0.024, 0.488), (0.025, 0.53), (0.026, 0.545)], seg=10, subsurf=0)
 neck_m = Mesh(evaluated(neck), WHITE, 'skin', dyn='skin')
 ears = []
 for sx in (-1, 1):
-    e = sphere(f'ear{sx}', (sx * 0.044, 0.574, -0.006), (0.006, 0.013, 0.009), seg=10, rings=8)
+    e = sphere(f'ear{sx}', (sx * 0.044, 0.574, -0.006), (0.006, 0.013, 0.009), seg=8, rings=6)
     ears.append(Mesh(evaluated(e), WHITE, 'skin', dyn='skin'))
-eyes = []
-for sx in (-1, 1):
-    e = sphere(f'eye{sx}', (sx * 0.0165, 0.584, 0.0418), (0.0062, 0.004, 0.0035), seg=8, rings=6)
-    eyes.append(Mesh(evaluated(e), hexrgb(0x1c140f), 'skin'))
 # włosy, brwi i broda: powłoki nad skórą, które łagodnie chowają się pod nią tam, gdzie ich nie ma (gładki brzeg, bez cięcia)
-def shell(name, grow, mask, seg=26, rings=18):
+def shell(name, grow, mask, seg=22, rings=16):
     def shp(x, y, z):
         x, y, z = face(x, y, z)
         k = 0.985 + (grow - 0.985) * max(0.0, min(1.0, mask(x, y, z)))
@@ -153,11 +157,11 @@ hair_m = Mesh(hair, WHITE, 'cloth', dyn='hair')
 beard = shell('beard', 1.085, lambda x, y, z: smooth(0.0, 0.12, -0.46 - y + 0.12 * (1 - z)) * smooth(-0.1, 0.35, z))  # tylko żuchwa i podbródek
 beard_m = Mesh(beard, WHITE, 'cloth', dyn='hair', show='beard')
 # brwi: dwa krzaczaste łuki nad oczami
-brow = shell('brow', 1.045, lambda x, y, z: smooth(0.0, 0.04, 0.05 - abs(y - 0.33)) * smooth(0.6, 0.85, z) * smooth(0.04, 0.12, abs(x)) * smooth(0.0, 0.1, 0.55 - abs(x)))
+brow = shell('brow', 1.045, lambda x, y, z: smooth(0.0, 0.06, 0.12 - abs(y - 0.33)) * smooth(0.6, 0.85, z) * smooth(0.04, 0.12, abs(x)) * smooth(0.0, 0.1, 0.55 - abs(x)))
 brow_m = Mesh(brow, WHITE, 'cloth', dyn='hair')
 
 # ---------- cień w zagłębieniach liczony na całej postaci w pozie spoczynkowej ----------
-static = [torso_m, skirt_m, chest_m, *paul, buckle_m, sheath_m, sash_m, head_m, neck_m, *ears, *eyes, hair_m, brow_m, beard_m]
+static = [torso_m, skirt_m, chest_m, *paul, buckle_m, sheath_m, sash_m, head_m, neck_m, *ears, hair_m, brow_m, beard_m]
 pose = [(m, (0, 0, 0)) for m in static]
 for sx in (-1, 1):
     pose += [(leg_m, (sx * HIP[0], HIP[1], HIP[2])), (greave_m, (sx * HIP[0], HIP[1], HIP[2]))]
@@ -172,6 +176,25 @@ for m, o in pose:
 # bryła do zasłaniania z całej postaci, przyciemniamy każdą siatkę raz
 bake_ao(pose, sample=uniq)
 
+# ---------- łączenie siatek: jedna siatka na materiał i kolor (mniej wywołań rysowania) ----------
+def join(meshes, mat=None):
+    out = Mesh.__new__(Mesh)
+    out.pos, out.nrm, out.col, out.idx = [], [], [], []
+    out.mat, out.dyn, out.show = mat or meshes[0].mat, meshes[0].dyn, meshes[0].show
+    for m in meshes:
+        base = len(out.pos)
+        out.pos += m.pos; out.nrm += m.nrm; out.col += m.col
+        out.idx += [tuple(base + i for i in f) for f in m.idx]
+    return out
+def groups(meshes, mat_of=lambda m: m.mat):
+    by = {}
+    for m in meshes:
+        by.setdefault((mat_of(m), m.dyn, m.show), []).append(m)
+    return [join(v, k[0]) for k, v in by.items()]
+# stałe kolory skóry i tkaniny w jedną (dwustronną) siatkę; metal osobno, bo inaczej błyszczy
+static = groups(static, lambda m: 'cloth' if m.mat in ('leather', 'cloth') and m.dyn is None else m.mat)
+leg_all = [join([leg_m, greave_m], 'leather')]  # nagolennik w tej samej siatce co noga (kolor stali z wierzchołków)
+
 # ---------- zapis ----------
 def pack(m):
     pos = b''.join(struct.pack('<3f', *p) for p in m.pos)
@@ -184,12 +207,15 @@ def pack(m):
 out = {
     'hip': HIP, 'shoulder': SHOULDER, 'hand': HAND,
     'static': [pack(m) for m in static],
-    'leg': [pack(leg_m), pack(greave_m)],
+    'leg': [pack(m) for m in leg_all],
     'arm': [pack(arm_m)],
 }
 dst = os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'render', 'models', 'guard.json')
 os.makedirs(os.path.dirname(dst), exist_ok=True)
 with open(dst, 'w') as f:
     json.dump(out, f, separators=(',', ':'))
-tris = sum(len(m.idx) for m in static) + 2 * (len(leg_m.idx) + len(greave_m.idx) + len(arm_m.idx))
+for nm, m in [('torso', torso_m), ('skirt', skirt_m), ('chest', chest_m), ('paul', paul[0]), ('head', head_m), ('hair', hair_m), ('beard', beard_m), ('brow', brow_m), ('sash', sash_m), ('leg', leg_m), ('greave', greave_m), ('arm', arm_m)]:
+    print(' ', nm, len(m.idx))
+tris = sum(len(m.idx) for m in static) + 2 * (sum(len(m.idx) for m in leg_all) + len(arm_m.idx))
+print('siatki: tułów', len(static), 'noga', len(leg_all), 'ręka 1')
 print('zapisano', os.path.relpath(dst), 'trójkątów na postać:', tris, 'rozmiar:', os.path.getsize(dst) // 1024, 'KB')
