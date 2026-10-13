@@ -289,7 +289,7 @@ function applySettings(st: Settings): void {
   gfx = st;
   // automat: cienie, cieniowanie zagłębień, rozdzielczość i zasięg trawy z poziomu dobranego do komputera
   if (st.auto) { const q = TIERS[autoQ.tier]!; renderer.setGraphics({ ...st, ...q, label: `automat ${autoQ.tier + 1}/${TIERS.length}` }); }
-  else renderer.setGraphics({ ...st, grass: 1 });
+  else renderer.setGraphics({ ...st, grass: st.grass ?? 1 });
   setBusVolume('sfx', st.sfx);
   setBusVolume('ui', st.ui);
   setBusVolume('amb', st.amb);

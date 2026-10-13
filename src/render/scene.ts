@@ -756,7 +756,7 @@ export class GameRenderer {
   /** Ustawienia grafiki i kamery z menu */
   setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; label?: string }): void {
     if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false };
-    this.quality = `${o.label ? o.label + ': ' : ''}AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}, trawa ${Math.round((o.grass ?? 1) * 100)}%`;
+    this.quality = `${o.label ? o.label + ': ' : ''}AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}, trawa ${(o.grass ?? 1) > 0 ? Math.round((o.grass ?? 1) * 100) + '%' : 'wył.'}`;
     this.grassReach = o.grass ?? 1;
     this.view?.grassReach(this.grassReach);
     this.ao.enabled = o.ao !== 'off';

@@ -10,13 +10,13 @@ export interface QualityTier {
   /** Rozmiar mapy cieni (0 = bez cieni) */
   shadows: number;
   ao: 'off' | 'low' | 'medium' | 'high';
-  /** Zasięg gęstej trawy wokół kamery (1 = pełny) */
+  /** Zasięg gęstej trawy wokół kamery (1 = pełny, 0 = bez trawy: zostaje tekstura ziemi) */
   grass: number;
 }
 
 export const TIERS: readonly QualityTier[] = [
-  { scale: 0.75, shadows: 0, ao: 'off', grass: 0.5 },
-  { scale: 1, shadows: 1024, ao: 'off', grass: 0.65 },
+  { scale: 0.75, shadows: 0, ao: 'off', grass: 0 },
+  { scale: 1, shadows: 1024, ao: 'off', grass: 0 },
   { scale: 1, shadows: 2048, ao: 'low', grass: 0.8 },
   { scale: 1.5, shadows: 2048, ao: 'medium', grass: 1 },
   { scale: 2, shadows: 4096, ao: 'medium', grass: 1 },

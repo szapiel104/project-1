@@ -17,13 +17,15 @@ export interface Settings {
   ui: number;
   amb: number;
   music: number;
+  /** Gęsta trawa wokół kamery: 0 wyłączona, 0.6 bliżej, 1 pełna */
+  grass: number;
   /** Gra sama dobiera jakość do komputera (mierzy płynność); ręczna zmiana grafiki to wyłącza */
   auto: boolean;
   /** Ostatnio dobrany poziom automatycznej jakości (następna sesja zaczyna od niego) */
   autoTier?: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true };
+export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true, grass: 1 };
 
 export interface MenuEvents {
   onContinue(): void;
@@ -377,6 +379,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         // ręczna zmiana wyłącza automat: gracz wie lepiej
         choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; manual(); }),
         choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
+        choice('Trawa', settings.grass, [[0, t('set.off')], [0.6, 'Bliżej kamery'], [1, 'Pełna']], (v) => { settings.grass = v; manual(); }),
         choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
         el('p', 'hint', t('set.graphicsHint')),

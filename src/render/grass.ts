@@ -21,7 +21,7 @@ export interface GrassField {
   setDensity(tile: number, v: number): void;
   /** Mnoży gęstość pola (np. wydeptanie): 1 bez zmian, 0 łyso */
   setWear(tile: number, worn: number): void;
-  /** Zasięg dywanu (1 = pełny, mniej = mniejszy krąg i mniej kęp do narysowania; automatyczna jakość) */
+  /** Zasięg dywanu (1 = pełny, mniej = mniejszy krąg i mniej kęp do narysowania, 0 = bez trawy) */
   setReach(f: number): void;
   /** Zwalnia tekstury i geometrię dywanu (przy zmianie mapy) */
   dispose(): void;
@@ -138,16 +138,19 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   mesh.frustumCulled = false;
   mesh.renderOrder = 1;
 
+  let off0 = false;
   return {
     mesh,
     update(x: number, z: number, time: number, camDist = 0) {
       uni.uOrigin.value.set(x + w / 2, z + h / 2);
       uni.uFade.value = 1 - Math.max(0, Math.min(1, (camDist - 32) / 26));
-      mesh.visible = uni.uFade.value > 0.01;
+      mesh.visible = !off0 && uni.uFade.value > 0.01;
       uni.uTime.value = time;
       if (dirty) { mTex.needsUpdate = true; dirty = false; }
     },
     setReach(f: number) {
+      off0 = f <= 0;
+      mesh.visible = !off0 && uni.uFade.value > 0.01;
       const r = Math.max(0.3, Math.min(1, f));
       uni.uReach.value = r;
       // instancje do promienia r·GRID/2 (dalsze i tak mają zerową wielkość)
