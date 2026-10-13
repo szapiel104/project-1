@@ -564,15 +564,10 @@ export function pluck(semi: number, near: number): void {
   }
 }
 
-// --- muzyka w tle: posępny, średniowieczny motyw składany na bieżąco (bez plików) ---
+// --- muzyka w tle: utwory z plików albo (bez plików) średniowieczne utwory składane na bieżąco ---
 // Dzień: bordun (kwinta) i melodia w skali doryckiej na „flecie” i „lutni”, spokojnie.
 // Noc: niżej, wolniej, w skali eolskiej, sam bordun z rzadkimi nutami. Atak: bębny i niski róg.
 let musicNext = 0, musicStep = 0, drone: { o: OscillatorNode[]; g: GainNode } | null = null, droneRoot = 0;
-const DORIAN = [0, 2, 3, 5, 7, 9, 10, 12, 14];
-const AEOLIAN = [0, 2, 3, 5, 7, 8, 10, 12];
-// motywy: indeksy w skali, -1 = pauza
-const PHRASES = [[0, 2, 3, 4, 3, 2, 1, 0, -1, -1], [4, 3, 4, 5, 4, 2, 3, -1, 1, 0], [2, 4, 6, 5, 4, 3, 2, 1, 0, -1], [0, -1, 3, 2, -1, 1, 0, -1, -1, -1]];
-let phrase = 0;
 
 function setDrone(c: AudioContext, root: number, level: number): void {
   if (!drone) {
@@ -631,6 +626,7 @@ export function music(night: number, danger: boolean, inMenu: boolean): void {
   setDrone(c, root, inMenu ? 0.05 : danger ? 0.09 : 0.06);
   if (now < musicNext - 0.2) return;
   const t = Math.max(now, musicNext);
+  if (danger && playTracks(c, 'battle', false)) { musicNext = now + 1; return; }
   if (danger) {
     // bębny wojenne: ciężkie „bum — bum-bum”, co takt niski róg
     const beat = 0.42;
@@ -640,15 +636,94 @@ export function music(night: number, danger: boolean, inMenu: boolean): void {
     musicNext = t + beat * 4;
     return;
   }
-  const scale = night > 0.5 ? AEOLIAN : DORIAN;
-  const p = PHRASES[phrase]!;
-  const idx = p[musicStep % p.length]!;
-  const len = night > 0.5 ? 1.4 : 0.75;
-  if (idx >= 0 && !(night > 0.5 && Math.random() < 0.45)) {
-    const f = root * 2 * Math.pow(2, scale[idx % scale.length]! / 12);
-    voice(c, t, f, len, night > 0.5 || musicStep % 8 < 4 ? 'lute' : 'flute', night > 0.5 ? 0.05 : 0.07);
+  // utwory z plików (public/music) mają pierwszeństwo; generowana muzyka gra, gdy plików brak
+  if (playTracks(c, night > 0.5 ? 'night' : 'day', inMenu)) { musicNext = now + 1; return; }
+  // utwór się skończył: cisza (słychać tylko otoczenie), potem nowy, inny utwór
+  if (!piece || now > piece.end) {
+    if (piece && now < piece.end + piece.rest) { musicNext = piece.end + piece.rest; return; }
+    piece = newPiece(night > 0.5);
+  }
+  const pc = piece;
+  // melodia: motyw utworu w odmianach (przesunięty o stopień, odwrócony, zwolniony), co takt akord lutni
+  const bar = Math.floor(musicStep / pc.motif.length);
+  const pos = musicStep % pc.motif.length;
+  const varSeed = (bar * 7 + pc.seed) % 4;
+  let idx = pc.motif[pos]!;
+  if (idx >= 0) {
+    if (varSeed === 1) idx += 2; else if (varSeed === 2) idx = pc.motif[0]! * 2 - idx + 2; else if (varSeed === 3 && pos % 2) idx = -1;
+  }
+  const len = pc.beat * (pos === pc.motif.length - 1 ? 2 : 1);
+  if (pos === 0) {
+    // akord na początek taktu: pryma i kwinta nisko
+    voice(c, t, pc.root, pc.beat * 3, 'lute', pc.night ? 0.035 : 0.045);
+    voice(c, t + 0.02, pc.root * 1.5, pc.beat * 3, 'lute', pc.night ? 0.025 : 0.035);
+  }
+  if (idx >= 0 && !(pc.night && Math.random() < 0.35)) {
+    const sc = pc.scale;
+    const deg = ((idx % sc.length) + sc.length) % sc.length, oct = Math.floor(idx / sc.length);
+    const f = pc.root * 2 * Math.pow(2, (sc[deg]! + 12 * oct) / 12);
+    voice(c, t, f, len, pc.lead, pc.night ? 0.05 : 0.065);
   }
   musicStep++;
-  if (musicStep % p.length === 0) { phrase = (phrase + 1 + Math.floor(Math.random() * 2)) % PHRASES.length; musicNext = t + len * (2 + Math.random() * 4); }
-  else musicNext = t + len;
+  musicNext = t + len;
+}
+
+// --- generator utworów: każdy ma własną tonację, skalę, tempo, instrument i motyw (bez dwóch takich samych) ---
+const SCALES = { dorian: [0, 2, 3, 5, 7, 9, 10], aeolian: [0, 2, 3, 5, 7, 8, 10], mixolydian: [0, 2, 4, 5, 7, 9, 10], phrygian: [0, 1, 3, 5, 7, 8, 10], ionian: [0, 2, 4, 5, 7, 9, 11] };
+interface Piece { root: number; scale: number[]; beat: number; lead: 'flute' | 'lute'; motif: number[]; end: number; rest: number; night: boolean; seed: number }
+let piece: Piece | null = null;
+function newPiece(night: boolean): Piece {
+  const c = ctx!;
+  const R = Math.random;
+  const day = [SCALES.dorian, SCALES.mixolydian, SCALES.ionian, SCALES.dorian, SCALES.aeolian];
+  const nite = [SCALES.aeolian, SCALES.phrygian, SCALES.dorian];
+  const scale = (night ? nite : day)[Math.floor(R() * (night ? nite.length : day.length))]!;
+  const roots = night ? [110, 116.54, 123.47, 98] : [146.83, 130.81, 164.81, 174.61, 196 / 1.5];
+  const root = roots[Math.floor(R() * roots.length)]!;
+  // motyw: błądzenie po skali małymi krokami, z pauzami i powrotem do toniki na końcu
+  const n = 6 + Math.floor(R() * 7);
+  const motif: number[] = [];
+  let cur = Math.floor(R() * 3);
+  for (let i = 0; i < n - 1; i++) {
+    if (R() < 0.14) { motif.push(-1); continue; }
+    cur = Math.max(-2, Math.min(9, cur + [-2, -1, -1, 1, 1, 2, 0, 3][Math.floor(R() * 8)]!));
+    motif.push(cur);
+  }
+  motif.push(0);
+  const beat = night ? 0.9 + R() * 0.7 : 0.45 + R() * 0.4;
+  const length = night ? 50 + R() * 50 : 70 + R() * 70;
+  musicStep = 0;
+  return { root, scale, beat, lead: R() < (night ? 0.7 : 0.45) ? 'lute' : 'flute', motif, end: c.currentTime + length, rest: 12 + R() * 30, night, seed: Math.floor(R() * 100) };
+}
+
+// --- utwory z plików: public/music/<plik>.ogg, nastrój wybiera, kiedy grają; między utworami chwila ciszy ---
+type Mood = 'day' | 'night' | 'battle' | 'menu';
+/** Lista utworów (darmowe, CC0 — źródła w docs/zasoby.md). Pusta lista = muzyka generowana. */
+export const MUSIC_TRACKS: { file: string; moods: Mood[] }[] = [];
+let trackEl: HTMLAudioElement | null = null, trackGain: GainNode | null = null, trackMood: Mood | null = null, trackFile = '', trackRestUntil = 0;
+function playTracks(c: AudioContext, mood: Mood, inMenu: boolean): boolean {
+  const want: Mood = inMenu ? 'menu' : mood;
+  const list = MUSIC_TRACKS.filter((x) => x.moods.includes(want));
+  if (!list.length) { stopTrack(c); return false; }
+  if (trackEl && !trackEl.paused && trackMood === want) return true;
+  if (trackEl && !trackEl.paused && trackMood !== want) stopTrack(c);
+  if (c.currentTime < trackRestUntil) return true;
+  const pick = list.filter((x) => x.file !== trackFile);
+  const tr = (pick.length ? pick : list)[Math.floor(Math.random() * (pick.length ? pick.length : list.length))]!;
+  const el = new Audio(`./music/${tr.file}`);
+  el.crossOrigin = 'anonymous';
+  const src = c.createMediaElementSource(el);
+  const g = c.createGain(); g.gain.value = 0; src.connect(g).connect(busGain.music ?? master!);
+  g.gain.setTargetAtTime(0.9, c.currentTime, 2);
+  el.addEventListener('ended', () => { trackRestUntil = c.currentTime + 15 + Math.random() * 35; trackEl = null; });
+  void el.play().catch(() => { trackEl = null; });
+  trackEl = el; trackGain = g; trackMood = want; trackFile = tr.file;
+  return true;
+}
+function stopTrack(c: AudioContext): void {
+  if (!trackEl || !trackGain) return;
+  const el = trackEl, g = trackGain;
+  g.gain.setTargetAtTime(0, c.currentTime, 1.2);
+  setTimeout(() => { el.pause(); }, 4000);
+  trackEl = null; trackGain = null; trackMood = null;
 }
