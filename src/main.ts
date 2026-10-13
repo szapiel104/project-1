@@ -120,7 +120,12 @@ const hud = createHud(document.getElementById('ui')!, {
   onPickBuilding: (id) => { if (wrecking) setWreck(false); pick(id); },
   onRations: (level) => pending.push({ type: 'setRations', player: ME, level }),
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
-  onSpeed: (s) => { if (!net) speed = s; else hud.toast('W grze przez sieć czas płynie tak samo dla obu graczy.'); },
+  onSpeed: (s) => {
+    // z drugim prawdziwym graczem nie ma pauzy ani przyspieszania: czas płynie tak samo u obu
+    if (net) { hud.toast('W grze z drugim graczem nie można pauzować ani zmieniać tempa.'); return false; }
+    speed = s;
+    return true;
+  },
   onDemolish: (id) => confirmDemolish(id),
   onCloseInfo: () => { selectUnit(0); select(0); if (chosen.size) chooseSoldiers([], false); },
   onRotate: () => rotate(),
@@ -1079,7 +1084,7 @@ function loop(now: number): void {
   if (steps) { refresh(); updateGhost(); }
   perf.ui += performance.now() - tu;
   const tr = performance.now();
-  renderer.frame(elapsed / 1000, speed ? acc / TICK_MS : 1);
+  renderer.frame(elapsed / 1000, speed ? acc / TICK_MS : 1, speed === 0);
   perf.render += performance.now() - tr;
   perf.frames++; perf.worst = Math.max(perf.worst, elapsed);
   if (now - perf.since > 1000) showPerf(now);

@@ -36,6 +36,32 @@ function tileRound(mesh: THREE.Mesh, radius: number, height: number): THREE.Mesh
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * Math.PI * 2 * radius * k, uv.getY(i) * height * k);
   return mesh;
 }
+/**
+ * Okrągła bela siana leżąca na boku (oś X): zaokrąglone krawędzie, źdźbła zwinięte wokół osi
+ * (na denkach widać słoje zwoju), dwa powrósła. Tekstura strzechy biegnie wzdłuż obwodu.
+ */
+function roundBale(r: number, len: number): THREE.Group {
+  const c = r * 0.32, h = len / 2, pts: THREE.Vector2[] = [new THREE.Vector2(0.001, -h)];
+  for (let i = 0; i <= 5; i++) { const a = (i / 5) * (Math.PI / 2); pts.push(new THREE.Vector2(r - c + Math.sin(a) * c, -h + c - Math.cos(a) * c)); }
+  for (let i = 0; i <= 5; i++) { const a = (i / 5) * (Math.PI / 2); pts.push(new THREE.Vector2(r - c + Math.cos(a) * c, h - c + Math.sin(a) * c)); }
+  pts.push(new THREE.Vector2(0.001, h));
+  const seg = 22, geo = new THREE.LatheGeometry(pts, seg);
+  const k = (M.hay.userData.tile as number) || 4;
+  const uv = geo.getAttribute('uv');
+  const along: number[] = [0];
+  for (let j = 1; j < pts.length; j++) along.push(along[j - 1]! + pts[j]!.distanceTo(pts[j - 1]!));
+  for (let i = 0; i <= seg; i++) for (let j = 0; j < pts.length; j++) uv.setXY(i * pts.length + j, along[j]! * k * 1.5, (i / seg) * Math.PI * 2 * r * k);
+  geo.rotateZ(Math.PI / 2);
+  const grp = new THREE.Group();
+  grp.add(new THREE.Mesh(geo, M.hay));
+  for (const o of [-0.3, 0.3]) {
+    const band = new THREE.Mesh(new THREE.TorusGeometry(r + 0.003, 0.006, 4, 22), M.woodDark);
+    band.rotation.y = Math.PI / 2;
+    band.position.x = o * len;
+    grp.add(band);
+  }
+  return grp;
+}
 const M = {
   stone: mat(0xcfc7b3, 'bricks'), stoneDark: mat(0xa39b88, 'bricks'), wood: mat(0x85603a, 'planks'), woodDark: mat(0x5e4329, 'planks'),
   plaster: mat(0xf0e4c4, 'plaster'), thatch: mat(0xd1ad4c, 'thatch'), soil: mat(0x86633d, 'soil'), wheat: mat(0xd9b84a),
@@ -1337,11 +1363,10 @@ const BUILDERS: Record<string, Builder> = {
     g.add(top);
     // siano przy wrotach: dwie okrągłe bele obwiązane powrósłem i kopka z wbitymi widłami
     for (const [bx, bz, rot] of [[1.0, 0.98, 0.3], [0.62, 1.02, -0.2]] as const) {
-      const bale = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.3, 12), M.hay), 0.17, 0.3);
-      bale.rotation.set(Math.PI / 2, 0, rot);
-      bale.position.set(bx, 0.17, bz);
-      g.add(bale);
-      for (const o of [-0.08, 0.08]) { const band = new THREE.Mesh(new THREE.TorusGeometry(0.172, 0.008, 4, 12), M.woodDark); band.rotation.set(0, Math.PI / 2 + rot, 0); band.position.set(bx + Math.sin(rot) * o, 0.17, bz + Math.cos(rot) * o); g.add(band); }
+      const b = roundBale(0.17, 0.3);
+      b.position.set(bx, 0.17, bz);
+      b.rotation.y = rot;
+      g.add(b);
     }
     const stack = new THREE.Mesh(new THREE.SphereGeometry(0.28, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2), M.hay);
     stack.scale.set(1, 1.25, 1);

@@ -181,6 +181,8 @@ export class GameRenderer {
   }
   private pullNow = new Map<number, [number, number]>();
   private armM = new THREE.Matrix4();
+  private armS = new THREE.Matrix4();
+  private armV = new THREE.Vector3();
   private soundAt = new Map<string, number>();
   /** Dźwięk z miejsca na mapie, nie częściej niż co `every` sekund dla danego źródła; głośność z odległości od środka ekranu */
   private sfxAt(kind: WorldSound, x: number, z: number, key: string | number, every: number, gain = 1): void {
@@ -406,10 +408,10 @@ export class GameRenderer {
     ]);
     // młotek w prawej dłoni: trzonek w przód z dłoni, obuch na końcu (układ ramienia: oś w barku)
     const hammer = mergeGeometries([
-      // trzonek wychodzi z dłoni do tyłu ramienia: przy ręce wyciągniętej w przód wisi w dół, obuch na końcu
-      tint(new THREE.CylinderGeometry(0.016, 0.019, 0.34, 6).rotateX(Math.PI / 2).translate(0, -0.2, -0.14), 0x7a5232),
-      tint(new THREE.BoxGeometry(0.15, 0.07, 0.07).translate(0, -0.2, -0.31), 0x4a4d52),
-      tint(new THREE.BoxGeometry(0.03, 0.075, 0.075).translate(-0.085, -0.2, -0.31), 0x8a8e96),
+      // trzonek z pięści prostopadle do ręki (przy opuszczonej ręce w przód); obuch w płaszczyźnie zamachu, jasna twarz uderzająca
+      tint(new THREE.CylinderGeometry(0.014, 0.017, 0.26, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.11), 0x7a5232),
+      tint(new THREE.BoxGeometry(0.055, 0.11, 0.055).translate(0, -0.19, 0.25), 0x4a4d52),
+      tint(new THREE.BoxGeometry(0.06, 0.02, 0.06).translate(0, -0.25, 0.25), 0x8a8e96),
     ]);
     this.hammers = new THREE.InstancedMesh(hammer, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
     this.hammers.count = 0;
@@ -1095,8 +1097,10 @@ export class GameRenderer {
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
   }
 
-  frame(dt: number, alpha: number): void {
-    if (this.walk && this.state) this.stepWalk(dt); else this.cam.update(dt);
+  /** `paused` = pauza: kamera dalej się rusza, ale ludzie, zwierzęta, ogień i woda stoją w miejscu */
+  frame(realDt: number, alpha: number, paused = false): void {
+    if (this.walk && this.state) this.stepWalk(realDt); else this.cam.update(realDt);
+    const dt = paused ? 0 : realDt;
     this.time += dt;
     this.updatePuffs(dt);
     this.updateRain(dt);
@@ -2424,7 +2428,7 @@ export class GameRenderer {
         break;
       }
       const hammering = u.phase === Phase.Repairing;
-      let lean = 0;
+      let lean = 0, work = 0;
       if (hammering) {
         // robotnicy rozstawiają się wokół budowy, twarzą do ścian; co drugi pracuje na pomoście rusztowania (na wysokości murów)
         const site = g.buildings.find((b) => b.id === u.target);
@@ -2448,15 +2452,16 @@ export class GameRenderer {
         if (!this.calm) {
           const ph = (this.time * 1.45 + (u.id % 13) * 0.137) % 1;
           const ease = (x: number): number => x * x * (3 - 2 * x);
-          // ujemny kąt = ręka w przód i w górę (kąt ramienia = swing·0,8). Uderzenie: ręka wyciągnięta przed siebie,
-          // trzonek skierowany w dół, obuch trafia w mur; zamach unosi młotek nad głowę
-          if (ph < 0.55) swing = -1.7 - ease(ph / 0.55) * 1.65;             // powolny zamach nad głowę
-          else if (ph < 0.66) swing = -3.35 + ((ph - 0.55) / 0.11) * 1.75;  // szybki cios w dół
-          else if (ph < 0.74) swing = -1.6 - ((ph - 0.66) / 0.08) * 0.15;   // odbicie od muru
-          else swing = -1.75 + ease((ph - 0.74) / 0.26) * 0.05;            // chwila przerwy
-          lean += ph > 0.55 && ph < 0.8 ? Math.sin(((ph - 0.55) / 0.25) * Math.PI) * 0.22 : 0;
-          if (ph > 0.64 && ph < 0.7) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
-        } else swing = 0;
+          // work = kąt prawej ręki (ujemny = w przód i w górę). Trzonek sterczy z pięści prostopadle do ręki:
+          // przy zamachu młotek jest za głową, przy ciosie ręka idzie w przód-w dół, a obuch trafia w mur na wysokości twarzy
+          if (ph < 0.5) work = -0.6 - ease(ph / 0.5) * 2.1;                       // powolny zamach nad głowę
+          else if (ph < 0.6) work = -2.7 + ((ph - 0.5) / 0.1) ** 2 * 2.1;         // przyspieszający cios
+          else if (ph < 0.7) work = -0.6 - Math.sin(((ph - 0.6) / 0.1) * Math.PI) * 0.18; // odbicie od muru
+          else work = -0.6;                                                        // chwila przerwy
+          lean += ph > 0.5 && ph < 0.75 ? Math.sin(((ph - 0.5) / 0.25) * Math.PI) * 0.22 : 0;
+          if (ph > 0.59 && ph < 0.65) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
+        } else work = -0.6;
+        swing = 0;
       }
       this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
@@ -2467,9 +2472,10 @@ export class GameRenderer {
       if (lean) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
       this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
       if (hammering) {
-        // ramię obraca się w barku tak jak prawa ręka postaci (kąt = swing * 0.8)
-        this.armM.makeRotationX(swing * 0.8).setPosition(0.135, 0.45, 0);
-        this.hammers.setMatrixAt(i, this.armM.premultiply(t.matrix));
+        // młotek obraca się w barku razem z prawą ręką (ta sama skala co postać)
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armM.makeRotationX(work).setPosition(0.135, 0.45, 0);
+        this.hammers.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
       } else this.hammers.setMatrixAt(i, ZERO);
       const wood = u.carryRes === WOOD;
       // kłodę ciągnie tylko drwal z lasu; włóczniarz niesie ze składu zwykłe deski
@@ -2478,7 +2484,7 @@ export class GameRenderer {
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
       if (torchOn) { this.handTorches.setMatrixAt(i, t.matrix); this.pushHandFlame(t.matrix, 0.17); } else this.handTorches.setMatrixAt(i, ZERO);
-      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
+      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : undefined);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();

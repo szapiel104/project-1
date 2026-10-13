@@ -24,7 +24,8 @@ export interface HudEvents {
   onPickBuilding(id: string | null): void;
   onRations(level: number): void;
   onTax(level: number): void;
-  onSpeed(speed: number): void;
+  /** false = zmiana tempa niedozwolona (gra przez sieć), pasek wraca do poprzedniej wartości */
+  onSpeed(speed: number): boolean | void;
   onDemolish(id: number): void;
   onCloseInfo(): void;
   onRotate(): void;
@@ -313,9 +314,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   let speedIndex = 1;
   let rationsNow = 0, taxNow = 0;
   const stepSpeed = (dir: number): void => {
+    const was = speedIndex;
     speedIndex = Math.max(0, Math.min(SPEEDS.length - 1, speedIndex + dir));
+    if (events.onSpeed(SPEEDS[speedIndex]!) === false) speedIndex = was;
     showSpeed();
-    events.onSpeed(SPEEDS[speedIndex]!);
   };
   const speedVal = stepper(t('hud.speed'), stepSpeed);
   const showSpeed = (): void => setText(speedVal, SPEEDS[speedIndex] === 0 ? t('hud.pause') : `${SPEEDS[speedIndex]}×`);

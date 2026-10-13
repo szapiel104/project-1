@@ -14,6 +14,9 @@ interface Part {
   sub?: { at: THREE.Vector3; rot: (swing: number, armsUp: boolean) => number };
 }
 
+const legL = (s: number): number => s, legR = (s: number): number => -s;
+const armL = (s: number, up: boolean): number => (up ? -1.35 : -s * 0.8), armR = (s: number, up: boolean): number => (up ? -1.35 : s * 0.8);
+
 type Mat = 'cloth' | 'leather' | 'metal' | 'skin' | 'wood';
 const MATS: Record<Mat, { roughness: number; metalness: number; side?: THREE.Side }> = {
   cloth: { roughness: 0.95, metalness: 0, side: THREE.DoubleSide },
@@ -142,8 +145,6 @@ export class Figures {
     };
     const flush = (): void => { for (const x of stills) mk(mergeGeometries(x.geo)!, x.color, new THREE.Vector3(), still, x.shown, x.mat); };
     const still = (): number => 0;
-    const legL = (s: number): number => s, legR = (s: number): number => -s;
-    const armL = (s: number, up: boolean): number => (up ? -1.35 : -s * 0.8), armR = (s: number, up: boolean): number => (up ? -1.35 : s * 0.8);
     const tunic = (l: Look): number => l.tunic, skin = (l: Look): number => l.skin;
     if (kind === 'spearman' || kind === 'archer') {
       const archer = kind === 'archer';
@@ -335,13 +336,22 @@ export class Figures {
   }
 
   /** Ustawia postać numer `i`. `base` = położenie i obrót całej postaci, `id` = numer chłopa (od niego zależy wygląd). */
-  set(i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = i): void {
+  /** Skala postaci (ludzie są różnego wzrostu) — potrzebna, żeby narzędzie w dłoni trafiało w rękę. */
+  sizeOf(id: number, tunic: number): number { return lookOf(id, tunic, this.muted).size; }
+
+  /**
+   * `work` = poza przy pracy: kąt prawej ręki (ujemny = w przód i w górę); nogi stoją, lewa ręka lekko przed sobą.
+   * Bez tego `swing` rusza rękami i nogami jak przy chodzie.
+   */
+  set(i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = i, work?: number): void {
     const look = lookOf(id, tunic, this.muted);
     this.scaled.copy(base).scale(this.one.setScalar(look.size));
     this.one.setScalar(1);
     for (const p of this.parts) {
       if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
-      this.q.setFromEuler(this.e.set(p.rot(swing, armsUp), 0, 0));
+      const r = work === undefined ? p.rot(swing, armsUp)
+        : p.rot === armR ? work : p.rot === armL ? -0.5 : p.rot === legL || p.rot === legR ? 0 : p.rot(0, false);
+      this.q.setFromEuler(this.e.set(r, 0, 0));
       this.local.compose(p.pos, this.q, this.one);
       if (p.sub) { this.q.setFromEuler(this.e.set(p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);
