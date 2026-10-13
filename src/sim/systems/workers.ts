@@ -13,6 +13,8 @@ const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
 const TAVERN = BUILDINGS.findIndex((b) => b.id === 'tavern');
 /** Wieczór i sen: tych ludzi nikt nie wyciąga do roboty (inaczej wstawaliby w nocy i kładli się od nowa) */
 const OFF_DUTY = new Set<Phase>([Phase.ToEvening, Phase.Evening, Phase.ToSleep, Phase.Sleeping]);
+/** Zajęcia, które chłop z pustymi rękami rzuca wieczorem (resztę kończy: niesie ładunek do składu, dokańcza wyrób) */
+const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest]);
 
 /** Pora dnia dla rytmu ludzi: praca, wieczór przy ogniu, sen */
 export function dayPart(tick: number): 'work' | 'evening' | 'sleep' {
@@ -108,7 +110,9 @@ function routine(g: GameState, u: Unit, part: 'work' | 'evening' | 'sleep'): boo
     return true;
   }
   if (part === 'work' || u.carryRes >= 0 || u.path.length) return false;
-  if (u.phase !== Phase.Idle && u.phase !== Phase.Returning) return false;
+  // po fajrancie każdy kończy zajęcie, w którym nie ma nic w rękach: czekanie pod pustym składem, budowę, układanie drogi
+  if (!AFTER_HOURS.has(u.phase)) return false;
+  u.target = 0; u.timer = 0;
   if (part === 'sleep') { u.phase = Phase.ToSleep; findBed(g, u); return true; }
   u.phase = Phase.ToEvening; u.target = 0;
   return true;
@@ -220,6 +224,8 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return doors.size ? (x) => doors.has(x) : null;
     }
     case Phase.ToEvening: {
+      // karczmarz zostaje wieczorem u siebie i nalewa
+      if (job && job.type === TAVERN && job.door >= 0) return (t) => t === job.door;
       // co drugi idzie do karczmy (o ile jest i ma karczmarza), reszta siada przy ognisku; bez nich — pod twierdzę
       let doors = u.id % 2 === 0 ? eveningDoors(g, u.owner, true) : new Set<number>();
       if (!doors.size) doors = eveningDoors(g, u.owner, false);

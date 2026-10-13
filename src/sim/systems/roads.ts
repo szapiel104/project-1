@@ -1,6 +1,7 @@
 import { BUILDINGS } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { Phase, type GameState, type Unit } from '../state';
+import { dayPart } from './workers';
 
 /** Czym się układa drogę danego rodzaju (surowiec do przyniesienia ze składu albo -1 dla piaskowej) */
 const MATERIAL: number[] = [-1, -1, -1, -1];
@@ -17,6 +18,7 @@ const DROPPABLE = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.Working, Ph
  */
 export function roadSystem(g: GameState): void {
   if (g.tick % 10 !== 0) return;
+  if (dayPart(g.tick) !== 'work') return; // drogi układa się za dnia
   const w = g.map.width;
   let planned: number[] | null = null;
   for (const p of g.players) {

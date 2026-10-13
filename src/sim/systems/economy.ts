@@ -2,6 +2,7 @@ import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { BUILDINGS } from '../../data/buildings';
 import { housing, population, type GameState, type PlayerState } from '../state';
+import { dayPart } from './workers';
 
 const FOOD = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 const GOLD = resIndex('gold');
@@ -42,6 +43,8 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
 /** Co „miesiąc”: chłopi zjadają racje, płacą podatki, a popularność się zmienia. */
 export function economySystem(g: GameState): void {
   if (g.tick === 0 || g.tick % RULES.monthTicks !== 0) return;
+  // nocą wszyscy śpią: nikt nie je, podatków nikt nie zbiera, nastroje stoją (noc i tak mija szybko)
+  if (dayPart(g.tick) === 'sleep') return;
   for (const p of g.players) {
     const f = monthlyForecast(g, p);
     let toEat = f.food;

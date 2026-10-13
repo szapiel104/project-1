@@ -7,6 +7,7 @@ import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type Soldier, type Unit } from '../state';
 import { BUILDINGS, footprint, workArea } from '../../data/buildings';
 import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
+import { dayPart } from './workers';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 import type { UnitDef } from '../../data/units';
 
@@ -643,6 +644,8 @@ function repairSystem(g: GameState): void {
     }
     let crew = 0;
     for (const u of g.units) if (u.target === b.id && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing || u.phase === Phase.ToFetch)) crew++;
+    // wieczorem i nocą nikt nie zaczyna budowy, rano wrócą
+    if (dayPart(g.tick) !== 'work') continue;
     while (crew < 3) {
       const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0);
       if (!u) break;

@@ -572,3 +572,27 @@ describe('rytm dnia', () => {
     } finally { (BUILDINGS[keep.type] as { housing?: number }).housing = saved; }
   });
 });
+
+describe('rytm dnia: poprawki', () => {
+  const at = (g: GameState, h0: number, h1: number): void => { while (!(clockAt(g.tick).hour >= h0 && clockAt(g.tick).hour < h1)) step(g, []); };
+  it('nocą nikt nie buduje ani nie czeka pod pustym składem, rano budowa rusza dalej', () => {
+    const g = createGame(5);
+    at(g, 20, 21);
+    step(g, [build(g, 'house')]); // postawiona wieczorem: nikt jej nie zacznie przed rankiem
+    const site = g.buildings[g.buildings.length - 1]!;
+    const work = site.build;
+    at(g, 1, 2);
+    expect(g.units.filter((u) => u.owner === 0).every((u) => u.phase === Phase.Sleeping)).toBe(true);
+    at(g, 4, 5);
+    expect(site.build).toBe(work);
+    at(g, 10, 11);
+    expect(site.build).toBeLessThan(work);
+  });
+  it('nocą nikt nie je: zapasy jedzenia stoją od 22 do 5:30', () => {
+    const g = createGame(5);
+    at(g, 22.5, 23);
+    const before = g.players[0]!.res.reduce((n, v) => n + v, 0);
+    at(g, 4, 5);
+    expect(g.players[0]!.res.reduce((n, v) => n + v, 0)).toBe(before);
+  });
+});

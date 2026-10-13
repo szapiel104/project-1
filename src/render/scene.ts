@@ -175,8 +175,8 @@ export class GameRenderer {
   private hitAt = new Map<number, number>();
   /** Kierunek, w którym patrzył poległy w chwili śmierci (pada do tyłu, nie obraca się w locie) */
   private fallYaw = new Map<number, number>();
-  private evening = false;
   private taverns = new Map<number, GameState['buildings'][number]>();
+  private innDoors = new Map<number, GameState['buildings'][number]>();
   private luteAt = 0;
   private luteNote = 0;
   /** Lutnia przed karczmą: prosta melodia nuta po nucie, słyszalna z bliska */
@@ -2524,11 +2524,10 @@ export class GameRenderer {
   private bedB = new THREE.Vector3();
 
   private syncUnits(g: GameState, view: TerrainView, alpha: number): void {
-    // karczmy z karczmarzem: wieczorem schodzą się do nich ludzie
-    const hourNow = this.menuNight ? 23 : clockAt(g.tick).hour;
-    this.evening = hourNow >= 18 && hourNow < 23.5;
+    // karczmy z karczmarzem: wieczorem schodzą się do nich ludzie (rytm dnia w symulacji)
     this.taverns.clear();
-    for (const b of g.buildings) if (BUILDINGS[b.type]!.id === 'tavern' && b.worker && !b.build && !this.taverns.has(b.owner)) this.taverns.set(b.owner, b);
+    this.innDoors.clear();
+    for (const b of g.buildings) if (BUILDINGS[b.type]!.id === 'tavern' && b.worker && !b.build) { if (!this.taverns.has(b.owner)) this.taverns.set(b.owner, b); if (b.door >= 0) this.innDoors.set(b.door, b); }
     const { width, height } = g.map;
     const n = Math.min(g.units.length, MAX_UNITS);
     const t = this.tmp;
@@ -2603,9 +2602,8 @@ export class GameRenderer {
       const evening = u.phase === Phase.Evening && still;
       const camp = (u.phase === Phase.Idle || evening) && still ? this.camps.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
       // wieczorem w karczmie: ci, którzy przyszli pod jej drzwi (rytm dnia), i dawny skrót dla wolnych z obozowiska
-      const myInn = this.taverns.get(u.owner);
-      const atInn = evening && !!myInn && myInn.door === (u.py >> 8) * width + (u.px >> 8);
-      const inn = atInn ? myInn : camp && camp.owner === u.owner && this.evening && u.id % 2 === 0 && !evening ? myInn : undefined;
+      // wieczorem w karczmie siedzą ci, którzy przyszli pod jej drzwi (każda karczma osobno)
+      const inn = evening ? this.innDoors.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
       if (inn) {
         const mesh = this.buildingMeshes.get(inn.id);
         const turn = (inn.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
