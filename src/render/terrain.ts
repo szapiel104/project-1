@@ -45,6 +45,8 @@ export interface TerrainView {
   setWet(k: number): void;
   /** Kolor nieba odbijany przez wodę */
   setSky(c: THREE.Color): void;
+  /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
+  lod(x: number, z: number, reach: number): void;
   /** Wydeptuje ziemię w narożniku pola (x, y): trawa brązowieje do gołej ziemi, do progu cap */
   wear(x: number, y: number, amount: number, cap?: number): void;
   dispose(): void;
@@ -493,8 +495,15 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   type Inst = { setMatrixAt(i: number, m: THREE.Matrix4): void; setColorAt(i: number, c: THREE.Color): void; instanceMatrix: { needsUpdate: boolean } };
   const CHUNK = 40;
   // korony świerków: kolory z wierzchołków (jasne końce gałęzi, ciemne wnętrze), gładkie cieniowanie, widoczne z obu stron
+  const farPine = models.treeCrownFar();
+  farPine.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array((farPine.attributes.position as THREE.BufferAttribute).count * 3).fill(0.95), 3));
+  const PINE_LOD: Lod = { farGeo: farPine }, TRUNK_LOD: Lod = { hide: 62 }, SMALL_LOD: Lod = { hide: 48 };
   const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: pattern('needles') });
-  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material): Inst | null => {
+  // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
+  // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
+  type Lod = { hide?: number; farGeo?: THREE.BufferGeometry };
+  const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; lod: Lod; near: THREE.BufferGeometry }[] = [];
+  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material, lod?: Lod): Inst | null => {
     if (!list.length) return null;
     const mat = own ?? new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
     const buckets = new Map<number, number[]>();
@@ -509,6 +518,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       idx.forEach((i, j) => { const it = list[i]!; mesh.setMatrixAt(j, it.m); tint.setHex(color).multiplyScalar(it.shade); if (it.frost) tint.lerp(FROST, it.frost); mesh.setColorAt(j, tint); where[i] = [mesh, j]; });
       mesh.computeBoundingSphere();
       if (mesh.boundingSphere) mesh.boundingSphere.radius += 3; // zapas na ścinane, przechylające się drzewa
+      if (lod && mesh.boundingSphere) lodChunks.push({ mesh, x: mesh.boundingSphere.center.x, z: mesh.boundingSphere.center.z, lod, near: g });
       mesh.castShadow = shadow;
       // kępy trawy nie przyjmują cienia: cienkie źdźbła tuż nad ziemią łapały cień samego terenu i czerniały
       mesh.receiveShadow = mat !== grassMat;
@@ -533,7 +543,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       if (stump) { stumpOf.set(item, stumpItems.length); stumpItems.push(item); }
     });
   };
-  plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark'), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat));
+  plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark', true, undefined, TRUNK_LOD), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat, PINE_LOD));
   plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark'), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves'));
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
   // Las wchodzi na zbocza aż pod granicę lasu; wyżej drzewa rzedną, są niższe i oszronione, nad nimi tylko skała i śnieg.
@@ -576,8 +586,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const bucket = dd < 14 ? near : far;
         (leafTree ? bucket.leaf : bucket.pine).push(item);
       }
-    instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark');
-    instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles', true, pineMat);
+    instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark', true, undefined, TRUNK_LOD);
+    instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles', true, pineMat, PINE_LOD);
     instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark');
     instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves');
     instanced(models.treeCrownFar(), 0x35703a, far.pine, 'needles', false);
@@ -585,10 +595,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
-  plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock'), null, false);
-  plant(tufts, instanced(models.tuft(), 0x9cb860, tufts, undefined, false, grassMat), null, false);
+  plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock', true, undefined, SMALL_LOD), null, false);
+  plant(tufts, instanced(models.tuft(), 0x9cb860, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {
-    const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false);
+    const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false, undefined, SMALL_LOD);
     const palette = [0xf4f1e6, 0xf2d24a, 0xb07ad6, 0xe8687a, 0x7fb2e6];
     if (mesh) { flowers.forEach((it, i) => mesh.setColorAt(i, tint.setHex(palette[(it.tile * 7 + i) % palette.length]!))); mesh.instanceMatrix.needsUpdate = true; }
     plant(flowers, mesh, null, false);
@@ -887,6 +897,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     clear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
+    lod(x: number, z: number, reach: number) {
+      for (const c of lodChunks) {
+        const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
+        if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide + reach;
+        if (c.lod.farGeo) { const want = d > 55 + reach ? c.lod.farGeo : c.near; if (c.mesh.geometry !== want) c.mesh.geometry = want; }
+      }
+    },
     setWet(k: number) {
       // błoto: ciemniejsza, błyszcząca ziemia na ścieżkach, mokry połysk bruku, trochę ciemniejsza trawa
       const dryC = new THREE.Color(0xffffff);

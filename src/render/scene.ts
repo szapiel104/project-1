@@ -971,6 +971,7 @@ export class GameRenderer {
   private handTorch: THREE.Group | null = null;
   private handTip = new THREE.Object3D();
   private handFlameTime = { value: 0 };
+  private lodTick = 0;
   private torchOn = false;
   private toggleHandTorch(): void {
     if (!this.handTorch) {
@@ -1069,6 +1070,7 @@ export class GameRenderer {
       const T = (name: string, fn: () => void): void => { const t0 = performance.now(); fn(); this.timing[name] = (this.timing[name] ?? 0) + performance.now() - t0; };
       T('animacje', () => { this.animate(g, this.calm ? 0 : dt); if (!this.calm) v.animate(this.time); });
       T('las', () => this.syncForest(g, v));
+      if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.syncRubble(g, v, dt));
       T('światła', () => this.syncLamps(g));
@@ -1106,7 +1108,7 @@ export class GameRenderer {
         // lista koszy zapamiętana przy budynku; gdy model się przebudował (stare części odpięte), szukamy od nowa
         let list = mesh.userData.braziers as THREE.Object3D[] | undefined;
         const attached = (o: THREE.Object3D): boolean => { let p: THREE.Object3D | null = o; while (p && p !== mesh) p = p.parent; return p === mesh; };
-        if (!list || (list.length && !attached(list[0]!)) || (this.frameNo % 120 === 0)) { list = []; mesh.traverse((o) => { if (o.name === 'brazier') list!.push(o); }); mesh.userData.braziers = list; }
+        if (!list || (list.length && !attached(list[0]!)) || (this.lodTick % 120 === 0)) { list = []; mesh.traverse((o) => { if (o.name === 'brazier') list!.push(o); }); mesh.userData.braziers = list; }
         for (const o of list) {
           let shown = true;
           for (let p: THREE.Object3D | null = o; p && p !== mesh; p = p.parent) if (!p.visible) { shown = false; break; }
