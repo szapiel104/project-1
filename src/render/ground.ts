@@ -106,9 +106,9 @@ const FRAG_ALBEDO = /* glsl */ `
   vec3 grass = mix(g1a, g1b, clamp(nS.b * 0.8 + far * 0.6 - 0.15, 0.0, 1.0));
   grass = mix(grass, g2 * vec3(0.92, 0.9, 0.8), smoothstep(0.38, 0.72, nM.r) * 0.85);
   vec3 meadow = texture2D(tMeadow, rot(w, 0.4) / 4.6).rgb;
-  vec3 forest = texture2D(tForest, rot(w, 1.3) / 4.2).rgb;
+  vec3 forest = texture2D(tForest, rot(w, 1.3) / 4.2).rgb * vec3(1.04, 0.96, 0.84);
   vec3 pebble = texture2D(tPebble, rot(w, 2.6) / 2.9).rgb;
-  vec3 dirt = texture2D(tDirt, rot(w, 0.2) / 3.8).rgb;
+  vec3 dirt = texture2D(tDirt, rot(w, 0.2) / 3.8).rgb * vec3(1.06, 0.93, 0.76);
   // skała: rzut z boku na stromych ścianach, z góry na płaskim
   vec3 an = abs(vWN);
   vec3 rTop = texture2D(tRock, w / 6.0).rgb;

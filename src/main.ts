@@ -947,6 +947,8 @@ requestAnimationFrame(loop);
   state: () => game,
 };
 (window as unknown as { __look: (x: number, y: number, d?: number) => void }).__look = (x, y, d) => renderer.lookAt(x, y, d);
+// piaskownica testowa: podgląd renderera z konsoli (szukanie błędów w wyglądzie)
+if (SANDBOX) (window as unknown as { __renderer: unknown }).__renderer = renderer;
 
 declare const __BUILD__: string;
 const badge = document.createElement('div');

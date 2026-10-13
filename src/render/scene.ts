@@ -1098,8 +1098,10 @@ export class GameRenderer {
       if (torchFlame && lit.has(id)) { torchFlame.getWorldPosition(w); w.y -= 0.12; F.add(w, 0.36, 0.2, (id * 0.137) % 1, glow); }
       // kosze ogniowe (brama zamku, wartownia): płoną tylko po zmroku i tylko gdy są widoczne
       if (dark) {
+        // lista koszy zapamiętana przy budynku; gdy model się przebudował (stare części odpięte), szukamy od nowa
         let list = mesh.userData.braziers as THREE.Object3D[] | undefined;
-        if (!list) { list = []; mesh.traverse((o) => { if (o.name === 'brazier') list!.push(o); }); mesh.userData.braziers = list; }
+        const attached = (o: THREE.Object3D): boolean => { let p: THREE.Object3D | null = o; while (p && p !== mesh) p = p.parent; return p === mesh; };
+        if (!list || (list.length && !attached(list[0]!)) || (this.frameNo % 120 === 0)) { list = []; mesh.traverse((o) => { if (o.name === 'brazier') list!.push(o); }); mesh.userData.braziers = list; }
         for (const o of list) {
           let shown = true;
           for (let p: THREE.Object3D | null = o; p && p !== mesh; p = p.parent) if (!p.visible) { shown = false; break; }
