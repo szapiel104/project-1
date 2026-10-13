@@ -728,7 +728,7 @@ function recruitInfo(): RecruitUnit[] {
   const p = game.players[ME]!;
   const gold = p.res[resIndex('gold')]!;
   const idle = game.units.filter((u) => u.owner === ME && u.job === 0).length;
-  return UNITS.map((def) => {
+  return UNITS.filter((def) => !def.guard).map((def) => {
     const have = p.res[resIndex(def.weapon)]!;
     const cost = def.cost.gold ?? 0;
     return { id: def.id, name: t(def.name), weapon: def.weapon, have, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, max: Math.max(0, Math.min(have, cost ? Math.floor(gold / cost) : 999, idle)) };
@@ -743,6 +743,8 @@ function canTrain(): boolean {
 }
 
 function chooseSoldiers(ids: number[], add: boolean, quiet = false): void {
+  // straż miejska pilnuje osady sama, nie słucha rozkazów
+  ids = ids.filter((id) => { const s = game.soldiers.find((x) => x.id === id); return !s || !UNITS[s.kind]!.guard; });
   if (!add) chosen.clear();
   for (const id of ids) chosen.add(id);
   if (ids.length && !quiet) shout('select');
@@ -1447,7 +1449,7 @@ requestAnimationFrame(sayLoop);
 
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
-  const LBL: Record<string, string> = { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z pszenicy)', crowd: 'Ciasnota w chatach' };
+  const LBL: Record<string, string> = { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z pszenicy)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: 'Brak jedzenia na wybrane racje', value: 0, note: '(jedzą mniej)' });
   const mine = game.units.filter((u) => u.owner === ME);

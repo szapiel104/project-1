@@ -43,6 +43,11 @@ export interface PlayerState {
   /** Tryb deweloperski: budynki stają od razu (false = zwykła budowa z noszeniem materiału) */
   instantBuild?: boolean;
   stats: { gathered: number; trained: number; kills: number; lost: number; built: number; razed: number };
+  /** Ilu strażników miejskich ma zamek (brak = jeszcze nie wystawieni; na start 6, poległych zastępują chłopi) */
+  guards?: number;
+  /** Ilu ludzi spało ostatniej nocy na słomie pod gołym niebem i ilu z nich zmokło w deszczu */
+  rough?: number;
+  cold?: number;
 }
 
 export interface Building {
@@ -207,6 +212,8 @@ export interface Soldier {
   prey?: number;
   /** Chłop, w którego właśnie bije (dla animacji ciosu i strzału) */
   hitting?: number;
+  /** Strażnik miejski: numer punktu obchodu, do którego idzie */
+  beat?: number;
 }
 
 /** Ciało poległego: leży, aż zabierze je grabarz z cmentarza */

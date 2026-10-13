@@ -126,7 +126,7 @@ describe('brama', () => {
 describe('wilki polują naprawdę', () => {
   it('dochodzą do człowieka daleko od miejsca, gdzie wyszły, i go zagryzają', () => {
     const g = createGame(9, '1v1', 2);
-    for (const p of g.players) p.bot = false;
+    for (const p of g.players) { p.bot = false; p.guards = 0; } // bez straży miejskiej, która wybiłaby watahę
     // noc, wataha na brzegu mapy; ludzie bez dachu nad głową śpią na słomie pod gołym niebem (w chacie wilk ich nie dosięgnie)
     while (!(clockAt(g.tick).hour >= 22.5 && clockAt(g.tick).hour < 23)) step(g, []);
     for (const u of g.units) { u.phase = Phase.Sleeping; u.home = 0; u.target = (u.py >> 8) * g.map.width + (u.px >> 8) + 1; u.path = []; }

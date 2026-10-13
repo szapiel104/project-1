@@ -17,7 +17,7 @@ import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
 import { FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
-import { clockAt } from '../sim/clock';
+import { clockAt, rainAt } from '../sim/clock';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
@@ -889,9 +889,8 @@ export class GameRenderer {
   private updateRain(dt: number): void {
     const g = this.state;
     const day = g ? g.tick / RULES.dayTicks : 0;
-    // co ~3 dni pada przez około pół dnia
-    const phase = (day / 3 + 0.37) % 1;
-    const want = phase < 0.16 ? Math.sin((phase / 0.16) * Math.PI) : 0;
+    // co ~3 dni pada przez około pół dnia (ten sam zegar deszczu co w symulacji: ludzie na słomie mokną naprawdę)
+    const want = g ? rainAt(g.tick) : 0;
     this.rain += (Math.min(1, want * 1.6) - this.rain) * Math.min(1, dt * 0.5);
     // pogoda dnia: pogodnie, pochmurno albo mglisto (z ziarna mapy, więc u każdego taka sama); przejścia płynne w ciągu dnia
     const seed = g?.map.seed ?? 1;
@@ -2445,7 +2444,8 @@ export class GameRenderer {
         this.sfxAt('swing', t.position.x, t.position.z, s.id, 1.1, 0.6);
         if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
       }
-      if (torchesOn && s.id % 5 === 0 && s.owner === this.me && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
+      // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
+      if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
       if (ranged) { this.archers.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); this.spearmen.set(n, ZERO, 0, false, 0, s.id); }
       else { this.archers.set(n, ZERO, 0, false, 0, s.id); this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); }
       let pos = this.soldierPos.get(s.id);

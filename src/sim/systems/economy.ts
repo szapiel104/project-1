@@ -36,6 +36,9 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const ale = Math.min(taverns, 2, Math.floor(p.res[WHEAT]! / 2));
   parts.push({ key: 'tavern', value: ale === 0 ? 0 : ale === 1 ? 3 : 5 });
   parts.push({ key: 'crowd', value: pop > housing(g, p.id) ? RULES.crowdingPenalty : 0 });
+  // ostatnia noc: kto spał na słomie pod gołym niebem, narzeka; kto przy tym zmókł w deszczu, narzeka podwójnie
+  parts.push({ key: 'rough', value: !p.rough ? 0 : p.rough >= 4 ? -2 : -1 });
+  parts.push({ key: 'cold', value: p.cold ? -1 : 0 });
   const delta = parts.reduce((n, x) => n + x.value, 0);
   return { delta, food, gold, fed, bribed, parts, ale };
 }

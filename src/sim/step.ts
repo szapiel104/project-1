@@ -5,6 +5,9 @@ import type { GameState } from './state';
 import { economySystem } from './systems/economy';
 import { demolish, placeBuilding, removeRoad } from './systems/placement';
 import { wolfSystem } from './systems/wolves';
+import { guardSystem } from './systems/guards';
+import { GUARD } from '../data/units';
+const isGuard = (g: GameState, id: number): boolean => g.soldiers.some((s) => s.id === id && s.kind === GUARD);
 import { gateSystem } from './systems/gates';
 import { migrationSystem, travelSystem } from './systems/population';
 import { rubbleSystem } from './systems/rubble';
@@ -66,13 +69,13 @@ function apply(g: GameState, c: Command): void {
       break;
     case 'move':
       if (Array.isArray(c.ids) && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.y >= 0 && c.x < g.map.width && c.y < g.map.height)
-        orderMove(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.y * g.map.width + c.x, { face: c.face, form: c.form, width: c.width, amove: c.amove === true });
+        orderMove(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), c.y * g.map.width + c.x, { face: c.face, form: c.form, width: c.width, amove: c.amove === true });
       break;
     case 'stance':
-      if (Array.isArray(c.ids)) orderStance(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.stance);
+      if (Array.isArray(c.ids)) orderStance(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), c.stance);
       break;
     case 'attack':
-      if (Array.isArray(c.ids) && Number.isInteger(c.target)) orderAttack(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.target);
+      if (Array.isArray(c.ids) && Number.isInteger(c.target)) orderAttack(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), c.target);
       break;
     case 'dismount':
       if (Number.isInteger(c.tower)) orderDismount(g, c.player, c.tower);
@@ -107,5 +110,6 @@ export function step(g: GameState, commands: readonly Command[]): void {
   travelSystem(g);
   gateSystem(g);
   wolfSystem(g);
+  guardSystem(g);
   economySystem(g);
 }

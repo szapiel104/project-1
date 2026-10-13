@@ -47,7 +47,7 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   const def = UNITS[kind];
   const p = g.players[player];
   const b = g.buildings.find((x) => x.id === barracksId);
-  if (!def || !p || !b || b.owner !== player || b.type !== BARRACKS || b.door < 0) return false;
+  if (!def || def.guard || !p || !b || b.owner !== player || b.type !== BARRACKS || b.door < 0) return false;
   for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
   const pi = g.units.findIndex((u) => u.owner === player && u.job === 0);
   if (pi < 0) return false;

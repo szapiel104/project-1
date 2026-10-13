@@ -78,7 +78,7 @@ export function botSystem(g: GameState): void {
     const barracks = g.buildings.find((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks');
     if (barracks) {
       // mieszane wojsko: mniej więcej co trzeci to łucznik, gdy są łuki
-      const mine = g.soldiers.filter((s) => s.owner === p.id);
+      const mine = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id);
       const archers = mine.filter((s) => UNITS[s.kind]!.range).length;
       const wantArcher = archers * 3 < mine.length + 1;
       if (!(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
@@ -94,7 +94,7 @@ export function botSystem(g: GameState): void {
     // atak falami: im później, tym większa fala; na poziomie pokojowym bot tylko się broni
     const wave = nextWave(g.tick, p.level);
     if (wave && wave.at - g.tick < THINK && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first) {
-      const army = g.soldiers.filter((s) => s.owner === p.id);
+      const army = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id);
       const foe = g.players.filter((o) => o.team !== p.team && !o.defeated).map((o) => playerKeep(g, o.id)).find((k) => k);
       if (foe && army.length >= wave.size && foe.door >= 0) {
         // atak z dwóch stron: połowa idzie pod bramę, połowa obchodzi i uderza z boku; łucznicy z wież zostają
@@ -110,7 +110,7 @@ export function botSystem(g: GameState): void {
     }
     // wypady: między falami dwóch, trzech żołnierzy poluje na drwali i rybaków wroga poza murami
     if (wave && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first / 2 && g.tick % (THINK * 30) === 0) {
-      const idle = g.soldiers.filter((s) => s.owner === p.id && !s.post && s.goal < 0 && !s.target);
+      const idle = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id && !s.post && s.goal < 0 && !s.target);
       if (idle.length >= 6) {
         const prey = g.units.find((u) => g.players[u.owner]?.team !== p.team && u.job && g.buildings.some((b) => b.id === u.job && ['woodcutter', 'fisher', 'quarry', 'mine'].includes(BUILDINGS[b.type]!.id)));
         if (prey) orderMove(g, p.id, idle.slice(0, 3).map((s) => s.id), (prey.py >> 8) * g.map.width + (prey.px >> 8));

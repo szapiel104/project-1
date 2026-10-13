@@ -217,7 +217,7 @@ export const pl = {
   'd.watchtower': 'Drewniana wieża strażnicza. Wzmacnia mur i widać z niej okolicę; później staną na niej łucznicy.',
   'd.cemetery': 'Grabarz zbiera ciała poległych z pola bitwy i chowa je tutaj. Bez niego ciała leżą i gniją.',
   'u.spearman': 'Włócznik',
-  'u.archer': 'Łucznik',
+  'u.archer': 'Łucznik', 'u.guard': 'Strażnik',
   'hud.train': 'Szkol włócznika',
   'hud.trainCost': '1 włócznia, 8 złota, 1 wolny chłop',
   'hud.trainNo': 'Brakuje włóczni, złota albo wolnego chłopa',

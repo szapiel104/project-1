@@ -3,7 +3,7 @@ import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/r
 import { RULES } from '../../data/rules';
 import { Terrain } from '../../data/terrain';
 import { findPath, walkable } from '../path';
-import { clockAt } from '../clock';
+import { clockAt, hourStarts, rainAt } from '../clock';
 import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 
 const RETRY_TICKS = 20;
@@ -417,6 +417,18 @@ export function workerSystem(g: GameState): void {
   }
 
   const part = dayPart(g.tick);
+  // o trzeciej w nocy liczymy, kto śpi pod gołym niebem; w deszczu marzną (tracą trochę zdrowia, ale nie umierają)
+  if (hourStarts(g.tick, 3)) {
+    const wet = rainAt(g.tick) > 0.3;
+    for (const p of g.players) { p.rough = 0; p.cold = 0; }
+    for (const u of g.units) {
+      if (u.phase !== Phase.Sleeping || u.home) continue;
+      const p = g.players[u.owner];
+      if (!p) continue;
+      p.rough = (p.rough ?? 0) + 1;
+      if (wet) { p.cold = (p.cold ?? 0) + 1; u.hp = Math.max(10, (u.hp ?? 30) - 8); }
+    }
+  }
   for (const u of g.units) {
     if (u.wait > 0) { u.wait--; continue; }
     if (!u.path.length && routine(g, u, part) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;

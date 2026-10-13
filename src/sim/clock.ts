@@ -51,3 +51,9 @@ export function hourStarts(tick: number, hour: number): boolean {
   const a = clockAt(tick - 1).hour, b = clockAt(tick).hour;
   return a < b ? a < hour && b >= hour : hour <= b || hour > a;
 }
+
+/** Deszcz z zegara gry (0..1): co ok. 3 doby pada przez mniej więcej pół doby. U wszystkich ten sam, więc może wpływać na symulację. */
+export function rainAt(tick: number): number {
+  const phase = (tick / RULES.dayTicks / 3 + 0.37) % 1;
+  return phase < 0.16 ? Math.sin((phase / 0.16) * Math.PI) : 0;
+}
