@@ -1125,7 +1125,9 @@ if (invite && !SANDBOX) {
 // Interfejs skaluje się do okna: na mniejszym ekranie wszystko jest proporcjonalnie mniejsze i nic nie ucieka za krawędź,
 // na dużym monitorze trochę większe. Wzorzec: pełny pasek dolny mieści się w ok. 2000 × 1100 px.
 function fitUi(): void {
-  const k = Math.max(0.6, Math.min(1.2, Math.min(innerWidth / 2000, innerHeight / 1080)));
+  // Skala interfejsu: dolny pasek ma ok. 1450 px przy skali 1, więc szerokość ekranu wyznacza, ile się zmieści;
+  // wysokość pilnuje, żeby pasek nie zjadał mapy na niskich ekranach. Laptop 1366×768 ≈ 0.92, 1920×1080 = 1.1.
+  const k = Math.max(0.6, Math.min(1.1, innerWidth / 1480, innerHeight / 800));
   document.documentElement.style.setProperty('--ui', k.toFixed(3));
 }
 fitUi();
