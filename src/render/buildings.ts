@@ -47,7 +47,7 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611), pane: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
-  ash: mat(0x4a4540), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
+  ash: mat(0x4a4540), sack: mat(0xe2d6ba, 'thatch'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xf4f0e8, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
@@ -63,6 +63,24 @@ const M = {
 // Szyby, ciemne wnęki i rysy leżą tuż przy ścianie: z daleka karta graficzna myli je ze ścianą i obraz mruga.
 // Przesunięcie głębi „do przodu” rozstrzyga ten remis zawsze na ich korzyść.
 for (const m of [M.window, M.pane, M.dark]) { m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; }
+
+/**
+ * Worek z płótna stojący na ziemi (y = podłoże): pękaty, lekko oklapnięty spód, ramiona, szyjka przewiązana sznurkiem
+ * i zebrana nad nią góra. `s` = wielkość (1 ≈ 0,3 pola wysokości), `rot` = obrót.
+ */
+function sack(g: THREE.Object3D, x: number, y: number, z: number, s = 1, rot = 0): void {
+  const w = new THREE.Group();
+  w.position.set(x, y, z);
+  w.rotation.y = rot;
+  w.scale.setScalar(s);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.1, 0.16, 9), M.sack); body.position.y = 0.1; w.add(body);
+  const bottom = new THREE.Mesh(new THREE.SphereGeometry(0.1, 9, 5, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.sack); bottom.scale.y = 0.45; bottom.position.y = 0.045; w.add(bottom);
+  const shoulder = new THREE.Mesh(new THREE.SphereGeometry(0.078, 9, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.sack); shoulder.scale.y = 0.55; shoulder.position.y = 0.18; w.add(shoulder);
+  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.04, 0.05, 7), M.sack); neck.position.y = 0.24; w.add(neck);
+  const tie = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.014, 7), M.rope); tie.position.y = 0.245; w.add(tie);
+  const tuft = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.05, 7), M.sack); tuft.rotation.x = Math.PI; tuft.position.y = 0.285; w.add(tuft);
+  g.add(w);
+}
 
 function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
   const geo = new THREE.BoxGeometry(w, h, d);
@@ -892,7 +910,7 @@ const BUILDERS: Record<string, Builder> = {
       hall.add(bl);
       box(hall, M.woodDark, 0.05, 0.04, 0.2, -0.95 + k * 0.24, L, -0.95);
     }
-    for (const [x, z] of [[-0.9, -0.55], [-0.75, -0.5], [-0.82, -0.38]] as const) { const sk = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 1), M.white); sk.scale.set(0.9, 1.2, 0.8); sk.position.set(x, L + 0.09, z); hall.add(sk); }
+    for (const [x, z] of [[-0.9, -0.55], [-0.75, -0.5], [-0.82, -0.38]] as const) sack(hall, x, L, z, 0.65, x * 6);
     box(hall, M.woodDark, 0.3, 0.16, 0.18, 0.75, L, -0.8);
     box(hall, M.gold, 0.26, 0.04, 0.14, 0.75, L + 0.16, -0.8);
     for (let k = 0; k < 6; k++) { const coin = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.01, 8), M.gold); coin.position.set(0.6 + (k % 3) * 0.05, L + 0.02, -0.55 + Math.floor(k / 3) * 0.05); hall.add(coin); }
@@ -1063,10 +1081,7 @@ const BUILDERS: Record<string, Builder> = {
     for (const x of [-0.12, 0.12]) { const rail = box(g, M.wood, 0.03, 0.42, 0.03, x, 0, 0.78); rail.rotation.x = 0.5; }
     for (let k = 0; k < 3; k++) box(g, M.wood, 0.26, 0.025, 0.03, 0, 0.08 + k * 0.1, 0.86 - k * 0.055);
     for (const [x, z, sc] of [[0.55, 0.82, 1], [0.78, 0.8, 0.85], [0.66, 0.84, 0.8]] as const) {
-      const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.12, 1), M.white);
-      sack.scale.set(sc, 1.25 * sc, 0.8 * sc);
-      sack.position.set(x, x === 0.66 ? 0.34 : 0.14, z);
-      g.add(sack);
+      sack(g, x, x === 0.66 ? 0.24 : 0, z, sc, x * 3);
     }
     // wnętrze: podłoga, niskie ściany i zapasy żywności, których przybywa
     const inside = new THREE.Group();
@@ -1848,10 +1863,7 @@ const BUILDERS: Record<string, Builder> = {
     box(inside, M.woodDark, 0.05, 0.7, 0.05, 0, 0.32, -0.22);
     // worki mąki i skrzynia z ziarnem
     for (const [x, z, h2] of [[0.38, 0.12, 0.22], [0.43, -0.12, 0.18], [0.24, 0.3, 0.2]] as const) {
-      const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.1, 1), M.white);
-      sack.scale.set(0.9, h2 / 0.17, 0.8);
-      sack.position.set(x, 0.04 + h2 / 2, z);
-      inside.add(sack);
+      sack(inside, x, 0.04, z, h2 / 0.26, x * 5);
     }
     box(inside, M.wood, 0.3, 0.2, 0.22, -0.36, 0.04, 0.2);
     box(inside, M.wheat, 0.26, 0.03, 0.18, -0.36, 0.24, 0.2);
@@ -1880,10 +1892,7 @@ const BUILDERS: Record<string, Builder> = {
     g.add(spin);
     // przy drzwiach: worki z mąką, zapasowy kamień młyński oparty o wieżę, taczka
     for (const [x, z, s2] of [[0.42, 0.66, 1], [0.55, 0.52, 0.85], [0.47, 0.78, 0.8]] as const) {
-      const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09 * s2, 1), M.white);
-      sack.scale.set(0.95, 1.25, 0.85);
-      sack.position.set(x, 0.1 * s2, z);
-      g.add(sack);
+      sack(g, x, 0, z, s2 * 0.85, x * 4);
     }
     const stoneWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.07, 16), M.stone);
     stoneWheel.rotation.set(Math.PI / 2 - 0.25, 0, 0.2);
@@ -1934,10 +1943,7 @@ const BUILDERS: Record<string, Builder> = {
     dough.scale.y = 0.4;
     dough.position.set(0.38, 0.16, 0.18);
     inside.add(dough);
-    const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.11, 1), M.white);
-    sack.scale.set(0.9, 1.3, 0.8);
-    sack.position.set(-0.45, 0.17, 0.25);
-    inside.add(sack);
+    sack(inside, -0.45, 0.04, 0.25, 0.9, 0.4);
     box(g, M.stoneDark, 0.3, 1.0, 0.3, -0.45, 0.8, -0.3).name = 'chimney';
     box(g, M.window, 0.3, 0.3, 0.04, 0.45, 0.32, 0.61);
     pennant(g, flag, 0.6, 1.2, 0);

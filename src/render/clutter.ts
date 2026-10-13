@@ -5,6 +5,7 @@ import { Terrain } from '../data/terrain';
 import { hash2 } from '../sim/rng';
 import type { GameState } from '../sim/state';
 import { tint } from './loads';
+import { bump, pattern } from './textures';
 
 /**
  * Graty przy domach: beczki, worki, siano, skrzynie, kupki śmieci, wiadra i taczki pod ścianami.
@@ -32,16 +33,16 @@ function geometry(kind: Kind): THREE.BufferGeometry {
       tint(new THREE.IcosahedronGeometry(0.07, 1).scale(1.2, 0.8, 0.9).translate(0.11, 0.055, 0.04), 0xa88e60), // drugi worek obok
     ]);
     case 'hay': {
-      // stóg siana na żerdzi: pękaty dół, zaokrąglony szczyt, sterczący kij; nierówne pasma i rozwiane źdźbła u stóp
+      // stóg siana jak ul: szeroki, pękaty dół, zaokrąglony czubek z żerdzią; profil obracany dookoła osi
+      const prof = [[0, 0], [0.2, 0], [0.225, 0.05], [0.225, 0.13], [0.2, 0.22], [0.15, 0.3], [0.08, 0.36], [0.02, 0.385], [0, 0.39]].map(([x, y]) => new THREE.Vector2(x, y));
       const parts = [
-        tint(new THREE.SphereGeometry(0.17, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.5, 1).translate(0, 0.08, 0), 0xc9a64e),
-        tint(new THREE.CylinderGeometry(0.17, 0.19, 0.09, 12).translate(0, 0.045, 0), 0xb8963f),
-        tint(new THREE.TorusGeometry(0.16, 0.012, 4, 16).rotateX(Math.PI / 2).translate(0, 0.17, 0), 0xa8862f), // pasmo przyciśniętego siana
-        tint(new THREE.CylinderGeometry(0.008, 0.01, 0.16, 5).translate(0, 0.38, 0), 0x5a3e24), // żerdź
+        tint(new THREE.LatheGeometry(prof, 14), 0xc9a64e),
+        tint(new THREE.CylinderGeometry(0.008, 0.01, 0.14, 5).translate(0, 0.44, 0), 0x5a3e24), // żerdź
+        tint(new THREE.TorusGeometry(0.205, 0.01, 4, 18).rotateX(Math.PI / 2).translate(0, 0.21, 0), 0x9a7a2a), // sznur przyciskający siano
       ];
-      for (let k = 0; k < 7; k++) {
-        const a2 = k * 0.9;
-        parts.push(tint(new THREE.BoxGeometry(0.035, 0.005, 0.1).rotateY(a2).translate(Math.cos(a2) * 0.22, 0.004, Math.sin(a2) * 0.22), k % 2 ? 0xd2b158 : 0xbf9e48));
+      for (let k = 0; k < 9; k++) {
+        const a2 = k * 0.71;
+        parts.push(tint(new THREE.BoxGeometry(0.03, 0.006, 0.11).rotateY(a2).translate(Math.cos(a2) * 0.25, 0.004, Math.sin(a2) * 0.25), k % 2 ? 0xd2b158 : 0xbf9e48));
       }
       return merge(parts);
     }
@@ -112,8 +113,10 @@ export class Clutter {
 
   constructor() {
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
+    // siano dostaje teksturę strzechy (źdźbła), reszta gratów gładkie barwy
+    const hayMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('thatch'), bumpMap: bump('thatch'), bumpScale: 1.2 });
     for (const k of ALL) {
-      const m = new THREE.InstancedMesh(geometry(k), mat, MAX);
+      const m = new THREE.InstancedMesh(geometry(k), k === 'hay' ? hayMat : mat, MAX);
       m.count = 0; m.castShadow = true; m.receiveShadow = true;
       this.meshes.set(k, m);
       this.group.add(m);

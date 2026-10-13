@@ -41,9 +41,13 @@ varying vec3 vC;
 varying float vFade;
 void main() {
   vUv = uv;
-  vec4 c = modelViewMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+  // kłąb zwrócony do kamery w przestrzeni świata (a nie do płaszczyzny ekranu): przy obracaniu głowy chmury stoją w miejscu
+  vec3 center = (modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
   float s = length(instanceMatrix[0].xyz);
-  c.xy += position.xy * s;
+  vec3 toCam = normalize(cameraPosition - center);
+  vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), toCam));
+  vec3 up = cross(toCam, right);
+  vec4 c = viewMatrix * vec4(center + (right * position.x + up * position.y) * s, 1.0);
   #ifdef USE_INSTANCING_COLOR
     vC = instanceColor;
   #else
