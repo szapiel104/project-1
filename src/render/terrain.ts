@@ -51,6 +51,8 @@ export interface TerrainView {
   noGrass(tile: number, on?: boolean): void;
   /** Kolor nieba odbijany przez wodę */
   setSky(c: THREE.Color): void;
+  /** Wykop pod budowę (depth 0 = zasypany): opuszcza teren działki tylko w obrazie */
+  dig(x: number, y: number, w: number, h: number, depth: number): void;
   /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
   lod(x: number, z: number, reach: number): void;
   /** Wydeptuje ziemię w narożniku pola (x, y): trawa brązowieje do gołej ziemi, do progu cap */
@@ -1163,6 +1165,22 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     clear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
+    dig(x: number, y: number, fw: number, fh: number, depth: number) {
+      // wykop pod budowę: narożniki działki opuszczone (środek głębiej, brzeg płycej), tylko w obrazie terenu
+      const attr = geo.getAttribute('position') as THREE.BufferAttribute;
+      const SLOT_OF: [number, number][] = [[0, 0], [0, 1], [1, 0], [1, 0], [0, 1], [1, 1]];
+      for (let ty = Math.max(0, y - 1); ty < Math.min(h, y + fh + 1); ty++)
+        for (let tx = Math.max(0, x - 1); tx < Math.min(w, x + fw + 1); tx++)
+          for (let k = 0; k < 6; k++) {
+            const [dx, dy] = SLOT_OF[k]!;
+            const cx = tx + dx, cy = ty + dy;
+            if (cx < x || cx > x + fw || cy < y || cy > y + fh) continue;
+            const inner = cx > x && cx < x + fw && cy > y && cy < y + fh;
+            const o = (ty * w + tx) * 18 + k * 3;
+            pos[o + 1] = corner(cx, cy) - depth * (inner ? 1 : 0.45);
+          }
+      attr.needsUpdate = true;
+    },
     updateGrass(x: number, z: number, time: number, camDist?: number) { grass?.update(x, z, time, camDist); },
     noGrass(tile: number, on = true) { builtOn[tile] = on ? 1 : 0; regrass(tile); },
     lod(x: number, z: number, reach: number) {

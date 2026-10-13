@@ -749,33 +749,37 @@ export class GameRenderer {
   /** Menu główne zawsze nocą, z zapalonymi pochodniami */
   private menuNight = false;
 
-  private puffs: { group: THREE.Group; age: number; bits: { m: THREE.Mesh; v: THREE.Vector3 }[] }[] = [];
+  private puffs: { group: THREE.Group; age: number; soft?: boolean; bits: { m: THREE.Mesh; v: THREE.Vector3 }[] }[] = [];
   private static puffGeo = new THREE.IcosahedronGeometry(0.16, 1);
   private static chipGeo = new THREE.DodecahedronGeometry(0.05, 0);
   /** Rozbita droga: kłąb kurzu i odpryski kamieni lub grudki ziemi rozlatują się i opadają */
-  roadDust(x: number, y: number, stone: boolean): void {
+  roadDust(x: number, y: number, stone: boolean, soft = false): void {
     const g = this.state;
     if (!g || !this.view) return;
     const { width, height } = g.map;
     const group = new THREE.Group();
     group.position.set(x + 0.5 - width / 2, Math.max(this.view.heightAt(x + 0.5, y + 0.5), 0) + 0.05, y + 0.5 - height / 2);
     const bits: { m: THREE.Mesh; v: THREE.Vector3 }[] = [];
-    for (let i = 0; i < 7; i++) {
-      const m = new THREE.Mesh(GameRenderer.puffGeo, new THREE.MeshStandardMaterial({ color: stone ? 0xbdb3a0 : 0xa08660, transparent: true, opacity: 0.7, depthWrite: false, roughness: 1 }));
-      const a = (i / 7) * Math.PI * 2;
+    // kurz z placu budowy: kilka małych, przejrzystych kłębków (nie biała „dynia”)
+    const puffMat = new THREE.MeshStandardMaterial({ color: stone ? 0xbdb3a0 : soft ? 0x9c8a6c : 0xa08660, transparent: true, opacity: soft ? 0.22 : 0.7, depthWrite: false, roughness: 1 });
+    const nPuff = soft ? 4 : 7;
+    for (let i = 0; i < nPuff; i++) {
+      const m = new THREE.Mesh(GameRenderer.puffGeo, puffMat);
+      if (soft) m.scale.setScalar(0.45);
+      const a = (i / nPuff) * Math.PI * 2;
       m.position.set(Math.cos(a) * 0.15, 0.05, Math.sin(a) * 0.15);
       bits.push({ m, v: new THREE.Vector3(Math.cos(a) * 0.5, 0.5 + (i % 3) * 0.15, Math.sin(a) * 0.5) });
       group.add(m);
     }
     const chipMat = new THREE.MeshStandardMaterial({ color: stone ? 0x9a9182 : 0x6b5236, roughness: 0.9 });
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < (soft ? 3 : 8); i++) {
       const m = new THREE.Mesh(GameRenderer.chipGeo, chipMat);
       const a = i * 2.4;
       bits.push({ m, v: new THREE.Vector3(Math.cos(a) * (0.6 + (i % 3) * 0.3), 1.6 + (i % 4) * 0.35, Math.sin(a) * (0.6 + (i % 3) * 0.3)) });
       group.add(m);
     }
     this.scene.add(group);
-    this.puffs.push({ group, age: 0, bits });
+    this.puffs.push({ group, age: 0, bits, soft });
   }
 
   /** Deszcz: przychodzi i odchodzi co kilka dni gry (czysto wizualnie, z zegara gry, więc bez losowania) */
@@ -975,8 +979,8 @@ export class GameRenderer {
         if (chip) { b.v.y -= 6 * dt; b.m.position.addScaledVector(b.v, dt); if (b.m.position.y < 0) { b.m.position.y = 0; b.v.set(0, 0, 0); } b.m.rotation.x += dt * 8; }
         else {
           b.m.position.addScaledVector(b.v, dt); b.v.multiplyScalar(1 - dt * 2.5);
-          b.m.scale.setScalar(1 + p.age * 3);
-          (b.m.material as THREE.MeshStandardMaterial).opacity = Math.max(0, 0.7 * (1 - p.age / 1.2));
+          b.m.scale.setScalar(p.soft ? 0.45 + p.age * 1.1 : 1 + p.age * 3);
+          (b.m.material as THREE.MeshStandardMaterial).opacity = Math.max(0, (p.soft ? 0.22 : 0.7) * (1 - p.age / 1.2));
         }
       }
       if (p.age > 1.4) {
@@ -1524,7 +1528,7 @@ export class GameRenderer {
   /** Czas, od kiedy trwa pokazowa budowa gotowego od razu budynku (sama grafika, ok. 3 s) */
   private quickBuild = new Map<number, number>();
   private builtAt = 0;
-  private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material; pit: THREE.Mesh }>();
+  private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material; pit: THREE.Mesh; dug?: number; rect: [number, number, number, number] }>();
   private static pitMat: THREE.MeshStandardMaterial | undefined;
   /** Części modelu, których na placu budowy nie ma (wnętrze z ludźmi, zapasy, dym, ogień, życie) */
   private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'smoke', 'flame', 'flagcloth', 'flagpole']);
@@ -1558,8 +1562,8 @@ export class GameRenderer {
     const pit = new THREE.Mesh(pitGeo, GameRenderer.pitMat ??= new THREE.MeshStandardMaterial({ vertexColors: true, color: 0x5a4430, map: pattern('soil'), roughness: 1, polygonOffset: true, polygonOffsetFactor: -3 }));
     pit.position.set(mesh.position.x, mesh.position.y + 0.012, mesh.position.z);
     pit.receiveShadow = true;
-    this.buildingLayer.add(pit);
-    const site = { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped, clip, pit };
+    pit.visible = false; // dno wykopu robi teren (dig), a mokra ziemia przyciemnia się w shaderze sama
+    const site = { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped, clip, pit, rect: [b0.x, b0.y, fp.w, fp.h] as [number, number, number, number] };
     this.sites.set(id, site);
     this.clipNew(mesh, site);
   }
@@ -1584,6 +1588,7 @@ export class GameRenderer {
     }
     this.buildingLayer.remove(s.pit);
     s.pit.geometry.dispose();
+    if (s.dug) this.view?.dig(s.rect[0], s.rect[1], s.rect[2], s.rect[3], 0);
     const mesh = this.buildingMeshes.get(id);
     if (mesh) for (const ch of mesh.children) if (GameRenderer.SITE_HIDE.has(ch.name)) ch.visible = true;
     this.sites.delete(id);
@@ -1638,15 +1643,21 @@ export class GameRenderer {
       const cut = site.base + 0.03 + Math.max(0, (k - 0.12) / 0.88) * (site.top - site.base) * 1.01;
       site.plane.constant = cut;
       mesh.visible = k >= 0.12;
-      site.pit.visible = k < 0.3;
+      // wykop: teren działki opada w miarę kopania, fundament go potem zasypuje
+      const want = k < 0.12 ? 0.08 + (k / 0.12) * 0.3 : 0;
+      if (Math.abs((site.dug ?? 0) - want) > 0.02) {
+        site.dug = want;
+        const fp2 = footprint(def, b.rot);
+        this.view?.dig(b.x, b.y, fp2.w, fp2.h, want);
+      }
       for (const ch of mesh.children) if (GameRenderer.SITE_HIDE.has(ch.name)) ch.visible = false;
       scaffolds.push({ b, k, cut, site });
       if (this.calm) continue;
       const next = this.dustAt.get(b.id) ?? 0;
       if (this.time > next) {
         const fp = footprint(def, b.rot);
-        this.roadDust(b.x + Math.floor(Math.random() * fp.w), b.y + Math.floor(Math.random() * fp.h), false);
-        this.dustAt.set(b.id, this.time + 0.9 + Math.random() * 1.2);
+        this.roadDust(b.x + Math.floor(Math.random() * fp.w), b.y + Math.floor(Math.random() * fp.h), false, true);
+        this.dustAt.set(b.id, this.time + 1.6 + Math.random() * 1.6);
       }
     }
     for (const id of [...this.sites.keys()]) if (!live.has(id)) this.endSite(id);
