@@ -109,7 +109,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       // barwa z tekstury trawy pod kępą (jak ziemia), kształt i cieniowanie z tekstury źdźbeł
       vec3 gc = texture2D(tGround, vGW / 3.1).rgb;
       gc = mix(gc, gc * vec3(1.18, 1.1, 0.72), smoothstep(0.75, 1.0, vGTone) * 0.7);
-      diffuseColor.rgb *= gc * (0.55 + bl.r * 0.9) * mix(0.55, 1.15, smoothstep(0.0, 0.85, vGUv.y));
+      diffuseColor.rgb *= gc * (0.75 + bl.r * 0.8) * mix(0.6, 1.25, smoothstep(0.0, 0.85, vGUv.y));
       diffuseColor.a = bl.a;
       diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;
     `).replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);');

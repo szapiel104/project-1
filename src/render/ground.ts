@@ -277,14 +277,14 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = `uniform sampler2D wN, shore; uniform float wTime; uniform vec3 skyCol; uniform vec2 mapSize; varying vec3 vWP; float wDepth; float wFoam;\n` + sh.fragmentShader
+    sh.fragmentShader = `uniform sampler2D wN, shore; uniform float wTime; uniform vec3 skyCol; uniform vec2 mapSize; varying vec3 vWP; float wDepth; float wFoam; float wRip;\n` + sh.fragmentShader
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           vec2 suv = (vWP.xz + mapSize * 0.5) / mapSize;
           wDepth = texture2D(shore, suv).r;
           float wMask = texture2D(shore, suv).g;
           float d = smoothstep(0.0, 0.55, wDepth);
-          vec3 shallowC = vec3(0.08, 0.105, 0.08), deepC = vec3(0.016, 0.04, 0.05);
+          vec3 shallowC = vec3(0.09, 0.12, 0.095), deepC = vec3(0.02, 0.058, 0.072);
           diffuseColor.rgb = mix(shallowC, deepC, d);
           diffuseColor.a = mix(0.62, 0.95, smoothstep(0.0, 0.3, wDepth));
           // miękki, nieregularny brzeg: tafla wygasa na ostatnich centymetrach zamiast kończyć się kantem
@@ -299,7 +299,8 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           vec3 n1 = texture2D(wN, vWP.xz / 4.2 + vec2(wTime * 0.026, wTime * 0.016)).xyz * 2.0 - 1.0;
           vec3 n2 = texture2D(wN, vec2(vWP.z, -vWP.x) / 2.1 - vec2(wTime * 0.02, wTime * 0.033)).xyz * 2.0 - 1.0;
           vec3 n3 = texture2D(wN, vWP.xz / 19.0 + vec2(-wTime * 0.008, wTime * 0.006)).xyz * 2.0 - 1.0;
-          vec3 wn = normalize(vec3((n1.xy * 0.8 + n2.xy * 0.7 + n3.xy * 0.15) * 0.5, 1.0));
+          vec3 wn = normalize(vec3((n1.xy * 0.8 + n2.xy * 0.7 + n3.xy * 0.2) * 0.75, 1.0));
+          wRip = wn.x;
           vec3 T = normalize((viewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
           vec3 B = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);
           normal = normalize(T * wn.x - B * wn.y + normal * wn.z);
@@ -312,7 +313,7 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
           vec3 skyR = mix(skyCol * 0.62, skyCol * 0.36, smoothstep(0.1, 0.55, rWorld.y)) * vec3(0.8, 0.9, 1.0);
-          outgoingLight = mix(outgoingLight, skyR, clamp(fres * 0.9 + 0.16, 0.0, 0.55));
+          outgoingLight = mix(outgoingLight, skyR * (0.85 + wRip * 1.2), clamp(fres * 0.9 + 0.24, 0.0, 0.62));
           outgoingLight += vec3(0.7, 0.72, 0.68) * wFoam * 0.22 * (0.3 + skyCol.g);
           diffuseColor.a = clamp(max(diffuseColor.a, fres * 0.9) + wFoam * 0.2, 0.0, 1.0);
         }
