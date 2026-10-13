@@ -16,6 +16,10 @@ if (touchOnly || mobileAgent) {
   </div>`;
 } else {
   void load();
+  // pliki gry zostają w przeglądarce (Service Worker): kolejne wejście startuje bez pobierania
+  if ('serviceWorker' in navigator && location.hostname !== 'localhost' && !location.search.includes('test=')) {
+    addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => { /* bez pamięci podręcznej gra działa jak dotąd */ }); });
+  }
 }
 
 /**
@@ -61,6 +65,8 @@ async function load(): Promise<void> {
   const assets = await import('./render/assets');
   await assets.preloadAssets();
   done++;
+  // miniatury budynków z poprzedniej wizyty (tej samej wersji gry): menu nie rysuje ich od nowa
+  await import('./render/thumbcache').then((m) => m.loadThumbs()).catch(() => undefined);
   await step('Budowanie świata i osady…');
   const game = await import('./main');
   await step('Przygotowanie grafiki…');

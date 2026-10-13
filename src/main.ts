@@ -26,6 +26,7 @@ import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
+import { cachedThumbs, saveThumbs } from './render/thumbcache';
 import { texturesReady } from './render/textures';
 import { TEAM_COLORS } from './data/teams';
 
@@ -104,7 +105,9 @@ function loadSave(): { seedText: string; data: SaveData; ui?: UiSave } | null {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null'); } catch { return null; }
 }
 
-const thumbs: Map<string, string> = TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288);
+// miniatury z poprzedniej wizyty tej samej wersji gry albo rysowane teraz
+const savedThumbs = TEST ? null : cachedThumbs();
+const thumbs: Map<string, string> = TEST ? new Map() : savedThumbs ?? renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288);
 const hud = createHud(document.getElementById('ui')!, {
   onArmyKind: (kind, shift) => {
     const ids = game.soldiers.filter((x) => chosen.has(x.id) && (UNITS[x.kind]!.id === kind) !== shift).map((x) => x.id);
@@ -158,8 +161,9 @@ const hud = createHud(document.getElementById('ui')!, {
 }, thumbs);
 
 // Miniatury rysują się od razu, a gdy dojdą tekstury zdjęciowe (deski, strzecha, bruk), rysujemy je jeszcze raz w pełnych barwach
-if (!TEST) void texturesReady().then(() => {
+if (!TEST && !savedThumbs) void texturesReady().then(() => {
   const fresh = renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288);
+  void saveThumbs(fresh);
   for (const [id, old] of thumbs) {
     const src = fresh.get(id);
     if (!src) continue;

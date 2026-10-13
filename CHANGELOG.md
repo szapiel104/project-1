@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.15.2 — szybszy drugi start (2026-10-13)
+
+- Pliki gry (kod, tekstury zdjęciowe, dźwięki, czcionki) zostają w przeglądarce (Service Worker): kolejne wejście nie pobiera ich z sieci; nowa wersja gry ładuje się zawsze (strona najpierw z sieci), a tekstury i dźwięki odświeżają się w tle; stare wersje kodu są sprzątane
+- Miniatury budynków w menu zapamiętane między wizytami (do następnego wdrożenia): zamiast ok. 5–6 s rysowania od razu
+- Tryb testowy i serwer deweloperski działają bez pamięci podręcznej
+
 ## 0.15.1 — praca z narzędziami, kopacze (2026-10-13)
 
 - Drwal rąbie siekierą trzymaną oburącz: zamach nad ramię, cios w drzewo z pochyleniem, stuk w chwili trafienia; stoi twarzą do drzewa
