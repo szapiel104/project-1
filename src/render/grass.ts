@@ -21,6 +21,8 @@ export interface GrassField {
   setDensity(tile: number, v: number): void;
   /** Mnoży gęstość pola (np. wydeptanie): 1 bez zmian, 0 łyso */
   setWear(tile: number, worn: number): void;
+  /** Zwalnia tekstury i geometrię dywanu (przy zmianie mapy) */
+  dispose(): void;
 }
 
 export function createGrassField(w: number, h: number, corners: Float32Array, density: Float32Array, grassTex: THREE.Texture | null, bladeTex: THREE.Texture): GrassField {
@@ -139,6 +141,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       if (dirty) { mTex.needsUpdate = true; dirty = false; }
     },
     setDensity(tile: number, v: number) { if (base[tile] !== v) { base[tile] = v; write(tile); dirty = true; } },
+    dispose() { hTex.dispose(); mTex.dispose(); bladeTex.dispose(); geo.dispose(); card.dispose(); mat.dispose(); },
     setWear(tile: number, worn: number) { if (Math.abs(wear[tile]! - worn) > 0.02) { wear[tile] = worn; write(tile); dirty = true; } },
   };
 }

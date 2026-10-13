@@ -1201,10 +1201,22 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     },
     wear,
     dispose() {
+      // zmiana mapy (także podgląd w menu): zwalniamy wszystko, co ta mapa stworzyła — geometrie, materiały,
+      // tekstury robione dla niej (brzeg wody, fale, trawa, trzciny); wspólne zdjęcia i materiał podłoża zostają
+      const mats = new Set<THREE.Material>();
       group.traverse((o) => {
         const mesh = o as THREE.Mesh;
-        if (mesh.geometry) mesh.geometry.dispose();
+        if (mesh.geometry && !(mesh.geometry as THREE.InstancedBufferGeometry).isInstancedBufferGeometry) mesh.geometry.dispose();
+        const m = mesh.material;
+        if (m) for (const x of Array.isArray(m) ? m : [m]) if (x !== ground.material) mats.add(x);
       });
+      for (const m of mats) {
+        for (const t of (m.userData.owned as THREE.Texture[] | undefined) ?? []) t.dispose();
+        m.dispose();
+      }
+      grass?.dispose();
+      grassTex.dispose();
+      reedMat.map?.dispose();
     },
   };
 }

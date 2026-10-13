@@ -288,7 +288,9 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
   const sky = { value: new THREE.Color(0x8a9aa6) };
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, roughness: 0.06, metalness: 0.0, depthWrite: false });
   if (TEST || !loader) { mat.color.setHex(0x2c6f8f); mat.opacity = 0.86; return { mat, time, sky }; }
-  const uni = { wN: { value: waveNormals() }, shore: { value: shore }, wTime: time, skyCol: sky, mapSize: { value: new THREE.Vector2(w, h) } };
+  const wN = waveNormals();
+  mat.userData.owned = [wN, shore];
+  const uni = { wN: { value: wN }, shore: { value: shore }, wTime: time, skyCol: sky, mapSize: { value: new THREE.Vector2(w, h) } };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
