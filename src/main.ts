@@ -15,7 +15,7 @@ import { canAfford, canPlace, maxHp } from './sim/systems/placement';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
-import { TEST } from './testmode';
+import { SANDBOX, TEST } from './testmode';
 import { Lockstep, TURN } from './net/lockstep';
 import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
 import type { OnlineStart } from './ui/online';
@@ -70,7 +70,7 @@ const SAVE_KEY = 'project1.save';
 
 /** Zapis w pamięci przeglądarki, żeby odświeżenie strony nie zaczynało gry od zera. */
 function save(): void {
-  if (TEST || net || gameOver) return; // skończona gra i gra przez sieć nie nadpisuje zapisu; tryb testowy nie nadpisuje prawdziwego zapisu gracza
+  if (SANDBOX || net || gameOver) return; // skończona gra i gra przez sieć nie nadpisuje zapisu; tryb testowy nie nadpisuje prawdziwego zapisu gracza
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seedText: currentSeedText, data: serialize(game, currentPreset) })); } catch { /* brak dostępu do pamięci przeglądarki */ }
 }
 
@@ -876,7 +876,7 @@ function loop(now: number): void {
 const [hashPreset, hashSeed] = decodeURIComponent(location.hash.slice(1)).split('/');
 hud.setMuted(isMuted());
 hud.setVolume(getVolume());
-const saved = TEST ? null : loadSave(); // test zawsze na świeżej mapie
+const saved = SANDBOX ? null : loadSave(); // test zawsze na świeżej mapie
 const loadedGame = saved ? deserialize(saved.data) : null;
 // zapis skończonej gry (porażka, poddanie, wygrana) to nie gra do kontynuowania — wyrzucamy go
 const finished = (g: GameState | null): boolean => {
@@ -887,16 +887,16 @@ const restored = finished(loadedGame) ? null : loadedGame;
 if (loadedGame && !restored) { try { localStorage.removeItem(SAVE_KEY); } catch { /* nic */ } }
 const T1 = performance.now();
 if (saved && restored) start(saved.seedText, saved.data.preset, restored);
-else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1', undefined, 1, TEST && new URLSearchParams(location.search).has('dev'));
+else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1', undefined, 1, SANDBOX && new URLSearchParams(location.search).has('dev'));
 mark.push(['start świata', Math.round(performance.now() - T1)]);
 console.info('[main]', mark.map(([a, b]) => `${a} ${b} ms`).join(' | '));
 menu.setVolume(getVolume());
 menu.setMuted(isMuted());
 menu.setCanContinue(!!(saved && restored));
-if (!TEST) menu.open(false); // w trybie testowym od razu gra
+if (!SANDBOX) menu.open(false); // w trybie testowym od razu gra
 // link zaproszenia: ?pokoj=<id> — od razu do pokoju znajomego (parametr znika z adresu, żeby odświeżenie nie wracało)
 const invite = new URLSearchParams(location.search).get('pokoj');
-if (invite && !TEST) {
+if (invite && !SANDBOX) {
   try { const u = new URL(location.href); u.searchParams.delete('pokoj'); history.replaceState(null, '', u.toString()); } catch { /* nic */ }
   menu.join(invite);
 }
