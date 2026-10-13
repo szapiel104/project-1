@@ -123,19 +123,25 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       }
       sizes.push(q.length);
     }
+    // brzegi przeplatają się: odcinek piaszczystej plaży, dalej trzciny i krzaki, potem znów zatoczka z piaskiem;
+    // „plażowe” jeziora mają piasku więcej, pozostałe tylko pojedyncze zatoczki
     const biggest = sizes.indexOf(Math.max(...sizes, 0));
-    const sandy = sizes.map((sz, id) => id === biggest || (sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2));
+    const bias = sizes.map((sz, id) => (id === biggest ? 0.25 : sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2 ? 0.1 : -0.3));
     for (let i = 0; i < w * h; i++) {
       const id = lake[i]!;
-      if (id < 0 || !sandy[id]) continue;
+      if (id < 0) continue;
       const x = i % w, y = (i - x) / w;
-      sandTile[i] = 1;
-      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const bf = smoothstep(-0.05, 0.25, nz(x / 8 + 31, y / 8 - 17) + bias[id]!);
+      if (bf <= 0.02) continue;
+      const reach = 1 + Math.round(bf * 2 * (0.6 + 0.4 * nz(x / 4, y / 4)));
+      sandTile[i] = Math.max(sandTile[i]!, bf);
+      for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) {
         const nx = x + dx, ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
         const t = map.tiles[ny * w + nx];
         if (t !== Terrain.Grass && t !== Terrain.Water) continue;
-        const v = Math.max(Math.abs(dx), Math.abs(dy)) <= 1 ? 1 : 0.55;
+        const rr = Math.max(Math.abs(dx), Math.abs(dy));
+        const v = (rr <= 1 ? 1 : rr === 2 ? 0.7 : 0.4) * bf;
         sandTile[ny * w + nx] = Math.max(sandTile[ny * w + nx]!, v);
       }
     }
@@ -570,6 +576,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const isW = (xx: number, yy: number): boolean => xx >= 0 && yy >= 0 && xx < w && yy < h && map.tiles[yy * w + xx] === Terrain.Water;
       const nearW = isW(x + 1, y) || isW(x - 1, y) || isW(x, y + 1) || isW(x, y - 1);
       const sandy = sandTile[y * w + x]! > 0.3;
+      if (!sandy && t === Terrain.Grass && nearW && (r >>> 18) % 4 === 0) put(bushes, x, y, 24, 0.9 + ((r >>> 20) & 7) / 12, 0.8);
       if (!sandy && t !== Terrain.Water && nearW && (r >>> 9) % 3 !== 0) { put(reeds, x, y, 21, 1, 1.0); if ((r >>> 12) & 1) put(reeds, x, y, 22, 0.8, 1.0); }
       if (t === Terrain.Water) {
         const shoreNear = !isW(x + 1, y) || !isW(x - 1, y) || !isW(x, y + 1) || !isW(x, y - 1);
