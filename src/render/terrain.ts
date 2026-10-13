@@ -105,10 +105,46 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
   const tileColor = (x: number, y: number): THREE.Color =>
     tmp.setHex(TERRAIN[map.tiles[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))] as Terrain].color);
+  // Plaże: część jezior (losowo, ale zawsze te największe) ma piaszczysty brzeg szeroki na 1–2 pola, piasek schodzi pod wodę
+  const sandTile = new Float32Array(w * h);
+  {
+    const lake = new Int32Array(w * h).fill(-1);
+    const sizes: number[] = [];
+    for (let i = 0; i < w * h; i++) {
+      if (map.tiles[i] !== Terrain.Water || lake[i]! >= 0) continue;
+      const id = sizes.length, q = [i]; lake[i] = id;
+      for (let k = 0; k < q.length; k++) {
+        const j = q[k]!, x = j % w, y = (j - x) / w;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx, ny = y + dy, n = ny * w + nx;
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h || lake[n]! >= 0 || map.tiles[n] !== Terrain.Water) continue;
+          lake[n] = id; q.push(n);
+        }
+      }
+      sizes.push(q.length);
+    }
+    const biggest = sizes.indexOf(Math.max(...sizes, 0));
+    const sandy = sizes.map((sz, id) => id === biggest || (sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2));
+    for (let i = 0; i < w * h; i++) {
+      const id = lake[i]!;
+      if (id < 0 || !sandy[id]) continue;
+      const x = i % w, y = (i - x) / w;
+      sandTile[i] = 1;
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const t = map.tiles[ny * w + nx];
+        if (t !== Terrain.Grass && t !== Terrain.Water) continue;
+        const v = Math.max(Math.abs(dx), Math.abs(dy)) <= 1 ? 1 : 0.55;
+        sandTile[ny * w + nx] = Math.max(sandTile[ny * w + nx]!, v);
+      }
+    }
+  }
+  const cornerSand = new Float32Array((w + 1) * (h + 1));
   const nv = new THREE.Vector3();
   for (let y = 0; y <= h; y++) {
     for (let x = 0; x <= w; x++) {
-      let r = 0, g = 0, b = 0, sf = 0, sp = 0, sr = 0;
+      let r = 0, g = 0, b = 0, sf = 0, sp = 0, sr = 0, sd = 0;
       for (const [dx, dy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) {
         const tt = tileAt(x + dx, y + dy);
         if (PHOTO_GROUND) { const m = MUL[tt]; r += m[0]; g += m[1]; b += m[2]; } else { const c = tileColor(x + dx, y + dy); r += c.r; g += c.g; b += c.b; }
@@ -116,7 +152,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if (tt === Terrain.Stone || tt === Terrain.Iron) sp += 0.25;
         if (tt === Terrain.Mountain) sr += 0.25;
         if (tt === Terrain.Water) sp += 0.2; // brzeg: piasek i kamyki (shader zostawia je tylko miejscami)
+        const sx2 = Math.min(w - 1, Math.max(0, x + dx)), sy2 = Math.min(h - 1, Math.max(0, y + dy));
+        sd += sandTile[sy2 * w + sx2]! * 0.25;
       }
+      cornerSand[y * (w + 1) + x] = sd;
       const patch = 0.9 + ((hash2(x >> 2, y >> 2, map.seed) & 63) / 63) * 0.12 + ((hash2(x, y, map.seed ^ 0x55) & 15) / 15) * 0.06;
       tmp.setRGB((r / 4) * patch, (g / 4) * patch, (b / 4) * patch);
       const hh = corner(x, y);
@@ -140,6 +179,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const nor = new Float32Array(w * h * 18);
   const uv = new Float32Array(w * h * 12);
   const spl = new Float32Array(w * h * 24);
+  const snd = new Float32Array(w * h * 6);
   let p = 0;
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
@@ -151,6 +191,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         nor[o] = cornerNor[ci]!; nor[o + 1] = cornerNor[ci + 1]!; nor[o + 2] = cornerNor[ci + 2]!;
         const so = (p / 3 + k) * 4, cs4 = (qy * (w + 1) + qx) * 4;
         spl[so] = cornerSplat[cs4]!; spl[so + 1] = cornerSplat[cs4 + 1]!; spl[so + 2] = cornerSplat[cs4 + 2]!; spl[so + 3] = 0;
+        snd[p / 3 + k] = cornerSand[qy * (w + 1) + qx]!;
         // wzór trawy powtarza się co 5 pól, więc nie widać siatki
         uv[(o / 3) * 2] = qx / 5; uv[(o / 3) * 2 + 1] = qy / 5;
       });
@@ -163,6 +204,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setAttribute('splat', new THREE.BufferAttribute(spl, 4));
+  geo.setAttribute('sand', new THREE.BufferAttribute(snd, 1));
   // Wydeptana ziemia: kolor narożnika przechodzi od trawy do brunatnej, ubitej gleby (przy domach, na ścieżkach chłopów)
   const baseCol = cornerCol.slice();
   const worn = new Float32Array((w + 1) * (h + 1));
@@ -231,56 +273,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca
   const ripples = bump('water')?.clone() ?? null;
   if (ripples) { ripples.repeat.set(w / 14, h / 14); ripples.needsUpdate = true; }
-  // odległość każdego pola wody od lądu (0 brzeg … 1 głębia), na niej opiera się kolor, przejrzystość i piana
-  // Brzeg wody w 4× gęstszej siatce: R = odległość od lądu (głębia), G = gładka maska wody (rozmyta granica),
-  // dzięki której tafla wygasa miękko i nieregularnie zamiast kończyć się kantem pól.
-  const SS = 4, SW = w * SS, SH = h * SS;
-  const shoreData = new Uint8Array(SW * SH * 4);
-  {
-    const dist = new Int16Array(w * h).fill(-1);
-    const queue: number[] = [];
-    for (let i = 0; i < w * h; i++) if (map.tiles[i] !== Terrain.Water) { dist[i] = 0; queue.push(i); }
-    for (let qi = 0; qi < queue.length; qi++) {
-      const i = queue[qi]!, x = i % w, y = (i - x) / w;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-        const nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-        const j = ny * w + nx;
-        if (dist[j]! >= 0) continue;
-        dist[j] = dist[i]! + 1; queue.push(j);
-      }
-    }
-    let m: Float32Array = new Float32Array(SW * SH), d: Float32Array = new Float32Array(SW * SH);
-    for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
-      const t = ((y / SS) | 0) * w + ((x / SS) | 0);
-      m[y * SW + x] = map.tiles[t] === Terrain.Water ? 1 : 0;
-      d[y * SW + x] = Math.max(0, dist[t]! - 0.5) / 6;
-    }
-    // dwa przejścia rozmycia pudełkowego (promień 3 podpola): zaokrąglone, płynne brzegi i płynna głębia
-    const blur = (src: Float32Array): Float32Array => {
-      const tmpB = new Float32Array(src.length), out = new Float32Array(src.length), R = 3;
-      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) { let a = 0, n = 0; for (let k = -R; k <= R; k++) { const xx = x + k; if (xx >= 0 && xx < SW) { a += src[y * SW + xx]!; n++; } } tmpB[y * SW + x] = a / n; }
-      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) { let a = 0, n = 0; for (let k = -R; k <= R; k++) { const yy = y + k; if (yy >= 0 && yy < SH) { a += tmpB[yy * SW + x]!; n++; } } out[y * SW + x] = a / n; }
-      return out;
-    };
-    m = blur(blur(m)); d = blur(d);
-    for (let i = 0; i < SW * SH; i++) { shoreData[i * 4] = Math.min(255, d[i]! * 255); shoreData[i * 4 + 1] = Math.min(255, m[i]! * 255); shoreData[i * 4 + 3] = 255; }
-  }
-  const shoreTex = new THREE.DataTexture(shoreData, SW, SH, THREE.RGBAFormat);
-  shoreTex.magFilter = THREE.LinearFilter; shoreTex.minFilter = THREE.LinearFilter; shoreTex.needsUpdate = true;
-  const wm = waterMaterial(shoreTex, w, h);
-  const waterMat = wm.mat;
-  if (TEST) { waterMat.bumpMap = ripples; waterMat.bumpScale = 0.7; }
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(w, h), waterMat);
-  water.rotation.x = -Math.PI / 2;
-  water.position.y = -0.08;
-  water.receiveShadow = true;
-  group.add(water);
-  // jaśniejsza płycizna przy brzegu: druga, niższa tafla o cieplejszej barwie prześwituje przez wodę
-  const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x46533f, roughness: 1 }));
-  shallow.rotation.x = -Math.PI / 2;
-  shallow.position.y = -0.32;
-  group.add(shallow);
+  // woda (jeziora i morze za mapą) powstaje niżej, gdy znany jest już teren za mapą
+  let wm!: ReturnType<typeof waterMaterial>;
 
   // Ryby: pływają po małych okręgach tuż pod powierzchnią, co jakiś czas któraś wyskakuje
   const waterTiles: number[] = [];
@@ -331,12 +325,24 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const floorCol = PHOTO_GROUND ? new THREE.Color(0.86, 0.88, 0.84) : new THREE.Color(0x46612a);
   // wielkie masywy: losowo po bokach i w rogach, zawsze poza planszą
   const massifs: { x: number; y: number; r: number; hgt: number }[] = [];
+  let seaSide = -1;
+  /** Jak daleko w morze (ujemne = jeszcze ląd): 0 przy krawędzi planszy od strony morza, wybrzeże faluje */
+  const seaT = (X: number, Y: number): number => {
+    if (seaSide < 0) return -99;
+    const s0 = seaSide === 0 ? -X : seaSide === 1 ? X - w : seaSide === 2 ? -Y : Y - h;
+    const along = seaSide < 2 ? Y : X;
+    return s0 - 6 + nz(along / 22, 3.3) * 4 + nz(along / 7, 9.1) * 1.2;
+  };
   {
     let rs = (map.seed ^ 0x2b7e1516) >>> 0;
     const rnd = (): number => { rs = (rs * 1664525 + 1013904223) >>> 0; return rs / 4294967296; };
+    // morze: na części map jeden bok za planszą to morze z szeroką plażą (zamiast lasu i gór)
+    seaSide = TEST ? -1 : rnd() < 0.6 ? Math.floor(rnd() * 4) : -1;
     const count = 2 + Math.floor(rnd() * 2);
     for (let i = 0; i < count; i++) {
-      const side = (Math.floor(rnd() * 4) + i) % 4, along = 0.1 + rnd() * 0.8, out = 30 + rnd() * 30;
+      let side = (Math.floor(rnd() * 4) + i) % 4;
+      if (side === seaSide) side = (side + 2) % 4;
+      const along = 0.1 + rnd() * 0.8, out = 30 + rnd() * 30;
       const x = side === 0 ? -out : side === 1 ? w + out : along * w;
       const y = side === 2 ? -out : side === 3 ? h + out : along * h;
       massifs.push({ x, y, r: 20 + rnd() * 16, hgt: 26 + rnd() * 18 });
@@ -358,8 +364,17 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const g = Math.exp(-q * 1.4);
       hh += m.hgt * g * (0.6 + 0.4 * ridged(X / 13 + m.x, Y / 13 + m.y, 5)) * smoothstep(1, 12, d);
     }
+    // od strony morza: szeroka, płaska plaża łagodnie schodząca do wody, dalej coraz głębiej
+    const t = seaT(X, Y);
+    if (t > -14) {
+      const beachH = t < 0 ? 0.13 + Math.min(-t, 8) * 0.012 + nz(X / 5, Y / 5) * 0.03 : -0.02 - t * 0.14;
+      const k = smoothstep(-14, -7, t);
+      hh = hh * (1 - k) + Math.max(beachH, -3.5) * k;
+    }
     return hh;
   };
+  /** Udział piasku za mapą (plaża nad morzem i pod płytką wodą) */
+  const outerSand = (X: number, Y: number): number => { const t = seaT(X, Y); return t < -40 ? 0 : smoothstep(-11, -8, t); };
   {
     const W2 = w + 2 * D, H2 = h + 2 * D;
     // kolumny/wiersze siatki: co 1 pole przy planszy, co 2 dalej niż 30, co 4 dalej niż 70
@@ -375,7 +390,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     };
     const xs = axis(w), ys = axis(h);
     const NX = xs.length, NY = ys.length;
-    const P = new Float32Array(NX * NY * 3), C = new Float32Array(NX * NY * 3), N = new Float32Array(NX * NY * 3), U = new Float32Array(NX * NY * 2), S = new Float32Array(NX * NY * 4);
+    const P = new Float32Array(NX * NY * 3), C = new Float32Array(NX * NY * 3), N = new Float32Array(NX * NY * 3), U = new Float32Array(NX * NY * 2), S = new Float32Array(NX * NY * 4), SD = new Float32Array(NX * NY);
     const hs = new Float32Array(NX * NY);
     for (let j = 0; j < NY; j++) for (let i = 0; i < NX; i++) hs[j * NX + i] = outerH(xs[i]!, ys[j]!);
     const c3 = new THREE.Color(), nv2 = new THREE.Vector3();
@@ -391,6 +406,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           C[k * 3] = cornerCol[ci]!; C[k * 3 + 1] = cornerCol[ci + 1]!; C[k * 3 + 2] = cornerCol[ci + 2]!;
           N[k * 3] = cornerNor[ci]!; N[k * 3 + 1] = cornerNor[ci + 1]!; N[k * 3 + 2] = cornerNor[ci + 2]!;
           S[k * 4] = cornerSplat[c4]!; S[k * 4 + 1] = cornerSplat[c4 + 1]!; S[k * 4 + 2] = cornerSplat[c4 + 2]!;
+          SD[k] = cornerSand[cy * (w + 1) + cx]!;
           continue;
         }
         const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
@@ -404,7 +420,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         N[k * 3] = nv2.x; N[k * 3 + 1] = nv2.y; N[k * 3 + 2] = nv2.z;
         // pod lasem ściółka; skała, gdzie stromo albo wysoko (śnieg dokłada shader)
         const rockK = Math.max(smoothstep(0.82, 0.6, nv2.y), smoothstep(13, 17, hs[k]!));
-        S[k * 4] = Math.min(0.9, d / 4) * (1 - rockK); S[k * 4 + 2] = rockK;
+        const sandK = outerSand(X, Y);
+        SD[k] = sandK;
+        S[k * 4] = Math.min(0.9, d / 4) * (1 - rockK) * (1 - sandK); S[k * 4 + 2] = rockK * (1 - sandK);
       }
     const idx: number[] = [];
     for (let j = 0; j < NY - 1; j++)
@@ -420,6 +438,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     og.setAttribute('normal', new THREE.BufferAttribute(N, 3));
     og.setAttribute('uv', new THREE.BufferAttribute(U, 2));
     og.setAttribute('splat', new THREE.BufferAttribute(S, 4));
+    og.setAttribute('sand', new THREE.BufferAttribute(SD, 1));
     og.setIndex(idx);
     const outer = new THREE.Mesh(og, ground.material);
     outer.receiveShadow = true;
@@ -432,11 +451,74 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     group.add(far);
   }
 
+  // Woda na całym obszarze (plansza i teren za nią): jeziora na planszy i morze za mapą jedną taflą.
+  // Tekstura brzegu (2 podpola na pole): R = głębia, G = gładka maska wody (rozmyta granica): tafla wygasa
+  // miękko i nieregularnie zamiast kończyć się kantem pól.
+  {
+    const EW = w + 2 * D, EH = h + 2 * D, SS = 2, SW = EW * SS, SH = EH * SS;
+    const dist = new Int16Array(w * h).fill(-1);
+    const queue: number[] = [];
+    for (let i = 0; i < w * h; i++) if (map.tiles[i] !== Terrain.Water) { dist[i] = 0; queue.push(i); }
+    for (let qi = 0; qi < queue.length; qi++) {
+      const i = queue[qi]!, x = i % w, y = (i - x) / w;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = ny * w + nx;
+        if (dist[j]! >= 0) continue;
+        dist[j] = dist[i]! + 1; queue.push(j);
+      }
+    }
+    // wysokość terenu za mapą w siatce pól (raz, potem odczyt)
+    const oh = new Float32Array(EW * EH);
+    for (let y = 0; y < EH; y++) for (let x = 0; x < EW; x++) {
+      const X = x - D + 0.5, Y = y - D + 0.5;
+      oh[y * EW + x] = X >= 0 && X < w && Y >= 0 && Y < h ? 1 : outerH(X, Y);
+    }
+    let m: Float32Array = new Float32Array(SW * SH), d: Float32Array = new Float32Array(SW * SH);
+    for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
+      const tx = ((x / SS) | 0) - D, ty = ((y / SS) | 0) - D;
+      if (tx >= 0 && ty >= 0 && tx < w && ty < h) {
+        const t = ty * w + tx;
+        m[y * SW + x] = map.tiles[t] === Terrain.Water ? 1 : 0;
+        d[y * SW + x] = Math.max(0, dist[t]! - 0.5) / 6;
+      } else {
+        const hh = oh[(ty + D) * EW + (tx + D)]!;
+        m[y * SW + x] = hh < -0.07 ? 1 : 0;
+        d[y * SW + x] = Math.max(0, Math.min(1.4, -hh * 0.45));
+      }
+    }
+    const blur = (src: Float32Array): Float32Array => {
+      const tmpB = new Float32Array(src.length), out = new Float32Array(src.length), R = 2;
+      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) { let a = 0, n = 0; for (let k = -R; k <= R; k++) { const xx = x + k; if (xx >= 0 && xx < SW) { a += src[y * SW + xx]!; n++; } } tmpB[y * SW + x] = a / n; }
+      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) { let a = 0, n = 0; for (let k = -R; k <= R; k++) { const yy = y + k; if (yy >= 0 && yy < SH) { a += tmpB[yy * SW + x]!; n++; } } out[y * SW + x] = a / n; }
+      return out;
+    };
+    m = blur(blur(m)); d = blur(d);
+    const shoreData = new Uint8Array(SW * SH * 4);
+    for (let i = 0; i < SW * SH; i++) { shoreData[i * 4] = Math.min(255, d[i]! * 255); shoreData[i * 4 + 1] = Math.min(255, m[i]! * 255); shoreData[i * 4 + 3] = 255; }
+    const shoreTex = new THREE.DataTexture(shoreData, SW, SH, THREE.RGBAFormat);
+    shoreTex.magFilter = THREE.LinearFilter; shoreTex.minFilter = THREE.LinearFilter; shoreTex.needsUpdate = true;
+    wm = waterMaterial(shoreTex, EW, EH);
+    const waterMat = wm.mat;
+    if (TEST) { waterMat.bumpMap = ripples; waterMat.bumpScale = 0.7; }
+    // tafla sięga daleko za obszar (morze aż po horyzont); poza nim tekstura brzegu powtarza wartości z krawędzi
+    const water = new THREE.Mesh(new THREE.PlaneGeometry(EW + 600, EH + 600), waterMat);
+    water.rotation.x = -Math.PI / 2;
+    water.position.y = -0.08;
+    water.receiveShadow = true;
+    group.add(water);
+    const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x46533f, roughness: 1 }));
+    shallow.rotation.x = -Math.PI / 2;
+    shallow.position.y = -0.32;
+    group.add(shallow);
+  }
+
   // gęsta trawa: łąka pełna, las i złoża rzadko, woda i góry bez trawy
   const grassBase = new Float32Array(w * h);
   for (let t = 0; t < w * h; t++) {
     const tt = map.tiles[t] as Terrain;
-    grassBase[t] = tt === Terrain.Grass ? 1 : tt === Terrain.Forest ? 0.35 : tt === Terrain.Stone ? 0.25 : tt === Terrain.Iron ? 0.1 : 0;
+    grassBase[t] = (tt === Terrain.Grass ? 1 : tt === Terrain.Forest ? 0.35 : tt === Terrain.Stone ? 0.25 : tt === Terrain.Iron ? 0.1 : 0) * (1 - sandTile[t]! * 0.95);
   }
   const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), bladeTexture(map.seed));
   if (grass) group.add(grass.mesh);
@@ -486,14 +568,15 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       // brzeg wody: kępy trzcin i pałek po obu stronach linii wody, na płyciźnie liście grzybieni
       const isW = (xx: number, yy: number): boolean => xx >= 0 && yy >= 0 && xx < w && yy < h && map.tiles[yy * w + xx] === Terrain.Water;
       const nearW = isW(x + 1, y) || isW(x - 1, y) || isW(x, y + 1) || isW(x, y - 1);
-      if (t !== Terrain.Water && nearW && (r >>> 9) % 3 !== 0) { put(reeds, x, y, 21, 1, 1.0); if ((r >>> 12) & 1) put(reeds, x, y, 22, 0.8, 1.0); }
+      const sandy = sandTile[y * w + x]! > 0.3;
+      if (!sandy && t !== Terrain.Water && nearW && (r >>> 9) % 3 !== 0) { put(reeds, x, y, 21, 1, 1.0); if ((r >>> 12) & 1) put(reeds, x, y, 22, 0.8, 1.0); }
       if (t === Terrain.Water) {
         const shoreNear = !isW(x + 1, y) || !isW(x - 1, y) || !isW(x, y + 1) || !isW(x, y - 1);
-        if (shoreNear && (r >>> 9) % 2 === 0) put(reeds, x, y, 23, 1.1, 0.9);
+        if (!sandy && shoreNear && (r >>> 9) % 2 === 0) put(reeds, x, y, 23, 1.1, 0.9);
         const near2 = !isW(x + 2, y) || !isW(x - 2, y) || !isW(x, y + 2) || !isW(x, y - 2);
         if ((shoreNear || near2) && (r >>> 14) % 5 === 0) for (let k = 0; k < 3; k++) put(lilies, x, y, 30 + k, 0.8 + k * 0.2, 0.9);
       }
-      else if (t === Terrain.Grass) {
+      else if (t === Terrain.Grass && !sandy) {
         // łąka: gęste kępy trawy, kwiaty, pojedyncze krzewy, kamyki i z rzadka większy głaz
         // kępy rosną gęściej tam, gdzie łąka jest bujniejsza (wolny szum), na wydeptanych miejscach znikają razem z polem
         const lush = (hash2(x >> 3, y >> 3, map.seed ^ 0x6a5d) & 255) / 255;
@@ -619,6 +702,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           if (map.tiles[ty * w + tx + 1] !== Terrain.Mountain || map.tiles[ty * w + tx - 1] !== Terrain.Mountain || map.tiles[(ty + 1) * w + tx] !== Terrain.Mountain || map.tiles[(ty - 1) * w + tx] !== Terrain.Mountain) continue;
         }
         const X = px - ox, Y = pz - oz;
+        if (seaT(X, Y) > -12) continue; // plaża i morze bez drzew
         const groundY = hAny(X, Y);
         const treeline = 10.5 + nz(X / 30, Y / 30) * 2.0;
         if (groundY > treeline || slopeAt(X, Y) > 1.3) continue;

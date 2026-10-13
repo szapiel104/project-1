@@ -67,21 +67,25 @@ function noiseTexture(): THREE.DataTexture {
 
 const VERT_HEAD = /* glsl */ `
 attribute vec4 splat;
+attribute float sand;
 varying vec4 vSplat;
+varying float vSand;
 varying vec3 vWP;
 varying vec3 vWN;
 `;
 const VERT_BODY = /* glsl */ `
 vSplat = splat;
+vSand = sand;
 vWP = (modelMatrix * vec4(transformed, 1.0)).xyz;
 vWN = normalize(mat3(modelMatrix) * objectNormal);
 `;
 
 const FRAG_HEAD = /* glsl */ `
-uniform sampler2D tGrass1, tGrass2, tMeadow, tForest, tPebble, tDirt, tRock, tCliff, tNoise;
+uniform sampler2D tGrass1, tGrass2, tMeadow, tForest, tPebble, tDirt, tRock, tCliff, tSand, tNoise;
 uniform sampler2D nGrass, nForest, nPebble, nRock;
 uniform float uDark;
 varying vec4 vSplat;
+varying float vSand;
 varying vec3 vWP;
 varying vec3 vWN;
 vec3 gNormal;
@@ -131,19 +135,24 @@ const FRAG_ALBEDO = /* glsl */ `
   float wRock = clamp(vSplat.z, 0.0, 1.0);
   float steep = smoothstep(0.82, 0.62, vWN.y);
   wRock = max(wRock, steep);
+  // piasek plaż (jeziora z plażą, morze za mapą): na plaży trawa i kamienie ustępują
+  vec3 sandC = texture2D(tSand, rot(w, 0.8) / 4.0).rgb * vec3(1.02, 0.97, 0.86);
+  float wSand = clamp(vSand * 1.1, 0.0, 1.0) * (1.0 - wRock);
+  wPeb *= 1.0 - wSand * 0.7; wDirt *= 1.0 - wSand; wForest *= 1.0 - wSand;
 
   // mieszanie po wysokości (jaśniejsze = wystaje): przejścia poszarpane, kamyki wychodzą z ziemi
   float hG = lum(grass) * 1.3 + 0.15, hM = lum(meadow) * 1.2 + 0.1, hF = lum(forest), hP = lum(pebble) * 1.15, hD = lum(dirt) * 0.8, hR = lum(rock) + 0.3;
-  float aG = (1.0 - wMeadow) * (1.0 - max(max(wForest, wDirt), max(wPeb, wRock))) + hG;
+  float aG = (1.0 - wMeadow) * (1.0 - max(max(max(wForest, wDirt), max(wPeb, wRock)), wSand)) + hG;
   float aM = wMeadow * (1.0 - max(max(wForest, wDirt), wRock)) * 0.9 + hM;
   float aF = wForest * 1.2 + hF;
   float aP = wPeb * 1.3 + hP - 0.45;
   float aD = wDirt * 1.25 + hD;
   float aR = wRock * 1.6 + hR - 0.4;
-  float top = max(max(max(aG, aM), max(aF, aP)), max(aD, aR)) - 0.22;
-  float bG = max(aG - top, 0.0), bM = max(aM - top, 0.0), bF = max(aF - top, 0.0), bP = max(aP - top, 0.0), bD = max(aD - top, 0.0), bR = max(aR - top, 0.0);
-  float sum = bG + bM + bF + bP + bD + bR + 1e-4;
-  vec3 alb = (grass * bG + meadow * bM + forest * bF + pebble * bP + dirt * bD + rock * bR) / sum;
+  float aS = wSand * 1.5 + lum(sandC) * 0.9 - 0.1;
+  float top = max(max(max(aG, aM), max(aF, aP)), max(max(aD, aR), aS)) - 0.22;
+  float bG = max(aG - top, 0.0), bM = max(aM - top, 0.0), bF = max(aF - top, 0.0), bP = max(aP - top, 0.0), bD = max(aD - top, 0.0), bR = max(aR - top, 0.0), bS = max(aS - top, 0.0);
+  float sum = bG + bM + bF + bP + bD + bR + bS + 1e-4;
+  vec3 alb = (grass * bG + meadow * bM + forest * bF + pebble * bP + dirt * bD + rock * bR + sandC * bS) / sum;
 
   // z bliska drobna faktura w dużo mniejszej skali: więcej szczegółu na metr (ostrzej, mniej płasko)
   float near = 1.0 - smoothstep(5.0, 24.0, dist);
@@ -156,7 +165,7 @@ const FRAG_ALBEDO = /* glsl */ `
   vec3 tnF = texture2D(nForest, rot(w, 1.3) / 4.2).xyz * 2.0 - 1.0;
   vec3 tnP = texture2D(nPebble, rot(w, 2.6) / 2.9).xyz * 2.0 - 1.0;
   vec3 tnR = texture2D(nRock, w / 6.0).xyz * 2.0 - 1.0;
-  gNormal = normalize((tnG * (bG + bM * 0.6) + tnF * (bF + bD + bM * 0.4) + tnP * bP * 1.4 + tnR * bR * 1.3) / sum);
+  gNormal = normalize((tnG * (bG + bM * 0.6) + tnF * (bF + bD + bM * 0.4) + tnP * (bP * 1.4 + bS * 0.5) + tnR * bR * 1.3 + vec3(0.0, 0.0, 1.0) * bS * 0.6) / sum);
   vec3 tnDet = texture2D(nGrass, rot(w, 1.7) / 0.85).xyz * 2.0 - 1.0;
   gNormal = normalize(gNormal + vec3(tnDet.xy * near * 0.8 * dg, 0.0));
 
@@ -214,7 +223,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
   if (TEST || !loader) { shared = mat; return mat; }
   const uniforms = {
     tGrass1: { value: tex('grass1', true) }, tGrass2: { value: tex('grass2', true) }, tMeadow: { value: tex('meadow', true) },
-    tForest: { value: tex('forest', true) }, tPebble: { value: tex('pebble', true) }, tDirt: { value: tex('dirt', true) }, tRock: { value: tex('rock', true) }, tCliff: { value: tex('cliff', true) },
+    tForest: { value: tex('forest', true) }, tPebble: { value: tex('pebble', true) }, tDirt: { value: tex('dirt', true) }, tRock: { value: tex('rock', true) }, tCliff: { value: tex('cliff', true) }, tSand: { value: tex('sand', true) },
     tNoise: { value: sharedNoise() },
     nGrass: { value: tex('grass_n', false) }, nForest: { value: tex('forest_n', false) }, nPebble: { value: tex('pebble_n', false) }, nRock: { value: tex('rock_n', false) },
     uDark: { value: 1.0 },
