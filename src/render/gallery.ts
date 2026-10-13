@@ -77,7 +77,9 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
     const def = BUILDINGS.find((d) => d.id === id.slice(2));
     if (!def) return;
     const m = buildingModel(def.id, TEAM_COLORS[0]!);
-    for (const n of ['base', 'patch', 'preview']) { const o = m.getObjectByName(n); if (o) o.visible = false; }
+    // podgląd bali palisady zostaje widoczny (w grze bale rysuje osobny system)
+    for (const n of ['base', 'patch']) { const o = m.getObjectByName(n); if (o) o.visible = false; }
+    const pv = m.getObjectByName('preview'); if (pv) pv.visible = true;
     m.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     stage.add(m);
     shown = m;

@@ -59,6 +59,10 @@ const M = {
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
+// Szyby, ciemne wnęki i rysy leżą tuż przy ścianie: z daleka karta graficzna myli je ze ścianą i obraz mruga.
+// Przesunięcie głębi „do przodu” rozstrzyga ten remis zawsze na ich korzyść.
+for (const m of [M.window, M.pane, M.dark]) { m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; }
+
 function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
   const geo = new THREE.BoxGeometry(w, h, d);
   const k = (m.userData.tile as number) || 0;
@@ -1482,9 +1486,14 @@ const BUILDERS: Record<string, Builder> = {
       }
     box(g, M.castleDark, 0.24, 0.32, 0.08, 1.0, 0, 0.85);
     // kaplica w rogu
+    const before = g.children.length;
     hut(g, M.castle, M.thatchDark, 0.8, 0.7, 0.6, 0.85, -0.85);
-    box(g, M.woodDark, 0.06, 0.4, 0.06, 0.85, 1.25, -0.85);
-    box(g, M.woodDark, 0.24, 0.05, 0.05, 0.85, 1.48, -0.85);
+    // krzyż stoi na kalenicy kaplicy: wysokość liczona z bryły, którą właśnie postawiliśmy
+    const chapel = new THREE.Box3();
+    for (const c of g.children.slice(before)) chapel.expandByObject(c);
+    const peak = chapel.isEmpty() ? 1.2 : chapel.max.y - 0.03;
+    box(g, M.woodDark, 0.05, 0.34, 0.05, 0.85, peak, -0.85);
+    box(g, M.woodDark, 0.2, 0.045, 0.045, 0.85, peak + 0.21, -0.85);
     // łopata wbita w ziemię przy świeżej mogile
     const sh = new THREE.Group();
     sh.position.set(0.55, 0, 1.05);
@@ -1645,16 +1654,100 @@ const BUILDERS: Record<string, Builder> = {
     }
     hut(g, M.plaster, M.thatch, 0.7, 0.7, 0.5, -0.95, -0.9);
   },
-  mill(g) {
+  mill(g, _team, flag) {
+    // Wiatrak wieżowy: kamienna podmurówka, zbieżna wieża z tynku przepasana belkami, małe okna, drzwi ze schodkiem,
+    // obiegowa galeria z balustradą (z niej młynarz ustawia płótna), kopulasta czapa ze strzechy z dyszlem i kołem,
+    // cztery kratowe skrzydła z płótnem (dwa rozwinięte, dwa zrefowane). Przy drzwiach worki i zapasowy kamień młyński.
     const millWall = M.plaster.clone();
     millWall.side = THREE.DoubleSide;
-    const tower = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 1.7, 10), M.plaster), 0.6, 1.7);
-    tower.position.y = 0.85;
-    tower.name = 'shell';
-    g.add(tower);
+    const r = rng(4417);
+    const H = 1.55, R0 = 0.66, R1 = 0.47; // wysokość wieży, promień u dołu i u góry
+    const rad = (y: number): number => R0 + (R1 - R0) * Math.min(1, Math.max(0, (y - 0.12) / H));
+    const shell = new THREE.Group();
+    shell.name = 'shell';
+    g.add(shell);
+    // podmurówka z polnego kamienia
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(R0 + 0.06, R0 + 0.1, 0.24, 14), M.stoneDark);
+    base.position.y = 0.12;
+    shell.add(base);
+    const tower = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(R1, R0, H, 14), M.plaster), (R0 + R1) / 2, H);
+    tower.position.y = 0.12 + H / 2;
+    shell.add(tower);
+    // belki opasujące wieżę
+    for (const y of [0.32, 0.86, 1.42]) {
+      const band = new THREE.Mesh(new THREE.TorusGeometry(rad(y) + 0.008, 0.022, 4, 28), M.woodDark);
+      band.rotation.x = Math.PI / 2;
+      band.position.y = y;
+      shell.add(band);
+    }
+    // okna w drewnianych ramach, rozłożone spiralnie
+    for (const [ang, y] of [[0.9, 0.62], [-1.0, 0.66], [2.4, 1.15], [-2.2, 1.2], [0.2, 1.22]] as const) {
+      const rr = rad(y) - 0.01;
+      const win = new THREE.Group();
+      win.position.set(Math.sin(ang) * rr, y, Math.cos(ang) * rr);
+      win.rotation.y = ang;
+      // ściana jest pochylona: okno pochylone razem z nią
+      win.rotation.x = -Math.atan((R0 - R1) / H);
+      box(win, M.woodDark, 0.15, 0.2, 0.03, 0, -0.1, 0.005);
+      box(win, M.pane, 0.1, 0.14, 0.03, 0, -0.07, 0.012);
+      box(win, M.woodDark, 0.012, 0.14, 0.035, 0, -0.07, 0.014);
+      shell.add(win);
+    }
+    // drzwi od frontu: deski, okucia, kamienny schodek i daszek
+    const dz = rad(0.3);
+    const door = new THREE.Group();
+    door.position.set(0, 0.24, dz - 0.02);
+    door.rotation.x = -Math.atan((R0 - R1) / H);
+    box(door, M.woodDark, 0.32, 0.46, 0.04, 0, 0, 0.01);
+    for (let k = -1; k <= 1; k++) box(door, M.wood, 0.085, 0.42, 0.03, k * 0.09, 0.02, 0.03);
+    for (const y of [0.1, 0.32]) box(door, M.iron, 0.24, 0.025, 0.03, -0.02, y, 0.05);
+    const lintel = box(door, M.woodDark, 0.42, 0.05, 0.14, 0, 0.47, 0.06);
+    lintel.rotation.x = 0.25;
+    shell.add(door);
+    box(shell, M.stone, 0.44, 0.08, 0.2, 0, 0, R0 + 0.12);
+    // galeria w połowie wysokości: pomost z desek, wsporniki, balustrada
+    const gy = 0.9, gr = rad(gy) + 0.2;
+    const deck = new THREE.Mesh(new THREE.CylinderGeometry(gr, gr, 0.04, 20), M.plank);
+    deck.position.y = gy;
+    shell.add(deck);
+    const rail = new THREE.Mesh(new THREE.TorusGeometry(gr - 0.01, 0.014, 4, 32), M.woodDark);
+    rail.rotation.x = Math.PI / 2; rail.position.y = gy + 0.17;
+    shell.add(rail);
+    for (let k = 0; k < 12; k++) {
+      const a2 = (k / 12) * Math.PI * 2;
+      const post = box(shell, M.woodDark, 0.025, 0.18, 0.025, Math.sin(a2) * (gr - 0.01), gy, Math.cos(a2) * (gr - 0.01));
+      post.rotation.y = a2;
+      if (k % 2 === 0) shell.add(new THREE.Mesh(beam(new THREE.Vector3(Math.sin(a2) * rad(0.55), 0.55, Math.cos(a2) * rad(0.55)), new THREE.Vector3(Math.sin(a2) * (gr - 0.04), gy - 0.01, Math.cos(a2) * (gr - 0.04)), 0.035, r), M.woodDark));
+    }
+    // czapa: kopuła ze strzechy na drewnianym wieńcu, gałka na szczycie
     const cap = new THREE.Group();
     cap.name = 'roof';
-    pyramid(cap, M.woodDark, 0.65, 0.6, 0, 1.7, 0, 8);
+    const top = 0.12 + H;
+    const curb = new THREE.Mesh(new THREE.CylinderGeometry(R1 + 0.06, R1 + 0.06, 0.08, 14), M.woodDark);
+    curb.position.y = top + 0.03;
+    cap.add(curb);
+    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), M.thatchDark);
+    dome.scale.set(1.05, 0.95, 1.25);
+    dome.position.y = top + 0.06;
+    cap.add(dome);
+    const knob = new THREE.Mesh(new THREE.SphereGeometry(0.05, 8, 6), M.woodDark);
+    knob.position.y = top + 0.56;
+    cap.add(knob);
+    // wał skrzydeł wychodzi z czapy do przodu, lekko zadarty
+    const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.4, 8), M.woodDark);
+    shaft.rotation.x = Math.PI / 2 - 0.12;
+    shaft.position.set(0, top + 0.24, 0.62);
+    cap.add(shaft);
+    // dyszel z tyłu: młynarz obraca nim czapę pod wiatr; na końcu koło
+    cap.add(new THREE.Mesh(beam(new THREE.Vector3(0, top + 0.12, -0.5), new THREE.Vector3(0, 0.2, -0.98), 0.055, r), M.woodDark));
+    cap.add(new THREE.Mesh(beam(new THREE.Vector3(-0.18, top + 0.05, -0.42), new THREE.Vector3(0, 0.55, -0.86), 0.03, r), M.woodDark));
+    cap.add(new THREE.Mesh(beam(new THREE.Vector3(0.18, top + 0.05, -0.42), new THREE.Vector3(0, 0.55, -0.86), 0.03, r), M.woodDark));
+    const wheel = new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.022, 5, 14), M.woodDark);
+    wheel.rotation.y = Math.PI / 2;
+    wheel.position.set(0, 0.15, -0.98);
+    cap.add(wheel);
+    for (let k = 0; k < 3; k++) { const sp = box(cap, M.wood, 0.02, 0.24, 0.02, 0, 0, -0.98); sp.rotation.x = (k / 3) * Math.PI; sp.position.y = 0.15; }
+    pennant(cap, flag, 0, top + 0.55, 0);
     g.add(cap);
     // wnętrze: ta sama wieża ucięta nisko, w środku żarna z lejem, wał, worki i skrzynia na ziarno
     const inside = new THREE.Group();
@@ -1694,17 +1787,42 @@ const BUILDERS: Record<string, Builder> = {
     box(inside, M.wood, 0.3, 0.2, 0.22, -0.36, 0.04, 0.2);
     box(inside, M.wheat, 0.26, 0.03, 0.18, -0.36, 0.24, 0.2);
     g.add(inside);
-    // skrzydła w osobnej grupie, żeby mogły się kręcić, gdy młynarz pracuje
+    // skrzydła: cztery kratowe ramiona na piaście; dwa z rozwiniętym płótnem, dwa zrefowane (płótno zwinięte przy ramieniu)
     const spin = new THREE.Group();
     spin.name = 'spin';
-    spin.position.set(0, 1.35, 0.62);
+    spin.position.set(0, top + 0.27, 0.84);
+    spin.rotation.x = -0.12;
+    const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.14, 8), M.woodDark);
+    hub.rotation.x = Math.PI / 2;
+    spin.add(hub);
+    const cloth = M.white;
     for (let i = 0; i < 4; i++) {
-      const blade = box(spin, M.white, 0.16, 1.25, 0.03, 0, 0, 0);
-      blade.geometry.translate(0, 0.62, 0);
-      blade.position.set(0, 0, 0);
-      blade.rotation.z = (Math.PI / 2) * i;
+      const arm = new THREE.Group();
+      arm.rotation.z = (Math.PI / 2) * i + Math.PI / 4;
+      box(arm, M.woodDark, 0.06, 1.28, 0.06, 0, 0.0, 0); // główne ramię
+      // krata: listwa krawędzi i poprzeczki co kawałek
+      box(arm, M.wood, 0.025, 1.0, 0.025, 0.25, 0.27, 0.0);
+      for (let k = 0; k < 9; k++) box(arm, M.wood, 0.25, 0.018, 0.018, 0.125, 0.3 + k * 0.115, 0.0);
+      for (let k = 0; k < 3; k++) box(arm, M.wood, 0.018, 1.0, 0.018, 0.06 + k * 0.065, 0.27, -0.012);
+      if (i % 2 === 0) box(arm, cloth, 0.23, 0.92, 0.01, 0.125, 0.32, -0.025); // płótno rozwinięte
+      else { const roll = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.9, 6), cloth); roll.position.set(0.045, 0.77, -0.03); arm.add(roll); }
+      spin.add(arm);
     }
     g.add(spin);
+    // przy drzwiach: worki z mąką, zapasowy kamień młyński oparty o wieżę, taczka
+    for (const [x, z, s2] of [[0.42, 0.66, 1], [0.55, 0.52, 0.85], [0.47, 0.78, 0.8]] as const) {
+      const sack = new THREE.Mesh(new THREE.IcosahedronGeometry(0.09 * s2, 1), M.white);
+      sack.scale.set(0.95, 1.25, 0.85);
+      sack.position.set(x, 0.1 * s2, z);
+      g.add(sack);
+    }
+    const stoneWheel = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.07, 16), M.stone);
+    stoneWheel.rotation.set(Math.PI / 2 - 0.25, 0, 0.2);
+    stoneWheel.position.set(-0.55, 0.2, 0.52);
+    g.add(stoneWheel);
+    const eye = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.075, 8), M.dark);
+    eye.rotation.copy(stoneWheel.rotation); eye.position.copy(stoneWheel.position);
+    g.add(eye);
   },
   bakery(g, _team, flag) {
     const inside = cottageAt(g, 23, 1.4, 1.2, 0.85, 0, 0);
