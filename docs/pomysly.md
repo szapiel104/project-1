@@ -55,7 +55,6 @@ Czeka — gra przez sieć:
 - Gracz, który wyszedł z meczu, oddaje miasto botowi
 
 Czeka — poprawki:
-- Animacje pracy (drwal rąbie siekierą, kamieniarz kilofem, piekarz przy piecu) — budowniczy z młotkiem zrobiony 13.10, ten sam sposób (osobna poza pracy) dla reszty
 - Chodzenie ludzi: płynniejsze skręty, omijanie się zamiast przenikania
 - Czytelność nocy: pochodnie o większym zasięgu jako opcja
 - Wszystkie panele w jednym stylu (World of Warcraft — Michałowi się podoba)
