@@ -413,6 +413,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if ((r >>> 16) % 23 === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
         if ((r >>> 19) % 31 === 0) put(pebbles, x, y, 5, 0.35 + ((r >>> 24) & 7) / 20, 0.8);
         if ((r >>> 21) % 173 === 0) put(pebbles, x, y, 10, 1.5, 0.4);
+        // drobne kamyki wystające z darni, częściej tam, gdzie łąka rzadsza
+        if ((r >>> 22) % (lush > 0.5 ? 9 : 5) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
+        if ((r >>> 25) % 17 === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);
       }
     }
   }
@@ -454,7 +457,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       mesh.computeBoundingSphere();
       if (mesh.boundingSphere) mesh.boundingSphere.radius += 3; // zapas na ścinane, przechylające się drzewa
       mesh.castShadow = shadow;
-      mesh.receiveShadow = true;
+      // kępy trawy nie przyjmują cienia: cienkie źdźbła tuż nad ziemią łapały cień samego terenu i czerniały
+      mesh.receiveShadow = mat !== grassMat;
       group.add(mesh);
     }
     const flag = { get needsUpdate() { return dirty.size > 0; }, set needsUpdate(v: boolean) { if (v) { for (const m of dirty) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } dirty.clear(); } } };
@@ -516,7 +520,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
   plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock'), null, false);
-  plant(tufts, instanced(models.tuft(), 0x7a9a48, tufts, undefined, false, grassMat), null, false);
+  plant(tufts, instanced(models.tuft(), 0x9cb860, tufts, undefined, false, grassMat), null, false);
   {
     const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false);
     const palette = [0xf4f1e6, 0xf2d24a, 0xb07ad6, 0xe8687a, 0x7fb2e6];

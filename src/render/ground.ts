@@ -274,8 +274,8 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           // odbicie nieba zależy od nachylenia fali: grzbiety łapią jasny horyzont, doliny ciemny zenit
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
-          vec3 skyR = mix(skyCol * 0.95, skyCol * 0.35, smoothstep(0.05, 0.6, rWorld.y));
-          outgoingLight = mix(outgoingLight, skyR, clamp(fres * 1.1, 0.0, 0.75));
+          vec3 skyR = mix(skyCol * 0.62, skyCol * 0.22, smoothstep(0.05, 0.6, rWorld.y));
+          outgoingLight = mix(outgoingLight, skyR, clamp(fres * 1.0, 0.0, 0.6));
           outgoingLight += vec3(0.7, 0.72, 0.68) * wFoam * 0.22 * (0.3 + skyCol.g);
           diffuseColor.a = clamp(max(diffuseColor.a, fres * 0.9) + wFoam * 0.2, 0.0, 1.0);
         }
