@@ -7,6 +7,7 @@ import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
+import { crowGeometry, WOLF_HIPS, wolfParts } from './creatures';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
@@ -1093,30 +1094,11 @@ export class GameRenderer {
   /** Wilki: szare, przygarbione, w kłusie; nocą świecą im oczy */
   private syncWolves(g: GameState, view: TerrainView, alpha: number): void {
     if (!this.wolfMesh) {
-      // smukły wilk: głęboka klatka, wcięty brzuch, długi pysk, stojące uszy; łapy i ogon osobno, żeby się ruszały
-      const fur = 0x6a655d, back = 0x4a4640, belly = 0x8f8778, dark = 0x2e2b27;
-      const body = mergeGeometries([
-        tint(new THREE.CylinderGeometry(0.075, 0.095, 0.22, 8).rotateX(Math.PI / 2).translate(0, 0.33, 0.1), fur), // klatka
-        tint(new THREE.CylinderGeometry(0.06, 0.075, 0.24, 8).rotateX(Math.PI / 2).translate(0, 0.335, -0.12), fur), // zad, wcięty
-        tint(new THREE.BoxGeometry(0.1, 0.03, 0.44).translate(0, 0.41, 0), back), // ciemny grzbiet
-        tint(new THREE.BoxGeometry(0.09, 0.03, 0.18).translate(0, 0.25, 0.1), belly), // jasna pierś
-        tint(new THREE.CylinderGeometry(0.05, 0.07, 0.16, 7).rotateX(-0.9).translate(0, 0.42, 0.25), fur), // kark
-        tint(new THREE.BoxGeometry(0.11, 0.1, 0.11).translate(0, 0.47, 0.33), fur), // łeb
-        tint(new THREE.BoxGeometry(0.055, 0.05, 0.13).translate(0, 0.44, 0.44), belly), // pysk
-        tint(new THREE.BoxGeometry(0.03, 0.025, 0.02).translate(0, 0.455, 0.505), dark), // nos
-        tint(new THREE.ConeGeometry(0.025, 0.07, 4).translate(-0.035, 0.55, 0.31), back),
-        tint(new THREE.ConeGeometry(0.025, 0.07, 4).translate(0.035, 0.55, 0.31), back),
-      ])!;
-      const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1 });
+      const { body, leg, tail, eyes, mat } = wolfParts();
       this.wolfMesh = new THREE.InstancedMesh(body, mat, 64);
-      // łapa: oś w biodrze/barku, od góry do ziemi, z ciemną stopą
-      const leg = mergeGeometries([tint(new THREE.BoxGeometry(0.035, 0.26, 0.04).translate(0, -0.13, 0), fur), tint(new THREE.BoxGeometry(0.04, 0.03, 0.05).translate(0, -0.26, 0.01), dark)])!;
       this.wolfLegs = new THREE.InstancedMesh(leg, mat, 256);
-      // ogon: krzaczasty, oś u nasady
-      const tail = mergeGeometries([tint(new THREE.CylinderGeometry(0.035, 0.015, 0.26, 6).translate(0, -0.13, 0), back)])!;
       this.wolfTails = new THREE.InstancedMesh(tail, mat, 64);
       for (const m of [this.wolfMesh, this.wolfLegs, this.wolfTails]) { m.castShadow = true; m.frustumCulled = false; this.scene.add(m); }
-      const eyes = mergeGeometries([new THREE.SphereGeometry(0.012, 6, 4).translate(-0.032, 0.49, 0.39), new THREE.SphereGeometry(0.012, 6, 4).translate(0.032, 0.49, 0.39)])!;
       this.wolfEyes = new THREE.InstancedMesh(eyes, new THREE.MeshBasicMaterial({ color: 0xffd24a }), 64);
       this.wolfEyes.frustumCulled = false;
       this.scene.add(this.wolfEyes);
@@ -1153,7 +1135,7 @@ export class GameRenderer {
       this.wolfMesh.setMatrixAt(n, t.matrix);
       // kłus: łapy po przekątnej razem; w ataku przednie wyrzucone do przodu
       const ph = this.time * 12 + w.id;
-      const hips: [number, number, number][] = [[-0.045, 0.32, 0.17], [0.045, 0.32, 0.17], [-0.045, 0.32, -0.17], [0.045, 0.32, -0.17]];
+      const hips = WOLF_HIPS;
       hips.forEach(([hx, hy, hz], k) => {
         const diag = k === 0 || k === 3 ? 1 : -1;
         const front = hz > 0;
@@ -1242,15 +1224,7 @@ export class GameRenderer {
   /** Kruki na ciałach poległych: dziobią, podskakują; płoszą się, gdy ktoś podejdzie */
   private syncCrows(g: GameState, view: TerrainView): void {
     if (!this.crows) {
-      const black = 0x15151a;
-      const geo = mergeGeometries([
-        tint(new THREE.SphereGeometry(0.07, 8, 6).scale(1, 0.8, 1.5).translate(0, 0.08, 0), black),
-        tint(new THREE.SphereGeometry(0.045, 8, 6).translate(0, 0.13, 0.09), black),
-        tint(new THREE.ConeGeometry(0.018, 0.07, 5).rotateX(Math.PI / 2).translate(0, 0.125, 0.15), 0x2a2a2a),
-        tint(new THREE.BoxGeometry(0.06, 0.012, 0.1).translate(0, 0.08, -0.12), black),
-        tint(new THREE.BoxGeometry(0.01, 0.05, 0.01).translate(-0.02, 0.025, 0), 0x333333),
-        tint(new THREE.BoxGeometry(0.01, 0.05, 0.01).translate(0.02, 0.025, 0), 0x333333),
-      ])!;
+      const geo = crowGeometry();
       this.crows = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }), 256);
       this.crows.frustumCulled = false; this.crows.castShadow = true;
       this.scene.add(this.crows);

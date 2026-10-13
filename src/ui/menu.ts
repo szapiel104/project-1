@@ -1,6 +1,7 @@
 import { me as netMe, onAccount, restore } from '../net/supa';
 import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
+import { createGallery, GALLERY, type GalleryEntry } from '../render/gallery';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { t } from '../i18n';
 
@@ -329,12 +330,46 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     screen(t('menu.settings'), true, tabs, foot);
   }
 
+  /** Zakładka z modelami: lista po lewej, obracający się model i opis po prawej */
+  function galleryPane(): HTMLElement {
+    const box = el('div', 'gallery');
+    const list = el('div', 'gallery-list');
+    list.setAttribute('role', 'listbox');
+    list.setAttribute('aria-label', 'Postacie');
+    const view = el('div', 'gallery-view');
+    const canvas = el('canvas', 'gallery-canvas');
+    canvas.setAttribute('aria-hidden', 'true');
+    const name = el('p', 'gallery-name');
+    const text = el('p', 'gallery-text');
+    view.append(canvas, name, text);
+    box.append(list, view);
+    let g: { show(id: string): void } | null = null;
+    const pick = (e: GalleryEntry, b: HTMLButtonElement): void => {
+      list.querySelectorAll('[aria-selected]').forEach((x) => x.setAttribute('aria-selected', 'false'));
+      b.setAttribute('aria-selected', 'true');
+      name.textContent = e.name; text.textContent = e.text;
+      g?.show(e.id);
+    };
+    let group = '';
+    const first: [GalleryEntry, HTMLButtonElement][] = [];
+    for (const e of GALLERY) {
+      if (e.group !== group) { group = e.group; list.append(el('p', 'gallery-group', group)); }
+      const b = button(e.name, () => pick(e, b), 'gallery-item');
+      b.setAttribute('role', 'option');
+      list.append(b);
+      first.push([e, b]);
+    }
+    // renderer powstaje, gdy płótno jest już na stronie (zna swój rozmiar)
+    requestAnimationFrame(() => { if (!canvas.isConnected) return; g = createGallery(canvas); pick(...first[0]!); });
+    return box;
+  }
+
   function showHelp(): void {
-    const tabs = tabbed(HELP.map(([name, lines]) => [t(name), () => {
+    const tabs = tabbed([...HELP.map(([name, lines]): [string, () => Node[]] => [t(name), () => {
       const list = el('ul', 'help-list');
       for (const k of lines) list.append(el('li', '', t(k)));
       return [list];
-    }]));
+    }]), ['Postacie i zwierzęta', () => [galleryPane()]]]);
     const foot = el('div', 'menu-foot');
     foot.append(back());
     screen(t('menu.howTo'), true, tabs, foot);
