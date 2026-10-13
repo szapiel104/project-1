@@ -1204,7 +1204,7 @@ export class GameRenderer {
       let n = 0;
       for (const u of g.units) {
         if (u.path.length === 0) continue;
-        v.wear(Math.round(u.px / 256), Math.round(u.py / 256), 0.012, 0.6);
+        v.wear(Math.round(u.px / 256), Math.round(u.py / 256), 0.008, 0.45);
         if (++n > 400) break;
       }
     }
@@ -1795,15 +1795,15 @@ export class GameRenderer {
       const ground = low + (top - low) * 0.35;
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
       mesh.rotation.y = (b.rot * Math.PI) / 2;
-      // ziemia wokół domu wydeptana do gołej gleby, najmocniej przy drzwiach
+      // ziemia wydeptana tylko tuż przy ścianach (z przerwami) i przy drzwiach; dalej trawa ledwo naruszona
       if (!def.wall && !def.gate && !def.road && def.id !== 'torch') {
         for (let cy = b.y - 1; cy <= b.y + fp.h + 1; cy++) for (let cx = b.x - 1; cx <= b.x + fp.w + 1; cx++) {
           const d = Math.max(b.x - cx, cx - (b.x + fp.w), b.y - cy, cy - (b.y + fp.h), 0);
-          view.wear(cx, cy, d === 0 ? 0.7 : 0.25 + (hash2(cx, cy, b.id) & 7) / 30);
+          view.wear(cx, cy, d === 0 ? 0.4 + (hash2(cx, cy, b.id) & 3) / 20 : (hash2(cx, cy, b.id) & 7) / 50);
         }
         if (b.door >= 0) {
           const dx = b.door % width, dy = Math.floor(b.door / width);
-          for (let cy = dy - 1; cy <= dy + 2; cy++) for (let cx = dx - 1; cx <= dx + 2; cx++) view.wear(cx, cy, cx >= dx && cx <= dx + 1 && cy >= dy && cy <= dy + 1 ? 0.8 : 0.45);
+          for (let cy = dy - 1; cy <= dy + 2; cy++) for (let cx = dx - 1; cx <= dx + 2; cx++) view.wear(cx, cy, cx >= dx && cx <= dx + 1 && cy >= dy && cy <= dy + 1 ? 0.65 : 0.12);
         }
       }
       const base = mesh.getObjectByName('base');
