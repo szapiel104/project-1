@@ -25,6 +25,7 @@ import { createMenu, loadSettings, type Settings } from './ui/menu';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
+import { texturesReady } from './render/textures';
 import { TEAM_COLORS } from './data/teams';
 
 let ME = 0; // gracz sterowany lokalnie (w grze przez sieć gość ma 1)
@@ -79,6 +80,7 @@ function loadSave(): { seedText: string; data: SaveData } | null {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null'); } catch { return null; }
 }
 
+const thumbs: Map<string, string> = TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288);
 const hud = createHud(document.getElementById('ui')!, {
   onArmyKind: (kind, shift) => {
     const ids = game.soldiers.filter((x) => chosen.has(x.id) && (UNITS[x.kind]!.id === kind) !== shift).map((x) => x.id);
@@ -123,7 +125,17 @@ const hud = createHud(document.getElementById('ui')!, {
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
   onTrain: (id, n, unit = 'spearman') => { const k = Math.min(n, recruitInfo().find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
-}, TEST ? new Map() : renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288));
+}, thumbs);
+
+// Miniatury rysują się od razu, a gdy dojdą tekstury zdjęciowe (deski, strzecha, bruk), rysujemy je jeszcze raz w pełnych barwach
+if (!TEST) void texturesReady().then(() => {
+  const fresh = renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288);
+  for (const [id, old] of thumbs) {
+    const src = fresh.get(id);
+    if (!src) continue;
+    document.querySelectorAll<HTMLImageElement>('img').forEach((img) => { if (img.src === old) img.src = src; });
+  }
+});
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
 mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);

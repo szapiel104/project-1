@@ -376,6 +376,15 @@ export async function restore(kind: Kind): Promise<boolean> {
 const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster', thatch: 'thatch', slate: 'slate', ashlar: 'ashlar', bricks: 'bricks', burlap: 'burlap', grass: 'grass', soil: 'soil', rock: 'rock', bark: 'bark' };
 const photoBase = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/cc0/';
 const normals = new Map<Kind, THREE.Texture>();
+const loading: Promise<void>[] = [];
+/** Wczytuje zdjęciową teksturę i zapamiętuje, kiedy dojdzie (albo się nie uda) — patrz texturesReady */
+const loadPhoto = (url: string): THREE.Texture => {
+  let done = (): void => {};
+  loading.push(new Promise<void>((r) => { done = r; }));
+  return new THREE.TextureLoader().load(url, () => done(), undefined, () => done());
+};
+/** Obietnica spełniona, gdy wszystkie dotąd zamówione tekstury zdjęciowe są już wczytane */
+export const texturesReady = (): Promise<void> => Promise.all(loading).then(() => undefined);
 const photos = new Map<Kind, THREE.Texture>();
 /** Mapa normalnych dla zdjęciowej tekstury (albo null, gdy wzór jest rysowany w kodzie) */
 export function normal(kind: Kind): THREE.Texture | null {
@@ -383,7 +392,7 @@ export function normal(kind: Kind): THREE.Texture | null {
   if (!f || typeof document === 'undefined' || TEST) return null;
   let n = normals.get(kind);
   if (!n) {
-    n = new THREE.TextureLoader().load(`${photoBase()}${f}_n.jpg`);
+    n = loadPhoto(`${photoBase()}${f}_n.jpg`);
     n.wrapS = n.wrapT = THREE.RepeatWrapping;
     n.anisotropy = 8;
     normals.set(kind, n);
@@ -399,7 +408,7 @@ export function pattern(kind: Kind): THREE.Texture | null {
   if (photo && !TEST) {
     let pt = photos.get(kind);
     if (!pt) {
-      pt = new THREE.TextureLoader().load(`${photoBase()}${photo}.jpg`);
+      pt = loadPhoto(`${photoBase()}${photo}.jpg`);
       pt.wrapS = pt.wrapT = THREE.RepeatWrapping;
       pt.colorSpace = THREE.SRGBColorSpace;
       pt.anisotropy = 16;
