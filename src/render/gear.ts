@@ -16,10 +16,13 @@ export function peasantGear(pick: THREE.BufferGeometry): { club: THREE.BufferGeo
   ];
   const club = mergeGeometries(clubParts())!;
   // kilof: środek styliska w początek układu, pionowo, skośnie przez plecy
-  const backM = new THREE.Matrix4().makeTranslation(0, 0.19, -0.18)
+  // kilof przypięty płasko do pleców: stylisko lekko skośnie, grot w poprzek pleców przy lewym barku (nic nie sterczy w bok)
+  const backM = new THREE.Matrix4().makeTranslation(0, 0.19, -0.16)
+    .premultiply(new THREE.Matrix4().makeRotationZ(Math.PI / 2))
     .premultiply(new THREE.Matrix4().makeRotationX(-Math.PI / 2))
-    .premultiply(new THREE.Matrix4().makeRotationZ(0.75))
-    .premultiply(new THREE.Matrix4().makeTranslation(0, 0.33, -0.1));
+    .premultiply(new THREE.Matrix4().makeScale(0.78, 0.78, 0.78))
+    .premultiply(new THREE.Matrix4().makeRotationZ(0.38))
+    .premultiply(new THREE.Matrix4().makeTranslation(0, 0.3, -0.145));
   const backPick = pick.clone().applyMatrix4(backM);
   // maczuga u pasa: głowicą w dół przy prawym biodrze
   const beltM = new THREE.Matrix4().makeTranslation(0, 0.19, -0.2)

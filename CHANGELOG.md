@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.16.5 — kilof na plecach (2026-10-13)
+
+- Kilof na plecach przypięty płasko: stylisko lekko skośnie, grot w poprzek pleców przy barku; nie przebija już rąk i nie sterczy w bok
+
 ## 0.16.4 — chłopi z bronią (2026-10-13)
 
 - Więcej chłopów staje do obrony: sześciu na dziesięciu (reszta ucieka)

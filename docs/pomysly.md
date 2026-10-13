@@ -30,8 +30,6 @@ Zrobione 12.10: palisada, brama (otwieranie, sama się zamyka), wieża, wilki (p
 Czeka:
 - Karczma i życie wieczorem (lutnia, pijacy, popularność)
 - Kości przy cmentarzu, więcej brudu (śmieci, gnój przy chlewie)
-- Wilki boją się światła pochodni (gotowe w git stash)
-- Ładniejszy model wilka (smukły, ruchome łapy i ogon)
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
 - Kopalnia rudy z prawdziwego zdarzenia (szyb, wózki)
 - Dźwięki: ptaki o świcie, koguty, świerszcze, puszczyk, grzmot, dzwon w południe, róg wojenny i dzwon alarmu, trzask ognisk, gwar, wiwaty, kroki bruk/ziemia, kowal
