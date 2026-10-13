@@ -26,6 +26,6 @@ Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://g
 - Ground 003 → `meadow.jpg` (łąka z prześwitami ziemi i kamykami)
 - Ground 015 → `forest.jpg` (ściółka leśna: igliwie, patyki)
 - Ground 062 S → `pebble.jpg` (żwir, złoża kamienia)
-- Ground 036 → `dirt.jpg` (wydeptana ziemia)
+- Ground 072 → `dirt.jpg` (wydeptana ziemia)
 - Rock 022 → `rock.jpg` (skała na zboczach)
 - Mapy normalnych `*_n.jpg` policzone z jasności zdjęć.

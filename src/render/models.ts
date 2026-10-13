@@ -58,7 +58,7 @@ export const proceduralModels: ModelFactory = {
     const P: number[] = [], C: number[] = [], N: number[] = [];
     let seed = 7;
     const rnd = (): number => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-    const BL = 16, SEG = 3;
+    const BL = 13, SEG = 2;
     for (let b = 0; b < BL; b++) {
       const ang = rnd() * Math.PI * 2;
       const r0 = rnd() * 0.07;
