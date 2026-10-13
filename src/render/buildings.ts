@@ -47,7 +47,7 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611), pane: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
-  ash: mat(0x4a4540), slate: mat(0x8a8d94, 'slate'), sack: mat(0xe2d6ba, 'burlap'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
+  ash: mat(0x4a4540), slate: mat(0x8a8d94, 'slate'), sack: mat(0xbfa77c, 'burlap'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xf4f0e8, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
@@ -259,10 +259,10 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     // worki z płótna: trzy stoją (każdy trochę inaczej obrócony), czwarty leży bokiem z przodu
     geo: merge([
       ...([[-0.1, -0.06, 0.2, 1], [0.1, -0.07, -0.5, 0.95], [0.0, 0.08, 1.1, 0.9]] as const).flatMap(([x, z, rot, sc]) => [
-        paint(sackGeometry().clone().scale(sc, sc, sc).rotateY(rot).translate(x, -0.15, z), 0xe8dcc2),
+        paint(sackGeometry().clone().scale(sc, sc, sc).rotateY(rot).translate(x, -0.15, z), 0xcdb68a),
         paint(new THREE.TorusGeometry(0.03, 0.007, 4, 10).rotateX(Math.PI / 2).scale(sc, sc, sc).translate(x, -0.15 + 0.25 * sc, z), 0x7a5a32),
       ]),
-      paint(sackGeometry().clone().scale(0.85, 0.85, 0.7).rotateZ(Math.PI / 2).translate(0.12, -0.055, 0.15), 0xe0d4b8),
+      paint(sackGeometry().clone().scale(0.85, 0.85, 0.7).rotateZ(Math.PI / 2).translate(0.12, -0.055, 0.15), 0xc4ad80),
     ]),
   },
   bread: {
