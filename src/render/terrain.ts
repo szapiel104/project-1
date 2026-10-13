@@ -904,12 +904,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
   // bale: zdjęcie desek przycięte tak, że na jednym balu widać jedną deskę ze słojami
   let plankMat: THREE.MeshStandardMaterial | null = null;
+  // ciepłe, miodowo-brązowe drewno jak na miniaturze w menu (zdjęcie desek jest szare, barwę daje materiał)
+  const PLANK_WOOD = new THREE.Color(0xd09a5c);
   const plankMaterial = (): THREE.MeshStandardMaterial => {
     if (plankMat) return plankMat;
     const src = pattern('planks'), nrm = normal('planks');
     const map = src ? src.clone() : null, nmap = nrm ? nrm.clone() : null;
     for (const t of [map, nmap]) if (t) { t.repeat.set(0.55, 0.3); t.needsUpdate = true; }
-    plankMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0, map, normalMap: nmap });
+    plankMat = new THREE.MeshStandardMaterial({ color: PLANK_WOOD, roughness: 0.85, metalness: 0, map, normalMap: nmap });
     return plankMat;
   };
   const kerbDummy = new THREE.Object3D();
@@ -1111,9 +1113,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             kerbDummy.updateMatrix();
             im.setMatrixAt(i, kerbDummy.matrix);
             // świeże jaśniejsze, stare szarzejące, czasem ciemny, przegniły bal
-            const t = 0.62 + ((r >>> 22) & 31) / 31 * 0.3;
-            const old = (r >>> 27) % 5 === 0 ? 0.25 : 0;
-            im.setColorAt(i, tone.setRGB(t * (1 - old * 0.4), t * 0.82 * (1 - old * 0.3), t * 0.62 * (1 - old * 0.1)));
+            const t = 0.78 + ((r >>> 22) & 31) / 31 * 0.3;
+            const old = (r >>> 27) % 6 === 0 ? 0.22 : 0;
+            im.setColorAt(i, tone.setRGB(t * (1 - old), t * 0.94 * (1 - old * 0.9), t * 0.86 * (1 - old * 0.7)));
           });
           im.instanceMatrix.needsUpdate = true;
           if (im.instanceColor) im.instanceColor.needsUpdate = true;
@@ -1128,7 +1130,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             kerbDummy.scale.set(len, 0.05, 0.09);
             kerbDummy.updateMatrix();
             rm.setMatrixAt(i, kerbDummy.matrix);
-            rm.setColorAt(i, tone.setRGB(0.38, 0.29, 0.2));
+            rm.setColorAt(i, tone.setRGB(0.5, 0.36, 0.24));
           });
           rm.instanceMatrix.needsUpdate = true;
           if (rm.instanceColor) rm.instanceColor.needsUpdate = true;
@@ -1274,7 +1276,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       // błoto: ciemniejsza, błyszcząca ziemia na ścieżkach, mokry połysk bruku, trochę ciemniejsza trawa
       const dryC = new THREE.Color(0xffffff);
       if (sandMat) { sandMat.color.copy(dryC).lerp(new THREE.Color(0x3e2c1c), k * 0.85); sandMat.roughness = 1 - k * 0.7; }
-      if (plankMat) { plankMat.roughness = 0.9 - k * 0.45; plankMat.color.copy(dryC).lerp(new THREE.Color(0x6a5a48), k * 0.45); }
+      if (plankMat) { plankMat.roughness = 0.85 - k * 0.45; plankMat.color.copy(PLANK_WOOD).lerp(new THREE.Color(0x6a5a48), k * 0.45); }
       if (kerbMat) { kerbMat.roughness = 0.88 - k * 0.45; kerbMat.color.copy(dryC).lerp(new THREE.Color(0x8a8478), k * 0.4); }
       // mokra nawierzchnia w deszczu: ciemniejsza i bardziej lśniąca
       for (const pm of paveMats.values()) { pm.roughness = 0.9 - k * 0.5; pm.color.copy(pm.userData.wood ? PLANK_DRY : PAVE_DRY).lerp(new THREE.Color(0x6e675c), k * 0.4); }
