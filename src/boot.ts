@@ -22,6 +22,19 @@ if (touchOnly || mobileAgent) {
   }
 }
 
+const TIPS = [
+  'Wilki wychodzą z lasu o zmierzchu. Palisada wokół osady daje ludziom spokojniejszą noc.',
+  'Najpierw jedzenie: sad albo rybak, zanim postawisz kolejne chaty dla nowych ludzi.',
+  'Chata drwala przy samym lesie: krótsza droga po drewno to więcej desek.',
+  'Grabarz zbiera ciała tylko na swoim terenie. Kliknij cmentarz, żeby zobaczyć, gdzie sięga.',
+  'Budowniczy najpierw idą do składu po materiał. Skład blisko budowy = szybsza budowa.',
+  'Prawy klik z przeciąganiem ustawia oddział w szyku i wskazuje, w którą stronę ma patrzeć.',
+  'Zaznacz chłopa i wciśnij F, żeby przejść się jego oczami. Oko na pasku wybiera kogoś losowo.',
+  'Wydeptane ścieżki pokazują, gdzie ludzie chodzą najczęściej. Tam warto położyć drogę.',
+  'W nocy ludzie schodzą do ogniska i karczmy, a o świcie wracają do pracy.',
+  'F3 pokazuje okno wydajności. Gra sama dobiera jakość grafiki do komputera.',
+];
+
 /**
  * Wczytywanie z paskiem: silnik 3D, każda tekstura osobno (rysowane w przeglądarce, to trwa najdłużej),
  * na końcu budowa świata. Między krokami oddajemy przeglądarce klatkę, żeby pasek się odświeżył.
@@ -30,6 +43,9 @@ async function load(): Promise<void> {
   const fill = document.getElementById('loading-fill');
   const label = document.getElementById('loading-label');
   const count = document.getElementById('loading-count');
+  // porada na czas wczytywania (losowanie to tylko ozdoba ekranu, nie symulacja)
+  const tip = document.getElementById('loading-tip');
+  if (tip) tip.textContent = TIPS[Math.floor(Math.random() * TIPS.length)]!;
   // klatka do odświeżenia paska; w karcie w tle przeglądarka wstrzymuje klatki, więc jest też zapasowy zegar
   const frame = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
   let done = 0, total = 3;

@@ -60,6 +60,9 @@ export interface Menu {
   setCanContinue(on: boolean): void;
 }
 
+declare const __BUILD__: string;
+const BUILD = typeof __BUILD__ === 'string' ? __BUILD__ : '';
+
 const SETTINGS_KEY = 'project1.settings';
 
 export function loadSettings(): Settings {
@@ -105,10 +108,11 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   wrap.setAttribute('role', 'dialog');
   wrap.setAttribute('aria-modal', 'true');
   wrap.setAttribute('aria-label', t('menu.title'));
-  const panel = el('div', 'panel menu-panel');
+  // układ jak w starych gotykach: u góry herb i tytuł nad osadą, na dole na środku pasek z pozycjami menu
+  // (pośrodku główna — nowa gra albo powrót do gry), a okna (nowa gra, ustawienia…) wyrastają nad paskiem
+  const head = el('div', 'menu-head');
   const title = el('p', 'menu-title', 'Project‑1');
   const sub = el('p', 'menu-sub', t('menu.subtitle'));
-  const body = el('div', 'menu-body');
   // herb nad nazwą: tarcza z wieżą i skrzyżowanymi włóczniami
   const crest = el('div', 'menu-crest');
   crest.innerHTML = `<svg viewBox="0 0 120 120" aria-hidden="true">
@@ -119,8 +123,26 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     <path d="M46 84 V52 h4 v-6 h5 v6 h10 v-6 h5 v6 h4 V84 Z" fill="#e9c145"/>
     <path d="M56 84 v-12 a4 4 0 0 1 8 0 v12z" fill="#6e1711"/>
   </svg>`;
-  panel.append(crest, title, sub, body);
-  wrap.append(panel);
+  head.append(crest, title, sub);
+  // iskry z ognisk unoszące się z dołu ekranu (sama ozdoba)
+  const embers = el('div', 'menu-embers');
+  embers.setAttribute('aria-hidden', 'true');
+  for (let i = 0; i < 18; i++) {
+    const e = el('span');
+    e.style.setProperty('--x', `${(i * 37) % 100}%`);
+    e.style.setProperty('--d', `${(i * 0.83) % 9}s`);
+    e.style.setProperty('--t', `${7 + ((i * 13) % 6)}s`);
+    e.style.setProperty('--s', `${2 + (i % 3)}px`);
+    embers.append(e);
+  }
+  const panel = el('div', 'panel menu-panel');
+  panel.hidden = true;
+  const body = el('div', 'menu-body');
+  panel.append(body);
+  const bar = el('nav', 'menu-bar');
+  bar.setAttribute('aria-label', t('menu.title'));
+  const foot = el('p', 'menu-fine', '');
+  wrap.append(embers, head, panel, bar, foot);
   root.append(wrap);
 
   let inGame = false;
@@ -141,6 +163,9 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   /** Ekran z nagłówkiem; szeroki = dwie kolumny (zakładki po lewej, treść po prawej) */
   const screen = (heading: string, wide: boolean, ...nodes: Node[]): void => {
     panel.classList.toggle('wide', wide);
+    panel.hidden = false;
+    wrap.classList.add('sub-open');
+    markBar(heading);
     body.replaceChildren(el('p', 'menu-heading', heading), ...nodes);
     body.querySelector<HTMLElement>('button, input, select')?.focus();
   };
@@ -196,20 +221,62 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   };
   onAccount(paintAccount);
   void restore();
-  panel.prepend(account);
+  wrap.append(account);
   paintAccount();
+
+  /** Pasek na dole: [lewe pozycje] [główna pośrodku] [prawe pozycje]; strzałki w lewo/prawo przechodzą między pozycjami */
+  let barItems: HTMLButtonElement[] = [];
+  const barBtn = (text: string, onClick: () => void, main = false): HTMLButtonElement => {
+    const b = button(text, onClick, main ? 'bar-item bar-main' : 'bar-item');
+    b.dataset.label = text;
+    return b;
+  };
+  function paintBar(): void {
+    const left = el('div', 'bar-side left'), right = el('div', 'bar-side right');
+    let main: HTMLButtonElement;
+    if (inGame) {
+      left.append(barBtn(t('menu.newGame'), showNew), barBtn(t('menu.settings'), showSettings), barBtn(t('menu.howTo'), showHelp));
+      main = barBtn(t('menu.resume'), () => events.onContinue(), true);
+      right.append(barBtn('Gra przez sieć', () => online.showOnline()), barBtn('Wyjdź do menu', () => showQuit()), barBtn('Poddaj się', showSurrender));
+    } else {
+      if (canContinue) left.append(barBtn(t('menu.continue'), () => events.onContinue()));
+      left.append(barBtn('Gra przez sieć', () => online.showOnline()));
+      main = barBtn(t('menu.newGame'), showNew, true);
+      right.append(barBtn(t('menu.settings'), showSettings), barBtn(t('menu.howTo'), showHelp));
+    }
+    bar.replaceChildren(left, main, right);
+    barItems = [...bar.querySelectorAll<HTMLButtonElement>('.bar-item')];
+  }
+  /** Podświetla pozycję paska, której okno jest otwarte */
+  function markBar(heading: string): void {
+    for (const b of barItems) {
+      if (b.dataset.label === heading) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+    }
+  }
+  bar.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const i = barItems.indexOf(document.activeElement as HTMLButtonElement);
+    if (i < 0) return;
+    e.preventDefault();
+    barItems[(i + (e.key === 'ArrowRight' ? 1 : barItems.length - 1)) % barItems.length]!.focus();
+  });
+  // Esc w otwartym oknie wraca do paska (a nie zamyka całego menu)
+  document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape' || wrap.hidden || panel.hidden) return;
+    e.preventDefault(); e.stopPropagation();
+    showMain();
+  }, true);
 
   function showMain(): void {
     online.leave();
     panel.classList.remove('wide');
     if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); }
-    const list = el('div', 'menu-list');
-    if (inGame) list.append(button(t('menu.resume'), () => events.onContinue()));
-    else if (canContinue) list.append(button(t('menu.continue'), () => events.onContinue()));
-    if (inGame) list.append(button('Wyjdź do menu głównego', () => showQuit(), 'menu-btn menu-back'), button('Poddaj się', showSurrender, 'menu-btn menu-back'));
-    list.append(button(t('menu.newGame'), showNew), button('Gra przez sieć', () => online.showOnline()), button(t('menu.settings'), showSettings), button(t('menu.howTo'), showHelp));
-    body.replaceChildren(list);
-    list.querySelector('button')?.focus();
+    panel.hidden = true;
+    wrap.classList.remove('sub-open');
+    body.replaceChildren();
+    paintBar();
+    foot.textContent = inGame ? 'Esc — wróć do gry · ← → wybór' : `wersja ${BUILD} · ← → wybór · Enter zatwierdza`;
+    bar.querySelector<HTMLButtonElement>('.bar-main')?.focus();
   }
 
   function showQuit(): void {
@@ -451,6 +518,6 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     isOpen: () => !wrap.hidden,
     setVolume(v) { volume = v; },
     setMuted(m) { muted = m; },
-    setCanContinue(on) { canContinue = on; },
+    setCanContinue(on) { canContinue = on; if (!wrap.hidden && panel.hidden) paintBar(); },
   };
 }
