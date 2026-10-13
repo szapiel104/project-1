@@ -502,6 +502,7 @@ export class GameRenderer {
   private shake = new Map<number, number>();
 
   setState(state: GameState, waterLevel: number, rim: number, focusPlayer = 0): void {
+    this.builtAt = 0; this.quickBuild.clear(); // budynki z wczytanej / nowej mapy stoją od razu, bez pokazu budowy
     this.me = focusPlayer;
     if (this.view) { this.scene.remove(this.view.group); this.view.dispose(); }
     for (const g of this.buildingMeshes.values()) this.buildingLayer.remove(g);
@@ -1515,6 +1516,9 @@ export class GameRenderer {
    * Wydajność: osobne kopie materiałów tylko dla budynków właśnie w budowie (zwykle kilka), rusztowania i stosy
    * to dwie wspólne siatki instancji przeliczane tylko, gdy postęp przeskoczy o 1/20.
    */
+  /** Czas, od kiedy trwa pokazowa budowa gotowego od razu budynku (sama grafika, ok. 3 s) */
+  private quickBuild = new Map<number, number>();
+  private builtAt = 0;
   private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material }>();
   private siteKey = '';
   private scaffold: THREE.InstancedMesh | null = null;
@@ -1572,7 +1576,14 @@ export class GameRenderer {
         scaffolds.push({ b, k: Math.max(0.1, k), cut: mesh.position.y + 0.7, site: { base: mesh.position.y, top: mesh.position.y + 0.9 } });
         continue;
       }
-      if (!b.build || def.line) {
+      // pokazowa budowa: gotowy w symulacji, ale na ekranie wznosi się przez kilka sekund
+      const qb = this.quickBuild.get(b.id);
+      let k = b.build ? 1 - b.build / buildWork(b.type) : 1;
+      if (qb !== undefined && !b.build) {
+        const t = (this.time - qb) / 3;
+        if (t >= 1 || this.calm) this.quickBuild.delete(b.id); else k = t;
+      }
+      if (k >= 1 || def.line) {
         if (pile && !b.build) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
         if (this.sites.has(b.id)) { this.endSite(b.id); mesh.visible = true; this.roadDust(b.x, b.y, false); }
         continue;
@@ -1581,7 +1592,6 @@ export class GameRenderer {
       if (!this.sites.has(b.id)) this.beginSite(b.id, mesh);
       const site = this.sites.get(b.id)!;
       if (this.lodTick % 30 === 0) this.clipNew(mesh, site);
-      const k = 1 - b.build / buildWork(b.type);
       if (ruinShown) {
         if (!pile) {
           const fp = footprint(def, b.rot);
@@ -1725,7 +1735,10 @@ export class GameRenderer {
       }
       this.buildingLayer.add(mesh);
       this.buildingMeshes.set(b.id, mesh);
+      // budynek postawiony od razu gotowy (tryb deweloperski, rozkaz bota z gotowcem): krótki pokaz budowy
+      if (this.builtAt > 0 && !b.build && !def.wall && !def.gate && !def.road && def.id !== 'torch') this.quickBuild.set(b.id, this.time);
     }
+    this.builtAt = 1;
     for (const [id, mesh] of this.buildingMeshes) {
       if (alive.has(id)) continue;
       // rozebrany budynek nie znika od razu: zapada się i przechyla, a pod nim zostaje gruz
