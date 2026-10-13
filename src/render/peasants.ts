@@ -388,7 +388,7 @@ export class Figures {
    * `work` = poza przy pracy: kąt prawej ręki (ujemny = w przód i w górę); nogi stoją, lewa ręka lekko przed sobą.
    * Bez tego `swing` rusza rękami i nogami jak przy chodzie.
    */
-  set(i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = i, work?: number, workL = -0.5, walkLegs = false): void {
+  set(i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = i, work?: number, workL = -0.5, walkLegs = false, holdR?: number, holdL?: number): void {
     const look = lookOf(id, tunic, this.muted);
     this.scaled.copy(base).scale(this.one.setScalar(look.size));
     this.one.setScalar(1);
@@ -396,7 +396,9 @@ export class Figures {
       if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
       const r = work === undefined ? p.rot(swing, armsUp)
         : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
-      this.q.setFromEuler(this.e.set(r, 0, 0));
+      // ręka trzymająca pochodnię: stała poza (nogi dalej idą), pochodnię rysuje scena w tej samej ręce
+      const r2 = holdR !== undefined && p.rot === armR ? holdR : holdL !== undefined && p.rot === armL ? holdL : r;
+      this.q.setFromEuler(this.e.set(r2, 0, 0));
       this.local.compose(p.pos, this.q, this.one);
       if (p.sub) { this.q.setFromEuler(this.e.set(p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);

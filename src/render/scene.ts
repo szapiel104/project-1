@@ -1,3 +1,4 @@
+import GUARD_MODEL from './models/guard.json';
 import * as THREE from 'three';
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
@@ -123,6 +124,9 @@ const MAX_UNITS = 2048;
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
 const tmpColor = new THREE.Color();
+/** Ręka z pochodnią uniesiona w przód (kąt w barku) i czubek pochodni w układzie tej ręki — płomień i światło */
+const TORCH_ARM = -0.95;
+const TORCH_TIP = new THREE.Vector3(0, 0.275, 0).applyAxisAngle(new THREE.Vector3(1, 0, 0), -TORCH_ARM).add(new THREE.Vector3(0, -0.19, 0.012));
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
 const DAY = [
@@ -249,11 +253,16 @@ export class GameRenderer {
   /** Czubki pochodni niesionych przez ludzi i żołnierzy w tej klatce (płomienie rysuje system ognia) */
   private handFlames: THREE.Vector3[] = [];
   private handFlameN = 0;
-  private pushHandFlame(m: THREE.Matrix4, x: number): void {
+  /** Macierz pochodni w ręce: postać (z jej wzrostem) · obrót ręki w barku; płomień na czubku */
+  private torchMatrix(base: THREE.Matrix4, size: number, shoulderX: number, out: THREE.Matrix4, shoulderY = 0.45): THREE.Matrix4 {
+    this.armM.makeRotationX(TORCH_ARM).setPosition(shoulderX, shoulderY, 0);
+    return out.copy(base).scale(this.armV.setScalar(size)).multiply(this.armM);
+  }
+  private pushHandFlame(m: THREE.Matrix4): void {
     if (this.handFlameN >= 400) return;
     const v = this.handFlames[this.handFlameN] ?? (this.handFlames[this.handFlameN] = new THREE.Vector3());
     const f = this.focusPoint;
-    v.set(x, 0.69, 0.1).applyMatrix4(m);
+    v.copy(TORCH_TIP).applyMatrix4(m);
     if ((v.x - f.x) ** 2 + (v.z - f.z) ** 2 > 80 * 80) return;
     this.handFlameN++;
   }
@@ -435,13 +444,15 @@ export class GameRenderer {
       this.scene.add(lamp);
       this.lamps.push(lamp);
     }
+    // pochodnia w pięści: układ ręki (oś w barku), ręka uniesiona w przód o TORCH_ARM; trzonek odchylony tak,
+    // żeby przy tej pozie stał pionowo, płomień nad dłonią
     const hand = mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.018, 0.022, 0.3, 5).translate(0.17, 0.5, 0.1), 0x4a3320),
-      tint(new THREE.CylinderGeometry(0.03, 0.022, 0.07, 6).translate(0.17, 0.67, 0.1), 0x2a1c12),
-    ]);
+      tint(new THREE.CylinderGeometry(0.016, 0.02, 0.3, 5).translate(0, 0.06, 0), 0x4a3320),
+      tint(new THREE.CylinderGeometry(0.03, 0.02, 0.07, 6).translate(0, 0.235, 0), 0x2a1c12),
+    ]).rotateX(-TORCH_ARM).translate(0, -0.19, 0.012);
     this.handTorches = new THREE.InstancedMesh(hand, new THREE.MeshBasicMaterial({ vertexColors: true }), MAX_UNITS);
-    // co piąty żołnierz nocą niesie pochodnię w lewej ręce (prawa trzyma włócznię)
-    this.soldierTorches = new THREE.InstancedMesh(hand.clone().translate(-0.34, 0, 0), new THREE.MeshBasicMaterial({ vertexColors: true }), 256);
+    // strażnik miejski nocą niesie pochodnię w lewej ręce (prawa trzyma miecz)
+    this.soldierTorches = new THREE.InstancedMesh(hand.clone(), new THREE.MeshBasicMaterial({ vertexColors: true }), 256);
     this.soldierTorches.count = 0; this.soldierTorches.frustumCulled = false;
     this.scene.add(this.soldierTorches);
     // wędka rybaka: kij, żyłka i spławik
@@ -2460,10 +2471,12 @@ export class GameRenderer {
         if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
       }
       // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
-      if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
+      // nocą każdy strażnik miejski niesie pochodnię w lewej ręce, uniesioną przed sobą
+      const guardTorch = torchesOn && !!udef.guard && torches < 256;
+      if (guardTorch) { const tm = this.torchMatrix(t.matrix, this.guardsFig.sizeOf(s.id, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888), -GUARD_MODEL.shoulder[0]!, this.armS, GUARD_MODEL.shoulder[1]!); this.soldierTorches.setMatrixAt(torches++, tm); this.pushHandFlame(tm); }
       const teamC = TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888;
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
-      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, swing, striking, teamC, s.id);
+      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, swing, striking, teamC, s.id, undefined, -0.5, false, undefined, guardTorch && !striking ? TORCH_ARM : undefined);
       this.archers.set(n, ranged ? t.matrix : ZERO, swing, striking, teamC, s.id);
       this.spearmen.set(n, !ranged && !udef.guard ? t.matrix : ZERO, swing, striking, teamC, s.id);
       let pos = this.soldierPos.get(s.id);
@@ -2850,11 +2863,11 @@ export class GameRenderer {
       const log = wood && u.phase === Phase.ToHome && !!jb && BUILDINGS[jb.type]!.production?.site === Terrain.Forest;
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
-      if (torchOn) { this.handTorches.setMatrixAt(i, t.matrix); this.pushHandFlame(t.matrix, 0.17); } else this.handTorches.setMatrixAt(i, ZERO);
+      if (torchOn) { const tm = this.torchMatrix(t.matrix, this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888), 0.135, this.armS); this.handTorches.setMatrixAt(i, tm); this.pushHandFlame(tm); } else this.handTorches.setMatrixAt(i, ZERO);
       // uciekający w panice: długi, szybki krok i ręce machające nad głową
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : undefined, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : -0.5, panic);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : undefined, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : -0.5, panic, torchOn ? TORCH_ARM : undefined);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();
