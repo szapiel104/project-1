@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.16.0 — walka z charakterem (2026-10-13)
+
+- Kierunek ciosu ma znaczenie: z boku o 30% mocniej, w plecy o 60% (liczy się, w którą stronę żołnierz patrzy: na przeciwnika, w stronę marszu albo w kierunek szyku)
+- Tarcza włócznika łapie połowę strzały z przodu; z boku i z tyłu nie chroni
+- Szarża: włócznik po rozbiegu (ok. 1,5 s marszu albo pościgu) zadaje pierwszy cios podwójnie
+- Łucznicy chybiają: z bliska prawie zawsze trafiają, z daleka mniej więcej co drugi raz, z wieży celniej; chybiona strzała może zranić swojego, który stoi tuż przy celu
+- Trafiony żołnierz odchyla się i lekko cofa; poległy przewraca się do tyłu zamiast od razu leżeć
+
 ## 0.15.3 — daleki las jako obrazki (2026-10-13)
 
 - Dalekie drzewa (za ok. 40 pól od kamery i cała puszcza za mapą) to obrazki prawdziwego świerka i drzewa liściastego sfotografowane z 8 stron przy starcie: dwa trójkąty na drzewo, z każdej strony właściwy widok, światło, noc i mgła działają jak na bryłach

@@ -4,7 +4,7 @@ import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { deserialize, serialize } from '../src/sim/save';
 import { FP, Phase, createGame as realGame, playerKeep, population, stateHash, type GameState, type Soldier } from '../src/sim/state';
-import { planFormation } from '../src/sim/systems/army';
+import { arrowHits, hitDamage, planFormation } from '../src/sim/systems/army';
 import { walkable } from '../src/sim/path';
 import { unitIndex } from '../src/data/units';
 import { step, type Command } from '../src/sim/step';
@@ -234,3 +234,44 @@ describe('drogi', () => {
     expect(g.roadPlan[t]).toBe(0);
   });
 });
+
+describe('walka z charakterem', () => {
+  const mk = (g: GameState, owner: number, kind: string, x: number, y: number, extra: Partial<Soldier> = {}): Soldier => {
+    const s: Soldier = { id: g.nextId++, owner, kind: unitIndex(kind), px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0, ...extra };
+    g.soldiers.push(s);
+    return s;
+  };
+  it('cios w plecy boli bardziej niż w twarz, z boku pośrodku', () => {
+    const g = createGame(7);
+    // obrońca patrzy na +y (face 0); atakujący z przodu (+y), z boku (+x) i z tyłu (−y)
+    const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 });
+    const front = mk(g, 0, 'spearman', 50, 51), side = mk(g, 0, 'spearman', 51, 50), back = mk(g, 0, 'spearman', 50, 49);
+    const byId = new Map(g.soldiers.map((x) => [x.id, x]));
+    const f = hitDamage(g, front, foe, byId, false), sd = hitDamage(g, side, foe, byId, false), b = hitDamage(g, back, foe, byId, false);
+    expect(sd).toBeGreaterThan(f);
+    expect(b).toBeGreaterThan(sd);
+  });
+  it('tarcza łapie połowę strzały z przodu, z tyłu nie', () => {
+    const g = createGame(7);
+    const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 });
+    const fromFront = mk(g, 0, 'archer', 50, 54), fromBack = mk(g, 0, 'archer', 50, 46);
+    const byId = new Map(g.soldiers.map((x) => [x.id, x]));
+    expect(hitDamage(g, fromFront, foe, byId, true)).toBeLessThan(UNITS_ATTACK_ARCHER);
+    expect(hitDamage(g, fromBack, foe, byId, true)).toBeGreaterThan(UNITS_ATTACK_ARCHER);
+  });
+  it('szarża po rozbiegu podwaja pierwszy cios włócznika', () => {
+    const g = createGame(7);
+    const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 });
+    const a = mk(g, 0, 'spearman', 50, 51), b = mk(g, 0, 'spearman', 50, 51, { run: 30 });
+    const byId = new Map(g.soldiers.map((x) => [x.id, x]));
+    expect(hitDamage(g, b, foe, byId, false)).toBe(hitDamage(g, a, foe, byId, false) * 2);
+  });
+  it('z daleka łucznik chybia częściej niż z bliska, z wieży trafia lepiej', () => {
+    const g = createGame(7);
+    const s = mk(g, 0, 'archer', 50, 50);
+    const rate = (dist: number, up = false): number => { let n = 0; s.up = up; for (let t = 0; t < 2000; t++) { g.tick = t; if (arrowHits(g, s, dist * FP)) n++; } s.up = false; return n / 2000; };
+    expect(rate(1)).toBeGreaterThan(rate(6));
+    expect(rate(6, true)).toBeGreaterThan(rate(6));
+  });
+});
+const UNITS_ATTACK_ARCHER = 7;

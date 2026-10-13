@@ -3,6 +3,7 @@ import { type ResourceId, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
+import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type Soldier, type Unit } from '../state';
 import { BUILDINGS, footprint, workArea } from '../../data/buildings';
 import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
@@ -240,6 +241,44 @@ function step(g: GameState, s: Soldier): void {
   s.px += Math.max(-speed, Math.min(speed, dx));
   s.py += Math.max(-speed, Math.min(speed, dy));
   if (s.px === tx && s.py === ty) s.path.shift();
+  s.run = Math.min(RUN_MAX, (s.run ?? 0) + 1);
+}
+
+/** Ile ticków marszu daje pełny rozbieg do szarży; po zatrzymaniu rozbieg gaśnie w kilka ticków */
+const RUN_MAX = 40, CHARGE_RUN = 15;
+
+/** W którą stronę patrzy żołnierz (0–7): na tego, z kim walczy, w stronę marszu albo w kierunek szyku; -1 = nie wiadomo */
+function facingOf(g: GameState, s: Soldier, byId: Map<number, Soldier>): number {
+  const t = s.target ? byId.get(s.target) : undefined;
+  if (t) return octant(t.px - s.px, t.py - s.py);
+  const next = s.path[0];
+  if (next !== undefined) { const w = g.map.width, nx = next % w, ny = (next - nx) / w; return octant(nx * FP + FP / 2 - s.px, ny * FP + FP / 2 - s.py); }
+  return s.face ?? -1;
+}
+
+/**
+ * Obrażenia ciosu albo strzały z uwzględnieniem, skąd przychodzą: z boku o 30% mocniej, w plecy o 60%;
+ * tarcza z przodu łapie połowę strzały; szarża po rozbiegu podwaja pierwszy cios włócznika.
+ */
+export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<number, Soldier>, ranged: boolean): number {
+  const def = UNITS[s.kind]!, fdef = UNITS[foe.kind]!;
+  let dmg = def.attack * 100;
+  const look = facingOf(g, foe, byId);
+  if (look >= 0) {
+    const from = octant(s.px - foe.px, s.py - foe.py);
+    const d = from < 0 ? 0 : Math.min(Math.abs(from - look), 8 - Math.abs(from - look));
+    if (d === 2) dmg = (dmg * 130) / 100;
+    else if (d >= 3) dmg = (dmg * 160) / 100;
+    else if (ranged && fdef.shield) dmg = dmg / 2;
+  }
+  if (!ranged && def.charge && (s.run ?? 0) >= CHARGE_RUN) dmg = (dmg * def.charge) / 100;
+  return Math.max(1, Math.round(dmg / 100));
+}
+
+/** Czy strzała trafia: im dalej, tym częściej chybia; z wieży celniej (losowanie z numeru strzelca i chwili, takie samo u każdego gracza) */
+export function arrowHits(g: GameState, s: Soldier, dist: number): boolean {
+  const chance = Math.max(30, Math.min(95, 100 - Math.round((dist * 8) / FP) + (s.up ? 20 : 0)));
+  return hash2(s.id, g.tick, 0x5eed) % 100 < chance;
 }
 
 let budget = 10;
@@ -292,6 +331,7 @@ export function armySystem(g: GameState): void {
   for (const s of g.soldiers) {
     if (s.hp <= 0) continue;
     if (s.cd > 0) s.cd--;
+    if (!s.path.length && s.run) s.run = Math.max(0, s.run - 3); // stoi: rozbieg gaśnie
     const def = UNITS[s.kind]!;
     // wieża: łucznik przy niej wchodzi na górę; gdy wieżę zniszczą, spada na ziemię
     if (s.post) {
@@ -338,8 +378,19 @@ export function armySystem(g: GameState): void {
         if (s.amove && s.goal >= 0 && s.path.length > 1) s.path = [];
         if (gap(s, foe) <= (range ? range * FP : FP + FP / 2) && !s.path.length) {
           if (s.cd === 0) {
-            foe.hp -= def.attack; s.cd = def.cooldown;
-            if (foe.hp <= 0) { g.players[s.owner]!.stats.kills++; g.players[foe.owner]!.stats.lost++; }
+            s.cd = def.cooldown;
+            // strzała może chybić; chybiona spada w kłąb walki i może zranić swojego, który stoi tuż przy celu
+            let hit: Soldier | undefined = foe;
+            if (range && !arrowHits(g, s, gap(s, foe))) {
+              hit = undefined;
+              for (const o of g.soldiers) if (o !== foe && o.hp > 0 && team(g, o.owner) === team(g, s.owner) && gap(o, foe) <= FP + FP / 4 && hash2(o.id, g.tick, 0xf1e) % 100 < 35) { hit = o; break; }
+            }
+            if (hit) {
+              const dmg = hit === foe ? hitDamage(g, s, foe, byId, !!range) : Math.max(1, def.attack >> 1);
+              hit.hp -= dmg;
+              if (hit.hp <= 0) { if (team(g, hit.owner) !== team(g, s.owner)) g.players[s.owner]!.stats.kills++; g.players[hit.owner]!.stats.lost++; }
+            }
+            s.run = 0;
           }
           continue;
         }

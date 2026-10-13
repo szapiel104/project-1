@@ -16,7 +16,7 @@ import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel,
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
-import { FP, Phase, type GameState } from '../sim/state';
+import { FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
 import { clockAt } from '../sim/clock';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
@@ -170,6 +170,11 @@ export class GameRenderer {
   private arrowMesh!: THREE.InstancedMesh;
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
   private lastCd = new Map<number, number>();
+  /** Trafienia: kiedy żołnierz ostatnio oberwał (odrzut do tyłu) i ile miał zdrowia */
+  private soldierHp = new Map<number, number>();
+  private hitAt = new Map<number, number>();
+  /** Kierunek, w którym patrzył poległy w chwili śmierci (pada do tyłu, nie obraca się w locie) */
+  private fallYaw = new Map<number, number>();
   private evening = false;
   private taverns = new Map<number, GameState['buildings'][number]>();
   private luteAt = 0;
@@ -2299,10 +2304,19 @@ export class GameRenderer {
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
       this.lastCd.set(s.id, s.cd);
-      t.rotation.set(0, heading, 0);
+      // trafiony odchyla się do tyłu i lekko cofa na ułamek sekundy
+      const was = this.soldierHp.get(s.id);
+      if (was !== undefined && s.hp < was && !this.calm) this.hitAt.set(s.id, this.time);
+      this.soldierHp.set(s.id, s.hp);
+      const since = this.time - (this.hitAt.get(s.id) ?? -9);
+      const flinch = since < 0.3 ? Math.sin((since / 0.3) * Math.PI) : 0;
+      if (flinch) { t.position.x -= Math.sin(heading) * flinch * 0.06; t.position.z -= Math.cos(heading) * flinch * 0.06; }
+      t.rotation.set(-flinch * 0.32, heading, 0, 'YXZ');
       t.scale.setScalar(1.08 * FIG);
       t.updateMatrix();
       t.scale.setScalar(1);
+      t.rotation.order = 'XYZ';
+      this.fallYaw.set(s.id, heading);
       if (striking && !this.calm) {
         // zamach włócznią i uderzenie: w człowieka głucho, w mur jak w drewno
         this.sfxAt('swing', t.position.x, t.position.z, s.id, 1.1, 0.6);
@@ -2349,9 +2363,13 @@ export class GameRenderer {
       const fx = body.px / FP, fy = body.py / FP;
       const age = Math.min(1, (g.tick - body.at) / 6000);
       const y = view.heightAt(fx, fy);
-      lay.setFromEuler(new THREE.Euler(-Math.PI / 2 + 0.08, ((body.id * 2.39) % 6.28), 0, 'YXZ'));
+      // padanie: przez 0,7 s przewraca się do tyłu (coraz szybciej, z małym odbiciem przy ziemi), potem leży
+      const fall = Math.max(0, Math.min(1, (g.tick - body.at) / (TICKS_PER_SECOND * 0.7)));
+      const ease = fall < 0.85 ? (fall / 0.85) ** 2 : 1 - Math.sin(((fall - 0.85) / 0.15) * Math.PI) * 0.06;
+      const yaw = this.fallYaw.get(body.id) ?? ((body.id * 2.39) % 6.28);
+      lay.setFromEuler(new THREE.Euler((-Math.PI / 2 + 0.08) * (this.calm ? 1 : ease), yaw, 0, 'YXZ'));
       sc.set(1.05 * FIG, 1.05 * FIG, 1.05 * FIG * (1 - age * 0.55));
-      m.compose(new THREE.Vector3(fx - width / 2, y + 0.06 - age * 0.04, fy - height / 2), lay, sc);
+      m.compose(new THREE.Vector3(fx - width / 2, y + (0.06 - age * 0.04) * (this.calm ? 1 : ease), fy - height / 2), lay, sc);
       const team = TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
       const rot = new THREE.Color(team).lerp(new THREE.Color(0x3b3226), 0.3 + age * 0.6).getHex();
       if (body.kind < 0) { this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); this.bodies.set(c, ZERO, 0, false, rot, body.id); }
