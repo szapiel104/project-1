@@ -246,6 +246,7 @@ export class GameRenderer {
   /** Żołnierze: osobny zestaw postaci w zbrojach */
   private spearmen: Figures;
   private rings: THREE.InstancedMesh;
+  private ringsBack!: THREE.InstancedMesh;
   /** Podgląd szyku przy przeciąganiu prawym przyciskiem: przyszłe miejsca żołnierzy */
   private ghostRings!: THREE.InstancedMesh;
   /** Ciała poległych i ciemne plamy pod nimi */
@@ -349,30 +350,36 @@ export class GameRenderer {
       tint(new THREE.BoxGeometry(0.04, 0.002, 0.08).translate(0, 0, -0.22), 0xe8e0c8),
     ])!, new THREE.MeshStandardMaterial({ vertexColors: true }), 256);
     this.arrowMesh.count = 0; this.arrowMesh.frustumCulled = false; this.scene.add(this.arrowMesh);
-    this.rings = new THREE.InstancedMesh(new THREE.RingGeometry(0.2, 0.27, 20).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false }), MAX_UNITS);
-    this.rings.count = 0;
-    this.rings.frustumCulled = false;
-    this.rings.renderOrder = 3;
-    this.scene.add(this.rings);
+    // znaczniki zaznaczenia rysują się nad wszystkim (trawa, krzaki), z ciemną obwódką, żeby było je widać na każdym tle
+    const mark = (inner: number, outer: number, color: number, opacity: number, order: number): THREE.InstancedMesh => {
+      const mesh = new THREE.InstancedMesh(new THREE.RingGeometry(inner, outer, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, depthTest: false, toneMapped: false, fog: false }), MAX_UNITS);
+      mesh.count = 0;
+      mesh.frustumCulled = false;
+      mesh.renderOrder = order;
+      this.scene.add(mesh);
+      return mesh;
+    };
+    this.ringsBack = mark(0.25, 0.4, 0x120c05, 0.6, 20);
+    this.rings = mark(0.28, 0.36, 0xffd34d, 1, 21);
     this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.peasantBodies = new Figures(MAX_UNITS, this.scene);
     this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);
     this.stains.count = 0;
     this.stains.frustumCulled = false;
     this.scene.add(this.stains);
-    this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.1, 12).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false }), MAX_UNITS);
+    this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.13, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false, toneMapped: false, fog: false }), MAX_UNITS);
     this.dots.count = 0;
     this.dots.frustumCulled = false;
-    this.dots.renderOrder = 3;
+    this.dots.renderOrder = 21;
     this.scene.add(this.dots);
-    this.ghostRings = new THREE.InstancedMesh(new THREE.RingGeometry(0.16, 0.26, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.55, depthWrite: false }), MAX_UNITS);
+    this.ghostRings = new THREE.InstancedMesh(new THREE.RingGeometry(0.22, 0.32, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xfff0b0, transparent: true, opacity: 0.7, depthWrite: false, depthTest: false, toneMapped: false, fog: false }), MAX_UNITS);
     this.ghostRings.count = 0;
     this.ghostRings.frustumCulled = false;
-    this.ghostRings.renderOrder = 3;
+    this.ghostRings.renderOrder = 21;
     this.scene.add(this.ghostRings);
-    this.wave = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.5, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false }));
+    this.wave = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.5, 32).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, depthWrite: false, depthTest: false, toneMapped: false, fog: false }));
     this.wave.visible = false;
-    this.wave.renderOrder = 3;
+    this.wave.renderOrder = 21;
     this.scene.add(this.wave);
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
@@ -1995,7 +2002,7 @@ export class GameRenderer {
       // kółko i ramka zaznaczenia idą za figurą (z dociągnięciem do grupy), nie za polem z symulacji
       pos.set(px - width / 2, y, pz - height / 2);
       if (this.soldierSel.has(s.id)) {
-        m.makeTranslation(pos.x, y + 0.03, pos.z); this.rings.setMatrixAt(rings++, m);
+        m.makeTranslation(pos.x, y + 0.03, pos.z); this.ringsBack.setMatrixAt(rings, m); this.rings.setMatrixAt(rings++, m);
         // kropka na polu docelowym, póki żołnierz idzie
         const dest = s.path.length ? s.path[s.path.length - 1]! : s.goal;
         if (dest >= 0) {
@@ -2045,6 +2052,10 @@ export class GameRenderer {
     this.stains.instanceMatrix.needsUpdate = true;
     this.rings.count = rings;
     this.rings.instanceMatrix.needsUpdate = true;
+    this.ringsBack.count = rings;
+    this.ringsBack.instanceMatrix.needsUpdate = true;
+    // lekki puls, żeby wzrok od razu łapał zaznaczonych
+    (this.rings.material as THREE.MeshBasicMaterial).opacity = 0.85 + Math.sin(this.time * 4) * 0.15;
   }
 
   private syncUnits(g: GameState, view: TerrainView, alpha: number): void {
