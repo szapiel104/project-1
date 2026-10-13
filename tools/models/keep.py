@@ -23,7 +23,7 @@ TR = 0.4                    # promień baszty
 # ---------- podmurówka i dziedziniec ----------
 b.box('base', 'castleDark', 2.86, 0.12, 2.86)
 b.box('base', 'castleDark', 2.74, G - 0.12, 2.74, 0, 0.12, 0)
-b.box('base', 'roadStone', 2 * WI, 0.015, 2 * WI, 0, G, 0)
+b.box('base', 'pathCobble', 2 * WI, 0.015, 2 * WI, 0, G, 0)
 
 # ---------- mury kurtynowe ----------
 for sz in (-1, 1):
@@ -91,7 +91,7 @@ for y in (0.3, 0.42):
 for sx in (-1, 1):
     b.box('base', 'woodDark', 0.19, 0.48, 0.035, sx * (0.2 - 0.0), G, GZ - 0.18, sx * -1.35)
 # droga przez bramę i zwodzony most opuszczony na ziemię przed bramą
-b.box('base', 'roadStone', 0.38, 0.012, 0.6, 0, G, GZ - 0.1)
+b.box('base', 'pathCobble', 0.38, 0.012, 0.6, 0, G, GZ - 0.1)
 ramp = math.atan2(G, 0.5)
 b.box('base', 'roadWood', 0.42, 0.035, math.hypot(0.5, G), 0, G - 0.035, GZ + 0.18, tilt=ramp, bottom=True)
 for k in range(4):

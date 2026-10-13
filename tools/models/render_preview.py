@@ -35,6 +35,15 @@ def unpack(m, off, arm=0.0):
     bsdf.inputs['Metallic'].default_value = 0.5 if m['mat'] == 'metal' else 0
     bsdf.inputs['Roughness'].default_value = 0.45 if m['mat'] == 'metal' else 0.85
     me.materials.append(mat)
+if 'hindLeg' in d:  # wilk: łapy w barkach i biodrach, kita u nasady
+    for m in d['body']: unpack(m, (0, 0, 0))
+    for k, (x, y, z) in enumerate([(-0.048, 0.35, 0.12), (0.048, 0.35, 0.12), (-0.05, 0.36, -0.19), (0.05, 0.36, -0.19)]):
+        for m in d['leg' if k < 2 else 'hindLeg']: unpack(m, (x, y, z))
+    for m in d['tail']: unpack(m, (0, 0.385, -0.25), arm=-1.2)
+    d['static'], d['leg'], d['arm'] = [], [], []
+elif 'leg' not in d:
+    for m in d['body']: unpack(m, (0, 0, 0))
+    d['static'], d['leg'], d['arm'], d['hip'], d['shoulder'] = [], [], [], [0, 0, 0], [0, 0, 0]
 for m in d['static']:
     if not ok(m): continue
     unpack(m, (0, 0, 0))

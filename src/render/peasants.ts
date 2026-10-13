@@ -6,7 +6,7 @@ import SPEARMAN_MODEL from './models/spearman.json';
 import ARCHER_MODEL from './models/archer.json';
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
-interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
+export interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
 /** Postać z Blendera: środki obrotu i siatki tułowia, nogi i ręki (z bliska i z daleka) */
 interface FigureModel {
   hip: number[]; shoulder: number[]; hand: number[];
@@ -14,7 +14,7 @@ interface FigureModel {
   far_static: ModelMesh[]; far_leg: ModelMesh[]; far_arm: ModelMesh[];
 }
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-function modelGeo(m: ModelMesh): THREE.BufferGeometry {
+export function modelGeo(m: ModelMesh): THREE.BufferGeometry {
   const geo = new THREE.BufferGeometry();
   const pos = b64(m.pos), nrm = b64(m.nrm), col = b64(m.col), idx = b64(m.idx);
   geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(pos.buffer, pos.byteOffset, pos.byteLength / 4), 3));
