@@ -14,16 +14,14 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
   renderer.setSize(size, size, false);
   renderer.setClearColor(0x000000, 0);
   // miniatury mają być czytelne na jasnym pergaminie, więc świecimy dużo mocniej niż na mapie
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.55;
+  // bez mapowania tonów i bez białego światła otoczenia, bo wypłukują barwy drewna i strzech
   const scene = new THREE.Scene();
-  scene.add(new THREE.HemisphereLight(0xfff6e0, 0x8a7a5c, 3.2));
-  scene.add(new THREE.AmbientLight(0xffffff, 0.9));
-  const sun = new THREE.DirectionalLight(0xfff0cc, 3.4);
+  scene.add(new THREE.HemisphereLight(0xfff2d8, 0x6a5a3e, 2.2));
+  const sun = new THREE.DirectionalLight(0xfff0cc, 2.9);
   sun.position.set(-3, 6, 4);
   scene.add(sun);
   // doświetlenie od strony kamery, żeby ściany frontowe nie wpadały w czerń
-  const fill = new THREE.DirectionalLight(0xffe8c8, 1.8);
+  const fill = new THREE.DirectionalLight(0xffe2b8, 1.1);
   fill.position.set(6, 4, 6);
   scene.add(fill);
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);
