@@ -746,3 +746,21 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
   .menu-sub { padding-bottom: 6px; }
   .newgame .pick-small { display: none; }
 }
+
+/* ===== Menu główne jako panel przyklejony do lewej krawędzi, na całą wysokość ekranu ===== */
+.menu, .menu.previewing { place-items: stretch start; padding: 0;
+  background: linear-gradient(90deg, rgba(20, 12, 5, .55), rgba(20, 12, 5, .18) 45%, rgba(20, 12, 5, 0) 65%); }
+.menu-panel, .menu-panel.wide, .menu.previewing .menu-panel.wide {
+  /* zoom interfejsu mnoży długości, więc wysokość dzielimy przez niego, żeby panel zawsze sięgał od góry do dołu */
+  height: calc(100vh / var(--ui, 1)); max-height: none; align-content: start;
+  padding: 22px 32px 28px; border: 0; border-right: 3px solid #3b2716;
+  box-shadow: 2px 0 0 var(--gold-dark), 7px 0 0 #2e1d0f, 9px 0 0 var(--gold-dark), 24px 0 60px rgba(0, 0, 0, .55); }
+.menu-panel { width: 440px; }
+.menu-panel.wide, .menu.previewing .menu-panel.wide { width: min(640px, calc(100vw / var(--ui, 1) - 40px)); }
+.menu-panel::before { top: 10px; left: 10px; }
+.menu-panel::after { top: 10px; right: 12px; }
+.newgame-foot { bottom: -28px; padding-bottom: 28px; }
+@media (max-height: 820px) {
+  .menu-panel, .menu-panel.wide { max-height: none; padding-top: 14px; padding-bottom: 18px; }
+  .newgame-foot { bottom: -18px; padding-bottom: 18px; }
+}
