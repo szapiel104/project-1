@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.15.3 — daleki las jako obrazki (2026-10-13)
+
+- Dalekie drzewa (za ok. 40 pól od kamery i cała puszcza za mapą) to obrazki prawdziwego świerka i drzewa liściastego sfotografowane z 8 stron przy starcie: dwa trójkąty na drzewo, z każdej strony właściwy widok, światło, noc i mgła działają jak na bryłach
+- Zamiast stożków i kul z daleka widać sylwetki prawdziwych drzew
+- Puszcza za mapą mniej więcej dwa razy gęstsza przy tym samym koszcie rysowania
+- Pień znika razem z przełączeniem korony na obrazek; obrazki nie rzucają cieni
+
 ## 0.15.2 — szybszy drugi start (2026-10-13)
 
 - Pliki gry (kod, tekstury zdjęciowe, dźwięki, czcionki) zostają w przeglądarce (Service Worker): kolejne wejście nie pobiera ich z sieci; nowa wersja gry ładuje się zawsze (strona najpierw z sieci), a tekstury i dźwięki odświeżają się w tle; stare wersje kodu są sprzątane
