@@ -65,7 +65,7 @@ describe('wilki', () => {
     const g = createGame(9, '1v1', 2);
     for (const p of g.players) p.bot = false;
     let most = 0;
-    for (let i = 0; i < RULES.dayTicks * 3; i++) { step(g, []); most = Math.max(most, g.wolves.length); }
+    for (let i = 0; i < RULES.dayTicks * 3 + 400; i++) { step(g, []); most = Math.max(most, g.wolves.length); }
     expect(most).toBeGreaterThan(1);
     expect(g.wolves.length).toBe(0); // po świcie
     const calm = createGame(9, '1v1', 0);

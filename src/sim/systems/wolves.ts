@@ -28,10 +28,19 @@ export function wolfSystem(g: GameState): void {
   const { width, height } = g.map;
   const clock = clockAt(g.tick);
   const peaceful = g.players[0]?.level === 0;
-  // nowa wataha: raz na noc (około 22:00), co drugą noc, od trzeciego dnia
-  if (!peaceful && clock.day >= 2 && g.tick > 0 && hourStarts(g.tick, 22)) {
-    const side = g.rng.int(4);
-    const along = 4 + g.rng.int((side < 2 ? width : height) - 8);
+  // nowa wataha: co noc od drugiego dnia, o zmierzchu (ok. 19:45), kiedy ludzie siedzą jeszcze przy ogniskach;
+  // wychodzi z lasu na skraju mapy najbliżej osady jednego z graczy, żeby zdążyła dojść przed snem i do świtu
+  if (!peaceful && clock.day >= 2 && g.tick > 0 && hourStarts(g.tick, 19.75)) {
+    const keeps = g.buildings.filter((b) => b.type === 0);
+    const k = keeps.length ? keeps[g.rng.int(keeps.length)]! : undefined;
+    let side = g.rng.int(4);
+    let along = 4 + g.rng.int((side < 2 ? width : height) - 8);
+    if (k) {
+      const d = [k.y, height - 1 - k.y, k.x, width - 1 - k.x];
+      side = d.indexOf(Math.min(...d));
+      const c = side < 2 ? k.x : k.y, lim = (side < 2 ? width : height) - 5;
+      along = Math.max(4, Math.min(lim, c - 8 + g.rng.int(17)));
+    }
     const tile = side === 0 ? along : side === 1 ? (height - 1) * width + along : side === 2 ? along * width : along * width + width - 1;
     const size = 2 + g.rng.int(3);
     for (let i = 0; i < size; i++) {
@@ -40,11 +49,14 @@ export function wolfSystem(g: GameState): void {
     }
   }
   if (!g.wolves.length) return;
-  const day = !clock.night;
+  // wilki polują od zmierzchu do wczesnego ranka (rano łapią tych, co pierwsi wyszli do pracy)
+  const day = clock.hour >= 6.5 && clock.hour < 19.5;
   for (const w of g.wolves) {
     if (w.cd > 0) w.cd--;
     const here = (w.py >> 8) * width + (w.px >> 8);
     if (day && !w.leaving) { w.leaving = true; w.path = []; w.target = 0; }
+    // w pełnym dniu maruder, który nie znalazł drogi do lasu, i tak znika w zaroślach
+    if (day && clock.hour >= 8.5) { w.hp = 0; continue; }
     if (w.leaving) {
       const x = w.px >> 8, y = w.py >> 8;
       if (x <= 0 || y <= 0 || x >= width - 1 || y >= height - 1) { w.hp = 0; continue; } // zniknął w lesie
