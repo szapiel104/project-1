@@ -769,18 +769,50 @@ export class GameRenderer {
       const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
       const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, fog: false, depthWrite: false }));
       moon.scale.setScalar(110);
-      // chmury: miękkie, ciemne kłęby
-      const cc = document.createElement('canvas'); cc.width = cc.height = 128;
-      const y = cc.getContext('2d')!;
-      for (let i = 0; i < 9; i++) { const g2 = y.createRadialGradient(30 + Math.random() * 68, 50 + Math.random() * 30, 0, 64, 64, 40 + Math.random() * 20); g2.addColorStop(0, 'rgba(255,255,255,0.55)'); g2.addColorStop(1, 'rgba(255,255,255,0)'); y.fillStyle = g2; y.fillRect(0, 0, 128, 128); }
-      const ctex = new THREE.CanvasTexture(cc);
+      // chmury: kłębiaste cumulusy z wielu miękkich kłębów — płaski, cieniowany spód, jasne, puszyste wierzchołki.
+      // Kilka wzorów, żeby się nie powtarzały; kłęby nie dotykają brzegu obrazka, więc nie ma ostrych krawędzi
+      const cloudTex = (seed: number): THREE.Texture => {
+        const W = 512, H = 256;
+        const cc = document.createElement('canvas'); cc.width = W; cc.height = H;
+        const y = cc.getContext('2d')!;
+        let s2 = seed * 9301 + 49297;
+        const rr = (): number => { s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; };
+        const base = H * 0.72; // płaska podstawa chmury
+        const puffs = 26 + Math.floor(rr() * 14);
+        for (let i = 0; i < puffs; i++) {
+          const t = rr();
+          const cx = W * (0.18 + t * 0.64);
+          // w środku wyższe kłęby, po bokach niższe
+          const hump = Math.sin(t * Math.PI);
+          const r = H * (0.1 + rr() * 0.14) * (0.6 + hump * 0.6);
+          const cy = Math.min(base - r * 0.35, base - hump * H * (0.18 + rr() * 0.22));
+          const rad = Math.min(r, cx - 6, W - 6 - cx, cy - 6, H - 6 - cy);
+          if (rad < 6) continue;
+          const g2 = y.createRadialGradient(cx, cy, 0, cx, cy, rad);
+          g2.addColorStop(0, 'rgba(255,255,255,0.95)'); g2.addColorStop(0.55, 'rgba(255,255,255,0.75)'); g2.addColorStop(1, 'rgba(255,255,255,0)');
+          y.fillStyle = g2; y.beginPath(); y.arc(cx, cy, rad, 0, Math.PI * 2); y.fill();
+        }
+        // cień od spodu i delikatne podświetlenie wierzchołków (tylko tam, gdzie jest chmura)
+        y.globalCompositeOperation = 'source-atop';
+        const sh = y.createLinearGradient(0, H * 0.2, 0, base);
+        sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.55, 'rgba(200,205,215,0.25)'); sh.addColorStop(1, 'rgba(120,128,145,0.6)');
+        y.fillStyle = sh; y.fillRect(0, 0, W, H);
+        y.globalCompositeOperation = 'source-over';
+        const t2 = new THREE.CanvasTexture(cc);
+        t2.colorSpace = THREE.SRGBColorSpace;
+        return t2;
+      };
+      const cloudTexs = [1, 2, 3, 4, 5].map(cloudTex);
       const clouds: THREE.Sprite[] = [];
       for (let i = 0; i < 40; i++) {
-        const c2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: ctex, transparent: true, opacity: 0, fog: false, depthWrite: false, color: 0x8a8f99 }));
+        const c2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTexs[i % cloudTexs.length]!, transparent: true, opacity: 0, fog: false, depthWrite: false, color: 0x8a8f99 }));
         // rozrzucone po całym niebie: część nad głową, część przy horyzoncie
-        const a = i * 2.39996, rr = 60 + ((i * 37) % 100) / 100 * 260;
-        c2.position.set(Math.cos(a) * rr, 170 + ((i * 53) % 100) * 0.9, Math.sin(a) * rr);
-        c2.scale.set(150 + (i % 5) * 40, 70 + (i % 3) * 25, 1);
+        // co druga nisko przy horyzoncie — widać ją też z kamery nad osadą, gdy patrzy się w dal
+        const a = i * 2.39996, low = i % 2 === 1;
+        const rr = low ? 280 + ((i * 37) % 100) * 0.9 : 60 + ((i * 37) % 100) / 100 * 260;
+        c2.position.set(Math.cos(a) * rr, low ? 35 + ((i * 53) % 100) * 0.6 : 170 + ((i * 53) % 100) * 0.9, Math.sin(a) * rr);
+        const sc2 = (low ? 150 : 190) + (i % 5) * 45;
+        c2.scale.set(sc2, sc2 / 2, 1);
         c2.userData.k = i / 40; // próg pojawiania się: im większe zachmurzenie, tym więcej chmur
         clouds.push(c2); group.add(c2);
       }
@@ -835,9 +867,10 @@ export class GameRenderer {
     for (const c of sk.clouds) {
       // w dzień białe obłoki, w deszczu ciemne i gęste, nocą prawie niewidoczne
       const m2 = c.material as THREE.SpriteMaterial;
-      m2.color.set(0xf2f0ea).lerp(new THREE.Color(0x5a5e66), Math.max(this.rain, this.night * 0.8));
-      const shown = c.userData.k < this.cover ? 1 : 0;
-      m2.opacity = shown * (0.25 + this.cover * 0.6) * (1 - this.night * 0.6);
+      m2.color.set(0xffffff).lerp(new THREE.Color(0x5a5e66), Math.max(this.rain, this.night * 0.8));
+      // chmura pojawia się i znika płynnie, gdy zmienia się zachmurzenie
+      const shown = Math.min(1, Math.max(0, (this.cover - c.userData.k) / 0.08 + 0.5));
+      m2.opacity = shown * (0.55 + this.cover * 0.4) * (1 - this.night * 0.6);
       c.position.x += 0.03 + this.cover * 0.05; if (c.position.x > 360) c.position.x = -360; // wiatr pcha chmury
     }
   }
@@ -1022,7 +1055,7 @@ export class GameRenderer {
     }
     const cam = this.cam.camera;
     this.ambience.update(dt, {
-      night: this.night, mist: this.mistLevel, rain: this.rain, fog: (this.scene.fog as THREE.Fog).color, focus, calm: this.calm,
+      night: this.night, mist: this.mistLevel, rain: this.rain, cover: this.cover, fog: (this.scene.fog as THREE.Fog).color, focus, calm: this.calm,
       ground: (x, z) => v.heightAt(x + width / 2, z + height / 2),
       scale: this.renderer.domElement.height / (2 * Math.tan((cam.fov * Math.PI) / 360)),
     });
