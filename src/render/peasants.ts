@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import GUARD_MODEL from './models/guard.json';
+import PEASANT_MODEL from './models/peasant.json';
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
 interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
@@ -351,68 +352,8 @@ export class Figures {
       for (let i = legsEnd; i < this.parts.length; i++) this.parts[i]!.pos.y += LIFT;
       return;
     }
-    // ---- chłop: wełniana tunika do kolan w przygaszonych barwach pana, sznurek w pasie, owijacze, nakrycie głowy ----
-    // kotwice narzędzi zostają jak dawniej: bark (±0,135; 0,45), dłoń 0,185 niżej, głowa na 0,555
-    const LINEN = 0xd9ceb0, STRAW = 0xcfae55, SHOE = 0x33251a;
-    const head = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.translate(0, -0.47, 0).scale(0.93, 0.93, 0.93).translate(0, 0.47, 0);
-    const trousers = (l: Look): number => l.trousers, hair = (l: Look): number => l.hair, hat = (l: Look): number => l.hat;
-    const wraps = (l: Look): boolean => l.wraps, apron = (l: Look): boolean => l.apron, beard = (l: Look): boolean => l.beard;
-    const hairOn = (l: Look): boolean => l.headwear !== 1 && l.headwear !== 3;
-    const strawHat = (l: Look): boolean => l.headwear === 0, hood = (l: Look): boolean => l.headwear === 1;
-    const cap = (l: Look): boolean => l.headwear === 2, kerchief = (l: Look): boolean => l.headwear === 3;
-    for (const [x, rot] of [[-0.052, legL], [0.052, legR]] as const) {
-      add(taper(0.045, 0.033, 0.17), trousers, x, 0.235, 0, rot);
-      // owijacze: lniane pasy na łydce (co drugi chłop)
-      add(prep(taper(0.039, 0.035, 0.08).translate(0, -0.12, 0), (_x, y) => 0.85 + 0.15 * Math.cos((y * Math.PI * 2) / 0.016)), 0xa89a7c, x, 0.235, 0, rot, wraps);
-      add(merge(
-        new THREE.CylinderGeometry(0.035, 0.038, 0.035, 8).translate(0, -0.2175, 0),
-        new THREE.BoxGeometry(0.064, 0.034, 0.105).translate(0, -0.218, 0.024),
-        new THREE.SphereGeometry(0.032, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.55, 1).translate(0, -0.235 + 0.017, 0.074),
-      ), SHOE, x, 0.235, 0, rot, always, 'leather');
-    }
-    // tunika do pół uda: fałdy pod pasem, ciemniejszy, wytarty dół
-    fix(prep(lathe([[0.12, 0.158], [0.115, 0.2], [0.097, 0.29], [0.101, 0.34], [0.11, 0.405], [0.108, 0.44], [0.07, 0.468], [0.046, 0.478]], 16, 0.76), (x, y, z) => {
-      if (y < 0.176) return 0.62;
-      const fold = y < 0.29 ? 0.88 + 0.12 * Math.cos(Math.atan2(x, z) * 6 + y * 30) : 1;
-      return fold * (0.84 + (y - 0.16) * 0.5);
-    }), tunic);
-    // fartuch z przodu
-    fix(prep(lathe([[0.124, 0.15], [0.118, 0.2], [0.102, 0.285], [0.1, 0.33]], 10, 0.8, -0.85, 1.7), (_x, y) => 0.88 + (y - 0.15) * 0.6), LINEN, 'cloth', apron);
-    // sznurek w pasie z sakiewką
-    fix(lathe([[0.098, 0.287], [0.101, 0.293], [0.101, 0.301], [0.097, 0.307]], 16, 0.78), 0x8a7350);
-    fix(merge(new THREE.SphereGeometry(0.03, 8, 6).scale(1, 1.15, 0.7).translate(-0.072, 0.262, 0.05), new THREE.CylinderGeometry(0.004, 0.004, 0.03, 4).translate(-0.072, 0.293, 0.05)), 0x6a4a2e, 'leather');
-    // ręce: rękawy tuniki, gołe dłonie
-    for (const [x, rot] of [[-0.135, armL], [0.135, armR]] as const) {
-      add(prep(merge(new THREE.SphereGeometry(0.035, 10, 6).scale(1, 0.85, 1).translate(0, -0.004, 0), taper(0.035, 0.028, 0.15)), (_x, y) => 0.86 + 0.06 * Math.sin(y * 60)), tunic, x, 0.45, 0, rot);
-      add(new THREE.IcosahedronGeometry(0.028, 1).scale(1, 1.2, 1.05).translate(0, -0.185, 0.003), skin, x, 0.45, 0, rot, always, 'skin');
-    }
-    // głowa: twarz, nos, oczy, szyja
-    fix(new THREE.CylinderGeometry(0.03, 0.035, 0.04, 8).translate(0, 0.485, 0), skin, 'skin');
-    fix(head(new THREE.IcosahedronGeometry(0.072, 1).scale(0.95, 1.08, 1).translate(0, 0.555, 0)), skin, 'skin');
-    fix(head(new THREE.BoxGeometry(0.014, 0.026, 0.016).translate(0, 0.548, 0.069)), skin, 'skin');
-    for (const ex of [-0.022, 0.022]) fix(head(new THREE.BoxGeometry(0.013, 0.009, 0.006).translate(ex, 0.564, 0.065)), 0x3a281c, 'skin');
-    // włosy: czupryna z tyłu i na czubku, broda u co trzeciego
-    fix(head(new THREE.SphereGeometry(0.078, 14, 8, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9, 0, Math.PI * 0.6).translate(0, 0.562, -0.006)), hair, 'cloth', hairOn);
-    fix(head(new THREE.SphereGeometry(0.077, 14, 6, 0, Math.PI * 2, 0, Math.PI * 0.32).translate(0, 0.565, 0)), hair, 'cloth', hairOn);
-    fix(head(prep(new THREE.IcosahedronGeometry(0.05, 1).scale(1.12, 0.95, 0.85).translate(0, 0.518, 0.03), (_x, y) => 0.85 + (y - 0.48) * 2)), hair, 'cloth', beard);
-    // słomkowy kapelusz z szerokim rondem
-    fix(head(prep(merge(
-      lathe([[0.08, 0.588], [0.155, 0.572], [0.16, 0.566], [0.08, 0.582]], 18),
-      lathe([[0.08, 0.582], [0.074, 0.62], [0.06, 0.64], [0, 0.645]], 14),
-    ), (_x, y) => 0.85 + 0.15 * Math.cos(y * 300))), STRAW, 'cloth', strawHat);
-    fix(head(lathe([[0.0795, 0.596], [0.0795, 0.608]], 14)), 0x7a3a2a, 'cloth', strawHat);
-    // kaptur z pelerynką
-    fix(head(prep(new THREE.SphereGeometry(0.087, 16, 10, Math.PI / 2 + 0.8, Math.PI * 2 - 1.6, 0, Math.PI * 0.66).translate(0, 0.558, -0.004), () => 0.9)), hat, 'cloth', hood);
-    fix(prep(lathe([[0.132, 0.4], [0.128, 0.428], [0.108, 0.456], [0.075, 0.484], [0.056, 0.5]], 16, 0.86), (_x, y) => (y < 0.407 ? 0.6 : 0.85)), hat, 'cloth', hood);
-    // filcowa czapka
-    fix(head(lathe([[0.08, 0.578], [0.084, 0.6], [0.075, 0.622], [0.045, 0.638], [0, 0.642]], 14)), hat, 'cloth', cap);
-    fix(head(lathe([[0.083, 0.577], [0.086, 0.585], [0.084, 0.593]], 14)), 0x3a2a1c, 'cloth', cap);
-    // lniana chusta zawiązana pod brodą
-    fix(head(prep(merge(
-      new THREE.SphereGeometry(0.081, 14, 8, Math.PI / 2 + 0.9, Math.PI * 2 - 1.8, 0, Math.PI * 0.72).translate(0, 0.56, -0.004),
-      new THREE.TorusGeometry(0.06, 0.009, 4, 12, Math.PI).rotateX(0.25).rotateZ(Math.PI).translate(0, 0.53, 0.02),
-    ), (_x, y) => 0.9 + (y - 0.5) * 0.4)), LINEN, 'cloth', kerchief);
-    flush();
+    // ---- chłop z Blendera (tools/models/peasant.py); kotwice narzędzi: bark (±0,135; 0,45), dłoń 0,185 niżej ----
+    model(PEASANT_MODEL as FigureModel, armL, armR);
   }
 
   /** Ustawia postać numer `i`. `base` = położenie i obrót całej postaci, `id` = numer chłopa (od niego zależy wygląd). */

@@ -6,7 +6,11 @@ from mathutils import Vector
 name, out = sys.argv[1], sys.argv[2]
 d = json.load(open(os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'render', 'models', f'{name}.json')))
 for o in list(bpy.data.objects): bpy.data.objects.remove(o, do_unlink=True)
-DYN = {'skin': (0.85, 0.66, 0.5), 'hair': (0.25, 0.17, 0.11), 'tunic': (0.75, 0.15, 0.12)}
+DYN = {'skin': (0.85, 0.66, 0.5), 'hair': (0.25, 0.17, 0.11), 'tunic': (0.62, 0.22, 0.16), 'trousers': (0.32, 0.25, 0.17), 'hat': (0.3, 0.42, 0.2)}
+# SHOW=straw,beardP — które warianty wyglądu pokazać (bez SHOW: wszystkie)
+SHOW = os.environ.get('SHOW')
+SHOWN = None if SHOW is None else set(SHOW.split(','))
+ok = lambda m: m['show'] is None or SHOWN is None or m['show'] in SHOWN
 def unpack(m, off, arm=0.0):
     raw = lambda k: base64.b64decode(m[k])
     pos = [struct.unpack_from('<3f', raw('pos'), i * 12) for i in range(len(raw('pos')) // 12)]
@@ -32,11 +36,11 @@ def unpack(m, off, arm=0.0):
     bsdf.inputs['Roughness'].default_value = 0.45 if m['mat'] == 'metal' else 0.85
     me.materials.append(mat)
 for m in d['static']:
-    if m['show'] == 'beard' and False: continue
+    if not ok(m): continue
     unpack(m, (0, 0, 0))
 for sx in (-1, 1):
-    for m in d['leg']: unpack(m, (sx * d['hip'][0], d['hip'][1], d['hip'][2]))
-    for m in d['arm']: unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=-0.25 if sx > 0 else 0.1)
+    for m in filter(ok, d['leg']): unpack(m, (sx * d['hip'][0], d['hip'][1], d['hip'][2]))
+    for m in filter(ok, d['arm']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=-0.25 if sx > 0 else 0.1)
 sc = bpy.context.scene
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam)
 views = [(0.0, 0.0), (0.9, 0.0)]
