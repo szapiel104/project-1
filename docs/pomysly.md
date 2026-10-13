@@ -85,9 +85,8 @@ Większe rzeczy na później:
 Zrobione: 19:30 ognisko i karczma, 22:00 sen w chacie/twierdzy, bez łóżka słomiane posłanie przy ognisku, 5:30 do pracy; noc w tickach krótsza (ok. 11% doby), wieczór 8%, dzień pracy 81%; wilki nie dosięgną śpiących pod dachem.
 
 Dalej:
-- Śpiący pod gołym niebem mniej zadowoleni (popularność) i marzną w deszczu
 - Karczmarz nalewa piwo z zapasów (piwo jako towar), pijacy wracają chwiejnym krokiem
-- Strażnik nocny z pochodnią obchodzi osadę
+- Straż miejska (zrobione 13.10: 6 strażników, posterunki i obchód, zastępstwo przez chłopów). Dalej: własny wygląd w barwach straży (zbroja, halabarda), odzywki jak w Gothicu, zmiana warty, koszary straży
 - Dzieci i rodziny w chatach (osada rośnie sama)
 
 ## Wojsko i piechota — do zrobienia (13.10.2026)
