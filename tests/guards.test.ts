@@ -10,14 +10,14 @@ const at = (g: GameState, h0: number, h1: number): void => { while (!(clockAt(g.
 const guards = (g: GameState, owner = 0) => g.soldiers.filter((s) => s.owner === owner && s.kind === GUARD);
 
 describe('straż miejska', () => {
-  it('na start zamek wystawia sześciu strażników, za dnia część stoi na posterunkach przy twierdzy', () => {
+  it('na start zamek wystawia sześciu strażników, za dnia dwóch stoi przy bramie, reszta obchodzi', () => {
     const g = createGame(5);
     for (const p of g.players) p.bot = false;
     for (let i = 0; i < 300; i++) step(g, []);
     expect(guards(g).length).toBe(6);
     const keep = playerKeep(g, 0)!;
     const near = guards(g).filter((s) => Math.abs((s.px >> 8) - keep.x) < 6 && Math.abs((s.py >> 8) - keep.y) < 7);
-    expect(near.length).toBeGreaterThanOrEqual(3);
+    expect(near.length).toBeGreaterThanOrEqual(2);
   });
 
   it('nocą obchodzą osadę (każdy chodzi), nie słuchają rozkazów gracza', () => {

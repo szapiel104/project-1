@@ -75,7 +75,7 @@ const newGuard = (g: GameState, owner: number, px: number, py: number): Soldier 
   ({ id: g.nextId++, owner, kind: GUARD, px, py, path: [], hp: UNITS[GUARD]!.hp, goal: -1, wait: 0, target: 0, cd: 0, beat: 0 });
 
 /**
- * Straż miejska jak w Gothicu: sześciu strażników z zamku. Za dnia połowa stoi na posterunkach przy twierdzy,
+ * Straż miejska jak w Gothicu: sześciu strażników z zamku. Za dnia dwóch stoi przy bramie twierdzy,
  * reszta obchodzi osadę; wieczorem i nocą obchodzą ją wszyscy (z pochodniami), po drodze biją wilki i wrogów.
  * Gdy strażnik zginie, po chwili jego miejsce zajmuje wolny chłop z obozowiska.
  */
@@ -144,9 +144,10 @@ export function guardSystem(g: GameState): void {
       // w walce albo w drodze: nie przeszkadzamy
       if (s.target || s.path.length || s.goal >= 0 || s.hunt) return;
       const here = (s.py >> 8) * g.map.width + (s.px >> 8);
-      const onPost = part === 'work' && i % 2 === 0 && stand.length;
+      // za dnia tylko dwóch stoi przy bramie twierdzy, reszta obchodzi osadę (nocą obchodzą wszyscy)
+      const onPost = part === 'work' && i < 2 && stand.length;
       if (onPost) {
-        const t = stand[(i >> 1) % stand.length]!;
+        const t = stand[i % stand.length]!;
         s.stance = 1; s.hold = t; s.amove = false;
         if (here !== t) s.goal = t;
         return;
