@@ -7,7 +7,7 @@ import { Phase, playerKeep, type Building, type GameState } from '../state';
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
@@ -91,6 +91,20 @@ function wouldBlock(g: GameState, player: number, x: number, y: number, w: numbe
   return blocked;
 }
 
+/** Ile pól od działki nie wolno budować, gdy stoi tam wrogie wojsko */
+export const ENEMY_BUILD_GAP = 8;
+/** Czy przy działce stoją wrodzy żołnierze (pod nosem wroga nikt nie postawi budynku — ani gracz, ani bot) */
+export function enemyNear(g: GameState, player: number, x: number, y: number, w: number, h: number): boolean {
+  const team = g.players[player]?.team;
+  for (const s of g.soldiers) {
+    if (s.hp <= 0 || g.players[s.owner]?.team === team) continue;
+    const sx = s.px >> 8, sy = s.py >> 8;
+    const dx = Math.max(x - sx, 0, sx - (x + w - 1)), dy = Math.max(y - sy, 0, sy - (y + h - 1));
+    if (Math.max(dx, dy) <= ENEMY_BUILD_GAP) return true;
+  }
+  return false;
+}
+
 export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true, rot = 0): PlaceError | null {
   const def = BUILDINGS[type];
   if (!def || !def.buildable || !g.players[player]) return 'place.unknown';
@@ -127,6 +141,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     if (!found) return 'place.needTerrain';
   }
   if (!def.wall && !def.gate && findDoor(g, x, y, fw, fh, rot) < 0) return 'place.noAccess';
+  if (enemyNear(g, player, x, y, fw, fh)) return 'place.enemy';
   if (wouldBlock(g, player, x, y, fw, fh, rot, !def.wall && !def.gate, !!def.gate)) return 'place.blocks';
   if (checkCost && !canAfford(g, player, def)) return 'place.cost';
   return null;
