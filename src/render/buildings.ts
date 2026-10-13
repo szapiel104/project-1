@@ -56,7 +56,7 @@ const M = {
   cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
-  castle: mat(0xf2e2ba, 'ashlar'), castleDark: mat(0xcdb98e, 'ashlar'), castlePlain: mat(0xd6c49a),
+  castle: mat(0xc9bb9a, 'ashlar'), castleDark: mat(0xa89a7a, 'ashlar'), castlePlain: mat(0xd6c49a),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 
@@ -449,9 +449,12 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
     interior.visible = active;
     // wszystkie części o tych nazwach (np. twierdza ma kilka warstw „shell”: donżon i bryłę murów z dziedzińcem)
-    const parts = (model.userData.lids ??= (() => { const l: THREE.Object3D[] = []; model.traverse((o) => { if (o !== model && ['roof', 'shell', 'chimney', 'spin'].includes(o.name)) l.push(o); }); return l; })()) as THREE.Object3D[];
+    const parts = (model.userData.lids ??= (() => { const l: THREE.Object3D[] = []; model.traverse((o) => { if (o !== model && ['roof', 'shell', 'chimney', 'spin', 'flagpole'].includes(o.name)) l.push(o); }); return l; })()) as THREE.Object3D[];
     for (const part of parts) part.visible = !active;
   }
+  // flagi łopoczą: płachta kołysze się wokół drzewca, każda w innym rytmie
+  const clothes = (model.userData.cloths ??= (() => { const l: THREE.Object3D[] = []; model.traverse((o) => { if (o.name === 'flagcloth') l.push(o); }); return l; })()) as THREE.Object3D[];
+  for (let i = 0; i < clothes.length; i++) { const c = clothes[i]!; c.rotation.y = Math.sin(time * 1.7 + i * 1.3 + model.id) * 0.28; c.rotation.z = Math.sin(time * 2.3 + i) * 0.04; }
   const flame = model.getObjectByName('flame');
   if (flame) { flame.visible = active; flame.scale.set(1, 0.8 + Math.abs(Math.sin(time * 9)) * 0.5, 1); }
   // życie na murach, niezależnie od tego, czy budynek jest otwarty
@@ -511,9 +514,36 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
 type Builder = (g: THREE.Group, team: THREE.Material, flag: THREE.Material) => void;
 
 /** Mała chorągiewka w barwie drużyny (gładka, bez wzoru dachówek) */
+/** Płachta flagi: płótno pofalowane na wietrze, przyczepione lewym brzegiem do drzewca, końce lekko opadają */
+let clothGeo: THREE.BufferGeometry | null = null;
+function flagCloth(): THREE.BufferGeometry {
+  if (clothGeo) return clothGeo;
+  const geo = new THREE.PlaneGeometry(0.3, 0.18, 12, 4).translate(0.15, 0, 0);
+  const p = geo.getAttribute('position');
+  for (let i = 0; i < p.count; i++) {
+    const x = p.getX(i), y = p.getY(i);
+    const k = x / 0.3;
+    p.setXYZ(i, x, y - k * k * 0.03, Math.sin(k * 7.5) * 0.025 * k + Math.sin(y * 18 + k * 4) * 0.004);
+  }
+  geo.computeVertexNormals();
+  clothGeo = geo;
+  return geo;
+}
+/** Flaga na drzewcu z gałką; cała grupa nazywa się 'flagpole' — znika, gdy zaglądamy do wnętrza budynku */
 function pennant(g: THREE.Group, flag: THREE.Material, x: number, y: number, z: number): void {
-  box(g, M.woodDark, 0.03, 0.4, 0.03, x, y, z);
-  box(g, flag, 0.24, 0.14, 0.02, x + 0.13, y + 0.25, z);
+  const fp = new THREE.Group();
+  fp.name = 'flagpole';
+  fp.position.set(x, y, z);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.56, 6), M.woodDark);
+  pole.position.y = 0.28; fp.add(pole);
+  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), M.gold);
+  knob.position.y = 0.57; fp.add(knob);
+  const cloth = new THREE.Group();
+  cloth.name = 'flagcloth';
+  cloth.position.y = 0.44;
+  cloth.add(new THREE.Mesh(flagCloth(), flag));
+  fp.add(cloth);
+  g.add(fp);
 }
 
 /** Jeden rząd zboża jako wspólna bryła: kilkadziesiąt źdźbeł różnej wysokości z kłosami, barwy w wierzchołkach. */
@@ -1023,11 +1053,18 @@ const BUILDERS: Record<string, Builder> = {
       hoop.position.set(x, 0.2, z); g.add(hoop);
     }
     // szyld na wysięgniku: kufel na desce
+    // słup, kuty wysięgnik z zawijasem, dwa łańcuszki i deska z obramowaniem, na niej kufel z pianą
     box(g, M.woodDark, 0.05, 1.25, 0.05, 0.3, 0, 0.62);
-    box(g, M.woodDark, 0.4, 0.04, 0.04, 0.45, 1.15, 0.62);
-    box(g, M.wood, 0.3, 0.22, 0.03, 0.55, 0.88, 0.62);
-    const sign = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.1, 8), M.wheat);
-    sign.position.set(0.55, 0.9, 0.645); sign.rotation.x = Math.PI / 2; g.add(sign);
+    box(g, M.iron, 0.42, 0.025, 0.025, 0.5, 1.15, 0.62);
+    box(g, M.iron, 0.2, 0.018, 0.018, 0.4, 1.08, 0.62).rotation.z = 0.6;
+    const curl = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.008, 4, 12, Math.PI * 1.5), M.iron); curl.position.set(0.7, 1.12, 0.62); g.add(curl);
+    for (const dx of [-0.11, 0.11]) box(g, M.iron, 0.008, 0.12, 0.008, 0.55 + dx, 1.03, 0.62);
+    box(g, M.woodDark, 0.32, 0.24, 0.035, 0.55, 0.8, 0.62);
+    box(g, M.plank, 0.27, 0.19, 0.04, 0.55, 0.825, 0.62);
+    for (const sz of [-1, 1]) {
+      const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.09, 10), M.woodDark); mug.position.set(0.55, 0.91, 0.62 + sz * 0.025); g.add(mug);
+      const foam = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.white); foam.position.set(0.55, 0.955, 0.62 + sz * 0.025); foam.scale.y = 0.6; g.add(foam);
+    }
     pennant(g, flag, -1.3, 0.2, 0.7);
   },
   house(g, _team, flag) {
@@ -1972,7 +2009,12 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   if (!team) { team = mat(teamColor, 'tiles'); teamMats.set(teamColor, team); }
   const g = new THREE.Group();
   let flag = flagMats.get(teamColor);
-  if (!flag) { flag = mat(teamColor); flagMats.set(teamColor, flag); }
+  if (!flag) {
+    // flagi, chorągwie i proporce z płótna w barwach drużyny (widać splot, światło przechodzi miękko)
+    flag = new THREE.MeshStandardMaterial({ color: teamColor, map: pattern('burlap'), normalMap: normal('burlap'), normalScale: new THREE.Vector2(0.6, 0.6), roughness: 0.95, side: THREE.DoubleSide });
+    flag.userData.tile = 3;
+    flagMats.set(teamColor, flag);
+  }
   (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team, flag);
   // gotowy model z paczki zastępuje bryłę z kodu; nasze wnętrze i animowane części zostają
   const def = BUILDINGS.find((d) => d.id === id);

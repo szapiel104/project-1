@@ -288,7 +288,7 @@ export class GameRenderer {
     // Cienie: jedno słońce, którego obszar cienia podąża za kamerą.
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.95;
+    this.renderer.toneMappingExposure = 0.84; // odrobinę mroczniej: klimat Gothica, nie słoneczna pocztówka
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
