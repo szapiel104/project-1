@@ -901,7 +901,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     kerbDummy.scale.set(sx, sy, sz);
     kerbDummy.updateMatrix();
     im.setMatrixAt(i, kerbDummy.matrix);
-    const t = 0.5 + ((r >>> 9) & 31) / 31 * 0.2;
+    const t = 0.36 + ((r >>> 9) & 31) / 31 * 0.16;
     const moss = (r >>> 15) % 6 === 0 ? 0.06 : 0;
     im.setColorAt(i, kerbTone.setRGB(t * 1.02 - moss, t + moss * 0.6, t * 0.92 - moss));
   };
@@ -931,9 +931,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const x0 = x - grow + jx, x1 = x + 1 + grow + jx, y0 = y - grow + jy, y1 = y + 1 + grow + jy;
           // odcień pola: większość szara, część jaśniejsza albo ciemniejsza, niektóre zielonkawe od mchu
           // ciepła szarość kamienia polnego zamiast prawie białej tafli
-          const tone = 0.58 + (((r >>> 8) & 31) / 31) * 0.12;
+          const tone = 0.44 + (((r >>> 8) & 31) / 31) * 0.1;
           const moss = (r >>> 14) % 5 === 0 ? 0.08 : 0;
-          shade.setRGB(tone * 1.02 * (1 - moss), tone * (1 + moss * 0.4), tone * 0.9 * (1 - moss * 1.5));
+          shade.setRGB(tone * 1.04 * (1 - moss), tone * 0.98 * (1 + moss * 0.4), tone * 0.86 * (1 - moss * 1.5));
           for (const [qx, qy, u, v] of [[x0, y0, 0, 0], [x0, y1, 0, 1], [x1, y0, 1, 0], [x1, y0, 1, 0], [x0, y1, 0, 1], [x1, y1, 1, 1]] as const) {
             p3.push(qx + ox, heightAt(qx, qy) + (soft ? 0.03 : 0.045), qy + oz);
             if (soft) uv2.push(u, v);
@@ -1029,7 +1029,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
                       // środek ścieżki jaśniejszy i ubity, brzegi ciemniejsze, wilgotniejsze
                       const a = alpha[k]!;
                       const t = 0.62 + a * 0.3 + pathNoise(px * 6, py * 6) * 0.06 + pathNoise(px * 1.7 + 9, py * 1.7) * 0.05;
-                      sand.push(0.74 * t, 0.57 * t, 0.37 * t, Math.min(1, a * 1.08));
+                      sand.push(0.6 * t, 0.43 * t, 0.26 * t, Math.min(1, a * 1.08));
                     });
                   }
               }
@@ -1063,7 +1063,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             shoulder.push(qx + ox, heightAt(qx, qy) + 0.032, qy + oz);
             shoulderUv.push(qx / 2, qy / 2);
             const t = 0.55 + pathNoise(qx * 5, qy * 5) * 0.06;
-            shoulderCol.push(0.62 * t, 0.5 * t, 0.36 * t, a * (0.8 + pathNoise(qx * 2.3, qy * 2.3) * 0.2));
+            shoulderCol.push(0.46 * t, 0.34 * t, 0.22 * t, a * (0.8 + pathNoise(qx * 2.3, qy * 2.3) * 0.2));
           }
         };
         for (let y = 0; y < h; y++)
@@ -1075,19 +1075,19 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
               const ax = dx === 1 ? x + 1 : x, ay = dy === 1 ? y + 1 : y;
               const bx = dy !== 0 ? x + 1 : ax, by = dx !== 0 ? y + 1 : ay;
               band(ax, ay, bx, by, dx, dy);
-              const n = 4;
+              const n = 3;
               for (let k = 0; k < n; k++) {
                 const r = hash2(x * 4 + k, y * 4 + (dx + 1) * 2 + dy + 1, map.seed ^ 0x6b3e);
                 const f = (k + 0.5) / n + (((r & 15) / 15) - 0.5) * 0.03;
-                const inset = 0.065;
+                const inset = 0.075;
                 kerbs.push([ax + (bx - ax) * f - dx * inset, ay + (by - ay) * f - dy * inset, 1 / n - 0.018 - ((r >>> 4) & 7) * 0.004, dx !== 0 ? Math.PI / 2 : 0, r]);
               }
             }
           }
         if (kerbs.length) {
-          const geo = new RoundedBoxGeometry(1, 1, 1, 2, 0.18);
+          const geo = new RoundedBoxGeometry(1, 1, 1, 2, 0.24);
           const im = new THREE.InstancedMesh(geo, kerbMaterial(), kerbs.length);
-          kerbs.forEach(([kx, ky, len, rot, r], i) => placeStone(im, i, kx, ky, 0.058, len, 0.075 + ((r >>> 20) & 7) * 0.004, 0.115, rot + (((r >>> 23) & 7) / 7 - 0.5) * 0.08, 0.06, r));
+          kerbs.forEach(([kx, ky, len, rot, r], i) => { const hgt = 0.08 + ((r >>> 20) & 7) * 0.007; placeStone(im, i, kx, ky, 0.03 + hgt / 2, len, hgt, 0.13 + ((r >>> 26) & 3) * 0.012, rot + (((r >>> 23) & 7) / 7 - 0.5) * 0.12, 0.1, r); });
           im.instanceMatrix.needsUpdate = true;
           if (im.instanceColor) im.instanceColor.needsUpdate = true;
           im.castShadow = true;
