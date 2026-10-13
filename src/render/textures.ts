@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
 
-export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed';
+export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -14,6 +14,38 @@ const gray = (v: number): string => { const c = Math.round(Math.max(0, Math.min(
 
 /** Wszystkie rodzaje tekstur (do wczytywania z paskiem postępu). */
 export const KINDS = (): Kind[] => Object.keys(PAINT) as Kind[];
+
+/**
+ * Mur z dużych, ciosanych bloków: powierzchnia jak w kamieniołomie (ślady dłuta, plamy, żyłki) na całym murze,
+ * każdy blok we własnym odcieniu, cienka, cofnięta fuga z jasną krawędzią pod spodem i z rzadka obtłuczony róg.
+ */
+function masonry(c: CanvasRenderingContext2D, n: number, r: () => number, rows: number): void {
+  PAINT.dressed(c, n, r);
+  const h = n / rows, joint = n * 0.007;
+  for (let y = 0; y < rows; y++) {
+    let x = -r() * n * 0.25;
+    while (x < n) {
+      const w = n * (0.3 + r() * 0.28);
+      // odcień bloku: lekko jaśniejszy albo ciemniejszy, raz cieplejszy
+      const lite = r() > 0.5;
+      c.fillStyle = `rgba(${lite ? '255,250,240' : '40,30,20'},${0.04 + r() * 0.1})`;
+      c.fillRect(x, y * h, w, h);
+      // wypukłość: delikatny cień u dołu bloku i światło u góry
+      const g1 = c.createLinearGradient(0, y * h, 0, y * h + h);
+      g1.addColorStop(0, 'rgba(255,255,255,0.12)'); g1.addColorStop(0.12, 'rgba(255,255,255,0)'); g1.addColorStop(0.85, 'rgba(0,0,0,0)'); g1.addColorStop(1, 'rgba(0,0,0,0.18)');
+      c.fillStyle = g1; c.fillRect(x, y * h, w, h);
+      // pionowa fuga
+      c.fillStyle = 'rgba(45,38,30,0.75)'; c.fillRect(x - joint / 2, y * h, joint, h);
+      c.fillStyle = 'rgba(255,255,255,0.18)'; c.fillRect(x + joint / 2, y * h, joint * 0.5, h);
+      // obtłuczony róg
+      if (r() > 0.7) { c.fillStyle = 'rgba(70,60,48,0.5)'; c.beginPath(); c.arc(r() > 0.5 ? x : x + w, y * h + (r() > 0.5 ? 0 : h), n * (0.01 + r() * 0.012), 0, 6.3); c.fill(); }
+      x += w;
+    }
+    // pozioma fuga
+    c.fillStyle = 'rgba(45,38,30,0.8)'; c.fillRect(0, y * h - joint / 2, n, joint);
+    c.fillStyle = 'rgba(255,255,255,0.16)'; c.fillRect(0, y * h + joint / 2, n, joint * 0.5);
+  }
+}
 
 const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => number) => void> = {
   rock(c, n, r) {
@@ -33,23 +65,7 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     }
     for (let k = 0; k < 6; k++) { c.fillStyle = 'rgba(120,140,70,0.35)'; c.beginPath(); c.arc(r() * n, r() * n, 2 + r() * 5, 0, Math.PI * 2); c.fill(); }
   },
-  bricks(c, n, r) {
-    // ciosany kamień: nierówne bloki, ciemna fuga, jasna górna krawędź i cień u dołu każdego bloku
-    c.fillStyle = gray(0.45); c.fillRect(0, 0, n, n);
-    const rows = 4, h = n / rows;
-    for (let y = 0; y < rows; y++) {
-      let x = y % 2 ? -n * 0.18 : 0;
-      while (x < n) {
-        const w = n * (0.28 + r() * 0.22);
-        const tone = 0.74 + r() * 0.24;
-        c.fillStyle = gray(tone); c.fillRect(x + 1.5, y * h + 1.5, w - 3, h - 3);
-        c.fillStyle = gray(tone + 0.1); c.fillRect(x + 1.5, y * h + 1.5, w - 3, 2);
-        c.fillStyle = gray(tone - 0.14); c.fillRect(x + 1.5, y * h + h - 3.5, w - 3, 2);
-        for (let k = 0; k < 3; k++) { c.fillStyle = gray(tone - 0.08 + r() * 0.12); c.fillRect(x + 3 + r() * (w - 8), y * h + 4 + r() * (h - 9), 2, 1.5); }
-        x += w;
-      }
-    }
-  },
+  bricks(c, n, r) { masonry(c, n, r, 3); },
   planks(c, n, r) {
     const boards = 4, w = n / boards;
     for (let i = 0; i < boards; i++) {
@@ -127,37 +143,7 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     c.fillStyle = gray(0.4); c.fillRect(n * 0.16, n * 0.16, n * 0.3, n * 0.3);
     c.fillStyle = gray(0.95); c.fillRect(n * 0.46, n * 0.12, n * 0.08, n * 0.76); c.fillRect(n * 0.12, n * 0.46, n * 0.76, n * 0.08);
   },
-  ashlar(c, n, r) {
-    // Mur twierdzy rysowany od razu w pełnej rozdzielczości: ciosy różnej długości, głęboka fuga,
-    // każdy kamień z własnym odcieniem, jasną górną krawędzią, cieniem u dołu, wyszczerbieniami i rysami
-    c.fillStyle = gray(0.44); c.fillRect(0, 0, n, n);
-    const rows = 6, h = n / rows, gap = n * 0.008;
-    for (let y = 0; y < rows; y++) {
-      let x = -r() * n * 0.12;
-      while (x < n) {
-        const w = n * (0.14 + r() * 0.2);
-        const tone = 0.8 + r() * 0.2;
-        const bx = x + gap, by = y * h + gap, bw = w - gap * 2, bh = h - gap * 2;
-        c.fillStyle = gray(tone); c.fillRect(bx, by, bw, bh);
-        // wypukłość kamienia: jaśniejszy środek, ciemniejące brzegi
-        const g1 = c.createLinearGradient(0, by, 0, by + bh);
-        g1.addColorStop(0, 'rgba(255,255,255,0.22)'); g1.addColorStop(0.18, 'rgba(255,255,255,0)'); g1.addColorStop(0.8, 'rgba(0,0,0,0)'); g1.addColorStop(1, 'rgba(0,0,0,0.3)');
-        c.fillStyle = g1; c.fillRect(bx, by, bw, bh);
-        const g2 = c.createLinearGradient(bx, 0, bx + bw, 0);
-        g2.addColorStop(0, 'rgba(255,255,255,0.14)'); g2.addColorStop(0.12, 'rgba(255,255,255,0)'); g2.addColorStop(0.9, 'rgba(0,0,0,0)'); g2.addColorStop(1, 'rgba(0,0,0,0.2)');
-        c.fillStyle = g2; c.fillRect(bx, by, bw, bh);
-        // dziobata powierzchnia po dłucie
-        for (let k = 0; k < 26; k++) { c.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${0.05 + r() * 0.1})`; c.fillRect(bx + r() * bw, by + r() * bh, 1 + r() * n * 0.006, 1 + r() * n * 0.004); }
-        // wyszczerbiony narożnik
-        if (r() > 0.55) { c.fillStyle = gray(0.44); c.beginPath(); const cx = r() > 0.5 ? bx : bx + bw, cy = r() > 0.5 ? by : by + bh; c.arc(cx, cy, n * (0.006 + r() * 0.01), 0, 6.3); c.fill(); }
-        // rysa
-        if (r() > 0.75) { c.strokeStyle = 'rgba(0,0,0,0.35)'; c.lineWidth = 1; c.beginPath(); let px = bx + r() * bw, py = by; c.moveTo(px, py); for (let k = 0; k < 4; k++) { px += (r() - 0.5) * bw * 0.15; py += bh / 4; c.lineTo(px, py); } c.stroke(); }
-        x += w;
-      }
-    }
-    // zacieki pod koroną muru
-    for (let k = 0; k < 14; k++) { const sx = r() * n, len = n * (0.15 + r() * 0.3); const gr = c.createLinearGradient(0, 0, 0, len); gr.addColorStop(0, 'rgba(0,0,0,0.22)'); gr.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = gr; c.fillRect(sx, 0, n * (0.01 + r() * 0.02), len); }
-  },
+  ashlar(c, n, r) { masonry(c, n, r, 4); },
   dressed(c, n, r) {
     // Świeżo ciosany kamień (bloki w kamieniołomie): jedna gładka płaszczyzna bez fug — plamy piaskowca,
     // pasma ukośnych śladów dłuta, drobne dziobki po szpicaku, cienkie żyłki
@@ -191,6 +177,19 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
       for (let s2 = 0; s2 < 12; s2++) { x += (r() - 0.3) * n * 0.05; y += (r() - 0.5) * n * 0.03; c.lineTo(x, y); }
       c.stroke();
     }
+  },
+  organic(c, n, r) {
+    // Skórka owoców, chleba i ryb: miękkie plamy, gęste drobne kropki i krótkie żyłki — żywność nie jest gładkim plastikiem
+    c.fillStyle = gray(0.86); c.fillRect(0, 0, n, n);
+    for (let k = 0; k < 60; k++) {
+      const x = r() * n, y = r() * n, rad = n * (0.04 + r() * 0.12);
+      const g = c.createRadialGradient(x, y, 0, x, y, rad);
+      g.addColorStop(0, `rgba(${r() > 0.5 ? '255,255,255' : '50,35,20'},${0.08 + r() * 0.1})`); g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = g; c.fillRect(x - rad, y - rad, rad * 2, rad * 2);
+    }
+    for (let k = 0; k < 1400; k++) { const sz = n * (0.002 + r() * 0.004); c.fillStyle = `rgba(${r() > 0.35 ? '60,40,20' : '255,250,230'},${0.12 + r() * 0.2})`; c.beginPath(); c.arc(r() * n, r() * n, sz, 0, 6.3); c.fill(); }
+    c.lineWidth = n * 0.002;
+    for (let k = 0; k < 80; k++) { c.strokeStyle = `rgba(70,45,25,${0.08 + r() * 0.1})`; c.beginPath(); const x = r() * n, y = r() * n; c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * n * 0.06, y + (r() - 0.5) * n * 0.03); c.stroke(); }
   },
   cobble(c, n, r) {
     // Bruk w rysunkowym stylu: drobne, prostokątne kamienie o zaokrąglonych rogach, w rzędach różnej długości,
@@ -267,14 +266,14 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
  * Dzięki temu jeden wzór cegieł służy jasnemu i ciemnemu kamieniowi oraz barwom drużyn.
  */
 /** Rysuje teksturę od zera (wolne: ziarno liczone piksel po pikselu). */
-const size = (kind: Kind): number => (TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'dressed' || kind === 'grass' ? 2048 : 1024);
+const size = (kind: Kind): number => (TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'bricks' || kind === 'dressed' || kind === 'grass' ? 2048 : 1024);
 function paint(kind: Kind, n: number): HTMLCanvasElement | null {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'ashlar' || kind === 'dressed' ? 1024 : kind === 'cobble' || kind === 'grass' ? n : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock'].includes(kind) ? 128 : 64;
+  const base = kind === 'ashlar' || kind === 'bricks' || kind === 'dressed' ? 1024 : kind === 'cobble' || kind === 'grass' ? n : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock', 'organic'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));

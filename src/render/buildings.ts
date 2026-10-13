@@ -9,7 +9,7 @@ type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
 /** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone];
-const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 1.15, dressed: 0.55, bricks: 1.3, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
+const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
 const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: tex === 'ashlar' ? 0.9 : tex === 'dressed' ? 0.7 : tex === 'cobble' ? 1.6 : 1.4 });
   m.userData.tile = (tex && TILE[tex]) || 0;
@@ -166,6 +166,16 @@ const merge = (parts: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeom
  * Jak wygląda jedna porcja surowca w składzie. Każda ma własny kształt i teksturę:
  * deski z usłojeniem, ciosany kamień, snopki zboża ze związanymi kłosami, worki z płótna, sztaby, kosze.
  */
+/** Kosz z wikliny: dno, ścianki zwężające się w dół, obręcz u góry i ciemniejsze plecione pasy */
+function basket(light: number, dark: number): THREE.BufferGeometry[] {
+  return [
+    paint(part(new THREE.CylinderGeometry(0.2, 0.15, 0.14, 14, 1, true), 0, -0.07, 0), light),
+    paint(part(new THREE.CylinderGeometry(0.15, 0.15, 0.01, 14), 0, -0.135, 0), dark),
+    paint(new THREE.TorusGeometry(0.2, 0.014, 5, 20).rotateX(Math.PI / 2).translate(0, 0.0, 0), dark),
+    ...[-0.1, -0.05].map((y) => paint(new THREE.TorusGeometry(0.18 + (y + 0.1) * 0.4, 0.008, 4, 20).rotateX(Math.PI / 2).translate(0, y, 0), dark)),
+    paint(part(new THREE.CylinderGeometry(0.185, 0.185, 0.02, 14), 0, -0.02, 0), 0x5a3e22), // ciemne wnętrze pod owocami
+  ];
+}
 const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean }> = {
   wood: {
     tex: 'planks',
@@ -173,7 +183,7 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
       .concat([-0.18, 0.18].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.03, 0.46), x, -0.135, 0), 0x6b4a2e)))),
   },
   stone: {
-    tex: 'ashlar',
+    tex: 'dressed',
     geo: merge([
       paint(part(new THREE.BoxGeometry(0.4, 0.17, 0.38), 0, -0.065, 0), 0xc9c4b6),
       paint(part(new THREE.BoxGeometry(0.22, 0.13, 0.2).rotateY(0.3), -0.07, 0.09, -0.05), 0xb9b3a4),
@@ -201,16 +211,37 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     ])),
   },
   bread: {
+    tex: 'organic',
+    // kosz z wikliny (obręcz, plecione pasy), w nim bochny z naciętą skórką i jasnym oprószeniem mąką
     geo: merge([
-      paint(part(new THREE.CylinderGeometry(0.2, 0.16, 0.12, 10), 0, -0.07, 0), 0x9a7442),
-      ...[[-0.07, -0.05], [0.07, -0.04], [0, 0.07]].map(([x, z]) => paint(new THREE.IcosahedronGeometry(0.075, 1).scale(1.5, 0.75, 1).translate(x!, 0.02, z!), 0xc98a45)),
-      paint(new THREE.IcosahedronGeometry(0.07, 1).scale(1.4, 0.7, 1).translate(0.02, 0.09, 0), 0xd99c55),
+      ...basket(0x8a6438, 0x6b4a2a),
+      ...([[-0.08, -0.05, 0.4, 0xb8743a], [0.08, -0.04, -0.5, 0xc4823f], [0, 0.08, 1.2, 0xae6a33]] as const).flatMap(([x, z, rot, col]) => [
+        paint(new THREE.IcosahedronGeometry(0.07, 2).scale(1.55, 0.72, 1).rotateY(rot).translate(x, 0.02, z), col),
+        // trzy ukośne nacięcia na skórce
+        ...[-0.04, 0, 0.04].map((d) => paint(new THREE.BoxGeometry(0.012, 0.012, 0.06).rotateY(rot + 0.6).translate(x + Math.cos(rot) * d, 0.072, z - Math.sin(rot) * d), 0x6e3e1c)),
+        paint(new THREE.IcosahedronGeometry(0.04, 1).scale(1.6, 0.25, 0.8).rotateY(rot).translate(x, 0.066, z), 0xe9d8b8), // mąka na wierzchu
+      ]),
+      paint(new THREE.IcosahedronGeometry(0.06, 2).scale(1, 0.75, 1).translate(0.03, 0.1, 0.01), 0xc98a45), // okrągły bochenek na górze
     ]),
   },
   apples: {
+    tex: 'organic',
+    // kosz jabłek: każde trochę inne (czerwone, rumiane, zielone), z ogonkiem; jedno z listkiem
     geo: merge([
-      paint(part(new THREE.CylinderGeometry(0.2, 0.15, 0.14, 10), 0, -0.07, 0), 0x9a7442),
-      ...[0, 1, 2, 3, 4, 5, 6].map((k) => paint(new THREE.IcosahedronGeometry(0.055, 1).translate(Math.cos(k * 0.9) * (k ? 0.11 : 0), 0.03 + (k ? 0 : 0.04), Math.sin(k * 0.9) * (k ? 0.11 : 0)), k % 3 === 2 ? 0x9fbf3a : 0xc8261d)),
+      ...basket(0x8a6438, 0x6b4a2a),
+      ...[0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap((k) => {
+        const top = k >= 7;
+        const ang = k * 0.9 + (top ? 0.4 : 0), rr = top ? 0.04 : k ? 0.11 : 0;
+        const x = Math.cos(ang) * rr, z = Math.sin(ang) * rr, y = top ? 0.09 : 0.03 + (k ? 0 : 0.03);
+        const col = [0xc8261d, 0xb31d18, 0xd9452a, 0x9fbf3a, 0xc8261d, 0xe0582c, 0xb8301f, 0xa8c040, 0xcf3322][k]!;
+        const parts = [
+          paint(new THREE.IcosahedronGeometry(0.052, 2).scale(1, 0.92, 1).translate(x, y, z), col),
+          paint(new THREE.SphereGeometry(0.02, 6, 4).scale(1, 0.4, 1).translate(x + 0.01, y + 0.03, z - 0.012), 0xf2d27a), // rumieniec / połysk
+          paint(new THREE.CylinderGeometry(0.004, 0.005, 0.03, 4).rotateZ(0.3).translate(x, y + 0.055, z), 0x4a3018), // ogonek
+        ];
+        if (k === 8) parts.push(paint(new THREE.IcosahedronGeometry(0.022, 0).scale(1.6, 0.25, 0.8).rotateY(0.6).translate(x + 0.02, y + 0.06, z), 0x4f8a2c));
+        return parts;
+      }),
     ]),
   },
   spear: {
@@ -236,9 +267,22 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     ]),
   },
   fish: {
+    tex: 'organic',
+    // skrzynka z listew, w niej ryby: ciemny grzbiet, srebrny brzuch, płetwa ogonowa i grzbietowa, oko
     geo: merge([
-      paint(part(new THREE.BoxGeometry(0.38, 0.1, 0.3), 0, -0.08, 0), 0x8a6a45),
-      ...[-0.08, 0, 0.08].map((z) => paint(new THREE.IcosahedronGeometry(0.06, 1).scale(2.6, 0.55, 0.8).translate(0, 0.0, z), 0x9cc3d6)),
+      paint(part(new THREE.BoxGeometry(0.38, 0.02, 0.3), 0, -0.12, 0), 0x6b4f30),
+      ...[-0.14, 0.14].map((z) => paint(part(new THREE.BoxGeometry(0.4, 0.08, 0.02), 0, -0.08, z), 0x8a6a45)),
+      ...[-0.19, 0.19].map((x) => paint(part(new THREE.BoxGeometry(0.02, 0.08, 0.3), x, -0.08, 0), 0x7a5a3a)),
+      ...([[-0.08, 0.1, 0], [0, -0.05, 0.03], [0.08, 0.06, 0], [-0.02, 0.02, 0.08]] as const).flatMap(([z, rot, lift]) => {
+        const y = -0.03 + lift;
+        return [
+          paint(new THREE.IcosahedronGeometry(0.06, 2).scale(2.4, 0.5, 0.75).rotateY(rot).translate(0, y, z), 0xc9d6dc), // brzuch
+          paint(new THREE.IcosahedronGeometry(0.058, 2).scale(2.35, 0.35, 0.6).rotateY(rot).translate(0, y + 0.012, z), 0x4f6470), // grzbiet
+          paint(new THREE.ConeGeometry(0.04, 0.07, 3).rotateZ(Math.PI / 2).scale(1, 1, 0.25).rotateY(rot).translate(-Math.cos(rot) * 0.17, y, z + Math.sin(rot) * 0.17), 0x5f7480), // ogon
+          paint(new THREE.ConeGeometry(0.02, 0.05, 3).scale(1.6, 1, 0.3).rotateY(rot).translate(0, y + 0.035, z), 0x5a6e7a), // płetwa grzbietowa
+          paint(new THREE.SphereGeometry(0.008, 5, 4).translate(Math.cos(rot) * 0.115, y + 0.008, z - Math.sin(rot) * 0.115 + 0.02), 0x111111), // oko
+        ];
+      }),
     ]),
   },
 };
