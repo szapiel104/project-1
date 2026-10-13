@@ -136,7 +136,7 @@ const FRAG_ALBEDO = /* glsl */ `
   float steep = smoothstep(0.82, 0.62, vWN.y);
   wRock = max(wRock, steep);
   // piasek plaż (jeziora z plażą, morze za mapą): na plaży trawa i kamienie ustępują
-  vec3 sandC = texture2D(tSand, rot(w, 0.8) / 4.0).rgb * vec3(1.02, 0.97, 0.86);
+  vec3 sandC = texture2D(tSand, rot(w, 0.8) / 4.0).rgb * vec3(1.16, 1.02, 0.74);
   float wSand = clamp(vSand * 1.1, 0.0, 1.0) * (1.0 - wRock);
   wPeb *= 1.0 - wSand * 0.7; wDirt *= 1.0 - wSand; wForest *= 1.0 - wSand;
 
@@ -185,7 +185,7 @@ const FRAG_ALBEDO = /* glsl */ `
   float macro = 0.74 + nM.b * 0.42 + (nS.r - 0.5) * 0.16;
   // wnęki między źdźbłami i kamieniami ciemnieją (fałszywe AO z jasności)
   float cav = mix(0.82, 1.08, smoothstep(0.08, 0.45, lum(alb)));
-  alb *= macro * cav * uDark;
+  alb *= mix(macro * cav, 0.95 + (macro - 0.95) * 0.35, bS / sum) * uDark; // piasek jasny i równy, bez ciemnych plam łąki
   // suchsze, żółtawe łaty na trawie
   alb = mix(alb, alb * vec3(1.12, 1.04, 0.78), smoothstep(0.62, 0.85, nM.g) * 0.5 * bG / sum);
   diffuseColor.rgb *= alb;

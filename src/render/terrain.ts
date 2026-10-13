@@ -331,7 +331,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     if (seaSide < 0) return -99;
     const s0 = seaSide === 0 ? -X : seaSide === 1 ? X - w : seaSide === 2 ? -Y : Y - h;
     const along = seaSide < 2 ? Y : X;
-    return s0 - 6 + nz(along / 22, 3.3) * 4 + nz(along / 7, 9.1) * 1.2;
+    return s0 - 17 + nz(along / 22, 3.3) * 4 + nz(along / 7, 9.1) * 1.2;
   };
   {
     let rs = (map.seed ^ 0x2b7e1516) >>> 0;
@@ -366,15 +366,16 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
     // od strony morza: szeroka, płaska plaża łagodnie schodząca do wody, dalej coraz głębiej
     const t = seaT(X, Y);
-    if (t > -14) {
-      const beachH = t < 0 ? 0.13 + Math.min(-t, 8) * 0.012 + nz(X / 5, Y / 5) * 0.03 : -0.02 - t * 0.14;
-      const k = smoothstep(-14, -7, t);
+    if (t > -20) {
+      // wydmy: lekko pofalowana plaża, przy wodzie płasko, dalej od wody nieco wyżej
+      const beachH = t < 0 ? 0.1 + Math.min(-t, 13) * 0.014 + Math.max(0, nz(X / 6, Y / 6)) * 0.12 * smoothstep(-2, -8, t) : -0.02 - t * 0.12;
+      const k = smoothstep(-20, -13, t);
       hh = hh * (1 - k) + Math.max(beachH, -3.5) * k;
     }
     return hh;
   };
   /** Udział piasku za mapą (plaża nad morzem i pod płytką wodą) */
-  const outerSand = (X: number, Y: number): number => { const t = seaT(X, Y); return t < -40 ? 0 : smoothstep(-11, -8, t); };
+  const outerSand = (X: number, Y: number): number => { const t = seaT(X, Y); return t < -40 ? 0 : smoothstep(-17, -13, t); };
   {
     const W2 = w + 2 * D, H2 = h + 2 * D;
     // kolumny/wiersze siatki: co 1 pole przy planszy, co 2 dalej niż 30, co 4 dalej niż 70
@@ -702,7 +703,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           if (map.tiles[ty * w + tx + 1] !== Terrain.Mountain || map.tiles[ty * w + tx - 1] !== Terrain.Mountain || map.tiles[(ty + 1) * w + tx] !== Terrain.Mountain || map.tiles[(ty - 1) * w + tx] !== Terrain.Mountain) continue;
         }
         const X = px - ox, Y = pz - oz;
-        if (seaT(X, Y) > -12) continue; // plaża i morze bez drzew
+        if (seaT(X, Y) > -16) continue; // plaża i morze bez drzew
         const groundY = hAny(X, Y);
         const treeline = 10.5 + nz(X / 30, Y / 30) * 2.0;
         if (groundY > treeline || slopeAt(X, Y) > 1.3) continue;
