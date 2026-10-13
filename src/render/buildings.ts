@@ -1113,10 +1113,6 @@ const BUILDERS: Record<string, Builder> = {
     const top = new THREE.Group();
     top.name = 'roof';
     layeredRoof(top, M.thatch, 1.75, 0.8, 1.6, 1.18);
-    // luk na strychu z żurawikiem do wciągania worków
-    box(top, M.woodDark, 0.26, 0.26, 0.04, 0, 1.3, 0.72);
-    box(top, M.woodDark, 0.05, 0.05, 0.4, 0, 1.62, 0.9);
-    box(top, M.plank, 0.012, 0.3, 0.012, 0, 1.33, 1.08);
     g.add(top);
     // drabinka do drzwi i worki pod ścianą
     for (const x of [-0.12, 0.12]) { const rail = box(g, M.wood, 0.03, 0.42, 0.03, x, 0, 0.78); rail.rotation.x = 0.5; }
@@ -1323,8 +1319,6 @@ const BUILDERS: Record<string, Builder> = {
     gable(top, M.thatchDark, 2.95, 0.9, 2.1, 1.1);
     gable(top, M.thatch, 2.8, 1.0, 1.9, 1.16);
     box(top, M.woodDark, 2.9, 0.07, 0.09, 0, 2.12, 0);
-    box(top, M.woodDark, 0.36, 0.36, 0.05, 0, 1.4, 0.93);
-    box(top, M.woodDark, 0.07, 0.07, 0.4, 0, 1.82, 1.1);
     const porch = box(top, M.thatchDark, 1.1, 0.05, 0.45, 0, 1.12, 1.05);
     porch.rotation.x = 0.45;
     g.add(top);

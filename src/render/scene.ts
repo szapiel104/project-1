@@ -1386,6 +1386,8 @@ export class GameRenderer {
   private dustAt = new Map<number, number>();
   /** Gruzowiska na miejscu zniszczonych budynków (do odbudowy) */
   private ruinPiles = new Map<number, THREE.Group>();
+  /** Do kiedy (czas sceny) pali się uszkodzony budynek */
+  private burnUntil = new Map<number, number>();
   /** Budynki w budowie rosną od fundamentów w górę, a nad placem co chwilę wzbija się kurz */
   private syncSites(g: GameState): void {
     for (const b of g.buildings) {
@@ -1662,7 +1664,7 @@ export class GameRenderer {
       if (!mesh) continue;
       // trafiony budynek drży, a mocno uszkodzony płonie
       const prevHp = this.hpSeen.get(b.id) ?? b.hp;
-      if (b.hp < prevHp) this.shake.set(b.id, 0.25);
+      if (b.hp < prevHp) { this.shake.set(b.id, 0.25); this.burnUntil.set(b.id, this.time + 50); }
       this.hpSeen.set(b.id, b.hp);
       const sk = this.shake.get(b.id) ?? 0;
       // drganie: lekkie kołysanie całej bryły, które wygasa po ćwierć sekundy
@@ -1677,7 +1679,8 @@ export class GameRenderer {
         mesh.add(fire);
       }
       if (fire) {
-        fire.visible = hurt > 0.4;
+        // pożar trwa tylko po świeżych ciosach; gdy nikt dalej nie atakuje, ogień przygasa i znika (budynek zostaje osmalony)
+        fire.visible = hurt > 0.4 && this.time < (this.burnUntil.get(b.id) ?? 0);
         fire.children.forEach((f, k) => { f.scale.set(1, 0.7 + Math.abs(Math.sin(this.time * 9 + k)) * 0.6 * (0.5 + hurt), 1); });
       }
       const def = BUILDINGS[b.type]!;
