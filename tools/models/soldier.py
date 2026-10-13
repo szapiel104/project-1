@@ -77,9 +77,8 @@ neck = lathe('neck', [(0.024, 0.49), (0.025, 0.53), (0.026, 0.545)], seg=10, sub
 neck_m = Mesh(evaluated(neck), WHITE, 'skin', dyn='skin')
 def face_hole(x, y, z, w=0.6, h=0.62):
     return smooth(0.15, 0.4, z) * smooth(-0.05, 0.1, h - abs(y + 0.1)) * smooth(-0.05, 0.1, w - abs(x))
-beard = head.shell('beard', 1.085, lambda x, y, z: smooth(0.0, 0.12, -0.46 - y + 0.12 * (1 - z)) * smooth(-0.1, 0.35, z), show='beard')
-brow = head.shell('brow', 1.045, lambda x, y, z: smooth(0.0, 0.06, 0.12 - abs(y - 0.33)) * smooth(0.6, 0.85, z) * smooth(0.04, 0.12, abs(x)) * smooth(0.0, 0.1, 0.55 - abs(x)))
-static = [head.skin, neck_m, beard, brow]
+beard = head.shell('beard', 1.07, head.beard_mask(), show='beard')
+static = [head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), beard]
 
 # ---------- tułów ----------
 belt = lathe('belt', [(0.084, 0.322), (0.088, 0.33), (0.088, 0.344), (0.084, 0.352)], seg=18, depth=0.78, subsurf=0)
@@ -108,7 +107,7 @@ if not archer:
         bmesh.ops.scale(bm, verts=bm.verts, vec=(1.035, 1.035, 1.0))
         static.append(Mesh(bm, CROSS, 'cloth'))
     # czepiec kolczy: na głowie (otwarty na twarz) i pelerynka na barkach
-    coif = head.shell('coif', 1.12, lambda x, y, z: (1 - face_hole(x, y, z)) if y > -0.95 else 0, dyn=None, mat='metal',
+    coif = head.shell('coif', 1.1, lambda x, y, z: (1 - face_hole(x, y, z, 0.74, 0.72)) if y > -0.95 else 0, dyn=None, mat='metal',
                       shade=lambda x, y, z: mail(STEEL)(x, y * 0.06, z))
     static.append(coif)
     cape = lathe('mantle', [(0.106, 0.448), (0.103, 0.468), (0.086, 0.488), (0.058, 0.508), (0.043, 0.528), (0.04, 0.545)], seg=18, depth=0.82, subsurf=0)

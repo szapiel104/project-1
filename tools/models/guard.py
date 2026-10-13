@@ -101,8 +101,7 @@ head = Head((0.0, 0.578, 0.004), (0.046, 0.058, 0.05))
 neck = lathe('neck', [(0.024, 0.488), (0.025, 0.53), (0.026, 0.545)], seg=10, subsurf=0)
 neck_m = Mesh(evaluated(neck), WHITE, 'skin', dyn='skin')
 hair = head.shell('hair', 1.075, lambda x, y, z: smooth(0.0, 0.1, y - (0.16 + 0.48 * z)))
-beard = head.shell('beard', 1.085, lambda x, y, z: smooth(0.0, 0.12, -0.46 - y + 0.12 * (1 - z)) * smooth(-0.1, 0.35, z), show='beard')
-brow = head.shell('brow', 1.045, lambda x, y, z: smooth(0.0, 0.06, 0.12 - abs(y - 0.33)) * smooth(0.6, 0.85, z) * smooth(0.04, 0.12, abs(x)) * smooth(0.0, 0.1, 0.55 - abs(x)))
+beard = head.shell('beard', 1.07, head.beard_mask(), show='beard')
 
-static = [torso_m, skirt_m, chest_m, *paul, buckle_m, sheath_m, sash_m, head.skin, neck_m, *head.ears(), hair, brow, beard]
+static = [torso_m, skirt_m, chest_m, *paul, buckle_m, sheath_m, sash_m, head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), hair, beard]
 finish('guard', static, [leg_m, greave_m], [arm_m], HIP, SHOULDER, HAND)

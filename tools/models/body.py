@@ -12,7 +12,7 @@ import struct
 
 import bpy  # noqa: F401
 import bmesh
-from common import Mesh, bake_ao, evaluated, g2b, sphere
+from common import Mesh, bake_ao, evaluated, g2b, skin, sphere
 
 
 def smooth(e0, e1, t):
@@ -25,28 +25,26 @@ def bump(u, v, cu, cv, su, sv):
 
 
 def face(x, y, z, strong=1.0):
-    """Twarz z kuli jednostkowej (y w górę, przód +z): szczęka, broda, nos, łuk brwiowy, oczodoły, kości policzkowe"""
+    """Twarz z kuli jednostkowej (y w górę, przód +z): spokojna, ludzka — lekka broda, wąski nos, płytkie oczodoły.
+    Postacie w grze mają kilkadziesiąt pikseli, więc rysy muszą być delikatne (mocne wypukłości dają małpi pysk)."""
     u, v = math.atan2(x, z), y
     front = max(0.0, z)
     k = 1.0
-    k -= 0.2 * max(0.0, -v - 0.25)
-    k += strong * 0.09 * bump(u, v, 0, -0.8, 0.32, 0.14)
-    k += strong * (0.07 * bump(u, v, 0.55, -0.62, 0.22, 0.14) + 0.07 * bump(u, v, -0.55, -0.62, 0.22, 0.14))
-    k += 0.3 * bump(u, v, 0, -0.14, 0.075, 0.17) * front
-    k += 0.09 * bump(u, v, 0, -0.33, 0.1, 0.05) * front
-    k += 0.09 * bump(u, v, 0, 0.2, 0.55, 0.07) * front
-    k -= 0.05 * bump(u, v, 0, -0.5, 0.25, 0.05) * front
+    k -= 0.16 * max(0.0, -v - 0.35)                                 # zwężenie ku brodzie (owal twarzy)
+    k += strong * 0.035 * bump(u, v, 0, -0.78, 0.28, 0.12)           # broda
+    k += 0.15 * bump(u, v, 0, -0.17, 0.075, 0.14) * front          # grzbiet nosa
+    k += 0.05 * bump(u, v, 0, -0.29, 0.08, 0.06) * front            # czubek nosa
+    k += 0.03 * bump(u, v, 0, 0.24, 0.5, 0.07) * front             # łuk brwiowy
     for su in (-0.36, 0.36):
-        k -= 0.13 * bump(u, v, su, 0.04, 0.13, 0.09) * front
-        k += 0.05 * bump(u, v, su * 1.4, -0.18, 0.15, 0.1) * front
-    k += 0.04 * bump(u, v, math.pi, 0.25, 0.8, 0.5)
-    return x * k * (0.92 if z < 0 else 1), y, z * k
+        k -= 0.04 * bump(u, v, su, 0.06, 0.12, 0.08) * front       # płytkie oczodoły
+    k += 0.04 * bump(u, v, math.pi, 0.25, 0.8, 0.5)                  # potylica
+    return x * k * (0.94 if z < 0 else 1), y, z * k
 
 
 class Head:
     """Głowa w punkcie C o półosiach R; powłoki włosów/brody chowają się gładko pod skórę"""
 
-    def __init__(self, C, R, seg=22, rings=16, strong=1.0):
+    def __init__(self, C, R, seg=26, rings=20, strong=1.0):
         self.C, self.R, self.seg, self.rings, self.strong = C, R, seg, rings, strong
         self.eye_y = C[1] + R[1] * 0.1
         self.eye_x = R[0] * 0.36
@@ -54,12 +52,40 @@ class Head:
         self.skin = Mesh(evaluated(ob), self._skin_col, 'skin', dyn='skin')
 
     def _skin_col(self, x, y, z):
+        ux, uy, uz = self.unit(x, y, z)
+        # usta: cienka, ciemniejsza linia; lekko zaróżowione policzki dają twarzy ciepło
         k = 1.0
-        if z > self.C[2] + self.R[2] * 0.6:
-            for sx in (-1, 1):
-                d = math.sqrt(((x - sx * self.eye_x) / (self.R[0] * 0.18)) ** 2 + ((y - self.eye_y) / (self.R[1] * 0.095)) ** 2)
-                k = min(k, 0.22 + 0.78 * min(1.0, d))
-        return (k, k, k)
+        if uz > 0.6:
+            k -= 0.35 * math.exp(-((uy + 0.47) / 0.045) ** 2) * math.exp(-(ux / 0.2) ** 2)
+        return (k, k * 0.97, k * 0.96)
+
+    def point(self, ux, uy, front=True):
+        """Punkt na powierzchni twarzy (jednostkowe x, y; przód) w układzie gry"""
+        uz = math.sqrt(max(0.0, 1 - ux * ux - uy * uy)) * (1 if front else -1)
+        x, y, z = face(ux, uy, uz, self.strong)
+        return self.C[0] + x * self.R[0], self.C[1] + y * self.R[1], self.C[2] + z * self.R[2]
+
+    def eyes(self, color=(0.12, 0.09, 0.07)):
+        """Oczy: małe, ciemne, lekko wpuszczone w twarz — czytelne nawet z daleka"""
+        out = []
+        for sx in (-1, 1):
+            x, y, z = self.point(sx * 0.34, 0.08)
+            e = sphere(f'eye{sx}', (x, y, z - self.R[2] * 0.03), (self.R[0] * 0.1, self.R[1] * 0.075, self.R[2] * 0.06), seg=8, rings=6)
+            out.append(Mesh(evaluated(e), color, 'leather'))
+        return out
+
+    def brows(self, dyn='hair'):
+        """Brwi: wąskie łuki nad oczami w kolorze włosów"""
+        out = []
+        for sx in (-1, 1):
+            pts = [self.point(sx * t, 0.27 - 0.05 * abs(t - 0.34) ** 1.5 * 4) for t in (0.18, 0.34, 0.5)]
+            b = skin(f'brow{sx}', pts, [(0, 1), (1, 2)], [(0.004, 0.003), (0.0048, 0.0035), (0.0035, 0.0028)], subsurf=0)
+            out.append(Mesh(evaluated(b), (0.8, 0.8, 0.8), 'cloth', dyn=dyn))
+        return out
+
+    def beard_mask(self):
+        """Broda wokół szczęki i pod ustami, z bakami do uszu — twarz zostaje odsłonięta"""
+        return lambda x, y, z: smooth(0.0, 0.1, -0.56 - y + 0.34 * (1 - max(0.0, z))) * smooth(-0.15, 0.3, z)
 
     def unit(self, x, y, z):
         C, R = self.C, self.R

@@ -61,8 +61,7 @@ head = Head((0.0, 0.546, 0.004), (0.054, 0.065, 0.058))
 neck = lathe('neck', [(0.027, 0.47), (0.027, 0.5), (0.029, 0.52)], seg=10, subsurf=0)
 neck_m = Mesh(evaluated(neck), WHITE, 'skin', dyn='skin')
 hair = head.shell('hair', 1.09, lambda x, y, z: smooth(0.0, 0.12, y - (0.12 + 0.5 * z)), show='hairOn')
-beard = head.shell('beard', 1.1, lambda x, y, z: smooth(0.0, 0.12, -0.42 - y + 0.12 * (1 - z)) * smooth(-0.1, 0.35, z), show='beardP')
-brow = head.shell('brow', 1.045, lambda x, y, z: smooth(0.0, 0.06, 0.12 - abs(y - 0.33)) * smooth(0.6, 0.85, z) * smooth(0.04, 0.12, abs(x)) * smooth(0.0, 0.1, 0.55 - abs(x)))
+beard = head.shell('beard', 1.07, head.beard_mask(), show='beardP')
 # otwór na twarz w kapturze i chuście
 def face_hole(x, y, z, w=0.62, h=0.6):
     return smooth(0.15, 0.4, z) * smooth(-0.05, 0.1, h - abs(y + 0.08)) * smooth(-0.05, 0.1, w - abs(x))
@@ -82,5 +81,5 @@ straw_m = [Mesh(evaluated(hat_cr), lambda x, y, z: hexrgb(0x7a3a2a) if 0.588 < y
 cap = lathe('cap', [(0.061, 0.586), (0.064, 0.603), (0.057, 0.624), (0.034, 0.636), (0.0, 0.639)], seg=16, subsurf=0)
 cap_m = Mesh(evaluated(cap), lambda x, y, z: (0.55 if y < 0.596 else 1.0,) * 3, 'cloth', dyn='hat', show='cap')
 
-static = [torso_m, skirt_m, apron_m, rope_m, pouch_m, head.skin, neck_m, *head.ears(), hair, beard, brow, hood, cape_m, kerchief, *straw_m, cap_m]
+static = [torso_m, skirt_m, apron_m, rope_m, pouch_m, head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), hair, beard, hood, cape_m, kerchief, *straw_m, cap_m]
 finish('peasant', static, [leg_m, shoe_m, wraps_m], [arm_m, hand_m], HIP, SHOULDER, HAND)
