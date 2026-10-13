@@ -56,6 +56,14 @@ export class StrategyCamera {
     this.bounds = { x: Math.max(4, width / 2 - margin), z: Math.max(4, height / 2 - margin) };
   }
 
+  /** Położenie kamery do zapisu gry: punkt, odległość i obrót */
+  get view(): { x: number; z: number; dist: number; yaw: number } { return { x: this.target.x, z: this.target.z, dist: this.dist, yaw: this.yaw }; }
+  setView(v: { x: number; z: number; dist: number; yaw: number }): void {
+    if (![v.x, v.z, v.dist, v.yaw].every(Number.isFinite)) return;
+    this.yaw = v.yaw;
+    this.lookAt(v.x, v.z, v.dist);
+  }
+
   lookAt(x: number, z: number, dist = this.dist): void {
     this.target.set(x, 0, z);
     this.dist = dist;

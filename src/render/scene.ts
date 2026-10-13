@@ -574,6 +574,10 @@ export class GameRenderer {
     return { calls: i.render.calls, triangles: i.render.triangles, geometries: i.memory.geometries, textures: i.memory.textures };
   }
 
+  /** Kamera do zapisu i odtworzenia po odświeżeniu strony */
+  get camView(): { x: number; z: number; dist: number; yaw: number } { return this.cam.view; }
+  setCamView(v: { x: number; z: number; dist: number; yaw: number }): void { this.cam.setView(v); }
+
   lookAt(x: number, y: number, dist = 40): void {
     if (!this.state) return;
     this.cam.lookAt(x - this.state.map.width / 2, y - this.state.map.height / 2, dist);

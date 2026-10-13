@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.14.2 — zapis ustawień (2026-10-13)
+
+- Do zapisu gry trafiają też grupy wojska, wybrany szyk, tryb marszu, tempo gry i kamera; po odświeżeniu strony wszystko wraca
+- Gra zapisuje się przy zamknięciu lub odświeżeniu strony, przy przełączeniu karty i co 15 s (wcześniej tylko co 50 kroków symulacji, więc ostatnie chwile i zmiany na pauzie ginęły)
+- Zapis grupy (Shift + cyfra) od razu trafia do pamięci; nowa mapa zaczyna bez starych grup
+
 ## 0.14.1 — pasek wojska (2026-10-13)
 
 - Nad dolnym menu pasek wojska: 10 miejsc na grupy (1–9 i 0) z portretem i liczbą żołnierzy; klik = wybierz grupę (dwa razy = kamera), klik w puste miejsce albo Shift + klik = zapisz zaznaczonych, prawy klik = wyczyść

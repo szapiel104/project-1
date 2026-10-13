@@ -71,12 +71,35 @@ let currentSeedText = 'project-1';
 const SAVE_KEY = 'project1.save';
 
 /** Zapis w pamięci przeglądarki, żeby odświeżenie strony nie zaczynało gry od zera. */
+/** Ustawienia gracza, które nie należą do symulacji, ale mają przetrwać odświeżenie strony */
+interface UiSave { groups?: [number, number[]][]; form?: number; march?: number; speed?: number; cam?: { x: number; z: number; dist: number; yaw: number } }
+
 function save(): void {
   if (SANDBOX || net || gameOver) return; // skończona gra i gra przez sieć nie nadpisuje zapisu; tryb testowy nie nadpisuje prawdziwego zapisu gracza
-  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seedText: currentSeedText, data: serialize(game, currentPreset) })); } catch { /* brak dostępu do pamięci przeglądarki */ }
+  const ui: UiSave = { groups: [...groups], form: armyForm, march: armyMarch, speed, cam: renderer.camView };
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seedText: currentSeedText, data: serialize(game, currentPreset), ui })); } catch { /* brak dostępu do pamięci przeglądarki */ }
 }
 
-function loadSave(): { seedText: string; data: SaveData } | null {
+/** Po wczytaniu zapisu: grupy, szyk, tryb marszu, tempo i kamera jak przed odświeżeniem */
+function applyUi(ui: UiSave | undefined): void {
+  if (!ui) return;
+  groups.clear();
+  for (const [n, ids] of ui.groups ?? []) if (Number.isInteger(n) && n >= 0 && n <= 9 && Array.isArray(ids)) groups.set(n, ids.filter((x) => Number.isInteger(x)));
+  if (Number.isInteger(ui.form) && ui.form! >= 0 && ui.form! <= 2) armyForm = ui.form!;
+  if (ui.march === 0 || ui.march === 1) armyMarch = ui.march;
+  if (ui.cam) renderer.setCamView(ui.cam);
+  // tempo: przyciskami, żeby pasek pokazał tę samą wartość (pauzy nie odtwarzamy)
+  const idx = [0, 1, 2, 3, 5].indexOf(ui.speed ?? 1);
+  if (idx > 1) { hud.stepSpeed(-9); hud.stepSpeed(1); for (let i = 1; i < idx; i++) hud.stepSpeed(1); }
+  armyBarUpdate();
+}
+
+// zapis przy zamknięciu, odświeżeniu i przełączeniu karty: nic nie ginie, nawet przy zatrzymanej grze
+window.addEventListener('pagehide', () => { if (game) save(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && game) save(); });
+setInterval(() => { if (game) save(); }, 15000);
+
+function loadSave(): { seedText: string; data: SaveData; ui?: UiSave } | null {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null'); } catch { return null; }
 }
 
@@ -268,6 +291,9 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   endOnline();
   ME = online ? online.me : 0;
   game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant);
+  // nowa mapa: grupy i zaznaczenie z poprzedniej gry nie mają sensu (przy wczytaniu wracają z zapisu)
+  if (!loaded) groups.clear();
+  chosen.clear(); renderer.setSoldierSelection(chosen);
   shownAreas.clear(); renderer.setAreas(shownAreas);
   setStatus({ where: online ? 'game' : 'menu' });
   if (online) {
@@ -577,6 +603,10 @@ canvas.addEventListener('contextmenu', () => {
 // ---- wojsko: prawy klik = marsz/atak, prawy przeciągnięty = linia frontu i kierunek szyku ----
 /** Wybrana formacja: 0 linia, 1 blok, 2 luźno */
 let armyForm = 0;
+/** Grupy wojska pod cyframi (numer → id żołnierzy); trafiają do zapisu gry */
+const groups = new Map<number, number[]>();
+let lastGroup = { n: 0, at: 0 };
+let armyBarKey = '';
 /** Tryb marszu: 0 zwykły, 1 z walką (Ctrl przy rozkazie odwraca) */
 let armyMarch = 0;
 let rDrag: { x: number; y: number; tile: { x: number; y: number } | null; on: boolean } | null = null;
@@ -1073,7 +1103,7 @@ const finished = (g: GameState | null): boolean => {
 const restored = finished(loadedGame) ? null : loadedGame;
 if (loadedGame && !restored) { try { localStorage.removeItem(SAVE_KEY); } catch { /* nic */ } }
 const T1 = performance.now();
-if (saved && restored) start(saved.seedText, saved.data.preset, restored);
+if (saved && restored) { start(saved.seedText, saved.data.preset, restored); applyUi(saved.ui); }
 else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1', undefined, 1, SANDBOX && new URLSearchParams(location.search).has('dev'));
 mark.push(['start świata', Math.round(performance.now() - T1)]);
 console.info('[main]', mark.map(([a, b]) => `${a} ${b} ms`).join(' | '));
@@ -1221,8 +1251,6 @@ function drawAlerts(): void {
 (function alertLoop(): void { drawAlerts(); requestAnimationFrame(alertLoop); })();
 
 // --- grupy oddziałów: Shift + cyfra zapisuje zaznaczonych, cyfra ich wybiera, podwójnie = kamera do grupy ---
-const groups = new Map<number, number[]>();
-let lastGroup = { n: 0, at: 0 };
 /** Numer grupy, którą jest dokładnie obecne zaznaczenie (do nagłówka panelu) */
 function groupOf(): number | undefined {
   for (const [n, ids] of groups) { const alive = ids.filter((id) => game.soldiers.some((x) => x.id === id)); if (alive.length === chosen.size && alive.every((id) => chosen.has(id))) return n; }
@@ -1236,6 +1264,7 @@ function groupAction(n: number, action: 'pick' | 'save' | 'clear'): void {
   if (action === 'save' || !ids.length) {
     if (!chosen.size) return;
     groups.set(n, [...chosen]);
+    save();
     hud.toast(`Grupa ${n}: ${chosen.size} ${chosen.size === 1 ? 'żołnierz' : 'żołnierzy'}. Wybierasz ją klawiszem ${n}.`);
     play('select');
     showArmy();
@@ -1254,7 +1283,6 @@ function groupAction(n: number, action: 'pick' | 'save' | 'clear'): void {
   play('select');
 }
 
-let armyBarKey = '';
 /** Odświeża pasek wojska (grupy i portrety zaznaczonych), tylko gdy coś się zmieniło */
 function armyBarUpdate(): void {
   const mine = game.soldiers.filter((x) => x.owner === ME);
