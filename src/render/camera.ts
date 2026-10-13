@@ -104,10 +104,23 @@ export class StrategyCamera {
   cinematic(on: boolean): void {
     if (on && !this.saved) { this.saved = { pitch: this.pitch, dist: this.dist }; this.pitch = (20 * Math.PI) / 180; this.dist = 24; }
     else if (!on && this.saved) { this.pitch = this.saved.pitch; this.dist = this.saved.dist; this.saved = null; }
+    else if (!on) return; // nic do przywrócenia
     this.apply();
   }
 
   spin(d: number): void { this.yaw += d; this.apply(); }
+
+  /** Lot do ujęcia z lotu ptaka (podgląd mapy w menu): płynnie w górę i nad środek; zwykły widok wraca przez cinematic(false) */
+  fly(dt: number, pitch: number, dist: number, x: number, z: number, spin: number): void {
+    if (!this.saved) this.saved = { pitch: this.pitch, dist: this.dist };
+    const k = 1 - Math.exp(-dt * 1.6);
+    this.pitch += (pitch - this.pitch) * k;
+    this.dist += (dist - this.dist) * k;
+    this.target.x += (x - this.target.x) * k;
+    this.target.z += (z - this.target.z) * k;
+    this.yaw += spin * dt;
+    this.apply();
+  }
 
   private tilt(d: number): void {
     this.pitch = Math.max(StrategyCamera.MIN_PITCH, Math.min(StrategyCamera.MAX_PITCH, this.pitch + d));

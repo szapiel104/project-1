@@ -33,6 +33,10 @@ export interface MenuEvents {
   onQuitToTitle(): void;
   /** Czy to mecz przez sieć (inny opis poddania) */
   isOnline(): boolean;
+  /** Podgląd mapy przy tworzeniu nowej gry: wygeneruj i pokaż z lotu ptaka */
+  onPreviewMap(seedText: string, preset: MapPresetId, level: number, dev: boolean): void;
+  /** Koniec podglądu (powrót z ekranu nowej gry bez startu) */
+  onPreviewEnd(): void;
   /** Mecz przez sieć się zaczyna: pokój, skład, mój numer gracza i kanał gry */
   onOnlineStart(s: OnlineStart): void;
 }
@@ -186,6 +190,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   function showMain(): void {
     online.leave();
     panel.classList.remove('wide');
+    if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); }
     const list = el('div', 'menu-list');
     if (inGame) list.append(button(t('menu.resume'), () => events.onContinue()));
     else if (canContinue) list.append(button(t('menu.continue'), () => events.onContinue()));
@@ -236,7 +241,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     for (const id of Object.keys(MAP_PRESETS) as MapPresetId[]) {
       const p = MAP_PRESETS[id];
       const [a, b] = id.split('v');
-      modeRow.append(tile('mode', id === preset, `${a} na ${b}`, `${t(`menu.mode.${id}`)} · mapa ${p.width}×${p.height}`, () => { preset = id; }, `mode-${id}`));
+      modeRow.append(tile('mode', id === preset, `${a} na ${b}`, `${t(`menu.mode.${id}`)} · mapa ${p.width}×${p.height}`, () => { preset = id; preview(); }, `mode-${id}`));
     }
     let level = 1;
     const levelRow = el('div', 'pick-row four');
@@ -254,7 +259,21 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
     const roll = (): void => { seed.value = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`; };
     roll();
-    row.append(seed, button(t('hud.newMap'), roll, 'btn-plain'));
+    // podgląd: po każdej zmianie mapa generuje się od nowa i widać ją z lotu ptaka za menu
+    const status = el('p', 'preview-status', '');
+    status.setAttribute('aria-live', 'polite');
+    let timer = 0;
+    const preview = (delay = 0): void => {
+      clearTimeout(timer);
+      status.textContent = 'Generuję mapę…';
+      timer = window.setTimeout(() => requestAnimationFrame(() => setTimeout(() => {
+        events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev);
+        status.textContent = `Mapa „${seed.value.trim() || 'project-1'}” — widok z lotu ptaka. Losuj, aż trafisz na swoją.`;
+      }, 20)), delay);
+    };
+    seed.addEventListener('input', () => preview(700));
+    const rollBtn = button('Losuj inną mapę', () => { roll(); preview(); }, 'btn-plain');
+    row.append(seed, rollBtn);
     seedWrap.append(seedLabel, row);
 
     // tryb dla dewelopera: przełącznik w jednej linii
@@ -262,7 +281,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const devLab = el('label', 'dev-switch');
     const devBox = el('input');
     devBox.type = 'checkbox'; devBox.setAttribute('role', 'switch');
-    devBox.addEventListener('change', () => { dev = devBox.checked; });
+    devBox.addEventListener('change', () => { dev = devBox.checked; preview(); });
     devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Tryb deweloperski'), el('span', 'dev-hint', 'miasto w murach, wojsko, pełne zapasy, budowa od razu'));
 
     const warn = el('p', 'hint', canContinue || inGame ? t('menu.overwrite') : '');
@@ -270,9 +289,11 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     start.type = 'submit';
     const foot = el('div', 'newgame-foot');
     foot.append(back(), start);
-    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, devLab, warn, foot);
-    form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev); });
+    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, status, devLab, warn, foot);
+    form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev); });
     screen(t('menu.newGame'), true, form);
+    wrap.classList.add('previewing');
+    preview();
   }
 
   /** Suwak 0–100 % z wartością obok */
@@ -394,7 +415,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     open(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); },
     account(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); if (netMe()) online.showAccount(); else online.showLogin(false); },
     join(id) { inGame = false; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
-    close() { wrap.hidden = true; document.body.classList.remove('menu-open'); },
+    close() { if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); } wrap.hidden = true; document.body.classList.remove('menu-open'); },
     isOpen: () => !wrap.hidden,
     setVolume(v) { volume = v; },
     setMuted(m) { muted = m; },

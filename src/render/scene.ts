@@ -722,7 +722,21 @@ export class GameRenderer {
   warmup(): void { this.renderer.compile(this.scene, this.cam.camera); this.composer.render(); }
 
   /** Powolny obrót kamery wokół osady, gdy otwarte jest menu */
-  orbit(dt: number): void { this.cam.cinematic(true); this.cam.spin(dt * 0.035); this.menuNight = true; }
+  orbit(dt: number): void {
+    // podgląd nowej mapy: kamera wzlatuje nad całą mapę, w dzień, i powoli ją obraca
+    if (this.previewing && this.state) {
+      const span = Math.max(this.state.map.width, this.state.map.height);
+      this.cam.fly(dt, 1.02, span * 0.95, 0, 0, 0.05);
+      this.menuNight = false;
+      return;
+    }
+    this.cam.cinematic(true); this.cam.spin(dt * 0.035); this.menuNight = true;
+  }
+  /** Podgląd generowanej mapy w menu (ujęcie z góry) */
+  private previewing = false;
+  startPreview(): void { this.previewing = true; }
+  get isPreviewing(): boolean { return this.previewing; }
+  endPreview(): void { this.previewing = false; }
   /** Koniec ujęcia z menu: wraca zwykły widok strategiczny */
   endOrbit(): void { this.cam.cinematic(false); this.menuNight = false; }
   /** Menu główne zawsze nocą, z zapalonymi pochodniami */

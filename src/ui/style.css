@@ -708,3 +708,9 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .army-btn[aria-pressed="true"] { color: #fff; background: var(--seal); border-color: #4a0f0b; position: relative; }
 .army-kind:focus-visible, .army-btn:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; position: relative; z-index: 1; }
 @media (prefers-reduced-motion: reduce) { .army-kind, .army-btn { transition: none; } }
+
+/* Podgląd nowej mapy: menu przesuwa się do lewej krawędzi i robi miejsce na widok mapy z lotu ptaka */
+.menu.previewing { place-items: center start; padding-left: clamp(12px, 2.5vw, 40px);
+  background: linear-gradient(90deg, rgba(20, 12, 5, .72), rgba(20, 12, 5, .25) 38%, rgba(20, 12, 5, 0) 55%); }
+.menu.previewing .menu-panel.wide { width: min(600px, calc(100vw - 48px)); }
+.preview-status { margin: -4px 0 0; font-style: italic; color: var(--ink-soft); min-height: 1.4em; }

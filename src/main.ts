@@ -125,9 +125,25 @@ const hud = createHud(document.getElementById('ui')!, {
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
 mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
+/** Mapa generowana w podglądzie nowej gry (null = brak podglądu) */
+let preview: GameState | null = null;
 const menu = createMenu(document.body, {
   onContinue: () => { menu.close(); if (!net) setStatus({ where: 'solo' }); },
+  // podgląd nowej mapy: generujemy ją obok bieżącej gry i pokazujemy z lotu ptaka; bieżąca gra czeka nietknięta
+  onPreviewMap: (seedText, preset, level, dev) => {
+    preview = createGame(seedFromText(seedText), preset, level, dev);
+    renderer.setState(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0);
+    renderer.startPreview();
+  },
+  onPreviewEnd: () => {
+    if (!preview) return;
+    preview = null;
+    renderer.endPreview();
+    renderer.setState(game, MAP_PRESETS[currentPreset].waterLevel, MAP_PRESETS[currentPreset].rim, ME);
+  },
   onNewGame: (seedText, preset, level, dev) => {
+    preview = null;
+    renderer.endPreview();
     // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
     const cover = document.createElement('div');
     cover.id = 'loading';
@@ -935,12 +951,12 @@ function loop(now: number): void {
   // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
   // w meczu przez sieć menu nie zatrzymuje czasu — inni gracze grają dalej
   if (menu.isOpen() && !net) {
-    if (titleScreen) renderer.orbit(elapsed / 1000);
+    if (titleScreen || renderer.isPreviewing) renderer.orbit(elapsed / 1000);
     renderer.frame(elapsed / 1000, 1);
     requestAnimationFrame(loop);
     return;
   }
-  if (titleScreen) renderer.endOrbit();
+  renderer.endOrbit(); // po ujęciu z menu (tytuł albo podgląd mapy) wraca widok gracza; bez ujęcia nic nie robi
   titleScreen = false;
   acc += elapsed * speed;
   let steps = 0;
