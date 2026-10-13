@@ -716,3 +716,20 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .preview-status { margin: -4px 0 0; font-style: italic; color: var(--ink-soft); min-height: 1.4em; }
 .roster-card:hover { border-color: var(--gold); box-shadow: 0 0 0 2px var(--gold); }
 .roster-card:focus-visible { outline: 3px solid var(--ink); outline-offset: 1px; }
+
+/* pasek wojska nad dolnym menu: grupy 1–0 i portrety zaznaczonych */
+.armybar { justify-self: start; margin: 0 0 -4px 8px; display: flex; align-items: flex-end; gap: 10px; max-width: calc(100% - 16px); flex-wrap: wrap; }
+.army-slots { display: flex; gap: 3px; padding: 3px; background: linear-gradient(#4a321c, #2e1d0f); border: 1px solid var(--gold-dark); box-shadow: inset 0 1px 0 rgba(255, 220, 160, .25), 0 0 0 1px var(--wood-edge); }
+.army-slot { position: relative; width: 42px; height: 42px; padding: 0; display: grid; place-items: center; cursor: pointer; color: var(--parchment-light); background: linear-gradient(#5e3f22, #3b2716); border: 1px solid var(--wood-edge); box-shadow: inset 0 0 0 1px rgba(232, 199, 102, .35); }
+.army-slot:hover { background: linear-gradient(#7a5530, #4a321c); }
+.army-slot.empty .army-slot-n { opacity: .8; }
+.army-slot[aria-pressed="true"] { box-shadow: inset 0 0 0 2px var(--gold), 0 0 0 1px var(--gold); }
+.army-slot-pic { display: grid; width: 32px; height: 32px; }
+.army-slot-pic svg { width: 32px; height: 32px; }
+.army-slot-n { position: absolute; left: 3px; top: 1px; font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--gold); text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+.army-slot-count { position: absolute; right: 2px; bottom: 1px; font-weight: 700; font-size: 13px; color: #fff; text-shadow: 0 1px 0 #000, 0 0 3px #000; font-variant-numeric: tabular-nums; }
+.army-slot:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
+.army-picked { display: flex; flex-wrap: wrap; align-content: flex-end; gap: 3px; width: max-content; max-width: min(760px, calc(100vw - 560px)); padding: 3px; background: rgba(35, 22, 11, .82); border: 1px solid var(--gold-dark); }
+.army-picked .roster-card { width: 34px; flex: none; }
+.army-picked .roster-card svg { width: 32px; height: 32px; }
+.army-picked .roster-more { color: var(--parchment-light); }

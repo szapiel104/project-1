@@ -89,7 +89,8 @@ const hud = createHud(document.getElementById('ui')!, {
   onArmyForm: (form) => { armyForm = form; reform(); play('rotate'); },
   onArmyStance: (stance) => { if (chosen.size) { pending.push({ type: 'stance', player: ME, ids: [...chosen], stance }); play('select'); shout('move'); } },
   onArmyMarch: (m) => { armyMarch = m; play('select'); showArmy(); },
-  onArmyUnit: (id, shift) => { if (shift) unchoose(id); else chooseSoldiers([id], false); play('select'); },
+  onArmyUnit: (id, shift) => { if (shift) chooseSoldiers([id], false); else unchoose(id); play('select'); },
+  onGroup: (n, action) => groupAction(n, action),
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
   // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
   onRandom: (preset) => start(`${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`, preset),
@@ -683,6 +684,7 @@ function chooseSoldiers(ids: number[], add: boolean, quiet = false): void {
     selectUnit(0);
     showArmy();
   } else hud.showArmy([]);
+  armyBarUpdate();
 }
 
 /** Odznacza jednego żołnierza, reszta zostaje zaznaczona */
@@ -690,6 +692,7 @@ function unchoose(id: number): void {
   chosen.delete(id);
   renderer.setSoldierSelection(chosen);
   if (chosen.size) showArmy(); else hud.showArmy([]);
+  armyBarUpdate();
 }
 
 /** Karta zaznaczonego wojska: portrety ze zdrowiem; znika, gdy żołnierze zginą */
@@ -1203,26 +1206,22 @@ function groupOf(): number | undefined {
   for (const [n, ids] of groups) { const alive = ids.filter((id) => game.soldiers.some((x) => x.id === id)); if (alive.length === chosen.size && alive.every((id) => chosen.has(id))) return n; }
   return undefined;
 }
-window.addEventListener('keydown', (e) => {
-  if (!e.code.startsWith('Digit') || e.ctrlKey || e.metaKey || e.altKey || renderer.walking || menu.isOpen()) return;
-  const tag = (e.target as HTMLElement | null)?.tagName;
-  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
-  const n = Number(e.code.slice(5));
-  if (!(n >= 1 && n <= 9)) return;
-  e.preventDefault();
-  if (e.shiftKey) {
+/** Grupa: wybór (drugi raz szybko = kamera nad grupą), zapis zaznaczonych albo wyczyszczenie */
+function groupAction(n: number, action: 'pick' | 'save' | 'clear'): void {
+  if (action === 'clear') { if (groups.delete(n)) { play('rotate'); armyBarUpdate(); } return; }
+  const ids = (groups.get(n) ?? []).filter((id) => game.soldiers.some((x) => x.id === id && x.owner === ME));
+  // klik w puste miejsce działa jak zapis
+  if (action === 'save' || !ids.length) {
     if (!chosen.size) return;
     groups.set(n, [...chosen]);
     hud.toast(`Grupa ${n}: ${chosen.size} ${chosen.size === 1 ? 'żołnierz' : 'żołnierzy'}. Wybierasz ją klawiszem ${n}.`);
     play('select');
     showArmy();
+    armyBarUpdate();
     return;
   }
-  const ids = (groups.get(n) ?? []).filter((id) => game.soldiers.some((x) => x.id === id && x.owner === ME));
-  if (!ids.length) return;
   const now = performance.now();
   if (lastGroup.n === n && now - lastGroup.at < 450) {
-    // drugie naciśnięcie: kamera nad środkiem grupy
     const list = game.soldiers.filter((x) => ids.includes(x.id));
     renderer.lookAt(list.reduce((a, x) => a + x.px, 0) / list.length / 256, list.reduce((a, x) => a + x.py, 0) / list.length / 256, 26);
     lastGroup = { n: 0, at: 0 };
@@ -1231,6 +1230,37 @@ window.addEventListener('keydown', (e) => {
   lastGroup = { n, at: now };
   chooseSoldiers(ids, false);
   play('select');
+}
+
+let armyBarKey = '';
+/** Odświeża pasek wojska (grupy i portrety zaznaczonych), tylko gdy coś się zmieniło */
+function armyBarUpdate(): void {
+  const mine = game.soldiers.filter((x) => x.owner === ME);
+  const alive = new Set(mine.map((x) => x.id));
+  const byId = new Map(mine.map((x) => [x.id, x]));
+  const gl = [...groups].map(([n, ids]) => {
+    const live = ids.filter((id) => alive.has(id));
+    const kinds = new Map<string, number>();
+    for (const id of live) { const k = UNITS[byId.get(id)!.kind]!.id; kinds.set(k, (kinds.get(k) ?? 0) + 1); }
+    return { n, count: live.length, kind: [...kinds].sort((a, b) => b[1] - a[1])[0]?.[0] };
+  });
+  const sel = mine.filter((x) => chosen.has(x.id));
+  const active = groupOf();
+  const key = `${mine.length > 0}|${gl.map((g) => `${g.n}:${g.count}:${g.kind}`).join()}|${active}|${sel.map((x) => `${x.id}:${x.hp}`).join()}`;
+  if (key === armyBarKey) return;
+  armyBarKey = key;
+  hud.setArmyBar({ show: mine.length > 0 || groups.size > 0, groups: gl, active, selected: sel.map((x) => ({ id: x.id, kind: UNITS[x.kind]!.id, hp: x.hp, max: UNITS[x.kind]!.hp, name: t(UNITS[x.kind]!.name) })) });
+}
+setInterval(() => { if (game) armyBarUpdate(); }, 250);
+
+window.addEventListener('keydown', (e) => {
+  if (!e.code.startsWith('Digit') || e.ctrlKey || e.metaKey || e.altKey || renderer.walking || menu.isOpen()) return;
+  const tag = (e.target as HTMLElement | null)?.tagName;
+  if (tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA') return;
+  const n = Number(e.code.slice(5));
+  if (!(n >= 0 && n <= 9)) return;
+  e.preventDefault();
+  groupAction(n, e.shiftKey ? 'save' : 'pick');
 });
 
 // --- okrzyki wojska: potwierdzenie przy zaznaczeniu i rozkazie (dymek nad jednym żołnierzem i szorstki głos) ---

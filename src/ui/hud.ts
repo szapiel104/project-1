@@ -15,8 +15,10 @@ export interface HudEvents {
   onArmyStance(stance: number): void;
   /** Marsz: 0 zwykły (nie oglądają się na wroga), 1 z walką (biją każdego po drodze) */
   onArmyMarch(march: number): void;
-  /** Portret żołnierza w panelu: zostaw tylko jego (Shift: odznacz go) */
+  /** Portret żołnierza: odznacz go (Shift: zostaw tylko jego) */
   onArmyUnit(id: number, shift: boolean): void;
+  /** Miejsce grupy na pasku wojska: klik = wybierz (puste: zapisz zaznaczonych), Shift = zapisz, prawy = wyczyść */
+  onGroup(n: number, action: 'pick' | 'save' | 'clear'): void;
   onNewGame(seedText: string, preset: MapPresetId): void;
   onRandom(preset: MapPresetId): void;
   onPickBuilding(id: string | null): void;
@@ -84,6 +86,8 @@ export interface Hud {
   /** Karta mieszkańca: imię i kilka wierszy opisu */
   showPerson(person: { name: string; lines: string[] } | null): void;
   /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
+  /** Pasek wojska nad dolnym menu: grupy 1–9 i 0 oraz portrety zaznaczonych */
+  setArmyBar(v: { show: boolean; groups: { n: number; count: number; kind?: string }[]; active?: number; selected: { id: number; kind: string; hp: number; max: number; name: string }[] }): void;
   showArmy(army: { id?: number; name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number; march: number; group?: number }): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
@@ -652,11 +656,68 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   floaters.append(drawer, info);
   const dock = el('div', 'dock');
   dock.append(toolbar, bar);
-  bottom.append(floaters, buildbar, dock);
+  // ---- pasek wojska nad menu: grupy pod cyframi i portrety zaznaczonych ----
+  const armyBar = el('div', 'armybar');
+  armyBar.hidden = true;
+  const slotsWrap = el('div', 'army-slots');
+  slotsWrap.setAttribute('role', 'group');
+  slotsWrap.setAttribute('aria-label', 'Grupy wojska');
+  const pickedBox = el('div', 'army-picked');
+  pickedBox.setAttribute('role', 'group');
+  pickedBox.setAttribute('aria-label', 'Zaznaczeni żołnierze');
+  armyBar.append(slotsWrap, pickedBox);
+  const slots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => {
+    const b = el('button', 'army-slot');
+    b.type = 'button';
+    const num = el('span', 'army-slot-n', String(n));
+    const pic = el('span', 'army-slot-pic');
+    const count = el('span', 'army-slot-count');
+    b.append(num, pic, count);
+    b.addEventListener('click', (e) => events.onGroup(n, e.shiftKey ? 'save' : 'pick'));
+    b.addEventListener('contextmenu', (e) => { e.preventDefault(); events.onGroup(n, 'clear'); });
+    slotsWrap.append(b);
+    return { n, b, pic, count, kind: '' };
+  });
+  let pickedKey = '';
+  bottom.append(floaters, buildbar, armyBar, dock);
   root.append(toast, bottom);
   showCategory(null);
 
   return {
+    setArmyBar(v) {
+      armyBar.hidden = !v.show;
+      if (!v.show) return;
+      for (const sl of slots) {
+        const g = v.groups.find((x) => x.n === sl.n);
+        const count = g?.count ?? 0;
+        const kind = count ? g?.kind ?? 'spearman' : '';
+        if (sl.kind !== kind) { sl.kind = kind; sl.pic.innerHTML = kind ? (kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT) : ''; }
+        setText(sl.count, count ? String(count) : '');
+        sl.b.classList.toggle('empty', !count);
+        sl.b.setAttribute('aria-pressed', String(v.active === sl.n));
+        const label = count ? `Grupa ${sl.n}: ${count}. Klik: wybierz (dwa razy: kamera). Shift + klik: zapisz zaznaczonych. Prawy klik: wyczyść.` : `Grupa ${sl.n} pusta. Klik albo Shift + ${sl.n}: zapisz zaznaczonych.`;
+        if (sl.b.title !== label) { sl.b.title = label; sl.b.setAttribute('aria-label', label); }
+      }
+      const key = v.selected.slice(0, 30).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}`).join() + v.selected.length;
+      if (key === pickedKey) return;
+      pickedKey = key;
+      pickedBox.replaceChildren(...v.selected.slice(0, 30).map((u) => {
+        const card = el('button', 'roster-card');
+        card.type = 'button';
+        card.title = `${u.name}. Klik: odznacz. Shift + klik: zostaw tylko jego.`;
+        card.setAttribute('aria-label', `${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%. Odznacz.`);
+        card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
+        const bar = el('span', 'roster-hp');
+        const fill = el('span');
+        fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;
+        bar.append(fill);
+        card.append(bar);
+        card.addEventListener('click', (e) => events.onArmyUnit(u.id, e.shiftKey));
+        return card;
+      }));
+      if (v.selected.length > 30) pickedBox.append(el('span', 'roster-more', `+${v.selected.length - 30}`));
+      pickedBox.hidden = !v.selected.length;
+    },
     setSeed(text, presetId) { seed.value = text; mode.value = presetId; },
     setHash(hash) { setText(hashLine, `${t('hud.hash')}: ${hash.toString(16).padStart(8, '0')}`); },
     update(v) {
@@ -774,7 +835,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         roster.replaceChildren(...army.slice(0, 24).map((u) => {
           const card = el('button', 'roster-card');
           card.type = 'button';
-          card.title = `${u.name}. Klik: zostaw tylko jego. Shift + klik: odznacz.`;
+          card.title = `${u.name}. Klik: odznacz. Shift + klik: zostaw tylko jego.`;
           card.setAttribute('aria-label', `${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%`);
           if (u.id) { const id = u.id; card.addEventListener('click', (e) => events.onArmyUnit(id, e.shiftKey)); }
           card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;

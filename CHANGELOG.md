@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.14.1 — pasek wojska (2026-10-13)
+
+- Nad dolnym menu pasek wojska: 10 miejsc na grupy (1–9 i 0) z portretem i liczbą żołnierzy; klik = wybierz grupę (dwa razy = kamera), klik w puste miejsce albo Shift + klik = zapisz zaznaczonych, prawy klik = wyczyść
+- Obok grup portrety zaznaczonych żołnierzy ze zdrowiem: klik = odznacz, Shift + klik = zostaw tylko jego
+- Klawisz 0 to dziesiąta grupa; mniejsze, równe kółka zaznaczenia (nie nachodzą na siebie w szyku)
+
 ## 0.14.0 — atak w marszu, grupy, okrzyki (2026-10-13)
 
 - Tryb marszu w panelu wojska: zwykły albo z walką (biją każdego wroga po drodze, potem idą dalej na miejsce); Ctrl + prawy klik odwraca tryb dla jednego rozkazu

@@ -360,8 +360,8 @@ export class GameRenderer {
       this.scene.add(mesh);
       return mesh;
     };
-    this.ringsBack = mark(0.25, 0.4, 0x120c05, 0.6, 20);
-    this.rings = mark(0.28, 0.36, 0xffd34d, 1, 21);
+    this.ringsBack = mark(0.17, 0.29, 0x120c05, 0.6, 20);
+    this.rings = mark(0.195, 0.262, 0xffd34d, 1, 21);
     this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.peasantBodies = new Figures(MAX_UNITS, this.scene);
     this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);

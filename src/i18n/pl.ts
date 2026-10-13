@@ -222,7 +222,7 @@ export const pl = {
   'hud.trainCost': '1 włócznia, 8 złota, 1 wolny chłop',
   'hud.trainNo': 'Brakuje włóczni, złota albo wolnego chłopa',
   'hud.soldiers': 'Zaznaczeni żołnierze',
-  'hud.orderHint': 'Prawy klik: marsz albo atak (Ctrl: odwrotny tryb marszu). Prawy przeciągnięty: linia frontu i kierunek. Podwójny klik na żołnierzu: wszyscy tego rodzaju. Shift + klik na zaznaczonym albo na portrecie: odznacz go. Shift + cyfra: zapisz grupę, cyfra: wybierz, dwa razy: kamera do grupy. Q/E obraca kamerę.',
+  'hud.orderHint': 'Prawy klik: marsz albo atak (Ctrl: odwrotny tryb marszu). Prawy przeciągnięty: linia frontu i kierunek. Podwójny klik na żołnierzu: wszyscy tego rodzaju. Shift + klik na zaznaczonym albo klik w jego portret: odznacz go. Shift + cyfra (albo klik w puste miejsce na pasku): zapisz grupę, cyfra: wybierz, dwa razy: kamera do grupy, prawy klik na pasku: wyczyść. Q/E obraca kamerę.',
   'b.roadSand': 'Droga piaskowa',
   'd.roadSand': 'Ubita piaskowa droga. Ludzie chodzą po niej o ćwierć szybciej. Nic nie kosztuje.',
   'b.roadStone': 'Droga kamienna',
