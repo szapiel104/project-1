@@ -14,6 +14,7 @@ export interface GalleryEntry { id: string; name: string; group: string; text: s
 
 const PEOPLE: GalleryEntry[] = [
   { id: 'peasant', group: 'Ludzie', name: 'Chłopi', text: 'Mieszkańcy osady: noszą drewno, kamień i żywność, pracują w warsztatach, stawiają budynki. Każdy wygląda trochę inaczej — czapka, kaptur, broda, fartuch.' },
+  { id: 'guard', group: 'Ludzie', name: 'Strażnik miejski', text: 'Straż zamku, jak w Starym Obozie: zbroja z czerwonej skóry i żelaznych płyt, naramienniki, miecz w dłoni, pas w barwach pana. Za dnia stoi przy bramie i obchodzi osadę, nocą patroluje z pochodnią. Nie słucha rozkazów. Poległego zastępuje rekrut szkolony w twierdzy (włócznia i złoto, ok. półtorej minuty).' },
   { id: 'spearman', group: 'Ludzie', name: 'Włócznik', text: 'Podstawowy żołnierz: kolczuga z czepcem pod waffenrockiem z krzyżem, kapalin albo hełm z nosalem, wypukła tarcza z okuciem i włócznia z liściastym grotem. Trzyma szyk i dźga z bliska. Nosi barwy swojego pana.' },
   { id: 'archer', group: 'Ludzie', name: 'Łucznik', text: 'Pikowana przeszywanica, kaptur z pelerynką, kołczan na plecach, kord u pasa i długi łuk. Strzela z daleka, najlepiej z wieży albo zza palisady. Słaby w zwarciu, więc trzymaj go za włócznikami.' },
   { id: 'wolf', group: 'Zwierzęta', name: 'Wilk', text: 'Wychodzi z lasu nocą. Poluje na samotnych chłopów, przegryza palisadę. W ciemności widać jego świecące oczy.' },
@@ -61,6 +62,7 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
   const peasants = new Figures(3, stage as unknown as THREE.Scene);
   const spearmen = new Figures(2, stage as unknown as THREE.Scene, 'spearman');
   const archers = new Figures(2, stage as unknown as THREE.Scene, 'archer');
+  const guardsFig = new Figures(2, stage as unknown as THREE.Scene, 'guard');
   const wp = wolfParts();
   const wolf = new THREE.Group();
   const wolfBody = new THREE.Mesh(wp.body, wp.mat);
@@ -115,6 +117,7 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
     // chłopi: trzech obok siebie, każdy inny
     if (kind === 'peasant') { [-0.32, 0, 0.32].forEach((x, i) => peasants.set(i, place(x, i === 1 ? 0.12 : -0.05, 0.25 - i * 0.2), i === 1 ? walk : 0, i === 2, team, 11 + i * 7)); peasants.finish(3); } else peasants.finish(0);
     if (kind === 'spearman') { spearmen.set(0, place(-0.16, 0, 0.3), 0, strike, enemy ? foe : team, 3); spearmen.set(1, place(0.18, -0.08, -0.2), walk, false, enemy ? foe : team, 8); spearmen.finish(2); } else spearmen.finish(0);
+    if (kind === 'guard') { guardsFig.set(0, place(-0.16, 0, 0.3), 0, strike, team, 4); guardsFig.set(1, place(0.18, -0.08, -0.2), walk, false, team, 10); guardsFig.finish(2); } else guardsFig.finish(0);
     if (kind === 'archer') { archers.set(0, place(-0.15, 0, 0.3), 0, strike, enemy ? foe : team, 5); archers.set(1, place(0.17, -0.08, -0.2), walk, false, enemy ? foe : team, 9); archers.finish(2); } else archers.finish(0);
     wolf.visible = kind === 'wolf';
     if (wolf.visible) {

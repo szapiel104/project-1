@@ -759,8 +759,10 @@ function canTrain(): boolean {
 }
 
 function chooseSoldiers(ids: number[], add: boolean, quiet = false): void {
-  // straż miejska pilnuje osady sama, nie słucha rozkazów
+  // straż miejska pilnuje osady sama, nie słucha rozkazów; kliknięty strażnik tylko coś burknie
+  const guard = ids.find((id) => { const s = game.soldiers.find((x) => x.id === id); return !!s && !!UNITS[s.kind]!.guard; });
   ids = ids.filter((id) => { const s = game.soldiers.find((x) => x.id === id); return !s || !UNITS[s.kind]!.guard; });
+  if (guard && !ids.length && !quiet) { sayGuard(guard); return; }
   if (!add) chosen.clear();
   for (const id of ids) chosen.add(id);
   if (ids.length && !quiet) shout('select');
@@ -1445,6 +1447,23 @@ function lineFor(id: number): string {
   const job = game.buildings.find((b) => b.id === u.job);
   const jid = job ? BUILDINGS[job.type]!.id : '';
   return SAY[jid] && Math.random() < 0.7 ? pick(jid) : pick('work');
+}
+/** Odzywki straży miejskiej (w duchu strażników Starego Obozu) */
+const GUARD_SAY = {
+  day: ['Czego tu szukasz?', 'Nie szwendaj się tu bez potrzeby.', 'Trzymaj się z dala od kłopotów.', 'Spokojnie. Dopóki ja tu stoję, nikt nie podskoczy.', 'Pan płaci, ja pilnuję. Proste.', 'Masz jakiś problem?'],
+  night: ['Po zmroku lepiej siedź w chacie.', 'Wilki dziś blisko. Słyszałeś je?', 'Cicho. Coś się rusza przy palisadzie.', 'Noc długa, a piwa ani kropli.'],
+  danger: ['Do broni!', 'Wróg pod bramą! Za mną!', 'Nie przejdą, póki ja stoję!'],
+};
+function sayGuard(id: number): void {
+  const s = game.soldiers.find((x) => x.id === id);
+  if (!s) return;
+  const pick = (l: string[]): string => l[Math.floor(Math.random() * l.length)]!;
+  const near = game.soldiers.some((o) => game.players[o.owner]!.team !== game.players[s.owner]!.team && (o.px - s.px) ** 2 + (o.py - s.py) ** 2 < (8 * 256) ** 2) || game.wolves.some((w) => (w.px - s.px) ** 2 + (w.py - s.py) ** 2 < (8 * 256) ** 2);
+  bubble.textContent = pick(near ? GUARD_SAY.danger : clockAt(game.tick).night ? GUARD_SAY.night : GUARD_SAY.day);
+  bubble.hidden = false;
+  sayUnit = id;
+  sayUntil = performance.now() + 3200;
+  talk(bubble.textContent ?? '', id, true);
 }
 function speak(id: number): void {
   bubble.textContent = lineFor(id);

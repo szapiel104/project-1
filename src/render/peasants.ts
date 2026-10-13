@@ -121,7 +121,7 @@ export class Figures {
   private none = new THREE.Matrix4().makeScale(0, 0, 0);
   private color = new THREE.Color();
 
-  constructor(max: number, scene: THREE.Scene, kind: 'peasant' | 'spearman' | 'archer' = 'peasant') {
+  constructor(max: number, scene: THREE.Scene, kind: 'peasant' | 'spearman' | 'archer' | 'guard' = 'peasant') {
     this.muted = kind === 'peasant';
     const always = (): boolean => true;
     const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub']): void => {
@@ -146,6 +146,77 @@ export class Figures {
     const flush = (): void => { for (const x of stills) mk(mergeGeometries(x.geo)!, x.color, new THREE.Vector3(), still, x.shown, x.mat); };
     const still = (): number => 0;
     const tunic = (l: Look): number => l.tunic, skin = (l: Look): number => l.skin;
+    if (kind === 'guard') {
+      // Strażnik Starego Obozu (Gothic): ciężka zbroja z czerwonej skóry i żelaznych płyt, naramienniki, gołą głowa
+      // (krótko ostrzyżony, często z brodą), miecz w prawej dłoni, pochwa u lewego biodra. Pas w barwach pana, żeby
+      // odróżnić swoich od cudzych.
+      const LIFT = 0.035;
+      const head = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.translate(0, -0.47, 0).scale(0.87, 0.87, 0.87).translate(0, 0.47, 0);
+      const legsEnd = this.parts.length + 4;
+      const BOOT = 0x24180f, RED = 0x7a2a1a, DARK = 0x3a1c12, LEATHER = 0x4a2c18, IRON = 0x5f646c, STEEL = 0xb7bcc3, GLOVE = 0x2f2118, BRASS = 0xb08a3a;
+      const hair = (l: Look): number => l.hair, beard = (l: Look): boolean => l.beard || l.headwear % 2 === 0;
+      for (const [x, rot] of [[-0.052, legL], [0.052, legR]] as const) {
+        add(taper(0.047, 0.034, 0.17 + LIFT), DARK, x, 0.235 + LIFT, 0, rot, always, 'leather');
+        // wysokie buty z cholewą i żelaznym nagolennikiem z przodu
+        add(merge(
+          new THREE.CylinderGeometry(0.039, 0.041, 0.11, 8).translate(0, -0.18, 0),
+          new THREE.BoxGeometry(0.07, 0.04, 0.112).translate(0, -0.215, 0.026),
+          new THREE.SphereGeometry(0.036, 8, 4, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.6, 1).translate(0, -0.215, 0.078),
+        ).translate(0, -LIFT, 0), BOOT, x, 0.235 + LIFT, 0, rot, always, 'leather');
+        add(new THREE.BoxGeometry(0.05, 0.1, 0.012).translate(0, -0.13 - LIFT, 0.04), IRON, x, 0.235 + LIFT, 0, rot, always, 'metal');
+      }
+      // twarz, nos, oczy, krótkie włosy i broda
+      fix(head(new THREE.IcosahedronGeometry(0.072, 1).scale(0.95, 1.08, 1).translate(0, 0.555, 0)), skin, 'skin');
+      fix(head(new THREE.BoxGeometry(0.015, 0.027, 0.017).translate(0, 0.548, 0.069)), skin, 'skin');
+      for (const ex of [-0.022, 0.022]) fix(head(new THREE.BoxGeometry(0.014, 0.009, 0.006).translate(ex, 0.564, 0.065)), 0x2a1c14, 'skin');
+      fix(head(new THREE.SphereGeometry(0.075, 14, 6, 0, Math.PI * 2, 0, Math.PI * 0.42).translate(0, 0.563, -0.004)), hair, 'cloth');
+      fix(head(prep(new THREE.IcosahedronGeometry(0.05, 1).scale(1.1, 0.9, 0.8).translate(0, 0.515, 0.032), (_x, y) => 0.8 + (y - 0.48) * 2)), hair, 'cloth', beard);
+      // kaftan z czerwonej skóry do pół uda, ciemny obrębek
+      fix(prep(lathe([[0.122, 0.14], [0.118, 0.2], [0.102, 0.29], [0.108, 0.34], [0.12, 0.4], [0.114, 0.445], [0.08, 0.472], [0.048, 0.488]], 16, 0.78), (x, y, z) => {
+        if (y < 0.16) return 0.55;
+        const panel = y < 0.29 ? 0.88 + 0.12 * Math.sign(Math.cos(Math.atan2(x, z) * 4)) : 1; // pasy skóry spódnicy
+        return panel * (0.85 + (y - 0.14) * 0.4);
+      }), RED, 'leather');
+      // napierśnik z żelaznych płyt nachodzących na siebie (z przodu i z tyłu)
+      fix(prep(lathe([[0.112, 0.31], [0.116, 0.34], [0.123, 0.39], [0.118, 0.43], [0.09, 0.458]], 16, 0.8), (_x, y) => 0.75 + 0.25 * (((y - 0.31) / 0.03) % 1)), IRON, 'metal');
+      // naramienniki: dwie warstwy wypukłych płyt na każdym barku
+      for (const sx of [-1, 1]) {
+        fix(new THREE.SphereGeometry(0.058, 12, 6, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 0.62, 1.05).translate(sx * 0.125, 0.452, 0), IRON, 'metal');
+        fix(new THREE.SphereGeometry(0.06, 12, 4, 0, Math.PI * 2, Math.PI * 0.3, Math.PI * 0.2).scale(1, 0.9, 1.05).translate(sx * 0.13, 0.43, 0), STEEL, 'metal');
+      }
+      // pas z mosiężną klamrą, szarfa w barwach pana przez pierś
+      fix(lathe([[0.108, 0.284], [0.112, 0.296], [0.112, 0.31], [0.107, 0.322]], 16, 0.8), LEATHER, 'leather');
+      fix(new THREE.BoxGeometry(0.032, 0.028, 0.012).translate(0, 0.303, 0.09), BRASS, 'metal');
+      fix(prep(lathe([[0.122, -0.013], [0.125, 0], [0.122, 0.013]], 18, 0.82).rotateZ(0.6).translate(0, 0.37, 0), () => 1), tunic);
+      // pochwa miecza u lewego biodra
+      fix(new THREE.BoxGeometry(0.022, 0.2, 0.014).rotateZ(-0.3).translate(-0.118, 0.2, 0.02), 0x1f1611, 'leather');
+      fix(new THREE.BoxGeometry(0.026, 0.014, 0.018).rotateZ(-0.3).translate(-0.088, 0.296, 0.02), BRASS, 'metal');
+      // ręce: rękawy z czerwonej skóry, karwasze, rękawice
+      const sleeve = (): THREE.BufferGeometry => prep(merge(new THREE.SphereGeometry(0.035, 10, 6).scale(1, 0.85, 1).translate(0, -0.004, 0), taper(0.036, 0.029, 0.175)), (_x, y) => 0.82 + 0.1 * Math.cos((y * Math.PI * 2) / 0.04));
+      const hand = (): THREE.BufferGeometry => new THREE.IcosahedronGeometry(0.031, 1).scale(1, 1.2, 1.05).translate(0, -0.195, 0.004);
+      add(sleeve(), RED, -0.128, 0.45, 0, armL, always, 'leather');
+      add(new THREE.CylinderGeometry(0.036, 0.034, 0.06, 9).translate(0, -0.15, 0), LEATHER, -0.128, 0.45, 0, armL, always, 'leather');
+      add(hand(), GLOVE, -0.128, 0.45, 0, armL, always, 'leather');
+      // prawa ręka z mieczem: przy marszu luźno, w walce zamach z góry
+      const swordArm = (s: number, up: boolean): number => (up ? -2.2 : s * 0.55 - 0.15);
+      add(sleeve(), RED, 0.128, 0.45, 0, swordArm, always, 'leather');
+      add(new THREE.CylinderGeometry(0.036, 0.034, 0.06, 9).translate(0, -0.15, 0), LEATHER, 0.128, 0.45, 0, swordArm, always, 'leather');
+      add(hand(), GLOVE, 0.128, 0.45, 0, swordArm, always, 'leather');
+      // miecz: rękojeść w dłoni, jelec, głowica, prosta klinga z wgłębieniem; w spoczynku ostrzem w dół i lekko w przód
+      const sword = { at: new THREE.Vector3(0, -0.195, 0.01), rot: (_s: number, up: boolean): number => (up ? -0.9 : -0.55) };
+      add(merge(
+        new THREE.CylinderGeometry(0.009, 0.009, 0.06, 6).translate(0, 0.012, 0),
+        new THREE.SphereGeometry(0.014, 6, 4).translate(0, 0.047, 0),
+      ), 0x3a2416, 0.128, 0.45, 0, swordArm, always, 'leather', sword);
+      add(merge(
+        new THREE.BoxGeometry(0.075, 0.011, 0.016).translate(0, -0.022, 0),
+        new THREE.BoxGeometry(0.026, 0.27, 0.0055).translate(0, -0.165, 0),
+        new THREE.ConeGeometry(0.0185, 0.04, 4).rotateY(Math.PI / 4).scale(1, 1, 0.3).rotateX(Math.PI).translate(0, -0.32, 0),
+      ), STEEL, 0.128, 0.45, 0, swordArm, always, 'metal', sword);
+      flush();
+      for (let i = legsEnd; i < this.parts.length; i++) this.parts[i]!.pos.y += LIFT;
+      return;
+    }
     if (kind === 'spearman' || kind === 'archer') {
       const archer = kind === 'archer';
       // dłuższe nogi i mniejsza głowa niż u chłopa: sylwetka żołnierza, a nie figurki

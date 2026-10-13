@@ -161,6 +161,7 @@ export class GameRenderer {
   private grade!: ShaderPass;
   private rain = 0;
   private hammers!: THREE.InstancedMesh;
+  private guardsFig!: Figures;
   /** Słomiane posłania pod śpiącymi bez dachu nad głową */
   private bedrolls!: THREE.InstancedMesh;
   /** Siekiera drwala i kilof kopacza: w prawej dłoni, obracane w barku jak młotek */
@@ -389,6 +390,7 @@ export class GameRenderer {
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.archers = new Figures(MAX_UNITS, this.scene, 'archer');
+    this.guardsFig = new Figures(MAX_UNITS, this.scene, 'guard');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
       tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
       tint(new THREE.ConeGeometry(0.02, 0.07, 4).rotateX(Math.PI / 2).translate(0, 0, 0.27), 0x6a6e76),
@@ -2457,8 +2459,11 @@ export class GameRenderer {
       }
       // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
       if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
-      if (ranged) { this.archers.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); this.spearmen.set(n, ZERO, 0, false, 0, s.id); }
-      else { this.archers.set(n, ZERO, 0, false, 0, s.id); this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); }
+      const teamC = TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888;
+      // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
+      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, swing, striking, teamC, s.id);
+      this.archers.set(n, ranged ? t.matrix : ZERO, swing, striking, teamC, s.id);
+      this.spearmen.set(n, !ranged && !udef.guard ? t.matrix : ZERO, swing, striking, teamC, s.id);
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
       // kółko i ramka zaznaczenia idą za figurą (z dociągnięciem do grupy), nie za polem z symulacji
@@ -2485,6 +2490,7 @@ export class GameRenderer {
     if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
     this.spearmen.finish(n);
     this.archers.finish(n);
+    this.guardsFig.finish(n);
     this.flyArrows();
     this.soldierTorches.count = torches;
     this.soldierTorches.instanceMatrix.needsUpdate = true;
