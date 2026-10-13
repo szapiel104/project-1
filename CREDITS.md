@@ -29,3 +29,4 @@ Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://g
 - Ground 044 → `dirt.jpg` (wydeptana ziemia)
 - Rock 022 → `rock.jpg` (skała na zboczach)
 - Mapy normalnych `*_n.jpg` policzone z jasności zdjęć.
+- Rock 026 → `cliff.jpg` (poszarpane turnie w górach)

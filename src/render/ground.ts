@@ -20,7 +20,7 @@ const cache = new Map<string, THREE.Texture>();
 function tex(name: string, color: boolean): THREE.Texture {
   let t = cache.get(name);
   if (t) return t;
-  t = loader!.load(base() + name + '.jpg?v=3'); // numer wersji: przeglądarka nie trzyma starego zdjęcia po podmianie
+  t = loader!.load(base() + name + '.jpg?v=4'); // numer wersji: przeglądarka nie trzyma starego zdjęcia po podmianie
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 8;
   if (color) t.colorSpace = THREE.SRGBColorSpace;
@@ -78,7 +78,7 @@ vWN = normalize(mat3(modelMatrix) * objectNormal);
 `;
 
 const FRAG_HEAD = /* glsl */ `
-uniform sampler2D tGrass1, tGrass2, tMeadow, tForest, tPebble, tDirt, tRock, tNoise;
+uniform sampler2D tGrass1, tGrass2, tMeadow, tForest, tPebble, tDirt, tRock, tCliff, tNoise;
 uniform sampler2D nGrass, nForest, nPebble, nRock;
 uniform float uDark;
 varying vec4 vSplat;
@@ -116,22 +116,28 @@ const FRAG_ALBEDO = /* glsl */ `
   vec3 rZ = texture2D(tRock, vWP.xy / 6.0).rgb;
   vec3 bw = pow(an, vec3(4.0)); bw /= (bw.x + bw.y + bw.z);
   vec3 rock = rX * bw.x + rTop * bw.y + rZ * bw.z;
+  // druga skała (poszarpane turnie) w wielkich płatach i warstwy jaśniejsze/ciemniejsze wzdłuż wysokości
+  vec3 cX = texture2D(tCliff, vWP.zy / 7.5).rgb, cZ = texture2D(tCliff, vWP.xy / 7.5).rgb, cT = texture2D(tCliff, w / 7.5).rgb;
+  vec3 cliff = (cX * bw.x + cT * bw.y + cZ * bw.z) * vec3(0.78, 0.76, 0.72);
+  rock = mix(rock, cliff, smoothstep(0.35, 0.65, nM.a));
+  float strata = texture2D(tNoise, vec2(vWP.y / 3.2, w.x / 140.0 + w.y / 170.0)).g;
+  rock *= 0.78 + strata * 0.4;
 
   // udziały: łąka w plamach, drobne kamienie i prześwity ziemi rozsiane po trawie
-  float wMeadow = smoothstep(0.66, 0.9, nS.g * 0.75 + nD.b * 0.3) * 0.85;
-  float wPeb = clamp(vSplat.y + smoothstep(0.9, 0.99, nD.a * 0.7 + nS.r * 0.4) * 0.7 + vSplat.w * smoothstep(0.55, 0.8, nD.r) * 0.6, 0.0, 1.0);
+  float wMeadow = smoothstep(0.74, 0.95, nS.g * 0.75 + nD.b * 0.3) * 0.7;
+  float wPeb = clamp(vSplat.y + smoothstep(0.99, 1.06, nD.a * 0.7 + nS.r * 0.4) * 0.5 + vSplat.w * smoothstep(0.6, 0.85, nD.r) * 0.45, 0.0, 1.0);
   float wForest = clamp(vSplat.x * (0.75 + nS.a * 0.5), 0.0, 1.0);
-  float wDirt = clamp(vSplat.w * 1.15 + smoothstep(0.95, 1.05, nS.r * 0.6 + nD.g * 0.5) * 0.6, 0.0, 1.0);
+  float wDirt = clamp(vSplat.w * 1.15 + smoothstep(1.0, 1.08, nS.r * 0.6 + nD.g * 0.5) * 0.5, 0.0, 1.0);
   float wRock = clamp(vSplat.z, 0.0, 1.0);
   float steep = smoothstep(0.82, 0.62, vWN.y);
   wRock = max(wRock, steep);
 
   // mieszanie po wysokości (jaśniejsze = wystaje): przejścia poszarpane, kamyki wychodzą z ziemi
-  float hG = lum(grass) * 1.3 + 0.15, hM = lum(meadow) * 1.2 + 0.1, hF = lum(forest), hP = lum(pebble) * 1.6, hD = lum(dirt) * 0.8, hR = lum(rock) + 0.3;
+  float hG = lum(grass) * 1.3 + 0.15, hM = lum(meadow) * 1.2 + 0.1, hF = lum(forest), hP = lum(pebble) * 1.15, hD = lum(dirt) * 0.8, hR = lum(rock) + 0.3;
   float aG = (1.0 - wMeadow) * (1.0 - max(max(wForest, wDirt), max(wPeb, wRock))) + hG;
   float aM = wMeadow * (1.0 - max(max(wForest, wDirt), wRock)) * 0.9 + hM;
   float aF = wForest * 1.2 + hF;
-  float aP = wPeb * 1.3 + hP - 0.3;
+  float aP = wPeb * 1.3 + hP - 0.45;
   float aD = wDirt * 1.25 + hD;
   float aR = wRock * 1.6 + hR - 0.4;
   float top = max(max(max(aG, aM), max(aF, aP)), max(aD, aR)) - 0.22;
@@ -146,6 +152,15 @@ const FRAG_ALBEDO = /* glsl */ `
   vec3 tnR = texture2D(nRock, w / 6.0).xyz * 2.0 - 1.0;
   gNormal = normalize((tnG * (bG + bM * 0.6) + tnF * (bF + bD + bM * 0.4) + tnP * bP * 1.4 + tnR * bR * 1.3) / sum);
 
+  // góry: na płaskich półkach trawa i mech, wysoko śnieg (mniej na stromiznach), granica postrzępiona szumem
+  float ledge = bR / sum * smoothstep(0.8, 0.95, vWN.y) * smoothstep(0.45, 0.7, nS.b) * (1.0 - smoothstep(5.0, 7.5, vWP.y));
+  alb = mix(alb, grass * 0.8, ledge * 0.85);
+  float line = 6.8 + nM.g * 2.4 + (nD.r - 0.5) * 0.8;
+  float snow = smoothstep(line, line + 1.1, vWP.y) * mix(0.3, 1.0, smoothstep(0.35, 0.8, vWN.y));
+  vec3 snowC = vec3(0.8, 0.83, 0.88) * (0.88 + nD.g * 0.18);
+  snow *= smoothstep(0.0, 0.35, 1.0 - lum(rock) * 0.6 + nD.b * 0.4 - 0.3) * 0.5 + 0.5;
+  alb = mix(alb, snowC, clamp(snow, 0.0, 1.0));
+  gNormal = normalize(mix(gNormal, vec3(0.0, 0.0, 1.0), snow * 0.7));
   // światło i cień w dużej skali: kępy wilgotniejsze i ciemniejsze, suche placki jaśniejsze
   float macro = 0.74 + nM.b * 0.42 + (nS.r - 0.5) * 0.16;
   // wnęki między źdźbłami i kamieniami ciemnieją (fałszywe AO z jasności)
@@ -179,7 +194,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
   if (TEST || !loader) { shared = mat; return mat; }
   const uniforms = {
     tGrass1: { value: tex('grass1', true) }, tGrass2: { value: tex('grass2', true) }, tMeadow: { value: tex('meadow', true) },
-    tForest: { value: tex('forest', true) }, tPebble: { value: tex('pebble', true) }, tDirt: { value: tex('dirt', true) }, tRock: { value: tex('rock', true) },
+    tForest: { value: tex('forest', true) }, tPebble: { value: tex('pebble', true) }, tDirt: { value: tex('dirt', true) }, tRock: { value: tex('rock', true) }, tCliff: { value: tex('cliff', true) },
     tNoise: { value: noiseTexture() },
     nGrass: { value: tex('grass_n', false) }, nForest: { value: tex('forest_n', false) }, nPebble: { value: tex('pebble_n', false) }, nRock: { value: tex('rock_n', false) },
     uDark: { value: 1.0 },
@@ -238,7 +253,7 @@ function waveNormals(): THREE.DataTexture {
 export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat: THREE.MeshStandardMaterial; time: { value: number }; sky: { value: THREE.Color } } {
   const time = { value: 0 };
   const sky = { value: new THREE.Color(0x8a9aa6) };
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, roughness: 0.12, metalness: 0.05, depthWrite: false });
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, roughness: 0.06, metalness: 0.0, depthWrite: false });
   if (TEST || !loader) { mat.color.setHex(0x2c6f8f); mat.opacity = 0.86; return { mat, time, sky }; }
   const uni = { wN: { value: waveNormals() }, shore: { value: shore }, wTime: time, skyCol: sky, mapSize: { value: new THREE.Vector2(w, h) } };
   mat.onBeforeCompile = (sh) => {
@@ -250,7 +265,7 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           vec2 suv = (vWP.xz + mapSize * 0.5) / mapSize;
           wDepth = texture2D(shore, suv).r;
           float d = smoothstep(0.0, 0.55, wDepth);
-          vec3 shallowC = vec3(0.09, 0.12, 0.085), deepC = vec3(0.012, 0.03, 0.038);
+          vec3 shallowC = vec3(0.07, 0.095, 0.075), deepC = vec3(0.008, 0.022, 0.03);
           diffuseColor.rgb = mix(shallowC, deepC, d);
           diffuseColor.a = mix(0.72, 0.95, smoothstep(0.0, 0.3, wDepth));
           // piana: postrzępiona linia tuż przy brzegu, przesuwa się z falami
@@ -262,7 +277,7 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           vec3 n1 = texture2D(wN, vWP.xz / 7.0 + vec2(wTime * 0.021, wTime * 0.013)).xyz * 2.0 - 1.0;
           vec3 n2 = texture2D(wN, vec2(vWP.z, -vWP.x) / 2.9 - vec2(wTime * 0.016, wTime * 0.027)).xyz * 2.0 - 1.0;
           vec3 n3 = texture2D(wN, vWP.xz / 19.0 + vec2(-wTime * 0.008, wTime * 0.006)).xyz * 2.0 - 1.0;
-          vec3 wn = normalize(vec3((n1.xy + n2.xy * 0.7 + n3.xy * 0.8) * 0.75, 1.0));
+          vec3 wn = normalize(vec3((n1.xy * 0.8 + n2.xy * 0.6 + n3.xy * 0.25) * 0.3, 1.0));
           vec3 T = normalize((viewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
           vec3 B = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);
           normal = normalize(T * wn.x - B * wn.y + normal * wn.z);
@@ -270,12 +285,12 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
       .replace('#include <opaque_fragment>', `
         {
           vec3 vdir = normalize(vViewPosition);
-          float fres = pow(1.0 - clamp(dot(normal, vdir), 0.0, 1.0), 2.6);
+          float fres = pow(1.0 - clamp(dot(normal, vdir), 0.0, 1.0), 4.0);
           // odbicie nieba zależy od nachylenia fali: grzbiety łapią jasny horyzont, doliny ciemny zenit
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
-          vec3 skyR = mix(skyCol * 0.62, skyCol * 0.22, smoothstep(0.05, 0.6, rWorld.y));
-          outgoingLight = mix(outgoingLight, skyR, clamp(fres * 1.0, 0.0, 0.6));
+          vec3 skyR = mix(skyCol * 0.5, skyCol * 0.28, smoothstep(0.05, 0.6, rWorld.y)) * vec3(0.78, 0.9, 1.0);
+          outgoingLight = mix(outgoingLight, skyR, clamp(fres * 0.9 + 0.1, 0.0, 0.5));
           outgoingLight += vec3(0.7, 0.72, 0.68) * wFoam * 0.22 * (0.3 + skyCol.g);
           diffuseColor.a = clamp(max(diffuseColor.a, fres * 0.9) + wFoam * 0.2, 0.0, 1.0);
         }

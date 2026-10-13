@@ -414,8 +414,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if ((r >>> 19) % 31 === 0) put(pebbles, x, y, 5, 0.35 + ((r >>> 24) & 7) / 20, 0.8);
         if ((r >>> 21) % 173 === 0) put(pebbles, x, y, 10, 1.5, 0.4);
         // drobne kamyki wystające z darni, częściej tam, gdzie łąka rzadsza
-        if ((r >>> 22) % (lush > 0.5 ? 9 : 5) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
-        if ((r >>> 25) % 17 === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);
+        if ((r >>> 22) % (lush > 0.5 ? 19 : 11) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
+        if ((r >>> 25) % 41 === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);
       }
     }
   }
