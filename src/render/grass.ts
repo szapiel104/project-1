@@ -93,10 +93,10 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       // brzeg dywanu: kępy rzedną i maleją stopniowo przez całą drugą połowę zasięgu (bez widocznego koła)
       float rr = length(aCell) / ${(GRID / 2).toFixed(1)};
       float edge = 1.0 - smoothstep(0.35, 0.97, rr + (gHash(cell + 5.5) - 0.5) * 0.25);
-      float keep = step(r3, dens * 1.15) * step(gHash(cell + 7.7), edge);
-      float sz = mix(0.26, 0.5, gHash(cell + 3.7)) * keep * mix(0.55, 1.0, edge) * uFade;
+      float keep = step(r3, smoothstep(0.25, 0.9, dens) * 1.1) * step(gHash(cell + 7.7), edge);
+      float sz = mix(0.17, 0.32, gHash(cell + 3.7)) * keep * mix(0.55, 1.0, edge) * uFade;
       float ang = r1 * 6.2831;
-      vec3 transformed = vec3(position.x * sz * 1.4, position.y * sz * mix(0.7, 1.25, r2), position.z * sz * 1.4);
+      vec3 transformed = vec3(position.x * sz * 1.4, position.y * sz * mix(0.55, 1.0, r2), position.z * sz * 1.4);
       transformed.xz = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * transformed.xz;
       // wiatr: fale przechodzą przez łąkę, czubki chodzą najmocniej
       float gust = sin(uTime * 1.6 + p.x * 0.35 + p.y * 0.22) * 0.6 + sin(uTime * 3.4 + p.x * 1.7 - p.y * 1.1) * 0.25;

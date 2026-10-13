@@ -525,7 +525,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const grassBase = new Float32Array(w * h);
   for (let t = 0; t < w * h; t++) {
     const tt = map.tiles[t] as Terrain;
-    grassBase[t] = (tt === Terrain.Grass ? 1 : tt === Terrain.Forest ? 0.35 : tt === Terrain.Stone ? 0.25 : tt === Terrain.Iron ? 0.1 : 0) * (1 - sandTile[t]! * 0.95);
+    grassBase[t] = (tt === Terrain.Grass ? 1 : tt === Terrain.Forest ? 0.35 : tt === Terrain.Stone ? 0.25 : tt === Terrain.Iron ? 0.1 : 0) * (sandTile[t]! > 0.12 ? 0 : 1); // na piasku plaży trawy nie ma wcale
   }
   const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), bladeTexture(map.seed));
   if (grass) group.add(grass.mesh);
