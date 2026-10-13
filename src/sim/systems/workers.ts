@@ -76,8 +76,26 @@ function findBed(g: GameState, u: Unit): void {
  * nic nie niesie i stoi między zajęciami (wolny w obozowisku albo pracownik wracający do swojej roboty).
  * Zwraca true, gdy zmienił zajęcie.
  */
+/** Wilk bliżej niż tyle pól budzi śpiącego pod gołym niebem */
+const WOLF_WAKE = 7;
+/** Schronienie przed wilkami: najbliższy budynek z dachem do spania (chata, twierdza), choćby było ciasno */
+function nearestShelter(g: GameState, u: Unit): Building | undefined {
+  let best: Building | undefined, bd = Infinity;
+  for (const b of g.buildings) {
+    if (b.owner !== u.owner || !BUILDINGS[b.type]!.housing || b.door < 0 || b.build) continue;
+    const d = Math.abs((b.door % g.map.width) * FP - u.px) + Math.abs(Math.floor(b.door / g.map.width) * FP - u.py);
+    if (d < bd) { bd = d; best = b; }
+  }
+  return best;
+}
+
 function routine(g: GameState, u: Unit, part: 'work' | 'evening' | 'sleep'): boolean {
   if (u.phase === Phase.Sleeping) {
+    // wilk przy posłaniu: zrywa się i ucieka pod najbliższy dach (tam śpi dalej, choćby na ciasno)
+    if (!u.home && g.wolves.some((w) => !w.leaving && (w.px - u.px) ** 2 + (w.py - u.py) ** 2 < (WOLF_WAKE * FP) ** 2)) {
+      const shelter = nearestShelter(g, u);
+      if (shelter) { u.home = shelter.id; u.target = 0; u.phase = Phase.ToSleep; u.path = []; return false; }
+    }
     if (part === 'sleep') return true;
     u.home = 0; u.target = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; u.path = [];
     return true;

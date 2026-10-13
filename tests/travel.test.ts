@@ -1,6 +1,7 @@
 import { RULES } from '../src/data/rules';
 import { describe, expect, it } from 'vitest';
 import { createGame, Phase } from '../src/sim/state';
+import { BUILDINGS } from '../src/data/buildings';
 import { clockAt } from '../src/sim/clock';
 import { step } from '../src/sim/step';
 import { serialize, deserialize } from '../src/sim/save';
@@ -130,8 +131,14 @@ describe('wilki polują naprawdę', () => {
     while (!(clockAt(g.tick).hour >= 22.5 && clockAt(g.tick).hour < 23)) step(g, []);
     for (const u of g.units) { u.phase = Phase.Sleeping; u.home = 0; u.target = (u.py >> 8) * g.map.width + (u.px >> 8) + 1; u.path = []; }
     for (let i = 0; i < 3; i++) g.wolves.push({ id: 99001 + i, px: 2 * 256 + 128, py: (29 + i) * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
+    // nie ma dokąd uciec: twierdza bez izb (gdy jest dach, obudzeni chowają się pod nim)
+    const keepDef = BUILDINGS[0] as { housing?: number };
+    const saved = keepDef.housing;
+    keepDef.housing = 0;
     let body = false;
-    for (let i = 0; i < 1500; i++) { step(g, []); body ||= g.corpses.some((c) => c.kind === -1); }
+    try {
+      for (let i = 0; i < 1500; i++) { step(g, []); body ||= g.corpses.some((c) => c.kind === -1); }
+    } finally { keepDef.housing = saved; }
     expect(g.players.reduce((n, p) => n + p.stats.lost, 0)).toBeGreaterThan(0);
     expect(body).toBe(true);
   });
@@ -198,5 +205,20 @@ describe('karczma', () => {
     for (let i = 0; i < 50; i++) step(g, []);
     const f = monthlyForecast(g, g.players[0]!);
     expect(f.parts.find((x) => x.key === 'tavern')!.value).toBeGreaterThan(0);
+  });
+});
+
+describe('wilki budzą śpiących', () => {
+  it('śpiący na słomie zrywa się, gdy wilk podchodzi, i ucieka pod dach', () => {
+    const g = createGame(9, '1v1', 2);
+    for (const p of g.players) p.bot = false;
+    while (!(clockAt(g.tick).hour >= 23 && clockAt(g.tick).hour < 23.5)) step(g, []);
+    const u = g.units.find((x) => x.owner === 0)!;
+    // śpi na słomie kilka pól od twierdzy
+    u.px += 6 * 256; u.phase = Phase.Sleeping; u.home = 0; u.target = (u.py >> 8) * g.map.width + (u.px >> 8) + 1; u.path = [];
+    g.wolves.push({ id: 99500, px: u.px + 5 * 256, py: u.py, hp: 45, path: [], target: 0, cd: 0, leaving: false });
+    step(g, []); step(g, []);
+    expect(u.phase).toBe(Phase.ToSleep);
+    expect(u.home).toBeGreaterThan(0);
   });
 });
