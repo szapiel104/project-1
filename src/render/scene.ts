@@ -1954,7 +1954,8 @@ export class GameRenderer {
       else { this.archers.set(n, ZERO, 0, false, 0, s.id); this.spearmen.set(n, t.matrix, swing, striking, TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888, s.id); }
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
-      pos.set(fx - width / 2, y, fy - height / 2);
+      // kółko i ramka zaznaczenia idą za figurą (z dociągnięciem do grupy), nie za polem z symulacji
+      pos.set(px - width / 2, y, pz - height / 2);
       if (this.soldierSel.has(s.id)) {
         m.makeTranslation(pos.x, y + 0.03, pos.z); this.rings.setMatrixAt(rings++, m);
         // kropka na polu docelowym, póki żołnierz idzie
