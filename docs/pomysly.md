@@ -14,9 +14,6 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Lasy i złoża się nie wyczerpują
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach
 - Test dotyku na prawdziwym telefonie i tablecie (dotąd tylko emulacja)
-- Chłopi nie mają animacji chodzenia ani pracy
-- Brak dźwięku
-- Brak zapisu gry: odświeżenie strony zaczyna od nowa
 - Budynki nie mają paska stanu ani informacji, co produkują i jak szybko
 - Przy dużych bitwach wyszukiwanie drogi trzeba będzie przerobić na wspólne ścieżki dla grup
 - Akcje GitHub używają wersji z ostrzeżeniem o Node 20, do podbicia
@@ -59,7 +56,7 @@ Czeka — gra przez sieć:
 - Gracz, który wyszedł z meczu, oddaje miasto botowi
 
 Czeka — poprawki:
-- Animacje pracy (drwal rąbie siekierą, kamieniarz kilofem, piekarz przy piecu)
+- Animacje pracy (drwal rąbie siekierą, kamieniarz kilofem, piekarz przy piecu) — budowniczy z młotkiem zrobiony 13.10, ten sam sposób (osobna poza pracy) dla reszty
 - Chodzenie ludzi: płynniejsze skręty, omijanie się zamiast przenikania
 - Czytelność nocy: pochodnie o większym zasięgu jako opcja
 - Wszystkie panele w jednym stylu (World of Warcraft — Michałowi się podoba)
