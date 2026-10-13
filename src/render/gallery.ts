@@ -1,5 +1,8 @@
 import * as THREE from 'three';
+import { BUILDINGS } from '../data/buildings';
 import { TEAM_COLORS } from '../data/teams';
+import { t } from '../i18n';
+import { buildingModel } from './buildings';
 import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
 import { Figures } from './peasants';
 
@@ -9,15 +12,20 @@ import { Figures } from './peasants';
  */
 export interface GalleryEntry { id: string; name: string; group: string; text: string }
 
-export const GALLERY: GalleryEntry[] = [
-  { id: 'peasant', group: 'Twoi ludzie', name: 'Chłopi', text: 'Mieszkańcy osady: noszą drewno, kamień i żywność, pracują w warsztatach, stawiają budynki. Każdy wygląda trochę inaczej — czapka, kaptur, broda, fartuch.' },
-  { id: 'spearman', group: 'Twoi ludzie', name: 'Włócznik', text: 'Podstawowy żołnierz: kolczuga, kapalin, okrągła tarcza i długa włócznia. Trzyma szyk i dźga z bliska.' },
-  { id: 'archer', group: 'Twoi ludzie', name: 'Łucznik', text: 'Strzela z daleka, najlepiej z wieży albo zza palisady. Słaby w zwarciu — trzymaj go za włócznikami.' },
-  { id: 'enemy-spearman', group: 'Wrogowie', name: 'Włócznik wroga', text: 'Żołnierze przeciwnika noszą jego barwy. Przychodzą falami albo w wypadach na Twoje pola.' },
-  { id: 'enemy-archer', group: 'Wrogowie', name: 'Łucznik wroga', text: 'Wrogi łucznik ostrzeliwuje Twoich ludzi z dystansu i strzela z wież przeciwnika.' },
+const PEOPLE: GalleryEntry[] = [
+  { id: 'peasant', group: 'Ludzie', name: 'Chłopi', text: 'Mieszkańcy osady: noszą drewno, kamień i żywność, pracują w warsztatach, stawiają budynki. Każdy wygląda trochę inaczej — czapka, kaptur, broda, fartuch.' },
+  { id: 'spearman', group: 'Ludzie', name: 'Włócznik', text: 'Podstawowy żołnierz: kolczuga, kapalin, okrągła tarcza i długa włócznia. Trzyma szyk i dźga z bliska. Żołnierze noszą barwy swojego pana.' },
+  { id: 'archer', group: 'Ludzie', name: 'Łucznik', text: 'Strzela z daleka, najlepiej z wieży albo zza palisady. Słaby w zwarciu — trzymaj go za włócznikami.' },
   { id: 'wolf', group: 'Zwierzęta', name: 'Wilk', text: 'Wychodzi z lasu nocą. Poluje na samotnych chłopów, przegryza palisadę. W ciemności widać jego świecące oczy.' },
   { id: 'crow', group: 'Zwierzęta', name: 'Kruk', text: 'Zlatuje na ciała poległych po bitwie. Płoszy się, gdy ktoś podejdzie.' },
 ];
+const CATS: Record<string, string> = { settlement: 'Osada', food: 'Żywność', industry: 'Przemysł', military: 'Wojsko', defense: 'Obrona', roads: 'Drogi' };
+const BUILDING_ENTRIES: GalleryEntry[] = BUILDINGS.filter((d) => !d.road).map((d) => ({
+  id: `b:${d.id}`, group: d.category ? CATS[d.category] ?? 'Budynki' : 'Osada', name: t(d.name),
+  text: (t(`d.${d.id}`) !== `d.${d.id}` ? t(`d.${d.id}`) : '') + (d.w ? ` Zajmuje ${d.w}×${d.h} pól.` : ''),
+}));
+/** Galeria: postacie i zwierzęta albo budynki (pogrupowane jak na belce budowania) */
+export const GALLERY = { people: PEOPLE, buildings: [...BUILDING_ENTRIES].sort((a, b) => Object.values(CATS).indexOf(a.group) - Object.values(CATS).indexOf(b.group)) };
 
 export function createGallery(canvas: HTMLCanvasElement): { show(id: string): void } {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
@@ -60,6 +68,20 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
   const crows = [0, 1].map((k) => { const m = new THREE.Mesh(crowGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 })); m.castShadow = true; m.position.set(k ? 0.18 : -0.15, 0, k ? -0.1 : 0.08); m.rotation.y = k ? 2.2 : -0.6; stage.add(m); return m; });
 
   let current = 'peasant';
+  let shown: THREE.Object3D | null = null;
+  let size = 1;
+  const showBuilding = (id: string): void => {
+    if (shown) { stage.remove(shown); shown = null; }
+    if (!id.startsWith('b:')) { size = 1; return; }
+    const def = BUILDINGS.find((d) => d.id === id.slice(2));
+    if (!def) return;
+    const m = buildingModel(def.id, TEAM_COLORS[0]!);
+    for (const n of ['base', 'patch', 'preview']) { const o = m.getObjectByName(n); if (o) o.visible = false; }
+    m.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    stage.add(m);
+    shown = m;
+    size = Math.max(def.w, def.h, 1);
+  };
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
   const place = (x: number, z: number, yaw: number, scale = 1): THREE.Matrix4 => M.compose(P.set(x, 0, z), Q.setFromAxisAngle(Y, yaw), S.setScalar(scale));
   const t0 = performance.now();
@@ -76,8 +98,8 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
     const walk = Math.sin(t * 7) * 0.5;
     const strike = Math.sin(t * 1.3) > 0.55; // co chwilę cios / strzał
     const team = TEAM_COLORS[0]!, foe = TEAM_COLORS[1]!;
-    const kind = current.replace('enemy-', '');
-    const enemy = current.startsWith('enemy-');
+    const kind = current;
+    const enemy = false;
     // chłopi: trzech obok siebie, każdy inny
     if (kind === 'peasant') { [-0.32, 0, 0.32].forEach((x, i) => peasants.set(i, place(x, i === 1 ? 0.12 : -0.05, 0.25 - i * 0.2), i === 1 ? walk : 0, i === 2, team, 11 + i * 7)); peasants.finish(3); } else peasants.finish(0);
     if (kind === 'spearman') { spearmen.set(0, place(-0.16, 0, 0.3), 0, strike, enemy ? foe : team, 3); spearmen.set(1, place(0.18, -0.08, -0.2), walk, false, enemy ? foe : team, 8); spearmen.finish(2); } else spearmen.finish(0);
@@ -90,15 +112,19 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
       wolf.position.set(0, 0, 0);
     }
     for (const c of crows) { c.visible = kind === 'crow'; c.rotation.x = Math.max(0, Math.sin(t * 5 + c.position.x * 20)) * 0.6; }
-    // kamera powoli krąży; zwierzęta i ptaki z bliska
-    const near = kind === 'crow' ? 0.9 : kind === 'wolf' ? 2.6 : 2.0;
+    // kamera powoli krąży; zwierzęta i ptaki z bliska, budynki z daleka (wg wielkości działki)
+    const building = kind.startsWith('b:');
+    ground.scale.setScalar(building ? size * 0.9 : 1);
+    sun.shadow.camera.left = sun.shadow.camera.bottom = -(building ? size * 1.4 : 1.5); sun.shadow.camera.right = sun.shadow.camera.top = building ? size * 1.4 : 1.5; sun.shadow.camera.updateProjectionMatrix();
+    (scene.fog as THREE.Fog).far = building ? size * 6 + 6 : 9;
+    const near = building ? size * 1.9 + 1.2 : kind === 'crow' ? 0.9 : kind === 'wolf' ? 2.6 : 2.0;
     const yaw = t * 0.35;
-    const lookY = kind === 'crow' ? 0.08 : kind === 'wolf' ? 0.4 : 0.33;
+    const lookY = building ? size * 0.28 : kind === 'crow' ? 0.08 : kind === 'wolf' ? 0.4 : 0.33;
     camera.position.set(Math.sin(yaw) * near, lookY + near * 0.35, Math.cos(yaw) * near);
     camera.lookAt(0, lookY, 0);
     renderer.render(scene, camera);
     requestAnimationFrame(frame);
   };
   requestAnimationFrame(frame);
-  return { show(id) { current = id; } };
+  return { show(id) { current = id; showBuilding(id); } };
 }

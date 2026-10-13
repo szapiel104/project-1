@@ -333,7 +333,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   }
 
   /** Zakładka z modelami: lista po lewej, obracający się model i opis po prawej */
-  function galleryPane(): HTMLElement {
+  function galleryPane(entries: GalleryEntry[]): HTMLElement {
     const box = el('div', 'gallery');
     const list = el('div', 'gallery-list');
     list.setAttribute('role', 'listbox');
@@ -354,7 +354,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     };
     let group = '';
     const first: [GalleryEntry, HTMLButtonElement][] = [];
-    for (const e of GALLERY) {
+    for (const e of entries) {
       if (e.group !== group) { group = e.group; list.append(el('p', 'gallery-group', group)); }
       const b = button(e.name, () => pick(e, b), 'gallery-item');
       b.setAttribute('role', 'option');
@@ -371,7 +371,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       const list = el('ul', 'help-list');
       for (const k of lines) list.append(el('li', '', t(k)));
       return [list];
-    }]), ['Postacie i zwierzęta', () => [galleryPane()]]]);
+    }]), ['Postacie i zwierzęta', () => [galleryPane(GALLERY.people)]], ['Budynki', () => [galleryPane(GALLERY.buildings)]]]);
     const foot = el('div', 'menu-foot');
     foot.append(back());
     screen(t('menu.howTo'), true, tabs, foot);
