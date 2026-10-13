@@ -655,3 +655,18 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .gallery-name { margin: 2px 0 0; font-family: var(--display); font-size: 20px; font-weight: 700; letter-spacing: .05em; }
 .gallery-text { margin: 0; line-height: 1.45; }
 @media (max-width: 700px) { .gallery { grid-template-columns: 1fr; } }
+
+/* ---- znajomi i zaproszenia ---- */
+.net-friends { display: grid; gap: 10px; }
+.net-friend .net-shield { opacity: .55; filter: grayscale(.8); }
+.net-friend.on .net-shield { opacity: 1; filter: drop-shadow(0 1px 1px rgba(0, 0, 0, .45)); }
+.net-tag.off { background: #6b6358; }
+.room-friends { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.room-friends .net-filter { display: inline-flex; align-items: center; gap: 5px; }
+.invite-toast { position: fixed; right: 16px; top: 64px; z-index: 90; display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; align-items: center; width: min(360px, calc(100vw - 32px)); padding: 14px 16px; color: var(--ink); background: radial-gradient(ellipse at 50% 0%, #fbf1d6, #ead6a8 70%); border: 3px solid #3b2716; box-shadow: 0 0 0 2px var(--gold-dark), 0 12px 30px rgba(0, 0, 0, .55); animation: invite-in .35s ease-out; }
+.invite-text { line-height: 1.35; }
+.invite-text strong { font-family: var(--display); letter-spacing: .03em; }
+.invite-acts { grid-column: 1 / -1; display: flex; align-items: center; gap: 14px; }
+.invite-acts .menu-btn { min-height: 40px; font-size: 15px; padding: 0 22px; }
+@keyframes invite-in { from { transform: translateY(-12px); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .invite-toast { animation: none; } }

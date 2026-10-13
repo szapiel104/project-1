@@ -19,7 +19,7 @@ export const me = (): Me | null => (session ? { id: session.user.id, nick: myNic
 /** Słuchacze zmiany konta (logowanie, wylogowanie, nowy nick lub herb) — menu odświeża nagłówek */
 const accountListeners = new Set<() => void>();
 export const onAccount = (f: () => void): (() => void) => { accountListeners.add(f); return () => accountListeners.delete(f); };
-const changed = (): void => { for (const f of accountListeners) f(); };
+const changed = (): void => { for (const f of accountListeners) f(); syncOnline(); };
 
 async function loadNick(): Promise<void> {
   if (!session) { myNick = ''; return; }
@@ -216,4 +216,99 @@ export function roomLink(roomId: string, self: Member): RoomLink {
     close: () => { void ch.untrack(); void supa.removeChannel(ch); },
     ready,
   };
+}
+
+// ---------------- znajomi i obecność ----------------
+export interface Profile { id: string; nick: string }
+/** Gdzie jest gracz: w menu, w pokoju (z nazwą), w meczu przez sieć albo w grze z botami */
+export interface Status { where: 'menu' | 'room' | 'game' | 'solo'; roomId?: string; roomName?: string }
+export type OnlinePlayer = Member & Status;
+export interface Invite { from: Member; roomId: string; roomName: string }
+
+export async function findProfile(nick: string): Promise<Profile | null> {
+  const { data } = await supa.from('profiles').select('id,nick').ilike('nick', nick.trim()).limit(1).maybeSingle();
+  return (data as Profile | null) ?? null;
+}
+
+/** Moja lista znajomych i ci, którzy dodali mnie (a ja ich jeszcze nie) */
+export async function listFriends(): Promise<{ mine: Profile[]; addedMe: Profile[] }> {
+  const m = me();
+  if (!m) return { mine: [], addedMe: [] };
+  const { data } = await supa.from('friends').select('user_id,friend_id').or(`user_id.eq.${m.id},friend_id.eq.${m.id}`);
+  const rows = (data as { user_id: string; friend_id: string }[] | null) ?? [];
+  const mineIds = rows.filter((r) => r.user_id === m.id).map((r) => r.friend_id);
+  const addedIds = rows.filter((r) => r.friend_id === m.id && !mineIds.includes(r.user_id)).map((r) => r.user_id);
+  const ids = [...new Set([...mineIds, ...addedIds])];
+  if (!ids.length) return { mine: [], addedMe: [] };
+  const { data: profs } = await supa.from('profiles').select('id,nick').in('id', ids);
+  const byId = new Map(((profs as Profile[] | null) ?? []).map((p) => [p.id, p]));
+  const pick = (list: string[]): Profile[] => list.map((id) => byId.get(id)).filter((p): p is Profile => !!p).sort((a, b) => a.nick.localeCompare(b.nick, 'pl'));
+  return { mine: pick(mineIds), addedMe: pick(addedIds) };
+}
+
+export async function addFriend(nick: string): Promise<string | null> {
+  const m = me();
+  if (!m) return 'Zaloguj się.';
+  const p = await findProfile(nick);
+  if (!p) return `Nie ma gracza o nicku „${nick.trim()}”.`;
+  if (p.id === m.id) return 'To Ty :)';
+  const { error } = await supa.from('friends').insert({ user_id: m.id, friend_id: p.id });
+  if (error && !/duplicate key/i.test(error.message)) return plErr(error.message);
+  return null;
+}
+
+export async function removeFriend(id: string): Promise<void> {
+  const m = me();
+  if (m) await supa.from('friends').delete().eq('user_id', m.id).eq('friend_id', id);
+}
+
+// Obecność: jeden wspólny kanał, w którym każdy zalogowany gracz ogłasza, gdzie jest. Nic nie trafia do bazy.
+let onlineCh: RealtimeChannel | null = null;
+let inboxCh: RealtimeChannel | null = null;
+let onlineFor = '';
+let status: Status = { where: 'menu' };
+const presenceSubs = new Set<() => void>();
+const inviteSubs = new Set<(i: Invite) => void>();
+export const onPresence = (f: () => void): (() => void) => { presenceSubs.add(f); return () => presenceSubs.delete(f); };
+export const onInvite = (f: (i: Invite) => void): (() => void) => { inviteSubs.add(f); return () => inviteSubs.delete(f); };
+
+function syncOnline(): void {
+  const m = me();
+  const key = m ? `${m.id}:${m.nick}:${m.avatar}` : '';
+  if (key === onlineFor) return;
+  onlineFor = key;
+  if (onlineCh) { void supa.removeChannel(onlineCh); onlineCh = null; }
+  if (inboxCh) { void supa.removeChannel(inboxCh); inboxCh = null; }
+  if (!m) { for (const f of presenceSubs) f(); return; }
+  onlineCh = supa.channel('online', { config: { presence: { key: m.id } } });
+  onlineCh.on('presence', { event: 'sync' }, () => { for (const f of presenceSubs) f(); });
+  onlineCh.subscribe((st) => { if (st === 'SUBSCRIBED') void onlineCh?.track({ id: m.id, nick: m.nick, avatar: m.avatar, ...status }); });
+  // skrzynka zaproszeń: znajomy wysyła na kanał z moim numerem
+  inboxCh = supa.channel(`inbox:${m.id}`);
+  inboxCh.on('broadcast', { event: 'invite' }, (p) => {
+    const i = p.payload as Invite;
+    if (i?.from?.nick && typeof i.roomId === 'string') for (const f of inviteSubs) f(i);
+  });
+  inboxCh.subscribe();
+}
+
+export function setStatus(st: Status): void {
+  status = st;
+  const m = me();
+  if (m && onlineCh) void onlineCh.track({ id: m.id, nick: m.nick, avatar: m.avatar, ...status });
+}
+
+/** Kto jest teraz w grze (zalogowani gracze) */
+export function onlinePlayers(): OnlinePlayer[] {
+  if (!onlineCh) return [];
+  return Object.values(onlineCh.presenceState<OnlinePlayer>()).map((l) => l[l.length - 1]!).filter(Boolean);
+}
+
+export async function sendInvite(toId: string, roomId: string, roomName: string): Promise<void> {
+  const m = me();
+  if (!m) return;
+  const ch = supa.channel(`inbox:${toId}`);
+  await new Promise<void>((ok) => { ch.subscribe((st) => { if (st === 'SUBSCRIBED') ok(); }); setTimeout(ok, 4000); });
+  await ch.send({ type: 'broadcast', event: 'invite', payload: { from: { id: m.id, nick: m.nick, avatar: m.avatar }, roomId, roomName } satisfies Invite });
+  setTimeout(() => void supa.removeChannel(ch), 1500);
 }

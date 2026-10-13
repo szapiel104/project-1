@@ -2,8 +2,8 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { TEAM_COLORS } from '../data/teams';
 import { Lockstep } from '../net/lockstep';
 import {
-  closeMyStaleRooms, createRoom, deleteRoom, getRoom, listRooms, myRecord, myResults, ranking, me, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
-  type Member, type NetMsg, type Room, type RoomLink, type Slot,
+  addFriend, closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, removeFriend, sendInvite, setStatus, deleteRoom, getRoom, listRooms, myRecord, myResults, ranking, me, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
+  type Invite, type Member, type NetMsg, type OnlinePlayer, type Room, type RoomLink, type Slot,
 } from '../net/supa';
 import { AVATAR_COUNT, avatarSvg } from './avatars';
 import { chatLine, cleanChat } from './chat';
@@ -29,6 +29,11 @@ interface Ui {
   screen(heading: string, wide: boolean, ...nodes: Node[]): void;
   showMain(): void;
   onStart(s: OnlineStart): void;
+  /** Otwiera menu i wchodzi do pokoju z zaproszenia */
+  openForJoin(roomId: string): void;
+  /** Czy trwa mecz przez sieć (wtedy zaproszenia nie przeszkadzają) */
+  inMatch(): boolean;
+  onInviteSound?(): void;
 }
 
 const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota', 'las', 'skala', 'rzeka', 'brod'];
@@ -40,6 +45,7 @@ const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
 export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
   const { el, button, screen } = ui;
+  const inMatch = (): boolean => ui.inMatch();
   let stopWatch: (() => void) | null = null;
   /** Wyjście z pokoju przy przejściu na inny ekran */
   let leaveRoom: (() => void) | null = null;
@@ -183,7 +189,15 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       b.setAttribute('aria-selected', String(filter === id));
       tabs.append(b);
     }
-    tabs.append(button('Ranking', () => void showRanking(), 'net-filter net-rank-btn'));
+    const friendsBtn = button('Znajomi', () => void showFriends(), 'net-filter net-rank-btn');
+    const paintFriendsBtn = async (): Promise<void> => {
+      const { mine } = await listFriends();
+      const on = onlinePlayers();
+      const n = mine.filter((f) => on.some((o) => o.id === f.id)).length;
+      friendsBtn.textContent = n ? `Znajomi · ${n} w grze` : 'Znajomi';
+    };
+    void paintFriendsBtn();
+    tabs.append(friendsBtn, button('Ranking', () => void showRanking(), 'net-filter'));
     bar.append(tabs);
     // zakładanie gry
     const create = el('form', 'net-create');
@@ -226,6 +240,81 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     await draw();
     stopWatch = watchRooms(() => void draw());
   }
+
+  // ---------------- znajomi ----------------
+  const where = (o: OnlinePlayer | undefined): string => {
+    if (!o) return 'poza grą';
+    if (o.where === 'room') return `w pokoju „${o.roomName ?? ''}”`;
+    if (o.where === 'game') return 'w meczu przez sieć';
+    if (o.where === 'solo') return 'gra z botami';
+    return 'w menu';
+  };
+  async function showFriends(): Promise<void> {
+    cleanup();
+    const m = me();
+    if (!m) { showLogin(false, '', () => void showFriends()); return; }
+    const wrap = el('div', 'net-friends');
+    const add = el('form', 'net-create');
+    const nick = el('input'); nick.placeholder = 'Nick znajomego'; nick.maxLength = 20; nick.setAttribute('aria-label', 'Nick znajomego'); nick.autocomplete = 'off';
+    const addBtn = el('button', 'menu-btn', 'Dodaj'); addBtn.type = 'submit';
+    add.append(nick, addBtn);
+    const note = msg('');
+    const list = el('div', 'net-list');
+    const draw = async (): Promise<void> => {
+      const { mine, addedMe } = await listFriends();
+      const on = onlinePlayers();
+      const row = (p: { id: string; nick: string }, mineList: boolean): HTMLElement => {
+        const o = on.find((x) => x.id === p.id);
+        const r = el('div', `net-room net-friend${o ? ' on' : ''}`);
+        const info = el('div', 'net-room-info');
+        info.append(el('strong', '', p.nick), el('span', '', where(o)));
+        r.append(shield(o?.avatar ?? 0, 30), info, el('span', o ? 'net-tag' : 'net-tag off', o ? 'w grze' : 'offline'));
+        if (o?.where === 'room' && o.roomId) r.append(button('Dołącz', () => void join(o.roomId!), 'menu-btn net-join'));
+        if (mineList) r.append(button('Usuń', async () => { await removeFriend(p.id); void draw(); }, 'link-btn'));
+        else r.append(button('Dodaj też', async () => { await addFriend(p.nick); void draw(); }, 'menu-btn net-join'));
+        return r;
+      };
+      const out: Node[] = [];
+      out.push(el('p', 'net-label', `Twoi znajomi (${mine.length})`));
+      if (mine.length) out.push(...mine.map((p) => row(p, true)));
+      else out.push(msg('Nikogo jeszcze nie dodałeś. Wpisz nick znajomego powyżej.'));
+      if (addedMe.length) { out.push(el('p', 'net-label', 'Dodali Cię do znajomych')); out.push(...addedMe.map((p) => row(p, false))); }
+      list.replaceChildren(...out);
+    };
+    add.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!nick.value.trim()) return;
+      addBtn.disabled = true;
+      const err = await addFriend(nick.value);
+      addBtn.disabled = false;
+      note.textContent = err ?? `Dodano: ${nick.value.trim()}.`; note.classList.toggle('bad', !!err);
+      if (!err) nick.value = '';
+      void draw();
+    });
+    wrap.append(add, note, list);
+    screen('Znajomi', true, wrap, back(() => void showOnline(), 'Wróć do listy gier'));
+    await draw();
+    stopWatch = onPresence(() => void draw());
+  }
+
+  // zaproszenie od znajomego: okienko w rogu ekranu, w menu i w grze z botami (w meczu przez sieć nie przeszkadzamy)
+  onInvite((i: Invite) => {
+    if (inMatch()) return;
+    document.querySelector('.invite-toast')?.remove();
+    const t = el('div', 'invite-toast panel');
+    t.setAttribute('role', 'alertdialog');
+    t.setAttribute('aria-label', 'Zaproszenie do gry');
+    const txt = el('div', 'invite-text');
+    txt.append(el('strong', '', i.from.nick), ` zaprasza Cię do gry „${i.roomName}”`);
+    const yes = button('Dołącz', () => { t.remove(); ui.openForJoin(i.roomId); }, 'menu-btn');
+    const no = button('Nie teraz', () => t.remove(), 'link-btn');
+    const acts = el('div', 'invite-acts');
+    acts.append(yes, no);
+    t.append(shield(i.from.avatar, 34), txt, acts);
+    document.body.append(t);
+    ui.onInviteSound?.();
+    setTimeout(() => t.remove(), 30_000);
+  });
 
   // ---------------- ranking ----------------
   async function showRanking(): Promise<void> {
@@ -312,7 +401,26 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       catch { prompt('Skopiuj link zaproszenia:', url); }
       setTimeout(() => { invite.textContent = 'Kopiuj link zaproszenia'; }, 2500);
     }, 'link-btn net-invite');
-    box.append(head, teams, note, invite, chatBox);
+    // zaproszenia dla znajomych, którzy są teraz w grze
+    const friendBox = el('div', 'room-friends');
+    const paintFriends = async (): Promise<void> => {
+      const { mine } = await listFriends();
+      const on = onlinePlayers();
+      const here = new Set(slots.filter((x) => x.kind === 'human').map((x) => (x as { id: string }).id));
+      const avail = mine.map((f) => on.find((o) => o.id === f.id)).filter((o): o is OnlinePlayer => !!o && !here.has(o.id));
+      friendBox.replaceChildren();
+      if (!avail.length) { if (mine.length) friendBox.append(el('span', 'net-msg', 'Żaden z Twoich znajomych nie jest teraz w grze.')); return; }
+      friendBox.append(el('span', 'net-label', 'Zaproś:'));
+      for (const o of avail) {
+        const b = button(o.nick, async () => { b.disabled = true; await sendInvite(o.id, room.id, room.name); b.textContent = `${o.nick} ✓`; }, 'net-filter');
+        b.prepend(shield(o.avatar, 18));
+        friendBox.append(b);
+      }
+    };
+    void paintFriends();
+    const offPresence = onPresence(() => void paintFriends());
+    setStatus({ where: 'room', roomId: room.id, roomName: room.name });
+    box.append(head, teams, note, invite, friendBox, chatBox);
 
     const publish = (): void => {
       if (!host) return;
@@ -406,7 +514,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       if (meIdx < 0) { note.textContent = 'Mecz ruszył bez Ciebie — nie było wolnego miejsca.'; note.classList.add('bad'); return; }
       started = true;
       const humans = final.map((s, i) => (s.kind === 'human' ? i : -1)).filter((i) => i >= 0);
-      off(); offMembers(); leaveRoom = null;
+      off(); offMembers(); offPresence(); leaveRoom = null;
+      setStatus({ where: 'game' });
       const net = new Lockstep(link, meIdx, humans);
       ui.onStart({ room, seed, preset: p, level: lv, slots: final, me: meIdx, humans, link, net });
     };
@@ -417,7 +526,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       go(preset, level, room.seed, final);
     };
     leaveRoom = () => {
-      off(); offMembers();
+      off(); offMembers(); offPresence();
+      setStatus({ where: 'menu' });
       if (host) { link.send({ k: 'close' }); void deleteRoom(room.id); }
       link.close();
     };

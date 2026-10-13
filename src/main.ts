@@ -17,7 +17,7 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { Lockstep, TURN } from './net/lockstep';
-import { deleteRoom, me as netMe, saveResult } from './net/supa';
+import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
 import type { OnlineStart } from './ui/online';
 import { createGameChat } from './ui/chat';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
@@ -110,7 +110,7 @@ const hud = createHud(document.getElementById('ui')!, {
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
 mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
 const menu = createMenu(document.body, {
-  onContinue: () => menu.close(),
+  onContinue: () => { menu.close(); if (!net) setStatus({ where: 'solo' }); },
   onNewGame: (seedText, preset, level, dev) => {
     // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
     const cover = document.createElement('div');
@@ -119,6 +119,7 @@ const menu = createMenu(document.body, {
     document.body.append(cover);
     requestAnimationFrame(() => setTimeout(() => {
       start(seedText, preset, undefined, level, dev);
+      setStatus({ where: 'solo' });
       renderer.warmup();
       menu.close();
       (cover.querySelector('.loading-bar span') as HTMLElement).style.width = '100%';
@@ -189,6 +190,7 @@ function endOnline(): void {
   // koniec meczu: gospodarz usuwa pokój z bazy (nic po meczu nie zostaje)
   if (netMe()?.id === netGame.room.host) void deleteRoom(netGame.room.id);
   net = null; netGame = null; netWait.hidden = true;
+  setStatus({ where: 'menu' });
 }
 window.addEventListener('beforeunload', () => endOnline());
 let titleScreen = true;
@@ -207,6 +209,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   endOnline();
   ME = online ? online.me : 0;
   game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans);
+  setStatus({ where: online ? 'game' : 'menu' });
   if (online) {
     net = online.net; netGame = online; netNotes = { desync: false, left: 0 };
     speed = 1; acc = 0;

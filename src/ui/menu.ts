@@ -154,6 +154,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     el, button, screen,
     showMain: () => showMain(),
     onStart: (st) => events.onOnlineStart(st),
+    openForJoin: (id) => { inGame = false; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
+    inMatch: () => events.isOnline(),
   });
   /** Pasek konta nad menu: herb, nick i przycisk konta albo zaproszenie do logowania */
   const account = el('div', 'menu-account');
