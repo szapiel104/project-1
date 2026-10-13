@@ -963,3 +963,12 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .loading-embers i:nth-child(9) { left: 80%; animation-delay: 1.8s; } .loading-embers i:nth-child(10) { left: 89%; animation-delay: 4.9s; animation-duration: 9.5s; }
 .loading-embers i:nth-child(11) { left: 4%; animation-delay: 7s; } .loading-embers i:nth-child(12) { left: 96%; animation-delay: 2.7s; }
 @media (prefers-reduced-motion: reduce) { .loading-embers { display: none; } #loading .loading-bar span::after { animation: none; } }
+/* nowa gra przy lewej krawędzi: szersze okno, treść na środku wysokości, kafelki z oddechem i miejscem na znaczek wyboru */
+.menu.previewing .menu-panel.wide { width: min(720px, calc(100vw / var(--ui, 1) - 380px)); min-width: min(560px, 100vw); align-content: center; padding: 28px 36px; }
+.menu.previewing .menu-panel .menu-heading { text-align: left; background-position: left bottom; }
+.menu-panel .newgame { gap: 16px; }
+.menu-panel .pick { min-height: 92px; padding: 14px 16px; gap: 6px; }
+.menu-panel .pick-big { font-size: 19px; padding-right: 26px; line-height: 1.15; }
+.menu-panel .pick-small { font-size: 14.5px; line-height: 1.3; }
+.menu-panel .pick-group legend { color: #cbb68a; }
+.menu-panel .field > label { color: #cbb68a; }
