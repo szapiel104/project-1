@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { groundGrassTexture2, sharedNoise } from './ground';
 
 /**
  * Trawa jak w nowych grach: gęsty dywan kęp wokół miejsca, na które patrzymy, zamiast pojedynczych kępek na płaskiej ziemi.
@@ -14,8 +15,8 @@ const STEP = 0.19; // odstęp kęp w polach
 
 export interface GrassField {
   mesh: THREE.Mesh;
-  /** Przesuwa dywan nad punkt (x, z) w świecie i ustawia czas wiatru */
-  update(x: number, z: number, time: number): void;
+  /** Przesuwa dywan nad punkt (x, z) w świecie i ustawia czas wiatru; camDist: z daleka dywan znika (wystarcza tekstura ziemi) */
+  update(x: number, z: number, time: number, camDist?: number): void;
   /** Gęstość trawy na polu (0 brak … 1 pełna) */
   setDensity(tile: number, v: number): void;
   /** Mnoży gęstość pola (np. wydeptanie): 1 bez zmian, 0 łyso */
@@ -62,7 +63,8 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   geo.instanceCount = GRID * GRID;
 
   const uni = {
-    uOrigin: { value: new THREE.Vector2() }, uTime: { value: 0 }, uMap: { value: new THREE.Vector2(w, h) },
+    uOrigin: { value: new THREE.Vector2() }, uTime: { value: 0 }, uMap: { value: new THREE.Vector2(w, h) }, uFade: { value: 1 },
+    tNoise: { value: sharedNoise() }, tGround2: { value: groundGrassTexture2() },
     tH: { value: hTex }, tMask: { value: mTex }, tBlade: { value: bladeTex }, tGround: { value: grassTex },
   };
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, alphaTest: 0.5 });
@@ -70,7 +72,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = /* glsl */ `
       attribute vec2 aCell;
-      uniform vec2 uOrigin; uniform float uTime; uniform vec2 uMap;
+      uniform vec2 uOrigin; uniform float uTime; uniform vec2 uMap; uniform float uFade;
       uniform sampler2D tH; uniform sampler2D tMask;
       varying vec2 vGUv; varying vec2 vGW; varying float vGTone;
       float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
@@ -88,9 +90,11 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       vec2 p = (cell + vec2(r1, r2)) * ${STEP.toFixed(3)};         // pozycja w polach mapy
       float dens = texture2D(tMask, (p + 0.5 * vec2(0.0)) / uMap).r;
       // im dalej od środka, tym mniejsze kępy (miękki brzeg dywanu)
-      float edge = 1.0 - smoothstep(0.62, 0.98, length(aCell) / ${(GRID / 2).toFixed(1)});
-      float keep = step(r3, dens * 1.15) * edge;
-      float sz = mix(0.26, 0.5, gHash(cell + 3.7)) * keep;
+      // brzeg dywanu: kępy rzedną i maleją stopniowo przez całą drugą połowę zasięgu (bez widocznego koła)
+      float rr = length(aCell) / ${(GRID / 2).toFixed(1)};
+      float edge = 1.0 - smoothstep(0.35, 0.97, rr + (gHash(cell + 5.5) - 0.5) * 0.25);
+      float keep = step(r3, dens * 1.15) * step(gHash(cell + 7.7), edge);
+      float sz = mix(0.26, 0.5, gHash(cell + 3.7)) * keep * mix(0.55, 1.0, edge) * uFade;
       float ang = r1 * 6.2831;
       vec3 transformed = vec3(position.x * sz * 1.4, position.y * sz * mix(0.7, 1.25, r2), position.z * sz * 1.4);
       transformed.xz = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * transformed.xz;
@@ -102,14 +106,20 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       vGUv = uv; vGW = transformed.xz; vGTone = gHash(cell + 9.1);
     `).replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
     sh.fragmentShader = /* glsl */ `
-      uniform sampler2D tBlade; uniform sampler2D tGround;
+      uniform sampler2D tBlade; uniform sampler2D tGround; uniform sampler2D tGround2; uniform sampler2D tNoise;
       varying vec2 vGUv; varying vec2 vGW; varying float vGTone;
     ` + sh.fragmentShader.replace('#include <map_fragment>', /* glsl */ `
       vec4 bl = texture2D(tBlade, vGUv);
       // barwa z tekstury trawy pod kępą (jak ziemia), kształt i cieniowanie z tekstury źdźbeł
+      // dokładnie jak podłoże: ta sama trawa, te same plamy jasności i żółtawe łaty, więc dywan nie odcina się od ziemi
+      vec4 nM = texture2D(tNoise, vGW / 96.0), nS = texture2D(tNoise, vGW / 23.0 + 0.37);
       vec3 gc = texture2D(tGround, vGW / 3.1).rgb;
+      vec2 r2 = vec2(cos(2.1) * vGW.x - sin(2.1) * vGW.y, sin(2.1) * vGW.x + cos(2.1) * vGW.y);
+      gc = mix(gc, texture2D(tGround2, r2 / 4.3).rgb * vec3(0.92, 0.9, 0.8), smoothstep(0.38, 0.72, nM.r) * 0.85);
+      gc *= 0.74 + nM.b * 0.42 + (nS.r - 0.5) * 0.16;
+      gc = mix(gc, gc * vec3(1.12, 1.04, 0.78), smoothstep(0.62, 0.85, nM.g) * 0.5);
       gc = mix(gc, gc * vec3(1.18, 1.1, 0.72), smoothstep(0.75, 1.0, vGTone) * 0.7);
-      diffuseColor.rgb *= gc * (0.75 + bl.r * 0.8) * mix(0.6, 1.25, smoothstep(0.0, 0.85, vGUv.y));
+      diffuseColor.rgb *= gc * (0.8 + bl.r * 0.55) * mix(0.72, 1.18, smoothstep(0.0, 0.85, vGUv.y));
       diffuseColor.a = bl.a;
       diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;
     `).replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);');
@@ -121,8 +131,10 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
 
   return {
     mesh,
-    update(x: number, z: number, time: number) {
+    update(x: number, z: number, time: number, camDist = 0) {
       uni.uOrigin.value.set(x + w / 2, z + h / 2);
+      uni.uFade.value = 1 - Math.max(0, Math.min(1, (camDist - 32) / 26));
+      mesh.visible = uni.uFade.value > 0.01;
       uni.uTime.value = time;
       if (dirty) { mTex.needsUpdate = true; dirty = false; }
     },

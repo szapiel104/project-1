@@ -45,7 +45,7 @@ export interface TerrainView {
   /** Mokro po deszczu: 0 sucho, 1 błoto i połyskujące drogi */
   setWet(k: number): void;
   /** Gęsta trawa nad punktem (x, z) świata */
-  updateGrass(x: number, z: number, time: number): void;
+  updateGrass(x: number, z: number, time: number, camDist?: number): void;
   /** Pole zabudowane: bez trawy */
   noGrass(tile: number, on?: boolean): void;
   /** Kolor nieba odbijany przez wodę */
@@ -960,7 +960,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     clear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
-    updateGrass(x: number, z: number, time: number) { grass?.update(x, z, time); },
+    updateGrass(x: number, z: number, time: number, camDist?: number) { grass?.update(x, z, time, camDist); },
     noGrass(tile: number, on = true) { builtOn[tile] = on ? 1 : 0; regrass(tile); },
     lod(x: number, z: number, reach: number) {
       for (const c of lodChunks) {

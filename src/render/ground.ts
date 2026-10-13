@@ -199,6 +199,12 @@ const FRAG_NORMAL = /* glsl */ `
 let shared: THREE.MeshStandardMaterial | null = null;
 
 /** Materiał podłoża (wspólny dla planszy i terenu za mapą). Geometria musi mieć atrybut `splat` (vec4). */
+let noiseShared: THREE.DataTexture | null = null;
+/** Ten sam szum plam co na podłożu (trawa korzysta z niego, żeby jaśniej i ciemniej było w tych samych miejscach) */
+export function sharedNoise(): THREE.DataTexture { return (noiseShared ??= noiseTexture()); }
+/** Druga trawa podłoża (plamy jaśniejszej, żółtawej trawy) */
+export function groundGrassTexture2(): THREE.Texture | null { return TEST || !loader ? null : tex('grass2', true); }
+
 /** Zdjęcie trawy podłoża (do barwienia gęstej trawy, żeby zlewała się z ziemią) */
 export function groundGrassTexture(): THREE.Texture | null { return TEST || !loader ? null : tex('grass1', true); }
 
@@ -209,7 +215,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
   const uniforms = {
     tGrass1: { value: tex('grass1', true) }, tGrass2: { value: tex('grass2', true) }, tMeadow: { value: tex('meadow', true) },
     tForest: { value: tex('forest', true) }, tPebble: { value: tex('pebble', true) }, tDirt: { value: tex('dirt', true) }, tRock: { value: tex('rock', true) }, tCliff: { value: tex('cliff', true) },
-    tNoise: { value: noiseTexture() },
+    tNoise: { value: sharedNoise() },
     nGrass: { value: tex('grass_n', false) }, nForest: { value: tex('forest_n', false) }, nPebble: { value: tex('pebble_n', false) }, nRock: { value: tex('rock_n', false) },
     uDark: { value: 1.0 },
   };

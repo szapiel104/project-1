@@ -1070,7 +1070,7 @@ export class GameRenderer {
       const T = (name: string, fn: () => void): void => { const t0 = performance.now(); fn(); this.timing[name] = (this.timing[name] ?? 0) + performance.now() - t0; };
       T('animacje', () => { this.animate(g, this.calm ? 0 : dt); if (!this.calm) v.animate(this.time); });
       T('las', () => this.syncForest(g, v));
-      { const f = this.focusPoint; v.updateGrass(f.x, f.z, this.calm ? 0 : this.time); }
+      { const f = this.focusPoint; v.updateGrass(f.x, f.z, this.calm ? 0 : this.time, this.walk ? 0 : this.cam.distance); }
       if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.syncRubble(g, v, dt));
