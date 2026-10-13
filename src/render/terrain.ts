@@ -7,7 +7,7 @@ import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { ModelFactory } from './models';
-import { bump, pattern } from './textures';
+import { bump, normal, pattern } from './textures';
 
 const HEIGHT_SCALE = 0.03;
 export const HAZE = 0xcfc9b4;
@@ -152,7 +152,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     attr.needsUpdate = true;
     dirtyLo = Infinity; dirtyHi = -1;
   };
-  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7 }));
+  const ground = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7, normalMap: normal('grass'), normalScale: new THREE.Vector2(0.8, 0.8) }));
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(ground);
@@ -348,7 +348,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const CHUNK = 40;
   const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true): Inst | null => {
     if (!list.length) return null;
-    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2 });
+    const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
     const buckets = new Map<number, number[]>();
     list.forEach((it, i) => {
       const k = Math.floor((it.pos.x + 512) / CHUNK) * 4096 + Math.floor((it.pos.z + 512) / CHUNK);
@@ -532,7 +532,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const pathNoise = createNoise2D(rng(map.seed ^ 0x51a7));
   let sandMat: THREE.MeshStandardMaterial | null = null;
   const sandMaterial = (): THREE.MeshStandardMaterial => {
-    if (!sandMat) sandMat = new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, depthWrite: false, roughness: 1, map: pattern('soil'), bumpMap: bump('soil'), bumpScale: 1.2, polygonOffset: true, polygonOffsetFactor: -3 });
+    if (!sandMat) sandMat = new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, depthWrite: false, roughness: 1, map: pattern('soil'), bumpMap: bump('soil'), bumpScale: 1.2, normalMap: normal('soil'), polygonOffset: true, polygonOffsetFactor: -3 });
     return sandMat;
   };
   // Bruk też nie ma równych brzegów: maska o poszarpanej krawędzi wycina go tak, że kamienie

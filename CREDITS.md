@@ -10,6 +10,11 @@ Dalsze tekstury ambientCG (CC0), z paczki ambientcg_1024 dostarczonej przez Mich
 - Roofing Tiles 005 → `slate.jpg` (łupek na wieżach zamku)
 - Bricks 091 → `ashlar.jpg` (mury zamku)
 - Bricks 076 A → `bricks.jpg` (kamienne podmurówki)
+- Fabric 011 → `burlap.jpg` (płótno worków i flag)
+- Grass 004 → `grass.jpg` (trawa)
+- Ground 072 → `soil.jpg` (ziemia, pola, ścieżki)
+- Rock 022 → `rock.jpg` (głazy, kamieniołom)
+- Bark 001 → `bark.jpg` (kora drzew, bale palisady, pniaki)
 
 Strzecha: [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) z Poly Haven (CC0) → `thatch.jpg`; mapa normalnych liczona z mapy przemieszczeń.
 Dla tekstur bez mapy normalnych mapa jest liczona z jasności obrazu.

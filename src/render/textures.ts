@@ -373,7 +373,7 @@ export async function restore(kind: Kind): Promise<boolean> {
  * Zdjęciowe tekstury CC0 (ambientCG, Poly Haven) — w odcieniach szarości,
  * żeby barwę nadawał materiał, plus mapy normalnych dające prawdziwą rzeźbę: bruk, deski, tynk.
  */
-const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster', thatch: 'thatch', slate: 'slate', ashlar: 'ashlar', bricks: 'bricks', burlap: 'burlap' };
+const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster', thatch: 'thatch', slate: 'slate', ashlar: 'ashlar', bricks: 'bricks', burlap: 'burlap', grass: 'grass', soil: 'soil', rock: 'rock', bark: 'bark' };
 const photoBase = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/cc0/';
 const normals = new Map<Kind, THREE.Texture>();
 const photos = new Map<Kind, THREE.Texture>();
