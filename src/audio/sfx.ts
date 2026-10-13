@@ -495,19 +495,6 @@ function thunder(c: AudioContext, at: number): void {
   src.connect(f).connect(g).connect(o); src.start(at); src.stop(at + 4.6);
 }
 
-/** Dzwon: metaliczne uderzenie z nieharmonicznymi tonami i długim wybrzmieniem */
-function bell(c: AudioContext, at: number, strikes: number): void {
-  const o = out2(c, 0, 0.18);
-  for (let k = 0; k < strikes; k++) {
-    const t = at + k * 1.6;
-    for (const [mul, amp] of [[1, 1], [2.4, 0.5], [3.0, 0.35], [4.2, 0.2], [0.5, 0.5]] as const) {
-      const s = c.createOscillator(); s.type = 'sine'; s.frequency.value = 320 * mul;
-      const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(amp, t + 0.01); g.gain.exponentialRampToValueAtTime(0.001, t + 3.2 / mul + 0.6);
-      s.connect(g).connect(o); s.start(t); s.stop(t + 4);
-    }
-  }
-}
-
 /** Róg wojenny: niski, chropowaty dźwięk narastający i opadający — wróg wyrusza */
 export function warHorn(): void {
   const c = ctx;
@@ -530,7 +517,7 @@ export function alarmBell(): void {
   if (!c || muted || c.state !== 'running') return;
   const at = c.currentTime + 0.02;
   const o = c.createGain(); o.gain.value = 0.25; o.connect(busGain.sfx ?? master!);
-  for (let k = 0; k < 6; k++) {
+  for (let k = 0; k < 4; k++) {
     const t = at + k * 0.28;
     for (const [mul, amp] of [[1, 1], [2.7, 0.4], [4.1, 0.2]] as const) {
       const s = c.createOscillator(); s.type = 'sine'; s.frequency.value = 880 * mul;
@@ -556,7 +543,8 @@ export function daySounds(hour: number, rain: number, paused: boolean): boolean 
   if (now > nextThunder) { if (rain > 0.6) { thunder(c, now + 0.4 + Math.random() * 1.2); flash = true; } nextThunder = now + 12 + Math.random() * 18; }
   // dzwon w południe (3 uderzenia) i o zmierzchu (5)
   const h = Math.floor(hour);
-  if (h !== lastBellHour) { if (lastBellHour >= 0 && (h === 12 || h === 19)) bell(c, now, h === 12 ? 3 : 5); lastBellHour = h; }
+  // dzwon nie bije o pełnych godzinach: odzywa się tylko na alarm (alarmBell), gdy ktoś atakuje osadę
+  if (h !== lastBellHour) lastBellHour = h;
   return flash;
 }
 

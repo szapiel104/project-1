@@ -1205,7 +1205,8 @@ function raiseAlert(x: number, y: number, kind: Alert['kind']): void {
   alertLayer.append(el);
   alerts.push(a);
   play('error');
-  if (performance.now() - lastAlarmBell > 20000) { alarmBell(); lastAlarmBell = performance.now(); }
+  // dzwon na chwilę na początku ataku, potem cisza przez minutę (dalsze ataki widać po znacznikach)
+  if (performance.now() - lastAlarmBell > 60000) { alarmBell(); lastAlarmBell = performance.now(); }
 }
 function scanAttacks(): void {
   const mineAt: [number, number][] = [];
