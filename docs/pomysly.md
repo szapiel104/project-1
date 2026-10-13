@@ -53,11 +53,11 @@ Zrobione wieczorem: mgła przy ziemi, dym z kominów (nocą podświetlony), iskr
 Czeka — klimat:
 - Śmieci, beczki, worki i siano przy domach (sama wydeptana ziemia już jest)
 
+Zrobione 13.10: czat w pokoju i w meczu (Enter), ranking i historia meczów (tabela results), link zaproszenia, gracz bez połączenia uznany za wychodzącego po 15 s (milczący po 45 s).
+
 Czeka — gra przez sieć:
-- Czat w pokoju i w meczu
-- Ranking i historia meczów przy koncie (potrzebna tabela w bazie)
-- Dołączanie z linku, zaproszenia znajomych
 - Gracz, który wyszedł z meczu, oddaje miasto botowi
+- Znajomi / zaproszenia po nicku
 
 Czeka — poprawki:
 - Animacje pracy (drwal rąbie siekierą, kamieniarz kilofem, piekarz przy piecu)

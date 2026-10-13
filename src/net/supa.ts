@@ -144,6 +144,37 @@ export function watchRooms(onChange: () => void): () => void {
   return () => { void supa.removeChannel(ch); };
 }
 
+// ---------------- wyniki i ranking ----------------
+export interface Result { nick: string; avatar: number; preset: string; won: boolean; minutes: number; created_at: string }
+export interface RankRow { user_id: string; nick: string; avatar: number; wins: number; losses: number; games: number }
+
+/** Każdy gracz zapisuje swój wynik po meczu przez sieć (zasady w bazie pozwalają tylko na własny) */
+export async function saveResult(preset: string, won: boolean, minutes: number): Promise<void> {
+  const m = me();
+  if (!m) return;
+  await supa.from('results').insert({ user_id: m.id, nick: m.nick, avatar: m.avatar, preset, won, minutes });
+}
+
+export async function myResults(limit = 12): Promise<Result[]> {
+  const m = me();
+  if (!m) return [];
+  const { data } = await supa.from('results').select('nick,avatar,preset,won,minutes,created_at').eq('user_id', m.id).order('created_at', { ascending: false }).limit(limit);
+  return (data as Result[] | null) ?? [];
+}
+
+export async function myRecord(): Promise<RankRow | null> {
+  const m = me();
+  if (!m) return null;
+  const { data } = await supa.from('ranking').select('*').eq('user_id', m.id).maybeSingle();
+  return (data as RankRow | null) ?? null;
+}
+
+/** Ranking: najwięcej wygranych, przy remisie mniej porażek */
+export async function ranking(limit = 50): Promise<RankRow[]> {
+  const { data } = await supa.from('ranking').select('*').order('wins', { ascending: false }).order('losses', { ascending: true }).limit(limit);
+  return (data as RankRow[] | null) ?? [];
+}
+
 /** Miejsce w pokoju: wolne (dla gracza), bot albo zajęte przez gracza */
 export type Slot = { kind: 'open' } | { kind: 'bot' } | { kind: 'human'; id: string; nick: string; avatar: number };
 export interface Member { id: string; nick: string; avatar: number }
@@ -156,6 +187,7 @@ export type NetMsg =
   | { k: 'hello'; who: Member }
   | { k: 'start'; preset: string; level: number; seed: string; slots: Slot[] }
   | { k: 'close' }
+  | { k: 'chat'; who: Member; text: string }
   | { k: 'bye'; from: number; last: number };
 
 /** Kanał pokoju: jeden na lobby i mecz. Obecność (presence) mówi, kto jest w pokoju. */

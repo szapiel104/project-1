@@ -17,6 +17,8 @@ export class Lockstep {
   private gone = new Map<number, number>();
   private off: () => void;
   private lastSent = DELAY - 1;
+  /** Ostatnia tura, na którą przyszły polecenia od danego gracza */
+  private lastFrom = new Map<number, number>();
   waitingSince = 0;
   desync = false;
   /** Ktoś wyszedł (do komunikatu na ekranie) */
@@ -33,6 +35,7 @@ export class Lockstep {
     if (!t) { t = new Map(); this.inbox.set(m.turn, t); }
     // gracz może wydawać polecenia tylko sobie
     t.set(m.from, (m.cmds ?? []).map((c) => ({ ...c, player: m.from }) as Command));
+    this.lastFrom.set(m.from, Math.max(this.lastFrom.get(m.from) ?? 0, m.turn));
     if (m.hashTurn !== undefined && m.hash !== undefined) {
       const mine = this.myHash.get(m.hashTurn);
       if (mine !== undefined && mine !== m.hash) this.desync = true;
@@ -40,6 +43,24 @@ export class Lockstep {
   }
 
   send(m: NetMsg): void { this.link.send(m); }
+
+  /** Na kogo czekamy w tej turze (gracze, od których brakuje poleceń) */
+  missing(turn: number): number[] {
+    if (turn < DELAY) return [];
+    const t = this.inbox.get(turn);
+    return this.players.filter((p) => p !== this.me && !t?.has(p) && !(this.gone.has(p) && turn > this.gone.get(p)!));
+  }
+
+  /**
+   * Gracz zamilkł (zerwane połączenie, zamknięta karta bez pożegnania): ogłaszamy jego wyjście w jego imieniu.
+   * Ostatnia tura to ta, na którą przyszły od niego polecenia — dostali je wszyscy, więc u każdego wypada tak samo.
+   */
+  drop(p: number): void {
+    if (this.gone.has(p) || p === this.me || !this.players.includes(p)) return;
+    const last = this.lastFrom.get(p) ?? DELAY - 1;
+    this.gone.set(p, last); this.left.push(p);
+    this.link.send({ k: 'bye', from: p, last });
+  }
 
   /** Czy można zacząć turę (mamy polecenia od wszystkich, którzy na nią jeszcze grają) */
   canRun(turn: number): boolean {

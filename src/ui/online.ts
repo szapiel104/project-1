@@ -2,10 +2,11 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { TEAM_COLORS } from '../data/teams';
 import { Lockstep } from '../net/lockstep';
 import {
-  closeMyStaleRooms, createRoom, deleteRoom, listRooms, me, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
+  closeMyStaleRooms, createRoom, deleteRoom, getRoom, listRooms, myRecord, myResults, ranking, me, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
   type Member, type NetMsg, type Room, type RoomLink, type Slot,
 } from '../net/supa';
 import { AVATAR_COUNT, avatarSvg } from './avatars';
+import { chatLine, cleanChat } from './chat';
 
 /** Wszystko, czego potrzebuje gra, żeby wystartować mecz przez sieć */
 export interface OnlineStart {
@@ -37,7 +38,7 @@ const seats = (preset: string): number => (MAP_PRESETS[preset as MapPresetId]?.s
 const modeName = (preset: string): string => MODES.find(([id]) => id === preset)?.[1] ?? preset;
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showLogin(register?: boolean): void; leave(): void } {
+export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
   const { el, button, screen } = ui;
   let stopWatch: (() => void) | null = null;
   /** Wyjście z pokoju przy przejściu na inny ekran */
@@ -137,7 +138,19 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     });
     const out = button('Wyloguj', async () => { await signOut(); ui.showMain(); }, 'menu-btn menu-back');
     const left = el('div', 'net-col');
-    left.append(card, el('p', 'net-label', 'Herb'), pick);
+    // bilans i ostatnie mecze przez sieć
+    const record = el('p', 'net-record', 'Bilans: wczytuję…');
+    const history = el('ol', 'net-history');
+    history.setAttribute('aria-label', 'Ostatnie mecze');
+    void Promise.all([myRecord(), myResults()]).then(([rec, list]) => {
+      record.replaceChildren(el('strong', '', `${rec?.wins ?? 0}`), ' wygranych · ', el('strong', '', `${rec?.losses ?? 0}`), ' porażek');
+      history.replaceChildren(...(list.length ? list.map((x) => {
+        const li = el('li', x.won ? 'won' : 'lost');
+        li.append(el('span', 'res', x.won ? 'Wygrana' : 'Porażka'), el('span', '', `${modeName(x.preset)} · ${x.minutes} min`), el('span', 'when', new Date(x.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })));
+        return li;
+      }) : [el('li', 'none', 'Jeszcze żadnego meczu przez sieć.')]));
+    });
+    left.append(card, record, history, el('p', 'net-label', 'Herb'), pick);
     const right = el('div', 'net-col');
     right.append(nickForm, passForm, note);
     const cols = el('div', 'net-cols');
@@ -170,6 +183,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       b.setAttribute('aria-selected', String(filter === id));
       tabs.append(b);
     }
+    tabs.append(button('Ranking', () => void showRanking(), 'net-filter net-rank-btn'));
     bar.append(tabs);
     // zakładanie gry
     const create = el('form', 'net-create');
@@ -213,6 +227,32 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     stopWatch = watchRooms(() => void draw());
   }
 
+  // ---------------- ranking ----------------
+  async function showRanking(): Promise<void> {
+    cleanup();
+    screen('Ranking', true, msg('Wczytuję…'));
+    const rows = await ranking();
+    const m = me();
+    const table = el('table', 'net-ranking');
+    const thead = el('thead');
+    const hr = el('tr');
+    for (const h of ['#', 'Gracz', 'Wygrane', 'Porażki', 'Mecze']) hr.append(el('th', '', h));
+    thead.append(hr);
+    const tbody = el('tbody');
+    rows.forEach((x, i) => {
+      const tr = el('tr', x.user_id === m?.id ? 'me' : '');
+      const who = el('td', 'who');
+      who.append(shield(x.avatar, 22), el('span', '', x.nick));
+      tr.append(el('td', 'pos', String(i + 1)), who, el('td', '', String(x.wins)), el('td', '', String(x.losses)), el('td', '', String(x.games)));
+      tbody.append(tr);
+    });
+    table.append(thead, tbody);
+    const body = rows.length ? table : msg('Ranking jest pusty — zagraj pierwszy mecz przez sieć.');
+    const wrap = el('div', 'net-rankwrap');
+    wrap.append(body);
+    screen('Ranking', true, wrap, back(() => void showOnline(), 'Wróć do listy gier'));
+  }
+
   // ---------------- pokój ----------------
   function enterRoom(room: Room): void {
     cleanup();
@@ -242,7 +282,37 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     start.hidden = !host;
     const leave = button('Wyjdź z pokoju', () => { cleanup(); void showOnline(); }, 'menu-btn menu-back');
     foot.append(leave, start);
-    box.append(head, teams, note);
+    // czat pokoju
+    const chatBox = el('div', 'room-chat');
+    const chatLog = el('div', 'room-chat-log');
+    chatLog.setAttribute('role', 'log');
+    chatLog.setAttribute('aria-live', 'polite');
+    const chatForm = el('form', 'room-chat-form');
+    const chatIn = el('input'); chatIn.maxLength = 200; chatIn.placeholder = 'Napisz do pokoju…'; chatIn.setAttribute('aria-label', 'Wiadomość czatu'); chatIn.autocomplete = 'off';
+    const chatSend = el('button', 'menu-btn', 'Wyślij'); chatSend.type = 'submit';
+    chatForm.append(chatIn, chatSend);
+    chatBox.append(chatLog, chatForm);
+    const addChat = (who: Member, text: string): void => {
+      chatLog.append(chatLine({ who, text }, who.id === m.id));
+      while (chatLog.children.length > 50) chatLog.firstElementChild!.remove();
+      chatLog.scrollTop = chatLog.scrollHeight;
+    };
+    chatForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = cleanChat(chatIn.value);
+      if (!text) return;
+      link.send({ k: 'chat', who: self, text });
+      addChat(self, text);
+      chatIn.value = '';
+    });
+    // zaproszenie: link otwiera grę od razu w tym pokoju
+    const invite = button('Kopiuj link zaproszenia', async () => {
+      const url = `${location.origin}${location.pathname}?pokoj=${room.id}`;
+      try { await navigator.clipboard.writeText(url); invite.textContent = 'Skopiowano — wyślij znajomemu'; }
+      catch { prompt('Skopiuj link zaproszenia:', url); }
+      setTimeout(() => { invite.textContent = 'Kopiuj link zaproszenia'; }, 2500);
+    }, 'link-btn net-invite');
+    box.append(head, teams, note, invite, chatBox);
 
     const publish = (): void => {
       if (!host) return;
@@ -322,6 +392,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       if (msgIn.k === 'lobby' && !host) { preset = msgIn.preset as MapPresetId; level = msgIn.level; slots = msgIn.slots; hostSeen = true; paint(); }
       if (msgIn.k === 'hello' && host) sync();
       if (msgIn.k === 'seat' && host) seat(msgIn.id, msgIn.slot);
+      if (msgIn.k === 'chat' && msgIn.who && typeof msgIn.text === 'string') addChat(msgIn.who, cleanChat(msgIn.text));
       if (msgIn.k === 'close' && !host) { cleanup(); void showOnline(); }
       if (msgIn.k === 'start' && !host) go(msgIn.preset as MapPresetId, msgIn.level, msgIn.seed, msgIn.slots);
     });
@@ -363,5 +434,19 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
 
   /** Twarde wyjście (np. zamknięcie strony): zamyka pokój, jeśli w nim jesteśmy */
   const leave = (): void => cleanup();
-  return { showOnline: () => void showOnline(), showAccount, showLogin: (register = false) => showLogin(register), leave };
+  /** Wejście z linku zaproszenia (?pokoj=…): logowanie, jeśli trzeba, potem prosto do pokoju */
+  async function join(id: string): Promise<void> {
+    cleanup();
+    screen('Zaproszenie', true, msg('Łączenie z pokojem…'));
+    await restore();
+    if (!me()) { showLogin(false, 'Zaloguj się, żeby dołączyć do gry znajomego.', () => void join(id)); return; }
+    const room = await getRoom(id);
+    if (typeof room === 'string' || room.status !== 'open') {
+      screen('Zaproszenie', true, msg(typeof room === 'string' ? 'Tej gry już nie ma — gospodarz ją zamknął.' : 'Ten mecz już się zaczął.', true), back(() => void showOnline(), 'Przejdź do listy gier'));
+      return;
+    }
+    enterRoom(room);
+  }
+
+  return { showOnline: () => void showOnline(), showAccount, showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
 }

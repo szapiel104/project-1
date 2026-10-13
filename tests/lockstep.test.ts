@@ -81,3 +81,21 @@ describe('wyjście z meczu', () => {
     expect(g.players[3]!.defeated).toBe(true);
   });
 });
+
+describe('zerwane połączenie', () => {
+  it('gracz, który zamilkł, zostaje ogłoszony jako wychodzący i poddaje się u wszystkich w tej samej turze', () => {
+    bus.length = 0;
+    const a = new Lockstep(link() as never, 0, [0, 1, 2]);
+    const b = new Lockstep(link() as never, 1, [0, 1, 2]);
+    const c = new Lockstep(link() as never, 2, [0, 1, 2]);
+    for (let t = 0; t < 3; t++) for (const x of [a, b, c]) x.beginTurn(t, [], 0);
+    // c znika bez pożegnania: wysłał polecenia do tury 4
+    for (const t of [3, 4]) for (const x of [a, b]) { expect(x.canRun(t)).toBe(true); x.beginTurn(t, [], 0); }
+    expect(a.canRun(5)).toBe(false);
+    expect(a.missing(5)).toEqual([2]);
+    a.drop(2); // a czekał za długo
+    expect(a.canRun(5) && b.canRun(5)).toBe(true);
+    expect(a.beginTurn(5, [], 0)).toEqual([{ type: 'surrender', player: 2 }]);
+    expect(b.beginTurn(5, [], 0)).toEqual([{ type: 'surrender', player: 2 }]);
+  });
+});

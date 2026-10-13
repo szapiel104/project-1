@@ -17,8 +17,9 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { TEST } from './testmode';
 import { Lockstep, TURN } from './net/lockstep';
-import { deleteRoom, me as netMe } from './net/supa';
+import { deleteRoom, me as netMe, saveResult } from './net/supa';
 import type { OnlineStart } from './ui/online';
+import { createGameChat } from './ui/chat';
 import { createMenu, loadSettings, type Settings } from './ui/menu';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
@@ -45,6 +46,7 @@ netWait.className = 'net-wait';
 netWait.textContent = 'Czekam na przeciwnika…';
 netWait.hidden = true;
 document.body.append(netWait);
+const chat = createGameChat(document.body, () => play('click'));
 let picked: string | null = null;
 let hoverTile: TileRef | null = null;
 let touchTile: TileRef | null = null;
@@ -130,7 +132,7 @@ const menu = createMenu(document.body, {
   isOnline: () => !!net,
   onSurrender: () => {
     // w sieci: wyjście = kapitulacja u wszystkich (lockstep wyśle ją w tej samej turze); lokalnie od razu porażka
-    endOnline();
+    // showEnd zapisze porażkę do rankingu i zamknie mecz (inni dostaną kapitulację w tej samej turze)
     game.players[ME]!.defeated = true;
     menu.close();
     showEnd(false);
@@ -154,12 +156,35 @@ const menu = createMenu(document.body, {
 /** Mecz 1 na 1 przez sieć: obie przeglądarki stawiają tę samą mapę z tego samego ziarna, bez botów na miejscach graczy. */
 function startOnline(st: OnlineStart): void {
   start(st.seed, st.preset, undefined, st.level, false, st);
+  const mine = st.slots[st.me];
+  if (mine?.kind === 'human') chat.attach(st.link, { id: mine.id, nick: mine.nick, avatar: mine.avatar });
   const names = st.slots.map((x) => (x.kind === 'human' ? x.nick : null)).filter(Boolean);
   hud.toast(`Mecz przez sieć (${st.preset}): ${names.join(', ')}${st.slots.some((x) => x.kind === 'bot') ? ' + boty' : ''}.`);
+}
+/**
+ * Gra stoi, bo brakuje czyichś poleceń. Po chwili pokazujemy, na kogo czekamy i ile jeszcze;
+ * kto zniknął z pokoju na 15 s (albo milczy 45 s), ten jest uznany za wychodzącego — reszta gra dalej.
+ */
+const DROP_ABSENT_MS = 15_000, DROP_SILENT_MS = 45_000;
+function waitFor(turn: number, now: number): void {
+  if (!net || !netGame) return;
+  if (!net.waitingSince) net.waitingSince = now;
+  const waited = now - net.waitingSince;
+  const missing = net.missing(turn);
+  const here = new Set(netGame.link.members().map((m) => m.id));
+  const nick = (p: number): string => { const x = netGame!.slots[p]; return x?.kind === 'human' ? x.nick : `gracz ${p + 1}`; };
+  const absent = missing.filter((p) => { const x = netGame!.slots[p]; return x?.kind === 'human' && !here.has(x.id); });
+  for (const p of missing) if ((absent.includes(p) && waited > DROP_ABSENT_MS) || waited > DROP_SILENT_MS) net.drop(p);
+  netWait.hidden = waited < 400;
+  if (!netWait.hidden) {
+    const left = Math.ceil(((absent.length ? DROP_ABSENT_MS : DROP_SILENT_MS) - waited) / 1000);
+    netWait.textContent = `Czekam na: ${missing.map(nick).join(', ') || 'graczy'}${waited > 3000 ? ` — ${absent.length ? 'brak połączenia' : 'słabe połączenie'}, jeszcze ${Math.max(0, left)} s` : '…'}`;
+  }
 }
 function endOnline(): void {
   if (!net || !netGame) return;
   net.close();
+  chat.detach();
   netGame.link.close();
   // koniec meczu: gospodarz usuwa pokój z bazy (nic po meczu nie zostaje)
   if (netMe()?.id === netGame.room.host) void deleteRoom(netGame.room.id);
@@ -422,6 +447,7 @@ window.addEventListener('keydown', (e) => {
   if (menu.isOpen()) return;
   const tag = (e.target as HTMLElement | null)?.tagName;
   if (tag === 'INPUT' || tag === 'SELECT' || e.ctrlKey || e.metaKey) return;
+  if (e.key === 'Enter' && chat.active) { e.preventDefault(); chat.open(); return; }
   if (e.code === 'KeyR' && picked) rotate();
   if (e.code === 'KeyM') hud.setMuted(toggleMute());
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
@@ -629,6 +655,8 @@ let gameOver = false;
 function showEnd(win: boolean): void {
   endShown = true;
   speed = 0;
+  // mecz przez sieć: wynik trafia do historii i rankingu gracza
+  if (netGame) void saveResult(netGame.preset, win, Math.floor(game.tick / TICKS_PER_SECOND / 60));
   // mecz przez sieć się skończył: zamykamy kanał i pokój, żeby nie dało się do niego wrócić
   endOnline();
   // skończona gra (wygrana, porażka, poddanie) znika z zapisu: w menu nie ma już „Kontynuuj”
@@ -765,7 +793,7 @@ function loop(now: number): void {
       // tura zaczyna się co TURN ticków; bez poleceń przeciwnika na tę turę gra stoi
       if (game.tick % TURN === 0) {
         const turn = game.tick / TURN;
-        if (!net.canRun(turn)) { netWait.hidden = !(net.waitingSince && now - net.waitingSince > 400); if (!net.waitingSince) net.waitingSince = now; acc = Math.min(acc, TICK_MS); break; }
+        if (!net.canRun(turn)) { waitFor(turn, now); acc = Math.min(acc, TICK_MS); break; }
         net.waitingSince = 0; netWait.hidden = true;
         cmds = net.beginTurn(turn, pending, stateHash(game));
         pending = [];
@@ -824,6 +852,12 @@ menu.setVolume(getVolume());
 menu.setMuted(isMuted());
 menu.setCanContinue(!!(saved && restored));
 if (!TEST) menu.open(false); // w trybie testowym od razu gra
+// link zaproszenia: ?pokoj=<id> — od razu do pokoju znajomego (parametr znika z adresu, żeby odświeżenie nie wracało)
+const invite = new URLSearchParams(location.search).get('pokoj');
+if (invite && !TEST) {
+  try { const u = new URL(location.href); u.searchParams.delete('pokoj'); history.replaceState(null, '', u.toString()); } catch { /* nic */ }
+  menu.join(invite);
+}
 window.addEventListener('pagehide', save);
 document.addEventListener('visibilitychange', () => { if (document.hidden) save(); });
 requestAnimationFrame(loop);
