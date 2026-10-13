@@ -1402,11 +1402,36 @@ const BUILDERS: Record<string, Builder> = {
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.12, 0.3, 8), M.wood);
     barrel.position.set(-0.75, 0.15, 0.7);
     g.add(barrel);
-    // łódka
-    const boat = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.85, 6, 1, false, 0, Math.PI).rotateZ(Math.PI / 2).rotateX(Math.PI), M.woodDark);
-    boat.scale.set(1, 0.6, 1);
-    boat.position.set(0.55, 0.14, -0.55);
+    // łódka wyciągnięta na brzeg: kadłub ze spiczastym dziobem i rufą, ciemne wnętrze, ławka i wiosło
+    const boat = new THREE.Group();
+    boat.position.set(0.55, 0, -0.55);
     boat.rotation.y = 0.5;
+    const outline = (k: number): THREE.Shape => {
+      const sh = new THREE.Shape();
+      sh.moveTo(-0.46 * k, 0);
+      sh.quadraticCurveTo(-0.25 * k, 0.19 * k, 0.15 * k, 0.18 * k);
+      sh.quadraticCurveTo(0.42 * k, 0.15 * k, 0.46 * k, 0);
+      sh.quadraticCurveTo(0.42 * k, -0.15 * k, 0.15 * k, -0.18 * k);
+      sh.quadraticCurveTo(-0.25 * k, -0.19 * k, -0.46 * k, 0);
+      return sh;
+    };
+    const hull = new THREE.Mesh(
+      new THREE.ExtrudeGeometry(outline(1), { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.025, bevelSegments: 2 }).rotateX(-Math.PI / 2).translate(0, 0.03, 0),
+      M.woodDark);
+    boat.add(hull);
+    const inside = new THREE.Mesh(new THREE.ShapeGeometry(outline(0.84)).rotateX(-Math.PI / 2), M.dark);
+    inside.position.y = 0.181;
+    boat.add(inside);
+    box(boat, M.wood, 0.5, 0.02, 0.035, 0, 0.17, 0.155); // listwy burt
+    box(boat, M.wood, 0.5, 0.02, 0.035, 0, 0.17, -0.155);
+    box(boat, M.plank, 0.07, 0.025, 0.3, 0.05, 0.16, 0); // ławka
+    // wiosło oparte o burtę: drzewce i płaskie pióro
+    const oar = new THREE.Group();
+    oar.position.set(-0.05, 0.02, 0.3);
+    oar.rotation.set(0, 0.15, 0.12);
+    box(oar, M.wood, 0.7, 0.025, 0.025, 0, 0, 0);
+    box(oar, M.wood, 0.18, 0.012, 0.08, 0.38, 0, 0);
+    boat.add(oar);
     g.add(boat);
     pennant(g, flag, -0.8, 0.9, -0.6);
   },
