@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { bump, pattern } from './textures';
+import { bump, normal, pattern } from './textures';
 import { beam, cutBox, paintGeo, rng, stoneSkirt, thatchSlab } from './craft';
 
 type Pattern = Parameters<typeof pattern>[0];
@@ -11,7 +11,8 @@ type Pattern = Parameters<typeof pattern>[0];
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone];
 const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
 const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
-  const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: tex === 'ashlar' ? 0.9 : tex === 'dressed' ? 0.7 : tex === 'cobble' ? 1.6 : 1.4 });
+  const nm = tex ? normal(tex) : null;
+  const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9), bumpScale: tex === 'ashlar' ? 0.9 : tex === 'dressed' ? 0.7 : tex === 'cobble' ? 1.6 : 1.4 });
   m.userData.tile = (tex && TILE[tex]) || 0;
   return m;
 };

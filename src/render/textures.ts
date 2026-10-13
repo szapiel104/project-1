@@ -330,10 +330,44 @@ export async function restore(kind: Kind): Promise<boolean> {
   } catch { return false; }
 }
 
+/**
+ * Zdjęciowe tekstury CC0 (ambientCG, przez repozytorium null3d-engine/sample-assets) — w odcieniach szarości,
+ * żeby barwę nadawał materiał, plus mapy normalnych dające prawdziwą rzeźbę: bruk, deski, tynk.
+ */
+const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster' };
+const photoBase = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/cc0/';
+const normals = new Map<Kind, THREE.Texture>();
+const photos = new Map<Kind, THREE.Texture>();
+/** Mapa normalnych dla zdjęciowej tekstury (albo null, gdy wzór jest rysowany w kodzie) */
+export function normal(kind: Kind): THREE.Texture | null {
+  const f = PHOTO[kind];
+  if (!f || typeof document === 'undefined' || TEST) return null;
+  let n = normals.get(kind);
+  if (!n) {
+    n = new THREE.TextureLoader().load(`${photoBase()}${f}_n.jpg`);
+    n.wrapS = n.wrapT = THREE.RepeatWrapping;
+    n.anisotropy = 8;
+    normals.set(kind, n);
+  }
+  return n;
+}
+
 export function pattern(kind: Kind): THREE.Texture | null {
   let t = cache.get(kind);
   if (t) return t;
   if (typeof document === 'undefined') return null;
+  const photo = PHOTO[kind];
+  if (photo && !TEST) {
+    let pt = photos.get(kind);
+    if (!pt) {
+      pt = new THREE.TextureLoader().load(`${photoBase()}${photo}.jpg`);
+      pt.wrapS = pt.wrapT = THREE.RepeatWrapping;
+      pt.colorSpace = THREE.SRGBColorSpace;
+      pt.anisotropy = 16;
+      photos.set(kind, pt);
+    }
+    return pt;
+  }
   // bruk w 2048 px, mur twierdzy 1024, reszta 512
   // tylko komputery: wysoka rozdzielczość wszędzie (bruk, mur, trawa 2048, reszta 1024)
   const n = size(kind);
@@ -351,6 +385,7 @@ export function pattern(kind: Kind): THREE.Texture | null {
 const bumps = new Map<Kind, THREE.CanvasTexture>();
 /** Ta sama tekstura jako mapa wypukłości: jasne miejsca wystają, fugi i szpary są wgłębione. */
 export function bump(kind: Kind): THREE.Texture | null {
+  if (PHOTO[kind] && !TEST) return null; // zdjęciowe mają mapę normalnych
   let b = bumps.get(kind);
   if (b) return b;
   const src = pattern(kind);

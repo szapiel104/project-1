@@ -18,5 +18,7 @@ if (q.get('open')) { const i = m.getObjectByName('interior'); if (i) i.visible =
 s.add(m);
 const cam = new THREE.PerspectiveCamera(35, 900 / 640, 0.1, 100);
 cam.position.set(Math.sin(yaw) * Math.cos(pitch) * dist, Math.sin(pitch) * dist + 0.4, Math.cos(yaw) * Math.cos(pitch) * dist); cam.lookAt(0, 0.55, 0);
-r.render(s, cam); document.title = 'gotowe';
+// zdjęciowe tekstury wczytują się w tle: rysujemy, gdy dojdą (albo po chwili, gdy nic nie było do wczytania)
+let done = false; const draw = () => { if (done) return; done = true; r.render(s, cam); document.title = 'gotowe'; };
+THREE.DefaultLoadingManager.onLoad = () => setTimeout(draw, 50); setTimeout(draw, 3000);
 </script>

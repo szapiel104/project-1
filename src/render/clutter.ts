@@ -31,12 +31,20 @@ function geometry(kind: Kind): THREE.BufferGeometry {
       tint(new THREE.CylinderGeometry(0.02, 0.035, 0.05, 6).translate(0, 0.18, 0), 0xa58a5a),
       tint(new THREE.IcosahedronGeometry(0.07, 1).scale(1.2, 0.8, 0.9).translate(0.11, 0.055, 0.04), 0xa88e60), // drugi worek obok
     ]);
-    case 'hay': return merge([
-      tint(new THREE.CylinderGeometry(0.16, 0.2, 0.14, 10).translate(0, 0.07, 0), 0xc9a64e),
-      tint(new THREE.ConeGeometry(0.17, 0.12, 10).translate(0, 0.2, 0), 0xd6b55c),
-      tint(new THREE.BoxGeometry(0.03, 0.006, 0.12).rotateY(0.6).translate(0.18, 0.004, 0.1), 0xc9a64e), // rozwiane źdźbła
-      tint(new THREE.BoxGeometry(0.03, 0.006, 0.1).rotateY(-0.9).translate(-0.17, 0.004, -0.06), 0xbfa04a),
-    ]);
+    case 'hay': {
+      // stóg siana na żerdzi: pękaty dół, zaokrąglony szczyt, sterczący kij; nierówne pasma i rozwiane źdźbła u stóp
+      const parts = [
+        tint(new THREE.SphereGeometry(0.17, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2).scale(1, 1.5, 1).translate(0, 0.08, 0), 0xc9a64e),
+        tint(new THREE.CylinderGeometry(0.17, 0.19, 0.09, 12).translate(0, 0.045, 0), 0xb8963f),
+        tint(new THREE.TorusGeometry(0.16, 0.012, 4, 16).rotateX(Math.PI / 2).translate(0, 0.17, 0), 0xa8862f), // pasmo przyciśniętego siana
+        tint(new THREE.CylinderGeometry(0.008, 0.01, 0.16, 5).translate(0, 0.38, 0), 0x5a3e24), // żerdź
+      ];
+      for (let k = 0; k < 7; k++) {
+        const a2 = k * 0.9;
+        parts.push(tint(new THREE.BoxGeometry(0.035, 0.005, 0.1).rotateY(a2).translate(Math.cos(a2) * 0.22, 0.004, Math.sin(a2) * 0.22), k % 2 ? 0xd2b158 : 0xbf9e48));
+      }
+      return merge(parts);
+    }
     case 'crate': return merge([
       tint(new THREE.BoxGeometry(0.15, 0.13, 0.15).translate(0, 0.065, 0), 0x8a6a42),
       tint(new THREE.BoxGeometry(0.155, 0.02, 0.155).translate(0, 0.12, 0), 0x6b4f30),
