@@ -83,10 +83,10 @@ for k in range(7):
     b.box('base', 'castleDark', 0.075, 0.06, 0.04, -math.cos(a) * 0.2, G + 0.44 + math.sin(a) * 0.1, GZ + 0.185, -a + math.pi / 2)
 b.box('base', 'dark', 0.4, 0.004, 0.36, 0, G + 0.515, GZ)  # sklepienie przejazdu
 # krata uniesiona do połowy
+# krata podniesiona: widać tylko dolne zęby pod sklepieniem, przejście wolne
 for k in range(6):
-    b.box('base', 'iron', 0.014, 0.3, 0.014, -0.17 + k * 0.068, G + 0.24, GZ + 0.15)
-for y in (0.3, 0.42):
-    b.box('base', 'iron', 0.36, 0.014, 0.014, 0, G + y, GZ + 0.15)
+    b.box('base', 'iron', 0.014, 0.05, 0.014, -0.17 + k * 0.068, G + 0.47, GZ + 0.15)
+b.box('base', 'iron', 0.36, 0.014, 0.014, 0, G + 0.5, GZ + 0.15)
 # otwarte wrota od strony dziedzińca
 for sx in (-1, 1):
     b.box('base', 'woodDark', 0.19, 0.48, 0.035, sx * (0.2 - 0.0), G, GZ - 0.18, sx * -1.35)
@@ -159,7 +159,8 @@ for x in (-0.3, 0.3):
 for sx in (-1, 1):
     for y in (H1 + 0.2, H2 + 0.2):
         b.box('shell', 'dark', 0.02, 0.27, 0.15, sx * (DX + 0.003), y, DZ)
-b.box('shell', 'woodDark', 0.22, 0.34, 0.03, 0, G, DZ1 + 0.012)
+b.box('shell', 'dark', 0.2, 0.34, 0.02, 0, G, DZ1 + 0.003)
+b.box('shell', 'woodDark', 0.2, 0.34, 0.03, -0.17, G, DZ1 - 0.04, 1.35)
 # hurdycja: wysunięta drewniana galeria na belkach
 for k in range(-2, 3):
     for sx in (-1, 1):
@@ -179,23 +180,24 @@ b.box('shell', 'woodDark', 0.035, 0.8, 0.035, 0, H3 + 1.5, DZ)
 b.box('shell', 'flag', 0.5, 0.28, 0.015, 0.27, H3 + 1.98, DZ)
 
 # wnętrze (po zdjęciu bryły): parter donżonu ze ścianami uciętymi nisko
-LW = 0.5
+LW = 0.68  # ściany sali: pełna wysokość parteru (da się chodzić w środku), sufit osobno
 b.box('interior', 'castleDark', DW, 0.03, DD, 0, G, DZ)
 b.box('interior', 'plank', DW - 0.2, 0.012, DD - 0.2, 0, G + 0.03, DZ)
 b.box('interior', 'castle', DW, LW, 0.1, 0, G, DZ0 + 0.05)
 for sx in (-1, 1):
     b.box('interior', 'castle', 0.1, LW, DD, sx * (DX - 0.05), G, DZ)
     b.box('interior', 'castle', DX - 0.13, LW, 0.1, sx * (0.13 + (DX - 0.13) / 2), G, DZ1 - 0.05)
-b.box('interior', 'castle', 0.26, LW - 0.36, 0.1, 0, G + 0.36, DZ1 - 0.05)
+b.box('interior', 'castle', 0.26, LW - 0.4, 0.1, 0, G + 0.4, DZ1 - 0.05)
 for x0, x1, z0, z1 in ((-DX, DX, DZ0, DZ0 + 0.1), (-DX, DX, DZ1 - 0.1, DZ1), (-DX, -DX + 0.1, DZ0, DZ1), (DX - 0.1, DX, DZ0, DZ1)):
     b.box('interior', 'castleDark', x1 - x0 + 0.02, 0.03, z1 - z0 + 0.02, (x0 + x1) / 2, G + LW, (z0 + z1) / 2)
 for x in (-0.3, 0.3):
     b.box('interior', 'window', 0.14, 0.22, 0.02, x, G + 0.25, DZ1 + 0.003)
-b.box('interior', 'woodDark', 0.22, 0.34, 0.03, 0, G, DZ1 + 0.012)
+b.box('interior', 'woodDark', 0.2, 0.34, 0.03, -0.17, G, DZ1 - 0.14, 1.35)
 # ścianka działowa: wielka sala (lewa) i komnata pana (prawa), przejście między nimi
 PX = 0.2
-b.box('interior', 'plaster', 0.05, LW - 0.06, 0.32, PX, G + 0.03, DZ0 + 0.26)
-b.box('interior', 'plaster', 0.05, LW - 0.06, 0.2, PX, G + 0.03, DZ1 - 0.2)
+b.box('interior', 'plaster', 0.05, LW - 0.03, 0.32, PX, G + 0.03, DZ0 + 0.26)
+b.box('interior', 'plaster', 0.05, LW - 0.03, 0.2, PX, G + 0.03, DZ1 - 0.2)
+b.box('interior', 'plaster', 0.05, LW - 0.43, 0.22, PX, G + 0.43, DZ + 0.05)
 # sala: tron na podeście, chorągwie, kominek, długi stół z ławami, dywan
 b.box('interior', 'stoneDark', 0.36, 0.05, 0.2, -0.22, G + 0.03, DZ0 + 0.2)
 b.box('interior', 'woodDark', 0.16, 0.1, 0.14, -0.22, G + 0.08, DZ0 + 0.19)
@@ -224,6 +226,10 @@ for k in range(7):
     a = k * 0.85
     b.box('interior', 'stone', 0.14, 0.05, 0.06, DX - 0.2 + math.sin(a) * 0.06, G + 0.03 + k * 0.065, DZ1 - 0.2 + math.cos(a) * 0.06, a)
 b.prism('interior', 'stoneDark', 0.025, 0.025, 0.5, DX - 0.2, G + 0.03, DZ1 - 0.2, seg=6)
+# sufit sali z belkami: widać go tylko, gdy chodzi się po sali (z góry zasłaniałby wnętrze)
+b.box('ceiling', 'wood', DW - 0.2, 0.03, DD - 0.2, 0, G + LW, DZ, bottom=True)
+for k in range(-2, 3):
+    b.box('ceiling', 'woodDark', 0.05, 0.05, DD - 0.2, k * 0.24, G + LW - 0.05, DZ, bottom=True)
 # schodki przed drzwiami donżonu
 b.box('base', 'castleDark', 0.34, 0.03, 0.12, 0, G, DZ1 + 0.06)
 b.box('base', 'castleDark', 0.3, 0.015, 0.06, 0, G + 0.03, DZ1 + 0.04)

@@ -105,7 +105,7 @@ class Building:
         groups = sorted({g for g, _ in self.parts})
         tris = self._tris(list(self.parts), maxe)
         # dwa widoki: z dachem (base + shell) i z odkrytym wnętrzem (base + interior + floor)
-        views = {'outside': ('base', 'shell'), 'inside': ('base', 'interior', 'floor')}
+        views = {'outside': ('base', 'shell'), 'inside': ('base', 'interior', 'floor', 'ceiling')}
         trees = {}
         for v, gs in views.items():
             verts, polys = [], []
@@ -123,7 +123,7 @@ class Building:
             dirs.append(Vector((math.cos(golden * i) * r, yy, math.sin(golden * i) * r)))
         out, ntri = {}, 0
         for (g, m), ts in tris.items():
-            tree = trees['inside' if g in ('interior', 'floor') else 'outside']
+            tree = trees['inside' if g in ('interior', 'floor', 'ceiling') else 'outside']
             pos, ao = bytearray(), bytearray()
             for a, b, c in ts:
                 n = (b - a).cross(c - a)

@@ -35,8 +35,12 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 
 export interface TileRef { x: number; y: number }
 /** Pola zamku, po których się chodzi (dy * 3 + dx): sala donżonu, koszary, dziedziniec, brama; posadzka na tej wysokości */
-const KEEP_WALK = new Set([1, 3, 4, 5, 7]);
 const KEEP_FLOOR = 0.22;
+/** Gdzie w zamku da się stanąć (x0, x1, z0, z1 względem środka, brama w +z): dziedziniec, przejazd z mostem, drzwi i sala donżonu, koszary */
+const KEEP_OPEN: [number, number, number, number][] = [[-1.0, 1.0, -0.17, 1.02], [-0.17, 0.17, 0.95, 1.98], [-0.1, 0.1, -0.4, -0.1], [-0.5, 0.5, -1.06, -0.33], [-1.0, -0.21, 0.11, 0.91]];
+/** …a gdzie stoją ściany i sprzęty: ściany koszar (z drzwiami), studnia, siano, ścianka działowa sali */
+const KEEP_SOLID: [number, number, number, number][] = [[-1.08, -0.13, 0.02, 0.1], [-1.08, -0.13, 0.92, 1.0], [-0.2, -0.12, 0.02, 0.42], [-0.2, -0.12, 0.6, 1.0], [0.57, 0.83, 0.42, 0.68], [0.73, 0.97, -0.13, 0.03], [0.16, 0.24, -1.1, -0.77], [0.16, 0.24, -0.53, -0.3]];
+const inRect = (r: [number, number, number, number][], x: number, z: number): boolean => r.some(([x0, x1, z0, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
 
@@ -1200,6 +1204,9 @@ export class GameRenderer {
       const tx = Math.floor(x), ty = Math.floor(z);
       if (tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height) return false;
       const t = ty * g.map.width + tx;
+      // w zamku: dokładny obrys dziedzińca, sal i przejść zamiast całych pól
+      const k = this.keepAt(x, z);
+      if (k && (k[2] <= 1.5 || inRect(KEEP_OPEN, k[1], k[2]))) return inRect(KEEP_OPEN, k[1], k[2]) && !inRect(KEEP_SOLID, k[1], k[2]);
       return (g.occupancy[t] === 0 || g.gates[t] !== 0) && g.map.tiles[t] !== Terrain.Water && g.map.tiles[t] !== Terrain.Mountain;
     };
     if (free(w.x + dx, w.z)) w.x += dx;
@@ -1207,7 +1214,9 @@ export class GameRenderer {
     if (fx || fz) w.bob += sp * 5;
     const cam = this.cam.camera;
     const { width, height } = g.map;
-    const ground = this.view ? this.view.heightAt(w.x, w.z) : 0;
+    const ground = this.view ? this.standY(this.view, w.x, w.z) : 0;
+    const kp = this.keepAt(w.x, w.z);
+    this.walkHall = kp && kp[2] < -0.3 && inRect(KEEP_OPEN, kp[1], kp[2]) ? kp[0] : 0;
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
   }
@@ -2210,7 +2219,12 @@ export class GameRenderer {
       yard.visible = left > 0;
       yard.scale.x = Math.max(0.3, left / 4);
     }
-    for (const [id, mesh] of this.buildingMeshes) animateBuilding(mesh, working.has(id) || id === this.selectedId, this.time, dt);
+    for (const [id, mesh] of this.buildingMeshes) {
+      const inHall = !!this.walk && id === this.walkHall;
+      animateBuilding(mesh, working.has(id) || id === this.selectedId || inHall, this.time, dt);
+      const ceil = mesh.getObjectByName('ceiling');
+      if (ceil) ceil.visible = inHall;
+    }
     // budynek bez pracownika: nad dachem kołysze się mały znak przekreślonego człowieka
     for (const b of g.buildings) {
       const mesh = this.buildingMeshes.get(b.id);
@@ -2548,18 +2562,22 @@ export class GameRenderer {
   private keepFloors = new Map<number, [number, number, number]>();
   /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */
   private standY(view: TerrainView, x: number, y: number): number {
-    const h = view.heightAt(x, y);
+    const h = view.heightAt(x, y), k = this.keepAt(x, y);
+    if (!k || !inRect(KEEP_OPEN, k[1], k[2])) return h;
+    return Math.max(h, k[3] + KEEP_FLOOR * Math.min(1, Math.max(0, (1.94 - k[2]) / 0.5)));
+  }
+  /** Zamek pod punktem (pola mapy): [id, x i z względem środka zamku, wysokość modelu] albo null */
+  private keepAt(x: number, y: number): [number, number, number, number] | null {
     for (const [id, [kx, ky, base]] of this.keepFloors) {
       const lx = x - kx, lz = y - ky;
-      if (Math.abs(lx) > 1.5 || lz < -1.5 || lz > 1.95) continue;
+      if (Math.abs(lx) > 1.5 || lz < -1.5 || lz > 1.98) continue;
       if (!this.buildingMeshes.has(id)) { this.keepFloors.delete(id); continue; }
-      const tx = Math.floor(lx + 1.5), ty = Math.floor(lz + 1.5);
-      const inside = lz < 1.5 && KEEP_WALK.has(ty * 3 + tx), bridge = Math.abs(lx) < 0.25 && lz > 1.0;
-      if (!inside && !bridge) continue;
-      return Math.max(h, base + KEEP_FLOOR * Math.min(1, Math.max(0, (1.94 - lz) / 0.5)));
+      return [id, lx, lz, base];
     }
-    return h;
+    return null;
   }
+  /** Zamek, w którego sali stoi teraz spacerowicz (zdejmujemy wtedy bryłę donżonu i kładziemy sufit) */
+  private walkHall = 0;
 
   private bedSpot(g: GameState, u: GameState['units'][number], view: TerrainView, sleepers: Map<number, number[]>): [number, number, number, number, number, number] | null {
     const width = g.map.width, height = g.map.height;

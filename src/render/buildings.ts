@@ -830,6 +830,12 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   interior.visible = false;
   for (const m of [...meshes('floor'), ...meshes('interior')]) interior.add(m);
   g.add(interior);
+  // sufit sali: tylko gdy ktoś chodzi po niej oczami mieszkańca
+  const ceiling = new THREE.Group();
+  ceiling.name = 'ceiling';
+  ceiling.visible = false;
+  for (const m of meshes('ceiling')) ceiling.add(m);
+  g.add(ceiling);
 }
 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
@@ -1892,7 +1898,7 @@ const teamMats = new Map<number, THREE.MeshStandardMaterial>();
 const flagMats = new Map<number, THREE.MeshStandardMaterial>();
 
 /** Części modelu z kodu, które zostają także przy gotowym modelu: wnętrze, zapasy, dym, ogień, życie */
-const KEEP = ['interior', 'yardlog', 'smoke', 'flame', 'fill', 'life'];
+const KEEP = ['interior', 'ceiling', 'yardlog', 'smoke', 'flame', 'fill', 'life'];
 
 export function buildingModel(id: string, teamColor: number): THREE.Group {
   let team = teamMats.get(teamColor);
