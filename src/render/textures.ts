@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
 
-export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic';
+export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic' | 'slate';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -191,6 +191,39 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
     c.lineWidth = n * 0.002;
     for (let k = 0; k < 80; k++) { c.strokeStyle = `rgba(70,45,25,${0.08 + r() * 0.1})`; c.beginPath(); const x = r() * n, y = r() * n; c.moveTo(x, y); c.lineTo(x + (r() - 0.5) * n * 0.06, y + (r() - 0.5) * n * 0.03); c.stroke(); }
   },
+  slate(c, n, r) {
+    // Dach z kamiennych płytek (łupek): rzędy nierównych płytek zachodzących na siebie, każda z zaokrąglonym
+    // dolnym brzegiem, własnym odcieniem, ziarnem kamienia, cieniem pod spodem i czasem odpryskiem albo mchem
+    c.fillStyle = gray(0.18); c.fillRect(0, 0, n, n);
+    const rows = 9, h = n / rows;
+    for (let y = -1; y <= rows; y++) {
+      let x = -r() * n * 0.08 + (y % 2 ? n * 0.045 : 0);
+      while (x < n) {
+        const w = n * (0.07 + r() * 0.05);
+        const top = y * h - h * 0.45, bot = y * h + h * (0.88 + r() * 0.1);
+        const tone = 0.55 + r() * 0.3;
+        c.save();
+        c.beginPath();
+        c.moveTo(x + 2, top); c.lineTo(x + w - 2, top);
+        c.lineTo(x + w - 2 - r() * 2, bot - w * 0.22);
+        c.quadraticCurveTo(x + w / 2, bot + w * 0.08, x + 2 + r() * 2, bot - w * 0.22);
+        c.closePath();
+        c.fillStyle = gray(tone); c.fill();
+        c.clip();
+        // ziarno i pasma w kamieniu
+        for (let k = 0; k < 14; k++) { c.fillStyle = `rgba(${r() > 0.5 ? '255,255,255' : '0,0,0'},${0.04 + r() * 0.07})`; c.fillRect(x + r() * w, top + r() * (bot - top), n * (0.002 + r() * 0.008), n * (0.001 + r() * 0.003)); }
+        const gl = c.createLinearGradient(0, top, 0, bot);
+        gl.addColorStop(0, 'rgba(0,0,0,0.35)'); gl.addColorStop(0.45, 'rgba(0,0,0,0)'); gl.addColorStop(0.85, 'rgba(255,255,255,0.08)'); gl.addColorStop(1, 'rgba(0,0,0,0.25)');
+        c.fillStyle = gl; c.fillRect(x, top, w, bot - top);
+        // mech w szczelinach u dołu płytki
+        if (r() > 0.82) { c.fillStyle = 'rgba(70,90,40,0.35)'; c.beginPath(); c.arc(x + r() * w, bot - h * 0.1, n * (0.006 + r() * 0.01), 0, 6.3); c.fill(); }
+        c.restore();
+        // cień rzucany przez płytkę na rząd niżej
+        c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(x + 3, bot - 1, w - 6, n * 0.006);
+        x += w;
+      }
+    }
+  },
   cobble(c, n, r) {
     // Bruk w rysunkowym stylu: drobne, prostokątne kamienie o zaokrąglonych rogach, w rzędach różnej długości,
     // jasny piaskowiec z refleksem u góry i cieniem u dołu, ciemne szczeliny i mech wyrastający ze spoin.
@@ -266,14 +299,14 @@ const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => numb
  * Dzięki temu jeden wzór cegieł służy jasnemu i ciemnemu kamieniowi oraz barwom drużyn.
  */
 /** Rysuje teksturę od zera (wolne: ziarno liczone piksel po pikselu). */
-const size = (kind: Kind): number => (TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'bricks' || kind === 'dressed' || kind === 'grass' ? 2048 : 1024);
+const size = (kind: Kind): number => (TEST ? 256 : kind === 'cobble' || kind === 'ashlar' || kind === 'bricks' || kind === 'dressed' || kind === 'slate' || kind === 'grass' ? 2048 : 1024);
 function paint(kind: Kind, n: number): HTMLCanvasElement | null {
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = n;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
   if (!ctx) return null;
   // wzory były rysowane dla 64 px (trawa i liście dla 128/256): skalujemy rysunek, a nie rozmywamy gotowy obraz
-  const base = kind === 'ashlar' || kind === 'bricks' || kind === 'dressed' ? 1024 : kind === 'cobble' || kind === 'grass' ? n : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock', 'organic'].includes(kind) ? 128 : 64;
+  const base = kind === 'ashlar' || kind === 'bricks' || kind === 'dressed' || kind === 'slate' ? 1024 : kind === 'cobble' || kind === 'grass' ? n : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock', 'organic'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
   PAINT[kind](ctx, base, noise(kind.length * 7919));

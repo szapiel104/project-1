@@ -9,7 +9,7 @@ type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
 /** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone];
-const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
+const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, slate: 1.1, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
 const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   const nm = tex ? normal(tex) : null;
   const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9), bumpScale: tex === 'ashlar' ? 0.9 : tex === 'dressed' ? 0.7 : tex === 'cobble' ? 1.6 : 1.4 });
@@ -47,7 +47,7 @@ const M = {
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611), pane: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
-  ash: mat(0x4a4540), sack: mat(0xe2d6ba, 'thatch'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
+  ash: mat(0x4a4540), slate: mat(0x8a8d94, 'slate'), sack: mat(0xe2d6ba, 'thatch'), rock: mat(0xb3ae9f, 'rock'), rockDark: mat(0x8d877a, 'rock'),
   flameLight: new THREE.MeshBasicMaterial({ color: 0xffc04a }), flameCore: new THREE.MeshBasicMaterial({ color: 0xfff0a8 }),
   roadSand: mat(0xd4b77c, 'soil'), roadStone: mat(0xf4f0e8, 'cobble'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
@@ -111,7 +111,8 @@ function gable(g: THREE.Group, m: THREE.Material, w: number, h: number, d: numbe
 }
 
 function pyramid(g: THREE.Group, m: THREE.Material, r: number, h: number, x: number, y: number, z: number, sides = 4): void {
-  const mesh = new THREE.Mesh(new THREE.ConeGeometry(r, h, sides), m);
+  // wzór dachu (gonty, łupek) ma tę samą wielkość na małej i dużej wieżyczce: obwód × długość połaci
+  const mesh = tileRound(new THREE.Mesh(new THREE.ConeGeometry(r, h, sides), m), r * 0.75, Math.hypot(r, h));
   mesh.position.set(x, y + h / 2, z);
   mesh.rotation.y = Math.PI / sides;
   g.add(mesh);
@@ -725,7 +726,7 @@ function cottage(g: THREE.Group, seed: number): THREE.Group {
 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
 const BUILDERS: Record<string, Builder> = {
-  keep(root, team, flag) {
+  keep(root, _team, flag) {
     let g = root;
     // Twierdza z ciepłego piaskowca, z drewnianymi hurdycjami i gontem jak reszta osady
     const S = M.castle, D = M.castleDark;
@@ -802,7 +803,7 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.wood, 1.56, 0.4, 1.56, 0, 2.96, -0.25);
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(g, M.woodDark, 0.07, 0.42, 0.07, sx * 0.77, 2.96, -0.25 + sz * 0.77);
     for (let k = -2; k <= 2; k++) { box(g, M.dark, 0.08, 0.14, 0.02, k * 0.28, 3.1, 0.54); box(g, M.dark, 0.02, 0.14, 0.08, 0.79, 3.1, -0.25 + k * 0.28); }
-    pyramid(g, team, 1.18, 1.25, 0, 3.36, -0.25);
+    pyramid(g, M.slate, 1.18, 1.25, 0, 3.36, -0.25);
     box(g, M.gold, 0.06, 0.12, 0.06, 0, 4.6, -0.25);
     box(g, M.woodDark, 0.04, 0.85, 0.04, 0, 4.6, -0.25);
     box(g, flag, 0.55, 0.3, 0.02, 0.29, 5.1, -0.25);
@@ -958,7 +959,7 @@ const BUILDERS: Record<string, Builder> = {
         const tooth = box(g, S, 0.17, 0.16, 0.1, x + Math.sin(a) * 0.46, 2.21, z + Math.cos(a) * 0.46);
         tooth.rotation.y = a;
       }
-      pyramid(g, team, 0.44, 1.05, x, 2.25, z, 14);
+      pyramid(g, M.slate, 0.44, 1.05, x, 2.25, z, 14);
       box(g, M.woodDark, 0.025, 0.35, 0.025, x, 3.28, z);
       box(g, flag, 0.2, 0.11, 0.015, x + 0.1, 3.5, z);
       // strzelnice na zewnątrz
@@ -972,7 +973,7 @@ const BUILDERS: Record<string, Builder> = {
       const gt = tileRound(new THREE.Mesh(new THREE.CylinderGeometry(0.24, 0.28, 1.45, 14), D), 0.26, 1.45);
       gt.position.set(s2 * 0.48, 0.725, 1.35);
       g.add(gt);
-      pyramid(g, team, 0.27, 0.5, s2 * 0.48, 1.45, 1.35, 12);
+      pyramid(g, M.slate, 0.27, 0.5, s2 * 0.48, 1.45, 1.35, 12);
       box(g, M.dark, 0.035, 0.2, 0.02, s2 * 0.48, 0.9, 1.63);
     }
     const gate = cutBox(0.72, 1.38, 0.36, [{ w: 0.42, h: 0.62, d: 0.5, x: 0, y: 0.31, z: 0 }], D, 1.15);
