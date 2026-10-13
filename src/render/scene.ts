@@ -1232,6 +1232,8 @@ export class GameRenderer {
       T('gruz', () => this.syncRubble(g, v, dt));
       T('światła', () => this.syncLamps(g));
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
+      const cp = this.cam.camera.position;
+      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.bodies, this.peasantBodies]) f.view(cp);
       T('chłopi', () => this.syncUnits(g, v, alpha));
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });

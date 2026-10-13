@@ -4,6 +4,12 @@ import GUARD_MODEL from './models/guard.json';
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
 interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
+/** Postać z Blendera: środki obrotu i siatki tułowia, nogi i ręki (z bliska i z daleka) */
+interface FigureModel {
+  hip: number[]; shoulder: number[]; hand: number[];
+  static: ModelMesh[]; leg: ModelMesh[]; arm: ModelMesh[];
+  far_static: ModelMesh[]; far_leg: ModelMesh[]; far_arm: ModelMesh[];
+}
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 function modelGeo(m: ModelMesh): THREE.BufferGeometry {
   const geo = new THREE.BufferGeometry();
@@ -30,6 +36,8 @@ interface Part {
   shown: (look: Look) => boolean;
   /** Druga oś obrotu w dłoni (łuk zostaje pionowo, choć ręka się unosi) */
   sub?: { at: THREE.Vector3; rot: (swing: number, armsUp: boolean) => number };
+  /** 0 = wersja z bliska, 1 = uproszczona wersja z daleka */
+  lod: 0 | 1;
 }
 
 const legL = (s: number): number => s, legR = (s: number): number => -s;
@@ -138,11 +146,17 @@ export class Figures {
   private one = new THREE.Vector3(1, 1, 1);
   private none = new THREE.Matrix4().makeScale(0, 0, 0);
   private color = new THREE.Color();
+  private nearN = 0;
+  private farN = 0;
+  private hasFar = false;
+  private viewPos: THREE.Vector3 | null = null;
+  /** Od tej odległości od kamery (do kwadratu) postać rysuje się w wersji uproszczonej */
+  static FAR2 = 13 * 13;
 
   constructor(max: number, scene: THREE.Scene, kind: 'peasant' | 'spearman' | 'archer' | 'guard' = 'peasant') {
     this.muted = kind === 'peasant';
     const always = (): boolean => true;
-    const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub']): void => {
+    const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub'], lod: 0 | 1 = 0): void => {
       const fixed = typeof color === 'number';
       const m = MATS[mat];
       const mesh = new THREE.InstancedMesh(geo.attributes.color ? geo : prep(geo), new THREE.MeshStandardMaterial({ color: fixed ? color : 0xffffff, vertexColors: true, roughness: m.roughness, metalness: m.metalness, side: m.side ?? THREE.FrontSide }), max);
@@ -150,7 +164,8 @@ export class Figures {
       mesh.frustumCulled = false;
       mesh.castShadow = true;
       scene.add(mesh);
-      this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub });
+      this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod });
+      if (lod) this.hasFar = true;
     };
     const add = (geo: THREE.BufferGeometry, color: number | Part['color'], x: number, y: number, z: number, rot: Part['rot'], shown: Part['shown'] = always, mat: Mat = 'cloth', sub?: Part['sub']): void =>
       mk(geo, color, new THREE.Vector3(x, y, z), rot, shown, mat, sub);
@@ -164,31 +179,44 @@ export class Figures {
     const flush = (): void => { for (const x of stills) mk(mergeGeometries(x.geo)!, x.color, new THREE.Vector3(), still, x.shown, x.mat); };
     const still = (): number => 0;
     const tunic = (l: Look): number => l.tunic, skin = (l: Look): number => l.skin;
+    /** Wczytuje postać z Blendera: tułów stoi, nogi i ręce się obracają; wersja z bliska i z daleka */
+    const DYN: Record<string, Part['color']> = { skin, tunic, hair: (l) => l.hair, trousers: (l) => l.trousers, hat: (l) => l.hat };
+    const SHOW: Record<string, Part['shown']> = {
+      beard: (l) => l.beard || l.headwear % 2 === 0, beardP: (l) => l.beard, apron: (l) => l.apron, wraps: (l) => l.wraps,
+      hairOn: (l) => l.headwear !== 1 && l.headwear !== 3, straw: (l) => l.headwear === 0, hood: (l) => l.headwear === 1,
+      cap: (l) => l.headwear === 2, kerchief: (l) => l.headwear === 3, kettle: (l) => l.headwear % 3 !== 1, nasal: (l) => l.headwear % 3 === 1,
+    };
+    const model = (M: FigureModel, armLeft: Part['rot'], armRight: Part['rot']): void => {
+      const dyn = (d: string | null): number | Part['color'] => (d ? DYN[d] ?? 0xffffff : 0xffffff);
+      const showOf = (sh: string | null): Part['shown'] => (sh ? SHOW[sh] ?? always : always);
+      for (const lod of [0, 1] as const) {
+        const st = lod ? M.far_static : M.static, lg = lod ? M.far_leg : M.leg, ar = lod ? M.far_arm : M.arm;
+        for (const m of st) mk(modelGeo(m), dyn(m.dyn), new THREE.Vector3(), still, showOf(m.show), m.mat as Mat, undefined, lod);
+        for (const [sx, rot] of [[-1, legL], [1, legR]] as const)
+          for (const m of lg) mk(modelGeo(m), dyn(m.dyn), new THREE.Vector3(sx * M.hip[0]!, M.hip[1]!, M.hip[2]!), rot, showOf(m.show), m.mat as Mat, undefined, lod);
+        for (const [sx, rot] of [[-1, armLeft], [1, armRight]] as const)
+          for (const m of ar) mk(modelGeo(m), dyn(m.dyn), new THREE.Vector3(sx * M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), rot, showOf(m.show), m.mat as Mat, undefined, lod);
+      }
+    };
+    /** Broń i sprzęt w jednej siatce z kolorami wierzchołków (jedno wywołanie rysowania) */
+    const tinted = (g: THREE.BufferGeometry, hex: number): THREE.BufferGeometry => {
+      const n = g.index ? g.toNonIndexed() : g;
+      n.deleteAttribute('uv');
+      const c = new THREE.Color(hex), arr = new Float32Array(n.attributes.position!.count * 3);
+      for (let i = 0; i < arr.length; i += 3) { arr[i] = c.r; arr[i + 1] = c.g; arr[i + 2] = c.b; }
+      n.setAttribute('color', new THREE.BufferAttribute(arr, 3));
+      return n;
+    };
     if (kind === 'guard') {
-      // Strażnik Starego Obozu: gładkie bryły wyrzeźbione w Blenderze (tools/models/guard.py) z cieniem w zagłębieniach
-      // zapisanym w kolorach wierzchołków. Części jak u innych postaci: tułów i głowa stoją, nogi i ręce się obracają.
-      const M = GUARD_MODEL;
-      const dyn = (d: string | null): number | Part['color'] => (d === 'skin' ? skin : d === 'hair' ? (l: Look) => l.hair : d === 'tunic' ? tunic : 0xffffff);
-      const showOf = (sh: string | null): Part['shown'] => (sh === 'beard' ? (l: Look) => l.beard || l.headwear % 2 === 0 : always);
-      for (const m of M.static) mk(modelGeo(m), dyn(m.dyn), new THREE.Vector3(), still, showOf(m.show), m.mat as Mat);
-      for (const [sx, rot] of [[-1, legL], [1, legR]] as const)
-        for (const m of M.leg) mk(modelGeo(m), dyn(m.dyn), new THREE.Vector3(sx * M.hip[0]!, M.hip[1]!, M.hip[2]!), rot, always, m.mat as Mat);
+      // Strażnik Starego Obozu (tools/models/guard.py)
+      const M = GUARD_MODEL as FigureModel;
       // prawa ręka z mieczem: przy marszu luźno, w walce zamach z góry
       const swordArm = (sw: number, up: boolean): number => (up ? -2.2 : sw * 0.55 - 0.15);
-      for (const [sx, rot] of [[-1, armL], [1, swordArm]] as const)
-        for (const m of M.arm) mk(modelGeo(m), dyn(m.dyn), new THREE.Vector3(sx * M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), rot, always, m.mat as Mat);
+      model(M, armL, swordArm);
       // miecz: rękojeść w dłoni, jelec, głowica, prosta klinga; w spoczynku ostrzem w dół i lekko w przód
       const sword = { at: new THREE.Vector3(M.hand[0]!, M.hand[1]!, M.hand[2]!), rot: (_s: number, up: boolean): number => (up ? -0.9 : -0.55) };
       const at = new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!);
-      // rękojeść i klinga w jednej siatce (kolory wierzchołków), jedno wywołanie rysowania
-      const tinted = (g: THREE.BufferGeometry, hex: number): THREE.BufferGeometry => {
-        const n = g.index ? g.toNonIndexed() : g;
-        n.deleteAttribute('uv');
-        const c = new THREE.Color(hex), arr = new Float32Array(n.attributes.position!.count * 3);
-        for (let i = 0; i < arr.length; i += 3) { arr[i] = c.r; arr[i + 1] = c.g; arr[i + 2] = c.b; }
-        n.setAttribute('color', new THREE.BufferAttribute(arr, 3));
-        return n;
-      };
+      // rękojeść i klinga w jednej siatce (kolory wierzchołków)
       mk(mergeGeometries([
         tinted(new THREE.CylinderGeometry(0.008, 0.008, 0.055, 6).translate(0, 0.012, 0), 0x3a2416),
         tinted(new THREE.SphereGeometry(0.013, 6, 4).translate(0, 0.044, 0), 0xb08a3a),
@@ -395,11 +423,19 @@ export class Figures {
    * `work` = poza przy pracy: kąt prawej ręki (ujemny = w przód i w górę); nogi stoją, lewa ręka lekko przed sobą.
    * Bez tego `swing` rusza rękami i nogami jak przy chodzie.
    */
-  set(i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = i, work?: number, workL = -0.5, walkLegs = false): void {
+  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false): void {
+    // ukryta postać (macierz o zerowej skali) nie zajmuje miejsca: karta graficzna liczy tylko widoczne
+    const e = base.elements;
+    if (e[0] === 0 && e[5] === 0 && e[10] === 0) return;
+    // z daleka: uproszczona wersja (o ile postać ją ma)
+    const far = this.hasFar && !!this.viewPos && (e[12] - this.viewPos.x) ** 2 + (e[13] - this.viewPos.y) ** 2 + (e[14] - this.viewPos.z) ** 2 > Figures.FAR2;
+    const i = far ? this.farN++ : this.nearN++;
+    const lod = far ? 1 : 0;
     const look = lookOf(id, tunic, this.muted);
     this.scaled.copy(base).scale(this.one.setScalar(look.size));
     this.one.setScalar(1);
     for (const p of this.parts) {
+      if (p.lod !== lod) continue;
       if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
       const r = work === undefined ? p.rot(swing, armsUp)
         : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
@@ -412,12 +448,17 @@ export class Figures {
     }
   }
 
-  finish(count: number): void {
+  /** Skąd patrzy kamera (do wyboru wersji z bliska / z daleka); wywoływane co klatkę przed set() */
+  view(p: THREE.Vector3): void { this.viewPos = p; }
+
+  finish(_count: number): void {
     for (const p of this.parts) {
-      p.mesh.count = count;
-      p.mesh.visible = count > 0; // pusta grupa nie kosztuje wywołania rysowania
+      const n = p.lod ? this.farN : this.nearN;
+      p.mesh.count = n;
+      p.mesh.visible = n > 0; // pusta grupa nie kosztuje wywołania rysowania
       p.mesh.instanceMatrix.needsUpdate = true;
       if (p.mesh.instanceColor) p.mesh.instanceColor.needsUpdate = true;
     }
+    this.nearN = 0; this.farN = 0;
   }
 }
