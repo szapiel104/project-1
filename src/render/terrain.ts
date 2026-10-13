@@ -77,7 +77,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const k = y * (w + 1) + x, hh = corners[k]!;
       if (hh <= 1.6) continue;
       const lift = hh - 1.6;
-      corners[k] = hh + (ridged(x / 9, y / 9, 5) - 0.45) * lift * 1.1 + Math.pow(ridged(x / 23 + 7, y / 23 - 3), 2) * lift * 0.9;
+      corners[k] = hh + (ridged(x / 11, y / 11, 5) - 0.45) * lift * 0.55 + Math.pow(ridged(x / 26 + 7, y / 26 - 3), 2) * Math.min(lift, 8) * 0.6;
     }
   const corner = (x: number, y: number): number => corners[y * (w + 1) + x]!;
 
@@ -562,8 +562,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         }
         const X = px - ox, Y = pz - oz;
         const groundY = hAny(X, Y);
-        const treeline = 12.5 + nz(X / 30, Y / 30) * 2.5;
-        if (groundY > treeline || slopeAt(X, Y) > 0.9) continue;
+        const treeline = 10.5 + nz(X / 30, Y / 30) * 2.0;
+        if (groundY > treeline || slopeAt(X, Y) > 1.3) continue;
         const alt = smoothstep(treeline - 6, treeline, groundY);
         if (((r >>> 20) & 255) / 255 < alt * 0.7) continue; // pod granicą lasu coraz rzadziej
         const k = Math.min(1, dd / 60);

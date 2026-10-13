@@ -163,8 +163,8 @@ const FRAG_ALBEDO = /* glsl */ `
   // góry: na płaskich półkach trawa i mech, wysoko śnieg (mniej na stromiznach), granica postrzępiona szumem
   float ledge = bR / sum * smoothstep(0.8, 0.95, vWN.y) * smoothstep(0.45, 0.7, nS.b) * (1.0 - smoothstep(9.0, 13.0, vWP.y));
   alb = mix(alb, grass * 0.8, ledge * 0.85);
-  float line = 13.5 + nM.g * 3.5 + (nD.r - 0.5) * 1.5;
-  float snow = smoothstep(line, line + 1.1, vWP.y) * mix(0.3, 1.0, smoothstep(0.35, 0.8, vWN.y));
+  float line = 11.5 + nM.g * 3.0 + (nD.r - 0.5) * 1.5;
+  float snow = smoothstep(line, line + 1.4, vWP.y) * mix(0.55, 1.0, smoothstep(0.3, 0.75, vWN.y));
   vec3 snowC = vec3(0.78, 0.81, 0.86) * (0.8 + lum(rock) * 0.45) * (0.9 + nD.g * 0.16);
   snow *= smoothstep(0.0, 0.35, 1.0 - lum(rock) * 0.6 + nD.b * 0.4 - 0.3) * 0.5 + 0.5;
   alb = mix(alb, snowC, clamp(snow, 0.0, 1.0));
