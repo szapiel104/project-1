@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.16.1 — skrzynie i drewniane graty (2026-10-13)
+
+- Skrzynie przy domach zamiast gładkich pudełek: narożne słupki, poziome klepki ze szparami, żelazne okucia na rogach, wieko z desek z listwą; na wierzchu otwarta skrzynka z rzepą i jabłkami
+- Drewniane graty (skrzynie, beczki, taczki, polana, wiadra) mają teksturę słojów drewna zamiast jednolitego koloru
+- Podgląd gratów z bliska: podglad-wojsko.html?graty=1
+
 ## 0.16.0 — walka z charakterem (2026-10-13)
 
 - Kierunek ciosu ma znaczenie: z boku o 30% mocniej, w plecy o 60% (liczy się, w którą stronę żołnierz patrzy: na przeciwnika, w stronę marszu albo w kierunek szyku)

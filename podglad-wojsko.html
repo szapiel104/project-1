@@ -4,6 +4,8 @@
 // Podgląd postaci żołnierzy z bliska: ?d=odległość&pitch=kąt (do porównań wyglądu, bez całej mapy)
 import * as THREE from 'three';
 import { Figures } from './src/render/peasants.ts';
+import { clutterModel } from './src/render/clutter.ts';
+import { pattern } from './src/render/textures.ts';
 const q = new URLSearchParams(location.search);
 const dist = Number(q.get('d') ?? 2.6), pitch = Number(q.get('pitch') ?? 0.32), look = Number(q.get('y') ?? 0.32);
 const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
@@ -29,5 +31,12 @@ if (q.get('chlopi')) {
 }
 const cam = new THREE.PerspectiveCamera(30, 1200 / 700, 0.05, 50);
 cam.position.set(0, look + Math.sin(pitch) * dist, Math.cos(pitch) * dist); cam.lookAt(0, look, 0);
-r.render(s, cam); document.title = 'gotowe';
+if (q.get('graty')) {
+  // same graty spod domów, powiększone: skrzynie, beczka, taczka, polana, wiadro
+  sp.finish(0); ar.finish(0); pe.finish(0);
+  const wm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: q.get('bez') ? null : pattern('planks') });
+  ['crate', 'barrel', 'barrow', 'logs', 'bucket', 'crate'].forEach((k, i) => { const geo = clutterModel(k); const uv = geo.attributes.uv; if (uv && k !== 'hay') for (let j = 0; j < uv.count; j++) uv.setXY(j, uv.getX(j) * 0.35, uv.getY(j) * 0.35); const m = new THREE.Mesh(geo, wm); m.scale.setScalar(4); m.position.set(-1.25 + i * 0.5, 0, i === 5 ? 0.4 : 0); m.rotation.y = i === 5 ? 2.2 : 0.5; m.castShadow = true; s.add(m); });
+}
+// zdjęciowe tekstury (deski, kora) dochodzą po chwili: klatka po ich wczytaniu
+setTimeout(() => { r.render(s, cam); document.title = 'gotowe'; }, q.get('graty') ? 4000 : 0);
 </script>

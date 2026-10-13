@@ -17,6 +17,44 @@ type Kind = 'barrel' | 'sack' | 'hay' | 'crate' | 'trash' | 'bucket' | 'barrow' 
 const n = (g: THREE.BufferGeometry): THREE.BufferGeometry => (g.index ? g.toNonIndexed() : g);
 const merge = (parts: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries(parts.map(n))!;
 
+/**
+ * Skrzynia z desek: cztery narożne słupki, poziome klepki ze szparami (w środku ciemno), wieko z trzech desek
+ * i żelazne okucia na rogach. Otwarta skrzynka ma zamiast wieka rzepy i jabłka.
+ */
+function crate(w: number, h: number, x: number, y: number, z: number, rot: number, open: boolean): THREE.BufferGeometry[] {
+  const out: THREE.BufferGeometry[] = [];
+  const put = (g: THREE.BufferGeometry, c: number): void => { out.push(tint(g.rotateY(rot).translate(x, y, z), c)); };
+  const SLAT = [0x8a6a42, 0x7d5e3a, 0x94724a, 0x846440];
+  const post = 0.02, t = 0.012, rows = 3, gap = 0.008, sh = (h - gap * (rows + 1)) / rows;
+  put(new THREE.BoxGeometry(w - 0.02, h - 0.01, w - 0.02).translate(0, h / 2, 0), 0x1c130b); // ciemne wnętrze widoczne w szparach
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) {
+    put(new THREE.BoxGeometry(post, h, post).translate(sx * (w / 2 - post / 2), h / 2, sz * (w / 2 - post / 2)), 0x5a3e24);
+    // żelazne okucie na górnym i dolnym rogu
+    for (const yy of [0.012, h - 0.012]) put(new THREE.BoxGeometry(post + 0.006, 0.014, post + 0.006).translate(sx * (w / 2 - post / 2), yy, sz * (w / 2 - post / 2)), 0x3a3836);
+  }
+  for (let side = 0; side < 4; side++)
+    for (let r = 0; r < rows; r++) {
+      const yy = gap + sh / 2 + r * (sh + gap);
+      const along = w - post * 2;
+      const g = side < 2 ? new THREE.BoxGeometry(along, sh, t) : new THREE.BoxGeometry(t, sh, along);
+      const off = w / 2 - t / 2;
+      g.translate(side === 2 ? -off : side === 3 ? off : 0, yy, side === 0 ? -off : side === 1 ? off : 0);
+      put(g, SLAT[(side * 3 + r) % SLAT.length]!);
+    }
+  if (!open) {
+    for (let k = 0; k < 3; k++) put(new THREE.BoxGeometry(w + 0.004, 0.012, (w - 0.008) / 3 - 0.004).translate(0, h + 0.006, -w / 3 + k * (w / 3)), SLAT[(k + 1) % SLAT.length]!);
+    put(new THREE.BoxGeometry(0.014, 0.014, w * 0.95).translate(0, h + 0.016, 0), 0x5a3e24); // listwa w poprzek wieka
+  } else {
+    // pełna skrzynka: rzepy i jabłka wystają nad brzeg
+    const FRUIT: [number, number, number, number][] = [[-0.026, -0.022, 0.019, 0xd8cfa8], [0.024, 0.02, 0.018, 0xb02a22], [0.02, -0.026, 0.017, 0xd8cfa8], [-0.022, 0.024, 0.017, 0xa83226], [0, 0, 0.019, 0xc9b98a], [0.026, -0.002, 0.016, 0x9a2a20]];
+    for (const [fx, fz, r, c] of FRUIT) put(new THREE.IcosahedronGeometry(r, 1).scale(1, 0.85, 1).translate(fx, h - 0.005, fz), c);
+  }
+  return out;
+}
+
+/** Model jednego rodzaju gratów (podgląd w podglad-wojsko.html?graty=1) */
+export const clutterModel = (kind: Kind): THREE.BufferGeometry => geometry(kind);
+
 function geometry(kind: Kind): THREE.BufferGeometry {
   const wood = 0x7a5232, dark = 0x3e2a1a, iron = 0x4a4844;
   switch (kind) {
@@ -47,10 +85,8 @@ function geometry(kind: Kind): THREE.BufferGeometry {
       return merge(parts);
     }
     case 'crate': return merge([
-      tint(new THREE.BoxGeometry(0.15, 0.13, 0.15).translate(0, 0.065, 0), 0x8a6a42),
-      tint(new THREE.BoxGeometry(0.155, 0.02, 0.155).translate(0, 0.12, 0), 0x6b4f30),
-      tint(new THREE.BoxGeometry(0.155, 0.02, 0.155).translate(0, 0.015, 0), 0x6b4f30),
-      tint(new THREE.BoxGeometry(0.11, 0.1, 0.11).rotateY(0.4).translate(0.03, 0.18, -0.01), 0x7f6240), // mniejsza na górze
+      ...crate(0.17, 0.14, 0, 0, 0, 0, false),
+      ...crate(0.12, 0.085, 0.025, 0.155, -0.01, 0.45, true),
     ]);
     case 'trash': return merge([
       tint(new THREE.IcosahedronGeometry(0.09, 0).scale(1.4, 0.35, 1).translate(0, 0.02, 0), 0x3f3527),
@@ -113,10 +149,16 @@ export class Clutter {
 
   constructor() {
     const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, flatShading: true });
+    // drewniane graty ze słojami desek (tekstura w mniejszej skali, żeby na małej klepce było widać jedno usłojenie)
+    // tekstura ta sama co na budynkach (dociąga się do niej zdjęcie desek), a skalę słojów zmniejsza geometria
+    const woodMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') });
+    const WOODEN = new Set<Kind>(['crate', 'barrel', 'barrow', 'logs', 'bucket']);
     // siano dostaje teksturę strzechy (źdźbła), reszta gratów gładkie barwy
     const hayMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('thatch'), bumpMap: bump('thatch'), bumpScale: 1.2 });
     for (const k of ALL) {
-      const m = new THREE.InstancedMesh(geometry(k), k === 'hay' ? hayMat : mat, MAX);
+      const geo = geometry(k);
+      if (WOODEN.has(k)) { const uv = geo.attributes.uv; if (uv) { for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.35, uv.getY(i) * 0.35); uv.needsUpdate = true; } }
+      const m = new THREE.InstancedMesh(geo, k === 'hay' ? hayMat : WOODEN.has(k) ? woodMat : mat, MAX);
       m.count = 0; m.castShadow = true; m.receiveShadow = true;
       this.meshes.set(k, m);
       this.group.add(m);
