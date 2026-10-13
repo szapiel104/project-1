@@ -1043,3 +1043,16 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 .bar-item { font-size: clamp(12px, 1.05vw, 17px); letter-spacing: clamp(.04em, .08vw, .1em); padding: 6px clamp(6px, .8vw, 14px); }
 .bar-main { font-size: clamp(17px, 1.7vw, 25px); padding: 10px clamp(18px, 2.6vw, 46px); }
 .menu-bar { gap: clamp(6px, 1.2vw, 34px); padding-left: 8px; padding-right: 8px; }
+/* zapasy: zawsze drewno, kamień, złoto i jedzenie razem; reszta po rozwinięciu (przycisk „…”) */
+.status .res li { flex: none; }
+.status .res .res-toggle-li { display: flex; padding: 0; background: none; border: 0; box-shadow: none; }
+.res-toggle { min-height: 46px; min-width: 34px; padding: 0 8px; font-size: 20px; line-height: 1; }
+.res-toggle[aria-expanded='true'] { color: #ffe7a6; box-shadow: inset 0 0 0 1px #e9c766; }
+.status .res .res-toggle-li { position: relative; }
+.status .res-extra { position: absolute; bottom: calc(100% + 8px); left: 0; z-index: 31; display: flex; flex-wrap: nowrap; gap: 3px; padding: 5px;
+  background: linear-gradient(#1f1710, #120d08); border: 1px solid #6e5420; box-shadow: 0 0 0 2px #0b0704, 0 8px 22px rgba(0, 0, 0, .6); }
+.status .res-extra li { display: grid; }
+/* dół ekranu nigdy szerszy niż okno: okno budynku nie ucieka za prawą krawędź */
+.bottom > *, .floaters, .dock, .status { min-width: 0; }
+
+.info { max-width: min(320px, calc(100vw - 16px)); }

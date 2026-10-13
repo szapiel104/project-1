@@ -140,6 +140,14 @@ const ICONS: Record<string, string> = {
   gold: '<circle cx="10" cy="10" r="7" fill="#e9c145" stroke="#2a1c10"/><circle cx="10" cy="10" r="4.5" fill="none" stroke="#9a7a1a"/><path d="M10 7v6M8 8.500h3.500a1.3 1.3 0 010 2.600H8" stroke="#7a5d10" fill="none"/>',
 };
 
+/** Krótki zapis dużych liczb, żeby pasek się nie rozjeżdżał: 14315 → 14,3k, 1000000 → 1 mln */
+function short(n: number): string {
+  const a = Math.abs(n);
+  if (a >= 1e6) return `${(n / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace('.0', '').replace('.', ',')} mln`;
+  if (a >= 1e4) return `${(n / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace('.0', '').replace('.', ',')}k`;
+  return String(n);
+}
+
 function icon(id: string): HTMLElement {
   const span = document.createElement('span');
   span.className = 'ico';
@@ -180,8 +188,31 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const resVals: HTMLElement[] = [];
   const resTrends: HTMLElement[] = [];
   const resItems: HTMLElement[] = [];
+  // ważne zapasy widać zawsze; reszta (półprodukty, broń, poszczególne rodzaje jedzenia) chowa się pod przyciskiem
+  const MAIN_RES: readonly ResourceId[] = ['wood', 'stone', 'gold'];
+  const FOOD_RES: readonly ResourceId[] = ['apples', 'bread', 'fish'];
+  // zbiorczo jedzenie (jabłka + chleb + ryby), gdy reszta jest zwinięta
+  const foodSum = el('li', 'res-sum');
+  const foodSumVal = el('strong', '', '0');
+  foodSum.dataset.tip = 'Jedzenie';
+  foodSum.setAttribute('aria-label', 'Jedzenie razem');
+  foodSum.append(icon('apples'), foodSumVal, el('span', 'trend'));
+  let resOpen = false;
+  try { resOpen = localStorage.getItem('project1.resOpen') === '1'; } catch { /* nic */ }
+  const resToggle = el('button', 'res-toggle');
+  resToggle.type = 'button';
+  const paintRes = (): void => {
+    resList.classList.toggle('open', resOpen);
+    extra.hidden = !resOpen;
+    resToggle.setAttribute('aria-expanded', String(resOpen));
+    resToggle.textContent = resOpen ? '‹' : '…';
+    resToggle.title = resOpen ? 'Zwiń: tylko najważniejsze zapasy' : 'Pokaż wszystkie zapasy';
+    resToggle.setAttribute('aria-label', resToggle.title);
+  };
+  resToggle.addEventListener('click', () => { resOpen = !resOpen; try { localStorage.setItem('project1.resOpen', resOpen ? '1' : '0'); } catch { /* nic */ } paintRes(); });
   for (const id of RESOURCES) {
     const li = el('li');
+    if (!MAIN_RES.includes(id)) li.classList.add('res-more');
     const val = el('strong', '', '0');
     const tr = el('span', 'trend');
     li.dataset.tip = t(RESOURCE_DEFS[id].name);
@@ -192,6 +223,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     resItems.push(li);
     resList.append(li);
   }
+  // kolejność: drewno, kamień, złoto, jedzenie razem, [rozwijane], przycisk
+  for (const id of MAIN_RES) resList.append(resItems[RESOURCES.indexOf(id)]!);
+  resList.append(foodSum);
+  // pozostałe zapasy w wysuwanej listwie nad paskiem (nie rozpychają dolnego paska)
+  const extra = el('ul', 'res res-extra');
+  extra.setAttribute('aria-label', 'Pozostałe zapasy');
+  for (const id of RESOURCES) if (!MAIN_RES.includes(id)) extra.append(resItems[RESOURCES.indexOf(id)]!);
+  const toggleLi = el('li', 'res-toggle-li');
+  toggleLi.append(resToggle, extra);
+  resList.append(toggleLi);
+  paintRes();
   const people = el('div', 'people');
   const popVal = el('strong');
   const popularVal = el('strong');
@@ -745,11 +787,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     update(v) {
       if (v.report) { lastReport = v.report; if (reportKind) drawReport(); }
       setText(armyVal, String(v.soldiers ?? 0));
-      resVals.forEach((node, i) => setText(node, String(v.res[i] ?? 0)));
+      resVals.forEach((node, i) => setText(node, short(v.res[i] ?? 0)));
+      const fs = FOOD_RES.reduce((a, id) => a + (v.res[RESOURCES.indexOf(id)] ?? 0), 0);
+      setText(foodSumVal, short(fs));
+      foodSum.dataset.tip = `Jedzenie razem: ${fs} (${FOOD_RES.map((id) => `${t(RESOURCE_DEFS[id].name)} ${v.res[RESOURCES.indexOf(id)] ?? 0}`).join(', ')})`;
       // trend: ile przybyło albo ubyło w ostatniej minucie gry (zielone na plus, czerwone na minus)
       resTrends.forEach((node, i) => {
         const d = v.trend[i] ?? 0;
-        setText(node, d ? `${d > 0 ? '+' : '−'}${Math.abs(d)}` : '');
+        setText(node, d ? `${d > 0 ? '+' : '−'}${short(Math.abs(d))}` : '');
         node.dataset.sign = d > 0 ? 'pos' : d < 0 ? 'neg' : '';
         resItems[i]!.dataset.tip = `${t(RESOURCE_DEFS[RESOURCES[i]!].name)}: ${v.res[i] ?? 0}${d ? ` (${d > 0 ? '+' : '−'}${Math.abs(d)} ${t('hud.perMinute')})` : ''}`;
       });
@@ -761,9 +806,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(popVal, `${v.pop} / ${v.housing}`);
       setText(idleVal, `${v.idle} / ${v.idleSlots}`);
       idleBox.classList.toggle('full', v.idle >= v.idleSlots);
-      setText(stockVal, `${v.stock} / ${v.stockCap}`);
+      setText(stockVal, `${short(v.stock)} / ${short(v.stockCap)}`);
       stockBox.classList.toggle('full', v.stock >= v.stockCap);
-      setText(foodVal, `${v.food} / ${v.foodCap}`);
+      setText(foodVal, `${short(v.food)} / ${short(v.foodCap)}`);
       foodBox.classList.toggle('full', v.food >= v.foodCap);
       setText(popularVal, `${v.popularity} / ${RULES.maxPopularity}`);
       meterFill.style.width = `${(v.popularity / RULES.maxPopularity) * 100}%`;
