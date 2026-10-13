@@ -406,8 +406,9 @@ export class GameRenderer {
     ]);
     // młotek w prawej dłoni: trzonek w przód z dłoni, obuch na końcu (układ ramienia: oś w barku)
     const hammer = mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.014, 0.016, 0.26, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.11), 0x7a5232),
-      tint(new THREE.BoxGeometry(0.11, 0.05, 0.05).translate(0, -0.19, 0.24), 0x55585e),
+      tint(new THREE.CylinderGeometry(0.016, 0.019, 0.34, 6).rotateX(Math.PI / 2).translate(0, -0.2, 0.14), 0x7a5232),
+      tint(new THREE.BoxGeometry(0.15, 0.07, 0.07).translate(0, -0.2, 0.31), 0x4a4d52),
+      tint(new THREE.BoxGeometry(0.03, 0.075, 0.075).translate(-0.085, -0.2, 0.31), 0x8a8e96),
     ]);
     this.hammers = new THREE.InstancedMesh(hammer, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
     this.hammers.count = 0;
@@ -1519,7 +1520,10 @@ export class GameRenderer {
   /** Czas, od kiedy trwa pokazowa budowa gotowego od razu budynku (sama grafika, ok. 3 s) */
   private quickBuild = new Map<number, number>();
   private builtAt = 0;
-  private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material }>();
+  private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material; pit: THREE.Mesh }>();
+  private static pitMat: THREE.MeshStandardMaterial | undefined;
+  /** Części modelu, których na placu budowy nie ma (wnętrze z ludźmi, zapasy, dym, ogień, życie) */
+  private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'smoke', 'flame', 'flagcloth', 'flagpole']);
   private siteKey = '';
   private scaffold: THREE.InstancedMesh | null = null;
   private siteStones: THREE.InstancedMesh | null = null;
@@ -1534,7 +1538,24 @@ export class GameRenderer {
       if (!c) { c = m.clone(); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clones.set(m, c); }
       return c;
     };
-    const site = { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped, clip };
+    // wykop pod fundament: ciemna, wilgotna ziemia z ciemniejszym dnem i jaśniejszym, rozkopanym brzegiem
+    const def = BUILDINGS[this.state!.buildings.find((b) => b.id === id)!.type]!;
+    const b0 = this.state!.buildings.find((b) => b.id === id)!;
+    const fp = footprint(def, b0.rot);
+    const pitGeo = new THREE.PlaneGeometry(fp.w - 0.1, fp.h - 0.1, 6, 6).rotateX(-Math.PI / 2);
+    const pc = new Float32Array(pitGeo.attributes.position!.count * 3);
+    for (let i = 0; i < pitGeo.attributes.position!.count; i++) {
+      const x = pitGeo.attributes.position!.getX(i) / ((fp.w - 0.1) / 2), z = pitGeo.attributes.position!.getZ(i) / ((fp.h - 0.1) / 2);
+      const edge = Math.max(Math.abs(x), Math.abs(z));
+      const v = 0.32 + edge * edge * 0.55; // środek ciemny (głęboko), brzegi jaśniejsze
+      pc[i * 3] = v; pc[i * 3 + 1] = v * 0.86; pc[i * 3 + 2] = v * 0.7;
+    }
+    pitGeo.setAttribute('color', new THREE.BufferAttribute(pc, 3));
+    const pit = new THREE.Mesh(pitGeo, GameRenderer.pitMat ??= new THREE.MeshStandardMaterial({ vertexColors: true, color: 0x5a4430, map: pattern('soil'), roughness: 1, polygonOffset: true, polygonOffsetFactor: -3 }));
+    pit.position.set(mesh.position.x, mesh.position.y + 0.012, mesh.position.z);
+    pit.receiveShadow = true;
+    this.buildingLayer.add(pit);
+    const site = { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped, clip, pit };
     this.sites.set(id, site);
     this.clipNew(mesh, site);
   }
@@ -1557,6 +1578,10 @@ export class GameRenderer {
       me.material = orig;
       me.userData.siteClip = false;
     }
+    this.buildingLayer.remove(s.pit);
+    s.pit.geometry.dispose();
+    const mesh = this.buildingMeshes.get(id);
+    if (mesh) for (const ch of mesh.children) if (GameRenderer.SITE_HIDE.has(ch.name)) ch.visible = true;
     this.sites.delete(id);
   }
   private syncSites(g: GameState): void {
@@ -1605,10 +1630,12 @@ export class GameRenderer {
         pl.visible = k < 0.7;
         pl.scale.y = 1.6 * (1 - k);
       } else if (pile) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
-      // najpierw fundament (pierwsze 10% pracy), potem mury i dach
-      const cut = site.base + 0.04 + Math.max(0, (k - 0.08) / 0.92) * (site.top - site.base) * 1.01;
+      // najpierw wykop (pierwsze 12% pracy: sama dziura w ziemi), potem fundament, mury i na końcu dach
+      const cut = site.base + 0.03 + Math.max(0, (k - 0.12) / 0.88) * (site.top - site.base) * 1.01;
       site.plane.constant = cut;
-      mesh.visible = true;
+      mesh.visible = k >= 0.12;
+      site.pit.visible = k < 0.3;
+      for (const ch of mesh.children) if (GameRenderer.SITE_HIDE.has(ch.name)) ch.visible = false;
       scaffolds.push({ b, k, cut, site });
       if (this.calm) continue;
       const next = this.dustAt.get(b.id) ?? 0;
@@ -1630,7 +1657,7 @@ export class GameRenderer {
     if (!this.scaffold) {
       const wood = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.95, map: pattern('planks') });
       this.scaffold = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), wood, 6000);
-      this.siteStones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0).translate(0, 0.35, 0), new THREE.MeshStandardMaterial({ color: 0x9a948a, roughness: 1, flatShading: true }), 600);
+      this.siteStones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0).translate(0, 0.35, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true, map: pattern('rock') }), 600);
       for (const m of [this.scaffold, this.siteStones]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.buildingLayer.add(m); }
     }
     const { width, height } = g.map;
@@ -1646,16 +1673,48 @@ export class GameRenderer {
       const fp = footprint(def, b.rot);
       const x0 = b.x - width / 2 - 0.12, z0 = b.y - height / 2 - 0.12, x1 = x0 + fp.w + 0.24, z1 = z0 + fp.h + 0.24;
       const base = site.base;
-      // stos desek i kamieni przy rogu działki: to, co robotnicy przynieśli ze składu, a czego jeszcze nie wbudowali
+      // Skład materiału przy placu (przed frontem działki, za rusztowaniem): każdy przyniesiony, a jeszcze niewbudowany
+      // ładunek leży osobno — wiązka desek ułożonych na krzyż albo kupka ciosanych kamieni. Przy wykopie hałda ziemi.
       const L = b.loads ?? 0;
-      const onSite = L ? Math.max(0, (b.delivered ?? 0) - Math.floor(k * L)) : Math.ceil(4 * (1 - k));
-      const planks = Math.min(8, Math.ceil(onSite * 1.5)), stones = Math.min(6, onSite);
-      for (let i = 0; i < planks; i++) put(x1 + 0.25, base + i * 0.06, z1 - 0.4, 0.7, 0.05, 0.12 + (i % 2) * 0.02, 0.1 * i);
-      for (let i = 0; i < stones && ns < 600; i++) {
-        q.setFromAxisAngle(Y, i * 1.7);
-        this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(x0 - 0.3 + (i % 2) * 0.22, base + (i > 1 ? 0.12 : 0), z1 - 0.3 - Math.floor(i / 2) * 0.2), q, sc.setScalar(0.2)));
+      const used = L ? Math.floor(Math.max(0, (k - 0.12) / 0.88) * L) : 0;
+      const delivered = L ? (b.delivered ?? 0) : Math.ceil(4 * (1 - k));
+      const cost = def.cost as Record<string, number>;
+      const kinds = (['wood', 'stone', 'iron'] as const).filter((r) => (cost[r] ?? 0) > 0);
+      let wi = 0, si = 0;
+      const yardZ = z1 + 0.62, yardX = x0 + 0.35;
+      for (let n = used; n < delivered; n++) {
+        const kind = kinds.length ? kinds[n % kinds.length]! : 'wood';
+        if (kind === 'wood') {
+          // wiązka: dwie warstwy po trzy deski, warstwy na krzyż
+          const bx = yardX + (wi % 3) * 0.62, by = base + Math.floor(wi / 3) * 0.13;
+          for (let layer = 0; layer < 2; layer++)
+            for (let j = 0; j < 3; j++) {
+              const off = (j - 1) * 0.11;
+              if (layer === 0) put(bx, by + 0.0, yardZ + off, 0.5, 0.05, 0.09, 0);
+              else put(bx + off, by + 0.055, yardZ, 0.09, 0.05, 0.5, 0);
+            }
+          wi++;
+        } else {
+          // kupka: trzy ciosane kamienie
+          const bx = x1 - 0.35 - (si % 3) * 0.45, bz = yardZ;
+          for (let j = 0; j < 3 && ns < 600; j++) {
+            q.setFromAxisAngle(Y, j * 1.3 + si);
+            this.siteStones!.setColorAt(ns, tmpColor.setHex(0xa39c90));
+            this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(bx + (j - 1) * 0.15, base + (j === 2 ? 0.13 : 0) + Math.floor(si / 3) * 0.2, bz + (j === 1 ? 0.08 : -0.04)), q, sc.set(0.26, 0.2, 0.22)));
+          }
+          si++;
+        }
       }
-      if (k < 0.08) continue; // fundament: jeszcze bez rusztowań
+      // hałda ziemi z wykopu: rośnie przy kopaniu, potem ją rozgarniają
+      const spoil = k < 0.12 ? 0.4 + k * 5 : Math.max(0, 1 - (k - 0.12) * 3);
+      if (spoil > 0.05 && ns < 598) {
+        q.setFromAxisAngle(Y, b.id);
+        this.siteStones!.setColorAt(ns, tmpColor.setHex(0x4e3a28));
+        this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(x1 + 0.45, base - 0.05, z0 + 0.4), q, sc.set(0.9 * spoil, 0.45 * spoil, 0.7 * spoil)));
+        this.siteStones!.setColorAt(ns, tmpColor.setHex(0x55402c));
+        this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(x1 + 0.4, base - 0.05, z0 + 0.95), q, sc.set(0.6 * spoil, 0.3 * spoil, 0.55 * spoil)));
+      }
+      if (k < 0.14) continue; // wykop i fundament: jeszcze bez rusztowań
       // słupy co ~0,8 pola po obwodzie, sięgają nieco ponad bieżącą wysokość
       const poleTop = Math.min(site.top + 0.2, cut + 0.45) - base;
       const posts: [number, number][] = [];
@@ -1683,6 +1742,7 @@ export class GameRenderer {
     this.siteStones!.count = ns;
     this.scaffold.instanceMatrix.needsUpdate = true;
     this.siteStones!.instanceMatrix.needsUpdate = true;
+    if (this.siteStones!.instanceColor) this.siteStones!.instanceColor.needsUpdate = true;
   }
 
   private syncBuildings(g: GameState, view: TerrainView): void {
@@ -2359,9 +2419,12 @@ export class GameRenderer {
           const sc = this.sites.get(site.id);
           const deck = sc ? sc.plane.constant - 0.1 : 0;
           const onDeck = !!sc && u.id % 2 === 0 && deck - sc.base > 0.35;
-          const rx = fp.w / 2 + (onDeck ? 0.24 : 0.3), ry = fp.h / 2 + (onDeck ? 0.24 : 0.3);
+          // tuż przy ścianie, żeby młotek trafiał w mur; co trzeci na ziemi klęczy i bije nisko (przy wykopie wszyscy)
+          const kneel = !onDeck && (u.id % 3 === 1 || (sc ? sc.plane.constant - sc.base < 0.2 : false));
+          const rx = fp.w / 2 + (onDeck ? 0.22 : 0.17), ry = fp.h / 2 + (onDeck ? 0.22 : 0.17);
           const px = cx + Math.cos(a) * rx, py = cy + Math.sin(a) * ry;
-          t.position.set(px - width / 2, onDeck ? deck + 0.02 : view.heightAt(px, py), py - height / 2);
+          t.position.set(px - width / 2, (onDeck ? deck + 0.02 : view.heightAt(px, py)) - (kneel ? 0.11 : 0), py - height / 2);
+          if (kneel) lean = 0.3;
           t.rotation.set(0, Math.atan2(cx - px, cy - py), 0);
         }
         // uderzenie młotkiem: powolny zamach w górę, szybki cios w dół, krótkie odbicie i chwila przerwy;
@@ -2373,7 +2436,7 @@ export class GameRenderer {
           else if (ph < 0.66) swing = -2.2 + ((ph - 0.55) / 0.11) * 2.45;  // cios
           else if (ph < 0.74) swing = 0.25 - ((ph - 0.66) / 0.08) * 0.2;   // odbicie
           else swing = 0.05 - ease((ph - 0.74) / 0.26) * 0.35;           // powrót
-          lean = ph > 0.55 && ph < 0.8 ? Math.sin(((ph - 0.55) / 0.25) * Math.PI) * 0.22 : 0;
+          lean += ph > 0.55 && ph < 0.8 ? Math.sin(((ph - 0.55) / 0.25) * Math.PI) * 0.22 : 0;
           if (ph > 0.64 && ph < 0.7) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
         } else swing = 0;
       }
