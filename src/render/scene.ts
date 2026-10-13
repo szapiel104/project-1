@@ -10,7 +10,7 @@ import { BUILDINGS, footprint, workArea } from '../data/buildings';
 import { Clutter } from './clutter';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
-import { crowGeometry, WOLF_HIPS, wolfParts } from './creatures';
+import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
@@ -1403,6 +1403,7 @@ export class GameRenderer {
   private wolfMesh: THREE.InstancedMesh | null = null;
   private wolfEyes: THREE.InstancedMesh | null = null;
   private wolfLegs!: THREE.InstancedMesh;
+  private wolfHindLegs!: THREE.InstancedMesh;
   private wolfTails!: THREE.InstancedMesh;
   private wolfPart = new THREE.Matrix4();
   private wolfRot = new THREE.Matrix4();
@@ -1485,11 +1486,12 @@ export class GameRenderer {
 
   private syncWolves(g: GameState, view: TerrainView, alpha: number): void {
     if (!this.wolfMesh) {
-      const { body, leg, tail, eyes, mat } = wolfParts();
+      const { body, leg, hindLeg, tail, eyes, mat } = wolfParts();
       this.wolfMesh = new THREE.InstancedMesh(body, mat, 64);
-      this.wolfLegs = new THREE.InstancedMesh(leg, mat, 256);
+      this.wolfLegs = new THREE.InstancedMesh(leg, mat, 128);
+      this.wolfHindLegs = new THREE.InstancedMesh(hindLeg, mat, 128);
       this.wolfTails = new THREE.InstancedMesh(tail, mat, 64);
-      for (const m of [this.wolfMesh, this.wolfLegs, this.wolfTails]) { m.castShadow = true; m.frustumCulled = false; this.scene.add(m); }
+      for (const m of [this.wolfMesh, this.wolfLegs, this.wolfHindLegs, this.wolfTails]) { m.castShadow = true; m.frustumCulled = false; this.scene.add(m); }
       this.wolfEyes = new THREE.InstancedMesh(eyes, new THREE.MeshBasicMaterial({ color: 0xffd24a }), 64);
       this.wolfEyes.frustumCulled = false;
       this.scene.add(this.wolfEyes);
@@ -1532,11 +1534,11 @@ export class GameRenderer {
         const front = hz > 0;
         const ang = run ? Math.sin(ph) * 0.55 * diag : lunge ? (front ? -0.7 * lunge : 0.35 * lunge) : 0;
         this.wolfRot.makeRotationX(ang).setPosition(hx, hy, hz);
-        this.wolfLegs.setMatrixAt(n * 4 + k, this.wolfPart.multiplyMatrices(t.matrix, this.wolfRot));
+        (k < 2 ? this.wolfLegs : this.wolfHindLegs).setMatrixAt(n * 2 + (k & 1), this.wolfPart.multiplyMatrices(t.matrix, this.wolfRot));
       });
       // ogon: w biegu prosto za sobą i lekko faluje, w miejscu zwieszony, w ataku sztywno
       const tailUp = run ? 1.9 + Math.sin(ph * 0.5) * 0.15 : lunge ? 2.2 : 0.5;
-      this.wolfRot.makeRotationX(tailUp).setPosition(0, 0.37, -0.23);
+      this.wolfRot.makeRotationX(tailUp).setPosition(...WOLF_TAIL);
       this.wolfTails.setMatrixAt(n, this.wolfPart.multiplyMatrices(t.matrix, this.wolfRot));
       this.wolfEyes!.setMatrixAt(n, this.night > 0.2 ? t.matrix : ZERO);
       // warczenie z bliska, kłapnięcie przy ataku
@@ -1545,8 +1547,8 @@ export class GameRenderer {
       n++;
     }
     this.wolfMarkersFinish(n);
-    this.wolfMesh.count = n; this.wolfEyes!.count = n; this.wolfTails.count = n; this.wolfLegs.count = n * 4;
-    this.wolfLegs.instanceMatrix.needsUpdate = true; this.wolfTails.instanceMatrix.needsUpdate = true;
+    this.wolfMesh.count = n; this.wolfEyes!.count = n; this.wolfTails.count = n; this.wolfLegs.count = this.wolfHindLegs.count = n * 2;
+    this.wolfLegs.instanceMatrix.needsUpdate = true; this.wolfHindLegs.instanceMatrix.needsUpdate = true; this.wolfTails.instanceMatrix.needsUpdate = true;
     this.wolfMesh.instanceMatrix.needsUpdate = true; this.wolfEyes!.instanceMatrix.needsUpdate = true;
   }
 

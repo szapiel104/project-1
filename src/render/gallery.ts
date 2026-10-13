@@ -66,7 +66,7 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
   const wp = wolfParts();
   const wolf = new THREE.Group();
   const wolfBody = new THREE.Mesh(wp.body, wp.mat);
-  const legs = WOLF_HIPS.map(([x, y, z]) => { const m = new THREE.Mesh(wp.leg, wp.mat); m.position.set(x, y, z); wolf.add(m); return m; });
+  const legs = WOLF_HIPS.map(([x, y, z], k) => { const m = new THREE.Mesh(k < 2 ? wp.leg : wp.hindLeg, wp.mat); m.position.set(x, y, z); wolf.add(m); return m; });
   const tail = new THREE.Mesh(wp.tail, wp.mat);
   tail.position.set(...WOLF_TAIL);
   const eyes = new THREE.Mesh(wp.eyes, new THREE.MeshBasicMaterial({ color: 0xffd24a }));

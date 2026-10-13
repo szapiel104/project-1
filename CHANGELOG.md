@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.16.6 — nowy wilk i kruk (2026-10-13)
+
+- Wilk od nowa: głęboka klatka, wcięty brzuch, kudłaty kark, długi pysk z jasną żuchwą i policzkami, stojące uszy, futro z ciemnym siodłem na grzbiecie i jasnym brzuchem; przednie i tylne łapy różne (tylne z mocnym udem i skokiem), puszysta kita z ciemnym końcem
+- Kruk od nowa: pierś, łeb z grubym, lekko zakrzywionym dziobem, nastroszone pióra na gardle, złożone skrzydła z lotkami, klinowy ogon, nogi z palcami, granatowy połysk na grzbiecie
+- Podgląd: podglad-zwierzeta.html
+
 ## 0.16.5 — kilof na plecach (2026-10-13)
 
 - Kilof na plecach przypięty płasko: stylisko lekko skośnie, grot w poprzek pleców przy barku; nie przebija już rąk i nie sterczy w bok
