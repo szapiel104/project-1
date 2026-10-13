@@ -1161,6 +1161,8 @@ requestAnimationFrame(loop);
   train(n = 1, player = ME): number { const b = game.buildings.find((x) => x.owner === player && BUILDINGS[x.type]!.id === 'barracks'); if (!b) return 0; for (let i = 0; i < n; i++) pending.push({ type: 'train', player, building: b.id, unit: 'spearman' }); return n; },
   /** Przewija symulację o `ticks` kroków bez rysowania */
   run(ticks: number): void { for (let i = 0; i < ticks; i++) { step(game, pending); pending = []; } refresh(); },
+  /** Kamera nad polem mapy (x, y w polach), z odległości `dist` */
+  at(x: number, y: number, dist = 8): void { renderer.lookAt(x, y, dist); },
   /** Kamera nad budynkiem danego typu */
   look(id: string, dist = 14): void { const b = game.buildings.find((x) => BUILDINGS[x.type]!.id === id); if (b) renderer.lookAt(b.x + 1, b.y + 1, dist); },
   /** Dostawia `n` wrogich włóczników obok koszar gracza (do testu walki) */
@@ -1356,8 +1358,8 @@ const SAY: Record<string, string[]> = {
   idle: ['Czego?', 'Roboty by się znalazło jakiej…', 'Siedzę i czekam. Jak każdy.', 'Panie, daj jaką robotę.', 'Zimno przy tym ognisku.'],
   work: ['Robię, robię.', 'Nie przeszkadzaj, panie.', 'Robota sama się nie zrobi.', 'Ano, pracuje się.', 'Znowu ja?'],
   woodcutter: ['Drzewa nie zetną się same.', 'Siekiera tępa jak wójt.', 'Las daleko, nogi bolą.'],
-  quarry: ['Kamień i kamień. Całe życie.', 'Plecy mi pękną od tego.'],
-  mine: ['Ciemno tam jak w grobie.', 'Ruda sama nie wyjdzie.'],
+  quarry: ['Kamień i kamień. Całe życie.', 'Plecy mi pękną od tego.', 'Kopacz ma tylko kilof i zmęczone ręce.', 'Jeszcze jeden blok i zapiję.'],
+  mine: ['Ciemno tam jak w grobie.', 'Ruda sama nie wyjdzie.', 'Kopacz kopie, pan się bogaci.', 'Tylko żeby strop nie siadł.'],
   farm: ['Byle deszcz nie zbił zboża.', 'Ziemia dobra, tylko ręce bolą.'],
   orchard: ['Jabłka w tym roku jak pięść.', 'Robaki w połowie, ale jeść można.'],
   fisher: ['Dziś nie biorą.', 'Woda zimna jak serce poborcy.'],

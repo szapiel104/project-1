@@ -159,6 +159,9 @@ export class GameRenderer {
   private grade!: ShaderPass;
   private rain = 0;
   private hammers!: THREE.InstancedMesh;
+  /** Siekiera drwala i kilof kopacza: w prawej dłoni, obracane w barku jak młotek */
+  private axes!: THREE.InstancedMesh;
+  private picks!: THREE.InstancedMesh;
   private soldierTorches!: THREE.InstancedMesh;
   private peasantBodies!: Figures;
   private archers!: Figures;
@@ -426,6 +429,27 @@ export class GameRenderer {
     this.hammers.frustumCulled = false;
     this.hammers.castShadow = true;
     this.scene.add(this.hammers);
+    // siekiera: długie stylisko z pięści w przód, żeleźce z ostrzem w dół (w płaszczyźnie zamachu)
+    const axe = mergeGeometries([
+      tint(new THREE.CylinderGeometry(0.013, 0.016, 0.44, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.17), 0x7a5232),
+      tint(new THREE.BoxGeometry(0.014, 0.1, 0.075).translate(0, -0.235, 0.355), 0x5c6068),
+      tint(new THREE.BoxGeometry(0.016, 0.014, 0.08).translate(0, -0.284, 0.355), 0xb9bec6),
+      tint(new THREE.BoxGeometry(0.03, 0.035, 0.04).translate(0, -0.19, 0.37), 0x3a3d42),
+    ]);
+    // kilof: stylisko i obustronny, lekko wygięty grot w poprzek
+    const pick = mergeGeometries([
+      tint(new THREE.CylinderGeometry(0.014, 0.017, 0.42, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.16), 0x6e4a2c),
+      tint(new THREE.BoxGeometry(0.026, 0.05, 0.035).translate(0, -0.19, 0.37), 0x4a4d52),
+      tint(new THREE.ConeGeometry(0.016, 0.13, 4).rotateX(Math.PI).rotateX(0.25).translate(0, -0.27, 0.36), 0x6a6e76),
+      tint(new THREE.ConeGeometry(0.016, 0.11, 4).rotateX(-0.25).translate(0, -0.12, 0.36), 0x6a6e76),
+    ]);
+    const tool = (geo: THREE.BufferGeometry): THREE.InstancedMesh => {
+      const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
+      m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m);
+      return m;
+    };
+    this.axes = tool(axe);
+    this.picks = tool(pick);
     this.rods = new THREE.InstancedMesh(rod, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true }), MAX_UNITS);
     this.rods.count = 0;
     this.rods.frustumCulled = false;
@@ -2432,15 +2456,41 @@ export class GameRenderer {
         for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const)
           if (g.map.tiles[(ty + dy) * width + tx + dx] === Terrain.Water) { t.rotation.set(0, Math.atan2(dx, dy), 0); break; }
         swing = 0;
-      } else if (u.phase === Phase.WorkingSite && !this.calm) swing = Math.sin(this.time * 9 + u.id) * 1.1;
+      }
+      // drwal z siekierą, kopacz z kilofem: oburęczny zamach, cios z pochyleniem i stuk w chwili trafienia
+      const site = u.phase === Phase.WorkingSite && !fishing && u.job ? BUILDINGS[jobs.get(u.job)?.type ?? -1]?.production?.site : undefined;
+      const chopping = site === Terrain.Forest, mining = site === Terrain.Stone || site === Terrain.Iron;
+      let toolArm = 0, toolLean = 0;
+      if (chopping || mining) {
+        // twarzą do najbliższego drzewa albo skały obok
+        const tx = u.px >> 8, ty = u.py >> 8, want = chopping ? Terrain.Forest : site!;
+        for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]] as const)
+          if (g.map.tiles[(ty + dy) * width + tx + dx] === want) { t.rotation.set(0, Math.atan2(dx, dy), 0); break; }
+        if (!this.calm) {
+          const ph = (this.time * (chopping ? 1.15 : 0.85) + (u.id % 11) * 0.173) % 1;
+          const ease = (x: number): number => x * x * (3 - 2 * x);
+          const high = chopping ? 2.3 : 2.75;
+          if (ph < 0.55) toolArm = -0.35 - ease(ph / 0.55) * high;                    // zamach nad ramię albo nad głowę
+          else if (ph < 0.67) toolArm = -0.35 - high + ((ph - 0.55) / 0.12) ** 2 * (high + 0.15); // cios
+          else if (ph < 0.77) toolArm = -0.2 - Math.sin(((ph - 0.67) / 0.1) * Math.PI) * 0.15;     // odbicie
+          else toolArm = -0.2;
+          toolLean = ph > 0.55 && ph < 0.85 ? Math.sin(((ph - 0.55) / 0.3) * Math.PI) * (mining ? 0.4 : 0.28) : 0.05;
+          if (ph > 0.66 && ph < 0.71) this.sfxAt(chopping ? 'chop' : 'mine', t.position.x, t.position.z, u.id, 0.5);
+        } else toolArm = -0.3;
+        swing = 0;
+      }
+      // rzemieślnik w warsztacie: pochylony nad stołem, ręce na zmianę wyrabiają albo strugają
+      const crafting = u.phase === Phase.Working && !!job && mode === 'inside';
+      let craftR = 0, craftL = 0;
+      if (crafting) {
+        const k2 = this.calm ? 0 : this.time * 5.5 + u.id;
+        craftR = -1.05 + Math.sin(k2) * 0.32; craftL = -1.05 - Math.sin(k2) * 0.32;
+      }
       // odgłosy pracy z miejsca, gdzie pracuje
       if (!this.calm && u.job) {
         const jt = jobs.get(u.job);
         const jid = jt ? BUILDINGS[jt.type]!.id : '';
-        if (u.phase === Phase.WorkingSite) {
-          if (jid === 'woodcutter') this.sfxAt('chop', t.position.x, t.position.z, u.id, 0.9);
-          else if (jid === 'quarry' || jid === 'mine') this.sfxAt('mine', t.position.x, t.position.z, u.id, 1.0);
-        } else if (u.phase === Phase.Working) {
+        if (u.phase === Phase.Working) {
           if (jid === 'woodcutter' || jid === 'poleturner') this.sfxAt('plank', t.position.x, t.position.z, u.id, 1.3, 0.7);
           else if (jid === 'mill') this.sfxAt('creak', t.position.x, t.position.z, u.id, 3.5, 0.8);
         }
@@ -2455,7 +2505,7 @@ export class GameRenderer {
       }
       // układanie drogi wygląda jak budowa: pochylony chłop bije młotkiem w ziemię
       const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving;
-      let lean = u.phase === Phase.Paving ? 0.35 : 0, work = 0;
+      let lean = u.phase === Phase.Paving ? 0.35 : crafting ? 0.18 : toolLean, work = 0;
       if (hammering) {
         // robotnicy rozstawiają się wokół budowy, twarzą do ścian; co drugi pracuje na pomoście rusztowania (na wysokości murów)
         const site = u.phase === Phase.Repairing ? g.buildings.find((b) => b.id === u.target) : undefined;
@@ -2504,6 +2554,13 @@ export class GameRenderer {
         this.armM.makeRotationX(work).setPosition(0.135, 0.45, 0);
         this.hammers.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
       } else this.hammers.setMatrixAt(i, ZERO);
+      // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką
+      if (chopping || mining) {
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armM.makeRotationX(toolArm).setPosition(0.135, 0.45, 0);
+        (chopping ? this.axes : this.picks).setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
+        (chopping ? this.picks : this.axes).setMatrixAt(i, ZERO);
+      } else { this.axes.setMatrixAt(i, ZERO); this.picks.setMatrixAt(i, ZERO); }
       const wood = u.carryRes === WOOD;
       // kłodę ciągnie tylko drwal z lasu; włóczniarz niesie ze składu zwykłe deski
       const jb = u.job ? jobs.get(u.job) : undefined;
@@ -2511,7 +2568,7 @@ export class GameRenderer {
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
       if (torchOn) { this.handTorches.setMatrixAt(i, t.matrix); this.pushHandFlame(t.matrix, 0.17); } else this.handTorches.setMatrixAt(i, ZERO);
-      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : undefined);
+      this.figures.set(i, t.matrix, swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : crafting ? craftR : undefined, chopping || mining ? toolArm + 0.1 : crafting ? craftL : -0.5);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();
@@ -2558,6 +2615,7 @@ export class GameRenderer {
     this.rods.count = n;
     this.hammers.count = n;
     this.hammers.instanceMatrix.needsUpdate = true;
+    for (const m of [this.axes, this.picks]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
     this.rods.instanceMatrix.needsUpdate = true;
     this.handTorches.count = n;
     this.handTorches.instanceMatrix.needsUpdate = true;

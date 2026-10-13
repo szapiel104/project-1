@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.15.1 — praca z narzędziami, kopacze (2026-10-13)
+
+- Drwal rąbie siekierą trzymaną oburącz: zamach nad ramię, cios w drzewo z pochyleniem, stuk w chwili trafienia; stoi twarzą do drzewa
+- Kopacze w kamieniołomie i kopalni biją kilofem: wysoki zamach nad głowę, mocny cios w dół w skałę
+- Rzemieślnicy w warsztatach (piekarz, włóczniarz, łuczarz…) pochyleni nad stołem, ręce na zmianę wyrabiają albo strugają
+- Pracownicy kamieniołomu i kopalni nazywają się jak w Gothicu: kopacze (karta osoby, opisy, nowe odzywki)
+- Karta osoby opisuje też noszenie materiału i układanie dróg
+- Tryb testowy: `__test.at(x, y, odległość)` ustawia kamerę nad polem
+
 ## 0.15.0 — drogi się buduje, droga z dyli, bliższa kamera (2026-10-13)
 
 - Nowa droga z dyli: drewniane bale, 1 drewno za pole, ludzie chodzą po niej o 40% szybciej (piaskowa 25%, kamienna 55%)

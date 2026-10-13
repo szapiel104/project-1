@@ -343,14 +343,14 @@ export class Figures {
    * `work` = poza przy pracy: kąt prawej ręki (ujemny = w przód i w górę); nogi stoją, lewa ręka lekko przed sobą.
    * Bez tego `swing` rusza rękami i nogami jak przy chodzie.
    */
-  set(i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = i, work?: number): void {
+  set(i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = i, work?: number, workL = -0.5): void {
     const look = lookOf(id, tunic, this.muted);
     this.scaled.copy(base).scale(this.one.setScalar(look.size));
     this.one.setScalar(1);
     for (const p of this.parts) {
       if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
       const r = work === undefined ? p.rot(swing, armsUp)
-        : p.rot === armR ? work : p.rot === armL ? -0.5 : p.rot === legL || p.rot === legR ? 0 : p.rot(0, false);
+        : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? 0 : p.rot(0, false);
       this.q.setFromEuler(this.e.set(r, 0, 0));
       this.local.compose(p.pos, this.q, this.one);
       if (p.sub) { this.q.setFromEuler(this.e.set(p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
