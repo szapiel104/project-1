@@ -704,6 +704,7 @@ export const MUSIC_TRACKS: { file: string; moods: Mood[] }[] = [
   { file: 'minstrel-dance.ogg', moods: ['day'] },
   { file: 'peasantry.ogg', moods: ['day'] },
   { file: 'old-tower-inn.ogg', moods: ['night', 'menu'] },
+  { file: 'medievals5.ogg', moods: ['night'] },
   { file: 'battle.ogg', moods: ['battle'] },
 ];
 let trackEl: HTMLAudioElement | null = null, trackGain: GainNode | null = null, trackMood: Mood | null = null, trackFile = '', trackRestUntil = 0;

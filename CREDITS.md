@@ -33,4 +33,4 @@ Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://g
 - Ground 079 S → `sand.jpg` (plaże nad jeziorami i morzem)
 
 ## Muzyka (CC0)
-RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old Tower Inn”, „Medieval Battle”; nihilocrat — „Peasant Theme”. Wszystkie z OpenGameArt na licencji CC0 (szczegóły w docs/zasoby.md). Dziękujemy autorom.
+RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old Tower Inn”, „Medieval Battle”; nihilocrat — „Peasant Theme”; Tozan — „Medievals 5”. Wszystkie z OpenGameArt na licencji CC0 (szczegóły w docs/zasoby.md). Dziękujemy autorom.

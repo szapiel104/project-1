@@ -33,5 +33,6 @@ Pobrane przez Michała z OpenGameArt, przekonwertowane do OGG i wyrównane gło�
 - minstrel-dance.ogg — „Medieval: Minstrel Dance”, RandomMind — https://opengameart.org/node/92393 (dzień)
 - old-tower-inn.ogg — „Medieval: The Old Tower Inn”, RandomMind — https://opengameart.org/content/medieval-the-old-tower-inn (noc, menu)
 - battle.ogg — „Medieval Battle”, RandomMind — https://opengameart.org/content/medieval-battle (bitwa)
+- medievals5.ogg — „Medievals 5”, Tozan — https://opengameart.org/content/medievals-5 (noc)
 - peasantry.ogg — „Peasant Theme”, nihilocrat — https://opengameart.org/content/peasant-theme (dzień)
 Gdy pliku brak albo nastrój nie ma utworu, gra składa muzykę sama (src/audio/sfx.ts).
