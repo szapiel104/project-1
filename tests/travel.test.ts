@@ -137,7 +137,8 @@ describe('wilki polują naprawdę', () => {
     keepDef.housing = 0;
     let body = false;
     try {
-      for (let i = 0; i < 1500; i++) { step(g, []); body ||= g.corpses.some((c) => c.kind === -1); }
+      // ta wataha może nie zdążyć przed świtem; następna wychodzi o zmierzchu od strony osady
+      for (let i = 0; i < RULES.dayTicks * 1.2; i++) { step(g, []); body ||= g.corpses.some((c) => c.kind === -1); }
     } finally { keepDef.housing = saved; }
     expect(g.players.reduce((n, p) => n + p.stats.lost, 0)).toBeGreaterThan(0);
     expect(body).toBe(true);
