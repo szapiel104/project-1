@@ -116,14 +116,14 @@ export const proceduralModels: ModelFactory = {
       const fx = Math.cos(face), fz = Math.sin(face);
       // kierunek pochylenia: na zewnątrz kępy
       const lx = Math.cos(ang), lz = Math.sin(ang);
-      const yellow = rnd() < 0.3;
+      const yellow = rnd() < 0.15;
       const pt = (t: number, side: number): [number, number, number] => {
         const ww = wid * (1 - t) * side;
         return [bx + lx * bend * t * t + -fz * ww, len * t * (1 - 0.15 * t * t), bz + lz * bend * t * t + fx * ww];
       };
       const col = (t: number): [number, number, number] => {
-        const k = 0.6 + t * 0.55;
-        return yellow ? [k * 1.12, k * 1.04, k * 0.6] : [k * 0.88, k, k * 0.72];
+        const k = 0.55 + t * 0.4;
+        return yellow ? [k * 1.05, k * 1.0, k * 0.62] : [k * 0.86, k, k * 0.72];
       };
       for (let i = 0; i < SEG; i++) {
         const t0 = i / SEG, t1 = (i + 1) / SEG;

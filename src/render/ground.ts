@@ -124,7 +124,7 @@ const FRAG_ALBEDO = /* glsl */ `
   rock *= 0.78 + strata * 0.4;
 
   // udziały: łąka w plamach, drobne kamienie i prześwity ziemi rozsiane po trawie
-  float wMeadow = smoothstep(0.74, 0.95, nS.g * 0.75 + nD.b * 0.3) * 0.7;
+  float wMeadow = smoothstep(0.86, 1.02, nS.g * 0.75 + nD.b * 0.3) * 0.5;
   float wPeb = clamp(vSplat.y + smoothstep(0.99, 1.06, nD.a * 0.7 + nS.r * 0.4) * 0.5 + vSplat.w * smoothstep(0.6, 0.85, nD.r) * 0.45, 0.0, 1.0);
   float wForest = clamp(vSplat.x * (0.75 + nS.a * 0.5), 0.0, 1.0);
   float wDirt = clamp(vSplat.w * 1.15 + smoothstep(1.0, 1.08, nS.r * 0.6 + nD.g * 0.5) * 0.5, 0.0, 1.0);

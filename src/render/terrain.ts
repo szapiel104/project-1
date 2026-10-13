@@ -64,6 +64,21 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       corners[y * (w + 1) + x] =
         (tileHeight(map, x - 1, y - 1, waterLevel) + tileHeight(map, x, y - 1, waterLevel) +
           tileHeight(map, x - 1, y, waterLevel) + tileHeight(map, x, y, waterLevel)) / 4;
+  // Góry na planszy (pole gór przy krawędzi): bryła z szumu grzbietowego, im wyżej, tym bardziej poszarpana —
+  // granie, żleby i turnie zamiast gładkiego kopca. To tylko wygląd: po górach i tak nikt nie chodzi.
+  const nz = createNoise2D(rng(map.seed ^ 0x6d0f));
+  const ridged = (x: number, y: number, oct = 4): number => {
+    let v = 0, a = 0.5, f = 1, sum = 0;
+    for (let o = 0; o < oct; o++) { const n = 1 - Math.abs(nz(x * f, y * f)); v += n * n * a; sum += a; a *= 0.5; f *= 2.03; }
+    return v / sum;
+  };
+  for (let y = 0; y <= h; y++)
+    for (let x = 0; x <= w; x++) {
+      const k = y * (w + 1) + x, hh = corners[k]!;
+      if (hh <= 1.6) continue;
+      const lift = hh - 1.6;
+      corners[k] = hh + (ridged(x / 9, y / 9, 5) - 0.45) * lift * 1.1 + Math.pow(ridged(x / 23 + 7, y / 23 - 3), 2) * lift * 0.9;
+    }
   const corner = (x: number, y: number): number => corners[y * (w + 1) + x]!;
 
   // Kolor i normalna liczone w narożnikach i dzielone przez sąsiednie pola: teren przechodzi płynnie,
@@ -289,12 +304,6 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Siatka indeksowana: każdy wierzchołek raz, gęsta przy planszy, rzadsza daleko (tam i tak mgła).
   const D = TEST ? 6 : 110;
   const floorCol = PHOTO_GROUND ? new THREE.Color(0.86, 0.88, 0.84) : new THREE.Color(0x46612a);
-  const nz = createNoise2D(rng(map.seed ^ 0x6d0f));
-  const ridged = (x: number, y: number, oct = 4): number => {
-    let v = 0, a = 0.5, f = 1, sum = 0;
-    for (let o = 0; o < oct; o++) { const n = 1 - Math.abs(nz(x * f, y * f)); v += n * n * a; sum += a; a *= 0.5; f *= 2.03; }
-    return v / sum;
-  };
   // wielkie masywy: losowo po bokach i w rogach, zawsze poza planszą
   const massifs: { x: number; y: number; r: number; hgt: number }[] = [];
   {
@@ -309,10 +318,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   }
   const outerH = (X: number, Y: number): number => {
-    if (X >= 0 && X <= w && Y >= 0 && Y <= h) return corner(X, Y);
+    if (X >= 0 && X <= w && Y >= 0 && Y <= h) return corner(Math.round(X), Math.round(Y));
     const cx = Math.max(0, Math.min(w, X)), cy = Math.max(0, Math.min(h, Y));
     const d = Math.max(Math.abs(X - cx), Math.abs(Y - cy));
-    const base = Math.max(0.12, corner(cx, cy));
+    const base = Math.max(0.12, corner(Math.round(cx), Math.round(cy)));
     const fade = Math.max(0, 1 - d / 9);
     let hh = 0.12 + (base - 0.12) * fade * fade * (3 - 2 * fade);
     // pagórki pod lasem przy brzegu, dalej coraz wyższe zalesione pasma
@@ -466,7 +475,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     // źdźbło świeci tak samo z obu stron (bez czarnych odwrotów) i lekko prześwituje w słońcu
     sh.fragmentShader = sh.fragmentShader
       .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * 0.12;');
+      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n  totalEmissiveRadiance += diffuseColor.rgb * 0.05;');
     sh.vertexShader = 'uniform float windTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
       #ifdef USE_INSTANCING
         vec2 ip = instanceMatrix[3].xz;
@@ -533,7 +542,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const near: { pine: Item[]; leaf: Item[] } = { pine: [], leaf: [] };
     const far: { pine: Item[]; leaf: Item[] } = { pine: [], leaf: [] };
     const e3 = new THREE.Euler();
-    const slopeAt = (X: number, Y: number): number => Math.hypot(outerH(X + 1, Y) - outerH(X - 1, Y), outerH(X, Y + 1) - outerH(X, Y - 1)) / 2;
+    const hAny = (X: number, Y: number): number => (X >= 0 && X <= w && Y >= 0 && Y <= h ? heightAt(X, Y) : outerH(X, Y));
+    const slopeAt = (X: number, Y: number): number => Math.hypot(hAny(X + 1, Y) - hAny(X - 1, Y), hAny(X, Y + 1) - hAny(X, Y - 1)) / 2;
     for (let gz = -h / 2 - D; gz < h / 2 + D; gz += 1.7)
       for (let gx = -w / 2 - D; gx < w / 2 + D; gx += 1.7) {
         const r = hash2(Math.round(gx * 10), Math.round(gz * 10), map.seed ^ 0x7f4a7c15);
@@ -544,9 +554,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const px = gx + ((r & 255) / 255 - 0.5) * step * 0.9;
         const pz = gz + (((r >>> 8) & 255) / 255 - 0.5) * step * 0.9;
         const dd = Math.max(Math.abs(px) - w / 2, Math.abs(pz) - h / 2);
-        if (dd < 0.9) continue;
+        if (dd < 0.9) {
+          // na planszy las tylko na zboczach gór (tam nikt nie chodzi ani nie ścina)
+          const tx = Math.floor(px - ox), ty = Math.floor(pz - oz);
+          if (tx < 1 || ty < 1 || tx >= w - 1 || ty >= h - 1 || map.tiles[ty * w + tx] !== Terrain.Mountain) continue;
+          if (map.tiles[ty * w + tx + 1] !== Terrain.Mountain || map.tiles[ty * w + tx - 1] !== Terrain.Mountain || map.tiles[(ty + 1) * w + tx] !== Terrain.Mountain || map.tiles[(ty - 1) * w + tx] !== Terrain.Mountain) continue;
+        }
         const X = px - ox, Y = pz - oz;
-        const groundY = outerH(X, Y);
+        const groundY = hAny(X, Y);
         const treeline = 12.5 + nz(X / 30, Y / 30) * 2.5;
         if (groundY > treeline || slopeAt(X, Y) > 0.9) continue;
         const alt = smoothstep(treeline - 6, treeline, groundY);
