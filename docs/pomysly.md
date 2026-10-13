@@ -32,7 +32,6 @@ Czeka:
 - Kości przy cmentarzu, więcej brudu (śmieci, gnój przy chlewie)
 - Wilki boją się światła pochodni (gotowe w git stash)
 - Ładniejszy model wilka (smukły, ruchome łapy i ogon)
-- Codzienność NPC: rano do pracy, wieczorem ognisko, nocą sen
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
 - Kopalnia rudy z prawdziwego zdarzenia (szyb, wózki)
 - Dźwięki: ptaki o świcie, koguty, świerszcze, puszczyk, grzmot, dzwon w południe, róg wojenny i dzwon alarmu, trzask ognisk, gwar, wiwaty, kroki bruk/ziemia, kowal
@@ -81,6 +80,15 @@ Większe rzeczy na później:
 - Trawa z teksturą źdźbeł (karty z alfą) zamiast pojedynczych pasków
 - Mgła wysokościowa w dolinach i chmury zahaczające o szczyty
 - Wodospady i strumienie z gór, odbicia brzegu w wodzie
+
+## Rytm dnia (13.10.2026)
+Zrobione: 19:30 ognisko i karczma, 22:00 sen w chacie/twierdzy, bez łóżka słomiane posłanie przy ognisku, 5:30 do pracy; noc w tickach krótsza (ok. 11% doby), wieczór 8%, dzień pracy 81%; wilki nie dosięgną śpiących pod dachem.
+
+Dalej:
+- Śpiący pod gołym niebem mniej zadowoleni (popularność) i marzną w deszczu
+- Karczmarz nalewa piwo z zapasów (piwo jako towar), pijacy wracają chwiejnym krokiem
+- Strażnik nocny z pochodnią obchodzi osadę
+- Dzieci i rodziny w chatach (osada rośnie sama)
 
 ## Wojsko i piechota — do zrobienia (13.10.2026)
 Zrobione 13.10: niegubione rozkazy, szyk przeciąganiem z kierunkiem, formacje (linia/blok/luźno), postawy (atak/obrona/stój), panel typów jednostek, atak w marszu, wspólne tempo oddziału, grupy pod cyframi, okrzyki na rozkaz, nowy wygląd włóczników, łuczników i chłopów.
