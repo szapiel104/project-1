@@ -162,10 +162,7 @@ export class Ambience {
   private time = 0;
   private static MIST = 70;
   private mistSeed: { x: number; z: number; s: number; r: number; v: number }[] = [];
-  /** Cienie chmur sunące po ziemi: z kamery z góry widać, że niebo jest zachmurzone */
-  private shade: THREE.InstancedMesh;
-  private shadeMat: THREE.MeshBasicMaterial;
-  private static SHADE = 14;
+
   enabled = true;
 
   constructor() {
@@ -178,11 +175,7 @@ export class Ambience {
       const r = (k: number): number => { const v = Math.sin(i * 91.7 + k * 13.1) * 43758.5453; return v - Math.floor(v); };
       this.mistSeed.push({ x: r(1) * 130, z: r(2) * 130, s: 7 + r(3) * 9, r: r(4) * Math.PI, v: 0.5 + r(5) * 0.7 });
     }
-    this.shadeMat = new THREE.MeshBasicMaterial({ map: this.soft, color: 0x101820, transparent: true, depthWrite: false, opacity: 0, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-    this.shade = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), this.shadeMat, Ambience.SHADE);
-    this.shade.frustumCulled = false;
-    this.shade.renderOrder = 1;
-    this.group.add(this.mist, this.shade, this.smoke.points, this.sparks.points, this.glow.points);
+    this.group.add(this.mist, this.smoke.points, this.sparks.points, this.glow.points);
   }
 
   /** Nowe miejsca emisji (wołane rzadko, np. raz na sekundę): kominy, ogniska, okna */
@@ -214,7 +207,7 @@ export class Ambience {
   }
 
   /** Klatka: night 0..1, mist 0..1 (świt, mgliste dni), rain 0..1, kolor mgły sceny, środek widoku, wysokość terenu */
-  update(dt: number, o: { night: number; mist: number; rain: number; cover: number; fog: THREE.Color; focus: THREE.Vector3; ground: (x: number, z: number) => number; scale: number; calm: boolean }): void {
+  update(dt: number, o: { night: number; mist: number; rain: number; fog: THREE.Color; focus: THREE.Vector3; ground: (x: number, z: number) => number; scale: number; calm: boolean }): void {
     this.time += dt;
     for (const p of [this.smoke, this.sparks, this.glow]) p.mat.uniforms.scale!.value = o.scale;
     this.group.visible = this.enabled;
@@ -295,24 +288,6 @@ export class Ambience {
         this.mist.setMatrixAt(i, M.compose(p, q, sc));
       }
       this.mist.instanceMatrix.needsUpdate = true;
-    }
-    // --- cienie chmur: wielkie, miękkie plamy cienia płyną z wiatrem (w dzień, przy zachmurzeniu)
-    const shadeK = Math.max(0, o.cover - 0.15) * (1 - night) * (1 - o.rain * 0.6);
-    this.shadeMat.opacity = Math.min(0.3, shadeK * 0.4);
-    this.shade.visible = this.shadeMat.opacity > 0.01;
-    if (this.shade.visible) {
-      const M = new THREE.Matrix4(), q = new THREE.Quaternion(), sc = new THREE.Vector3(), p = new THREE.Vector3();
-      const W = 200;
-      const wrap = (v: number): number => ((v % W) + W) % W - W / 2;
-      for (let i = 0; i < Ambience.SHADE; i++) {
-        const s = this.mistSeed[i]!;
-        const x = o.focus.x + wrap(s.x * 1.6 + this.time * 1.1 - o.focus.x);
-        const z = o.focus.z + wrap(s.z * 1.6 + this.time * 0.4 - o.focus.z);
-        p.set(x, o.ground(x, z) + 0.15, z);
-        sc.set(s.s * 4.5, 1, s.s * 2.8);
-        this.shade.setMatrixAt(i, M.compose(p, q, sc));
-      }
-      this.shade.instanceMatrix.needsUpdate = true;
     }
   }
 }

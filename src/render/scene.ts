@@ -8,6 +8,7 @@ import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { Clutter } from './clutter';
+import { Clouds } from './clouds';
 import { crowGeometry, WOLF_HIPS, wolfParts } from './creatures';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
@@ -221,6 +222,8 @@ export class GameRenderer {
   private ambience = new Ambience();
   /** Beczki, worki, siano i śmieci przy domach */
   private clutter = new Clutter();
+  /** Chmury jako obiekty nad mapą: płyną, rodzą się i rozpływają, rzucają cień */
+  private clouds = new Clouds();
   private fxAt = 0;
   private mistLevel = 0;
   private buildingMeshes = new Map<number, THREE.Group>();
@@ -300,6 +303,7 @@ export class GameRenderer {
     this.scene.add(this.buildingLayer);
     this.scene.add(this.ambience.group);
     this.scene.add(this.clutter.group);
+    this.scene.add(this.clouds.group);
 
     const flat = (geo: THREE.BufferGeometry, color: number, opacity = 1): THREE.Mesh => {
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: opacity < 1, opacity, depthWrite: false }));
@@ -481,6 +485,7 @@ export class GameRenderer {
     this.strides.clear();
     this.storesTick = -1;
     this.clutter.reset();
+    this.clouds.reset();
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
     this.scene.add(this.view.group);
@@ -720,7 +725,7 @@ export class GameRenderer {
   }
 
   // --- niebo nocą: gwiazdy, księżyc z poświatą; w deszczu ciemne chmury zasłaniają niebo ---
-  private sky: { group: THREE.Group; stars: THREE.Points; moon: THREE.Sprite; clouds: THREE.Sprite[]; dome: THREE.Mesh; sunDisc: THREE.Sprite } | null = null;
+  private sky: { group: THREE.Group; stars: THREE.Points; moon: THREE.Sprite; dome: THREE.Mesh; sunDisc: THREE.Sprite } | null = null;
   private updateSky(): void {
     if (!this.sky) {
       const group = new THREE.Group();
@@ -769,53 +774,6 @@ export class GameRenderer {
       const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
       const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, fog: false, depthWrite: false }));
       moon.scale.setScalar(110);
-      // chmury: kłębiaste cumulusy z wielu miękkich kłębów — płaski, cieniowany spód, jasne, puszyste wierzchołki.
-      // Kilka wzorów, żeby się nie powtarzały; kłęby nie dotykają brzegu obrazka, więc nie ma ostrych krawędzi
-      const cloudTex = (seed: number): THREE.Texture => {
-        const W = 512, H = 256;
-        const cc = document.createElement('canvas'); cc.width = W; cc.height = H;
-        const y = cc.getContext('2d')!;
-        let s2 = seed * 9301 + 49297;
-        const rr = (): number => { s2 = (s2 * 16807) % 2147483647; return s2 / 2147483647; };
-        const base = H * 0.72; // płaska podstawa chmury
-        const puffs = 26 + Math.floor(rr() * 14);
-        for (let i = 0; i < puffs; i++) {
-          const t = rr();
-          const cx = W * (0.18 + t * 0.64);
-          // w środku wyższe kłęby, po bokach niższe
-          const hump = Math.sin(t * Math.PI);
-          const r = H * (0.1 + rr() * 0.14) * (0.6 + hump * 0.6);
-          const cy = Math.min(base - r * 0.35, base - hump * H * (0.18 + rr() * 0.22));
-          const rad = Math.min(r, cx - 6, W - 6 - cx, cy - 6, H - 6 - cy);
-          if (rad < 6) continue;
-          const g2 = y.createRadialGradient(cx, cy, 0, cx, cy, rad);
-          g2.addColorStop(0, 'rgba(255,255,255,0.95)'); g2.addColorStop(0.55, 'rgba(255,255,255,0.75)'); g2.addColorStop(1, 'rgba(255,255,255,0)');
-          y.fillStyle = g2; y.beginPath(); y.arc(cx, cy, rad, 0, Math.PI * 2); y.fill();
-        }
-        // cień od spodu i delikatne podświetlenie wierzchołków (tylko tam, gdzie jest chmura)
-        y.globalCompositeOperation = 'source-atop';
-        const sh = y.createLinearGradient(0, H * 0.2, 0, base);
-        sh.addColorStop(0, 'rgba(255,255,255,0)'); sh.addColorStop(0.55, 'rgba(200,205,215,0.25)'); sh.addColorStop(1, 'rgba(120,128,145,0.6)');
-        y.fillStyle = sh; y.fillRect(0, 0, W, H);
-        y.globalCompositeOperation = 'source-over';
-        const t2 = new THREE.CanvasTexture(cc);
-        t2.colorSpace = THREE.SRGBColorSpace;
-        return t2;
-      };
-      const cloudTexs = [1, 2, 3, 4, 5].map(cloudTex);
-      const clouds: THREE.Sprite[] = [];
-      for (let i = 0; i < 40; i++) {
-        const c2 = new THREE.Sprite(new THREE.SpriteMaterial({ map: cloudTexs[i % cloudTexs.length]!, transparent: true, opacity: 0, fog: false, depthWrite: false, color: 0x8a8f99 }));
-        // rozrzucone po całym niebie: część nad głową, część przy horyzoncie
-        // co druga nisko przy horyzoncie — widać ją też z kamery nad osadą, gdy patrzy się w dal
-        const a = i * 2.39996, low = i % 2 === 1;
-        const rr = low ? 280 + ((i * 37) % 100) * 0.9 : 60 + ((i * 37) % 100) / 100 * 260;
-        c2.position.set(Math.cos(a) * rr, low ? 35 + ((i * 53) % 100) * 0.6 : 170 + ((i * 53) % 100) * 0.9, Math.sin(a) * rr);
-        const sc2 = (low ? 150 : 190) + (i % 5) * 45;
-        c2.scale.set(sc2, sc2 / 2, 1);
-        c2.userData.k = i / 40; // próg pojawiania się: im większe zachmurzenie, tym więcej chmur
-        clouds.push(c2); group.add(c2);
-      }
       // kopuła nieba: u góry głęboki błękit, przy horyzoncie kolor mgły (płynne przejście w krajobraz)
       const domeGeo = new THREE.SphereGeometry(420, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2 + 0.15);
       const dome = new THREE.Mesh(domeGeo, new THREE.ShaderMaterial({
@@ -838,7 +796,7 @@ export class GameRenderer {
       group.add(dome, stars, moon, sunDisc);
       for (const o of [stars, moon, sunDisc]) o.renderOrder = -10;
       this.scene.add(group);
-      this.sky = { group, stars, moon, clouds, dome, sunDisc };
+      this.sky = { group, stars, moon, dome, sunDisc };
     }
     const sk = this.sky;
     const clear = 1 - this.rain;
@@ -864,15 +822,6 @@ export class GameRenderer {
     const sm2 = sk.sunDisc.material as THREE.SpriteMaterial;
     sm2.opacity = (1 - this.night) * (1 - Math.max(this.rain * 0.9, this.cover * 0.6)) * Math.min(1, Math.max(0, (sd.y - 0.02) * 6));
     sm2.color.set(0xffffff).lerp(new THREE.Color(0xff9a50), Math.max(0, 1 - sd.y * 2.5)); // nisko nad horyzontem pomarańczowe
-    for (const c of sk.clouds) {
-      // w dzień białe obłoki, w deszczu ciemne i gęste, nocą prawie niewidoczne
-      const m2 = c.material as THREE.SpriteMaterial;
-      m2.color.set(0xffffff).lerp(new THREE.Color(0x5a5e66), Math.max(this.rain, this.night * 0.8));
-      // chmura pojawia się i znika płynnie, gdy zmienia się zachmurzenie
-      const shown = Math.min(1, Math.max(0, (this.cover - c.userData.k) / 0.08 + 0.5));
-      m2.opacity = shown * (0.55 + this.cover * 0.4) * (1 - this.night * 0.6);
-      c.position.x += 0.03 + this.cover * 0.05; if (c.position.x > 360) c.position.x = -360; // wiatr pcha chmury
-    }
   }
 
   private updatePuffs(dt: number): void {
@@ -1054,8 +1003,12 @@ export class GameRenderer {
       }
     }
     const cam = this.cam.camera;
+    this.clouds.update(this.calm ? 0 : dt, {
+      cover: this.cover, rain: this.rain, night: this.night, sun: this.sunDir.clone().normalize(), haze: this.scene.background as THREE.Color,
+      focus, camera: cam, ground: (x, z) => v.heightAt(x + width / 2, z + height / 2), far: cam.far,
+    });
     this.ambience.update(dt, {
-      night: this.night, mist: this.mistLevel, rain: this.rain, cover: this.cover, fog: (this.scene.fog as THREE.Fog).color, focus, calm: this.calm,
+      night: this.night, mist: this.mistLevel, rain: this.rain, fog: (this.scene.fog as THREE.Fog).color, focus, calm: this.calm,
       ground: (x, z) => v.heightAt(x + width / 2, z + height / 2),
       scale: this.renderer.domElement.height / (2 * Math.tan((cam.fov * Math.PI) / 360)),
     });

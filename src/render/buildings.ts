@@ -192,23 +192,55 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
   },
   iron: {
     metal: true,
-    geo: merge([0, 1].flatMap((layer) => [-0.1, 0.1].map((x) => paint(part(new THREE.CylinderGeometry(0.06, 0.07, 0.38, 6).rotateX(Math.PI / 2), layer ? x * 0.5 : x, -0.08 + layer * 0.12, 0), 0x6a6670)))),
+    // sztaby żelaza: trapezowe odlewy ułożone w krzyż (warstwa wzdłuż, warstwa w poprzek), na drewnianym podkładzie
+    geo: merge([
+      ...[-0.15, 0.15].map((x) => paint(part(new THREE.BoxGeometry(0.05, 0.03, 0.4), x, -0.135, 0), 0x5a3e24)),
+      ...[0, 1, 2].flatMap((layer) => [-0.12, 0, 0.12].map((o) => {
+        const bar = new THREE.CylinderGeometry(0.035, 0.055, 0.36, 4, 1).rotateY(Math.PI / 4).scale(1, 0.6, 1).rotateX(Math.PI / 2);
+        if (layer % 2) bar.rotateY(Math.PI / 2);
+        return paint(part(bar, layer % 2 ? 0 : o, -0.09 + layer * 0.048, layer % 2 ? o : 0), layer === 2 ? 0x7a7c84 : 0x5f6168);
+      })),
+    ]),
   },
   wheat: {
     tex: 'thatch',
-    // snopek: wiązka źdźbeł z przewiązką i rozchylone kłosy na górze
-    geo: merge([-0.11, 0.11].flatMap((x) => [
-      paint(part(new THREE.CylinderGeometry(0.065, 0.05, 0.22, 8), x, -0.05, 0), 0xd9b452),
-      paint(part(new THREE.CylinderGeometry(0.07, 0.07, 0.03, 8), x, -0.02, 0), 0x9a7a2a),
-      ...[0, 1, 2, 3, 4].map((k) => paint(part(new THREE.ConeGeometry(0.03, 0.12, 4).rotateZ(Math.cos(k * 1.26) * 0.4).rotateX(Math.sin(k * 1.26) * 0.4), x + Math.cos(k * 1.26) * 0.035, 0.11, Math.sin(k * 1.26) * 0.035), 0xe8c766)),
-    ])),
+    // dwa snopki oparte o siebie: pęk źdźbeł rozchylony u dołu, przewiązany powrósłem, u góry opadające kłosy
+    geo: merge([-0.1, 0.1].flatMap((x, side) => {
+      const lean = side ? -0.18 : 0.18;
+      const parts: THREE.BufferGeometry[] = [];
+      for (let k = 0; k < 22; k++) {
+        const a = (k / 22) * Math.PI * 2 + (k % 2) * 0.15;
+        const spread = 0.04 + (k % 3) * 0.012;
+        // źdźbło: od rozchylonej stopy do przewiązki i dalej do kłosa
+        // dół źdźbeł rozchodzi się na boki (snop stoi na szerokiej stopie), w przewiązce są ściśnięte
+        const stalk = new THREE.CylinderGeometry(0.009, 0.007, 0.3, 3).rotateX(-Math.sin(a) * 0.22).rotateZ(Math.cos(a) * 0.22 + lean);
+        parts.push(paint(part(stalk, x + Math.cos(a) * spread * 0.5, -0.02, Math.sin(a) * spread * 0.5), k % 2 ? 0xd9b452 : 0xc9a240));
+        // kłos: wydłużony, lekko opadający na zewnątrz
+        // kłosy zbite w pióropusz, lekko opadające na boki
+        const ear = new THREE.IcosahedronGeometry(0.017, 0).scale(0.75, 2.4, 0.75).rotateZ(-Math.cos(a) * 0.45 + lean).rotateX(Math.sin(a) * 0.45);
+        parts.push(paint(part(ear, x + Math.cos(a) * 0.028 - lean * 0.14, 0.15 + (k % 3) * 0.008, Math.sin(a) * 0.028), k % 3 ? 0xe8c766 : 0xd4ad4a));
+      }
+      parts.push(paint(part(new THREE.CylinderGeometry(0.048, 0.048, 0.025, 10).rotateZ(lean), x - lean * 0.03, 0.0, 0), 0x8a6a28)); // powrósło
+      return parts;
+    })),
   },
   flour: {
-    tex: 'plaster',
-    geo: merge([-0.11, 0.11].flatMap((x) => [
-      paint(new THREE.IcosahedronGeometry(0.12, 1).scale(0.9, 1.15, 0.8).translate(x, -0.02, 0), 0xf2ebd6),
-      paint(part(new THREE.CylinderGeometry(0.035, 0.05, 0.06, 6), x, 0.12, 0), 0xd8cdb0),
-    ])),
+    tex: 'thatch',
+    // worki z płótna: pękaty spód, zwężenie przewiązane sznurkiem, nad nim zebrana góra worka; jeden leży bokiem
+    geo: merge([
+      ...([[-0.1, -0.05, 0.15], [0.11, -0.06, -0.1]] as const).flatMap(([x, z, rot]) => [
+        paint(new THREE.CylinderGeometry(0.085, 0.11, 0.2, 9).rotateY(rot).translate(x, -0.05, z), 0xe6dcc4), // korpus
+        paint(new THREE.IcosahedronGeometry(0.1, 1).scale(1.05, 0.55, 1.05).translate(x, -0.13, z), 0xddd2b8), // wybrzuszony dół
+        paint(new THREE.IcosahedronGeometry(0.088, 1).scale(1, 0.5, 1).translate(x, 0.05, z), 0xe6dcc4), // ramiona worka
+        paint(new THREE.CylinderGeometry(0.03, 0.045, 0.05, 8).translate(x, 0.1, z), 0xd8cdb0), // szyjka
+        paint(new THREE.CylinderGeometry(0.034, 0.034, 0.014, 8).translate(x, 0.105, z), 0x7a5a32), // sznurek
+        paint(new THREE.ConeGeometry(0.045, 0.06, 7).rotateX(Math.PI).translate(x, 0.15, z), 0xddd2b8), // zebrana góra
+        paint(new THREE.IcosahedronGeometry(0.03, 0).scale(1.6, 0.2, 1.2).translate(x + 0.02, 0.07, z + 0.06), 0xf6f2e8), // mąka na płótnie
+      ]),
+      // trzeci worek leży bokiem z przodu
+      paint(new THREE.CylinderGeometry(0.07, 0.085, 0.24, 9).rotateZ(Math.PI / 2).translate(0.0, -0.1, 0.13), 0xe0d6be),
+      paint(new THREE.ConeGeometry(0.04, 0.05, 7).rotateZ(-Math.PI / 2).translate(0.15, -0.1, 0.13), 0xd8cdb0),
+    ]),
   },
   bread: {
     tex: 'organic',
