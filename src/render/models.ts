@@ -12,6 +12,8 @@ export interface ModelFactory {
   treeCrown(): THREE.BufferGeometry;
   /** Uproszczony świerk na daleki plan (pień i korona w jednej, lekkiej bryle) */
   treeCrownFar(): THREE.BufferGeometry;
+  /** Uproszczona korona drzewa liściastego na daleki plan */
+  leafCrownFar(): THREE.BufferGeometry;
   /** Drzewo liściaste */
   leafTrunk(): THREE.BufferGeometry;
   leafCrown(): THREE.BufferGeometry;
@@ -89,6 +91,13 @@ export const proceduralModels: ModelFactory = {
       at(new THREE.CylinderGeometry(0.035, 0.05, 0.35, 5).rotateZ(0.8), -0.13, 0.62, 0),
       at(new THREE.CylinderGeometry(0.035, 0.05, 0.35, 5).rotateZ(-0.8), 0.13, 0.66, 0.02),
     ]);
+  },
+  leafCrownFar() {
+    return mergeGeometries([
+      at(new THREE.IcosahedronGeometry(0.38, 0), 0, 0.95, 0),
+      at(new THREE.IcosahedronGeometry(0.28, 0), -0.25, 0.8, 0.08),
+      at(new THREE.IcosahedronGeometry(0.28, 0), 0.24, 0.84, -0.06),
+    ])!;
   },
   leafCrown() {
     return mergeGeometries([

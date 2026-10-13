@@ -456,7 +456,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         // łąka: gęste kępy trawy, kwiaty, pojedyncze krzewy, kamyki i z rzadka większy głaz
         // kępy rosną gęściej tam, gdzie łąka jest bujniejsza (wolny szum), na wydeptanych miejscach znikają razem z polem
         const lush = (hash2(x >> 3, y >> 3, map.seed ^ 0x6a5d) & 255) / 255;
-        const nT = lush > 0.55 ? 3 : lush > 0.25 ? 2 : 1;
+        const nT = lush > 0.5 ? 2 : 1;
         for (let k = 0; k < nT; k++) if (((r >>> (7 + k * 3)) & 3) !== 0) put(tufts, x, y, 2 + k * 11, 0.8 + ((r >>> (k * 5)) & 7) / 14, 0.95);
         if ((r >>> 13) % 15 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
         if ((r >>> 16) % 23 === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
@@ -497,7 +497,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // korony świerków: kolory z wierzchołków (jasne końce gałęzi, ciemne wnętrze), gładkie cieniowanie, widoczne z obu stron
   const farPine = models.treeCrownFar();
   farPine.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array((farPine.attributes.position as THREE.BufferAttribute).count * 3).fill(0.95), 3));
-  const PINE_LOD: Lod = { farGeo: farPine }, TRUNK_LOD: Lod = { hide: 62 }, SMALL_LOD: Lod = { hide: 48 };
+  const PINE_LOD: Lod = { farGeo: farPine }, LEAF_LOD: Lod = { farGeo: models.leafCrownFar() }, TRUNK_LOD: Lod = { hide: 62 }, SMALL_LOD: Lod = { hide: 40 };
   const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: pattern('needles') });
   // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
@@ -544,7 +544,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     });
   };
   plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark', true, undefined, TRUNK_LOD), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat, PINE_LOD));
-  plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark'), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves'));
+  plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark', true, undefined, TRUNK_LOD), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves', true, undefined, LEAF_LOD));
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
   // Las wchodzi na zbocza aż pod granicę lasu; wyżej drzewa rzedną, są niższe i oszronione, nad nimi tylko skała i śnieg.
   // Dalekie drzewa mają uproszczony model (mniej trójkątów), a mgła i tak zaciera szczegóły.
@@ -559,8 +559,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const r = hash2(Math.round(gx * 10), Math.round(gz * 10), map.seed ^ 0x7f4a7c15);
         const dist = Math.max(Math.abs(gx) - w / 2, Math.abs(gz) - h / 2);
         // dalej rzadziej: co drugi punkt za 40 pól, co trzeci za 75 (mgła)
-        if (dist > 75 ? r % 3 !== 0 : dist > 40 ? (r & 1) === 1 : false) continue;
-        const step = dist > 40 ? 3 : 1.7;
+        if (dist > 70 ? r % 5 !== 0 : dist > 35 ? r % 3 !== 0 : dist > 18 ? (r & 1) === 1 : false) continue;
+        const step = dist > 70 ? 5 : dist > 35 ? 3.5 : dist > 18 ? 2.4 : 1.7;
         const px = gx + ((r & 255) / 255 - 0.5) * step * 0.9;
         const pz = gz + (((r >>> 8) & 255) / 255 - 0.5) * step * 0.9;
         const dd = Math.max(Math.abs(px) - w / 2, Math.abs(pz) - h / 2);
@@ -577,7 +577,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const alt = smoothstep(treeline - 6, treeline, groundY);
         if (((r >>> 20) & 255) / 255 < alt * 0.7) continue; // pod granicą lasu coraz rzadziej
         const k = Math.min(1, dd / 60);
-        const size = (1.25 + k * 1.2) * (0.8 + ((r >>> 16) & 255) / 255 * 0.5) * (1 - alt * 0.45);
+        const size = (1.25 + k * 1.6) * (0.8 + ((r >>> 16) & 255) / 255 * 0.5) * (1 - alt * 0.45);
         const leafTree = groundY < 4 && (r >>> 24) % 4 === 0; // wysoko tylko świerki
         const pos = new THREE.Vector3(px, groundY - 0.05, pz);
         const qq = new THREE.Quaternion().setFromEuler(e3.set(0, ((r >>> 4) & 63) / 10, 0));
@@ -588,10 +588,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       }
     instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark', true, undefined, TRUNK_LOD);
     instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles', true, pineMat, PINE_LOD);
-    instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark');
-    instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves');
+    instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark', true, undefined, TRUNK_LOD);
+    instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves', true, undefined, LEAF_LOD);
     instanced(models.treeCrownFar(), 0x35703a, far.pine, 'needles', false);
-    instanced(models.leafCrown(), 0x55903a, far.leaf, 'leaves', false);
+    instanced(models.leafCrownFar(), 0x55903a, far.leaf, 'leaves', false);
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
