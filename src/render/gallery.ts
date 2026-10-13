@@ -22,7 +22,7 @@ const PEOPLE: GalleryEntry[] = [
 const CATS: Record<string, string> = { settlement: 'Osada', food: 'Żywność', industry: 'Przemysł', military: 'Wojsko', defense: 'Obrona', roads: 'Drogi' };
 const BUILDING_ENTRIES: GalleryEntry[] = BUILDINGS.filter((d) => !d.road).map((d) => ({
   id: `b:${d.id}`, group: d.category ? CATS[d.category] ?? 'Budynki' : 'Osada', name: t(d.name),
-  text: (t(`d.${d.id}`) !== `d.${d.id}` ? t(`d.${d.id}`) : '') + (d.w ? ` Zajmuje ${d.w}×${d.h} pól.` : ''),
+  text: (t(`d.${d.id}`) !== `d.${d.id}` ? t(`d.${d.id}`) : '') + (d.w ? ` Działka: ${d.w}×${d.h}.` : ''),
 }));
 /** Galeria: postacie i zwierzęta albo budynki (pogrupowane jak na belce budowania) */
 export const GALLERY = { people: PEOPLE, buildings: [...BUILDING_ENTRIES].sort((a, b) => Object.values(CATS).indexOf(a.group) - Object.values(CATS).indexOf(b.group)) };
@@ -70,6 +70,7 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
   let current = 'peasant';
   let shown: THREE.Object3D | null = null;
   let size = 1;
+  let centerY = 0.3;
   const showBuilding = (id: string): void => {
     if (shown) { stage.remove(shown); shown = null; }
     if (!id.startsWith('b:')) { size = 1; return; }
@@ -80,7 +81,10 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
     m.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
     stage.add(m);
     shown = m;
-    size = Math.max(def.w, def.h, 1);
+    // kadr dopasowany do bryły (brama i wieża są wyższe niż szersze)
+    const sphere = new THREE.Box3().setFromObject(m).getBoundingSphere(new THREE.Sphere());
+    size = Math.max(sphere.radius, 0.5);
+    centerY = sphere.center.y;
   };
   const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
   const place = (x: number, z: number, yaw: number, scale = 1): THREE.Matrix4 => M.compose(P.set(x, 0, z), Q.setFromAxisAngle(Y, yaw), S.setScalar(scale));
@@ -114,12 +118,12 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
     for (const c of crows) { c.visible = kind === 'crow'; c.rotation.x = Math.max(0, Math.sin(t * 5 + c.position.x * 20)) * 0.6; }
     // kamera powoli krąży; zwierzęta i ptaki z bliska, budynki z daleka (wg wielkości działki)
     const building = kind.startsWith('b:');
-    ground.scale.setScalar(building ? size * 0.9 : 1);
+    ground.scale.setScalar(building ? Math.max(1, size * 1.1) : 1);
     sun.shadow.camera.left = sun.shadow.camera.bottom = -(building ? size * 1.4 : 1.5); sun.shadow.camera.right = sun.shadow.camera.top = building ? size * 1.4 : 1.5; sun.shadow.camera.updateProjectionMatrix();
     (scene.fog as THREE.Fog).far = building ? size * 6 + 6 : 9;
-    const near = building ? size * 1.9 + 1.2 : kind === 'crow' ? 0.9 : kind === 'wolf' ? 2.6 : 2.0;
+    const near = building ? size * 3.2 + 0.4 : kind === 'crow' ? 0.9 : kind === 'wolf' ? 2.6 : 2.0;
     const yaw = t * 0.35;
-    const lookY = building ? size * 0.28 : kind === 'crow' ? 0.08 : kind === 'wolf' ? 0.4 : 0.33;
+    const lookY = building ? centerY * 0.85 : kind === 'crow' ? 0.08 : kind === 'wolf' ? 0.4 : 0.33;
     camera.position.set(Math.sin(yaw) * near, lookY + near * 0.35, Math.cos(yaw) * near);
     camera.lookAt(0, lookY, 0);
     renderer.render(scene, camera);

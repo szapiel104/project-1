@@ -1050,52 +1050,75 @@ const BUILDERS: Record<string, Builder> = {
     yard.visible = false;
     g.add(yard);
   },
-  quarry(g) {
-    // Kamieniołom: skalna ściana wycięta schodkowo, żuraw z blokiem na linie, ławka kamieniarza i stos ciosów
-    for (const [x, z, r, sy] of [[-0.45, -0.55, 0.6, 0.9], [0.35, -0.6, 0.55, 1.0], [-0.85, -0.2, 0.38, 0.65], [0.82, -0.25, 0.36, 0.7], [-0.05, -0.85, 0.45, 0.8]] as const) {
-      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), x < -0.6 || x > 0.6 ? M.rockDark : M.rock);
-      rock.scale.set(1, sy, 0.85);
-      rock.rotation.set(x * 2.3, z * 2.7, x - z);
-      rock.position.set(x, r * sy * 0.45, z);
+  quarry(g, _team, flag) {
+    // Kamieniołom: skała wycięta w trzy równe stopnie (świeży, jasny ciosany kamień, ślady klinów),
+    // nad nią dziki, ciemny garb skalny. Z przodu trójnóg z liną podnoszący blok, wiata kamieniarza i stos gotowych ciosów.
+    const r = rng(7311);
+    const V = (x: number, y: number, z: number): THREE.Vector3 => new THREE.Vector3(x, y, z);
+    const stick = (a: THREE.Vector3, b2: THREE.Vector3, size: number, m: THREE.Material = M.woodDark): void => { g.add(new THREE.Mesh(beam(a, b2, size, r), m)); };
+    // dziki garb skały z tyłu, zachodzi na boki
+    for (const [x, y, z, rad, sy, dark] of [[-0.55, 0.55, -0.78, 0.5, 1.1, 1], [0.15, 0.7, -0.85, 0.55, 1.1, 0], [0.7, 0.45, -0.7, 0.42, 1.0, 1], [-0.88, 0.25, -0.35, 0.3, 0.9, 0], [0.88, 0.2, -0.3, 0.28, 0.8, 1]] as const) {
+      const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(rad, 0), dark ? M.rockDark : M.rock);
+      rock.scale.set(1.15, sy, 0.8);
+      rock.rotation.set(x * 2.1, z * 3.3, x * 1.7);
+      rock.position.set(x, y, z);
       g.add(rock);
     }
-    // świeżo odcięte stopnie w skale: jasne, równe płaszczyzny z widocznymi spoinami
-    box(g, M.cut, 1.0, 0.5, 0.35, -0.05, 0, -0.3);
-    box(g, M.cut, 0.8, 0.28, 0.3, 0.05, 0, -0.02);
-    box(g, M.cutDark, 0.35, 0.18, 0.3, -0.38, 0.5, -0.35);
-    // urobek i odłamki u stóp ściany
-    for (const [x, z, r] of [[-0.55, 0.15, 0.08], [-0.42, 0.25, 0.06], [0.48, 0.12, 0.07], [0.3, 0.3, 0.05], [-0.7, 0.35, 0.05], [0.62, 0.32, 0.06]] as const) {
-      const chip = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), M.rock);
-      chip.position.set(x, r * 0.6, z);
+    // stopnie wycięte w skale: od najwyższego z tyłu do najniższego z przodu
+    const steps: [number, number, number, number][] = [[1.3, 0.95, -0.62, 0.3], [1.2, 0.62, -0.4, 0.26], [1.0, 0.3, -0.2, 0.24]];
+    steps.forEach(([w, h, z, d], i) => {
+      box(g, i === 0 ? M.cutDark : M.cut, w, h, d, -0.05 + i * 0.04, 0, z);
+      // ślady wierteł i klinów na czole stopnia
+      for (let k = 0; k < 5; k++) box(g, M.dark, 0.012, h * 0.55, 0.01, -0.05 + i * 0.04 - w / 2 + 0.15 + k * (w - 0.3) / 4, h * 0.2, z + d / 2 + 0.002);
+      // jedna pozioma szczelina, wzdłuż której blok zaraz odpadnie
+      box(g, M.dark, w * 0.6, 0.012, 0.01, -0.05 + i * 0.04 + 0.1, h * 0.62, z + d / 2 + 0.002);
+    });
+    // blok właśnie odłupany ze stopnia, z klinami wbitymi w szczelinę
+    box(g, M.cut, 0.32, 0.2, 0.2, 0.38, 0.3, -0.18).rotation.y = 0.12;
+    for (const x of [0.28, 0.38, 0.48]) box(g, M.iron, 0.025, 0.06, 0.04, x, 0.5, -0.1);
+    // drabina oparta o środkowy stopień
+    stick(V(-0.62, 0, -0.06), V(-0.66, 0.66, -0.36), 0.035, M.wood);
+    stick(V(-0.44, 0, -0.06), V(-0.48, 0.66, -0.36), 0.035, M.wood);
+    for (let k = 1; k < 5; k++) { const t = k / 5; box(g, M.wood, 0.2, 0.025, 0.025, -0.55 - t * 0.04, t * 0.62, -0.06 - t * 0.3); }
+    // trójnóg z liną i bloczkiem: blok kamienia wisi w uprzęży nad wozem
+    const apex = V(0.3, 1.35, 0.25);
+    stick(V(0.0, 0, 0.0), apex, 0.06);
+    stick(V(0.62, 0, 0.05), apex, 0.06);
+    stick(V(0.32, 0, 0.65), apex, 0.06);
+    box(g, M.iron, 0.08, 0.08, 0.08, apex.x, apex.y - 0.06, apex.z);
+    box(g, M.rope, 0.014, 0.62, 0.014, apex.x, apex.y - 0.68, apex.z);
+    box(g, M.cut, 0.3, 0.18, 0.22, apex.x, 0.5, apex.z);
+    for (const dz of [-0.06, 0.06]) box(g, M.rope, 0.31, 0.015, 0.02, apex.x, 0.62, apex.z + dz);
+    // kołowrót przy nodze trójnogu, lina biegnie do niego
+    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.26, 8), M.wood);
+    drum.rotation.z = Math.PI / 2; drum.position.set(0.66, 0.28, 0.32); g.add(drum);
+    for (const dx of [-0.14, 0.14]) box(g, M.woodDark, 0.04, 0.3, 0.04, 0.66 + dx, 0, 0.32);
+    box(g, M.woodDark, 0.025, 0.16, 0.025, 0.82, 0.28, 0.4).rotation.z = 0.4;
+    stick(V(0.66, 0.34, 0.32), V(apex.x, apex.y - 0.08, apex.z), 0.012, M.rope);
+    // wiata kamieniarza po lewej: cztery słupy, pochyły dach z desek, pod nią kozioł z blokiem w obróbce
+    const sx = -0.55, sz = 0.55;
+    for (const [dx, dz, hgt] of [[-0.3, -0.22, 0.78], [0.3, -0.22, 0.78], [-0.3, 0.22, 0.6], [0.3, 0.22, 0.6]] as const) box(g, M.woodDark, 0.05, hgt, 0.05, sx + dx, 0, sz + dz);
+    const roof = box(g, M.wood, 0.78, 0.035, 0.6, sx, 0.68, sz);
+    roof.rotation.x = 0.32;
+    for (const dz of [-0.2, 0, 0.2]) { const lath = box(g, M.woodDark, 0.8, 0.02, 0.03, sx, 0.715 - dz * 0.33, sz + dz); lath.rotation.x = 0.32; }
+    box(g, M.woodDark, 0.44, 0.04, 0.24, sx, 0.24, sz);
+    for (const [dx, dz] of [[-0.18, -0.08], [0.18, -0.08], [-0.18, 0.08], [0.18, 0.08]] as const) box(g, M.woodDark, 0.035, 0.24, 0.035, sx + dx, 0, sz + dz);
+    box(g, M.cut, 0.26, 0.15, 0.18, sx - 0.02, 0.28, sz);
+    box(g, M.wood, 0.03, 0.03, 0.15, sx + 0.18, 0.29, sz - 0.04).rotation.y = 0.6; // trzonek młotka
+    box(g, M.iron, 0.07, 0.05, 0.05, sx + 0.21, 0.29, sz - 0.1);
+    box(g, M.iron, 0.012, 0.012, 0.13, sx + 0.06, 0.44, sz + 0.02).rotation.x = 0.8; // dłuto
+    pennant(g, flag, sx + 0.3, 0.78, sz - 0.22);
+    // stos gotowych ciosów na płozach po prawej, z przodu
+    for (const dz of [-0.11, 0.11]) box(g, M.woodDark, 0.56, 0.05, 0.06, 0.55, 0, 0.78 + dz);
+    for (const [x, y, z] of [[0.42, 0.05, 0.78], [0.68, 0.05, 0.78], [0.55, 0.2, 0.78]] as const) box(g, (x + y) % 0.2 > 0.1 ? M.cutDark : M.cut, 0.24, 0.15, 0.24, x, y, z);
+    // okruchy u stóp ściany i jasny pył na placu
+    for (let k = 0; k < 9; k++) {
+      const chip = new THREE.Mesh(new THREE.DodecahedronGeometry(0.03 + r() * 0.04, 0), k % 3 ? M.cut : M.rock);
+      chip.position.set(-0.7 + r() * 1.4, 0.02, -0.02 + r() * 0.25);
+      chip.rotation.set(r() * 3, r() * 3, 0);
       g.add(chip);
     }
-    // żuraw: maszt, ukośny wysięgnik, zastrzał, lina i blok w uprzęży
-    box(g, M.stoneDark, 0.26, 0.08, 0.26, 0.62, 0, 0.55);
-    box(g, M.woodDark, 0.09, 1.25, 0.09, 0.62, 0.08, 0.55);
-    const jib = box(g, M.woodDark, 0.95, 0.07, 0.07, 0.25, 1.15, 0.55);
-    jib.rotation.z = -0.32;
-    box(g, M.woodDark, 0.05, 0.6, 0.05, 0.48, 0.55, 0.55).rotation.z = 0.55;
-    box(g, M.rope, 0.015, 0.55, 0.015, -0.17, 0.75, 0.55);
-    box(g, M.cut, 0.26, 0.17, 0.2, -0.17, 0.58, 0.55);
-    box(g, M.rope, 0.27, 0.015, 0.03, -0.17, 0.75, 0.55);
-    // kołowrót przy maszcie
-    const drum = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.3, 8), M.wood);
-    drum.rotation.x = Math.PI / 2;
-    drum.position.set(0.62, 0.35, 0.78);
-    g.add(drum);
-    box(g, M.woodDark, 0.03, 0.18, 0.03, 0.62, 0.35, 0.94);
-    // ławka kamieniarza: kozioł z blokiem w obróbce, młotek i dłuto
-    box(g, M.woodDark, 0.42, 0.04, 0.26, -0.35, 0.22, 0.5);
-    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) box(g, M.woodDark, 0.04, 0.22, 0.04, -0.35 + sx * 0.17, 0, 0.5 + sz * 0.09);
-    box(g, M.cut, 0.26, 0.14, 0.18, -0.38, 0.26, 0.5);
-    box(g, M.wood, 0.04, 0.04, 0.16, -0.18, 0.27, 0.42).rotation.y = 0.5;
-    box(g, M.iron, 0.08, 0.06, 0.06, -0.16, 0.27, 0.36);
-    box(g, M.iron, 0.015, 0.015, 0.12, -0.2, 0.41, 0.52).rotation.x = 0.7;
-    // stos gotowych ciosów na drewnianych podkładach
-    for (const sx of [-1, 1]) box(g, M.woodDark, 0.5, 0.04, 0.05, 0.1, 0, 0.82 + sx * 0.1);
-    for (const [x, y, z] of [[-0.05, 0.04, 0.82], [0.22, 0.04, 0.82], [0.08, 0.18, 0.82]] as const) box(g, M.cut, 0.24, 0.14, 0.22, x, y, z);
-    // biały pył kamienny na ziemi
-    box(g, M.dust, 0.9, 0.012, 0.5, 0, 0.005, 0.35);
+    box(g, M.dust, 1.5, 0.012, 0.95, 0, 0.004, 0.35);
   },
   mine(g) {
     // Kopalnia żelaza: skalny garb ze sztolnią w drewnianej obudowie, tory z wózkiem rudy, kołowrót i hałda
