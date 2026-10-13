@@ -2,6 +2,20 @@
  * Gra jest tylko na komputery. Telefon albo tablet (sam dotyk, bez myszy) dostaje tablicę z informacją,
  * a gra w ogóle się nie wczytuje.
  */
+/** Porady na ekranie wczytywania (musi stać przed uruchomieniem load) */
+const TIPS = [
+  'Wilki wychodzą z lasu o zmierzchu. Palisada wokół osady daje ludziom spokojniejszą noc.',
+  'Najpierw jedzenie: sad albo rybak, zanim postawisz kolejne chaty dla nowych ludzi.',
+  'Chata drwala przy samym lesie: krótsza droga po drewno to więcej desek.',
+  'Grabarz zbiera ciała tylko na swoim terenie. Kliknij cmentarz, żeby zobaczyć, gdzie sięga.',
+  'Budowniczy najpierw idą do składu po materiał. Skład blisko budowy = szybsza budowa.',
+  'Prawy klik z przeciąganiem ustawia oddział w szyku i wskazuje, w którą stronę ma patrzeć.',
+  'Zaznacz chłopa i wciśnij F, żeby przejść się jego oczami. Oko na pasku wybiera kogoś losowo.',
+  'Wydeptane ścieżki pokazują, gdzie ludzie chodzą najczęściej. Tam warto położyć drogę.',
+  'W nocy ludzie schodzą do ogniska i karczmy, a o świcie wracają do pracy.',
+  'F3 pokazuje okno wydajności. Gra sama dobiera jakość grafiki do komputera.',
+];
+
 const touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
 const mobileAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
 
@@ -22,18 +36,6 @@ if (touchOnly || mobileAgent) {
   }
 }
 
-const TIPS = [
-  'Wilki wychodzą z lasu o zmierzchu. Palisada wokół osady daje ludziom spokojniejszą noc.',
-  'Najpierw jedzenie: sad albo rybak, zanim postawisz kolejne chaty dla nowych ludzi.',
-  'Chata drwala przy samym lesie: krótsza droga po drewno to więcej desek.',
-  'Grabarz zbiera ciała tylko na swoim terenie. Kliknij cmentarz, żeby zobaczyć, gdzie sięga.',
-  'Budowniczy najpierw idą do składu po materiał. Skład blisko budowy = szybsza budowa.',
-  'Prawy klik z przeciąganiem ustawia oddział w szyku i wskazuje, w którą stronę ma patrzeć.',
-  'Zaznacz chłopa i wciśnij F, żeby przejść się jego oczami. Oko na pasku wybiera kogoś losowo.',
-  'Wydeptane ścieżki pokazują, gdzie ludzie chodzą najczęściej. Tam warto położyć drogę.',
-  'W nocy ludzie schodzą do ogniska i karczmy, a o świcie wracają do pracy.',
-  'F3 pokazuje okno wydajności. Gra sama dobiera jakość grafiki do komputera.',
-];
 
 /**
  * Wczytywanie z paskiem: silnik 3D, każda tekstura osobno (rysowane w przeglądarce, to trwa najdłużej),
