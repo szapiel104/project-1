@@ -266,7 +266,7 @@ export class GameRenderer {
     return tile === Terrain.Stone || tile === Terrain.Iron ? 'stepGravel' : 'stepDirt';
   }
 
-  /** Krok postaci: tylko z bliska i najwyżej 8 na sekundę w całej grze (tłum nie zlewa się w szum) */
+  /** Krok postaci: tylko z bliska i najwyżej 5 na sekundę w całej grze (tłum nie zlewa się w szum) */
   private footstep(g: GameState, id: number, x: number, y: number, stride: number, gain: number): void {
     const k = Math.floor(stride / Math.PI);
     const last = this.stepIdx.get(id);
@@ -277,7 +277,7 @@ export class GameRenderer {
     const d = Math.hypot(cam.position.x - wx, cam.position.y - wy, cam.position.z - wz);
     if (d > 11) return;
     this.stepTimes = this.stepTimes.filter((s) => this.time - s < 1);
-    if (this.stepTimes.length >= 8) return;
+    if (this.stepTimes.length >= 5) return;
     this.stepTimes.push(this.time);
     const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
     const pan = ((wx - cam.position.x) * right.x + (wz - cam.position.z) * right.z) / Math.max(1, d) * 1.4;
@@ -1272,10 +1272,11 @@ export class GameRenderer {
     };
     if (free(w.x + dx, w.z)) w.x += dx;
     if (free(w.x, w.z + dz)) w.z += dz;
-    if (fx || fz) w.bob += sp * 5;
+    // tempo kroków jak u człowieka: idąc ok. 1,8 kroku na sekundę, biegiem ok. 2,7 (kołysanie kamery w tym samym rytmie)
+    if (fx || fz) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
     // własne kroki w spacerze: na każdy krok dźwięk podłoża, lewa i prawa noga lekko z boku
     const stepK = Math.floor(w.bob / Math.PI);
-    if (stepK !== this.walkStep) { this.walkStep = stepK; playAt(this.surface(g, w.x, w.z), 1, stepK % 2 ? 0.12 : -0.12, 0.5); }
+    if (stepK !== this.walkStep) { this.walkStep = stepK; playAt(this.surface(g, w.x, w.z), 0.8, stepK % 2 ? 0.12 : -0.12, run ? 0.42 : 0.32); }
     const cam = this.cam.camera;
     const { width, height } = g.map;
     const ground = this.view ? this.standY(this.view, w.x, w.z) : 0;
@@ -2563,7 +2564,7 @@ export class GameRenderer {
       const cv = this.crowd.move(s.id, fx + cur[0], fy + cur[1], heading, this.calm || !!s.up, true);
       if (walking && cv.speed > 0.3) { heading = cv.heading; this.facing.set(s.id, heading); }
       const px = cv.sx, pz = cv.sy;
-      if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.4);
+      if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.3);
       const y = this.standY(view, px, pz) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
@@ -2802,7 +2803,7 @@ export class GameRenderer {
       st.phase += Math.min(0.5, Math.hypot(cv.sx - st.x, cv.sy - st.y)) * 7.5;
       st.x = cv.sx; st.y = cv.sy;
       const stride = walking ? st.phase : 0;
-      if (walking) this.footstep(g, u.id, cv.sx, cv.sy, stride, 0.3);
+      if (walking) this.footstep(g, u.id, cv.sx, cv.sy, stride, 0.22);
       let swing = walking ? Math.sin(stride) * 0.55 : 0;
       t.position.set(cv.sx - width / 2, this.standY(view, cv.sx, cv.sy) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
       t.rotation.set(0, heading, 0);

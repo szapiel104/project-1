@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.18.1 — spokojniejsze kroki (2026-10-14)
+
+- Spacer oczami chłopa: kroki w ludzkim tempie (idąc ok. 1,8 na sekundę, biegiem ok. 2,7) zamiast serii jak z karabinu; kołysanie kamery w tym samym rytmie
+- Nagrania kroków łagodniejsze (bez ostrego trzasku na początku, przycięte wysokie tony) i cichsze; kroki innych postaci najwyżej 5 na sekundę
+
 ## 0.18.0 — ludzie nie chodzą jak drewno (2026-10-14)
 
 - Płynne chodzenie: chłopi i żołnierze skręcają łukiem zamiast załamywać się na rogach pól, patrzą tam, dokąd naprawdę idą, a po dojściu wsuwają się na miejsce zamiast przeskakiwać
