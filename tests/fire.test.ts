@@ -27,6 +27,15 @@ describe('pożary', () => {
     let crew = 0;
     for (let i = 0; i < 40; i++) { step(g, []); crew = Math.max(crew, g.units.filter((u) => u.bucket && u.fireAt === house.id).length); }
     expect(crew).toBeGreaterThan(0);
+    // ekipa nie stoi na jednym polu: przy studni i przy ogniu każdy ma swoje miejsce
+    let spread = false;
+    for (let i = 0; i < 300 && !spread; i++) {
+      step(g, []);
+      const still = g.units.filter((u) => u.bucket && !u.path.length && u.timer > 0);
+      const tiles = new Set(still.map((u) => (u.py >> 8) * g.map.width + (u.px >> 8)));
+      if (still.length >= 2) { expect(tiles.size).toBe(still.length); spread = true; }
+    }
+    expect(spread).toBe(true);
     let t = 0;
     for (; t < 500 && (house.fire ?? 0) > 0; t++) step(g, []);
     // ugaszony wyraźnie szybciej niż sam by się wypalił (600 ticków)

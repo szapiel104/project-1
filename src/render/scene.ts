@@ -3287,8 +3287,8 @@ export class GameRenderer {
       const fy = (prev ? prev[1] + (u.py - prev[1]) * alpha : u.py) / FP;
       // stojący w tym samym miejscu rozstawiają się wokół, żeby nie zlewali się w jednego
       const still = u.path.length === 0;
-      const ox = still ? (((u.id * 7) % 5) - 2) * 0.17 : 0;
-      const oz = still ? (((u.id * 11) % 5) - 2) * 0.17 : 0;
+      const ox = still && !u.bucket ? (((u.id * 7) % 5) - 2) * 0.17 : 0;
+      const oz = still && !u.bucket ? (((u.id * 11) % 5) - 2) * 0.17 : 0;
       // postać patrzy w stronę marszu; gdy stoi, zachowuje ostatni kierunek
       const next = u.path[0];
       let heading = this.facing.get(u.id) ?? ((u.id * 2.4) % 6.28);

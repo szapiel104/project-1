@@ -1,5 +1,5 @@
 import { BUILDINGS, buildingIndex, footprint } from '../../data/buildings';
-import { findPath } from '../path';
+import { findPath, walkable } from '../path';
 import { FP, Phase, type Building, type GameState, type Unit } from '../state';
 import { maxHp } from './placement';
 
@@ -44,6 +44,24 @@ function nearestWell(g: GameState, owner: number, fire: Building): Building | un
   }
   return best;
 }
+/** Miejsce dla gaszącego przy `goal`: wolne pola wokół, najbliższe `other` (drugiemu końcowi trasy), kolejne osoby obok siebie */
+function slotFor(g: GameState, u: Unit, goal: Building, other: Building): number {
+  const fp = footprint(BUILDINGS[goal.type]!, goal.rot), w = g.map.width, h = g.map.height;
+  const [ox, oy] = center(other);
+  const tiles: number[] = [];
+  for (let y = goal.y - 1; y <= goal.y + fp.h; y++) for (let x = goal.x - 1; x <= goal.x + fp.w; x++) {
+    if (x < 0 || y < 0 || x >= w || y >= h) continue;
+    if (x >= goal.x && x < goal.x + fp.w && y >= goal.y && y < goal.y + fp.h) continue;
+    const t = y * w + x;
+    if (walkable(g, t, u.owner)) tiles.push(t);
+  }
+  if (!tiles.length) return -1;
+  const d = (t: number): number => { const x = t % w, y = (t - x) / w; return (x + 0.5 - ox) ** 2 + (y + 0.5 - oy) ** 2; };
+  tiles.sort((a, b) => d(a) - d(b) || a - b);
+  const crew = g.units.filter((x) => x.bucket && x.fireAt === u.fireAt && (x.bucket === 1 ? x.target : x.fireAt) === goal.id && x.bucket === u.bucket).map((x) => x.id).sort((a, b) => a - b);
+  const rank = Math.max(0, crew.indexOf(u.id));
+  return tiles[rank % tiles.length]!;
+}
 function release(u: Unit): void {
   u.bucket = 0; u.fireAt = 0; u.target = 0; u.path = []; u.timer = 0;
   u.phase = u.job ? Phase.Returning : Phase.Idle;
@@ -86,12 +104,15 @@ export function fireSystem(g: GameState): void {
     if (u.path.length) continue; // krok robi system ludzi
     const goal = u.bucket === 1 ? g.buildings.find((x) => x.id === u.target) : fire;
     if (!goal) { release(u); continue; }
+    // każdy z ekipy ma własne miejsce: pola przy studni / przy ogniu od strony drugiego końca, po kolei wg id
+    const other = u.bucket === 1 ? fire : g.buildings.find((x) => x.id === u.target) ?? fire;
+    const slot = slotFor(g, u, goal, other);
+    const here = tileOf(g, u);
     const at = beside(g, goal);
-    if (!at(tileOf(g, u))) {
-      const path = findPath(g, tileOf(g, u), at, 3000, u.owner);
-      if (!path || !path.length) { release(u); continue; }
-      u.path = path;
-      continue;
+    if (slot >= 0 ? here !== slot : !at(here)) {
+      const path = (slot >= 0 ? findPath(g, here, (t) => t === slot, 3000, u.owner) : undefined) ?? findPath(g, here, at, 3000, u.owner);
+      if (!path || !path.length) { if (at(here)) { u.path = []; } else { release(u); continue; } }
+      else { u.path = path; continue; }
     }
     // na miejscu: chwila przy studni (czerpie) albo przy ogniu (wylewa)
     if (++u.timer < DRAW) continue;
