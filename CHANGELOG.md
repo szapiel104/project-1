@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.21.1 — widać życie w chacie (2026-10-14)
+
+- Gospodyni w długiej sukni, a przy chacie balia i sznur z praniem, które kołysze się na wietrze za dnia
+- Co kilkanaście sekund inna praca, wyraźnie widoczna: zamiatanie miotłą przed drzwiami (z kurzem spod miotły), pranie pochylona nad balią, wieszanie prania z rękami w górze, sypanie ziarna kurom, odpoczynek
+- Dzieci o połowę mniejsze: biegają, gonią się, podskakują, czasem biegną z rękami w górze
+
 ## 0.21.0 — rodziny przy chatach, pochodnie bez biegania (2026-10-14)
 
 - Przy każdej chacie żona i 0–2 dzieci: za dnia kobieta krząta się przy domu (zamiata, coś robi rękami), dzieci biegają i bawią się w berka; nocą wszyscy w chacie, a na widok wilka albo wrogiego żołnierza uciekają do domu (tylko wygląd, gra przez sieć zgodna)
