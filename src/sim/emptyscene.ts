@@ -3,7 +3,7 @@ import { RULES } from '../data/rules';
 import { Terrain } from '../data/terrain';
 import { clockAt, dayFraction } from './clock';
 import { FP, paveForecourt, type GameState, type Unit } from './state';
-import { addBuilding } from './systems/placement';
+import { addBuilding, wallsUnder } from './systems/placement';
 import { spawnPeasant } from './systems/population';
 
 /**
@@ -38,6 +38,11 @@ export function placeReady(g: GameState, id: string, x: number, y: number, rot =
   const type = buildingIndex(id);
   if (type < 0) return null;
   const d = BUILDINGS[type]!, w = rot % 2 ? d.h : d.w, h = rot % 2 ? d.w : d.h;
+  // brama, wieża albo mur kamienny na istniejącym murze: przęsła pod spodem znikają (jak w grze)
+  for (const o of wallsUnder(g, owner, type, x, y, w, h) ?? []) {
+    g.occupancy[o.y * g.map.width + o.x] = 0; g.gates[o.y * g.map.width + o.x] = 0;
+    g.buildings.splice(g.buildings.indexOf(o), 1);
+  }
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) {
     if (tx < 1 || ty < 1 || tx >= g.map.width - 1 || ty >= g.map.height - 1) return null;
     const t = ty * g.map.width + tx;
