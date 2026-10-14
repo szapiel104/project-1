@@ -100,7 +100,7 @@ export function octant(dx: number, dy: number): number {
 }
 
 /** Formacje: 0 linia (szeroko, 1–3 szeregi), 1 blok (kwadrat), 2 luźno (co drugie pole, mniej strat od strzał) */
-export const FORMS = 3;
+export const FORMS = 4;
 export interface MoveOpts { face?: number; form?: number; width?: number; amove?: boolean }
 
 /**
@@ -127,7 +127,7 @@ export function planFormation(g: GameState, player: number, ids: readonly number
   const slots = new Map<number, [number, number]>();
   if (!n) return { spots, slots, face, form };
   const space = form === 2 ? 2 : 1;
-  let cols = form === 1 ? Math.ceil(Math.sqrt(n)) : form === 2 ? Math.ceil(Math.sqrt(n * 2)) : Math.ceil(n / (n <= 6 ? 1 : n <= 16 ? 2 : 3));
+  let cols = form === 1 || form === 3 ? Math.ceil(Math.sqrt(n)) : form === 2 ? Math.ceil(Math.sqrt(n * 2)) : Math.ceil(n / (n <= 6 ? 1 : n <= 16 ? 2 : 3));
   if (Number.isInteger(opts.width) && opts.width! > 0) cols = opts.width!;
   cols = Math.max(1, Math.min(n, cols));
   const [fx, fy] = DIRS[face]!;
@@ -190,6 +190,7 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
     s.amove = !!opts.amove;
     s.pace = slow < fast ? slow : undefined;
     s.slot = march ? slots.get(s.id) : undefined;
+    s.tight = opts.form === 3 ? true : undefined;
     s.wounded = 0;
   }
 }

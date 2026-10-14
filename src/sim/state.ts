@@ -218,6 +218,8 @@ export interface Soldier {
   beat?: number;
   /** Miejsce w zwartym szyku w marszu: [w bok, w tył] w polach względem punktu prowadzącego oddział */
   slot?: [number, number];
+  /** Szyk „ścisk”: po dojściu stoi ramię w ramię z kolegami (zbicie tylko w wyglądzie, pola w symulacji jak w bloku) */
+  tight?: boolean;
   /** Ranny: 1 = cofa się za szyk, 2 = idzie do twierdzy i tam się leczy */
   wounded?: number;
 }

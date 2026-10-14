@@ -88,7 +88,7 @@ function applyUi(ui: UiSave | undefined): void {
   if (!ui) return;
   groups.clear();
   for (const [n, ids] of ui.groups ?? []) if (Number.isInteger(n) && n >= 0 && n <= 9 && Array.isArray(ids)) groups.set(n, ids.filter((x) => Number.isInteger(x)));
-  if (Number.isInteger(ui.form) && ui.form! >= 0 && ui.form! <= 2) armyForm = ui.form!;
+  if (Number.isInteger(ui.form) && ui.form! >= 0 && ui.form! <= 3) armyForm = ui.form!;
   if (ui.march === 0 || ui.march === 1) armyMarch = ui.march;
   if (ui.cam) renderer.setCamView(ui.cam);
   // tempo: przyciskami, żeby pasek pokazał tę samą wartość (pauzy nie odtwarzamy)
@@ -835,10 +835,15 @@ canvas.addEventListener('pointerup', (e) => {
     return;
   }
   // zwykłe kliknięcie: najbliższy żołnierz pod kursorem (trafia się w całą sylwetkę, od stóp po hełm)
-  let best = 0, bestD = 30 * 30;
+  // odległość od odcinka stopy–czubek (sylwetka rośnie przy zbliżeniu), tolerancja zależna od wielkości postaci na ekranie
+  let best = 0, bestD = Infinity;
   for (const s of onScreen) {
-    const d = Math.min((s.x - e.clientX) ** 2 + (s.y - e.clientY) ** 2, (s.x - e.clientX) ** 2 + (s.y + 14 - e.clientY) ** 2, (s.x - e.clientX) ** 2 + (s.y - 14 - e.clientY) ** 2);
-    if (d < bestD) { bestD = d; best = s.id; }
+    const hgt = Math.max(1, s.feet - s.y);
+    const tol = Math.max(16, hgt * 0.35);
+    const vx = s.x - s.fx, vy = s.y - s.feet, len2 = vx * vx + vy * vy || 1;
+    const k = Math.max(0, Math.min(1, ((e.clientX - s.fx) * vx + (e.clientY - s.feet) * vy) / len2));
+    const d = Math.hypot(e.clientX - (s.fx + vx * k), e.clientY - (s.feet + vy * k));
+    if (d <= tol && d < bestD) { bestD = d; best = s.id; }
   }
   // Shift + klik na zaznaczonym: odznacza tylko jego
   if (best && e.shiftKey && chosen.has(best)) { unchoose(best); play('select'); renderer.markDragged(); return; }

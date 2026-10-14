@@ -26,7 +26,7 @@ export type Command =
   | { type: 'setRations'; player: number; level: number }
   | { type: 'setTax'; player: number; level: number }
   | { type: 'train'; player: number; building: number; unit: string }
-  /** face 0–7 (kierunek szyku), form 0–2 (linia, blok, luźno), width = ilu w szeregu */
+  /** face 0–7 (kierunek szyku), form 0–3 (linia, blok, luźno, ścisk), width = ilu w szeregu */
   | { type: 'move'; player: number; ids: number[]; x: number; y: number; face?: number; form?: number; width?: number; amove?: boolean }
   /** 0 atak, 1 obrona, 2 stój */
   | { type: 'stance'; player: number; ids: number[]; stance: number }

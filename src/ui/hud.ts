@@ -467,7 +467,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     return out;
   };
   armyPanel.append(kindsRow);
-  const formBtns = seg('Szyk', [['Linia', 'Szeroki front, 1–3 szeregi. Łucznicy z tyłu.'], ['Blok', 'Zwarty kwadrat: trudny do obejścia.'], ['Luźno', 'Co drugie pole: mniej ofiar od strzał.']], (i) => events.onArmyForm(i));
+  const formBtns = seg('Szyk', [['Linia', 'Szeroki front, 1–3 szeregi. Łucznicy z tyłu.'], ['Blok', 'Zwarty kwadrat: trudny do obejścia.'], ['Luźno', 'Co drugie pole: mniej ofiar od strzał.'], ['Ścisk', 'Ramię w ramię: zbity kwadrat, gdy oddział stoi.']], (i) => events.onArmyForm(i));
   const marchBtns = seg('Marsz', [['Zwykły', 'Idą na miejsce, nie zatrzymując się na wroga.'], ['Z walką', 'Idą na miejsce, ale biją każdego wroga, którego spotkają. Ctrl + prawy klik odwraca wybór dla jednego rozkazu.']], (i) => events.onArmyMarch(i));
   const stanceBtns = seg('Postawa', [['Atak', 'Goni każdego wroga, którego zobaczy.'], ['Obrona', 'Walczy w pobliżu swojego miejsca i do niego wraca.'], ['Stój', 'Nie rusza się z miejsca. Bije tylko tych, których sięgnie.']], (i) => events.onArmyStance(i));
   // brama: jeden duży przycisk otwórz/zamknij i stan pod spodem

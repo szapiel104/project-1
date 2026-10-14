@@ -2451,9 +2451,9 @@ export class GameRenderer {
   get dragged(): boolean { return this.cam.dragged; }
 
   /** Żołnierze gracza z położeniem na ekranie (piksele w oknie) */
-  soldiersOnScreen(player: number): { id: number; x: number; y: number; owner: number; hp: number }[] {
+  soldiersOnScreen(player: number): { id: number; x: number; y: number; owner: number; hp: number; feet: number; fx: number }[] {
     if (!this.state) return [];
-    const out: { id: number; x: number; y: number; owner: number; hp: number }[] = [];
+    const out: { id: number; x: number; y: number; owner: number; hp: number; feet: number; fx: number }[] = [];
     const r = this.canvas.getBoundingClientRect();
     const v = new THREE.Vector3();
     for (const s of this.state.soldiers) {
@@ -2462,7 +2462,10 @@ export class GameRenderer {
       if (!p) continue;
       v.copy(p).setY(p.y + this.barLift).project(this.cam.camera);
       if (v.z > 1) continue;
-      out.push({ id: s.id, owner: s.owner, hp: s.hp, x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height });
+      const x = r.left + ((v.x + 1) / 2) * r.width, y = r.top + ((1 - v.y) / 2) * r.height;
+      // stopy: do trafienia kliknięciem w całą sylwetkę (od stóp po pasek zdrowia nad głową), przy każdym zbliżeniu
+      v.copy(p).project(this.cam.camera);
+      out.push({ id: s.id, owner: s.owner, hp: s.hp, x, y, fx: r.left + ((v.x + 1) / 2) * r.width, feet: r.top + ((1 - v.y) / 2) * r.height });
     }
     return out;
   }
@@ -2479,7 +2482,7 @@ export class GameRenderer {
     for (const a of still) if (a.grp) { const c = mid.get(a.grp) ?? [0, 0, 0]; c[0] += a.px; c[1] += a.py; c[2]++; mid.set(a.grp, c); }
     for (const a of still) {
       const c = a.grp ? mid.get(a.grp) : undefined;
-      if (c && c[2] > 1) { pull.set(a.id, [(c[0] / c[2] - a.px) / FP * 0.3, (c[1] / c[2] - a.py) / FP * 0.3]); continue; }
+      if (c && c[2] > 1) { const k = a.tight ? 0.6 : 0.3; pull.set(a.id, [(c[0] / c[2] - a.px) / FP * k, (c[1] / c[2] - a.py) / FP * k]); continue; }
       let sx = 0, sy = 0, k = 0;
       for (const b of still) if (b.owner === a.owner && Math.abs(b.px - a.px) < 3 * FP && Math.abs(b.py - a.py) < 3 * FP) { sx += b.px; sy += b.py; k++; }
       if (k > 1) pull.set(a.id, [(sx / k - a.px) / FP * 0.45, (sy / k - a.py) / FP * 0.45]);
