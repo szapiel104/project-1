@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.21.8 — okno budynku mieści się na ekranie (2026-10-14)
+
+- Okno koszar (i każdego budynku czy oddziału) kończy się pod znacznikami wersji, FPS i przyciskiem „Deweloper” na każdym ekranie, także 24″ z otwartą listą budynków; resztę się przewija
+- `__test.select('barracks')` otwiera okno budynku w testach
+
 ## 0.21.7 — tekstury na ludziach (2026-10-14)
 
 - Wszyscy ludzie (gospodynie, dzieci, chłopi, strażnicy, włócznicy, łucznicy) mają splot płótna na ubraniach, ziarno skóry na butach i pasach i słoje na drzewcach, łukach i tarczach; splot jest szary, więc barwy ubrań zostają

@@ -1088,7 +1088,7 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 .toolbar { grid-template-columns: auto minmax(0, 1fr) auto; }
 .toolbar .cats { flex-wrap: wrap; justify-content: center; min-width: 0; }
 /* okno budynku/wojska nie wchodzi pod znacznik wersji, FPS i przycisk dewelopera w prawym górnym rogu */
-.floaters .info { max-height: calc(100vh / var(--ui, 1) - 300px); overflow-y: auto; }
+.floaters .info { max-height: calc(100vh / var(--ui, 1) - 300px); overflow-y: auto; } /* dokładną wysokość ustawia hud.ts (fitInfo) */
 /* ekran końca gry: tytuł mieści się w oknie */
 .end-panel { width: min(560px, calc(100vw / var(--ui, 1) - 32px)); }
 .end-panel .menu-title { font-size: clamp(30px, 4.2vw, 52px); letter-spacing: .04em; overflow-wrap: anywhere; }

@@ -403,6 +403,20 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
 
   // ---- panel wybranego budynku ----
   const info = el('div', 'panel info');
+  // Okno budynku/wojska rośnie w górę od dołu ekranu: jego wysokość ogranicza miejsce między dolną belką
+  // (z otwartą listą budynków też) a znacznikami w prawym górnym rogu (wersja, FPS, deweloper). Liczone z położenia
+  // na ekranie, bo pasek budynków i belka mają różną wysokość zależnie od okna i powiększenia interfejsu.
+  const fitInfo = (): void => {
+    if (info.hidden || !info.isConnected) return;
+    const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
+    const r = info.getBoundingClientRect();
+    if (!r.height) return;
+    const top = 136 * k; // pod przyciskiem „Deweloper” (top 92 + 34 px w skali interfejsu) z małym zapasem
+    const want = `${Math.max(140, Math.floor((r.bottom - top) / k))}px`;
+    if (info.style.maxHeight !== want) info.style.maxHeight = want;
+  };
+  setInterval(fitInfo, 300);
+  window.addEventListener('resize', fitInfo);
   info.hidden = true;
   const infoName = el('p', 'info-name');
   const infoDesc = el('p');
