@@ -1454,6 +1454,15 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.woodDark, 0.06, 1.5, 0.06, -1.3, 0, 0.2);
     box(g, flag, 0.04, 0.6, 0.36, -1.3, 0.85, 0.4);
   },
+  stoneWall(g) {
+    // na mapie mur kamienny rysuje scena (syncWalls) jako filary i ramiona łączące sąsiednie mury; tu tylko podgląd
+    const preview = new THREE.Group();
+    preview.name = 'preview';
+    box(preview, M.stone, 1.0, 1.25, 0.42, 0, 0, 0);
+    box(preview, M.stoneDark, 1.07, 0.06, 0.49, 0, 1.25, 0);
+    for (const x of [-0.33, -0.08, 0.17, 0.42]) box(preview, M.stone, 0.11, 0.2, 0.44, x, 1.31, 0);
+    g.add(preview);
+  },
   palisade(g) {
     // na mapie częstokół rysuje scena jako jeden zestaw bali łączący sąsiednie pola (palisadeLogs);
     // tu tylko podgląd do miniatury i ducha przy stawianiu

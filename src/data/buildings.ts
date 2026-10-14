@@ -150,6 +150,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
     workView: 'inside',
     production: { input: { res: 'wheat', amount: 2 }, output: { res: 'ale', amount: 3 }, site: 'home', workTicks: 90 },
   },
+  // Mur kamienny: stawiany przeciąganiem jak częstokół (także wprost na częstokole — zamienia bale na kamień), dużo mocniejszy
+  { id: 'stoneWall', category: 'defense', name: 'b.stoneWall', w: 1, h: 1, cost: { stone: 3 }, hp: 1100, wall: true, line: true, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

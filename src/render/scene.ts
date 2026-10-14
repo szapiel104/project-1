@@ -141,6 +141,8 @@ export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean
 const MAX_UNITS = 2048;
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
+/** Wysokość muru kamiennego (bez blanek) */
+const STONE_H = 1.25;
 /** Wierzch nawierzchni drogi nad ziemią (0 brak, 1 ścieżka, 2 bruk, 3 dyle: bale leżą na 0,05 i mają ok. 0,05 grubości) */
 const ROAD_TOP = [0, 0.025, 0.045, 0.1];
 const tmpColor = new THREE.Color();
@@ -1608,6 +1610,7 @@ export class GameRenderer {
   private wallKey = '';
   private wallShafts: THREE.InstancedMesh | null = null;
   private wallTips: THREE.InstancedMesh | null = null;
+  private stoneBlocks: THREE.InstancedMesh | null = null;
   /** Częstokół: bale łączą się z sąsiednimi palisadami, bramami i wieżami; brama obraca się w linii muru */
   private syncWalls(g: GameState, view: TerrainView): void {
     const { width, height } = g.map;
@@ -1625,7 +1628,13 @@ export class GameRenderer {
       for (const m of [this.wallShafts, this.wallTips]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); }
     }
     const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
-    let n = 0;
+    let n = 0, sn = 0;
+    if (!this.stoneBlocks) {
+      const mat = new THREE.MeshStandardMaterial({ color: 0xc9bea6, roughness: 0.95, map: pattern('ashlar'), normalMap: normal('ashlar') });
+      this.stoneBlocks = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), mat, 8192);
+      this.stoneBlocks.castShadow = true; this.stoneBlocks.receiveShadow = true; this.stoneBlocks.frustumCulled = false;
+      this.scene.add(this.stoneBlocks);
+    }
     for (const b of walls) {
       const def = BUILDINGS[b.type]!;
       if (def.gate) {
@@ -1639,6 +1648,29 @@ export class GameRenderer {
       const built = b.build ? 1 - b.build / buildWork(b.type) : 1;
       const links: [boolean, boolean, boolean, boolean] = [at(b.x + 1, b.y), at(b.x - 1, b.y), at(b.x, b.y + 1), at(b.x, b.y - 1)];
       const cx = b.x + 0.5, cz = b.y + 0.5;
+      if (def.id === 'stoneWall') {
+        // mur kamienny: filar na polu, ramiona do sąsiednich murów, gzyms i blanki; w budowie rośnie warstwami
+        const y0 = view.heightAt(cx, cz) - 0.08, T = 0.42;
+        const H = Math.max(0.12, Math.round(STONE_H * built * 6) / 6);
+        const put = (x: number, z: number, w: number, h: number, d: number, y: number): void => {
+          if (sn >= 8192) return;
+          M4.compose(p.set(x - width / 2, y, z - height / 2), q.identity(), sc.set(w, h, d));
+          this.stoneBlocks!.setMatrixAt(sn++, M4);
+        };
+        put(cx, cz, T, H, T, y0);
+        const dirs: [number, number][] = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        const arms = dirs.filter((_, i) => links[i]);
+        for (const [dx, dz] of arms) put(cx + dx * 0.25, cz + dz * 0.25, dx ? 0.5 : T, H, dz ? 0.5 : T, y0);
+        if (built >= 1) {
+          put(cx, cz, T + 0.07, 0.06, T + 0.07, y0 + H);
+          for (const [dx, dz] of arms) {
+            put(cx + dx * 0.25, cz + dz * 0.25, dx ? 0.5 : T + 0.07, 0.06, dz ? 0.5 : T + 0.07, y0 + H);
+            for (const o of [0.17, 0.42]) put(cx + dx * o, cz + dz * o, dx ? 0.11 : T + 0.02, 0.2, dz ? 0.11 : T + 0.02, y0 + H + 0.06);
+          }
+          if (!arms.length || (arms.length === 2 && arms[0]![0] !== -arms[1]![0])) put(cx, cz, 0.16, 0.2, 0.16, y0 + H + 0.06); // narożnik
+        }
+        continue;
+      }
       const logs = palisadeLogs(links, b.id);
       const shown = Math.floor(logs.length * built + 0.001);
       for (let li = 0; li < logs.length; li++) {
@@ -1668,6 +1700,7 @@ export class GameRenderer {
       }
     }
     this.wallShafts.count = n; this.wallTips!.count = n;
+    this.stoneBlocks.count = sn; this.stoneBlocks.instanceMatrix.needsUpdate = true;
     this.wallShafts.instanceMatrix.needsUpdate = true; this.wallTips!.instanceMatrix.needsUpdate = true;
   }
 

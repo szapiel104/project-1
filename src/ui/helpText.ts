@@ -172,10 +172,11 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       { table: [
         ['Umocnienie', 'Koszt', 'Wytrzymałość'],
         ['Palisada (przeciągasz)', '1 drewno za pole', '260'],
+        ['Mur kamienny (przeciągasz)', '3 kamienia za pole', '1100'],
         ['Brama', '8 drewna', '600'],
         ['Wieża strażnicza', '16 drewna', '700'],
       ] },
-      'Bramę stawiasz na wolnym polu albo wprost na przęśle swojej palisady (zastępuje je). Twoi ludzie przechodzą przez otwartą bramę, wróg musi ją rozbić. Wyłom w palisadzie zostaje otwarty, dopóki go nie odbudujesz.',
+      'Bramę i wieżę strażniczą stawiasz na wolnym polu albo wprost na swoim murze (zastępują przęsła pod sobą). Mur kamienny możesz przeciągnąć po palisadzie — bale zamienią się w kamień. Twoi ludzie przechodzą przez otwartą bramę, wróg musi ją rozbić. Wyłom w palisadzie zostaje otwarty, dopóki go nie odbudujesz.',
       { h: 'Przeciwnicy komputerowi' },
       'Bot buduje osadę jak ty, ustawia podatki, szkoli mieszane wojsko (mniej więcej co trzeci to łucznik), a gdy urośnie, otacza się palisadą. W grze 2 na 2 i 4 na 4 boty zajmują wolne miejsca.',
     ],

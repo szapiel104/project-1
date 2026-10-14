@@ -142,13 +142,15 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     if (checkCost && !canAfford(g, player, def)) return 'place.cost';
     return null;
   }
-  // brama na istniejącym własnym częstokole: zastępuje to jedno przęsło
-  const over = def.gate ? palisadeUnder(g, player, x, y) : undefined;
+  // brama, wieża albo mur kamienny na istniejącym własnym murze: zastępuje przęsła pod sobą
+  const over = wallsUnder(g, player, type, x, y, fw, fh);
+  const overTiles = new Set<number>();
+  if (over) for (const o of over) overTiles.add(o.y * width + o.x);
   for (let ty = y; ty < y + fh; ty++) {
     for (let tx = x; tx < x + fw; tx++) {
       const t = ty * width + tx;
       if (!TERRAIN[g.map.tiles[t] as Terrain].buildable) return 'place.terrain';
-      if (over) continue;
+      if (overTiles.has(t)) continue;
       if (g.occupancy[t] !== 0 || g.reserved[t] !== 0) return 'place.occupied';
       if (inForecourt(g, tx, ty)) return 'place.forecourt';
     }
@@ -173,10 +175,24 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
   return null;
 }
 
-/** Własne przęsło częstokołu na polu (x, y) — tam można postawić bramę */
-function palisadeUnder(g: GameState, player: number, x: number, y: number): Building | undefined {
-  if (x < 0 || y < 0 || x >= g.map.width || y >= g.map.height || g.occupancy[y * g.map.width + x] === 0) return undefined;
-  return g.buildings.find((b) => b.x === x && b.y === y && b.owner === player && BUILDINGS[b.type]!.line === true && !b.ruined);
+/**
+ * Przęsła własnego muru (częstokół, mur kamienny) pod działką, na które wolno postawić bramę, wieżę strażniczą
+ * albo mur kamienny (ten tylko na częstokół — zamiana bali na kamień). Wszystkie zajęte pola działki muszą być
+ * takimi przęsłami i musi być choć jedno; inaczej undefined (zwykłe stawianie na wolnym polu).
+ */
+export function wallsUnder(g: GameState, player: number, type: number, x: number, y: number, w: number, h: number): Building[] | undefined {
+  const def = BUILDINGS[type]!;
+  if (!(def.gate || def.id === 'watchtower' || def.id === 'stoneWall')) return undefined;
+  const W = g.map.width;
+  const out: Building[] = [];
+  for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) {
+    if (tx < 0 || ty < 0 || tx >= W || ty >= g.map.height) return undefined;
+    if (g.occupancy[ty * W + tx] === 0) continue;
+    const b = g.buildings.find((o) => o.x === tx && o.y === ty && BUILDINGS[o.type]!.line === true);
+    if (!b || b.owner !== player || b.ruined || (def.id === 'stoneWall' && b.type === type)) return undefined;
+    out.push(b);
+  }
+  return out.length ? out : undefined;
 }
 
 /** Zamek: pola dziedzińca i sal są przechodnie dla właściciela, a między pomieszczeniami stoją ściany (wejście tylko bramą) */
@@ -269,13 +285,13 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
     else g.roadPlan[t] = def.road;
     return true;
   }
-  // brama w miejscu przęsła częstokołu: przęsło znika bez gruzu (bale idą na bramę)
-  const over = def.gate ? palisadeUnder(g, player, x, y) : undefined;
-  if (over) {
-    const t = y * g.map.width + x;
+  // brama / wieża / mur kamienny w miejscu przęseł muru: przęsła znikają bez gruzu (materiał idzie na nowe)
+  const fpo = footprint(def, rot);
+  for (const o of wallsUnder(g, player, type, x, y, fpo.w, fpo.h) ?? []) {
+    const t = o.y * g.map.width + o.x;
     g.occupancy[t] = 0; g.gates[t] = 0;
-    g.buildings.splice(g.buildings.indexOf(over), 1);
-    for (const u of g.units) if (u.target === over.id) { u.target = 0; u.path = []; }
+    g.buildings.splice(g.buildings.indexOf(o), 1);
+    for (const u of g.units) if (u.target === o.id) { u.target = 0; u.path = []; }
   }
   const b = addBuilding(g, type, player, x, y, rot);
   // żołnierze stojący na działce schodzą z niej na najbliższe wolne pole (zamiast stać w środku ścian)
