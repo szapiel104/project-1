@@ -1093,3 +1093,16 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 .end-panel { width: min(560px, calc(100vw / var(--ui, 1) - 32px)); }
 .end-panel .menu-title { font-size: clamp(30px, 4.2vw, 52px); letter-spacing: .04em; overflow-wrap: anywhere; }
 .end-panel .menu-sub { font-size: 16px; }
+/* koszary: karty jednostek w ciemnej skórze, czytelne nazwy, statystyki i koszty */
+.unit-card { background: linear-gradient(#271d13, #170f09); border: 1px solid #6e5420; box-shadow: inset 0 1px 0 rgba(255, 220, 160, .08); color: var(--ink); }
+.unit-name { color: #e9c766; text-shadow: 0 1px 2px #000; }
+.unit-stats { color: #d2c19c; }
+.unit-needs { color: #f1e4c4; }
+.unit-needs em { color: #c9b68f; }
+.unit-needs .short strong, .unit-needs .short em { color: #ff8a78; }
+.unit-card.cant { opacity: 1; }
+.unit-card.cant .unit-pic { opacity: .75; }
+.store-box .store-pic { width: 34px; height: 34px; margin: -6px -2px -6px -4px; object-fit: contain; filter: drop-shadow(0 1px 1px #000); }
+.store-box .trend { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: #b9a782; }
+.store-box .trend[data-sign='pos'] { color: #8ee07a; }
+.store-box .trend[data-sign='neg'] { color: #ff8a7a; }

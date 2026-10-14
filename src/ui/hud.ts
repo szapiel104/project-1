@@ -305,12 +305,21 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const stockBox = el('div');
   stockBox.title = t('hud.stockpile');
   stockBox.setAttribute('aria-label', t('hud.stockpile'));
-  stockBox.append(icon('store'), stockVal);
+  // obrazek budynku zamiast ogólnej ikonki: od razu widać, który to skład, a który spichlerz; obok bilans na minutę
+  const pic = (id: string, fallback: string): HTMLElement => {
+    const src = thumbs.get(id);
+    if (!src) return icon(fallback);
+    const img = el('img', 'store-pic'); img.src = src; img.alt = ''; return img;
+  };
+  const stockTrend = el('span', 'trend'), foodTrend = el('span', 'trend');
+  stockBox.classList.add('store-box');
+  stockBox.append(pic('stockpile', 'store'), stockVal, stockTrend);
   const foodVal = el('strong');
   const foodBox = el('div');
   foodBox.title = t('hud.granary');
   foodBox.setAttribute('aria-label', t('hud.granary'));
-  foodBox.append(icon('granary'), foodVal);
+  foodBox.classList.add('store-box');
+  foodBox.append(pic('granary', 'granary'), foodVal, foodTrend);
   const idleVal = el('strong');
   const idleBox = el('div');
   idleBox.title = t('hud.idle');
@@ -812,6 +821,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(idleVal, `${v.idle} / ${v.idleSlots}`);
       idleBox.classList.toggle('full', v.idle >= v.idleSlots);
       setText(stockVal, `${short(v.stock)} / ${short(v.stockCap)}`);
+      // bilans: suma zmian zapasów w składach (towary) i w spichlerzach (jedzenie) z ostatniej minuty gry
+      let ds = 0, df = 0;
+      RESOURCES.forEach((id, i) => { const d = v.trend[i] ?? 0; const st = RESOURCE_DEFS[id].store; if (st === 'stockpile') ds += d; else if (st === 'granary') df += d; });
+      for (const [node, d, box, what] of [[stockTrend, ds, stockBox, 'Skład (towary)'], [foodTrend, df, foodBox, 'Spichlerz (jedzenie)']] as const) {
+        setText(node, d ? `${d > 0 ? '+' : '−'}${short(Math.abs(d))}` : '±0');
+        node.dataset.sign = d > 0 ? 'pos' : d < 0 ? 'neg' : '';
+        box.title = `${what}: ${d > 0 ? 'przybywa' : d < 0 ? 'ubywa' : 'bez zmian'}${d ? ` (${d > 0 ? '+' : '−'}${Math.abs(d)} na minutę)` : ''}`;
+      }
       stockBox.classList.toggle('full', v.stock >= v.stockCap);
       setText(foodVal, `${short(v.food)} / ${short(v.foodCap)}`);
       foodBox.classList.toggle('full', v.food >= v.foodCap);
