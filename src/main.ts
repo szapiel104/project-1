@@ -15,7 +15,7 @@ import { buildWork, canAfford, canPlace, maxHp } from './sim/systems/placement';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
-import { octant, planFormation } from './sim/systems/army';
+import { garrisonRoom, octant, planFormation } from './sim/systems/army';
 import { EMPTY, SANDBOX, TEST } from './testmode';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
@@ -454,7 +454,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     : undefined;
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: def.id === 'barracks' ? recruitInfo().map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
-    garrison: def.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
+    garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     watch: def.id === 'keep' ? watchInfo(b.owner) : undefined,
     area: def.area || def.id === 'watchtower' ? shownAreas.has(b.id) : undefined,
     site: b.build ? siteInfo(b) : undefined };
@@ -732,7 +732,7 @@ function armyRightClick(amove: boolean): void {
   }
   if (!hoverTile) return;
   const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
-  if (b && b.owner === ME && BUILDINGS[b.type]!.id === 'watchtower') {
+  if (b && b.owner === ME && garrisonRoom(BUILDINGS[b.type]!.id) && !b.build) {
     const sent = [...chosen];
     pending.push({ type: 'garrison', player: ME, ids: sent, tower: b.id });
     // na wieży nie są już częścią oddziału ani grup 1–0: zostają na wieży, póki nie zdejmie się ich z jej okna
@@ -946,8 +946,8 @@ function updateHoverFoe(): void {
   let enter = false;
   if (!hoverFoe && chosen.size && hoverTile) {
     const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
-    if (b && b.owner === ME && !b.build && BUILDINGS[b.type]!.id === 'watchtower') {
-      const room = 4 - game.soldiers.filter((s) => s.post === b.id).length;
+    if (b && b.owner === ME && !b.build && garrisonRoom(BUILDINGS[b.type]!.id)) {
+      const room = garrisonRoom(BUILDINGS[b.type]!.id) - game.soldiers.filter((s) => s.post === b.id).length;
       enter = room > 0 && game.soldiers.some((s) => chosen.has(s.id) && !!UNITS[s.kind]!.range && s.post !== b.id);
     }
   }

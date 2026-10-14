@@ -449,11 +449,14 @@ export function orderDismount(g: GameState, player: number, towerId: number): vo
   for (const s of g.soldiers) if (s.owner === player && s.post === towerId) { leavePost(g, s); s.goal = -1; s.path = []; s.target = 0; s.slot = undefined; }
 }
 
-/** Łucznicy wchodzą na wieżę strażniczą (najwyżej czterech); inni żołnierze stają przy niej */
+/** Ilu łuczników zmieści się na budynku: wieża strażnicza 4, pole muru kamiennego 2 (wchodzą po drabinie) */
+export const garrisonRoom = (id: string): number => (id === 'watchtower' ? 4 : id === 'stoneWall' ? 2 : 0);
+
+/** Łucznicy wchodzą na wieżę strażniczą albo mur kamienny; inni żołnierze stają przy nim */
 export function orderGarrison(g: GameState, player: number, ids: readonly number[], towerId: number): void {
   const tower = buildingById(g, towerId);
-  if (!tower || tower.owner !== player || BUILDINGS[tower.type]!.id !== 'watchtower' || tower.build) return;
-  let room = 4 - g.soldiers.filter((s) => s.post === towerId).length;
+  if (!tower || tower.owner !== player || !garrisonRoom(BUILDINGS[tower.type]!.id) || tower.build) return;
+  let room = garrisonRoom(BUILDINGS[tower.type]!.id) - g.soldiers.filter((s) => s.post === towerId).length;
   const spot = besideTower(g, tower);
   for (const s of g.soldiers) {
     if (s.owner !== player || !ids.includes(s.id) || s.post === towerId) continue;

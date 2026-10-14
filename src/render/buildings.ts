@@ -1995,3 +1995,62 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
   g.add(patch);
   return g;
 }
+
+/**
+ * Mur kamienny z ciosów (jak mury zamku): części do składania przez scenę (instancjonowane).
+ * Układ części: odcinek biegnie wzdłuż x (od -0,25 do 0,25 — pół pola), zewnętrzna strona muru (blanki) to +z.
+ *  - arm: pół pola muru: cokół, lico, gzyms, chodnik, przedpiersie z blankami od zewnątrz i niski murek od środka
+ *  - core: środek pola (wypełnia skrzyżowania i zakręty)
+ *  - tower: baszta na końcu muru i w narożnikach (wyższa, z blankami dookoła)
+ *  - ladder: drabina oparta o mur od środka (tędy łucznicy wchodzą na mur)
+ */
+export const STONE_WALL_TOP = 1.14;
+export function stoneWallKit(): { arm: THREE.BufferGeometry; core: THREE.BufferGeometry; tower: THREE.BufferGeometry; ladder: THREE.BufferGeometry; mat: THREE.Material; wood: THREE.Material } {
+  const k = (M.castle.userData.tile as number) || 1;
+  const shade = (geo: THREE.BufferGeometry, v: number): THREE.BufferGeometry => {
+    const n = geo.getAttribute('position').count, c = new Float32Array(n * 3).fill(v);
+    geo.setAttribute('color', new THREE.BufferAttribute(c, 3));
+    return geo;
+  };
+  const blk = (w: number, h: number, d: number, x: number, y: number, z: number, v = 1): THREE.BufferGeometry => {
+    const geo = new THREE.BoxGeometry(w, h, d);
+    tileBox(geo, w, h, d, k);
+    return shade(geo.translate(x, y + h / 2, z).toNonIndexed(), v);
+  };
+  const T = 0.38, TOP = STONE_WALL_TOP;
+  const section = (len: number, x: number, merlons: number[]): THREE.BufferGeometry[] => [
+    blk(len, 0.16, T + 0.1, x, 0, 0, 0.78),                    // cokół
+    blk(len, 0.04, T + 0.04, x, 0.16, 0, 0.7),                 // odsadzka
+    blk(len, TOP - 0.2, T, x, 0.2, 0, 1),                      // lico
+    blk(len, 0.05, T + 0.06, x, 0.86, 0, 0.82),                // gzyms pod chodnikiem
+    blk(len, 0.13, 0.09, x, TOP, T / 2 - 0.045, 0.95),         // przedpiersie od zewnątrz
+    blk(len, 0.06, 0.06, x, TOP, -T / 2 + 0.03, 0.9),          // niski murek od środka
+    ...merlons.map((mx) => blk(0.12, 0.17, 0.1, mx, TOP + 0.13, T / 2 - 0.045, 1)),
+    ...merlons.map((mx) => blk(0.13, 0.025, 0.11, mx, TOP + 0.3, T / 2 - 0.045, 0.75)),   // daszek blanki
+  ];
+  const arm = mergeGeometries(section(0.5, 0, [-0.125, 0.125]))!;
+  const core = mergeGeometries([blk(T + 0.1, 0.16, T + 0.1, 0, 0, 0, 0.78), blk(T, TOP, T, 0, 0.16, 0, 1)])!;
+  // baszta: kwadratowa, wyżej niż mur, ze strzelnicami i blankami w narożach
+  const S = 0.62, BH = TOP + 0.42;
+  const tower: THREE.BufferGeometry[] = [
+    blk(S + 0.1, 0.2, S + 0.1, 0, 0, 0, 0.75), blk(S, BH - 0.2, S, 0, 0.2, 0, 1),
+    blk(S + 0.08, 0.06, S + 0.08, 0, BH, 0, 0.8),
+  ];
+  for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) tower.push(blk(0.16, 0.2, 0.16, sx * (S / 2 - 0.08), BH + 0.06, sz * (S / 2 - 0.08), 1));
+  for (const [sx, sz] of [[0, 1], [0, -1], [1, 0], [-1, 0]] as const) {
+    // strzelnica: ciemna szczelina w licu
+    tower.push(blk(sx ? 0.012 : 0.05, 0.22, sz ? 0.012 : 0.05, sx * (S / 2 + 0.006), BH - 0.5, sz * (S / 2 + 0.006), 0.15));
+  }
+  // drabina oparta o mur od środka (-z), lekko pochylona
+  const lad: THREE.BufferGeometry[] = [];
+  const L = TOP + 0.25, lean = 0.32;
+  for (const x of [-0.11, 0.11]) {
+    const g = new THREE.BoxGeometry(0.035, L, 0.035).translate(0, L / 2, 0).rotateX(lean).translate(x, 0, -T / 2 - 0.42);
+    lad.push(shade(g.toNonIndexed(), 0.9));
+  }
+  for (let y = 0.18; y < L - 0.1; y += 0.2) {
+    const g = new THREE.BoxGeometry(0.26, 0.025, 0.03).translate(0, y, 0).rotateX(lean).translate(0, 0, -T / 2 - 0.42);
+    lad.push(shade(g.toNonIndexed(), 0.75));
+  }
+  return { arm, core, tower: mergeGeometries(tower)!, ladder: mergeGeometries(lad)!, mat: withAo(M.castle), wood: withAo(M.wood) };
+}

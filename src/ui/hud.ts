@@ -1038,7 +1038,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
       towerBox.hidden = !(i.own && i.garrison !== undefined);
       if (i.garrison !== undefined) {
-        setText(towerState, i.garrison ? `Na wieży: ${i.garrison} / 4 łuczników` : 'Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.');
+        const wall = i.def.id === 'stoneWall';
+        setText(towerState, i.garrison ? `${wall ? 'Na murze' : 'Na wieży'}: ${i.garrison} / ${wall ? 2 : 4} łuczników` : wall ? 'Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.' : 'Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.');
         tSel.disabled = tDown.disabled = !i.garrison;
       }
       gateBox.hidden = !(i.own && i.gate);
