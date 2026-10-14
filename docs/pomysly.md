@@ -157,3 +157,28 @@ Balans:
 - Odwrócenie kółka przy przybliżaniu i odwrócenie obrotu kamery.
 - Dostępność: kolory drużyn dla daltonistów; „mniej ruchu” (bez trzęsienia kamery i błysków).
 - Tytuł „Project-1” i linki logowania na ekranie menu też rosnące z „Wielkością interfejsu”.
+
+## Droga do „mega gry” — grafika na poziomie, FPS bez spadków (14.10.2026)
+Zasada: każda poprawka wyglądu z budżetem wydajności. Mierzymy przed i po (`window.__perf()`, F3); cel ≥ 60 FPS na średnim laptopie przy 4v4 i dużej bitwie. Co nie mieści się w budżecie, dostaje wersję „z daleka” albo trafia do wyższego poziomu grafiki.
+
+**Kolejność (od największego efektu za najmniejszy koszt):**
+1. **Światło i kolory** — cieplejsze słońce, mocniejsze, dłuższe cienie, światło odbite w zakamarkach, lekka mgła w oddali, korekcja barw, delikatna winieta; przełącznik stary/nowy wygląd do porównania. Koszt: prawie zero (to te same światła i jedno przejście obrazu).
+2. **Teren** — błoto i ziemia wokół zabudowy, wydeptane ścieżki, plamy innej trawy, kamyki, kwiaty, przejścia łąka–las. Koszt: mieszanie tekstur w shaderze terenu i instancjonowane drobiazgi z odległością znikania.
+3. **Chata od nowa** (najczęstszy budynek) w 2–3 wariantach, potem kolejne budynki od najczęściej stawianych.
+4. **Ludzie czytelniejsi z wysokości kamery** — wyraźniejszy ruch, lepsze odcinanie od tła (obrys/kontrast), animacje pracy.
+
+**Skąd modele (moje modele składane skryptem z brył to za mało na ładną grę):**
+- Gotowe paczki średniowieczne w stylu realistycznym/mrocznym (nie bajkowym jak KayKit) — chaty, warsztaty, mury, postacie z animacjami. Przy każdej sprawdzić licencję: gra w przeglądarce (pliki da się wyciągnąć), sprzedaż, modyfikacje.
+- Generatory 3D z obrazka (budynki, rekwizyty) — potem uproszczenie siatki i dopasowanie stylu.
+- Grafik 3D na zlecenie do kluczowych rzeczy (zamek, chata, główne postacie) — spójny, własny styl.
+- Claude zajmuje się wpinaniem: uproszczenie pod przeglądarkę, wersje z daleka, wspólne światło i paleta, animacje, podgląd w `modele.html`, pilnowanie wydajności.
+- Pierwszy krok: rozpoznanie 3–5 paczek (styl Gothica, licencja, cena) i jedna darmowa chata/postać obok naszej w podglądzie modeli do porównania.
+
+**Budżet wydajności (żeby FPS nie spadły przy ładniejszej grafice):**
+- Każdy model z wersją z daleka (Decimate do ok. 20–25%) i odległością przełączania; drobiazgi znikają dalej niż kilkadziesiąt pól.
+- Te same modele = jedno wywołanie rysowania (instancjonowanie; BatchedMesh dla różnych budynków); limit wywołań rysowania na klatkę (dziś ok. 1180 — schodzić w dół).
+- Tekstury: wspólne atlasy, rozdzielczość wg poziomu grafiki, kompresja (KTX2/Basis), mipmapy; normal mapy zamiast gęstej siatki.
+- Trójkąty: chata z bliska do kilku tysięcy, z daleka kilkaset; postać z bliska ok. 5–6 tys., z daleka ok. 1–1,5 tys.; trawa i korony drzew (dziś ~750 tys. trójkątów) — pierwsze do odchudzenia.
+- Cienie tylko z bliskich obiektów, mapa cieni wg poziomu grafiki; drogie efekty (światło odbite, mgła objętościowa) tylko na wysokim poziomie.
+- Automatyczna jakość (już jest) przełącza poziomy, gdy FPS spada; nowe efekty muszą mieć wpis w poziomach automatu.
+- Po każdej partii pomiar w Chrome (`__perf()`), duża bitwa i 4v4; spadek >10% = poprawka przed wdrożeniem.
