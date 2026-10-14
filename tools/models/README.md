@@ -1,5 +1,10 @@
 # Modele postaci z Blendera (bez okna, sterowane kodem)
 
+**Sprawdzanie:** każdy model najpierw w podglądzie `modele.html?id=<id>` (podstawka, pełna jakość, oblatywanie myszą,
+lista modeli w `src/viewer.ts`), potem w grze na pustej scenie `?test=1&pusta=1&model=<id>`. Drewno, płótno, kamień
+i ziemia muszą mieć tekstury (`pattern`/`normal` z `src/render/textures.ts`; przykład w `src/render/family.ts` → `yardModel`).
+Zasady dla wszystkich czatów są w `CLAUDE.md`, w sekcji „Modele”.
+
 **Sprawdzanie wyglądu:** każdy model najpierw w podglądzie `modele.html?id=<id>` (podstawka / w powietrzu / trawa,
 pełna jakość, obrót myszą, liczba trójkątów), potem budynki arkuszem `inspect.sh`, a na końcu w grze na pustej scenie
 `?test=1&pusta=1&model=<id>`. Nowy model dopisz do listy `GROUPS` w `src/viewer.ts`. Szczegóły: CLAUDE.md, „Modele”.
@@ -37,3 +42,5 @@ Po każdej zmianie obchód bez przeglądarki (ok. 2 min, Workbench z ukrytymi ty
 Arkusz: 8 widoków dookoła, z lotu ptaka, przekrój bez dachów, od dołu, a także widoki z oczu człowieka zapisane przez
 skrypt budynku w kluczu `views` (podpis, oko, cel, grupy, ogniskowa). Nowy budynek (np. lepsza stodoła) dopisuje
 swoje `views` i od razu ma ten sam obchód.
+
+Podwórko przy chatach (balia, sznur i pranie, stos polan, ława, kosz, wiadro, grządka): `/tmp/bpyenv/bin/python tools/models/yard.py` → `src/render/models/yard.json`; podgląd w Blenderze `tools/models/yard_preview.py /tmp/yard.png`, w przeglądarce `modele.html?id=yard-tub`. Każda siatka ma pole `mat` (wood / cloth / soil / plain), a gra dobiera do niego teksturę.

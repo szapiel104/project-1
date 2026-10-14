@@ -2,6 +2,12 @@
 
 ## 0.21.5 — podgląd modeli (2026-10-14)
 
+- `modele.html?id=tavern`: każdy model gry osobno (budynki, ludzie, zwierzęta, podwórko, graty) na kamiennej podstawce, w powietrzu albo na trawie, w zwykłym świetle i pełnej jakości; oblatywanie myszą, noc, widok bez dachu, siatka, liczba trójkątów i wymiary
+- Zasady dla wszystkich czatów (CLAUDE.md, „Modele”): modele robimy w Blenderze, z teksturami, najpierw sprawdzamy w podglądzie, potem na pustej scenie
+- Drobniejszy splot płótna na sukni gospodyni
+
+## 0.21.5 — podgląd modeli (2026-10-14)
+
 - Nowa strona `modele.html`: każdy model gry (budynki, ludzie, zwierzęta, podwórko, graty) osobno na kamiennej podstawce, w powietrzu albo na trawie, w pełnej jakości; obrót myszą, noc, bez dachu, siatka, liczba trójkątów i wymiary
 - Suknia gospodyni z drobnym splotem płótna zamiast grubej kraty
 
