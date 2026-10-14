@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.17.1 — karta strażnika, poprawka cechów (2026-10-14)
+
+- Karta mieszkańca: łuczarz i karczmarz mają nazwę cechu („Cech łuczarzy”, „Cech karczmarzy”) zamiast surowego klucza; kto pracuje w budynku bez cechu, ma „Pracuje: …”
+- Kliknięty strażnik miejski poza odzywką pokazuje kartę: imię, wiek, stopień (lekki albo ciężki strażnik miejski), co robi (posterunek przy bramie, obchód, walka, pogoń za wilkiem) i zdrowie
+
 ## 0.17.0 — zwarty szyk i ranni (2026-10-13)
 
 - Marsz w zwartym szyku: oddział (dwóch i więcej, dalej niż 4 pola) idzie jedną drogą za wspólnym punktem prowadzącym, każdy trzyma swoje miejsce obok niego; na starcie oddział się zbiera, po drodze czeka na maruderów, a przeszkody (drzewo, woda) omija, przechodząc za punktem prowadzącym; utknięty maruder po chwili idzie sam

@@ -353,18 +353,34 @@ function rotate(): void {
 
 let selectedUnit = 0;
 
-/** Imię, przydomek i wiek wynikają na stałe z numeru chłopa i ziarna mapy. */
-function personCard(id: number): { name: string; lines: string[] } | null {
-  const u = game.units.find((x) => x.id === id);
-  if (!u) return null;
+/** Imię, przydomek i wiek wynikają na stałe z numeru chłopa (albo strażnika) i ziarna mapy. */
+function personCard(id: number): { name: string; lines: string[]; walk?: boolean } | null {
   const h = (salt: number): number => { let v = (id * 2654435761 + game.map.seed + salt * 40503) >>> 0; v ^= v >>> 15; v = Math.imul(v, 0x2c1b3c6d); return (v ^ (v >>> 12)) >>> 0; };
+  const name = `${FIRST_NAMES[h(1) % FIRST_NAMES.length]} ${BYNAMES[h(2) % BYNAMES.length]}`;
+  const age = `${16 + (h(3) % 45)} ${t('person.age')}`;
+  const u = game.units.find((x) => x.id === id);
+  if (!u) {
+    // strażnik miejski: stopień (co trzeci ciężki, w mocniejszym rynsztunku), co teraz robi i zdrowie
+    const s = game.soldiers.find((x) => x.id === id);
+    const def = s ? UNITS[s.kind]! : undefined;
+    if (!s || !def?.guard) return null;
+    const rank = h(4) % 3 === 0 ? t('guard.heavy') : t('guard.light');
+    const here = (s.py >> 8) * game.map.width + (s.px >> 8);
+    const doing = s.target ? t('guard.fight') : s.hunt ? t('guard.wolf')
+      : s.stance === 1 && (s.hold ?? -1) >= 0 ? t(here === s.hold ? 'guard.post' : 'guard.toPost')
+      : s.goal >= 0 ? t(s.amove ? 'guard.beat' : 'guard.back') : t('guard.watch');
+    return { name, walk: false, lines: [`${age} · ${t('person.service')}: ${rank}`, `${t('person.doing')}: ${doing}`, `${t('person.hp')}: ${Math.max(0, s.hp)} / ${def.hp}`] };
+  }
   const job = game.buildings.find((b) => b.id === u.job);
-  const guild = job ? t(`guild.${BUILDINGS[job.type]!.id}`) : '';
+  const jobDef = job ? BUILDINGS[job.type]! : undefined;
+  // cech z nazwą w dopełniaczu, a gdy budynek takiej nie ma (np. skład), po prostu gdzie pracuje
+  const guildKey = jobDef ? `guild.${jobDef.id}` : '';
+  const work = !jobDef ? t('person.none') : t(guildKey) !== guildKey ? `${t('person.guild')} ${t(guildKey)}` : `${t('person.works')}: ${t(jobDef.name)}`;
   return {
-    name: `${FIRST_NAMES[h(1) % FIRST_NAMES.length]} ${BYNAMES[h(2) % BYNAMES.length]}`,
+    name,
     lines: [
-      `${16 + (h(3) % 45)} ${t('person.age')}`,
-      job ? `${t('person.guild')} ${guild}` : t('person.none'),
+      age,
+      work,
       `${t('person.doing')}: ${t(`phase.${u.phase}`)}`,
     ],
   };
@@ -762,7 +778,7 @@ function chooseSoldiers(ids: number[], add: boolean, quiet = false): void {
   // straż miejska pilnuje osady sama, nie słucha rozkazów; kliknięty strażnik tylko coś burknie
   const guard = ids.find((id) => { const s = game.soldiers.find((x) => x.id === id); return !!s && !!UNITS[s.kind]!.guard; });
   ids = ids.filter((id) => { const s = game.soldiers.find((x) => x.id === id); return !s || !UNITS[s.kind]!.guard; });
-  if (guard && !ids.length && !quiet) { sayGuard(guard); return; }
+  if (guard && !ids.length && !quiet) { sayGuard(guard); selectUnit(guard); return; }
   if (!add) chosen.clear();
   for (const id of ids) chosen.add(id);
   if (ids.length && !quiet) shout('select');

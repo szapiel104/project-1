@@ -89,7 +89,7 @@ export interface Hud {
   setPicked(id: string | null): void;
   showInfo(info: BuildingInfo | null): void;
   /** Karta mieszkańca: imię i kilka wierszy opisu */
-  showPerson(person: { name: string; lines: string[] } | null): void;
+  showPerson(person: { name: string; lines: string[]; walk?: boolean } | null): void;
   /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
   /** Pasek wojska nad dolnym menu: grupy 1–9 i 0 oraz portrety zaznaczonych */
   setArmyBar(v: { show: boolean; groups: { n: number; count: number; kind?: string }[]; active?: number; selected: { id: number; kind: string; hp: number; max: number; name: string }[] }): void;
@@ -854,7 +854,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
-      walkBtn.hidden = false;
+      walkBtn.hidden = person.walk === false;
     },
     showArmy(army, ctl) {
       info.hidden = army.length === 0;
