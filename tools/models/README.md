@@ -17,3 +17,5 @@ Budowa modelu i podgląd (Cycles na procesorze, kilka sekund):
 
 Układ współrzędnych: jak w grze (x w prawo, y w górę, twarz w +z). Środki obrotu: biodro `hip`, bark `shoulder`,
 dłoń `hand` (w układzie ręki).
+
+Zwierzęta w osadzie (kury, świnia, koń, pies): `/tmp/bpyenv/bin/python tools/models/animals.py` → `src/render/models/animals.json`, podgląd `podglad-zwierzeta.html?osada=1`.

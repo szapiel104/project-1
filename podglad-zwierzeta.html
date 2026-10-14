@@ -4,7 +4,7 @@
 // Podgląd wilka i kruków z bliska: ?d=odległość&pitch=kąt&yaw=obrót (bez całej mapy)
 import * as THREE from 'three';
 import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './src/render/creatures.ts';
-import { henGeometry, pigGeometry, horseGeometry } from './src/render/village.ts';
+import { animalGeo, ANIMAL_AT } from './src/render/village.ts';
 const q = new URLSearchParams(location.search);
 const dist = Number(q.get('d') ?? 2.0), pitch = Number(q.get('pitch') ?? 0.3), yaw = Number(q.get('yaw') ?? 0.9);
 const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
@@ -33,17 +33,15 @@ if (q.get('osada')) {
   s.children.filter((o) => o.type === 'Group' || (o.isMesh && o !== ground)).forEach((o) => s.remove(o));
   const vm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
   const put = (geo, x, z, ry, color) => { const m = new THREE.Mesh(geo, color ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, color }) : vm); m.position.set(x, 0, z); m.rotation.y = ry; m.castShadow = true; s.add(m); return m; };
-  const hen = henGeometry();
-  [[-0.5, 0.3, 0.6, 0xffffff], [-0.35, 0.45, 2.2, 0xa8673a], [-0.6, 0.5, -0.8, 0x2e2925]].forEach(([x, z, r, c]) => { put(hen.body, x, z, r, c); put(hen.detail, x, z, r); });
-  put(pigGeometry(), -0.05, 0.25, 0.9);
-  const h = horseGeometry(); const hb = put(h.body, 0.5, -0.2, -0.5);
-  const nk = new THREE.Mesh(h.neck, vm); nk.position.set(0, 0.4, 0.17); nk.rotation.x = Number(q.get('graze') ?? 0.2); hb.add(nk);
-  const tl = new THREE.Mesh(h.tail, vm); tl.position.set(0, 0.42, -0.2); tl.rotation.x = 0.35; hb.add(tl);
-  const fur = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, color: 0xd6a466 });
-  const dog = new THREE.Group(); dog.add(new THREE.Mesh(wp.body, fur));
-  WOLF_HIPS.forEach(([hx, hy, hz], k) => { const m = new THREE.Mesh(k < 2 ? wp.leg : wp.hindLeg, fur); m.position.set(hx, hy, hz); dog.add(m); });
-  const dt = new THREE.Mesh(wp.tail, fur); dt.position.set(...WOLF_TAIL); dt.rotation.x = 2.5; dog.add(dt);
-  dog.scale.setScalar(0.5); dog.position.set(0.15, 0, 0.55); dog.rotation.y = 0.4; dog.traverse((o) => { if (o.isMesh) o.castShadow = true; }); s.add(dog);
+  [[-0.5, 0.3, 0.6, 'hen_white'], [-0.35, 0.45, 2.2, 'hen_brown'], [-0.6, 0.5, -0.8, 'hen_black']].forEach(([x, z, r, k]) => put(animalGeo(k), x, z, r));
+  put(animalGeo('pig'), -0.05, 0.25, 0.9);
+  const hb = put(animalGeo('horse_body'), 0.5, -0.2, -0.5);
+  const nk = new THREE.Mesh(animalGeo('horse_neck'), vm); nk.position.set(...ANIMAL_AT.neck); nk.rotation.x = Number(q.get('graze') ?? 0.2); hb.add(nk);
+  const tl = new THREE.Mesh(animalGeo('horse_tail'), vm); tl.position.set(...ANIMAL_AT.tail); tl.rotation.x = 0.35; hb.add(tl);
+  const dog = new THREE.Group(); dog.add(new THREE.Mesh(animalGeo('dog_body'), vm));
+  ANIMAL_AT.dogHips.forEach(([hx, hy, hz], k) => { const m = new THREE.Mesh(animalGeo(k < 2 ? 'dog_leg' : 'dog_hind'), vm); m.position.set(hx, hy, hz); dog.add(m); });
+  const dt = new THREE.Mesh(animalGeo('dog_tail'), vm); dt.position.set(...ANIMAL_AT.dogTail); dt.rotation.x = 2.5; dog.add(dt);
+  dog.position.set(0.15, 0, 0.55); dog.rotation.y = 0.4; dog.traverse((o) => { if (o.isMesh) o.castShadow = true; }); s.add(dog);
 }
 const cam = new THREE.PerspectiveCamera(30, 1200 / 700, 0.05, 50);
 const look = Number(q.get('y') ?? 0.25), cx = Number(q.get('x') ?? 0), cz = Number(q.get('z') ?? 0);

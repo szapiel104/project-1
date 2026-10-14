@@ -1,10 +1,9 @@
 import * as THREE from 'three';
-import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
 import { FP, type GameState } from '../sim/state';
-import { tint } from './loads';
-import { WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
+import { modelGeo, type ModelMesh } from './peasants';
+import ANIMALS from './models/animals.json';
 
 /**
  * Zwierzęta w osadzie — tylko w wyglądzie (symulacja ich nie zna, gra przez sieć zostaje zgodna):
@@ -19,75 +18,19 @@ export interface VillageCtx { time: number; dt: number; night: number; calm: boo
 interface Critter { x: number; y: number; tx: number; ty: number; wait: number; heading: number; speed: number; seen: number; hx: number; hy: number; flee: number; next: number }
 interface Dog extends Critter { master: number; until: number; bark: number; run: number }
 
-const HEN_COLORS = [0xf0ece2, 0xa8673a, 0x8a5530, 0x2e2925, 0xd8c7a0];
-const MAX_HENS = 160, MAX_PIGS = 48, MAX_HORSES = 8, MAX_DOGS = 8;
+const MAX_HENS = 120, MAX_PIGS = 48, MAX_HORSES = 8, MAX_DOGS = 8;
 
-const ell = (r: number, sx: number, sy: number, sz: number, x: number, y: number, z: number, hex: number): THREE.BufferGeometry =>
-  tint(new THREE.SphereGeometry(r, 10, 7).scale(sx, sy, sz).translate(x, y, z), hex);
-const cyl = (r1: number, r2: number, h: number, x: number, y: number, z: number, hex: number, sides = 6): THREE.BufferGeometry =>
-  tint(new THREE.CylinderGeometry(r1, r2, h, sides).translate(x, y, z), hex);
-const mergeAll = (l: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries(l.map((g) => { const n = g.index ? g.toNonIndexed() : g; n.deleteAttribute('uv'); return n; }))!;
-
-export function henGeometry(): { body: THREE.BufferGeometry; detail: THREE.BufferGeometry } {
-  // tułów, ogon i łeb w kolorze kury (barwa na egzemplarz); grzebień, korale, dziób i nogi stałe
-  const body = mergeAll([
-    ell(0.045, 0.8, 0.82, 1.15, 0, 0.068, 0, 0xffffff),
-    tint(new THREE.ConeGeometry(0.026, 0.06, 5).rotateX(-0.9).translate(0, 0.098, -0.05), 0xe6e6e6),
-    ell(0.021, 1, 1.05, 1, 0, 0.112, 0.045, 0xffffff),
-  ]);
-  const detail = mergeAll([
-    tint(new THREE.BoxGeometry(0.006, 0.018, 0.026).translate(0, 0.137, 0.045), 0xc0281e),
-    tint(new THREE.BoxGeometry(0.008, 0.014, 0.008).translate(0, 0.1, 0.064), 0xc0281e),
-    tint(new THREE.ConeGeometry(0.007, 0.018, 4).rotateX(Math.PI / 2).translate(0, 0.11, 0.072), 0xe0a530),
-    cyl(0.004, 0.004, 0.04, -0.013, 0.02, 0, 0xd99a2a, 4), cyl(0.004, 0.004, 0.04, 0.013, 0.02, 0, 0xd99a2a, 4),
-    ell(0.004, 1, 1, 1, -0.015, 0.118, 0.056, 0x111111), ell(0.004, 1, 1, 1, 0.015, 0.118, 0.056, 0x111111),
-  ]);
-  return { body, detail };
-}
-
-export function pigGeometry(): THREE.BufferGeometry {
-  const PINK = 0xd9a08c, SNOUT = 0xe6aa98, HOOF = 0x4a3a30;
-  return mergeAll([
-    ell(0.08, 0.9, 0.82, 1.45, 0, 0.115, 0, PINK),
-    ell(0.05, 0.95, 0.9, 1, 0, 0.125, 0.12, PINK),
-    tint(new THREE.CylinderGeometry(0.024, 0.026, 0.035, 8).rotateX(Math.PI / 2).translate(0, 0.115, 0.17), SNOUT),
-    tint(new THREE.ConeGeometry(0.018, 0.035, 4).rotateX(0.6).translate(-0.028, 0.17, 0.11), PINK),
-    tint(new THREE.ConeGeometry(0.018, 0.035, 4).rotateX(0.6).translate(0.028, 0.17, 0.11), PINK),
-    ...[[-0.04, 0.07], [0.04, 0.07], [-0.04, -0.07], [0.04, -0.07]].map(([x, z]) => cyl(0.014, 0.012, 0.06, x!, 0.03, z!, HOOF, 5)),
-    tint(new THREE.TorusGeometry(0.012, 0.004, 4, 8, Math.PI * 1.5).translate(0, 0.13, -0.118), PINK),
-    ell(0.005, 1, 1, 1, -0.02, 0.14, 0.158, 0x1a1412), ell(0.005, 1, 1, 1, 0.02, 0.14, 0.158, 0x1a1412),
-  ]);
-}
-
-export function horseGeometry(): { body: THREE.BufferGeometry; neck: THREE.BufferGeometry; tail: THREE.BufferGeometry } {
-  const COAT = 0x6b4527, DARK = 0x2a1c12, HOOF = 0x1c1612;
-  const body = mergeAll([
-    ell(0.12, 0.76, 0.86, 1.6, 0, 0.37, 0, COAT),
-    ell(0.07, 1, 1, 1, 0, 0.38, 0.13, COAT), // pierś
-    ell(0.075, 1, 1, 1, 0, 0.385, -0.13, COAT), // zad
-    ...[[-0.05, 0.14], [0.05, 0.14], [-0.05, -0.14], [0.05, -0.14]].flatMap(([x, z]) => [
-      cyl(0.032, 0.02, 0.26, x!, 0.17, z!, COAT, 7), cyl(0.024, 0.024, 0.04, x!, 0.02, z!, HOOF, 7),
-    ]),
-    tint(new THREE.BoxGeometry(0.17, 0.025, 0.2).translate(0, 0.475, 0.0), 0x5a3018), // derka na grzbiecie
-  ]);
-  // szyja i łeb z osią w kłębie (pochyla się do trawy)
-  const neck = mergeAll([
-    cyl(0.045, 0.07, 0.26, 0, 0.12, 0, COAT, 8).rotateX(0.55),
-    tint(new THREE.CylinderGeometry(0.03, 0.045, 0.21, 8).rotateX(Math.PI / 2 + 0.5).translate(0, 0.19, 0.2), COAT), // łeb
-    tint(new THREE.CylinderGeometry(0.026, 0.03, 0.04, 8).rotateX(Math.PI / 2 + 0.5).translate(0, 0.14, 0.29), 0x3a2414), // chrapy
-    tint(new THREE.BoxGeometry(0.016, 0.04, 0.22).translate(0, 0.19, -0.01).rotateX(0.55), DARK), // grzywa
-    tint(new THREE.ConeGeometry(0.014, 0.05, 4).translate(-0.022, 0.27, 0.13), COAT),
-    tint(new THREE.ConeGeometry(0.014, 0.05, 4).translate(0.022, 0.27, 0.13), COAT),
-  ]);
-  const tail = mergeAll([tint(new THREE.CylinderGeometry(0.03, 0.012, 0.28, 6).translate(0, -0.14, 0), DARK)]);
-  return { body, neck, tail };
-}
+/** Modele zwierząt z Blendera (tools/models/animals.py) */
+const A = ANIMALS as unknown as Record<string, ModelMesh[]> & { horse_neck_at: [number, number, number]; horse_tail_at: [number, number, number]; dog_hips: [number, number, number][]; dog_tail_at: [number, number, number] };
+const geo = (k: string): THREE.BufferGeometry => modelGeo(A[k]![0]!);
+export const animalGeo = (k: 'hen_white' | 'hen_brown' | 'hen_black' | 'pig' | 'horse_body' | 'horse_neck' | 'horse_tail' | 'dog_body' | 'dog_leg' | 'dog_hind' | 'dog_tail'): THREE.BufferGeometry => geo(k);
+export const ANIMAL_AT = { neck: A.horse_neck_at, tail: A.horse_tail_at, dogHips: A.dog_hips, dogTail: A.dog_tail_at };
 
 const rand = (): number => Math.random();
 
 export class Village {
-  private hensBody: THREE.InstancedMesh;
-  private hensDetail: THREE.InstancedMesh;
+  /** Kury w trzech umaszczeniach (białe, rude, czarne) */
+  private hensBy: THREE.InstancedMesh[];
   private pigs: THREE.InstancedMesh;
   private horseBody: THREE.InstancedMesh;
   private horseNeck: THREE.InstancedMesh;
@@ -114,23 +57,16 @@ export class Village {
       m.count = 0; m.frustumCulled = false; m.castShadow = true; scene.add(m);
       return m;
     };
-    const hen = henGeometry();
-    this.hensBody = inst(hen.body, MAX_HENS);
-    this.hensDetail = inst(hen.detail, MAX_HENS);
-    this.pigs = inst(pigGeometry(), MAX_PIGS);
-    const horse = horseGeometry();
-    this.horseBody = inst(horse.body, MAX_HORSES);
-    this.horseNeck = inst(horse.neck, MAX_HORSES);
-    this.horseTail = inst(horse.tail, MAX_HORSES);
-    // pies: sylwetka wilka, mniejszy, w brązowej, płowej sierści, z ogonem w górze
-    const w = wolfParts();
-    const fur = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, color: 0xd6a466 });
-    this.dogBody = inst(w.body, MAX_DOGS, fur);
-    this.dogLegF = inst(w.leg, MAX_DOGS * 2, fur);
-    this.dogLegH = inst(w.hindLeg, MAX_DOGS * 2, fur);
-    this.dogTail = inst(w.tail, MAX_DOGS, fur);
-    // pierwsze ustawienie kolorów, żeby instanceColor istniał
-    this.hensBody.setColorAt(0, this.c.setHex(0xffffff));
+    this.hensBy = (['hen_white', 'hen_brown', 'hen_black'] as const).map((k) => inst(geo(k), MAX_HENS));
+    this.pigs = inst(geo('pig'), MAX_PIGS);
+    this.horseBody = inst(geo('horse_body'), MAX_HORSES);
+    this.horseNeck = inst(geo('horse_neck'), MAX_HORSES);
+    this.horseTail = inst(geo('horse_tail'), MAX_HORSES);
+    this.dogBody = inst(geo('dog_body'), MAX_DOGS);
+    this.dogLegF = inst(geo('dog_leg'), MAX_DOGS * 2);
+    this.dogLegH = inst(geo('dog_hind'), MAX_DOGS * 2);
+    this.dogTail = inst(geo('dog_tail'), MAX_DOGS);
+    // pierwsze ustawienie koloru, żeby instanceColor istniał (ubłocone świnie)
     this.pigs.setColorAt(0, this.c.setHex(0xffffff));
   }
 
@@ -186,6 +122,7 @@ export class Village {
       return undefined;
     };
     let hens = 0, pigs = 0, horses = 0;
+    const henN = [0, 0, 0];
     const sleep = ctx.night > 0.55;
     for (const b of g.buildings) {
       if (b.build || b.ruined || b.door < 0) continue;
@@ -213,9 +150,8 @@ export class Village {
           if (time > c.next) { c.next = time + 8 + rand() * 18; ctx.sound('cluck', c.x, c.y); }
           const bob = sp > 0.1 && !hop ? Math.abs(Math.sin(time * 14 + k)) * 0.006 : 0;
           this.place(c.x - W2, ctx.height(c.x, c.y) + bob + hop, c.y - H2, c.heading, peck);
-          this.hensBody.setMatrixAt(hens, this.m);
-          this.hensDetail.setMatrixAt(hens, this.m);
-          this.hensBody.setColorAt(hens, this.c.setHex(HEN_COLORS[(b.id * 3 + k * 7) % HEN_COLORS.length]!));
+          const v = (b.id * 3 + k * 7) % 5, kind = v < 2 ? 0 : v < 4 ? 1 : 2;
+          this.hensBy[kind]!.setMatrixAt(henN[kind]!++, this.m);
           hens++;
         }
       }
@@ -255,9 +191,9 @@ export class Village {
         this.place(hx - W2, y, hy - H2, yaw + Math.sin(time * 0.1 + b.id) * 0.15);
         this.horseBody.setMatrixAt(horses, this.m);
         const body = this.p.copy(this.m);
-        this.m.compose(this.v.set(0, 0.4, 0.17), this.q.setFromEuler(this.e.set(Math.max(-0.25, Math.min(1.25, graze)), 0, 0)), this.s.setScalar(1));
+        this.m.compose(this.v.set(...ANIMAL_AT.neck), this.q.setFromEuler(this.e.set(Math.max(-0.25, Math.min(1.25, graze)), 0, 0)), this.s.setScalar(1));
         this.horseNeck.setMatrixAt(horses, this.m.premultiply(body));
-        this.m.compose(this.v.set(0, 0.42, -0.2), this.q.setFromEuler(this.e.set(0.35, 0, ctx.calm ? 0 : Math.sin(time * 2.3 + b.id) * 0.35)), this.s.setScalar(1));
+        this.m.compose(this.v.set(...ANIMAL_AT.tail), this.q.setFromEuler(this.e.set(0.35, 0, ctx.calm ? 0 : Math.sin(time * 2.3 + b.id) * 0.35)), this.s.setScalar(1));
         this.horseTail.setMatrixAt(horses, this.m.premultiply(body));
         horses++;
       }
@@ -308,10 +244,10 @@ export class Village {
       const sit = !moving && !wolf;
       const y = ctx.height(d.x, d.y);
       // siedzi: zad nisko (pochylony do tyłu); w biegu podskakuje
-      this.place(d.x - W2, y + (moving ? Math.abs(Math.sin(ph)) * 0.02 : 0) - (sit ? 0.03 : 0), d.y - H2, d.heading, sit ? -0.32 : 0, 0, 0.5);
+      this.place(d.x - W2, y + (moving ? Math.abs(Math.sin(ph)) * 0.015 : 0) - (sit ? 0.02 : 0), d.y - H2, d.heading, sit ? -0.32 : 0, 0, 1);
       this.dogBody.setMatrixAt(dogs, this.m);
       const body = this.p.copy(this.m);
-      WOLF_HIPS.forEach(([hx, hy, hz], k) => {
+      ANIMAL_AT.dogHips.forEach(([hx, hy, hz], k) => {
         const diag = k === 0 || k === 3 ? 1 : -1;
         const ang = moving ? Math.sin(ph) * Math.min(0.7, 0.25 + d!.run * 0.2) * diag : sit && k >= 2 ? -1.2 : sit ? 0.32 : 0;
         this.m.compose(this.v.set(hx, hy, hz), this.q.setFromEuler(this.e.set(ang, 0, 0)), this.s.setScalar(1));
@@ -319,7 +255,7 @@ export class Village {
       });
       // ogon w górze i merda (przy wilku sztywny)
       const wag = ctx.calm || wolf ? 0 : Math.sin(time * (moving ? 14 : 8)) * 0.5;
-      this.m.compose(this.v.set(...WOLF_TAIL), this.q.setFromEuler(this.e.set(wolf ? 2.1 : 2.5, 0, wag)), this.s.setScalar(1));
+      this.m.compose(this.v.set(...ANIMAL_AT.dogTail), this.q.setFromEuler(this.e.set(wolf ? 2.1 : 2.5, 0, wag)), this.s.setScalar(1));
       this.dogTail.setMatrixAt(dogs, this.m.premultiply(body));
       dogs++;
     }
@@ -328,7 +264,7 @@ export class Village {
     for (const [k, c] of this.pigState) if (this.frame - c.seen > 120) this.pigState.delete(k);
     for (const [k, c] of this.dogs) if (this.frame - c.seen > 120) this.dogs.delete(k);
     const fin = (m: THREE.InstancedMesh, n: number): void => { m.count = n; m.visible = n > 0; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; };
-    fin(this.hensBody, hens); fin(this.hensDetail, hens); fin(this.pigs, pigs);
+    this.hensBy.forEach((m, k) => fin(m, henN[k]!)); fin(this.pigs, pigs);
     fin(this.horseBody, horses); fin(this.horseNeck, horses); fin(this.horseTail, horses);
     fin(this.dogBody, dogs); fin(this.dogLegF, dogs * 2); fin(this.dogLegH, dogs * 2); fin(this.dogTail, dogs);
   }

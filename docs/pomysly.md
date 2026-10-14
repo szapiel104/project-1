@@ -116,4 +116,4 @@ Czeka:
 - Targ co kilka dni: kramy na placu, przyjezdny kupiec z wozem, gwar; tanio kupić albo sprzedać zapasy
 - Brud i graty: śmieci, gnój przy chlewie, worki i siano przy domach, kości przy cmentarzu, wrony na płotach
 - Odzywki jak w Gothicu zależne od sytuacji (deszcz, wilki w nocy, podatki, głód) u chłopów i strażników
-- Zwierzęta z Blendera zamiast prostych modeli z kodu (kura, świnia, koń, pies); chlew i stajnia jako budynki
+- Chlew i stajnia jako budynki (zwierzęta z Blendera już są)

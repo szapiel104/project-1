@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.19.1 — zwierzęta z Blendera (2026-10-14)
+
+- Kury (białe, rude, czarne), świnia, koń i pies zrobione w Blenderze jak reszta postaci (tools/models/animals.py → src/render/models/animals.json): gładkie bryły, pióra i sierść w kolorach wierzchołków, cień w zagłębieniach; pies to teraz płowy kundel z klapniętymi uszami, a nie przemalowany wilk
+
 ## 0.19.0 — życie osady, poprawka muzyki (2026-10-14)
 
 - Rozmowy: stojący bez zajęcia blisko siebie (ten sam pan) dobierają się w pary, zwracają się do siebie i gadają na zmianę — mówiący gestykuluje, słuchający kiwa głową, co kilkanaście sekund chwila ciszy; z bliska słychać cichy bełkot rozmowy
