@@ -12,6 +12,7 @@ import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
 import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
 import KEEP_MODEL from './models/keep.json';
+import TAVERN_MODEL from './models/tavern.json';
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
@@ -45,6 +46,10 @@ const KEEP_SOLID = (KEEP_MODEL as unknown as { solid: [number, number, number, n
 const KEEP_FLOOR = (KEEP_MODEL as unknown as { floorY: number }).floorY;
 const KEEP_WALL = (KEEP_MODEL as unknown as { wallY: number }).wallY;
 const KEEP_HALF = KEEP_SIZE / 2;
+/** Karczma z Blendera: miejsca dla gości (x, z, obrót), posadzka izby, obszar do chodzenia i przeszkody */
+const TAVERN = TAVERN_MODEL as unknown as { seats: [number, number, number][]; floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] };
+const TAVERN_SEATS = TAVERN.seats;
+const TAVERN_FLOOR = TAVERN.floorY;
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
 
@@ -1369,6 +1374,17 @@ export class GameRenderer {
       const tx = Math.floor(x), ty = Math.floor(z);
       if (tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height) return false;
       const t = ty * g.map.width + tx;
+      // w karczmie (i na jej ganku): obrys izby i drzwi z modelu, sprzęty na swojej wysokości
+      const wb = this.walkableAt(x, z);
+      if (wb) {
+        const y = feet - wb[3], R = 0.07;
+        for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]] as const) {
+          const lx = wb[1] + ox, lz = wb[2] + oz;
+          if (!TAVERN.open.some(([x0, x1, z0, z1]) => lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1)) return false;
+          for (const [x0, x1, z0, z1, y0, y1] of TAVERN.solid) if (lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1 && y + 0.3 > y0 && y < y1 - 0.05) return false;
+        }
+        return true;
+      }
       if (!((g.occupancy[t] === 0 || g.gates[t] !== 0) && g.map.tiles[t] !== Terrain.Water && g.map.tiles[t] !== Terrain.Mountain)) return false;
       // ściany między polami (w zamku): ta sama zasada co dla ludzi w symulacji — przez drzwi tak, przez ścianę nie
       const fx0 = Math.floor(w.x), fz0 = Math.floor(w.z);
@@ -1400,15 +1416,17 @@ export class GameRenderer {
     // w pomieszczeniu (nie na dziedzińcu): dach znika, widać sufit; przy zamku jego wnętrza są zawsze widoczne
     const kp = this.keepAt(w.x, w.z);
     const inRoom = !!kp && Math.abs(kp[1]) < KEEP_HALF && Math.abs(kp[2]) < KEEP_HALF && 'TKCBL1234'.includes(keepRoom(Math.floor(kp[1] + KEEP_HALF), Math.floor(kp[2] + KEEP_HALF)));
-    this.walkHall = inRoom ? kp![0] : 0;
-    this.walkNear = kp ? kp[0] : 0;
+    const wbk = this.walkableAt(w.x, w.z), tap = TAVERN.open[0]!;
+    const inTap = !!wbk && wbk[1] >= tap[0] && wbk[1] <= tap[1] && wbk[2] >= tap[2] && wbk[2] <= tap[3];
+    this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
+    this.walkNear = kp ? kp[0] : wbk ? wbk[0] : 0;
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
     if (!this.roomLight) { this.roomLight = new THREE.PointLight(0xffb36b, 0, 5, 1.2); this.scene.add(this.roomLight); }
     // izby w basztach (narożne i w połowie boków) też mają ogień
     const tdx = kp ? Math.floor(kp[1] + KEEP_HALF) : -1, tdy = kp ? Math.floor(kp[2] + KEEP_HALF) : -1;
     const inTower = !!kp && keepTile(tdx, tdy) === '=' && (((tdx === 0 || tdx === KEEP_SIZE - 1) && (tdy === 0 || tdy === KEEP_SIZE - 1 || tdy === KEEP_SIZE >> 1))
       || (tdy === KEEP_SIZE - 1 && (keepTile(tdx - 1, tdy) === 'G' || keepTile(tdx + 1, tdy) === 'G'))); // baszty i wieże bramy
-    this.roomLight.intensity = inRoom || inTower ? 3.4 + Math.sin(this.time * 7) * 0.2 : 0;
+    this.roomLight.intensity = inRoom || inTower || inTap ? 3.4 + Math.sin(this.time * 7) * 0.2 : 0;
     this.roomLight.position.set(cam.position.x, cam.position.y + 0.35, cam.position.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
   }
@@ -2339,6 +2357,7 @@ export class GameRenderer {
       const ground = low + (top - low) * 0.35;
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
       if (def.id === 'keep') this.keepFloors.set(b.id, [b.x + KEEP_HALF, b.y + KEEP_HALF, ground]);
+      if (def.id === 'tavern') this.walkables.set(b.id, { cx: b.x + fp.w / 2, cy: b.y + fp.h / 2, rot: b.rot, base: ground, hw: fp.w / 2, hh: fp.h / 2 });
       mesh.rotation.y = (b.rot * Math.PI) / 2;
       // ziemia wydeptana tylko tuż przy ścianach (z przerwami) i przy drzwiach; dalej trawa ledwo naruszona
       if (!def.wall && !def.gate && !def.road && def.id !== 'torch') {
@@ -3043,7 +3062,11 @@ export class GameRenderer {
       const a = top(x0, y0) + (top(x0 + 1, y0) - top(x0, y0)) * ax, b = top(x0, y0 + 1) + (top(x0 + 1, y0 + 1) - top(x0, y0 + 1)) * ax;
       h += a + (b - a) * ay;
     }
-    if (!k) return h;
+    if (!k) {
+      const wb = this.walkableAt(x, y);
+      if (wb && TAVERN.open.some(([x0, x1, z0, z1]) => wb[1] >= x0 && wb[1] <= x1 && wb[2] >= z0 && wb[2] <= z1)) return Math.max(h, wb[3] + TAVERN_FLOOR);
+      return h;
+    }
     const [, lx, lz, base] = k;
     // most zwodzony przed bramą: łagodnie z ziemi na posadzkę
     const gx = KEEP_GATE[0] - KEEP_HALF + 0.5, bridge0 = KEEP_HALF - 0.05, bridge1 = KEEP_HALF + 0.85;
@@ -3069,6 +3092,22 @@ export class GameRenderer {
       if (Math.abs(lx) > KEEP_HALF + 1 || Math.abs(lz) > KEEP_HALF + 1) continue;
       if (!this.buildingMeshes.has(id)) { this.keepFloors.delete(id); continue; }
       return [id, lx, lz, base];
+    }
+    return null;
+  }
+  /** Budynki z Blendera, do których wchodzi się spacerem (karczma): środek, obrót, wysokość, połowa wymiarów działki */
+  private walkables = new Map<number, { cx: number; cy: number; rot: number; base: number; hw: number; hh: number }>();
+  /** Budynek do chodzenia pod punktem: [id, x i z w układzie modelu (bez obrotu), wysokość] albo null */
+  private walkableAt(x: number, y: number): [number, number, number, number] | null {
+    for (const [id, w] of this.walkables) {
+      const dx = x - w.cx, dz = y - w.cy;
+      if (Math.abs(dx) > Math.max(w.hw, w.hh) + 0.5 || Math.abs(dz) > Math.max(w.hw, w.hh) + 0.5) continue;
+      if (!this.buildingMeshes.has(id)) { this.walkables.delete(id); continue; }
+      const th = (w.rot * Math.PI) / 2, c = Math.cos(th), s = Math.sin(th);
+      const lx = dx * c - dz * s, lz = dx * s + dz * c;
+      const half = w.rot % 2 ? [w.hh, w.hw] : [w.hw, w.hh];
+      if (Math.abs(lx) > half[0]! || Math.abs(lz) > half[1]!) continue;
+      return [id, lx, lz, w.base];
     }
     return null;
   }
@@ -3205,15 +3244,16 @@ export class GameRenderer {
       if (inn) {
         const mesh = this.buildingMeshes.get(inn.id);
         const turn = (inn.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
-        const slot = (u.id >> 1) % 6;
-        const drunk = slot === 5;
-        // trzech w izbie przy stole (widać po zdjęciu dachu), dwóch na ławie przed karczmą, jeden pijak przed wejściem
-        const SEATS: [number, number, number][] = [[0.2, 0.05, -Math.PI / 2], [0.85, 0.05, Math.PI / 2], [-0.35, -0.5, 0], [-0.8, 0.72, 0], [-0.45, 1.18, Math.PI]];
-        const seat = SEATS[Math.min(slot, 4)]!;
+        // miejsca z modelu karczmy: przy stołach w izbie i na ławach ganku; ostatni to pijak zataczający się przed wejściem
+        const SEATS = TAVERN_SEATS;
+        const slot = (u.id >> 1) % (SEATS.length + 1);
+        const drunk = slot === SEATS.length;
+        const seat = SEATS[Math.min(slot, SEATS.length - 1)]!;
         let lx = seat[0], lz = seat[1];
         if (drunk) { lx = 0.1 + Math.sin(this.time * 0.6 + u.id) * 0.5; lz = 1.5 + Math.cos(this.time * 0.45) * 0.25; }
         const wx = lx * cosT + lz * sinT, wz = -lx * sinT + lz * cosT;
-        t.position.set(inn.x + 1.5 + wx - width / 2, (mesh?.position.y ?? 0) + 0.02, inn.y + 1 + wz - height / 2);
+        const ifp = footprint(BUILDINGS[inn.type]!, inn.rot);
+        t.position.set(inn.x + ifp.w / 2 + wx - width / 2, (mesh?.position.y ?? 0) + (drunk ? 0.02 : TAVERN_FLOOR), inn.y + ifp.h / 2 + wz - height / 2);
         t.rotation.set(drunk ? Math.sin(this.time * 2.3 + u.id) * 0.25 : 0, drunk ? this.time * 0.7 : seat[2] + turn, drunk ? Math.cos(this.time * 1.9) * 0.2 : 0);
         swing = drunk ? Math.sin(this.time * 3) * 0.4 : Math.max(0, Math.sin(this.time * 1.3 + u.id * 2)) * -1.2;
         if (slot === 0 && !this.calm) this.lutePlay(t.position.x, t.position.z);

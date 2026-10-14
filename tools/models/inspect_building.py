@@ -16,7 +16,7 @@ ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 d = json.load(open(os.path.join(ROOT, 'src', 'render', 'models', f'{name}.json')))
 COL = {'castle': 0xc9bb9a, 'castleDark': 0xa89a7a, 'slate': 0x6a6d74, 'woodDark': 0x5e4329, 'wood': 0x85603a, 'plank': 0xd9b27a, 'roadWood': 0xc49a6a,
        'pathCobble': 0x9e968a, 'stone': 0xcfc7b3, 'stoneDark': 0xa39b88, 'dark': 0x1c1611, 'iron': 0x4a4038, 'gold': 0xe9c145, 'flag': 0xb02020,
-       'plaster': 0xf0e4c4, 'thatch': 0xd1ad4c, 'hay': 0xe0c466, 'ember': 0xff8a2a, 'bread': 0xa8652c, 'apple': 0xd0281f, 'fish': 0x9cc3d6, 'white': 0xf1ead8, 'sack': 0xbfa77c}
+       'plaster': 0xf0e4c4, 'thatch': 0xd1ad4c, 'thatchDark': 0xa9862f, 'roadStone': 0xf4f0e8, 'hay': 0xe0c466, 'ember': 0xff8a2a, 'bread': 0xa8652c, 'apple': 0xd0281f, 'fish': 0x9cc3d6, 'white': 0xf1ead8, 'sack': 0xbfa77c}
 q = d['q']
 objs = {}
 for g in ('base', 'shell', 'interior', 'floor', 'ceiling'):
@@ -80,7 +80,7 @@ xs = []
 for m in d.get('base', []):
     raw = base64.b64decode(m['pos'])
     xs += [abs(v) / q for v in struct.unpack_from(f'<{len(raw) // 2}h', raw)[::3]]
-R = max(3.0, max(xs, default=2) * 2.3)
+R = max(4.0, max(xs, default=2) * (2.3 if max(xs, default=2) > 4 else 3.0))
 for i in range(8):  # dookoła
     a = i * math.pi / 4
     views.append((f'dookoła {i * 45}°', (math.sin(a) * R, R * 0.55, math.cos(a) * R), (0, 0.8, 0), OUT, 28))

@@ -5,6 +5,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { bump, normal, pattern } from './textures';
 import { beam, cutBox, paintGeo, rng, stoneSkirt, thatchSlab } from './craft';
 import KEEP_MODEL from './models/keep.json';
+import TAVERN_MODEL from './models/tavern.json';
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -857,6 +858,24 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   ceiling.visible = false;
   for (const m of meshes('ceiling')) ceiling.add(m);
   g.add(ceiling);
+  // znaczniki z modelu: szyby (świecą nocą), komin (dym), ogień w palenisku
+  const marks = model as unknown as { windows?: [number, number, number, number, number, number, number, string][]; chimneys?: [number, number, number][]; flames?: [number, number, number][] };
+  for (const [x, y, z, nx, nz, w, h, grp] of marks.windows ?? []) {
+    const pane = box(grp === 'shell' ? shell : g, M.pane, nx ? 0.012 : w, h, nz ? 0.012 : w, x, y - h / 2, z);
+    pane.name = 'pane';
+  }
+  for (const [x, y, z] of marks.chimneys ?? []) {
+    const c = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.02, 0.1), new THREE.MeshBasicMaterial({ visible: false }));
+    c.name = 'chimney';
+    c.position.set(x, y, z);
+    shell.add(c);
+  }
+  for (const [x, y, z] of marks.flames ?? []) {
+    const f = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6).translate(0, 0.08, 0), M.ember);
+    f.name = 'flame';
+    f.position.set(x, y, z);
+    g.add(f);
+  }
 }
 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
@@ -896,39 +915,11 @@ const BUILDERS: Record<string, Builder> = {
     g.add(life);
   },
   tavern(g, _team, flag) {
-    // Karczma: duża chata z bali i strzechy, w izbie szynkwas i beczki; przed wejściem ławy z kuflami, beczki i szyld
-    const hall = new THREE.Group();
-    const inside = cottage(hall, 7);
-    hall.scale.set(1.75, 1.15, 1.35);
-    hall.position.z = -0.15;
-    g.add(hall);
-    box(inside, M.woodDark, 0.8, 0.28, 0.14, 0, 0.05, -0.3); // szynkwas
-    for (const x of [-0.5, -0.32]) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.2, 10).rotateZ(Math.PI / 2), M.wood); b.position.set(x, 0.12, -0.42); inside.add(b); }
-    box(inside, M.wood, 0.35, 0.18, 0.25, 0.3, 0.05, 0.15);
-    // przed karczmą: dwie ławy ze stołem, kufle, beczki
-    box(g, M.wood, 0.7, 0.05, 0.28, -0.6, 0.26, 0.95);
-    for (const z of [0.75, 1.15]) box(g, M.woodDark, 0.7, 0.04, 0.1, -0.6, 0.16, z);
-    for (const x of [-0.8, -0.55, -0.4]) { const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.028, 0.07, 8), M.woodDark); mug.position.set(x, 0.33, 0.95); g.add(mug); }
-    for (const [x, z] of [[0.75, 0.85], [0.95, 0.95], [0.85, 1.12]] as const) {
-      const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.28, 10), M.wood);
-      barrel.position.set(x, 0.14, z); g.add(barrel);
-      const hoop = new THREE.Mesh(new THREE.TorusGeometry(0.115, 0.01, 4, 12).rotateX(Math.PI / 2), M.iron);
-      hoop.position.set(x, 0.2, z); g.add(hoop);
-    }
-    // szyld na wysięgniku: kufel na desce
-    // słup, kuty wysięgnik z zawijasem, dwa łańcuszki i deska z obramowaniem, na niej kufel z pianą
-    box(g, M.woodDark, 0.05, 1.25, 0.05, 0.3, 0, 0.62);
-    box(g, M.iron, 0.42, 0.025, 0.025, 0.5, 1.15, 0.62);
-    box(g, M.iron, 0.2, 0.018, 0.018, 0.4, 1.08, 0.62).rotation.z = 0.6;
-    const curl = new THREE.Mesh(new THREE.TorusGeometry(0.04, 0.008, 4, 12, Math.PI * 1.5), M.iron); curl.position.set(0.7, 1.12, 0.62); g.add(curl);
-    for (const dx of [-0.11, 0.11]) box(g, M.iron, 0.008, 0.12, 0.008, 0.55 + dx, 1.03, 0.62);
-    box(g, M.woodDark, 0.32, 0.24, 0.035, 0.55, 0.8, 0.62);
-    box(g, M.plank, 0.27, 0.19, 0.04, 0.55, 0.825, 0.62);
-    for (const sz of [-1, 1]) {
-      const mug = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.03, 0.09, 10), M.woodDark); mug.position.set(0.55, 0.91, 0.62 + sz * 0.025); g.add(mug);
-      const foam = new THREE.Mesh(new THREE.SphereGeometry(0.038, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.white); foam.position.set(0.55, 0.955, 0.62 + sz * 0.025); foam.scale.y = 0.6; g.add(foam);
-    }
-    pennant(g, flag, -1.3, 0.2, 0.7);
+    // Karczma z Blendera (tools/models/tavern.py): piętrowy szachulec, strzecha, komin, ganek z ławami i szyldem;
+    // w izbie szynkwas, beczki, palenisko i stoły — wieczorem siadają przy nich goście, chłopem da się wejść do środka
+    blenderModel(g, TAVERN_MODEL as unknown as BlenderBuilding, flag);
+    const p = (TAVERN_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   house(g, _team, flag) {
     const inside = cottage(g, houseSeed++);

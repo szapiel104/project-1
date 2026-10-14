@@ -35,11 +35,13 @@ class Building:
         self.parts.setdefault((group, mat), []).append(pts)
 
     # ---------- bryły (y = spód, jak box() w grze) ----------
-    def box(self, group, mat, w, h, d, x=0.0, y=0.0, z=0.0, rot=0.0, top=True, bottom=False, tilt=0.0):
-        """Pudło stojące na (x, y, z); rot = obrót wokół pionu, tilt = pochylenie wokół osi x (przy spodzie)"""
+    def box(self, group, mat, w, h, d, x=0.0, y=0.0, z=0.0, rot=0.0, top=True, bottom=False, tilt=0.0, roll=0.0):
+        """Pudło stojące na (x, y, z); rot = obrót wokół pionu, tilt = pochylenie wokół osi x, roll = wokół osi z (przy spodzie)"""
         c, s = math.cos(rot), math.sin(rot)
         ct, st = math.cos(tilt), math.sin(tilt)
+        cr, sr = math.cos(roll), math.sin(roll)
         def P(px, py, pz):
+            px, py = px * cr - py * sr, px * sr + py * cr
             py, pz = py * ct - pz * st, py * st + pz * ct
             return (x + px * c + pz * s, y + py, z - px * s + pz * c)
         a, b, e = w / 2, d / 2, h
