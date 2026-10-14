@@ -365,6 +365,11 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       rations: RULES.defaultRations, tax: RULES.defaultTax, bot: humans ? !humans.includes(s.player) : s.player !== 0, defeated: false, level, stats: { gathered: 0, trained: 0, kills: 0, lost: 0, built: 0, razed: 0 },
     });
     addBuilding(g, keep, s.player, s.x - (KEEP_SIZE >> 1), s.y - (KEEP_SIZE >> 1));
+    // plac przed bramą wyłożony kamienną kostką (zwykła droga brukowana: szybciej się po nim chodzi)
+    for (let d = 0; d < FORECOURT.depth; d++) for (let o = -FORECOURT.half; o <= FORECOURT.half; o++) {
+      const x = s.x + o, y = s.y + (KEEP_SIZE >> 1) + 1 + d, t = y * map.width + x;
+      if (x >= 0 && y >= 0 && x < map.width && y < map.height && TERRAIN[g.map.tiles[t] as Terrain].walkable) g.roads[t] = 2;
+    }
     // przed bramą zostaje wolny plac (stodoła trzyma tylko towary, jedzenie idzie do spichlerza)
     const L = s.x - FORECOURT.half - 2, R = s.x + FORECOURT.half + 2, Y = s.y + (KEEP_SIZE >> 1) + 2;
     const BARN = buildingIndex('barn'), GRAN = buildingIndex('granary');
