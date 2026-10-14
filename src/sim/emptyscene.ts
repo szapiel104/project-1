@@ -2,7 +2,7 @@ import { BUILDINGS, buildingIndex } from '../data/buildings';
 import { RULES } from '../data/rules';
 import { Terrain } from '../data/terrain';
 import { clockAt, dayFraction } from './clock';
-import { FP, type GameState, type Unit } from './state';
+import { FP, paveForecourt, type GameState, type Unit } from './state';
 import { addBuilding } from './systems/placement';
 import { spawnPeasant } from './systems/population';
 
@@ -28,7 +28,7 @@ export function emptyScene(g: GameState): void {
   const keeps = g.buildings.filter((b) => BUILDINGS[b.type]!.id === 'keep');
   g.buildings = []; g.units = []; g.soldiers = []; g.corpses = []; g.travelers = []; g.wolves = []; g.cut = []; g.rubble = []; g.marches = [];
   for (const a of [g.occupancy, g.gates, g.walls, g.reserved, g.wear, g.roads, g.roadPlan]) a.fill(0);
-  for (const k of keeps) addBuilding(g, k.type, k.owner, k.x, k.y, k.rot);
+  for (const k of keeps) { addBuilding(g, k.type, k.owner, k.x, k.y, k.rot); paveForecourt(g, k); }
   // bez botów i bez napadów: poziom pokojowy, nikt nie gra za przeciwnika
   for (const p of g.players) { p.bot = false; p.level = 0; p.guards = 0; for (let i = 0; i < p.res.length; i++) p.res[i] = 5000; }
 }
