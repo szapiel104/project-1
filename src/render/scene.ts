@@ -2598,7 +2598,8 @@ export class GameRenderer {
       if (this.soldierSel.has(s.id)) {
         m.makeTranslation(pos.x, y + 0.03, pos.z); this.ringsBack.setMatrixAt(rings, m); this.rings.setMatrixAt(rings++, m);
         // kropka na polu docelowym, póki żołnierz idzie
-        const dest = s.path.length ? s.path[s.path.length - 1]! : s.goal;
+        // cel rozkazu (goal), nie najbliższy krok: w zwartym szyku droga to tylko pole przed żołnierzem
+        const dest = s.goal >= 0 ? s.goal : s.path.length ? s.path[s.path.length - 1]! : -1;
         if (dest >= 0) {
           const dx = dest % width, dy = (dest - dx) / width;
           const pulse = 0.75 + Math.sin(this.time * 6 + s.id) * 0.25;
