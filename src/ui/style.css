@@ -1117,3 +1117,6 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 .rally-row .btn-main { min-height: 40px; font-size: 14px; white-space: normal; line-height: 1.15; }
 .rally-row button:not(.btn-main) { min-height: 40px; font-size: 13px; }
 .rally-row .hint { grid-column: 1 / -1; margin: 0; font-size: 13.5px; }
+/* odnośniki w „Dla twórców” wyglądają jak przyciski menu */
+a.menu-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; min-width: 170px; min-height: 40px; padding: 0 14px; flex-shrink: 0; }
+a.menu-link:focus-visible { outline: 2px solid #e8c36a; outline-offset: 2px; }

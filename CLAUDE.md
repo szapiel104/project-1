@@ -6,6 +6,7 @@
 ## Modele — gdzie robić i jak sprawdzać (obowiązkowo dla każdego czatu)
 - **Robimy je w Blenderze** skryptem w Pythonie w `tools/models/` (bpy jako moduł, opis w `tools/models/README.md`): `/tmp/bpyenv/bin/python tools/models/<model>.py` → `src/render/models/<model>.json`. Kod gry tylko wczytuje gotowe siatki; nie składamy nowych modeli z prostopadłościanów w TypeScripcie.
 - **Tekstury są obowiązkowe:** drewno, płótno, kamień i ziemia dostają zdjęciowe tekstury z `src/render/textures.ts` (`pattern('planks' | 'burlap' | 'ashlar' | 'soil' | ...)` + `normal(...)`). Gładki kolor zostaje tylko na żelazie, wodzie i liściach. Kolor z wierzchołków to barwa i cień w zagłębieniach (`bake_ao`), a nie zamiennik tekstury.
+- Odnośniki do podglądu modeli i pustej sceny są też w grze: Ustawienia → zakładka „Dla twórców”.
 - **Najpierw sprawdzasz w podglądzie modeli, nie w grze:** `https://szapiel104.github.io/project-1/modele.html?id=<id>` (lokalnie `npx vite` → `/modele.html?id=<id>`). Model stoi sam na kamiennej podstawce (albo `&tlo=powietrze` / `&tlo=trawa`), w zwykłym świetle i pełnej jakości. Myszą oblatujesz go z każdej strony; przyciski: Noc, Bez dachu, Siatka, Obrót. Na dole liczba trójkątów i wymiary w polach.
   - Nowy model dopisz do listy w `src/viewer.ts` (grupy: Budynki — same z `BUILDINGS`; Ludzie, Zwierzęta, Podwórko, Graty), żeby dało się go tam obejrzeć.
   - Do zrzutu w Chrome lub Playwright: `window.__view('<id>', obrótStopnie, nachylenieStopnie)`.

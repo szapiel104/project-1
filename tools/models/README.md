@@ -44,3 +44,5 @@ skrypt budynku w kluczu `views` (podpis, oko, cel, grupy, ogniskowa). Nowy budyn
 swoje `views` i od razu ma ten sam obchód.
 
 Podwórko przy chatach (balia, sznur i pranie, stos polan, ława, kosz, wiadro, grządka): `/tmp/bpyenv/bin/python tools/models/yard.py` → `src/render/models/yard.json`; podgląd w Blenderze `tools/models/yard_preview.py /tmp/yard.png`, w przeglądarce `modele.html?id=yard-tub`. Każda siatka ma pole `mat` (wood / cloth / soil / plain), a gra dobiera do niego teksturę.
+
+Gospodyni i dziecko (rodziny przy chatach): `tools/models/woman.py` → `woman.json`, `tools/models/child.py` → `child.json`; w grze `Figures('woman')` / `Figures('child')`, podgląd `modele.html?id=woman`, `?id=child`.

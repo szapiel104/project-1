@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.21.6 — gospodyni i dziecko z Blendera (2026-10-14)
+
+- Gospodyni to własny model: suknia do ziemi z fałdami i ciemniejszym obrąbkiem, sznurowany gorset, biały dekolt koszuli, lniany fartuch z troczkami, mankiety; na głowie chusta zawiązana na karku albo włosy w kok z warkoczem (zamiast chłopa z doklejonym stożkiem)
+- Dziecko ma proporcje dziecka: duża głowa, krótkie ręce i nogi, koszula do kolan przewiązana sznurkiem, bose nogi albo owijacze, rozczochrane włosy albo czapeczka
+- Ustawienia → zakładka „Dla twórców”: stałe odnośniki do podglądu modeli i pustej sceny testowej
+
 ## 0.21.5 — podgląd modeli (2026-10-14)
 
 - `modele.html?id=tavern`: każdy model gry osobno (budynki, ludzie, zwierzęta, podwórko, graty) na kamiennej podstawce, w powietrzu albo na trawie, w zwykłym świetle i pełnej jakości; oblatywanie myszą, noc, widok bez dachu, siatka, liczba trójkątów i wymiary

@@ -8,7 +8,7 @@ import { FP, type GameState } from '../sim/state';
 import { torchHour } from '../sim/systems/torches';
 import { clutterTaken } from './clutter';
 import { idle } from './motion';
-import { Figures, familyId, modelGeo, type ModelMesh } from './peasants';
+import { Figures, modelGeo, type ModelMesh } from './peasants';
 import { tint } from './loads';
 import { normal, pattern } from './textures';
 import YARD from './models/yard.json';
@@ -42,7 +42,6 @@ interface Yard { dx: number; dy: number; fx: number; fy: number; props: Placed[]
 export interface FamilyCtx { time: number; dt: number; calm: boolean; height: (x: number, y: number) => number; fig: number; cam?: { x: number; y: number; h: number }; team: (owner: number) => number }
 
 const MAX = 160;
-const DRESS = [0x6a3a32, 0x4a4f6a, 0x5a5a3c, 0x6a5038, 0x3e4a3e, 0x7a4a5a];
 const CLOTH = [0xe8e0cc, 0xd8cfb4, 0xb8c4c8, 0xc8a890, 0xe0d8c0, 0xa8b498, 0x9a4a3a, 0x6a7a8a, 0xb89a5a];
 const rand = (): number => Math.random();
 const hashN = (a: number, b: number): number => { let h = (a * 2654435761 + b * 40503) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); return (h ^ (h >>> 12)) >>> 0; };
@@ -60,14 +59,6 @@ function boxUv(geo: THREE.BufferGeometry, scale: number): THREE.BufferGeometry {
   }
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   return geo;
-}
-
-/** Długa suknia gospodyni (od pasa do ziemi); splot płótna drobny jak na reszcie ubrań */
-export function skirtGeometry(): THREE.BufferGeometry {
-  const g = new THREE.LatheGeometry([[0.0, 0.0], [0.155, 0.0], [0.15, 0.06], [0.125, 0.2], [0.098, 0.31], [0.0, 0.32]].map(([r, y]) => new THREE.Vector2(r, y)), 16);
-  const uv = g.attributes.uv!;
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 3.5, uv.getY(i) * 2);
-  return g;
 }
 
 let yardMats: Record<string, [THREE.Material, number]> | null = null;
@@ -93,8 +84,9 @@ export function yardModel(key: string): THREE.Group {
 }
 
 export class Family {
-  private figs: Figures;
-  private skirts: THREE.InstancedMesh;
+  /** Gospodynie i dzieci: osobne modele z Blendera (tools/models/woman.py, child.py) */
+  private women: Figures;
+  private kids: Figures;
   private brooms: THREE.InstancedMesh;
   /** Rzeczy z podwórka: [rodzaj] → siatki po materiale (deski, płótno, ziemia, gładkie) */
   private props = new Map<string, THREE.InstancedMesh[]>();
@@ -115,15 +107,13 @@ export class Family {
   private dutyAt = -99;
 
   constructor(scene: THREE.Scene) {
-    this.figs = new Figures(MAX, scene);
+    this.women = new Figures(MAX, scene, 'woman');
+    this.kids = new Figures(MAX, scene, 'child');
     const inst = (geo: THREE.BufferGeometry, max: number, mat: THREE.Material, shadow = true): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(geo, mat, max);
       m.count = 0; m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = shadow; scene.add(m); return m;
     };
     // długa suknia z fartuchem: od pasa do ziemi zasłania nogi (postać z gry ma męską sylwetkę)
-    const skirt = skirtGeometry();
-    this.skirts = inst(skirt, MAX, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: pattern('burlap') }));
-    this.skirts.setColorAt(0, this.c.setHex(0xffffff));
     // miotła z witek: kij w dłoni, miotła przy ziemi (układ ręki: bark w początku, dłoń 0,185 niżej)
     this.brooms = inst(mergeGeometries([
       tint(new THREE.CylinderGeometry(0.009, 0.009, 0.62, 5).translate(0, -0.2, 0.05).rotateX(0.35), 0x7a5a38),
@@ -147,7 +137,7 @@ export class Family {
     this.dust = inst(new THREE.SphereGeometry(0.05, 6, 4), 256, new THREE.MeshBasicMaterial({ color: 0xb8a888, transparent: true, opacity: 0.35, depthWrite: false }), false);
   }
 
-  view(p: THREE.Vector3): void { this.figs.view(p); }
+  view(p: THREE.Vector3): void { this.women.view(p); this.kids.view(p); }
 
   /**
    * Podwórko chaty: wolne pola tuż przy ścianach (bez drzwi i pola przed nimi, bez gratów, dróg i lasu),
@@ -256,7 +246,7 @@ export class Family {
       for (const mesh of list) { mesh.setMatrixAt(k, mat); if (color !== undefined) mesh.setColorAt(k, this.c.setHex(color)); }
       counts.set(key, k + 1);
     };
-    let n = 0, sk = 0, br = 0, rp = 0, du = 0;
+    let n = 0, br = 0, rp = 0, du = 0;
     const tm = this.t;
     const wind = Math.sin(time * 0.6) * 0.5 + 0.6;
     const top = Y.post_top ?? 0.46;
@@ -379,29 +369,28 @@ export class Family {
         }
         if (sp > 0.1) { swing = Math.sin(time * (woman ? 8 : 14) + k) * (woman ? 0.45 : 0.75); legs = arm !== undefined; }
         const ia = !sp && arm === undefined && !hop && !ctx.calm ? idle(h.id * 3 + k, time) : undefined;
-        const scale = woman ? 0.94 : 0.5 + (h.id % 2) * 0.05;
+        const scale = woman ? 1 : 0.92 + (h.id % 2) * 0.08;
         const run = !woman && sp > 0.1 ? Math.abs(Math.sin(time * 14 + k)) * 0.03 : 0;
         tm.position.set(m.x - W2, ctx.height(m.x, m.y) + run + hop - sit, m.y - H2);
         tm.rotation.set(lean, m.heading + (ia?.yaw ?? 0), ia?.roll ?? 0, 'YXZ');
         tm.scale.setScalar(ctx.fig * scale);
         tm.updateMatrix();
-        const id = familyId(h.id * 3 + k, woman ? 'woman' : 'child');
-        this.figs.set(n, tm.matrix, ia?.legs ? ia.legs : swing, up || !!ia?.up, team, id, arm ?? ia?.arm, arm !== undefined ? armL : (ia?.armL ?? -0.5), legs || !!ia?.legs);
+        const id = h.id * 3 + k;
+        (woman ? this.women : this.kids).set(n, tm.matrix, ia?.legs ? ia.legs : swing, up || !!ia?.up, team, id, arm ?? ia?.arm, arm !== undefined ? armL : (ia?.armL ?? -0.5), legs || !!ia?.legs);
         if (woman) {
-          this.skirts.setMatrixAt(sk, tm.matrix);
-          this.skirts.setColorAt(sk++, this.c.setHex(DRESS[h.id % DRESS.length]!));
           if (broom && br < MAX) {
             // miotła w prawej ręce, obraca się razem z ręką w barku
-            this.m2.makeRotationX(arm ?? -0.5).setPosition(0.135, 0.45, 0);
+            this.m2.makeRotationX(arm ?? -0.5).setPosition(this.women.shoulder[0], this.women.shoulder[1], this.women.shoulder[2]);
             this.brooms.setMatrixAt(br++, this.m2.premultiply(tm.matrix));
           }
         }
         n++;
       }
     }
-    this.figs.finish(n);
+    this.women.finish(n);
+    this.kids.finish(n);
     const fin = (mesh: THREE.InstancedMesh, k: number): void => { mesh.count = k; mesh.visible = k > 0; mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; };
-    fin(this.skirts, sk); fin(this.brooms, br); fin(this.rope, rp); fin(this.dust, du);
+    fin(this.brooms, br); fin(this.rope, rp); fin(this.dust, du);
     for (const [key, list] of this.props) for (const mesh of list) fin(mesh, counts.get(key) ?? 0);
     for (const [k, mm] of this.members) if (this.frame - mm.seen > 600) this.members.delete(k);
   }

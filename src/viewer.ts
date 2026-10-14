@@ -11,8 +11,8 @@ import { t } from './i18n';
 import { buildingModel, setNight } from './render/buildings';
 import { clutterModel } from './render/clutter';
 import { crowGeometry, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
-import { skirtGeometry, YARD_KEYS, yardModel } from './render/family';
-import { Figures, familyId } from './render/peasants';
+import { YARD_KEYS, yardModel } from './render/family';
+import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
 import { ANIMAL_AT, animalGeo } from './render/village';
 
@@ -22,22 +22,16 @@ const vc = (): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({ ve
 const mesh = (g: THREE.BufferGeometry, m: THREE.Material = vc()): THREE.Mesh => new THREE.Mesh(g, m);
 
 /** Postać z instancjonowanych części gry, w kontenerze (żeby dało się ją usunąć ze sceny) */
-function figure(kind: 'peasant' | 'spearman' | 'archer' | 'guard', id: number, extra?: (h: THREE.Scene) => void): Make {
+function figure(kind: FigureKind, id: number, h = 0.64): Make {
   return () => {
     const holder = new THREE.Scene();
     Figures.FAR2 = 1e9;
     const f = new Figures(1, holder, kind);
     f.set(0, new THREE.Matrix4(), 0, false, RED, id);
     f.finish(1);
-    extra?.(holder);
-    return { obj: holder, size: new THREE.Vector3(0.3, 0.6, 0.2) };
+    return { obj: holder, size: new THREE.Vector3(0.3, h, 0.2) };
   };
 }
-const skirt = (h: THREE.Scene): void => {
-  const g = skirtGeometry();
-  h.add(mesh(g, new THREE.MeshStandardMaterial({ color: 0x6a3a32, roughness: 0.95, map: pattern('burlap'), normalMap: normal('burlap') })));
-};
-
 function horse(): THREE.Object3D {
   const g = new THREE.Group();
   g.add(mesh(animalGeo('horse_body')));
@@ -69,8 +63,10 @@ const GROUPS: [string, [string, string, Make][]][] = [
   }] as [string, string, Make])],
   ['Ludzie', [
     ['peasant', 'Chłop', figure('peasant', 3)],
-    ['woman', 'Gospodyni', figure('peasant', familyId(7, 'woman'), skirt)],
-    ['child', 'Dziecko', figure('peasant', familyId(8, 'child'))],
+    ['woman', 'Gospodyni (chusta)', figure('woman', idWithHead((h) => h % 2 === 0))],
+    ['woman2', 'Gospodyni (kok)', figure('woman', idWithHead((h) => h % 2 === 1))],
+    ['child', 'Dziecko', figure('child', idWithHead((h) => h !== 2), 0.42)],
+    ['child2', 'Dziecko (czapka)', figure('child', idWithHead((h) => h === 2), 0.42)],
     ['spearman', 'Włócznik', figure('spearman', 4)],
     ['archer', 'Łucznik', figure('archer', 5)],
     ['guard', 'Strażnik', figure('guard', 6)],

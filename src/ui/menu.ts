@@ -449,6 +449,20 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         check(t('set.edge'), settings.edgeScroll, (v) => { settings.edgeScroll = v; save(); }),
         el('p', 'hint', t('set.controlsHint')),
       ]],
+      ['Dla twórców', () => {
+        // stałe odnośniki do narzędzi: podgląd modeli i pusta scena testowa (otwierają się w nowej karcie)
+        const link = (label: string, href: string, hint: string): HTMLElement => {
+          const box = el('div', 'set-row');
+          const a = document.createElement('a');
+          a.className = 'menu-btn menu-link'; a.href = href; a.target = '_blank'; a.rel = 'noopener'; a.textContent = label;
+          box.append(a, el('p', 'hint', hint));
+          return box;
+        };
+        return [
+          link('Podgląd modeli', 'modele.html', 'Każdy model gry osobno, na podstawce, w pełnej jakości: obracasz go myszą z każdej strony.'),
+          link('Pusta scena testowa', '?test=1&pusta=1', 'Płaska łąka z samą twierdzą, bez zapisu gry — do sprawdzania jednej rzeczy w grze.'),
+        ];
+      }],
     ], true);
     // zmiany zapisują się od razu; „Zapisz” potwierdza i wraca do menu
     const reset = button(t('set.reset'), () => { Object.assign(settings, DEFAULT_SETTINGS); save(); showSettings(); }, 'menu-btn menu-reset');

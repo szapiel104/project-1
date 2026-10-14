@@ -4,6 +4,8 @@ import GUARD_MODEL from './models/guard.json';
 import PEASANT_MODEL from './models/peasant.json';
 import SPEARMAN_MODEL from './models/spearman.json';
 import ARCHER_MODEL from './models/archer.json';
+import WOMAN_MODEL from './models/woman.json';
+import CHILD_MODEL from './models/child.json';
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
 export interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
@@ -112,6 +114,9 @@ export function familyId(n: number, kind: 'woman' | 'child'): number {
   }
 }
 
+/** Pierwszy numer postaci od `from`, której nakrycie głowy (0–4) spełnia warunek — do podglądu wariantów */
+export function idWithHead(want: (head: number) => boolean, from = 1): number { let id = from; while (!want(mix(id, 5) % 5)) id++; return id; }
+
 const looks = new Map<string, Look>();
 function lookOf(id: number, tunic: number, muted = false): Look {
   const key = `${id}:${tunic}:${muted}`;
@@ -137,6 +142,9 @@ function lookOf(id: number, tunic: number, muted = false): Look {
  * Chłopi jako małe postacie złożone z części: buty, nogawice, tunika z pasem, ręce z dłońmi, głowa z włosami,
  * a do tego jedno z kilku nakryć głowy, czasem broda albo fartuch. Każda część to jedna siatka instancjonowana.
  */
+/** Rodzaje postaci z Blendera */
+export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child';
+
 export class Figures {
   private parts: Part[] = [];
   private muted: boolean;
@@ -156,8 +164,11 @@ export class Figures {
   /** Od tej odległości od kamery (do kwadratu) postać rysuje się w wersji uproszczonej */
   static FAR2 = 13 * 13;
 
-  constructor(max: number, scene: THREE.Scene, kind: 'peasant' | 'spearman' | 'archer' | 'guard' = 'peasant') {
-    this.muted = kind === 'peasant';
+  /** Bark względem stóp (x, y, z) — tam zaczepia się narzędzie w dłoni */
+  shoulder: [number, number, number] = [0.135, 0.45, 0];
+
+  constructor(max: number, scene: THREE.Scene, kind: FigureKind = 'peasant') {
+    this.muted = kind === 'peasant' || kind === 'woman' || kind === 'child';
     const always = (): boolean => true;
     const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub'], lod: 0 | 1 = 0): void => {
       const fixed = typeof color === 'number';
@@ -179,9 +190,11 @@ export class Figures {
     const SHOW: Record<string, Part['shown']> = {
       beard: (l) => l.beard || l.headwear % 2 === 0, beardP: (l) => l.beard, apron: (l) => l.apron, wraps: (l) => l.wraps,
       hairOn: (l) => l.headwear !== 1 && l.headwear !== 3, straw: (l) => l.headwear === 0, hood: (l) => l.headwear === 1,
+      wkerchief: (l) => l.headwear % 2 === 0, wbun: (l) => l.headwear % 2 === 1,
       cap: (l) => l.headwear === 2, kerchief: (l) => l.headwear === 3, kettle: (l) => l.headwear % 3 !== 1, nasal: (l) => l.headwear % 3 === 1,
     };
     const model = (M: FigureModel, armLeft: Part['rot'], armRight: Part['rot']): void => {
+      this.shoulder = [M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!];
       const dyn = (d: string | null): number | Part['color'] => (d ? DYN[d] ?? 0xffffff : 0xffffff);
       const showOf = (sh: string | null): Part['shown'] => (sh ? SHOW[sh] ?? always : always);
       for (const lod of [0, 1] as const) {
@@ -263,6 +276,8 @@ export class Figures {
       ])!, 0xffffff, -sx, sy, 0, bowArm, always, 'wood', bowSub);
       return;
     }
+    // ---- gospodyni i dziecko z Blendera (tools/models/woman.py, child.py) ----
+    if (kind === 'woman' || kind === 'child') { model((kind === 'woman' ? WOMAN_MODEL : CHILD_MODEL) as FigureModel, armL, armR); return; }
     // ---- chłop z Blendera (tools/models/peasant.py); kotwice narzędzi: bark (±0,135; 0,45), dłoń 0,185 niżej ----
     model(PEASANT_MODEL as FigureModel, armL, armR);
   }
