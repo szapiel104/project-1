@@ -34,10 +34,13 @@ cz = lambda dy: dy - H + 0.5
 b = Building()
 solid = []          # przeszkody spacerowicza: x0, x1, z0, z1, od wysokości y0 do y1
 def torch(group, x, y, z):
-    """Pochodnia na ścianie: żelazny uchwyt i płomień (stożek), zamiast świecącego klocka"""
-    b.box(group, 'iron', 0.025, 0.12, 0.025, x, y, z)
-    b.prism(group, 'iron', 0.03, 0.035, 0.03, x, y + 0.12, z, seg=6)
-    b.prism(group, 'ember', 0.028, 0.0, 0.1, x, y + 0.15, z, seg=6)
+    """Pochodnia na ścianie: drewniany trzonek w żelaznym uchwycie, kubek ze smołą i wąski, wysoki płomień"""
+    b.box(group, 'iron', 0.05, 0.02, 0.05, x, y + 0.02, z)                       # uchwyt
+    b.prism(group, 'woodDark', 0.012, 0.016, 0.2, x, y - 0.06, z, seg=6)         # trzonek
+    b.prism(group, 'iron', 0.022, 0.03, 0.04, x, y + 0.14, z, seg=6, top=False)  # kubek
+    b.prism(group, 'dark', 0.026, 0.026, 0.004, x, y + 0.172, z, seg=6)          # smoła
+    b.prism(group, 'ember', 0.0, 0.022, 0.03, x, y + 0.176, z, seg=6, top=False)  # płomień: rozszerza się…
+    b.prism(group, 'ember', 0.022, 0.0, 0.09, x, y + 0.206, z, seg=6)            # …i zwęża ku górze
 def brazier(group, x, y, z):
     """Kosz ogniowy na nodze: misa rozszerzona ku górze, z dnem, żar i trzy języki ognia"""
     b.prism(group, 'iron', 0.02, 0.02, y - G, x, G, z, seg=5)
@@ -310,7 +313,7 @@ for s in (-1, 1):
     block(x - 0.45, x + 0.45, GZ - 0.5, GZ + 0.9, 0, TOP)
     square_room(x, GZ + 0.2, 0.45, 0.7, WALK + ROOM_UP, doors=[(s, 0)], windows=[(0, 1), (0, -1)])
     b.box('base', 'flag', 0.32, 0.6, 0.02, x, 0.85, GZ + 0.915)
-    torch('interior', x + s * 0.28, WALK + 0.36, GZ + 0.2)
+    torch('interior', x - s * (0.45 - RW - 0.03), WALK + 0.36, GZ + 0.2)  # na ścianie naprzeciw drzwi
 b.box('base', 'castle', 1.0, WALK + ROOM_UP - 0.15 - (G + 0.95), 1.36, cx(gx), G + 0.95, GZ + 0.2)
 b.box('base', 'castleDark', 1.0, 0.06, 1.44, cx(gx), WALK + ROOM_UP - 0.15, GZ + 0.2)
 b.merlons_line('base', 'castle', cx(gx) - 0.45, GZ + 0.84, cx(gx) + 0.45, GZ + 0.84, WALK + ROOM_UP - 0.09, step=0.22, w=0.12, h=0.16, t=0.08)
