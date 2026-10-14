@@ -465,7 +465,7 @@ export class GameRenderer {
     // Cienie: jedno słońce, którego obszar cienia podąża za kamerą.
     // filmowe odwzorowanie tonów: jasne partie nie przepalają się, cienie zostają głębokie
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    this.renderer.toneMappingExposure = 0.84; // odrobinę mroczniej: klimat Gothica, nie słoneczna pocztówka
+    this.renderer.toneMappingExposure = 0.98; // nadal klimat Gothica, ale bez topienia się w mroku
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -1376,7 +1376,7 @@ export class GameRenderer {
     // izby w basztach (narożne i w połowie boków) też mają ogień
     const tdx = kp ? Math.floor(kp[1] + KEEP_HALF) : -1, tdy = kp ? Math.floor(kp[2] + KEEP_HALF) : -1;
     const inTower = !!kp && keepTile(tdx, tdy) === '=' && (tdx === 0 || tdx === KEEP_SIZE - 1) && (tdy === 0 || tdy === KEEP_SIZE - 1 || tdy === KEEP_SIZE >> 1);
-    this.roomLight.intensity = inRoom || inTower ? 2.6 + Math.sin(this.time * 7) * 0.15 : 0;
+    this.roomLight.intensity = inRoom || inTower ? 3.4 + Math.sin(this.time * 7) * 0.2 : 0;
     this.roomLight.position.set(cam.position.x, cam.position.y + 0.35, cam.position.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
   }

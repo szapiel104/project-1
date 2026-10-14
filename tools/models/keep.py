@@ -439,6 +439,11 @@ for i in range(3):
     b.box('interior', 'apple' if i % 2 else 'bread', 0.06, 0.05, 0.08, kx1 - 0.09, G + 0.42 + i * 0.12, (kz0 + kz1) / 2 + 0.2 + i * 0.1)
 
 # ---------------- komnata pana ----------------
+# pochodnie w sali tronowej i kuchni
+for xx in (tx0 + 0.09, tx1 - 0.09):
+    for zz in (tz0 + 1.3, tz1 - 0.5):
+        torch('interior', xx, G + 0.7, zz)
+torch('interior', kx1 - 0.08, G + 0.55, kz0 + 0.5)
 qx0, qx1, qz0, qz1 = bbox('C')
 boxs('interior', 'woodDark', 0.75, 0.2, 1.05, qx1 - 0.45, G, qz0 + 0.6)
 b.box('interior', 'flag', 0.7, 0.06, 0.82, qx1 - 0.45, G + 0.2, qz0 + 0.72)
@@ -467,6 +472,11 @@ for i in range(4):
     b.box('interior', 'iron', 0.03, 0.08, 0.04, bx1 - 0.08, G + 0.62, bz0 + 0.25 + i * 0.09)
 block(bx1 - 0.14, bx1, bz0 + 0.15, bz0 + 0.62)
 boxs('interior', 'woodDark', 0.4, 0.2, 0.22, bx1 - 0.28, G, bz1 - 0.16)
+# pochodnie na ścianach koszar (ściana od muru i obie szczytowe)
+for zz in (bz0 + 1.2, bz0 + 2.8):
+    torch('interior', bx1 - 0.05, G + 0.5, zz)
+torch('interior', (bx0 + bx1) / 2, G + 0.5, bz0 + 0.09)
+torch('interior', (bx0 + bx1) / 2, G + 0.5, bz1 - 0.09)
 boxs('interior', 'woodDark', 0.12, 0.5, 0.6, bx0 + 0.09, G, bz1 - 0.45)
 for i in range(3):
     b.box('interior', 'iron', 0.08, 0.1, 0.08, bx0 + 0.09, G + 0.5, bz1 - 0.65 + i * 0.2)
