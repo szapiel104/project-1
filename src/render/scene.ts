@@ -346,6 +346,7 @@ export class GameRenderer {
     const cam = this.cam.camera, { width, height } = g.map;
     this.village.sync(g, {
       time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y),
+      cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2, h: cam.position.y },
       sound: (kind, x, y) => {
         const wx = x - width / 2, wz = y - height / 2, d = Math.hypot(cam.position.x - wx, cam.position.y - view.heightAt(x, y), cam.position.z - wz);
         if (d > 16) return;

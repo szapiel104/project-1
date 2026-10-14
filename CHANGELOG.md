@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.20.4 — więcej klatek na sekundę (2026-10-14)
+
+- Drzewa przechodzą w obrazki od ok. 30 pól od środka widoku (było 42), kępy, kwiaty i kamyki znikają wcześniej — z bliska nic się nie zmienia
+- Krzaki dalej niż 30 pól to jedna prosta bryła (40 trójkątów zamiast 320) — krzaków są tysiące, było to ponad 700 tys. trójkątów w klatce
+- Góry za mapą nie rzucają cienia (100 tys. trójkątów mniej w każdej klatce cienia)
+- Zwierzęta w osadzie dalej niż ~40 pól od kamery nie są liczone ani rysowane; lżejsze kury
+- Pomiar w Chrome (pełna grafika, widok osady): ok. 34 → 50–55 FPS
+
 ## 0.20.3 — płynność przy wielu graczach (2026-10-14)
 
 - Boty myślą każdy w innym ticku (przy 4 na 4 osiem botów naraz zacinało grę co 20 s), palisadę bota sprawdzają po kawałku (najwyżej ~40 odcinków na raz)

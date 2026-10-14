@@ -753,7 +753,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     else instanced(models.leafCrownFar(), 0x55903a, far.leaf, 'leaves', false);
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
-  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves'), null, false);
+  // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące
+  const bushFar = mergeGeometries([new THREE.IcosahedronGeometry(0.27, 0).translate(0, 0.2, 0).toNonIndexed(), new THREE.IcosahedronGeometry(0.2, 0).translate(0.12, 0.15, 0.05).toNonIndexed()])!;
+  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, undefined, { farGeo: bushFar }), null, false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }

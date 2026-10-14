@@ -92,7 +92,7 @@ def hen(name, body_c, neck_c, tail_c, wing_c):
     col = lambda x, y, z: speck(mix(mix(body_c, neck_c, (y - 0.095) / 0.02) if z > 0.02 else body_c, tuple(c * 0.8 for c in body_c), (0.05 - y) / 0.03), x, y, z)
     b = skin('hen', [(0, 0.095, -0.055), (0, 0.072, -0.01), (0, 0.072, 0.03), (0, 0.1, 0.048), (0, 0.124, 0.056)],
              [(0, 1), (1, 2), (2, 3), (3, 4)],
-             [(0.022, 0.018), (0.046, 0.042), (0.04, 0.04), (0.019, 0.019), (0.021, 0.021)], subsurf=2)
+             [(0.022, 0.018), (0.046, 0.042), (0.04, 0.04), (0.019, 0.019), (0.021, 0.021)], subsurf=1)  # kur bywa sto: lżejsza siatka
     parts = [fluff(Mesh(evaluated(b), col, 'fur'), 0.004)]
     head = sphere('hhead', (0, 0.127, 0.057), (0.0165, 0.0175, 0.019), seg=12, rings=9)
     parts.append(Mesh(evaluated(head), col, 'fur'))

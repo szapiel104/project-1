@@ -13,7 +13,8 @@ import ANIMALS from './models/animals.json';
  */
 
 type Sound = (kind: 'bark' | 'cluck' | 'grunt', x: number, y: number) => void;
-export interface VillageCtx { time: number; dt: number; night: number; calm: boolean; height: (x: number, y: number) => number; sound: Sound }
+/** `cam` = kamera w polach mapy (x, y) i jej wysokość; zwierzęta dalej niż ~40 pól od niej nie są rysowane */
+export interface VillageCtx { time: number; dt: number; night: number; calm: boolean; height: (x: number, y: number) => number; sound: Sound; cam?: { x: number; y: number; h: number } }
 
 interface Critter { x: number; y: number; tx: number; ty: number; wait: number; heading: number; speed: number; seen: number; hx: number; hy: number; flee: number; next: number }
 interface Dog extends Critter { master: number; until: number; bark: number; run: number }
@@ -129,6 +130,8 @@ export class Village {
       const id = BUILDINGS[b.type]!.id;
       const house = id === 'house', farm = id === 'farm';
       const dx = (b.door % width) + 0.5, dy = Math.floor(b.door / width) + 0.5;
+      // daleko od kamery zwierząt i tak nie widać: nie liczymy ich i nie rysujemy (stoją, aż kamera wróci)
+      if (ctx.cam && Math.hypot(dx - ctx.cam.x, dy - ctx.cam.y) > 36 + ctx.cam.h * 0.4) continue;
       // kury przy chatach: grzebią i dziobią, przed przechodniem uciekają z trzepotem; nocą siedzą w kurniku
       if (house && !sleep) {
         const n = 2 + (b.id % 2);
