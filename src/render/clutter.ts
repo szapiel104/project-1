@@ -141,6 +141,8 @@ const KINDS: Record<string, Kind[]> = {
 };
 const ALL: Kind[] = ['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'];
 const MAX = 1500;
+/** Pola zajęte przez graty (czyta je podwórko rodzin w family.ts, żeby balia nie stanęła na beczce) */
+export const clutterTaken = new Set<number>();
 
 export class Clutter {
   readonly group = new THREE.Group();
@@ -175,7 +177,8 @@ export class Clutter {
     const { width: w, height: h } = g.map;
     const counts = new Map<Kind, number>(ALL.map((k) => [k, 0]));
     const M = new THREE.Matrix4(), Q = new THREE.Quaternion(), P = new THREE.Vector3(), S = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
-    const used = new Set<number>();
+    const used = clutterTaken;
+    used.clear();
     const free = (x: number, y: number): boolean => {
       if (x < 0 || y < 0 || x >= w || y >= h) return false;
       const t = y * w + x;

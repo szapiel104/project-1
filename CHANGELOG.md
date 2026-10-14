@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.21.3 — każda chata ma swoje podwórko (2026-10-14)
+
+- Nowe modele z Blendera z teksturami desek, płótna i ziemi: balia z klepek i obręczy z mydlinami i tarą, krzywe słupki ze sznurem, który zwisa między nimi, pranie (koszula, prześcieradło, chusta, portki), stos polan z pniakiem i siekierą, ława z dzbankiem, kosz z praniem, wiadro, grządka z kapustą w plecionym płotku
+- Każda chata losuje 2–4 z tych rzeczy i stawia je tuż przy swoich ścianach, w innych miejscach niż sąsiedzi i nie na gratach; pranie też co chata inne (ile sztuk, jakie, w jakich kolorach)
+- Gospodyni robi to, do czego ma rzeczy: pierze w balii, wiesza pranie, pieli grządkę, nosi polana, siada na ławie, a do tego zamiata przed drzwiami i sypie ziarno kurom
+
 ## 0.21.2 — pusta scena do testów (2026-10-14)
 
 - `?test=1&pusta=1`: płaska łąka z samymi twierdzami, bez lasów, wody, botów i wilków, a w `__test` pomocniki `home`, `place`, `hour`, `peasants`, `wolf` — szybkie zrzuty jednej rzeczy dla wszystkich czatów
