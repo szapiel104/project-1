@@ -170,6 +170,8 @@ for sx in (-1, 1):
         b.prism('base', 'castleDark', TR + 0.05, TR + 0.05, 0.08, tx, 2.55, tz, seg=18)
         b.merlons_ring('base', 'castle', tx, tz, TR - 0.02, 2.63, n=12, w=0.17, h=0.18, t=0.1)
         b.prism('base', 'castleDark', TR + 0.1, TR + 0.1, 0.04, tx, 2.81, tz, seg=18)
+        # spód okapu dachu: przez blanki widać drewniany strop, a nie niebo w środku stożka
+        b.poly('base', 'woodDark', [(tx + math.sin(2 * math.pi * k / 18) * (TR + 0.1), 2.81, tz + math.cos(2 * math.pi * k / 18) * (TR + 0.1)) for k in range(18)], away=(tx, 3.5, tz))
         b.prism('base', 'slate', TR + 0.1, 0.0, 1.25, tx, 2.85, tz, seg=18)
         b.box('base', 'gold', 0.06, 0.12, 0.06, tx, 4.08, tz)
         b.box('base', 'woodDark', 0.03, 0.45, 0.03, tx, 4.15, tz)
@@ -298,6 +300,8 @@ for dy in range(N):
             k = edge_key((ax, ay, bx2, by2))
             if ra == rb and k not in BARS:
                 continue
+            if ra in 'S=' or rb in 'S=':
+                continue  # schody i chodnik na murach mają własne bryły (stopnie, przedpiersia)
             h = height_of(ra, rb)
             mat = mat_of(ra, rb)
             if ex:   # ściana pionowa x = granica, wzdłuż z
@@ -347,6 +351,8 @@ for dy in range(N):
                 continue
             k = edge_key((ax, ay, bx2, by2))
             if room(ax, ay) == room(bx2, by2) and k not in BARS:
+                continue
+            if room(ax, ay) in 'S=' or room(bx2, by2) in 'S=':
                 continue
             h = height_of(room(ax, ay), room(bx2, by2))
             ends = ((cx(ax) + 0.5, cz(ay) - 0.5), (cx(ax) + 0.5, cz(ay) + 0.5)) if ex else ((cx(ax) - 0.5, cz(ay) + 0.5), (cx(ax) + 0.5, cz(ay) + 0.5))
