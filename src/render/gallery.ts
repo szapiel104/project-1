@@ -132,6 +132,9 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
     ground.scale.setScalar(building ? Math.max(1, size * 1.1) : 1);
     sun.shadow.camera.left = sun.shadow.camera.bottom = -(building ? size * 1.4 : 1.5); sun.shadow.camera.right = sun.shadow.camera.top = building ? size * 1.4 : 1.5; sun.shadow.camera.updateProjectionMatrix();
     const near = building ? size * 3.2 + 0.4 : kind === 'crow' ? 0.9 : kind === 'wolf' ? 2.6 : 2.0;
+    // duży zamek stoi dalej niż zasięg kamery dla małych budynków: daleka płaszczyzna rośnie razem z kadrem
+    const far = Math.max(20, near + size * 3);
+    if (camera.far !== far) { camera.far = far; camera.updateProjectionMatrix(); }
     const yaw = t * 0.35;
     const lookY = building ? centerY * 0.85 : kind === 'crow' ? 0.08 : kind === 'wolf' ? 0.4 : 0.33;
     camera.position.set(Math.sin(yaw) * near, lookY + near * 0.35, Math.cos(yaw) * near);
