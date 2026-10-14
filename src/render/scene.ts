@@ -31,6 +31,8 @@ import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
 import { createLoads, tint } from './loads';
+import { FireCrewFx } from './firecrew';
+import { DRAW as FIRE_DRAW } from '../sim/systems/fire';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 import { normal, pattern } from './textures';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
@@ -383,6 +385,13 @@ export class GameRenderer {
   private handTorches: THREE.InstancedMesh;
   /** wiadro w prawej ręce gaszącego (puste i z wodą) */
   private buckets!: THREE.InstancedMesh;
+  private fireFx!: FireCrewFx;
+  /** ostatnia faza wylewania (do jednorazowego kłębu pary przy trafieniu) */
+  private pourWas = new Map<number, number>();
+  private bucketM = new THREE.Matrix4();
+  private bucketL = new THREE.Matrix4();
+  private bucketR = new THREE.Matrix4();
+  private mouth = new THREE.Vector3();
   private bucketWater!: THREE.InstancedMesh;
   private rods: THREE.InstancedMesh;
   private frameNo = 0;
@@ -698,6 +707,7 @@ export class GameRenderer {
     this.bucketWater = new THREE.InstancedMesh(new THREE.CircleGeometry(0.064, 10).rotateX(-Math.PI / 2).translate(0.19, 0.33, 0.06), new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 }), MAX_UNITS);
     this.bucketWater.count = 0; this.bucketWater.frustumCulled = false;
     this.scene.add(this.bucketWater);
+    this.fireFx = new FireCrewFx(this.scene);
     this.handTorches.count = 0;
     this.handTorches.frustumCulled = false;
     this.scene.add(this.handTorches);
@@ -3187,6 +3197,51 @@ export class GameRenderer {
   private bedA = new THREE.Vector3();
   private bedB = new THREE.Vector3();
 
+  /**
+   * Gaszący pożar: ikonka nad głową, przy studni kręci korbą (wiadro w studni, wraca pełne),
+   * przy ogniu unosi wiadro, przechyla je i chlusta wodą (krople łukiem, rozbryzg, kłąb pary nad ogniem).
+   */
+  private fireCrew(g: GameState, u: GameState['units'][number], i: number, t: THREE.Object3D, view: TerrainView, jobs: Map<number, GameState['buildings'][number]>, heading: number, still: boolean, alpha: number): void {
+    const { width, height } = g.map;
+    this.fireFx.icon(u.id, t.position.x, t.position.y + 1.02, t.position.z, this.time);
+    if (!still || u.timer <= 0) { this.pourWas.delete(u.id); return; }
+    const p = Math.min(1, (u.timer + (this.calm ? 0 : alpha)) / FIRE_DRAW);
+    const team = TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888;
+    if (u.bucket === 1) {
+      // przy studni: obie ręce na korbie, wiadro w studni; pod koniec wyciąga je pełne
+      const c = this.time * 9 + u.id;
+      this.figures.set(i, t.matrix, 0, false, team, u.id, -1.35 + Math.sin(c) * 0.45, -1.35 + Math.cos(c) * 0.45, false);
+      const up = p >= 0.75;
+      this.buckets.setMatrixAt(i, up ? t.matrix : ZERO);
+      this.bucketWater.setMatrixAt(i, up ? t.matrix : ZERO);
+      return;
+    }
+    // przy ogniu: 0–0,45 unosi wiadro do piersi, 0,45–0,7 przechyla, do końca leje
+    const lift = Math.min(1, p / 0.45), ease = lift * lift * (3 - 2 * lift);
+    const tilt = p < 0.45 ? 0 : Math.min(1, (p - 0.45) / 0.25) * 2.0;
+    this.figures.set(i, t.matrix, 0, false, team, u.id, -0.35 - 1.55 * ease - tilt * 0.15, -0.35 - 1.45 * ease - tilt * 0.15, false);
+    // wiadro: z prawej dłoni na wprost piersi, obrót wokół jego środka
+    this.bucketL.makeTranslation(0.19 - 0.17 * ease, 0.3 + 0.3 * ease, 0.06 + 0.17 * ease)
+      .multiply(this.bucketR.makeRotationX(tilt))
+      .multiply(this.bucketM.makeTranslation(-0.19, -0.3, -0.06));
+    this.bucketM.copy(t.matrix).multiply(this.bucketL);
+    this.buckets.setMatrixAt(i, this.bucketM);
+    this.bucketWater.setMatrixAt(i, tilt < 0.7 ? this.bucketM : ZERO);
+    if (this.calm) return;
+    if (tilt > 0.6 && p < 0.99) {
+      this.mouth.set(0.19, 0.34, 0.13).applyMatrix4(this.bucketM);
+      this.fireFx.pour(this.mouth, this.armV.set(Math.sin(heading), 0, Math.cos(heading)), Math.min(1, (tilt - 0.6) * 1.5) * (1 - Math.max(0, p - 0.9) * 8));
+    }
+    const was = this.pourWas.get(u.id) ?? 0;
+    this.pourWas.set(u.id, p);
+    const fire = jobs.get(u.fireAt ?? 0);
+    if (fire && was < 0.72 && p >= 0.72) {
+      const fp = footprint(BUILDINGS[fire.type]!, fire.rot);
+      const cx = fire.x + fp.w / 2, cy = fire.y + fp.h / 2;
+      this.fireFx.steam(cx - width / 2, this.standY(view, cx, cy) + 0.6, cy - height / 2, 7);
+    }
+  }
+
   private syncUnits(g: GameState, view: TerrainView, alpha: number): void {
     // karczmy z karczmarzem: wieczorem schodzą się do nich ludzie (rytm dnia w symulacji)
     this.taverns.clear();
@@ -3197,6 +3252,7 @@ export class GameRenderer {
     const t = this.tmp;
     this.unitSpots.length = 0;
     this.unitY.clear();
+    this.fireFx.begin();
     const jobs = new Map<number, GameState['buildings'][number]>();
     this.camps.clear();
     for (const b of g.buildings) { jobs.set(b.id, b); if (BUILDINGS[b.type]!.idleSlots && b.door >= 0) this.camps.set(b.door, b); }
@@ -3232,6 +3288,17 @@ export class GameRenderer {
       // figura idzie łukiem za pozycją z symulacji i omija innych; patrzy tam, dokąd naprawdę idzie
       const cv = this.crowd.move(u.id, fx + ox, fy + oz, heading, this.calm, true);
       if (cv.speed > 0.3) { heading = cv.heading; this.facing.set(u.id, heading); }
+      // gaszący na miejscu: twarzą do studni (czerpie) albo do ognia (wylewa)
+      const bucketGoal = u.bucket ? jobs.get(u.bucket === 1 ? u.target : u.fireAt ?? 0) : undefined;
+      if (bucketGoal && still && cv.speed <= 0.3) {
+        const fpB = footprint(BUILDINGS[bucketGoal.type]!, bucketGoal.rot);
+        const want = Math.atan2(bucketGoal.x + fpB.w / 2 - cv.sx, bucketGoal.y + fpB.h / 2 - cv.sy);
+        let diff = want - heading;
+        while (diff > Math.PI) diff -= Math.PI * 2;
+        while (diff < -Math.PI) diff += Math.PI * 2;
+        heading += this.calm ? diff : diff * 0.2;
+        this.facing.set(u.id, heading);
+      }
       const walking = (!still || cv.speed > 0.35) && !this.calm;
       let st = this.strides.get(u.id);
       if (!st) { st = { x: cv.sx, y: cv.sy, phase: u.id }; this.strides.set(u.id, st); }
@@ -3463,7 +3530,7 @@ export class GameRenderer {
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
       t.scale.setScalar(FIG);
       // stojący bez zajęcia nie zamiera: przestępuje, rozgląda się, drapie się, przeciąga, przenosi ciężar
-      const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !chopping && !mining && !crafting && !hammering && !fighting && u.carryRes < 0 && !lean;
+      const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !chopping && !mining && !crafting && !hammering && !fighting && u.carryRes < 0 && !lean && !u.bucket;
       const ia = rest ? idle(u.id, this.time) : undefined;
       // rozmowa: obaj zwracają się do siebie, mówiący gestykuluje, słuchający kiwa głową; co kilkanaście sekund chwila ciszy
       const mate = rest ? this.chats.get(u.id) : undefined;
@@ -3557,6 +3624,7 @@ export class GameRenderer {
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
       this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, (u.carryRes >= 0 && !log) || !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : waving ? -2.55 + Math.sin(this.time * 14) * 0.35 : ia?.arm, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : waving ? -swing * 0.8 : ia ? (ia.armL ?? 0.05) : -0.5, panic || waving || !!ia?.legs);
+      if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();
@@ -3610,6 +3678,7 @@ export class GameRenderer {
     this.handTorches.count = n;
     this.handTorches.instanceMatrix.needsUpdate = true;
     for (const m of [this.buckets, this.bucketWater]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
+    this.fireFx.end(this.calm ? 0 : Math.min(0.05, this.frameDt), (x, z) => this.standY(view, x + width / 2, z + height / 2));
     for (const m of [...this.loads.values(), this.logs, this.planks]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;

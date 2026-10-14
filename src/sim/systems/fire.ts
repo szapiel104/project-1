@@ -21,7 +21,7 @@ const CREW = 4;
 /** Studnia dalej niż tyle pól od pożaru się nie przyda */
 const WELL_RANGE = 40;
 /** Czerpanie wody i wylanie trwa po tyle ticków */
-const DRAW = 15;
+export const DRAW = 15;
 
 const tileOf = (g: GameState, u: { px: number; py: number }): number => (u.py >> 8) * g.map.width + (u.px >> 8);
 const center = (b: Building): [number, number] => { const fp = footprint(BUILDINGS[b.type]!, b.rot); return [b.x + fp.w / 2, b.y + fp.h / 2]; };
