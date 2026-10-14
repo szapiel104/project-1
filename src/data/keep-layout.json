@@ -1,5 +1,5 @@
 {
-  "about": "Plan zamku (twierdzy gracza): wspólny dla symulacji (src/data/keep.ts) i modelu w Blenderze (tools/models/keep.py). Wiersz = y (0 tył, ostatni przód z bramą), kolumna = x. # mur bez przejścia (donżon, wieże bramy), = chodnik na murach i w basztach, S schody na mury, . dziedziniec, G brama, o studnia, T sala tronowa, K kuchnia, C komnata pana, B koszary, L korytarz lochów, 1-4 cele. Między polami różnych pomieszczeń stoi ściana; doors = przejścia w ścianach (także wejście na schody i ze schodów na mur), bars = kraty.",
+  "about": "Plan zamku (twierdzy gracza): wspólny dla symulacji (src/data/keep.ts) i modelu w Blenderze (tools/models/keep.py). Wiersz = y (0 tył, ostatni przód z bramą), kolumna = x. # mur bez przejścia (donżon), = chodnik na murach, w basztach i w wieżach bramy, S schody na mury, . dziedziniec, G brama, o studnia, T sala tronowa, K kuchnia, C komnata pana, B koszary, L korytarz lochów, 1-4 cele. Między polami różnych pomieszczeń stoi ściana; doors = przejścia w ścianach (także wejście na schody i ze schodów na mur), bars = kraty.",
   "size": 11,
   "tiles": [
     "====###====",
@@ -12,7 +12,7 @@
     "=2L..o..BB=",
     "=3LS...SBB=",
     "=4LS...SBB=",
-    "====#G#===="
+    "=====G====="
   ],
   "doors": [
     [

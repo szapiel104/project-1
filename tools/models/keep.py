@@ -105,7 +105,8 @@ for k in (-3.2, -1.6, 1.6, 3.2):
 # Po murze chodzi się pola, które w planie mają „=”; od pola zamyka je mur z blankami, od dziedzińca niskie przedpiersie
 # z przerwą tam, gdzie wychodzą schody.
 def is_tower(dx, dy):
-    return dx in (0, N - 1) and dy in (0, N // 2, N - 1)
+    """Baszty (narożne i w połowie boków) i wieże bramy: tam zamiast chodnika jest izba"""
+    return (dx in (0, N - 1) and dy in (0, N // 2, N - 1)) or (dy == N - 1 and tile(dx, dy) == '=' and 'G' in (tile(dx - 1, dy), tile(dx + 1, dy)))
 stair_tops = {(dx, dy + 1) for dy in range(N) for dx in range(N) if tile(dx, dy) == 'S' and tile(dx, dy + 1) == '='}
 for dy in range(N):
     for dx in range(N):
@@ -135,87 +136,131 @@ for dy in range(N):
                 boxs('base', 'castle', w, 0.24, d, ex, WALK, ez)
                 b.box('base', 'castleDark', w + 0.02, 0.03, d + 0.02, ex, WALK + 0.24, ez)
 
-# ---------------- baszty: w narożnikach okrągłe, w połowie boków kwadratowe; w środku izba na wysokości chodnika ----------------
+# ---------------- baszty i wieże bramy: izba na wysokości chodnika, drzwi na mur, strzelnice ----------------
+# Izby mają gładkie ściany (pierścień z prawdziwych wycinków, nie z klocków) i strzelnice: wąskie okna,
+# przez które widać pole przed murem. Wysokość izby z zapasem, żeby nikt nie zawadzał głową.
 TR = 0.82
-RW = 0.13   # grubość ściany izby w baszcie
+RW = 0.13      # grubość ściany izby
 DOORW = 0.5
+ROOM_UP = 0.95  # wysokość izby nad chodnikiem
+SLIT = (0.26, 0.56)  # strzelnica: od-do nad chodnikiem
 def tower_doors(dx, dy):
-    """Kierunki (ox, oy), w których z izby w baszcie wychodzi się na chodnik muru"""
-    out = []
-    for ox, oy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
-        if tile(dx + ox, dy + oy) == '=' and 0 <= dx + ox < N and 0 <= dy + oy < N:
-            out.append((ox, oy))
-    return out
+    """Kierunki (ox, oy), w których z izby wychodzi się na chodnik muru"""
+    return [(ox, oy) for ox, oy in ((-1, 0), (1, 0), (0, -1), (0, 1))
+            if 0 <= dx + ox < N and 0 <= dy + oy < N and tile(dx + ox, dy + oy) == '=']
+def ring_piece(mat, x0, z0, ri, ro, a0, a1, y0, y1, jamb0=False, jamb1=False):
+    """Wycinek okrągłej ściany: lico zewnętrzne i wewnętrzne, wierzch, ościeża przy otworach"""
+    P = lambda r, a, y: (x0 + math.sin(a) * r, y, z0 + math.cos(a) * r)
+    am = (a0 + a1) / 2
+    inside = (x0, (y0 + y1) / 2, z0)
+    outside = (x0 + math.sin(am) * 9, (y0 + y1) / 2, z0 + math.cos(am) * 9)
+    b.poly('base', mat, [P(ro, a0, y0), P(ro, a1, y0), P(ro, a1, y1), P(ro, a0, y1)], away=inside)
+    b.poly('base', mat, [P(ri, a0, y0), P(ri, a1, y0), P(ri, a1, y1), P(ri, a0, y1)], away=outside)
+    b.poly('base', mat, [P(ro, a0, y1), P(ro, a1, y1), P(ri, a1, y1), P(ri, a0, y1)], away=(x0, y0 - 5, z0))
+    b.poly('base', mat, [P(ro, a0, y0), P(ro, a1, y0), P(ri, a1, y0), P(ri, a0, y0)], away=(x0, y1 + 5, z0))
+    for jamb, a in ((jamb0, a0), (jamb1, a1)):
+        if jamb:
+            b.poly('base', 'castleDark', [P(ri, a, y0), P(ro, a, y0), P(ro, a, y1), P(ri, a, y1)], away=P((ri + ro) / 2, am, (y0 + y1) / 2))
 for sx in (-1, 1):
     for sz in (-1, 1):
         dx, dy = (0 if sx < 0 else N - 1), (0 if sz < 0 else N - 1)
         tx, tz = cx(dx), cz(dy)
         doors = tower_doors(dx, dy)
-        b.prism('base', 'castleDark', TR + 0.12, TR, 0.5, tx, 0.0, tz, seg=18, top=False)
-        b.prism('base', 'castle', TR, TR, TOP - 0.5, tx, 0.5, tz, seg=18, top=False)
+        out_a = math.atan2(sx, sz)
+        y_top = WALK + ROOM_UP
+        b.prism('base', 'castleDark', TR + 0.12, TR, 0.5, tx, 0.0, tz, seg=24, top=False)
+        b.prism('base', 'castle', TR, TR, TOP - 0.5, tx, 0.5, tz, seg=24, top=False)
         block(tx - TR - 0.12, tx + TR + 0.12, tz - TR - 0.12, tz + TR + 0.12, 0, TOP)
-        b.prism('base', 'castleDark', TR - RW, TR - RW, 0.06, tx, TOP, tz, seg=18)   # podłoga izby
-        # ściana izby z odcinków; tam, gdzie chodnik, drzwi z nadprożem
-        seg = 18
+        b.prism('base', 'castleDark', TR - RW, TR - RW, 0.06, tx, TOP, tz, seg=24)   # podłoga izby
+        seg = 24
         for k in range(seg):
-            a = 2 * math.pi * (k + 0.5) / seg
-            ox, oz = math.sin(a), math.cos(a)
-            door = any(ox * ddx + oz * ddy > 0.93 for ddx, ddy in doors)
-            ln = 2 * math.pi * TR / seg + 0.02
+            a0, a1 = 2 * math.pi * k / seg, 2 * math.pi * (k + 1) / seg
+            am = (a0 + a1) / 2
+            ox, oz = math.sin(am), math.cos(am)
+            door = any(ox * ddx + oz * ddy > 0.95 for ddx, ddy in doors)
+            rel = abs((am - out_a + math.pi) % (2 * math.pi) - math.pi)
+            window = not door and (rel < 0.14 or abs(rel - 0.75) < 0.14 or abs(rel - 1.75) < 0.14)
             px, pz = tx + ox * (TR - RW / 2), tz + oz * (TR - RW / 2)
             if door:
-                b.box('base', 'castle', ln, 2.55 - (WALK + 0.62), RW, px, WALK + 0.62, pz, a)
-                b.box('base', 'woodDark', ln, 0.04, RW + 0.02, px, WALK + 0.6, pz, a)
+                ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, WALK + 0.62, y_top)
+                b.box('base', 'woodDark', 2 * math.pi * TR / seg + 0.02, 0.04, RW + 0.02, px, WALK + 0.6, pz, am)
+            elif window:
+                ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, TOP, WALK + SLIT[0])
+                ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, WALK + SLIT[1], y_top)
+                block(px - 0.09, px + 0.09, pz - 0.09, pz + 0.09, WALK - 0.1, 9)
             else:
-                b.box('base', 'castle', ln, 2.55 - WALK + 0.06, RW, px, WALK - 0.06, pz, a)
+                ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, TOP, y_top)
                 block(px - 0.09, px + 0.09, pz - 0.09, pz + 0.09, WALK - 0.1, 9)
         for ddx, ddy in doors:  # ościeża drzwi
             for side in (-1, 1):
-                px = tx + ddx * (TR - 0.05) + (ddy * side * DOORW / 2 if ddy else 0)
-                pz = tz + ddy * (TR - 0.05) + (ddx * side * DOORW / 2 if ddx else 0)
-                boxs('base', 'castleDark', 0.12, 0.62, 0.12, px, WALK, pz)
-        b.prism('base', 'woodDark', TR - RW, TR - RW, 0.03, tx, 2.52, tz, seg=18, top=False)
-        b.poly('base', 'wood', [(tx + math.sin(2 * math.pi * k / 18) * (TR - RW), 2.52, tz + math.cos(2 * math.pi * k / 18) * (TR - RW)) for k in range(18)], away=(tx, 3.5, tz))
-        b.prism('base', 'castleDark', TR + 0.05, TR + 0.05, 0.08, tx, 2.55, tz, seg=18)
-        b.merlons_ring('base', 'castle', tx, tz, TR - 0.02, 2.63, n=12, w=0.17, h=0.18, t=0.1)
-        b.prism('base', 'castleDark', TR + 0.1, TR + 0.1, 0.04, tx, 2.81, tz, seg=18)
-        # spód okapu dachu: przez blanki widać drewniany strop, a nie niebo w środku stożka
-        b.poly('base', 'woodDark', [(tx + math.sin(2 * math.pi * k / 18) * (TR + 0.1), 2.81, tz + math.cos(2 * math.pi * k / 18) * (TR + 0.1)) for k in range(18)], away=(tx, 3.5, tz))
-        b.prism('base', 'slate', TR + 0.1, 0.0, 1.25, tx, 2.85, tz, seg=18)
-        b.box('base', 'gold', 0.06, 0.12, 0.06, tx, 4.08, tz)
-        b.box('base', 'woodDark', 0.03, 0.45, 0.03, tx, 4.15, tz)
-        b.box('base', 'flag', 0.3, 0.17, 0.015, tx + 0.15, 4.4, tz)
-        for a0 in (math.atan2(sx, sz) - 0.7, math.atan2(sx, sz) + 0.7):
-            for y in (1.0, 2.1):
-                b.box('base', 'dark', 0.05, 0.22, 0.015, tx + math.sin(a0) * (TR + 0.002), y, tz + math.cos(a0) * (TR + 0.002), a0)
+                px = tx + ddx * (TR - 0.06) + (ddy * side * DOORW / 2 if ddy else 0)
+                pz = tz + ddy * (TR - 0.06) + (ddx * side * DOORW / 2 if ddx else 0)
+                boxs('base', 'castleDark', 0.13, 0.62, 0.13, px, WALK, pz)
+        # strop izby i dach
+        b.poly('base', 'wood', [(tx + math.sin(2 * math.pi * k / 24) * (TR - RW), y_top - 0.01, tz + math.cos(2 * math.pi * k / 24) * (TR - RW)) for k in range(24)], away=(tx, y_top + 2, tz))
+        b.prism('base', 'castleDark', TR + 0.05, TR + 0.05, 0.08, tx, y_top, tz, seg=24)
+        b.merlons_ring('base', 'castle', tx, tz, TR - 0.02, y_top + 0.08, n=12, w=0.17, h=0.18, t=0.1)
+        b.prism('base', 'castleDark', TR + 0.1, TR + 0.1, 0.04, tx, y_top + 0.26, tz, seg=24)
+        b.poly('base', 'woodDark', [(tx + math.sin(2 * math.pi * k / 24) * (TR + 0.1), y_top + 0.26, tz + math.cos(2 * math.pi * k / 24) * (TR + 0.1)) for k in range(24)], away=(tx, y_top + 5, tz))
+        b.prism('base', 'slate', TR + 0.1, 0.0, 1.25, tx, y_top + 0.3, tz, seg=24)
+        b.box('base', 'gold', 0.06, 0.12, 0.06, tx, y_top + 1.53, tz)
+        b.box('base', 'woodDark', 0.03, 0.45, 0.03, tx, y_top + 1.6, tz)
+        b.box('base', 'flag', 0.3, 0.17, 0.015, tx + 0.15, y_top + 1.85, tz)
+        for a0 in (out_a - 0.7, out_a + 0.7):
+            b.box('base', 'dark', 0.05, 0.22, 0.015, tx + math.sin(a0) * (TR + 0.002), 1.0, tz + math.cos(a0) * (TR + 0.002), a0)
         torch('interior', tx - sx * 0.5, WALK + 0.36, tz - sz * 0.5)
+
+def square_room(tx, tz, hx, hz, y_top, doors, windows, roof_merlons=True):
+    """Izba kwadratowa na wysokości chodnika: ściany z drzwiami (ox, oz) i strzelnicami, strop, blanki na dachu"""
+    def side_wall(axis_x, sgn, half_len, center, door, win):
+        # ściana równoległa do osi x (axis_x=True) w z = tz + sgn*(hz - RW/2), albo równoległa do z
+        segs = []
+        if door:
+            segs.append((-half_len, -DOORW / 2, WALK, y_top))
+            segs.append((DOORW / 2, half_len, WALK, y_top))
+            segs.append((-DOORW / 2, DOORW / 2, WALK + 0.62, y_top))
+        elif win:
+            w = 0.16
+            segs.append((-half_len, -w / 2, WALK, y_top))
+            segs.append((w / 2, half_len, WALK, y_top))
+            segs.append((-w / 2, w / 2, WALK, WALK + SLIT[0]))
+            segs.append((-w / 2, w / 2, WALK + SLIT[1], y_top))
+        else:
+            segs.append((-half_len, half_len, WALK, y_top))
+        for u0, u1, y0, y1 in segs:
+            if axis_x:
+                z = tz + sgn * (hz - RW / 2)
+                b.box('base', 'castle', u1 - u0, y1 - y0, RW, tx + (u0 + u1) / 2, y0, z)
+                if y0 <= WALK + 0.01: block(tx + u0, tx + u1, z - RW / 2, z + RW / 2, WALK - 0.1, 9)
+            else:
+                x = tx + sgn * (hx - RW / 2)
+                b.box('base', 'castle', RW, y1 - y0, u1 - u0, x, y0, tz + (u0 + u1) / 2)
+                if y0 <= WALK + 0.01: block(x - RW / 2, x + RW / 2, tz + u0, tz + u1, WALK - 0.1, 9)
+        if door:
+            if axis_x:
+                b.box('base', 'woodDark', DOORW + 0.04, 0.04, RW + 0.02, tx, WALK + 0.6, tz + sgn * (hz - RW / 2))
+            else:
+                b.box('base', 'woodDark', RW + 0.02, 0.04, DOORW + 0.04, tx + sgn * (hx - RW / 2), WALK + 0.6, tz)
+    for sgn in (-1, 1):
+        side_wall(True, sgn, hx, tz, (0, sgn) in doors, (0, sgn) in windows)
+        side_wall(False, sgn, hz - RW, tx, (sgn, 0) in doors, (sgn, 0) in windows)
+    b.box('base', 'castleDark', 2 * hx - 0.1, 0.06, 2 * hz - 0.1, tx, TOP, tz)
+    b.box('base', 'wood', 2 * hx - 2 * RW, 0.02, 2 * hz - 2 * RW, tx, y_top - 0.02, tz, bottom=True)
+    b.box('base', 'castleDark', 2 * hx + 0.1, 0.07, 2 * hz + 0.1, tx, y_top, tz)
+    if roof_merlons:
+        for s2 in (-1, 1):
+            b.merlons_line('base', 'castle', tx - hx + 0.1, tz + s2 * (hz - 0.03), tx + hx - 0.1, tz + s2 * (hz - 0.03), y_top + 0.07, step=0.3, w=0.14, h=0.18, t=0.08)
+            b.merlons_line('base', 'castle', tx + s2 * (hx - 0.03), tz - hz + 0.1, tx + s2 * (hx - 0.03), tz + hz - 0.1, y_top + 0.07, step=0.3, w=0.14, h=0.18, t=0.08)
+# baszty w połowie boków: większe (1,6 pola), izba wysoka na człowieka z zapasem
 for sx in (-1, 1):
-    dx = 0 if sx < 0 else N - 1
-    dy = N // 2
+    dx, dy = (0 if sx < 0 else N - 1), N // 2
     tx, tz = cx(dx), cz(dy)
-    S2 = 0.65
+    S2 = 0.8
     b.box('base', 'castle', 2 * S2, TOP - G, 2 * S2, tx, G, tz)
     block(tx - S2, tx + S2, tz - S2, tz + S2, 0, TOP)
-    b.box('base', 'castleDark', 2 * S2 - 0.1, 0.06, 2 * S2 - 0.1, tx, TOP, tz)
-    # ściany izby: od pola i od dziedzińca pełne, w kierunku muru drzwi
-    for ox in (-1, 1):
-        b.box('base', 'castle', RW, 2.2 - WALK, 2 * S2, tx + ox * (S2 - RW / 2), WALK, tz)
-        block(tx + ox * (S2 - RW / 2) - RW / 2, tx + ox * (S2 - RW / 2) + RW / 2, tz - S2, tz + S2, WALK - 0.1, 9)
-    for oz in (-1, 1):
-        zz = tz + oz * (S2 - RW / 2)
-        for side in (-1, 1):
-            w = S2 - DOORW / 2
-            b.box('base', 'castle', w, 2.2 - WALK, RW, tx + side * (DOORW / 2 + w / 2), WALK, zz)
-            block(tx + side * DOORW / 2, tx + side * S2, zz - RW / 2, zz + RW / 2, WALK - 0.1, 9)
-        b.box('base', 'castle', DOORW, 2.2 - (WALK + 0.62), RW, tx, WALK + 0.62, zz)
-        b.box('base', 'woodDark', DOORW + 0.04, 0.04, RW + 0.02, tx, WALK + 0.6, zz)
-    b.box('base', 'wood', 2 * S2 - 2 * RW, 0.02, 2 * S2 - 2 * RW, tx, 2.17, tz, bottom=True)
-    b.box('base', 'castleDark', 1.4, 0.07, 1.4, tx, 2.2, tz)
-    for s2 in (-1, 1):
-        b.merlons_line('base', 'castle', tx - 0.6, tz + s2 * 0.62, tx + 0.6, tz + s2 * 0.62, 2.27, step=0.3, w=0.14, h=0.16, t=0.08)
-        b.merlons_line('base', 'castle', tx + s2 * 0.62, tz - 0.6, tx + s2 * 0.62, tz + 0.6, 2.27, step=0.3, w=0.14, h=0.16, t=0.08)
-    b.box('base', 'dark', 0.015, 0.26, 0.06, tx + sx * 0.656, 1.0, tz)
-    torch('interior', tx + sx * 0.48, WALK + 0.36, tz)
+    square_room(tx, tz, S2, S2, WALK + ROOM_UP, doors=[(0, -1), (0, 1)], windows=[(sx, 0), (-sx, 0)])
+    b.box('base', 'dark', 0.015, 0.26, 0.06, tx + sx * (S2 + 0.006), 1.0, tz)
+    torch('interior', tx + sx * (S2 - RW - 0.03), WALK + 0.36, tz + 0.35)
 
 # ---------------- schody na mury: kamienne stopnie od dziedzińca w górę ku koronie ----------------
 for dx in range(N):
@@ -258,16 +303,17 @@ b.box('base', 'flag', 0.7, 0.4, 0.02, 0.37, 5.65, DZ)
 
 # ---------------- brama: dwie wieże, przejazd, krata, wrota, most zwodzony ----------------
 GZ = H - 0.5
+# wieże bramy: w dole pełne, wyżej izby z wejściem z chodnika muru (od strony schodów) i strzelnicami na przedpole
 for s in (-1, 1):
     x = cx(gx) + s * 0.95
-    b.box('base', 'castle', 0.9, 2.35 - G, 1.4, x, G, GZ + 0.2)
-    b.box('base', 'castleDark', 1.0, 0.07, 1.5, x, 2.35, GZ + 0.2)
-    b.merlons_line('base', 'castle', x - 0.4, GZ + 0.86, x + 0.4, GZ + 0.86, 2.42, step=0.2, w=0.12, h=0.16, t=0.08)
-    b.box('base', 'dark', 0.06, 0.26, 0.015, x, 1.4, GZ + 0.906)
+    b.box('base', 'castle', 0.9, TOP - G, 1.4, x, G, GZ + 0.2)
+    block(x - 0.45, x + 0.45, GZ - 0.5, GZ + 0.9, 0, TOP)
+    square_room(x, GZ + 0.2, 0.45, 0.7, WALK + ROOM_UP, doors=[(s, 0)], windows=[(0, 1), (0, -1)])
     b.box('base', 'flag', 0.32, 0.6, 0.02, x, 0.85, GZ + 0.915)
-b.box('base', 'castle', 1.0, 2.2 - (G + 0.95), 1.36, cx(gx), G + 0.95, GZ + 0.2)
-b.box('base', 'castleDark', 1.0, 0.06, 1.44, cx(gx), 2.2, GZ + 0.2)
-b.merlons_line('base', 'castle', cx(gx) - 0.45, GZ + 0.84, cx(gx) + 0.45, GZ + 0.84, 2.26, step=0.22, w=0.12, h=0.16, t=0.08)
+    torch('interior', x + s * 0.28, WALK + 0.36, GZ + 0.2)
+b.box('base', 'castle', 1.0, WALK + ROOM_UP - 0.15 - (G + 0.95), 1.36, cx(gx), G + 0.95, GZ + 0.2)
+b.box('base', 'castleDark', 1.0, 0.06, 1.44, cx(gx), WALK + ROOM_UP - 0.15, GZ + 0.2)
+b.merlons_line('base', 'castle', cx(gx) - 0.45, GZ + 0.84, cx(gx) + 0.45, GZ + 0.84, WALK + ROOM_UP - 0.09, step=0.22, w=0.12, h=0.16, t=0.08)
 b.box('base', 'dark', 1.0, 0.004, 1.4, cx(gx), G + 0.946, GZ + 0.2)
 for k in range(9):  # łuk z ciosów od frontu
     a = math.pi * (k + 0.5) / 9
@@ -621,6 +667,10 @@ VIEWS = [
     ['schody przy koszarach', [1.1, E + 0.3, 2.1], [2.2, 1.2, 4.2], OUT, 18],
     ['na murze', [-5.0, WY, 3.8], [-5.0, WY - 0.2, -2], OUT, 20],
     ['izba baszty', [-5.0, WY, 4.7], [-4.0, WY - 0.1, 5.2], OUT, 16],
+    ['baszta: strzelnice', [-4.75, WY, 4.75], [-5.6, WY - 0.05, 5.6], OUT, 16],
+    ['izba baszty bocznej', [-5.0, WY, -0.4], [-5.0, WY, 0.7], OUT, 16],
+    ['wieża bramy: izba', [-0.8, WY, 5.2], [-0.95, WY - 0.05, 6.0], OUT, 16],
+    ['z muru do wieży bramy', [-2.2, WY, 5.0], [-0.9, WY, 5.0], OUT, 20],
     ['z muru na dziedziniec', [4.8, WY, 1.0], [0, 0.3, 1.0], OUT, 22],
 ]
 b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G, 'wallY': WALK, 'views': VIEWS})

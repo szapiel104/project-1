@@ -134,7 +134,7 @@ class Building:
             out[key] = tris
         return out
 
-    def save(self, name, maxe=0.22, rays=20, reach=0.35, extra=None):
+    def save(self, name, maxe=0.22, rays=20, reach=0.35, extra=None, grime=True):
         groups = sorted({g for g, _ in self.parts})
         tris = self._tris(list(self.parts), maxe)
         # dwa widoki: z dachem (base + shell) i z odkrytym wnętrzem (base + interior + floor)
@@ -172,7 +172,11 @@ class Building:
                         h = tree.ray_cast(p + n * 0.003, dd, reach)
                         if h[0] is not None:
                             hit += w * (1 - (h[3] / reach) * 0.6)
-                    k = 0.42 + 0.58 * (1 - hit / max(tot, 1e-6))
+                    k = 0.32 + 0.68 * (1 - hit / max(tot, 1e-6))
+                    if grime:
+                        # brud i zacieki: ciemniej przy ziemi i w plamach (szum z położenia), żeby kamień nie był jednolity
+                        spot = math.sin(p.x * 1.7 + p.z * 0.9) * math.sin(p.z * 1.3 - p.x * 0.6 + p.y * 2.1)
+                        k *= (0.86 + 0.14 * min(1.0, p.y / 0.7)) * (0.9 + 0.1 * spot)
                     pos += struct.pack('<3h', *[max(-32767, min(32767, round(q * Q))) for q in p])
                     ao.append(max(0, min(255, round(k * 255))))
                 ntri += 1

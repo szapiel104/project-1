@@ -632,6 +632,11 @@ describe('zamek', () => {
     expect(up).not.toBeNull();
     expect(up).toContain(at(3, 8));
     expect(g.walls[wallTop]! & 16).toBe(16);
+    // wieża bramy: z chodnika muru (od schodów) do izby, z dziedzińca prosto nie
+    const gateTower = at(4, 10);
+    const toGate = findPath(g, outside, (t) => t === gateTower, 900, 0)!;
+    expect(toGate).toContain(at(3, 10));
+    expect(g.walls[gateTower]! & 16).toBe(16);
     // cele za kratą: nie da się do nich wejść
     expect(findPath(g, outside, (t) => t === at(1, 7), 900, 0)).toBeNull();
   });
