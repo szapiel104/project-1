@@ -62,6 +62,36 @@ function boxUv(geo: THREE.BufferGeometry, scale: number): THREE.BufferGeometry {
   return geo;
 }
 
+/** Długa suknia gospodyni (od pasa do ziemi); splot płótna drobny jak na reszcie ubrań */
+export function skirtGeometry(): THREE.BufferGeometry {
+  const g = new THREE.LatheGeometry([[0.0, 0.0], [0.155, 0.0], [0.15, 0.06], [0.125, 0.2], [0.098, 0.31], [0.0, 0.32]].map(([r, y]) => new THREE.Vector2(r, y)), 16);
+  const uv = g.attributes.uv!;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 3.5, uv.getY(i) * 2);
+  return g;
+}
+
+let yardMats: Record<string, [THREE.Material, number]> | null = null;
+/** Materiały podwórka: deski, płótno, ziemia (tekstury zdjęciowe) i gładkie; liczba = skala tekstury */
+function yardMaterials(): Record<string, [THREE.Material, number]> {
+  if (yardMats) return yardMats;
+  const wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks'), normalMap: normal('planks') });
+  const cloth = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, map: pattern('burlap'), normalMap: normal('burlap'), side: THREE.DoubleSide });
+  const soil = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('soil'), normalMap: normal('soil') });
+  const plain = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 });
+  return (yardMats = { wood: [wood, 6], cloth: [cloth, 8], soil: [soil, 3], plain: [plain, 1] });
+}
+/** Nazwy przedmiotów podwórka z yard.json (do podglądu modeli) */
+export const YARD_KEYS = ['tub', 'post', 'woodpile', 'bench', 'basket', 'bucket', 'garden', ...CLOTHS];
+/** Jeden przedmiot podwórka jako zwykła grupa siatek (podgląd modeli) */
+export function yardModel(key: string): THREE.Group {
+  const g = new THREE.Group(), MAT = yardMaterials();
+  for (const part of Y[key] ?? []) {
+    const [mat, scale] = MAT[part.mat] ?? MAT.plain!;
+    g.add(new THREE.Mesh(boxUv(modelGeo(part), scale), mat));
+  }
+  return g;
+}
+
 export class Family {
   private figs: Figures;
   private skirts: THREE.InstancedMesh;
@@ -91,7 +121,7 @@ export class Family {
       m.count = 0; m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = shadow; scene.add(m); return m;
     };
     // długa suknia z fartuchem: od pasa do ziemi zasłania nogi (postać z gry ma męską sylwetkę)
-    const skirt = new THREE.LatheGeometry([[0.0, 0.0], [0.155, 0.0], [0.15, 0.06], [0.125, 0.2], [0.098, 0.31], [0.0, 0.32]].map(([r, y]) => new THREE.Vector2(r, y)), 12);
+    const skirt = skirtGeometry();
     this.skirts = inst(skirt, MAX, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, map: pattern('burlap') }));
     this.skirts.setColorAt(0, this.c.setHex(0xffffff));
     // miotła z witek: kij w dłoni, miotła przy ziemi (układ ręki: bark w początku, dłoń 0,185 niżej)
@@ -99,11 +129,8 @@ export class Family {
       tint(new THREE.CylinderGeometry(0.009, 0.009, 0.62, 5).translate(0, -0.2, 0.05).rotateX(0.35), 0x7a5a38),
       tint(new THREE.ConeGeometry(0.06, 0.16, 6).translate(0, -0.5, 0.0).rotateX(0.35), 0xc8a85a),
     ].map((g) => { g.deleteAttribute('uv'); return g; }))!, MAX, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }));
-    const wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks'), normalMap: normal('planks') });
-    const cloth = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, map: pattern('burlap'), normalMap: normal('burlap'), side: THREE.DoubleSide });
-    const soil = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('soil'), normalMap: normal('soil') });
-    const plain = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 });
-    const MAT: Record<string, [THREE.Material, number]> = { wood: [wood, 6], cloth: [cloth, 8], soil: [soil, 3], plain: [plain, 1] };
+    const MAT = yardMaterials();
+    const cloth = MAT.cloth![0];
     for (const key of [...PROPS.filter((p) => p !== 'line'), 'post', ...CLOTHS]) {
       const list: THREE.InstancedMesh[] = [];
       for (const part of Y[key] ?? []) {

@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.21.5 — podgląd modeli (2026-10-14)
+
+- Nowa strona `modele.html`: każdy model gry (budynki, ludzie, zwierzęta, podwórko, graty) osobno na kamiennej podstawce, w powietrzu albo na trawie, w pełnej jakości; obrót myszą, noc, bez dachu, siatka, liczba trójkątów i wymiary
+- Suknia gospodyni z drobnym splotem płótna zamiast grubej kraty
+
 ## 0.21.4 — scena do sprawdzania modeli (2026-10-14)
 
 - `?test=1&pusta=1&model=tavern`: gotowy model budynku na pustej łące, w południe, kamera od frontu; `__test.view(...)` obchodzi go dookoła, z góry, z bliska i z ziemi oczami chłopa, `__test.model(...)` wymienia model bez przeładowania

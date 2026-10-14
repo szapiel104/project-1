@@ -13,5 +13,7 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     chunkSizeWarningLimit: 1200,
+    // druga strona: podgląd modeli (modele.html) — wdrażany razem z grą
+    ...(mode === 'single' ? {} : { rollupOptions: { input: { main: 'index.html', modele: 'modele.html' } } }),
   },
 }));

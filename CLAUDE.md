@@ -24,5 +24,13 @@
 4. Wydajność: w grze F3 pokazuje okno wydajności; w Chrome `window.__perf()` zwraca FPS, czasy symulacji/rysowania i liczniki.
 5. Nie robić serii zrzutów „na wszelki wypadek”; jeden zrzut na zmianę wyglądu wystarczy.
 
+## Modele — gdzie robić i jak sprawdzać (obowiązkowo dla każdego czatu)
+1. **Robienie:** modele z Blendera w `tools/models/*.py` (bpy bez okna, `/tmp/bpyenv/bin/python tools/models/X.py`), wynik do `src/render/models/*.json`. Opis narzędzi: `tools/models/README.md`. Budynki przez `building.py` (grupy `base`/`shell`/`interior`…), postacie przez `body.py`, drobne rzeczy jak `yard.py`/`animals.py`.
+2. **Sprawdzanie wyglądu — zawsze najpierw w podglądzie modeli, nie w grze:** `https://szapiel104.github.io/project-1/modele.html?id=tavern` (lokalnie `npx vite` → `/modele.html?id=…`). Jeden model na kamiennej podstawce, w powietrzu (`&tlo=powietrze`) albo na trawie (`&tlo=trawa`), w zwykłym świetle i pełnej jakości (zdjęciowe tekstury, cienie, odbicia); myszą obrót, przesuw i przybliżenie; przyciski Noc, Bez dachu, Siatka, Obrót. Na dole liczba trójkątów i siatek oraz wymiary w polach mapy.
+   - Nowy model musi trafić na listę w `src/viewer.ts` (`GROUPS`): budynki z `data/buildings.ts` są tam same, resztę (postać, zwierzę, przedmiot) dopisz jedną linijką.
+   - Do zrzutów z Chrome/Playwright: `window.__view('tavern', obrótStopnie, nachylenieStopnie)`.
+3. **Budynki dodatkowo** arkusz `sh tools/models/inspect.sh <id> /tmp/x.png` (dziury, odwrócone dachy, widoki z ziemi i ze środka) — punkt 3 w Testach.
+4. **Dopiero na końcu w grze**, na pustej scenie: `?test=1&pusta=1&model=<id>` (gotowy budynek na łące, `__test.view('ground-front')` itd.) — czy pasuje skalą do ludzi, terenu i sąsiadów. Nie sprawdzać nowych modeli w zwykłej rozgrywce ani w trybie deweloperskim.
+
 ## Pomysły
 - Lista kolejnych partii jest w `docs/pomysly.md`. Gdy Michał pyta „co dalej”, podpowiadaj z niej (i dopisuj tam nowe pomysły, zdejmuj zrobione).
