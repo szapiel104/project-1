@@ -1189,6 +1189,8 @@ export class GameRenderer {
   private handFlameTime = { value: 0 };
   private lodTick = 0;
   private torchOn = false;
+  /** Ciepłe światło kominków i koszy z ogniem w salach zamku (włączone, gdy spacerowicz jest pod dachem) */
+  private roomLight: THREE.PointLight | null = null;
   private toggleHandTorch(): void {
     if (!this.handTorch) {
       const g = new THREE.Group();
@@ -1229,6 +1231,7 @@ export class GameRenderer {
       window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true);
       window.removeEventListener('mousemove', move); document.removeEventListener('pointerlockchange', lock); this.canvas.removeEventListener('click', click);
       this.walk = null;
+      if (this.roomLight) this.roomLight.intensity = 0;
       if (this.torchOn) this.toggleHandTorch();
       cam.fov = 38; cam.near = 0.5; cam.updateProjectionMatrix();
       this.cam.lookAt(tileX - this.state!.map.width / 2, tileY - this.state!.map.height / 2, 22);
@@ -1288,6 +1291,9 @@ export class GameRenderer {
     this.walkHall = inRoom ? kp![0] : 0;
     this.walkNear = kp ? kp[0] : 0;
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
+    if (!this.roomLight) { this.roomLight = new THREE.PointLight(0xffb36b, 0, 5, 1.2); this.scene.add(this.roomLight); }
+    this.roomLight.intensity = inRoom ? 2.6 + Math.sin(this.time * 7) * 0.15 : 0;
+    this.roomLight.position.set(cam.position.x, cam.position.y + 0.35, cam.position.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
   }
 
@@ -2317,7 +2323,7 @@ export class GameRenderer {
     for (const u of g.units) {
       if (u.phase === Phase.Working) working.add(u.job);
       else if (u.phase === Phase.Resting) working.add(u.home);
-      else if ((u.phase === Phase.Idle || u.phase === Phase.Evening) && u.path.length === 0) { const camp = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8)); if (camp) working.add(camp.id); }
+      else if ((u.phase === Phase.Idle || u.phase === Phase.Evening) && u.path.length === 0) { const camp = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8)); if (camp && BUILDINGS[camp.type]!.id !== 'keep') working.add(camp.id); }
     }
     // kliknięty budynek też odsłania wnętrze, żeby dało się zajrzeć do środka
     for (const u of g.units) {

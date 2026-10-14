@@ -73,8 +73,12 @@ curtain(-H, gl, H - 1, H)                      # przód po bokach bramy
 curtain(gr, H, H - 1, H)
 curtain(gl, gr, H - 1, H, G + 0.95, TOP)       # nad przejazdem
 # skarpa u stóp murów, gzyms, korona z blankami po zewnętrznej stronie
+# przed bramą skarpy nie ma: most kładzie się prosto na ziemi
+gx0 = L['tiles'][N - 1].index('G') - H + 0.5
+b.box('base', 'castleDark', N + 0.24, 0.35, 0.12, 0, 0, -(H + 0.06))
+b.box('base', 'castleDark', (gx0 - 0.5) + H + 0.12, 0.35, 0.12, (-H - 0.12 + gx0 - 0.5) / 2, 0, H + 0.06)
+b.box('base', 'castleDark', H + 0.12 - (gx0 + 0.5), 0.35, 0.12, (H + 0.12 + gx0 + 0.5) / 2, 0, H + 0.06)
 for s in (-1, 1):
-    b.box('base', 'castleDark', N + 0.24, 0.35, 0.12, 0, 0, s * (H + 0.06))
     b.box('base', 'castleDark', 0.12, 0.35, N + 0.24, s * (H + 0.06), 0, 0)
     b.box('base', 'castleDark', N + 0.08, 0.06, 0.04, 0, G + 0.75, s * (H + 0.02))
     b.box('base', 'castleDark', 0.04, 0.06, N + 0.08, s * (H + 0.02), G + 0.75, 0)
@@ -371,7 +375,7 @@ for dy in range(N):
         if tile(dx, dy) == 'o':
             wx, wz = cx(dx), cz(dy)
 b.prism('base', 'stone', 0.36, 0.36, 0.32, wx, G, wz, seg=14)
-b.prism('base', 'dark', 0.28, 0.28, 0.004, wx, G + 0.32, wz, seg=14)
+b.prism('base', 'dark', 0.28, 0.28, 0.006, wx, G + 0.322, wz, seg=14)
 for s in (-1, 1):
     b.box('base', 'woodDark', 0.05, 0.75, 0.05, wx + s * 0.3, G + 0.2, wz)
 b.box('base', 'woodDark', 0.66, 0.05, 0.05, wx, G + 0.92, wz)

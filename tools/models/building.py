@@ -55,7 +55,7 @@ class Building:
             else:
                 self.poly(group, mat, [lo[k], lo[k2], (x, y + h, z)])
         if top and r1 > 1e-6:
-            self.poly(group, mat, list(reversed(hi)))
+            self.poly(group, mat, list(hi))  # wierzch walca patrzy w górę
 
     def pyramid(self, group, mat, w, d, h, x=0.0, y=0.0, z=0.0):
         a, b = w / 2, d / 2
