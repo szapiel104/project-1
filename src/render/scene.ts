@@ -1702,6 +1702,7 @@ export class GameRenderer {
       t.scale.setScalar(1.0);
       t.updateMatrix();
       this.wolfMesh.setMatrixAt(n, t.matrix);
+      { let wp = this.wolfPos.get(w.id); if (!wp) { wp = new THREE.Vector3(); this.wolfPos.set(w.id, wp); } wp.copy(t.position); }
       // kłus: łapy po przekątnej razem; w ataku przednie wyrzucone do przodu
       const ph = this.time * 12 + w.id;
       const hips = WOLF_HIPS;
@@ -1722,8 +1723,33 @@ export class GameRenderer {
       this.wolfMarker(n, w, g, t.position.x, t.position.y, t.position.z, view);
       n++;
     }
+    // zabite wilki leżą na boku z wyciągniętymi łapami, z czasem ciemnieją (rozkład)
+    let dead = 0;
+    for (const body of g.corpses) {
+      if (body.kind !== -2 || n + dead >= 64) continue;
+      const fx = body.px / FP, fy = body.py / FP;
+      const fall = this.calm ? 1 : Math.max(0, Math.min(1, (g.tick - body.at) / (TICKS_PER_SECOND * 0.6)));
+      const yaw = this.wolfHeading.get(body.id) ?? ((body.id * 2.39) % 6.28);
+      const k = n + dead;
+      t.position.set(fx - width / 2, view.heightAt(fx, fy), fy - height / 2);
+      t.rotation.set(0, yaw, 0, 'YXZ');
+      t.scale.setScalar(1);
+      t.updateMatrix();
+      // obrót na bok wokół osi grzbietu: ciało kładzie się na ziemi
+      this.wolfRot.makeTranslation(0, 0.075 * fall, 0).multiply(new THREE.Matrix4().makeRotationZ(fall * Math.PI / 2)).multiply(new THREE.Matrix4().makeTranslation(0, -0.33 * fall, 0));
+      const bodyM = new THREE.Matrix4().multiplyMatrices(t.matrix, this.wolfRot);
+      this.wolfMesh.setMatrixAt(k, bodyM);
+      WOLF_HIPS.forEach(([hx, hy, hz], j) => {
+        this.wolfRot.makeRotationX((j < 2 ? -0.35 : 0.35) * fall).setPosition(hx, hy, hz);
+        (j < 2 ? this.wolfLegs : this.wolfHindLegs).setMatrixAt(k * 2 + (j & 1), this.wolfPart.multiplyMatrices(bodyM, this.wolfRot));
+      });
+      this.wolfRot.makeRotationX(1.5).setPosition(...WOLF_TAIL);
+      this.wolfTails.setMatrixAt(k, this.wolfPart.multiplyMatrices(bodyM, this.wolfRot));
+      this.wolfEyes!.setMatrixAt(k, ZERO);
+      dead++;
+    }
     this.wolfMarkersFinish(n);
-    this.wolfMesh.count = n; this.wolfEyes!.count = n; this.wolfTails.count = n; this.wolfLegs.count = this.wolfHindLegs.count = n * 2;
+    this.wolfMesh.count = n + dead; this.wolfEyes!.count = n + dead; this.wolfTails.count = n + dead; this.wolfLegs.count = this.wolfHindLegs.count = (n + dead) * 2;
     this.wolfLegs.instanceMatrix.needsUpdate = true; this.wolfHindLegs.instanceMatrix.needsUpdate = true; this.wolfTails.instanceMatrix.needsUpdate = true;
     this.wolfMesh.instanceMatrix.needsUpdate = true; this.wolfEyes!.instanceMatrix.needsUpdate = true;
   }
@@ -2565,6 +2591,24 @@ export class GameRenderer {
   get dragged(): boolean { return this.cam.dragged; }
 
   /** Żołnierze gracza z położeniem na ekranie (piksele w oknie) */
+  /** Położenia wilków w świecie (do pasków zdrowia nad nimi) */
+  private wolfPos = new Map<number, THREE.Vector3>();
+  /** Wilki na ekranie: punkt nad grzbietem i zdrowie */
+  wolvesOnScreen(): { id: number; x: number; y: number; hp: number }[] {
+    if (!this.state) return [];
+    const out: { id: number; x: number; y: number; hp: number }[] = [];
+    const r = this.canvas.getBoundingClientRect(), v = new THREE.Vector3();
+    for (const w of this.state.wolves) {
+      const p = this.wolfPos.get(w.id);
+      if (!p) continue;
+      v.copy(p).setY(p.y + 0.7).project(this.cam.camera);
+      if (v.z > 1) continue;
+      out.push({ id: w.id, hp: w.hp, x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height });
+    }
+    for (const id of this.wolfPos.keys()) if (!this.state.wolves.some((w) => w.id === id)) this.wolfPos.delete(id);
+    return out;
+  }
+
   soldiersOnScreen(player: number): { id: number; x: number; y: number; owner: number; hp: number; feet: number; fx: number }[] {
     if (!this.state) return [];
     const out: { id: number; x: number; y: number; owner: number; hp: number; feet: number; fx: number }[] = [];
@@ -2803,6 +2847,7 @@ export class GameRenderer {
     let pc = 0, ac = 0, gc = 0, sp = 0;
     for (const body of g.corpses) {
       if (c >= MAX_UNITS) break;
+      if (body.kind === -2) continue; // zabity wilk: rysuje go syncWolves (leży na boku)
       const fx = body.px / FP, fy = body.py / FP;
       const age = Math.min(1, (g.tick - body.at) / 6000);
       const y = view.heightAt(fx, fy);

@@ -859,6 +859,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
+      // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
+      siteBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true; infoDesc.hidden = false;
       walkBtn.hidden = person.walk === false;
     },
     showArmy(army, ctl) {
@@ -873,6 +875,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
+      siteBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true;
       walkBtn.hidden = true;
       // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
       const byKind = new Map<string, { name: string; n: number }>();

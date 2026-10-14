@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.20.0 — wilki i straż (2026-10-14)
+
+- Strażnik miejski, który zobaczy wilka (12 pól), rzuca obchód i biegnie go ubić — wyraźnie szybciej niż zwykle; goni też uciekającego (do granicy osady)
+- Wilki słabsze: gryzą rzadziej i lżej (chłop wytrzymuje cztery ugryzienia), wataha 2–3 wilki zamiast 2–4, po zabiciu wilk długo pożera ofiarę; ciężko ranny wilk ucieka do lasu, chłopi biją go mocniej
+- Zabity wilk zostaje na ziemi (leży na boku), obsiadają go kruki, zabiera go grabarz albo zgnije; wilk, który uciekł do lasu, nie zostawia ciała
+- Nad każdym wilkiem pasek zdrowia
+- Karta strażnika (i wojska) nie pokazuje już resztek okna budynku (plac budowy, materiał, zasięg strzału)
+- Rozpiska popularności nie wyjeżdża poza ekran przy powiększonym interfejsie
+
 ## 0.19.3 — paski zdrowia pod menu (2026-10-14)
 
 - Pasek zdrowia żołnierza nie przechodzi już przez dolne menu, okno budynku ani pasek wojska — chowa się pod nimi

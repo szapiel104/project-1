@@ -417,7 +417,9 @@ function step(g: GameState, s: Soldier): void {
   const tx = nx * FP + FP / 2, ty = ny * FP + FP / 2;
   const dx = tx - s.px, dy = ty - s.py;
   const base = dx !== 0 && dy !== 0 ? RULES.unitSpeedDiagonal : RULES.unitSpeed;
-  const speed = Math.round((base * (s.goal >= 0 && s.pace ? s.pace : UNITS[s.kind]!.speed) * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, s)]!]!)) / 10000);
+  // strażnik w pogoni za wilkiem biegnie (o 40% szybciej) — widać, że rusza na pomoc
+  const run = s.hunt && UNITS[s.kind]!.guard ? 1.4 : 1;
+  const speed = Math.round((base * (s.goal >= 0 && s.pace ? s.pace : UNITS[s.kind]!.speed) * run * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, s)]!]!)) / 10000);
   s.px += Math.max(-speed, Math.min(speed, dx));
   s.py += Math.max(-speed, Math.min(speed, dy));
   if (s.px === tx && s.py === ty) s.path.shift();

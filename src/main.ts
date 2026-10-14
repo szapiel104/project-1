@@ -27,6 +27,7 @@ import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, wa
 import { proceduralModels } from './render/models';
 import { renderThumbnails } from './render/thumbnails';
 import { GUARDS, GUARD_COST } from './sim/systems/guards';
+import { WOLF_HP } from './sim/systems/wolves';
 import { cachedThumbs, saveThumbs } from './render/thumbcache';
 import { texturesReady } from './render/textures';
 import { TEAM_COLORS } from './data/teams';
@@ -953,6 +954,18 @@ function updateBars(): void {
     const fill = bar.firstChild as HTMLElement;
     fill.style.width = `${Math.max(0, (s.hp / max) * 100)}%`;
     fill.dataset.low = String(s.hp < max * 0.35);
+    n++;
+  }
+  // wilki: pasek zdrowia zawsze, w barwie wroga
+  for (const w of renderer.wolvesOnScreen()) {
+    let bar = bars[n];
+    if (!bar) { bar = document.createElement('div'); bar.className = 'hpbar'; bar.append(document.createElement('span')); barLayer.append(bar); bars.push(bar); }
+    bar.hidden = false;
+    bar.style.transform = `translate(${Math.round(w.x - 17)}px, ${Math.round(w.y - 4)}px)`;
+    bar.dataset.team = 'foe';
+    const fill = bar.firstChild as HTMLElement;
+    fill.style.width = `${Math.max(0, (w.hp / WOLF_HP) * 100)}%`;
+    fill.dataset.low = String(w.hp < WOLF_HP * 0.35);
     n++;
   }
   for (let i = n; i < bars.length; i++) bars[i]!.hidden = true;

@@ -12,10 +12,16 @@ import { ruin } from './placement';
  */
 const SPEED = 30;
 const SIGHT = 9;
-const BITE = 14; // ticki między ugryzieniami
-const PEASANT_HP = 30, WOLF_BITE = 11;
+const BITE = 20; // ticki między ugryzieniami
+/** Wilk gryzie mocno, ale nie zabija tłumu: chłop wytrzymuje cztery ugryzienia, a po zabiciu wilk długo pożera ofiarę */
+const PEASANT_HP = 30, WOLF_BITE = 8, SOLDIER_BITE = 5, EAT = 300;
+/** Zdrowie wilka (pasek nad nim); ranny poniżej FLEE_HP ucieka do lasu */
+export const WOLF_HP = 45;
+const FLEE_HP = 15;
 /** Chłop broni się kijem albo narzędziem: słabo, ale kilku razem przegoni wilka */
-const PEASANT_HIT = 3, PEASANT_CD = 20;
+const PEASANT_HIT = 4, PEASANT_CD = 20;
+/** Strażnik miejski widzi wilka z tylu pól i od razu biegnie go ubić */
+const GUARD_SIGHT = 12;
 
 function edgeOut(g: GameState, w: Wolf): number {
   const { width, height } = g.map;
@@ -43,24 +49,28 @@ export function wolfSystem(g: GameState): void {
       along = Math.max(4, Math.min(lim, c - 8 + g.rng.int(17)));
     }
     const tile = side === 0 ? along : side === 1 ? (height - 1) * width + along : side === 2 ? along * width : along * width + width - 1;
-    const size = 2 + g.rng.int(3);
+    const size = 2 + g.rng.int(2);
     for (let i = 0; i < size; i++) {
       const x = tile % width, y = (tile - x) / width;
-      g.wolves.push({ id: g.nextId++, px: x * FP + FP / 2 + (i - 1) * 60, py: y * FP + FP / 2, hp: 45, path: [], target: 0, cd: 0, leaving: false });
+      g.wolves.push({ id: g.nextId++, px: x * FP + FP / 2 + (i - 1) * 60, py: y * FP + FP / 2, hp: WOLF_HP, path: [], target: 0, cd: 0, leaving: false });
     }
   }
   if (!g.wolves.length) return;
   // wilki polują od zmierzchu do wczesnego ranka (rano łapią tych, co pierwsi wyszli do pracy)
   const day = clock.hour >= 6.5 && clock.hour < 19.5;
+  /** Wilki, które zniknęły w lesie (nie zginęły): po nich nie zostaje ciało */
+  const gone = new Set<number>();
   for (const w of g.wolves) {
     if (w.cd > 0) w.cd--;
     const here = (w.py >> 8) * width + (w.px >> 8);
     if (day && !w.leaving) { w.leaving = true; w.path = []; w.target = 0; }
     // w pełnym dniu maruder, który nie znalazł drogi do lasu, i tak znika w zaroślach
-    if (day && clock.hour >= 8.5) { w.hp = 0; continue; }
+    if (day && clock.hour >= 8.5) { w.hp = 0; gone.add(w.id); continue; }
+    // ciężko ranny ucieka do lasu
+    if (!w.leaving && w.hp > 0 && w.hp <= FLEE_HP) { w.leaving = true; w.path = []; w.target = 0; w.gnaw = 0; }
     if (w.leaving) {
       const x = w.px >> 8, y = w.py >> 8;
-      if (x <= 0 || y <= 0 || x >= width - 1 || y >= height - 1) { w.hp = 0; continue; } // zniknął w lesie
+      if (x <= 0 || y <= 0 || x >= width - 1 || y >= height - 1) { w.hp = 0; gone.add(w.id); continue; } // zniknął w lesie
       if (!w.path.length && (g.tick + w.id) % 20 === 0) { const out = edgeOut(g, w); w.path = findPath(g, here, (t) => t === out, 3000, WOLF) ?? []; }
     } else {
       // ofiara: najbliższy człowiek albo żołnierz w zasięgu wzroku
@@ -87,8 +97,8 @@ export function wolfSystem(g: GameState): void {
             g.units.splice(ui, 1);
             const p = g.players[u.owner];
             if (p) { p.stats.lost++; p.wolfKills = (p.wolfKills ?? 0) + 1; }
-            w.cd = 160; // pożera ofiarę, chwilę nie poluje
-          } else { const s = g.soldiers.find((x) => x.id === prey); if (s) s.hp -= 7; }
+            w.cd = EAT; // pożera ofiarę, długo nie poluje
+          } else { const s = g.soldiers.find((x) => x.id === prey); if (s) s.hp -= SOLDIER_BITE; }
         }
         continue;
       }
@@ -148,6 +158,12 @@ export function wolfSystem(g: GameState): void {
   }
   // żołnierze bronią się i gonią wilki w pobliżu
   for (const s of g.soldiers) {
+    // strażnik miejski: wilk w zasięgu wzroku — rzuca obchód i biegnie go ubić (także uciekającego)
+    if (UNITS[s.kind]!.guard && !s.hunt && !s.target && !s.up) {
+      let bd = GUARD_SIGHT * GUARD_SIGHT, near: Wolf | undefined;
+      for (const w of g.wolves) { if (w.hp <= 0) continue; const d = ((s.px - w.px) / FP) ** 2 + ((s.py - w.py) / FP) ** 2; if (d < bd) { bd = d; near = w; } }
+      if (near) { s.hunt = near.id; s.amove = false; s.stance = 0; s.hold = -1; s.slot = undefined; s.goal = (near.py >> 8) * width + (near.px >> 8); s.path = []; }
+    }
     if (s.hunt) {
       const prey = g.wolves.find((w) => w.id === s.hunt && w.hp > 0);
       if (!prey) s.hunt = 0;
@@ -167,5 +183,7 @@ export function wolfSystem(g: GameState): void {
     }
     else if (!s.up && s.goal < 0 && !s.target && !s.path.length) s.goal = (wolf.py >> 8) * width + (wolf.px >> 8);
   }
+  // zabity wilk zostaje na ziemi (rodzaj -2); zabierze go grabarz albo zgnije, obsiądą go kruki
+  for (const w of g.wolves) if (w.hp <= 0 && !gone.has(w.id)) g.corpses.push({ id: w.id, owner: -1, kind: -2, px: w.px, py: w.py, at: g.tick, taken: false });
   g.wolves = g.wolves.filter((w) => w.hp > 0);
 }
