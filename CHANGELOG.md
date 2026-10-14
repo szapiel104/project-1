@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.21.2 — pusta scena do testów (2026-10-14)
+
+- `?test=1&pusta=1`: płaska łąka z samymi twierdzami, bez lasów, wody, botów i wilków, a w `__test` pomocniki `home`, `place`, `hour`, `peasants`, `wolf` — szybkie zrzuty jednej rzeczy dla wszystkich czatów
+
 ## 0.21.1 — widać życie w chacie (2026-10-14)
 
 - Gospodyni w długiej sukni, a przy chacie balia i sznur z praniem, które kołysze się na wietrze za dnia

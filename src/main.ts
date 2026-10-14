@@ -16,7 +16,8 @@ import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { octant, planFormation } from './sim/systems/army';
-import { SANDBOX, TEST } from './testmode';
+import { EMPTY, SANDBOX, TEST } from './testmode';
+import { addPeasants, addWolf, emptyScene, placeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
 import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
 import type { OnlineStart } from './ui/online';
@@ -329,6 +330,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   endOnline();
   ME = online ? online.me : 0;
   game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant);
+  if (EMPTY && !loaded && !online) emptyScene(game);
   // nowa mapa: grupy i zaznaczenie z poprzedniej gry nie mają sensu (przy wczytaniu wracają z zapisu)
   if (!loaded) groups.clear();
   chosen.clear(); renderer.setSoldierSelection(chosen);
@@ -1302,6 +1304,16 @@ requestAnimationFrame(loop);
     const b = game.buildings.find((x) => x.owner === ME && BUILDINGS[x.type]!.id === 'barracks') ?? game.buildings[0]!;
     for (let i = 0; i < n; i++) game.soldiers.push({ id: game.nextId++, owner: 1, kind: 0, px: (b.x + 5 + i) * 256 + 128, py: (b.y + 4) * 256 + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 });
   },
+  /** Pole przed bramą twierdzy gracza (punkt odniesienia na pustej scenie) */
+  home(player = ME): { x: number; y: number } | null { const k = game.buildings.find((b) => b.owner === player && b.type === 0); return k && k.door >= 0 ? { x: k.door % game.map.width, y: Math.floor(k.door / game.map.width) } : null; },
+  /** Gotowy budynek w polu (x, y), bez budowy; zwraca id albo null (działka zajęta) */
+  place(id: string, x: number, y: number, rot = 0, player = ME): number | null { const r = placeReady(game, id, x, y, rot, player); refresh(); return r; },
+  /** Godzina na zegarze bieżącego dnia, np. hour(20.5) — wieczór z pochodniami */
+  hour(h: number): void { setHour(game, h); refresh(); },
+  /** `n` chłopów przy twierdzy */
+  peasants(n = 5, player = ME): number { const r = addPeasants(game, n, player).length; refresh(); return r; },
+  /** Wilk w polu (x, y) */
+  wolf(x: number, y: number): void { addWolf(game, x, y); },
   state: () => game,
 };
 (window as unknown as { __look: (x: number, y: number, d?: number) => void }).__look = (x, y, d) => renderer.lookAt(x, y, d);
