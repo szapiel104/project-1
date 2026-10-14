@@ -231,6 +231,9 @@ export interface Soldier {
   tight?: boolean;
   /** Ranny: 1 = cofa się za szyk, 2 = idzie do twierdzy i tam się leczy */
   wounded?: number;
+  /** Wróg, do którego nie ma przejścia (za murem), i do kiedy go pomijać przy wyborze celu */
+  skip?: number;
+  skipUntil?: number;
 }
 
 /** Oddział w zwartym marszu: punkt prowadzący idzie jedną drogą, każdy żołnierz trzyma swoje miejsce obok niego */
@@ -513,7 +516,7 @@ export function stateHash(g: GameState): number {
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
-  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.path.length); for (const t of s.path) add(t); }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.path.length); for (const t of s.path) add(t); }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }

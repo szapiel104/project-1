@@ -39,7 +39,13 @@ export function findDoor(g: GameState, x: number, y: number, w: number, h: numbe
   return -1;
 }
 
-let seen = new Uint8Array(0), before = new Uint8Array(0);
+let seen = new Uint8Array(0), before = new Uint8Array(0), beforeKey = '';
+let batch = false;
+/** Wiele sprawdzeń miejsca pod rząd bez zmian w stanie (bot szuka miejsca): wspólne zalanie „przed” */
+export function placementBatch<T>(fn: () => T): T {
+  batch = true; beforeKey = '';
+  try { return fn(); } finally { batch = false; beforeKey = ''; }
+}
 let queue = new Int32Array(0);
 
 /**
@@ -48,8 +54,16 @@ let queue = new Int32Array(0);
  */
 const WALL_BIT = [2, 8, 4, 1];
 /** Zalewanie od drzwi twierdzy: które pola są osiągalne pieszo. */
+/** Czy po terenie da się chodzić — raz na mapę (woda i góry się nie zmieniają, wycięty las był i jest przechodni) */
+const walkCache = new WeakMap<object, Uint8Array>();
+function terrainWalk(g: GameState): Uint8Array {
+  let a = walkCache.get(g.map);
+  if (!a) { a = new Uint8Array(g.map.tiles.length); for (let i = 0; i < a.length; i++) a[i] = TERRAIN[g.map.tiles[i] as Terrain].walkable ? 1 : 0; walkCache.set(g.map, a); }
+  return a;
+}
 function flood(g: GameState, start: number, out: Uint8Array, player: number): void {
   const { width, height } = g.map;
+  const tw = terrainWalk(g), occ = g.occupancy, gates = g.gates, walls = g.walls, me = player + 1;
   out.fill(0, 0, width * height);
   let head = 0, tail = 0;
   if (g.occupancy[start] === 0 || g.gates[start] === player + 1) { queue[tail++] = start; out[start] = 1; }
@@ -59,9 +73,9 @@ function flood(g: GameState, start: number, out: Uint8Array, player: number): vo
     for (let d = 0; d < 4; d++) {
       const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0), ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-      if ((g.walls[t]! & WALL_BIT[d]!) || (g.walls[ny * width + nx]! & WALL_BIT[d ^ 1]!)) continue; // ściana w zamku (z obu stron)
       const nt = ny * width + nx;
-      if (out[nt] || (g.occupancy[nt] !== 0 && g.gates[nt] !== player + 1) || !TERRAIN[g.map.tiles[nt] as Terrain].walkable) continue;
+      if (out[nt] || (occ[nt] !== 0 && gates[nt] !== me) || !tw[nt]) continue;
+      if ((walls[t]! & WALL_BIT[d]!) || (walls[nt]! & WALL_BIT[d ^ 1]!)) continue; // ściana w zamku (z obu stron)
       out[nt] = 1; queue[tail++] = nt;
     }
   }
@@ -76,8 +90,11 @@ function wouldBlock(g: GameState, player: number, x: number, y: number, w: numbe
   if (!keep || keep.door < 0) return false;
   const { width, height } = g.map;
   const size = width * height;
-  if (seen.length < size) { seen = new Uint8Array(size); before = new Uint8Array(size); queue = new Int32Array(size); }
-  flood(g, keep.door, before, player);
+  if (seen.length < size) { seen = new Uint8Array(size); before = new Uint8Array(size); queue = new Int32Array(size); beforeKey = ''; }
+  // „przed” jest takie samo dla wszystkich miejsc sprawdzanych w tym samym ticku (bot sprawdza ich dziesiątki naraz)
+  // (tylko w paczce sprawdzeń bota — poza nią stan mógł się zmienić w tym samym ticku, więc liczymy od nowa)
+  const key = batch ? `${g.tick}:${player}:${g.nextId}:${keep.door}` : '';
+  if (!key || key !== beforeKey) { flood(g, keep.door, before, player); beforeKey = key; }
   if (!passable) for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) g.occupancy[ty * width + tx] = -1;
   const door = findDoor(g, x, y, w, h, rot);
   flood(g, keep.door, seen, player);

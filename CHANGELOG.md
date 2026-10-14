@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.20.2 — przegląd długiej gry (2026-10-14)
+
+- Nowe narzędzie: długie gry bot kontra bot bez przeglądarki (`npx vitest run --config tools/soak/vitest.config.ts`, zmienne SOAK_SEEDS, SOAK_HOURS) — wypisuje zawieszonych chłopów i żołnierzy, stojące budowy, pat w walce, rozjazd zapisu i najwolniejsze ticki
+- Naprawa: żołnierz, który nie mógł dojść do wroga (np. strażnik za murem zamku), stał pod murem bez końca; teraz szuka drogi, a gdy jej nie ma, bierze inny cel albo rozbija mur
+- Naprawa: odważny chłop stawał jak wryty, gdy wróg stał 2–3 pola od niego (np. pod murem) — przestawał pracować na długo; teraz staje tylko tuż przy wrogu i wtedy się bije
+- Płynność: bot szukający miejsca na budynek albo palisadę potrafił zatrzymać grę na 0,2–0,35 s; sprawdzanie, czy budynek nie zablokuje przejścia, jest 3–4 razy szybsze (najdłuższy tick w 3-godzinnej grze: 76–130 ms zamiast 200–340 ms)
+
 ## 0.20.1 — gdzie jest straż (2026-10-14)
 
 - Po kliknięciu twierdzy każdy strażnik miejski ma czerwone kółko pod stopami i czerwoną tarczę z krzyżem nad głową (tej samej wielkości przy każdym zbliżeniu); po odznaczeniu znaczniki znikają

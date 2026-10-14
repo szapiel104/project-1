@@ -4,7 +4,7 @@ import { UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
 import { keepCenter, keepFront, playerKeep, type GameState, type PlayerState } from '../state';
 import { orderGarrison, orderMove, train } from './army';
-import { canPlace, placeBuilding } from './placement';
+import { canPlace, placeBuilding, placementBatch } from './placement';
 
 /**
  * Bot przeciwnik. Działa wewnątrz symulacji, więc jest w pełni deterministyczny i może grać także w meczach sieciowych.
@@ -69,14 +69,14 @@ export function botSystem(g: GameState): void {
       want.set(id, (want.get(id) ?? 0) + 1);
       if ((have.get(id) ?? 0) >= want.get(id)!) continue;
       const type = buildingIndex(id);
-      if (affordable(p, type)) { const at = spot(g, p.id, type); if (at) placeBuilding(g, p.id, type, at.x, at.y); }
+      if (affordable(p, type)) { const at = placementBatch(() => spot(g, p.id, type)); if (at) placeBuilding(g, p.id, type, at.x, at.y); }
       break;
     }
     }
     // umocnienia: gdy osada ma już kilkanaście budynków, otacza się palisadą z bramami i wieżami w narożnikach
     // (dopiero gdy stoją koszary: najpierw gospodarka i wojsko, potem drewno na palisadę)
     if (g.tick % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
-      && g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks')) fortify(g, p);
+      && g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks')) placementBatch(() => fortify(g, p));
     // podatek, gdy osada jest zadowolona: złoto na żołd
     p.tax = p.popularity > 70 ? 2 : p.popularity > 55 ? 1 : 0;
     // wojsko: szkoli jednego włócznika naraz, gdy ma broń, złoto i wolnego chłopa

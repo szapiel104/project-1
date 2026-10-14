@@ -614,6 +614,7 @@ export function armySystem(g: GameState): void {
           for (let gx = cx - 1; gx <= cx + 1; gx++) {
             for (const o of grid.get(gy * cw + gx) ?? []) {
               if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (high(g, o) && !range)) continue; // na wieżę wręcz nie sięgnie
+              if (o.id === s.skip && g.tick < (s.skipUntil ?? 0)) continue; // do tego wroga nie ma przejścia (za murem): na razie inny cel
               const d = gap(s, o);
               if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
             }
@@ -652,6 +653,15 @@ export function armySystem(g: GameState): void {
         if (!s.path.length) {
           const next = greedy(g, tileOf(g, s), tileOf(g, foe), taken, s.owner);
           if (next >= 0) { s.path = [next]; taken.add(next); }
+          else if (budget > 0) {
+            // krok wprost się nie da (mur, budynek): kawałek prawdziwej drogi do wroga; bez drogi — wróg nieosiągalny,
+            // bierze inny cel albo rozbija mur (dawniej stał pod murem i patrzył na strażnika w środku bez końca)
+            budget--;
+            const ft = tileOf(g, foe), fx = ft % W, fy = (ft - fx) / W;
+            const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1, 1500, s.owner);
+            if (p && p.length) s.path = p.slice(0, 8);
+            else { s.skip = foe.id; s.skipUntil = g.tick + 150; s.target = 0; }
+          }
         }
         if (s.path.length) step(g, s);
         continue;
@@ -979,7 +989,8 @@ function lookout(g: GameState): void {
     if (!isBrave(u.id)) { peasantReacts(g, u, best, true); continue; }
     // odważny: stoi i patrzy na wroga; z bliska bije kijem (rzadko i słabo)
     u.foe = best.id;
-    if (bd <= FP * 2.5) u.wait = Math.max(u.wait, 6);
+    // staje tylko tuż przy wrogu (i wtedy się bije); wróg stojący obok, np. pod murem, nie zatrzymuje mu pracy na zawsze
+    if (bd <= FP + FP / 2) u.wait = Math.max(u.wait, 6);
     if (bd <= FP + FP / 2 && hash2(u.id, g.tick, 0xc1b) % 100 < 30) best.hp -= peasantWeapon(u.id) === 'pick' ? 3 : 2; // kilof boli trochę bardziej niż maczuga
   }
 }
