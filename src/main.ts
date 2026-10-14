@@ -940,6 +940,10 @@ const alarm = document.createElement('div');
 alarm.className = 'alarm';
 alarm.setAttribute('role', 'status');
 document.body.append(alarm);
+/** Środek nadciągającego oddziału wroga (klik w pasek ostrzeżeń przenosi tam kamerę) */
+let comingAt: { x: number; y: number } | null = null;
+alarm.addEventListener('click', () => { if (comingAt) renderer.lookAt(comingAt.x, comingAt.y, 30); });
+alarm.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && comingAt) { e.preventDefault(); renderer.lookAt(comingAt.x, comingAt.y, 30); } });
 function updateAlarm(): void {
   const me = game.players[ME]!;
   const enemies = game.players.filter((p) => p.team !== me.team && p.bot && !p.defeated);
@@ -947,19 +951,25 @@ function updateAlarm(): void {
   alarm.hidden = false;
   const keep = game.buildings.find((b) => b.owner === ME && b.type === 0);
   const foes = game.soldiers.filter((s) => game.players[s.owner]!.team !== me.team);
-  // nadciąga: wrogowie w marszu, bliżej naszej twierdzy niż swojej
+  // nadciąga: wrogie wojsko (bez strażników miejskich, którzy chodzą obchodem po swojej osadzie) idzie do celu
+  // przy naszej osadzie — cel marszu najwyżej 30 pól od naszej twierdzy albo właśnie bije kogoś z naszych
+  const W = game.map.width;
   const coming = keep ? foes.filter((s) => {
-    const own = game.buildings.find((b) => b.owner === s.owner && b.type === 0);
-    const dMe = Math.hypot((s.px >> 8) - keep.x, (s.py >> 8) - keep.y);
-    const dHome = own ? Math.hypot((s.px >> 8) - own.x, (s.py >> 8) - own.y) : 99;
-    return s.path.length > 0 && dMe < dHome + 30 && dHome > 12;
+    if (UNITS[s.kind]?.guard) return false;
+    if (s.target && (game.soldiers.find((x) => x.id === s.target)?.owner === ME || game.units.find((x) => x.id === s.target)?.owner === ME)) return true;
+    if (s.goal < 0 || !s.path.length) return false;
+    return Math.hypot((s.goal % W) - keep.x, Math.floor(s.goal / W) - keep.y) < 30;
   }) : [];
+  comingAt = coming.length ? { x: coming.reduce((a, s) => a + (s.px >> 8), 0) / coming.length, y: coming.reduce((a, s) => a + (s.py >> 8), 0) / coming.length } : null;
   if (coming.length && keep) {
     const near = Math.min(...coming.map((s) => Math.hypot((s.px >> 8) - keep.x, (s.py >> 8) - keep.y)));
     alarm.dataset.state = 'coming';
-    alarm.innerHTML = `<strong>${t('alarm.coming')}</strong><span>${coming.length} ${t('alarm.soldiers')} · ${Math.round(near)} ${t('alarm.fields')}</span><span class="alarm-bar"><span style="width:${Math.max(4, Math.min(100, 100 - near))}%"></span></span>`;
+    alarm.tabIndex = 0;
+    alarm.title = 'Kliknij, żeby zobaczyć nadciągające wojsko';
+    alarm.innerHTML = `<strong>${t('alarm.coming')}</strong><span>${coming.length} ${t('alarm.soldiers')} · ${Math.round(near)} ${t('alarm.fields')}</span><span class="alarm-bar"><span style="width:${Math.max(4, Math.min(100, 100 - near))}%"></span></span><span class="alarm-go">Pokaż ▸</span>`;
     return;
   }
+  alarm.removeAttribute('tabindex'); alarm.removeAttribute('title');
   const w = nextWave(game.tick, enemies[0]!.level);
   if (!w) { alarm.dataset.state = 'calm'; alarm.innerHTML = `<strong>${t('alarm.peace')}</strong><span>${t('alarm.has')} ${foes.length}</span>`; return; }
   const secs = Math.max(0, Math.round((w.at - game.tick) / TICKS_PER_SECOND));

@@ -1056,3 +1056,8 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 .bottom > *, .floaters, .dock, .status { min-width: 0; }
 
 .info { max-width: min(320px, calc(100vw - 16px)); }
+/* nadciągający wróg: pasek u góry da się kliknąć — kamera leci do oddziału */
+.alarm[data-state='coming'] { pointer-events: auto; cursor: pointer; }
+.alarm[data-state='coming']:hover { filter: brightness(1.15); }
+.alarm[data-state='coming']:focus-visible { outline: 2px solid #e9c766; outline-offset: 3px; }
+.alarm-go { font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #ffe7a6; }
