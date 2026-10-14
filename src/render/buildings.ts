@@ -6,6 +6,7 @@ import { bump, normal, pattern } from './textures';
 import { beam, cutBox, paintGeo, rng, stoneSkirt, thatchSlab } from './craft';
 import KEEP_MODEL from './models/keep.json';
 import TAVERN_MODEL from './models/tavern.json';
+import BREWERY_MODEL from './models/brewery.json';
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -362,6 +363,19 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
         paint(new THREE.TorusGeometry(0.2, 0.012, 4, 12, Math.PI * 0.9).rotateZ(Math.PI * 0.05).translate(0, 0.02, -0.09 + k * 0.06), 0x7a5232),
         paint(new THREE.CylinderGeometry(0.004, 0.004, 0.39, 3).rotateZ(Math.PI / 2).translate(0, 0.03, -0.09 + k * 0.06), 0xe8e0c8),
       ]),
+    ]),
+  },
+  ale: {
+    tex: 'planks',
+    // beczki piwa: dwie leżą na legarach, trzecia stoi na nich; klepki ciemniejsze, obręcze z żelaza
+    geo: merge([
+      ...[-0.15, 0.15].map((z) => paint(part(new THREE.BoxGeometry(0.42, 0.03, 0.04), 0, -0.135, z), 0x5a3e24)),
+      ...([[-0.1, 0], [0.1, 0]] as const).flatMap(([z]) => [
+        paint(new THREE.CylinderGeometry(0.1, 0.1, 0.34, 10).rotateZ(Math.PI / 2).translate(0, -0.02, z), 0x8a5a2b),
+        ...[-0.12, 0, 0.12].map((x) => paint(new THREE.CylinderGeometry(0.106, 0.106, 0.02, 10).rotateZ(Math.PI / 2).translate(x, -0.02, z), 0x4a4038)),
+      ]),
+      paint(new THREE.CylinderGeometry(0.085, 0.085, 0.22, 10).translate(0, 0.17, 0), 0x9a6634),
+      ...[0.1, 0.24].map((y) => paint(new THREE.CylinderGeometry(0.09, 0.09, 0.018, 10).translate(0, y, 0), 0x4a4038)),
     ]),
   },
   fish: {
@@ -913,6 +927,11 @@ const BUILDERS: Record<string, Builder> = {
       life.add(stand);
     }
     g.add(life);
+  },
+  brewery(g, _team, flag) {
+    // Browar z Blendera (tools/models/brewery.py): kamienny dom, dach z gontu, komin pieca; w środku kocioł z miedzi i kadzie
+    blenderModel(g, BREWERY_MODEL as unknown as BlenderBuilding, flag);
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, 0, 1.45, 0.4);
   },
   tavern(g, _team, flag) {
     // Karczma z Blendera (tools/models/tavern.py): piętrowy szachulec, strzecha, komin, ganek z ławami i szyldem;

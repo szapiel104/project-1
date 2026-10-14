@@ -6,7 +6,7 @@ import { dayPart } from './workers';
 
 const FOOD = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 const GOLD = resIndex('gold');
-const WHEAT = resIndex('wheat');
+const ALE = resIndex('ale');
 
 export function foodTotal(p: PlayerState): number {
   let n = 0;
@@ -31,10 +31,10 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const parts: { key: string; value: number; level?: string }[] = [];
   parts.push({ key: 'food', value: RULES.rations[level]!.effect, level: RULES.rations[level]!.name });
   parts.push({ key: 'tax', value: bribed ? tax.effect : RULES.taxes[1].effect, level: bribed ? tax.name : RULES.taxes[1].name });
-  // karczmy z karczmarzem i pszenicą na piwo: wieczory przy kuflu poprawiają nastroje
+  // karczmy z karczmarzem i piwem ze składu: wieczory przy kuflu poprawiają nastroje, a sucha karczma złości
   const taverns = g.buildings.filter((b) => b.owner === p.id && !b.build && b.worker && BUILDINGS[b.type]!.id === 'tavern').length;
-  const ale = Math.min(taverns, 2, Math.floor(p.res[WHEAT]! / 2));
-  parts.push({ key: 'tavern', value: ale === 0 ? 0 : ale === 1 ? 3 : 5 });
+  const ale = Math.min(taverns, 2, p.res[ALE]! / RULES.alePerTavern | 0);
+  parts.push({ key: 'tavern', value: ale === 0 ? (taverns ? RULES.dryTavernPenalty : 0) : ale === 1 ? 3 : 5, level: taverns && !ale ? 'tavern.dry' : undefined });
   parts.push({ key: 'crowd', value: pop > housing(g, p.id) ? RULES.crowdingPenalty : 0 });
   // ostatnia noc: kto spał na słomie pod gołym niebem, narzeka; kto przy tym zmókł w deszczu, narzeka podwójnie
   parts.push({ key: 'rough', value: !p.rough ? 0 : p.rough >= 4 ? -2 : -1 });
@@ -56,7 +56,7 @@ export function economySystem(g: GameState): void {
       p.res[i]! -= eat; toEat -= eat;
     }
     if (f.bribed) p.res[GOLD]! += f.gold;
-    p.res[WHEAT]! -= f.ale * 2; // piwo wypite
+    p.res[ALE]! -= f.ale * RULES.alePerTavern; // piwo wypite
     p.popDelta = f.delta;
     p.popularity = Math.max(0, Math.min(RULES.maxPopularity, p.popularity + f.delta));
   }

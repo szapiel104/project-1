@@ -125,6 +125,13 @@ Czeka:
 - Odzywki jak w Gothicu zależne od sytuacji (deszcz, wilki w nocy, podatki, głód) u chłopów i strażników
 - Chlew i stajnia jako budynki (zwierzęta z Blendera już są)
 
+## Kolejka — następne partie (ustalone z Michałem 14.10)
+Po działającej karczmie, w tej kolejności:
+1. Życie w zamku (niżej w sekcji Zamek)
+2. Oblężenie zamku: taran, drabiny, krata przy wrogu
+3. Kolejne budynki z Blendera: stodoła, chata (inspect.sh + kolizje w spacerze)
+4. Poprawki karczmy: działka 4×3, trawa przez podłogę
+
 ## Zamek (14.10.2026)
 Zrobione 14.10: zamek 11×11 z Blendera według wspólnego planu (src/data/keep-layout.json): mury z blankami, baszty z izbami i strzelnicami, wieże bramy z izbami, brama z kratą i mostem, donżon; dziedziniec, sala tronowa z tronem pod baldachimem, kuchnia, komnata pana, koszary, lochy z celami; wejście tylko bramą, ściany i drzwi w symulacji, schody i chodnik na murach (łucznik na murze strzela dalej); spacer chłopem z kolizjami; 6000 HP; obchód modeli bez przeglądarki (tools/models/inspect.sh).
 

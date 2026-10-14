@@ -134,7 +134,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     workView: 'inside',
     production: { input: { res: 'wood', amount: 2 }, output: { res: 'bow', amount: 1 }, site: 'home', workTicks: 140 },
   },
-  // Karczma: karczmarz warzy piwo z pszenicy ze składu; wieczorem ludzie przychodzą posiedzieć, co podnosi popularność
+  // Karczma: karczmarz nalewa piwo ze składu (warzy je browar); wieczorem ludzie przychodzą posiedzieć, co podnosi popularność
   { id: 'tavern', category: 'settlement', name: 'b.tavern', w: 3, h: 2, cost: { wood: 35, gold: 20 }, staff: true, workView: 'inside', buildable: true },
   // Umocnienia z bali: częstokół stawiany przeciąganiem, brama dla swoich, drewniana wieża strażnicza
   { id: 'palisade', category: 'defense', name: 'b.palisade', w: 1, h: 1, cost: { wood: 1 }, hp: 260, wall: true, line: true, buildable: true },
@@ -144,6 +144,12 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'roadWood', category: 'roads', name: 'b.roadWood', w: 1, h: 1, cost: { wood: 1 }, road: 3, buildable: true },
   // Studnia: z niej ludzie czerpią wodę do gaszenia pożarów (cech inżynierów ma własną studnię na podwórzu)
   { id: 'well', category: 'settlement', name: 'b.well', w: 1, h: 1, cost: { wood: 8, stone: 6 }, hp: 300, wall: true, buildable: true },
+  // Browar: piwowar warzy piwo z pszenicy ze składu, beczki idą do składu, a stamtąd do karczmy
+  {
+    id: 'brewery', category: 'food', name: 'b.brewery', w: 2, h: 2, cost: { wood: 25, stone: 5 }, buildable: true,
+    workView: 'inside',
+    production: { input: { res: 'wheat', amount: 2 }, output: { res: 'ale', amount: 3 }, site: 'home', workTicks: 90 },
+  },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

@@ -13,6 +13,10 @@ export const RULES = {
   startPeasants: 6,
   /** Tylu chłopów zostaje przy twierdzy zawsze, nawet przy głodzie, żeby dało się odbudować osadę */
   minPeasants: 4,
+  /** Ile piwa wypija jedna karczma na miesiąc */
+  alePerTavern: 1,
+  /** Karczma z karczmarzem, ale bez piwa w składzie: ludzie się złoszczą */
+  dryTavernPenalty: -2,
   startPopularity: 75,
   maxPopularity: 100,
   /** Od tej popularności przybywa ludzi, poniżej odchodzą */

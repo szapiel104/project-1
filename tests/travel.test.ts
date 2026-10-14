@@ -193,19 +193,40 @@ describe('łucznicy', () => {
   });
 });
 
-describe('karczma', () => {
-  it('z karczmarzem i pszenicą podnosi popularność i zużywa pszenicę', async () => {
+describe('karczma i browar', () => {
+  it('karczma z piwem w składzie podnosi popularność, sucha karczma ją obniża', async () => {
     const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
     const { buildingIndex } = await import('../src/data/buildings');
     const { monthlyForecast } = await import('../src/sim/systems/economy');
+    const { resIndex } = await import('../src/data/resources');
     const g = createGame(5, '1v1', 0, true);
     for (const p of g.players) p.bot = false;
     const keep = g.buildings[0]!;
     let done = false;
     for (let r = 4; r < 22 && !done; r++) for (let d = -r; d <= r && !done; d++) if (canPlace(g, 0, buildingIndex('tavern'), keep.x + d, keep.y + r) === null) done = placeBuilding(g, 0, buildingIndex('tavern'), keep.x + d, keep.y + r);
     for (let i = 0; i < 50; i++) step(g, []);
-    const f = monthlyForecast(g, g.players[0]!);
-    expect(f.parts.find((x) => x.key === 'tavern')!.value).toBeGreaterThan(0);
+    const p0 = g.players[0]!, ALE = resIndex('ale');
+    p0.res[ALE] = 10;
+    expect(monthlyForecast(g, p0).parts.find((x) => x.key === 'tavern')!.value).toBeGreaterThan(0);
+    p0.res[ALE] = 0;
+    expect(monthlyForecast(g, p0).parts.find((x) => x.key === 'tavern')!.value).toBeLessThan(0);
+  });
+  it('browar warzy piwo z pszenicy ze składu', async () => {
+    const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const { resIndex } = await import('../src/data/resources');
+    const g = createGame(5, '1v1', 0, true);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings[0]!;
+    let done = false;
+    for (let r = 4; r < 22 && !done; r++) for (let d = -r; d <= r && !done; d++) if (canPlace(g, 0, buildingIndex('brewery'), keep.x + d, keep.y + r) === null) done = placeBuilding(g, 0, buildingIndex('brewery'), keep.x + d, keep.y + r);
+    expect(done).toBe(true);
+    const p0 = g.players[0]!;
+    // bez karczmy nikt piwa nie pije, więc przybywa go tylko z browaru
+    for (const b of g.buildings) if (b.owner === 0 && b.type === buildingIndex('tavern')) b.worker = 0;
+    p0.res[resIndex('wheat')] = 20; p0.res[resIndex('ale')] = 0;
+    for (let i = 0; i < 2500 && !p0.res[resIndex('ale')]; i++) step(g, []);
+    expect(p0.res[resIndex('ale')]).toBeGreaterThan(0);
   });
 });
 

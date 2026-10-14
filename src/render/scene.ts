@@ -59,7 +59,7 @@ const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
  * zostają osobno, bo animacje i podgląd wnętrza ich szukają.
  */
 /** Budynki, w których pali się w piecu: z komina idzie dym */
-const SMOKY = new Set(['house', 'bakery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter']);
+const SMOKY = new Set(['house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter']);
 
 function mergeStatic(root: THREE.Object3D): void {
   root.updateMatrixWorld(true);
@@ -158,6 +158,7 @@ const DAY = [
   { h: 24, sun: 0x8095c8, power: 0.28, sky: 0.24, haze: 0x0b0f1c },
 ];
 const WOOD = RESOURCES.indexOf('wood');
+const ALE = RESOURCES.indexOf('ale');
 const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 
 /** Renderer: czyta stan symulacji, nigdy go nie zmienia. */
@@ -225,6 +226,9 @@ export class GameRenderer {
   private taverns = new Map<number, GameState['buildings'][number]>();
   private innDoors = new Map<number, GameState['buildings'][number]>();
   private luteAt = 0;
+  /** Kto pił dziś w karczmie (wraca potem chwiejnym krokiem); czyszczone rano */
+  private drank = new Set<number>();
+  private murmurAt = 0;
   private luteNote = 0;
   /** Lutnia przed karczmą: prosta melodia nuta po nucie, słyszalna z bliska */
   private lutePlay(x: number, z: number): void {
@@ -3195,6 +3199,10 @@ export class GameRenderer {
     for (const u of g.units) if (u.phase === Phase.Sleeping && u.home) { const l = sleepers.get(u.home); if (l) l.push(u.id); else sleepers.set(u.home, [u.id]); }
     for (const l of sleepers.values()) l.sort((a, b) => a - b);
     this.pairChats();
+    // pijacy z karczmy: po zamknięciu (od 22:00) wracają do chat chwiejnym krokiem; rano trzeźwieją
+    const hourNow = clockAt(g.tick).hour;
+    const tipsy = hourNow >= 21.5 || hourNow < 5;
+    if (hourNow >= 6 && hourNow < 18) this.drank.clear();
     for (let i = 0; i < n; i++) {
       const u = g.units[i]!;
       const prev = this.prevPos.get(u.id);
@@ -3229,6 +3237,12 @@ export class GameRenderer {
       let swing = walking ? Math.sin(stride) * 0.55 : 0;
       t.position.set(cv.sx - width / 2, this.standY(view, cv.sx, cv.sy) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
       t.rotation.set(0, heading, 0);
+      if (walking && tipsy && this.drank.has(u.id)) {
+        // zatacza się: znosi go na boki (prostopadle do drogi), kiwa się i kręci głową
+        const w = Math.sin(this.time * 1.7 + u.id) * 0.13 + Math.sin(this.time * 4.1 + u.id * 3) * 0.04;
+        t.position.x += Math.cos(heading) * w; t.position.z -= Math.sin(heading) * w;
+        t.rotation.set(Math.sin(this.time * 2.2 + u.id) * 0.1, heading + Math.sin(this.time * 1.3 + u.id) * 0.35, Math.sin(this.time * 1.7 + u.id) * 0.18);
+      }
       // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
       const resting = u.phase === Phase.Resting;
       const job = resting ? jobs.get(u.home) : u.phase === Phase.Working && u.job ? jobs.get(u.job) : undefined;
@@ -3268,8 +3282,11 @@ export class GameRenderer {
         const turn = (inn.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
         // miejsca z modelu karczmy: przy stołach w izbie i na ławach ganku; ostatni to pijak zataczający się przed wejściem
         const SEATS = TAVERN_SEATS;
-        const slot = (u.id >> 1) % (SEATS.length + 1);
+        // sucha karczma (w składzie nie ma piwa): siedzą markotni, nikt nie gra ani się nie zatacza
+        const wet = (g.players[inn.owner]?.res[ALE] ?? 0) > 0;
+        const slot = (u.id >> 1) % (SEATS.length + (wet ? 1 : 0));
         const drunk = slot === SEATS.length;
+        if (wet) this.drank.add(u.id);
         const seat = SEATS[Math.min(slot, SEATS.length - 1)]!;
         let lx = seat[0], lz = seat[1];
         if (drunk) { lx = 0.1 + Math.sin(this.time * 0.6 + u.id) * 0.5; lz = 1.5 + Math.cos(this.time * 0.45) * 0.25; }
@@ -3277,8 +3294,19 @@ export class GameRenderer {
         const ifp = footprint(BUILDINGS[inn.type]!, inn.rot);
         t.position.set(inn.x + ifp.w / 2 + wx - width / 2, (mesh?.position.y ?? 0) + (drunk ? 0.02 : TAVERN_FLOOR), inn.y + ifp.h / 2 + wz - height / 2);
         t.rotation.set(drunk ? Math.sin(this.time * 2.3 + u.id) * 0.25 : 0, drunk ? this.time * 0.7 : seat[2] + turn, drunk ? Math.cos(this.time * 1.9) * 0.2 : 0);
-        swing = drunk ? Math.sin(this.time * 3) * 0.4 : Math.max(0, Math.sin(this.time * 1.3 + u.id * 2)) * -1.2;
-        if (slot === 0 && !this.calm) this.lutePlay(t.position.x, t.position.z);
+        swing = drunk ? Math.sin(this.time * 3) * 0.4 : wet ? Math.max(0, Math.sin(this.time * 1.3 + u.id * 2)) * -1.2 : 0;
+        if (!wet) t.rotation.x = 0.18; // zwiesza głowę nad pustym kuflem
+        if (wet && slot === 0 && !this.calm) this.lutePlay(t.position.x, t.position.z);
+        // gwar przy kuflach: co chwilę ktoś inny zagaduje, śmieje się albo przekrzykuje lutnię
+        if (wet && !this.calm && this.time > this.murmurAt && (u.id + Math.floor(this.time * 3)) % 4 === 0) {
+          const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);
+          if (dist < 14) {
+            this.murmurAt = this.time + 0.35 + ((u.id * 13) % 7) * 0.08;
+            const right = this.armV.setFromMatrixColumn(cam.matrixWorld, 0);
+            const pan = ((t.position.x - cam.position.x) * right.x + (t.position.z - cam.position.z) * right.z) / Math.max(1, dist) * 1.4;
+            talk('x'.repeat(6 + (u.id * 5 + Math.floor(this.time)) % 14), u.id, (u.id + Math.floor(this.time / 3)) % 5 === 0, Math.max(0, 1 - (dist - 2) / 12) * 0.28, pan);
+          }
+        }
       } else if (camp && camp.owner === u.owner) {
         const mesh = this.buildingMeshes.get(camp.id);
         const a = (u.id * 2.39996) % (Math.PI * 2), rad = 0.5 + (u.id % 3) * 0.14;

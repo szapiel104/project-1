@@ -1569,7 +1569,7 @@ requestAnimationFrame(sayLoop);
 
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
-  const LBL: Record<string, string> = { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z pszenicy)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu' };
+  const LBL: Record<string, string> = { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: 'Brak jedzenia na wybrane racje', value: 0, note: '(jedzą mniej)' });
   const mine = game.units.filter((u) => u.owner === ME);
