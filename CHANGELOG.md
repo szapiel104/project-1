@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.20.5 — kolumna nie staje przez jednego (2026-10-14)
+
+- Zwarty marsz: oddział czeka tylko na zbiórkę na starcie (najwyżej ok. 4 s); w drodze nie staje, gdy ktoś się przesunie albo utknie — czoło lekko zwalnia, maruder przyspiesza, żeby dogonić, a kto przez 3 s jest daleko (las, tłok, mur), idzie sam swoją drogą na miejsce
+- Cały oddział staje tylko przy ataku w marszu, dopóki trwa walka
+
 ## 0.20.4 — więcej klatek na sekundę (2026-10-14)
 
 - Drzewa przechodzą w obrazki od ok. 30 pól od środka widoku (było 42), kępy, kwiaty i kamyki znikają wcześniej — z bliska nic się nie zmienia

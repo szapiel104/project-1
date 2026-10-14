@@ -89,6 +89,24 @@ describe('zwarty szyk w marszu', () => {
     for (const id of ids) { const s = g.soldiers.find((x) => x.id === id)!; expect(Math.abs((s.px >> 8) - (a.x + 12))).toBeLessThanOrEqual(2); }
   });
 
+  it('jeden maruder nie zatrzymuje kolumny: czoło idzie dalej, maruder po chwili idzie sam', () => {
+    const g = createGame(7);
+    const a = openArea(g, 16, 4);
+    const list = [0, 1, 2, 3].map((i) => mk(g, 0, 'spearman', a.x + 1, a.y + i));
+    step(g, [{ type: 'move', player: 0, ids: list.map((s) => s.id), x: a.x + 15, y: a.y + 1 }]);
+    expect(g.marches?.length).toBe(1);
+    // zbiórka
+    for (let i = 0; i < 50; i++) step(g, []);
+    const m = g.marches![0]!;
+    const start = m.px;
+    // jeden „przyklejony” (np. zablokowany w tłoku) — trzymamy go w miejscu
+    const stuck = list[3]!, sx = stuck.px, sy = stuck.py;
+    for (let i = 0; i < 40; i++) { stuck.px = sx; stuck.py = sy; step(g, []); }
+    expect(Math.abs((g.marches?.[0]?.px ?? m.px) - start)).toBeGreaterThan(256);
+    for (let i = 0; i < 40; i++) { stuck.px = sx; stuck.py = sy; step(g, []); }
+    expect(stuck.slot).toBeUndefined(); // odłączył się i idzie sam
+  });
+
   it('pojedynczy żołnierz albo krótki marsz idzie po staremu, bez szyku', () => {
     const g = createGame(7);
     const a = openArea(g, 6, 3);

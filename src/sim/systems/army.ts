@@ -290,8 +290,10 @@ function planMarch(g: GameState, player: number, members: Soldier[], target: num
 
 /** Maruder dalej niż tyle pól od swojego miejsca zatrzymuje oddział */
 const LAG = 1.5 * FP;
-/** Po tylu tickach czekania bez poprawy utknięty maruder idzie sam, a oddział rusza dalej */
+/** Zbiórka na starcie: najwyżej tyle ticków czekania, potem oddział rusza */
 const STALL = 40;
+/** Maruder dalej niż tyle od miejsca w szyku przez LOST_TICKS ticków odłącza się i idzie sam */
+const FAR_LAG = 4 * FP, LOST_TICKS = 30;
 
 /** Miejsce żołnierza w szyku w tej chwili; gdy wypada na drzewie, wodzie albo murze, idzie za punktem prowadzącym */
 function slotPoint(g: GameState, m: March, s: Soldier): [number, number, boolean] {
@@ -326,31 +328,27 @@ function marchSystem(g: GameState): Map<number, March> {
       const allow = own ? LAG : LAG + (Math.abs(s.slot![0]) + Math.abs(s.slot![1])) * FP;
       if (d > allow) lag += d;
     }
-    if (fight || lag) {
-      // czeka; liczy tylko czekanie bez postępu, żeby nie zostawić tych, którzy po prostu dochodzą z daleka
-      // postęp = maruderzy wyraźnie bliżej niż najbliżej dotąd (kręcenie się w miejscu przy przeszkodzie się nie liczy)
-      if (!lag) m.stall = fight ? m.stall : 0;
-      else if (!m.lag || lag < m.lag - FP / 2) { m.stall = 0; m.lag = lag; }
-      else m.stall++;
-      if (m.stall > STALL) {
-        for (const s of list) {
-          if (s.target) continue;
-          const [x, y, own] = slotPoint(g, m, s);
-          const allow = own ? LAG : LAG + (Math.abs(s.slot![0]) + Math.abs(s.slot![1])) * FP;
-          if (Math.max(Math.abs(s.px - x), Math.abs(s.py - y)) > allow) dropOut(s);
-        }
-        m.stall = 0; m.lag = 0;
-      }
-      live.set(m.grp, m);
-      return true;
+    // walka (atak w marszu): cały oddział staje, dopóki trwa
+    if (fight) { live.set(m.grp, m); return true; }
+    // zbiórka na starcie: czeka, aż wszyscy staną w szyku (najwyżej ok. 4 s), potem rusza i już nie staje dla maruderów
+    if (!m.go) {
+      if (lag && m.stall++ < STALL) { live.set(m.grp, m); return true; }
+      m.go = true; m.stall = 0;
     }
-    m.stall = 0; m.lag = 0;
+    // w drodze: maruderzy doganiają (idą szybciej), czoło tylko trochę zwalnia; kto długo jest daleko (las, mur), idzie sam
+    if (lag) {
+      for (const s of list) {
+        const [x, y] = slotPoint(g, m, s);
+        if (Math.max(Math.abs(s.px - x), Math.abs(s.py - y)) > FAR_LAG) { s.lost = (s.lost ?? 0) + 1; if (s.lost > LOST_TICKS) { s.lost = 0; dropOut(s); } }
+        else s.lost = 0;
+      }
+    }
     const next = m.path[0];
     if (next === undefined || !walkable(g, next, m.owner)) { for (const s of list) dropOut(s); return false; }
     const W = g.map.width, nx = next % W, ny = (next - nx) / W;
     const tx = nx * FP + FP / 2, ty = ny * FP + FP / 2, dx = tx - m.px, dy = ty - m.py;
     const base = dx !== 0 && dy !== 0 ? RULES.unitSpeedDiagonal : RULES.unitSpeed;
-    const speed = Math.round((base * m.pace * (100 + RULES.roadSpeedBonus[g.roads[(m.py >> 8) * W + (m.px >> 8)]!]!)) / 10000);
+    const speed = Math.round((base * m.pace * (lag ? 0.8 : 1) * (100 + RULES.roadSpeedBonus[g.roads[(m.py >> 8) * W + (m.px >> 8)]!]!)) / 10000);
     m.px += Math.max(-speed, Math.min(speed, dx));
     m.py += Math.max(-speed, Math.min(speed, dy));
     if (m.px === tx && m.py === ty) m.path.shift();
@@ -370,7 +368,9 @@ function marchStep(g: GameState, s: Soldier, m: March): void {
   const W = g.map.width;
   const base = dx !== 0 && dy !== 0 ? RULES.unitSpeedDiagonal : RULES.unitSpeed;
   // własnym tempem (szybszy dogania), punkt prowadzący idzie tempem najwolniejszego
-  const speed = Math.round((base * UNITS[s.kind]!.speed * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, s)]!]!)) / 10000);
+  // daleko od swojego miejsca: przyspiesza, żeby dogonić (czoło na nikogo nie czeka)
+  const catchUp = Math.max(Math.abs(dx), Math.abs(dy)) > FP / 2 ? 1.35 : 1;
+  const speed = Math.round((base * UNITS[s.kind]!.speed * catchUp * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, s)]!]!)) / 10000);
   const sx = Math.max(-speed, Math.min(speed, dx)), sy = Math.max(-speed, Math.min(speed, dy));
   const free = (px: number, py: number): boolean => walkable(g, (py >> 8) * W + (px >> 8), s.owner);
   let moved = true;

@@ -134,3 +134,15 @@ Czeka:
 - Pozostałe budynki z Blendera w tym samym potoku (stodoła, chata, piekarnia, koszary), z obchodem inspect.sh i kolizjami w spacerze. Zrobione 14.10: karczma (szachulec, strzecha, ganek, szynkwas, palenisko, stoły, wejście drzwiami z kolizjami)
 - Karczma: izba ciasna z oczu człowieka (działka 3×2) — rozważyć 4×3; trawa przebija przy palenisku przez podłogę na pochyłym terenie
 - Ulepszanie zamku (poziomy widać na modelu: drewniane hurdycje, druga linia murów, fosa)
+
+## Do poprawy — kolejka po przeglądzie 14.10.2026 (Claude podpowiada stąd przy „co dalej”)
+Wydajność (więcej FPS):
+- Trawa i drzewa liściaste z daleka uproszczone albo jako obrazki (dziś ok. 750 tys. trójkątów w widoku osady)
+- Domy z Blendera (ok. 19 tys. trójkątów każdy): prostsza wersja z daleka
+- Las rysowany w setkach małych kawałków (ok. 1180 wywołań rysowania na klatkę): łączenie w większe paczki (BatchedMesh)
+Wojsko — wygoda dowodzenia:
+- Kolejka rozkazów: Shift + prawy klik dodaje kolejne punkty marszu
+- Patrol tam i z powrotem (np. wzdłuż palisady)
+- Numer grupy widoczny nad oddziałem i na portretach
+Balans:
+- Gry bot kontra bot kończą się po ok. godzinie i zwykle przegrywa ten sam typ osady: ceny, tempo produkcji i siła fal do wyrównania (narzędzie: tools/soak)
