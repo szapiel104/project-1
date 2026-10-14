@@ -239,17 +239,19 @@ for dx in range(N):
         block(x - 0.03, x + 0.03, z0, z1)
 
 # ---------------- donżon nad tylnym murem: wysoka wieża z chorągwią ----------------
-DZ = -H + 0.55
-b.box('base', 'castle', 1.9, 3.6 - G, 1.4, 0, G, DZ)
-b.box('base', 'castleDark', 2.0, 0.08, 1.5, 0, 1.6, DZ)
-b.box('base', 'castleDark', 2.04, 0.08, 1.54, 0, 3.6, DZ)
+# donżon stoi w tylnym murze i wystaje tylko na zewnątrz: przód kończy się tuż za tylną ścianą sali tronowej
+DD = 1.13
+DZ = -H - 0.15 + DD / 2
+b.box('base', 'castle', 1.9, 3.6 - G, DD, 0, G, DZ)
+b.box('base', 'castleDark', 2.0, 0.08, DD + 0.1, 0, 1.6, DZ - 0.05)
+b.box('base', 'castleDark', 2.04, 0.08, DD + 0.14, 0, 3.6, DZ)
 for sx in (-1, 1):
     for sz in (-1, 1):
-        b.box('base', 'castle', 0.26, 0.2, 0.26, sx * 0.88, 3.68, DZ + sz * 0.63)
+        b.box('base', 'castle', 0.26, 0.2, 0.26, sx * 0.88, 3.68, DZ + sz * (DD / 2 - 0.08))
 for x in (-0.45, 0.45):
     for y in (2.0, 2.85):
-        b.box('base', 'dark', 0.16, 0.34, 0.015, x, y, DZ - 0.708)
-b.pyramid('base', 'slate', 2.1, 1.6, 1.5, 0, 3.68, DZ)
+        b.box('base', 'dark', 0.16, 0.34, 0.015, x, y, DZ - DD / 2 - 0.008)
+b.pyramid('base', 'slate', 2.1, DD + 0.25, 1.5, 0, 3.68, DZ)
 b.box('base', 'gold', 0.07, 0.12, 0.07, 0, 5.17, DZ)
 b.box('base', 'woodDark', 0.04, 0.9, 0.04, 0, 5.2, DZ)
 b.box('base', 'flag', 0.7, 0.4, 0.02, 0.37, 5.65, DZ)
@@ -407,16 +409,68 @@ for chars, mat, rise in ROOFS:
 # ---------------- sala tronowa ----------------
 tx0, tx1, tz0, tz1 = bbox('T')
 tmx = (tx0 + tx1) / 2
-b.box('interior', 'stoneDark', 1.7, 0.08, 0.8, tmx, G, tz0 + 0.45)
-boxs('interior', 'woodDark', 0.42, 0.24, 0.34, tmx, G + 0.08, tz0 + 0.38)
-b.box('interior', 'woodDark', 0.46, 0.68, 0.06, tmx, G + 0.08, tz0 + 0.2)
-b.box('interior', 'flag', 0.32, 0.03, 0.28, tmx, G + 0.32, tz0 + 0.4)
-for s in (-1, 1):
-    b.box('interior', 'gold', 0.05, 0.08, 0.05, tmx + s * 0.2, G + 0.76, tz0 + 0.2)
-    b.box('interior', 'woodDark', 0.05, 0.2, 0.3, tmx + s * 0.23, G + 0.32, tz0 + 0.38)
-    b.box('interior', 'flag', 0.26, 0.75, 0.015, tmx + s * 1.1, G + 0.3, tz0 + 0.01)
-    b.box('interior', 'gold', 0.3, 0.03, 0.03, tmx + s * 1.1, G + 1.05, tz0 + 0.02)
-b.box('interior', 'flag', 0.6, 0.008, tz1 - tz0 - 0.95, tmx, G + 0.013, (tz0 + 0.85 + tz1) / 2)
+# podest z dwoma stopniami: niższy szerszy, wyższy pod tronem, krawędzie stopni z ciemniejszego kamienia
+b.box('interior', 'stoneDark', 2.1, 0.06, 1.05, tmx, G, tz0 + 0.55)
+b.box('interior', 'castleDark', 2.12, 0.015, 0.04, tmx, G + 0.06, tz0 + 1.06)
+b.box('interior', 'stoneDark', 1.4, 0.06, 0.72, tmx, G + 0.06, tz0 + 0.4)
+b.box('interior', 'castleDark', 1.42, 0.015, 0.04, tmx, G + 0.12, tz0 + 0.75)
+b.box('interior', 'flag', 0.5, 0.006, 1.0, tmx, G + 0.122, tz0 + 0.42)   # chodnik na podeście
+TY = G + 0.12   # tu stoi tron
+TZ = tz0 + 0.34
+# tron: siedzisko z poduchą, wysokie oparcie zakończone szczytem, poręcze z złotymi gałkami, nogi-łapy
+boxs('interior', 'woodDark', 0.52, 0.22, 0.4, tmx, TY, TZ)
+b.box('interior', 'gold', 0.54, 0.025, 0.42, tmx, TY + 0.2, TZ)
+b.box('interior', 'flag', 0.44, 0.05, 0.34, tmx, TY + 0.225, TZ + 0.01)
+b.box('interior', 'woodDark', 0.56, 0.9, 0.07, tmx, TY, TZ - 0.21)
+b.box('interior', 'flag', 0.4, 0.62, 0.012, tmx, TY + 0.25, TZ - 0.17)
+b.gable('interior', 'gold', tmx - 0.28, tmx + 0.28, TZ - 0.25, TZ - 0.17, TY + 0.9, 0.2, along_x=False, over=0.01, end_mat='woodDark')
+b.box('interior', 'gold', 0.07, 0.07, 0.07, tmx, TY + 1.1, TZ - 0.21)
+for sx in (-1, 1):
+    x = tmx + sx * 0.28
+    b.box('interior', 'woodDark', 0.07, 1.0, 0.09, x, TY, TZ - 0.21)               # słupki oparcia
+    b.prism('interior', 'gold', 0.045, 0.045, 0.06, x, TY + 1.0, TZ - 0.21, seg=8)  # gałki
+    b.box('interior', 'woodDark', 0.07, 0.16, 0.38, x, TY + 0.22, TZ + 0.01)        # poręcz
+    b.prism('interior', 'gold', 0.04, 0.03, 0.05, x, TY + 0.38, TZ + 0.18, seg=8)   # gałka poręczy
+    for zz in (TZ - 0.15, TZ + 0.16):
+        b.prism('interior', 'gold', 0.035, 0.025, 0.05, x - sx * 0.02, TY, zz, seg=6)  # złote stopki
+# baldachim nad tronem: cztery kute słupki, sukno w barwach pana ze złotym obszyciem
+for sx in (-1, 1):
+    for zz in (TZ - 0.27, TZ + 0.3):
+        b.prism('interior', 'woodDark', 0.022, 0.022, 1.2, tmx + sx * 0.42, TY, zz, seg=6)
+        b.prism('interior', 'gold', 0.035, 0.035, 0.04, tmx + sx * 0.42, TY + 1.2, zz, seg=6)
+b.box('interior', 'flag', 0.92, 0.03, 0.64, tmx, TY + 1.2, TZ + 0.015)
+for zz, w, d in ((TZ - 0.29, 0.94, 0.02), (TZ + 0.32, 0.94, 0.02)):
+    b.box('interior', 'flag', w, 0.16, d, tmx, TY + 1.06, zz)
+    b.box('interior', 'gold', w, 0.025, d + 0.006, tmx, TY + 1.06, zz)
+for sx in (-1, 1):
+    b.box('interior', 'flag', 0.02, 0.16, 0.62, tmx + sx * 0.44, TY + 1.06, TZ + 0.015)
+    b.box('interior', 'gold', 0.026, 0.025, 0.62, tmx + sx * 0.44, TY + 1.06, TZ + 0.015)
+# arras z herbem za tronem: płótno na złotym drążku, tarcza herbowa
+b.box('interior', 'gold', 1.3, 0.03, 0.03, tmx, G + 1.22, tz0 + 0.03)
+b.box('interior', 'flag', 1.2, 1.0, 0.012, tmx, G + 0.22, tz0 + 0.025)
+b.box('interior', 'gold', 1.2, 0.03, 0.016, tmx, G + 0.22, tz0 + 0.027)
+b.box('interior', 'castleDark', 0.32, 0.3, 0.02, tmx, G + 0.86, tz0 + 0.04)
+b.box('interior', 'gold', 0.05, 0.22, 0.022, tmx, G + 0.9, tz0 + 0.045)
+b.box('interior', 'gold', 0.2, 0.05, 0.022, tmx, G + 1.02, tz0 + 0.045)
+for sx in (-1, 1):
+    # chorągwie po bokach i tarcze ze skrzyżowanymi mieczami
+    b.box('interior', 'flag', 0.26, 0.75, 0.015, tmx + sx * 1.15, G + 0.3, tz0 + 0.01)
+    b.box('interior', 'gold', 0.3, 0.03, 0.03, tmx + sx * 1.15, G + 1.05, tz0 + 0.02)
+    sxw = tmx + sx * 1.15
+# dywan od drzwi do podestu ze złotym obszyciem
+cl = tz1 - (tz0 + 1.1)
+b.box('interior', 'flag', 0.62, 0.008, cl, tmx, G + 0.013, tz0 + 1.1 + cl / 2)
+for sx in (-1, 1):
+    b.box('interior', 'gold', 0.035, 0.009, cl, tmx + sx * 0.3, G + 0.013, tz0 + 1.1 + cl / 2)
+# żyrandol z kutego żelaza ze świecami (pod sufitem, widać go od środka sali)
+for zz in (tz0 + 1.25, tz1 - 0.55):
+    b.prism('ceiling', 'iron', 0.32, 0.32, 0.025, tmx, G + 1.0, zz, seg=12)
+    b.prism('ceiling', 'iron', 0.008, 0.008, 0.28, tmx, G + 1.02, zz, seg=4)
+    for k in range(6):
+        a2 = k * math.pi / 3
+        x, z = tmx + math.sin(a2) * 0.3, zz + math.cos(a2) * 0.3
+        b.prism('ceiling', 'white', 0.016, 0.016, 0.06, x, G + 1.025, z, seg=5)
+        b.prism('ceiling', 'ember', 0.012, 0.0, 0.035, x, G + 1.085, z, seg=5)
 for s in (-1, 1):
     # długie stoły z ławami po bokach sali, na nich chleb i jabłka
     x = tmx + s * 1.55
@@ -431,8 +485,8 @@ for s in (-1, 1):
     for zz in (tz0 + 1.2, tz1 - 0.5):
         b.prism('interior', 'castleDark', 0.1, 0.1, 1.27, tmx + s * 0.85, G, zz, seg=8)
         block(tmx + s * 0.85 - 0.1, tmx + s * 0.85 + 0.1, zz - 0.1, zz + 0.1)
-    brazier('interior', tmx + s * 0.62, G + 0.4, tz0 + 0.35)
-    block(tmx + s * 0.62 - 0.13, tmx + s * 0.62 + 0.13, tz0 + 0.22, tz0 + 0.48)
+    brazier('interior', tmx + s * 0.85, G + 0.45, tz0 + 0.85)
+    block(tmx + s * 0.85 - 0.13, tmx + s * 0.85 + 0.13, tz0 + 0.72, tz0 + 0.98)
 
 # ---------------- kuchnia ----------------
 kx0, kx1, kz0, kz1 = bbox('K')
@@ -558,6 +612,7 @@ VIEWS = [
     ['dziedziniec → lochy, schody', [1.2, E, 1.2], [-3, 0.6, 3.5], OUT, 20],
     ['dziedziniec → koszary', [-1.0, E, 1.0], [3.5, 0.6, 3], OUT, 20],
     ['sala tronowa', [0, E, -1.9], [0, 0.6, -4.5], ROOM, 18],
+    ['tron z bliska', [0.5, E + 0.1, -2.9], [0, 0.7, -4.6], ROOM, 20],
     ['kuchnia', [-2.9, E, -2.8], [-4.3, 0.4, -4.4], ROOM, 16],
     ['komnata', [2.9, E, -2.7], [4.4, 0.4, -4.3], ROOM, 16],
     ['koszary', [3.0, E, 0.9], [4.0, 0.3, 4.3], ROOM, 16],
