@@ -377,6 +377,9 @@ export class GameRenderer {
     this.handFlameN++;
   }
   private handTorches: THREE.InstancedMesh;
+  /** wiadro w prawej ręce gaszącego (puste i z wodą) */
+  private buckets!: THREE.InstancedMesh;
+  private bucketWater!: THREE.InstancedMesh;
   private rods: THREE.InstancedMesh;
   private frameNo = 0;
 
@@ -677,6 +680,20 @@ export class GameRenderer {
     this.rods.count = 0;
     this.rods.frustumCulled = false;
     this.scene.add(this.rods);
+    // drewniane wiadro z obręczami i kabłąkiem, zwisa z prawej dłoni
+    const pail = mergeGeometries([
+      tint(new THREE.CylinderGeometry(0.07, 0.055, 0.1, 10, 1, true).translate(0.19, 0.3, 0.06), 0x8a5f36),
+      tint(new THREE.CylinderGeometry(0.055, 0.055, 0.01, 10).translate(0.19, 0.255, 0.06), 0x6e4a2a),
+      tint(new THREE.TorusGeometry(0.071, 0.008, 4, 12).rotateX(Math.PI / 2).translate(0.19, 0.335, 0.06), 0x3a3d42),
+      tint(new THREE.TorusGeometry(0.06, 0.008, 4, 12).rotateX(Math.PI / 2).translate(0.19, 0.27, 0.06), 0x3a3d42),
+      tint(new THREE.TorusGeometry(0.07, 0.006, 4, 12, Math.PI).translate(0.19, 0.35, 0.06), 0x3a3d42),
+    ]);
+    this.buckets = new THREE.InstancedMesh(pail, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), MAX_UNITS);
+    this.buckets.count = 0; this.buckets.frustumCulled = false; this.buckets.castShadow = true;
+    this.scene.add(this.buckets);
+    this.bucketWater = new THREE.InstancedMesh(new THREE.CircleGeometry(0.064, 10).rotateX(-Math.PI / 2).translate(0.19, 0.33, 0.06), new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 }), MAX_UNITS);
+    this.bucketWater.count = 0; this.bucketWater.frustumCulled = false;
+    this.scene.add(this.bucketWater);
     this.handTorches.count = 0;
     this.handTorches.frustumCulled = false;
     this.scene.add(this.handTorches);
@@ -3498,7 +3515,9 @@ export class GameRenderer {
       const jb = u.job ? jobs.get(u.job) : undefined;
       const log = wood && u.phase === Phase.ToHome && !!jb && BUILDINGS[jb.type]!.production?.site === Terrain.Forest;
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
-      const torchOn = this.night > 0.15 && !still && u.carryRes < 0;
+      const torchOn = this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket;
+      this.buckets.setMatrixAt(i, u.bucket ? t.matrix : ZERO);
+      this.bucketWater.setMatrixAt(i, u.bucket === 2 ? t.matrix : ZERO);
       if (torchOn) { this.handTorches.setMatrixAt(i, t.matrix); this.pushHandFlame(t.matrix, 0.17); } else this.handTorches.setMatrixAt(i, ZERO);
       // uciekający w panice: długi, szybki krok i ręce machające nad głową
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
@@ -3556,6 +3575,7 @@ export class GameRenderer {
     this.rods.instanceMatrix.needsUpdate = true;
     this.handTorches.count = n;
     this.handTorches.instanceMatrix.needsUpdate = true;
+    for (const m of [this.buckets, this.bucketWater]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
     for (const m of [...this.loads.values(), this.logs, this.planks]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;
