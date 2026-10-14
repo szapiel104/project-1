@@ -134,7 +134,7 @@ export function wolfSystem(g: GameState): void {
             const p = findPath(g, here, (x) => Math.max(Math.abs((x % width) - wall.x), Math.abs(Math.floor(x / width) - wall.y)) === 1, 3000, WOLF);
             w.gnaw = wall.id;
             w.path = p ?? [];
-          }
+          } else { w.leaving = true; w.target = 0; } // wszyscy schowani w zamku, a muru do przegryzienia nie ma: wilk wraca do lasu
         }
       }
     }

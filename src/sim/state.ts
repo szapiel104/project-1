@@ -365,10 +365,14 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       rations: RULES.defaultRations, tax: RULES.defaultTax, bot: humans ? !humans.includes(s.player) : s.player !== 0, defeated: false, level, stats: { gathered: 0, trained: 0, kills: 0, lost: 0, built: 0, razed: 0 },
     });
     addBuilding(g, keep, s.player, s.x - (KEEP_SIZE >> 1), s.y - (KEEP_SIZE >> 1));
-    placeNear(g, buildingIndex('barn'), s.player, s.x, s.y);
-    // stodoła trzyma tylko towary, jedzenie idzie do spichlerza
-    placeNear(g, buildingIndex('granary'), s.player, s.x, s.y);
-    placeNear(g, CAMP, s.player, s.x, s.y);
+    // przed bramą zostaje wolny plac (stodoła trzyma tylko towary, jedzenie idzie do spichlerza)
+    const L = s.x - FORECOURT.half - 2, R = s.x + FORECOURT.half + 2, Y = s.y + (KEEP_SIZE >> 1) + 2;
+    const BARN = buildingIndex('barn'), GRAN = buildingIndex('granary');
+    // spichlerz (jedzenie, najczęstsze kursy) po prawej albo po lewej stronie placu, stodoła po drugiej, obozowisko na końcu placu
+    const granRight = placeAt(g, GRAN, s.player, R, Y);
+    if (!granRight && !placeAt(g, GRAN, s.player, L - 1, Y)) placeNear(g, GRAN, s.player, s.x, s.y);
+    if (!placeAt(g, BARN, s.player, granRight ? L - 2 : R, Y)) placeNear(g, BARN, s.player, s.x, s.y);
+    placeAt(g, CAMP, s.player, s.x, s.y + (KEEP_SIZE >> 1) + FORECOURT.depth + 2) || placeAt(g, CAMP, s.player, s.x - 1, s.y + (KEEP_SIZE >> 1) + FORECOURT.depth + 2) || placeNear(g, CAMP, s.player, s.x, s.y);
     const extra = !humans && s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0;
     for (let i = 0; i < RULES.startPeasants + extra; i++) spawnPeasant(g, s.player);
     if (dev && s.player === 0) {
@@ -435,24 +439,34 @@ function devFortify(g: GameState, player: number): void {
       }
 }
 
+/** Wolne miejsce na budynek startowy z wolnym pasem dookoła (poza placem przed bramą) */
+function startFree(g: GameState, def: { w: number; h: number }, x: number, y: number): boolean {
+  const w = g.map.width;
+  for (let ty = y - 1; ty <= y + def.h; ty++)
+    for (let tx = x - 1; tx <= x + def.w; tx++) {
+      const t = ty * w + tx;
+      if (tx < 0 || ty < 0 || tx >= w || ty >= g.map.height || g.map.tiles[t] !== 0 || g.occupancy[t] !== 0 || g.reserved[t] !== 0 || inForecourt(g, tx, ty)) return false;
+    }
+  return true;
+}
+/** Stawia budynek startowy dokładnie tutaj, jeśli miejsce jest wolne */
+function placeAt(g: GameState, type: number, player: number, x: number, y: number): boolean {
+  if (!startFree(g, BUILDINGS[type]!, x, y)) return false;
+  addBuilding(g, type, player, x, y);
+  return true;
+}
+
 /** Stawia budynek startowy na pierwszym wolnym miejscu przy twierdzy (stała kolejność szukania). */
 function placeNear(g: GameState, type: number, player: number, cx: number, cy: number, reach = 8): void {
   const def = BUILDINGS[type]!;
-  const w = g.map.width;
   for (let r = (KEEP_SIZE >> 1) + 2; r <= reach + (KEEP_SIZE >> 1); r++)
     // od frontu (strona bramy) do tyłu: stodoła, spichlerz i obozowisko stają blisko wejścia do zamku
     for (let dy = r; dy >= -r; dy--)
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const x = cx + dx, y = cy + dy;
-        let free = true;
         // z wolnym pasem dookoła, żeby nic nie zatkało przejść
-        for (let ty = y - 1; ty <= y + def.h && free; ty++)
-          for (let tx = x - 1; tx <= x + def.w; tx++) {
-            const t = ty * w + tx;
-            if (tx < 0 || ty < 0 || tx >= w || ty >= g.map.height || g.map.tiles[t] !== 0 || g.occupancy[t] !== 0 || g.reserved[t] !== 0) { free = false; break; }
-          }
-        if (free) { addBuilding(g, type, player, x, y); return; }
+        if (startFree(g, def, x, y)) { addBuilding(g, type, player, x, y); return; }
       }
 }
 
@@ -468,6 +482,18 @@ export function idleCount(g: GameState, player: number): number {
   for (const u of g.units) if (u.owner === player && u.job === 0) n++;
   for (const t of g.travelers) if (t.owner === player && !t.leaving) n++; // idący do obozowiska już mają w nim miejsce
   return n;
+}
+
+/** Plac przed bramą zamku: tyle pól w głąb i w każdą stronę od osi bramy. Nie wolno tu budować (drogi tak). */
+export const FORECOURT = { depth: 3, half: 3 };
+/** Czy pole leży na placu przed bramą któregoś zamku */
+export function inForecourt(g: GameState, x: number, y: number): boolean {
+  for (const k of g.buildings) {
+    if (k.type !== 0) continue;
+    const gx = k.x + KEEP_GATE[0], y0 = k.y + KEEP_SIZE;
+    if (y >= y0 && y < y0 + FORECOURT.depth && Math.abs(x - gx) <= FORECOURT.half) return true;
+  }
+  return false;
 }
 
 /** Środek zamku (pole) */

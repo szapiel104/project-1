@@ -4,12 +4,12 @@ import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { TERRAIN, Terrain } from '../../data/terrain';
 import { KEEP_BED, KEEP_CELLS } from '../../data/keep';
-import { FP, keepCenter, Phase, playerKeep, type Building, type GameState } from '../state';
+import { FP, inForecourt, keepCenter, Phase, playerKeep, type Building, type GameState } from '../state';
 
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.forecourt' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
@@ -150,6 +150,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
       if (!TERRAIN[g.map.tiles[t] as Terrain].buildable) return 'place.terrain';
       if (over) continue;
       if (g.occupancy[t] !== 0 || g.reserved[t] !== 0) return 'place.occupied';
+      if (inForecourt(g, tx, ty)) return 'place.forecourt';
     }
   }
   const keep = playerKeep(g, player);

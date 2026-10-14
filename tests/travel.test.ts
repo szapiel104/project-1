@@ -244,3 +244,20 @@ describe('wilki budzą śpiących', () => {
     expect(u.home).toBeGreaterThan(0);
   });
 });
+
+describe('plac przed bramą', () => {
+  it('przed bramą zamku nie da się budować, a startowe budynki stoją poza placem', async () => {
+    const { canPlace } = await import('../src/sim/systems/placement');
+    const { buildingIndex, BUILDINGS, footprint } = await import('../src/data/buildings');
+    const { inForecourt, keepFront } = await import('../src/sim/state');
+    const g = createGame(5, '1v1', 0, true);
+    const keep = g.buildings.find((b) => b.owner === 0 && b.type === 0)!;
+    const [fx, fy] = keepFront(keep);
+    expect(canPlace(g, 0, buildingIndex('house'), fx - 1, fy + 1)).toBe('place.forecourt');
+    for (const b of g.buildings) {
+      if (b.type === 0) continue;
+      const fp = footprint(BUILDINGS[b.type]!, b.rot);
+      for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) expect(inForecourt(g, x, y)).toBe(false);
+    }
+  });
+});

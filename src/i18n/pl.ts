@@ -265,6 +265,7 @@ export const pl = {
   'place.cost': 'Za mało surowców',
   'place.needTerrain': 'Za daleko od złoża albo wody',
   'place.noAccess': 'Brak dojścia do budynku',
+  'place.forecourt': 'Plac przed bramą zamku musi zostać wolny',
   'place.blocks': 'Tu budynek zablokowałby ludziom przejście',
   'place.enemy': 'Wrogie wojsko w pobliżu — tu nie da się budować',
   'place.unknown': 'Nie można tego zbudować',

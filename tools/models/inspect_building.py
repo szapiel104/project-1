@@ -92,6 +92,10 @@ views.append(('od dołu: przód', (0, 0.25, R * 0.63), (0, R * 0.1, R * 0.4), OU
 for i in range(4):
     a = math.pi / 4 + i * math.pi / 2
     views.append((f'z ziemi {45 + i * 90}°', (math.sin(a) * R * 0.42, 0.46, math.cos(a) * R * 0.42), (0, R * 0.22, 0), OUT, 18))
+# z boku przy szczycie, na wysokości okapu: połać po drugiej stronie kalenicy i jej okap widać od spodu
+for i in range(4):
+    a = math.pi / 4 + i * math.pi / 2
+    views.append((f'przy szczycie {45 + i * 90}°', (math.sin(a) * R * 0.3, R * 0.2, math.cos(a) * R * 0.38), (-math.sin(a) * R * 0.05, R * 0.27, 0), OUT, 20))
 # widoki z oczu człowieka zapisuje skrypt budynku w modelu (klucz 'views'), np. keep.py
 for label, eye, tgt, groups, lens in d.get('views', []):
     views.append((label, tuple(eye), tuple(tgt), tuple(groups), lens))

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { GUARD } from '../src/data/units';
 import { resIndex } from '../src/data/resources';
 import { clockAt } from '../src/sim/clock';
-import { createGame, Phase, playerKeep, type GameState } from '../src/sim/state';
+import { createGame, keepFront, Phase, playerKeep, type GameState } from '../src/sim/state';
 import { step } from '../src/sim/step';
 import { monthlyForecast } from '../src/sim/systems/economy';
 
@@ -16,7 +16,8 @@ describe('straż miejska', () => {
     for (let i = 0; i < 300; i++) step(g, []);
     expect(guards(g).length).toBe(6);
     const keep = playerKeep(g, 0)!;
-    const near = guards(g).filter((s) => Math.abs((s.px >> 8) - keep.x) < 6 && Math.abs((s.py >> 8) - keep.y) < 7);
+    const [fx, fy] = keepFront(keep);
+    const near = guards(g).filter((s) => Math.abs((s.px >> 8) - fx) <= 4 && Math.abs((s.py >> 8) - fy) <= 4);
     expect(near.length).toBeGreaterThanOrEqual(2);
   });
 

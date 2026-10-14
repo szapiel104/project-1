@@ -14,9 +14,11 @@ it('łucznicy z wież w osadzie w murach: każdy rozkaz do przodu przesuwa oddzi
     const mx = sel.reduce((a, s) => a + s.px / FP, 0) / sel.length, my = sel.reduce((a, s) => a + s.py / FP, 0) / sel.length;
     const tx = Math.round(mx + dx * 6), ty = Math.round(my + dy * 6);
     step(g, [{ type: 'move', player: 0, ids: sel.map((s) => s.id), x: tx, y: ty }]);
-    for (let t = 0; t < 120; t++) step(g, []);
+    // 12 s, a gdy droga prowadzi naokoło zabudowy (palisada, chaty) — do 20 s
+    const prog = (): number => (sel.reduce((a, s) => a + s.px / FP, 0) / sel.length - mx) * dx + (sel.reduce((a, s) => a + s.py / FP, 0) / sel.length - my) * dy;
+    for (let t = 0; t < 200 && (t < 120 || prog() <= 3); t++) step(g, []);
     const nx = sel.reduce((a, s) => a + s.px / FP, 0) / sel.length, ny = sel.reduce((a, s) => a + s.py / FP, 0) / sel.length;
-    // po 12 s każdy rozkaz daje wyraźny postęp w stronę celu (wcześniej: stali albo się cofali)
+    // każdy rozkaz daje wyraźny postęp w stronę celu (wcześniej: stali albo się cofali)
     expect((nx - mx) * dx + (ny - my) * dy).toBeGreaterThan(3);
   }
 });

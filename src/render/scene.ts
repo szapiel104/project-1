@@ -20,7 +20,7 @@ import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel,
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
-import { FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
+import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
 import { peasantWeapon } from '../sim/systems/army';
 import { peasantGear } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
@@ -2403,7 +2403,17 @@ export class GameRenderer {
       // budynek siada lekko poniżej najwyższego punktu działki, wtopiony w teren, bez cokołu
       const ground = low + (top - low) * 0.35;
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
-      if (def.id === 'keep') this.keepFloors.set(b.id, [b.x + KEEP_HALF, b.y + KEEP_HALF, ground]);
+      if (def.id === 'keep') {
+        this.keepFloors.set(b.id, [b.x + KEEP_HALF, b.y + KEEP_HALF, ground]);
+        // plac przed bramą: bez krzaków i kamyków, ziemia wydeptana najmocniej przy moście
+        const gx = b.x + KEEP_GATE[0];
+        for (let d = 0; d < FORECOURT.depth; d++) for (let o = -FORECOURT.half; o <= FORECOURT.half; o++) {
+          const tx = gx + o, ty = b.y + KEEP_SIZE + d;
+          if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
+          view.clear(ty * width + tx);
+          view.wear(tx, ty, Math.max(0.15, 0.6 - d * 0.1 - Math.abs(o) * 0.08));
+        }
+      }
       if (def.id === 'tavern') this.walkables.set(b.id, { cx: b.x + fp.w / 2, cy: b.y + fp.h / 2, rot: b.rot, base: ground, hw: fp.w / 2, hh: fp.h / 2 });
       mesh.rotation.y = (b.rot * Math.PI) / 2;
       // ziemia wydeptana tylko tuż przy ścianach (z przerwami) i przy drzwiach; dalej trawa ledwo naruszona

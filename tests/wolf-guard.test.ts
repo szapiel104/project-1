@@ -30,8 +30,9 @@ describe('wilki i straż', () => {
     g.soldiers = g.soldiers.filter((s) => s.kind !== GUARD);
     at(g, 20.6, 21);
     const people = g.units.filter((u) => u.owner === 0).slice(0, 6);
-    const c = people[0]!;
-    // wieczór: ludzie jeszcze nie śpią (śpiących w chacie wilk nie widzi)
+    // wieczór: ludzie jeszcze nie śpią (śpiących w chacie wilk nie widzi); stoją na placu przed bramą (zawsze wolny)
+    const keep = g.buildings.find((b) => b.owner === 0 && b.type === 0)!;
+    const c = { px: (keep.x + 5) * 256 + 128, py: (keep.y + 12) * 256 + 128 };
     for (const u of people) { u.px = c.px; u.py = c.py; u.path = []; }
     g.wolves = [{ id: 99998, px: c.px + 2 * 256, py: c.py, hp: 45, path: [], target: 0, cd: 0, leaving: false }];
     const before = g.units.length;

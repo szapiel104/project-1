@@ -567,7 +567,7 @@ describe('rytm dnia', () => {
     const saved = BUILDINGS[keep.type]!.housing;
     (BUILDINGS[keep.type] as { housing?: number }).housing = 0;
     try {
-      at(1, 2);
+      at(2.5, 3); // ostatni idą z dziedzińca zamku przez bramę na posłania przy obozowisku
       const mine = g.units.filter((u) => u.owner === 0);
       expect(mine.every((u) => u.phase === Phase.Sleeping && u.home === 0 && u.target > 0)).toBe(true);
       expect(new Set(mine.map((u) => u.target)).size).toBe(mine.length); // każdy na swoim posłaniu

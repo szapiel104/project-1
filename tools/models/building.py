@@ -33,6 +33,12 @@ class Building:
             if n.dot(mid - Vector(away)) < 0:
                 pts = list(reversed(pts))
         self.parts.setdefault((group, mat), []).append(pts)
+        return pts
+
+    def slope(self, group, mat, pts, away, t=0.025):
+        """Połać dachu z grubością: wierzch odwrócony od `away` i spód tuż pod nim (widać go spod okapu)"""
+        top = self.poly(group, mat, pts, away=away)
+        self.poly(group, mat, [(x, y - t, z) for x, y, z in reversed(top)])
 
     # ---------- bryły (y = spód, jak box() w grze) ----------
     def box(self, group, mat, w, h, d, x=0.0, y=0.0, z=0.0, rot=0.0, top=True, bottom=False, tilt=0.0, roll=0.0):
@@ -83,16 +89,16 @@ class Building:
             r0, r1 = (a[0], y, a[1]), (b[0], y, a[1])
             q0, q1 = (a[0], y, b[1]), (b[0], y, b[1])
             k0, k1 = (a[0], y + h, zm), (b[0], y + h, zm)
-            self.poly(group, mat, [r0, r1, k1, k0], away=mid)
-            self.poly(group, mat, [q1, q0, k0, k1], away=mid)
+            self.slope(group, mat, [r0, r1, k1, k0], mid)
+            self.slope(group, mat, [q1, q0, k0, k1], mid)
             if end_mat:
                 self.poly(group, end_mat, [(x0, y, z1), (x0, y, z0), (x0, y + h, zm)], away=mid)
                 self.poly(group, end_mat, [(x1, y, z0), (x1, y, z1), (x1, y + h, zm)], away=mid)
         else:
             xm = (x0 + x1) / 2
             a, b = (x0 - over, z0 - over), (x1 + over, z1 + over)
-            self.poly(group, mat, [(a[0], y, b[1]), (a[0], y, a[1]), (xm, y + h, a[1]), (xm, y + h, b[1])], away=mid)
-            self.poly(group, mat, [(b[0], y, a[1]), (b[0], y, b[1]), (xm, y + h, b[1]), (xm, y + h, a[1])], away=mid)
+            self.slope(group, mat, [(a[0], y, b[1]), (a[0], y, a[1]), (xm, y + h, a[1]), (xm, y + h, b[1])], mid)
+            self.slope(group, mat, [(b[0], y, a[1]), (b[0], y, b[1]), (xm, y + h, b[1]), (xm, y + h, a[1])], mid)
             if end_mat:
                 self.poly(group, end_mat, [(x0, y, z0), (x1, y, z0), (xm, y + h, z0)], away=mid)
                 self.poly(group, end_mat, [(x1, y, z1), (x0, y, z1), (xm, y + h, z1)], away=mid)
