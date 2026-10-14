@@ -260,7 +260,7 @@ export class Figures {
    * `work` = poza przy pracy: kąt prawej ręki (ujemny = w przód i w górę); nogi stoją, lewa ręka lekko przed sobą.
    * Bez tego `swing` rusza rękami i nogami jak przy chodzie.
    */
-  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false): void {
+  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number): void {
     // ukryta postać (macierz o zerowej skali) nie zajmuje miejsca: karta graficzna liczy tylko widoczne
     const e = base.elements;
     if (e[0] === 0 && e[5] === 0 && e[10] === 0) return;
@@ -276,7 +276,8 @@ export class Figures {
       if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
       const r = work === undefined ? p.rot(swing, armsUp)
         : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
-      this.q.setFromEuler(this.e.set(r, 0, 0));
+      // siedzi: obie nogi wyciągnięte przed siebie
+      this.q.setFromEuler(this.e.set(sitLegs !== undefined && (p.rot === legL || p.rot === legR) ? sitLegs : r, 0, 0));
       this.local.compose(p.pos, this.q, this.one);
       if (p.sub) { this.q.setFromEuler(this.e.set(p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);

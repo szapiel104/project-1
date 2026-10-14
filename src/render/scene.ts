@@ -191,6 +191,8 @@ export class GameRenderer {
   /** Wieże, których łucznicy właśnie strzelają: id → czas ostatniego strzału (znaczek ataku nad wieżą) */
   private towerShots = new Map<number, number>();
   private towerIcons: THREE.Sprite[] = [];
+  /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
+  private towerPose = new Map<number, [number, number]>();
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
   private lastCd = new Map<number, number>();
   /** Trafienia: kiedy żołnierz ostatnio oberwał (odrzut do tyłu) i ile miał zdrowia */
@@ -2504,6 +2506,13 @@ export class GameRenderer {
     }
     const torchesOn = this.night > 0.15;
     const m = new THREE.Matrix4();
+    // załogi wież: kto stoi na której wieży (kolejność wg id) i czy wieża walczy (ktoś z załogi ma cel)
+    const crews = new Map<number, number[]>(), crewFight = new Map<number, [number, number]>();
+    for (const x of g.soldiers) if (x.up && x.post) {
+      const l = crews.get(x.post) ?? []; l.push(x.id); crews.set(x.post, l);
+      if (x.target && !crewFight.has(x.post)) { const f = g.soldiers.find((o) => o.id === x.target); if (f) crewFight.set(x.post, [f.px / FP, f.py / FP]); }
+    }
+    for (const l of crews.values()) l.sort((a, b) => a - b);
     const byId = new Map<number, (typeof g.soldiers)[number]>();
     for (const x of g.soldiers) byId.set(x.id, x);
     const bById = new Map<number, (typeof g.buildings)[number]>();
@@ -2553,7 +2562,35 @@ export class GameRenderer {
       const ranged = !!udef.range;
       const striking = (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
-      const lift = s.up ? 1.95 : 0;
+      let lift = s.up ? 1.95 : 0;
+      // życie na wieży: bez walki każdy zajęty czym innym (oparty o barierkę, siedzi, wypatruje, czwarty pod wieżą);
+      // przy ataku wszyscy na pomoście obok siebie, od strony wroga, i strzelają w tamtą stronę
+      let towerSit = false, towerLean = 0, towerAt: [number, number] | null = null;
+      const tw = s.up && s.post ? bById.get(s.post) : undefined;
+      if (tw) {
+        const fpT = footprint(BUILDINGS[tw.type]!, tw.rot), tcx = tw.x + fpT.w / 2, tcy = tw.y + fpT.h / 2;
+        const crew = crews.get(tw.id) ?? [s.id], idx = crew.indexOf(s.id), fight = crewFight.get(tw.id);
+        if (fight) {
+          const ang = Math.atan2(fight[0] - tcx, fight[1] - tcy), side = (idx - (crew.length - 1) / 2) * 0.32;
+          towerAt = [tcx + Math.sin(ang) * 0.42 + Math.cos(ang) * side, tcy + Math.cos(ang) * 0.42 - Math.sin(ang) * side];
+          if (!foe) { heading = ang; this.facing.set(s.id, heading); }
+        } else {
+          const role = idx % 4;
+          const corner = [[0.42, 0.42], [-0.42, 0.38], [0.4, -0.42], [0, 0]][role]!;
+          if (role === 3 && crew.length >= 4) {
+            // czwarty schodzi pod wieżę: stoi przy drabinie i pilnuje wejścia
+            towerAt = [tcx + 0.15, tcy + fpT.h / 2 + 0.35]; lift = 0;
+            heading = Math.PI * 0.1 + Math.sin(this.time * 0.13 + s.id) * 0.6;
+          } else {
+            towerAt = [tcx + corner[0]!, tcy + corner[1]!];
+            const out = Math.atan2(corner[0]!, corner[1]!);
+            heading = out + (role === 2 ? Math.sin(this.time * 0.25 + s.id) * 0.9 : 0); // wypatrujący powoli rozgląda się
+            if (role === 0) towerLean = 0.16; // oparty o barierkę, pochylony
+            if (role === 1) { towerSit = true; lift -= 0.17; }
+          }
+          this.facing.set(s.id, heading);
+        }
+      }
       // przesunięcie do środka grupy narasta i znika płynnie, więc po dojściu nikt nie „doskakuje” do kolegów
       const want = pull.get(s.id) ?? [0, 0];
       const cur = this.pullNow.get(s.id) ?? [0, 0];
@@ -2563,7 +2600,15 @@ export class GameRenderer {
       // łuki na zakrętach i omijanie mijających się (tylko w wyglądzie); patrzy tam, dokąd idzie
       const cv = this.crowd.move(s.id, fx + cur[0], fy + cur[1], heading, this.calm || !!s.up, true);
       if (walking && cv.speed > 0.3) { heading = cv.heading; this.facing.set(s.id, heading); }
-      const px = cv.sx, pz = cv.sy;
+      let px = cv.sx, pz = cv.sy;
+      if (towerAt) {
+        // płynnie przechodzi na nowe miejsce (z pomostu pod wieżę i z powrotem, do barierki przy ataku)
+        const tp = this.towerPose.get(s.id) ?? [towerAt[0], towerAt[1]];
+        const kk = this.calm ? 1 : 0.05;
+        tp[0] += (towerAt[0] - tp[0]) * kk; tp[1] += (towerAt[1] - tp[1]) * kk;
+        this.towerPose.set(s.id, tp);
+        px = tp[0]; pz = tp[1];
+      } else this.towerPose.delete(s.id);
       if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.3);
       const y = this.standY(view, px, pz) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
@@ -2575,7 +2620,7 @@ export class GameRenderer {
         else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; }
         else { const fp = footprint(BUILDINGS[wall!.type]!, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; }
         if (s.up && s.post) this.towerShots.set(s.post, this.time);
-        this.arrows.push({ from: new THREE.Vector3(fx - width / 2, y + 0.5, fy - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0 });
+        this.arrows.push({ from: new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0 });
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
       this.lastCd.set(s.id, s.cd);
@@ -2589,7 +2634,7 @@ export class GameRenderer {
       // stojący bez walki: przenosi ciężar, rozgląda się, przestępuje, opiera o włócznię; w marszu kołysze się z krokiem
       const ia = !walking && !striking && !foe && !wall && !victim && !this.calm ? idle(s.id, this.time, true) : undefined;
       const sway = ia ? ia.roll : walking ? Math.sin(st.phase) * 0.025 : 0;
-      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0), heading + (ia?.yaw ?? 0), sway, 'YXZ');
+      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, heading + (towerAt ? 0 : ia?.yaw ?? 0), sway, 'YXZ');
       if (ia) t.position.y += ia.dy;
       t.scale.setScalar(1.08 * FIG);
       t.updateMatrix();
@@ -2607,7 +2652,7 @@ export class GameRenderer {
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
       this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
-      this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
       this.spearmen.set(n, !ranged && !udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
