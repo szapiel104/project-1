@@ -87,4 +87,38 @@ describe('brama na częstokole', () => {
     expect((s.py >> 8) * W + (s.px >> 8)).toBe(top);
     expect(high(g, s)).toBe(true);
   });
+
+  it('wróg wchodzi na mur po drabinie postawionej od zewnątrz i walczy z obrońcą na koronie', () => {
+    const g = createGame(5, '1v1', 1, true);
+    for (const p of g.players) { p.bot = false; p.res = p.res.map(() => 900); }
+    const keep = g.buildings.find((b) => b.owner === 0 && b.type === 0)!;
+    const stone = buildingIndex('stoneWall');
+    let x = -1, y = -1;
+    for (let r = 5; r < 30 && x < 0; r++) for (let d = -r; d <= r && x < 0; d++)
+      if ([0, 1, 2, 3, 4, 5].every((k) => canPlace(g, 0, stone, keep.x + d + k, keep.y + r) === null && (k !== 1 || canPlace(g, 0, buildingIndex('palisade'), keep.x + d + k, keep.y + r + 1) === null) && (k !== 1 || canPlace(g, 0, buildingIndex('palisade'), keep.x + d + k, keep.y + r + 4) === null))) { x = keep.x + d; y = keep.y + r; }
+    expect(x).toBeGreaterThanOrEqual(0);
+    for (let k = 0; k < 6; k++) { placeBuilding(g, 0, stone, x + k, y); g.buildings[g.buildings.length - 1]!.build = 0; }
+    // drabina od zewnątrz (z dala od twierdzy)
+    expect(canPlace(g, 0, buildingIndex('ladder'), x + 1, y + 1)).toBe(null);
+    expect(placeBuilding(g, 0, buildingIndex('ladder'), x + 1, y + 1)).toBe(true);
+    g.buildings[g.buildings.length - 1]!.build = 0;
+    step(g, []);
+    const W = g.map.width;
+    const mk = (owner: number, tx: number, ty: number): number => {
+      const id = g.nextId++;
+      g.soldiers.push({ id, owner, kind: 0, px: tx * 256 + 128, py: ty * 256 + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0, stance: owner === 0 ? 2 : 0 } as never);
+      return id;
+    };
+    const def = mk(0, x + 4, y);
+    for (const s of g.soldiers) if (s.id === def) { s.hold = y * W + x + 4; }
+    const foe = mk(1, x + 1, y + 4);
+    step(g, [{ type: 'move', player: 1, ids: [foe], x: x + 3, y, amove: true }]);
+    let met = false;
+    for (let i = 0; i < 900 && !met; i++) {
+      step(g, []);
+      const f = g.soldiers.find((o) => o.id === foe), d = g.soldiers.find((o) => o.id === def);
+      if (!f || !d || f.hp < 60 || d.hp < 60) met = true;
+    }
+    expect(met).toBe(true);
+  });
 });

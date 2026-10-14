@@ -629,7 +629,7 @@ export function armySystem(g: GameState): void {
         for (let gy = cy - 1; gy <= cy + 1; gy++)
           for (let gx = cx - 1; gx <= cx + 1; gx++) {
             for (const o of grid.get(gy * cw + gx) ?? []) {
-              if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (high(g, o) && !range)) continue; // na wieżę wręcz nie sięgnie
+              if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (high(g, o) && !range && (o.up || !high(g, s)))) continue; // na wieżę wręcz nie sięgnie, na mur tylko z muru
               if (o.id === s.skip && g.tick < (s.skipUntil ?? 0)) continue; // do tego wroga nie ma przejścia (za murem): na razie inny cel
               const d = gap(s, o);
               if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
