@@ -1,44 +1,60 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { tint } from './loads';
+import TOOLS_MODEL from './models/tools.json';
+import { normal, pattern } from './textures';
 
 /**
- * Broń chłopa. W dłoni (układ ramienia: oś w barku, dłoń 0,19 niżej, stylisko w przód z pięści) albo schowana
- * w układzie postaci: kilof skośnie przez plecy, drewniana maczuga zwisająca u prawego biodra.
+ * Broń chłopa z Blendera (tools/models/tools.py): kilof i maczuga w dłoni (układ ramienia: oś w barku, dłoń 0,19 niżej,
+ * stylisko w przód z pięści) albo schowane w układzie postaci: kilof płasko na plecach, maczuga za sznurem u biodra.
+ * Każda siatka ma dwie grupy: drewno (tekstura kory/słojów) i żelazo (metal), więc jedna instancja = jedno wywołanie.
  */
-export function peasantGear(pick: THREE.BufferGeometry): { club: THREE.BufferGeometry; backPick: THREE.BufferGeometry; beltClub: THREE.BufferGeometry } {
-  // maczuga: stylisko rozszerzające się w sękatą głowicę
-  const clubParts = (): THREE.BufferGeometry[] => [
-    tint(new THREE.CylinderGeometry(0.018, 0.012, 0.3, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.12), 0x7a5634),
-    tint(new THREE.IcosahedronGeometry(0.042, 0).scale(1, 1, 1.4).translate(0, -0.19, 0.29), 0x5e4128),
-    tint(new THREE.IcosahedronGeometry(0.016, 0).translate(0.03, -0.17, 0.27), 0x4a3320),
-    tint(new THREE.IcosahedronGeometry(0.014, 0).translate(-0.028, -0.21, 0.31), 0x4a3320),
-  ];
-  const club = mergeGeometries(clubParts())!;
-  // kilof: środek styliska w początek układu, pionowo, skośnie przez plecy
-  // kilof przypięty płasko do pleców: stylisko lekko skośnie, grot w poprzek pleców przy lewym barku (nic nie sterczy w bok)
-  const backM = new THREE.Matrix4().makeTranslation(0, 0.19, -0.16)
-    .premultiply(new THREE.Matrix4().makeRotationZ(Math.PI / 2))
-    .premultiply(new THREE.Matrix4().makeRotationX(-Math.PI / 2))
-    .premultiply(new THREE.Matrix4().makeScale(0.78, 0.78, 0.78))
-    .premultiply(new THREE.Matrix4().makeRotationZ(0.38))
-    .premultiply(new THREE.Matrix4().makeTranslation(0, 0.3, -0.145));
-  const backPick = pick.clone().applyMatrix4(backM);
-  // maczuga u pasa: głowicą w dół przy prawym biodrze
-  const beltM = new THREE.Matrix4().makeTranslation(0, 0.19, -0.2)
-    .premultiply(new THREE.Matrix4().makeRotationX(Math.PI / 2 + 0.15))
-    .premultiply(new THREE.Matrix4().makeRotationZ(-0.12))
-    .premultiply(new THREE.Matrix4().makeTranslation(0.115, 0.2, 0.02));
-  const beltClub = mergeGeometries(clubParts())!.applyMatrix4(beltM);
-  return { club, backPick, beltClub };
+type ToolPart = { mat: string; pos: string; ao: string };
+const T = TOOLS_MODEL as unknown as { q: number } & Record<string, ToolPart[]>;
+const COLOR: Record<string, number> = { wood: 0x8a6440, iron: 0x6a6e76 };
+const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
+
+function partGeo(p: ToolPart): THREE.BufferGeometry {
+  const raw = b64(p.pos), p16 = new Int16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2), ao = b64(p.ao);
+  const n = p16.length / 3, P = new Float32Array(n * 3), C = new Float32Array(n * 3), UV = new Float32Array(n * 2);
+  for (let i = 0; i < p16.length; i++) P[i] = p16[i]! / T.q;
+  const c = new THREE.Color(COLOR[p.mat] ?? 0x888888);
+  for (let i = 0; i < n; i++) { const k = ao[i]! / 255; C[i * 3] = c.r * k; C[i * 3 + 1] = c.g * k; C[i * 3 + 2] = c.b * k; }
+  // słoje wzdłuż styliska: tekstura rzutowana z boku, gęsto (stylisko jest cienkie)
+  for (let i = 0; i < n; i++) { UV[i * 2] = (P[i * 3]! + P[i * 3 + 1]!) * 6; UV[i * 2 + 1] = P[i * 3 + 2]! * 6; }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+  g.setAttribute('color', new THREE.BufferAttribute(C, 3));
+  g.setAttribute('uv', new THREE.BufferAttribute(UV, 2));
+  g.computeVertexNormals();
+  return g;
 }
 
-/** Kilof (w dłoni): stylisko i obustronny, lekko wygięty grot w poprzek */
-export function pickGeometry(): THREE.BufferGeometry {
-  return mergeGeometries([
-    tint(new THREE.CylinderGeometry(0.014, 0.017, 0.42, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.16), 0x6e4a2c),
-    tint(new THREE.BoxGeometry(0.026, 0.05, 0.035).translate(0, -0.19, 0.37), 0x4a4d52),
-    tint(new THREE.ConeGeometry(0.016, 0.13, 4).rotateX(Math.PI).rotateX(0.25).translate(0, -0.27, 0.36), 0x6a6e76),
-    tint(new THREE.ConeGeometry(0.016, 0.11, 4).rotateX(-0.25).translate(0, -0.12, 0.36), 0x6a6e76),
-  ])!;
+/** Siatka narzędzia z grupami [drewno, żelazo] (pusta grupa dostaje zdegenerowany trójkąt, żeby indeksy grup się zgadzały) */
+export function toolGeometry(name: string): THREE.BufferGeometry {
+  const parts = T[name] ?? [];
+  const byMat = (m: string): THREE.BufferGeometry => {
+    const p = parts.find((x) => x.mat === m);
+    if (p) return partGeo(p);
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(9), 3));
+    g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(9), 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(6), 2));
+    g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(9), 3));
+    return g;
+  };
+  return mergeGeometries([byMat('wood'), byMat('iron')], true)!;
+}
+
+let mats: THREE.Material[] | null = null;
+/** Materiały narzędzi: [drewno z teksturą kory, kute żelazo] — wspólne dla wszystkich chłopów */
+export function toolMaterials(): THREE.Material[] {
+  if (mats) return mats;
+  const wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, map: pattern('bark'), normalMap: normal('bark') });
+  const iron = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.6 });
+  mats = [wood, iron];
+  return mats;
+}
+
+export function peasantGear(): { pick: THREE.BufferGeometry; club: THREE.BufferGeometry; backPick: THREE.BufferGeometry; beltClub: THREE.BufferGeometry } {
+  return { pick: toolGeometry('pick'), club: toolGeometry('club'), backPick: toolGeometry('backPick'), beltClub: toolGeometry('beltClub') };
 }

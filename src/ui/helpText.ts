@@ -203,7 +203,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         ['Tempo', '+ i − (pauza, 1×, 2×, 3×, 5×)'],
         ['Wojsko', 'lewy = zaznacz, prawy = rozkaz, prawy z przeciąganiem = linia frontu'],
         ['Grupy wojska', 'Shift + cyfra zapisuje, cyfra wybiera, dwa razy = pokaż'],
-        ['Oczami chłopa', 'F przy zaznaczonym; w środku: W A S D, mysz, Shift = bieg, F = pochodnia, Esc = wyjście'],
+        ['Oczami chłopa', 'F przy zaznaczonym; w środku: W A S D, mysz, Shift = bieg, Spacja = skok, F = pochodnia, Esc = wyjście'],
         ['Dźwięk', 'M wycisza'],
         ['Okno wydajności', 'F3'],
         ['Czat (sieć)', 'Enter'],

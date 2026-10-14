@@ -25,7 +25,7 @@ import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
 import { peasantWeapon } from '../sim/systems/army';
-import { peasantGear } from './gear';
+import { peasantGear, toolMaterials } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
@@ -685,25 +685,23 @@ export class GameRenderer {
       tint(new THREE.BoxGeometry(0.016, 0.014, 0.08).translate(0, -0.284, 0.355), 0xb9bec6),
       tint(new THREE.BoxGeometry(0.03, 0.035, 0.04).translate(0, -0.19, 0.37), 0x3a3d42),
     ]);
-    // kilof: stylisko i obustronny, lekko wygięty grot w poprzek
-    const pick = mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.014, 0.017, 0.42, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.16), 0x6e4a2c),
-      tint(new THREE.BoxGeometry(0.026, 0.05, 0.035).translate(0, -0.19, 0.37), 0x4a4d52),
-      tint(new THREE.ConeGeometry(0.016, 0.13, 4).rotateX(Math.PI).rotateX(0.25).translate(0, -0.27, 0.36), 0x6a6e76),
-      tint(new THREE.ConeGeometry(0.016, 0.11, 4).rotateX(-0.25).translate(0, -0.12, 0.36), 0x6a6e76),
-    ]);
     const tool = (geo: THREE.BufferGeometry): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
       m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m);
       return m;
     };
     this.axes = tool(axe);
-    this.picks = tool(pick);
-    // broń chłopów (osobny plik, żeby podgląd postaci pokazywał to samo)
-    const gear = peasantGear(pick);
-    this.clubs = tool(gear.club);
-    this.backPicks = tool(gear.backPick);
-    this.beltClubs = tool(gear.beltClub);
+    // kilof i maczuga chłopów z Blendera (tools/models/tools.py): drewno z teksturą i kute żelazo
+    const gear = peasantGear();
+    const gearTool = (geo: THREE.BufferGeometry): THREE.InstancedMesh => {
+      const m = new THREE.InstancedMesh(geo, toolMaterials(), MAX_UNITS);
+      m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m);
+      return m;
+    };
+    this.picks = gearTool(gear.pick);
+    this.clubs = gearTool(gear.club);
+    this.backPicks = gearTool(gear.backPick);
+    this.beltClubs = gearTool(gear.beltClub);
     this.rods = new THREE.InstancedMesh(rod, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true }), MAX_UNITS);
     this.rods.count = 0;
     this.rods.frustumCulled = false;
@@ -1341,7 +1339,7 @@ export class GameRenderer {
   }
 
   // --- spacer oczami chłopa: kamera na wysokości głowy, WASD i mysz, zderzenia z budynkami i wodą ---
-  private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number } | null = null;
+  private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number; jy?: number; vy?: number } | null = null;
   /** Wywoływane, gdy spacer się skończy (Esc) */
   onWalkEnd: () => void = () => {};
   get walking(): boolean { return !!this.walk; }
@@ -1430,8 +1428,14 @@ export class GameRenderer {
     const sx = Math.sin(w.yaw), cz = Math.cos(w.yaw);
     // przód kamery to -z w jej układzie: yaw=0 patrzy w -z świata
     const dx = (-sx * fz + cz * fx) / len * sp, dz = (-cz * fz - sx * fx) / len * sp;
+    // skok spacją: wybicie, łuk w górę i lądowanie (w powietrzu niskie przeszkody, np. ławy, nie zatrzymują)
+    if (k.has('Space') && !w.jy) { w.vy = 2.5; w.jy = 0.0001; }
+    if (w.jy) {
+      w.jy += (w.vy ?? 0) * dt; w.vy = (w.vy ?? 0) - 9.5 * dt;
+      if (w.jy <= 0) { w.jy = 0; w.vy = 0; playAt(this.surface(g, w.x, w.z), 0.9, 0, 0.45); }
+    }
     // wysokość stóp spacerowicza (na murach i schodach przeszkody z dołu go nie dotyczą)
-    const feet = this.view ? this.standY(this.view, w.x, w.z) : 0;
+    const feet = (this.view ? this.standY(this.view, w.x, w.z) : 0) + (w.jy ?? 0);
     const free = (x: number, z: number): boolean => {
       const tx = Math.floor(x), ty = Math.floor(z);
       if (tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height) return false;
@@ -1472,7 +1476,7 @@ export class GameRenderer {
       if (free(w.x, w.z + dz / nStep)) w.z += dz / nStep;
     }
     // tempo kroków jak u człowieka: idąc ok. 1,8 kroku na sekundę, biegiem ok. 2,7 (kołysanie kamery w tym samym rytmie)
-    if (fx || fz) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
+    if ((fx || fz) && !w.jy) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
     // własne kroki w spacerze: na każdy krok dźwięk podłoża, lewa i prawa noga lekko z boku
     const stepK = Math.floor(w.bob / Math.PI);
     if (stepK !== this.walkStep) { this.walkStep = stepK; playAt(this.surface(g, w.x, w.z), 0.8, stepK % 2 ? 0.12 : -0.12, run ? 0.42 : 0.32); }
@@ -1486,7 +1490,7 @@ export class GameRenderer {
     const inTap = !!wbk && !!tap && wbk[1] >= tap[0] && wbk[1] <= tap[1] && wbk[2] >= tap[2] && wbk[2] <= tap[3];
     this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
     this.walkNear = wbk ? wbk[0] : kp ? kp[0] : 0; // budynek pod nogami ma pierwszeństwo przed zamkiem obok
-    cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
+    cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + (w.jy ?? 0) + (w.jy ? 0 : Math.sin(w.bob) * 0.02), w.z - height / 2);
     if (!this.roomLight) { this.roomLight = new THREE.PointLight(0xffb36b, 0, 5, 1.2); this.scene.add(this.roomLight); }
     // izby w basztach (narożne i w połowie boków) też mają ogień
     const tdx = kp ? Math.floor(kp[1] + KEEP_HALF) : -1, tdy = kp ? Math.floor(kp[2] + KEEP_HALF) : -1;
