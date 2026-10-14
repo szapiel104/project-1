@@ -884,7 +884,11 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     leaf.name = name;
     leaf.position.x = side * hinge;
     leaf.rotation.y = side * 1.3;
-    for (const m of meshes(name)) { m.geometry.translate(-side * hinge, 0, 0); leaf.add(m); }
+    // siatki są wspólne dla wszystkich bram (pamięć podręczna), więc przesuwamy pośrednią grupę, nie geometrię
+    const off = new THREE.Group();
+    off.position.x = -side * hinge;
+    for (const m of meshes(name)) off.add(m);
+    leaf.add(off);
     g.add(leaf);
   }
   // znaczniki z modelu: szyby (świecą nocą), komin (dym), ogień w palenisku
