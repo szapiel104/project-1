@@ -1,3 +1,4 @@
+import { WALL_TOP } from '../../data/keep';
 import { buildingIndex } from '../../data/buildings';
 import { type ResourceId, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
@@ -9,6 +10,9 @@ import { BUILDINGS, footprint, workArea } from '../../data/buildings';
 import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
 import { dayPart } from './workers';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
+
+/** Żołnierz stoi wysoko: na wieży albo na murach zamku (dalej widzi i strzela, wręcz go nie dosięgną) */
+export const high = (g: GameState, s: { up?: boolean; px: number; py: number }): boolean => !!s.up || (g.walls[(s.py >> 8) * g.map.width + (s.px >> 8)]! & WALL_TOP) !== 0;
 import type { UnitDef } from '../../data/units';
 
 const BARRACKS = buildingIndex('barracks');
@@ -453,7 +457,7 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
 
 /** Czy strzała trafia: im dalej, tym częściej chybia; z wieży celniej (losowanie z numeru strzelca i chwili, takie samo u każdego gracza) */
 export function arrowHits(g: GameState, s: Soldier, dist: number): boolean {
-  const chance = Math.max(30, Math.min(95, 100 - Math.round((dist * 8) / FP) + (s.up ? 20 : 0)));
+  const chance = Math.max(30, Math.min(95, 100 - Math.round((dist * 8) / FP) + (high(g, s) ? 20 : 0)));
   return hash2(s.id, g.tick, 0x5eed) % 100 < chance;
 }
 
@@ -526,7 +530,7 @@ export function armySystem(g: GameState): void {
         s.up = true; s.px = tower.x * FP + (fp.w * FP) / 2; s.py = tower.y * FP + (fp.h * FP) / 2;
       }
     }
-    const range = def.range ? def.range + (s.up ? 3 : 0) : 0;
+    const range = def.range ? def.range + (high(g, s) ? 3 : 0) : 0;
     // obrona i „stój”: bez celu pilnuje miejsca, w którym stoi (np. po rozkazie ataku albo po szkoleniu)
     const stance = s.stance ?? 0;
     if (stance && s.goal < 0 && !s.target && !s.path.length && (s.hold ?? -1) < 0) s.hold = tileOf(g, s);
@@ -546,13 +550,13 @@ export function armySystem(g: GameState): void {
       let foe = s.target ? byId.get(s.target) : undefined;
       if (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP) {
         foe = undefined;
-        let best = (def.sight + (s.up ? 3 : 0)) * FP + 1;
+        let best = (def.sight + (high(g, s) ? 3 : 0)) * FP + 1;
         const t = tileOf(g, s), x = t % W, y = (t - x) / W;
         const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
         for (let gy = cy - 1; gy <= cy + 1; gy++)
           for (let gx = cx - 1; gx <= cx + 1; gx++) {
             for (const o of grid.get(gy * cw + gx) ?? []) {
-              if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (o.up && !range)) continue; // na wieżę wręcz nie sięgnie
+              if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (high(g, o) && !range)) continue; // na wieżę wręcz nie sięgnie
               const d = gap(s, o);
               if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
             }
@@ -597,7 +601,7 @@ export function armySystem(g: GameState): void {
       }
       // brak wrogich żołnierzy: atakuje wrogich chłopów (łucznik z daleka); każdy zabity obniża popularność ich pana
       {
-        let best = (def.sight + (s.up ? 3 : 0)) ** 2 + 0.1, prey: Unit | undefined;
+        let best = (def.sight + (high(g, s) ? 3 : 0)) ** 2 + 0.1, prey: Unit | undefined;
         // chłop wskazany rozkazem: ten jest pierwszy, choćby był daleko (dopóki żyje)
         const ordered = s.prey ? g.units.find((u) => u.id === s.prey) : undefined;
         if (s.prey && !ordered) s.prey = 0;
@@ -754,7 +758,7 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
     s.target = b ? b.id : 0;
   }
   if (!b) return false;
-  const reach = def.range ? def.range + (s.up ? 3 : 0) : 1;
+  const reach = def.range ? def.range + (high(g, s) ? 3 : 0) : 1;
   if (rectGap(g, here, b) <= reach && !s.path.length) {
     if (s.cd === 0) {
       b.hp -= def.attack;

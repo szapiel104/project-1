@@ -604,7 +604,7 @@ describe('zamek', () => {
     const g = createGame(5);
     const keep = playerKeep(g, 0)!;
     const w = g.map.width;
-    const gate = (keep.y + 10) * w + keep.x + 5, hall = (keep.y + 1) * w + keep.x + 5, tower = keep.y * w + keep.x;
+    const gate = (keep.y + 10) * w + keep.x + 5, hall = (keep.y + 1) * w + keep.x + 5, tower = keep.y * w + keep.x + 5; // donżon nad tylnym murem
     expect(walkable(g, gate, 0)).toBe(true);
     expect(walkable(g, hall, 0)).toBe(true);
     expect(walkable(g, tower, 0)).toBe(false);
@@ -626,6 +626,12 @@ describe('zamek', () => {
         prevT = t;
       }
     }
+    // na mury wchodzi się tylko schodami z dziedzińca (z dziedzińca prosto na koronę muru nie ma przejścia)
+    const wallTop = at(0, 5);
+    const up = findPath(g, outside, (t) => t === wallTop, 900, 0)!;
+    expect(up).not.toBeNull();
+    expect(up).toContain(at(3, 8));
+    expect(g.walls[wallTop]! & 16).toBe(16);
     // cele za kratą: nie da się do nich wejść
     expect(findPath(g, outside, (t) => t === at(1, 7), 900, 0)).toBeNull();
   });
@@ -651,5 +657,21 @@ describe('zamek — wojsko', () => {
     });
     expect(inside.length).toBeGreaterThan(0);
     for (const s of inside) expect(walkable(g, (s.py >> 8) * w + (s.px >> 8), 0)).toBe(true);
+  });
+});
+
+describe('zamek — mury', () => {
+  it('łucznik na rozkaz wchodzi schodami na mur i stoi tam wysoko', () => {
+    const g = createGame(5);
+    g.players[0]!.guards = 0;
+    const keep = playerKeep(g, 0)!;
+    const w = g.map.width;
+    const id = g.nextId++;
+    g.soldiers.push({ id, owner: 0, kind: 1, px: (keep.x + 5) * 256 + 128, py: (keep.y + 13) * 256 + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0 } as GameState['soldiers'][number]);
+    step(g, [{ type: 'move', player: 0, ids: [id], x: keep.x, y: keep.y + 4 }]);
+    for (let i = 0; i < 900; i++) step(g, []);
+    const s = g.soldiers.find((x) => x.id === id)!;
+    const t = (s.py >> 8) * w + (s.px >> 8);
+    expect(g.walls[t]! & 16).toBe(16);
   });
 });

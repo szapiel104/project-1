@@ -23,8 +23,16 @@ class Building:
     def __init__(self):
         self.parts = {}   # (grupa, materiał) -> lista wielokątów [(x, y, z), ...]
 
-    def poly(self, group, mat, pts):
-        self.parts.setdefault((group, mat), []).append([tuple(p) for p in pts])
+    def poly(self, group, mat, pts, away=None):
+        """Wielokąt; z `away` (punkt) przód ściany odwraca się od tego punktu (gra rysuje tylko przednią stronę)"""
+        pts = [tuple(p) for p in pts]
+        if away is not None:
+            a, b2, c = (Vector(q) for q in pts[:3])
+            n = (b2 - a).cross(c - a)
+            mid = sum((Vector(q) for q in pts), Vector()) / len(pts)
+            if n.dot(mid - Vector(away)) < 0:
+                pts = list(reversed(pts))
+        self.parts.setdefault((group, mat), []).append(pts)
 
     # ---------- bryły (y = spód, jak box() w grze) ----------
     def box(self, group, mat, w, h, d, x=0.0, y=0.0, z=0.0, rot=0.0, top=True, bottom=False, tilt=0.0):
@@ -66,27 +74,28 @@ class Building:
 
     def gable(self, group, mat, x0, x1, z0, z1, y, h, along_x=True, over=0.12, end_mat=None):
         """Dach dwuspadowy nad prostokątem (kalenica wzdłuż x albo z), z okapem; szczyty z materiału end_mat"""
+        mid = ((x0 + x1) / 2, y + h * 0.3, (z0 + z1) / 2)
         if along_x:
             zm = (z0 + z1) / 2
             a, b = (x0 - over, z0 - over), (x1 + over, z1 + over)
             r0, r1 = (a[0], y, a[1]), (b[0], y, a[1])
             q0, q1 = (a[0], y, b[1]), (b[0], y, b[1])
             k0, k1 = (a[0], y + h, zm), (b[0], y + h, zm)
-            self.poly(group, mat, [r0, r1, k1, k0])
-            self.poly(group, mat, [q1, q0, k0, k1])
+            self.poly(group, mat, [r0, r1, k1, k0], away=mid)
+            self.poly(group, mat, [q1, q0, k0, k1], away=mid)
             if end_mat:
-                self.poly(group, end_mat, [(x0, y, z1), (x0, y, z0), (x0, y + h, zm)])
-                self.poly(group, end_mat, [(x1, y, z0), (x1, y, z1), (x1, y + h, zm)])
+                self.poly(group, end_mat, [(x0, y, z1), (x0, y, z0), (x0, y + h, zm)], away=mid)
+                self.poly(group, end_mat, [(x1, y, z0), (x1, y, z1), (x1, y + h, zm)], away=mid)
         else:
             xm = (x0 + x1) / 2
             a, b = (x0 - over, z0 - over), (x1 + over, z1 + over)
-            self.poly(group, mat, [(a[0], y, b[1]), (a[0], y, a[1]), (xm, y + h, a[1]), (xm, y + h, b[1])])
-            self.poly(group, mat, [(b[0], y, a[1]), (b[0], y, b[1]), (xm, y + h, b[1]), (xm, y + h, a[1])])
+            self.poly(group, mat, [(a[0], y, b[1]), (a[0], y, a[1]), (xm, y + h, a[1]), (xm, y + h, b[1])], away=mid)
+            self.poly(group, mat, [(b[0], y, a[1]), (b[0], y, b[1]), (xm, y + h, b[1]), (xm, y + h, a[1])], away=mid)
             if end_mat:
-                self.poly(group, end_mat, [(x0, y, z0), (x1, y, z0), (xm, y + h, z0)])
-                self.poly(group, end_mat, [(x1, y, z1), (x0, y, z1), (xm, y + h, z1)])
+                self.poly(group, end_mat, [(x0, y, z0), (x1, y, z0), (xm, y + h, z0)], away=mid)
+                self.poly(group, end_mat, [(x1, y, z1), (x0, y, z1), (xm, y + h, z1)], away=mid)
         # spód połaci, żeby od środka (spacer) dach nie był przezroczysty
-        self.poly(group, mat, [(x0 - over, y - 0.001, z0 - over), (x1 + over, y - 0.001, z0 - over), (x1 + over, y - 0.001, z1 + over), (x0 - over, y - 0.001, z1 + over)])
+        self.poly(group, mat, [(x0 - over, y - 0.001, z0 - over), (x1 + over, y - 0.001, z0 - over), (x1 + over, y - 0.001, z1 + over), (x0 - over, y - 0.001, z1 + over)], away=((x0 + x1) / 2, y + 1, (z0 + z1) / 2))
 
     def merlons_line(self, group, mat, x0, z0, x1, z1, y, step=0.24, w=0.1, h=0.13, t=0.07):
         L = math.hypot(x1 - x0, z1 - z0)

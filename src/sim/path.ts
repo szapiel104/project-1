@@ -20,9 +20,11 @@ const BIT_X = (dx: number): number => (dx > 0 ? 2 : 8), BIT_Y = (dy: number): nu
 /** Czy krok z pola o (dx, dy) przechodzi przez ścianę (w zamku). Po skosie: żadna z czterech krawędzi przy narożniku nie może być ścianą. */
 export function wallBetween(g: GameState, tile: number, dx: number, dy: number): boolean {
   const w = g.map.width, W = g.walls;
-  if (!dy) return (W[tile]! & BIT_X(dx)) !== 0;
-  if (!dx) return (W[tile]! & BIT_Y(dy)) !== 0;
-  return ((W[tile]! & (BIT_X(dx) | BIT_Y(dy))) | (W[tile + dx]! & BIT_Y(dy)) | (W[tile + dy * w]! & BIT_X(dx))) !== 0;
+  // krawędź zapisana jest po obu stronach (albo tylko po stronie zamku, gdy sąsiad leży poza nim)
+  const orth = (t: number, ox: number, oy: number): number => (ox ? (W[t]! & BIT_X(ox)) | (W[t + ox]! & BIT_X(-ox)) : (W[t]! & BIT_Y(oy)) | (W[t + oy * w]! & BIT_Y(-oy)));
+  if (!dy) return orth(tile, dx, 0) !== 0;
+  if (!dx) return orth(tile, 0, dy) !== 0;
+  return (orth(tile, dx, 0) | orth(tile + dx, 0, dy) | orth(tile, 0, dy) | orth(tile + dy * w, dx, 0)) !== 0;
 }
 
 /**
@@ -87,7 +89,7 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
         const nt = ny * w + nx;
         if (!walkable(g, nt, player)) continue;
         if (dx && dy && (!walkable(g, y * w + nx, player) || !walkable(g, ny * w + x, player))) continue;
-        if ((g.walls[tile] || g.walls[nt]) && wallBetween(g, tile, dx, dy)) continue;
+        if ((g.walls[tile] || g.walls[nt] || g.walls[y * w + nx] || g.walls[ny * w + x]) && wallBetween(g, tile, dx, dy)) continue;
         // po drodze idzie się taniej, więc ścieżka chętnie nią prowadzi
         const nc = cost + Math.round(((dx && dy ? 14 : 10) * RULES.roadPathCost[g.roads[nt]!]!) / 100);
         if (mark[nt] === generation && dist[nt]! <= nc) continue;

@@ -59,7 +59,7 @@ function flood(g: GameState, start: number, out: Uint8Array, player: number): vo
     for (let d = 0; d < 4; d++) {
       const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0), ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-      if (g.walls[t]! & WALL_BIT[d]!) continue; // ściana w zamku
+      if ((g.walls[t]! & WALL_BIT[d]!) || (g.walls[ny * width + nx]! & WALL_BIT[d ^ 1]!)) continue; // ściana w zamku (z obu stron)
       const nt = ny * width + nx;
       if (out[nt] || (g.occupancy[nt] !== 0 && g.gates[nt] !== player + 1) || !TERRAIN[g.map.tiles[nt] as Terrain].walkable) continue;
       out[nt] = 1; queue[tail++] = nt;

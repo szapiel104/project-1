@@ -27,15 +27,22 @@ export function keepEdge(ax: number, ay: number, bx: number, by: number): 'open'
   return keepRoom(ax, ay) === keepRoom(bx, by) ? 'open' : 'wall';
 }
 
-/** Pola, po których się chodzi, i bity ścian każdego z nich: 1 = ku -y, 2 = ku +x, 4 = ku +y, 8 = ku -x */
+/** Bit „na murach”: chodnik na koronie muru i w basztach (łucznik stamtąd strzela dalej, wręcz go nie dosięgną) */
+export const WALL_TOP = 16;
+/** Pola, po których się chodzi, i bity ścian każdego z nich: 1 = ku -y, 2 = ku +x, 4 = ku +y, 8 = ku -x, 16 = na murach */
 export const KEEP_CELLS: { dx: number; dy: number; walls: number }[] = (() => {
   const out: { dx: number; dy: number; walls: number }[] = [];
-  const shut = (ax: number, ay: number, bx: number, by: number): boolean => { const e = keepEdge(ax, ay, bx, by); return e === 'wall' || e === 'bars'; };
+  const inside = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < KEEP_SIZE && y < KEEP_SIZE;
+  // z zewnątrz do zamku tylko przez bramę: korona muru od strony pola jest zamknięta (nikt nie wskoczy na mur z ziemi)
+  const shut = (ax: number, ay: number, bx: number, by: number): boolean => {
+    if (!inside(bx, by)) return keepTile(ax, ay) !== 'G';
+    const e = keepEdge(ax, ay, bx, by); return e === 'wall' || e === 'bars';
+  };
   for (let dy = 0; dy < KEEP_SIZE; dy++)
     for (let dx = 0; dx < KEEP_SIZE; dx++) {
       if (!keepWalk(dx, dy)) continue;
       const walls = (shut(dx, dy, dx, dy - 1) ? 1 : 0) | (shut(dx, dy, dx + 1, dy) ? 2 : 0) | (shut(dx, dy, dx, dy + 1) ? 4 : 0) | (shut(dx, dy, dx - 1, dy) ? 8 : 0);
-      out.push({ dx, dy, walls });
+      out.push({ dx, dy, walls: walls | (keepTile(dx, dy) === '=' ? WALL_TOP : 0) });
     }
   return out;
 })();

@@ -32,19 +32,20 @@ cx = lambda dx: dx - H + 0.5   # środek pola w układzie modelu
 cz = lambda dy: dy - H + 0.5
 
 b = Building()
-solid = []          # prostokąty, o które potyka się spacerowicz
-def block(x0, x1, z0, z1):
-    solid.append([round(min(x0, x1), 3), round(max(x0, x1), 3), round(min(z0, z1), 3), round(max(z0, z1), 3)])
+solid = []          # przeszkody spacerowicza: x0, x1, z0, z1, od wysokości y0 do y1
+def block(x0, x1, z0, z1, y0=0.0, y1=9.0):
+    solid.append([round(min(x0, x1), 3), round(max(x0, x1), 3), round(min(z0, z1), 3), round(max(z0, z1), 3), round(y0, 3), round(y1, 3)])
 def boxs(group, mat, w, h, d, x, y, z, rot=0.0, **kw):
-    """Pudło, które jest też przeszkodą dla spacerowicza"""
+    """Pudło, które jest też przeszkodą dla spacerowicza (na swojej wysokości)"""
     b.box(group, mat, w, h, d, x, y, z, rot, **kw)
     c, s = abs(math.cos(rot)), abs(math.sin(rot))
     ww, dd = w * c + d * s, w * s + d * c
-    block(x - ww / 2, x + ww / 2, z - dd / 2, z + dd / 2)
+    block(x - ww / 2, x + ww / 2, z - dd / 2, z + dd / 2, y - 0.05, y + h)
 
 G = 0.15             # posadzka dziedzińca i sal
 WH = 1.5             # wysokość murów nad posadzką
 TOP = G + WH
+WALK = TOP + 0.06     # chodnik na koronie muru (wierzch płyt)
 
 # ---------------- podmurówka, posadzki ----------------
 b.box('base', 'castleDark', N + 0.3, 0.06, N + 0.3, 0, 0, 0)
@@ -72,8 +73,7 @@ gl, gr = cx(gx) - 0.5, cx(gx) + 0.5
 curtain(-H, gl, H - 1, H)                      # przód po bokach bramy
 curtain(gr, H, H - 1, H)
 curtain(gl, gr, H - 1, H, G + 0.95, TOP)       # nad przejazdem
-# skarpa u stóp murów, gzyms, korona z blankami po zewnętrznej stronie
-# przed bramą skarpy nie ma: most kładzie się prosto na ziemi
+# skarpa u stóp murów, gzyms; przed bramą skarpy nie ma: most kładzie się prosto na ziemi
 gx0 = L['tiles'][N - 1].index('G') - H + 0.5
 b.box('base', 'castleDark', N + 0.24, 0.35, 0.12, 0, 0, -(H + 0.06))
 b.box('base', 'castleDark', (gx0 - 0.5) + H + 0.12, 0.35, 0.12, (-H - 0.12 + gx0 - 0.5) / 2, 0, H + 0.06)
@@ -82,25 +82,84 @@ for s in (-1, 1):
     b.box('base', 'castleDark', 0.12, 0.35, N + 0.24, s * (H + 0.06), 0, 0)
     b.box('base', 'castleDark', N + 0.08, 0.06, 0.04, 0, G + 0.75, s * (H + 0.02))
     b.box('base', 'castleDark', 0.04, 0.06, N + 0.08, s * (H + 0.02), G + 0.75, 0)
-    b.box('base', 'castleDark', N + 0.1, 0.06, 1.06, 0, TOP, s * (H - 0.5))
-    b.box('base', 'castleDark', 1.06, 0.06, N + 0.1, s * (H - 0.5), TOP, 0)
-    b.merlons_line('base', 'castle', -H + 1, s * (H - 0.06), H - 1, s * (H - 0.06), TOP + 0.06, step=0.36, w=0.16, h=0.18, t=0.1)
-    b.merlons_line('base', 'castle', s * (H - 0.06), -H + 1, s * (H - 0.06), H - 1, TOP + 0.06, step=0.36, w=0.16, h=0.18, t=0.1)
-    # niski parapet od dziedzińca
-    b.box('base', 'castle', N - 2, 0.1, 0.06, 0, TOP + 0.06, s * (H - 0.97))
-    b.box('base', 'castle', 0.06, 0.1, N - 2, s * (H - 0.97), TOP + 0.06, 0)
 for k in (-3.2, -1.6, 1.6, 3.2):
     b.box('base', 'dark', 0.05, 0.24, 0.015, k, G + 0.95, -H - 0.006)
     for s in (-1, 1):
         b.box('base', 'dark', 0.015, 0.24, 0.05, s * (H + 0.006), G + 0.95, k)
 
-# ---------------- baszty w narożnikach i w połowie boków ----------------
+# ---------------- chodnik na murach: płyty, blanki od pola, przedpiersie od dziedzińca ----------------
+# Po murze chodzi się pola, które w planie mają „=”; od pola zamyka je mur z blankami, od dziedzińca niskie przedpiersie
+# z przerwą tam, gdzie wychodzą schody.
+stair_tops = {(dx, dy + 1) for dy in range(N) for dx in range(N) if tile(dx, dy) == 'S' and tile(dx, dy + 1) == '='}
+for dy in range(N):
+    for dx in range(N):
+        if tile(dx, dy) != '=':
+            continue
+        x, z = cx(dx), cz(dy)
+        b.box('base', 'castleDark', 1.0, 0.06, 1.0, x, TOP, z)
+        for ox, oy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+            nx, ny = dx + ox, dy + oy
+            outside = not (0 <= nx < N and 0 <= ny < N)
+            if not outside and tile(nx, ny) in '=#':
+                continue  # dalej mur albo wieża
+            if outside:   # od pola: przedpiersie i blanki
+                ex, ez = x + ox * 0.44, z + oy * 0.44
+                w, d = (0.12, 1.0) if ox else (1.0, 0.12)
+                boxs('base', 'castle', w, 0.16, d, ex, WALK, ez)
+                for t in (-0.3, 0.06, 0.4):
+                    if ox:
+                        b.box('base', 'castle', 0.12, 0.2, 0.18, ex, WALK + 0.16, z + t - 0.05)
+                    else:
+                        b.box('base', 'castle', 0.18, 0.2, 0.12, x + t - 0.05, WALK + 0.16, ez)
+            elif (dx, dy) in stair_tops and (ox, oy) == (0, -1):
+                continue  # wyjście schodów na mur
+            elif tile(nx, ny) != 'S' or (ox, oy) != (0, -1):
+                ex, ez = x + ox * 0.47, z + oy * 0.47
+                w, d = (0.06, 1.0) if ox else (1.0, 0.06)
+                boxs('base', 'castle', w, 0.24, d, ex, WALK, ez)
+                b.box('base', 'castleDark', w + 0.02, 0.03, d + 0.02, ex, WALK + 0.24, ez)
+
+# ---------------- baszty: w narożnikach okrągłe, w połowie boków kwadratowe; w środku izba na wysokości chodnika ----------------
 TR = 0.82
+RW = 0.13   # grubość ściany izby w baszcie
+DOORW = 0.5
+def tower_doors(dx, dy):
+    """Kierunki (ox, oy), w których z izby w baszcie wychodzi się na chodnik muru"""
+    out = []
+    for ox, oy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
+        if tile(dx + ox, dy + oy) == '=' and 0 <= dx + ox < N and 0 <= dy + oy < N:
+            out.append((ox, oy))
+    return out
 for sx in (-1, 1):
     for sz in (-1, 1):
-        tx, tz = sx * (H - 0.5), sz * (H - 0.5)
+        dx, dy = (0 if sx < 0 else N - 1), (0 if sz < 0 else N - 1)
+        tx, tz = cx(dx), cz(dy)
+        doors = tower_doors(dx, dy)
         b.prism('base', 'castleDark', TR + 0.12, TR, 0.5, tx, 0.0, tz, seg=18, top=False)
-        b.prism('base', 'castle', TR, TR - 0.03, 2.55 - 0.5, tx, 0.5, tz, seg=18)
+        b.prism('base', 'castle', TR, TR, TOP - 0.5, tx, 0.5, tz, seg=18, top=False)
+        block(tx - TR - 0.12, tx + TR + 0.12, tz - TR - 0.12, tz + TR + 0.12, 0, TOP)
+        b.prism('base', 'castleDark', TR - RW, TR - RW, 0.06, tx, TOP, tz, seg=18)   # podłoga izby
+        # ściana izby z odcinków; tam, gdzie chodnik, drzwi z nadprożem
+        seg = 18
+        for k in range(seg):
+            a = 2 * math.pi * (k + 0.5) / seg
+            ox, oz = math.sin(a), math.cos(a)
+            door = any(ox * ddx + oz * ddy > 0.93 for ddx, ddy in doors)
+            ln = 2 * math.pi * TR / seg + 0.02
+            px, pz = tx + ox * (TR - RW / 2), tz + oz * (TR - RW / 2)
+            if door:
+                b.box('base', 'castle', ln, 2.55 - (WALK + 0.62), RW, px, WALK + 0.62, pz, a)
+                b.box('base', 'woodDark', ln, 0.04, RW + 0.02, px, WALK + 0.6, pz, a)
+            else:
+                b.box('base', 'castle', ln, 2.55 - WALK + 0.06, RW, px, WALK - 0.06, pz, a)
+                block(px - 0.09, px + 0.09, pz - 0.09, pz + 0.09, WALK - 0.1, 9)
+        for ddx, ddy in doors:  # ościeża drzwi
+            for side in (-1, 1):
+                px = tx + ddx * (TR - 0.05) + (ddy * side * DOORW / 2 if ddy else 0)
+                pz = tz + ddy * (TR - 0.05) + (ddx * side * DOORW / 2 if ddx else 0)
+                boxs('base', 'castleDark', 0.12, 0.62, 0.12, px, WALK, pz)
+        b.prism('base', 'woodDark', TR - RW, TR - RW, 0.03, tx, 2.52, tz, seg=18, top=False)
+        b.poly('base', 'wood', [(tx + math.sin(2 * math.pi * k / 18) * (TR - RW), 2.52, tz + math.cos(2 * math.pi * k / 18) * (TR - RW)) for k in range(18)], away=(tx, 3.5, tz))
         b.prism('base', 'castleDark', TR + 0.05, TR + 0.05, 0.08, tx, 2.55, tz, seg=18)
         b.merlons_ring('base', 'castle', tx, tz, TR - 0.02, 2.63, n=12, w=0.17, h=0.18, t=0.1)
         b.prism('base', 'castleDark', TR + 0.1, TR + 0.1, 0.04, tx, 2.81, tz, seg=18)
@@ -109,16 +168,57 @@ for sx in (-1, 1):
         b.box('base', 'woodDark', 0.03, 0.45, 0.03, tx, 4.15, tz)
         b.box('base', 'flag', 0.3, 0.17, 0.015, tx + 0.15, 4.4, tz)
         for a0 in (math.atan2(sx, sz) - 0.7, math.atan2(sx, sz) + 0.7):
-            for y in (1.0, 1.85):
-                b.box('base', 'dark', 0.05, 0.22, 0.015, tx + math.sin(a0) * (TR - 0.01), y, tz + math.cos(a0) * (TR - 0.01), a0)
+            for y in (1.0, 2.1):
+                b.box('base', 'dark', 0.05, 0.22, 0.015, tx + math.sin(a0) * (TR + 0.002), y, tz + math.cos(a0) * (TR + 0.002), a0)
+        b.box('interior', 'ember', 0.04, 0.07, 0.03, tx - sx * 0.45, WALK + 0.45, tz - sz * 0.45)
 for sx in (-1, 1):
-    tx = sx * (H - 0.5)
-    b.box('base', 'castle', 1.3, 2.2 - G, 1.3, tx, G, 0)
-    b.box('base', 'castleDark', 1.4, 0.07, 1.4, tx, 2.2, 0)
+    dx = 0 if sx < 0 else N - 1
+    dy = N // 2
+    tx, tz = cx(dx), cz(dy)
+    S2 = 0.65
+    b.box('base', 'castle', 2 * S2, TOP - G, 2 * S2, tx, G, tz)
+    block(tx - S2, tx + S2, tz - S2, tz + S2, 0, TOP)
+    b.box('base', 'castleDark', 2 * S2 - 0.1, 0.06, 2 * S2 - 0.1, tx, TOP, tz)
+    # ściany izby: od pola i od dziedzińca pełne, w kierunku muru drzwi
+    for ox in (-1, 1):
+        b.box('base', 'castle', RW, 2.2 - WALK, 2 * S2, tx + ox * (S2 - RW / 2), WALK, tz)
+        block(tx + ox * (S2 - RW / 2) - RW / 2, tx + ox * (S2 - RW / 2) + RW / 2, tz - S2, tz + S2, WALK - 0.1, 9)
+    for oz in (-1, 1):
+        zz = tz + oz * (S2 - RW / 2)
+        for side in (-1, 1):
+            w = S2 - DOORW / 2
+            b.box('base', 'castle', w, 2.2 - WALK, RW, tx + side * (DOORW / 2 + w / 2), WALK, zz)
+            block(tx + side * DOORW / 2, tx + side * S2, zz - RW / 2, zz + RW / 2, WALK - 0.1, 9)
+        b.box('base', 'castle', DOORW, 2.2 - (WALK + 0.62), RW, tx, WALK + 0.62, zz)
+        b.box('base', 'woodDark', DOORW + 0.04, 0.04, RW + 0.02, tx, WALK + 0.6, zz)
+    b.box('base', 'wood', 2 * S2 - 2 * RW, 0.02, 2 * S2 - 2 * RW, tx, 2.17, tz, bottom=True)
+    b.box('base', 'castleDark', 1.4, 0.07, 1.4, tx, 2.2, tz)
     for s2 in (-1, 1):
-        b.merlons_line('base', 'castle', tx - 0.6, s2 * 0.62, tx + 0.6, s2 * 0.62, 2.27, step=0.3, w=0.14, h=0.16, t=0.08)
-        b.merlons_line('base', 'castle', tx + s2 * 0.62, -0.6, tx + s2 * 0.62, 0.6, 2.27, step=0.3, w=0.14, h=0.16, t=0.08)
-    b.box('base', 'dark', 0.015, 0.26, 0.06, tx + sx * 0.656, 1.5, 0)
+        b.merlons_line('base', 'castle', tx - 0.6, tz + s2 * 0.62, tx + 0.6, tz + s2 * 0.62, 2.27, step=0.3, w=0.14, h=0.16, t=0.08)
+        b.merlons_line('base', 'castle', tx + s2 * 0.62, tz - 0.6, tx + s2 * 0.62, tz + 0.6, 2.27, step=0.3, w=0.14, h=0.16, t=0.08)
+    b.box('base', 'dark', 0.015, 0.26, 0.06, tx + sx * 0.656, 1.0, tz)
+    b.box('interior', 'ember', 0.03, 0.07, 0.04, tx + sx * 0.5, WALK + 0.45, tz)
+
+# ---------------- schody na mury: kamienne stopnie od dziedzińca w górę ku koronie ----------------
+for dx in range(N):
+    col = [dy for dy in range(N) if tile(dx, dy) == 'S']
+    if not col:
+        continue
+    z0, z1 = cz(min(col)) - 0.5, cz(max(col)) + 0.5
+    n = 12
+    for i in range(n):
+        za, zb = z0 + (z1 - z0) * i / n, z0 + (z1 - z0) * (i + 1) / n
+        hgt = G + (WALK - G) * (i + 1) / n
+        b.box('base', 'stone', 0.86, hgt - G, zb - za, cx(dx), G, (za + zb) / 2)
+        b.box('base', 'castleDark', 0.88, 0.02, 0.03, cx(dx), hgt - 0.02, zb - 0.015)
+    for side in (-1, 1):   # balustrada z belek
+        x = cx(dx) + side * 0.45
+        for i in range(4):
+            zz = z0 + 0.15 + i * (z1 - z0 - 0.3) / 3
+            hh = G + (WALK - G) * (zz - z0) / (z1 - z0)
+            b.box('base', 'woodDark', 0.04, 0.32, 0.04, x, hh, zz)
+        b.box('base', 'woodDark', 0.04, 0.04, math.hypot(z1 - z0, WALK - G), x, G + 0.32 + (WALK - G) / 2, (z0 + z1) / 2, tilt=-math.atan2(WALK - G, z1 - z0))
+        block(x - 0.03, x + 0.03, z0, z1)
 
 # ---------------- donżon nad tylnym murem: wysoka wieża z chorągwią ----------------
 DZ = -H + 0.55
@@ -382,7 +482,7 @@ b.box('base', 'woodDark', 0.66, 0.05, 0.05, wx, G + 0.92, wz)
 b.gable('base', 'roadWood', wx - 0.4, wx + 0.4, wz - 0.32, wz + 0.32, G + 0.95, 0.25, along_x=True, over=0.05)
 b.prism('base', 'wood', 0.08, 0.08, 0.12, wx + 0.12, G + 0.45, wz, seg=8)
 # wóz z sianem
-cxw, czw = cx(3) + 0.1, cz(8) + 0.2
+cxw, czw = cx(4) - 0.05, cz(6) + 0.1
 boxs('base', 'wood', 0.5, 0.06, 0.9, cxw, G + 0.2, czw)
 b.box('base', 'hay', 0.44, 0.22, 0.8, cxw, G + 0.26, czw)
 for s in (-1, 1):
@@ -390,10 +490,10 @@ for s in (-1, 1):
         b.box('base', 'woodDark', 0.04, 0.26, 0.26, cxw + s * 0.28, G, czw + zz)  # koła
 b.box('base', 'woodDark', 0.04, 0.04, 0.7, cxw, G + 0.15, czw + 0.75)
 # siano i beczki pod murem, stos drewna, kukły
-for i, (x, z) in enumerate(((cx(7) + 0.2, cz(9) + 0.15), (cx(7) - 0.25, cz(9) + 0.25), (cx(6) + 0.3, cz(4) - 0.25))):
+for i, (x, z) in enumerate(((cx(4) - 0.25, cz(9) + 0.3), (cx(4) + 0.1, cz(9) + 0.35), (cx(6) + 0.3, cz(4) - 0.25))):
     b.prism('base', 'wood', 0.16, 0.14, 0.38, x, G, z, seg=10)
     block(x - 0.16, x + 0.16, z - 0.16, z + 0.16)
-boxs('base', 'hay', 0.55, 0.3, 0.4, cx(7) + 0.1, G, cz(8) - 0.2)
+boxs('base', 'hay', 0.4, 0.3, 0.5, cx(6) + 0.2, G, cz(9) + 0.15)
 for i in range(4):
     b.box('base', 'wood', 0.6, 0.08, 0.08, cx(1) + 0.05, G + i * 0.08, cz(4) - 0.3 + (i % 2) * 0.02, 0.0)
 block(cx(1) - 0.25, cx(1) + 0.35, cz(4) - 0.38, cz(4) - 0.22)
@@ -411,4 +511,4 @@ for s in (-1, 1):
     b.box('base', 'ember', 0.14, 0.04, 0.14, x, G + 0.5, z)
     block(x - 0.12, x + 0.12, z - 0.12, z + 0.12)
 
-b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G})
+b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G, 'wallY': WALK})
