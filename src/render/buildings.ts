@@ -6,6 +6,8 @@ import { bump, normal, pattern } from './textures';
 import { beam, cutBox, paintGeo, rng, stoneSkirt, thatchSlab } from './craft';
 import KEEP_MODEL from './models/keep.json';
 import TAVERN_MODEL from './models/tavern.json';
+import HOUSE_MODEL from './models/house.json';
+import BARN_MODEL from './models/barn.json';
 import BREWERY_MODEL from './models/brewery.json';
 import GATE_MODEL from './models/gate.json';
 
@@ -39,32 +41,6 @@ function tileRound(mesh: THREE.Mesh, radius: number, height: number): THREE.Mesh
   const uv = mesh.geometry.getAttribute('uv');
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * Math.PI * 2 * radius * k, uv.getY(i) * height * k);
   return mesh;
-}
-/**
- * Okrągła bela siana leżąca na boku (oś X): zaokrąglone krawędzie, źdźbła zwinięte wokół osi
- * (na denkach widać słoje zwoju), dwa powrósła. Tekstura strzechy biegnie wzdłuż obwodu.
- */
-function roundBale(r: number, len: number): THREE.Group {
-  const c = r * 0.32, h = len / 2, pts: THREE.Vector2[] = [new THREE.Vector2(0.001, -h)];
-  for (let i = 0; i <= 5; i++) { const a = (i / 5) * (Math.PI / 2); pts.push(new THREE.Vector2(r - c + Math.sin(a) * c, -h + c - Math.cos(a) * c)); }
-  for (let i = 0; i <= 5; i++) { const a = (i / 5) * (Math.PI / 2); pts.push(new THREE.Vector2(r - c + Math.cos(a) * c, h - c + Math.sin(a) * c)); }
-  pts.push(new THREE.Vector2(0.001, h));
-  const seg = 22, geo = new THREE.LatheGeometry(pts, seg);
-  const k = (M.hay.userData.tile as number) || 4;
-  const uv = geo.getAttribute('uv');
-  const along: number[] = [0];
-  for (let j = 1; j < pts.length; j++) along.push(along[j - 1]! + pts[j]!.distanceTo(pts[j - 1]!));
-  for (let i = 0; i <= seg; i++) for (let j = 0; j < pts.length; j++) uv.setXY(i * pts.length + j, along[j]! * k * 1.5, (i / seg) * Math.PI * 2 * r * k);
-  geo.rotateZ(Math.PI / 2);
-  const grp = new THREE.Group();
-  grp.add(new THREE.Mesh(geo, M.hay));
-  for (const o of [-0.3, 0.3]) {
-    const band = new THREE.Mesh(new THREE.TorusGeometry(r + 0.003, 0.006, 4, 22), M.woodDark);
-    band.rotation.y = Math.PI / 2;
-    band.position.x = o * len;
-    grp.add(band);
-  }
-  return grp;
 }
 const M = {
   stone: mat(0xcfc7b3, 'bricks'), stoneDark: mat(0xa39b88, 'bricks'), wood: mat(0x85603a, 'planks'), woodDark: mat(0x5e4329, 'planks'),
@@ -639,7 +615,6 @@ function craft(): { timber: THREE.MeshStandardMaterial; stones: THREE.MeshStanda
   craftMats.stones.bumpScale = 0.6;
   return craftMats;
 }
-let houseSeed = 1;
 
 /**
  * Chata z szachulcem: podmurówka z polnych kamieni, bielone ściany z ciemnymi, ręcznie ciosanymi belkami,
@@ -960,14 +935,11 @@ const BUILDERS: Record<string, Builder> = {
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   house(g, _team, flag) {
-    const inside = cottage(g, houseSeed++);
-    // izba: cała podłoga to legowiska (siennik pod każdym śpiącym rysuje scena), przy ścianie skrzynia i dzban
-    box(inside, M.woodDark, 0.22, 0.14, 0.14, 0.56, 0.05, 0.42);
-    const jug = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.045, 0.1, 8), M.rockDark);
-    jug.position.set(0.56, 0.24, 0.42);
-    inside.add(jug);
-    // chorągiewka stoi na szczycie dachu, więc znika razem z nim przy podglądzie wnętrza
-    pennant(g.getObjectByName('roof') as THREE.Group, flag, 0.86, 1.42, 0);
+    // chata z Blendera (tools/models/house.py): szachulec, strzecha, komin nad paleniskiem; w izbie stół, skrzynia
+    // i wolna podłoga pod ścianami na posłania śpiących; chłopem da się wejść do środka
+    blenderModel(g, HOUSE_MODEL as unknown as BlenderBuilding, flag);
+    const p = (HOUSE_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   stockpile(g) {
     box(g, M.soil, 1.9, 0.06, 1.9);
@@ -1195,60 +1167,16 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.ember, 0.04, 0.06, 0.04, -0.33, 0.54, 0.26);
   },
   barn(g, _team, flag) {
-    // duża drewniana stodoła na kamiennej podmurówce, z wrotami i sianem
-    box(g, M.stoneDark, 2.7, 0.2, 1.7);
-    const shell = new THREE.Group();
-    shell.name = 'shell';
-    // ściany z deskami, od frontu szeroki otwór: wrota przesuwne zawsze odsunięte na boki, w środku widać zapasy
-    box(shell, M.wood, 2.6, 0.95, 0.06, 0, 0.2, -0.77);
-    for (const sx of [-1, 1]) {
-      box(shell, M.wood, 0.06, 0.95, 1.6, sx * 1.27, 0.2, 0);
-      box(shell, M.window, 0.04, 0.26, 0.26, sx * 1.305, 0.6, 0);
-      box(shell, M.wood, 0.65, 0.95, 0.06, sx * 0.975, 0.2, 0.77);
-      // wrota na szynie: deski z ukośną zastrzałą
-      box(shell, M.woodDark, 0.66, 0.84, 0.04, sx * 0.99, 0.2, 0.83);
-      for (const yy of [0.32, 0.86]) box(shell, M.plank, 0.62, 0.05, 0.03, sx * 0.99, yy, 0.86);
-      const brace = box(shell, M.plank, 0.05, 0.62, 0.03, sx * 0.99, 0.33, 0.86);
-      brace.rotation.z = sx * 0.75;
-    }
-    box(shell, M.wood, 1.3, 0.13, 0.06, 0, 1.02, 0.77);
-    box(shell, M.iron, 2.4, 0.03, 0.03, 0, 1.06, 0.86);
-    g.add(shell);
-    // dach: gruba strzecha z ciemniejszym okapem, kalenica z żerdzi, wiatrownice na szczytach i daszek nad wrotami
-    const top = new THREE.Group();
-    top.name = 'roof';
-    gable(top, M.thatchDark, 2.95, 0.9, 2.1, 1.1);
-    gable(top, M.thatch, 2.8, 1.0, 1.9, 1.16);
-    box(top, M.woodDark, 2.9, 0.07, 0.09, 0, 2.12, 0);
-    const porch = box(top, M.thatchDark, 1.1, 0.05, 0.45, 0, 1.12, 1.05);
-    porch.rotation.x = 0.45;
-    g.add(top);
-    // siano przy wrotach: dwie okrągłe bele obwiązane powrósłem i kopka z wbitymi widłami
-    for (const [bx, bz, rot] of [[1.08, 1.1, 0.3], [0.66, 1.12, -0.2]] as const) {
-      const b = roundBale(0.17, 0.3);
-      b.position.set(bx, 0.17, bz);
-      b.rotation.y = rot;
-      g.add(b);
-    }
-    const stack = new THREE.Mesh(new THREE.SphereGeometry(0.28, 9, 6, 0, Math.PI * 2, 0, Math.PI / 2), M.hay);
-    stack.scale.set(1, 1.25, 1);
-    stack.position.set(-1.0, 0, 1.12);
-    g.add(stack);
-    const fork = box(g, M.woodDark, 0.025, 0.55, 0.025, -0.95, 0.15, 1.12);
-    fork.rotation.z = 0.35;
-    // wnętrze zawsze widoczne przez otwarte wrota: klepisko ze słomą i zapasy składu (stodoła trzyma tylko surowce)
-    box(g, M.plank, 2.5, 0.05, 1.5, 0, 0.2, 0);
-    // po kliknięciu (albo gdy ktoś pracuje) zdejmujemy dach i ściany: zostają niskie ścianki jak w innych budynkach
-    const inside = new THREE.Group();
-    inside.name = 'interior';
-    inside.visible = false;
-    for (const [x, z, w, d] of [[0, -0.77, 2.6, 0.06], [-1.27, 0, 0.06, 1.6], [1.27, 0, 0.06, 1.6]] as const) box(inside, M.wood, w, 0.45, d, x, 0.2, z);
-    g.add(inside);
-    const goods = fillSlots('fill', 0, -0.05, 0.42);
-    goods.position.y = 0.2;
+    // stodoła z Blendera (tools/models/barn.py): deski na słupach, strzecha z lukarną, wrota otwarte na oścież,
+    // w środku antresola z sianem; na klepisku gra układa zapasy składu (stodoła trzyma tylko surowce)
+    blenderModel(g, BARN_MODEL as unknown as BlenderBuilding, flag);
+    const goods = fillSlots('fill', 0, 0.05, 0.42);
+    goods.position.y = (BARN_MODEL as unknown as { floorY: number }).floorY;
     g.add(goods);
-    pennant(g, flag, -1.25, 1.75, 0);
+    const p = (BARN_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
+
   fisher(g, _team, flag) {
     // chata rybaka na palach, z suszarnią ryb, beczką i łódką wyciągniętą na brzeg
     for (const [x, z] of [[-0.75, -0.6], [0.15, -0.6], [-0.75, 0.1], [0.15, 0.1]] as const) box(g, M.woodDark, 0.09, 0.3, 0.09, x, 0, z);

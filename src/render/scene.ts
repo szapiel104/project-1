@@ -13,6 +13,8 @@ import { Flames, flameSprite } from './flames';
 import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
 import KEEP_MODEL from './models/keep.json';
 import TAVERN_MODEL from './models/tavern.json';
+import HOUSE_MODEL from './models/house.json';
+import BARN_MODEL from './models/barn.json';
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
@@ -50,7 +52,10 @@ const KEEP_FLOOR = (KEEP_MODEL as unknown as { floorY: number }).floorY;
 const KEEP_WALL = (KEEP_MODEL as unknown as { wallY: number }).wallY;
 const KEEP_HALF = KEEP_SIZE / 2;
 /** Karczma z Blendera: miejsca dla gości (x, z, obrót), posadzka izby, obszar do chodzenia i przeszkody */
-const TAVERN = TAVERN_MODEL as unknown as { seats: [number, number, number][]; floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] };
+/** Budynek z Blendera, do którego wchodzi się spacerem: prostokąty podłogi, przeszkody na swojej wysokości, wysokość posadzki */
+interface WalkModel { floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] }
+const TAVERN = TAVERN_MODEL as unknown as WalkModel & { seats: [number, number, number][] };
+const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel };
 const TAVERN_SEATS = TAVERN.seats;
 const TAVERN_FLOOR = TAVERN.floorY;
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
@@ -1436,8 +1441,8 @@ export class GameRenderer {
         const y = feet - wb[3], R = 0.07;
         for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]] as const) {
           const lx = wb[1] + ox, lz = wb[2] + oz;
-          if (!TAVERN.open.some(([x0, x1, z0, z1]) => lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1)) return false;
-          for (const [x0, x1, z0, z1, y0, y1] of TAVERN.solid) if (lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1 && y + 0.3 > y0 && y < y1 - 0.05) return false;
+          if (!wb[4].open.some(([x0, x1, z0, z1]) => lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1)) return false;
+          for (const [x0, x1, z0, z1, y0, y1] of wb[4].solid) if (lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1 && y + 0.3 > y0 && y < y1 - 0.05) return false;
         }
         return true;
       }
@@ -1476,8 +1481,8 @@ export class GameRenderer {
     // w pomieszczeniu (nie na dziedzińcu): dach znika, widać sufit; przy zamku jego wnętrza są zawsze widoczne
     const kp = this.keepAt(w.x, w.z);
     const inRoom = !!kp && Math.abs(kp[1]) < KEEP_HALF && Math.abs(kp[2]) < KEEP_HALF && 'TKCBL1234'.includes(keepRoom(Math.floor(kp[1] + KEEP_HALF), Math.floor(kp[2] + KEEP_HALF)));
-    const wbk = this.walkableAt(w.x, w.z), tap = TAVERN.open[0]!;
-    const inTap = !!wbk && wbk[1] >= tap[0] && wbk[1] <= tap[1] && wbk[2] >= tap[2] && wbk[2] <= tap[3];
+    const wbk = this.walkableAt(w.x, w.z), tap = wbk?.[4].open[0];
+    const inTap = !!wbk && !!tap && wbk[1] >= tap[0] && wbk[1] <= tap[1] && wbk[2] >= tap[2] && wbk[2] <= tap[3];
     this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
     this.walkNear = wbk ? wbk[0] : kp ? kp[0] : 0; // budynek pod nogami ma pierwszeństwo przed zamkiem obok
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
@@ -2499,7 +2504,8 @@ export class GameRenderer {
           view.wear(tx, ty, Math.max(0.15, 0.6 - d * 0.1 - Math.abs(o) * 0.08));
         }
       }
-      if (def.id === 'tavern') this.walkables.set(b.id, { cx: b.x + fp.w / 2, cy: b.y + fp.h / 2, rot: b.rot, base: ground, hw: fp.w / 2, hh: fp.h / 2 });
+      const wm = WALK_MODELS[def.id];
+      if (wm) this.walkables.set(b.id, { cx: b.x + fp.w / 2, cy: b.y + fp.h / 2, rot: b.rot, base: ground, hw: fp.w / 2, hh: fp.h / 2, m: wm });
       mesh.rotation.y = (b.rot * Math.PI) / 2;
       // ziemia wydeptana tylko tuż przy ścianach (z przerwami) i przy drzwiach; dalej trawa ledwo naruszona
       if (!def.wall && !def.gate && !def.road && def.id !== 'torch') {
@@ -3234,7 +3240,7 @@ export class GameRenderer {
     }
     if (!k) {
       const wb = this.walkableAt(x, y);
-      if (wb && TAVERN.open.some(([x0, x1, z0, z1]) => wb[1] >= x0 && wb[1] <= x1 && wb[2] >= z0 && wb[2] <= z1)) return Math.max(h, wb[3] + TAVERN_FLOOR);
+      if (wb && wb[4].open.some(([x0, x1, z0, z1]) => wb[1] >= x0 && wb[1] <= x1 && wb[2] >= z0 && wb[2] <= z1)) return Math.max(h, wb[3] + wb[4].floorY);
       return h;
     }
     const [, lx, lz, base] = k;
@@ -3266,9 +3272,9 @@ export class GameRenderer {
     return null;
   }
   /** Budynki z Blendera, do których wchodzi się spacerem (karczma): środek, obrót, wysokość, połowa wymiarów działki */
-  private walkables = new Map<number, { cx: number; cy: number; rot: number; base: number; hw: number; hh: number }>();
+  private walkables = new Map<number, { cx: number; cy: number; rot: number; base: number; hw: number; hh: number; m: WalkModel }>();
   /** Budynek do chodzenia pod punktem: [id, x i z w układzie modelu (bez obrotu), wysokość] albo null */
-  private walkableAt(x: number, y: number): [number, number, number, number] | null {
+  private walkableAt(x: number, y: number): [number, number, number, number, WalkModel] | null {
     for (const [id, w] of this.walkables) {
       const dx = x - w.cx, dz = y - w.cy;
       if (Math.abs(dx) > Math.max(w.hw, w.hh) + 0.5 || Math.abs(dz) > Math.max(w.hw, w.hh) + 0.5) continue;
@@ -3277,7 +3283,7 @@ export class GameRenderer {
       const lx = dx * c - dz * s, lz = dx * s + dz * c;
       const half = w.rot % 2 ? [w.hh, w.hw] : [w.hw, w.hh];
       if (Math.abs(lx) > half[0]! || Math.abs(lz) > half[1]!) continue;
-      return [id, lx, lz, w.base];
+      return [id, lx, lz, w.base, w.m];
     }
     return null;
   }
