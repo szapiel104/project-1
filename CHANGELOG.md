@@ -2,8 +2,8 @@
 
 ## 0.19.2 — ludzie chodzą po drodze, nie w niej (2026-10-14)
 
-- Droga z dyli wpuszczona w ziemię: bale wystają tylko na grubość deski, legary schowane pod spodem
-- Ludzie, żołnierze i zwierzęta stoją na wierzchu nawierzchni (ścieżka, bruk, dyle), zamiast zapadać się w nią po kostki
+- Ludzie, żołnierze i zwierzęta stoją na wierzchu nawierzchni (ścieżka, bruk, bale drogi z dyli), zamiast przenikać przez nią po kostki; na drogę wchodzą krótkim krokiem w górę przy brzegu pola
+- Droga z dyli wygląda jak przedtem (cofnięte wpuszczenie bali w ziemię, które zasłaniało deski)
 
 ## 0.19.1 — zwierzęta z Blendera (2026-10-14)
 

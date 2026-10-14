@@ -133,8 +133,8 @@ export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean
 const MAX_UNITS = 2048;
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
-/** Wierzch nawierzchni drogi nad ziemią (0 brak, 1 ścieżka, 2 bruk, 3 dyle) */
-const ROAD_TOP = [0, 0.025, 0.04, 0.035];
+/** Wierzch nawierzchni drogi nad ziemią (0 brak, 1 ścieżka, 2 bruk, 3 dyle: bale leżą na 0,05 i mają ok. 0,05 grubości) */
+const ROAD_TOP = [0, 0.025, 0.045, 0.1];
 const tmpColor = new THREE.Color();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
@@ -2823,8 +2823,14 @@ export class GameRenderer {
     // na drodze stopy stoją na nawierzchni, nie w niej: ścieżka, bruk i dyle są trochę nad ziemią
     const g = this.state;
     if (g && !k) {
-      const tx = Math.floor(x), ty = Math.floor(y);
-      if (tx >= 0 && ty >= 0 && tx < g.map.width && ty < g.map.height) h += ROAD_TOP[g.roads[ty * g.map.width + tx]!] ?? 0;
+      // wejście na drogę krótkim krokiem w górę (przy samym brzegu pola), nie skokiem
+      const W = g.map.width, H = g.map.height;
+      const top = (tx: number, ty: number): number => (tx >= 0 && ty >= 0 && tx < W && ty < H ? ROAD_TOP[g.roads[ty * W + tx]!] ?? 0 : 0);
+      const fx = x - 0.5, fy = y - 0.5, x0 = Math.floor(fx), y0 = Math.floor(fy);
+      const ease = (t: number): number => { const u = Math.max(0, Math.min(1, (t - 0.42) / 0.16)); return u * u * (3 - 2 * u); };
+      const ax = ease(fx - x0), ay = ease(fy - y0);
+      const a = top(x0, y0) + (top(x0 + 1, y0) - top(x0, y0)) * ax, b = top(x0, y0 + 1) + (top(x0 + 1, y0 + 1) - top(x0, y0 + 1)) * ax;
+      h += a + (b - a) * ay;
     }
     if (!k) return h;
     const [, lx, lz, base] = k;
