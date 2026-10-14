@@ -18,6 +18,7 @@ import BARN_MODEL from './models/barn.json';
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
+import { ladderSide } from '../sim/systems/stonewalls';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
@@ -1628,6 +1629,8 @@ export class GameRenderer {
   private wallKey = '';
   private wallShafts: THREE.InstancedMesh | null = null;
   private wallTips: THREE.InstancedMesh | null = null;
+  /** Pola u stóp drabin na mur kamienny → kierunek do muru (wspinaczka w wyglądzie) */
+  private ladderFeet = new Map<number, [number, number]>();
   private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
   /** Częstokół: bale łączą się z sąsiednimi palisadami, bramami i wieżami; brama obraca się w linii muru */
   private syncWalls(g: GameState, view: TerrainView): void {
@@ -1648,6 +1651,7 @@ export class GameRenderer {
     const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
     let n = 0;
     const sn = { block: 0, edge: 0, ladder: 0 };
+    this.ladderFeet.clear();
     const stoneAt = (x: number, y: number): boolean => { const o = solid.get(y * width + x); return !!o && BUILDINGS[o.type]!.id === 'stoneWall'; };
     if (!this.stoneKit) {
       const k = stoneWallKit();
@@ -1718,13 +1722,14 @@ export class GameRenderer {
           return cnt + 1;
         };
         if (sn.block < 8192) sn.block = put(kit.block, 0, sn.block);
-        const kp = keeps.get(b.owner);
-        let ladderDone = !(built >= 1 && ((b.x * 7 + b.y * 13) % 5) === 0);
+        // drabina tam, gdzie symulacja pozwala wejść na mur (ladderSide: indeks boku -y, +x, +y, -x)
+        const ls = built >= 1 ? ladderSide(g, b) : -1;
+        const sideRot = [Math.PI, Math.PI / 2, 0, -Math.PI / 2];
+        const sideD: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+        if (ls >= 0) { this.ladderFeet.set((b.y + sideD[ls]![1]) * width + b.x + sideD[ls]![0], [sideD[ls]![0], sideD[ls]![1]]); if (sn.ladder < 2048) sn.ladder = put(kit.ladder, sideRot[ls]!, sn.ladder); }
         for (const [dx, dz, rot] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]] as const) {
           if (stoneAt(b.x + dx, b.y + dz) || sn.edge >= 16384) continue;
           sn.edge = put(kit.edge, rot, sn.edge);
-          // drabina na krawędzi od strony twierdzy, gdy przed nią jest wolne pole
-          if (!ladderDone && kp && dx * (kp[0] - cx) + dz * (kp[1] - cz) > 0 && !at(b.x + dx, b.y + dz) && sn.ladder < 2048) { sn.ladder = put(kit.ladder, rot, sn.ladder); ladderDone = true; }
         }
         continue;
       }
@@ -3237,6 +3242,18 @@ export class GameRenderer {
       const ax = ease(fx - x0), ay = ease(fy - y0);
       const a = top(x0, y0) + (top(x0 + 1, y0) - top(x0, y0)) * ax, b = top(x0, y0 + 1) + (top(x0 + 1, y0 + 1) - top(x0, y0 + 1)) * ax;
       h += a + (b - a) * ay;
+    }
+    if (!k && g) {
+      // korona muru kamiennego: chodzi się wysoko; u stóp drabiny wspina się na wysokość muru
+      const W = g.map.width, tx = Math.floor(x), ty = Math.floor(y), t = ty * W + tx;
+      if (tx >= 0 && ty >= 0 && tx < W && ty < g.map.height) {
+        if ((g.walls[t]! & 16) && g.gates[t]) return h + STONE_WALL_TOP;
+        const lf = this.ladderFeet.get(t);
+        if (lf) {
+          const off = (x - tx - 0.5) * lf[0] + (y - ty - 0.5) * lf[1];
+          if (off > 0) return h + STONE_WALL_TOP * Math.min(1, off * 2);
+        }
+      }
     }
     if (!k) {
       const wb = this.walkableAt(x, y);

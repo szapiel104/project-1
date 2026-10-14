@@ -4,6 +4,7 @@ import { createGame } from '../src/sim/state';
 import { canPlace, placeBuilding } from '../src/sim/systems/placement';
 import { walkable } from '../src/sim/path';
 import { step } from '../src/sim/step';
+import { high } from '../src/sim/systems/army';
 
 describe('brama na częstokole', () => {
   it('bramę można postawić na własnym przęśle: przęsło znika, swoi przechodzą, wróg nie', () => {
@@ -59,26 +60,27 @@ describe('brama na częstokole', () => {
     expect(canPlace(g, 0, buildingIndex('gate'), x, y)).toBe(null);
   });
 
-  it('łucznicy wchodzą na mur kamienny (najwyżej dwóch na pole)', () => {
+  it('po murze kamiennym chodzi się jak po terenie: swoi wchodzą po drabinie, wróg nie wejdzie', () => {
     const g = createGame(5, '1v1', 1, true);
-    for (const p of g.players) { p.bot = false; p.res = p.res.map(() => 500); }
+    for (const p of g.players) { p.bot = false; p.res = p.res.map(() => 900); }
     const keep = g.buildings.find((b) => b.owner === 0 && b.type === 0)!;
     const stone = buildingIndex('stoneWall');
     let x = -1, y = -1;
-    for (let r = 5; r < 16 && x < 0; r++) for (let d = -r; d <= r && x < 0; d++) if (canPlace(g, 0, stone, keep.x + d, keep.y + r) === null) { x = keep.x + d; y = keep.y + r; }
-    expect(placeBuilding(g, 0, stone, x, y)).toBe(true);
-    const wall = g.buildings[g.buildings.length - 1]!;
-    wall.build = 0;
-    const W = g.map.width;
-    const ids: number[] = [];
-    for (let i = 0; i < 3; i++) {
-      const id = g.nextId++;
-      ids.push(id);
-      g.soldiers.push({ id, owner: 0, kind: 1, px: (x + 1 + i) * 256 + 128, py: (y + 2) * 256 + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0 } as never);
-    }
-    step(g, [{ type: 'garrison', player: 0, ids, tower: wall.id }]);
-    for (let i = 0; i < 300; i++) step(g, []);
-    expect(g.soldiers.filter((s) => s.post === wall.id && s.up).length).toBe(2);
-    void W;
+    for (let r = 6; r < 16 && x < 0; r++) for (let d = -r; d <= r && x < 0; d++)
+      if ([0, 1, 2, 3, 4, 5].every((k) => canPlace(g, 0, stone, keep.x + d + k, keep.y + r) === null)) { x = keep.x + d; y = keep.y + r; }
+    expect(x).toBeGreaterThanOrEqual(0);
+    for (let k = 0; k < 6; k++) { expect(placeBuilding(g, 0, stone, x + k, y)).toBe(true); g.buildings[g.buildings.length - 1]!.build = 0; }
+    step(g, []);
+    const W = g.map.width, top = y * W + x + 3;
+    expect(walkable(g, top, 0)).toBe(true);
+    expect(walkable(g, top, 1)).toBe(false);
+    // łucznik spod muru (od zewnątrz) wchodzi na koronę po drabinie i strzela z góry
+    const id = g.nextId++;
+    g.soldiers.push({ id, owner: 0, kind: 1, px: (x + 3) * 256 + 128, py: (y + 3) * 256 + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0 } as never);
+    step(g, [{ type: 'move', player: 0, ids: [id], x: x + 3, y }]);
+    for (let i = 0; i < 600; i++) step(g, []);
+    const s = g.soldiers.find((o) => o.id === id)!;
+    expect((s.py >> 8) * W + (s.px >> 8)).toBe(top);
+    expect(high(g, s)).toBe(true);
   });
 });

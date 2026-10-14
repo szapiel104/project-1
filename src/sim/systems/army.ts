@@ -450,7 +450,7 @@ export function orderDismount(g: GameState, player: number, towerId: number): vo
 }
 
 /** Ilu łuczników zmieści się na budynku: wieża strażnicza 4, pole muru kamiennego 2 (wchodzą po drabinie) */
-export const garrisonRoom = (id: string): number => (id === 'watchtower' ? 4 : id === 'stoneWall' ? 2 : 0);
+export const garrisonRoom = (id: string): number => (id === 'watchtower' ? 4 : 0);
 
 /** Łucznicy wchodzą na wieżę strażniczą albo mur kamienny; inni żołnierze stają przy nim */
 export function orderGarrison(g: GameState, player: number, ids: readonly number[], towerId: number): void {
