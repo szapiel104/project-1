@@ -455,7 +455,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     og.setIndex(idx);
     const outer = new THREE.Mesh(og, ground.material);
     outer.receiveShadow = true;
-    outer.castShadow = true;
+    // góry za mapą nie rzucają cienia: 100 tys. trójkątów w każdej klatce cienia, a ich cień i tak pada poza plansza
+    outer.castShadow = false;
     group.add(outer);
     // daleko za górami płaska ciemna równina, którą i tak zakrywa mgła
     const far = new THREE.Mesh(new THREE.PlaneGeometry(W2 + 600, H2 + 600), new THREE.MeshStandardMaterial({ color: 0x2c3a1c, roughness: 1 }));
@@ -648,7 +649,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const PINE_LOD: Lod = pineImp ? { farGeo: pineImp.geometry, farMat: pineImp.material(0x3c7a3a) } : { farGeo: farPine };
   const LEAF_LOD: Lod = leafImp ? { farGeo: leafImp.geometry, farMat: leafImp.material(0x6fa33d) } : { farGeo: models.leafCrownFar() };
   // pień znika razem z przełączeniem korony na obrazek (obrazek ma już pień)
-  const TRUNK_LOD: Lod = { hide: pineImp ? 42 : 62 }, SMALL_LOD: Lod = { hide: 40 };
+  // od ok. 30 pól od środka widoku drzewa są obrazkami (impostorami), drobiazgi znikają — z bliska nic się nie zmienia,
+  // a z daleka i tak ich nie widać (wcześniej 40–42 pola: w zwykłym widoku pełne drzewa sięgały do krawędzi ekranu)
+  const TRUNK_LOD: Lod = { hide: pineImp ? 30 : 62 }, SMALL_LOD: Lod = { hide: 30 };
   const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: pattern('needles') });
   // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
@@ -1284,7 +1287,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
         if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide + reach;
         if (c.lod.farGeo) {
-          const far = d > 42 + reach;
+          const far = d > 30 + reach;
           const want = far ? c.lod.farGeo : c.near;
           if (c.mesh.geometry !== want) {
             c.mesh.geometry = want;
