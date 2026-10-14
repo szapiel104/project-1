@@ -59,7 +59,7 @@ export function fireSystem(g: GameState): void {
     if (hit && b.hp < max * 0.6) b.fire = Math.max(b.fire ?? 0, BURN);
     if (!b.fire) continue;
     b.fire--;
-    if (g.tick % 10 === 0 && b.hp > max * 0.15) b.hp = Math.max(Math.ceil(max * 0.15), b.hp - 1);
+    if (g.tick % 10 === 0 && b.hp > max * 0.15) { b.hp = Math.max(Math.ceil(max * 0.15), b.hp - 1); b.hpWas = b.hp; } // to nie cios wroga: nie rozpala ognia na nowo
   }
   if (g.tick % 5 === 0) {
     // kto gasi: do każdego pożaru najwyżej CREW ludzi, najpierw wolni chłopi, potem inżynier z cechu

@@ -35,4 +35,12 @@ describe('pożary', () => {
     step(g, []);
     expect(g.units.some((u) => u.bucket)).toBe(false); // po ugaszeniu wracają do swoich zajęć
   });
+  it('pożar bez gaszenia sam się wypala (ogień nie podsyca sam siebie)', () => {
+    const g = createGame(5, '1v1', 1, true);
+    for (const p of g.players) p.bot = false;
+    const house = g.buildings.find((b) => b.owner === 0 && b.type === buildingIndex('house') && !b.build)!;
+    house.hp = Math.floor(maxHp(house.type) * 0.5); house.hpWas = house.hp; house.fire = 600;
+    for (let i = 0; i < 620; i++) step(g, []);
+    expect(house.fire ?? 0).toBe(0);
+  });
 });
