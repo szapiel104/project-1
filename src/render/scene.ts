@@ -1420,7 +1420,7 @@ export class GameRenderer {
     const wbk = this.walkableAt(w.x, w.z), tap = TAVERN.open[0]!;
     const inTap = !!wbk && wbk[1] >= tap[0] && wbk[1] <= tap[1] && wbk[2] >= tap[2] && wbk[2] <= tap[3];
     this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
-    this.walkNear = kp ? kp[0] : wbk ? wbk[0] : 0;
+    this.walkNear = wbk ? wbk[0] : kp ? kp[0] : 0; // budynek pod nogami ma pierwszeństwo przed zamkiem obok
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
     if (!this.roomLight) { this.roomLight = new THREE.PointLight(0xffb36b, 0, 5, 1.2); this.scene.add(this.roomLight); }
     // izby w basztach (narożne i w połowie boków) też mają ogień
