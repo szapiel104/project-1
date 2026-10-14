@@ -97,6 +97,21 @@ function mix(seed: number, salt: number): number {
   return h >>> 0;
 }
 
+/**
+ * Numer postaci, która wygląda jak kobieta (chusta na głowie, fartuch, bez brody) albo jak dziecko (bez brody,
+ * z odkrytą głową lub w czapce) — do rodzin przy chatach. `n` = który z kolei (różne osoby wyglądają różnie).
+ */
+const familyIds = new Map<string, number>();
+export function familyId(n: number, kind: 'woman' | 'child'): number {
+  const key = `${kind}${n}`, have = familyIds.get(key);
+  if (have !== undefined) return have;
+  for (let id = 900000 + n * 7919; ; id++) {
+    const head = mix(id, 5) % 5, beard = mix(id, 8) % 3 === 0;
+    if (beard) continue;
+    if (kind === 'woman' ? head === 3 && mix(id, 7) % 4 === 0 : head === 2 || head === 4) { familyIds.set(key, id); return id; }
+  }
+}
+
 const looks = new Map<string, Look>();
 function lookOf(id: number, tunic: number, muted = false): Look {
   const key = `${id}:${tunic}:${muted}`;

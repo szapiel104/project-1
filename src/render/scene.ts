@@ -30,6 +30,7 @@ import { proceduralModels, type ModelFactory } from './models';
 import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
+import { Family } from './family';
 import { createLoads, tint } from './loads';
 import { FireCrewFx } from './firecrew';
 import { DRAW as FIRE_DRAW } from '../sim/systems/fire';
@@ -343,6 +344,7 @@ export class GameRenderer {
   }
 
   private village: Village | null = null;
+  private family: Family | null = null;
   /** Kury, świnie, koń i pies w osadzie (tylko wygląd) */
   private syncVillage(g: GameState, view: TerrainView, dt: number): void {
     if (!this.village) this.village = new Village(this.scene);
@@ -350,6 +352,13 @@ export class GameRenderer {
     for (const u of g.units) people.push({ x: u.px / FP, y: u.py / FP, owner: u.owner, moving: u.path.length > 0, id: u.id });
     for (const s of g.soldiers) if (!s.up) people.push({ x: s.px / FP, y: s.py / FP, owner: s.owner, moving: s.path.length > 0, id: s.id });
     const cam = this.cam.camera, { width, height } = g.map;
+    if (!this.family) this.family = new Family(this.scene);
+    this.family.view(this.cam.camera.position);
+    this.family.sync(g, {
+      time: this.time, dt, calm: this.calm, height: (x, y) => this.standY(view, x, y), fig: FIG,
+      cam: { x: this.cam.camera.position.x + g.map.width / 2, y: this.cam.camera.position.z + g.map.height / 2, h: this.cam.camera.position.y },
+      team: (o) => TEAM_COLORS[g.players[o]?.team ?? 0] ?? 0x888888,
+    });
     this.village.sync(g, {
       time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y),
       cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2, h: cam.position.y },
@@ -2418,7 +2427,8 @@ export class GameRenderer {
         part.castShadow = true;
         part.receiveShadow = true;
       });
-      if (def.id !== 'torch') {
+      // pochodnia na słupie przy wejściu: przy budynkach z drzwiami (nie przy murach, bramach ani drogach)
+      if (def.id !== 'torch' && !def.wall && !def.gate && !def.road && def.id !== 'keep') {
         const torch = torchModel();
         torch.position.set(def.w / 2 - 0.08, 0, def.h / 2 - 0.08);
         mesh.add(torch);

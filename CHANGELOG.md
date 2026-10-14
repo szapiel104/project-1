@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.21.0 — rodziny przy chatach, pochodnie bez biegania (2026-10-14)
+
+- Przy każdej chacie żona i 0–2 dzieci: za dnia kobieta krząta się przy domu (zamiata, coś robi rękami), dzieci biegają i bawią się w berka; nocą wszyscy w chacie, a na widok wilka albo wrogiego żołnierza uciekają do domu (tylko wygląd, gra przez sieć zgodna)
+- Pochodnie zapalają kobiety z pobliskich chat: wieczorem obchodzą pochodnie przy swojej chacie i budynkach w pobliżu, każda pochodnia płonie od swojej godziny (20:00–21:00) do świtu
+- Chłopi nie biegają już wieczorem od pochodni do pochodni — od razu idą do ogniska i karczmy
+- Pochodnie na słupach tylko przy budynkach z wejściem: bez pochodni przy każdym odcinku palisady, bramie i zamku
+
 ## 0.20.5 — kolumna nie staje przez jednego (2026-10-14)
 
 - Zwarty marsz: oddział czeka tylko na zbiórkę na starcie (najwyżej ok. 4 s); w drodze nie staje, gdy ktoś się przesunie albo utknie — czoło lekko zwalnia, maruder przyspiesza, żeby dogonić, a kto przez 3 s jest daleko (las, tłok, mur), idzie sam swoją drogą na miejsce

@@ -88,7 +88,7 @@ Zrobione: 19:30 ognisko i karczma, 22:00 sen w chacie/twierdzy, bez łóżka sł
 
 Dalej:
 - Straż miejska (zrobione 13.10: 6 strażników, posterunki i obchód, zastępstwo przez chłopów). Dalej: własny wygląd w barwach straży (zbroja, halabarda), odzywki jak w Gothicu, zmiana warty, koszary straży
-- Dzieci i rodziny w chatach (osada rośnie sama)
+- Dzieci i rodziny: osada rośnie sama (rodziny przy chatach już są — 14.10)
 
 ## Wojsko i piechota — do zrobienia (13.10.2026)
 Zrobione 14.10: płynne chodzenie (łuki, omijanie się), zachowanie w miejscu, kołysanie w chodzie, tarcza trzymana w marszu, kroki zależne od podłoża.
@@ -115,7 +115,7 @@ Wygląd i ruch:
 Zrobione 14.10: rozmowy stojących (para zwraca się do siebie, gestykuluje, kiwa głową, bełkot z bliska), pozdrowienie ręką w przejściu, kury przy chatach, świnie przy chatach i polach, koń przy koszarach, pies chodzący za mieszkańcami i obszczekujący wilki.
 
 Czeka:
-- Dzieci i rodziny: dzieci biegają między chatami, bawią się w berka, przed wilkiem uciekają do chaty; osada rośnie sama
+- Dzieci i rodziny: osada rośnie sama z dzieci (wygląd rodzin przy chatach już jest — 14.10)
 - Zrobione 14.10: browar z Blendera, piwo jako towar (skład), karczma pije 1 beczkę na miesiąc, sucha karczma −2 do popularności, wieczorem gwar i lutnia tylko przy piwie, pijacy wracają chwiejnym krokiem. Dalej: karczmarz widocznie nosi beczki ze składu, grajek z lutnią jako osobna postać, bot pilnuje zapasu piwa
 - Poranek i wieczór: koguty o świcie, kobieta wylewa wiadro, wieczorem świece w oknach i zamykanie okiennic
 - Targ co kilka dni: kramy na placu, przyjezdny kupiec z wozem, gwar; tanio kupić albo sprzedać zapasy

@@ -28,9 +28,10 @@ describe('wilki i straż', () => {
     const g = createGame(5);
     for (const p of g.players) { p.bot = false; p.guards = 0; }
     g.soldiers = g.soldiers.filter((s) => s.kind !== GUARD);
-    at(g, 23, 23.5);
+    at(g, 20.6, 21);
     const people = g.units.filter((u) => u.owner === 0).slice(0, 6);
     const c = people[0]!;
+    // wieczór: ludzie jeszcze nie śpią (śpiących w chacie wilk nie widzi)
     for (const u of people) { u.px = c.px; u.py = c.py; u.path = []; }
     g.wolves = [{ id: 99998, px: c.px + 2 * 256, py: c.py, hp: 45, path: [], target: 0, cd: 0, leaving: false }];
     const before = g.units.length;
