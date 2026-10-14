@@ -180,6 +180,9 @@ export class GameRenderer {
   private beltClubs!: THREE.InstancedMesh;
   private soldierTorches!: THREE.InstancedMesh;
   private peasantBodies!: Figures;
+  /** Polegli łucznicy i strażnicy leżą we własnych zbrojach (nie w zbroi włócznika) */
+  private archerBodies!: Figures;
+  private guardBodies!: Figures;
   private archers!: Figures;
   private arrowMesh!: THREE.InstancedMesh;
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
@@ -417,6 +420,8 @@ export class GameRenderer {
     this.rings = mark(0.195, 0.262, 0xffd34d, 1, 21);
     this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.peasantBodies = new Figures(MAX_UNITS, this.scene);
+    this.archerBodies = new Figures(512, this.scene, 'archer');
+    this.guardBodies = new Figures(256, this.scene, 'guard');
     this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);
     this.stains.count = 0;
     this.stains.frustumCulled = false;
@@ -1245,7 +1250,7 @@ export class GameRenderer {
       T('światła', () => this.syncLamps(g));
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
       const cp = this.cam.camera.position;
-      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.bodies, this.peasantBodies]) f.view(cp);
+      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
       T('chłopi', () => this.syncUnits(g, v, alpha));
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
@@ -2519,7 +2524,7 @@ export class GameRenderer {
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
-    let pc = 0;
+    let pc = 0, ac = 0, gc = 0, sp = 0;
     for (const body of g.corpses) {
       if (c >= MAX_UNITS) break;
       const fx = body.px / FP, fy = body.py / FP;
@@ -2536,14 +2541,20 @@ export class GameRenderer {
       m.compose(new THREE.Vector3(fx - width / 2, y + (0.06 - age * 0.04) * (this.calm ? 1 : ease), fy - height / 2), lay, sc);
       const team = TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
       const rot = new THREE.Color(team).lerp(new THREE.Color(0x3b3226), 0.3 + age * 0.6).getHex();
-      if (body.kind < 0) { this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); this.bodies.set(c, ZERO, 0, false, rot, body.id); }
-      else this.bodies.set(c, m, 0.3, false, rot, body.id);
+      // każdy leży w swoim stroju: chłop, łucznik, strażnik miejski albo włócznik
+      const ud = body.kind >= 0 ? UNITS[body.kind] : undefined;
+      if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); }
+      else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id); }
+      else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id); }
+      else this.bodies.set(sp++, m, 0.3, false, rot, body.id);
       m.compose(new THREE.Vector3(fx - width / 2, y + 0.02, fy - height / 2), new THREE.Quaternion(), sc.set(1 + age * 0.4, 1, 1 + age * 0.4));
       this.stains.setMatrixAt(c, m);
       c++;
     }
-    this.bodies.finish(c);
+    this.bodies.finish(sp);
     this.peasantBodies.finish(pc);
+    this.archerBodies.finish(ac);
+    this.guardBodies.finish(gc);
     this.stains.count = c;
     this.stains.instanceMatrix.needsUpdate = true;
     this.rings.count = rings;

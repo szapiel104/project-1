@@ -179,7 +179,7 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
   const members: Soldier[] = [];
   for (const s of g.soldiers) if (spots.has(s.id) && s.owner === player) { const v = UNITS[s.kind]!.speed; slow = Math.min(slow, v); fast = Math.max(fast, v); members.push(s); }
   // zwarty szyk: punkt prowadzący idzie jedną drogą od środka oddziału, każdy trzyma swoje miejsce obok niego
-  const march = members.length >= 2 ? planMarch(g, player, members, target, grp, slow) : undefined;
+  const march = members.length >= 2 ? planMarch(g, player, members, target, grp, slow, slots) : undefined;
   if (march) (g.marches ??= []).push(march);
   for (const s of g.soldiers) {
     const spot = spots.get(s.id);
@@ -195,24 +195,37 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
 }
 
 /** Droga punktu prowadzącego: od żołnierza najbliżej środka oddziału do celu; null, gdy blisko albo nie ma drogi */
-function planMarch(g: GameState, player: number, members: Soldier[], target: number, grp: number, pace: number): March | undefined {
-  const W = g.map.width;
-  let mx = 0, my = 0;
-  for (const s of members) { mx += s.px >> 8; my += s.py >> 8; }
-  mx = Math.floor(mx / members.length); my = Math.floor(my / members.length);
-  let start = -1, best = Infinity;
-  for (const s of members) {
-    if (s.up) continue;
-    const t = tileOf(g, s), d = Math.max(Math.abs((t % W) - mx), Math.abs(Math.floor(t / W) - my));
-    if (d < best) { best = d; start = t; }
+function planMarch(g: GameState, player: number, members: Soldier[], target: number, grp: number, pace: number, slots: Map<number, [number, number]>): March | undefined {
+  const W = g.map.width, H = g.map.height;
+  let mx = 0, my = 0, n = 0;
+  for (const s of members) { if (s.up) continue; mx += s.px; my += s.py; n++; }
+  if (!n) return undefined;
+  mx = Math.floor(mx / n); my = Math.floor(my / n);
+  const tx = target % W, ty = (target - tx) / W;
+  const dir0 = octant(tx - (mx >> 8), ty - (my >> 8));
+  const dir = dir0 < 0 ? 0 : dir0;
+  if (Math.max(Math.abs(tx - (mx >> 8)), Math.abs(ty - (my >> 8))) < MARCH_MIN || !walkable(g, target, player)) return undefined;
+  // punkt prowadzący stawiamy tak, żeby środek szyku wypadł na środku oddziału: nikt nie cofa się, żeby ustawić się
+  // za żołnierzem z przodu (wcześniej szyk rósł do tyłu od jednego żołnierza i cały oddział najpierw się cofał)
+  const [fx, fy] = DIRS[dir]!, rx = -fy, ry = fx;
+  let ox = 0, oy = 0, k = 0;
+  for (const s of members) { const sl = slots.get(s.id); if (!sl || s.up) continue; ox += rx * sl[0] - fx * sl[1]; oy += ry * sl[0] - fy * sl[1]; k++; }
+  const lx = k ? mx - Math.round((ox / k) * FP) : mx, ly = k ? my - Math.round((oy / k) * FP) : my;
+  const bx = Math.max(0, Math.min(W - 1, lx >> 8)), by = Math.max(0, Math.min(H - 1, ly >> 8));
+  let start = -1;
+  for (const [dx, dy] of SPIRAL) {
+    const ax = bx + dx, ay = by + dy;
+    if (ax < 0 || ay < 0 || ax >= W || ay >= H) continue;
+    if (walkable(g, ay * W + ax, player)) { start = ay * W + ax; break; }
   }
   if (start < 0) return undefined;
-  const sx = start % W, sy = (start - sx) / W, tx = target % W, ty = (target - tx) / W;
-  if (Math.max(Math.abs(tx - sx), Math.abs(ty - sy)) < MARCH_MIN || !walkable(g, target, player)) return undefined;
   const path = findPath(g, start, (t) => t === target, 4000, player);
   if (!path || !path.length) return undefined;
-  const dir = octant(tx - sx, ty - sy);
-  return { grp, owner: player, path, px: sx * FP + FP / 2, py: sy * FP + FP / 2, dir: dir < 0 ? 0 : dir, pace, stall: 0, lag: 0 };
+  const sx = start % W, sy = (start - sx) / W;
+  // kręta droga (mury, brama, budynki w osadzie): zwarty szyk by się zakleszczał i czekał na maruderów —
+  // wtedy każdy idzie sam swoją drogą; szyk trzyma się tylko w otwartym terenie
+  if (path.length > Math.max(Math.abs(tx - sx), Math.abs(ty - sy)) * 1.35 + 3) return undefined;
+  return { grp, owner: player, path, px: sx * FP + FP / 2, py: sy * FP + FP / 2, dir, pace, stall: 0, lag: 0 };
 }
 
 /** Maruder dalej niż tyle pól od swojego miejsca zatrzymuje oddział */
@@ -303,6 +316,8 @@ function marchStep(g: GameState, s: Soldier, m: March): void {
   else if (sx && free(s.px + sx, s.py)) s.px += sx;
   else if (sy && free(s.px, s.py + sy)) s.py += sy;
   else moved = false;
+  // zablokowany (budynek, mur, drzewo na drodze do miejsca w szyku): nie wstrzymuje oddziału, idzie sam swoją drogą
+  if (!moved) { dropOut(s); return; }
   // „droga” to tylko pole przed nim w kierunku marszu (żeby wygląd wiedział, że idzie i dokąd patrzy)
   const [fx, fy] = DIRS[m.dir]!, ax = Math.max(0, Math.min(W - 1, (x >> 8) + fx)), ay = Math.max(0, Math.min(g.map.height - 1, (y >> 8) + fy));
   s.path = moved ? [ay * W + ax] : [];
