@@ -26,7 +26,7 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
   const cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 50);
 
   for (const def of BUILDINGS) {
-    if (!def.buildable) continue;
+    if (!def.buildable && def.id !== 'keep') continue; // twierdza też: pokazuje ją pomoc „Budynki”
     const model = models.building(def.id, teamColor);
     const base = model.getObjectByName('base');
     if (base) base.visible = false;

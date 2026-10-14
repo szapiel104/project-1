@@ -242,7 +242,7 @@ export const pl = {
   'b.barn': 'Stodoła',
   'd.barn': 'Mieści 250 surowców i 120 żywności. Stoi od początku przy twierdzy; można ją rozebrać i postawić w lepszym miejscu.',
   'd.camp': 'Wiata z ławami i ogniskiem na 6 chłopów bez pracy. Gdy brakuje wolnych miejsc, nowi ludzie nie przychodzą: daj im pracę albo dobuduj obozowisko.',
-  'd.keep': 'Siedziba władcy. Mieszka tu 8 osób.',
+  'd.keep': 'Siedziba władcy: mury z basztami, brama z mostem, dziedziniec, sala tronowa, kuchnia, komnata, koszary i lochy. Na mury wchodzi się schodami, a łucznik na murze strzela dalej. Mieszka tu 12 osób.',
   'd.house': 'Miejsce dla 8 kolejnych mieszkańców. Chłopi przychodzą tu odpocząć po pracy.',
   'd.stockpile': 'Mieści 200 surowców: drewno, kamień, żelazo, zboże i mąkę. Gdy składy są pełne, chłopi czekają z towarem.',
   'd.granary': 'Mieści 150 żywności: chleb i jabłka.',
