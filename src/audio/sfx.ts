@@ -17,7 +17,7 @@ const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
   ambience: ['ambience'],
 };
 /** Dźwięki świata (CC0, Kenney i OpenGameArt — docs/zasoby.md), grane z miejsca na mapie */
-export type WorldSound = 'chop' | 'mine' | 'smith' | 'plank' | 'creak' | 'coins' | 'hit' | 'swing' | 'clang' | 'growl' | 'scream' | 'alert' | 'torch';
+export type WorldSound = 'chop' | 'mine' | 'smith' | 'plank' | 'creak' | 'coins' | 'hit' | 'swing' | 'clang' | 'growl' | 'scream' | 'alert' | 'torch' | 'stepDirt' | 'stepStone' | 'stepWood' | 'stepGravel' | 'stepMud';
 const WORLD: Record<WorldSound, string[]> = {
   chop: ['chop'], mine: ['mine-0', 'mine-1', 'mine-2'], smith: ['smith-0', 'smith-1', 'smith-2'], plank: ['plank-0', 'plank-1', 'plank-2'],
   creak: ['creak-1', 'creak-2', 'creak-3'], coins: ['coins'], hit: ['hit-0', 'hit-1', 'hit-2'], swing: ['swing-0', 'swing-1', 'swing-2'],
@@ -26,6 +26,12 @@ const WORLD: Record<WorldSound, string[]> = {
   scream: ['scream-0', 'scream-1', 'scream-2', 'scream-3', 'scream-4'], alert: ['alert-0', 'alert-1'],
   // buchnięcie płomienia przy zapalaniu pochodni w ręce (CC0, Freesound, przez C-Dogs SDL)
   torch: ['torch'],
+  // kroki na różnym podłożu (CC0, Kenney: Impact Sounds i OGA Footsteps)
+  stepDirt: ['step-dirt-0', 'step-dirt-1', 'step-dirt-2', 'step-dirt-3', 'step-dirt-4'],
+  stepStone: ['step-stone-0', 'step-stone-1', 'step-stone-2', 'step-stone-3', 'step-stone-4', 'step-stone-5'],
+  stepWood: ['step-wood-0', 'step-wood-1', 'step-wood-2', 'step-wood-3', 'step-wood-4'],
+  stepGravel: ['step-gravel-0', 'step-stone-5'],
+  stepMud: ['step-mud-0'],
 };
 const buffers = new Map<string, AudioBuffer>();
 let ambienceOn = false;

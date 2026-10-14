@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.18.0 — ludzie nie chodzą jak drewno (2026-10-14)
+
+- Płynne chodzenie: chłopi i żołnierze skręcają łukiem zamiast załamywać się na rogach pól, patrzą tam, dokąd naprawdę idą, a po dojściu wsuwają się na miejsce zamiast przeskakiwać
+- Mijający się omijają się w bok (każdy w swoją prawą stronę), zamiast przez siebie przenikać
+- Zachowanie w miejscu: stojący chłop co kilka sekund się rozgląda, przestępuje z nogi na nogę, drapie się w głowę, przeciąga, ociera czoło, a cały czas przenosi ciężar i oddycha; żołnierz rozgląda się, przestępuje i opiera o włócznię
+- Chód: biodra kołyszą się z krokiem, tułów lekko pochylony (uciekający mocniej); włócznik trzyma tarczę przed sobą zamiast nią wymachiwać
+- Kroki zależne od podłoża: bruk (i dziedziniec zamku), deski, żwir na piaskowej drodze i skałach, ziemia z trawą, błoto po deszczu; słychać je tylko z bliska (najwyżej 8 na sekundę) i w spacerze oczami chłopa (nagrania CC0, Kenney)
+- Wszystko to tylko wygląd: symulacja się nie zmienia, gra przez sieć zostaje zgodna
+
 ## 0.17.2 — dźwięk pochodni (2026-10-14)
 
 - Zapalenie pochodni w ręce (F w spacerze oczami chłopa) brzmi jak buchnięcie płomienia zamiast skrzypnięcia drzwi (nagranie CC0)

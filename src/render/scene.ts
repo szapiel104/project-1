@@ -24,6 +24,7 @@ import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { Figures } from './peasants';
+import { Crowd, idle } from './motion';
 import { createLoads, tint } from './loads';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 import { normal, pattern } from './textures';
@@ -251,6 +252,37 @@ export class GameRenderer {
     const pan = (rel.dot(right) / Math.max(1, d)) * 1.4;
     playAt(kind, near, pan, gain);
   }
+  /** Podłoże pod stopami (do dźwięku kroków): bruk, deski, żwir, błoto po deszczu albo ziemia z trawą */
+  private surface(g: GameState, x: number, y: number): WorldSound {
+    const tx = Math.floor(x), ty = Math.floor(y);
+    if (tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height) return 'stepDirt';
+    const t = ty * g.map.width + tx, road = g.roads[t]!;
+    if (road === 2 || this.keepAt(x, y)) return 'stepStone';
+    if (road === 3) return 'stepWood';
+    if (road === 1) return 'stepGravel';
+    if (this.wet > 0.35) return 'stepMud';
+    const tile = g.map.tiles[t];
+    return tile === Terrain.Stone || tile === Terrain.Iron ? 'stepGravel' : 'stepDirt';
+  }
+
+  /** Krok postaci: tylko z bliska i najwyżej 8 na sekundę w całej grze (tłum nie zlewa się w szum) */
+  private footstep(g: GameState, id: number, x: number, y: number, stride: number, gain: number): void {
+    const k = Math.floor(stride / Math.PI);
+    const last = this.stepIdx.get(id);
+    this.stepIdx.set(id, k);
+    if (last === undefined || last === k || this.walk) return;
+    const cam = this.cam.camera, { width, height } = g.map;
+    const wx = x - width / 2, wz = y - height / 2, wy = this.view?.heightAt(x, y) ?? 0;
+    const d = Math.hypot(cam.position.x - wx, cam.position.y - wy, cam.position.z - wz);
+    if (d > 11) return;
+    this.stepTimes = this.stepTimes.filter((s) => this.time - s < 1);
+    if (this.stepTimes.length >= 8) return;
+    this.stepTimes.push(this.time);
+    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+    const pan = ((wx - cam.position.x) * right.x + (wz - cam.position.z) * right.z) / Math.max(1, d) * 1.4;
+    playAt(this.surface(g, x, y), Math.max(0, Math.min(1, 1 - (d - 2.5) / 8.5)), pan, gain);
+  }
+
   /** Pora i pogoda dla dźwięków otoczenia */
   private flash = 0;
   /** Błyskawica: na ułamek sekundy rozjaśnia całą scenę */
@@ -319,6 +351,12 @@ export class GameRenderer {
   private planks: THREE.InstancedMesh;
   private time = 0;
   private calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Ruch ludzi w wyglądzie: łuki na zakrętach, omijanie się */
+  private crowd = new Crowd();
+  /** Ostatni krok (numer półokresu chodu) każdej postaci: dźwięk kroku przy zmianie */
+  private stepIdx = new Map<number, number>();
+  private stepTimes: number[] = [];
+  private walkStep = 0;
   private prevPos = new Map<number, [number, number]>();
   private storesTick = -1;
   private selectedId = 0;
@@ -1226,6 +1264,9 @@ export class GameRenderer {
     if (free(w.x + dx, w.z)) w.x += dx;
     if (free(w.x, w.z + dz)) w.z += dz;
     if (fx || fz) w.bob += sp * 5;
+    // własne kroki w spacerze: na każdy krok dźwięk podłoża, lewa i prawa noga lekko z boku
+    const stepK = Math.floor(w.bob / Math.PI);
+    if (stepK !== this.walkStep) { this.walkStep = stepK; playAt(this.surface(g, w.x, w.z), 1, stepK % 2 ? 0.12 : -0.12, 0.5); }
     const cam = this.cam.camera;
     const { width, height } = g.map;
     const ground = this.view ? this.standY(this.view, w.x, w.z) : 0;
@@ -1260,6 +1301,7 @@ export class GameRenderer {
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
+      this.crowd.begin(dt);
       T('chłopi', () => this.syncUnits(g, v, alpha));
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
@@ -2500,7 +2542,11 @@ export class GameRenderer {
       const k = this.calm ? 1 : 0.06;
       cur[0] += (want[0] - cur[0]) * k; cur[1] += (want[1] - cur[1]) * k;
       this.pullNow.set(s.id, cur);
-      const px = fx + cur[0], pz = fy + cur[1];
+      // łuki na zakrętach i omijanie mijających się (tylko w wyglądzie); patrzy tam, dokąd idzie
+      const cv = this.crowd.move(s.id, fx + cur[0], fy + cur[1], heading, this.calm || !!s.up, true);
+      if (walking && cv.speed > 0.3) { heading = cv.heading; this.facing.set(s.id, heading); }
+      const px = cv.sx, pz = cv.sy;
+      if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.4);
       const y = this.standY(view, px, pz) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
@@ -2522,7 +2568,11 @@ export class GameRenderer {
       const since = this.time - (this.hitAt.get(s.id) ?? -9);
       const flinch = since < 0.3 ? Math.sin((since / 0.3) * Math.PI) : 0;
       if (flinch) { t.position.x -= Math.sin(heading) * flinch * 0.06; t.position.z -= Math.cos(heading) * flinch * 0.06; }
-      t.rotation.set(-flinch * 0.32, heading, 0, 'YXZ');
+      // stojący bez walki: przenosi ciężar, rozgląda się, przestępuje, opiera o włócznię; w marszu kołysze się z krokiem
+      const ia = !walking && !striking && !foe && !wall && !victim && !this.calm ? idle(s.id, this.time, true) : undefined;
+      const sway = ia ? ia.roll : walking ? Math.sin(st.phase) * 0.025 : 0;
+      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0), heading + (ia?.yaw ?? 0), sway, 'YXZ');
+      if (ia) t.position.y += ia.dy;
       t.scale.setScalar(1.08 * FIG);
       t.updateMatrix();
       t.scale.setScalar(1);
@@ -2537,9 +2587,10 @@ export class GameRenderer {
       if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
       const teamC = TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888;
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
-      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, swing, striking, teamC, s.id);
-      this.archers.set(n, ranged ? t.matrix : ZERO, swing, striking, teamC, s.id);
-      this.spearmen.set(n, !ranged && !udef.guard ? t.matrix : ZERO, swing, striking, teamC, s.id);
+      const legs = ia?.legs ? ia.legs : swing;
+      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      this.spearmen.set(n, !ranged && !udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
       // kółko i ramka zaznaczenia idą za figurą (z dociągnięciem do grupy), nie za polem z symulacji
@@ -2705,15 +2756,19 @@ export class GameRenderer {
         heading += diff * 0.25; // płynny obrót
         this.facing.set(u.id, heading);
       }
-      const walking = !still && !this.calm;
+      // figura idzie łukiem za pozycją z symulacji i omija innych; patrzy tam, dokąd naprawdę idzie
+      const cv = this.crowd.move(u.id, fx + ox, fy + oz, heading, this.calm, true);
+      if (cv.speed > 0.3) { heading = cv.heading; this.facing.set(u.id, heading); }
+      const walking = (!still || cv.speed > 0.35) && !this.calm;
       let st = this.strides.get(u.id);
-      if (!st) { st = { x: fx, y: fy, phase: u.id }; this.strides.set(u.id, st); }
+      if (!st) { st = { x: cv.sx, y: cv.sy, phase: u.id }; this.strides.set(u.id, st); }
       // jeden pełny krok (obie nogi) na około 0,8 pola
-      st.phase += Math.min(0.5, Math.hypot(fx - st.x, fy - st.y)) * 7.5;
-      st.x = fx; st.y = fy;
+      st.phase += Math.min(0.5, Math.hypot(cv.sx - st.x, cv.sy - st.y)) * 7.5;
+      st.x = cv.sx; st.y = cv.sy;
       const stride = walking ? st.phase : 0;
+      if (walking) this.footstep(g, u.id, cv.sx, cv.sy, stride, 0.3);
       let swing = walking ? Math.sin(stride) * 0.55 : 0;
-      t.position.set(fx + ox - width / 2, this.standY(view, fx + ox, fy + oz) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), fy + oz - height / 2);
+      t.position.set(cv.sx - width / 2, this.standY(view, cv.sx, cv.sy) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
       t.rotation.set(0, heading, 0);
       // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
       const resting = u.phase === Phase.Resting;
@@ -2913,9 +2968,17 @@ export class GameRenderer {
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
       t.scale.setScalar(FIG);
-      if (lean) { t.rotation.reorder('YXZ'); t.rotation.x = lean; }
+      // stojący bez zajęcia nie zamiera: przestępuje, rozgląda się, drapie się, przeciąga, przenosi ciężar
+      const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !chopping && !mining && !crafting && !hammering && !fighting && u.carryRes < 0 && !lean;
+      const ia = rest ? idle(u.id, this.time) : undefined;
+      if (ia) { t.rotation.y += ia.yaw; t.position.y += ia.dy; }
+      // chód: biodra kołyszą się z krokiem, tułów lekko pochylony do przodu (uciekający bardziej)
+      const fleeing = (u.fled ?? 0) > g.tick && !still;
+      const roll = ia ? ia.roll : walking ? Math.sin(stride) * 0.03 : 0;
+      if (walking && !lean && !this.calm) lean = fleeing ? 0.16 : 0.05;
+      if (lean || roll) { t.rotation.reorder('YXZ'); t.rotation.x = lean; t.rotation.z = roll; }
       t.updateMatrix();
-      if (lean) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
+      if (lean || roll) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
       this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
       if (hammering) {
         // młotek obraca się w barku razem z prawą ręką (ta sama skala co postać)
@@ -2956,7 +3019,7 @@ export class GameRenderer {
       // uciekający w panice: długi, szybki krok i ręce machające nad głową
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : swing, u.carryRes >= 0 && !log, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : undefined, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : -0.5, panic);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, (u.carryRes >= 0 && !log) || !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : ia?.arm, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : ia ? (ia.armL ?? 0.05) : -0.5, panic || !!ia?.legs);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();

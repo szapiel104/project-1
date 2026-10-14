@@ -32,7 +32,7 @@ Czeka:
 - Kości przy cmentarzu, więcej brudu (śmieci, gnój przy chlewie)
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
 - Kopalnia rudy z prawdziwego zdarzenia (szyb, wózki)
-- Dźwięki: ptaki o świcie, koguty, świerszcze, puszczyk, grzmot, dzwon w południe, róg wojenny i dzwon alarmu, trzask ognisk, gwar, wiwaty, kroki bruk/ziemia, kowal
+- Dźwięki: ptaki o świcie, koguty, świerszcze, puszczyk, grzmot, dzwon w południe, róg wojenny i dzwon alarmu, trzask ognisk, gwar, wiwaty, kowal
 - Wojsko: łucznik + wytwórca łuków (strzelanie z murów/wież), zbrojny, taran; kamienne mury i wieże później
 - Wnętrza pozostałych budynków w stylu nowej chaty
 - Leśniczy (sadzi drzewa; lasy się nie odnawiają)
@@ -53,11 +53,9 @@ Czeka — gra przez sieć:
 - Gracz, który wyszedł z meczu, oddaje miasto botowi
 
 Czeka — poprawki:
-- Chodzenie ludzi: płynniejsze skręty, omijanie się zamiast przenikania
 - Czytelność nocy: pochodnie o większym zasięgu jako opcja
 - Wszystkie panele w grze (dolna belka, okna budynków, skryba, alarm) w stylu nowego menu: ciemna skóra, złote żyłki, napisy Cinzel (menu i wczytywanie zrobione 13.10)
 - Pełny magazyn: dziś robotnik po chwili wyrzuca nadmiar (przepada) — do decyzji, czy ma czekać
-- Dźwięki kroków: bruk / ziemia / błoto
 
 ## Wydajność — do zrobienia (13.10.2026, gra dla wielu graczy w przeglądarce)
 Zrobione 13.10 wieczorem: daleki las jako obrazki z 8 stron, Service Worker z pamięcią plików gry, zapamiętane miniatury budynków.
@@ -88,6 +86,8 @@ Dalej:
 - Dzieci i rodziny w chatach (osada rośnie sama)
 
 ## Wojsko i piechota — do zrobienia (13.10.2026)
+Zrobione 14.10: płynne chodzenie (łuki, omijanie się), zachowanie w miejscu, kołysanie w chodzie, tarcza trzymana w marszu, kroki zależne od podłoża.
+
 Zrobione 13.10 późnym wieczorem: marsz w zwartym szyku, odwrót rannych i leczenie przy twierdzy.
 
 Zrobione 13.10 wieczorem: kierunek ciosu (bok/plecy), tarcza na strzały, szarża, chybienia i trafianie swoich, odrzut przy trafieniu, padanie poległych.
@@ -102,7 +102,6 @@ Sterowanie:
 Walka:
 
 Wygląd i ruch:
-- Naturalniejszy chód (ręka z tarczą trzymana, kołysanie) i zachowanie w miejscu (opiera się na włóczni, przestępuje z nogi na nogę)
 - Chorąży z proporcem w barwach pana w każdym oddziale
 - Ulepszenia widoczne na modelu (za monety z bitew): płytowe naramienniki, hełm z przyłbicą itd.
 - Prawdziwy głos okrzyków (np. syntezator mowy po polsku) zamiast bełkotu

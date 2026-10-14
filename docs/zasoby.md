@@ -37,3 +37,10 @@ Pobrane przez Michała z OpenGameArt, przekonwertowane do OGG i wyrównane gło�
 - medievals5.ogg — „Medievals 5”, Tozan — https://opengameart.org/content/medievals-5 (noc)
 - peasantry.ogg — „Peasant Theme”, nihilocrat — https://opengameart.org/content/peasant-theme (dzień)
 Gdy pliku brak albo nastrój nie ma utworu, gra składa muzykę sama (src/audio/sfx.ts).
+
+## Kroki (CC0, bez wymogu podpisu)
+
+Z indeksu [open-game-sfx-index](https://github.com/Mcamento8/open-game-sfx-index):
+- step-stone-0…4, step-dirt-0…4, step-wood-0…4 — Kenney „Impact Sounds” (footstep_concrete, footstep_grass, footstep_wood) (CC0)
+- step-stone-5, step-gravel-0, step-mud-0 — Kenney „OGA Footsteps” (stone01, gravel, mud02; nagrania TinyWorlds) (CC0)
+- Zmiany: mono 32 kHz, przycięte do jednego kroku, wyrównana głośność.

@@ -216,14 +216,16 @@ export class Figures {
         // prawa ręka trzyma włócznię pionowo przy boku; pchnięcie: ręka do przodu, włócznia grotem we wroga
         const thrustArm = (_s: number, up: boolean): number => (up ? -1.25 : -0.25);
         const thrustSpear = (_s: number, up: boolean): number => (up ? 1.45 : 0);
-        model(M, armL, thrustArm);
+        // lewa ręka trzyma tarczę przed sobą: w marszu prawie się nie kołysze
+        const shieldArm = (sw: number, up: boolean): number => (up ? -1.35 : -0.32 - sw * 0.12);
+        model(M, shieldArm, thrustArm);
         // wypukła tarcza w barwach pana na lewym przedramieniu, okucie i guz z żelaza
         const shield = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.rotateY(0.6).translate(-0.02, -0.11, 0.035);
-        add(shield(prep(new THREE.SphereGeometry(0.33, 18, 5, 0, Math.PI * 2, 0, 0.38).rotateZ(Math.PI / 2).translate(0.28, 0, 0), (_x, y, z) => 0.8 + 0.25 * (1 - Math.hypot(y, z) / 0.122))), tunic, -sx, sy, 0, armL, always, 'wood');
+        add(shield(prep(new THREE.SphereGeometry(0.33, 18, 5, 0, Math.PI * 2, 0, 0.38).rotateZ(Math.PI / 2).translate(0.28, 0, 0), (_x, y, z) => 0.8 + 0.25 * (1 - Math.hypot(y, z) / 0.122))), tunic, -sx, sy, 0, shieldArm, always, 'wood');
         add(shield(merge(
           new THREE.TorusGeometry(0.122, 0.008, 4, 22).rotateY(Math.PI / 2).translate(-0.027, 0, 0),
           new THREE.SphereGeometry(0.03, 10, 4, 0, Math.PI * 2, 0, Math.PI / 2).rotateZ(Math.PI / 2).translate(-0.047, 0, 0),
-        )), IRON, -sx, sy, 0, armL, always, 'metal');
+        )), IRON, -sx, sy, 0, shieldArm, always, 'metal');
         // drzewce i liściasty grot w jednej siatce
         add(mergeGeometries([
           tinted(new THREE.CylinderGeometry(0.0105, 0.012, 1.2, 6).translate(0, 0.24, 0), WOOD),
