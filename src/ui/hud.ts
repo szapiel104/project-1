@@ -99,6 +99,8 @@ export interface Hud {
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
+  /** Ustawia pokazywane tempo (np. domyślne tempo z ustawień na starcie gry) */
+  setSpeed(speed: number): void;
   /** Zaznacza, że trwa tryb wyburzania */
   setWreck(on: boolean): void;
   setMuted(muted: boolean): void;
@@ -1077,6 +1079,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
     },
     stepSpeed,
+    setSpeed: (sp: number) => { const i = SPEEDS.indexOf(sp); if (i >= 0) { speedIndex = i; showSpeed(); } },
     setMuted(m) { mute.setAttribute('aria-pressed', String(m)); setText(mute, t(m ? 'hud.unmute' : 'hud.mute')); },
     setVolume(v) { vol.value = String(Math.round(v * 100)); },
     setWreck(on) {

@@ -315,6 +315,16 @@ const autoQ = new AutoQuality(gfx.autoTier ?? TOP_TIER - 1);
 function applySettings(st: Settings): void {
   gfx = st;
   fitUi();
+  // interfejs z ustawień: licznik FPS (w trybie testowym zawsze), dymki, podpowiedzi
+  const bc = document.body.classList;
+  bc.toggle('hide-fps', !(st.showFps ?? false) && !SANDBOX);
+  bc.toggle('no-bubbles', st.bubbles === false);
+  bc.toggle('tips-delay', st.tips === 'delay');
+  bc.toggle('tips-off', st.tips === 'off');
+  // obraz: jasność, deszcz, mgła
+  renderer.brightness = st.brightness ?? 1;
+  renderer.rainOn = st.rain ?? true;
+  renderer.fogOn = st.fog ?? true;
   // automat: cienie, cieniowanie zagłębień, rozdzielczość i zasięg trawy z poziomu dobranego do komputera
   if (st.auto) { const q = TIERS[autoQ.tier]!; renderer.setGraphics({ ...st, ...q, label: `automat ${autoQ.tier + 1}/${TIERS.length}` }); }
   else renderer.setGraphics({ ...st, grass: st.grass ?? 1 });
@@ -340,6 +350,10 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   if (online) {
     net = online.net; netGame = online; netNotes = { desync: false, left: 0 };
     speed = 1; acc = 0;
+  } else if (!loaded) {
+    // nowa gra: tempo na starcie z ustawień (Rozgrywka)
+    speed = gfx.startSpeed ?? 1;
+    hud.setSpeed(speed);
   }
   currentPreset = preset;
   currentSeedText = seedText;
@@ -968,9 +982,13 @@ function updateBars(): void {
   const kinds = new Map<number, number>();
   for (const x of game.soldiers) kinds.set(x.id, x.kind);
   let n = 0;
+  // Ustawienia → Interfejs → Paski zdrowia: zawsze / w walce (ranni i zaznaczeni) / tylko zaznaczeni / nigdy
+  const mode = gfx.hpBars ?? 'combat';
   for (const s of list) {
+    if (mode === 'never') break;
     const max = UNITS[kinds.get(s.id) ?? 0]!.hp;
-    if (s.hp >= max && !chosen.has(s.id) && s.id !== hoverFoe) continue;
+    const marked = chosen.has(s.id) || s.id === hoverFoe;
+    if (mode === 'selected' ? !marked : mode === 'combat' ? s.hp >= max && !marked : false) continue;
     let bar = bars[n];
     if (!bar) { bar = document.createElement('div'); bar.className = 'hpbar'; bar.append(document.createElement('span')); barLayer.append(bar); bars.push(bar); }
     bar.hidden = false;
@@ -982,7 +1000,7 @@ function updateBars(): void {
     n++;
   }
   // wilki: pasek zdrowia zawsze, w barwie wroga
-  for (const w of renderer.wolvesOnScreen()) {
+  for (const w of mode === 'never' || mode === 'selected' ? [] : renderer.wolvesOnScreen()) {
     let bar = bars[n];
     if (!bar) { bar = document.createElement('div'); bar.className = 'hpbar'; bar.append(document.createElement('span')); barLayer.append(bar); bars.push(bar); }
     bar.hidden = false;
@@ -1159,7 +1177,12 @@ function refresh(): void {
 
 let last = performance.now();
 let acc = 0;
+let lastDraw = 0;
 function loop(now: number): void {
+  // limit klatek z ustawień: klatka pominięta, gdy od poprzedniej minęło za mało czasu (laptop się nie grzeje)
+  const cap = gfx.fpsLimit ?? 0;
+  if (cap > 0 && now - lastDraw < 1000 / cap - 2) { requestAnimationFrame(loop); return; }
+  lastDraw = now;
   const elapsed = Math.min(250, now - last);
   if (gfx.auto && !document.hidden) {
     const tier = autoQ.frame(now - last);
@@ -1672,6 +1695,8 @@ function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
 function confirmDemolish(id: number): void {
   const b = game.buildings.find((x) => x.id === id);
   if (!b) return;
+  // Ustawienia → Rozgrywka: bez pytania rozbiera od razu
+  if (gfx.confirmDemolish === false) { pending.push({ type: 'demolish', player: ME, id }); play('demolish'); select(0); return; }
   const def = BUILDINGS[b.type]!;
   const back = (Object.entries(def.cost) as [ResourceId, number][]).map(([r, n]) => `${Math.floor((n * RULES_REFUND) / 100)} × ${t(`res.${r}`).toLowerCase()}`);
   const box = document.createElement('div');

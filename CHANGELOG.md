@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.22.0 — więcej ustawień (2026-10-14)
+
+- Interfejs: paski zdrowia (zawsze / w walce / tylko zaznaczeni / nigdy), licznik FPS w rogu (domyślnie ukryty, F3 dalej pokazuje statystyki), dymki z tym, co mówią ludzie, podpowiedzi po najechaniu (od razu / z opóźnieniem / wcale)
+- Nowa zakładka Rozgrywka: tempo gry na starcie (pauza, 1×, 2×, 3×), pytanie przed rozbiórką (można wyłączyć)
+- Grafika: limit klatek (30 / 60 / bez limitu), jasność (60–160%), deszcz i mgła do wyłączenia
+- Reszta pomysłów do ustawień zapisana w docs/pomysly.md
+
 ## 0.21.9 — wielkość interfejsu w ustawieniach (2026-10-14)
 
 - Ustawienia → Interfejs → „Wielkość interfejsu”: 50–150% względem wielkości dobranej do ekranu; powiększa całe menu (okna i dolny pasek), belkę gry, okna budynków i wojska, raporty i czat; działa od razu i zapisuje się w przeglądarce

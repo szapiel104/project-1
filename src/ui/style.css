@@ -1123,3 +1123,10 @@ a.menu-link:focus-visible { outline: 2px solid #e8c36a; outline-offset: 2px; }
 
 /* dolny pasek menu też rośnie z ustawieniem „Wielkość interfejsu”; szerokość w pikselach przed powiększeniem */
 .menu-bar { width: min(1500px, calc(100vw / var(--ui, 1))); }
+
+/* ustawienia interfejsu (Ustawienia → Interfejs) */
+body.hide-fps .fps-tag { display: none; }
+body.no-bubbles .say { display: none !important; }
+body.tips-off .res li[data-tip]:hover::after { display: none; }
+body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1, end) both; }
+@keyframes tip-late { from { visibility: hidden; } to { visibility: visible; } }

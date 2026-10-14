@@ -149,3 +149,11 @@ Wojsko — wygoda dowodzenia:
 - Numer grupy widoczny nad oddziałem i na portretach
 Balans:
 - Gry bot kontra bot kończą się po ok. godzinie i zwykle przegrywa ten sam typ osady: ceny, tempo produkcji i siła fal do wyrównania (narzędzie: tools/soak)
+
+## Ustawienia — do zrobienia (14.10.2026)
+- Pauza, gdy gracz przełączy się na inną kartę albo okno (tylko gra z botami).
+- Autozapis co 1 / 5 / 10 minut (teraz co 50 ticków, bez wyboru).
+- Zmiana klawiszy (WASD, Q/E, skróty budynków i oddziałów) i lista wszystkich skrótów w jednym miejscu.
+- Odwrócenie kółka przy przybliżaniu i odwrócenie obrotu kamery.
+- Dostępność: kolory drużyn dla daltonistów; „mniej ruchu” (bez trzęsienia kamery i błysków).
+- Tytuł „Project-1” i linki logowania na ekranie menu też rosnące z „Wielkością interfejsu”.

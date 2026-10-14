@@ -894,6 +894,11 @@ export class GameRenderer {
     const s = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
     return { w: s.x, h: s.y, d: s.z };
   }
+  /** Ustawienia → Grafika: deszcz i mgła (tylko obraz i dźwięk; symulacja deszczu liczy się dalej) */
+  rainOn = true;
+  fogOn = true;
+  /** Ustawienia → Grafika: jasność obrazu (1 = 100%) */
+  set brightness(v: number) { this.renderer.toneMappingExposure = 0.9 * Math.max(0.5, Math.min(2, v)); }
   /** Testy: budynki stawiane od ręki stoją od razu, bez kilkusekundowego pokazu budowy */
   noBuildShow = false;
 
@@ -1135,7 +1140,7 @@ export class GameRenderer {
     const g = this.state;
     const day = g ? g.tick / RULES.dayTicks : 0;
     // co ~3 dni pada przez około pół dnia (ten sam zegar deszczu co w symulacji: ludzie na słomie mokną naprawdę)
-    const want = g ? rainAt(g.tick) : 0;
+    const want = g && this.rainOn ? rainAt(g.tick) : 0;
     this.rain += (Math.min(1, want * 1.6) - this.rain) * Math.min(1, dt * 0.5);
     // pogoda dnia: pogodnie, pochmurno albo mglisto (z ziarna mapy, więc u każdego taka sama); przejścia płynne w ciągu dnia
     const seed = g?.map.seed ?? 1;
@@ -2611,7 +2616,7 @@ export class GameRenderer {
     // mgła: gęsta o świcie (4–8), rzadsza w dzień; w deszczu gęstsza
     const mist = Math.max(0, Math.min(1, hour < 4 ? 0 : hour < 6 ? (hour - 4) / 2 : (8.5 - hour) / 2.5));
     const fog = this.scene.fog as THREE.Fog;
-    const m = Math.min(1, mist + this.dayMist);
+    const m = this.fogOn ? Math.min(1, mist + this.dayMist) : 0;
     this.mistLevel = m;
     // pogodny dzień: daleka widoczność; mgła rano i w mgliste dni, gęsta w deszczu
     // mgła liczy się od kamery: zaczyna się zawsze dopiero za ziemią, na którą patrzymy, więc osady nie zakrywa

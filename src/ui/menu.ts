@@ -26,6 +26,25 @@ export interface Settings {
   autoTier?: number;
   /** Wielkość całego interfejsu i menu względem dobranej do ekranu (1 = 100%) */
   uiSize?: number;
+  /** Paski zdrowia: zawsze, tylko w walce (ranni i zaznaczeni), tylko zaznaczeni, nigdy */
+  hpBars?: 'always' | 'combat' | 'selected' | 'never';
+  /** Licznik FPS w rogu ekranu */
+  showFps?: boolean;
+  /** Dymki z tym, co mówią ludzie po kliknięciu */
+  bubbles?: boolean;
+  /** Podpowiedzi po najechaniu myszą: od razu, z opóźnieniem, wcale */
+  tips?: 'now' | 'delay' | 'off';
+  /** Tempo gry na starcie (0 = pauza) */
+  startSpeed?: number;
+  /** Pytać przed rozbiórką budynku */
+  confirmDemolish?: boolean;
+  /** Limit klatek na sekundę (0 = bez limitu) */
+  fpsLimit?: number;
+  /** Jasność obrazu (1 = 100%) */
+  brightness?: number;
+  /** Deszcz i mgła */
+  rain?: boolean;
+  fog?: boolean;
 }
 
 export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true, grass: 1 };
@@ -444,11 +463,25 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         choice('Trawa', settings.grass, [[0, t('set.off')], [0.6, 'Bliżej kamery'], [1, 'Pełna']], (v) => { settings.grass = v; manual(); }),
         choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
+        choice('Limit klatek', settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, 'Bez limitu']], (v) => { settings.fpsLimit = v; save(); }),
+        slider('Jasność', (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 160),
+        check('Deszcz', settings.rain ?? true, (v) => { settings.rain = v; save(); }),
+        check('Mgła', settings.fog ?? true, (v) => { settings.fog = v; save(); }),
         el('p', 'hint', t('set.graphicsHint')),
       ]],
       ['Interfejs', () => [
         choice('Wielkość interfejsu', settings.uiSize ?? 1, [[0.5, '50%'], [0.75, '75%'], [0.85, '85%'], [1, '100%'], [1.15, '115%'], [1.3, '130%'], [1.5, '150%']], (v) => { settings.uiSize = v; save(); }),
+        choice('Paski zdrowia', settings.hpBars ?? 'combat', [['always', 'Zawsze'], ['combat', 'W walce'], ['selected', 'Zaznaczeni'], ['never', 'Nigdy']], (v) => { settings.hpBars = v; save(); }),
+        check('Licznik FPS w rogu ekranu', settings.showFps ?? false, (v) => { settings.showFps = v; save(); }),
+        check('Dymki z tym, co mówią ludzie', settings.bubbles ?? true, (v) => { settings.bubbles = v; save(); }),
+        choice('Podpowiedzi po najechaniu', settings.tips ?? 'now', [['now', 'Od razu'], ['delay', 'Z opóźnieniem'], ['off', 'Wcale']], (v) => { settings.tips = v; save(); }),
+        el('p', 'hint', '„W walce” — paski tylko nad rannymi i zaznaczonymi. Pełne statystyki wydajności zawsze pod klawiszem F3.'),
         el('p', 'hint', 'Powiększa albo pomniejsza całe menu, paski, okna budynków i wojska. 100% to wielkość dobrana do ekranu; na dużym monitorze daj więcej, na małym laptopie mniej. Zmiana działa od razu.'),
+      ]],
+      ['Rozgrywka', () => [
+        choice('Tempo gry na starcie', settings.startSpeed ?? 1, [[0, 'Pauza'], [1, '1×'], [2, '2×'], [3, '3×']], (v) => { settings.startSpeed = v; save(); }),
+        check('Pytaj przed rozbiórką budynku', settings.confirmDemolish ?? true, (v) => { settings.confirmDemolish = v; save(); }),
+        el('p', 'hint', 'Tempo na starcie działa od następnej gry (w grze przez sieć tempo jest zawsze 1×).'),
       ]],
       [t('set.controls'), () => [
         slider(t('set.camSpeed'), settings.camSpeed * 100, (v) => { settings.camSpeed = v / 100; save(); }, 50, 200),
