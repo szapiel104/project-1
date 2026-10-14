@@ -314,6 +314,7 @@ let gfx: Settings = loadSettings();
 const autoQ = new AutoQuality(gfx.autoTier ?? TOP_TIER - 1);
 function applySettings(st: Settings): void {
   gfx = st;
+  fitUi();
   // automat: cienie, cieniowanie zagłębień, rozdzielczość i zasięg trawy z poziomu dobranego do komputera
   if (st.auto) { const q = TIERS[autoQ.tier]!; renderer.setGraphics({ ...st, ...q, label: `automat ${autoQ.tier + 1}/${TIERS.length}` }); }
   else renderer.setGraphics({ ...st, grass: st.grass ?? 1 });
@@ -1260,7 +1261,8 @@ if (invite && !SANDBOX) {
 function fitUi(): void {
   // Skala interfejsu: dolny pasek ma ok. 1450 px przy skali 1, więc szerokość ekranu wyznacza, ile się zmieści;
   // wysokość pilnuje, żeby pasek nie zjadał mapy na niskich ekranach. Laptop 1366×768 ≈ 0.92, 1920×1080 = 1.1.
-  const k = Math.max(0.6, Math.min(1.1, innerWidth / 1480, innerHeight / 800));
+  // do tego mnożnik z ustawień (Ustawienia → Interfejs): gracz może powiększyć albo pomniejszyć wszystko
+  const k = Math.max(0.5, Math.min(1.9, Math.max(0.6, Math.min(1.1, innerWidth / 1480, innerHeight / 800)) * (gfx?.uiSize ?? 1)));
   document.documentElement.style.setProperty('--ui', k.toFixed(3));
 }
 fitUi();

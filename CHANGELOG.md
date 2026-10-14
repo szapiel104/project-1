@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.21.9 — wielkość interfejsu w ustawieniach (2026-10-14)
+
+- Ustawienia → Interfejs → „Wielkość interfejsu”: 75–150% względem wielkości dobranej do ekranu; powiększa całe menu (okna i dolny pasek), belkę gry, okna budynków i wojska, raporty i czat; działa od razu i zapisuje się w przeglądarce
+
 ## 0.21.8 — okno budynku mieści się na ekranie (2026-10-14)
 
 - Okno koszar (i każdego budynku czy oddziału) kończy się pod znacznikami wersji, FPS i przyciskiem „Deweloper” na każdym ekranie, także 24″ z otwartą listą budynków; resztę się przewija

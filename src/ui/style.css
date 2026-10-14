@@ -686,7 +686,7 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .stock-empty { font-style: italic; color: var(--ink-soft); }
 
 /* ---- skalowanie interfejsu do wielkości okna (liczone w main.ts: --ui) ---- */
-#ui, .build, .scribe, .alarm, .alerts, .report, .fps-tag, .perf, .invite-toast, .game-chat, .net-wait, .menu-panel, .end-panel { zoom: var(--ui, 1); }
+#ui, .build, .scribe, .alarm, .alerts, .report, .fps-tag, .perf, .invite-toast, .game-chat, .net-wait, .menu-panel, .end-panel, .menu-bar, .menu-fine { zoom: var(--ui, 1); }
 
 /* oko na dolnym pasku: spacer oczami przypadkowego mieszkańca */
 .hud-eye { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; }
@@ -1120,3 +1120,6 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 /* odnośniki w „Dla twórców” wyglądają jak przyciski menu */
 a.menu-link { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; min-width: 170px; min-height: 40px; padding: 0 14px; flex-shrink: 0; }
 a.menu-link:focus-visible { outline: 2px solid #e8c36a; outline-offset: 2px; }
+
+/* dolny pasek menu też rośnie z ustawieniem „Wielkość interfejsu”; szerokość w pikselach przed powiększeniem */
+.menu-bar { width: min(1500px, calc(100vw / var(--ui, 1))); }

@@ -24,6 +24,8 @@ export interface Settings {
   auto: boolean;
   /** Ostatnio dobrany poziom automatycznej jakości (następna sesja zaczyna od niego) */
   autoTier?: number;
+  /** Wielkość całego interfejsu i menu względem dobranej do ekranu (1 = 100%) */
+  uiSize?: number;
 }
 
 export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true, grass: 1 };
@@ -443,6 +445,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
         el('p', 'hint', t('set.graphicsHint')),
+      ]],
+      ['Interfejs', () => [
+        choice('Wielkość interfejsu', settings.uiSize ?? 1, [[0.75, '75%'], [0.85, '85%'], [1, '100%'], [1.15, '115%'], [1.3, '130%'], [1.5, '150%']], (v) => { settings.uiSize = v; save(); }),
+        el('p', 'hint', 'Powiększa albo pomniejsza całe menu, paski, okna budynków i wojska. 100% to wielkość dobrana do ekranu; na dużym monitorze daj więcej, na małym laptopie mniej. Zmiana działa od razu.'),
       ]],
       [t('set.controls'), () => [
         slider(t('set.camSpeed'), settings.camSpeed * 100, (v) => { settings.camSpeed = v / 100; save(); }, 50, 200),
