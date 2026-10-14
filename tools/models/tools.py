@@ -106,7 +106,9 @@ def add(group, parts, M=None):
 
 
 add('pick', pick_parts())
-add('club', club_parts())
+# maczuga krótsza i lżejsza niż kilof: cała bryła zmniejszona wokół chwytu
+CLUB = Matrix.Translation(GRIP) @ Matrix.Scale(0.66, 4) @ Matrix.Translation(-GRIP)
+add('club', club_parts(), CLUB)
 
 # ---------------- schowane na ciele (układ postaci) ----------------
 def place(origin, z_axis, y_axis):
@@ -122,7 +124,7 @@ def place(origin, z_axis, y_axis):
 backM = place((0.11, 0.155, -0.106), (-0.5, 0.866, 0.04), (0.866, 0.5, 0.0))
 add('backPick', pick_parts(), backM)
 # maczuga za sznurem u prawego biodra: rękojeść w górze przy pasie, głowica w dół i lekko na zewnątrz od tuniki
-beltM = place((0.105, 0.42, 0.0), (0.2, -1.0, 0.0), (0.0, 0.0, 1.0))
-add('beltClub', club_parts(), beltM)
+beltM = place((0.108, 0.37, 0.0), (0.22, -1.0, 0.0), (0.0, 0.0, 1.0))
+add('beltClub', club_parts(), beltM @ CLUB)
 
 b.save('tools', maxe=0.5, rays=8, reach=0.05, grime=False, extra={'grip': list(GRIP)})

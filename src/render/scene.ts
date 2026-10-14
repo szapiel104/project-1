@@ -3596,15 +3596,17 @@ export class GameRenderer {
         }
       }
       // wilk tuż obok: chłop staje do niego twarzą i macha rękami
+      // (bije go swoją bronią: kilofem albo maczugą — patrz walka niżej)
+      let wolfNear: { px: number; py: number } | undefined;
       if (!this.calm && g.wolves.length) for (const w of g.wolves) {
-        if ((w.px - u.px) ** 2 + (w.py - u.py) ** 2 > (1.5 * FP) ** 2) continue;
+        if (w.hp <= 0 || (w.px - u.px) ** 2 + (w.py - u.py) ** 2 > (1.5 * FP) ** 2) continue;
         t.rotation.set(0, Math.atan2(w.px - u.px, w.py - u.py), 0);
-        swing = Math.sin(this.time * 14 + u.id) * 1.4;
+        wolfNear = w;
         if ((u.hp ?? 30) < 30) this.sfxAt('hit', t.position.x, t.position.z, `bite${u.id}`, 0.9, 0.8);
         break;
       }
       // odważny chłop przed wrogim żołnierzem: twarzą do niego, z bliska okłada go pięściami i kijem
-      const enemy = u.foe ? g.soldiers.find((x) => x.id === u.foe) : undefined;
+      const enemy = (u.foe ? g.soldiers.find((x) => x.id === u.foe) : undefined) ?? wolfNear;
       const weapon = peasantWeapon(u.id);
       let fighting = false, fightArm = -0.4;
       if (enemy && !this.calm) {
