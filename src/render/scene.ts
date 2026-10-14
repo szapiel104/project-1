@@ -1373,7 +1373,10 @@ export class GameRenderer {
     this.walkNear = kp ? kp[0] : 0;
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
     if (!this.roomLight) { this.roomLight = new THREE.PointLight(0xffb36b, 0, 5, 1.2); this.scene.add(this.roomLight); }
-    this.roomLight.intensity = inRoom ? 2.6 + Math.sin(this.time * 7) * 0.15 : 0;
+    // izby w basztach (narożne i w połowie boków) też mają ogień
+    const tdx = kp ? Math.floor(kp[1] + KEEP_HALF) : -1, tdy = kp ? Math.floor(kp[2] + KEEP_HALF) : -1;
+    const inTower = !!kp && keepTile(tdx, tdy) === '=' && (tdx === 0 || tdx === KEEP_SIZE - 1) && (tdy === 0 || tdy === KEEP_SIZE - 1 || tdy === KEEP_SIZE >> 1);
+    this.roomLight.intensity = inRoom || inTower ? 2.6 + Math.sin(this.time * 7) * 0.15 : 0;
     this.roomLight.position.set(cam.position.x, cam.position.y + 0.35, cam.position.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
   }

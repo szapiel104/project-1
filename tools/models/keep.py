@@ -48,8 +48,8 @@ TOP = G + WH
 WALK = TOP + 0.06     # chodnik na koronie muru (wierzch płyt)
 
 # ---------------- podmurówka, posadzki ----------------
-b.box('base', 'castleDark', N + 0.3, 0.06, N + 0.3, 0, 0, 0)
-b.box('base', 'castleDark', N, G - 0.06, N, 0, 0.06, 0)
+b.box('base', 'stoneDark', N + 0.3, 0.06, N + 0.3, 0, 0, 0)
+b.box('base', 'stoneDark', N, G - 0.06, N, 0, 0.06, 0)
 FLOOR = {'.': 'pathCobble', 'T': 'plank', 'K': 'stone', 'C': 'plank', 'L': 'stoneDark', 'B': 'plank'}
 for dy in range(N):
     for dx in range(N):
@@ -75,11 +75,11 @@ curtain(gr, H, H - 1, H)
 curtain(gl, gr, H - 1, H, G + 0.95, TOP)       # nad przejazdem
 # skarpa u stóp murów, gzyms; przed bramą skarpy nie ma: most kładzie się prosto na ziemi
 gx0 = L['tiles'][N - 1].index('G') - H + 0.5
-b.box('base', 'castleDark', N + 0.24, 0.35, 0.12, 0, 0, -(H + 0.06))
-b.box('base', 'castleDark', (gx0 - 0.5) + H + 0.12, 0.35, 0.12, (-H - 0.12 + gx0 - 0.5) / 2, 0, H + 0.06)
-b.box('base', 'castleDark', H + 0.12 - (gx0 + 0.5), 0.35, 0.12, (H + 0.12 + gx0 + 0.5) / 2, 0, H + 0.06)
+b.box('base', 'stoneDark', N + 0.24, 0.35, 0.12, 0, 0, -(H + 0.06))
+b.box('base', 'stoneDark', (gx0 - 0.5) + H + 0.12, 0.35, 0.12, (-H - 0.12 + gx0 - 0.5) / 2, 0, H + 0.06)
+b.box('base', 'stoneDark', H + 0.12 - (gx0 + 0.5), 0.35, 0.12, (H + 0.12 + gx0 + 0.5) / 2, 0, H + 0.06)
 for s in (-1, 1):
-    b.box('base', 'castleDark', 0.12, 0.35, N + 0.24, s * (H + 0.06), 0, 0)
+    b.box('base', 'stoneDark', 0.12, 0.35, N + 0.24, s * (H + 0.06), 0, 0)
     b.box('base', 'castleDark', N + 0.08, 0.06, 0.04, 0, G + 0.75, s * (H + 0.02))
     b.box('base', 'castleDark', 0.04, 0.06, N + 0.08, s * (H + 0.02), G + 0.75, 0)
 for k in (-3.2, -1.6, 1.6, 3.2):
@@ -90,11 +90,13 @@ for k in (-3.2, -1.6, 1.6, 3.2):
 # ---------------- chodnik na murach: płyty, blanki od pola, przedpiersie od dziedzińca ----------------
 # Po murze chodzi się pola, które w planie mają „=”; od pola zamyka je mur z blankami, od dziedzińca niskie przedpiersie
 # z przerwą tam, gdzie wychodzą schody.
+def is_tower(dx, dy):
+    return dx in (0, N - 1) and dy in (0, N // 2, N - 1)
 stair_tops = {(dx, dy + 1) for dy in range(N) for dx in range(N) if tile(dx, dy) == 'S' and tile(dx, dy + 1) == '='}
 for dy in range(N):
     for dx in range(N):
-        if tile(dx, dy) != '=':
-            continue
+        if tile(dx, dy) != '=' or is_tower(dx, dy):
+            continue  # w basztach własna izba
         x, z = cx(dx), cz(dy)
         b.box('base', 'castleDark', 1.0, 0.06, 1.0, x, TOP, z)
         for ox, oy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
@@ -308,7 +310,8 @@ for dy in range(N):
                     wall_piece('base', mat, x - WT / 2, x + WT / 2, zc + DW / 2, z1, G, G + h)
                     wall_piece('base', mat, x - WT / 2, x + WT / 2, zc - DW / 2, zc + DW / 2, G + DH, G + h)
                     b.box('base', 'woodDark', DW + 0.06, 0.04, WT + 0.03, x, G + DH, zc, math.pi / 2)
-                    b.box('interior', 'woodDark', DW - 0.04, DH - 0.02, 0.035, x + 0.22, G, zc - DW / 2 + 0.02, math.pi / 2 + 1.35)
+                    side = 1 if rb != '.' else -1   # skrzydło otwiera się do pomieszczenia, nie na dziedziniec
+                    b.box('interior', 'woodDark', DW - 0.04, DH - 0.02, 0.035, x + side * 0.2, G, zc - DW / 2 + 0.02, math.pi / 2 + side * 1.35)
                     block(x - WT / 2, x + WT / 2, z0, zc - DW / 2); block(x - WT / 2, x + WT / 2, zc + DW / 2, z1)
                 else:
                     wall_piece('base', mat, x - WT / 2, x + WT / 2, z0, z1, G, G + h)
@@ -322,7 +325,8 @@ for dy in range(N):
                     wall_piece('base', mat, xc + DW / 2, x1, z - WT / 2, z + WT / 2, G, G + h)
                     wall_piece('base', mat, xc - DW / 2, xc + DW / 2, z - WT / 2, z + WT / 2, G + DH, G + h)
                     b.box('base', 'woodDark', DW + 0.06, 0.04, WT + 0.03, xc, G + DH, z)
-                    b.box('interior', 'woodDark', DW - 0.04, DH - 0.02, 0.035, xc - DW / 2 + 0.02, G, z - 0.22, 1.35)
+                    side = 1 if rb != '.' else -1
+                    b.box('interior', 'woodDark', DW - 0.04, DH - 0.02, 0.035, xc - DW / 2 + 0.05, G, z + side * 0.22, math.pi / 2 - side * 0.2)
                     block(x0, xc - DW / 2, z - WT / 2, z + WT / 2); block(xc + DW / 2, x1, z - WT / 2, z + WT / 2)
                 else:
                     wall_piece('base', mat, x0, x1, z - WT / 2, z + WT / 2, G, G + h)
@@ -343,10 +347,16 @@ for dy in range(N):
             ends = ((cx(ax) + 0.5, cz(ay) - 0.5), (cx(ax) + 0.5, cz(ay) + 0.5)) if ex else ((cx(ax) - 0.5, cz(ay) + 0.5), (cx(ax) + 0.5, cz(ay) + 0.5))
             for e in ends:
                 key2 = (round(e[0], 3), round(e[1], 3))
-                posts[key2] = max(posts.get(key2, (0, ''))[0], h), mat_of(room(ax, ay), room(bx2, by2))
-for (x, z), (h, mat) in posts.items():
+                old = posts.get(key2, (0, '', set()))
+                posts[key2] = (max(old[0], h), mat_of(room(ax, ay), room(bx2, by2)), old[2] | {'v' if ex else 'h'})
+                posts[key2][2].add(('v' if ex else 'h') + ('+' if e == ends[1] else '-'))
+for (x, z), (h, mat, dirs) in posts.items():
     if abs(x) > H - 1.001 or abs(z) > H - 1.001:
         continue  # przy murze kurtynowym słup niepotrzebny
+    ends_here = {d for d in dirs if len(d) == 2}
+    # środek prostej ściany (dwa odcinki w jednej linii): bez słupa, ściana idzie gładko
+    if ends_here in ({'v+', 'v-'}, {'h+', 'h-'}):
+        continue
     pm = 'woodDark' if mat in ('plaster', 'woodDark') else 'castleDark'
     b.box('base', pm, WT + 0.04, h + 0.02, WT + 0.04, x, G, z)
     block(x - WT / 2 - 0.02, x + WT / 2 + 0.02, z - WT / 2 - 0.02, z + WT / 2 + 0.02)
