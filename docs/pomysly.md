@@ -28,7 +28,6 @@ Kierunek: klimat Gothic 1/2 — surowo, brudno, mroczno, żywy świat.
 Zrobione 12.10: palisada, brama (otwieranie, sama się zamyka), wieża, wilki (polują, przegryzają mur), ruiny do odbudowy, odzywki ludzi, błoto i kałuże, kruki na ciałach, alarmy ataku, tryb deweloperski.
 
 Czeka:
-- Karczma i życie wieczorem (lutnia, pijacy, popularność)
 - Kości przy cmentarzu, więcej brudu (śmieci, gnój przy chlewie)
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
 - Kopalnia rudy z prawdziwego zdarzenia (szyb, wózki)
@@ -88,7 +87,6 @@ Większe rzeczy na później:
 Zrobione: 19:30 ognisko i karczma, 22:00 sen w chacie/twierdzy, bez łóżka słomiane posłanie przy ognisku, 5:30 do pracy; noc w tickach krótsza (ok. 11% doby), wieczór 8%, dzień pracy 81%; wilki nie dosięgną śpiących pod dachem.
 
 Dalej:
-- Karczmarz nalewa piwo z zapasów (piwo jako towar), pijacy wracają chwiejnym krokiem
 - Straż miejska (zrobione 13.10: 6 strażników, posterunki i obchód, zastępstwo przez chłopów). Dalej: własny wygląd w barwach straży (zbroja, halabarda), odzywki jak w Gothicu, zmiana warty, koszary straży
 - Dzieci i rodziny w chatach (osada rośnie sama)
 
@@ -118,7 +116,7 @@ Zrobione 14.10: rozmowy stojących (para zwraca się do siebie, gestykuluje, kiw
 
 Czeka:
 - Dzieci i rodziny: dzieci biegają między chatami, bawią się w berka, przed wilkiem uciekają do chaty; osada rośnie sama
-- Karczma naprawdę działa: browar i piwo jako towar, karczmarz nalewa z zapasów, wieczorem gwar i lutnia, pijacy wracają chwiejnym krokiem; bez piwa spada popularność
+- Zrobione 14.10: browar z Blendera, piwo jako towar (skład), karczma pije 1 beczkę na miesiąc, sucha karczma −2 do popularności, wieczorem gwar i lutnia tylko przy piwie, pijacy wracają chwiejnym krokiem. Dalej: karczmarz widocznie nosi beczki ze składu, grajek z lutnią jako osobna postać, bot pilnuje zapasu piwa
 - Poranek i wieczór: koguty o świcie, kobieta wylewa wiadro, wieczorem świece w oknach i zamykanie okiennic
 - Targ co kilka dni: kramy na placu, przyjezdny kupiec z wozem, gwar; tanio kupić albo sprzedać zapasy
 - Brud i graty: śmieci, gnój przy chlewie, worki i siano przy domach, kości przy cmentarzu, wrony na płotach
