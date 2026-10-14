@@ -128,7 +128,6 @@ Po działającej karczmie, w tej kolejności:
 1. Życie w zamku (niżej w sekcji Zamek)
 2. Oblężenie zamku: taran, drabiny, krata przy wrogu
 3. Kolejne budynki z Blendera: stodoła, chata (inspect.sh + kolizje w spacerze)
-4. Poprawki karczmy: działka 4×3, trawa przez podłogę
 
 ## Zamek (14.10.2026)
 Zrobione 14.10: zamek 11×11 z Blendera według wspólnego planu (src/data/keep-layout.json): mury z blankami, baszty z izbami i strzelnicami, wieże bramy z izbami, brama z kratą i mostem, donżon; dziedziniec, sala tronowa z tronem pod baldachimem, kuchnia, komnata pana, koszary, lochy z celami; wejście tylko bramą, ściany i drzwi w symulacji, schody i chodnik na murach (łucznik na murze strzela dalej); spacer chłopem z kolizjami; 6000 HP; obchód modeli bez przeglądarki (tools/models/inspect.sh).
@@ -137,7 +136,7 @@ Czeka:
 - Życie w zamku: pan na tronie, kucharz przy palenisku, straż zmienia wartę w bramie i chodzi po murach, więźniowie w lochach (np. pojmani wrogowie), służba nosi jedzenie z kuchni do sali
 - Oblężenie zamku: taran pod bramą, drabiny na mury, wrzątek/kamienie z machikuł; brama zamyka się przy wrogu
 - Pozostałe budynki z Blendera w tym samym potoku (stodoła, chata, piekarnia, koszary), z obchodem inspect.sh i kolizjami w spacerze. Zrobione 14.10: karczma (szachulec, strzecha, ganek, szynkwas, palenisko, stoły, wejście drzwiami z kolizjami)
-- Karczma: izba ciasna z oczu człowieka (działka 3×2) — rozważyć 4×3; trawa przebija przy palenisku przez podłogę na pochyłym terenie
+- Zrobione 14.10: karczma 4×3 (trzy stoły, dłuższy szynkwas, wyższy strop, ganek z dwoma stołami)
 - Ulepszanie zamku (poziomy widać na modelu: drewniane hurdycje, druga linia murów, fosa)
 
 ## Do poprawy — kolejka po przeglądzie 14.10.2026 (Claude podpowiada stąd przy „co dalej”)
