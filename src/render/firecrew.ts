@@ -76,7 +76,7 @@ export class FireCrewFx {
     const pop = a >= 1 ? 1 : 1 + 2.7 * (a - 1) ** 3 + 1.7 * (a - 1) ** 2;
     const bob = Math.sin(time * 4 + id) * 0.025;
     e.s.position.set(x, y + bob + (1 - a) * 0.15, z);
-    e.s.scale.setScalar(0.3 * Math.max(0.01, pop));
+    e.s.scale.setScalar(0.22 * Math.max(0.01, pop));
     (e.s.material as THREE.SpriteMaterial).opacity = Math.min(1, a * 2);
   }
 
