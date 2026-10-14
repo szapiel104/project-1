@@ -278,9 +278,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     report.append(list);
     // okienko wyskakuje tuż nad przyciskiem, który je otworzył
     const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : popBox;
+    // okno ma powiększenie interfejsu (zoom: var(--ui)), więc jego left/bottom liczą się w pikselach powiększonych:
+    // pozycję z ekranu dzielimy przez powiększenie, a szerokość okna mnożymy — inaczej wyjeżdża poza ekran
     const r = anchor.getBoundingClientRect();
-    report.style.bottom = `${window.innerHeight - r.top + 10}px`;
-    report.style.left = `${Math.max(8, Math.min(window.innerWidth - 360, r.left + r.width / 2 - 170))}px`;
+    const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
+    const w = report.getBoundingClientRect().width || 340 * k;
+    const left = Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2));
+    report.style.bottom = `${(window.innerHeight - r.top + 10) / k}px`;
+    report.style.left = `${left / k}px`;
     report.style.right = 'auto';
     if (reportKind === 'popularity') report.append(el('p', 'report-hint', 'W górę: większe racje, niższe podatki albo rozdawanie złota. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.'));
   };
