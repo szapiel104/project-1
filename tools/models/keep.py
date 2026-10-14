@@ -173,7 +173,10 @@ for sx in (-1, 1):
         y_top = WALK + ROOM_UP
         b.prism('base', 'castleDark', TR + 0.12, TR, 0.5, tx, 0.0, tz, seg=24, top=False)
         b.prism('base', 'castle', TR, TR, TOP - 0.5, tx, 0.5, tz, seg=24, top=False)
-        block(tx - TR - 0.12, tx + TR + 0.12, tz - TR - 0.12, tz + TR + 0.12, 0, TOP)
+        # przeszkoda w kształcie koła (trzy prostokąty), żeby przy baszcie dało się przejść tuż obok
+        R0 = TR + 0.12
+        for ax, az in ((0.92, 0.38), (0.38, 0.92), (0.7, 0.7)):
+            block(tx - R0 * ax, tx + R0 * ax, tz - R0 * az, tz + R0 * az, 0, TOP)
         b.prism('base', 'castleDark', TR - RW, TR - RW, 0.06, tx, TOP, tz, seg=24)   # podłoga izby
         seg = 24
         for k in range(seg):
