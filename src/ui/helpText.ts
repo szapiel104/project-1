@@ -177,7 +177,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         ['Brama', '8 drewna', '600'],
         ['Wieża strażnicza', '16 drewna', '700'],
       ] },
-      'Bramę i wieżę strażniczą stawiasz na wolnym polu albo wprost na swoim murze (zastępują przęsła pod sobą). Mur kamienny możesz przeciągnąć po palisadzie — bale zamienią się w kamień. Na mur wchodzi się tylko po drabinach, które sam stawiasz tuż przy murze (najlepiej od strony osady); po koronie Twoi ludzie chodzą jak po ziemi. Twoi ludzie przechodzą przez otwartą bramę, wróg musi ją rozbić. Wyłom w palisadzie zostaje otwarty, dopóki go nie odbudujesz.',
+      'Bramę i wieżę strażniczą stawiasz na wolnym polu albo wprost na swoim murze (zastępują przęsła pod sobą). Mur kamienny możesz przeciągnąć po palisadzie — bale zamienią się w kamień. Na mur wchodzi się tylko po drabinach, które sam stawiasz tuż przy murze. Po drabinie wejdzie każdy, także wróg, więc stawiaj je od strony osady; po koronie Twoi ludzie chodzą jak po ziemi. Twoi ludzie przechodzą przez otwartą bramę, wróg musi ją rozbić. Wyłom w palisadzie zostaje otwarty, dopóki go nie odbudujesz.',
       { h: 'Przeciwnicy komputerowi' },
       'Bot buduje osadę jak ty, ustawia podatki, szkoli mieszane wojsko (mniej więcej co trzeci to łucznik), a gdy urośnie, otacza się palisadą. W grze 2 na 2 i 4 na 4 boty zajmują wolne miejsca.',
     ],

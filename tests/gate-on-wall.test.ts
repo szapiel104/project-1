@@ -60,7 +60,7 @@ describe('brama na częstokole', () => {
     expect(canPlace(g, 0, buildingIndex('gate'), x, y)).toBe(null);
   });
 
-  it('po murze kamiennym chodzi się jak po terenie: swoi wchodzą po drabinie, wróg nie wejdzie', () => {
+  it('po murze kamiennym chodzi się jak po terenie, wchodzi się tylko po drabinie (każdy, kto do niej dojdzie)', () => {
     const g = createGame(5, '1v1', 1, true);
     for (const p of g.players) { p.bot = false; p.res = p.res.map(() => 900); }
     const keep = g.buildings.find((b) => b.owner === 0 && b.type === 0)!;
@@ -77,8 +77,7 @@ describe('brama na częstokole', () => {
     g.buildings[g.buildings.length - 1]!.build = 0;
     step(g, []);
     expect(walkable(g, top, 0)).toBe(true);
-    expect(walkable(g, top, 1)).toBe(false);
-    expect(walkable(g, (y + 1) * W + x + 3, 1)).toBe(false); // wróg nie stanie na drabinie
+    expect(walkable(g, (y + 1) * W + x + 3, 1)).toBe(true); // drabina od zewnątrz posłuży też wrogowi
     // łucznik spod muru wchodzi na koronę po postawionej drabinie i strzela z góry
     const id = g.nextId++;
     g.soldiers.push({ id, owner: 0, kind: 1, px: (x + 3) * 256 + 128, py: (y + 3) * 256 + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0 } as never);

@@ -1,11 +1,12 @@
 import { buildingIndex } from '../../data/buildings';
 import { WALL_TOP } from '../../data/keep';
+import { OPEN_ALL } from '../path';
 import type { Building, GameState } from '../state';
 import { buildingById } from '../state';
 
 /**
- * Mur kamienny jak w Twierdzy: korona muru to zwykły teren, tylko wysoko. Chodzą po niej wszyscy właściciela
- * (wróg nie — jak przez zamkniętą bramę), wchodzi się i schodzi tylko po drabinach; z ziemi na mur ani z muru
+ * Mur kamienny jak w Twierdzy: korona muru to zwykły teren, tylko wysoko. Wchodzi się i schodzi tylko po drabinach,
+ * które stawia gracz — kto dojdzie do drabiny (także wróg, gdy stoi od zewnątrz), ten wejdzie; z ziemi na mur ani z muru
  * na ziemię poza drabiną nie da się przejść. Łucznik na murze ma bit WALL_TOP: strzela dalej, wręcz go nie dosięgną.
  */
 const STONE = buildingIndex('stoneWall');
@@ -42,15 +43,15 @@ export function stoneWallSystem(g: GameState): void {
     if (b.type !== STONE) continue;
     const t = b.y * w + b.x;
     if (b.build || b.ruined) { g.gates[t] = 0; g.walls[t] = 0; continue; }
-    g.gates[t] = b.owner + 1;
+    g.gates[t] = OPEN_ALL;
     const ladders = ladderSides(g, b);
     let bits = WALL_TOP;
     for (const [dx, dy, bit] of SIDES) if (!(ladders & bit) && !isStone(g, b.x + dx, b.y + dy)) bits |= bit;
     g.walls[t] = bits;
   }
-  // drabina: pole u stóp jest przechodnie tylko dla właściciela (jak brama)
+  // drabina: pole u stóp jest przechodnie dla każdego — postawiona od zewnątrz posłuży też wrogowi
   for (const b of g.buildings) {
     if (b.type !== LADDER) continue;
-    g.gates[b.y * w + b.x] = b.build || b.ruined ? 0 : b.owner + 1;
+    g.gates[b.y * w + b.x] = b.build || b.ruined ? 0 : OPEN_ALL;
   }
 }

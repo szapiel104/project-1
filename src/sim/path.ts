@@ -10,12 +10,14 @@ let generation = 0;
 /** Czy po polu da się przejść (teren i brak budynku). */
 /** Gracz -2 = wilk: chodzi też przez las */
 export const WOLF = -2;
+/** Wartość w g.gates: pole zajęte przez budowlę, ale przechodnie dla każdego gracza (korona muru kamiennego, drabina) */
+export const OPEN_ALL = 255;
 const WALK = new Uint8Array(256);
 for (const k of Object.keys(TERRAIN)) WALK[Number(k)] = TERRAIN[Number(k) as Terrain].walkable ? 1 : 0;
 export function walkable(g: GameState, tile: number, player = -1): boolean {
   if (player === WOLF) return g.occupancy[tile] === 0 && (TERRAIN[g.map.tiles[tile] as Terrain].walkable || g.map.tiles[tile] === Terrain.Forest);
   // brama przepuszcza tylko swoich
-  return (g.occupancy[tile] === 0 || (player >= 0 && g.gates[tile] === player + 1)) && TERRAIN[g.map.tiles[tile] as Terrain].walkable;
+  return (g.occupancy[tile] === 0 || (player >= 0 && (g.gates[tile] === player + 1 || g.gates[tile] === OPEN_ALL))) && TERRAIN[g.map.tiles[tile] as Terrain].walkable;
 }
 
 /** Najtańszy możliwy krok prosto i po skosie (po najlepszej drodze) — dolne oszacowanie dla A* */
@@ -89,7 +91,7 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
   const ok = (t: number): boolean => {
     const tt = tiles[t]!;
     if (wolf) return occ[t] === 0 && (WALK[tt] === 1 || tt === Terrain.Forest);
-    return (occ[t] === 0 || (player >= 0 && gates[t] === gate)) && WALK[tt] === 1;
+    return (occ[t] === 0 || (player >= 0 && (gates[t] === gate || gates[t] === OPEN_ALL))) && WALK[tt] === 1;
   };
   const K = 1 << 20; // klucz = koszt * K + pole (do 1024 x 1024 pól; koszt najwyżej kilka tysięcy, więc mieści się w liczbie)
   dist[from] = 0; mark[from] = generation; prev[from] = -1;
