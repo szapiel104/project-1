@@ -142,10 +142,13 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     if (checkCost && !canAfford(g, player, def)) return 'place.cost';
     return null;
   }
+  // brama na istniejącym własnym częstokole: zastępuje to jedno przęsło
+  const over = def.gate ? palisadeUnder(g, player, x, y) : undefined;
   for (let ty = y; ty < y + fh; ty++) {
     for (let tx = x; tx < x + fw; tx++) {
       const t = ty * width + tx;
       if (!TERRAIN[g.map.tiles[t] as Terrain].buildable) return 'place.terrain';
+      if (over) continue;
       if (g.occupancy[t] !== 0 || g.reserved[t] !== 0) return 'place.occupied';
     }
   }
@@ -164,9 +167,15 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
   }
   if (!def.wall && !def.gate && findDoor(g, x, y, fw, fh, rot) < 0) return 'place.noAccess';
   if (enemyNear(g, player, x, y, fw, fh)) return 'place.enemy';
-  if (wouldBlock(g, player, x, y, fw, fh, rot, !def.wall && !def.gate, !!def.gate)) return 'place.blocks';
+  if (!over && wouldBlock(g, player, x, y, fw, fh, rot, !def.wall && !def.gate, !!def.gate)) return 'place.blocks';
   if (checkCost && !canAfford(g, player, def)) return 'place.cost';
   return null;
+}
+
+/** Własne przęsło częstokołu na polu (x, y) — tam można postawić bramę */
+function palisadeUnder(g: GameState, player: number, x: number, y: number): Building | undefined {
+  if (x < 0 || y < 0 || x >= g.map.width || y >= g.map.height || g.occupancy[y * g.map.width + x] === 0) return undefined;
+  return g.buildings.find((b) => b.x === x && b.y === y && b.owner === player && BUILDINGS[b.type]!.line === true && !b.ruined);
 }
 
 /** Zamek: pola dziedzińca i sal są przechodnie dla właściciela, a między pomieszczeniami stoją ściany (wejście tylko bramą) */
@@ -258,6 +267,14 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
     if (p.dev && p.instantBuild !== false) { g.roads[t] = def.road; g.roadPlan[t] = 0; }
     else g.roadPlan[t] = def.road;
     return true;
+  }
+  // brama w miejscu przęsła częstokołu: przęsło znika bez gruzu (bale idą na bramę)
+  const over = def.gate ? palisadeUnder(g, player, x, y) : undefined;
+  if (over) {
+    const t = y * g.map.width + x;
+    g.occupancy[t] = 0; g.gates[t] = 0;
+    g.buildings.splice(g.buildings.indexOf(over), 1);
+    for (const u of g.units) if (u.target === over.id) { u.target = 0; u.path = []; }
   }
   const b = addBuilding(g, type, player, x, y, rot);
   // żołnierze stojący na działce schodzą z niej na najbliższe wolne pole (zamiast stać w środku ścian)

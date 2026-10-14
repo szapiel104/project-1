@@ -1871,6 +1871,8 @@ export class GameRenderer {
       const l = mesh.getObjectByName('leafL'), r = mesh.getObjectByName('leafR');
       if (l) l.rotation.y = -a;
       if (r) r.rotation.y = a;
+      const lit = this.night > 0.15;
+      mesh.traverse((o) => { if (o.name === 'torchFlame') o.visible = lit; });
     }
   }
 

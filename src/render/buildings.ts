@@ -7,6 +7,7 @@ import { beam, cutBox, paintGeo, rng, stoneSkirt, thatchSlab } from './craft';
 import KEEP_MODEL from './models/keep.json';
 import TAVERN_MODEL from './models/tavern.json';
 import BREWERY_MODEL from './models/brewery.json';
+import GATE_MODEL from './models/gate.json';
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -876,6 +877,16 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   ceiling.visible = false;
   for (const m of meshes('ceiling')) ceiling.add(m);
   g.add(ceiling);
+  // skrzydła wrót (brama): zapisane zamknięte, obracają się wokół zawiasów x = ±hinge; startują otwarte
+  const hinge = (model as unknown as { hinge?: number }).hinge;
+  if (hinge) for (const [name, side] of [['leafL', -1], ['leafR', 1]] as const) {
+    const leaf = new THREE.Group();
+    leaf.name = name;
+    leaf.position.x = side * hinge;
+    leaf.rotation.y = side * 1.3;
+    for (const m of meshes(name)) { m.geometry.translate(-side * hinge, 0, 0); leaf.add(m); }
+    g.add(leaf);
+  }
   // znaczniki z modelu: szyby (świecą nocą), komin (dym), ogień w palenisku
   const marks = model as unknown as { windows?: [number, number, number, number, number, number, number, string][]; chimneys?: [number, number, number][]; flames?: [number, number, number][] };
   for (const [x, y, z, nx, nz, w, h, grp] of marks.windows ?? []) {
@@ -1453,25 +1464,12 @@ const BUILDERS: Record<string, Builder> = {
     g.add(preview);
   },
   gate(g, _team, flag) {
-    // Brama w częstokole: dwa grube słupy, belka z daszkiem, dwuskrzydłowe wrota z okuciami, uchylone
-    for (const x of [-0.46, 0.46]) {
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.12, 1.55, 8), M.bark);
-      post.position.set(x, 0.775, 0); g.add(post);
-      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.1, 0.22, 8), M.bark);
-      tip.position.set(x, 1.66, 0); g.add(tip);
-    }
-    box(g, M.woodDark, 1.1, 0.12, 0.16, 0, 1.28, 0);
-    box(g, M.wood, 1.2, 0.04, 0.42, 0, 1.4, 0).rotation.x = 0.12;
-    for (const side of [-1, 1]) {
-      const leaf = new THREE.Group();
-      leaf.position.set(side * 0.4, 0, 0);
-      leaf.name = side < 0 ? 'leafL' : 'leafR';
-      leaf.rotation.y = side * 1.3; // otwarte do środka; scena domyka je przy zamknięciu
-      box(leaf, M.wood, 0.4, 1.1, 0.06, -side * 0.2, 0.05, 0);
-      for (const y of [0.3, 0.85]) box(leaf, M.iron, 0.38, 0.05, 0.075, -side * 0.2, y, 0);
-      g.add(leaf);
-    }
-    box(g, flag, 0.3, 0.22, 0.02, 0, 1.0, 0.1);
+    // Brama z Blendera (tools/models/gate.py): baszty z zaostrzonych bali, pomost straży z daszkiem i palami,
+    // dwuskrzydłowe wrota z desek z okuciami (obraca je scena), pochodnie w uchwytach (płoną nocą)
+    blenderModel(g, GATE_MODEL as unknown as BlenderBuilding, flag);
+    g.traverse((o) => { if (o.name === 'flame') o.name = 'torchFlame'; });
+    const p = (GATE_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   watchtower(g, _team, flag) {
     // Drewniana wieża strażnicza: cztery nogi z bali, zastrzały, pomost z balustradą, dach ze strzechy, drabina

@@ -175,7 +175,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         ['Brama', '8 drewna', '600'],
         ['Wieża strażnicza', '16 drewna', '700'],
       ] },
-      'Twoi ludzie przechodzą przez otwartą bramę, wróg musi ją rozbić. Wyłom w palisadzie zostaje otwarty, dopóki go nie odbudujesz.',
+      'Bramę stawiasz na wolnym polu albo wprost na przęśle swojej palisady (zastępuje je). Twoi ludzie przechodzą przez otwartą bramę, wróg musi ją rozbić. Wyłom w palisadzie zostaje otwarty, dopóki go nie odbudujesz.',
       { h: 'Przeciwnicy komputerowi' },
       'Bot buduje osadę jak ty, ustawia podatki, szkoli mieszane wojsko (mniej więcej co trzeci to łucznik), a gdy urośnie, otacza się palisadą. W grze 2 na 2 i 4 na 4 boty zajmują wolne miejsca.',
     ],

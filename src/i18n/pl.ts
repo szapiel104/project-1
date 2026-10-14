@@ -223,7 +223,7 @@ export const pl = {
   'd.tavern': 'Karczmarz nalewa piwo ze składu (1 beczka na miesiąc). Wieczorem ludzie przychodzą posiedzieć i posłuchać lutni: +3 popularności miesięcznie, dwie karczmy +5. Gdy w składzie nie ma piwa, karczma stoi sucha i ludzie się złoszczą (−2).',
   'd.brewery': 'Piwowar warzy piwo z pszenicy ze składu: z 2 snopków 3 beczki. Beczki trafiają do składu, a stamtąd do karczmy.',
   'd.palisade': 'Częstokół z zaostrzonych bali. Stawiasz go przeciąganiem jak drogę; wróg musi go porąbać, żeby przejść.',
-  'd.gate': 'Brama w palisadzie. Swoi przechodzą, wróg nie. Możesz ją otworzyć i zamknąć; gdy wróg albo wilki są blisko, zamyka się sama.',
+  'd.gate': 'Brama w palisadzie. Możesz ją postawić od razu na gotowym przęśle palisady. Swoi przechodzą, wróg nie. Możesz ją otworzyć i zamknąć; gdy wróg albo wilki są blisko, zamyka się sama.',
   'd.watchtower': 'Drewniana wieża strażnicza. Wzmacnia mur i widać z niej okolicę; później staną na niej łucznicy.',
   'd.cemetery': 'Grabarz zbiera ciała poległych z pola bitwy i chowa je tutaj. Bez niego ciała leżą i gniją.',
   'u.spearman': 'Włócznik',
