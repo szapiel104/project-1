@@ -1110,3 +1110,10 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 .unit-pic.shot { display: block; width: 96px; height: 96px; border: 2px solid #9a7a2a; box-shadow: 0 0 0 2px #0b0704, 0 4px 10px rgba(0, 0, 0, .6);
   background: radial-gradient(ellipse at 45% 35%, #6a4224 0%, #2a1a0e 60%, #120b06 100%); overflow: hidden; }
 .unit-pic.shot img { width: 100%; height: 100%; display: block; object-fit: cover; }
+/* koszary: flaga zbiórki na karcie i wspólny punkt zbiórki pod kartami */
+.unit-flag { width: 100%; min-height: 34px; padding: 4px 8px; font-size: 13px; white-space: normal; line-height: 1.15; }
+.unit-flag[aria-pressed='true'] { color: #ffe7a6; box-shadow: inset 0 0 0 1px #e9c766; }
+.rally-row { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center; }
+.rally-row .btn-main { min-height: 40px; font-size: 14px; white-space: normal; line-height: 1.15; }
+.rally-row button:not(.btn-main) { min-height: 40px; font-size: 13px; }
+.rally-row .hint { grid-column: 1 / -1; margin: 0; font-size: 13.5px; }

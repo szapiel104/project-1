@@ -197,6 +197,8 @@ export class GameRenderer {
   /** Wieże, których łucznicy właśnie strzelają: id → czas ostatniego strzału (znaczek ataku nad wieżą) */
   private towerShots = new Map<number, number>();
   private towerIcons: THREE.Sprite[] = [];
+  /** Flagi zbiórki koszar gracza (drzewce z chorągwią w jego barwach) */
+  private rallyFlags: THREE.InstancedMesh | null = null;
   /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
   private towerPose = new Map<number, [number, number]>();
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
@@ -1876,6 +1878,38 @@ export class GameRenderer {
     this.crows.instanceMatrix.needsUpdate = true;
   }
 
+  /** Flagi zbiórki: nad polem, na które idą nowi żołnierze z koszar (tylko moje koszary) */
+  private syncRallyFlags(g: GameState, view: TerrainView): void {
+    if (!this.rallyFlags) {
+      const team = TEAM_COLORS[g.players[this.me]?.team ?? 0] ?? 0xa32a22;
+      const geo = mergeGeometries([
+        tint(new THREE.CylinderGeometry(0.018, 0.022, 0.75, 5).translate(0, 0.375, 0), 0x5a3a20),
+        tint(new THREE.BoxGeometry(0.26, 0.17, 0.012).translate(0.13, 0.64, 0), team),
+        tint(new THREE.SphereGeometry(0.03, 6, 4).translate(0, 0.76, 0), 0xe9c766),
+        tint(new THREE.CylinderGeometry(0.12, 0.14, 0.03, 10).translate(0, 0.015, 0), 0x3b2a1a),
+      ])!;
+      this.rallyFlags = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }), 64);
+      this.rallyFlags.frustumCulled = false;
+      this.rallyFlags.castShadow = true;
+      this.scene.add(this.rallyFlags);
+    }
+    const W = g.map.width, H = g.map.height, m = new THREE.Matrix4();
+    let n = 0;
+    const seen = new Set<number>();
+    for (const b of g.buildings) {
+      if (b.owner !== this.me || !b.rally) continue;
+      for (const t of b.rally) {
+        if (t < 0 || seen.has(t) || n >= 64) continue;
+        seen.add(t);
+        const x = (t % W) + 0.5, y = Math.floor(t / W) + 0.5;
+        m.makeRotationY(Math.sin(this.time * 1.7 + t) * 0.25).setPosition(x - W / 2, view.heightAt(x, y), y - H / 2);
+        this.rallyFlags.setMatrixAt(n++, m);
+      }
+    }
+    this.rallyFlags.count = n;
+    this.rallyFlags.instanceMatrix.needsUpdate = true;
+  }
+
   /** Znaczek nad wieżą, której łucznicy strzelają: czerwona tarcza ze skrzyżowanymi strzałami, pulsuje; gaśnie 3 s po ostatnim strzale */
   private syncTowerIcons(g: GameState): void {
     const view = this.view;
@@ -2873,6 +2907,7 @@ export class GameRenderer {
     this.guardsFig.finish(n);
     this.flyArrows();
     this.syncTowerIcons(g);
+    this.syncRallyFlags(g, view);
     this.soldierTorches.count = torches;
     this.soldierTorches.instanceMatrix.needsUpdate = true;
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)

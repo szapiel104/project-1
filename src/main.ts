@@ -165,6 +165,13 @@ const hud = createHud(document.getElementById('ui')!, {
   onDismount: (id) => { pending.push({ type: 'dismount', player: ME, tower: id }); play('rotate'); },
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
+  onRally: (id, unit, clear) => {
+    const kind = unit ? unitIndex(unit) : -1;
+    if (clear) { pending.push({ type: 'rally', player: ME, building: id, kind, tile: -1 }); hud.toast('Flaga zdjęta: nowi staną przed koszarami.'); return; }
+    rallyPick = { building: id, kind };
+    canvas.classList.add('placing');
+    hud.toast(unit ? 'Wskaż na mapie, gdzie mają iść nowi tego rodzaju (Esc anuluje).' : 'Wskaż na mapie punkt zbiórki dla wszystkich nowych (Esc anuluje).');
+  },
   onTrain: (id, n, unit = 'spearman') => { const k = Math.min(n, recruitInfo().find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
 }, thumbs);
 
@@ -437,7 +444,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     }))
     : undefined;
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
-    recruit: def.id === 'barracks' ? recruitInfo() : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
+    recruit: def.id === 'barracks' ? recruitInfo().map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     garrison: def.id === 'watchtower' ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     watch: def.id === 'keep' ? watchInfo(b.owner) : undefined,
     area: def.area || def.id === 'watchtower' ? shownAreas.has(b.id) : undefined,
@@ -575,6 +582,12 @@ renderer.onPaintDown = (tile) => {
 renderer.onUnit = (id) => { if (!picked && !wrecking) selectUnit(id === selectedUnit ? 0 : id); };
 
 renderer.onClick = (tile, touch) => {
+  if (rallyPick) {
+    pending.push({ type: 'rally', player: ME, building: rallyPick.building, kind: rallyPick.kind, tile: tile.y * game.map.width + tile.x });
+    rallyPick = null; canvas.classList.remove('placing'); play('rotate');
+    renderer.orderMarker(tile);
+    return;
+  }
   if (devSpawn && devAllowed()) { devPlace(tile.x, tile.y, devSpawn.kind, devSpawn.foe, devSpawn.count); return; }
   if (wrecking) {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
@@ -1621,6 +1634,8 @@ fpsTag.addEventListener('click', togglePerf);
 window.addEventListener('keydown', (e) => { if (e.key === 'F3') { e.preventDefault(); togglePerf(); } });
 
 // ---- panel dewelopera (F9): stawianie jednostek i wilków, scenki, czas — tylko w grze z botami w trybie dewelopera ----
+/** Czeka na klik na mapie: punkt zbiórki koszar */
+let rallyPick: { building: number; kind: number } | null = null;
 let devSpawn: { kind: DevSpawn; foe: boolean; count: number } | null = null;
 function devAllowed(): boolean { return !net && (SANDBOX || !!game.players[ME]?.dev); }
 const devFoe = (): number => game.players.find((p) => p.team !== game.players[ME]!.team && !p.defeated)?.id ?? -1;
@@ -1683,6 +1698,7 @@ const devPanel = createDevPanel(document.body, {
 });
 window.addEventListener('keydown', (e) => {
   if (e.key === 'F9' && devAllowed()) { e.preventDefault(); devPanel.toggle(); return; }
+  if (e.key === 'Escape' && rallyPick) { e.preventDefault(); e.stopImmediatePropagation(); rallyPick = null; canvas.classList.remove('placing'); return; }
   if (e.key === 'Escape' && devPanel.isPlacing()) { e.preventDefault(); e.stopImmediatePropagation(); devPanel.stop(); }
 }, true);
 // przycisk na dolnej belce (obok Menu), widoczny tylko gdy panel jest dostępny

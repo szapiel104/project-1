@@ -32,14 +32,21 @@ function withBarracks(): { g: GameState; id: number } {
   return { g, id: b.id };
 }
 
+/** Rekruci idą do koszar i wychodzą w zbroi: czekamy, aż wyjdzie `n` żołnierzy */
+const waitSoldiers = (g: ReturnType<typeof withBarracks>['g'], n: number): void => { for (let i = 0; i < 1500 && g.soldiers.filter((s) => s.owner === 0).length < n; i++) step(g, []); };
+
 describe('wojsko', () => {
   it('koszary zamieniają wolnego chłopa w żołnierza za włócznię i złoto', () => {
     const { g, id } = withBarracks();
     const pop = population(g, 0);
     const gold = g.players[0]!.res[resIndex('gold')]!;
     step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
+    // broń i żołd płaci się od razu; chłop idzie do koszar i po chwili wychodzi w zbroi
+    expect(g.units.some((u) => u.enlist)).toBe(true);
+    waitSoldiers(g, 1);
     expect(g.soldiers.length).toBe(1);
-    expect(population(g, 0)).toBe(pop - 1);
+    expect(g.units.some((u) => u.enlist)).toBe(false); // rekrut zniknął w koszarach (ludność mogła w tym czasie urosnąć)
+    void pop;
     expect(g.players[0]!.res[resIndex('spear')]).toBe(4);
     expect(g.players[0]!.res[resIndex('gold')]).toBe(gold - 8);
   });
@@ -55,6 +62,7 @@ describe('wojsko', () => {
     const { g, id } = withBarracks();
     const train: Command[] = [1, 2, 3].map(() => ({ type: 'train', player: 0, building: id, unit: 'spearman' }));
     step(g, train);
+    waitSoldiers(g, 3);
     const keep = playerKeep(g, 0)!;
     const tx = keep.x + 5, ty = keep.y + 15;
     step(g, [{ type: 'move', player: 0, ids: g.soldiers.map((s) => s.id), x: tx, y: ty }]);
@@ -67,6 +75,7 @@ describe('wojsko', () => {
   it('zapis pamięta żołnierzy', () => {
     const { g, id } = withBarracks();
     step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
+    waitSoldiers(g, 1);
     const back = deserialize(serialize(g, '1v1'))!;
     expect(back.soldiers.length).toBe(1);
     expect(stateHash(back)).toBe(stateHash(g));
@@ -77,6 +86,7 @@ describe('walka', () => {
   it('wrogowie stojący blisko walczą, aż jeden padnie', () => {
     const { g, id } = withBarracks();
     step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
+    waitSoldiers(g, 1);
     for (let i = 0; i < 200; i++) step(g, []);
     const mine = g.soldiers[0]!;
     // wróg dostawiony dwa pola obok
@@ -94,6 +104,7 @@ describe('oblężenie', () => {
   it('żołnierz burzy wrogi budynek, a zburzona twierdza wyklucza gracza', () => {
     const { g, id } = withBarracks();
     step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
+    waitSoldiers(g, 1);
     const enemyKeep = playerKeep(g, 1)!;
     enemyKeep.hp = 30;
     const s = g.soldiers[0]!;
@@ -327,5 +338,24 @@ describe('wrodzy chłopi', () => {
     g.soldiers.push(s);
     for (let i = 0; i < 6; i++) step(g, []);
     expect((g.units.find((x) => x.id === coward.id)?.fled ?? 0) > g.tick).toBe(true);
+  });
+});
+
+describe('punkt zbiórki', () => {
+  it('rekrut wychodzi z koszar i idzie na flagę zbiórki ustawioną dla jego rodzaju', () => {
+    const { g, id } = withBarracks();
+    const keep = playerKeep(g, 0)!;
+    const W = g.map.width;
+    let flag = -1;
+    for (let d = 6; d < 14 && flag < 0; d++) for (const [dx, dy] of [[0, d], [d, 0], [0, -d], [-d, 0]] as const) {
+      const t = (keep.y + dy) * W + keep.x + dx;
+      if (!g.occupancy[t] && g.map.tiles[t] === 0) { flag = t; break; }
+    }
+    step(g, [{ type: 'rally', player: 0, building: id, kind: -1, tile: flag }]);
+    step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
+    waitSoldiers(g, 1);
+    for (let i = 0; i < 600; i++) step(g, []);
+    const s = g.soldiers[0]!;
+    expect(Math.abs((s.px >> 8) - (flag % W)) + Math.abs((s.py >> 8) - Math.floor(flag / W))).toBeLessThanOrEqual(2);
   });
 });

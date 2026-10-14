@@ -14,7 +14,7 @@ import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
 import { roadSystem } from './systems/roads';
-import { armySystem, orderAttack, orderMove, orderStance, train , orderDismount, orderGarrison } from './systems/army';
+import { armySystem, orderAttack, orderMove, orderStance, train , orderDismount, orderGarrison, enlistSystem, setRally } from './systems/army';
 import { botSystem } from './systems/bot';
 
 /** Komendy graczy. To jedyna droga, którą gracz (albo bot, albo sieć) wpływa na grę. */
@@ -26,6 +26,8 @@ export type Command =
   | { type: 'setRations'; player: number; level: number }
   | { type: 'setTax'; player: number; level: number }
   | { type: 'train'; player: number; building: number; unit: string }
+  /** Punkt zbiórki koszar: kind = rodzaj jednostki (-1 = wszystkie), tile = pole (-1 = usuń flagę) */
+  | { type: 'rally'; player: number; building: number; kind: number; tile: number }
   /** face 0–7 (kierunek szyku), form 0–3 (linia, blok, luźno, ścisk), width = ilu w szeregu */
   | { type: 'move'; player: number; ids: number[]; x: number; y: number; face?: number; form?: number; width?: number; amove?: boolean }
   /** 0 atak, 1 obrona, 2 stój */
@@ -67,6 +69,9 @@ function apply(g: GameState, c: Command): void {
     case 'train':
       if (Number.isInteger(c.building) && typeof c.unit === 'string') train(g, c.player, c.building, c.unit);
       break;
+    case 'rally':
+      if (Number.isInteger(c.building) && Number.isInteger(c.kind) && Number.isInteger(c.tile)) setRally(g, c.player, c.building, c.kind, c.tile);
+      break;
     case 'move':
       if (Array.isArray(c.ids) && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.y >= 0 && c.x < g.map.width && c.y < g.map.height)
         orderMove(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), c.y * g.map.width + c.x, { face: c.face, form: c.form, width: c.width, amove: c.amove === true });
@@ -105,6 +110,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   rubbleSystem(g);
   roadSystem(g);
   workerSystem(g);
+  enlistSystem(g);
   armySystem(g);
   migrationSystem(g);
   travelSystem(g);

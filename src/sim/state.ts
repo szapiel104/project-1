@@ -55,6 +55,10 @@ export interface PlayerState {
 
 export interface Building {
   id: number;
+  /** Koszary: punkt zbiórki dla każdego rodzaju jednostki (pole albo -1 = przed koszarami) */
+  rally?: number[];
+  /** Koszary: rekruci w środku, którzy wyjdą w zbroi (rodzaj jednostki i tick wyjścia) */
+  enlistQ?: { k: number; at: number }[];
   /** Indeks w BUILDINGS */
   type: number;
   owner: number;
@@ -140,11 +144,15 @@ export const enum Phase {
   ToSleep = 21,
   /** Śpi: w chacie (`home`) albo na słomie pod gołym niebem (`target` = pole + 1) */
   Sleeping = 22,
+  /** Rekrut: wolny chłop idzie do koszar `job`, gdzie dostanie broń (`enlist` = rodzaj jednostki + 1) */
+  ToEnlist = 23,
 }
 
 export interface Unit {
   id: number;
   owner: number;
+  /** Rekrut w drodze do koszar: rodzaj jednostki + 1 (0/brak = zwykły chłop) */
+  enlist?: number;
   /** Pozycja w stałym przecinku (środek pola = pole * 256 + 128) */
   px: number;
   py: number;
@@ -499,9 +507,9 @@ export function stateHash(g: GameState): number {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
-    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0);
+    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.enlist ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }

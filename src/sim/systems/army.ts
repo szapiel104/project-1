@@ -53,19 +53,74 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   const b = g.buildings.find((x) => x.id === barracksId);
   if (!def || def.guard || !p || !b || b.owner !== player || b.type !== BARRACKS || b.door < 0) return false;
   for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
-  const pi = g.units.findIndex((u) => u.owner === player && u.job === 0);
-  if (pi < 0) return false;
+  // wolny chłop (najlepiej ten, co siedzi przy ognisku) idzie do koszar; w środku dostaje broń i wychodzi żołnierzem
+  const free = g.units.filter((u) => u.owner === player && u.job === 0 && !u.enlist && u.carryRes < 0);
+  if (!free.length) return false;
+  const pick = free.find((u) => u.phase === Phase.Idle) ?? free[0]!;
   for (const [res, amount] of Object.entries(def.cost)) p.res[resIndex(res as ResourceId)]! -= amount!;
-  g.units.splice(pi, 1);
-  const w = g.map.width;
-  const x = b.door % w, y = (b.door - x) / w;
-  // nowi żołnierze ustawiają się w szyku przed koszarami
-  const here = g.soldiers.filter((s) => s.owner === player).length;
-  const spots = formation(g, b.door, here % 25 + 1);
-  const s: Soldier = { id: g.nextId++, owner: player, kind, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: def.hp, goal: spots[spots.length - 1] ?? -1, wait: 0, target: 0, cd: 0 };
-  g.soldiers.push(s);
+  const path = findPath(g, tileOf2(g, pick), (t) => t === b.door, 4000, player);
+  if (!path) {
+    // nie dojdzie (zamknięty, odcięty): od razu w koszarach, jak dawniej
+    g.units.splice(g.units.indexOf(pick), 1);
+    (b.enlistQ ??= []).push({ k: kind, at: g.tick + ENLIST_TICKS });
+  } else {
+    pick.enlist = kind + 1; pick.job = b.id; pick.phase = Phase.ToEnlist; pick.path = path; pick.wait = 0; pick.target = 0; pick.timer = 0;
+  }
   p.stats.trained++;
   return true;
+}
+
+/** Tyle ticków rekrut jest w koszarach (dostaje broń i zbroję), zanim wyjdzie */
+const ENLIST_TICKS = 20;
+const tileOf2 = (g: GameState, u: { px: number; py: number }): number => (u.py >> 8) * g.map.width + (u.px >> 8);
+
+/** Punkt zbiórki koszar: dla jednego rodzaju jednostki albo dla wszystkich (kind < 0); tile < 0 = bez flagi */
+export function setRally(g: GameState, player: number, barracksId: number, kind: number, tile: number): void {
+  const b = g.buildings.find((x) => x.id === barracksId);
+  if (!b || b.owner !== player || b.type !== BARRACKS) return;
+  if (tile >= g.map.tiles.length || !Number.isInteger(tile)) return;
+  const r = b.rally ?? UNITS.map(() => -1);
+  if (kind < 0) for (let i = 0; i < r.length; i++) r[i] = tile < 0 ? -1 : tile;
+  else if (kind < r.length) r[kind] = tile < 0 ? -1 : tile;
+  b.rally = r;
+}
+
+/** Rekruci: dochodzą do koszar i znikają w środku; po chwili wychodzą w zbroi i idą na punkt zbiórki (albo stają przed koszarami) */
+export function enlistSystem(g: GameState): void {
+  for (let i = g.units.length - 1; i >= 0; i--) {
+    const u = g.units[i]!;
+    if (!u.enlist) continue;
+    const b = g.buildings.find((x) => x.id === u.job && x.type === BARRACKS);
+    if (!b || b.door < 0) { u.enlist = 0; u.job = 0; u.phase = Phase.Idle; u.path = []; continue; }
+    // ktoś go zawrócił (ucieczka przed wrogiem): po chwili idzie dalej do koszar
+    if (u.phase !== Phase.ToEnlist && !u.path.length) u.phase = Phase.ToEnlist;
+    if (u.phase === Phase.ToEnlist && !u.path.length) {
+      if (tileOf2(g, u) === b.door) {
+        g.units.splice(i, 1);
+        (b.enlistQ ??= []).push({ k: u.enlist - 1, at: g.tick + ENLIST_TICKS });
+      } else {
+        const path = findPath(g, tileOf2(g, u), (t) => t === b.door, 4000, u.owner);
+        if (path && path.length) u.path = path; else { g.units.splice(i, 1); (b.enlistQ ??= []).push({ k: u.enlist - 1, at: g.tick + ENLIST_TICKS }); }
+      }
+    }
+  }
+  for (const b of g.buildings) {
+    if (!b.enlistQ?.length || b.door < 0) continue;
+    const ready = b.enlistQ.filter((q) => q.at <= g.tick);
+    if (!ready.length) continue;
+    b.enlistQ = b.enlistQ.filter((q) => q.at > g.tick);
+    const w = g.map.width, x = b.door % w, y = (b.door - x) / w;
+    for (const q of ready) {
+      const def = UNITS[q.k]!;
+      const rally = b.rally?.[q.k] ?? -1;
+      // na punkt zbiórki (koło innych, którzy już tam stoją) albo w szyku przed koszarami
+      const at = rally >= 0 ? rally : b.door;
+      const near = g.soldiers.filter((s) => s.owner === b.owner && (s.goal >= 0 ? s.goal : tileOf2(g, s)) !== -1 && Math.abs(((s.goal >= 0 ? s.goal : tileOf2(g, s)) % w) - (at % w)) <= 4 && Math.abs(Math.floor((s.goal >= 0 ? s.goal : tileOf2(g, s)) / w) - Math.floor(at / w)) <= 4).length;
+      const spots = formation(g, at, near + 1);
+      const s: Soldier = { id: g.nextId++, owner: b.owner, kind: q.k, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: def.hp, goal: spots[spots.length - 1] ?? -1, wait: 0, target: 0, cd: 0 };
+      g.soldiers.push(s);
+    }
+  }
 }
 
 /** Rozkaz ataku: zaznaczeni idą na wskazanego wroga (żołnierza albo budynek). */

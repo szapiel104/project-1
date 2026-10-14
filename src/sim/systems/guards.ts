@@ -150,6 +150,13 @@ export function guardSystem(g: GameState): void {
       if (onPost) {
         const t = stand[i % stand.length]!;
         s.stance = 1; s.hold = t; s.amove = false;
+        // na posterunku stoi plecami do zamku, twarzą do osady (kierunek od środka twierdzy)
+        const keep = playerKeep(g, s.owner);
+        if (keep) {
+          const [cx, cy] = keepCenter(keep), w = g.map.width;
+          const a = Math.atan2((t % w) + 0.5 - cx, Math.floor(t / w) + 0.5 - cy);
+          s.face = ((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8;
+        }
         if (here !== t) s.goal = t;
         return;
       }

@@ -36,6 +36,8 @@ export interface HudEvents {
   /** Klik w herb na dolnym pasku: konto */
   onAccount(): void;
   onTrain(building: number, count: number, unit?: string): void;
+  /** Punkt zbiórki koszar: unit = rodzaj (brak = wszyscy); clear = zdejmij flagę, inaczej następny klik na mapie ją stawia */
+  onRally(building: number, unit: string | null, clear: boolean): void;
   onGate(building: number, open: boolean): void;
   onDismount(building: number): void;
   onWalk(): void;
@@ -80,7 +82,7 @@ export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDe
   watch?: { have: number; want: number; training: number; note?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
   site?: { pct: number; loads: number; delivered: number; carrying: number; fetching: number; builders: number; state: string } }
-export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number }
+export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -418,7 +420,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const recruit = el('div', 'recruit');
   recruit.hidden = true;
   let lastRecruit: RecruitUnit[] = [];
-  const unitCards = new Map<string, { card: HTMLElement; stats: HTMLElement; needs: HTMLElement; b1: HTMLButtonElement; b5: HTMLButtonElement; bAll: HTMLButtonElement }>();
+  const unitCards = new Map<string, { card: HTMLElement; stats: HTMLElement; needs: HTMLElement; b1: HTMLButtonElement; b5: HTMLButtonElement; bAll: HTMLButtonElement; flag: HTMLButtonElement }>();
+  // wspólny punkt zbiórki dla wszystkich nowych żołnierzy (pod kartami)
+  const rallyRow = el('div', 'rally-row');
+  const rallyAll = el('button', 'btn-main', '⚑ Punkt zbiórki dla wszystkich');
+  rallyAll.type = 'button';
+  const rallyOff = el('button', '', 'Zdejmij flagi');
+  rallyOff.type = 'button';
+  rallyAll.addEventListener('click', () => events.onRally(infoId, null, false));
+  rallyOff.addEventListener('click', () => events.onRally(infoId, null, true));
+  rallyRow.append(rallyAll, rallyOff, el('p', 'hint', 'Rekrut idzie z obozowiska do koszar, wychodzi w zbroi i staje na fladze (bez flagi — przed koszarami).'));
   const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT };
   const drawRecruit = (): void => {
     for (const r of lastRecruit) {
@@ -436,9 +447,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const btns = el('div', 'unit-btns');
         const mk = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n, r.id)); btns.append(b); return b; };
         const b1 = mk(1, '+1'), b5 = mk(5, '+5'), bAll = mk(999, '+ wszyscy');
-        card.append(pic, name, stats, needs, btns);
-        recruit.append(card);
-        c = { card, stats, needs, b1, b5, bAll };
+        // flaga zbiórki tylko dla tego rodzaju: klik i wskazanie miejsca na mapie
+        const flag = el('button', 'unit-flag', '⚑ Flaga zbiórki');
+        flag.type = 'button';
+        flag.title = `Gdzie mają iść nowi (${r.name.toLowerCase()}): kliknij, potem wskaż miejsce na mapie. Prawy klik na przycisku zdejmuje flagę.`;
+        flag.addEventListener('click', () => events.onRally(infoId, r.id, false));
+        flag.addEventListener('contextmenu', (e) => { e.preventDefault(); events.onRally(infoId, r.id, true); });
+        card.append(pic, name, stats, needs, btns, flag);
+        if (!rallyRow.isConnected) recruit.append(rallyRow);
+        recruit.insertBefore(card, rallyRow);
+        c = { card, stats, needs, b1, b5, bAll, flag };
         unitCards.set(r.id, c);
       }
       setText(c.stats, `${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · zasięg ${r.range}` : ''}`);
@@ -447,6 +465,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;
       setText(c.bAll, `+ wszyscy (${r.max})`);
       c.card.classList.toggle('cant', r.max < 1);
+      c.flag.setAttribute('aria-pressed', String(!!r.rally));
+      setText(c.flag, r.rally ? '⚑ Flaga ustawiona — zmień' : '⚑ Flaga zbiórki');
     }
   };
 
