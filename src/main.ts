@@ -1694,6 +1694,22 @@ const devPanel = createDevPanel(document.body, {
     refresh();
     devPanel.placed(`Jest ${Math.floor(clockAt(game.tick).hour)}:${String(Math.floor((clockAt(game.tick).hour % 1) * 60)).padStart(2, '0')}.`);
   },
+  onFire: () => {
+    // płonie mój gotowy budynek najbliżej studni albo cechu inżynierów (żeby było widać gaszenie)
+    const wellT = BUILDINGS.findIndex((d) => d.id === 'well'), engT = BUILDINGS.findIndex((d) => d.id === 'engineers');
+    const water = game.buildings.filter((b) => b.owner === ME && (b.type === wellT || b.type === engT) && !b.build);
+    const keep = game.buildings.find((b) => b.owner === ME && b.type === 0);
+    const ref = water.length ? water : keep ? [keep] : [];
+    let best: (typeof game.buildings)[number] | undefined, bd = Infinity;
+    for (const b of game.buildings) {
+      if (b.owner !== ME || b.type === 0 || b.type === wellT || b.build || b.fire) continue;
+      for (const r of ref) { const d = Math.hypot(b.x - r.x, b.y - r.y); if (d < bd) { bd = d; best = b; } }
+    }
+    if (!best) { devPanel.placed('Nie masz budynku, który mógłby się zapalić.'); return; }
+    best.hp = Math.min(best.hp, Math.floor(maxHp(best.type) * 0.5)); best.hpWas = best.hp; best.fire = 600;
+    renderer.lookAt(best.x + BUILDINGS[best.type]!.w / 2, best.y + BUILDINGS[best.type]!.h / 2, 18);
+    devPanel.placed(water.length ? 'Pali się budynek przy studni — chłopi powinni zaraz przybiec z wiadrami.' : 'Pali się budynek, ale nie masz studni ani cechu inżynierów — postaw studnię obok.');
+  },
   onHeal: () => { for (const s of game.soldiers) if (s.owner === ME) s.hp = UNITS[s.kind]!.hp; },
   onGive: () => { const p = game.players[ME]!; for (let i = 0; i < p.res.length; i++) p.res[i]! += 1000; refresh(); },
   onCamera: (which) => {

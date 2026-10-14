@@ -9,6 +9,7 @@ export interface DevEvents {
   onPlace(spawn: { kind: DevSpawn; foe: boolean; count: number } | null): void;
   onFoeAtTower(): void;
   onSkip(to: 'night' | 'day'): void;
+  onFire(): void;
   onHeal(): void;
   onGive(): void;
   onCamera(which: 'mine' | 'foe'): void;
@@ -85,6 +86,7 @@ export function createDevPanel(root: HTMLElement, ev: DevEvents): DevPanel {
   const acts = el('div', 'dev-acts');
   acts.append(
     act('Wróg pod moją wieżą', () => { ev.onFoeAtTower(); status.textContent = 'Trzech wrogich włóczników 6 pól od Twojej wieży z łucznikami.'; }, 'Sprawdzenie, czy wieża strzela'),
+    act('Wywołaj pożar', () => ev.onFire(), 'Podpala Twój budynek najbliżej studni'),
     act('Przewiń do nocy', () => ev.onSkip('night'), 'Wilki wychodzą o zmierzchu'),
     act('Przewiń do rana', () => ev.onSkip('day')),
     act('Kamera: moja twierdza', () => ev.onCamera('mine')),
