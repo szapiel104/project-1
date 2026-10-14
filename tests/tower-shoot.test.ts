@@ -1,0 +1,30 @@
+import { describe, expect, it } from 'vitest';
+import { buildingIndex } from '../src/data/buildings';
+import { unitIndex } from '../src/data/units';
+import { FP, createGame, type Soldier } from '../src/sim/state';
+import { step } from '../src/sim/step';
+
+describe('wieża strażnicza', () => {
+  it('łucznik na wieży strzela do wroga, który podejdzie na zasięg', () => {
+    const g = createGame(3, '1v1', 2, true);
+    for (const p of g.players) p.bot = false;
+    const tower = g.buildings.find((b) => b.owner === 0 && b.type === buildingIndex('watchtower'))!;
+    expect(tower).toBeTruthy();
+    const archers = g.soldiers.filter((s) => s.owner === 0 && s.post === tower.id);
+    // dojście na wieżę
+    for (let i = 0; i < 300 && !archers.some((s) => s.up); i++) step(g, []);
+    expect(archers.some((s) => s.up)).toBe(true);
+    // wróg staje 7 pól od wieży, w polu, i się nie rusza
+    const W = g.map.width;
+    let spot = -1;
+    for (let d = 7; d <= 8 && spot < 0; d++) for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]] as const) {
+      const t = (tower.y + 1 + dy) * W + tower.x + 1 + dx;
+      if (!g.occupancy[t] && g.map.tiles[t] === 0) { spot = t; break; }
+    }
+    expect(spot).toBeGreaterThan(0);
+    const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('spearman'), px: (spot % W) * FP + FP / 2, py: Math.floor(spot / W) * FP + FP / 2, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0, stance: 2, hold: spot };
+    g.soldiers.push(foe);
+    for (let i = 0; i < 200; i++) step(g, []);
+    expect(foe.hp).toBeLessThan(60);
+  });
+});

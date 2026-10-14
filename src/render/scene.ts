@@ -185,6 +185,10 @@ export class GameRenderer {
   private guardBodies!: Figures;
   private archers!: Figures;
   private arrowMesh!: THREE.InstancedMesh;
+  private arrowTrail!: THREE.InstancedMesh;
+  /** Wieże, których łucznicy właśnie strzelają: id → czas ostatniego strzału (znaczek ataku nad wieżą) */
+  private towerShots = new Map<number, number>();
+  private towerIcons: THREE.Sprite[] = [];
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
   private lastCd = new Map<number, number>();
   /** Trafienia: kiedy żołnierz ostatnio oberwał (odrzut do tyłu) i ile miał zdrowia */
@@ -402,10 +406,15 @@ export class GameRenderer {
     this.archers = new Figures(MAX_UNITS, this.scene, 'archer');
     this.guardsFig = new Figures(MAX_UNITS, this.scene, 'guard');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
-      tint(new THREE.ConeGeometry(0.02, 0.07, 4).rotateX(Math.PI / 2).translate(0, 0, 0.27), 0x6a6e76),
-      tint(new THREE.BoxGeometry(0.04, 0.002, 0.08).translate(0, 0, -0.22), 0xe8e0c8),
-    ])!, new THREE.MeshStandardMaterial({ vertexColors: true }), 256);
+      tint(new THREE.CylinderGeometry(0.014, 0.014, 0.62, 4).rotateX(Math.PI / 2), 0x9a7a4e),
+      tint(new THREE.ConeGeometry(0.032, 0.1, 4).rotateX(Math.PI / 2).translate(0, 0, 0.35), 0xb8bec8),
+      tint(new THREE.BoxGeometry(0.07, 0.004, 0.12).translate(0, 0, -0.27), 0xfff2d8),
+      tint(new THREE.BoxGeometry(0.004, 0.07, 0.12).translate(0, 0, -0.27), 0xfff2d8),
+    ])!, new THREE.MeshBasicMaterial({ vertexColors: true }), 256);
+    // smuga za strzałą: jasny, gasnący pas, żeby lot było widać z daleka i nocą
+    this.arrowTrail = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.035, 1).rotateX(-Math.PI / 2).translate(0, 0, -0.5),
+      new THREE.MeshBasicMaterial({ color: 0xffe9b0, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }), 256);
+    this.arrowTrail.count = 0; this.arrowTrail.frustumCulled = false; this.scene.add(this.arrowTrail);
     this.arrowMesh.count = 0; this.arrowMesh.frustumCulled = false; this.scene.add(this.arrowMesh);
     // znaczniki zaznaczenia rysują się nad wszystkim (trawa, krzaki), z ciemną obwódką, żeby było je widać na każdym tle
     const mark = (inner: number, outer: number, color: number, opacity: number, order: number): THREE.InstancedMesh => {
@@ -1670,6 +1679,40 @@ export class GameRenderer {
     this.crows.instanceMatrix.needsUpdate = true;
   }
 
+  /** Znaczek nad wieżą, której łucznicy strzelają: czerwona tarcza ze skrzyżowanymi strzałami, pulsuje; gaśnie 3 s po ostatnim strzale */
+  private syncTowerIcons(g: GameState): void {
+    const view = this.view;
+    let n = 0;
+    if (view) for (const [id, at] of this.towerShots) {
+      const age = this.time - at;
+      const b = g.buildings.find((x) => x.id === id);
+      if (!b || age > 3) { this.towerShots.delete(id); continue; }
+      let icon = this.towerIcons[n];
+      if (!icon) {
+        const c = document.createElement('canvas'); c.width = c.height = 64;
+        const x = c.getContext('2d')!;
+        x.fillStyle = '#7a120c'; x.strokeStyle = '#e9c766'; x.lineWidth = 4;
+        x.beginPath(); x.moveTo(32, 4); x.lineTo(58, 12); x.lineTo(56, 34); x.quadraticCurveTo(52, 52, 32, 60); x.quadraticCurveTo(12, 52, 8, 34); x.lineTo(6, 12); x.closePath(); x.fill(); x.stroke();
+        x.strokeStyle = '#fff1c8'; x.lineWidth = 3.5; x.lineCap = 'round';
+        for (const [a, b2, c2, d] of [[18, 46, 46, 18], [46, 46, 18, 18]] as const) { x.beginPath(); x.moveTo(a, b2); x.lineTo(c2, d); x.stroke(); }
+        x.fillStyle = '#fff1c8';
+        for (const [px, py, dx, dy] of [[46, 18, 1, -1], [18, 18, -1, -1]] as const) { x.beginPath(); x.moveTo(px + dx * 5, py + dy * 5); x.lineTo(px - dx * 6, py + dy * 1); x.lineTo(px + dx * 1, py - dy * 6); x.closePath(); x.fill(); }
+        const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+        icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, fog: false }));
+        icon.renderOrder = 11; this.scene.add(icon); this.towerIcons[n] = icon;
+      }
+      const fp = footprint(BUILDINGS[b.type]!, b.rot);
+      const cx = b.x + fp.w / 2, cy = b.y + fp.h / 2;
+      const pulse = 1 + Math.sin(this.time * 8) * 0.08;
+      icon.position.set(cx - g.map.width / 2, view.heightAt(cx, cy) + 3.4 + Math.sin(this.time * 3) * 0.05, cy - g.map.height / 2);
+      icon.scale.setScalar(0.62 * pulse);
+      (icon.material as THREE.SpriteMaterial).opacity = Math.min(1, (3 - age) * 1.5);
+      icon.visible = true;
+      n++;
+    }
+    for (let i = n; i < this.towerIcons.length; i++) this.towerIcons[i]!.visible = false;
+  }
+
   /** Strzały w locie: łuk balistyczny od łucznika do celu, ok. 0,45 s */
   private flyArrows(): void {
     const dt = this.calm ? 1 : 1 / 60;
@@ -1683,10 +1726,15 @@ export class GameRenderer {
       m.lookAt(nx, p, new THREE.Vector3(0, 1, 0));
       q.setFromRotationMatrix(m);
       m.compose(p, q, one);
-      this.arrowMesh.setMatrixAt(n++, m);
+      this.arrowMesh.setMatrixAt(n, m);
+      // smuga: rozciągnięta do tyłu, dłuższa przy szybkim, dalekim strzale
+      m.compose(p, q, new THREE.Vector3(1, 1, Math.min(1.6, 0.4 + a.from.distanceTo(a.to) * 0.12)));
+      this.arrowTrail.setMatrixAt(n++, m);
     }
     this.arrowMesh.count = n;
     this.arrowMesh.instanceMatrix.needsUpdate = true;
+    this.arrowTrail.count = n;
+    this.arrowTrail.instanceMatrix.needsUpdate = true;
   }
 
   private eyes: THREE.InstancedMesh | null = null;
@@ -2462,6 +2510,7 @@ export class GameRenderer {
         if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : 0.4; }
         else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; }
         else { const fp = footprint(BUILDINGS[wall!.type]!, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; }
+        if (s.up && s.post) this.towerShots.set(s.post, this.time);
         this.arrows.push({ from: new THREE.Vector3(fx - width / 2, y + 0.5, fy - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0 });
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
@@ -2519,6 +2568,7 @@ export class GameRenderer {
     this.archers.finish(n);
     this.guardsFig.finish(n);
     this.flyArrows();
+    this.syncTowerIcons(g);
     this.soldierTorches.count = torches;
     this.soldierTorches.instanceMatrix.needsUpdate = true;
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
