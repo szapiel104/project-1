@@ -1,3 +1,4 @@
+import { buildingById } from '../state';
 import { high, isBrave, peasantWeapon } from './army';
 import { clockAt, hourStarts } from '../clock';
 import { WOLF, findPath, walkable } from '../path';
@@ -71,7 +72,7 @@ export function wolfSystem(g: GameState): void {
     if (w.leaving) {
       const x = w.px >> 8, y = w.py >> 8;
       if (x <= 0 || y <= 0 || x >= width - 1 || y >= height - 1) { w.hp = 0; gone.add(w.id); continue; } // zniknął w lesie
-      if (!w.path.length && (g.tick + w.id) % 20 === 0) { const out = edgeOut(g, w); w.path = findPath(g, here, (t) => t === out, 3000, WOLF) ?? []; }
+      if (!w.path.length && (g.tick + w.id) % 20 === 0) { const out = edgeOut(g, w); w.path = findPath(g, here, (t) => t === out, 3000, WOLF, out) ?? []; }
     } else {
       // ofiara: najbliższy człowiek albo żołnierz w zasięgu wzroku
       let best = SIGHT * SIGHT, prey = 0;
@@ -92,7 +93,7 @@ export function wolfSystem(g: GameState): void {
             // trzecie ugryzienie zabija; ciało zostaje, zabierze je grabarz albo wolny chłop
             const u = g.units[ui]!;
             g.corpses.push({ id: u.id, owner: u.owner, kind: -1, px: u.px, py: u.py, at: g.tick, taken: false });
-            if (u.job) { const b = g.buildings.find((x) => x.id === u.job); if (b) b.worker = 0; }
+            if (u.job) { const b = buildingById(g, u.job); if (b) b.worker = 0; }
             for (const b of g.buildings) if (b.worker === u.id) b.worker = 0;
             g.units.splice(ui, 1);
             const p = g.players[u.owner];
@@ -104,7 +105,7 @@ export function wolfSystem(g: GameState): void {
       }
       // obgryza palisadę, przy której stoi
       if (w.gnaw) {
-        const wall = g.buildings.find((x) => x.id === w.gnaw);
+        const wall = buildingById(g, w.gnaw);
         if (!wall) w.gnaw = 0;
         else if (Math.max(Math.abs((w.px >> 8) - wall.x), Math.abs((w.py >> 8) - wall.y)) <= 1 && !w.path.length) {
           if (w.cd === 0) { w.cd = BITE; wall.hp -= 6; if (wall.hp <= 0) { ruin(g, wall); w.gnaw = 0; } }

@@ -1,3 +1,4 @@
+import { buildingById } from './state';
 import { BUILDINGS } from '../data/buildings';
 import { buildingIndex } from '../data/buildings';
 import { RULES } from '../data/rules';
@@ -90,7 +91,7 @@ function apply(g: GameState, c: Command): void {
       if (Array.isArray(c.ids) && Number.isInteger(c.tower)) orderGarrison(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.tower);
       break;
     case 'gate': {
-      const b = g.buildings.find((x) => x.id === c.id);
+      const b = buildingById(g, c.id);
       if (b && b.owner === c.player && BUILDINGS[b.type]!.gate) b.gateOpen = !!c.open;
       break;
     }

@@ -535,3 +535,24 @@ export function stateHash(g: GameState): number {
   for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); }
   return h >>> 0;
 }
+
+/**
+ * Szybkie wyszukiwanie po id (zamiast przeglądać całą listę za każdym razem).
+ * Indeks buduje się leniwie i jest ważny, dopóki lista jest ta sama (ta sama tablica i długość) w tym samym ticku.
+ */
+interface IdIndex<T> { list: readonly T[]; len: number; last: T | undefined; tick: number; map: Map<number, T> }
+const bIdx = new WeakMap<GameState, IdIndex<Building>>();
+const uIdx = new WeakMap<GameState, IdIndex<Unit>>();
+function lookup<T extends { id: number }>(cache: WeakMap<GameState, IdIndex<T>>, g: GameState, list: readonly T[], id: number | undefined): T | undefined {
+  let ix = cache.get(g);
+  if (!ix || ix.list !== list || ix.len !== list.length || ix.last !== list[list.length - 1] || ix.tick !== g.tick) {
+    const map = new Map<number, T>();
+    for (const x of list) map.set(x.id, x);
+    ix = { list, len: list.length, last: list[list.length - 1], tick: g.tick, map };
+    cache.set(g, ix);
+  }
+  // (splice zmienia długość, splice + push — ostatni element, więc oba unieważniają indeks)
+  return id === undefined ? undefined : ix.map.get(id);
+}
+export const buildingById = (g: GameState, id: number | undefined): Building | undefined => lookup(bIdx, g, g.buildings, id);
+export const unitById = (g: GameState, id: number | undefined): Unit | undefined => lookup(uIdx, g, g.units, id);

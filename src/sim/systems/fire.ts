@@ -1,3 +1,4 @@
+import { buildingById } from '../state';
 import { BUILDINGS, buildingIndex, footprint } from '../../data/buildings';
 import { findPath, walkable } from '../path';
 import { FP, Phase, type Building, type GameState, type Unit } from '../state';
@@ -89,7 +90,7 @@ export function fireSystem(g: GameState): void {
       if (busy >= CREW) continue;
       const [fx, fy] = center(b);
       const cands = g.units.filter((u) => u.owner === b.owner && !u.bucket && !u.enlist && u.carryRes < 0 && u.phase !== Phase.Sleeping && u.phase !== Phase.ToSleep
-        && (u.job === 0 ? u.phase === Phase.Idle || u.phase === Phase.Evening || u.phase === Phase.ToEvening : g.buildings.find((x) => x.id === u.job)?.type === ENGINEERS)
+        && (u.job === 0 ? u.phase === Phase.Idle || u.phase === Phase.Evening || u.phase === Phase.ToEvening : buildingById(g, u.job)?.type === ENGINEERS)
         && Math.hypot(u.px / FP - fx, u.py / FP - fy) < 30);
       cands.sort((a, c) => Math.hypot(a.px / FP - fx, a.py / FP - fy) - Math.hypot(c.px / FP - fx, c.py / FP - fy));
       for (const u of cands.slice(0, CREW - busy)) { u.bucket = 1; u.fireAt = b.id; u.target = well.id; u.path = []; u.timer = 0; u.wait = 0; }
@@ -98,19 +99,19 @@ export function fireSystem(g: GameState): void {
   // biegną do studni, czerpią, niosą, wylewają, wracają po następne wiadro, aż ogień zgaśnie
   for (const u of g.units) {
     if (!u.bucket) continue;
-    const fire = g.buildings.find((x) => x.id === u.fireAt);
+    const fire = buildingById(g, u.fireAt);
     if (!fire || !fire.fire) { release(u); continue; }
     if (u.wait > 0) continue;
     if (u.path.length) continue; // krok robi system ludzi
-    const goal = u.bucket === 1 ? g.buildings.find((x) => x.id === u.target) : fire;
+    const goal = u.bucket === 1 ? buildingById(g, u.target) : fire;
     if (!goal) { release(u); continue; }
     // każdy z ekipy ma własne miejsce: pola przy studni / przy ogniu od strony drugiego końca, po kolei wg id
-    const other = u.bucket === 1 ? fire : g.buildings.find((x) => x.id === u.target) ?? fire;
+    const other = u.bucket === 1 ? fire : buildingById(g, u.target) ?? fire;
     const slot = slotFor(g, u, goal, other);
     const here = tileOf(g, u);
     const at = beside(g, goal);
     if (slot >= 0 ? here !== slot : !at(here)) {
-      const path = (slot >= 0 ? findPath(g, here, (t) => t === slot, 3000, u.owner) : undefined) ?? findPath(g, here, at, 3000, u.owner);
+      const path = (slot >= 0 ? findPath(g, here, (t) => t === slot, 3000, u.owner, slot) : undefined) ?? findPath(g, here, at, 3000, u.owner);
       if (!path || !path.length) { if (at(here)) { u.path = []; } else { release(u); continue; } }
       else { u.path = path; continue; }
     }

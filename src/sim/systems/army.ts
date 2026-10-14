@@ -1,3 +1,4 @@
+import { buildingById, unitById } from '../state';
 import { WALL_TOP } from '../../data/keep';
 import { buildingIndex } from '../../data/buildings';
 import { type ResourceId, resIndex } from '../../data/resources';
@@ -50,7 +51,7 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   const kind = unitIndex(unit);
   const def = UNITS[kind];
   const p = g.players[player];
-  const b = g.buildings.find((x) => x.id === barracksId);
+  const b = buildingById(g, barracksId);
   if (!def || def.guard || !p || !b || b.owner !== player || b.type !== BARRACKS || b.door < 0) return false;
   for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
   // wolny chłop (najlepiej ten, co siedzi przy ognisku) idzie do koszar; w środku dostaje broń i wychodzi żołnierzem
@@ -58,7 +59,7 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   if (!free.length) return false;
   const pick = free.find((u) => u.phase === Phase.Idle) ?? free[0]!;
   for (const [res, amount] of Object.entries(def.cost)) p.res[resIndex(res as ResourceId)]! -= amount!;
-  const path = findPath(g, tileOf2(g, pick), (t) => t === b.door, 4000, player);
+  const path = findPath(g, tileOf2(g, pick), (t) => t === b.door, 4000, player, b.door);
   if (!path) {
     // nie dojdzie (zamknięty, odcięty): od razu w koszarach, jak dawniej
     g.units.splice(g.units.indexOf(pick), 1);
@@ -76,7 +77,7 @@ const tileOf2 = (g: GameState, u: { px: number; py: number }): number => (u.py >
 
 /** Punkt zbiórki koszar: dla jednego rodzaju jednostki albo dla wszystkich (kind < 0); tile < 0 = bez flagi */
 export function setRally(g: GameState, player: number, barracksId: number, kind: number, tile: number): void {
-  const b = g.buildings.find((x) => x.id === barracksId);
+  const b = buildingById(g, barracksId);
   if (!b || b.owner !== player || b.type !== BARRACKS) return;
   if (tile >= g.map.tiles.length || !Number.isInteger(tile)) return;
   const r = b.rally ?? UNITS.map(() => -1);
@@ -99,7 +100,7 @@ export function enlistSystem(g: GameState): void {
         g.units.splice(i, 1);
         (b.enlistQ ??= []).push({ k: u.enlist - 1, at: g.tick + ENLIST_TICKS });
       } else {
-        const path = findPath(g, tileOf2(g, u), (t) => t === b.door, 4000, u.owner);
+        const path = findPath(g, tileOf2(g, u), (t) => t === b.door, 4000, u.owner, b.door);
         if (path && path.length) u.path = path; else { g.units.splice(i, 1); (b.enlistQ ??= []).push({ k: u.enlist - 1, at: g.tick + ENLIST_TICKS }); }
       }
     }
@@ -126,7 +127,7 @@ export function enlistSystem(g: GameState): void {
 /** Rozkaz ataku: zaznaczeni idą na wskazanego wroga (żołnierza albo budynek). */
 export function orderAttack(g: GameState, player: number, ids: readonly number[], target: number): void {
   // wrogi chłop: żołnierze gonią go, aż padnie albo schowa się na dobre
-  const peasant = g.units.find((u) => u.id === target);
+  const peasant = unitById(g, target);
   if (peasant) {
     if (team(g, peasant.owner) === team(g, player)) return;
     for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.prey = peasant.id; s.target = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.amove = false; s.slot = undefined; s.wounded = 0; }
@@ -139,7 +140,7 @@ export function orderAttack(g: GameState, player: number, ids: readonly number[]
     return;
   }
   const foeSoldier = g.soldiers.find((s) => s.id === target);
-  const foeBuilding = foeSoldier ? undefined : g.buildings.find((b) => b.id === target);
+  const foeBuilding = foeSoldier ? undefined : buildingById(g, target);
   const owner = foeSoldier?.owner ?? foeBuilding?.owner;
   if (owner === undefined || team(g, owner) === team(g, player)) return;
   for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.target = target; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.slot = undefined; s.wounded = 0; }
@@ -279,7 +280,7 @@ function planMarch(g: GameState, player: number, members: Soldier[], target: num
     if (walkable(g, ay * W + ax, player)) { start = ay * W + ax; break; }
   }
   if (start < 0) return undefined;
-  const path = findPath(g, start, (t) => t === target, 4000, player);
+  const path = findPath(g, start, (t) => t === target, 4000, player, target);
   if (!path || !path.length) return undefined;
   const sx = start % W, sy = (start - sx) / W;
   // kręta droga (mury, brama, budynki w osadzie): zwarty szyk by się zakleszczał i czekał na maruderów —
@@ -425,7 +426,7 @@ export function orderStance(g: GameState, player: number, ids: readonly number[]
 /** Schodzi z wieży na wolne pole obok niej */
 function leavePost(g: GameState, s: Soldier): void {
   if (s.up) {
-    const tower = g.buildings.find((b) => b.id === s.post);
+    const tower = buildingById(g, s.post);
     const spot = tower ? besideTower(g, tower) : -1;
     if (spot >= 0) { s.px = (spot % g.map.width) * FP + FP / 2; s.py = Math.floor(spot / g.map.width) * FP + FP / 2; }
   }
@@ -450,7 +451,7 @@ export function orderDismount(g: GameState, player: number, towerId: number): vo
 
 /** Łucznicy wchodzą na wieżę strażniczą (najwyżej czterech); inni żołnierze stają przy niej */
 export function orderGarrison(g: GameState, player: number, ids: readonly number[], towerId: number): void {
-  const tower = g.buildings.find((b) => b.id === towerId);
+  const tower = buildingById(g, towerId);
   if (!tower || tower.owner !== player || BUILDINGS[tower.type]!.id !== 'watchtower' || tower.build) return;
   let room = 4 - g.soldiers.filter((s) => s.post === towerId).length;
   const spot = besideTower(g, tower);
@@ -549,6 +550,16 @@ const gap = (a: Soldier, b: Soldier): number => Math.max(Math.abs(a.px - b.px), 
  * Ruch i walka. Żołnierz z rozkazem marszu idzie, nie oglądając się na wroga.
  * Stojący wypatruje najbliższego wroga w zasięgu wzroku, podchodzi i bije co kilka ticków. Martwi znikają.
  */
+/** Nieosiągalne cele marszu (gracz, cel, okolica startu) → do kiedy nie szukać drogi; osobno dla każdej gry */
+const DEAD_TTL = 40;
+const deadMaps = new WeakMap<GameState, Map<string, number>>();
+function deadEnds(g: GameState): Map<string, number> {
+  let m = deadMaps.get(g);
+  if (!m) { m = new Map(); deadMaps.set(g, m); }
+  if (g.tick % 200 === 0) for (const [k, t] of m) if (t <= g.tick) m.delete(k);
+  return m;
+}
+
 export function armySystem(g: GameState): void {
   const byId = new Map<number, Soldier>();
   for (const s of g.soldiers) byId.set(s.id, s);
@@ -582,7 +593,7 @@ export function armySystem(g: GameState): void {
     if (s.wounded === 2 && s.hp * 100 >= def.hp * HEALED) { s.wounded = 0; if ((s.hold ?? -1) >= 0) { s.goal = s.hold!; s.path = []; } }
     // wieża: łucznik przy niej wchodzi na górę; gdy wieżę zniszczą, spada na ziemię
     if (s.post) {
-      const tower = g.buildings.find((b) => b.id === s.post);
+      const tower = buildingById(g, s.post);
       if (!tower || tower.ruined) { s.up = false; s.post = 0; }
       else if (!s.up && s.goal < 0 && !s.path.length && rectGap(g, tileOf(g, s), tower) <= 1) {
         const fp = footprint(BUILDINGS[tower.type]!, tower.rot);
@@ -660,7 +671,7 @@ export function armySystem(g: GameState): void {
             // bierze inny cel albo rozbija mur (dawniej stał pod murem i patrzył na strażnika w środku bez końca)
             budget--;
             const ft = tileOf(g, foe), fx = ft % W, fy = (ft - fx) / W;
-            const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1, 1500, s.owner);
+            const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1, 1500, s.owner, ft, 1);
             if (p && p.length) s.path = p.slice(0, 8);
             else { s.skip = foe.id; s.skipUntil = g.tick + 150; s.target = 0; }
           }
@@ -672,7 +683,7 @@ export function armySystem(g: GameState): void {
       {
         let best = (def.sight + (high(g, s) ? 3 : 0)) ** 2 + 0.1, prey: Unit | undefined;
         // chłop wskazany rozkazem: ten jest pierwszy, choćby był daleko (dopóki żyje)
-        const ordered = s.prey ? g.units.find((u) => u.id === s.prey) : undefined;
+        const ordered = s.prey ? unitById(g, s.prey) : undefined;
         if (s.prey && !ordered) s.prey = 0;
         if (ordered) { prey = ordered; best = ((ordered.px - s.px) / FP) ** 2 + ((ordered.py - s.py) / FP) ** 2; }
         else for (const u of g.units) {
@@ -754,7 +765,12 @@ export function armySystem(g: GameState): void {
     const goal = s.goal;
     if (budget <= 0) continue; // ruszy w następnym ticku
     budget--;
-    const path = findPath(g, here, (t) => t === goal, 2400, s.owner);
+    // ten sam nieosiągalny cel z tej samej okolicy (np. cały oddział pod zamkniętym zamkiem): nie przeszukujemy mapy
+    // od nowa dla każdego żołnierza — pamiętamy porażkę przez chwilę (to samo u każdego gracza, bo zależy tylko od stanu)
+    const deadKey = `${s.owner}:${goal}:${(here % W) >> 3}:${Math.floor(here / W) >> 3}`;
+    const deadUntil = deadEnds(g).get(deadKey);
+    const path = deadUntil !== undefined && deadUntil > g.tick ? null : findPath(g, here, (t) => t === goal, 2400, s.owner, goal);
+    if (!path && !(deadUntil !== undefined && deadUntil > g.tick)) deadEnds(g).set(deadKey, g.tick + DEAD_TTL);
     if (path && path.length) s.path = path;
     else if (!path) {
       // droga zamknięta (palisada, brama): bierze na cel najbliższe wrogie umocnienie i je rozbija
@@ -801,7 +817,7 @@ function graveSystem(g: GameState): void {
   }
   for (const b of g.buildings) {
     if (b.type !== CEMETERY || !b.worker) continue;
-    const u = g.units.find((x) => x.id === b.worker);
+    const u = unitById(g, b.worker);
     if (!u || u.phase !== Phase.Idle || u.path.length) continue;
     const a = workArea(b);
     let best: Corpse | undefined, bd = Infinity;
@@ -830,7 +846,7 @@ function rectGap(g: GameState, t: number, b: Building): number {
 function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): boolean {
   if (s.wait > 0) return false; // odpoczywa po nieudanym podejściu
   const here = tileOf(g, s);
-  let b = s.target ? g.buildings.find((x) => x.id === s.target) : undefined;
+  let b = s.target ? buildingById(g, s.target) : undefined;
   if (!b || b.ruined || team(g, b.owner) === team(g, s.owner)) {
     b = undefined;
     let best = def.sight + 1;
@@ -910,7 +926,7 @@ function repairSystem(g: GameState): void {
   if (g.tick % 10 !== 0) return;
   for (const u of g.units) {
     if (u.phase === Phase.Repairing) {
-      const b = g.buildings.find((x) => x.id === u.target);
+      const b = buildingById(g, u.target);
       // budowa: każdy robotnik dokłada swoją część, ostatni kończy
       if (b && b.build > 0) {
         // pod okiem wrogiego wojska nikt nie buduje ani nie odbudowuje — robota stoi
@@ -965,7 +981,7 @@ function repairSystem(g: GameState): void {
   }
   for (const guild of g.buildings) {
     if (guild.type !== ENGINEERS || !guild.worker) continue;
-    const u = g.units.find((x) => x.id === guild.worker);
+    const u = unitById(g, guild.worker);
     if (!u || u.phase !== Phase.Idle || u.path.length) continue;
     let best: Building | undefined, bd = Infinity;
     for (const b of g.buildings) {
@@ -1036,7 +1052,7 @@ function peasantReacts(g: GameState, u: Unit, attacker: Soldier, ranged: boolean
   const camp = g.buildings.find((b) => b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots);
   const dest = away >= 0 ? away : keep?.door ?? camp?.door;
   if (dest === undefined) return;
-  const path = findPath(g, uy * w + ux, (t) => t === dest, 900, u.owner);
+  const path = findPath(g, uy * w + ux, (t) => t === dest, 900, u.owner, dest);
   if (!path || !path.length) return;
   // rzuca, co niósł, przerywa pracę i biegnie; po dobiegnięciu wraca do swoich zajęć (praca albo obozowisko pod dachem)
   u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.target = 0;

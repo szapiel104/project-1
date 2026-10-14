@@ -1,3 +1,4 @@
+import { unitById } from '../state';
 import { BUILDINGS, footprint, type BuildingDef } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
@@ -226,7 +227,7 @@ export function ruin(g: GameState, b: Building): void {
   startSite(b, 0.5); // odbudowa ruiny: część materiału leży w gruzie
   b.hp = maxHp(b.type);
   b.ruined = true;
-  if (b.worker) { const u = g.units.find((x) => x.id === b.worker); if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; } b.worker = 0; }
+  if (b.worker) { const u = unitById(g, b.worker); if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; } b.worker = 0; }
   if (def.wall || def.gate) {
     const fp = footprint(def, b.rot);
     for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { g.occupancy[y * g.map.width + x] = 0; g.gates[y * g.map.width + x] = 0; g.walls[y * g.map.width + x] = 0; }

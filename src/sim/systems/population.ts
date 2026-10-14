@@ -1,3 +1,4 @@
+import { buildingById } from '../state';
 import { RULES } from '../../data/rules';
 import { findPath } from '../path';
 import { FP, Phase, housing, idleCount, idleSlots, playerKeep, population, type GameState, type Unit } from '../state';
@@ -26,7 +27,7 @@ function removePeasant(g: GameState, player: number): void {
   }
   const u = g.units[pick];
   if (!u) return;
-  if (u.job) { const b = g.buildings.find((x) => x.id === u.job); if (b) b.worker = 0; }
+  if (u.job) { const b = buildingById(g, u.job); if (b) b.worker = 0; }
   g.units.splice(pick, 1);
   // odchodzi pieszo do najbliższego brzegu mapy i dalej w las
   const { width: w, height: h } = g.map;

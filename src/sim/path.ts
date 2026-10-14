@@ -10,12 +10,19 @@ let generation = 0;
 /** Czy po polu da się przejść (teren i brak budynku). */
 /** Gracz -2 = wilk: chodzi też przez las */
 export const WOLF = -2;
+const WALK = new Uint8Array(256);
+for (const k of Object.keys(TERRAIN)) WALK[Number(k)] = TERRAIN[Number(k) as Terrain].walkable ? 1 : 0;
 export function walkable(g: GameState, tile: number, player = -1): boolean {
   if (player === WOLF) return g.occupancy[tile] === 0 && (TERRAIN[g.map.tiles[tile] as Terrain].walkable || g.map.tiles[tile] === Terrain.Forest);
   // brama przepuszcza tylko swoich
   return (g.occupancy[tile] === 0 || (player >= 0 && g.gates[tile] === player + 1)) && TERRAIN[g.map.tiles[tile] as Terrain].walkable;
 }
 
+/** Najtańszy możliwy krok prosto i po skosie (po najlepszej drodze) — dolne oszacowanie dla A* */
+const STEP_MIN = Math.min(...RULES.roadPathCost.map((c) => Math.round((10 * c) / 100)));
+const DIAG_MIN = Math.min(...RULES.roadPathCost.map((c) => Math.round((14 * c) / 100)));
+/** Liczniki do okna wydajności: ile razy szukano drogi, ile pól przejrzano, ile razy bez skutku */
+export const pathStats = { calls: 0, expanded: 0, failed: 0, wasted: 0 };
 const BIT_X = (dx: number): number => (dx > 0 ? 2 : 8), BIT_Y = (dy: number): number => (dy > 0 ? 4 : 1);
 /** Czy krok z pola o (dx, dy) przechodzi przez ścianę (w zamku). Po skosie: żadna z czterech krawędzi przy narożniku nie może być ścianą. */
 export function wallBetween(g: GameState, tile: number, dx: number, dy: number): boolean {
@@ -32,8 +39,19 @@ export function wallBetween(g: GameState, tile: number, dx: number, dy: number):
  * do najbliższego pola spełniającego `isGoal`. Zwraca listę pól bez startu albo null.
  * Remisy rozstrzyga numer pola, więc wynik jest identyczny u każdego gracza.
  */
-export function findPath(g: GameState, from: number, isGoal: (tile: number) => boolean, maxCost = 900, player = -1): number[] | null {
+export function findPath(g: GameState, from: number, isGoal: (tile: number) => boolean, maxCost = 900, player = -1, target = -1, reach = 0): number[] | null {
+  pathStats.calls++;
+  const e0 = pathStats.expanded;
   const { width: w, height: h } = g.map;
+  // Gdy cel to jedno znane pole, szukamy A* (dolne oszacowanie: najtańszy krok po najlepszej drodze), zamiast rozlewać
+  // się po całej mapie we wszystkie strony. Oszacowanie nigdy nie przecenia, więc droga jest nadal najkrótsza.
+  const tx = target >= 0 ? target % w : 0, ty = target >= 0 ? (target - tx) / w : 0;
+  const est = target < 0 ? (_t: number): number => 0 : (t: number): number => {
+    const x = t % w, y = (t - x) / w;
+    const ax = Math.max(0, Math.abs(x - tx) - reach), ay = Math.max(0, Math.abs(y - ty) - reach);
+    const lo = ax < ay ? ax : ay, hi = ax < ay ? ay : ax;
+    return STEP_MIN * (hi - lo) + DIAG_MIN * lo;
+  };
   const size = w * h;
   if (dist.length < size) { dist = new Int32Array(size); prev = new Int32Array(size); mark = new Int32Array(size); }
   generation++;
@@ -66,14 +84,22 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
     return top;
   };
 
+  // walkable() wpisane na miejscu (to najczęściej wołana funkcja w całej symulacji)
+  const occ = g.occupancy, tiles = g.map.tiles, gates = g.gates, gate = player + 1, wolf = player === WOLF;
+  const ok = (t: number): boolean => {
+    const tt = tiles[t]!;
+    if (wolf) return occ[t] === 0 && (WALK[tt] === 1 || tt === Terrain.Forest);
+    return (occ[t] === 0 || (player >= 0 && gates[t] === gate)) && WALK[tt] === 1;
+  };
   const K = 1 << 20; // klucz = koszt * K + pole (do 1024 x 1024 pól; koszt najwyżej kilka tysięcy, więc mieści się w liczbie)
   dist[from] = 0; mark[from] = generation; prev[from] = -1;
-  push(from);
+  push(est(from) * K + from);
   while (heap.length) {
     const key = pop();
     const tile = key % K;
-    const cost = (key - tile) / K;
-    if (cost > dist[tile]!) continue;
+    const cost = dist[tile]!;
+    if ((key - tile) / K > cost + est(tile)) continue; // nieaktualny wpis
+    pathStats.expanded++;
     if (isGoal(tile)) {
       const path: number[] = [];
       for (let t = tile; t !== from; t = prev[t]!) path.push(t);
@@ -87,16 +113,17 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
         const nx = x + dx, ny = y + dy;
         if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
         const nt = ny * w + nx;
-        if (!walkable(g, nt, player)) continue;
-        if (dx && dy && (!walkable(g, y * w + nx, player) || !walkable(g, ny * w + x, player))) continue;
+        if (!ok(nt)) continue;
+        if (dx && dy && (!ok(y * w + nx) || !ok(ny * w + x))) continue;
         if ((g.walls[tile] || g.walls[nt] || g.walls[y * w + nx] || g.walls[ny * w + x]) && wallBetween(g, tile, dx, dy)) continue;
         // po drodze idzie się taniej, więc ścieżka chętnie nią prowadzi
         const nc = cost + Math.round(((dx && dy ? 14 : 10) * RULES.roadPathCost[g.roads[nt]!]!) / 100);
         if (mark[nt] === generation && dist[nt]! <= nc) continue;
         mark[nt] = generation; dist[nt] = nc; prev[nt] = tile;
-        push(nc * K + nt);
+        push((nc + est(nt)) * K + nt);
       }
     }
   }
+  pathStats.failed++; pathStats.wasted += pathStats.expanded - e0;
   return null;
 }

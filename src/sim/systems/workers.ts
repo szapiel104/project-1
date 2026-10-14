@@ -1,3 +1,4 @@
+import { buildingById } from '../state';
 import { BUILDINGS, footprint, type ProductionDef } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/resources';
 import { RULES } from '../../data/rules';
@@ -180,7 +181,7 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return (t) => doors.has(t);
     }
     case Phase.ToLight: {
-      const target = g.buildings.find((b) => b.id === u.target);
+      const target = buildingById(g, u.target);
       return target ? (t) => t === target.door : null;
     }
     case Phase.ToRubble: {
@@ -190,7 +191,7 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return (t) => { const x = t % w, y = (t - x) / w; return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; };
     }
     case Phase.ToRepair: {
-      const b = g.buildings.find((x) => x.id === u.target);
+      const b = buildingById(g, u.target);
       if (!b) return null;
       if (b.door >= 0 && !b.build) return (t) => t === b.door;
       // plac budowy (i umocnienia bez wejścia): wystarczy stanąć tuż obok działki
@@ -233,7 +234,7 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return doors.size ? (t) => doors.has(t) : null;
     }
     case Phase.ToSleep: {
-      if (u.home) { const b = g.buildings.find((x) => x.id === u.home); return b && b.door >= 0 ? (t) => t === b.door : null; }
+      if (u.home) { const b = buildingById(g, u.home); return b && b.door >= 0 ? (t) => t === b.door : null; }
       const mat = u.target - 1;
       return mat >= 0 ? (t) => t === mat : null;
     }
@@ -328,7 +329,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       break;
     }
     case Phase.ToLight: {
-      const target = g.buildings.find((b) => b.id === u.target);
+      const target = buildingById(g, u.target);
       if (target) target.lit = true;
       u.target = 0;
       u.phase = u.job ? Phase.Returning : Phase.Idle;
@@ -352,7 +353,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
     case Phase.ToRepair: {
       // przyniesiony materiał kładzie obok budowy, potem bierze się do roboty
       if (u.carryRes >= 0) {
-        const b = g.buildings.find((x) => x.id === u.target);
+        const b = buildingById(g, u.target);
         if (b && b.build && b.loads) b.delivered = (b.delivered ?? 0) + 1;
         u.carryRes = -1; u.carryAmt = 0;
       }
@@ -486,7 +487,7 @@ export function workerSystem(g: GameState): void {
       if (u.phase === Phase.ToPave && u.carryRes >= 0) { u.carryRes = -1; u.carryAmt = 0; } // plan zdjęty po drodze: materiał zostaje
       if (u.phase === Phase.ToFetch) {
         // skład zniknął albo budowa: ładunek liczy się jako przyniesiony, żeby budowa nie stanęła
-        const b = g.buildings.find((x) => x.id === u.target);
+        const b = buildingById(g, u.target);
         if (b && b.build && b.loads) b.delivered = (b.delivered ?? 0) + 1;
         u.timer = 0;
         u.phase = b && b.build ? Phase.ToRepair : u.job ? Phase.Returning : Phase.Idle;
