@@ -1,7 +1,6 @@
 """Stodoła (3×2 pola): drewniana, z desek na słupach, na kamiennej podmurówce; wysoka strzecha, szerokie wrota
 otwarte na oścież (skrzydła odchylone na zewnątrz), nad nimi okienko strychu z belką do wciągania siana.
-W środku: klepisko, z tyłu antresola z sianem i drabina; środek zostaje wolny na zapasy składu (gra układa
-tam towary). Przed wrotami bele siana, kopka z widłami i oparte koło od wozu.
+W środku tylko puste klepisko: zapasy składu układa na nim gra, według tego, co leży w stodole. Przed wrotami bele siana, kopka z widłami i oparte koło od wozu.
 Dach i szczyty (grupa 'shell') znikają przy podglądzie wnętrza.
 
 Uruchomienie (z katalogu repo):  python tools/models/barn.py
@@ -93,21 +92,7 @@ b.box('shell', 'woodDark', 0.06, 0.06, 0.35, 0, LY + 0.34, LZ1 + 0.12)
 b.box('shell', 'iron', 0.012, 0.3, 0.012, 0, LY + 0.04, LZ1 + 0.26)
 b.prism('shell', 'woodDark', 0.03, 0.03, 0.04, 0, LY + 0.3, LZ1 + 0.26, seg=8)
 
-# ---------------- wnętrze: antresola z sianem z tyłu, drabina, worki i narzędzia ----------------
-LOFT = P + 0.6
-b.box('interior', 'woodDark', X1 - X0 - 2 * T, 0.04, 0.42, 0, LOFT, Z0 + T + 0.21, bottom=True)
-for x in (-0.85, 0.0, 0.85):
-    t.boxs('interior', 'woodDark', 0.06, LOFT - P, 0.06, x, P, Z0 + T + 0.4)
-for k, x in enumerate((-0.9, -0.45, 0.05, 0.55, 0.95)):
-    b.box('interior', 'hay', 0.42, 0.18 + (k % 2) * 0.06, 0.38, x, LOFT + 0.04, Z0 + T + 0.2)
-for sx in (-1, 1):
-    b.box('interior', 'woodDark', 0.03, 0.75, 0.03, 1.0 + sx * 0.1, P, Z0 + T + 0.62, tilt=0.25)
-for k in range(4):
-    b.box('interior', 'wood', 0.22, 0.02, 0.025, 1.0, P + 0.12 + k * 0.15, Z0 + T + 0.62 + (0.12 + k * 0.15) * 0.25)
-# przy ścianach: widły i grabie oparte, kosz, ławka z sierpem
-for k, x in enumerate((-1.15, -1.05)):
-    b.box('interior', 'woodDark', 0.02, 0.7, 0.02, x, P, Z1 - T - 0.12, roll=0.12 * (1 if k else -1))
-b.prism('interior', 'basket', 0.11, 0.09, 0.14, 1.08, P, Z1 - T - 0.15, seg=10)
+# ---------------- wnętrze: puste klepisko — zapasy składu układa na nim gra (dynamicznie, według stanu) ----------------
 t.open.append([X0 + T, X1 - T, Z0 + T, Z1 - T])
 t.open.append([GATE[0], GATE[1], Z1 - T - 0.02, Z1 + 0.05])
 
@@ -148,7 +133,6 @@ OUT, ROOM = ['base', 'shell'], ['base', 'interior', 'floor', 'ceiling']
 VIEWS = [
     ['stodoła z przodu', [0.3, 0.6, 3.0], [0, 0.6, 0], OUT, 22],
     ['przez wrota', [0.0, E, 1.4], [0, 0.4, -0.6], ['base', 'shell', 'interior', 'floor'], 18],
-    ['w środku', [0.3, E, 0.4], [-0.6, 0.5, -0.7], ROOM, 16],
 ]
 b.save('barn', maxe=0.28, rays=16, reach=0.4, extra={
     'solid': t.solid, 'open': t.open, 'floorY': P, 'windows': t.windows, 'chimneys': [], 'flames': [],

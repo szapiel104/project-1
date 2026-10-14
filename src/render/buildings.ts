@@ -1168,7 +1168,7 @@ const BUILDERS: Record<string, Builder> = {
   },
   barn(g, _team, flag) {
     // stodoła z Blendera (tools/models/barn.py): deski na słupach, strzecha z lukarną, wrota otwarte na oścież,
-    // w środku antresola z sianem; na klepisku gra układa zapasy składu (stodoła trzyma tylko surowce)
+    // w środku puste klepisko, na którym gra układa zapasy składu (stodoła trzyma tylko surowce)
     blenderModel(g, BARN_MODEL as unknown as BlenderBuilding, flag);
     const goods = fillSlots('fill', 0, 0.05, 0.42);
     goods.position.y = (BARN_MODEL as unknown as { floorY: number }).floorY;
