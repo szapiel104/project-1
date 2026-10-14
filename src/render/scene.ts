@@ -2626,7 +2626,12 @@ export class GameRenderer {
       const inHall = !!this.walk && id === this.walkHall;
       // spacerem z ziemi dachy zostają na miejscu (zdjęty dach widać od dołu jako dziurę); zdejmujemy go tylko nad salą, w której stoimy
       const busy = working.has(id) || id === this.selectedId;
-      animateBuilding(mesh, this.walk ? inHall : busy || inHall, this.time, dt);
+      // z kamery dach z pracującego budynku zdejmujemy tylko, gdy patrzymy na niego z góry; z niska (przybliżenie) dach zostaje,
+      // bo inaczej widać mury bez dachu i szczytów. Kliknięty budynek otwiera się zawsze.
+      const cp = this.cam.camera.position, mp = mesh.position;
+      const steep = cp.y - mp.y > Math.hypot(cp.x - mp.x, cp.z - mp.z) * 0.85;
+      const open = id === this.selectedId || (working.has(id) && steep);
+      animateBuilding(mesh, this.walk ? inHall : open || inHall, this.time, dt);
       if (this.walk && busy && !inHall) {
         const inn = mesh.getObjectByName('interior'); if (inn) inn.visible = true;
         const fl = mesh.getObjectByName('flame'); if (fl) fl.visible = true;
