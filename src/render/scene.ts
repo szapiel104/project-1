@@ -2614,7 +2614,13 @@ export class GameRenderer {
     }
     for (const [id, mesh] of this.buildingMeshes) {
       const inHall = !!this.walk && id === this.walkHall;
-      animateBuilding(mesh, working.has(id) || id === this.selectedId || inHall, this.time, dt);
+      // spacerem z ziemi dachy zostają na miejscu (zdjęty dach widać od dołu jako dziurę); zdejmujemy go tylko nad salą, w której stoimy
+      const busy = working.has(id) || id === this.selectedId;
+      animateBuilding(mesh, this.walk ? inHall : busy || inHall, this.time, dt);
+      if (this.walk && busy && !inHall) {
+        const inn = mesh.getObjectByName('interior'); if (inn) inn.visible = true;
+        const fl = mesh.getObjectByName('flame'); if (fl) fl.visible = true;
+      }
       const ceil = mesh.getObjectByName('ceiling');
       if (ceil) ceil.visible = inHall;
       // spacerem przy zamku: przez drzwi widać wnętrza sal, choć dachy zostają na miejscu
