@@ -33,6 +33,11 @@ cz = lambda dy: dy - H + 0.5
 
 b = Building()
 solid = []          # przeszkody spacerowicza: x0, x1, z0, z1, od wysokości y0 do y1
+def torch(group, x, y, z):
+    """Pochodnia na ścianie: żelazny uchwyt i płomień (stożek), zamiast świecącego klocka"""
+    b.box(group, 'iron', 0.025, 0.12, 0.025, x, y, z)
+    b.prism(group, 'iron', 0.03, 0.035, 0.03, x, y + 0.12, z, seg=6)
+    b.prism(group, 'ember', 0.028, 0.0, 0.1, x, y + 0.15, z, seg=6)
 def block(x0, x1, z0, z1, y0=0.0, y1=9.0):
     solid.append([round(min(x0, x1), 3), round(max(x0, x1), 3), round(min(z0, z1), 3), round(max(z0, z1), 3), round(y0, 3), round(y1, 3)])
 def boxs(group, mat, w, h, d, x, y, z, rot=0.0, **kw):
@@ -172,7 +177,7 @@ for sx in (-1, 1):
         for a0 in (math.atan2(sx, sz) - 0.7, math.atan2(sx, sz) + 0.7):
             for y in (1.0, 2.1):
                 b.box('base', 'dark', 0.05, 0.22, 0.015, tx + math.sin(a0) * (TR + 0.002), y, tz + math.cos(a0) * (TR + 0.002), a0)
-        b.box('interior', 'ember', 0.04, 0.07, 0.03, tx - sx * 0.45, WALK + 0.45, tz - sz * 0.45)
+        torch('interior', tx - sx * 0.5, WALK + 0.36, tz - sz * 0.5)
 for sx in (-1, 1):
     dx = 0 if sx < 0 else N - 1
     dy = N // 2
@@ -199,7 +204,7 @@ for sx in (-1, 1):
         b.merlons_line('base', 'castle', tx - 0.6, tz + s2 * 0.62, tx + 0.6, tz + s2 * 0.62, 2.27, step=0.3, w=0.14, h=0.16, t=0.08)
         b.merlons_line('base', 'castle', tx + s2 * 0.62, tz - 0.6, tx + s2 * 0.62, tz + 0.6, 2.27, step=0.3, w=0.14, h=0.16, t=0.08)
     b.box('base', 'dark', 0.015, 0.26, 0.06, tx + sx * 0.656, 1.0, tz)
-    b.box('interior', 'ember', 0.03, 0.07, 0.04, tx + sx * 0.5, WALK + 0.45, tz)
+    torch('interior', tx + sx * 0.48, WALK + 0.36, tz)
 
 # ---------------- schody na mury: kamienne stopnie od dziedzińca w górę ku koronie ----------------
 for dx in range(N):
@@ -447,7 +452,8 @@ boxs('interior', 'woodDark', 0.42, 0.24, 0.26, qx0 + 0.45, G, qz0 + 0.2)
 b.box('interior', 'gold', 0.36, 0.04, 0.2, qx0 + 0.45, G + 0.24, qz0 + 0.2)
 boxs('interior', 'wood', 0.5, 0.04, 0.32, qx0 + 0.5, G + 0.3, qz1 - 0.35)
 b.box('interior', 'white', 0.2, 0.01, 0.15, qx0 + 0.5, G + 0.34, qz1 - 0.35)
-b.box('interior', 'ember', 0.025, 0.06, 0.025, qx0 + 0.66, G + 0.34, qz1 - 0.35)
+b.prism('interior', 'white', 0.015, 0.015, 0.05, qx0 + 0.66, G + 0.34, qz1 - 0.35, seg=6)
+b.prism('interior', 'ember', 0.01, 0.0, 0.03, qx0 + 0.66, G + 0.39, qz1 - 0.35, seg=5)
 for s in (-1, 1):
     b.box('interior', 'woodDark', 0.04, 0.3, 0.28, qx0 + 0.5 + s * 0.22, G, qz1 - 0.35)
 boxs('interior', 'woodDark', 0.4, 0.85, 0.3, qx1 - 0.25, G, qz1 - 0.2)
@@ -474,8 +480,7 @@ for dy in range(N):
         for y in (0.35, 0.5):
             b.box('interior', 'iron', 0.02, 0.02, 0.18, cx(1) - 0.47, G + y, z - 0.15)
         b.prism('interior', 'wood', 0.06, 0.05, 0.1, cx(1) + 0.25, G, z - 0.3, seg=8)
-b.box('interior', 'ember', 0.05, 0.08, 0.03, cx(2) + 0.42, G + 0.55, cz(7))
-b.box('interior', 'iron', 0.06, 0.05, 0.1, cx(2) + 0.44, G + 0.5, cz(7))
+torch('interior', cx(2) + 0.42, G + 0.45, cz(7))
 boxs('interior', 'wood', 0.22, 0.2, 0.22, cx(2) + 0.32, G, lz1 - 0.2)
 
 # ---------------- dziedziniec: studnia, wóz, siano, kukły do ćwiczeń, beczki, drewno ----------------
