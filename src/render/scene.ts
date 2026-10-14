@@ -2589,7 +2589,7 @@ export class GameRenderer {
       else if (mesh.rotation.z !== 0) { mesh.rotation.z = 0; this.shake.delete(b.id); }
       const hurt = 1 - b.hp / maxHp(b.type);
       let fire = mesh.getObjectByName('fire') as THREE.Group | undefined;
-      if (hurt > 0.4 && !fire) {
+      if ((b.fire ?? 0) > 0 && !fire) {
         fire = new THREE.Group();
         fire.name = 'fire';
         for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 6), k % 2 ? FIRE_A : FIRE_B); f.position.set(Math.sin(k * 2.4) * 0.5, 1.0 + (k % 3) * 0.2, Math.cos(k * 2.4) * 0.5); fire.add(f); }
@@ -2597,8 +2597,9 @@ export class GameRenderer {
       }
       if (fire) {
         // pożar trwa tylko po świeżych ciosach; gdy nikt dalej nie atakuje, ogień przygasa i znika (budynek zostaje osmalony)
-        fire.visible = hurt > 0.4 && this.time < (this.burnUntil.get(b.id) ?? 0);
-        fire.children.forEach((f, k) => { f.scale.set(1, 0.7 + Math.abs(Math.sin(this.time * 9 + k)) * 0.6 * (0.5 + hurt), 1); });
+        fire.visible = (b.fire ?? 0) > 0;
+        const heat = Math.min(1, (b.fire ?? 0) / 300); // przy gaszeniu płomienie maleją
+        fire.children.forEach((f, k) => { const k2 = 0.35 + heat * 0.65; f.scale.set(k2, (0.7 + Math.abs(Math.sin(this.time * 9 + k)) * 0.6 * (0.5 + hurt)) * k2, k2); });
       }
       const def = BUILDINGS[b.type]!;
       const needs = b.owner === this.me && (def.production || def.staff) && b.worker === 0;

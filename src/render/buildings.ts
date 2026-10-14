@@ -121,6 +121,27 @@ export function sackGeometry(): THREE.BufferGeometry {
   return sackGeo;
 }
 
+/** Studnia: kamienna cembrowina, dwa słupy z daszkiem, wał z korbą, wiadro na linie; skala do wstawienia na podwórze */
+function wellModel(k: number): THREE.Group {
+  const g = new THREE.Group();
+  const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.33, 0.32, 14, 1, true), M.stone);
+  ring.position.y = 0.16; g.add(ring);
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.04, 6, 16), M.stoneDark);
+  rim.rotation.x = Math.PI / 2; rim.position.y = 0.32; g.add(rim);
+  const water = new THREE.Mesh(new THREE.CircleGeometry(0.27, 14), new THREE.MeshStandardMaterial({ color: 0x1b3a40, roughness: 0.15, metalness: 0.1 }));
+  water.rotation.x = -Math.PI / 2; water.position.y = 0.2; g.add(water);
+  for (const sx of [-1, 1]) box(g, M.woodDark, 0.06, 0.82, 0.06, sx * 0.3, 0, 0);
+  box(g, M.wood, 0.7, 0.05, 0.05, 0, 0.62, 0);
+  const crank = box(g, M.woodDark, 0.03, 0.14, 0.03, 0.38, 0.55, 0.04);
+  crank.rotation.z = 0.4;
+  for (const sz of [-1, 1]) { const r = box(g, M.thatch, 0.8, 0.04, 0.34, 0, 0.84, sz * 0.15); r.rotation.x = sz * 0.55; }
+  box(g, M.rope, 0.012, 0.3, 0.012, 0, 0.32, 0);
+  const pail = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.05, 0.09, 8), M.wood);
+  pail.position.set(0, 0.3, 0); g.add(pail);
+  g.scale.setScalar(k);
+  return g;
+}
+
 function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
   const geo = new THREE.BoxGeometry(w, h, d);
   const k = (m.userData.tile as number) || 0;
@@ -1269,6 +1290,9 @@ const BUILDERS: Record<string, Builder> = {
   torch(g) {
     g.add(torchModel());
   },
+  well(g) {
+    g.add(wellModel(1));
+  },
   engineers(g, _team, flag) {
     // Cech inżynierów: warsztat z daszkiem nad stołem kreślarskim, dźwig z blokiem kamienia, taczka i narzędzia
     const eng = cottageAt(g, 24, 1.0, 0.95, 0.78, 0.42, -0.35);
@@ -1283,6 +1307,8 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.wood, 0.55, 0.05, 0.35, -0.52, 0.32, -0.5);
     for (const sx of [-1, 1]) box(g, M.woodDark, 0.05, 0.32, 0.3, -0.52 + sx * 0.23, 0, -0.5);
     box(g, M.white, 0.3, 0.01, 0.22, -0.52, 0.375, -0.5);
+    // studnia na podwórzu cechu: stąd inżynier czerpie wodę do gaszenia pożarów
+    const w2 = wellModel(0.7); w2.position.set(0.72, 0, 0.78); g.add(w2);
     // dźwig: dwie skośne nogi, wysięgnik, lina i podwieszony blok
     for (const sz of [-1, 1]) { const leg = box(g, M.woodDark, 0.06, 1.25, 0.06, -0.55, 0, 0.55 + sz * 0.22); leg.rotation.x = sz * -0.2; }
     const boom = box(g, M.woodDark, 0.9, 0.06, 0.06, -0.2, 1.15, 0.55);

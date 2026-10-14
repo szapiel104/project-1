@@ -14,6 +14,7 @@ import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
 import { roadSystem } from './systems/roads';
+import { fireSystem } from './systems/fire';
 import { armySystem, orderAttack, orderMove, orderStance, train , orderDismount, orderGarrison, enlistSystem, setRally } from './systems/army';
 import { botSystem } from './systems/bot';
 
@@ -111,6 +112,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   roadSystem(g);
   workerSystem(g);
   enlistSystem(g);
+  fireSystem(g);
   armySystem(g);
   migrationSystem(g);
   travelSystem(g);

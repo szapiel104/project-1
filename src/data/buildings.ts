@@ -142,6 +142,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'watchtower', category: 'defense', name: 'b.watchtower', w: 2, h: 2, cost: { wood: 16 }, hp: 700, wall: true, buildable: true },
   // Droga z dyli: drewniane bale ułożone w poprzek, między piaskową a brukowaną (na końcu listy, żeby stare zapisy dalej działały)
   { id: 'roadWood', category: 'roads', name: 'b.roadWood', w: 1, h: 1, cost: { wood: 1 }, road: 3, buildable: true },
+  // Studnia: z niej ludzie czerpią wodę do gaszenia pożarów (cech inżynierów ma własną studnię na podwórzu)
+  { id: 'well', category: 'settlement', name: 'b.well', w: 1, h: 1, cost: { wood: 8, stone: 6 }, hp: 300, wall: true, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

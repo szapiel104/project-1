@@ -232,6 +232,7 @@ export const pl = {
   'b.roadSand': 'Droga piaskowa',
   'd.roadSand': 'Ubita piaskowa droga. Ludzie chodzą po niej o ćwierć szybciej. Nic nie kosztuje. Układa ją wolny chłop z obozowiska.',
   'b.roadWood': 'Droga z dyli',
+  'b.well': 'Studnia',
   'd.roadWood': 'Drewniane bale ułożone w poprzek. Ludzie chodzą po niej o 40% szybciej. Jedno pole kosztuje 1 drewno. Układa ją wolny chłop z obozowiska.',
   'b.roadStone': 'Droga kamienna',
   'd.roadStone': 'Brukowana droga. Ludzie chodzą po niej o połowę szybciej. Jedno pole kosztuje 1 kamień. Układa ją wolny chłop z obozowiska.',

@@ -433,6 +433,8 @@ export function workerSystem(g: GameState): void {
     if (u.wait > 0) { u.wait--; continue; }
     // rekrut idzie do koszar (prowadzi go enlistSystem): tylko krok, bez pracy, wieczoru i snu
     if (u.enlist) { if (u.path.length) move(g, u); continue; }
+    // gasi pożar (prowadzi go fireSystem): tylko krok
+    if (u.bucket) { if (u.path.length) move(g, u); continue; }
     if (!u.path.length && routine(g, u, part) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;
     if (u.phase === Phase.Evening || u.phase === Phase.Sleeping) continue;
     const job = u.job ? byId.get(u.job) : undefined;
