@@ -199,6 +199,11 @@ export class GameRenderer {
   private towerIcons: THREE.Sprite[] = [];
   /** Flagi zbiórki koszar gracza (drzewce z chorągwią w jego barwach) */
   private rallyFlags: THREE.InstancedMesh | null = null;
+  /** Wyjście nowego żołnierza z koszar: złote iskry w górę, błysk i „+1” (tylko wygląd) */
+  private knownSoldiers: Set<number> | null = null;
+  private sparks: { p: THREE.Vector3; v: THREE.Vector3; t: number; life: number }[] = [];
+  private sparkMesh: THREE.InstancedMesh | null = null;
+  private plusIcons: { s: THREE.Sprite; t: number }[] = [];
   /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
   private towerPose = new Map<number, [number, number]>();
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
@@ -769,6 +774,7 @@ export class GameRenderer {
     this.clouds.reset();
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
+    this.knownSoldiers = null;
     this.view.grassReach(this.grassReach);
     this.scene.add(this.view.group);
     const { width, height, starts } = state.map;
@@ -1878,6 +1884,57 @@ export class GameRenderer {
     this.crows.instanceMatrix.needsUpdate = true;
   }
 
+  private syncSpawnFx(g: GameState, view: TerrainView): void {
+    const W = g.map.width, H = g.map.height;
+    if (!this.knownSoldiers) { this.knownSoldiers = new Set(g.soldiers.map((s) => s.id)); return; }
+    const doors = new Set(g.buildings.filter((b) => BUILDINGS[b.type]!.id === 'barracks').map((b) => b.door));
+    for (const s of g.soldiers) {
+      if (this.knownSoldiers.has(s.id)) continue;
+      this.knownSoldiers.add(s.id);
+      const tile = (s.py >> 8) * W + (s.px >> 8);
+      if (!doors.has(tile) || this.calm) continue;
+      const x = s.px / FP - W / 2, z = s.py / FP - H / 2, y = view.heightAt(s.px / FP, s.py / FP);
+      for (let i = 0; i < 26; i++) {
+        const a = Math.random() * Math.PI * 2, r = 0.4 + Math.random() * 0.9;
+        this.sparks.push({ p: new THREE.Vector3(x, y + 0.15 + Math.random() * 0.3, z), v: new THREE.Vector3(Math.cos(a) * r * 0.6, 1.1 + Math.random() * 1.3, Math.sin(a) * r * 0.6), t: 0, life: 0.7 + Math.random() * 0.6 });
+      }
+      // „+1” nad drzwiami, unosi się i gaśnie
+      const c = document.createElement('canvas'); c.width = 96; c.height = 64;
+      const ctx = c.getContext('2d')!;
+      ctx.font = 'bold 44px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.lineWidth = 6; ctx.strokeStyle = '#2a1406'; ctx.strokeText('+1', 48, 34);
+      ctx.fillStyle = '#ffe08a'; ctx.fillText('+1', 48, 34);
+      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, fog: false }));
+      sp.renderOrder = 12; sp.scale.set(0.6, 0.4, 1); sp.position.set(x, y + 1.0, z);
+      this.scene.add(sp); this.plusIcons.push({ s: sp, t: 0 });
+    }
+    for (const id of this.knownSoldiers) if (!g.soldiers.some((s) => s.id === id)) this.knownSoldiers.delete(id);
+    // ruch iskier: lecą w górę, zwalniają, opadają i gasną
+    const dt = 1 / 60;
+    if (!this.sparkMesh) {
+      this.sparkMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.07, 0.07), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), 512);
+      this.sparkMesh.frustumCulled = false; this.sparkMesh.renderOrder = 11; this.scene.add(this.sparkMesh);
+    }
+    this.sparks = this.sparks.filter((k) => (k.t += dt) < k.life);
+    const m = new THREE.Matrix4(), q = this.cam.camera.quaternion, sc = new THREE.Vector3();
+    let n = 0;
+    for (const k of this.sparks) {
+      k.v.y -= 1.6 * dt; k.v.multiplyScalar(0.985); k.p.addScaledVector(k.v, dt);
+      const f = 1 - k.t / k.life;
+      sc.setScalar(0.5 + f);
+      if (n < 512) this.sparkMesh.setMatrixAt(n++, m.compose(k.p, q, sc));
+    }
+    this.sparkMesh.count = n; this.sparkMesh.instanceMatrix.needsUpdate = true;
+    this.plusIcons = this.plusIcons.filter((p) => {
+      p.t += dt;
+      p.s.position.y += dt * 0.5;
+      (p.s.material as THREE.SpriteMaterial).opacity = Math.max(0, 1 - Math.max(0, p.t - 0.6) / 0.8);
+      if (p.t > 1.4) { this.scene.remove(p.s); (p.s.material as THREE.SpriteMaterial).map?.dispose(); p.s.material.dispose(); return false; }
+      return true;
+    });
+  }
+
   /** Flagi zbiórki: nad polem, na które idą nowi żołnierze z koszar (tylko moje koszary) */
   private syncRallyFlags(g: GameState, view: TerrainView): void {
     if (!this.rallyFlags) {
@@ -2908,6 +2965,7 @@ export class GameRenderer {
     this.flyArrows();
     this.syncTowerIcons(g);
     this.syncRallyFlags(g, view);
+    this.syncSpawnFx(g, view);
     this.soldierTorches.count = torches;
     this.soldierTorches.instanceMatrix.needsUpdate = true;
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
