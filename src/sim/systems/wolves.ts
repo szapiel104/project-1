@@ -1,4 +1,4 @@
-import { high } from './army';
+import { high, isBrave, peasantWeapon } from './army';
 import { clockAt, hourStarts } from '../clock';
 import { WOLF, findPath, walkable } from '../path';
 import { BUILDINGS } from '../../data/buildings';
@@ -142,7 +142,8 @@ export function wolfSystem(g: GameState): void {
     for (const w of g.wolves) {
       if (w.hp <= 0 || w.leaving) continue;
       const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP;
-      if (dx * dx + dy * dy <= 2.2) { w.hp -= PEASANT_HIT; u.wait = Math.max(u.wait, 10); break; }
+      // odważni (sześciu na dziesięciu) biją kilofem albo maczugą, tchórze tylko machają rękami
+      if (dx * dx + dy * dy <= 2.2) { w.hp -= isBrave(u.id) ? (peasantWeapon(u.id) === 'pick' ? PEASANT_HIT + 2 : PEASANT_HIT + 1) : 1; u.wait = Math.max(u.wait, 10); break; }
     }
   }
   // żołnierze bronią się i gonią wilki w pobliżu
@@ -154,10 +155,16 @@ export function wolfSystem(g: GameState): void {
     }
     const def = UNITS[s.kind]!;
     const reach = def.range ? (def.range + (high(g, s) ? 3 : 0)) ** 2 : 2.2;
-    let best = Math.max(36, reach), wolf: Wolf | undefined;
-    for (const w of g.wolves) { if (w.hp <= 0) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; wolf = w; } }
+    // strażnik miejski wypatruje wilków dalej (12 pól) i rzuca obchód, żeby je przegonić; zwykły żołnierz — 6 pól
+    const alert = def.guard ? 144 : 36;
+    let best = Math.max(alert, reach), wolf: Wolf | undefined;
+    for (const w of g.wolves) { if (w.hp <= 0 || (def.guard && w.leaving)) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; wolf = w; } }
     if (!wolf) continue;
     if (best <= reach) { if ((g.tick + s.id) % def.cooldown === 0) wolf.hp -= def.attack; }
+    else if (def.guard && !s.target && !s.hunt) {
+      // strażnik: pościg za wilkiem (obchód czeka, aż wilk padnie albo ucieknie za osadę)
+      s.hunt = wolf.id; s.goal = (wolf.py >> 8) * width + (wolf.px >> 8); s.path = []; s.wait = 0;
+    }
     else if (!s.up && s.goal < 0 && !s.target && !s.path.length) s.goal = (wolf.py >> 8) * width + (wolf.px >> 8);
   }
   g.wolves = g.wolves.filter((w) => w.hp > 0);

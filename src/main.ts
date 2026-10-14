@@ -708,7 +708,17 @@ function armyRightClick(amove: boolean): void {
   if (!hoverTile) return;
   const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
   if (b && b.owner === ME && BUILDINGS[b.type]!.id === 'watchtower') {
-    pending.push({ type: 'garrison', player: ME, ids: [...chosen], tower: b.id });
+    const sent = [...chosen];
+    pending.push({ type: 'garrison', player: ME, ids: sent, tower: b.id });
+    // na wieży nie są już częścią oddziału ani grup 1–0: zostają na wieży, póki nie zdejmie się ich z jej okna
+    // (po wykonaniu rozkazu: tylko ci, którzy dostali miejsce na wieży — włócznicy stoją przy niej i zostają w oddziale)
+    setTimeout(() => {
+      const up = sent.filter(onTower);
+      if (!up.length) return;
+      for (const [k, l] of groups) groups.set(k, l.filter((id) => !up.includes(id)));
+      chooseSoldiers([...chosen].filter((id) => !up.includes(id)), false, true);
+      armyBarUpdate();
+    }, 300);
     play('rotate');
     shout('move');
     return;
@@ -779,6 +789,9 @@ function canTrain(): boolean {
   return game.units.some((u) => u.owner === ME && u.job === 0);
 }
 
+/** Łucznik przypisany do wieży (na niej albo w drodze na nią): nie łapie się ramką, podwójnym klikiem ani grupą —
+ *  zdejmuje się go tylko z okna wieży („Zaznacz łuczników” / „Zejdźcie z wieży”) */
+const onTower = (id: number): boolean => { const s = game.soldiers.find((x) => x.id === id); return !!s && !!s.post; };
 function chooseSoldiers(ids: number[], add: boolean, quiet = false): void {
   // straż miejska pilnuje osady sama, nie słucha rozkazów; kliknięty strażnik tylko coś burknie
   const guard = ids.find((id) => { const s = game.soldiers.find((x) => x.id === id); return !!s && !!UNITS[s.kind]!.guard; });
@@ -833,7 +846,7 @@ canvas.addEventListener('pointerup', (e) => {
   if (!selBox.hidden) {
     selBox.hidden = true;
     const x0 = Math.min(start.x, e.clientX), x1 = Math.max(start.x, e.clientX), y0 = Math.min(start.y, e.clientY), y1 = Math.max(start.y, e.clientY);
-    const ids = onScreen.filter((s) => s.x >= x0 && s.x <= x1 && s.y >= y0 && s.y <= y1).map((s) => s.id);
+    const ids = onScreen.filter((s) => s.x >= x0 && s.x <= x1 && s.y >= y0 && s.y <= y1 && !onTower(s.id)).map((s) => s.id);
     chooseSoldiers(ids, e.shiftKey);
     if (ids.length) play('select');
     renderer.markDragged();
@@ -858,7 +871,7 @@ canvas.addEventListener('pointerup', (e) => {
     const kind = game.soldiers.find((x) => x.id === best)?.kind;
     if (lastPick.id === best && now - lastPick.at < 400) {
       const kinds = new Map(game.soldiers.map((x) => [x.id, x.kind]));
-      chooseSoldiers(onScreen.filter((o) => kinds.get(o.id) === kind).map((o) => o.id), e.shiftKey);
+      chooseSoldiers(onScreen.filter((o) => kinds.get(o.id) === kind && !onTower(o.id)).map((o) => o.id), e.shiftKey);
       lastPick = { id: 0, at: 0 };
     } else {
       chooseSoldiers([best], e.shiftKey);
@@ -1353,7 +1366,7 @@ function groupOf(): number | undefined {
 /** Grupa: wybór (drugi raz szybko = kamera nad grupą), zapis zaznaczonych albo wyczyszczenie */
 function groupAction(n: number, action: 'pick' | 'save' | 'clear'): void {
   if (action === 'clear') { if (groups.delete(n)) { play('rotate'); armyBarUpdate(); } return; }
-  const ids = (groups.get(n) ?? []).filter((id) => game.soldiers.some((x) => x.id === id && x.owner === ME));
+  const ids = (groups.get(n) ?? []).filter((id) => game.soldiers.some((x) => x.id === id && x.owner === ME) && !onTower(id));
   // klik w puste miejsce działa jak zapis
   if (action === 'save' || !ids.length) {
     if (!chosen.size) return;
@@ -1617,6 +1630,8 @@ function devPlace(x: number, y: number, kind: DevSpawn, foe: boolean, count: num
         n++;
       }
   const what = kind === 'wolf' ? 'wilków' : kind === 'archer' ? 'łuczników' : 'włóczników';
+  const h = clockAt(game.tick).hour;
+  if (kind === 'wolf' && h >= 6.5 && h < 19.5 && n) { devPanel.placed(`Postawiono ${n} wilków, ale jest dzień — od razu uciekną do lasu. Najpierw „Przewiń do nocy”.`); return n; }
   devPanel.placed(n ? `Postawiono ${n} ${what}${kind === 'wolf' ? '' : foe ? ' wroga' : ' swoich'}. Klikaj dalej albo Esc.` : 'Tu nie da się postawić — wybierz wolne pole.');
   return n;
 }
