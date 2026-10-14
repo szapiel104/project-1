@@ -124,14 +124,18 @@ export function sackGeometry(): THREE.BufferGeometry {
 }
 
 /** Studnia: kamienna cembrowina, dwa słupy z daszkiem, wał z korbą, wiadro na linie; skala do wstawienia na podwórze */
+const WELL_INNER = new THREE.MeshStandardMaterial({ color: 0x3a3833, roughness: 1, side: THREE.BackSide });
 function wellModel(k: number): THREE.Group {
   const g = new THREE.Group();
   const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.33, 0.32, 14, 1, true), M.stone);
   ring.position.y = 0.16; g.add(ring);
+  // wewnętrzna ściana cembrowiny (widać ją od środka, więc tylna strona) i ciemne dno studni
+  const inner = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.27, 0.3, 14, 1, true), WELL_INNER);
+  inner.position.y = 0.17; g.add(inner);
   const rim = new THREE.Mesh(new THREE.TorusGeometry(0.31, 0.04, 6, 16), M.stoneDark);
   rim.rotation.x = Math.PI / 2; rim.position.y = 0.32; g.add(rim);
   const water = new THREE.Mesh(new THREE.CircleGeometry(0.27, 14), new THREE.MeshStandardMaterial({ color: 0x1b3a40, roughness: 0.15, metalness: 0.1 }));
-  water.rotation.x = -Math.PI / 2; water.position.y = 0.2; g.add(water);
+  water.rotation.x = -Math.PI / 2; water.position.y = 0.22; g.add(water);
   for (const sx of [-1, 1]) box(g, M.woodDark, 0.06, 0.82, 0.06, sx * 0.3, 0, 0);
   box(g, M.wood, 0.7, 0.05, 0.05, 0, 0.62, 0);
   const crank = box(g, M.woodDark, 0.03, 0.14, 0.03, 0.38, 0.55, 0.04);
