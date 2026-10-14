@@ -1914,7 +1914,13 @@ export class GameRenderer {
     // ruch iskier: lecą w górę, zwalniają, opadają i gasną
     const dt = 1 / 60;
     if (!this.sparkMesh) {
-      this.sparkMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.07, 0.07), new THREE.MeshBasicMaterial({ color: 0xffd27a, transparent: true, opacity: 0.95, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), 512);
+      // okrągła, miękka iskra (jasny środek, złota poświata), nie kwadracik
+      const c = document.createElement('canvas'); c.width = c.height = 32;
+      const x = c.getContext('2d')!, gr = x.createRadialGradient(16, 16, 0, 16, 16, 16);
+      gr.addColorStop(0, 'rgba(255,250,220,1)'); gr.addColorStop(0.25, 'rgba(255,200,90,0.9)'); gr.addColorStop(1, 'rgba(255,120,20,0)');
+      x.fillStyle = gr; x.fillRect(0, 0, 32, 32);
+      const sparkTex = new THREE.CanvasTexture(c);
+      this.sparkMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.09, 0.09), new THREE.MeshBasicMaterial({ map: sparkTex, color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), 512);
       this.sparkMesh.frustumCulled = false; this.sparkMesh.renderOrder = 11; this.scene.add(this.sparkMesh);
     }
     this.sparks = this.sparks.filter((k) => (k.t += dt) < k.life);
