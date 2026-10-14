@@ -25,7 +25,7 @@ import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
-import { renderThumbnails } from './render/thumbnails';
+import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
 import { GUARDS, GUARD_COST } from './sim/systems/guards';
 import { WOLF_HP } from './sim/systems/wolves';
 import { cachedThumbs, saveThumbs } from './render/thumbcache';
@@ -114,6 +114,8 @@ function loadSave(): { seedText: string; data: SaveData; ui?: UiSave } | null {
 // miniatury z poprzedniej wizyty tej samej wersji gry albo rysowane teraz
 const savedThumbs = TEST ? null : cachedThumbs();
 const thumbs: Map<string, string> = TEST ? new Map() : savedThumbs ?? renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288);
+// portrety żołnierzy do koszar (rysowane zawsze: dwa szybkie ujęcia, niezależne od zapisanych miniatur budynków)
+if (!TEST) for (const [k, v] of renderUnitPortraits(TEAM_COLORS[0]!)) thumbs.set(k, v);
 const hud = createHud(document.getElementById('ui')!, {
   onArmyKind: (kind, shift) => {
     const ids = game.soldiers.filter((x) => chosen.has(x.id) && (UNITS[x.kind]!.id === kind) !== shift).map((x) => x.id);

@@ -1106,3 +1106,7 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 .store-box .trend { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; color: #b9a782; }
 .store-box .trend[data-sign='pos'] { color: #8ee07a; }
 .store-box .trend[data-sign='neg'] { color: #ff8a7a; }
+/* koszary: portret żołnierza z modelu 3D w ramce, na tle ciepłej poświaty jak przy ognisku */
+.unit-pic.shot { display: block; width: 96px; height: 96px; border: 2px solid #9a7a2a; box-shadow: 0 0 0 2px #0b0704, 0 4px 10px rgba(0, 0, 0, .6);
+  background: radial-gradient(ellipse at 45% 35%, #6a4224 0%, #2a1a0e 60%, #120b06 100%); overflow: hidden; }
+.unit-pic.shot img { width: 100%; height: 100%; display: block; object-fit: cover; }

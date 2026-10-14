@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { BUILDINGS } from '../data/buildings';
 import type { ModelFactory } from './models';
+import { Figures } from './peasants';
 
 /** Renderuje obrazki budynków do menu z tych samych modeli, które stoją na mapie. Zwraca id → adres obrazka. */
 export function renderThumbnails(models: ModelFactory, teamColor: number, size = 160): Map<string, string> {
@@ -50,6 +51,54 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
     renderer.render(scene, cam);
     out.set(def.id, renderer.domElement.toDataURL('image/png'));
     scene.remove(model);
+  }
+  renderer.dispose();
+  renderer.forceContextLoss();
+  return out;
+}
+
+/**
+ * Portrety jednostek do koszar: te same modele co na mapie (włócznik, łucznik), w barwach gracza,
+ * w trzech czwartych od przodu, od pasa w górę z bronią, na ciemnym tle z ciepłym światłem od pochodni.
+ * Klucz: `u:<id jednostki>`.
+ */
+export function renderUnitPortraits(teamColor: number, size = 192): Map<string, string> {
+  const out = new Map<string, string>();
+  let renderer: THREE.WebGLRenderer;
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  } catch {
+    return out;
+  }
+  renderer.setSize(size, size, false);
+  renderer.setClearColor(0x000000, 0);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  const scene = new THREE.Scene();
+  scene.add(new THREE.HemisphereLight(0xffeccc, 0x3a2c1c, 1.6));
+  const key = new THREE.DirectionalLight(0xffd9a0, 3.0); key.position.set(-1.5, 2.5, 2.5); scene.add(key);
+  const rim = new THREE.DirectionalLight(0xffa860, 1.6); rim.position.set(2, 1.5, -2); scene.add(rim);
+  const cam = new THREE.PerspectiveCamera(26, 1, 0.05, 20);
+  const m = new THREE.Matrix4();
+  for (const kind of ['spearman', 'archer'] as const) {
+    const root = new THREE.Group();
+    scene.add(root);
+    const f = new Figures(1, root as unknown as THREE.Scene, kind);
+    // lekko obrócony w stronę kamery, broń widoczna
+    m.makeRotationY(-0.45);
+    f.set(0, m, 0, false, teamColor, kind === 'archer' ? 9 : 3);
+    f.finish(1);
+    root.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(root);
+    // wzrost postaci bez broni (włócznia sterczy wysoko nad głowę): kadr na człowieka, nie na drzewce
+    const h = Math.min(box.max.y - box.min.y, 0.68);
+    // kadr: od pasa po czubek broni/głowy
+    const lookY = box.min.y + h * 0.66;
+    cam.position.set(0.25 * h, lookY + 0.05 * h, 1.55 * h);
+    cam.lookAt(0, lookY, 0);
+    renderer.render(scene, cam);
+    out.set(`u:${kind}`, renderer.domElement.toDataURL('image/png'));
+    scene.remove(root);
+    root.traverse((o) => { const mm = o as THREE.Mesh; if (mm.isMesh) { mm.geometry.dispose(); (mm.material as THREE.Material).dispose(); } });
   }
   renderer.dispose();
   renderer.forceContextLoss();

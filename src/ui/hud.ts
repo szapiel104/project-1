@@ -426,7 +426,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       if (!c) {
         const card = el('div', 'unit-card');
         const pic = el('span', 'unit-pic');
-        pic.innerHTML = PORTRAITS[r.id] ?? PORTRAIT;
+        // portret z modelu 3D (ten sam żołnierz co na mapie); bez niego rysunek
+        const shot = thumbs.get(`u:${r.id}`);
+        if (shot) { const img = el('img'); img.src = shot; img.alt = ''; pic.append(img); pic.classList.add('shot'); }
+        else pic.innerHTML = PORTRAITS[r.id] ?? PORTRAIT;
         const name = el('strong', 'unit-name', r.name);
         const stats = el('span', 'unit-stats');
         const needs = el('div', 'unit-needs');
