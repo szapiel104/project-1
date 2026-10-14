@@ -88,6 +88,10 @@ views.append(('z lotu ptaka', (0.01, R * 1.5, 0.01), (0, 0, 0), OUT, 24))
 views.append(('przekrój bez dachów', (R * 0.35, R * 1.1, R * 0.55), (0, 0, 0), IN, 24))
 views.append(('od dołu: narożnik', (-R * 0.55, 0.3, R * 0.55), (-R * 0.38, R * 0.18, R * 0.38), OUT, 20))
 views.append(('od dołu: przód', (0, 0.25, R * 0.63), (0, R * 0.1, R * 0.4), OUT, 20))
+# z oczu chłopa dookoła (spacer): z ziemi, patrząc w górę pod okap — dach i szczyty nie mogą prześwitywać
+for i in range(4):
+    a = math.pi / 4 + i * math.pi / 2
+    views.append((f'z ziemi {45 + i * 90}°', (math.sin(a) * R * 0.42, 0.46, math.cos(a) * R * 0.42), (0, R * 0.22, 0), OUT, 18))
 # widoki z oczu człowieka zapisuje skrypt budynku w modelu (klucz 'views'), np. keep.py
 for label, eye, tgt, groups, lens in d.get('views', []):
     views.append((label, tuple(eye), tuple(tgt), tuple(groups), lens))
