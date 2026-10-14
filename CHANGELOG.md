@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.20.3 — płynność przy wielu graczach (2026-10-14)
+
+- Boty myślą każdy w innym ticku (przy 4 na 4 osiem botów naraz zacinało grę co 20 s), palisadę bota sprawdzają po kawałku (najwyżej ~40 odcinków na raz)
+- Żołnierz albo strażnik, którego cel zabudowano (np. punkt obchodu pod nowym sadem), idzie na najbliższe wolne pole obok — wcześniej szukanie drogi przeszukiwało całą mapę co półtorej sekundy
+- Żołnierze stojący na działce nowego budynku schodzą z niej, zamiast stać w ścianach
+- Zwarty marsz: maruder kręcący się przy przeszkodzie nie zatrzymuje już oddziału na minutę — po kilku sekundach bez wyraźnego postępu idzie sam
+- Wynik w 2-godzinnej grze 4 na 4: średnio 1,2 ms na tick (było 2,1), najdłuższy tick 95 ms (było 330); w 1 na 1 najdłuższy tick ok. 35 ms
+
 ## 0.20.2 — przegląd długiej gry (2026-10-14)
 
 - Nowe narzędzie: długie gry bot kontra bot bez przeglądarki (`npx vitest run --config tools/soak/vitest.config.ts`, zmienne SOAK_SEEDS, SOAK_HOURS) — wypisuje zawieszonych chłopów i żołnierzy, stojące budowy, pat w walce, rozjazd zapisu i najwolniejsze ticki

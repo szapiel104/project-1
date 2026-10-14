@@ -328,8 +328,10 @@ function marchSystem(g: GameState): Map<number, March> {
     }
     if (fight || lag) {
       // czeka; liczy tylko czekanie bez postępu, żeby nie zostawić tych, którzy po prostu dochodzą z daleka
-      m.stall = lag && lag >= m.lag ? m.stall + 1 : fight ? m.stall : 0;
-      m.lag = lag;
+      // postęp = maruderzy wyraźnie bliżej niż najbliżej dotąd (kręcenie się w miejscu przy przeszkodzie się nie liczy)
+      if (!lag) m.stall = fight ? m.stall : 0;
+      else if (!m.lag || lag < m.lag - FP / 2) { m.stall = 0; m.lag = lag; }
+      else m.stall++;
       if (m.stall > STALL) {
         for (const s of list) {
           if (s.target) continue;
@@ -733,6 +735,21 @@ export function armySystem(g: GameState): void {
     if (here === s.goal) {
       s.goal = -1; s.amove = false; s.pace = undefined; s.slot = undefined;
       continue;
+    }
+    // cel zabudowany (np. punkt obchodu, na którym stanął sad): najbliższe wolne pole obok, inaczej szukanie drogi
+    // przeszukiwało całą mapę co kilkanaście ticków (zacięcia przy 4 na 4)
+    if (!walkable(g, s.goal, s.owner)) {
+      const gx = s.goal % W, gy = (s.goal - gx) / W;
+      let alt = -1;
+      for (const [dx, dy] of SPIRAL) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) > 4) continue;
+        const x = gx + dx, y = gy + dy;
+        if (x < 0 || y < 0 || x >= W || y >= g.map.height) continue;
+        if (walkable(g, y * W + x, s.owner)) { alt = y * W + x; break; }
+      }
+      if (alt < 0) { s.goal = -1; continue; }
+      s.goal = alt;
+      if (here === alt) { s.goal = -1; continue; }
     }
     const goal = s.goal;
     if (budget <= 0) continue; // ruszy w następnym ticku

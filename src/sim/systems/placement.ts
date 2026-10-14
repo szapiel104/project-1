@@ -3,7 +3,7 @@ import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { TERRAIN, Terrain } from '../../data/terrain';
 import { KEEP_BED, KEEP_CELLS } from '../../data/keep';
-import { keepCenter, Phase, playerKeep, type Building, type GameState } from '../state';
+import { FP, keepCenter, Phase, playerKeep, type Building, type GameState } from '../state';
 
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
@@ -259,6 +259,23 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
     return true;
   }
   const b = addBuilding(g, type, player, x, y, rot);
+  // żołnierze stojący na działce schodzą z niej na najbliższe wolne pole (zamiast stać w środku ścian)
+  if (b) {
+    const fp = footprint(def, rot), W = g.map.width;
+    for (const s of g.soldiers) {
+      const sx = s.px >> 8, sy = s.py >> 8;
+      if (s.up || sx < x || sy < y || sx >= x + fp.w || sy >= y + fp.h) continue;
+      let best = -1, bd = Infinity;
+      for (let ty = y - 1; ty <= y + fp.h; ty++) for (let tx = x - 1; tx <= x + fp.w; tx++) {
+        if (tx < 0 || ty < 0 || tx >= W || ty >= g.map.height) continue;
+        const t = ty * W + tx;
+        if (g.occupancy[t] !== 0 || !TERRAIN[g.map.tiles[t] as Terrain].walkable) continue;
+        const d = Math.abs(tx - sx) + Math.abs(ty - sy);
+        if (d < bd) { bd = d; best = t; }
+      }
+      if (best >= 0) { s.px = (best % W) * FP + FP / 2; s.py = Math.floor(best / W) * FP + FP / 2; s.path = []; if (s.goal >= 0 && g.occupancy[s.goal] !== 0) s.goal = best; }
+    }
+  }
   // budowa trwa: robotnicy z obozowiska przychodzą i stawiają budynek (pochodnia stoi od razu)
   if (b && def.id !== 'torch' && !(p.dev && p.instantBuild !== false)) startSite(b);
   p.stats.built++;

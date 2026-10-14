@@ -57,11 +57,13 @@ function spot(g: GameState, player: number, type: number): { x: number; y: numbe
 }
 
 export function botSystem(g: GameState): void {
-  if (g.tick % THINK !== 0) return;
   for (const p of g.players) {
+    // każdy bot myśli w innym ticku (przy 4 na 4 osiem botów naraz zacinało grę co 20 s)
+    const tk = g.tick - p.id * 5;
+    if (tk % THINK !== 0) continue;
     if (!p.bot || p.defeated || !playerKeep(g, p.id)) continue;
     // budowa: następny budynek z listy, którego jeszcze brakuje (rzadziej, bo szukanie miejsca kosztuje)
-    if (g.tick % (THINK * 5) === 0) {
+    if (tk % (THINK * 5) === 0) {
     const have = new Map<string, number>();
     for (const b of g.buildings) if (b.owner === p.id) { const id = BUILDINGS[b.type]!.id; have.set(id, (have.get(id) ?? 0) + 1); }
     const want = new Map<string, number>();
@@ -75,7 +77,7 @@ export function botSystem(g: GameState): void {
     }
     // umocnienia: gdy osada ma już kilkanaście budynków, otacza się palisadą z bramami i wieżami w narożnikach
     // (dopiero gdy stoją koszary: najpierw gospodarka i wojsko, potem drewno na palisadę)
-    if (g.tick % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
+    if (tk % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
       && g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks')) placementBatch(() => fortify(g, p));
     // podatek, gdy osada jest zadowolona: złoto na żołd
     p.tax = p.popularity > 70 ? 2 : p.popularity > 55 ? 1 : 0;
@@ -114,7 +116,7 @@ export function botSystem(g: GameState): void {
       }
     }
     // wypady: między falami dwóch, trzech żołnierzy poluje na drwali i rybaków wroga poza murami
-    if (wave && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first / 2 && g.tick % (THINK * 30) === 0) {
+    if (wave && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first / 2 && tk % (THINK * 30) === 0) {
       const idle = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id && !s.post && s.goal < 0 && !s.target);
       if (idle.length >= 6) {
         const prey = g.units.find((u) => g.players[u.owner]?.team !== p.team && u.job && g.buildings.some((b) => b.id === u.job && ['woodcutter', 'fisher', 'quarry', 'mine'].includes(BUILDINGS[b.type]!.id)));
@@ -143,10 +145,17 @@ function fortify(g: GameState, p: PlayerState): void {
   // najpierw bramy (żeby mur nie zamknął przejść), potem reszta muru
   const isG = ([x, y]: [number, number]): boolean => (x === cx && (y === y0 || y === y1)) || (y === cy && (x === x0 || x === x1));
   ring.sort((a, b) => Number(isG(b)) - Number(isG(a)));
-  for (const [x, y] of ring) {
+  // sprawdzenie miejsca pod mur jest drogie (czy nie odetnie przejść): najwyżej 40 odcinków na raz, za każdym razem
+  // od innego miejsca obwodu (bramy zawsze pierwsze) — zamiast kilkuset sprawdzeń w jednym ticku
+  const gates = ring.filter(isG), rest = ring.filter((c) => !isG(c));
+  const off = rest.length ? Math.floor(g.tick / (THINK * 3)) * 40 % rest.length : 0;
+  const order = [...gates, ...rest.slice(off), ...rest.slice(0, off)];
+  let tries = 0;
+  for (const [x, y] of order) {
     if (placed >= 8 || x < 1 || y < 1 || x >= w - 1 || y >= g.map.height - 1) continue;
     const t = y * w + x;
     if (g.occupancy[t] !== 0) continue;
+    if (++tries > 44) break;
     const isGate = (x === cx && (y === y0 || y === y1)) || (y === cy && (x === x0 || x === x1));
     const type = isGate ? gate : pal;
     if (canPlace(g, p.id, type, x, y) === null && placeBuilding(g, p.id, type, x, y)) placed++;
