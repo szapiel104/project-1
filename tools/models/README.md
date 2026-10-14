@@ -19,3 +19,17 @@ Układ współrzędnych: jak w grze (x w prawo, y w górę, twarz w +z). Środki
 dłoń `hand` (w układzie ręki).
 
 Zwierzęta w osadzie (kury, świnia, koń, pies): `/tmp/bpyenv/bin/python tools/models/animals.py` → `src/render/models/animals.json`, podgląd `podglad-zwierzeta.html?osada=1`.
+
+## Budynki i obchód
+
+Budynki (np. `keep.py`) korzystają z `building.py`: grupy `base` / `shell` (dachy, znikają przy podglądzie wnętrza) /
+`interior` / `floor` (podłoga sypialni) / `ceiling` (sufit, tylko przy spacerze w środku). Plan zamku jest w
+`src/data/keep-layout.json` — ten sam czyta symulacja, więc ściany w grze i na modelu się pokrywają.
+
+Po każdej zmianie obchód bez przeglądarki (ok. 2 min, Workbench z ukrytymi tylnymi ścianami jak w grze):
+
+    sh tools/models/inspect.sh keep /tmp/keep.png
+
+Arkusz: 8 widoków dookoła, z lotu ptaka, przekrój bez dachów, od dołu, a także widoki z oczu człowieka zapisane przez
+skrypt budynku w kluczu `views` (podpis, oko, cel, grupy, ogniskowa). Nowy budynek (np. lepsza stodoła) dopisuje
+swoje `views` i od razu ma ten sam obchód.

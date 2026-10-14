@@ -38,6 +38,15 @@ def torch(group, x, y, z):
     b.box(group, 'iron', 0.025, 0.12, 0.025, x, y, z)
     b.prism(group, 'iron', 0.03, 0.035, 0.03, x, y + 0.12, z, seg=6)
     b.prism(group, 'ember', 0.028, 0.0, 0.1, x, y + 0.15, z, seg=6)
+def brazier(group, x, y, z):
+    """Kosz ogniowy na nodze: misa rozszerzona ku górze, z dnem, żar i trzy języki ognia"""
+    b.prism(group, 'iron', 0.02, 0.02, y - G, x, G, z, seg=5)
+    b.prism(group, 'iron', 0.06, 0.06, 0.012, x, y - 0.012, z, seg=10)
+    b.poly(group, 'iron', [(x + math.sin(2 * math.pi * k / 10) * 0.06, y - 0.012, z + math.cos(2 * math.pi * k / 10) * 0.06) for k in range(10)], away=(x, y + 1, z))
+    b.prism(group, 'iron', 0.06, 0.13, 0.09, x, y, z, seg=10, top=False)
+    b.prism(group, 'woodDark', 0.11, 0.11, 0.06, x, y + 0.01, z, seg=10)
+    for i, (ox, oz, hh) in enumerate(((0.0, 0.0, 0.16), (0.045, 0.02, 0.11), (-0.035, -0.03, 0.12))):
+        b.prism(group, 'ember', 0.04, 0.0, hh, x + ox, y + 0.07, z + oz, seg=6)
 def block(x0, x1, z0, z1, y0=0.0, y1=9.0):
     solid.append([round(min(x0, x1), 3), round(max(x0, x1), 3), round(min(z0, z1), 3), round(max(z0, z1), 3), round(y0, 3), round(y1, 3)])
 def boxs(group, mat, w, h, d, x, y, z, rot=0.0, **kw):
@@ -218,10 +227,10 @@ for dx in range(N):
     for i in range(n):
         za, zb = z0 + (z1 - z0) * i / n, z0 + (z1 - z0) * (i + 1) / n
         hgt = G + (WALK - G) * (i + 1) / n
-        b.box('base', 'stone', 0.86, hgt - G, zb - za, cx(dx), G, (za + zb) / 2)
-        b.box('base', 'castleDark', 0.88, 0.02, 0.03, cx(dx), hgt - 0.02, zb - 0.015)
+        b.box('base', 'stone', 0.76, hgt - G, zb - za, cx(dx), G, (za + zb) / 2)
+        b.box('base', 'castleDark', 0.78, 0.02, 0.03, cx(dx), hgt - 0.02, zb - 0.015)
     for side in (-1, 1):   # balustrada z belek
-        x = cx(dx) + side * 0.45
+        x = cx(dx) + side * 0.36
         for i in range(4):
             zz = z0 + 0.15 + i * (z1 - z0 - 0.3) / 3
             hh = G + (WALK - G) * (zz - z0) / (z1 - z0)
@@ -382,7 +391,8 @@ for chars, mat, rise in ROOFS:
     x0, x1, z0, z1 = bbox(chars)
     h = ROOM_H.get(chars[0], 0.9)
     if rise:
-        b.gable('shell', mat, x0, x1, z0, z1, G + h, rise, along_x=(x1 - x0) >= (z1 - z0), over=0.1, end_mat=WALL_MAT.get(chars[0], 'castle'))
+        # koszary i lochy stoją przy schodach na mury: krótki okap, żeby dach nie wchodził w bieg schodów
+        b.gable('shell', mat, x0, x1, z0, z1, G + h, rise, along_x=(x1 - x0) >= (z1 - z0), over=0.03 if chars[0] in 'BL' else 0.1, end_mat=WALL_MAT.get(chars[0], 'castle'))
     else:   # lochy: płaski kamienny strop z otworem świetlnym
         b.box('shell', mat, x1 - x0 + 0.1, 0.08, z1 - z0 + 0.1, (x0 + x1) / 2, G + h, (z0 + z1) / 2, bottom=True)
     b.box('ceiling', 'wood' if chars[0] != 'L' else 'castleDark', x1 - x0, 0.03, z1 - z0, (x0 + x1) / 2, G + h - 0.03, (z0 + z1) / 2, bottom=True)
@@ -421,9 +431,7 @@ for s in (-1, 1):
     for zz in (tz0 + 1.2, tz1 - 0.5):
         b.prism('interior', 'castleDark', 0.1, 0.1, 1.27, tmx + s * 0.85, G, zz, seg=8)
         block(tmx + s * 0.85 - 0.1, tmx + s * 0.85 + 0.1, zz - 0.1, zz + 0.1)
-    b.prism('interior', 'iron', 0.13, 0.09, 0.08, tmx + s * 0.62, G + 0.4, tz0 + 0.35, seg=8)
-    b.prism('interior', 'iron', 0.02, 0.02, 0.4, tmx + s * 0.62, G, tz0 + 0.35, seg=5)
-    b.box('interior', 'ember', 0.16, 0.04, 0.16, tmx + s * 0.62, G + 0.46, tz0 + 0.35)
+    brazier('interior', tmx + s * 0.62, G + 0.4, tz0 + 0.35)
     block(tmx + s * 0.62 - 0.13, tmx + s * 0.62 + 0.13, tz0 + 0.22, tz0 + 0.48)
 
 # ---------------- kuchnia ----------------
@@ -537,9 +545,27 @@ for x, z in ((cx(6) + 0.1, cz(6) + 0.1), (cx(6) + 0.1, cz(5) + 0.2)):
 # kosze z ogniem przy wewnętrznej stronie bramy
 for s in (-1, 1):
     x, z = cx(gx) + s * 0.75, cz(N - 2) + 0.2
-    b.prism('base', 'iron', 0.02, 0.02, 0.45, x, G, z, seg=5)
-    b.prism('base', 'iron', 0.12, 0.08, 0.08, x, G + 0.45, z, seg=8)
-    b.box('base', 'ember', 0.14, 0.04, 0.14, x, G + 0.5, z)
+    brazier('base', x, G + 0.45, z)
     block(x - 0.12, x + 0.12, z - 0.12, z + 0.12)
 
-b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G, 'wallY': WALK})
+# punkty do obchodu (tools/models/inspect_building.py): [podpis, oko, cel, grupy, ogniskowa]; oko i cel w układzie modelu
+E, WY = G + 0.46, WALK + 0.46
+OUT, ROOM = ['base', 'shell'], ['base', 'interior', 'floor', 'ceiling']
+VIEWS = [
+    ['brama z zewnątrz', [0, 0.46, 7.6], [0, 0.7, 3], OUT, 22],
+    ['dziedziniec → sala', [0.9, E, 0.4], [0, 0.9, -3], OUT, 20],
+    ['dziedziniec → brama', [0, E, -0.8], [0, 0.6, 5], OUT, 20],
+    ['dziedziniec → lochy, schody', [1.2, E, 1.2], [-3, 0.6, 3.5], OUT, 20],
+    ['dziedziniec → koszary', [-1.0, E, 1.0], [3.5, 0.6, 3], OUT, 20],
+    ['sala tronowa', [0, E, -1.9], [0, 0.6, -4.5], ROOM, 18],
+    ['kuchnia', [-2.9, E, -2.8], [-4.3, 0.4, -4.4], ROOM, 16],
+    ['komnata', [2.9, E, -2.7], [4.4, 0.4, -4.3], ROOM, 16],
+    ['koszary', [3.0, E, 0.9], [4.0, 0.3, 4.3], ROOM, 16],
+    ['lochy', [-3.0, E, 0.8], [-3.0, 0.4, 4.4], ROOM, 16],
+    ['pod schodami', [-1.3, E, 2.2], [-2.0, 1.0, 4.5], OUT, 18],
+    ['schody przy koszarach', [1.1, E + 0.3, 2.1], [2.2, 1.2, 4.2], OUT, 18],
+    ['na murze', [-5.0, WY, 3.8], [-5.0, WY - 0.2, -2], OUT, 20],
+    ['izba baszty', [-5.0, WY, 4.7], [-4.0, WY - 0.1, 5.2], OUT, 16],
+    ['z muru na dziedziniec', [4.8, WY, 1.0], [0, 0.3, 1.0], OUT, 22],
+]
+b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G, 'wallY': WALK, 'views': VIEWS})
