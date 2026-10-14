@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.21.7 — tekstury na ludziach (2026-10-14)
+
+- Wszyscy ludzie (gospodynie, dzieci, chłopi, strażnicy, włócznicy, łucznicy) mają splot płótna na ubraniach, ziarno skóry na butach i pasach i słoje na drzewcach, łukach i tarczach; splot jest szary, więc barwy ubrań zostają
+- Pranie na sznurach też z szarym splotem (bez brązowego zabarwienia), jaśniejszy fartuch gospodyni
+
 ## 0.21.6 — gospodyni i dziecko z Blendera (2026-10-14)
 
 - Gospodyni to własny model: suknia do ziemi z fałdami i ciemniejszym obrąbkiem, sznurowany gorset, biały dekolt koszuli, lniany fartuch z troczkami, mankiety; na głowie chusta zawiązana na karku albo włosy w kok z warkoczem (zamiast chłopa z doklejonym stożkiem)

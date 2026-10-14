@@ -482,3 +482,47 @@ function grain(ctx: CanvasRenderingContext2D, n: number, seed: number): void {
   }
   ctx.putImageData(img, 0, 0);
 }
+
+const grays = new Map<Kind, THREE.CanvasTexture>();
+/**
+ * Szara wersja tekstury (jasność średnio ok. 0,9, w przestrzeni liniowej): sam splot, słoje albo ziarno, bez barwy.
+ * Do rzeczy, których kolor daje gra (ubrania w barwach pana, suknie, pranie) — zdjęciowa juta zabarwiłaby je na brązowo.
+ * Wypełnia się, gdy wczyta się zdjęcie (albo od razu, gdy wzór jest rysowany w kodzie).
+ */
+export function grayPattern(kind: Kind): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  const have = grays.get(kind);
+  if (have) return have;
+  const src = pattern(kind);
+  if (!src) return null;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = 4;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (ctx) { ctx.fillStyle = '#e6e6e6'; ctx.fillRect(0, 0, 4, 4); }
+  const out = new THREE.CanvasTexture(canvas);
+  out.wrapS = out.wrapT = THREE.RepeatWrapping;
+  out.colorSpace = THREE.NoColorSpace;
+  out.anisotropy = 8;
+  grays.set(kind, out);
+  const fill = (): boolean => {
+    const img = src.image as (CanvasImageSource & { width: number; height: number }) | undefined;
+    if (!ctx || !img || !img.width) return false;
+    const n = Math.min(512, img.width);
+    canvas.width = canvas.height = n;
+    ctx.drawImage(img, 0, 0, n, n);
+    const d = ctx.getImageData(0, 0, n, n), px = d.data;
+    let sum = 0;
+    for (let i = 0; i < px.length; i += 4) sum += px[i]! * 0.3 + px[i + 1]! * 0.59 + px[i + 2]! * 0.11;
+    const mean = Math.max(1, sum / (px.length / 4));
+    for (let i = 0; i < px.length; i += 4) {
+      const l = (px[i]! * 0.3 + px[i + 1]! * 0.59 + px[i + 2]! * 0.11) / mean;
+      const v = Math.max(0, Math.min(255, Math.round((0.9 + (l - 1) * 0.8) * 255)));
+      px[i] = px[i + 1] = px[i + 2] = v;
+    }
+    ctx.putImageData(d, 0, 0);
+    out.needsUpdate = true;
+    return true;
+  };
+  if (!fill()) { const iv = setInterval(() => { if (fill()) clearInterval(iv); }, 250); setTimeout(() => clearInterval(iv), 30000); }
+  return out;
+}

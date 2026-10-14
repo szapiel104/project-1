@@ -4,6 +4,7 @@ import GUARD_MODEL from './models/guard.json';
 import PEASANT_MODEL from './models/peasant.json';
 import SPEARMAN_MODEL from './models/spearman.json';
 import ARCHER_MODEL from './models/archer.json';
+import { grayPattern, normal, pattern } from './textures';
 import WOMAN_MODEL from './models/woman.json';
 import CHILD_MODEL from './models/child.json';
 
@@ -70,6 +71,27 @@ function prep(geo: THREE.BufferGeometry, shade?: (x: number, y: number, z: numbe
   g.setAttribute('color', new THREE.BufferAttribute(c, 3));
   return g;
 }
+
+/** Współrzędne tekstury z rzutu na płaszczyznę, do której ściana jest najbardziej zwrócona (splot tkaniny, słoje) */
+export function boxUv(geo: THREE.BufferGeometry, scale: number): THREE.BufferGeometry {
+  const p = geo.attributes.position!, n = geo.attributes.normal!;
+  const uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    const [u, v] = ay >= ax && ay >= az ? [x, z] : ax >= az ? [z, y] : [x, y];
+    uv[i * 2] = u * scale; uv[i * 2 + 1] = v * scale;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  return geo;
+}
+
+/** Tekstury ubrań i drewna na postaciach: splot płótna (szary, barwę daje kolor ubrania) i słoje drzewca, łuku, tarczy */
+const TEX: Partial<Record<Mat, () => { map: THREE.Texture | null; normalMap: THREE.Texture | null; scale: number }>> = {
+  cloth: () => ({ map: grayPattern('burlap'), normalMap: normal('burlap'), scale: 9 }),
+  leather: () => ({ map: grayPattern('soil'), normalMap: null, scale: 7 }),
+  wood: () => ({ map: pattern('planks'), normalMap: normal('planks'), scale: 6 }),
+};
 
 const merge = (...g: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries(g.map((x) => (x.attributes.color ? x : prep(x))))!;
 
@@ -173,7 +195,13 @@ export class Figures {
     const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub'], lod: 0 | 1 = 0): void => {
       const fixed = typeof color === 'number';
       const m = MATS[mat];
-      const mesh = new THREE.InstancedMesh(geo.attributes.color ? geo : prep(geo), new THREE.MeshStandardMaterial({ color: fixed ? color : 0xffffff, vertexColors: true, roughness: m.roughness, metalness: m.metalness, side: m.side ?? THREE.FrontSide }), max);
+      const tex = TEX[mat]?.();
+      const g0 = geo.attributes.color ? geo : prep(geo);
+      if (tex?.map) boxUv(g0, tex.scale);
+      const mesh = new THREE.InstancedMesh(g0, new THREE.MeshStandardMaterial({
+        color: fixed ? color : 0xffffff, vertexColors: true, roughness: m.roughness, metalness: m.metalness, side: m.side ?? THREE.FrontSide,
+        map: tex?.map ?? null, normalMap: tex?.normalMap ?? null, normalScale: new THREE.Vector2(0.45, 0.45),
+      }), max);
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.castShadow = true;

@@ -95,7 +95,7 @@ for v in abm.verts:
     a = math.atan2(x, z)
     k = 1.12 + 0.015 * math.sin(a * 5) * smooth(0.3, 0.1, y)
     v.co.x, v.co.y = x * k, -(z * k)
-apron_m = Mesh(abm, lambda x, y, z: tuple(c * (0.84 + (y - 0.05) * 0.5) for c in LINEN), 'cloth')
+apron_m = Mesh(abm, lambda x, y, z: tuple(min(1.0, c * (1.3 + (y - 0.05) * 0.4)) for c in LINEN), 'cloth')
 band = lathe('wband', [(0.088, 0.298), (0.09, 0.304), (0.09, 0.314), (0.087, 0.318)], seg=20, depth=0.76, subsurf=0)
 band_m = Mesh(evaluated(band), LINEN, 'cloth')
 bow = [Mesh(evaluated(sphere('bowk', (0, 0.31, -0.07), (0.014, 0.01, 0.008), seg=8, rings=5)), LINEN, 'cloth')]

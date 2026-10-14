@@ -10,7 +10,7 @@ import { clutterTaken } from './clutter';
 import { idle } from './motion';
 import { Figures, modelGeo, type ModelMesh } from './peasants';
 import { tint } from './loads';
-import { normal, pattern } from './textures';
+import { grayPattern, normal, pattern } from './textures';
 import YARD from './models/yard.json';
 
 /**
@@ -66,7 +66,7 @@ let yardMats: Record<string, [THREE.Material, number]> | null = null;
 function yardMaterials(): Record<string, [THREE.Material, number]> {
   if (yardMats) return yardMats;
   const wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks'), normalMap: normal('planks') });
-  const cloth = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, map: pattern('burlap'), normalMap: normal('burlap'), side: THREE.DoubleSide });
+  const cloth = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, map: grayPattern('burlap'), normalMap: normal('burlap'), side: THREE.DoubleSide });
   const soil = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('soil'), normalMap: normal('soil') });
   const plain = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.7 });
   return (yardMats = { wood: [wood, 6], cloth: [cloth, 8], soil: [soil, 3], plain: [plain, 1] });
