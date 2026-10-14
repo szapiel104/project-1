@@ -64,6 +64,13 @@ Zrobione 13.10: kawałki roślinności 40×40 z odrzucaniem poza ekranem, poziom
 
 Zrobione 13.10 wieczorem: automatyczna jakość (5 poziomów: cienie, AO, rozdzielczość, zasięg trawy; schodzi przy < 45 FPS, raz na sesję próbuje wyżej, poziom zapamiętany; wyłącza się po ręcznej zmianie grafiki).
 
+Zrobione 14.10: przegląd długiej gry (tools/soak), boty myślą w różnych tickach, szybsze sprawdzanie blokowania przejść, krzaki i drzewa z daleka lżejsze, góry za mapą bez cienia (karta graficzna ok. 10 → 7,5 ms na klatkę w widoku osady).
+
+Dalej (zmierzone 14.10 w Chrome, widok osady: ok. 2,7 mln trójkątów w scenie, 4 mln z cieniem, ok. 1180 wywołań rysowania):
+- Kępy trawy (28 trójkątów) i korony liściastych (200) to razem ok. 750 tys. trójkątów — rzadsze z daleka albo obrazki
+- Domy z Blendera mają po ok. 19 tys. trójkątów — wersja z daleka (LOD) dla budynków
+- Ok. 1180 wywołań rysowania: kawałki lasu po kilkanaście rodzajów na kawałek, w cieniu drugi raz — BatchedMesh albo większe kawałki
+
 Większe rzeczy na później:
 - Wspólny bufor instancji dla wszystkich kawałków jednego rodzaju (BatchedMesh) — mniej wywołań rysowania
 - Cienie kaskadowe albo cień tylko z budynków i drzew blisko kamery; statyczna mapa cieni dla gór i puszczy
