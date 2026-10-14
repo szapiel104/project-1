@@ -1623,7 +1623,7 @@ export class GameRenderer {
   private wallKey = '';
   private wallShafts: THREE.InstancedMesh | null = null;
   private wallTips: THREE.InstancedMesh | null = null;
-  private stoneKit: { arm: THREE.InstancedMesh; core: THREE.InstancedMesh; tower: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
+  private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
   /** Częstokół: bale łączą się z sąsiednimi palisadami, bramami i wieżami; brama obraca się w linii muru */
   private syncWalls(g: GameState, view: TerrainView): void {
     const { width, height } = g.map;
@@ -1642,7 +1642,8 @@ export class GameRenderer {
     }
     const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
     let n = 0;
-    const sn = { arm: 0, core: 0, tower: 0, ladder: 0 };
+    const sn = { block: 0, edge: 0, ladder: 0 };
+    const stoneAt = (x: number, y: number): boolean => { const o = solid.get(y * width + x); return !!o && BUILDINGS[o.type]!.id === 'stoneWall'; };
     if (!this.stoneKit) {
       const k = stoneWallKit();
       const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, max: number): THREE.InstancedMesh => {
@@ -1650,7 +1651,7 @@ export class GameRenderer {
         m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(m);
         return m;
       };
-      this.stoneKit = { arm: mk(k.arm, k.mat, 8192), core: mk(k.core, k.mat, 4096), tower: mk(k.tower, k.mat, 2048), ladder: mk(k.ladder, k.wood, 1024) };
+      this.stoneKit = { block: mk(k.block, k.mat, 8192), edge: mk(k.edge, k.mat, 16384), ladder: mk(k.ladder, k.wood, 2048) };
     }
     const keeps = new Map<number, [number, number]>();
     for (const b of g.buildings) if (b.type === 0) { const fp = footprint(BUILDINGS[0]!, b.rot); keeps.set(b.owner, [b.x + fp.w / 2, b.y + fp.h / 2]); }
@@ -1666,7 +1667,6 @@ export class GameRenderer {
         // mur przechodzi pod wieżą: między nogami wieży stoją bale (albo kamień), żeby było widać, że tędy nie ma przejścia
         const fp = footprint(def, b.rot);
         const inside = (x: number, y: number): boolean => x >= b.x && y >= b.y && x < b.x + fp.w && y < b.y + fp.h;
-        const stoneAt = (x: number, y: number): boolean => { const o = solid.get(y * width + x); return !!o && BUILDINGS[o.type]!.id === 'stoneWall'; };
         for (let ty = b.y; ty < b.y + fp.h; ty++) for (let tx = b.x; tx < b.x + fp.w; tx++) {
           // rząd albo kolumna wieży, do której z zewnątrz dochodzi mur
           const rowIn = at(b.x - 1, ty) || at(b.x + fp.w, ty), colIn = at(tx, b.y - 1) || at(tx, b.y + fp.h);
@@ -1678,15 +1678,10 @@ export class GameRenderer {
           const stone = stoneAt(b.x - 1, ty) || stoneAt(b.x + fp.w, ty) || stoneAt(tx, b.y - 1) || stoneAt(tx, b.y + fp.h);
           const lx0 = tx + 0.5, lz0 = ty + 0.5;
           if (stone && this.stoneKit) {
-            const kp = keeps.get(b.owner), ox = lx0 - (kp ? kp[0] : lx0), oz = lz0 - (kp ? kp[1] : lz0 + 1);
-            const yb = view.heightAt(lx0, lz0) - 0.06;
-            const place = (mesh: THREE.InstancedMesh, x: number, z: number, r: number, c: number): number => {
-              e.set(0, r, 0); q.setFromEuler(e); M4.compose(p.set(x - width / 2, yb, z - height / 2), q, sc.set(1, 1, 1)); mesh.setMatrixAt(c, M4); return c + 1;
-            };
-            sn.core = place(this.stoneKit.core, lx0, lz0, 0, sn.core);
-            for (const [i, [dx, dz]] of ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const).entries()) {
-              if (lk[i]) sn.arm = place(this.stoneKit.arm, lx0 + dx * 0.25, lz0 + dz * 0.25, dx ? (oz >= 0 ? 0 : Math.PI) : (ox >= 0 ? Math.PI / 2 : -Math.PI / 2), sn.arm);
-            }
+            // pod wieżą pełny blok muru kamiennego (bez blanek — przykrywa go pomost wieży)
+            e.set(0, 0, 0); q.setFromEuler(e);
+            M4.compose(p.set(lx0 - width / 2, view.heightAt(lx0, lz0) - 0.06, lz0 - height / 2), q, sc.set(1, 1, 1));
+            this.stoneKit.block.setMatrixAt(sn.block++, M4);
             continue;
           }
           for (const log of palisadeLogs(lk, b.id + tx * 3 + ty)) {
@@ -1707,28 +1702,25 @@ export class GameRenderer {
       const links: [boolean, boolean, boolean, boolean] = [at(b.x + 1, b.y), at(b.x - 1, b.y), at(b.x, b.y + 1), at(b.x, b.y - 1)];
       const cx = b.x + 0.5, cz = b.y + 0.5;
       if (def.id === 'stoneWall') {
-        // mur kamienny z części (stoneWallKit): ramię do każdego sąsiedniego muru, blanki od strony z dala od twierdzy,
-        // baszta na końcach i w narożnikach, co kilka pól drabina od środka; w budowie rośnie od ziemi
+        // mur kamienny jak w Twierdzy: pełny blok na polu, sąsiednie bloki zlewają się w gruby mur; blanki tylko na
+        // krawędziach bez sąsiedniego muru kamiennego; co kilka pól drabina od strony twierdzy; w budowie rośnie od ziemi
         const kit = this.stoneKit!;
         const y0 = view.heightAt(cx, cz) - 0.06, hk = Math.max(0.08, built);
-        const keep = keeps.get(b.owner);
-        const ox = cx - (keep ? keep[0] : cx), oz = cz - (keep ? keep[1] : cz + 1);
-        const put = (mesh: THREE.InstancedMesh, x: number, z: number, rotY: number, cnt: number): number => {
+        const put = (mesh: THREE.InstancedMesh, rotY: number, cnt: number): number => {
           e.set(0, rotY, 0); q.setFromEuler(e);
-          M4.compose(p.set(x - width / 2, y0, z - height / 2), q, sc.set(1, hk, 1));
+          M4.compose(p.set(cx - width / 2, y0, cz - height / 2), q, sc.set(1, hk, 1));
           mesh.setMatrixAt(cnt, M4);
           return cnt + 1;
         };
-        const alongX = oz >= 0 ? 0 : Math.PI, alongZ = ox >= 0 ? Math.PI / 2 : -Math.PI / 2;
-        const [E, Wl, S, N] = links;
-        const straight = (E && Wl && !S && !N) || (S && N && !E && !Wl);
-        if (sn.core < 4096) sn.core = put(kit.core, cx, cz, 0, sn.core);
-        for (const [i, [dx, dz]] of ([[1, 0], [-1, 0], [0, 1], [0, -1]] as const).entries()) {
-          if (!links[i] || sn.arm >= 8192) continue;
-          sn.arm = put(kit.arm, cx + dx * 0.25, cz + dz * 0.25, dx ? alongX : alongZ, sn.arm);
+        if (sn.block < 8192) sn.block = put(kit.block, 0, sn.block);
+        const kp = keeps.get(b.owner);
+        let ladderDone = !(built >= 1 && ((b.x * 7 + b.y * 13) % 5) === 0);
+        for (const [dx, dz, rot] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]] as const) {
+          if (stoneAt(b.x + dx, b.y + dz) || sn.edge >= 16384) continue;
+          sn.edge = put(kit.edge, rot, sn.edge);
+          // drabina na krawędzi od strony twierdzy, gdy przed nią jest wolne pole
+          if (!ladderDone && kp && dx * (kp[0] - cx) + dz * (kp[1] - cz) > 0 && !at(b.x + dx, b.y + dz) && sn.ladder < 2048) { sn.ladder = put(kit.ladder, rot, sn.ladder); ladderDone = true; }
         }
-        if (!straight && sn.tower < 2048) sn.tower = put(kit.tower, cx, cz, 0, sn.tower);
-        if (straight && built >= 1 && ((b.x * 7 + b.y * 13) % 6) === 0 && sn.ladder < 1024) sn.ladder = put(kit.ladder, cx, cz, E ? alongX : alongZ, sn.ladder);
         continue;
       }
       const logs = palisadeLogs(links, b.id);
@@ -1760,7 +1752,7 @@ export class GameRenderer {
       }
     }
     this.wallShafts.count = n; this.wallTips!.count = n;
-    for (const key of ['arm', 'core', 'tower', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; m.instanceMatrix.needsUpdate = true; }
+    for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; m.instanceMatrix.needsUpdate = true; }
     this.wallShafts.instanceMatrix.needsUpdate = true; this.wallTips!.instanceMatrix.needsUpdate = true;
   }
 
