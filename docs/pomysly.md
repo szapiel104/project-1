@@ -182,3 +182,26 @@ Zasada: każda poprawka wyglądu z budżetem wydajności. Mierzymy przed i po (`
 - Cienie tylko z bliskich obiektów, mapa cieni wg poziomu grafiki; drogie efekty (światło odbite, mgła objętościowa) tylko na wysokim poziomie.
 - Automatyczna jakość (już jest) przełącza poziomy, gdy FPS spada; nowe efekty muszą mieć wpis w poziomach automatu.
 - Po każdej partii pomiar w Chrome (`__perf()`), duża bitwa i 4v4; spadek >10% = poprawka przed wdrożeniem.
+
+## Technika: wydajniej i ładniej (14.10.2026, wieczór) — uzupełnia „Drogę do mega gry” wyżej
+**Wydajność**
+- Symulacja w osobnym wątku (Web Worker): logika gry i boty poza wątkiem rysowania; grafika dostaje cały czas klatki, koniec przycinania w 4v4 i dużych bitwach. Największy pojedynczy zysk. (Lockstep i zapis bez zmian — worker liczy step(), wątek główny dostaje stan do rysowania.)
+- Skompresowane tekstury KTX2/Basis z mipmapami: 4–6× mniej pamięci karty, szybsze wczytywanie, można dać ostrzejsze tekstury.
+- BatchedMesh dla budynków + mapa rysowana kawałkami (chunki z odcinaniem poza kamerą): mniej wywołań rysowania (dziś ~1180).
+- Drzewa z daleka jako impostory (płaski obrazek zwrócony do kamery, 2 trójkąty) i trawa liczona na karcie graficznej — dziś ~750 tys. trójkątów, najwięcej w scenie.
+- Cienie statyczne liczone raz (budynki, drzewa, mury) i odświeżane tylko po zmianie; co klatkę cień tylko ruchomych (ludzie, zwierzęta).
+- Dynamiczna rozdzielczość: przy spadku FPS w bitwie obraz na chwilę o 10–20% mniejszy, klatki równe.
+
+**Ładność**
+- Wiatr w shaderze: trawa, korony drzew, flagi, pranie, strzechy kołyszą się (prawie za darmo).
+- Cienie chmur przesuwające się po terenie (jedna ruchoma tekstura w shaderze terenu).
+- Poświata ognia (bloom: pochodnie, ogniska, okna nocą) i promienie światła przez mgłę o świcie.
+- Prawdziwe niebo: słońce i księżyc po łuku, chmury, oświetlenie od nieba (mapa otoczenia) zamiast płaskiego tła.
+- Cząsteczki na karcie graficznej: dym z kominów, kurz spod nóg, iskry, świetliki nocą.
+- Naklejki na teren: błoto przy drzwiach, wydeptane ścieżki tam, gdzie ludzie chodzą najczęściej, krew po bitwie.
+- Woda z odbiciem nieba i pianą przy brzegu.
+- Ludzie ze szkieletem i animacjami z gotowych paczek (chód, praca, walka, śmierć), wpięci z instancjonowaniem (animacje wypalone w teksturę), żeby setki postaci dalej szły kilkoma wywołaniami rysowania.
+
+**Na później:** Three.js w trybie WebGPU (WebGPURenderer + TSL) — obliczenia na karcie (cząsteczki, trawa, tłum), więcej klatek na nowszych komputerach; wymaga częściowego przepisania shaderów.
+
+**Proponowana kolejność startu:** 1) wiatr + cienie chmur, 2) symulacja w Web Workerze, 3) tekstury KTX2.
