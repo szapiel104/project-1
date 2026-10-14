@@ -135,7 +135,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     production: { input: { res: 'wood', amount: 2 }, output: { res: 'bow', amount: 1 }, site: 'home', workTicks: 140 },
   },
   // Karczma: karczmarz nalewa piwo ze składu (warzy je browar); wieczorem ludzie przychodzą posiedzieć, co podnosi popularność
-  { id: 'tavern', category: 'settlement', name: 'b.tavern', w: 3, h: 2, cost: { wood: 35, gold: 20 }, staff: true, workView: 'inside', buildable: true },
+  { id: 'tavern', category: 'settlement', name: 'b.tavern', w: 4, h: 3, cost: { wood: 35, gold: 20 }, staff: true, workView: 'inside', buildable: true },
   // Umocnienia z bali: częstokół stawiany przeciąganiem, brama dla swoich, drewniana wieża strażnicza
   { id: 'palisade', category: 'defense', name: 'b.palisade', w: 1, h: 1, cost: { wood: 1 }, hp: 260, wall: true, line: true, buildable: true },
   { id: 'gate', category: 'defense', name: 'b.gate', w: 1, h: 1, cost: { wood: 8 }, hp: 600, gate: true, buildable: true },

@@ -8,7 +8,7 @@ import { openWalk } from './systems/placement';
 import type { Building, Corpse, Traveler, Wolf, GameState, March, PlayerState, Rubble, Soldier, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
-export const SAVE_VERSION = 20;
+export const SAVE_VERSION = 21;
 
 export interface SaveData {
   v: number;
