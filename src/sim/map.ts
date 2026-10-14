@@ -106,6 +106,17 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
   for (const s of starts) {
     const dir = s.team === 0 ? 1 : -1;
     clearCircle(tiles, elevation, width, height, s.x, s.y, preset.startRadius, preset.waterLevel);
+    // pod zamkiem równy plac: średnia wysokość, łagodnie wtopiona w otoczenie
+    let sum = 0, n = 0;
+    for (let y = s.y - 6; y <= s.y + 6; y++) for (let x = s.x - 6; x <= s.x + 6; x++) if (x >= 0 && y >= 0 && x < width && y < height) { sum += elevation[y * width + x]!; n++; }
+    const flat = Math.round(sum / Math.max(1, n));
+    for (let y = s.y - 9; y <= s.y + 9; y++)
+      for (let x = s.x - 9; x <= s.x + 9; x++) {
+        if (x < 0 || y < 0 || x >= width || y >= height) continue;
+        const d = Math.max(Math.abs(x - s.x), Math.abs(y - s.y)), k = d <= 6 ? 1 : (9 - d) / 3;
+        const i = y * width + x;
+        elevation[i] = Math.round(elevation[i]! + (flat - elevation[i]!) * k);
+      }
     stamp(tiles, width, height, s.x - dir * (preset.startRadius + 1), s.y + dir * 3, 3, Terrain.Forest);
     stamp(tiles, width, height, s.x + dir * 2, s.y - dir * (preset.startRadius + 2), 1, Terrain.Stone);
     stamp(tiles, width, height, s.x - dir * 5, s.y - dir * (preset.startRadius + 2), 0, Terrain.Iron);

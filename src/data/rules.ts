@@ -19,7 +19,7 @@ export const RULES = {
   migrationThreshold: 50,
   startResources: { wood: 150, stone: 40, apples: 100, gold: 100 } as Partial<Record<ResourceId, number>>,
   /** Jak daleko od własnej twierdzy wolno budować (w polach) */
-  buildRadius: 24,
+  buildRadius: 30,
   /** Prędkość chłopa: 256 = jedno pole na tick */
   unitSpeed: 28,
   unitSpeedDiagonal: 20,

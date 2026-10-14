@@ -2,7 +2,7 @@ import { BUILDINGS } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { GUARD, UNITS } from '../../data/units';
 import { walkable } from '../path';
-import { FP, Phase, playerKeep, type GameState, type Soldier } from '../state';
+import { FP, keepCenter, keepFront, Phase, playerKeep, type GameState, type Soldier } from '../state';
 import { dayPart } from './workers';
 
 /** Ilu strażników miejskich pilnuje osady */
@@ -17,7 +17,8 @@ const DANGER = 14;
 /** Wróg (żołnierz innej drużyny) albo wilk blisko twierdzy */
 function danger(g: GameState, owner: number, keep: { x: number; y: number }): boolean {
   const team = g.players[owner]?.team;
-  const near = (px: number, py: number): boolean => Math.max(Math.abs((px >> 8) - keep.x - 1), Math.abs((py >> 8) - keep.y - 1)) <= DANGER;
+  const [kx, ky] = keepCenter(keep);
+  const near = (px: number, py: number): boolean => Math.max(Math.abs((px >> 8) - kx), Math.abs((py >> 8) - ky)) <= DANGER;
   for (const s of g.soldiers) if (s.hp > 0 && g.players[s.owner]?.team !== team && near(s.px, s.py)) return true;
   for (const w of g.wolves) if (w.hp > 0 && !w.leaving && near(w.px, w.py)) return true;
   return false;
@@ -66,9 +67,9 @@ function beatRoute(g: GameState, owner: number): number[] {
 /** Posterunki za dnia: po bokach drzwi twierdzy, dalej od niej o kilka pól */
 function posts(g: GameState, owner: number): number[] {
   const keep = playerKeep(g, owner);
-  if (!keep || keep.door < 0) return [];
-  const w = g.map.width, dx = keep.door % w, dy = Math.floor(keep.door / w);
-  return [[-1, 1], [1, 1], [-2, 2], [2, 2]].map(([ox, oy]) => snap(g, owner, dx + ox!, dy + oy!)).filter((t) => t >= 0);
+  if (!keep) return [];
+  const [dx, dy] = keepFront(keep);
+  return [[-1, 0], [1, 0], [-2, 1], [2, 1]].map(([ox, oy]) => snap(g, owner, dx + ox!, dy + oy!)).filter((t) => t >= 0);
 }
 
 const newGuard = (g: GameState, owner: number, px: number, py: number): Soldier =>
@@ -90,7 +91,7 @@ export function guardSystem(g: GameState): void {
     // pierwsza straż przychodzi z zamku za darmo
     if (p.guards === undefined) {
       p.guards = GUARDS;
-      const w = g.map.width, kx = keep.door >= 0 ? keep.door % w : keep.x + 1, ky = keep.door >= 0 ? Math.floor(keep.door / w) : keep.y + 3;
+      const w = g.map.width, [kx, ky] = keepFront(keep);
       for (let i = mine.length; i < p.guards; i++) {
         const t = snap(g, p.id, kx + (i % 3) - 1, ky + 1 + Math.floor(i / 3));
         if (t < 0) break;
@@ -107,7 +108,7 @@ export function guardSystem(g: GameState): void {
       if (threat) p.guardReady++;
       else if (g.tick >= p.guardReady) {
         p.guardReady = 0;
-        const w = g.map.width, t = keep.door >= 0 ? snap(g, p.id, keep.door % w, Math.floor(keep.door / w) + 1) : -1;
+        const w = g.map.width, [fx, fy] = keepFront(keep), t = snap(g, p.id, fx, fy);
         if (t >= 0) {
           const s = newGuard(g, p.id, (t % w) * FP + FP / 2, Math.floor(t / w) * FP + FP / 2);
           s.beat = mine.length;

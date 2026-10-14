@@ -5,10 +5,11 @@ import { RULES } from '../src/data/rules';
 import { Terrain } from '../src/data/terrain';
 import { findPath, walkable, WOLF } from '../src/sim/path';
 import { deserialize, serialize } from '../src/sim/save';
-import { createGame as realGame, housing, Phase, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
+import { createGame as realGame, housing, keepCenter, Phase, playerKeep, population, stateHash, storeCapacity, storeUsed, type GameState } from '../src/sim/state';
 import { clockAt } from '../src/sim/clock';
 import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
+import { keepEdge } from '../src/data/keep';
 
 /** Testy gospodarki i wojska bez bota: drugi gracz stoi bezczynnie */
 const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => { const g = realGame(...a); for (const p of g.players) p.bot = false; return g; };
@@ -22,10 +23,11 @@ const run = (g: GameState, ticks: number, cmds: Command[] = []): void => {
 function spot(g: GameState, id: string, player = 0): { x: number; y: number } {
   const keep = playerKeep(g, player)!;
   const type = buildingIndex(id);
-  for (let r = 3; r < RULES.buildRadius; r++)
-    for (let dy = -r; dy <= r; dy++)
+  const [kx, ky] = keepCenter(keep);
+  for (let r = 7; r < RULES.buildRadius; r++)
+    for (let dy = r; dy >= -r; dy--)
       for (let dx = -r; dx <= r; dx++) {
-        const x = keep.x + dx, y = keep.y + dy;
+        const x = kx + dx, y = ky + dy;
         if (canPlace(g, player, type, x, y, false) === null) return { x, y };
       }
   throw new Error(`brak miejsca na ${id}`);
@@ -40,7 +42,7 @@ describe('start gry', () => {
     for (const p of g.players) {
       expect(playerKeep(g, p.id)).toBeDefined();
       expect(population(g, p.id)).toBe(RULES.startPeasants);
-      expect(housing(g, p.id)).toBe(8);
+      expect(housing(g, p.id)).toBe(BUILDINGS[0]!.housing);
       expect(res(g, 'wood', p.id)).toBe(RULES.startResources.wood);
     }
   });
@@ -78,14 +80,14 @@ describe('budowanie', () => {
   it('nie pozwala zamurować ludzi: budynek w jedynym przejściu jest odrzucany', () => {
     const g = createGame(5);
     const keep = playerKeep(g, 0)!;
-    const w = g.map.width, cx = keep.x + 1, cy = keep.y + 1;
-    // sztuczny mur dookoła twierdzy z jednym przejściem szerokości chaty
-    for (let dy = -5; dy <= 5; dy++)
-      for (let dx = -5; dx <= 5; dx++)
-        if (Math.max(Math.abs(dx), Math.abs(dy)) === 5 && !(dy === 5 && (dx === 0 || dx === 1))) g.occupancy[(cy + dy) * w + cx + dx] = 9999;
+    const w = g.map.width, [cx, cy] = keepCenter(keep);
+    // sztuczny mur dookoła twierdzy z jednym przejściem szerokości chaty (przed bramą)
+    for (let dy = -8; dy <= 8; dy++)
+      for (let dx = -8; dx <= 8; dx++)
+        if (Math.max(Math.abs(dx), Math.abs(dy)) === 8 && !(dx === 8 && (dy === 0 || dy === 1))) g.occupancy[(cy + dy) * w + cx + dx] = 9999;
     const house = buildingIndex('house');
-    expect(canPlace(g, 0, house, cx, cy + 5)).toBe('place.blocks'); // zatkałby przejście
-    step(g, [{ type: 'build', player: 0, building: 'house', x: cx, y: cy + 5 }]);
+    expect(canPlace(g, 0, house, cx + 8, cy)).toBe('place.blocks'); // zatkałby przejście
+    step(g, [{ type: 'build', player: 0, building: 'house', x: cx + 8, y: cy }]);
     expect(g.buildings.filter((b) => b.owner === 0).length).toBe(4); // komenda też została odrzucona
   });
 
@@ -260,7 +262,7 @@ describe('praca chłopów', () => {
     const g = createGame(5);
     const keep = playerKeep(g, 0)!;
     const w = g.map.width;
-    const from = (keep.y + 1) * w + keep.x - 2, to = (keep.y + 1) * w + keep.x + 5;
+    const from = (keep.y + 3) * w + keep.x - 2, to = (keep.y + 3) * w + keep.x + 13;
     const path = findPath(g, from, (t) => t === to)!;
     expect(path.length).toBeGreaterThan(6);
     for (const t of path) expect(g.occupancy[t]).toBe(0);
@@ -305,7 +307,7 @@ describe('ludność i popularność', () => {
     run(g, 300);
     expect(population(g, 0)).toBe(6); // obozowisko pełne bezrobotnych: nikt nowy nie przyjdzie
     step(g, [build(g, 'woodcutter')]);
-    run(g, 300, [build(g, 'orchard')]);
+    run(g, 700, [build(g, 'orchard')]);
     expect(population(g, 0)).toBe(8); // dwóch dostało pracę, więc dwóch doszło (do limitu miejsc w twierdzy)
     step(g, [build(g, 'house')]);
     run(g, 400, [build(g, 'camp')]);
@@ -548,7 +550,7 @@ describe('rytm dnia', () => {
     at(21, 21.5);
     const mine = (): typeof g.units => g.units.filter((u) => u.owner === 0);
     expect(mine().filter((u) => u.phase === Phase.Evening || u.phase === Phase.ToEvening || u.phase === Phase.ToLight).length).toBeGreaterThan(mine().length / 2);
-    at(2, 3);
+    at(4, 5); // do koszar w zamku idzie się przez bramę i dziedziniec: ostatni kładą się koło czwartej
     expect(mine().every((u) => u.phase === Phase.Sleeping)).toBe(true);
     expect(mine().every((u) => u.home > 0)).toBe(true); // twierdza ma miejsce dla wszystkich
     at(8, 9);
@@ -581,9 +583,9 @@ describe('rytm dnia: poprawki', () => {
     step(g, [build(g, 'house')]); // postawiona wieczorem: nikt jej nie zacznie przed rankiem
     const site = g.buildings[g.buildings.length - 1]!;
     const work = site.build;
-    at(g, 1, 2);
+    at(g, 4, 4.6);
     expect(g.units.filter((u) => u.owner === 0).every((u) => u.phase === Phase.Sleeping)).toBe(true);
-    at(g, 4, 5);
+    at(g, 5, 5.4);
     expect(site.build).toBe(work);
     at(g, 10, 11);
     expect(site.build).toBeLessThan(work);
@@ -602,16 +604,30 @@ describe('zamek', () => {
     const g = createGame(5);
     const keep = playerKeep(g, 0)!;
     const w = g.map.width;
-    const gate = (keep.y + 2) * w + keep.x + 1, hall = keep.y * w + keep.x + 1, tower = keep.y * w + keep.x;
+    const gate = (keep.y + 10) * w + keep.x + 5, hall = (keep.y + 1) * w + keep.x + 5, tower = keep.y * w + keep.x;
     expect(walkable(g, gate, 0)).toBe(true);
     expect(walkable(g, hall, 0)).toBe(true);
     expect(walkable(g, tower, 0)).toBe(false);
     expect(walkable(g, hall, 1)).toBe(false);
     expect(walkable(g, hall, WOLF)).toBe(false);
-    const outside = (keep.y + 4) * w + keep.x + 1;
-    const path = findPath(g, outside, (t) => t === hall, 400, 0)!;
+    const outside = (keep.y + 12) * w + keep.x + 5;
+    const path = findPath(g, outside, (t) => t === hall, 900, 0)!;
     expect(path).not.toBeNull();
     expect(path).toContain(gate);
+    // z dziedzińca do kuchni i do celi lochów tylko przez drzwi: żaden krok nie przechodzi przez ścianę ani kratę
+    const at = (dx: number, dy: number): number => (keep.y + dy) * w + keep.x + dx;
+    for (const goal of [at(1, 1), at(9, 1), at(2, 9), at(8, 9)]) {
+      const p = findPath(g, outside, (t) => t === goal, 900, 0)!;
+      expect(p).not.toBeNull();
+      let prevT = outside;
+      for (const t of p) {
+        const ax = (prevT % w) - keep.x, ay = Math.floor(prevT / w) - keep.y, bx = (t % w) - keep.x, by = Math.floor(t / w) - keep.y;
+        if (Math.abs(ax - bx) + Math.abs(ay - by) === 1) expect(['wall', 'bars']).not.toContain(keepEdge(ax, ay, bx, by));
+        prevT = t;
+      }
+    }
+    // cele za kratą: nie da się do nich wejść
+    expect(findPath(g, outside, (t) => t === at(1, 7), 900, 0)).toBeNull();
   });
 });
 
@@ -625,13 +641,13 @@ describe('zamek — wojsko', () => {
     for (let i = 0; i < 3; i++) {
       const id = g.nextId++;
       ids.push(id);
-      g.soldiers.push({ id, owner: 0, kind: 0, px: (keep.x + i) * 256 + 128, py: (keep.y + 5) * 256 + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 } as GameState['soldiers'][number]);
+      g.soldiers.push({ id, owner: 0, kind: 0, px: (keep.x + 4 + i) * 256 + 128, py: (keep.y + 13) * 256 + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 } as GameState['soldiers'][number]);
     }
-    step(g, [{ type: 'move', player: 0, ids, x: keep.x + 1, y: keep.y + 1 }]);
-    for (let i = 0; i < 300; i++) step(g, []);
+    step(g, [{ type: 'move', player: 0, ids, x: keep.x + 5, y: keep.y + 6 }]);
+    for (let i = 0; i < 500; i++) step(g, []);
     const inside = g.soldiers.filter((s) => ids.includes(s.id)).filter((s) => {
       const tx = s.px >> 8, ty = s.py >> 8;
-      return tx >= keep.x && tx < keep.x + 3 && ty >= keep.y && ty < keep.y + 3;
+      return tx >= keep.x && tx < keep.x + 11 && ty >= keep.y && ty < keep.y + 11;
     });
     expect(inside.length).toBeGreaterThan(0);
     for (const s of inside) expect(walkable(g, (s.py >> 8) * w + (s.px >> 8), 0)).toBe(true);

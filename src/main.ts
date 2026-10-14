@@ -1224,11 +1224,12 @@ requestAnimationFrame(loop);
     const type = buildingIndex(id);
     const keep = game.buildings.find((b) => b.owner === player && b.type === 0);
     if (!keep || type < 0) return null;
-    for (let r = 3; r < 24; r++)
+    const kx = keep.x + 5, ky = keep.y + 5;
+    for (let r = 7; r < 30; r++)
       for (let dy = -r; dy <= r; dy++)
         for (let dx = -r; dx <= r; dx++) {
           if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-          const x = keep.x + dx, y = keep.y + dy;
+          const x = kx + dx, y = ky + dy;
           if (canPlace(game, player, type, x, y, false) === null) { step(game, [{ type: 'build', player, building: id, x, y }]); refresh(); return { x, y }; }
         }
     return null;
@@ -1242,7 +1243,7 @@ requestAnimationFrame(loop);
   /** Kamera nad polem mapy (x, y w polach), z odległości `dist` */
   at(x: number, y: number, dist = 8): void { renderer.lookAt(x, y, dist); },
   /** Kamera nad budynkiem danego typu */
-  look(id: string, dist = 14): void { const b = game.buildings.find((x) => BUILDINGS[x.type]!.id === id); if (b) renderer.lookAt(b.x + 1, b.y + 1, dist); },
+  look(id: string, dist = 14): void { const b = game.buildings.find((x) => BUILDINGS[x.type]!.id === id); if (b) { const d = BUILDINGS[b.type]!; renderer.lookAt(b.x + d.w / 2, b.y + d.h / 2, dist); } },
   /** Dostawia `n` wrogich włóczników obok koszar gracza (do testu walki) */
   enemy(n = 3): void {
     const b = game.buildings.find((x) => x.owner === ME && BUILDINGS[x.type]!.id === 'barracks') ?? game.buildings[0]!;
@@ -1307,7 +1308,7 @@ function scanAttacks(): void {
   for (const b of game.buildings) {
     if (b.owner !== ME) continue;
     const prev = hpBefore.get(b.id);
-    if (prev !== undefined && b.hp < prev) raiseAlert(b.x + 1, b.y + 1, game.wolves.some((w) => w.gnaw === b.id) ? 'wolf' : 'enemy');
+    if (prev !== undefined && b.hp < prev) raiseAlert(b.x + (BUILDINGS[b.type]!.w >> 1), b.y + (BUILDINGS[b.type]!.h >> 1), game.wolves.some((w) => w.gnaw === b.id) ? 'wolf' : 'enemy');
     hpBefore.set(b.id, b.hp);
   }
 }

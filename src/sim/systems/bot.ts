@@ -1,7 +1,8 @@
 import { BUILDINGS, buildingIndex } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { UNITS } from '../../data/units';
-import { playerKeep, type GameState, type PlayerState } from '../state';
+import { KEEP_SIZE } from '../../data/keep';
+import { keepCenter, keepFront, playerKeep, type GameState, type PlayerState } from '../state';
 import { orderGarrison, orderMove, train } from './army';
 import { canPlace, placeBuilding } from './placement';
 
@@ -11,7 +12,7 @@ import { canPlace, placeBuilding } from './placement';
  */
 const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'orchard', 'house', 'poleturner', 'barracks', 'quarry', 'house', 'farm', 'orchard', 'fletcher', 'house', 'tavern', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house'];
 /** Promień palisady wokół twierdzy (budynki stawia tylko w środku) */
-const RING = 15;
+const RING = 16;
 const THINK = 40;
 /** Pierwszy atak po ok. 25 minutach gry, kolejne co ok. 8 minut */
 export const FIRST_WAVE = 15000;
@@ -41,13 +42,15 @@ function affordable(p: PlayerState, type: number): boolean {
 function spot(g: GameState, player: number, type: number): { x: number; y: number } | null {
   const keep = playerKeep(g, player);
   if (!keep) return null;
-  for (let r = 4; r < RING - 2; r++)
+  // osada rośnie przed bramą zamku (krótsze drogi ze składu do pracy), dookoła coraz dalej
+  const [fx, fy] = keepFront(keep), kx = fx, ky = fy + 3;
+  for (let r = 2; r < RING; r++)
     for (let dy = -r; dy <= r; dy++)
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         // co drugi pierścień zostaje wolny, żeby osada miała przejścia
         if (r % 3 === 0) continue;
-        const x = keep.x + dx, y = keep.y + dy;
+        const x = kx + dx, y = ky + dy;
         if (canPlace(g, player, type, x, y) === null) return { x, y };
       }
   return null;
@@ -71,7 +74,9 @@ export function botSystem(g: GameState): void {
     }
     }
     // umocnienia: gdy osada ma już kilkanaście budynków, otacza się palisadą z bramami i wieżami w narożnikach
-    if (g.tick % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12) fortify(g, p);
+    // (dopiero gdy stoją koszary: najpierw gospodarka i wojsko, potem drewno na palisadę)
+    if (g.tick % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
+      && g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks')) fortify(g, p);
     // podatek, gdy osada jest zadowolona: złoto na żołd
     p.tax = p.popularity > 70 ? 2 : p.popularity > 55 ? 1 : 0;
     // wojsko: szkoli jednego włócznika naraz, gdy ma broń, złoto i wolnego chłopa
@@ -98,12 +103,12 @@ export function botSystem(g: GameState): void {
       const foe = g.players.filter((o) => o.team !== p.team && !o.defeated).map((o) => playerKeep(g, o.id)).find((k) => k);
       if (foe && army.length >= wave.size && foe.door >= 0) {
         // atak z dwóch stron: połowa idzie pod bramę, połowa obchodzi i uderza z boku; łucznicy z wież zostają
-        const w = g.map.width, kx = foe.x + 1, ky = foe.y + 1;
+        const w = g.map.width, [kx, ky] = keepCenter(foe), R = (KEEP_SIZE >> 1) + 3;
         const field = army.filter((s) => !s.post);
         const half = Math.ceil(field.length / 2);
         const side = (g.tick / WAVE_EVERY) % 2 < 1 ? 1 : -1;
-        const a = Math.min(g.map.height - 2, Math.max(1, ky + 7)) * w + kx;
-        const b = ky * w + Math.min(w - 2, Math.max(1, kx + 7 * side));
+        const a = Math.min(g.map.height - 2, Math.max(1, ky + R)) * w + kx;
+        const b = ky * w + Math.min(w - 2, Math.max(1, kx + R * side));
         orderMove(g, p.id, field.slice(0, half).map((s) => s.id), a);
         orderMove(g, p.id, field.slice(half).map((s) => s.id), b);
       }
@@ -126,7 +131,7 @@ export function botSystem(g: GameState): void {
 function fortify(g: GameState, p: PlayerState): void {
   const keep = playerKeep(g, p.id);
   if (!keep) return;
-  const cx = keep.x + 1, cy = keep.y + 1, w = g.map.width;
+  const [cx, cy] = keepCenter(keep), w = g.map.width;
   const pal = buildingIndex('palisade'), gate = buildingIndex('gate'), tower = buildingIndex('watchtower');
   const wood = p.res[resIndex('wood')]!;
   if (wood < 25) return;

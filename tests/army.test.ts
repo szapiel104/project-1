@@ -3,7 +3,7 @@ import { buildingIndex } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { deserialize, serialize } from '../src/sim/save';
-import { FP, Phase, createGame as realGame, playerKeep, population, stateHash, type GameState, type Soldier } from '../src/sim/state';
+import { FP, Phase, createGame as realGame, keepFront, playerKeep, population, stateHash, type GameState, type Soldier } from '../src/sim/state';
 import { arrowHits, hitDamage, planFormation } from '../src/sim/systems/army';
 import { walkable } from '../src/sim/path';
 import { hash2 } from '../src/sim/rng';
@@ -56,7 +56,7 @@ describe('wojsko', () => {
     const train: Command[] = [1, 2, 3].map(() => ({ type: 'train', player: 0, building: id, unit: 'spearman' }));
     step(g, train);
     const keep = playerKeep(g, 0)!;
-    const tx = keep.x + 1, ty = keep.y + 8;
+    const tx = keep.x + 5, ty = keep.y + 15;
     step(g, [{ type: 'move', player: 0, ids: g.soldiers.map((s) => s.id), x: tx, y: ty }]);
     for (let i = 0; i < 800; i++) step(g, []);
     const tiles = g.soldiers.map((s) => (s.py >> 8) * g.map.width + (s.px >> 8));
@@ -302,6 +302,9 @@ describe('wrodzy chłopi', () => {
     for (const p of g.players) p.bot = false;
     // chłop, który nie jest odważny (ucieka)
     const u = g.units.find((x) => x.owner === 1 && hash2(x.id, 7, 0xbad) % 100 >= 33)!;
+    // na otwartym polu przed bramą zamku (na starcie chłopi wychodzą z koszar)
+    const [fx, fy] = keepFront(playerKeep(g, 1)!);
+    u.px = fx * FP + 128; u.py = (fy + 3) * FP + 128; u.path = [];
     const tx = u.px >> 8, ty = u.py >> 8;
     const s: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('spearman'), px: (tx - 1) * FP + 128, py: ty * FP + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 };
     g.soldiers.push(s);

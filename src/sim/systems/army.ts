@@ -4,7 +4,7 @@ import { RULES } from '../../data/rules';
 import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
 import { hash2 } from '../rng';
-import { FP, Phase, type Building, type Corpse, type GameState, type March, type Soldier, type Unit } from '../state';
+import { FP, Phase, type Building, type Corpse, type GameState, type March, type Soldier, type Unit, keepCenter } from '../state';
 import { BUILDINGS, footprint, workArea } from '../../data/buildings';
 import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
 import { dayPart } from './workers';
@@ -707,7 +707,7 @@ function graveSystem(g: GameState): void {
     const u = g.units.find((x) => x.owner === p.id && x.job === 0 && x.phase === Phase.Idle && !x.path.length && x.carryRes < 0);
     const keep = g.buildings.find((b) => b.owner === p.id && b.type === 0);
     if (!u || !keep) continue;
-    const c = g.corpses.find((x) => !x.taken && Math.abs((x.px >> 8) - keep.x) + Math.abs((x.py >> 8) - keep.y) < 30);
+    const c = g.corpses.find((x) => !x.taken && Math.abs((x.px >> 8) - keepCenter(keep)[0]) + Math.abs((x.py >> 8) - keepCenter(keep)[1]) < 34);
     if (!c) continue;
     c.taken = true; u.target = c.id; u.phase = Phase.ToCorpse;
   }

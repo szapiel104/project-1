@@ -11,6 +11,8 @@ import { Clutter } from './clutter';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
 import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
+import KEEP_MODEL from './models/keep.json';
+import { KEEP_GATE, KEEP_SIZE, keepRoom, keepWalk } from '../data/keep';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
@@ -36,11 +38,10 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 
 export interface TileRef { x: number; y: number }
 /** Pola zamku, po których się chodzi (dy * 3 + dx): sala donżonu, koszary, dziedziniec, brama; posadzka na tej wysokości */
-const KEEP_FLOOR = 0.22;
-/** Gdzie w zamku da się stanąć (x0, x1, z0, z1 względem środka, brama w +z): dziedziniec, przejazd z mostem, drzwi i sala donżonu, koszary */
-const KEEP_OPEN: [number, number, number, number][] = [[-1.0, 1.0, -0.17, 1.02], [-0.17, 0.17, 0.95, 1.98], [-0.1, 0.1, -0.4, -0.1], [-0.5, 0.5, -1.06, -0.33], [-1.0, -0.21, 0.11, 0.91]];
-/** …a gdzie stoją ściany i sprzęty: ściany koszar (z drzwiami), studnia, siano, ścianka działowa sali */
-const KEEP_SOLID: [number, number, number, number][] = [[-1.08, -0.13, 0.02, 0.1], [-1.08, -0.13, 0.92, 1.0], [-0.2, -0.12, 0.02, 0.42], [-0.2, -0.12, 0.6, 1.0], [0.57, 0.83, 0.42, 0.68], [0.73, 0.97, -0.13, 0.03], [0.16, 0.24, -1.1, -0.77], [0.16, 0.24, -0.53, -0.3]];
+/** Przeszkody w zamku (ściany pomieszczeń, kraty, sprzęty) z modelu z Blendera: prostokąty x0, x1, z0, z1 względem środka */
+const KEEP_SOLID = (KEEP_MODEL as unknown as { solid: [number, number, number, number][] }).solid;
+const KEEP_FLOOR = (KEEP_MODEL as unknown as { floorY: number }).floorY;
+const KEEP_HALF = KEEP_SIZE / 2;
 const inRect = (r: [number, number, number, number][], x: number, z: number): boolean => r.some(([x0, x1, z0, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
@@ -1258,7 +1259,15 @@ export class GameRenderer {
       const t = ty * g.map.width + tx;
       // w zamku: dokładny obrys dziedzińca, sal i przejść zamiast całych pól
       const k = this.keepAt(x, z);
-      if (k && (k[2] <= 1.5 || inRect(KEEP_OPEN, k[1], k[2]))) return inRect(KEEP_OPEN, k[1], k[2]) && !inRect(KEEP_SOLID, k[1], k[2]);
+      if (k && k[2] < KEEP_HALF) {
+        // w obrębie murów: tylko pola dziedzińca i sal, z dala od ścian, krat i sprzętów (spacerowicz ma kilka cm „grubości”)
+        const R = 0.07;
+        for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]] as const) {
+          const lx = k[1] + ox, lz = k[2] + oz;
+          if (!keepWalk(Math.floor(lx + KEEP_HALF), Math.floor(lz + KEEP_HALF)) || inRect(KEEP_SOLID, lx, lz)) return false;
+        }
+        return true;
+      }
       return (g.occupancy[t] === 0 || g.gates[t] !== 0) && g.map.tiles[t] !== Terrain.Water && g.map.tiles[t] !== Terrain.Mountain;
     };
     if (free(w.x + dx, w.z)) w.x += dx;
@@ -1270,8 +1279,11 @@ export class GameRenderer {
     const cam = this.cam.camera;
     const { width, height } = g.map;
     const ground = this.view ? this.standY(this.view, w.x, w.z) : 0;
+    // w pomieszczeniu (nie na dziedzińcu): dach znika, widać sufit; przy zamku jego wnętrza są zawsze widoczne
     const kp = this.keepAt(w.x, w.z);
-    this.walkHall = kp && kp[2] < -0.3 && inRect(KEEP_OPEN, kp[1], kp[2]) ? kp[0] : 0;
+    const inRoom = !!kp && kp[2] < KEEP_HALF && keepRoom(Math.floor(kp[1] + KEEP_HALF), Math.floor(kp[2] + KEEP_HALF)) !== '.';
+    this.walkHall = inRoom ? kp![0] : 0;
+    this.walkNear = kp ? kp[0] : 0;
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + Math.sin(w.bob) * 0.02, w.z - height / 2);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
   }
@@ -2085,7 +2097,7 @@ export class GameRenderer {
       // budynek siada lekko poniżej najwyższego punktu działki, wtopiony w teren, bez cokołu
       const ground = low + (top - low) * 0.35;
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
-      if (def.id === 'keep') this.keepFloors.set(b.id, [b.x + 1.5, b.y + 1.5, ground]);
+      if (def.id === 'keep') this.keepFloors.set(b.id, [b.x + KEEP_HALF, b.y + KEEP_HALF, ground]);
       mesh.rotation.y = (b.rot * Math.PI) / 2;
       // ziemia wydeptana tylko tuż przy ścianach (z przerwami) i przy drzwiach; dalej trawa ledwo naruszona
       if (!def.wall && !def.gate && !def.road && def.id !== 'torch') {
@@ -2319,6 +2331,8 @@ export class GameRenderer {
       animateBuilding(mesh, working.has(id) || id === this.selectedId || inHall, this.time, dt);
       const ceil = mesh.getObjectByName('ceiling');
       if (ceil) ceil.visible = inHall;
+      // spacerem przy zamku: przez drzwi widać wnętrza sal, choć dachy zostają na miejscu
+      if (this.walk && id === this.walkNear && !inHall) { const inn = mesh.getObjectByName('interior'); if (inn) inn.visible = true; }
     }
     // budynek bez pracownika: nad dachem kołysze się mały znak przekreślonego człowieka
     for (const b of g.buildings) {
@@ -2679,19 +2693,26 @@ export class GameRenderer {
   /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */
   private standY(view: TerrainView, x: number, y: number): number {
     const h = view.heightAt(x, y), k = this.keepAt(x, y);
-    if (!k || !inRect(KEEP_OPEN, k[1], k[2])) return h;
-    return Math.max(h, k[3] + KEEP_FLOOR * Math.min(1, Math.max(0, (1.94 - k[2]) / 0.5)));
+    if (!k) return h;
+    const [, lx, lz, base] = k;
+    // most zwodzony przed bramą: łagodnie z ziemi na posadzkę
+    const gx = KEEP_GATE[0] - KEEP_HALF + 0.5, bridge0 = KEEP_HALF - 0.05, bridge1 = KEEP_HALF + 0.85;
+    if (Math.abs(lx - gx) < 0.5 && lz > bridge0) return Math.max(h, base + KEEP_FLOOR * Math.min(1, Math.max(0, (bridge1 - lz) / (bridge1 - bridge0))));
+    if (lz >= KEEP_HALF || !keepWalk(Math.floor(lx + KEEP_HALF), Math.floor(lz + KEEP_HALF))) return h;
+    return Math.max(h, base + KEEP_FLOOR);
   }
   /** Zamek pod punktem (pola mapy): [id, x i z względem środka zamku, wysokość modelu] albo null */
   private keepAt(x: number, y: number): [number, number, number, number] | null {
     for (const [id, [kx, ky, base]] of this.keepFloors) {
       const lx = x - kx, lz = y - ky;
-      if (Math.abs(lx) > 1.5 || lz < -1.5 || lz > 1.98) continue;
+      if (Math.abs(lx) > KEEP_HALF || lz < -KEEP_HALF || lz > KEEP_HALF + 0.9) continue;
       if (!this.buildingMeshes.has(id)) { this.keepFloors.delete(id); continue; }
       return [id, lx, lz, base];
     }
     return null;
   }
+  /** Zamek, przy którym (albo w którym) spaceruje gracz */
+  private walkNear = 0;
   /** Zamek, w którego sali stoi teraz spacerowicz (zdejmujemy wtedy bryłę donżonu i kładziemy sufit) */
   private walkHall = 0;
 
@@ -2703,12 +2724,23 @@ export class GameRenderer {
       if (!floor?.geometry) return null;
       floor.geometry.boundingBox ?? floor.geometry.computeBoundingBox();
       const bb = floor.geometry.boundingBox!;
-      const k = Math.max(0, (sleepers.get(u.home) ?? []).indexOf(u.id)) % 8;
-      const col = k % 2, row = k >> 1;
-      const m = 0.09, dz = (bb.max.z - bb.min.z - 2 * m) / 4;
-      const z = bb.min.z + m + dz * (row + 0.5);
-      const hx = col === 0 ? bb.min.x + m : bb.max.x - m;
-      const fxl = col === 0 ? hx + L : hx - L;
+      const idx = Math.max(0, (sleepers.get(u.home) ?? []).indexOf(u.id));
+      let hx: number, fxl: number, z: number;
+      if (bb.max.x - bb.min.x > 1.6) {
+        // duża sala (koszary zamku): rzędy posłań w poprzek, kilka kolumn, głowami do ściany
+        const m = 0.16, cols = Math.max(1, Math.floor((bb.max.x - bb.min.x - 2 * m) / (L + 0.1)));
+        const rows = Math.max(1, Math.floor((bb.max.z - bb.min.z - 2 * m) / 0.21));
+        const k = idx % (cols * rows), col = k % cols, row = Math.floor(k / cols);
+        const cw = (bb.max.x - bb.min.x - 2 * m) / cols;
+        hx = bb.min.x + m + cw * col + (cw - L) / 2; fxl = hx + L;
+        z = bb.min.z + m + ((bb.max.z - bb.min.z - 2 * m) / rows) * (row + 0.5);
+      } else {
+        const k = idx % 8, col = k % 2, row = k >> 1;
+        const m = 0.09, dz = (bb.max.z - bb.min.z - 2 * m) / 4;
+        z = bb.min.z + m + dz * (row + 0.5);
+        hx = col === 0 ? bb.min.x + m : bb.max.x - m;
+        fxl = col === 0 ? hx + L : hx - L;
+      }
       floor.updateWorldMatrix(true, false);
       const h = floor.localToWorld(this.bedA.set(hx, bb.max.y, z));
       const f = floor.localToWorld(this.bedB.set(fxl, bb.max.y, z));

@@ -64,6 +64,30 @@ class Building:
         for k in range(4):
             self.poly(group, mat, [base[k], base[(k + 1) % 4], apex])
 
+    def gable(self, group, mat, x0, x1, z0, z1, y, h, along_x=True, over=0.12, end_mat=None):
+        """Dach dwuspadowy nad prostokątem (kalenica wzdłuż x albo z), z okapem; szczyty z materiału end_mat"""
+        if along_x:
+            zm = (z0 + z1) / 2
+            a, b = (x0 - over, z0 - over), (x1 + over, z1 + over)
+            r0, r1 = (a[0], y, a[1]), (b[0], y, a[1])
+            q0, q1 = (a[0], y, b[1]), (b[0], y, b[1])
+            k0, k1 = (a[0], y + h, zm), (b[0], y + h, zm)
+            self.poly(group, mat, [r0, r1, k1, k0])
+            self.poly(group, mat, [q1, q0, k0, k1])
+            if end_mat:
+                self.poly(group, end_mat, [(x0, y, z1), (x0, y, z0), (x0, y + h, zm)])
+                self.poly(group, end_mat, [(x1, y, z0), (x1, y, z1), (x1, y + h, zm)])
+        else:
+            xm = (x0 + x1) / 2
+            a, b = (x0 - over, z0 - over), (x1 + over, z1 + over)
+            self.poly(group, mat, [(a[0], y, b[1]), (a[0], y, a[1]), (xm, y + h, a[1]), (xm, y + h, b[1])])
+            self.poly(group, mat, [(b[0], y, a[1]), (b[0], y, b[1]), (xm, y + h, b[1]), (xm, y + h, a[1])])
+            if end_mat:
+                self.poly(group, end_mat, [(x0, y, z0), (x1, y, z0), (xm, y + h, z0)])
+                self.poly(group, end_mat, [(x1, y, z1), (x0, y, z1), (xm, y + h, z1)])
+        # spód połaci, żeby od środka (spacer) dach nie był przezroczysty
+        self.poly(group, mat, [(x0 - over, y - 0.001, z0 - over), (x1 + over, y - 0.001, z0 - over), (x1 + over, y - 0.001, z1 + over), (x0 - over, y - 0.001, z1 + over)])
+
     def merlons_line(self, group, mat, x0, z0, x1, z1, y, step=0.24, w=0.1, h=0.13, t=0.07):
         L = math.hypot(x1 - x0, z1 - z0)
         n = max(1, int(L / step))
@@ -101,7 +125,7 @@ class Building:
             out[key] = tris
         return out
 
-    def save(self, name, maxe=0.22, rays=20, reach=0.35):
+    def save(self, name, maxe=0.22, rays=20, reach=0.35, extra=None):
         groups = sorted({g for g, _ in self.parts})
         tris = self._tris(list(self.parts), maxe)
         # dwa widoki: z dachem (base + shell) i z odkrytym wnętrzem (base + interior + floor)
@@ -146,6 +170,6 @@ class Building:
             out.setdefault(g, []).append({'mat': m, 'pos': base64.b64encode(bytes(pos)).decode(), 'ao': base64.b64encode(bytes(ao)).decode()})
         dst = os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'render', 'models', f'{name}.json')
         with open(dst, 'w') as f:
-            json.dump({'q': Q, **out}, f, separators=(',', ':'))
+            json.dump({'q': Q, **(extra or {}), **out}, f, separators=(',', ':'))
         draws = sum(len(v) for v in out.values())
         print(f'{name}: {ntri} trójkątów, {draws} siatek ({", ".join(f"{g} {len(v)}" for g, v in out.items())}), plik {os.path.getsize(dst) // 1024} KB')

@@ -1,3 +1,4 @@
+import { KEEP_GATE, KEEP_SIZE } from '../data/keep';
 import { BUILDINGS, buildingIndex } from '../data/buildings';
 import type { MAP_PRESETS } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type ResourceId, type StoreKind } from '../data/resources';
@@ -297,6 +298,8 @@ export interface GameState {
   wolves: Wolf[];
   /** Brama na polu: właściciel + 1 (0 = brak). Swoi przechodzą, obcy nie */
   gates: Uint8Array;
+  /** Ściany między polami (w zamku): bity 1 = ku -y, 2 = ku +x, 4 = ku +y, 8 = ku -x; przez taką krawędź nie da się przejść */
+  walls: Uint8Array;
   /** Id budynku na polu albo 0 */
   occupancy: Int32Array;
   /** Ile wejść do budynków leży na polu (takiego pola nie wolno zabudować) */
@@ -325,7 +328,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const size = map.width * map.height;
   const g: GameState = {
     tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [], corpses: [], travelers: [], wolves: [],
-    occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size), rubble: [], nextId: 1,
+    occupancy: new Int32Array(size), gates: new Uint8Array(size), walls: new Uint8Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size), rubble: [], nextId: 1,
   };
   const keep = buildingIndex('keep');
   const starts = [...map.starts].sort((a, b) => a.player - b.player);
@@ -338,7 +341,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       id: s.player, team: s.team, res, popularity: RULES.startPopularity, popDelta: 0,
       rations: RULES.defaultRations, tax: RULES.defaultTax, bot: humans ? !humans.includes(s.player) : s.player !== 0, defeated: false, level, stats: { gathered: 0, trained: 0, kills: 0, lost: 0, built: 0, razed: 0 },
     });
-    addBuilding(g, keep, s.player, s.x - 1, s.y - 1);
+    addBuilding(g, keep, s.player, s.x - (KEEP_SIZE >> 1), s.y - (KEEP_SIZE >> 1));
     placeNear(g, buildingIndex('barn'), s.player, s.x, s.y);
     // stodoła trzyma tylko towary, jedzenie idzie do spichlerza
     placeNear(g, buildingIndex('granary'), s.player, s.x, s.y);
@@ -398,11 +401,11 @@ function devFortify(g: GameState, player: number): void {
   const keep = g.buildings.find((b) => b.owner === player && b.type === 0);
   if (!keep) return;
   let n = 0;
-  for (let r = 2; r < 10 && n < 20; r++)
+  for (let r = (KEEP_SIZE >> 1) + 2; r < 16 && n < 20; r++)
     for (let dy = -r; dy <= r && n < 20; dy++)
       for (let dx = -r; dx <= r && n < 20; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        const x = keep.x + 1 + dx, y = keep.y + 1 + dy;
+        const [kx, ky] = keepCenter(keep), x = kx + dx, y = ky + dy;
         if (x < 0 || y < 0 || x >= w || y >= h || g.occupancy[y * w + x] !== 0 || !TERRAIN_WALK(g.map.tiles[y * w + x]!)) continue;
         g.soldiers.push({ id: g.nextId++, owner: player, kind: 0, px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: UNIT_HP(), goal: -1, wait: 0, target: 0, cd: 0 });
         n++;
@@ -413,8 +416,9 @@ function devFortify(g: GameState, player: number): void {
 function placeNear(g: GameState, type: number, player: number, cx: number, cy: number, reach = 8): void {
   const def = BUILDINGS[type]!;
   const w = g.map.width;
-  for (let r = 3; r <= reach; r++)
-    for (let dy = -r; dy <= r; dy++)
+  for (let r = (KEEP_SIZE >> 1) + 2; r <= reach + (KEEP_SIZE >> 1); r++)
+    // od frontu (strona bramy) do tyłu: stodoła, spichlerz i obozowisko stają blisko wejścia do zamku
+    for (let dy = r; dy >= -r; dy--)
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const x = cx + dx, y = cy + dy;
@@ -442,6 +446,11 @@ export function idleCount(g: GameState, player: number): number {
   for (const t of g.travelers) if (t.owner === player && !t.leaving) n++; // idący do obozowiska już mają w nim miejsce
   return n;
 }
+
+/** Środek zamku (pole) */
+export function keepCenter(k: { x: number; y: number }): [number, number] { return [k.x + (KEEP_SIZE >> 1), k.y + (KEEP_SIZE >> 1)]; }
+/** Pole tuż przed bramą zamku (na zewnątrz) */
+export function keepFront(k: { x: number; y: number }): [number, number] { return [k.x + KEEP_GATE[0], k.y + KEEP_GATE[1] + 1]; }
 
 export function playerKeep(g: GameState, player: number): Building | undefined {
   return g.buildings.find((b) => b.owner === player && b.type === 0);

@@ -2,7 +2,8 @@ import { BUILDINGS, footprint, type BuildingDef } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { TERRAIN, Terrain } from '../../data/terrain';
-import { Phase, playerKeep, type Building, type GameState } from '../state';
+import { KEEP_BED, KEEP_CELLS } from '../../data/keep';
+import { keepCenter, Phase, playerKeep, type Building, type GameState } from '../state';
 
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
@@ -45,18 +46,20 @@ let queue = new Int32Array(0);
  * Czy budynek w tym miejscu odciąłby drogę: po postawieniu z wejścia twierdzy musi dać się dojść
  * do wejścia każdego budynku gracza (także nowego) i do każdego jego chłopa.
  */
+const WALL_BIT = [2, 8, 4, 1];
 /** Zalewanie od drzwi twierdzy: które pola są osiągalne pieszo. */
 function flood(g: GameState, start: number, out: Uint8Array, player: number): void {
   const { width, height } = g.map;
   out.fill(0, 0, width * height);
   let head = 0, tail = 0;
-  if (g.occupancy[start] === 0) { queue[tail++] = start; out[start] = 1; }
+  if (g.occupancy[start] === 0 || g.gates[start] === player + 1) { queue[tail++] = start; out[start] = 1; }
   while (head < tail) {
     const t = queue[head++]!;
     const cx = t % width, cy = (t - cx) / width;
     for (let d = 0; d < 4; d++) {
       const nx = cx + (d === 0 ? 1 : d === 1 ? -1 : 0), ny = cy + (d === 2 ? 1 : d === 3 ? -1 : 0);
       if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+      if (g.walls[t]! & WALL_BIT[d]!) continue; // ściana w zamku
       const nt = ny * width + nx;
       if (out[nt] || (g.occupancy[nt] !== 0 && g.gates[nt] !== player + 1) || !TERRAIN[g.map.tiles[nt] as Terrain].walkable) continue;
       out[nt] = 1; queue[tail++] = nt;
@@ -117,7 +120,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     if (!TERRAIN[g.map.tiles[t] as Terrain].walkable) return 'place.terrain';
     if (g.occupancy[t] !== 0 || g.roads[t] === def.road || g.roadPlan[t] === def.road) return 'place.occupied';
     const k = playerKeep(g, player);
-    if (!k || Math.max(Math.abs(x - (k.x + 1)), Math.abs(y - (k.y + 1))) > RULES.buildRadius + 10) return 'place.far';
+    if (!k || Math.max(Math.abs(x - keepCenter(k)[0]), Math.abs(y - keepCenter(k)[1])) > RULES.buildRadius + 10) return 'place.far';
     if (checkCost && !canAfford(g, player, def)) return 'place.cost';
     return null;
   }
@@ -131,7 +134,8 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
   const keep = playerKeep(g, player);
   if (!keep) return 'place.far';
   const cx = x + (fw >> 1), cy = y + (fh >> 1);
-  if (Math.max(Math.abs(cx - (keep.x + 1)), Math.abs(cy - (keep.y + 1))) > RULES.buildRadius) return 'place.far';
+  const [kx, ky] = keepCenter(keep);
+  if (Math.max(Math.abs(cx - kx), Math.abs(cy - ky)) > RULES.buildRadius) return 'place.far';
   if (def.needsTerrain) {
     const r = def.needsTerrain.radius;
     let found = false;
@@ -147,11 +151,11 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
   return null;
 }
 
-/** Pola wewnątrz budynku, po których chodzą ludzie właściciela (brama, dziedziniec, sale zamku) */
+/** Zamek: pola dziedzińca i sal są przechodnie dla właściciela, a między pomieszczeniami stoją ściany (wejście tylko bramą) */
 export function openWalk(g: GameState, b: Building): void {
-  const def = BUILDINGS[b.type]!;
-  if (!def.walk || b.rot) return;
-  for (const [dx, dy] of def.walk) g.gates[(b.y + dy) * g.map.width + b.x + dx] = b.owner + 1;
+  if (BUILDINGS[b.type]!.id !== 'keep') return;
+  const w = g.map.width;
+  for (const c of KEEP_CELLS) { const t = (b.y + c.dy) * w + b.x + c.dx; g.gates[t] = b.owner + 1; g.walls[t] = c.walls; }
 }
 
 /** Wstawia budynek do stanu bez sprawdzania kosztów (używane też dla twierdzy startowej). */
@@ -159,7 +163,8 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
   const def = BUILDINGS[type]!;
   const fp = footprint(def, rot);
   // umocnienia nie mają wejścia; brama sama jest przejściem
-  const door = def.wall || def.gate ? -1 : findDoor(g, x, y, fp.w, fp.h, rot);
+  // zamek: mieszkańcy idą przez bramę do koszar; inne budynki mają wejście tuż przy ścianie
+  const door = def.wall || def.gate ? -1 : def.id === 'keep' ? (y + KEEP_BED[1]) * g.map.width + x + KEEP_BED[0] : findDoor(g, x, y, fp.w, fp.h, rot);
   const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false, hp: maxHp(type), build: 0 };
   for (let ty = y; ty < y + fp.h; ty++)
     for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; g.roadPlan[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
@@ -207,7 +212,7 @@ export function ruin(g: GameState, b: Building): void {
   if (b.worker) { const u = g.units.find((x) => x.id === b.worker); if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; } b.worker = 0; }
   if (def.wall || def.gate) {
     const fp = footprint(def, b.rot);
-    for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { g.occupancy[y * g.map.width + x] = 0; g.gates[y * g.map.width + x] = 0; }
+    for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { g.occupancy[y * g.map.width + x] = 0; g.gates[y * g.map.width + x] = 0; g.walls[y * g.map.width + x] = 0; }
   }
 }
 
@@ -258,7 +263,7 @@ export function demolish(g: GameState, player: number, id: number, destroyed = f
   if (!def.buildable && !destroyed) return false;
   const fp = footprint(def, b.rot);
   for (let ty = b.y; ty < b.y + fp.h; ty++)
-    for (let tx = b.x; tx < b.x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = 0; g.gates[ty * g.map.width + tx] = 0; }
+    for (let tx = b.x; tx < b.x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = 0; g.gates[ty * g.map.width + tx] = 0; g.walls[ty * g.map.width + tx] = 0; }
   if (b.door >= 0) g.reserved[b.door]!--;
   g.buildings.splice(i, 1);
   for (const u of g.units) {

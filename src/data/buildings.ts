@@ -52,8 +52,6 @@ export interface BuildingDef {
   wall?: boolean;
   /** Brama: swoi przechodzą, wrogowie muszą ją rozbić */
   gate?: boolean;
-  /** Pola działki (dx, dy od lewego górnego rogu), po których chodzą ludzie właściciela: dziedziniec, sale, brama */
-  walk?: [number, number][];
   /** Stawiany przeciąganiem w linii, jak droga */
   line?: boolean;
   /** Czy gracz może go postawić (twierdza powstaje sama) */
@@ -65,7 +63,7 @@ export interface BuildingDef {
  * KOLEJNOŚĆ MA ZNACZENIE: indeks trafia do stanu gry i skrótu, nowe wpisy dopisujemy na końcu.
  */
 export const BUILDINGS: readonly BuildingDef[] = [
-  { id: 'keep', name: 'b.keep', w: 3, h: 3, cost: {}, housing: 8, hp: 1500, buildable: false, walk: [[1, 2], [1, 1], [0, 1], [2, 1], [1, 0]] },
+  { id: 'keep', name: 'b.keep', w: 11, h: 11, cost: {}, housing: 12, hp: 6000, buildable: false },
   { id: 'house', category: 'settlement', name: 'b.house', w: 2, h: 2, cost: { wood: 20 }, housing: 8, buildable: true },
   { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 10 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
   { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 150 }, buildable: true },

@@ -8,7 +8,7 @@ import { openWalk } from './systems/placement';
 import type { Building, Corpse, Traveler, Wolf, GameState, March, PlayerState, Rubble, Soldier, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
-export const SAVE_VERSION = 19;
+export const SAVE_VERSION = 20;
 
 export interface SaveData {
   v: number;
@@ -76,7 +76,7 @@ export function deserialize(d: SaveData): GameState | null {
       corpses: (d.corpses ?? []).map((c) => ({ ...c })),
       travelers: (d.travelers ?? []).map((t) => ({ ...t, path: [...t.path] })),
       wolves: (d.wolves ?? []).map((w) => ({ ...w, path: [...w.path] })),
-      occupancy: new Int32Array(size), gates: new Uint8Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size),
+      occupancy: new Int32Array(size), gates: new Uint8Array(size), walls: new Uint8Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size),
       rubble: d.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     };
     for (const r of g.rubble) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g.reserved[y * map.width + x]!++;

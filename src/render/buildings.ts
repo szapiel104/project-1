@@ -843,7 +843,7 @@ const BUILDERS: Record<string, Builder> = {
   keep(g, _team, flag) {
     // Zamek z Blendera (tools/models/keep.py): mury z dziedzińcem, baszty, brama z mostem, donżon z salą i komnatą,
     // koszary straży. Przy podglądzie wnętrza znikają dachy i piętra donżonu — widać pomieszczenia i śpiących.
-    blenderModel(g, KEEP_MODEL as BlenderBuilding, flag);
+    blenderModel(g, KEEP_MODEL as unknown as BlenderBuilding, flag);
     // Życie widoczne z zewnątrz: kosze z ogniem przy wejściu. Straż na murach i w bramie to prawdziwi strażnicy miejscy
     // z symulacji (systems/guards.ts), więc w modelu nie ma już udawanych postaci.
     const life = new THREE.Group();
@@ -851,7 +851,7 @@ const BUILDERS: Record<string, Builder> = {
     // kosze ogniowe przy bramie: kuta noga na trzech łapach, żelazna misa z węglem; płomień rysuje system ognia (tylko po zmroku)
     for (const sx of [-1, 1]) {
       const stand = new THREE.Group();
-      stand.position.set(sx * 0.62, 0, 1.62);
+      stand.position.set(sx * 1.2, 0, 6.15);
       const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.02, 0.36, 6).translate(0, 0.18, 0), M.iron);
       stand.add(leg);
       for (let k = 0; k < 3; k++) {
