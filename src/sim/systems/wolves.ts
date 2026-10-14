@@ -174,7 +174,8 @@ export function wolfSystem(g: GameState): void {
     // strażnik miejski wypatruje wilków dalej (12 pól) i rzuca obchód, żeby je przegonić; zwykły żołnierz — 6 pól
     const alert = def.guard ? 144 : 36;
     let best = Math.max(alert, reach), wolf: Wolf | undefined;
-    for (const w of g.wolves) { if (w.hp <= 0 || (def.guard && w.leaving)) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; wolf = w; } }
+    // uciekającego rannego wilka strażnik też dobija (pościg kończy smycz obchodu w guards.ts)
+    for (const w of g.wolves) { if (w.hp <= 0) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; wolf = w; } }
     if (!wolf) continue;
     if (best <= reach) { if ((g.tick + s.id) % def.cooldown === 0) wolf.hp -= def.attack; }
     else if (def.guard && !s.target && !s.hunt) {
