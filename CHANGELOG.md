@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.20.1 — gdzie jest straż (2026-10-14)
+
+- Po kliknięciu twierdzy każdy strażnik miejski ma czerwone kółko pod stopami i czerwoną tarczę z krzyżem nad głową (tej samej wielkości przy każdym zbliżeniu); po odznaczeniu znaczniki znikają
+
 ## 0.20.0 — wilki i straż (2026-10-14)
 
 - Strażnik miejski, który zobaczy wilka (12 pól), rzuca obchód i biegnie go ubić — wyraźnie szybciej niż zwykle; goni też uciekającego (do granicy osady)

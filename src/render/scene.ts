@@ -390,6 +390,27 @@ export class GameRenderer {
   private spearmen: Figures;
   private rings: THREE.InstancedMesh;
   private ringsBack!: THREE.InstancedMesh;
+  private guardRings!: THREE.InstancedMesh;
+  private guardPins: THREE.Sprite[] = [];
+  private guardPinMat?: THREE.SpriteMaterial;
+  /** Tarcza nad strażnikiem (pokazana po kliknięciu twierdzy) */
+  private guardPin(i: number, x: number, y: number, z: number): void {
+    if (!this.guardPinMat) {
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const k = c.getContext('2d')!;
+      // tarcza herbowa w barwie straży (czerwona skóra, żelazne okucie), pod nią szpic wskazujący strażnika
+      k.fillStyle = '#b8382a'; k.strokeStyle = 'rgba(20,10,5,.9)'; k.lineWidth = 4;
+      k.beginPath(); k.moveTo(14, 10); k.lineTo(50, 10); k.lineTo(50, 30); k.quadraticCurveTo(50, 46, 32, 56); k.quadraticCurveTo(14, 46, 14, 30); k.closePath(); k.fill(); k.stroke();
+      k.strokeStyle = '#d9d2c2'; k.lineWidth = 4; k.beginPath(); k.moveTo(32, 14); k.lineTo(32, 48); k.moveTo(19, 27); k.lineTo(45, 27); k.stroke();
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      // stała wielkość na ekranie: tarcze widać i z daleka, i z bliska
+      this.guardPinMat = new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false, fog: false, sizeAttenuation: false });
+    }
+    let sp = this.guardPins[i];
+    if (!sp) { sp = new THREE.Sprite(this.guardPinMat); sp.renderOrder = 22; sp.scale.setScalar(0.045); this.scene.add(sp); this.guardPins.push(sp); }
+    sp.visible = true;
+    sp.position.set(x, y + 1.05 + Math.sin(this.time * 3 + i) * 0.05, z);
+  }
   /** Podgląd szyku przy przeciąganiu prawym przyciskiem: przyszłe miejsca żołnierzy */
   private ghostRings!: THREE.InstancedMesh;
   /** Ciała poległych i ciemne plamy pod nimi */
@@ -542,6 +563,8 @@ export class GameRenderer {
     };
     this.ringsBack = mark(0.17, 0.29, 0x120c05, 0.6, 20);
     this.rings = mark(0.195, 0.262, 0xffd34d, 1, 21);
+    // straż miejska po kliknięciu twierdzy: czerwone kółka pod strażnikami i tarcza nad głową
+    this.guardRings = mark(0.24, 0.33, 0xe0503a, 0.95, 21);
     this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.peasantBodies = new Figures(MAX_UNITS, this.scene);
     this.archerBodies = new Figures(512, this.scene, 'archer');
@@ -2632,6 +2655,10 @@ export class GameRenderer {
     const { width, height } = g.map;
     const t = this.tmp;
     let n = 0, rings = 0, dots = 0, torches = 0;
+    // kliknięta twierdza: pokazujemy, gdzie są jej strażnicy
+    const selB = this.selectedId ? g.buildings.find((b) => b.id === this.selectedId) : undefined;
+    const guardOwner = selB && selB.type === 0 ? selB.owner : -99;
+    let guardRingN = 0;
     // stojący oddział zbija się ciaśniej: każdy przysuwa się do środka swojej grupy (tylko wygląd, pola w symulacji bez zmian)
     const pull = new Map<number, [number, number]>();
     const still = g.soldiers.filter((x) => !x.path.length && !x.up && !x.target && x.goal < 0);
@@ -2810,6 +2837,10 @@ export class GameRenderer {
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
       // kółko i ramka zaznaczenia idą za figurą (z dociągnięciem do grupy), nie za polem z symulacji
       pos.set(px - width / 2, y, pz - height / 2);
+      if (udef.guard && guardOwner === s.owner && guardRingN < MAX_UNITS) {
+        m.makeTranslation(pos.x, y + 0.03, pos.z); this.guardRings.setMatrixAt(guardRingN, m);
+        this.guardPin(guardRingN++, pos.x, y, pos.z);
+      }
       if (this.soldierSel.has(s.id)) {
         m.makeTranslation(pos.x, y + 0.03, pos.z); this.ringsBack.setMatrixAt(rings, m); this.rings.setMatrixAt(rings++, m);
         // kropka na polu docelowym, póki żołnierz idzie
@@ -2827,6 +2858,9 @@ export class GameRenderer {
       }
       n++;
     }
+    this.guardRings.count = guardRingN;
+    this.guardRings.instanceMatrix.needsUpdate = true;
+    for (let i = guardRingN; i < this.guardPins.length; i++) this.guardPins[i]!.visible = false;
     this.dots.count = dots;
     this.dots.instanceMatrix.needsUpdate = true;
     (this.dots.material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(this.time * 6) * 0.35;
