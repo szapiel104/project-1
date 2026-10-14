@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.19.3 — paski zdrowia pod menu (2026-10-14)
+
+- Pasek zdrowia żołnierza nie przechodzi już przez dolne menu, okno budynku ani pasek wojska — chowa się pod nimi
+
 ## 0.19.2 — ludzie chodzą po drodze, nie w niej (2026-10-14)
 
 - Ludzie, żołnierze i zwierzęta stoją na wierzchu nawierzchni (ścieżka, bruk, bale drogi z dyli), zamiast przenikać przez nią po kostki; na drogę wchodzą krótkim krokiem w górę przy brzegu pola

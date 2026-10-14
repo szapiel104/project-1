@@ -108,7 +108,7 @@ ul { list-style: none; }
 .build { position: fixed; right: 12px; top: 10px; z-index: 60; padding: 6px 14px; font-size: 20px; font-weight: 700; letter-spacing: .03em; border-width: 2px; color: var(--light); background: rgba(35, 22, 11, .78); border: 1px solid var(--gold-dark); pointer-events: none; }
 
 /* dół ekranu */
-.bottom { position: fixed; left: 0; right: 0; bottom: 0; display: grid; gap: 8px; pointer-events: none; }
+.bottom { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; display: grid; gap: 8px; pointer-events: none; } /* nad paskami zdrowia (.hpbars, z-index 5): pasek żołnierza nie przechodzi przez menu */
 .floaters { padding: 0 8px; }
 .bottom > *, .floaters > * { pointer-events: auto; }
 .floaters { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; pointer-events: none; }
