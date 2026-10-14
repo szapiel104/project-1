@@ -1061,3 +1061,35 @@ input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inse
 .alarm[data-state='coming']:hover { filter: brightness(1.15); }
 .alarm[data-state='coming']:focus-visible { outline: 2px solid #e9c766; outline-offset: 3px; }
 .alarm-go { font-family: var(--display); font-weight: 700; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #ffe7a6; }
+/* okno zaznaczonego wojska i budynku zawsze mieści się w ekranie (z uwzględnieniem powiększenia interfejsu);
+   przyciski szyku/marszu/postawy zawijają się zamiast wychodzić poza okno */
+.info { max-width: calc(100vw / var(--ui, 1) - 16px); min-width: 0; }
+.floaters .info { width: min(340px, calc(100vw / var(--ui, 1) - 16px)); }
+.info-name { overflow-wrap: anywhere; }
+.army-row { min-width: 0; align-items: flex-start; }
+.army-label { padding-top: 6px; }
+.army-seg { flex: 1 1 auto; min-width: 0; flex-wrap: wrap; row-gap: 2px; }
+.army-btn { flex: 1 1 auto; padding: 3px 9px; }
+.info .hint, .info p { overflow-wrap: anywhere; }
+/* panel dewelopera: po lewej nad belką, nie zasłania środka mapy; mieści się na każdym ekranie */
+.devpanel { position: fixed; left: 12px; bottom: 205px; z-index: 45; width: min(380px, calc(100vw / var(--ui, 1) - 24px)); max-height: calc(100vh / var(--ui, 1) - 230px); overflow-y: auto; padding: 12px 14px 14px; display: grid; gap: 8px; zoom: var(--ui, 1); }
+.dev-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dev-x { min-height: 32px; min-width: 32px; padding: 0; font-size: 20px; line-height: 1; }
+.dev-row { display: flex; align-items: flex-start; gap: 8px; min-width: 0; }
+.dev-place { min-height: 40px; white-space: normal; line-height: 1.2; }
+.dev-place[aria-pressed='true'] { box-shadow: inset 0 0 0 2px #fff3c4, inset 0 0 0 4px #3a0805; }
+.dev-sub { margin: 4px 0 0; font-family: var(--display); font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: #e9c766; }
+.dev-acts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+.dev-act { min-height: 36px; padding: 4px 8px; font-size: 12.5px; white-space: normal; line-height: 1.15; }
+.dev-status { margin: 0; font-size: 14px; font-style: italic; color: var(--ink-soft); overflow-wrap: anywhere; }
+.dev-open { color: #ffe7a6; }
+.dev-open { position: fixed; right: 12px; top: 92px; z-index: 44; min-height: 34px; padding: 4px 12px; font-size: 13px; zoom: var(--ui, 1); }
+/* dolna belka nie wychodzi poza ekran: kolumny mogą się zwężać, grupy przycisków zawijają się */
+.toolbar { grid-template-columns: auto minmax(0, 1fr) auto; }
+.toolbar .cats { flex-wrap: wrap; justify-content: center; min-width: 0; }
+/* okno budynku/wojska nie wchodzi pod znacznik wersji, FPS i przycisk dewelopera w prawym górnym rogu */
+.floaters .info { max-height: calc(100vh / var(--ui, 1) - 300px); overflow-y: auto; }
+/* ekran końca gry: tytuł mieści się w oknie */
+.end-panel { width: min(560px, calc(100vw / var(--ui, 1) - 32px)); }
+.end-panel .menu-title { font-size: clamp(30px, 4.2vw, 52px); letter-spacing: .04em; overflow-wrap: anywhere; }
+.end-panel .menu-sub { font-size: 16px; }

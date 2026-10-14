@@ -136,6 +136,8 @@ const FIG = 0.76;
 /** Wierzch nawierzchni drogi nad ziemią (0 brak, 1 ścieżka, 2 bruk, 3 dyle: bale leżą na 0,05 i mają ok. 0,05 grubości) */
 const ROAD_TOP = [0, 0.025, 0.045, 0.1];
 const tmpColor = new THREE.Color();
+/** Szyk „ścisk”: o ile żołnierz (i jego kropka celu) przysuwa się do środka oddziału — ramię w ramię */
+const TIGHT = 0.6;
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
 const DAY = [
@@ -513,14 +515,20 @@ export class GameRenderer {
     this.archers = new Figures(MAX_UNITS, this.scene, 'archer');
     this.guardsFig = new Figures(MAX_UNITS, this.scene, 'guard');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.014, 0.014, 0.62, 4).rotateX(Math.PI / 2), 0x9a7a4e),
-      tint(new THREE.ConeGeometry(0.032, 0.1, 4).rotateX(Math.PI / 2).translate(0, 0, 0.35), 0xb8bec8),
-      tint(new THREE.BoxGeometry(0.07, 0.004, 0.12).translate(0, 0, -0.27), 0xfff2d8),
-      tint(new THREE.BoxGeometry(0.004, 0.07, 0.12).translate(0, 0, -0.27), 0xfff2d8),
-    ])!, new THREE.MeshBasicMaterial({ vertexColors: true }), 256);
+      tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
+      tint(new THREE.ConeGeometry(0.02, 0.07, 4).rotateX(Math.PI / 2).translate(0, 0, 0.27), 0x6a6e76),
+      tint(new THREE.BoxGeometry(0.04, 0.002, 0.08).translate(0, 0, -0.22), 0xe8e0c8),
+    ])!, new THREE.MeshStandardMaterial({ vertexColors: true }), 256);
     // smuga za strzałą: jasny, gasnący pas, żeby lot było widać z daleka i nocą
-    this.arrowTrail = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.035, 1).rotateX(-Math.PI / 2).translate(0, 0, -0.5),
-      new THREE.MeshBasicMaterial({ color: 0xffe9b0, transparent: true, opacity: 0.45, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }), 256);
+    // smuga: delikatna, jaśniejsza przy strzale i zanikająca ku tyłowi (gradient w kolorach wierzchołków)
+    const trailGeo = new THREE.PlaneGeometry(0.03, 1, 1, 1).rotateX(-Math.PI / 2).translate(0, 0, -0.5);
+    {
+      const pos = trailGeo.getAttribute('position'), col = new Float32Array(pos.count * 3);
+      for (let i = 0; i < pos.count; i++) { const k = 1 + pos.getZ(i); col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = Math.max(0, k) ** 1.5; }
+      trailGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    }
+    this.arrowTrail = new THREE.InstancedMesh(trailGeo,
+      new THREE.MeshBasicMaterial({ color: 0xd8d0c0, vertexColors: true, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }), 256);
     this.arrowTrail.count = 0; this.arrowTrail.frustumCulled = false; this.scene.add(this.arrowTrail);
     this.arrowMesh.count = 0; this.arrowMesh.frustumCulled = false; this.scene.add(this.arrowMesh);
     // znaczniki zaznaczenia rysują się nad wszystkim (trawa, krzaki), z ciemną obwódką, żeby było je widać na każdym tle
@@ -2519,15 +2527,21 @@ export class GameRenderer {
   }
 
   /** Podgląd szyku: półprzezroczyste kółka na polach, na których staną żołnierze (null chowa podgląd) */
-  setFormationPreview(tiles: number[] | null): void {
+  setFormationPreview(tiles: number[] | null, tight = false): void {
     if (!this.state || !this.view) return;
     const { width, height } = this.state.map;
     const m = new THREE.Matrix4();
-    let n = 0;
-    for (const t of tiles ?? []) {
+    let n = 0, cx = 0, cy = 0;
+    const list = tiles ?? [];
+    for (const t of list) { cx += t % width + 0.5; cy += Math.floor(t / width) + 0.5; }
+    if (list.length) { cx /= list.length; cy /= list.length; }
+    for (const t of list) {
       if (n >= MAX_UNITS) break;
-      const x = t % width, y = (t - x) / width;
-      m.makeTranslation(x + 0.5 - width / 2, this.view.heightAt(x + 0.5, y + 0.5) + 0.04, y + 0.5 - height / 2);
+      let x = t % width + 0.5, y = Math.floor(t / width) + 0.5;
+      // ścisk: podgląd tak zbity, jak oddział stanie
+      if (tight) { x += (cx - x) * TIGHT; y += (cy - y) * TIGHT; }
+      m.makeTranslation(x - width / 2, this.view.heightAt(x, y) + 0.04, y - height / 2);
+      if (tight) m.scale(new THREE.Vector3(0.6, 1, 0.6));
       this.ghostRings.setMatrixAt(n++, m);
     }
     this.ghostRings.count = n;
@@ -2577,9 +2591,20 @@ export class GameRenderer {
     // oddział z jednego rozkazu ściąga się do swojego środka równo, więc linia zostaje linią, a blok blokiem
     const mid = new Map<number, [number, number, number]>();
     for (const a of still) if (a.grp) { const c = mid.get(a.grp) ?? [0, 0, 0]; c[0] += a.px; c[1] += a.py; c[2]++; mid.set(a.grp, c); }
+    // ścisk: oddział zbity od razu, także w marszu, a kropki celu też w ścisku (środek celów oddziału)
+    const tightMid = new Map<number, [number, number, number]>(), tightGoal = new Map<number, [number, number, number]>();
+    for (const a of g.soldiers) if (a.tight && a.grp && !a.up) {
+      const c = tightMid.get(a.grp) ?? [0, 0, 0]; c[0] += a.px; c[1] += a.py; c[2]++; tightMid.set(a.grp, c);
+      if (a.goal >= 0) { const q = tightGoal.get(a.grp) ?? [0, 0, 0]; q[0] += a.goal % width + 0.5; q[1] += Math.floor(a.goal / width) + 0.5; q[2]++; tightGoal.set(a.grp, q); }
+    }
+    for (const a of g.soldiers) {
+      const c = a.tight && a.grp ? tightMid.get(a.grp) : undefined;
+      if (c && c[2] > 1) pull.set(a.id, [(c[0] / c[2] - a.px) / FP * TIGHT, (c[1] / c[2] - a.py) / FP * TIGHT]);
+    }
     for (const a of still) {
+      if (pull.has(a.id)) continue;
       const c = a.grp ? mid.get(a.grp) : undefined;
-      if (c && c[2] > 1) { const k = a.tight ? 0.6 : 0.3; pull.set(a.id, [(c[0] / c[2] - a.px) / FP * k, (c[1] / c[2] - a.py) / FP * k]); continue; }
+      if (c && c[2] > 1) { const k = 0.3; pull.set(a.id, [(c[0] / c[2] - a.px) / FP * k, (c[1] / c[2] - a.py) / FP * k]); continue; }
       let sx = 0, sy = 0, k = 0;
       for (const b of still) if (b.owner === a.owner && Math.abs(b.px - a.px) < 3 * FP && Math.abs(b.py - a.py) < 3 * FP) { sx += b.px; sy += b.py; k++; }
       if (k > 1) pull.set(a.id, [(sx / k - a.px) / FP * 0.45, (sy / k - a.py) / FP * 0.45]);
@@ -2746,7 +2771,10 @@ export class GameRenderer {
         if (dest >= 0) {
           const dx = dest % width, dy = (dest - dx) / width;
           const pulse = 0.75 + Math.sin(this.time * 6 + s.id) * 0.25;
-          m.makeScale(pulse, 1, pulse).setPosition(dx + 0.5 - width / 2, view.heightAt(dx + 0.5, dy + 0.5) + 0.035, dy + 0.5 - height / 2);
+          let ox = dx + 0.5, oy = dy + 0.5;
+          const tg = s.tight && s.grp && s.goal >= 0 ? tightGoal.get(s.grp) : undefined;
+          if (tg && tg[2] > 1) { ox += (tg[0] / tg[2] - ox) * TIGHT; oy += (tg[1] / tg[2] - oy) * TIGHT; }
+          m.makeScale(pulse * (tg ? 0.7 : 1), 1, pulse * (tg ? 0.7 : 1)).setPosition(ox - width / 2, view.heightAt(ox, oy) + 0.035, oy - height / 2);
           this.dots.setMatrixAt(dots++, m);
         }
       }

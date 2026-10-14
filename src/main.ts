@@ -30,6 +30,10 @@ import { GUARDS, GUARD_COST } from './sim/systems/guards';
 import { cachedThumbs, saveThumbs } from './render/thumbcache';
 import { texturesReady } from './render/textures';
 import { TEAM_COLORS } from './data/teams';
+import { createDevPanel, type DevSpawn } from './ui/devpanel';
+import { walkable } from './sim/path';
+import { FP } from './sim/state';
+import { unitIndex } from './data/units';
 
 let ME = 0; // gracz sterowany lokalnie (w grze przez sieć gość ma 1)
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -568,6 +572,7 @@ renderer.onPaintDown = (tile) => {
 renderer.onUnit = (id) => { if (!picked && !wrecking) selectUnit(id === selectedUnit ? 0 : id); };
 
 renderer.onClick = (tile, touch) => {
+  if (devSpawn && devAllowed()) { devPlace(tile.x, tile.y, devSpawn.kind, devSpawn.foe, devSpawn.count); return; }
   if (wrecking) {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
     const b = game.buildings.find((x) => x.id === id);
@@ -673,7 +678,7 @@ function dragOrder(start: { x: number; y: number } | null, amove = false): { x: 
   let px = -vy, py = vx;
   if (px * (cx - mx) + py * (cy - my) < 0) { px = -px; py = -py; }
   const face = octant(px, py);
-  const stepLen = (face % 2 ? Math.SQRT2 : 1) * (armyForm === 2 ? 2 : 1);
+  const stepLen = (face % 2 ? Math.SQRT2 : 1) * (armyForm === 2 ? 2 : armyForm === 3 ? 0.4 : 1);
   const width = Math.max(1, Math.min(list.length, Math.round(Math.hypot(vx, vy) / stepLen) + 1));
   return { x: cx, y: cy, face, form: armyForm, width, amove };
 }
@@ -725,7 +730,7 @@ window.addEventListener('pointermove', (e) => {
   if (!rDrag.on && Math.hypot(e.clientX - rDrag.x, e.clientY - rDrag.y) < 14) return;
   rDrag.on = true;
   const o = dragOrder(rDrag.tile);
-  renderer.setFormationPreview(o ? [...planFormation(game, ME, [...chosen], o.y * game.map.width + o.x, o).spots.values()] : null);
+  renderer.setFormationPreview(o ? [...planFormation(game, ME, [...chosen], o.y * game.map.width + o.x, o).spots.values()] : null, armyForm === 3);
 });
 canvas.addEventListener('pointerup', (e) => {
   if (e.button !== 2) return;
@@ -1586,6 +1591,79 @@ document.body.append(fpsTag);
 const togglePerf = (): void => { perfBox.hidden = !perfBox.hidden; fpsTag.setAttribute('aria-pressed', String(!perfBox.hidden)); };
 fpsTag.addEventListener('click', togglePerf);
 window.addEventListener('keydown', (e) => { if (e.key === 'F3') { e.preventDefault(); togglePerf(); } });
+
+// ---- panel dewelopera (F9): stawianie jednostek i wilków, scenki, czas — tylko w grze z botami w trybie dewelopera ----
+let devSpawn: { kind: DevSpawn; foe: boolean; count: number } | null = null;
+function devAllowed(): boolean { return !net && (SANDBOX || !!game.players[ME]?.dev); }
+const devFoe = (): number => game.players.find((p) => p.team !== game.players[ME]!.team && !p.defeated)?.id ?? -1;
+/** Stawia jednostki wokół pola (x, y): po spirali na przechodnich polach */
+function devPlace(x: number, y: number, kind: DevSpawn, foe: boolean, count: number): number {
+  const W = game.map.width, H = game.map.height;
+  const owner = foe ? devFoe() : ME;
+  let n = 0;
+  for (let r = 0; r < 8 && n < count; r++)
+    for (let dy = -r; dy <= r && n < count; dy++)
+      for (let dx = -r; dx <= r && n < count; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const tx = x + dx, ty = y + dy;
+        if (tx < 0 || ty < 0 || tx >= W || ty >= H || !walkable(game, ty * W + tx, owner < 0 ? ME : owner)) continue;
+        const px = tx * FP + FP / 2, py = ty * FP + FP / 2;
+        if (kind === 'wolf') game.wolves.push({ id: game.nextId++, px, py, hp: 45, path: [], target: 0, cd: 0, leaving: false });
+        else {
+          if (owner < 0) return 0;
+          const k = unitIndex(kind);
+          game.soldiers.push({ id: game.nextId++, owner, kind: k, px, py, path: [], hp: UNITS[k]!.hp, goal: -1, wait: 0, target: 0, cd: 0 });
+        }
+        n++;
+      }
+  const what = kind === 'wolf' ? 'wilków' : kind === 'archer' ? 'łuczników' : 'włóczników';
+  devPanel.placed(n ? `Postawiono ${n} ${what}${kind === 'wolf' ? '' : foe ? ' wroga' : ' swoich'}. Klikaj dalej albo Esc.` : 'Tu nie da się postawić — wybierz wolne pole.');
+  return n;
+}
+const devPanel = createDevPanel(document.body, {
+  onPlace: (sp) => { devSpawn = sp; canvas.classList.toggle('placing', !!sp); },
+  onFoeAtTower: () => {
+    const W = game.map.width;
+    const towers = game.buildings.filter((b) => b.owner === ME && BUILDINGS[b.type]!.id === 'watchtower');
+    const manned = towers.find((t) => game.soldiers.some((s) => s.post === t.id && s.up)) ?? towers[0];
+    if (!manned) { devPanel.placed('Nie masz wieży strażniczej.'); return; }
+    for (const [dx, dy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [5, 5], [-5, -5]] as const) {
+      const tx = manned.x + 1 + dx, ty = manned.y + 1 + dy;
+      if (walkable(game, ty * W + tx, devFoe()) && devPlace(tx, ty, 'spearman', true, 3)) { renderer.lookAt(manned.x + 1 + dx / 2, manned.y + 1 + dy / 2, 16); return; }
+    }
+  },
+  onSkip: (to) => {
+    // szybko do przodu, aż wybije zmierzch (20:30) albo ranek (7:00); najwyżej jedna doba
+    for (let i = 0; i < 7200; i++) {
+      const h = clockAt(game.tick).hour;
+      if (to === 'night' ? h >= 20.5 || h < 4 : h >= 7 && h < 12) break;
+      step(game, []);
+    }
+    refresh();
+    devPanel.placed(`Jest ${Math.floor(clockAt(game.tick).hour)}:${String(Math.floor((clockAt(game.tick).hour % 1) * 60)).padStart(2, '0')}.`);
+  },
+  onHeal: () => { for (const s of game.soldiers) if (s.owner === ME) s.hp = UNITS[s.kind]!.hp; },
+  onGive: () => { const p = game.players[ME]!; for (let i = 0; i < p.res.length; i++) p.res[i]! += 1000; refresh(); },
+  onCamera: (which) => {
+    const owner = which === 'mine' ? ME : devFoe();
+    const k = game.buildings.find((b) => b.owner === owner && b.type === 0);
+    if (k) renderer.lookAt(k.x + 1.5, k.y + 1.5, 26);
+  },
+  onKillFoes: () => { const me = game.players[ME]!; game.soldiers = game.soldiers.filter((s) => game.players[s.owner]!.team === me.team); game.wolves = []; },
+});
+window.addEventListener('keydown', (e) => {
+  if (e.key === 'F9' && devAllowed()) { e.preventDefault(); devPanel.toggle(); return; }
+  if (e.key === 'Escape' && devPanel.isPlacing()) { e.preventDefault(); e.stopImmediatePropagation(); devPanel.stop(); }
+}, true);
+// przycisk na dolnej belce (obok Menu), widoczny tylko gdy panel jest dostępny
+const devBtn = document.createElement('button');
+devBtn.type = 'button';
+devBtn.className = 'dev-open';
+devBtn.textContent = 'Deweloper';
+devBtn.title = 'Panel dewelopera (F9)';
+devBtn.addEventListener('click', () => devPanel.toggle());
+document.body.append(devBtn);
+setInterval(() => { devBtn.hidden = !devAllowed() || document.body.classList.contains('menu-open'); }, 500);
 function showPerf(now: number): void {
   const secs = (now - perf.since) / 1000;
   const r = renderer.stats;
