@@ -1120,7 +1120,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const im = new THREE.InstancedMesh(new RoundedBoxGeometry(1, 1, 1, 1, 0.12), boardMat, boards.length);
           const tone = new THREE.Color();
           boards.forEach(([bx, by, len, rot, r, hgt], i) => {
-            kerbDummy.position.set(bx + ox, heightAt(bx, by) + 0.05 + hgt / 2, by + oz);
+            // bale wpuszczone w ziemię: wystają tylko na grubość deski, po wierzchu chodzą ludzie (scene.standY)
+            kerbDummy.position.set(bx + ox, heightAt(bx, by) + 0.035 - hgt / 2 + 0.004 * (((r >>> 13) & 3) - 1), by + oz);
             kerbDummy.rotation.set((((r >>> 16) & 7) / 7 - 0.5) * 0.04, rot, (((r >>> 19) & 7) / 7 - 0.5) * 0.03);
             kerbDummy.scale.set(len, hgt, BW * 0.86);
             kerbDummy.updateMatrix();
@@ -1138,7 +1139,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           roadMeshes.push(im);
           const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), boardMat, rails.length);
           rails.forEach(([rx, ry, len, rot], i) => {
-            kerbDummy.position.set(rx + ox, heightAt(rx, ry) + 0.045, ry + oz);
+            kerbDummy.position.set(rx + ox, heightAt(rx, ry) - 0.015, ry + oz);
             kerbDummy.rotation.set(0, rot, 0);
             kerbDummy.scale.set(len, 0.05, 0.09);
             kerbDummy.updateMatrix();

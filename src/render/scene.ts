@@ -132,6 +132,8 @@ export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean
 const MAX_UNITS = 2048;
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
+/** Wierzch nawierzchni drogi nad ziemią (0 brak, 1 ścieżka, 2 bruk, 3 dyle) */
+const ROAD_TOP = [0, 0.025, 0.04, 0.035];
 const tmpColor = new THREE.Color();
 const ZERO = new THREE.Matrix4().makeScale(0, 0, 0);
 /** Klatki kluczowe doby: godzina, barwa i siła słońca (albo księżyca), siła światła nieba, barwa mgły i tła */
@@ -2808,7 +2810,14 @@ export class GameRenderer {
   private keepFloors = new Map<number, [number, number, number]>();
   /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */
   private standY(view: TerrainView, x: number, y: number): number {
-    const h = view.heightAt(x, y), k = this.keepAt(x, y);
+    const k = this.keepAt(x, y);
+    let h = view.heightAt(x, y);
+    // na drodze stopy stoją na nawierzchni, nie w niej: ścieżka, bruk i dyle są trochę nad ziemią
+    const g = this.state;
+    if (g && !k) {
+      const tx = Math.floor(x), ty = Math.floor(y);
+      if (tx >= 0 && ty >= 0 && tx < g.map.width && ty < g.map.height) h += ROAD_TOP[g.roads[ty * g.map.width + tx]!] ?? 0;
+    }
     if (!k) return h;
     const [, lx, lz, base] = k;
     // most zwodzony przed bramą: łagodnie z ziemi na posadzkę

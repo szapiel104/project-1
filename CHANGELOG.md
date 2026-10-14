@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.19.2 — ludzie chodzą po drodze, nie w niej (2026-10-14)
+
+- Droga z dyli wpuszczona w ziemię: bale wystają tylko na grubość deski, legary schowane pod spodem
+- Ludzie, żołnierze i zwierzęta stoją na wierzchu nawierzchni (ścieżka, bruk, dyle), zamiast zapadać się w nią po kostki
+
 ## 0.19.1 — zwierzęta z Blendera (2026-10-14)
 
 - Kury (białe, rude, czarne), świnia, koń i pies zrobione w Blenderze jak reszta postaci (tools/models/animals.py → src/render/models/animals.json): gładkie bryły, pióra i sierść w kolorach wierzchołków, cień w zagłębieniach; pies to teraz płowy kundel z klapniętymi uszami, a nie przemalowany wilk
