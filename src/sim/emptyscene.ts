@@ -64,3 +64,14 @@ export function addPeasants(g: GameState, n: number, owner = 0): Unit[] {
 export function addWolf(g: GameState, x: number, y: number): void {
   g.wolves.push({ id: g.nextId++, px: x * FP + FP / 2, py: y * FP + FP / 2, hp: 45, path: [], target: 0, cd: 0, leaving: false });
 }
+
+/** Zdejmuje budynek od ręki, bez gruzu (do wymiany modelu na scenie testowej) */
+export function removeReady(g: GameState, id: number): void {
+  const i = g.buildings.findIndex((b) => b.id === id);
+  const b = g.buildings[i];
+  if (!b) return;
+  const d = BUILDINGS[b.type]!, w = b.rot % 2 ? d.h : d.w, h = b.rot % 2 ? d.w : d.h;
+  for (let ty = b.y; ty < b.y + h; ty++) for (let tx = b.x; tx < b.x + w; tx++) { const t = ty * g.map.width + tx; g.occupancy[t] = 0; g.gates[t] = 0; g.walls[t] = 0; }
+  if (b.door >= 0 && g.reserved[b.door]) g.reserved[b.door]!--;
+  g.buildings.splice(i, 1);
+}

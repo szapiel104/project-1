@@ -67,7 +67,18 @@ export class StrategyCamera {
     this.lookAt(v.x, v.z, v.dist);
   }
 
+  /** Wysokość punktu, na który patrzy kamera, nad ziemią (tylko widoki testowe; zwykle 0) */
+  private lift = 0;
+  /** Testy: kamera dookoła punktu — obrót i nachylenie w radianach, lift = wysokość celu nad ziemią */
+  orbit(x: number, z: number, dist: number, yaw: number, pitch: number, lift = 0): void {
+    this.target.set(x, 0, z);
+    this.dist = dist; this.yaw = yaw; this.lift = lift;
+    this.pitch = Math.max(StrategyCamera.MIN_PITCH, Math.min(StrategyCamera.MAX_PITCH, pitch));
+    this.apply();
+  }
+
   lookAt(x: number, z: number, dist = this.dist): void {
+    this.lift = 0;
     this.target.set(x, 0, z);
     this.dist = dist;
     this.apply();
@@ -145,7 +156,7 @@ export class StrategyCamera {
 
   private apply(): void {
     // punkt na ziemi leży na wysokości terenu, żeby przy niskim kącie nie patrzeć w głąb pagórka
-    this.target.y = this.ground(this.target.x, this.target.z);
+    this.target.y = this.ground(this.target.x, this.target.z) + this.lift;
     // z bliska kamera sama się kładzie niżej (widok bardziej z boku, jak przy patrzeniu na oddział z konia)
     const close = Math.max(0, Math.min(1, (14 - this.dist) / 10));
     const pitch = Math.max(StrategyCamera.MIN_PITCH, this.pitch - close * close * 0.35);

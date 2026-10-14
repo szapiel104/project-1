@@ -880,6 +880,21 @@ export class GameRenderer {
   get camView(): { x: number; z: number; dist: number; yaw: number } { return this.cam.view; }
   setCamView(v: { x: number; z: number; dist: number; yaw: number }): void { this.cam.setView(v); }
 
+  /** Testy: kamera dookoła pola (x, y) mapy — kąty w stopniach, lift = wysokość celu nad ziemią */
+  viewAround(x: number, y: number, dist: number, yawDeg: number, pitchDeg: number, lift = 0): void {
+    if (!this.state) return;
+    this.cam.orbit(x - this.state.map.width / 2, y - this.state.map.height / 2, dist, (yawDeg * Math.PI) / 180, (pitchDeg * Math.PI) / 180, lift);
+  }
+  /** Testy: wymiary modelu budynku w świecie (szerokość, wysokość, głębokość) albo null */
+  buildingSize(id: number): { w: number; h: number; d: number } | null {
+    const m = this.buildingMeshes.get(id);
+    if (!m) return null;
+    const s = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
+    return { w: s.x, h: s.y, d: s.z };
+  }
+  /** Testy: budynki stawiane od ręki stoją od razu, bez kilkusekundowego pokazu budowy */
+  noBuildShow = false;
+
   lookAt(x: number, y: number, dist = 40): void {
     if (!this.state) return;
     this.cam.lookAt(x - this.state.map.width / 2, y - this.state.map.height / 2, dist);
@@ -2481,7 +2496,7 @@ export class GameRenderer {
       this.buildingLayer.add(mesh);
       this.buildingMeshes.set(b.id, mesh);
       // budynek postawiony od razu gotowy (tryb deweloperski, rozkaz bota z gotowcem): krótki pokaz budowy
-      if (this.builtAt > 0 && !b.build && !def.wall && !def.gate && !def.road && def.id !== 'torch') this.quickBuild.set(b.id, this.time);
+      if (this.builtAt > 0 && !this.noBuildShow && !b.build && !def.wall && !def.gate && !def.road && def.id !== 'torch') this.quickBuild.set(b.id, this.time);
     }
     this.builtAt = 1;
     for (const [id, mesh] of this.buildingMeshes) {

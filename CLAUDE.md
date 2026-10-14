@@ -16,6 +16,7 @@
      - `at(x, y, dist)` — kamera;
      - `run(ticks)` — przewinięcie symulacji.
      Przykład: `const h=__test.home(); __test.place('house',h.x-1,h.y+6); __test.hour(10); __test.at(h.x,h.y+8,7)`.
+   - **Nowy albo zmieniony model budynku sprawdzaj na pustej scenie, nie w zwykłej grze:** `?test=1&pusta=1&model=tavern` (opcjonalnie `&rot=1`, `&widok=ground-front`) od razu stawia gotowy, zbudowany model na łące przed twierdzą, w południe, z kamerą od frontu (strona z drzwiami). Obchód: `__test.view(nazwa)` — `front`, `right`, `back`, `left`, `top`, `near`, `door`, `ground-front`, `ground-right`, `ground-back`, `ground-left` (z ziemi, oczami chłopa). Inny model bez przeładowania: `__test.model('house', rot?, widok?)` (poprzedni znika). Na pustej scenie budynki stoją od razu, bez pokazu budowy.
    - Bez Chrome: Playwright + `?test=1` (start ~1,5 s), najlepiej z `&pusta=1`. Pełna grafika w Playwright jest bardzo wolna — unikać.
    - Pojedynczy model: `podglad.html?id=house` na serwerze deweloperskim Vite.
 3. Modele z Blendera (tools/models): po każdej zmianie budynku `sh tools/models/inspect.sh keep /tmp/keep.png` — arkusz ok. 25 zdjęć (dookoła, z lotu ptaka, od dołu, z ziemi oczami chłopa, przekrój, z oczu człowieka w salach i na murach), z ukrytymi tylnymi ścianami jak w grze, więc odwrócone dachy i dziury widać od razu. Obejrzeć arkusz przed wdrożeniem; widoki z oczu człowieka dopisuje się w skrypcie budynku (klucz `views`).

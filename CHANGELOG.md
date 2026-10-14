@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.21.4 — scena do sprawdzania modeli (2026-10-14)
+
+- `?test=1&pusta=1&model=tavern`: gotowy model budynku na pustej łące, w południe, kamera od frontu; `__test.view(...)` obchodzi go dookoła, z góry, z bliska i z ziemi oczami chłopa, `__test.model(...)` wymienia model bez przeładowania
+- Na pustej scenie budynki stoją od razu gotowe (bez kilkusekundowego pokazu budowy, przez który wyglądały jak rusztowania)
+
 ## 0.21.3 — każda chata ma swoje podwórko (2026-10-14)
 
 - Nowe modele z Blendera z teksturami desek, płótna i ziemi: balia z klepek i obręczy z mydlinami i tarą, krzywe słupki ze sznurem, który zwisa między nimi, pranie (koszula, prześcieradło, chusta, portki), stos polan z pniakiem i siekierą, ława z dzbankiem, kosz z praniem, wiadro, grządka z kapustą w plecionym płotku

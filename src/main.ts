@@ -17,7 +17,7 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { octant, planFormation } from './sim/systems/army';
 import { EMPTY, SANDBOX, TEST } from './testmode';
-import { addPeasants, addWolf, emptyScene, placeReady, setHour } from './sim/emptyscene';
+import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
 import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
 import type { OnlineStart } from './ui/online';
@@ -1312,10 +1312,64 @@ requestAnimationFrame(loop);
   hour(h: number): void { setHour(game, h); refresh(); },
   /** `n` chłopów przy twierdzy */
   peasants(n = 5, player = ME): number { const r = addPeasants(game, n, player).length; refresh(); return r; },
+  /**
+   * Scena dla nowego modelu: stawia gotowy budynek `id` na środku pustej łąki przed twierdzą (poprzedni model znika),
+   * ustawia południe i kamerę od frontu. Potem `view(nazwa)` obchodzi go dookoła — patrz `views`.
+   */
+  model(id: string, rot = 0, view = 'front'): { id: number; x: number; y: number; views: string[] } | null {
+    if (stage) removeReady(game, stage.id);
+    stage = null;
+    const h = (window as unknown as { __test: { home: () => { x: number; y: number } | null } }).__test.home();
+    const type = buildingIndex(id);
+    if (!h || type < 0) return null;
+    const d = BUILDINGS[type]!, w = rot % 2 ? d.h : d.w, hh = rot % 2 ? d.w : d.h;
+    const x = h.x - Math.floor(w / 2), y = h.y + 5;
+    const bid = placeReady(game, id, x, y, rot);
+    if (bid === null) return null;
+    stage = { id: bid, x, y, w, h: hh };
+    setHour(game, 11.5);
+    refresh();
+    // kamera dopiero, gdy model jest w scenie (wymiary z siatki)
+    requestAnimationFrame(() => requestAnimationFrame(() => testView(view)));
+    return { id: bid, x, y, views: Object.keys(VIEWS) };
+  },
+  /** Widok na model z `model()`: front, right, back, left, top, near, ground-front, ground-right, ground-back, ground-left, door */
+  view(name = 'front'): boolean { return testView(name); },
+  views: () => Object.keys(VIEWS),
   /** Wilk w polu (x, y) */
   wolf(x: number, y: number): void { addWolf(game, x, y); },
   state: () => game,
 };
+/** Model na scenie testowej (__test.model) */
+let stage: { id: number; x: number; y: number; w: number; h: number } | null = null;
+/** Widoki na model: obrót względem frontu (strona z drzwiami), nachylenie, odległość w rozmiarach modelu, wysokość celu (część wysokości) */
+const VIEWS: Record<string, [number, number, number, number]> = {
+  front: [0, 32, 2.2, 0.35], right: [90, 32, 2.2, 0.35], back: [180, 32, 2.2, 0.35], left: [270, 32, 2.2, 0.35],
+  top: [30, 85, 2.4, 0], near: [35, 22, 1.3, 0.5], door: [0, 12, 0.9, 0.25],
+  // z ziemi, oczami chłopa: nisko, blisko, cel na wysokości okapu
+  'ground-front': [0, 6, 1.5, 0.45], 'ground-right': [90, 6, 1.5, 0.45], 'ground-back': [180, 6, 1.5, 0.45], 'ground-left': [270, 6, 1.5, 0.45],
+};
+function testView(name: string): boolean {
+  const v = VIEWS[name];
+  const b = stage && game.buildings.find((x) => x.id === stage!.id);
+  if (!v || !stage || !b) return false;
+  const size = renderer.buildingSize(b.id) ?? { w: stage.w, h: 1, d: stage.h };
+  const cx = stage.x + stage.w / 2, cy = stage.y + stage.h / 2;
+  // front = strona z drzwiami
+  const W = game.map.width, dx = b.door >= 0 ? (b.door % W) + 0.5 - cx : 0, dy = b.door >= 0 ? Math.floor(b.door / W) + 0.5 - cy : 1;
+  const front = (Math.atan2(dx, dy) * 180) / Math.PI;
+  const span = Math.max(size.w, size.d, size.h, 1.2);
+  renderer.viewAround(cx, cy, Math.max(1.2, span * v[2]), front + v[0], v[1], size.h * v[3]);
+  return true;
+}
+// pusta scena: budynki od razu gotowe; ?model=house&rot=1&widok=ground-front od razu stawia model i ustawia widok
+if (EMPTY) {
+  renderer.noBuildShow = true;
+  const q = new URLSearchParams(location.search), id = q.get('model');
+  if (id) {
+    (window as unknown as { __test: { model: (id: string, rot: number, view: string) => unknown } }).__test.model(id, Number(q.get('rot') ?? 0) || 0, q.get('widok') ?? 'front');
+  }
+}
 (window as unknown as { __look: (x: number, y: number, d?: number) => void }).__look = (x, y, d) => renderer.lookAt(x, y, d);
 // piaskownica testowa: podgląd renderera z konsoli (szukanie błędów w wyglądzie)
 if (SANDBOX) (window as unknown as { __renderer: unknown }).__renderer = renderer;
