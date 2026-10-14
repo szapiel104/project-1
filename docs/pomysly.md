@@ -117,3 +117,12 @@ Czeka:
 - Brud i graty: śmieci, gnój przy chlewie, worki i siano przy domach, kości przy cmentarzu, wrony na płotach
 - Odzywki jak w Gothicu zależne od sytuacji (deszcz, wilki w nocy, podatki, głód) u chłopów i strażników
 - Chlew i stajnia jako budynki (zwierzęta z Blendera już są)
+
+## Zamek (14.10.2026)
+Zrobione 14.10: zamek 11×11 z Blendera według wspólnego planu (src/data/keep-layout.json): mury z blankami, baszty z izbami i strzelnicami, wieże bramy z izbami, brama z kratą i mostem, donżon; dziedziniec, sala tronowa z tronem pod baldachimem, kuchnia, komnata pana, koszary, lochy z celami; wejście tylko bramą, ściany i drzwi w symulacji, schody i chodnik na murach (łucznik na murze strzela dalej); spacer chłopem z kolizjami; 6000 HP; obchód modeli bez przeglądarki (tools/models/inspect.sh).
+
+Czeka:
+- Życie w zamku: pan na tronie, kucharz przy palenisku, straż zmienia wartę w bramie i chodzi po murach, więźniowie w lochach (np. pojmani wrogowie), służba nosi jedzenie z kuchni do sali
+- Oblężenie zamku: taran pod bramą, drabiny na mury, wrzątek/kamienie z machikuł; brama zamyka się przy wrogu
+- Pozostałe budynki z Blendera w tym samym potoku (najpierw stodoła, chata, karczma), z obchodem inspect.sh i kolizjami w spacerze
+- Ulepszanie zamku (poziomy widać na modelu: drewniane hurdycje, druga linia murów, fosa)
