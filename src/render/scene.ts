@@ -3606,7 +3606,7 @@ export class GameRenderer {
         break;
       }
       // odważny chłop przed wrogim żołnierzem: twarzą do niego, z bliska okłada go pięściami i kijem
-      const enemy = (u.foe ? g.soldiers.find((x) => x.id === u.foe) : undefined) ?? wolfNear;
+      const enemy = (u.foe ? g.soldiers.find((x) => x.id === u.foe) : undefined) ?? (u.foeU ? g.units.find((x) => x.id === u.foeU) : undefined) ?? wolfNear;
       const weapon = peasantWeapon(u.id);
       let fighting = false, fightArm = -0.4;
       if (enemy && !this.calm) {

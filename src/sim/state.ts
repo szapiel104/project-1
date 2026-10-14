@@ -187,6 +187,8 @@ export interface Unit {
   /** Do kiedy (tick) ucieka przed wrogiem: nie szuka nowej drogi ucieczki co chwilę */
   /** Wrogi żołnierz, przed którym odważny chłop stanął (twarzą do niego, okłada go); 0 = nikt */
   foe?: number;
+  /** Wrogi chłop, z którym ten się właśnie bije (wręcz, kilofem albo maczugą) */
+  foeU?: number;
   fled?: number;
 }
 
@@ -559,7 +561,7 @@ export function stateHash(g: GameState): number {
   }
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
-    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0);
+    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }

@@ -1011,9 +1011,10 @@ export const peasantWeapon = (id: number): 'pick' | 'club' => (hash2(id, 9, 0x77
  */
 function lookout(g: GameState): void {
   if (g.tick % 5 !== 0) return;
-  const R = 5 * FP;
+  const R = 5 * FP, NEAR = FP + FP / 2;
+  const dead: [Unit, number][] = [];
   for (const u of g.units) {
-    u.foe = 0;
+    u.foe = 0; u.foeU = 0;
     if (u.phase === Phase.Sleeping || u.phase === Phase.Resting) continue;
     let best: Soldier | undefined, bd = R + 1;
     for (const s of g.soldiers) {
@@ -1021,7 +1022,25 @@ function lookout(g: GameState): void {
       const d = Math.max(Math.abs(s.px - u.px), Math.abs(s.py - u.py));
       if (d < bd) { bd = d; best = s; }
     }
-    if (!best) continue;
+    if (!best) {
+      // wrogi chłop tuż obok (np. drwale dwóch panów w tym samym lesie): odważny staje i okłada go kilofem albo maczugą
+      if (!isBrave(u.id)) continue;
+      let foe: Unit | undefined, fd = NEAR + 1;
+      for (const o of g.units) {
+        if (o === u || o.phase === Phase.Sleeping || o.phase === Phase.Resting || team(g, o.owner) === team(g, u.owner)) continue;
+        const d = Math.max(Math.abs(o.px - u.px), Math.abs(o.py - u.py));
+        if (d < fd) { fd = d; foe = o; }
+      }
+      if (!foe) continue;
+      u.foeU = foe.id;
+      u.wait = Math.max(u.wait, 6);
+      if (hash2(u.id, g.tick, 0xc1b) % 100 < 35) {
+        foe.hp = (foe.hp ?? 30) - (peasantWeapon(u.id) === 'pick' ? 3 : 2);
+        foe.wait = Math.max(foe.wait, 6);
+        if (foe.hp <= 0 && !dead.some(([x]) => x === foe)) dead.push([foe, u.owner]);
+      }
+      continue;
+    }
     if (!isBrave(u.id)) { peasantReacts(g, u, best, true); continue; }
     // odważny: stoi i patrzy na wroga; z bliska bije kijem (rzadko i słabo)
     u.foe = best.id;
@@ -1029,6 +1048,7 @@ function lookout(g: GameState): void {
     if (bd <= FP + FP / 2) u.wait = Math.max(u.wait, 6);
     if (bd <= FP + FP / 2 && hash2(u.id, g.tick, 0xc1b) % 100 < 30) best.hp -= peasantWeapon(u.id) === 'pick' ? 3 : 2; // kilof boli trochę bardziej niż maczuga
   }
+  for (const [u, killer] of dead) killPeasant(g, u, killer);
 }
 
 function peasantReacts(g: GameState, u: Unit, attacker: Soldier, ranged: boolean): void {

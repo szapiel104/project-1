@@ -261,3 +261,18 @@ describe('plac przed bramą', () => {
     }
   });
 });
+
+describe('chłop na chłopa', () => {
+  it('odważny chłop okłada wrogiego chłopa stojącego obok', async () => {
+    const { isBrave } = await import('../src/sim/systems/army');
+    const g = createGame(5, '1v1', 0);
+    for (const p of g.players) p.bot = false;
+    const a = g.units.find((u) => u.owner === 0 && isBrave(u.id))!;
+    const b = g.units.find((u) => u.owner === 1)!;
+    // obaj na łące przed zamkiem gracza 0, tuż obok siebie
+    b.px = a.px + 256; b.py = a.py; b.path = []; a.path = [];
+    for (let i = 0; i < 120; i++) { step(g, []); b.px = a.px + 256; b.py = a.py; }
+    const hurt = !g.units.includes(b) || (b.hp ?? 30) < 30;
+    expect(hurt).toBe(true);
+  });
+});
