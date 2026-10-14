@@ -1404,8 +1404,12 @@ export class GameRenderer {
       }
       return true;
     };
-    if (free(w.x + dx, w.z)) w.x += dx;
-    if (free(w.x, w.z + dz)) w.z += dz;
+    // małymi krokami: przy niskim FPS jeden duży skok przeskoczyłby cienką ścianę
+    const nStep = Math.min(40, Math.ceil(Math.hypot(dx, dz) / 0.04));
+    for (let i = 0; i < nStep; i++) {
+      if (free(w.x + dx / nStep, w.z)) w.x += dx / nStep;
+      if (free(w.x, w.z + dz / nStep)) w.z += dz / nStep;
+    }
     // tempo kroków jak u człowieka: idąc ok. 1,8 kroku na sekundę, biegiem ok. 2,7 (kołysanie kamery w tym samym rytmie)
     if (fx || fz) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
     // własne kroki w spacerze: na każdy krok dźwięk podłoża, lewa i prawa noga lekko z boku
