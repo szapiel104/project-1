@@ -1153,7 +1153,7 @@ export class GameRenderer {
     }
     this.torchOn = !this.torchOn;
     this.handTorch.visible = this.torchOn;
-    if (this.torchOn) playAt('creak', 1, 0.3, 0.4);
+    if (this.torchOn) playAt('torch', 1, 0.3, 0.55);
   }
   startWalk(tileX: number, tileY: number, heading = 0): void {
     if (!this.state) return;

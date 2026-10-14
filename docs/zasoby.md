@@ -26,6 +26,7 @@ Z repozytorium gry [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) (`sounds/cha
 - scream-0…4 — „human male scream multi”, [JohnsonBrandEditing](https://freesound.org/people/JohnsonBrandEditing/sounds/173944/) (CC0): krzyk uciekającego chłopa i poległego
 - alert-0 — „Huh? - Vocal”, [davdud101](https://freesound.org/people/davdud101/sounds/150505/) (CC0); alert-1 — „Huh_male.wav”, [Adam_N](https://freesound.org/people/Adam_N/sounds/166129/) (CC0): odważny chłop na widok wroga
 - Zmiany: mono 32 kHz, wyrównana głośność, krótsze wybrzmienie.
+- torch — „JM_FX_Fireball 01”, [Julien Matthey](http://freesound.org/people/Julien%20Matthey/sounds/105016/) (CC0), z C-Dogs SDL (`sounds/fireball.wav`): buchnięcie płomienia przy zapalaniu pochodni w ręce; mono 32 kHz, przycięte wysokie tony, wyciszenie na końcu
 
 ## Muzyka (CC0, bez wymogu podpisu) — `public/music/`
 Pobrane przez Michała z OpenGameArt, przekonwertowane do OGG i wyrównane głośnościowo:

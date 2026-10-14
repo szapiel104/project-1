@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.17.2 — dźwięk pochodni (2026-10-14)
+
+- Zapalenie pochodni w ręce (F w spacerze oczami chłopa) brzmi jak buchnięcie płomienia zamiast skrzypnięcia drzwi (nagranie CC0)
+
 ## 0.17.1 — karta strażnika, poprawka cechów (2026-10-14)
 
 - Karta mieszkańca: łuczarz i karczmarz mają nazwę cechu („Cech łuczarzy”, „Cech karczmarzy”) zamiast surowego klucza; kto pracuje w budynku bez cechu, ma „Pracuje: …”
