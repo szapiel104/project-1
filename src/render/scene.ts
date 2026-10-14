@@ -18,7 +18,7 @@ import BARN_MODEL from './models/barn.json';
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
-import { ladderSide } from '../sim/systems/stonewalls';
+import { ladderSides } from '../sim/systems/stonewalls';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
@@ -1722,11 +1722,13 @@ export class GameRenderer {
           return cnt + 1;
         };
         if (sn.block < 8192) sn.block = put(kit.block, 0, sn.block);
-        // drabina tam, gdzie symulacja pozwala wejść na mur (ladderSide: indeks boku -y, +x, +y, -x)
-        const ls = built >= 1 ? ladderSide(g, b) : -1;
-        const sideRot = [Math.PI, Math.PI / 2, 0, -Math.PI / 2];
-        const sideD: [number, number][] = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-        if (ls >= 0) { this.ladderFeet.set((b.y + sideD[ls]![1]) * width + b.x + sideD[ls]![0], [sideD[ls]![0], sideD[ls]![1]]); if (sn.ladder < 2048) sn.ladder = put(kit.ladder, sideRot[ls]!, sn.ladder); }
+        // drabiny postawione przez gracza przy tym polu muru (te same, którymi symulacja wpuszcza na mur)
+        const ls = built >= 1 ? ladderSides(g, b) : 0;
+        for (const [bit, dx, dz, rot] of [[1, 0, -1, Math.PI], [2, 1, 0, Math.PI / 2], [4, 0, 1, 0], [8, -1, 0, -Math.PI / 2]] as const) {
+          if (!(ls & bit)) continue;
+          this.ladderFeet.set((b.y + dz) * width + b.x + dx, [-dx, -dz]);
+          if (sn.ladder < 2048) sn.ladder = put(kit.ladder, rot, sn.ladder);
+        }
         for (const [dx, dz, rot] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]] as const) {
           if (stoneAt(b.x + dx, b.y + dz) || sn.edge >= 16384) continue;
           sn.edge = put(kit.edge, rot, sn.edge);

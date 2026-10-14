@@ -152,6 +152,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   // Mur kamienny: stawiany przeciąganiem jak częstokół (także wprost na częstokole — zamienia bale na kamień), dużo mocniejszy
   { id: 'stoneWall', category: 'defense', name: 'b.stoneWall', w: 1, h: 1, cost: { stone: 3 }, hp: 1100, wall: true, line: true, buildable: true },
+  // Drabina na mur kamienny: stawiasz ją na polu tuż przy murze; tędy Twoi ludzie wchodzą na mur i z niego schodzą
+  { id: 'ladder', category: 'defense', name: 'b.ladder', w: 1, h: 1, cost: { wood: 3 }, hp: 120, wall: true, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

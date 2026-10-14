@@ -1382,6 +1382,14 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.woodDark, 0.06, 1.5, 0.06, -1.3, 0, 0.2);
     box(g, flag, 0.04, 0.6, 0.36, -1.3, 0.85, 0.4);
   },
+  ladder(g) {
+    // na mapie drabinę rysuje scena przy murze (syncWalls); tu tylko podgląd: drabina oparta o mur od strony -z
+    const preview = new THREE.Group();
+    preview.name = 'preview';
+    const geo = stoneWallKit().ladder.clone().translate(0, 0, -1);
+    preview.add(new THREE.Mesh(geo, M.wood));
+    g.add(preview);
+  },
   stoneWall(g) {
     // na mapie mur kamienny rysuje scena (syncWalls) jako filary i ramiona łączące sąsiednie mury; tu tylko podgląd
     const preview = new THREE.Group();

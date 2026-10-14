@@ -9,7 +9,7 @@ import { FP, inForecourt, keepCenter, Phase, playerKeep, type Building, type Gam
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.forecourt' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.forecourt' | 'place.ladder' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
@@ -155,6 +155,11 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
       if (inForecourt(g, tx, ty)) return 'place.forecourt';
     }
   }
+  if (def.id === 'ladder' && ![[0, -1], [1, 0], [0, 1], [-1, 0]].some(([dx, dy]) => {
+    const id = g.occupancy[(y + dy!) * width + x + dx!];
+    const o = id ? g.buildings.find((b) => b.id === id) : undefined;
+    return !!o && o.owner === player && BUILDINGS[o.type]!.id === 'stoneWall';
+  })) return 'place.ladder';
   const keep = playerKeep(g, player);
   if (!keep) return 'place.far';
   const cx = x + (fw >> 1), cy = y + (fh >> 1);
@@ -170,7 +175,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
   }
   if (!def.wall && !def.gate && findDoor(g, x, y, fw, fh, rot) < 0) return 'place.noAccess';
   if (enemyNear(g, player, x, y, fw, fh)) return 'place.enemy';
-  if (!over && wouldBlock(g, player, x, y, fw, fh, rot, !def.wall && !def.gate, !!def.gate)) return 'place.blocks';
+  if (!over && wouldBlock(g, player, x, y, fw, fh, rot, !def.wall && !def.gate, !!def.gate || def.id === 'ladder')) return 'place.blocks';
   if (checkCost && !canAfford(g, player, def)) return 'place.cost';
   return null;
 }

@@ -70,11 +70,16 @@ describe('brama na częstokole', () => {
       if ([0, 1, 2, 3, 4, 5].every((k) => canPlace(g, 0, stone, keep.x + d + k, keep.y + r) === null)) { x = keep.x + d; y = keep.y + r; }
     expect(x).toBeGreaterThanOrEqual(0);
     for (let k = 0; k < 6; k++) { expect(placeBuilding(g, 0, stone, x + k, y)).toBe(true); g.buildings[g.buildings.length - 1]!.build = 0; }
-    step(g, []);
+    // bez drabiny nikt nie wejdzie
     const W = g.map.width, top = y * W + x + 3;
+    expect(canPlace(g, 0, buildingIndex('ladder'), x + 3, y + 3)).toBe('place.ladder'); // nie przy murze
+    expect(placeBuilding(g, 0, buildingIndex('ladder'), x + 3, y + 1)).toBe(true);
+    g.buildings[g.buildings.length - 1]!.build = 0;
+    step(g, []);
     expect(walkable(g, top, 0)).toBe(true);
     expect(walkable(g, top, 1)).toBe(false);
-    // łucznik spod muru (od zewnątrz) wchodzi na koronę po drabinie i strzela z góry
+    expect(walkable(g, (y + 1) * W + x + 3, 1)).toBe(false); // wróg nie stanie na drabinie
+    // łucznik spod muru wchodzi na koronę po postawionej drabinie i strzela z góry
     const id = g.nextId++;
     g.soldiers.push({ id, owner: 0, kind: 1, px: (x + 3) * 256 + 128, py: (y + 3) * 256 + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0 } as never);
     step(g, [{ type: 'move', player: 0, ids: [id], x: x + 3, y }]);
