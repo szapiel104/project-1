@@ -131,5 +131,6 @@ Zrobione 14.10: zamek 11×11 z Blendera według wspólnego planu (src/data/keep-
 Czeka:
 - Życie w zamku: pan na tronie, kucharz przy palenisku, straż zmienia wartę w bramie i chodzi po murach, więźniowie w lochach (np. pojmani wrogowie), służba nosi jedzenie z kuchni do sali
 - Oblężenie zamku: taran pod bramą, drabiny na mury, wrzątek/kamienie z machikuł; brama zamyka się przy wrogu
-- Pozostałe budynki z Blendera w tym samym potoku (najpierw stodoła, chata, karczma), z obchodem inspect.sh i kolizjami w spacerze
+- Pozostałe budynki z Blendera w tym samym potoku (stodoła, chata, piekarnia, koszary), z obchodem inspect.sh i kolizjami w spacerze. Zrobione 14.10: karczma (szachulec, strzecha, ganek, szynkwas, palenisko, stoły, wejście drzwiami z kolizjami)
+- Karczma: izba ciasna z oczu człowieka (działka 3×2) — rozważyć 4×3; trawa przebija przy palenisku przez podłogę na pochyłym terenie
 - Ulepszanie zamku (poziomy widać na modelu: drewniane hurdycje, druga linia murów, fosa)
