@@ -447,7 +447,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         el('p', 'hint', t('set.graphicsHint')),
       ]],
       ['Interfejs', () => [
-        choice('Wielkość interfejsu', settings.uiSize ?? 1, [[0.75, '75%'], [0.85, '85%'], [1, '100%'], [1.15, '115%'], [1.3, '130%'], [1.5, '150%']], (v) => { settings.uiSize = v; save(); }),
+        choice('Wielkość interfejsu', settings.uiSize ?? 1, [[0.5, '50%'], [0.75, '75%'], [0.85, '85%'], [1, '100%'], [1.15, '115%'], [1.3, '130%'], [1.5, '150%']], (v) => { settings.uiSize = v; save(); }),
         el('p', 'hint', 'Powiększa albo pomniejsza całe menu, paski, okna budynków i wojska. 100% to wielkość dobrana do ekranu; na dużym monitorze daj więcej, na małym laptopie mniej. Zmiana działa od razu.'),
       ]],
       [t('set.controls'), () => [
