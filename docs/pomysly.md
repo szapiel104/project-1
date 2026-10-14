@@ -105,3 +105,15 @@ Wygląd i ruch:
 - Chorąży z proporcem w barwach pana w każdym oddziale
 - Ulepszenia widoczne na modelu (za monety z bitew): płytowe naramienniki, hełm z przyłbicą itd.
 - Prawdziwy głos okrzyków (np. syntezator mowy po polsku) zamiast bełkotu
+
+## Życie osady (14.10.2026)
+Zrobione 14.10: rozmowy stojących (para zwraca się do siebie, gestykuluje, kiwa głową, bełkot z bliska), pozdrowienie ręką w przejściu, kury przy chatach, świnie przy chatach i polach, koń przy koszarach, pies chodzący za mieszkańcami i obszczekujący wilki.
+
+Czeka:
+- Dzieci i rodziny: dzieci biegają między chatami, bawią się w berka, przed wilkiem uciekają do chaty; osada rośnie sama
+- Karczma naprawdę działa: browar i piwo jako towar, karczmarz nalewa z zapasów, wieczorem gwar i lutnia, pijacy wracają chwiejnym krokiem; bez piwa spada popularność
+- Poranek i wieczór: koguty o świcie, kobieta wylewa wiadro, wieczorem świece w oknach i zamykanie okiennic
+- Targ co kilka dni: kramy na placu, przyjezdny kupiec z wozem, gwar; tanio kupić albo sprzedać zapasy
+- Brud i graty: śmieci, gnój przy chlewie, worki i siano przy domach, kości przy cmentarzu, wrony na płotach
+- Odzywki jak w Gothicu zależne od sytuacji (deszcz, wilki w nocy, podatki, głód) u chłopów i strażników
+- Zwierzęta z Blendera zamiast prostych modeli z kodu (kura, świnia, koń, pies); chlew i stajnia jako budynki

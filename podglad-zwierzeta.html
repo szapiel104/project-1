@@ -4,6 +4,7 @@
 // Podgląd wilka i kruków z bliska: ?d=odległość&pitch=kąt&yaw=obrót (bez całej mapy)
 import * as THREE from 'three';
 import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './src/render/creatures.ts';
+import { henGeometry, pigGeometry, horseGeometry } from './src/render/village.ts';
 const q = new URLSearchParams(location.search);
 const dist = Number(q.get('d') ?? 2.0), pitch = Number(q.get('pitch') ?? 0.3), yaw = Number(q.get('yaw') ?? 0.9);
 const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
@@ -27,6 +28,23 @@ wolf(-0.35, 0, Math.PI / 2, 0, 0.5);
 wolf(0.45, -0.3, -0.6, 0.5, 1.9);
 const cm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 });
 [[0.1, 0.45, 2.4, 0], [0.4, 0.35, -0.9, 0.5]].forEach(([x, z, ry, peck]) => { const m = new THREE.Mesh(crowGeometry(), cm); m.castShadow = true; m.scale.setScalar(1.25 * Number(q.get('kruk') ?? 1)); m.position.set(x, 0, z); m.rotation.set(peck, ry, 0, 'YXZ'); s.add(m); });
+if (q.get('osada')) {
+  // zwierzęta w osadzie: kury, świnia, koń, pies (sylwetka wilka w płowej sierści)
+  s.children.filter((o) => o.type === 'Group' || (o.isMesh && o !== ground)).forEach((o) => s.remove(o));
+  const vm = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
+  const put = (geo, x, z, ry, color) => { const m = new THREE.Mesh(geo, color ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, color }) : vm); m.position.set(x, 0, z); m.rotation.y = ry; m.castShadow = true; s.add(m); return m; };
+  const hen = henGeometry();
+  [[-0.5, 0.3, 0.6, 0xffffff], [-0.35, 0.45, 2.2, 0xa8673a], [-0.6, 0.5, -0.8, 0x2e2925]].forEach(([x, z, r, c]) => { put(hen.body, x, z, r, c); put(hen.detail, x, z, r); });
+  put(pigGeometry(), -0.05, 0.25, 0.9);
+  const h = horseGeometry(); const hb = put(h.body, 0.5, -0.2, -0.5);
+  const nk = new THREE.Mesh(h.neck, vm); nk.position.set(0, 0.4, 0.17); nk.rotation.x = Number(q.get('graze') ?? 0.2); hb.add(nk);
+  const tl = new THREE.Mesh(h.tail, vm); tl.position.set(0, 0.42, -0.2); tl.rotation.x = 0.35; hb.add(tl);
+  const fur = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, color: 0xd6a466 });
+  const dog = new THREE.Group(); dog.add(new THREE.Mesh(wp.body, fur));
+  WOLF_HIPS.forEach(([hx, hy, hz], k) => { const m = new THREE.Mesh(k < 2 ? wp.leg : wp.hindLeg, fur); m.position.set(hx, hy, hz); dog.add(m); });
+  const dt = new THREE.Mesh(wp.tail, fur); dt.position.set(...WOLF_TAIL); dt.rotation.x = 2.5; dog.add(dt);
+  dog.scale.setScalar(0.5); dog.position.set(0.15, 0, 0.55); dog.rotation.y = 0.4; dog.traverse((o) => { if (o.isMesh) o.castShadow = true; }); s.add(dog);
+}
 const cam = new THREE.PerspectiveCamera(30, 1200 / 700, 0.05, 50);
 const look = Number(q.get('y') ?? 0.25), cx = Number(q.get('x') ?? 0), cz = Number(q.get('z') ?? 0);
 cam.position.set(cx + Math.sin(yaw) * Math.cos(pitch) * dist, look + Math.sin(pitch) * dist, cz + Math.cos(yaw) * Math.cos(pitch) * dist); cam.lookAt(cx, look, cz);

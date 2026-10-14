@@ -419,9 +419,13 @@ export function playAt(kind: WorldSound, near: number, pan: number, gain = 1): v
  * Głos chłopa przy odzywce: bełkot sylab jak w starych strategiach, długi tyle co zdanie.
  * Każdy człowiek ma swoją wysokość głosu (z id), więc dwóch różnych brzmi inaczej.
  */
-export function talk(text: string, voice: number, shout = false): void {
+export function talk(text: string, voice: number, shout = false, gain = 1, pan = 0): void {
   const c = ctx;
-  if (!c || muted || c.state !== 'running') return;
+  if (!c || muted || c.state !== 'running' || gain <= 0.01) return;
+  // rozmowa w osadzie: ciszej i z boku, tam gdzie stoją rozmówcy
+  const outN = c.createGain(); outN.gain.value = gain;
+  const panN = c.createStereoPanner(); panN.pan.value = Math.max(-1, Math.min(1, pan));
+  outN.connect(panN).connect(busGain.sfx ?? master!);
   // okrzyk żołnierza: niżej, krócej, głośniej i ostrzej niż gadanie chłopa
   const base = (95 + (voice % 7) * 14) * (shout ? 0.82 : 1);
   const n = Math.min(shout ? 10 : 26, Math.max(shout ? 2 : 4, Math.round(text.length / (shout ? 3.2 : 2.6))));
@@ -441,7 +445,7 @@ export function talk(text: string, voice: number, shout = false): void {
     g.gain.exponentialRampToValueAtTime(shout ? (i === 0 ? 0.95 : 0.75) : 0.5, at + 0.02);
     g.gain.exponentialRampToValueAtTime(0.001, at + 0.09);
     o.connect(f).connect(g); o.connect(f2).connect(g);
-    g.connect(busGain.sfx ?? master!);
+    g.connect(outN);
     o.start(at); o.stop(at + 0.1);
   }
 }
@@ -716,12 +720,23 @@ export const MUSIC_TRACKS: { file: string; moods: Mood[] }[] = [
   { file: 'battle.ogg', moods: ['battle'] },
 ];
 let trackEl: HTMLAudioElement | null = null, trackGain: GainNode | null = null, trackMood: Mood | null = null, trackFile = '', trackRestUntil = 0;
+/** Nastrój, o który prosi gra, i od kiedy (zmiana utworu dopiero, gdy prośba się utrzyma — alarm migający co sekundę nie przełącza muzyki) */
+let askMood: Mood | null = null, askSince = 0;
+/** Utwory wyciszane po zmianie nastroju; nowy utwór nie zacznie się, póki stary całkiem nie ucichnie i nie stanie */
+const fading = new Set<HTMLAudioElement>();
 function playTracks(c: AudioContext, mood: Mood, inMenu: boolean): boolean {
   const want: Mood = inMenu ? 'menu' : mood;
   const list = MUSIC_TRACKS.filter((x) => x.moods.includes(want));
   if (!list.length) { stopTrack(c); return false; }
-  if (trackEl && !trackEl.paused && trackMood === want) return true;
-  if (trackEl && !trackEl.paused && trackMood !== want) stopTrack(c);
+  if (want !== askMood) { askMood = want; askSince = c.currentTime; }
+  if (trackEl && trackMood === want) return true;
+  // inny nastrój: przełącza dopiero po chwili (do walki szybko, z walki i między dniem a nocą wolniej)
+  if (trackEl && trackMood !== want) {
+    const hold = want === 'battle' ? 1.5 : trackMood === 'battle' ? 8 : 4;
+    if (c.currentTime - askSince < hold) return true;
+    stopTrack(c);
+  }
+  if (fading.size) return true; // stary jeszcze wybrzmiewa
   if (c.currentTime < trackRestUntil) return true;
   const pick = list.filter((x) => x.file !== trackFile);
   const tr = (pick.length ? pick : list)[Math.floor(Math.random() * (pick.length ? pick.length : list.length))]!;
@@ -730,15 +745,74 @@ function playTracks(c: AudioContext, mood: Mood, inMenu: boolean): boolean {
   const src = c.createMediaElementSource(el);
   const g = c.createGain(); g.gain.value = 0; src.connect(g).connect(busGain.music ?? master!);
   g.gain.setTargetAtTime(0.9, c.currentTime, 2);
-  el.addEventListener('ended', () => { trackRestUntil = c.currentTime + 15 + Math.random() * 35; trackEl = null; });
-  void el.play().catch(() => { trackEl = null; });
+  // zdarzenia dotyczą tylko tego utworu: stary, wyciszony utwór nie może skasować bieżącego
+  el.addEventListener('ended', () => { fading.delete(el); if (trackEl === el) { trackRestUntil = c.currentTime + 15 + Math.random() * 35; trackEl = null; trackGain = null; trackMood = null; } });
+  void el.play().catch(() => { fading.delete(el); if (trackEl === el) { trackEl = null; trackGain = null; trackMood = null; } });
   trackEl = el; trackGain = g; trackMood = want; trackFile = tr.file;
   return true;
 }
 function stopTrack(c: AudioContext): void {
   if (!trackEl || !trackGain) return;
   const el = trackEl, g = trackGain;
-  g.gain.setTargetAtTime(0, c.currentTime, 1.2);
-  setTimeout(() => { el.pause(); }, 4000);
+  g.gain.setTargetAtTime(0, c.currentTime, 0.6);
+  fading.add(el);
+  setTimeout(() => { el.pause(); el.removeAttribute('src'); el.load(); fading.delete(el); }, 3000);
   trackEl = null; trackGain = null; trackMood = null;
+}
+
+/**
+ * Zwierzęta w osadzie (syntezowane): szczekanie psa, gdakanie kury, chrząkanie świni.
+ * `near` 0..1 (blisko kamery = głośno), `pan` -1..1.
+ */
+export function animal(kind: 'bark' | 'cluck' | 'grunt', near: number, pan: number): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running' || near < 0.05) return;
+  const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
+  const out = c.createGain(); out.gain.value = near * near;
+  out.connect(p).connect(busGain.sfx ?? master!);
+  const t0 = c.currentTime + 0.01;
+  if (kind === 'bark') {
+    // „hau hau”: dwa krótkie, chropawe szczeknięcia z opadającym tonem
+    const n = 1 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const at = t0 + i * (0.22 + Math.random() * 0.08);
+      const o = c.createOscillator(); o.type = 'sawtooth';
+      const f0 = 330 + Math.random() * 80;
+      o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f0 * 0.55, at + 0.13);
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 2.2;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.5, at + 0.012); g.gain.exponentialRampToValueAtTime(0.001, at + 0.15);
+      o.connect(f).connect(g).connect(out); o.start(at); o.stop(at + 0.17);
+      if (noise) {
+        const ns = c.createBufferSource(); ns.buffer = noise; ns.playbackRate.value = 0.8;
+        const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 1300; nf.Q.value = 1.2;
+        const ng = c.createGain(); ng.gain.setValueAtTime(0.0001, at); ng.gain.exponentialRampToValueAtTime(0.25, at + 0.01); ng.gain.exponentialRampToValueAtTime(0.001, at + 0.1);
+        ns.connect(nf).connect(ng).connect(out); ns.start(at); ns.stop(at + 0.12);
+      }
+    }
+  } else if (kind === 'cluck') {
+    // gdakanie: kilka szybkich, wysokich „ko-ko-ko” i dłuższe na końcu
+    const n = 3 + Math.floor(Math.random() * 4);
+    for (let i = 0; i < n; i++) {
+      const at = t0 + i * 0.09 + (i === n - 1 ? 0.08 : 0);
+      const o = c.createOscillator(); o.type = 'square';
+      const f0 = 700 + Math.random() * 200, len = i === n - 1 ? 0.16 : 0.05;
+      o.frequency.setValueAtTime(f0, at); o.frequency.linearRampToValueAtTime(f0 * (i === n - 1 ? 1.4 : 0.85), at + len);
+      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 3;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.12, at + 0.008); g.gain.exponentialRampToValueAtTime(0.001, at + len);
+      o.connect(f).connect(g).connect(out); o.start(at); o.stop(at + len + 0.02);
+    }
+  } else {
+    // chrząkanie: niski, chrapliwy pomruk raz albo dwa razy
+    const n = 1 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < n; i++) {
+      const at = t0 + i * 0.3;
+      const o = c.createOscillator(); o.type = 'sawtooth';
+      o.frequency.setValueAtTime(95 + Math.random() * 20, at); o.frequency.linearRampToValueAtTime(70, at + 0.22);
+      const am = c.createGain(); am.gain.value = 0.6;
+      const lfo = c.createOscillator(); lfo.frequency.value = 28; const lg = c.createGain(); lg.gain.value = 0.4; lfo.connect(lg).connect(am.gain);
+      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 600;
+      const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.6, at + 0.03); g.gain.exponentialRampToValueAtTime(0.001, at + 0.25);
+      o.connect(am).connect(f).connect(g).connect(out); o.start(at); lfo.start(at); o.stop(at + 0.27); lfo.stop(at + 0.27);
+    }
+  }
 }

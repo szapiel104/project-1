@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
 import { RULES } from '../data/rules';
-import { playAt, pluck, type WorldSound } from '../audio/sfx';
+import { animal, playAt, pluck, talk, type WorldSound } from '../audio/sfx';
 import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -27,6 +27,7 @@ import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
+import { Village } from './village';
 import { createLoads, tint } from './loads';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
 import { normal, pattern } from './textures';
@@ -286,6 +287,57 @@ export class GameRenderer {
     playAt(this.surface(g, x, y), Math.max(0, Math.min(1, 1 - (d - 2.5) / 8.5)), pan, gain);
   }
 
+  /**
+   * Stojący bez zajęcia, którzy są blisko siebie (ten sam pan), dobierają się w pary i gadają.
+   * Pary sprawdzamy dwa razy na sekundę; para trwa, dopóki obaj stoją obok siebie.
+   */
+  private pairChats(): void {
+    [this.restPos, this.restNext] = [this.restNext, this.restPos];
+    this.restNext.clear();
+    if (this.time - this.chatAt < 0.5) return;
+    this.chatAt = this.time;
+    const pos = this.restPos;
+    for (const [a, b] of this.chats) {
+      const pa = pos.get(a), pb = pos.get(b);
+      if (!pa || !pb || Math.hypot(pa[0] - pb[0], pa[1] - pb[1]) > 1.6) { this.chats.delete(a); this.chats.delete(b); }
+    }
+    const grid = new Map<number, number[]>();
+    for (const [id, [x, z]] of pos) { const k = Math.floor(x) * 4096 + Math.floor(z); let l = grid.get(k); if (!l) { l = []; grid.set(k, l); } l.push(id); }
+    for (const [id, [x, z, owner]] of pos) {
+      if (this.chats.has(id)) continue;
+      let best = 1.3, mate = 0;
+      for (let gx = Math.floor(x) - 1; gx <= Math.floor(x) + 1; gx++) for (let gz = Math.floor(z) - 1; gz <= Math.floor(z) + 1; gz++)
+        for (const o of grid.get(gx * 4096 + gz) ?? []) {
+          if (o === id || this.chats.has(o)) continue;
+          const po = pos.get(o)!;
+          if (po[2] !== owner) continue;
+          const d = Math.hypot(po[0] - x, po[1] - z);
+          if (d < best) { best = d; mate = o; }
+        }
+      // nie każdy jest gadułą: mniej więcej trzy pary na cztery zaczynają rozmowę
+      if (mate && ((Math.min(id, mate) * 31 + Math.max(id, mate) * 17) % 4) !== 0) { this.chats.set(id, mate); this.chats.set(mate, id); }
+    }
+  }
+
+  private village: Village | null = null;
+  /** Kury, świnie, koń i pies w osadzie (tylko wygląd) */
+  private syncVillage(g: GameState, view: TerrainView, dt: number): void {
+    if (!this.village) this.village = new Village(this.scene);
+    const people: { x: number; y: number; owner: number; moving: boolean; id: number }[] = [];
+    for (const u of g.units) people.push({ x: u.px / FP, y: u.py / FP, owner: u.owner, moving: u.path.length > 0, id: u.id });
+    for (const s of g.soldiers) if (!s.up) people.push({ x: s.px / FP, y: s.py / FP, owner: s.owner, moving: s.path.length > 0, id: s.id });
+    const cam = this.cam.camera, { width, height } = g.map;
+    this.village.sync(g, {
+      time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y),
+      sound: (kind, x, y) => {
+        const wx = x - width / 2, wz = y - height / 2, d = Math.hypot(cam.position.x - wx, cam.position.y - view.heightAt(x, y), cam.position.z - wz);
+        if (d > 16) return;
+        const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
+        animal(kind, Math.max(0, Math.min(1, 1 - (d - 3) / 13)) * (kind === 'bark' ? 0.9 : 0.6), ((wx - cam.position.x) * right.x + (wz - cam.position.z) * right.z) / Math.max(1, d) * 1.4);
+      },
+    }, people);
+  }
+
   /** Pora i pogoda dla dźwięków otoczenia */
   private flash = 0;
   /** Błyskawica: na ułamek sekundy rozjaśnia całą scenę */
@@ -360,6 +412,17 @@ export class GameRenderer {
   private stepIdx = new Map<number, number>();
   private stepTimes: number[] = [];
   private walkStep = 0;
+  private frameDt = 1 / 60;
+  /** Rozmowy stojących: kto z kim (para), od kiedy; położenia stojących z poprzedniej klatki */
+  private chats = new Map<number, number>();
+  private chatAt = 0;
+  private restPos = new Map<number, [number, number, number]>();
+  private restNext = new Map<number, [number, number, number]>();
+  private chatYaw = new Map<number, number>();
+  private chatTurn = new Map<number, number>();
+  /** Pozdrowienia w przejściu: do kiedy macha, kiedy ostatnio */
+  private waveUntil = new Map<number, number>();
+  private waveAt = new Map<number, number>();
   private prevPos = new Map<number, [number, number]>();
   private storesTick = -1;
   private selectedId = 0;
@@ -1302,6 +1365,7 @@ export class GameRenderer {
     if (this.walk && this.state) this.stepWalk(realDt); else this.cam.update(realDt);
     const dt = paused ? 0 : realDt;
     this.time += dt;
+    this.frameDt = dt;
     this.updatePuffs(dt);
     this.updateRain(dt);
     this.updateSky();
@@ -1326,7 +1390,7 @@ export class GameRenderer {
       T('chłopi', () => this.syncUnits(g, v, alpha));
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
-      T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); });
+      T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); this.syncVillage(g, v, dt); });
     }
     const tg = performance.now();
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
@@ -2824,6 +2888,7 @@ export class GameRenderer {
     const sleepers = new Map<number, number[]>();
     for (const u of g.units) if (u.phase === Phase.Sleeping && u.home) { const l = sleepers.get(u.home); if (l) l.push(u.id); else sleepers.set(u.home, [u.id]); }
     for (const l of sleepers.values()) l.sort((a, b) => a - b);
+    this.pairChats();
     for (let i = 0; i < n; i++) {
       const u = g.units[i]!;
       const prev = this.prevPos.get(u.id);
@@ -3059,7 +3124,48 @@ export class GameRenderer {
       // stojący bez zajęcia nie zamiera: przestępuje, rozgląda się, drapie się, przeciąga, przenosi ciężar
       const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !chopping && !mining && !crafting && !hammering && !fighting && u.carryRes < 0 && !lean;
       const ia = rest ? idle(u.id, this.time) : undefined;
+      // rozmowa: obaj zwracają się do siebie, mówiący gestykuluje, słuchający kiwa głową; co kilkanaście sekund chwila ciszy
+      const mate = rest ? this.chats.get(u.id) : undefined;
+      const mp = mate ? this.restPos.get(mate) : undefined;
+      if (ia && mate && mp) {
+        const want = Math.atan2(mp[0] - t.position.x, mp[1] - t.position.z);
+        let cy = this.chatYaw.get(u.id) ?? t.rotation.y;
+        let d = want - cy; while (d > Math.PI) d -= Math.PI * 2; while (d < -Math.PI) d += Math.PI * 2;
+        cy += d * Math.min(1, this.frameDt * 4);
+        this.chatYaw.set(u.id, cy);
+        ia.yaw = 0; ia.legs = 0; ia.up = false; ia.armL = undefined; ia.arm = undefined;
+        t.rotation.y = cy;
+        const pair = Math.min(u.id, mate) * 7 + Math.max(u.id, mate) * 3;
+        const ct = this.time + (pair % 13);
+        const talking = ct % 19 < 14;
+        if (talking) {
+          const turn = Math.floor(ct / 2.6);
+          const speaker = turn % 2 ? Math.max(u.id, mate) : Math.min(u.id, mate);
+          if (speaker === u.id) {
+            ia.arm = -0.75 + Math.sin(this.time * 5.3 + u.id) * 0.45;
+            ia.armL = -0.35 + Math.sin(this.time * 3.9 + u.id * 2) * 0.35;
+            // bełkot rozmowy z bliska, raz na kolejkę mówiącego
+            if (this.chatTurn.get(u.id) !== turn) {
+              this.chatTurn.set(u.id, turn);
+              const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);
+              if (dist < 9 && !this.calm) {
+                const right = this.armV.setFromMatrixColumn(cam.matrixWorld, 0);
+                const pan = ((t.position.x - cam.position.x) * right.x + (t.position.z - cam.position.z) * right.z) / Math.max(1, dist) * 1.4;
+                talk('x'.repeat(14 + (turn * 7 + u.id) % 18), u.id, false, Math.max(0, 1 - (dist - 2) / 7) * 0.35, pan);
+              }
+            }
+          } else lean = Math.max(0, Math.sin(this.time * 2.6 + u.id)) * 0.07; // kiwa głową, słuchając
+        }
+      }
       if (ia) { t.rotation.y += ia.yaw; t.position.y += ia.dy; }
+      if (rest) this.restNext.set(u.id, [t.position.x, t.position.z, u.owner]);
+      // pozdrowienie w przejściu: mijając swojego, czasem macha ręką (z pustymi rękami)
+      const wavingNow = (this.waveUntil.get(u.id) ?? 0) > this.time;
+      if (walking && !wavingNow && cv.near && u.carryRes < 0 && !this.calm && this.time - (this.waveAt.get(u.id) ?? -99) > 25 && (u.id * 13 + cv.near * 7) % 3 === 0) {
+        const other = g.units.find((o) => o.id === cv.near);
+        if (other && other.owner === u.owner) { this.waveUntil.set(u.id, this.time + 0.9); this.waveAt.set(u.id, this.time); }
+      }
+      const waving = walking && (this.waveUntil.get(u.id) ?? 0) > this.time && u.carryRes < 0;
       // chód: biodra kołyszą się z krokiem, tułów lekko pochylony do przodu (uciekający bardziej)
       const fleeing = (u.fled ?? 0) > g.tick && !still;
       const roll = ia ? ia.roll : walking ? Math.sin(stride) * 0.03 : 0;
@@ -3107,7 +3213,7 @@ export class GameRenderer {
       // uciekający w panice: długi, szybki krok i ręce machające nad głową
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, (u.carryRes >= 0 && !log) || !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : ia?.arm, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : ia ? (ia.armL ?? 0.05) : -0.5, panic || !!ia?.legs);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, (u.carryRes >= 0 && !log) || !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : waving ? -2.55 + Math.sin(this.time * 14) * 0.35 : ia?.arm, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : waving ? -swing * 0.8 : ia ? (ia.armL ?? 0.05) : -0.5, panic || waving || !!ia?.legs);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
       t.updateMatrix();

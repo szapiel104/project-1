@@ -1,5 +1,17 @@
 # Dziennik zmian
 
+## 0.19.0 — życie osady, poprawka muzyki (2026-10-14)
+
+- Rozmowy: stojący bez zajęcia blisko siebie (ten sam pan) dobierają się w pary, zwracają się do siebie i gadają na zmianę — mówiący gestykuluje, słuchający kiwa głową, co kilkanaście sekund chwila ciszy; z bliska słychać cichy bełkot rozmowy
+- Pozdrowienie w przejściu: mijając swojego, chłop czasem macha ręką
+- Kury przy chatach: grzebią, dziobią, przed przechodniem uciekają z trzepotem, gdaczą; nocą w kurniku
+- Świnie: przy co trzeciej chacie i przy polach, ryją w ziemi, chrząkają, nocą leżą na boku
+- Koń przy koszarach: skubie trawę, macha ogonem
+- Pies: jeden przy każdej twierdzy, chodzi za kimś z mieszkańców, siada, gdy pan stoi, merda ogonem; nocą biegnie pod wilka i go obszczekuje, szczeka też na obcych żołnierzy
+- Wszystko to tylko wygląd: symulacja się nie zmienia, gra przez sieć zostaje zgodna
+- Muzyka: nigdy dwa utwory naraz — zmiana nastroju (dzień, noc, menu, walka) przełącza utwór dopiero, gdy się utrzyma (migający alarm nie przełącza), nowy utwór zaczyna się, gdy stary całkiem ucichnie, a stary utwór nie może już „zgubić” bieżącego
+- Podgląd: podglad-zwierzeta.html?osada=1
+
 ## 0.18.1 — spokojniejsze kroki (2026-10-14)
 
 - Spacer oczami chłopa: kroki w ludzkim tempie (idąc ok. 1,8 na sekundę, biegiem ok. 2,7) zamiast serii jak z karabinu; kołysanie kamery w tym samym rytmie

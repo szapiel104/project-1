@@ -18,6 +18,9 @@ interface Vis {
   speed: number;
   frame: number;
   solid: boolean;
+  id: number;
+  /** Najbliższy inny przechodzień w odległości do 0,7 pola (do pozdrowienia w przejściu), 0 = nikt */
+  near: number;
 }
 
 const CELL = 0.5;
@@ -52,7 +55,7 @@ export class Crowd {
     let v = this.vis.get(id);
     if (!v || calm || Math.abs(v.x - tx) > 1.5 || Math.abs(v.y - ty) > 1.5) {
       // pierwszy raz, skok (np. wyjście z chaty) albo wyłączone animacje: od razu na miejscu
-      v = { x: tx, y: ty, sx: tx, sy: ty, heading, side: 0, speed: 0, frame: this.frame, solid };
+      v = { x: tx, y: ty, sx: tx, sy: ty, heading, side: 0, speed: 0, frame: this.frame, solid, id, near: 0 };
       this.vis.set(id, v);
       return v;
     }
@@ -71,7 +74,8 @@ export class Crowd {
       v.heading += d * (1 - Math.exp(-this.dt * 11));
     } else v.heading = heading;
     // omijanie: kto idzie, odbija w bok od tego, kto jest przed nim (każdy w swoją prawą stronę)
-    let want = 0;
+    let want = 0, best = 0.7;
+    v.near = 0;
     if (v.speed > 0.3) {
       const fx = Math.sin(v.heading), fy = Math.cos(v.heading);
       const cx = Math.floor(v.sx / CELL), cy = Math.floor(v.sy / CELL);
@@ -80,6 +84,7 @@ export class Crowd {
           for (const o of this.grid.get(gx * 4096 + gy) ?? []) {
             if (o === v || !o.solid) continue;
             const dx = o.sx - v.sx, dy = o.sy - v.sy, d = Math.hypot(dx, dy);
+            if (d < best && d > 1e-4) { best = d; v.near = o.id; }
             if (d >= NEAR || d < 1e-4) continue;
             const ahead = dx * fx + dy * fy;
             if (ahead < -0.1) continue; // ten za plecami nie przeszkadza
