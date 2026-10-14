@@ -9,7 +9,7 @@ it('łucznicy z wież w osadzie w murach: każdy rozkaz do przodu przesuwa oddzi
   const cx = Math.round(sel.reduce((a, s) => a + (s.px >> 8), 0) / sel.length), cy = Math.round(sel.reduce((a, s) => a + (s.py >> 8), 0) / sel.length);
   const keep = g.buildings.find((b) => b.owner === 0 && b.type === 0)!;
   // kierunek od twierdzy na zewnątrz
-  const dx = Math.sign(cx - keep.x) || 1, dy = Math.sign(cy - keep.y);
+  const dx = Math.sign(cx - (keep.x + 5)) || 1, dy = Math.sign(cy - (keep.y + 5));
   for (let k = 0; k < 4; k++) {
     const mx = sel.reduce((a, s) => a + s.px / FP, 0) / sel.length, my = sel.reduce((a, s) => a + s.py / FP, 0) / sel.length;
     const tx = Math.round(mx + dx * 6), ty = Math.round(my + dy * 6);
