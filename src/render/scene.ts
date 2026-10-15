@@ -931,6 +931,8 @@ export class GameRenderer {
     const s = new THREE.Box3().setFromObject(m).getSize(new THREE.Vector3());
     return { w: s.x, h: s.y, d: s.z };
   }
+  /** Zasięg szczegółów (drzewa jako bryły, drobiazgi) wg poziomu grafiki: 1 = pełny */
+  private detail = 1;
   /** Ustawienia → Grafika: deszcz i mgła (tylko obraz i dźwięk; symulacja deszczu liczy się dalej) */
   rainOn = true;
   fogOn = true;
@@ -1090,10 +1092,12 @@ export class GameRenderer {
   private alwaysDay = false;
 
   /** Ustawienia grafiki i kamery z menu */
-  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; label?: string }): void {
+  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; label?: string }): void {
     if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false };
     this.quality = `${o.label ? o.label + ': ' : ''}AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}, trawa ${(o.grass ?? 1) > 0 ? Math.round((o.grass ?? 1) * 100) + '%' : 'wył.'}`;
     this.grassReach = o.grass ?? 1;
+    // zasięg szczegółów: z automatu jakości, a przy ręcznych ustawieniach z trawy (bez trawy = bliżej)
+    this.detail = o.detail ?? 0.6 + 0.4 * (o.grass ?? 1);
     this.view?.grassReach(this.grassReach);
     this.ao.enabled = o.ao !== 'off';
     this.plain.enabled = o.ao === 'off';
@@ -1562,7 +1566,7 @@ export class GameRenderer {
       T('animacje', () => { this.animate(g, this.calm ? 0 : dt); if (!this.calm) v.animate(this.time); });
       T('las', () => this.syncForest(g, v));
       { const f = this.focusPoint; v.updateGrass(f.x, f.z, this.calm ? 0 : this.time, this.walk ? 0 : this.cam.distance); }
-      if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35); }
+      if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.syncRubble(g, v, dt));
       T('światła', () => this.syncLamps(g));

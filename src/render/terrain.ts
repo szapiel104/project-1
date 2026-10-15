@@ -57,7 +57,8 @@ export interface TerrainView {
   /** Wykop pod budowę (depth 0 = zasypany): opuszcza teren działki tylko w obrazie */
   dig(x: number, y: number, w: number, h: number, depth: number): void;
   /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
-  lod(x: number, z: number, reach: number): void;
+  /** `detail` (0–1) skraca odległości szczegółów na słabszych poziomach grafiki (1 = pełne) */
+  lod(x: number, z: number, reach: number, detail?: number): void;
   /** Wydeptuje ziemię w narożniku pola (x, y): trawa brązowieje do gołej ziemi, do progu cap */
   wear(x: number, y: number, amount: number, cap?: number): void;
   dispose(): void;
@@ -1285,12 +1286,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     updateGrass(x: number, z: number, time: number, camDist?: number) { grass?.update(x, z, time, camDist); },
     grassReach(f: number) { grass?.setReach(f); },
     noGrass(tile: number, on = true) { builtOn[tile] = on ? 1 : 0; regrass(tile); },
-    lod(x: number, z: number, reach: number) {
+    lod(x: number, z: number, reach: number, detail = 1) {
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
-        if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide + reach;
+        if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide * detail + reach;
         if (c.lod.farGeo) {
-          const far = d > 30 + reach;
+          const far = d > 30 * detail + reach;
           const want = far ? c.lod.farGeo : c.near;
           if (c.mesh.geometry !== want) {
             c.mesh.geometry = want;

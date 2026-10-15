@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.22.2 — szczegóły wg jakości grafiki (2026-10-15)
+
+- Zasięg szczegółów zależy od poziomu grafiki: na najwyższym bez zmian (drzewa jako bryły i kępy, kamyki do ok. 30 pól), na niższych drzewa wcześniej przechodzą w obrazki, a drobiazgi wcześniej znikają (do ok. 55% zasięgu na najniższym); automat jakości obniża to sam przy spadku FPS
+
 ## 0.22.1 — mniej wywołań rysowania (2026-10-15)
 
 - Ściany, dachy i kominy budynków sklejone z setek drobnych brył w kilka siatek (ten sam materiał = jedna siatka; wygląd bez zmian): w wiosce testowej ok. 600 wywołań rysowania mniej na klatkę razem z cieniami
