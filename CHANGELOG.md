@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.22.1 — mniej wywołań rysowania (2026-10-15)
+
+- Ściany, dachy i kominy budynków sklejone z setek drobnych brył w kilka siatek (ten sam materiał = jedna siatka; wygląd bez zmian): w wiosce testowej ok. 600 wywołań rysowania mniej na klatkę razem z cieniami
+
 ## 0.22.0 — więcej ustawień (2026-10-14)
 
 - Interfejs: paski zdrowia (zawsze / w walce / tylko zaznaczeni / nigdy), licznik FPS w rogu (domyślnie ukryty, F3 dalej pokazuje statystyki), dymki z tym, co mówią ludzie, podpowiedzi po najechaniu (od razu / z opóźnieniem / wcale)

@@ -70,32 +70,46 @@ const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
 /** Budynki, w których pali się w piecu: z komina idzie dym */
 const SMOKY = new Set(['house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter']);
 
+/** Grupy, w których też łączymy bryły (ściany i dach znikają w całości przy podglądzie wnętrza, więc wspólna siatka nic nie psuje) */
+const MERGE_IN = new Set(['shell', 'roof', 'chimney']);
 function mergeStatic(root: THREE.Object3D): void {
   root.updateMatrixWorld(true);
-  const inv = new THREE.Matrix4().copy(root.matrixWorld).invert();
-  const groups = new Map<THREE.Material, { geos: THREE.BufferGeometry[]; meshes: THREE.Mesh[] }>();
+  // klucz: grupa, do której trafi wspólna siatka (korzeń albo „shell” / „roof” / „chimney”) + materiał
+  const groups = new Map<THREE.Object3D, Map<THREE.Material, { geos: THREE.BufferGeometry[]; meshes: THREE.Mesh[] }>>();
+  const m4 = new THREE.Matrix4();
   root.traverse((o) => {
     const m = o as THREE.Mesh;
     if (!m.isMesh || (m as THREE.InstancedMesh).isInstancedMesh || Array.isArray(m.material) || m.name || !m.visible) return;
-    // wszystko pod nazwaną grupą zostaje nietknięte (animacje, wnętrza, zapasy w składzie, ludzie w twierdzy)
-    for (let p: THREE.Object3D | null = m.parent; p && p !== root; p = p.parent) if (p.name || !p.visible) return;
+    // wszystko pod inną nazwaną grupą zostaje nietknięte (animacje, wnętrza, zapasy w składzie, ludzie w twierdzy)
+    let into: THREE.Object3D | null = null;
+    for (let p: THREE.Object3D | null = m.parent; p; p = p.parent) {
+      if (p === root) { into ??= root; break; }
+      if (!p.visible) return;
+      if (p.name) { if (!MERGE_IN.has(p.name)) return; into ??= p; }
+    }
+    if (!into) return;
+    m4.copy(into.matrixWorld).invert().multiply(m.matrixWorld);
+    if (m4.determinant() <= 0) return; // lustrzane odbicie odwróciłoby ściany
     const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
-    g.applyMatrix4(new THREE.Matrix4().multiplyMatrices(inv, m.matrixWorld));
-    let e = groups.get(m.material); if (!e) { e = { geos: [], meshes: [] }; groups.set(m.material, e); }
+    g.applyMatrix4(m4);
+    let byMat = groups.get(into); if (!byMat) { byMat = new Map(); groups.set(into, byMat); }
+    let e = byMat.get(m.material); if (!e) { e = { geos: [], meshes: [] }; byMat.set(m.material, e); }
     e.geos.push(g); e.meshes.push(m);
   });
-  for (const [mat, e] of groups) {
-    if (e.meshes.length < 2) continue;
+  for (const [into, byMat] of groups) for (const [mat, e] of byMat) {
+    if (e.meshes.length < 2) { for (const g of e.geos) g.dispose(); continue; }
     // wspólne atrybuty muszą się zgadzać; inaczej zostawiamy jak jest
     const keys = Object.keys(e.geos[0]!.attributes).sort().join();
-    if (e.geos.some((g) => Object.keys(g.attributes).sort().join() !== keys)) continue;
+    if (e.geos.some((g) => Object.keys(g.attributes).sort().join() !== keys)) { for (const g of e.geos) g.dispose(); continue; }
     for (const g of e.geos) g.morphAttributes = {};
     const merged = mergeGeometries(e.geos);
+    for (const g of e.geos) g.dispose();
     if (!merged) continue;
     const one = new THREE.Mesh(merged, mat);
     one.castShadow = e.meshes.some((m) => m.castShadow);
     one.receiveShadow = true;
-    root.add(one);
+    one.userData.merged = true;
+    into.add(one);
     for (const m of e.meshes) m.parent?.remove(m);
   }
 }
@@ -2579,7 +2593,7 @@ export class GameRenderer {
       d.mesh.scale.y = Math.max(0.04, 1 - k * k);
       d.mesh.rotation.z = k * 0.18;
       d.mesh.rotation.x = k * -0.1;
-      if (k >= 1) { this.buildingLayer.remove(d.mesh); this.dying.splice(i, 1); }
+      if (k >= 1) { this.buildingLayer.remove(d.mesh); d.mesh.traverse((o) => { if (o.userData.merged) (o as THREE.Mesh).geometry.dispose(); }); this.dying.splice(i, 1); }
     }
     const { width, height } = g.map;
     const alive = new Set<number>();
