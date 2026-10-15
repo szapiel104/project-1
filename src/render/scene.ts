@@ -1132,8 +1132,8 @@ export class GameRenderer {
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
     this.sun.castShadow = o.shadows > 0;
     // poświata od średniej jakości w górę (kosztuje kilka przejść w małej rozdzielczości)
-    // poświata na razie tylko do sprawdzenia (?poswiata=1): w zwykłej grze dawała czarny obraz
-    this.bloom.enabled = new URLSearchParams(location.search).has('poswiata') && o.ao !== 'off';
+    // poświata wokół płomieni, okien i odblasków: od średniej jakości w górę (obraz przed nią czyszczony z błędnych pikseli)
+    this.bloom.enabled = o.ao !== 'off' && o.shadows >= 2048;
     this.sanitize.enabled = this.bloom.enabled;
     // miękkie cienie: rozmyte krawędzie (zmiana rodzaju mapy wymaga przebudowy shaderów materiałów)
     const type = o.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
