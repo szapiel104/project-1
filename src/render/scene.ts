@@ -1136,14 +1136,11 @@ export class GameRenderer {
     // poświata wokół płomieni, okien i odblasków: od średniej jakości w górę (obraz przed nią czyszczony z błędnych pikseli)
     this.bloom.enabled = o.ao !== 'off' && o.shadows >= 2048;
     this.sanitize.enabled = this.bloom.enabled;
-    // miękkie cienie: rozmyte krawędzie (zmiana rodzaju mapy wymaga przebudowy shaderów materiałów)
-    const type = o.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
-    if (this.renderer.shadowMap.type !== type) {
-      this.renderer.shadowMap.type = type;
+    // miękkie cienie: rodzaj mapy cieni ustawiany tylko przy starcie gry (przebudowa shaderów w trakcie psuła teren i budynki)
+    if (!this.shadowTypeSet) {
+      this.shadowTypeSet = true;
+      this.renderer.shadowMap.type = o.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
       this.sun.shadow.radius = o.soft ? 3 : 1;
-      this.sun.shadow.map?.dispose();
-      (this.sun.shadow as { map: unknown }).map = null;
-      this.scene.traverse((ob) => { const mt = (ob as THREE.Mesh).material; for (const m of Array.isArray(mt) ? mt : mt ? [mt] : []) m.needsUpdate = true; });
     }
     this.shadowSize(o.shadows);
     this.ratioMax = Math.min(window.devicePixelRatio, o.scale);
@@ -2850,6 +2847,7 @@ export class GameRenderer {
     else if (avg < 11) this.ratioDyn = Math.min(1, this.ratioDyn + 0.05);
     if (this.ratioDyn !== before) this.applyRatio();
   }
+  private shadowTypeSet = false;
   private shadowSize(n: number): void {
     if (n <= 0 || this.sun.shadow.mapSize.x === n) return;
     this.sun.shadow.mapSize.setScalar(n);

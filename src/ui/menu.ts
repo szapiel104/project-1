@@ -464,7 +464,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
         button('Ustaw wszystko na Ultra', () => { Object.assign(settings, { shadows: 4096, ao: 'high', grass: 1.35, scale: 2, soft: true }); manual(); showSettings(); }, 'menu-btn set-ultra'),
         choice('Trawa', settings.grass, [[0, t('set.off')], [0.6, 'Bliżej kamery'], [1, 'Pełna'], [1.35, 'Daleko (Ultra)']], (v) => { settings.grass = v; manual(); }),
-        check('Miękkie cienie', settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
+        check('Miękkie cienie (po ponownym uruchomieniu gry)', settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
         choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
         choice('Limit klatek', settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, 'Bez limitu']], (v) => { settings.fpsLimit = v; save(); }),
