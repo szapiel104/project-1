@@ -148,7 +148,7 @@ const MAX_UNITS = 2048;
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
 /** Miejsca w zamku z modelu (tools/models/keep.py, układ modelu: środek działki, przód z bramą = +z) */
-const CASTLE = { floorY: 0.15, walkY: 1.71, throneZ: -4.16, seatY: 0.31 };
+const CASTLE = { floorY: 0.15, walkY: 1.71, throneZ: -4.16, seatY: 0.34 };
 /** Wierzch nawierzchni drogi nad ziemią (0 brak, 1 ścieżka, 2 bruk, 3 dyle: bale leżą na 0,05 i mają ok. 0,05 grubości) */
 const ROAD_TOP = [0, 0.025, 0.045, 0.1];
 const tmpColor = new THREE.Color();
@@ -3310,7 +3310,7 @@ export class GameRenderer {
       // pan: za dnia na tronie; co minutę wstaje i obchodzi salę (ok. 15 s), nocą śpi w komnacie (niewidoczny)
       if (day) {
         const per = 60, ph = ((T + seed) % per) / per;
-        if (ph < 0.75) put(kx, ky, base, 0, CASTLE.seatY, CASTLE.throneZ + 0.05, 0, 0, col, 777000 + seed, { sit: -1.45, work: -0.3 + Math.sin(T * 0.7) * 0.08, workL: -0.3 });
+        if (ph < 0.75) put(kx, ky, base, 0, CASTLE.seatY, CASTLE.throneZ + 0.12, 0, 0, col, 777000 + seed, { sit: -1.45, work: -0.3 + Math.sin(T * 0.7) * 0.08, workL: -0.3 });
         else {
           const f = (ph - 0.75) / 0.25;
           const tour: [number, number][] = [[0, CASTLE.throneZ + 0.45], [0.9, -3.0], [0.6, -2.0], [-0.7, -2.0], [-0.9, -3.0], [0, CASTLE.throneZ + 0.45]];
