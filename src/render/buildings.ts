@@ -866,6 +866,14 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     leaf.add(off);
     g.add(leaf);
   }
+  // inne grupy z modelu (np. krata bramy zamku): osobne obiekty o tej samej nazwie, gra rusza nimi sama
+  for (const [key, val] of Object.entries(model)) {
+    if (['base', 'shell', 'interior', 'floor', 'ceiling'].includes(key) || !Array.isArray(val) || !val.length || typeof val[0] !== 'object' || !('pos' in (val[0] as object))) continue;
+    const grp = new THREE.Group();
+    grp.name = key;
+    for (const m of meshes(key)) grp.add(m);
+    g.add(grp);
+  }
   // znaczniki z modelu: szyby (świecą nocą), komin (dym), ogień w palenisku
   const marks = model as unknown as { windows?: [number, number, number, number, number, number, number, string][]; chimneys?: [number, number, number][]; flames?: [number, number, number][] };
   for (const [x, y, z, nx, nz, w, h, grp] of marks.windows ?? []) {
@@ -892,6 +900,9 @@ const BUILDERS: Record<string, Builder> = {
     // Zamek z Blendera (tools/models/keep.py): mury z dziedzińcem, baszty, brama z mostem, donżon z salą i komnatą,
     // koszary straży. Przy podglądzie wnętrza znikają dachy i piętra donżonu — widać pomieszczenia i śpiących.
     blenderModel(g, KEEP_MODEL as unknown as BlenderBuilding, flag);
+    // krata na start podniesiona (opuszcza ją gra, gdy pod zamek podejdzie wróg)
+    const port = g.getObjectByName('portcullis');
+    if (port) port.position.y = (KEEP_MODEL as unknown as { portLift?: number }).portLift ?? 0.86;
     // Życie widoczne z zewnątrz: kosze z ogniem przy wejściu. Straż na murach i w bramie to prawdziwi strażnicy miejscy
     // z symulacji (systems/guards.ts), więc w modelu nie ma już udawanych postaci.
     const life = new THREE.Group();

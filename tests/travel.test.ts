@@ -276,3 +276,24 @@ describe('chłop na chłopa', () => {
     expect(hurt).toBe(true);
   });
 });
+
+describe('krata zamku', () => {
+  it('wrogie wojsko pod bramą zamyka zamek, po odejściu brama znów się otwiera', async () => {
+    const { KEEP_GATE } = await import('../src/data/keep');
+    const g = createGame(5, '1v1', 0);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings.find((b) => b.type === 0 && b.owner === 0)!;
+    const gt = (keep.y + KEEP_GATE[1]) * g.map.width + keep.x + KEEP_GATE[0];
+    step(g, []);
+    for (let i = 0; i < 5; i++) step(g, []);
+    expect(g.gates[gt]).toBe(1);
+    const foe = g.soldiers.find((s) => s.owner === 1)!;
+    foe.px = (keep.x + KEEP_GATE[0]) * 256 + 128; foe.py = (keep.y + KEEP_GATE[1] + 4) * 256 + 128; foe.path = []; foe.goal = -1;
+    for (let i = 0; i < 5; i++) { step(g, []); foe.px = (keep.x + KEEP_GATE[0]) * 256 + 128; foe.py = (keep.y + KEEP_GATE[1] + 4) * 256 + 128; }
+    expect(g.gates[gt]).toBe(0);
+    expect(keep.shut).toBe(true);
+    g.soldiers = g.soldiers.filter((s) => s !== foe);
+    for (let i = 0; i < 6; i++) step(g, []);
+    expect(g.gates[gt]).toBe(1);
+  });
+});

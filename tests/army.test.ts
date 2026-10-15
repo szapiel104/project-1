@@ -303,7 +303,11 @@ describe('wrodzy chłopi', () => {
     expect(s.prey).toBe(u.id);
     let hurt = false;
     for (let i = 0; i < 2500 && g.units.some((x) => x.id === u.id); i++) { step(g, []); if ((g.units.find((x) => x.id === u.id)?.hp ?? 30) < 30) hurt = true; }
-    expect(hurt || !g.units.some((x) => x.id === u.id)).toBe(true);
+    // chłop ranny, zabity albo schował się w zamku, którego krata opadła przed żołnierzem
+    const k1 = g.buildings.find((b) => b.type === 0 && b.owner === 1)!;
+    const alive = g.units.find((x) => x.id === u.id);
+    const hidden = !!alive && k1.shut === true && (alive.px >> 8) >= k1.x && (alive.px >> 8) < k1.x + 11 && (alive.py >> 8) >= k1.y && (alive.py >> 8) < k1.y + 11;
+    expect(hurt || !alive || hidden).toBe(true);
     // żołnierz przeżył: chłopi biją słabiej niż żołnierz (kilof 3, maczuga 2)
     expect(s.hp).toBeGreaterThan(20);
   });

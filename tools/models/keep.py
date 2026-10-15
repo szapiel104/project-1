@@ -324,9 +324,16 @@ b.box('base', 'dark', 1.0, 0.004, 1.4, cx(gx), G + 0.946, GZ + 0.2)
 for k in range(9):  # łuk z ciosów od frontu
     a = math.pi * (k + 0.5) / 9
     b.box('base', 'castleDark', 0.13, 0.09, 0.05, cx(gx) - math.cos(a) * 0.44, G + 0.78 + math.sin(a) * 0.16, GZ + 0.925, -a + math.pi / 2)
-for k in range(8):  # krata podniesiona: widać tylko zęby pod sklepieniem
-    b.box('base', 'iron', 0.02, 0.07, 0.02, cx(gx) - 0.42 + k * 0.12, G + 0.88, GZ + 0.75)
-b.box('base', 'iron', 0.96, 0.02, 0.02, cx(gx), G + 0.93, GZ + 0.75)
+# krata (osobna grupa 'portcullis', zapisana opuszczona): gra podnosi ją o PORT_LIFT, gdy pod zamkiem spokojnie,
+# i opuszcza, gdy podchodzi wróg — podniesiona chowa się w murze nad przejazdem, spod sklepienia widać tylko zęby
+PORT_Z = GZ + 0.75
+for k in range(8):
+    x = cx(gx) - 0.42 + k * 0.12
+    b.box('portcullis', 'iron', 0.022, 0.86, 0.022, x, G + 0.06, PORT_Z)
+    b.prism('portcullis', 'iron', 0.0, 0.016, 0.07, x, G - 0.01, PORT_Z, seg=4)
+for y in (0.2, 0.45, 0.7, 0.9):
+    b.box('portcullis', 'iron', 0.96, 0.03, 0.028, cx(gx), G + y, PORT_Z)
+b.box('base', 'iron', 0.96, 0.02, 0.02, cx(gx), G + 0.93, PORT_Z)
 for s in (-1, 1):  # wrota otwarte na boki przejazdu
     b.box('base', 'woodDark', 0.46, 0.85, 0.05, cx(gx) + s * 0.44, G, GZ - 0.2, s * math.pi / 2)
 ramp = math.atan2(G, 0.9)
@@ -551,7 +558,7 @@ for s in (-1, 1):
     b.box('interior', 'woodDark', 0.05, 0.28, 0.4, (kx0 + kx1) / 2 + s * 0.38, G, (kz0 + kz1) / 2 + 0.15)
 for i, m in enumerate(('bread', 'apple', 'fish', 'bread', 'apple')):
     b.box('interior', m, 0.07, 0.05, 0.07, (kx0 + kx1) / 2 - 0.3 + i * 0.15, G + 0.33, (kz0 + kz1) / 2 + 0.15)
-for i, (x, z) in enumerate(((kx0 + 0.22, kz1 - 0.25), (kx0 + 0.22, kz1 - 0.6), (kx1 - 0.25, kz0 + 0.65))):
+for i, (x, z) in enumerate(((kx0 + 0.22, kz1 - 0.25), (kx0 + 0.22, kz1 - 0.6), (kx0 + 0.2, kz0 + 0.62))):
     b.prism('interior', 'wood', 0.15, 0.13, 0.36, x, G, z, seg=10)
     block(x - 0.15, x + 0.15, z - 0.15, z + 0.15)
 boxs('interior', 'woodDark', 0.12, 0.7, 0.6, kx1 - 0.09, G, (kz0 + kz1) / 2 + 0.35)
@@ -679,4 +686,4 @@ VIEWS = [
     ['z muru do wieży bramy', [-2.2, WY, 5.0], [-0.9, WY, 5.0], OUT, 20],
     ['z muru na dziedziniec', [4.8, WY, 1.0], [0, 0.3, 1.0], OUT, 22],
 ]
-b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G, 'wallY': WALK, 'views': VIEWS})
+b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS})

@@ -163,6 +163,8 @@ const MAX_UNITS = 2048;
 const FIG = 0.76;
 /** Miejsca w zamku z modelu (tools/models/keep.py, układ modelu: środek działki, przód z bramą = +z) */
 const CASTLE = { floorY: 0.15, walkY: 1.71, throneZ: -4.16, seatY: 0.34 };
+/** O ile podnosi się krata bramy zamku (z modelu) */
+const KEEP_PORT_LIFT = (KEEP_MODEL as unknown as { portLift?: number }).portLift ?? 0.86;
 /** Wierzch nawierzchni drogi nad ziemią (0 brak, 1 ścieżka, 2 bruk, 3 dyle: bale leżą na 0,05 i mają ok. 0,05 grubości) */
 const ROAD_TOP = [0, 0.025, 0.045, 0.1];
 const tmpColor = new THREE.Color();
@@ -2817,6 +2819,20 @@ export class GameRenderer {
       yard.visible = left > 0;
       yard.scale.x = Math.max(0.3, left / 4);
     }
+    // krata w bramie zamku: opada szybko, gdy symulacja zamknęła bramę (wróg pod zamkiem), podnosi się powoli
+    for (const id of this.keepFloors.keys()) {
+      const port = this.buildingMeshes.get(id)?.getObjectByName('portcullis');
+      const kb = g.buildings.find((x) => x.id === id);
+      if (!port || !kb) continue;
+      const want = kb.shut ? 0 : KEEP_PORT_LIFT;
+      const was = port.position.y;
+      const sp = want < was ? 2.2 : 0.35;
+      port.position.y = was + Math.max(-sp * dt, Math.min(sp * dt, want - was));
+      if (Math.abs(port.position.y - was) > 1e-4 && !this.calm) {
+        const wp = this.buildingMeshes.get(id)!.position;
+        this.sfxAt(want < was ? 'clang' : 'creak', wp.x, wp.z + KEEP_HALF, `port${id}`, want < was ? 0.6 : 1.2, 0.8);
+      }
+    }
     for (const [id, mesh] of this.buildingMeshes) {
       const inHall = !!this.walk && id === this.walkHall;
       // spacerem z ziemi dachy zostają na miejscu (zdjęty dach widać od dołu jako dziurę); zdejmujemy go tylko nad salą, w której stoimy
@@ -3396,7 +3412,7 @@ export class GameRenderer {
       }
       // służba: z kuchni przez drzwi do sali i z powrotem; w stronę sali niesie jedzenie oburącz
       if (day) {
-        const path: [number, number][] = [[-3.0, -2.95], [-2.62, -3.5], [-2.4, -4.05], [-1.6, -4.0], [-0.95, -3.35]];
+        const path: [number, number][] = [[-3.0, -2.95], [-2.85, -3.9], [-2.2, -4.0], [-1.6, -4.0], [-0.95, -3.35]];
         for (let s2 = 0; s2 < 2; s2++) {
           const per = 30, ph = ((T + seed + s2 * 15) % per) / per;
           let x: number, z: number, yaw: number, up = false, sw = Math.sin(T * 5.5 + s2) * 0.5;
