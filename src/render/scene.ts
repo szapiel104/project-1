@@ -1116,7 +1116,7 @@ export class GameRenderer {
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
     this.sun.castShadow = o.shadows > 0;
     // poświata od średniej jakości w górę (kosztuje kilka przejść w małej rozdzielczości)
-    this.bloom.enabled = o.ao !== 'off' && o.shadows >= 2048;
+    this.bloom.enabled = false; // poświata wyłączona: w części przeglądarek dawała czarny obraz (do sprawdzenia)
     // miękkie cienie: rozmyte krawędzie (zmiana rodzaju mapy wymaga przebudowy shaderów materiałów)
     const type = o.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     if (this.renderer.shadowMap.type !== type) {
