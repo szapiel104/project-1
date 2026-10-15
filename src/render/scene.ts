@@ -2831,6 +2831,9 @@ export class GameRenderer {
   private ratioDyn = 1;
   private gpuAvg = 0;
   private gpuFrames = 0;
+  private gpuBad = 0;
+  private gpuGood = 0;
+  private ratioChanged = 0;
   /** Bieżąca rozdzielczość obrazu (do okna wydajności) */
   get resolution(): string { return `${Math.round(this.ratioDyn * 100)}% z ${this.ratioMax}×`; }
   private applyRatio(): void {
@@ -2847,13 +2850,19 @@ export class GameRenderer {
   private dynamicResolution(ms: number): void {
     if (this.calm) return;
     this.gpuAvg += ms; this.gpuFrames++;
-    if (this.gpuFrames < 45) return;
+    if (this.gpuFrames < 60) return;
     const avg = this.gpuAvg / this.gpuFrames;
     this.gpuAvg = 0; this.gpuFrames = 0;
+    // zmiana rozdzielczości przebudowuje bufory obrazu (jedna klatka potrafi mignąć), więc rzadko i tylko przy pewności:
+    // w dół po 3 kolejnych słabych sekundach, w górę po 10 dobrych, nie częściej niż co 15 s
+    this.gpuBad = avg > 22 ? this.gpuBad + 1 : 0;
+    this.gpuGood = avg < 10 ? this.gpuGood + 1 : 0;
+    const now = performance.now();
+    if (now - this.ratioChanged < 15000) return;
     const before = this.ratioDyn;
-    if (avg > 20) this.ratioDyn = Math.max(0.55, this.ratioDyn - (avg > 30 ? 0.15 : 0.08));
-    else if (avg < 11) this.ratioDyn = Math.min(1, this.ratioDyn + 0.05);
-    if (this.ratioDyn !== before) this.applyRatio();
+    if (this.gpuBad >= 3) this.ratioDyn = Math.max(0.55, this.ratioDyn - (avg > 32 ? 0.2 : 0.1));
+    else if (this.gpuGood >= 10) this.ratioDyn = Math.min(1, this.ratioDyn + 0.1);
+    if (this.ratioDyn !== before) { this.gpuBad = this.gpuGood = 0; this.ratioChanged = now; this.applyRatio(); }
   }
   private shadowTypeSet = false;
   private shadowSize(n: number): void {
