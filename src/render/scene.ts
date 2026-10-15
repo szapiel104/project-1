@@ -801,7 +801,7 @@ export class GameRenderer {
     this.composer.addPass(this.plain);
     this.composer.addPass(this.ao);
     // poświata: tylko najjaśniejsze miejsca (płomienie, okna nocą, odblaski słońca) dostają miękką aureolę
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.28, 0.5, 1.15);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.18, 0.45, 1.6);
     this.bloom.enabled = false;
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
@@ -2779,8 +2779,6 @@ export class GameRenderer {
     this.sun.shadow.map?.dispose();
     (this.sun.shadow as { map: unknown }).map = null;
   }
-  private shadowFrame = 0;
-  private sunWas = new THREE.Vector3();
 
   /**
    * Przesuwa słońce i obszar cienia za kamerą; im dalej kamera, tym większy obszar. Gdy kamera stoi,
@@ -2797,17 +2795,8 @@ export class GameRenderer {
     this.sun.position.set(x + this.sunDir.x, this.sunDir.y, z + this.sunDir.z);
     const c = this.sun.shadow.camera;
     if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
-    const sm = this.renderer.shadowMap;
-    sm.autoUpdate = false;
-    const moved = this.sunWas.distanceToSquared(this.sun.position) > 0.0025 || this.camMoved;
-    this.sunWas.copy(this.sun.position);
-    sm.needsUpdate = this.calm || moved || (this.shadowFrame++ & 1) === 0;
-  }
-  private camWas = new THREE.Vector3();
-  private get camMoved(): boolean {
-    const p = this.cam.camera.position, m = this.camWas.distanceToSquared(p) > 1e-6;
-    this.camWas.copy(p);
-    return m;
+    // cienie liczone w każdej klatce (liczenie co drugą migało światłem pochodni i latarni)
+    this.renderer.shadowMap.autoUpdate = true;
   }
 
   /** Nocą zapala pochodnie przy budynkach i w rękach ludzi oraz rozdaje światła najbliższym z nich. */
