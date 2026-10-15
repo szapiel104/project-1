@@ -17,7 +17,7 @@ type Sound = (kind: 'bark' | 'cluck' | 'grunt', x: number, y: number) => void;
 export interface VillageCtx { time: number; dt: number; night: number; calm: boolean; height: (x: number, y: number) => number; sound: Sound; cam?: { x: number; y: number; h: number } }
 
 interface Critter { x: number; y: number; tx: number; ty: number; wait: number; heading: number; speed: number; seen: number; hx: number; hy: number; flee: number; next: number }
-interface Dog extends Critter { master: number; until: number; bark: number; run: number }
+interface Dog extends Critter { master: number; until: number; bark: number; run: number; stuck: number }
 
 const MAX_HENS = 120, MAX_PIGS = 48, MAX_HORSES = 8, MAX_DOGS = 8;
 
@@ -218,7 +218,7 @@ export class Village {
       const spots: [number, number][] = [[fx + 2.5, fy + 1.5], [fx - 1.5, fy + 1.5], [fx + 0.5, fy + 3.5]];
       const [kx, ky] = spots.find(([x, y]) => this.free(g, x, y)) ?? spots[0]!;
       let d = this.dogs.get(pl.id);
-      if (!d) { d = { x: kx, y: ky, tx: kx, ty: ky, wait: 0, heading: 0, speed: 0, seen: 0, hx: kx, hy: ky, flee: 0, next: 0, master: 0, until: 0, bark: 0, run: 0 }; this.dogs.set(pl.id, d); }
+      if (!d) { d = { x: kx, y: ky, tx: kx, ty: ky, wait: 0, heading: 0, speed: 0, seen: 0, hx: kx, hy: ky, flee: 0, next: 0, master: 0, until: 0, bark: 0, run: 0, stuck: 0 }; this.dogs.set(pl.id, d); }
       d.hx = kx; d.hy = ky; d.seen = this.frame;
       if (!this.free(g, d.x, d.y)) { d.x = d.tx = kx; d.y = d.ty = ky; }   // zabłąkany w zamku albo w budynku: wraca przed bramę
       // wilk w pobliżu: biegnie w jego stronę, staje dwa pola przed nim i szczeka
@@ -242,6 +242,8 @@ export class Village {
           // idzie obok pana, trochę z tyłu; gdy pan stoi, siada przy nim
           d.tx = master.x + 0.35; d.ty = master.y + 0.35;
           speed = Math.min(2.6, 0.6 + Math.hypot(d.tx - d.x, d.ty - d.y) * 2);
+          // pan wszedł do zamku albo budynku, albo pies utknął za przeszkodą: szuka innego
+          if (!this.free(g, d.tx, d.ty) || d.stuck > 1.5) { d.master = 0; d.until = 0; d.stuck = 0; this.wander(g, d, 2.5); d.wait = 2 + rand() * 3; }
         } else d.wait -= dt;
         // obcy żołnierz w osadzie: szczeka z daleka
         if (time > d.bark) {
@@ -251,6 +253,8 @@ export class Village {
         }
       }
       const sp = this.walk(g, d, dt, speed, 2.5);
+      // stoi, choć cel jest daleko = coś go blokuje
+      d.stuck = sp < 0.05 && Math.hypot(d.tx - d.x, d.ty - d.y) > 0.6 ? d.stuck + dt : 0;
       d.run += (sp - d.run) * Math.min(1, dt * 6);
       const moving = d.run > 0.15;
       const ph = time * (6 + d.run * 3);
