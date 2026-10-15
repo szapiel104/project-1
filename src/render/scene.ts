@@ -4194,7 +4194,12 @@ export class GameRenderer {
       // uciekający w panice: długi, szybki krok i ręce machające nad głową
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, (u.carryRes >= 0 && !log) || !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : panic ? -2.5 + flail : waving ? -2.55 + Math.sin(this.time * 14) * 0.35 : ia?.arm, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : panic ? -2.5 - flail : waving ? -swing * 0.8 : ia ? (ia.armL ?? 0.05) : -0.5, panic || waving || !!ia?.legs);
+      // niosący ładunek trzyma go oburącz przed sobą przez cały czas: bez drapania się, machania i rozkładania rąk
+      // (inaczej ręce opadały, a kosz czy blok wisiał sam w powietrzu)
+      const carrying = u.carryRes >= 0 && !log && !hammering && !chopping && !mining && !fighting && !crafting;
+      const iaArm = carrying ? undefined : ia?.arm;
+      const wave = waving && !carrying, flee = panic && !carrying;
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, carrying || (!(u.carryRes >= 0 && !log) && !!ia?.up), TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : iaArm, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : !carrying && ia ? (ia.armL ?? 0.05) : -0.5, flee || wave || !!ia?.legs);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
@@ -4203,9 +4208,11 @@ export class GameRenderer {
       t.scale.setScalar(wood && !log ? FIG : 0);
       t.updateMatrix();
       this.planks.setMatrixAt(i, t.matrix);
-      // każdy surowiec ma własny wygląd: kosz jabłek, bochenki, snop, worek, blok, sztaby
+      // każdy surowiec ma własny wygląd: kosz jabłek, bochenki, snop, worek, blok, sztaby;
+      // skala jak postać (ludzie są różnego wzrostu), żeby ładunek trafiał w dłonie i u niskiego, i u wysokiego
+      const loadSz = u.carryRes >= 0 ? this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888) : 1;
       for (const [res, mesh] of this.loads) {
-        t.scale.setScalar(u.carryRes === res ? FIG : 0);
+        t.scale.setScalar(u.carryRes === res ? FIG * loadSz : 0);
         t.updateMatrix();
         mesh.setMatrixAt(i, t.matrix);
       }
