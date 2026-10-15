@@ -71,7 +71,7 @@ const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
 const SMOKY = new Set(['house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter']);
 
 /** Grupy, w których też łączymy bryły (ściany i dach znikają w całości przy podglądzie wnętrza, więc wspólna siatka nic nie psuje) */
-const MERGE_IN = new Set(['shell', 'roof', 'chimney']);
+const MERGE_IN = new Set(['shell', 'roof', 'chimney', 'spin', 'flagpole']);
 function mergeStatic(root: THREE.Object3D): void {
   root.updateMatrixWorld(true);
   // klucz: grupa, do której trafi wspólna siatka (korzeń albo „shell” / „roof” / „chimney”) + materiał

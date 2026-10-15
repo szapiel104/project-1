@@ -657,12 +657,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
   type Lod = { hide?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material };
   const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean }[] = [];
-  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material, lod?: Lod): Inst | null => {
+  const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material, lod?: Lod, chunk = CHUNK): Inst | null => {
     if (!list.length) return null;
     const mat = own ?? new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
     const buckets = new Map<number, number[]>();
     list.forEach((it, i) => {
-      const k = Math.floor((it.pos.x + 512) / CHUNK) * 4096 + Math.floor((it.pos.z + 512) / CHUNK);
+      const k = Math.floor((it.pos.x + 512) / chunk) * 4096 + Math.floor((it.pos.z + 512) / chunk);
       let b = buckets.get(k); if (!b) { b = []; buckets.set(k, b); } b.push(i);
     });
     const where: [THREE.InstancedMesh, number][] = new Array(list.length);
@@ -747,10 +747,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark', true, undefined, TRUNK_LOD);
     instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves', true, undefined, LEAF_LOD);
     // puszcza za mapą: obrazki zamiast brył (dwa trójkąty na drzewo), stąd może być gęstsza
-    if (pineImp) instanced(pineImp.geometry, 0xffffff, far.pine, undefined, false, pineImp.material());
-    else instanced(models.treeCrownFar(), 0x35703a, far.pine, 'needles', false);
-    if (leafImp) instanced(leafImp.geometry, 0xffffff, far.leaf, undefined, false, leafImp.material());
-    else instanced(models.leafCrownFar(), 0x55903a, far.leaf, 'leaves', false);
+    // dalekie obrazki nie przełączają szczegółów, więc kawałki mogą być duże (120 pól): kilkanaście wywołań rysowania zamiast ~200
+    if (pineImp) instanced(pineImp.geometry, 0xffffff, far.pine, undefined, false, pineImp.material(), undefined, 120);
+    else instanced(models.treeCrownFar(), 0x35703a, far.pine, 'needles', false, undefined, undefined, 120);
+    if (leafImp) instanced(leafImp.geometry, 0xffffff, far.leaf, undefined, false, leafImp.material(), undefined, 120);
+    else instanced(models.leafCrownFar(), 0x55903a, far.leaf, 'leaves', false, undefined, undefined, 120);
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące

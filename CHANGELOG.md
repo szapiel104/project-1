@@ -3,6 +3,8 @@
 ## 0.22.1 — mniej wywołań rysowania (2026-10-15)
 
 - Ściany, dachy i kominy budynków sklejone z setek drobnych brył w kilka siatek (ten sam materiał = jedna siatka; wygląd bez zmian): w wiosce testowej ok. 600 wywołań rysowania mniej na klatkę razem z cieniami
+- Skrzydła wiatraków i maszty flag też sklejone; daleka puszcza za mapą (obrazki drzew) w dużych kawałkach — razem z budynkami z ok. 1600 do ok. 1140 rysowanych części w widoku wioski
+- Naprawa: chmury wywracały klatkę błędem przy przejaśnianiu się pogody
 
 ## 0.22.0 — więcej ustawień (2026-10-14)
 
