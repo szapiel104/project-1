@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import GUARD_MODEL from './models/guard.json';
 import PEASANT_MODEL from './models/peasant.json';
@@ -206,7 +207,7 @@ export class Figures {
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.castShadow = true;
-      scene.add(mesh);
+      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod });
       if (lod) this.hasFar = true;
     };

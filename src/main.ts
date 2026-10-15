@@ -1814,9 +1814,12 @@ const RULES_REFUND = 50;
 
 // --- wydajność: F3 pokazuje FPS, czasy symulacji i rysowania, liczniki sceny; window.__perf() zwraca to samo dla testów ---
 const perf = { frames: 0, sim: 0, ticks: 0, render: 0, ui: 0, worst: 0, since: performance.now(), last: {} as Record<string, number | string> };
-const perfBox = document.createElement('pre');
+const perfBox = document.createElement('div');
 perfBox.className = 'perf';
 perfBox.hidden = true;
+// dwie kolumny: ogólne liczniki | karta graficzna przejście po przejściu i najcięższe rzeczy na scenie
+const perfMain = document.createElement('pre'), perfGpu = document.createElement('pre');
+perfBox.append(perfMain, perfGpu);
 document.body.append(perfBox);
 // mały licznik FPS zawsze widoczny pod wersją; klik albo F3 rozwija pełne statystyki
 const fpsTag = document.createElement('button');
@@ -1825,7 +1828,12 @@ fpsTag.className = 'fps-tag';
 fpsTag.title = 'Wydajność — kliknij albo F3';
 fpsTag.textContent = 'FPS —';
 document.body.append(fpsTag);
-const togglePerf = (): void => { perfBox.hidden = !perfBox.hidden; fpsTag.setAttribute('aria-pressed', String(!perfBox.hidden)); };
+const togglePerf = (): void => {
+  perfBox.hidden = !perfBox.hidden;
+  fpsTag.setAttribute('aria-pressed', String(!perfBox.hidden));
+  // przy otwartym oknie co 15. klatka jest mierzona przejście po przejściu (cienie, scena, AO, poświata…)
+  renderer.gpuProfile = !perfBox.hidden;
+};
 fpsTag.addEventListener('click', togglePerf);
 window.addEventListener('keydown', (e) => { if (e.key === 'F3') { e.preventDefault(); togglePerf(); } });
 
@@ -1940,11 +1948,24 @@ function showPerf(now: number): void {
   for (const [k, v] of Object.entries(renderer.readTiming())) perf.last[`  ${k} ms`] = v;
   perf.last['jakość'] = renderer.quality;
   perf.last['rozdzielczość'] = renderer.resolution;
-  perf.last['budynki z daleka'] = renderer.lodInfo;
   perf.last['wątek symulacji'] = simMode ? 'tak' : 'nie';
+  perf.last['budynki z daleka'] = renderer.lodInfo;
+  // karta graficzna przejście po przejściu (tylko przy otwartym oknie; mierzona co 15. klatka)
+  const gpu = renderer.readGpu();
+  if (Object.keys(gpu).length) { perf.last['KARTA: co ile liczy'] = ''; Object.assign(perf.last, gpu); }
+  if (!perfBox.hidden) {
+    perf.last['NAJWIĘCEJ TRÓJKĄTÓW'] = 'w kadrze + w cieniu';
+    const k = (n: number): string => (n >= 1e6 ? `${(n / 1e6).toFixed(2)} mln` : `${Math.round(n / 1000)} tys.`);
+    for (const h of renderer.heavy(10)) perf.last[`  ${h.cat}`] = `${k(h.tris)} + ${k(h.shadow)} · ${h.meshes} siatek`;
+  }
   fpsTag.textContent = `FPS ${perf.last.fps}`;
   fpsTag.dataset.low = String(Number(perf.last.fps) < 40);
-  if (!perfBox.hidden) perfBox.textContent = Object.entries(perf.last).map(([k, v]) => `${k.padEnd(22)} ${v}`).join('\n');
+  if (!perfBox.hidden) {
+    const rows = Object.entries(perf.last).map(([k, v]) => `${k.padEnd(22)} ${v}`);
+    const cut = Object.keys(perf.last).indexOf('budynki z daleka');
+    perfMain.textContent = rows.slice(0, cut < 0 ? rows.length : cut).join('\n');
+    perfGpu.textContent = cut < 0 ? '' : rows.slice(cut).join('\n');
+  }
   perf.frames = 0; perf.sim = 0; perf.ticks = 0; perf.render = 0; perf.ui = 0; perf.worst = 0; perf.since = now;
 }
 (window as unknown as { __perf: () => Record<string, number | string> }).__perf = () => perf.last;

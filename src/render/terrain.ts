@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
+import { cat } from './cat';
 import { createNoise2D } from 'simplex-noise';
 import { treeImpostor } from './impostors';
 import { rng } from './craft';
@@ -285,7 +286,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const ground = new THREE.Mesh(geo, PHOTO_GROUND ? groundMaterial() : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7, normalMap: normal('grass'), normalScale: new THREE.Vector2(0.8, 0.8) }));
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
-  group.add(ground);
+  group.add(cat(ground, 'teren'));
 
   // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca
   const ripples = bump('water')?.clone() ?? null;
@@ -311,7 +312,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       fish.push({ x: (tile % w) + 0.5 + ox, z: Math.floor(tile / w) + 0.5 + oz, r: 0.25 + ((rr >>> 8) & 15) / 40, speed: 0.6 + ((rr >>> 12) & 15) / 20, phase: ((rr >>> 16) & 255) / 40 });
       fishMesh.setColorAt(i, fc.setHex((rr >>> 24) % 4 === 0 ? 0xe08a3c : 0xb9c9d4));
     }
-    group.add(fishMesh);
+    group.add(cat(fishMesh, 'ryby'));
   }
   const fm = new THREE.Matrix4();
   const fq = new THREE.Quaternion();
@@ -462,12 +463,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     outer.receiveShadow = true;
     // góry za mapą nie rzucają cienia: 100 tys. trójkątów w każdej klatce cienia, a ich cień i tak pada poza plansza
     outer.castShadow = false;
-    group.add(outer);
+    group.add(cat(outer, 'teren za mapą'));
     // daleko za górami płaska ciemna równina, którą i tak zakrywa mgła
     const far = new THREE.Mesh(new THREE.PlaneGeometry(W2 + 600, H2 + 600), new THREE.MeshStandardMaterial({ color: 0x2c3a1c, roughness: 1 }));
     far.rotation.x = -Math.PI / 2;
     far.position.y = -0.2;
-    group.add(far);
+    group.add(cat(far, 'teren za mapą'));
   }
 
   // Woda na całym obszarze (plansza i teren za nią): jeziora na planszy i morze za mapą jedną taflą.
@@ -526,11 +527,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     water.rotation.x = -Math.PI / 2;
     water.position.y = -0.08;
     water.receiveShadow = true;
-    group.add(water);
+    group.add(cat(water, 'woda'));
     const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x46533f, roughness: 1 }));
     shallow.rotation.x = -Math.PI / 2;
     shallow.position.y = -0.32;
-    group.add(shallow);
+    group.add(cat(shallow, 'woda'));
   }
 
   // gęsta trawa: łąka pełna, las i złoża rzadko, woda i góry bez trawy
@@ -540,7 +541,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     grassBase[t] = (tt === Terrain.Grass ? 1 : tt === Terrain.Forest ? 0.35 : tt === Terrain.Stone ? 0.25 : tt === Terrain.Iron ? 0.1 : 0) * (sandTile[t]! > 0.12 ? 0 : 1); // na piasku plaży trawy nie ma wcale
   }
   const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), bladeTexture(map.seed));
-  if (grass) group.add(grass.mesh);
+  if (grass) group.add(cat(grass.mesh, 'trawa (dywan)'));
   const yAxis = new THREE.Vector3(0, 1, 0);
   const heightAt = (fx: number, fy: number): number => {
     const x = Math.max(0, Math.min(w - 1.001, fx)), y = Math.max(0, Math.min(h - 1.001, fy));
@@ -662,6 +663,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
   type Lod = { hide?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material };
   const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean }[] = [];
+  /** Podpis kolejnych siatek roślinności do okna wydajności (F3) */
+  let label = 'roślinność';
   const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material, lod?: Lod, chunk = CHUNK): Inst | null => {
     if (!list.length) return null;
     const mat = own ?? new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
@@ -679,6 +682,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       if (mesh.boundingSphere) mesh.boundingSphere.radius += 3; // zapas na ścinane, przechylające się drzewa
       if (lod && mesh.boundingSphere) lodChunks.push({ mesh, x: mesh.boundingSphere.center.x, z: mesh.boundingSphere.center.z, lod, near: g, nearMat: mat, shadow }); 
       mesh.castShadow = shadow;
+      cat(mesh, label);
       // kępy trawy nie przyjmują cienia: cienkie źdźbła tuż nad ziemią łapały cień samego terenu i czerniały
       mesh.receiveShadow = mat !== grassMat;
       group.add(mesh);
@@ -703,8 +707,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     });
   };
   const trunkItems = new Set<Item>([...pines, ...leafy]);
-  plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark', true, undefined, TRUNK_LOD), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat, PINE_LOD));
-  plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark', true, undefined, TRUNK_LOD), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves', true, undefined, LEAF_LOD));
+  label = 'drzewa: pnie';
+  const pineTrunks = instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark', true, undefined, TRUNK_LOD);
+  const leafTrunks = instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark', true, undefined, TRUNK_LOD);
+  label = 'drzewa: korony';
+  plant(pines, pineTrunks, instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat, PINE_LOD));
+  plant(leafy, leafTrunks, instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves', true, undefined, LEAF_LOD));
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
   // Las wchodzi na zbocza aż pod granicę lasu; wyżej drzewa rzedną, są niższe i oszronione, nad nimi tylko skała i śnieg.
   // Dalekie drzewa mają uproszczony model (mniej trójkątów), a mgła i tak zaciera szczegóły.
@@ -748,12 +756,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const bucket = dd < 14 ? near : far;
         (leafTree ? bucket.leaf : bucket.pine).push(item);
       }
+    label = 'puszcza za mapą: bliska';
     instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark', true, undefined, TRUNK_LOD);
     instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles', true, pineMat, PINE_LOD);
     instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark', true, undefined, TRUNK_LOD);
     instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves', true, undefined, LEAF_LOD);
     // puszcza za mapą: obrazki zamiast brył (dwa trójkąty na drzewo), stąd może być gęstsza
     // dalekie obrazki nie przełączają szczegółów, więc kawałki mogą być duże (120 pól): kilkanaście wywołań rysowania zamiast ~200
+    label = 'puszcza za mapą: obrazki';
     if (pineImp) instanced(pineImp.geometry, 0xffffff, far.pine, undefined, false, pineImp.material(), undefined, 120);
     else instanced(models.treeCrownFar(), 0x35703a, far.pine, 'needles', false, undefined, undefined, 120);
     if (leafImp) instanced(leafImp.geometry, 0xffffff, far.leaf, undefined, false, leafImp.material(), undefined, 120);
@@ -762,6 +772,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące
   const bushFar = mergeGeometries([new THREE.IcosahedronGeometry(0.27, 0).translate(0, 0.2, 0).toNonIndexed(), new THREE.IcosahedronGeometry(0.2, 0).translate(0.12, 0.15, 0.05).toNonIndexed()])!;
+  label = 'krzewy';
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, undefined, { farGeo: bushFar }), null, false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
@@ -769,20 +780,26 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const reedMat = new THREE.MeshStandardMaterial({ map: reedTexture(map.seed), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 });
   reedMat.onBeforeCompile = grassMat.onBeforeCompile;
   reedMat.customProgramCacheKey = () => 'reeds';
+  label = 'trzcina i grzybienie';
   plant(reeds, instanced(grassCards(), 0xffffff, reeds, undefined, false, reedMat, { hide: 70 }), null, false);
   const lilyGeo = new THREE.CircleGeometry(0.13, 12, 0.35, Math.PI * 2 - 0.5).rotateX(-Math.PI / 2);
   plant(lilies, instanced(lilyGeo, 0x4a7a32, lilies, undefined, false, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0 }), { hide: 70 }), null, false);
+  label = 'kamyki';
   plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock', true, undefined, SMALL_LOD), null, false);
+  label = 'kępy trawy';
   plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {
+    label = 'kwiaty';
     const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false, undefined, SMALL_LOD);
     const palette = [0xf4f1e6, 0xf2d24a, 0xb07ad6, 0xe8687a, 0x7fb2e6];
     if (mesh) { flowers.forEach((it, i) => mesh.setColorAt(i, tint.setHex(palette[(it.tile * 7 + i) % palette.length]!))); mesh.instanceMatrix.needsUpdate = true; }
     plant(flowers, mesh, null, false);
   }
   // skały i rudy też znikają, gdy złoże się wyczerpie (bez pniaka)
+  label = 'skały i złoża';
   plant(rocks, instanced(models.rock(), 0xc4bfb1, rocks, 'rock'), null, false);
   plant(ores, instanced(models.rock(), 0xa05a36, ores, 'rock'), null, false);
+  label = 'pniaki (ukryte)';
   const stumps = instanced(new THREE.CylinderGeometry(0.1, 0.13, 0.14, 7).translate(0, 0.07, 0), 0x8a6a45, stumpItems, 'bark', false);
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
   if (stumps) { stumpItems.forEach((_, i) => stumps.setMatrixAt(i, zero)); stumps.instanceMatrix.needsUpdate = true; }
@@ -1110,7 +1127,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const mesh = new THREE.Mesh(g2, soft ? sandMaterial() : paveMaterial(materials[kind - 1]!, plank));
       mesh.receiveShadow = true;
       mesh.renderOrder = soft ? 1 : 0;
-      group.add(mesh);
+      group.add(cat(mesh, 'drogi'));
       roadMeshes.push(mesh);
       const onRoad = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind;
       if (plank) {
@@ -1158,7 +1175,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           if (im.instanceColor) im.instanceColor.needsUpdate = true;
           im.castShadow = true;
           im.receiveShadow = true;
-          group.add(im);
+          group.add(cat(im, 'drogi'));
           roadMeshes.push(im);
           const rm = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), boardMat, rails.length);
           rails.forEach(([rx, ry, len, rot], i) => {
@@ -1172,7 +1189,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           rm.instanceMatrix.needsUpdate = true;
           if (rm.instanceColor) rm.instanceColor.needsUpdate = true;
           rm.receiveShadow = true;
-          group.add(rm);
+          group.add(cat(rm, 'drogi'));
           roadMeshes.push(rm);
         }
       } else if (!soft) {
@@ -1216,7 +1233,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           if (im.instanceColor) im.instanceColor.needsUpdate = true;
           im.castShadow = true;
           im.receiveShadow = true;
-          group.add(im);
+          group.add(cat(im, 'drogi'));
           roadMeshes.push(im);
         }
         if (shoulder.length) {
@@ -1229,7 +1246,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           (sm.material as THREE.Material).side = THREE.DoubleSide;
           sm.receiveShadow = true;
           sm.renderOrder = 1;
-          group.add(sm);
+          group.add(cat(sm, 'drogi'));
           roadMeshes.push(sm);
         }
       } else {
@@ -1257,7 +1274,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           im.instanceMatrix.needsUpdate = true;
           if (im.instanceColor) im.instanceColor.needsUpdate = true;
           im.receiveShadow = true;
-          group.add(im);
+          group.add(cat(im, 'drogi'));
           roadMeshes.push(im);
         }
       }
@@ -1269,7 +1286,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         dg.setAttribute('normal', new THREE.Float32BufferAttribute(new Float32Array(ditch.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
         const dm = new THREE.Mesh(dg, ditchMaterial());
         dm.receiveShadow = true;
-        group.add(dm);
+        group.add(cat(dm, 'drogi'));
         roadMeshes.push(dm);
       }
     }

@@ -23,6 +23,7 @@ import { ladderSides } from '../sim/systems/stonewalls';
 import { isWetMat, setWetBuildings } from './buildings';
 import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
 import { setCloudShadows } from './ground';
+import { cat } from './cat';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
@@ -593,11 +594,11 @@ export class GameRenderer {
     sun.shadow.camera.far = 260;
     this.scene.add(sun, sun.target);
     this.sun = sun;
-    this.scene.add(this.buildingLayer);
-    this.scene.add(this.ambience.group);
-    this.scene.add(this.clutter.group);
-    this.scene.add(this.clouds.group);
-    this.scene.add(this.flames.group);
+    this.scene.add(cat(this.buildingLayer, 'budynki'));
+    this.scene.add(cat(this.ambience.group, 'dym, mgła, iskry'));
+    this.scene.add(cat(this.clutter.group, 'graty przy domach'));
+    this.scene.add(cat(this.clouds.group, 'chmury'));
+    this.scene.add(cat(this.flames.group, 'płomienie'));
 
     const flat = (geo: THREE.BufferGeometry, color: number, opacity = 1): THREE.Mesh => {
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: opacity < 1, opacity, depthWrite: false }));
@@ -736,7 +737,7 @@ export class GameRenderer {
     ]);
     const tool = (geo: THREE.BufferGeometry): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
-      m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m);
+      m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'narzędzia w rękach'));
       return m;
     };
     this.axes = tool(axe);
@@ -744,7 +745,7 @@ export class GameRenderer {
     const gear = peasantGear();
     const gearTool = (geo: THREE.BufferGeometry): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(geo, toolMaterials(), MAX_UNITS);
-      m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m);
+      m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'narzędzia w rękach'));
       return m;
     };
     // taran z Blendera (tools/models/ram.py): wóz z daszkiem i osobno belka, która wysuwa się przy uderzeniu
@@ -758,7 +759,7 @@ export class GameRenderer {
     ];
     const ramMesh = (grp: string): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(partsGeometry(RAM_MODEL as unknown as { q: number } & Record<string, unknown>, grp, RAM_MATS, RAM_COL), ramMats, 256);
-      m.count = 0; m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; this.scene.add(m);
+      m.count = 0; m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; this.scene.add(cat(m, 'tarany'));
       return m;
     };
     this.ramBodies = ramMesh('body');
@@ -807,7 +808,7 @@ export class GameRenderer {
     const plankMap = pattern('planks')?.clone() ?? null;
     if (plankMap) { plankMap.repeat.set(0.25, 1); plankMap.needsUpdate = true; }
     this.planks = new THREE.InstancedMesh(plank, new THREE.MeshStandardMaterial({ vertexColors: true, map: plankMap, roughness: 0.9 }), MAX_UNITS);
-    for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m); }
+    for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'niesione bale i deski')); }
 
     this.cam = new StrategyCamera(canvas);
     this.composer = new EffectComposer(this.renderer);
@@ -942,17 +943,41 @@ export class GameRenderer {
 
   /** Liczniki karty graficznej z ostatniej klatki (do okna wydajności) */
   /** Do diagnozy wydajności: które siatki mają najwięcej trójkątów (z instancjami) */
-  heavy(top = 15): { name: string; tris: number; count: number; culled: boolean }[] {
-    const out: { name: string; tris: number; count: number; culled: boolean }[] = [];
-    this.scene.traverse((o) => {
+  /**
+   * Co ile trójkątów rysuje w tej chwili, pogrupowane po rodzaju (podpisy z cat()): w kadrze kamery i w mapie cieni.
+   * Liczy tylko widoczne siatki; ukryte instancje (zerowa skala poza kadrem) też się liczą, bo karta i tak je przetwarza.
+   */
+  heavy(top = 12): { cat: string; tris: number; shadow: number; meshes: number }[] {
+    const cam = this.cam.camera;
+    cam.updateMatrixWorld();
+    const m4 = new THREE.Matrix4();
+    const view = new THREE.Frustum().setFromProjectionMatrix(m4.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    const sc = this.sun.shadow.camera;
+    sc.updateMatrixWorld();
+    const shadow = this.sun.castShadow ? new THREE.Frustum().setFromProjectionMatrix(m4.multiplyMatrices(sc.projectionMatrix, sc.matrixWorldInverse)) : null;
+    const by = new Map<string, { cat: string; tris: number; shadow: number; meshes: number }>();
+    const walk = (o: THREE.Object3D, label: string): void => {
+      if (!o.visible) return;
+      const l = o.userData.lod ? 'budynki (daleka wersja)' : ((o.userData.cat as string | undefined) ?? label);
       const m = o as THREE.Mesh;
-      if (!m.isMesh || !m.visible) return;
-      const geo = m.geometry;
-      const per = (geo.index ? geo.index.count : geo.getAttribute('position')?.count ?? 0) / 3;
-      const count = (m as THREE.InstancedMesh).isInstancedMesh ? (m as THREE.InstancedMesh).count : 1;
-      out.push({ name: `${m.parent?.name || ''}/${m.name || m.type}`, tris: Math.round(per * count), count, culled: m.frustumCulled });
-    });
-    return out.sort((a, b) => b.tris - a.tris).slice(0, top);
+      if ((m.isMesh || (o as THREE.Sprite).isSprite) && m.geometry && !(Array.isArray(m.material) ? false : (m.material as THREE.Material).visible === false)) {
+        const geo = m.geometry;
+        const all = (geo.index ? geo.index.count : geo.getAttribute('position')?.count ?? 0);
+        const per = Math.min(all, geo.drawRange.count) / 3;
+        const count = (m as THREE.InstancedMesh).isInstancedMesh ? (m as THREE.InstancedMesh).count : 1;
+        const n = per * count;
+        if (n > 0) {
+          let e = by.get(l);
+          if (!e) { e = { cat: l, tris: 0, shadow: 0, meshes: 0 }; by.set(l, e); }
+          e.meshes++;
+          if (!m.frustumCulled || view.intersectsObject(m)) e.tris += n;
+          if (shadow && m.castShadow && (!m.frustumCulled || shadow.intersectsObject(m))) e.shadow += n;
+        }
+      }
+      for (const ch of o.children) walk(ch, l);
+    };
+    for (const ch of this.scene.children) walk(ch, 'inne');
+    return [...by.values()].sort((a, b) => b.tris + b.shadow - a.tris - a.shadow).slice(0, top);
   }
 
   get stats(): { calls: number; triangles: number; geometries: number; textures: number } {
@@ -1733,13 +1758,82 @@ export class GameRenderer {
       T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); this.syncVillage(g, v, dt); });
       T('kadr', () => this.cullInstances());
     }
-    const tg = performance.now();
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
+    // okno wydajności otwarte: co 15. klatka mierzona przejście po przejściu (ta jedna klatka jest wolniejsza, więc jej
+    // czasu nie wliczamy do zwykłego „karta graficzna”)
+    if (this.gpuProfile && this.profN++ % 15 === 0) { this.profiledRender(); return; }
+    const tg = performance.now();
     this.composer.render();
     const gpu = performance.now() - tg;
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;
     this.dynamicResolution(gpu);
     this.timingFrames++;
+  }
+
+  /** Okno wydajności (F3) otwarte: mierzymy, ile karta graficzna liczy cienie, scenę, AO, poświatę i resztę przejść */
+  gpuProfile = false;
+  private profN = 0;
+  private prof: Record<string, number> = {};
+  private profFrames = 0;
+  private gpuLast: Record<string, string | number> = {};
+  private passName(p: object): string {
+    return p === this.ao ? 'AO' : p === this.plain ? 'obraz' : p === this.bloom ? 'poświata' : p === this.sanitize ? 'czyszczenie obrazu'
+      : p === this.grade ? 'barwy' : p instanceof OutputPass ? 'wyjście' : 'inne';
+  }
+  /**
+   * Jedna klatka mierzona dokładnie: przed i po każdym kawałku czekamy, aż karta skończy (gl.finish), więc czas kawałka
+   * to naprawdę jego praca na karcie. Kawałki: mapa cieni (w środku rysowania sceny), scena, każde przejście obrazu.
+   */
+  private profiledRender(): void {
+    const r = this.renderer, gl = r.getContext(), info = r.info.render, acc = this.prof;
+    const add = (k: string, v: number): void => { acc[k] = (acc[k] ?? 0) + v; };
+    const seg = (name: string, fn: () => void): void => {
+      gl.finish();
+      const t0 = performance.now(), c0 = info.calls, t0r = info.triangles;
+      fn();
+      gl.finish();
+      add(name, performance.now() - t0); add(name + '#w', info.calls - c0); add(name + '#t', info.triangles - t0r);
+    };
+    const restore: (() => void)[] = [];
+    const sm = r.shadowMap as unknown as { render: (...a: unknown[]) => void };
+    const smRender = sm.render;
+    sm.render = (...a: unknown[]): void => seg('cienie', () => smRender.apply(sm, a));
+    restore.push(() => { sm.render = smRender; });
+    const rRender = r.render;
+    r.render = ((sc: THREE.Object3D, c: THREE.Camera): void => {
+      if (sc === this.scene) seg('scena', () => rRender.call(r, sc, c)); else rRender.call(r, sc, c);
+    }) as typeof rRender;
+    restore.push(() => { r.render = rRender; });
+    for (const p of this.composer.passes) {
+      if (!p.enabled) continue;
+      const pRender = p.render, name = this.passName(p);
+      p.render = ((...a: Parameters<typeof pRender>): void => seg('p:' + name, () => pRender.apply(p, a))) as typeof pRender;
+      restore.push(() => { p.render = pRender; });
+    }
+    try { seg('klatka', () => this.composer.render()); } finally { for (const f of restore) f(); }
+    this.profFrames++;
+  }
+  /** Wyniki pomiaru od ostatniego odczytu (ms na klatkę i liczba wywołań / trójkątów), potem zerowanie */
+  readGpu(): Record<string, string | number> {
+    const n = this.profFrames, a = this.prof, out: Record<string, string | number> = {};
+    if (!n) return this.gpuLast; // w tej sekundzie nie było mierzonej klatki: pokazujemy poprzedni wynik
+    const ms = (k: string): number => (a[k] ?? 0) / n;
+    const cnt = (k: string): string => `${Math.round((a[k + '#w'] ?? 0) / n)} wyw., ${Math.round((a[k + '#t'] ?? 0) / n / 1000)} tys. trójk.`;
+    const f = (v: number): string => v.toFixed(2);
+    out['  cienie'] = `${f(ms('cienie'))} ms · ${cnt('cienie')}`;
+    out['  scena'] = `${f(ms('scena') - ms('cienie'))} ms · ${Math.round(((a['scena#w'] ?? 0) - (a['cienie#w'] ?? 0)) / n)} wyw., ${Math.round(((a['scena#t'] ?? 0) - (a['cienie#t'] ?? 0)) / n / 1000)} tys. trójk.`;
+    for (const k of Object.keys(a)) {
+      if (!k.startsWith('p:') || k.includes('#')) continue;
+      const name = k.slice(2);
+      // przejście ze sceną (obraz albo AO): sama scena już policzona wyżej
+      const own = name === 'AO' || name === 'obraz' ? ms(k) - ms('scena') : ms(k);
+      if (name === 'obraz' && own < 0.05) continue;
+      out[`  ${name}`] = `${f(own)} ms`;
+    }
+    out['  razem (pomiar)'] = `${f(ms('klatka'))} ms`;
+    this.prof = {}; this.profFrames = 0;
+    this.gpuLast = out;
+    return out;
   }
   /** Płomienie: pochodnie przy budynkach (zapalone), ogniska w obozowiskach i karczmach, pożary uszkodzonych budynków */
   private syncFlames(g: GameState): void {
@@ -1925,7 +2019,7 @@ export class GameRenderer {
       const bark = (new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.95, map: pattern('bark'), normalMap: normal('bark') }));
       this.wallShafts = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.1, 1, 7).translate(0, 0.5, 0), bark, 4096);
       this.wallTips = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7).translate(0, 0.5, 0), bark, 4096);
-      for (const m of [this.wallShafts, this.wallTips]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(m); }
+      for (const m of [this.wallShafts, this.wallTips]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'palisada')); }
     }
     const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
     let n = 0;
@@ -1936,7 +2030,7 @@ export class GameRenderer {
       const k = stoneWallKit();
       const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, max: number): THREE.InstancedMesh => {
         const m = new THREE.InstancedMesh(geo, mat, max);
-        m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(m);
+        m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(cat(m, 'mury kamienne'));
         return m;
       };
       this.stoneKit = { block: mk(k.block, k.mat, 8192), edge: mk(k.edge, k.mat, 16384), ladder: mk(k.ladder, k.wood, 2048) };
@@ -2143,7 +2237,7 @@ export class GameRenderer {
       this.wolfLegs = new THREE.InstancedMesh(leg, mat, 128);
       this.wolfHindLegs = new THREE.InstancedMesh(hindLeg, mat, 128);
       this.wolfTails = new THREE.InstancedMesh(tail, mat, 64);
-      for (const m of [this.wolfMesh, this.wolfLegs, this.wolfHindLegs, this.wolfTails]) { m.castShadow = true; m.frustumCulled = false; this.scene.add(m); }
+      for (const m of [this.wolfMesh, this.wolfLegs, this.wolfHindLegs, this.wolfTails]) { m.castShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'wilki')); }
       this.wolfEyes = new THREE.InstancedMesh(eyes, new THREE.MeshBasicMaterial({ color: 0xffd24a }), 64);
       this.wolfEyes.frustumCulled = false;
       this.scene.add(this.wolfEyes);
@@ -2305,7 +2399,7 @@ export class GameRenderer {
       this.crows = new THREE.InstancedMesh(c.stand, c.mat, 256);
       this.crows.frustumCulled = false; this.crows.castShadow = true;
       this.scene.add(this.crows);
-      this.crowFly = c.fly.map((geo) => { const m = new THREE.InstancedMesh(geo, c.mat, 128); m.frustumCulled = false; m.castShadow = true; m.count = 0; this.scene.add(m); return m; });
+      this.crowFly = c.fly.map((geo) => { const m = new THREE.InstancedMesh(geo, c.mat, 128); m.frustumCulled = false; m.castShadow = true; m.count = 0; this.scene.add(cat(m, 'kruki')); return m; });
     }
     const { width, height } = g.map;
     const t = this.tmp;
@@ -2697,7 +2791,7 @@ export class GameRenderer {
       const wood = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.95, map: pattern('planks') });
       this.scaffold = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), wood, 6000);
       this.siteStones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0).translate(0, 0.35, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true, map: pattern('rock') }), 600);
-      for (const m of [this.scaffold, this.siteStones]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.buildingLayer.add(m); }
+      for (const m of [this.scaffold, this.siteStones]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.buildingLayer.add(cat(m, 'budowy (rusztowania)')); }
     }
     const { width, height } = g.map;
     const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);

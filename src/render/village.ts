@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { cat } from './cat';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
 import { FP, keepFront, type GameState } from '../sim/state';
@@ -56,7 +57,7 @@ export class Village {
   constructor(scene: THREE.Scene) {
     const inst = (geo: THREE.BufferGeometry, max: number, mat?: THREE.Material): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(geo, mat ?? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 }), max);
-      m.count = 0; m.frustumCulled = false; m.castShadow = true; scene.add(m);
+      m.count = 0; m.frustumCulled = false; m.castShadow = true; scene.add(cat(m, 'zwierzęta i wieś'));
       return m;
     };
     this.hensBy = (['hen_white', 'hen_brown', 'hen_black'] as const).map((k) => inst(geo(k), MAX_HENS));

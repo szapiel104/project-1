@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { Terrain, TERRAIN } from '../data/terrain';
@@ -111,7 +112,7 @@ export class Family {
     this.kids = new Figures(MAX, scene, 'child');
     const inst = (geo: THREE.BufferGeometry, max: number, mat: THREE.Material, shadow = true): THREE.InstancedMesh => {
       const m = new THREE.InstancedMesh(geo, mat, max);
-      m.count = 0; m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = shadow; scene.add(m); return m;
+      m.count = 0; m.frustumCulled = false; m.castShadow = shadow; m.receiveShadow = shadow; scene.add(cat(m, 'rodziny i podwórka')); return m;
     };
     // długa suknia z fartuchem: od pasa do ziemi zasłania nogi (postać z gry ma męską sylwetkę)
     // miotła z witek: kij w dłoni, miotła przy ziemi (układ ręki: bark w początku, dłoń 0,185 niżej)

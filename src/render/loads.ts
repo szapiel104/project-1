@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RESOURCES } from '../data/resources';
 
@@ -137,7 +138,7 @@ export function createLoads(max: number, scene: THREE.Scene): Map<number, THREE.
     mesh.count = 0;
     mesh.frustumCulled = false;
     mesh.castShadow = true;
-    scene.add(mesh);
+    scene.add(cat(mesh, 'niesione ładunki'));
     out.set(index, mesh);
   });
   // grabarz niesie ciało owinięte w płótno (znacznik poza listą surowców)
@@ -149,7 +150,7 @@ export function createLoads(max: number, scene: THREE.Scene): Map<number, THREE.
   shroud.translate(0.1, 0.5, 0);
   const sm = new THREE.InstancedMesh(shroud, mat, max);
   sm.count = 0; sm.frustumCulled = false; sm.castShadow = true;
-  scene.add(sm);
+  scene.add(cat(sm, 'niesione ładunki'));
   out.set(RESOURCES.length, sm);
   return out;
 }
