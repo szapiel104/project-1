@@ -1892,6 +1892,7 @@ function showPerf(now: number): void {
   };
   for (const [k, v] of Object.entries(renderer.readTiming())) perf.last[`  ${k} ms`] = v;
   perf.last['jakość'] = renderer.quality;
+  perf.last['rozdzielczość'] = renderer.resolution;
   perf.last['wątek symulacji'] = simMode ? 'tak' : 'nie';
   fpsTag.textContent = `FPS ${perf.last.fps}`;
   fpsTag.dataset.low = String(Number(perf.last.fps) < 40);

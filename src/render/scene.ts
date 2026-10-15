@@ -1146,12 +1146,9 @@ export class GameRenderer {
       this.scene.traverse((ob) => { const mt = (ob as THREE.Mesh).material; for (const m of Array.isArray(mt) ? mt : mt ? [mt] : []) m.needsUpdate = true; });
     }
     this.shadowSize(o.shadows);
-    const ratio = Math.min(window.devicePixelRatio, o.scale);
-    if (this.renderer.getPixelRatio() !== ratio) {
-      this.renderer.setPixelRatio(ratio);
-      this.composer.setPixelRatio(ratio);
-      this.resize();
-    }
+    this.ratioMax = Math.min(window.devicePixelRatio, o.scale);
+    this.ratioDyn = 1;
+    this.applyRatio();
     this.alwaysDay = !o.dayNight;
     this.cam.speed = o.camSpeed;
     this.cam.edgeScroll = o.edgeScroll;
@@ -1621,7 +1618,9 @@ export class GameRenderer {
     const tg = performance.now();
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
     this.composer.render();
-    this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + performance.now() - tg;
+    const gpu = performance.now() - tg;
+    this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;
+    this.dynamicResolution(gpu);
     this.timingFrames++;
   }
   /** Płomienie: pochodnie przy budynkach (zapalone), ogniska w obozowiskach i karczmach, pożary uszkodzonych budynków */
@@ -2822,6 +2821,35 @@ export class GameRenderer {
   private shadowFrame = 0;
   private sunWas = new THREE.Vector3();
   private camWas = new THREE.Vector3();
+  /** Rozdzielczość z ustawień i bieżący mnożnik dynamicznej rozdzielczości (0,55–1) */
+  private ratioMax = 1;
+  private ratioDyn = 1;
+  private gpuAvg = 0;
+  private gpuFrames = 0;
+  /** Bieżąca rozdzielczość obrazu (do okna wydajności) */
+  get resolution(): string { return `${Math.round(this.ratioDyn * 100)}% z ${this.ratioMax}×`; }
+  private applyRatio(): void {
+    const ratio = Math.max(0.5, Math.round(this.ratioMax * this.ratioDyn * 20) / 20);
+    if (Math.abs(this.renderer.getPixelRatio() - ratio) < 0.01) return;
+    this.renderer.setPixelRatio(ratio);
+    this.composer.setPixelRatio(ratio);
+    this.resize();
+  }
+  /**
+   * Dynamiczna rozdzielczość: gdy karta graficzna nie wyrabia (średnio > 20 ms na klatkę), obraz robi się trochę mniejszy,
+   * a gdy jest zapas (< 11 ms), wraca do rozdzielczości z ustawień. Zmiana co ok. sekundę, małymi krokami.
+   */
+  private dynamicResolution(ms: number): void {
+    if (this.calm) return;
+    this.gpuAvg += ms; this.gpuFrames++;
+    if (this.gpuFrames < 45) return;
+    const avg = this.gpuAvg / this.gpuFrames;
+    this.gpuAvg = 0; this.gpuFrames = 0;
+    const before = this.ratioDyn;
+    if (avg > 20) this.ratioDyn = Math.max(0.55, this.ratioDyn - (avg > 30 ? 0.15 : 0.08));
+    else if (avg < 11) this.ratioDyn = Math.min(1, this.ratioDyn + 0.05);
+    if (this.ratioDyn !== before) this.applyRatio();
+  }
   private shadowSize(n: number): void {
     if (n <= 0 || this.sun.shadow.mapSize.x === n) return;
     this.sun.shadow.mapSize.setScalar(n);
