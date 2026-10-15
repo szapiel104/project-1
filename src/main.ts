@@ -818,7 +818,9 @@ function recruitInfo(): RecruitUnit[] {
   return UNITS.filter((def) => !def.guard).map((def) => {
     const have = p.res[resIndex(def.weapon)]!;
     const cost = def.cost.gold ?? 0;
-    return { id: def.id, name: t(def.name), weapon: def.weapon, have, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, max: Math.max(0, Math.min(have, cost ? Math.floor(gold / cost) : 999, idle)) };
+    // ile sztuk broni (albo drewna na taran) idzie na jednego
+    const need = def.cost[def.weapon] ?? 1;
+    return { id: def.id, name: t(def.name), weapon: def.weapon, need, have, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, max: Math.max(0, Math.min(Math.floor(have / need), cost ? Math.floor(gold / cost) : 999, idle)) };
   });
 }
 

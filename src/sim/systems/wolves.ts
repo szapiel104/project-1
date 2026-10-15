@@ -116,7 +116,7 @@ export function wolfSystem(g: GameState): void {
         // poluje na najbliższego człowieka na całej mapie, do którego da się dojść (drwale, rybacy, ci za murem)
         const cands: { d: number; t: number }[] = [];
         for (const u of g.units) if (!(u.phase === Phase.Sleeping && u.home)) cands.push({ d: (u.px - w.px) ** 2 + (u.py - w.py) ** 2, t: (u.py >> 8) * width + (u.px >> 8) });
-        for (const v of g.soldiers) if (!high(g, v)) cands.push({ d: (v.px - w.px) ** 2 + (v.py - w.py) ** 2, t: (v.py >> 8) * width + (v.px >> 8) });
+        for (const v of g.soldiers) if (!high(g, v) && !UNITS[v.kind]!.ram) cands.push({ d: (v.px - w.px) ** 2 + (v.py - w.py) ** 2, t: (v.py >> 8) * width + (v.px >> 8) });
         cands.sort((a, b) => a.d - b.d);
         const near = (t: number) => (x: number): boolean => Math.abs((x % width) - (t % width)) <= 1 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 1;
         for (const c of cands.slice(0, 3)) { const p = findPath(g, here, near(c.t), 3000, WOLF); if (p && p.length) { w.path = p; w.gnaw = 0; break; } }

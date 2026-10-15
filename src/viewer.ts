@@ -9,6 +9,8 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { BUILDINGS } from './data/buildings';
 import { t } from './i18n';
 import { buildingModel, setNight } from './render/buildings';
+import { partsGeometry } from './render/gear';
+import RAM_MODEL from './render/models/ram.json';
 import { clutterModel } from './render/clutter';
 import { crowGeometry, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
 import { YARD_KEYS, yardModel } from './render/family';
@@ -79,6 +81,21 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['wolf', 'Wilk', () => ({ obj: wolf() })],
     ['crow', 'Kruk', () => ({ obj: mesh(crowGeometry()) })],
   ]],
+  ['Machiny', [
+    ['ram', 'Taran', () => {
+      const g = new THREE.Group();
+      const mats = ['wood', 'woodDark', 'sack', 'iron'];
+      const col = { wood: 0x8a6440, woodDark: 0x5e4329, sack: 0xb39a72, iron: 0x6a6e76 };
+      const mm = [
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, map: pattern('planks'), normalMap: normal('planks') }),
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks'), normalMap: normal('planks') }),
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('burlap'), normalMap: normal('burlap') }),
+        new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.6 }),
+      ];
+      for (const grp of ['body', 'beam']) g.add(new THREE.Mesh(partsGeometry(RAM_MODEL as unknown as { q: number } & Record<string, unknown>, grp, mats, col), mm));
+      return { obj: g };
+    }],
+  ] as [string, string, Make][]],
   ['Podwórko', YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', 'pranie: '), () => ({ obj: yardModel(k) })] as [string, string, Make])],
   ['Graty', (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: mesh(clutterModel(k), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
 ];

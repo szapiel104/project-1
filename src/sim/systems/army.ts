@@ -515,6 +515,8 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
     else if (ranged && fdef.shield) dmg = dmg / 2;
   }
   if (!ranged && def.charge && (s.run ?? 0) >= CHARGE_RUN) dmg = (dmg * def.charge) / 100;
+  // taran pod daszkiem ze skór: strzały ledwo go drasną, toporem i włócznią rąbie się go powoli
+  if (fdef.ram) dmg = ranged ? dmg / 6 : dmg / 2;
   return Math.max(1, Math.round(dmg / 100));
 }
 
@@ -608,7 +610,7 @@ export function armySystem(g: GameState): void {
     const stance = s.stance ?? 0;
     if (stance && s.goal < 0 && !s.target && !s.path.length && (s.hold ?? -1) < 0) s.hold = tileOf(g, s);
     // ciężko ranny w walce cofa się za szyk (nie w postawie „stój”, nie z wieży, nie strażnik miejski)
-    if (!s.wounded && s.target && !def.guard && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) retreat(g, s, byId);
+    if (!s.wounded && s.target && !def.guard && !def.ram && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) retreat(g, s, byId);
     // jak daleko od pilnowanego pola wolno mu odejść za wrogiem
     const leash = stance === 1 ? 6 : stance === 2 ? 0 : Infinity;
     const tooFar = (t: number): boolean => {
@@ -616,6 +618,10 @@ export function armySystem(g: GameState): void {
       const hx = s.hold! % W, hy = (s.hold! - hx) / W, x = t % W, y = (t - x) / W;
       return Math.max(Math.abs(hx - x), Math.abs(hy - y)) > leash + (range || 1);
     };
+    // taran: nie walczy z ludźmi, tylko podjeżdża pod najbliższą wrogą bramę, mur albo zamek i bije w nie belką
+    if (def.ram) {
+      if ((s.goal < 0 || s.amove) && siege(g, s, def, taken)) continue;
+    } else
     // walka: tylko gdy nie maszeruje na rozkaz (albo maszeruje z rozkazem „atak w marszu”)
     if (!s.wounded && (s.goal < 0 || s.amove)) {
       // rozkaz ataku na budynek ma pierwszeństwo przed szukaniem żołnierzy
@@ -791,7 +797,7 @@ export function armySystem(g: GameState): void {
   }
   // polegli zostają na polu jako ciała, aż zabierze je grabarz
   if (g.soldiers.some((s) => s.hp <= 0)) {
-    for (const s of g.soldiers) if (s.hp <= 0) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false });
+    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false }); // rozbity taran nie zostawia ciała
     g.soldiers = g.soldiers.filter((s) => s.hp > 0);
   }
   lookout(g);
@@ -855,7 +861,9 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
     let best = def.sight + 1;
     for (const o of g.buildings) {
       if (team(g, o.owner) === team(g, s.owner) || BUILDINGS[o.type]!.road || o.ruined) continue;
-      const d = rectGap(g, here, o);
+      // taran woli umocnienia: brama, mur, wieża i zamek są dla niego „bliżej” o 5 pól
+      const od = BUILDINGS[o.type]!;
+      const d = rectGap(g, here, o) - (def.ram && (od.wall || od.gate || o.type === KEEP) ? 5 : 0);
       if (d < best) { best = d; b = o; }
     }
     s.target = b ? b.id : 0;
@@ -1018,7 +1026,7 @@ function lookout(g: GameState): void {
     if (u.phase === Phase.Sleeping || u.phase === Phase.Resting) continue;
     let best: Soldier | undefined, bd = R + 1;
     for (const s of g.soldiers) {
-      if (s.hp <= 0 || s.up || team(g, s.owner) === team(g, u.owner)) continue;
+      if (s.hp <= 0 || s.up || team(g, s.owner) === team(g, u.owner) || UNITS[s.kind]!.ram) continue;
       const d = Math.max(Math.abs(s.px - u.px), Math.abs(s.py - u.py));
       if (d < bd) { bd = d; best = s; }
     }

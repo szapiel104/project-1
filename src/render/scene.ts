@@ -25,7 +25,8 @@ import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
 import { peasantWeapon } from '../sim/systems/army';
-import { peasantGear, toolMaterials } from './gear';
+import { partsGeometry, peasantGear, toolMaterials } from './gear';
+import RAM_MODEL from './models/ram.json';
 import { clockAt, rainAt } from '../sim/clock';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
@@ -416,6 +417,8 @@ export class GameRenderer {
     this.handFlameN++;
   }
   private handTorches: THREE.InstancedMesh;
+  private ramBodies!: THREE.InstancedMesh;
+  private ramBeams!: THREE.InstancedMesh;
   /** wiadro w prawej ręce gaszącego (puste i z wodą) */
   private buckets!: THREE.InstancedMesh;
   private fireFx!: FireCrewFx;
@@ -716,6 +719,22 @@ export class GameRenderer {
       m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(m);
       return m;
     };
+    // taran z Blendera (tools/models/ram.py): wóz z daszkiem i osobno belka, która wysuwa się przy uderzeniu
+    const RAM_MATS = ['wood', 'woodDark', 'sack', 'iron'];
+    const RAM_COL = { wood: 0x8a6440, woodDark: 0x5e4329, sack: 0xb39a72, iron: 0x6a6e76 };
+    const ramMats = [
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, map: pattern('planks'), normalMap: normal('planks') }),
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks'), normalMap: normal('planks') }),
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('burlap'), normalMap: normal('burlap') }),
+      new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.6 }),
+    ];
+    const ramMesh = (grp: string): THREE.InstancedMesh => {
+      const m = new THREE.InstancedMesh(partsGeometry(RAM_MODEL as unknown as { q: number } & Record<string, unknown>, grp, RAM_MATS, RAM_COL), ramMats, 256);
+      m.count = 0; m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true; this.scene.add(m);
+      return m;
+    };
+    this.ramBodies = ramMesh('body');
+    this.ramBeams = ramMesh('beam');
     this.picks = gearTool(gear.pick);
     this.clubs = gearTool(gear.club);
     this.backPicks = gearTool(gear.backPick);
@@ -3055,7 +3074,7 @@ export class GameRenderer {
   private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
     const { width, height } = g.map;
     const t = this.tmp;
-    let n = 0, rings = 0, dots = 0, torches = 0;
+    let n = 0, rings = 0, dots = 0, torches = 0, rams = 0;
     // kliknięta twierdza: pokazujemy, gdzie są jej strażnicy
     const selB = this.selectedId ? g.buildings.find((b) => b.id === this.selectedId) : undefined;
     const guardOwner = selB && selB.type === 0 ? selB.owner : -99;
@@ -3249,7 +3268,19 @@ export class GameRenderer {
       const legs = ia?.legs ? ia.legs : swing;
       this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
       this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
-      this.spearmen.set(n, !ranged && !udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      if (udef.ram && rams < 256) {
+        // wóz jedzie przodem (głowicą) w stronę marszu; belka cofa się, gdy taran szykuje cios, i wybija się do przodu przy uderzeniu
+        m.makeRotationY(heading).setPosition(px - width / 2, y, pz - height / 2);
+        this.ramBodies.setMatrixAt(rams, m);
+        const k = s.cd / udef.cooldown;
+        const hitting = !walking && s.target && s.cd > 0;
+        const off = !hitting ? 0 : k > 0.85 ? 0.13 * ((k - 0.85) / 0.15) : -0.12 * (1 - k / 0.85);
+        this.armM.makeTranslation(0, 0, off).premultiply(m);
+        this.ramBeams.setMatrixAt(rams, this.armM);
+        if (hitting && k > 0.97 && !this.calm) this.sfxAt('plank', px - width / 2, pz - height / 2, `ram${s.id}`, 0.5, 1.2);
+        rams++;
+      }
       let pos = this.soldierPos.get(s.id);
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
       // kółko i ramka zaznaczenia idą za figurą (z dociągnięciem do grupy), nie za polem z symulacji
@@ -3307,6 +3338,8 @@ export class GameRenderer {
         n++;
       }
     }
+    this.ramBodies.count = rams; this.ramBeams.count = rams;
+    this.ramBodies.instanceMatrix.needsUpdate = true; this.ramBeams.instanceMatrix.needsUpdate = true;
     this.spearmen.finish(n);
     this.archers.finish(n);
     this.guardsFig.finish(n);

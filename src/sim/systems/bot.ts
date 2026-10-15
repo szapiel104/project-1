@@ -88,7 +88,10 @@ export function botSystem(g: GameState): void {
       const mine = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id);
       const archers = mine.filter((s) => UNITS[s.kind]!.range).length;
       const wantArcher = archers * 3 < mine.length + 1;
-      if (!(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
+      // przy większym wojsku jeden taran na bramy i mury wroga (gdy starcza drewna i złota na resztę)
+      const rams = mine.filter((s) => UNITS[s.kind]!.ram).length;
+      const wantRam = rams === 0 && mine.length >= 6 && p.res[resIndex('wood')]! >= 90 && p.res[resIndex('gold')]! >= 60;
+      if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
       // łucznicy wchodzą na wolne wieże (po dwóch), reszta zostaje do ataku
       for (const t of g.buildings) {
         if (t.owner !== p.id || t.build || BUILDINGS[t.type]!.id !== 'watchtower') continue;

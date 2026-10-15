@@ -297,3 +297,25 @@ describe('krata zamku', () => {
     expect(g.gates[gt]).toBe(1);
   });
 });
+
+describe('taran', () => {
+  it('taran podjeżdża pod wrogi zamek i bije w niego, a strzały prawie go nie ranią', async () => {
+    const { unitIndex, UNITS } = await import('../src/data/units');
+    const { hitDamage } = await import('../src/sim/systems/army');
+    const g = createGame(5, '1v1', 0);
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings.find((b) => b.type === 0 && b.owner === 1)!;
+    const R = unitIndex('ram');
+    const ram = { id: g.nextId++, owner: 0, kind: R, px: (keep.x + 5) * 256 + 128, py: (keep.y + 15) * 256 + 128, path: [], hp: UNITS[R]!.hp, goal: -1, wait: 0, target: 0, cd: 0 };
+    g.soldiers.push(ram);
+    // obrońcy z dala, żeby nie rozbili tarana w teście
+    g.soldiers = g.soldiers.filter((s) => s === ram || s.owner === 0);
+    const hp0 = keep.hp;
+    for (let i = 0; i < 1500 && keep.hp === hp0; i++) step(g, []);
+    expect(keep.hp).toBeLessThan(hp0);
+    const archer = { id: 1, owner: 1, kind: unitIndex('archer'), px: ram.px + 512, py: ram.py, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0 };
+    const spear = { ...archer, kind: unitIndex('spearman') };
+    expect(hitDamage(g, archer, ram, new Map(), true)).toBeLessThan(3);
+    expect(hitDamage(g, spear, ram, new Map(), false)).toBeLessThan(UNITS[unitIndex('spearman')]!.attack);
+  });
+});

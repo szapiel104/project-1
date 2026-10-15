@@ -82,7 +82,7 @@ export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDe
   watch?: { have: number; want: number; training: number; note?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
   site?: { pct: number; loads: number; delivered: number; carrying: number; fetching: number; builders: number; state: string } }
-export interface RecruitUnit { id: string; name: string; weapon: string; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean }
+export interface RecruitUnit { id: string; name: string; weapon: string; need?: number; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -447,7 +447,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   rallyAll.addEventListener('click', () => events.onRally(infoId, null, false));
   rallyOff.addEventListener('click', () => events.onRally(infoId, null, true));
   rallyRow.append(rallyAll, rallyOff, el('p', 'hint', 'Rekrut idzie z obozowiska do koszar, wychodzi w zbroi i staje na fladze (bez flagi — przed koszarami).'));
-  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT };
+  // taran: wóz z daszkiem i belką z kutą głowicą
+  const RAM_PORTRAIT = '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M5 15l11-7 11 7z" fill="#8a6a44" stroke="#2a1c10"/><rect x="6" y="15" width="20" height="2" fill="#5e4329"/><path d="M8 17v7M24 17v7" stroke="#5e4329" stroke-width="2"/><rect x="3" y="18" width="24" height="3" rx="1.5" fill="#8a5a2b" stroke="#2a1c10"/><path d="M27 17.5l3 1.5v1.5l-3 1.5z" fill="#6a6e76" stroke="#2a1c10"/><circle cx="10" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/><circle cx="22" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/></svg>';
+  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT };
   const drawRecruit = (): void => {
     for (const r of lastRecruit) {
       let c = unitCards.get(r.id);
@@ -478,7 +480,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
       setText(c.stats, `${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · zasięg ${r.range}` : ''}`);
       const row = (icon: string, have: number, need: number): string => `<span class="need${have < need ? ' short' : ''}"><svg viewBox="0 0 20 20" width="22" height="22">${ICONS[icon] ?? ''}</svg><strong>${need}</strong><em>(${have})</em></span>`;
-      c.needs.innerHTML = row(r.weapon, r.have, 1) + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
+      c.needs.innerHTML = row(r.weapon, r.have, r.need ?? 1) + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
       c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;
       setText(c.bAll, `+ wszyscy (${r.max})`);
       c.card.classList.toggle('cant', r.max < 1);

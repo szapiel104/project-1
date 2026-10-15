@@ -55,6 +55,47 @@ export function toolMaterials(): THREE.Material[] {
   return mats;
 }
 
+/**
+ * Siatka z Blendera do instancjonowania (wiele sztuk jednym wywołaniem): grupy w kolejności `mats`
+ * (np. drewno, ciemne drewno, płótno, żelazo) — do każdej trzeba podać materiał w tej samej kolejności.
+ */
+export function partsGeometry(model: { q: number } & Record<string, unknown>, group: string, mats: string[], colors: Record<string, number>): THREE.BufferGeometry {
+  const parts = (model[group] as ToolPart[] | undefined) ?? [];
+  const geos = mats.map((m) => {
+    const p = parts.find((x) => x.mat === m);
+    if (!p) {
+      const g = new THREE.BufferGeometry();
+      for (const [a, n] of [['position', 3], ['color', 3], ['uv', 2], ['normal', 3]] as const) g.setAttribute(a, new THREE.BufferAttribute(new Float32Array(3 * n), n));
+      return g;
+    }
+    const raw = b64(p.pos), p16 = new Int16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2), ao = b64(p.ao);
+    const n = p16.length / 3, P = new Float32Array(n * 3), C = new Float32Array(n * 3), UV = new Float32Array(n * 2);
+    for (let i = 0; i < p16.length; i++) P[i] = p16[i]! / model.q;
+    const c = new THREE.Color(colors[m] ?? 0x888888);
+    for (let i = 0; i < n; i++) { const k = ao[i]! / 255; C[i * 3] = c.r * k; C[i * 3 + 1] = c.g * k; C[i * 3 + 2] = c.b * k; }
+    // tekstura rzutowana z płaszczyzny ściany trójkąta (jak w budynkach z Blendera)
+    const e1 = new THREE.Vector3(), e2 = new THREE.Vector3(), nr = new THREE.Vector3();
+    for (let t = 0; t < n; t += 3) {
+      e1.set(P[t * 3 + 3]! - P[t * 3]!, P[t * 3 + 4]! - P[t * 3 + 1]!, P[t * 3 + 5]! - P[t * 3 + 2]!);
+      e2.set(P[t * 3 + 6]! - P[t * 3]!, P[t * 3 + 7]! - P[t * 3 + 1]!, P[t * 3 + 8]! - P[t * 3 + 2]!);
+      nr.crossVectors(e1, e2);
+      const ax = Math.abs(nr.x), ay = Math.abs(nr.y), az = Math.abs(nr.z);
+      for (let v = t; v < t + 3; v++) {
+        const x = P[v * 3]!, y = P[v * 3 + 1]!, z = P[v * 3 + 2]!;
+        const [u, w] = ay >= ax && ay >= az ? [x, z] : ax >= az ? [z, y] : [x, y];
+        UV[v * 2] = u * 3; UV[v * 2 + 1] = w * 3;
+      }
+    }
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.BufferAttribute(P, 3));
+    g.setAttribute('color', new THREE.BufferAttribute(C, 3));
+    g.setAttribute('uv', new THREE.BufferAttribute(UV, 2));
+    g.computeVertexNormals();
+    return g;
+  });
+  return mergeGeometries(geos, true)!;
+}
+
 export function peasantGear(): { pick: THREE.BufferGeometry; club: THREE.BufferGeometry; backPick: THREE.BufferGeometry; beltClub: THREE.BufferGeometry } {
   return { pick: toolGeometry('pick'), club: toolGeometry('club'), backPick: toolGeometry('backPick'), beltClub: toolGeometry('beltClub') };
 }

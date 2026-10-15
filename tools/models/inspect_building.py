@@ -19,9 +19,11 @@ COL = {'castle': 0xc9bb9a, 'castleDark': 0xa89a7a, 'slate': 0x6a6d74, 'woodDark'
        'plaster': 0xf0e4c4, 'thatch': 0xd1ad4c, 'thatchDark': 0xa9862f, 'roadStone': 0xf4f0e8, 'hay': 0xe0c466, 'ember': 0xff8a2a, 'bread': 0xa8652c, 'apple': 0xd0281f, 'fish': 0x9cc3d6, 'white': 0xf1ead8, 'sack': 0xbfa77c, 'ore': 0xb0623a, 'crust': 0xe2b06a, 'cutDark': 0xc9c1ae, 'rope': 0xb89a64, 'bark': 0x7a5a3a, 'rockDark': 0x8d877a, 'basket': 0xb08a4e, 'soil': 0x86633d}
 q = d['q']
 objs = {}
+# inne grupy (krata zamku, taran: wóz i belka) pokazujemy razem z 'base'
+EXTRA = [k for k, v in d.items() if isinstance(v, list) and v and isinstance(v[0], dict) and 'pos' in v[0] and k not in ('base', 'shell', 'interior', 'floor', 'ceiling', 'leafL', 'leafR')]
 for g in ('base', 'shell', 'interior', 'floor', 'ceiling', 'leafL', 'leafR'):
     objs[g] = []
-    for m in d.get(g, []):
+    for m in d.get(g, []) + ([x for k in EXTRA for x in d[k]] if g == 'base' else []):
         raw = base64.b64decode(m['pos']); ao = base64.b64decode(m['ao'])
         n = len(raw) // 6
         P = [struct.unpack_from('<3h', raw, i * 6) for i in range(n)]

@@ -25,6 +25,8 @@ export interface UnitDef {
   charge?: number;
   /** Straż miejska: nie szkoli się jej w koszarach i nie słucha rozkazów, sama pilnuje osady */
   guard?: boolean;
+  /** Taran: bije tylko w budynki (bramy, mury, zamek), na ludzi nie zwraca uwagi; strzały prawie go nie ranią */
+  ram?: boolean;
 }
 
 export const UNITS: readonly UnitDef[] = [
@@ -33,6 +35,8 @@ export const UNITS: readonly UnitDef[] = [
   { id: 'archer', name: 'u.archer', cost: { bow: 1, gold: 12 }, hp: 40, speed: 105, attack: 7, cooldown: 24, sight: 8, range: 6, weapon: 'bow' },
   // Strażnik miejski z zamku: włócznia, zbroja, nocą pochodnia; obchodzi osadę i stoi na posterunkach (na końcu listy dla starych zapisów)
   { id: 'guard', name: 'u.guard', cost: {}, hp: 70, speed: 100, attack: 8, cooldown: 12, sight: 7, weapon: 'spear', shield: true, guard: true },
+  // Taran: wóz z daszkiem i belką z kutą głowicą, pcha go chłop z koszar; wolny, ale rozbija bramy i mury (na końcu listy dla starych zapisów)
+  { id: 'ram', name: 'u.ram', cost: { wood: 40, gold: 30 }, hp: 320, speed: 45, attack: 60, cooldown: 40, sight: 12, weapon: 'wood', ram: true },
 ];
 
 /** Indeks strażnika miejskiego w UNITS */
