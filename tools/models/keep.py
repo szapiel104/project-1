@@ -1,6 +1,6 @@
 """Zamek gracza (11×11 pól) według wspólnego planu src/data/keep-layout.json.
 
-Mury kurtynowe z blankami i basztami, brama z przejazdem, kratą i mostem, donżon nad tylnym murem,
+Mury kurtynowe z blankami i basztami, brama z przejazdem, kratą i kamiennym zjazdem, donżon nad tylnym murem,
 a w środku dziedziniec ze studnią i pomieszczenia: sala tronowa, kuchnia, komnata pana, koszary, lochy z celami.
 Ściany pomieszczeń stoją dokładnie na krawędziach pól z planu — tam, gdzie zatrzymuje się symulacja i spacer.
 Dachy (grupa 'shell') znikają przy podglądzie wnętrza; sufity ('ceiling') widać tylko z wnętrza podczas spaceru.
@@ -315,7 +315,7 @@ b.box('base', 'gold', 0.07, 0.12, 0.07, 0, 5.17, DZ)
 b.box('base', 'woodDark', 0.04, 0.9, 0.04, 0, 5.2, DZ)
 b.box('base', 'flag', 0.7, 0.4, 0.02, 0.37, 5.65, DZ)
 
-# ---------------- brama: dwie wieże, przejazd, krata, wrota, most zwodzony ----------------
+# ---------------- brama: dwie wieże, przejazd ze sklepieniem, krata, wrota, kamienny zjazd ----------------
 GZ = H - 0.5
 # wieże bramy: w dole pełne, wyżej izby z wejściem z chodnika muru (od strony schodów) i strzelnicami na przedpole
 for s in (-1, 1):
@@ -325,10 +325,9 @@ for s in (-1, 1):
     square_room(x, GZ + 0.2, 0.45, 0.7, WALK + ROOM_UP, doors=[(s, 0)], windows=[(0, 1), (0, -1)])
     b.box('base', 'flag', 0.32, 0.6, 0.02, x, 0.85, GZ + 0.915)
     torch('interior', x - s * (0.45 - RW - 0.03), WALK + 0.36, GZ + 0.2)  # na ścianie naprzeciw drzwi
-b.box('base', 'castle', 1.0, WALK + ROOM_UP - 0.15 - (G + 0.95), 1.36, cx(gx), G + 0.95, GZ + 0.2)
+b.box('base', 'castle', 1.0, WALK + ROOM_UP - 0.15 - (G + 0.95), 1.36, cx(gx), G + 0.95, GZ + 0.2, bottom=True)   # sklepienie przejazdu: spód widać z dołu
 b.box('base', 'castleDark', 1.0, 0.06, 1.44, cx(gx), WALK + ROOM_UP - 0.15, GZ + 0.2)
 b.merlons_line('base', 'castle', cx(gx) - 0.45, GZ + 0.84, cx(gx) + 0.45, GZ + 0.84, WALK + ROOM_UP - 0.09, step=0.22, w=0.12, h=0.16, t=0.08)
-b.box('base', 'dark', 1.0, 0.004, 1.4, cx(gx), G + 0.946, GZ + 0.2)
 for k in range(9):  # łuk z ciosów od frontu
     a = math.pi * (k + 0.5) / 9
     b.box('base', 'castleDark', 0.13, 0.09, 0.05, cx(gx) - math.cos(a) * 0.44, G + 0.78 + math.sin(a) * 0.16, GZ + 0.925, -a + math.pi / 2)
@@ -344,13 +343,9 @@ for y in (0.2, 0.45, 0.7, 0.9):
 b.box('base', 'iron', 0.96, 0.02, 0.02, cx(gx), G + 0.93, PORT_Z)
 for s in (-1, 1):  # wrota otwarte na boki przejazdu
     b.box('base', 'woodDark', 0.46, 0.85, 0.05, cx(gx) + s * 0.44, G, GZ - 0.2, s * math.pi / 2)
+# zjazd z przejazdu na przedpole: kamienna rampa (bez drewnianego mostu)
 ramp = math.atan2(G, 0.9)
-b.box('base', 'roadWood', 0.92, 0.05, math.hypot(0.9, G), cx(gx), G - 0.05, GZ + 0.9, tilt=ramp, bottom=True)
-for k in range(5):
-    f = (k + 0.5) / 5
-    b.box('base', 'woodDark', 0.96, 0.02, 0.035, cx(gx), G - G * f, GZ + 0.9 + 0.9 * f)
-for s in (-1, 1):
-    b.box('base', 'iron', 0.016, math.hypot(0.9, 1.1), 0.016, cx(gx) + s * 0.43, 0.04, GZ + 1.8, tilt=-math.atan2(0.9, 1.1))
+b.box('base', 'roadStone', 0.92, 0.05, math.hypot(0.9, G), cx(gx), G - 0.05, GZ + 0.9, tilt=ramp, bottom=True)
 
 # ---------------- pomieszczenia: ściany na krawędziach pól ----------------
 ROOM_H = {'T': 1.3, 'K': 1.0, 'C': 1.05, 'B': 0.95, 'L': 0.9, '1': 0.9, '2': 0.9, '3': 0.9, '4': 0.9}
