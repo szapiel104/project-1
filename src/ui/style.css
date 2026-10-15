@@ -848,10 +848,13 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 /* pasek pozycji na dole */
 .menu-bar { grid-row: 3; width: min(1500px, 100vw); display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: clamp(10px, 2vw, 34px);
   padding: 16px clamp(16px, 3vw, 48px) 10px; position: relative; }
-.menu-bar::before, .menu-bar::after { content: ''; position: absolute; left: 6%; right: 6%; height: 1px; pointer-events: none;
-  background: linear-gradient(90deg, transparent, #9a7a2a 18%, #e9c766 50%, #9a7a2a 82%, transparent); }
-.menu-bar::before { top: 50%; opacity: .55; }
-.menu-bar::after { top: calc(50% + 4px); opacity: .25; }
+/* złote linie ozdobne tylko po bokach, na wysokości środka przycisków: nie przechodzą pod główną tarczą
+   (jej ścięte rogi są przezroczyste i linie prześwitywały, a druga linia wypadała tuż pod przyciskiem) */
+.bar-side::before, .bar-side::after { content: ''; position: absolute; height: 1px; pointer-events: none; z-index: -1; }
+.bar-side::before { top: calc(50% - 2px); opacity: .55; }
+.bar-side::after { top: calc(50% + 2px); opacity: .25; }
+.bar-side.left::before, .bar-side.left::after { left: 0; right: 0; background: linear-gradient(90deg, transparent, #9a7a2a 30%, #e9c766); }
+.bar-side.right::before, .bar-side.right::after { left: 0; right: 0; background: linear-gradient(90deg, #e9c766, #9a7a2a 70%, transparent); }
 .bar-side { display: flex; gap: clamp(4px, 1vw, 18px); position: relative; z-index: 1; }
 .bar-side.left { justify-content: flex-end; }
 .bar-side.right { justify-content: flex-start; }
