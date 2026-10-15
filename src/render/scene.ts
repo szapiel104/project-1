@@ -147,6 +147,8 @@ export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean
 const MAX_UNITS = 2048;
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
+/** Miejsca w zamku z modelu (tools/models/keep.py, układ modelu: środek działki, przód z bramą = +z) */
+const CASTLE = { floorY: 0.15, walkY: 1.71, throneZ: -4.16, seatY: 0.31 };
 /** Wierzch nawierzchni drogi nad ziemią (0 brak, 1 ścieżka, 2 bruk, 3 dyle: bale leżą na 0,05 i mają ok. 0,05 grubości) */
 const ROAD_TOP = [0, 0.025, 0.045, 0.1];
 const tmpColor = new THREE.Color();
@@ -2511,6 +2513,7 @@ export class GameRenderer {
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
       if (def.id === 'keep') {
         this.keepFloors.set(b.id, [b.x + KEEP_HALF, b.y + KEEP_HALF, ground]);
+        this.keepOwner.set((b.x + KEEP_HALF) * 1000 + (b.y + KEEP_HALF), b.owner);
         // plac przed bramą: bez krzaków i kamyków, ziemia wydeptana najmocniej przy moście
         const gx = b.x + KEEP_GATE[0];
         for (let d = 0; d < FORECOURT.depth; d++) for (let o = -FORECOURT.half; o <= FORECOURT.half; o++) {
@@ -3178,6 +3181,28 @@ export class GameRenderer {
     this.waveAge += 1 / 60;
     this.wave.visible = this.waveAge < 0.6;
     if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
+    // wartownicy na murach zamków (ozdoba, poza symulacją): chodzą po koronie bocznych murów, nocą z pochodnią
+    for (const [, [kx, ky, base]] of this.keepFloors) {
+      for (const side of [-1, 1]) {
+        if (n >= MAX_UNITS) break;
+        const per = 46, ph = ((this.time + side * 11 + kx) % per + per) % per / per;
+        const tri = ph < 0.5 ? ph * 2 : 2 - ph * 2;           // tam i z powrotem wzdłuż muru
+        const lz = -4 + tri * 8, lx = side * 5;
+        const heading = ph < 0.5 ? 0 : Math.PI;
+        const lt = this.lifeObj;
+        lt.position.set(kx + lx - width / 2, base + CASTLE.walkY, ky + lz - height / 2);
+        lt.rotation.set(0, heading, 0);
+        lt.scale.setScalar(1.08 * FIG);
+        lt.updateMatrix();
+        const legs = Math.sin(this.time * 5.5 + side) * 0.5;
+        const teamC = TEAM_COLORS[g.players[this.keepOwner.get(kx * 1000 + ky) ?? 0]?.team ?? 0] ?? 0x888888;
+        this.guardsFig.set(n, lt.matrix, legs, false, teamC, 900000 + side + Math.round(kx));
+        this.archers.set(n, ZERO, 0, false, teamC, 0);
+        this.spearmen.set(n, ZERO, 0, false, teamC, 0);
+        if (torchesOn && torches < 256) { this.soldierTorches.setMatrixAt(torches++, lt.matrix); this.pushHandFlame(lt.matrix, -0.17); }
+        n++;
+      }
+    }
     this.spearmen.finish(n);
     this.archers.finish(n);
     this.guardsFig.finish(n);
@@ -3238,6 +3263,95 @@ export class GameRenderer {
    */
   /** Zamki: środek działki (pola) i wysokość, na której stoi model — po dziedzińcu i salach chodzi się po posadzce */
   private keepFloors = new Map<number, [number, number, number]>();
+  /** Właściciel zamku (klucz: x * 1000 + y środka) — barwy domowników i wartowników */
+  private keepOwner = new Map<number, number>();
+  private lifeObj = new THREE.Object3D();
+  /**
+   * Domownicy zamku (ozdoba, poza symulacją): pan na tronie, który co jakiś czas przechadza się po sali, kucharz
+   * przy palenisku, dwoje służby noszącej jedzenie z kuchni do sali i dwóch więźniów w celach. Rysowani tą samą
+   * siatką co chłopi (dalsze miejsca w puli), więc nie kosztują osobnych wywołań rysowania.
+   */
+  private castleFolk(g: GameState, k0: number): number {
+    let k = k0;
+    const { width, height } = g.map;
+    const hour = clockAt(g.tick).hour, day = hour >= 6 && hour < 21.5;
+    const t = this.lifeObj, T = this.time;
+    const put = (kx: number, ky: number, base: number, x: number, y: number, z: number, yaw: number, swing: number, tunic: number, id: number, opt: { up?: boolean; work?: number; workL?: number; sit?: number; bow?: number } = {}): void => {
+      if (k >= MAX_UNITS) return;
+      t.position.set(kx + x - width / 2, base + y, ky + z - height / 2);
+      t.rotation.set(opt.bow ?? 0, yaw, 0, 'YXZ');
+      t.scale.setScalar(FIG);
+      t.updateMatrix();
+      this.figures.set(k, t.matrix, swing, !!opt.up, tunic, id, opt.work, opt.workL ?? -0.5, false, opt.sit);
+      for (const mesh of this.loads.values()) mesh.setMatrixAt(k, ZERO);
+      k++;
+    };
+    // droga po łamanej: położenie i kierunek dla ułamka f (0..1) całej trasy
+    const along = (pts: [number, number][], f: number): [number, number, number] => {
+      const seg: number[] = []; let L = 0;
+      for (let i = 1; i < pts.length; i++) { const d = Math.hypot(pts[i]![0] - pts[i - 1]![0], pts[i]![1] - pts[i - 1]![1]); seg.push(d); L += d; }
+      let r = Math.max(0, Math.min(1, f)) * L;
+      for (let i = 0; i < seg.length; i++) {
+        if (r <= seg[i]! || i === seg.length - 1) {
+          const a = pts[i]!, b = pts[i + 1]!, q = seg[i]! ? Math.min(1, r / seg[i]!) : 0;
+          return [a[0] + (b[0] - a[0]) * q, a[1] + (b[1] - a[1]) * q, Math.atan2(b[0] - a[0], b[1] - a[1])];
+        }
+        r -= seg[i]!;
+      }
+      return [pts[0]![0], pts[0]![1], 0];
+    };
+    for (const [, [kx, ky, base]] of this.keepFloors) {
+      const owner = this.keepOwner.get(kx * 1000 + ky) ?? 0;
+      const team = g.players[owner]?.team ?? 0;
+      const col = TEAM_COLORS[team] ?? 0x888888;
+      const foe = TEAM_COLORS[team === 0 ? 1 : 0] ?? 0x666666;
+      const seed = Math.round(kx * 7 + ky * 13);
+      const G = CASTLE.floorY;
+      // pan: za dnia na tronie; co minutę wstaje i obchodzi salę (ok. 15 s), nocą śpi w komnacie (niewidoczny)
+      if (day) {
+        const per = 60, ph = ((T + seed) % per) / per;
+        if (ph < 0.75) put(kx, ky, base, 0, CASTLE.seatY, CASTLE.throneZ + 0.05, 0, 0, col, 777000 + seed, { sit: -1.45, work: -0.3 + Math.sin(T * 0.7) * 0.08, workL: -0.3 });
+        else {
+          const f = (ph - 0.75) / 0.25;
+          const tour: [number, number][] = [[0, CASTLE.throneZ + 0.45], [0.9, -3.0], [0.6, -2.0], [-0.7, -2.0], [-0.9, -3.0], [0, CASTLE.throneZ + 0.45]];
+          const [x, z, yaw] = along(tour, f);
+          put(kx, ky, base, x, z < -3.5 ? G + 0.12 : G, z, yaw, Math.sin(T * 5) * 0.45, col, 777000 + seed);
+        }
+      }
+      // kucharz: przy palenisku miesza w kotle, co jakiś czas idzie do stołu kroić
+      if (day || hour >= 4.5) {
+        const per = 24, ph = ((T + seed * 3) % per) / per;
+        // stół stoi między paleniskiem a drzwiami: do niego obchodzi się bokiem
+        const hearth: [number, number] = [-3.5, -3.82], table: [number, number] = [-3.5, -2.95];
+        const round: [number, number][] = [hearth, [-2.95, -3.82], [-2.95, -2.95], table];
+        if (ph < 0.55) put(kx, ky, base, hearth[0], G, hearth[1], Math.PI, 0, 0xd9ceb0, 778000 + seed, { work: -1.1 + Math.sin(T * 4) * 0.35, workL: -0.9 });
+        else if (ph < 0.62 || ph > 0.93) {
+          const f = ph < 0.62 ? (ph - 0.55) / 0.07 : 1 - (ph - 0.93) / 0.07;
+          const [x, z, yaw] = along(round, f);
+          put(kx, ky, base, x, G, z, ph < 0.62 ? yaw : yaw + Math.PI, Math.sin(T * 6) * 0.45, 0xd9ceb0, 778000 + seed);
+        } else put(kx, ky, base, table[0], G, table[1], Math.PI, 0, 0xd9ceb0, 778000 + seed, { work: -0.95 + Math.max(0, Math.sin(T * 7)) * -0.5, workL: -0.8 });
+      }
+      // służba: z kuchni przez drzwi do sali i z powrotem; w stronę sali niesie jedzenie oburącz
+      if (day) {
+        const path: [number, number][] = [[-3.0, -2.95], [-2.62, -3.5], [-2.4, -4.05], [-1.6, -4.0], [-0.95, -3.35]];
+        for (let s2 = 0; s2 < 2; s2++) {
+          const per = 30, ph = ((T + seed + s2 * 15) % per) / per;
+          let x: number, z: number, yaw: number, up = false, sw = Math.sin(T * 5.5 + s2) * 0.5;
+          if (ph < 0.4) { [x, z, yaw] = along(path, ph / 0.4); up = true; }
+          else if (ph < 0.5) { [x, z] = path[path.length - 1]!; yaw = Math.PI / 2 + 0.6; sw = 0; up = ph < 0.46; }
+          else if (ph < 0.9) { [x, z, yaw] = along([...path].reverse(), (ph - 0.5) / 0.4); }
+          else { [x, z] = path[0]!; yaw = Math.PI; sw = 0; }
+          put(kx, ky, base, x + s2 * 0.18, G, z + s2 * 0.12, yaw, sw, s2 ? 0x8a7350 : 0x6a5a40, 779000 + seed + s2, { up });
+        }
+      }
+      // więźniowie w celach: siedzą na słomie ze spuszczoną głową, w barwach wroga
+      for (const [cz, id] of [[2.1, 780000], [4.1, 780001]] as const) {
+        const rest = Math.sin(T * 0.3 + cz) * 0.05;
+        put(kx, ky, base, -4.25, G + 0.02, cz, Math.PI / 2, 0, foe, id + seed, { sit: -1.45, bow: 0.35 + rest, work: -0.25, workL: -0.25 });
+      }
+    }
+    return k;
+  }
   /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */
   private standY(view: TerrainView, x: number, y: number): number {
     const k = this.keepAt(x, y);
@@ -3831,6 +3945,7 @@ export class GameRenderer {
       k++;
     }
     for (let i = sad; i < this.sadFaces.length; i++) this.sadFaces[i]!.visible = false;
+    k = this.castleFolk(g, k);
     this.figures.finish(k);
     this.rods.count = n;
     this.bedrolls.count = n;
