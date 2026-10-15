@@ -1103,11 +1103,8 @@ export class GameRenderer {
     this.plain.enabled = o.ao === 'off';
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
     this.sun.castShadow = o.shadows > 0;
-    if (o.shadows > 0 && this.sun.shadow.mapSize.x !== o.shadows) {
-      this.sun.shadow.mapSize.setScalar(o.shadows);
-      this.sun.shadow.map?.dispose();
-      (this.sun.shadow as { map: unknown }).map = null;
-    }
+    this.shadowMax = o.shadows;
+    this.shadowSize(o.shadows);
     const ratio = Math.min(window.devicePixelRatio, o.scale);
     if (this.renderer.getPixelRatio() !== ratio) {
       this.renderer.setPixelRatio(ratio);
@@ -2748,8 +2745,30 @@ export class GameRenderer {
     this.sunDir.set(-Math.cos(arc) * 80, 30 + Math.sin(arc) * 70, 40);
   }
 
-  /** Przesuwa słońce i obszar cienia za kamerą; im dalej kamera, tym większy obszar. */
+  /** Rozdzielczość mapy cieni z ustawień (najwyższa) */
+  private shadowMax = 4096;
+  private shadowSize(n: number): void {
+    if (n <= 0 || this.sun.shadow.mapSize.x === n) return;
+    this.sun.shadow.mapSize.setScalar(n);
+    this.sun.shadow.map?.dispose();
+    (this.sun.shadow as { map: unknown }).map = null;
+  }
+  private shadowFrame = 0;
+  private sunWas = new THREE.Vector3();
+
+  /**
+   * Przesuwa słońce i obszar cienia za kamerą; im dalej kamera, tym większy obszar. Cienie są tańsze:
+   * z daleka mapa ma mniejszą rozdzielczość (na ekranie i tak nie widać różnicy), a gdy kamera stoi,
+   * mapa cieni liczy się co drugą klatkę (ludzie chodzą wolno, więc cień nie odstaje).
+   */
   private aimSun(): void {
+    if (this.shadowMax > 0) {
+      const d = this.cam.distance;
+      // z histerezą, żeby przy zbliżaniu w okolicy progu mapa nie przełączała się w kółko
+      const cur = this.sun.shadow.mapSize.x;
+      const want = d > 34 ? Math.min(this.shadowMax, 2048) : d < 30 ? this.shadowMax : cur;
+      if (!this.calm) this.shadowSize(want);
+    }
     const f = this.focusPoint;
     const half = Math.max(22, Math.min(70, this.cam.distance * 1.15));
     // skok o stałą siatkę, żeby cienie nie migotały przy przesuwaniu kamery
@@ -2759,6 +2778,17 @@ export class GameRenderer {
     this.sun.position.set(x + this.sunDir.x, this.sunDir.y, z + this.sunDir.z);
     const c = this.sun.shadow.camera;
     if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
+    const sm = this.renderer.shadowMap;
+    sm.autoUpdate = false;
+    const moved = this.sunWas.distanceToSquared(this.sun.position) > 0.0025 || this.camMoved;
+    this.sunWas.copy(this.sun.position);
+    sm.needsUpdate = this.calm || moved || (this.shadowFrame++ & 1) === 0;
+  }
+  private camWas = new THREE.Vector3();
+  private get camMoved(): boolean {
+    const p = this.cam.camera.position, m = this.camWas.distanceToSquared(p) > 1e-6;
+    this.camWas.copy(p);
+    return m;
   }
 
   /** Nocą zapala pochodnie przy budynkach i w rękach ludzi oraz rozdaje światła najbliższym z nich. */
