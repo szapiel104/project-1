@@ -143,16 +143,17 @@ for i in range(9):
     s = sphere(f'suds{i}', (math.sin(a) * r, 0.075, math.cos(a) * r), (0.014 + (i % 2) * 0.006, 0.006, 0.014), seg=8, rings=5)
     parts.append(Mesh(evaluated(s), (0.93, 0.93, 0.9), 'plain'))
 # mokra koszula przewieszona przez brzeg
-lip = skin('lip', [(-0.04, 0.074, R - 0.03), (0, 0.09, R + 0.005), (0.035, 0.05, R + 0.03)], [(0, 1), (1, 2)],
-           [(0.02, 0.006), (0.024, 0.006), (0.02, 0.006)], subsurf=1)
+# leży na brzegu klepek (góra klepek y = H) i zwisa na zewnątrz nad obręczą, nie przez nią
+lip = skin('lip', [(-0.035, 0.076, R - 0.035), (-0.01, 0.1, R + 0.008), (0.012, 0.088, R + 0.03), (0.03, 0.052, R + 0.038)],
+           [(0, 1), (1, 2), (2, 3)], [(0.02, 0.005), (0.024, 0.005), (0.022, 0.005), (0.018, 0.005)], subsurf=1)
 parts.append(Mesh(evaluated(lip), (0.86, 0.84, 0.78), 'cloth'))
 # tara: deska z poprzecznymi żeberkami, oparta skośnie
 board = [box(0.07, 0.17, 0.008, move=(0, 0.085, 0))]
 for j in range(7):
-    board.append(box(0.06, 0.006, 0.006, move=(0, 0.04 + j * 0.016, 0.006)))
+    board.append(box(0.06, 0.006, 0.006, move=(0, 0.04 + j * 0.016, -0.006)))  # żeberka od zewnątrz
 for b in board:
-    # tara oparta z zewnątrz o tylną klepkę (pochylona ku balii), nie wbita w środek
-    xf(b, rx=0.35, ry=0.5, move=(-0.04, 0.0, -R - 0.05))
+    # tara stoi na ziemi za balią i górą opiera się o brzeg klepek (pochylona ku balii, styk na wysokości H)
+    xf(b, rx=-0.32, move=(-0.04, 0.0, -0.168))
     parts.append(Mesh(b, wood(WOOD_L), 'wood'))
 finish('tub', parts)
 
@@ -218,25 +219,26 @@ for row in range(3):
     n = 6 - row
     for i in range(n):
         x = (i - (n - 1) / 2) * 0.062
-        y = 0.028 + row * 0.05
+        y = 0.029 + row * 0.053  # każde polano leży w dołku między dwoma niżej
         rot = noise(i, row, 3) * math.tau
-        # połówka pnia: klin z korą na zewnątrz i jasnym drewnem w przekroju
-        lg = cyl(0.03, 0.03, 0.16, seg=7, rx=math.pi / 2, move=(0, 0, -0.08))
+        dz = (noise(i, row, 7) - 0.5) * 0.02  # czoła nierówno, jak w prawdziwym stosie
+        # polano leży poziomo wzdłuż z, wyśrodkowane na stosie (cyl jest pionowy od y = 0, po rx leży od z = 0 do -0.16)
+        lg = cyl(0.03, 0.03, 0.16, seg=7, rx=math.pi / 2, move=(0, 0, 0.08))
         xf(lg, rz=rot)
-        xf(lg, move=(x, y, 0))
+        xf(lg, move=(x, y, dz))
         cx, cy = x, y
 
-        def logc(px, py, pz, cx=cx, cy=cy):
+        def logc(px, py, pz, cx=cx, cy=cy, dz=dz):
             r = math.hypot(px - cx, py - cy)
             c = BARK if r > 0.024 else WOOD_L
-            if abs(pz) > 0.078:
+            if abs(pz - dz) > 0.078:
                 c = (hexc(0xd8b880) if (r * 260) % 2 < 1.4 else hexc(0xb08a58)) if r < 0.026 else BARK  # słoje na czole
             return speck(c, px, py, pz, 0.12)
         parts.append(Mesh(lg, logc, 'wood'))
 # dwa paliki trzymające stos z boków
-for sx in (-0.2, 0.2):
-    parts.append(Mesh(cyl(0.008, 0.007, 0.17, seg=6, move=(sx, 0, 0.05)), wood(BARK), 'wood'))
-    parts.append(Mesh(cyl(0.008, 0.007, 0.17, seg=6, move=(sx, 0, -0.05)), wood(BARK), 'wood'))
+for sx in (-0.226, 0.226):  # tuż przy skrajnych polanach dolnego rzędu, przy obu końcach polan
+    parts.append(Mesh(cyl(0.008, 0.007, 0.19, seg=6, move=(sx, 0, 0.05)), wood(BARK), 'wood'))
+    parts.append(Mesh(cyl(0.008, 0.007, 0.19, seg=6, move=(sx, 0, -0.05)), wood(BARK), 'wood'))
 # pniak z siekierą wbitą w górę, obok
 stump = cyl(0.05, 0.045, 0.07, seg=12, move=(0.3, 0, 0.06))
 parts.append(Mesh(stump, lambda x, y, z: speck(hexc(0xc0a070) if y > 0.068 else BARK, x, y, z, 0.12), 'wood'))
