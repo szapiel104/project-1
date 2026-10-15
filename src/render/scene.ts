@@ -1107,7 +1107,6 @@ export class GameRenderer {
     this.plain.enabled = o.ao === 'off';
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
     this.sun.castShadow = o.shadows > 0;
-    this.shadowMax = o.shadows;
     this.shadowSize(o.shadows);
     const ratio = Math.min(window.devicePixelRatio, o.scale);
     if (this.renderer.getPixelRatio() !== ratio) {
@@ -2749,8 +2748,6 @@ export class GameRenderer {
     this.sunDir.set(-Math.cos(arc) * 80, 30 + Math.sin(arc) * 70, 40);
   }
 
-  /** Rozdzielczość mapy cieni z ustawień (najwyższa) */
-  private shadowMax = 4096;
   private shadowSize(n: number): void {
     if (n <= 0 || this.sun.shadow.mapSize.x === n) return;
     this.sun.shadow.mapSize.setScalar(n);
@@ -2761,18 +2758,11 @@ export class GameRenderer {
   private sunWas = new THREE.Vector3();
 
   /**
-   * Przesuwa słońce i obszar cienia za kamerą; im dalej kamera, tym większy obszar. Cienie są tańsze:
-   * z daleka mapa ma mniejszą rozdzielczość (na ekranie i tak nie widać różnicy), a gdy kamera stoi,
+   * Przesuwa słońce i obszar cienia za kamerą; im dalej kamera, tym większy obszar. Gdy kamera stoi,
    * mapa cieni liczy się co drugą klatkę (ludzie chodzą wolno, więc cień nie odstaje).
    */
   private aimSun(): void {
-    if (this.shadowMax > 0) {
-      const d = this.cam.distance;
-      // z histerezą, żeby przy zbliżaniu w okolicy progu mapa nie przełączała się w kółko
-      const cur = this.sun.shadow.mapSize.x;
-      const want = d > 34 ? Math.min(this.shadowMax, 2048) : d < 30 ? this.shadowMax : cur;
-      if (!this.calm) this.shadowSize(want);
-    }
+    // rozdzielczość cieni zawsze taka, jak w ustawieniach (zmniejszanie z daleka psuło wygląd)
     const f = this.focusPoint;
     const half = Math.max(22, Math.min(70, this.cam.distance * 1.15));
     // skok o stałą siatkę, żeby cienie nie migotały przy przesuwaniu kamery
