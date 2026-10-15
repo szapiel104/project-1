@@ -873,6 +873,14 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
   box-shadow: inset 0 0 0 2px #e9c766, inset 0 0 0 4px #3a0805, inset 0 0 0 5px #9a7a2a, inset 0 14px 18px rgba(255, 190, 120, .18); }
 .bar-main::before, .bar-main::after { display: none; }
 .bar-main:hover, .bar-main:focus-visible, .bar-main[aria-current='page'] { color: #fff; background: linear-gradient(#b72a1f, #82170f 55%, #520b06); }
+/* wyraźny hover głównego przycisku: jaśniejsza czerwień, złota ramka jaśnieje, napis żarzy się, przycisk lekko rośnie */
+.bar-main { transition: transform .15s ease, background .15s ease, color .15s ease, box-shadow .15s ease; }
+.bar-main:hover { background: linear-gradient(#d23a2a, #9c1f14 55%, #641008); transform: scale(1.05);
+  box-shadow: inset 0 0 0 2px #fff3c4, inset 0 0 0 4px #3a0805, inset 0 0 0 5px #e9c766, inset 0 14px 22px rgba(255, 210, 140, .32);
+  text-shadow: 0 0 14px rgba(255, 200, 110, .9), 0 2px 3px #000; }
+.bar-main:active { transform: scale(.98); }
+.menu-bar .bar-main:hover { animation: none; filter: drop-shadow(0 0 30px rgba(255, 140, 40, .85)); }
+@media (prefers-reduced-motion: reduce) { .bar-main, .bar-main:hover, .bar-main:active { transform: none; transition: none; } }
 .bar-main:focus-visible { outline: none; box-shadow: inset 0 0 0 2px #fff3c4, inset 0 0 0 4px #3a0805, inset 0 0 0 5px #e9c766; }
 .menu-bar .bar-main { filter: drop-shadow(0 0 16px rgba(255, 110, 30, .45)); animation: menu-glow 3.2s ease-in-out infinite; }
 @keyframes menu-glow { 50% { filter: drop-shadow(0 0 26px rgba(255, 120, 30, .7)); } }
