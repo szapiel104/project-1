@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.23.0 — symulacja w osobnym wątku (2026-10-15)
+
+- W grze z botami logika gry (ekonomia, ścieżki, wojsko, boty) liczy się w osobnym wątku przeglądarki (Web Worker); wątek główny tylko rysuje i obsługuje interfejs, więc długi tick (np. bot planujący zabudowę w 4v4) nie przycina obrazu
+- Gra przez sieć, tryb deweloperski i testowy liczą jak dotąd w wątku głównym (tam stan zmieniają też narzędzia); gdy wątek się nie wczyta albo nie odpowiada 3 s, gra sama wraca do liczenia w wątku głównym
+- F3 / `__perf()` pokazuje „wątek symulacji: tak/nie”; `?bezwatku` wyłącza wątek, `?test=1&watek=1` włącza go w testach
+
 ## 0.22.2 — szczegóły wg jakości grafiki (2026-10-15)
 
 - Zasięg szczegółów zależy od poziomu grafiki: na najwyższym bez zmian (drzewa jako bryły i kępy, kamyki do ok. 30 pól), na niższych drzewa wcześniej przechodzą w obrazki, a drobiazgi wcześniej znikają (do ok. 55% zasięgu na najniższym); automat jakości obniża to sam przy spadku FPS

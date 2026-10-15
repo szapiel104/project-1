@@ -17,6 +17,7 @@ import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { garrisonRoom, octant, planFormation } from './sim/systems/army';
 import { EMPTY, SANDBOX, TEST } from './testmode';
+import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
 import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
@@ -242,6 +243,7 @@ const menu = createMenu(document.body, {
   onSurrender: () => {
     // w sieci: wyjście = kapitulacja u wszystkich (lockstep wyśle ją w tej samej turze); lokalnie od razu porażka
     // showEnd zapisze porażkę do rankingu i zamknie mecz (inni dostaną kapitulację w tej samej turze)
+    simMode = false; // dalej liczy wątek główny: zmiana stanu poza symulacją nie może zginąć pod wynikiem z wątku
     game.players[ME]!.defeated = true;
     menu.close();
     showEnd(false);
@@ -342,6 +344,12 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   ME = online ? online.me : 0;
   game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant);
   if (EMPTY && !loaded && !online) emptyScene(game);
+  // wątek symulacji: tylko gra z botami bez trybu dewelopera i testów (tam wątek główny też zmienia stan gry)
+  simGen++; simBusy = false;
+  // w testach można wymusić wątek: ?test=1&watek=1 (bez pomocników __test, które zmieniają stan)
+  const forceThread = SANDBOX && new URLSearchParams(location.search).has('watek');
+  simMode = !!simThread && !simBroken && !online && (!SANDBOX || forceThread) && (!game.players[ME]?.dev || forceThread);
+  if (simMode) simThread!.set(game, simGen);
   // nowa mapa: grupy i zaznaczenie z poprzedniej gry nie mają sensu (przy wczytaniu wracają z zapisu)
   if (!loaded) groups.clear();
   chosen.clear(); renderer.setSoldierSelection(chosen);
@@ -1179,6 +1187,30 @@ function refresh(): void {
 
 let last = performance.now();
 let acc = 0;
+// --- symulacja w osobnym wątku (src/sim/worker.ts): w grze z botami długie ticki nie zatrzymują obrazu ---
+const simThread = typeof window !== 'undefined' && !new URLSearchParams(location.search).has('bezwatku') ? createSimThread() : null;
+let simMode = false, simBusy = false, simGen = 0, simBroken = false, simSent = 0;
+function onSimResult(r: SimResult): void {
+  if (r.gen !== simGen || !simMode) return;
+  simBusy = false;
+  renderer.snapshot(); // pozycje sprzed porcji kroków: ruch płynny między tickami
+  const map = game.map;
+  // wycinka lasu i wyczerpane złoża: jedyne zmiany mapy w symulacji — nanosimy je na naszą kopię mapy
+  for (let i = game.cut.length; i < r.state.cut.length; i++) map.tiles[r.state.cut[i]!] = 0;
+  const before = game.tick;
+  r.state.map = map;
+  game = r.state;
+  renderer.swapState(game);
+  perf.sim += r.ms; perf.ticks += r.ticks;
+  if (Math.floor(game.tick / 50) !== Math.floor(before / 50)) save();
+  refresh(); updateGhost(); updateAlarm();
+}
+if (simThread) {
+  simThread.onResult = onSimResult;
+  // wątek nie wstał (np. gra złożona w jeden plik) albo padł: dalej liczy wątek główny, od bieżącego stanu
+  simThread.onError = () => { if (simMode) console.warn('Wątek symulacji niedostępny — liczę w wątku głównym'); simMode = false; simBusy = false; simBroken = true; };
+}
+
 let lastDraw = 0;
 function loop(now: number): void {
   // limit klatek z ustawień: klatka pominięta, gdy od poprzedniej minęło za mało czasu (laptop się nie grzeje)
@@ -1210,7 +1242,19 @@ function loop(now: number): void {
   titleScreen = false;
   acc += elapsed * speed;
   let steps = 0;
-  while (acc >= TICK_MS && steps < 6) {
+  if (simMode && !net) {
+    // symulacja w osobnym wątku: wysyłamy porcję kroków, wynik przychodzi w onSimResult (tam odświeżenie widoku)
+    if (!simBusy && acc >= TICK_MS) {
+      const n = Math.min(6, Math.floor(acc / TICK_MS));
+      acc = n === 6 ? 0 : acc - n * TICK_MS;
+      simBusy = true; simSent = now;
+      const cmds = pending; pending = [];
+      simThread!.run(n, cmds, simGen);
+    } else if (simBusy && now - simSent > 3000) {
+      // brak odpowiedzi przez 3 s: wątek się zawiesił albo nie wczytał — liczymy dalej sami
+      simThread!.onError();
+    }
+  } else while (acc >= TICK_MS && steps < 6) {
     let cmds: Command[] = [];
     if (net) {
       // tura zaczyna się co TURN ticków; bez poleceń przeciwnika na tę turę gra stoi
@@ -1243,7 +1287,7 @@ function loop(now: number): void {
   if (steps) { refresh(); updateGhost(); }
   perf.ui += performance.now() - tu;
   const tr = performance.now();
-  renderer.frame(elapsed / 1000, speed ? acc / TICK_MS : 1, speed === 0);
+  renderer.frame(elapsed / 1000, speed ? Math.min(1, acc / TICK_MS) : 1, speed === 0);
   perf.render += performance.now() - tr;
   perf.frames++; perf.worst = Math.max(perf.worst, elapsed);
   if (now - perf.since > 1000) showPerf(now);
@@ -1847,6 +1891,7 @@ function showPerf(now: number): void {
   };
   for (const [k, v] of Object.entries(renderer.readTiming())) perf.last[`  ${k} ms`] = v;
   perf.last['jakość'] = renderer.quality;
+  perf.last['wątek symulacji'] = simMode ? 'tak' : 'nie';
   fpsTag.textContent = `FPS ${perf.last.fps}`;
   fpsTag.dataset.low = String(Number(perf.last.fps) < 40);
   if (!perfBox.hidden) perfBox.textContent = Object.entries(perf.last).map(([k, v]) => `${k.padEnd(22)} ${v}`).join('\n');

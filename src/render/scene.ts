@@ -876,6 +876,9 @@ export class GameRenderer {
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie
   }
 
+  /** Nowy stan tej samej gry z wątku symulacji (bez przebudowy terenu i modeli) */
+  swapState(state: GameState): void { this.state = state; }
+
   /** Zapamiętuje pozycje jednostek przed krokiem symulacji, żeby ruch był płynny między tickami. */
   snapshot(): void {
     if (!this.state) return;
