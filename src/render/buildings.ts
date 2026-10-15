@@ -8,6 +8,8 @@ import KEEP_MODEL from './models/keep.json';
 import TAVERN_MODEL from './models/tavern.json';
 import HOUSE_MODEL from './models/house.json';
 import BARN_MODEL from './models/barn.json';
+import GRANARY_MODEL from './models/granary.json';
+import ARMORY_MODEL from './models/armory.json';
 import BREWERY_MODEL from './models/brewery.json';
 import GATE_MODEL from './models/gate.json';
 import STONE_TOWER_MODEL from './models/stonetower.json';
@@ -959,53 +961,26 @@ const BUILDERS: Record<string, Builder> = {
     g.add(fillSlots('fill', 0, 0));
   },
   granary(g, _team, flag) {
-    // Spichlerz na kamiennych grzybkach (chronią ziarno przed gryzoniami), ściany szachulcowe, dach jak na stodole
-    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1], [0, -1], [0, 1]] as const) {
-      const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 0.2, 7), M.rock);
-      leg.position.set(sx * 0.6, 0.1, sz * 0.52);
-      g.add(leg);
-      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.05, 8), M.rockDark);
-      cap.position.set(sx * 0.6, 0.225, sz * 0.52);
-      g.add(cap);
-    }
-    box(g, M.woodDark, 1.55, 0.08, 1.35, 0, 0.25, 0);
-    const shell = new THREE.Group();
-    shell.name = 'shell';
-    box(shell, M.plaster, 1.45, 0.85, 1.25, 0, 0.33, 0);
-    // belki szachulca: słupy, rygle i zastrzały
-    for (const sz of [-1, 1]) {
-      for (const x of [-0.71, -0.24, 0.24, 0.71]) box(shell, M.woodDark, 0.06, 0.85, 0.03, x, 0.33, sz * 0.635);
-      box(shell, M.woodDark, 1.45, 0.05, 0.03, 0, 0.72, sz * 0.635);
-      for (const x of [-0.475, 0.475]) { const brace = box(shell, M.woodDark, 0.045, 0.52, 0.03, x, 0.36, sz * 0.636); brace.rotation.z = x > 0 ? 0.75 : -0.75; }
-    }
-    for (const sx of [-1, 1]) {
-      for (const z of [-0.61, 0, 0.61]) box(shell, M.woodDark, 0.03, 0.85, 0.06, sx * 0.735, 0.33, z);
-      box(shell, M.woodDark, 0.03, 0.05, 1.25, sx * 0.735, 0.72, 0);
-    }
-    box(shell, M.woodDark, 0.34, 0.5, 0.04, 0, 0.33, 0.64);
-    box(shell, M.plank, 0.28, 0.44, 0.02, 0, 0.36, 0.665);
-    g.add(shell);
-    const top = new THREE.Group();
-    top.name = 'roof';
-    layeredRoof(top, M.thatch, 1.75, 0.8, 1.6, 1.18);
-    g.add(top);
-    // drabinka do drzwi i worki pod ścianą
-    for (const x of [-0.12, 0.12]) { const rail = box(g, M.wood, 0.03, 0.42, 0.03, x, 0, 0.78); rail.rotation.x = 0.5; }
-    for (let k = 0; k < 3; k++) box(g, M.wood, 0.26, 0.025, 0.03, 0, 0.08 + k * 0.1, 0.86 - k * 0.055);
-    for (const [x, z, sc] of [[0.55, 0.82, 1], [0.78, 0.8, 0.85], [0.66, 0.84, 0.8]] as const) {
-      sack(g, x, x === 0.66 ? 0.24 : 0, z, sc, x * 3);
-    }
-    // wnętrze: podłoga, niskie ściany i zapasy żywności, których przybywa
-    const inside = new THREE.Group();
-    inside.name = 'interior';
-    inside.visible = false;
-    box(inside, M.plank, 1.45, 0.05, 1.25, 0, 0.33, 0);
-    for (const [x, z, w, d] of [[0, -0.6, 1.45, 0.06], [-0.7, 0, 0.06, 1.25], [0.7, 0, 0.06, 1.25]] as const) box(inside, M.plaster, w, 0.4, d, x, 0.33, z);
-    const food = fillSlots('foodfill', 0, 0, 0.4);
-    food.position.y = 0.33;
+    // spichlerz z Blendera (tools/models/granary.py): szachulec na kamiennych grzybkach, strzecha, schodki do drzwi;
+    // w środku pusta podłoga, na której gra układa żywność według stanu spichlerza
+    blenderModel(g, GRANARY_MODEL as unknown as BlenderBuilding, flag);
+    const inside = g.getObjectByName('interior') as THREE.Group;
+    const food = fillSlots('foodfill', 0, -0.02, 0.38);
+    food.position.y = (GRANARY_MODEL as unknown as { floorY: number }).floorY - 0.06;
     inside.add(food);
-    g.add(inside);
-    pennant(g, flag, 0.72, 1.25, -0.6);
+    const p = (GRANARY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  armory(g, _team, flag) {
+    // zbrojownia z Blendera (tools/models/armory.py): kamień, łupek, okute drzwi, tarcza w barwach pana nad wejściem;
+    // w środku stojaki pod ścianami, a na posadzce gra układa włócznie i łuki według stanu zbrojowni
+    blenderModel(g, ARMORY_MODEL as unknown as BlenderBuilding, flag);
+    const inside = g.getObjectByName('interior') as THREE.Group;
+    const arms = fillSlots('armsfill', 0.12, 0.02, 0.34);
+    arms.position.y = (ARMORY_MODEL as unknown as { floorY: number }).floorY - 0.06;
+    inside.add(arms);
+    const p = (ARMORY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   woodcutter(g) {
     // Tartak: chata po prawej (naprzeciw wejścia), po lewej wiata z kozłem do cięcia, z tyłu stos desek.

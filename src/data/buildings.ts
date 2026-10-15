@@ -156,6 +156,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'ladder', category: 'defense', name: 'b.ladder', w: 1, h: 1, cost: { wood: 3 }, hp: 120, wall: true, buildable: true },
   // Kamienna wieża: jak strażnica, ale z kamienia — wytrzymalsza, mieści sześciu łuczników, z wyższego pomostu strzelają dalej
   { id: 'stoneTower', category: 'defense', name: 'b.stoneTower', w: 2, h: 2, cost: { stone: 30, wood: 6 }, hp: 2400, wall: true, buildable: true },
+  // Zbrojownia: tu włóczniarz i łuczarz odnoszą gotową broń, stąd biorą ją koszary i straż
+  { id: 'armory', category: 'military', name: 'b.armory', w: 2, h: 2, cost: { wood: 20, stone: 10 }, stores: ['armory'], capacity: { armory: 60 }, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);

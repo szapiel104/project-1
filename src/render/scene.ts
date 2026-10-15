@@ -86,7 +86,7 @@ const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
  * zostają osobno, bo animacje i podgląd wnętrza ich szukają.
  */
 /** Budynki, w których pali się w piecu: z komina idzie dym */
-const SMOKY = new Set(['house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter']);
+const SMOKY = new Set(['armory', 'house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter']);
 
 /** Grupy, w których też łączymy bryły (ściany i dach znikają w całości przy podglądzie wnętrza, więc wspólna siatka nic nie psuje) */
 const MERGE_IN = new Set(['shell', 'roof', 'chimney', 'spin', 'flagpole']);
@@ -2691,7 +2691,7 @@ export class GameRenderer {
   private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material; pit: THREE.Mesh; dug?: number; rect: [number, number, number, number] }>();
   private static pitMat: THREE.MeshStandardMaterial | undefined;
   /** Części modelu, których na placu budowy nie ma (wnętrze z ludźmi, zapasy, dym, ogień, życie) */
-  private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'smoke', 'flame', 'flagcloth', 'flagpole']);
+  private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'armsfill', 'smoke', 'flame', 'flagcloth', 'flagpole']);
   private siteKey = '';
   private scaffold: THREE.InstancedMesh | null = null;
   private siteStones: THREE.InstancedMesh | null = null;
@@ -3383,7 +3383,7 @@ export class GameRenderer {
     if (g.tick === this.storesTick) return;
     this.storesTick = g.tick;
     for (const p of g.players) {
-      for (const [kind, group] of [['stockpile', 'fill'], ['granary', 'foodfill']] as const) {
+      for (const [kind, group] of [['stockpile', 'fill'], ['granary', 'foodfill'], ['armory', 'armsfill']] as const) {
         let sum = 0;
         const stock: { id: string; share: number }[] = [];
         RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === kind) sum += p.res[i]!; });

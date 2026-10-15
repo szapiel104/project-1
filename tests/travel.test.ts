@@ -230,6 +230,35 @@ describe('karczma i browar', () => {
   });
 });
 
+describe('zbrojownia', () => {
+  it('włóczniarz odnosi włócznie do zbrojowni; bez niej czeka z bronią', async () => {
+    const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
+    const { buildingIndex } = await import('../src/data/buildings');
+    const { resIndex } = await import('../src/data/resources');
+    const { storeUsed } = await import('../src/sim/state');
+    const g = createGame(5, '1v1', 0);   // bez trybu deweloperskiego: tam stoi już pokaz wszystkich budynków
+    for (const p of g.players) p.bot = false;
+    const keep = g.buildings[0]!;
+    const put = (id: string): boolean => {
+      for (let r = 4; r < 24; r++) for (let d = -r; d <= r; d++) if (canPlace(g, 0, buildingIndex(id), keep.x + d, keep.y + r) === null) return placeBuilding(g, 0, buildingIndex(id), keep.x + d, keep.y + r);
+      return false;
+    };
+    g.players[0]!.res[0] = 200;
+    expect(put('poleturner')).toBe(true);
+    const p0 = g.players[0]!, SPEAR = resIndex('spear');
+    p0.res[resIndex('wood')] = 200; p0.res[resIndex('stone')] = 50; p0.res[SPEAR] = 0;
+    const smith = (): (typeof g.units)[number] | undefined => g.units.find((u) => u.owner === 0 && u.carryRes === SPEAR);
+    for (let i = 0; i < 3000 && !smith(); i++) step(g, []);
+    expect(smith()).toBeTruthy();
+    for (let i = 0; i < 300; i++) step(g, []);
+    expect(p0.res[SPEAR]).toBe(0);            // nie ma gdzie odnieść
+    expect(put('armory')).toBe(true);
+    for (let i = 0; i < 1500 && !p0.res[SPEAR]; i++) step(g, []);
+    expect(p0.res[SPEAR]).toBeGreaterThan(0);
+    expect(storeUsed(p0, 'armory')).toBe(p0.res[SPEAR]! + p0.res[resIndex('bow')]!);
+  });
+});
+
 describe('wilki budzą śpiących', () => {
   it('śpiący na słomie zrywa się, gdy wilk podchodzi, i ucieka pod dach', () => {
     const g = createGame(9, '1v1', 2);

@@ -1132,6 +1132,11 @@ function refresh(): void {
   const full = storeUsed(p, 'stockpile') >= storeCapacity(game, ME, 'stockpile');
   if (full && !stockFull) scribe.say('stockFull', t('scribe.stockFull'));
   stockFull = full;
+  // broń idzie do zbrojowni: gdy są warsztaty broni, a zbrojowni brak albo jest pełna, skryba o tym mówi
+  const myB = game.buildings.filter((b) => b.owner === ME && !b.build);
+  const smiths = myB.some((b) => ['poleturner', 'fletcher'].includes(BUILDINGS[b.type]!.id));
+  if (smiths && !myB.some((b) => BUILDINGS[b.type]!.stores?.includes('armory'))) scribe.say('noArmory', t('scribe.noArmory'));
+  else if (smiths && storeUsed(p, 'armory') >= storeCapacity(game, ME, 'armory')) scribe.say('armoryFull', t('scribe.armoryFull'));
   const hour = clockAt(game.tick).hour;
   const night = hour >= 19.5 || hour < 6;
   // dlaczego nikt nie przychodzi: skryba mówi wprost, co blokuje nowych osadników
