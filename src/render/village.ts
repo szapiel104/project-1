@@ -43,6 +43,7 @@ export class Village {
   private hens = new Map<string, Critter>();
   private pigState = new Map<string, Critter>();
   private dogs = new Map<number, Dog>();
+  private keeps: [number, number, number, number][] = [];
   private frame = 0;
   private m = new THREE.Matrix4();
   private p = new THREE.Matrix4();
@@ -76,6 +77,8 @@ export class Village {
     const tx = Math.floor(x), ty = Math.floor(y);
     if (tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height) return false;
     const t = ty * g.map.width + tx;
+    // na dziedziniec i do sal zamku zwierzęta nie wchodzą (pole w zamku bywa wolne dla ludzi)
+    for (const k of this.keeps) if (x >= k[0] && x < k[1] && y >= k[2] && y < k[3]) return false;
     return g.occupancy[t] === 0 && TERRAIN[g.map.tiles[t] as keyof typeof TERRAIN]!.walkable;
   }
 
@@ -112,6 +115,7 @@ export class Village {
 
   sync(g: GameState, ctx: VillageCtx, people: { x: number; y: number; owner: number; moving: boolean; id: number }[]): void {
     this.frame++;
+    this.keeps = g.buildings.filter((b) => b.type === 0 && !b.ruined).map((b) => { const d = BUILDINGS[0]!; return [b.x, b.x + d.w, b.y, b.y + d.h]; });
     const { width, height } = g.map, dt = ctx.calm ? 0 : Math.min(0.1, ctx.dt), time = ctx.time;
     const W2 = width / 2, H2 = height / 2;
     // siatka przechodniów (kury przed nimi uciekają, pies wybiera sobie pana)
@@ -211,6 +215,7 @@ export class Village {
       let d = this.dogs.get(pl.id);
       if (!d) { d = { x: kx, y: ky, tx: kx, ty: ky, wait: 0, heading: 0, speed: 0, seen: 0, hx: kx, hy: ky, flee: 0, next: 0, master: 0, until: 0, bark: 0, run: 0 }; this.dogs.set(pl.id, d); }
       d.hx = kx; d.hy = ky; d.seen = this.frame;
+      if (!this.free(g, d.x, d.y)) { d.x = d.tx = kx; d.y = d.ty = ky; }   // zabłąkany w zamku albo w budynku: wraca przed bramę
       // wilk w pobliżu: biegnie w jego stronę, staje dwa pola przed nim i szczeka
       let wolf: { x: number; y: number } | undefined, wd = 10;
       for (const w of g.wolves) { if (w.hp <= 0 || w.leaving) continue; const x = w.px / FP, y = w.py / FP, dd = Math.hypot(x - d.x, y - d.y); if (dd < wd) { wd = dd; wolf = { x, y }; } }

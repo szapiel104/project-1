@@ -179,23 +179,31 @@ for sx in (-1, 1):
             block(tx - R0 * ax, tx + R0 * ax, tz - R0 * az, tz + R0 * az, 0, TOP)
         b.prism('base', 'castleDark', TR - RW, TR - RW, 0.06, tx, TOP, tz, seg=24)   # podłoga izby
         seg = 24
+        kinds = []
         for k in range(seg):
-            a0, a1 = 2 * math.pi * k / seg, 2 * math.pi * (k + 1) / seg
-            am = (a0 + a1) / 2
+            am = 2 * math.pi * (k + 0.5) / seg
             ox, oz = math.sin(am), math.cos(am)
             door = any(ox * ddx + oz * ddy > 0.95 for ddx, ddy in doors)
             rel = abs((am - out_a + math.pi) % (2 * math.pi) - math.pi)
             window = not door and (rel < 0.14 or abs(rel - 0.75) < 0.14 or abs(rel - 1.75) < 0.14)
+            kinds.append('door' if door else 'window' if window else 'wall')
+        for k in range(seg):
+            a0, a1 = 2 * math.pi * k / seg, 2 * math.pi * (k + 1) / seg
+            am = (a0 + a1) / 2
+            ox, oz = math.sin(am), math.cos(am)
+            kind = kinds[k]
             px, pz = tx + ox * (TR - RW / 2), tz + oz * (TR - RW / 2)
-            if door:
+            if kind == 'door':
                 ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, WALK + 0.62, y_top)
                 b.box('base', 'woodDark', 2 * math.pi * TR / seg + 0.02, 0.04, RW + 0.02, px, WALK + 0.6, pz, am)
-            elif window:
+            elif kind == 'window':
                 ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, TOP, WALK + SLIT[0])
                 ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, WALK + SLIT[1], y_top)
                 block(px - 0.09, px + 0.09, pz - 0.09, pz + 0.09, WALK - 0.1, 9)
             else:
-                ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, TOP, y_top)
+                # ościeża: boki ściany przy strzelnicy i drzwiach, żeby nie było widać pustki między licami
+                ring_piece('castle', tx, tz, TR - RW, TR, a0, a1, TOP, y_top,
+                           jamb0=kinds[k - 1] != 'wall', jamb1=kinds[(k + 1) % seg] != 'wall')
                 block(px - 0.09, px + 0.09, pz - 0.09, pz + 0.09, WALK - 0.1, 9)
         for ddx, ddy in doors:  # ościeża drzwi
             for side in (-1, 1):
@@ -633,14 +641,36 @@ for s in (-1, 1):
 b.box('base', 'woodDark', 0.66, 0.05, 0.05, wx, G + 0.92, wz)
 b.gable('base', 'roadWood', wx - 0.4, wx + 0.4, wz - 0.32, wz + 0.32, G + 0.95, 0.25, along_x=True, over=0.05)
 b.prism('base', 'wood', 0.08, 0.08, 0.12, wx + 0.12, G + 0.45, wz, seg=8)
-# wóz z sianem
+# wóz z sianem: skrzynia z deskami burt, kopa siana, dwie osie z kołami na szprychach, dyszel
 cxw, czw = cx(4) - 0.05, cz(6) + 0.1
-boxs('base', 'wood', 0.5, 0.06, 0.9, cxw, G + 0.2, czw)
-b.box('base', 'hay', 0.44, 0.22, 0.8, cxw, G + 0.26, czw)
+WHR, WHY = 0.13, G + 0.13
+def wheel(x, y, z, r):
+    """Koło wozu w płaszczyźnie YZ: obręcz z grubością, piasta i szprychy"""
+    n = 16
+    P = lambda rr, a, dx: (x + dx, y + math.cos(a) * rr, z + math.sin(a) * rr)
+    for k in range(n):
+        a0, a1 = 2 * math.pi * k / n, 2 * math.pi * (k + 1) / n
+        for rr, side in ((r, 1), (r - 0.03, -1)):          # zewnętrzny i wewnętrzny brzeg obręczy
+            b.poly('base', 'woodDark', [P(rr, a0, -0.02), P(rr, a1, -0.02), P(rr, a1, 0.02), P(rr, a0, 0.02)],
+                   away=(x, y, z) if side > 0 else P(r * 3, (a0 + a1) / 2, 0))
+        for dx in (-0.02, 0.02):                            # boki obręczy
+            b.poly('base', 'woodDark', [P(r, a0, dx), P(r, a1, dx), P(r - 0.03, a1, dx), P(r - 0.03, a0, dx)], away=(x - dx * 9, y, z))
+        b.poly('base', 'iron', [P(r + 0.006, a0, -0.022), P(r + 0.006, a1, -0.022), P(r + 0.006, a1, 0.022), P(r + 0.006, a0, 0.022)], away=(x, y, z))
+    for k in range(8):                                      # szprychy od piasty do obręczy
+        b.box('base', 'wood', 0.016, r - 0.025, 0.016, x, y, z, tilt=2 * math.pi * k / 8 + 0.2, bottom=True)
+    b.box('base', 'iron', 0.06, 0.05, 0.05, x, y - 0.025, z, bottom=True)   # piasta
+boxs('base', 'wood', 0.5, 0.05, 0.9, cxw, WHY + 0.02, czw)
 for s in (-1, 1):
-    for zz in (-0.3, 0.3):
-        b.box('base', 'woodDark', 0.04, 0.26, 0.26, cxw + s * 0.28, G, czw + zz)  # koła
-b.box('base', 'woodDark', 0.04, 0.04, 0.7, cxw, G + 0.15, czw + 0.75)
+    b.box('base', 'woodDark', 0.03, 0.12, 0.9, cxw + s * 0.235, WHY + 0.07, czw)       # burty
+for zz in (-0.45, 0.45):
+    b.box('base', 'woodDark', 0.5, 0.12, 0.03, cxw, WHY + 0.07, czw + zz * 0.97)
+b.box('base', 'hay', 0.44, 0.18, 0.84, cxw, WHY + 0.07, czw)
+b.box('base', 'hay', 0.36, 0.08, 0.7, cxw, WHY + 0.25, czw)
+for zz in (-0.28, 0.28):
+    b.box('base', 'iron', 0.62, 0.025, 0.025, cxw, WHY - 0.012, czw + zz)              # oś
+    for s in (-1, 1):
+        wheel(cxw + s * 0.29, WHY, czw + zz, WHR)
+b.box('base', 'woodDark', 0.04, 0.04, 0.7, cxw, WHY - 0.02, czw + 0.75)
 # siano i beczki pod murem, stos drewna, kukły
 for i, (x, z) in enumerate(((cx(4) - 0.25, cz(9) + 0.3), (cx(4) + 0.1, cz(9) + 0.35), (cx(6) + 0.3, cz(4) - 0.25))):
     b.prism('base', 'wood', 0.16, 0.14, 0.38, x, G, z, seg=10)
@@ -684,6 +714,8 @@ VIEWS = [
     ['izba baszty bocznej', [-5.0, WY, -0.4], [-5.0, WY, 0.7], OUT, 16],
     ['wieża bramy: izba', [-0.8, WY, 5.2], [-0.95, WY - 0.05, 6.0], OUT, 16],
     ['z muru do wieży bramy', [-2.2, WY, 5.0], [-0.9, WY, 5.0], OUT, 20],
+    ['wóz z sianem', [-0.1, E, 2.5], [-1.05, 0.25, 1.6], OUT, 18],
+    ['strzelnica baszty z bliska', [-4.55, WY - 0.05, 4.55], [-5.35, WY - 0.1, 5.1], OUT, 14],
     ['z muru na dziedziniec', [4.8, WY, 1.0], [0, 0.3, 1.0], OUT, 22],
 ]
 b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS})
