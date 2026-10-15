@@ -224,6 +224,9 @@ export function groundGrassTexture2(): THREE.Texture | null { return TEST || !lo
 /** Zdjęcie trawy podłoża (do barwienia gęstej trawy, żeby zlewała się z ziemią) */
 export function groundGrassTexture(): THREE.Texture | null { return TEST || !loader ? null : tex('grass1', true); }
 
+const cloudT = { value: 0 }, cloudK = { value: 0 };
+/** Cienie chmur na ziemi: czas (przesuw z wiatrem) i siła (0 = bez chmur, nocą i w gęstej mgle też 0) */
+export function setCloudShadows(time: number, strength: number): void { cloudT.value = time; cloudK.value = strength; }
 export function groundMaterial(): THREE.MeshStandardMaterial {
   if (shared) return shared;
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 });
@@ -234,6 +237,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
     tNoise: { value: sharedNoise() },
     nGrass: { value: tex('grass_n', false) }, nForest: { value: tex('forest_n', false) }, nPebble: { value: tex('pebble_n', false) }, nRock: { value: tex('rock_n', false) },
     uDark: { value: 1.0 },
+    uCloudT: cloudT, uCloud: cloudK,
   };
   mat.userData.ground = uniforms;
   mat.onBeforeCompile = (sh) => {
@@ -241,9 +245,19 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
     sh.vertexShader = VERT_HEAD + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\n' + VERT_BODY);
     sh.fragmentShader = FRAG_HEAD + sh.fragmentShader
       .replace('#include <color_fragment>', '#include <color_fragment>\n' + FRAG_ALBEDO)
-      .replace('#include <normal_fragment_maps>', FRAG_NORMAL);
+      .replace('#include <normal_fragment_maps>', FRAG_NORMAL)
+      // cienie chmur: wielkie, miękkie plamy cienia sunące z wiatrem (tylko światło słońca, nie rozproszone)
+      .replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+        {
+          vec2 cuv = vWP.xz / 70.0 + uCloudT * vec2(0.006, 0.0035);
+          float cn = texture2D(tNoise, cuv).r * 0.65 + texture2D(tNoise, cuv * 2.3 + 0.37).g * 0.35;
+          float sh = 1.0 - uCloud * 0.6 * smoothstep(0.42, 0.62, cn);
+          reflectedLight.directDiffuse *= sh;
+          reflectedLight.directSpecular *= sh;
+        }`);
+    sh.fragmentShader = 'uniform float uCloudT; uniform float uCloud;\n' + sh.fragmentShader;
   };
-  mat.customProgramCacheKey = () => 'ground-v1';
+  mat.customProgramCacheKey = () => 'ground-v2';
   shared = mat;
   return mat;
 }

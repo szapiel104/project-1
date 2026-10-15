@@ -20,6 +20,7 @@ import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { ladderSides } from '../sim/systems/stonewalls';
 import { setWetBuildings } from './buildings';
+import { setCloudShadows } from './ground';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
@@ -1424,6 +1425,11 @@ export class GameRenderer {
   setWalkPitch(p: number): void { if (this.walk) this.walk.pitch = p; }
   private walkFocus = new THREE.Vector3();
   /** Środek uwagi: przy spacerze miejsce, gdzie stoi chłop (światła, cienie i deszcz liczą się wokół niego) */
+  /** Pole mapy, na które patrzy kamera (do odzywek ludzi w pobliżu) */
+  get focusTile(): { x: number; y: number } {
+    const f = this.focusPoint, g = this.state;
+    return g ? { x: f.x + g.map.width / 2, y: f.z + g.map.height / 2 } : { x: 0, y: 0 };
+  }
   private get focusPoint(): THREE.Vector3 {
     if (!this.walk || !this.state) return this.cam.focus;
     const c = this.cam.camera.position;
@@ -1591,6 +1597,8 @@ export class GameRenderer {
     if (this.state) this.setDaylight(this.menuNight ? 23 : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     if (this.flash > 0) { this.flash = Math.max(0, this.flash - dt * 4); this.hemi.intensity += this.flash * 3 * (Math.random() < 0.7 ? 1 : 0.3); }
     this.aimSun();
+    // cienie chmur: przy pogodzie z chmurami wyraźniejsze, nocą, w deszczu (pełne zachmurzenie) i we mgle znikają
+    setCloudShadows(this.calm ? 0 : this.time, Math.min(1, 0.25 + this.cover * 0.9) * (1 - this.night) * (1 - this.rain * 0.8) * (1 - this.dayMist * 0.6));
     if (this.state && this.view) {
       const g = this.state, v = this.view;
       // każdy etap mierzony osobno: okno wydajności pokazuje, co zjada czas klatki

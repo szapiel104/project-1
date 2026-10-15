@@ -1646,7 +1646,34 @@ const SAY: Record<string, string[]> = {
   sleep: ['Ziew… pora do wyra.', 'Starczy na dziś.', 'Idę spać, jutro znowu harówka.', 'Dobranoc, panie.'],
   sleeping: ['Chrrr…', 'Mmm… jeszcze chwilkę…', 'Chrrr… pchiii…'],
   outside: ['Ziemia twarda, a dachu ani śladu.', 'Na słomie pod gołym niebem, jak pies.', 'Postaw, panie, chatę, bo tu zimno.'],
+  taxHigh: ['Poborca znowu był. Zostawił mi guzik.', 'Pan zdziera z nas skórę.', 'Za te podatki to by się zamek złocił.', 'Płać i płać, a z czego żyć?'],
+  bribe: ['Pan złotem sypie, niech mu Bóg da zdrowie!', 'Takiego pana to ze świecą szukać.', 'Złoto od pana? Postawię kolejkę!'],
+  noTax: ['Podatków nie ma, to i żyć się chce.', 'Pan dobry, nic nie zdziera.'],
+  fire: ['Pali się! Wody!', 'Ogień! Dawaj wiadra!', 'Spłonie wszystko, ratujcie!'],
+  enemy: ['Wojsko idzie! Nie nasze!', 'Chowaj się, chłopie, bo nadziana na włócznię nie pożyjesz!', 'Wróg pod osadą!'],
+  dry: ['Karczma sucha jak pustynia. Piwa nie ma.', 'Bez piwa to i wieczór nie wieczór.'],
+  good: ['Dobrze się tu żyje, nie powiem.', 'Brzuch pełny, dach nad głową. Czego chcieć więcej?', 'Niech pan żyje sto lat!'],
+  wolvesNight: ['Słyszysz? Wyją za palisadą.', 'Nocą wilki podchodzą pod same chaty.', 'Drzwi zaryglować, wilki krążą.'],
 };
+/** Sytuacja w osadzie i wokół człowieka: najważniejsza wygrywa (ogień, wróg, wilki, głód, podatki…) */
+function situation(px: number, py: number): string | null {
+  const p = game.players[ME]!, R2 = (r: number): number => (r * 256) ** 2;
+  const d2 = (x: number, y: number): number => (x - px) ** 2 + (y - py) ** 2;
+  if (game.buildings.some((b) => b.owner === ME && (b.fire ?? 0) > 0 && d2(b.x * 256, b.y * 256) < R2(10))) return 'fire';
+  if (game.soldiers.some((o) => game.players[o.owner]!.team !== p.team && d2(o.px, o.py) < R2(14))) return 'enemy';
+  if (game.wolves.some((w) => d2(w.px, w.py) < R2(5))) return 'wolves';
+  if (renderer.weather.night > 0.5 && game.wolves.length && Math.random() < 0.5) return 'wolvesNight';
+  if (!monthlyForecast(game, p).fed) return 'hungry';
+  if (p.tax >= 3 && Math.random() < 0.6) return 'taxHigh';
+  if (p.tax === 0 && Math.random() < 0.5) return 'bribe';
+  if (p.popularity < 45 && Math.random() < 0.6) return 'angry';
+  const tavern = game.buildings.some((b) => b.owner === ME && BUILDINGS[b.type]!.id === 'tavern' && b.worker);
+  if (tavern && (p.res[resIndex('ale')] ?? 0) <= 0 && Math.random() < 0.3) return 'dry';
+  if (renderer.weather.rain > 0.4 && Math.random() < 0.4) return 'rain';
+  if (p.tax === 1 && Math.random() < 0.15) return 'noTax';
+  if (p.popularity >= 80 && Math.random() < 0.25) return 'good';
+  return null;
+}
 const bubble = document.createElement('div');
 bubble.className = 'say';
 bubble.hidden = true;
@@ -1657,10 +1684,9 @@ function lineFor(id: number): string {
   const p = game.players[ME]!;
   const pick = (k: string): string => { const l = SAY[k]!; return l[Math.floor(Math.random() * l.length)]!; };
   if (!u) return pick('work');
-  if (game.wolves.some((w) => (w.px - u.px) ** 2 + (w.py - u.py) ** 2 < (5 * 256) ** 2)) return pick('wolves');
-  if (!monthlyForecast(game, p).fed) return pick('hungry');
-  if (p.popularity < 45 && Math.random() < 0.6) return pick('angry');
-  if (renderer.weather.rain > 0.4 && Math.random() < 0.4) return pick('rain');
+  void p;
+  const sit = situation(u.px, u.py);
+  if (sit) return pick(sit);
   if (renderer.weather.night > 0.5 && Math.random() < 0.4) return pick('night');
   // rytm dnia: wieczór (19, 20), w drodze do łóżka (21), sen (22, pod dachem albo na słomie)
   if (u.phase === 22) return u.home ? pick('sleeping') : Math.random() < 0.5 ? pick('outside') : pick('sleeping');
@@ -1678,13 +1704,19 @@ const GUARD_SAY = {
   day: ['Czego tu szukasz?', 'Nie szwendaj się tu bez potrzeby.', 'Trzymaj się z dala od kłopotów.', 'Spokojnie. Dopóki ja tu stoję, nikt nie podskoczy.', 'Pan płaci, ja pilnuję. Proste.', 'Masz jakiś problem?'],
   night: ['Po zmroku lepiej siedź w chacie.', 'Wilki dziś blisko. Słyszałeś je?', 'Cicho. Coś się rusza przy palisadzie.', 'Noc długa, a piwa ani kropli.'],
   danger: ['Do broni!', 'Wróg pod bramą! Za mną!', 'Nie przejdą, póki ja stoję!'],
+  fire: ['Ogień! Ruszać się z tymi wiadrami!', 'Gasić, nie gapić się!'],
+  rain: ['Leje jak z cebra, a ja tu stoję.', 'Zbroja rdzewieje od tego deszczu.'],
+  hungry: ['Pusty kocioł w koszarach. Długo tak nie postoimy.', 'Głodny strażnik to zły strażnik.'],
+  taxHigh: ['Chłopi narzekają na podatki. Pilnuj, żeby się nie zbuntowali.', 'Poborca chodzi z nami, bo sam by nie wrócił.'],
 };
 function sayGuard(id: number): void {
   const s = game.soldiers.find((x) => x.id === id);
   if (!s) return;
   const pick = (l: string[]): string => l[Math.floor(Math.random() * l.length)]!;
   const near = game.soldiers.some((o) => game.players[o.owner]!.team !== game.players[s.owner]!.team && (o.px - s.px) ** 2 + (o.py - s.py) ** 2 < (8 * 256) ** 2) || game.wolves.some((w) => (w.px - s.px) ** 2 + (w.py - s.py) ** 2 < (8 * 256) ** 2);
-  bubble.textContent = pick(near ? GUARD_SAY.danger : clockAt(game.tick).night ? GUARD_SAY.night : GUARD_SAY.day);
+  const sit = situation(s.px, s.py);
+  const extra = sit === 'fire' ? GUARD_SAY.fire : sit === 'rain' ? GUARD_SAY.rain : sit === 'hungry' ? GUARD_SAY.hungry : sit === 'taxHigh' ? GUARD_SAY.taxHigh : null;
+  bubble.textContent = pick(near || sit === 'enemy' ? GUARD_SAY.danger : extra ?? (clockAt(game.tick).night ? GUARD_SAY.night : GUARD_SAY.day));
   bubble.hidden = false;
   sayUnit = id;
   sayUntil = performance.now() + 3200;
@@ -1697,7 +1729,22 @@ function speak(id: number): void {
   sayUntil = performance.now() + 3200;
   talk(bubble.textContent ?? '', id);
 }
+/** Sami z siebie: co kilkanaście sekund ktoś na ekranie, blisko kamery, rzuca odzywkę o tym, co się dzieje */
+let nextChatter = performance.now() + 9000;
+function chatter(): void {
+  const now = performance.now();
+  if (now < nextChatter || !bubble.hidden || menu.isOpen() || titleScreen || gfx.bubbles === false) return;
+  nextChatter = now + 9000 + Math.random() * 9000;
+  const f = renderer.focusTile, near = (px: number, py: number): boolean => Math.hypot(px / 256 - f.x, py / 256 - f.y) < 12;
+  const people = game.units.filter((u) => u.owner === ME && near(u.px, u.py) && u.phase !== 22);
+  const guards = game.soldiers.filter((s) => s.owner === ME && UNITS[s.kind]!.guard && near(s.px, s.py));
+  const pool = [...people.map((u) => ['u', u.id] as const), ...guards.map((s) => ['g', s.id] as const)];
+  if (!pool.length) return;
+  const [kind, id] = pool[Math.floor(Math.random() * pool.length)]!;
+  if (kind === 'g') sayGuard(id); else speak(id);
+}
 function sayLoop(): void {
+  chatter();
   if (!bubble.hidden) {
     const u = game.units.find((x) => x.id === sayUnit) ?? game.soldiers.find((x) => x.id === sayUnit);
     if (!u || performance.now() > sayUntil || menu.isOpen()) bubble.hidden = true;
