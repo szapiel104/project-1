@@ -499,7 +499,8 @@ export class GameRenderer {
   private logs: THREE.InstancedMesh;
   private planks: THREE.InstancedMesh;
   private time = 0;
-  private calm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /** Bez animacji (tylko na życzenie: ?spokoj=1). Systemowe „ogranicz ruch” zatrzymywało wszystkie animacje w grze (ludzie sunęli, bramy stały) */
+  private calm = new URLSearchParams(location.search).has('spokoj');
   /** Ruch ludzi w wyglądzie: łuki na zakrętach, omijanie się */
   private crowd = new Crowd();
   /** Ostatni krok (numer półokresu chodu) każdej postaci: dźwięk kroku przy zmianie */
