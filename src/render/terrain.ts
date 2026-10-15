@@ -40,6 +40,8 @@ export interface TerrainView {
   fell(tile: number, k: number): void;
   /** Usuwa drzewa z pola i zostawia pniaki */
   clear(tile: number): void;
+  /** Spacer: czy punkt (pola, ułamkowo) jest bliżej niż r od pnia drzewa (ścięte już nie przeszkadzają) */
+  trunkNear(x: number, y: number, r: number): boolean;
   /** Odbudowuje nawierzchnię dróg z tablicy pól (0 brak, 1 piasek, 2 bruk) */
   setRoads(roads: Uint8Array, materials: THREE.Material[]): void;
   /** Animacje otoczenia: fale i ryby */
@@ -700,6 +702,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       if (stump) { stumpOf.set(item, stumpItems.length); stumpItems.push(item); }
     });
   };
+  const trunkItems = new Set<Item>([...pines, ...leafy]);
   plant(pines, instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark', true, undefined, TRUNK_LOD), instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat, PINE_LOD));
   plant(leafy, instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark', true, undefined, TRUNK_LOD), instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves', true, undefined, LEAF_LOD));
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
@@ -799,6 +802,18 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       if (stumps && si !== undefined) { stumps.setMatrixAt(si, m.compose(t.item.pos, t.item.q, t.item.s)); stumps.instanceMatrix.needsUpdate = true; }
     }
     trees.delete(tile);
+  };
+  const trunkNear = (x: number, y: number, r: number): boolean => {
+    const tx = Math.floor(x), ty = Math.floor(y);
+    for (let yy = ty - 1; yy <= ty + 1; yy++) for (let xx = tx - 1; xx <= tx + 1; xx++) {
+      if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      for (const t of trees.get(yy * w + xx) ?? []) {
+        if (!trunkItems.has(t.item)) continue;
+        const R = r + 0.12 * t.item.s.x;
+        if ((t.item.pos.x - ox - x) ** 2 + (t.item.pos.z - oz - y) ** 2 < R * R) return true;
+      }
+    }
+    return false;
   };
 
 
@@ -1267,6 +1282,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     heightAt,
     fell,
     clear,
+    trunkNear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },

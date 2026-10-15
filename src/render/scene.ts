@@ -1521,15 +1521,15 @@ export class GameRenderer {
     }
     // wysokość stóp spacerowicza (na murach i schodach przeszkody z dołu go nie dotyczą)
     const feet = (this.view ? this.standY(this.view, w.x, w.z) : 0) + (w.jy ?? 0);
-    const free = (x: number, z: number): boolean => {
+    const point = (x: number, z: number, ring: readonly (readonly [number, number])[]): boolean => {
       const tx = Math.floor(x), ty = Math.floor(z);
       if (tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height) return false;
       const t = ty * g.map.width + tx;
       // w karczmie (i na jej ganku): obrys izby i drzwi z modelu, sprzęty na swojej wysokości
       const wb = this.walkableAt(x, z);
       if (wb) {
-        const y = feet - wb[3], R = 0.07;
-        for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]] as const) {
+        const y = feet - wb[3];
+        for (const [ox, oz] of ring) {
           const lx = wb[1] + ox, lz = wb[2] + oz;
           if (!wb[4].open.some(([x0, x1, z0, z1]) => lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1)) return false;
           for (const [x0, x1, z0, z1, y0, y1] of wb[4].solid) if (lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1 && y + 0.3 > y0 && y < y1 - 0.05) return false;
@@ -1546,19 +1546,30 @@ export class GameRenderer {
       // przy zamku: ściany sal, kraty, sprzęty, baszty i wieże bramy (każda przeszkoda na swojej wysokości)
       const k = this.keepAt(x, z);
       if (k) {
-        const R = 0.08, base = k[3], y = feet - base;
-        for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]] as const) {
+        const base = k[3], y = feet - base;
+        for (const [ox, oz] of ring) {
           const lx = k[1] + ox, lz = k[2] + oz;
           for (const [x0, x1, z0, z1, y0, y1] of KEEP_SOLID) if (lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1 && y + 0.3 > y0 && y < y1 - 0.05) return false;
         }
       }
       return true;
     };
+    // ciało spacerowicza: kamera trzyma się ok. 0,11 pola od ścian, sprzętów i pni (bliżej przednia płaszczyzna kamery wchodziła w ściany)
+    const BODY = 0.11, D = BODY * 0.7071;
+    const RING = [[0, 0], [BODY, 0], [-BODY, 0], [0, BODY], [0, -BODY], [D, D], [D, -D], [-D, D], [-D, -D]] as const;
+    const free = (x: number, z: number): boolean => {
+      if (!point(x, z, RING)) return false;
+      // poza budynkami z modelem: obrys ciała też nie może wejść na zajęte pole (ściany domów stoją na brzegu działki)
+      if (!this.walkableAt(x, z) && !this.keepAt(x, z)) for (const [ox, oz] of RING) if ((ox || oz) && !point(x + ox, z + oz, [[0, 0]])) return false;
+      return !this.view || !this.view.trunkNear(x, z, BODY * 0.8);
+    };
     // małymi krokami: przy niskim FPS jeden duży skok przeskoczyłby cienką ścianę
     const nStep = Math.min(40, Math.ceil(Math.hypot(dx, dz) / 0.04));
+    // stoi już za blisko ściany (start spaceru, skok, otwarte wrota): wolno mu odejść, sprawdzamy wtedy tylko środek
+    const ok = free(w.x, w.z) ? free : (x: number, z: number): boolean => point(x, z, [[0, 0]]);
     for (let i = 0; i < nStep; i++) {
-      if (free(w.x + dx / nStep, w.z)) w.x += dx / nStep;
-      if (free(w.x, w.z + dz / nStep)) w.z += dz / nStep;
+      if (ok(w.x + dx / nStep, w.z)) w.x += dx / nStep;
+      if (ok(w.x, w.z + dz / nStep)) w.z += dz / nStep;
     }
     // tempo kroków jak u człowieka: idąc ok. 1,8 kroku na sekundę, biegiem ok. 2,7 (kołysanie kamery w tym samym rytmie)
     if ((fx || fz) && !w.jy) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
