@@ -868,7 +868,7 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
   }
   // inne grupy z modelu (np. krata bramy zamku): osobne obiekty o tej samej nazwie, gra rusza nimi sama
   for (const [key, val] of Object.entries(model)) {
-    if (['base', 'shell', 'interior', 'floor', 'ceiling'].includes(key) || !Array.isArray(val) || !val.length || typeof val[0] !== 'object' || !('pos' in (val[0] as object))) continue;
+    if (['base', 'shell', 'interior', 'floor', 'ceiling', 'leafL', 'leafR'].includes(key) || !Array.isArray(val) || !val.length || typeof val[0] !== 'object' || !('pos' in (val[0] as object))) continue;
     const grp = new THREE.Group();
     grp.name = key;
     for (const m of meshes(key)) grp.add(m);
