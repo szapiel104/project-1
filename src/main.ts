@@ -1,3 +1,4 @@
+import { GUARD_SAY, SAY } from './data/barks';
 import { BUILDINGS, buildingIndex, footprint } from './data/buildings';
 import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } from './data/resources';
 import { UNITS } from './data/units';
@@ -1625,36 +1626,12 @@ function shout(kind: 'select' | 'move' | 'attack'): void {
   talk(text, s.id, true);
 }
 
-// --- odzywki ludzi: krótko, szorstko, zależnie od tego, co robią i jak im się żyje ---
-const SAY: Record<string, string[]> = {
-  idle: ['Czego?', 'Roboty by się znalazło jakiej…', 'Siedzę i czekam. Jak każdy.', 'Panie, daj jaką robotę.', 'Zimno przy tym ognisku.'],
-  work: ['Robię, robię.', 'Nie przeszkadzaj, panie.', 'Robota sama się nie zrobi.', 'Ano, pracuje się.', 'Znowu ja?'],
-  woodcutter: ['Drzewa nie zetną się same.', 'Siekiera tępa jak wójt.', 'Las daleko, nogi bolą.'],
-  quarry: ['Kamień i kamień. Całe życie.', 'Plecy mi pękną od tego.', 'Kopacz ma tylko kilof i zmęczone ręce.', 'Jeszcze jeden blok i zapiję.'],
-  mine: ['Ciemno tam jak w grobie.', 'Ruda sama nie wyjdzie.', 'Kopacz kopie, pan się bogaci.', 'Tylko żeby strop nie siadł.'],
-  farm: ['Byle deszcz nie zbił zboża.', 'Ziemia dobra, tylko ręce bolą.'],
-  orchard: ['Jabłka w tym roku jak pięść.', 'Robaki w połowie, ale jeść można.'],
-  fisher: ['Dziś nie biorą.', 'Woda zimna jak serce poborcy.'],
-  build: ['Stuk, stuk, i stoi.', 'Kto to projektował, ten nie nosił belek.', 'Jeszcze jedna belka i fajrant.'],
-  carry: ['Ciężkie to cholerstwo.', 'Niosę, niosę.', 'Z drogi!'],
-  hungry: ['Głodno w osadzie, panie.', 'Brzuch mi do krzyża przyrasta.', 'Z pustym brzuchem nie popracuję.'],
-  angry: ['Podatki nas wykończą.', 'Inni pany lepiej płacą.', 'Jeszcze trochę i pójdę stąd.'],
-  night: ['Wilki dziś wyją, słyszysz?', 'Po ciemku lepiej nie łazić za palisadę.', 'Spać by się chciało.'],
-  wolves: ['Wilki! Ratujcie!', 'Bierz kij, idą!', 'Matko Boska, wilki!'],
-  rain: ['Leje i leje.', 'Błoto po kolana.'],
-  evening: ['Do karczmy, chłopy!', 'Fajrant. Nareszcie.', 'Posiedzimy przy ogniu.', 'Nogi mi odpadają od tej roboty.', 'Kto stawia piwo?'],
-  sleep: ['Ziew… pora do wyra.', 'Starczy na dziś.', 'Idę spać, jutro znowu harówka.', 'Dobranoc, panie.'],
-  sleeping: ['Chrrr…', 'Mmm… jeszcze chwilkę…', 'Chrrr… pchiii…'],
-  outside: ['Ziemia twarda, a dachu ani śladu.', 'Na słomie pod gołym niebem, jak pies.', 'Postaw, panie, chatę, bo tu zimno.'],
-  taxHigh: ['Poborca znowu był. Zostawił mi guzik.', 'Pan zdziera z nas skórę.', 'Za te podatki to by się zamek złocił.', 'Płać i płać, a z czego żyć?'],
-  bribe: ['Pan złotem sypie, niech mu Bóg da zdrowie!', 'Takiego pana to ze świecą szukać.', 'Złoto od pana? Postawię kolejkę!'],
-  noTax: ['Podatków nie ma, to i żyć się chce.', 'Pan dobry, nic nie zdziera.'],
-  fire: ['Pali się! Wody!', 'Ogień! Dawaj wiadra!', 'Spłonie wszystko, ratujcie!'],
-  enemy: ['Wojsko idzie! Nie nasze!', 'Chowaj się, chłopie, bo nadziana na włócznię nie pożyjesz!', 'Wróg pod osadą!'],
-  dry: ['Karczma sucha jak pustynia. Piwa nie ma.', 'Bez piwa to i wieczór nie wieczór.'],
-  good: ['Dobrze się tu żyje, nie powiem.', 'Brzuch pełny, dach nad głową. Czego chcieć więcej?', 'Niech pan żyje sto lat!'],
-  wolvesNight: ['Słyszysz? Wyją za palisadą.', 'Nocą wilki podchodzą pod same chaty.', 'Drzwi zaryglować, wilki krążą.'],
-};
+// --- odzywki ludzi: teksty w data/barks.ts ---
+/** Pan zamku spaceruje po dziedzińcu blisko tego miejsca (patrz renderer.lordAt) */
+function lordNear(px: number, py: number): boolean {
+  const l = renderer.lordAt(ME);
+  return !!l && Math.hypot(l.x - px / 256, l.y - py / 256) < 6;
+}
 /** Sytuacja w osadzie i wokół człowieka: najważniejsza wygrywa (ogień, wróg, wilki, głód, podatki…) */
 function situation(px: number, py: number): string | null {
   const p = game.players[ME]!, R2 = (r: number): number => (r * 256) ** 2;
@@ -1663,7 +1640,10 @@ function situation(px: number, py: number): string | null {
   if (game.soldiers.some((o) => game.players[o.owner]!.team !== p.team && d2(o.px, o.py) < R2(14))) return 'enemy';
   if (game.wolves.some((w) => d2(w.px, w.py) < R2(5))) return 'wolves';
   if (renderer.weather.night > 0.5 && game.wolves.length && Math.random() < 0.5) return 'wolvesNight';
-  if (!monthlyForecast(game, p).fed) return 'hungry';
+  if (lordNear(px, py)) return 'lord';
+  const fc = monthlyForecast(game, p);
+  if (!fc.fed) return 'hungry';
+  if (fc.parts.some((x) => x.key === 'crowd' && x.value < 0) && Math.random() < 0.35) return 'crowded';
   if (p.tax >= 3 && Math.random() < 0.6) return 'taxHigh';
   if (p.tax === 0 && Math.random() < 0.5) return 'bribe';
   if (p.popularity < 45 && Math.random() < 0.6) return 'angry';
@@ -1688,6 +1668,7 @@ function lineFor(id: number): string {
   const sit = situation(u.px, u.py);
   if (sit) return pick(sit);
   if (renderer.weather.night > 0.5 && Math.random() < 0.4) return pick('night');
+  { const h = clockAt(game.tick).hour; if (h >= 5 && h < 8 && Math.random() < 0.5) return pick('morning'); }
   // rytm dnia: wieczór (19, 20), w drodze do łóżka (21), sen (22, pod dachem albo na słomie)
   if (u.phase === 22) return u.home ? pick('sleeping') : Math.random() < 0.5 ? pick('outside') : pick('sleeping');
   if (u.phase === 21) return pick('sleep');
@@ -1699,23 +1680,13 @@ function lineFor(id: number): string {
   const jid = job ? BUILDINGS[job.type]!.id : '';
   return SAY[jid] && Math.random() < 0.7 ? pick(jid) : pick('work');
 }
-/** Odzywki straży miejskiej (w duchu strażników Starego Obozu) */
-const GUARD_SAY = {
-  day: ['Czego tu szukasz?', 'Nie szwendaj się tu bez potrzeby.', 'Trzymaj się z dala od kłopotów.', 'Spokojnie. Dopóki ja tu stoję, nikt nie podskoczy.', 'Pan płaci, ja pilnuję. Proste.', 'Masz jakiś problem?'],
-  night: ['Po zmroku lepiej siedź w chacie.', 'Wilki dziś blisko. Słyszałeś je?', 'Cicho. Coś się rusza przy palisadzie.', 'Noc długa, a piwa ani kropli.'],
-  danger: ['Do broni!', 'Wróg pod bramą! Za mną!', 'Nie przejdą, póki ja stoję!'],
-  fire: ['Ogień! Ruszać się z tymi wiadrami!', 'Gasić, nie gapić się!'],
-  rain: ['Leje jak z cebra, a ja tu stoję.', 'Zbroja rdzewieje od tego deszczu.'],
-  hungry: ['Pusty kocioł w koszarach. Długo tak nie postoimy.', 'Głodny strażnik to zły strażnik.'],
-  taxHigh: ['Chłopi narzekają na podatki. Pilnuj, żeby się nie zbuntowali.', 'Poborca chodzi z nami, bo sam by nie wrócił.'],
-};
 function sayGuard(id: number): void {
   const s = game.soldiers.find((x) => x.id === id);
   if (!s) return;
   const pick = (l: string[]): string => l[Math.floor(Math.random() * l.length)]!;
   const near = game.soldiers.some((o) => game.players[o.owner]!.team !== game.players[s.owner]!.team && (o.px - s.px) ** 2 + (o.py - s.py) ** 2 < (8 * 256) ** 2) || game.wolves.some((w) => (w.px - s.px) ** 2 + (w.py - s.py) ** 2 < (8 * 256) ** 2);
   const sit = situation(s.px, s.py);
-  const extra = sit === 'fire' ? GUARD_SAY.fire : sit === 'rain' ? GUARD_SAY.rain : sit === 'hungry' ? GUARD_SAY.hungry : sit === 'taxHigh' ? GUARD_SAY.taxHigh : null;
+  const extra = sit === 'lord' ? GUARD_SAY.lord : sit === 'fire' ? GUARD_SAY.fire : sit === 'rain' ? GUARD_SAY.rain : sit === 'hungry' ? GUARD_SAY.hungry : sit === 'taxHigh' ? GUARD_SAY.taxHigh : null;
   bubble.textContent = pick(near || sit === 'enemy' ? GUARD_SAY.danger : extra ?? (clockAt(game.tick).night ? GUARD_SAY.night : GUARD_SAY.day));
   bubble.hidden = false;
   sayUnit = id;

@@ -3882,8 +3882,14 @@ export class GameRenderer {
       const foe = TEAM_COLORS[team === 0 ? 1 : 0] ?? 0x666666;
       const seed = Math.round(kx * 7 + ky * 13);
       const G = CASTLE.floorY;
-      // pan: za dnia na tronie; co minutę wstaje i obchodzi salę (ok. 15 s), nocą śpi w komnacie (niewidoczny)
-      if (day) {
+      // pan: za dnia na tronie; co minutę wstaje i obchodzi salę (ok. 15 s), nocą śpi w komnacie (niewidoczny);
+      // co kilka minut wychodzi drzwiami sali na dziedziniec, obchodzi go dookoła studni, chwilę przy niej stoi i wraca
+      const yard = day && !this.calm ? this.lordYard(T + seed * 1.7) : null;
+      if (yard) {
+        const [x, z, yaw, moving] = yard;
+        put(kx, ky, base, x, z < -3.5 ? G + 0.12 : G, z, yaw, moving ? Math.sin(T * 3.6) * 0.32 : 0, col, 777000 + seed, { king: true });
+        if (z > -1.5) this.lordPos.set(owner, { x: kx + x, y: ky + z, t: T });
+      } else if (day) {
         const per = 60, ph = ((T + seed) % per) / per;
         if (ph < 0.75) put(kx, ky, base, 0, CASTLE.seatY, CASTLE.throneZ + 0.12, 0, 0, col, 777000 + seed, { sit: -1.45, work: -0.3 + Math.sin(T * 0.7) * 0.08, workL: -0.3, king: true });
         else {
@@ -3927,6 +3933,40 @@ export class GameRenderer {
     }
     this.kings.finish(kings);
     return k;
+  }
+  /** Gdzie pan zamku spaceruje po dziedzińcu (pola mapy; ostatnia sekunda), do odzywek ludzi i straży */
+  private lordPos = new Map<number, { x: number; y: number; t: number }>();
+  lordAt(owner: number): { x: number; y: number } | null {
+    const p = this.lordPos.get(owner);
+    return p && this.time - p.t < 1 ? p : null;
+  }
+  /**
+   * Spacer pana po dziedzińcu (układ zamku: środek = 0,0, pole = 1, tył -z): od tronu przez drzwi sali, wzdłuż
+   * zachodniej strony, za studnią (przy niej przystaje i patrzy na nią), wschodnią stroną z powrotem do sali.
+   * Co 150 s, trwa ok. 40 s. Zwraca [x, z, kierunek, czy idzie] albo null, gdy pan siedzi w sali.
+   */
+  private lordYard(t: number): [number, number, number, boolean] | null {
+    const per = 150, len = 40, ph = t % per;
+    if (ph > len) return null;
+    const route: [number, number][] = [[0, CASTLE.throneZ + 0.45], [0, -2.4], [0, -1.5], [0, -0.6], [-2, 0], [-2, 1.6], [-1, 3.0], [0, 3.05],
+      [1, 3.0], [2, 1.6], [2, 0], [0, -0.6], [0, -1.5], [0, -2.4], [0, CASTLE.throneZ + 0.45]];
+    const stopAt = 7, stop = 6; // przy studni (punkt 7 trasy) stoi 6 s
+    const seg: number[] = []; let L = 0;
+    for (let i = 1; i < route.length; i++) { const d = Math.hypot(route[i]![0] - route[i - 1]![0], route[i]![1] - route[i - 1]![1]); seg.push(d); L += d; }
+    let before = 0; for (let i = 0; i < stopAt; i++) before += seg[i]!;
+    const speed = L / (len - stop);
+    let r: number;
+    if (ph * speed < before) r = ph * speed;
+    else if (ph < before / speed + stop) return [0, 3.05, Math.PI, false]; // przodem do studni (studnia na z = 2)
+    else r = (ph - stop) * speed;
+    for (let i = 0; i < seg.length; i++) {
+      if (r <= seg[i]! || i === seg.length - 1) {
+        const a = route[i]!, b = route[i + 1]!, q = seg[i]! ? Math.min(1, r / seg[i]!) : 0;
+        return [a[0] + (b[0] - a[0]) * q, a[1] + (b[1] - a[1]) * q, Math.atan2(b[0] - a[0], b[1] - a[1]), true];
+      }
+      r -= seg[i]!;
+    }
+    return null;
   }
   /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */
   private standY(view: TerrainView, x: number, y: number): number {
