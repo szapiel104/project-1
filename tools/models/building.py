@@ -38,10 +38,16 @@ class Building:
     def slope(self, group, mat, pts, away, t=0.025):
         """Połać dachu z grubością: wierzch odwrócony od `away` i spód tuż pod nim (widać go spod okapu)"""
         top = self.poly(group, mat, pts, away=away)
-        self.poly(group, mat, [(x, y - t, z) for x, y, z in reversed(top)])
+        low = [(x, y - t, z) for x, y, z in top]
+        self.poly(group, mat, list(reversed(low)))
+        n = len(top)
+        cen = tuple(sum(q[i] for q in top) / n - (t / 2 if i == 1 else 0) for i in range(3))
+        for k in range(n):  # boki płyty: dach to bryła, nie kartka — od krawędzi nic nie prześwituje
+            j = (k + 1) % n
+            self.poly(group, mat, [top[j], top[k], low[k], low[j]], away=cen)
 
     # ---------- bryły (y = spód, jak box() w grze) ----------
-    def box(self, group, mat, w, h, d, x=0.0, y=0.0, z=0.0, rot=0.0, top=True, bottom=False, tilt=0.0, roll=0.0):
+    def box(self, group, mat, w, h, d, x=0.0, y=0.0, z=0.0, rot=0.0, top=True, bottom=None, tilt=0.0, roll=0.0):
         """Pudło stojące na (x, y, z); rot = obrót wokół pionu, tilt = pochylenie wokół osi x, roll = wokół osi z (przy spodzie)"""
         c, s = math.cos(rot), math.sin(rot)
         ct, st = math.cos(tilt), math.sin(tilt)
@@ -55,6 +61,8 @@ class Building:
         faces = [(3, 2, 6, 7), (1, 0, 4, 5), (2, 1, 5, 6), (0, 3, 7, 4)]
         if top:
             faces.append((7, 6, 5, 4))
+        if bottom is None:  # spód dostaje wszystko, co nie leży na ziemi (okiennice, belki, daszki — widać je od dołu w spacerze)
+            bottom = y > 0.005 or bool(tilt) or bool(roll)
         if bottom:
             faces.append((0, 1, 2, 3))
         for f in faces:
@@ -72,6 +80,8 @@ class Building:
                 self.poly(group, mat, [lo[k], lo[k2], (x, y + h, z)])
         if top and r1 > 1e-6:
             self.poly(group, mat, list(hi))  # wierzch walca patrzy w górę
+        if y > 0.005 and r0 > 1e-6:
+            self.poly(group, mat, list(reversed(lo)))  # spód, gdy nie stoi na ziemi
 
     def pyramid(self, group, mat, w, d, h, x=0.0, y=0.0, z=0.0):
         a, b = w / 2, d / 2
@@ -92,16 +102,20 @@ class Building:
             self.slope(group, mat, [r0, r1, k1, k0], mid)
             self.slope(group, mat, [q1, q0, k0, k1], mid)
             if end_mat:
-                self.poly(group, end_mat, [(x0, y, z1), (x0, y, z0), (x0, y + h, zm)], away=mid)
-                self.poly(group, end_mat, [(x1, y, z0), (x1, y, z1), (x1, y + h, zm)], away=mid)
+                f = self.poly(group, end_mat, [(x0, y, z1), (x0, y, z0), (x0, y + h, zm)], away=mid)
+                self.poly(group, end_mat, list(reversed(f)))  # od środka też ściana
+                f = self.poly(group, end_mat, [(x1, y, z0), (x1, y, z1), (x1, y + h, zm)], away=mid)
+                self.poly(group, end_mat, list(reversed(f)))  # od środka też ściana
         else:
             xm = (x0 + x1) / 2
             a, b = (x0 - over, z0 - over), (x1 + over, z1 + over)
             self.slope(group, mat, [(a[0], y, b[1]), (a[0], y, a[1]), (xm, y + h, a[1]), (xm, y + h, b[1])], mid)
             self.slope(group, mat, [(b[0], y, a[1]), (b[0], y, b[1]), (xm, y + h, b[1]), (xm, y + h, a[1])], mid)
             if end_mat:
-                self.poly(group, end_mat, [(x0, y, z0), (x1, y, z0), (xm, y + h, z0)], away=mid)
-                self.poly(group, end_mat, [(x1, y, z1), (x0, y, z1), (xm, y + h, z1)], away=mid)
+                f = self.poly(group, end_mat, [(x0, y, z0), (x1, y, z0), (xm, y + h, z0)], away=mid)
+                self.poly(group, end_mat, list(reversed(f)))  # od środka też ściana
+                f = self.poly(group, end_mat, [(x1, y, z1), (x0, y, z1), (xm, y + h, z1)], away=mid)
+                self.poly(group, end_mat, list(reversed(f)))  # od środka też ściana
         # spód połaci, żeby od środka (spacer) dach nie był przezroczysty
         self.poly(group, mat, [(x0 - over, y - 0.001, z0 - over), (x1 + over, y - 0.001, z0 - over), (x1 + over, y - 0.001, z1 + over), (x0 - over, y - 0.001, z1 + over)], away=((x0 + x1) / 2, y + 1, (z0 + z1) / 2))
 
