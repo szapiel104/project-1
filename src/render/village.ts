@@ -19,7 +19,6 @@ export interface VillageCtx { time: number; dt: number; night: number; calm: boo
 interface Critter { x: number; y: number; tx: number; ty: number; wait: number; heading: number; speed: number; seen: number; hx: number; hy: number; flee: number; next: number }
 interface Dog extends Critter { master: number; until: number; bark: number; run: number }
 
-const DOGS_ON = false;
 const MAX_HENS = 120, MAX_PIGS = 48, MAX_HORSES = 8, MAX_DOGS = 8;
 
 /** Modele zwierząt z Blendera (tools/models/animals.py) */
@@ -207,14 +206,17 @@ export class Village {
       }
     }
     // pies: jeden na gracza, przy twierdzy; chodzi za kimś z osady, nocą obszczekuje wilki
-    // pies wyłączony (Michał 15.10: przeszkadzał w bramie zamku); kod zostaje, gdyby miał wrócić
     let dogs = 0;
-    for (const pl of DOGS_ON ? g.players : []) {
+    for (const pl of g.players) {
       if (dogs >= MAX_DOGS || pl.defeated) continue;
       const keep = g.buildings.find((b) => b.owner === pl.id && b.type === 0 && !b.ruined);
       if (!keep) continue;
       // dom psa: przedpole przed bramą zamku (drzwi budynku zamku prowadzą do środka, tam pies nie chodzi)
-      const [fx, fy] = keepFront(keep), kx = fx + 0.5, ky = fy + 1.5;
+      // dom z boku przedpola, nie na drodze do bramy
+      const [fx, fy] = keepFront(keep);
+      // na przedpolu, dwa pola w bok od osi bramy; gdy tam zajęte, druga strona albo dalej przed bramą
+      const spots: [number, number][] = [[fx + 2.5, fy + 1.5], [fx - 1.5, fy + 1.5], [fx + 0.5, fy + 3.5]];
+      const [kx, ky] = spots.find(([x, y]) => this.free(g, x, y)) ?? spots[0]!;
       let d = this.dogs.get(pl.id);
       if (!d) { d = { x: kx, y: ky, tx: kx, ty: ky, wait: 0, heading: 0, speed: 0, seen: 0, hx: kx, hy: ky, flee: 0, next: 0, master: 0, until: 0, bark: 0, run: 0 }; this.dogs.set(pl.id, d); }
       d.hx = kx; d.hy = ky; d.seen = this.frame;
