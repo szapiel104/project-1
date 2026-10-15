@@ -853,8 +853,8 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .bar-side::before, .bar-side::after { content: ''; position: absolute; height: 1px; pointer-events: none; z-index: -1; }
 .bar-side::before { top: calc(50% - 2px); opacity: .55; }
 .bar-side::after { top: calc(50% + 2px); opacity: .25; }
-.bar-side.left::before, .bar-side.left::after { left: 0; right: 0; background: linear-gradient(90deg, transparent, #9a7a2a 30%, #e9c766); }
-.bar-side.right::before, .bar-side.right::after { left: 0; right: 0; background: linear-gradient(90deg, #e9c766, #9a7a2a 70%, transparent); }
+.bar-side.left::before, .bar-side.left::after { left: 0; right: 6px; background: linear-gradient(90deg, transparent, #9a7a2a 30%, #e9c766); }
+.bar-side.right::before, .bar-side.right::after { left: 6px; right: 0; background: linear-gradient(90deg, #e9c766, #9a7a2a 70%, transparent); }
 .bar-side { display: flex; gap: clamp(4px, 1vw, 18px); position: relative; z-index: 1; }
 .bar-side.left { justify-content: flex-end; }
 .bar-side.right { justify-content: flex-start; }
