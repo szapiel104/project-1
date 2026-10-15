@@ -171,7 +171,7 @@ function applyLook(): void {
   grass.scale.setScalar(r * 2.2);
   // w powietrzu model wisi nad własnym cieniem
   const lift = state.bg === 'powietrze' ? Math.max(0.15, size.y * 0.35) : 0;
-  if (current) current.position.y = lift;
+  if (current) current.position.y = ((current.userData.baseY as number | undefined) ?? 0) + lift;
   shadowCatch.scale.setScalar(r * 1.6);
   if (current) {
     current.traverse((o) => {
@@ -198,7 +198,9 @@ function show(id: string): void {
   if (!made.size) {
     // wyśrodkowanie w poziomie, stopa na zerze
     const c = box.getCenter(new THREE.Vector3());
-    current.position.set(-c.x, 0, -c.z);
+    // stopa na podstawce: modele wiszące od y = 0 w dół (pranie) też stają na niej
+    current.position.set(-c.x, box.min.y < -0.001 ? -box.min.y : 0, -c.z);
+    current.userData.baseY = current.position.y;
   }
   const span = Math.max(size.x, size.y, size.z, 0.2);
   const d = span * 2.4;

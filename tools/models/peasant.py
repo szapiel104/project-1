@@ -50,7 +50,8 @@ def skirt_col(x, y, z):
     return (0.86 + 0.12 * math.cos(math.atan2(x, z) * 6 + y * 30),) * 3
 skirt_m = Mesh(evaluated(skirt), skirt_col, 'cloth', dyn='tunic')
 apron = lathe('apron', [(0.104, 0.33), (0.103, 0.28), (0.116, 0.21), (0.126, 0.15)], seg=8, depth=0.82, phi0=-0.85, phi=1.7, subsurf=0)
-apron_m = Mesh(evaluated(apron), lambda x, y, z: tuple(c * (0.85 + (y - 0.15) * 0.6) for c in LINEN), 'cloth', show='apron')
+# fartuch leży tuż na tunice, więc cień w zagłębieniach mocno go szarzy: barwa bazowa jaśniejsza, żeby len był lnem
+apron_m = Mesh(evaluated(apron), lambda x, y, z: tuple(min(1.0, c * (1.6 + (y - 0.15) * 0.6)) for c in LINEN), 'cloth', show='apron')
 rope = lathe('rope', [(0.092, 0.29), (0.096, 0.297), (0.096, 0.305), (0.092, 0.311)], seg=18, depth=0.78, subsurf=0)
 rope_m = Mesh(evaluated(rope), ROPE, 'cloth')
 pouch = sphere('pouch', (-0.07, 0.262, 0.056), (0.026, 0.032, 0.018), seg=10, rings=6)

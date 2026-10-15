@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.23.1 — przegląd modeli z Blendera (2026-10-15)
+
+- Obejrzane w podglądzie z trzech stron: ludzie, zwierzęta, rzeczy z podwórka i budynki z Blendera
+- Poprawione: fartuchy chłopa i gospodyni nie są już szare jak kamień (len jasny mimo cienia w fałdach); tara przy balii oparta z zewnątrz zamiast wbitej w środek wody
+- Podgląd modeli: rzeczy wiszące w dół (pranie) stają na podstawce zamiast chować się pod nią
+
 ## 0.23.0 — symulacja w osobnym wątku (2026-10-15)
 
 - W grze z botami logika gry (ekonomia, ścieżki, wojsko, boty) liczy się w osobnym wątku przeglądarki (Web Worker); wątek główny tylko rysuje i obsługuje interfejs, więc długi tick (np. bot planujący zabudowę w 4v4) nie przycina obrazu

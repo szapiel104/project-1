@@ -151,7 +151,8 @@ board = [box(0.07, 0.17, 0.008, move=(0, 0.085, 0))]
 for j in range(7):
     board.append(box(0.06, 0.006, 0.006, move=(0, 0.04 + j * 0.016, 0.006)))
 for b in board:
-    xf(b, rx=-0.35, ry=0.6, move=(-0.05, 0.03, -R + 0.02))
+    # tara oparta z zewnątrz o tylną klepkę (pochylona ku balii), nie wbita w środek
+    xf(b, rx=0.35, ry=0.5, move=(-0.04, 0.0, -R - 0.05))
     parts.append(Mesh(b, wood(WOOD_L), 'wood'))
 finish('tub', parts)
 
