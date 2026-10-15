@@ -1655,49 +1655,74 @@ export class GameRenderer {
   quality = '';
 
   /**
-   * Postacie, broń, ładunki i inne rzeczy rysowane setkami (instancje) poza kadrem nie idą do karty graficznej:
-   * ich macierz dostaje zerową skalę na tę klatkę. Dotyczy tylko siatek przepisywanych co klatkę (od 30 klatek z rzędu)
-   * — te zapisywane rzadko (mury, las) zostają nietknięte, bo nikt by ich potem nie przywrócił przy ruchu kamery.
+   * Rzeczy rysowane setkami (instancje: postacie, broń, ładunki, drzewa, bale…) poza kadrem nie idą do karty graficznej:
+   * ich macierz dostaje na tę klatkę zerową skalę. Oryginał jest odkładany, więc gdy siatki nikt nie przepisze
+   * (mury, las), a kamera się przesunie, ukryte instancje wracają same.
    */
-  private cullSeen = new Map<THREE.InstancedMesh, { ver: number; streak: number; r: number; cx: number; cy: number; cz: number }>();
+  private cullSeen = new Map<THREE.InstancedMesh, { ver: number; r: number; cx: number; cy: number; cz: number; hidden: Uint8Array | null; saved: Float32Array | null }>();
   private cullFrustum = new THREE.Frustum();
   private cullM = new THREE.Matrix4();
   private cullS = new THREE.Sphere();
   culled = 0;
+  /** Do porównań wydajności (window.__renderer.cullOn = false) */
+  cullOn = true;
   private cullInstances(): void {
+    if (!this.cullOn) {
+      for (const [m, st] of this.cullSeen) {
+        if (!st.hidden || m.instanceMatrix.version !== st.ver) continue;
+        const a = m.instanceMatrix.array as Float32Array;
+        for (let i = 0; i < st.hidden.length; i++) if (st.hidden[i]) { for (let k = 0; k < 16; k++) a[i * 16 + k] = st.saved![i * 16 + k]!; st.hidden[i] = 0; }
+        m.instanceMatrix.needsUpdate = true; st.ver = m.instanceMatrix.version;
+      }
+      this.culled = 0;
+      return;
+    }
     const cam = this.cam.camera;
     cam.updateMatrixWorld();
     this.cullFrustum.setFromProjectionMatrix(this.cullM.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
     let culled = 0;
+    const sph = this.cullS, fr = this.cullFrustum;
     this.scene.traverseVisible((o) => {
       const m = o as THREE.InstancedMesh;
       if (!m.isInstancedMesh || m.count === 0 || m.count > 4096) return;
-      const attr = m.instanceMatrix;
+      const attr = m.instanceMatrix, a = attr.array as Float32Array;
       let st = this.cullSeen.get(m);
       if (!st) {
         if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
         const bs = m.geometry.boundingSphere!;
-        st = { ver: attr.version, streak: 0, r: bs.radius, cx: bs.center.x, cy: bs.center.y, cz: bs.center.z };
+        // drobiazgi (iskry, krople, liście) nie są warte liczenia: tylko siatki od 60 trójkątów w górę
+        const tris = (m.geometry.index ? m.geometry.index.count : m.geometry.getAttribute('position').count) / 3;
+        st = { ver: tris < 60 ? -2 : -1, r: bs.radius, cx: bs.center.x, cy: bs.center.y, cz: bs.center.z, hidden: null, saved: null };
         this.cullSeen.set(m, st);
-        return;
       }
-      st.streak = attr.version !== st.ver ? st.streak + 1 : 0;
-      if (st.streak < 30) { st.ver = attr.version; return; }
-      const a = attr.array as Float32Array, sph = this.cullS;
+      if (st.ver === -2) return;
+      // przepisana od ostatniej klatki: odłożone kopie są nieaktualne
+      if (attr.version !== st.ver) { st.hidden?.fill(0); }
+      const inView = (src: Float32Array, o16: number): boolean => {
+        const sx = src[o16]! * src[o16]! + src[o16 + 1]! * src[o16 + 1]! + src[o16 + 2]! * src[o16 + 2]!;
+        const sc = Math.sqrt(Math.max(sx, src[o16 + 4]! * src[o16 + 4]! + src[o16 + 5]! * src[o16 + 5]! + src[o16 + 6]! * src[o16 + 6]!, src[o16 + 8]! * src[o16 + 8]! + src[o16 + 9]! * src[o16 + 9]! + src[o16 + 10]! * src[o16 + 10]!));
+        if (sc === 0) return true; // i tak niewidoczna
+        sph.center.set(src[o16 + 12]! + st!.cx * sc, src[o16 + 13]! + st!.cy * sc, src[o16 + 14]! + st!.cz * sc).applyMatrix4(m.matrixWorld);
+        sph.radius = st!.r * sc + 1.5; // zapas: cień i ruch kamery w tej klatce
+        return fr.intersectsSphere(sph);
+      };
       let changed = false;
       for (let i = 0; i < m.count; i++) {
         const o16 = i * 16;
-        const sx = a[o16]! * a[o16]! + a[o16 + 1]! * a[o16 + 1]! + a[o16 + 2]! * a[o16 + 2]!;
-        if (sx === 0) continue; // już ukryta
-        const sc = Math.sqrt(Math.max(sx, a[o16 + 4]! * a[o16 + 4]! + a[o16 + 5]! * a[o16 + 5]! + a[o16 + 6]! * a[o16 + 6]!, a[o16 + 8]! * a[o16 + 8]! + a[o16 + 9]! * a[o16 + 9]! + a[o16 + 10]! * a[o16 + 10]!));
-        sph.center.set(a[o16 + 12]! + st.cx * sc, a[o16 + 13]! + st.cy * sc, a[o16 + 14]! + st.cz * sc).applyMatrix4(m.matrixWorld);
-        sph.radius = st.r * sc + 1.5; // zapas: cień i ruch kamery w tej klatce
-        if (this.cullFrustum.intersectsSphere(sph)) continue;
-        for (let k = 0; k < 16; k++) a[o16 + k] = 0;
+        if (st.hidden && st.hidden[i]) {
+          // ukryta wcześniej, a nikt jej nie przepisał: wraca, gdy znów jest w kadrze
+          if (inView(st.saved!, o16)) { for (let k = 0; k < 16; k++) a[o16 + k] = st.saved![o16 + k]!; st.hidden[i] = 0; changed = true; } else culled++;
+          continue;
+        }
+        if (inView(a, o16)) continue;
+        if (!st.saved || st.saved.length < a.length) { st.saved = new Float32Array(a.length); st.hidden = new Uint8Array(a.length / 16); }
+        for (let k = 0; k < 16; k++) { st.saved[o16 + k] = a[o16 + k]!; a[o16 + k] = 0; }
+        st.hidden![i] = 1;
         changed = true; culled++;
       }
       if (changed) attr.needsUpdate = true;
       st.ver = attr.version;
+      if (st.ver === -2) st.ver = -3;
     });
     this.culled = culled;
   }
