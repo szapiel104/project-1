@@ -145,7 +145,8 @@ export class Clouds {
     this.clouds = this.clouds.filter((c) => c.age < c.life + 25);
     // nadmiar chmur (pogoda się przejaśnia) rozpływa się
     let alive = this.clouds.filter((c) => c.age < c.life);
-    for (let i = want; i < alive.length; i++) alive[i]!.life = Math.min(alive[i]!.life, alive[i]!.age);
+    // want bywa niecałkowite/ujemne przy dziwnych danych pogody — bez tego alive[i] było undefined i chmury wywracały klatkę
+    for (let i = Math.max(0, Math.floor(want) || 0); i < alive.length; i++) { const c = alive[i]; if (c) c.life = Math.min(c.life, c.age); }
     alive = this.clouds;
 
     // barwy: w dzień białe z szaroniebieskim spodem, o zachodzie ciepłe, w deszczu ołowiane, nocą ciemne
