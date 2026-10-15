@@ -600,6 +600,7 @@ export class GameRenderer {
     this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.archers = new Figures(MAX_UNITS, this.scene, 'archer');
     this.guardsFig = new Figures(MAX_UNITS, this.scene, 'guard');
+    this.kings = new Figures(32, this.scene, 'king');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
       tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
       tint(new THREE.ConeGeometry(0.02, 0.07, 4).rotateX(Math.PI / 2).translate(0, 0, 0.27), 0x6a6e76),
@@ -1569,7 +1570,7 @@ export class GameRenderer {
       T('światła', () => this.syncLamps(g));
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
       const cp = this.cam.camera.position;
-      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
+      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
       this.crowd.begin(dt);
       T('chłopi', () => this.syncUnits(g, v, alpha));
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
@@ -3444,6 +3445,8 @@ export class GameRenderer {
   private keepFloors = new Map<number, [number, number, number]>();
   /** Właściciel zamku (klucz: x * 1000 + y środka) — barwy domowników i wartowników */
   private keepOwner = new Map<number, number>();
+  /** Panowie zamków (osobna siatka: korona, gronostaj, płaszcz) */
+  private kings!: Figures;
   private lifeObj = new THREE.Object3D();
   /**
    * Domownicy zamku (ozdoba, poza symulacją): pan na tronie, który co jakiś czas przechadza się po sali, kucharz
@@ -3455,7 +3458,17 @@ export class GameRenderer {
     const { width, height } = g.map;
     const hour = clockAt(g.tick).hour, day = hour >= 6 && hour < 21.5;
     const t = this.lifeObj, T = this.time;
-    const put = (kx: number, ky: number, base: number, x: number, y: number, z: number, yaw: number, swing: number, tunic: number, id: number, opt: { up?: boolean; work?: number; workL?: number; sit?: number; bow?: number } = {}): void => {
+    let kings = 0;
+    const put = (kx: number, ky: number, base: number, x: number, y: number, z: number, yaw: number, swing: number, tunic: number, id: number, opt: { up?: boolean; work?: number; workL?: number; sit?: number; bow?: number; king?: boolean } = {}): void => {
+      if (opt.king) {
+        if (kings >= 32) return;
+        t.position.set(kx + x - width / 2, base + y, ky + z - height / 2);
+        t.rotation.set(0, yaw, 0, 'YXZ');
+        t.scale.setScalar(FIG * 1.05);
+        t.updateMatrix();
+        this.kings.set(kings++, t.matrix, swing, false, tunic, id, opt.work, opt.workL ?? -0.5, false, opt.sit);
+        return;
+      }
       if (k >= MAX_UNITS) return;
       t.position.set(kx + x - width / 2, base + y, ky + z - height / 2);
       t.rotation.set(opt.bow ?? 0, yaw, 0, 'YXZ');
@@ -3489,12 +3502,12 @@ export class GameRenderer {
       // pan: za dnia na tronie; co minutę wstaje i obchodzi salę (ok. 15 s), nocą śpi w komnacie (niewidoczny)
       if (day) {
         const per = 60, ph = ((T + seed) % per) / per;
-        if (ph < 0.75) put(kx, ky, base, 0, CASTLE.seatY, CASTLE.throneZ + 0.12, 0, 0, col, 777000 + seed, { sit: -1.45, work: -0.3 + Math.sin(T * 0.7) * 0.08, workL: -0.3 });
+        if (ph < 0.75) put(kx, ky, base, 0, CASTLE.seatY, CASTLE.throneZ + 0.12, 0, 0, col, 777000 + seed, { sit: -1.45, work: -0.3 + Math.sin(T * 0.7) * 0.08, workL: -0.3, king: true });
         else {
           const f = (ph - 0.75) / 0.25;
           const tour: [number, number][] = [[0, CASTLE.throneZ + 0.45], [0.9, -3.0], [0.6, -2.0], [-0.7, -2.0], [-0.9, -3.0], [0, CASTLE.throneZ + 0.45]];
           const [x, z, yaw] = along(tour, f);
-          put(kx, ky, base, x, z < -3.5 ? G + 0.12 : G, z, yaw, Math.sin(T * 5) * 0.45, col, 777000 + seed);
+          put(kx, ky, base, x, z < -3.5 ? G + 0.12 : G, z, yaw, Math.sin(T * 4) * 0.35, col, 777000 + seed, { king: true });
         }
       }
       // kucharz: przy palenisku miesza w kotle, co jakiś czas idzie do stołu kroić
@@ -3529,6 +3542,7 @@ export class GameRenderer {
         put(kx, ky, base, -4.25, G + 0.02, cz, Math.PI / 2, 0, foe, id + seed, { sit: -1.45, bow: 0.35 + rest, work: -0.25, workL: -0.25 });
       }
     }
+    this.kings.finish(kings);
     return k;
   }
   /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */

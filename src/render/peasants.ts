@@ -6,6 +6,7 @@ import SPEARMAN_MODEL from './models/spearman.json';
 import ARCHER_MODEL from './models/archer.json';
 import { grayPattern, normal, pattern } from './textures';
 import WOMAN_MODEL from './models/woman.json';
+import KING_MODEL from './models/king.json';
 import CHILD_MODEL from './models/child.json';
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
@@ -165,7 +166,7 @@ function lookOf(id: number, tunic: number, muted = false): Look {
  * a do tego jedno z kilku nakryć głowy, czasem broda albo fartuch. Każda część to jedna siatka instancjonowana.
  */
 /** Rodzaje postaci z Blendera */
-export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child';
+export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king';
 
 export class Figures {
   private parts: Part[] = [];
@@ -306,6 +307,8 @@ export class Figures {
     }
     // ---- gospodyni i dziecko z Blendera (tools/models/woman.py, child.py) ----
     if (kind === 'woman' || kind === 'child') { model((kind === 'woman' ? WOMAN_MODEL : CHILD_MODEL) as FigureModel, armL, armR); return; }
+    // pan zamku z Blendera (tools/models/king.py): korona, gronostaj, płaszcz w barwach pana
+    if (kind === 'king') { model(KING_MODEL as FigureModel, armL, armR); return; }
     // ---- chłop z Blendera (tools/models/peasant.py); kotwice narzędzi: bark (±0,135; 0,45), dłoń 0,185 niżej ----
     model(PEASANT_MODEL as FigureModel, armL, armR);
   }

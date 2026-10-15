@@ -72,6 +72,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['spearman', 'Włócznik', figure('spearman', 4)],
     ['archer', 'Łucznik', figure('archer', 5)],
     ['guard', 'Strażnik', figure('guard', 6)],
+    ['king', 'Pan zamku', figure('king', 7)],
   ]],
   ['Zwierzęta', [
     ['hen', 'Kura', () => ({ obj: mesh(animalGeo('hen_brown')) })],
