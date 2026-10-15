@@ -3,7 +3,7 @@ import { BUILDINGS } from '../data/buildings';
 import { TEAM_COLORS } from '../data/teams';
 import { t } from '../i18n';
 import { buildingModel } from './buildings';
-import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
+import { crowParts, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
 import { Figures } from './peasants';
 
 /**
@@ -73,7 +73,7 @@ export function createGallery(canvas: HTMLCanvasElement): { show(id: string): vo
   wolf.add(wolfBody, tail, eyes);
   wolf.traverse((o) => { if ((o as THREE.Mesh).isMesh) o.castShadow = true; });
   stage.add(wolf);
-  const crows = [0, 1].map((k) => { const m = new THREE.Mesh(crowGeometry(), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 })); m.castShadow = true; m.position.set(k ? 0.18 : -0.15, 0, k ? -0.1 : 0.08); m.rotation.y = k ? 2.2 : -0.6; stage.add(m); return m; });
+  const crows = [0, 1].map((k) => { const m = new THREE.Mesh(crowParts().stand, crowParts().mat); m.castShadow = true; m.position.set(k ? 0.18 : -0.15, 0, k ? -0.1 : 0.08); m.rotation.y = k ? 2.2 : -0.6; stage.add(m); return m; });
 
   let current = 'peasant';
   let shown: THREE.Object3D | null = null;

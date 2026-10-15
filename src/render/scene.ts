@@ -10,7 +10,7 @@ import { BUILDINGS, footprint, workArea } from '../data/buildings';
 import { Clutter } from './clutter';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
-import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
+import { crowParts, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
 import KEEP_MODEL from './models/keep.json';
 import TAVERN_MODEL from './models/tavern.json';
 import HOUSE_MODEL from './models/house.json';
@@ -2173,39 +2173,60 @@ export class GameRenderer {
   }
 
   private crows: THREE.InstancedMesh | null = null;
-  /** Kruki na ciałach poległych: dziobią, podskakują; płoszą się, gdy ktoś podejdzie */
+  /** Kruki w locie: jedna siatka na klatkę machania skrzydłami (model CC0 z animacją lotu) */
+  private crowFly: THREE.InstancedMesh[] = [];
+  /** Kruki na ciałach poległych: dziobią, podskakują; gdy ktoś podejdzie, zrywają się i krążą nad ciałem, aż odejdzie */
   private syncCrows(g: GameState, view: TerrainView): void {
     if (!this.crows) {
-      const geo = crowGeometry();
-      this.crows = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6 }), 256);
+      const c = crowParts();
+      this.crows = new THREE.InstancedMesh(c.stand, c.mat, 256);
       this.crows.frustumCulled = false; this.crows.castShadow = true;
       this.scene.add(this.crows);
+      this.crowFly = c.fly.map((geo) => { const m = new THREE.InstancedMesh(geo, c.mat, 128); m.frustumCulled = false; m.castShadow = true; m.count = 0; this.scene.add(m); return m; });
     }
     const { width, height } = g.map;
     const t = this.tmp;
+    const F = this.crowFly.length;
+    const flyN = new Array<number>(F).fill(0);
     let n = 0;
     for (const body of g.corpses) {
       if (n >= 250) break;
       if (body.taken || g.tick - body.at < 150) continue; // przylatują chwilę po śmierci
       const near = g.units.some((u) => Math.abs(u.px - body.px) < 2.5 * FP && Math.abs(u.py - body.py) < 2.5 * FP)
         || g.soldiers.some((s) => Math.abs(s.px - body.px) < 2.5 * FP && Math.abs(s.py - body.py) < 2.5 * FP);
-      if (near) continue; // spłoszone
       const count = 1 + (body.id % 3);
+      const bx = body.px / FP, by = body.py / FP;
       for (let i = 0; i < count; i++) {
+        if (near) {
+          // spłoszone: krążą nad ciałem na różnych wysokościach, machając skrzydłami
+          const ang = (this.calm ? 0 : this.time) * (0.9 + i * 0.15) + body.id + i * 2.1;
+          const r = 1.1 + i * 0.35;
+          const x = bx + Math.cos(ang) * r, y = by + Math.sin(ang) * r;
+          t.position.set(x - width / 2, view.heightAt(bx, by) + 1.6 + i * 0.35 + Math.sin(ang * 2) * 0.12, y - height / 2);
+          // leci po okręgu (stycznie), lekko przechylony do środka zakrętu
+          t.rotation.set(0, Math.atan2(-Math.sin(ang), Math.cos(ang)), -0.35, 'YXZ');
+          t.scale.setScalar(1.1);
+          t.updateMatrix();
+          const f = Math.floor(((this.calm ? 0 : this.time) * 9 + i * 2.7 + body.id) % F);
+          const mesh = this.crowFly[f]!;
+          if (flyN[f]! < 128) mesh.setMatrixAt(flyN[f]!++, t.matrix);
+          continue;
+        }
         const a = body.id * 1.7 + i * 2.3, r = 0.28 + (i % 2) * 0.12;
         const k = this.calm ? 0 : this.time * 3 + body.id + i * 1.9;
-        const hop = Math.max(0, Math.sin(k * 0.7)) > 0.97 ? 0.06 : 0;
-        const x = body.px / FP + Math.cos(a) * r, y = body.py / FP + Math.sin(a) * r;
+        const hop = Math.max(0, Math.sin(k * 0.7)) > 0.97 ? 0.05 : 0;
+        const x = bx + Math.cos(a) * r, y = by + Math.sin(a) * r;
         t.position.set(x - width / 2, view.heightAt(x, y) + hop, y - height / 2);
-        // dziobanie: tułów pochyla się do ciała
-        t.rotation.set(Math.max(0, Math.sin(k * 2.3)) * 0.6, Math.atan2(-Math.cos(a), -Math.sin(a)), 0, 'YXZ');
-        t.scale.setScalar(1.25);
+        // dziobanie: tułów pochyla się do ciała (przód modelu w +z)
+        t.rotation.set(Math.max(0, Math.sin(k * 2.3)) * 0.5, Math.atan2(-Math.cos(a), -Math.sin(a)), 0, 'YXZ');
+        t.scale.setScalar(1);
         t.updateMatrix();
         this.crows.setMatrixAt(n++, t.matrix);
       }
     }
     this.crows.count = n;
     this.crows.instanceMatrix.needsUpdate = true;
+    this.crowFly.forEach((m, f) => { m.count = flyN[f]!; m.visible = m.count > 0; m.instanceMatrix.needsUpdate = true; });
   }
 
   private syncSpawnFx(g: GameState, view: TerrainView): void {

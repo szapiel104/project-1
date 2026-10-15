@@ -12,7 +12,7 @@ import { buildingModel, setNight } from './render/buildings';
 import { partsGeometry } from './render/gear';
 import RAM_MODEL from './render/models/ram.json';
 import { clutterModel } from './render/clutter';
-import { crowGeometry, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
+import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
 import { YARD_KEYS, yardModel } from './render/family';
 import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
@@ -80,7 +80,8 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['horse', 'Koń', () => ({ obj: horse() })],
     ['dog', 'Pies', () => ({ obj: dog() })],
     ['wolf', 'Wilk', () => ({ obj: wolf() })],
-    ['crow', 'Kruk', () => ({ obj: mesh(crowGeometry()) })],
+    ['crow', 'Kruk', () => ({ obj: mesh(crowParts().stand, crowParts().mat) })],
+    ['crow-fly', 'Kruk w locie', () => ({ obj: mesh(crowParts().fly[1]!, crowParts().mat) })],
   ]],
   ['Machiny', [
     ['ram', 'Taran', () => {

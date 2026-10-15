@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.23.2 — nowy kruk (2026-10-15)
+
+- Kruk z gotowego modelu CC0 („Raven”, OpenGameArt): prawdziwa sylwetka, pióra z teksturą (krucza czerń z połyskiem), ciemne nogi z palcami
+- Spłoszone kruki nie znikają: zrywają się i krążą nad ciałem, machając skrzydłami (8 klatek animacji lotu z modelu), a gdy ludzie odejdą, wracają dziobać
+- W podglądzie modeli: „Kruk” i „Kruk w locie”
+
 ## 0.23.1 — przegląd modeli z Blendera (2026-10-15)
 
 - Obejrzane w podglądzie z trzech stron: ludzie, zwierzęta, rzeczy z podwórka i budynki z Blendera
