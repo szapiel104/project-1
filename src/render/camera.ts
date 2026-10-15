@@ -11,6 +11,11 @@ export class StrategyCamera {
   private dist = 38;
   /** Kąt patrzenia: od prawie poziomego (widok z ziemi) do pionowego (z lotu ptaka) */
   private pitch = (52 * Math.PI) / 180;
+  /**
+   * Ruch kamery jest płynny: klawisze, mysz i kółko zmieniają cel (goal), a kamera co klatkę dojeżdża do niego
+   * miękko (wykładniczo), zamiast skakać o cały krok kółka czy szarpać przy nierównym czasie klatek.
+   */
+  private goal = { x: 0, z: 0, yaw: Math.PI / 4, dist: 38, pitch: (52 * Math.PI) / 180 };
   private static readonly MIN_PITCH = (6 * Math.PI) / 180;
   private static readonly MAX_PITCH = (89 * Math.PI) / 180;
   /** Najbliżej, jak da się podjechać kamerą (dawniej 12): z tej odległości widać twarze, hełmy i lotki strzał */
@@ -74,13 +79,18 @@ export class StrategyCamera {
     this.target.set(x, 0, z);
     this.dist = dist; this.yaw = yaw; this.lift = lift;
     this.pitch = Math.max(StrategyCamera.MIN_PITCH, Math.min(StrategyCamera.MAX_PITCH, pitch));
+    this.snap();
     this.apply();
   }
+
+  /** Cel = obecne położenie (po skoku kamery: lookAt, zapis, ujęcia filmowe) */
+  private snap(): void { this.goal = { x: this.target.x, z: this.target.z, yaw: this.yaw, dist: this.dist, pitch: this.pitch }; }
 
   lookAt(x: number, z: number, dist = this.dist): void {
     this.lift = 0;
     this.target.set(x, 0, z);
     this.dist = dist;
+    this.snap();
     this.apply();
   }
 
@@ -108,17 +118,27 @@ export class StrategyCamera {
     if (k.has('PageUp') || k.has('KeyT')) tilt += 1;
     if (k.has('PageDown') || k.has('KeyG')) tilt -= 1;
     if (tilt) this.tilt(tilt * dt * 1.2);
-    if (fx || fz) this.pan(fx * this.dist * dt * 0.9 * this.speed, fz * this.dist * dt * 0.9 * this.speed);
-    if (rot) this.yaw += rot * dt * 1.6 * this.speed;
-    if (fx || fz || rot || tilt) this.apply();
+    if (fx || fz) this.pan(fx * this.goal.dist * dt * 0.9 * this.speed, fz * this.goal.dist * dt * 0.9 * this.speed);
+    if (rot) this.goal.yaw += rot * dt * 1.6 * this.speed;
+    // dojazd do celu: szybko, ale bez skoków (ok. 90% drogi w ~0,15 s)
+    const g = this.goal, kk = 1 - Math.exp(-Math.min(0.1, dt) * 16);
+    const d = Math.abs(g.x - this.target.x) + Math.abs(g.z - this.target.z) + Math.abs(g.yaw - this.yaw) + Math.abs(g.dist - this.dist) * 0.1 + Math.abs(g.pitch - this.pitch);
+    if (d < 1e-4) return;
+    this.target.x += (g.x - this.target.x) * kk;
+    this.target.z += (g.z - this.target.z) * kk;
+    this.yaw += (g.yaw - this.yaw) * kk;
+    // zbliżenie w skali logarytmicznej: tak samo płynne z daleka i z bliska
+    this.dist = Math.exp(Math.log(this.dist) + (Math.log(g.dist) - Math.log(this.dist)) * kk);
+    this.pitch += (g.pitch - this.pitch) * kk;
+    this.apply();
   }
 
   private pan(dx: number, dz: number): void {
-    const s = Math.sin(this.yaw), c = Math.cos(this.yaw);
-    this.target.x += dx * c + dz * s;
-    this.target.z += -dx * s + dz * c;
-    this.target.x = Math.max(-this.bounds.x, Math.min(this.bounds.x, this.target.x));
-    this.target.z = Math.max(-this.bounds.z, Math.min(this.bounds.z, this.target.z));
+    const g = this.goal, s = Math.sin(g.yaw), c = Math.cos(g.yaw);
+    g.x += dx * c + dz * s;
+    g.z += -dx * s + dz * c;
+    g.x = Math.max(-this.bounds.x, Math.min(this.bounds.x, g.x));
+    g.z = Math.max(-this.bounds.z, Math.min(this.bounds.z, g.z));
   }
 
   private saved: { pitch: number; dist: number } | null = null;
@@ -127,10 +147,11 @@ export class StrategyCamera {
     if (on && !this.saved) { this.saved = { pitch: this.pitch, dist: this.dist }; this.pitch = (20 * Math.PI) / 180; this.dist = 24; }
     else if (!on && this.saved) { this.pitch = this.saved.pitch; this.dist = this.saved.dist; this.saved = null; }
     else if (!on) return; // nic do przywrócenia
+    this.snap();
     this.apply();
   }
 
-  spin(d: number): void { this.yaw += d; this.apply(); }
+  spin(d: number): void { this.yaw += d; this.snap(); this.apply(); }
 
   /** Lot do ujęcia z lotu ptaka (podgląd mapy w menu): płynnie w górę i nad środek; zwykły widok wraca przez cinematic(false) */
   fly(dt: number, pitch: number, dist: number, x: number, z: number, spin: number): void {
@@ -141,17 +162,18 @@ export class StrategyCamera {
     this.target.x += (x - this.target.x) * k;
     this.target.z += (z - this.target.z) * k;
     this.yaw += spin * dt;
+    this.snap();
     this.apply();
   }
 
   private tilt(d: number): void {
-    this.pitch = Math.max(StrategyCamera.MIN_PITCH, Math.min(StrategyCamera.MAX_PITCH, this.pitch + d));
+    this.goal.pitch = Math.max(StrategyCamera.MIN_PITCH, Math.min(StrategyCamera.MAX_PITCH, this.goal.pitch + d));
   }
 
   private zoom(factor: number): void {
     // przy ziemi kroki kółka są drobniejsze, żeby dało się płynnie podjechać do żołnierzy
-    const f = this.dist < 14 ? 1 + (factor - 1) * 0.6 : factor;
-    this.dist = Math.max(StrategyCamera.MIN_DIST, Math.min(StrategyCamera.MAX_DIST, this.dist * f));
+    const f = this.goal.dist < 14 ? 1 + (factor - 1) * 0.6 : factor;
+    this.goal.dist = Math.max(StrategyCamera.MIN_DIST, Math.min(StrategyCamera.MAX_DIST, this.goal.dist * f));
   }
 
   private apply(): void {
@@ -208,7 +230,7 @@ export class StrategyCamera {
       return;
     } else if (p.button === 2 || (p.button === 0 && e.ctrlKey)) {
       // obrót: prawy przycisk albo lewy z Ctrl; ruch w górę i w dół zmienia kąt patrzenia
-      this.yaw -= dx * 0.006 * this.speed;
+      this.goal.yaw -= dx * 0.006 * this.speed;
       this.tilt(dy * 0.005);
       this.dragged = true;
     } else if (p.button === 1) {
@@ -222,7 +244,6 @@ export class StrategyCamera {
       if (p.moved > 5) this.dragged = true;
       return;
     }
-    this.apply();
   };
 
   private onUp = (e: PointerEvent): void => {
@@ -232,7 +253,8 @@ export class StrategyCamera {
 
   private onWheel = (e: WheelEvent): void => {
     e.preventDefault();
-    this.zoom(e.deltaY > 0 ? 1.1 : 1 / 1.1);
-    this.apply();
+    // gładzik i myszy z płynnym kółkiem dają małe kroki: zbliżenie proporcjonalne do obrotu kółka
+    const steps = Math.max(-3, Math.min(3, (e.deltaMode === 1 ? e.deltaY * 33 : e.deltaY) / 100));
+    this.zoom(Math.pow(1.12, steps));
   };
 }
