@@ -1188,7 +1188,8 @@ function refresh(): void {
 let last = performance.now();
 let acc = 0;
 // --- symulacja w osobnym wątku (src/sim/worker.ts): w grze z botami długie ticki nie zatrzymują obrazu ---
-const simThread = typeof window !== 'undefined' && !new URLSearchParams(location.search).has('bezwatku') ? createSimThread() : null;
+// na razie tylko na życzenie (?watek=1): w zwykłej grze ludzie sunęli bez animacji, przeskakiwali i przenikali przez zamek
+const simThread = typeof window !== 'undefined' && new URLSearchParams(location.search).has('watek') ? createSimThread() : null;
 let simMode = false, simBusy = false, simGen = 0, simBroken = false, simSent = 0;
 function onSimResult(r: SimResult): void {
   if (r.gen !== simGen || !simMode) return;
