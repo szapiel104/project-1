@@ -1997,3 +1997,21 @@ export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.Buffe
   for (let y = 0.18; y < L - 0.1; y += 0.2) lad.push(shade(new THREE.BoxGeometry(0.26, 0.025, 0.03).translate(0, y, 0).rotateX(lean).translate(0, 0, foot).toNonIndexed(), 0.75));
   return { block, edge, ladder: mergeGeometries(lad)!, mat: withAo(M.castle), wood: withAo(M.wood) };
 }
+
+/** Mokre budynki w deszczu: dachy, drewno i kamień ciemnieją i łapią połysk (odbicia światła), po deszczu schną */
+const WET_KEYS = ['thatch', 'thatchDark', 'wood', 'woodDark', 'plank', 'stone', 'stoneDark', 'castle', 'castleDark', 'plaster', 'slate', 'tiles', 'bark'] as const;
+const dryState = new Map<THREE.MeshStandardMaterial, { c: THREE.Color; r: number }>();
+export function setWetBuildings(k: number): void {
+  const mats = M as unknown as Record<string, THREE.Material | undefined>;
+  for (const key of WET_KEYS) {
+    const base = mats[key] as THREE.MeshStandardMaterial | undefined;
+    if (!base) continue;
+    for (const m of [base, aoMats.get(base) as THREE.MeshStandardMaterial | undefined]) {
+      if (!m) continue;
+      let d = dryState.get(m);
+      if (!d) { d = { c: m.color.clone(), r: m.roughness }; dryState.set(m, d); }
+      m.color.copy(d.c).multiplyScalar(1 - k * 0.28);
+      m.roughness = d.r - (d.r - 0.38) * k;
+    }
+  }
+}

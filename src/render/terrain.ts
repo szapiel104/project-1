@@ -54,6 +54,8 @@ export interface TerrainView {
   noGrass(tile: number, on?: boolean): void;
   /** Kolor nieba odbijany przez wodę */
   setSky(c: THREE.Color): void;
+  /** Kierunek ku słońcu (świat) i jego barwa: odblaski na wodzie; golden = złota godzina (0..1) */
+  setSun(dir: THREE.Vector3, color: THREE.Color, golden: number): void;
   /** Wykop pod budowę (depth 0 = zasypany): opuszcza teren działki tylko w obrazie */
   dig(x: number, y: number, w: number, h: number, depth: number): void;
   /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
@@ -1267,6 +1269,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     clear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
+    setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
     dig(x: number, y: number, fw: number, fh: number, depth: number) {
       // wykop pod budowę: narożniki działki opuszczone (środek głębiej, brzeg płycej), tylko w obrazie terenu
       const attr = geo.getAttribute('position') as THREE.BufferAttribute;

@@ -290,18 +290,19 @@ function waveNormals(): THREE.DataTexture {
  * pod kątem (efekt Fresnela) tafla odbija kolor nieba, a słońce daje ostry połysk.
  * `shore` to tekstura odległości od lądu (0 = brzeg, 1 = głębia) rozpięta na całej mapie.
  */
-export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat: THREE.MeshStandardMaterial; time: { value: number }; sky: { value: THREE.Color } } {
+export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat: THREE.MeshStandardMaterial; time: { value: number }; sky: { value: THREE.Color }; sunDir: { value: THREE.Vector3 }; sunCol: { value: THREE.Color } } {
   const time = { value: 0 };
   const sky = { value: new THREE.Color(0x8a9aa6) };
+  const sunDir = { value: new THREE.Vector3(0, 1, 0) }, sunCol = { value: new THREE.Color(0) };
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, roughness: 0.06, metalness: 0.0, depthWrite: false });
-  if (TEST || !loader) { mat.color.setHex(0x2c6f8f); mat.opacity = 0.86; return { mat, time, sky }; }
+  if (TEST || !loader) { mat.color.setHex(0x2c6f8f); mat.opacity = 0.86; return { mat, time, sky, sunDir, sunCol }; }
   const wN = waveNormals();
   mat.userData.owned = [wN, shore];
-  const uni = { wN: { value: wN }, shore: { value: shore }, wTime: time, skyCol: sky, mapSize: { value: new THREE.Vector2(w, h) } };
+  const uni = { wN: { value: wN }, shore: { value: shore }, wTime: time, skyCol: sky, wSunDir: sunDir, wSunCol: sunCol, mapSize: { value: new THREE.Vector2(w, h) } };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = `uniform sampler2D wN, shore; uniform float wTime; uniform vec3 skyCol; uniform vec2 mapSize; varying vec3 vWP; float wDepth; float wFoam; float wRip;\n` + sh.fragmentShader
+    sh.fragmentShader = `uniform sampler2D wN, shore; uniform float wTime; uniform vec3 skyCol; uniform vec3 wSunDir; uniform vec3 wSunCol; uniform vec2 mapSize; varying vec3 vWP; float wDepth; float wFoam; float wRip;\n` + sh.fragmentShader
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           vec2 suv = (vWP.xz + mapSize * 0.5) / mapSize;
@@ -337,12 +338,16 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
           vec3 skyR = mix(skyCol * 0.62, skyCol * 0.36, smoothstep(0.1, 0.55, rWorld.y)) * vec3(0.8, 0.9, 1.0);
-          outgoingLight = mix(outgoingLight, skyR * (0.85 + wRip * 1.2), clamp(fres * 0.9 + 0.24, 0.0, 0.62));
+          outgoingLight = mix(outgoingLight, skyR * (0.85 + wRip * 1.2), clamp(fres * 0.9 + 0.28, 0.0, 0.72));
+          // odblask słońca na falach: ostre, migoczące błyski w stronę słońca (najmocniej o złotej godzinie)
+          float glint = pow(max(dot(normalize(rWorld), wSunDir), 0.0), 380.0);
+          float sheen = pow(max(dot(normalize(rWorld), wSunDir), 0.0), 24.0);
+          outgoingLight += wSunCol * (glint * 2.4 + sheen * 0.12);
           outgoingLight += vec3(0.7, 0.72, 0.68) * wFoam * 0.22 * (0.3 + skyCol.g);
           diffuseColor.a = clamp(max(diffuseColor.a, fres * 0.9) + wFoam * 0.2, 0.0, 1.0);
         }
         #include <opaque_fragment>`);
   };
-  mat.customProgramCacheKey = () => 'water-v1';
-  return { mat, time, sky };
+  mat.customProgramCacheKey = () => 'water-v2';
+  return { mat, time, sky, sunDir, sunCol };
 }

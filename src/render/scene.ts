@@ -19,6 +19,7 @@ import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { ladderSides } from '../sim/systems/stonewalls';
+import { setWetBuildings } from './buildings';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
@@ -43,6 +44,7 @@ import { normal, pattern } from './textures';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
+import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { N8AOPass } from 'n8ao';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 
@@ -208,6 +210,7 @@ export class GameRenderer {
   /** 0 w dzień, 1 w środku nocy */
   private night = 0;
   private grade!: ShaderPass;
+  private bloom!: UnrealBloomPass;
   private rain = 0;
   private hammers!: THREE.InstancedMesh;
   private guardsFig!: Figures;
@@ -797,17 +800,22 @@ export class GameRenderer {
     this.plain.enabled = false;
     this.composer.addPass(this.plain);
     this.composer.addPass(this.ao);
+    // poświata: tylko najjaśniejsze miejsca (płomienie, okna nocą, odblaski słońca) dostają miękką aureolę
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.28, 0.5, 1.15);
+    this.bloom.enabled = false;
+    this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
     // gradacja koloru w klimacie surowego średniowiecza: mniej nasycenia, ciepłe brudne cienie, chłodna noc, winieta
     this.grade = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, night: { value: 0 }, rain: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, night: { value: 0 }, rain: { value: 0 }, golden: { value: 0 } },
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: `
-        uniform sampler2D tDiffuse; uniform float night; uniform float rain; varying vec2 vUv;
+        uniform sampler2D tDiffuse; uniform float night; uniform float rain; uniform float golden; varying vec2 vUv;
         void main() {
           vec3 c = texture2D(tDiffuse, vUv).rgb;
           float l = dot(c, vec3(0.299, 0.587, 0.114));
-          c = mix(vec3(l), c, 0.72 - rain * 0.15);                       // przygaszone barwy
+          c = mix(vec3(l), c, 0.72 - rain * 0.15 + golden * 0.14);       // przygaszone barwy (o złotej godzinie żywsze)
+          c = mix(c, c * vec3(1.14, 1.0, 0.8), golden * smoothstep(0.15, 0.75, l)); // ciepłe, złote światło o świcie i zmierzchu
           c = mix(c * vec3(1.06, 0.98, 0.86), c, smoothstep(0.0, 0.6, l)); // brązowe cienie
           c = (c - 0.5) * 1.08 + 0.5;                                   // trochę kontrastu
           c = mix(c, c * vec3(0.72, 0.8, 1.05), night * 0.35);          // chłodna, ciemna noc
@@ -1096,7 +1104,7 @@ export class GameRenderer {
   private alwaysDay = false;
 
   /** Ustawienia grafiki i kamery z menu */
-  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; label?: string }): void {
+  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; soft?: boolean; label?: string }): void {
     if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false };
     this.quality = `${o.label ? o.label + ': ' : ''}AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}, trawa ${(o.grass ?? 1) > 0 ? Math.round((o.grass ?? 1) * 100) + '%' : 'wył.'}`;
     this.grassReach = o.grass ?? 1;
@@ -1107,6 +1115,17 @@ export class GameRenderer {
     this.plain.enabled = o.ao === 'off';
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
     this.sun.castShadow = o.shadows > 0;
+    // poświata od średniej jakości w górę (kosztuje kilka przejść w małej rozdzielczości)
+    this.bloom.enabled = o.ao !== 'off' && o.shadows >= 2048;
+    // miękkie cienie: rozmyte krawędzie (zmiana rodzaju mapy wymaga przebudowy shaderów materiałów)
+    const type = o.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    if (this.renderer.shadowMap.type !== type) {
+      this.renderer.shadowMap.type = type;
+      this.sun.shadow.radius = o.soft ? 3 : 1;
+      this.sun.shadow.map?.dispose();
+      (this.sun.shadow as { map: unknown }).map = null;
+      this.scene.traverse((ob) => { const mt = (ob as THREE.Mesh).material; for (const m of Array.isArray(mt) ? mt : mt ? [mt] : []) m.needsUpdate = true; });
+    }
     this.shadowSize(o.shadows);
     const ratio = Math.min(window.devicePixelRatio, o.scale);
     if (this.renderer.getPixelRatio() !== ratio) {
@@ -1193,7 +1212,7 @@ export class GameRenderer {
     this.grade.uniforms.rain!.value = this.rain;
     // po deszczu długo jest mokro: błoto i kałuże schną powoli
     this.wet = Math.max(0, Math.min(1, this.wet + (this.rain > 0.15 ? dt * 0.12 : -dt * 0.003)));
-    if (Math.abs(this.wet - this.wetShown) > 0.01) { this.view?.setWet(this.wet); this.wetShown = this.wet; }
+    if (Math.abs(this.wet - this.wetShown) > 0.01) { this.view?.setWet(this.wet); setWetBuildings(this.wet); this.wetShown = this.wet; }
     if (g && this.view) this.syncPuddles(g, this.view);
     if (!this.rainLines) {
       // dwie identyczne warstwy jedna nad drugą: przesuwanie o 25 w kółko jest niewidoczne
@@ -2729,6 +2748,12 @@ export class GameRenderer {
     this.night = hour >= 12 ? dusk : dawn;
     setNight(this.night);
     this.grade.uniforms.night!.value = this.night;
+    // złota godzina: rano 6–8:30 i wieczorem 17–20 ciepłe, niskie światło (najmocniej tuż po wschodzie i przed zachodem)
+    const bell = (h0: number, h1: number): number => { const t = (hour - h0) / (h1 - h0); return t <= 0 || t >= 1 ? 0 : Math.sin(t * Math.PI); };
+    const golden = Math.max(bell(5.6, 8.6), bell(16.8, 20.3)) * (1 - this.rain * 0.8) * (1 - this.dayMist * 0.5);
+    this.grade.uniforms.golden!.value = golden;
+    this.hemi.color.setHex(0xdfeaff).lerp(tmpColor.setHex(0xffd2a0), golden * 0.45);
+    this.view?.setSun(this.sunDir, this.sun.color, golden);
     // mgła: gęsta o świcie (4–8), rzadsza w dzień; w deszczu gęstsza
     const mist = Math.max(0, Math.min(1, hour < 4 ? 0 : hour < 6 ? (hour - 4) / 2 : (8.5 - hour) / 2.5));
     const fog = this.scene.fog as THREE.Fog;

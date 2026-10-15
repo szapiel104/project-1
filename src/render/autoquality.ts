@@ -14,6 +14,8 @@ export interface QualityTier {
   grass: number;
   /** Zasięg szczegółów (1 = pełny): drzewa jako bryły i drobiazgi (kępy, kamyki) do 30 pól, niżej odpowiednio bliżej */
   detail: number;
+  /** Miękkie cienie (rozmyte krawędzie) */
+  soft?: boolean;
 }
 
 export const TIERS: readonly QualityTier[] = [
@@ -22,6 +24,8 @@ export const TIERS: readonly QualityTier[] = [
   { scale: 1, shadows: 2048, ao: 'low', grass: 0.8, detail: 0.75 },
   { scale: 1.5, shadows: 2048, ao: 'medium', grass: 1, detail: 0.9 },
   { scale: 2, shadows: 4096, ao: 'medium', grass: 1, detail: 1 },
+  // Ultra: dokładne cieniowanie zagłębień, miękkie cienie, dalej trawa i szczegóły
+  { scale: 2, shadows: 4096, ao: 'high', grass: 1.35, detail: 1.35, soft: true },
 ];
 export const TOP_TIER = TIERS.length - 1;
 

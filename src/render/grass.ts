@@ -10,7 +10,9 @@ import { groundGrassTexture2, sharedNoise } from './ground';
  * - Barwa źdźbła pochodzi z tej samej tekstury trawy co ziemia pod nim, więc dywan zlewa się z podłożem,
  *   a tekstura kępy daje tylko kształt źdźbeł, ciemną nasadę i jaśniejsze, miejscami żółte końce.
  */
-const GRID = 210; // kępy w rzędzie: 210×210 ≈ 44 tys. (zasięg ok. 20 pól wokół kamery)
+const GRID = 290; // kępy w rzędzie: siatka na najdalszy zasięg (Ultra); zwykły pełny zasięg używa promienia BASE
+/** Promień (w kępach) pełnego zasięgu trawy = 1 (ok. 20 pól wokół kamery); Ultra sięga do GRID/2 */
+const BASE = 105;
 const STEP = 0.19; // odstęp kęp w polach
 
 export interface GrassField {
@@ -69,7 +71,8 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   const dist = new Float32Array(GRID * GRID);
   cells.forEach((c, k) => { off[k * 2] = c[0]; off[k * 2 + 1] = c[1]; dist[k] = Math.sqrt(c[2]); });
   geo.setAttribute('aCell', new THREE.InstancedBufferAttribute(off, 2));
-  geo.instanceCount = GRID * GRID;
+  // na start pełny zwykły zasięg (BASE); dalej sięga tylko Ultra (setReach > 1)
+  { let n = 0; while (n < dist.length && dist[n]! <= BASE) n++; geo.instanceCount = n; }
 
   const uni = {
     uOrigin: { value: new THREE.Vector2() }, uTime: { value: 0 }, uReach: { value: 1 }, uMap: { value: new THREE.Vector2(w, h) }, uFade: { value: 1 },
@@ -100,7 +103,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       float dens = texture2D(tMask, (p + 0.5 * vec2(0.0)) / uMap).r;
       // im dalej od środka, tym mniejsze kępy (miękki brzeg dywanu)
       // brzeg dywanu: kępy rzedną i maleją stopniowo przez całą drugą połowę zasięgu (bez widocznego koła)
-      float rr = length(aCell) / (${(GRID / 2).toFixed(1)} * uReach);
+      float rr = length(aCell) / (${BASE.toFixed(1)} * uReach);
       float edge = 1.0 - smoothstep(0.35, 0.97, rr + (gHash(cell + 5.5) - 0.5) * 0.25);
       float keep = step(r3, smoothstep(0.25, 0.9, dens) * 1.1) * step(gHash(cell + 7.7), edge);
       float sz = mix(0.17, 0.32, gHash(cell + 3.7)) * keep * mix(0.55, 1.0, edge) * uFade;
@@ -151,10 +154,10 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
     setReach(f: number) {
       off0 = f <= 0;
       mesh.visible = !off0 && uni.uFade.value > 0.01;
-      const r = Math.max(0.3, Math.min(1, f));
+      const r = Math.max(0.3, Math.min(GRID / 2 / BASE, f));
       uni.uReach.value = r;
-      // instancje do promienia r·GRID/2 (dalsze i tak mają zerową wielkość)
-      const lim = (GRID / 2) * r;
+      // instancje do promienia r·BASE (dalsze i tak mają zerową wielkość)
+      const lim = BASE * r;
       let lo = 0, hi = dist.length;
       while (lo < hi) { const m = (lo + hi) >> 1; if (dist[m]! <= lim) lo = m + 1; else hi = m; }
       geo.instanceCount = lo;
