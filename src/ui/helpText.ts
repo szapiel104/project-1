@@ -44,7 +44,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       { h: 'Złoża się kończą' },
       'Każde pole skały albo rudy daje 5 urobków, potem zarasta trawą. Ścięte drzewo też znika — drwal idzie coraz dalej, więc z czasem warto postawić nową chatę przy świeżym lesie.',
       { h: 'Magazyny' },
-      'Skład mieści 200, stodoła 250 towarów (drewno, kamień, żelazo, pszenica, mąka, broń). Spichlerz trzyma 150 jedzenia. Gdy magazyn jest pełny, robotnik czeka chwilę, a potem wyrzuca to, co się nie zmieściło — towar przepada.',
+      'Skład mieści 200, stodoła 250 towarów (drewno, kamień, żelazo, pszenica, mąka, piwo). Spichlerz trzyma 150 jedzenia, a zbrojownia 60 sztuk broni (włócznie i łuki): bez zbrojowni włóczniarz i łuczarz nie mają gdzie odnieść broni. Gdy magazyn jest pełny, robotnik czeka chwilę, a potem wyrzuca to, co się nie zmieściło — towar przepada.',
       { h: 'Odpoczynek' },
       'Po trzech dostawach robotnik idzie na chwilę odpocząć do najbliższej chaty. Bez chat pracuje bez przerwy, ale chaty i tak są potrzebne na nowych ludzi.',
       { h: 'Złoto' },
@@ -129,7 +129,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
   {
     title: 'Wojsko',
     blocks: [
-      'Żołnierz to wolny chłop, który w koszarach (30 drewna, 30 kamienia) dostaje broń ze składu i żołd.',
+      'Żołnierz to wolny chłop, który w koszarach (30 drewna, 30 kamienia) dostaje broń ze zbrojowni i żołd.',
       { table: [
         ['', 'Włócznik', 'Łucznik'],
         ['Koszt', '1 włócznia + 8 złota', '1 łuk + 12 złota'],
