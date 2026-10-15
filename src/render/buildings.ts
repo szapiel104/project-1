@@ -10,6 +10,7 @@ import HOUSE_MODEL from './models/house.json';
 import BARN_MODEL from './models/barn.json';
 import BREWERY_MODEL from './models/brewery.json';
 import GATE_MODEL from './models/gate.json';
+import STONE_TOWER_MODEL from './models/stonetower.json';
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -1460,6 +1461,10 @@ const BUILDERS: Record<string, Builder> = {
     box(g, M.woodDark, 0.04, 0.7, 0.04, -r, H + 0.9, -r);
     box(g, flag, 0.02, 0.22, 0.34, -r, H + 1.35, -r + 0.18);
   },
+  stoneTower(g, _team, flag) {
+    // Kamienna wieża z Blendera (tools/models/stonetower.py): baszta z ciosów, machikuły, blanki, pomost dla łuczników
+    blenderModel(g, STONE_TOWER_MODEL as unknown as BlenderBuilding, flag);
+  },
   cemetery(g, _team, flag) {
     // Cmentarz: płot z żerdzi, rzędy mogił z drewnianymi krzyżami, kamienny nagrobek, kaplica z dzwonkiem, łopata grabarza
     box(g, M.soil, 2.9, 0.025, 2.9);
@@ -1951,6 +1956,8 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
  *  - ladder: drabina oparta o mur od strony twierdzy (tędy łucznicy wchodzą na mur)
  */
 export const STONE_WALL_TOP = 1.14;
+/** Pomost kamiennej wieży (stoją na nim łucznicy) — z modelu */
+export const STONE_TOWER_TOP: number = (STONE_TOWER_MODEL as unknown as { deck?: number }).deck ?? 2.3;
 export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.BufferGeometry; ladder: THREE.BufferGeometry; mat: THREE.Material; wood: THREE.Material } {
   const k = (M.castle.userData.tile as number) || 1;
   const shade = (geo: THREE.BufferGeometry, v: number): THREE.BufferGeometry => {

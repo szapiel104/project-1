@@ -1,5 +1,5 @@
 import { unitById } from '../state';
-import { BUILDINGS, footprint, type BuildingDef } from '../../data/buildings';
+import { BUILDINGS, footprint, isTower, type BuildingDef } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { TERRAIN, Terrain } from '../../data/terrain';
@@ -187,7 +187,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
  */
 export function wallsUnder(g: GameState, player: number, type: number, x: number, y: number, w: number, h: number): Building[] | undefined {
   const def = BUILDINGS[type]!;
-  if (!(def.gate || def.id === 'watchtower' || def.id === 'stoneWall')) return undefined;
+  if (!(def.gate || isTower(def.id) || def.id === 'stoneWall')) return undefined;
   const W = g.map.width;
   const out: Building[] = [];
   for (let ty = y; ty < y + h; ty++) for (let tx = x; tx < x + w; tx++) {

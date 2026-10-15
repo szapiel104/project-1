@@ -65,3 +65,5 @@ Gospodyni i dziecko (rodziny przy chatach): `tools/models/woman.py` → `woman.j
 
 ## Bryły zamknięte
 gra nie rysuje tylnych stron ścian, więc otwarta powierzchnia (stożek bez denek `cap_ends=False`, sama płaszczyzna, rurka bez grubości) od tyłu lub od środka po prostu znika. Obręcze, rury, deski i blachy robimy z grubością: wszystkie ściany wokół (np. `ring()` w `yard.py` dla obręczy, `box`, zamknięty `cyl`). Płótno i kartki mają dwie warstwy (jak `cloth()` w `yard.py`). W podglądzie obejrzyj model też od tyłu i od środka.
+
+Kamienna wieża (`stoneTower`, 2×2): `tools/models/stonetower.py` → `stonetower.json`; pomost łuczników na wysokości `deck` (gra: `STONE_TOWER_TOP`). Podgląd `modele.html?id=stoneTower`, w grze `?test=1&pusta=1&model=stoneTower`.

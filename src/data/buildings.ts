@@ -154,9 +154,15 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'stoneWall', category: 'defense', name: 'b.stoneWall', w: 1, h: 1, cost: { stone: 3 }, hp: 1100, wall: true, line: true, buildable: true },
   // Drabina na mur kamienny: stawiasz ją na polu tuż przy murze; tędy Twoi ludzie wchodzą na mur i z niego schodzą
   { id: 'ladder', category: 'defense', name: 'b.ladder', w: 1, h: 1, cost: { wood: 3 }, hp: 120, wall: true, buildable: true },
+  // Kamienna wieża: jak strażnica, ale z kamienia — wytrzymalsza, mieści sześciu łuczników, z wyższego pomostu strzelają dalej
+  { id: 'stoneTower', category: 'defense', name: 'b.stoneTower', w: 2, h: 2, cost: { stone: 30, wood: 6 }, hp: 2400, wall: true, buildable: true },
 ];
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
+/** Wieże z łucznikami: drewniana strażnica i kamienna wieża */
+export const isTower = (id: string): boolean => id === 'watchtower' || id === 'stoneTower';
+/** O ile dalej strzela łucznik z danej wieży (ponad zwykłe +3 z wysokości): kamienna wieża jest wyższa */
+export const towerBonus = (id: string): number => (id === 'stoneTower' ? 1 : 0);
 
 /** Wymiary działki po obrocie: przy obrocie o 90° i 270° szerokość zamienia się z głębokością. */
 export function footprint(def: BuildingDef, rot = 0): { w: number; h: number } {

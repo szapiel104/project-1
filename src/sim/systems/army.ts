@@ -7,7 +7,7 @@ import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable } from '../path';
 import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type March, type Soldier, type Unit, keepCenter } from '../state';
-import { BUILDINGS, footprint, workArea } from '../../data/buildings';
+import { BUILDINGS, footprint, towerBonus, workArea } from '../../data/buildings';
 import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
 import { dayPart } from './workers';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
@@ -450,7 +450,7 @@ export function orderDismount(g: GameState, player: number, towerId: number): vo
 }
 
 /** Ilu łuczników zmieści się na budynku: wieża strażnicza 4, pole muru kamiennego 2 (wchodzą po drabinie) */
-export const garrisonRoom = (id: string): number => (id === 'watchtower' ? 4 : 0);
+export const garrisonRoom = (id: string): number => (id === 'watchtower' ? 4 : id === 'stoneTower' ? 6 : 0);
 
 /** Łucznicy wchodzą na wieżę strażniczą albo mur kamienny; inni żołnierze stają przy nim */
 export function orderGarrison(g: GameState, player: number, ids: readonly number[], towerId: number): void {
@@ -605,7 +605,8 @@ export function armySystem(g: GameState): void {
         s.up = true; s.px = tower.x * FP + (fp.w * FP) / 2; s.py = tower.y * FP + (fp.h * FP) / 2;
       }
     }
-    const range = def.range ? def.range + (high(g, s) ? 3 : 0) : 0;
+    const postAt = s.up && s.post ? buildingById(g, s.post) : undefined;
+    const range = def.range ? def.range + (high(g, s) ? 3 : 0) + (postAt ? towerBonus(BUILDINGS[postAt.type]!.id) : 0) : 0;
     // obrona i „stój”: bez celu pilnuje miejsca, w którym stoi (np. po rozkazie ataku albo po szkoleniu)
     const stance = s.stance ?? 0;
     if (stance && s.goal < 0 && !s.target && !s.path.length && (s.hold ?? -1) < 0) s.hold = tileOf(g, s);

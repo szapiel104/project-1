@@ -1,4 +1,4 @@
-import { BUILDINGS, buildingIndex } from '../../data/buildings';
+import { BUILDINGS, buildingIndex, isTower } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
@@ -94,7 +94,7 @@ export function botSystem(g: GameState): void {
       if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
       // łucznicy wchodzą na wolne wieże (po dwóch), reszta zostaje do ataku
       for (const t of g.buildings) {
-        if (t.owner !== p.id || t.build || BUILDINGS[t.type]!.id !== 'watchtower') continue;
+        if (t.owner !== p.id || t.build || !isTower(BUILDINGS[t.type]!.id)) continue;
         const on = g.soldiers.filter((s) => s.post === t.id).length;
         if (on >= 2) continue;
         const free = mine.filter((s) => UNITS[s.kind]!.range && !s.post && s.goal < 0 && !s.target).slice(0, 2 - on);

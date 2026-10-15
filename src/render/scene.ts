@@ -7,7 +7,7 @@ import { animal, playAt, pluck, talk, type WorldSound } from '../audio/sfx';
 import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BUILDINGS, footprint, workArea } from '../data/buildings';
+import { BUILDINGS, footprint, isTower, towerBonus, workArea } from '../data/buildings';
 import { Clutter } from './clutter';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
@@ -24,7 +24,7 @@ import { isWetMat, setWetBuildings } from './buildings';
 import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
 import { setCloudShadows } from './ground';
 import { cat } from './cat';
-import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, setRubble, setStockFill, torchModel } from './buildings';
+import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
@@ -1095,9 +1095,9 @@ export class GameRenderer {
     if (!this.areaGroup.parent) { this.areaGroup.renderOrder = 4; this.scene.add(this.areaGroup); }
     const { width, height } = g.map;
     for (const b of list) {
-      if (BUILDINGS[b.type]!.id === 'watchtower') {
+      if (isTower(BUILDINGS[b.type]!.id)) {
         // koło o promieniu zasięgu łucznika na wieży, od środka wieży, ułożone na terenie
-        const fp = footprint(BUILDINGS[b.type]!, b.rot), cx = b.x + fp.w / 2, cy = b.y + fp.h / 2, R = TOWER_RANGE;
+        const fp = footprint(BUILDINGS[b.type]!, b.rot), cx = b.x + fp.w / 2, cy = b.y + fp.h / 2, R = TOWER_RANGE + towerBonus(BUILDINGS[b.type]!.id);
         const lift = (x: number, y: number): number => Math.max(0, v.heightAt(Math.min(width - 0.01, Math.max(0, x)), Math.min(height - 0.01, Math.max(0, y)))) + 0.09;
         const geo = new THREE.CircleGeometry(R, 72, 0, Math.PI * 2).rotateX(-Math.PI / 2);
         const pos = geo.attributes.position as THREE.BufferAttribute;
@@ -3600,7 +3600,7 @@ export class GameRenderer {
       const ranged = !!udef.range;
       const striking = (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
-      let lift = s.up ? 1.95 : 0;
+      let lift = s.up ? (s.post && BUILDINGS[bById.get(s.post)?.type ?? 0]!.id === 'stoneTower' ? STONE_TOWER_TOP : 1.95) : 0;
       // życie na wieży: bez walki każdy zajęty czym innym (oparty o barierkę, siedzi, wypatruje, czwarty pod wieżą);
       // przy ataku wszyscy na pomoście obok siebie, od strony wroga, i strzelają w tamtą stronę
       let towerSit = false, towerLean = 0, towerAt: [number, number] | null = null;

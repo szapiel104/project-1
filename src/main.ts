@@ -1,5 +1,5 @@
 import { GUARD_SAY, SAY } from './data/barks';
-import { BUILDINGS, buildingIndex, footprint } from './data/buildings';
+import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
 import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } from './data/resources';
 import { UNITS } from './data/units';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
@@ -480,7 +480,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     recruit: def.id === 'barracks' ? recruitInfo().map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     watch: def.id === 'keep' ? watchInfo(b.owner) : undefined,
-    area: def.area || def.id === 'watchtower' ? shownAreas.has(b.id) : undefined,
+    area: def.area || isTower(def.id) ? shownAreas.has(b.id) : undefined,
     site: b.build ? siteInfo(b) : undefined };
 }
 
@@ -1844,7 +1844,7 @@ const devPanel = createDevPanel(document.body, {
   onPlace: (sp) => { devSpawn = sp; canvas.classList.toggle('placing', !!sp); },
   onFoeAtTower: () => {
     const W = game.map.width;
-    const towers = game.buildings.filter((b) => b.owner === ME && BUILDINGS[b.type]!.id === 'watchtower');
+    const towers = game.buildings.filter((b) => b.owner === ME && isTower(BUILDINGS[b.type]!.id));
     const manned = towers.find((t) => game.soldiers.some((s) => s.post === t.id && s.up)) ?? towers[0];
     if (!manned) { devPanel.placed('Nie masz wieży strażniczej.'); return; }
     for (const [dx, dy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [5, 5], [-5, -5]] as const) {
