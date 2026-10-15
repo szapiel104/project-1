@@ -1839,7 +1839,7 @@ function showPerf(now: number): void {
     'symulacja ms/tick': +(perf.sim / Math.max(1, perf.ticks)).toFixed(2),
     'ticki/s': Math.round(perf.ticks / secs),
     'interfejs ms/klatkę': +(perf.ui / Math.max(1, perf.frames)).toFixed(2),
-    'wywołania rysowania': r.calls, 'trójkąty': r.triangles, 'geometrie': r.geometries, 'tekstury': r.textures,
+    'wywołania rysowania': r.calls, 'trójkąty': r.triangles, 'poza kadrem': renderer.culled, 'geometrie': r.geometries, 'tekstury': r.textures,
     mapa: `${game.map.width}×${game.map.height}`, budynki: game.buildings.length, chłopi: game.units.length, żołnierze: game.soldiers.length, wilki: game.wolves.length, ciała: game.corpses.length,
     'pamięć MB': mem ? Math.round(mem.usedJSHeapSize / 1048576) : '—',
   };

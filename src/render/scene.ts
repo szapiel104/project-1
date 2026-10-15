@@ -1553,6 +1553,7 @@ export class GameRenderer {
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
       T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); this.syncVillage(g, v, dt); });
+      T('kadr', () => this.cullInstances());
     }
     const tg = performance.now();
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
@@ -1650,6 +1651,54 @@ export class GameRenderer {
   private timing: Record<string, number> = {};
   private timingFrames = 0;
   quality = '';
+
+  /**
+   * Postacie, broń, ładunki i inne rzeczy rysowane setkami (instancje) poza kadrem nie idą do karty graficznej:
+   * ich macierz dostaje zerową skalę na tę klatkę. Dotyczy tylko siatek przepisywanych co klatkę (od 30 klatek z rzędu)
+   * — te zapisywane rzadko (mury, las) zostają nietknięte, bo nikt by ich potem nie przywrócił przy ruchu kamery.
+   */
+  private cullSeen = new Map<THREE.InstancedMesh, { ver: number; streak: number; r: number; cx: number; cy: number; cz: number }>();
+  private cullFrustum = new THREE.Frustum();
+  private cullM = new THREE.Matrix4();
+  private cullS = new THREE.Sphere();
+  culled = 0;
+  private cullInstances(): void {
+    const cam = this.cam.camera;
+    cam.updateMatrixWorld();
+    this.cullFrustum.setFromProjectionMatrix(this.cullM.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    let culled = 0;
+    this.scene.traverseVisible((o) => {
+      const m = o as THREE.InstancedMesh;
+      if (!m.isInstancedMesh || m.count === 0 || m.count > 4096) return;
+      const attr = m.instanceMatrix;
+      let st = this.cullSeen.get(m);
+      if (!st) {
+        if (!m.geometry.boundingSphere) m.geometry.computeBoundingSphere();
+        const bs = m.geometry.boundingSphere!;
+        st = { ver: attr.version, streak: 0, r: bs.radius, cx: bs.center.x, cy: bs.center.y, cz: bs.center.z };
+        this.cullSeen.set(m, st);
+        return;
+      }
+      st.streak = attr.version !== st.ver ? st.streak + 1 : 0;
+      if (st.streak < 30) { st.ver = attr.version; return; }
+      const a = attr.array as Float32Array, sph = this.cullS;
+      let changed = false;
+      for (let i = 0; i < m.count; i++) {
+        const o16 = i * 16;
+        const sx = a[o16]! * a[o16]! + a[o16 + 1]! * a[o16 + 1]! + a[o16 + 2]! * a[o16 + 2]!;
+        if (sx === 0) continue; // już ukryta
+        const sc = Math.sqrt(Math.max(sx, a[o16 + 4]! * a[o16 + 4]! + a[o16 + 5]! * a[o16 + 5]! + a[o16 + 6]! * a[o16 + 6]!, a[o16 + 8]! * a[o16 + 8]! + a[o16 + 9]! * a[o16 + 9]! + a[o16 + 10]! * a[o16 + 10]!));
+        sph.center.set(a[o16 + 12]! + st.cx * sc, a[o16 + 13]! + st.cy * sc, a[o16 + 14]! + st.cz * sc).applyMatrix4(m.matrixWorld);
+        sph.radius = st.r * sc + 1.5; // zapas: cień i ruch kamery w tej klatce
+        if (this.cullFrustum.intersectsSphere(sph)) continue;
+        for (let k = 0; k < 16; k++) a[o16 + k] = 0;
+        changed = true; culled++;
+      }
+      if (changed) attr.needsUpdate = true;
+      st.ver = attr.version;
+    });
+    this.culled = culled;
+  }
 
   private wallKey = '';
   private wallShafts: THREE.InstancedMesh | null = null;
