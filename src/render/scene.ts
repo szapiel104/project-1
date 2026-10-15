@@ -1688,7 +1688,7 @@ export class GameRenderer {
   private cullS = new THREE.Sphere();
   culled = 0;
   /** Do porównań wydajności (window.__renderer.cullOn = false) */
-  cullOn = true;
+  cullOn = false;
   private cullInstances(): void {
     if (!this.cullOn) {
       for (const [m, st] of this.cullSeen) {
