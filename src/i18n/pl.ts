@@ -132,7 +132,7 @@ export const pl = {
   'set.ui': 'Interfejs',
   'set.amb': 'Otoczenie',
   'set.shadows': 'Cienie',
-  'set.ao': 'Cieniowanie zagłębień',
+  'set.ao': 'Cieniowanie zagłębień (AO)',
   'set.scale': 'Rozdzielczość obrazu',
   'set.scaleLow': 'Niższa (szybciej)',
   'set.scaleNormal': 'Normalna',
