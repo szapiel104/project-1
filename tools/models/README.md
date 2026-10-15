@@ -43,6 +43,22 @@ Arkusz: 8 widoków dookoła, z lotu ptaka, przekrój bez dachów, od dołu, a ta
 skrypt budynku w kluczu `views` (podpis, oko, cel, grupy, ogniskowa). Nowy budynek (np. lepsza stodoła) dopisuje
 swoje `views` i od razu ma ten sam obchód.
 
+### Daleka wersja (LOD) — liczy się sama
+
+Gra sama robi uproszczone wersje każdego budynku (`src/render/lod.ts`, meshoptimizer w osobnym wątku, 3 poziomy
+z błędem ok. 0,006 / 0,02 / 0,05 pola). Przy nowym modelu nic nie trzeba dopisywać, wystarczy trzymać się zasad:
+- bryły zewnętrzne (mury, dach, komin) w grupach `base` / `shell` / `roof` / `chimney` — tylko je gra upraszcza;
+- wszystko, co się rusza albo chowa (wnętrze, sufit, wrota `leafL`/`leafR`, krata, wiatrak `spin`, flagi, ludzie, zapasy,
+  ogień, szyby), w osobnej nazwanej grupie — zostaje w pełnej wersji;
+- nowa nazwa grupy na zwykłe mury (np. `tower`) też zostanie w pełnej wersji; żeby ją upraszczać, dopisz ją do `LIDS`
+  w `src/render/lod.ts` (grupy wieka znikają przy podglądzie wnętrza) albo wrzuć bryły do `base`;
+- budynki poniżej ~800 trójkątów brył zewnętrznych nie dostają dalekiej wersji (nie ma czego oszczędzać).
+
+Sprawdzenie: `modele.html?id=<id>` → przycisk „Z daleka” (pełny → 1 → 2 → 3; na dole trójkąty i błąd poziomu),
+do zrzutów `window.__view('<id>', obrót, nachylenie, poziom)`, adres `&daleko=1..3`. W grze okno F3, wiersz
+„budynki z daleka”; `?lod=0` wyłącza daleką wersję (do porównań). Odległość przełączenia zależy od jakości grafiki
+(minimum blisko, Ultra bardzo daleko), test w `tests/lod.test.ts` pilnuje, że obrys się nie kurczy.
+
 Podwórko przy chatach (balia, sznur i pranie, stos polan, ława, kosz, wiadro, grządka): `/tmp/bpyenv/bin/python tools/models/yard.py` → `src/render/models/yard.json`; podgląd w Blenderze `tools/models/yard_preview.py /tmp/yard.png`, w przeglądarce `modele.html?id=yard-tub`. Każda siatka ma pole `mat` (wood / cloth / soil / plain), a gra dobiera do niego teksturę.
 
 Gospodyni i dziecko (rodziny przy chatach): `tools/models/woman.py` → `woman.json`, `tools/models/child.py` → `child.json`; w grze `Figures('woman')` / `Figures('child')`, podgląd `modele.html?id=woman`, `?id=child`.
