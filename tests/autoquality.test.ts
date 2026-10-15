@@ -11,7 +11,7 @@ function run(q: AutoQuality, dt: number, ms: number): number[] {
 describe('automatyczna jakość', () => {
   it('słaby komputer: schodzi poziom po poziomie aż do płynności', () => {
     const q = new AutoQuality(TOP_TIER);
-    expect(run(q, 1000 / 20, 40000)).toEqual([4, 3, 2, 1, 0]);
+    expect(run(q, 1000 / 20, 40000)).toEqual([3, 2, 1, 0]);
     expect(q.tier).toBe(0);
   });
 

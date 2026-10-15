@@ -27,7 +27,8 @@ export const TIERS: readonly QualityTier[] = [
   // Ultra: dokładne cieniowanie zagłębień, miękkie cienie, dalej trawa i szczegóły
   { scale: 2, shadows: 4096, ao: 'high', grass: 1.35, detail: 1.35, soft: true },
 ];
-export const TOP_TIER = TIERS.length - 1;
+/** Automat nie wchodzi na Ultra (miękkie cienie przebudowują shadery — przy przełączaniu ekran czerniał); Ultra tylko ręcznie */
+export const TOP_TIER = TIERS.length - 2;
 
 /** Poniżej tylu klatek na sekundę obniżamy jakość */
 const LOW_FPS = 45;
