@@ -881,6 +881,7 @@ export class GameRenderer {
   /** Gracz przy tym ekranie (znaki „brak pracownika” tylko nad jego budynkami) */
   private me = 0;
   private hpSeen = new Map<number, number>();
+  /** budynek -> czas, od którego może znowu sypnąć kurzem po trafieniu (żeby seria ciosów nie robiła chmury) */
   private shake = new Map<number, number>();
 
   setState(state: GameState, waterLevel: number, rim: number, focusPlayer = 0): void {
@@ -1251,6 +1252,47 @@ export class GameRenderer {
     }
     this.scene.add(group);
     this.puffs.push({ group, age: 0, bits, soft });
+  }
+
+  /** Trafiony budynek: w losowym miejscu przy ścianie, na wysokości uderzenia, wysypuje się mały, rzadki obłoczek
+   *  kurzu (powoli rośnie i znika) i kilka okruchów spada pod mur. Tylko wygląd, bez wpływu na symulację. */
+  private hitDust(b: { type: number; x: number; y: number; rot: number }): void {
+    const g = this.state;
+    if (!g || !this.view || this.calm) return;
+    const { width, height } = g.map;
+    const fp = footprint(BUILDINGS[b.type]!, b.rot);
+    // punkt na obwodzie budynku (tuż przed ścianą)
+    const per = 2 * (fp.w + fp.h);
+    let t = Math.random() * per, px: number, py: number;
+    if (t < fp.w) { px = b.x + t; py = b.y - 0.05; }
+    else if ((t -= fp.w) < fp.h) { px = b.x + fp.w + 0.05; py = b.y + t; }
+    else if ((t -= fp.h) < fp.w) { px = b.x + t; py = b.y + fp.h + 0.05; }
+    else { px = b.x - 0.05; py = b.y + (t - fp.w); }
+    const cx = b.x + fp.w / 2, cy = b.y + fp.h / 2;
+    const ox = px - cx, oy = py - cy, ol = Math.hypot(ox, oy) || 1;
+    const group = new THREE.Group();
+    group.position.set(px - width / 2, Math.max(this.view.heightAt(px, py), 0), py - height / 2);
+    const bits: { m: THREE.Mesh; v: THREE.Vector3 }[] = [];
+    const hy = 0.15 + Math.random() * 0.35;
+    const puffMat = new THREE.MeshStandardMaterial({ color: 0xb3a68e, transparent: true, opacity: 0.22, depthWrite: false, roughness: 1 });
+    for (let i = 0; i < 4; i++) {
+      const m = new THREE.Mesh(GameRenderer.puffGeo, puffMat);
+      m.scale.setScalar(0.45);
+      m.position.set((Math.random() - 0.5) * 0.2, hy + (Math.random() - 0.5) * 0.15, (Math.random() - 0.5) * 0.2);
+      // od ściany na zewnątrz i lekko w górę, wolno
+      bits.push({ m, v: new THREE.Vector3((ox / ol) * 0.25 + (Math.random() - 0.5) * 0.15, 0.12 + Math.random() * 0.12, (oy / ol) * 0.25 + (Math.random() - 0.5) * 0.15) });
+      group.add(m);
+    }
+    const chipMat = new THREE.MeshStandardMaterial({ color: 0x8e8473, roughness: 0.9 });
+    for (let i = 0; i < 3; i++) {
+      const m = new THREE.Mesh(GameRenderer.chipGeo, chipMat);
+      m.scale.setScalar(0.45);
+      m.position.set((Math.random() - 0.5) * 0.15, hy, (Math.random() - 0.5) * 0.15);
+      bits.push({ m, v: new THREE.Vector3((ox / ol) * 0.35 + (Math.random() - 0.5) * 0.2, 0.3, (oy / ol) * 0.35 + (Math.random() - 0.5) * 0.2) });
+      group.add(m);
+    }
+    this.scene.add(group);
+    this.puffs.push({ group, age: 0, bits, soft: true });
   }
 
   /** Deszcz: przychodzi i odchodzi co kilka dni gry (czysto wizualnie, z zegara gry, więc bez losowania) */
@@ -3298,12 +3340,13 @@ export class GameRenderer {
       if (!mesh) continue;
       // trafiony budynek drży, a mocno uszkodzony płonie
       const prevHp = this.hpSeen.get(b.id) ?? b.hp;
-      if (b.hp < prevHp) { this.shake.set(b.id, 0.25); this.burnUntil.set(b.id, this.time + 50); }
+      // trafiony budynek nie drży (to wyglądało sztucznie) — z miejsca uderzenia sypie się delikatny kurz i okruchy
+      if (b.hp < prevHp) {
+        this.burnUntil.set(b.id, this.time + 50);
+        if (this.time >= (this.shake.get(b.id) ?? 0)) { this.shake.set(b.id, this.time + 0.35); this.hitDust(b); }
+      }
       this.hpSeen.set(b.id, b.hp);
-      const sk = this.shake.get(b.id) ?? 0;
-      // drganie: lekkie kołysanie całej bryły, które wygasa po ćwierć sekundy
-      if (sk > 0) { this.shake.set(b.id, sk - dt); mesh.rotation.z = Math.sin(this.time * 60) * 0.012 * (sk / 0.25); }
-      else if (mesh.rotation.z !== 0) { mesh.rotation.z = 0; this.shake.delete(b.id); }
+      if (mesh.rotation.z !== 0) mesh.rotation.z = 0;
       const hurt = 1 - b.hp / maxHp(b.type);
       let fire = mesh.getObjectByName('fire') as THREE.Group | undefined;
       if ((b.fire ?? 0) > 0 && !fire) {

@@ -5,6 +5,7 @@
 - Poza niesienia: ręce zgięte w przód, ładunek leży na dłoniach tuż przed piersią (wcześniej wisiał w powietrzu przed wyciągniętymi rękami); deski na prawym ramieniu, prawa ręka przytrzymuje wiązkę
 - Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
 - Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
+- Trafiony budynek już się nie trzęsie — z miejsca uderzenia sypie się delikatny obłoczek kurzu i kilka okruchów spada pod ścianę
 - Budynki pełne z każdej strony: daszek ganku karczmy, okiennice, belki i inne części nad ziemią mają spód, połacie dachów mają boki, szczyty są widoczne też od środka (wszystkie budynki z Blendera przebudowane)
 - Obręcze wiadra i balii to pełne pierścienie z grubością — nie znikają już od tyłu ani od środka
 - Stos polan: polana leżą poziomo w równych rzędach (każde w dołku między dwoma niżej) między palikami; tara stoi na ziemi i opiera się o brzeg balii; mokra koszula leży na brzegu zamiast przechodzić przez klepki
