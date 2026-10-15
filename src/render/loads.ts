@@ -27,7 +27,22 @@ const basket = (): THREE.BufferGeometry => tint(new THREE.CylinderGeometry(0.115
 const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
   apples: () => [basket(), ...[0, 1, 2, 3, 4, 5].map((k) => ball(0.045, Math.cos(k * 1.05) * 0.06, 0.08, Math.sin(k * 1.05) * 0.06, k % 3 ? 0xd0281f : 0xa9c23f)), ball(0.05, 0, 0.11, 0, 0xd0281f)],
   bread: () => [basket(), ...[-0.06, 0.06].map((x) => ball(0.07, x, 0.09, 0, 0xc9843d, 0.8, 0.7, 1.6)), ball(0.06, 0, 0.14, 0.02, 0xd99a4f, 1.5, 0.7, 0.8)],
-  wheat: () => [0, 1, 2].map((k) => tint(new THREE.ConeGeometry(0.07, 0.34, 6).rotateZ(Math.PI / 2 + (k - 1) * 0.18).translate(0, 0.03 + k * 0.01, (k - 1) * 0.08), 0xe2bf4a)).concat(block(0.04, 0.16, 0.2, -0.02, 0.03, 0, 0x8a6a1f)),
+  // snop zboża niesiony w poprzek na rękach (jak w stodole): pęk źdźbeł przewiązany powrósłem, z jednej strony
+  // rozchylone ścięte końce, z drugiej opadające kłosy
+  wheat: () => {
+    const parts: THREE.BufferGeometry[] = [];
+    for (let k = 0; k < 18; k++) {
+      const a = (k / 18) * Math.PI * 2 + (k % 2) * 0.2, r = 0.022 + (k % 3) * 0.008;
+      const y = Math.sin(a) * r + 0.04, z = Math.cos(a) * r;
+      // źdźbło wzdłuż x: przy kłosach ściśnięte, przy ściętym końcu lekko rozchylone
+      const stalk = new THREE.CylinderGeometry(0.007, 0.006, 0.3, 3).rotateZ(Math.PI / 2).rotateY(Math.cos(a) * 0.12).rotateZ(Math.sin(a) * 0.12);
+      parts.push(tint(stalk.translate(-0.02, y, z), k % 2 ? 0xd9b452 : 0xc9a240));
+      const ear = new THREE.IcosahedronGeometry(0.015, 0).scale(2.4, 0.75, 0.75).rotateY(Math.cos(a) * 0.4).rotateZ(-0.25 + Math.sin(a) * 0.3);
+      parts.push(tint(ear.translate(0.15 + (k % 3) * 0.008, y - 0.01, z * 1.4), k % 3 ? 0xe8c766 : 0xd4ad4a));
+    }
+    parts.push(tint(new THREE.CylinderGeometry(0.036, 0.036, 0.022, 10).rotateZ(Math.PI / 2).translate(0.02, 0.04, 0), 0x8a6a28)); // powrósło
+    return parts;
+  },
   flour: () => [ball(0.13, 0, 0.04, 0, 0xf4eedc, 0.85, 0.95, 0.9), block(0.06, 0.05, 0.06, 0.1, 0.12, 0, 0xcfc4a4)],
   stone: () => [block(0.21, 0.17, 0.2, 0, 0.03, 0, 0xb5b0a2), block(0.14, 0.1, 0.14, 0.03, 0.16, 0.01, 0x9d978a)],
   fish: () => [basket(), ...[-0.05, 0.05].map((x, k) => ball(0.05, x, 0.09, k ? 0.03 : -0.03, 0x9cc3d6, 0.7, 0.6, 2.2)), ball(0.045, 0, 0.13, 0, 0x7aa6bd, 2.2, 0.6, 0.7)],

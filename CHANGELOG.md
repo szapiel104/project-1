@@ -5,6 +5,7 @@
 - Chłop niosący ładunek trzyma go oburącz przed sobą przez cały czas: stojąc nie drapie się, nie macha i nie rozkłada rąk (wcześniej ręce opadały, a kosz czy blok wisiał sam w powietrzu)
 - Ładunek rośnie i maleje razem z postacią (ludzie są różnego wzrostu), więc trafia w dłonie i u niskiego, i u wysokiego
 - Kosze, worek z mąką i blok kamienia węższe: dłonie obejmują je z boków zamiast wchodzić w środek
+- Niesione zboże to snop jak w stodole (pęk źdźbeł z powrósłem i kłosami), a nie trzy żółte stożki
 
 ## 0.23.2 — nowy kruk (2026-10-15)
 
