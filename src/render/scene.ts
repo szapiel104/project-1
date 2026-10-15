@@ -62,6 +62,17 @@ interface WalkModel { floorY: number; open: [number, number, number, number][]; 
 const TAVERN = TAVERN_MODEL as unknown as WalkModel & { seats: [number, number, number][] };
 const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel };
 const TAVERN_SEATS = TAVERN.seats;
+/** Obrys budynku z modelu (ściany, sprzęty i wnętrze): poza nim, na podwórku działki, chodzi się jak po łące */
+const footCache = new Map<WalkModel, [number, number, number, number]>();
+function walkFoot(m: WalkModel): [number, number, number, number] {
+  let f = footCache.get(m);
+  if (!f) {
+    f = [Infinity, -Infinity, Infinity, -Infinity];
+    for (const r of [...m.open, ...m.solid.filter((b) => b[4] < 0.3)]) { f[0] = Math.min(f[0], r[0]); f[1] = Math.max(f[1], r[1]); f[2] = Math.min(f[2], r[2]); f[3] = Math.max(f[3], r[3]); }
+    footCache.set(m, f);
+  }
+  return f;
+}
 const TAVERN_FLOOR = TAVERN.floorY;
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
@@ -1527,10 +1538,13 @@ export class GameRenderer {
       const t = ty * g.map.width + tx;
       // w karczmie (i na jej ganku): obrys izby i drzwi z modelu, sprzęty na swojej wysokości
       const wb = this.walkableAt(x, z);
+      const ft = wb && walkFoot(wb[4]);
+      if (wb && ft && (wb[1] < ft[0] || wb[1] > ft[1] || wb[2] < ft[2] || wb[2] > ft[3])) return true;   // podwórko przed chatą, w obrysie działki
       if (wb) {
         const y = feet - wb[3];
         for (const [ox, oz] of ring) {
           const lx = wb[1] + ox, lz = wb[2] + oz;
+          if (ft && (lx < ft[0] || lx > ft[1] || lz < ft[2] || lz > ft[3])) continue;
           if (!wb[4].open.some(([x0, x1, z0, z1]) => lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1)) return false;
           for (const [x0, x1, z0, z1, y0, y1] of wb[4].solid) if (lx >= x0 && lx <= x1 && lz >= z0 && lz <= z1 && y + 0.3 > y0 && y < y1 - 0.05) return false;
         }
