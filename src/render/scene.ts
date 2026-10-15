@@ -3275,7 +3275,15 @@ export class GameRenderer {
       this.spearmen.set(n, !ranged && !udef.guard && !udef.ram ? t.matrix : ZERO, legs, striking, teamC, s.id);
       if (udef.ram && rams < 256) {
         // wóz jedzie przodem (głowicą) w stronę marszu; belka cofa się, gdy taran szykuje cios, i wybija się do przodu przy uderzeniu
-        m.makeRotationY(heading).setPosition(px - width / 2, y, pz - height / 2);
+        // pod budynkiem: głowicą prosto w najbliższy kawałek ściany celu (nie bokiem, jak stanął po drodze)
+        let rh = heading;
+        const tb = !walking && s.target ? g.buildings.find((b) => b.id === s.target) : undefined;
+        if (tb) {
+          const fp = footprint(BUILDINGS[tb.type]!, tb.rot);
+          const nx = Math.max(tb.x, Math.min(tb.x + fp.w, px)), nz = Math.max(tb.y, Math.min(tb.y + fp.h, pz));
+          if ((nx - px) ** 2 + (nz - pz) ** 2 > 1e-4) rh = Math.atan2(nx - px, nz - pz);
+        }
+        m.makeRotationY(rh).setPosition(px - width / 2, y, pz - height / 2);
         this.ramBodies.setMatrixAt(rams, m);
         const k = s.cd / udef.cooldown;
         const hitting = !walking && s.target && s.cd > 0;
