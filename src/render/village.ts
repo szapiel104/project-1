@@ -19,6 +19,7 @@ export interface VillageCtx { time: number; dt: number; night: number; calm: boo
 interface Critter { x: number; y: number; tx: number; ty: number; wait: number; heading: number; speed: number; seen: number; hx: number; hy: number; flee: number; next: number }
 interface Dog extends Critter { master: number; until: number; bark: number; run: number }
 
+const DOGS_ON = false;
 const MAX_HENS = 120, MAX_PIGS = 48, MAX_HORSES = 8, MAX_DOGS = 8;
 
 /** Modele zwierząt z Blendera (tools/models/animals.py) */
@@ -206,8 +207,9 @@ export class Village {
       }
     }
     // pies: jeden na gracza, przy twierdzy; chodzi za kimś z osady, nocą obszczekuje wilki
+    // pies wyłączony (Michał 15.10: przeszkadzał w bramie zamku); kod zostaje, gdyby miał wrócić
     let dogs = 0;
-    for (const pl of g.players) {
+    for (const pl of DOGS_ON ? g.players : []) {
       if (dogs >= MAX_DOGS || pl.defeated) continue;
       const keep = g.buildings.find((b) => b.owner === pl.id && b.type === 0 && !b.ruined);
       if (!keep) continue;
