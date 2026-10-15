@@ -69,6 +69,29 @@ def cyl(r1, r2, h, seg=10, rx=0.0, ry=0.0, rz=0.0, move=(0, 0, 0), cap=True):
     return xf(bm, rx, ry, rz, move)
 
 
+def ring(r_in, r_out, h, seg=28, move=(0, 0, 0)):
+    """Zamknięta obręcz (ścianka zewnętrzna, wewnętrzna, góra i dół) — widać ją z każdej strony,
+    nie znika od tyłu jak otwarty stożek. Wewnętrzna ścianka chowa się w klepkach."""
+    bm = bmesh.new()
+    outer, inner = [], []
+    for k in range(seg):
+        a = k / seg * math.tau
+        c, s_ = math.cos(a), math.sin(a)
+        outer.append((bm.verts.new((c * r_out, s_ * r_out, -h / 2)), bm.verts.new((c * r_out, s_ * r_out, h / 2))))
+        inner.append((bm.verts.new((c * r_in, s_ * r_in, -h / 2)), bm.verts.new((c * r_in, s_ * r_in, h / 2))))
+    for k in range(seg):
+        j = (k + 1) % seg
+        (o0, o1), (p0, p1) = outer[k], outer[j]
+        (i0, i1), (q0, q1) = inner[k], inner[j]
+        bm.faces.new((o0, p0, p1, o1))  # zewnątrz
+        bm.faces.new((i0, i1, q1, q0))  # wewnątrz
+        bm.faces.new((o1, p1, q1, i1))  # góra
+        bm.faces.new((o0, i0, q0, p0))  # dół
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return xf(bm, move=move)
+
+
 def ev(ob, rx=0.0, ry=0.0, rz=0.0, move=(0, 0, 0)):
     return xf(evaluated(ob), rx, ry, rz, move)
 
@@ -132,10 +155,7 @@ for k in range(N):
     parts.append(Mesh(st, wood(c), 'wood'))
 parts.append(Mesh(cyl(R - 0.008, R - 0.008, 0.012, seg=16), wood(WOOD_D), 'wood'))
 for hy, hr in ((0.02, R + 0.003), (0.07, R + 0.012)):
-    t = bmesh.new()
-    bmesh.ops.create_cone(t, cap_ends=False, segments=20, radius1=hr, radius2=hr + 0.002, depth=0.008)
-    bmesh.ops.triangulate(t, faces=t.faces)
-    parts.append(Mesh(xf(t, move=(0, hy, 0)), lambda x, y, z: speck(IRON, x, y, z), 'plain'))
+    parts.append(Mesh(ring(hr - 0.008, hr + 0.001, 0.008, seg=32, move=(0, hy, 0)), lambda x, y, z: speck(IRON, x, y, z), 'plain'))
 water = cyl(R + 0.004, R + 0.004, 0.003, seg=20, move=(0, 0.072, 0))
 parts.append(Mesh(water, lambda x, y, z: speck(hexc(0x7a9aa4), x, y, z, 0.05), 'plain'))
 for i in range(9):
@@ -283,9 +303,8 @@ parts = []
 bucket = lathe('bucket', [(0.0, 0.0), (0.04, 0.0), (0.048, 0.075), (0.044, 0.075), (0.036, 0.008), (0.0, 0.008)], seg=14, subsurf=0)
 parts.append(Mesh(evaluated(bucket), lambda x, y, z: speck([WOOD, WOOD_D][int((math.atan2(x, z) + 4) * 2.3) % 2], x, y, z), 'wood'))
 for hy in (0.015, 0.06):
-    t = bmesh.new()
-    bmesh.ops.create_cone(t, cap_ends=False, segments=14, radius1=0.042 + hy * 0.1, radius2=0.043 + hy * 0.1, depth=0.006)
-    parts.append(Mesh(xf(t, move=(0, hy, 0)), (0.22, 0.21, 0.2), 'plain'))
+    wall = 0.04 + 0.008 * hy / 0.075  # zewnętrzny promień wiadra na tej wysokości
+    parts.append(Mesh(ring(wall - 0.003, wall + 0.0025, 0.006, move=(0, hy, 0)), (0.22, 0.21, 0.2), 'plain'))
 parts.append(Mesh(cyl(0.043, 0.043, 0.002, seg=14, move=(0, 0.06, 0)), (0.42, 0.52, 0.56), 'plain'))
 arc = skin('arc', [(-0.046, 0.07, 0), (-0.03, 0.115, 0), (0.03, 0.115, 0), (0.046, 0.07, 0)], [(0, 1), (1, 2), (2, 3)], [(0.003, 0.003)] * 4, subsurf=1)
 parts.append(Mesh(evaluated(arc), IRON, 'plain'))
