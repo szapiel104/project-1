@@ -38,7 +38,7 @@ import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
 import { Family } from './family';
-import { createLoads, tint } from './loads';
+import { createLoads, tint, carryArms, plankBundle } from './loads';
 import { FireCrewFx } from './firecrew';
 import { DRAW as FIRE_DRAW } from '../sim/systems/fire';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
@@ -802,13 +802,7 @@ export class GameRenderer {
     ]);
     this.logs = new THREE.InstancedMesh(log, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }), MAX_UNITS);
     // wiązka desek na ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami
-    const boards: THREE.BufferGeometry[] = [];
-    [[-0.045, 0, 0.02, 0xd2ab74], [0.045, 0, -0.03, 0xc49a63], [0, 0.03, 0.04, 0xdcb886], [-0.045, 0.06, -0.02, 0xcca26c], [0.045, 0.06, 0.01, 0xd8b07a]].forEach(([x, y, z, c]) => {
-      const b = new THREE.BoxGeometry(0.085, 0.024, 0.66); b.translate(x!, y!, z!); boards.push(tint(b, c!));
-    });
-    for (const z of [-0.2, 0.2]) { const tie = new THREE.BoxGeometry(0.2, 0.1, 0.025); tie.translate(0, 0.03, z); boards.push(tint(tie, 0x8a6a3a)); }
-    const plank = mergeGeometries(boards.map((b) => (b.index ? b.toNonIndexed() : b)))!;
-    plank.translate(0.14, 0.53, 0);
+    const plank = plankBundle();
     const plankMap = pattern('planks')?.clone() ?? null;
     if (plankMap) { plankMap.repeat.set(0.25, 1); plankMap.needsUpdate = true; }
     this.planks = new THREE.InstancedMesh(plank, new THREE.MeshStandardMaterial({ vertexColors: true, map: plankMap, roughness: 0.9 }), MAX_UNITS);
@@ -4286,8 +4280,10 @@ export class GameRenderer {
       // (inaczej ręce opadały, a kosz czy blok wisiał sam w powietrzu)
       const carrying = u.carryRes >= 0 && !log && !hammering && !chopping && !mining && !fighting && !crafting;
       const iaArm = carrying ? undefined : ia?.arm;
+      // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
+      const [carryR, carryL] = carryArms(wood, swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, carrying || (!(u.carryRes >= 0 && !log) && !!ia?.up), TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : iaArm, chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : !carrying && ia ? (ia.armL ?? 0.05) : -0.5, flee || wave || !!ia?.legs);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : iaArm, carrying ? carryL : chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || !!ia?.legs);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);

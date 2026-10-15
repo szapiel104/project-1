@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { BUILDINGS } from './data/buildings';
+import { RESOURCES } from './data/resources';
+import { carryArms, loadGeometry, plankBundle } from './render/loads';
 import { t } from './i18n';
 import { buildingModel, isWetMat, isWindowMat, setNight } from './render/buildings';
 import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
@@ -34,6 +36,26 @@ function figure(kind: FigureKind, id: number, h = 0.64): Make {
     f.set(0, new THREE.Matrix4(), 0, false, RED, id);
     f.finish(1);
     return { obj: holder, size: new THREE.Vector3(0.3, h, 0.2) };
+  };
+}
+/** Chłop niosący ładunek: ta sama poza rąk i to samo położenie ładunku co w grze (loads.ts) */
+function carrier(res: string): Make {
+  return () => {
+    const holder = new THREE.Scene();
+    Figures.FAR2 = 1e9;
+    const id = 3;
+    const f = new Figures(1, holder, 'peasant');
+    const planks = res === 'planks';
+    const [r, l] = carryArms(planks, 0);
+    f.set(0, new THREE.Matrix4(), 0, false, RED, id, r, l, true);
+    f.finish(1);
+    const geo = planks ? plankBundle() : loadGeometry(res);
+    if (geo) {
+      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: !planks, roughness: 0.9 }));
+      m.scale.setScalar(f.sizeOf(id, RED));
+      holder.add(m);
+    }
+    return { obj: holder, size: new THREE.Vector3(0.3, 0.64, 0.3) };
   };
 }
 function horse(): THREE.Object3D {
@@ -75,6 +97,10 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['archer', 'Łucznik', figure('archer', 5)],
     ['guard', 'Strażnik', figure('guard', 6)],
     ['king', 'Pan zamku', figure('king', 7)],
+  ]],
+  ['Niosą', [
+    ['carry-planks', 'deski', carrier('planks')],
+    ...RESOURCES.filter((r) => r !== 'wood' && r !== 'gold').map((r) => [`carry-${r}`, t(`res.${r}`), carrier(r)] as [string, string, Make]),
   ]],
   ['Zwierzęta', [
     ['hen', 'Kura', () => ({ obj: mesh(animalGeo('hen_brown')) })],

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.23.4 — niesienie od nowa (2026-10-15)
+
+- Poza niesienia: ręce zgięte w przód, ładunek leży na dłoniach tuż przed piersią (wcześniej wisiał w powietrzu przed wyciągniętymi rękami); deski na prawym ramieniu, prawa ręka przytrzymuje wiązkę
+- Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
+- Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
+
 ## 0.23.3 — ładunek w rękach (2026-10-15)
 
 - Chłop niosący ładunek trzyma go oburącz przed sobą przez cały czas: stojąc nie drapie się, nie macha i nie rozkłada rąk (wcześniej ręce opadały, a kosz czy blok wisiał sam w powietrzu)
