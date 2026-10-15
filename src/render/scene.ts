@@ -1830,7 +1830,12 @@ export class GameRenderer {
       if (def.gate) {
         // brama staje w poprzek muru: gdy sąsiedzi są po bokach w osi x, wrota idą wzdłuż x
         const mesh = this.buildingMeshes.get(b.id);
-        if (mesh) mesh.rotation.y = at(b.x - 1, b.y) || at(b.x + 1, b.y) ? 0 : Math.PI / 2;
+        // liczą się przede wszystkim przęsła muru (palisada, mur kamienny), a nie stojąca obok wieża czy budynek:
+        // wygrywa oś, na której mur jest po obu stronach, potem ta z większą liczbą przęseł
+        const line = (x: number, y: number): number => { const o = solid.get(y * width + x); return !o ? 0 : BUILDINGS[o.type]!.line ? 2 : 1; };
+        const ax = line(b.x - 1, b.y) + line(b.x + 1, b.y) + (line(b.x - 1, b.y) && line(b.x + 1, b.y) ? 3 : 0);
+        const az = line(b.x, b.y - 1) + line(b.x, b.y + 1) + (line(b.x, b.y - 1) && line(b.x, b.y + 1) ? 3 : 0);
+        if (mesh) mesh.rotation.y = ax >= az ? 0 : Math.PI / 2;
         continue;
       }
       if (def.id === 'watchtower' && !b.build) {
