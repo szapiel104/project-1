@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
-import { FP, type GameState } from '../sim/state';
+import { FP, keepFront, type GameState } from '../sim/state';
 import { modelGeo, type ModelMesh } from './peasants';
 import ANIMALS from './models/animals.json';
 
@@ -210,8 +210,9 @@ export class Village {
     for (const pl of g.players) {
       if (dogs >= MAX_DOGS || pl.defeated) continue;
       const keep = g.buildings.find((b) => b.owner === pl.id && b.type === 0 && !b.ruined);
-      if (!keep || keep.door < 0) continue;
-      const kx = (keep.door % width) + 0.5, ky = Math.floor(keep.door / width) + 1.5;
+      if (!keep) continue;
+      // dom psa: przedpole przed bramą zamku (drzwi budynku zamku prowadzą do środka, tam pies nie chodzi)
+      const [fx, fy] = keepFront(keep), kx = fx + 0.5, ky = fy + 1.5;
       let d = this.dogs.get(pl.id);
       if (!d) { d = { x: kx, y: ky, tx: kx, ty: ky, wait: 0, heading: 0, speed: 0, seen: 0, hx: kx, hy: ky, flee: 0, next: 0, master: 0, until: 0, bark: 0, run: 0 }; this.dogs.set(pl.id, d); }
       d.hx = kx; d.hy = ky; d.seen = this.frame;
