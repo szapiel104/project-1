@@ -2,6 +2,7 @@ import { BUILDINGS } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { GUARD, UNITS } from '../../data/units';
 import { walkable } from '../path';
+import { KEEP_SIZE } from '../../data/keep';
 import { FP, keepCenter, keepFront, Phase, playerKeep, type GameState, type Soldier } from '../state';
 import { dayPart } from './workers';
 
@@ -145,6 +146,18 @@ export function guardSystem(g: GameState): void {
       // w walce albo w drodze: nie przeszkadzamy
       if (s.target || s.path.length || s.goal >= 0 || s.hunt) return;
       const here = (s.py >> 8) * g.map.width + (s.px >> 8);
+      // dwóch wartowników chodzi po bocznych murach twierdzy tam i z powrotem (wchodzą schodami z dziedzińca)
+      if (i === 2 || i === 3) {
+        const k = playerKeep(g, s.owner);
+        if (k) {
+          const w = g.map.width, x = k.x + (i === 2 ? 0 : KEEP_SIZE - 1);
+          const ends = [(k.y + 2) * w + x, (k.y + KEEP_SIZE - 3) * w + x];
+          s.stance = 0; s.hold = -1; s.amove = true;
+          s.beat = ((s.beat ?? 0) + 1) % 2;
+          const t = ends[s.beat]!;
+          if (here !== t) { s.goal = t; return; }
+        }
+      }
       // za dnia tylko dwóch stoi przy bramie twierdzy, reszta obchodzi osadę (nocą obchodzą wszyscy)
       const onPost = part === 'work' && i < 2 && stand.length;
       if (onPost) {

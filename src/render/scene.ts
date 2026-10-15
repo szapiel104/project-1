@@ -3424,28 +3424,7 @@ export class GameRenderer {
     this.waveAge += 1 / 60;
     this.wave.visible = this.waveAge < 0.6;
     if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
-    // wartownicy na murach zamków (ozdoba, poza symulacją): chodzą po koronie bocznych murów, nocą z pochodnią
-    for (const [, [kx, ky, base]] of this.keepFloors) {
-      for (const side of [-1, 1]) {
-        if (n >= MAX_UNITS) break;
-        const per = 46, ph = ((this.time + side * 11 + kx) % per + per) % per / per;
-        const tri = ph < 0.5 ? ph * 2 : 2 - ph * 2;           // tam i z powrotem wzdłuż muru
-        const lz = -4 + tri * 8, lx = side * 5;
-        const heading = ph < 0.5 ? 0 : Math.PI;
-        const lt = this.lifeObj;
-        lt.position.set(kx + lx - width / 2, base + CASTLE.walkY, ky + lz - height / 2);
-        lt.rotation.set(0, heading, 0);
-        lt.scale.setScalar(1.08 * FIG);
-        lt.updateMatrix();
-        const legs = Math.sin(this.time * 5.5 + side) * 0.5;
-        const teamC = TEAM_COLORS[g.players[this.keepOwner.get(kx * 1000 + ky) ?? 0]?.team ?? 0] ?? 0x888888;
-        this.guardsFig.set(n, lt.matrix, legs, false, teamC, 900000 + side + Math.round(kx));
-        this.archers.set(n, ZERO, 0, false, teamC, 0);
-        this.spearmen.set(n, ZERO, 0, false, teamC, 0);
-        if (torchesOn && torches < 256) { this.soldierTorches.setMatrixAt(torches++, lt.matrix); this.pushHandFlame(lt.matrix, -0.17); }
-        n++;
-      }
-    }
+    // wartownicy na murach zamków to teraz prawdziwi strażnicy (guardSystem), nie ozdoba
     this.ramBodies.count = rams; this.ramBeams.count = rams;
     this.ramBodies.instanceMatrix.needsUpdate = true; this.ramBeams.instanceMatrix.needsUpdate = true;
     this.spearmen.finish(n);
