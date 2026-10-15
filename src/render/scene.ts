@@ -1131,6 +1131,7 @@ export class GameRenderer {
     this.plain.enabled = o.ao === 'off';
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
     this.sun.castShadow = o.shadows > 0;
+    this.shadowMax = o.shadows;
     // poświata od średniej jakości w górę (kosztuje kilka przejść w małej rozdzielczości)
     // poświata wokół płomieni, okien i odblasków: od średniej jakości w górę (obraz przed nią czyszczony z błędnych pikseli)
     this.bloom.enabled = o.ao !== 'off' && o.shadows >= 2048;
@@ -1725,7 +1726,7 @@ export class GameRenderer {
   private cullS = new THREE.Sphere();
   culled = 0;
   /** Do porównań wydajności (window.__renderer.cullOn = false) */
-  cullOn = false;
+  cullOn = true;
   private cullInstances(): void {
     if (!this.cullOn) {
       for (const [m, st] of this.cullSeen) {
@@ -2817,6 +2818,10 @@ export class GameRenderer {
     this.sunDir.set(-Math.cos(arc) * 80, 30 + Math.sin(arc) * 70, 40);
   }
 
+  private shadowMax = 4096;
+  private shadowFrame = 0;
+  private sunWas = new THREE.Vector3();
+  private camWas = new THREE.Vector3();
   private shadowSize(n: number): void {
     if (n <= 0 || this.sun.shadow.mapSize.x === n) return;
     this.sun.shadow.mapSize.setScalar(n);
@@ -2829,7 +2834,11 @@ export class GameRenderer {
    * mapa cieni liczy się co drugą klatkę (ludzie chodzą wolno, więc cień nie odstaje).
    */
   private aimSun(): void {
-    // rozdzielczość cieni zawsze taka, jak w ustawieniach (zmniejszanie z daleka psuło wygląd)
+    // z daleka mapa cieni 2048 zamiast 4096 (z histerezą, żeby przy progu nie przełączała się w kółko)
+    if (this.shadowMax > 0 && !this.calm) {
+      const d = this.cam.distance, cur = this.sun.shadow.mapSize.x;
+      this.shadowSize(d > 34 ? Math.min(this.shadowMax, 2048) : d < 30 ? this.shadowMax : cur);
+    }
     const f = this.focusPoint;
     const half = Math.max(22, Math.min(70, this.cam.distance * 1.15));
     // skok o stałą siatkę, żeby cienie nie migotały przy przesuwaniu kamery
@@ -2839,8 +2848,13 @@ export class GameRenderer {
     this.sun.position.set(x + this.sunDir.x, this.sunDir.y, z + this.sunDir.z);
     const c = this.sun.shadow.camera;
     if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
-    // cienie liczone w każdej klatce (liczenie co drugą migało światłem pochodni i latarni)
-    this.renderer.shadowMap.autoUpdate = true;
+    // gdy kamera i słońce stoją, mapa cieni liczy się co drugą klatkę (ludzie chodzą wolno, cień nie odstaje)
+    const sm = this.renderer.shadowMap;
+    sm.autoUpdate = false;
+    const cp = this.cam.camera.position;
+    const moved = this.sunWas.distanceToSquared(this.sun.position) > 0.0025 || this.camWas.distanceToSquared(cp) > 1e-6;
+    this.sunWas.copy(this.sun.position); this.camWas.copy(cp);
+    sm.needsUpdate = this.calm || moved || (this.shadowFrame++ & 1) === 0;
   }
 
   /** Nocą zapala pochodnie przy budynkach i w rękach ludzi oraz rozdaje światła najbliższym z nich. */
