@@ -2001,6 +2001,12 @@ export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.Buffe
 /** Mokre budynki w deszczu: dachy, drewno i kamień ciemnieją i łapią połysk (odbicia światła), po deszczu schną */
 const WET_KEYS = ['thatch', 'thatchDark', 'wood', 'woodDark', 'plank', 'stone', 'stoneDark', 'castle', 'castleDark', 'plaster', 'slate', 'tiles', 'bark'] as const;
 const dryState = new Map<THREE.MeshStandardMaterial, { c: THREE.Color; r: number }>();
+/** Czy materiał moknie w deszczu (daleka wersja budynku łączy tylko materiały, które mokną tak samo) */
+export function isWetMat(m: THREE.Material): boolean {
+  const mats = M as unknown as Record<string, THREE.Material | undefined>;
+  for (const key of WET_KEYS) { const base = mats[key]; if (base && (m === base || m === aoMats.get(base))) return true; }
+  return false;
+}
 export function setWetBuildings(k: number): void {
   const mats = M as unknown as Record<string, THREE.Material | undefined>;
   for (const key of WET_KEYS) {

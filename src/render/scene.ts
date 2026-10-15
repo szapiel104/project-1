@@ -19,7 +19,8 @@ import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
 import { ladderSides } from '../sim/systems/stonewalls';
-import { setWetBuildings } from './buildings';
+import { isWetMat, setWetBuildings } from './buildings';
+import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
 import { setCloudShadows } from './ground';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
@@ -465,6 +466,14 @@ export class GameRenderer {
   private fxAt = 0;
   private mistLevel = 0;
   private buildingMeshes = new Map<number, THREE.Group>();
+  /** Dalekie (uproszczone) wersje budynków i ich przełączanie wg odległości od kamery */
+  private lods = new Map<number, BuildingLod>();
+  /** Do porównań (window.__renderer.lodOn = false) i ?lod=0 */
+  lodOn = new URLSearchParams(location.search).get('lod') !== '0';
+  /** Dopuszczalny błąd dalekiej wersji na ekranie (piksele): mniejszy = przełączanie dalej; z jakości grafiki */
+  private lodPx = 0.6;
+  /** Ile budynków stoi w pełnej wersji i na kolejnych poziomach, ile trójkątów oszczędzamy (okno wydajności) */
+  lodInfo = '';
 
   private figures: Figures;
   /** Żołnierze: osobny zestaw postaci w zbrojach */
@@ -884,6 +893,7 @@ export class GameRenderer {
     if (this.view) { this.scene.remove(this.view.group); this.view.dispose(); }
     for (const g of this.buildingMeshes.values()) this.buildingLayer.remove(g);
     this.buildingMeshes.clear();
+    this.lods.clear();
     for (const pile of this.rubbleMeshes.values()) this.scene.remove(pile);
     this.rubbleMeshes.clear();
     for (const d of this.dying) this.buildingLayer.remove(d.mesh);
@@ -1138,6 +1148,8 @@ export class GameRenderer {
     this.grassReach = o.grass ?? 1;
     // zasięg szczegółów: z automatu jakości, a przy ręcznych ustawieniach z trawy (bez trawy = bliżej)
     this.detail = o.detail ?? 0.6 + 0.4 * (o.grass ?? 1);
+    // daleka wersja budynków: na minimum wolno pomylić się o ~2 piksele (przełącza blisko), na Ultra o 0,3 piksela (bardzo daleko)
+    this.lodPx = 0.6 / Math.pow(Math.max(0.4, this.detail), 2.2);
     this.view?.grassReach(this.grassReach);
     this.ao.enabled = o.ao !== 'off';
     this.plain.enabled = o.ao === 'off';
@@ -1653,6 +1665,7 @@ export class GameRenderer {
       T('gruz', () => this.syncRubble(g, v, dt));
       T('światła', () => this.syncLamps(g));
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
+      T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
       this.crowd.begin(dt);
@@ -2772,6 +2785,9 @@ export class GameRenderer {
         part.castShadow = true;
         part.receiveShadow = true;
       });
+      // daleka wersja: zapamiętujemy bryły teraz (dach na miejscu, nic nie zdjęte), liczymy ją dopiero, gdy będzie potrzebna
+      const lod = prepareLod(mesh, def.id);
+      if (lod) this.lods.set(b.id, lod);
       // pochodnia na słupie przy wejściu: przy budynkach z drzwiami (nie przy murach, bramach ani drogach)
       if (def.id !== 'torch' && !def.wall && !def.gate && !def.road && def.id !== 'keep') {
         const torch = torchModel();
@@ -2790,6 +2806,48 @@ export class GameRenderer {
       this.dying.push({ mesh, t: 0 });
       this.onCollapse();
       this.buildingMeshes.delete(id);
+      this.lods.delete(id);
+    }
+  }
+
+  /**
+   * Daleka wersja budynków: dla każdego budynku wybieramy najprostszy poziom, którego błąd (w jednostkach świata)
+   * rzutowany na ekran z tej odległości jest mniejszy niż `lodPx` pikseli. Przełączanie z zapasem 10%, żeby budynek na
+   * granicy nie mrugał. Budowy, pokaz budowy i budynek, w którym stoimy spacerem, zawsze w pełnej wersji.
+   */
+  private lodW = new THREE.Vector3();
+  private updateLods(): void {
+    const cam = this.cam.camera, cp = cam.position;
+    const H = this.renderer.domElement.clientHeight || window.innerHeight;
+    // odległość, w której błąd 1 jednostki ma `lodPx` pikseli
+    const k = H / (2 * Math.tan((cam.fov * Math.PI) / 360) * this.lodPx);
+    const counts = [0, 0, 0, 0];
+    let saved = 0, waiting = 0;
+    const opts = { keep: isWindowMat, wet: isWetMat };
+    for (const [id, lod] of this.lods) {
+      const mesh = this.buildingMeshes.get(id);
+      if (!mesh) { this.lods.delete(id); continue; }
+      let want = -1;
+      const pinned = !this.lodOn || this.sites.has(id) || this.quickBuild.has(id) || (this.walk && (id === this.walkHall || id === this.walkNear));
+      if (!pinned) {
+        const d = Math.max(0, this.lodW.copy(lod.center).applyMatrix4(mesh.matrixWorld).distanceTo(cp) - lod.radius);
+        if (!lod.levels.length) {
+          // wersje liczą się w tle przy pierwszej potrzebie (raz na rodzaj budynku)
+          if (d > LOD_STEPS[0]! * k * 0.8 && !attachLod(mesh, lod, opts)) waiting++;
+        }
+        for (let i = lod.levels.length - 1; i >= 0; i--) {
+          const D = lod.levels[i]!.error * k * (i <= lod.level ? 0.9 : 1);
+          if (d > D) { want = i; break; }
+        }
+      }
+      showLod(lod, want);
+      counts[lod.level + 1]!++;
+      if (lod.level >= 0) saved += lod.full - lod.levels[lod.level]!.tris;
+    }
+    if (this.lodTick % 30 === 0) {
+      this.lodInfo = `pełne ${counts[0]}, bliżej ${counts[1]}, dalej ${counts[2]}, najdalej ${counts[3]}` +
+        ` · −${Math.round(saved / 1000)} tys. trójkątów · próg ${this.lodPx.toFixed(2)} px` +
+        (waiting ? ` · liczy się ${waiting}` : '') + ` · policzone rodzaje ${lodStats.baked}${lodStats.worker ? ' (w tle)' : ''}`;
     }
   }
 

@@ -2,13 +2,15 @@
  * Podgląd modeli (modele.html): jeden model na kamiennej podstawce, w powietrzu albo na trawie, w zwykłym świetle
  * i w pełnej jakości (zdjęciowe tekstury, miękkie cienie, odbicia otoczenia). Kamerą obraca się myszą dookoła.
  * Do sprawdzania nowych i zmienionych modeli bez uruchamiania gry: modele.html?id=tavern (&tlo=powietrze|trawa, &noc=1).
+ * Budynki mają też daleką wersję (przycisk „Z daleka”, &daleko=1..3): ta sama bryła uproszczona tak, jak gra rysuje ją z oddali.
  */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { BUILDINGS } from './data/buildings';
 import { t } from './i18n';
-import { buildingModel, setNight } from './render/buildings';
+import { buildingModel, isWetMat, isWindowMat, setNight } from './render/buildings';
+import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
 import { partsGeometry } from './render/gear';
 import RAM_MODEL from './render/models/ram.json';
 import { clutterModel } from './render/clutter';
@@ -142,8 +144,11 @@ shadowCatch.rotation.x = -Math.PI / 2; shadowCatch.receiveShadow = true;
 scene.add(plinth, grass, shadowCatch);
 
 const q = new URLSearchParams(location.search);
-const state = { id: q.get('id') ?? 'house', bg: (q.get('tlo') ?? 'podstawka') as 'podstawka' | 'powietrze' | 'trawa', night: q.has('noc'), roof: true, spin: false, wire: false };
+const state = { id: q.get('id') ?? 'house', bg: (q.get('tlo') ?? 'podstawka') as 'podstawka' | 'powietrze' | 'trawa', night: q.has('noc'), roof: true, spin: false, wire: false, far: Math.max(0, Math.min(3, Number(q.get('daleko')) || 0)) };
 let current: THREE.Object3D | null = null;
+/** Daleka wersja pokazanego budynku (null dla innych modeli) */
+let lod: BuildingLod | null = null;
+const url = (): string => `?id=${encodeURIComponent(state.id)}${state.bg !== 'podstawka' ? `&tlo=${state.bg}` : ''}${state.night ? '&noc=1' : ''}${state.far ? `&daleko=${state.far}` : ''}`;
 let size = new THREE.Vector3(1, 1, 1);
 const nameEl = document.getElementById('name')!, infoEl = document.getElementById('info')!;
 
@@ -181,6 +186,17 @@ function applyLook(): void {
       const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | THREE.MeshStandardMaterial[] | undefined;
       if (m) for (const mm of Array.isArray(m) ? m : [m]) if ('wireframe' in mm) mm.wireframe = state.wire;
     });
+    // daleka wersja: wieko (dach, mury) idzie za przyciskiem „Bez dachu”, tak jak w grze
+    if (lod) showLod(lod, state.far - 1);
+    let tris = 0, meshes = 0;
+    current.traverseVisible((o) => {
+      const m = o as THREE.Mesh;
+      if (!m.isMesh) return;
+      meshes++;
+      tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position!.count) / 3;
+    });
+    const far = lod && state.far ? ` · daleka wersja ${state.far}/3 (błąd ${lod.levels[state.far - 1]?.error.toFixed(3) ?? '—'} pola)` : '';
+    infoEl.textContent = `${nameEl.textContent} · ${Math.round(tris).toLocaleString('pl-PL')} trójkątów · ${meshes} siatek · ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} (pola)${far}`;
   }
   controls.autoRotate = state.spin;
   syncBar();
@@ -194,6 +210,11 @@ function show(id: string): void {
   current = made.obj;
   current.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; } });
   scene.add(current);
+  lod = null;
+  if (BUILDINGS.some((d) => d.id === state.id)) {
+    lod = prepareLod(current, state.id);
+    if (lod) attachLod(current, lod, { keep: isWindowMat, wet: isWetMat }, true);
+  }
   const box = new THREE.Box3().setFromObject(current);
   size = made.size ?? box.getSize(new THREE.Vector3());
   if (!made.size) {
@@ -214,16 +235,7 @@ function show(id: string): void {
   s.left = s.bottom = -span * 1.4; s.right = s.top = span * 1.4; s.near = 0.01; s.far = span * 15; s.updateProjectionMatrix();
   controls.update();
   nameEl.textContent = hit[0];
-  let tris = 0, meshes = 0;
-  current.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (!m.isMesh || !o.visible) return;
-    meshes++;
-    const g = m.geometry;
-    tris += (g.index ? g.index.count : g.attributes.position!.count) / 3;
-  });
-  infoEl.textContent = `${hit[0]} · ${Math.round(tris).toLocaleString('pl-PL')} trójkątów · ${meshes} siatek · ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} (pola)`;
-  history.replaceState(null, '', `?id=${encodeURIComponent(state.id)}${state.bg !== 'podstawka' ? `&tlo=${state.bg}` : ''}${state.night ? '&noc=1' : ''}`);
+  history.replaceState(null, '', url());
   document.querySelectorAll<HTMLButtonElement>('#groups button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === state.id)));
   applyLook();
 }
@@ -250,15 +262,22 @@ const toggles: [string, () => boolean, () => void][] = [
   ['Bez dachu', () => !state.roof, () => { state.roof = !state.roof; }],
   ['Siatka', () => state.wire, () => { state.wire = !state.wire; }],
   ['Obrót', () => state.spin, () => { state.spin = !state.spin; }],
+  ['Z daleka', () => state.far > 0, () => { state.far = (state.far + 1) % 4; }],
 ];
 const barButtons = toggles.map(([label, on, act]) => {
   const b = document.createElement('button');
   b.type = 'button'; b.textContent = label;
-  b.onclick = () => { act(); applyLook(); history.replaceState(null, '', `?id=${encodeURIComponent(state.id)}${state.bg !== 'podstawka' ? `&tlo=${state.bg}` : ''}${state.night ? '&noc=1' : ''}`); };
+  b.onclick = () => { act(); applyLook(); history.replaceState(null, '', url()); };
   barEl.append(b);
   return [b, on] as const;
 });
-function syncBar(): void { for (const [b, on] of barButtons) b.setAttribute('aria-pressed', String(on())); }
+function syncBar(): void {
+  for (const [b, on] of barButtons) b.setAttribute('aria-pressed', String(on()));
+  // przycisk dalekiej wersji przełącza po kolei: pełny → 1 → 2 → 3 (tylko budynki ją mają)
+  const farBtn = barButtons[barButtons.length - 1]![0];
+  farBtn.textContent = state.far ? `Z daleka ${state.far}/3` : 'Z daleka';
+  farBtn.hidden = !lod;
+}
 
 function resize(): void {
   const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -267,11 +286,13 @@ function resize(): void {
 }
 window.addEventListener('resize', resize);
 resize();
-show(state.id);
+// upraszczanie (WebAssembly) wczytuje się chwilę; bez niego model i tak się pokaże, tylko bez dalekiej wersji
+void lodReady.then(() => show(state.id));
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
-// do zrzutów z testów: window.__view('tavern', yawStopnie, nachylenieStopnie)
-(window as unknown as { __view: (id: string, yaw?: number, pitch?: number) => void }).__view = (id, yaw = 40, pitch = 25) => {
+// do zrzutów z testów: window.__view('tavern', yawStopnie, nachylenieStopnie, dalekaWersja 0..3)
+(window as unknown as { __view: (id: string, yaw?: number, pitch?: number, far?: number) => void }).__view = (id, yaw = 40, pitch = 25, far) => {
   if (id !== state.id) show(id);
+  if (far !== undefined) { state.far = far; applyLook(); }
   const span = Math.max(size.x, size.y, size.z, 0.2), d = span * 2.4, a = (yaw * Math.PI) / 180, p = (pitch * Math.PI) / 180;
   camera.position.set(Math.sin(a) * Math.cos(p) * d, controls.target.y + Math.sin(p) * d, Math.cos(a) * Math.cos(p) * d);
   controls.update();
