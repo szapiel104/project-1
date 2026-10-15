@@ -1,6 +1,6 @@
 """Zamek gracza (11×11 pól) według wspólnego planu src/data/keep-layout.json.
 
-Mury kurtynowe z blankami i basztami, brama z przejazdem, kratą i kamiennym zjazdem, donżon nad tylnym murem,
+Mury kurtynowe z blankami i basztami, brama z przejazdem i kratą, donżon nad tylnym murem,
 a w środku dziedziniec ze studnią i pomieszczenia: sala tronowa, kuchnia, komnata pana, koszary, lochy z celami.
 Ściany pomieszczeń stoją dokładnie na krawędziach pól z planu — tam, gdzie zatrzymuje się symulacja i spacer.
 Dachy (grupa 'shell') znikają przy podglądzie wnętrza; sufity ('ceiling') widać tylko z wnętrza podczas spaceru.
@@ -315,7 +315,7 @@ b.box('base', 'gold', 0.07, 0.12, 0.07, 0, 5.17, DZ)
 b.box('base', 'woodDark', 0.04, 0.9, 0.04, 0, 5.2, DZ)
 b.box('base', 'flag', 0.7, 0.4, 0.02, 0.37, 5.65, DZ)
 
-# ---------------- brama: dwie wieże, przejazd ze sklepieniem, krata, wrota, kamienny zjazd ----------------
+# ---------------- brama: dwie wieże, przejazd ze sklepieniem, krata, wrota ----------------
 GZ = H - 0.5
 # wieże bramy: w dole pełne, wyżej izby z wejściem z chodnika muru (od strony schodów) i strzelnicami na przedpole
 for s in (-1, 1):
@@ -343,9 +343,6 @@ for y in (0.2, 0.45, 0.7, 0.9):
 b.box('base', 'iron', 0.96, 0.02, 0.02, cx(gx), G + 0.93, PORT_Z)
 for s in (-1, 1):  # wrota otwarte na boki przejazdu
     b.box('base', 'woodDark', 0.46, 0.85, 0.05, cx(gx) + s * 0.44, G, GZ - 0.2, s * math.pi / 2)
-# zjazd z przejazdu na przedpole: kamienna rampa (bez drewnianego mostu)
-ramp = math.atan2(G, 0.9)
-b.box('base', 'roadStone', 0.92, 0.05, math.hypot(0.9, G), cx(gx), G - 0.05, GZ + 0.9, tilt=ramp, bottom=True)
 
 # ---------------- pomieszczenia: ściany na krawędziach pól ----------------
 ROOM_H = {'T': 1.3, 'K': 1.0, 'C': 1.05, 'B': 0.95, 'L': 0.9, '1': 0.9, '2': 0.9, '3': 0.9, '4': 0.9}
