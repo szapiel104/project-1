@@ -211,6 +211,7 @@ export class GameRenderer {
   private night = 0;
   private grade!: ShaderPass;
   private bloom!: UnrealBloomPass;
+  private sanitize!: ShaderPass;
   private rain = 0;
   private hammers!: THREE.InstancedMesh;
   private guardsFig!: Figures;
@@ -802,6 +803,20 @@ export class GameRenderer {
     this.composer.addPass(this.plain);
     this.composer.addPass(this.ao);
     // poświata: tylko najjaśniejsze miejsca (płomienie, okna nocą, odblaski słońca) dostają miękką aureolę
+    // przed poświatą: pojedynczy błędny piksel (NaN albo nieskończenie jasny) rozmyty przez poświatę czernił cały ekran,
+    // więc obraz jest najpierw czyszczony i przycinany do rozsądnej jasności
+    this.sanitize = new ShaderPass({
+      uniforms: { tDiffuse: { value: null } },
+      vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+      fragmentShader: `uniform sampler2D tDiffuse; varying vec2 vUv;
+        void main() {
+          vec4 c = texture2D(tDiffuse, vUv);
+          if (!(c.r == c.r && c.g == c.g && c.b == c.b) || c.r > 1e4 || c.g > 1e4 || c.b > 1e4) c = vec4(0.0, 0.0, 0.0, 1.0);
+          gl_FragColor = vec4(clamp(c.rgb, 0.0, 40.0), c.a);
+        }`,
+    });
+    this.sanitize.enabled = false;
+    this.composer.addPass(this.sanitize);
     this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.18, 0.45, 1.6);
     this.bloom.enabled = false;
     this.composer.addPass(this.bloom);
@@ -1119,6 +1134,7 @@ export class GameRenderer {
     // poświata od średniej jakości w górę (kosztuje kilka przejść w małej rozdzielczości)
     // poświata na razie tylko do sprawdzenia (?poswiata=1): w zwykłej grze dawała czarny obraz
     this.bloom.enabled = new URLSearchParams(location.search).has('poswiata') && o.ao !== 'off';
+    this.sanitize.enabled = this.bloom.enabled;
     // miękkie cienie: rozmyte krawędzie (zmiana rodzaju mapy wymaga przebudowy shaderów materiałów)
     const type = o.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     if (this.renderer.shadowMap.type !== type) {
