@@ -5,6 +5,7 @@
 - Poza niesienia: ręce zgięte w przód, ładunek leży na dłoniach tuż przed piersią (wcześniej wisiał w powietrzu przed wyciągniętymi rękami); deski na prawym ramieniu, prawa ręka przytrzymuje wiązkę
 - Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
 - Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
+- Włócznie niesione wiązką na ramieniu (groty w przód, przewiązane sznurem), deski węższą wiązką na barku między głową a ręką (dłoń już w nie nie wchodzi), żelazo z metalicznym połyskiem i rdzawymi zaciekami
 
 ## 0.23.3 — ładunek w rękach (2026-10-15)
 

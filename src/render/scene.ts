@@ -38,7 +38,7 @@ import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
 import { Family } from './family';
-import { createLoads, tint, carryArms, plankBundle } from './loads';
+import { createLoads, tint, carryArms, plankBundle, ON_SHOULDER } from './loads';
 import { FireCrewFx } from './firecrew';
 import { DRAW as FIRE_DRAW } from '../sim/systems/fire';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
@@ -4281,7 +4281,7 @@ export class GameRenderer {
       const carrying = u.carryRes >= 0 && !log && !hammering && !chopping && !mining && !fighting && !crafting;
       const iaArm = carrying ? undefined : ia?.arm;
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
-      const [carryR, carryL] = carryArms(wood, swing);
+      const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
       this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : iaArm, carrying ? carryL : chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || !!ia?.legs);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);

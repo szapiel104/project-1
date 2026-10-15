@@ -92,14 +92,34 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
     return [g];
   },
   fish: () => [basket(), ...[-0.05, 0.05].map((x, k) => ball(0.05, x, 0.09, k ? 0.03 : -0.03, 0x9cc3d6, 0.7, 0.6, 2.2)), ball(0.045, 0, 0.13, 0, 0x7aa6bd, 2.2, 0.6, 0.7)],
-  spear: () => [0, 1, 2].flatMap((k) => [tint(new THREE.CylinderGeometry(0.014, 0.014, 0.7, 5).rotateX(Math.PI / 2).translate((k - 1) * 0.04, 0.02, 0.05), 0xc9a26b), tint(new THREE.ConeGeometry(0.024, 0.08, 4).rotateX(Math.PI / 2).translate((k - 1) * 0.04, 0.02, 0.44), 0x8a8f96)]),
+  // wiązka włóczni na prawym ramieniu (jak deski): trzy drzewca z grotami w przód i lekko w górę, przewiązane sznurem
+  spear: () => [0, 1, 2].flatMap((k) => {
+    const x = (k - 1) * 0.022, y = (k === 1 ? 0.02 : 0);
+    const tilt = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.rotateX(-0.28).translate(x, y, 0);
+    return [
+      tint(tilt(new THREE.CylinderGeometry(0.009, 0.01, 0.72, 5).rotateX(Math.PI / 2).translate(0, 0, 0.04)), k === 1 ? 0xb88f5c : 0xa67f50),
+      tint(tilt(new THREE.OctahedronGeometry(1, 0).scale(0.018, 0.006, 0.055).translate(0, 0, 0.45)), 0x9aa0a8),
+      tint(tilt(new THREE.CylinderGeometry(0.011, 0.012, 0.03, 5).rotateX(Math.PI / 2).translate(0, 0, 0.395)), 0x7a7f86),
+    ];
+  }).concat([-0.1, 0.12].map((z) => tint(new THREE.TorusGeometry(0.026, 0.006, 4, 10).translate(0, 0, z).rotateX(-0.28).translate(0, 0.01, 0), 0x6b5a3c))),
   bow: () => [0, 1].flatMap((k) => [tint(new THREE.TorusGeometry(0.18, 0.012, 4, 10, Math.PI * 0.9).rotateX(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.05), 0x7a5232), tint(new THREE.CylinderGeometry(0.004, 0.004, 0.34, 3).rotateZ(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.03), 0xe8e0c8)]),
   ale: () => [tint(new THREE.CylinderGeometry(0.12, 0.12, 0.26, 10).rotateZ(Math.PI / 2).translate(0, 0.04, 0), 0x8a5a2b), ...[-0.1, 0, 0.1].map((x) => tint(new THREE.CylinderGeometry(0.128, 0.128, 0.02, 10).rotateZ(Math.PI / 2).translate(x, 0.04, 0), 0x4a4038))],
   // sztaby żelaza jak w składzie: trapezowe odlewy (szersze u dołu), dwie na spodzie i jedna na wierzchu, w poprzek rąk
   iron: () => {
-    const bar = (x: number, y: number, z: number, hex: number): THREE.BufferGeometry =>
-      tint(new THREE.CylinderGeometry(0.035, 0.055, 0.3, 4, 1).rotateY(Math.PI / 4).scale(1, 0.6, 1).rotateZ(Math.PI / 2).translate(x, y, z), hex);
-    return [bar(0, 0, -0.045, 0x46484e), bar(0, 0, 0.045, 0x4e5056), bar(0, 0.05, 0, 0x5c5e66)];
+    // sztaby z kuźni: trapezowe odlewy, stal ciemna z rdzawobrązowymi zaciekami (żelazo bez ochrony szybko rdzewieje)
+    const bar = (x: number, y: number, z: number, seed: number): THREE.BufferGeometry => {
+      const g = new THREE.CylinderGeometry(0.035, 0.055, 0.3, 4, 3).rotateY(Math.PI / 4).scale(1, 0.6, 1).rotateZ(Math.PI / 2).translate(x, y, z);
+      const n = g.index ? g.toNonIndexed() : g;
+      const p = n.attributes.position!, col = new Float32Array(p.count * 3), c = new THREE.Color();
+      for (let t = 0; t < p.count; t += 3) {
+        const r = Math.sin((t + seed * 97) * 12.989) * 43758.5; const v = r - Math.floor(r);
+        c.setHex(v > 0.86 ? 0x5f4433 : v > 0.7 ? 0x4e423a : v > 0.35 ? 0x484a50 : 0x3e4046);
+        for (let k = 0; k < 3; k++) { col[(t + k) * 3] = c.r; col[(t + k) * 3 + 1] = c.g; col[(t + k) * 3 + 2] = c.b; }
+      }
+      n.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      return n;
+    };
+    return [bar(0, 0, -0.045, 1), bar(0, 0, 0.045, 2), bar(0, 0.05, 0, 3)];
   },
 };
 
@@ -107,11 +127,13 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
 export function createLoads(max: number, scene: THREE.Scene): Map<number, THREE.InstancedMesh> {
   const out = new Map<number, THREE.InstancedMesh>();
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.9 });
+  // kute żelazo: metal z połyskiem, ciemne i rdzawe plamy w kolorach wierzchołków
+  const ironMat = new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.5, metalness: 0.55 });
   RESOURCES.forEach((id, index) => {
     // niesione oburącz przed sobą: ręce zgięte w przód (CARRY_ARM), ładunek leży na dłoniach przed piersią
     const geo = loadGeometry(id);
     if (!geo) return;
-    const mesh = new THREE.InstancedMesh(geo, mat, max);
+    const mesh = new THREE.InstancedMesh(geo, id === 'iron' ? ironMat : mat, max);
     mesh.count = 0;
     mesh.frustumCulled = false;
     mesh.castShadow = true;
@@ -132,7 +154,9 @@ export function createLoads(max: number, scene: THREE.Scene): Map<number, THREE.
   return out;
 }
 
-const LOAD_SCALE: Record<string, number> = { flour: 0.7, iron: 0.75, stone: 0.8, ale: 0.75, wheat: 0.85, spear: 0.85, bow: 0.85 };
+/** Ładunki niesione na prawym ramieniu (prawa ręka przytrzymuje), a nie oburącz przed sobą */
+export const ON_SHOULDER = new Set(['spear']);
+const LOAD_SCALE: Record<string, number> = { flour: 0.7, iron: 0.75, stone: 0.8, ale: 0.75, wheat: 0.85, bow: 0.85 };
 
 /** Ręce chłopa niosącego ładunek: zgięte w przód pod kątem, dłonie pod ładunkiem przed piersią (ładunek nad dłońmi) */
 export const CARRY_ARM = -1.1;
@@ -141,18 +165,19 @@ export const CARRY_ARM = -1.1;
  * prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie (`swing` = wymach kroku).
  */
 export function carryArms(planks: boolean, swing: number): [number, number] {
-  return planks ? [-2.75, swing * 0.8] : [CARRY_ARM, CARRY_ARM];
+  return planks ? [-2.35, swing * 0.8] : [CARRY_ARM, CARRY_ARM];
 }
 
 /** Wiązka desek na prawym ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami */
 export function plankBundle(): THREE.BufferGeometry {
   const boards: THREE.BufferGeometry[] = [];
   ([[-0.045, 0, 0.02, 0xd2ab74], [0.045, 0, -0.03, 0xc49a63], [0, 0.03, 0.04, 0xdcb886], [-0.045, 0.06, -0.02, 0xcca26c], [0.045, 0.06, 0.01, 0xd8b07a]] as const).forEach(([x, y, z, c]) => {
-    const b = new THREE.BoxGeometry(0.06, 0.018, 0.5); b.translate(x * 0.72, y * 0.75, z); boards.push(tint(b, c));
+    const b = new THREE.BoxGeometry(0.042, 0.018, 0.5); b.translate(x * 0.45, y * 0.75, z); boards.push(tint(b, c));
   });
-  for (const z of [-0.15, 0.15]) { const tie = new THREE.BoxGeometry(0.15, 0.075, 0.02); tie.translate(0, 0.022, z); boards.push(tint(tie, 0x8a6a3a)); }
+  for (const z of [-0.15, 0.15]) { const tie = new THREE.BoxGeometry(0.09, 0.07, 0.02); tie.translate(0, 0.022, z); boards.push(tint(tie, 0x8a6a3a)); }
   const plank = mergeGeometries(boards.map((b) => (b.index ? b.toNonIndexed() : b)))!;
-  plank.translate(0.13, 0.5, 0);
+  // wąska wiązka na barku między głową a ręką (bark ±0,135, głowa ±0,054): ręka idzie obok, dłoń przytrzymuje z boku od góry
+  plank.translate(0.09, 0.495, 0);
   return plank;
 }
 
@@ -164,6 +189,7 @@ export function loadGeometry(res: string): THREE.BufferGeometry | null {
   // duże ładunki mniejsze, w proporcji do chłopa (worek mąki nie wielkości tułowia); kosze zostają, żeby dłonie je obejmowały
   const k = LOAD_SCALE[res] ?? 1;
   geo?.scale(k, k, k);
-  geo?.translate(0, 0.33, 0.12);
+  // włócznie na ramieniu (jak deski), reszta na dłoniach przed piersią
+  if (ON_SHOULDER.has(res)) geo?.translate(0.09, 0.5, 0); else geo?.translate(0, 0.33, 0.12);
   return geo;
 }
