@@ -1121,7 +1121,7 @@ export class GameRenderer {
   private alwaysDay = false;
 
   /** Ustawienia grafiki i kamery z menu */
-  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; soft?: boolean; label?: string }): void {
+  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; soft?: boolean; dynRes?: boolean; label?: string }): void {
     if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false };
     this.quality = `${o.label ? o.label + ': ' : ''}AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}, trawa ${(o.grass ?? 1) > 0 ? Math.round((o.grass ?? 1) * 100) + '%' : 'wył.'}`;
     this.grassReach = o.grass ?? 1;
@@ -1146,6 +1146,7 @@ export class GameRenderer {
     this.shadowSize(o.shadows);
     this.ratioMax = Math.min(window.devicePixelRatio, o.scale);
     this.ratioDyn = 1;
+    this.dynRes = !!o.dynRes;
     this.applyRatio();
     this.alwaysDay = !o.dayNight;
     this.cam.speed = o.camSpeed;
@@ -2847,8 +2848,9 @@ export class GameRenderer {
    * Dynamiczna rozdzielczość: gdy karta graficzna nie wyrabia (średnio > 20 ms na klatkę), obraz robi się trochę mniejszy,
    * a gdy jest zapas (< 11 ms), wraca do rozdzielczości z ustawień. Zmiana co ok. sekundę, małymi krokami.
    */
+  private dynRes = false;
   private dynamicResolution(ms: number): void {
-    if (this.calm) return;
+    if (this.calm || !this.dynRes) return;
     this.gpuAvg += ms; this.gpuFrames++;
     if (this.gpuFrames < 60) return;
     const avg = this.gpuAvg / this.gpuFrames;

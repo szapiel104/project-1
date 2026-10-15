@@ -22,6 +22,8 @@ export interface Settings {
   grass: number;
   /** Miękkie cienie (rozmyte krawędzie) */
   soft?: boolean;
+  /** Dynamiczna rozdzielczość: obraz zmniejsza się, gdy karta graficzna nie wyrabia (domyślnie wyłączona) */
+  dynRes?: boolean;
   /** Gra sama dobiera jakość do komputera (mierzy płynność); ręczna zmiana grafiki to wyłącza */
   auto: boolean;
   /** Ostatnio dobrany poziom automatycznej jakości (następna sesja zaczyna od niego) */
@@ -464,6 +466,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
         button('Ustaw wszystko na Ultra', () => { Object.assign(settings, { shadows: 4096, ao: 'high', grass: 1.35, scale: 2, soft: true }); manual(); showSettings(); }, 'menu-btn set-ultra'),
         choice('Trawa', settings.grass, [[0, t('set.off')], [0.6, 'Bliżej kamery'], [1, 'Pełna'], [1.35, 'Daleko (Ultra)']], (v) => { settings.grass = v; manual(); }),
+        check('Dynamiczna rozdzielczość (mniejszy obraz, gdy karta nie wyrabia; może mignąć przy zmianie)', settings.dynRes ?? false, (v) => { settings.dynRes = v; save(); }),
         check('Miękkie cienie (po ponownym uruchomieniu gry)', settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
         choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
