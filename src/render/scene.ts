@@ -1567,9 +1567,25 @@ export class GameRenderer {
     const nStep = Math.min(40, Math.ceil(Math.hypot(dx, dz) / 0.04));
     // stoi już za blisko ściany (start spaceru, skok, otwarte wrota): wolno mu odejść, sprawdzamy wtedy tylko środek
     const ok = free(w.x, w.z) ? free : (x: number, z: number): boolean => point(x, z, [[0, 0]]);
+    const sx0 = dx / nStep, sz0 = dz / nStep, sl = Math.hypot(sx0, sz0);
     for (let i = 0; i < nStep; i++) {
-      if (ok(w.x + dx / nStep, w.z)) w.x += dx / nStep;
-      if (ok(w.x, w.z + dz / nStep)) w.z += dz / nStep;
+      const x0 = w.x, z0 = w.z;
+      if (ok(w.x + sx0, w.z)) w.x += sx0;
+      if (ok(w.x, w.z + sz0)) w.z += sz0;
+      // utknął na framudze drzwi albo rogu: lekko w bok, jeśli stamtąd da się iść dalej (wejście w drzwi bez celowania co do centymetra)
+      if (w.x === x0 && w.z === z0 && sl > 0) {
+        const px = -sz0 / sl, pz = sx0 / sl;
+        let moved = false;
+        for (const o of [0.02, -0.02, 0.04, -0.04, 0.06, -0.06, 0.09, -0.09, 0.12, -0.12]) {
+          const nx = x0 + px * o, nz = z0 + pz * o;
+          if (!ok(nx, nz) || !ok(nx + sx0, nz + sz0)) continue;
+          // przesuwa się w stronę prześwitu o długość kroku (płynnie, bez skoku na bok)
+          const k = Math.sign(o) * Math.min(Math.abs(o), sl);
+          if (ok(x0 + px * k, z0 + pz * k)) { w.x = x0 + px * k; w.z = z0 + pz * k; moved = true; }
+          break;
+        }
+        if (!moved) break;   // ściana na całej szerokości: dalsze kroki w tej klatce i tak nic nie dadzą
+      }
     }
     // tempo kroków jak u człowieka: idąc ok. 1,8 kroku na sekundę, biegiem ok. 2,7 (kołysanie kamery w tym samym rytmie)
     if ((fx || fz) && !w.jy) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
