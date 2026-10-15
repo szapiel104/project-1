@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { MeshBVH } from 'three-mesh-bvh';
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
 import { RULES } from '../data/rules';
@@ -1516,6 +1517,64 @@ export class GameRenderer {
     // pointerlockchange przychodzi chwilę po zablokowaniu kursora; dopiero potem słuchamy wyjścia (Esc)
     setTimeout(() => document.addEventListener('pointerlockchange', lock), 300);
   }
+  /** Spacer: siatki budynków w pobliżu (widoczne), z drzewami BVH do szybkich promieni */
+  private walkHits: { mesh: THREE.Mesh; box: THREE.Box3; root: THREE.Object3D }[] = [];
+  private walkCache = new WeakMap<THREE.Group, { mesh: THREE.Mesh; box: THREE.Box3; root: THREE.Object3D }[]>();
+  private gatherWalkHits(wx: number, wz: number): void {
+    this.walkHits.length = 0;
+    for (const grp of this.buildingMeshes.values()) {
+      if (Math.abs(grp.position.x - wx) > 9 || Math.abs(grp.position.z - wz) > 9) continue;
+      let list = this.walkCache.get(grp);
+      if (!list) {
+        // raz na budynek: wszystkie stałe siatki (bez płomieni, szyb i dymu) z ramką w świecie i drzewem BVH
+        list = [];
+        grp.updateMatrixWorld(true);
+        grp.traverse((o) => {
+          const m = o as THREE.Mesh;
+          if (!m.isMesh || (m as unknown as THREE.InstancedMesh).isInstancedMesh || !m.geometry.getAttribute('position')) return;
+          const mat = m.material as THREE.Material;
+          if (!mat || Array.isArray(mat) || mat.transparent || (mat as THREE.MeshBasicMaterial).isMeshBasicMaterial) return;
+          const geo = m.geometry as THREE.BufferGeometry & { boundsTree?: MeshBVH };
+          if (!geo.boundingBox) geo.computeBoundingBox();
+          if (!geo.boundsTree) geo.boundsTree = new MeshBVH(geo);
+          list!.push({ mesh: m, box: geo.boundingBox!.clone().applyMatrix4(m.matrixWorld), root: grp });
+        });
+        this.walkCache.set(grp, list);
+      }
+      for (const h of list) {
+        const bx = h.box;
+        if (wx < bx.min.x - 0.6 || wx > bx.max.x + 0.6 || wz < bx.min.z - 0.6 || wz > bx.max.z + 0.6) continue;
+        // tylko to, co teraz widać (ukryte wnętrze, zdjęty dach, schowana krata nie przeszkadzają)
+        let o: THREE.Object3D | null = h.mesh, vis = true;
+        while (o && o !== h.root) { if (!o.visible) { vis = false; break; } o = o.parent; }
+        if (!vis) continue;
+        // ruchome części (wrota, krata): ramka i macierz z bieżącego położenia
+        if (h.mesh.parent !== h.root) { h.mesh.updateWorldMatrix(true, false); h.box.copy(h.mesh.geometry.boundingBox!).applyMatrix4(h.mesh.matrixWorld); }
+        this.walkHits.push(h);
+      }
+    }
+  }
+  /** Czy bliżej niż r od punktu (świat) na którejś z wysokości ys jest ściana albo sprzęt (najbliższy punkt siatki, drzewo BVH) */
+  private walkTouch(x: number, z: number, ys: number[], r: number): boolean {
+    const inv = this.walkInv, pt = this.walkPt, hit = this.walkHit;
+    for (const { mesh, box } of this.walkHits) {
+      if (x < box.min.x - r || x > box.max.x + r || z < box.min.z - r || z > box.max.z + r) continue;
+      const tree = (mesh.geometry as THREE.BufferGeometry & { boundsTree?: MeshBVH }).boundsTree!;
+      inv.copy(mesh.matrixWorld).invert();
+      const sc = mesh.matrixWorld.getMaxScaleOnAxis() || 1;
+      for (const y of ys) {
+        if (y < box.min.y - r || y > box.max.y + r) continue;
+        pt.set(x, y, z).applyMatrix4(inv);
+        const res = tree.closestPointToPoint(pt, hit, 0, r / sc);
+        if (res && res.distance < r / sc) return true;
+      }
+    }
+    return false;
+  }
+  private walkInv = new THREE.Matrix4();
+  private walkPt = new THREE.Vector3();
+  private walkHit = { point: new THREE.Vector3(), distance: 0, faceIndex: 0 };
+  private walkGatherAt = { x: 1e9, z: 1e9, t: 0 };
   private stepWalk(dt: number): void {
     const w = this.walk!, g = this.state!;
     const k = w.keys;
@@ -1575,13 +1634,18 @@ export class GameRenderer {
       return true;
     };
     // ciało spacerowicza: kamera trzyma się ok. 0,11 pola od ścian, sprzętów i pni (bliżej przednia płaszczyzna kamery wchodziła w ściany)
-    const BODY = 0.11, D = BODY * 0.7071;
+    const BODY = 0.11, D = BODY * 0.7071, W2 = g.map.width / 2, H2 = g.map.height / 2;
+    // zbiór siatek w pobliżu odświeżany co kilka kroków (i tak sięga 0,6 pola dalej niż ciało)
+    const gt = this.walkGatherAt;
+    if (Math.hypot(w.x - gt.x, w.z - gt.z) > 0.3 || this.time - gt.t > 0.3 || this.time < gt.t) { this.gatherWalkHits(w.x - W2, w.z - H2); gt.x = w.x; gt.z = w.z; gt.t = this.time; }
     const RING = [[0, 0], [BODY, 0], [-BODY, 0], [0, BODY], [0, -BODY], [D, D], [D, -D], [-D, D], [-D, -D]] as const;
     const free = (x: number, z: number): boolean => {
       if (!point(x, z, RING)) return false;
-      // poza budynkami z modelem: obrys ciała też nie może wejść na zajęte pole (ściany domów stoją na brzegu działki)
-      if (!this.walkableAt(x, z) && !this.keepAt(x, z)) for (const [ox, oz] of RING) if ((ox || oz) && !point(x + ox, z + oz, [[0, 0]])) return false;
-      return !this.view || !this.view.trunkNear(x, z, BODY * 0.8);
+      // poza budynkami z modelem (także przy zamku i w nim): obrys ciała też nie może wejść na zajęte pole ani za ścianę między polami
+      if (!this.walkableAt(x, z)) for (const [ox, oz] of RING) if ((ox || oz) && !point(x + ox, z + oz, [[0, 0]])) return false;
+      if (this.view && this.view.trunkNear(x, z, BODY * 0.8)) return false;
+      // prawdziwe siatki budynków: promienie na wysokości kolan i oczu, żeby kamera nigdy nie weszła w ścianę ani sprzęt
+      return !this.walkTouch(x - W2, z - H2, [feet + 0.3, feet + 0.46], BODY);
     };
     // małymi krokami: przy niskim FPS jeden duży skok przeskoczyłby cienką ścianę
     const nStep = Math.min(40, Math.ceil(Math.hypot(dx, dz) / 0.04));
