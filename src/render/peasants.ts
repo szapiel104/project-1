@@ -6,6 +6,7 @@ import PEASANT_MODEL from './models/peasant.json';
 import SPEARMAN_MODEL from './models/spearman.json';
 import ARCHER_MODEL from './models/archer.json';
 import { grayPattern, normal, pattern } from './textures';
+import { charTexture } from './chartex';
 import WOMAN_MODEL from './models/woman.json';
 import KING_MODEL from './models/king.json';
 import CHILD_MODEL from './models/child.json';
@@ -51,11 +52,12 @@ interface Part {
 const legL = (s: number): number => s, legR = (s: number): number => -s;
 const armL = (s: number, up: boolean): number => (up ? -1.35 : -s * 0.8), armR = (s: number, up: boolean): number => (up ? -1.35 : s * 0.8);
 
-type Mat = 'cloth' | 'leather' | 'metal' | 'skin' | 'wood';
+type Mat = 'cloth' | 'leather' | 'metal' | 'mail' | 'skin' | 'wood';
 const MATS: Record<Mat, { roughness: number; metalness: number; side?: THREE.Side }> = {
   cloth: { roughness: 0.95, metalness: 0, side: THREE.DoubleSide },
-  leather: { roughness: 0.72, metalness: 0 },
+  leather: { roughness: 0.72, metalness: 0, side: THREE.DoubleSide },
   metal: { roughness: 0.48, metalness: 0.3 },
+  mail: { roughness: 0.5, metalness: 0.35 },
   skin: { roughness: 0.78, metalness: 0 },
   wood: { roughness: 0.82, metalness: 0, side: THREE.DoubleSide },
 };
@@ -89,10 +91,21 @@ export function boxUv(geo: THREE.BufferGeometry, scale: number): THREE.BufferGeo
 }
 
 /** Tekstury ubrań i drewna na postaciach: splot płótna (szary, barwę daje kolor ubrania) i słoje drzewca, łuku, tarczy */
-const TEX: Partial<Record<Mat, () => { map: THREE.Texture | null; normalMap: THREE.Texture | null; scale: number }>> = {
+type TexDef = { map: THREE.Texture | null; normalMap: THREE.Texture | null; scale: number; ns?: number };
+const TEX: Partial<Record<Mat, () => TexDef>> = {
   cloth: () => ({ map: grayPattern('burlap'), normalMap: normal('burlap'), scale: 9 }),
   leather: () => ({ map: grayPattern('soil'), normalMap: null, scale: 7 }),
+  mail: () => ({ map: grayPattern('mail'), normalMap: normal('mail'), scale: 9 }),
   wood: () => ({ map: pattern('planks'), normalMap: normal('planks'), scale: 6 }),
+};
+/** Z bliska: zdjęciowe tekstury CC0 z ambientCG (filcowana wełna, kute żelazo z rdzą, kolczuga) w 1024 px i rysowane
+ *  w kodzie (ziarno wyprawionej skóry, pory skóry) — wszystkie z mapami normalnych */
+const NEAR_TEX: Partial<Record<Mat, () => TexDef | null>> = {
+  cloth: () => ({ map: grayPattern('wool', 1024), normalMap: normal('wool'), scale: 3, ns: 0.6 }),
+  metal: () => ({ map: grayPattern('iron', 1024), normalMap: normal('iron'), scale: 2.5, ns: 0.5 }),
+  mail: () => ({ map: grayPattern('mail', 1024), normalMap: normal('mail'), scale: 9, ns: 0.9 }),
+  leather: () => { const t = charTexture('leather'); return t && { ...t, scale: 7, ns: 0.45 }; },
+  skin: () => { const t = charTexture('skin'); return t && { ...t, scale: 4, ns: 0.35 }; },
 };
 
 const merge = (...g: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries(g.map((x) => (x.attributes.color ? x : prep(x))))!;
@@ -198,12 +211,13 @@ export class Figures {
     const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub'], lod: 0 | 1 = 0): void => {
       const fixed = typeof color === 'number';
       const m = MATS[mat];
-      const tex = TEX[mat]?.();
+      const tex = (lod === 0 ? NEAR_TEX[mat]?.() : null) ?? TEX[mat]?.();
       const g0 = geo.attributes.color ? geo : prep(geo);
       if (tex?.map) boxUv(g0, tex.scale);
+      const ns = tex?.ns ?? 0.45;
       const mesh = new THREE.InstancedMesh(g0, new THREE.MeshStandardMaterial({
         color: fixed ? color : 0xffffff, vertexColors: true, roughness: m.roughness, metalness: m.metalness, side: m.side ?? THREE.FrontSide,
-        map: tex?.map ?? null, normalMap: tex?.normalMap ?? null, normalScale: new THREE.Vector2(0.45, 0.45),
+        map: tex?.map ?? null, normalMap: tex?.normalMap ?? null, normalScale: new THREE.Vector2(ns, ns),
       }), max);
       mesh.count = 0;
       mesh.frustumCulled = false;
@@ -255,14 +269,10 @@ export class Figures {
       // miecz: rękojeść w dłoni, jelec, głowica, prosta klinga; w spoczynku ostrzem w dół i lekko w przód
       const sword = { at: new THREE.Vector3(M.hand[0]!, M.hand[1]!, M.hand[2]!), rot: (_s: number, up: boolean): number => (up ? -0.9 : -0.55) };
       const at = new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!);
-      // rękojeść i klinga w jednej siatce (kolory wierzchołków)
-      mk(mergeGeometries([
-        tinted(new THREE.CylinderGeometry(0.008, 0.008, 0.055, 6).translate(0, 0.012, 0), 0x3a2416),
-        tinted(new THREE.SphereGeometry(0.013, 6, 4).translate(0, 0.044, 0), 0xb08a3a),
-        tinted(new THREE.BoxGeometry(0.07, 0.01, 0.015).translate(0, -0.02, 0), 0x8e939b),
-        tinted(new THREE.BoxGeometry(0.024, 0.25, 0.005).translate(0, -0.15, 0), 0xb8bdc4),
-        tinted(new THREE.ConeGeometry(0.017, 0.035, 4).rotateY(Math.PI / 4).scale(1, 1, 0.3).rotateX(Math.PI).translate(0, -0.292, 0), 0xb8bdc4),
-      ])!, 0xffffff, at.clone(), swordArm, always, 'metal', sword);
+      // miecz z Blendera (tools/models/sword.py): owinięta rękojeść, głowica, jelec, klinga ze zbroczem; z bliska i z daleka
+      const SW = M as FigureModel & { sword: ModelMesh[]; swordFar: ModelMesh[] };
+      for (const lod of [0, 1] as const)
+        for (const m of lod ? SW.swordFar : SW.sword) mk(modelGeo(m), 0xffffff, at.clone(), swordArm, always, m.mat as Mat, sword, lod);
       return;
     }
     if (kind === 'spearman' || kind === 'archer') {

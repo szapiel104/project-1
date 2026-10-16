@@ -396,11 +396,12 @@ resize();
 // upraszczanie (WebAssembly) wczytuje się chwilę; bez niego model i tak się pokaże, tylko bez dalekiej wersji
 void lodReady.then(() => show(state.id));
 renderer.setAnimationLoop(() => { controls.update(); renderer.render(scene, camera); });
-// do zrzutów z testów: window.__view('tavern', yawStopnie, nachylenieStopnie, dalekaWersja 0..3)
-(window as unknown as { __view: (id: string, yaw?: number, pitch?: number, far?: number) => void }).__view = (id, yaw = 40, pitch = 25, far) => {
+// do zrzutów z testów: window.__view('tavern', yawStopnie, nachylenieStopnie, dalekaWersja 0..3, przybliżenie)
+(window as unknown as { __view: (id: string, yaw?: number, pitch?: number, far?: number, zoom?: number, lift?: number) => void }).__view = (id, yaw = 40, pitch = 25, far, zoom = 1, lift = 0) => {
   if (id !== state.id) show(id);
   if (far !== undefined) { state.far = far; applyLook(); }
-  const span = Math.max(size.x, size.y, size.z, 0.2), d = span * 2.4, a = (yaw * Math.PI) / 180, p = (pitch * Math.PI) / 180;
+  const span = Math.max(size.x, size.y, size.z, 0.2), d = (span * 2.4) / zoom, a = (yaw * Math.PI) / 180, p = (pitch * Math.PI) / 180;
+  if (lift) controls.target.y = size.y * (0.45 + lift);
   camera.position.set(Math.sin(a) * Math.cos(p) * d, controls.target.y + Math.sin(p) * d, Math.cos(a) * Math.cos(p) * d);
   controls.update();
 };

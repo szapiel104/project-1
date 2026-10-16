@@ -17,7 +17,7 @@ from common import Mesh, evaluated, hexrgb, keep_faces, lathe, reset, skin, sphe
 reset()
 import bmesh as _bm  # noqa: E402
 from mathutils import Matrix as _M  # noqa: E402
-from body import Head, finish, smooth  # noqa: E402
+from body import Head, finish, pack, smooth  # noqa: E402
 
 RED, RED_DK, DARK, LEATHER, BOOT, GLOVE = hexrgb(0x8e2a1c), hexrgb(0x5a1a12), hexrgb(0x2e2420), hexrgb(0x5a3a24), hexrgb(0x241a14), hexrgb(0x33241a)
 STEEL, STEEL_DK, BRASS, MAIL, WHITE = hexrgb(0x8c929c), hexrgb(0x5a5f68), hexrgb(0xa8843c), hexrgb(0x7a7c80), (1.0, 1.0, 1.0)
@@ -100,7 +100,7 @@ torso = skin('torso', [(0, 0.3, 0), (0, 0.355, 0), (0, 0.42, 0.005), (0, 0.472, 
 torso_m = Mesh(evaluated(torso), lambda x, y, z: RED if abs(x) > 0.035 or z < 0 else RED_DK, 'cloth')
 # kolczuga na środku piersi (pod rozchylonym kaftanem), sznurowana rzemieniem na krzyż
 mailc = lathe('mailchest', [(0.072, 0.35), (0.082, 0.39), (0.09, 0.43), (0.082, 0.468)], seg=10, depth=0.74, phi0=-0.42, phi=0.84, subsurf=0)
-mailc_m = Mesh(evaluated(mailc), mail, 'metal')
+mailc_m = Mesh(evaluated(mailc), mail, 'mail')
 laces = []
 for k in range(4):
     y = 0.37 + k * 0.024
@@ -113,7 +113,7 @@ sb = evaluated(skirt)
 keep_faces(sb, lambda x, y, z: abs(math.atan2(x, z)) < 0.75 or abs(math.atan2(x, z)) > math.pi - 0.75)
 skirt_m = Mesh(sb, lambda x, y, z: tuple(c * (0.65 if y < 0.195 else 0.95 + 0.05 * math.sin(math.atan2(x, z) * 8)) for c in RED), 'cloth')
 mailskirt = lathe('mailskirt', [(0.07, 0.33), (0.08, 0.3), (0.092, 0.24), (0.1, 0.2)], seg=20, depth=0.76, subsurf=0)
-mailskirt_m = Mesh(evaluated(mailskirt), mail, 'metal')
+mailskirt_m = Mesh(evaluated(mailskirt), mail, 'mail')
 # płyty na biodrach (po dwie z każdej strony, nad kolczugą)
 tassets = []
 for sx in (-1, 1):
@@ -172,4 +172,6 @@ beard = head.shell('beard', 1.07, head.beard_mask(), show='beard')
 
 static = [torso_m, mailc_m, *laces, skirt_m, mailskirt_m, *tassets, *paul, belt_m, buckle_m, pouch_m, sheath_m, sash_m,
           scarf_m, cowl_m, head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), hair, beard]
-finish('guard', static, [leg_m, cuisse_m, knee_m, greave_m, *straps], [arm_m, *rere, brace_m, *studs], HIP, SHOULDER, HAND)
+import sword as _sword  # noqa: E402
+_extra = {'sword': [pack(m) for m in _sword.build(False)], 'swordFar': [pack(m) for m in _sword.build(True)]}
+finish('guard', static, [leg_m, cuisse_m, knee_m, greave_m, *straps], [arm_m, *rere, brace_m, *studs], HIP, SHOULDER, HAND, extra=_extra)

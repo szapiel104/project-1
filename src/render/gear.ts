@@ -51,7 +51,7 @@ export function toolMaterials(): THREE.Material[] {
   if (mats) return mats;
   const wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, map: pattern('bark'), normalMap: normal('bark') });
   // kute żelazo: szara faktura kamienia jako ślady młota i nalot, połysk metalu (nie gładki, plastikowy kolor)
-  const iron = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.65, map: grayPattern('rock'), normalMap: normal('rock'), normalScale: new THREE.Vector2(0.6, 0.6) });
+  const iron = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.65, map: grayPattern('iron', 1024), normalMap: normal('iron'), normalScale: new THREE.Vector2(0.6, 0.6) });
   // szmaty nasączone smołą na pochodni: ciemne płótno
   const dark = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: grayPattern('burlap'), normalMap: normal('burlap') });
   mats = [wood, iron, dark];

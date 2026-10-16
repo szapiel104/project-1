@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.23.5 — tekstury postaci (2026-10-16)
+
+- Postacie z bliska w prawdziwych teksturach ze zdjęć (ambientCG, CC0) z mapami normalnych w 1024 px: filcowana wełna na koszulach, portkach i kaftanach, kolczuga z widocznymi ogniwami (pierś i poły strażnika, rękawy, kaptur i pelerynka włócznika), kute żelazo z rdzą na naramiennikach, płytach, mieczach i narzędziach
+- Wyprawiona skóra (pasy, buty, sakwy, pelerynka) dostała własną teksturę z ziarnem i rysami zamiast płótna; skóra ludzi delikatne pory
+- Nowy miecz strażnika z Blendera (tools/models/sword.py): rękojeść owinięta rzemieniem, tarczowa głowica z nitem, kuty jelec z opuszczonymi końcami, klinga ze zbroczem i jaśniejszymi, naostrzonymi krawędziami (z bliska i z daleka)
+- Z daleka postacie zostają przy lżejszych teksturach (bez zmian w wydajności)
+
 ## 0.23.4 — niesienie od nowa (2026-10-15)
 
 - Poza niesienia: ręce zgięte w przód, ładunek leży na dłoniach tuż przed piersią (wcześniej wisiał w powietrzu przed wyciągniętymi rękami); deski na prawym ramieniu, prawa ręka przytrzymuje wiązkę

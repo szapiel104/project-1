@@ -134,8 +134,9 @@ def groups(meshes, mat_of=lambda m: m.mat):
 
 
 def fixed_cloth(m):
-    """Stałe kolory skóry i tkaniny razem w jednej (dwustronnej) siatce; metal i skóra ciała osobno"""
-    return 'cloth' if m.mat in ('leather', 'cloth') and m.dyn is None else m.mat
+    """Stałe kolory tkaniny w jednej siatce, wyprawionej skóry (pasy, buty, sakwy) w drugiej — każda ze swoją teksturą
+    z bliska (splot wełny, ziarno skóry); metal i skóra ciała osobno"""
+    return m.mat
 
 
 def decimated(m, ratio):

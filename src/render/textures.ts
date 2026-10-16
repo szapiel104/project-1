@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
 
-export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic' | 'slate' | 'burlap';
+export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic' | 'slate' | 'burlap' | 'wool' | 'iron' | 'mail';
 const cache = new Map<Kind, THREE.CanvasTexture>();
 
 /** Prosty generator liczb do wzorów (tylko wygląd, nie symulacja). */
@@ -47,7 +47,11 @@ function masonry(c: CanvasRenderingContext2D, n: number, r: () => number, rows: 
   }
 }
 
-const PAINT: Record<Kind, (c: CanvasRenderingContext2D, n: number, r: () => number) => void> = {
+type Painted = Exclude<Kind, 'wool' | 'iron' | 'mail'>;
+/** Zdjęciowe tekstury postaci bez własnego rysunku: w trybie testowym zastępuje je podobny wzór z kodu */
+const PAINT_AS: Record<Exclude<Kind, Painted>, Painted> = { wool: 'burlap', iron: 'rock', mail: 'rock' };
+const painter = (k: Kind): Painted => (k in PAINT_AS ? PAINT_AS[k as Exclude<Kind, Painted>] : (k as Painted));
+const PAINT: Record<Painted, (c: CanvasRenderingContext2D, n: number, r: () => number) => void> = {
   rock(c, n, r) {
     // surowa skała: plamy jaśniejszego i ciemniejszego kamienia, drobne ziarno, pęknięcia i odrobina porostu
     c.fillStyle = gray(0.7); c.fillRect(0, 0, n, n);
@@ -315,7 +319,7 @@ function paint(kind: Kind, n: number): HTMLCanvasElement | null {
   const base = kind === 'ashlar' || kind === 'bricks' || kind === 'dressed' || kind === 'slate' ? 1024 : kind === 'cobble' || kind === 'grass' ? n : ['leaves', 'needles', 'bark', 'soil', 'window', 'water', 'rock', 'organic'].includes(kind) ? 128 : 64;
   ctx.save();
   ctx.scale(n / base, n / base);
-  PAINT[kind](ctx, base, noise(kind.length * 7919));
+  PAINT[painter(kind)](ctx, base, noise(kind.length * 7919));
   ctx.restore();
   if (kind !== 'window') grain(ctx, n, kind.length * 31);
   return canvas;
@@ -326,7 +330,7 @@ const stored = new Map<Kind, HTMLCanvasElement>();
 const DB = 'project1-tex';
 /** Klucz zmienia się razem z kodem rysującym, więc po zmianie wyglądu tekstura rysuje się na nowo */
 function keyOf(kind: Kind, n: number): string {
-  const src = String(PAINT[kind]) + String(grain);
+  const src = String(PAINT[painter(kind)]) + String(grain);
   let h = 2166136261;
   for (let i = 0; i < src.length; i++) h = Math.imul(h ^ src.charCodeAt(i), 16777619);
   return `${kind}-${n}-${(h >>> 0).toString(36)}`;
@@ -373,7 +377,7 @@ export async function restore(kind: Kind): Promise<boolean> {
  * Zdjęciowe tekstury CC0 (ambientCG, Poly Haven) — w odcieniach szarości,
  * żeby barwę nadawał materiał, plus mapy normalnych dające prawdziwą rzeźbę: bruk, deski, tynk.
  */
-const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster', thatch: 'thatch', slate: 'slate', ashlar: 'ashlar', bricks: 'bricks', burlap: 'burlap', grass: 'grass', soil: 'soil', rock: 'rock', bark: 'bark' };
+const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster', thatch: 'thatch', slate: 'slate', ashlar: 'ashlar', bricks: 'bricks', burlap: 'burlap', grass: 'grass', soil: 'soil', rock: 'rock', bark: 'bark', wool: 'wool', iron: 'iron', mail: 'mail' };
 const photoBase = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/cc0/';
 const normals = new Map<Kind, THREE.Texture>();
 const loading: Promise<void>[] = [];
@@ -489,7 +493,7 @@ const grays = new Map<Kind, THREE.CanvasTexture>();
  * Do rzeczy, których kolor daje gra (ubrania w barwach pana, suknie, pranie) — zdjęciowa juta zabarwiłaby je na brązowo.
  * Wypełnia się, gdy wczyta się zdjęcie (albo od razu, gdy wzór jest rysowany w kodzie).
  */
-export function grayPattern(kind: Kind): THREE.Texture | null {
+export function grayPattern(kind: Kind, max = 512): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
   const have = grays.get(kind);
   if (have) return have;
@@ -507,7 +511,7 @@ export function grayPattern(kind: Kind): THREE.Texture | null {
   const fill = (): boolean => {
     const img = src.image as (CanvasImageSource & { width: number; height: number }) | undefined;
     if (!ctx || !img || !img.width) return false;
-    const n = Math.min(512, img.width);
+    const n = Math.min(max, img.width);
     canvas.width = canvas.height = n;
     ctx.drawImage(img, 0, 0, n, n);
     const d = ctx.getImageData(0, 0, n, n), px = d.data;

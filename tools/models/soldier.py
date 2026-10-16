@@ -62,7 +62,7 @@ arm = lathe('arm', [(0.001, 0.034), (0.022, 0.029), (0.034, 0.01), (0.034, -0.01
 if archer:
     arm_m = Mesh(evaluated(arm), lambda x, y, z: (0.8 + 0.12 * math.cos(y * math.pi * 2 / 0.034),) * 3, 'cloth', dyn='tunic')
 else:
-    arm_m = Mesh(evaluated(arm), mail(STEEL), 'metal')
+    arm_m = Mesh(evaluated(arm), mail(STEEL), 'mail')
 glove = skin('glove', [(0, -0.162, 0.003), (0, -0.198, 0.006), (0, -0.217, 0.009)], [(0, 1), (1, 2)],
              [(0.024, 0.022), (0.027, 0.018), (0.02, 0.013)], subsurf=1)
 glove_m = Mesh(evaluated(glove), lambda x, y, z: tuple(c * (1.2 if y > -0.17 else 1) for c in GLOVE), 'leather')
@@ -96,7 +96,7 @@ if not archer:
     keep_faces(sb, lambda x, y, z: not (y < 0.25 and min(abs(math.atan2(x, z) - a) for a in (-math.pi, 0, math.pi)) < 0.12))
     static.append(Mesh(sb, lambda x, y, z: (0.55 if y < 0.18 else 0.88 + 0.1 * math.cos(math.atan2(x, z) * 7),) * 3, 'cloth', dyn='tunic'))
     hem = lathe('hem', [(0.1, 0.24), (0.108, 0.19), (0.113, 0.14)], seg=18, depth=0.8, subsurf=0)
-    static.append(Mesh(evaluated(hem), mail(STEEL), 'metal'))
+    static.append(Mesh(evaluated(hem), mail(STEEL), 'mail'))
     for a in (0.0, math.pi):
         v = lathe('crossv', [(r + 0.003, y) for r, y in ((0.09, 0.39), (0.097, 0.42), (0.098, 0.44))] + [(0.0975, 0.45)], seg=2, depth=0.74, phi0=a - 0.13, phi=0.26, subsurf=0)
         static.append(Mesh(evaluated(v), CROSS, 'cloth'))
@@ -107,11 +107,11 @@ if not archer:
         bmesh.ops.scale(bm, verts=bm.verts, vec=(1.035, 1.035, 1.0))
         static.append(Mesh(bm, CROSS, 'cloth'))
     # czepiec kolczy: na głowie (otwarty na twarz) i pelerynka na barkach
-    coif = head.shell('coif', 1.1, lambda x, y, z: (1 - face_hole(x, y, z, 0.74, 0.72)) if y > -0.95 else 0, dyn=None, mat='metal',
+    coif = head.shell('coif', 1.1, lambda x, y, z: (1 - face_hole(x, y, z, 0.74, 0.72)) if y > -0.95 else 0, dyn=None, mat='mail',
                       shade=lambda x, y, z: mail(STEEL)(x, y * 0.06, z))
     static.append(coif)
     cape = lathe('mantle', [(0.106, 0.448), (0.103, 0.468), (0.086, 0.488), (0.058, 0.508), (0.043, 0.528), (0.04, 0.545)], seg=18, depth=0.82, subsurf=0)
-    static.append(Mesh(evaluated(cape), mail(STEEL), 'metal'))
+    static.append(Mesh(evaluated(cape), mail(STEEL), 'mail'))
     # kapalin z szerokim rondem albo stożkowy hełm z nosalem
     kettle = lathe('kettle', [(0.058, 0.602), (0.058, 0.617), (0.053, 0.636), (0.036, 0.652), (0.0, 0.658)], seg=16, subsurf=0)
     brim = lathe('kbrim', [(0.058, 0.6), (0.104, 0.579), (0.102, 0.584), (0.06, 0.607)], seg=20, subsurf=0)

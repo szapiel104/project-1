@@ -15,6 +15,9 @@ Dalsze tekstury ambientCG (CC0), z paczki ambientcg_1024 dostarczonej przez Mich
 - Ground 072 → `soil.jpg` (ziemia, pola, ścieżki)
 - Rock 022 → `rock.jpg` (głazy, kamieniołom)
 - Bark 001 → `bark.jpg` (kora drzew, bale palisady, pniaki)
+- Fabric 043 → `wool.jpg` (filcowana wełna ubrań postaci z bliska)
+- Metal 021 → `iron.jpg` (kute żelazo z rdzą: pancerze, miecze, narzędzia)
+- Chainmail 004 → `mail.jpg` (kolczugi strażników i włóczników)
 
 Strzecha: [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) z Poly Haven (CC0) → `thatch.jpg`; mapa normalnych liczona z mapy przemieszczeń.
 Dla tekstur bez mapy normalnych mapa jest liczona z jasności obrazu.
