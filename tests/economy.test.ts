@@ -12,7 +12,13 @@ import { canPlace } from '../src/sim/systems/placement';
 import { keepEdge } from '../src/data/keep';
 
 /** Testy gospodarki i wojska bez bota: drugi gracz stoi bezczynnie */
-const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => { const g = realGame(...a); for (const p of g.players) p.bot = false; return g; };
+/** Testy mechaniki startują z zapasem jak dawniej (150 drewna, 40 kamienia, 100 jabłek i złota), niezależnie od balansu startu */
+const OLD_START: Partial<Record<Parameters<typeof resIndex>[0], number>> = { wood: 150, stone: 40, apples: 100, gold: 100 };
+const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => {
+  const g = realGame(...a);
+  for (const p of g.players) { p.bot = false; for (const [k, v] of Object.entries(OLD_START)) p.res[resIndex(k as Parameters<typeof resIndex>[0])] = v!; }
+  return g;
+};
 
 const run = (g: GameState, ticks: number, cmds: Command[] = []): void => {
   step(g, cmds);
@@ -37,7 +43,7 @@ const res = (g: GameState, id: Parameters<typeof resIndex>[0], player = 0): numb
 
 describe('start gry', () => {
   it('każdy gracz ma twierdzę, chłopów i zasoby startowe', () => {
-    const g = createGame(11, '2v2');
+    const g = realGame(11, '2v2');
     expect(g.players.length).toBe(4);
     for (const p of g.players) {
       expect(playerKeep(g, p.id)).toBeDefined();
@@ -54,7 +60,7 @@ describe('budowanie', () => {
     const c = build(g, 'house') as Extract<Command, { type: 'build' }>;
     step(g, [c]);
     expect(g.buildings.filter((b) => b.owner === 0).length).toBe(5);
-    expect(res(g, 'wood')).toBe(RULES.startResources.wood! - 20);
+    expect(res(g, 'wood')).toBe(OLD_START.wood! - BUILDINGS[buildingIndex('house')]!.cost.wood!);
     expect(g.occupancy[c.y * g.map.width + c.x]).toBeGreaterThan(0);
     expect(canPlace(g, 0, buildingIndex('house'), c.x, c.y)).toBe('place.occupied');
   });
@@ -107,7 +113,7 @@ describe('budowanie', () => {
     expect(canPlace(g, 0, buildingIndex('house'), b.x, b.y)).toBe('place.occupied'); // na gruzie nie da się budować
     run(g, 1500);
     expect(g.rubble.length).toBe(0);
-    expect(res(g, 'wood')).toBe(wood + 10);
+    expect(res(g, 'wood')).toBe(wood + Math.floor(BUILDINGS[buildingIndex('house')]!.cost.wood! / 2)); // połowa kosztu chaty
     expect(canPlace(g, 0, buildingIndex('house'), b.x, b.y)).toBeNull();
     expect(g.units.every((u) => u.target === 0 && u.carryRes < 0)).toBe(true);
     step(g, [{ type: 'demolish', player: 0, id: playerKeep(g, 0)!.id }]);
@@ -132,7 +138,7 @@ describe('budowanie', () => {
     for (let i = 0; i < 1500 && g.rubble.length; i++) { step(g, []); if (g.units.filter((u) => u.owner === 0).length > 1) g.units = g.units.filter((u) => u.owner !== 0 || u.id === guild.worker); }
     expect(g.rubble.length).toBe(0);
     run(g, 400); // ostatni ładunek jest jeszcze w drodze do składu
-    expect(res(g, 'wood')).toBe(wood + 10);
+    expect(res(g, 'wood')).toBe(wood + Math.floor(BUILDINGS[buildingIndex('house')]!.cost.wood! / 2)); // połowa kosztu chaty
   });
 
   it('drogę da się usunąć', () => {
@@ -310,7 +316,7 @@ describe('ludność i popularność', () => {
     run(g, 700, [build(g, 'orchard')]);
     expect(population(g, 0)).toBe(8); // dwóch dostało pracę, więc dwóch doszło (do limitu miejsc w twierdzy)
     step(g, [build(g, 'house')]);
-    run(g, 400, [build(g, 'camp')]);
+    run(g, 800, [build(g, 'camp')]);
     expect(population(g, 0)).toBeGreaterThan(8); // nowa chata i drugie obozowisko
     expect(population(g, 0)).toBeLessThanOrEqual(16);
   });

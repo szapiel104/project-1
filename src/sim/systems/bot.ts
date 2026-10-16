@@ -10,7 +10,8 @@ import { canPlace, placeBuilding, placementBatch } from './placement';
  * Bot przeciwnik. Działa wewnątrz symulacji, więc jest w pełni deterministyczny i może grać także w meczach sieciowych.
  * Buduje osadę według listy, szkoli włóczników i co jakiś czas wysyła coraz większą falę na najbliższy wrogi zamek.
  */
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'orchard', 'house', 'armory', 'poleturner', 'barracks', 'quarry', 'house', 'farm', 'orchard', 'fletcher', 'house', 'tavern', 'brewery', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house'];
+// kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'quarry', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'quarry', 'tavern', 'brewery', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house'];
 /** Promień palisady wokół twierdzy (budynki stawia tylko w środku) */
 const RING = 16;
 const THINK = 40;
