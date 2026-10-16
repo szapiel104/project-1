@@ -64,17 +64,24 @@ def spike(base, tip, r, seg=6):
 
 
 # ---------------- kształty w układzie ręki ----------------
-def pick_parts():
+def crescent(head, half=0.14, back=0.05, r=0.012, n=10, seg=4):
+    """Grot kilofa jak w Gothicu: wąski półksiężyc w poprzek styliska, oba końce wygięte w stronę dłoni i zaostrzone"""
+    pts, radii = [], []
+    for i in range(n + 1):
+        t = -1 + 2 * i / n
+        pts.append(head + Vector((0, t * half, -back * t * t)))
+        radii.append(max(0.0015, r * (1 - abs(t) ** 1.6)))
+    return tube(pts, radii, seg=seg)
+
+
+def pick_parts(far=False):
     g = GRIP
-    haft = tube([g + Vector((0, 0, -0.05)), g + Vector((0, 0, 0.12)), g + Vector((0, 0, 0.36))], [0.013, 0.014, 0.017], seg=8)
-    head = Vector((0, -0.19, 0.375))
-    iron = box(head.x, head.y, head.z, 0.03, 0.05, 0.04)   # oko grotu nasadzone na stylisko
-    # dwa ramiona grotu, lekko wygięte do przodu (w stronę uderzenia)
-    for s in (1, -1):
-        mid = head + Vector((0, s * 0.07, 0.012))
-        iron += tube([head + Vector((0, s * 0.02, 0)), mid], [0.016, 0.013], seg=6, caps=False)
-        iron += spike(mid, head + Vector((0, s * (0.15 if s > 0 else 0.12), 0.04)), 0.013)
-    wood = haft + box(g.x, g.y, g.z + 0.355, 0.026, 0.026, 0.02)  # klin w oku
+    haft = tube([g + Vector((0, 0, -0.06)), g + Vector((0, 0, 0.15)), g + Vector((0, 0, 0.4))], [0.011, 0.012, 0.013], seg=4 if far else 8)
+    head = Vector((0, -0.19, 0.39))
+    iron = crescent(head, seg=4, n=6 if far else 12)
+    if not far:
+        iron += box(head.x, head.y, head.z, 0.024, 0.03, 0.03)   # oko grotu na stylisku
+    wood = haft
     return wood, iron
 
 
@@ -96,8 +103,9 @@ def club_parts():
 
 
 def add(group, parts, M=None):
-    wood, iron = parts
-    for mat, polys in (('wood', wood), ('iron', iron)):
+    wood, iron = parts[0], parts[1]
+    dark = parts[2] if len(parts) > 2 else []
+    for mat, polys in (('wood', wood), ('iron', iron), ('dark', dark)):
         for pts, inside in polys:
             if M is not None:
                 pts = [M @ Vector(p) for p in pts]
@@ -142,23 +150,21 @@ def wedge(x, ytop, ybot, zc, dtop, dbot, ttop, tbot, zoff=0.0):
 def axe_parts(far=False):
     g = GRIP
     seg = 4 if far else 8
-    wood = tube([g + Vector((0, 0, -0.05)), g + Vector((0, 0, 0.15)), g + Vector((0, 0, 0.39))], [0.013, 0.014, 0.016], seg=seg)
+    wood = tube([g + Vector((0, 0, -0.05)), g + Vector((0, 0, 0.15)), g + Vector((0, 0, 0.37))], [0.011, 0.012, 0.013], seg=seg)
     # żeleźce: oko na stylisku i ostrze rozszerzające się w dół (krawędź tnąca wysunięta do przodu)
-    iron = box(0, -0.19, 0.37, 0.03, 0.035, 0.045)
-    iron += wedge(0, -0.2, -0.29, 0.36, 0.045, 0.085, 0.022, 0.006, zoff=0.01)
-    if not far:
-        iron += box(0, -0.19, 0.398, 0.034, 0.02, 0.012)   # obuch z tyłu oka
+    iron = box(0, -0.19, 0.355, 0.022, 0.026, 0.032)
+    iron += wedge(0, -0.198, -0.255, 0.35, 0.03, 0.058, 0.016, 0.004, zoff=0.008)
     return wood, iron
 
 
 def hammer_parts(far=False):
     g = GRIP
     seg = 4 if far else 8
-    wood = tube([g + Vector((0, 0, -0.03)), g + Vector((0, 0, 0.12)), g + Vector((0, 0, 0.25))], [0.014, 0.015, 0.017], seg=seg)
-    iron = box(0, -0.19, 0.25, 0.05, 0.1, 0.05)
+    wood = tube([g + Vector((0, 0, -0.03)), g + Vector((0, 0, 0.12)), g + Vector((0, 0, 0.24))], [0.011, 0.012, 0.013], seg=seg)
+    # obuch: mały kuty klocek, twarz uderzająca w dół (w płaszczyźnie zamachu)
+    iron = box(0, -0.195, 0.245, 0.03, 0.06, 0.03)
     if not far:
-        iron += box(0, -0.245, 0.25, 0.058, 0.014, 0.058)   # twarz uderzająca (szersza)
-        iron += box(0, -0.13, 0.25, 0.04, 0.025, 0.04)      # klin z drugiej strony
+        iron += box(0, -0.228, 0.245, 0.034, 0.01, 0.034)   # szersza twarz
     return wood, iron
 
 
@@ -172,8 +178,9 @@ def torch_parts(far=False):
     g, d = GRIP, TORCH_DIR
     wood = tube([g - d * 0.03, g + d * 0.1, g + d * 0.25], [0.018, 0.02, 0.022], seg=seg)
     # głowica z nasączonych szmat (płomień dokłada gra nad końcem: g + d * 0.33)
-    iron = tube([g + d * 0.24, g + d * 0.275, g + d * 0.32], [0.024, 0.031, 0.026], seg=seg)
-    return wood, iron
+    rag = tube([g + d * 0.24, g + d * 0.27, g + d * 0.31], [0.02, 0.025, 0.02], seg=seg)
+    iron = [] if far else tube([g + d * 0.235, g + d * 0.245], [0.023, 0.023], seg=seg)   # drut owijający szmaty
+    return wood, iron, rag
 
 
 def ring_polys(cx, cz, y0, y1, r_in, r_out, seg):
@@ -221,13 +228,27 @@ def water_parts(far=False):
     return [], disc(BX, BZ, BY1 - 0.024, BY1 - 0.019, 0.06, 8 if far else 12)
 
 
+FISH_ARM = -0.9   # ręka rybaka wyciągnięta w przód (scene.ts: FISH_ARM)
+
+
+def arm_dir(dx, dy, dz, arm):
+    """Kierunek w układzie postaci → w układzie ręki obróconej o `arm` (obrót wokół osi x)"""
+    c, s_ = math.cos(-arm), math.sin(-arm)
+    return Vector((dx, dy * c - dz * s_, dy * s_ + dz * c)).normalized()
+
+
 def rod_parts(far=False):
+    """Wędka w dłoni: koniec kija w pięści, kij w przód i w górę (ok. 30°), żyłka pionowo w dół do wody"""
     seg = 4 if far else 6
-    base, tip = Vector((0.12, 0.446, 0.123)), Vector((0.12, 0.994, 1.077))
-    wood = tube([base, base + (tip - base) * 0.5, tip], [0.02, 0.016, 0.011], seg=seg)
-    iron = tube([tip, Vector((0.12, 0.27, 1.077))], [0.0035, 0.0035], seg=3)            # żyłka
+    g = GRIP
+    d = arm_dir(0, 0.5, 0.866, FISH_ARM)
+    tip = g + d * 1.05
+    wood = tube([g - d * 0.08, g + d * 0.4, tip], [0.016, 0.012, 0.007], seg=seg)
+    down = arm_dir(0, -1, 0, FISH_ARM)
+    end = tip + down * 0.62
+    iron = tube([tip, end], [0.003, 0.003], seg=3)           # żyłka
     if not far:
-        iron += tube([(0.12, 0.27, 1.077), (0.12, 0.24, 1.077), (0.12, 0.21, 1.077)], [0.012, 0.03, 0.01], seg=6)  # spławik
+        iron += tube([end, end + down * 0.025, end + down * 0.05], [0.01, 0.022, 0.008], seg=6)  # spławik
     return wood, iron
 
 
@@ -237,24 +258,14 @@ for name, fn in (('axe', axe_parts), ('hammer', hammer_parts), ('torch', torch_p
     add(name + 'Far', fn(True))
 
 # wersje z daleka kilofa i maczugi: te same kształty z mniejszej liczby ścian (stylisko czworokątne, bez sęków)
-def pick_far():
-    g = GRIP
-    haft = tube([g + Vector((0, 0, -0.05)), g + Vector((0, 0, 0.36))], [0.013, 0.017], seg=4)
-    head = Vector((0, -0.19, 0.375))
-    iron = box(head.x, head.y, head.z, 0.03, 0.05, 0.04)
-    for sx in (1, -1):
-        iron += spike(head + Vector((0, sx * 0.02, 0)), head + Vector((0, sx * (0.15 if sx > 0 else 0.12), 0.04)), 0.015, seg=4)
-    return haft, iron
-
-
 def club_far():
     g = GRIP
     return tube([g + Vector((0, 0, -0.04)), g + Vector((0, 0, 0.2)), g + Vector((0, 0, 0.28)), g + Vector((0, 0, 0.355))], [0.015, 0.02, 0.042, 0.026], seg=5), []
 
 
-add('pickFar', pick_far())
+add('pickFar', pick_parts(True))
 add('clubFar', club_far(), CLUB)
-add('backPickFar', pick_far(), backM)
+add('backPickFar', pick_parts(True), backM)
 add('beltClubFar', club_far(), beltM @ CLUB)
 
 b.save('tools', maxe=0.5, rays=8, reach=0.05, grime=False, extra={'grip': list(GRIP)})

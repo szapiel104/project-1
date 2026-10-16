@@ -2,13 +2,15 @@ import * as THREE from 'three';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { bump, normal, pattern } from './textures';
+import { bump, grayPattern, normal, pattern } from './textures';
+import { boxUv, modelGeo } from './peasants';
 import { beam, cutBox, paintGeo, rng, stoneSkirt, thatchSlab } from './craft';
 import KEEP_MODEL from './models/keep.json';
 import TAVERN_MODEL from './models/tavern.json';
 import HOUSE_MODEL from './models/house.json';
 import BARN_MODEL from './models/barn.json';
 import GRANARY_MODEL from './models/granary.json';
+import TORCH_MODEL from './models/torch.json';
 import GRANARY_BIG_MODEL from './models/granary_big.json';
 import ARMORY_MODEL from './models/armory.json';
 import BAKERY_MODEL from './models/bakery.json';
@@ -458,13 +460,27 @@ export function setNight(k: number): void {
 }
 
 /** Pochodnia na słupie: stawiana przy każdym budynku, płonie tylko nocą. */
+/** Pochodnia na słupie z Blendera (tools/models/torch.py): ociosany słup z opaskami, kopczyk z kamieniami, kuty kosz
+ *  ze szczapami. Siatki wspólne dla wszystkich pochodni (stoją przy każdym budynku z wejściem). */
+let torchParts: { geo: THREE.BufferGeometry; mat: THREE.Material }[] | null = null;
 export function torchModel(): THREE.Group {
+  if (!torchParts) {
+    const T = TORCH_MODEL as unknown as { flame: [number, number, number]; parts: (Parameters<typeof modelGeo>[0] & { mat: string })[] };
+    const MATS: Record<string, [THREE.Material, number]> = {
+      wood: [new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('bark'), normalMap: normal('bark') }), 7],
+      iron: [new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.65, map: grayPattern('rock'), normalMap: normal('rock') }), 9],
+      stone: [new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, map: pattern('rock'), normalMap: normal('rock') }), 5],
+      soil: [new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('soil'), normalMap: normal('soil') }), 4],
+      pitch: [new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.4 }), 1],
+    };
+    torchParts = T.parts.map((p) => { const [mat, sc] = MATS[p.mat] ?? MATS.pitch!; return { geo: boxUv(modelGeo(p), sc), mat }; });
+  }
   const g = new THREE.Group();
   g.name = 'torch';
-  box(g, M.woodDark, 0.06, 0.95, 0.06);
-  box(g, M.iron, 0.12, 0.08, 0.12, 0, 0.92, 0);
-  const flame = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.3, 6), M.ember);
-  flame.position.y = 1.15;
+  for (const p of torchParts) { const m = new THREE.Mesh(p.geo, p.mat); m.castShadow = true; m.receiveShadow = true; g.add(m); }
+  // punkt płomienia: system ognia rysuje go 0,12 niżej, czyli tuż nad szczapami w koszu
+  const flame = new THREE.Object3D();
+  flame.position.set(0, 1.21, 0);
   flame.name = 'torchflame';
   g.add(flame);
   return g;

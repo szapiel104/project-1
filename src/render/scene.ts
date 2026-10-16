@@ -196,6 +196,8 @@ export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean
 const MAX_UNITS = 2048;
 /** Ręka z pochodnią uniesiona w przód (tak samo w tools/models/tools.py) i koniec pochodni w układzie ręki */
 const TORCH_ARM = -0.55;
+/** Ręka rybaka z wędką wyciągnięta w przód (tak samo w tools/models/tools.py) */
+const FISH_ARM = -0.9;
 const TORCH_TIP = new THREE.Vector3(0, -0.19 + Math.cos(0.55) * 0.34, Math.sin(0.55) * 0.34);
 /** Środek wiadra w układzie postaci (wisi z opuszczonej prawej dłoni) */
 const BUCKET_C = new THREE.Vector3(0.15, 0.15, 0.02);
@@ -776,12 +778,11 @@ export class GameRenderer {
     this.beltClubs = pool('beltClub');
     this.hammers = pool('hammer');
     this.rods = pool('rod');
-    // pochodnia w ręce świeci sama (bez cieniowania), płomień dokłada system ognia
-    const torchMat = new THREE.MeshBasicMaterial({ vertexColors: true });
-    this.handTorches = pool('torch', 'pochodnie w rękach', [torchMat, torchMat]);
+    // pochodnia w ręce: kij, drut i szmaty ze smołą (płomień dokłada system ognia)
+    this.handTorches = pool('torch', 'pochodnie w rękach');
     this.buckets = pool('bucket');
     const waterMat = new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 });
-    this.bucketWater = pool('bucketWater', 'woda w wiadrach', [waterMat, waterMat]);
+    this.bucketWater = pool('bucketWater', 'woda w wiadrach', [waterMat, waterMat, waterMat]);
     // posłanie: rozrzucona wiązka słomy z wałkiem pod głowę i kawałkiem zgrzebnego koca na nogach
     const straw = new THREE.MeshStandardMaterial({ color: 0xd6b56a, roughness: 1, map: pattern('thatch'), vertexColors: true });
     // wymiary pod leżącą postać (ok. 0,48 długości): siennik, wałek pod głową, koc na nogach
@@ -4874,7 +4875,12 @@ export class GameRenderer {
       if (lean || roll) { t.rotation.reorder('YXZ'); t.rotation.x = lean; t.rotation.z = roll; }
       t.updateMatrix();
       if (lean || roll) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
-      this.rods.setMatrixAt(i, fishing ? t.matrix : ZERO);
+      if (fishing) {
+        // wędka w prawej dłoni wyciągniętej w przód (FISH_ARM), obracana w barku razem z ręką
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armM.makeRotationX(FISH_ARM).setPosition(0.135, 0.45, 0);
+        this.rods.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
+      } else this.rods.setMatrixAt(i, ZERO);
       if (hammering) {
         // młotek obraca się w barku razem z prawą ręką (ta sama skala co postać)
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
@@ -4930,7 +4936,7 @@ export class GameRenderer {
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || !!ia?.legs);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || !!ia?.legs);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);

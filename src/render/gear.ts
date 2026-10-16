@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import TOOLS_MODEL from './models/tools.json';
-import { normal, pattern } from './textures';
+import { grayPattern, normal, pattern } from './textures';
 
 /**
  * Broń chłopa z Blendera (tools/models/tools.py): kilof i maczuga w dłoni (układ ramienia: oś w barku, dłoń 0,19 niżej,
@@ -10,7 +10,7 @@ import { normal, pattern } from './textures';
  */
 type ToolPart = { mat: string; pos: string; ao: string };
 const T = TOOLS_MODEL as unknown as { q: number } & Record<string, ToolPart[]>;
-const COLOR: Record<string, number> = { wood: 0x8a6440, iron: 0x6a6e76 };
+const COLOR: Record<string, number> = { wood: 0x8a6440, iron: 0x8a8d92, dark: 0x2e231a };
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
 
 function partGeo(p: ToolPart): THREE.BufferGeometry {
@@ -42,7 +42,7 @@ export function toolGeometry(name: string): THREE.BufferGeometry {
     g.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(9), 3));
     return g;
   };
-  return mergeGeometries([byMat('wood'), byMat('iron')], true)!;
+  return mergeGeometries([byMat('wood'), byMat('iron'), byMat('dark')], true)!;
 }
 
 let mats: THREE.Material[] | null = null;
@@ -50,8 +50,11 @@ let mats: THREE.Material[] | null = null;
 export function toolMaterials(): THREE.Material[] {
   if (mats) return mats;
   const wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.85, map: pattern('bark'), normalMap: normal('bark') });
-  const iron = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.45, metalness: 0.6 });
-  mats = [wood, iron];
+  // kute żelazo: szara faktura kamienia jako ślady młota i nalot, połysk metalu (nie gładki, plastikowy kolor)
+  const iron = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.65, map: grayPattern('rock'), normalMap: normal('rock'), normalScale: new THREE.Vector2(0.6, 0.6) });
+  // szmaty nasączone smołą na pochodni: ciemne płótno
+  const dark = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: grayPattern('burlap'), normalMap: normal('burlap') });
+  mats = [wood, iron, dark];
   return mats;
 }
 

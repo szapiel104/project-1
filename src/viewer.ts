@@ -86,11 +86,11 @@ const WATER_MAT = new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0
 function toolPair(name: string): Make {
   return () => {
     const g = new THREE.Group();
-    const mats = name === 'bucketWater' ? [WATER_MAT, WATER_MAT] : toolMaterials();
+    const mats = name === 'bucketWater' ? [WATER_MAT, WATER_MAT, WATER_MAT] : toolMaterials();
     const near = new THREE.Mesh(toolGeometry(name), mats);
     const far = new THREE.Mesh(toolGeometry(name + 'Far'), mats);
     // dno wiadra z wodą: woda w wiadrze, żeby było widać, gdzie leży
-    if (name === 'bucket') for (const [m, n] of [[near, 'bucketWater'], [far, 'bucketWaterFar']] as const) m.add(new THREE.Mesh(toolGeometry(n), [WATER_MAT, WATER_MAT]));
+    if (name === 'bucket') for (const [m, n] of [[near, 'bucketWater'], [far, 'bucketWaterFar']] as const) m.add(new THREE.Mesh(toolGeometry(n), [WATER_MAT, WATER_MAT, WATER_MAT]));
     // każde narzędzie przesunięte tak, żeby jego dół stał na podstawce, i dwa razy większe (są drobne)
     const holder = new THREE.Group();
     for (const [m, x] of [[near, -0.3], [far, 0.3]] as const) {
@@ -117,7 +117,7 @@ function worker(tool: string, arm: number, hand: boolean, extra?: string): Make 
     Figures.FAR2 = 1e9;
     const id = 3;
     const f = new Figures(1, holder, 'peasant');
-    f.set(0, new THREE.Matrix4(), 0, false, RED, id, hand ? arm : tool === 'bucket' ? 0 : undefined, -0.5, false);
+    f.set(0, new THREE.Matrix4(), 0, false, RED, id, hand ? arm : tool === 'bucket' ? 0 : undefined, tool === 'rod' ? arm + 0.15 : -0.5, false);
     f.finish(1);
     const sz = f.sizeOf(id, RED);
     const mats = toolMaterials();
@@ -127,7 +127,7 @@ function worker(tool: string, arm: number, hand: boolean, extra?: string): Make 
       holder.add(mesh);
     };
     add(tool);
-    if (extra) add(extra, [WATER_MAT, WATER_MAT]);
+    if (extra) add(extra, [WATER_MAT, WATER_MAT, WATER_MAT]);
     return { obj: holder, size: new THREE.Vector3(0.5, 0.7, 0.5) };
   };
 }
@@ -202,7 +202,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['work-club', 'chłop z maczugą', worker('club', -1.4, true)],
     ['work-torch', 'z pochodnią nocą', worker('torch', -0.55, true)],
     ['work-bucket', 'z wiadrem wody', worker('bucket', 0, false, 'bucketWater')],
-    ['work-rod', 'rybak z wędką', worker('rod', 0, false)],
+    ['work-rod', 'rybak z wędką', worker('rod', -0.9, true)],
     ['work-back', 'kilof na plecach', worker('backPick', 0, false)],
   ]],
   ['Narzędzia', ([['axe', 'siekiera'], ['pick', 'kilof'], ['hammer', 'młotek'], ['club', 'maczuga'], ['torch', 'pochodnia'], ['bucket', 'wiadro'], ['rod', 'wędka'], ['backPick', 'kilof na plecach'], ['beltClub', 'maczuga u pasa']] as const).map(([k, l]) => [`tool-${k}`, `${l} (z bliska | z daleka)`, toolPair(k)] as [string, string, Make])],
