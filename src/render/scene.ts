@@ -4326,6 +4326,9 @@ export class GameRenderer {
     SEASON_U.uFrost.value = Math.max(0, frost);
     SEASON_U.uAutumn.value = autumn;
     SEASON_U.uBare.value = bare;
+    // wiosna od pierwszych liści do początku lata; lato najmocniej w drugiej połowie (susza)
+    SEASON_U.uSpring.value = sm(0.04, 0.1, p) * (1 - sm(0.2, 0.28, p));
+    SEASON_U.uSummer.value = p < 0.6 ? sm(0.27, 0.36, p) * (1 - sm(0.5, 0.56, p)) : 0;
   }
 
   /** Gdzie pan zamku spaceruje po dziedzińcu (pola mapy; ostatnia sekunda), do odzywek ludzi i straży */

@@ -12,6 +12,10 @@ export const SEASON_U = {
   uFrost: { value: 0 },
   uAutumn: { value: 0 },
   uBare: { value: 0 },
+  /** Wiosna: świeża jasna zieleń i kwitnące drzewa (0..1) */
+  uSpring: { value: 0 },
+  /** Lato: głęboka zieleń liści, pod koniec płowiejąca trawa (0..1) */
+  uSummer: { value: 0 },
   /** Ślady na śniegu (wydeptanie 0..1) i jak je czytać: [przesunięcie x, przesunięcie z, 1/szerokość, 1/wysokość] w metrach */
   uTrail: { value: new THREE.DataTexture(new Uint8Array(4), 1, 1) as THREE.Texture },
   uTrailMap: { value: new THREE.Vector4(0, 0, 1, 1) },
@@ -96,7 +100,7 @@ const VERT_BODY = (kind: SeasonKind): string => `
     ${kind === 'ground' ? 'vTrail = texture2D(uTrail, (vSeasonPos.xz + uTrailMap.xy) * uTrailMap.zw).r;' : ''}
   }
 `;
-const FRAG_HEAD = (kind: SeasonKind): string => (kind === 'grass' ? 'uniform sampler2D uTrail;\nuniform vec4 uTrailMap;\n' : kind === 'ground' ? 'varying float vTrail;\n' : '') + 'uniform float uSnow;\nuniform float uFrost;\nuniform float uAutumn;\nuniform float uBare;\nvarying vec3 vSeasonPos;\n' +
+const FRAG_HEAD = (kind: SeasonKind): string => (kind === 'grass' ? 'uniform sampler2D uTrail;\nuniform vec4 uTrailMap;\n' : kind === 'ground' ? 'varying float vTrail;\n' : '') + 'uniform float uSpring;\nuniform float uSummer;\nuniform float uSnow;\nuniform float uFrost;\nuniform float uAutumn;\nuniform float uBare;\nvarying vec3 vSeasonPos;\n' +
   'float sHash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }\n' +
   'float sVal(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);\n' +
   '  return mix(mix(sHash(i), sHash(i + vec2(1.0, 0.0)), f.x), mix(sHash(i + vec2(0.0, 1.0)), sHash(i + vec2(1.0, 1.0)), f.x), f.y); }\n' +
@@ -110,6 +114,12 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     ${kind === 'leaf' || kind === 'leafFar' ? `
     // jesień: liście żółkną i rudzieją (każde drzewo trochę inaczej), zimą resztki brązowieją
     float sLum = dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15));
+    // wiosna: młode liście jasne, żółtawozielone; co trzecie drzewo kwitnie (białe i różowe kwiaty w plamkach)
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 1.32, 0.62) + vec3(0.03, 0.05, 0.0), uSpring * 0.85);
+    float sBloom = step(0.66, sCell) * smoothstep(0.62, 0.7, sVal(vSeasonPos.xz * 16.0 + vSeasonPos.y * 11.0)) * uSpring;
+    diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.96, 0.9, 0.9), vec3(0.93, 0.62, 0.74), step(0.8, sCell)), sBloom * 0.85);
+    // lato: zieleń ciemnieje i nasyca się
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.78, 0.88, 0.7), uSummer * 0.8);
     vec3 sFall = mix(mix(vec3(0.88, 0.58, 0.07), vec3(0.8, 0.32, 0.05), sCell), vec3(0.55, 0.16, 0.05), sCell * sCell) * (0.5 + sLum * 1.1);
     diffuseColor.rgb = mix(diffuseColor.rgb, sFall, clamp(uAutumn * (0.75 + sCell * 0.35), 0.0, 1.0));
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.42, 0.33, 0.24) * (0.6 + sLum), uBare * 0.8);
@@ -117,6 +127,9 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     ${kind === 'grass' ? `
     // trawa: jesienią płowieje, zimą szarzeje i niknie pod śniegiem
     float sG = dot(diffuseColor.rgb, vec3(0.33));
+    // wiosną soczyście zielona, latem pod koniec płowieje
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.95, 1.22, 0.7), uSpring * 0.7);
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.6, 0.56, 0.3) * (0.55 + sG), uSummer * 0.3);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.55, 0.3) * (0.6 + sG), uAutumn * 0.55 + uBare * 0.25);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84), max(smoothstep(0.0, 0.1, uSnow * 1.25 - (0.92 - sPatch(vSeasonPos.xz))) * 0.85, uFrost * 0.35) * (1.0 - sTrail * 0.8));` : `
     // śnieg leży na tym, co patrzy w górę (płaskie dachy i ziemia najmocniej, strome połacie mniej), w plamach;
@@ -138,6 +151,22 @@ const FRAG_BODY = (kind: SeasonKind): string => `
 `;
 
 const done = new WeakSet<THREE.Material>();
+/** Materiały wnętrz: te same co na zewnątrz (deski, kamień), ale pod dachem — bez śniegu i pór roku */
+const indoor = new WeakSet<THREE.Material>();
+const twins = new WeakMap<THREE.Material, THREE.Material>();
+function indoorTwin(m: THREE.Material): THREE.Material {
+  if (indoor.has(m)) return m;
+  let t = twins.get(m);
+  if (!t) {
+    t = m.clone();
+    t.onBeforeCompile = m.onBeforeCompile;
+    t.customProgramCacheKey = m.customProgramCacheKey;
+    t.userData = m.userData;
+    indoor.add(t);
+    twins.set(m, t);
+  }
+  return t;
+}
 /** Dokłada wstawki pór roku do materiału (raz); istniejące onBeforeCompile zostają i działają pierwsze */
 export function seasonMaterial(m: THREE.Material, kind: SeasonKind): void {
   if (done.has(m)) return;
@@ -146,33 +175,40 @@ export function seasonMaterial(m: THREE.Material, kind: SeasonKind): void {
   done.add(m);
   const prev = m.onBeforeCompile;
   const prevKey = m.customProgramCacheKey;
-  m.onBeforeCompile = (sh, r) => {
-    prev.call(m, sh, r);
+  // zwykłe funkcje (this = materiał): bliźniak do wnętrz (indoorTwin) dziedziczy je, ale bez śniegu
+  m.onBeforeCompile = function (this: THREE.Material, sh, r) {
+    prev.call(this, sh, r);
+    if (indoor.has(this)) return;
     if (!sh.fragmentShader.includes('#include <lights_physical_fragment>') || !sh.vertexShader.includes('#include <project_vertex>')) return;
     Object.assign(sh.uniforms, SEASON_U);
     sh.vertexShader = VERT_HEAD(kind) + sh.vertexShader.replace('#include <project_vertex>', VERT_BODY(kind) + '#include <project_vertex>');
     sh.fragmentShader = FRAG_HEAD(kind) + sh.fragmentShader.replace('#include <lights_physical_fragment>', FRAG_BODY(kind) + '#include <lights_physical_fragment>');
   };
-  m.customProgramCacheKey = () => `${prevKey.call(m)}|season-${kind}`;
+  m.customProgramCacheKey = function (this: THREE.Material) { return indoor.has(this) ? prevKey.call(this) : `${prevKey.call(this)}|season-${kind}`; };
   m.needsUpdate = true;
 }
 
 /** Podpisy grup (cat), których nie przysypujemy: ludzie, zwierzęta, niesione rzeczy, woda, chmury, dym, ogień */
+const INSIDE = new Set(['interior', 'floor', 'ceiling']);
 const SKIP = /^(postacie|wilki|kruki|niesione|narzędzia|zwierzęta|woda|chmury|dym|płomienie|ryby|tarany)/;
 
 /** Przechodzi po obiekcie i łata jego materiały; rodzaj z material.userData.season (domyślnie zwykły) */
 export function applySeason(root: THREE.Object3D): void {
   const walk = (o: THREE.Object3D, skip: boolean): void => {
     const cat = o.userData.cat as string | undefined;
-    const sk = skip || (!!cat && SKIP.test(cat)) || !!o.userData.noSeason;
+    // wnętrza budynków (podłogi, sprzęty, sufity sal) są pod dachem: bez śniegu, szronu i pór roku
+    const sk = skip || (!!cat && SKIP.test(cat)) || !!o.userData.noSeason || INSIDE.has(o.name);
     const m = o as THREE.Mesh;
+    const inside = INSIDE.has(o.name) || (skip && o.userData.seasonInside);
+    if (inside) o.userData.seasonInside = true;
+    if (inside && m.isMesh && m.material) m.material = Array.isArray(m.material) ? m.material.map(indoorTwin) : indoorTwin(m.material);
     if (!sk && m.isMesh && m.material) {
       for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
         if (mat.transparent && !mat.alphaTest) continue;
         seasonMaterial(mat, (mat.userData.season as SeasonKind | undefined) ?? 'solid');
       }
     }
-    for (const ch of o.children) walk(ch, sk);
+    for (const ch of o.children) { if (inside) ch.userData.seasonInside = true; walk(ch, sk); }
   };
   walk(root, false);
 }
