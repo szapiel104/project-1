@@ -144,14 +144,6 @@ const hud = createHud(document.getElementById('ui')!, {
     return true;
   },
   onDemolish: (id) => confirmDemolish(id),
-  onShowWorker: (bid) => {
-    const b = game.buildings.find((x) => x.id === bid);
-    const u = b?.worker ? game.units.find((x) => x.id === b.worker) : undefined;
-    if (!u) return;
-    renderer.lookAt(u.px / 256, u.py / 256, 12);
-    selectUnit(u.id);
-    play('select');
-  },
   onCloseInfo: () => { selectUnit(0); select(0); if (chosen.size) chooseSoldiers([], false); },
   onRotate: () => rotate(),
   onWreck: () => setWreck(!wrecking),
@@ -477,7 +469,7 @@ function personCard(id: number): { name: string; lines: string[]; walk?: boolean
 function selectUnit(id: number): void {
   if (id && id !== selectedUnit) play('select');
   selectedUnit = id;
-  if (id) { selected = 0; renderer.setSelection(0); }
+  if (id) { selected = 0; renderer.setSelection(0); renderer.setWorkerMark(0); }
   renderer.setUnitSelection(id);
   hud.showPerson(id ? personCard(id) : null);
   if (id) speak(id);
@@ -623,6 +615,8 @@ function select(id: number): void {
   selected = id;
   const b = game.buildings.find((x) => x.id === id);
   renderer.setSelection(b ? id : 0);
+  // pracownik zaznaczonego budynku dostaje nad głową szpilkę (jak strażnicy po kliknięciu twierdzy)
+  renderer.setWorkerMark(b && b.owner === ME ? b.worker : 0);
   hud.showInfo(b ? buildingInfo(b) : null);
 }
 
@@ -1362,7 +1356,7 @@ function refresh(): void {
   if (selected) {
     const b = game.buildings.find((x) => x.id === selected);
     if (!b) select(0);
-    else hud.showInfo(buildingInfo(b));
+    else { hud.showInfo(buildingInfo(b)); renderer.setWorkerMark(b.owner === ME ? b.worker : 0); }
   }
 }
 

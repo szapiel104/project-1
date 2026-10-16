@@ -511,6 +511,32 @@ export class GameRenderer {
     sp.visible = true;
     sp.position.set(x, y + 1.05 + Math.sin(this.time * 3 + i) * 0.05, z);
   }
+  /** Pracownik zaznaczonego budynku: nad nim złota szpilka z ludzikiem (widać ją też zza ścian i drzew) */
+  private workerMark = 0;
+  private workerPin: THREE.Sprite | null = null;
+  setWorkerMark(id: number): void { this.workerMark = id; if (!id && this.workerPin) this.workerPin.visible = false; }
+  private placeWorkerPin(): void {
+    if (!this.workerMark) return;
+    if (!this.workerPin) {
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const k = c.getContext('2d')!;
+      // złote koło z ciemnym ludzikiem, pod nim szpic wskazujący pracownika
+      k.fillStyle = '#e9c145'; k.strokeStyle = 'rgba(20,10,5,.95)'; k.lineWidth = 4;
+      k.beginPath(); k.arc(32, 25, 19, 0, Math.PI * 2); k.moveTo(22, 40); k.lineTo(32, 60); k.lineTo(42, 40); k.fill(); k.stroke();
+      k.beginPath(); k.arc(32, 25, 19, 0, Math.PI * 2); k.fill();
+      k.fillStyle = '#2a1a0c';
+      k.beginPath(); k.arc(32, 17, 5.5, 0, Math.PI * 2); k.fill();
+      k.beginPath(); k.moveTo(22, 37); k.quadraticCurveTo(22, 24, 32, 24); k.quadraticCurveTo(42, 24, 42, 37); k.closePath(); k.fill();
+      const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+      this.workerPin = new THREE.Sprite(new THREE.SpriteMaterial({ map: t, transparent: true, depthTest: false, depthWrite: false, fog: false, sizeAttenuation: false }));
+      this.workerPin.renderOrder = 22;
+      this.workerPin.scale.setScalar(0.05);
+      this.scene.add(this.workerPin);
+    }
+    const spot = this.unitSpots.find((s) => s.id === this.workerMark);
+    this.workerPin.visible = !!spot;
+    if (spot) this.workerPin.position.set(spot.x, (this.unitY.get(spot.id) ?? 0) + 1.05 + (this.calm ? 0 : Math.sin(this.time * 3) * 0.05), spot.z);
+  }
   /** Podgląd szyku przy przeciąganiu prawym przyciskiem: przyszłe miejsca żołnierzy */
   private ghostRings!: THREE.InstancedMesh;
   /** Ciała poległych i ciemne plamy pod nimi */
@@ -1852,7 +1878,7 @@ export class GameRenderer {
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
       this.crowd.begin(dt);
-      T('chłopi', () => this.syncUnits(g, v, alpha));
+      T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
       T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); this.syncVillage(g, v, dt); });
