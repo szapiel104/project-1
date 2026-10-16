@@ -100,7 +100,7 @@ describe('tryb deweloperski', () => {
 });
 
 describe('brama', () => {
-  it('zamknięta nie przepuszcza nikogo, otwarta swoich; zamyka się sama, gdy wilk blisko', async () => {
+  it('zamknięta nie przepuszcza nikogo, otwarta swoich; wilk jej nie zamyka, wrogie wojsko pod bramą tak', async () => {
     const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
     const { buildingIndex } = await import('../src/data/buildings');
     const { walkable } = await import('../src/sim/path');
@@ -118,6 +118,9 @@ describe('brama', () => {
     for (let i = 0; i < 5; i++) step(g, []);
     expect(walkable(g, t, 0)).toBe(true);
     g.wolves.push({ id: 99999, px: gate!.x * 256 + 128, py: (gate!.y + 3) * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
+    for (let i = 0; i < 5; i++) step(g, []);
+    expect(gate!.shut).toBe(false); // wilki nie więżą wojska za bramą
+    g.soldiers.push({ id: 99998, owner: 1, kind: 0, px: gate!.x * 256 + 128, py: (gate!.y + 3) * 256 + 128, path: [], hp: 100, goal: -1, wait: 0, target: 0, cd: 0 });
     for (let i = 0; i < 5; i++) step(g, []);
     expect(gate!.shut).toBe(true);
   });

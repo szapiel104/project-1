@@ -69,10 +69,18 @@ describe('budowanie', () => {
     const g = createGame(5);
     const enemy = playerKeep(g, 1)!;
     const house = buildingIndex('house');
-    let far = false; // gdzieś przy wrogiej twierdzy jest wolna łąka, ale to za daleko od własnej
-    for (let d = 4; d < 12 && !far; d++) far = canPlace(g, 0, house, enemy.x - d, enemy.y - d) === 'place.far';
+    let far = false; // przy wrogiej twierdzy jest wolna łąka, ale to ziemia wroga
+    for (let d = 4; d < 12 && !far; d++) far = canPlace(g, 0, house, enemy.x - d, enemy.y - d) === 'place.enemyLand';
     expect(far).toBe(true);
     expect(canPlace(g, 0, house, 0, 0)).toBe('place.terrain'); // góry na krańcu mapy
+    // daleko od obu twierdz (połowa drogi do wroga) można budować: zasięgu od twierdzy już nie ma
+    const own = playerKeep(g, 0)!;
+    let open = false;
+    for (let k = 0; k < 400 && !open; k++) {
+      const x = Math.round((own.x + enemy.x) / 2) + (k % 20) - 10, y = Math.round((own.y + enemy.y) / 2) + Math.floor(k / 20) - 10;
+      open = canPlace(g, 0, house, x, y, false) === null;
+    }
+    expect(open).toBe(true);
     expect(canPlace(g, 0, buildingIndex('keep'), 20, 20)).toBe('place.unknown');
     g.players[0]!.res[resIndex('wood')] = 5;
     const s = spot(g, 'house');

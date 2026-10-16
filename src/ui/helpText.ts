@@ -91,7 +91,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
   {
     title: 'Budowa i drogi',
     blocks: [
-      'Wybierz kategorię na dolnej belce i kartę budynku, kliknij miejsce na mapie. R obraca budynek, prawy przycisk albo Esc anuluje. Budujesz najwyżej 24 pola od twierdzy (drogi do 34).',
+      'Wybierz kategorię na dolnej belce i kartę budynku, kliknij miejsce na mapie. R obraca budynek, prawy przycisk albo Esc anuluje. Budować możesz na całej mapie (daleko od twierdzy trudniej obronić), ale nie na ziemi wroga: 6 pól wokół każdego jego budynku należy do niego, dopóki budynek stoi. Wroga budynek trzeba najpierw zburzyć.',
       { h: 'Plac budowy' },
       'Koszt płacisz od razu. Potem na plac przychodzi do trzech wolnych chłopów (gdy wolnych brak — najwyżej dwóch robotników odchodzi od swojej pracy). Najpierw kopią wykop, potem noszą materiał ze składu kursami i składają go obok, a budowa idzie tylko tak daleko, na ile starcza przyniesionego materiału. Skład blisko placu = szybsza budowa.',
       'Budują tylko w godzinach pracy. Gdy w promieniu 8 pól są wrogowie, budowa staje (i tam też nie da się nic postawić). Kliknij plac, żeby zobaczyć postęp i ile materiału już leży.',

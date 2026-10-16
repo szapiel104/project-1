@@ -4,12 +4,12 @@ import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { TERRAIN, Terrain } from '../../data/terrain';
 import { KEEP_BED, KEEP_CELLS } from '../../data/keep';
-import { FP, inForecourt, keepCenter, Phase, playerKeep, type Building, type GameState } from '../state';
+import { FP, inForecourt, Phase, playerKeep, type Building, type GameState } from '../state';
 
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.forecourt' | 'place.ladder' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
@@ -126,16 +126,28 @@ export function enemyNear(g: GameState, player: number, x: number, y: number, w:
   return false;
 }
 
-/** Czy na tym jednym polu wolno budować (siatka w trybie budowy): teren, wolne pole, nie plac przed bramą, w zasięgu twierdzy */
+/** Ile pól wokół każdego budynku wroga należy do niego: tam nie postawisz nic swojego, dopóki budynek stoi */
+export const ENEMY_LAND = 6;
+/** Czy prostokąt (x..x+w-1, y..y+h-1) leży na ziemi wroga: w pasie ENEMY_LAND wokół jego budynku (zburzony i ruina się nie liczą) */
+export function enemyLand(g: GameState, player: number, x: number, y: number, w: number, h: number): boolean {
+  const team = g.players[player]?.team;
+  for (const b of g.buildings) {
+    if (b.ruined || g.players[b.owner]?.team === team) continue;
+    const fp = footprint(BUILDINGS[b.type]!, b.rot);
+    const dx = Math.max(b.x - (x + w - 1), 0, x - (b.x + fp.w - 1)), dy = Math.max(b.y - (y + h - 1), 0, y - (b.y + fp.h - 1));
+    if (Math.max(dx, dy) <= ENEMY_LAND) return true;
+  }
+  return false;
+}
+
+/** Czy na tym jednym polu wolno budować (siatka w trybie budowy): teren, wolne pole, nie plac przed bramą, poza ziemią wroga */
 export function tileBuildable(g: GameState, player: number, x: number, y: number): boolean {
   const { width, height } = g.map;
   if (x < 0 || y < 0 || x >= width || y >= height) return false;
   const t = y * width + x;
   if (!TERRAIN[g.map.tiles[t] as Terrain].buildable || g.occupancy[t] !== 0 || g.reserved[t] !== 0 || inForecourt(g, x, y)) return false;
-  const keep = playerKeep(g, player);
-  if (!keep) return false;
-  const [kx, ky] = keepCenter(keep);
-  return Math.max(Math.abs(x - kx), Math.abs(y - ky)) <= RULES.buildRadius;
+  if (!playerKeep(g, player)) return false;
+  return !enemyLand(g, player, x, y, 1, 1);
 }
 
 export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true, rot = 0): PlaceError | null {
@@ -149,8 +161,8 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     const t = y * width + x;
     if (!TERRAIN[g.map.tiles[t] as Terrain].walkable) return 'place.terrain';
     if (g.occupancy[t] !== 0 || g.roads[t] === def.road || g.roadPlan[t] === def.road) return 'place.occupied';
-    const k = playerKeep(g, player);
-    if (!k || Math.max(Math.abs(x - keepCenter(k)[0]), Math.abs(y - keepCenter(k)[1])) > RULES.buildRadius + 10) return 'place.far';
+    if (!playerKeep(g, player)) return 'place.far';
+    if (enemyLand(g, player, x, y, 1, 1)) return 'place.enemyLand';
     if (checkCost && !canAfford(g, player, def)) return 'place.cost';
     return null;
   }
@@ -172,11 +184,10 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     const o = id ? g.buildings.find((b) => b.id === id) : undefined;
     return !!o && o.owner === player && BUILDINGS[o.type]!.id === 'stoneWall';
   })) return 'place.ladder';
-  const keep = playerKeep(g, player);
-  if (!keep) return 'place.far';
+  // budować można na całej mapie (wróg co najwyżej zburzy), ale nie na ziemi wroga — przy jego budynkach
+  if (!playerKeep(g, player)) return 'place.far';
   const cx = x + (fw >> 1), cy = y + (fh >> 1);
-  const [kx, ky] = keepCenter(keep);
-  if (Math.max(Math.abs(cx - kx), Math.abs(cy - ky)) > RULES.buildRadius) return 'place.far';
+  if (enemyLand(g, player, x, y, fw, fh)) return 'place.enemyLand';
   if (def.needsTerrain) {
     const r = def.needsTerrain.radius;
     let found = false;
