@@ -4,6 +4,8 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 
 ## Zgłoszone przez Michała
 
+- **Progresja gracza (16.10.2026):** postać pana na zamku z poziomami i doświadczeniem (także za przegrane), drzewko umiejętności, tytuły, herb, nagrody na start, ranking, wyzwania, sezony, później świat/rody (MMO). Cały plan i partie: `docs/progresja.md`.
+
 - Menu główne w klimacie Twierdzy z ekranem ładowania, ustawieniami i wszystkimi funkcjami gry (w planie jako etap 3)
 - Poziomy graczy, konta, ulepszenia postaci, zamków i budowli (w planie: etapy 5 i 8)
 - Zarabianie: mikropłatności i reklamy (po wersji, która trzyma graczy)
