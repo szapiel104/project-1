@@ -722,7 +722,7 @@ export class GameRenderer {
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
     for (let i = 0; i < 24; i++) {
-      const lamp = new THREE.PointLight(0xffa35a, 0, 11, 1.4);
+      const lamp = new THREE.PointLight(0xffa35a, 0, 7, 1.7);   // krótszy zasięg: światło pochodni kończy się kilka kroków dalej, a nie oblewa całej osady
       this.scene.add(lamp);
       this.lamps.push(lamp);
     }
