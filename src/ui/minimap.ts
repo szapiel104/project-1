@@ -24,7 +24,7 @@ const rgb = (n: number): [number, number, number] => [(n >> 16) & 255, (n >> 8) 
 const css = (n: number, k = 1): string => { const [r, g, b] = rgb(n); return `rgb(${Math.min(255, r * k) | 0},${Math.min(255, g * k) | 0},${Math.min(255, b * k) | 0})`; };
 const WOLF = '#2a2622';
 
-export function createMinimap(host: MinimapHost): { update(g: GameState, me: number, now: number): void; toggle(): void; hide(): void; readonly shown: boolean } {
+export function createMinimap(host: MinimapHost): { update(g: GameState, me: number, now: number): void; toggle(): void; mount(el: HTMLElement): void; hide(): void; readonly shown: boolean } {
   const box = document.createElement('div');
   box.className = 'minimap';
   box.hidden = true;
@@ -34,27 +34,55 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = canvas.height = Math.round(SIZE * dpr);
   canvas.style.width = canvas.style.height = `${SIZE}px`;
+  // pasek nad mapą: nazwa, miejsce na przycisk „Sojusznicy” i chowanie
+  const bar = document.createElement('div');
+  bar.className = 'minimap-bar';
+  const title = document.createElement('span');
+  title.className = 'minimap-title';
+  title.textContent = 'Mapa';
+  const slot = document.createElement('span');
+  slot.className = 'minimap-slot';
   const hide = document.createElement('button');
   hide.type = 'button';
   hide.className = 'minimap-hide';
   hide.textContent = '–';
   hide.title = 'Schowaj minimapę (N)';
   hide.setAttribute('aria-label', hide.title);
-  const show = document.createElement('button');
-  show.type = 'button';
+  bar.append(title, slot, hide);
+  // schowana minimapa: mały pasek z przyciskiem „Mapa” (i przyciskiem z paska, żeby nie zniknął razem z mapą)
+  const show = document.createElement('div');
   show.className = 'minimap-show';
-  show.textContent = 'Mapa';
-  show.title = 'Pokaż minimapę (N)';
   show.hidden = true;
-  box.append(canvas, hide);
+  const showBtn = document.createElement('button');
+  showBtn.type = 'button';
+  showBtn.className = 'minimap-showbtn';
+  showBtn.textContent = 'Mapa';
+  showBtn.title = 'Pokaż minimapę (N)';
+  const slot2 = document.createElement('span');
+  slot2.className = 'minimap-slot';
+  show.append(slot2, showBtn);
+  box.append(bar, canvas);
   document.body.append(box, show);
+  /** Prawy dolny róg tuż nad dolną belką (jej wysokość zależy od skali interfejsu i otwartej listy budynków) */
+  const place = (): void => {
+    let top = innerHeight;
+    const dock = document.querySelector('.bottom .dock');
+    if (dock) top = Math.min(top, dock.getBoundingClientRect().top);
+    const bb = document.querySelector('.bottom .buildbar') as HTMLElement | null;
+    if (bb && bb.offsetParent) { const r = bb.getBoundingClientRect(); if (r.height > 0 && r.right > innerWidth - SIZE - 40) top = Math.min(top, r.top); }
+    const bottom = Math.max(8, innerHeight - top + 8);
+    box.style.bottom = show.style.bottom = `${bottom}px`;
+    document.documentElement.style.setProperty('--mini-bottom', `${bottom}px`);
+    document.documentElement.style.setProperty('--mini-left', `${(box.hidden ? show : box).offsetWidth + 22}px`);
+    document.documentElement.style.setProperty('--mini-top', `${innerHeight - bottom - (box.hidden ? show.offsetHeight : box.offsetHeight)}px`);
+  };
   const ctx = canvas.getContext('2d')!;
 
   let on = true;
   try { on = localStorage.getItem('minimap') !== '0'; } catch { /* bez pamięci przeglądarki */ }
   const setOn = (v: boolean): void => { on = v; try { localStorage.setItem('minimap', v ? '1' : '0'); } catch { /* jw. */ } };
   hide.addEventListener('click', () => setOn(false));
-  show.addEventListener('click', () => setOn(true));
+  showBtn.addEventListener('click', () => setOn(true));
 
   // teren: obrazek w rozdzielczości mapy, przerysowywany rzadko (wycięty las zmienia się na łąkę)
   const terrain = document.createElement('canvas');
@@ -113,6 +141,10 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
       const visible = on && !document.body.classList.contains('menu-open') && !document.body.classList.contains('walking');
       box.hidden = !visible;
       show.hidden = on || document.body.classList.contains('menu-open') || document.body.classList.contains('walking');
+      // obcy przycisk (Sojusznicy) jedzie tam, gdzie widać pasek
+      const holder = visible ? slot : slot2;
+      for (const el of [...slot.children, ...slot2.children]) if (el.parentElement !== holder) holder.append(el);
+      place();
       if (!visible || now - last < 150) return;
       last = now;
       state = g;
@@ -180,6 +212,8 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
       }
     },
     toggle() { setOn(!on); },
+    /** Miejsce w pasku minimapy na obcy przycisk (np. „Sojusznicy”) */
+    mount(el: HTMLElement) { slot.append(el); },
     hide() { box.hidden = true; show.hidden = true; },
     get shown() { return on; },
   };

@@ -3870,7 +3870,7 @@ export class GameRenderer {
     if (!g || !this.view) return [];
     const cam = this.cam.camera;
     const f = this.focusPoint;
-    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.view.heightAt(f.x, f.z));
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.view.heightAt(f.x + g.map.width / 2, f.z + g.map.height / 2));
     const out: { x: number; y: number }[] = [];
     const ray = new THREE.Ray(), hit = new THREE.Vector3();
     for (const [nx, ny] of [[-1, -1], [1, -1], [1, 0.98], [-1, 0.98]] as const) {

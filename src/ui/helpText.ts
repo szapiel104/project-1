@@ -193,7 +193,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       'Czat: Enter otwiera i wysyła, Esc zamyka.',
       'Razem przeciw botom: gospodarz wybiera rodzaj gry „Razem przeciw botom” — wszyscy ludzie są w jednej drużynie, a drugą zajmują wzmocnione boty (więcej zapasów, ludzi i broni, tym silniejsze, im więcej was jest). Fale rozkładają się na wszystkich graczy. Taki mecz nie liczy się do rankingu.',
       'Gra drużynowa: Alt + klik w mapę stawia znacznik dla drużyny — „Atakuj tutaj”, „Pomocy!” albo „Zbiórka” (sojusznicy widzą słup światła, strzałkę przy krawędzi ekranu i wpis na czacie; Spacja przenosi do ostatniego znacznika). Boty z twojej drużyny też słuchają: na atak i zbiórkę wysyłają całe wolne wojsko, na pomoc połowę.',
-      'Przycisk „Sojusznicy” (lewy górny róg, gdy masz sojusznika) wysyła mu surowce: chłop ciągnie dwukółkę od twojego zamku pod jego zamek (najwyżej 100 sztuk na wóz, 3 wozy naraz). Wrogi żołnierz, który dopadnie wóz, zabiera towar — pilnuj drogi albo daj eskortę.',
+      'Przycisk „Sojusznicy” (w pasku minimapy w prawym dolnym rogu, gdy masz sojusznika) wysyła mu surowce: chłop ciągnie dwukółkę od twojego zamku pod jego zamek (najwyżej 100 sztuk na wóz, 3 wozy naraz). Wrogi żołnierz, który dopadnie wóz, zabiera towar — pilnuj drogi albo daj eskortę.',
       { tip: 'W grze przez sieć czas płynie tak samo dla wszystkich: nie ma pauzy ani zmiany tempa, a otwarte menu nie zatrzymuje gry. Wyjście z meczu oznacza poddanie się.' },
     ],
   },

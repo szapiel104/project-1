@@ -366,6 +366,7 @@ const allies = createAllies({
   name: playerName,
   send: (to, res, amount) => { pending.push({ type: 'send', player: ME, to, res, amount }); play('click'); },
 });
+minimap.mount(allies.button);
 let caravanSeen = -1;
 let alliesTick = 0;
 function caravanNews(now: number): void {

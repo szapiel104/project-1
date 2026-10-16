@@ -18,12 +18,13 @@ export interface AlliesHost {
 const AMOUNTS = [10, 25, 50, 100];
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createAllies(host: AlliesHost): { update(g: GameState, me: number): void; close(): void } {
+export function createAllies(host: AlliesHost): { update(g: GameState, me: number): void; close(): void; readonly button: HTMLButtonElement } {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'allies-btn';
   btn.hidden = true;
   btn.innerHTML = '<span aria-hidden="true">⚑</span> Sojusznicy';
+  btn.title = 'Wyślij surowce sojusznikowi';
   document.body.append(btn);
   const panel = document.createElement('div');
   panel.className = 'allies-panel';
@@ -132,5 +133,6 @@ export function createAllies(host: AlliesHost): { update(g: GameState, me: numbe
       if (key !== lastKey) { lastKey = key; paint(); }
     },
     close() { open(false); btn.hidden = true; },
+    button: btn,
   };
 }
