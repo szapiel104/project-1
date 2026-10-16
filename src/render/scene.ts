@@ -3367,7 +3367,7 @@ export class GameRenderer {
       const st = this.lampState[i]!;
       st.cur += ((on ? st.target : 0) - st.cur) * ease;
       if (st.cur < 0.002) { st.cur = 0; if (!on) st.key = ''; }
-      lamp.intensity = st.cur * st.k * this.night * 16 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
+      lamp.intensity = st.cur * st.k * this.night * 9 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
     });
   }
 
@@ -3397,7 +3397,7 @@ export class GameRenderer {
     const glow = this.torchGlow;
     const mat = glow.material as THREE.MeshBasicMaterial;
     const k = Math.max(0, Math.min(1, (this.night - 0.1) / 0.4));
-    mat.opacity = k * 0.45;
+    mat.opacity = k * 0.18;   // delikatna plama (0,45 przepalała ziemię na biało-żółto)
     glow.visible = k > 0.01;
     if (!glow.visible) return;
     const { width, height } = g.map;
