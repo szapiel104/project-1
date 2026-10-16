@@ -260,6 +260,32 @@ export function cloudShade(mat: THREE.Material): void {
   mat.customProgramCacheKey = function (this: THREE.Material) { return (isDefault ? prevSrc : pk.call(this)) + '|cloud'; };
 }
 
+
+/**
+ * Podłoże używa 14 własnych próbników tekstur; three.js dokłada mapę cieni i (od r18x) tablicę DFG do odbić,
+ * a pory roku mapę śladów w śniegu — razem 17, a wiele kart (np. NVIDIA przez ANGLE/D3D11) daje shaderowi 16.
+ * Powyżej limitu three.js sypie ostrzeżeniem przy każdym rysowaniu (tysiące wpisów na sekundę w konsoli, co samo
+ * w sobie spowalnia grę). Tablicę DFG zastępujemy tu wzorem przybliżonym (ten sam, którego three.js używało do r18x);
+ * na matowej ziemi (chropowatość 0,97) różnicy nie widać, a próbników jest o jeden mniej.
+ */
+const DFG_APPROX = /* glsl */ `
+vec2 dfgApprox(const in float roughness, const in float dotNV) {
+  const vec4 c0 = vec4(-1.0, -0.0275, -0.572, 0.022);
+  const vec4 c1 = vec4(1.0, 0.0425, 1.04, -0.04);
+  vec4 r = roughness * c0 + c1;
+  float a004 = min(r.x * r.x, exp2(-9.28 * dotNV)) * r.x + r.y;
+  return vec2(-1.04, 1.04) * a004 + r.zw;
+}
+`;
+function withoutDfgLut(frag: string): string {
+  const strip = (src: string): string => src
+    .replace('uniform sampler2D dfgLUT;', DFG_APPROX)
+    .replace(/texture2D\(\s*dfgLUT,\s*vec2\(\s*([^,]+),\s*([^)]+)\)\s*\)\.rg/g, 'dfgApprox($1, $2)');
+  return frag
+    .replace('#include <lights_physical_pars_fragment>', strip(THREE.ShaderChunk.lights_physical_pars_fragment!))
+    .replace('#include <lights_fragment_begin>', strip(THREE.ShaderChunk.lights_fragment_begin!));
+}
+
 export function groundMaterial(): THREE.MeshStandardMaterial {
   if (shared) return shared;
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 });
@@ -293,8 +319,9 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
           reflectedLight.indirectDiffuse *= 1.0 - cm * 0.32;
         }`);
     sh.fragmentShader = 'uniform float uCloudT; uniform float uCloud;\n' + sh.fragmentShader;
+    sh.fragmentShader = withoutDfgLut(sh.fragmentShader);
   };
-  mat.customProgramCacheKey = () => 'ground-v2';
+  mat.customProgramCacheKey = () => 'ground-v3';
   shared = mat;
   return mat;
 }
