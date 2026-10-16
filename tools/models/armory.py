@@ -67,7 +67,11 @@ for x in (X0, X1):
             big = k % 2 == 0
             w, d = (0.2, 0.12) if big else (0.12, 0.2)     # na przemian długi i krótki cios, wystają o 1,5 cm
             b.box('base', 'cutDark', w, 0.18, d, x - math.copysign(w / 2 - 0.015, x), P + 0.02 + k * 0.21, z - math.copysign(d / 2 - 0.015, z))
-b.box('base', 'cutDark', X1 - X0 + 0.06, 0.05, Z1 - Z0 + 0.06, 0, H1 - 0.05, ZM)
+# gzyms to rama z czterech belek kamienia na wierzchu murów (nie płyta — wnętrze musi być widać, gdy dach zdjęty)
+for z in (Z0, Z1):
+    b.box('base', 'cutDark', X1 - X0 + 0.06, 0.05, T + 0.06, 0, H1 - 0.05, z + (T / 2 if z == Z0 else -T / 2))
+for x in (X0, X1):
+    b.box('base', 'cutDark', T + 0.06, 0.05, Z1 - Z0 - 2 * T, x + (T / 2 if x == X0 else -T / 2), H1 - 0.05, ZM)
 # drzwi: kamienne ościeże z łukiem z klińców, ciężkie skrzydło okute żelazem, otwarte do środka
 for sx in (-1, 1):
     b.box('base', 'cutDark', 0.06, DOOR[2], T + 0.04, DM + sx * ((DOOR[1] - DOOR[0]) / 2 + 0.03), P, Z1 - T / 2)
