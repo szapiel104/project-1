@@ -116,6 +116,16 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     float sLum = dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15));
     // wiosna: młode liście jasne, żółtawozielone
     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 1.32, 0.62) + vec3(0.03, 0.05, 0.0), uSpring * 0.85);
+    // co trzecie drzewo kwitnie: drobne, rzadkie kropki (białe albo różowe), liczone w przestrzeni, więc się nie rozciągają
+    {
+      vec3 sQ = vSeasonPos * 16.0;
+      vec3 sC = floor(sQ);
+      float sH = fract(sin(dot(sC, vec3(12.9898, 78.233, 37.719))) * 43758.5453);
+      vec3 sO = vec3(fract(sH * 7.13), fract(sH * 3.71), fract(sH * 5.31)) * 0.5 + 0.25;
+      float sDot = (1.0 - smoothstep(0.1, 0.17, length(sQ - sC - sO))) * step(sH, 0.3);
+      float sBloom = sDot * step(0.66, sCell) * uSpring;
+      diffuseColor.rgb = mix(diffuseColor.rgb, step(0.8, sCell) > 0.5 ? vec3(0.95, 0.7, 0.8) : vec3(0.97, 0.95, 0.92), sBloom * 0.85);
+    }
     // lato: zieleń ciemnieje i nasyca się
     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.78, 0.88, 0.7), uSummer * 0.8);
     vec3 sFall = mix(mix(vec3(0.88, 0.58, 0.07), vec3(0.8, 0.32, 0.05), sCell), vec3(0.55, 0.16, 0.05), sCell * sCell) * (0.5 + sLum * 1.1);
