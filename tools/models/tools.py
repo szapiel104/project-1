@@ -76,11 +76,11 @@ def crescent(head, half=0.14, back=0.05, r=0.012, n=10, seg=4):
 
 def pick_parts(far=False):
     g = GRIP
-    haft = tube([g + Vector((0, 0, -0.06)), g + Vector((0, 0, 0.15)), g + Vector((0, 0, 0.4))], [0.011, 0.012, 0.013], seg=4 if far else 8)
     head = Vector((0, -0.19, 0.39))
+    # stylisko kończy się w oku grotu (nie przebija go), oko szersze niż stylisko z każdej strony
+    haft = tube([g + Vector((0, 0, -0.06)), g + Vector((0, 0, 0.15)), g + Vector((0, 0, head.z - g.z + 0.008))], [0.011, 0.012, 0.0115], seg=4 if far else 8)
     iron = crescent(head, seg=4, n=6 if far else 12)
-    if not far:
-        iron += box(head.x, head.y, head.z, 0.024, 0.03, 0.03)   # oko grotu na stylisku
+    iron += box(head.x, head.y, head.z, 0.032, 0.034, 0.036)   # oko grotu na stylisku
     wood = haft
     return wood, iron
 
@@ -150,9 +150,9 @@ def wedge(x, ytop, ybot, zc, dtop, dbot, ttop, tbot, zoff=0.0):
 def axe_parts(far=False):
     g = GRIP
     seg = 4 if far else 8
-    wood = tube([g + Vector((0, 0, -0.05)), g + Vector((0, 0, 0.15)), g + Vector((0, 0, 0.37))], [0.011, 0.012, 0.013], seg=seg)
-    # żeleźce: oko na stylisku i ostrze rozszerzające się w dół (krawędź tnąca wysunięta do przodu)
-    iron = box(0, -0.19, 0.355, 0.022, 0.026, 0.032)
+    wood = tube([g + Vector((0, 0, -0.05)), g + Vector((0, 0, 0.15)), g + Vector((0, 0, 0.362))], [0.011, 0.012, 0.0115], seg=seg)
+    # żeleźce: oko na stylisku (szersze niż stylisko, które kończy się w środku) i ostrze rozszerzające się w dół
+    iron = box(0, -0.19, 0.355, 0.031, 0.032, 0.034)
     iron += wedge(0, -0.198, -0.255, 0.35, 0.03, 0.058, 0.016, 0.004, zoff=0.008)
     return wood, iron
 
@@ -160,9 +160,9 @@ def axe_parts(far=False):
 def hammer_parts(far=False):
     g = GRIP
     seg = 4 if far else 8
-    wood = tube([g + Vector((0, 0, -0.03)), g + Vector((0, 0, 0.12)), g + Vector((0, 0, 0.24))], [0.011, 0.012, 0.013], seg=seg)
+    wood = tube([g + Vector((0, 0, -0.03)), g + Vector((0, 0, 0.12)), g + Vector((0, 0, 0.25))], [0.011, 0.012, 0.0115], seg=seg)
     # obuch: mały kuty klocek, twarz uderzająca w dół (w płaszczyźnie zamachu)
-    iron = box(0, -0.195, 0.245, 0.03, 0.06, 0.03)
+    iron = box(0, -0.195, 0.245, 0.032, 0.06, 0.034)   # stylisko kończy się w środku obucha
     if not far:
         iron += box(0, -0.228, 0.245, 0.034, 0.01, 0.034)   # szersza twarz
     return wood, iron

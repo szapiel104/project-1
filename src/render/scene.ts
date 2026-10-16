@@ -198,6 +198,8 @@ const MAX_UNITS = 2048;
 const TORCH_ARM = -0.55;
 /** Ręka rybaka z wędką wyciągnięta w przód (tak samo w tools/models/tools.py) */
 const FISH_ARM = -0.9;
+/** Oburęczny chwyt kilofa i siekiery: o tyle ręce schodzą się do środka (dłonie razem na stylisku) */
+const TWO_HAND = 0.5;
 const TORCH_TIP = new THREE.Vector3(0, -0.19 + Math.cos(0.55) * 0.34, Math.sin(0.55) * 0.34);
 /** Środek wiadra w układzie postaci (wisi z opuszczonej prawej dłoni) */
 const BUCKET_C = new THREE.Vector3(0.15, 0.15, 0.02);
@@ -313,6 +315,7 @@ export class GameRenderer {
   }
   private pullNow = new Map<number, [number, number]>();
   private armM = new THREE.Matrix4();
+  private gripE = new THREE.Euler();
   private armS = new THREE.Matrix4();
   private armV = new THREE.Vector3();
   private soundAt = new Map<string, number>();
@@ -4890,7 +4893,7 @@ export class GameRenderer {
       // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką
       if (chopping || mining) {
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
-        this.armM.makeRotationX(toolArm).setPosition(0.135, 0.45, 0);
+        this.armM.makeRotationFromEuler(this.gripE.set(toolArm, 0, -TWO_HAND)).setPosition(0.135, 0.45, 0);
         (chopping ? this.axes : this.picks).setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
         (chopping ? this.picks : this.axes).setMatrixAt(i, ZERO);
       } else if (fighting) {
@@ -4936,7 +4939,7 @@ export class GameRenderer {
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || !!ia?.legs);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || !!ia?.legs, undefined, chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);

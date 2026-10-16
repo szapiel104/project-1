@@ -111,19 +111,19 @@ function toolPair(name: string): Make {
 
 /** Chłop przy pracy z narzędziem — ta sama poza ręki i to samo przypięcie narzędzia co w grze (scene.ts):
  *  narzędzia ręczne obracają się w barku (0,135; 0,45) razem z prawą ręką, pochodnia, wiadro i wędka są w układzie postaci */
-function worker(tool: string, arm: number, hand: boolean, extra?: string): Make {
+function worker(tool: string, arm: number, hand: boolean, extra?: string, grip = 0): Make {
   return () => {
     const holder = new THREE.Scene();
     Figures.FAR2 = 1e9;
     const id = 3;
     const f = new Figures(1, holder, 'peasant');
-    f.set(0, new THREE.Matrix4(), 0, false, RED, id, hand ? arm : tool === 'bucket' ? 0 : undefined, tool === 'rod' ? arm + 0.15 : -0.5, false);
+    f.set(0, new THREE.Matrix4(), 0, false, RED, id, hand ? arm : tool === 'bucket' ? 0 : undefined, tool === 'rod' ? arm + 0.15 : grip ? arm : -0.5, false, undefined, grip);
     f.finish(1);
     const sz = f.sizeOf(id, RED);
     const mats = toolMaterials();
     const add = (name: string, m: THREE.Material[] = mats): void => {
       const mesh = new THREE.Mesh(toolGeometry(name), m);
-      if (hand) mesh.applyMatrix4(new THREE.Matrix4().makeScale(sz, sz, sz).multiply(new THREE.Matrix4().makeRotationX(arm).setPosition(0.135, 0.45, 0)));
+      if (hand) mesh.applyMatrix4(new THREE.Matrix4().makeScale(sz, sz, sz).multiply(new THREE.Matrix4().makeRotationFromEuler(new THREE.Euler(arm, 0, -grip)).setPosition(0.135, 0.45, 0)));
       holder.add(mesh);
     };
     add(tool);
@@ -197,8 +197,9 @@ const GROUPS: [string, [string, string, Make][]][] = [
   ['W pracy', [
     ['work-hammer', 'budowniczy z młotkiem (zamach)', worker('hammer', -2.1, true)],
     ['work-hammer2', 'budowniczy z młotkiem (uderzenie)', worker('hammer', -0.9, true)],
-    ['work-axe', 'drwal z siekierą', worker('axe', -2.0, true)],
-    ['work-pick', 'kamieniarz z kilofem', worker('pick', -1.9, true)],
+    ['work-axe', 'drwal z siekierą (oburącz)', worker('axe', -2.0, true, undefined, 0.5)],
+    ['work-pick', 'kamieniarz z kilofem (oburącz)', worker('pick', -1.9, true, undefined, 0.5)],
+    ['work-pick2', 'kamieniarz z kilofem (cios)', worker('pick', -0.7, true, undefined, 0.5)],
     ['work-club', 'chłop z maczugą', worker('club', -1.4, true)],
     ['work-torch', 'z pochodnią nocą', worker('torch', -0.55, true)],
     ['work-bucket', 'z wiadrem wody', worker('bucket', 0, false, 'bucketWater')],

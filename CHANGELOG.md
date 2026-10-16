@@ -6,6 +6,8 @@
 - Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
 - Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
 - Wejście w spacer chłopem bez kilkusekundowego zamrożenia: światło sal stoi w scenie od startu (nowe światło przebudowywało shadery wszystkich materiałów), drzewa kolizji liczone tylko dla ścian tuż obok
+- Kilof i siekiera trzymane oburącz: przy kopaniu i rąbaniu obie dłonie schodzą się na stylisku; stylisko kończy się w oku grotu (nie przebija żelaza)
+- Włócznik: włócznia ok. półtora raza wyższa od człowieka (była dwa razy), tarcza tuż przy przedramieniu
 - Narzędzia poprawione: kute żelazo z fakturą i połyskiem (nie gładki szary klocek), mniejsze obuchy młotka i siekiery, kilof jak w Gothicu (długie cienkie stylisko, wąski grot-półksiężyc o zaostrzonych końcach), pochodnia z głowicą ze szmat nasączonych smołą owiniętą drutem, rybak trzyma wędkę w obu dłoniach wyciągniętych w przód
 - Nowa pochodnia na słupie z Blendera (tools/models/torch.py) — wolnostojąca i przy wejściach budynków: ociosany słup z żelaznymi opaskami, kopczyk ziemi obłożony kamieniami, kuty kosz ogniowy ze szczapami
 - Narzędzia chłopów z Blendera (tools/models/tools.py), każde w wersji z bliska i z daleka: siekiera, młotek, kilof, maczuga, pochodnia, wiadro z wodą, wędka. Gra rysuje tylko te, które ktoś naprawdę trzyma (wcześniej każde narzędzie przy każdym człowieku, schowane), z daleka lżejsze, bardzo daleko wcale. Pochodnię chłop trzyma teraz w uniesionej dłoni (płomień nad jej końcem), a wiadro wisi z opuszczonej ręki

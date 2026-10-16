@@ -278,7 +278,7 @@ export class Figures {
         const shieldArm = (sw: number, up: boolean): number => (up ? -1.35 : -0.32 - sw * 0.12);
         model(M, shieldArm, thrustArm);
         // wypukła tarcza w barwach pana na lewym przedramieniu, okucie i guz z żelaza
-        const shield = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.rotateY(0.6).translate(-0.02, -0.11, 0.035);
+        const shield = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.rotateY(0.6).translate(0.022, -0.11, 0.035); // tuż przy przedramieniu
         add(shield(prep(new THREE.SphereGeometry(0.33, 18, 5, 0, Math.PI * 2, 0, 0.38).rotateZ(Math.PI / 2).translate(0.28, 0, 0), (_x, y, z) => 0.8 + 0.25 * (1 - Math.hypot(y, z) / 0.122))), tunic, -sx, sy, 0, shieldArm, always, 'wood');
         add(shield(merge(
           new THREE.TorusGeometry(0.122, 0.008, 4, 22).rotateY(Math.PI / 2).translate(-0.027, 0, 0),
@@ -286,10 +286,11 @@ export class Figures {
         )), IRON, -sx, sy, 0, shieldArm, always, 'metal');
         // drzewce i liściasty grot w jednej siatce
         add(mergeGeometries([
-          tinted(new THREE.CylinderGeometry(0.0105, 0.012, 1.2, 6).translate(0, 0.24, 0), WOOD),
-          tinted(new THREE.CylinderGeometry(0.013, 0.011, 0.03, 6).translate(0, -0.37, 0), WOOD),
-          tinted(new THREE.OctahedronGeometry(1, 0).scale(0.027, 0.09, 0.008).translate(0, 0.93, 0), STEEL),
-          tinted(new THREE.CylinderGeometry(0.0125, 0.014, 0.05, 6).translate(0, 0.855, 0), STEEL),
+          // włócznia ok. półtora raza wyższa od człowieka (dawniej dwa razy): drzewce od kostki do nad głowę
+          tinted(new THREE.CylinderGeometry(0.009, 0.0105, 0.84, 6).translate(0, 0.12, 0), WOOD),
+          tinted(new THREE.CylinderGeometry(0.011, 0.0095, 0.025, 6).translate(0, -0.3, 0), WOOD),
+          tinted(new THREE.OctahedronGeometry(1, 0).scale(0.021, 0.07, 0.007).translate(0, 0.645, 0), STEEL),
+          tinted(new THREE.CylinderGeometry(0.0105, 0.012, 0.04, 6).translate(0, 0.565, 0), STEEL),
         ])!, 0xffffff, 0.15, sy - 0.09, 0.075, thrustSpear, always, 'metal');
         return;
       }
@@ -322,7 +323,8 @@ export class Figures {
    * `work` = poza przy pracy: kąt prawej ręki (ujemny = w przód i w górę); nogi stoją, lewa ręka lekko przed sobą.
    * Bez tego `swing` rusza rękami i nogami jak przy chodzie.
    */
-  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number): void {
+  /** grip: o ile obie ręce schodzą się do środka (oburęczny chwyt kilofa czy siekiery), w radianach; 0 = zwykle */
+  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number, grip = 0): void {
     // ukryta postać (macierz o zerowej skali) nie zajmuje miejsca: karta graficzna liczy tylko widoczne
     const e = base.elements;
     if (e[0] === 0 && e[5] === 0 && e[10] === 0) return;
@@ -339,7 +341,9 @@ export class Figures {
       const r = work === undefined ? p.rot(swing, armsUp)
         : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
       // siedzi: obie nogi wyciągnięte przed siebie
-      this.q.setFromEuler(this.e.set(sitLegs !== undefined && (p.rot === legL || p.rot === legR) ? sitLegs : r, 0, 0));
+      // oburęczny chwyt: ręce obrócone do środka (przed uniesieniem), dłonie spotykają się na stylisku
+      const roll = grip && (p.rot === armR || p.rot === armL) ? (p.rot === armR ? -grip : grip) : 0;
+      this.q.setFromEuler(this.e.set(sitLegs !== undefined && (p.rot === legL || p.rot === legR) ? sitLegs : r, 0, roll));
       this.local.compose(p.pos, this.q, this.one);
       if (p.sub) { this.q.setFromEuler(this.e.set(p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);
