@@ -21,6 +21,31 @@ const accountListeners = new Set<() => void>();
 export const onAccount = (f: () => void): (() => void) => { accountListeners.add(f); return () => accountListeners.delete(f); };
 const changed = (): void => { for (const f of accountListeners) f(); syncOnline(); };
 
+// ---------------- poziom gracza (PD za mecze; liczy i zapisuje funkcja w bazie award_match) ----------------
+export interface Progress { xp: number; level: number; matches: number; wins: number; kills: number }
+let myProgress: Progress | null = null;
+/** Poziom zalogowanego gracza (null: niezalogowany albo baza jeszcze bez tabeli postępu) */
+export const progress = (): Progress | null => myProgress;
+async function loadProgress(): Promise<void> {
+  myProgress = null;
+  if (!session) return;
+  const { data, error } = await supa.from('player_progress').select('xp,level,matches,wins,kills').eq('user_id', session.user.id).maybeSingle();
+  if (error) return; // tabela jeszcze nie założona — gra działa jak dotąd, bez poziomów
+  myProgress = (data as Progress | null) ?? { xp: 0, level: 1, matches: 0, wins: 0, kills: 0 };
+}
+/** Po meczu: baza liczy PD z wyniku (z limitami) i zwraca, ile przybyło; null, gdy niezalogowany albo błąd */
+export async function awardMatch(mode: string, s: { won: boolean; minutes: number; kills: number; razed: number; built: number }): Promise<{ gained: number; xp: number; level: number; before: number } | null> {
+  if (!session) return null;
+  const before = myProgress?.level ?? 1;
+  const { data, error } = await supa.rpc('award_match', { p_mode: mode, p_won: s.won, p_minutes: s.minutes, p_kills: s.kills, p_razed: s.razed, p_built: s.built });
+  if (error || !data) return null;
+  const row = (Array.isArray(data) ? data[0] : data) as { gained: number; xp: number; level: number } | undefined;
+  if (!row) return null;
+  myProgress = { ...(myProgress ?? { matches: 0, wins: 0, kills: 0 }), xp: row.xp, level: row.level, matches: (myProgress?.matches ?? 0) + 1, wins: (myProgress?.wins ?? 0) + (s.won ? 1 : 0), kills: (myProgress?.kills ?? 0) + s.kills };
+  changed();
+  return { ...row, before };
+}
+
 async function loadNick(): Promise<void> {
   if (!session) { myNick = ''; return; }
   const { data } = await supa.from('profiles').select('nick').eq('id', session.user.id).maybeSingle();
@@ -31,6 +56,7 @@ export async function restore(): Promise<void> {
   const { data } = await supa.auth.getSession();
   session = data.session;
   await loadNick();
+  await loadProgress();
   changed();
 }
 
@@ -53,6 +79,7 @@ export async function signUp(email: string, password: string, nick: string): Pro
   const { error: e2 } = await supa.from('profiles').insert({ id: session.user.id, nick: n });
   if (e2) return plErr(e2.message);
   myNick = n;
+  await loadProgress();
   changed();
   return null;
 }
@@ -68,11 +95,12 @@ export async function signIn(email: string, password: string): Promise<string | 
     await supa.from('profiles').insert({ id: session.user.id, nick: n });
     myNick = n;
   }
+  await loadProgress();
   changed();
   return null;
 }
 
-export async function signOut(): Promise<void> { await supa.auth.signOut(); session = null; myNick = ''; changed(); }
+export async function signOut(): Promise<void> { await supa.auth.signOut(); session = null; myNick = ''; myProgress = null; changed(); }
 
 /** Zmiana nicku w profilu (unikalny w bazie) */
 export async function setNick(nick: string): Promise<string | null> {

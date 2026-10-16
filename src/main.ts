@@ -27,7 +27,8 @@ import { EMPTY, SANDBOX, TEST } from './testmode';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
-import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
+import { awardMatch, deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
+import { levelOf, MODE_MULT, titleOf, xpParts, type MatchMode } from './data/progress';
 import type { OnlineStart } from './ui/online';
 import { createGameChat } from './ui/chat';
 import { createPings, PINGS } from './ui/pings';
@@ -1376,6 +1377,40 @@ function showEnd(win: boolean): void {
   btn(t('end.again'), () => { menu.open(false); });
   document.body.append(box);
   play(win ? 'build' : 'collapse');
+  endXp(box.querySelector('.summary')!, win, mins);
+}
+
+/**
+ * Doświadczenie za mecz (konto): rozpiska z gry od razu, a liczba PD i poziom z bazy (award_match liczy z limitami —
+ * to, co policzy przeglądarka, to tylko podgląd). Tryb deweloperski, testy i mecz bez konta nic nie dają.
+ */
+function endXp(after: Element, win: boolean, mins: number): void {
+  const p = game.players[ME]!;
+  if (SANDBOX || p.dev || !netMe()) return;
+  const enemy = game.players.find((q) => q.id !== ME && q.bot);
+  const mode: MatchMode = netGame ? (netGame.coop ? 'coop' : 'online') : (`bots${Math.max(0, Math.min(3, enemy?.level ?? 2))}` as MatchMode);
+  const st = p.stats;
+  const stats = { won: win, minutes: mins, kills: st.kills, razed: st.razed, built: st.built };
+  const box = document.createElement('div');
+  box.className = 'end-xp';
+  box.setAttribute('aria-live', 'polite');
+  const parts = xpParts(stats).filter((x) => x.xp > 0).map((x) => `<li><span>${x.label}</span><span>${x.xp}</span></li>`).join('');
+  const mult = MODE_MULT[mode] < 1 ? `<li><span>rodzaj meczu (${mode === 'coop' ? 'razem przeciw botom' : mode.startsWith('bots') ? 'z botami' : 'przez sieć'})</span><span>×${MODE_MULT[mode]}</span></li>` : '';
+  box.innerHTML = `<strong>Doświadczenie: liczę…</strong><ul>${parts}${mult}</ul>`;
+  after.after(box);
+  void awardMatch(mode, stats).then((r) => {
+    const head = box.querySelector('strong')!;
+    if (!r) { head.textContent = 'Doświadczenia nie udało się zapisać (brak połączenia z bazą).'; return; }
+    const lv = levelOf(r.xp);
+    head.textContent = r.gained > 0 ? `+${r.gained} PD` : mins < 3 ? 'Za krótki mecz — bez doświadczenia' : '+0 PD (dzienny limit)';
+    const bar = document.createElement('span'); bar.className = 'acc-xp';
+    const fill = document.createElement('span'); fill.className = 'acc-xp-fill'; fill.style.width = '0%'; bar.append(fill);
+    const line = document.createElement('span'); line.className = 'end-up';
+    line.textContent = r.level > r.before ? `Nowy poziom: ${r.level} — ${titleOf(r.level)}!` : `${titleOf(lv.level)} · poziom ${lv.level} · ${lv.into}/${lv.need} PD`;
+    box.append(bar, line);
+    requestAnimationFrame(() => { fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`; });
+    if (r.level > r.before) play('build');
+  });
 }
 
 const scribe = createScribe(() => play('babble'));

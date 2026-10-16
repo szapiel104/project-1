@@ -1,4 +1,5 @@
-import { me as netMe, onAccount, restore } from '../net/supa';
+import { me as netMe, onAccount, progress, restore } from '../net/supa';
+import { levelOf, titleOf } from '../data/progress';
 import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
 import { createGallery, GALLERY, type GalleryEntry } from '../render/gallery';
@@ -230,7 +231,17 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       who.setAttribute('aria-label', `Konto: ${m.nick}`);
       const s = el('span', 'net-shield'); s.innerHTML = avatarSvg(m.avatar, 34);
       const txt = el('span', 'acc-text');
-      txt.append(el('strong', '', m.nick), el('span', '', 'zalogowany · konto'));
+      const pr = progress();
+      if (pr) {
+        // poziom pana na zamku: tytuł, poziom i pasek PD do następnego
+        const lv = levelOf(pr.xp);
+        const bar = el('span', 'acc-xp');
+        bar.setAttribute('role', 'img');
+        bar.setAttribute('aria-label', `Poziom ${lv.level}: ${lv.into} z ${lv.need} PD do następnego`);
+        const fill = el('span', 'acc-xp-fill'); fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`;
+        bar.append(fill);
+        txt.append(el('strong', '', m.nick), el('span', 'acc-level', `${titleOf(lv.level)} · poziom ${lv.level} · ${lv.into}/${lv.need} PD`), bar);
+      } else txt.append(el('strong', '', m.nick), el('span', '', 'zalogowany · konto'));
       who.append(s, txt);
       who.addEventListener('click', () => online.showAccount());
       account.append(who);

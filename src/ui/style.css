@@ -1297,3 +1297,15 @@ body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1
 .minimap-showbtn:hover { color: var(--light); border-color: var(--gold); }
 .minimap-hide:focus-visible, .minimap-showbtn:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 body.walking .minimap, body.walking .minimap-show { display: none !important; }
+
+/* poziom gracza przy nicku w menu i nagroda PD na końcu meczu */
+.acc-level { font-size: 12px; color: var(--ink-soft); }
+.acc-xp { display: block; height: 5px; margin-top: 3px; background: rgba(0, 0, 0, .45); border: 1px solid rgba(201, 162, 75, .45); }
+.acc-xp-fill { display: block; height: 100%; background: linear-gradient(90deg, #8a6a24, #e0bd62); transition: width .6s ease; }
+.end-xp { margin: 12px 0 4px; padding: 10px 12px; border: 1px solid rgba(201, 162, 75, .45); background: rgba(0, 0, 0, .3); }
+.end-xp strong { font-family: var(--display); font-size: 18px; color: #e8c66a; letter-spacing: .04em; }
+.end-xp ul { margin: 6px 0 0; padding: 0; list-style: none; font-size: 14px; }
+.end-xp li { display: flex; justify-content: space-between; gap: 16px; }
+.end-xp .acc-xp { height: 8px; margin-top: 8px; }
+.end-xp .end-up { display: block; margin-top: 6px; font-family: var(--display); font-size: 16px; color: #f2d27a; }
+@media (prefers-reduced-motion: reduce) { .acc-xp-fill { transition: none; } }

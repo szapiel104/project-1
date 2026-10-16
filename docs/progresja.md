@@ -81,6 +81,14 @@ wyzwania. Każda partia z listy na dole ma być małą, wdrażalną zmianą; zro
 
 ## Partie (kolejność; każdy czat bierze następną nieoznaczoną)
 
+**Zrobione 16.10.2026 (wersja pierwsza, przed partiami 1–3):** poziomy i PD za mecz. Wzór w `src/data/progress.ts`
+(czas meczu, wygrana/przegrana, pokonani wrogowie, zburzone i postawione budynki, mnożnik rodzaju meczu, najwyżej 600 PD
+na mecz), tabela `player_progress`, historia `xp_awards` i funkcja `award_match` w bazie
+(`supabase/migrations/20261016_progress.sql`: liczy PD na serwerze, przycina dane, nie przyzna meczu dłuższego niż czas
+od poprzedniego przy tempie 5×, dzienny limit 3000 PD), w menu tytuł, poziom i pasek PD przy nicku, na końcu meczu
+rozpiska i „+PD”, awans. Dalej do zrobienia: herb i ekran „Mój ród” (partia 1), zgodność zgłoszeń obu graczy
+w meczu przez sieć (partia 2), statystyki w profilu (partia 4).
+
 1. **Postać w profilu:** tabela postaci (poziom, PD, tytuł, herb: barwy i godło), ekran „Mój ród” w menu (podgląd
    herbu, poziom, pasek PD, tytuł), tytuł przy nicku w pokoju i rankingu. Bez przyznawania PD — same dane i wygląd.
 2. **Bezpieczny wynik meczu:** Edge Function `report_match_result` (zgodność zgłoszeń, skrót stanu), wyniki i ranking
