@@ -6,6 +6,8 @@ import { dayPart } from './workers';
 import { rainAt } from '../clock';
 import { weatherOf } from '../weather';
 
+const FOOD_VALUE_OF: Record<string, number> = { apples: 1, bread: 2, fish: 3 };
+
 const WOOD = resIndex('wood');
 /** Drewno na opał: na jedną zamieszkaną chatę i dobę przy ok. 0°C (zamek liczy się za dwie); przy mrozie więcej */
 export const FUEL_PER_HOUSE_DAY = 1;
@@ -19,12 +21,14 @@ export function fuelNeed(g: GameState, p: PlayerState): number {
   return (homes * chill * FUEL_PER_HOUSE_DAY * RULES.monthTicks) / RULES.dayTicks;
 }
 
-const FOOD = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
+/** Jedzenie w kolejności jedzenia: najpierw jabłka (najmniej sycą i najszybciej schodzą), potem chleb, ryby na końcu */
+const FOOD = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0)
+  .sort((a, b) => (FOOD_VALUE_OF[RESOURCES[a]!] ?? 1) - (FOOD_VALUE_OF[RESOURCES[b]!] ?? 1));
 const GOLD = resIndex('gold');
 const ALE = resIndex('ale');
 
-/** Ile porcji daje jedna sztuka jedzenia: ryba to mięso — syci jak dwa jabłka czy dwa bochenki */
-export const FOOD_VALUE: Record<string, number> = { fish: 2 };
+/** Ile porcji daje jedna sztuka jedzenia: jabłko syci najkrócej (schodzi najszybciej), chleb dłużej, ryba (mięso) najdłużej */
+export const FOOD_VALUE: Record<string, number> = FOOD_VALUE_OF;
 const VALUE = RESOURCES.map((r) => FOOD_VALUE[r] ?? 1);
 
 /** Ile porcji jedzenia jest w spichlerzach (ryba liczy się podwójnie) */
@@ -39,7 +43,7 @@ export const MEALS_PER_DAY = (() => { let n = 0; for (let t = RULES.monthTicks; 
 
 /** Ile jedzenia na dobę daje jeden pracujący budynek (zmierzone w symulacji: chodzenie do spichlerza w cenie;
  *  dla piekarni cały łańcuch pole → młyn → piekarnia, po jednym budynku) — do prognozy w oknie spichlerza */
-export const FOOD_PER_DAY: Record<string, number> = { orchard: 140, fisher: 128, bakery: 190 }; // rybak: 64 ryby = 128 porcji
+export const FOOD_PER_DAY: Record<string, number> = { orchard: 140, fisher: 190, bakery: 240 }; // porcje: rybak 64 ryby × 3, piekarnia ok. 120 chlebów × 2
 
 /** Miesięczna zmiana popularności przy obecnych ustawieniach (także jako prognoza dla interfejsu). */
 export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; food: number; gold: number; fed: boolean; bribed: boolean; ale: number; parts: { key: string; value: number; level?: string }[] } {

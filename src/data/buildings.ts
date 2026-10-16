@@ -100,7 +100,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, cost: { wood: 20, stone: 10 }, buildable: true,
     workView: 'inside',
-    production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 16 }, site: 'home', workTicks: 110 },
+    production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 10 }, site: 'home', workTicks: 110 },
   },
   // Obozowisko stoi od początku przy twierdzy: tu czekają chłopi bez pracy. Ma limit miejsc, więc bez wolnego miejsca nowi nie przyjdą
   { id: 'camp', category: 'settlement', name: 'b.camp', w: 2, h: 2, cost: { wood: 15 }, idleSlots: 6, buildable: true },

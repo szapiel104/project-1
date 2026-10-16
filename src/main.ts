@@ -1956,7 +1956,7 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
     ...(p0.hungry ? [{ label: 'Głód!', value: 'odchodzą', sign: 'minus' as const, note: '(zabrakło jedzenia — póki go nie ma, ludzie opuszczają osadę)' }] : []),
     { label: 'Zjadają co miesiąc', value: `${perMonthWant} porcji`, note: '(rozliczenie)' },
     { label: 'Zjadają na dobę', value: `${perDayWant} porcji`, note: `(${perPerson.toFixed(perPerson % 1 ? 1 : 0)} na osobę)` },
-    { label: 'W spichlerzach', value: `${storeUsed(p0, 'granary')} / ${storeCapacity(game, ME, 'granary')}`, note: `(${have} porcji — ryba syci za dwie)` },
+    { label: 'W spichlerzach', value: `${storeUsed(p0, 'granary')} / ${storeCapacity(game, ME, 'granary')}`, note: `(${have} porcji: jabłko 1, chleb 2, ryba 3)` },
     { label: 'Zapas starczy na', value: fmtLast(lasts), sign: lasts < 0.5 ? 'minus' : lasts >= 2 ? 'plus' : undefined },
     { label: 'Gospodarstwa dają na dobę', value: `ok. ${made}`, note: `(sady ${count('orchard')}, rybacy ${count('fisher')}, piekarnie ${bakeries})` },
     { label: 'Wykarmią', value: `ok. ${feeds} osób`, sign: feeds < pop ? 'minus' : 'plus' },

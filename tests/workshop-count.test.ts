@@ -20,6 +20,6 @@ it('warsztat liczy, ile oddał do składu (okno budynku pokazuje to i tempo)', (
   for (let i = 0; i < 1500; i++) step(g, []);
   const b = g.buildings.find((x) => x.id === id)!;
   expect(b.made ?? 0).toBeGreaterThan(0);
-  expect((b.made ?? 0) % 16).toBe(0); // chleb po 16 z jednego cyklu
+  expect((b.made ?? 0) % 10).toBe(0); // chleb po 10 z jednego cyklu
   expect(b.lost ?? 0).toBe(0);
 });
