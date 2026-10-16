@@ -402,7 +402,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
 
 const CAMP = buildingIndex('camp');
 
-/** Tryb deweloperski: miasto otoczone palisadą z bramami pośrodku boków, wieże w narożnikach, oddział włóczników */
+/** Tryb deweloperski: miasto otoczone murem (tył i prawy bok kamienne, przód i lewy z bali) z bramami na każdym boku, wieże w narożnikach, drabiny na kamienny mur, oddział włóczników */
 function devFortify(g: GameState, player: number): void {
   const { width: w, height: h } = g.map;
   let x0 = w, y0 = h, x1 = 0, y1 = 0;
@@ -417,24 +417,46 @@ function devFortify(g: GameState, player: number): void {
     const t = y * w + x;
     return g.occupancy[t] === 0 && g.reserved[t] === 0 && TERRAIN_BUILDABLE(g.map.tiles[t]!);
   };
-  const put = (id: string, x: number, y: number): void => {
-    // mur idzie przez las i skały tak samo jak stawiany przez gracza: pole zostaje wykarczowane (woda i góry zostają dziurą)
+  const put = (id: string, x: number, y: number): boolean => {
+    // mur idzie przez las i skały: pole zostaje wykarczowane (woda i góry zostają dziurą)
     const t = y * w + x, tile = g.map.tiles[t]!;
-    if ((id === 'palisade' || id === 'gate') && g.occupancy[t] === 0 && g.reserved[t] === 0 && (tile === Terrain.Forest || tile === Terrain.Stone || tile === Terrain.Iron)) g.map.tiles[t] = Terrain.Grass;
-    if (free(x, y)) addBuilding(g, buildingIndex(id), player, x, y);
+    if (g.occupancy[t] === 0 && g.reserved[t] === 0 && (tile === Terrain.Forest || tile === Terrain.Stone || tile === Terrain.Iron)) g.map.tiles[t] = Terrain.Grass;
+    if (!free(x, y)) return false;
+    addBuilding(g, buildingIndex(id), player, x, y);
+    return true;
   };
+  // boki: tył (północ) i prawy (wschód) z kamienia, przód i lewy z bali; brama na każdym boku, z przodu na wprost bramy zamku
+  const keepB = g.buildings.find((b) => b.owner === player && b.type === 0);
+  const frontX = keepB ? Math.min(x1 - 1, Math.max(x0 + 1, keepB.x + KEEP_GATE[0])) : (x0 + x1) >> 1;
   const mx = (x0 + x1) >> 1, my = (y0 + y1) >> 1;
-  for (let x = x0; x <= x1; x++) for (const y of [y0, y1]) put(Math.abs(x - mx) <= 0 ? 'gate' : 'palisade', x, y);
-  for (let y = y0 + 1; y < y1; y++) for (const x of [x0, x1]) put(Math.abs(y - my) <= 0 ? 'gate' : 'palisade', x, y);
-  // wieże tuż za narożnikami, w środku
-  const tower = buildingIndex('watchtower');
-  for (const [x, y] of [[x0 + 1, y0 + 1], [x1 - 2, y0 + 1], [x0 + 1, y1 - 2], [x1 - 2, y1 - 2]] as const)
-    if (free(x, y) && free(x + 1, y) && free(x, y + 1) && free(x + 1, y + 1)) addBuilding(g, tower, player, x, y);
+  const sides: { kind: string; tiles: [number, number][]; gate: number }[] = [
+    { kind: 'stoneWall', tiles: Array.from({ length: x1 - x0 + 1 }, (_, i) => [x0 + i, y0] as [number, number]), gate: mx - x0 },
+    { kind: 'palisade', tiles: Array.from({ length: x1 - x0 + 1 }, (_, i) => [x0 + i, y1] as [number, number]), gate: frontX - x0 },
+    { kind: 'palisade', tiles: Array.from({ length: y1 - y0 - 1 }, (_, i) => [x0, y0 + 1 + i] as [number, number]), gate: my - y0 - 1 },
+    { kind: 'stoneWall', tiles: Array.from({ length: y1 - y0 - 1 }, (_, i) => [x1, y0 + 1 + i] as [number, number]), gate: my - y0 - 1 },
+  ];
+  for (const side of sides) {
+    // brama: na swoim miejscu, a gdy tam stoi budynek albo woda — na najbliższym wolnym polu tego boku
+    let gate = -1;
+    for (let d = 0; d < side.tiles.length && gate < 0; d++)
+      for (const k of [side.gate + d, side.gate - d]) {
+        const p = side.tiles[k];
+        if (!p || k === 0 || k === side.tiles.length - 1) continue;
+        if (put('gate', p[0], p[1])) { gate = k; break; }
+      }
+    side.tiles.forEach(([x, y], k) => { if (k !== gate) put(side.kind, x, y); });
+  }
+  // wieże tuż za narożnikami, w środku: przy kamiennym murze kamienne, w drewnianym rogu strażnica
+  const stoneT = buildingIndex('stoneTower'), woodT = buildingIndex('watchtower');
+  for (const [x, y, id] of [[x0 + 1, y0 + 1, stoneT], [x1 - 2, y0 + 1, stoneT], [x0 + 1, y1 - 2, woodT], [x1 - 2, y1 - 2, stoneT]] as const)
+    if (free(x, y) && free(x + 1, y) && free(x, y + 1) && free(x + 1, y + 1)) addBuilding(g, id, player, x, y);
+  // drabiny na kamienne mury od środka osady (inaczej nikt nie wejdzie na koronę)
+  for (const [x, y] of [[mx - 4, y0 + 1], [mx + 4, y0 + 1], [x1 - 1, my - 4], [x1 - 1, my + 4]] as const) if (free(x, y)) addBuilding(g, buildingIndex('ladder'), player, x, y);
   // po dwóch łuczników na każdej wieży
   const archer = UNITS.findIndex((u) => u.id === 'archer');
   for (const b of g.buildings) {
-    if (b.owner !== player || b.type !== tower) continue;
-    for (let k = 0; k < 2; k++) g.soldiers.push({ id: g.nextId++, owner: player, kind: archer, px: b.x * FP + FP, py: b.y * FP + FP, path: [], hp: UNITS[archer]!.hp, goal: -1, wait: 0, target: 0, cd: 0, post: b.id, up: true });
+    if (b.owner !== player || (b.type !== stoneT && b.type !== woodT)) continue;
+    for (let k = 0; k < (b.type === stoneT ? 3 : 2); k++) g.soldiers.push({ id: g.nextId++, owner: player, kind: archer, px: b.x * FP + FP, py: b.y * FP + FP, path: [], hp: UNITS[archer]!.hp, goal: -1, wait: 0, target: 0, cd: 0, post: b.id, up: true });
   }
   // dwudziestu włóczników przy twierdzy
   const keep = g.buildings.find((b) => b.owner === player && b.type === 0);

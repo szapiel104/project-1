@@ -216,6 +216,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     onStart: (st) => events.onOnlineStart(st),
     openForJoin: (id) => { inGame = false; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
     inMatch: () => events.isOnline(),
+    preview: (seedText, preset) => { wrap.classList.add('previewing'); events.onPreviewMap(seedText, preset, 2, false); },
+    previewEnd: () => { if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); } },
   });
   /** Pasek konta nad menu: herb, nick i przycisk konta albo zaproszenie do logowania */
   const account = el('div', 'menu-account');

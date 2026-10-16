@@ -289,6 +289,8 @@ const menu = createMenu(document.body, {
     showEnd(false);
   },
   onOnlineStart: (st) => {
+    // podgląd mapy z pokoju znika bez wracania do poprzedniej gry: od razu startuje mecz
+    previewJob++; previewCover.hidden = true; preview = null; renderer.endPreview();
     const cover = document.createElement('div');
     cover.id = 'loading';
     cover.innerHTML = loadingMarkup(t('load.map'));

@@ -34,6 +34,9 @@ interface Ui {
   /** Czy trwa mecz przez sieć (wtedy zaproszenia nie przeszkadzają) */
   inMatch(): boolean;
   onInviteSound?(): void;
+  /** Podgląd mapy za panelem pokoju (ta sama, którą wszyscy dostaną po starcie) */
+  preview(seed: string, preset: MapPresetId): void;
+  previewEnd(): void;
 }
 
 const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota', 'las', 'skala', 'rzeka', 'brod'];
@@ -353,6 +356,10 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     let level = 2;
     let slots: Slot[] = [];
     let started = false;
+    /** Mapa meczu: losuje ją tylko gospodarz, goście widzą ten sam podgląd */
+    let seed = room.seed;
+    let shown = '';
+    const showMap = (): void => { const key = `${seed}|${preset}`; if (key === shown) return; shown = key; ui.preview(seed, preset); };
     const fresh = (n: number, keep: Slot[] = []): Slot[] => {
       const out: Slot[] = Array.from({ length: n }, (_, i) => keep[i] ?? { kind: 'open' });
       // ludzie z obciętych miejsc przesiadają się na wolne
@@ -424,21 +431,26 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
 
     const publish = (): void => {
       if (!host) return;
-      link.send({ k: 'lobby', preset, level, slots });
+      link.send({ k: 'lobby', preset, level, slots, seed });
       const humans = slots.filter((s) => s.kind === 'human') as Extract<Slot, { kind: 'human' }>[];
       const guests = humans.filter((s) => s.id !== m.id).map((s) => s.nick);
-      void updateRoom(room.id, { preset, guest_nick: `${humans.length}/${slots.length}${guests.length ? ` · ${guests.join(', ')}` : ''}` });
+      void updateRoom(room.id, { preset, seed, guest_nick: `${humans.length}/${slots.length}${guests.length ? ` · ${guests.join(', ')}` : ''}` });
     };
     const paint = (): void => {
       head.replaceChildren();
       const title = el('div', 'net-roomtitle');
-      title.append(el('strong', '', room.name), el('span', '', `mapa ${room.seed}`));
+      title.append(el('strong', '', room.name), el('span', '', `mapa ${seed}`));
       head.append(title);
+      // gospodarz losuje mapę; wszyscy w pokoju widzą ją za panelem
+      if (host) head.append(button('Losuj inną mapę', () => {
+        seed = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
+        paint(); publish(); showMap();
+      }, 'link-btn net-reroll'));
       if (host) {
         const ms = el('select'); ms.setAttribute('aria-label', 'Tryb');
         for (const [id, label] of MODES) { const o = el('option', '', label); o.value = id; ms.append(o); }
         ms.value = preset;
-        ms.addEventListener('change', () => { preset = ms.value as MapPresetId; slots = fresh(seats(preset), slots); paint(); publish(); });
+        ms.addEventListener('change', () => { preset = ms.value as MapPresetId; slots = fresh(seats(preset), slots); paint(); publish(); showMap(); });
         const ls = el('select'); ls.setAttribute('aria-label', 'Poziom botów');
         LEVELS.forEach((n, i) => { const o = el('option', '', `Boty: ${n}`); o.value = String(i); ls.append(o); });
         ls.value = String(level);
@@ -497,7 +509,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     };
     let hostSeen = host;
     const off = link.on((msgIn: NetMsg) => {
-      if (msgIn.k === 'lobby' && !host) { preset = msgIn.preset as MapPresetId; level = msgIn.level; slots = msgIn.slots; hostSeen = true; paint(); }
+      if (msgIn.k === 'lobby' && !host) { preset = msgIn.preset as MapPresetId; level = msgIn.level; slots = msgIn.slots; if (typeof msgIn.seed === 'string' && msgIn.seed) seed = msgIn.seed.slice(0, 40); hostSeen = true; paint(); showMap(); }
       if (msgIn.k === 'hello' && host) sync();
       if (msgIn.k === 'seat' && host) seat(msgIn.id, msgIn.slot);
       if (msgIn.k === 'chat' && msgIn.who && typeof msgIn.text === 'string') addChat(msgIn.who, cleanChat(msgIn.text));
@@ -521,12 +533,13 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     };
     const doStart = (): void => {
       const final: Slot[] = slots.map((s) => (s.kind === 'open' ? { kind: 'bot' } : s));
-      link.send({ k: 'start', preset, level, seed: room.seed, slots: final });
+      link.send({ k: 'start', preset, level, seed, slots: final });
       void updateRoom(room.id, { status: 'playing' });
-      go(preset, level, room.seed, final);
+      go(preset, level, seed, final);
     };
     leaveRoom = () => {
       off(); offMembers(); offPresence();
+      ui.previewEnd();
       setStatus({ where: 'menu' });
       if (host) { link.send({ k: 'close' }); void deleteRoom(room.id); }
       link.close();
@@ -540,6 +553,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     }, 6000);
     paint();
     screen('Pokój', true, box, foot);
+    showMap();
   }
 
   /** Twarde wyjście (np. zamknięcie strony): zamyka pokój, jeśli w nim jesteśmy */

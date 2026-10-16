@@ -131,7 +131,7 @@ export async function getRoom(id: string): Promise<Room | string> {
 }
 
 /** Gospodarz zmienia opis pokoju: tryb, nazwę albo podsumowanie składu (guest_nick, np. „3/4 · Ola, Kuba”) */
-export async function updateRoom(id: string, patch: Partial<Pick<Room, 'preset' | 'name' | 'guest_nick' | 'status'>>): Promise<void> {
+export async function updateRoom(id: string, patch: Partial<Pick<Room, 'preset' | 'name' | 'guest_nick' | 'status' | 'seed'>>): Promise<void> {
   await supa.from('rooms').update(patch).eq('id', id);
 }
 
@@ -182,7 +182,7 @@ export interface Member { id: string; nick: string; avatar: number }
 /** Wiadomości kanału pokoju: skład lobby, prośby o miejsce, start, polecenia na turę i wyjście */
 export type NetMsg =
   | { k: 'turn'; turn: number; from: number; cmds: Command[]; hash?: number; hashTurn?: number }
-  | { k: 'lobby'; preset: string; level: number; slots: Slot[] }
+  | { k: 'lobby'; preset: string; level: number; slots: Slot[]; seed?: string }
   | { k: 'seat'; id: string; slot: number }
   | { k: 'hello'; who: Member }
   | { k: 'start'; preset: string; level: number; seed: string; slots: Slot[] }
