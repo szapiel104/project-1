@@ -43,17 +43,39 @@ function adopt(t: THREE.Texture, c: THREE.CompressedTexture): void {
   tt.needsUpdate = true;
 }
 
+/**
+ * Kopie tekstury (gra robi je dla innej skali, np. deski podłóg, kafle terenu) dzielą obraz z oryginałem; kopia
+ * zrobiona przed wczytaniem musi też dostać dane KTX2, inaczej karta próbuje wgrać ją jak zwykły obrazek.
+ */
+function trackClones(t: THREE.Texture, linked: THREE.Texture[], state: { c: THREE.CompressedTexture | null }): void {
+  const plain = THREE.Texture.prototype.clone;
+  t.clone = function (this: THREE.Texture): THREE.Texture {
+    const k = plain.call(this) as THREE.Texture;
+    if (state.c) adopt(k, state.c); else linked.push(k);
+    trackClones(k, linked, state);
+    return k;
+  } as typeof t.clone;
+}
+
 /** Tekstura z pliku `.jpg` — w praktyce z `.ktx2` obok niego, JPG tylko w zapasie. `done` po wczytaniu (albo błędzie). */
 export function loadTexture(url: string, done?: () => void): THREE.Texture {
   const t = new THREE.Texture();
+  const linked: THREE.Texture[] = [];
+  const state: { c: THREE.CompressedTexture | null } = { c: null };
+  trackClones(t, linked, state);
   const finish = (): void => done?.();
   const jpg = (): void => {
-    new THREE.ImageLoader().load(url, (img) => { t.image = img; t.needsUpdate = true; finish(); }, undefined, () => finish());
+    new THREE.ImageLoader().load(url, (img) => { t.image = img; t.needsUpdate = true; for (const k of linked) k.needsUpdate = true; finish(); }, undefined, () => finish());
   };
   if (typeof document === 'undefined') return t;
   void ready.then((l) => {
     if (!l) { jpg(); return; }
-    l.load(url.replace(/\.jpg(\?|$)/, '.ktx2$1'), (c) => { adopt(t, c as THREE.CompressedTexture); finish(); }, undefined, () => jpg());
+    l.load(url.replace(/\.jpg(\?|$)/, '.ktx2$1'), (c) => {
+      state.c = c as THREE.CompressedTexture;
+      adopt(t, state.c);
+      for (const k of linked) adopt(k, state.c);
+      finish();
+    }, undefined, () => jpg());
   });
   return t;
 }
