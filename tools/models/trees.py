@@ -128,17 +128,17 @@ def spruce():
         return (lean[0] * f * f, y, lean[2] * f * f)
 
     bark = lambda p: grey(0.62 + min(0.3, p[1] * 0.25))
-    trunk = tube([(*axis(y), 0.12 * (1 - y / H) ** 0.85 + 0.012) for y in [0, 0.15, 0.4, 0.8, 1.2, 1.6, 2.0, 2.3]], 8, bark)
+    trunk = tube([(*axis(y), 0.12 * (1 - y / H) ** 0.85 + 0.012) for y in [0, 0.2, 0.8, 1.5, 2.3]], 6, bark)
     # suche kikuty gałęzi pod koroną (stary świerk gubi dolne gałęzie)
-    for k in range(6):
-        y = 0.38 + k * 0.08
+    for k in range(3):
+        y = 0.42 + k * 0.14
         a = k * 2.4 + 0.3
         base = axis(y)
         d = (math.cos(a), -0.15, math.sin(a))
         L = 0.1 + rnd() * 0.08
         trunk.add(tube([(*addv(base, mul(d, 0.05)), 0.012), (*addv(base, mul(d, 0.05 + L)), 0.004)], 4, lambda p: grey(0.5)))
     crown = Geo()
-    TIERS = 11
+    TIERS = 9
     for t in range(TIERS):
         f = t / (TIERS - 1)
         y = C0 + f * (H - 0.3 - C0)
@@ -189,7 +189,7 @@ def broadleaf():
     rnd = Rnd(7)
     CY, RX, RY = 1.55, 0.68, 0.56   # środek i promienie korony
     bark = lambda p: grey(0.6 + min(0.3, p[1] * 0.22))
-    wood = tube([(0, 0, 0, 0.15), (0.0, 0.08, 0.0, 0.13), (0.02, 0.5, 0.01, 0.11), (0.03, 0.95, -0.01, 0.095), (0.0, 1.25, 0.0, 0.07)], 9, bark)
+    wood = tube([(0, 0, 0, 0.15), (0.0, 0.08, 0.0, 0.13), (0.02, 0.5, 0.01, 0.11), (0.03, 0.95, -0.01, 0.095), (0.0, 1.25, 0.0, 0.07)], 7, bark)
     ends = []
     for k in range(4):
         a = k * 2 * math.pi / 4 + 0.6 + (rnd() - 0.5) * 0.5
@@ -198,12 +198,12 @@ def broadleaf():
         p0 = (0.03, y0, 0)
         p1 = addv(p0, addv(mul(d, 0.22), (0, 0.28, 0)))
         p2 = addv(p0, addv(mul(d, 0.45), (0, 0.62 + rnd() * 0.12, 0)))
-        wood.add(tube([(*p0, 0.06), (*p1, 0.045), (*p2, 0.022)], 6, bark))
+        wood.add(tube([(*p0, 0.06), (*p1, 0.045), (*p2, 0.022)], 5, bark))
         ends.append(p2)
         # gałązka boczna
         side = (-d[2], 0, d[0])
         q2 = addv(p1, addv(mul(side, 0.25 * (1 if k % 2 else -1)), (0, 0.3, 0)))
-        wood.add(tube([(*p1, 0.025), (*q2, 0.012)], 5, bark))
+        wood.add(tube([(*p1, 0.025), (*q2, 0.012)], 3, bark))
         ends.append(q2)
     crown = Geo()
     N = 52
