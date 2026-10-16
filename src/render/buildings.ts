@@ -12,6 +12,7 @@ import GRANARY_MODEL from './models/granary.json';
 import ARMORY_MODEL from './models/armory.json';
 import BAKERY_MODEL from './models/bakery.json';
 import MILL_MODEL from './models/mill.json';
+import BARRACKS_MODEL from './models/barracks.json';
 import BREWERY_MODEL from './models/brewery.json';
 import GATE_MODEL from './models/gate.json';
 import STONE_TOWER_MODEL from './models/stonetower.json';
@@ -1316,44 +1317,9 @@ const BUILDERS: Record<string, Builder> = {
     pennant(g, flag, -0.62, 0.95, -0.6);
   },
   barracks(g, _team, flag) {
-    // Koszary: długi dom z kamienną podmurówką i strzechą, plac ćwiczeń z kukłami, stojak z bronią, ławka i sztandar
-    box(g, M.soil, 2.9, 0.03, 2.9);
-    box(g, M.stoneDark, 2.6, 0.3, 1.2, 0, 0, -0.75);
-    box(g, M.wood, 2.5, 0.65, 1.1, 0, 0.3, -0.75);
-    for (const x of [-1.2, -0.4, 0.4, 1.2]) box(g, M.woodDark, 0.08, 0.66, 0.08, x, 0.3, -0.19);
-    box(g, M.woodDark, 2.55, 0.07, 0.08, 0, 0.92, -0.19);
-    box(g, M.woodDark, 0.34, 0.5, 0.04, 0, 0.3, -0.18);
-    for (const x of [-0.8, 0.8]) box(g, M.window, 0.26, 0.22, 0.04, x, 0.55, -0.18);
-    layeredRoof(g, M.thatch, 2.8, 0.75, 1.5, 0.95, 0, -0.75);
-    // plac: dwie kukły ze słomy na palach i stojak z włóczniami
-    for (const x of [-0.9, -0.3]) {
-      box(g, M.woodDark, 0.05, 0.7, 0.05, x, 0, 0.6);
-      box(g, M.woodDark, 0.4, 0.04, 0.04, x, 0.5, 0.6);
-      const dummy = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.13, 0.34, 8), M.hay);
-      dummy.position.set(x, 0.5, 0.6);
-      g.add(dummy);
-      const head = new THREE.Mesh(new THREE.IcosahedronGeometry(0.08, 1), M.hay);
-      head.position.set(x, 0.78, 0.6);
-      g.add(head);
-    }
-    box(g, M.woodDark, 0.06, 0.55, 0.06, 0.55, 0, 0.75);
-    box(g, M.woodDark, 0.06, 0.55, 0.06, 1.15, 0, 0.75);
-    box(g, M.woodDark, 0.66, 0.05, 0.06, 0.85, 0.5, 0.75);
-    for (let k = 0; k < 6; k++) {
-      const sp = new THREE.Group();
-      sp.position.set(0.6 + k * 0.1, 0, 0.73);
-      sp.rotation.z = -0.1;
-      box(sp, M.plank, 0.025, 1.0, 0.025, 0, 0, 0);
-      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.12, 4), M.iron);
-      tip.position.y = 1.05;
-      sp.add(tip);
-      g.add(sp);
-    }
-    box(g, M.wood, 0.9, 0.05, 0.22, 0.6, 0.22, 0.05);
-    for (const x of [0.25, 0.95]) box(g, M.woodDark, 0.05, 0.22, 0.2, x, 0, 0.05);
-    // sztandar w barwach drużyny przy wejściu
-    box(g, M.woodDark, 0.06, 1.5, 0.06, -1.3, 0, 0.2);
-    box(g, flag, 0.04, 0.6, 0.36, -1.3, 0.85, 0.4);
+    // koszary z Blendera (tools/models/barracks.py): z tyłu dom straży (szachulec, strzecha, komin), z przodu plac ćwiczeń
+    // z kukłami, tarczą łuczniczą, stojakiem z włóczniami, korytem i sztandarem; w domu prycze, stół, palenisko, tarcze
+    blenderModel(g, BARRACKS_MODEL as unknown as BlenderBuilding, flag);
   },
   ladder(g) {
     // na mapie drabinę rysuje scena przy murze (syncWalls); tu tylko podgląd: drabina oparta o mur od strony -z
