@@ -427,12 +427,12 @@ export class GameRenderer {
     if (!this.family) this.family = new Family(this.scene);
     this.family.view(this.cam.camera.position);
     this.family.sync(g, {
-      time: this.time, dt, calm: this.calm, height: (x, y) => this.standY(view, x, y), fig: FIG,
+      time: this.time, dt, calm: this.calm, height: (x, y) => this.standY(view, x, y, -2), fig: FIG,
       cam: { x: this.cam.camera.position.x + g.map.width / 2, y: this.cam.camera.position.z + g.map.height / 2, h: this.cam.camera.position.y },
       team: (o) => TEAM_COLORS[g.players[o]?.team ?? 0] ?? 0x888888,
     });
     this.village.sync(g, {
-      time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y),
+      time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y, -2),
       cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2, h: cam.position.y },
       sound: (kind, x, y) => {
         const wx = x - width / 2, wz = y - height / 2, d = Math.hypot(cam.position.x - wx, cam.position.y - view.heightAt(x, y), cam.position.z - wz);
@@ -4037,7 +4037,7 @@ export class GameRenderer {
         px = tp[0]; pz = tp[1];
       } else this.towerPose.delete(s.id);
       if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.3);
-      const y = this.standY(view, px, pz) + lift;
+      const y = this.standY(view, px, pz, s.up ? -1 : (s.py >> 8) * width + (s.px >> 8)) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
       const pc = this.lastCd.get(s.id) ?? 0;
@@ -4399,7 +4399,8 @@ export class GameRenderer {
     return null;
   }
   /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */
-  private standY(view: TerrainView, x: number, y: number): number {
+  /** sim: pole człowieka w symulacji (o wejściu na mur decyduje ono, a nie wygładzona pozycja obrazka); -1 = z pozycji, -2 = nigdy na mur */
+  private standY(view: TerrainView, x: number, y: number, sim = -1): number {
     const k = this.keepAt(x, y);
     let h = view.heightAt(x, y);
     // na drodze stopy stoją na nawierzchni, nie w niej: ścieżka, bruk i dyle są trochę nad ziemią
@@ -4414,9 +4415,12 @@ export class GameRenderer {
       const a = top(x0, y0) + (top(x0 + 1, y0) - top(x0, y0)) * ax, b = top(x0, y0 + 1) + (top(x0 + 1, y0 + 1) - top(x0, y0 + 1)) * ax;
       h += a + (b - a) * ay;
     }
-    if (!k && g) {
+    // sim = -2: dzieci, żony i zwierzęta nigdy nie wchodzą na mur (stoją u jego stóp)
+    if (!k && g && sim !== -2) {
       // korona muru kamiennego: chodzi się wysoko; u stóp drabiny wspina się na wysokość muru
-      const W = g.map.width, tx = Math.floor(x), ty = Math.floor(y), t = ty * W + tx;
+      // pole z symulacji (gdy znane): wygładzona i rozsuwana w tłumie pozycja obrazka potrafi na chwilę wejść na pole muru
+      // u jego stóp — wtedy człowiek podskakiwał na koronę i spadał z powrotem
+      const W = g.map.width, t = sim >= 0 ? sim : Math.floor(y) * W + Math.floor(x), tx = t % W, ty = (t - tx) / W;
       if (tx >= 0 && ty >= 0 && tx < W && ty < g.map.height) {
         if ((g.walls[t]! & 16) && g.gates[t]) return h + STONE_WALL_TOP;
         const lf = this.ladderFeet.get(t);
@@ -4641,7 +4645,7 @@ export class GameRenderer {
       const stride = walking ? st.phase : 0;
       if (walking) this.footstep(g, u.id, cv.sx, cv.sy, stride, 0.22);
       let swing = walking ? Math.sin(stride) * 0.55 : 0;
-      t.position.set(cv.sx - width / 2, this.standY(view, cv.sx, cv.sy) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
+      t.position.set(cv.sx - width / 2, this.standY(view, cv.sx, cv.sy, (u.py >> 8) * width + (u.px >> 8)) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
       t.rotation.set(0, heading, 0);
       if (walking && tipsy && this.drank.has(u.id)) {
         // zatacza się: znosi go na boki (prostopadle do drogi), kiwa się i kręci głową
