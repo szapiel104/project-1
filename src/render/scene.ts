@@ -424,7 +424,9 @@ export class GameRenderer {
   private rainLines: THREE.LineSegments | null = null;
   private sadFaces: THREE.Sprite[] = [];
   private lamps: THREE.PointLight[] = [];
-  private lampSpots: { v: THREE.Vector3; k: number }[] = [];
+  /** Stan lamp z puli: do jakiego źródła przypięta (klucz), docelowa i bieżąca jasność — lampy przechodzą płynnie,
+   *  zamiast skakać, gdy kamera przesuwa się nad osadą i zmienia się zestaw najbliższych pochodni */
+  private lampState: { key: string; k: number; target: number; cur: number }[] = [];
   /** Czubki pochodni niesionych przez ludzi i żołnierzy w tej klatce (płomienie rysuje system ognia) */
   private handFlames: THREE.Vector3[] = [];
   private handFlameN = 0;
@@ -690,6 +692,10 @@ export class GameRenderer {
       this.scene.add(lamp);
       this.lamps.push(lamp);
     }
+    // światło sal przy spacerze stoi w scenie od początku (wygaszone): nowe światło w trakcie gry zmienia ich liczbę,
+    // a wtedy three przebudowuje shadery wszystkich materiałów — wejście w spacer zamrażało grę na kilka sekund
+    this.roomLight = new THREE.PointLight(0xffb36b, 0, 5, 1.2);
+    this.scene.add(this.roomLight);
     const hand = mergeGeometries([
       tint(new THREE.CylinderGeometry(0.018, 0.022, 0.3, 5).translate(0.17, 0.5, 0.1), 0x4a3320),
       tint(new THREE.CylinderGeometry(0.03, 0.022, 0.07, 6).translate(0.17, 0.67, 0.1), 0x2a1c12),
@@ -1532,7 +1538,7 @@ export class GameRenderer {
   private lodTick = 0;
   private torchOn = false;
   /** Ciepłe światło kominków i koszy z ogniem w salach zamku (włączone, gdy spacerowicz jest pod dachem) */
-  private roomLight: THREE.PointLight | null = null;
+  private roomLight!: THREE.PointLight;
   private toggleHandTorch(): void {
     if (!this.handTorch) {
       const g = new THREE.Group();
@@ -1605,7 +1611,6 @@ export class GameRenderer {
           if (!mat || Array.isArray(mat) || mat.transparent || (mat as THREE.MeshBasicMaterial).isMeshBasicMaterial) return;
           const geo = m.geometry as THREE.BufferGeometry & { boundsTree?: MeshBVH };
           if (!geo.boundingBox) geo.computeBoundingBox();
-          if (!geo.boundsTree) geo.boundsTree = new MeshBVH(geo);
           list!.push({ mesh: m, box: geo.boundingBox!.clone().applyMatrix4(m.matrixWorld), root: grp });
         });
         this.walkCache.set(grp, list);
@@ -1619,6 +1624,9 @@ export class GameRenderer {
         if (!vis) continue;
         // ruchome części (wrota, krata): ramka i macierz z bieżącego położenia
         if (h.mesh.parent !== h.root) { h.mesh.updateWorldMatrix(true, false); h.box.copy(h.mesh.geometry.boundingBox!).applyMatrix4(h.mesh.matrixWorld); }
+        // drzewo BVH dopiero dla siatki, przy której naprawdę stoimy (wcześniej od razu dla wszystkich budynków w promieniu 9 pól)
+        const geo = h.mesh.geometry as THREE.BufferGeometry & { boundsTree?: MeshBVH };
+        if (!geo.boundsTree) geo.boundsTree = new MeshBVH(geo);
         this.walkHits.push(h);
       }
     }
@@ -1756,7 +1764,6 @@ export class GameRenderer {
     this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
     this.walkNear = wbk ? wbk[0] : kp ? kp[0] : 0; // budynek pod nogami ma pierwszeństwo przed zamkiem obok
     cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + (w.jy ?? 0) + (w.jy ? 0 : Math.sin(w.bob) * 0.02), w.z - height / 2);
-    if (!this.roomLight) { this.roomLight = new THREE.PointLight(0xffb36b, 0, 5, 1.2); this.scene.add(this.roomLight); }
     // izby w basztach (narożne i w połowie boków) też mają ogień
     const tdx = kp ? Math.floor(kp[1] + KEEP_HALF) : -1, tdy = kp ? Math.floor(kp[2] + KEEP_HALF) : -1;
     const inTower = !!kp && keepTile(tdx, tdy) === '=' && (((tdx === 0 || tdx === KEEP_SIZE - 1) && (tdy === 0 || tdy === KEEP_SIZE - 1 || tdy === KEEP_SIZE >> 1))
@@ -3215,37 +3222,66 @@ export class GameRenderer {
     // pochodnia w ręce przy spacerze świeci zawsze, gdy jest zapalona (pierwsza lampa z puli)
     const own = this.walk && this.torchOn ? this.lamps[0]! : null;
     if (own) { this.handTip.getWorldPosition(own.position); own.intensity = (this.night > 0.15 ? 7 : 3) * flicker; }
-    if (!on) { for (const lamp of this.lamps) if (lamp !== own) lamp.intensity = 0; return; }
+    // nocą lampy rozjaśniają się, w dzień gasną — płynnie, bez przeskoku
+    const dt = Math.min(0.1, this.frameDt || 0.016);
+    const ease = Math.min(1, dt * 3.5);
+    if (this.lampState.length !== this.lamps.length) this.lampState = this.lamps.map(() => ({ key: '', k: 0, target: 0, cur: 0 }));
     // co kilka klatek wybieramy źródła światła najbliższe środkowi ekranu
-    if (this.frameNo++ % 6 === 0) {
+    if (on && this.frameNo++ % 6 === 0) {
       const f = this.focusPoint;
-      const spots: { v: THREE.Vector3; d: number; k: number }[] = [];
+      const spots: { key: string; v: THREE.Vector3; d: number; k: number }[] = [];
       for (const [id, mesh] of this.buildingMeshes) {
         const torch = mesh.getObjectByName('torch');
         if (!torch || !lit.has(id)) continue;
         const v = torch.getWorldPosition(new THREE.Vector3());
         v.y += 1.25;
-        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2, k: 1 });
+        spots.push({ key: 'b' + id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2, k: 1 });
       }
       const { width, height } = g.map;
       for (const u of g.units) {
         if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
         const v = new THREE.Vector3(u.px / FP - width / 2, (this.view?.heightAt(u.px / FP, u.py / FP) ?? 0) + 0.8, u.py / FP - height / 2);
-        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.3 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
+        spots.push({ key: 'u' + u.id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.3 }); // ręczna pochodnia świeci dużo słabiej niż ta na słupie
       }
-      for (const s of g.soldiers) {
-        if (s.id % 5 !== 0 || s.owner !== this.me) continue;
-        const v = new THREE.Vector3(s.px / FP - width / 2, (this.view?.heightAt(s.px / FP, s.py / FP) ?? 0) + 0.8, s.py / FP - height / 2);
-        spots.push({ v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.35 });
+      for (const sd of g.soldiers) {
+        if (sd.id % 5 !== 0 || sd.owner !== this.me) continue;
+        const v = new THREE.Vector3(sd.px / FP - width / 2, (this.view?.heightAt(sd.px / FP, sd.py / FP) ?? 0) + 0.8, sd.py / FP - height / 2);
+        spots.push({ key: 's' + sd.id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 4, k: 0.35 });
       }
       spots.sort((a, b) => a.d - b.d);
-      this.lampSpots = spots.slice(0, this.lamps.length);
+      const free = this.lamps.length - (own ? 1 : 0);
+      const chosen = spots.slice(0, free);
+      // miękki brzeg: najdalsze z wybranych świecą słabiej, więc gdy wypadają z puli, nie gasną nagle
+      const edge = spots.length > free ? Math.sqrt(spots[free]!.d) : Infinity;
+      const weight = (d: number): number => (edge === Infinity ? 1 : Math.max(0, Math.min(1, (edge - Math.sqrt(d)) / (edge * 0.35))));
+      const want = new Map(chosen.map((sp) => [sp.key, sp]));
+      // lampy już przypięte do wybranych źródeł zostają przy nich
+      const taken = new Set<string>();
+      this.lamps.forEach((lamp, i) => {
+        if (lamp === own) return;
+        const st = this.lampState[i]!;
+        const sp = want.get(st.key);
+        if (sp) { taken.add(st.key); st.k = sp.k; st.target = weight(sp.d); lamp.position.copy(sp.v); }
+        else st.target = 0; // źródło wypadło z puli: lampa wygasa, zanim przejdzie gdzie indziej
+      });
+      // nowe źródła dostają lampy, które już zgasły (najciemniejsze najpierw)
+      const idle = this.lamps.map((_, i) => i).filter((i) => this.lamps[i] !== own && !want.has(this.lampState[i]!.key) && this.lampState[i]!.cur < 0.06)
+        .sort((a, b) => this.lampState[a]!.cur - this.lampState[b]!.cur);
+      for (const sp of chosen) {
+        if (taken.has(sp.key)) continue;
+        const i = idle.shift();
+        if (i === undefined) break;
+        const st = this.lampState[i]!;
+        st.key = sp.key; st.k = sp.k; st.target = weight(sp.d); st.cur = 0;
+        this.lamps[i]!.position.copy(sp.v);
+      }
     }
     this.lamps.forEach((lamp, i) => {
       if (lamp === own) return;
-      const spot = this.lampSpots[own ? i - 1 : i];
-      lamp.intensity = spot ? spot.k * this.night * 16 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker : 0;
-      if (spot) lamp.position.copy(spot.v);
+      const st = this.lampState[i]!;
+      st.cur += ((on ? st.target : 0) - st.cur) * ease;
+      if (st.cur < 0.002) { st.cur = 0; if (!on) st.key = ''; }
+      lamp.intensity = st.cur * st.k * this.night * 16 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
     });
   }
 
