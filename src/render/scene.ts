@@ -3951,17 +3951,21 @@ export class GameRenderer {
       const c = tightMid.get(a.grp) ?? [0, 0, 0]; c[0] += a.px; c[1] += a.py; c[2]++; tightMid.set(a.grp, c);
       if (a.goal >= 0) { const q = tightGoal.get(a.grp) ?? [0, 0, 0]; q[0] += a.goal % width + 0.5; q[1] += Math.floor(a.goal / width) + 0.5; q[2]++; tightGoal.set(a.grp, q); }
     }
+    // ścisk to tylko drobne przysunięcie (najwyżej 0,35 pola) i tylko do bliskiego środka: oddział rozdzielony przez zamek
+    // albo mur ma środek w środku zamku — wtedy obrazki „przelatywały” przez mury, choć w symulacji nikt tam nie szedł
+    const near = (c: [number, number, number], a: { px: number; py: number }): boolean => Math.max(Math.abs(c[0] / c[2] - a.px), Math.abs(c[1] / c[2] - a.py)) < 3 * FP;
+    const clampPull = (v: [number, number]): [number, number] => { const L = Math.hypot(v[0], v[1]); return L > 0.35 ? [v[0] / L * 0.35, v[1] / L * 0.35] : v; };
     for (const a of g.soldiers) {
       const c = a.tight && a.grp ? tightMid.get(a.grp) : undefined;
-      if (c && c[2] > 1) pull.set(a.id, [(c[0] / c[2] - a.px) / FP * TIGHT, (c[1] / c[2] - a.py) / FP * TIGHT]);
+      if (c && c[2] > 1 && near(c, a)) pull.set(a.id, clampPull([(c[0] / c[2] - a.px) / FP * TIGHT, (c[1] / c[2] - a.py) / FP * TIGHT]));
     }
     for (const a of still) {
       if (pull.has(a.id)) continue;
       const c = a.grp ? mid.get(a.grp) : undefined;
-      if (c && c[2] > 1) { const k = 0.3; pull.set(a.id, [(c[0] / c[2] - a.px) / FP * k, (c[1] / c[2] - a.py) / FP * k]); continue; }
+      if (c && c[2] > 1 && near(c, a)) { const k = 0.3; pull.set(a.id, clampPull([(c[0] / c[2] - a.px) / FP * k, (c[1] / c[2] - a.py) / FP * k])); continue; }
       let sx = 0, sy = 0, k = 0;
       for (const b of still) if (b.owner === a.owner && Math.abs(b.px - a.px) < 3 * FP && Math.abs(b.py - a.py) < 3 * FP) { sx += b.px; sy += b.py; k++; }
-      if (k > 1) pull.set(a.id, [(sx / k - a.px) / FP * 0.45, (sy / k - a.py) / FP * 0.45]);
+      if (k > 1) pull.set(a.id, clampPull([(sx / k - a.px) / FP * 0.45, (sy / k - a.py) / FP * 0.45]));
     }
     const torchesOn = this.night > 0.15;
     const m = new THREE.Matrix4();
