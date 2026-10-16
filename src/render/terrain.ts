@@ -675,13 +675,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: pattern('needles') });
   // wiatr w koronach: czubek drzewa kołysze się wolno, każde drzewo w swojej fazie (podmuchy przechodzą przez las falą);
   // pień stoi, więc ruch rośnie z wysokością. Ten sam zegar co trawa.
-  const windCrown = (m: THREE.Material, amp: number, key: string): void => {
+  const windCrown = (m: THREE.Material, amp: number, key: string, base = 0.25): void => {
     m.onBeforeCompile = (sh) => {
       sh.uniforms.windTime = windTime;
       sh.vertexShader = 'uniform float windTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
         #ifdef USE_INSTANCING
           vec2 wp = instanceMatrix[3].xz;
-          float lift = max(position.y - 0.25, 0.0);
+          float lift = max(position.y - ${base.toFixed(2)}, 0.0);
           float wave = sin(windTime * 0.9 + wp.x * 0.11 + wp.y * 0.07) * 0.7 + sin(windTime * 2.3 + wp.x * 0.6 + wp.y * 0.4) * 0.3;
           transformed.x += wave * ${amp.toFixed(3)} * lift * lift;
           transformed.z += wave * ${(amp * 0.5).toFixed(3)} * lift * lift;
@@ -833,7 +833,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     color: 0xffffff, vertexColors: true, flatShading: flat, roughness: 0.95, metalness: 0, map: pattern(tex), bumpMap: bump(tex), bumpScale: 1.2, normalMap: normal(tex) });
   const rockMat = plantMat('rock', true), rockFar = models.rockFar();
   label = 'krzewy';
-  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, plantMat('leaves', false), { farGeo: bushFar, shadowGeo: bushFar }), null, false);
+  const bushMat = plantMat('leaves', false);
+  windCrown(bushMat, 0.22, 'wind-bush', 0.04);   // krzaki też drżą na wietrze (nisko przy ziemi prawie nic, u góry najwięcej)
+  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, bushMat, { farGeo: bushFar, shadowGeo: bushFar }), null, false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
