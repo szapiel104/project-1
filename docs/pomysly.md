@@ -165,7 +165,7 @@ Czeka:
 Wydajność (więcej FPS):
 - Trawa i drzewa liściaste z daleka uproszczone albo jako obrazki (dziś ok. 750 tys. trójkątów w widoku osady)
 - Domy z Blendera (ok. 19 tys. trójkątów każdy): prostsza wersja z daleka
-- Las rysowany w setkach małych kawałków (ok. 1180 wywołań rysowania na klatkę): łączenie w większe paczki (BatchedMesh)
+- Zrobione 16.10: roślinność we wspólnych pulach na rodzaj (widok osady 522 → 409 wywołań rysowania, karta 7,5 → 5,4 ms). Dalej: budynki we wspólnym rysowaniu (ok. 160 siatek w kadrze)
 Wojsko — wygoda dowodzenia:
 - Kolejka rozkazów: Shift + prawy klik dodaje kolejne punkty marszu
 - Patrol tam i z powrotem (np. wzdłuż palisady)
