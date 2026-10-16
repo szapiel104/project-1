@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.23.6 — skompresowane tekstury i teren 2K (2026-10-16)
+
+- Wszystkie zdjęciowe tekstury (teren, mury, deski, strzechy, ubrania, żelazo) wczytywane jako KTX2 (Basis Universal): karta graficzna trzyma je skompresowane (BC1/BC7) — ok. 6–8× mniej pamięci karty niż JPG rozpakowany do pikseli, a przeglądarka nie dekoduje dużych obrazków w trakcie gry (mniej zacięć, gdy nowa tekstura wchodzi w kadr). Pliki do pobrania mniejsze: 17 MB zamiast 24 MB. Gdy KTX2 się nie wczyta, gra bierze zwykły JPG
+- Teren w 2K (2048 px zamiast 1024): obie trawy, ściółka leśna, wydeptana ziemia, skała na zboczach i turnie — z prawdziwymi mapami normalnych ze skanów (wcześniej liczonymi z jasności zdjęcia)
+- Narzędzie `tools/textures/ktx2.mjs` (ktx2-encoder): `node tools/textures/ktx2.mjs [pliki.jpg]` — po dodaniu albo podmianie tekstury trzeba je uruchomić, żeby powstał plik .ktx2 obok .jpg
+
 ## 0.23.5 — tekstury postaci (2026-10-16)
 
 - Postacie z bliska w prawdziwych teksturach ze zdjęć (ambientCG, CC0) z mapami normalnych w 1024 px: filcowana wełna na koszulach, portkach i kaftanach, kolczuga z widocznymi ogniwami (pierś i poły strażnika, rękawy, kaptur i pelerynka włócznika), kute żelazo z rdzą na naramiennikach, płytach, mieczach i narzędziach

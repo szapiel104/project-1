@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { initKtx } from './ktx';
 import { MeshBVH } from 'three-mesh-bvh';
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
@@ -639,6 +640,7 @@ export class GameRenderer {
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    initKtx(this.renderer);
     this.renderer.localClippingEnabled = true; // budynki w budowie: model przycięty na wysokości postępu
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.scene.background = new THREE.Color(HAZE);

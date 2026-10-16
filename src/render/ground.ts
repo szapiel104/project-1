@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
+import { loadTexture } from './ktx';
 
 /**
  * Podłoże jak w nowych silnikach: kilka zdjęciowych warstw (dwie trawy, łąka z ziemią i kamykami, ściółka leśna,
@@ -20,7 +21,7 @@ const cache = new Map<string, THREE.Texture>();
 function tex(name: string, color: boolean): THREE.Texture {
   let t = cache.get(name);
   if (t) return t;
-  t = loader!.load(base() + name + '.jpg?v=4'); // numer wersji: przeglądarka nie trzyma starego zdjęcia po podmianie
+  t = loadTexture(base() + name + '.jpg?v=5'); // numer wersji: przeglądarka nie trzyma starego zdjęcia po podmianie; w praktyce .ktx2 (ktx.ts)
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 16;
   if (color) t.colorSpace = THREE.SRGBColorSpace;

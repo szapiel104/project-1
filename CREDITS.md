@@ -34,6 +34,7 @@ Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://g
 - Mapy normalnych `*_n.jpg` policzone z jasności zdjęć.
 - Rock 026 → `cliff.jpg` (poszarpane turnie w górach)
 - Ground 079 S → `sand.jpg` (plaże nad jeziorami i morzem)
+- W 2K (od 16.10.2026): Grass 001, Grass 004, Ground 015, Ground 044, Rock 022, Rock 026 wraz z mapami normalnych — z paczki cc0-texture-pack (te same tekstury ambientCG przekonwertowane do s&box) dostarczonej przez Michała, zdekodowane z powrotem do JPG; łąka, żwir i piasek dalej w 1K
 
 ## Muzyka (CC0)
 RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old Tower Inn”, „Medieval Battle”; nihilocrat — „Peasant Theme”; Tozan — „Medievals 5”. Wszystkie z OpenGameArt na licencji CC0 (szczegóły w docs/zasoby.md). Dziękujemy autorom.

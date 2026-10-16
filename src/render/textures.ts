@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { loadTexture } from './ktx';
 import { TEST } from '../testmode';
 
 export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic' | 'slate' | 'burlap' | 'wool' | 'iron' | 'mail';
@@ -385,7 +386,7 @@ const loading: Promise<void>[] = [];
 const loadPhoto = (url: string): THREE.Texture => {
   let done = (): void => {};
   loading.push(new Promise<void>((r) => { done = r; }));
-  return new THREE.TextureLoader().load(url, () => done(), undefined, () => done());
+  return loadTexture(url, () => done());
 };
 /** Obietnica spełniona, gdy wszystkie dotąd zamówione tekstury zdjęciowe są już wczytane */
 export const texturesReady = (): Promise<void> => Promise.all(loading).then(() => undefined);
@@ -497,8 +498,10 @@ export function grayPattern(kind: Kind, max = 512): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
   const have = grays.get(kind);
   if (have) return have;
-  const src = pattern(kind);
-  if (!src) return null;
+  // zdjęcie wczytujemy osobno jako zwykły obraz: tekstura z pattern() bywa skompresowana (KTX2) i nie da się jej narysować
+  const photo = PHOTO[kind] && !TEST ? new THREE.ImageLoader().load(`${photoBase()}${PHOTO[kind]}.jpg`) : null;
+  const src = photo ? null : pattern(kind);
+  if (!photo && !src) return null;
   const canvas = document.createElement('canvas');
   canvas.width = canvas.height = 4;
   const ctx = canvas.getContext('2d', { willReadFrequently: true });
@@ -509,7 +512,8 @@ export function grayPattern(kind: Kind, max = 512): THREE.Texture | null {
   out.anisotropy = 8;
   grays.set(kind, out);
   const fill = (): boolean => {
-    const img = src.image as (CanvasImageSource & { width: number; height: number }) | undefined;
+    const img = (photo ?? src!.image) as (CanvasImageSource & { width: number; height: number; complete?: boolean }) | undefined;
+    if (photo && !photo.complete) return false;
     if (!ctx || !img || !img.width) return false;
     const n = Math.min(max, img.width);
     canvas.width = canvas.height = n;

@@ -81,14 +81,13 @@ Dalej (zmierzone 14.10 w Chrome, widok osady: ok. 2,7 mln trójkątów w scenie,
 - Kępy trawy (28 trójkątów) i korony liściastych (200) to razem ok. 750 tys. trójkątów — rzadsze z daleka albo obrazki
 - Ok. 1180 wywołań rysowania: kawałki lasu po kilkanaście rodzajów na kawałek, w cieniu drugi raz — BatchedMesh albo większe kawałki
 
-- Zrobione 16.10: pniaki tylko po ścięciu, zastępcze bryły cienia roślinności (warstwa „tylko cień”, src/render/shadowlayer.ts), lżejsze kwiaty, ładunki tylko u niosących. Dalej: narzędzia w rękach (siekiery, kilofy, pochodnie, wiadra) też mają instancję na każdego człowieka z zerową skalą
+- Zrobione 16.10: pniaki tylko po ścięciu, zastępcze bryły cienia roślinności (warstwa „tylko cień”, src/render/shadowlayer.ts), lżejsze kwiaty, ładunki tylko u niosących.
 - AO w połowie rozdzielczości na jakościach do „Wysokiej”
 
 Większe rzeczy na później:
 - Wspólny bufor instancji dla wszystkich kawałków jednego rodzaju (BatchedMesh) — mniej wywołań rysowania
 - Cienie kaskadowe albo cień tylko z budynków i drzew blisko kamery; statyczna mapa cieni dla gór i puszczy
-- Tekstury w formacie KTX2/Basis (kompresja na karcie graficznej: 4–6× mniej pamięci, szybsze wczytanie) i tablica tekstur zamiast 11 osobnych próbek w shaderze terenu
-- Prawdziwy 2K/4K dla terenu: paczka ambientCG w 2K/4K (pobrać ręcznie albo wgrać do repo przez Michała — z kontenera serwisy z teksturami są zablokowane)
+- Zrobione 16.10: tekstury KTX2/Basis (src/render/ktx.ts, tools/textures/ktx2.mjs) i teren w 2K. Dalej: tablica tekstur zamiast 11 osobnych próbek w shaderze terenu; łąka, żwir i piasek w 2K (brak w paczkach)
 - Symulacja w Web Workerze (rysowanie nie czeka na logikę), szczególnie przy grze 4 na 4
 
 ## Wygląd — do zrobienia (13.10.2026)
