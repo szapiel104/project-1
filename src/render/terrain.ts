@@ -309,7 +309,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const ground = new THREE.Mesh(geo, PHOTO_GROUND ? groundMaterial() : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7, normalMap: normal('grass'), normalScale: new THREE.Vector2(0.8, 0.8) }));
   (ground.material as THREE.Material).userData.season = 'ground'; // śnieg ze śladami ludzi
   ground.receiveShadow = true;
-  ground.castShadow = true; // góry i pagórki też rzucają cień
+  // plansza tylko odbiera cień: pagórki są łagodne i cienia na siebie praktycznie nie rzucają, a rysowanie całej
+  // planszy (74–148 tys. trójkątów) do mapy cieni przy każdym odświeżeniu było jednym z większych kosztów karty;
+  // góry za mapą to osobna siatka i nie są tu ruszane
+  ground.castShadow = false;
   group.add(cat(ground, 'teren'));
 
   // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca

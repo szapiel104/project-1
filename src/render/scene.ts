@@ -3466,9 +3466,13 @@ export class GameRenderer {
     const sm = this.renderer.shadowMap;
     sm.autoUpdate = false;
     const cp = this.cam.camera.position;
-    const moved = this.sunWas.distanceToSquared(this.sun.position) > 0.0025 || this.camWas.distanceToSquared(cp) > 1e-6;
+    const camMove2 = this.camWas.distanceToSquared(cp);
+    const moved = this.sunWas.distanceToSquared(this.sun.position) > 0.0025 || camMove2 > 1e-6;
+    // szybkie przewijanie widoku (ponad ~40% pełnej prędkości kamery): obraz i tak się rozmywa, więc mapa cieni
+    // liczy się co drugą klatkę; przy wolnym ruchu i dojeżdżaniu kamery dalej co klatkę, żeby cień nie odstawał od murów
+    const fast = camMove2 > (0.006 * this.cam.distance) ** 2;
     this.sunWas.copy(this.sun.position); this.camWas.copy(cp);
-    sm.needsUpdate = this.calm || moved || (this.shadowFrame++ & 1) === 0;
+    sm.needsUpdate = this.calm || (moved && !fast) || (this.shadowFrame++ & 1) === 0;
   }
 
   /** Nocą zapala pochodnie przy budynkach i w rękach ludzi oraz rozdaje światła najbliższym z nich. */

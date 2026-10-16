@@ -225,7 +225,9 @@ export class Figures {
       }), max);
       mesh.count = 0;
       mesh.frustumCulled = false;
-      mesh.castShadow = true;
+      // cień rzuca tylko wersja z bliska: z daleka postać ma kilka pikseli i jej cień zlewa się z cieniem ziemi,
+      // a każda część to osobne rysowanie do mapy cieni
+      mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
       scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod });
