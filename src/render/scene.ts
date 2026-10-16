@@ -97,7 +97,9 @@ const SMOKY = new Set(['armory', 'house', 'bakery', 'brewery', 'tavern', 'keep',
 
 /** Grupy, w których też łączymy bryły (ściany i dach znikają w całości przy podglądzie wnętrza, więc wspólna siatka nic nie psuje) */
 const MERGE_IN = new Set(['shell', 'roof', 'chimney', 'spin', 'flagpole']);
-function mergeStatic(root: THREE.Object3D): void {
+/** Wspólne scalone siatki dla budynków tego samego rodzaju: dzięki temu wszystkie chaty mają te same siatki i karta rysuje je razem */
+const mergedCache = new Map<string, THREE.BufferGeometry>();
+function mergeStatic(root: THREE.Object3D, kind = ''): void {
   root.updateMatrixWorld(true);
   // klucz: grupa, do której trafi wspólna siatka (korzeń albo „shell” / „roof” / „chimney”) + materiał
   const groups = new Map<THREE.Object3D, Map<THREE.Material, { geos: THREE.BufferGeometry[]; meshes: THREE.Mesh[] }>>();
@@ -127,13 +129,18 @@ function mergeStatic(root: THREE.Object3D): void {
     const keys = Object.keys(e.geos[0]!.attributes).sort().join();
     if (e.geos.some((g) => Object.keys(g.attributes).sort().join() !== keys)) { for (const g of e.geos) g.dispose(); continue; }
     for (const g of e.geos) g.morphAttributes = {};
-    const merged = mergeGeometries(e.geos);
+    let verts = 0;
+    for (const g of e.geos) verts += g.getAttribute('position').count;
+    const ck = kind ? kind + '|' + (into === root ? '' : into.name) + '|' + mat.uuid + '|' + e.meshes.length + '|' + verts : '';
+    const merged = (ck && mergedCache.get(ck)) || mergeGeometries(e.geos);
+    if (ck && merged && !mergedCache.has(ck)) mergedCache.set(ck, merged);
     for (const g of e.geos) g.dispose();
     if (!merged) continue;
     const one = new THREE.Mesh(merged, mat);
     one.castShadow = e.meshes.some((m) => m.castShadow);
     one.receiveShadow = true;
     one.userData.merged = true;
+    one.userData.shared = !!ck; // wspólna dla wszystkich budynków tego rodzaju: nie zwalniać przy rozbiórce
     into.add(one);
     for (const m of e.meshes) m.parent?.remove(m);
   }
@@ -933,6 +940,8 @@ export class GameRenderer {
     if (this.view) { this.scene.remove(this.view.group); this.view.dispose(); }
     for (const g of this.buildingMeshes.values()) this.buildingLayer.remove(g);
     this.buildingMeshes.clear();
+    for (const b of this.batches.values()) { this.buildingLayer.remove(b.mesh); b.mesh.dispose(); }
+    this.batches.clear();
     this.lods.clear();
     for (const pile of this.rubbleMeshes.values()) this.scene.remove(pile);
     this.rubbleMeshes.clear();
@@ -1251,6 +1260,7 @@ export class GameRenderer {
     // skompilowane shadery). Dlatego raz, przy wczytywaniu, stawiamy pod mapą po jednym egzemplarzu każdego budynku —
     // gotowy i jako plac budowy, z widocznym wnętrzem — kompilujemy wszystko i od razu sprzątamy.
     let probe: THREE.Group | null = null;
+    const batchProbe: [number, THREE.Object3D][] = [];
     if (!this.prewarmed) {
       this.prewarmed = true;
       probe = new THREE.Group();
@@ -1265,7 +1275,7 @@ export class GameRenderer {
         for (const site of [false, true]) {
           const m = this.models.building(def.id, TEAM_COLORS[0] ?? 0x888888);
           m.userData.fx = collectFx(m, isWindowMat);
-          mergeStatic(m);
+          mergeStatic(m, site ? '' : def.id + ':0');
           m.traverse((o) => {
             o.visible = true;
             const me = o as THREE.Mesh;
@@ -1275,13 +1285,18 @@ export class GameRenderer {
           });
           m.position.set(0, -50, 0);
           probe.add(m);
+          if (!site) batchProbe.push([-1 - batchProbe.length, m]);
         }
       }
       this.scene.add(probe);
+      probe.updateMatrixWorld(true);
+      this.renderer.compile(this.scene, this.cam.camera);   // zwykły wariant (budynek rysowany sam: rozbiórka, ?razem=0)
+      // wspólne rysowanie budynków to inny wariant shaderów (instancjonowanie): też kompilujemy go z góry
+      this.syncBatches(batchProbe);
     }
     this.renderer.compile(this.scene, this.cam.camera);
     this.composer.render();
-    if (probe) this.scene.remove(probe);
+    if (probe) { this.scene.remove(probe); this.syncBatches(); }
   }
   private prewarmed = false;
 
@@ -1888,6 +1903,7 @@ export class GameRenderer {
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
       T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); this.syncVillage(g, v, dt); });
+      T('budynki razem', () => this.syncBatches());
       T('kadr', () => this.cullInstances());
     }
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
@@ -2087,6 +2103,72 @@ export class GameRenderer {
   culled = 0;
   /** Do porównań wydajności (window.__renderer.cullOn = false) */
   cullOn = true;
+  /**
+   * Budynki rysowane razem (instancjonowanie): stałe bryły budynków (ściany, dach, sprzęty — po scaleniu w mergeStatic
+   * te same siatki dla każdego budynku danego rodzaju) zbieramy co klatkę w jedno InstancedMesh na parę siatka+materiał.
+   * Karta dostaje jedno polecenie „narysuj strzechę chaty w tych 20 miejscach” zamiast 20 osobnych. Sam budynek dalej
+   * istnieje jak dotąd (widoczność dachu, wnętrza, daleka wersja, podświetlenie i kliknięcie działają bez zmian): jego
+   * stałe bryły przenosimy tylko na warstwę 1, której kamera nie rysuje. Place budowy (przycinane) zostają po staremu.
+   */
+  private batches = new Map<string, { mesh: THREE.InstancedMesh; n: number }>();
+  private batchParts = new WeakMap<THREE.Object3D, THREE.Mesh[]>();
+  batchOn = !/[?&]razem=0/.test(location.search);
+  private staticParts(root: THREE.Object3D): THREE.Mesh[] {
+    let list = this.batchParts.get(root);
+    if (list) return list;
+    list = [];
+    const walk = (o: THREE.Object3D): void => {
+      for (const ch of o.children) {
+        if (ch.name && !MERGE_IN.has(ch.name)) continue;          // wnętrza, ludzie, ogień, ruchome części: po staremu
+        const m = ch as THREE.Mesh;
+        if (m.isMesh && !ch.name && !(m as THREE.InstancedMesh).isInstancedMesh && !Array.isArray(m.material)) {
+          const mat = m.material as THREE.Material;
+          if (!mat.transparent && mat.visible !== false && m.geometry.getAttribute('position')) list!.push(m);
+        }
+        walk(ch);
+      }
+    };
+    walk(root);
+    this.batchParts.set(root, list);
+    return list;
+  }
+  private syncBatches(roots: Iterable<[number, THREE.Object3D]> = this.buildingMeshes, keepOff = false): void {
+    for (const b of this.batches.values()) b.n = 0;
+    const on = this.batchOn;
+    this.buildingLayer.updateMatrixWorld();
+    for (const [id, root] of roots) {
+      const parts = this.staticParts(root);
+      const own = !on || this.sites.has(id);
+      for (const m of parts) {
+        if (own) { m.layers.set(0); continue; }
+        m.layers.set(1);
+        let vis = m.visible;
+        for (let q: THREE.Object3D | null = m.parent; vis && q; q = q.parent) { if (!q.visible) vis = false; if (q === root) break; }
+        if (!vis || !root.visible) continue;
+        const mat = m.material as THREE.Material;
+        const key = m.geometry.uuid + mat.uuid + (m.castShadow ? 'c' : '') + (m.receiveShadow ? 'r' : '');
+        let b = this.batches.get(key);
+        if (!b || b.n >= b.mesh.instanceMatrix.count) {
+          const cap = Math.max(8, (b ? b.mesh.instanceMatrix.count : 4) * 2);
+          const im = new THREE.InstancedMesh(m.geometry, mat, cap);
+          im.castShadow = m.castShadow; im.receiveShadow = m.receiveShadow;
+          im.frustumCulled = false;
+          im.userData.noCull = true;
+          if (b) { im.instanceMatrix.array.set(b.mesh.instanceMatrix.array.subarray(0, b.n * 16)); this.buildingLayer.remove(b.mesh); b.mesh.dispose(); }
+          b = { mesh: im, n: b ? b.n : 0 };
+          this.batches.set(key, b);
+          this.buildingLayer.add(im);
+        }
+        b.mesh.setMatrixAt(b.n++, m.matrixWorld);
+      }
+    }
+    for (const b of this.batches.values()) {
+      if (keepOff) continue;
+      b.mesh.count = b.n;
+      b.mesh.visible = b.n > 0;
+      b.mesh.instanceMatrix.needsUpdate = true;
+    }
+  }
   private cullInstances(): void {
     if (!this.cullOn) {
       for (const [m, st] of this.cullSeen) {
@@ -2105,7 +2187,7 @@ export class GameRenderer {
     const sph = this.cullS, fr = this.cullFrustum;
     this.scene.traverseVisible((o) => {
       const m = o as THREE.InstancedMesh;
-      if (!m.isInstancedMesh || m.count === 0 || m.count > 4096) return;
+      if (!m.isInstancedMesh || m.count === 0 || m.count > 4096 || m.userData.noCull) return;
       const attr = m.instanceMatrix, a = attr.array as Float32Array;
       let st = this.cullSeen.get(m);
       if (!st) {
@@ -3048,7 +3130,7 @@ export class GameRenderer {
       const team = g.players[b.owner]?.team ?? 0;
       const mesh = this.models.building(def.id, TEAM_COLORS[team] ?? 0x888888);
       mesh.userData.fx = collectFx(mesh, isWindowMat);
-      mergeStatic(mesh);
+      mergeStatic(mesh, def.id + ':' + team);
       let top = -99, low = 99;
       const fp = footprint(def, b.rot);
       // pod budynkiem nie rośnie trawa, krzewy ani nie leżą kamyki
@@ -3122,6 +3204,7 @@ export class GameRenderer {
     for (const [id, mesh] of this.buildingMeshes) {
       if (alive.has(id)) continue;
       // rozebrany budynek nie znika od razu: zapada się i przechyla, a pod nim zostaje gruz
+      for (const m of this.staticParts(mesh)) m.layers.set(0); // zapadający się budynek rysuje się już sam (poza wspólnym rysowaniem)
       this.dying.push({ mesh, t: 0 });
       this.onCollapse();
       this.buildingMeshes.delete(id);
@@ -3179,7 +3262,7 @@ export class GameRenderer {
       d.mesh.scale.y = Math.max(0.04, 1 - k * k);
       d.mesh.rotation.z = k * 0.18;
       d.mesh.rotation.x = k * -0.1;
-      if (k >= 1) { this.buildingLayer.remove(d.mesh); d.mesh.traverse((o) => { if (o.userData.merged) (o as THREE.Mesh).geometry.dispose(); }); this.dying.splice(i, 1); }
+      if (k >= 1) { this.buildingLayer.remove(d.mesh); d.mesh.traverse((o) => { if (o.userData.merged && !o.userData.shared) (o as THREE.Mesh).geometry.dispose(); }); this.dying.splice(i, 1); }
     }
     const { width, height } = g.map;
     const alive = new Set<number>();
@@ -4917,6 +5000,7 @@ export class GameRenderer {
     const r = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     this.ray.setFromCamera(ndc, this.cam.camera);
+    this.ray.layers.enable(1); // stałe bryły budynków leżą na warstwie 1 (rysuje je wspólne InstancedMesh)
     const hit = this.ray.intersectObjects([...this.buildingMeshes.values()], true)[0];
     if (!hit) return null;
     let o: THREE.Object3D | null = hit.object;
