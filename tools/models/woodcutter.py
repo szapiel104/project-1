@@ -97,15 +97,8 @@ open_ += [[X0 + LOG, X1 - LOG, Z0 + LOG, Z1 - LOG], [DOOR[0], DOOR[1], Z1 - LOG 
 b.gable('shell', 'wood', X0 - 0.12, X1 + 0.12, Z0 - 0.02, Z1 + 0.02, H1, RISE, along_x=True, over=0.16, end_mat='woodDark')
 b.gable('shell', 'woodDark', X0 - 0.12, X1 + 0.12, Z0 - 0.02, Z1 + 0.02, H1 - 0.03, RISE, along_x=True, over=0.19)
 for x, s in ((X0, -1), (X1, 1)):
-    # szczyt z pionowych desek, odrobinę cofnięty względem bali
-    n = 7
-    for k in range(n):
-        z0 = Z0 + (Z1 - Z0) * k / n
-        z1 = Z0 + (Z1 - Z0) * (k + 1) / n
-        zm = (z0 + z1) / 2
-        hh = RISE * (1 - abs(zm - (Z0 + Z1) / 2) / ((Z1 - Z0) / 2)) - 0.02
-        if hh > 0.03:
-            b.box('shell', 'plank', 0.025, hh, (z1 - z0) - 0.006, x + s * 0.0, H1, zm)
+    # szczyt z desek: pełny trójkąt z listwami (wcześniej deski w schodek)
+    b.gable_boards('shell', 'plank', 'z', x, Z0, Z1, H1, RISE - 0.01, out=s)
 b.box('shell', 'woodDark', X1 - X0 + 0.32, 0.05, 0.09, (X0 + X1) / 2, H1 + RISE - 0.02, (Z0 + Z1) / 2)   # kalenica
 CX, CZ = X1 - 0.22, Z0 + 0.14
 b.box('shell', 'stone', 0.2, RISE + 0.36, 0.2, CX, H1 - 0.05, CZ)

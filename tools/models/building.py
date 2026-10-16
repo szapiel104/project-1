@@ -46,6 +46,37 @@ class Building:
             j = (k + 1) % n
             self.poly(group, mat, [top[j], top[k], low[k], low[j]], away=cen)
 
+    def gable_boards(self, group, mat, along, plane, a0, a1, y, rise, out, t=0.025, step=0.1, batten='woodDark'):
+        """Szczyt z desek: pełny trójkąt z grubością (bez schodków) i pionowe listwy na licu, przycięte pod połacią.
+        along = 'x': trójkąt w płaszczyźnie z = plane, rozpięty na x od a0 do a1; 'z': w płaszczyźnie x = plane.
+        out = +1/-1: w którą stronę patrzy lico (na zewnątrz budynku)."""
+        am = (a0 + a1) / 2
+
+        def P(a, yy, d):
+            return (a, yy, plane + d) if along == 'x' else (plane + d, yy, a)
+        o = [P(a0, y, 0), P(a1, y, 0), P(am, y + rise, 0)]
+        i = [P(a0, y, -out * t), P(a1, y, -out * t), P(am, y + rise, -out * t)]
+        cen = P(am, y + rise / 3, -out * t / 2)
+        far = P(am, y + rise / 3, out * 5)
+        self.poly(group, mat, o, away=P(am, y + rise / 3, -out * 5))     # lico
+        self.poly(group, mat, i, away=far)                               # strona wewnętrzna
+        for k in range(3):                                               # brzegi trójkąta
+            j = (k + 1) % 3
+            self.poly(group, mat, [o[k], o[j], i[j], i[k]], away=cen)
+        # listwy: od podstawy do połaci, wierzch na wysokości dachu przy zewnętrznej krawędzi listwy (nie wystaje)
+        n = max(2, int(round((a1 - a0) / step)))
+        half = (a1 - a0) / 2
+        for k in range(1, n):
+            a = a0 + (a1 - a0) * k / n
+            edge = abs(a - am) + 0.012
+            hh = rise * (1 - edge / half) - 0.015
+            if hh < 0.03:
+                continue
+            if along == 'x':
+                self.box(group, batten, 0.022, hh, 0.012, a, y, plane + out * 0.006)
+            else:
+                self.box(group, batten, 0.012, hh, 0.022, plane + out * 0.006, y, a)
+
     # ---------- bryły (y = spód, jak box() w grze) ----------
     def box(self, group, mat, w, h, d, x=0.0, y=0.0, z=0.0, rot=0.0, top=True, bottom=None, tilt=0.0, roll=0.0):
         """Pudło stojące na (x, y, z); rot = obrót wokół pionu, tilt = pochylenie wokół osi x, roll = wokół osi z (przy spodzie)"""
