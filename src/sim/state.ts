@@ -400,7 +400,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       p.dev = true;
       p.instantBuild = instantBuild;
       for (let i = 0; i < res.length; i++) res[i] = 2000;
-      const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate', 'stoneGate']);
+      const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate', 'stoneGate', 'stoneWall']); // mury stawia devFortify
       for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.road && !skip.has(d.id)) placeNear(g, i, s.player, s.x, s.y, 20);
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
