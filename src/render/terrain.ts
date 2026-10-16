@@ -673,6 +673,26 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const TRUNK_LOD: Lod = { hide: pineImp ? 30 : 62, shadowGeo: pineTrunkShadow }, SMALL_LOD: Lod = { hide: 30 };
   const LEAF_TRUNK_LOD: Lod = { ...TRUNK_LOD, shadowGeo: leafTrunkShadow };
   const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: pattern('needles') });
+  // wiatr w koronach: czubek drzewa kołysze się wolno, każde drzewo w swojej fazie (podmuchy przechodzą przez las falą);
+  // pień stoi, więc ruch rośnie z wysokością. Ten sam zegar co trawa.
+  const windCrown = (m: THREE.Material, amp: number, key: string): void => {
+    m.onBeforeCompile = (sh) => {
+      sh.uniforms.windTime = windTime;
+      sh.vertexShader = 'uniform float windTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+        #ifdef USE_INSTANCING
+          vec2 wp = instanceMatrix[3].xz;
+          float lift = max(position.y - 0.25, 0.0);
+          float wave = sin(windTime * 0.9 + wp.x * 0.11 + wp.y * 0.07) * 0.7 + sin(windTime * 2.3 + wp.x * 0.6 + wp.y * 0.4) * 0.3;
+          transformed.x += wave * ${amp.toFixed(3)} * lift * lift;
+          transformed.z += wave * ${(amp * 0.5).toFixed(3)} * lift * lift;
+        #endif`);
+    };
+    m.customProgramCacheKey = () => key;
+  };
+  windCrown(pineMat, 0.08, 'wind-pine');
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: pattern('leaves'), bumpMap: bump('leaves'), bumpScale: 1.2, normalMap: normal('leaves') });
+  leafMat.userData.season = 'leaf';
+  windCrown(leafMat, 0.12, 'wind-leaf');
   // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
   // shadowGeo: prostsza bryła tego samego kształtu, która rzuca cień zamiast pełnego modelu (w obrazie zostaje pełny);
@@ -741,7 +761,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const leafTrunks = instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark', true, undefined, LEAF_TRUNK_LOD);
   label = 'drzewa: korony';
   plant(pines, pineTrunks, instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat, PINE_LOD));
-  plant(leafy, leafTrunks, instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves', true, undefined, LEAF_LOD));
+  plant(leafy, leafTrunks, instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves', true, leafMat, LEAF_LOD));
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
   // Las wchodzi na zbocza aż pod granicę lasu; wyżej drzewa rzedną, są niższe i oszronione, nad nimi tylko skała i śnieg.
   // Dalekie drzewa mają uproszczony model (mniej trójkątów), a mgła i tak zaciera szczegóły.
@@ -789,7 +809,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark', true, undefined, TRUNK_LOD);
     instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles', true, pineMat, PINE_LOD);
     instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark', true, undefined, LEAF_TRUNK_LOD);
-    instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves', true, undefined, LEAF_LOD);
+    instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves', true, leafMat, LEAF_LOD);
     // puszcza za mapą: obrazki zamiast brył (dwa trójkąty na drzewo), stąd może być gęstsza
     // dalekie obrazki nie przełączają szczegółów, więc kawałki mogą być duże (120 pól): kilkanaście wywołań rysowania zamiast ~200
     label = 'puszcza za mapą: obrazki';
