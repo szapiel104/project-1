@@ -1,10 +1,13 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 import { cat } from './cat';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { TERRAIN } from '../data/terrain';
 import { FP, keepFront, type GameState } from '../sim/state';
 import { modelGeo, type ModelMesh } from './peasants';
-import ANIMALS from './models/animals.json';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const ANIMALS = model('animals');
 
 /**
  * Zwierzęta w osadzie — tylko w wyglądzie (symulacja ich nie zna, gra przez sieć zostaje zgodna):
@@ -281,7 +284,7 @@ export class Village {
     for (const [k, c] of this.hens) if (this.frame - c.seen > 120) this.hens.delete(k);
     for (const [k, c] of this.pigState) if (this.frame - c.seen > 120) this.pigState.delete(k);
     for (const [k, c] of this.dogs) if (this.frame - c.seen > 120) this.dogs.delete(k);
-    const fin = (m: THREE.InstancedMesh, n: number): void => { m.count = n; m.visible = n > 0; m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; };
+    const fin = (m: THREE.InstancedMesh, n: number): void => { m.count = n; m.visible = n > 0; touch(m); if (m.instanceColor) touch(m); };
     this.hensBy.forEach((m, k) => fin(m, henN[k]!)); fin(this.pigs, pigs);
     fin(this.horseBody, horses); fin(this.horseNeck, horses); fin(this.horseTail, horses);
     fin(this.dogBody, dogs); fin(this.dogLegF, dogs * 2); fin(this.dogLegH, dogs * 2); fin(this.dogTail, dogs);

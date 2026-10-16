@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { modelGeo, type ModelMesh } from './peasants';
-import WOLF_MODEL from './models/wolf.json';
-import CROW_MODEL from './models/crow.json';
-import CROW2 from './models/crow2.json';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const WOLF_MODEL = model('wolf');
+const CROW_MODEL = model('crow');
+const CROW2 = model('crow2');
 
 /** Wilk z części (z Blendera, tools/models/wolf.py): tułów z łbem, łapa przednia i tylna (oś w barku/biodrze), kita (oś u nasady), oczy. Wspólne dla gry i galerii. */
 export function wolfParts(): { body: THREE.BufferGeometry; leg: THREE.BufferGeometry; hindLeg: THREE.BufferGeometry; tail: THREE.BufferGeometry; eyes: THREE.BufferGeometry; mat: THREE.MeshStandardMaterial } {

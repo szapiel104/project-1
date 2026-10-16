@@ -1,9 +1,11 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildingModel } from './buildings';
-import PLANTS from './models/plants.json';
 import { boxUv, modelGeo } from './peasants';
 import { treeGeo } from './foliage';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const PLANTS = model('plants');
 
 /**
  * Proceduralne modele z prostych brył. Każdy model powstaje przez tę fabrykę,

@@ -1,3 +1,4 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 import { TEST } from '../testmode';
 import { cat } from './cat';
@@ -356,7 +357,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       fq.setFromEuler(fe.set(jump ? Math.cos((cycle / 0.06) * Math.PI) * -0.9 : 0, -a, 0, 'YXZ'));
       fishMesh.setMatrixAt(i, fm.compose(fp, fq, fs));
     });
-    fishMesh.instanceMatrix.needsUpdate = true;
+    touch(fishMesh);
   };
 
   // Za mapą: puszcza i prawdziwe góry. Brzeg planszy przechodzi płynnie w las, dalej wznoszą się pasma
@@ -782,7 +783,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
    * więc karta graficzna pomija to, czego nie widać (także w cieniach). Na dużych mapach to kilkukrotnie mniej trójkątów.
    * Na zewnątrz zachowuje się jak jedna siatka instancji (indeksy jak w liście).
    */
-  type Inst = { setMatrixAt(i: number, m: THREE.Matrix4): void; setColorAt(i: number, c: THREE.Color): void; instanceMatrix: { needsUpdate: boolean } };
+  type Inst = { setMatrixAt(i: number, m: THREE.Matrix4): void; setColorAt(i: number, c: THREE.Color): void; count: number; instanceMatrix: { needsUpdate: boolean; count: number } };
   const CHUNK = 40;
   // korony świerków: kolory z wierzchołków (jasne końce gałęzi, ciemne wnętrze), gładkie cieniowanie, widoczne z obu stron
   const farPine = models.treeCrownFar();
@@ -915,8 +916,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         p.mesh.count = p.n;
         p.mesh.visible = p.n > 0;
         if (p.n) {
-          p.mesh.instanceMatrix.clearUpdateRanges(); p.mesh.instanceMatrix.addUpdateRange(0, p.n * 16); p.mesh.instanceMatrix.needsUpdate = true;
-          if (p.mesh.instanceColor) { p.mesh.instanceColor.clearUpdateRanges(); p.mesh.instanceColor.addUpdateRange(0, p.n * 3); p.mesh.instanceColor.needsUpdate = true; }
+          p.mesh.instanceMatrix.clearUpdateRanges(); p.mesh.instanceMatrix.addUpdateRange(0, p.n * 16); touch(p.mesh);
+          if (p.mesh.instanceColor) { p.mesh.instanceColor.clearUpdateRanges(); p.mesh.instanceColor.addUpdateRange(0, p.n * 3); touch(p.mesh); }
         }
       }
     }
@@ -972,8 +973,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       vegPool(kind, g, mat, 'shadow', total, mat.userData.windDepth as THREE.Material | undefined);
       if (lod?.farGeo && !lod.farMat) vegPool(kind, lod.farGeo, mat, 'shadow', total, mat.userData.windDepth as THREE.Material | undefined);
     }
-    const flag = { get needsUpdate() { return dirty.size > 0; }, set needsUpdate(v: boolean) { if (v) { for (const m of dirty) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } dirty.clear(); } } };
+    const flag = { count: 0, get needsUpdate() { return dirty.size > 0; }, set needsUpdate(v: boolean) { if (v) { for (const m of dirty) touch(m); dirty.clear(); } } };
     return {
+      count: 0,
       setMatrixAt(i, m) { const w = where[i]; if (w) { w[0].setMatrixAt(w[1], m); dirty.add(w[0]); } },
       setColorAt(i, c) { const w = where[i]; if (w) { w[0].setColorAt(w[1], c); dirty.add(w[0]); flag.needsUpdate = true; } },
       instanceMatrix: flag,
@@ -1091,7 +1093,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     label = 'kwiaty';
     const mesh = instanced(models.flower(), 0xffffff, flowers, undefined, false, undefined, SMALL_LOD);
     const palette = [0xf4f1e6, 0xf2d24a, 0xb07ad6, 0xe8687a, 0x7fb2e6];
-    if (mesh) { flowers.forEach((it, i) => mesh.setColorAt(i, tint.setHex(palette[(it.tile * 7 + i) % palette.length]!))); mesh.instanceMatrix.needsUpdate = true; }
+    if (mesh) { flowers.forEach((it, i) => mesh.setColorAt(i, tint.setHex(palette[(it.tile * 7 + i) % palette.length]!))); touch(mesh); }
     plant(flowers, mesh, null, false);
   }
   // skały i rudy też znikają, gdy złoże się wyczerpie (bez pniaka)
@@ -1124,8 +1126,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     tint.setHex(0x8a6a45).multiplyScalar(it.shade);
     if (it.frost) tint.lerp(FROST, it.frost);
     stumpMesh.setColorAt(j, tint);
-    stumpMesh.instanceMatrix.needsUpdate = true;
-    if (stumpMesh.instanceColor) stumpMesh.instanceColor.needsUpdate = true;
+    touch(stumpMesh);
+    if (stumpMesh.instanceColor) touch(stumpMesh);
     stumpMesh.visible = true;
   };
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -1135,12 +1137,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     for (const t of trees.get(tile) ?? []) {
       tilt.copy(t.item.q).multiply(q.setFromAxisAngle(xAxis, Math.min(1, k) * 1.45));
       m.compose(t.item.pos, tilt, t.item.s);
-      for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, m); mesh.instanceMatrix.needsUpdate = true; }
+      for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, m); touch(mesh); }
     }
   };
   const clear = (tile: number): void => {
     for (const t of trees.get(tile) ?? []) {
-      for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, zero); mesh.instanceMatrix.needsUpdate = true; }
+      for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, zero); touch(mesh); }
       const si = stumpOf.get(t.item);
       if (si !== undefined) showStump(si, m.compose(t.item.pos, t.item.q, t.item.s));
     }
@@ -1497,8 +1499,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             const old = (r >>> 27) % 6 === 0 ? 0.22 : 0;
             im.setColorAt(i, tone.setRGB(t * (1 - old), t * 0.94 * (1 - old * 0.9), t * 0.86 * (1 - old * 0.7)));
           });
-          im.instanceMatrix.needsUpdate = true;
-          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          touch(im);
+          if (im.instanceColor) touch(im);
           im.castShadow = true;
           im.receiveShadow = true;
           group.add(cat(im, 'drogi'));
@@ -1512,8 +1514,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
             rm.setMatrixAt(i, kerbDummy.matrix);
             rm.setColorAt(i, tone.setRGB(0.5, 0.36, 0.24));
           });
-          rm.instanceMatrix.needsUpdate = true;
-          if (rm.instanceColor) rm.instanceColor.needsUpdate = true;
+          touch(rm);
+          if (rm.instanceColor) touch(rm);
           rm.receiveShadow = true;
           group.add(cat(rm, 'drogi'));
           roadMeshes.push(rm);
@@ -1555,8 +1557,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const geo = new RoundedBoxGeometry(1, 1, 1, 2, 0.24);
           const im = new THREE.InstancedMesh(geo, kerbMaterial(), kerbs.length);
           kerbs.forEach(([kx, ky, len, rot, r], i) => { const hgt = 0.08 + ((r >>> 20) & 7) * 0.007; placeStone(im, i, kx, ky, 0.03 + hgt / 2, len, hgt, 0.13 + ((r >>> 26) & 3) * 0.012, rot + (((r >>> 23) & 7) / 7 - 0.5) * 0.12, 0.1, r); });
-          im.instanceMatrix.needsUpdate = true;
-          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          touch(im);
+          if (im.instanceColor) touch(im);
           im.castShadow = true;
           im.receiveShadow = true;
           group.add(cat(im, 'drogi'));
@@ -1597,8 +1599,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if (pebbles.length) {
           const im = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0), kerbMaterial(), pebbles.length);
           pebbles.forEach(([px, py, sz, r], i) => placeStone(im, i, px, py, sz * 0.25, sz * 1.3, sz * 0.7, sz, ((r >>> 4) & 63) / 10, 0.5, r));
-          im.instanceMatrix.needsUpdate = true;
-          if (im.instanceColor) im.instanceColor.needsUpdate = true;
+          touch(im);
+          if (im.instanceColor) touch(im);
           im.receiveShadow = true;
           group.add(cat(im, 'drogi'));
           roadMeshes.push(im);

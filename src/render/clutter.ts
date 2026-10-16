@@ -1,3 +1,4 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, footprint } from '../data/buildings';
@@ -219,7 +220,7 @@ export class Clutter {
         placed++;
       }
     }
-    for (const [k, m] of this.meshes) { m.count = counts.get(k)!; m.instanceMatrix.needsUpdate = true; m.computeBoundingSphere(); }
+    for (const [k, m] of this.meshes) { m.count = counts.get(k)!; touch(m); m.computeBoundingSphere(); }
   }
 
   reset(): void { this.key = ''; for (const m of this.meshes.values()) m.count = 0; }

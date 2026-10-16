@@ -2,7 +2,9 @@
 <body style="margin:0;background:#9fb07a"><canvas id="c" width="900" height="640"></canvas>
 <script type="module">
 import * as THREE from 'three';
-import { buildingModel } from './src/render/buildings.ts';
+import { loadModels } from './src/render/modelstore.ts';
+await loadModels();
+const { buildingModel } = await import('./src/render/buildings.ts');
 const q = new URLSearchParams(location.search);
 const id = q.get('id') ?? 'house', yaw = Number(q.get('yaw') ?? 0.6), pitch = Number(q.get('pitch') ?? 0.55), dist = Number(q.get('d') ?? 4.2);
 const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });

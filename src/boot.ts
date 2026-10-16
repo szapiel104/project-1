@@ -80,6 +80,9 @@ async function load(): Promise<void> {
     done++;
   }
   await step('Modele…');
+  // modele z Blendera leżą poza kodem gry: pobierają się tu równolegle (za drugim razem z pamięci przeglądarki)
+  const { loadModels } = await import('./render/modelstore');
+  await loadModels((n, all) => { if (count) count.textContent = `${done} / ${total} · modele ${n}/${all}`; });
   const assets = await import('./render/assets');
   await assets.preloadAssets();
   done++;

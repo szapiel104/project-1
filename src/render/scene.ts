@@ -1,3 +1,5 @@
+import { named, namedTick, remember } from './named';
+import { touch } from './touch';
 import * as THREE from 'three';
 import { initKtx } from './ktx';
 import { MeshBVH } from 'three-mesh-bvh';
@@ -13,14 +15,6 @@ import { Clutter } from './clutter';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
 import { crowParts, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
-import KEEP_MODEL from './models/keep.json';
-import TAVERN_MODEL from './models/tavern.json';
-import HOUSE_MODEL from './models/house.json';
-import BARN_MODEL from './models/barn.json';
-import ORCHARD_MODEL from './models/orchard.json';
-import FARM_MODEL from './models/farm.json';
-import CAMP_MODEL from './models/camp.json';
-const CAMP_SEATS = (CAMP_MODEL as unknown as { seats: [number, number, number][] }).seats;
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
@@ -38,7 +32,6 @@ import { TEAM_COLORS } from '../data/teams';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
 import { peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
-import RAM_MODEL from './models/ram.json';
 import { clockAt, rainAt } from '../sim/clock';
 import { COLD, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
@@ -61,6 +54,17 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { N8AOPass } from 'n8ao';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const KEEP_MODEL = model('keep');
+const TAVERN_MODEL = model('tavern');
+const HOUSE_MODEL = model('house');
+const BARN_MODEL = model('barn');
+const ORCHARD_MODEL = model('orchard');
+const FARM_MODEL = model('farm');
+const CAMP_MODEL = model('camp');
+const RAM_MODEL = model('ram');
+const CAMP_SEATS = (CAMP_MODEL as unknown as { seats: [number, number, number][] }).seats;
 
 export interface TileRef { x: number; y: number }
 /** Pola zamku, po których się chodzi (dy * 3 + dx): sala donżonu, koszary, dziedziniec, brama; posadzka na tej wysokości */
@@ -1069,8 +1073,8 @@ export class GameRenderer {
       this.plan.setColorAt(i, c.set(t.ok ? 0x6fd05a : 0xe0503a));
     }
     this.plan.count = n;
-    this.plan.instanceMatrix.needsUpdate = true;
-    if (this.plan.instanceColor) this.plan.instanceColor.needsUpdate = true;
+    touch(this.plan);
+    if (this.plan.instanceColor) touch(this.plan);
   }
 
   setPainting(on: boolean): void { this.painting = on; this.cam.panLocked = on; }
@@ -1110,8 +1114,8 @@ export class GameRenderer {
         n++;
       }
     grid.count = n;
-    grid.instanceMatrix.needsUpdate = true;
-    if (grid.instanceColor) grid.instanceColor.needsUpdate = true;
+    touch(grid);
+    if (grid.instanceColor) touch(grid);
     grid.visible = true;
   }
 
@@ -1891,6 +1895,7 @@ export class GameRenderer {
 
   /** `paused` = pauza: kamera dalej się rusza, ale ludzie, zwierzęta, ogień i woda stoją w miejscu */
   frame(realDt: number, alpha: number, paused = false): void {
+    namedTick();
     if (this.walk && this.state) this.stepWalk(realDt); else this.cam.update(realDt);
     const dt = paused ? 0 : realDt;
     this.time += dt;
@@ -2020,7 +2025,7 @@ export class GameRenderer {
     this.handFlameTime.value = this.time;
     for (const [id, mesh] of this.buildingMeshes) {
       if ((mesh.position.x - f.x) ** 2 + (mesh.position.z - f.z) ** 2 > 110 * 110) continue;
-      const torchFlame = mesh.getObjectByName('torchflame');
+      const torchFlame = named(mesh, 'torchflame');
       if (torchFlame && lit.has(id)) { torchFlame.getWorldPosition(w); w.y -= 0.12; F.add(w, 0.36, 0.2, (id * 0.137) % 1, glow); }
       // pochodnie w bryle modelu (baszty bram, ściany zamku): po zmroku żywy ogień jak w pochodni chłopa, tylko gdy widoczne
       if (dark) for (const o of this.lightMarks(mesh)) {
@@ -2044,14 +2049,14 @@ export class GameRenderer {
           o.getWorldPosition(w); F.add(w, 0.3, 0.17, (o.id * 0.271) % 1, glow);
         }
       }
-      const camp = mesh.getObjectByName('flame');
+      const camp = named(mesh, 'flame');
       if (camp && camp.visible) {
         camp.getWorldPosition(w);
         for (const ch of camp.children) ch.visible = false;
         F.add(w, 0.42, 0.3, (id * 0.311) % 1, glow);
         F.add(w.set(w.x + 0.04, w.y, w.z - 0.03), 0.3, 0.2, (id * 0.731) % 1, 0);
       }
-      const fire = mesh.getObjectByName('fire');
+      const fire = named(mesh, 'fire');
       if (fire && fire.visible) {
         for (const ch of fire.children) { ch.visible = false; ch.getWorldPosition(w); F.add(w.setY(w.y - 0.1), 0.75, 0.5, (ch.id * 0.193) % 1, glow * 0.6 + 0.3); }
       }
@@ -2080,7 +2085,7 @@ export class GameRenderer {
         const mesh = this.buildingMeshes.get(b.id);
         const fx = mesh?.userData.fx as BuildingFx | undefined;
         if (!mesh || !fx || b.build || b.ruined) continue;
-        const fire = mesh.getObjectByName('fire');
+        const fire = named(mesh, 'fire');
         const id = BUILDINGS[b.type]!.id;
         const smoke = !SMOKY.has(id) ? false
           : id === 'bakery' || id === 'brewery' ? busy.has(b.id) || (cold && !!b.worker)
@@ -2204,7 +2209,7 @@ export class GameRenderer {
       if (keepOff) continue;
       b.mesh.count = b.n;
       b.mesh.visible = b.n > 0;
-      if (b.n) { b.mesh.instanceMatrix.needsUpdate = true; b.mesh.computeBoundingSphere(); }
+      if (b.n) { touch(b.mesh); b.mesh.computeBoundingSphere(); }
     }
   }
   private vegView = new THREE.Frustum();
@@ -2231,7 +2236,7 @@ export class GameRenderer {
         if (!st.hidden || m.instanceMatrix.version !== st.ver) continue;
         const a = m.instanceMatrix.array as Float32Array;
         for (let i = 0; i < st.hidden.length; i++) if (st.hidden[i]) { for (let k = 0; k < 16; k++) a[i * 16 + k] = st.saved![i * 16 + k]!; st.hidden[i] = 0; }
-        m.instanceMatrix.needsUpdate = true; st.ver = m.instanceMatrix.version;
+        touch(m); st.ver = m.instanceMatrix.version;
       }
       this.culled = 0;
       return;
@@ -2441,8 +2446,8 @@ export class GameRenderer {
       }
     }
     this.wallShafts.count = n; this.wallTips!.count = n;
-    for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; m.instanceMatrix.needsUpdate = true; }
-    this.wallShafts.instanceMatrix.needsUpdate = true; this.wallTips!.instanceMatrix.needsUpdate = true;
+    for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; touch(m); }
+    touch(this.wallShafts); touch(this.wallTips!);
   }
 
   private wolfMesh: THREE.InstancedMesh | null = null;
@@ -2619,8 +2624,8 @@ export class GameRenderer {
     }
     this.wolfMarkersFinish(n);
     this.wolfMesh.count = n + dead; this.wolfEyes!.count = n + dead; this.wolfTails.count = n + dead; this.wolfLegs.count = this.wolfHindLegs.count = (n + dead) * 2;
-    this.wolfLegs.instanceMatrix.needsUpdate = true; this.wolfHindLegs.instanceMatrix.needsUpdate = true; this.wolfTails.instanceMatrix.needsUpdate = true;
-    this.wolfMesh.instanceMatrix.needsUpdate = true; this.wolfEyes!.instanceMatrix.needsUpdate = true;
+    touch(this.wolfLegs); touch(this.wolfHindLegs); touch(this.wolfTails);
+    touch(this.wolfMesh); touch(this.wolfEyes!);
   }
 
   private gateAngle = new Map<number, number>();
@@ -2684,7 +2689,7 @@ export class GameRenderer {
       this.puddles.setMatrixAt(n++, m);
     }
     this.puddles.count = n;
-    this.puddles.instanceMatrix.needsUpdate = true;
+    touch(this.puddles);
   }
 
   private crows: THREE.InstancedMesh | null = null;
@@ -2740,8 +2745,8 @@ export class GameRenderer {
       }
     }
     this.crows.count = n;
-    this.crows.instanceMatrix.needsUpdate = true;
-    this.crowFly.forEach((m, f) => { m.count = flyN[f]!; m.visible = m.count > 0; m.instanceMatrix.needsUpdate = true; });
+    touch(this.crows);
+    this.crowFly.forEach((m, f) => { m.count = flyN[f]!; m.visible = m.count > 0; touch(m); });
   }
 
   private syncSpawnFx(g: GameState, view: TerrainView): void {
@@ -2791,7 +2796,7 @@ export class GameRenderer {
       sc.setScalar(0.5 + f);
       if (n < 512) this.sparkMesh.setMatrixAt(n++, m.compose(k.p, q, sc));
     }
-    this.sparkMesh.count = n; this.sparkMesh.instanceMatrix.needsUpdate = true;
+    this.sparkMesh.count = n; touch(this.sparkMesh);
     this.plusIcons = this.plusIcons.filter((p) => {
       p.t += dt;
       p.s.position.y += dt * 0.5;
@@ -2830,7 +2835,7 @@ export class GameRenderer {
       }
     }
     this.rallyFlags.count = n;
-    this.rallyFlags.instanceMatrix.needsUpdate = true;
+    touch(this.rallyFlags);
   }
 
   /** Znaczek nad wieżą, której łucznicy strzelają: czerwona tarcza ze skrzyżowanymi strzałami, pulsuje; gaśnie 3 s po ostatnim strzale */
@@ -2886,9 +2891,9 @@ export class GameRenderer {
       this.arrowTrail.setMatrixAt(n++, m);
     }
     this.arrowMesh.count = n;
-    this.arrowMesh.instanceMatrix.needsUpdate = true;
+    touch(this.arrowMesh);
     this.arrowTrail.count = n;
-    this.arrowTrail.instanceMatrix.needsUpdate = true;
+    touch(this.arrowTrail);
   }
 
   private eyes: THREE.InstancedMesh | null = null;
@@ -2926,7 +2931,7 @@ export class GameRenderer {
       t.updateMatrix();
       this.eyes.setMatrixAt(i, t.matrix);
     }
-    this.eyes.instanceMatrix.needsUpdate = true;
+    touch(this.eyes);
   }
 
   private dustAt = new Map<number, number>();
@@ -3171,9 +3176,9 @@ export class GameRenderer {
     }
     this.scaffold.count = n;
     this.siteStones!.count = ns;
-    this.scaffold.instanceMatrix.needsUpdate = true;
-    this.siteStones!.instanceMatrix.needsUpdate = true;
-    if (this.siteStones!.instanceColor) this.siteStones!.instanceColor.needsUpdate = true;
+    touch(this.scaffold);
+    touch(this.siteStones!);
+    if (this.siteStones!.instanceColor) touch(this.siteStones!);
   }
 
   private syncBuildings(g: GameState, view: TerrainView): void {
@@ -3471,10 +3476,10 @@ export class GameRenderer {
     const lit = new Set<number>();
     if (on || this.menuNight) for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
     for (const mesh of this.buildingMeshes.values()) {
-      const torch = mesh.getObjectByName('torch');
+      const torch = named(mesh, 'torch');
       if (!torch) continue;
       // słup stoi cały czas; płomień pali się dopiero, gdy ktoś podejdzie i zapali pochodnię
-      const flame = torch.getObjectByName('torchflame');
+      const flame = named(torch, 'torchflame');
       // stary stożek zostaje tylko jako znacznik miejsca; płomień rysuje system ognia
       if (flame) flame.visible = false;
     }
@@ -3492,7 +3497,7 @@ export class GameRenderer {
       const f = this.focusPoint;
       const spots: { key: string; v: THREE.Vector3; d: number; k: number }[] = [];
       for (const [id, mesh] of this.buildingMeshes) {
-        const torch = mesh.getObjectByName('torch');
+        const torch = named(mesh, 'torch');
         if (!torch || !lit.has(id)) continue;
         const v = torch.getWorldPosition(new THREE.Vector3());
         v.y += 1.25;
@@ -3509,7 +3514,7 @@ export class GameRenderer {
       // ognisko w obozowisku pali się zawsze, więc nocą świeci na ludzi i stołki dookoła
       for (const b of g.buildings) {
         if (BUILDINGS[b.type]!.id !== 'camp' || b.build) continue;
-        const fl = this.buildingMeshes.get(b.id)?.getObjectByName('flame');
+        const fl = named(this.buildingMeshes.get(b.id), 'flame');
         if (!fl) continue;
         const v = fl.getWorldPosition(new THREE.Vector3());
         v.y += 0.45;
@@ -3611,14 +3616,14 @@ export class GameRenderer {
     };
     for (const [id, mesh] of this.buildingMeshes) {
       if (!lit.has(id)) continue;
-      const torch = mesh.getObjectByName('torch');
+      const torch = named(mesh, 'torch');
       if (!torch) continue;
       torch.getWorldPosition(v);
       put(v.x, v.z, 1.8);   // mała plama pod pochodnią (4 pola zlewały się w jedną pomarańczową łunę nad osadą)
     }
     for (const u of g.units) if (u.path.length > 0 && !u.bucket && u.carryRes < 0) put(u.px / FP - width / 2, u.py / FP - height / 2, 0.8);
     glow.count = n;
-    glow.instanceMatrix.needsUpdate = true;
+    touch(glow);
   }
 
   private syncRoads(g: GameState, view: TerrainView): void {
@@ -3644,8 +3649,8 @@ export class GameRenderer {
       n++;
     }
     this.roadPlans.count = n;
-    this.roadPlans.instanceMatrix.needsUpdate = true;
-    if (this.roadPlans.instanceColor) this.roadPlans.instanceColor.needsUpdate = true;
+    touch(this.roadPlans);
+    if (this.roadPlans.instanceColor) touch(this.roadPlans);
   }
 
   /** Drzewo przechyla się pod koniec rąbania, a po ścięciu znika i zostaje pniak. */
@@ -3668,7 +3673,7 @@ export class GameRenderer {
     // kliknięty budynek też odsłania wnętrze, żeby dało się zajrzeć do środka
     for (const u of g.units) {
       if (!u.job) continue;
-      const yard = this.buildingMeshes.get(u.job)?.getObjectByName('yardlog');
+      const yard = named(this.buildingMeshes.get(u.job), 'yardlog');
       if (!yard) continue;
       // pień leży pod chatą, dopóki zostały z niego partie do pocięcia
       const left = u.phase === Phase.ToHome ? 0 : u.batches;
@@ -3677,7 +3682,7 @@ export class GameRenderer {
     }
     // krata w bramie zamku: opada szybko, gdy symulacja zamknęła bramę (wróg pod zamkiem), podnosi się powoli
     for (const id of this.keepFloors.keys()) {
-      const port = this.buildingMeshes.get(id)?.getObjectByName('portcullis');
+      const port = named(this.buildingMeshes.get(id), 'portcullis');
       const kb = g.buildings.find((x) => x.id === id);
       if (!port || !kb) continue;
       const want = kb.shut ? 0 : KEEP_PORT_LIFT;
@@ -3700,13 +3705,13 @@ export class GameRenderer {
       const open = id === this.selectedId || (working.has(id) && steep);
       animateBuilding(mesh, this.walk ? inHall : open || inHall, this.time, dt);
       if (this.walk && busy && !inHall) {
-        const inn = mesh.getObjectByName('interior'); if (inn) inn.visible = true;
-        const fl = mesh.getObjectByName('flame'); if (fl) fl.visible = true;
+        const inn = named(mesh, 'interior'); if (inn) inn.visible = true;
+        const fl = named(mesh, 'flame'); if (fl) fl.visible = true;
       }
-      const ceil = mesh.getObjectByName('ceiling');
+      const ceil = named(mesh, 'ceiling');
       if (ceil) ceil.visible = inHall;
       // spacerem przy zamku: przez drzwi widać wnętrza sal, choć dachy zostają na miejscu
-      if (this.walk && id === this.walkNear && !inHall) { const inn = mesh.getObjectByName('interior'); if (inn) inn.visible = true; }
+      if (this.walk && id === this.walkNear && !inHall) { const inn = named(mesh, 'interior'); if (inn) inn.visible = true; }
     }
     // budynek bez pracownika: nad dachem kołysze się mały znak przekreślonego człowieka
     for (const b of g.buildings) {
@@ -3722,12 +3727,13 @@ export class GameRenderer {
       this.hpSeen.set(b.id, b.hp);
       if (mesh.rotation.z !== 0) mesh.rotation.z = 0;
       const hurt = 1 - b.hp / maxHp(b.type);
-      let fire = mesh.getObjectByName('fire') as THREE.Group | undefined;
+      let fire = named(mesh, 'fire') as THREE.Group | undefined;
       if ((b.fire ?? 0) > 0 && !fire) {
         fire = new THREE.Group();
         fire.name = 'fire';
         for (let k = 0; k < 5; k++) { const f = new THREE.Mesh(new THREE.ConeGeometry(0.12, 0.4, 6), k % 2 ? FIRE_A : FIRE_B); f.position.set(Math.sin(k * 2.4) * 0.5, 1.0 + (k % 3) * 0.2, Math.cos(k * 2.4) * 0.5); fire.add(f); }
         mesh.add(fire);
+        remember(mesh, 'fire', fire);
       }
       if (fire) {
         // pożar trwa tylko po świeżych ciosach; gdy nikt dalej nie atakuje, ogień przygasa i znika (budynek zostaje osmalony)
@@ -3737,7 +3743,7 @@ export class GameRenderer {
       }
       const def = BUILDINGS[b.type]!;
       const needs = b.owner === this.me && (def.production || def.staff) && b.worker === 0;
-      let sign = mesh.getObjectByName('noworker') as THREE.Sprite | undefined;
+      let sign = named(mesh, 'noworker') as THREE.Sprite | undefined;
       if (!needs) { if (sign) sign.visible = false; continue; }
       if (!sign) {
         sign = new THREE.Sprite(noWorkerMaterial());
@@ -3745,6 +3751,7 @@ export class GameRenderer {
         sign.scale.setScalar(0.55);
         sign.renderOrder = 4;
         mesh.add(sign);
+        remember(mesh, 'noworker', sign);
       }
       sign.visible = true;
       sign.position.set(0, 2.3 + Math.sin(this.time * 2 + b.id) * 0.06, 0);
@@ -3903,7 +3910,7 @@ export class GameRenderer {
       this.ghostRings.setMatrixAt(n++, m);
     }
     this.ghostRings.count = n;
-    this.ghostRings.instanceMatrix.needsUpdate = true;
+    touch(this.ghostRings);
   }
 
   /** Prawy przycisk rysuje szyk zamiast obracać kamerę (gdy zaznaczone jest wojsko) */
@@ -4205,10 +4212,10 @@ export class GameRenderer {
       n++;
     }
     this.guardRings.count = guardRingN;
-    this.guardRings.instanceMatrix.needsUpdate = true;
+    touch(this.guardRings);
     for (let i = guardRingN; i < this.guardPins.length; i++) this.guardPins[i]!.visible = false;
     this.dots.count = dots;
-    this.dots.instanceMatrix.needsUpdate = true;
+    touch(this.dots);
     (this.dots.material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(this.time * 6) * 0.35;
     // fala rozkazu: rośnie i blednie przez pół sekundy
     this.animatePings(1 / 60);
@@ -4217,7 +4224,7 @@ export class GameRenderer {
     if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
     // wartownicy na murach zamków to teraz prawdziwi strażnicy (guardSystem), nie ozdoba
     this.ramBodies.count = rams; this.ramBeams.count = rams;
-    this.ramBodies.instanceMatrix.needsUpdate = true; this.ramBeams.instanceMatrix.needsUpdate = true;
+    touch(this.ramBodies); touch(this.ramBeams);
     this.spearmen.finish(n);
     this.archers.finish(n);
     this.guardsFig.finish(n);
@@ -4226,7 +4233,7 @@ export class GameRenderer {
     this.syncRallyFlags(g, view);
     this.syncSpawnFx(g, view);
     this.soldierTorches.count = torches;
-    this.soldierTorches.instanceMatrix.needsUpdate = true;
+    touch(this.soldierTorches);
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
@@ -4263,11 +4270,11 @@ export class GameRenderer {
     this.archerBodies.finish(ac);
     this.guardBodies.finish(gc);
     this.stains.count = c;
-    this.stains.instanceMatrix.needsUpdate = true;
+    touch(this.stains);
     this.rings.count = rings;
-    this.rings.instanceMatrix.needsUpdate = true;
+    touch(this.rings);
     this.ringsBack.count = rings;
-    this.ringsBack.instanceMatrix.needsUpdate = true;
+    touch(this.ringsBack);
     // lekki puls, żeby wzrok od razu łapał zaznaczonych
     (this.rings.material as THREE.MeshBasicMaterial).opacity = 0.85 + Math.sin(this.time * 4) * 0.15;
   }
@@ -4576,7 +4583,7 @@ export class GameRenderer {
     const width = g.map.width, height = g.map.height;
     const L = 0.48;
     if (u.home) {
-      const floor = this.buildingMeshes.get(u.home)?.getObjectByName('interior')?.children[0] as THREE.Mesh | undefined;
+      const floor = named(this.buildingMeshes.get(u.home), 'interior')?.children[0] as THREE.Mesh | undefined;
       if (!floor?.geometry) return null;
       floor.geometry.boundingBox ?? floor.geometry.computeBoundingBox();
       const bb = floor.geometry.boundingBox!;
@@ -4758,7 +4765,7 @@ export class GameRenderer {
           t.rotation.set(Math.max(0, Math.sin(k * 5)) * 0.5, k * 0.4 + u.id, 0, 'YXZ'); // schyla się przy pracy
           swing = Math.sin(k * 5) * 0.4;
         } else {
-          const m = mesh?.getObjectByName('interior')?.children[0];
+          const m = named(mesh, 'interior')?.children[0];
           // miejsce we wnętrzu jest zapisane w układzie modelu, więc obracamy je razem z budynkiem
           const mx = m ? m.position.x : 0, mz = (m ? m.position.z : 0) + (resting ? 0.3 : 0.12);
           const lx = mx * cosT + mz * sinT, lz = -mx * sinT + mz * cosT;
@@ -5173,25 +5180,16 @@ export class GameRenderer {
     for (const [id, cart] of this.carts) if (!seenCarts.has(id)) { this.scene.remove(cart.obj); cart.obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose()); this.carts.delete(id); }
     k = this.castleFolk(g, k);
     this.figures.finish(k);
-    this.rods.count = n;
-    this.bedrolls.count = n;
-    this.bedrolls.instanceMatrix.needsUpdate = true;
-    this.hammers.count = n;
-    this.hammers.instanceMatrix.needsUpdate = true;
-    for (const m of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
-    this.rods.instanceMatrix.needsUpdate = true;
-    this.handTorches.count = n;
-    this.handTorches.instanceMatrix.needsUpdate = true;
-    for (const m of [this.buckets, this.bucketWater]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
+    // pule narzędzi: `count` zamyka klatkę (liczba bez znaczenia) i same oznaczają swoje bufory
+    for (const p of [this.rods, this.bedrolls, this.hammers, this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.handTorches, this.buckets, this.bucketWater]) p.count = n;
     this.fireFx.end(this.calm ? 0 : Math.min(0.05, this.frameDt), (x, z) => this.standY(view, x + width / 2, z + height / 2));
     for (const [res, m] of this.loads) {
       m.count = loadUsed.get(res) ?? 0;
-      m.instanceMatrix.needsUpdate = true;
+      touch(m);
     }
     for (const m of [this.logs, this.planks]) {
       m.count = n;
-      m.instanceMatrix.needsUpdate = true;
-      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      touch(m);
     }
   }
 

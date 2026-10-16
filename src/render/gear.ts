@@ -1,7 +1,9 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import TOOLS_MODEL from './models/tools.json';
 import { grayPattern, normal, pattern } from './textures';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const TOOLS_MODEL = model('tools');
 
 /**
  * Broń chłopa z Blendera (tools/models/tools.py): kilof i maczuga w dłoni (układ ramienia: oś w barku, dłoń 0,19 niżej,

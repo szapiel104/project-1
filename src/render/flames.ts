@@ -1,3 +1,4 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 
 /**
@@ -130,8 +131,8 @@ export class Flames {
   end(): void {
     for (const m of [this.flame, this.glow]) {
       m.count = this.n;
-      m.instanceMatrix.needsUpdate = true;
-      if (m.instanceColor) m.instanceColor.needsUpdate = true;
+      touch(m);
+      if (m.instanceColor) touch(m);
     }
   }
 }

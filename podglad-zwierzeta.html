@@ -3,8 +3,10 @@
 <script type="module">
 // Podgląd wilka i kruków z bliska: ?d=odległość&pitch=kąt&yaw=obrót (bez całej mapy)
 import * as THREE from 'three';
-import { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } from './src/render/creatures.ts';
-import { animalGeo, ANIMAL_AT } from './src/render/village.ts';
+import { loadModels } from './src/render/modelstore.ts';
+await loadModels();
+const { crowGeometry, WOLF_HIPS, WOLF_TAIL, wolfParts } = await import('./src/render/creatures.ts');
+const { animalGeo, ANIMAL_AT } = await import('./src/render/village.ts');
 const q = new URLSearchParams(location.search);
 const dist = Number(q.get('d') ?? 2.0), pitch = Number(q.get('pitch') ?? 0.3), yaw = Number(q.get('yaw') ?? 0.9);
 const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });

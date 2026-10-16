@@ -1,3 +1,4 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 
 /**
@@ -136,7 +137,7 @@ export class FireCrewFx {
       this.dropMesh.setMatrixAt(k++, this.m);
     }
     this.dropMesh.count = k;
-    this.dropMesh.instanceMatrix.needsUpdate = true;
+    touch(this.dropMesh);
     this.puffs = this.puffs.filter((p) => {
       p.life -= dt;
       if (p.life <= 0) { this.scene.remove(p.s); p.s.material.dispose(); return false; }

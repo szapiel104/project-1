@@ -1,3 +1,4 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -12,7 +13,9 @@ import { idle } from './motion';
 import { Figures, modelGeo, type ModelMesh } from './peasants';
 import { tint } from './loads';
 import { grayPattern, normal, pattern } from './textures';
-import YARD from './models/yard.json';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const YARD = model('yard');
 
 /**
  * Rodziny przy chatach — tylko w wyglądzie (symulacja ich nie zna, gra przez sieć zostaje zgodna).
@@ -390,7 +393,7 @@ export class Family {
     }
     this.women.finish(n);
     this.kids.finish(n);
-    const fin = (mesh: THREE.InstancedMesh, k: number): void => { mesh.count = k; mesh.visible = k > 0; mesh.instanceMatrix.needsUpdate = true; if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true; };
+    const fin = (mesh: THREE.InstancedMesh, k: number): void => { mesh.count = k; mesh.visible = k > 0; touch(mesh); if (mesh.instanceColor) touch(mesh); };
     fin(this.brooms, br); fin(this.rope, rp); fin(this.dust, du);
     for (const [key, list] of this.props) for (const mesh of list) fin(mesh, counts.get(key) ?? 0);
     for (const [k, mm] of this.members) if (this.frame - mm.seen > 600) this.members.delete(k);

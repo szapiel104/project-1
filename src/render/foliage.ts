@@ -1,5 +1,7 @@
 import * as THREE from 'three';
-import TREES from './models/trees.json';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const TREES = model('trees');
 
 /**
  * Drzewa z Blendera (tools/models/trees.py) i tekstury kart korony: gałąź świerka z igłami i kępa liści,

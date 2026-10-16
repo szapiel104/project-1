@@ -3,10 +3,12 @@
 <script type="module">
 // Podgląd postaci żołnierzy z bliska: ?d=odległość&pitch=kąt (do porównań wyglądu, bez całej mapy)
 import * as THREE from 'three';
-import { Figures } from './src/render/peasants.ts';
-import { clutterModel } from './src/render/clutter.ts';
-import { peasantGear, pickGeometry } from './src/render/gear.ts';
-import { pattern } from './src/render/textures.ts';
+import { loadModels } from './src/render/modelstore.ts';
+await loadModels();
+const { Figures } = await import('./src/render/peasants.ts');
+const { clutterModel } = await import('./src/render/clutter.ts');
+const { peasantGear, pickGeometry } = await import('./src/render/gear.ts');
+const { pattern } = await import('./src/render/textures.ts');
 const q = new URLSearchParams(location.search);
 const dist = Number(q.get('d') ?? 2.6), pitch = Number(q.get('pitch') ?? 0.32), look = Number(q.get('y') ?? 0.32);
 const r = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });

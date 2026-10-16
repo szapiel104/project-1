@@ -1,16 +1,19 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 import { cloudShade } from './ground';
 import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import GUARD_MODEL from './models/guard.json';
-import PEASANT_MODEL from './models/peasant.json';
-import SPEARMAN_MODEL from './models/spearman.json';
-import ARCHER_MODEL from './models/archer.json';
 import { grayPattern, normal, pattern } from './textures';
 import { charTexture } from './chartex';
-import WOMAN_MODEL from './models/woman.json';
-import KING_MODEL from './models/king.json';
-import CHILD_MODEL from './models/child.json';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const GUARD_MODEL = model('guard');
+const PEASANT_MODEL = model('peasant');
+const SPEARMAN_MODEL = model('spearman');
+const ARCHER_MODEL = model('archer');
+const WOMAN_MODEL = model('woman');
+const KING_MODEL = model('king');
+const CHILD_MODEL = model('child');
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
 export interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
@@ -373,8 +376,8 @@ export class Figures {
       const n = p.lod ? this.farN : this.nearN;
       p.mesh.count = n;
       p.mesh.visible = n > 0; // pusta grupa nie kosztuje wywołania rysowania
-      p.mesh.instanceMatrix.needsUpdate = true;
-      if (p.mesh.instanceColor) p.mesh.instanceColor.needsUpdate = true;
+      touch(p.mesh);
+      if (p.mesh.instanceColor) touch(p.mesh);
     }
     this.nearN = 0; this.farN = 0;
   }

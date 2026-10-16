@@ -17,13 +17,14 @@ import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './re
 import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
 import { proceduralModels } from './render/models';
 import { fernTexture, leafTexture, needleTexture } from './render/foliage';
-import RAM_MODEL from './render/models/ram.json';
+import { model } from './render/modelstore';
 import { clutterModel } from './render/clutter';
 import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
 import { YARD_KEYS, yardModel } from './render/family';
 import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
 import { ANIMAL_AT, animalGeo } from './render/village';
+const RAM_MODEL = model('ram');
 
 const RED = 0xa32a22;
 type Make = () => { obj: THREE.Object3D; size?: THREE.Vector3 };

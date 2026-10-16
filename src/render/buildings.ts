@@ -1,3 +1,4 @@
+import { named } from './named';
 import * as THREE from 'three';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
@@ -5,30 +6,32 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { bump, grayPattern, normal, pattern } from './textures';
 import { boxUv, modelGeo } from './peasants';
 import { beam, cutBox, paintGeo, rng, stoneSkirt, thatchSlab } from './craft';
-import KEEP_MODEL from './models/keep.json';
-import TAVERN_MODEL from './models/tavern.json';
-import HOUSE_MODEL from './models/house.json';
-import BARN_MODEL from './models/barn.json';
-import GRANARY_MODEL from './models/granary.json';
-import TORCH_MODEL from './models/torch.json';
-import GRANARY_BIG_MODEL from './models/granary_big.json';
-import ARMORY_MODEL from './models/armory.json';
-import BAKERY_MODEL from './models/bakery.json';
-import MILL_MODEL from './models/mill.json';
-import BARRACKS_MODEL from './models/barracks.json';
-import ORCHARD_MODEL from './models/orchard.json';
-import FARM_MODEL from './models/farm.json';
-import CAMP_MODEL from './models/camp.json';
-import BREWERY_MODEL from './models/brewery.json';
-import GATE_MODEL from './models/gate.json';
-import STONE_TOWER_MODEL from './models/stonetower.json';
-import STONE_GATE_MODEL from './models/stonegate.json';
-import STOCKPILE_MODEL from './models/stockpile.json';
-import WOODCUTTER_MODEL from './models/woodcutter.json';
-import FISHER_MODEL from './models/fisher.json';
-import FLETCHER_MODEL from './models/fletcher.json';
-import POLETURNER_MODEL from './models/poleturner.json';
-import CEMETERY_MODEL from './models/cemetery.json';
+import { model } from './modelstore';
+// modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+const KEEP_MODEL = model('keep');
+const TAVERN_MODEL = model('tavern');
+const HOUSE_MODEL = model('house');
+const BARN_MODEL = model('barn');
+const GRANARY_MODEL = model('granary');
+const TORCH_MODEL = model('torch');
+const GRANARY_BIG_MODEL = model('granary_big');
+const ARMORY_MODEL = model('armory');
+const BAKERY_MODEL = model('bakery');
+const MILL_MODEL = model('mill');
+const BARRACKS_MODEL = model('barracks');
+const ORCHARD_MODEL = model('orchard');
+const FARM_MODEL = model('farm');
+const CAMP_MODEL = model('camp');
+const BREWERY_MODEL = model('brewery');
+const GATE_MODEL = model('gate');
+const STONE_TOWER_MODEL = model('stonetower');
+const STONE_GATE_MODEL = model('stonegate');
+const STOCKPILE_MODEL = model('stockpile');
+const WOODCUTTER_MODEL = model('woodcutter');
+const FISHER_MODEL = model('fisher');
+const FLETCHER_MODEL = model('fletcher');
+const POLETURNER_MODEL = model('poleturner');
+const CEMETERY_MODEL = model('cemetery');
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -444,7 +447,7 @@ export function torchModel(): THREE.Group {
 
 /** Animacje budynków: kręcące się skrzydła młyna i dym z komina, tylko gdy ktoś w środku pracuje. */
 export function animateBuilding(model: THREE.Object3D, active: boolean, time: number, dt: number): void {
-  const interior = model.getObjectByName('interior');
+  const interior = named(model, 'interior');
   if (interior) {
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
     interior.visible = active;
@@ -455,10 +458,10 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   // flagi łopoczą: płachta kołysze się wokół drzewca, każda w innym rytmie
   const clothes = (model.userData.cloths ??= (() => { const l: THREE.Object3D[] = []; model.traverse((o) => { if (o.name === 'flagcloth') l.push(o); }); return l; })()) as THREE.Object3D[];
   for (let i = 0; i < clothes.length; i++) { const c = clothes[i]!; c.rotation.y = Math.sin(time * 1.7 + i * 1.3 + model.id) * 0.28; c.rotation.z = Math.sin(time * 2.3 + i) * 0.04; }
-  const flame = model.getObjectByName('flame');
+  const flame = named(model, 'flame');
   if (flame) { flame.visible = active; flame.scale.set(1, 0.8 + Math.abs(Math.sin(time * 9)) * 0.5, 1); }
   // życie na murach, niezależnie od tego, czy budynek jest otwarty
-  const life = model.getObjectByName('life');
+  const life = named(model, 'life');
   if (life && dt > 0) {
     const R = 1.02, Y = 1.25;
     for (const p of life.children) {
@@ -480,7 +483,7 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
     for (const p of interior.children) {
       if (!p.name || !p.userData.x) { if (p.name !== 'lord') continue; }
       n++;
-      const arm = p.getObjectByName('arm');
+      const arm = named(p, 'arm');
       if (p.name === 'servant') {
         const k = (Math.sin(time * 0.7) + 1) / 2;
         p.position.x = 0.3 - k * 0.38;
@@ -494,14 +497,14 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
       else if (p.name === 'lord' && arm) arm.rotation.x = -0.6 + Math.sin(time * 0.9) * 0.3;
     }
   }
-  const spin = model.getObjectByName('spin');
+  const spin = named(model, 'spin');
   if (spin && active) spin.rotation.z -= dt * 1.6;
   const crops = (model.userData.crops ?? model.children[0]?.userData.crops) as THREE.Object3D[] | undefined;
   if (crops) for (const o of crops) o.rotation.x = Math.sin(time * 1.3 + o.position.z * 3) * 0.06;
-  const runner = model.getObjectByName('runner');
+  const runner = named(model, 'runner');
   if (runner && active) runner.rotation.y += dt * 2.2;
   // stary dym z brył (kanciaste kule) wyłączony: dym z kominów i ognisk rysuje teraz system cząstek (ambience)
-  const smoke = model.getObjectByName('smoke');
+  const smoke = named(model, 'smoke');
   if (smoke && smoke.visible) smoke.visible = false;
 }
 

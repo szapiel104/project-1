@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { cat } from './cat';
 import { Figures } from './peasants';
+import { touch } from './touch';
 
 /** Zerowa macierz: „tego narzędzia teraz nie ma” — pula takiej instancji w ogóle nie rysuje */
 export const GEAR_NONE = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -21,6 +22,7 @@ export class GearPool {
   private n = 0;
   private f = 0;
   private view: THREE.Vector3 | null = null;
+  private on = true;
   /** Dalej niż tyle (do kwadratu) od kamery narzędzia nie rysujemy */
   static HIDE2 = 60 * 60;
 
@@ -39,8 +41,8 @@ export class GearPool {
   /** Pozycja kamery (to samo, co dostają postacie) */
   setView(p: THREE.Vector3): void { this.view = p; }
 
-  set visible(v: boolean) { this.near.visible = v; if (this.far) this.far.visible = v; }
-  get visible(): boolean { return this.near.visible; }
+  set visible(v: boolean) { this.on = v; this.near.visible = v && this.near.count > 0; if (this.far) this.far.visible = v && this.far.count > 0; }
+  get visible(): boolean { return this.on; }
 
   setMatrixAt(_i: number, m: THREE.Matrix4): void {
     if (m === GEAR_NONE) return;
@@ -55,12 +57,13 @@ export class GearPool {
 
   /** Koniec klatki: tyle narzędzi rysujemy; liczba podana z zewnątrz (dawna liczba ludzi) nie ma znaczenia */
   set count(_n: number) {
-    this.near.count = this.n; this.near.instanceMatrix.needsUpdate = true;
-    if (this.far) { this.far.count = this.f; this.far.instanceMatrix.needsUpdate = true; }
+    // pusta pula znika ze sceny (bez wywołania rysowania), a na kartę idą tylko używane instancje
+    this.near.count = this.n; this.near.visible = this.on && this.n > 0; touch(this.near);
+    if (this.far) { this.far.count = this.f; this.far.visible = this.on && this.f > 0; touch(this.far); }
     this.n = 0; this.f = 0;
   }
   get count(): number { return this.n + this.f; }
 
   /** Zgodność z siatką instancji: zmiany oznacza już `count` */
-  readonly instanceMatrix = { needsUpdate: false };
+  readonly instanceMatrix = { needsUpdate: false, count: 0 };
 }

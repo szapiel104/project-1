@@ -1,3 +1,4 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 
 /**
@@ -290,7 +291,7 @@ export class Ambience {
         sc.set(s.s * 2.4 * k, 1, s.s * 0.8 * k);
         this.mist.setMatrixAt(i, M.compose(p, q, sc));
       }
-      this.mist.instanceMatrix.needsUpdate = true;
+      touch(this.mist);
     }
   }
 }

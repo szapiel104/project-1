@@ -1,3 +1,4 @@
+import { touch } from './touch';
 import * as THREE from 'three';
 
 /**
@@ -185,10 +186,10 @@ export class Clouds {
       }
     }
     this.mesh.count = n;
-    this.mesh.instanceMatrix.needsUpdate = true;
-    if (this.mesh.instanceColor) this.mesh.instanceColor.needsUpdate = true;
+    touch(this.mesh);
+    if (this.mesh.instanceColor) touch(this.mesh);
     this.shadows.count = sh;
-    this.shadows.instanceMatrix.needsUpdate = true;
+    touch(this.shadows);
     this.shadowMat.opacity = 0.16 * (1 - o.night) * (0.6 + o.cover * 0.4) * (1 - o.rain * 0.5);
   }
 
