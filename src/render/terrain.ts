@@ -76,6 +76,8 @@ export interface TerrainView {
   /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
   /** `detail` (0–1) skraca odległości szczegółów na słabszych poziomach grafiki (1 = pełne) */
   lod(x: number, z: number, reach: number, detail?: number): void;
+  /** Roślinność do wspólnych pul na tę klatkę: kawałki w kadrze i w zasięgu mapy cieni */
+  cullVegetation(view: THREE.Frustum, shadow: THREE.Frustum | null): void;
   /** Wydeptuje ziemię w narożniku pola (x, y): trawa brązowieje do gołej ziemi, do progu cap */
   wear(x: number, y: number, amount: number, cap?: number): void;
   dispose(): void;
@@ -747,6 +749,88 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // cień liczony jest z mapy 4096 px na obszar kilkudziesięciu pól, więc różnicy w kształcie cienia nie widać
   type Lod = { hide?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material; shadowGeo?: THREE.BufferGeometry };
   const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean; proxy?: THREE.InstancedMesh }[] = [];
+  /**
+   * Wspólne pule roślinności: zamiast osobnego wywołania rysowania dla każdego kawałka 40×40 (i drugiego w cieniu)
+   * każdy rodzaj (korony, pnie, krzewy, kamyki, kwiaty…) rysuje się jedną siatką na parę bryła–materiał. Co klatkę
+   * (tylko gdy coś się zmieniło) trafiają do niej instancje kawałków w kadrze kamery, a do puli cienia — kawałki
+   * w zasięgu mapy cieni. Kawałki zostają jak były (macierze, kolory, ścinanie drzew, LOD z lod()); pula tylko je
+   * kopiuje, więc logika lasu się nie zmienia.
+   */
+  type VegChunk = { mesh: THREE.InstancedMesh; proxy?: THREE.InstancedMesh };
+  type VegPool = { mesh: THREE.InstancedMesh; n: number };
+  type VegKind = { chunks: VegChunk[]; pools: Map<string, VegPool>; label: string; receive: boolean; sig: number[] };
+  const vegKinds: VegKind[] = [];
+  const poolKey = (g: THREE.BufferGeometry, m: THREE.Material, role: 'main' | 'shadow'): string => `${g.uuid}|${m.uuid}|${role}`;
+  const vegPool = (k: VegKind, g: THREE.BufferGeometry, m: THREE.Material, role: 'main' | 'shadow', cap: number, depth?: THREE.Material): VegPool => {
+    const key = poolKey(g, m, role);
+    let p = k.pools.get(key);
+    if (p) return p;
+    const mesh = new THREE.InstancedMesh(g, m, cap);
+    mesh.count = 0;
+    mesh.visible = true; // widoczna od startu, żeby wstępna kompilacja shaderów ją objęła; pierwsze cullVeg ustawi właściwie
+    mesh.frustumCulled = false;
+    mesh.userData.noCull = true; // sama wybiera kawałki; cięcie instancji poza kadrem (scene.cullInstances) jej nie dotyczy
+    mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    if (role === 'shadow') {
+      mesh.layers.set(SHADOW_LAYER);
+      mesh.castShadow = true;
+      if (depth) mesh.customDepthMaterial = depth;
+      cat(mesh, k.label + ' (cień)');
+    } else {
+      mesh.castShadow = false;
+      mesh.receiveShadow = k.receive;
+      mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(cap * 3), 3).setUsage(THREE.DynamicDrawUsage);
+      cat(mesh, k.label);
+    }
+    group.add(mesh);
+    p = { mesh, n: 0 };
+    k.pools.set(key, p);
+    return p;
+  };
+  const vegSphere = new THREE.Sphere();
+  /** Wybór kawałków do pul na tę klatkę: `view` — kadr kamery, `shadow` — zasięg mapy cieni (null: bez cieni) */
+  const cullVeg = (view: THREE.Frustum, shadow: THREE.Frustum | null): void => {
+    for (const k of vegKinds) {
+      // podpis: które kawałki, do której puli i w jakiej wersji danych — bez zmian nic nie kopiujemy
+      const sig: number[] = [];
+      const plan: [VegPool, THREE.InstancedMesh, boolean][] = [];
+      k.chunks.forEach((c, ci) => {
+        const m = c.mesh;
+        if (!m.visible || !m.boundingSphere) return;
+        vegSphere.copy(m.boundingSphere).applyMatrix4(group.matrixWorld);
+        if (view.intersectsSphere(vegSphere)) {
+          const p = k.pools.get(poolKey(m.geometry, m.material as THREE.Material, 'main'));
+          if (p) { plan.push([p, m, true]); sig.push(ci, 0, m.instanceMatrix.version, m.instanceColor?.version ?? 0); }
+        }
+        if (!shadow || !shadow.intersectsSphere(vegSphere)) return;
+        if (c.proxy) {
+          if (!c.proxy.visible) return;
+          const p = k.pools.get(poolKey(c.proxy.geometry, shadowProxyMaterial, 'shadow'));
+          if (p) { plan.push([p, m, false]); sig.push(ci, 1, m.instanceMatrix.version); }
+        } else if (m.castShadow) {
+          const p = k.pools.get(poolKey(m.geometry, m.material as THREE.Material, 'shadow'));
+          if (p) { plan.push([p, m, false]); sig.push(ci, 2, m.instanceMatrix.version); }
+        }
+      });
+      if (sig.length === k.sig.length && sig.every((v, i) => v === k.sig[i])) continue;
+      k.sig = sig;
+      for (const p of k.pools.values()) p.n = 0;
+      for (const [p, m, color] of plan) {
+        const n = m.count;
+        (p.mesh.instanceMatrix.array as Float32Array).set((m.instanceMatrix.array as Float32Array).subarray(0, n * 16), p.n * 16);
+        if (color && p.mesh.instanceColor && m.instanceColor) (p.mesh.instanceColor.array as Float32Array).set((m.instanceColor.array as Float32Array).subarray(0, n * 3), p.n * 3);
+        p.n += n;
+      }
+      for (const p of k.pools.values()) {
+        p.mesh.count = p.n;
+        p.mesh.visible = p.n > 0;
+        if (p.n) {
+          p.mesh.instanceMatrix.clearUpdateRanges(); p.mesh.instanceMatrix.addUpdateRange(0, p.n * 16); p.mesh.instanceMatrix.needsUpdate = true;
+          if (p.mesh.instanceColor) { p.mesh.instanceColor.clearUpdateRanges(); p.mesh.instanceColor.addUpdateRange(0, p.n * 3); p.mesh.instanceColor.needsUpdate = true; }
+        }
+      }
+    }
+  };
   /** Podpis kolejnych siatek roślinności do okna wydajności (F3) */
   let label = 'roślinność';
   const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material, lod?: Lod, chunk = CHUNK): Inst | null => {
@@ -760,6 +844,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     });
     const where: [THREE.InstancedMesh, number][] = new Array(list.length);
     const dirty = new Set<THREE.InstancedMesh>();
+    const kind: VegKind = { chunks: [], pools: new Map(), label, receive: mat !== grassMat, sig: [] };
+    vegKinds.push(kind);
     for (const idx of buckets.values()) {
       const mesh = new THREE.InstancedMesh(g, mat, idx.length);
       idx.forEach((i, j) => { const it = list[i]!; mesh.setMatrixAt(j, it.m); tint.setHex(color).multiplyScalar(it.shade); if (it.frost) tint.lerp(FROST, it.frost); mesh.setColorAt(j, tint); where[i] = [mesh, j]; });
@@ -774,17 +860,25 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         proxy.layers.set(SHADOW_LAYER);
         proxy.castShadow = true;
         if (mat.userData.windDepth) proxy.customDepthMaterial = mat.userData.windDepth as THREE.Material;
-        cat(proxy, label + ' (cień)');
-        group.add(proxy);
       }
       const casts = shadow && !proxy;
       if (lod && mesh.boundingSphere) lodChunks.push({ mesh, x: mesh.boundingSphere.center.x, z: mesh.boundingSphere.center.z, lod, near: g, nearMat: mat, shadow: casts, proxy });
       mesh.castShadow = casts;
       if (mat.userData.windDepth) mesh.customDepthMaterial = mat.userData.windDepth as THREE.Material;
-      cat(mesh, label);
       // kępy trawy nie przyjmują cienia: cienkie źdźbła tuż nad ziemią łapały cień samego terenu i czerniały
       mesh.receiveShadow = mat !== grassMat;
-      group.add(mesh);
+      // kawałek nie trafia do sceny: to tylko dane (macierze, kolory, stan LOD); rysuje go wspólna pula rodzaju
+      kind.chunks.push({ mesh, proxy });
+    }
+    // pule tworzone od razu dla wszystkich par bryła–materiał, jakie ten rodzaj może mieć (pory roku łatają materiały
+    // tego, co jest w scenie — pula dodana później dostałaby je z opóźnieniem)
+    const total = list.length;
+    vegPool(kind, g, mat, 'main', total);
+    if (lod?.farGeo) vegPool(kind, lod.farGeo, lod.farMat ?? mat, 'main', total);
+    if (shadow && lod?.shadowGeo) vegPool(kind, lod.shadowGeo, shadowProxyMaterial, 'shadow', total, mat.userData.windDepth as THREE.Material | undefined);
+    else if (shadow) {
+      vegPool(kind, g, mat, 'shadow', total, mat.userData.windDepth as THREE.Material | undefined);
+      if (lod?.farGeo && !lod.farMat) vegPool(kind, lod.farGeo, mat, 'shadow', total, mat.userData.windDepth as THREE.Material | undefined);
     }
     const flag = { get needsUpdate() { return dirty.size > 0; }, set needsUpdate(v: boolean) { if (v) { for (const m of dirty) { m.instanceMatrix.needsUpdate = true; if (m.instanceColor) m.instanceColor.needsUpdate = true; } dirty.clear(); } } };
     return {
@@ -1478,6 +1572,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     updateGrass(x: number, z: number, time: number, camDist?: number) { grass?.update(x, z, time, camDist); },
     grassReach(f: number) { grass?.setReach(f); },
     noGrass(tile: number, on = true) { builtOn[tile] = on ? 1 : 0; regrass(tile); },
+    /** Roślinność do wspólnych pul na tę klatkę (wywołanie tuż przed rysowaniem) */
+    cullVegetation(view: THREE.Frustum, shadow: THREE.Frustum | null) { cullVeg(view, shadow); },
     lod(x: number, z: number, reach: number, detail = 1) {
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka

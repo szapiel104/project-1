@@ -1927,7 +1927,7 @@ export class GameRenderer {
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
       T('zwierzęta', () => { this.syncWolves(g, v, alpha); this.syncCrows(g, v); this.syncForestEyes(g, v); this.syncVillage(g, v, dt); });
       T('budynki razem', () => this.syncBatches());
-      T('kadr', () => this.cullInstances());
+      T('kadr', () => { this.cullInstances(); this.cullVegetation(v); });
     }
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
     // okno wydajności otwarte: co 15. klatka mierzona przejście po przejściu (ta jedna klatka jest wolniejsza, więc jej
@@ -2208,6 +2208,24 @@ export class GameRenderer {
       if (b.n) { b.mesh.instanceMatrix.needsUpdate = true; b.mesh.computeBoundingSphere(); }
     }
   }
+  private vegView = new THREE.Frustum();
+  private vegShadow = new THREE.Frustum();
+  /** Roślinność: wspólne pule dostają kawałki w kadrze kamery i w zasięgu mapy cieni słońca (terrain.ts, cullVeg) */
+  private cullVegetation(v: TerrainView): void {
+    const cam = this.cam.camera;
+    cam.updateMatrixWorld();
+    this.vegView.setFromProjectionMatrix(this.cullM.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse));
+    let shadow: THREE.Frustum | null = null;
+    if (this.sun.castShadow && this.renderer.shadowMap.enabled) {
+      // macierze kamery cienia liczymy teraz (te same, które za chwilę policzy mapa cieni)
+      this.sun.updateMatrixWorld();
+      this.sun.target.updateMatrixWorld();
+      this.sun.shadow.updateMatrices(this.sun);
+      shadow = this.vegShadow.copy(this.sun.shadow.getFrustum());
+    }
+    v.cullVegetation(this.vegView, shadow);
+  }
+
   private cullInstances(): void {
     if (!this.cullOn) {
       for (const [m, st] of this.cullSeen) {

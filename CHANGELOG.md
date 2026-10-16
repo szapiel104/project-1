@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.23.7 — las we wspólnych pulach (2026-10-16)
+
+- Roślinność (korony, pnie, krzewy, kamyki, kwiaty, kępy trawy, trzcina, skały, puszcza za mapą) rysowana jedną siatką na rodzaj zamiast osobno dla każdego kawałka mapy 40×40 i jeszcze raz w cieniu. Do puli trafiają tylko kawałki w kadrze, a do puli cienia te w zasięgu mapy cieni; przepisywane tylko wtedy, gdy coś się zmieni (ruch kamery przez granicę kawałka, ścięte drzewo, zmiana LOD). Logika lasu bez zmian: ścinanie, pniaki, obrazki z daleka, pory roku, wiatr i zastępcze cienie działają jak wcześniej
+
 ## 0.23.6 — skompresowane tekstury i teren 2K (2026-10-16)
 
 - Wszystkie zdjęciowe tekstury (teren, mury, deski, strzechy, ubrania, żelazo) wczytywane jako KTX2 (Basis Universal): karta graficzna trzyma je skompresowane (BC1/BC7) — ok. 6–8× mniej pamięci karty niż JPG rozpakowany do pikseli, a przeglądarka nie dekoduje dużych obrazków w trakcie gry (mniej zacięć, gdy nowa tekstura wchodzi w kadr). Pliki do pobrania mniejsze: 17 MB zamiast 24 MB. Gdy KTX2 się nie wczyta, gra bierze zwykły JPG
