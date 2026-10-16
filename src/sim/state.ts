@@ -362,7 +362,9 @@ export interface GameState {
  * Nowa gra. `humans` = numery graczy-ludzi w meczu przez sieć: wszyscy zaczynają na równych zasadach,
  * reszta miejsc to boty. Bez `humans` człowiekiem jest gracz 0 i dostaje premię zależną od poziomu.
  */
-export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[], instantBuild = true): GameState {
+/** Mury miasta w trybie deweloperskim: kamienne, drewniane (palisada) albo mieszane (tył i prawy bok z kamienia) */
+export type DevWalls = 'mix' | 'stone' | 'wood';
+export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[], instantBuild = true, devWalls: DevWalls = 'mix'): GameState {
   const map = generateMap(seed, preset);
   const size = map.width * map.height;
   const g: GameState = {
@@ -404,7 +406,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
       placeNear(g, CAMP, s.player, s.x, s.y, 14);
       for (let i = 0; i < 30; i++) spawnPeasant(g, s.player);
-      devFortify(g, s.player);
+      devFortify(g, s.player, devWalls);
     }
   }
   return g;
@@ -413,7 +415,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
 const CAMP = buildingIndex('camp');
 
 /** Tryb deweloperski: miasto otoczone murem (tył i prawy bok kamienne, przód i lewy z bali) z bramami na każdym boku, wieże w narożnikach, drabiny na kamienny mur, oddział włóczników */
-function devFortify(g: GameState, player: number): void {
+function devFortify(g: GameState, player: number, walls: DevWalls = 'mix'): void {
   const { width: w, height: h } = g.map;
   let x0 = w, y0 = h, x1 = 0, y1 = 0;
   for (const b of g.buildings) {
@@ -445,6 +447,7 @@ function devFortify(g: GameState, player: number): void {
     { kind: 'palisade', tiles: Array.from({ length: y1 - y0 - 1 }, (_, i) => [x0, y0 + 1 + i] as [number, number]), gate: my - y0 - 1 },
     { kind: 'stoneWall', tiles: Array.from({ length: y1 - y0 - 1 }, (_, i) => [x1, y0 + 1 + i] as [number, number]), gate: my - y0 - 1 },
   ];
+  if (walls !== 'mix') for (const side of sides) side.kind = walls === 'stone' ? 'stoneWall' : 'palisade';
   for (const side of sides) {
     // brama: na swoim miejscu, a gdy tam stoi budynek albo woda — na najbliższym wolnym polu tego boku
     let gate = -1;
@@ -458,10 +461,14 @@ function devFortify(g: GameState, player: number): void {
   }
   // wieże tuż za narożnikami, w środku: przy kamiennym murze kamienne, w drewnianym rogu strażnica
   const stoneT = buildingIndex('stoneTower'), woodT = buildingIndex('watchtower');
-  for (const [x, y, id] of [[x0 + 1, y0 + 1, stoneT], [x1 - 2, y0 + 1, stoneT], [x0 + 1, y1 - 2, woodT], [x1 - 2, y1 - 2, stoneT]] as const)
+  const corners: [number, number, number][] = [[x0 + 1, y0 + 1, stoneT], [x1 - 2, y0 + 1, stoneT], [x0 + 1, y1 - 2, woodT], [x1 - 2, y1 - 2, stoneT]];
+  if (walls !== 'mix') for (const c of corners) c[2] = walls === 'stone' ? stoneT : woodT;
+  for (const [x, y, id] of corners)
     if (free(x, y) && free(x + 1, y) && free(x, y + 1) && free(x + 1, y + 1)) addBuilding(g, id, player, x, y);
   // drabiny na kamienne mury od środka osady (inaczej nikt nie wejdzie na koronę)
-  for (const [x, y] of [[mx - 4, y0 + 1], [mx + 4, y0 + 1], [x1 - 1, my - 4], [x1 - 1, my + 4]] as const) if (free(x, y)) addBuilding(g, buildingIndex('ladder'), player, x, y);
+  const ladders: [number, number][] = walls === 'wood' ? [] : [[mx - 4, y0 + 1], [mx + 4, y0 + 1], [x1 - 1, my - 4], [x1 - 1, my + 4]];
+  if (walls === 'stone') ladders.push([mx - 4, y1 - 1], [mx + 4, y1 - 1], [x0 + 1, my - 4], [x0 + 1, my + 4]);
+  for (const [x, y] of ladders) if (free(x, y)) addBuilding(g, buildingIndex('ladder'), player, x, y);
   // po dwóch łuczników na każdej wieży
   const archer = UNITS.findIndex((u) => u.id === 'archer');
   for (const b of g.buildings) {

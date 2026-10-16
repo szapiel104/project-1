@@ -12,7 +12,7 @@ import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
-import { Phase, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
+import { Phase, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { applyCommands, step, type Command } from './sim/step';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
@@ -83,6 +83,8 @@ function setWreck(on: boolean): void {
   if (on) hud.toast(t('hud.wrecking'));
 }
 let currentPreset: MapPresetId = '1v1';
+/** ?dev&mury=kamien|drewno — mury miasta w trybie deweloperskim z adresu (domyślnie mieszane) */
+const URL_WALLS: DevWalls = ((m) => (m === 'kamien' || m === 'kamień' ? 'stone' : m === 'drewno' ? 'wood' : 'mix'))(new URLSearchParams(location.search).get('mury'));
 let currentSeedText = 'project-1';
 const SAVE_KEY = 'project1.save';
 
@@ -241,7 +243,7 @@ const menu = createMenu(document.body, {
     renderer.endPreview();
     renderer.setState(game, MAP_PRESETS[currentPreset].waterLevel, MAP_PRESETS[currentPreset].rim, ME);
   },
-  onNewGame: (seedText, preset, level, dev, instant) => {
+  onNewGame: (seedText, preset, level, dev, instant, walls) => {
     previewJob++; previewCover.hidden = true;
     preview = null;
     renderer.endPreview();
@@ -251,7 +253,7 @@ const menu = createMenu(document.body, {
     cover.innerHTML = loadingMarkup(t('load.map'));
     document.body.append(cover);
     requestAnimationFrame(() => setTimeout(() => {
-      start(seedText, preset, undefined, level, dev, undefined, instant);
+      start(seedText, preset, undefined, level, dev, undefined, instant, walls);
       setStatus({ where: 'solo' });
       renderer.warmup();
       menu.close();
@@ -375,12 +377,12 @@ function applySettings(st: Settings): void {
 }
 applySettings(gfx);
 
-function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true): void {
+function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS): void {
   endShown = false;
   gameOver = false;
   endOnline();
   ME = online ? online.me : 0;
-  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant);
+  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls);
   if (EMPTY && !loaded && !online) emptyScene(game);
   // wątek symulacji: tylko gra z botami bez trybu dewelopera i testów (tam wątek główny też zmienia stan gry)
   simGen++; simBusy = false;

@@ -3174,8 +3174,10 @@ export class GameRenderer {
       for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { view.clear(y * width + x); view.noGrass(y * width + x); }
       for (let y = b.y; y <= b.y + fp.h; y++)
         for (let x = b.x; x <= b.x + fp.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
-      // budynek siada lekko poniżej najwyższego punktu działki, wtopiony w teren, bez cokołu
+      // budynek siada lekko poniżej najwyższego punktu działki, a teren pod nim się wyrównuje (nasyp od dołu stoku,
+      // wkop od góry), więc fundament nigdzie nie wisi nad ziemią i do środka nie zagląda trawa ze zbocza
       const ground = low + (top - low) * 0.35;
+      if (top - low > 0.02 && !def.wall && !def.road) view.level(b.x, b.y, fp.w, fp.h, ground - 0.01);
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
       if (def.id === 'keep') {
         this.keepFloors.set(b.id, [b.x + KEEP_HALF, b.y + KEEP_HALF, ground]);

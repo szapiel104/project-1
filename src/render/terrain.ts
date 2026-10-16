@@ -71,6 +71,8 @@ export interface TerrainView {
   setSun(dir: THREE.Vector3, color: THREE.Color, golden: number): void;
   /** Wykop pod budowę (depth 0 = zasypany): opuszcza teren działki tylko w obrazie */
   dig(x: number, y: number, w: number, h: number, depth: number): void;
+  /** Wyrównuje teren pod działką do wysokości y (nasyp albo wkop), z łagodnym przejściem na 2 pola dookoła */
+  level(x: number, y: number, w: number, h: number, height: number): void;
   /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
   /** `detail` (0–1) skraca odległości szczegółów na słabszych poziomach grafiki (1 = pełne) */
   lod(x: number, z: number, reach: number, detail?: number): void;
@@ -131,7 +133,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const sandTile = new Float32Array(w * h);
   {
     const lake = new Int32Array(w * h).fill(-1);
-    const sizes: number[] = [];
+    const sizes: number[] = [], river: boolean[] = [];
     for (let i = 0; i < w * h; i++) {
       if (map.tiles[i] !== Terrain.Water || lake[i]! >= 0) continue;
       const id = sizes.length, q = [i]; lake[i] = id;
@@ -144,11 +146,15 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         }
       }
       sizes.push(q.length);
+      // rzeka (długa i wąska: w swoim prostokącie zajmuje mało miejsca) ma brzeg z trawą i trzciną, nie plażę
+      let x0 = w, x1 = 0, y0 = h, y1 = 0;
+      for (const j of q) { const x = j % w, y = (j - x) / w; x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); }
+      river.push(q.length > 40 && q.length < (x1 - x0 + 1) * (y1 - y0 + 1) * 0.22);
     }
     // brzegi przeplatają się: odcinek piaszczystej plaży, dalej trzciny i krzaki, potem znów zatoczka z piaskiem;
     // „plażowe” jeziora mają piasku więcej, pozostałe tylko pojedyncze zatoczki
-    const biggest = sizes.indexOf(Math.max(...sizes, 0));
-    const bias = sizes.map((sz, id) => (id === biggest ? 0.25 : sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2 ? 0.1 : -0.3));
+    const biggest = sizes.indexOf(Math.max(...sizes.map((sz, id) => (river[id] ? 0 : sz)), 0));
+    const bias = sizes.map((sz, id) => (river[id] ? -0.42 : id === biggest ? 0.25 : sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2 ? 0.1 : -0.3));
     for (let i = 0; i < w * h; i++) {
       const id = lake[i]!;
       if (id < 0) continue;
@@ -560,7 +566,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const n = map.trails[(cy - 1) * w + cx - 1]! + map.trails[(cy - 1) * w + cx]! + map.trails[cy * w + cx - 1]! + map.trails[cy * w + cx]!;
       if (!n) continue;
       const j = (hash2(cx, cy, map.seed ^ 0x7e11) & 15) / 100;
-      wear(cx, cy, n >= 2 ? 0.62 + j : 0.3 + j, 0.75);
+      // tylko narożniki w środku dróżki (dwa pola ścieżki obok siebie), brzeg ledwo przetarty: ścieżka na ok. jedno pole, nie na dwa
+      wear(cx, cy, n >= 3 ? 0.5 + j : n === 2 ? 0.4 + j : 0.06, 0.55);
     }
   }
   const yAxis = new THREE.Vector3(0, 1, 0);
@@ -1424,6 +1431,31 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
+    level(x: number, y: number, fw: number, fh: number, y0: number) {
+      // plac pod budynek jak w prawdziwej budowie: działka równa, a dookoła skarpa łagodnie schodzi do terenu
+      const attr = geo.getAttribute('position') as THREE.BufferAttribute;
+      const changed: number[] = [];
+      for (let cy = Math.max(0, y - 2); cy <= Math.min(h, y + fh + 2); cy++)
+        for (let cx = Math.max(0, x - 2); cx <= Math.min(w, x + fw + 2); cx++) {
+          const d = Math.max(x - cx, cx - (x + fw), y - cy, cy - (y + fh), 0);
+          const k = d === 0 ? 1 : d === 1 ? 0.6 : 0.22;
+          const ci = cy * (w + 1) + cx, old = corners[ci]!;
+          if (old < 0 && d > 0) continue; // brzeg wody zostaje
+          const nv = old + (y0 - old) * k;
+          if (Math.abs(nv - old) < 0.002) continue;
+          corners[ci] = nv; changed.push(ci);
+          grass?.setHeight(ci, nv);
+        }
+      if (!changed.length) return;
+      const SLOT_OF: [number, number][] = [[0, 0], [0, 1], [1, 0], [1, 0], [0, 1], [1, 1]];
+      for (let ty = Math.max(0, y - 3); ty < Math.min(h, y + fh + 3); ty++)
+        for (let tx = Math.max(0, x - 3); tx < Math.min(w, x + fw + 3); tx++)
+          for (let k = 0; k < 6; k++) {
+            const [dx, dy] = SLOT_OF[k]!;
+            pos[(ty * w + tx) * 18 + k * 3 + 1] = corner(tx + dx, ty + dy);
+          }
+      attr.needsUpdate = true;
+    },
     dig(x: number, y: number, fw: number, fh: number, depth: number) {
       // wykop pod budowę: narożniki działki opuszczone (środek głębiej, brzeg płycej), tylko w obrazie terenu
       const attr = geo.getAttribute('position') as THREE.BufferAttribute;

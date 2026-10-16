@@ -55,7 +55,7 @@ export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 
 
 export interface MenuEvents {
   onContinue(): void;
-  onNewGame(seedText: string, preset: MapPresetId, level: number, dev: boolean, instant: boolean): void;
+  onNewGame(seedText: string, preset: MapPresetId, level: number, dev: boolean, instant: boolean, walls: 'mix' | 'stone' | 'wood'): void;
   onVolume(v: number): void;
   onMute(): boolean;
   onSettings(s: Settings): void;
@@ -380,7 +380,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const devLab = el('label', 'dev-switch');
     const devBox = el('input');
     devBox.type = 'checkbox'; devBox.setAttribute('role', 'switch');
-    devBox.addEventListener('change', () => { dev = devBox.checked; instLab.hidden = !dev; preview(); });
+    devBox.addEventListener('change', () => { dev = devBox.checked; instLab.hidden = !dev; wallLab.hidden = !dev; preview(); });
     devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Tryb deweloperski'), el('span', 'dev-hint', 'miasto w murach, wojsko, pełne zapasy'));
     // w trybie deweloperskim: budynki od razu gotowe albo zwykła budowa (robotnicy noszą materiał, rusztowania)
     let instant = true;
@@ -390,14 +390,24 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     instBox.addEventListener('change', () => { instant = instBox.checked; });
     instLab.append(instBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Budowa od razu'), el('span', 'dev-hint', 'wyłączone: zwykła budowa z noszeniem materiału'));
     instLab.hidden = true;
+    // w trybie deweloperskim: z czego są mury miasta
+    let walls: 'mix' | 'stone' | 'wood' = 'mix';
+    const wallLab = el('label', 'dev-switch dev-walls');
+    const wallSel = el('select');
+    for (const [v, txt] of [['mix', 'mieszane (kamień i bale)'], ['stone', 'kamienne'], ['wood', 'drewniane (palisada)']] as const) {
+      const o = el('option'); o.value = v; o.textContent = txt; wallSel.append(o);
+    }
+    wallSel.addEventListener('change', () => { walls = wallSel.value as typeof walls; });
+    wallLab.append(el('span', 'dev-text', 'Mury miasta'), wallSel);
+    wallLab.hidden = true;
 
     const warn = el('p', 'hint', canContinue || inGame ? t('menu.overwrite') : '');
     const start = el('button', 'menu-btn', t('menu.start'));
     start.type = 'submit';
     const foot = el('div', 'newgame-foot');
     foot.append(back(), start);
-    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, status, devLab, instLab, warn, foot);
-    form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant); });
+    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, status, devLab, instLab, wallLab, warn, foot);
+    form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant, walls); });
     screen(t('menu.newGame'), true, form);
     wrap.classList.add('previewing');
     preview();

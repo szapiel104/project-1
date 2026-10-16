@@ -25,6 +25,8 @@ export interface GrassField {
   setWear(tile: number, worn: number): void;
   /** Zasięg dywanu (1 = pełny, mniej = mniejszy krąg i mniej kęp do narysowania, 0 = bez trawy) */
   setReach(f: number): void;
+  /** Nowa wysokość narożnika (wyrównany teren pod budynkiem) */
+  setHeight(corner: number, y: number): void;
   /** Zwalnia tekstury i geometrię dywanu (przy zmianie mapy) */
   dispose(): void;
 }
@@ -163,6 +165,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       while (lo < hi) { const m = (lo + hi) >> 1; if (dist[m]! <= lim) lo = m + 1; else hi = m; }
       geo.instanceCount = lo;
     },
+    setHeight(corner: number, y: number) { (hTex.image.data as Float32Array)[corner] = y; hTex.needsUpdate = true; },
     setDensity(tile: number, v: number) { if (base[tile] !== v) { base[tile] = v; write(tile); dirty = true; } },
     dispose() { hTex.dispose(); mTex.dispose(); bladeTex.dispose(); geo.dispose(); card.dispose(); mat.dispose(); },
     setWear(tile: number, worn: number) { if (Math.abs(wear[tile]! - worn) > 0.02) { wear[tile] = worn; write(tile); dirty = true; } },

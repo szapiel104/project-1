@@ -1201,3 +1201,8 @@ body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1
 .clock .weather[data-t='cold'] { color: #a9cbe8; }
 .clock .weather[data-t='frost'] { color: #cfe6ff; }
 .clock .weather[data-t='hot'] { color: #ffb28a; }
+/* tryb deweloperski: wybór murów miasta (lista zamiast przełącznika) */
+.dev-switch.dev-walls { grid-template-columns: auto 1fr; cursor: default; }
+.dev-walls select { font: 500 15px var(--text); color: var(--ink); background: #241a10; border: 1px solid #5a4424; border-radius: 4px; padding: 6px 10px; min-height: 36px; }
+.dev-walls select:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+.dev-switch[hidden] { display: none; }
