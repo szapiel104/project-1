@@ -688,6 +688,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         #endif`);
     };
     m.customProgramCacheKey = () => key;
+    // cień korony kołysze się razem z nią (inaczej po koronie wędrują jasne pasy w miejscach, gdzie cień „został”)
+    const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+    depth.onBeforeCompile = m.onBeforeCompile;
+    depth.customProgramCacheKey = () => key + '-depth';
+    m.userData.windDepth = depth;
   };
   windCrown(pineMat, 0.08, 'wind-pine');
   const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: pattern('leaves'), bumpMap: bump('leaves'), bumpScale: 1.2, normalMap: normal('leaves') });
@@ -725,12 +730,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         proxy.boundingSphere = mesh.boundingSphere;
         proxy.layers.set(SHADOW_LAYER);
         proxy.castShadow = true;
+        if (mat.userData.windDepth) proxy.customDepthMaterial = mat.userData.windDepth as THREE.Material;
         cat(proxy, label + ' (cień)');
         group.add(proxy);
       }
       const casts = shadow && !proxy;
       if (lod && mesh.boundingSphere) lodChunks.push({ mesh, x: mesh.boundingSphere.center.x, z: mesh.boundingSphere.center.z, lod, near: g, nearMat: mat, shadow: casts, proxy });
       mesh.castShadow = casts;
+      if (mat.userData.windDepth) mesh.customDepthMaterial = mat.userData.windDepth as THREE.Material;
       cat(mesh, label);
       // kępy trawy nie przyjmują cienia: cienkie źdźbła tuż nad ziemią łapały cień samego terenu i czerniały
       mesh.receiveShadow = mat !== grassMat;
