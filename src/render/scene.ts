@@ -7,7 +7,7 @@ import { animal, playAt, pluck, talk, type WorldSound } from '../audio/sfx';
 import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BUILDINGS, footprint, isTower, towerBonus, workArea } from '../data/buildings';
+import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
 import { Clutter } from './clutter';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
@@ -722,7 +722,7 @@ export class GameRenderer {
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
     for (let i = 0; i < 24; i++) {
-      const lamp = new THREE.PointLight(0xffa35a, 0, 7, 1.7);   // krótszy zasięg: światło pochodni kończy się kilka kroków dalej, a nie oblewa całej osady
+      const lamp = new THREE.PointLight(0xffa35a, 0, 9, 1.5);   // krótszy zasięg: światło pochodni kończy się kilka kroków dalej, a nie oblewa całej osady
       this.scene.add(lamp);
       this.lamps.push(lamp);
     }
@@ -3105,7 +3105,7 @@ export class GameRenderer {
       const lod = prepareLod(mesh, def.id);
       if (lod) this.lods.set(b.id, lod);
       // pochodnia na słupie przy wejściu: przy budynkach z drzwiami (nie przy murach, bramach ani drogach)
-      if (def.id !== 'torch' && !def.wall && !def.gate && !def.road && def.id !== 'keep') {
+      if (def.id !== 'torch' && !def.wall && !def.gate && !def.road && def.id !== 'keep' && !NO_TORCH.has(def.id)) {
         const torch = torchModel();
         torch.position.set(def.w / 2 - 0.08, 0, def.h / 2 - 0.08);
         mesh.add(torch);
@@ -3404,7 +3404,7 @@ export class GameRenderer {
       const st = this.lampState[i]!;
       st.cur += ((on ? st.target : 0) - st.cur) * ease;
       if (st.cur < 0.002) { st.cur = 0; if (!on) st.key = ''; }
-      lamp.intensity = st.cur * st.k * this.night * 9 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
+      lamp.intensity = st.cur * st.k * this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
     });
   }
 

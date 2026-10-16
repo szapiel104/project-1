@@ -160,6 +160,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'armory', category: 'military', name: 'b.armory', w: 2, h: 2, cost: { wood: 20, stone: 10 }, stores: ['armory'], capacity: { armory: 60 }, buildable: true },
 ];
 
+/** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */
+export const NO_TORCH = new Set(['camp', 'orchard', 'farm', 'cemetery', 'well']);
+
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
 /** Wieże z łucznikami: drewniana strażnica i kamienna wieża */
 export const isTower = (id: string): boolean => id === 'watchtower' || id === 'stoneTower';

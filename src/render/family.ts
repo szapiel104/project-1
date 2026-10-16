@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BUILDINGS, footprint } from '../data/buildings';
+import { BUILDINGS, NO_TORCH, footprint } from '../data/buildings';
 import { Terrain, TERRAIN } from '../data/terrain';
 import { clockAt, dayFraction } from '../sim/clock';
 import { RULES } from '../data/rules';
@@ -229,7 +229,7 @@ export class Family {
       this.dutyAt = time;
       this.duty.clear();
       for (const b of g.buildings) {
-        if (b.door < 0 || b.ruined) continue;
+        if (b.door < 0 || b.ruined || NO_TORCH.has(BUILDINGS[b.type]!.id)) continue;
         const bx = b.door % width, by = Math.floor(b.door / width);
         let best: typeof b | undefined, bd = 12 * 12;
         for (const h of houses) { if (h.owner !== b.owner) continue; const d = (h.door % width - bx) ** 2 + (Math.floor(h.door / width) - by) ** 2; if (d < bd) { bd = d; best = h; } }
