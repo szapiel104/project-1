@@ -3819,7 +3819,29 @@ export class GameRenderer {
   /** Znaczniki sojuszników (gra drużynowa): pulsujący krąg na ziemi i słup światła widoczny z daleka, ok. 10 s */
   private pings: { g: THREE.Group; age: number; x: number; y: number }[] = [];
   /** Wozy z surowcami w drodze (modele dwukółki) */
-  private carts = new Map<number, { obj: THREE.Group; heading: number }>();
+  private carts = new Map<number, { obj: THREE.Group; heading: number; icon?: THREE.Sprite }>();
+  /** Gracz, nad którego wozami widać znacznik (okno „Sojusznicy” otwarte); -1 = bez znaczników */
+  cartIcons = -1;
+  private cartTex: THREE.CanvasTexture | null = null;
+  /** Znacznik wozu: złota tarcza z kołem i skrzynią, widoczny z daleka (stała wielkość na ekranie) */
+  private cartIcon(): THREE.Sprite {
+    if (!this.cartTex) {
+      const c = document.createElement('canvas'); c.width = c.height = 64;
+      const x = c.getContext('2d')!;
+      x.fillStyle = '#2a1c0e'; x.strokeStyle = '#e8c15a'; x.lineWidth = 4;
+      x.beginPath(); x.arc(32, 28, 24, 0, Math.PI * 2); x.fill(); x.stroke();
+      x.beginPath(); x.moveTo(26, 52); x.lineTo(32, 62); x.lineTo(38, 52); x.closePath(); x.fillStyle = '#e8c15a'; x.fill();
+      // skrzynia wozu z ładunkiem i koło
+      x.fillStyle = '#e8c15a'; x.fillRect(16, 20, 30, 10); x.fillRect(19, 15, 9, 5); x.fillRect(31, 13, 9, 7);
+      x.strokeStyle = '#e8c15a'; x.lineWidth = 3; x.beginPath(); x.arc(24, 36, 6, 0, Math.PI * 2); x.stroke();
+      x.beginPath(); x.moveTo(46, 26); x.lineTo(54, 34); x.stroke();
+      this.cartTex = new THREE.CanvasTexture(c); this.cartTex.colorSpace = THREE.SRGBColorSpace;
+    }
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.cartTex, transparent: true, depthTest: false, fog: false }));
+    sp.renderOrder = 11;
+    this.scene.add(sp);
+    return sp;
+  }
   ping(x: number, y: number, color: number): void {
     if (!this.state || !this.view) return;
     const { width, height } = this.state.map;
@@ -5176,6 +5198,15 @@ export class GameRenderer {
       cart.obj.position.set(cx - width / 2, cyH, cy - height / 2);
       cart.obj.rotation.set(0, cart.heading, 0);
       cart.obj.visible = true;
+      if (this.cartIcons >= 0 && c.owner === this.cartIcons) {
+        cart.icon ??= this.cartIcon();
+        // stała wielkość na ekranie, żeby wóz było widać także z wysoka; lekko pulsuje
+        const dist = this.cam.camera.position.distanceTo(cart.obj.position);
+        const sc = Math.max(1, dist * 0.045) * (1 + Math.sin(this.time * 4) * 0.06);
+        cart.icon.scale.set(sc, sc, 1);
+        cart.icon.position.set(cx - width / 2, cyH + 1.4 + sc * 0.5, cy - height / 2);
+        cart.icon.visible = true;
+      } else if (cart.icon) cart.icon.visible = false;
       const px = fx + sx * 0.1, py = fy + sz * 0.1;
       const y = view.heightAt(px, py);
       t.position.set(px - width / 2, y + (this.calm ? 0 : Math.abs(Math.cos(st.phase)) * 0.02), py - height / 2);
@@ -5185,7 +5216,7 @@ export class GameRenderer {
       this.figures.set(k, t.matrix, this.calm ? 0 : Math.sin(st.phase) * 0.45, false, TEAM_COLORS[g.players[c.owner]?.team ?? 0] ?? 0x888888, c.id);
       k++;
     }
-    for (const [id, cart] of this.carts) if (!seenCarts.has(id)) { this.scene.remove(cart.obj); cart.obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose()); this.carts.delete(id); }
+    for (const [id, cart] of this.carts) if (!seenCarts.has(id)) { if (cart.icon) { this.scene.remove(cart.icon); cart.icon.material.dispose(); } this.scene.remove(cart.obj); cart.obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose()); this.carts.delete(id); }
     k = this.castleFolk(g, k);
     this.figures.finish(k);
     // pule narzędzi: `count` zamyka klatkę (liczba bez znaczenia) i same oznaczają swoje bufory

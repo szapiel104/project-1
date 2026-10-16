@@ -374,6 +374,7 @@ function caravanNews(now: number): void {
   if (now - alliesTick < 400 || !game) return;
   alliesTick = now;
   allies.update(game, ME);
+  renderer.cartIcons = allies.isOpen() ? ME : -1; // przy otwartym oknie sojuszników nad własnymi wozami znacznik
   const log = game.caravanLog ?? [];
   if (caravanSeen < 0) { caravanSeen = log.at(-1)?.id ?? 0; return; }
   for (const n of log) {

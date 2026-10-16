@@ -18,7 +18,7 @@ export interface AlliesHost {
 const AMOUNTS = [10, 25, 50, 100];
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createAllies(host: AlliesHost): { update(g: GameState, me: number): void; close(): void; readonly button: HTMLButtonElement } {
+export function createAllies(host: AlliesHost): { update(g: GameState, me: number): void; close(): void; isOpen(): boolean; readonly button: HTMLButtonElement } {
   const btn = document.createElement('button');
   btn.type = 'button';
   btn.className = 'allies-btn';
@@ -121,6 +121,7 @@ export function createAllies(host: AlliesHost): { update(g: GameState, me: numbe
   }
 
   return {
+    isOpen: () => !panel.hidden,
     update(state, who) {
       g = state; me = who;
       const mine = state.players[me];
