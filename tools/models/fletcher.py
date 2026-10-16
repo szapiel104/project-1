@@ -81,14 +81,47 @@ for k in range(5):
 # ---------------- przed warsztatem: tarcza na kozłach, stojak z łukami, beczka strzał ----------------
 # tarcza ze słomy (kopa) na kozłach w lewym przednim rogu, z kołami namalowanymi farbą i dwiema strzałami
 TX, TZ = -0.62, 0.78
+# Tarcza stoi pionowo, odchylona do tyłu o FI, licem do przodu (+z). Punkt na tarczy: środek + u·oś x + v·w górę
+# po licu + w·normalna. Pierścienie farby leżą co 6 mm przed słomą, żeby nie migały (dwie powierzchnie w jednym miejscu).
+FI, CY, TR, TD, SEG = 0.25, 0.34, 0.17, 0.035, 20
+NY, NZ = math.sin(FI), math.cos(FI)            # normalna lica
+VY, VZ = math.cos(FI), -math.sin(FI)           # „w górę” po licu
+
+
+def tp(u, v, w):
+    return (TX + u, CY + v * VY + w * NY, TZ + v * VZ + w * NZ)
+
+
+def fan(mat, r, w, front=True):
+    """Płaski krąg o promieniu r w odległości w od środka tarczy (przodem do przodu albo do tyłu)"""
+    away = tp(0, 0, w - 1 if front else w + 1)
+    for k in range(SEG):
+        a0, a1 = 2 * math.pi * k / SEG, 2 * math.pi * (k + 1) / SEG
+        b.poly('base', mat, [tp(0, 0, w), tp(math.cos(a0) * r, math.sin(a0) * r, w), tp(math.cos(a1) * r, math.sin(a1) * r, w)], away=away)
+
+
+# słomiana kopa: lico, tył i obwód (zamknięta bryła)
+fan('thatch', TR, TD)
+fan('thatch', TR, -TD, front=False)
+for k in range(SEG):
+    a0, a1 = 2 * math.pi * k / SEG, 2 * math.pi * (k + 1) / SEG
+    c0, s0, c1, s1 = math.cos(a0) * TR, math.sin(a0) * TR, math.cos(a1) * TR, math.sin(a1) * TR
+    b.poly('base', 'thatch', [tp(c0, s0, -TD), tp(c1, s1, -TD), tp(c1, s1, TD), tp(c0, s0, TD)], away=tp(0, 0, 0))
+# koła namalowane farbą, każde 6 mm przed poprzednim
+for i, (rr, m) in enumerate(((0.145, 'white'), (0.105, 'thatchDark'), (0.065, 'flag'), (0.025, 'white'))):
+    fan(m, rr, TD + 0.006 * (i + 1))
+# sztaluga: dwie przednie nogi tuż za tarczą (równolegle do niej), tylna podpora i półka pod dolną krawędzią
+LZ = TZ + CY * math.tan(FI) - (TD + 0.025) / NZ
 for s in (-1, 1):
-    b.box('base', 'woodDark', 0.03, 0.42, 0.03, TX + s * 0.14, 0.0, TZ - 0.08, tilt=0.25)
-    b.box('base', 'woodDark', 0.03, 0.42, 0.03, TX + s * 0.14, 0.0, TZ + 0.12, tilt=-0.35)
-b.prism('base', 'thatch', 0.17, 0.17, 0.06, TX, 0.24, TZ, seg=16)
-for rr, m in ((0.14, 'white'), (0.1, 'thatchDark'), (0.06, 'flag'), (0.025, 'white')):
-    b.prism('base', m, rr, rr, 0.004, TX, 0.3, TZ, seg=16)
-for k, (dx, dz) in enumerate(((0.03, 0.02), (-0.06, -0.04))):
-    b.box('base', 'plank', 0.008, 0.18, 0.008, TX + dx, 0.3, TZ + dz, tilt=0.3 + k * 0.1, bottom=True)
+    b.box('base', 'woodDark', 0.03, 0.52, 0.03, TX + s * 0.12, 0.0, LZ, tilt=-FI)
+b.box('base', 'woodDark', 0.03, 0.44, 0.03, TX, 0.0, TZ - 0.27, tilt=0.5)
+b.box('base', 'woodDark', 0.3, 0.025, 0.05, TX, CY - TR * VY - 0.03, TZ - TR * VZ + 0.01)
+# dwie strzały wbite prostopadle w lico (grot w słomie), z białymi lotkami
+for dx, dv, r in ((0.035, 0.03, 0.08), (-0.07, -0.045, -0.1)):
+    bx, by, bz = tp(dx, dv, TD - 0.02)
+    b.box('base', 'plank', 0.008, 0.2, 0.008, bx, by, bz, tilt=math.pi / 2 - FI, rot=r)
+    fx, fy, fz = tp(dx, dv, TD + 0.14)
+    b.box('base', 'white', 0.003, 0.04, 0.035, fx, fy, fz, tilt=math.pi / 2 - FI, rot=r)
 # stojak z łukami do sezonowania pod prawą ścianą, z daszkiem
 SX, SZ = 0.86, -0.05
 for z in (-0.4, 0.3):
@@ -109,6 +142,8 @@ E = P + 0.42
 VIEWS = [
     ['warsztat z przodu', [0.2, 0.5, 2.4], [0, 0.45, 0], ['base', 'shell'], 22],
     ['izba od drzwi', [0.35, E, 0.3], [-0.2, 0.25, -0.5], ['base', 'interior', 'floor', 'ceiling'], 16],
+    ['tarcza z przodu', [TX + 0.15, 0.45, TZ + 0.8], [TX, CY, TZ], ['base', 'shell'], 22],
+    ['tarcza z boku', [TX + 0.75, 0.4, TZ + 0.1], [TX, 0.25, TZ], ['base', 'shell'], 22],
 ]
 b.save('fletcher', maxe=0.22, rays=16, reach=0.3, extra={
     'solid': t.solid, 'open': t.open, 'floorY': P, 'windows': t.windows, 'chimneys': w['chimneys'], 'flames': w['flames'],

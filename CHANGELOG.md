@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.24.1 — tarcza u łuczarza (2026-10-16)
+
+- Tarcza ze słomy przed warsztatem łuczarza stoi pionowo na sztaludze, lekko odchylona do tyłu (wcześniej leżała płasko jak taca); namalowane koła nie migają już w czerwoną plamę, a dwie strzały tkwią grotem w licu zamiast przebijać tarczę na wylot
+
 ## 0.24.0 — gra drużynowa (2026-10-16)
 
 - Znaczniki dla drużyny: Alt + klik w mapę → „Atakuj tutaj”, „Pomocy!”, „Zbiórka” (albo 1/2/3). Sojusznicy widzą pulsujący krąg ze słupem światła, strzałkę przy krawędzi ekranu (kliknięcie przenosi kamerę), wpis na czacie i słyszą krótki sygnał; Spacja skacze do ostatniego znacznika. Boty z drużyny słuchają: na atak i zbiórkę wysyłają całe wolne wojsko, na pomoc połowę
