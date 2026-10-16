@@ -4289,16 +4289,20 @@ export class GameRenderer {
     if ((g.seasonShift ?? 0) !== this.shiftSeen) { this.shiftSeen = g.seasonShift ?? 0; this.snowNow = -1; }
     this.snowNow = this.snowNow < 0 || this.calm ? want : this.snowNow + (want - this.snowNow) * Math.min(1, dt / 30);
     if (this.snowForce >= 0) this.snowNow = this.snowForce;
+    if (!Number.isFinite(this.snowNow)) { console.warn('[pory roku] śnieg NaN', { dt, rain: this.rain, temp: w.temp }); this.snowNow = -1; } // raz zepsuta liczba zostałaby na zawsze i czerniła cały obraz
     const hour = clockAt(g.tick).hour;
     const frost = w.temp < 3 && hour > 3.5 && hour < 9.5 ? Math.min(1, (3 - w.temp) / 5) * (1 - Math.abs(hour - 6.3) / 3.2) : 0;
-    SEASON_U.uSnow.value = this.snowNow;
-    this.updateTrails(g, dt);
-    SEASON_U.uFrost.value = Math.max(0, frost);
-    SEASON_U.uAutumn.value = autumn;
-    SEASON_U.uBare.value = bare;
+    // każda wartość trafia do shaderów wszystkich materiałów: NaN dałby błędny kolor wszędzie (czyszczenie przed
+    // poświatą zamienia go na czerń — czarny ekran, świecą tylko płomienie), więc tylko liczby 0..1
+    const ok = (x: number): number => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0);
+    SEASON_U.uSnow.value = ok(this.snowNow);
+    if (Number.isFinite(dt)) this.updateTrails(g, dt);
+    SEASON_U.uFrost.value = ok(frost);
+    SEASON_U.uAutumn.value = ok(autumn);
+    SEASON_U.uBare.value = ok(bare);
     // wiosna od pierwszych liści do początku lata; lato najmocniej w drugiej połowie (susza)
-    SEASON_U.uSpring.value = sm(0.04, 0.1, p) * (1 - sm(0.2, 0.28, p));
-    SEASON_U.uSummer.value = p < 0.6 ? sm(0.27, 0.36, p) * (1 - sm(0.5, 0.56, p)) : 0;
+    SEASON_U.uSpring.value = ok(sm(0.04, 0.1, p) * (1 - sm(0.2, 0.28, p)));
+    SEASON_U.uSummer.value = ok(p < 0.6 ? sm(0.27, 0.36, p) * (1 - sm(0.5, 0.56, p)) : 0);
   }
 
   /** Gdzie pan zamku spaceruje po dziedzińcu (pola mapy; ostatnia sekunda), do odzywek ludzi i straży */
