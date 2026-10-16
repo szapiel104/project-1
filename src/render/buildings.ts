@@ -782,9 +782,17 @@ function cottage(g: THREE.Group, seed: number): THREE.Group {
 interface BlenderBuilding { q: number; [group: string]: number | { mat: string; pos: string; ao: string }[] }
 const aoMats = new Map<THREE.Material, THREE.Material>();
 /** Ten sam materiał gry, ale z kolorem wierzchołków (niesie cień w zagłębieniach upieczony w Blenderze) */
+let baseMats: Set<THREE.Material> | null = null;
 function withAo(m: THREE.Material): THREE.Material {
   let c = aoMats.get(m);
-  if (!c) { c = m.clone(); (c as THREE.MeshStandardMaterial).vertexColors = true; c.userData = m.userData; aoMats.set(m, c); }
+  if (!c) {
+    c = m.clone(); (c as THREE.MeshStandardMaterial).vertexColors = true; c.userData = m.userData; aoMats.set(m, c);
+    // Modele z Blendera składamy z brył, które często stykają się płaszczyznami (belki szachulca na tynku, ciosy na murze,
+    // gzyms na koronie): dwie powierzchnie w tym samym miejscu migają przy ruchu kamery (z-fighting). Duże płaszczyzny
+    // (tynk, mur, deski, ziemia, strzecha) zostają na swoim miejscu, a detale są o włos bliżej kamery, więc zawsze wygrywają.
+    baseMats ??= new Set<THREE.Material>([M.plaster, M.stone, M.castle, M.castlePlain, M.plank, M.soil, M.thatch, M.thatchDark, M.slate, M.roadWood, M.roadStone, M.roadSand, M.pathCobble, M.pathDirt, M.cut, M.turf, M.orchardGrass]);
+    if (!baseMats.has(m)) { c.polygonOffset = true; c.polygonOffsetFactor = -1; c.polygonOffsetUnits = -4; }
+  }
   return c;
 }
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
