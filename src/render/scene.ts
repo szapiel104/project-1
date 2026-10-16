@@ -946,7 +946,8 @@ export class GameRenderer {
     this.roadSum = -1; this.planSum = -1;
     // nowa mapa: mury, place budowy i obszary liczone od nowa (te same id budynków na nowej mapie dawały ten sam klucz —
     // brama zostawała nieobrócona, a bale palisady stały jak na poprzedniej mapie)
-    this.wallKey = ''; this.siteKey = ''; this.areaKey = '';
+    // nie puste: mapa bez murów (placów budowy, obszarów) ma klucz '', a stare bale i ciosy z poprzedniej mapy muszą zniknąć
+    this.wallKey = '-'; this.siteKey = '-'; this.areaKey = '-';
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie
   }
 
