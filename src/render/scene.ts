@@ -100,6 +100,8 @@ const SMOKY = new Set(['armory', 'house', 'bakery', 'brewery', 'tavern', 'keep',
 const MERGE_IN = new Set(['shell', 'roof', 'chimney', 'spin', 'flagpole']);
 /** Wspólne scalone siatki dla budynków tego samego rodzaju: dzięki temu wszystkie chaty mają te same siatki i karta rysuje je razem */
 const mergedCache = new Map<string, THREE.BufferGeometry>();
+/** Warstwa, na którą odkładamy bryły budynków rysowane wspólnie (nie 1 — tę rysuje mapa cieni, SHADOW_LAYER) */
+const BATCH_LAYER = 5;
 function mergeStatic(root: THREE.Object3D, kind = ''): void {
   root.updateMatrixWorld(true);
   // klucz: grupa, do której trafi wspólna siatka (korzeń albo „shell” / „roof” / „chimney”) + materiał
@@ -2120,7 +2122,7 @@ export class GameRenderer {
    */
   private batches = new Map<string, { mesh: THREE.InstancedMesh; n: number }>();
   private batchParts = new WeakMap<THREE.Object3D, THREE.Mesh[]>();
-  batchOn = /[?&]razem=1/.test(location.search);   // na razie tylko do prób: w pomiarze 16.10 wspólne rysowanie było wolniejsze (więcej wywołań i dłużej na karcie)
+  batchOn = !/[?&]razem=0/.test(location.search);   // na razie tylko do prób: w pomiarze 16.10 wspólne rysowanie było wolniejsze (więcej wywołań i dłużej na karcie)
   private staticParts(root: THREE.Object3D): THREE.Mesh[] {
     let list = this.batchParts.get(root);
     if (list) return list;
@@ -2175,7 +2177,7 @@ export class GameRenderer {
         this.batches.set(key, b);
         this.buildingLayer.add(im);
       }
-      for (const m of list) { m.layers.set(1); b.mesh.setMatrixAt(b.n++, m.matrixWorld); }
+      for (const m of list) { m.layers.set(BATCH_LAYER); b.mesh.setMatrixAt(b.n++, m.matrixWorld); }
     }
     for (const b of this.batches.values()) {
       if (keepOff) continue;
@@ -5029,7 +5031,7 @@ export class GameRenderer {
     const r = this.canvas.getBoundingClientRect();
     const ndc = new THREE.Vector2(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
     this.ray.setFromCamera(ndc, this.cam.camera);
-    this.ray.layers.enable(1); // stałe bryły budynków leżą na warstwie 1 (rysuje je wspólne InstancedMesh)
+    this.ray.layers.enable(BATCH_LAYER); // stałe bryły budynków rysowane razem leżą na osobnej warstwie (kliknięcie dalej je trafia)
     const hit = this.ray.intersectObjects([...this.buildingMeshes.values()], true)[0];
     if (!hit) return null;
     let o: THREE.Object3D | null = hit.object;
