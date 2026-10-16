@@ -149,19 +149,26 @@ solid.append([CX - 0.14, CX + 0.14, Z0, CZ + 0.13])
 
 # ---------------- wiata po lewej: słupy, daszek z desek, kozioł z kłodą i piłą, stos desek ----------------
 WX0, WX1, WZ0, WZ1 = -0.98, -0.56, -0.86, 0.3
-for x, z, hh in ((WX0, WZ0, 0.82), (WX1, WZ0, 0.86), (WX0, WZ1, 0.62), (WX1, WZ1, 0.66)):
-    b.prism('base', 'bark', 0.035, 0.032, hh, x, 0.0, z, seg=6)
-    solid.append([x - 0.04, x + 0.04, z - 0.04, z + 0.04])
+RZ0, RZ1, RY0, RY1 = WZ0 - 0.1, WZ1 + 0.14, 0.86, 0.64      # daszek: od tyłu do przodu opada z RY0 do RY1
+roof_y = lambda z: RY0 + (RY1 - RY0) * (z - RZ0) / (RZ1 - RZ0)
+RT = 0.03                                                     # grubość desek daszku
+BH = 0.05                                                     # wysokość belek pod daszkiem
+# belki pod daszkiem: pochylone razem z nim (wierzch tuż pod deskami), na każdej linii słupów
+L = math.hypot(WZ1 + 0.06 - (WZ0 - 0.06), roof_y(WZ0 - 0.06) - roof_y(WZ1 + 0.06))
+ang = math.atan2(roof_y(WZ0 - 0.06) - roof_y(WZ1 + 0.06), WZ1 + 0.06 - (WZ0 - 0.06))
+zm = (WZ0 + WZ1) / 2
 for x in (WX0, WX1):
-    zlog('base', WZ0 - 0.05, WZ1 + 0.05, 0.64 + (0.2 if x == WX1 else 0.16) - 0.02, x, r=0.03, mat='woodDark', ends='wood')
-# daszek pochylony do przodu: dwie warstwy desek (z grubością)
-pts = [(WX0 - 0.08, 0.84, WZ0 - 0.1), (WX1 + 0.05, 0.88, WZ0 - 0.1), (WX1 + 0.05, 0.66, WZ1 + 0.14), (WX0 - 0.08, 0.62, WZ1 + 0.14)]
-b.slope('shell', 'wood', pts, away=(-0.77, 0.0, -0.3), t=0.03)
-for k in range(6):   # listwy na daszku
-    f = (k + 0.5) / 6
-    z = WZ0 - 0.1 + (WZ1 + 0.24 - WZ0) * f
-    y = 0.86 - 0.22 * f + 0.035
-    b.box('shell', 'woodDark', WX1 - WX0 + 0.1, 0.015, 0.03, (WX0 + WX1) / 2 - 0.015, y, z)
+    b.box('base', 'woodDark', 0.05, BH, L, x, roof_y(zm) - RT - BH - 0.004, zm, tilt=ang, bottom=True)
+# słupy z okorowanych bali aż pod belki
+for x, z in ((WX0, WZ0), (WX1, WZ0), (WX0, WZ1), (WX1, WZ1)):
+    b.prism('base', 'bark', 0.035, 0.032, roof_y(z) - RT - BH - 0.004, x, 0.0, z, seg=6)
+    solid.append([x - 0.04, x + 0.04, z - 0.04, z + 0.04])
+# daszek pochylony do przodu: deski z grubością, poziomo w poprzek
+pts = [(WX0 - 0.08, RY0, RZ0), (WX1 + 0.05, RY0, RZ0), (WX1 + 0.05, RY1, RZ1), (WX0 - 0.08, RY1, RZ1)]
+b.slope('shell', 'wood', pts, away=(-0.77, 0.0, -0.3), t=RT)
+for k in range(6):   # listwy przybite na deskach (wpuszczone 5 mm, żeby nie wisiały)
+    z = RZ0 + (RZ1 - RZ0) * (k + 0.5) / 6
+    b.box('shell', 'woodDark', WX1 - WX0 + 0.1, 0.02, 0.03, (WX0 + WX1) / 2 - 0.015, roof_y(z) - 0.005, z, tilt=ang)
 # kozioł: dwa krzyżaki, kłoda i piła
 for z in (-0.5, -0.12):
     for r in (0.45, -0.45):
