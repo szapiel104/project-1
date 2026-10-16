@@ -47,5 +47,13 @@
 3. **Budynki dodatkowo** arkusz `sh tools/models/inspect.sh <id> /tmp/x.png` (dziury, odwrócone dachy, widoki z ziemi i ze środka) — punkt 3 w Testach.
 4. **Dopiero na końcu w grze**, na pustej scenie: `?test=1&pusta=1&model=<id>` (gotowy budynek na łące, `__test.view('ground-front')` itd.) — czy pasuje skalą do ludzi, terenu i sąsiadów. Nie sprawdzać nowych modeli w zwykłej rozgrywce ani w trybie deweloperskim.
 
+## Tekstury — po każdej zmianie obowiązkowo KTX2
+- Gra wczytuje tekstury ze zdjęć jako `.ktx2` (skompresowane dla karty graficznej, `src/render/ktx.ts`); `.jpg` obok to tylko zapas. Dotyczy `public/textures/terrain/` i `public/textures/cc0/`.
+- **Po dodaniu albo podmianie każdego `.jpg` (także mapy normalnych `*_n.jpg`) uruchom:** `node tools/textures/ktx2.mjs public/textures/<folder>/<plik>.jpg` (kilka plików naraz można podać po spacji; bez argumentów przerabia wszystkie, ok. 15 min). Ok. 25 s na teksturę 2K. Bez tego gra pokaże stary `.ktx2` albo weźmie `.jpg`. Wynikowy `.ktx2` commitujemy razem z `.jpg`.
+- Nowa tekstura terenu: podbij numer wersji `?v=` w `tex()` w `src/render/ground.ts`.
+- Mapy normalnych w konwencji OpenGL (Y w górę); z paczek z DirectX (np. s&box, `cc0-texture-pack`) odwróć kanał zielony.
+- Kopie tekstury (`.clone()` dla innej skali) działają, bo `ktx.ts` dopisuje im dane po wczytaniu; nie rysować tekstur z `pattern()` na płótnie (KTX2 nie ma obrazka) — szare wersje robi `grayPattern()` z `.jpg`.
+- Źródła: paczki od Michała w Pobranych (`ambientcg_1024.sh3t` — 1K, sam kolor; `cc0-texture-pack-main.zip` — 2K kolor + normalne w formacie `.vtex_c`, dekoder: DXT1/BC7 + LZ4). Strony z teksturami (ambientCG, Poly Haven) są z czatu zablokowane. Każdą nową teksturę wpisz do `CREDITS.md`.
+
 ## Pomysły
 - Lista kolejnych partii jest w `docs/pomysly.md`. Gdy Michał pyta „co dalej”, podpowiadaj z niej (i dopisuj tam nowe pomysły, zdejmuj zrobione).
