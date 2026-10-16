@@ -114,10 +114,8 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     ${kind === 'leaf' || kind === 'leafFar' ? `
     // jesień: liście żółkną i rudzieją (każde drzewo trochę inaczej), zimą resztki brązowieją
     float sLum = dot(diffuseColor.rgb, vec3(0.3, 0.55, 0.15));
-    // wiosna: młode liście jasne, żółtawozielone; co trzecie drzewo kwitnie (białe i różowe kwiaty w plamkach)
+    // wiosna: młode liście jasne, żółtawozielone
     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(1.12, 1.32, 0.62) + vec3(0.03, 0.05, 0.0), uSpring * 0.85);
-    float sBloom = step(0.66, sCell) * smoothstep(0.62, 0.7, sVal(vSeasonPos.xz * 16.0 + vSeasonPos.y * 11.0)) * uSpring;
-    diffuseColor.rgb = mix(diffuseColor.rgb, mix(vec3(0.96, 0.9, 0.9), vec3(0.93, 0.62, 0.74), step(0.8, sCell)), sBloom * 0.85);
     // lato: zieleń ciemnieje i nasyca się
     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.78, 0.88, 0.7), uSummer * 0.8);
     vec3 sFall = mix(mix(vec3(0.88, 0.58, 0.07), vec3(0.8, 0.32, 0.05), sCell), vec3(0.55, 0.16, 0.05), sCell * sCell) * (0.5 + sLum * 1.1);
