@@ -10,7 +10,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
-from common import Mesh, evaluated, hexrgb, lathe, reset, skin, sphere  # noqa: E402
+from common import Mesh, evaluated, hexrgb, keep_faces, lathe, reset, skin, sphere  # noqa: E402
 
 reset()
 from body import Head, finish, smooth  # noqa: E402
@@ -19,59 +19,93 @@ WHITE = (1.0, 1.0, 1.0)
 LINEN, STRAW, SHOE, ROPE, POUCH, WRAP = hexrgb(0xd9ceb0), hexrgb(0xcfae55), hexrgb(0x2a201a), hexrgb(0x8a7350), hexrgb(0x6a4a2e), hexrgb(0x9a8462)
 BELT, BUCKLE = hexrgb(0x2e231b), hexrgb(0x8c8a84)
 
+def noise3(x, y, z):
+    return (math.sin(x * 129.898 + y * 782.33 + z * 377.19) * 43758.5453) % 1.0
+
+
 HIP = (0.052, 0.235, 0.0)
 SHOULDER = (0.135, 0.45, 0.0)
 HAND = (0.0, -0.185, 0.004)
 
 # ---------- noga: workowate portki do pół łydki (barwa z gry) z ciemnymi pasami, owijacze, ciężki but ----------
-leg = skin('leg', [(0, 0.01, 0), (0, -0.06, 0.006), (0, -0.115, 0.008), (0, -0.135, 0.004)],
-           [(0, 1), (1, 2), (2, 3)],
-           [(0.052, 0.052), (0.05, 0.051), (0.045, 0.046), (0.04, 0.041)], subsurf=1)
+leg = skin('leg', [(0, 0.01, 0), (0, -0.04, 0.005), (0, -0.08, 0.008), (0, -0.115, 0.008), (0, -0.135, 0.004)],
+           [(0, 1), (1, 2), (2, 3), (3, 4)],
+           [(0.052, 0.052), (0.052, 0.053), (0.049, 0.05), (0.045, 0.046), (0.04, 0.041)], subsurf=2)
 def leg_col(x, y, z):
-    band = -0.105 < y < -0.085 or -0.06 < y < -0.05   # ciemne obszyte pasy pod kolanem
-    k = 0.55 if band else 0.86 + 0.08 * math.sin(math.atan2(x, z) * 5 + y * 40)   # fałdy szerokich nogawic
-    return (k * (0.9 + 0.1 * smooth(-0.14, 0.0, y)),) * 3
+    a = math.atan2(x, z)
+    seam = abs(((y + 0.2) * 90) % 3 - 1.5) < 0.12                # poziome przeszycia workowatych nogawic
+    k = 0.86 + 0.09 * math.sin(a * 5 + y * 40) + 0.05 * math.sin(a * 13 - y * 70)   # fałdy i przetarcia
+    if seam:
+        k *= 0.72
+    return (k * (0.88 + 0.12 * smooth(-0.14, 0.0, y)),) * 3
 leg_m = Mesh(evaluated(leg), leg_col, 'cloth', dyn='trousers')
-shoe = skin('shoe', [(0, -0.172, 0), (0, -0.212, 0.0), (0, -0.216, 0.055)], [(0, 1), (1, 2)],
-            [(0.037, 0.037), (0.038, 0.025), (0.03, 0.018)], subsurf=1)
-shoe_m = Mesh(evaluated(shoe), lambda x, y, z: tuple(c * (0.7 if y < -0.226 else 1) for c in SHOE), 'leather')
+# opaska pod kolanem z ciemnej skóry obszyta łańcuszkiem (jak u kopaczy)
+kband = lathe('kband', [(0.05, -0.1), (0.053, -0.093), (0.053, -0.078), (0.05, -0.071)], seg=16, subsurf=0)
+kband_m = Mesh(evaluated(kband), hexrgb(0x2a221c), 'leather')
+chain = lathe('chain', [(0.054, -0.088), (0.0555, -0.0855), (0.054, -0.083)], seg=24, subsurf=0)
+def chain_col(x, y, z):
+    k = 0.6 + 0.4 * abs(math.sin(math.atan2(x, z) * 24))
+    return tuple(c * k for c in hexrgb(0x9a9ca0))
+chain_m = Mesh(evaluated(chain), chain_col, 'metal')
+shoe = skin('shoe', [(0, -0.17, 0), (0, -0.212, 0.0), (0, -0.218, 0.058)], [(0, 1), (1, 2)],
+            [(0.039, 0.039), (0.04, 0.027), (0.032, 0.019)], subsurf=2)
+def shoe_col(x, y, z):
+    strap = -0.205 < y < -0.192 or (-0.2 < y < -0.19 and z > 0.02)   # szare paski zapięcia
+    if strap:
+        return hexrgb(0x6a6a6a)
+    return tuple(c * (0.65 if y < -0.228 else 1) for c in SHOE)
+shoe_m = Mesh(evaluated(shoe), shoe_col, 'leather')
 # owijacze z jasnej skóry od buta do nogawicy, przewiązane rzemieniem na krzyż
-wraps = lathe('wraps', [(0.031, -0.125), (0.034, -0.14), (0.033, -0.16), (0.036, -0.178)], seg=10, subsurf=0)
-wraps_m = Mesh(evaluated(wraps), lambda x, y, z: tuple(c * (0.72 if (y * 70 + math.atan2(x, z) * 1.6) % 2 < 0.35 else 1.0) for c in WRAP), 'leather')
+wraps = lathe('wraps', [(0.031, -0.125), (0.034, -0.14), (0.033, -0.16), (0.037, -0.176)], seg=14, subsurf=0)
+wraps_m = Mesh(evaluated(wraps), lambda x, y, z: tuple(c * (0.68 if (y * 70 + math.atan2(x, z) * 1.6) % 2 < 0.35 or (y * 70 - math.atan2(x, z) * 1.6) % 2 < 0.3 else 1.0) for c in WRAP), 'leather')
 
 # ---------- ręka: krótki, postrzępiony rękaw koszuli i gołe, umięśnione przedramię ----------
-arm = lathe('arm', [(0.001, 0.034), (0.022, 0.029), (0.034, 0.01), (0.035, -0.015), (0.034, -0.05), (0.03, -0.062)], seg=12, subsurf=0)
-arm_m = Mesh(evaluated(arm), lambda x, y, z: (0.6 if y < -0.052 else 0.9 + 0.06 * math.sin(y * 60),) * 3, 'cloth', dyn='tunic')
-fore = lathe('fore', [(0.0255, -0.048), (0.026, -0.075), (0.027, -0.105), (0.023, -0.14), (0.02, -0.165), (0.001, -0.168)], seg=12, subsurf=0)
-fore_m = Mesh(evaluated(fore), WHITE, 'skin', dyn='skin')
+arm = lathe('arm', [(0.001, 0.034), (0.022, 0.03), (0.035, 0.01), (0.036, -0.015), (0.035, -0.045), (0.033, -0.058)], seg=16, subsurf=0)
+ab = evaluated(arm)
+# postrzępiony brzeg rękawa: wycięte zęby materiału
+keep_faces(ab, lambda x, y, z: not (y < -0.05 and (math.atan2(x, z) * 5) % 2 < 0.8))
+arm_m = Mesh(ab, lambda x, y, z: (0.55 if y < -0.048 else 0.9 + 0.06 * math.sin(y * 60),) * 3, 'cloth', dyn='tunic')
+# goła ręka: biceps pod rękawem, mocne przedramię zwężające się do nadgarstka
+fore = lathe('fore', [(0.028, -0.02), (0.03, -0.05), (0.0275, -0.075), (0.029, -0.095), (0.027, -0.12), (0.022, -0.148), (0.02, -0.165), (0.001, -0.168)], seg=14, subsurf=0)
+fore_m = Mesh(evaluated(fore), lambda x, y, z: (1.0 - 0.06 * max(0.0, math.cos(math.atan2(x, z) * 2)) * (y > -0.12),) * 3, 'skin', dyn='skin')
 hand = skin('hand', [(0, -0.162, 0.002), (0, -0.19, 0.005), (0, -0.207, 0.008)], [(0, 1), (1, 2)],
             [(0.022, 0.02), (0.026, 0.018), (0.02, 0.014)], subsurf=1)
 hand_m = Mesh(evaluated(hand), WHITE, 'skin', dyn='skin')
 
 # ---------- tułów: krótka koszula z wycięciem w serek, postrzępiony dół; portki od pasa; szeroki skórzany pas ----------
-torso = lathe('torso', [(0.09, 0.262), (0.084, 0.31), (0.095, 0.37), (0.104, 0.415), (0.1, 0.448), (0.08, 0.472), (0.05, 0.488), (0.032, 0.494)], seg=20, depth=0.74, subsurf=0)
+torso = lathe('torso', [(0.09, 0.262), (0.086, 0.29), (0.084, 0.31), (0.095, 0.37), (0.104, 0.415), (0.1, 0.448), (0.08, 0.472), (0.05, 0.488), (0.032, 0.494)], seg=28, depth=0.74, subsurf=0)
+tb = evaluated(torso)
+def torn(x, y, z):
+    a = math.atan2(x, z)
+    if z > 0 and abs(x) < 0.05 and y > 0.405 + abs(x) * 1.6 + 0.008 * math.sin(x * 300):   # rozdarty dekolt w serek
+        return True
+    if y < 0.272 and (a * 6) % 2 < 0.7:      # postrzępiony dół koszuli (zęby nad pasem)
+        return True
+    return False
+keep_faces(tb, lambda x, y, z: not torn(x, y, z))
 def shirt_col(x, y, z):
-    # rozdarte wycięcie pod szyją (ciemne, widać skórę) i wytarte, postrzępione brzegi
-    front = z > 0 and abs(x) < 0.04 and y > 0.44 - abs(x) * 1.5
-    if front:
-        return (0.35,) * 3
-    tear = y < 0.272 and (math.atan2(x, z) * 7) % 2 < 0.9
-    return ((0.55 if tear else 0.82) + 0.25 * (y - 0.27) + 0.05 * math.sin(math.atan2(x, z) * 9 + y * 50),) * 3
-torso_m = Mesh(evaluated(torso), shirt_col, 'cloth', dyn='tunic')
-# skóra w wycięciu koszuli (pod spodem, tuż za tkaniną)
-chest = sphere('chest', (0.0, 0.452, 0.052), (0.035, 0.03, 0.012), seg=10, rings=6)
-chest_m = Mesh(evaluated(chest), WHITE, 'skin', dyn='skin')
+    a = math.atan2(x, z)
+    k = 0.8 + 0.25 * (y - 0.27) + 0.05 * math.sin(a * 9 + y * 50) + (noise3(x, y, z) - 0.5) * 0.12
+    if z > 0 and abs(x - 0.03) < 0.012 and abs(y - 0.33) < 0.012:   # przetarta dziura
+        k *= 0.45
+    if z > 0 and abs(x) < 0.07 and y > 0.4 + abs(x) * 1.6 - 0.012:  # brzeg dekoltu ciemniejszy
+        k *= 0.7
+    return (k,) * 3
+torso_m = Mesh(tb, shirt_col, 'cloth', dyn='tunic')
+# naga pierś pod rozdartą koszulą (tuż za tkaniną)
+chest = lathe('chest', [(0.083, 0.4), (0.094, 0.43), (0.088, 0.455), (0.07, 0.474), (0.045, 0.488)], seg=10, depth=0.72, phi0=-0.6, phi=1.2, subsurf=0)
+chest_m = Mesh(evaluated(chest), lambda x, y, z: (0.95 - 0.1 * (abs(x) < 0.008),) * 3, 'skin', dyn='skin')
 hips = lathe('hips', [(0.088, 0.29), (0.094, 0.255), (0.098, 0.215), (0.09, 0.19)], seg=20, depth=0.8, subsurf=0)
 hips_m = Mesh(evaluated(hips), lambda x, y, z: (0.82 + 0.1 * math.cos(math.atan2(x, z) * 6),) * 3, 'cloth', dyn='trousers')
 belt = lathe('belt', [(0.093, 0.262), (0.097, 0.268), (0.097, 0.296), (0.093, 0.302)], seg=20, depth=0.78, subsurf=0)
-belt_m = Mesh(evaluated(belt), BELT, 'leather')
+belt_m = Mesh(evaluated(belt), lambda x, y, z: tuple(c * (1.9 if abs(y - 0.282) < 0.004 and (math.atan2(x, z) * 12) % 2 < 0.5 else 1.0) for c in BELT), 'leather')  # rząd ćwieków
 buckle = sphere('buckle', (0.0, 0.282, 0.075), (0.018, 0.017, 0.007), seg=8, rings=4)
 buckle_m = Mesh(evaluated(buckle), BUCKLE, 'metal')
 pouch = sphere('pouch', (-0.075, 0.25, 0.05), (0.026, 0.032, 0.018), seg=10, rings=6)
 pouch_m = Mesh(evaluated(pouch), POUCH, 'leather')
 
 # ---------- głowa ----------
-head = Head((0.0, 0.546, 0.004), (0.054, 0.065, 0.058))
+head = Head((0.0, 0.546, 0.004), (0.054, 0.065, 0.058), seg=32, rings=24)
 neck = lathe('neck', [(0.027, 0.47), (0.027, 0.5), (0.029, 0.52)], seg=10, subsurf=0)
 neck_m = Mesh(evaluated(neck), WHITE, 'skin', dyn='skin')
 hair = head.shell('hair', 1.09, lambda x, y, z: smooth(0.0, 0.12, y - (0.12 + 0.5 * z)), show='hairOn')
@@ -96,4 +130,4 @@ cap = lathe('cap', [(0.061, 0.586), (0.064, 0.603), (0.057, 0.624), (0.034, 0.63
 cap_m = Mesh(evaluated(cap), lambda x, y, z: (0.55 if y < 0.596 else 1.0,) * 3, 'cloth', dyn='hat', show='cap')
 
 static = [torso_m, chest_m, hips_m, belt_m, buckle_m, pouch_m, head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), hair, beard, hood, cape_m, kerchief, *straw_m, cap_m]
-finish('peasant', static, [leg_m, shoe_m, wraps_m], [arm_m, fore_m, hand_m], HIP, SHOULDER, HAND)
+finish('peasant', static, [leg_m, kband_m, chain_m, shoe_m, wraps_m], [arm_m, fore_m, hand_m], HIP, SHOULDER, HAND)
