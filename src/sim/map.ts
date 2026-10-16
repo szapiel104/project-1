@@ -24,6 +24,8 @@ export interface GameMap {
   gen: number;
   /** Leśne ścieżki wydeptane od zawsze: 1 = ścieżka. Chłopi wolą nimi chodzić, w lesie nie ma na nich drzew. */
   trails: Uint8Array;
+  /** Pola rzeki (generator 2): brzeg rzeki rysuje się bez plaży */
+  river?: Uint8Array;
 }
 
 const FP = 256; // stały przecinek: 8 bitów części ułamkowej
@@ -109,7 +111,8 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
     starts.push({ player: n * 2 + 1, team: 1, x: width - 1 - x, y: height - 1 - y });
   });
 
-  if (gen >= 2) carveRiver(tiles, elevation, width, height, starts, seed, preset);
+  const river = new Uint8Array(width * height);
+  if (gen >= 2) carveRiver(tiles, elevation, width, height, starts, seed, preset, river);
 
   // Wokół każdego startu czysta łąka pod zamek, a tuż obok gwarantowane surowce.
   for (const s of starts) {
@@ -133,7 +136,7 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
 
   const trails = new Uint8Array(width * height);
   if (gen >= 2) carveTrails(tiles, elevation, trails, width, height, starts, seed, preset.startRadius);
-  return { seed, width, height, tiles, elevation, starts, gen, trails };
+  return { seed, width, height, tiles, elevation, starts, gen, trails, river };
 }
 
 /**
@@ -141,7 +144,7 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
  * Krzywa jest nieparzysta względem środka (obrót o 180° daje ją samą), więc mapa zostaje symetryczna.
  * Przejść są tylko brody — na środku i po jednym bliżej każdej drużyny — więc przeprawa to ważne miejsce na mapie.
  */
-function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset): void {
+function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset, river: Uint8Array): void {
   const size = w * h, cx = (w - 1) / 2, cy = (h - 1) / 2;
   const own = starts.filter((s) => s.team === 0);
   let ax = 0, ay = 0;
@@ -163,6 +166,7 @@ function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, s
     if (tiles[t] === Terrain.Mountain) return;
     tiles[t] = Terrain.Water; elev[t] = Math.min(elev[t]!, Math.max(0, preset.waterLevel - deep));
     const m = size - 1 - t;
+    river[t] = 1; river[m] = 1;
     if (tiles[m] !== Terrain.Mountain) { tiles[m] = Terrain.Water; elev[m] = elev[t]!; }
   };
   const du = 0.25 / L;

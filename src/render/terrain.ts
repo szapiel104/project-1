@@ -154,14 +154,15 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     // brzegi przeplatają się: odcinek piaszczystej plaży, dalej trzciny i krzaki, potem znów zatoczka z piaskiem;
     // „plażowe” jeziora mają piasku więcej, pozostałe tylko pojedyncze zatoczki
     const biggest = sizes.indexOf(Math.max(...sizes.map((sz, id) => (river[id] ? 0 : sz)), 0));
-    const bias = sizes.map((sz, id) => (river[id] ? -0.42 : id === biggest ? 0.25 : sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2 ? 0.1 : -0.3));
+    const bias = sizes.map((sz, id) => (river[id] ? -0.42 : id === biggest ? 0.15 : sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2 ? 0.1 : -0.3));
     for (let i = 0; i < w * h; i++) {
       const id = lake[i]!;
-      if (id < 0) continue;
+      if (id < 0 || map.river?.[i]) continue; // nad rzeką trawa i trzcina, nie plaża
       const x = i % w, y = (i - x) / w;
       const bf = smoothstep(-0.05, 0.25, nz(x / 8 + 31, y / 8 - 17) + bias[id]!);
       if (bf <= 0.02) continue;
-      const reach = 1 + Math.round(bf * 2 * (0.6 + 0.4 * nz(x / 4, y / 4)));
+      // plaża wąska (pas 1–2 pól przy wodzie), żeby nie wyglądała jak wklejona łata piasku
+      const reach = 1 + Math.round(bf * (0.4 + 0.4 * nz(x / 4, y / 4)));
       sandTile[i] = Math.max(sandTile[i]!, bf);
       for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) {
         const nx = x + dx, ny = y + dy;
