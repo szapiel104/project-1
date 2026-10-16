@@ -92,6 +92,10 @@ export interface Building {
   shut?: boolean;
   /** Ruina po zniszczeniu: nie działa, a mur w tym miejscu da się przejść, dopóki go nie odbudują */
   ruined?: boolean;
+  /** Warsztat: ile towaru jego pracownik oddał do składu od postawienia (do okna budynku) */
+  made?: number;
+  /** Warsztat: ile towaru przepadło, bo skład był pełny */
+  lost?: number;
 }
 
 /** Gruz po rozebranym budynku. Leży na działce, dopóki ludzie nie wyniosą wszystkich ładunków. */

@@ -1,5 +1,7 @@
 import { GUARD_SAY, SAY } from './data/barks';
 import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
+import { RULES } from './data/rules';
+import { Terrain } from './data/terrain';
 import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } from './data/resources';
 import { UNITS } from './data/units';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
@@ -479,9 +481,88 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: def.id === 'barracks' ? recruitInfo().map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
+    garrisonMax: garrisonRoom(def.id) || undefined,
+    prod: b.owner === ME && !b.build && (def.production || def.staff) ? prodInfo(b) : undefined,
     watch: def.id === 'keep' ? watchInfo(b.owner) : undefined,
     area: def.area || isTower(def.id) ? shownAreas.has(b.id) : undefined,
     site: b.build ? siteInfo(b) : undefined };
+}
+
+/**
+ * Warsztat w oknie budynku: z czego i co robi, kto pracuje i co teraz robi (z postępem), czy coś go blokuje,
+ * ile zrobił (od postawienia i w ostatniej dobie), ile przepadło przez pełny skład i ile surowca leży na stanie.
+ */
+const madeLog = new Map<number, [number, number][]>();
+let madeAt = -1;
+/** Co 1/24 doby zapisujemy liczniki warsztatów gracza: z nich liczy się tempo z ostatniej doby */
+function sampleMade(): void {
+  if (madeAt >= 0 && game.tick - madeAt < RULES.dayTicks / 24 && game.tick >= madeAt) return;
+  madeAt = game.tick;
+  const alive = new Set<number>();
+  for (const b of game.buildings) {
+    if (b.owner !== ME || !BUILDINGS[b.type]!.production || b.build) continue;
+    alive.add(b.id);
+    let log = madeLog.get(b.id);
+    if (!log) { log = []; madeLog.set(b.id, log); }
+    log.push([game.tick, b.made ?? 0]);
+    while (log.length > 1 && log[1]![0] <= game.tick - RULES.dayTicks) log.shift();
+  }
+  for (const id of madeLog.keys()) if (!alive.has(id)) madeLog.delete(id);
+}
+const SITE_NAME: Record<string, string> = { home: 'w warsztacie', shore: 'na brzegu wody' };
+function prodInfo(b: GameState['buildings'][number]): BuildingInfo['prod'] {
+  const def = BUILDINGS[b.type]!, pr = def.production, p = game.players[b.owner]!;
+  const u = b.worker ? game.units.find((x) => x.id === b.worker) : undefined;
+  const resName = (r: string): string => t(RESOURCE_DEFS[r as ResourceId].name).toLowerCase();
+  // przepis
+  const place = !pr ? '' : typeof pr.site === 'string' ? SITE_NAME[pr.site] ?? '' : pr.site === Terrain.Forest ? 'w lesie' : pr.site === Terrain.Stone ? 'w skałach' : pr.site === Terrain.Iron ? 'przy złożu rudy' : '';
+  const recipe = pr ? {
+    input: pr.input ? { id: pr.input.res, n: pr.input.amount, name: resName(pr.input.res) } : undefined,
+    output: { id: pr.output.res, n: pr.output.amount, name: resName(pr.output.res) },
+    secs: Math.round((pr.workTicks + (pr.processTicks ?? 0)) / TICKS_PER_SECOND),
+    place,
+  } : undefined;
+  // pracownik: kto i co robi teraz; postęp roboty w warsztacie albo w terenie
+  let worker: { name: string; doing: string; pct?: number } | undefined;
+  if (u) {
+    let pct: number | undefined;
+    if (pr && u.phase === Phase.Working) { const total = (pr.input ? pr.workTicks : pr.processTicks) ?? pr.workTicks; pct = Math.round(100 * (1 - u.timer / Math.max(1, total))); }
+    else if (pr && u.phase === Phase.WorkingSite) pct = Math.round(100 * (1 - u.timer / Math.max(1, pr.workTicks)));
+    worker = { name: personCard(u.id)?.name ?? '', doing: t(`phase.${u.phase}`), pct: pct === undefined ? undefined : Math.max(0, Math.min(100, pct)) };
+  }
+  // stan: co blokuje robotę (najważniejsze pierwsze)
+  const outKind = pr ? RESOURCE_DEFS[pr.output.res].store : undefined;
+  const outFull = !!outKind && storeUsed(p, outKind) >= storeCapacity(game, b.owner, outKind);
+  const inHave = pr?.input ? p.res[resIndex(pr.input.res)]! : 0;
+  const storeLabel = (k: string): string => (k === 'granary' ? 'spichlerz' : k === 'armory' ? 'zbrojownia' : 'skład');
+  let status: { text: string; level: 'ok' | 'warn' | 'bad' };
+  if (!u) {
+    const free = game.units.some((x) => x.owner === b.owner && x.job === 0 && !x.enlist);
+    status = free ? { text: 'Brak pracownika — wolny chłop zaraz przyjdzie.', level: 'warn' }
+      : { text: 'Brak pracownika: nie ma wolnych chłopów. Postaw chaty, obniż podatki albo podnieś racje, żeby przyszli nowi.', level: 'bad' };
+  } else if (u.phase === Phase.Sleeping || u.phase === Phase.ToSleep) status = { text: 'Noc — pracownik śpi, rano wraca do roboty.', level: 'ok' };
+  else if (u.phase === Phase.Evening || u.phase === Phase.ToEvening) status = { text: 'Wieczór — fajrant, rano wraca do roboty.', level: 'ok' };
+  else if (pr?.input && RESOURCE_DEFS[pr.input.res].store && !storeCapacity(game, b.owner, RESOURCE_DEFS[pr.input.res].store!)) status = { text: `Nie ma skąd wziąć surowca (${resName(pr.input.res)}): postaw ${storeLabel(RESOURCE_DEFS[pr.input.res].store!).replace(/a$/, 'ę')}.`, level: 'bad' };
+  else if (outKind && !storeCapacity(game, b.owner, outKind)) status = { text: `Nie ma gdzie odnieść towaru (${resName(pr!.output.res)}): postaw ${storeLabel(outKind).replace(/a$/, 'ę')}.`, level: 'bad' };
+  else if (pr?.input && u.phase === Phase.ToInputStore && inHave < pr.input.amount) status = { text: `Czeka na surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, potrzeba ${pr.input.amount}.`, level: 'bad' };
+  else if (u.phase === Phase.ToStore && u.carryAmt > 0 && u.timer > 0) status = { text: `${outKind === 'armory' ? 'Pełna' : 'Pełny'} ${storeLabel(outKind ?? '')} — pracownik czeka z towarem, a nadmiar przepadnie. Postaw kolejny.`, level: 'bad' };
+  else if (outFull) status = { text: `${outKind === 'armory' ? 'Pełna' : 'Pełny'} ${storeLabel(outKind ?? '')} — nowy towar nie będzie miał gdzie leżeć.`, level: 'warn' };
+  else if (pr?.input && inHave < pr.input.amount) status = { text: `Kończy się surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, na jeden cykl trzeba ${pr.input.amount}.`, level: 'warn' };
+  else if (u.phase === Phase.Resting || u.phase === Phase.ToRest) status = { text: 'Krótki odpoczynek w chacie, zaraz wraca.', level: 'ok' };
+  else status = { text: 'Pracuje bez przeszkód.', level: 'ok' };
+  // liczby
+  let day: number | undefined;
+  const log = madeLog.get(b.id);
+  if (log && log.length > 1) {
+    const span = game.tick - log[0]![0];
+    if (span >= RULES.dayTicks / 4) day = Math.round((((b.made ?? 0) - log[0]![1]) * RULES.dayTicks) / span);
+  }
+  return {
+    recipe, worker, status, made: b.made ?? 0, lost: b.lost ?? 0, day,
+    stockOut: pr ? p.res[resIndex(pr.output.res)]! : undefined,
+    stockIn: pr?.input ? inHave : undefined,
+    cycles: pr?.input ? Math.floor(inHave / pr.input.amount) : undefined,
+  };
 }
 
 /** Straż miejska do panelu twierdzy: ilu jest, szkolenie rekruta i co blokuje werbunek */
@@ -1184,6 +1265,7 @@ function refresh(): void {
     const card = personCard(selectedUnit);
     if (card) hud.showPerson(card); else selectUnit(0); // odszedł z osady
   }
+  sampleMade();
   if (selected) {
     const b = game.buildings.find((x) => x.id === selected);
     if (!b) select(0);
@@ -1386,6 +1468,8 @@ requestAnimationFrame(loop);
   home(player = ME): { x: number; y: number } | null { const k = game.buildings.find((b) => b.owner === player && b.type === 0); return k && k.door >= 0 ? { x: k.door % game.map.width, y: Math.floor(k.door / game.map.width) } : null; },
   /** Gotowy budynek w polu (x, y), bez budowy; zwraca id albo null (działka zajęta) */
   place(id: string, x: number, y: number, rot = 0, player = ME): number | null { const r = placeReady(game, id, x, y, rot, player); refresh(); return r; },
+  /** Otwiera okno budynku o danym id (jak kliknięcie) */
+  open(id: number): void { select(id); },
   /** Godzina na zegarze bieżącego dnia, np. hour(20.5) — wieczór z pochodniami */
   hour(h: number): void { setHour(game, h); refresh(); },
   /** `n` chłopów przy twierdzy */

@@ -304,8 +304,12 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
         p.res[u.carryRes]! += put;
         p.stats.gathered += put;
         u.carryAmt -= put;
+        // licznik warsztatu: towar z własnej produkcji (okno budynku pokazuje, ile zrobił i ile przepadło)
+        const shop = u.job && prod && resIndex(prod.output.res) === u.carryRes ? buildingById(g, u.job) : undefined;
+        if (shop && put) shop.made = (shop.made ?? 0) + put;
         // skład pełny: chwilę czeka, a gdy dalej nie ma miejsca, zostawia ładunek i wraca do pracy (nie stoi w nieskończoność)
         if (u.carryAmt > 0 && ++u.timer < 6) { u.wait = RETRY_TICKS; break; }
+        if (shop && u.carryAmt > 0) shop.lost = (shop.lost ?? 0) + u.carryAmt;
         u.timer = 0;
       }
       u.carryRes = -1; u.carryAmt = 0;

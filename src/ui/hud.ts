@@ -81,7 +81,20 @@ export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDe
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
-  site?: { pct: number; loads: number; delivered: number; carrying: number; fetching: number; builders: number; state: string } }
+  site?: { pct: number; loads: number; delivered: number; carrying: number; fetching: number; builders: number; state: string };
+  /** Ilu łuczników mieści wieża / mur */
+  garrisonMax?: number;
+  /** Warsztat: przepis, pracownik, stan i liczby */
+  prod?: ProdInfo }
+export interface ProdInfo {
+  recipe?: { input?: { id: string; n: number; name: string }; output: { id: string; n: number; name: string }; secs: number; place: string };
+  worker?: { name: string; doing: string; pct?: number };
+  status: { text: string; level: 'ok' | 'warn' | 'bad' };
+  /** Oddane do składu od postawienia, przepadłe przez pełny skład, tempo z ostatniej doby (brak = za krótko liczone) */
+  made: number; lost: number; day?: number;
+  /** Na stanie: gotowy towar i surowiec (ile pełnych cykli wystarczy) */
+  stockOut?: number; stockIn?: number; cycles?: number;
+}
 export interface RecruitUnit { id: string; name: string; weapon: string; need?: number; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean }
 
 export interface Hud {
@@ -555,6 +568,20 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   areaBtn.addEventListener('click', () => events.onArea(infoId));
   infoActions.append(areaBtn, demolish, close);
   // plac budowy: pasek postępu, materiał (przyniesiony / potrzebny, w drodze), robotnicy i co się teraz dzieje
+  // warsztat: przepis z ikonami, pracownik z postępem roboty, stan (co blokuje) i liczby
+  const prodBox = el('div', 'info-prod');
+  prodBox.hidden = true;
+  const prodRecipe = el('div', 'prod-recipe');
+  const prodWorker = el('div', 'prod-worker');
+  const prodWho = el('p', 'prod-who');
+  const prodBar = el('div', 'prod-bar');
+  const prodFill = el('span');
+  prodBar.append(prodFill);
+  prodWorker.append(prodWho, prodBar);
+  const prodStatus = el('p', 'prod-status');
+  prodStatus.setAttribute('role', 'status');
+  const prodRows = el('div', 'prod-rows');
+  prodBox.append(prodRecipe, prodWorker, prodStatus, prodRows);
   const siteBox = el('div', 'info-site');
   siteBox.hidden = true;
   const siteHead = el('p', 'stock-head');
@@ -565,7 +592,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, gateBox, towerBox, watchState, walkBtn, recruit, armyPanel, roster, siteBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, towerBox, watchState, walkBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -919,7 +946,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       towerBox.hidden = true;
       gateBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
-      siteBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true; infoDesc.hidden = false;
+      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true; infoDesc.hidden = false;
       walkBtn.hidden = person.walk === false;
     },
     showArmy(army, ctl) {
@@ -934,7 +961,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
-      siteBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true;
+      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true;
       walkBtn.hidden = true;
       // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
       const byKind = new Map<string, { name: string; n: number }>();
@@ -1001,9 +1028,46 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       hpLine.hidden = i.hp === undefined;
       if (i.hp !== undefined && i.maxHp) { setText(hpText, `${t('hud.hp')}: ${i.hp} / ${i.maxHp}`); hpFill.style.width = `${Math.max(0, (i.hp / i.maxHp) * 100)}%`; hpFill.dataset.low = String(i.hp < i.maxHp * 0.35); }
       setText(infoDesc, t(`d.${i.def.id}`));
-      infoWorker.hidden = !i.def.production;
+      infoWorker.hidden = !i.def.production || !!i.prod;
+      prodBox.hidden = !i.prod;
+      if (i.prod) {
+        const pd = i.prod;
+        // przepis: [surowiec] → [towar], czas roboty i miejsce
+        const key = JSON.stringify(pd.recipe ?? null);
+        if (prodRecipe.dataset.key !== key) {
+          prodRecipe.dataset.key = key;
+          prodRecipe.hidden = !pd.recipe;
+          if (pd.recipe) {
+            const r = pd.recipe;
+            const chip = (id: string, n: number, name: string): HTMLElement => { const c = el('span', 'prod-chip'); c.title = name; c.append(icon(id), el('strong', '', `${n}`), el('span', '', name)); return c; };
+            const line = el('div', 'prod-line');
+            if (r.input) line.append(chip(r.input.id, r.input.n, r.input.name), el('span', 'prod-arrow', '→'));
+            line.append(chip(r.output.id, r.output.n, r.output.name));
+            prodRecipe.replaceChildren(line, el('p', 'prod-note', `Robota: ${r.secs} s${r.place ? ` ${r.place}` : ''} (bez chodzenia po surowiec i do składu)`));
+          }
+        }
+        prodWorker.hidden = !pd.worker;
+        if (pd.worker) {
+          setText(prodWho, `${pd.worker.name || 'Pracownik'} — ${pd.worker.doing}${pd.worker.pct !== undefined ? ` (${pd.worker.pct}%)` : ''}`);
+          prodBar.hidden = pd.worker.pct === undefined;
+          prodFill.style.width = `${pd.worker.pct ?? 0}%`;
+        }
+        setText(prodStatus, pd.status.text);
+        prodStatus.dataset.level = pd.status.level;
+        const row = (label: string, value: string, warn = false): HTMLElement => { const r = el('p', 'site-row'); r.append(el('span', '', label), el('strong', warn ? 'warn' : '', value)); return r; };
+        const out = pd.recipe?.output.name ?? 'towaru';
+        const rows: HTMLElement[] = [];
+        if (pd.recipe) {
+          rows.push(row('Zrobione od postawienia', `${pd.made}`));
+          rows.push(row('W ostatniej dobie', pd.day === undefined ? 'liczy się…' : `${pd.day}`));
+          if (pd.lost) rows.push(row('Przepadło (pełny skład)', `${pd.lost}`, true));
+          if (pd.stockOut !== undefined) rows.push(row(`Na stanie: ${out}`, `${pd.stockOut}`));
+          if (pd.recipe.input && pd.stockIn !== undefined) rows.push(row(`Na stanie: ${pd.recipe.input.name}`, `${pd.stockIn} (na ${pd.cycles ?? 0} ${pd.cycles === 1 ? 'cykl' : 'cykli'})`, (pd.cycles ?? 0) === 0));
+        }
+        prodRows.replaceChildren(...rows);
+      }
       // co produkuje, z czego i jak szybko (czas samej pracy, bez chodzenia po surowiec)
-      const pr = i.def.production;
+      const pr = i.prod ? undefined : i.def.production;
       if (pr) {
         const secs = Math.round(((pr.workTicks + (pr.processTicks ?? 0)) / 10));
         const from = pr.input ? ` ${t('hud.from')} ${pr.input.amount} × ${t(RESOURCE_DEFS[pr.input.res].name).toLowerCase()}` : '';
@@ -1057,7 +1121,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       towerBox.hidden = !(i.own && i.garrison !== undefined);
       if (i.garrison !== undefined) {
         const wall = i.def.id === 'stoneWall';
-        setText(towerState, i.garrison ? `${wall ? 'Na murze' : 'Na wieży'}: ${i.garrison} / ${wall ? 2 : 4} łuczników` : wall ? 'Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.' : 'Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.');
+        setText(towerState, i.garrison ? `${wall ? 'Na murze' : 'Na wieży'}: ${i.garrison} / ${i.garrisonMax ?? (wall ? 2 : 4)} łuczników` : wall ? 'Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.' : 'Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.');
         tSel.disabled = tDown.disabled = !i.garrison;
       }
       gateBox.hidden = !(i.own && i.gate);
