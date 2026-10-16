@@ -768,7 +768,9 @@ window.addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     if (menu.isOpen()) { if (!titleScreen) menu.close(); return; }
     if (wrecking) setWreck(false);
-    else if (picked) pick(null);
+    // tryb budowy: Esc odkłada wybrany budynek i chowa listę budynków
+    else if (picked) { pick(null); hud.closeBuild(); }
+    else if (hud.closeBuild()) { /* lista budynków schowana */ }
     else if (chosen.size) chooseSoldiers([], false);
     else if (selected || selectedUnit) { select(0); selectUnit(0); }
     else menu.open(!gameOver);

@@ -104,6 +104,8 @@ export interface Hud {
   setHash(hash: number): void;
   update(v: HudView): void;
   setPicked(id: string | null): void;
+  /** Chowa otwartą listę budynków (Esc); zwraca true, gdy była otwarta */
+  closeBuild(): boolean;
   showInfo(info: BuildingInfo | null): void;
   /** Karta mieszkańca: imię i kilka wierszy opisu */
   showPerson(person: { name: string; lines: string[]; walk?: boolean } | null): void;
@@ -928,6 +930,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       for (const [id, b] of buildButtons) b.classList.toggle('poor', !v.affordable.has(id));
       if (wreck.getAttribute('aria-pressed') !== 'true') buildFoot.hidden = picked === null;
       syncPicker();
+    },
+    closeBuild() {
+      if (category === null) return false;
+      showCategory(null);
+      return true;
     },
     setPicked(id) {
       picked = id;
