@@ -1,7 +1,7 @@
 """Drzewa z Blendera: świerk i drzewo liściaste (dąb/lipa) w skali gry — pień z korą, gałęzie i korona
 z kart z teksturą igliwia albo liści (przezroczystość robi gra: alphaTest), jak w grach RPG.
 
-  świerk:     pień zwężający się do czubka, suche kikuty gałęzi nisko, 11 pięter gałęzi-kart opadających na boki
+  świerk:     pień zwężający się do czubka, suche kikuty gałęzi nisko, 9 pięter gałęzi-kart opadających na boki
               (każda gałąź to dwie skrzyżowane karty, żeby z boku i z góry była pełna), czubek z krzyżaka kart
   liściaste:  pień z lekkim skrętem, 4 konary i drobniejsze gałęzie, korona z ok. 36 kęp liści (każda z trzech
               skrzyżowanych kart) rozłożonych po nierównej elipsoidzie, gęściej u góry

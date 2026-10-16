@@ -59,7 +59,7 @@ export const proceduralModels: ModelFactory = {
     return treeGeo('pineTrunk');
   },
   treeCrown() {
-    // korona świerka z kart igliwia: 11 pięter opadających gałęzi, każda z dwóch skrzyżowanych kart
+    // korona świerka z kart igliwia: 9 pięter opadających gałęzi, każda z dwóch skrzyżowanych kart
     return treeGeo('pineCrown');
   },
   treeCrownFar() {
