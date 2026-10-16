@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.24.2 — obozowisko i ładunki (2026-10-16)
+
+- Obozowisko: stos drewna przy ognisku mniejszy (pięć krótszych polan w dwóch warstwach zamiast dziewięciu w trzech); w spacerze nie da się już wejść w stos, krąg kamieni, stołki ani kłodę
+- Niesione ładunki (kosz jabłek, chleb, ryby, worki, kłody, deski) w marszu trzymają się dłoni i patrzą tam, gdzie idzie chłop; wcześniej kosz trafiał z boku i był obrócony
+
 ## 0.24.1 — tarcza u łuczarza (2026-10-16)
 
 - Tarcza ze słomy przed warsztatem łuczarza stoi pionowo na sztaludze, lekko odchylona do tyłu (wcześniej leżała płasko jak taca); namalowane koła nie migają już w czerwoną plamę, a dwie strzały tkwią grotem w licu zamiast przebijać tarczę na wylot

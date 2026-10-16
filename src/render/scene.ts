@@ -1710,13 +1710,15 @@ export class GameRenderer {
     setTimeout(() => document.addEventListener('pointerlockchange', lock), 300);
   }
   /** Spacer: siatki budynków w pobliżu (widoczne), z drzewami BVH do szybkich promieni */
-  private walkHits: { mesh: THREE.Mesh; box: THREE.Box3; root: THREE.Object3D }[] = [];
-  private walkCache = new WeakMap<THREE.Group, { mesh: THREE.Mesh; box: THREE.Box3; root: THREE.Object3D }[]>();
+  private walkHits: { mesh: THREE.Mesh; box: THREE.Box3; root: THREE.Object3D; low?: boolean }[] = [];
+  private walkCache = new WeakMap<THREE.Group, { mesh: THREE.Mesh; box: THREE.Box3; root: THREE.Object3D; low?: boolean }[]>();
   private gatherWalkHits(wx: number, wz: number): void {
     this.walkHits.length = 0;
-    for (const grp of this.buildingMeshes.values()) {
+    for (const [bid, grp] of this.buildingMeshes) {
       if (Math.abs(grp.position.x - wx) > 9 || Math.abs(grp.position.z - wz) > 9) continue;
       let list = this.walkCache.get(grp);
+      // obozowisko nie ma ścian, tylko niskie rzeczy (krąg kamieni, stołki, stos drewna): sprawdzamy je też tuż nad ziemią
+      const low = BUILDINGS[this.state?.buildings.find((b) => b.id === bid)?.type ?? -1]?.id === 'camp';
       if (!list) {
         // raz na budynek: wszystkie stałe siatki (bez płomieni, szyb i dymu) z ramką w świecie i drzewem BVH
         list = [];
@@ -1728,7 +1730,7 @@ export class GameRenderer {
           if (!mat || Array.isArray(mat) || mat.transparent || (mat as THREE.MeshBasicMaterial).isMeshBasicMaterial) return;
           const geo = m.geometry as THREE.BufferGeometry & { boundsTree?: MeshBVH };
           if (!geo.boundingBox) geo.computeBoundingBox();
-          list!.push({ mesh: m, box: geo.boundingBox!.clone().applyMatrix4(m.matrixWorld), root: grp });
+          list!.push({ mesh: m, box: geo.boundingBox!.clone().applyMatrix4(m.matrixWorld), root: grp, low });
         });
         this.walkCache.set(grp, list);
       }
@@ -1749,14 +1751,14 @@ export class GameRenderer {
     }
   }
   /** Czy bliżej niż r od punktu (świat) na którejś z wysokości ys jest ściana albo sprzęt (najbliższy punkt siatki, drzewo BVH) */
-  private walkTouch(x: number, z: number, ys: number[], r: number): boolean {
+  private walkTouch(x: number, z: number, ys: number[], r: number, lowY?: number): boolean {
     const inv = this.walkInv, pt = this.walkPt, hit = this.walkHit;
-    for (const { mesh, box } of this.walkHits) {
+    for (const { mesh, box, low } of this.walkHits) {
       if (x < box.min.x - r || x > box.max.x + r || z < box.min.z - r || z > box.max.z + r) continue;
       const tree = (mesh.geometry as THREE.BufferGeometry & { boundsTree?: MeshBVH }).boundsTree!;
       inv.copy(mesh.matrixWorld).invert();
       const sc = mesh.matrixWorld.getMaxScaleOnAxis() || 1;
-      for (const y of ys) {
+      for (const y of low && lowY !== undefined ? [lowY, ...ys] : ys) {
         if (y < box.min.y - r || y > box.max.y + r) continue;
         pt.set(x, y, z).applyMatrix4(inv);
         const res = tree.closestPointToPoint(pt, hit, 0, r / sc);
@@ -1839,7 +1841,7 @@ export class GameRenderer {
       if (!this.walkableAt(x, z)) for (const [ox, oz] of RING) if ((ox || oz) && !point(x + ox, z + oz, [[0, 0]])) return false;
       if (this.view && this.view.trunkNear(x, z, BODY * 0.8)) return false;
       // prawdziwe siatki budynków: promienie na wysokości kolan i oczu, żeby kamera nigdy nie weszła w ścianę ani sprzęt
-      return !this.walkTouch(x - W2, z - H2, [feet + 0.3, feet + 0.46], BODY);
+      return !this.walkTouch(x - W2, z - H2, [feet + 0.3, feet + 0.46], BODY, feet + 0.13);
     };
     // małymi krokami: przy niskim FPS jeden duży skok przeskoczyłby cienką ścianę
     const nStep = Math.min(40, Math.ceil(Math.hypot(dx, dz) / 0.04));
@@ -5031,7 +5033,6 @@ export class GameRenderer {
       if (walking && !lean && !this.calm) lean = fleeing ? 0.16 : 0.05;
       if (lean || roll) { t.rotation.reorder('YXZ'); t.rotation.x = lean; t.rotation.z = roll; }
       t.updateMatrix();
-      if (lean || roll) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
       if (fishing) {
         // wędka w prawej dłoni wyciągniętej w przód (FISH_ARM), obracana w barku razem z ręką
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
@@ -5113,6 +5114,9 @@ export class GameRenderer {
         t.updateMatrix();
         loadMesh.setMatrixAt(j, t.matrix);
       }
+      // pochylenie i kołysanie zerujemy dopiero po ładunkach: kłoda, deski i kosz liczą się z tym samym obrotem co tułów
+      // (wcześniej obrót zerował się razem z kierunkiem i ładunek trafiał w bok, nie w dłonie)
+      if (lean || roll) { t.rotation.set(0, 0, 0); t.rotation.order = 'XYZ'; }
     }
     // wędrowcy: przychodzący z lasu i odchodzący za mapę (ci drudzy ze smutną minką nad głową)
     let k = n, sad = 0;

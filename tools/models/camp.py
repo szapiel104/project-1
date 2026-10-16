@@ -70,9 +70,10 @@ for u in (-L / 2, L / 2):
 SEATS.append([round(lx, 3), round(lz, 3), round(math.atan2(-lx, -lz), 3)])
 
 # ---------------- stos drewna na opał ----------------
-for row in range(3):
-    for k in range(4 - row):
-        b.box('base', 'bark', 0.38, 0.08, 0.08, 0.72, F + row * 0.075, -0.62 + k * 0.09 + row * 0.045, 0.6)
+# mały: kilka polan na dwa dni palenia, w dwóch warstwach (dolna 3, górna 2 w rowkach dolnej)
+for row in range(2):
+    for k in range(3 - row):
+        b.box('base', 'bark', 0.26, 0.07, 0.07, 0.74, F + row * 0.065, -0.6 + k * 0.08 + row * 0.04, 0.6)
 
 VIEWS = [['obozowisko', [0.6, 0.9, 2.0], [0, 0.2, 0], ['base'], 26]]
 b.save('camp', maxe=0.25, rays=12, reach=0.3, extra={
