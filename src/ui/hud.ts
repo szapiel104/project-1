@@ -142,6 +142,8 @@ function costText(def: BuildingDef): string {
 
 /** Proste ikony surowców (SVG 20x20), rysowane ręcznie w jednym stylu. */
 const ICONS: Record<string, string> = {
+  // jedzenie razem: wiklinowy kosz z bochenkiem i jabłkiem (inna ikona niż same jabłka)
+  food: '<path d="M4.5 9.5c0-3 2.5-4.5 5.5-4.5s5.5 1.500 5.5 4.500z" fill="#c9843d" stroke="#2a1c10" stroke-width=".9"/><circle cx="13.5" cy="8.6" r="2.4" fill="#d0281f" stroke="#2a1c10" stroke-width=".8"/><path d="M2.5 9.5h15l-2 7.5h-11z" fill="#9a6a34" stroke="#2a1c10"/><path d="M4 12h12M4.6 14.5h10.8M7 9.5l.5 7.500M10 9.5v7.500M13 9.5l-.5 7.500" stroke="#5e3e1c" stroke-width=".8"/>',
   wood: '<rect x="2" y="7" width="16" height="6" rx="3" fill="#8a5a2b" stroke="#2a1c10"/><circle cx="16" cy="10" r="2.6" fill="#d9b27a" stroke="#2a1c10"/><path d="M5 9h6M6 11.5h5" stroke="#5e4329"/>',
   stone: '<path d="M3 15l2-7 5-4 6 3 1 8z" fill="#b5b0a2" stroke="#2a1c10"/><path d="M5 8l5 2 6-3M10 10l-1 5" stroke="#6f6a5e" fill="none"/>',
   iron: '<path d="M3 14l2-5h10l2 5z" fill="#6a6570" stroke="#2a1c10"/><path d="M5 9l1-2h8l1 2" fill="#8f8a96" stroke="#2a1c10"/>',
@@ -218,7 +220,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const foodSumVal = el('strong', '', '0');
   foodSum.dataset.tip = 'Jedzenie';
   foodSum.setAttribute('aria-label', 'Jedzenie razem');
-  foodSum.append(icon('apples'), foodSumVal, el('span', 'trend'));
+  const foodSumTrend = el('span', 'trend');
+  foodSum.append(icon('food'), foodSumVal, foodSumTrend);
   let resOpen = false;
   try { resOpen = localStorage.getItem('project1.resOpen') === '1'; } catch { /* nic */ }
   const resToggle = el('button', 'res-toggle');
@@ -257,14 +260,20 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'bread', 'apples', 'wheat', 'flour', 'fish'];
   const fitRes = (): void => {
     for (const id of SECOND) resList.insertBefore(resItems[RESOURCES.indexOf(id)]!, toggleLi);
-    const over = (): boolean => resList.scrollWidth > resList.clientWidth + 1 || bar.scrollWidth > bar.clientWidth + 1;
+    const over = (): boolean => {
+      if (resList.scrollWidth > resList.clientWidth + 1 || bar.scrollWidth > bar.clientWidth + 1) return true;
+      // ostatni kafelek nie może dochodzić do liczników osady po prawej (odstęp jak między kafelkami)
+      const last = (toggleLi.hidden ? toggleLi.previousElementSibling : toggleLi) as HTMLElement | null;
+      return !!last && people.isConnected && last.getBoundingClientRect().right + 10 > people.getBoundingClientRect().left;
+    };
+    toggleLi.hidden = true; // najpierw próba bez „…”: może zmieści się wszystko
+    if (over()) toggleLi.hidden = false;
     let shown = SECOND.length;
-    while (shown > 0 && over()) shown--, extra.prepend(resItems[RESOURCES.indexOf(SECOND[shown]!)]!);
+    while (shown > 0 && !toggleLi.hidden && over()) shown--, extra.prepend(resItems[RESOURCES.indexOf(SECOND[shown]!)]!);
     // listwa w kolejności pierwszeństwa (to, co nie zmieściło się w pasku)
     toggleLi.hidden = shown === SECOND.length;
     if (toggleLi.hidden && resOpen) { resOpen = false; paintRes(); }
   };
-  fitRes();
   paintRes();
   const people = el('div', 'people');
   const popVal = el('strong');
@@ -422,6 +431,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   });
   // jeden wąski pasek: zegar, surowce jako ikony z liczbą, stan osady, sterowanie
   bar.append(clockBox, resList, people);
+  fitRes();
 
   // ---- komunikaty ----
   const toast = el('div', 'toast');
@@ -903,6 +913,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       const fs = FOOD_RES.reduce((a, id) => a + (v.res[RESOURCES.indexOf(id)] ?? 0), 0);
       setText(foodSumVal, short(fs));
       foodSum.dataset.tip = `Jedzenie razem: ${fs} (${FOOD_RES.map((id) => `${t(RESOURCE_DEFS[id].name)} ${v.res[RESOURCES.indexOf(id)] ?? 0}`).join(', ')})`;
+      // w pasku zmianę (+/−) pokazuje tylko jedzenie razem — to ono decyduje o głodzie; reszta zapasów ma zmianę w podpowiedzi
+      const fd = FOOD_RES.reduce((a, id) => a + (v.trend[RESOURCES.indexOf(id)] ?? 0), 0);
+      setText(foodSumTrend, fd ? `${fd > 0 ? '+' : '−'}${short(Math.abs(fd))}` : '');
+      foodSumTrend.dataset.sign = fd > 0 ? 'pos' : fd < 0 ? 'neg' : '';
       // trend: ile przybyło albo ubyło w ostatniej minucie gry (zielone na plus, czerwone na minus)
       resTrends.forEach((node, i) => {
         const d = v.trend[i] ?? 0;

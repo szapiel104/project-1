@@ -1183,3 +1183,16 @@ body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1
 .preview-spin { width: 46px; height: 46px; border-radius: 50%; border: 3px solid rgba(233, 199, 102, .22); border-top-color: #e9c766; animation: preview-spin .9s linear infinite; }
 @keyframes preview-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .preview-spin { animation-duration: 2.4s; } .preview-cover { transition: none; } }
+
+/* dolny pasek zapasów (16.10): duża ikona i liczba w jednej linii, wyśrodkowane w pionie; zmianę +/− pokazuje tylko
+   „jedzenie razem” (małą liczbą obok), pozostałe zapasy mają ją w podpowiedzi po najechaniu */
+.status .res li, .status .res-extra li { display: flex; align-items: center; gap: 7px; padding: 2px 10px 2px 7px; min-height: 46px; }
+.status .res li .ico, .status .res-extra li .ico { display: grid; place-items: center; }
+.status .res li .ico svg, .status .res-extra li .ico svg { width: 32px; height: 32px; }
+.status .res li strong, .status .res-extra li strong { font-size: 20px; line-height: 1; min-width: 2.2ch; }
+.status .res li .trend, .status .res-extra li .trend { display: none; }
+.status .res li.res-sum .trend:not(:empty) { display: inline-block; font-size: 14px; font-weight: 700; line-height: 1; margin-left: -2px; }
+.status .res .res-toggle-li { padding: 0; min-height: 0; }
+/* skład i spichlerz: sama liczba „ile / ile mieści” o stałej szerokości (nie skacze); bilans +/− w podpowiedzi */
+.status .store-box .trend { display: none; }
+.status .store-box strong { display: inline-block; min-width: 8.5ch; text-align: left; font-variant-numeric: tabular-nums lining-nums; }
