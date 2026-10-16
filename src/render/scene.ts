@@ -4282,6 +4282,8 @@ export class GameRenderer {
    * Materiały nowych rzeczy (budynki, drogi) łatamy co kilka sekund — raz na materiał.
    */
   private snowNow = -1;
+  /** Test: wymuszona ilość śniegu 0..1 (−1 = z pogody) */
+  snowForce = -1;
   private trails: SnowTrails | null = null;
   private trailSeen = 0;
   /** Ślady na śniegu: ludzie, żołnierze i wilki wydeptują ścieżki, które powoli się zasypują */
@@ -4312,10 +4314,11 @@ export class GameRenderer {
     const bare = p < 0.2 ? 1 - sm(0.03, 0.13, p) : sm(0.7, 0.78, p);
     const autumn = p < 0.5 ? 0 : sm(0.52, 0.64, p);
     // śnieg: przy mrozie leży, przy odwilży topnieje; po wczytaniu mapy od razu taki, jaki powinien być
-    const want = Math.max(0, Math.min(1, (2 - w.temp) / 4));
+    const want = Math.max(0, Math.min(1, (0.5 - w.temp) / 4)) * (w.temp > 0 ? 1 - this.rain : 1); // leży przy mrozie, deszcz w odwilż go spłukuje
     // przeskok pory roku (menu dewelopera): śnieg od razu taki, jaki powinien być
     if ((g.seasonShift ?? 0) !== this.shiftSeen) { this.shiftSeen = g.seasonShift ?? 0; this.snowNow = -1; }
     this.snowNow = this.snowNow < 0 || this.calm ? want : this.snowNow + (want - this.snowNow) * Math.min(1, dt / 30);
+    if (this.snowForce >= 0) this.snowNow = this.snowForce;
     const hour = clockAt(g.tick).hour;
     const frost = w.temp < 3 && hour > 3.5 && hour < 9.5 ? Math.min(1, (3 - w.temp) / 5) * (1 - Math.abs(hour - 6.3) / 3.2) : 0;
     SEASON_U.uSnow.value = this.snowNow;

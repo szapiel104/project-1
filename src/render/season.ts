@@ -81,7 +81,10 @@ export class SnowTrails {
 /** Rodzaj materiału: zwykły (śnieg na górnych ścianach), liście (jesień, gołe zimą), trawa (szarzeje, przysypana) */
 export type SeasonKind = 'solid' | 'ground' | 'leaf' | 'leafFar' | 'grass';
 
-const VERT_HEAD = 'uniform float uBare;\nvarying vec3 vSeasonPos;\n';
+// Mapa śladów: trawa czyta ją w pikselach; ziemia w wierzchołkach (jej shader ma już 14 tekstur, a karty
+// graficzne pozwalają na 16 w pikselach — z jedną więcej cały teren przestaje się rysować); reszta wcale.
+const VERT_HEAD = (kind: SeasonKind): string => 'uniform float uBare;\nvarying vec3 vSeasonPos;\n' +
+  (kind === 'ground' ? 'uniform sampler2D uTrail;\nuniform vec4 uTrailMap;\nvarying float vTrail;\n' : '');
 const VERT_BODY = (kind: SeasonKind): string => `
   ${kind === 'leaf' ? 'transformed *= max(0.0, 1.0 - uBare);' : ''}
   {
@@ -90,14 +93,19 @@ const VERT_BODY = (kind: SeasonKind): string => `
       sP = instanceMatrix * sP;
     #endif
     vSeasonPos = (modelMatrix * sP).xyz;
+    ${kind === 'ground' ? 'vTrail = texture2D(uTrail, (vSeasonPos.xz + uTrailMap.xy) * uTrailMap.zw).r;' : ''}
   }
 `;
-const FRAG_HEAD = 'uniform sampler2D uTrail;\nuniform vec4 uTrailMap;\nuniform float uSnow;\nuniform float uFrost;\nuniform float uAutumn;\nuniform float uBare;\nvarying vec3 vSeasonPos;\n';
+const FRAG_HEAD = (kind: SeasonKind): string => (kind === 'grass' ? 'uniform sampler2D uTrail;\nuniform vec4 uTrailMap;\n' : kind === 'ground' ? 'varying float vTrail;\n' : '') + 'uniform float uSnow;\nuniform float uFrost;\nuniform float uAutumn;\nuniform float uBare;\nvarying vec3 vSeasonPos;\n' +
+  'float sHash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }\n' +
+  'float sVal(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);\n' +
+  '  return mix(mix(sHash(i), sHash(i + vec2(1.0, 0.0)), f.x), mix(sHash(i + vec2(0.0, 1.0)), sHash(i + vec2(1.0, 1.0)), f.x), f.y); }\n' +
+  'float sPatch(vec2 p) { return sVal(p * 0.28) * 0.55 + sVal(p * 0.9 + 7.3) * 0.3 + sVal(p * 3.1 - 2.1) * 0.15; }\n';
 const FRAG_BODY = (kind: SeasonKind): string => `
   {
     vec3 sWN = normalize(inverseTransformDirection(normal, viewMatrix));
     float sCell = fract(sin(dot(floor(vSeasonPos.xz * 0.9), vec2(12.9898, 78.233))) * 43758.5453);
-    float sTrail = texture2D(uTrail, (vSeasonPos.xz + uTrailMap.xy) * uTrailMap.zw).r;
+    ${kind === 'grass' ? 'float sTrail = texture2D(uTrail, (vSeasonPos.xz + uTrailMap.xy) * uTrailMap.zw).r;' : kind === 'ground' ? 'float sTrail = vTrail;' : ''}
     float sWave = sin(vSeasonPos.x * 1.3 + vSeasonPos.z * 0.7) * sin(vSeasonPos.z * 1.1 - vSeasonPos.x * 0.4) * 0.5 + 0.5;
     ${kind === 'leaf' || kind === 'leafFar' ? `
     // jesień: liście żółkną i rudzieją (każde drzewo trochę inaczej), zimą resztki brązowieją
@@ -110,12 +118,14 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     // trawa: jesienią płowieje, zimą szarzeje i niknie pod śniegiem
     float sG = dot(diffuseColor.rgb, vec3(0.33));
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.55, 0.3) * (0.6 + sG), uAutumn * 0.55 + uBare * 0.25);
-    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84), clamp(max(uSnow, uFrost * 0.6) * (0.7 + sWave * 0.3) * (1.0 - sTrail * 0.8), 0.0, 0.85));` : `
+    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84), max(smoothstep(0.0, 0.1, uSnow * 1.25 - (0.92 - sPatch(vSeasonPos.xz))) * 0.85, uFrost * 0.35) * (1.0 - sTrail * 0.8));` : `
     // śnieg leży na tym, co patrzy w górę (płaskie dachy i ziemia najmocniej, strome połacie mniej), w plamach;
     // szron rano: cienki, tylko na płaskim
     float sUp = smoothstep(0.45, 0.92, sWN.y);
-    float sCover = max(uSnow, uFrost * 0.45 * smoothstep(0.7, 0.95, sWN.y));
-    float sAmt = clamp(sCover * 1.1 * sUp - sWave * 0.3 * (1.0 - sCover * 0.6) - sCell * 0.08, 0.0, 0.9);
+    // mało śniegu = osobne białe płaty (najpierw w zagłębieniach fali), a nie szary nalot na całej ziemi
+    float sNoise = sPatch(vSeasonPos.xz);
+    float sAmt = sUp * smoothstep(0.0, 0.1, uSnow * 1.25 - (0.92 - sNoise)) * 0.9;
+    sAmt = max(sAmt, uFrost * 0.3 * smoothstep(0.7, 0.95, sWN.y) * (0.5 + sNoise * 0.5));
     ${kind === 'ground' ? `
     // wydeptane ścieżki: śnieg ubity i przemieszany z ziemią
     sAmt *= 1.0 - sTrail * 0.65;
@@ -140,8 +150,8 @@ export function seasonMaterial(m: THREE.Material, kind: SeasonKind): void {
     prev.call(m, sh, r);
     if (!sh.fragmentShader.includes('#include <lights_physical_fragment>') || !sh.vertexShader.includes('#include <project_vertex>')) return;
     Object.assign(sh.uniforms, SEASON_U);
-    sh.vertexShader = VERT_HEAD + sh.vertexShader.replace('#include <project_vertex>', VERT_BODY(kind) + '#include <project_vertex>');
-    sh.fragmentShader = FRAG_HEAD + sh.fragmentShader.replace('#include <lights_physical_fragment>', FRAG_BODY(kind) + '#include <lights_physical_fragment>');
+    sh.vertexShader = VERT_HEAD(kind) + sh.vertexShader.replace('#include <project_vertex>', VERT_BODY(kind) + '#include <project_vertex>');
+    sh.fragmentShader = FRAG_HEAD(kind) + sh.fragmentShader.replace('#include <lights_physical_fragment>', FRAG_BODY(kind) + '#include <lights_physical_fragment>');
   };
   m.customProgramCacheKey = () => `${prevKey.call(m)}|season-${kind}`;
   m.needsUpdate = true;
