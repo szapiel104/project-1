@@ -23,7 +23,7 @@ export const RULES = {
   migrationThreshold: 50,
   /** Gdy jedzenia zabrakło (a nie gracz skąpi racji): łagodna kara popularności co miesiąc — głodni i tak odchodzą sami */
   hungerPenalty: -2,
-  startResources: { wood: 80, stone: 0, apples: 120, gold: 60 } as Partial<Record<ResourceId, number>>,
+  startResources: { wood: 80, stone: 0, apples: 100, bread: 300, gold: 60 } as Partial<Record<ResourceId, number>>,
   /** Jak daleko od własnej twierdzy wolno budować (w polach) */
   buildRadius: 30,
   /** Prędkość chłopa: 256 = jedno pole na tick */

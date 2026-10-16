@@ -13,7 +13,7 @@ import { keepEdge } from '../src/data/keep';
 
 /** Testy gospodarki i wojska bez bota: drugi gracz stoi bezczynnie */
 /** Testy mechaniki startują z zapasem jak dawniej (150 drewna, 40 kamienia, 100 jabłek i złota), niezależnie od balansu startu */
-const OLD_START: Partial<Record<Parameters<typeof resIndex>[0], number>> = { wood: 150, stone: 40, apples: 100, gold: 100 };
+const OLD_START: Partial<Record<Parameters<typeof resIndex>[0], number>> = { wood: 150, stone: 40, apples: 100, bread: 0, gold: 100 };
 const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => {
   const g = realGame(...a);
   for (const p of g.players) { p.bot = false; for (const [k, v] of Object.entries(OLD_START)) p.res[resIndex(k as Parameters<typeof resIndex>[0])] = v!; }

@@ -1094,6 +1094,46 @@ export class GameRenderer {
 
   setPainting(on: boolean): void { this.painting = on; this.cam.panLocked = on; }
 
+  /** Siatka budowy: przy wybranym budynku pola wokół kursora — zielone, gdzie wolno budować, czerwone, gdzie nie
+   *  (zajęte, w tym świeżo postawione place budowy, zły teren, za daleko). Prawie przezroczysta, z przerwami jak kratka. */
+  private buildGrid: THREE.InstancedMesh | null = null;
+  setBuildGrid(center: { x: number; y: number } | null, ok?: (x: number, y: number) => boolean): void {
+    const g = this.state, view = this.view;
+    if (!center || !g || !view || !ok) { if (this.buildGrid) this.buildGrid.visible = false; return; }
+    const R = 13;
+    if (!this.buildGrid) {
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, depthWrite: false, fog: false, toneMapped: false,
+        polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
+      this.buildGrid = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2), mat, (2 * R + 1) ** 2);
+      this.buildGrid.frustumCulled = false;
+      this.buildGrid.renderOrder = 3;
+      this.scene.add(cat(this.buildGrid, 'siatka budowy'));
+    }
+    const grid = this.buildGrid;
+    const { width, height } = g.map;
+    const m = new THREE.Matrix4(), c = new THREE.Color(), v = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1), q = new THREE.Quaternion();
+    const GOOD = new THREE.Color(0x3ee05a), BAD = new THREE.Color(0xff3a2e);
+    let n = 0;
+    for (let dy = -R; dy <= R; dy++)
+      for (let dx = -R; dx <= R; dx++) {
+        const x = center.x + dx, y = center.y + dy;
+        if (x < 0 || y < 0 || x >= width || y >= height) continue;
+        const d = Math.hypot(dx, dy);
+        if (d > R + 0.5) continue;
+        // ku brzegowi kratka gaśnie (kółko wokół kursora, bez ostrej krawędzi)
+        const fade = Math.max(0, Math.min(1, (R + 0.5 - d) / 4));
+        const hgt = Math.max(view.heightAt(x + 0.5, y + 0.5), 0) + 0.035;
+        m.compose(v.set(x + 0.5 - width / 2, hgt, y + 0.5 - height / 2), q, sc);
+        grid.setMatrixAt(n, m);
+        grid.setColorAt(n, c.copy(ok(x, y) ? GOOD : BAD).multiplyScalar(fade));
+        n++;
+      }
+    grid.count = n;
+    grid.instanceMatrix.needsUpdate = true;
+    if (grid.instanceColor) grid.instanceColor.needsUpdate = true;
+    grid.visible = true;
+  }
+
   setGhost(g: Ghost | null): void {
     if (this.ghostModel) this.ghostModel.visible = false;
     if (!g || !this.view || !this.state) { this.ghost.visible = false; return; }

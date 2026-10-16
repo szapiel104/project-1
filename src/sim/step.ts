@@ -117,6 +117,12 @@ function apply(g: GameState, c: Command): void {
   }
 }
 
+/** Gra z botami w pauzie: polecenia gracza (budowa, rozbiórka, drogi…) wchodzą od razu, bez upływu czasu —
+ *  plac budowy widać od razu, więc kolejny budynek nie wejdzie na poprzedni. W grze przez sieć pauzy nie ma. */
+export function applyCommands(g: GameState, commands: readonly Command[]): void {
+  for (const c of commands) apply(g, c);
+}
+
 /**
  * Jeden krok symulacji. Te same komendy w tej samej kolejności dają zawsze ten sam stan.
  * Komendy są sprawdzane tutaj, bo w grze sieciowej nie wolno ufać klientowi.

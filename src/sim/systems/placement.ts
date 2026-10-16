@@ -126,6 +126,18 @@ export function enemyNear(g: GameState, player: number, x: number, y: number, w:
   return false;
 }
 
+/** Czy na tym jednym polu wolno budować (siatka w trybie budowy): teren, wolne pole, nie plac przed bramą, w zasięgu twierdzy */
+export function tileBuildable(g: GameState, player: number, x: number, y: number): boolean {
+  const { width, height } = g.map;
+  if (x < 0 || y < 0 || x >= width || y >= height) return false;
+  const t = y * width + x;
+  if (!TERRAIN[g.map.tiles[t] as Terrain].buildable || g.occupancy[t] !== 0 || g.reserved[t] !== 0 || inForecourt(g, x, y)) return false;
+  const keep = playerKeep(g, player);
+  if (!keep) return false;
+  const [kx, ky] = keepCenter(keep);
+  return Math.max(Math.abs(x - kx), Math.abs(y - ky)) <= RULES.buildRadius;
+}
+
 export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true, rot = 0): PlaceError | null {
   const def = BUILDINGS[type];
   if (!def || !def.buildable || !g.players[player]) return 'place.unknown';

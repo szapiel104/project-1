@@ -13,11 +13,11 @@ import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
 import { Phase, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
-import { step, type Command } from './sim/step';
+import { applyCommands, step, type Command } from './sim/step';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
-import { buildWork, canAfford, canPlace, maxHp } from './sim/systems/placement';
+import { buildWork, canAfford, canPlace, maxHp, tileBuildable } from './sim/systems/placement';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
@@ -633,8 +633,11 @@ function origin(tile: TileRef, type: number): TileRef {
 
 function updateGhost(): void {
   const tile = touchTile ?? hoverTile;
-  if (!picked || !tile) { renderer.setGhost(null); return; }
+  if (!picked || !tile) { renderer.setGhost(null); renderer.setBuildGrid(null); return; }
   const type = buildingIndex(picked);
+  // siatka budowy wokół kursora: zielone pola wolne, czerwone zajęte (także place budowy postawione przed chwilą)
+  const road = !!BUILDINGS[type]!.road;
+  renderer.setBuildGrid(tile, road ? (x, y) => canPlace(game, ME, type, x, y, false) === null : (x, y) => tileBuildable(game, ME, x, y));
   const fp = footprint(BUILDINGS[type]!, placeRot);
   const o = origin(tile, type);
   renderer.setGhost({ ...o, w: fp.w, h: fp.h, ok: canPlace(game, ME, type, o.x, o.y, true, placeRot) === null, id: picked, team: game.players[ME]!.team, rot: placeRot });
@@ -1424,6 +1427,13 @@ function loop(now: number): void {
   titleScreen = false;
   acc += elapsed * speed;
   let steps = 0;
+  // pauza w grze z botami: polecenia od razu (plac budowy widać od razu, a siatka budowy pokazuje zajęte pola)
+  if (speed === 0 && !net && pending.length && !simBusy) {
+    applyCommands(game, pending);
+    pending = [];
+    if (simMode) { simGen++; simThread!.set(game, simGen); }
+    refresh(); updateGhost();
+  }
   if (simMode && !net) {
     // symulacja w osobnym wątku: wysyłamy porcję kroków, wynik przychodzi w onSimResult (tam odświeżenie widoku)
     if (!simBusy && acc >= TICK_MS) {

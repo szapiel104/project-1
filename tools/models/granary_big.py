@@ -107,8 +107,8 @@ b.box('shell', 'iron', 0.012, 0.36, 0.012, 0, LY1 - 0.38, LZ + 0.34)
 b.prism('shell', 'woodDark', 0.035, 0.035, 0.05, 0, LY1 - 0.08, LZ + 0.34, seg=8)
 
 # ---------------- wnętrze: pusta podłoga — zapasy żywności układa gra; kilka słupów nośnych ----------------
-for x in (-0.55, 0.55):
-    b.box('interior', 'woodDark', 0.08, H1 - P, 0.08, x, P, -0.35)
+for x in (-0.64, 0.64):  # między miejscami na zapasy (siatka 6 × 5, co 0,32 pola), żeby kosze nie wchodziły w słupy
+    b.box('interior', 'woodDark', 0.08, H1 - P, 0.08, x, P, -0.24)
 t.open.append([X0 + T, X1 - T, Z0 + T, Z1 - T])
 t.open.append([DOOR[0], DOOR[1], Z1 - T - 0.02, Z1 + 0.05])
 

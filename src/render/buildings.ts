@@ -175,19 +175,22 @@ function hut(g: THREE.Group, wall: THREE.Material, roof: THREE.Material, w: numb
 export const STOCK_LAYERS = 3;
 
 /** Pusta siatka miejsc na stosy (9 miejsc w 3 warstwach), wypełniana przez setStockFill. */
-function fillSlots(name: string, x: number, z: number, step = 0.54): THREE.Group {
+function fillSlots(name: string, x: number, z: number, step = 0.54, cols = 3, rows = 3, scale = 1): THREE.Group {
+  // miejsca na zapasy: siatka cols × rows w STOCK_LAYERS warstwach; scale zmniejsza kosze, worki i beczki
+  // (w spichlerzach jedzenie jest mniejsze, a duży spichlerz ma więcej miejsc, więc widać, że mieści więcej)
   const fill = new THREE.Group();
   fill.name = name;
+  fill.userData.slots = cols * rows;
   for (let layer = 0; layer < STOCK_LAYERS; layer++)
-    for (let i = 0; i < 9; i++) {
+    for (let i = 0; i < cols * rows; i++) {
       const m = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.3, 0.46), M.wood);
-      m.position.set(x + ((i % 3) - 1) * step, 0.06 + 0.15 + layer * 0.31, z + (Math.floor(i / 3) - 1) * step);
+      m.scale.setScalar(scale);
+      m.position.set(x + ((i % cols) - (cols - 1) / 2) * step, 0.06 + (0.15 + layer * 0.31) * scale, z + (Math.floor(i / cols) - (rows - 1) / 2) * step);
       m.visible = false;
       fill.add(m);
     }
   return fill;
 }
-const STOCK_SLOTS = 9;
 
 const part = (geo: THREE.BufferGeometry, x: number, y: number, z: number): THREE.BufferGeometry => geo.translate(x, y, z);
 /** Jak wygląda jedna porcja surowca w składzie: deski leżą na deskach, worki na workach. Klucz = id surowca. */
@@ -374,6 +377,7 @@ const pileMats = new Map<string, THREE.MeshStandardMaterial>();
 export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: string; share: number }[], group = 'fill'): void {
   const fill = model.getObjectByName(group);
   if (!fill) return;
+  const STOCK_SLOTS = (fill.userData.slots as number | undefined) ?? 9;
   const total = STOCK_SLOTS * STOCK_LAYERS;
   const shown = ratio <= 0 ? 0 : Math.max(1, Math.round(Math.min(1, ratio) * total));
   for (const child of fill.children) child.visible = false;
@@ -956,7 +960,7 @@ const BUILDERS: Record<string, Builder> = {
     // w środku pusta podłoga, na której gra układa żywność według stanu spichlerza
     blenderModel(g, GRANARY_MODEL as unknown as BlenderBuilding, flag);
     const inside = g.getObjectByName('interior') as THREE.Group;
-    const food = fillSlots('foodfill', 0, -0.02, 0.38);
+    const food = fillSlots('foodfill', 0, -0.02, 0.3, 4, 3, 0.55);
     food.position.y = (GRANARY_MODEL as unknown as { floorY: number }).floorY - 0.06;
     inside.add(food);
     const p = (GRANARY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
@@ -967,7 +971,7 @@ const BUILDERS: Record<string, Builder> = {
     // na podłodze gra układa żywność według stanu spichlerzy (gęściej niż w małym, bo izba większa)
     blenderModel(g, GRANARY_BIG_MODEL as unknown as BlenderBuilding, flag);
     const inside = g.getObjectByName('interior') as THREE.Group;
-    const food = fillSlots('foodfill', 0, -0.1, 0.6);
+    const food = fillSlots('foodfill', 0, -0.08, 0.32, 6, 5, 0.55);
     food.position.y = (GRANARY_BIG_MODEL as unknown as { floorY: number }).floorY - 0.06;
     inside.add(food);
     const p = (GRANARY_BIG_MODEL as unknown as { pennant: [number, number, number] }).pennant;
