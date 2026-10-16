@@ -17,10 +17,14 @@ export interface ModelFactory {
   /** Drzewo liściaste */
   leafTrunk(): THREE.BufferGeometry;
   leafCrown(): THREE.BufferGeometry;
+  /** Bryła cienia korony liściastej: te same gruzły co korona, z mniejszej liczby ścian */
+  leafCrownShadow(): THREE.BufferGeometry;
   /** Kępka trawy */
   tuft(): THREE.BufferGeometry;
   /** Krzew */
   bush(): THREE.BufferGeometry;
+  /** Bryła cienia krzaka: te same cztery kule, tylko z mniejszej liczby ścian */
+  bushShadow(): THREE.BufferGeometry;
   /** Kwiat polny (sama główka z łodyżką) */
   flower(): THREE.BufferGeometry;
   rock(): THREE.BufferGeometry;
@@ -113,6 +117,21 @@ export const proceduralModels: ModelFactory = {
     };
     return mergeGeometries([lump(0.4, 1, 0, 0.95, 0, 1), lump(0.29, 1, -0.26, 0.8, 0.1, 2), lump(0.3, 0, 0.25, 0.84, -0.08, 3), lump(0.24, 0, 0.03, 0.82, 0.27, 4)])!;
   },
+  leafCrownShadow() {
+    // te same cztery gruzły i ten sam szum, tylko każdy z 20 ścian (80 trójkątów zamiast 200)
+    const lump = (r: number, x: number, y: number, z: number, seed: number): THREE.BufferGeometry => {
+      const g = new THREE.IcosahedronGeometry(r * 1.03, 0);
+      const p = g.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < p.count; i++) {
+        const vx = p.getX(i), vy = p.getY(i), vz = p.getZ(i);
+        const k = 1 + Math.sin(vx * 17 + seed) * Math.cos(vz * 13 - seed) * 0.12 + Math.sin(vy * 21 + seed * 2) * 0.06;
+        p.setXYZ(i, vx * k + x, vy * k * 0.92 + y, vz * k + z);
+      }
+      g.deleteAttribute('uv'); g.deleteAttribute('normal');
+      return g;
+    };
+    return mergeGeometries([lump(0.4, 0, 0.95, 0, 1), lump(0.29, -0.26, 0.8, 0.1, 2), lump(0.3, 0.25, 0.84, -0.08, 3), lump(0.24, 0.03, 0.82, 0.27, 4)])!;
+  },
   tuft() {
     // kępa trawy: kilkanaście cienkich, wygiętych źdźbeł (taśma zwężająca się ku górze, trzy odcinki),
     // u nasady ciemne, na końcach jaśniejsze i żółtawe; normalne w górę, więc kępa świeci jak ziemia pod nią
@@ -161,15 +180,26 @@ export const proceduralModels: ModelFactory = {
       at(new THREE.IcosahedronGeometry(0.15, 1), 0.03, 0.14, 0.2),
     ]);
   },
+  bushShadow() {
+    const ball = (r: number, x: number, y: number, z: number): THREE.BufferGeometry => {
+      const g = new THREE.IcosahedronGeometry(r * 1.04, 0).translate(x, y, z); // trochę większa: dwudziestościan jest wpisany w kulę
+      g.deleteAttribute('uv'); g.deleteAttribute('normal');
+      return g;
+    };
+    return mergeGeometries([ball(0.24, 0, 0.2, 0), ball(0.18, -0.2, 0.15, 0.06), ball(0.19, 0.19, 0.16, -0.05), ball(0.15, 0.03, 0.14, 0.2)])!;
+  },
   flower() {
     // kwiat polny: cienka łodyżka i mała, płaska główka z pięciu płatków (z góry widać kolorową gwiazdkę, nie kulkę)
     const petals: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < 5; i++) petals.push(new THREE.SphereGeometry(0.018, 5, 3).scale(1, 0.3, 0.55).translate(0.02, 0.13, 0).rotateY((i / 5) * Math.PI * 2).toNonIndexed());
-    return mergeGeometries([
-      new THREE.CylinderGeometry(0.004, 0.005, 0.13, 3).translate(0, 0.065, 0).toNonIndexed(),
+    // płatek to spłaszczony ośmiościan (8 trójkątów zamiast 20 w kulce); przy 3–4 cm i płaskim cieniowaniu wygląda tak samo
+    for (let i = 0; i < 5; i++) petals.push(new THREE.OctahedronGeometry(0.019, 0).scale(1, 0.3, 0.55).translate(0.02, 0.13, 0).rotateY((i / 5) * Math.PI * 2));
+    const parts = [
+      new THREE.CylinderGeometry(0.004, 0.005, 0.13, 3, 1, true).translate(0, 0.065, 0).toNonIndexed(),
       ...petals,
-      new THREE.SphereGeometry(0.012, 5, 3).translate(0, 0.135, 0).toNonIndexed(),
-    ]);
+      new THREE.OctahedronGeometry(0.012, 0).translate(0, 0.135, 0),
+    ];
+    for (const p of parts) for (const k of Object.keys(p.attributes)) if (k !== 'position' && k !== 'normal' && k !== 'uv') p.deleteAttribute(k);
+    return mergeGeometries(parts)!;
   },
   rock() {
     // głaz z nierównymi ścianami: wierzchołki przesunięte zależnie od położenia, więc bryła pozostaje szczelna

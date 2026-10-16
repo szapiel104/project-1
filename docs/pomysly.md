@@ -71,7 +71,7 @@ Dalej (zmierzone 14.10 w Chrome, widok osady: ok. 2,7 mln trójkątów w scenie,
 - Kępy trawy (28 trójkątów) i korony liściastych (200) to razem ok. 750 tys. trójkątów — rzadsze z daleka albo obrazki
 - Ok. 1180 wywołań rysowania: kawałki lasu po kilkanaście rodzajów na kawałek, w cieniu drugi raz — BatchedMesh albo większe kawałki
 
-- Pniaki czekające na ścięcie drzewa (ok. 200 tys. ukrytych trójkątów) i instancje poza kadrem: wyrzucać z rysowania zamiast zerowej skali
+- Zrobione 16.10: pniaki tylko po ścięciu, zastępcze bryły cienia roślinności (warstwa „tylko cień”, src/render/shadowlayer.ts), lżejsze kwiaty, ładunki tylko u niosących. Dalej: narzędzia w rękach (siekiery, kilofy, pochodnie, wiadra) też mają instancję na każdego człowieka z zerową skalą
 - AO w połowie rozdzielczości na jakościach do „Wysokiej”
 
 Większe rzeczy na później:

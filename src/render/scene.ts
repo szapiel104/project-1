@@ -24,6 +24,7 @@ import { isWetMat, setWetBuildings } from './buildings';
 import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
 import { setCloudShadows } from './ground';
 import { cat } from './cat';
+import { enableShadowLayer } from './shadowlayer';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
@@ -583,6 +584,7 @@ export class GameRenderer {
     this.renderer.info.autoReset = false;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
+    enableShadowLayer(this.renderer); // zastępcze bryły cienia roślinności (terrain.ts)
     this.hemi = new THREE.HemisphereLight(0xdfeaff, 0x6a5a3c, 1.5);
     this.scene.add(this.hemi);
     const sun = new THREE.DirectionalLight(0xffe2ad, 3.6);
@@ -3858,7 +3860,6 @@ export class GameRenderer {
       t.scale.setScalar(FIG);
       t.updateMatrix();
       this.figures.set(k, t.matrix, swing, !!opt.up, tunic, id, opt.work, opt.workL ?? -0.5, false, opt.sit);
-      for (const mesh of this.loads.values()) mesh.setMatrixAt(k, ZERO);
       k++;
     };
     // droga po łamanej: położenie i kierunek dla ułamka f (0..1) całej trasy
@@ -4157,6 +4158,9 @@ export class GameRenderer {
     const hourNow = clockAt(g.tick).hour;
     const tipsy = hourNow >= 21.5 || hourNow < 5;
     if (hourNow >= 6 && hourNow < 18) this.drank.clear();
+    // niesione ładunki: każdy surowiec ma swoją siatkę, ale rysujemy w niej tylko tych, którzy go niosą
+    // (wcześniej każda z kilkunastu siatek miała po jednej instancji na każdego człowieka, z zerową skalą)
+    const loadUsed = new Map<number, number>();
     for (let i = 0; i < n; i++) {
       const u = g.units[i]!;
       const prev = this.prevPos.get(u.id);
@@ -4536,10 +4540,13 @@ export class GameRenderer {
       // każdy surowiec ma własny wygląd: kosz jabłek, bochenki, snop, worek, blok, sztaby;
       // skala jak postać (ludzie są różnego wzrostu), żeby ładunek trafiał w dłonie i u niskiego, i u wysokiego
       const loadSz = u.carryRes >= 0 ? this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888) : 1;
-      for (const [res, mesh] of this.loads) {
-        t.scale.setScalar(u.carryRes === res ? FIG * loadSz : 0);
+      const loadMesh = u.carryRes >= 0 ? this.loads.get(u.carryRes) : undefined;
+      if (loadMesh) {
+        const j = loadUsed.get(u.carryRes) ?? 0;
+        loadUsed.set(u.carryRes, j + 1);
+        t.scale.setScalar(FIG * loadSz);
         t.updateMatrix();
-        mesh.setMatrixAt(i, t.matrix);
+        loadMesh.setMatrixAt(j, t.matrix);
       }
     }
     // wędrowcy: przychodzący z lasu i odchodzący za mapę (ci drudzy ze smutną minką nad głową)
@@ -4583,7 +4590,11 @@ export class GameRenderer {
     this.handTorches.instanceMatrix.needsUpdate = true;
     for (const m of [this.buckets, this.bucketWater]) { m.count = n; m.instanceMatrix.needsUpdate = true; }
     this.fireFx.end(this.calm ? 0 : Math.min(0.05, this.frameDt), (x, z) => this.standY(view, x + width / 2, z + height / 2));
-    for (const m of [...this.loads.values(), this.logs, this.planks]) {
+    for (const [res, m] of this.loads) {
+      m.count = loadUsed.get(res) ?? 0;
+      m.instanceMatrix.needsUpdate = true;
+    }
+    for (const m of [this.logs, this.planks]) {
       m.count = n;
       m.instanceMatrix.needsUpdate = true;
       if (m.instanceColor) m.instanceColor.needsUpdate = true;

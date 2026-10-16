@@ -12,6 +12,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import type { ModelFactory } from './models';
 import { bump, normal, pattern } from './textures';
 import { groundGrassTexture, groundMaterial, waterMaterial } from './ground';
+import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
 import { bladeTexture, createGrassField, type GrassField } from './grass';
 
 const HEIGHT_SCALE = 0.03;
@@ -653,16 +654,26 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const pineImp = treeImpostor([{ geo: models.treeTrunk(), color: 0x6b4a2e, map: pattern('bark') }, { geo: models.treeCrown(), color: 0x3c7a3a, map: pattern('needles'), vertexColors: true }]);
   const leafImp = treeImpostor([{ geo: models.leafTrunk(), color: 0x7a5a3a, map: pattern('bark') }, { geo: models.leafCrown(), color: 0x6fa33d, map: pattern('leaves') }]);
   const PINE_LOD: Lod = pineImp ? { farGeo: pineImp.geometry, farMat: pineImp.material(0x3c7a3a) } : { farGeo: farPine };
-  const LEAF_LOD: Lod = leafImp ? { farGeo: leafImp.geometry, farMat: leafImp.material(0x6fa33d) } : { farGeo: models.leafCrownFar() };
+  const LEAF_LOD: Lod = { ...(leafImp ? { farGeo: leafImp.geometry, farMat: leafImp.material(0x6fa33d) } : { farGeo: models.leafCrownFar() }), shadowGeo: models.leafCrownShadow() };
   // pień znika razem z przełączeniem korony na obrazek (obrazek ma już pień)
   // od ok. 30 pól od środka widoku drzewa są obrazkami (impostorami), drobiazgi znikają — z bliska nic się nie zmienia,
   // a z daleka i tak ich nie widać (wcześniej 40–42 pola: w zwykłym widoku pełne drzewa sięgały do krawędzi ekranu)
-  const TRUNK_LOD: Lod = { hide: pineImp ? 30 : 62 }, SMALL_LOD: Lod = { hide: 30 };
+  // cień pnia: graniastosłup bez denek (z góry słońca denka i tak nie widać), gałęzie liściastych też uproszczone
+  const pineTrunkShadow = new THREE.CylinderGeometry(0.06, 0.11, 0.55, 4, 1, true).translate(0, 0.27, 0);
+  const leafTrunkShadow = mergeGeometries([
+    new THREE.CylinderGeometry(0.07, 0.12, 0.6, 4, 1, true).translate(0, 0.3, 0),
+    new THREE.CylinderGeometry(0.035, 0.05, 0.35, 3, 1, true).rotateZ(0.8).translate(-0.13, 0.62, 0),
+    new THREE.CylinderGeometry(0.035, 0.05, 0.35, 3, 1, true).rotateZ(-0.8).translate(0.13, 0.66, 0.02),
+  ])!;
+  const TRUNK_LOD: Lod = { hide: pineImp ? 30 : 62, shadowGeo: pineTrunkShadow }, SMALL_LOD: Lod = { hide: 30 };
+  const LEAF_TRUNK_LOD: Lod = { ...TRUNK_LOD, shadowGeo: leafTrunkShadow };
   const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: pattern('needles') });
   // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
-  type Lod = { hide?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material };
-  const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean }[] = [];
+  // shadowGeo: prostsza bryła tego samego kształtu, która rzuca cień zamiast pełnego modelu (w obrazie zostaje pełny);
+  // cień liczony jest z mapy 4096 px na obszar kilkudziesięciu pól, więc różnicy w kształcie cienia nie widać
+  type Lod = { hide?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material; shadowGeo?: THREE.BufferGeometry };
+  const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean; proxy?: THREE.InstancedMesh }[] = [];
   /** Podpis kolejnych siatek roślinności do okna wydajności (F3) */
   let label = 'roślinność';
   const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material, lod?: Lod, chunk = CHUNK): Inst | null => {
@@ -680,8 +691,20 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       idx.forEach((i, j) => { const it = list[i]!; mesh.setMatrixAt(j, it.m); tint.setHex(color).multiplyScalar(it.shade); if (it.frost) tint.lerp(FROST, it.frost); mesh.setColorAt(j, tint); where[i] = [mesh, j]; });
       mesh.computeBoundingSphere();
       if (mesh.boundingSphere) mesh.boundingSphere.radius += 3; // zapas na ścinane, przechylające się drzewa
-      if (lod && mesh.boundingSphere) lodChunks.push({ mesh, x: mesh.boundingSphere.center.x, z: mesh.boundingSphere.center.z, lod, near: g, nearMat: mat, shadow }); 
-      mesh.castShadow = shadow;
+      let proxy: THREE.InstancedMesh | undefined;
+      if (shadow && lod?.shadowGeo) {
+        // zastępcza bryła cienia: te same instancje (wspólny bufor macierzy, więc ścinanie drzew działa samo), warstwa „tylko cień”
+        proxy = new THREE.InstancedMesh(lod.shadowGeo, shadowProxyMaterial, idx.length);
+        proxy.instanceMatrix = mesh.instanceMatrix;
+        proxy.boundingSphere = mesh.boundingSphere;
+        proxy.layers.set(SHADOW_LAYER);
+        proxy.castShadow = true;
+        cat(proxy, label + ' (cień)');
+        group.add(proxy);
+      }
+      const casts = shadow && !proxy;
+      if (lod && mesh.boundingSphere) lodChunks.push({ mesh, x: mesh.boundingSphere.center.x, z: mesh.boundingSphere.center.z, lod, near: g, nearMat: mat, shadow: casts, proxy });
+      mesh.castShadow = casts;
       cat(mesh, label);
       // kępy trawy nie przyjmują cienia: cienkie źdźbła tuż nad ziemią łapały cień samego terenu i czerniały
       mesh.receiveShadow = mat !== grassMat;
@@ -709,7 +732,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const trunkItems = new Set<Item>([...pines, ...leafy]);
   label = 'drzewa: pnie';
   const pineTrunks = instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark', true, undefined, TRUNK_LOD);
-  const leafTrunks = instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark', true, undefined, TRUNK_LOD);
+  const leafTrunks = instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark', true, undefined, LEAF_TRUNK_LOD);
   label = 'drzewa: korony';
   plant(pines, pineTrunks, instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat, PINE_LOD));
   plant(leafy, leafTrunks, instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves', true, undefined, LEAF_LOD));
@@ -759,7 +782,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     label = 'puszcza za mapą: bliska';
     instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark', true, undefined, TRUNK_LOD);
     instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles', true, pineMat, PINE_LOD);
-    instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark', true, undefined, TRUNK_LOD);
+    instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark', true, undefined, LEAF_TRUNK_LOD);
     instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves', true, undefined, LEAF_LOD);
     // puszcza za mapą: obrazki zamiast brył (dwa trójkąty na drzewo), stąd może być gęstsza
     // dalekie obrazki nie przełączają szczegółów, więc kawałki mogą być duże (120 pól): kilkanaście wywołań rysowania zamiast ~200
@@ -773,7 +796,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące
   const bushFar = mergeGeometries([new THREE.IcosahedronGeometry(0.27, 0).translate(0, 0.2, 0).toNonIndexed(), new THREE.IcosahedronGeometry(0.2, 0).translate(0.12, 0.15, 0.05).toNonIndexed()])!;
   label = 'krzewy';
-  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, undefined, { farGeo: bushFar }), null, false);
+  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, undefined, { farGeo: bushFar, shadowGeo: models.bushShadow() }), null, false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
@@ -800,9 +823,34 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   plant(rocks, instanced(models.rock(), 0xc4bfb1, rocks, 'rock'), null, false);
   plant(ores, instanced(models.rock(), 0xa05a36, ores, 'rock'), null, false);
   label = 'pniaki (ukryte)';
-  const stumps = instanced(new THREE.CylinderGeometry(0.1, 0.13, 0.14, 7).translate(0, 0.07, 0), 0x8a6a45, stumpItems, 'bark', false);
+  // Pniaki pojawiają się dopiero po ścięciu drzewa. Wcześniej wszystkie stały w scenie z zerową skalą i karta
+  // i tak je przetwarzała (ok. 300 tys. trójkątów w zwykłym widoku); teraz rysujemy tylko te już widoczne:
+  // jedna siatka, liczba instancji rośnie z każdym ściętym drzewem.
+  const stumpMesh = stumpItems.length ? new THREE.InstancedMesh(new THREE.CylinderGeometry(0.1, 0.13, 0.14, 7).translate(0, 0.07, 0),
+    new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: pattern('bark'), bumpMap: bump('bark'), bumpScale: 1.2, normalMap: normal('bark') }), stumpItems.length) : null;
+  if (stumpMesh) {
+    stumpMesh.count = 0;
+    stumpMesh.visible = false;
+    stumpMesh.frustumCulled = false; // pniaki rozsiane po całej mapie, a jest ich niewiele trójkątów
+    stumpMesh.receiveShadow = true;
+    cat(stumpMesh, label);
+    group.add(stumpMesh);
+  }
+  const stumpShown = new Set<number>();
+  const showStump = (si: number, mm: THREE.Matrix4): void => {
+    if (!stumpMesh || stumpShown.has(si)) return;
+    stumpShown.add(si);
+    const it = stumpItems[si]!;
+    const j = stumpMesh.count++;
+    stumpMesh.setMatrixAt(j, mm);
+    tint.setHex(0x8a6a45).multiplyScalar(it.shade);
+    if (it.frost) tint.lerp(FROST, it.frost);
+    stumpMesh.setColorAt(j, tint);
+    stumpMesh.instanceMatrix.needsUpdate = true;
+    if (stumpMesh.instanceColor) stumpMesh.instanceColor.needsUpdate = true;
+    stumpMesh.visible = true;
+  };
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
-  if (stumps) { stumpItems.forEach((_, i) => stumps.setMatrixAt(i, zero)); stumps.instanceMatrix.needsUpdate = true; }
   const tilt = new THREE.Quaternion();
   const xAxis = new THREE.Vector3(1, 0, 0);
   const fell = (tile: number, k: number): void => {
@@ -816,7 +864,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     for (const t of trees.get(tile) ?? []) {
       for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, zero); mesh.instanceMatrix.needsUpdate = true; }
       const si = stumpOf.get(t.item);
-      if (stumps && si !== undefined) { stumps.setMatrixAt(si, m.compose(t.item.pos, t.item.q, t.item.s)); stumps.instanceMatrix.needsUpdate = true; }
+      if (si !== undefined) showStump(si, m.compose(t.item.pos, t.item.q, t.item.s));
     }
     trees.delete(tile);
   };
@@ -1326,8 +1374,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
         if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide * detail + reach;
+        const far = d > 30 * detail + reach;
+        // cień z daleka: obrazek drzewa nie rzuca cienia (jak dotąd), krzak z daleka dalej rzuca
+        if (c.proxy) c.proxy.visible = c.mesh.visible && !(far && c.lod.farMat);
         if (c.lod.farGeo) {
-          const far = d > 30 * detail + reach;
           const want = far ? c.lod.farGeo : c.near;
           if (c.mesh.geometry !== want) {
             c.mesh.geometry = want;
