@@ -2152,7 +2152,7 @@ export class GameRenderer {
    */
   private batches = new Map<string, { mesh: THREE.InstancedMesh; n: number }>();
   private batchParts = new WeakMap<THREE.Object3D, THREE.Mesh[]>();
-  batchOn = !/[?&]razem=0/.test(location.search);
+  batchOn = /[?&]razem=1/.test(location.search);   // na razie tylko do prób: w pomiarze 16.10 wspólne rysowanie było wolniejsze (więcej wywołań i dłużej na karcie)
   private staticParts(root: THREE.Object3D): THREE.Mesh[] {
     let list = this.batchParts.get(root);
     if (list) return list;
