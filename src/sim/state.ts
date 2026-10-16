@@ -3,7 +3,7 @@ import { BUILDINGS, buildingIndex } from '../data/buildings';
 import type { MAP_PRESETS } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type ResourceId, type StoreKind } from '../data/resources';
 import { RULES } from '../data/rules';
-import { TERRAIN, type Terrain } from '../data/terrain';
+import { TERRAIN, Terrain } from '../data/terrain';
 import { UNITS } from '../data/units';
 const TERRAIN_BUILDABLE = (t: number): boolean => TERRAIN[t as Terrain].buildable;
 const TERRAIN_WALK = (t: number): boolean => TERRAIN[t as Terrain].walkable;
@@ -417,7 +417,12 @@ function devFortify(g: GameState, player: number): void {
     const t = y * w + x;
     return g.occupancy[t] === 0 && g.reserved[t] === 0 && TERRAIN_BUILDABLE(g.map.tiles[t]!);
   };
-  const put = (id: string, x: number, y: number): void => { if (free(x, y)) addBuilding(g, buildingIndex(id), player, x, y); };
+  const put = (id: string, x: number, y: number): void => {
+    // mur idzie przez las i skały tak samo jak stawiany przez gracza: pole zostaje wykarczowane (woda i góry zostają dziurą)
+    const t = y * w + x, tile = g.map.tiles[t]!;
+    if ((id === 'palisade' || id === 'gate') && g.occupancy[t] === 0 && g.reserved[t] === 0 && (tile === Terrain.Forest || tile === Terrain.Stone || tile === Terrain.Iron)) g.map.tiles[t] = Terrain.Grass;
+    if (free(x, y)) addBuilding(g, buildingIndex(id), player, x, y);
+  };
   const mx = (x0 + x1) >> 1, my = (y0 + y1) >> 1;
   for (let x = x0; x <= x1; x++) for (const y of [y0, y1]) put(Math.abs(x - mx) <= 0 ? 'gate' : 'palisade', x, y);
   for (let y = y0 + 1; y < y1; y++) for (const x of [x0, x1]) put(Math.abs(y - my) <= 0 ? 'gate' : 'palisade', x, y);

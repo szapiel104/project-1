@@ -923,7 +923,10 @@ export class GameRenderer {
     const s = starts.find((p) => p.player === focusPlayer) ?? starts[0];
     if (s) this.cam.lookAt(s.x + 0.5 - width / 2, s.y + 0.5 - height / 2, 30);
     this.cursor.visible = this.ghost.visible = this.selection.visible = false;
-    this.roadSum = -1;
+    this.roadSum = -1; this.planSum = -1;
+    // nowa mapa: mury, place budowy i obszary liczone od nowa (te same id budynków na nowej mapie dawały ten sam klucz —
+    // brama zostawała nieobrócona, a bale palisady stały jak na poprzedniej mapie)
+    this.wallKey = ''; this.siteKey = ''; this.areaKey = '';
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie
   }
 
@@ -2019,8 +2022,18 @@ export class GameRenderer {
         this.cullSeen.set(m, st);
       }
       if (st.ver === -2) return;
-      // przepisana od ostatniej klatki: odłożone kopie są nieaktualne
-      if (attr.version !== st.ver) { st.hidden?.fill(0); }
+      // przepisana od ostatniej klatki: ktoś zmienił część instancji (np. ścięte drzewo w kawałku lasu). Te, które
+      // ukryliśmy, a których nikt nie ruszył, mają dalej nasze same zera (prawdziwa macierz ma w rogu 1, także zerowa
+      // skala ściętego drzewa) — wracają z odłożonej kopii; przepisane zostają takie, jakie są. Inaczej korony drzew
+      // ukryte poza kadrem znikały na zawsze, gdy drwal ściął jedno drzewo w tym kawałku lasu (zostawały same pnie).
+      if (attr.version !== st.ver && st.hidden) {
+        for (let i = 0; i < st.hidden.length && i * 16 < a.length; i++) {
+          if (!st.hidden[i] || a[i * 16 + 15] !== 0) continue;
+          for (let k = 0; k < 16; k++) a[i * 16 + k] = st.saved![i * 16 + k]!;
+          attr.needsUpdate = true;
+        }
+        st.hidden.fill(0);
+      }
       const inView = (src: Float32Array, o16: number): boolean => {
         const sx = src[o16]! * src[o16]! + src[o16 + 1]! * src[o16 + 1]! + src[o16 + 2]! * src[o16 + 2]!;
         const sc = Math.sqrt(Math.max(sx, src[o16 + 4]! * src[o16 + 4]! + src[o16 + 5]! * src[o16 + 5]! + src[o16 + 6]! * src[o16 + 6]!, src[o16 + 8]! * src[o16 + 8]! + src[o16 + 9]! * src[o16 + 9]! + src[o16 + 10]! * src[o16 + 10]!));
