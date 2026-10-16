@@ -4440,7 +4440,16 @@ export class GameRenderer {
     const gx = KEEP_GATE[0] - KEEP_HALF + 0.5, bridge0 = KEEP_HALF - 0.05, bridge1 = KEEP_HALF + 0.85;
     if (Math.abs(lx - gx) < 0.5 && lz > bridge0 && lz < bridge1 + 0.1) return Math.max(h, base + KEEP_FLOOR * Math.min(1, Math.max(0, (bridge1 - lz) / (bridge1 - bridge0))));
     if (Math.abs(lx) >= KEEP_HALF || Math.abs(lz) >= KEEP_HALF) return h;
-    const dx = Math.floor(lx + KEEP_HALF), dy = Math.floor(lz + KEEP_HALF), c = keepTile(dx, dy);
+    // pole zamku, na którym człowiek naprawdę stoi (symulacja): idący pod murem zamku nie wskakuje na chodnik muru,
+    // gdy jego obrazek (wygładzony, rozsuwany w tłumie) na chwilę wejdzie na pole muru
+    let cx = lx, cz = lz;
+    if (sim >= 0 && g) {
+      const W = g.map.width, ks = this.keepAt(sim % W + 0.5, Math.floor(sim / W) + 0.5);
+      if (!ks || Math.abs(ks[1]) >= KEEP_HALF || Math.abs(ks[2]) >= KEEP_HALF) return h;
+      cx = ks[1]; cz = ks[2];
+    }
+    const dx = Math.floor(cx + KEEP_HALF), dy = Math.floor(cz + KEEP_HALF), c = keepTile(dx, dy);
+    if (sim === -2 && (c === '=' || c === 'S')) return h;
     if (c === '=') return base + KEEP_WALL;
     if (c === 'S') {
       // schody: od dolnego końca biegu (dziedziniec) do korony muru

@@ -197,6 +197,10 @@ export function planFormation(g: GameState, player: number, ids: readonly number
   const byFront = (a: Soldier, b: Soldier): number => fwd(b) - fwd(a) || a.id - b.id;
   const melee = chosen.filter((s) => !UNITS[s.kind]!.range).sort(byFront);
   const ranged = chosen.filter((s) => !!UNITS[s.kind]!.range).sort(byFront);
+  // rozkaz na ziemi: nikt nie dostaje miejsca na koronie muru (zamku albo kamiennego) — inaczej część oddziału
+  // szła schodami na mur; na mur idzie się, wskazując miejsce na murze
+  const onWall = (g.walls[target]! & WALL_TOP) !== 0;
+  const offTop = (t: number): boolean => !onWall && (g.walls[t]! & WALL_TOP) !== 0;
   const order = [...melee, ...ranged];
   const rows = Math.ceil(n / cols);
   const used = new Set<number>();
@@ -208,7 +212,7 @@ export function planFormation(g: GameState, player: number, ids: readonly number
       slots.set(s.id, [off, back]);
       const x = cx + rx * off - fx * back, y = cy + ry * off - fy * back;
       let t = x >= 0 && y >= 0 && x < w && y < h ? y * w + x : -1;
-      if (t < 0 || used.has(t) || !walkable(g, t, player)) {
+      if (t < 0 || used.has(t) || !walkable(g, t, player) || offTop(t)) {
         // pole zajęte albo nieprzechodnie (drzewo, woda, budynek): najbliższe wolne obok
         t = -1;
         const bx = Math.max(0, Math.min(w - 1, x)), by = Math.max(0, Math.min(h - 1, y));
@@ -216,7 +220,7 @@ export function planFormation(g: GameState, player: number, ids: readonly number
           const ax = bx + dx, ay = by + dy;
           if (ax < 0 || ay < 0 || ax >= w || ay >= h) continue;
           const q = ay * w + ax;
-          if (!used.has(q) && walkable(g, q, player)) { t = q; break; }
+          if (!used.has(q) && walkable(g, q, player) && !offTop(q)) { t = q; break; }
         }
       }
       if (t >= 0) { used.add(t); spots.set(s.id, t); }
@@ -451,12 +455,17 @@ function leavePost(g: GameState, s: Soldier): void {
 
 function besideTower(g: GameState, b: Building): number {
   const fp = footprint(BUILDINGS[b.type]!, b.rot), w = g.map.width;
-  for (let y = b.y - 1; y <= b.y + fp.h; y++)
-    for (let x = b.x - 1; x <= b.x + fp.w; x++) {
-      if (x >= b.x && x < b.x + fp.w && y >= b.y && y < b.y + fp.h) continue;
-      if (x < 0 || y < 0 || x >= w || y >= g.map.height) continue;
-      if (walkable(g, y * w + x, b.owner)) return y * w + x;
-    }
+  // najpierw ziemia: korona muru kamiennego obok wieży też jest „przechodnia”, ale schodzący lądowali wtedy na murze
+  // (i dalej szli po nim zamiast przez bramę); mur tylko wtedy, gdy na ziemi obok nie ma miejsca
+  for (const top of [false, true])
+    for (let y = b.y - 1; y <= b.y + fp.h; y++)
+      for (let x = b.x - 1; x <= b.x + fp.w; x++) {
+        if (x >= b.x && x < b.x + fp.w && y >= b.y && y < b.y + fp.h) continue;
+        if (x < 0 || y < 0 || x >= w || y >= g.map.height) continue;
+        const t = y * w + x;
+        if (((g.walls[t]! & WALL_TOP) !== 0) !== top) continue;
+        if (walkable(g, t, b.owner)) return t;
+      }
   return -1;
 }
 
