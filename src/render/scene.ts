@@ -424,6 +424,9 @@ export class GameRenderer {
   private rainLines: THREE.LineSegments | null = null;
   private sadFaces: THREE.Sprite[] = [];
   private lamps: THREE.PointLight[] = [];
+  /** Poświata pochodni na ziemi: tania plama ciepłego światła pod każdą zapaloną pochodnią (bez kosztu prawdziwego
+   *  światła), więc nocą osada świeci w całym kadrze, a nie tylko tam, gdzie sięgają lampy z puli */
+  private torchGlow: THREE.InstancedMesh | null = null;
   /** Stan lamp z puli: do jakiego źródła przypięta (klucz), docelowa i bieżąca jasność — lampy przechodzą płynnie,
    *  zamiast skakać, gdy kamera przesuwa się nad osadą i zmienia się zestaw najbliższych pochodni */
   private lampState: { key: string; k: number; target: number; cur: number }[] = [];
@@ -687,7 +690,7 @@ export class GameRenderer {
     this.scene.add(this.wave);
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
-    for (let i = 0; i < 18; i++) {
+    for (let i = 0; i < 24; i++) {
       const lamp = new THREE.PointLight(0xffa35a, 0, 11, 1.4);
       this.scene.add(lamp);
       this.lamps.push(lamp);
@@ -3235,6 +3238,7 @@ export class GameRenderer {
     // pochodnia w ręce przy spacerze świeci zawsze, gdy jest zapalona (pierwsza lampa z puli)
     const own = this.walk && this.torchOn ? this.lamps[0]! : null;
     if (own) { this.handTip.getWorldPosition(own.position); own.intensity = (this.night > 0.15 ? 7 : 3) * flicker; }
+    this.syncTorchGlow(g, lit);
     // nocą lampy rozjaśniają się, w dzień gasną — płynnie, bez przeskoku
     const dt = Math.min(0.1, this.frameDt || 0.016);
     const ease = Math.min(1, dt * 3.5);
@@ -3296,6 +3300,56 @@ export class GameRenderer {
       if (st.cur < 0.002) { st.cur = 0; if (!on) st.key = ''; }
       lamp.intensity = st.cur * st.k * this.night * 16 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
     });
+  }
+
+  private syncTorchGlow(g: GameState, lit: Set<number>): void {
+    const view = this.view;
+    if (!view) return;
+    if (!this.torchGlow) {
+      // miękka, ciepła plama: jasny środek, długie wygaszanie ku brzegom (bez ostrej krawędzi)
+      const c = document.createElement('canvas');
+      c.width = c.height = 128;
+      const x = c.getContext('2d')!;
+      const gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
+      gr.addColorStop(0, 'rgba(255,190,120,1)');
+      gr.addColorStop(0.25, 'rgba(255,160,90,0.55)');
+      gr.addColorStop(0.6, 'rgba(255,130,60,0.15)');
+      gr.addColorStop(1, 'rgba(255,120,50,0)');
+      x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
+      const tex = new THREE.CanvasTexture(c);
+      tex.colorSpace = THREE.SRGBColorSpace;
+      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      this.torchGlow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, 1024);
+      this.torchGlow.count = 0;
+      this.torchGlow.frustumCulled = false;
+      this.torchGlow.renderOrder = 2;
+      this.scene.add(cat(this.torchGlow, 'poświata pochodni'));
+    }
+    const glow = this.torchGlow;
+    const mat = glow.material as THREE.MeshBasicMaterial;
+    const k = Math.max(0, Math.min(1, (this.night - 0.1) / 0.4));
+    mat.opacity = k * 0.45;
+    glow.visible = k > 0.01;
+    if (!glow.visible) return;
+    const { width, height } = g.map;
+    const m = new THREE.Matrix4(), v = new THREE.Vector3(), sc = new THREE.Vector3(), q = new THREE.Quaternion();
+    let n = 0;
+    const put = (wx: number, wz: number, r: number): void => {
+      if (n >= 1024) return;
+      const y = Math.max(view.heightAt(wx + width / 2, wz + height / 2), 0) + 0.04;
+      m.compose(v.set(wx, y, wz), q, sc.set(r * 2, 1, r * 2));
+      glow.setMatrixAt(n++, m);
+    };
+    for (const [id, mesh] of this.buildingMeshes) {
+      if (!lit.has(id)) continue;
+      const torch = mesh.getObjectByName('torch');
+      if (!torch) continue;
+      torch.getWorldPosition(v);
+      put(v.x, v.z, 4);
+    }
+    for (const u of g.units) if (u.path.length > 0 && !u.bucket && u.carryRes < 0) put(u.px / FP - width / 2, u.py / FP - height / 2, 1.6);
+    glow.count = n;
+    glow.instanceMatrix.needsUpdate = true;
   }
 
   private syncRoads(g: GameState, view: TerrainView): void {
