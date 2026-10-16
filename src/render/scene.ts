@@ -27,7 +27,7 @@ import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience'
 import { ladderSides } from '../sim/systems/stonewalls';
 import { isWetMat, setWetBuildings } from './buildings';
 import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
-import { setCloudShadows } from './ground';
+import { cloudShade, setCloudShadows } from './ground';
 import { cat } from './cat';
 import { GearPool } from './gearpool';
 import { enableShadowLayer } from './shadowlayer';
@@ -3188,6 +3188,8 @@ export class GameRenderer {
       const mesh = this.models.building(def.id, TEAM_COLORS[team] ?? 0x888888);
       mesh.userData.fx = collectFx(mesh, isWindowMat);
       mergeStatic(mesh, def.id + ':' + team);
+      // cienie chmur suną też po dachach i ścianach (te same plamy co na ziemi)
+      mesh.traverse((o) => { const mm = (o as THREE.Mesh).material; if (mm) for (const x of Array.isArray(mm) ? mm : [mm]) cloudShade(x); });
       let top = -99, low = 99;
       const fp = footprint(def, b.rot);
       // pod budynkiem nie rośnie trawa, krzewy ani nie leżą kamyki

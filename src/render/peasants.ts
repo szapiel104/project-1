@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { cloudShade } from './ground';
 import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import GUARD_MODEL from './models/guard.json';
@@ -222,6 +223,7 @@ export class Figures {
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.castShadow = true;
+      cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
       scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod });
       if (lod) this.hasFar = true;

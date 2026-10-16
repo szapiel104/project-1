@@ -232,10 +232,14 @@ export function setCloudShadows(time: number, strength: number): void { cloudT.v
  * Te same cienie chmur na wszystkim, co stoi na ziemi (trawa, drzewa, krzaki, pnie): plama cienia przesuwa się
  * po łące i lesie jednocześnie, a nie tylko po gołej ziemi pod spodem. Dokleja się do istniejącego shadera materiału.
  */
+const clouded = new WeakSet<THREE.Material>();
 export function cloudShade(mat: THREE.Material): void {
-  if (TEST || !loader || mat.userData.cloud) return;
-  mat.userData.cloud = true;
-  const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey();
+  // WeakSet, nie userData: klony materiałów (withAo) dzielą userData z oryginałem
+  if (TEST || !loader || clouded.has(mat) || !(mat as THREE.MeshStandardMaterial).isMeshStandardMaterial) return;
+  clouded.add(mat);
+  // klucz programu: dotychczasowy (liczony na bieżąco, np. pory roku) albo — przy domyślnym — treść poprzedniej łatki
+  const prev = mat.onBeforeCompile, pk = mat.customProgramCacheKey, prevSrc = prev.toString();
+  const isDefault = pk === THREE.Material.prototype.customProgramCacheKey;
   mat.onBeforeCompile = (sh, r) => {
     prev.call(mat, sh, r);
     // wstawka tylko raz (łańcuch onBeforeCompile bywa owinięty dwa razy — np. pory roku i kopie materiału — a podwójna deklaracja psuje shader)
@@ -251,7 +255,7 @@ export function cloudShade(mat: THREE.Material): void {
         reflectedLight.directSpecular *= csh;
       }`);
   };
-  mat.customProgramCacheKey = () => key + '|cloud';
+  mat.customProgramCacheKey = function (this: THREE.Material) { return (isDefault ? prevSrc : pk.call(this)) + '|cloud'; };
 }
 
 export function groundMaterial(): THREE.MeshStandardMaterial {
