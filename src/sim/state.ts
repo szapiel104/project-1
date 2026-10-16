@@ -398,7 +398,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       p.dev = true;
       p.instantBuild = instantBuild;
       for (let i = 0; i < res.length; i++) res[i] = 2000;
-      const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate']);
+      const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate', 'stoneGate']);
       for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.road && !skip.has(d.id)) placeNear(g, i, s.player, s.x, s.y, 20);
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
@@ -435,7 +435,7 @@ function devFortify(g: GameState, player: number): void {
     addBuilding(g, buildingIndex(id), player, x, y);
     return true;
   };
-  // boki: tył (północ) i prawy (wschód) z kamienia, przód i lewy z bali; brama na każdym boku, z przodu na wprost bramy zamku
+  // boki: tył (północ) i prawy (wschód) z kamienia, przód i lewy z bali; brama na każdym boku (w kamiennym murze kamienna), z przodu na wprost bramy zamku
   const keepB = g.buildings.find((b) => b.owner === player && b.type === 0);
   const frontX = keepB ? Math.min(x1 - 1, Math.max(x0 + 1, keepB.x + KEEP_GATE[0])) : (x0 + x1) >> 1;
   const mx = (x0 + x1) >> 1, my = (y0 + y1) >> 1;
@@ -452,7 +452,7 @@ function devFortify(g: GameState, player: number): void {
       for (const k of [side.gate + d, side.gate - d]) {
         const p = side.tiles[k];
         if (!p || k === 0 || k === side.tiles.length - 1) continue;
-        if (put('gate', p[0], p[1])) { gate = k; break; }
+        if (put(side.kind === 'stoneWall' ? 'stoneGate' : 'gate', p[0], p[1])) { gate = k; break; }
       }
     side.tiles.forEach(([x, y], k) => { if (k !== gate) put(side.kind, x, y); });
   }

@@ -12,7 +12,8 @@ it('mapa deweloperska: mur (kamienny i z bali) z czterema bramami wokół miasta
     const ids = (id: string): number => g.buildings.filter((b) => b.owner === 0 && BUILDINGS[b.type]!.id === id).length;
     expect(ids('stoneWall'), `seed ${seed}`).toBeGreaterThan(10);
     expect(ids('palisade'), `seed ${seed}`).toBeGreaterThan(10);
-    expect(ids('gate'), `seed ${seed}`).toBe(4);
+    expect(ids('gate'), `seed ${seed}`).toBe(2);
+    expect(ids('stoneGate'), `seed ${seed}`).toBe(2);
     expect(ids('ladder'), `seed ${seed}`).toBeGreaterThan(0);
     const xs = walls.map((b) => b.x), ys = walls.map((b) => b.y);
     const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);

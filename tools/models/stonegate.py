@@ -144,6 +144,5 @@ VIEWS = [
     ['brama z zewnątrz (oczy chłopa)', [0.25, 0.5, 2.2], [0, 0.9, 0], ['base', 'leafL', 'leafR'], 22],
     ['brama od środka', [-0.4, 0.5, -2.1], [0, 0.9, 0], ['base', 'leafL', 'leafR'], 22],
     ['przejazd (wrota otwarte)', [0.0, 0.35, 1.2], [0, 0.7, -0.4], ['base'], 18],
-    ['korona nad przejazdem', [-0.9, WALL_TOP + 0.45, 0.0], [0.3, WALL_TOP + 0.2, 0.0], ['base'], 16],
 ]
 b.save('stonegate', maxe=0.2, rays=16, reach=0.3, extra={'hinge': HINGE, 'flames': flames, 'views': VIEWS})

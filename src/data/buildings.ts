@@ -161,6 +161,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // duży spichlerz: kamienna podmurówka, piętro z szachulca, dach z łupka — trzy razy więcej miejsca za kamień
   // (na końcu listy: typ budynku w zapisach gry to numer na tej liście, więc nowe budynki dopisujemy na końcu)
   { id: 'granaryBig', category: 'food', name: 'b.granaryBig', w: 3, h: 3, cost: { wood: 70, stone: 60 }, stores: ['granary'], capacity: { granary: 1200 }, buildable: true },
+  // kamienna brama w murze: baszty z ciosów, łukowy przejazd, okute wrota; wytrzymalsza od drewnianej
+  { id: 'stoneGate', category: 'defense', name: 'b.stoneGate', w: 1, h: 1, cost: { stone: 25, wood: 10 }, hp: 1600, gate: true, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */

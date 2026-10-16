@@ -22,6 +22,7 @@ import CAMP_MODEL from './models/camp.json';
 import BREWERY_MODEL from './models/brewery.json';
 import GATE_MODEL from './models/gate.json';
 import STONE_TOWER_MODEL from './models/stonetower.json';
+import STONE_GATE_MODEL from './models/stonegate.json';
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -1393,6 +1394,12 @@ const BUILDERS: Record<string, Builder> = {
     g.traverse((o) => { if (o.name === 'flame') o.name = 'torchFlame'; });
     const p = (GATE_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  stoneGate(g, _team, flag) {
+    // Kamienna brama z Blendera (tools/models/stonegate.py): baszty z ciosów, łukowy przejazd z klińcami, korona na wysokości
+    // muru kamiennego, okute wrota (obraca je scena), pochodnie w uchwytach (płoną nocą)
+    blenderModel(g, STONE_GATE_MODEL as unknown as BlenderBuilding, flag);
+    g.traverse((o) => { if (o.name === 'flame') o.name = 'torchFlame'; });
   },
   watchtower(g, _team, flag) {
     // Drewniana wieża strażnicza: cztery nogi z bali, zastrzały, pomost z balustradą, dach ze strzechy, drabina
