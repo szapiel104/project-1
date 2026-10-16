@@ -615,6 +615,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     return false;
   };
   // pola przy zamkach zostają czyste (miejsce pod osadę): ani samotnych drzew, ani murków
+  const peak = (x: number, y: number): boolean => {
+    const e = map.elevation[y * w + x]!;
+    for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if ((dx || dy) && nx >= 0 && ny >= 0 && nx < w && ny < h && map.elevation[ny * w + nx]! >= e + ((dy * w + dx) > 0 ? 0 : 1)) return false;
+    }
+    return true;
+  };
   const farFromKeeps = (x: number, y: number): boolean => map.starts.every((st) => Math.hypot(st.x - x, st.y - y) > 16);
   const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [], reeds: Item[] = [], lilies: Item[] = [];
   const m = new THREE.Matrix4();
@@ -687,10 +695,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         // na leśnej ścieżce tylko drobne kamyki w ubitej ziemi
         if ((r >>> 22) % 9 === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
       }
-      else if (t === Terrain.Grass && !sandy && !map.trails?.[y * w + x] && map.elevation[y * w + x]! - waterLevel > 112 && (r >>> 15) % 6 === 0) {
-        // szczyt wzgórza: wychodnia skalna — kilka głazów różnej wielkości wystających z darni
+      else if (t === Terrain.Grass && !sandy && !map.trails?.[y * w + x] && map.elevation[y * w + x]! - waterLevel > 105 && peak(x, y)) {
+        // sam szczyt wzgórza (najwyższe pole w promieniu 4): wychodnia skalna — kilka głazów różnej wielkości z darni
         const n = 2 + ((r >>> 9) & 1) + ((r >>> 11) & 1);
-        for (let k = 0; k < n; k++) put(rocks, x, y, 40 + k, 1.1 + ((r >>> (k * 3)) & 7) / 6, 0.95);
+        for (let k = 0; k < n; k++) put(rocks, x, y, 40 + k, 0.55 + ((r >>> (k * 3)) & 7) / 10, 0.95);
         put(pebbles, x, y, 46, 0.4, 0.95);
       }
       else if (t === Terrain.Grass && !sandy && !nearW && !map.trails?.[y * w + x] && !besideForest(x, y) && (r >>> 7) % 211 === 0 && farFromKeeps(x, y)) {
