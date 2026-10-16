@@ -3351,6 +3351,15 @@ export class GameRenderer {
         v.y += 1.25;
         spots.push({ key: 'b' + id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2, k: 1 });
       }
+      // ognisko w obozowisku pali się zawsze, więc nocą świeci na ludzi i stołki dookoła
+      for (const b of g.buildings) {
+        if (BUILDINGS[b.type]!.id !== 'camp' || b.build) continue;
+        const fl = this.buildingMeshes.get(b.id)?.getObjectByName('flame');
+        if (!fl) continue;
+        const v = fl.getWorldPosition(new THREE.Vector3());
+        v.y += 0.45;
+        spots.push({ key: 'c' + b.id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 - 2, k: 0.9 });
+      }
       const { width, height } = g.map;
       for (const u of g.units) {
         if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
@@ -3425,7 +3434,7 @@ export class GameRenderer {
     const glow = this.torchGlow;
     const mat = glow.material as THREE.MeshBasicMaterial;
     const k = Math.max(0, Math.min(1, (this.night - 0.1) / 0.4));
-    mat.opacity = k * 0.18;   // delikatna plama (0,45 przepalała ziemię na biało-żółto)
+    mat.opacity = k * 0.1;   // delikatna plama (0,45 przepalała ziemię na biało-żółto)
     glow.visible = k > 0.01;
     if (!glow.visible) return;
     const { width, height } = g.map;
@@ -3442,9 +3451,9 @@ export class GameRenderer {
       const torch = mesh.getObjectByName('torch');
       if (!torch) continue;
       torch.getWorldPosition(v);
-      put(v.x, v.z, 4);
+      put(v.x, v.z, 1.8);   // mała plama pod pochodnią (4 pola zlewały się w jedną pomarańczową łunę nad osadą)
     }
-    for (const u of g.units) if (u.path.length > 0 && !u.bucket && u.carryRes < 0) put(u.px / FP - width / 2, u.py / FP - height / 2, 1.6);
+    for (const u of g.units) if (u.path.length > 0 && !u.bucket && u.carryRes < 0) put(u.px / FP - width / 2, u.py / FP - height / 2, 0.8);
     glow.count = n;
     glow.instanceMatrix.needsUpdate = true;
   }
@@ -4485,6 +4494,20 @@ export class GameRenderer {
         t.position.set(camp.x + 1 + lx * cosT + lz * sinT - width / 2, (mesh?.position.y ?? 0) + 0.02, camp.y + 1 - lx * sinT + lz * cosT - height / 2);
         t.rotation.set(0, seat[2] + turn, 0);
         swing = 0;
+        // wieczorem przy ogniu: pierwszy gra na lutni, inni kiwają się w takt i co chwilę ktoś śpiewa albo zagaduje
+        if (evening && !this.calm) {
+          if (n === 0) { swing = Math.sin(this.time * 9) * 0.35; this.lutePlay(t.position.x, t.position.z); }
+          else { t.rotation.z = Math.sin(this.time * 2.2 + u.id) * 0.06; if ((u.id + Math.floor(this.time * 0.5)) % 3 === 0) swing = Math.max(0, Math.sin(this.time * 2.2 + u.id)) * -0.9; }
+          if (this.time > this.murmurAt && (u.id + Math.floor(this.time * 3)) % 4 === 0) {
+            const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);
+            if (dist < 14) {
+              this.murmurAt = this.time + 0.5 + ((u.id * 13) % 7) * 0.1;
+              const right = this.armV.setFromMatrixColumn(cam.matrixWorld, 0);
+              const pan = ((t.position.x - cam.position.x) * right.x + (t.position.z - cam.position.z) * right.z) / Math.max(1, dist) * 1.4;
+              talk('x'.repeat(8 + (u.id * 5 + Math.floor(this.time)) % 14), u.id, (u.id + Math.floor(this.time / 3)) % 4 === 0, Math.max(0, 1 - (dist - 2) / 12) * 0.25, pan);
+            }
+          }
+        }
       }
       // rybak stoi twarzą do wody z wędką; pozostali na stanowisku machają siekierą lub kilofem
       const fishing = u.phase === Phase.WorkingSite && u.job !== 0 && jobs.get(u.job)?.type === FISHER;
