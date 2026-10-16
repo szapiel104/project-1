@@ -98,6 +98,12 @@ export const SAY: Record<string, string[]> = {
   ],
   wolves: ['Wilki! Ratujcie!', 'Bierz kij, idą!', 'Matko Boska, wilki!', 'Do chat, szybko!', 'Straż! Wilki pod osadą!'],
   wolvesNight: ['Słyszysz? Wyją za palisadą.', 'Nocą wilki podchodzą pod same chaty.', 'Drzwi zaryglować, wilki krążą.'],
+  cold: [
+    'Ale ziąb! Trzeba napalić w piecu.', 'Ręce mi grabieją, idę rozpalić ogień.', 'Mróz trzyma, drewna by więcej.',
+    'Zimno jak w psiarni. Dorzuć do pieca!', 'Woda w wiadrze zamarzła.', 'Kto ma suche drwa? W chacie zimno.',
+  ],
+  coldNight: ['Napalę w piecu, bo do rana zamarzniemy.', 'Drzwi zamknąć, ogień podsycić i spać.', 'Pod dwiema derkami i dalej zimno.'],
+  hot: ['Skwar nie do wytrzymania.', 'Wody! Gardło mam jak pieprz.', 'W taki upał to tylko w cieniu siedzieć.', 'Słońce praży, pot leje się strumieniem.'],
   rain: ['Leje i leje.', 'Błoto po kolana.', 'Przemokłem do kości.', 'Deszcz dobry dla zboża, zły dla mnie.', 'Pod dach by się schować.'],
   morning: [
     'Kur zapiał, trzeba wstawać.', 'Świt, a ja już na nogach.', 'Mgła rano gęsta jak mleko.', 'Nowy dzień, stara robota.',
@@ -147,6 +153,7 @@ export const GUARD_SAY = {
   ],
   danger: ['Do broni!', 'Wróg pod bramą! Za mną!', 'Nie przejdą, póki ja stoję!', 'Trzymać szyk!', 'Bij ich!'],
   fire: ['Ogień! Ruszać się z tymi wiadrami!', 'Gasić, nie gapić się!', 'Wszyscy do studni!'],
+  cold: ['Zimno, aż zbroja do skóry przymarza.', 'Mróz. Ogień by się przydał przy bramie.'],
   rain: ['Leje jak z cebra, a ja tu stoję.', 'Zbroja rdzewieje od tego deszczu.', 'Mokry strażnik, zły strażnik.'],
   hungry: ['Pusty kocioł w koszarach. Długo tak nie postoimy.', 'Głodny strażnik to zły strażnik.'],
   taxHigh: ['Chłopi narzekają na podatki. Pilnuj, żeby się nie zbuntowali.', 'Poborca chodzi z nami, bo sam by nie wrócił.'],

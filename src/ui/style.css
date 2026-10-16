@@ -1195,3 +1195,9 @@ body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1
 /* skład i spichlerz: sama liczba „ile / ile mieści” o stałej szerokości (nie skacze); bilans +/− w podpowiedzi */
 .status .store-box .trend { display: none; }
 .status .store-box strong { display: inline-block; min-width: 8.5ch; text-align: left; font-variant-numeric: tabular-nums lining-nums; }
+/* zegar: pod godziną pora roku i temperatura */
+.clock-text { display: inline-grid; line-height: 1.05; }
+.clock .weather { font-size: 13px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.clock .weather[data-t='cold'] { color: #a9cbe8; }
+.clock .weather[data-t='frost'] { color: #cfe6ff; }
+.clock .weather[data-t='hot'] { color: #ffb28a; }

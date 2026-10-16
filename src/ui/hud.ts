@@ -61,6 +61,8 @@ export interface HudView {
   housing: number;
   popularity: number;
   day: number;
+  /** Pora roku i temperatura (°C) */
+  weather?: { season: string; temp: number };
   hour: number;
   night: boolean;
   idle: number;
@@ -399,7 +401,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   </svg>`.replace(/(\d)\.(\d)00/g, '$1.$2');
   const disc = clockIcon.querySelector<SVGGElement>('.dial-disc')!;
   const clockVal = el('strong');
-  clockBox.append(clockIcon, clockVal);
+  // pora roku i temperatura pod zegarem; mróz na niebiesko, upał na czerwono
+  const weatherVal = el('span', 'weather');
+  const clockText = el('span', 'clock-text');
+  clockText.append(clockVal, weatherVal);
+  clockBox.append(clockIcon, clockText);
   people.append(stockBox, foodBox, popBox, armyBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');
@@ -946,6 +952,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       // godzina co kwadrans, stałej szerokości, żeby pasek nie skakał
       const hh = Math.floor(v.hour), mm = Math.floor(((v.hour - hh) * 60) / 15) * 15;
       setText(clockVal, `${t('hud.day')} ${v.day}, ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
+      if (v.weather) {
+        const tmp = Math.round(v.weather.temp);
+        setText(weatherVal, `${v.weather.season} · ${tmp < 0 ? '−' : ''}${Math.abs(tmp)}°C`);
+        weatherVal.dataset.t = tmp <= 0 ? 'frost' : tmp < 8 ? 'cold' : tmp > 25 ? 'hot' : '';
+        clockBox.title = `${v.weather.season}, ${v.weather.temp.toFixed(1).replace('.', ',')}°C${tmp < 8 ? ' — ludzie palą w piecach' : ''}`;
+      }
       // południe na górze o 12:00, północ o 24:00
       disc.setAttribute('transform', `rotate(${((v.hour - 12) / 24) * 360})`);
       setText(popVal, `${v.pop} / ${v.housing}`);

@@ -1,4 +1,5 @@
 import { GUARD_SAY, SAY } from './data/barks';
+import { COLD, SEASON_NAME, seasonAt, temperatureAt } from './sim/weather';
 import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
 import { RULES } from './data/rules';
 import { Terrain } from './data/terrain';
@@ -8,7 +9,7 @@ import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { BYNAMES, FIRST_NAMES } from './data/names';
 import { t } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
-import { clockAt } from './sim/clock';
+import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
 import { Phase, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
@@ -1339,6 +1340,7 @@ function refresh(): void {
   const clock = clockAt(game.tick);
   hud.update({
     day: clock.day, hour: clock.hour, night: clock.night,
+    weather: { season: SEASON_NAME[seasonAt(game.tick)], temp: temperatureAt(game.tick, game.map.seed, rainAt(game.tick)) },
     res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
@@ -1830,6 +1832,7 @@ function situation(px: number, py: number): string | null {
   const tavern = game.buildings.some((b) => b.owner === ME && BUILDINGS[b.type]!.id === 'tavern' && b.worker);
   if (tavern && (p.res[resIndex('ale')] ?? 0) <= 0 && Math.random() < 0.3) return 'dry';
   if (renderer.weather.rain > 0.4 && Math.random() < 0.4) return 'rain';
+  { const temp = temperatureAt(game.tick, game.map.seed, rainAt(game.tick)); if (temp < 2 && Math.random() < 0.5) return 'cold'; if (temp > 25 && Math.random() < 0.35) return 'hot'; }
   if (p.tax === 1 && Math.random() < 0.15) return 'noTax';
   if (p.popularity >= 80 && Math.random() < 0.25) return 'good';
   return null;
@@ -1851,7 +1854,7 @@ function lineFor(id: number): string {
   { const h = clockAt(game.tick).hour; if (h >= 5 && h < 8 && Math.random() < 0.5) return pick('morning'); }
   // rytm dnia: wieczór (19, 20), w drodze do łóżka (21), sen (22, pod dachem albo na słomie)
   if (u.phase === 22) return u.home ? pick('sleeping') : Math.random() < 0.5 ? pick('outside') : pick('sleeping');
-  if (u.phase === 21) return pick('sleep');
+  if (u.phase === 21) return temperatureAt(game.tick, game.map.seed) < COLD && Math.random() < 0.6 ? pick('coldNight') : pick('sleep');
   if (u.phase === 19 || u.phase === 20) return pick('evening');
   if (u.phase === 13 || u.phase === 14) return pick('build');
   if (u.carryRes >= 0 && Math.random() < 0.5) return pick('carry');
@@ -1866,7 +1869,7 @@ function sayGuard(id: number): void {
   const pick = (l: string[]): string => l[Math.floor(Math.random() * l.length)]!;
   const near = game.soldiers.some((o) => game.players[o.owner]!.team !== game.players[s.owner]!.team && (o.px - s.px) ** 2 + (o.py - s.py) ** 2 < (8 * 256) ** 2) || game.wolves.some((w) => (w.px - s.px) ** 2 + (w.py - s.py) ** 2 < (8 * 256) ** 2);
   const sit = situation(s.px, s.py);
-  const extra = sit === 'lord' ? GUARD_SAY.lord : sit === 'fire' ? GUARD_SAY.fire : sit === 'rain' ? GUARD_SAY.rain : sit === 'hungry' ? GUARD_SAY.hungry : sit === 'taxHigh' ? GUARD_SAY.taxHigh : null;
+  const extra = sit === 'lord' ? GUARD_SAY.lord : sit === 'cold' ? GUARD_SAY.cold : sit === 'fire' ? GUARD_SAY.fire : sit === 'rain' ? GUARD_SAY.rain : sit === 'hungry' ? GUARD_SAY.hungry : sit === 'taxHigh' ? GUARD_SAY.taxHigh : null;
   bubble.textContent = pick(near || sit === 'enemy' ? GUARD_SAY.danger : extra ?? (clockAt(game.tick).night ? GUARD_SAY.night : GUARD_SAY.day));
   bubble.hidden = false;
   sayUnit = id;

@@ -38,6 +38,7 @@ import { peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import RAM_MODEL from './models/ram.json';
 import { clockAt, rainAt } from '../sim/clock';
+import { COLD, temperatureAt } from '../sim/weather';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
@@ -2015,12 +2016,29 @@ export class GameRenderer {
     if (this.time > this.fxAt) {
       this.fxAt = this.time + 0.5;
       const list: FxSource[] = [];
+      // dym ma powód: w zimne dni ludzie palą w piecach tam, gdzie są (chata z mieszkańcami, warsztat z pracownikiem),
+      // piekarz i piwowar palą pod piecem i kotłem tylko przy robocie, karczma wieczorem, kuchnia zamku za dnia
+      const temp = temperatureAt(g.tick, g.map.seed, rainAt(g.tick));
+      const cold = temp < COLD;
+      const hour = clockAt(g.tick).hour;
+      const home = new Set<number>(), busy = new Set<number>();
+      for (const u of g.units) {
+        if (u.home && (u.phase === Phase.Sleeping || u.phase === Phase.Resting)) home.add(u.home);
+        if (u.job && (u.phase === Phase.Working || u.phase === Phase.Resting)) busy.add(u.job);
+      }
       for (const b of g.buildings) {
         const mesh = this.buildingMeshes.get(b.id);
         const fx = mesh?.userData.fx as BuildingFx | undefined;
         if (!mesh || !fx || b.build || b.ruined) continue;
         const fire = mesh.getObjectByName('fire');
-        list.push({ mesh, fx, smoke: SMOKY.has(BUILDINGS[b.type]!.id), burning: !!fire?.visible });
+        const id = BUILDINGS[b.type]!.id;
+        const smoke = !SMOKY.has(id) ? false
+          : id === 'bakery' || id === 'brewery' ? busy.has(b.id) || (cold && !!b.worker)
+          : id === 'tavern' ? !!b.worker && ((hour >= 17 && hour < 23) || cold)
+          : id === 'keep' ? (hour >= 5 && hour < 21) || cold
+          : id === 'house' ? cold && home.has(b.id)
+          : cold && busy.has(b.id);
+        list.push({ mesh, fx, smoke, burning: !!fire?.visible });
       }
       this.ambience.setSources(list, focus);
       this.clutter.sync(g, (x, y) => v.heightAt(x, y));
