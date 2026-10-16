@@ -6,6 +6,7 @@
 - Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
 - Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
 - Wejście w spacer chłopem bez kilkusekundowego zamrożenia: światło sal stoi w scenie od startu (nowe światło przebudowywało shadery wszystkich materiałów), drzewa kolizji liczone tylko dla ścian tuż obok
+- Wydajniejsze gospodarstwa: sad daje 18 jabłek na zbiór (było 12), pole 16 zboża (było 8), młyn miele po 16 (było 8). Zmierzone w symulacji 6 sadów + 3 pola, 3 młyny i piekarnie przy 46 mieszkańcach: ok. 1400 porcji na dobę przy zużyciu ok. 720 (wcześniej ok. 850 przy 640 — wiecznie na granicy). Wąskim gardłem chleba było pole i młyn, nie piekarnie
 - Głód: gdy zabraknie jedzenia, ludzie odchodzą od razu (bez względu na popularność) i przestają, gdy tylko jedzenie wróci; popularność spada wtedy tylko trochę (−2), bo to nie pan skąpi racji — koniec z długim odpływem ludzi po krótkim braku
 - Spichlerz mieści 400 (było 150); ryba syci za dwie porcje (rybak wykarmi ok. 8 osób), ale rybak kosztuje 40 drewna i 20 złota
 - Klik w spichlerz na dolnym pasku: ilu je, ile zjadają co miesiąc i na dobę, na ile starczy zapas, ile dają gospodarstwa i ilu ludzi wykarmią, bilans z ostatnich godzin oraz podpowiedź, ile sadów brakuje

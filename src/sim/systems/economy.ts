@@ -39,7 +39,7 @@ export const MEALS_PER_DAY = (() => { let n = 0; for (let t = RULES.monthTicks; 
 
 /** Ile jedzenia na dobę daje jeden pracujący budynek (zmierzone w symulacji: chodzenie do spichlerza w cenie;
  *  dla piekarni cały łańcuch pole → młyn → piekarnia, po jednym budynku) — do prognozy w oknie spichlerza */
-export const FOOD_PER_DAY: Record<string, number> = { orchard: 130, fisher: 128, bakery: 110 }; // rybak: 64 ryby = 128 porcji
+export const FOOD_PER_DAY: Record<string, number> = { orchard: 140, fisher: 128, bakery: 190 }; // rybak: 64 ryby = 128 porcji
 
 /** Miesięczna zmiana popularności przy obecnych ustawieniach (także jako prognoza dla interfejsu). */
 export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; food: number; gold: number; fed: boolean; bribed: boolean; ale: number; parts: { key: string; value: number; level?: string }[] } {
