@@ -41,8 +41,7 @@ def torch(group, x, y, z):
     b.prism(group, 'woodDark', 0.012, 0.016, 0.2, x, y - 0.06, z, seg=6)         # trzonek
     b.prism(group, 'iron', 0.022, 0.03, 0.04, x, y + 0.14, z, seg=6, top=False)  # kubek
     b.prism(group, 'dark', 0.026, 0.026, 0.004, x, y + 0.172, z, seg=6)          # smoła
-    b.prism(group, 'ember', 0.0, 0.022, 0.03, x, y + 0.176, z, seg=6, top=False)  # płomień: rozszerza się…
-    b.prism(group, 'ember', 0.022, 0.0, 0.09, x, y + 0.206, z, seg=6)            # …i zwęża ku górze
+    # płomień rysuje gra (żywy ogień jak w pochodni chłopa) w znaczniku 'lights'
 def brazier(group, x, y, z):
     """Kosz ogniowy na nodze: misa rozszerzona ku górze, z dnem, żar i trzy języki ognia"""
     b.prism(group, 'iron', 0.02, 0.02, y - G, x, G, z, seg=5)

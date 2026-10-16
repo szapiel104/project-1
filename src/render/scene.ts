@@ -2014,6 +2014,15 @@ export class GameRenderer {
       if ((mesh.position.x - f.x) ** 2 + (mesh.position.z - f.z) ** 2 > 110 * 110) continue;
       const torchFlame = mesh.getObjectByName('torchflame');
       if (torchFlame && lit.has(id)) { torchFlame.getWorldPosition(w); w.y -= 0.12; F.add(w, 0.36, 0.2, (id * 0.137) % 1, glow); }
+      // pochodnie w bryle modelu (baszty bram, ściany zamku): po zmroku żywy ogień jak w pochodni chłopa, tylko gdy widoczne
+      if (dark) for (const o of this.lightMarks(mesh)) {
+        let shown = true;
+        for (let p: THREE.Object3D | null = o.parent; p && p !== mesh; p = p.parent) if (!p.visible) { shown = false; break; }
+        if (!shown) continue;
+        o.getWorldPosition(w);
+        if (o.name === 'lightSpot') w.y -= 0.08;
+        F.add(w, 0.22, 0.12, (o.id * 0.419) % 1, glow * 0.7);
+      }
       // kosze ogniowe (brama zamku, wartownia): płoną tylko po zmroku i tylko gdy są widoczne
       if (dark) {
         // lista koszy zapamiętana przy budynku; gdy model się przebudował (stare części odpięte), szukamy od nowa
@@ -2271,7 +2280,9 @@ export class GameRenderer {
   private syncWalls(g: GameState, view: TerrainView): void {
     const { width, height } = g.map;
     const walls = g.buildings.filter((b) => { const d = BUILDINGS[b.type]!; return d.wall || d.gate; });
-    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}`).join(',');
+    // w kluczu też to, czy model już jest: na nowej mapie mur liczy się czasem przed modelami bram, a brama bez obrotu
+    // stała wzdłuż muru (po odświeżeniu kolejność była inna i wszystko wracało)
+    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}:${this.buildingMeshes.has(b.id) ? 1 : 0}`).join(',');
     if (key === this.wallKey) return;
     this.wallKey = key;
     const solid = new Map<number, GameState['buildings'][number]>();
@@ -2608,8 +2619,7 @@ export class GameRenderer {
       const l = mesh.getObjectByName('leafL'), r = mesh.getObjectByName('leafR');
       if (l) l.rotation.y = -a;
       if (r) r.rotation.y = a;
-      const lit = this.night > 0.15;
-      mesh.traverse((o) => { if (o.name === 'torchFlame') o.visible = lit; });
+      mesh.traverse((o) => { if (o.name === 'torchFlame') o.visible = false; }); // stożek to tylko znacznik: płomień rysuje system ognia (syncFlames)
     }
   }
 
