@@ -16,6 +16,8 @@ import KEEP_MODEL from './models/keep.json';
 import TAVERN_MODEL from './models/tavern.json';
 import HOUSE_MODEL from './models/house.json';
 import BARN_MODEL from './models/barn.json';
+import ORCHARD_MODEL from './models/orchard.json';
+import FARM_MODEL from './models/farm.json';
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
@@ -64,7 +66,7 @@ const KEEP_HALF = KEEP_SIZE / 2;
 /** Budynek z Blendera, do którego wchodzi się spacerem: prostokąty podłogi, przeszkody na swojej wysokości, wysokość posadzki */
 interface WalkModel { floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] }
 const TAVERN = TAVERN_MODEL as unknown as WalkModel & { seats: [number, number, number][] };
-const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel };
+const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel };
 const TAVERN_SEATS = TAVERN.seats;
 /** Obrys budynku z modelu (ściany, sprzęty i wnętrze): poza nim, na podwórku działki, chodzi się jak po łące */
 const footCache = new Map<WalkModel, [number, number, number, number]>();
@@ -1518,7 +1520,7 @@ export class GameRenderer {
   }
 
   // --- spacer oczami chłopa: kamera na wysokości głowy, WASD i mysz, zderzenia z budynkami i wodą ---
-  private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number; jy?: number; vy?: number } | null = null;
+  private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number; jy?: number; vy?: number; gy?: number } | null = null;
   /** Wywoływane, gdy spacer się skończy (Esc) */
   onWalkEnd: () => void = () => {};
   get walking(): boolean { return !!this.walk; }
@@ -1769,7 +1771,10 @@ export class GameRenderer {
     const inTap = !!wbk && !!tap && wbk[1] >= tap[0] && wbk[1] <= tap[1] && wbk[2] >= tap[2] && wbk[2] <= tap[3];
     this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
     this.walkNear = wbk ? wbk[0] : kp ? kp[0] : 0; // budynek pod nogami ma pierwszeństwo przed zamkiem obok
-    cam.position.set(w.x - width / 2, Math.max(ground, 0) + 0.46 + (w.jy ?? 0) + (w.jy ? 0 : Math.sin(w.bob) * 0.02), w.z - height / 2);
+    // stopy idą po podłożu z lekkim wygładzeniem: próg chaty, skraj sadu czy bruku to krok, a nie skok kamery
+    const gy = Math.max(ground, 0);
+    w.gy = w.gy === undefined || Math.abs(gy - w.gy) > 0.4 ? gy : w.gy + (gy - w.gy) * Math.min(1, dt * 12);
+    cam.position.set(w.x - width / 2, w.gy + 0.46 + (w.jy ?? 0) + (w.jy ? 0 : Math.sin(w.bob) * 0.02), w.z - height / 2);
     // izby w basztach (narożne i w połowie boków) też mają ogień
     const tdx = kp ? Math.floor(kp[1] + KEEP_HALF) : -1, tdy = kp ? Math.floor(kp[2] + KEEP_HALF) : -1;
     const inTower = !!kp && keepTile(tdx, tdy) === '=' && (((tdx === 0 || tdx === KEEP_SIZE - 1) && (tdy === 0 || tdy === KEEP_SIZE - 1 || tdy === KEEP_SIZE >> 1))

@@ -13,6 +13,8 @@ import ARMORY_MODEL from './models/armory.json';
 import BAKERY_MODEL from './models/bakery.json';
 import MILL_MODEL from './models/mill.json';
 import BARRACKS_MODEL from './models/barracks.json';
+import ORCHARD_MODEL from './models/orchard.json';
+import FARM_MODEL from './models/farm.json';
 import BREWERY_MODEL from './models/brewery.json';
 import GATE_MODEL from './models/gate.json';
 import STONE_TOWER_MODEL from './models/stonetower.json';
@@ -1570,57 +1572,26 @@ const BUILDERS: Record<string, Builder> = {
     smoke.visible = false;
     g.add(smoke);
   },
-  orchard(g) {
-    box(g, M.orchardGrass, 2.8, 0.05, 2.8);
-    // płotek dookoła z przerwą na wejście
-    for (const [x, z, w, d] of [[0, -1.38, 2.8, 0.04], [-1.38, 0, 0.04, 2.8], [1.38, 0, 0.04, 2.8], [-0.85, 1.38, 1.1, 0.04], [0.85, 1.38, 1.1, 0.04]] as const) {
-      box(g, M.wood, w, 0.05, d, x, 0.2, z);
-      box(g, M.wood, w, 0.05, d, x, 0.36, z);
-    }
-    for (const [x, z] of [[-1.38, -1.38], [1.38, -1.38], [-1.38, 1.38], [1.38, 1.38], [-0.3, 1.38], [0.3, 1.38], [0, -1.38], [-1.38, 0], [1.38, 0]] as const) box(g, M.woodDark, 0.08, 0.45, 0.08, x, 0.05, z);
-    // jabłonie: krzywy pień, korona z kilku kul liści i jabłka na gałęziach
-    const spots = [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.7], [0.8, 0.7], [0, -0.05]] as const;
-    spots.forEach(([x, z], n) => {
-      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.09, 0.5, 6), M.bark);
-      trunk.position.set(x, 0.3, z);
-      trunk.rotation.z = (n % 2 ? 1 : -1) * 0.12;
-      g.add(trunk);
-      for (const [dx, dy, dz, r] of [[0, 0.82, 0, 0.33], [-0.22, 0.7, 0.08, 0.22], [0.22, 0.72, -0.06, 0.23], [0.02, 0.7, 0.22, 0.2], [0, 0.72, -0.22, 0.2]] as const) {
-        const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), n % 2 ? M.leaf : M.leafLight);
-        blob.position.set(x + dx, dy, z + dz);
-        g.add(blob);
-      }
-      for (let k = 0; k < 9; k++) {
-        const a = k * 2.4 + n, rad = 0.28 + (k % 3) * 0.05;
-        const apple = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 1), k % 4 === 0 ? M.appleGreen : M.apple);
-        apple.position.set(x + Math.cos(a) * rad, 0.58 + (k % 4) * 0.09, z + Math.sin(a) * rad);
-        g.add(apple);
-      }
-    });
-    // kosz z zebranymi jabłkami przy wejściu
-    const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.12, 0.16, 8), M.basket);
-    basket.position.set(0.45, 0.13, 1.0);
-    g.add(basket);
-    for (let k = 0; k < 6; k++) {
-      const apple = new THREE.Mesh(new THREE.IcosahedronGeometry(0.05, 1), M.apple);
-      apple.position.set(0.45 + Math.cos(k * 1.05) * 0.08, 0.23, 1.0 + Math.sin(k * 1.05) * 0.08);
-      g.add(apple);
-    }
+  orchard(g, _team, flag) {
+    // sad z Blendera (tools/models/orchard.py): łąka w płocie z plecionki, cztery jabłonie z jabłkami, skład jabłek
+    // (szopa z regałami skrzynek), ul, drabina, skrzynki przy wejściu; chłopem da się wejść i pochodzić między drzewami
+    blenderModel(g, ORCHARD_MODEL as unknown as BlenderBuilding, flag);
   },
-  farm(g) {
-    box(g, M.soil, 2.8, 0.05, 2.8);
-    // zagony: usypane grzędy z ziemi, na nich gęste źdźbła z pochylonymi kłosami, każdy rząd lekko faluje na wietrze
-    for (let i = 0; i < 6; i++) {
-      const z = -1.1 + i * 0.44;
-      box(g, M.soil, 1.8, 0.06, 0.3, 0.45, 0.04, z);
+  farm(g, _team, flag) {
+    // farma z Blendera (tools/models/farm.py): pole w płocie, zagony, chałupa rolnika z narzędziami, kopki, strach na wróble;
+    // zboże na zagonach jest z kodu (rośnie i faluje), w miejscach zapisanych w modelu
+    blenderModel(g, FARM_MODEL as unknown as BlenderBuilding, flag);
+    const rows = (FARM_MODEL as unknown as { rows: [number, number, number, number][] }).rows;
+    rows.forEach(([x, y, z, len], i) => {
       const row = new THREE.Group();
       row.name = 'crop';
-      row.position.set(0.45, 0.1, z);
-      row.add(new THREE.Mesh(wheatRow(i), wheatMat));
+      row.position.set(x, y, z);
+      const m = new THREE.Mesh(wheatRow(i), wheatMat);
+      m.scale.x = len / 1.78;
+      row.add(m);
       g.add(row);
       ((g.userData.crops ??= []) as THREE.Object3D[]).push(row);
-    }
-    hut(g, M.plaster, M.thatch, 0.7, 0.7, 0.5, -0.95, -0.9);
+    });
   },
   mill(g, _team, flag) {
     // wiatrak z Blendera (tools/models/mill.py): kamienna podmurówka, zbieżna wieża z tynku, galeria, czapa ze strzechy,
