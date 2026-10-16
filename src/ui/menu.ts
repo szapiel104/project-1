@@ -473,7 +473,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
         choice('Limit klatek', settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, 'Bez limitu']], (v) => { settings.fpsLimit = v; save(); }),
-        slider('Jasność', (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 160),
+        slider('Jasność', (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
         check('Deszcz', settings.rain ?? true, (v) => { settings.rain = v; save(); }),
         check('Mgła', settings.fog ?? true, (v) => { settings.fog = v; save(); }),
         el('p', 'hint', t('set.graphicsHint')),

@@ -863,10 +863,10 @@ export class GameRenderer {
     this.composer.addPass(new OutputPass());
     // gradacja koloru w klimacie surowego średniowiecza: mniej nasycenia, ciepłe brudne cienie, chłodna noc, winieta
     this.grade = new ShaderPass({
-      uniforms: { tDiffuse: { value: null }, night: { value: 0 }, rain: { value: 0 }, golden: { value: 0 } },
+      uniforms: { tDiffuse: { value: null }, night: { value: 0 }, rain: { value: 0 }, golden: { value: 0 }, bright: { value: 1 } },
       vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
       fragmentShader: `
-        uniform sampler2D tDiffuse; uniform float night; uniform float rain; uniform float golden; varying vec2 vUv;
+        uniform sampler2D tDiffuse; uniform float night; uniform float rain; uniform float golden; uniform float bright; varying vec2 vUv;
         void main() {
           vec3 c = texture2D(tDiffuse, vUv).rgb;
           float l = dot(c, vec3(0.299, 0.587, 0.114));
@@ -876,8 +876,10 @@ export class GameRenderer {
           c = (c - 0.5) * 1.08 + 0.5;                                   // trochę kontrastu
           c = mix(c, c * vec3(0.72, 0.8, 1.05), night * 0.35);          // chłodna, ciemna noc
           c *= 1.0 - rain * 0.12;
+          // suwak Jasność: podnosi przede wszystkim ciemne miejsca (noc, cienie), jasne prawie zostają; 1 = bez zmian
+          c = pow(max(c, 0.0), vec3(1.0 / pow(bright, 1.1))) * mix(1.0, bright, 0.35);
           vec2 d = vUv - 0.5;
-          c *= 1.0 - dot(d, d) * (0.85 + night * 0.6);                  // winieta
+          c *= 1.0 - dot(d, d) * (0.85 + night * 0.6) / bright;         // winieta (jaśniej = słabsza)
           gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);
         }`,
     });
@@ -1037,7 +1039,11 @@ export class GameRenderer {
   rainOn = true;
   fogOn = true;
   /** Ustawienia → Grafika: jasność obrazu (1 = 100%) */
-  set brightness(v: number) { this.renderer.toneMappingExposure = 0.9 * Math.max(0.5, Math.min(2, v)); }
+  set brightness(v: number) {
+    const b = Math.max(0.5, Math.min(2, v));
+    this.renderer.toneMappingExposure = 0.9 * Math.sqrt(b);
+    this.grade.uniforms.bright!.value = b;
+  }
   /** Testy: budynki stawiane od ręki stoją od razu, bez kilkusekundowego pokazu budowy */
   noBuildShow = false;
 
