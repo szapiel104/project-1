@@ -154,7 +154,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     // brzegi przeplatają się: odcinek piaszczystej plaży, dalej trzciny i krzaki, potem znów zatoczka z piaskiem;
     // „plażowe” jeziora mają piasku więcej, pozostałe tylko pojedyncze zatoczki
     const biggest = sizes.indexOf(Math.max(...sizes.map((sz, id) => (river[id] ? 0 : sz)), 0));
-    const bias = sizes.map((sz, id) => (river[id] ? -0.42 : id === biggest ? 0.15 : sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2 ? 0.1 : -0.3));
+    // bez pierścieni piasku dookoła jeziora: brzeg to trawa, trzcina i kamyki, a piasek tylko w kilku małych zatoczkach
+    void biggest;
+    const bias = sizes.map((sz, id) => (river[id] ? -0.42 : sz > 6 && (hash2(id, sz, map.seed ^ 0x5a4d) & 3) < 2 ? -0.16 : -0.3));
     for (let i = 0; i < w * h; i++) {
       const id = lake[i]!;
       if (id < 0 || map.river?.[i]) continue; // nad rzeką trawa i trzcina, nie plaża
@@ -162,7 +164,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const bf = smoothstep(-0.05, 0.25, nz(x / 8 + 31, y / 8 - 17) + bias[id]!);
       if (bf <= 0.02) continue;
       // plaża wąska (pas 1–2 pól przy wodzie), żeby nie wyglądała jak wklejona łata piasku
-      const reach = 1 + Math.round(bf * (0.4 + 0.4 * nz(x / 4, y / 4)));
+      const reach = 1;
       sandTile[i] = Math.max(sandTile[i]!, bf);
       for (let dy = -reach; dy <= reach; dy++) for (let dx = -reach; dx <= reach; dx++) {
         const nx = x + dx, ny = y + dy;
@@ -170,7 +172,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const t = map.tiles[ny * w + nx];
         if (t !== Terrain.Grass && t !== Terrain.Water) continue;
         const rr = Math.max(Math.abs(dx), Math.abs(dy));
-        const v = (rr <= 1 ? 1 : rr === 2 ? 0.7 : 0.4) * bf;
+        const v = (rr === 0 ? 1 : 0.55) * bf; // piasek tuż przy wodzie, w trawę przechodzi miękko
         sandTile[ny * w + nx] = Math.max(sandTile[ny * w + nx]!, v);
       }
     }

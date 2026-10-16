@@ -143,7 +143,7 @@ const FRAG_ALBEDO = /* glsl */ `
   float steep = smoothstep(0.82, 0.62, vWN.y);
   wRock = max(wRock, steep);
   // piasek plaż (jeziora z plażą, morze za mapą): na plaży trawa i kamienie ustępują
-  vec3 sandC = texture2D(tSand, rot(w, 0.8) / 4.0).rgb * vec3(1.16, 1.02, 0.74);
+  vec3 sandC = texture2D(tSand, rot(w, 0.8) / 4.0).rgb * vec3(0.98, 0.9, 0.72); // przygaszony, wilgotny piasek (nie jaskrawa plaża)
   float wSand = clamp(vSand * 1.1, 0.0, 1.0) * (1.0 - wRock);
   wPeb *= 1.0 - wSand * 0.7; wDirt *= 1.0 - wSand; wForest *= 1.0 - wSand;
 
