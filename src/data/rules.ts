@@ -33,6 +33,9 @@ export const RULES = {
   roadSpeedBonus: [0, 20, 80, 35],
   /** Koszt przejścia pola przy szukaniu drogi w procentach zwykłego: ludzie wolą iść drogą */
   roadPathCost: [100, 80, 45, 70],
+  /** Koszt kroku (w %) bez drogi: po leśnej ścieżce taniej, przez gęsty las drożej — chłopi wybierają ścieżki */
+  trailPathCost: 82,
+  forestPathCost: 125,
   /** Ile razy można wydobyć surowiec z jednego pola złoża, zanim się wyczerpie */
   depositYields: 5,
   /** Rytm dnia: od tej godziny ludzie kończą robotę i idą do ogniska albo do karczmy */

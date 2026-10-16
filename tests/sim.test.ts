@@ -31,6 +31,29 @@ describe('mapa', () => {
     expect(a.starts).toEqual(b.starts);
   });
 
+  it.each(presets)('%s: leśne ścieżki są, są symetryczne i nie wchodzą w wodę ani góry', (p) => {
+    for (const seed of [1, 7, 2026]) {
+      const m = generateMap(seed, p);
+      let n = 0;
+      for (let i = 0; i < m.trails.length; i++) {
+        if (!m.trails[i]) continue;
+        n++;
+        expect(m.trails[m.trails.length - 1 - i]).toBe(1);
+        expect([Terrain.Water, Terrain.Mountain, Terrain.Forest]).not.toContain(m.tiles[i]);
+      }
+      expect(n).toBeGreaterThan(m.width); // sieć dróżek, nie kilka pól
+    }
+  });
+
+  it('stare zapisy (generator 1) dostają dawną mapę 160 pól bez ścieżek, nowe 1 na 1 jest większe', () => {
+    const old = generateMap(42, '1v1', 1), now = generateMap(42, '1v1');
+    expect(old.width).toBe(160);
+    expect(old.trails.some((t) => t)).toBe(false);
+    expect(now.width).toBeGreaterThan(160);
+    const [a, b] = now.starts;
+    expect(Math.hypot(a!.x - b!.x, a!.y - b!.y)).toBeGreaterThan(90);
+  });
+
   it('różne ziarna dają różne mapy', () => {
     expect(generateMap(1).tiles).not.toEqual(generateMap(2).tiles);
   });

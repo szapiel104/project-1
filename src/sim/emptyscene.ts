@@ -24,7 +24,7 @@ export function emptyScene(g: GameState): void {
     if (rim) elevation[i] = g.map.elevation[i]!;
   }
   // nowy obiekt mapy: podręczne tablice przechodniości (trzymane per mapa) liczą się od nowa
-  g.map = { ...g.map, tiles, elevation };
+  g.map = { ...g.map, tiles, elevation, trails: new Uint8Array(tiles.length) };
   const keeps = g.buildings.filter((b) => BUILDINGS[b.type]!.id === 'keep');
   g.buildings = []; g.units = []; g.soldiers = []; g.corpses = []; g.travelers = []; g.wolves = []; g.cut = []; g.rubble = []; g.marches = [];
   for (const a of [g.occupancy, g.gates, g.walls, g.reserved, g.wear, g.roads, g.roadPlan]) a.fill(0);

@@ -526,7 +526,7 @@ export function workerSystem(g: GameState): void {
     }
     const here = tileOf(g, u);
     if (goal(here)) { arrive(g, u, prod); continue; }
-    const path = findPath(g, here, goal, 900, u.owner);
+    const path = findPath(g, here, goal, 900, u.owner, -1, 0, true);
     if (path && path.length) u.path = path;
     else if (!path && (u.phase === Phase.ToSleep || u.phase === Phase.ToEvening)) {
       // nie da się dojść (np. zamknięty w murach): śpi albo siedzi tam, gdzie stoi

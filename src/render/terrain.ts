@@ -547,6 +547,16 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
   const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), bladeTexture(map.seed));
   if (grass) group.add(cat(grass.mesh, 'trawa (dywan)'));
+  // leśne ścieżki z generatora mapy: wydeptana ziemia, najmocniej tam, gdzie spotykają się dwa pola ścieżki (środek dróżki),
+  // słabiej na brzegach, z lekką nierównością — wygląda jak dróżka chodzona od lat, a nie jak wyrysowana droga
+  if (map.trails) {
+    for (let cy = 1; cy < h; cy++) for (let cx = 1; cx < w; cx++) {
+      const n = map.trails[(cy - 1) * w + cx - 1]! + map.trails[(cy - 1) * w + cx]! + map.trails[cy * w + cx - 1]! + map.trails[cy * w + cx]!;
+      if (!n) continue;
+      const j = (hash2(cx, cy, map.seed ^ 0x7e11) & 15) / 100;
+      wear(cx, cy, n >= 2 ? 0.5 + j : 0.22 + j, 0.62);
+    }
+  }
   const yAxis = new THREE.Vector3(0, 1, 0);
   const heightAt = (fx: number, fy: number): number => {
     const x = Math.max(0, Math.min(w - 1.001, fx)), y = Math.max(0, Math.min(h - 1.001, fy));

@@ -3,7 +3,7 @@ import { UNITS } from '../src/data/units';
 import { FP, createGame } from '../src/sim/state';
 import { step } from '../src/sim/step';
 it('łucznicy z wież w osadzie w murach: każdy rozkaz do przodu przesuwa oddział (nie stoją, nie czekają w kółko)', () => {
-  const g = createGame(5, '1v1', 1, true);
+  const g = createGame(6, '1v1', 1, true) // ziarno 5 na nowej mapie stawia jezioro w murach osady;
   const mine = g.soldiers.filter((s) => s.owner === 0 && !UNITS[s.kind]!.guard && UNITS[s.kind]!.range);
     const sel = mine.slice(0, 8);
   const cx = Math.round(sel.reduce((a, s) => a + (s.px >> 8), 0) / sel.length), cy = Math.round(sel.reduce((a, s) => a + (s.py >> 8), 0) / sel.length);

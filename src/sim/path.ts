@@ -24,6 +24,7 @@ export function walkable(g: GameState, tile: number, player = -1): boolean {
 const STEP_MIN = Math.min(...RULES.roadPathCost.map((c) => Math.round((10 * c) / 100)));
 const DIAG_MIN = Math.min(...RULES.roadPathCost.map((c) => Math.round((14 * c) / 100)));
 /** Liczniki do okna wydajności: ile razy szukano drogi, ile pól przejrzano, ile razy bez skutku */
+const NONE = new Uint8Array(1 << 20);
 export const pathStats = { calls: 0, expanded: 0, failed: 0, wasted: 0 };
 const BIT_X = (dx: number): number => (dx > 0 ? 2 : 8), BIT_Y = (dy: number): number => (dy > 0 ? 4 : 1);
 /** Czy krok z pola o (dx, dy) przechodzi przez ścianę (w zamku). Po skosie: żadna z czterech krawędzi przy narożniku nie może być ścianą. */
@@ -41,7 +42,8 @@ export function wallBetween(g: GameState, tile: number, dx: number, dy: number):
  * do najbliższego pola spełniającego `isGoal`. Zwraca listę pól bez startu albo null.
  * Remisy rozstrzyga numer pola, więc wynik jest identyczny u każdego gracza.
  */
-export function findPath(g: GameState, from: number, isGoal: (tile: number) => boolean, maxCost = 900, player = -1, target = -1, reach = 0): number[] | null {
+/** `afoot` = chłop albo wędrowiec: woli leśne ścieżki i omija gęsty las (wojsko na rozkaz idzie prosto) */
+export function findPath(g: GameState, from: number, isGoal: (tile: number) => boolean, maxCost = 900, player = -1, target = -1, reach = 0, afoot = false): number[] | null {
   pathStats.calls++;
   const e0 = pathStats.expanded;
   const { width: w, height: h } = g.map;
@@ -87,6 +89,7 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
   };
 
   // walkable() wpisane na miejscu (to najczęściej wołana funkcja w całej symulacji)
+  const trails = afoot ? g.map.trails : NONE, RP = RULES.roadPathCost, TRAIL = RULES.trailPathCost, FOREST = RULES.forestPathCost;
   const occ = g.occupancy, tiles = g.map.tiles, gates = g.gates, gate = player + 1, wolf = player === WOLF;
   const ok = (t: number): boolean => {
     const tt = tiles[t]!;
@@ -119,7 +122,9 @@ export function findPath(g: GameState, from: number, isGoal: (tile: number) => b
         if (dx && dy && (!ok(y * w + nx) || !ok(ny * w + x))) continue;
         if ((g.walls[tile] || g.walls[nt] || g.walls[y * w + nx] || g.walls[ny * w + x]) && wallBetween(g, tile, dx, dy)) continue;
         // po drodze idzie się taniej, więc ścieżka chętnie nią prowadzi
-        const nc = cost + Math.round(((dx && dy ? 14 : 10) * RULES.roadPathCost[g.roads[nt]!]!) / 100);
+        // bez drogi: leśna ścieżka tańsza, gęsty las droższy (wilk w lesie jak u siebie)
+        const rd = g.roads[nt]!, pc = rd ? RP[rd]! : trails[nt] ? TRAIL : afoot && tiles[nt] === Terrain.Forest ? FOREST : 100;
+        const nc = cost + Math.round(((dx && dy ? 14 : 10) * pc) / 100);
         if (mark[nt] === generation && dist[nt]! <= nc) continue;
         mark[nt] = generation; dist[nt] = nc; prev[nt] = tile;
         push((nc + est(nt)) * K + nt);
