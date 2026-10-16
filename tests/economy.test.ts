@@ -574,7 +574,7 @@ describe('rytm dnia', () => {
     at(21, 21.5);
     const mine = (): typeof g.units => g.units.filter((u) => u.owner === 0);
     expect(mine().filter((u) => u.phase === Phase.Evening || u.phase === Phase.ToEvening || u.phase === Phase.ToLight).length).toBeGreaterThan(mine().length / 2);
-    at(4, 5); // do koszar w zamku idzie się przez bramę i dziedziniec: ostatni kładą się koło czwartej
+    at(5.2, 5.5); // nocne marki siedzą przy ogniu do pierwszej i trzeciej, a do koszar w zamku idzie się długo
     expect(mine().every((u) => u.phase === Phase.Sleeping)).toBe(true);
     expect(mine().every((u) => u.home > 0)).toBe(true); // twierdza ma miejsce dla wszystkich
     at(8, 9);
@@ -591,7 +591,7 @@ describe('rytm dnia', () => {
     const saved = BUILDINGS[keep.type]!.housing;
     (BUILDINGS[keep.type] as { housing?: number }).housing = 0;
     try {
-      at(2.5, 3); // ostatni idą z dziedzińca zamku przez bramę na posłania przy obozowisku
+      at(5.2, 5.5); // ostatni (nocne marki) kładą się na posłaniach przy obozowisku przed świtem
       const mine = g.units.filter((u) => u.owner === 0);
       expect(mine.every((u) => u.phase === Phase.Sleeping && u.home === 0 && u.target > 0)).toBe(true);
       expect(new Set(mine.map((u) => u.target)).size).toBe(mine.length); // każdy na swoim posłaniu
@@ -608,7 +608,8 @@ describe('rytm dnia: poprawki', () => {
     const site = g.buildings[g.buildings.length - 1]!;
     const work = site.build;
     at(g, 4, 4.6);
-    expect(g.units.filter((u) => u.owner === 0).every((u) => u.phase === Phase.Sleeping)).toBe(true);
+    // śpią albo (nocne marki) wracają spać — nikt nie pracuje
+    expect(g.units.filter((u) => u.owner === 0).every((u) => u.phase === Phase.Sleeping || u.phase === Phase.ToSleep || u.phase === Phase.Evening)).toBe(true);
     at(g, 5, 5.4);
     expect(site.build).toBe(work);
     at(g, 10, 11);

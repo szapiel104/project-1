@@ -4358,6 +4358,13 @@ export class GameRenderer {
     const jobs = new Map<number, GameState['buildings'][number]>();
     this.camps.clear();
     for (const b of g.buildings) { jobs.set(b.id, b); if (BUILDINGS[b.type]!.idleSlots && b.door >= 0) this.camps.set(b.door, b); }
+    // przy każdym ognisku wieczorem gra jeden: ten z najmniejszym numerem spośród siedzących (zawsze ktoś, kto tam jest)
+    const bards = new Map<number, number>();
+    for (const u of g.units) {
+      if (u.phase !== Phase.Evening || u.path.length) continue;
+      const c = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8));
+      if (c && BUILDINGS[c.type]!.id === 'camp' && (bards.get(c.id) ?? Infinity) > u.id) bards.set(c.id, u.id);
+    }
     // kto śpi w której chacie: miejsce na podłodze według kolejności (stałej, po numerze chłopa)
     const sleepers = new Map<number, number[]>();
     for (const u of g.units) if (u.phase === Phase.Sleeping && u.home) { const l = sleepers.get(u.home); if (l) l.push(u.id); else sleepers.set(u.home, [u.id]); }
@@ -4496,7 +4503,7 @@ export class GameRenderer {
         swing = 0;
         // wieczorem przy ogniu: pierwszy gra na lutni, inni kiwają się w takt i co chwilę ktoś śpiewa albo zagaduje
         if (evening && !this.calm) {
-          if (n === 0) { swing = Math.sin(this.time * 9) * 0.35; this.lutePlay(t.position.x, t.position.z); }
+          if (bards.get(camp.id) === u.id) { swing = Math.sin(this.time * 9) * 0.35; t.rotation.x = 0.12; this.lutePlay(t.position.x, t.position.z); }
           else { t.rotation.z = Math.sin(this.time * 2.2 + u.id) * 0.06; if ((u.id + Math.floor(this.time * 0.5)) % 3 === 0) swing = Math.max(0, Math.sin(this.time * 2.2 + u.id)) * -0.9; }
           if (this.time > this.murmurAt && (u.id + Math.floor(this.time * 3)) % 4 === 0) {
             const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);

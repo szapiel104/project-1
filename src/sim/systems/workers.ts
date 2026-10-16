@@ -17,6 +17,11 @@ const OFF_DUTY = new Set<Phase>([Phase.ToEvening, Phase.Evening, Phase.ToSleep, 
 /** Zajęcia, które chłop z pustymi rękami rzuca wieczorem (resztę kończy: niesie ładunek do składu, dokańcza wyrób) */
 const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest]);
 
+/** Do której godziny (po północy) chłop siedzi wieczorem przy ogniu albo w karczmie; 0 = idzie spać o zwykłej porze */
+export function nightOwl(u: { id: number }): number {
+  return u.id % 7 === 3 ? 3 : u.id % 4 === 1 ? 1 : 0;
+}
+
 /** Pora dnia dla rytmu ludzi: praca, wieczór przy ogniu, sen */
 export function dayPart(tick: number): 'work' | 'evening' | 'sleep' {
   const { hour } = clockAt(tick);
@@ -106,6 +111,8 @@ function routine(g: GameState, u: Unit, part: 'work' | 'evening' | 'sleep'): boo
   if (u.phase === Phase.ToSleep) return false;
   if (u.phase === Phase.Evening || u.phase === Phase.ToEvening) {
     if (part === 'evening') return false;
+    // nocne marki: co czwarty siedzi przy ogniu do pierwszej, co siódmy do trzeciej (reszta idzie spać o 22)
+    if (part === 'sleep') { const owl = nightOwl(u), { hour } = clockAt(g.tick); if (owl && (hour >= RULES.sleepHour || hour < owl)) return false; }
     if (part === 'sleep') { u.phase = Phase.ToSleep; u.path = []; findBed(g, u); return true; }
     u.target = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; u.path = [];
     return true;
