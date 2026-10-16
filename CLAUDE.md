@@ -17,6 +17,7 @@
 - Budynki dodatkowo przechodzą arkusz `inspect.sh` (punkt 3 niżej).
 
 ## Testy — zawsze w tej kolejności, możliwie tanio
+- **Zasada Michała (16.10.2026, dla wszystkich czatów tej gry): przeglądarkę (Chrome, Playwright, zrzuty) odpalamy tylko przy GRUBYCH zmianach.** Mniejszych zmian nie sprawdzamy w oknie — to zjada czas; Michał testuje sam. Nowe albo zmienione obiekty sprawdzamy w Blenderze (arkusz `inspect.sh`, podgląd modeli), a wszystko inne tylko `tsc` + `vitest` + `build`. W razie wątpliwości: nie odpalać przeglądarki, napisać Michałowi, co sprawdzić.
 1. `npx tsc --noEmit`, `npx vitest run`, `npm run build` — logikę gry sprawdzamy testami bez przeglądarki (tests/*.test.ts).
 2. Przeglądarka tylko gdy trzeba zobaczyć wygląd albo klikanie:
    - Chrome Michała przez rozszerzenie Claude in Chrome (prawdziwa karta graficzna, zrzuty w sekundy): otwórz `https://szapiel104.github.io/project-1/?test=1` w nowej karcie (`&hd=1` = pełna grafika, nadal bez ruszania zapisu), steruj przez `window.__test` (`give`, `build`, `train`, `run`, `look`, `at`, `state`). Zrzuty w skali 0.5–0.6. Tryb testowy nie rusza zapisu gracza.
