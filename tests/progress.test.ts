@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { readFileSync } from 'fs';
+import sql from '../supabase/migrations/20261016_progress.sql?raw';
 import { levelOf, matchXp, MAX_MATCH_XP, MODE_MULT, titleOf, xpToNext } from '../src/data/progress';
 
 describe('poziomy i doświadczenie za mecz', () => {
@@ -23,7 +23,6 @@ describe('poziomy i doświadczenie za mecz', () => {
     expect(titleOf(40)).toBe('Król');
   });
   it('wzór w bazie (award_match) zgadza się z grą', () => {
-    const sql = readFileSync('supabase/migrations/20261016_progress.sql', 'utf8');
     for (const [mode, mult] of Object.entries(MODE_MULT)) expect(sql).toContain(`when '${mode}' then ${mult}`);
     expect(sql).toContain(`least(${MAX_MATCH_XP},`);
     expect(sql).toContain('round(100 * power(l, 1.5))');
