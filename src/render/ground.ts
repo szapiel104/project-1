@@ -250,9 +250,11 @@ export function cloudShade(mat: THREE.Material): void {
         vec3 cw = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).xyz;
         vec2 cuv = cw.xz / 70.0 + uCloudT * vec2(0.006, 0.0035);
         float cn = texture2D(tCloudN, cuv).r * 0.65 + texture2D(tCloudN, cuv * 2.3 + 0.37).g * 0.35;
-        float csh = 1.0 - uCloud * 0.6 * smoothstep(0.42, 0.62, cn);
+        float ccm = uCloud * smoothstep(0.38, 0.62, cn);
+        float csh = 1.0 - ccm * 0.75;
         reflectedLight.directDiffuse *= csh;
         reflectedLight.directSpecular *= csh;
+        reflectedLight.indirectDiffuse *= 1.0 - ccm * 0.32;
       }`);
   };
   mat.customProgramCacheKey = function (this: THREE.Material) { return (isDefault ? prevSrc : pk.call(this)) + '|cloud'; };
@@ -282,9 +284,13 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
         {
           vec2 cuv = vWP.xz / 70.0 + uCloudT * vec2(0.006, 0.0035);
           float cn = texture2D(tNoise, cuv).r * 0.65 + texture2D(tNoise, cuv * 2.3 + 0.37).g * 0.35;
-          float sh = 1.0 - uCloud * 0.6 * smoothstep(0.42, 0.62, cn);
+          // w scenie dużo światła rozproszonego (niebo), więc sam brak słońca prawie nie widać — cień chmury
+          // przygasza też trochę światło nieba (pod chmurą jest naprawdę ciemniej)
+          float cm = uCloud * smoothstep(0.38, 0.62, cn);
+          float sh = 1.0 - cm * 0.75;
           reflectedLight.directDiffuse *= sh;
           reflectedLight.directSpecular *= sh;
+          reflectedLight.indirectDiffuse *= 1.0 - cm * 0.32;
         }`);
     sh.fragmentShader = 'uniform float uCloudT; uniform float uCloud;\n' + sh.fragmentShader;
   };
