@@ -10,6 +10,7 @@ import HOUSE_MODEL from './models/house.json';
 import BARN_MODEL from './models/barn.json';
 import GRANARY_MODEL from './models/granary.json';
 import ARMORY_MODEL from './models/armory.json';
+import BAKERY_MODEL from './models/bakery.json';
 import BREWERY_MODEL from './models/brewery.json';
 import GATE_MODEL from './models/gate.json';
 import STONE_TOWER_MODEL from './models/stonetower.json';
@@ -1818,57 +1819,11 @@ const BUILDERS: Record<string, Builder> = {
     g.add(eye);
   },
   bakery(g, _team, flag) {
-    const inside = cottageAt(g, 23, 1.4, 1.2, 0.85, 0, 0);
-    // podłoga z desek, kopulasty piec chlebowy z żarem w łukowym otworze, stół z bochenkami, dzieża i worek mąki
-    box(inside, M.wood, 1.3, 0.03, 1.1, 0, 0.02, 0);
-    box(inside, M.stoneDark, 0.56, 0.22, 0.5, -0.38, 0.05, -0.3);
-    const dome = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 7, 0, Math.PI * 2, 0, Math.PI / 2), M.stone);
-    dome.scale.set(1, 0.85, 0.95);
-    dome.position.set(-0.38, 0.27, -0.3);
-    inside.add(dome);
-    const mouth = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.05, 10, 1, false, 0, Math.PI), M.dark);
-    mouth.rotation.set(Math.PI / 2, 0, Math.PI / 2);
-    mouth.position.set(-0.38, 0.28, -0.04);
-    inside.add(mouth);
-    box(inside, M.ember, 0.14, 0.04, 0.03, -0.38, 0.28, -0.02);
-    // łopata piekarska oparta o piec
-    const peel = new THREE.Group();
-    peel.position.set(-0.1, 0.05, -0.12);
-    peel.rotation.z = 0.35;
-    box(peel, M.wood, 0.025, 0.5, 0.025);
-    box(peel, M.wood, 0.14, 0.14, 0.012, 0, -0.02, 0);
-    inside.add(peel);
-    // stół z bochenkami: owalne, wypieczone, z jaśniejszym nacięciem na grzbiecie
-    box(inside, M.wood, 0.5, 0.04, 0.3, 0.32, 0.26, -0.3);
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) box(inside, M.woodDark, 0.04, 0.26, 0.04, 0.32 + sx * 0.21, 0, -0.3 + sz * 0.11);
-    for (const [x, z, r] of [[0.17, -0.36, 0.3], [0.32, -0.24, -0.2], [0.47, -0.35, 0.1], [0.3, -0.38, 0.6]] as const) {
-      const loaf = new THREE.Mesh(new THREE.SphereGeometry(0.07, 10, 6), M.bread);
-      loaf.scale.set(1.35, 0.62, 0.9);
-      loaf.rotation.y = r;
-      loaf.position.set(x, 0.33, z);
-      inside.add(loaf);
-      const cut = box(inside, M.crust, 0.12, 0.012, 0.016, x, 0.365, z);
-      cut.rotation.y = r;
-    }
-    // dzieża z ciastem i worek mąki
-    const trough = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.11, 0.14, 10), M.woodDark);
-    trough.position.set(0.38, 0.1, 0.18);
-    inside.add(trough);
-    const dough = new THREE.Mesh(new THREE.SphereGeometry(0.13, 10, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.white);
-    dough.scale.y = 0.4;
-    dough.position.set(0.38, 0.16, 0.18);
-    inside.add(dough);
-    sack(inside, -0.45, 0.04, 0.25, 0.9, 0.4);
-    box(g, M.stoneDark, 0.3, 1.0, 0.3, -0.45, 0.8, -0.3).name = 'chimney';
-    box(g, M.window, 0.3, 0.3, 0.04, 0.45, 0.32, 0.61);
-    pennant(g, flag, 0.6, 1.2, 0);
-    // dym z komina, widoczny tylko gdy piekarz piecze
-    const smoke = new THREE.Group();
-    smoke.name = 'smoke';
-    smoke.position.set(-0.45, 1.85, -0.3);
-    for (let i = 0; i < 4; i++) smoke.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.16, 0), M.smoke));
-    smoke.visible = false;
-    g.add(smoke);
+    // piekarnia z Blendera (tools/models/bakery.py): szachulec, strzecha, z tyłu kopulasty piec pod daszkiem i komin;
+    // od frontu okno-lada z bochenkami i szyld z obwarzankiem; w środku czeluść z żarem, stół z chlebem, dzieża, worki mąki
+    blenderModel(g, BAKERY_MODEL as unknown as BlenderBuilding, flag);
+    const p = (BAKERY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
 };
 
