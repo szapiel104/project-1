@@ -203,21 +203,50 @@ if (!TEST && !savedThumbs) void texturesReady().then(() => {
 mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
 /** Mapa generowana w podglądzie nowej gry (null = brak podglądu) */
 let preview: GameState | null = null;
+/** Zasłona na czas generowania mapy w podglądzie nowej gry (za panelem menu) */
+let previewJob = 0;
+const previewCover = document.createElement('div');
+previewCover.className = 'preview-cover';
+previewCover.hidden = true;
+previewCover.setAttribute('role', 'status');
+previewCover.innerHTML = '<div class="preview-cover-box"><span class="preview-spin" aria-hidden="true"></span><p>Generuję mapę…</p></div>';
+document.body.append(previewCover);
 const menu = createMenu(document.body, {
   onContinue: () => { menu.close(); if (!net) setStatus({ where: 'solo' }); },
   // podgląd nowej mapy: generujemy ją obok bieżącej gry i pokazujemy z lotu ptaka; bieżąca gra czeka nietknięta
   onPreviewMap: (seedText, preset, level, dev) => {
-    preview = createGame(seedFromText(seedText), preset, level, dev);
-    renderer.setState(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0);
-    renderer.startPreview();
+    // generowanie mapy zatrzymuje stronę na chwilę: najpierw ciemna zasłona z kręciołkiem za menu (lewy panel zostaje),
+    // potem mapa, a zasłona schodzi dopiero, gdy pierwsze klatki nowej mapy są narysowane i kamera rusza
+    const job = ++previewJob;
+    previewCover.hidden = false;
+    previewCover.classList.remove('gone');
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      if (job !== previewJob) return; // w międzyczasie wylosowano kolejną mapę
+      preview = createGame(seedFromText(seedText), preset, level, dev);
+      renderer.setState(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0);
+      renderer.startPreview();
+      renderer.warmup();
+      let frames = 0, done = false;
+      const reveal = (): void => {
+        if (done || job !== previewJob) return;
+        done = true;
+        previewCover.classList.add('gone');
+        setTimeout(() => { if (job === previewJob) previewCover.hidden = true; }, 450);
+      };
+      const wait = (): void => { if (++frames < 4) requestAnimationFrame(wait); else reveal(); };
+      requestAnimationFrame(wait);
+      setTimeout(reveal, 2500); // bardzo wolna karta: zasłona i tak schodzi po chwili
+    }));
   },
   onPreviewEnd: () => {
+    previewJob++; previewCover.hidden = true;
     if (!preview) return;
     preview = null;
     renderer.endPreview();
     renderer.setState(game, MAP_PRESETS[currentPreset].waterLevel, MAP_PRESETS[currentPreset].rim, ME);
   },
   onNewGame: (seedText, preset, level, dev, instant) => {
+    previewJob++; previewCover.hidden = true;
     preview = null;
     renderer.endPreview();
     // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
