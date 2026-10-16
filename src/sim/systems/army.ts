@@ -4,7 +4,7 @@ import { buildingIndex } from '../../data/buildings';
 import { type ResourceId, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { UNITS, unitIndex } from '../../data/units';
-import { findPath, walkable } from '../path';
+import { findPath, walkable, wallBetween } from '../path';
 import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type March, type Soldier, type Unit, keepCenter } from '../state';
 import { BUILDINGS, footprint, towerBonus, workArea } from '../../data/buildings';
@@ -262,6 +262,10 @@ function planMarch(g: GameState, player: number, members: Soldier[], target: num
   for (const s of members) { if (s.up) continue; mx += s.px; my += s.py; n++; }
   if (!n) return undefined;
   mx = Math.floor(mx / n); my = Math.floor(my / n);
+  // oddział rozsiany (np. wokół twierdzy, na murach i przy bramach): środek wypada w zamku albo za murem,
+  // więc zwarty szyk szedłby przez mury — wtedy każdy idzie sam swoją drogą (przez bramę)
+  const spread = Math.max(6, Math.sqrt(n) * 1.6) * FP;
+  for (const s of members) if (!s.up && Math.max(Math.abs(s.px - mx), Math.abs(s.py - my)) > spread) return undefined;
   const tx = target % W, ty = (target - tx) / W;
   const dir0 = octant(tx - (mx >> 8), ty - (my >> 8));
   const dir = dir0 < 0 ? 0 : dir0;
@@ -280,6 +284,8 @@ function planMarch(g: GameState, player: number, members: Soldier[], target: num
     if (walkable(g, ay * W + ax, player)) { start = ay * W + ax; break; }
   }
   if (start < 0) return undefined;
+  // punkt prowadzący nie rusza z wnętrza budynku (dziedziniec i sale zamku są przechodnie dla właściciela)
+  if (g.occupancy[start] !== 0 || g.walls[start]) return undefined;
   const path = findPath(g, start, (t) => t === target, 4000, player, target);
   if (!path || !path.length) return undefined;
   const sx = start % W, sy = (start - sx) / W;
@@ -373,7 +379,17 @@ function marchStep(g: GameState, s: Soldier, m: March): void {
   const catchUp = Math.max(Math.abs(dx), Math.abs(dy)) > FP / 2 ? 1.35 : 1;
   const speed = Math.round((base * UNITS[s.kind]!.speed * catchUp * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, s)]!]!)) / 10000);
   const sx = Math.max(-speed, Math.min(speed, dx)), sy = Math.max(-speed, Math.min(speed, dy));
-  const free = (px: number, py: number): boolean => walkable(g, (py >> 8) * W + (px >> 8), s.owner);
+  // krok wolny: pole przechodnie i bez ściany między polami (sale zamku, mury) — inaczej szyk przechodził przez ściany
+  const here = (s.py >> 8) * W + (s.px >> 8);
+  const free = (px: number, py: number): boolean => {
+    const t = (py >> 8) * W + (px >> 8);
+    if (t === here) return true;
+    if (!walkable(g, t, s.owner)) return false;
+    const ddx = (px >> 8) - (s.px >> 8), ddy = (py >> 8) - (s.py >> 8);
+    if (Math.abs(ddx) > 1 || Math.abs(ddy) > 1) return false;
+    if (ddx && ddy && (!walkable(g, here + ddx, s.owner) || !walkable(g, here + ddy * W, s.owner))) return false;
+    return !((g.walls[here] || g.walls[t] || g.walls[here + ddx] || g.walls[here + ddy * W]) && wallBetween(g, here, ddx, ddy));
+  };
   let moved = true;
   if (free(s.px + sx, s.py + sy)) { s.px += sx; s.py += sy; }
   else if (sx && free(s.px + sx, s.py)) s.px += sx;
