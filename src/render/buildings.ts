@@ -25,6 +25,10 @@ import STONE_TOWER_MODEL from './models/stonetower.json';
 import STONE_GATE_MODEL from './models/stonegate.json';
 import STOCKPILE_MODEL from './models/stockpile.json';
 import WOODCUTTER_MODEL from './models/woodcutter.json';
+import FISHER_MODEL from './models/fisher.json';
+import FLETCHER_MODEL from './models/fletcher.json';
+import POLETURNER_MODEL from './models/poleturner.json';
+import CEMETERY_MODEL from './models/cemetery.json';
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -124,57 +128,6 @@ function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number,
   mesh.position.set(x, y + h / 2, z);
   g.add(mesh);
   return mesh;
-}
-
-/** Dach dwuspadowy: graniastosłup o podstawie trójkąta */
-function gable(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, y: number, x = 0, z = 0): void {
-  const geo = new THREE.CylinderGeometry(1, 1, 1, 3, 1);
-  geo.rotateX(-Math.PI / 2); // trójkąt pionowo, wierzchołkiem do góry
-  geo.rotateY(Math.PI / 2); // kalenica wzdłuż osi X
-  // wzór w prawdziwej skali: w poprzek obwód dachu, wzdłuż jego długość
-  const k = (m.userData.tile as number) || 0;
-  if (k) {
-    const uv = geo.getAttribute('uv');
-    const around = d + 2 * Math.hypot(d / 2, h);
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * around * k, uv.getY(i) * w * k);
-  }
-  const mesh = new THREE.Mesh(geo, m);
-  mesh.scale.set(w, h / 1.5, d / 1.732);
-  mesh.position.set(x, y + h / 3, z);
-  g.add(mesh);
-}
-
-/** Dach jak na stodole: ciemniejszy okap pod spodem, gruba warstwa na wierzchu i kalenica z żerdzi. */
-function layeredRoof(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, y: number, x = 0, z = 0): void {
-  const eave = m === M.thatch ? M.thatchDark : M.woodDark;
-  gable(g, eave, w * 1.06, h * 0.9, d * 1.1, y - 0.035, x, z);
-  gable(g, m, w, h, d, y + 0.02, x, z);
-  box(g, M.woodDark, w * 1.03, 0.05, 0.07, x, y + h - 0.01, z);
-}
-
-/** Chata. Z `open` dach i ściany dają się zdjąć, żeby pokazać wnętrze, gdy ktoś w środku pracuje. */
-function hut(g: THREE.Group, wall: THREE.Material, roof: THREE.Material, w: number, d: number, h: number, x = 0, z = 0, open = false): THREE.Group {
-  const shell = box(g, wall, w, h, d, x, 0, z);
-  const top = new THREE.Group();
-  layeredRoof(top, roof, w * 1.14, h * 0.8, d * 1.18, h, x, z);
-  g.add(top);
-  box(g, M.woodDark, w * 0.22, h * 0.6, 0.05, x, 0, z + d / 2 + 0.01);
-  const interior = new THREE.Group();
-  if (open) {
-    shell.name = 'shell';
-    top.name = 'roof';
-    interior.name = 'interior';
-    interior.visible = false;
-    box(interior, M.wood, w, 0.05, d, x, 0, z);
-    const t = 0.07, low = h * 0.45;
-    box(interior, wall, w, low, t, x, 0, z - d / 2 + t / 2);
-    box(interior, wall, t, low, d, x - w / 2 + t / 2, 0, z);
-    box(interior, wall, t, low, d, x + w / 2 - t / 2, 0, z);
-    box(interior, wall, w * 0.3, low, t, x - w * 0.35, 0, z + d / 2 - t / 2);
-    box(interior, wall, w * 0.3, low, t, x + w * 0.35, 0, z + d / 2 - t / 2);
-    g.add(interior);
-  }
-  return interior;
 }
 
 export const STOCK_LAYERS = 3;
@@ -1173,71 +1126,11 @@ const BUILDERS: Record<string, Builder> = {
   },
 
   fisher(g, _team, flag) {
-    // chata rybaka na palach, z suszarnią ryb, beczką i łódką wyciągniętą na brzeg
-    for (const [x, z] of [[-0.75, -0.6], [0.15, -0.6], [-0.75, 0.1], [0.15, 0.1]] as const) box(g, M.woodDark, 0.09, 0.3, 0.09, x, 0, z);
-    box(g, M.plank, 1.15, 0.06, 0.95, -0.3, 0.3, -0.25);
-    box(g, M.wood, 0.95, 0.6, 0.75, -0.3, 0.36, -0.25);
-    layeredRoof(g, M.thatch, 1.12, 0.52, 0.98, 0.96, -0.3, -0.25);
-    box(g, M.woodDark, 0.22, 0.42, 0.04, -0.3, 0.36, 0.13);
-    box(g, M.window, 0.2, 0.2, 0.03, 0.18, 0.55, -0.25).rotation.y = Math.PI / 2;
-    // suszarnia: dwa słupki, żerdź i wiszące ryby
-    box(g, M.woodDark, 0.05, 0.6, 0.05, 0.45, 0, 0.75);
-    box(g, M.woodDark, 0.05, 0.6, 0.05, 0.9, 0, 0.75);
-    box(g, M.woodDark, 0.55, 0.04, 0.04, 0.675, 0.58, 0.75);
-    // ryby suszone na żerdzi: srebrzyste tułowie, ogon i sznurek, każda trochę inna
-    for (let k = 0; k < 4; k++) {
-      const fish = new THREE.Group();
-      fish.position.set(0.5 + k * 0.12, 0.5, 0.75);
-      fish.rotation.z = (k % 2 ? 1 : -1) * 0.08;
-      box(fish, M.woodDark, 0.008, 0.06, 0.008, 0, -0.06, 0);
-      const body = new THREE.Mesh(new THREE.IcosahedronGeometry(0.045, 1), M.fish);
-      body.scale.set(0.55, 1.9, 0.8);
-      body.position.y = -0.13;
-      fish.add(body);
-      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.04, 0.06, 4), M.fish);
-      tail.scale.set(1, 1, 0.35);
-      tail.position.y = -0.24;
-      fish.add(tail);
-      const eye = new THREE.Mesh(new THREE.IcosahedronGeometry(0.008, 0), M.dark);
-      eye.position.set(0, -0.075, 0.03);
-      fish.add(eye);
-      g.add(fish);
-    }
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.14, 0.12, 0.3, 8), M.wood);
-    barrel.position.set(-0.75, 0.15, 0.7);
-    g.add(barrel);
-    // łódka wyciągnięta na brzeg: kadłub ze spiczastym dziobem i rufą, ciemne wnętrze, ławka i wiosło
-    const boat = new THREE.Group();
-    boat.position.set(0.55, 0, -0.55);
-    boat.rotation.y = 0.5;
-    const outline = (k: number): THREE.Shape => {
-      const sh = new THREE.Shape();
-      sh.moveTo(-0.46 * k, 0);
-      sh.quadraticCurveTo(-0.25 * k, 0.19 * k, 0.15 * k, 0.18 * k);
-      sh.quadraticCurveTo(0.42 * k, 0.15 * k, 0.46 * k, 0);
-      sh.quadraticCurveTo(0.42 * k, -0.15 * k, 0.15 * k, -0.18 * k);
-      sh.quadraticCurveTo(-0.25 * k, -0.19 * k, -0.46 * k, 0);
-      return sh;
-    };
-    const hull = new THREE.Mesh(
-      new THREE.ExtrudeGeometry(outline(1), { depth: 0.12, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.025, bevelSegments: 2 }).rotateX(-Math.PI / 2).translate(0, 0.03, 0),
-      M.woodDark);
-    boat.add(hull);
-    const inside = new THREE.Mesh(new THREE.ShapeGeometry(outline(0.84)).rotateX(-Math.PI / 2), M.dark);
-    inside.position.y = 0.181;
-    boat.add(inside);
-    box(boat, M.wood, 0.5, 0.02, 0.035, 0, 0.17, 0.155); // listwy burt
-    box(boat, M.wood, 0.5, 0.02, 0.035, 0, 0.17, -0.155);
-    box(boat, M.plank, 0.07, 0.025, 0.3, 0.05, 0.16, 0); // ławka
-    // wiosło oparte o burtę: drzewce i płaskie pióro
-    const oar = new THREE.Group();
-    oar.position.set(-0.05, 0.02, 0.3);
-    oar.rotation.set(0, 0.15, 0.12);
-    box(oar, M.wood, 0.7, 0.025, 0.025, 0, 0, 0);
-    box(oar, M.wood, 0.18, 0.012, 0.08, 0.38, 0, 0);
-    boat.add(oar);
-    g.add(boat);
-    pennant(g, flag, -0.8, 0.9, -0.6);
+    // chata rybaka z Blendera (tools/models/fisher.py): chata z desek na palach z gankiem i strzechą, suszarnia ryb,
+    // sieci na tyczkach, łódka z wiosłami wyciągnięta na brzeg, beczka do solenia, kosz z rybami
+    blenderModel(g, FISHER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (FISHER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   torch(g) {
     g.add(torchModel());
@@ -1297,45 +1190,18 @@ const BUILDERS: Record<string, Builder> = {
     pennant(g, flag, 0.8, 1.25, -0.7);
   },
   fletcher(g, _team, flag) {
-    // Warsztat łuczarza: otwarta chata, na ścianie wiszą łuki, na stole drewno na łęczyska, kosz strzał
-    const inside = cottageAt(g, 22, 1.4, 1.1, 0.8, 0, -0.15);
-    box(inside, M.wood, 0.7, 0.05, 0.22, -0.1, 0.32, -0.25);
-    for (const sx of [-1, 1]) box(inside, M.woodDark, 0.05, 0.32, 0.18, -0.1 + sx * 0.3, 0.0, -0.25);
-    for (let k = 0; k < 3; k++) {
-      const bow = new THREE.Mesh(new THREE.TorusGeometry(0.22, 0.014, 5, 14, Math.PI * 0.85), M.woodDark);
-      bow.rotation.z = Math.PI * 0.07; bow.position.set(-0.45 + k * 0.32, 0.55, -0.62); inside.add(bow);
-    }
-    const quiver = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.06, 0.3, 8), M.wood);
-    quiver.position.set(0.55, 0.15, 0.25); g.add(quiver);
-    for (let k = 0; k < 5; k++) box(g, M.plank, 0.012, 0.22, 0.012, 0.52 + (k % 3) * 0.03, 0.28, 0.22 + (k >> 1) * 0.03);
-    box(g, M.woodDark, 0.06, 1.3, 0.06, 0.75, 0, 0.55);
-    box(g, flag, 0.04, 0.4, 0.3, 0.75, 0.85, 0.72);
+    // łuczarz z Blendera (tools/models/fletcher.py): warsztat z szachulca; w izbie stół z łęczyskiem, łuki na ścianie,
+    // beczka strzał, lotki; przed nim tarcza ze słomy, stojak z łukami do sezonowania
+    blenderModel(g, FLETCHER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (FLETCHER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   poleturner(g, _team, flag) {
-    // Warsztat włóczniarza: otwarta chata z kozłem do strugania, stojak z gotowymi włóczniami i kosz z grotami
-    const inside = cottageAt(g, 22, 1.4, 1.1, 0.8, 0, -0.15);
-    box(inside, M.wood, 0.7, 0.05, 0.22, -0.1, 0.32, -0.25);
-    for (const sx of [-1, 1]) box(inside, M.woodDark, 0.05, 0.32, 0.18, -0.1 + sx * 0.3, 0.0, -0.25);
-    box(inside, M.plank, 0.9, 0.03, 0.03, -0.05, 0.38, -0.25).rotation.y = 0.15;
-    box(inside, M.sawdust, 0.6, 0.012, 0.4, -0.1, 0.03, 0.05);
-    // stojak pod ścianą od frontu
-    box(g, M.woodDark, 0.06, 0.6, 0.06, 0.45, 0, 0.62);
-    box(g, M.woodDark, 0.06, 0.6, 0.06, 0.85, 0, 0.62);
-    box(g, M.woodDark, 0.5, 0.05, 0.06, 0.65, 0.55, 0.62);
-    for (let k = 0; k < 5; k++) {
-      const sp = new THREE.Group();
-      sp.position.set(0.5 + k * 0.08, 0, 0.6);
-      sp.rotation.z = -0.12;
-      box(sp, M.plank, 0.025, 0.95, 0.025, 0, 0, 0);
-      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.12, 4), M.iron);
-      tip.position.y = 1.0;
-      sp.add(tip);
-      g.add(sp);
-    }
-    const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.1, 0.14, 8), M.basket);
-    basket.position.set(-0.7, 0.07, 0.62);
-    g.add(basket);
-    pennant(g, flag, -0.62, 0.95, -0.6);
+    // włóczniarz z Blendera (tools/models/poleturner.py): warsztat z szachulca; w izbie kozioł do strugania drzewc,
+    // drzewca na wieszakach, kosz grotów; przed nim stojak z gotowymi włóczniami i wiązka surowych drzewc pod daszkiem
+    blenderModel(g, POLETURNER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (POLETURNER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   barracks(g, _team, flag) {
     // koszary z Blendera (tools/models/barracks.py): z tyłu dom straży (szachulec, strzecha, komin), z przodu plac ćwiczeń
@@ -1420,46 +1286,9 @@ const BUILDERS: Record<string, Builder> = {
     blenderModel(g, STONE_TOWER_MODEL as unknown as BlenderBuilding, flag);
   },
   cemetery(g, _team, flag) {
-    // Cmentarz: płot z żerdzi, rzędy mogił z drewnianymi krzyżami, kamienny nagrobek, kaplica z dzwonkiem, łopata grabarza
-    box(g, M.soil, 2.9, 0.025, 2.9);
-    for (const [x, z, w, d] of [[0, -1.42, 2.9, 0.05], [-1.42, 0, 0.05, 2.9], [1.42, 0, 0.05, 2.9], [-0.95, 1.42, 1.0, 0.05], [0.95, 1.42, 1.0, 0.05]] as const) {
-      box(g, M.woodDark, w, 0.05, d, x, 0.32, z);
-      box(g, M.woodDark, w, 0.05, d, x, 0.16, z);
-    }
-    for (let k = -1.4; k <= 1.41; k += 0.35) for (const [x, z] of [[k, -1.42], [-1.42, k], [1.42, k]] as const) box(g, M.woodDark, 0.06, 0.4, 0.06, x, 0, z);
-    for (let row = 0; row < 3; row++)
-      for (let col = 0; col < 4; col++) {
-        const x = -1.05 + col * 0.5, z = -0.15 + row * 0.5;
-        const mound = new THREE.Mesh(new THREE.SphereGeometry(0.16, 8, 5, 0, Math.PI * 2, 0, Math.PI / 2), M.soil);
-        mound.scale.set(1, 0.5, 1.7);
-        mound.position.set(x, 0.02, z);
-        g.add(mound);
-        const tilt = ((row * 4 + col) % 3 - 1) * 0.08;
-        const cross = new THREE.Group();
-        cross.position.set(x, 0, z - 0.24);
-        cross.rotation.z = tilt;
-        box(cross, M.wood, 0.035, 0.34, 0.035, 0, 0, 0);
-        box(cross, M.wood, 0.18, 0.035, 0.035, 0, 0.22, 0);
-        g.add(cross);
-      }
-    box(g, M.castleDark, 0.24, 0.32, 0.08, 1.0, 0, 0.85);
-    // kaplica w rogu
-    const before = g.children.length;
-    hut(g, M.castle, M.thatchDark, 0.8, 0.7, 0.6, 0.85, -0.85);
-    // krzyż stoi na kalenicy kaplicy: wysokość liczona z bryły, którą właśnie postawiliśmy
-    const chapel = new THREE.Box3();
-    for (const c of g.children.slice(before)) chapel.expandByObject(c);
-    const peak = chapel.isEmpty() ? 1.2 : chapel.max.y - 0.03;
-    box(g, M.woodDark, 0.05, 0.34, 0.05, 0.85, peak, -0.85);
-    box(g, M.woodDark, 0.2, 0.045, 0.045, 0.85, peak + 0.21, -0.85);
-    // łopata wbita w ziemię przy świeżej mogile
-    const sh = new THREE.Group();
-    sh.position.set(0.55, 0, 1.05);
-    sh.rotation.z = 0.25;
-    box(sh, M.woodDark, 0.03, 0.55, 0.03, 0, 0.12, 0);
-    box(sh, M.iron, 0.12, 0.16, 0.02, 0, 0.0, 0);
-    g.add(sh);
-    pennant(g, flag, -1.3, 0.4, 1.3);
+    // cmentarz z Blendera (tools/models/cemetery.py): kamienna kapliczka z sygnaturką i dzwonkiem, mogiły z krzyżami
+    // i nagrobkami, świeży dół z łopatą, płot z żerdzi z bramką, ławka i latarnia
+    blenderModel(g, CEMETERY_MODEL as unknown as BlenderBuilding, flag);
   },
   roadSand(g) {
     box(g, M.pathDirt, 0.96, 0.04, 0.96);
