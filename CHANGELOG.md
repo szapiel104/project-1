@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.24.3 — bez psa (2026-10-16)
+
+- Pies na razie nie pojawia się w osadzie ani nie szczeka; model i zachowanie zostają w kodzie (przełącznik `DOGS_ON` w `src/render/village.ts`), żeby łatwo go przywrócić
+
 ## 0.24.2 — obozowisko i ładunki (2026-10-16)
 
 - Obozowisko: stos drewna przy ognisku mniejszy (pięć krótszych polan w dwóch warstwach zamiast dziewięciu w trzech); w spacerze nie da się już wejść w stos, krąg kamieni, stołki ani kłodę

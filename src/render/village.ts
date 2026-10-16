@@ -24,6 +24,8 @@ interface Critter { x: number; y: number; tx: number; ty: number; wait: number; 
 interface Dog extends Critter { master: number; until: number; bark: number; run: number; stuck: number }
 
 const MAX_HENS = 120, MAX_PIGS = 48, MAX_HORSES = 8, MAX_DOGS = 8;
+/** Pies na razie wyłączony (decyzja Michała 16.10.2026); kod i model zostają — żeby wrócił, wystarczy true */
+const DOGS_ON = false;
 
 /** Modele zwierząt z Blendera (tools/models/animals.py) */
 const A = ANIMALS as unknown as Record<string, ModelMesh[]> & { horse_neck_at: [number, number, number]; horse_tail_at: [number, number, number]; dog_hips: [number, number, number][]; dog_tail_at: [number, number, number] };
@@ -212,7 +214,7 @@ export class Village {
     // pies: jeden na gracza, przy twierdzy; chodzi za kimś z osady, nocą obszczekuje wilki
     let dogs = 0;
     for (const pl of g.players) {
-      if (dogs >= MAX_DOGS || pl.defeated) continue;
+      if (!DOGS_ON || dogs >= MAX_DOGS || pl.defeated) continue;
       const keep = g.buildings.find((b) => b.owner === pl.id && b.type === 0 && !b.ruined);
       if (!keep) continue;
       // dom psa: przedpole przed bramą zamku (drzwi budynku zamku prowadzą do środka, tam pies nie chodzi)
