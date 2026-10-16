@@ -612,10 +612,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           if ((r >>> 17) % 3 === 0) put(bushes, x, y, 4, 0.7, 0.5);
           continue;
         }
-        const size = age === 0 ? 2.1 : age < 3 ? 1.5 : age < 8 ? 0.6 : 1;
-        put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, size, age === 0 ? 0.2 : 0.7);
-        if ((r & 1) && age !== 0) put((r >>> 5) % 4 === 0 ? leafy : pines, x, y, 1, age < 8 ? 0.5 : 0.8);
-        if ((r >>> 17) % 5 === 0) put(bushes, x, y, 4, 0.8, 0.9);
+        // jedno drzewo na pole (pole to ok. 3 m): pnie stoją w naturalnych odstępach, korony zwierają się wysoko nad głowami;
+        // las w różnym wieku — rzadko stary olbrzym, najwięcej dojrzałych, do tego młode i podrost, a między nimi krzaki
+        const size = age === 0 ? 1.55 : age < 3 ? 1.25 : age < 12 ? 1 : age < 17 ? 0.7 : 0.45;
+        put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, size, age === 0 ? 0.25 : 0.75);
+        if ((r >>> 17) % 3 === 0 || age >= 17) put(bushes, x, y, 4, 0.75 + ((r >>> 21) & 3) * 0.1, 0.95);
       } else if (t === Terrain.Stone) { put(rocks, x, y, 0, 1.1); if ((r >>> 6) & 1) put(pebbles, x, y, 5, 0.5, 0.9); }
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
       // brzeg wody: kępy trzcin i pałek po obu stronach linii wody, na płyciźnie liście grzybieni
@@ -696,11 +697,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // od ok. 30 pól od środka widoku drzewa są obrazkami (impostorami), drobiazgi znikają — z bliska nic się nie zmienia,
   // a z daleka i tak ich nie widać (wcześniej 40–42 pola: w zwykłym widoku pełne drzewa sięgały do krawędzi ekranu)
   // cień pnia: graniastosłup bez denek (z góry słońca denka i tak nie widać), gałęzie liściastych też uproszczone
-  const pineTrunkShadow = new THREE.CylinderGeometry(0.06, 0.11, 0.55, 4, 1, true).translate(0, 0.27, 0);
+  const pineTrunkShadow = new THREE.CylinderGeometry(0.06, 0.12, 1.3, 4, 1, true).translate(0, 0.64, 0);
   const leafTrunkShadow = mergeGeometries([
-    new THREE.CylinderGeometry(0.07, 0.12, 0.6, 4, 1, true).translate(0, 0.3, 0),
-    new THREE.CylinderGeometry(0.035, 0.05, 0.35, 3, 1, true).rotateZ(0.8).translate(-0.13, 0.62, 0),
-    new THREE.CylinderGeometry(0.035, 0.05, 0.35, 3, 1, true).rotateZ(-0.8).translate(0.13, 0.66, 0.02),
+    new THREE.CylinderGeometry(0.07, 0.13, 1.2, 4, 1, true).translate(0, 0.6, 0),
+    new THREE.CylinderGeometry(0.035, 0.05, 0.4, 3, 1, true).rotateZ(0.8).translate(-0.14, 1.2, 0),
+    new THREE.CylinderGeometry(0.035, 0.05, 0.4, 3, 1, true).rotateZ(-0.8).translate(0.14, 1.25, 0.02),
   ])!;
   const TRUNK_LOD: Lod = { hide: pineImp ? 30 : 62, shadowGeo: pineTrunkShadow }, SMALL_LOD: Lod = { hide: 30 };
   const LEAF_TRUNK_LOD: Lod = { ...TRUNK_LOD, shadowGeo: leafTrunkShadow };
@@ -726,10 +727,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     depth.customProgramCacheKey = () => key + '-depth';
     m.userData.windDepth = depth;
   };
-  windCrown(pineMat, 0.08, 'wind-pine');
+  windCrown(pineMat, 0.08, 'wind-pine', 0.8); // korona zaczyna się wysoko na pniu
   const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: pattern('leaves'), bumpMap: bump('leaves'), bumpScale: 1.2, normalMap: normal('leaves') });
   leafMat.userData.season = 'leaf';
-  windCrown(leafMat, 0.12, 'wind-leaf');
+  windCrown(leafMat, 0.12, 'wind-leaf', 1.0);
   // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
   // shadowGeo: prostsza bryła tego samego kształtu, która rzuca cień zamiast pełnego modelu (w obrazie zostaje pełny);
