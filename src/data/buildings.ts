@@ -66,7 +66,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'keep', name: 'b.keep', w: 11, h: 11, cost: {}, housing: 12, hp: 6000, buildable: false },
   { id: 'house', category: 'settlement', name: 'b.house', w: 2, h: 2, cost: { wood: 20 }, housing: 8, buildable: true },
   { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 10 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
-  { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 150 }, buildable: true },
+  { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 15 }, stores: ['granary'], capacity: { granary: 400 }, buildable: true },
   {
     id: 'woodcutter', category: 'industry', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 10 }, buildable: true,
     workView: 'inside',
@@ -107,7 +107,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Stodoła stoi od początku obok twierdzy i mieści zapasy startowe; można ją rozebrać i postawić gdzie indziej
   { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 30 }, stores: ['stockpile'], capacity: { stockpile: 250 }, buildable: true },
   {
-    id: 'fisher', category: 'food', name: 'b.fisher', w: 2, h: 2, cost: { wood: 15 }, buildable: true,
+    id: 'fisher', category: 'food', name: 'b.fisher', w: 2, h: 2, cost: { wood: 40, gold: 20 }, buildable: true,
     needsTerrain: { terrain: Terrain.Water, radius: 7 },
     production: { output: { res: 'fish', amount: 8 }, site: 'shore', workTicks: 110 },
   },

@@ -87,6 +87,9 @@ export function migrationSystem(g: GameState): void {
   for (const p of g.players) {
     const pop = population(g, p.id);
     if (pop < RULES.minPeasants) arrive(g, p.id);
+    // głód: póki nie ma co jeść, ludzie odchodzą (i nikt nowy nie przyjdzie) — bez względu na popularność;
+    // gdy jedzenie wróci, odchodzenie od razu ustaje
+    else if (p.hungry) { if (pop > RULES.minPeasants) removePeasant(g, p.id); }
     else if (p.popularity >= RULES.migrationThreshold) {
       // nowi przychodzą tylko wtedy, gdy jest dla nich dach w chacie i wolne miejsce w obozowisku
       if (pop < housing(g, p.id) && idleCount(g, p.id) < idleSlots(g, p.id)) arrive(g, p.id);

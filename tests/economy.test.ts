@@ -291,13 +291,13 @@ describe('pojemność składów', () => {
   it('spichlerz ma osobny limit na żywność', () => {
     const g = createGame(5);
     // stodoła trzyma tylko towary, jedzenie mieści startowy spichlerz
-    expect(storeCapacity(g, 0, 'granary')).toBe(150);
+    expect(storeCapacity(g, 0, 'granary')).toBe(400);
     step(g, [{ type: 'demolish', player: 0, id: g.buildings.find((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'granary')!.id }]);
     expect(storeCapacity(g, 0, 'granary')).toBe(0);
     step(g, [build(g, 'barn')]);
     step(g, [build(g, 'granary')]);
     for (const b of g.buildings) b.build = 0; // budowa skończona
-    expect(storeCapacity(g, 0, 'granary')).toBe(150);
+    expect(storeCapacity(g, 0, 'granary')).toBe(400);
   });
 });
 
@@ -322,7 +322,9 @@ describe('ludność i popularność', () => {
     expect(res(g, 'apples')).toBeLessThan(apples);
     g.players[0]!.res[resIndex('apples')] = 0;
     run(g, RULES.monthTicks * 8);
-    expect(g.players[0]!.popularity).toBeLessThan(50);
+    // głodni odchodzą od razu, choć popularność spada tylko trochę (to nie pan skąpi jedzenia)
+    expect(g.players[0]!.hungry).toBe(true);
+    expect(g.players[0]!.popularity).toBeGreaterThanOrEqual(50);
     expect(population(g, 0)).toBeLessThan(6);
     run(g, RULES.monthTicks * 30);
     expect(population(g, 0)).toBe(RULES.minPeasants); // garstka zawsze zostaje
@@ -474,7 +476,29 @@ describe('balans żywności', () => {
     const g = createGame(5);
     g.players[0]!.res[resIndex('apples')] = 2; // starczy na połowę racji dla 6 osób
     run(g, RULES.monthTicks);
-    expect(g.players[0]!.popDelta).toBe(RULES.rations[1].effect + RULES.taxes[RULES.defaultTax].effect);
+    // jedzenia zabrakło (nie gracz skąpi): łagodna kara zamiast kary za połowę racji, a głodni odchodzą
+    expect(g.players[0]!.popDelta).toBe(Math.max(RULES.rations[1].effect, RULES.hungerPenalty) + RULES.taxes[RULES.defaultTax].effect);
+    expect(g.players[0]!.hungry).toBe(true);
+    expect(g.players[0]!.res[resIndex('apples')]).toBe(0);
+  });
+
+  it('gdy jedzenie wraca, głodni przestają odchodzić; ryba syci za dwie porcje', () => {
+    const g = createGame(5);
+    const p = g.players[0]!;
+    p.res[resIndex('apples')] = 0;
+    run(g, RULES.monthTicks * 2);
+    expect(p.hungry).toBe(true);
+    const before = population(g, 0);
+    p.res[resIndex('fish')] = 50; // 100 porcji
+    run(g, RULES.monthTicks + 1);
+    expect(p.hungry).toBeUndefined();
+    run(g, RULES.migrationTicks * 4);
+    expect(population(g, 0)).toBeGreaterThanOrEqual(before - 1); // najwyżej ten jeden, który już szedł
+    // 6 osób na pełnych racjach zjada 3 porcje na miesiąc = 2 ryby (zaokrąglone w górę)
+    const fish = p.res[resIndex('fish')]!;
+    const eaters = population(g, 0);
+    run(g, RULES.monthTicks);
+    expect(fish - p.res[resIndex('fish')]!).toBeLessThanOrEqual(Math.ceil(Math.ceil((eaters * 4) / 8) / 2) + 1);
   });
 });
 

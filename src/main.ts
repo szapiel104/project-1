@@ -14,7 +14,7 @@ import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
 import { Phase, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
 import { step, type Command } from './sim/step';
-import { FOOD_PER_DAY, MEALS_PER_DAY, monthlyForecast } from './sim/systems/economy';
+import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 import { buildWork, canAfford, canPlace, maxHp } from './sim/systems/placement';
@@ -1941,8 +1941,8 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
   const lvl = RULES.rations[p0.rations]!;
   const perMonthWant = Math.ceil((pop * lvl.foodPer8) / 8);
   const perDayWant = perMonthWant * MEALS_PER_DAY;
-  const have = FOOD_RES_ALL.reduce((n, i) => n + (p0.res[i] ?? 0), 0);
-  const net = FOOD_RES_ALL.reduce((n, i) => n + (trend[i] ?? 0), 0); // zmiana z ostatnich ok. 600 ticków (1/6 doby)
+  const have = foodTotal(p0); // porcje (ryba liczy się podwójnie)
+  const net = FOOD_RES_ALL.reduce((n, i) => n + (trend[i] ?? 0) * (FOOD_VALUE[RESOURCES[i]!] ?? 1), 0); // zmiana z ostatnich ok. 600 ticków (1/6 doby)
   const mineB = game.buildings.filter((b) => b.owner === ME && !b.build);
   const count = (id: string, worked = true): number => mineB.filter((b) => BUILDINGS[b.type]!.id === id && (!worked || b.worker) && !b.off).length;
   const bakeries = Math.min(count('bakery'), count('mill'), count('farm'));
@@ -1953,9 +1953,10 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
   const fmtLast = (d: number): string => d === Infinity ? 'bez końca' : d >= 2 ? `${Math.floor(d)} dni` : d >= 1 ? '1 dzień' : `${Math.max(0, Math.floor(d * 24))} godz.`;
   const food: NonNullable<HudView['report']>['food'] = [
     { label: 'Jedzących', value: String(pop), note: `(racje: ${t(lvl.name).toLowerCase()})` },
-    { label: 'Zjadają co miesiąc', value: String(perMonthWant), note: '(rozliczenie)' },
-    { label: 'Zjadają na dobę', value: String(perDayWant), note: `(${perPerson.toFixed(perPerson % 1 ? 1 : 0)} na osobę)` },
-    { label: 'W spichlerzach', value: `${have} / ${storeCapacity(game, ME, 'granary')}` },
+    ...(p0.hungry ? [{ label: 'Głód!', value: 'odchodzą', sign: 'minus' as const, note: '(zabrakło jedzenia — póki go nie ma, ludzie opuszczają osadę)' }] : []),
+    { label: 'Zjadają co miesiąc', value: `${perMonthWant} porcji`, note: '(rozliczenie)' },
+    { label: 'Zjadają na dobę', value: `${perDayWant} porcji`, note: `(${perPerson.toFixed(perPerson % 1 ? 1 : 0)} na osobę)` },
+    { label: 'W spichlerzach', value: `${storeUsed(p0, 'granary')} / ${storeCapacity(game, ME, 'granary')}`, note: `(${have} porcji — ryba syci za dwie)` },
     { label: 'Zapas starczy na', value: fmtLast(lasts), sign: lasts < 0.5 ? 'minus' : lasts >= 2 ? 'plus' : undefined },
     { label: 'Gospodarstwa dają na dobę', value: `ok. ${made}`, note: `(sady ${count('orchard')}, rybacy ${count('fisher')}, piekarnie ${bakeries})` },
     { label: 'Wykarmią', value: `ok. ${feeds} osób`, sign: feeds < pop ? 'minus' : 'plus' },

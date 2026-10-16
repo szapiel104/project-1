@@ -21,6 +21,8 @@ export const RULES = {
   maxPopularity: 100,
   /** Od tej popularności przybywa ludzi, poniżej odchodzą */
   migrationThreshold: 50,
+  /** Gdy jedzenia zabrakło (a nie gracz skąpi racji): łagodna kara popularności co miesiąc — głodni i tak odchodzą sami */
+  hungerPenalty: -2,
   startResources: { wood: 150, stone: 40, apples: 100, gold: 100 } as Partial<Record<ResourceId, number>>,
   /** Jak daleko od własnej twierdzy wolno budować (w polach) */
   buildRadius: 30,

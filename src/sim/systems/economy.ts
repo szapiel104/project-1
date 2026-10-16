@@ -8,9 +8,14 @@ const FOOD = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i
 const GOLD = resIndex('gold');
 const ALE = resIndex('ale');
 
+/** Ile porcji daje jedna sztuka jedzenia: ryba to mięso — syci jak dwa jabłka czy dwa bochenki */
+export const FOOD_VALUE: Record<string, number> = { fish: 2 };
+const VALUE = RESOURCES.map((r) => FOOD_VALUE[r] ?? 1);
+
+/** Ile porcji jedzenia jest w spichlerzach (ryba liczy się podwójnie) */
 export function foodTotal(p: PlayerState): number {
   let n = 0;
-  for (const i of FOOD) n += p.res[i]!;
+  for (const i of FOOD) n += p.res[i]! * VALUE[i]!;
   return n;
 }
 
@@ -19,7 +24,7 @@ export const MEALS_PER_DAY = (() => { let n = 0; for (let t = RULES.monthTicks; 
 
 /** Ile jedzenia na dobę daje jeden pracujący budynek (zmierzone w symulacji: chodzenie do spichlerza w cenie;
  *  dla piekarni cały łańcuch pole → młyn → piekarnia, po jednym budynku) — do prognozy w oknie spichlerza */
-export const FOOD_PER_DAY: Record<string, number> = { orchard: 130, fisher: 64, bakery: 110 };
+export const FOOD_PER_DAY: Record<string, number> = { orchard: 130, fisher: 128, bakery: 110 }; // rybak: 64 ryby = 128 porcji
 
 /** Miesięczna zmiana popularności przy obecnych ustawieniach (także jako prognoza dla interfejsu). */
 export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; food: number; gold: number; fed: boolean; bribed: boolean; ale: number; parts: { key: string; value: number; level?: string }[] } {
@@ -36,7 +41,9 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const bribed = gold >= 0 || p.res[GOLD]! >= -gold;
   // rozbicie na składniki, żeby gracz widział, co podnosi, a co obniża popularność
   const parts: { key: string; value: number; level?: string }[] = [];
-  parts.push({ key: 'food', value: RULES.rations[level]!.effect, level: RULES.rations[level]!.name });
+  // racje wybrane przez gracza działają na nastroje jak zawsze; gdy jedzenia po prostu zabrakło, ludzie nie obrażają się
+  // na pana na długo (to nie on skąpi) — tylko trochę narzekają, a głodni odchodzą od razu (migrationSystem)
+  parts.push({ key: 'food', value: fed ? RULES.rations[level]!.effect : Math.max(RULES.rations[level]!.effect, RULES.hungerPenalty), level: RULES.rations[level]!.name });
   parts.push({ key: 'tax', value: bribed ? tax.effect : RULES.taxes[1].effect, level: bribed ? tax.name : RULES.taxes[1].name });
   // karczmy z karczmarzem i piwem ze składu: wieczory przy kuflu poprawiają nastroje, a sucha karczma złości
   const taverns = g.buildings.filter((b) => b.owner === p.id && !b.build && b.worker && BUILDINGS[b.type]!.id === 'tavern').length;
@@ -59,9 +66,13 @@ export function economySystem(g: GameState): void {
     const f = monthlyForecast(g, p);
     let toEat = f.food;
     for (const i of FOOD) {
-      const eat = Math.min(toEat, p.res[i]!);
-      p.res[i]! -= eat; toEat -= eat;
+      if (toEat <= 0) break;
+      const v = VALUE[i]!;
+      const eat = Math.min(Math.ceil(toEat / v), p.res[i]!); // ryba: jedna sztuka = dwie porcje
+      p.res[i]! -= eat; toEat -= eat * v;
     }
+    // głodni: zabrakło na racje, które gracz ustawił (zjedli mniej albo nic)
+    p.hungry = !f.fed || undefined;
     if (f.bribed) p.res[GOLD]! += f.gold;
     p.res[ALE]! -= f.ale * RULES.alePerTavern; // piwo wypite
     p.popDelta = f.delta;
