@@ -1165,3 +1165,6 @@ body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1
 .prod-rows { display: grid; gap: 2px; }
 .prod-rows .site-row strong.warn { color: #ff9a8a; }
 @media (prefers-reduced-motion: reduce) { .prod-bar span { transition: none; } }
+.prod-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.prod-eye { flex: none; display: inline-grid; place-items: center; min-width: 36px; min-height: 32px; padding: 4px 8px; }
+.prod-eye:hover { color: #ffe7a6; }

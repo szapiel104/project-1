@@ -144,6 +144,14 @@ const hud = createHud(document.getElementById('ui')!, {
     return true;
   },
   onDemolish: (id) => confirmDemolish(id),
+  onShowWorker: (bid) => {
+    const b = game.buildings.find((x) => x.id === bid);
+    const u = b?.worker ? game.units.find((x) => x.id === b.worker) : undefined;
+    if (!u) return;
+    renderer.lookAt(u.px / 256, u.py / 256, 12);
+    selectUnit(u.id);
+    play('select');
+  },
   onCloseInfo: () => { selectUnit(0); select(0); if (chosen.size) chooseSoldiers([], false); },
   onRotate: () => rotate(),
   onWreck: () => setWreck(!wrecking),

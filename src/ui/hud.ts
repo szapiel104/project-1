@@ -7,6 +7,8 @@ import { RULES } from '../data/rules';
 import { t } from '../i18n';
 
 export interface HudEvents {
+  /** Oko w oknie warsztatu: kamera do pracownika budynku i jego karta (jak po kliknięciu strażnika) */
+  onShowWorker(buildingId: number): void;
   /** Kliknięto typ jednostki w panelu wojska: zostaw tylko ten typ (Shift: odznacz ten typ) */
   onArmyKind(kind: string, shift: boolean): void;
   /** Formacja: 0 linia, 1 blok, 2 luźno */
@@ -574,10 +576,19 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const prodRecipe = el('div', 'prod-recipe');
   const prodWorker = el('div', 'prod-worker');
   const prodWho = el('p', 'prod-who');
+  // oko: pokaż, gdzie jest pracownik (kamera leci do niego, zaznacza go i otwiera jego kartę)
+  const prodEye = el('button', 'btn-plain prod-eye');
+  prodEye.type = 'button';
+  prodEye.title = 'Pokaż pracownika na mapie';
+  prodEye.setAttribute('aria-label', prodEye.title);
+  prodEye.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/></svg>';
+  prodEye.addEventListener('click', () => events.onShowWorker(infoId));
+  const prodHead = el('div', 'prod-head');
+  prodHead.append(prodWho, prodEye);
   const prodBar = el('div', 'prod-bar');
   const prodFill = el('span');
   prodBar.append(prodFill);
-  prodWorker.append(prodWho, prodBar);
+  prodWorker.append(prodHead, prodBar);
   const prodStatus = el('p', 'prod-status');
   prodStatus.setAttribute('role', 'status');
   const prodRows = el('div', 'prod-rows');
