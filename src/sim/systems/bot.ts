@@ -80,6 +80,12 @@ export function botSystem(g: GameState): void {
     // (dopiero gdy stoją koszary: najpierw gospodarka i wojsko, potem drewno na palisadę)
     if (tk % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
       && g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks')) placementBatch(() => fortify(g, p));
+    // kooperacja: wzmocniony bot co ok. 2 minuty dostaje dostawę broni i złota (więcej wojska na fale)
+    if (p.boost && tk % (THINK * 60) === 0) {
+      p.res[resIndex('spear')]! += Math.round(2 * p.boost);
+      p.res[resIndex('bow')]! += Math.round(p.boost);
+      p.res[resIndex('gold')]! += Math.round(15 * p.boost);
+    }
     // podatek, gdy osada jest zadowolona: złoto na żołd
     p.tax = p.popularity > 70 ? 2 : p.popularity > 55 ? 1 : 0;
     // wojsko: szkoli jednego włócznika naraz, gdy ma broń, złoto i wolnego chłopa
@@ -102,11 +108,22 @@ export function botSystem(g: GameState): void {
         if (free.length) orderGarrison(g, p.id, free.map((s) => s.id), t.id);
       }
     }
+    // sygnał od sojusznika (znacznik na mapie): atak i zbiórka — całe wolne wojsko, pomoc — połowa; potem sygnał gaśnie
+    if (p.call) {
+      const c = p.call;
+      p.call = undefined;
+      const field = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id && !s.post);
+      const n = c.kind === 1 ? Math.ceil(field.length / 2) : field.length;
+      if (n && g.tick - c.tick < 2400) orderMove(g, p.id, field.slice(0, n).map((s) => s.id), c.tile, { amove: c.kind !== 2 });
+    }
     // atak falami: im później, tym większa fala; na poziomie pokojowym bot tylko się broni
+    // kooperacja: wzmocniony bot rusza przy tej samej liczebności co zwykły, ale ma więcej wojska (zapasy, dostawy broni)
     const wave = nextWave(g.tick, p.level);
     if (wave && wave.at - g.tick < THINK && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first) {
       const army = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id);
-      const foe = g.players.filter((o) => o.team !== p.team && !o.defeated).map((o) => playerKeep(g, o.id)).find((k) => k);
+      const foes = g.players.filter((o) => o.team !== p.team && !o.defeated).map((o) => playerKeep(g, o.id)).filter((k) => !!k);
+      // kooperacja: boty rozkładają fale na wszystkich ludzi po kolei (zwykle cała drużyna szła na pierwszego)
+      const foe = p.boost ? foes[(p.id + Math.floor(g.tick / WAVE_EVERY)) % Math.max(1, foes.length)] : foes[0];
       if (foe && army.length >= wave.size && foe.door >= 0) {
         // atak z dwóch stron: połowa idzie pod bramę, połowa obchodzi i uderza z boku; łucznicy z wież zostają
         const w = g.map.width, [kx, ky] = keepCenter(foe), R = (KEEP_SIZE >> 1) + 3;

@@ -57,6 +57,10 @@ export interface PlayerState {
   fuel?: number;
   /** Ostatni miesiąc zabrakło drewna na opał (ludzie marzną) */
   freezing?: boolean;
+  /** Kooperacja: bot przeciwników jest mocniejszy (więcej zapasów, większe fale) — mnożnik, brak = zwykły */
+  boost?: number;
+  /** Bot: sygnał od sojusznika-człowieka (znacznik na mapie) — 0 atak, 1 pomocy, 2 zbiórka; pole i tick */
+  call?: { kind: number; tile: number; tick: number };
 }
 
 export interface Building {
@@ -308,6 +312,27 @@ export interface Traveler {
   path: number[];
 }
 
+/** Wóz z surowcami dla sojusznika: chłop ciągnie dwukółkę od zamku nadawcy pod zamek odbiorcy; wróg może go przechwycić */
+export interface Caravan {
+  id: number;
+  owner: number;
+  /** Odbiorca (sojusznik) */
+  to: number;
+  /** Indeks surowca (RESOURCES) i ile sztuk */
+  res: number;
+  amount: number;
+  px: number;
+  py: number;
+  /** Bieżący cel kroku w stałym przecinku (do kierunku w wyglądzie) */
+  tx: number;
+  ty: number;
+  /** Pola do przejścia (ostatnie na końcu tablicy jest najbliższe) */
+  path: number[];
+}
+
+/** Co się stało z wozem (dla powiadomień w interfejsie; ostatnie kilkanaście wpisów) */
+export interface CaravanNote { id: number; owner: number; to: number; res: number; amount: number; tick: number; captured: boolean; by: number }
+
 /** Wilk z lasu: poluje nocą, o świcie wraca za mapę */
 export interface Wolf {
   id: number;
@@ -334,6 +359,9 @@ export interface GameState {
   soldiers: Soldier[];
   corpses: Corpse[];
   travelers: Traveler[];
+  /** Wozy z surowcami jadące do sojuszników (brak w starych zapisach) */
+  caravans?: Caravan[];
+  caravanLog?: CaravanNote[];
   wolves: Wolf[];
   /** Brama na polu: właściciel + 1 (0 = brak). Swoi przechodzą, obcy nie */
   gates: Uint8Array;
@@ -364,7 +392,8 @@ export interface GameState {
  */
 /** Mury miasta w trybie deweloperskim: kamienne, drewniane (palisada) albo mieszane (tył i prawy bok z kamienia) */
 export type DevWalls = 'mix' | 'stone' | 'wood';
-export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[], instantBuild = true, devWalls: DevWalls = 'mix'): GameState {
+/** `coop` = kooperacja: wszyscy ludzie w drużynie 0, boty przeciwników mocniejsze (zapasy, ludzie, fale) — tym bardziej, im więcej ludzi */
+export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1', level = 2, dev = false, humans?: number[], instantBuild = true, devWalls: DevWalls = 'mix', coop = false): GameState {
   const map = generateMap(seed, preset);
   const size = map.width * map.height;
   const g: GameState = {
@@ -377,10 +406,14 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
     const res = new Int32Array(RESOURCES.length);
     // gracz-człowiek dostaje na start tym więcej, im łatwiejszy poziom (pokojowy ×3, łatwy ×2, średni ×1, trudny ×0,75)
     const bonus = !humans && s.player === 0 ? [3, 2, 1, 0.75][level] ?? 1 : 1;
-    for (const [k, v] of Object.entries(RULES.startResources)) res[resIndex(k as ResourceId)] = Math.round(v * bonus);
+    // kooperacja: bot drużyny przeciwnej dostaje mnożnik (1,5 przy jednym człowieku, +0,25 za każdego kolejnego)
+    const humanTeam = humans?.length ? starts.find((t) => t.player === humans[0])?.team : undefined;
+    const boost = coop && humans && !humans.includes(s.player) && s.team !== humanTeam ? 1.5 + 0.25 * Math.max(0, humans.length - 1) : 0;
+    for (const [k, v] of Object.entries(RULES.startResources)) res[resIndex(k as ResourceId)] = Math.round(v * bonus * (boost || 1));
     g.players.push({
       id: s.player, team: s.team, res, popularity: RULES.startPopularity, popDelta: 0,
       rations: RULES.defaultRations, tax: RULES.defaultTax, bot: humans ? !humans.includes(s.player) : s.player !== 0, defeated: false, level, stats: { gathered: 0, trained: 0, kills: 0, lost: 0, built: 0, razed: 0 },
+      ...(boost ? { boost } : {}),
     });
     addBuilding(g, keep, s.player, s.x - (KEEP_SIZE >> 1), s.y - (KEEP_SIZE >> 1));
     paveForecourt(g, g.buildings[g.buildings.length - 1]!);
@@ -392,7 +425,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
     if (!granRight && !placeAt(g, GRAN, s.player, L - 1, Y)) placeNear(g, GRAN, s.player, s.x, s.y);
     if (!placeAt(g, BARN, s.player, granRight ? L - 2 : R, Y)) placeNear(g, BARN, s.player, s.x, s.y);
     placeAt(g, CAMP, s.player, s.x, s.y + (KEEP_SIZE >> 1) + FORECOURT.depth + 2) || placeAt(g, CAMP, s.player, s.x - 1, s.y + (KEEP_SIZE >> 1) + FORECOURT.depth + 2) || placeNear(g, CAMP, s.player, s.x, s.y);
-    const extra = !humans && s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0;
+    const extra = (!humans && s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0) + (boost ? Math.round((boost - 1) * 8) : 0);
     for (let i = 0; i < RULES.startPeasants + extra; i++) spawnPeasant(g, s.player);
     if (dev && s.player === 0) {
       // do testów: każdy budynek gotowy przy twierdzy, dużo ludzi i zapasów
@@ -618,6 +651,7 @@ export function stateHash(g: GameState): number {
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }
   for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); }
+  for (const c of g.caravans ?? []) { add(c.id); add(c.px); add(c.py); add(c.amount); add(c.path.length); }
   return h >>> 0;
 }
 

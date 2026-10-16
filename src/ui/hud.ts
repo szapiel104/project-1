@@ -174,6 +174,9 @@ function short(n: number): string {
   return String(n);
 }
 
+/** Ikona surowca (ta sama co na pasku zasobów) — do innych okien */
+export function resIcon(id: string): HTMLElement { return icon(id); }
+
 function icon(id: string): HTMLElement {
   const span = document.createElement('span');
   span.className = 'ico';

@@ -341,6 +341,49 @@ for i in range(8):
     parts.append(Mesh(sp, hexc(0x5a8a3a), 'plain'))
 finish('garden', parts)
 
+# ================= DWUKÓŁKA =================
+# wózek z wysyłką dla sojusznika: skrzynia z desek na osi, dwa koła ze szprychami i żelazną obręczą, dyszle do rąk
+# chłopa idącego z przodu (+z), na skrzyni worki i skrzynka. Jedzie w stronę +z; dyszle kończą się na wysokości dłoni.
+parts = []
+BED, WR = 0.13, 0.095          # wysokość dna skrzyni, promień koła
+BW, BL = 0.25, 0.34            # szerokość (x) i długość (z) skrzyni
+parts.append(Mesh(box(BW, 0.014, BL, move=(0, BED, 0)), wood(WOOD), 'wood'))                     # dno
+for sx in (-1, 1):                                                                                  # burty boczne
+    parts.append(Mesh(box(0.014, 0.07, BL, move=(sx * (BW / 2 - 0.007), BED + 0.042, 0)), wood(WOOD_D), 'wood'))
+for sz in (-1, 1):                                                                                  # burty przód/tył
+    parts.append(Mesh(box(BW - 0.028, 0.06, 0.014, move=(0, BED + 0.037, sz * (BL / 2 - 0.007))), wood(WOOD_D), 'wood'))
+for sx in (-1, 1):                                                                                  # słupki narożne
+    for sz in (-1, 1):
+        parts.append(Mesh(box(0.02, 0.09, 0.02, move=(sx * (BW / 2 - 0.004), BED + 0.04, sz * (BL / 2 - 0.004))), wood(WOOD_D, 0.18), 'wood'))
+parts.append(Mesh(box(BW + 0.12, 0.022, 0.026, move=(0, WR, -0.02)), wood(BARK), 'wood'))            # oś
+for sx in (-1, 1):
+    x = sx * (BW / 2 + 0.035)
+    rim = xf(ring(WR - 0.012, WR, 0.022, seg=24), rz=math.pi / 2, move=(x, WR, -0.02))              # drewniane koło
+    parts.append(Mesh(rim, wood(WOOD_D), 'wood'))
+    tyre = xf(ring(WR - 0.001, WR + 0.006, 0.026, seg=24), rz=math.pi / 2, move=(x, WR, -0.02))     # żelazna obręcz
+    parts.append(Mesh(tyre, IRON, 'plain'))
+    hub = cyl(0.016, 0.014, 0.036, seg=10, rz=-sx * math.pi / 2, move=(x - 0.006 * sx, WR, -0.02))      # piasta
+    parts.append(Mesh(hub, wood(BARK), 'wood'))
+    for k in range(6):                                                                              # szprychy
+        a = k / 6 * math.pi
+        parts.append(Mesh(box(0.012, (WR - 0.012) * 2, 0.012, rx=a, move=(x, WR, -0.02)), wood(WOOD), 'wood'))
+for sx in (-1, 1):                                                                                  # dyszle
+    d = skin(f'shaft{sx}', [(sx * 0.1, BED - 0.005, -BL / 2 + 0.02), (sx * 0.1, BED - 0.004, BL / 2), (sx * 0.115, 0.185, BL / 2 + 0.2)],
+             [(0, 1), (1, 2)], [(0.009, 0.009)] * 3, subsurf=0)
+    parts.append(Mesh(evaluated(d), wood(WOOD_D), 'wood'))
+parts.append(Mesh(box(0.25, 0.014, 0.014, move=(0, BED - 0.012, BL / 2 - 0.03)), wood(BARK), 'wood'))   # poprzeczka pod dnem
+# ładunek: dwa worki i skrzynka (płótno i deski)
+for i, (x, z, r) in enumerate(((-0.05, -0.07, 0.065), (0.055, -0.05, 0.058))):
+    sack = sphere(f'cartsack{i}', (x, BED + 0.06, z), (r, r * 0.95, r * 0.85), seg=12, rings=8,
+                  shape=lambda a, b, c: (a * (1 + 0.06 * math.sin(b * 40)), b if b > 0 else b * 0.6, c))
+    parts.append(Mesh(evaluated(sack), lambda x, y, z: speck(hexc(0xc8b48c), x, y, z, 0.08), 'cloth'))
+    neck = cyl(0.012, 0.02, 0.03, seg=8, move=(x, BED + 0.06 + r * 0.9, z))
+    parts.append(Mesh(neck, hexc(0xb8a47c), 'cloth'))
+parts.append(Mesh(box(0.12, 0.08, 0.1, move=(0, BED + 0.047, 0.09)), wood(WOOD_L), 'wood'))
+for yy in (0.02, 0.06):
+    parts.append(Mesh(box(0.126, 0.008, 0.106, move=(0, BED + 0.007 + yy, 0.09)), wood(WOOD_D), 'wood'))
+finish('handcart', parts, reach=0.06)
+
 
 def save():
     dst = os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'render', 'models', 'yard.json')

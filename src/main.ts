@@ -29,9 +29,11 @@ import { Lockstep, TURN } from './net/lockstep';
 import { deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
 import type { OnlineStart } from './ui/online';
 import { createGameChat } from './ui/chat';
+import { createPings, PINGS } from './ui/pings';
+import { createAllies } from './ui/allies';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
-import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
 import { GUARDS, GUARD_COST } from './sim/systems/guards';
@@ -304,11 +306,84 @@ const menu = createMenu(document.body, {
   },
 });
 
+// ---- znaczniki dla sojuszników: Alt + klik w mapę (ui/pings.ts); w meczu przez sieć idą kanałem pokoju ----
+const pings = createPings({
+  tileAt: () => hoverTile,
+  pick: (kind, x, y) => {
+    showPing(ME, kind, x, y);
+    net?.send({ k: 'ping', from: ME, kind, x, y });
+    // boty w mojej drużynie też słuchają znaczników (przez symulację, żeby u wszystkich wyszło tak samo)
+    const mine = game.players[ME];
+    if (mine && game.players.some((p) => p.bot && p.team === mine.team && p.id !== ME && !p.defeated)) pending.push({ type: 'signal', player: ME, kind, x: Math.floor(x), y: Math.floor(y) });
+  },
+  screenOf: (x, y) => renderer.screenOf(x, y),
+  lookAt: (x, y) => renderer.lookAt(x, y, 30),
+});
+function showPing(from: number, kind: number, x: number, y: number): void {
+  const p = PINGS[kind];
+  if (!p || !Number.isFinite(x) || !Number.isFinite(y)) return;
+  const slot = netGame?.slots[from];
+  const who = slot?.kind === 'human' ? { id: slot.id, nick: slot.nick, avatar: slot.avatar } : { id: `p${from}`, nick: from === ME ? 'Ty' : `Gracz ${from + 1}`, avatar: 0 };
+  renderer.ping(x, y, p.color);
+  pings.show(kind, x, y, who.nick);
+  if (chat.active) chat.note(who, `${p.icon} ${p.label}`, from === ME);
+  // krótki sygnał: atak niżej, pomoc wysoko i dwa razy, zbiórka w środku
+  if (kind === 0) { pluck(-5, 1); setTimeout(() => pluck(-12, 1), 120); }
+  else if (kind === 1) { pluck(12, 1); setTimeout(() => pluck(12, 1), 160); }
+  else { pluck(5, 1); setTimeout(() => pluck(7, 1), 140); }
+}
+window.addEventListener('pointerdown', (e) => {
+  if (!e.altKey || e.button !== 0 || e.target !== canvas || menu.isOpen() || renderer.walking) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  pings.openMenu(e.clientX, e.clientY);
+}, { capture: true });
+
+// ---- sojusznicy: wysyłanie surowców wozem (polecenie 'send' w symulacji) i powiadomienia o wozach ----
+const playerName = (p: number): string => {
+  if (p === ME) return 'Ty';
+  const slot = netGame?.slots[p];
+  if (slot?.kind === 'human') return slot.nick;
+  return game.players[p]?.bot ? `Bot ${p + 1}` : `Gracz ${p + 1}`;
+};
+const allies = createAllies({
+  name: playerName,
+  send: (to, res, amount) => { pending.push({ type: 'send', player: ME, to, res, amount }); play('click'); },
+});
+let caravanSeen = -1;
+let alliesTick = 0;
+function caravanNews(now: number): void {
+  if (now - alliesTick < 400 || !game) return;
+  alliesTick = now;
+  allies.update(game, ME);
+  const log = game.caravanLog ?? [];
+  if (caravanSeen < 0) { caravanSeen = log.at(-1)?.id ?? 0; return; }
+  for (const n of log) {
+    if (n.id <= caravanSeen) continue;
+    caravanSeen = n.id;
+    const what = `${n.amount} × ${t(RESOURCE_DEFS[RESOURCES[n.res]!].name).toLowerCase()}`;
+    if (n.captured) {
+      if (n.owner === ME) hud.toast(`Wróg przechwycił Twój wóz dla: ${playerName(n.to)} (${what}).`);
+      else if (n.by === ME) hud.toast(`Twoi żołnierze przechwycili wóz wroga: +${what}.`);
+      else if (n.to === ME) hud.toast(`Wróg przechwycił wóz, który jechał do Ciebie od: ${playerName(n.owner)}.`);
+    } else if (n.by === ME && n.owner !== ME) { hud.toast(`${playerName(n.owner)} przysłał Ci wóz: +${what}.`); play('select'); }
+    else if (n.owner === ME && n.by !== ME) hud.toast(`Wóz dotarł do: ${playerName(n.to)} (${what}).`);
+    else if (n.owner === ME) hud.toast(`Sojusznik odpadł — wóz wrócił do zamku (${what}).`);
+  }
+}
+
 /** Mecz 1 na 1 przez sieć: obie przeglądarki stawiają tę samą mapę z tego samego ziarna, bez botów na miejscach graczy. */
 function startOnline(st: OnlineStart): void {
   start(st.seed, st.preset, undefined, st.level, false, st);
   const mine = st.slots[st.me];
   if (mine?.kind === 'human') chat.attach(st.link, { id: mine.id, nick: mine.nick, avatar: mine.avatar });
+  // znaczniki sojuszników (tylko z mojej drużyny; obcy ich nie widzą — ale też nie powinni ich wysyłać)
+  const offPing = st.link.on((m) => {
+    if (m.k !== 'ping' || !netGame || m.from === ME || !Number.isInteger(m.from) || !Number.isInteger(m.kind)) return;
+    const a = game.players[m.from], b = game.players[ME];
+    if (a && b && a.team === b.team) showPing(m.from, m.kind, m.x, m.y);
+  });
+  pingOff = offPing;
   const names = st.slots.map((x) => (x.kind === 'human' ? x.nick : null)).filter(Boolean);
   hud.toast(`Mecz przez sieć (${st.preset}): ${names.join(', ')}${st.slots.some((x) => x.kind === 'bot') ? ' + boty' : ''}.`);
 }
@@ -332,10 +407,13 @@ function waitFor(turn: number, now: number): void {
     netWait.textContent = `Czekam na: ${missing.map(nick).join(', ') || 'graczy'}${waited > 3000 ? ` — ${absent.length ? 'brak połączenia' : 'słabe połączenie'}, jeszcze ${Math.max(0, left)} s` : '…'}`;
   }
 }
+let pingOff: (() => void) | null = null;
 function endOnline(): void {
   if (!net || !netGame) return;
   net.close();
   chat.detach();
+  pingOff?.(); pingOff = null;
+  pings.clear();
   netGame.link.close();
   // koniec meczu: gospodarz usuwa pokój z bazy (nic po meczu nie zostaje)
   if (netMe()?.id === netGame.room.host) void deleteRoom(netGame.room.id);
@@ -382,7 +460,8 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   gameOver = false;
   endOnline();
   ME = online ? online.me : 0;
-  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls);
+  caravanSeen = -1; allies.close(); pings.clear();
+  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true);
   if (EMPTY && !loaded && !online) emptyScene(game);
   // wątek symulacji: tylko gra z botami bez trybu dewelopera i testów (tam wątek główny też zmienia stan gry)
   simGen++; simBusy = false;
@@ -867,6 +946,7 @@ window.addEventListener('keydown', (e) => {
   const tag = (e.target as HTMLElement | null)?.tagName;
   if (tag === 'INPUT' || tag === 'SELECT' || e.ctrlKey || e.metaKey) return;
   if (e.key === 'Enter' && chat.active) { e.preventDefault(); chat.open(); return; }
+  if (e.code === 'Space' && !e.repeat && !renderer.walking && pings.jumpLast()) { e.preventDefault(); return; } // spacja: do ostatniego znacznika sojusznika
   if (e.code === 'KeyR' && picked) rotate();
   if (e.code === 'KeyF' && selectedUnit && !e.repeat) { walkAs(selectedUnit); return; } // F przy zaznaczonym mieszkańcu = przejdź się jego oczami
   if (e.code === 'KeyM') hud.setMuted(toggleMute());
@@ -1252,8 +1332,8 @@ let gameOver = false;
 function showEnd(win: boolean): void {
   endShown = true;
   speed = 0;
-  // mecz przez sieć: wynik trafia do historii i rankingu gracza
-  if (netGame) void saveResult(netGame.preset, win, Math.floor(game.tick / TICKS_PER_SECOND / 60));
+  // mecz przez sieć: wynik trafia do historii i rankingu gracza (kooperacja przeciw botom nie liczy się do rankingu)
+  if (netGame && !netGame.coop) void saveResult(netGame.preset, win, Math.floor(game.tick / TICKS_PER_SECOND / 60));
   // mecz przez sieć się skończył: zamykamy kanał i pokój, żeby nie dało się do niego wrócić
   endOnline();
   // skończona gra (wygrana, porażka, poddanie) znika z zapisu: w menu nie ma już „Kontynuuj”
@@ -1400,6 +1480,8 @@ if (simThread) {
 
 let lastDraw = 0;
 function loop(now: number): void {
+  pings.update(now);
+  caravanNews(now);
   // limit klatek z ustawień: klatka pominięta, gdy od poprzedniej minęło za mało czasu (laptop się nie grzeje)
   const cap = gfx.fpsLimit ?? 0;
   if (cap > 0 && now - lastDraw < 1000 / cap - 2) { requestAnimationFrame(loop); return; }
@@ -1554,6 +1636,8 @@ requestAnimationFrame(loop);
         }
     return null;
   },
+  /** Nowa gra z botami na wybranej mapie (np. '2v2' — z botem-sojusznikiem) */
+  play(preset: MapPresetId = '1v1', seed = 'test'): void { start(seed, preset); },
   /** Dodaje po `n` każdego surowca */
   give(n = 300, player = ME): void { const p = game.players[player]!; for (let i = 0; i < p.res.length; i++) p.res[i]! += n; },
   /** Szkoli `n` włóczników w pierwszych koszarach gracza */

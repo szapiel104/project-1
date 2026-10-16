@@ -73,7 +73,7 @@ function yardMaterials(): Record<string, [THREE.Material, number]> {
   return (yardMats = { wood: [wood, 6], cloth: [cloth, 8], soil: [soil, 3], plain: [plain, 1] });
 }
 /** Nazwy przedmiotów podwórka z yard.json (do podglądu modeli) */
-export const YARD_KEYS = ['tub', 'post', 'woodpile', 'bench', 'basket', 'bucket', 'garden', ...CLOTHS];
+export const YARD_KEYS = ['tub', 'post', 'woodpile', 'bench', 'basket', 'bucket', 'garden', 'handcart', ...CLOTHS];
 /** Jeden przedmiot podwórka jako zwykła grupa siatek (podgląd modeli) */
 export function yardModel(key: string): THREE.Group {
   const g = new THREE.Group(), MAT = yardMaterials();

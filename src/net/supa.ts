@@ -182,12 +182,14 @@ export interface Member { id: string; nick: string; avatar: number }
 /** Wiadomości kanału pokoju: skład lobby, prośby o miejsce, start, polecenia na turę i wyjście */
 export type NetMsg =
   | { k: 'turn'; turn: number; from: number; cmds: Command[]; hash?: number; hashTurn?: number }
-  | { k: 'lobby'; preset: string; level: number; slots: Slot[]; seed?: string }
+  | { k: 'lobby'; preset: string; level: number; slots: Slot[]; seed?: string; coop?: boolean }
   | { k: 'seat'; id: string; slot: number }
   | { k: 'hello'; who: Member }
-  | { k: 'start'; preset: string; level: number; seed: string; slots: Slot[] }
+  | { k: 'start'; preset: string; level: number; seed: string; slots: Slot[]; coop?: boolean }
   | { k: 'close' }
   | { k: 'chat'; who: Member; text: string }
+  /** Znacznik dla sojuszników (Alt + klik): 0 atak, 1 pomocy, 2 zbiórka; x, y w polach mapy */
+  | { k: 'ping'; from: number; kind: number; x: number; y: number }
   | { k: 'bye'; from: number; last: number };
 
 /** Kanał pokoju: jeden na lobby i mecz. Obecność (presence) mówi, kto jest w pokoju. */

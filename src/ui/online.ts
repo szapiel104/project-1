@@ -19,6 +19,8 @@ export interface OnlineStart {
   me: number;
   /** Numery graczy-ludzi */
   humans: number[];
+  /** Kooperacja: wszyscy ludzie w drużynie 1 przeciw wzmocnionym botom */
+  coop: boolean;
   link: RoomLink;
   net: Lockstep;
 }
@@ -354,16 +356,24 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const link = roomLink(room.id, self);
     let preset = (room.preset in MAP_PRESETS ? room.preset : '1v1') as MapPresetId;
     let level = 2;
+    /** Kooperacja: ludzie siadają tylko w drużynie 1, drużyna 2 to wzmocnione boty */
+    let coop = false;
     let slots: Slot[] = [];
     let started = false;
     /** Mapa meczu: losuje ją tylko gospodarz, goście widzą ten sam podgląd */
     let seed = room.seed;
     let shown = '';
     const showMap = (): void => { const key = `${seed}|${preset}`; if (key === shown) return; shown = key; ui.preview(seed, preset); };
+    /** Miejsce dla człowieka? W kooperacji tylko drużyna 1 (parzyste miejsca) */
+    const humanSeat = (i: number): boolean => !coop || i % 2 === 0;
     const fresh = (n: number, keep: Slot[] = []): Slot[] => {
       const out: Slot[] = Array.from({ length: n }, (_, i) => keep[i] ?? { kind: 'open' });
-      // ludzie z obciętych miejsc przesiadają się na wolne
-      for (const s of keep.slice(n)) if (s.kind === 'human') { const k = out.findIndex((x) => x.kind !== 'human'); if (k >= 0) out[k] = s; }
+      // ludzie z obciętych miejsc (albo z drużyny botów w kooperacji) przesiadają się na wolne
+      const moved: Slot[] = [...keep.slice(n).filter((s) => s.kind === 'human')];
+      out.forEach((s, i) => { if (s.kind === 'human' && !humanSeat(i)) { moved.push(s); out[i] = { kind: 'bot' }; } });
+      for (const s of moved) { const k = out.findIndex((x, i) => x.kind !== 'human' && humanSeat(i)); if (k >= 0) out[k] = s; }
+      // w kooperacji drużyna 2 to zawsze boty
+      if (coop) out.forEach((_s, i) => { if (!humanSeat(i)) out[i] = { kind: 'bot' }; });
       return out;
     };
     slots = fresh(seats(preset));
@@ -431,7 +441,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
 
     const publish = (): void => {
       if (!host) return;
-      link.send({ k: 'lobby', preset, level, slots, seed });
+      link.send({ k: 'lobby', preset, level, slots, seed, coop });
       const humans = slots.filter((s) => s.kind === 'human') as Extract<Slot, { kind: 'human' }>[];
       const guests = humans.filter((s) => s.id !== m.id).map((s) => s.nick);
       void updateRoom(room.id, { preset, seed, guest_nick: `${humans.length}/${slots.length}${guests.length ? ` · ${guests.join(', ')}` : ''}` });
@@ -455,25 +465,29 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         LEVELS.forEach((n, i) => { const o = el('option', '', `Boty: ${n}`); o.value = String(i); ls.append(o); });
         ls.value = String(level);
         ls.addEventListener('change', () => { level = Number(ls.value); publish(); });
-        head.append(ms, ls);
-      } else head.append(el('span', 'net-chip', modeName(preset)), el('span', 'net-chip', `Boty: ${LEVELS[level]}`));
+        const cs = el('select'); cs.setAttribute('aria-label', 'Rodzaj gry');
+        for (const [v, label] of [['0', 'Rywalizacja'], ['1', 'Razem przeciw botom']] as const) { const o = el('option', '', label); o.value = v; cs.append(o); }
+        cs.value = coop ? '1' : '0';
+        cs.addEventListener('change', () => { coop = cs.value === '1'; slots = fresh(seats(preset), slots); paint(); publish(); });
+        head.append(ms, cs, ls);
+      } else head.append(el('span', 'net-chip', modeName(preset)), el('span', 'net-chip', coop ? 'Razem przeciw botom' : 'Rywalizacja'), el('span', 'net-chip', `Boty: ${LEVELS[level]}`));
       teams.replaceChildren();
       for (const team of [0, 1]) {
         const col = el('div', 'net-team');
-        const h = el('p', 'net-teamname', `Drużyna ${team + 1}`);
+        const h = el('p', 'net-teamname', coop ? (team === 0 ? 'Drużyna graczy' : 'Wzmocnione boty') : `Drużyna ${team + 1}`);
         h.style.setProperty('--team', hex(TEAM_COLORS[team] ?? 0x888888));
         col.append(h);
         slots.forEach((s, i) => {
           if (i % 2 !== team) return;
           const row = el('div', `net-slot ${s.kind}`);
           if (s.kind === 'human') row.append(shield(s.avatar, 30), el('strong', '', s.nick + (s.id === room.host ? ' (gospodarz)' : '') + (s.id === m.id ? ' — Ty' : '')));
-          else if (s.kind === 'bot') row.append(el('span', 'net-bot', '⚙'), el('strong', '', `Bot (${LEVELS[level]})`));
+          else if (s.kind === 'bot') row.append(el('span', 'net-bot', '⚙'), el('strong', '', coop && !humanSeat(i) ? `Bot (${LEVELS[level]}, wzmocniony)` : `Bot (${LEVELS[level]})`));
           else row.append(el('span', 'net-open', '+'), el('span', '', 'Wolne miejsce'));
           const act = el('div', 'net-slot-act');
           if (host && s.kind === 'open') act.append(button('Dodaj bota', () => { slots[i] = { kind: 'bot' }; paint(); publish(); }, 'link-btn'));
-          if (host && s.kind === 'bot') act.append(button('Usuń bota', () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
+          if (host && s.kind === 'bot' && humanSeat(i)) act.append(button('Usuń bota', () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
           if (host && s.kind === 'human' && s.id !== m.id) act.append(button('Wyrzuć', () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
-          if (s.kind === 'open') {
+          if (s.kind === 'open' && humanSeat(i)) {
             act.append(button('Usiądź tutaj', () => { if (host) { seat(m.id, i); } else link.send({ k: 'seat', id: m.id, slot: i }); }, 'link-btn'));
           }
           row.append(act);
@@ -485,7 +499,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     };
     /** Gospodarz przesadza gracza na wolne miejsce */
     const seat = (id: string, i: number): void => {
-      if (slots[i]?.kind !== 'open') return;
+      if (slots[i]?.kind !== 'open' || !humanSeat(i)) return;
       const k = slots.findIndex((s) => s.kind === 'human' && s.id === id);
       const who = k >= 0 ? slots[k] : link.members().map((x) => ({ kind: 'human' as const, ...x })).find((x) => x.id === id);
       if (!who) return;
@@ -501,7 +515,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       slots.forEach((s, i) => { if (s.kind === 'human' && s.id !== m.id && !here.some((x) => x.id === s.id)) { slots[i] = { kind: 'open' }; touched = true; } });
       for (const x of here) {
         if (slots.some((s) => s.kind === 'human' && s.id === x.id)) continue;
-        const k = slots.findIndex((s) => s.kind === 'open');
+        const k = slots.findIndex((s, i) => s.kind === 'open' && humanSeat(i));
         if (k >= 0) { slots[k] = { kind: 'human', ...x }; touched = true; }
       }
       if (touched) paint();
@@ -509,19 +523,19 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     };
     let hostSeen = host;
     const off = link.on((msgIn: NetMsg) => {
-      if (msgIn.k === 'lobby' && !host) { preset = msgIn.preset as MapPresetId; level = msgIn.level; slots = msgIn.slots; if (typeof msgIn.seed === 'string' && msgIn.seed) seed = msgIn.seed.slice(0, 40); hostSeen = true; paint(); showMap(); }
+      if (msgIn.k === 'lobby' && !host) { preset = msgIn.preset as MapPresetId; level = msgIn.level; slots = msgIn.slots; coop = msgIn.coop === true; if (typeof msgIn.seed === 'string' && msgIn.seed) seed = msgIn.seed.slice(0, 40); hostSeen = true; paint(); showMap(); }
       if (msgIn.k === 'hello' && host) sync();
       if (msgIn.k === 'seat' && host) seat(msgIn.id, msgIn.slot);
       if (msgIn.k === 'chat' && msgIn.who && typeof msgIn.text === 'string') addChat(msgIn.who, cleanChat(msgIn.text));
       if (msgIn.k === 'close' && !host) { cleanup(); void showOnline(); }
-      if (msgIn.k === 'start' && !host) go(msgIn.preset as MapPresetId, msgIn.level, msgIn.seed, msgIn.slots);
+      if (msgIn.k === 'start' && !host) go(msgIn.preset as MapPresetId, msgIn.level, msgIn.seed, msgIn.slots, msgIn.coop === true);
     });
     const offMembers = link.onMembers(() => {
       if (host) { sync(); return; }
       // gospodarz zniknął z pokoju
       if (hostSeen && !link.members().some((x) => x.id === room.host)) { note.textContent = 'Gospodarz wyszedł z pokoju.'; note.classList.add('bad'); }
     });
-    const go = (p: MapPresetId, lv: number, seed: string, final: Slot[]): void => {
+    const go = (p: MapPresetId, lv: number, seed: string, final: Slot[], co: boolean): void => {
       const meIdx = final.findIndex((s) => s.kind === 'human' && s.id === m.id);
       if (meIdx < 0) { note.textContent = 'Mecz ruszył bez Ciebie — nie było wolnego miejsca.'; note.classList.add('bad'); return; }
       started = true;
@@ -529,13 +543,13 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       off(); offMembers(); offPresence(); leaveRoom = null;
       setStatus({ where: 'game' });
       const net = new Lockstep(link, meIdx, humans);
-      ui.onStart({ room, seed, preset: p, level: lv, slots: final, me: meIdx, humans, link, net });
+      ui.onStart({ room, seed, preset: p, level: lv, slots: final, me: meIdx, humans, coop: co, link, net });
     };
     const doStart = (): void => {
       const final: Slot[] = slots.map((s) => (s.kind === 'open' ? { kind: 'bot' } : s));
-      link.send({ k: 'start', preset, level, seed, slots: final });
+      link.send({ k: 'start', preset, level, seed, slots: final, coop });
       void updateRoom(room.id, { status: 'playing' });
-      go(preset, level, seed, final);
+      go(preset, level, seed, final, coop);
     };
     leaveRoom = () => {
       off(); offMembers(); offPresence();

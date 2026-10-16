@@ -29,6 +29,8 @@ export interface GameChat {
   detach(): void;
   /** Otwiera pole wpisywania (Enter w grze) */
   open(): void;
+  /** Wpis od gracza bez wysyłania (np. znacznik sojusznika na mapie) */
+  note(who: Member, text: string, mine: boolean): void;
   readonly active: boolean;
 }
 
@@ -81,6 +83,7 @@ export function createGameChat(root: HTMLElement, onSound: () => void): GameChat
     },
     detach() { off?.(); off = null; link = null; box.hidden = true; close(); log.replaceChildren(); },
     open() { if (!link) return; form.hidden = false; box.classList.add('open'); input.focus(); },
+    note(who, text, mine) { box.hidden = false; add({ who, text }, mine); },
     get active() { return !!link; },
   };
 }

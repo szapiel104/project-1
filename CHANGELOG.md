@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.24.0 — gra drużynowa (2026-10-16)
+
+- Znaczniki dla drużyny: Alt + klik w mapę → „Atakuj tutaj”, „Pomocy!”, „Zbiórka” (albo 1/2/3). Sojusznicy widzą pulsujący krąg ze słupem światła, strzałkę przy krawędzi ekranu (kliknięcie przenosi kamerę), wpis na czacie i słyszą krótki sygnał; Spacja skacze do ostatniego znacznika. Boty z drużyny słuchają: na atak i zbiórkę wysyłają całe wolne wojsko, na pomoc połowę
+- Wysyłanie surowców sojusznikowi: przycisk „Sojusznicy” → komu, co, ile (10–100). Z bramy wyjeżdża chłop z dwukółką (nowy model z Blendera: skrzynia z desek, koła ze szprychami, worki i skrzynka) i jedzie pod zamek sojusznika; wrogi żołnierz, który go dopadnie, zabiera towar. Powiadomienia o dostawach i przechwyceniach
+- Razem przeciw botom (kooperacja): w pokoju gry przez sieć rodzaj „Razem przeciw botom” — wszyscy ludzie w jednej drużynie, druga to wzmocnione boty (zapasy i ludzie ×1,5, +0,25 za każdego kolejnego gracza, dostawy broni i złota co ok. 2 minuty), fale rozkładają się na wszystkich graczy; wynik nie liczy się do rankingu
+
 ## 0.23.7 — las we wspólnych pulach (2026-10-16)
 
 - Roślinność (korony, pnie, krzewy, kamyki, kwiaty, kępy trawy, trzcina, skały, puszcza za mapą) rysowana jedną siatką na rodzaj zamiast osobno dla każdego kawałka mapy 40×40 i jeszcze raz w cieniu. Do puli trafiają tylko kawałki w kadrze, a do puli cienia te w zasięgu mapy cieni; przepisywane tylko wtedy, gdy coś się zmieni (ruch kamery przez granicę kawałka, ścięte drzewo, zmiana LOD). Logika lasu bez zmian: ścinanie, pniaki, obrazki z daleka, pory roku, wiatr i zastępcze cienie działają jak wcześniej

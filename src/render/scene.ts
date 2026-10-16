@@ -49,7 +49,7 @@ import { needleTexture } from './foliage';
 import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
-import { Family } from './family';
+import { Family, yardModel } from './family';
 import { createLoads, tint, carryArms, plankBundle, ON_SHOULDER } from './loads';
 import { FireCrewFx } from './firecrew';
 import { DRAW as FIRE_DRAW } from '../sim/systems/fire';
@@ -961,6 +961,7 @@ export class GameRenderer {
     for (const u of this.state.units) this.prevPos.set(u.id, [u.px, u.py]);
     for (const x of this.state.soldiers) this.prevPos.set(x.id, [x.px, x.py]);
     for (const x of this.state.travelers) this.prevPos.set(x.id, [x.px, x.py]);
+    for (const x of this.state.caravans ?? []) this.prevPos.set(x.id, [x.px, x.py]);
     for (const x of this.state.wolves) this.prevPos.set(x.id, [x.px, x.py]);
   }
 
@@ -3800,6 +3801,55 @@ export class GameRenderer {
     if (id) swap(id, true);
   }
 
+  /** Znaczniki sojuszników (gra drużynowa): pulsujący krąg na ziemi i słup światła widoczny z daleka, ok. 10 s */
+  private pings: { g: THREE.Group; age: number; x: number; y: number }[] = [];
+  /** Wozy z surowcami w drodze (modele dwukółki) */
+  private carts = new Map<number, { obj: THREE.Group; heading: number }>();
+  ping(x: number, y: number, color: number): void {
+    if (!this.state || !this.view) return;
+    const { width, height } = this.state.map;
+    const g = new THREE.Group();
+    const mat = (o: number): THREE.MeshBasicMaterial => new THREE.MeshBasicMaterial({ color, transparent: true, opacity: o, depthWrite: false, toneMapped: false, fog: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.55, 0.75, 40).rotateX(-Math.PI / 2), mat(0.9));
+    ring.renderOrder = 21;
+    const inner = new THREE.Mesh(new THREE.RingGeometry(0.1, 0.22, 24).rotateX(-Math.PI / 2), mat(0.9));
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.16, 6, 12, 1, true).translate(0, 3, 0), mat(0.35));
+    g.add(ring, inner, beam);
+    g.position.set(x - width / 2, this.view.heightAt(x, y) + 0.05, y - height / 2);
+    this.scene.add(g);
+    this.pings.push({ g, age: 0, x, y });
+    while (this.pings.length > 6) this.dropPing(0);
+  }
+  private dropPing(i: number): void {
+    const p = this.pings[i]!;
+    this.scene.remove(p.g);
+    p.g.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.geometry.dispose(); (m.material as THREE.Material).dispose(); } });
+    this.pings.splice(i, 1);
+  }
+  private animatePings(dt: number): void {
+    for (let i = this.pings.length - 1; i >= 0; i--) {
+      const p = this.pings[i]!;
+      p.age += dt;
+      if (p.age > 10) { this.dropPing(i); continue; }
+      const [ring, inner, beam] = p.g.children as THREE.Mesh[];
+      const pulse = (p.age * 1.4) % 1;
+      ring!.scale.setScalar(0.6 + pulse * 1.4);
+      (ring!.material as THREE.MeshBasicMaterial).opacity = (1 - pulse) * 0.9;
+      const fade = p.age > 8 ? (10 - p.age) / 2 : 1;
+      (inner!.material as THREE.MeshBasicMaterial).opacity = 0.9 * fade;
+      (beam!.material as THREE.MeshBasicMaterial).opacity = 0.35 * fade * (0.8 + 0.2 * Math.sin(p.age * 6));
+    }
+  }
+  /** Punkt mapy (pola) na ekranie: piksele w oknie i czy jest przed kamerą w kadrze */
+  screenOf(x: number, y: number, lift = 0.6): { x: number; y: number; on: boolean; behind: boolean } {
+    const g = this.state;
+    if (!g || !this.view) return { x: 0, y: 0, on: false, behind: false };
+    const v = new THREE.Vector3(x - g.map.width / 2, this.view.heightAt(x, y) + lift, y - g.map.height / 2).project(this.cam.camera);
+    const behind = v.z > 1;
+    const sx = (v.x * 0.5 + 0.5) * innerWidth, sy = (-v.y * 0.5 + 0.5) * innerHeight;
+    return { x: sx, y: sy, on: !behind && Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1, behind };
+  }
+
   /** Rozkaz marszu: rozchodząca się złota fala w klikniętym miejscu */
   orderMarker(tile: { x: number; y: number }): void {
     if (!this.state || !this.view) return;
@@ -4131,6 +4181,7 @@ export class GameRenderer {
     this.dots.instanceMatrix.needsUpdate = true;
     (this.dots.material as THREE.MeshBasicMaterial).opacity = 0.55 + Math.sin(this.time * 6) * 0.35;
     // fala rozkazu: rośnie i blednie przez pół sekundy
+    this.animatePings(1 / 60);
     this.waveAge += 1 / 60;
     this.wave.visible = this.waveAge < 0.6;
     if (this.wave.visible) { const k = this.waveAge / 0.6; this.wave.scale.setScalar(0.6 + k * 1.6); (this.wave.material as THREE.MeshBasicMaterial).opacity = 1 - k; }
@@ -5054,6 +5105,42 @@ export class GameRenderer {
       k++;
     }
     for (let i = sad; i < this.sadFaces.length; i++) this.sadFaces[i]!.visible = false;
+    // wozy z surowcami dla sojusznika: chłop idzie z przodu i ciągnie dwukółkę za dyszle (model z tools/models/yard.py)
+    const seenCarts = new Set<number>();
+    for (const c of g.caravans ?? []) {
+      if (k >= MAX_UNITS) break;
+      const prev = this.prevPos.get(c.id);
+      const fx = (prev ? prev[0] + (c.px - prev[0]) * alpha : c.px) / FP;
+      const fy = (prev ? prev[1] + (c.py - prev[1]) * alpha : c.py) / FP;
+      let st = this.strides.get(c.id);
+      if (!st) { st = { x: fx, y: fy, phase: c.id }; this.strides.set(c.id, st); }
+      const moved = Math.hypot(fx - st.x, fy - st.y);
+      st.phase += Math.min(0.5, moved) * 7.5;
+      st.x = fx; st.y = fy;
+      // kierunek wygładzony (na zakrętach wóz nie obraca się skokiem)
+      const want = c.tx || c.ty ? Math.atan2(c.tx / FP - fx, c.ty / FP - fy) : 0;
+      let cart = this.carts.get(c.id);
+      if (!cart) { cart = { obj: yardModel('handcart'), heading: want }; cart.obj.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } }); this.scene.add(cat(cart.obj, 'wozy z surowcami')); this.carts.set(c.id, cart); }
+      let d = want - cart.heading; d = Math.atan2(Math.sin(d), Math.cos(d));
+      cart.heading += d * Math.min(1, this.frameDt * 6);
+      seenCarts.add(c.id);
+      const sx = Math.sin(cart.heading), sz = Math.cos(cart.heading);
+      // wóz za plecami chłopa (dyszle sięgają mu do rąk)
+      const cx = fx - sx * 0.3, cy = fy - sz * 0.3;
+      const cyH = view.heightAt(cx, cy);
+      cart.obj.position.set(cx - width / 2, cyH, cy - height / 2);
+      cart.obj.rotation.set(0, cart.heading, 0);
+      cart.obj.visible = true;
+      const px = fx + sx * 0.1, py = fy + sz * 0.1;
+      const y = view.heightAt(px, py);
+      t.position.set(px - width / 2, y + (this.calm ? 0 : Math.abs(Math.cos(st.phase)) * 0.02), py - height / 2);
+      t.rotation.set(0.1, cart.heading, 0, 'YXZ'); // pochylony, ciągnie
+      t.scale.setScalar(FIG);
+      t.updateMatrix();
+      this.figures.set(k, t.matrix, this.calm ? 0 : Math.sin(st.phase) * 0.45, false, TEAM_COLORS[g.players[c.owner]?.team ?? 0] ?? 0x888888, c.id);
+      k++;
+    }
+    for (const [id, cart] of this.carts) if (!seenCarts.has(id)) { this.scene.remove(cart.obj); cart.obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose()); this.carts.delete(id); }
     k = this.castleFolk(g, k);
     this.figures.finish(k);
     this.rods.count = n;
