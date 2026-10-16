@@ -107,6 +107,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       'Przycisk „Wyburzanie” i klik w budynek (albo przeciąganie po drogach). Wraca połowa kosztu, a gruz wynoszą wolni ludzie albo inżynier z cechu. Budynek zniszczony przez wroga zostaje ruiną — odbudowa kosztuje połowę materiału. Inżynier z cechu łata też uszkodzone budynki.',
       { h: 'Pożary i studnie' },
       'Budynek mocno rozbity przez wroga zajmuje się ogniem i powoli traci wytrzymałość. Gaszą go wolni chłopi i inżynier z cechu: biegną do najbliższej studni (8 drewna, 6 kamienia; cech inżynierów ma własną na podwórzu), czerpią wodę i wylewają ją na ogień. Bez studni w pobliżu pożar wypala się sam po minucie. Spalony budynek naprawia potem inżynier.',
+      { h: 'Pory roku i opał' },
+      'Rok ma cztery pory po 5 dni gry (cały rok to ok. 2 godziny). Pod zegarem widać porę roku i temperaturę. Gdy spada poniżej 8°C, ludzie palą w piecach: z chat i warsztatów idzie dym, a ze składu po trochu znika drewno na opał (zimą mniej więcej jedna kłoda na chatę na dobę, zamek za dwie). Zimno lekko psuje nastroje, a gdy zabraknie drewna, ludzie marzną w chatach i popularność spada wyraźnie — na zimę trzymaj zapas drewna.',
       { h: 'Pochodnie' },
       'Pochodnia kosztuje 2 drewna i stoi od razu. O zmierzchu ludzie obchodzą osadę i zapalają pochodnie przy budynkach, o świcie same gasną.',
     ],

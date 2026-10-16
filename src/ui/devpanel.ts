@@ -10,6 +10,8 @@ export interface DevEvents {
   onFoeAtTower(): void;
   onSkip(to: 'night' | 'day'): void;
   onFire(): void;
+  /** Ustawia porę roku (środek wybranej pory); zwraca opis pogody */
+  onSeason(season: 'spring' | 'summer' | 'autumn' | 'winter'): string;
   onHeal(): void;
   onGive(): void;
   onCamera(which: 'mine' | 'foe'): void;
@@ -96,12 +98,17 @@ export function createDevPanel(root: HTMLElement, ev: DevEvents): DevPanel {
     act('Usuń wrogie wojsko', () => { ev.onKillFoes(); status.textContent = 'Wrogie wojsko i wilki usunięte.'; }),
   );
 
+  // pora roku: gra przeskakuje do środka wybranej pory (temperatura, dym, opał, nastroje)
+  const seasons = el('div', 'dev-acts');
+  for (const [id, label] of [['spring', 'Wiosna'], ['summer', 'Lato'], ['autumn', 'Jesień'], ['winter', 'Zima']] as const)
+    seasons.append(act(label, () => { status.textContent = ev.onSeason(id); }, `Przeskocz do środka pory: ${label.toLowerCase()}`));
   box.append(
     head,
     pick<DevSpawn>('Kto', [['spearman', 'Włócznik'], ['archer', 'Łucznik'], ['wolf', 'Wilk']], kind, (v) => { kind = v; }),
     pick<boolean>('Czyj', [[true, 'Wróg'], [false, 'Mój']], foe, (v) => { foe = v; }),
     pick<number>('Ilu', [[1, '1'], [3, '3'], [6, '6'], [12, '12']], count, (v) => { count = v; }),
-    place, el('p', 'dev-sub', 'Szybkie scenki'), acts, status,
+    place, el('p', 'dev-sub', 'Szybkie scenki'), acts,
+    el('p', 'dev-sub', 'Pora roku'), seasons, status,
   );
   root.append(box);
   const hide = (): void => { box.hidden = true; if (placing) { placing = false; refresh(); } };

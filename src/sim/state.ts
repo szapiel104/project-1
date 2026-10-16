@@ -53,6 +53,10 @@ export interface PlayerState {
   /** Głód: przy ostatnim rozliczeniu zabrakło jedzenia na posiłek — głodni odchodzą, dopóki znów nie będzie co jeść */
   hungry?: boolean;
   cold?: number;
+  /** Opał: ułamek drewna spalonego w piecach, którego jeszcze nie zdjęto ze składu (zima) */
+  fuel?: number;
+  /** Ostatni miesiąc zabrakło drewna na opał (ludzie marzną) */
+  freezing?: boolean;
 }
 
 export interface Building {
@@ -320,6 +324,8 @@ export interface Wolf {
 
 export interface GameState {
   tick: number;
+  /** Przesunięcie pory roku w dniach (menu dewelopera: „ustaw porę roku”) */
+  seasonShift?: number;
   map: GameMap;
   rng: Rng;
   players: PlayerState[];

@@ -3,6 +3,21 @@ import { RULES } from '../../data/rules';
 import { BUILDINGS } from '../../data/buildings';
 import { housing, population, type GameState, type PlayerState } from '../state';
 import { dayPart } from './workers';
+import { rainAt } from '../clock';
+import { weatherOf } from '../weather';
+
+const WOOD = resIndex('wood');
+/** Drewno na opał: na jedną zamieszkaną chatę i dobę przy ok. 0°C (zamek liczy się za dwie); przy mrozie więcej */
+export const FUEL_PER_HOUSE_DAY = 1;
+
+/** Ile drewna na opał na miesiąc gry (ułamek) przy obecnej pogodzie */
+export function fuelNeed(g: GameState, p: PlayerState): number {
+  const { chill } = weatherOf(g, rainAt(g.tick));
+  if (!chill) return 0;
+  let homes = 0;
+  for (const b of g.buildings) if (b.owner === p.id && !b.build && !b.ruined) { const id = BUILDINGS[b.type]!.id; if (id === 'house') homes++; else if (id === 'keep') homes += 2; }
+  return (homes * chill * FUEL_PER_HOUSE_DAY * RULES.monthTicks) / RULES.dayTicks;
+}
 
 const FOOD = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 const GOLD = resIndex('gold');
@@ -53,6 +68,10 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   // ostatnia noc: kto spał na słomie pod gołym niebem, narzeka; kto przy tym zmókł w deszczu, narzeka podwójnie
   parts.push({ key: 'rough', value: !p.rough ? 0 : p.rough >= 4 ? -2 : -1 });
   parts.push({ key: 'cold', value: p.cold ? -1 : 0 });
+  // zima: zimno trochę psuje nastroje; gdy zabrakło drewna na opał, ludzie marzną w chatach i złości to dużo bardziej
+  const w = weatherOf(g, rainAt(g.tick));
+  parts.push({ key: 'winter', value: w.chill >= 1 ? -1 : 0 });
+  parts.push({ key: 'freezing', value: w.chill > 0 && p.freezing ? -3 : 0 });
   const delta = parts.reduce((n, x) => n + x.value, 0);
   return { delta, food, gold, fed, bribed, parts, ale };
 }
@@ -75,6 +94,15 @@ export function economySystem(g: GameState): void {
     p.hungry = !f.fed || undefined;
     if (f.bribed) p.res[GOLD]! += f.gold;
     p.res[ALE]! -= f.ale * RULES.alePerTavern; // piwo wypite
+    // opał: w zimne dni chaty palą w piecach — z drewna w składzie znika po trochu (ułamki się zbierają)
+    p.fuel = (p.fuel ?? 0) + fuelNeed(g, p);
+    const burn = Math.floor(p.fuel);
+    if (burn > 0) {
+      const take = Math.min(burn, p.res[WOOD]!);
+      p.res[WOOD]! -= take;
+      p.fuel -= burn;
+      p.freezing = take < burn;
+    } else if (!fuelNeed(g, p)) p.freezing = false;
     p.popDelta = f.delta;
     p.popularity = Math.max(0, Math.min(RULES.maxPopularity, p.popularity + f.delta));
   }

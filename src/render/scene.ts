@@ -38,7 +38,7 @@ import { peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import RAM_MODEL from './models/ram.json';
 import { clockAt, rainAt } from '../sim/clock';
-import { COLD, temperatureAt } from '../sim/weather';
+import { COLD, weatherOf } from '../sim/weather';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
@@ -2018,7 +2018,7 @@ export class GameRenderer {
       const list: FxSource[] = [];
       // dym ma powód: w zimne dni ludzie palą w piecach tam, gdzie są (chata z mieszkańcami, warsztat z pracownikiem),
       // piekarz i piwowar palą pod piecem i kotłem tylko przy robocie, karczma wieczorem, kuchnia zamku za dnia
-      const temp = temperatureAt(g.tick, g.map.seed, rainAt(g.tick));
+      const temp = weatherOf(g, rainAt(g.tick)).temp;
       const cold = temp < COLD;
       const hour = clockAt(g.tick).hour;
       const home = new Set<number>(), busy = new Set<number>();

@@ -1,5 +1,5 @@
 import { GUARD_SAY, SAY } from './data/barks';
-import { COLD, SEASON_NAME, seasonAt, temperatureAt } from './sim/weather';
+import { COLD, SEASON_NAME, shiftToSeason, weatherOf, type Season } from './sim/weather';
 import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
 import { RULES } from './data/rules';
 import { Terrain } from './data/terrain';
@@ -1340,7 +1340,7 @@ function refresh(): void {
   const clock = clockAt(game.tick);
   hud.update({
     day: clock.day, hour: clock.hour, night: clock.night,
-    weather: { season: SEASON_NAME[seasonAt(game.tick)], temp: temperatureAt(game.tick, game.map.seed, rainAt(game.tick)) },
+    weather: (() => { const w = weatherOf(game, rainAt(game.tick)); return { season: SEASON_NAME[w.season], temp: w.temp }; })(),
     res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
@@ -1832,7 +1832,7 @@ function situation(px: number, py: number): string | null {
   const tavern = game.buildings.some((b) => b.owner === ME && BUILDINGS[b.type]!.id === 'tavern' && b.worker);
   if (tavern && (p.res[resIndex('ale')] ?? 0) <= 0 && Math.random() < 0.3) return 'dry';
   if (renderer.weather.rain > 0.4 && Math.random() < 0.4) return 'rain';
-  { const temp = temperatureAt(game.tick, game.map.seed, rainAt(game.tick)); if (temp < 2 && Math.random() < 0.5) return 'cold'; if (temp > 25 && Math.random() < 0.35) return 'hot'; }
+  { const temp = weatherOf(game, rainAt(game.tick)).temp; if (temp < 2 && Math.random() < 0.5) return 'cold'; if (temp > 25 && Math.random() < 0.35) return 'hot'; }
   if (p.tax === 1 && Math.random() < 0.15) return 'noTax';
   if (p.popularity >= 80 && Math.random() < 0.25) return 'good';
   return null;
@@ -1854,7 +1854,7 @@ function lineFor(id: number): string {
   { const h = clockAt(game.tick).hour; if (h >= 5 && h < 8 && Math.random() < 0.5) return pick('morning'); }
   // rytm dnia: wieczór (19, 20), w drodze do łóżka (21), sen (22, pod dachem albo na słomie)
   if (u.phase === 22) return u.home ? pick('sleeping') : Math.random() < 0.5 ? pick('outside') : pick('sleeping');
-  if (u.phase === 21) return temperatureAt(game.tick, game.map.seed) < COLD && Math.random() < 0.6 ? pick('coldNight') : pick('sleep');
+  if (u.phase === 21) return weatherOf(game).temp < COLD && Math.random() < 0.6 ? pick('coldNight') : pick('sleep');
   if (u.phase === 19 || u.phase === 20) return pick('evening');
   if (u.phase === 13 || u.phase === 14) return pick('build');
   if (u.carryRes >= 0 && Math.random() < 0.5) return pick('carry');
@@ -1910,7 +1910,7 @@ requestAnimationFrame(sayLoop);
 
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): HudView['report'] {
-  const LBL: Record<string, string> = { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu' };
+  const LBL: Record<string, string> = { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: 'Brak jedzenia na wybrane racje', value: 0, note: '(jedzą mniej)' });
   const mine = game.units.filter((u) => u.owner === ME);
@@ -2073,6 +2073,12 @@ const devPanel = createDevPanel(document.body, {
     }
     refresh();
     devPanel.placed(`Jest ${Math.floor(clockAt(game.tick).hour)}:${String(Math.floor((clockAt(game.tick).hour % 1) * 60)).padStart(2, '0')}.`);
+  },
+  onSeason: (s: Season) => {
+    game.seasonShift = shiftToSeason(game.tick, s);
+    refresh();
+    const w = weatherOf(game, rainAt(game.tick));
+    return `${SEASON_NAME[w.season]}: teraz ${w.temp.toFixed(1).replace('.', ',')}°C${w.temp < COLD ? ' — w chatach palą w piecach (drewno na opał)' : ''}.`;
   },
   onFire: () => {
     // płonie mój gotowy budynek najbliżej studni albo cechu inżynierów (żeby było widać gaszenie)
