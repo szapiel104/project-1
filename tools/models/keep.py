@@ -277,6 +277,17 @@ for sx in (-1, 1):
     b.box('base', 'dark', 0.015, 0.26, 0.06, tx + sx * (S2 + 0.006), 1.0, tz)
     torch('interior', tx + sx * (S2 - RW - 0.03), WALK + 0.36, tz + 0.35)
 
+# ---------------- pochodnie na murach od zewnątrz: przy bramie, na bokach i z tyłu (nocą płoną, gra stawia przy nich światło) ----------------
+def torch_out(x, z, nx, nz, y=0.8):
+    """Pochodnia na zewnętrznym licu muru: żelazne ramię od muru (normalna nx, nz) i pochodnia 7 cm przed licem"""
+    b.box('base', 'iron', 0.03 if nz else 0.09, 0.025, 0.09 if nz else 0.03, x - nx * 0.04, y + 0.005, z - nz * 0.04)
+    torch('base', x, y, z)
+for s in (-1, 1):
+    torch_out(s * 0.6, H + 0.48, 0, 1)            # po bokach bramy, na licach wież bramnych (lico z = H + 0,4; obok chorągwi)
+    torch_out(s * 2.4, -H - 0.08, 0, -1)          # tylny mur
+    for k in (-2.6, 2.6):
+        torch_out(s * (H + 0.08), k, s, 0)        # boczne mury
+
 # ---------------- schody na mury: kamienne stopnie od dziedzińca w górę ku koronie ----------------
 for dx in range(N):
     col = [dy for dy in range(N) if tile(dx, dy) == 'S']
@@ -633,7 +644,23 @@ for s in (-1, 1):
     b.box('base', 'woodDark', 0.05, 0.75, 0.05, wx + s * 0.3, G + 0.2, wz)
 b.box('base', 'woodDark', 0.66, 0.05, 0.05, wx, G + 0.92, wz)
 b.gable('base', 'roadWood', wx - 0.4, wx + 0.4, wz - 0.32, wz + 0.32, G + 0.95, 0.25, along_x=True, over=0.05)
-b.prism('base', 'wood', 0.08, 0.08, 0.12, wx + 0.12, G + 0.45, wz, seg=8)
+# kołowrót między słupkami (wałek z korbą), lina i wiadro wiszące na niej nad cembrowiną
+ROLL = G + 0.8
+b.box('base', 'wood', 0.56, 0.07, 0.07, wx, ROLL - 0.035, wz, bottom=True)                 # wałek
+b.box('base', 'rope', 0.12, 0.08, 0.08, wx + 0.08, ROLL - 0.04, wz, bottom=True)           # nawinięta lina
+for s in (-1, 1):
+    b.box('base', 'woodDark', 0.06, 0.08, 0.08, wx + s * 0.3, ROLL - 0.04, wz, bottom=True)  # łożyska na słupkach
+b.box('base', 'iron', 0.03, 0.025, 0.025, wx + 0.345, ROLL - 0.012, wz, bottom=True)       # oś korby
+b.box('base', 'iron', 0.02, 0.16, 0.02, wx + 0.36, ROLL - 0.16, wz, bottom=True)           # ramię korby
+b.box('base', 'woodDark', 0.07, 0.025, 0.025, wx + 0.39, ROLL - 0.17, wz, bottom=True)     # rączka
+BY = G + 0.5    # spód wiadra
+b.box('base', 'rope', 0.012, ROLL - 0.04 - (BY + 0.2), 0.012, wx + 0.08, BY + 0.2, wz, bottom=True)   # lina
+b.prism('base', 'wood', 0.06, 0.075, 0.12, wx + 0.08, BY, wz, seg=10)                       # wiadro (szersze u góry)
+for y in (BY + 0.02, BY + 0.09):
+    b.prism('base', 'iron', 0.066 + (y - BY) * 0.12, 0.066 + (y - BY) * 0.12, 0.012, wx + 0.08, y, wz, seg=10, top=False)
+b.box('base', 'iron', 0.15, 0.012, 0.012, wx + 0.08, BY + 0.19, wz, bottom=True)            # kabłąk
+for s in (-1, 1):
+    b.box('base', 'iron', 0.012, 0.08, 0.012, wx + 0.08 + s * 0.07, BY + 0.11, wz, bottom=True)
 # wóz z sianem: skrzynia z deskami burt, kopa siana, dwie osie z kołami na szprychach, dyszel
 cxw, czw = cx(4) - 0.05, cz(6) + 0.1
 WHR, WHY = 0.13, G + 0.13
