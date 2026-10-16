@@ -19,7 +19,7 @@ export const pl = {
   'hud.map': 'Mapa',
   'hud.population': 'Ludność',
   'hud.day': 'Dzień',
-  'hud.idle': 'Bez pracy',
+  'hud.idle': 'Kopacze bez fachu (wolni) / miejsca przy ogniskach',
   'hud.stockpile': 'Skład',
   'hud.granary': 'Spichlerz',
   'hud.popularity': 'Popularność',

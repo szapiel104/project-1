@@ -151,7 +151,13 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
         }
         const doors = new Set<number>();
         for (const b of camps) if ((used.get(b.door) ?? 0) < BUILDINGS[b.type]!.idleSlots!) doors.add(b.door);
-        if (!doors.size) for (const b of camps) doors.add(b.door);
+        // już stoi przy ognisku, na którym jest: zostaje (nie liczy sam siebie, więc „pełne” go nie wygania)
+        if (!doors.size) {
+          // przy ogniskach brak miejsc: kopacz czeka pod chatą (każdy pod inną, po kolei według id), a bez chat — przy ognisku
+          const houses = g.buildings.filter((b) => b.owner === u.owner && b.door >= 0 && !b.build && BUILDINGS[b.type]!.housing && BUILDINGS[b.type]!.id !== 'keep');
+          if (houses.length) { const d = houses[u.id % houses.length]!.door; return (t) => t === d; }
+          for (const b of camps) doors.add(b.door);
+        }
         return (t) => doors.has(t);
       }
       const keep = playerKeep(g, u.owner);
@@ -411,7 +417,7 @@ export function workerSystem(g: GameState): void {
   for (const b of g.buildings) byId.set(b.id, b);
 
   for (const b of g.buildings) {
-    if (b.worker !== 0 || b.build || !(BUILDINGS[b.type]!.production || BUILDINGS[b.type]!.staff)) continue;
+    if (b.worker !== 0 || b.build || b.off || !(BUILDINGS[b.type]!.production || BUILDINGS[b.type]!.staff)) continue;
     // najpierw ktoś, kto nic nie robi; budowniczego, latarnika czy tragarza gruzu zabieramy dopiero, gdy nie ma innych,
     // a nikogo z ładunkiem w rękach. Stare zadanie (target) się kasuje, żeby nie blokowało go później.
     const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0)

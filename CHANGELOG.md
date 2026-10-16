@@ -6,6 +6,9 @@
 - Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
 - Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
 - Wejście w spacer chłopem bez kilkusekundowego zamrożenia: światło sal stoi w scenie od startu (nowe światło przebudowywało shadery wszystkich materiałów), drzewa kolizji liczone tylko dla ścian tuż obok
+- Klik w spichlerz na dolnym pasku: ilu je, ile zjadają co miesiąc i na dobę, na ile starczy zapas, ile dają gospodarstwa i ilu ludzi wykarmią, bilans z ostatnich godzin oraz podpowiedź, ile sadów brakuje
+- Wyłączanie budynku (przycisk w oknie budynku): wyłączony stoi pusty, a pracownik idzie do innej roboty — np. do sadu, gdy brakuje jedzenia; po włączeniu znów ktoś przychodzi
+- Kopacze bez fachu: przy ognisku obozowiska siedzi najwyżej tylu, ile ma miejsc; nadmiarowi czekają pod chatami, a skryba podpowiada kolejne obozowisko
 - Dolny pasek czytelniej: duże ikony i liczby w jednej linii, bez skaczących +/− przy każdym zapasie (zmiana w podpowiedzi), własna ikona „jedzenie razem” (kosz) i tylko przy niej bilans; skład i spichlerz pokazują samą liczbę o stałej szerokości
 - Dolny pasek: zapasy zaraz za zegarem i tyle, ile mieści się na ekranie (drewno, kamień, złoto, jedzenie, potem żelazo, piwo, włócznie, łuki, chleb…); pod „…” zostaje tylko reszta, a gdy wszystko się mieści, przycisk znika
 - Nocą światło pochodni widać w całym kadrze: pod każdą zapaloną pochodnią (przy budynkach i w rękach idących) ciepła poświata na ziemi, prawdziwych świateł w puli 24 zamiast 18

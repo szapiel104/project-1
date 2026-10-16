@@ -13,7 +13,9 @@ import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
 import { Phase, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type GameState } from './sim/state';
 import { step, type Command } from './sim/step';
-import { monthlyForecast } from './sim/systems/economy';
+import { FOOD_PER_DAY, MEALS_PER_DAY, monthlyForecast } from './sim/systems/economy';
+/** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
+const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 import { buildWork, canAfford, canPlace, maxHp } from './sim/systems/placement';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
@@ -170,6 +172,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onDismount: (id) => { pending.push({ type: 'dismount', player: ME, tower: id }); play('rotate'); },
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
+  onPower: (id, on) => { pending.push({ type: 'power', player: ME, id, on }); play('click'); },
   onRally: (id, unit, clear) => {
     const kind = unit ? unitIndex(unit) : -1;
     if (clear) { pending.push({ type: 'rally', player: ME, building: id, kind, tile: -1 }); hud.toast('Flaga zdjęta: nowi staną przed koszarami.'); return; }
@@ -511,6 +514,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     : undefined;
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: def.id === 'barracks' ? recruitInfo().map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
+    power: !b.build && (def.production || def.staff) && def.id !== 'keep' ? { on: !b.off, worker: b.worker !== 0 } : undefined,
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     garrisonMax: garrisonRoom(def.id) || undefined,
     prod: b.owner === ME && !b.build && (def.production || def.staff) ? prodInfo(b) : undefined,
@@ -1311,7 +1315,7 @@ function refresh(): void {
   const pop = population(game, ME);
   if (p.popularity < 50 && pop <= 6) scribe.say('noComers', `Nikt nie chce tu przyjść — popularność ${p.popularity}. Daj więcej jedzenia albo obniż podatki.`, true);
   else if (p.popularity >= 50 && pop >= housing(game, ME)) scribe.say('noComers', 'Ludzie by przyszli, ale nie ma dla nich dachu. Postaw chatę.');
-  else if (p.popularity >= 50 && idleCount(game, ME) >= idleSlots(game, ME)) scribe.say('noComers', 'Obozowisko pełne — nowi nie mają gdzie czekać. Daj im pracę albo postaw drugie obozowisko.');
+  else if (p.popularity >= 50 && idleCount(game, ME) >= idleSlots(game, ME)) scribe.say('noComers', `Przy ogniskach komplet (${idleSlots(game, ME)} miejsc) — nowi kopacze nie przyjdą, a nadmiarowi czekają pod chatami. Daj im pracę albo postaw kolejne obozowisko.`);
   if (game.wolves.length && !wolvesSeen) scribe.say('wolves', 'Wilki wyszły z lasu! Trzymajcie ludzi za palisadą.', true, 'herald');
   wolvesSeen = game.wolves.length > 0;
   if ((p.wolfKills ?? 0) > wolfKillsSeen) scribe.say('wolfKill', 'Wilki zagryzły naszego człowieka…', true);
@@ -1339,7 +1343,7 @@ function refresh(): void {
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
     delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable,
-    report: buildReport(f),
+    report: buildReport(f, resTrend(p.res)),
     soldiers: game.soldiers.filter((s) => s.owner === ME).length,
   });
   hud.setHash(stateHash(game));
@@ -1902,7 +1906,7 @@ function sayLoop(): void {
 requestAnimationFrame(sayLoop);
 
 /** Rozpiska do panelu: składniki popularności i podział ludności */
-function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
+function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): HudView['report'] {
   const LBL: Record<string, string> = { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: 'Brak jedzenia na wybrane racje', value: 0, note: '(jedzą mniej)' });
@@ -1916,7 +1920,7 @@ function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
     const name = b ? t(BUILDINGS[b.type]!.name) : '?';
     jobs.set(name, (jobs.get(name) ?? 0) + 1);
   }
-  const people: { label: string; value: number }[] = [{ label: 'Wszyscy chłopi', value: mine.length }, { label: 'Bez pracy', value: idle }, { label: 'Na budowie', value: builders }];
+  const people: { label: string; value: number }[] = [{ label: 'Wszyscy chłopi', value: mine.length }, { label: 'Kopacze bez fachu', value: idle }, { label: 'Na budowie', value: builders }];
   for (const [k, v] of [...jobs.entries()].sort((a, b) => b[1] - a[1])) people.push({ label: k, value: v });
   const coming = game.travelers.filter((x) => x.owner === ME && !x.leaving).length, going = game.travelers.filter((x) => x.owner === ME && x.leaving).length;
   if (coming) people.push({ label: 'W drodze do osady', value: coming });
@@ -1929,7 +1933,35 @@ function buildReport(f: ReturnType<typeof monthlyForecast>): HudView['report'] {
   army.push({ label: 'W walce', value: mySoldiers.filter((s) => s.target || s.hunt).length });
   const p0 = game.players[ME]!;
   army.push({ label: 'Polegli od początku', value: p0.stats.lost }, { label: 'Zabici wrogowie', value: p0.stats.kills });
-  return { popularity, people, army };
+  // spichlerz: zapotrzebowanie, zapas, prognoza
+  const pop = population(game, ME);
+  const lvl = RULES.rations[p0.rations]!;
+  const perMonthWant = Math.ceil((pop * lvl.foodPer8) / 8);
+  const perDayWant = perMonthWant * MEALS_PER_DAY;
+  const have = FOOD_RES_ALL.reduce((n, i) => n + (p0.res[i] ?? 0), 0);
+  const net = FOOD_RES_ALL.reduce((n, i) => n + (trend[i] ?? 0), 0); // zmiana z ostatnich ok. 600 ticków (1/6 doby)
+  const mineB = game.buildings.filter((b) => b.owner === ME && !b.build);
+  const count = (id: string, worked = true): number => mineB.filter((b) => BUILDINGS[b.type]!.id === id && (!worked || b.worker) && !b.off).length;
+  const bakeries = Math.min(count('bakery'), count('mill'), count('farm'));
+  const made = count('orchard') * FOOD_PER_DAY.orchard! + count('fisher') * FOOD_PER_DAY.fisher! + bakeries * FOOD_PER_DAY.bakery!;
+  const perPerson = (lvl.foodPer8 / 8) * MEALS_PER_DAY;
+  const feeds = perPerson > 0 ? Math.floor(made / perPerson) : 0;
+  const lasts = perDayWant > 0 ? have / perDayWant : Infinity;
+  const fmtLast = (d: number): string => d === Infinity ? 'bez końca' : d >= 2 ? `${Math.floor(d)} dni` : d >= 1 ? '1 dzień' : `${Math.max(0, Math.floor(d * 24))} godz.`;
+  const food: NonNullable<HudView['report']>['food'] = [
+    { label: 'Jedzących', value: String(pop), note: `(racje: ${t(lvl.name).toLowerCase()})` },
+    { label: 'Zjadają co miesiąc', value: String(perMonthWant), note: '(rozliczenie)' },
+    { label: 'Zjadają na dobę', value: String(perDayWant), note: `(${perPerson.toFixed(perPerson % 1 ? 1 : 0)} na osobę)` },
+    { label: 'W spichlerzach', value: `${have} / ${storeCapacity(game, ME, 'granary')}` },
+    { label: 'Zapas starczy na', value: fmtLast(lasts), sign: lasts < 0.5 ? 'minus' : lasts >= 2 ? 'plus' : undefined },
+    { label: 'Gospodarstwa dają na dobę', value: `ok. ${made}`, note: `(sady ${count('orchard')}, rybacy ${count('fisher')}, piekarnie ${bakeries})` },
+    { label: 'Wykarmią', value: `ok. ${feeds} osób`, sign: feeds < pop ? 'minus' : 'plus' },
+    { label: 'Bilans teraz', value: `${net * 6 > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net * 6)} na dobę`, sign: net < 0 ? 'minus' : net > 0 ? 'plus' : undefined, note: '(z ostatnich 4 godzin)' },
+  ];
+  const lack = Math.max(0, Math.ceil((pop * perPerson - made) / FOOD_PER_DAY.orchard!));
+  const foodHint = (lack > 0 ? `Brakuje jedzenia dla ${pop - feeds} osób — postaw jeszcze ok. ${lack} ${lack === 1 ? 'sad' : lack < 5 ? 'sady' : 'sadów'} (albo wyłącz mniej ważny budynek, żeby pracownik poszedł do sadu). ` : '')
+    + `Jeden sad wykarmi ok. ${Math.floor(FOOD_PER_DAY.orchard! / (perPerson || 1))} osób, rybak ok. ${Math.floor(FOOD_PER_DAY.fisher! / (perPerson || 1))}, pole z młynem i piekarnią ok. ${Math.floor(FOOD_PER_DAY.bakery! / (perPerson || 1))}. Jeden spichlerz mieści ${BUILDINGS.find((b) => b.id === 'granary')?.capacity?.granary ?? 0}.`;
+  return { popularity, people, army, food, foodHint };
 }
 
 /** Okno na środku ekranu: czy na pewno rozebrać, co wróci do składu (połowa kosztu, wynoszona z gruzu) */

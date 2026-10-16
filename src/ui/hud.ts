@@ -39,6 +39,8 @@ export interface HudEvents {
   /** Punkt zbiórki koszar: unit = rodzaj (brak = wszyscy); clear = zdejmij flagę, inaczej następny klik na mapie ją stawia */
   onRally(building: number, unit: string | null, clear: boolean): void;
   onGate(building: number, open: boolean): void;
+  /** Wyłącza/włącza budynek z pracownikiem */
+  onPower(building: number, on: boolean): void;
   onDismount(building: number): void;
   onWalk(): void;
   /** Oko: spacer oczami losowego mieszkańca */
@@ -50,7 +52,7 @@ export interface HudEvents {
 
 export interface HudView {
   /** Rozpiska popularności (składniki z plusem i minusem) i ludności (kto co robi) */
-  report?: { popularity: { label: string; value: number; note?: string }[]; people: { label: string; value: number }[]; army: { label: string; value: number }[] };
+  report?: { popularity: { label: string; value: number; note?: string }[]; people: { label: string; value: number }[]; army: { label: string; value: number }[]; food: { label: string; value: string; note?: string; sign?: 'plus' | 'minus' }[]; foodHint: string };
   soldiers?: number;
   res: ArrayLike<number>;
   /** Zmiana zapasu każdego surowca w ciągu ostatniej minuty gry */
@@ -77,7 +79,7 @@ export interface HudView {
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
 export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
-export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; garrison?: number;
+export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
@@ -298,15 +300,20 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // rozwijane rozpiski nad dolnym paskiem: klik w koronę = popularność, klik w ludzi = kto co robi
   const report = el('div', 'report panel');
   report.hidden = true;
-  let reportKind: 'popularity' | 'people' | 'army' | null = null;
+  let reportKind: 'popularity' | 'people' | 'army' | 'food' | null = null;
   let lastReport: HudView['report'];
   const drawReport = (): void => {
     if (!reportKind || !lastReport) { report.hidden = true; return; }
     report.hidden = false;
-    const rows = reportKind === 'popularity' ? lastReport.popularity : reportKind === 'army' ? lastReport.army : lastReport.people;
+    const rows = reportKind === 'popularity' ? lastReport.popularity : reportKind === 'army' ? lastReport.army : reportKind === 'food' ? [] : lastReport.people;
     const sum = reportKind === 'popularity' ? rows.reduce((n, r) => n + r.value, 0) : 0;
-    report.innerHTML = `<button type="button" class="report-x" aria-label="Zamknij">×</button><p class="report-title">${reportKind === 'popularity' ? 'Popularność — co miesiąc' : reportKind === 'army' ? 'Wojsko' : 'Mieszkańcy'}</p>`;
+    report.innerHTML = `<button type="button" class="report-x" aria-label="Zamknij">×</button><p class="report-title">${reportKind === 'popularity' ? 'Popularność — co miesiąc' : reportKind === 'army' ? 'Wojsko' : reportKind === 'food' ? 'Spichlerz — jedzenie' : 'Mieszkańcy'}</p>`;
     const list = el('dl', 'report-list');
+    if (reportKind === 'food') for (const r of lastReport.food) {
+      const dt = el('dt', '', r.label);
+      if (r.note) dt.append(el('small', '', ` ${r.note}`));
+      list.append(dt, el('dd', r.sign ?? '', r.value));
+    }
     for (const r of rows) {
       const dt = el('dt', '', r.label);
       if ('note' in r && r.note) dt.append(el('small', '', ` ${r.note}`));
@@ -316,7 +323,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', 'Razem'), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
     report.append(list);
     // okienko wyskakuje tuż nad przyciskiem, który je otworzył
-    const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : popBox;
+    const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : reportKind === 'food' ? foodBox : popBox;
     // okno ma powiększenie interfejsu (zoom: var(--ui)), więc jego left/bottom liczą się w pikselach powiększonych:
     // pozycję z ekranu dzielimy przez powiększenie, a szerokość okna mnożymy — inaczej wyjeżdża poza ekran
     const r = anchor.getBoundingClientRect();
@@ -326,9 +333,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     report.style.bottom = `${(window.innerHeight - r.top + 10) / k}px`;
     report.style.left = `${left / k}px`;
     report.style.right = 'auto';
+    if (reportKind === 'food' && lastReport.foodHint) report.append(el('p', 'report-hint', lastReport.foodHint));
     if (reportKind === 'popularity') report.append(el('p', 'report-hint', 'W górę: większe racje, niższe podatki albo rozdawanie złota. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.'));
   };
-  const toggleReport = (k: 'popularity' | 'people' | 'army'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
+  const toggleReport = (k: 'popularity' | 'people' | 'army' | 'food'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
   for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people'], [armyBox, 'army']] as const) {
     box.classList.add('clickable');
     box.tabIndex = 0;
@@ -359,6 +367,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   foodBox.setAttribute('aria-label', t('hud.granary'));
   foodBox.classList.add('store-box');
   foodBox.append(pic('granary', 'granary'), foodVal, foodTrend);
+  // klik w spichlerz: ile jedzą na dobę i co miesiąc, na ile starczy, ilu ludzi wykarmią gospodarstwa
+  foodBox.classList.add('clickable');
+  foodBox.tabIndex = 0;
+  foodBox.setAttribute('role', 'button');
+  foodBox.addEventListener('click', () => toggleReport('food'));
+  foodBox.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleReport('food'); } });
   const idleVal = el('strong');
   const idleBox = el('div');
   idleBox.title = t('hud.idle');
@@ -576,6 +590,15 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   gateBtn.addEventListener('click', () => events.onGate(infoId, !gateWant));
   gateBox.append(gateBtn, gateState);
   gateBox.hidden = true;
+  // wyłączanie budynku: pracownik odchodzi do innej roboty (np. do sadu, gdy brakuje jedzenia)
+  const powerBox = el('div', 'gate-box power-box');
+  const powerBtn = el('button', 'btn-main gate-btn');
+  powerBtn.type = 'button';
+  const powerState = el('p', 'gate-state');
+  let powerOn = true;
+  powerBtn.addEventListener('click', () => events.onPower(infoId, !powerOn));
+  powerBox.append(powerBtn, powerState);
+  powerBox.hidden = true;
   // wieża: ilu łuczników stoi na pomoście, zaznacz ich albo każ zejść
   const towerBox = el('div', 'gate-box');
   const towerState = el('p', 'gate-state');
@@ -627,7 +650,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, gateBox, towerBox, watchState, walkBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, powerBox, towerBox, watchState, walkBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -989,6 +1012,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
+      powerBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
       siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true; infoDesc.hidden = false;
       walkBtn.hidden = person.walk === false;
@@ -1005,6 +1029,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       recruit.hidden = true;
       towerBox.hidden = true;
       gateBox.hidden = true;
+      powerBox.hidden = true;
       siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true;
       walkBtn.hidden = true;
       // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
@@ -1167,6 +1192,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const wall = i.def.id === 'stoneWall';
         setText(towerState, i.garrison ? `${wall ? 'Na murze' : 'Na wieży'}: ${i.garrison} / ${i.garrisonMax ?? (wall ? 2 : 4)} łuczników` : wall ? 'Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.' : 'Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.');
         tSel.disabled = tDown.disabled = !i.garrison;
+      }
+      powerBox.hidden = !(i.own && i.power);
+      if (i.power) {
+        powerOn = i.power.on;
+        setText(powerBtn, i.power.on ? 'Wyłącz budynek' : 'Włącz budynek');
+        setText(powerState, i.power.on ? 'Działa — wyłącz, a pracownik pójdzie do innej roboty' : i.power.worker ? 'Wyłączony' : 'Wyłączony — pracownik poszedł do innej roboty');
+        powerState.dataset.shut = String(!i.power.on);
       }
       gateBox.hidden = !(i.own && i.gate);
       if (i.gate) {

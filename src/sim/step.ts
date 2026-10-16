@@ -1,4 +1,4 @@
-import { buildingById } from './state';
+import { buildingById, Phase, unitById } from './state';
 import { BUILDINGS } from '../data/buildings';
 import { buildingIndex } from '../data/buildings';
 import { RULES } from '../data/rules';
@@ -37,6 +37,8 @@ export type Command =
   | { type: 'stance'; player: number; ids: number[]; stance: number }
   | { type: 'attack'; player: number; ids: number[]; target: number }
   | { type: 'gate'; player: number; id: number; open: boolean }
+  /** Wyłącza albo włącza budynek z pracownikiem (wyłączony stoi pusty, pracownik idzie do innej roboty) */
+  | { type: 'power'; player: number; id: number; on: boolean }
   | { type: 'garrison'; player: number; ids: number[]; tower: number }
   | { type: 'dismount'; player: number; tower: number }
   /** Gracz wyszedł z meczu przez sieć: przegrywa (wysyła ją lockstep, nie gracz) */
@@ -94,6 +96,20 @@ function apply(g: GameState, c: Command): void {
     case 'gate': {
       const b = buildingById(g, c.id);
       if (b && b.owner === c.player && BUILDINGS[b.type]!.gate) b.gateOpen = !!c.open;
+      break;
+    }
+    case 'power': {
+      const b = buildingById(g, c.id);
+      if (!b || b.owner !== c.player) break;
+      const def = BUILDINGS[b.type]!;
+      if (!(def.production || def.staff) || def.id === 'keep') break;
+      b.off = !c.on || undefined;
+      if (b.off && b.worker) {
+        // pracownik odkłada robotę (ładunek w rękach przepada, jak przy zburzeniu) i jest wolny dla innego budynku
+        const u = unitById(g, b.worker);
+        if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.target = 0; }
+        b.worker = 0;
+      }
       break;
     }
     case 'noop':

@@ -680,3 +680,31 @@ describe('zamek — mury', () => {
     expect(g.walls[t]! & 16).toBe(16);
   });
 });
+
+describe('wyłączanie budynku', () => {
+  it('wyłączony budynek oddaje pracownika, który bierze inną robotę; po włączeniu znów ktoś przychodzi', () => {
+    const g = createGame(9);
+    const p = g.players[0]!;
+    p.res[resIndex('wood')] = 200;
+    const a = build(g, 'woodcutter') as Extract<Command, { type: 'build' }>;
+    run(g, 1, [a]);
+    const wc = g.buildings.find((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'woodcutter')!;
+    run(g, 1500);
+    expect(wc.build).toBe(0);
+    expect(wc.worker).toBeGreaterThan(0);
+    const man = wc.worker;
+    run(g, 1, [{ type: 'power', player: 0, id: wc.id, on: false }]);
+    expect(wc.off).toBe(true);
+    expect(wc.worker).toBe(0);
+    expect(g.units.find((u) => u.id === man)!.job).not.toBe(wc.id);
+    run(g, 200);
+    expect(wc.worker).toBe(0);
+    // cudzy gracz nie może włączyć
+    run(g, 1, [{ type: 'power', player: 1, id: wc.id, on: true }]);
+    expect(wc.off).toBe(true);
+    run(g, 1, [{ type: 'power', player: 0, id: wc.id, on: true }]);
+    run(g, 50);
+    expect(wc.off).toBeUndefined();
+    expect(wc.worker).toBeGreaterThan(0);
+  });
+});

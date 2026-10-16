@@ -14,6 +14,13 @@ export function foodTotal(p: PlayerState): number {
   return n;
 }
 
+/** Ile razy na dobę ludzie jedzą (rozliczenie co miesiąc gry, poza nocą — śpiący nie jedzą) */
+export const MEALS_PER_DAY = (() => { let n = 0; for (let t = RULES.monthTicks; t <= RULES.dayTicks; t += RULES.monthTicks) if (dayPart(t) !== 'sleep') n++; return n; })();
+
+/** Ile jedzenia na dobę daje jeden pracujący budynek (zmierzone w symulacji: chodzenie do spichlerza w cenie;
+ *  dla piekarni cały łańcuch pole → młyn → piekarnia, po jednym budynku) — do prognozy w oknie spichlerza */
+export const FOOD_PER_DAY: Record<string, number> = { orchard: 130, fisher: 64, bakery: 110 };
+
 /** Miesięczna zmiana popularności przy obecnych ustawieniach (także jako prognoza dla interfejsu). */
 export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; food: number; gold: number; fed: boolean; bribed: boolean; ale: number; parts: { key: string; value: number; level?: string }[] } {
   const pop = population(g, p.id);
