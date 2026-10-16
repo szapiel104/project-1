@@ -1214,7 +1214,45 @@ export class GameRenderer {
   }
 
   /** Kompiluje z góry wszystkie shadery sceny, żeby gra nie przycinała przy pierwszym widoku */
-  warmup(): void { this.renderer.compile(this.scene, this.cam.camera); this.composer.render(); }
+  warmup(): void {
+    // Pierwszy budynek danego rodzaju (i pierwszy plac budowy, przycięty płaszczyzną) potrzebuje nowych shaderów: karta
+    // kompiluje je w chwili pierwszego rysowania i gra wtedy przycina, a po odświeżeniu już nie (przeglądarka pamięta
+    // skompilowane shadery). Dlatego raz, przy wczytywaniu, stawiamy pod mapą po jednym egzemplarzu każdego budynku —
+    // gotowy i jako plac budowy, z widocznym wnętrzem — kompilujemy wszystko i od razu sprzątamy.
+    let probe: THREE.Group | null = null;
+    if (!this.prewarmed) {
+      this.prewarmed = true;
+      probe = new THREE.Group();
+      const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), -49);
+      const clips = new Map<THREE.Material, THREE.Material>();
+      const clip = (m: THREE.Material): THREE.Material => {
+        let c = clips.get(m);
+        if (!c) { c = m.clone(); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clips.set(m, c); }
+        return c;
+      };
+      for (const def of BUILDINGS) {
+        for (const site of [false, true]) {
+          const m = this.models.building(def.id, TEAM_COLORS[0] ?? 0x888888);
+          m.userData.fx = collectFx(m, isWindowMat);
+          mergeStatic(m);
+          m.traverse((o) => {
+            o.visible = true;
+            const me = o as THREE.Mesh;
+            if (!me.isMesh) return;
+            me.castShadow = me.receiveShadow = true;
+            if (site) me.material = Array.isArray(me.material) ? me.material.map(clip) : clip(me.material);
+          });
+          m.position.set(0, -50, 0);
+          probe.add(m);
+        }
+      }
+      this.scene.add(probe);
+    }
+    this.renderer.compile(this.scene, this.cam.camera);
+    this.composer.render();
+    if (probe) this.scene.remove(probe);
+  }
+  private prewarmed = false;
 
   /** Powolny obrót kamery wokół osady, gdy otwarte jest menu */
   orbit(dt: number): void {
