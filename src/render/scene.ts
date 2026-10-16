@@ -3458,6 +3458,14 @@ export class GameRenderer {
         v.y += 1.25;
         spots.push({ key: 'b' + id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2, k: 1 });
       }
+      // pochodnie na bramach i w zamku (w bryle modelu) świecą nocą lekko, słabiej niż pochodnia na słupie
+      for (const [id, mesh] of this.buildingMeshes) {
+        const marks = this.lightMarks(mesh);
+        for (let k = 0; k < marks.length; k++) {
+          const v = marks[k]!.getWorldPosition(new THREE.Vector3());
+          spots.push({ key: 'm' + id + ':' + k, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 1, k: 0.4 });
+        }
+      }
       // ognisko w obozowisku pali się zawsze, więc nocą świeci na ludzi i stołki dookoła
       for (const b of g.buildings) {
         if (BUILDINGS[b.type]!.id !== 'camp' || b.build) continue;
@@ -3513,6 +3521,14 @@ export class GameRenderer {
       if (st.cur < 0.002) { st.cur = 0; if (!on) st.key = ''; }
       lamp.intensity = st.cur * st.k * this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
     });
+  }
+
+  /** Znaczniki pochodni w bryle budynku (płomienie na bramach, pochodnie na ścianach zamku); liczone raz na budynek */
+  private lightMarkCache = new WeakMap<THREE.Object3D, THREE.Object3D[]>();
+  private lightMarks(mesh: THREE.Object3D): THREE.Object3D[] {
+    let l = this.lightMarkCache.get(mesh);
+    if (!l) { l = []; mesh.traverse((o) => { if (o.name === 'torchFlame' || o.name === 'lightSpot') l!.push(o); }); this.lightMarkCache.set(mesh, l); }
+    return l;
   }
 
   private syncTorchGlow(g: GameState, lit: Set<number>): void {

@@ -890,7 +890,7 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     g.add(grp);
   }
   // znaczniki z modelu: szyby (świecą nocą), komin (dym), ogień w palenisku
-  const marks = model as unknown as { windows?: [number, number, number, number, number, number, number, string][]; chimneys?: [number, number, number][]; flames?: [number, number, number][] };
+  const marks = model as unknown as { windows?: [number, number, number, number, number, number, number, string][]; chimneys?: [number, number, number][]; flames?: [number, number, number][]; lights?: [number, number, number][] };
   for (const [x, y, z, nx, nz, w, h, grp] of marks.windows ?? []) {
     const pane = box(grp === 'shell' ? shell : g, M.pane, nx ? 0.012 : w, h, nz ? 0.012 : w, x, y - h / 2, z);
     pane.name = 'pane';
@@ -900,6 +900,13 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     c.name = 'chimney';
     c.position.set(x, y, z);
     shell.add(c);
+  }
+  // pochodnie zrobione w bryle modelu (zamek): niewidoczne znaczniki, przy których scena nocą zapala lekkie światło
+  for (const [x, y, z] of marks.lights ?? []) {
+    const o = new THREE.Object3D();
+    o.name = 'lightSpot';
+    o.position.set(x, y, z);
+    g.add(o);
   }
   for (const [x, y, z] of marks.flames ?? []) {
     const f = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6).translate(0, 0.08, 0), M.ember);

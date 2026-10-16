@@ -32,9 +32,11 @@ cx = lambda dx: dx - H + 0.5   # środek pola w układzie modelu
 cz = lambda dy: dy - H + 0.5
 
 b = Building()
+lights = []         # pochodnie na ścianach: tu gra nocą zapala światło
 solid = []          # przeszkody spacerowicza: x0, x1, z0, z1, od wysokości y0 do y1
 def torch(group, x, y, z):
     """Pochodnia na ścianie: drewniany trzonek w żelaznym uchwycie, kubek ze smołą i wąski, wysoki płomień"""
+    lights.append([round(x, 3), round(y + 0.25, 3), round(z, 3)])   # gra stawia tu nocą lekkie światło
     b.box(group, 'iron', 0.05, 0.02, 0.05, x, y + 0.02, z)                       # uchwyt
     b.prism(group, 'woodDark', 0.012, 0.016, 0.2, x, y - 0.06, z, seg=6)         # trzonek
     b.prism(group, 'iron', 0.022, 0.03, 0.04, x, y + 0.14, z, seg=6, top=False)  # kubek
@@ -710,4 +712,4 @@ VIEWS = [
     ['strzelnica baszty z bliska', [-4.55, WY - 0.05, 4.55], [-5.35, WY - 0.1, 5.1], OUT, 14],
     ['z muru na dziedziniec', [4.8, WY, 1.0], [0, 0.3, 1.0], OUT, 22],
 ]
-b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS})
+b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS})
