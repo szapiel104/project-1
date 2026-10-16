@@ -18,6 +18,8 @@ import HOUSE_MODEL from './models/house.json';
 import BARN_MODEL from './models/barn.json';
 import ORCHARD_MODEL from './models/orchard.json';
 import FARM_MODEL from './models/farm.json';
+import CAMP_MODEL from './models/camp.json';
+const CAMP_SEATS = (CAMP_MODEL as unknown as { seats: [number, number, number][] }).seats;
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
@@ -4450,9 +4452,12 @@ export class GameRenderer {
         }
       } else if (camp && camp.owner === u.owner) {
         const mesh = this.buildingMeshes.get(camp.id);
-        const a = (u.id * 2.39996) % (Math.PI * 2), rad = 0.5 + (u.id % 3) * 0.14;
-        t.position.set(camp.x + 1 + Math.cos(a) * rad - width / 2, (mesh?.position.y ?? 0) + 0.02, camp.y + 1.35 + Math.sin(a) * rad * 0.8 - height / 2);
-        t.rotation.set(0, Math.atan2(-Math.cos(a), -Math.sin(a)), 0);
+        // przy stołkach wokół ogniska (miejsca z modelu), kolejni stoją za nimi w drugim kręgu
+        const seats = CAMP_SEATS, n = u.id % (seats.length * 2), seat = seats[n % seats.length]!, back = n >= seats.length ? 1.45 : 1.25;
+        const turn = (camp.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
+        const lx = seat[0] * back, lz = seat[1] * back;
+        t.position.set(camp.x + 1 + lx * cosT + lz * sinT - width / 2, (mesh?.position.y ?? 0) + 0.02, camp.y + 1 - lx * sinT + lz * cosT - height / 2);
+        t.rotation.set(0, seat[2] + turn, 0);
         swing = 0;
       }
       // rybak stoi twarzą do wody z wędką; pozostali na stanowisku machają siekierą lub kilofem
