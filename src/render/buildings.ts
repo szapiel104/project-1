@@ -9,6 +9,7 @@ import TAVERN_MODEL from './models/tavern.json';
 import HOUSE_MODEL from './models/house.json';
 import BARN_MODEL from './models/barn.json';
 import GRANARY_MODEL from './models/granary.json';
+import GRANARY_BIG_MODEL from './models/granary_big.json';
 import ARMORY_MODEL from './models/armory.json';
 import BAKERY_MODEL from './models/bakery.json';
 import MILL_MODEL from './models/mill.json';
@@ -959,6 +960,17 @@ const BUILDERS: Record<string, Builder> = {
     food.position.y = (GRANARY_MODEL as unknown as { floorY: number }).floorY - 0.06;
     inside.add(food);
     const p = (GRANARY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  granaryBig(g, _team, flag) {
+    // duży spichlerz z Blendera (tools/models/granary_big.py): kamienna podmurówka, szachulec, łupek, lukarna z bloczkiem;
+    // na podłodze gra układa żywność według stanu spichlerzy (gęściej niż w małym, bo izba większa)
+    blenderModel(g, GRANARY_BIG_MODEL as unknown as BlenderBuilding, flag);
+    const inside = g.getObjectByName('interior') as THREE.Group;
+    const food = fillSlots('foodfill', 0, -0.1, 0.6);
+    food.position.y = (GRANARY_BIG_MODEL as unknown as { floorY: number }).floorY - 0.06;
+    inside.add(food);
+    const p = (GRANARY_BIG_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   armory(g, _team, flag) {

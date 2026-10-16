@@ -158,6 +158,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'stoneTower', category: 'defense', name: 'b.stoneTower', w: 2, h: 2, cost: { stone: 30, wood: 6 }, hp: 2400, wall: true, buildable: true },
   // Zbrojownia: tu włóczniarz i łuczarz odnoszą gotową broń, stąd biorą ją koszary i straż
   { id: 'armory', category: 'military', name: 'b.armory', w: 2, h: 2, cost: { wood: 20, stone: 10 }, stores: ['armory'], capacity: { armory: 60 }, buildable: true },
+  // duży spichlerz: kamienna podmurówka, piętro z szachulca, dach z łupka — trzy razy więcej miejsca za kamień
+  // (na końcu listy: typ budynku w zapisach gry to numer na tej liście, więc nowe budynki dopisujemy na końcu)
+  { id: 'granaryBig', category: 'food', name: 'b.granaryBig', w: 3, h: 3, cost: { wood: 40, stone: 30 }, stores: ['granary'], capacity: { granary: 1200 }, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */

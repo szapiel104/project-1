@@ -75,7 +75,8 @@ class Timber:
                     b.box(group, 'wood', 0.02, h + 0.02, w / 2, xx + nx * 0.04, y0 - 0.01, z + side * (w / 2 + w / 4 + 0.01), -side * nx * 0.5)
 
     # ---------- szachulec na licu ----------
-    def frame_x(self, group, z, x0, x1, y0, y1, posts, braces=True, out=1):
+    def frame_x(self, group, z, x0, x1, y0, y1, posts, braces=True, out=1, doors=()):
+        """doors: otwory (u0, u1), przez które nie wolno puścić zastrzału"""
         b, T = self.b, self.T
         zz = z + out * (T / 2 + 0.008)
         # słupy, rygle i zastrzały w trzech warstwach o kilka mm (lica nie leżą w jednej płaszczyźnie — inaczej migają)
@@ -85,7 +86,7 @@ class Timber:
         b.box(group, 'woodDark', x1 - x0, 0.05, 0.025, (x0 + x1) / 2, y1 - 0.05, zz + out * 0.006)
         if braces:
             for a, c in zip(posts, posts[1:]):
-                if c - a < 0.45:
+                if c - a < 0.45 or any(a < u1 and c > u0 for u0, u1 in doors):
                     continue
                 ln = math.hypot(c - a, y1 - y0 - 0.1)
                 ang = math.atan2(y1 - y0 - 0.1, c - a)
