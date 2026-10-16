@@ -152,7 +152,7 @@ function lookOf(id: number, tunic: number, muted = false): Look {
   const shade = 0.8 + (mix(id, 1) % 40) / 100;
   c.multiplyScalar(shade);
   // chłop: barwa pana wyblakła i przybrudzona (tania wełna), żołnierz nosi ją czystą
-  if (muted) c.lerp(new THREE.Color(EARTH[mix(id, 11) % EARTH.length]!), 0.42);
+  if (muted) c.lerp(new THREE.Color(EARTH[mix(id, 11) % EARTH.length]!), 0.6); // jak u kopaczy w Gothicu: brudny brąz, barwa pana tylko przebija
   l = {
     tunic: c.getHex(), trousers: pickOf(TROUSERS, 2), hair: pickOf(HAIR, 3), skin: pickOf(SKIN, 4),
     headwear: mix(id, 5) % 5, hat: pickOf(CAPS, 6), apron: mix(id, 7) % 4 === 0, beard: mix(id, 8) % 3 === 0, wraps: mix(id, 10) % 2 === 0,

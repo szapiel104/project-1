@@ -6,6 +6,7 @@
 - Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
 - Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
 - Wejście w spacer chłopem bez kilkusekundowego zamrożenia: światło sal stoi w scenie od startu (nowe światło przebudowywało shadery wszystkich materiałów), drzewa kolizji liczone tylko dla ścian tuż obok
+- Nowy wygląd chłopa w stylu kopacza z Gothica: krótka, postrzępiona koszula z wycięciem pod szyją i krótkimi rękawami, gołe przedramiona, szeroki skórzany pas z klamrą i sakiewką, workowate portki do pół łydki z ciemnymi pasami, owijacze ze skóry i ciężkie buty; koszula w brudnym brązie, przez który tylko przebija barwa pana
 - Kilof i siekiera trzymane oburącz: przy kopaniu i rąbaniu obie dłonie schodzą się na stylisku; stylisko kończy się w oku grotu (nie przebija żelaza)
 - Włócznik: włócznia ok. półtora raza wyższa od człowieka (była dwa razy), tarcza tuż przy przedramieniu
 - Narzędzia poprawione: kute żelazo z fakturą i połyskiem (nie gładki szary klocek), mniejsze obuchy młotka i siekiery, kilof jak w Gothicu (długie cienkie stylisko, wąski grot-półksiężyc o zaostrzonych końcach), pochodnia z głowicą ze szmat nasączonych smołą owiniętą drutem, rybak trzyma wędkę w obu dłoniach wyciągniętych w przód
