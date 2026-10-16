@@ -1272,15 +1272,16 @@ body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1
 .allies-going { font-size: 14px; color: var(--light); }
 /* ---- minimapa (prawy dolny róg, nad dolną belką) ---- */
 .minimap {
-  position: fixed; right: 10px; bottom: 140px; z-index: 56; padding: 0 5px 5px; line-height: 0;
+  position: fixed; right: 10px; bottom: 140px; z-index: 56; padding: 0 5px 5px; line-height: 0; width: 224px; box-sizing: border-box;
   background: linear-gradient(#3e2a17, #24170c); border: 2px solid var(--gold-dark); box-shadow: 0 0 0 2px var(--wood-edge), 3px 4px 0 rgba(30, 18, 8, .5);
 }
-.minimap-bar { display: flex; align-items: center; gap: 6px; height: 34px; line-height: 1; }
-.minimap-title { font: 700 13px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
-.minimap-slot { margin-left: auto; display: flex; }
+.minimap-bar { display: flex; align-items: center; gap: 6px; height: 34px; line-height: 1; min-width: 0; }
+.minimap-title { flex: none; font: 700 13px var(--display); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
+.minimap-slot { margin-left: auto; display: flex; flex: 0 1 auto; min-width: 0; }
+.minimap-slot .allies-btn { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .minimap canvas { display: block; cursor: pointer; border: 1px solid #120a04; box-shadow: inset 0 0 0 1px var(--gold-dark); touch-action: none; }
 .minimap-hide {
-  width: 28px; height: 28px; padding: 0; cursor: pointer; line-height: 1;
+  flex: none; width: 28px; height: 28px; padding: 0; cursor: pointer; line-height: 1; display: grid; place-items: center;
   font: 700 18px var(--display); color: var(--gold); background: rgba(0, 0, 0, .35); border: 1px solid var(--gold-dark);
 }
 .minimap-hide:hover { color: var(--light); border-color: var(--gold); }
