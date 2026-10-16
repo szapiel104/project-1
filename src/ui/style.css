@@ -449,7 +449,7 @@ body.menu-open .scribe { display: none; }
 .report-hint { margin: 10px 0 0; font-size: 15px; color: var(--ink-soft); line-height: 1.35; }
 /* dolny pasek w jednej linii: zapasy węższe (zmiana pod liczbą), liczniki osady zwarte, bez zawijania */
 .status { flex-wrap: nowrap; gap: 6px; }
-.status .res { flex-wrap: nowrap; gap: 3px; min-width: 0; }
+.status .res { flex-wrap: nowrap; gap: 3px; min-width: 0; flex: 0 1 auto; justify-content: flex-start; margin-right: auto; } /* zapasy zaraz za zegarem */
 .status .people { flex-wrap: nowrap; gap: 3px; }
 .status .res li { min-height: 46px; padding: 2px 7px; gap: 5px; }
 .status .res .ico svg { width: 26px; height: 26px; }

@@ -234,7 +234,6 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   resToggle.addEventListener('click', () => { resOpen = !resOpen; try { localStorage.setItem('project1.resOpen', resOpen ? '1' : '0'); } catch { /* nic */ } paintRes(); });
   for (const id of RESOURCES) {
     const li = el('li');
-    if (!MAIN_RES.includes(id)) li.classList.add('res-more');
     const val = el('strong', '', '0');
     const tr = el('span', 'trend');
     li.dataset.tip = t(RESOURCE_DEFS[id].name);
@@ -245,16 +244,27 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     resItems.push(li);
     resList.append(li);
   }
-  // kolejność: drewno, kamień, złoto, jedzenie razem, [rozwijane], przycisk
+  // kolejność: drewno, kamień, złoto, jedzenie razem, potem tyle kolejnych zapasów, ile zmieści się w pasku,
+  // a reszta w wysuwanej listwie nad paskiem (przycisk „…”)
   for (const id of MAIN_RES) resList.append(resItems[RESOURCES.indexOf(id)]!);
   resList.append(foodSum);
-  // pozostałe zapasy w wysuwanej listwie nad paskiem (nie rozpychają dolnego paska)
   const extra = el('ul', 'res res-extra');
   extra.setAttribute('aria-label', 'Pozostałe zapasy');
-  for (const id of RESOURCES) if (!MAIN_RES.includes(id)) extra.append(resItems[RESOURCES.indexOf(id)]!);
   const toggleLi = el('li', 'res-toggle-li');
   toggleLi.append(resToggle, extra);
   resList.append(toggleLi);
+  /** Zapasy dokładane do paska w tej kolejności, póki jest miejsce (broń i piwo, potem składniki jedzenia) */
+  const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'bread', 'apples', 'wheat', 'flour', 'fish'];
+  const fitRes = (): void => {
+    for (const id of SECOND) resList.insertBefore(resItems[RESOURCES.indexOf(id)]!, toggleLi);
+    const over = (): boolean => resList.scrollWidth > resList.clientWidth + 1 || bar.scrollWidth > bar.clientWidth + 1;
+    let shown = SECOND.length;
+    while (shown > 0 && over()) shown--, extra.prepend(resItems[RESOURCES.indexOf(SECOND[shown]!)]!);
+    // listwa w kolejności pierwszeństwa (to, co nie zmieściło się w pasku)
+    toggleLi.hidden = shown === SECOND.length;
+    if (toggleLi.hidden && resOpen) { resOpen = false; paintRes(); }
+  };
+  fitRes();
   paintRes();
   const people = el('div', 'people');
   const popVal = el('strong');
@@ -436,6 +446,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   };
   setInterval(fitInfo, 300);
   window.addEventListener('resize', fitInfo);
+  // zapasy w pasku: przelicz po zmianie okna i wielkości interfejsu (oraz raz po wczytaniu czcionek)
+  let resW = 0;
+  const refit = (): void => { const w = bar.clientWidth + Math.round(parseFloat(getComputedStyle(bar).zoom || '1') * 1000); if (w !== resW && bar.isConnected) { resW = w; fitRes(); } };
+  setInterval(refit, 500);
+  window.addEventListener('resize', refit);
+  void document.fonts?.ready.then(() => { resW = 0; refit(); });
   info.hidden = true;
   const infoName = el('p', 'info-name');
   const infoDesc = el('p');

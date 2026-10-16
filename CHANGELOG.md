@@ -6,6 +6,7 @@
 - Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
 - Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
 - Wejście w spacer chłopem bez kilkusekundowego zamrożenia: światło sal stoi w scenie od startu (nowe światło przebudowywało shadery wszystkich materiałów), drzewa kolizji liczone tylko dla ścian tuż obok
+- Dolny pasek: zapasy zaraz za zegarem i tyle, ile mieści się na ekranie (drewno, kamień, złoto, jedzenie, potem żelazo, piwo, włócznie, łuki, chleb…); pod „…” zostaje tylko reszta, a gdy wszystko się mieści, przycisk znika
 - Nocą światło pochodni widać w całym kadrze: pod każdą zapaloną pochodnią (przy budynkach i w rękach idących) ciepła poświata na ziemi, prawdziwych świateł w puli 24 zamiast 18
 - Nocne światła pochodni przy przesuwaniu kamery nie zapalają się i nie gasną skokowo: lampy rozjaśniają się i wygasają płynnie, a najdalsze z puli świecą słabiej
 - Wydajność bez zmiany wyglądu: pniaki rysowane dopiero po ścięciu drzewa (wcześniej ok. 300 tys. niewidocznych trójkątów), cienie krzaków, koron liściastych i pni liczone z prostszych brył tego samego kształtu (cień w widoku osady ok. 1,3 mln → 0,7 mln trójkątów), lżejsze kwiaty, niesione ładunki rysowane tylko u niosących
