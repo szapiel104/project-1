@@ -238,6 +238,8 @@ export function cloudShade(mat: THREE.Material): void {
   const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey();
   mat.onBeforeCompile = (sh, r) => {
     prev.call(mat, sh, r);
+    // wstawka tylko raz (łańcuch onBeforeCompile bywa owinięty dwa razy — np. pory roku i kopie materiału — a podwójna deklaracja psuje shader)
+    if (sh.fragmentShader.includes('uniform float uCloudT;')) return;
     sh.uniforms.uCloudT = cloudT; sh.uniforms.uCloud = cloudK; sh.uniforms.tCloudN = { value: sharedNoise() };
     sh.fragmentShader = 'uniform float uCloudT; uniform float uCloud; uniform sampler2D tCloudN;\n' + sh.fragmentShader.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
       {
