@@ -251,7 +251,21 @@ def ellipsoid(c, r, seg, rings):
     return g
 
 
+def outward(g):
+    """Każdy trójkąt zwrócony tam, gdzie normalne jego wierzchołków (na zewnątrz bryły): gra nie rysuje tylnych
+    stron ścian, więc wywinięty na lewą stronę pień pokazywał dziury i swoje wnętrze"""
+    fixed = []
+    for a, b, c in g.idx:
+        pa, pb, pc = g.pos[a], g.pos[b], g.pos[c]
+        fn = cross(sub(pb, pa), sub(pc, pa))
+        vn = addv(addv(g.nrm[a], g.nrm[b]), g.nrm[c])
+        fixed.append((a, b, c) if dot(fn, vn) >= 0 else (a, c, b))
+    g.idx = fixed
+    return g
+
+
 def pack(g):
+    outward(g)
     pos = b''.join(struct.pack('<3f', *p) for p in g.pos)
     nrm = b''.join(struct.pack('<3b', *[max(-127, min(127, round(c * 127))) for c in n]) for n in g.nrm)
     col = b''.join(struct.pack('<3B', *[max(0, min(255, round(c * 255))) for c in cc]) for cc in g.col)

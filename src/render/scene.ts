@@ -45,6 +45,7 @@ import { applySeason, SEASON_U, SnowTrails } from './season';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
+import { needleTexture } from './foliage';
 import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
@@ -817,17 +818,14 @@ export class GameRenderer {
 
     this.loads = createLoads(MAX_UNITS, this.scene);
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
-    // całe ścięte drzewo ciągnięte po ziemi za drwalem: pień z gałęziami i koroną na końcu
-    const log = mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.06, 0.1, 1.3, 7).rotateX(Math.PI / 2 - 0.1).translate(0, 0.15, -0.72), 0x6b4a2e),
-      tint(new THREE.CylinderGeometry(0.02, 0.035, 0.3, 5).rotateZ(0.9).translate(0.13, 0.2, -0.95), 0x6b4a2e),
-      tint(new THREE.CylinderGeometry(0.02, 0.035, 0.28, 5).rotateZ(-0.9).translate(-0.13, 0.17, -0.75), 0x6b4a2e),
-      tint(new THREE.ConeGeometry(0.3, 0.6, 7).rotateX(-Math.PI / 2).translate(0, 0.2, -1.25), 0x3c7a3a),
-      tint(new THREE.ConeGeometry(0.22, 0.5, 7).rotateX(-Math.PI / 2).translate(0, 0.2, -1.6), 0x44883f),
-      tint(new THREE.IcosahedronGeometry(0.16, 0).translate(0.16, 0.2, -1.05), 0x4c8f44),
-      tint(new THREE.IcosahedronGeometry(0.15, 0).translate(-0.17, 0.18, -0.98), 0x3c7a3a),
-    ]);
-    this.logs = new THREE.InstancedMesh(log, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true, roughness: 0.95 }), MAX_UNITS);
+    // całe ścięte drzewo ciągnięte po ziemi za drwalem: ten sam świerk z Blendera co w lesie (młody, ok. 6 m),
+    // położony czubkiem do tyłu — pień z korą w dłoniach, korona z igliwia wlecze się po ziemi
+    const lay = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.rotateX(-Math.PI / 2 + 0.12).scale(0.6, 0.6, 0.6).translate(0, 0.3, -0.2);
+    const log = mergeGeometries([lay(this.models.treeTrunk()), lay(this.models.treeCrown())], true)!;
+    this.logs = new THREE.InstancedMesh(log, [
+      new THREE.MeshStandardMaterial({ color: 0x6b4a2e, vertexColors: true, roughness: 0.95, map: pattern('bark'), normalMap: normal('bark') }),
+      new THREE.MeshStandardMaterial({ color: 0x3c7a3a, vertexColors: true, roughness: 0.95, side: THREE.DoubleSide, map: needleTexture(), alphaTest: 0.5 }),
+    ], MAX_UNITS);
     // wiązka desek na ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami
     const plank = plankBundle();
     const plankMap = pattern('planks')?.clone() ?? null;
