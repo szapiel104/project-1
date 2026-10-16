@@ -31,6 +31,7 @@ import type { OnlineStart } from './ui/online';
 import { createGameChat } from './ui/chat';
 import { createPings, PINGS } from './ui/pings';
 import { createAllies } from './ui/allies';
+import { createMinimap } from './ui/minimap';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
 import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
@@ -332,6 +333,21 @@ function showPing(from: number, kind: number, x: number, y: number): void {
   else if (kind === 1) { pluck(12, 1); setTimeout(() => pluck(12, 1), 160); }
   else { pluck(5, 1); setTimeout(() => pluck(7, 1), 140); }
 }
+// ---- minimapa (ui/minimap.ts): klik przenosi kamerę, prawy = marsz zaznaczonego wojska, Alt + klik = znacznik ----
+const minimap = createMinimap({
+  centerOn: (x, y) => renderer.centerOn(x, y),
+  order: (x, y) => {
+    if (!chosen.size) return false;
+    pending.push({ type: 'move', player: ME, ids: [...chosen], x, y, form: armyForm, amove: armyMarch === 1 });
+    renderer.orderMarker({ x, y });
+    play('rotate');
+    shout(armyMarch === 1 ? 'attack' : 'move');
+    return true;
+  },
+  ping: (cx, cy, x, y) => { pings.openMenu(cx, cy, { x, y }); },
+  viewQuad: () => renderer.viewQuad(),
+  pings: () => pings.active(),
+});
 window.addEventListener('pointerdown', (e) => {
   if (!e.altKey || e.button !== 0 || e.target !== canvas || menu.isOpen() || renderer.walking) return;
   e.preventDefault();
@@ -950,6 +966,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyR' && picked) rotate();
   if (e.code === 'KeyF' && selectedUnit && !e.repeat) { walkAs(selectedUnit); return; } // F przy zaznaczonym mieszkańcu = przejdź się jego oczami
   if (e.code === 'KeyM') hud.setMuted(toggleMute());
+  if (e.code === 'KeyN' && !e.repeat) minimap.toggle();
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
   if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);
 });
@@ -1482,6 +1499,7 @@ let lastDraw = 0;
 function loop(now: number): void {
   pings.update(now);
   caravanNews(now);
+  if (game) minimap.update(game, ME, now);
   // limit klatek z ustawień: klatka pominięta, gdy od poprzedniej minęło za mało czasu (laptop się nie grzeje)
   const cap = gfx.fpsLimit ?? 0;
   if (cap > 0 && now - lastDraw < 1000 / cap - 2) { requestAnimationFrame(loop); return; }

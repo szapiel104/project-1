@@ -3852,6 +3852,30 @@ export class GameRenderer {
     return { x: sx, y: sy, on: !behind && Math.abs(v.x) <= 1 && Math.abs(v.y) <= 1, behind };
   }
 
+  /** Środek kamery nad punktem mapy (pola) bez zmiany przybliżenia — minimapa */
+  centerOn(x: number, y: number): void {
+    if (!this.state) return;
+    this.cam.lookAt(x - this.state.map.width / 2, y - this.state.map.height / 2, this.cam.distance);
+  }
+  /** Gdzie na mapie (w polach) leży to, co widać na ekranie: cztery rogi kadru rzucone na ziemię (minimapa) */
+  viewQuad(): { x: number; y: number }[] {
+    const g = this.state;
+    if (!g || !this.view) return [];
+    const cam = this.cam.camera;
+    const f = this.focusPoint;
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -this.view.heightAt(f.x, f.z));
+    const out: { x: number; y: number }[] = [];
+    const ray = new THREE.Ray(), hit = new THREE.Vector3();
+    for (const [nx, ny] of [[-1, -1], [1, -1], [1, 0.98], [-1, 0.98]] as const) {
+      ray.origin.setFromMatrixPosition(cam.matrixWorld);
+      ray.direction.set(nx, ny, 0.5).unproject(cam).sub(ray.origin).normalize();
+      // górne rogi patrzą czasem ponad horyzont: wtedy bierzemy punkt daleko w tym kierunku
+      if (!ray.intersectPlane(plane, hit)) { ray.direction.y = Math.min(ray.direction.y, -0.02); ray.at(Math.min(400, this.cam.distance * 6), hit); }
+      out.push({ x: hit.x + g.map.width / 2, y: hit.z + g.map.height / 2 });
+    }
+    return out;
+  }
+
   /** Rozkaz marszu: rozchodząca się złota fala w klikniętym miejscu */
   orderMarker(tile: { x: number; y: number }): void {
     if (!this.state || !this.view) return;

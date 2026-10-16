@@ -214,6 +214,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         ['Okno wydajności', 'F3'],
         ['Czat (sieć)', 'Enter'],
         ['Znacznik dla drużyny', 'Alt + klik w mapę, potem 1 / 2 / 3; Spacja = do ostatniego znacznika'],
+        ['Minimapa', 'klik / przeciąganie = kamera tam, prawy = marsz zaznaczonego wojska, Alt + klik = znacznik; N chowa'],
         ['Menu', 'Esc albo przycisk Menu; w grze z botami menu zatrzymuje grę'],
       ] },
       'Esc działa po kolei: najpierw anuluje to, co robisz (budowę, wyburzanie, zaznaczenie wojska, okno budynku), a dopiero potem otwiera menu.',

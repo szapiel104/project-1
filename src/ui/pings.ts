@@ -23,7 +23,7 @@ interface Live { kind: number; x: number; y: number; at: number; who: string; el
 
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createPings(host: PingHost): { openMenu(cx: number, cy: number): boolean; show(kind: number, x: number, y: number, who: string): void; update(now: number): void; jumpLast(): boolean; clear(): void } {
+export function createPings(host: PingHost): { openMenu(cx: number, cy: number, tile?: { x: number; y: number }): boolean; active(): { x: number; y: number; color: number; age: number }[]; show(kind: number, x: number, y: number, who: string): void; update(now: number): void; jumpLast(): boolean; clear(): void } {
   const menu = document.createElement('div');
   menu.className = 'ping-menu';
   menu.hidden = true;
@@ -59,8 +59,8 @@ export function createPings(host: PingHost): { openMenu(cx: number, cy: number):
   document.body.append(layer);
 
   return {
-    openMenu(cx, cy) {
-      const t = host.tileAt();
+    openMenu(cx, cy, tile) {
+      const t = tile ?? host.tileAt();
       if (!t) return false;
       at = { x: t.x + 0.5, y: t.y + 0.5 };
       menu.hidden = false;
@@ -104,6 +104,7 @@ export function createPings(host: PingHost): { openMenu(cx: number, cy: number):
         l.el.style.setProperty('--ang', `${Math.atan2(dy, dx)}rad`);
       }
     },
+    active() { const now = performance.now(); return live.map((l) => ({ x: l.x, y: l.y, color: PINGS[l.kind]!.color, age: (now - l.at) / 1000 })); },
     jumpLast() {
       const l = live[live.length - 1];
       if (!l) return false;
