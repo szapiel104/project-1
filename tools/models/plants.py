@@ -88,6 +88,60 @@ for name, fn in (('bush', bush), ('rock', rock)):
         m0.idx = [t for f in m0.idx for t in ([f] if len(f) == 3 else [(f[0], f[k], f[k + 1]) for k in range(1, len(f) - 1)])]
         out[name + ('Far' if far else '')] = pack(m0)
         print(name, 'daleka' if far else 'bliska', len(m0.idx), 'trójkątów')
+
+
+def drywall():
+    """Murek z polnych kamieni (jedno pole długości, wzdłuż x): dwie warstwy płaskich kamieni na przemian,
+    na wierzchu kamienie kładzione na sztorc; każdy kamień to zamknięta, lekko nieregularna bryła"""
+    rnd_s = [17]
+
+    def rnd():
+        rnd_s[0] = (rnd_s[0] * 16807) % 2147483647
+        return rnd_s[0] / 2147483647
+    parts = []
+    L = 1.02
+    for course, (y0, hgt) in enumerate(((0.0, 0.085), (0.08, 0.075))):
+        x = -L / 2 + (0.06 if course else 0)
+        while x < L / 2 - 0.04:
+            w = 0.12 + rnd() * 0.1
+            w = min(w, L / 2 - x)
+            for side in (-1, 1):
+                bm = bmesh.new()
+                bmesh.ops.create_cube(bm, size=1.0)
+                d = 0.075 + rnd() * 0.02
+                for v in bm.verts:
+                    # Blender: x wzdłuż muru, y w poprzek, z w górę; wierzchołki trochę rozrzucone (polny kamień)
+                    v.co.x = (x + w / 2) + v.co.x * (w - 0.012) + (rnd() - 0.5) * 0.02
+                    v.co.y = side * (d / 2 + 0.003) + v.co.y * d * 0.95 + (rnd() - 0.5) * 0.015
+                    v.co.z = y0 + (v.co.z + 0.5) * hgt * (0.85 + rnd() * 0.2)
+                bmesh.ops.triangulate(bm, faces=bm.faces)
+                parts.append(Mesh(bm, shade_rock, 'rock'))
+            x += w + 0.008
+    # wierzch: kamienie na sztorc, w poprzek muru
+    x = -L / 2 + 0.03
+    while x < L / 2 - 0.05:
+        w = 0.05 + rnd() * 0.04
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=1.0)
+        for v in bm.verts:
+            v.co.x = (x + w / 2) + v.co.x * w + (rnd() - 0.5) * 0.012
+            v.co.y = v.co.y * 0.17 + (rnd() - 0.5) * 0.015
+            v.co.z = 0.158 + (v.co.z + 0.5) * (0.06 + rnd() * 0.03)
+        bmesh.ops.triangulate(bm, faces=bm.faces)
+        parts.append(Mesh(bm, shade_rock, 'rock'))
+        x += w + 0.012
+    bake_ao([(m, (0, 0, 0)) for m in parts], rays=12, reach=0.08)
+    m0 = parts[0]
+    for m in parts[1:]:
+        base = len(m0.pos)
+        m0.pos += m.pos; m0.nrm += m.nrm; m0.col += m.col
+        m0.idx += [tuple(base + i for i in f) for f in m.idx]
+    return m0
+
+
+wall = drywall()
+out['drywall'] = pack(wall)
+print('murek', len(wall.idx), 'trójkątów')
 with open(OUT, 'w') as f:
     json.dump(out, f, separators=(',', ':'))
 print('plants', os.path.getsize(OUT) // 1024, 'KB')

@@ -228,6 +228,30 @@ export function groundGrassTexture(): THREE.Texture | null { return TEST || !loa
 const cloudT = { value: 0 }, cloudK = { value: 0 };
 /** Cienie chmur na ziemi: czas (przesuw z wiatrem) i siła (0 = bez chmur, nocą i w gęstej mgle też 0) */
 export function setCloudShadows(time: number, strength: number): void { cloudT.value = time; cloudK.value = strength; }
+/**
+ * Te same cienie chmur na wszystkim, co stoi na ziemi (trawa, drzewa, krzaki, pnie): plama cienia przesuwa się
+ * po łące i lesie jednocześnie, a nie tylko po gołej ziemi pod spodem. Dokleja się do istniejącego shadera materiału.
+ */
+export function cloudShade(mat: THREE.Material): void {
+  if (TEST || !loader || mat.userData.cloud) return;
+  mat.userData.cloud = true;
+  const prev = mat.onBeforeCompile, key = mat.customProgramCacheKey();
+  mat.onBeforeCompile = (sh, r) => {
+    prev.call(mat, sh, r);
+    sh.uniforms.uCloudT = cloudT; sh.uniforms.uCloud = cloudK; sh.uniforms.tCloudN = { value: sharedNoise() };
+    sh.fragmentShader = 'uniform float uCloudT; uniform float uCloud; uniform sampler2D tCloudN;\n' + sh.fragmentShader.replace('#include <lights_fragment_end>', `#include <lights_fragment_end>
+      {
+        vec3 cw = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).xyz;
+        vec2 cuv = cw.xz / 70.0 + uCloudT * vec2(0.006, 0.0035);
+        float cn = texture2D(tCloudN, cuv).r * 0.65 + texture2D(tCloudN, cuv * 2.3 + 0.37).g * 0.35;
+        float csh = 1.0 - uCloud * 0.6 * smoothstep(0.42, 0.62, cn);
+        reflectedLight.directDiffuse *= csh;
+        reflectedLight.directSpecular *= csh;
+      }`);
+  };
+  mat.customProgramCacheKey = () => key + '|cloud';
+}
+
 export function groundMaterial(): THREE.MeshStandardMaterial {
   if (shared) return shared;
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 });

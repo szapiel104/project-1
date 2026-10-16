@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { cloudShade } from './ground';
 import { groundGrassTexture2, sharedNoise } from './ground';
 
 /**
@@ -140,6 +141,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   };
   mat.customProgramCacheKey = () => 'grass-field-v1';
   mat.userData.season = 'grass';
+  cloudShade(mat); // cienie chmur suną też po trawie
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;
   mesh.renderOrder = 1;

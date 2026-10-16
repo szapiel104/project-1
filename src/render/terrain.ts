@@ -15,7 +15,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ModelFactory } from './models';
 import { bump, normal, pattern } from './textures';
-import { groundGrassTexture, groundMaterial, waterMaterial } from './ground';
+import { cloudShade, groundGrassTexture, groundMaterial, waterMaterial } from './ground';
 import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
 import { bladeTexture, createGrassField, type GrassField } from './grass';
 
@@ -614,6 +614,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
     return false;
   };
+  // pola przy zamkach zostają czyste (miejsce pod osadę): ani samotnych drzew, ani murków
+  const farFromKeeps = (x: number, y: number): boolean => map.starts.every((st) => Math.hypot(st.x - x, st.y - y) > 16);
   const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [], reeds: Item[] = [], lilies: Item[] = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -685,6 +687,17 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         // na leśnej ścieżce tylko drobne kamyki w ubitej ziemi
         if ((r >>> 22) % 9 === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
       }
+      else if (t === Terrain.Grass && !sandy && !map.trails?.[y * w + x] && map.elevation[y * w + x]! - waterLevel > 112 && (r >>> 15) % 6 === 0) {
+        // szczyt wzgórza: wychodnia skalna — kilka głazów różnej wielkości wystających z darni
+        const n = 2 + ((r >>> 9) & 1) + ((r >>> 11) & 1);
+        for (let k = 0; k < n; k++) put(rocks, x, y, 40 + k, 1.1 + ((r >>> (k * 3)) & 7) / 6, 0.95);
+        put(pebbles, x, y, 46, 0.4, 0.95);
+      }
+      else if (t === Terrain.Grass && !sandy && !nearW && !map.trails?.[y * w + x] && !besideForest(x, y) && (r >>> 7) % 211 === 0 && farFromKeeps(x, y)) {
+        // samotne drzewo na łące: rozłożysty, stary dąb (czasem świerk), widoczny z daleka
+        put((r >>> 3) % 5 === 0 ? pines : leafy, x, y, 0, 1.35 + ((r >>> 20) & 7) / 25, 0.5);
+        put(bushes, x, y, 4, 0.7, 0.95);
+      }
       else if (t === Terrain.Grass && !sandy && besideForest(x, y) && !map.trails?.[y * w + x] && (r >>> 14) % 5 < 3) {
         // łąka przy lesie: zarasta młodymi drzewkami (samosiejki), krzakami i paprociami — przejście łąka–las stopniowe
         const k = (r >>> 18) % 6;
@@ -706,6 +719,26 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if ((r >>> 22) % (lush > 0.5 ? 19 : 11) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
         if ((r >>> 25) % 41 === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);
       }
+    }
+  }
+  // murki z polnych kamieni: stare miedze na łąkach — proste odcinki po kilka pól, z przerwą na przejście,
+  // tylko na łące (nie przez las, wodę, ścieżki ani plac pod zamkiem)
+  const walls: Item[] = [];
+  for (let by = 0; by < h; by += 18) for (let bx = 0; bx < w; bx += 18) {
+    const r = hash2(bx, by, map.seed ^ 0x4d55524b);
+    if ((r & 3) !== 0) continue;
+    let x = bx + ((r >>> 4) % 18), y = by + ((r >>> 9) % 18);
+    const alongX = ((r >>> 14) & 1) === 1, len = 4 + ((r >>> 15) % 8), gap = 1 + ((r >>> 19) % Math.max(1, len - 2));
+    for (let k = 0; k < len; k++, alongX ? x++ : y++) {
+      if (x < 1 || y < 1 || x >= w - 1 || y >= h - 1) break;
+      const i = y * w + x;
+      if (map.tiles[i] !== Terrain.Grass || map.trails?.[i] || map.river?.[i] || sandTile[i]! > 0.1 || !farFromKeeps(x, y) || besideForest(x, y)) break;
+      if (k === gap) continue; // przełaz
+      const jx = alongX ? 0 : ((hash2(x, y, 7) & 15) / 15 - 0.5) * 0.12, jz = alongX ? ((hash2(x, y, 7) & 15) / 15 - 0.5) * 0.12 : 0;
+      const pos = new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz) - 0.02, y + 0.5 + jz + oz);
+      const qq = new THREE.Quaternion().setFromAxisAngle(yAxis, (alongX ? 0 : Math.PI / 2) + ((hash2(x, y, 9) & 15) / 15 - 0.5) * 0.12);
+      const sc = new THREE.Vector3(1, 0.9 + (hash2(x, y, 11) & 7) / 30, 1);
+      walls.push({ m: new THREE.Matrix4().compose(pos, qq, sc), shade: 0.85 + (hash2(x, y, 13) & 15) / 60, tile: i, pos, q: qq, s: sc });
     }
   }
   const tint = new THREE.Color();
@@ -735,6 +768,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
   grassMat.customProgramCacheKey = () => 'grass-cards';
   grassMat.userData.season = 'grass';
+  cloudShade(grassMat);
   /**
    * Roślinność i kamienie w kawałkach 40×40 pól: każdy kawałek to osobna siatka z własną sferą ograniczającą,
    * więc karta graficzna pomija to, czego nie widać (także w cieniach). Na dużych mapach to kilkukrotnie mniej trójkątów.
@@ -885,6 +919,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     if (!list.length) return null;
     const mat = own ?? new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
     if (!own && tex === 'leaves') mat.userData.season = 'leaf'; // liściaste korony i krzewy: jesienią rude, zimą gołe
+    cloudShade(mat); // plamy cienia chmur suną po lesie razem z ziemią
+    if (lod?.farMat) cloudShade(lod.farMat);
     const buckets = new Map<number, number[]>();
     list.forEach((it, i) => {
       const k = Math.floor((it.pos.x + 512) / chunk) * 4096 + Math.floor((it.pos.z + 512) / chunk);
@@ -1053,6 +1089,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // skały i rudy też znikają, gdy złoże się wyczerpie (bez pniaka)
   label = 'skały i złoża';
   plant(rocks, instanced(models.rock(), 0xc4bfb1, rocks, 'rock', true, rockMat, { farGeo: rockFar }), null, false);
+  label = 'murki';
+  plant(walls, instanced(models.drywall(), 0xb9b3a4, walls, 'rock', true, rockMat), null, false);
   plant(ores, instanced(models.rock(), 0xa05a36, ores, 'rock', true, rockMat, { farGeo: rockFar }), null, false);
   label = 'pniaki (ukryte)';
   // Pniaki pojawiają się dopiero po ścięciu drzewa. Wcześniej wszystkie stały w scenie z zerową skalą i karta

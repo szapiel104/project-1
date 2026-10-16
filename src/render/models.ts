@@ -27,6 +27,8 @@ export interface ModelFactory {
   /** Paproć (trzy skrzyżowane karty) i opadła gałąź — podszyt lasu */
   fern(): THREE.BufferGeometry;
   deadwood(): THREE.BufferGeometry;
+  /** Murek z polnych kamieni, jedno pole długości (wzdłuż x) */
+  drywall(): THREE.BufferGeometry;
   /** Kępka trawy */
   tuft(): THREE.BufferGeometry;
   /** Krzew */
@@ -138,6 +140,7 @@ export const proceduralModels: ModelFactory = {
     return g;
   },
   deadwood() { return treeGeo('deadwood'); },
+  drywall() { return plantGeo('drywall', true, 2.2); },
   bush() {
     // krzak z Blendera: cztery kępy liści z gałązkami i dziurami (ok. 220 trójkątów zamiast 320)
     return plantGeo('bush', false, 2.2);

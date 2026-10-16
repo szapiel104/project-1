@@ -1903,7 +1903,7 @@ export class GameRenderer {
     this.aimSun();
     this.updateSeason(dt);
     // cienie chmur: przy pogodzie z chmurami wyraźniejsze, nocą, w deszczu (pełne zachmurzenie) i we mgle znikają
-    setCloudShadows(this.calm ? 0 : this.time, Math.min(1, 0.25 + this.cover * 0.9) * (1 - this.night) * (1 - this.rain * 0.8) * (1 - this.dayMist * 0.6));
+    setCloudShadows(this.calm ? 0 : this.time, Math.min(1, 0.42 + this.cover * 0.8) * (1 - this.night) * (1 - this.rain * 0.8) * (1 - this.dayMist * 0.6));
     if (this.state && this.view) {
       const g = this.state, v = this.view;
       // każdy etap mierzony osobno: okno wydajności pokazuje, co zjada czas klatki
