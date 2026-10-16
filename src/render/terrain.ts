@@ -554,7 +554,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const n = map.trails[(cy - 1) * w + cx - 1]! + map.trails[(cy - 1) * w + cx]! + map.trails[cy * w + cx - 1]! + map.trails[cy * w + cx]!;
       if (!n) continue;
       const j = (hash2(cx, cy, map.seed ^ 0x7e11) & 15) / 100;
-      wear(cx, cy, n >= 2 ? 0.5 + j : 0.22 + j, 0.62);
+      wear(cx, cy, n >= 2 ? 0.62 + j : 0.3 + j, 0.75);
     }
   }
   const yAxis = new THREE.Vector3(0, 1, 0);
@@ -574,10 +574,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [], reeds: Item[] = [], lilies: Item[] = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
-  const put = (list: Item[], x: number, y: number, n: number, scaleBase: number, spread = 0.7): void => {
+  const put = (list: Item[], x: number, y: number, n: number, scaleBase: number, spread = 0.7, sx = 0, sz = 0): void => {
     const r = hash2(x * 7 + n, y * 13 - n, map.seed ^ 0xabcdef);
-    const jx = ((r & 255) / 255 - 0.5) * spread;
-    const jz = (((r >>> 8) & 255) / 255 - 0.5) * spread;
+    const jx = ((r & 255) / 255 - 0.5) * spread + sx;
+    const jz = (((r >>> 8) & 255) / 255 - 0.5) * spread + sz;
     const s = scaleBase * (0.75 + (((r >>> 16) & 255) / 255) * 0.6);
     q.setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
     const pos = new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz);
@@ -594,6 +594,18 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       if (t === Terrain.Forest) {
         // las mieszany o różnym wieku: większość zwykłych drzew, sporo młodych, czasem stary olbrzym
         const age = (r >>> 11) % 20;
+        // przy leśnej ścieżce: jedno drzewo, mniejsze i odsunięte od dróżki, żeby korony nie zakrywały przecinki
+        let ex = 0, ez = 0;
+        if (map.trails) for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+          const nx = x + dx, ny = y + dy;
+          if ((dx || dy) && nx >= 0 && ny >= 0 && nx < w && ny < h && map.trails[ny * w + nx]) { ex -= dx; ez -= dy; }
+        }
+        if (ex || ez) {
+          const l = Math.hypot(ex, ez) || 1;
+          put((r >>> 3) % 3 === 0 ? leafy : pines, x, y, 0, age < 8 ? 0.55 : 0.8, 0.3, (ex / l) * 0.32, (ez / l) * 0.32);
+          if ((r >>> 17) % 3 === 0) put(bushes, x, y, 4, 0.7, 0.5);
+          continue;
+        }
         const size = age === 0 ? 2.1 : age < 3 ? 1.5 : age < 8 ? 0.6 : 1;
         put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, size, age === 0 ? 0.2 : 0.7);
         if ((r & 1) && age !== 0) put((r >>> 5) % 4 === 0 ? leafy : pines, x, y, 1, age < 8 ? 0.5 : 0.8);
@@ -611,6 +623,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if (!sandy && shoreNear && (r >>> 9) % 2 === 0) put(reeds, x, y, 23, 1.1, 0.9);
         const near2 = !isW(x + 2, y) || !isW(x - 2, y) || !isW(x, y + 2) || !isW(x, y - 2);
         if ((shoreNear || near2) && (r >>> 14) % 5 === 0) for (let k = 0; k < 3; k++) put(lilies, x, y, 30 + k, 0.8 + k * 0.2, 0.9);
+      }
+      else if (t === Terrain.Grass && !sandy && map.trails?.[y * w + x]) {
+        // na leśnej ścieżce tylko drobne kamyki w ubitej ziemi
+        if ((r >>> 22) % 9 === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
       }
       else if (t === Terrain.Grass && !sandy) {
         // łąka: gęste kępy trawy, kwiaty, pojedyncze krzewy, kamyki i z rzadka większy głaz
