@@ -33,7 +33,14 @@ const WORLD: Record<WorldSound, string[]> = {
   stepGravel: ['step-gravel-0', 'step-stone-5'],
   stepMud: ['step-mud-0'],
 };
+/** Nagrania świata do teł i pojedynczych zdarzeń (docs/zasoby.md): ptaki za dnia, świerszcze nocą, odgłosy wsi,
+ *  kury, dzwon w południe, róg alarmu, grzmot — 0 A.D. (Wildfire Games, CC-BY-SA 3.0) i Freesound (CC0) */
+const NATURE = {
+  day: ['day-0', 'day-1', 'day-2', 'day-3'], night: ['night-0', 'night-1'], farm: ['farm-0', 'farm-1'],
+  hen: ['hen-0', 'hen-1', 'hen-2', 'hen-3'], bell: ['bell'], horn: ['horn'], thunder: ['thunder-0', 'thunder-1'],
+};
 const buffers = new Map<string, AudioBuffer>();
+const pick = (list: string[]): AudioBuffer | undefined => { const ok = list.filter((n) => buffers.has(n)); return ok.length ? buffers.get(ok[Math.floor(Math.random() * ok.length)]!) : undefined; };
 let ambienceOn = false;
 
 let ctx: AudioContext | null = null;
@@ -66,7 +73,7 @@ function audio(): AudioContext | null {
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   const c = ctx;
-  const names = new Set([...Object.values(FILES).flat(), ...Object.values(WORLD).flat()]);
+  const names = new Set([...Object.values(FILES).flat(), ...Object.values(WORLD).flat(), ...Object.values(NATURE).flat()]);
   for (const name of names) {
     fetch(`sounds/${name}.ogg`)
       .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(name))))
@@ -500,6 +507,13 @@ function owl(c: AudioContext, at: number): void {
 
 /** Grzmot: trzask i długi, toczący się niski pomruk */
 function thunder(c: AudioContext, at: number): void {
+  const rec = pick(NATURE.thunder);
+  if (rec) {
+    // nagrany grzmot (0 A.D.), trochę wolniej i niżej co drugi raz, żeby się nie powtarzał
+    const src = c.createBufferSource(); src.buffer = rec; src.playbackRate.value = 0.85 + Math.random() * 0.2;
+    src.connect(out2(c, Math.random() * 1.2 - 0.6, 0.9)); src.start(at);
+    return;
+  }
   if (!noise) return;
   const o = out2(c, Math.random() * 1.2 - 0.6, 1);
   const src = c.createBufferSource(); src.buffer = noise; src.loop = true; src.playbackRate.value = 0.25;
@@ -514,6 +528,14 @@ export function warHorn(): void {
   const c = ctx;
   if (!c || muted || c.state !== 'running') return;
   const at = c.currentTime + 0.05;
+  const rec = pick(NATURE.horn);
+  if (rec) {
+    // nagrany róg (0 A.D.) z echem lasu: wróg wyrusza
+    const src = c.createBufferSource(); src.buffer = rec;
+    const g = c.createGain(); g.gain.value = 0.8; src.connect(g).connect(busGain.sfx ?? master!); g.connect(forestEcho(c));
+    src.start(at);
+    return;
+  }
   const o = c.createGain(); o.gain.value = 0.5; o.connect(busGain.sfx ?? master!);
   for (const [mul, det] of [[1, 0], [1.005, 3], [2, 0]] as const) {
     const s = c.createOscillator(); s.type = 'sawtooth';
@@ -541,24 +563,61 @@ export function alarmBell(): void {
   }
 }
 
+/** Tło z nagrań w pętli: kolejne warianty z płynnym przejściem (bez słyszalnego szwu), głośność płynnie za porą dnia */
+const beds = new Map<string, { gain: GainNode; until: number }>();
+function bed(c: AudioContext, key: string, list: string[], level: number): void {
+  let b = beds.get(key);
+  if (!b) {
+    if (level <= 0.001 || !pick(list)) return;
+    const gain = c.createGain(); gain.gain.value = 0; gain.connect(busGain.amb ?? master!);
+    b = { gain, until: 0 }; beds.set(key, b);
+  }
+  const now = c.currentTime;
+  b.gain.gain.setTargetAtTime(level, now, 1.5);
+  // następny wariant zaczyna się 2 s przed końcem poprzedniego, oba się przenikają
+  if (now > b.until - 2 && level > 0.001) {
+    const buf = pick(list);
+    if (!buf) return;
+    const src = c.createBufferSource(); src.buffer = buf;
+    const x = c.createGain(); const t = Math.max(now, b.until - 2);
+    x.gain.setValueAtTime(0.0001, t); x.gain.exponentialRampToValueAtTime(1, t + 2);
+    x.gain.setValueAtTime(1, t + buf.duration - 2); x.gain.exponentialRampToValueAtTime(0.0001, t + buf.duration);
+    src.connect(x).connect(b.gain); src.start(t); src.stop(t + buf.duration + 0.05);
+    b.until = t + buf.duration;
+  }
+}
+
 /** Woła się co klatkę z godziną gry: pora dnia decyduje, co słychać */
 export function daySounds(hour: number, rain: number, paused: boolean): boolean {
   const c = ctx;
   if (!c || muted || c.state !== 'running' || paused) return false;
   const now = c.currentTime;
   if (!nextBird) { nextBird = now + 3; nextCricket = now + 4; nextOwl = now + 20; nextThunder = now + 10; }
-  // świt i ranek: ptaki, gęsto o świcie, rzadziej w dzień, nie w deszczu
-  if (now > nextBird) { if (hour >= 4.5 && hour < 18 && rain < 0.4) bird(c, now); nextBird = now + (hour < 8 ? 1.5 + Math.random() * 3 : 6 + Math.random() * 10); }
-  // wieczór i noc: świerszcze
-  if (now > nextCricket) { if ((hour >= 19 || hour < 4) && rain < 0.4) cricket(c, now); nextCricket = now + 1.5 + Math.random() * 2.5; }
+  // tła z nagrań: śpiew ptaków od świtu (najgłośniej rano, w południe ciszej, milkną o zmierzchu), nocą świerszcze;
+  // w deszczu ptaki i świerszcze cichną. Odgłosy wsi (kury, zwierzęta) za dnia, cicho w tle.
+  const dawn = hour >= 4.5 && hour < 9 ? 1 : 0;
+  const dayK = hour < 4.5 || hour >= 19.5 ? 0 : Math.min(1, (hour - 4.5) / 0.8, (19.5 - hour) / 1.2) * (dawn ? 1 : 0.55);
+  const nightK = hour >= 20 || hour < 4.5 ? Math.min(1, hour >= 20 ? (hour - 20) / 0.8 : (4.5 - hour) / 0.6) : 0;
+  const dry = 1 - Math.min(1, rain * 1.6);
+  bed(c, 'day', NATURE.day, 0.22 * dayK * dry);
+  bed(c, 'night', NATURE.night, 0.2 * nightK * dry);
+  bed(c, 'farm', NATURE.farm, 0.07 * Math.min(1, dayK * 1.6) * dry);
+  // świt i ranek: dodatkowe pojedyncze ćwierknięcia tylko gdy nagrania jeszcze się nie wczytały
+  const recorded = !!pick(NATURE.day);
+  if (now > nextBird) { if (!recorded && hour >= 4.5 && hour < 18 && rain < 0.4) bird(c, now); nextBird = now + (hour < 8 ? 1.5 + Math.random() * 3 : 6 + Math.random() * 10); }
+  // wieczór i noc: świerszcze (syntezowane, gdy brak nagrania)
+  if (now > nextCricket) { if (!pick(NATURE.night) && (hour >= 19 || hour < 4) && rain < 0.4) cricket(c, now); nextCricket = now + 1.5 + Math.random() * 2.5; }
   if (now > nextOwl) { if (hour >= 21 || hour < 4) owl(c, now); nextOwl = now + 25 + Math.random() * 30; }
   // burza: przy mocnym deszczu grzmot co kilkanaście sekund; zwraca true, żeby scena błysnęła
   let flash = false;
   if (now > nextThunder) { if (rain > 0.6) { thunder(c, now + 0.4 + Math.random() * 1.2); flash = true; } nextThunder = now + 12 + Math.random() * 18; }
   // dzwon w południe (3 uderzenia) i o zmierzchu (5)
   const h = Math.floor(hour);
-  // dzwon nie bije o pełnych godzinach: odzywa się tylko na alarm (alarmBell), gdy ktoś atakuje osadę
-  if (h !== lastBellHour) lastBellHour = h;
+  // dzwon bije tylko w południe (z daleka, z kościółka za lasem); poza tym odzywa się na alarm (alarmBell)
+  if (h !== lastBellHour) {
+    if (lastBellHour === 11 && h === 12) { const b = pick(NATURE.bell); if (b) { const src = c.createBufferSource(); src.buffer = b; src.connect(out2(c, Math.random() * 0.8 - 0.4, 0.3)); src.connect(forestEcho(c)); src.start(now + 0.1); } }
+    lastBellHour = h;
+  }
   return flash;
 }
 
@@ -789,6 +848,10 @@ export function animal(kind: 'bark' | 'cluck' | 'grunt', near: number, pan: numb
         ns.connect(nf).connect(ng).connect(out); ns.start(at); ns.stop(at + 0.12);
       }
     }
+  } else if (kind === 'cluck' && pick(NATURE.hen)) {
+    // nagrane gdakanie kury (0 A.D.)
+    const src = c.createBufferSource(); src.buffer = pick(NATURE.hen)!; src.playbackRate.value = 0.92 + Math.random() * 0.18;
+    const g = c.createGain(); g.gain.value = 0.7; src.connect(g).connect(out); src.start(t0);
   } else if (kind === 'cluck') {
     // gdakanie: kilka szybkich, wysokich „ko-ko-ko” i dłuższe na końcu
     const n = 3 + Math.floor(Math.random() * 4);

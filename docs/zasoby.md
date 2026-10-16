@@ -22,6 +22,23 @@ Pobrane z indeksu [open-game-sfx-index](https://github.com/Mcamento8/open-game-s
 - swing-0…2, clang-0…1, wolf (warknięcie z pogłosem) — „RPG Sound Pack”, artisticdude, OpenGameArt (CC0)
 Wiatr, deszcz, wrony i wycie wilków są syntezowane w src/audio/sfx.ts.
 
+## Odgłosy natury i wsi (16.10.2026)
+
+Z gry [0 A.D.](https://play0ad.com) — © Wildfire Games (https://www.wildfiregames.com/), licencja
+[CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/) (plik licencji: `public/sounds/LICENSE-0ad.txt`).
+Przerobione na mono 32 kHz, z wyrównaną głośnością; przerobione pliki udostępniamy na tej samej licencji CC BY-SA 3.0.
+- day-0…3 — śpiew ptaków za dnia (`audio/ambient/dayscape/day_temperate_11…14`)
+- farm-0…1 — odgłosy gospodarstwa (`audio/ambient/building/amb_farm_10…11`)
+- hen-0…3 — gdakanie kur (`audio/actor/fauna/animal/chicken_10…13`)
+- horn — róg alarmu przed atakiem (`audio/interface/alarm/alarmattackcity_1`)
+- thunder-0…1 — grzmot w burzy (`audio/ambient/weather/thunder_10…11`)
+
+Z Freesound przez paczkę dźwięków [CDDA-Soundpacks](https://github.com/Fris0uman/CDDA-Soundpacks) (CC-Sounds), tylko nagrania CC0:
+- night-0 — „clear night”, [rsn267](https://freesound.org/people/rsn267/sounds/275595/) (CC0): świerszcze nocą
+- night-1 — „cloudy night”, [beambot](https://freesound.org/people/beambot/sounds/259987/) (CC0)
+- bell — „church bells”, [Nox_Sound](https://freesound.org/people/Nox_Sound/sounds/563885/) (CC0): dzwon w południe
+Puszczyk i dźwięki zastępcze (gdy nagranie się nie wczyta) dalej są syntezowane.
+
 ## Głosy ludzi (CC0, bez wymogu podpisu)
 
 Z repozytorium gry [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) (`sounds/chars`), które zebrało je z Freesound — w grze tylko nagrania na CC0:

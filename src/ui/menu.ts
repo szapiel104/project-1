@@ -469,6 +469,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           slider(t('set.ui'), settings.ui * 100, (v) => { settings.ui = v / 100; save(); }),
           slider(t('set.amb'), settings.amb * 100, (v) => { settings.amb = v / 100; save(); }),
           slider('Muzyka', (settings.music ?? 0.45) * 100, (v) => { settings.music = v / 100; save(); }),
+          // autorzy nagrań (CC BY-SA wymaga podpisu w grze)
+          el('p', 'hint', 'Ptaki, odgłosy wsi, kury, róg i grzmot: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0. Świerszcze i dzwon: Freesound (rsn267, beambot, Nox_Sound), CC0. Muzyka: RandomMind, nihilocrat, Tozan (OpenGameArt, CC0). Efekty: Kenney (CC0/MIT).'),
         ];
       }],
       [t('menu.graphics'), () => [
