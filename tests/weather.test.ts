@@ -1,4 +1,4 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { RULES } from '../src/data/rules';
 import { COLD, SEASON_DAYS, seasonAt, temperatureAt, YEAR_DAYS } from '../src/sim/weather';
 
@@ -45,4 +45,22 @@ it('zima: chaty palą drewno (po trochu), zimno psuje nastroje, a bez drewna lud
   for (let i = 0; i < 4000 && !p.freezing; i++) { p.res[W] = 0; step(g, []); }
   expect(p.freezing).toBe(true);
   expect(monthlyForecast(g, p).parts.find((x) => x.key === 'freezing')!.value).toBe(-3);
+});
+
+describe('gotowość na zimę (skryba jesienią)', () => {
+  it('liczy dni do zimy, opał na całą zimę i dni jedzenia', async () => {
+    const { createGame } = await import('../src/sim/state');
+    const { winterReadiness } = await import('../src/sim/systems/economy');
+    const { shiftToSeason } = await import('../src/sim/weather');
+    const g = createGame(5);
+    g.seasonShift = shiftToSeason(g.tick, 'autumn'); // środek jesieni
+    const p = g.players[0]!;
+    const w = winterReadiness(g, p);
+    expect(w.days).toBeGreaterThan(1.5);
+    expect(w.days).toBeLessThan(3.5);
+    expect(w.fuel).toBeGreaterThan(0); // zamek liczy się za dwie chaty, a zimą jest zimno
+    expect(w.foodDays).toBeGreaterThan(0);
+    g.seasonShift = shiftToSeason(g.tick, 'winter');
+    expect(winterReadiness(g, p).days).toBe(0);
+  });
 });

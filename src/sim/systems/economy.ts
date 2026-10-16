@@ -4,7 +4,7 @@ import { BUILDINGS } from '../../data/buildings';
 import { housing, population, type GameState, type PlayerState } from '../state';
 import { dayPart } from './workers';
 import { rainAt } from '../clock';
-import { weatherOf } from '../weather';
+import { COLD, SEASON_DAYS, temperatureAt, weatherOf, yearPos, YEAR_DAYS } from '../weather';
 
 const FOOD_VALUE_OF: Record<string, number> = { apples: 1, bread: 2, fish: 3 };
 
@@ -19,6 +19,30 @@ export function fuelNeed(g: GameState, p: PlayerState): number {
   let homes = 0;
   for (const b of g.buildings) if (b.owner === p.id && !b.build && !b.ruined) { const id = BUILDINGS[b.type]!.id; if (id === 'house') homes++; else if (id === 'keep') homes += 2; }
   return (homes * chill * FUEL_PER_HOUSE_DAY * RULES.monthTicks) / RULES.dayTicks;
+}
+
+/**
+ * Gotowość na zimę (skryba ostrzega jesienią): za ile dni zima, ile drewna na opał zjedzą chaty przez całą zimę
+ * (średni mróz zimy dla tej mapy), ile drewna jest w składzie i na ile dni starczy jedzenia przy obecnych racjach.
+ */
+export function winterReadiness(g: GameState, p: PlayerState): { days: number; fuel: number; wood: number; foodDays: number } {
+  const pos = yearPos(g.tick, g.seasonShift ?? 0);
+  const days = pos < 0.75 ? (0.75 - pos) * YEAR_DAYS : 0;
+  // średnie „zimno” zimy: próbki co ćwierć doby przez całą zimę (bez deszczu)
+  const start = g.tick + Math.round(days * RULES.dayTicks);
+  let chill = 0, n = 0;
+  for (let k = 0; k < SEASON_DAYS * 4; k++, n++) {
+    const t = temperatureAt(start + Math.round((k * RULES.dayTicks) / 4), g.map.seed, 0, g.seasonShift ?? 0);
+    chill += Math.max(0, Math.min(2, (COLD - t) / COLD)); // jak weatherOf
+  }
+  chill /= n;
+  let homes = 0;
+  for (const b of g.buildings) if (b.owner === p.id && !b.build && !b.ruined) { const id = BUILDINGS[b.type]!.id; if (id === 'house') homes++; else if (id === 'keep') homes += 2; }
+  const fuel = Math.ceil(homes * chill * FUEL_PER_HOUSE_DAY * SEASON_DAYS);
+  const f = monthlyForecast(g, p);
+  const perDay = (f.food * RULES.dayTicks) / RULES.monthTicks;
+  const foodDays = perDay > 0 ? foodTotal(p) / perDay : Infinity;
+  return { days, fuel, wood: p.res[WOOD]!, foodDays };
 }
 
 /** Jedzenie w kolejności jedzenia: najpierw jabłka (najmniej sycą i najszybciej schodzą), potem chleb, ryby na końcu */

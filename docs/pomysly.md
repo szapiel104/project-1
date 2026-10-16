@@ -25,6 +25,8 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 ## Pory roku — dalej (16.10.2026)
 Zrobione 16.10: pory roku i temperatura pod zegarem, dym z kominów zależny od zimna i pracy, opał zimą, zimno i brak opału obniżają popularność, przyciski pór roku w menu dewelopera. Wygląd pór roku: śnieg na ziemi i dachach, szron o świcie, rude liście jesienią, gołe drzewa zimą, ślady ludzi i wilków na śniegu (znikają po 1–2 min).
 
+Zrobione 16.10 wieczorem: skryba przed zimą — zapowiedź na początku jesieni, ok. 1,5 dnia przed zimą rachunek drewna na opał i jedzenia (z ostrzeżeniem, gdy brakuje), krótka wiadomość, gdy zima przychodzi.
+
 Czeka:
 - Zboże i sad: zimą nie rosną (farma i sad stoją), wiosną siew, latem zbiory
 - Rybak zimą łowi mniej (lód przy brzegu)

@@ -1,5 +1,6 @@
 import { GUARD_SAY, SAY } from './data/barks';
-import { COLD, SEASON_NAME, shiftToSeason, weatherOf, type Season } from './sim/weather';
+import { COLD, SEASON_DAYS, SEASON_NAME, shiftToSeason, weatherOf, yearPos, type Season } from './sim/weather';
+import { winterReadiness } from './sim/systems/economy';
 import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
 import { RULES } from './data/rules';
 import { Terrain } from './data/terrain';
@@ -1396,6 +1397,32 @@ function resTrend(res: ArrayLike<number>): number[] {
 let warnedHungry = false;
 let warnedLeaving = false;
 
+/** Skryba przed zimą: na początku jesieni zapowiedź, ok. półtora dnia przed zimą rachunek drewna i jedzenia, a gdy zima
+ * przyjdzie — krótko, co robić. Progi liczone z położenia w roku; skok pory roku z menu dewelopera nic nie ogłasza. */
+let yearSeen = -1;
+function winterNotes(p: (typeof game.players)[number]): void {
+  const pos = yearPos(game.tick, game.seasonShift ?? 0);
+  const was = yearSeen;
+  yearSeen = pos;
+  if (was < 0 || pos < was || pos - was > 0.02) return; // start gry, nowy rok albo przeskok pory roku
+  const crossed = (th: number): boolean => was < th && pos >= th;
+  const n = (x: number): string => String(Math.round(x));
+  if (crossed(0.5)) {
+    const w = winterReadiness(game, p);
+    scribe.say('autumn', `Nadeszła jesień. Za ${n(w.days)} dni zima — chaty będą palić w piecach. Gromadźcie drewno na opał (na zimę ok. ${w.fuel}) i jedzenie na zapas.`);
+  }
+  if (crossed(0.68)) {
+    const w = winterReadiness(game, p), short = w.wood < w.fuel, hungry = w.foodDays < SEASON_DAYS;
+    const fuel = short ? `drewna na opał za mało: potrzeba ok. ${w.fuel}, w składzie ${w.wood}. Postawcie drwali` : `drewna na opał starczy (potrzeba ok. ${w.fuel}, jest ${w.wood})`;
+    const food = hungry ? `, a jedzenia ledwie na ${n(Math.max(0, w.foodDays))} dni — zróbcie zapasy w spichlerzu` : '';
+    scribe.say('winterSoon', `Panie, za ${Math.max(1, Math.round(w.days))} dni zima: ${fuel}${food}.`, short || hungry);
+  }
+  if (crossed(0.75)) {
+    const w = winterReadiness(game, p);
+    scribe.say('winter', w.wood < w.fuel / 2 ? `Zima nadeszła, a drewna na opał mało (${w.wood}). Ludzie zmarzną w chatach — tnijcie drewno.` : 'Zima nadeszła. Chaty palą w piecach; pilnujcie drewna na opał.', w.wood < w.fuel / 2);
+  }
+}
+
 function refresh(): void {
   const p = game.players[ME]!;
   const f = monthlyForecast(game, p);
@@ -1424,6 +1451,7 @@ function refresh(): void {
   wolvesSeen = game.wolves.length > 0;
   if ((p.wolfKills ?? 0) > wolfKillsSeen) scribe.say('wolfKill', 'Wilki zagryzły naszego człowieka…', true);
   wolfKillsSeen = p.wolfKills ?? 0;
+  winterNotes(p);
   if (night !== wasNight) scribe.say(night ? 'dusk' : 'dawn', t(night ? 'scribe.dusk' : 'scribe.dawn'));
   wasNight = night;
   const coming = alarm.dataset.state === 'coming';
