@@ -24,7 +24,7 @@ PAR = 0.22      # wysokość przedpiersia (do wcięć blank)
 # ---------------- cokół i trzon ----------------
 b.box('base', 'castleDark', 2 * S + 0.2, 0.18, 2 * S + 0.2, 0, 0, 0, bottom=False)          # cokół
 b.box('base', 'castleDark', 2 * S + 0.1, 0.1, 2 * S + 0.1, 0, 0.18, 0)                     # odsadzka nad cokołem
-b.box('base', 'castle', 2 * S, DECK - 0.28 - 0.18, 2 * S, 0, 0.28, 0, top=False)             # trzon (od góry przykryty płytą chodnika)
+b.box('base', 'castle', 2 * S, DECK - 0.12 - 0.28 + 0.01, 2 * S, 0, 0.28, 0, top=False)       # trzon aż pod płytę chodnika (bez szpary pod wspornikami)
 b.box('base', 'castleDark', 2 * S + 0.06, 0.07, 2 * S + 0.06, 0, 1.25, 0)                  # gzyms w połowie
 # narożniki z jaśniejszych, większych ciosów (na przemian długie i krótkie), wystają odrobinę z lica
 for sx in (-1, 1):

@@ -78,25 +78,26 @@ class Timber:
     def frame_x(self, group, z, x0, x1, y0, y1, posts, braces=True, out=1):
         b, T = self.b, self.T
         zz = z + out * (T / 2 + 0.008)
+        # słupy, rygle i zastrzały w trzech warstwach o kilka mm (lica nie leżą w jednej płaszczyźnie — inaczej migają)
         for x in posts:
             b.box(group, 'woodDark', 0.06, y1 - y0, 0.025, x, y0, zz)
-        b.box(group, 'woodDark', x1 - x0, 0.05, 0.025, (x0 + x1) / 2, y0, zz)
-        b.box(group, 'woodDark', x1 - x0, 0.05, 0.025, (x0 + x1) / 2, y1 - 0.05, zz)
+        b.box(group, 'woodDark', x1 - x0, 0.05, 0.025, (x0 + x1) / 2, y0, zz + out * 0.006)
+        b.box(group, 'woodDark', x1 - x0, 0.05, 0.025, (x0 + x1) / 2, y1 - 0.05, zz + out * 0.006)
         if braces:
             for a, c in zip(posts, posts[1:]):
                 if c - a < 0.45:
                     continue
                 ln = math.hypot(c - a, y1 - y0 - 0.1)
                 ang = math.atan2(y1 - y0 - 0.1, c - a)
-                b.box(group, 'woodDark', 0.04, ln, 0.022, a + 0.03, y0 + 0.05, zz, roll=-(math.pi / 2 - ang))
+                b.box(group, 'woodDark', 0.04, ln, 0.022, a + 0.03, y0 + 0.05, zz + out * 0.003, roll=-(math.pi / 2 - ang))
 
     def frame_z(self, group, x, z0, z1, y0, y1, posts, out=1):
         b, T = self.b, self.T
         xx = x + out * (T / 2 + 0.008)
         for z in posts:
             b.box(group, 'woodDark', 0.025, y1 - y0, 0.06, xx, y0, z)
-        b.box(group, 'woodDark', 0.025, 0.05, z1 - z0, xx, y0, (z0 + z1) / 2)
-        b.box(group, 'woodDark', 0.025, 0.05, z1 - z0, xx, y1 - 0.05, (z0 + z1) / 2)
+        b.box(group, 'woodDark', 0.025, 0.05, z1 - z0, xx + out * 0.006, y0, (z0 + z1) / 2)
+        b.box(group, 'woodDark', 0.025, 0.05, z1 - z0, xx + out * 0.006, y1 - 0.05, (z0 + z1) / 2)
 
     def gable_end(self, group, mat, x, z0, z1, y, rise, out=1):
         """Trójkątny szczyt w płaszczyźnie x (dach wzdłuż x) z belką pionową pośrodku"""
