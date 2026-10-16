@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
 import { cat } from './cat';
+
+/** Daleki obrazek drzewa liściastego: jesienią rudzieje, zimą szarzeje (bez zwijania korony — obrazek ma pień) */
+const leafFar = <M extends THREE.Material>(m: M): M => { m.userData.season = 'leafFar'; return m; };
 import { createNoise2D } from 'simplex-noise';
 import { treeImpostor } from './impostors';
 import { rng } from './craft';
@@ -285,6 +288,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     dirtyLo = Infinity; dirtyHi = -1;
   };
   const ground = new THREE.Mesh(geo, PHOTO_GROUND ? groundMaterial() : new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, metalness: 0, map: pattern('grass'), bumpMap: bump('grass'), bumpScale: 0.7, normalMap: normal('grass'), normalScale: new THREE.Vector2(0.8, 0.8) }));
+  (ground.material as THREE.Material).userData.season = 'ground'; // śnieg ze śladami ludzi
   ground.receiveShadow = true;
   ground.castShadow = true; // góry i pagórki też rzucają cień
   group.add(cat(ground, 'teren'));
@@ -640,6 +644,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       #endif`);
   };
   grassMat.customProgramCacheKey = () => 'grass-cards';
+  grassMat.userData.season = 'grass';
   /**
    * Roślinność i kamienie w kawałkach 40×40 pól: każdy kawałek to osobna siatka z własną sferą ograniczającą,
    * więc karta graficzna pomija to, czego nie widać (także w cieniach). Na dużych mapach to kilkukrotnie mniej trójkątów.
@@ -654,7 +659,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const pineImp = treeImpostor([{ geo: models.treeTrunk(), color: 0x6b4a2e, map: pattern('bark') }, { geo: models.treeCrown(), color: 0x3c7a3a, map: pattern('needles'), vertexColors: true }]);
   const leafImp = treeImpostor([{ geo: models.leafTrunk(), color: 0x7a5a3a, map: pattern('bark') }, { geo: models.leafCrown(), color: 0x6fa33d, map: pattern('leaves') }]);
   const PINE_LOD: Lod = pineImp ? { farGeo: pineImp.geometry, farMat: pineImp.material(0x3c7a3a) } : { farGeo: farPine };
-  const LEAF_LOD: Lod = { ...(leafImp ? { farGeo: leafImp.geometry, farMat: leafImp.material(0x6fa33d) } : { farGeo: models.leafCrownFar() }), shadowGeo: models.leafCrownShadow() };
+  const LEAF_LOD: Lod = { ...(leafImp ? { farGeo: leafImp.geometry, farMat: leafFar(leafImp.material(0x6fa33d)) } : { farGeo: models.leafCrownFar() }), shadowGeo: models.leafCrownShadow() };
   // pień znika razem z przełączeniem korony na obrazek (obrazek ma już pień)
   // od ok. 30 pól od środka widoku drzewa są obrazkami (impostorami), drobiazgi znikają — z bliska nic się nie zmienia,
   // a z daleka i tak ich nie widać (wcześniej 40–42 pola: w zwykłym widoku pełne drzewa sięgały do krawędzi ekranu)
@@ -679,6 +684,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const instanced = (g: THREE.BufferGeometry, color: number, list: Item[], tex?: Parameters<typeof pattern>[0], shadow = true, own?: THREE.Material, lod?: Lod, chunk = CHUNK): Inst | null => {
     if (!list.length) return null;
     const mat = own ?? new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, bumpScale: 1.2, normalMap: tex ? normal(tex) : null });
+    if (!own && tex === 'leaves') mat.userData.season = 'leaf'; // liściaste korony i krzewy: jesienią rude, zimą gołe
     const buckets = new Map<number, number[]>();
     list.forEach((it, i) => {
       const k = Math.floor((it.pos.x + 512) / chunk) * 4096 + Math.floor((it.pos.z + 512) / chunk);
@@ -789,7 +795,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     label = 'puszcza za mapą: obrazki';
     if (pineImp) instanced(pineImp.geometry, 0xffffff, far.pine, undefined, false, pineImp.material(), undefined, 120);
     else instanced(models.treeCrownFar(), 0x35703a, far.pine, 'needles', false, undefined, undefined, 120);
-    if (leafImp) instanced(leafImp.geometry, 0xffffff, far.leaf, undefined, false, leafImp.material(), undefined, 120);
+    if (leafImp) instanced(leafImp.geometry, 0xffffff, far.leaf, undefined, false, leafFar(leafImp.material()), undefined, 120);
     else instanced(models.leafCrownFar(), 0x55903a, far.leaf, 'leaves', false, undefined, undefined, 120);
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
@@ -802,6 +808,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
   const reedMat = new THREE.MeshStandardMaterial({ map: reedTexture(map.seed), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 });
   reedMat.onBeforeCompile = grassMat.onBeforeCompile;
+  reedMat.userData.season = 'grass';
   reedMat.customProgramCacheKey = () => 'reeds';
   label = 'trzcina i grzybienie';
   plant(reeds, instanced(grassCards(), 0xffffff, reeds, undefined, false, reedMat, { hide: 70 }), null, false);

@@ -1650,6 +1650,9 @@ export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.Buffe
 const WET_KEYS = ['thatch', 'thatchDark', 'wood', 'woodDark', 'plank', 'stone', 'stoneDark', 'castle', 'castleDark', 'plaster', 'slate', 'tiles', 'bark'] as const;
 const dryState = new Map<THREE.MeshStandardMaterial, { c: THREE.Color; r: number }>();
 /** Czy materiał moknie w deszczu (daleka wersja budynku łączy tylko materiały, które mokną tak samo) */
+// liście i owoce w sadach: jesienią rude, zimą opadają (pory roku, render/season.ts)
+for (const m of [M.leaf, M.leafLight, M.apple, M.appleGreen]) m.userData.season = 'leaf';
+
 export function isWetMat(m: THREE.Material): boolean {
   const mats = M as unknown as Record<string, THREE.Material | undefined>;
   for (const key of WET_KEYS) { const base = mats[key]; if (base && (m === base || m === aoMats.get(base))) return true; }

@@ -38,7 +38,8 @@ import { peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import RAM_MODEL from './models/ram.json';
 import { clockAt, rainAt } from '../sim/clock';
-import { COLD, weatherOf } from '../sim/weather';
+import { COLD, weatherOf, yearPos } from '../sim/weather';
+import { applySeason, SEASON_U, SnowTrails } from './season';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
@@ -950,6 +951,7 @@ export class GameRenderer {
     this.knownSoldiers = null;
     this.view.grassReach(this.grassReach);
     this.scene.add(this.view.group);
+    this.snowNow = -1; this.seasonScan = 0;
     const { width, height, starts } = state.map;
     this.cam.setBounds(width, height, rim + 8);
     const view = this.view;
@@ -1863,6 +1865,7 @@ export class GameRenderer {
     if (this.state) this.setDaylight(this.menuNight ? 23 : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     if (this.flash > 0) { this.flash = Math.max(0, this.flash - dt * 4); this.hemi.intensity += this.flash * 3 * (Math.random() < 0.7 ? 1 : 0.3); }
     this.aimSun();
+    this.updateSeason(dt);
     // cienie chmur: przy pogodzie z chmurami wyraźniejsze, nocą, w deszczu (pełne zachmurzenie) i we mgle znikają
     setCloudShadows(this.calm ? 0 : this.time, Math.min(1, 0.25 + this.cover * 0.9) * (1 - this.night) * (1 - this.rain * 0.8) * (1 - this.dayMist * 0.6));
     if (this.state && this.view) {
@@ -4144,6 +4147,54 @@ export class GameRenderer {
     this.kings.finish(kings);
     return k;
   }
+  /**
+   * Pory roku na ekranie: śnieg (narasta i topnieje przez ok. pół minuty), szron o świcie, jesienne liście, gołe drzewa.
+   * Materiały nowych rzeczy (budynki, drogi) łatamy co kilka sekund — raz na materiał.
+   */
+  private snowNow = -1;
+  private trails: SnowTrails | null = null;
+  private trailSeen = 0;
+  /** Ślady na śniegu: ludzie, żołnierze i wilki wydeptują ścieżki, które powoli się zasypują */
+  private updateTrails(g: GameState, dt: number): void {
+    const { width: w, height: h } = g.map;
+    if (!this.trails || this.trailSeen !== w * 100000 + h) { this.trails?.dispose(); this.trails = new SnowTrails(w, h); this.trailSeen = w * 100000 + h; }
+    const t = this.trails;
+    if (this.snowNow > 0.05) {
+      const alive = new Set<number>();
+      for (const u of g.units) if (u.path.length > 0) { t.step(u.id, u.px / FP, u.py / FP); alive.add(u.id); }
+      for (const s of g.soldiers) if (s.path.length > 0) { t.step(s.id, s.px / FP, s.py / FP); alive.add(s.id); }
+      for (const v of g.wolves) { t.step(v.id, v.px / FP, v.py / FP); alive.add(v.id); }
+      t.forget(alive);
+    }
+    // śnieg zasypuje ślady: pojedyncze kroki po ok. 45 s, wydeptana ścieżka po ok. 2 min; w opadzie szybciej
+    t.update(dt, 2 + this.rain * 8);
+  }
+  private shiftSeen = 0;
+  private seasonScan = 0;
+  private updateSeason(dt: number): void {
+    const g = this.state;
+    if (!g) return;
+    if ((this.seasonScan -= dt) <= 0) { this.seasonScan = 3; applySeason(this.scene); }
+    const w = weatherOf(g, this.rain);
+    const p = yearPos(g.tick, g.seasonShift ?? 0);
+    const sm = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+    // liście: żółkną od początku jesieni, opadają pod jej koniec, wiosną odrastają
+    const bare = p < 0.2 ? 1 - sm(0.03, 0.13, p) : sm(0.7, 0.78, p);
+    const autumn = p < 0.5 ? 0 : sm(0.52, 0.64, p);
+    // śnieg: przy mrozie leży, przy odwilży topnieje; po wczytaniu mapy od razu taki, jaki powinien być
+    const want = Math.max(0, Math.min(1, (2 - w.temp) / 4));
+    // przeskok pory roku (menu dewelopera): śnieg od razu taki, jaki powinien być
+    if ((g.seasonShift ?? 0) !== this.shiftSeen) { this.shiftSeen = g.seasonShift ?? 0; this.snowNow = -1; }
+    this.snowNow = this.snowNow < 0 || this.calm ? want : this.snowNow + (want - this.snowNow) * Math.min(1, dt / 30);
+    const hour = clockAt(g.tick).hour;
+    const frost = w.temp < 3 && hour > 3.5 && hour < 9.5 ? Math.min(1, (3 - w.temp) / 5) * (1 - Math.abs(hour - 6.3) / 3.2) : 0;
+    SEASON_U.uSnow.value = this.snowNow;
+    this.updateTrails(g, dt);
+    SEASON_U.uFrost.value = Math.max(0, frost);
+    SEASON_U.uAutumn.value = autumn;
+    SEASON_U.uBare.value = bare;
+  }
+
   /** Gdzie pan zamku spaceruje po dziedzińcu (pola mapy; ostatnia sekunda), do odzywek ludzi i straży */
   private lordPos = new Map<number, { x: number; y: number; t: number }>();
   lordAt(owner: number): { x: number; y: number } | null {

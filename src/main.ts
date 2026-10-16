@@ -1561,6 +1561,8 @@ requestAnimationFrame(loop);
   home(player = ME): { x: number; y: number } | null { const k = game.buildings.find((b) => b.owner === player && b.type === 0); return k && k.door >= 0 ? { x: k.door % game.map.width, y: Math.floor(k.door / game.map.width) } : null; },
   /** Gotowy budynek w polu (x, y), bez budowy; zwraca id albo null (działka zajęta) */
   place(id: string, x: number, y: number, rot = 0, player = ME): number | null { const r = placeReady(game, id, x, y, rot, player); refresh(); return r; },
+  /** Pora roku: środek wybranej pory (spring, summer, autumn, winter) */
+  season(name: Season): void { game.seasonShift = shiftToSeason(game.tick, name); refresh(); },
   /** Otwiera okno budynku o danym id (jak kliknięcie) */
   open(id: number): void { select(id); },
   /** Godzina na zegarze bieżącego dnia, np. hour(20.5) — wieczór z pochodniami */

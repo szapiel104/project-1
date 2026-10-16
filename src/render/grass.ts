@@ -137,6 +137,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
     `).replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);');
   };
   mat.customProgramCacheKey = () => 'grass-field-v1';
+  mat.userData.season = 'grass';
   const mesh = new THREE.Mesh(geo, mat);
   mesh.frustumCulled = false;
   mesh.renderOrder = 1;
