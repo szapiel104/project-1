@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 /** Część drzewa do sfotografowania: bryła, barwa i tekstura */
-export interface ImpostorPart { geo: THREE.BufferGeometry; color: number; map?: THREE.Texture | null; vertexColors?: boolean }
+export interface ImpostorPart { geo: THREE.BufferGeometry; color: number; map?: THREE.Texture | null; vertexColors?: boolean; /** karty z przezroczystością (liście, igły) */ alpha?: boolean }
 
 const FRAMES = 8;
 
@@ -24,7 +24,7 @@ export function treeImpostor(parts: ImpostorPart[], px = 96): { geometry: THREE.
   // światło jak w pochmurny dzień z góry: bryła ma głębię, ale obrazek nie ma ostrych cieni (resztę robi światło sceny)
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8a7a, 2.2));
   const sun = new THREE.DirectionalLight(0xffffff, 0.9); sun.position.set(0, 5, 2); scene.add(sun);
-  for (const p of parts) scene.add(new THREE.Mesh(p.geo, new THREE.MeshLambertMaterial({ color: p.color, map: p.map ?? null, vertexColors: !!p.vertexColors, side: THREE.DoubleSide })));
+  for (const p of parts) scene.add(new THREE.Mesh(p.geo, new THREE.MeshLambertMaterial({ color: p.color, map: p.map ?? null, vertexColors: !!p.vertexColors, side: THREE.DoubleSide, alphaTest: p.alpha ? 0.5 : 0 })));
   const cam = new THREE.OrthographicCamera(-W / 2, W / 2, H, 0, 0.1, 40);
   const canvas = document.createElement('canvas');
   canvas.width = fw * FRAMES; canvas.height = fh;

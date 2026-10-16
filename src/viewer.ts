@@ -16,6 +16,7 @@ import { buildingModel, isWetMat, isWindowMat, setNight } from './render/buildin
 import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
 import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
 import { proceduralModels } from './render/models';
+import { fernTexture, leafTexture, needleTexture } from './render/foliage';
 import RAM_MODEL from './render/models/ram.json';
 import { clutterModel } from './render/clutter';
 import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
@@ -145,6 +146,17 @@ function plantPair(near: THREE.BufferGeometry, far: THREE.BufferGeometry, color:
   };
 }
 
+/** Drzewo z Blendera: pień z korą i korona z kart (igliwie / liście z przezroczystością), w barwach z gry */
+function treeMake(trunk: THREE.BufferGeometry, crown: THREE.BufferGeometry, crownTex: THREE.Texture, trunkCol: number, crownCol: number): Make {
+  return () => {
+    const g = new THREE.Group();
+    g.add(new THREE.Mesh(trunk, new THREE.MeshStandardMaterial({ color: trunkCol, vertexColors: true, roughness: 0.95, map: pattern('bark'), normalMap: normal('bark') })));
+    g.add(new THREE.Mesh(crown, new THREE.MeshStandardMaterial({ color: crownCol, vertexColors: true, roughness: 0.95, side: THREE.DoubleSide, map: crownTex, alphaTest: 0.5 })));
+    g.scale.set(1.25, 1.6, 1.25); // jak w grze (dorosłe drzewo)
+    return { obj: g, size: new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3()) };
+  };
+}
+
 /** Wszystkie modele w grupach: [grupa, [id, podpis, budowa]] */
 const GROUPS: [string, [string, string, Make][]][] = [
   ['Budynki', BUILDINGS.filter((d) => !d.road).map((d) => [d.id, t(d.name), () => {
@@ -192,6 +204,10 @@ const GROUPS: [string, [string, string, Make][]][] = [
     }],
   ] as [string, string, Make][]],
   ['Roślinność i kamienie', [
+    ['tree-pine', 'świerk', treeMake(proceduralModels.treeTrunk(), proceduralModels.treeCrown(), needleTexture(), 0x6b4a2e, 0x3c7a3a)],
+    ['tree-leaf', 'drzewo liściaste', treeMake(proceduralModels.leafTrunk(), proceduralModels.leafCrown(), leafTexture(), 0x7a5a3a, 0x6fa33d)],
+    ['plant-fern', 'paproć', () => ({ obj: new THREE.Mesh(proceduralModels.fern(), new THREE.MeshStandardMaterial({ color: 0x5d8a34, side: THREE.DoubleSide, map: fernTexture(), alphaTest: 0.5 })) })],
+    ['plant-deadwood', 'opadła gałąź', () => ({ obj: new THREE.Mesh(proceduralModels.deadwood(), new THREE.MeshStandardMaterial({ color: 0x6b5038, vertexColors: true, map: pattern('bark') })) })],
     ['plant-bush', 'krzak (z bliska | z daleka)', plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
     ['plant-rock', 'głaz (z bliska | z daleka)', plantPair(proceduralModels.rock(), proceduralModels.rockFar(), 0xc4bfb1, 'rock', true)],
   ]],

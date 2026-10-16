@@ -10,6 +10,7 @@ import { rng } from './craft';
 import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
+import { leafTexture, needleTexture, fernTexture } from './foliage';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ModelFactory } from './models';
@@ -589,6 +590,30 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3; frost?: number };
   const FROST = new THREE.Color(0xdfe7ea);
   const pines: Item[] = [], leafy: Item[] = [], rocks: Item[] = [], ores: Item[] = [], tufts: Item[] = [];
+  const ferns: Item[] = [], deadwood: Item[] = [];
+  // odległość od skraju lasu (w polach, do 3): skraj rzadszy i młodszy, w głębi stary las z paprociami i opadłymi gałęziami
+  const forestDepth = new Uint8Array(w * h);
+  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+    const i = y * w + x;
+    if (map.tiles[i] !== Terrain.Forest) continue;
+    let d = 3;
+    for (let dy = -2; dy <= 2 && d > 1; dy++) for (let dx = -2; dx <= 2; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+      const tt = map.tiles[ny * w + nx];
+      if (tt === Terrain.Forest || tt === Terrain.Mountain) continue;
+      d = Math.min(d, Math.max(Math.abs(dx), Math.abs(dy)));
+    }
+    forestDepth[i] = d;
+  }
+  /** Pole łąki tuż przy lesie (jedno pole od drzew): tu las „wychodzi” na łąkę młodymi drzewkami i krzakami */
+  const besideForest = (x: number, y: number): boolean => {
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx >= 0 && ny >= 0 && nx < w && ny < h && map.tiles[ny * w + nx] === Terrain.Forest) return true;
+    }
+    return false;
+  };
   const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [], reeds: Item[] = [], lilies: Item[] = [];
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
@@ -626,9 +651,22 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         }
         // jedno drzewo na pole (pole to ok. 3 m): pnie stoją w naturalnych odstępach, korony zwierają się wysoko nad głowami;
         // las w różnym wieku — rzadko stary olbrzym, najwięcej dojrzałych, do tego młode i podrost, a między nimi krzaki
+        const depth = forestDepth[y * w + x]!;
+        if (depth <= 1) {
+          // skraj lasu: młodsze i niższe drzewa (częściej liściaste, które lubią światło), gęsto krzaki — las nie urywa się ścianą
+          const edgeSize = age < 3 ? 1 : age < 12 ? 0.75 : 0.5;
+          put((r >>> 3) % 2 === 0 ? leafy : pines, x, y, 0, edgeSize, 0.8);
+          if ((r >>> 17) % 3 !== 0) put(bushes, x, y, 4, 0.8 + ((r >>> 21) & 3) * 0.1, 0.95);
+          if ((r >>> 23) % 3 === 0) put(ferns, x, y, 6, 0.9, 0.95);
+          continue;
+        }
         const size = age === 0 ? 1.55 : age < 3 ? 1.25 : age < 12 ? 1 : age < 17 ? 0.7 : 0.45;
-        put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, size, age === 0 ? 0.25 : 0.75);
-        if ((r >>> 17) % 3 === 0 || age >= 17) put(bushes, x, y, 4, 0.75 + ((r >>> 21) & 3) * 0.1, 0.95);
+        // w głębi starszy las: drzewa dorastają do pełnej wielkości
+        put((r >>> 3) % 4 === 0 ? leafy : pines, x, y, 0, size * (depth >= 3 ? 1.08 : 0.95), age === 0 ? 0.25 : 0.75);
+        if ((r >>> 17) % 4 === 0 || age >= 17) put(bushes, x, y, 4, 0.75 + ((r >>> 21) & 3) * 0.1, 0.95);
+        // podszyt: paprocie w cieniu koron, tu i ówdzie opadła gałąź
+        if ((r >>> 23) % 5 < 2) put(ferns, x, y, 6, 0.85 + ((r >>> 26) & 3) * 0.12, 0.95);
+        if ((r >>> 27) % 9 === 0) put(deadwood, x, y, 8, 0.9 + ((r >>> 5) & 3) * 0.15, 0.9);
       } else if (t === Terrain.Stone) { put(rocks, x, y, 0, 1.1); if ((r >>> 6) & 1) put(pebbles, x, y, 5, 0.5, 0.9); }
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
       // brzeg wody: kępy trzcin i pałek po obu stronach linii wody, na płyciźnie liście grzybieni
@@ -646,6 +684,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       else if (t === Terrain.Grass && !sandy && map.trails?.[y * w + x]) {
         // na leśnej ścieżce tylko drobne kamyki w ubitej ziemi
         if ((r >>> 22) % 9 === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
+      }
+      else if (t === Terrain.Grass && !sandy && besideForest(x, y) && !map.trails?.[y * w + x] && (r >>> 14) % 5 < 3) {
+        // łąka przy lesie: zarasta młodymi drzewkami (samosiejki), krzakami i paprociami — przejście łąka–las stopniowe
+        const k = (r >>> 18) % 6;
+        if (k < 2) put((r >>> 3) % 3 === 0 ? pines : leafy, x, y, 0, 0.32 + ((r >>> 20) & 7) / 30, 0.9);
+        else if (k < 5) put(bushes, x, y, 4, 0.7 + ((r >>> 21) & 3) * 0.12, 0.95);
+        if ((r >>> 25) % 3 === 0) put(ferns, x, y, 6, 0.75, 0.95);
       }
       else if (t === Terrain.Grass && !sandy) {
         // łąka: gęste kępy trawy, kwiaty, pojedyncze krzewy, kamyki i z rzadka większy głaz
@@ -701,9 +746,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const farPine = models.treeCrownFar();
   farPine.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array((farPine.attributes.position as THREE.BufferAttribute).count * 3).fill(0.95), 3));
   // daleki las jako obrazki: świerk i drzewo liściaste sfotografowane z 8 stron (pień + korona w jednym obrazku)
-  const pineImp = treeImpostor([{ geo: models.treeTrunk(), color: 0x6b4a2e, map: pattern('bark') }, { geo: models.treeCrown(), color: 0x3c7a3a, map: pattern('needles'), vertexColors: true }]);
-  const leafImp = treeImpostor([{ geo: models.leafTrunk(), color: 0x7a5a3a, map: pattern('bark') }, { geo: models.leafCrown(), color: 0x6fa33d, map: pattern('leaves') }]);
-  const PINE_LOD: Lod = pineImp ? { farGeo: pineImp.geometry, farMat: pineImp.material(0x3c7a3a) } : { farGeo: farPine };
+  const pineImp = treeImpostor([{ geo: models.treeTrunk(), color: 0x6b4a2e, map: pattern('bark') }, { geo: models.treeCrown(), color: 0x3c7a3a, map: needleTexture(), vertexColors: true, alpha: true }]);
+  const leafImp = treeImpostor([{ geo: models.leafTrunk(), color: 0x7a5a3a, map: pattern('bark') }, { geo: models.leafCrown(), color: 0x6fa33d, map: leafTexture(), vertexColors: true, alpha: true }]);
+  const PINE_LOD: Lod = { ...(pineImp ? { farGeo: pineImp.geometry, farMat: pineImp.material(0x3c7a3a) } : { farGeo: farPine }), shadowGeo: models.pineCrownShadow() };
   const LEAF_LOD: Lod = { ...(leafImp ? { farGeo: leafImp.geometry, farMat: leafFar(leafImp.material(0x6fa33d)) } : { farGeo: models.leafCrownFar() }), shadowGeo: models.leafCrownShadow() };
   // pień znika razem z przełączeniem korony na obrazek (obrazek ma już pień)
   // od ok. 30 pól od środka widoku drzewa są obrazkami (impostorami), drobiazgi znikają — z bliska nic się nie zmienia,
@@ -717,7 +762,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   ])!;
   const TRUNK_LOD: Lod = { hide: pineImp ? 30 : 62, shadowGeo: pineTrunkShadow }, SMALL_LOD: Lod = { hide: 30 };
   const LEAF_TRUNK_LOD: Lod = { ...TRUNK_LOD, shadowGeo: leafTrunkShadow };
-  const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: pattern('needles') });
+  // korony z kart (drzewa z Blendera): igliwie i liście na przezroczystym tle, cięte alphaTest, widoczne z obu stron
+  const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: needleTexture(), alphaTest: 0.5 });
   // wiatr w koronach: czubek drzewa kołysze się wolno, każde drzewo w swojej fazie (podmuchy przechodzą przez las falą);
   // pień stoi, więc ruch rośnie z wysokością. Ten sam zegar co trawa.
   const windCrown = (m: THREE.Material, amp: number, key: string, base = 0.25): void => {
@@ -731,6 +777,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           transformed.x += wave * ${amp.toFixed(3)} * lift * lift;
           transformed.z += wave * ${(amp * 0.5).toFixed(3)} * lift * lift;
         #endif`);
+      // ostre brzegi liści i igieł także z daleka (mipmapy rozmywają przezroczystość, więc ją wyostrzamy)
+      sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;\n#include <alphatest_fragment>');
     };
     m.customProgramCacheKey = () => key;
     // cień korony kołysze się razem z nią (inaczej po koronie wędrują jasne pasy w miejscach, gdzie cień „został”)
@@ -740,7 +788,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     m.userData.windDepth = depth;
   };
   windCrown(pineMat, 0.08, 'wind-pine', 0.8); // korona zaczyna się wysoko na pniu
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: pattern('leaves'), bumpMap: bump('leaves'), bumpScale: 1.2, normalMap: normal('leaves') });
+  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.92, metalness: 0, side: THREE.DoubleSide, map: leafTexture(), alphaTest: 0.5 });
   leafMat.userData.season = 'leaf';
   windCrown(leafMat, 0.12, 'wind-leaf', 1.0);
   // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
@@ -973,6 +1021,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const bushMat = plantMat('leaves', false);
   windCrown(bushMat, 0.22, 'wind-bush', 0.04);   // krzaki też drżą na wietrze (nisko przy ziemi prawie nic, u góry najwięcej)
   plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, bushMat, { farGeo: bushFar, shadowGeo: bushFar }), null, false);
+  // podszyt lasu: paprocie (karty z przezroczystością, drżą na wietrze, jesienią rudzieją) i opadłe gałęzie z korą
+  label = 'podszyt';
+  const fernMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: fernTexture(), alphaTest: 0.5 });
+  fernMat.userData.season = 'leaf';
+  windCrown(fernMat, 0.5, 'wind-fern', 0.05);
+  plant(ferns, instanced(models.fern(), 0x5d8a34, ferns, undefined, false, fernMat, SMALL_LOD), null, false);
+  plant(deadwood, instanced(models.deadwood(), 0x6b5038, deadwood, 'bark', false, undefined, SMALL_LOD), null, false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
