@@ -43,7 +43,7 @@ Czeka:
 - Kości przy cmentarzu, więcej brudu (śmieci, gnój przy chlewie)
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
 - Kopalnia rudy z prawdziwego zdarzenia (szyb, wózki)
-- Dźwięki: ptaki o świcie, koguty, świerszcze, puszczyk, grzmot, dzwon w południe, róg wojenny i dzwon alarmu, trzask ognisk, gwar, wiwaty, kowal
+- Dźwięki: zrobione 16.10 z nagrań — ptaki, świerszcze, odgłosy wsi, kury, dzwon w południe, róg alarmu, grzmot (docs/zasoby.md). Czeka: kogut o świcie i prawdziwy puszczyk (brak nagrania na wolnej licencji pod ręką), trzask ognisk, gwar, wiwaty
 - Wojsko: zbrojny (łucznik, łuczarz, taran, kamienne mury, drabiny i kamienna wieża już są)
 - Wnętrza pozostałych budynków w stylu nowej chaty
 - Leśniczy (sadzi drzewa; lasy się nie odnawiają)
