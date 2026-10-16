@@ -1285,7 +1285,7 @@ export class GameRenderer {
           });
           m.position.set(0, -50, 0);
           probe.add(m);
-          if (!site) batchProbe.push([-1 - batchProbe.length, m]);
+          if (!site) batchProbe.push([-1 - batchProbe.length, m], [-2 - batchProbe.length, m]);   // dwa razy: wspólne rysowanie zaczyna się od dwóch sztuk
         }
       }
       this.scene.add(probe);
@@ -2132,41 +2132,48 @@ export class GameRenderer {
     this.batchParts.set(root, list);
     return list;
   }
+  private batchGroups = new Map<string, THREE.Mesh[]>();
   private syncBatches(roots: Iterable<[number, THREE.Object3D]> = this.buildingMeshes, keepOff = false): void {
     for (const b of this.batches.values()) b.n = 0;
-    const on = this.batchOn;
+    const on = this.batchOn, groups = this.batchGroups;
+    for (const l of groups.values()) l.length = 0;
     this.buildingLayer.updateMatrixWorld();
     for (const [id, root] of roots) {
       const parts = this.staticParts(root);
-      const own = !on || this.sites.has(id);
+      const own = !on || this.sites.has(id) || !root.visible;
       for (const m of parts) {
         if (own) { m.layers.set(0); continue; }
-        m.layers.set(1);
         let vis = m.visible;
         for (let q: THREE.Object3D | null = m.parent; vis && q; q = q.parent) { if (!q.visible) vis = false; if (q === root) break; }
-        if (!vis || !root.visible) continue;
+        if (!vis) { m.layers.set(0); continue; }   // i tak niewidoczna
         const mat = m.material as THREE.Material;
         const key = m.geometry.uuid + mat.uuid + (m.castShadow ? 'c' : '') + (m.receiveShadow ? 'r' : '');
-        let b = this.batches.get(key);
-        if (!b || b.n >= b.mesh.instanceMatrix.count) {
-          const cap = Math.max(8, (b ? b.mesh.instanceMatrix.count : 4) * 2);
-          const im = new THREE.InstancedMesh(m.geometry, mat, cap);
-          im.castShadow = m.castShadow; im.receiveShadow = m.receiveShadow;
-          im.frustumCulled = false;
-          im.userData.noCull = true;
-          if (b) { im.instanceMatrix.array.set(b.mesh.instanceMatrix.array.subarray(0, b.n * 16)); this.buildingLayer.remove(b.mesh); b.mesh.dispose(); }
-          b = { mesh: im, n: b ? b.n : 0 };
-          this.batches.set(key, b);
-          this.buildingLayer.add(im);
-        }
-        b.mesh.setMatrixAt(b.n++, m.matrixWorld);
+        let l = groups.get(key);
+        if (!l) { l = []; groups.set(key, l); }
+        l.push(m);
       }
+    }
+    // razem rysujemy tylko to, co powtarza się w co najmniej dwóch budynkach; pojedyncze siatki rysują się same (z cięciem do kadru)
+    for (const [key, list] of groups) {
+      if (list.length < 2) { for (const m of list) m.layers.set(0); continue; }
+      const m0 = list[0]!;
+      let b = this.batches.get(key);
+      if (!b || b.mesh.instanceMatrix.count < list.length) {
+        if (b) { this.buildingLayer.remove(b.mesh); b.mesh.dispose(); }
+        const im = new THREE.InstancedMesh(m0.geometry, m0.material as THREE.Material, Math.max(4, list.length * 2));
+        im.castShadow = m0.castShadow; im.receiveShadow = m0.receiveShadow;
+        im.userData.noCull = true;
+        b = { mesh: im, n: 0 };
+        this.batches.set(key, b);
+        this.buildingLayer.add(im);
+      }
+      for (const m of list) { m.layers.set(1); b.mesh.setMatrixAt(b.n++, m.matrixWorld); }
     }
     for (const b of this.batches.values()) {
       if (keepOff) continue;
       b.mesh.count = b.n;
       b.mesh.visible = b.n > 0;
-      b.mesh.instanceMatrix.needsUpdate = true;
+      if (b.n) { b.mesh.instanceMatrix.needsUpdate = true; b.mesh.computeBoundingSphere(); }
     }
   }
   private cullInstances(): void {
