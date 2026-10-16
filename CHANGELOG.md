@@ -6,6 +6,9 @@
 - Nowe ładunki: worek mąki jak w spichlerzu (płótno z fałdami, sznurek pod szyjką, pył mąki), sztaby żelaza jak w składzie, ciosany blok kamienia; mniejsze, w proporcji do chłopa
 - Podgląd modeli: grupa „Niosą” — chłop z każdym ładunkiem w tej samej pozie co w grze
 - Wejście w spacer chłopem bez kilkusekundowego zamrożenia: światło sal stoi w scenie od startu (nowe światło przebudowywało shadery wszystkich materiałów), drzewa kolizji liczone tylko dla ścian tuż obok
+- Narzędzia chłopów z Blendera (tools/models/tools.py), każde w wersji z bliska i z daleka: siekiera, młotek, kilof, maczuga, pochodnia, wiadro z wodą, wędka. Gra rysuje tylko te, które ktoś naprawdę trzyma (wcześniej każde narzędzie przy każdym człowieku, schowane), z daleka lżejsze, bardzo daleko wcale. Pochodnię chłop trzyma teraz w uniesionej dłoni (płomień nad jej końcem), a wiadro wisi z opuszczonej ręki
+- Krzaki i głazy z Blendera (tools/models/plants.py) w wersji z bliska i z daleka: krzak z kęp liści z gałązkami (ok. 220 trójkątów zamiast 320), głaz o płaskich ścianach osadzony w ziemi; cień w zagłębieniach. W widoku osady krzaki ok. 410 tys. → 307 tys. trójkątów, ich cień 148 tys. → 111 tys.
+- Podgląd modeli: grupy „W pracy” (chłop z młotkiem, siekierą, kilofem, maczugą, pochodnią, wiadrem, wędką), „Narzędzia” i „Roślinność i kamienie” (z bliska | z daleka obok siebie)
 - Siatka budowy: przy wybranym budynku albo drodze pola wokół kursora są lekko podświetlone — zielone, gdzie wolno budować, czerwone, gdzie nie (zajęte, także świeżo postawione place budowy, zły teren, plac przed bramą, za daleko)
 - Pauza: stawianie budynków, dróg i rozbiórka działają od razu, więc plac budowy widać i kolejny budynek nie wejdzie na poprzedni
 - Start z jedzeniem na ok. tydzień dla sześciu osób: 300 chlebów i 100 jabłek (ok. 700 porcji)

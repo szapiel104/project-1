@@ -28,6 +28,7 @@ import { isWetMat, setWetBuildings } from './buildings';
 import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
 import { setCloudShadows } from './ground';
 import { cat } from './cat';
+import { GearPool } from './gearpool';
 import { enableShadowLayer } from './shadowlayer';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
@@ -191,6 +192,11 @@ function noWorkerMaterial(): THREE.SpriteMaterial {
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number }
 
 const MAX_UNITS = 2048;
+/** Ręka z pochodnią uniesiona w przód (tak samo w tools/models/tools.py) i koniec pochodni w układzie ręki */
+const TORCH_ARM = -0.55;
+const TORCH_TIP = new THREE.Vector3(0, -0.19 + Math.cos(0.55) * 0.34, Math.sin(0.55) * 0.34);
+/** Środek wiadra w układzie postaci (wisi z opuszczonej prawej dłoni) */
+const BUCKET_C = new THREE.Vector3(0.15, 0.15, 0.02);
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
 /** Miejsca w zamku z modelu (tools/models/keep.py, układ modelu: środek działki, przód z bramą = +z) */
@@ -242,17 +248,17 @@ export class GameRenderer {
   private bloom!: UnrealBloomPass;
   private sanitize!: ShaderPass;
   private rain = 0;
-  private hammers!: THREE.InstancedMesh;
+  private hammers!: GearPool;
   private guardsFig!: Figures;
   /** Słomiane posłania pod śpiącymi bez dachu nad głową */
-  private bedrolls!: THREE.InstancedMesh;
+  private bedrolls!: GearPool;
   /** Siekiera drwala i kilof kopacza: w prawej dłoni, obracane w barku jak młotek */
-  private axes!: THREE.InstancedMesh;
-  private picks!: THREE.InstancedMesh;
+  private axes!: GearPool;
+  private picks!: GearPool;
   /** Broń chłopa: maczuga w dłoni w walce, kilof na plecach i maczuga u pasa na co dzień */
-  private clubs!: THREE.InstancedMesh;
-  private backPicks!: THREE.InstancedMesh;
-  private beltClubs!: THREE.InstancedMesh;
+  private clubs!: GearPool;
+  private backPicks!: GearPool;
+  private beltClubs!: GearPool;
   private soldierTorches!: THREE.InstancedMesh;
   private peasantBodies!: Figures;
   /** Polegli łucznicy i strażnicy leżą we własnych zbrojach (nie w zbroi włócznika) */
@@ -446,6 +452,15 @@ export class GameRenderer {
   /** Czubki pochodni niesionych przez ludzi i żołnierzy w tej klatce (płomienie rysuje system ognia) */
   private handFlames: THREE.Vector3[] = [];
   private handFlameN = 0;
+  /** Płomień w punkcie `local` układu `m` (np. koniec pochodni w dłoni) */
+  private pushHandFlameAt(m: THREE.Matrix4, local: THREE.Vector3): void {
+    if (this.handFlameN >= 400) return;
+    const v = this.handFlames[this.handFlameN] ?? (this.handFlames[this.handFlameN] = new THREE.Vector3());
+    const f = this.focusPoint;
+    v.copy(local).applyMatrix4(m);
+    if ((v.x - f.x) ** 2 + (v.z - f.z) ** 2 > 80 * 80) return;
+    this.handFlameN++;
+  }
   private pushHandFlame(m: THREE.Matrix4, x: number): void {
     if (this.handFlameN >= 400) return;
     const v = this.handFlames[this.handFlameN] ?? (this.handFlames[this.handFlameN] = new THREE.Vector3());
@@ -454,11 +469,11 @@ export class GameRenderer {
     if ((v.x - f.x) ** 2 + (v.z - f.z) ** 2 > 80 * 80) return;
     this.handFlameN++;
   }
-  private handTorches: THREE.InstancedMesh;
+  private handTorches: GearPool;
   private ramBodies!: THREE.InstancedMesh;
   private ramBeams!: THREE.InstancedMesh;
   /** wiadro w prawej ręce gaszącego (puste i z wodą) */
-  private buckets!: THREE.InstancedMesh;
+  private buckets!: GearPool;
   private fireFx!: FireCrewFx;
   /** ostatnia faza wylewania (do jednorazowego kłębu pary przy trafieniu) */
   private pourWas = new Map<number, number>();
@@ -466,8 +481,8 @@ export class GameRenderer {
   private bucketL = new THREE.Matrix4();
   private bucketR = new THREE.Matrix4();
   private mouth = new THREE.Vector3();
-  private bucketWater!: THREE.InstancedMesh;
-  private rods: THREE.InstancedMesh;
+  private bucketWater!: GearPool;
+  private rods: GearPool;
   private frameNo = 0;
 
   private cursor: THREE.Mesh;
@@ -742,29 +757,29 @@ export class GameRenderer {
       tint(new THREE.CylinderGeometry(0.018, 0.022, 0.3, 5).translate(0.17, 0.5, 0.1), 0x4a3320),
       tint(new THREE.CylinderGeometry(0.03, 0.022, 0.07, 6).translate(0.17, 0.67, 0.1), 0x2a1c12),
     ]);
-    this.handTorches = new THREE.InstancedMesh(hand, new THREE.MeshBasicMaterial({ vertexColors: true }), MAX_UNITS);
     // co piąty żołnierz nocą niesie pochodnię w lewej ręce (prawa trzyma włócznię)
     this.soldierTorches = new THREE.InstancedMesh(hand.clone().translate(-0.34, 0, 0), new THREE.MeshBasicMaterial({ vertexColors: true }), 256);
     this.soldierTorches.count = 0; this.soldierTorches.frustumCulled = false;
     this.scene.add(this.soldierTorches);
-    // wędka rybaka: kij, żyłka i spławik
-    const rod = mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.012, 0.02, 1.1, 5).rotateX(1.05).translate(0.12, 0.72, 0.6), 0x6b4a2e),
-      tint(new THREE.CylinderGeometry(0.004, 0.004, 0.75, 3).translate(0.12, 0.62, 1.07), 0xe8e4d8),
-      tint(new THREE.IcosahedronGeometry(0.035, 0).translate(0.12, 0.24, 1.07), 0xd0281f),
-    ]);
-    // młotek w prawej dłoni: trzonek w przód z dłoni, obuch na końcu (układ ramienia: oś w barku)
-    const hammer = mergeGeometries([
-      // trzonek z pięści prostopadle do ręki (przy opuszczonej ręce w przód); obuch w płaszczyźnie zamachu, jasna twarz uderzająca
-      tint(new THREE.CylinderGeometry(0.014, 0.017, 0.26, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.11), 0x7a5232),
-      tint(new THREE.BoxGeometry(0.055, 0.11, 0.055).translate(0, -0.19, 0.25), 0x4a4d52),
-      tint(new THREE.BoxGeometry(0.06, 0.02, 0.06).translate(0, -0.25, 0.25), 0x8a8e96),
-    ]);
-    this.hammers = new THREE.InstancedMesh(hammer, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
-    this.hammers.count = 0;
-    this.hammers.frustumCulled = false;
-    this.hammers.castShadow = true;
-    this.scene.add(this.hammers);
+    // narzędzia chłopów z Blendera (tools/models/tools.py): każde w wersji z bliska i z daleka, drewno z teksturą i kute żelazo;
+    // pula rysuje tylko te, które ktoś naprawdę trzyma (wcześniej każdy człowiek miał każde narzędzie, schowane zerową skalą)
+    const gear = peasantGear();
+    const tm = toolMaterials();
+    const pool = (name: keyof typeof gear, label = 'narzędzia w rękach', mats: THREE.Material | THREE.Material[] = tm): GearPool =>
+      new GearPool(this.scene, gear[name], gear[(name + 'Far') as keyof typeof gear] ?? null, mats, MAX_UNITS, label);
+    this.axes = pool('axe');
+    this.picks = pool('pick');
+    this.clubs = pool('club');
+    this.backPicks = pool('backPick');
+    this.beltClubs = pool('beltClub');
+    this.hammers = pool('hammer');
+    this.rods = pool('rod');
+    // pochodnia w ręce świeci sama (bez cieniowania), płomień dokłada system ognia
+    const torchMat = new THREE.MeshBasicMaterial({ vertexColors: true });
+    this.handTorches = pool('torch', 'pochodnie w rękach', [torchMat, torchMat]);
+    this.buckets = pool('bucket');
+    const waterMat = new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 });
+    this.bucketWater = pool('bucketWater', 'woda w wiadrach', [waterMat, waterMat]);
     // posłanie: rozrzucona wiązka słomy z wałkiem pod głowę i kawałkiem zgrzebnego koca na nogach
     const straw = new THREE.MeshStandardMaterial({ color: 0xd6b56a, roughness: 1, map: pattern('thatch'), vertexColors: true });
     // wymiary pod leżącą postać (ok. 0,48 długości): siennik, wałek pod głową, koc na nogach
@@ -773,31 +788,7 @@ export class GameRenderer {
       tint(new THREE.CylinderGeometry(0.035, 0.04, 0.17, 7).rotateZ(Math.PI / 2).translate(0, 0.04, -0.24), 0xe8d29a),
       tint(new THREE.BoxGeometry(0.21, 0.02, 0.24).translate(0, 0.06, 0.13), 0x7d6a52),
     ]);
-    this.bedrolls = new THREE.InstancedMesh(bed, straw, MAX_UNITS);
-    this.bedrolls.count = 0;
-    this.bedrolls.frustumCulled = false;
-    this.bedrolls.receiveShadow = true;
-    this.scene.add(this.bedrolls);
-    // siekiera: długie stylisko z pięści w przód, żeleźce z ostrzem w dół (w płaszczyźnie zamachu)
-    const axe = mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.013, 0.016, 0.44, 6).rotateX(Math.PI / 2).translate(0, -0.19, 0.17), 0x7a5232),
-      tint(new THREE.BoxGeometry(0.014, 0.1, 0.075).translate(0, -0.235, 0.355), 0x5c6068),
-      tint(new THREE.BoxGeometry(0.016, 0.014, 0.08).translate(0, -0.284, 0.355), 0xb9bec6),
-      tint(new THREE.BoxGeometry(0.03, 0.035, 0.04).translate(0, -0.19, 0.37), 0x3a3d42),
-    ]);
-    const tool = (geo: THREE.BufferGeometry): THREE.InstancedMesh => {
-      const m = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.6, metalness: 0.3 }), MAX_UNITS);
-      m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'narzędzia w rękach'));
-      return m;
-    };
-    this.axes = tool(axe);
-    // kilof i maczuga chłopów z Blendera (tools/models/tools.py): drewno z teksturą i kute żelazo
-    const gear = peasantGear();
-    const gearTool = (geo: THREE.BufferGeometry): THREE.InstancedMesh => {
-      const m = new THREE.InstancedMesh(geo, toolMaterials(), MAX_UNITS);
-      m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'narzędzia w rękach'));
-      return m;
-    };
+    this.bedrolls = new GearPool(this.scene, bed, null, straw, MAX_UNITS, 'posłania', false);
     // taran z Blendera (tools/models/ram.py): wóz z daszkiem i osobno belka, która wysuwa się przy uderzeniu
     const RAM_MATS = ['wood', 'woodDark', 'sack', 'iron'];
     const RAM_COL = { wood: 0x8a6440, woodDark: 0x5e4329, sack: 0xb39a72, iron: 0x6a6e76 };
@@ -814,32 +805,8 @@ export class GameRenderer {
     };
     this.ramBodies = ramMesh('body');
     this.ramBeams = ramMesh('beam');
-    this.picks = gearTool(gear.pick);
-    this.clubs = gearTool(gear.club);
-    this.backPicks = gearTool(gear.backPick);
-    this.beltClubs = gearTool(gear.beltClub);
-    this.rods = new THREE.InstancedMesh(rod, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: true }), MAX_UNITS);
-    this.rods.count = 0;
-    this.rods.frustumCulled = false;
-    this.scene.add(this.rods);
-    // drewniane wiadro z obręczami i kabłąkiem, zwisa z prawej dłoni
-    const pail = mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.07, 0.055, 0.1, 10, 1, true).translate(0.19, 0.3, 0.06), 0x8a5f36),
-      tint(new THREE.CylinderGeometry(0.055, 0.055, 0.01, 10).translate(0.19, 0.255, 0.06), 0x6e4a2a),
-      tint(new THREE.TorusGeometry(0.071, 0.008, 4, 12).rotateX(Math.PI / 2).translate(0.19, 0.335, 0.06), 0x3a3d42),
-      tint(new THREE.TorusGeometry(0.06, 0.008, 4, 12).rotateX(Math.PI / 2).translate(0.19, 0.27, 0.06), 0x3a3d42),
-      tint(new THREE.TorusGeometry(0.07, 0.006, 4, 12, Math.PI).translate(0.19, 0.35, 0.06), 0x3a3d42),
-    ]);
-    this.buckets = new THREE.InstancedMesh(pail, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, side: THREE.DoubleSide }), MAX_UNITS);
-    this.buckets.count = 0; this.buckets.frustumCulled = false; this.buckets.castShadow = true;
-    this.scene.add(this.buckets);
-    this.bucketWater = new THREE.InstancedMesh(new THREE.CircleGeometry(0.064, 10).rotateX(-Math.PI / 2).translate(0.19, 0.33, 0.06), new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 }), MAX_UNITS);
-    this.bucketWater.count = 0; this.bucketWater.frustumCulled = false;
-    this.scene.add(this.bucketWater);
     this.fireFx = new FireCrewFx(this.scene);
-    this.handTorches.count = 0;
-    this.handTorches.frustumCulled = false;
-    this.scene.add(this.handTorches);
+
     this.loads = createLoads(MAX_UNITS, this.scene);
     // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
     // całe ścięte drzewo ciągnięte po ziemi za drwalem: pień z gałęziami i koroną na końcu
@@ -1938,6 +1905,7 @@ export class GameRenderer {
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
+      for (const t of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.hammers, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
@@ -4510,9 +4478,10 @@ export class GameRenderer {
     const tilt = p < 0.45 ? 0 : Math.min(1, (p - 0.45) / 0.25) * 2.0;
     this.figures.set(i, t.matrix, 0, false, team, u.id, -0.35 - 1.55 * ease - tilt * 0.15, -0.35 - 1.45 * ease - tilt * 0.15, false);
     // wiadro: z prawej dłoni na wprost piersi, obrót wokół jego środka
-    this.bucketL.makeTranslation(0.19 - 0.17 * ease, 0.3 + 0.3 * ease, 0.06 + 0.17 * ease)
+    const C = BUCKET_C;
+    this.bucketL.makeTranslation(C.x + (0.02 - C.x) * ease, C.y + (0.6 - C.y) * ease, C.z + (0.23 - C.z) * ease)
       .multiply(this.bucketR.makeRotationX(tilt))
-      .multiply(this.bucketM.makeTranslation(-0.19, -0.3, -0.06));
+      .multiply(this.bucketM.makeTranslation(-C.x, -C.y, -C.z));
     this.bucketM.copy(t.matrix).multiply(this.bucketL);
     this.buckets.setMatrixAt(i, this.bucketM);
     this.bucketWater.setMatrixAt(i, tilt < 0.7 ? this.bucketM : ZERO);
@@ -4937,7 +4906,14 @@ export class GameRenderer {
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket;
       this.buckets.setMatrixAt(i, u.bucket ? t.matrix : ZERO);
       this.bucketWater.setMatrixAt(i, u.bucket === 2 ? t.matrix : ZERO);
-      if (torchOn) { this.handTorches.setMatrixAt(i, t.matrix); this.pushHandFlame(t.matrix, 0.17); } else this.handTorches.setMatrixAt(i, ZERO);
+      if (torchOn) {
+        // pochodnia w prawej dłoni, obracana w barku razem z uniesioną ręką (TORCH_ARM); płomień nad jej końcem
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armM.makeRotationX(TORCH_ARM).setPosition(0.135, 0.45, 0);
+        this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz)));
+        this.handTorches.setMatrixAt(i, this.armM);
+        this.pushHandFlameAt(this.armM, TORCH_TIP);
+      } else this.handTorches.setMatrixAt(i, ZERO);
       // uciekający w panice: długi, szybki krok i ręce machające nad głową
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
@@ -4948,7 +4924,7 @@ export class GameRenderer {
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : iaArm, carrying ? carryL : chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || !!ia?.legs);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : chopping || mining ? toolArm + 0.1 : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || !!ia?.legs);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);

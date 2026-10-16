@@ -13,7 +13,8 @@ import { carryArms, loadGeometry, ON_SHOULDER, plankBundle } from './render/load
 import { t } from './i18n';
 import { buildingModel, isWetMat, isWindowMat, setNight } from './render/buildings';
 import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
-import { partsGeometry } from './render/gear';
+import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
+import { proceduralModels } from './render/models';
 import RAM_MODEL from './render/models/ram.json';
 import { clutterModel } from './render/clutter';
 import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
@@ -80,6 +81,69 @@ function wolf(): THREE.Object3D {
   return g;
 }
 
+/** Narzędzie z Blendera (tools/models/tools.py): z lewej pełna wersja, z prawej daleka (lżejsza) — do porównania */
+const WATER_MAT = new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 });
+function toolPair(name: string): Make {
+  return () => {
+    const g = new THREE.Group();
+    const mats = name === 'bucketWater' ? [WATER_MAT, WATER_MAT] : toolMaterials();
+    const near = new THREE.Mesh(toolGeometry(name), mats);
+    const far = new THREE.Mesh(toolGeometry(name + 'Far'), mats);
+    // dno wiadra z wodą: woda w wiadrze, żeby było widać, gdzie leży
+    if (name === 'bucket') for (const [m, n] of [[near, 'bucketWater'], [far, 'bucketWaterFar']] as const) m.add(new THREE.Mesh(toolGeometry(n), [WATER_MAT, WATER_MAT]));
+    // każde narzędzie przesunięte tak, żeby jego dół stał na podstawce, i dwa razy większe (są drobne)
+    const holder = new THREE.Group();
+    for (const [m, x] of [[near, -0.3], [far, 0.3]] as const) {
+      const box = new THREE.Box3().setFromObject(m);
+      const c = box.getCenter(new THREE.Vector3());
+      const wrap = new THREE.Group();
+      m.position.set(-c.x, -box.min.y, -c.z);
+      wrap.add(m);
+      wrap.scale.setScalar(2);
+      wrap.position.x = x;
+      holder.add(wrap);
+    }
+    g.add(holder);
+    const box = new THREE.Box3().setFromObject(g);
+    return { obj: g, size: box.getSize(new THREE.Vector3()) };
+  };
+}
+
+/** Chłop przy pracy z narzędziem — ta sama poza ręki i to samo przypięcie narzędzia co w grze (scene.ts):
+ *  narzędzia ręczne obracają się w barku (0,135; 0,45) razem z prawą ręką, pochodnia, wiadro i wędka są w układzie postaci */
+function worker(tool: string, arm: number, hand: boolean, extra?: string): Make {
+  return () => {
+    const holder = new THREE.Scene();
+    Figures.FAR2 = 1e9;
+    const id = 3;
+    const f = new Figures(1, holder, 'peasant');
+    f.set(0, new THREE.Matrix4(), 0, false, RED, id, hand ? arm : tool === 'bucket' ? 0 : undefined, -0.5, false);
+    f.finish(1);
+    const sz = f.sizeOf(id, RED);
+    const mats = toolMaterials();
+    const add = (name: string, m: THREE.Material[] = mats): void => {
+      const mesh = new THREE.Mesh(toolGeometry(name), m);
+      if (hand) mesh.applyMatrix4(new THREE.Matrix4().makeScale(sz, sz, sz).multiply(new THREE.Matrix4().makeRotationX(arm).setPosition(0.135, 0.45, 0)));
+      holder.add(mesh);
+    };
+    add(tool);
+    if (extra) add(extra, [WATER_MAT, WATER_MAT]);
+    return { obj: holder, size: new THREE.Vector3(0.5, 0.7, 0.5) };
+  };
+}
+
+/** Krzak albo głaz z Blendera (tools/models/plants.py): z lewej z bliska, z prawej z daleka; barwa jak w grze */
+function plantPair(near: THREE.BufferGeometry, far: THREE.BufferGeometry, color: number, tex: 'leaves' | 'rock', flat: boolean): Make {
+  return () => {
+    const mat = new THREE.MeshStandardMaterial({ color, vertexColors: true, flatShading: flat, roughness: 0.95, map: pattern(tex), normalMap: normal(tex) });
+    const g = new THREE.Group();
+    const a = new THREE.Mesh(near, mat), b = new THREE.Mesh(far, mat);
+    a.position.x = -0.45; b.position.x = 0.45;
+    g.add(a, b);
+    return { obj: g, size: new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3()) };
+  };
+}
+
 /** Wszystkie modele w grupach: [grupa, [id, podpis, budowa]] */
 const GROUPS: [string, [string, string, Make][]][] = [
   ['Budynki', BUILDINGS.filter((d) => !d.road).map((d) => [d.id, t(d.name), () => {
@@ -126,6 +190,22 @@ const GROUPS: [string, [string, string, Make][]][] = [
       return { obj: g };
     }],
   ] as [string, string, Make][]],
+  ['Roślinność i kamienie', [
+    ['plant-bush', 'krzak (z bliska | z daleka)', plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
+    ['plant-rock', 'głaz (z bliska | z daleka)', plantPair(proceduralModels.rock(), proceduralModels.rockFar(), 0xc4bfb1, 'rock', true)],
+  ]],
+  ['W pracy', [
+    ['work-hammer', 'budowniczy z młotkiem (zamach)', worker('hammer', -2.1, true)],
+    ['work-hammer2', 'budowniczy z młotkiem (uderzenie)', worker('hammer', -0.9, true)],
+    ['work-axe', 'drwal z siekierą', worker('axe', -2.0, true)],
+    ['work-pick', 'kamieniarz z kilofem', worker('pick', -1.9, true)],
+    ['work-club', 'chłop z maczugą', worker('club', -1.4, true)],
+    ['work-torch', 'z pochodnią nocą', worker('torch', -0.55, true)],
+    ['work-bucket', 'z wiadrem wody', worker('bucket', 0, false, 'bucketWater')],
+    ['work-rod', 'rybak z wędką', worker('rod', 0, false)],
+    ['work-back', 'kilof na plecach', worker('backPick', 0, false)],
+  ]],
+  ['Narzędzia', ([['axe', 'siekiera'], ['pick', 'kilof'], ['hammer', 'młotek'], ['club', 'maczuga'], ['torch', 'pochodnia'], ['bucket', 'wiadro'], ['rod', 'wędka'], ['backPick', 'kilof na plecach'], ['beltClub', 'maczuga u pasa']] as const).map(([k, l]) => [`tool-${k}`, `${l} (z bliska | z daleka)`, toolPair(k)] as [string, string, Make])],
   ['Podwórko', YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', 'pranie: '), () => ({ obj: yardModel(k) })] as [string, string, Make])],
   ['Graty', (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: mesh(clutterModel(k), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
 ];

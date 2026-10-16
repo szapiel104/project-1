@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { buildingModel } from './buildings';
+import PLANTS from './models/plants.json';
+import { boxUv, modelGeo } from './peasants';
 
 /**
  * Proceduralne modele z prostych brył. Każdy model powstaje przez tę fabrykę,
@@ -23,12 +25,24 @@ export interface ModelFactory {
   tuft(): THREE.BufferGeometry;
   /** Krzew */
   bush(): THREE.BufferGeometry;
-  /** Bryła cienia krzaka: te same cztery kule, tylko z mniejszej liczby ścian */
-  bushShadow(): THREE.BufferGeometry;
   /** Kwiat polny (sama główka z łodyżką) */
   flower(): THREE.BufferGeometry;
   rock(): THREE.BufferGeometry;
+  /** Głaz z daleka (ten sam kształt z 20 ścian) */
+  rockFar(): THREE.BufferGeometry;
+  /** Krzak z daleka (te same kępy z mniejszej liczby ścian) — też jako bryła cienia */
+  bushFar(): THREE.BufferGeometry;
   building(id: string, teamColor: number): THREE.Group;
+}
+
+
+/** Krzaki i głazy z Blendera (tools/models/plants.py): pozycje, normalne i cień w zagłębieniach (kolor wierzchołków
+ *  w szarości — barwę daje instancja), współrzędne tekstury rzutowane z boków bryły */
+function plantGeo(name: string, flat: boolean, uvScale: number): THREE.BufferGeometry {
+  const src = (PLANTS as unknown as Record<string, Parameters<typeof modelGeo>[0]>)[name]!;
+  const g = modelGeo(src).toNonIndexed();
+  if (flat) g.computeVertexNormals(); // głaz: płaskie ściany (normalne trójkątów); krzak zostaje z gładkimi normalnymi z Blendera
+  return boxUv(g, uvScale);
 }
 
 const at = (g: THREE.BufferGeometry, x: number, y: number, z: number): THREE.BufferGeometry => g.translate(x, y, z);
@@ -173,20 +187,11 @@ export const proceduralModels: ModelFactory = {
     return g;
   },
   bush() {
-    return mergeGeometries([
-      at(new THREE.IcosahedronGeometry(0.24, 1), 0, 0.2, 0),
-      at(new THREE.IcosahedronGeometry(0.18, 1), -0.2, 0.15, 0.06),
-      at(new THREE.IcosahedronGeometry(0.19, 1), 0.19, 0.16, -0.05),
-      at(new THREE.IcosahedronGeometry(0.15, 1), 0.03, 0.14, 0.2),
-    ]);
+    // krzak z Blendera: cztery kępy liści z gałązkami i dziurami (ok. 220 trójkątów zamiast 320)
+    return plantGeo('bush', false, 2.2);
   },
-  bushShadow() {
-    const ball = (r: number, x: number, y: number, z: number): THREE.BufferGeometry => {
-      const g = new THREE.IcosahedronGeometry(r * 1.04, 0).translate(x, y, z); // trochę większa: dwudziestościan jest wpisany w kulę
-      g.deleteAttribute('uv'); g.deleteAttribute('normal');
-      return g;
-    };
-    return mergeGeometries([ball(0.24, 0, 0.2, 0), ball(0.18, -0.2, 0.15, 0.06), ball(0.19, 0.19, 0.16, -0.05), ball(0.15, 0.03, 0.14, 0.2)])!;
+  bushFar() {
+    return plantGeo('bushFar', false, 2.2);
   },
   flower() {
     // kwiat polny: cienka łodyżka i mała, płaska główka z pięciu płatków (z góry widać kolorową gwiazdkę, nie kulkę)
@@ -202,18 +207,11 @@ export const proceduralModels: ModelFactory = {
     return mergeGeometries(parts)!;
   },
   rock() {
-    // głaz z nierównymi ścianami: wierzchołki przesunięte zależnie od położenia, więc bryła pozostaje szczelna
-    const g = new THREE.IcosahedronGeometry(0.34, 1);
-    const p = g.getAttribute('position');
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      const k = 0.82 + (Math.sin(x * 37.1 + y * 11.7) * Math.cos(z * 29.3 - x * 5.1) + 1) * 0.16;
-      p.setXYZ(i, x * k, Math.max(y * k, -0.12), z * k);
-    }
-    g.computeVertexNormals();
-    g.scale(1, 0.7, 1);
-    g.translate(0, 0.12, 0);
-    return g;
+    // głaz z Blendera: nieregularna bryła o płaskich ścianach, spód osadzony w ziemi (80 trójkątów)
+    return plantGeo('rock', true, 2.5);
+  },
+  rockFar() {
+    return plantGeo('rockFar', true, 2.5);
   },
   building: buildingModel,
 };

@@ -827,9 +827,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące
-  const bushFar = mergeGeometries([new THREE.IcosahedronGeometry(0.27, 0).translate(0, 0.2, 0).toNonIndexed(), new THREE.IcosahedronGeometry(0.2, 0).translate(0.12, 0.15, 0.05).toNonIndexed()])!;
+  // krzaki i głazy z Blendera (tools/models/plants.py) w wersji z bliska i z daleka; cień w zagłębieniach w kolorach wierzchołków
+  const bushFar = models.bushFar();
+  const plantMat = (tex: Parameters<typeof pattern>[0], flat: boolean): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({
+    color: 0xffffff, vertexColors: true, flatShading: flat, roughness: 0.95, metalness: 0, map: pattern(tex), bumpMap: bump(tex), bumpScale: 1.2, normalMap: normal(tex) });
+  const rockMat = plantMat('rock', true), rockFar = models.rockFar();
   label = 'krzewy';
-  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, undefined, { farGeo: bushFar, shadowGeo: models.bushShadow() }), null, false);
+  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, plantMat('leaves', false), { farGeo: bushFar, shadowGeo: bushFar }), null, false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
@@ -842,7 +846,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const lilyGeo = new THREE.CircleGeometry(0.13, 12, 0.35, Math.PI * 2 - 0.5).rotateX(-Math.PI / 2);
   plant(lilies, instanced(lilyGeo, 0x4a7a32, lilies, undefined, false, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0 }), { hide: 70 }), null, false);
   label = 'kamyki';
-  plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock', true, undefined, SMALL_LOD), null, false);
+  plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock', true, rockMat, { ...SMALL_LOD, farGeo: rockFar }), null, false);
   label = 'kępy trawy';
   plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {
@@ -854,8 +858,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
   // skały i rudy też znikają, gdy złoże się wyczerpie (bez pniaka)
   label = 'skały i złoża';
-  plant(rocks, instanced(models.rock(), 0xc4bfb1, rocks, 'rock'), null, false);
-  plant(ores, instanced(models.rock(), 0xa05a36, ores, 'rock'), null, false);
+  plant(rocks, instanced(models.rock(), 0xc4bfb1, rocks, 'rock', true, rockMat, { farGeo: rockFar }), null, false);
+  plant(ores, instanced(models.rock(), 0xa05a36, ores, 'rock', true, rockMat, { farGeo: rockFar }), null, false);
   label = 'pniaki (ukryte)';
   // Pniaki pojawiają się dopiero po ścięciu drzewa. Wcześniej wszystkie stały w scenie z zerową skalą i karta
   // i tak je przetwarzała (ok. 300 tys. trójkątów w zwykłym widoku); teraz rysujemy tylko te już widoczne:

@@ -96,6 +96,11 @@ export function partsGeometry(model: { q: number } & Record<string, unknown>, gr
   return mergeGeometries(geos, true)!;
 }
 
-export function peasantGear(): { pick: THREE.BufferGeometry; club: THREE.BufferGeometry; backPick: THREE.BufferGeometry; beltClub: THREE.BufferGeometry } {
-  return { pick: toolGeometry('pick'), club: toolGeometry('club'), backPick: toolGeometry('backPick'), beltClub: toolGeometry('beltClub') };
+const GEAR_NAMES = ['pick', 'club', 'backPick', 'beltClub', 'axe', 'hammer', 'torch', 'bucket', 'bucketWater', 'rod'] as const;
+type GearName = (typeof GEAR_NAMES)[number];
+/** Wszystkie narzędzia chłopów z Blendera, każde w wersji z bliska (`axe`) i z daleka (`axeFar`) */
+export function peasantGear(): Record<GearName | `${GearName}Far`, THREE.BufferGeometry> {
+  const out = {} as Record<GearName | `${GearName}Far`, THREE.BufferGeometry>;
+  for (const n of GEAR_NAMES) { out[n] = toolGeometry(n); out[`${n}Far`] = toolGeometry(`${n}Far`); }
+  return out;
 }
