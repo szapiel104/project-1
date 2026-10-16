@@ -32,7 +32,7 @@ Czeka:
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
 - Kopalnia rudy z prawdziwego zdarzenia (szyb, wózki)
 - Dźwięki: ptaki o świcie, koguty, świerszcze, puszczyk, grzmot, dzwon w południe, róg wojenny i dzwon alarmu, trzask ognisk, gwar, wiwaty, kowal
-- Wojsko: łucznik + wytwórca łuków (strzelanie z murów/wież), zbrojny, taran; kamienne mury i wieże później
+- Wojsko: zbrojny (łucznik, łuczarz, taran, kamienne mury, drabiny i kamienna wieża już są)
 - Wnętrza pozostałych budynków w stylu nowej chaty
 - Leśniczy (sadzi drzewa; lasy się nie odnawiają)
 - Bot dalej: kamienne mury, taran, lepszy wybór celów, poziomy trudności dopracowane (zrobione: palisada, wieże, łucznicy na wieżach, karczma, atak z dwóch stron, wypady)
@@ -65,10 +65,14 @@ Zrobione 13.10 wieczorem: automatyczna jakość (5 poziomów: cienie, AO, rozdzi
 
 Zrobione 14.10: przegląd długiej gry (tools/soak), boty myślą w różnych tickach, szybsze sprawdzanie blokowania przejść, krzaki i drzewa z daleka lżejsze, góry za mapą bez cienia (karta graficzna ok. 10 → 7,5 ms na klatkę w widoku osady).
 
+Zrobione 15.10: daleka wersja budynków (LOD, 3 poziomy, próg zależny od jakości), okno F3 z czasem karty na przejście (cienie, scena, AO, poświata) i listą najcięższych rzeczy.
+
 Dalej (zmierzone 14.10 w Chrome, widok osady: ok. 2,7 mln trójkątów w scenie, 4 mln z cieniem, ok. 1180 wywołań rysowania):
 - Kępy trawy (28 trójkątów) i korony liściastych (200) to razem ok. 750 tys. trójkątów — rzadsze z daleka albo obrazki
-- Domy z Blendera mają po ok. 19 tys. trójkątów — wersja z daleka (LOD) dla budynków
 - Ok. 1180 wywołań rysowania: kawałki lasu po kilkanaście rodzajów na kawałek, w cieniu drugi raz — BatchedMesh albo większe kawałki
+
+- Pniaki czekające na ścięcie drzewa (ok. 200 tys. ukrytych trójkątów) i instancje poza kadrem: wyrzucać z rysowania zamiast zerowej skali
+- AO w połowie rozdzielczości na jakościach do „Wysokiej”
 
 Większe rzeczy na później:
 - Wspólny bufor instancji dla wszystkich kawałków jednego rodzaju (BatchedMesh) — mniej wywołań rysowania
