@@ -6,6 +6,8 @@
 - Wyprawiona skóra (pasy, buty, sakwy, pelerynka) dostała własną teksturę z ziarnem i rysami zamiast płótna; skóra ludzi delikatne pory
 - Nowy miecz strażnika z Blendera (tools/models/sword.py): rękojeść owinięta rzemieniem, tarczowa głowica z nitem, kuty jelec z opuszczonymi końcami, klinga ze zbroczem i jaśniejszymi, naostrzonymi krawędziami (z bliska i z daleka)
 - Z daleka postacie zostają przy lżejszych teksturach (bez zmian w wydajności)
+- Postacie od dołu i od środka bez dziur: otwarte powłoki z metalu, kolczugi i skóry ciała (naramienniki, płyty na biodrach, kolczuga pod połami, kaptur kolczy) dostają w Blenderze grubość i obrzeże (`thicken` w body.py) — wcześniej znikały, gdy patrzyło się od spodu
+- Chłop: dekolt koszuli przycięty w równe V z obszytym brzegiem (wcześniej poszarpane schodki z wyciętych ścian siatki)
 
 ## 0.23.4 — niesienie od nowa (2026-10-15)
 

@@ -176,6 +176,36 @@ def pack(m):
     return {'mat': m.mat, 'dyn': m.dyn, 'show': m.show, 'pos': e(pos), 'nrm': e(nrm), 'col': e(col), 'idx': e(idx)}
 
 
+def thicken(m, t=0.0025):
+    """Otwarta powłoka (naramiennik z połówki kuli, płyta z wycinka bryły, kolczuga pod połami) → zamknięta bryła:
+    druga warstwa przesunięta do środka o t (odwrócone ściany) i obrzeże łączące obie wzdłuż brzegów.
+    Gra nie rysuje tylnych stron metalu, więc bez tego od dołu i od środka takie części znikały."""
+    count = {}
+    for f in m.idx:
+        for k in range(len(f)):
+            a, b = f[k], f[(k + 1) % len(f)]
+            key = (min(a, b), max(a, b))
+            count[key] = count.get(key, 0) + 1
+    edges = []
+    for f in m.idx:
+        for k in range(len(f)):
+            a, b = f[k], f[(k + 1) % len(f)]
+            if count[(min(a, b), max(a, b))] == 1:
+                edges.append((a, b))
+    if not edges:
+        return m
+    n0 = len(m.pos)
+    m.pos += [(x - nx * t, y - ny * t, z - nz * t) for (x, y, z), (nx, ny, nz) in zip(m.pos, m.nrm)]
+    m.nrm += [(-nx, -ny, -nz) for nx, ny, nz in m.nrm[:n0]]
+    m.col += [tuple(c * 0.8 for c in cc) for cc in m.col[:n0]]
+    inner = [tuple(n0 + i for i in reversed(f)) for f in m.idx]
+    rim = []
+    for a, b in edges:
+        rim += [(b, a, n0 + a), (b, n0 + a, n0 + b)]
+    m.idx += inner + rim
+    return m
+
+
 def finish(name, static, leg, arm, hip, shoulder, hand, extra=None, far_ratio=0.22):
     """Cień w zagłębieniach (cała postać w pozie spoczynkowej), łączenie siatek, wersja z daleka, zapis JSON"""
     pose = [(m, (0, 0, 0)) for m in static]
@@ -188,6 +218,10 @@ def finish(name, static, leg, arm, hip, shoulder, hand, extra=None, far_ratio=0.
             seen.add(id(m))
             uniq.append((m, o))
     bake_ao(pose, sample=uniq)
+    # metal, kolczuga i skóra ciała są rysowane jednostronnie: otwarte powłoki dostają grubość
+    for m, _ in uniq:
+        if m.mat in ('metal', 'mail', 'skin'):
+            thicken(m)
     near = {'static': groups(static, fixed_cloth), 'leg': groups(leg, fixed_cloth), 'arm': groups(arm, fixed_cloth)}
     # z daleka: metal i tkanina w jednej siatce, wszystko kilka razy rzadsze
     far_of = lambda m: 'leather' if m.dyn is None else m.mat

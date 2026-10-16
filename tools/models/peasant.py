@@ -14,6 +14,7 @@ from common import Mesh, evaluated, hexrgb, keep_faces, lathe, reset, skin, sphe
 
 reset()
 from body import Head, finish, smooth  # noqa: E402
+import bmesh as _bm  # noqa: E402
 
 WHITE = (1.0, 1.0, 1.0)
 LINEN, STRAW, SHOE, ROPE, POUCH, WRAP = hexrgb(0xd9ceb0), hexrgb(0xcfae55), hexrgb(0x2a201a), hexrgb(0x8a7350), hexrgb(0x6a4a2e), hexrgb(0x9a8462)
@@ -75,14 +76,38 @@ hand_m = Mesh(evaluated(hand), WHITE, 'skin', dyn='skin')
 # ---------- tułów: krótka koszula z wycięciem w serek, postrzępiony dół; portki od pasa; szeroki skórzany pas ----------
 torso = lathe('torso', [(0.09, 0.262), (0.086, 0.29), (0.084, 0.31), (0.095, 0.37), (0.104, 0.415), (0.1, 0.448), (0.08, 0.472), (0.05, 0.488), (0.032, 0.494)], seg=28, depth=0.74, subsurf=0)
 tb = evaluated(torso)
+# dekolt w serek: siatka przecięta dwiema płaszczyznami (równe brzegi zamiast schodków z całych ścian), potem wycięty
+V0, VK = 0.405, 1.6
+for sx in (-1, 1):
+    _bm.ops.bisect_plane(tb, geom=tb.verts[:] + tb.edges[:] + tb.faces[:], plane_co=(0, 0, V0), plane_no=(-sx * VK, 0, 1))
 def torn(x, y, z):
     a = math.atan2(x, z)
-    if z > 0 and abs(x) < 0.05 and y > 0.405 + abs(x) * 1.6 + 0.008 * math.sin(x * 300):   # rozdarty dekolt w serek
+    if z > 0.02 and y > V0 + abs(x) * VK + 1e-4:   # dekolt w serek
         return True
     if y < 0.272 and (a * 6) % 2 < 0.7:      # postrzępiony dół koszuli (zęby nad pasem)
         return True
     return False
 keep_faces(tb, lambda x, y, z: not torn(x, y, z))
+_bm.ops.triangulate(tb, faces=tb.faces[:])
+# obszycie dekoltu: zgrubiały brzeg tkaniny wzdłuż wycięcia (zamknięta bryła, zakrywa styk z piersią)
+_hem = {}
+for e in tb.edges:
+    if e.is_boundary:
+        ps = [(v.co.x, v.co.z, -v.co.y) for v in e.verts]
+        if all(p[2] > 0.01 and V0 - 0.002 < p[1] < 0.486 for p in ps):
+            _hem[e] = ps
+_hv, _he, _idx = [], [], {}
+for e, ps in _hem.items():
+    ids = []
+    for v, p in zip(e.verts, ps):
+        if v.index not in _idx:
+            _idx[v.index] = len(_hv)
+            # brzeg odsunięty o włos na zewnątrz od osi tułowia (leży na tkaninie, nie w niej)
+            r = math.hypot(p[0], p[2] / 0.74) or 1
+            _hv.append((p[0] * (1 + 0.004 / r), p[1], p[2] * (1 + 0.004 / r)))
+        ids.append(_idx[v.index])
+    _he.append(tuple(ids))
+neckhem = skin('neckhem', _hv, _he, [(0.0045, 0.0035)] * len(_hv), subsurf=1)
 def shirt_col(x, y, z):
     a = math.atan2(x, z)
     k = 0.8 + 0.25 * (y - 0.27) + 0.05 * math.sin(a * 9 + y * 50) + (noise3(x, y, z) - 0.5) * 0.12
@@ -92,6 +117,7 @@ def shirt_col(x, y, z):
         k *= 0.7
     return (k,) * 3
 torso_m = Mesh(tb, shirt_col, 'cloth', dyn='tunic')
+neckhem_m = Mesh(evaluated(neckhem), lambda x, y, z: (0.62 + (noise3(x, y, z) - 0.5) * 0.1,) * 3, 'cloth', dyn='tunic')
 # naga pierś pod rozdartą koszulą (tuż za tkaniną)
 chest = lathe('chest', [(0.083, 0.4), (0.094, 0.43), (0.088, 0.455), (0.07, 0.474), (0.045, 0.488)], seg=10, depth=0.72, phi0=-0.6, phi=1.2, subsurf=0)
 chest_m = Mesh(evaluated(chest), lambda x, y, z: (0.95 - 0.1 * (abs(x) < 0.008),) * 3, 'skin', dyn='skin')
@@ -129,5 +155,5 @@ straw_m = [Mesh(evaluated(hat_cr), lambda x, y, z: hexrgb(0x7a3a2a) if 0.588 < y
 cap = lathe('cap', [(0.061, 0.586), (0.064, 0.603), (0.057, 0.624), (0.034, 0.636), (0.0, 0.639)], seg=16, subsurf=0)
 cap_m = Mesh(evaluated(cap), lambda x, y, z: (0.55 if y < 0.596 else 1.0,) * 3, 'cloth', dyn='hat', show='cap')
 
-static = [torso_m, chest_m, hips_m, belt_m, buckle_m, pouch_m, head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), hair, beard, hood, cape_m, kerchief, *straw_m, cap_m]
+static = [torso_m, neckhem_m, chest_m, hips_m, belt_m, buckle_m, pouch_m, head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), hair, beard, hood, cape_m, kerchief, *straw_m, cap_m]
 finish('peasant', static, [leg_m, kband_m, chain_m, shoe_m, wraps_m], [arm_m, fore_m, hand_m], HIP, SHOULDER, HAND)
