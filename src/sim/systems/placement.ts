@@ -126,6 +126,9 @@ export function enemyNear(g: GameState, player: number, x: number, y: number, w:
   return false;
 }
 
+/** Pola, przez które mur (palisada, mur kamienny) przechodzi, karczując je: drzewo idzie pod topór, głaz i złoże na gruz */
+export const clearable = (t: number): boolean => t === Terrain.Forest || t === Terrain.Stone || t === Terrain.Iron;
+
 export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true, rot = 0): PlaceError | null {
   const def = BUILDINGS[type];
   if (!def || !def.buildable || !g.players[player]) return 'place.unknown';
@@ -149,7 +152,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
   for (let ty = y; ty < y + fh; ty++) {
     for (let tx = x; tx < x + fw; tx++) {
       const t = ty * width + tx;
-      if (!TERRAIN[g.map.tiles[t] as Terrain].buildable) return 'place.terrain';
+      if (!TERRAIN[g.map.tiles[t] as Terrain].buildable && !(def.line && clearable(g.map.tiles[t]!))) return 'place.terrain';
       if (overTiles.has(t)) continue;
       if (g.occupancy[t] !== 0 || g.reserved[t] !== 0) return 'place.occupied';
       if (inForecourt(g, tx, ty)) return 'place.forecourt';
@@ -297,6 +300,11 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
     g.occupancy[t] = 0; g.gates[t] = 0;
     g.buildings.splice(g.buildings.indexOf(o), 1);
     for (const u of g.units) if (u.target === o.id) { u.target = 0; u.path = []; }
+  }
+  // mur przez las albo skały: pole zostaje wykarczowane (drzewo ścięte, kamień rozbity) i staje się zwykłą ziemią
+  if (def.line) {
+    const t = y * g.map.width + x;
+    if (clearable(g.map.tiles[t]!)) { g.map.tiles[t] = Terrain.Grass; g.wear[t] = 0; g.cut.push(t); }
   }
   const b = addBuilding(g, type, player, x, y, rot);
   // żołnierze stojący na działce schodzą z niej na najbliższe wolne pole (zamiast stać w środku ścian)

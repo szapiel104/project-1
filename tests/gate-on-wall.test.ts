@@ -15,7 +15,7 @@ describe('brama na częstokole', () => {
     let x = -1, y = -1;
     for (let r = 5; r < 15 && x < 0; r++) for (let d = -r; d <= r && x < 0; d++) {
       const tx = keep.x + d, ty = keep.y + r;
-      if ([0, 1, 2].every((k) => canPlace(g, 0, pal, tx + k, ty) === null)) { x = tx; y = ty; }
+      if ([0, 1, 2].every((k) => canPlace(g, 0, pal, tx + k, ty) === null && g.map.tiles[ty * g.map.width + tx + k] === 0)) { x = tx; y = ty; }
     }
     expect(x).toBeGreaterThanOrEqual(0);
     for (let k = 0; k < 3; k++) expect(placeBuilding(g, 0, pal, x + k, y)).toBe(true);
@@ -43,7 +43,7 @@ describe('brama na częstokole', () => {
     let x = -1, y = -1;
     for (let r = 5; r < 16 && x < 0; r++) for (let d = -r; d <= r && x < 0; d++) {
       const tx = keep.x + d, ty = keep.y + r;
-      if ([0, 1, 2, 3].every((k) => canPlace(g, 0, pal, tx + k, ty) === null) && [2, 3].every((k) => canPlace(g, 0, pal, tx + k, ty - 1) === null)) { x = tx; y = ty; }
+      if ([0, 1, 2, 3].every((k) => canPlace(g, 0, pal, tx + k, ty) === null && g.map.tiles[ty * g.map.width + tx + k] === 0) && [2, 3].every((k) => canPlace(g, 0, pal, tx + k, ty - 1) === null && g.map.tiles[(ty - 1) * g.map.width + tx + k] === 0)) { x = tx; y = ty; }
     }
     expect(x).toBeGreaterThanOrEqual(0);
     for (let k = 0; k < 4; k++) expect(placeBuilding(g, 0, pal, x + k, y)).toBe(true);

@@ -652,6 +652,58 @@ function planLine(a: { x: number; y: number }, b: { x: number; y: number }): { x
   return out;
 }
 
+/**
+ * Pola muru: jak droga (prosto, potem zakręt), ale gdy po drodze jest woda albo góra, mur je obchodzi —
+ * najkrótszą drogą z jak najmniejszą liczbą zakrętów (las i skały mur przechodzi, karczując je).
+ */
+function wallLine(a: { x: number; y: number }, b: { x: number; y: number }): { x: number; y: number }[] {
+  const straight = planLine(a, b);
+  const W = game.map.width, H = game.map.height;
+  const hard = (x: number, y: number): boolean => { const t = game.map.tiles[y * W + x]; return t === Terrain.Water || t === Terrain.Mountain; };
+  if (!straight.some((p) => hard(p.x, p.y)) || hard(a.x, a.y) || hard(b.x, b.y)) return straight;
+  // Dijkstra po polach w prostokącie wokół odcinka (z zapasem), stan = pole i kierunek; zakręt kosztuje dodatkowo
+  const M = 16;
+  const x0 = Math.max(0, Math.min(a.x, b.x) - M), y0 = Math.max(0, Math.min(a.y, b.y) - M);
+  const x1 = Math.min(W - 1, Math.max(a.x, b.x) + M), y1 = Math.min(H - 1, Math.max(a.y, b.y) + M);
+  const bw = x1 - x0 + 1, bh = y1 - y0 + 1, N = bw * bh * 4;
+  const dist = new Float32Array(N).fill(Infinity), prev = new Int32Array(N).fill(-1);
+  const DX = [1, 0, -1, 0], DY = [0, 1, 0, -1];
+  const heap: [number, number][] = [];
+  const push = (d: number, s: number): void => {
+    heap.push([d, s]);
+    let i = heap.length - 1;
+    while (i > 0) { const p = (i - 1) >> 1; if (heap[p]![0] <= heap[i]![0]) break; [heap[p], heap[i]] = [heap[i]!, heap[p]!]; i = p; }
+  };
+  const pop = (): [number, number] => {
+    const top = heap[0]!, last = heap.pop()!;
+    if (heap.length) {
+      heap[0] = last;
+      let i = 0;
+      for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < heap.length && heap[l]![0] < heap[m]![0]) m = l; if (r < heap.length && heap[r]![0] < heap[m]![0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i]!, heap[m]!]; i = m; }
+    }
+    return top;
+  };
+  const id = (x: number, y: number, d: number): number => ((y - y0) * bw + (x - x0)) * 4 + d;
+  for (let d = 0; d < 4; d++) { dist[id(a.x, a.y, d)] = 0; push(0, id(a.x, a.y, d)); }
+  let end = -1;
+  while (heap.length) {
+    const [dd, s] = pop();
+    if (dd > dist[s]!) continue;
+    const d = s & 3, cell = s >> 2, x = (cell % bw) + x0, y = Math.floor(cell / bw) + y0;
+    if (x === b.x && y === b.y) { end = s; break; }
+    for (let k = 0; k < 4; k++) {
+      const nx = x + DX[k]!, ny = y + DY[k]!;
+      if (nx < x0 || ny < y0 || nx > x1 || ny > y1 || hard(nx, ny)) continue;
+      const ns = id(nx, ny, k), nd = dd + 1 + (k === d ? 0 : 0.6);
+      if (nd < dist[ns]!) { dist[ns] = nd; prev[ns] = s; push(nd, ns); }
+    }
+  }
+  if (end < 0) return straight; // nie da się obejść w pobliżu: zostaje prosto (pola w wodzie czerwone)
+  const out: { x: number; y: number }[] = [];
+  for (let s = end; s >= 0; s = prev[s]!) { const cell = s >> 2; out.push({ x: (cell % bw) + x0, y: Math.floor(cell / bw) + y0 }); }
+  return out.reverse();
+}
+
 function showPlan(): void {
   if (!picked || plan.state === 'none' || plan.state === 'done') { renderer.setRoadPlan([]); planTip.hidden = true; return; }
   const type = buildingIndex(picked);
@@ -661,7 +713,7 @@ function showPlan(): void {
   const left = new Map<ResourceId, number>();
   for (const res of Object.keys(def.cost) as ResourceId[]) left.set(res, p.res[resIndex(res)]!);
   let count = 0;
-  plan.tiles = planLine(plan.start, plan.end).map(({ x, y }) => {
+  plan.tiles = (def.line ? wallLine(plan.start, plan.end) : planLine(plan.start, plan.end)).map(({ x, y }) => {
     let ok = (!def.road || !game.roads[y * game.map.width + x]) && canPlace(game, ME, type, x, y, false) === null;
     if (ok) for (const [res, n] of Object.entries(def.cost) as [ResourceId, number][]) if ((left.get(res) ?? 0) < n) ok = false;
     if (ok) { for (const [res, n] of Object.entries(def.cost) as [ResourceId, number][]) left.set(res, left.get(res)! - n); count++; }
