@@ -312,7 +312,10 @@ function slotPoint(g: GameState, m: March, s: Soldier): [number, number, boolean
   const [off, back] = s.slot!;
   const x = m.px + (rx * off - fx * back) * FP, y = m.py + (ry * off - fy * back) * FP;
   const tx = x >> 8, ty = y >> 8;
-  if (tx >= 0 && ty >= 0 && tx < g.map.width && ty < g.map.height && walkable(g, ty * g.map.width + tx, s.owner)) return [x, y, true];
+  // miejsce na koronie muru (szyk idzie wzdłuż muru) nie jest miejscem w szyku: ktoś wchodził po drabinie na mur,
+  // szedł nim i nie miał jak zejść po drugiej stronie
+  const W = g.map.width, lead = (m.py >> 8) * W + (m.px >> 8), top = (t: number): boolean => (g.walls[t]! & WALL_TOP) !== 0;
+  if (tx >= 0 && ty >= 0 && tx < W && ty < g.map.height && walkable(g, ty * W + tx, s.owner) && (top(lead) || !top(ty * W + tx))) return [x, y, true];
   return [m.px, m.py, false];
 }
 
@@ -389,6 +392,7 @@ function marchStep(g: GameState, s: Soldier, m: March): void {
     const t = (py >> 8) * W + (px >> 8);
     if (t === here) return true;
     if (!walkable(g, t, s.owner)) return false;
+    if ((g.walls[t]! & WALL_TOP) && !(g.walls[here]! & WALL_TOP)) return false; // w marszu nikt nie wchodzi z ziemi na mur
     const ddx = (px >> 8) - (s.px >> 8), ddy = (py >> 8) - (s.py >> 8);
     if (Math.abs(ddx) > 1 || Math.abs(ddy) > 1) return false;
     if (ddx && ddy && (!walkable(g, here + ddx, s.owner) || !walkable(g, here + ddy * W, s.owner))) return false;
@@ -566,6 +570,9 @@ function greedy(g: GameState, from: number, to: number, taken: Set<number>, play
       const t = y * w + x;
       if (t === to || taken.has(t) || !walkable(g, t, player)) continue;
       if (dx && dy && (!walkable(g, fy * w + x, player) || !walkable(g, y * w + fx, player))) continue;
+      // ściany zamku i brzegi muru: krok wprost nie przechodzi przez ścianę ani z ziemi na koronę muru
+      if ((g.walls[from] || g.walls[t] || g.walls[fy * w + x] || g.walls[y * w + fx]) && wallBetween(g, from, dx, dy)) continue;
+      if ((g.walls[t]! & WALL_TOP) && !(g.walls[from]! & WALL_TOP)) continue;
       const d = (x - tx) ** 2 + (y - ty) ** 2;
       if (d < bd) { bd = d; best = t; }
     }
@@ -706,7 +713,9 @@ export function armySystem(g: GameState): void {
             // bierze inny cel albo rozbija mur (dawniej stał pod murem i patrzył na strażnika w środku bez końca)
             budget--;
             const ft = tileOf(g, foe), fx = ft % W, fy = (ft - fx) / W;
-            const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1, 1500, s.owner, ft, 1);
+            // z ziemi nie podchodzi do wroga po koronie muru (wchodził po drabinie nad wilka za murem i nie miał jak zejść)
+            const low = !high(g, s);
+            const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1 && !(low && (g.walls[t]! & WALL_TOP)), 1500, s.owner, ft, 1);
             if (p && p.length) s.path = p.slice(0, 8);
             else { s.skip = foe.id; s.skipUntil = g.tick + 150; s.target = 0; }
           }
@@ -772,7 +781,7 @@ export function armySystem(g: GameState): void {
       if (stance && !s.wounded && (s.hold ?? -1) >= 0 && here !== s.hold && !s.target && !s.post) { s.goal = s.hold!; continue; }
       // stoi na polu razem z kimś: odsuwa się na najbliższe wolne
       if ((standing.get(here) ?? 0) > 1) {
-        const free = formation(g, here, 9).find((t) => !taken.has(t) && t !== here);
+        const free = formation(g, here, 9).find((t) => !taken.has(t) && t !== here && (!(g.walls[t]! & WALL_TOP) || (g.walls[here]! & WALL_TOP) !== 0));
         if (free !== undefined) { const n = greedy(g, here, free, taken, s.owner); if (n >= 0) { s.path = [n]; taken.add(n); standing.set(here, standing.get(here)! - 1); } }
       }
       continue;
@@ -791,7 +800,7 @@ export function armySystem(g: GameState): void {
         if (Math.max(Math.abs(dx), Math.abs(dy)) > 4) continue;
         const x = gx + dx, y = gy + dy;
         if (x < 0 || y < 0 || x >= W || y >= g.map.height) continue;
-        if (walkable(g, y * W + x, s.owner)) { alt = y * W + x; break; }
+        if (walkable(g, y * W + x, s.owner) && ((g.walls[s.goal]! & WALL_TOP) || !(g.walls[y * W + x]! & WALL_TOP))) { alt = y * W + x; break; }
       }
       if (alt < 0) { s.goal = -1; continue; }
       s.goal = alt;
@@ -914,7 +923,8 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
   if (!s.path.length && budget > 0) {
     budget--;
     const target = b;
-    const path = findPath(g, here, (t) => rectGap(g, t, target) <= reach && rectGap(g, t, target) >= 1 && (t === here || !taken.has(t)), 600, s.owner);
+    const low = !(g.walls[here]! & WALL_TOP);
+    const path = findPath(g, here, (t) => rectGap(g, t, target) <= reach && rectGap(g, t, target) >= 1 && (t === here || !taken.has(t)) && !(low && (g.walls[t]! & WALL_TOP)), 600, s.owner);
     s.path = path ?? [];
     if (s.path.length) taken.add(s.path[s.path.length - 1]!);
     // nie da się podejść (zajęte miejsca, zamknięte przejście): odpuszcza ten cel na chwilę, zamiast szukać drogi co tick
