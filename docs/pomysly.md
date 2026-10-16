@@ -135,6 +135,16 @@ Czeka:
 - Odzywki jak w Gothicu zależne od sytuacji (deszcz, wilki w nocy, podatki, głód) u chłopów i strażników
 - Chlew i stajnia jako budynki (zwierzęta z Blendera już są)
 
+## Gospodarka i grywalność (16.10.2026)
+Zrobione 16.10: koszty budynków etapami (start 80 drewna, kamień i złoto na później), jedzenie na tydzień na start, głodni odchodzą tylko z głodu, jedzenie syci różnie (jabłko 1, chleb 2, ryba 3), duży spichlerz, okno spichlerza z prognozą, wyłączanie budynków, limit kopaczy przy ognisku, siatka budowy, budowanie w pauzie.
+
+Czeka:
+- Wymagania budynków (drzewko): piekarnia dopiero przy młynie, młyn przy polu, koszary przy zbrojowni, karczma przy browarze — zablokowane karty z podpowiedzią „najpierw…”
+- Cele na początek gry (skryba prowadzi): postaw drwala → sad → chatę → kamieniołom; mała nagroda za każdy krok, żeby nowy gracz wiedział, co dalej
+- Jabłka się psują (część zapasu ubywa co dzień, chleb wolniej, ryby wędzone najdłużej) — powód, żeby mieć różne jedzenie
+- Targ: sprzedaż nadmiaru (np. zboża, drewna) za złoto i kupno tego, czego brakuje
+- Sprawdzić na żywo pacing pierwszych 30 minut (narzędzie tools/soak + zwykła gra Michała) i dostroić koszty
+
 ## Kolejka — następne partie (ustalone z Michałem 14.10)
 Zrobione 15.10: karczma z browarem, oblężenie (taran z koszar, krata opada i zamek się zamyka, gdy wróg podchodzi), pan zamku w koronie.
 1. Obrona zamku: wrzątek i kamienie z machikuł nad bramą na taran
