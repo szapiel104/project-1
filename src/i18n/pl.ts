@@ -183,6 +183,7 @@ export const pl = {
   'terrain.iron': 'żelazo',
   'terrain.water': 'woda',
   'terrain.mountain': 'góry',
+  'terrain.ford': 'bród',
   'res.wood': 'Drewno',
   'res.stone': 'Kamień',
   'res.iron': 'Żelazo',

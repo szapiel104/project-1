@@ -31,8 +31,14 @@ function tileHeight(map: GameMap, x: number, y: number, waterLevel: number): num
   if (t === Terrain.Mountain) return 1.3 + (e - 170) * 0.15;
   const h = (e - waterLevel) * HEIGHT_SCALE;
   if (t === Terrain.Water) return Math.min(h, -0.25);
+  if (t === Terrain.Ford) return -0.17; // bród: dno tuż pod taflą, woda po kostki
   // ląd w większości płaski: łagodne falowanie, a wyraźne pagórki tylko tam, gdzie teren jest naprawdę wysoko
   const d = e - waterLevel;
+  if (map.gen >= 2) {
+    // generator 2: wzgórza rosną łagodnie (miękkie kolano zamiast stromej ściany), niższe i szersze
+    const x = Math.max(0, d - 95);
+    return 0.12 + Math.max(0, d) * 0.004 + ((x * x) / (x + 60)) * 0.014;
+  }
   return 0.12 + Math.max(0, d) * 0.004 + Math.max(0, d - 120) * HEIGHT_SCALE;
 }
 
@@ -117,7 +123,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const PHOTO_GROUND = !TEST;
   const MUL: Record<Terrain, [number, number, number]> = {
     [Terrain.Grass]: [1, 1, 1], [Terrain.Forest]: [0.92, 0.95, 0.9], [Terrain.Stone]: [1, 1, 1], [Terrain.Iron]: [1.12, 0.86, 0.74],
-    [Terrain.Water]: [0.8, 0.8, 0.75], [Terrain.Mountain]: [1, 1, 1],
+    [Terrain.Water]: [0.8, 0.8, 0.75], [Terrain.Mountain]: [1, 1, 1], [Terrain.Ford]: [0.85, 0.85, 0.8],
   };
   const tileColor = (x: number, y: number): THREE.Color =>
     tmp.setHex(TERRAIN[map.tiles[Math.min(h - 1, Math.max(0, y)) * w + Math.min(w - 1, Math.max(0, x))] as Terrain].color);
@@ -505,8 +511,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const tx = ((x / SS) | 0) - D, ty = ((y / SS) | 0) - D;
       if (tx >= 0 && ty >= 0 && tx < w && ty < h) {
         const t = ty * w + tx;
-        m[y * SW + x] = map.tiles[t] === Terrain.Water ? 1 : 0;
-        d[y * SW + x] = Math.max(0, dist[t]! - 0.5) / 6;
+        m[y * SW + x] = map.tiles[t] === Terrain.Water || map.tiles[t] === Terrain.Ford ? 1 : 0;
+        d[y * SW + x] = map.tiles[t] === Terrain.Ford ? 0 : Math.max(0, dist[t]! - 0.5) / 6;
       } else {
         const hh = oh[(ty + D) * EW + (tx + D)]!;
         m[y * SW + x] = hh < -0.07 ? 1 : 0;

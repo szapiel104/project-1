@@ -109,6 +109,8 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
     starts.push({ player: n * 2 + 1, team: 1, x: width - 1 - x, y: height - 1 - y });
   });
 
+  if (gen >= 2) carveRiver(tiles, elevation, width, height, starts, seed, preset);
+
   // Wokół każdego startu czysta łąka pod zamek, a tuż obok gwarantowane surowce.
   for (const s of starts) {
     const dir = s.team === 0 ? 1 : -1;
@@ -135,6 +137,59 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
 }
 
 /**
+ * Rzeka między drużynami: wije się przez środek mapy w poprzek osi wróg–wróg, od gór do gór, szeroka na 2–4 pola.
+ * Krzywa jest nieparzysta względem środka (obrót o 180° daje ją samą), więc mapa zostaje symetryczna.
+ * Przejść są tylko brody — na środku i po jednym bliżej każdej drużyny — więc przeprawa to ważne miejsce na mapie.
+ */
+function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset): void {
+  const size = w * h, cx = (w - 1) / 2, cy = (h - 1) / 2;
+  const own = starts.filter((s) => s.team === 0);
+  let ax = 0, ay = 0;
+  for (const s of own) { ax += s.x; ay += s.y; }
+  ax = ax / own.length - cx; ay = ay / own.length - cy;
+  const al = Math.hypot(ax, ay) || 1;
+  const nx = ax / al, ny = ay / al, tx = -ny, ty = nx; // n: oś między drużynami, t: bieg rzeki
+  // jak daleko wolno rzece odbić w bok, żeby nie weszła na plac pod zamkiem
+  let room = Infinity;
+  for (const s of own) room = Math.min(room, Math.abs((s.x - cx) * nx + (s.y - cy) * ny));
+  const amp = Math.max(0, Math.min(w * 0.07, room - preset.startRadius - 8));
+  const r0 = hash2(seed, 77, 0x72697665);
+  const k1 = 1.2 + (r0 & 255) / 255, k2 = 3.5 + ((r0 >>> 8) & 255) / 120;
+  const a1 = amp * 0.72, a2 = amp * 0.28 * (((r0 >>> 16) & 1) ? 1 : -1);
+  const L = Math.hypot(w, h) * 0.55;
+  const off = (u: number): number => a1 * Math.sin(Math.PI * u * k1) + a2 * Math.sin(Math.PI * u * k2); // nieparzysta: off(-u) = -off(u)
+  const at = (u: number): [number, number] => [cx + tx * u * L + nx * off(u), cy + ty * u * L + ny * off(u)];
+  const water = (t: number, deep: number): void => {
+    if (tiles[t] === Terrain.Mountain) return;
+    tiles[t] = Terrain.Water; elev[t] = Math.min(elev[t]!, Math.max(0, preset.waterLevel - deep));
+    const m = size - 1 - t;
+    if (tiles[m] !== Terrain.Mountain) { tiles[m] = Terrain.Water; elev[m] = elev[t]!; }
+  };
+  const du = 0.25 / L;
+  /** Brody: odległość wzdłuż rzeki (w polach) od najbliższego brodu */
+  const fordU = [0, 0.4];
+  const fordTiles: number[] = [];
+  for (let u = 0; u <= 1; u += du) {
+    const [px, py] = at(u);
+    if (px < -3 || py < -3 || px > w + 2 || py > h + 2) break;
+    // szerokość płynie wolno (szum wzdłuż biegu), przy brodzie rzeka się rozlewa i spłyca
+    const fd = Math.min(...fordU.map((f) => Math.abs(u - f) * L));
+    const r = 1.0 + (valueNoise(Math.round(u * L), 0, 9, seed ^ 0x52495645) * 0.9) / 256 + (fd < 3 ? 0.5 : 0);
+    const R = Math.ceil(r);
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) {
+      const x = Math.round(px) + dx, y = Math.round(py) + dy;
+      if (x < 0 || y < 0 || x >= w || y >= h) continue;
+      const dd = Math.hypot(x - px, y - py);
+      if (dd > r) continue;
+      const t = y * w + x;
+      water(t, dd < r - 0.8 ? 16 : 8);
+      if (fd < 1.6) fordTiles.push(t);
+    }
+  }
+  for (const t of fordTiles) for (const f of [t, size - 1 - t]) if (tiles[f] === Terrain.Water) { tiles[f] = Terrain.Ford; elev[f] = Math.max(0, preset.waterLevel - 3); }
+}
+
+/**
  * Leśne ścieżki: od każdej twierdzy wydeptane dróżki do środka mapy (i dalej do wroga), do skraju świata,
  * do najbliższych złóż kamienia i żelaza, a między sojusznikami do siebie. Każda kolejna ścieżka chętnie
  * wchodzi na już wydeptaną, więc wychodzi sieć z rozwidleniami, a szum terenu i zbocza każą jej się wić.
@@ -156,7 +211,7 @@ function carveTrails(
     const tt = tiles[t]!;
     if (tt === Terrain.Water || tt === Terrain.Mountain) return -1;
     if (trails[t]) return 4; // po wydeptanej idzie się chętniej: ścieżki się łączą
-    return (tt === Terrain.Forest ? 11 : tt === Terrain.Grass ? 10 : 34) + wiggle[t]!; // las prawie jak łąka: ścieżki śmiało w niego wchodzą
+    return (tt === Terrain.Forest ? 11 : tt === Terrain.Grass || tt === Terrain.Ford ? 10 : 34) + wiggle[t]!; // las prawie jak łąka: ścieżki śmiało w niego wchodzą
   };
   const dist = new Int32Array(size), prev = new Int32Array(size);
   const K = 1 << 18;
@@ -246,6 +301,21 @@ function carveTrails(
   for (const s of own) if (centre >= 0) carve(wander(sIdx(s), centre));
   // 2) sojusznicy między sobą
   for (let i = 0; i + 1 < own.length; i++) carve(wander(sIdx(own[i]!), sIdx(own[i + 1]!)));
+  // 2b) do bocznego brodu na rzece (środkowy łączy już droga do środka) i przez niego na drugi brzeg
+  for (const s of own) {
+    let best = -1, bd = Infinity;
+    for (let t = 0; t < size; t++) {
+      if (tiles[t] !== Terrain.Ford) continue;
+      const x = t % w, y = (t - x) / w;
+      if (Math.hypot(x - (w >> 1), y - (h >> 1)) < 20) continue;
+      const d = Math.hypot(x - s.x, y - s.y);
+      if (d < bd) { bd = d; best = t; }
+    }
+    if (best < 0) continue;
+    carve(wander(sIdx(s), best));
+    // za brodem ścieżka idzie dalej, aż do drogi wroga (do środka mapy od tamtej strony)
+    if (centre >= 0) carve(wander(best, mirror(sIdx(s))));
+  }
   // 3) do złóż: najbliższe kamień i żelazo poza placem pod zamkiem
   for (const s of own) {
     for (const kind of [Terrain.Stone, Terrain.Iron]) {

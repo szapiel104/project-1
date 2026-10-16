@@ -45,6 +45,25 @@ describe('mapa', () => {
     }
   });
 
+  it.each(presets)('%s: rzeka dzieli drużyny, ale przez brody da się dojść od każdego zamku do każdego', (p) => {
+    for (const seed of [1, 7, 2026]) {
+      const m = generateMap(seed, p);
+      expect(m.tiles.some((t) => t === Terrain.Ford)).toBe(true);
+      const seen = new Uint8Array(m.tiles.length), q = [m.starts[0]!.y * m.width + m.starts[0]!.x];
+      seen[q[0]!] = 1;
+      for (let i = 0; i < q.length; i++) {
+        const t = q[i]!, x = t % m.width, y = (t - x) / m.width;
+        for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+          const nx = x + dx, ny = y + dy, n = ny * m.width + nx;
+          if (nx < 0 || ny < 0 || nx >= m.width || ny >= m.height || seen[n]) continue;
+          if (m.tiles[n] === Terrain.Water || m.tiles[n] === Terrain.Mountain) continue;
+          seen[n] = 1; q.push(n);
+        }
+      }
+      for (const st of m.starts) expect(seen[st.y * m.width + st.x]).toBe(1);
+    }
+  });
+
   it('stare zapisy (generator 1) dostają dawną mapę 160 pól bez ścieżek, nowe 1 na 1 jest większe', () => {
     const old = generateMap(42, '1v1', 1), now = generateMap(42, '1v1');
     expect(old.width).toBe(160);
