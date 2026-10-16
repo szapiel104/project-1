@@ -13,10 +13,9 @@ sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 
 b = Building()
-F = 0.02                         # wierzch wydeptanej ziemi
+F = 0.0                          # ziemia (teren)
 
-# ---------------- wydeptana ziemia (okrąg) ----------------
-b.prism('base', 'soil', 0.95, 0.92, F, 0, 0, 0, seg=20)
+# bez podstawki: wydeptaną ziemię wokół ogniska maluje gra na terenie (trawa znika, ziemia ciemnieje)
 
 # ---------------- ognisko: kamienie, popiół, polana, żar ----------------
 b.prism('base', 'ash', 0.24, 0.22, 0.02, 0, F, 0, seg=12)

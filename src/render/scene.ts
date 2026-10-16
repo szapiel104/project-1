@@ -3076,6 +3076,14 @@ export class GameRenderer {
           const d = Math.max(b.x - cx, cx - (b.x + fp.w), b.y - cy, cy - (b.y + fp.h), 0);
           if (d === 0 && (hash2(cx, cy, b.id) & 1)) view.wear(cx, cy, 0.18 + (hash2(cx, cy, b.id) & 6) / 40);
         }
+        // obozowisko: ziemia wydeptana wokół ogniska, najmocniej przy ogniu, ku brzegom miękko przechodzi w trawę
+        if (def.id === 'camp') {
+          const ox = b.x + fp.w / 2, oy = b.y + fp.h / 2;
+          for (let cy = b.y - 1; cy <= b.y + fp.h + 1; cy++) for (let cx = b.x - 1; cx <= b.x + fp.w + 1; cx++) {
+            const r = Math.hypot(cx - ox, cy - oy);
+            if (r < 2.2) view.wear(cx, cy, Math.max(0, 0.75 - r * 0.3) * (0.85 + (hash2(cx, cy, b.id) & 3) * 0.05));
+          }
+        }
         if (b.door >= 0) {
           const dx = b.door % width, dy = Math.floor(b.door / width);
           for (let cy = dy - 1; cy <= dy + 2; cy++) for (let cx = dx - 1; cx <= dx + 2; cx++) view.wear(cx, cy, cx >= dx && cx <= dx + 1 && cy >= dy && cy <= dy + 1 ? 0.4 : 0);
