@@ -23,6 +23,8 @@ import BREWERY_MODEL from './models/brewery.json';
 import GATE_MODEL from './models/gate.json';
 import STONE_TOWER_MODEL from './models/stonetower.json';
 import STONE_GATE_MODEL from './models/stonegate.json';
+import STOCKPILE_MODEL from './models/stockpile.json';
+import WOODCUTTER_MODEL from './models/woodcutter.json';
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -974,10 +976,13 @@ const BUILDERS: Record<string, Builder> = {
     const p = (HOUSE_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
-  stockpile(g) {
-    box(g, M.soil, 1.9, 0.06, 1.9);
-    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]] as const) box(g, M.woodDark, 0.1, 0.5, 0.1, sx * 0.9, 0.06, sz * 0.9);
-    g.add(fillSlots('fill', 0, 0));
+  stockpile(g, _team, flag) {
+    // skład z Blendera (tools/models/stockpile.py): plac z desek na legarach, płot z żerdzi z trzech stron, tablica z karbami,
+    // taczka; na środku 3×3 miejsc, na których gra układa towary według stanu składu
+    blenderModel(g, STOCKPILE_MODEL as unknown as BlenderBuilding, flag);
+    const fill = fillSlots('fill', 0, 0);
+    fill.position.y = (STOCKPILE_MODEL as unknown as { floorY: number }).floorY - 0.06;
+    g.add(fill);
   },
   granary(g, _team, flag) {
     // spichlerz z Blendera (tools/models/granary.py): szachulec na kamiennych grzybkach, strzecha, schodki do drzwi;
@@ -1012,43 +1017,16 @@ const BUILDERS: Record<string, Builder> = {
     const p = (ARMORY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
-  woodcutter(g) {
-    // Tartak: chata po prawej (naprzeciw wejścia), po lewej wiata z kozłem do cięcia, z tyłu stos desek.
-    // Plac z pniem leży z boku, więc droga do drzwi jest wolna.
-    const inside = cottageAt(g, 21, 1.0, 0.95, 0.75, 0.42, -0.3);
-    box(inside, M.woodDark, 0.4, 0.2, 0.12, 0.3, 0.05, -0.45);
-    box(inside, M.plank, 0.4, 0.04, 0.3, 0.6, 0.05, -0.5);
-    box(g, M.window, 0.2, 0.2, 0.03, 0.72, 0.36, 0.16);
-    // wiata: cztery słupy i skośny dach
-    for (const [x, z, hgt] of [[-0.9, -0.75, 0.85], [-0.15, -0.75, 0.85], [-0.9, 0.05, 0.62], [-0.15, 0.05, 0.62]] as const) box(g, M.woodDark, 0.07, hgt, 0.07, x, 0, z);
-    const shed = box(g, M.thatch, 0.95, 0.05, 1.0, -0.52, 0.76, -0.35);
-    shed.rotation.x = 0.28;
-    // kozioł: dwa krzyżaki, na nich kłoda i piła
-    for (const x of [-0.75, -0.3]) for (const r of [0.5, -0.5]) { const leg = box(g, M.woodDark, 0.05, 0.42, 0.05, x, 0, -0.35); leg.rotation.x = r; }
-    const sawn = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.075, 0.7, 7), M.bark);
-    sawn.rotation.z = Math.PI / 2;
-    sawn.position.set(-0.52, 0.36, -0.35);
-    g.add(sawn);
-    box(g, M.iron, 0.02, 0.2, 0.34, -0.45, 0.36, -0.35);
-    box(g, M.woodDark, 0.03, 0.06, 0.08, -0.45, 0.52, -0.2);
-    // stos gotowych desek przy tylnej ścianie wiaty i trociny na ziemi
-    for (let i = 0; i < 4; i++) box(g, M.plank, 0.62, 0.045, 0.16 + (i % 2) * 0.03, -0.52, 0.02 + i * 0.05, -0.82);
-    box(g, M.sawdust, 0.5, 0.015, 0.4, -0.52, 0.035, -0.3);
-    // pieniek z siekierą
-    const block = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.18, 8), M.bark);
-    block.position.set(-0.05, 0.09, 0.35);
-    g.add(block);
-    // siekiera wbita w pieniek: trzonek i ostrze w jednej grupie, pochylone razem
-    const axe = new THREE.Group();
-    axe.position.set(-0.05, 0.17, 0.35);
-    axe.rotation.z = -0.45;
-    box(axe, M.woodDark, 0.03, 0.34, 0.03);
-    box(axe, M.iron, 0.11, 0.08, 0.025, 0.045, 0.02, 0);
-    g.add(axe);
+  woodcutter(g, _team, flag) {
+    // chata drwala z Blendera (tools/models/woodcutter.py): chata z bali z dachem z gontu i kominem, wiata z kozłem, piłą
+    // i stosem desek, pieniek z siekierą, sągi; w izbie pieniek do rąbania (tu pracuje drwal), ława z narzędziami, polana
+    blenderModel(g, WOODCUTTER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (WOODCUTTER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
     // przyciągnięte drzewo: pień z sękami, gałęziami i resztką listowia; skraca się z każdą partią desek
     const yard = new THREE.Group();
     yard.name = 'yardlog';
-    yard.position.set(-0.98, 0.1, 0.68);
+    yard.position.set(-0.98, 0.1, 0.74);
     yard.add(new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.1, 0.95, 7).rotateZ(Math.PI / 2).translate(0.475, 0, 0), M.bark));
     // krótkie gałęzie odstające na boki i kępki igliwia przy ich końcach, nisko przy pniu
     for (const [x, side, len] of [[0.3, 1, 0.22], [0.5, -1, 0.2], [0.68, 1, 0.18], [0.84, -1, 0.16]] as const) {
