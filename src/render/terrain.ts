@@ -1651,8 +1651,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const k = d === 0 ? 1 : d === 1 ? 0.6 : 0.22;
           const ci = cy * (w + 1) + cx, old = corners[ci]!;
           if (old < 0 && d > 0) continue; // brzeg wody zostaje
-          // narożnik przy górach zostaje: zbocze masywu nie schodzi do poziomu działki (kopalnia stoi tyłem do skały)
-          if (rockCorner(cx, cy)) continue;
+          // narożnik przy górach POZA działką zostaje: zbocze masywu nie schodzi do poziomu działki (kopalnia stoi tyłem do skały).
+          // Sama działka jest zawsze równa — inaczej zbocze wjeżdżało w grotę kopalni i zasłaniało ją od środka.
+          if (d > 0 && rockCorner(cx, cy)) continue;
           const nv = old + (y0 - old) * k;
           if (Math.abs(nv - old) < 0.002) continue;
           corners[ci] = nv; changed.push(ci);
