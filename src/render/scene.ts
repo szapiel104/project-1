@@ -4,6 +4,7 @@ import { touch } from './touch';
 import * as THREE from 'three';
 import { initKtx } from './ktx';
 import { MeshBVH } from 'three-mesh-bvh';
+import { watchLoading, watchRenderer } from '../debug/errlog';
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
 import { RULES } from '../data/rules';
@@ -676,6 +677,8 @@ export class GameRenderer {
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     initKtx(this.renderer);
+    watchRenderer(this.renderer, 'gra');
+    watchLoading(THREE.DefaultLoadingManager);
     this.renderer.localClippingEnabled = true; // budynki w budowie: model przycięty na wysokości postępu
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.scene.background = new THREE.Color(HAZE);
@@ -1320,7 +1323,8 @@ export class GameRenderer {
     // miękkie cienie: rodzaj mapy cieni ustawiany tylko przy starcie gry (przebudowa shaderów w trakcie psuła teren i budynki)
     if (!this.shadowTypeSet) {
       this.shadowTypeSet = true;
-      this.renderer.shadowMap.type = o.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+      // PCFSoftShadowMap został w three.js usunięty; miękkość daje promień rozmycia PCF
+      this.renderer.shadowMap.type = THREE.PCFShadowMap;
       this.sun.shadow.radius = o.soft ? 3 : 1;
     }
     this.shadowSize(o.shadows);

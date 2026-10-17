@@ -1,0 +1,215 @@
+/**
+ * Dziennik błędów gry i grafiki.
+ *
+ * Łapie od pierwszej chwili wczytywania:
+ *  - wyjątki JS i odrzucone obietnice (`error`, `unhandledrejection`),
+ *  - wszystko, co trafia do `console.error` / `console.warn` (także ostrzeżenia three.js),
+ *  - nieudane wczytanie plików (skrypty, style, obrazki, tekstury przez menedżer three.js),
+ *  - grafikę: błędy kompilacji shaderów, utratę kontekstu WebGL, `gl.getError()`, stojący obraz
+ *    (brak klatki przez 5 s przy widocznej karcie) i kamerę z NaN w położeniu.
+ *
+ * Każdy wpis liczony raz (te same komunikaty sumują się w `count`), najwyżej 200 różnych.
+ * Ostatni dziennik zostaje w localStorage, więc po zawieszeniu karty widać go przy następnym wejściu (`previous`).
+ *
+ * Sprawdzanie: w konsoli `__errors()` (albo `__errors().items`), czyszczenie `__errors.clear()`.
+ * Automatycznie: `npm run check:console` (tools/check/console.mjs) — otwiera grę w Chromium i wypisuje dziennik.
+ */
+import type * as THREE from 'three';
+
+export type ErrKind = 'js' | 'promise' | 'console' | 'resource' | 'shader' | 'webgl' | 'render';
+export type ErrLevel = 'error' | 'warn';
+export interface ErrEntry {
+  kind: ErrKind;
+  level: ErrLevel;
+  msg: string;
+  /** pierwsze linijki stosu wywołań */
+  stack?: string;
+  count: number;
+  /** sekundy od otwarcia strony: pierwszy i ostatni raz */
+  first: number;
+  last: number;
+}
+export interface ErrReport {
+  page: string;
+  build: string;
+  /** sekundy od otwarcia strony */
+  uptime: number;
+  errors: number;
+  warnings: number;
+  items: ErrEntry[];
+  /** dziennik z poprzedniego wejścia (np. gdy karta się zawiesiła) */
+  previous: { page: string; build: string; at: string; items: ErrEntry[] } | null;
+}
+
+declare const __BUILD__: string;
+const BUILD = typeof __BUILD__ === 'string' ? __BUILD__ : 'dev';
+const KEY = 'p1.errlog';
+const MAX = 200;
+const t0 = performance.now();
+const secs = (): number => Math.round((performance.now() - t0) / 100) / 10;
+
+const items: ErrEntry[] = [];
+const byKey = new Map<string, ErrEntry>();
+const listeners = new Set<() => void>();
+/** Znane, nieszkodliwe komunikaty bibliotek (nie zaśmiecają dziennika) */
+const ignored: RegExp[] = [];
+let previous: ErrReport['previous'] = null;
+let saveTimer = 0;
+let busy = false;
+
+/** Wspólna kopia oryginalnych funkcji konsoli (dziennik sam nie może wołać zawiniętych) */
+const rawError = console.error.bind(console);
+const rawWarn = console.warn.bind(console);
+
+function text(v: unknown): string {
+  if (v instanceof Error) return `${v.name}: ${v.message}`;
+  if (typeof v === 'string') return v;
+  try { return JSON.stringify(v) ?? String(v); } catch { return String(v); }
+}
+function stackOf(v: unknown): string | undefined {
+  const s = v instanceof Error ? v.stack : undefined;
+  return s ? s.split('\n').slice(0, 6).join('\n') : undefined;
+}
+
+/** Dopisuje wpis do dziennika (ten sam komunikat tylko zwiększa licznik) */
+export function report(kind: ErrKind, level: ErrLevel, msg: string, stack?: string): void {
+  if (busy) return;
+  msg = msg.replace(/\s+/g, ' ').trim().slice(0, 500);
+  if (!msg || ignored.some((r) => r.test(msg))) return;
+  const key = `${kind}|${msg}`;
+  const old = byKey.get(key);
+  if (old) { old.count++; old.last = secs(); return; }
+  if (items.length >= MAX) return;
+  const e: ErrEntry = { kind, level, msg, count: 1, first: secs(), last: secs() };
+  if (stack) e.stack = stack.slice(0, 1200);
+  items.push(e);
+  byKey.set(key, e);
+  save();
+  busy = true;
+  try { for (const f of listeners) f(); } catch { /* słuchacz nie może zepsuć dziennika */ } finally { busy = false; }
+}
+
+/** Komunikat biblioteki, który wiemy, że jest nieszkodliwy — nie trafia do dziennika */
+export function ignore(re: RegExp): void { ignored.push(re); }
+/** Wywoływane przy każdym nowym (różnym) wpisie */
+export function onReport(f: () => void): void { listeners.add(f); }
+export function counts(): { errors: number; warnings: number } {
+  let errors = 0, warnings = 0;
+  for (const e of items) if (e.level === 'error') errors++; else warnings++;
+  return { errors, warnings };
+}
+export function entries(): readonly ErrEntry[] { return items; }
+
+export function snapshot(): ErrReport {
+  return { page: location.pathname.split('/').pop() + location.search, build: BUILD, uptime: secs(), ...counts(), items: items.map((e) => ({ ...e })), previous };
+}
+
+export function clear(): void {
+  items.length = 0;
+  byKey.clear();
+  previous = null;
+  try { localStorage.removeItem(KEY); } catch { /* bez pamięci przeglądarki */ }
+}
+
+function save(): void {
+  if (saveTimer) return;
+  saveTimer = window.setTimeout(() => {
+    saveTimer = 0;
+    try { localStorage.setItem(KEY, JSON.stringify({ page: location.pathname.split('/').pop() + location.search, build: BUILD, at: new Date().toISOString(), items: items.slice(0, 60) })); } catch { /* pełna albo zablokowana pamięć */ }
+  }, 1000);
+}
+
+// ---------------- instalacja (raz, od razu przy imporcie) ----------------
+let installed = false;
+export function install(): void {
+  if (installed || typeof window === 'undefined') return;
+  installed = true;
+  try {
+    const raw = localStorage.getItem(KEY);
+    if (raw) { const p = JSON.parse(raw) as NonNullable<ErrReport['previous']>; if (p.items?.length) previous = p; }
+    localStorage.removeItem(KEY);
+  } catch { /* bez pamięci przeglądarki */ }
+
+  // wyjątki JS i błędy wczytywania plików (te drugie przychodzą tylko w fazie przechwytywania)
+  window.addEventListener('error', (ev) => {
+    const el = ev.target as (HTMLElement & { src?: string; href?: string }) | null;
+    if (el && el !== (window as unknown) && el instanceof HTMLElement) {
+      report('resource', 'warn', `nie wczytano ${el.tagName.toLowerCase()}: ${el.src || el.href || '?'}`);
+      return;
+    }
+    const where = ev.filename ? ` (${ev.filename.split('/').pop()}:${ev.lineno}:${ev.colno})` : '';
+    report('js', 'error', `${ev.message || text(ev.error)}${where}`, stackOf(ev.error));
+  }, true);
+  window.addEventListener('unhandledrejection', (ev) => report('promise', 'error', text(ev.reason), stackOf(ev.reason)));
+
+  console.error = (...a: unknown[]): void => {
+    rawError(...a);
+    report('console', 'error', a.map(text).join(' '), stackOf(a.find((x) => x instanceof Error)) ?? new Error().stack?.split('\n').slice(2, 6).join('\n'));
+  };
+  console.warn = (...a: unknown[]): void => {
+    rawWarn(...a);
+    report('console', 'warn', a.map(text).join(' '));
+  };
+
+  const w = window as unknown as { __errors: (() => ErrReport) & { clear: () => void; text: () => string } };
+  w.__errors = Object.assign(() => snapshot(), { clear, text: () => formatText() });
+}
+
+/** Dziennik jako zwykły tekst (do skopiowania i wklejenia w czacie) */
+export function formatText(): string {
+  const s = snapshot();
+  const lines = [`project-1 ${s.build} · ${s.page} · ${s.uptime}s · błędy ${s.errors}, ostrzeżenia ${s.warnings}`];
+  for (const e of s.items) lines.push(`[${e.level} ${e.kind}] ×${e.count} @${e.first}s ${e.msg}${e.stack ? '\n    ' + e.stack.split('\n').slice(1, 4).map((l) => l.trim()).join('\n    ') : ''}`);
+  if (s.previous) lines.push(`--- poprzednie wejście (${s.previous.at}, ${s.previous.build}) ---`, ...s.previous.items.map((e) => `[${e.level} ${e.kind}] ×${e.count} ${e.msg}`));
+  return lines.join('\n');
+}
+
+// ---------------- grafika ----------------
+/**
+ * Pilnuje jednego renderera: shadery, kontekst WebGL, błędy GL, stojący obraz i kamera z NaN.
+ * `name` rozróżnia renderery (gra, podgląd modeli, miniatury).
+ */
+export function watchRenderer(renderer: THREE.WebGLRenderer, name = 'gra'): void {
+  const gl = renderer.getContext();
+  const canvas = renderer.domElement;
+  renderer.debug.checkShaderErrors = true;
+  renderer.debug.onShaderError = (g, program, vs, fs): void => {
+    const log = (sh: WebGLShader): string => (g.getShaderParameter(sh, g.COMPILE_STATUS) ? '' : (g.getShaderInfoLog(sh) ?? '').trim());
+    const msg = [g.getProgramInfoLog(program)?.trim(), log(vs) && `VS: ${log(vs)}`, log(fs) && `FS: ${log(fs)}`].filter(Boolean).join(' | ');
+    report('shader', 'error', `[${name}] shader się nie skompilował: ${msg || 'brak opisu'}`);
+  };
+  canvas.addEventListener('webglcontextlost', () => report('webgl', 'error', `[${name}] utracono kontekst WebGL (karta graficzna zresetowała rysowanie)`));
+  canvas.addEventListener('webglcontextrestored', () => report('webgl', 'warn', `[${name}] kontekst WebGL odzyskany`));
+
+  // znacznik klatki i ostatnia kamera: zawijamy render (wołany kilka razy na klatkę, koszt jednego przypisania)
+  let lastFrame = 0, frames = 0, stalled = false;
+  let cam: THREE.Camera | null = null;
+  const render = renderer.render.bind(renderer);
+  renderer.render = (scene, camera): void => { lastFrame = performance.now(); frames++; cam = camera; render(scene, camera); };
+
+  const GL_NAMES: Record<number, string> = { 0x0500: 'INVALID_ENUM', 0x0501: 'INVALID_VALUE', 0x0502: 'INVALID_OPERATION', 0x0505: 'OUT_OF_MEMORY', 0x0506: 'INVALID_FRAMEBUFFER_OPERATION', 0x9242: 'CONTEXT_LOST_WEBGL' };
+  const timer = window.setInterval(() => {
+    if (!canvas.isConnected) { window.clearInterval(timer); return; }
+    if (gl.isContextLost()) return;
+    // gl.getError wymusza synchronizację z kartą, więc tylko co kilka sekund
+    for (let i = 0, e = gl.getError(); e && i < 4; i++, e = gl.getError()) report('webgl', 'error', `[${name}] błąd WebGL ${GL_NAMES[e] ?? '0x' + e.toString(16)}`);
+    const now = performance.now();
+    const visible = document.visibilityState === 'visible' && canvas.offsetParent !== null;
+    if (frames && visible && now - lastFrame > 5000) {
+      if (!stalled) report('render', 'error', `[${name}] obraz stoi: brak nowej klatki od ${Math.round((now - lastFrame) / 1000)} s`);
+      stalled = true;
+    } else stalled = false;
+    if (cam) {
+      const p = (cam as THREE.Camera).position;
+      if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) report('render', 'error', `[${name}] kamera ma złe położenie (NaN/∞)`);
+    }
+  }, 3000);
+}
+
+/** Błędy wczytywania przez menedżer three.js (tekstury, pliki modeli) */
+export function watchLoading(manager: THREE.LoadingManager): void {
+  const prev = manager.onError;
+  manager.onError = (url: string): void => { report('resource', 'error', `three.js nie wczytał: ${url}`); prev?.(url); };
+}
+
+install();

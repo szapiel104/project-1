@@ -505,6 +505,11 @@ body.menu-open .scribe { display: none; }
 .fps-tag { position: fixed; top: 54px; right: 12px; z-index: 60; min-height: 0; padding: 4px 12px; font: 700 17px/1.2 ui-monospace, Consolas, monospace;
   color: #bff0a8; background: rgba(35, 22, 11, .78); border: 1px solid var(--gold-dark); cursor: pointer; }
 .fps-tag[data-low='true'] { color: #ff9a8a; }
+.fps-tag[data-err='true'] { border-color: #c4553f; }
+.perf-err { flex: 1 0 100%; display: grid; gap: 6px; border-top: 1px solid var(--gold-dark); padding-top: 6px; }
+.perf-err pre { margin: 0; white-space: pre-wrap; color: #ffd2c8; }
+.perf-err button { pointer-events: auto; justify-self: start; font: 700 14px/1.2 ui-monospace, Consolas, monospace; min-height: 32px; padding: 4px 12px; }
+.perf-err button:focus-visible { outline: 3px solid var(--gold); }
 .fps-tag:focus-visible { outline: 3px solid var(--gold); }
 .perf { top: 92px; }
 body.menu-open .fps-tag { display: none; }

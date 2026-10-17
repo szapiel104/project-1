@@ -121,17 +121,22 @@ export function cutBox(w: number, h: number, d: number, holes: { w: number; h: n
   const size: [number, number][] = [[d, h], [d, h], [w, d], [w, d], [w, h], [w, h]];
   for (let f = 0; f < 6; f++) for (let v = 0; v < 4; v++) { const i = f * 4 + v; uv.setXY(i, uv.getX(i) * size[f]![0] * uvK, uv.getY(i) * size[f]![1] * uvK); }
   geo.translate(0, h / 2, 0);
-  let brush = new Brush(geo, material);
-  brush.updateMatrixWorld();
-  const ev = new Evaluator();
-  ev.attributes = ['position', 'normal', 'uv'];
-  for (const hole of holes) {
-    const hb = new Brush(new THREE.BoxGeometry(hole.w, hole.h, hole.d), material);
-    hb.position.set(hole.x, hole.y, hole.z);
-    hb.updateMatrixWorld();
-    brush = ev.evaluate(brush, hb, SUBTRACTION) as Brush;
+  // three-bvh-csg 0.0.18 woła MeshBVH ze starą opcją „maxLeafSize” i przy każdym otworze pisze ostrzeżenie
+  // o przestarzałej nazwie; działa poprawnie, więc tylko to jedno ostrzeżenie wyciszamy na czas wycinania
+  const warn = console.warn;
+  console.warn = (...a: unknown[]): void => { if (!(typeof a[0] === 'string' && a[0].includes('maxLeafSize'))) warn(...a); };
+  try {
+    let brush = new Brush(geo, material);
     brush.updateMatrixWorld();
-  }
-  const mesh = new THREE.Mesh(brush.geometry, material);
-  return mesh;
+    const ev = new Evaluator();
+    ev.attributes = ['position', 'normal', 'uv'];
+    for (const hole of holes) {
+      const hb = new Brush(new THREE.BoxGeometry(hole.w, hole.h, hole.d), material);
+      hb.position.set(hole.x, hole.y, hole.z);
+      hb.updateMatrixWorld();
+      brush = ev.evaluate(brush, hb, SUBTRACTION) as Brush;
+      brush.updateMatrixWorld();
+    }
+    return new THREE.Mesh(brush.geometry, material);
+  } finally { console.warn = warn; }
 }

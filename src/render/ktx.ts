@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader.js';
+import { report } from '../debug/errlog';
 
 /**
  * Tekstury skompresowane dla karty graficznej (KTX2 / Basis Universal, robione przez tools/textures/ktx2.mjs).
@@ -65,7 +66,7 @@ export function loadTexture(url: string, done?: () => void): THREE.Texture {
   trackClones(t, linked, state);
   const finish = (): void => done?.();
   const jpg = (): void => {
-    new THREE.ImageLoader().load(url, (img) => { t.image = img; t.needsUpdate = true; for (const k of linked) k.needsUpdate = true; finish(); }, undefined, () => finish());
+    new THREE.ImageLoader().load(url, (img) => { t.image = img; t.needsUpdate = true; for (const k of linked) k.needsUpdate = true; finish(); }, undefined, () => { report('resource', 'error', `nie wczytano tekstury: ${url}`); finish(); });
   };
   if (typeof document === 'undefined') return t;
   void ready.then((l) => {
@@ -75,7 +76,7 @@ export function loadTexture(url: string, done?: () => void): THREE.Texture {
       adopt(t, state.c);
       for (const k of linked) adopt(k, state.c);
       finish();
-    }, undefined, () => jpg());
+    }, undefined, () => { report('resource', 'warn', `brak .ktx2, wczytuję zapasowy .jpg: ${url}`); jpg(); });
   });
   return t;
 }

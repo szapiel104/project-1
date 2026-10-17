@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.26.1 — dziennik błędów gry i grafiki (2026-10-17)
+
+- Gra prowadzi dziennik błędów: wyjątki, błędy shaderów i WebGL, utrata kontekstu karty graficznej, brakujące tekstury i pliki, zatrzymany obraz; po zawieszeniu karty dziennik z poprzedniego wejścia zostaje
+- F3 pokazuje ostatnie wpisy z przyciskiem „Kopiuj dziennik błędów”, a przy liczniku FPS pojawia się ⚠ z liczbą błędów (PL/EN)
+- `npm run check:console` otwiera grę w przeglądarce bez okna i wypisuje dziennik; w konsoli `__errors()`
+- Poprawki z przeglądu konsoli: miękkie cienie przez PCF z promieniem (stary tryb PCFSoft zniknął z three.js i sypał ostrzeżeniem), wyciszone powtarzane ostrzeżenie biblioteki przy wycinaniu okien
+
 ## 0.26.0 — kolejka rozkazów i patrol (2026-10-17)
 
 - Shift + prawy klik (także z przeciąganiem linii frontu) dopisuje kolejny punkt trasy: oddział idzie dalej, gdy cały dojdzie do poprzedniego (najwyżej 12 punktów)

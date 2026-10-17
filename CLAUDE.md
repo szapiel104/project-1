@@ -43,9 +43,14 @@
    - Pojedynczy model: `modele.html?id=house` (podgląd modeli, wdrożony razem z grą; patrz „Modele” wyżej).
 3. Modele z Blendera (tools/models): po każdej zmianie budynku `sh tools/models/inspect.sh keep /tmp/keep.png` — arkusz ok. 25 zdjęć (dookoła, z lotu ptaka, od dołu, z ziemi oczami chłopa, przekrój, z oczu człowieka w salach i na murach), z ukrytymi tylnymi ścianami jak w grze, więc odwrócone dachy i dziury widać od razu. Obejrzeć arkusz przed wdrożeniem; widoki z oczu człowieka dopisuje się w skrypcie budynku (klucz `views`).
    - Zawsze sprawdzić budynek też z oczu chłopa (spacer): z ziemi dookoła, od dołu pod okapem i z boku — dach, szczyty i ściany nie mogą znikać ani prześwitywać, także gdy ktoś pracuje w środku (gra zdejmuje wtedy dach w widoku z góry, w spacerze dach ma zostać). Arkusz z inspect.sh ma do tego widoki „z ziemi” i „przy szczycie”. Połacie dachów robić `gable()`/`slope()` z building.py — mają spód, więc okap widać też od dołu.
-4. Wydajność: w grze F3 pokazuje okno wydajności; w Chrome `window.__perf()` zwraca FPS, czasy symulacji/rysowania i liczniki.
-5. Nie robić serii zrzutów „na wszelki wypadek”; jeden zrzut na zmianę wyglądu wystarczy.
-6. **Po skończonym teście zamknij karty, które otworzyłeś w Chrome Michała** (`tabs_close_mcp` na swoje karty; nie ruszaj kart, których nie otworzyłeś). W Playwright zamykaj przeglądarkę (`browser.close()`), a serwer `npx vite` zostaw tylko, jeśli jeszcze go potrzebujesz.
+4. **Dziennik błędów gry i grafiki** (`src/debug/errlog.ts`, od 17.10.2026): łapie wyjątki JS, odrzucone obietnice, `console.error/warn` (także three.js), nieudane wczytanie plików i tekstur, błędy shaderów, utratę kontekstu WebGL, `gl.getError()`, stojący obraz i kamerę z NaN. Każdy czat po większej zmianie sprawdza go:
+   - bez przeglądarki Michała: `npm run build && npm run check:console` (Chromium bez okna; kod wyjścia 1 przy błędach; `--url=https://szapiel104.github.io/project-1/` sprawdza wdrożoną wersję, `--pages=...`, `--hd`);
+   - w Chrome Michała: `window.__errors()` (lista wpisów, `previous` = dziennik z poprzedniego wejścia, gdy karta się zawiesiła), `__errors.text()` do wklejenia, `__errors.clear()`;
+   - w grze: F3 → sekcja „Dziennik błędów” z przyciskiem kopiowania, a przy FPS pojawia się ⚠ z liczbą błędów.
+   Znane nieszkodliwe ostrzeżenie biblioteki wyciszamy w miejscu (jak `maxLeafSize` w `cutBox`), nie globalnie.
+5. Wydajność: w grze F3 pokazuje okno wydajności; w Chrome `window.__perf()` zwraca FPS, czasy symulacji/rysowania i liczniki.
+6. Nie robić serii zrzutów „na wszelki wypadek”; jeden zrzut na zmianę wyglądu wystarczy.
+7. **Po skończonym teście zamknij karty, które otworzyłeś w Chrome Michała** (`tabs_close_mcp` na swoje karty; nie ruszaj kart, których nie otworzyłeś). W Playwright zamykaj przeglądarkę (`browser.close()`), a serwer `npx vite` zostaw tylko, jeśli jeszcze go potrzebujesz.
 
 ## Modele — gdzie robić i jak sprawdzać (obowiązkowo dla każdego czatu)
 1. **Robienie:** modele z Blendera w `tools/models/*.py` (bpy bez okna, `/tmp/bpyenv/bin/python tools/models/X.py`), wynik do `src/render/models/*.json`. Opis narzędzi: `tools/models/README.md`. Budynki przez `building.py` (grupy `base`/`shell`/`interior`…), postacie przez `body.py`, drobne rzeczy jak `yard.py`/`animals.py`.

@@ -1,3 +1,4 @@
+import { counts as errCounts, entries as errEntries, formatText as errText, onReport } from './debug/errlog';
 import { GUARD_SAY, SAY } from './data/barks';
 import { COLD, SEASON_DAYS, SEASON_NAME, shiftToSeason, weatherOf, yearPos, type Season } from './sim/weather';
 import { winterReadiness } from './sim/systems/economy';
@@ -2313,13 +2314,24 @@ perfBox.className = 'perf';
 perfBox.hidden = true;
 // dwie kolumny: ogólne liczniki | karta graficzna przejście po przejściu i najcięższe rzeczy na scenie
 const perfMain = document.createElement('pre'), perfGpu = document.createElement('pre');
-perfBox.append(perfMain, perfGpu);
+// dziennik błędów gry i grafiki (src/debug/errlog.ts): ostatnie wpisy pod licznikami i kopiowanie całości
+const perfErr = document.createElement('div');
+perfErr.className = 'perf-err';
+const perfErrList = document.createElement('pre');
+const perfErrCopy = document.createElement('button');
+perfErrCopy.type = 'button';
+perfErrCopy.textContent = tx('Kopiuj dziennik błędów', 'Copy error log');
+perfErrCopy.addEventListener('click', () => {
+  void navigator.clipboard?.writeText(errText()).then(() => { perfErrCopy.textContent = tx('Skopiowano', 'Copied'); setTimeout(() => { perfErrCopy.textContent = tx('Kopiuj dziennik błędów', 'Copy error log'); }, 1500); }, () => { /* bez schowka */ });
+});
+perfErr.append(perfErrList, perfErrCopy);
+perfBox.append(perfMain, perfGpu, perfErr);
 document.body.append(perfBox);
 // mały licznik FPS zawsze widoczny pod wersją; klik albo F3 rozwija pełne statystyki
 const fpsTag = document.createElement('button');
 fpsTag.type = 'button';
 fpsTag.className = 'fps-tag';
-fpsTag.title = tx('Wydajność — kliknij albo F3', 'Performance — click or press F3');
+fpsTag.title = tx('Wydajność i dziennik błędów — kliknij albo F3', 'Performance and error log — click or press F3');
 fpsTag.textContent = 'FPS —';
 document.body.append(fpsTag);
 const togglePerf = (): void => {
@@ -2458,8 +2470,17 @@ function showPerf(now: number): void {
     const k = (n: number): string => (n >= 1e6 ? `${(n / 1e6).toFixed(2)} mln` : `${Math.round(n / 1000)} tys.`);
     for (const h of renderer.heavy(10)) perf.last[`  ${h.cat}`] = `${k(h.tris)} + ${k(h.shadow)} · ${h.meshes} siatek`;
   }
-  fpsTag.textContent = `FPS ${perf.last.fps}`;
+  const ec = errCounts();
+  perf.last['błędy'] = ec.errors; perf.last['ostrzeżenia'] = ec.warnings;
+  fpsTag.textContent = ec.errors ? `FPS ${perf.last.fps} · ⚠ ${ec.errors}` : `FPS ${perf.last.fps}`;
   fpsTag.dataset.low = String(Number(perf.last.fps) < 40);
+  fpsTag.dataset.err = String(ec.errors > 0);
+  if (!perfBox.hidden) {
+    const list = errEntries();
+    perfErrList.textContent = list.length
+      ? `${tx('DZIENNIK BŁĘDÓW', 'ERROR LOG')} (${ec.errors} ${tx('błędów', 'errors')}, ${ec.warnings} ${tx('ostrzeżeń', 'warnings')})\n` + list.slice(-8).map((e) => `${e.level === 'error' ? '✖' : '!'} ×${e.count} ${e.msg.slice(0, 110)}`).join('\n')
+      : tx('DZIENNIK BŁĘDÓW: czysto', 'ERROR LOG: clean');
+  }
   if (!perfBox.hidden) {
     const rows = Object.entries(perf.last).map(([k, v]) => `${k.padEnd(22)} ${v}`);
     const cut = Object.keys(perf.last).indexOf('budynki z daleka');
@@ -2469,6 +2490,8 @@ function showPerf(now: number): void {
   perf.frames = 0; perf.sim = 0; perf.ticks = 0; perf.render = 0; perf.ui = 0; perf.worst = 0; perf.since = now;
 }
 (window as unknown as { __perf: () => Record<string, number | string> }).__perf = () => perf.last;
+// nowy błąd od razu podbija licznik przy FPS (bez czekania na kolejne odświeżenie statystyk)
+onReport(() => { const n = errCounts().errors; if (n) { fpsTag.textContent = `FPS ${perf.last.fps ?? '—'} · ⚠ ${n}`; fpsTag.dataset.err = 'true'; } });
 (window as unknown as { __heavy: (n?: number) => unknown }).__heavy = (n) => renderer.heavy(n);
 // do testów wyglądu: spacer bez blokady kursora (kamera z oczu chłopa)
 (window as unknown as { __walk: (x: number, y: number, yaw?: number, pitch?: number) => void }).__walk = (x, y, yaw = 0, pitch = 0.2) => { renderer.startWalk(x, y, yaw); renderer.setWalkPitch(pitch); };

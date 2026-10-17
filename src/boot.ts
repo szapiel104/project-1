@@ -2,6 +2,7 @@
  * Gra jest tylko na komputery. Telefon albo tablet (sam dotyk, bez myszy) dostaje tablicę z informacją,
  * a gra w ogóle się nie wczytuje.
  */
+import './debug/errlog'; // dziennik błędów od pierwszej chwili (window.__errors())
 import { t, tx } from './i18n';
 import { randomTip } from './data/tips';
 

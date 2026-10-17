@@ -24,6 +24,7 @@ import { YARD_KEYS, yardModel } from './render/family';
 import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
 import { ANIMAL_AT, animalGeo } from './render/village';
+import { watchRenderer } from './debug/errlog';
 const RAM_MODEL = model('ram');
 
 const RED = 0xa32a22;
@@ -235,7 +236,8 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
 initKtx(renderer);
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap; // PCFSoft usunięty w three.js
+watchRenderer(renderer, 'podgląd modeli');
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
