@@ -83,7 +83,7 @@ export interface HudView {
 export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
 export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
-  watch?: { have: number; want: number; training: number; note?: string }; recruit?: RecruitUnit[]; area?: boolean;
+  watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
   site?: { pct: number; loads: number; delivered: number; carrying: number; fetching: number; builders: number; state: string };
   /** Ilu łuczników mieści wieża / mur */
@@ -1201,7 +1201,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       watchState.hidden = !(i.own && i.watch);
       if (i.watch) {
         const w = i.watch;
-        setText(watchState, `Straż miejska: ${w.have} / ${w.want}` + (w.training ? ` · rekrut szkoli się jeszcze ${w.training} s` : w.note ? ` · ${w.note}` : ''));
+        setText(watchState, `${w.label ?? 'Straż miejska'}: ${w.have} / ${w.want}` + (w.training ? ` · rekrut szkoli się jeszcze ${w.training} s` : '') + (w.note && (!w.training || w.label) ? ` · ${w.note}` : '') + ' · gdzie są: pinezki na mapie');
       }
       towerBox.hidden = !(i.own && i.garrison !== undefined);
       if (i.garrison !== undefined) {

@@ -4031,7 +4031,9 @@ export class GameRenderer {
     let n = 0, rings = 0, dots = 0, torches = 0, rams = 0;
     // kliknięta twierdza: pokazujemy, gdzie są jej strażnicy
     const selB = this.selectedId ? g.buildings.find((b) => b.id === this.selectedId) : undefined;
+    // kliknięta twierdza: pinezki nad strażą miejską; kliknięty barak górników: nad strażnikami tej kopalni
     const guardOwner = selB && selB.type === 0 ? selB.owner : -99;
+    const guardCamp = selB && BUILDINGS[selB.type]!.id === 'minecamp' ? selB.id : 0;
     let guardRingN = 0;
     // stojący oddział zbija się ciaśniej: każdy przysuwa się do środka swojej grupy (tylko wygląd, pola w symulacji bez zmian)
     const pull = new Map<number, [number, number]>();
@@ -4251,7 +4253,7 @@ export class GameRenderer {
       if (!pos) { pos = new THREE.Vector3(); this.soldierPos.set(s.id, pos); }
       // kółko i ramka zaznaczenia idą za figurą (z dociągnięciem do grupy), nie za polem z symulacji
       pos.set(px - width / 2, y, pz - height / 2);
-      if (udef.guard && guardOwner === s.owner && guardRingN < MAX_UNITS) {
+      if (udef.guard && ((guardOwner === s.owner && !s.camp) || (guardCamp && s.camp === guardCamp)) && guardRingN < MAX_UNITS) {
         m.makeTranslation(pos.x, y + 0.03, pos.z); this.guardRings.setMatrixAt(guardRingN, m);
         this.guardPin(guardRingN++, pos.x, y, pos.z);
       }

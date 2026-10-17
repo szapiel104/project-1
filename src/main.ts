@@ -20,6 +20,7 @@ import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } f
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 import { buildWork, canAfford, canPlace, maxHp, tileBuildable } from './sim/systems/placement';
 import { crewWanted, MINE_YIELDS } from './sim/systems/workers';
+import { CAMP_GUARDS, campOf } from './sim/systems/minecamp';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
@@ -624,7 +625,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     garrisonMax: garrisonRoom(def.id) || undefined,
     prod: b.owner === ME && !b.build && (def.production || def.staff) ? prodInfo(b) : undefined,
-    watch: def.id === 'keep' ? watchInfo(b.owner) : undefined,
+    watch: def.id === 'keep' ? watchInfo(b.owner) : def.id === 'minecamp' ? campWatch(b) : undefined,
     area: def.area || isTower(def.id) ? shownAreas.has(b.id) : undefined,
     site: b.build ? siteInfo(b) : undefined };
 }
@@ -717,7 +718,7 @@ function prodInfo(b: GameState['buildings'][number]): BuildingInfo['prod'] {
 /** Straż miejska do panelu twierdzy: ilu jest, szkolenie rekruta i co blokuje werbunek */
 function watchInfo(owner: number): BuildingInfo['watch'] {
   const p = game.players[owner]!;
-  const have = game.soldiers.filter((s) => s.owner === owner && UNITS[s.kind]!.guard).length;
+  const have = game.soldiers.filter((s) => s.owner === owner && UNITS[s.kind]!.guard && !s.camp).length;
   const want = p.guards ?? GUARDS;
   const training = p.guardReady ? Math.max(0, Math.ceil((p.guardReady - game.tick) / TICKS_PER_SECOND)) : 0;
   let note: string | undefined;
@@ -726,6 +727,25 @@ function watchInfo(owner: number): BuildingInfo['watch'] {
     note = lack.length ? `na rekruta brakuje: ${lack.join(', ')}` : !game.units.some((u) => u.owner === owner && u.job === 0) ? 'brak wolnego chłopa na rekruta' : 'werbunek ruszy za dnia, gdy pod zamkiem nie ma wroga';
   }
   return { have, want, training, note };
+}
+
+/** Barak górników: strażnicy kopalni (ilu żyje, szkolenie następcy, czego brakuje), urobek pod barakiem i wóz w drodze */
+function campWatch(b: GameState['buildings'][number]): BuildingInfo['watch'] {
+  const p = game.players[b.owner]!;
+  const have = game.soldiers.filter((s) => s.camp === b.id && s.hp > 0).length;
+  const training = b.recruitAt ? Math.max(0, Math.ceil((b.recruitAt - game.tick) / TICKS_PER_SECOND)) : 0;
+  const parts: string[] = [];
+  if (!training && have < CAMP_GUARDS) {
+    const lack = Object.entries(GUARD_COST).filter(([r, n]) => p.res[resIndex(r as ResourceId)]! < n!).map(([r]) => t(`res.${r}`).toLowerCase());
+    parts.push(lack.length ? `na rekruta brakuje: ${lack.join(', ')}` : 'czeka na wolnego chłopa z obozowiska');
+  }
+  const held = (b.hold ?? []).map((n, r) => [r, n] as const).filter(([, n]) => n > 0).map(([r, n]) => `${t(`res.${RESOURCES[r]}`).toLowerCase()} ${n}`);
+  parts.push(held.length ? `pod barakiem: ${held.join(', ')}` : 'pod barakiem pusto');
+  const cart = (game.caravans ?? []).find((c) => c.camp === b.id);
+  if (cart) parts.push(`wóz w drodze do zamku (eskorta: ${cart.escort?.length ?? 0})`);
+  const mine = game.buildings.find((m) => BUILDINGS[m.type]!.id === 'oremine' && campOf(game, m)?.id === b.id);
+  if (!mine) parts.push('brak kopalni w zasięgu 10 pól — barak stoi pusty');
+  return { have, want: CAMP_GUARDS, training, note: parts.join(' · '), label: 'Straż kopalni' };
 }
 
 function select(id: number): void {
