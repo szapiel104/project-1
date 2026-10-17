@@ -84,7 +84,7 @@ Zrobione 13.10 wieczorem: automatyczna jakość (5 poziomów: cienie, AO, rozdzi
 
 Zrobione 14.10: przegląd długiej gry (tools/soak), boty myślą w różnych tickach, szybsze sprawdzanie blokowania przejść, krzaki i drzewa z daleka lżejsze, góry za mapą bez cienia (karta graficzna ok. 10 → 7,5 ms na klatkę w widoku osady).
 
-Zrobione 16.10: mapa 1 na 1 192 pola (zamki ok. 100 pól od siebie), leśne ścieżki z generatora (sieć do środka, złóż, lasów i skraju świata; chłopi wolą nimi chodzić), polany w puszczy, wiatr w krzakach, budynki rysowane razem. Dalej przy mapach: rzeki z brodami, wzgórza z łagodnymi zboczami, ścieżki też na 2v2/4v4 do obejrzenia.
+Zrobione 16.10: mapa 1 na 1 192 pola (zamki ok. 100 pól od siebie), leśne ścieżki z generatora (sieć do środka, złóż, lasów i skraju świata; chłopi wolą nimi chodzić), polany w puszczy, wiatr w krzakach, budynki rysowane razem. Mapy (generator 2): rzeki z brodami między drużynami, łagodne wzgórza i leśne ścieżki są już na wszystkich trybach (sprawdzone 17.10).
 
 Zrobione 15.10: daleka wersja budynków (LOD, 3 poziomy, próg zależny od jakości), okno F3 z czasem karty na przejście (cienie, scena, AO, poświata) i listą najcięższych rzeczy.
 
