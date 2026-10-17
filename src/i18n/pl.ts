@@ -196,7 +196,7 @@ export const pl = {
   'res.spear': 'Włócznie',
   'res.bow': 'Łuki',
   'res.ale': 'Piwo',
-  'res.ore': 'Ruda',
+  'res.ore': 'Ruda (stara)',
   'b.keep': 'Twierdza',
   'b.house': 'Chata',
   'b.stockpile': 'Skład',

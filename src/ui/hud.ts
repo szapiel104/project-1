@@ -251,6 +251,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     resVals.push(val);
     resTrends.push(tr);
     resItems.push(li);
+    // dawna osobna ruda z kopalni (17.10) nie ma już kafelka — ruda to waluta (kafelek 'gold')
+    if (id === 'ore') { li.hidden = true; continue; }
     resList.append(li);
   }
   // kolejność: drewno, kamień, złoto, jedzenie razem, potem tyle kolejnych zapasów, ile zmieści się w pasku,
