@@ -25,7 +25,15 @@ const SCALE: Record<string, number> = { guard: 0.344 };
 const WALK_CYCLE = 0.4;
 
 interface ClipInfo { row: number; frames: number; dur: number }
-interface Baked { geo: THREE.BufferGeometry; mat: THREE.MeshStandardMaterial; bones: THREE.DataTexture; clips: Record<string, ClipInfo> }
+interface Baked {
+  geo: THREE.BufferGeometry; mat: THREE.MeshStandardMaterial; bones: THREE.DataTexture; clips: Record<string, ClipInfo>;
+  /** rekwizyt nocny (pochodnia w lewej dłoni) — osobna siatka, ta sama tekstura i ten sam szkielet */
+  torch: THREE.BufferGeometry | null;
+  /** płomień: punkt w spoczynku i kość, na której wisi (do liczenia jego miejsca w każdej klatce) */
+  flame: { at: THREE.Vector3; bone: number } | null;
+  /** zapieczone macierze (kopia tekstury) do liczenia punktów na procesorze */
+  data: Float32Array; nb: number;
+}
 
 const baked = new Map<string, Baked>();
 const pending = new Map<string, Promise<Baked | null>>();
@@ -50,10 +58,14 @@ function load(name: string): Promise<Baked | null> {
 
 /** Zapieka każdą klatkę każdej animacji jako macierze kości (gotowe do mnożenia przez wierzchołek w spoczynku) */
 function bake(gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] }, scale: number): Baked {
-  let sk: THREE.SkinnedMesh | null = null;
-  gltf.scene.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) sk = o as THREE.SkinnedMesh; });
-  if (!sk) throw new Error('Brak siatki ze skórą w pliku postaci');
-  const mesh = sk as THREE.SkinnedMesh;
+  // siatki: postać (największa), pochodnia i znacznik płomienia (po nazwach z Blendera)
+  const all: THREE.SkinnedMesh[] = [];
+  gltf.scene.traverse((o) => { if ((o as THREE.SkinnedMesh).isSkinnedMesh) all.push(o as THREE.SkinnedMesh); });
+  const named = (k: string): THREE.SkinnedMesh | undefined => all.find((m) => m.name.toLowerCase().includes(k) || m.parent?.name.toLowerCase().includes(k));
+  const flameM = named('ogie') ?? named('flame');
+  const torchM = all.find((m) => m !== flameM && (m.name.toLowerCase().includes('pochodnia') || m.parent?.name.toLowerCase().includes('pochodnia')));
+  const mesh = all.filter((m) => m !== flameM && m !== torchM).sort((a, b) => b.geometry.getAttribute('position').count - a.geometry.getAttribute('position').count)[0];
+  if (!mesh) throw new Error('Brak siatki ze skórą w pliku postaci');
   const nb = mesh.skeleton.bones.length;
   const clips: Record<string, ClipInfo> = {};
   let rows = 0;
@@ -99,7 +111,22 @@ function bake(gltf: { scene: THREE.Group; animations: THREE.AnimationClip[] }, s
   const mat = src.clone();
   mat.vertexColors = false;
   mat.side = THREE.FrontSide;
-  return { geo, mat, bones: tex, clips };
+  let torch: THREE.BufferGeometry | null = null;
+  if (torchM) {
+    torch = torchM.geometry.clone();
+    if (torch.getAttribute('color')) torch.deleteAttribute('color');
+    // bez maski drużyny: zero w każdym wierzchołku
+    torch.setAttribute('teamMask', new THREE.BufferAttribute(new Float32Array(torch.getAttribute('position').count * 3), 3));
+  }
+  let flame: Baked['flame'] = null;
+  if (flameM) {
+    const pos = flameM.geometry.getAttribute('position'), si = flameM.geometry.getAttribute('skinIndex');
+    const at = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) at.x += pos.getX(i), at.y += pos.getY(i), at.z += pos.getZ(i);
+    at.divideScalar(pos.count);
+    flame = { at, bone: si ? si.getX(0) : 0 };
+  }
+  return { geo, mat, bones: tex, clips, torch, flame, data, nb };
 }
 
 const VERT_HEAD = /* glsl */ `
@@ -147,6 +174,12 @@ function depthMaterial(bones: THREE.DataTexture): THREE.MeshDepthMaterial {
 
 export class SkinnedFigures {
   private mesh: THREE.InstancedMesh | null = null;
+  private torchMesh: THREE.InstancedMesh | null = null;
+  private tAnim!: THREE.InstancedBufferAttribute;
+  private tn = 0;
+  private fr = { r0: 0, r1: 0, k: 0 };
+  private m0 = new THREE.Matrix4();
+  private m1 = new THREE.Matrix4();
   private b: Baked | null = null;
   private anim!: THREE.InstancedBufferAttribute;
   private team!: THREE.InstancedBufferAttribute;
@@ -179,6 +212,45 @@ export class SkinnedFigures {
     mesh.customDepthMaterial = depthMaterial(b.bones);
     this.scene.add(cat(mesh, this.label));
     this.mesh = mesh;
+    if (b.torch) {
+      const tg = b.torch.clone();
+      this.tAnim = new THREE.InstancedBufferAttribute(new Float32Array(this.max * 4), 4);
+      this.tAnim.setUsage(THREE.DynamicDrawUsage);
+      tg.setAttribute('aAnim', this.tAnim);
+      tg.setAttribute('aTeam', new THREE.InstancedBufferAttribute(new Float32Array(this.max * 3), 3));
+      const tm = new THREE.InstancedMesh(tg, mat, this.max);
+      tm.count = 0;
+      tm.frustumCulled = false;
+      tm.castShadow = false;
+      this.scene.add(cat(tm, this.label + ' (pochodnie)'));
+      this.torchMesh = tm;
+    }
+  }
+
+  /** Wiersze tekstury i mieszanie dla animacji `clip` w chwili `t` (wynik w this.fr) */
+  private frame(b: Baked, clip: Clip, t: number): void {
+    const c = b.clips[clip] ?? b.clips.idle!;
+    const last = c.frames - 1;
+    let f = Math.max(0, t) * FPS;
+    f = LOOPS[clip] ? f % last : Math.min(f, last);
+    const f0 = Math.floor(f);
+    this.fr.r0 = c.row + f0;
+    this.fr.r1 = c.row + Math.min(f0 + 1, last);
+    this.fr.k = f - f0;
+  }
+
+  /** Miejsce płomienia pochodni w świecie dla postaci w `base`, w animacji `clip` w chwili `t` (false: brak pochodni) */
+  flamePoint(base: THREE.Matrix4, clip: Clip, t: number, out: THREE.Vector3): boolean {
+    const b = this.b;
+    if (!b?.flame) return false;
+    this.frame(b, clip, t);
+    const o0 = (this.fr.r0 * b.nb * 4 + b.flame.bone * 4) * 4, o1 = (this.fr.r1 * b.nb * 4 + b.flame.bone * 4) * 4;
+    this.m0.fromArray(b.data, o0);
+    this.m1.fromArray(b.data, o1);
+    const k = this.fr.k, e0 = this.m0.elements, e1 = this.m1.elements;
+    for (let i = 0; i < 16; i++) e0[i] = e0[i]! * (1 - k) + e1[i]! * k;
+    out.copy(b.flame.at).applyMatrix4(this.m0).applyMatrix4(base);
+    return true;
   }
 
   /** Czas trwania animacji w sekundach (0, gdy postać jeszcze się nie wczytała) */
@@ -192,19 +264,20 @@ export class SkinnedFigures {
   view(_p: THREE.Vector3): void { /* jedna wersja z bliska i z daleka */ }
 
   /** Postać w miejscu `base` (stopy, kierunek patrzenia +z), w animacji `clip` w chwili `t` sekund, w kolorze drużyny */
-  set(base: THREE.Matrix4, clip: Clip, t: number, team: number): void {
+  set(base: THREE.Matrix4, clip: Clip, t: number, team: number, torch = false): void {
     const e = base.elements;
     if (e[0] === 0 && e[5] === 0 && e[10] === 0) return;
     const b = this.b, mesh = this.mesh;
     if (!b || !mesh || this.n >= this.max) return;
-    const c = b.clips[clip] ?? b.clips.idle!;
-    const last = c.frames - 1;
-    let f = Math.max(0, t) * FPS;
-    f = LOOPS[clip] ? f % last : Math.min(f, last);
-    const f0 = Math.floor(f);
+    this.frame(b, clip, t);
     const i = this.n++;
     mesh.setMatrixAt(i, base);
-    this.anim.setXYZW(i, c.row + f0, c.row + Math.min(f0 + 1, last), f - f0, 0);
+    this.anim.setXYZW(i, this.fr.r0, this.fr.r1, this.fr.k, 0);
+    if (torch && this.torchMesh) {
+      const j = this.tn++;
+      this.torchMesh.setMatrixAt(j, base);
+      this.tAnim.setXYZW(j, this.fr.r0, this.fr.r1, this.fr.k, 0);
+    }
     this.color.setHex(team);
     this.team.setXYZ(i, this.color.r, this.color.g, this.color.b);
   }
@@ -218,6 +291,14 @@ export class SkinnedFigures {
       this.anim.needsUpdate = true;
       this.team.needsUpdate = true;
     }
+    const tm = this.torchMesh;
+    if (tm) {
+      tm.count = this.tn;
+      tm.visible = this.tn > 0;
+      tm.instanceMatrix.needsUpdate = true;
+      this.tAnim.needsUpdate = true;
+    }
     this.n = 0;
+    this.tn = 0;
   }
 }

@@ -9,6 +9,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import bpy  # noqa: E402
 import charlib as C  # noqa: E402
 from mathutils import Vector  # noqa: E402
 
@@ -19,15 +20,17 @@ def build():
     B = C.Body(body, arm)
 
     M = dict(
-        skin=C.material('skóra', (0.52, 0.32, 0.23), rough=0.6, noise=0.12, dark=(0.45, 0.22, 0.18), bump=0.08, pattern='grain', bump_scale=400),
+        skin=C.material('skóra', (0.42, 0.22, 0.14), rough=0.6, noise=0.12, dark=(0.45, 0.22, 0.18), bump=0.08, pattern='grain', bump_scale=400),
         hair=C.material('włosy', (0.06, 0.045, 0.035), rough=0.8, noise=0.3, pattern='hair', bump=0.6, bump_scale=60),
         wool=C.material('wełna', (0.05, 0.04, 0.034), rough=0.95, noise=0.25, dark=(0.1, 0.03, 0.02), pattern='weave', bump=0.35, bump_scale=260),
         trousers=C.material('spodnie', (0.055, 0.045, 0.035), rough=0.95, noise=0.25, pattern='weave', bump=0.3, bump_scale=240),
-        leather=C.material('skóra wyprawiona', (0.16, 0.045, 0.026), rough=0.75, noise=0.35, dark=(0.08, 0.04, 0.02), pattern='grain', bump=0.25, bump_scale=90, wear=0.35),
+        leather=C.material('skóra wyprawiona', (0.075, 0.024, 0.015), rough=0.8, noise=0.35, dark=(0.03, 0.012, 0.008), pattern='grain', bump=0.25, bump_scale=90, wear=0.2),
         darkleather=C.material('ciemna skóra', (0.04, 0.026, 0.017), rough=0.7, noise=0.3, pattern='grain', bump=0.25, bump_scale=110, wear=0.25),
         iron=C.material('żelazo', (0.2, 0.2, 0.21), rough=0.45, metal=1.0, noise=0.35, dark=(0.12, 0.10, 0.09), pattern='scratch', bump=0.15, bump_scale=200, wear=0.6),
         brass=C.material('mosiądz', (0.55, 0.40, 0.18), rough=0.4, metal=1.0, noise=0.2),
         eye=C.material('oko', (0.85, 0.82, 0.78), rough=0.2, noise=0.0, bump=0),
+        wood=C.material('drewno', (0.09, 0.055, 0.03), rough=0.85, noise=0.35, pattern='grain', bump=0.3, bump_scale=60),
+        pitch=C.material('smoła', (0.03, 0.022, 0.016), rough=0.9, noise=0.4, pattern='weave', bump=0.5, bump_scale=120),
     )
     C.finish(body, M['skin'])
     if eyes:
@@ -156,34 +159,50 @@ def build():
         parts.append(C.rivets_along('nity', B, rv[::2], 0.006, M['iron'], lift=0.003))
     # pusta pochwa przy lewym biodrze (miecz strażnik trzyma w dłoni)
     hip = B.head('LeftUpLeg')
-    sx = max(v.co.x for v in belt.data.vertices) + 0.02
+    sx = max(v.co.x for v in belt.data.vertices) + 0.035
     sheath = []
     for k in range(9):
         t = k / 8
         z = belt_z - 0.02 - t * 0.74
-        c = Vector((sx + 0.01, hip.y + 0.04 + t * 0.24, z))
+        c = Vector((sx - 0.02 - t * 0.03, hip.y + 0.02 + t * 0.1, z))
         w, d = 0.028 * (1 - 0.5 * t) + 0.006, 0.012
         sheath.append([c + Vector((0, -w, 0)), c + Vector((d, 0, 0)), c + Vector((0, w, 0)), c + Vector((-d, 0, 0))])
     parts.append(C.tube('pochwa', sheath, M['darkleather']))
     top = sheath[0][0] * 0.5 + sheath[0][2] * 0.5
     parts.append(C.box('okucie', top + Vector((0, 0, -0.02)), (0.034, 0.075, 0.03), M['iron'], bevel=0.003))
     parts += sword(B, M)
-    return dict(body=body, eyes=eyes, arm=arm, parts=parts, M=M, B=B)
+    tparts, flame = torch(B, M)
+    return dict(body=body, eyes=eyes, arm=arm, parts=parts, M=M, B=B, torch=tparts, flame=flame)
 
 
-def grip_frame(B):
+def grip_frame(B, side='Right'):
     """Chwyt prawej dłoni w spoczynku, z budowy dłoni: f = kierunek palców, blade = oś rękojeści (od małego palca
     ku kciukowi; klinga wychodzi z przeciwnej strony, spod małego palca), p = wnętrze dłoni (ku niemu zginają się palce). Zwraca (środek, blade, f, p)."""
-    f = (B.tail('RightFingerBase') - B.head('RightFingerBase')).normalized()
-    th = (B.tail('RThumb') - B.head('RThumb')).normalized()
+    T = 'RThumb' if side == 'Right' else 'LThumb'
+    f = (B.tail(side + 'FingerBase') - B.head(side + 'FingerBase')).normalized()
+    th = (B.tail(T) - B.head(T)).normalized()
     # klinga z dołu pięści (od strony małego palca): w nagraniach CMU tak wychodzi naturalny chód z opuszczonym
     # mieczem i cios znad głowy zakończony klingą w dół; od strony kciuka miecz sterczał w górę
     blade = -(th - f * th.dot(f)).normalized()
-    f1 = (B.tail('RightHandFinger1') - B.head('RightHandFinger1')).normalized()
+    f1 = (B.tail(side + 'HandFinger1') - B.head(side + 'HandFinger1')).normalized()
     p = f1 - f
     p = (p - f * p.dot(f) - blade * p.dot(blade)).normalized()
-    center = B.head('RightFingerBase') + p * 0.022 + f * 0.012
+    center = B.head(side + 'FingerBase') + p * 0.022 + f * 0.012
     return center, blade, f, p
+
+
+def torch(B, M):
+    """Pochodnia w lewej dłoni (rekwizyt nocny, osobna siatka): drewniany kij, owinięta smolna głowica,
+    znacznik płomienia na czubku (gra stawia tam ogień)"""
+    c, ax, f, p = grip_frame(B, 'Left')
+    up = -ax  # głowica od strony małego palca: przy opuszczonej ręce w górę (jak klinga miecza w prawej)
+    def ring(u, r, n=6):
+        side = up.cross(f).normalized()
+        return [c + up * u + (f * math.cos(a) + side * math.sin(a)) * r for a in [i * 2 * math.pi / n for i in range(n)]]
+    stick = C.tube('pochodnia kij', [ring(-0.12, 0.016), ring(0.30, 0.018)], M['wood'])
+    head = C.tube('pochodnia głowica', [ring(0.27, 0.026), ring(0.31, 0.034), ring(0.38, 0.033), ring(0.41, 0.022)], M['pitch'])
+    flame = C.sphere('pochodnia ogień', c + up * 0.43, 0.01, None, seg=4, rings=3)
+    return [stick, head], flame
 
 
 def sword(B, M):
@@ -197,15 +216,15 @@ def sword(B, M):
     rings = []
     for k in range(10):
         u = 0.07 + k / 9 * 0.82
-        wd = 0.024 * (1 - 0.35 * k / 9) if k < 9 else 0.002
-        th = 0.0045 * (1 - 0.4 * k / 9)
+        wd = 0.036 * (1 - 0.3 * k / 9) if k < 9 else 0.003
+        th = 0.009 * (1 - 0.35 * k / 9)
         u = u + (0.04 if k == 9 else 0)
         rings.append([at(u, 0, wd), at(u, th, 0), at(u, 0, -wd), at(u, -th, 0)])
     out.append(C.tube('miecz klinga', rings, M['iron'], flat=False))
-    out.append(C.tube('miecz jelec', [[at(0.055, 0.012 * sv, 0.11 * sw) for sv, sw in ((1, 1), (1, -1), (-1, -1), (-1, 1))],
-                                       [at(0.075, 0.012 * sv, 0.11 * sw) for sv, sw in ((1, 1), (1, -1), (-1, -1), (-1, 1))]], M['iron']))
-    out.append(C.tube('miecz rękojeść', [[at(u, 0.016 * math.cos(a), 0.016 * math.sin(a)) for a in (0, 1.57, 3.14, 4.71)] for u in (-0.075, 0.055)], M['darkleather']))
-    out.append(C.sphere('miecz głowica', at(-0.095, 0, 0), 0.024, M['iron'], scale=(1, 1, 1)))
+    out.append(C.tube('miecz jelec', [[at(0.05, 0.016 * sv, 0.13 * sw) for sv, sw in ((1, 1), (1, -1), (-1, -1), (-1, 1))],
+                                       [at(0.078, 0.016 * sv, 0.13 * sw) for sv, sw in ((1, 1), (1, -1), (-1, -1), (-1, 1))]], M['iron']))
+    out.append(C.tube('miecz rękojeść', [[at(u, 0.019 * math.cos(a), 0.019 * math.sin(a)) for a in (0, 1.57, 3.14, 4.71)] for u in (-0.075, 0.055)], M['darkleather']))
+    out.append(C.sphere('miecz głowica', at(-0.095, 0, 0), 0.03, M['iron'], scale=(1, 1, 1)))
     return out
 
 
@@ -244,23 +263,40 @@ def low(g, out_dir, core_tris=2300, tex=1024):
                 new = {k: w / tot * 0.55 * t for k, w in legw.items()}
                 new['Hips'] = new.get('Hips', 0) + 1 - 0.55 * t
                 C.set_weights(ob, [v.index], new)
-    lowm = C.join([core] + pieces, 'strażnik')
+    # pochodnia: piecze się razem z resztą (jedna tekstura), potem odcinana jako osobna siatka (gra pokazuje ją nocą)
+    tlow = C.low_parts(g['torch'], {'pochodnia': 48})
+    for ob in tlow:
+        C.skin_low(ob, g['body'], g['arm'])
+        C.set_weights(ob, range(len(ob.data.vertices)), {'LeftHand': 1.0})
+        a = ob.data.attributes.new('rekwizyt', 'INT', 'FACE')
+        for i in range(len(ob.data.polygons)):
+            a.data[i].value = 1
+    hi = hi + g['torch']
+    lowm = C.join([core] + pieces + tlow, 'strażnik')
     C.normalize_weights(lowm)
     C.team_mask(lowm, [o for o in hi if o.name.startswith(TEAM)], [o for o in hi if not o.name.startswith(TEAM)])
     C.unwrap(lowm)
     paths = C.bake(lowm, hi, out_dir, 'guard', size=tex)
     for o in hi:
         o.hide_render = True
-    print('trójkąty gry:', C.tris(lowm))
-    return lowm, paths
+    torch_ob = C.split_attr(lowm, 'rekwizyt', 'pochodnia')
+    flame = C.copy(g['flame'], 'pochodnia_ogień')
+    flame.data.materials.clear()
+    flame.data.materials.append(lowm.data.materials[0])
+    C.skin_low(flame, g['body'], g['arm'])
+    C.set_weights(flame, range(len(flame.data.vertices)), {'LeftHand': 1.0})
+    bpy.data.objects.remove(g['flame'], do_unlink=True)
+    print('trójkąty gry:', C.tris(lowm), '+ pochodnia', C.tris(torch_ob))
+    return lowm, paths, [torch_ob, flame]
 
 
-def fist(arm, B):
-    """Zaciśnięta prawa pięść: palce obrócone wokół osi rękojeści ku wnętrzu dłoni"""
+def fist(arm, B, side='Right'):
+    """Zaciśnięta pięść: palce obrócone wokół osi rękojeści ku wnętrzu dłoni"""
     from mathutils import Quaternion
-    c, blade, f, p = grip_frame(B)
+    c, blade, f, p = grip_frame(B, side)
     out = {}
-    for name, ang in (('RightFingerBase', 85), ('RightHandFinger1', 80), ('RThumb', 30)):
+    T = 'RThumb' if side == 'Right' else 'LThumb'
+    for name, ang in ((side + 'FingerBase', 85), (side + 'HandFinger1', 80), (T, 30)):
         b = arm.data.bones.get(name)
         if not b:
             continue
@@ -297,6 +333,7 @@ def animate(g):
     acts.append(death)
     bpy.data.actions.remove(lie)
     F = fist(arm, g['B'])
+    F.update(fist(arm, g['B'], 'Left'))
     for act in acts:
         for bone, q in F.items():
             C.add_rotation(act, bone, q)
@@ -321,15 +358,17 @@ if __name__ == '__main__':
     if '--preview' in args:
         objs = [g['body']] + ([g['eyes']] if g['eyes'] else []) + g['parts']
         C.preview(objs, os.path.join(out_dir, 'guard_hi.png'), views=((0, 0), (40, 8), (90, 0), (180, 0)), size=560)
-    lm, paths = low(g, out_dir)
+    lm, paths, props = low(g, out_dir)
     C.preview([lm], os.path.join(out_dir, 'guard_low.png'), views=((0, 0), (40, 8), (90, 0), (180, 0)), size=560)
     acts = animate(g)
     bind(lm, g['arm'])
-    for o in [g['body'], g['eyes']] + g['parts']:
+    for p_ in props:
+        bind(p_, g['arm'])
+    for o in [g['body'], g['eyes']] + g['parts'] + g['torch']:
         if o:
             bpy.data.objects.remove(o, do_unlink=True)
     if '--sheets' in args:
         for act, view in zip(acts, ((0, 0), (90, 0), (60, 0), (90, 0))):
-            C.anim_sheet([lm], g['arm'], act, os.path.join(out_dir, f'guard_{act.name}.png'), view=view, height=2.3)
-    C.export_glb(os.path.join(out_dir, 'guard.glb'), lm, g['arm'], actions=acts)
+            C.anim_sheet([lm, props[0]], g['arm'], act, os.path.join(out_dir, f'guard_{act.name}.png'), view=view, height=2.3)
+    C.export_glb(os.path.join(out_dir, 'guard.glb'), lm, g['arm'], extras=props, actions=acts)
     print('gotowe:', os.path.join(out_dir, 'guard.glb'), 'trójkąty:', C.tris(lm), 'animacje:', [a.name for a in acts])

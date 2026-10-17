@@ -519,6 +519,16 @@ export class GameRenderer {
     if ((v.x - f.x) ** 2 + (v.z - f.z) ** 2 > 80 * 80) return;
     this.handFlameN++;
   }
+  private flameTmp = new THREE.Vector3();
+  /** Płomień w gotowym punkcie świata (pochodnia strażnika liczona z kości dłoni) */
+  private pushHandFlameWorld(p: THREE.Vector3): void {
+    if (this.handFlameN >= 400) return;
+    const f = this.focusPoint;
+    if ((p.x - f.x) ** 2 + (p.z - f.z) ** 2 > 80 * 80) return;
+    const v = this.handFlames[this.handFlameN] ?? (this.handFlames[this.handFlameN] = new THREE.Vector3());
+    v.copy(p);
+    this.handFlameN++;
+  }
   private pushHandFlame(m: THREE.Matrix4, x: number): void {
     if (this.handFlameN >= 400) return;
     const v = this.handFlames[this.handFlameN] ?? (this.handFlames[this.handFlameN] = new THREE.Vector3());
@@ -4573,12 +4583,18 @@ export class GameRenderer {
         if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
       }
       // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
-      if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
+      // strażnik ze szkieletem trzyma własną pochodnię w lewej dłoni (rekwizyt modelu), płomień idzie za dłonią
+      const guardTorch = torchesOn && !!udef.guard;
+      if (torchesOn && !udef.guard && s.id % 5 === 0 && s.owner === this.me && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
       const teamC = TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888;
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
-      this.guardsFig.set(udef.guard ? t.matrix : ZERO, walking ? 'walk' : striking ? 'attack' : 'idle',
-        walking ? this.guardsFig.walkTime(st.phase) : this.time + s.id * 0.37, teamC);
+      if (udef.guard) {
+        const gClip = walking ? 'walk' : striking ? 'attack' : 'idle';
+        const gT = walking ? this.guardsFig.walkTime(st.phase) : this.time + s.id * 0.37;
+        this.guardsFig.set(t.matrix, gClip, gT, teamC, guardTorch);
+        if (guardTorch && this.guardsFig.flamePoint(t.matrix, gClip, gT, this.flameTmp)) this.pushHandFlameWorld(this.flameTmp);
+      }
       this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
       this.spearmen.set(n, !ranged && !udef.guard && !udef.ram ? t.matrix : ZERO, legs, striking, teamC, s.id);
       if (udef.ram && rams < 256) {

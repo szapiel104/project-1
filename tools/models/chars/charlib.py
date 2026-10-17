@@ -528,8 +528,10 @@ def _sheet(files, out, cols=None):
 # ───────────────────────────── siatka gry i pieczenie ─────────────────────────────
 
 def select(objs, active=None):
+    bpy.context.view_layer.update()  # po usunięciu obiektów lista warstwy bywa nieaktualna (puste wpisy)
     for o in bpy.context.view_layer.objects:
-        o.select_set(False)
+        if o:
+            o.select_set(False)
     for o in objs:
         o.select_set(True)
     bpy.context.view_layer.objects.active = active or objs[0]
@@ -1075,3 +1077,21 @@ def team_mask(low, team_objs, other_objs, name='team'):
         attr.data[i].color = (k, k, k, 1.0)
     low.data.color_attributes.active_color = attr
     return attr
+
+
+def split_attr(ob, attr, name):
+    """Odcina ściany z atrybutem `attr` = 1 do nowego obiektu `name` (UV, materiał i wagi zostają)"""
+    new = ob.copy()
+    new.data = ob.data.copy()
+    new.name = name
+    bpy.context.scene.collection.objects.link(new)
+    for target, keep in ((ob, 0), (new, 1)):
+        bm = bmesh.new()
+        bm.from_mesh(target.data)
+        layer = bm.faces.layers.int.get(attr)
+        bmesh.ops.delete(bm, geom=[f for f in bm.faces if f[layer] != keep], context='FACES')
+        bmesh.ops.delete(bm, geom=[v for v in bm.verts if not v.link_faces], context='VERTS')
+        bm.to_mesh(target.data)
+        bm.free()
+        target.data.attributes.remove(target.data.attributes[attr])
+    return new
