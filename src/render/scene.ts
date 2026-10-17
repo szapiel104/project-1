@@ -73,6 +73,9 @@ const CAMP_MODEL = model('camp');
 const RAM_MODEL = model('ram');
 const CAMP_SEATS = (CAMP_MODEL as unknown as { seats: [number, number, number][] }).seats;
 
+/** Godzina na ekranie tytułowym: późne popołudnie, ciepłe światło przed zachodem */
+const MENU_HOUR = 17.6;
+
 export interface TileRef { x: number; y: number }
 /** Pola zamku, po których się chodzi (dy * 3 + dx): sala donżonu, koszary, dziedziniec, brama; posadzka na tej wysokości */
 /** Przeszkody w zamku (ściany pomieszczeń, kraty, sprzęty) z modelu z Blendera: prostokąty x0, x1, z0, z1 względem środka */
@@ -1410,6 +1413,7 @@ export class GameRenderer {
   /** Koniec ujęcia z menu: wraca zwykły widok strategiczny */
   endOrbit(): void { this.cam.cinematic(false); this.menuNight = false; }
   /** Menu główne zawsze nocą, z zapalonymi pochodniami */
+  /** Ujęcie z menu: osada w złotej godzinie (ciepłe, niskie słońce), a nie w nocy */
   private menuNight = false;
 
   private puffs: { group: THREE.Group; age: number; soft?: boolean; bits: { m: THREE.Mesh; v: THREE.Vector3 }[] }[] = [];
@@ -2178,7 +2182,7 @@ export class GameRenderer {
     this.updatePuffs(dt);
     this.updateRain(dt);
     this.updateSky();
-    if (this.state) this.setDaylight(this.menuNight ? 23 : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
+    if (this.state) this.setDaylight(this.menuNight ? MENU_HOUR : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     if (this.inMine) {
       // w sztolni: bez słońca i nieba, ciemna mgła, światło tylko z latarń
       this.sun.intensity = 0; this.hemi.intensity = 0.1;
@@ -2315,8 +2319,8 @@ export class GameRenderer {
     const f = this.focusPoint;
     const lit = new Set<number>();
     // pochodnia na słupie płonie tylko po zmroku (także gdy cykl dnia jest wyłączony, a symulacja ma noc)
-    const dark = this.night > 0.12 || this.menuNight;
-    if (dark) for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
+    const dark = this.night > 0.12;
+    if (dark) for (const b of g.buildings) if (b.lit) lit.add(b.id);
     for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
     this.handFlameN = 0;
     this.handFlameTime.value = this.time;
@@ -3808,7 +3812,7 @@ export class GameRenderer {
     const on = this.night > 0.15;
     const flicker = this.calm ? 1 : 0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07;
     const lit = new Set<number>();
-    if (on || this.menuNight) for (const b of g.buildings) if (b.lit || this.menuNight) lit.add(b.id);
+    if (on) for (const b of g.buildings) if (b.lit) lit.add(b.id);
     for (const mesh of this.buildingMeshes.values()) {
       const torch = named(mesh, 'torch');
       if (!torch) continue;
