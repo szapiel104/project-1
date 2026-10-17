@@ -4801,6 +4801,9 @@ export class GameRenderer {
     // wiosna od pierwszych liści do początku lata; lato najmocniej w drugiej połowie (susza)
     SEASON_U.uSpring.value = ok(sm(0.04, 0.1, p) * (1 - sm(0.2, 0.28, p)));
     SEASON_U.uSummer.value = ok(p < 0.6 ? sm(0.27, 0.36, p) * (1 - sm(0.5, 0.56, p)) : 0);
+    // w sztolni pod górą nie ma pór roku: śnieg, szron i jesień zostają na powierzchni (materiały są wspólne z
+    // budynkami na mapie, ale powierzchni stąd nie widać, więc na czas spaceru w kopalni zerujemy je wszystkie)
+    if (this.inMine) { SEASON_U.uSnow.value = 0; SEASON_U.uFrost.value = 0; SEASON_U.uAutumn.value = 0; SEASON_U.uBare.value = 0; SEASON_U.uSpring.value = 0; SEASON_U.uSummer.value = 0; }
   }
 
   /** Gdzie pan zamku spaceruje po dziedzińcu (pola mapy; ostatnia sekunda), do odzywek ludzi i straży */
