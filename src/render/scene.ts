@@ -11,6 +11,7 @@ import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
+import { crewOf } from '../sim/systems/workers';
 import { Clutter } from './clutter';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
@@ -57,6 +58,7 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { model } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const KEEP_MODEL = model('keep');
+const OREMINE_MODEL = model('mine');
 const TAVERN_MODEL = model('tavern');
 const HOUSE_MODEL = model('house');
 const BARN_MODEL = model('barn');
@@ -77,7 +79,10 @@ const KEEP_HALF = KEEP_SIZE / 2;
 /** Budynek z Blendera, do którego wchodzi się spacerem: prostokąty podłogi, przeszkody na swojej wysokości, wysokość posadzki */
 interface WalkModel { floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] }
 const TAVERN = TAVERN_MODEL as unknown as WalkModel & { seats: [number, number, number][] };
-const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel };
+const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel, oremine: OREMINE_MODEL as unknown as WalkModel };
+/** Kopalnia: miejsca pracy górników w grocie (x, z w układzie modelu, kierunek twarzy) — z tools/models/mine.py */
+const MINE_SPOTS = (OREMINE_MODEL as unknown as { spots: [number, number, number][] }).spots;
+const OREMINE_T = BUILDINGS.findIndex((d) => d.id === 'oremine');
 const TAVERN_SEATS = TAVERN.seats;
 /** Obrys budynku z modelu (ściany, sprzęty i wnętrze): poza nim, na podwórku działki, chodzi się jak po łące */
 const footCache = new Map<WalkModel, [number, number, number, number]>();
@@ -942,6 +947,7 @@ export class GameRenderer {
     this.snowNow = -1; this.seasonScan = 0;
     const { width, height, starts } = state.map;
     this.cam.setBounds(width, height, rim + 8);
+    this.camMargin = rim + 8; this.reachKey = '';
     const view = this.view;
     this.cam.ground = (x, z) => view.heightAt(x + width / 2, z + height / 2);
     const s = starts.find((p) => p.player === focusPlayer) ?? starts[0];
@@ -1242,6 +1248,25 @@ export class GameRenderer {
   private grassReach = 1;
   /** Zawsze dzień zamiast cyklu dnia i nocy (ustawienie gracza) */
   private alwaysDay = false;
+
+  private reachTick = 0;
+  private camMargin = 18;
+  private reachKey = '';
+  /** Koła, do których kamera może wyjechać poza grywalny środek: wokół każdego własnego budynku, który tam stoi */
+  private updateReach(g: GameState): void {
+    const { width, height } = g.map;
+    const bx = width / 2 - this.camMargin, bz = height / 2 - this.camMargin;
+    const pts: { x: number; z: number; r: number }[] = [];
+    for (const b of g.buildings) {
+      if (b.owner !== this.me) continue;
+      const fp = footprint(BUILDINGS[b.type]!, b.rot);
+      const x = b.x + fp.w / 2 - width / 2, z = b.y + fp.h / 2 - height / 2;
+      if (Math.abs(x) <= bx && Math.abs(z) <= bz) continue;
+      pts.push({ x, z, r: Math.max(fp.w, fp.h) / 2 + 6 });
+    }
+    const key = pts.map((p) => `${p.x},${p.z}`).join('|');
+    if (key !== this.reachKey) { this.reachKey = key; this.cam.setReach(pts); }
+  }
 
   /** Ustawienia grafiki i kamery z menu */
   setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; soft?: boolean; dynRes?: boolean; label?: string }): void {
@@ -1898,6 +1923,8 @@ export class GameRenderer {
   /** `paused` = pauza: kamera dalej się rusza, ale ludzie, zwierzęta, ogień i woda stoją w miejscu */
   frame(realDt: number, alpha: number, paused = false): void {
     namedTick();
+    // co pół sekundy: wyjątki od granicy kamery przy własnych budynkach poza środkiem mapy (kopalnia pod górami)
+    if (this.state && (this.reachTick = (this.reachTick + 1) % 30) === 0) this.updateReach(this.state);
     if (this.walk && this.state) this.stepWalk(realDt); else this.cam.update(realDt);
     const dt = paused ? 0 : realDt;
     this.time += dt;
@@ -4804,11 +4831,18 @@ export class GameRenderer {
           const lx = mx * cosT + mz * sinT, lz = -mx * sinT + mz * cosT;
           // odpoczywający siedzą przy stole obok siebie, pracujący krzątają się przy warsztacie
           const side = resting ? ((u.id % 3) - 1) * 0.28 : Math.sin(k * 2) * 0.12;
-          // załoga kopalni: każdy przy własnym przodku, rozstawieni po działce (do czasu sztolni z Blendera z miejscami pracy)
-          const crewX = def.crew && !resting ? ((u.id % 4) - 1.5) * 0.55 : 0, crewZ = def.crew && !resting ? (((u.id >> 2) % 3) - 1) * 0.5 : 0;
-          t.position.set(cx + lx - width / 2 + side + crewX * cosT + crewZ * sinT, (mesh?.position.y ?? 0) + (resting ? -0.03 : 0.05), cy + lz - height / 2 - crewX * sinT + crewZ * cosT);
+          t.position.set(cx + lx - width / 2 + side, (mesh?.position.y ?? 0) + (resting ? -0.03 : 0.05), cy + lz - height / 2);
           t.rotation.set(0, resting ? 0 : Math.PI + Math.sin(k * 2) * 0.6, 0);
           if (!resting) swing = Math.sin(k * 6) * 0.35;
+          // załoga kopalni: każdy przy swoim przodku z modelu (`spots`), twarzą do ściany; zamach kilofem robi animacja kopania niżej
+          if (job.type === OREMINE_T && !resting && MINE_SPOTS.length) {
+            const idx = Math.max(0, crewOf(job).indexOf(u.id));
+            const sp = MINE_SPOTS[idx % MINE_SPOTS.length]!;
+            const sx = sp[0] * cosT + sp[1] * sinT, sz = -sp[0] * sinT + sp[1] * cosT;
+            t.position.set(cx + sx - width / 2, (mesh?.position.y ?? 0) + 0.05, cy + sz - height / 2);
+            t.rotation.set(0, sp[2] + turn, 0);
+            swing = 0;
+          }
         }
       }
       // wieczorem (18–23) połowa bezrobotnych z obozowiska siedzi przed karczmą przy kuflu, a jeden się zatacza
@@ -4881,12 +4915,15 @@ export class GameRenderer {
       }
       // drwal z siekierą, kopacz z kilofem: oburęczny zamach, cios z pochyleniem i stuk w chwili trafienia
       const site = u.phase === Phase.WorkingSite && !fishing && u.job ? BUILDINGS[jobs.get(u.job)?.type ?? -1]?.production?.site : undefined;
-      const chopping = site === Terrain.Forest, mining = site === Terrain.Stone || site === Terrain.Iron;
+      const chopping = site === Terrain.Forest;
+      // górnik w grocie kopalni: ten sam zamach kilofem co na złożu, ale stoi już twarzą do ściany (miejsce z modelu)
+      const inMine = u.phase === Phase.Working && !!job && job.type === OREMINE_T;
+      const mining = site === Terrain.Stone || site === Terrain.Iron || inMine;
       let toolArm = 0, toolLean = 0;
       if (chopping || mining) {
         // twarzą do najbliższego drzewa albo skały obok
         const tx = u.px >> 8, ty = u.py >> 8, want = chopping ? Terrain.Forest : site!;
-        for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]] as const)
+        if (!inMine) for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]] as const)
           if (g.map.tiles[(ty + dy) * width + tx + dx] === want) { t.rotation.set(0, Math.atan2(dx, dy), 0); break; }
         if (!this.calm) {
           const ph = (this.time * (chopping ? 1.15 : 0.85) + (u.id % 11) * 0.173) % 1;
@@ -4902,7 +4939,7 @@ export class GameRenderer {
         swing = 0;
       }
       // rzemieślnik w warsztacie: pochylony nad stołem, ręce na zmianę wyrabiają albo strugają
-      const crafting = u.phase === Phase.Working && !!job && mode === 'inside';
+      const crafting = u.phase === Phase.Working && !!job && mode === 'inside' && !inMine;
       let craftR = 0, craftL = 0;
       if (crafting) {
         const k2 = this.calm ? 0 : this.time * 5.5 + u.id;

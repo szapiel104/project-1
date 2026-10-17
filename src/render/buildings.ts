@@ -28,6 +28,7 @@ const STONE_TOWER_MODEL = model('stonetower');
 const STONE_GATE_MODEL = model('stonegate');
 const STOCKPILE_MODEL = model('stockpile');
 const WOODCUTTER_MODEL = model('woodcutter');
+const OREMINE_MODEL = model('mine');
 const FISHER_MODEL = model('fisher');
 const FLETCHER_MODEL = model('fletcher');
 const POLETURNER_MODEL = model('poleturner');
@@ -1380,8 +1381,11 @@ const BUILDERS: Record<string, Builder> = {
     const p = (BAKERY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
-  // TYMCZASOWO: kopalnia pod górami używa bryły starej kopalni żelaza, dopóki nie powstanie sztolnia z Blendera (następna partia)
-  oremine(g, team, flag) { BUILDERS.mine!(g, team, flag); }
+  oremine(g, _team, flag) {
+    // kopalnia pod górami z Blendera (tools/models/mine.py): skalny garb z drewnianym portalem sztolni, w grocie ściany
+    // z żyłami rudy, stemple, wózek na szynach, latarnie; górnicy kopią w miejscach z klucza `spots` (scene.ts)
+    blenderModel(g, OREMINE_MODEL as unknown as BlenderBuilding, flag);
+  },
 };
 
 const teamMats = new Map<number, THREE.MeshStandardMaterial>();

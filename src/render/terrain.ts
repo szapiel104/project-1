@@ -1635,6 +1635,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
     level(x: number, y: number, fw: number, fh: number, y0: number) {
+      const rockCorner = (cx: number, cy: number): boolean => {
+        for (const [ox, oy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) {
+          const tx = cx + ox, ty = cy + oy;
+          if (tx >= 0 && ty >= 0 && tx < w && ty < h && map.tiles[ty * w + tx] === Terrain.Mountain) return true;
+        }
+        return false;
+      };
       // plac pod budynek jak w prawdziwej budowie: działka równa, a dookoła skarpa łagodnie schodzi do terenu
       const attr = geo.getAttribute('position') as THREE.BufferAttribute;
       const changed: number[] = [];
@@ -1644,6 +1651,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           const k = d === 0 ? 1 : d === 1 ? 0.6 : 0.22;
           const ci = cy * (w + 1) + cx, old = corners[ci]!;
           if (old < 0 && d > 0) continue; // brzeg wody zostaje
+          // narożnik przy górach zostaje: zbocze masywu nie schodzi do poziomu działki (kopalnia stoi tyłem do skały)
+          if (rockCorner(cx, cy)) continue;
           const nv = old + (y0 - old) * k;
           if (Math.abs(nv - old) < 0.002) continue;
           corners[ci] = nv; changed.push(ci);

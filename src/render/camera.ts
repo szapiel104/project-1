@@ -63,6 +63,25 @@ export class StrategyCamera {
   setBounds(width: number, height: number, margin: number): void {
     this.bounds = { x: Math.max(4, width / 2 - margin), z: Math.max(4, height / 2 - margin) };
   }
+  /**
+   * Wyjątki od granicy: koła wokół budynków gracza stojących poza grywalnym środkiem (kopalnia pod górami).
+   * Kamera może do nich podjechać, ale reszta krawędzi mapy zostaje zakryta.
+   */
+  private reach: { x: number; z: number; r: number }[] = [];
+  setReach(points: { x: number; z: number; r: number }[]): void { this.reach = points; }
+  /** Najbliższy dozwolony punkt: w prostokącie środka albo w którymś z kół wyjątków */
+  private clampGoal(x: number, z: number): [number, number] {
+    const bx = Math.max(-this.bounds.x, Math.min(this.bounds.x, x)), bz = Math.max(-this.bounds.z, Math.min(this.bounds.z, z));
+    if (bx === x && bz === z) return [x, z];
+    let best: [number, number] = [bx, bz], bd = (bx - x) ** 2 + (bz - z) ** 2;
+    for (const c of this.reach) {
+      const dx = x - c.x, dz = z - c.z, d = Math.hypot(dx, dz);
+      const k = d > c.r ? c.r / d : 1;
+      const px = c.x + dx * k, pz = c.z + dz * k, pd = (px - x) ** 2 + (pz - z) ** 2;
+      if (pd < bd) { best = [px, pz]; bd = pd; }
+    }
+    return best;
+  }
 
   /** Położenie kamery do zapisu gry: punkt, odległość i obrót */
   get view(): { x: number; z: number; dist: number; yaw: number } { return { x: this.target.x, z: this.target.z, dist: this.dist, yaw: this.yaw }; }
@@ -137,8 +156,7 @@ export class StrategyCamera {
     const g = this.goal, s = Math.sin(g.yaw), c = Math.cos(g.yaw);
     g.x += dx * c + dz * s;
     g.z += -dx * s + dz * c;
-    g.x = Math.max(-this.bounds.x, Math.min(this.bounds.x, g.x));
-    g.z = Math.max(-this.bounds.z, Math.min(this.bounds.z, g.z));
+    [g.x, g.z] = this.clampGoal(g.x, g.z);
   }
 
   private saved: { pitch: number; dist: number } | null = null;
