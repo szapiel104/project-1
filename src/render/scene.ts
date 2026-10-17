@@ -2158,9 +2158,11 @@ export class GameRenderer {
     // w kopalni „salą” jest cała sztolnia: już w korytarzu za portalem garb skały znika, a pokazuje się grota ze stropem
     // (inaczej garb, wciąż widoczny w korytarzu, zastawiał przejście do groty)
     const inside = (r: [number, number, number, number] | undefined): boolean => !!wbk && !!r && wbk[1] >= r[0] && wbk[1] <= r[1] && wbk[2] >= r[2] && wbk[2] <= r[3];
-    const inTap = !!wbk && (wbk[4] === OREMINE_WALK ? wbk[4].open.some(inside) : inside(tap));
-    // korytarz za portalem kopalni: przejście do sztolni (osobna lokacja)
-    if (wbk && wbk[4] === OREMINE_WALK && wbk[2] < 1.1 && Math.abs(wbk[1]) < 0.45) {
+    // kopalnia: garb skały zostaje zawsze na miejscu (wnętrze to osobna sztolnia), inaczej tuż przed portalem
+    // znikał i przez otwór było widać zbocze gór za kopalnią
+    const inTap = !!wbk && wbk[4] !== OREMINE_WALK && inside(tap);
+    // pod oczepem portalu kopalni: od razu przejście do sztolni (osobna lokacja), bez pół kroku „pustego” korytarza
+    if (wbk && wbk[4] === OREMINE_WALK && wbk[2] < 1.32 && Math.abs(wbk[1]) < 0.45) {
       const mb = g.buildings.find((x) => x.id === wbk[0]);
       if (mb && mb.owner === this.me) { this.enterMine(wbk[0]); return; }
       // cudza kopalnia: wrota zamknięte, spacerowicz odbija się od portalu
