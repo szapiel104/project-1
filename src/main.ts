@@ -1705,7 +1705,7 @@ function loop(now: number): void {
     }
   }
   last = now;
-  if (renderer.inMineWalk) caveSounds(renderer.mineWater, renderer.minePicks);
+  if (renderer.inMineWalk) caveSounds(0, renderer.minePicks);
   else {
     nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
     if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();

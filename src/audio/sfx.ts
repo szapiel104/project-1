@@ -465,7 +465,7 @@ function drip(c: AudioContext, at: number, pan: number, gain: number): void {
   o.start(at); o.stop(at + 0.12);
 }
 /**
- * Dźwięki sztolni zamiast łąki: wiatr i deszcz cichną, ze stropu kapie woda (gęściej przy jeziorku, `water` 0–1),
+ * Dźwięki sztolni zamiast łąki: wiatr i deszcz cichną, ze stropu kapie woda (`water` 0–1 = gęstsze kapanie),
  * a z dalszych chodników niesie się echo kilofów, gdy ktoś kopie (`picks` = ilu górników pracuje).
  */
 export function caveSounds(water: number, picks: number): void {

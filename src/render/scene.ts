@@ -1745,8 +1745,6 @@ export class GameRenderer {
   private mineLevel: THREE.Group | null = null;
   /** Czy spacer jest teraz w sztolni (dla interfejsu: podpowiedź wyjścia) */
   get inMineWalk(): boolean { return !!this.inMine; }
-  /** Jak blisko podziemnego jeziorka stoi spacerowicz (0–1, do gęstości kapania) */
-  get mineWater(): number { const m = this.inMine; return m && m.lvl ? Math.max(0, 1 - Math.hypot(m.x - 2.1, m.z + 7.9) / 4) : 0; }
   /** Ilu górników kopie teraz w tej sztolni (echo kilofów) */
   minePicks = 0;
   /**

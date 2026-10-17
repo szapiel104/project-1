@@ -278,14 +278,6 @@ for k, (x, z, sx, sz) in enumerate(((1.8, -10.55, 1.0, 0.7), (4.5, -10.55, 1.0, 
 for k, (ox, oz, r, hh) in enumerate(((0.0, 0.0, 0.32, 1.9), (0.3, 0.2, 0.2, 1.3), (-0.25, 0.25, 0.18, 1.1), (0.1, -0.3, 0.16, 0.9))):
     b.crystal(G, 'magicOre', 6.0 + ox, r * hh * 0.9, -7.6 + oz, r, seed=70 + k, sy=hh)
 solid2.append([5.6, 6.45, -8.05, -7.2])
-# podziemne jeziorko: ciemna, gładka woda w obramowaniu z kamieni (kapie do niej ze stropu)
-# tafla to owal pod kamieniami obramowania (prostokąt wystawał rogami poza krąg i wyglądał jak czarna dziura)
-b.poly(G, 'caveWater', [(2.1 + math.cos(2 * math.pi * k / 14) * 0.86, 0.03, -7.9 + math.sin(2 * math.pi * k / 14) * 0.74) for k in range(14)], away=(2.1, -5, -7.9))
-for k in range(14):
-    a = 2 * math.pi * k / 14
-    x, z = 2.1 + math.cos(a) * 0.9, -7.9 + math.sin(a) * 0.78
-    b.prism(G, 'rock' if k % 2 else 'rockDark', 0.13 + 0.03 * (k % 3), 0.06, 0.1 + 0.03 * (k % 2), x, 0, z, seg=6, phase=k)
-solid2.append([1.15, 3.05, -8.75, -7.05])
 # stemple i podciąg pod stropem, wózek z urobkiem, skrzynie
 for (x, z) in ((4.5, -6.3), (4.5, -9.8)):
     b.box(G, 'woodDark', 0.13, 2.7, 0.13, x, 0, z)
