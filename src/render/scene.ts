@@ -729,7 +729,7 @@ export class GameRenderer {
       return m;
     };
     this.cursor = flat(new THREE.RingGeometry(0.5, 0.66, 4, 1, Math.PI / 4), 0xfff3c4);
-    this.ghost = flat(new THREE.PlaneGeometry(1, 1), 0x3f9b3f, 0.4);
+    this.ghost = flat(new THREE.PlaneGeometry(1, 1), 0x3f9b3f, 0.16);
     this.selection = flat(new THREE.RingGeometry(0.62, 0.72, 4, 1, Math.PI / 4), 0xfff3c4);
     // podgląd planowanej drogi: zielone pola da się wybudować, czerwone nie
     this.plan = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.92, 0.92).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false }), 512);
@@ -1136,7 +1136,7 @@ export class GameRenderer {
     if (!center || !g || !view || !ok) { if (this.buildGrid) this.buildGrid.visible = false; return; }
     const R = 13;
     if (!this.buildGrid) {
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.1, depthWrite: false, fog: false, toneMapped: false,
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.08, depthWrite: false, fog: false, toneMapped: false,
         polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3 });
       this.buildGrid = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.9, 0.9).rotateX(-Math.PI / 2), mat, (2 * R + 1) ** 2);
       this.buildGrid.frustumCulled = false;
@@ -1146,7 +1146,8 @@ export class GameRenderer {
     const grid = this.buildGrid;
     const { width, height } = g.map;
     const m = new THREE.Matrix4(), c = new THREE.Color(), v = new THREE.Vector3(), sc = new THREE.Vector3(1, 1, 1), q = new THREE.Quaternion();
-    const GOOD = new THREE.Color(0x3ee05a), BAD = new THREE.Color(0xff3a2e);
+    // zielone pola tylko podpowiadają (słabo, w nocy jeszcze słabiej), czerwone mają być widać wyraźnie
+    const GOOD = new THREE.Color(0x3ee05a).multiplyScalar(0.55 - this.night * 0.25), BAD = new THREE.Color(0xff3a2e);
     let n = 0;
     for (let dy = -R; dy <= R; dy++)
       for (let dx = -R; dx <= R; dx++) {
@@ -1155,7 +1156,7 @@ export class GameRenderer {
         const d = Math.hypot(dx, dy);
         if (d > R + 0.5) continue;
         // ku brzegowi kratka gaśnie (kółko wokół kursora, bez ostrej krawędzi)
-        const fade = Math.max(0, Math.min(1, (R + 0.5 - d) / 4));
+        const fade = Math.max(0, Math.min(1, (R + 0.5 - d) / 6));
         const hgt = Math.max(view.heightAt(x + 0.5, y + 0.5), 0) + 0.035;
         m.compose(v.set(x + 0.5 - width / 2, hgt, y + 0.5 - height / 2), q, sc);
         grid.setMatrixAt(n, m);
@@ -1177,6 +1178,7 @@ export class GameRenderer {
     this.ghost.scale.set(g.w, g.h, 1);
     this.ghost.position.set(g.x + g.w / 2 - width / 2, top + 0.08, g.y + g.h / 2 - height / 2);
     (this.ghost.material as THREE.MeshBasicMaterial).color.setHex(g.ok ? 0x3f9b3f : 0xb3261e);
+    (this.ghost.material as THREE.MeshBasicMaterial).opacity = g.ok ? 0.12 : 0.3;
     this.ghost.visible = true;
     // półprzezroczysty podgląd samej budowli nad działką
     const key = `${g.id}:${g.team}`;
@@ -1188,7 +1190,8 @@ export class GameRenderer {
         if (!mesh.isMesh) return;
         if (mesh.name === 'base') { mesh.visible = false; return; }
         const m = (mesh.material as THREE.MeshLambertMaterial).clone();
-        m.transparent = true; m.opacity = 0.85; m.depthWrite = false;
+        // pełna bryła (bez prześwitywania siatki i trawy przez ściany); widoczność daje rozjaśnienie niżej
+        m.transparent = false; m.opacity = 1; m.depthWrite = true;
         mesh.material = m;
       });
       this.ghostModels.set(key, model);
@@ -1196,10 +1199,12 @@ export class GameRenderer {
     }
     model.position.set(this.ghost.position.x, top, this.ghost.position.z);
     model.rotation.y = (g.rot * Math.PI) / 2;
+    const lift = new THREE.Color(0x3a3020).multiplyScalar(0.25 + this.night * 0.75), bad = new THREE.Color(0x7a0f0a).add(lift);
     model.traverse((o) => {
       const mesh = o as THREE.Mesh;
       // fundament dzieli materiał z prawdziwymi budynkami, więc go nie barwimy
-      if (mesh.isMesh && mesh.name !== 'base') (mesh.material as THREE.MeshLambertMaterial).emissive?.setHex(g.ok ? 0x000000 : 0x7a0f0a);
+      // w nocy podgląd lekko się podświetla, żeby budynek było widać na ciemnej trawie
+      if (mesh.isMesh && mesh.name !== 'base') (mesh.material as THREE.MeshLambertMaterial).emissive?.copy(g.ok ? lift : bad);
     });
     model.visible = true;
     this.ghostModel = model;
