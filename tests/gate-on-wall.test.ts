@@ -67,7 +67,8 @@ describe('brama na częstokole', () => {
     const stone = buildingIndex('stoneWall');
     let x = -1, y = -1;
     for (let r = 6; r < 16 && x < 0; r++) for (let d = -r; d <= r && x < 0; d++)
-      if ([0, 1, 2, 3, 4, 5].every((k) => canPlace(g, 0, stone, keep.x + d + k, keep.y + r) === null)) { x = keep.x + d; y = keep.y + r; }
+      // miejsce na mur i równa łąka dwa pola przed nim (tam sprawdzamy, że drabiny z dala od muru się nie postawi)
+      if ([0, 1, 2, 3, 4, 5].every((k) => canPlace(g, 0, stone, keep.x + d + k, keep.y + r) === null) && canPlace(g, 0, buildingIndex('ladder'), keep.x + d + 3, keep.y + r + 3) === 'place.ladder') { x = keep.x + d; y = keep.y + r; }
     expect(x).toBeGreaterThanOrEqual(0);
     for (let k = 0; k < 6; k++) { expect(placeBuilding(g, 0, stone, x + k, y)).toBe(true); g.buildings[g.buildings.length - 1]!.build = 0; }
     // bez drabiny nikt nie wejdzie
