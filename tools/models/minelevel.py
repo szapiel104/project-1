@@ -38,6 +38,7 @@ HOLE = (2.9, 3.5, -4.6, -4.0)
 # przejścia między salami: (sala, bok, od, do) — w tych odcinkach ściany nie ma
 GAPS = {
     ('R2', 'z1'): [(-0.7, 0.7)], ('R1', 'z0'): [(-0.7, 0.7)],
+    ('R1', 'z1'): [(-0.7, 0.7)],   # koniec korytarza: zamiast skały czarna czeluść wyjścia
     ('R2', 'x0'): [(-1.8, -0.4)], ('R3', 'x1'): [(-1.8, -0.4)],
     ('R2', 'x1'): [(0.0, 1.4)], ('R4', 'x0'): [(0.0, 1.4)],
     ('R2', 'z0'): [(2.6, 3.8)], ('R5', 'z1'): [(2.6, 3.8)],
@@ -157,10 +158,39 @@ for z in [-0.9 + 0.32 * k for k in range(9)]:
     b.box(G, 'woodDark', 0.62, 0.03, 0.08, 0, 0, z)
 for sx in (-1, 1):
     b.box(G, 'iron', 0.03, 0.035, 3.0, sx * 0.2, 0.03, 0.55)
-# wrota wyjścia na końcu korytarza: deski z jasną szczeliną (światło dnia z zewnątrz)
-b.box(G, 'plank', 1.3, 1.4, 0.06, 0, 0, 6.95)
-b.box(G, 'plaster', 0.9, 0.05, 0.01, 0, 1.1, 6.915)
-b.box(G, 'plaster', 0.04, 1.0, 0.01, 0.0, 0.1, 6.915)
+# wyjście na końcu korytarza: czarna czeluść (sztolnia ciągnie się dalej w mrok), w nierównym obrysie skały
+b.box(G, 'void', 1.4, 1.55, 0.04, 0, 0, 7.0)
+hole = [(-0.46, 0.0), (0.46, 0.0), (0.52, 0.42), (0.49, 0.92), (0.36, 1.22), (0.08, 1.33), (-0.2, 1.3), (-0.42, 1.12), (-0.53, 0.72), (-0.5, 0.3)]
+hole = [(x + jit(x, y, 0.02), y + (jit(y, x, 0.02) if y else 0)) for x, y in hole]
+CEN = (0.0, 0.62)                                   # środek otworu: z niego rzutujemy obrys na ściany korytarza
+def ray_rect(px, py):
+    dx, dy = px - CEN[0], py - CEN[1]
+    t = min(t for t in ((0.7 - CEN[0]) / dx if dx > 0 else 1e9, (-0.7 - CEN[0]) / dx if dx < 0 else 1e9,
+                        (1.55 - CEN[1]) / dy if dy > 0 else 1e9, (0.0 - CEN[1]) / dy if dy < 0 else 1e9))
+    return (CEN[0] + dx * t, CEN[1] + dy * t)
+def ang(p):
+    return math.atan2(p[1] - CEN[1], p[0] - CEN[0]) % (2 * math.pi)
+CORN = [(0.7, 0.0), (0.7, 1.55), (-0.7, 1.55), (-0.7, 0.0)]
+RZ = 6.95
+n = len(hole)
+order = sorted(range(n), key=lambda k: ang(hole[k]))
+hole = [hole[k] for k in order]                      # obrys w kolejności kąta (przeciwnie do zegara)
+for k in range(n):
+    a, c = hole[k], hole[(k + 1) % n]
+    if a[1] < 0.01 and c[1] < 0.01:
+        continue                                        # dół otworu leży na posadzce
+    a0, a1 = ang(a), ang(c)
+    if a1 < a0:
+        a1 += 2 * math.pi
+    mid = [q for q in CORN if a0 < ang(q) < a1 or a0 < ang(q) + 2 * math.pi < a1]
+    mid.sort(key=lambda q: ang(q) if ang(q) > a0 else ang(q) + 2 * math.pi)
+    ring = []
+    for q in [a, c, ray_rect(*c)] + list(reversed(mid)) + [ray_rect(*a)]:
+        if not ring or math.dist(q, ring[-1]) > 1e-4:
+            ring.append(q)                              # bez zdublowanych wierzchołków (punkt na posadzce = jego rzut)
+    if math.dist(ring[0], ring[-1]) < 1e-4:
+        ring.pop()
+    b.poly(G, 'rockDark' if k % 2 else 'rock', [(x, y, RZ) for x, y in ring], away=(0, 0.7, 9.0))
 lamps.append([0.42, 1.15, 6.6])
 lamps.append([-0.42, 1.15, 3.6])
 
@@ -323,6 +353,7 @@ rooms = [[x0, x1, z0, z1] for (x0, x1, z0, z1, _h) in ROOMS.values()]
 rooms2 = [[x0, x1, z0, z1] for (x0, x1, z0, z1, _h) in ROOMS2.values()]
 VIEWS = [
     ['korytarz od wyjścia', [0.0, 0.46, 6.5], [0.0, 0.5, 2.0], ['base'], 18],
+    ['wyjście (czeluść)', [0.0, 0.46, 4.4], [0.0, 0.6, 7.0], ['base'], 18],
     ['hala od wejścia', [0.0, 0.46, 1.8], [0.0, 0.8, -3.0], ['base'], 18],
     ['lewy chodnik', [-4.0, 0.46, -1.1], [-9.0, 0.7, -1.1], ['base'], 18],
     ['prawy chodnik', [4.0, 0.46, 0.7], [9.0, 0.7, 0.7], ['base'], 18],

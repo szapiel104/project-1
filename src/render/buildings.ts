@@ -115,6 +115,8 @@ const M = {
   orchardGrass: mat(0x86b54a, 'grass'), bark: mat(0x7a5a3a, 'bark'), leafLight: mat(0x7fb548, 'leaves'),
   appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xa8652c),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
+  // czarna czeluść (wyjście ze sztolni ginące w mroku): bez światła i odbić, zawsze smoliście czarna
+  void: new THREE.MeshBasicMaterial({ color: 0x000000 }),
   window: mat(0xb08a5a, 'window'), dark: mat(0x1c1611), pane: mat(0x1c1611),
   turf: mat(0x7f9a48, 'grass'),
   trodden: new THREE.MeshStandardMaterial({ color: 0x8c8a4e, roughness: 1, map: pattern('grass'), transparent: true, opacity: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
