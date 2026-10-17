@@ -128,6 +128,55 @@ export function pickSources(S: StreamSampler, want: number): Pt[][] {
   return found;
 }
 
+
+/**
+ * Wodospady nad wodą: tam, gdzie jezioro albo rzeka na planszy dochodzi do skalnej ściany, woda spada ze ściany
+ * prosto do toni. Szukamy pól wody z sąsiadem w górach i wspinamy się od brzegu po zboczu aż na krawędź progu.
+ */
+export function cliffFalls(S: StreamSampler, want: number): Pt[][] {
+  const cands: { path: Pt[]; gain: number; x: number; y: number }[] = [];
+  for (let y = 1; y < S.h - 1; y++)
+    for (let x = 1; x < S.w - 1; x++) {
+      if (!S.water(x, y)) continue;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        if (!S.rock(x + dx, y + dy) || S.water(x + dx, y + dy)) continue;
+        // start na brzegu wody, krok w głąb skały i dalej pod górę najbardziej stromo (z bezwładnością)
+        let px = x + 0.5 + dx * 0.45, py = y + 0.5 + dy * 0.45, vx = dx, vy = dy;
+        const h0 = S.height(px, py);
+        const up: Pt[] = [{ x: px - dx * 0.7, y: py - dy * 0.7 }, { x: px, y: py }];
+        let flat = 0, top = h0;
+        for (let i = 0; i < 90; i++) {
+          const e = 0.3;
+          const gx = (S.height(px + e, py) - S.height(px - e, py)) / (2 * e), gy = (S.height(px, py + e) - S.height(px, py - e)) / (2 * e);
+          const gl = Math.hypot(gx, gy);
+          if (gl > 1e-4) { vx = vx * 0.7 + (gx / gl) * 0.3; vy = vy * 0.7 + (gy / gl) * 0.3; }
+          const vl = Math.hypot(vx, vy) || 1;
+          vx /= vl; vy /= vl;
+          const nx = px + vx * 0.15, ny = py + vy * 0.15, hn = S.height(nx, ny);
+          // krawędź progu: zbocze łagodnieje (tam woda wypływa z góry), albo próg już dość wysoki
+          if (hn - S.height(px, py) < 0.15 * 0.3) { if (++flat >= 3) break; } else flat = 0;
+          px = nx; py = ny; up.push({ x: px, y: py }); top = Math.max(top, hn);
+          if (top - h0 > 11) break;
+        }
+        const gain = top - h0;
+        if (gain < 2.5) continue;
+        // kawałek spokojnego nurtu nad krawędzią, żeby woda „skądś” płynęła
+        for (let k = 1; k <= 8; k++) up.push({ x: px + vx * 0.25 * k, y: py + vy * 0.25 * k });
+        cands.push({ path: up.reverse(), gain, x, y });
+      }
+    }
+  cands.sort((a, b) => b.gain - a.gain);
+  const out: Pt[][] = [];
+  const at: Pt[] = [];
+  for (const c of cands) {
+    if (out.length >= want) break;
+    if (at.some((p) => Math.hypot(p.x - c.x, p.y - c.y) < 24)) continue;
+    at.push({ x: c.x, y: c.y });
+    out.push(c.path);
+  }
+  return out;
+}
+
 const VERT = /* glsl */ `
 attribute float aSlope;
 attribute float aEdge;
@@ -170,10 +219,10 @@ void main() {
   c = mix(c, sky * 0.55, 0.28 + n * 0.18);
   // piana: na wodospadzie prawie biało, w nurcie tylko jaśniejsze grzywki
   float foam = clamp(fall * (0.55 + n * 0.7) + smoothstep(0.62, 0.9, n) * 0.35 * (0.3 + vSlope), 0.0, 1.0);
-  vec3 foamC = mix(vec3(0.82, 0.86, 0.86), vec3(1.0), n2) * (0.45 + sky.g * 0.7);
+  vec3 foamC = mix(vec3(0.84, 0.88, 0.88), vec3(1.0), n2) * (0.62 + sky.g * 0.75);
   c = mix(c, foamC, foam);
   float a = smoothstep(1.0, 0.55 - fall * 0.2, abs(vEdge) + (n - 0.5) * 0.25);
-  a *= mix(0.82, 0.96, foam) * vEnd;
+  a *= mix(0.82, 0.98, foam) * vEnd;
   if (a < 0.01) discard;
   gl_FragColor = vec4(c, a);
   #include <fog_fragment>
@@ -181,7 +230,9 @@ void main() {
 
 export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): Streams {
   const group = new THREE.Group();
-  const paths = pickSources(S, want);
+  // najpierw wodospady wpadające do jezior i rzek pod skałą, potem zwykłe strumienie z gór
+  const falls = cliffFalls(S, 5);
+  const paths = [...falls, ...pickSources(S, want)];
   const mat = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { noise: { value: noise }, time: { value: 0 }, sky: { value: new THREE.Color(0x8a9aa6) } }]),
     vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, fog: true,
@@ -192,7 +243,7 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
   const sprays: THREE.Vector3[] = [];
   const H = (x: number, y: number): number => S.height(x, y);
   for (const raw of paths) {
-    const pts = smooth(raw, 0.22);
+    const pts = smooth(raw, 0.16);
     const n = pts.length;
     const P: number[] = [], UV: number[] = [], SL: number[] = [], ED: number[] = [], EN: number[] = [], I: number[] = [];
     const tiles = new Set<number>();
@@ -206,7 +257,7 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
       const slope = Math.abs(H(a.x, a.y) - H(b.x, b.y)) / horiz;
       const k = i / (n - 1);
       // strumień rośnie z biegiem; wodospad węższy i zwarty
-      const width = 0.32 + k * 0.38 + Math.min(slope, 2.5) * 0.08;
+      const width = 0.32 + k * 0.38 + Math.min(slope, 3) * 0.14;
       const hc = H(p.x, p.y);
       // normalna terenu: woda leży tuż nad zboczem także na stromej ścianie (pionowe podniesienie by ją tam schowało)
       const e = 0.35;
@@ -222,14 +273,15 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
         UV.push(side * 0.5 + 0.5, along);
         SL.push(slope); ED.push(side);
         // ujście: na końcu (u stóp gór) strumień wsiąka, w jeziorze wtapia się w taflę
-        EN.push(Math.min(1, (n - 1 - i) / 10) * Math.min(1, i / 3));
+        EN.push(Math.min(1, (n - 1 - i) / 4) * Math.min(1, i / 3));
       }
       tiles.add(Math.floor(p.y) * S.w + Math.floor(p.x));
       if (i > 0) along += Math.hypot(p.x - a.x, p.y - a.y) * 0.5;
       // koniec stromego odcinka = dół wodospadu: tam pył wodny
       // (tylko pod prawdziwym wodospadem: kilka stromych kroków z rzędu, nie pod jednym progiem)
       if (slope > 1.1) fallLen++;
-      else if (slope < 0.6) { if (fallLen >= 4) sprays.push(new THREE.Vector3(p.x + S.ox, hc + 0.3, p.y + S.oz)); fallLen = 0; }
+      else if (slope < 0.6) { if (fallLen >= 3) sprays.push(new THREE.Vector3(p.x + S.ox, hc + 0.3, p.y + S.oz)); fallLen = 0; }
+      if (i === n - 1 && fallLen >= 3) sprays.push(new THREE.Vector3(p.x + S.ox, Math.max(hc, -0.1) + 0.3, p.y + S.oz));
       if (i < n - 1) { const q = i * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
     }
     const geo = new THREE.BufferGeometry();
