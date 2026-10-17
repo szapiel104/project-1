@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 
 b = Building()
-flames, solid, open_, spots = [], [], [], []
+lights, lamps, solid, open_, spots = [], [], [], [], []
 
 P = 0.05                                   # posadzka groty
 CX0, CX1, CZ0, CZ1 = -1.15, 1.15, -0.5, 0.75   # grota
@@ -91,7 +91,7 @@ b.box('base', 'woodDark', 2 * PX + 0.1, 0.08, 0.12, 0, HK + 0.24, PZ - 0.02)
 b.box('base', 'plank', 0.5, 0.14, 0.03, 0, HK + 0.33, PZ + 0.08)
 b.box('base', 'iron', 0.02, 0.1, 0.02, PX + 0.02, HK - 0.02, PZ + 0.12)
 b.box('base', 'iron', 0.07, 0.11, 0.07, PX + 0.02, HK - 0.14, PZ + 0.12)
-flames.append([round(PX + 0.02, 3), round(HK - 0.12, 3), round(PZ + 0.12, 3)])
+lights.append([round(PX + 0.02, 3), round(HK - 0.1, 3), round(PZ + 0.12, 3)])   # latarnia przy portalu: pali się po zmroku
 
 # ---------------- grota (interior): posadzka, fasetowane ściany skalne, żyły rudy ----------------
 b.box('interior', 'soil', CX1 - CX0 + 0.1, P, CZ1 - CZ0 + 0.1, 0, 0, (CZ0 + CZ1) / 2)
@@ -168,7 +168,7 @@ solid.append([WX - 0.17, WX + 0.17, WZ - 0.23, WZ + 0.23])
 for (x, z) in ((0.95, 0.5), (-0.4, -0.35)):
     b.box('interior', 'woodDark', 0.05, 0.85, 0.05, x, P, z)
     b.box('interior', 'iron', 0.08, 0.12, 0.08, x, P + 0.85, z)
-    flames.append([x, round(P + 0.9, 3), z])
+    lamps.append([x, round(P + 0.93, 3), z, 'interior'])   # latarnie w grocie: palą się zawsze (w sztolni jest ciemno)
     solid.append([x - 0.04, x + 0.04, z - 0.04, z + 0.04])
 # półka z narzędziami przy prawej ścianie, kosze z urobkiem przy wejściu
 b.box('interior', 'plank', 0.36, 0.03, 0.14, 0.95, P + 0.5, -0.05)
@@ -212,4 +212,4 @@ VIEWS = [
     ['grota: lewa ściana', [0.6, P + 0.42, -0.1], [-1.1, 0.5, 0.1], ['base', 'interior', 'ceiling'], 16],
 ]
 b.save('mine', maxe=0.24, rays=16, reach=0.35, extra={
-    'solid': solid, 'open': open_, 'floorY': P, 'flames': flames, 'spots': spots, 'views': VIEWS})
+    'solid': solid, 'open': open_, 'floorY': P, 'lights': lights, 'lamps': lamps, 'spots': spots, 'views': VIEWS})

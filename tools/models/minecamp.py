@@ -15,7 +15,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 
 b = Building()
-chimneys, flames, solid, open_ = [], [], [], []
+chimneys, lamps, fires, lights, solid, open_ = [], [], [], [], [], []
 
 P = 0.1
 X0, X1, Z0, Z1 = -0.78, 0.78, -0.82, 0.42
@@ -79,6 +79,9 @@ b.box('base', 'woodDark', 0.05, DOOR[2], 0.13, DOOR[0] - 0.02, P, Z1)
 b.box('base', 'woodDark', 0.05, DOOR[2], 0.13, DOOR[1] + 0.02, P, Z1)
 b.box('base', 'woodDark', DOOR[1] - DOOR[0] + 0.12, 0.06, 0.13, 0, P + DOOR[2], Z1)
 b.box('base', 'stoneDark', DOOR[1] - DOOR[0] + 0.06, 0.03, 0.14, 0, 0.0, Z1 + 0.12)
+b.box('base', 'iron', 0.015, 0.06, 0.08, DOOR[1] + 0.09, P + 0.56, Z1 + LOG + 0.04)          # hak latarni przy drzwiach
+b.box('base', 'iron', 0.06, 0.09, 0.06, DOOR[1] + 0.09, P + 0.44, Z1 + LOG + 0.1)
+lights.append([round(DOOR[1] + 0.09, 3), round(P + 0.49, 3), round(Z1 + LOG + 0.1, 3)])
 # uchylone drzwi z desek (do środka, przy lewym węgarze)
 b.box('interior', 'plank', DOOR[1] - DOOR[0] - 0.02, DOOR[2] - 0.02, 0.025, DOOR[0] + 0.02, P, Z1 - 0.16, (math.pi / 2 - 0.4))
 solid += [[X0 - 0.06, DOOR[0], Z1 - LOG, Z1 + LOG], [DOOR[1], X1 + 0.06, Z1 - LOG, Z1 + LOG],
@@ -118,7 +121,7 @@ for k, x in enumerate((0.15, 0.27, 0.39)):
     b.box('interior', 'woodDark', 0.025, 0.42, 0.025, x, P, Z0 + LOG + 0.04, tilt=-0.15)
     b.box('interior', 'iron', 0.16, 0.025, 0.03, x, P + 0.4, Z0 + LOG + 0.1)
 b.box('interior', 'iron', 0.06, 0.09, 0.06, 0.5, P + 0.5, Z0 + LOG + 0.04)
-flames.append([0.5, round(P + 0.52, 3), round(Z0 + LOG + 0.04, 3)])
+lamps.append([0.5, round(P + 0.56, 3), round(Z0 + LOG + 0.04, 3), 'interior'])   # mały płomyk latarni w izbie
 # piecyk pod kominem
 b.box('interior', 'stone', 0.24, 0.28, 0.2, CX, P, CZ + 0.02)
 b.box('interior', 'dark', 0.13, 0.11, 0.02, CX, P + 0.04, CZ + 0.12)
@@ -132,7 +135,7 @@ for k in range(8):   # krąg kamieni
 b.box('base', 'ash', 0.24, 0.006, 0.24, FX, 0.002, FZ)
 for a in (0.4, 2.0, 3.5):   # polana w ognisku
     b.box('base', 'woodDark', 0.03, 0.03, 0.18, FX, 0.012, FZ, rot=a)
-flames.append([FX, 0.03, FZ])
+fires.append([FX, 0.04, FZ])   # ognisko załogi: płonie jak w obozowisku
 for (x, z, a) in ((FX - 0.36, FZ - 0.05, 0.2), (FX + 0.05, FZ + 0.34, 1.5)):   # kłody do siedzenia
     b.box('base', 'bark', 0.38, 0.1, 0.11, x, 0, z, rot=a)
 solid.append([FX - 0.5, FX + 0.25, FZ - 0.22, FZ + 0.45])
@@ -150,5 +153,5 @@ VIEWS = [
     ['ognisko', [-0.1, 0.4, 1.5], [-0.55, 0.1, 0.78], OUT, 18],
 ]
 b.save('minecamp', maxe=0.22, rays=16, reach=0.3, extra={
-    'solid': solid, 'open': open_, 'floorY': P, 'chimneys': chimneys, 'flames': flames,
+    'solid': solid, 'open': open_, 'floorY': P, 'chimneys': chimneys, 'lamps': lamps, 'campfires': fires, 'lights': lights,
     'pennant': [round(X1 - 0.05, 3), round(H1 + RISE - 0.1, 3), round(Z0 + 0.1, 3)], 'views': VIEWS})

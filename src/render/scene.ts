@@ -2092,6 +2092,17 @@ export class GameRenderer {
           o.getWorldPosition(w); F.add(w, 0.3, 0.17, (o.id * 0.271) % 1, glow);
         }
       }
+      // latarnie płonące zawsze (sztolnia, izba baraku) i ognisko przed barakiem: znaczniki z modelu, zapamiętane przy budynku
+      let spots = mesh.userData.lampSpots as THREE.Object3D[] | undefined;
+      if (!spots) { spots = []; mesh.traverse((o) => { if (o.name === 'lampSpot' || o.name === 'campfire') spots!.push(o); }); mesh.userData.lampSpots = spots; }
+      for (const o of spots) {
+        let shown = true;
+        for (let p: THREE.Object3D | null = o.parent; p && p !== mesh; p = p.parent) if (!p.visible) { shown = false; break; }
+        if (!shown) continue;
+        o.getWorldPosition(w);
+        if (o.name === 'campfire') { F.add(w, 0.42, 0.3, (o.id * 0.311) % 1, glow); F.add(w.set(w.x + 0.04, w.y, w.z - 0.03), 0.3, 0.2, (o.id * 0.731) % 1, 0); }
+        else F.add(w, 0.16, 0.09, (o.id * 0.419) % 1, 0.5);
+      }
       const camp = named(mesh, 'flame');
       if (camp && camp.visible) {
         camp.getWorldPosition(w);

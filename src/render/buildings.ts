@@ -868,6 +868,20 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     o.position.set(x, y, z);
     g.add(o);
   }
+  // latarnie, które płoną zawsze (sztolnia, izba baraku): znacznik w swojej grupie, więc widać go tylko, gdy widać tę grupę
+  for (const [x, y, z, grp] of (model as unknown as { lamps?: [number, number, number, string?][] }).lamps ?? []) {
+    const o = new THREE.Object3D();
+    o.name = 'lampSpot';
+    o.position.set(x, y, z);
+    (grp === 'interior' ? interior : g).add(o);
+  }
+  // ognisko przed budynkiem (barak górników): pali się cały czas, rysuje je system płomieni jak w obozowisku
+  for (const [x, y, z] of (model as unknown as { campfires?: [number, number, number][] }).campfires ?? []) {
+    const o = new THREE.Object3D();
+    o.name = 'campfire';
+    o.position.set(x, y, z);
+    g.add(o);
+  }
   for (const [x, y, z] of marks.flames ?? []) {
     const f = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.16, 6).translate(0, 0.08, 0), M.ember);
     f.name = 'flame';
