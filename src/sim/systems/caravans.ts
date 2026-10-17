@@ -9,7 +9,7 @@ import { FP, keepCenter, playerKeep, storeCapacity, storeUsed, type Caravan, typ
  * Wóz jest bezbronny: gdy dopadnie go żołnierz wroga, towar przejmuje właściciel tego żołnierza.
  */
 
-/** Co można wysłać (wszystko, co leży w składach, spichlerzach i zbrojowni, oraz złoto) */
+/** Co można wysłać (wszystko, co leży w składach, spichlerzach i zbrojowni, oraz ruda) */
 export const SENDABLE = RESOURCES.map((_, i) => i);
 /** Najwięcej sztuk na jeden wóz */
 export const CARAVAN_MAX = 100;
@@ -55,7 +55,7 @@ export function sendCaravan(g: GameState, player: number, to: number, res: numbe
   return true;
 }
 
-/** Towar trafia do gracza (do wolnego miejsca w jego składach; złoto bez limitu). Zwraca, ile się zmieściło. */
+/** Towar trafia do gracza (do wolnego miejsca w jego składach; ruda bez limitu). Zwraca, ile się zmieściło. */
 function deliver(g: GameState, player: number, res: number, amount: number): number {
   const p = g.players[player];
   if (!p) return 0;

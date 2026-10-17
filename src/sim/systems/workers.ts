@@ -560,7 +560,7 @@ export function workerSystem(g: GameState): void {
       u.carryRes = resIndex(prod.output.res);
       u.carryAmt = prod.output.amount;
       if (job && job.type === OREMINE) {
-        // kopalnia: z jednego kursu wychodzi kamień, żelazo albo (rzadko) złoto — losowane z ziarna meczu
+        // kopalnia: z jednego kursu wychodzi kamień, żelazo albo (rzadko) ruda — losowane z ziarna meczu
         let roll = g.rng.int(100);
         let pick = MINE_YIELDS[0]!;
         for (const y of MINE_YIELDS) { pick = y; if ((roll -= y.weight) < 0) break; }

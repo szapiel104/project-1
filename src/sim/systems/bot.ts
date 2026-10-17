@@ -153,7 +153,7 @@ export function botSystem(g: GameState): void {
     // (dopiero gdy stoją koszary: najpierw gospodarka i wojsko, potem drewno na palisadę)
     if (tk % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
       && g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks')) placementBatch(() => fortify(g, p));
-    // kooperacja: wzmocniony bot co ok. 2 minuty dostaje dostawę broni i złota (więcej wojska na fale)
+    // kooperacja: wzmocniony bot co ok. 2 minuty dostaje dostawę broni i rudy (więcej wojska na fale)
     if (p.boost && tk % (THINK * 60) === 0) {
       p.res[resIndex('spear')]! += Math.round(2 * p.boost);
       p.res[resIndex('bow')]! += Math.round(p.boost);
@@ -161,14 +161,14 @@ export function botSystem(g: GameState): void {
     }
     // podatek, gdy osada jest zadowolona: złoto na żołd
     p.tax = p.popularity > 70 ? 2 : p.popularity > 55 ? 1 : 0;
-    // wojsko: szkoli jednego włócznika naraz, gdy ma broń, złoto i wolnego chłopa
+    // wojsko: szkoli jednego włócznika naraz, gdy ma broń, rudę i wolnego chłopa
     const barracks = g.buildings.find((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks');
     if (barracks) {
       // mieszane wojsko: mniej więcej co trzeci to łucznik, gdy są łuki
       const mine = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id);
       const archers = mine.filter((s) => UNITS[s.kind]!.range).length;
       const wantArcher = archers * 3 < mine.length + 1;
-      // przy większym wojsku jeden taran na bramy i mury wroga (gdy starcza drewna i złota na resztę)
+      // przy większym wojsku jeden taran na bramy i mury wroga (gdy starcza drewna i rudy na resztę)
       const rams = mine.filter((s) => UNITS[s.kind]!.ram).length;
       const wantRam = rams === 0 && mine.length >= 6 && p.res[resIndex('wood')]! >= 90 && p.res[resIndex('gold')]! >= 60;
       if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);

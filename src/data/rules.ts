@@ -64,7 +64,7 @@ export const RULES = {
     { name: 'rations.extra', foodPer8: 6, effect: 4 },
     { name: 'rations.double', foodPer8: 8, effect: 8 },
   ],
-  /** Podatki: złoto miesięcznie na 2 chłopów (ujemne = rozdawanie złota) i wpływ na popularność */
+  /** Podatki: ruda miesięcznie na 2 chłopów (ujemne = rozdawanie rudy) i wpływ na popularność */
   taxes: [
     { name: 'tax.bribe', goldPer2: -2, effect: 4 },
     { name: 'tax.none', goldPer2: 0, effect: 1 },

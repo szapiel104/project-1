@@ -46,7 +46,7 @@ function formation(g: GameState, center: number, count: number): number[] {
   return out;
 }
 
-/** Szkolenie: wolny chłop dostaje broń ze składu i za złoto staje się żołnierzem przy koszarach. */
+/** Szkolenie: wolny chłop dostaje broń ze składu i za rudę staje się żołnierzem przy koszarach. */
 export function train(g: GameState, player: number, barracksId: number, unit: string): boolean {
   const kind = unitIndex(unit);
   const def = UNITS[kind];

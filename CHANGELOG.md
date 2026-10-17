@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.25.2 — ruda zamiast złota (2026-10-17)
+
+- Waluta po polsku nazywa się wszędzie „ruda”: poprawiony rozdział o waluce w „Jak grać” (z dopiskiem, że rudę daje podatek i kopalnia) i opis strażnika w galerii; po angielsku dalej „ore”
+
 ## 0.25.1 — cała gra po angielsku (2026-10-17)
 
 - Po wybraniu English po angielsku są teraz: ekran wczytywania (rady, kroki paska), okna ludzi i budynków („Walk through his eyes”), dolny pasek, sojusznicy, mapa, znaczniki i czat, raporty popularności i wojska, alarmy i powiadomienia, konto i logowanie („Your account”, „New password”, historia meczów z angielskimi datami), pokoje i gra przez sieć, całe „Jak grać”, podgląd modeli, rangi graczy i pory roku

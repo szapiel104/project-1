@@ -258,7 +258,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     if (id === 'ore') { li.hidden = true; continue; }
     resList.append(li);
   }
-  // kolejność: drewno, kamień, złoto, jedzenie razem, potem tyle kolejnych zapasów, ile zmieści się w pasku,
+  // kolejność: drewno, kamień, ruda, jedzenie razem, potem tyle kolejnych zapasów, ile zmieści się w pasku,
   // a reszta w wysuwanej listwie nad paskiem (przycisk „…”)
   for (const id of MAIN_RES) resList.append(resItems[RESOURCES.indexOf(id)]!);
   resList.append(foodSum);

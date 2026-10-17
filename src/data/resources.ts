@@ -6,7 +6,7 @@ export type StoreKind = 'stockpile' | 'granary' | 'armory';
 export interface ResourceDef {
   name: string;
   color: number;
-  /** Gdzie chłopi odnoszą surowiec. Złoto nie jest noszone. */
+  /** Gdzie chłopi odnoszą surowiec. Ruda z podatków nie jest noszona. */
   store: StoreKind | null;
   /** Czy liczy się jako żywność przy racjach */
   food?: boolean;

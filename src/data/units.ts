@@ -4,7 +4,7 @@ import type { ResourceId } from './resources';
 export interface UnitDef {
   id: string;
   name: string;
-  /** Co zużywa szkolenie (broń ze składu i złoto); do tego zawsze jeden wolny chłop */
+  /** Co zużywa szkolenie (broń ze składu i ruda); do tego zawsze jeden wolny chłop */
   cost: Partial<Record<ResourceId, number>>;
   hp: number;
   /** Szybkość marszu w procentach szybkości chłopa */

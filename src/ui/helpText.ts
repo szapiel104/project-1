@@ -63,9 +63,9 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       { h: tx('Odpoczynek', 'Rest') },
       tx('Po trzech dostawach robotnik idzie na chwilę odpocząć do najbliższej chaty. Bez chat pracuje bez przerwy, ale chaty i tak są potrzebne na nowych ludzi.',
         'After three deliveries a worker goes to the nearest house for a short rest. Without houses they work without a break — but you need houses for newcomers anyway.'),
-      { h: tx('Złoto', 'Ore') },
-      tx('Złoto daje tylko podatek (i to, co masz na starcie). Wydajesz je na żołnierzy, karczmę i rozdawanie ludziom.',
-        'Ore is your coin, and it comes only from taxes (plus what you start with). You spend it on soldiers, the tavern and handouts to your people.'),
+      { h: tx('Ruda', 'Ore') },
+      tx('Rudę daje podatek i kopalnia (i to, co masz na starcie). Wydajesz ją na żołnierzy, karczmę i rozdawanie ludziom.',
+        'Ore is your coin: it comes from taxes and the mine (plus what you start with). You spend it on soldiers, the tavern and handouts to your people.'),
     ],
   },
   {
