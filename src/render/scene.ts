@@ -1710,7 +1710,14 @@ export class GameRenderer {
     this.walk = { x: tileX, z: tileY, yaw: heading, pitch: -0.05, keys, bob: 0 };
     const cam = this.cam.camera;
     cam.fov = 70; cam.near = 0.05; cam.updateProjectionMatrix();
-    const down = (e: KeyboardEvent): void => { if (this.walk) { if (e.code === 'KeyF' && !e.repeat) this.toggleHandTorch(); keys.add(e.code); if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyF'].includes(e.code)) e.stopImmediatePropagation(); } };
+    const down = (e: KeyboardEvent): void => {
+      if (!this.walk) return;
+      // Esc bez zablokowanego kursora (przeglądarka nie dała blokady, np. start spaceru z kliknięcia mapy): wyjście ze spaceru
+      if (e.key === 'Escape' && document.pointerLockElement !== this.canvas) { e.stopImmediatePropagation(); end(); return; }
+      if (e.code === 'KeyF' && !e.repeat) this.toggleHandTorch();
+      keys.add(e.code);
+      if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'KeyF'].includes(e.code)) e.stopImmediatePropagation();
+    };
     const up = (e: KeyboardEvent): void => { keys.delete(e.code); };
     const move = (e: MouseEvent): void => {
       if (!this.walk || document.pointerLockElement !== this.canvas) return;
@@ -1722,11 +1729,13 @@ export class GameRenderer {
     const end = (): void => {
       window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true);
       window.removeEventListener('mousemove', move); document.removeEventListener('pointerlockchange', lock); this.canvas.removeEventListener('click', click);
+      // kamera wraca nad miejsce, w którym skończył się spacer (lookAt sam przycina je do dozwolonego obszaru mapy)
+      const ex = this.walk?.x ?? tileX, ez = this.walk?.z ?? tileY;
       this.walk = null;
       if (this.roomLight) this.roomLight.intensity = 0;
       if (this.torchOn) this.toggleHandTorch();
       cam.fov = 38; cam.near = 0.5; cam.updateProjectionMatrix();
-      this.cam.lookAt(tileX - this.state!.map.width / 2, tileY - this.state!.map.height / 2, 22);
+      this.cam.lookAt(ex - this.state!.map.width / 2, ez - this.state!.map.height / 2, 22);
       this.onWalkEnd();
     };
     window.addEventListener('keydown', down, true); window.addEventListener('keyup', up, true);

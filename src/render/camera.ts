@@ -107,6 +107,8 @@ export class StrategyCamera {
 
   lookAt(x: number, z: number, dist = this.dist): void {
     this.lift = 0;
+    // poza grywalnym środkiem (np. koniec spaceru przy krawędzi): od razu najbliższy dozwolony punkt, żeby kamera nie utknęła
+    [x, z] = this.clampGoal(x, z);
     this.target.set(x, 0, z);
     this.dist = dist;
     this.snap();
