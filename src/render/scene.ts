@@ -46,7 +46,7 @@ import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
 import { Family, yardModel } from './family';
-import { createLoads, tint, carryArms, plankBundle, ON_SHOULDER } from './loads';
+import { createLoads, tint, carryArms, plankBundle, ON_SHOULDER, loadMaterials } from './loads';
 import { FireCrewFx } from './firecrew';
 import { DRAW as FIRE_DRAW } from '../sim/systems/fire';
 import { HAZE, buildTerrain, type TerrainView } from './terrain';
@@ -845,9 +845,7 @@ export class GameRenderer {
     ], MAX_UNITS);
     // wiązka desek na ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami
     const plank = plankBundle();
-    const plankMap = pattern('planks')?.clone() ?? null;
-    if (plankMap) { plankMap.repeat.set(0.25, 1); plankMap.needsUpdate = true; }
-    this.planks = new THREE.InstancedMesh(plank, new THREE.MeshStandardMaterial({ vertexColors: true, map: plankMap, roughness: 0.9 }), MAX_UNITS);
+    this.planks = new THREE.InstancedMesh(plank, loadMaterials(plank), MAX_UNITS); // deski z fakturą drewna, przewiązki z płótna
     for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'niesione bale i deski')); }
 
     this.cam = new StrategyCamera(canvas);

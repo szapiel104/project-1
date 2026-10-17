@@ -10,7 +10,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { BUILDINGS } from './data/buildings';
 import { RESOURCES } from './data/resources';
-import { carryArms, loadGeometry, ON_SHOULDER, plankBundle } from './render/loads';
+import { carryArms, loadGeometry, loadMaterials, ON_SHOULDER, plankBundle } from './render/loads';
 import { lang, t, tx } from './i18n';
 import { buildingModel, isWetMat, isWindowMat, setNight } from './render/buildings';
 import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
@@ -55,7 +55,7 @@ function carrier(res: string): Make {
     f.finish(1);
     const geo = planks ? plankBundle() : loadGeometry(res);
     if (geo) {
-      const m = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, flatShading: !planks, roughness: 0.9 }));
+      const m = new THREE.Mesh(geo, loadMaterials(geo));
       m.scale.setScalar(f.sizeOf(id, RED));
       holder.add(m);
     }
