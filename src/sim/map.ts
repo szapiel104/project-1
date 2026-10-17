@@ -91,8 +91,9 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
         e = Math.min(255, 170 + Math.min(rim - edge, (massif - 150) >> 3) * 9 + (hash2(x, y, seed) & 15));
       } else if (h < preset.waterLevel) t = Terrain.Water;
       // kamień i żelazo tylko u podnóża gór, w niedużych złożach; żelazo rzadsze i bliżej skał
-      else if (edge < rim + 3 && massif > 120 && ore > 208) t = Terrain.Iron;
-      else if (edge < rim + 5 && massif > 105 && valueNoise(x, y, 6, seed ^ 0x1b873593) > 186) t = Terrain.Stone;
+      // (od generatora 4 złóż na powierzchni nie ma wcale — kamień, żelazo i rudę daje kopalnia pod górą)
+      else if (gen < 4 && edge < rim + 3 && massif > 120 && ore > 208) t = Terrain.Iron;
+      else if (gen < 4 && edge < rim + 5 && massif > 105 && valueNoise(x, y, 6, seed ^ 0x1b873593) > 186) t = Terrain.Stone;
       else if (forest > 146) {
         // w głębi puszczy tu i ówdzie polana (generator 2), żeby las nie był jednolitą ścianą
         t = gen >= 2 && forest < 200 && valueNoise(x, y, 5, seed ^ 0x0badf00d) > 226 ? Terrain.Grass : Terrain.Forest;

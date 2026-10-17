@@ -105,10 +105,19 @@ describe('mapa', () => {
       for (let i = 0; i < total; i++) if ((i < total / 2 ? 0 : 1) === half && m.tiles[i] === t) n++;
       return n;
     };
-    for (const t of [Terrain.Forest, Terrain.Stone, Terrain.Iron]) {
+    for (const t of [Terrain.Forest, Terrain.Mountain]) {
       expect(count(t, 0)).toBe(count(t, 1));
       expect(count(t, 0)).toBeGreaterThan(0);
     }
+  });
+
+  it('od generatora 4 nie ma placków kamienia ani żelaza (urobek daje kopalnia pod górą)', () => {
+    for (const p of ['1v1', '2v2'] as const) {
+      const m = generateMap(314, p);
+      expect(m.tiles.some((t) => t === Terrain.Stone || t === Terrain.Iron)).toBe(false);
+    }
+    const old = generateMap(314, '1v1', 3);
+    expect(old.tiles.some((t) => t === Terrain.Stone)).toBe(true);
   });
 });
 

@@ -667,6 +667,17 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
     return true;
   };
+  /** Odległość pola od najbliższej skały gór (1–3 pola, 0 = dalej): u podnóża leży rumowisko, które spadło ze zboczy */
+  const rockFoot = (x: number, y: number): number => {
+    let best = 0;
+    for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) {
+      const nx = x + dx, ny = y + dy;
+      if (nx < 0 || ny < 0 || nx >= w || ny >= h || map.tiles[ny * w + nx] !== Terrain.Mountain) continue;
+      const d = Math.max(Math.abs(dx), Math.abs(dy));
+      if (!best || d < best) best = d;
+    }
+    return best;
+  };
   const farFromKeeps = (x: number, y: number): boolean => map.starts.every((st) => Math.hypot(st.x - x, st.y - y) > 16);
   const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [], reeds: Item[] = [], lilies: Item[] = [];
   const m = new THREE.Matrix4();
@@ -744,6 +755,21 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const n = 2 + ((r >>> 9) & 1) + ((r >>> 11) & 1);
         for (let k = 0; k < n; k++) put(rocks, x, y, 40 + k, 0.55 + ((r >>> (k * 3)) & 7) / 10, 0.95);
         put(pebbles, x, y, 46, 0.4, 0.95);
+      }
+      else if (t === Terrain.Grass && !sandy && !map.trails?.[y * w + x] && map.gen >= 4 && rockFoot(x, y) > 0 && farFromKeeps(x, y)) {
+        // podnóże gór (generator 4, bez dawnych placków złóż): rumowisko ze zboczy — przy samej skale gęściej i większe głazy,
+        // dalej coraz rzadziej i drobniej; skupiska płyną z szumu, więc nie układają się w równy pas ani w kratkę
+        const d = rockFoot(x, y);
+        const clump = (nz(x / 7, y / 7) + 1) / 2; // 0..1: tu leży więcej, tam prawie nic
+        const chance = (d === 1 ? 0.55 : d === 2 ? 0.28 : 0.1) * (0.35 + clump * 0.9);
+        if (((r >>> 5) & 1023) / 1023 < chance) {
+          const n = d === 1 ? 1 + ((r >>> 9) & 1) + (clump > 0.6 ? 1 : 0) : 1;
+          const big = d === 1 ? 0.55 : d === 2 ? 0.38 : 0.24;
+          for (let k = 0; k < n; k++) put(rocks, x, y, 50 + k, big + ((r >>> (12 + k * 3)) & 7) / (d === 1 ? 14 : 22), 0.95);
+        }
+        if ((r >>> 17) % (d === 1 ? 2 : 4) === 0) put(pebbles, x, y, 55, 0.25 + ((r >>> 20) & 3) * 0.08, 0.95);
+        // między kamieniami jałowiec i krzaki, trawa zostaje (to łąka pod górą, nie żwirowisko)
+        if ((r >>> 24) % 7 === 0) put(bushes, x, y, 56, 0.6 + ((r >>> 27) & 3) * 0.1, 0.95);
       }
       else if (t === Terrain.Grass && !sandy && !nearW && !map.trails?.[y * w + x] && !besideForest(x, y) && (r >>> 7) % 211 === 0 && farFromKeeps(x, y)) {
         // samotne drzewo na łące: rozłożysty, stary dąb (czasem świerk), widoczny z daleka

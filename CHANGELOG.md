@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.26.2 — podnóże gór bez placków złóż (2026-10-17)
+
+- Nowe mapy (generator 4) nie mają już placków kamienia i rudy żelaza także u podnóża gór (przy zamku zniknęły w generatorze 3) — kamień, żelazo i rudę daje kopalnia stawiana pod górą
+- U stóp gór leży teraz naturalne rumowisko na trawie: przy samej skale gęściej i większe głazy, dalej coraz rzadziej i drobniej, w nieregularnych skupiskach, między nimi krzaki
+- Stare zapisy wczytują się na swojej dawnej mapie bez zmian
+
 ## 0.26.1 — dziennik błędów gry i grafiki (2026-10-17)
 
 - Gra prowadzi dziennik błędów: wyjątki, błędy shaderów i WebGL, utrata kontekstu karty graficznej, brakujące tekstury i pliki, zatrzymany obraz; po zawieszeniu karty dziennik z poprzedniego wejścia zostaje
