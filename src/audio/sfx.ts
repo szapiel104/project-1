@@ -403,6 +403,55 @@ export function nature(night: number, rain: number, paused: boolean, wolvesNear 
   }
 }
 
+let nextDrip = 0, nextPick = 0, caveEcho: { input: GainNode } | null = null;
+/** Pogłos sztolni: krótkie echo z wygaszaniem (opóźnienie ze sprzężeniem przez filtr), wspólne dla kapania i kilofów */
+function echoBus(c: AudioContext): GainNode {
+  if (caveEcho) return caveEcho.input;
+  const input = c.createGain(), delay = c.createDelay(1), fb = c.createGain(), lp = c.createBiquadFilter(), wet = c.createGain();
+  delay.delayTime.value = 0.23; fb.gain.value = 0.42; lp.type = 'lowpass'; lp.frequency.value = 2400; wet.gain.value = 0.5;
+  input.connect(busGain.amb ?? master!);
+  input.connect(delay); delay.connect(lp).connect(fb).connect(delay); lp.connect(wet).connect(busGain.amb ?? master!);
+  caveEcho = { input };
+  return input;
+}
+/** Kropla spadająca do kałuży: krótkie „plum” z opadającym tonem, odbite echem od skały */
+function drip(c: AudioContext, at: number, pan: number, gain: number): void {
+  const o = c.createOscillator(); o.type = 'sine';
+  const f0 = 900 + Math.random() * 900;
+  o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f0 * 2.1, at + 0.035);
+  const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.09 * gain, at + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.09);
+  const p = c.createStereoPanner(); p.pan.value = pan;
+  o.connect(g).connect(p).connect(echoBus(c));
+  o.start(at); o.stop(at + 0.12);
+}
+/**
+ * Dźwięki sztolni zamiast łąki: wiatr i deszcz cichną, ze stropu kapie woda (gęściej przy jeziorku, `water` 0–1),
+ * a z dalszych chodników niesie się echo kilofów, gdy ktoś kopie (`picks` = ilu górników pracuje).
+ */
+export function caveSounds(water: number, picks: number): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running') return;
+  const now = c.currentTime;
+  if (wind) wind.gain.gain.setTargetAtTime(0, now, 0.4);
+  if (rainNoise) rainNoise.gain.gain.setTargetAtTime(0, now, 0.4);
+  if (now > nextDrip) {
+    drip(c, now, Math.random() * 1.4 - 0.7, 0.5 + water * 0.7);
+    if (Math.random() < 0.3) drip(c, now + 0.18 + Math.random() * 0.2, Math.random() * 1.4 - 0.7, 0.4 + water * 0.5);
+    nextDrip = now + (0.6 + Math.random() * 2.2) * (1 - water * 0.6);
+  }
+  if (picks > 0 && now > nextPick) {
+    // daleki stuk kilofa o skałę: dwa twarde uderzenia z echem
+    const pan = Math.random() * 1.6 - 0.8, p = c.createStereoPanner(); p.pan.value = pan; p.connect(echoBus(c));
+    for (let i = 0; i < 2; i++) {
+      const at = now + i * 0.06, o = c.createOscillator(), g = c.createGain();
+      o.type = 'square'; o.frequency.setValueAtTime(1500 + Math.random() * 500, at); o.frequency.exponentialRampToValueAtTime(600, at + 0.03);
+      g.gain.setValueAtTime(0.025, at); g.gain.exponentialRampToValueAtTime(0.0001, at + 0.05);
+      o.connect(g).connect(p); o.start(at); o.stop(at + 0.06);
+    }
+    nextPick = now + (2.6 + Math.random() * 3) / Math.min(4, picks);
+  }
+}
+
 /**
  * Dźwięk z miejsca na mapie: `near` 0..1 (1 = przy środku ekranu), `pan` -1..1 (lewo/prawo).
  * Daleko — cicho i bez wysokich tonów nie ma sensu grać, więc poniżej progu po prostu milczymy.

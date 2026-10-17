@@ -7,6 +7,8 @@ import { step } from '../src/sim/step';
 import { backTiles, canPlace, rockBehind } from '../src/sim/systems/placement';
 import { crewWanted, MINE_YIELDS } from '../src/sim/systems/workers';
 import { CAMP_T, campOf, holdTotal } from '../src/sim/systems/minecamp';
+import { GUARD, UNITS } from '../src/data/units';
+import { FP } from '../src/sim/state';
 import { clockAt } from '../src/sim/clock';
 
 /** Gra bez botów, z zapasem drewna na kopalnię i chaty */
@@ -181,5 +183,32 @@ describe('kopalnia pod górami', () => {
       if (h >= 1 && h < 4) slept = [mine.worker, ...(mine.crew ?? [])].some((id) => { const u = g.units.find((x) => x.id === id); return !!u && u.home === camp.id; });
     }
     expect(slept).toBe(true);
+  });
+
+  it('wróg pod kopalnią: załoga ucieka do zamku i wraca do roboty, gdy wroga już nie ma', () => {
+    const g = createGame(3);
+    const at = rockSpot(g);
+    step(g, [{ type: 'build', player: 0, building: 'oremine', x: at.x, y: at.y, rot: at.rot }]);
+    const mine = g.buildings.find((b) => b.type === MINE)!;
+    const tpl = g.units.find((u) => u.owner === 0)!;
+    for (let i = 0; i < 12; i++) g.units.push({ ...tpl, id: g.nextId++, job: 0, home: 0, phase: Phase.Idle, path: [], carryRes: -1, carryAmt: 0, target: 0, wait: 0, timer: 0, batches: 0, trips: 0 });
+    // do pierwszego kursu: ktoś kopie w sztolni
+    let t = 0;
+    while (t++ < 6000 && !g.units.some((u) => u.job === mine.id && u.phase === Phase.Working)) step(g, []);
+    expect(g.units.some((u) => u.job === mine.id && u.phase === Phase.Working)).toBe(true);
+    // żołnierz wroga (stoi w miejscu) tuż przy kopalni
+    const w = g.map.width, d = mine.door;
+    const foe = { id: g.nextId++, owner: 1, kind: GUARD, px: (d % w) * FP + FP / 2, py: Math.floor(d / w) * FP + FP / 2 + 2 * FP, path: [], hp: 9999, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
+    g.soldiers.push(foe);
+    run(g, 20);
+    expect(mine.threat ?? 0).toBeGreaterThan(g.tick);
+    run(g, 200);
+    expect(g.units.some((u) => u.job === mine.id && u.phase === Phase.Working)).toBe(false);
+    // wróg odchodzi: po chwili alarm gaśnie i górnicy wracają do sztolni
+    g.soldiers.splice(g.soldiers.indexOf(foe), 1);
+    let back = false;
+    for (let i = 0; i < 4000 && !back; i++) { step(g, []); back = !mine.threat && g.units.some((u) => u.job === mine.id && u.phase === Phase.Working); }
+    expect(back).toBe(true);
+    expect(UNITS[GUARD]).toBeDefined();
   });
 });

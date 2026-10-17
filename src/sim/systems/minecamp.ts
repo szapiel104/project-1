@@ -1,7 +1,7 @@
 import { BUILDINGS, footprint } from '../../data/buildings';
 import { RESOURCES, resIndex, type ResourceId } from '../../data/resources';
 import { GUARD, UNITS } from '../../data/units';
-import { walkable } from '../path';
+import { findPath, walkable } from '../path';
 import { FP, Phase, playerKeep, type Building, type GameState, type Soldier } from '../state';
 import { routeTo } from './caravans';
 
@@ -77,7 +77,45 @@ function posts(g: GameState, b: Building): number[] {
   return out.length ? out : [b.door];
 }
 
+/** Jak blisko kopalni (pola, od środka) musi podejść wróg, żeby załoga uciekła, i ile ticków alarm trwa po jego odejściu */
+export const THREAT_RANGE = 7;
+const THREAT_HOLD = 150;
+
+/**
+ * Wróg pod kopalnią (jak napad na Starą Kopalnię): górnicy rzucają kilofy i uciekają pod barak (bez baraku — do zamku),
+ * a wracają do roboty dopiero, gdy wroga nie ma w pobliżu przez chwilę (workers.ts czeka, dopóki trwa `threat`).
+ */
+export function mineThreats(g: GameState): void {
+  if (MINE_T < 0 || g.tick % 10 !== 0) return;
+  const R = THREAT_RANGE * FP;
+  for (const b of g.buildings) {
+    if (b.type !== MINE_T || !ready(b)) continue;
+    const myTeam = g.players[b.owner]?.team ?? -1;
+    const [cx, cy] = center(b);
+    const mx = cx * FP, my = cy * FP;
+    const foe = g.soldiers.some((s) => s.hp > 0 && s.owner !== b.owner && (g.players[s.owner]?.team ?? -2) !== myTeam && Math.max(Math.abs(s.px - mx), Math.abs(s.py - my)) <= R);
+    if (!foe) { if (b.threat && g.tick >= b.threat) delete b.threat; continue; }
+    b.threat = g.tick + THREAT_HOLD;
+    const shelter = campOf(g, b) ?? playerKeep(g, b.owner);
+    if (!shelter || shelter.door < 0) continue;
+    const w = g.map.width;
+    for (const id of b.worker ? [b.worker, ...(b.crew ?? [])] : b.crew ?? []) {
+      const u = g.units.find((x) => x.id === id);
+      // ucieka ten, kto jest w sztolni albo do niej idzie; niosący urobek dokańczają drogę do składu
+      if (!u || (u.phase !== Phase.Working && u.phase !== Phase.Returning)) continue;
+      if (u.phase === Phase.Returning && u.path.length && (u.fled ?? 0) > g.tick) continue; // już biegnie w ukrycie
+      const from = (u.py >> 8) * w + (u.px >> 8);
+      if (from === shelter.door) continue;
+      const path = findPath(g, from, (t) => t === shelter.door, 1400, u.owner, shelter.door);
+      if (!path || !path.length) continue;
+      u.phase = Phase.Returning; u.timer = 0; u.target = 0; u.path = path; u.wait = 0;
+      u.fled = g.tick + 400;
+    }
+  }
+}
+
 export function campSystem(g: GameState): void {
+  mineThreats(g);
   if (CAMP_T < 0 || g.tick % 5 !== 0) return;
   const camps = g.buildings.filter((b) => b.type === CAMP_T);
   const alive = new Set(camps.filter(ready).map((b) => b.id));

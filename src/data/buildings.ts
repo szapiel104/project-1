@@ -178,7 +178,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'oremine', category: 'industry', name: 'b.oremine', w: 3, h: 3, cost: { wood: 30 }, hp: 360, buildable: true,
     workView: 'inside', needsRock: true, crew: { per: 4, max: 8 },
-    production: { output: { res: 'stone', amount: 6 }, site: 'home', workTicks: 90 },
+    production: { output: { res: 'stone', amount: 10 }, site: 'home', workTicks: 150 },
   },
   // Barak górników: stawiany przy kopalni (do 10 pól). Załoga nocuje tu i siedzi wieczorem przy ognisku zamiast wracać
   // do wioski; urobek odkłada pod barakiem, a do zamku wozi go wóz pod eskortą dwóch strażników kopalni (minecamp.ts).

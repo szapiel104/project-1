@@ -38,7 +38,7 @@ import { createAllies } from './ui/allies';
 import { createMinimap } from './ui/minimap';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
-import { alarmBell, daySounds, music, getVolume, isMuted, nature, play, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { alarmBell, daySounds, music, getVolume, isMuted, caveSounds, nature, play, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
 import { GUARDS, GUARD_COST } from './sim/systems/guards';
@@ -1652,8 +1652,11 @@ function loop(now: number): void {
     }
   }
   last = now;
-  nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
-  if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
+  if (renderer.inMineWalk) caveSounds(renderer.mineWater, renderer.minePicks);
+  else {
+    nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
+    if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
+  }
   music(renderer.weather.night, alerts.length > 0 || alarmComing, menu.isOpen());
   // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
   // w meczu przez sieć menu nie zatrzymuje czasu — inni gracze grają dalej
@@ -2440,12 +2443,14 @@ function showPerf(now: number): void {
 const walkHint = document.createElement('p');
 walkHint.className = 'walk-hint';
 walkHint.hidden = true;
-walkHint.textContent = tx('W A S D — idź · mysz — rozglądaj się · Shift — biegnij · Spacja — skok · F — pochodnia · portal kopalni — wejście do sztolni (wyjście: wrota na końcu korytarza) · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)', 'W A S D — walk · mouse — look around · Shift — run · Space — jump · F — torch · mine portal — enter the adit (way out: the door at the end of the tunnel) · Esc — back to the overhead view (click if the cursor got released)');
+walkHint.textContent = tx('W A S D — idź · mysz — rozglądaj się · Shift — biegnij · Spacja — skok · F — pochodnia · portal kopalni — wejście do sztolni (wyjście: wrota na końcu korytarza; szyb z drabiną w hali prowadzi niżej) · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)', 'W A S D — walk · mouse — look around · Shift — run · Space — jump · F — torch · mine portal — enter the adit (way out: the door at the end of the tunnel; the ladder shaft in the hall leads deeper) · Esc — back to the overhead view (click if the cursor got released)');
 document.body.append(walkHint);
 renderer.onWalkAlert = (kind) => {
   if (kind === 'seen') hud.toast(tx('Straż wroga Cię zauważyła — uciekaj z ich ziem!', 'The enemy guards have spotted you — flee their lands!'));
   else if (kind === 'safe') hud.toast(tx('Zgubili Cię. Na razie jesteś bezpieczny.', 'They have lost your trail. You are safe for now.'));
   else if (kind === 'killed') hud.toast(tx('Strażnicy wroga dopadli Twojego chłopa. Wracasz nad mapę.', 'The enemy guards caught your peasant. You are back above the map.'));
+  else if (kind === 'mineRaid') hud.toast(tx('Wróg u wrót kopalni! Górnicy rzucili kilofy i uciekają.', 'The enemy is at the mine gates! The miners have dropped their picks and fled.'));
+  else if (kind === 'mineLost') hud.toast(tx('Kopalnia padła — wychodzisz na powierzchnię.', 'The mine has fallen — you climb back to the surface.'));
   else hud.toast(tx('To cudza kopalnia — jej wrota są dla Ciebie zamknięte.', 'This mine belongs to another lord — its gates are shut to you.'));
 };
 renderer.onWalkEnd = () => { document.body.classList.remove('walking'); walkHint.hidden = true; };

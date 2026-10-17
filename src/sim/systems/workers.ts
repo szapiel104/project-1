@@ -19,11 +19,12 @@ const OREMINE = BUILDINGS.findIndex((b) => b.id === 'oremine');
  * Co wychodzi z jednego kursu w kopalni (losowane z ziarna meczu, więc u wszystkich graczy tak samo): wagi i ilości.
  * Ruda (waluta gry, jak w Gothicu; w kodzie 'gold') jest rzadka. Górnicy noszą wszystko: kamień i żelazo do składu,
  * rudę do skarbca w zamku (albo całość pod barak, skąd jedzie wozem). Suma wag = 100.
+ * Kurs jest długi (15 s), a urobek z niego większy: górnicy dłużej siedzą w sztolni, więc w środku widać ich więcej naraz.
  */
 export const MINE_YIELDS: { res: 'stone' | 'iron' | 'gold'; weight: number; amount: number }[] = [
-  { res: 'stone', weight: 58, amount: 6 },
-  { res: 'iron', weight: 34, amount: 4 },
-  { res: 'gold', weight: 8, amount: 4 },
+  { res: 'stone', weight: 58, amount: 10 },
+  { res: 'iron', weight: 34, amount: 7 },
+  { res: 'gold', weight: 8, amount: 6 },
 ];
 /** Ilu górników powinna mieć kopalnia przy danej liczbie mieszkańców: 1 + po jednym na każde `per`, najwyżej `max` */
 export function crewWanted(def: { crew?: { per: number; max: number } }, pop: number): number {
@@ -572,6 +573,8 @@ export function workerSystem(g: GameState): void {
       continue;
     }
     if (u.path.length) { move(g, u); continue; }
+    // wróg pod kopalnią: górnik czeka w ukryciu (pod barakiem albo w zamku), aż alarm minie (minecamp.ts, mineThreats)
+    if (job && job.type === OREMINE && u.phase === Phase.Returning && (job.threat ?? 0) > g.tick) { u.wait = 10; continue; }
 
     const goal = goalFor(g, u, job, prod);
     if (!goal) {

@@ -25,12 +25,23 @@ ROOMS = {
     'R2': (-4.5, 4.5, -3.5, 2.0, 2.6),
     'R3': (-9.0, -4.5, -1.8, -0.4, 1.6),
     'R4': (4.5, 9.0, 0.0, 1.4, 1.6),
+    'R5': (2.6, 3.8, -4.9, -3.5, 1.8),
 }
+# niższy poziom (pod halą, posadzka na y = LOW): komora pod szybem i głęboka galeria z największymi złożami
+LOW = -3.0
+ROOMS2 = {
+    'L1': (2.0, 4.4, -5.6, -3.0, 2.0),
+    'L2': (0.5, 8.5, -10.5, -5.6, 2.8),
+}
+# otwór szybu w posadzce wnęki R5 (i w stropie komory L1 pod nią); drabina stoi w otworze
+HOLE = (2.9, 3.5, -4.6, -4.0)
 # przejścia między salami: (sala, bok, od, do) — w tych odcinkach ściany nie ma
 GAPS = {
     ('R2', 'z1'): [(-0.7, 0.7)], ('R1', 'z0'): [(-0.7, 0.7)],
     ('R2', 'x0'): [(-1.8, -0.4)], ('R3', 'x1'): [(-1.8, -0.4)],
     ('R2', 'x1'): [(0.0, 1.4)], ('R4', 'x0'): [(0.0, 1.4)],
+    ('R2', 'z0'): [(2.6, 3.8)], ('R5', 'z1'): [(2.6, 3.8)],
+    ('L1', 'z0'): [(2.6, 3.8)], ('L2', 'z1'): [(2.6, 3.8)],
 }
 
 
@@ -59,8 +70,20 @@ def face_wall(x0, z0, x1, z1, h, out, step=0.45, amp=0.07, seed=0.0):
             b.poly(G, m, pts, away=(out[0], h * 0.5, out[1]))
 
 
-def room_walls(name):
-    x0, x1, z0, z1, h = ROOMS[name]
+def holed(x0, x1, z0, z1, hole, y, up, mat):
+    """Płyta z prostokątnym otworem: cztery kawałki wokół otworu (posadzka przodem w górę albo strop przodem w dół)"""
+    hx0, hx1, hz0, hz1 = hole
+    for (a0, a1, c0, c1) in ((x0, x1, z0, hz0), (x0, x1, hz1, z1), (x0, hx0, hz0, hz1), (hx1, x1, hz0, hz1)):
+        if a1 - a0 < 0.001 or c1 - c0 < 0.001:
+            continue
+        if up:
+            b.box(G, mat, a1 - a0, 0.02, c1 - c0, (a0 + a1) / 2, y - 0.02, (c0 + c1) / 2, top=True, bottom=False)
+        else:
+            b.poly(G, mat, [(a0, y, c0), (a1, y, c0), (a1, y, c1), (a0, y, c1)], away=((a0 + a1) / 2, y - 5, (c0 + c1) / 2))
+
+
+def room_walls(name, rooms=None, floor_hole=None, ceil_hole=None):
+    x0, x1, z0, z1, h = (rooms or ROOMS)[name]
     cx, cz = (x0 + x1) / 2, (z0 + z1) / 2
     sides = {
         'z0': ((x0, z0), (x1, z0), (cx, z0 - 5)),
@@ -94,7 +117,13 @@ def room_walls(name):
                 else:
                     b.poly(G, 'rockDark', [(ax, top, g0), (ax, top, g1), (ax, h, g1), (ax, h, g0)], away=(out[0], h, out[1]))
     # posadzka (ubita ziemia) i strop (fasetowany, przodem w dół)
-    b.box(G, 'soil', x1 - x0, 0.02, z1 - z0, cx, -0.02, cz, top=True, bottom=False)
+    if floor_hole:
+        holed(x0, x1, z0, z1, floor_hole, 0.0, True, 'soil')
+    else:
+        b.box(G, 'soil', x1 - x0, 0.02, z1 - z0, cx, -0.02, cz, top=True, bottom=False)
+    if ceil_hole:
+        holed(x0, x1, z0, z1, ceil_hole, h, False, 'rockDark')
+        return
     nx, nz = max(1, int((x1 - x0) / 0.9)), max(1, int((z1 - z0) / 0.9))
     for i in range(nx):
         for j in range(nz):
@@ -107,9 +136,9 @@ def room_walls(name):
 
 
 for name in ROOMS:
-    room_walls(name)
+    room_walls(name, floor_hole=HOLE if name == 'R5' else None)
 # strop nad przejściami (krótkie belki skały, żeby nie było dziury między salami)
-for (x0, x1, z0, z1) in ((-0.7, 0.7, 1.9, 2.1), (-4.6, -4.4, -1.8, -0.4), (4.4, 4.6, 0.0, 1.4)):
+for (x0, x1, z0, z1) in ((-0.7, 0.7, 1.9, 2.1), (-4.6, -4.4, -1.8, -0.4), (4.4, 4.6, 0.0, 1.4), (2.6, 3.8, -3.6, -3.4)):
     b.poly(G, 'rockDark', [(x0, 1.55, z0), (x1, 1.55, z0), (x1, 1.55, z1), (x0, 1.55, z1)], away=((x0 + x1) / 2, 6, (z0 + z1) / 2))
 
 # ---------------- korytarz wejściowy: obudowa z belek co 0.8, tory, drzwi wyjścia ----------------
@@ -151,7 +180,7 @@ def boulder(x, z, r, h, seed):
 # filar od posadzki do stropu (kopacze zostawili go, żeby strop nie runął)
 boulder(2.2, -1.2, 0.7, 2.7, 1.0)
 # hałdy urobku i rudy
-for (x, z, r, h, m) in ((-3.4, 1.2, 0.5, 0.45, 'stone'), (3.6, -2.6, 0.55, 0.5, 'stone')):
+for (x, z, r, h, m) in ((-3.4, 1.2, 0.5, 0.45, 'stone'), (3.95, -1.7, 0.5, 0.5, 'stone')):
     b.prism(G, m, r, r * 0.3, h, x, 0, z, seg=9, phase=x)
     solid.append([x - r, x + r, z - r, z + r])
 # hałdy rudy: kupa kanciastych brył jak w Gothicu (spodnie wpuszczone w posadzkę)
@@ -223,12 +252,88 @@ HPI = math.pi / 2
 spots = [[-8.55, -1.2, -HPI], [-8.55, -0.75, -HPI], [8.55, 0.45, HPI], [8.55, 0.95, HPI],
          [-2.0, -2.75, math.pi], [1.0, -2.75, math.pi], [-4.05, 1.2, -HPI], [4.05, -2.4, HPI]]
 
+# ---------------- wnęka szybu w hali: otwór w posadzce, barierka z belek, kołowrót ----------------
+for (x, z) in ((2.75, -4.75), (3.65, -4.75), (2.75, -3.85), (3.65, -3.85)):
+    b.box(G, 'woodDark', 0.08, 0.95, 0.08, x, 0, z)
+b.box(G, 'woodDark', 0.98, 0.07, 0.07, 3.2, 0.9, -4.75)
+b.box(G, 'woodDark', 0.07, 0.07, 0.98, 2.75, 0.9, -4.3)
+b.box(G, 'woodDark', 0.07, 0.07, 0.98, 3.65, 0.9, -4.3)
+b.box(G, 'iron', 0.98, 0.05, 0.05, 3.2, 1.55, -4.3)   # wał kołowrotu nad szybem
+b.prism(G, 'rope', 0.012, 0.012, 1.4, 3.05, 0.15, -4.3, seg=6)
+solid.extend([[2.68, 3.72, -4.83, -4.68], [2.68, 2.82, -4.83, -3.78], [3.58, 3.72, -4.83, -3.78]])
+lamps.append([2.75, 1.05, -3.85])
+
+# ---------------- niższy poziom: rysowany na y = 0, potem przesunięty w dół o LOW ----------------
+mark = {k: len(v) for k, v in b.parts.items()}
+lamps2, solid2, spots2 = [], [], []
+room_walls('L1', ROOMS2, ceil_hole=HOLE)
+room_walls('L2', ROOMS2)
+b.poly(G, 'rockDark', [(2.6, 1.55, -5.7), (3.8, 1.55, -5.7), (3.8, 1.55, -5.5), (2.6, 1.55, -5.5)], away=(3.2, 6, -5.6))
+# wielkie złoża przy ścianach galerii: tu kopie się najwięcej (w nie walą kilofami górnicy z niższego poziomu)
+for k, (x, z, sx, sz) in enumerate(((1.8, -10.55, 1.0, 0.7), (4.5, -10.55, 1.0, 0.7), (7.2, -10.55, 1.0, 0.7), (0.45, -8.0, 0.7, 1.0), (8.55, -7.5, 0.7, 1.0))):
+    b.crystal(G, 'magicOre', x, 0.85, z, 0.5, seed=40 + k, sx=sx, sz=sz, sy=1.2)
+    b.crystal(G, 'magicOre', x + (0.45 if sx == 1.0 else 0.0), 0.3, z + (0.0 if sx == 1.0 else 0.45), 0.28, seed=50 + k, sx=sx, sz=sz)
+    b.crystal(G, 'magicOre', x - (0.4 if sx == 1.0 else 0.0), 1.55, z - (0.0 if sx == 1.0 else 0.4), 0.22, seed=60 + k, sx=sx, sz=sz)
+# kryształowa iglica na środku galerii (wyrosła z posadzki)
+for k, (ox, oz, r, hh) in enumerate(((0.0, 0.0, 0.32, 1.9), (0.3, 0.2, 0.2, 1.3), (-0.25, 0.25, 0.18, 1.1), (0.1, -0.3, 0.16, 0.9))):
+    b.crystal(G, 'magicOre', 6.0 + ox, r * hh * 0.9, -7.6 + oz, r, seed=70 + k, sy=hh)
+solid2.append([5.6, 6.45, -8.05, -7.2])
+# podziemne jeziorko: ciemna, gładka woda w obramowaniu z kamieni (kapie do niej ze stropu)
+b.poly(G, 'caveWater', [(1.3, 0.03, -8.6), (2.9, 0.03, -8.6), (2.9, 0.03, -7.2), (1.3, 0.03, -7.2)], away=(2.1, -5, -7.9))
+for k in range(14):
+    a = 2 * math.pi * k / 14
+    x, z = 2.1 + math.cos(a) * 0.9, -7.9 + math.sin(a) * 0.78
+    b.prism(G, 'rock' if k % 2 else 'rockDark', 0.13 + 0.03 * (k % 3), 0.06, 0.1 + 0.03 * (k % 2), x, 0, z, seg=6, phase=k)
+solid2.append([1.15, 3.05, -8.75, -7.05])
+# stemple i podciąg pod stropem, wózek z urobkiem, skrzynie
+for (x, z) in ((4.5, -6.3), (4.5, -9.8)):
+    b.box(G, 'woodDark', 0.13, 2.7, 0.13, x, 0, z)
+    solid2.append([x - 0.09, x + 0.09, z - 0.09, z + 0.09])
+b.box(G, 'woodDark', 0.14, 0.14, 3.7, 4.5, 2.62, -8.05)
+b.box(G, 'woodDark', 0.42, 0.3, 0.6, 3.2, 0.1, -6.4, rot=0.3)
+for k, (ox, oz, r) in enumerate(((0.0, 0.0, 0.13), (0.08, -0.15, 0.1), (-0.08, 0.15, 0.1))):
+    b.crystal(G, 'magicOre', 3.2 + ox, 0.42, -6.4 + oz, r, seed=k + 80, sy=0.8)
+for sx in (-1, 1):
+    for sz in (-1, 1):
+        b.prism(G, 'iron', 0.08, 0.08, 0.04, 3.2 + sx * 0.22 * math.cos(0.3) + sz * 0.2 * math.sin(0.3), 0.04, -6.4 - sx * 0.22 * math.sin(0.3) + sz * 0.2 * math.cos(0.3), seg=8)
+solid2.append([2.85, 3.55, -6.8, -6.0])
+b.box(G, 'wood', 0.5, 0.35, 0.35, 7.8, 0, -6.0)
+b.box(G, 'wood', 0.35, 0.3, 0.35, 7.9, 0.35, -6.0)
+solid2.append([7.5, 8.1, -6.25, -5.75])
+for (x, z) in ((1.0, -6.0), (8.0, -9.6), (2.4, -9.9), (5.2, -6.0), (2.25, -3.3)):
+    b.box(G, 'woodDark', 0.07, 1.1, 0.07, x, 0, z)
+    b.box(G, 'iron', 0.1, 0.14, 0.1, x, 1.1, z)
+    lamps2.append([x, 1.2, z])
+    solid2.append([x - 0.06, x + 0.06, z - 0.06, z + 0.06])
+spots2 += [[1.8, -9.95, math.pi], [4.5, -9.95, math.pi], [7.2, -9.95, math.pi], [1.0, -8.0, -HPI], [8.0, -7.5, HPI], [6.0, -7.0, math.pi]]
+# przesunięcie całego niższego poziomu w dół
+for k, v in b.parts.items():
+    for i in range(mark.get(k, 0), len(v)):
+        v[i] = [(x, y + LOW, z) for (x, y, z) in v[i]]
+lamps += [[x, y + LOW, z] for (x, y, z) in lamps2]
+# szyb: cztery ściany otworu od stropu komory L1 do posadzki wnęki (przodem do środka) i drabina
+hx0, hx1, hz0, hz1 = HOLE
+ct, top = LOW + ROOMS2['L1'][4], -0.025
+hc = ((hx0 + hx1) / 2, (hz0 + hz1) / 2)
+for (ax, az, bx, bz) in ((hx0, hz0, hx1, hz0), (hx1, hz0, hx1, hz1), (hx1, hz1, hx0, hz1), (hx0, hz1, hx0, hz0)):
+    b.poly(G, 'rockDark', [(ax, ct, az), (bx, ct, bz), (bx, top, bz), (ax, top, az)], away=(hc[0] + (ax + bx - 2 * hc[0]) * 5, (ct + top) / 2, hc[1] + (az + bz - 2 * hc[1]) * 5))
+for x in (3.02, 3.38):
+    b.box(G, 'woodDark', 0.04, 0.9 - LOW, 0.04, x, LOW, -4.53)
+for k in range(int((0.9 - LOW) / 0.28)):
+    b.box(G, 'woodDark', 0.4, 0.03, 0.03, 3.2, LOW + 0.2 + k * 0.28, -4.53)
+
 rooms = [[x0, x1, z0, z1] for (x0, x1, z0, z1, _h) in ROOMS.values()]
+rooms2 = [[x0, x1, z0, z1] for (x0, x1, z0, z1, _h) in ROOMS2.values()]
 VIEWS = [
     ['korytarz od wyjścia', [0.0, 0.46, 6.5], [0.0, 0.5, 2.0], ['base'], 18],
     ['hala od wejścia', [0.0, 0.46, 1.8], [0.0, 0.8, -3.0], ['base'], 18],
     ['lewy chodnik', [-4.0, 0.46, -1.1], [-9.0, 0.7, -1.1], ['base'], 18],
     ['prawy chodnik', [4.0, 0.46, 0.7], [9.0, 0.7, 0.7], ['base'], 18],
+    ['wnęka szybu', [3.2, 0.46, -2.6], [3.2, -0.6, -4.3], ['base'], 18],
+    ['szyb od dołu', [3.2, LOW + 0.46, -3.4], [3.2, 0.5, -4.4], ['base'], 18],
+    ['galeria od szybu', [3.2, LOW + 0.46, -5.2], [4.5, LOW + 0.6, -10.0], ['base'], 18],
+    ['galeria z kąta', [8.0, LOW + 0.46, -10.0], [2.0, LOW + 0.3, -7.0], ['base'], 18],
 ]
 b.save('minelevel', maxe=0.3, rays=12, reach=0.6, extra={
-    'rooms': rooms, 'solid': solid, 'lamps': lamps, 'spots': spots, 'entry': [0.0, 6.4, math.pi], 'exit': [-0.7, 0.7, 6.65, 7.0], 'views': VIEWS})
+    'rooms': rooms, 'solid': solid, 'lamps': lamps, 'spots': spots, 'rooms2': rooms2, 'solid2': solid2, 'spots2': spots2,
+    'low': LOW, 'hole': list(HOLE), 'down': [3.2, -3.75], 'up': [3.2, -3.75], 'entry': [0.0, 6.4, math.pi], 'exit': [-0.7, 0.7, 6.65, 7.0], 'views': VIEWS})

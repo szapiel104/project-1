@@ -88,7 +88,23 @@ const MINE_SPOTS = (OREMINE_MODEL as unknown as { spots: [number, number, number
 const OREMINE_T = BUILDINGS.findIndex((d) => d.id === 'oremine');
 const OREMINE_WALK = WALK_MODELS.oremine;
 /** Wnętrze kopalni (osobna lokacja): sale do chodzenia, przeszkody, latarnie, miejsca górników, wejście i strefa wyjścia */
-const MINE_LEVEL = model('minelevel') as unknown as { rooms: [number, number, number, number][]; solid: [number, number, number, number][]; spots: [number, number, number][]; entry: [number, number, number]; exit: [number, number, number, number] };
+type Rect = [number, number, number, number];
+const MINE_LEVEL = model('minelevel') as unknown as {
+  rooms: Rect[]; solid: Rect[]; spots: [number, number, number][]; entry: [number, number, number]; exit: Rect;
+  /** Niższy poziom (posadzka na y = low): sale, przeszkody, przodki; szyb z drabiną w otworze `hole` */
+  rooms2: Rect[]; solid2: Rect[]; spots2: [number, number, number][]; low: number; hole: Rect; down: [number, number]; up: [number, number];
+};
+/** Przodki obu poziomów na przemian (x, y posadzki, z, kierunek): mała załoga kopie i na górze, i na dole */
+const MINE_LEVEL_SPOTS: [number, number, number, number][] = (() => {
+  const out: [number, number, number, number][] = [];
+  const up = MINE_LEVEL.spots, low = MINE_LEVEL.spots2 ?? [];
+  for (let i = 0; i < Math.max(up.length, low.length); i++) {
+    if (up[i]) out.push([up[i]![0], 0, up[i]![1], up[i]![2]]);
+    if (low[i]) out.push([low[i]![0], MINE_LEVEL.low, low[i]![1], low[i]![2]]);
+  }
+  return out;
+})();
+const inRect = (r: Rect, x: number, z: number): boolean => x >= r[0] && x <= r[1] && z >= r[2] && z <= r[3];
 /** Gdzie w świecie stoi wnętrze kopalni: głęboko pod mapą (od dołu terenu nie widać, a strop zasłania niebo) */
 const MINE_AT = new THREE.Vector3(0, -80, 0);
 const TAVERN_SEATS = TAVERN.seats;
@@ -1667,7 +1683,8 @@ export class GameRenderer {
    * Spacer na ziemiach wroga: 'seen' — straż Cię zauważyła (kilka sekund na ucieczkę), 'safe' — zgubili Cię,
    * 'killed' — dopadli Cię i spacer się kończy, 'foreign' — próba wejścia do cudzej kopalni
    */
-  onWalkAlert: (kind: 'seen' | 'safe' | 'killed' | 'foreign') => void = () => {};
+  onWalkAlert: (kind: 'seen' | 'safe' | 'killed' | 'foreign' | 'mineRaid' | 'mineLost') => void = () => {};
+  private mineRaidShown = false;
   /** Kończy trwający spacer (jak Esc) */
   private walkEnd: (() => void) | null = null;
   /** Ile sekund straż wroga już patrzy na spacerowicza (rośnie, gdy widzi, opada, gdy zgubi) */
@@ -1699,10 +1716,14 @@ export class GameRenderer {
   /** Ciepłe światło kominków i koszy z ogniem w salach zamku (włączone, gdy spacerowicz jest pod dachem) */
   private roomLight!: THREE.PointLight;
   /** Spacer we wnętrzu kopalni: która kopalnia i gdzie stoi spacerowicz (układ wnętrza) */
-  private inMine: { id: number; x: number; z: number } | null = null;
+  private inMine: { id: number; x: number; z: number; lvl: number; climb?: { t: number; down: boolean } } | null = null;
   private mineLevel: THREE.Group | null = null;
   /** Czy spacer jest teraz w sztolni (dla interfejsu: podpowiedź wyjścia) */
   get inMineWalk(): boolean { return !!this.inMine; }
+  /** Jak blisko podziemnego jeziorka stoi spacerowicz (0–1, do gęstości kapania) */
+  get mineWater(): number { const m = this.inMine; return m && m.lvl ? Math.max(0, 1 - Math.hypot(m.x - 2.1, m.z + 7.9) / 4) : 0; }
+  /** Ilu górników kopie teraz w tej sztolni (echo kilofów) */
+  minePicks = 0;
   /**
    * Wejście do kopalni: spacer przenosi się do osobnej lokacji (duża sztolnia pod mapą). Z przycisku w oknie kopalni
    * zaczyna też spacer, jeśli jeszcze go nie ma. Wyjście: na końcu korytarza wejściowego (wrota) albo Esc.
@@ -1718,7 +1739,7 @@ export class GameRenderer {
     if (!this.mineLevel) { this.mineLevel = mineLevelModel(); this.mineLevel.position.copy(MINE_AT); this.scene.add(this.mineLevel); }
     this.mineLevel.visible = true;
     const [ex, ez, yaw] = MINE_LEVEL.entry;
-    this.inMine = { id, x: ex, z: ez };
+    this.inMine = { id, x: ex, z: ez, lvl: 0 };
     this.walk.yaw = yaw - Math.PI; this.walk.pitch = -0.05; this.walk.jy = 0; this.walk.gy = undefined;
     playAt('creak', 0.8, 0, 0.6);
   }
@@ -1740,6 +1761,42 @@ export class GameRenderer {
   /** Spacer w sztolni: ruch po salach z modelu (prostokąty), przeszkody, kamera nisko pod stropem, latarnia w dłoni */
   private stepMine(dt: number): void {
     const w = this.walk!, m = this.inMine!, k = w.keys;
+    const cam = this.cam.camera;
+    const floorY = (lvl: number): number => (lvl ? MINE_LEVEL.low : 0);
+    // drabina w szybie: krótka wspinaczka między poziomami (kamera jedzie w pionie, szczebel po szczeblu)
+    if (m.climb) {
+      const c = m.climb, T = 1.8;
+      const before = Math.floor(c.t / 0.3);
+      c.t += dt;
+      if (Math.floor(c.t / 0.3) !== before) playAt('stepWood', 0.6, 0, 0.4);
+      const k2 = Math.min(1, c.t / T), e = k2 * k2 * (3 - 2 * k2);
+      const y0 = c.down ? 0 : MINE_LEVEL.low, y1 = c.down ? MINE_LEVEL.low : 0;
+      const [hx0, hx1, hz0, hz1] = MINE_LEVEL.hole;
+      cam.position.set(MINE_AT.x + (hx0 + hx1) / 2, MINE_AT.y + y0 + (y1 - y0) * e + 0.46, MINE_AT.z + (hz0 + hz1) / 2 + 0.12);
+      cam.rotation.set(c.down ? -0.5 : 0.35, 0, 0, 'YXZ'); // twarzą do drabiny
+      this.roomLight.position.set(cam.position.x, cam.position.y + 0.25, cam.position.z);
+      if (k2 >= 1) {
+        m.climb = undefined;
+        m.lvl = c.down ? 1 : 0;
+        [m.x, m.z] = c.down ? MINE_LEVEL.down : MINE_LEVEL.up;
+        w.yaw = Math.PI; w.pitch = -0.05; // plecami do drabiny
+      }
+      return;
+    }
+    // stan kopalni na powierzchni: kto kopie (echo kilofów), czy wróg stoi u wrót, czy kopalnia jeszcze stoi
+    const g = this.state!, mb = g.buildings.find((x) => x.id === m.id);
+    if (!mb || mb.ruined || mb.owner !== this.me) {
+      this.onWalkAlert('mineLost');
+      this.leaveMine();
+      return;
+    }
+    let picks = 0;
+    for (const u of g.units) if (u.job === m.id && u.phase === Phase.Working) picks++;
+    this.minePicks = picks;
+    const raid = (mb.threat ?? 0) > g.tick;
+    if (raid && !this.mineRaidShown) this.onWalkAlert('mineRaid');
+    this.mineRaidShown = raid;
+    const rooms = m.lvl ? MINE_LEVEL.rooms2 : MINE_LEVEL.rooms, solids = m.lvl ? MINE_LEVEL.solid2 : MINE_LEVEL.solid;
     const run = k.has('ShiftLeft') || k.has('ShiftRight');
     const sp = (run ? 3.4 : 1.8) * dt;
     let fx = 0, fz = 0;
@@ -1754,9 +1811,9 @@ export class GameRenderer {
     const free = (x: number, z: number): boolean => {
       for (const [ox, oz] of [[0, 0], [R, 0], [-R, 0], [0, R], [0, -R]] as const) {
         const px = x + ox, pz = z + oz;
-        if (!MINE_LEVEL.rooms.some(([x0, x1, z0, z1]) => px >= x0 && px <= x1 && pz >= z0 && pz <= z1)) return false;
+        if (!rooms.some(([x0, x1, z0, z1]) => px >= x0 && px <= x1 && pz >= z0 && pz <= z1)) return false;
       }
-      for (const [x0, x1, z0, z1] of MINE_LEVEL.solid) if (x > x0 - R && x < x1 + R && z > z0 - R && z < z1 + R) return false;
+      for (const [x0, x1, z0, z1] of solids) if (x > x0 - R && x < x1 + R && z > z0 - R && z < z1 + R) return false;
       return true;
     };
     const n = Math.max(1, Math.ceil(Math.hypot(dx, dz) / 0.04));
@@ -1768,15 +1825,16 @@ export class GameRenderer {
     if (fx || fz) { w.bob += dt * (run ? 11 : 7); if (Math.sin(w.bob) * Math.sin(w.bob - dt * 7) < 0) playAt('stepDirt', 0.5, 0, 0.35); }
     if (k.has('Space') && !w.jy) { w.vy = 2.3; w.jy = 0.0001; }
     if (w.jy) { w.jy += (w.vy ?? 0) * dt; w.vy = (w.vy ?? 0) - 9.5 * dt; if (w.jy <= 0) { w.jy = 0; w.vy = 0; } }
-    const cam = this.cam.camera;
-    cam.position.set(MINE_AT.x + m.x, MINE_AT.y + 0.46 + Math.min(w.jy ?? 0, 0.5) + Math.sin(w.bob) * 0.015, MINE_AT.z + m.z);
+    cam.position.set(MINE_AT.x + m.x, MINE_AT.y + floorY(m.lvl) + 0.46 + Math.min(w.jy ?? 0, 0.5) + Math.sin(w.bob) * 0.015, MINE_AT.z + m.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
     // ciepłe światło latarni w dłoni (w sztolni bez niego byłoby czarno między lampami)
     this.roomLight.intensity = this.torchOn ? 0.6 : 1.4; // bez pochodni tylko słaba poświata (ciemno między latarniami)
     this.roomLight.position.set(cam.position.x, cam.position.y + 0.25, cam.position.z);
     // wrota na końcu korytarza: wyjście na powierzchnię
     const [ex0, ex1, ez0, ez1] = MINE_LEVEL.exit;
-    if (m.x >= ex0 && m.x <= ex1 && m.z >= ez0 && m.z <= ez1) this.leaveMine();
+    if (!m.lvl && m.x >= ex0 && m.x <= ex1 && m.z >= ez0 && m.z <= ez1) { this.leaveMine(); return; }
+    // wejście w otwór szybu (z góry) albo pod drabinę (z dołu): wspinaczka na drugi poziom
+    if (MINE_LEVEL.hole && inRect(MINE_LEVEL.hole, m.x, m.z) && !w.jy) { m.climb = { t: 0, down: !m.lvl }; playAt('creak', 0.7, 0, 0.5); }
   }
   private toggleHandTorch(): void {
     if (!this.handTorch) {
@@ -5052,9 +5110,9 @@ export class GameRenderer {
           if (job.type === OREMINE_T && !resting && this.inMine?.id === job.id) {
             // spacerowicz jest w sztolni tej kopalni: górnicy kopią przy przodkach we wnętrzu
             const idx = Math.max(0, crewOf(job).indexOf(u.id));
-            const sp = MINE_LEVEL.spots[idx % MINE_LEVEL.spots.length]!;
-            t.position.set(MINE_AT.x + sp[0], MINE_AT.y + 0.0, MINE_AT.z + sp[1]);
-            t.rotation.set(0, sp[2], 0);
+            const sp = MINE_LEVEL_SPOTS[idx % MINE_LEVEL_SPOTS.length]!;
+            t.position.set(MINE_AT.x + sp[0], MINE_AT.y + sp[1], MINE_AT.z + sp[2]);
+            t.rotation.set(0, sp[3], 0);
             swing = 0;
           } else if (job.type === OREMINE_T && !resting && MINE_SPOTS.length) {
             const idx = Math.max(0, crewOf(job).indexOf(u.id));

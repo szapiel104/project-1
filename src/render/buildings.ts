@@ -128,6 +128,8 @@ const M = {
   ore: mat(0x8a4a2c), crust: mat(0xe2b06a),
   // magiczna ruda jak w Gothicu: skała z niebieskawym połyskiem, lekko świeci w ciemnej sztolni (żyły, hałdy, urobek w koszach)
   magicOre: oreMaterial(),
+  // woda w podziemnym jeziorku: prawie czarna i gładka, odbija latarnie
+  caveWater: new THREE.MeshStandardMaterial({ color: 0x14222a, roughness: 0.06, metalness: 0.35, emissive: 0x08182a, emissiveIntensity: 0.4 }),
   cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
