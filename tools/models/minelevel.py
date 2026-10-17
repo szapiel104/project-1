@@ -279,7 +279,8 @@ for k, (ox, oz, r, hh) in enumerate(((0.0, 0.0, 0.32, 1.9), (0.3, 0.2, 0.2, 1.3)
     b.crystal(G, 'magicOre', 6.0 + ox, r * hh * 0.9, -7.6 + oz, r, seed=70 + k, sy=hh)
 solid2.append([5.6, 6.45, -8.05, -7.2])
 # podziemne jeziorko: ciemna, gładka woda w obramowaniu z kamieni (kapie do niej ze stropu)
-b.poly(G, 'caveWater', [(1.3, 0.03, -8.6), (2.9, 0.03, -8.6), (2.9, 0.03, -7.2), (1.3, 0.03, -7.2)], away=(2.1, -5, -7.9))
+# tafla to owal pod kamieniami obramowania (prostokąt wystawał rogami poza krąg i wyglądał jak czarna dziura)
+b.poly(G, 'caveWater', [(2.1 + math.cos(2 * math.pi * k / 14) * 0.86, 0.03, -7.9 + math.sin(2 * math.pi * k / 14) * 0.74) for k in range(14)], away=(2.1, -5, -7.9))
 for k in range(14):
     a = 2 * math.pi * k / 14
     x, z = 2.1 + math.cos(a) * 0.9, -7.9 + math.sin(a) * 0.78
