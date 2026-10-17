@@ -356,13 +356,13 @@ export class GameRenderer {
   private armV = new THREE.Vector3();
   private soundAt = new Map<string, number>();
   /** Dźwięk z miejsca na mapie, nie częściej niż co `every` sekund dla danego źródła; głośność z odległości od środka ekranu */
-  private sfxAt(kind: WorldSound, x: number, z: number, key: string | number, every: number, gain = 1): void {
+  private sfxAt(kind: WorldSound, x: number, z: number, key: string | number, every: number, gain = 1, y?: number): void {
     const k = `${kind}${key}`;
     const due = this.soundAt.get(k) ?? 0;
     if (this.time < due) return;
     this.soundAt.set(k, this.time + every * (0.85 + Math.random() * 0.3));
     if (due === 0) return; // pierwszy raz tylko ustawiamy zegar, żeby wszystkie źródła nie ruszyły naraz
-    this.playHere(kind, x, z, gain);
+    this.playHere(kind, x, z, gain, y);
   }
 
   /** Krzyki naraz: najwyżej trzy na sekundę w całej grze, żeby ucieczka tłumu nie zlała się w jeden wrzask */
@@ -375,11 +375,12 @@ export class GameRenderer {
     this.playHere(kind, x, z, gain);
   }
 
-  private playHere(kind: WorldSound, x: number, z: number, gain = 1): void {
+  private playHere(kind: WorldSound, x: number, z: number, gain = 1, y?: number): void {
     // słychać jak w rzeczywistości: z odległości od kamery (ucha), nie od środka ekranu;
     // blisko — głośno, przy zwykłym widoku cicho, a z daleka od osady wcale
+    // `y` podajemy, gdy źródło nie stoi na terenie (np. górnik w sztolni pod mapą)
     const cam = this.cam.camera;
-    const src = new THREE.Vector3(x, this.view?.heightAt(x + (this.state?.map.width ?? 0) / 2, z + (this.state?.map.height ?? 0) / 2) ?? 0, z);
+    const src = new THREE.Vector3(x, y ?? this.view?.heightAt(x + (this.state?.map.width ?? 0) / 2, z + (this.state?.map.height ?? 0) / 2) ?? 0, z);
     const d = cam.position.distanceTo(src);
     const near = Math.max(0, Math.min(1, 1 - (d - 8) / 30)); // ok. 38 jednostek = cisza
     const rel = src.sub(cam.position);
@@ -5226,7 +5227,13 @@ export class GameRenderer {
           else if (ph < 0.77) toolArm = -0.2 - Math.sin(((ph - 0.67) / 0.1) * Math.PI) * 0.15;     // odbicie
           else toolArm = -0.2;
           toolLean = ph > 0.55 && ph < 0.85 ? Math.sin(((ph - 0.55) / 0.3) * Math.PI) * (mining ? 0.4 : 0.28) : 0.05;
-          if (ph > 0.66 && ph < 0.71) this.sfxAt(chopping ? 'chop' : 'mine', t.position.x, t.position.z, u.id, 0.5);
+          if (ph > 0.66 && ph < 0.71) {
+            if (!inMine) this.sfxAt(chopping ? 'chop' : 'mine', t.position.x, t.position.z, u.id, 0.5);
+            // górnik w sztolni, a my w niej spacerujemy: pełny stuk z jego miejsca pod ziemią (wysokość z pozycji, nie z terenu)
+            else if (this.inMine?.id === job!.id) this.sfxAt('mine', t.position.x, t.position.z, u.id, 0.5, 1.1, t.position.y + 0.8);
+            // z zewnątrz kopalni: kopią w głębi góry — jeden przytłumiony stuk na całą kopalnię, nie każdy górnik osobno
+            else this.sfxAt('mine', t.position.x, t.position.z, `m${job!.id}`, 1.4, 0.3);
+          }
         } else toolArm = -0.3;
         swing = 0;
       }
