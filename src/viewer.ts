@@ -11,7 +11,7 @@ import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment
 import { BUILDINGS } from './data/buildings';
 import { RESOURCES } from './data/resources';
 import { carryArms, loadGeometry, ON_SHOULDER, plankBundle } from './render/loads';
-import { t } from './i18n';
+import { lang, t, tx } from './i18n';
 import { buildingModel, isWetMat, isWindowMat, setNight } from './render/buildings';
 import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
 import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
@@ -160,36 +160,36 @@ function treeMake(trunk: THREE.BufferGeometry, crown: THREE.BufferGeometry, crow
 
 /** Wszystkie modele w grupach: [grupa, [id, podpis, budowa]] */
 const GROUPS: [string, [string, string, Make][]][] = [
-  ['Budynki', BUILDINGS.filter((d) => !d.road).map((d) => [d.id, t(d.name), () => {
+  [tx('Budynki', 'Buildings'), BUILDINGS.filter((d) => !d.road).map((d) => [d.id, t(d.name), () => {
     const m = buildingModel(d.id, RED);
     const base = m.getObjectByName('base'); if (base) base.visible = false;
     return { obj: m };
   }] as [string, string, Make])],
-  ['Ludzie', [
-    ['peasant', 'Chłop', figure('peasant', 3)],
-    ['woman', 'Gospodyni (chusta)', figure('woman', idWithHead((h) => h % 2 === 0))],
-    ['woman2', 'Gospodyni (kok)', figure('woman', idWithHead((h) => h % 2 === 1))],
-    ['child', 'Dziecko', figure('child', idWithHead((h) => h !== 2), 0.42)],
-    ['child2', 'Dziecko (czapka)', figure('child', idWithHead((h) => h === 2), 0.42)],
-    ['spearman', 'Włócznik', figure('spearman', 4)],
-    ['archer', 'Łucznik', figure('archer', 5)],
-    ['guard', 'Strażnik', figure('guard', 6)],
-    ['king', 'Pan zamku', figure('king', 7)],
+  [tx('Ludzie', 'People'), [
+    ['peasant', tx('Chłop', 'Peasant'), figure('peasant', 3)],
+    ['woman', tx('Gospodyni (chusta)', 'Goodwife (headscarf)'), figure('woman', idWithHead((h) => h % 2 === 0))],
+    ['woman2', tx('Gospodyni (kok)', 'Goodwife (bun)'), figure('woman', idWithHead((h) => h % 2 === 1))],
+    ['child', tx('Dziecko', 'Child'), figure('child', idWithHead((h) => h !== 2), 0.42)],
+    ['child2', tx('Dziecko (czapka)', 'Child (cap)'), figure('child', idWithHead((h) => h === 2), 0.42)],
+    ['spearman', t('u.spearman'), figure('spearman', 4)],
+    ['archer', t('u.archer'), figure('archer', 5)],
+    ['guard', tx('Strażnik', 'Guard'), figure('guard', 6)],
+    ['king', tx('Pan zamku', 'Lord of the castle'), figure('king', 7)],
   ]],
-  ['Niosą', [
-    ['carry-planks', 'deski', carrier('planks')],
+  [tx('Niosą', 'Carrying'), [
+    ['carry-planks', tx('deski', 'planks'), carrier('planks')],
     ...RESOURCES.filter((r) => r !== 'wood' && r !== 'gold').map((r) => [`carry-${r}`, t(`res.${r}`), carrier(r)] as [string, string, Make]),
   ]],
-  ['Zwierzęta', [
-    ['hen', 'Kura', () => ({ obj: mesh(animalGeo('hen_brown')) })],
-    ['pig', 'Świnia', () => ({ obj: mesh(animalGeo('pig')) })],
-    ['horse', 'Koń', () => ({ obj: horse() })],
-    ['dog', 'Pies', () => ({ obj: dog() })],
-    ['wolf', 'Wilk', () => ({ obj: wolf() })],
-    ['crow', 'Kruk', () => ({ obj: mesh(crowParts().stand, crowParts().mat) })],
-    ['crow-fly', 'Kruk w locie', () => ({ obj: mesh(crowParts().fly[1]!, crowParts().mat) })],
+  [tx('Zwierzęta', 'Animals'), [
+    ['hen', tx('Kura', 'Hen'), () => ({ obj: mesh(animalGeo('hen_brown')) })],
+    ['pig', tx('Świnia', 'Pig'), () => ({ obj: mesh(animalGeo('pig')) })],
+    ['horse', tx('Koń', 'Horse'), () => ({ obj: horse() })],
+    ['dog', tx('Pies', 'Dog'), () => ({ obj: dog() })],
+    ['wolf', tx('Wilk', 'Wolf'), () => ({ obj: wolf() })],
+    ['crow', tx('Kruk', 'Raven'), () => ({ obj: mesh(crowParts().stand, crowParts().mat) })],
+    ['crow-fly', tx('Kruk w locie', 'Raven in flight'), () => ({ obj: mesh(crowParts().fly[1]!, crowParts().mat) })],
   ]],
-  ['Machiny', [
+  [tx('Machiny', 'Siege engines'), [
     ['ram', 'Taran', () => {
       const g = new THREE.Group();
       const mats = ['wood', 'woodDark', 'sack', 'iron'];
@@ -204,29 +204,29 @@ const GROUPS: [string, [string, string, Make][]][] = [
       return { obj: g };
     }],
   ] as [string, string, Make][]],
-  ['Roślinność i kamienie', [
-    ['tree-pine', 'świerk', treeMake(proceduralModels.treeTrunk(), proceduralModels.treeCrown(), needleTexture(), 0x6b4a2e, 0x3c7a3a)],
-    ['tree-leaf', 'drzewo liściaste', treeMake(proceduralModels.leafTrunk(), proceduralModels.leafCrown(), leafTexture(), 0x7a5a3a, 0x6fa33d)],
-    ['plant-fern', 'paproć', () => ({ obj: new THREE.Mesh(proceduralModels.fern(), new THREE.MeshStandardMaterial({ color: 0x5d8a34, side: THREE.DoubleSide, map: fernTexture(), alphaTest: 0.5 })) })],
-    ['plant-deadwood', 'opadła gałąź', () => ({ obj: new THREE.Mesh(proceduralModels.deadwood(), new THREE.MeshStandardMaterial({ color: 0x6b5038, vertexColors: true, map: pattern('bark') })) })],
-    ['plant-bush', 'krzak (z bliska | z daleka)', plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
-    ['plant-rock', 'głaz (z bliska | z daleka)', plantPair(proceduralModels.rock(), proceduralModels.rockFar(), 0xc4bfb1, 'rock', true)],
+  [tx('Roślinność i kamienie', 'Plants and rocks'), [
+    ['tree-pine', tx('świerk', 'spruce'), treeMake(proceduralModels.treeTrunk(), proceduralModels.treeCrown(), needleTexture(), 0x6b4a2e, 0x3c7a3a)],
+    ['tree-leaf', tx('drzewo liściaste', 'broadleaf tree'), treeMake(proceduralModels.leafTrunk(), proceduralModels.leafCrown(), leafTexture(), 0x7a5a3a, 0x6fa33d)],
+    ['plant-fern', tx('paproć', 'fern'), () => ({ obj: new THREE.Mesh(proceduralModels.fern(), new THREE.MeshStandardMaterial({ color: 0x5d8a34, side: THREE.DoubleSide, map: fernTexture(), alphaTest: 0.5 })) })],
+    ['plant-deadwood', tx('opadła gałąź', 'fallen branch'), () => ({ obj: new THREE.Mesh(proceduralModels.deadwood(), new THREE.MeshStandardMaterial({ color: 0x6b5038, vertexColors: true, map: pattern('bark') })) })],
+    ['plant-bush', tx('krzak (z bliska | z daleka)', 'bush (near | far)'), plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
+    ['plant-rock', tx('głaz (z bliska | z daleka)', 'boulder (near | far)'), plantPair(proceduralModels.rock(), proceduralModels.rockFar(), 0xc4bfb1, 'rock', true)],
   ]],
-  ['W pracy', [
-    ['work-hammer', 'budowniczy z młotkiem (zamach)', worker('hammer', -2.1, true)],
-    ['work-hammer2', 'budowniczy z młotkiem (uderzenie)', worker('hammer', -0.9, true)],
-    ['work-axe', 'drwal z siekierą (oburącz)', worker('axe', -2.0, true, undefined, 0.5)],
-    ['work-pick', 'kamieniarz z kilofem (oburącz)', worker('pick', -1.9, true, undefined, 0.5)],
-    ['work-pick2', 'kamieniarz z kilofem (cios)', worker('pick', -0.7, true, undefined, 0.5)],
-    ['work-club', 'chłop z maczugą', worker('club', -1.4, true)],
-    ['work-torch', 'z pochodnią nocą', worker('torch', -0.55, true)],
-    ['work-bucket', 'z wiadrem wody', worker('bucket', 0, false, 'bucketWater')],
-    ['work-rod', 'rybak z wędką', worker('rod', -0.9, true)],
-    ['work-back', 'kilof na plecach', worker('backPick', 0, false)],
+  [tx('W pracy', 'At work'), [
+    ['work-hammer', tx('budowniczy z młotkiem (zamach)', 'builder with hammer (swing)'), worker('hammer', -2.1, true)],
+    ['work-hammer2', tx('budowniczy z młotkiem (uderzenie)', 'builder with hammer (strike)'), worker('hammer', -0.9, true)],
+    ['work-axe', tx('drwal z siekierą (oburącz)', 'woodcutter with axe (two-handed)'), worker('axe', -2.0, true, undefined, 0.5)],
+    ['work-pick', tx('kamieniarz z kilofem (oburącz)', 'stonecutter with pick (two-handed)'), worker('pick', -1.9, true, undefined, 0.5)],
+    ['work-pick2', tx('kamieniarz z kilofem (cios)', 'stonecutter with pick (blow)'), worker('pick', -0.7, true, undefined, 0.5)],
+    ['work-club', tx('chłop z maczugą', 'peasant with club'), worker('club', -1.4, true)],
+    ['work-torch', tx('z pochodnią nocą', 'with torch at night'), worker('torch', -0.55, true)],
+    ['work-bucket', tx('z wiadrem wody', 'with a bucket of water'), worker('bucket', 0, false, 'bucketWater')],
+    ['work-rod', tx('rybak z wędką', 'fisherman with rod'), worker('rod', -0.9, true)],
+    ['work-back', tx('kilof na plecach', 'pick on the back'), worker('backPick', 0, false)],
   ]],
-  ['Narzędzia', ([['axe', 'siekiera'], ['pick', 'kilof'], ['hammer', 'młotek'], ['club', 'maczuga'], ['torch', 'pochodnia'], ['bucket', 'wiadro'], ['rod', 'wędka'], ['backPick', 'kilof na plecach'], ['beltClub', 'maczuga u pasa']] as const).map(([k, l]) => [`tool-${k}`, `${l} (z bliska | z daleka)`, toolPair(k)] as [string, string, Make])],
-  ['Podwórko', YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', 'pranie: '), () => ({ obj: yardModel(k) })] as [string, string, Make])],
-  ['Graty', (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: mesh(clutterModel(k), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
+  [tx('Narzędzia', 'Tools'), ([['axe', tx('siekiera', 'axe')], ['pick', tx('kilof', 'pick')], ['hammer', tx('młotek', 'hammer')], ['club', tx('maczuga', 'club')], ['torch', tx('pochodnia', 'torch')], ['bucket', tx('wiadro', 'bucket')], ['rod', tx('wędka', 'fishing rod')], ['backPick', tx('kilof na plecach', 'pick on the back')], ['beltClub', tx('maczuga u pasa', 'club at the belt')]] as const).map(([k, l]) => [`tool-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, toolPair(k)] as [string, string, Make])],
+  [tx('Podwórko', 'Yard'), YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', tx('pranie: ', 'washing: ')), () => ({ obj: yardModel(k) })] as [string, string, Make])],
+  [tx('Graty', 'Clutter'), (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: mesh(clutterModel(k), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
 ];
 
 // ---------- scena ----------
@@ -321,8 +321,8 @@ function applyLook(): void {
       meshes++;
       tris += (m.geometry.index ? m.geometry.index.count : m.geometry.attributes.position!.count) / 3;
     });
-    const far = lod && state.far ? ` · daleka wersja ${state.far}/3 (błąd ${lod.levels[state.far - 1]?.error.toFixed(3) ?? '—'} pola)` : '';
-    infoEl.textContent = `${nameEl.textContent} · ${Math.round(tris).toLocaleString('pl-PL')} trójkątów · ${meshes} siatek · ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} (pola)${far}`;
+    const far = lod && state.far ? tx(` · daleka wersja ${state.far}/3 (błąd ${lod.levels[state.far - 1]?.error.toFixed(3) ?? '—'} pola)`, ` · far version ${state.far}/3 (error ${lod.levels[state.far - 1]?.error.toFixed(3) ?? '—'} tiles)`) : '';
+    infoEl.textContent = `${nameEl.textContent} · ${Math.round(tris).toLocaleString(lang() === 'en' ? 'en-GB' : 'pl-PL')} ${tx('trójkątów', 'triangles')} · ${meshes} ${tx('siatek', 'meshes')} · ${size.x.toFixed(2)} × ${size.y.toFixed(2)} × ${size.z.toFixed(2)} ${tx('(pola)', '(tiles)')}${far}`;
   }
   controls.autoRotate = state.spin;
   syncBar();
@@ -381,14 +381,14 @@ for (const [title, list] of GROUPS) {
 }
 const barEl = document.getElementById('bar')!;
 const toggles: [string, () => boolean, () => void][] = [
-  ['Podstawka', () => state.bg === 'podstawka', () => { state.bg = 'podstawka'; }],
-  ['W powietrzu', () => state.bg === 'powietrze', () => { state.bg = 'powietrze'; }],
-  ['Na trawie', () => state.bg === 'trawa', () => { state.bg = 'trawa'; }],
-  ['Noc', () => state.night, () => { state.night = !state.night; }],
-  ['Bez dachu', () => !state.roof, () => { state.roof = !state.roof; }],
-  ['Siatka', () => state.wire, () => { state.wire = !state.wire; }],
-  ['Obrót', () => state.spin, () => { state.spin = !state.spin; }],
-  ['Z daleka', () => state.far > 0, () => { state.far = (state.far + 1) % 4; }],
+  [tx('Podstawka', 'Plinth'), () => state.bg === 'podstawka', () => { state.bg = 'podstawka'; }],
+  [tx('W powietrzu', 'In the air'), () => state.bg === 'powietrze', () => { state.bg = 'powietrze'; }],
+  [tx('Na trawie', 'On grass'), () => state.bg === 'trawa', () => { state.bg = 'trawa'; }],
+  [tx('Noc', 'Night'), () => state.night, () => { state.night = !state.night; }],
+  [tx('Bez dachu', 'No roof'), () => !state.roof, () => { state.roof = !state.roof; }],
+  [tx('Siatka', 'Wireframe'), () => state.wire, () => { state.wire = !state.wire; }],
+  [tx('Obrót', 'Spin'), () => state.spin, () => { state.spin = !state.spin; }],
+  [tx('Z daleka', 'Far'), () => state.far > 0, () => { state.far = (state.far + 1) % 4; }],
 ];
 const barButtons = toggles.map(([label, on, act]) => {
   const b = document.createElement('button');
@@ -401,7 +401,7 @@ function syncBar(): void {
   for (const [b, on] of barButtons) b.setAttribute('aria-pressed', String(on()));
   // przycisk dalekiej wersji przełącza po kolei: pełny → 1 → 2 → 3 (tylko budynki ją mają)
   const farBtn = barButtons[barButtons.length - 1]![0];
-  farBtn.textContent = state.far ? `Z daleka ${state.far}/3` : 'Z daleka';
+  farBtn.textContent = state.far ? tx(`Z daleka ${state.far}/3`, `Far ${state.far}/3`) : tx('Z daleka', 'Far');
   farBtn.hidden = !lod;
 }
 

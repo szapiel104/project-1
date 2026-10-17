@@ -1,4 +1,5 @@
 import { RULES } from '../data/rules';
+import { tx } from '../i18n';
 import { clockAt, dayFraction } from './clock';
 
 /**
@@ -14,7 +15,7 @@ export const SEASON_DAYS = 5;
 export const YEAR_DAYS = SEASON_DAYS * 4;
 export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 export const SEASONS: Season[] = ['spring', 'summer', 'autumn', 'winter'];
-export const SEASON_NAME: Record<Season, string> = { spring: 'Wiosna', summer: 'Lato', autumn: 'Jesień', winter: 'Zima' };
+export const SEASON_NAME: Record<Season, string> = { spring: tx('Wiosna', 'Spring'), summer: tx('Lato', 'Summer'), autumn: tx('Jesień', 'Autumn'), winter: tx('Zima', 'Winter') };
 /** Poniżej tej temperatury ludzie palą w piecach (dym z kominów chat i warsztatów) */
 export const COLD = 8;
 

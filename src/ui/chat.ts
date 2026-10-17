@@ -1,5 +1,6 @@
 import type { Member, RoomLink } from '../net/supa';
 import { avatarSvg } from './avatars';
+import { tx } from '../i18n';
 
 /**
  * Czat meczu przez sieć: wiadomości w lewym dolnym rogu, gasną po chwili.
@@ -47,8 +48,8 @@ export function createGameChat(root: HTMLElement, onSound: () => void): GameChat
   form.hidden = true;
   const input = document.createElement('input');
   input.maxLength = MAX;
-  input.placeholder = 'Wiadomość do wszystkich — Enter wysyła, Esc zamyka';
-  input.setAttribute('aria-label', 'Wiadomość czatu');
+  input.placeholder = tx('Wiadomość do wszystkich — Enter wysyła, Esc zamyka', 'Message to everyone — Enter sends, Esc closes');
+  input.setAttribute('aria-label', tx('Wiadomość czatu', 'Chat message'));
   input.autocomplete = 'off';
   form.append(input);
   box.append(log, form);

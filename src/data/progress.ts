@@ -3,6 +3,7 @@
  * award_match) — tam jest rozstrzygający; gra używa go tylko do podglądu („za ten mecz ok. +X PD”) i do paska poziomu.
  * Zmieniasz liczby tutaj — zmień je też w SQL (test pilnuje, że tabela poziomów się zgadza).
  */
+import { tx } from '../i18n';
 
 /** Rodzaj meczu: przez sieć z ludźmi, z ludźmi przeciw botom, sam z botami (poziom trudności 0–3) */
 export type MatchMode = 'online' | 'coop' | 'bots0' | 'bots1' | 'bots2' | 'bots3';
@@ -22,11 +23,11 @@ export function xpParts(s: MatchStats): { key: string; label: string; xp: number
   const razed = Math.max(0, Math.min(60, Math.floor(s.razed)));
   const built = Math.max(0, Math.min(100, Math.floor(s.built)));
   return [
-    { key: 'time', label: `czas meczu (${minutes} min)`, xp: minutes * 2 },
-    { key: 'result', label: s.won ? 'wygrana' : 'przegrana (też uczy)', xp: s.won ? 100 : 30 },
-    { key: 'kills', label: `pokonani wrogowie (${kills})`, xp: kills * 2 },
-    { key: 'razed', label: `zburzone budynki wroga (${razed})`, xp: razed * 5 },
-    { key: 'built', label: `postawione budynki (${built})`, xp: built },
+    { key: 'time', label: tx(`czas meczu (${minutes} min)`, `match time (${minutes} min)`), xp: minutes * 2 },
+    { key: 'result', label: s.won ? tx('wygrana', 'victory') : tx('przegrana (też uczy)', 'defeat (still a lesson)'), xp: s.won ? 100 : 30 },
+    { key: 'kills', label: tx(`pokonani wrogowie (${kills})`, `enemies slain (${kills})`), xp: kills * 2 },
+    { key: 'razed', label: tx(`zburzone budynki wroga (${razed})`, `enemy buildings razed (${razed})`), xp: razed * 5 },
+    { key: 'built', label: tx(`postawione budynki (${built})`, `buildings raised (${built})`), xp: built },
   ];
 }
 
@@ -50,5 +51,5 @@ export function levelOf(xp: number): { level: number; into: number; need: number
 
 /** Tytuł pana na zamku według poziomu */
 export function titleOf(level: number): string {
-  return level >= 40 ? 'Król' : level >= 30 ? 'Książę' : level >= 20 ? 'Wojewoda' : level >= 12 ? 'Kasztelan' : level >= 6 ? 'Rycerz' : 'Giermek';
+  return level >= 40 ? tx('Król', 'King') : level >= 30 ? tx('Książę', 'Duke') : level >= 20 ? tx('Wojewoda', 'Voivode') : level >= 12 ? tx('Kasztelan', 'Castellan') : level >= 6 ? tx('Rycerz', 'Knight') : tx('Giermek', 'Squire');
 }

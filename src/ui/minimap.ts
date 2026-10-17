@@ -1,5 +1,6 @@
 import { BUILDINGS, footprint } from '../data/buildings';
 import { TEAM_COLORS } from '../data/teams';
+import { t, tx } from '../i18n';
 import { TERRAIN, Terrain } from '../data/terrain';
 import { FP, type GameState } from '../sim/state';
 
@@ -30,7 +31,7 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
   box.hidden = true;
   const canvas = document.createElement('canvas');
   canvas.setAttribute('role', 'img');
-  canvas.setAttribute('aria-label', 'Minimapa — kliknij, żeby przenieść tam kamerę');
+  canvas.setAttribute('aria-label', tx('Minimapa — kliknij, żeby przenieść tam kamerę', 'Minimap — click to move the camera there'));
   const dpr = Math.min(2, window.devicePixelRatio || 1);
   canvas.width = canvas.height = Math.round(SIZE * dpr);
   canvas.style.width = canvas.style.height = `${SIZE}px`;
@@ -39,14 +40,14 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
   bar.className = 'minimap-bar';
   const title = document.createElement('span');
   title.className = 'minimap-title';
-  title.textContent = 'Mapa';
+  title.textContent = t('hud.map');
   const slot = document.createElement('span');
   slot.className = 'minimap-slot';
   const hide = document.createElement('button');
   hide.type = 'button';
   hide.className = 'minimap-hide';
   hide.textContent = '–';
-  hide.title = 'Schowaj minimapę (N)';
+  hide.title = tx('Schowaj minimapę (N)', 'Hide minimap (N)');
   hide.setAttribute('aria-label', hide.title);
   bar.append(title, slot, hide);
   // schowana minimapa: mały pasek z przyciskiem „Mapa” (i przyciskiem z paska, żeby nie zniknął razem z mapą)
@@ -56,8 +57,8 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
   const showBtn = document.createElement('button');
   showBtn.type = 'button';
   showBtn.className = 'minimap-showbtn';
-  showBtn.textContent = 'Mapa';
-  showBtn.title = 'Pokaż minimapę (N)';
+  showBtn.textContent = t('hud.map');
+  showBtn.title = tx('Pokaż minimapę (N)', 'Show minimap (N)');
   const slot2 = document.createElement('span');
   slot2.className = 'minimap-slot';
   show.append(slot2, showBtn);

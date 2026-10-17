@@ -1,6 +1,6 @@
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { TEAM_COLORS } from '../data/teams';
-import { t } from '../i18n';
+import { t, tx } from '../i18n';
 import type { GameState } from '../sim/state';
 import { CARAVAN_MAX, CARAVANS_PER_PLAYER } from '../sim/systems/caravans';
 import { resIcon } from './hud';
@@ -23,14 +23,14 @@ export function createAllies(host: AlliesHost): { update(g: GameState, me: numbe
   btn.type = 'button';
   btn.className = 'allies-btn';
   btn.hidden = true;
-  btn.innerHTML = '<span aria-hidden="true">⚑</span> Sojusznicy';
-  btn.title = 'Wyślij surowce sojusznikowi';
+  btn.innerHTML = '<span aria-hidden="true">⚑</span> ' + tx('Sojusznicy', 'Allies');
+  btn.title = tx('Wyślij surowce sojusznikowi', 'Send goods to an ally');
   document.body.append(btn);
   const panel = document.createElement('div');
   panel.className = 'allies-panel';
   panel.hidden = true;
   panel.setAttribute('role', 'dialog');
-  panel.setAttribute('aria-label', 'Sojusznicy');
+  panel.setAttribute('aria-label', tx('Sojusznicy', 'Allies'));
   document.body.append(panel);
   btn.setAttribute('aria-expanded', 'false');
   const open = (on: boolean): void => { panel.hidden = !on; btn.setAttribute('aria-expanded', String(on)); if (on) paint(); };
@@ -49,14 +49,14 @@ export function createAllies(host: AlliesHost): { update(g: GameState, me: numbe
     panel.replaceChildren();
     const head = document.createElement('div');
     head.className = 'allies-head';
-    const h = document.createElement('strong'); h.textContent = 'Sojusznicy';
-    const x = document.createElement('button'); x.type = 'button'; x.className = 'allies-x'; x.textContent = '×'; x.setAttribute('aria-label', 'Zamknij'); x.addEventListener('click', () => open(false));
+    const h = document.createElement('strong'); h.textContent = tx('Sojusznicy', 'Allies');
+    const x = document.createElement('button'); x.type = 'button'; x.className = 'allies-x'; x.textContent = '×'; x.setAttribute('aria-label', t('hud.close')); x.addEventListener('click', () => open(false));
     head.append(h, x);
     panel.append(head);
 
     const sec = (title: string): HTMLElement => { const d = document.createElement('div'); d.className = 'allies-sec'; const p = document.createElement('p'); p.className = 'allies-label'; p.textContent = title; d.append(p); panel.append(d); return d; };
     // komu
-    const who = sec('Komu wysłać');
+    const who = sec(tx('Komu wysłać', 'Send to'));
     const row = document.createElement('div'); row.className = 'allies-row';
     for (const a of allies) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'allies-chip';
@@ -68,7 +68,7 @@ export function createAllies(host: AlliesHost): { update(g: GameState, me: numbe
     }
     who.append(row);
     // co
-    const what = sec('Co');
+    const what = sec(tx('Co', 'What'));
     const grid = document.createElement('div'); grid.className = 'allies-res';
     RESOURCES.forEach((id, i) => {
       const have = mine.res[i]!;
@@ -84,7 +84,7 @@ export function createAllies(host: AlliesHost): { update(g: GameState, me: numbe
     });
     what.append(grid);
     // ile
-    const how = sec('Ile');
+    const how = sec(tx('Ile', 'How much'));
     const r2 = document.createElement('div'); r2.className = 'allies-row';
     for (const a of AMOUNTS) {
       const b = document.createElement('button'); b.type = 'button'; b.className = 'allies-chip';
@@ -101,22 +101,22 @@ export function createAllies(host: AlliesHost): { update(g: GameState, me: numbe
     const go = document.createElement('button'); go.type = 'button'; go.className = 'menu-btn allies-go';
     const full = going.length >= CARAVANS_PER_PLAYER;
     go.disabled = to < 0 || n < 1 || full;
-    go.textContent = to < 0 ? 'Brak sojusznika w grze' : full ? `Najwyżej ${CARAVANS_PER_PLAYER} wozy naraz` : n < 1 ? 'Nie masz tego surowca' : `Wyślij wóz: ${n} × ${t(RESOURCE_DEFS[RESOURCES[res]!].name).toLowerCase()}`;
-    go.addEventListener('click', () => { host.send(to, res, n); go.disabled = true; go.textContent = 'Wóz wyrusza…'; });
+    go.textContent = to < 0 ? tx('Brak sojusznika w grze', 'No ally in the game') : full ? tx(`Najwyżej ${CARAVANS_PER_PLAYER} wozy naraz`, `At most ${CARAVANS_PER_PLAYER} carts at once`) : n < 1 ? tx('Nie masz tego surowca', 'You have none of this') : tx(`Wyślij wóz: ${n} × ${t(RESOURCE_DEFS[RESOURCES[res]!].name).toLowerCase()}`, `Send a cart: ${n} × ${t(RESOURCE_DEFS[RESOURCES[res]!].name).toLowerCase()}`);
+    go.addEventListener('click', () => { host.send(to, res, n); go.disabled = true; go.textContent = tx('Wóz wyrusza…', 'The cart sets off…'); });
     panel.append(go);
     const hint = document.createElement('p'); hint.className = 'allies-hint';
-    hint.textContent = 'Wóz jedzie przez mapę do zamku sojusznika — wrogi żołnierz, który go dopadnie, zabiera towar. Pilnuj drogi.';
+    hint.textContent = tx('Wóz jedzie przez mapę do zamku sojusznika — wrogi żołnierz, który go dopadnie, zabiera towar. Pilnuj drogi.', 'The cart travels across the map to your ally\'s castle — any enemy soldier who catches it takes the goods. Guard the road.');
     panel.append(hint);
     if (going.length) {
-      const list = sec('W drodze');
+      const list = sec(tx('W drodze', 'On the road'));
       for (const c of going) {
         const p = document.createElement('p'); p.className = 'allies-going';
-        p.textContent = `${c.amount} × ${t(RESOURCE_DEFS[RESOURCES[c.res]!].name).toLowerCase()} → ${host.name(c.to)} (zostało ok. ${c.path.length} pól)`;
+        p.textContent = `${c.amount} × ${t(RESOURCE_DEFS[RESOURCES[c.res]!].name).toLowerCase()} → ${host.name(c.to)} ${tx(`(zostało ok. ${c.path.length} pól)`, `(about ${c.path.length} tiles to go)`)}`;
         list.append(p);
       }
     }
     const tip = document.createElement('p'); tip.className = 'allies-hint';
-    tip.innerHTML = '<kbd>Alt</kbd> + klik w mapę: znacznik dla drużyny (atak, pomocy, zbiórka). <kbd>Spacja</kbd>: do ostatniego znacznika.';
+    tip.innerHTML = tx('<kbd>Alt</kbd> + klik w mapę: znacznik dla drużyny (atak, pomocy, zbiórka). <kbd>Spacja</kbd>: do ostatniego znacznika.', '<kbd>Alt</kbd> + click on the map: a marker for your team (attack, help, rally). <kbd>Space</kbd>: jump to the last marker.');
     panel.append(tip);
   }
 

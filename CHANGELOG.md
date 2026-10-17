@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.25.1 — cała gra po angielsku (2026-10-17)
+
+- Po wybraniu English po angielsku są teraz: ekran wczytywania (rady, kroki paska), okna ludzi i budynków („Walk through his eyes”), dolny pasek, sojusznicy, mapa, znaczniki i czat, raporty popularności i wojska, alarmy i powiadomienia, konto i logowanie („Your account”, „New password”, historia meczów z angielskimi datami), pokoje i gra przez sieć, całe „Jak grać”, podgląd modeli, rangi graczy i pory roku
+- Ludzie w dymkach mówią po angielsku własnymi, krótkimi kwestiami (nie tłumaczenie słowo w słowo); imiona zostają polskie, przydomki po angielsku („Zbyszko of the Forest”)
+- Po polsku zostaje tylko okno wydajności F3 (narzędzie twórcy)
+
 ## 0.25.0 — polski i angielski (2026-10-17)
 
 - Gra ma dwa języki: polski i angielski. Wybór w Ustawienia → Interfejs („Język / Language”); zmiana od razu przeładowuje grę, postęp zapisuje się sam. Za pierwszym razem gra bierze język przeglądarki (polska przeglądarka → polski, każda inna → angielski)

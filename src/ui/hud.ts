@@ -4,7 +4,7 @@ import { BUILDINGS, CATEGORIES, type BuildingDef, type CategoryId } from '../dat
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, type ResourceId } from '../data/resources';
 import { RULES } from '../data/rules';
-import { t } from '../i18n';
+import { lang, t, tx } from '../i18n';
 
 export interface HudEvents {
   /** Kliknięto typ jednostki w panelu wojska: zostaw tylko ten typ (Shift: odznacz ten typ) */
@@ -170,8 +170,9 @@ const ICONS: Record<string, string> = {
 /** Krótki zapis dużych liczb, żeby pasek się nie rozjeżdżał: 14315 → 14,3k, 1000000 → 1 mln */
 function short(n: number): string {
   const a = Math.abs(n);
-  if (a >= 1e6) return `${(n / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace('.0', '').replace('.', ',')} mln`;
-  if (a >= 1e4) return `${(n / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace('.0', '').replace('.', ',')}k`;
+  const dec = lang() === 'en' ? '.' : ',';
+  if (a >= 1e6) return `${(n / 1e6).toFixed(a >= 1e7 ? 0 : 1).replace('.0', '').replace('.', dec)}${tx(' mln', 'M')}`;
+  if (a >= 1e4) return `${(n / 1e3).toFixed(a >= 1e5 ? 0 : 1).replace('.0', '').replace('.', dec)}k`;
   return String(n);
 }
 
@@ -214,7 +215,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // dolny pas stanu (jak w grach miejskich): zegar i tempo z lewej, surowce w środku, osada i dwór z prawej
   const bar = el('div', 'status');
   const resList = el('ul', 'res');
-  resList.setAttribute('aria-label', 'Zasoby');
+  resList.setAttribute('aria-label', tx('Zasoby', 'Supplies'));
   const resVals: HTMLElement[] = [];
   const resTrends: HTMLElement[] = [];
   const resItems: HTMLElement[] = [];
@@ -224,8 +225,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // zbiorczo jedzenie (jabłka + chleb + ryby), gdy reszta jest zwinięta
   const foodSum = el('li', 'res-sum');
   const foodSumVal = el('strong', '', '0');
-  foodSum.dataset.tip = 'Jedzenie';
-  foodSum.setAttribute('aria-label', 'Jedzenie razem');
+  foodSum.dataset.tip = tx('Jedzenie', 'Food');
+  foodSum.setAttribute('aria-label', tx('Jedzenie razem', 'Total food'));
   const foodSumTrend = el('span', 'trend');
   foodSum.append(icon('food'), foodSumVal, foodSumTrend);
   let resOpen = false;
@@ -237,7 +238,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     extra.hidden = !resOpen;
     resToggle.setAttribute('aria-expanded', String(resOpen));
     resToggle.textContent = resOpen ? '‹' : '…';
-    resToggle.title = resOpen ? 'Zwiń: tylko najważniejsze zapasy' : 'Pokaż wszystkie zapasy';
+    resToggle.title = resOpen ? tx('Zwiń: tylko najważniejsze zapasy', 'Collapse: key supplies only') : tx('Pokaż wszystkie zapasy', 'Show all supplies');
     resToggle.setAttribute('aria-label', resToggle.title);
   };
   resToggle.addEventListener('click', () => { resOpen = !resOpen; try { localStorage.setItem('project1.resOpen', resOpen ? '1' : '0'); } catch { /* nic */ } paintRes(); });
@@ -260,7 +261,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   for (const id of MAIN_RES) resList.append(resItems[RESOURCES.indexOf(id)]!);
   resList.append(foodSum);
   const extra = el('ul', 'res res-extra');
-  extra.setAttribute('aria-label', 'Pozostałe zapasy');
+  extra.setAttribute('aria-label', tx('Pozostałe zapasy', 'Other supplies'));
   const toggleLi = el('li', 'res-toggle-li');
   toggleLi.append(resToggle, extra);
   resList.append(toggleLi);
@@ -293,8 +294,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   popBox.append(icon('pop'), popVal);
   const armyVal = el('strong');
   const armyBox = el('div');
-  armyBox.title = 'Wojsko';
-  armyBox.setAttribute('aria-label', 'Wojsko');
+  armyBox.title = t('cat.military');
+  armyBox.setAttribute('aria-label', t('cat.military'));
   armyBox.append(icon('spear'), armyVal);
   const popularBox = el('div');
   // pasek popularności ze znacznikiem progu, od którego przybywa ludzi
@@ -315,7 +316,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     report.hidden = false;
     const rows = reportKind === 'popularity' ? lastReport.popularity : reportKind === 'army' ? lastReport.army : reportKind === 'food' ? [] : lastReport.people;
     const sum = reportKind === 'popularity' ? rows.reduce((n, r) => n + r.value, 0) : 0;
-    report.innerHTML = `<button type="button" class="report-x" aria-label="Zamknij">×</button><p class="report-title">${reportKind === 'popularity' ? 'Popularność — co miesiąc' : reportKind === 'army' ? 'Wojsko' : reportKind === 'food' ? 'Spichlerz — jedzenie' : 'Mieszkańcy'}</p>`;
+    report.innerHTML = `<button type="button" class="report-x" aria-label="${t('hud.close')}">×</button><p class="report-title">${reportKind === 'popularity' ? tx('Popularność — co miesiąc', 'Popularity — each month') : reportKind === 'army' ? t('cat.military') : reportKind === 'food' ? tx('Spichlerz — jedzenie', 'Granary — food') : tx('Mieszkańcy', 'Townsfolk')}</p>`;
     const list = el('dl', 'report-list');
     if (reportKind === 'food') for (const r of lastReport.food) {
       const dt = el('dt', '', r.label);
@@ -328,7 +329,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       const dd = el('dd', reportKind === 'popularity' ? (r.value > 0 ? 'plus' : r.value < 0 ? 'minus' : '') : '', reportKind === 'popularity' ? `${r.value > 0 ? '+' : ''}${r.value}` : String(r.value));
       list.append(dt, dd);
     }
-    if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', 'Razem'), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
+    if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', tx('Razem', 'Total')), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
     report.append(list);
     // okienko wyskakuje tuż nad przyciskiem, który je otworzył
     const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : reportKind === 'food' ? foodBox : popBox;
@@ -342,7 +343,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     report.style.left = `${left / k}px`;
     report.style.right = 'auto';
     if (reportKind === 'food' && lastReport.foodHint) report.append(el('p', 'report-hint', lastReport.foodHint));
-    if (reportKind === 'popularity') report.append(el('p', 'report-hint', 'W górę: większe racje, niższe podatki albo rozdawanie rudy. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.'));
+    if (reportKind === 'popularity') report.append(el('p', 'report-hint', tx('W górę: większe racje, niższe podatki albo rozdawanie rudy. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.', 'Up: bigger rations, lower taxes or handing out ore. Down: small rations, high taxes, too few places in the cottages. From 50 new folk arrive; below it they leave.')));
   };
   const toggleReport = (k: 'popularity' | 'people' | 'army' | 'food'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
   for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people'], [armyBox, 'army']] as const) {
@@ -507,13 +508,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const unitCards = new Map<string, { card: HTMLElement; stats: HTMLElement; needs: HTMLElement; b1: HTMLButtonElement; b5: HTMLButtonElement; bAll: HTMLButtonElement; flag: HTMLButtonElement }>();
   // wspólny punkt zbiórki dla wszystkich nowych żołnierzy (pod kartami)
   const rallyRow = el('div', 'rally-row');
-  const rallyAll = el('button', 'btn-main', '⚑ Punkt zbiórki dla wszystkich');
+  const rallyAll = el('button', 'btn-main', tx('⚑ Punkt zbiórki dla wszystkich', '⚑ Rally point for all'));
   rallyAll.type = 'button';
-  const rallyOff = el('button', '', 'Zdejmij flagi');
+  const rallyOff = el('button', '', tx('Zdejmij flagi', 'Remove flags'));
   rallyOff.type = 'button';
   rallyAll.addEventListener('click', () => events.onRally(infoId, null, false));
   rallyOff.addEventListener('click', () => events.onRally(infoId, null, true));
-  rallyRow.append(rallyAll, rallyOff, el('p', 'hint', 'Rekrut idzie z obozowiska do koszar, wychodzi w zbroi i staje na fladze (bez flagi — przed koszarami).'));
+  rallyRow.append(rallyAll, rallyOff, el('p', 'hint', tx('Rekrut idzie z obozowiska do koszar, wychodzi w zbroi i staje na fladze (bez flagi — przed koszarami).', 'A recruit walks from the camp to the barracks, comes out armoured and stands at the flag (with no flag — outside the barracks).')));
   // taran: wóz z daszkiem i belką z kutą głowicą
   const RAM_PORTRAIT = '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M5 15l11-7 11 7z" fill="#8a6a44" stroke="#2a1c10"/><rect x="6" y="15" width="20" height="2" fill="#5e4329"/><path d="M8 17v7M24 17v7" stroke="#5e4329" stroke-width="2"/><rect x="3" y="18" width="24" height="3" rx="1.5" fill="#8a5a2b" stroke="#2a1c10"/><path d="M27 17.5l3 1.5v1.5l-3 1.5z" fill="#6a6e76" stroke="#2a1c10"/><circle cx="10" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/><circle cx="22" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/></svg>';
   const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT };
@@ -532,11 +533,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const needs = el('div', 'unit-needs');
         const btns = el('div', 'unit-btns');
         const mk = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n, r.id)); btns.append(b); return b; };
-        const b1 = mk(1, '+1'), b5 = mk(5, '+5'), bAll = mk(999, '+ wszyscy');
+        const b1 = mk(1, '+1'), b5 = mk(5, '+5'), bAll = mk(999, tx('+ wszyscy', '+ all'));
         // flaga zbiórki tylko dla tego rodzaju: klik i wskazanie miejsca na mapie
-        const flag = el('button', 'unit-flag', '⚑ Flaga zbiórki');
+        const flag = el('button', 'unit-flag', tx('⚑ Flaga zbiórki', '⚑ Rally flag'));
         flag.type = 'button';
-        flag.title = `Gdzie mają iść nowi (${r.name.toLowerCase()}): kliknij, potem wskaż miejsce na mapie. Prawy klik na przycisku zdejmuje flagę.`;
+        flag.title = tx(`Gdzie mają iść nowi (${r.name.toLowerCase()}): kliknij, potem wskaż miejsce na mapie. Prawy klik na przycisku zdejmuje flagę.`, `Where new recruits (${r.name.toLowerCase()}) should go: click, then pick a spot on the map. Right-click the button to remove the flag.`);
         flag.addEventListener('click', () => events.onRally(infoId, r.id, false));
         flag.addEventListener('contextmenu', (e) => { e.preventDefault(); events.onRally(infoId, r.id, true); });
         card.append(pic, name, stats, needs, btns, flag);
@@ -545,14 +546,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         c = { card, stats, needs, b1, b5, bAll, flag };
         unitCards.set(r.id, c);
       }
-      setText(c.stats, `${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · zasięg ${r.range}` : ''}`);
+      setText(c.stats, `${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · ${tx('zasięg', 'range')} ${r.range}` : ''}`);
       const row = (icon: string, have: number, need: number): string => `<span class="need${have < need ? ' short' : ''}"><svg viewBox="0 0 20 20" width="22" height="22">${ICONS[icon] ?? ''}</svg><strong>${need}</strong><em>(${have})</em></span>`;
       c.needs.innerHTML = row(r.weapon, r.have, r.need ?? 1) + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
       c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;
-      setText(c.bAll, `+ wszyscy (${r.max})`);
+      setText(c.bAll, tx(`+ wszyscy (${r.max})`, `+ all (${r.max})`));
       c.card.classList.toggle('cant', r.max < 1);
       c.flag.setAttribute('aria-pressed', String(!!r.rally));
-      setText(c.flag, r.rally ? '⚑ Flaga ustawiona — zmień' : '⚑ Flaga zbiórki');
+      setText(c.flag, r.rally ? tx('⚑ Flaga ustawiona — zmień', '⚑ Flag set — change') : tx('⚑ Flaga zbiórki', '⚑ Rally flag'));
     }
   };
 
@@ -590,9 +591,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     return out;
   };
   armyPanel.append(kindsRow);
-  const formBtns = seg('Szyk', [['Linia', 'Szeroki front, 1–3 szeregi. Łucznicy z tyłu.'], ['Blok', 'Zwarty kwadrat: trudny do obejścia.'], ['Luźno', 'Co drugie pole: mniej ofiar od strzał.'], ['Ścisk', 'Ramię w ramię: zbity kwadrat, gdy oddział stoi.']], (i) => events.onArmyForm(i));
-  const marchBtns = seg('Marsz', [['Zwykły', 'Idą na miejsce, nie zatrzymując się na wroga.'], ['Z walką', 'Idą na miejsce, ale biją każdego wroga, którego spotkają. Ctrl + prawy klik odwraca wybór dla jednego rozkazu.']], (i) => events.onArmyMarch(i));
-  const stanceBtns = seg('Postawa', [['Atak', 'Goni każdego wroga, którego zobaczy.'], ['Obrona', 'Walczy w pobliżu swojego miejsca i do niego wraca.'], ['Stój', 'Nie rusza się z miejsca. Bije tylko tych, których sięgnie.']], (i) => events.onArmyStance(i));
+  const formBtns = seg(tx('Szyk', 'Formation'), [[tx('Linia', 'Line'), tx('Szeroki front, 1–3 szeregi. Łucznicy z tyłu.', 'Wide front, 1–3 ranks. Archers at the rear.')], [tx('Blok', 'Block'), tx('Zwarty kwadrat: trudny do obejścia.', 'A tight square: hard to outflank.')], [tx('Luźno', 'Loose'), tx('Co drugie pole: mniej ofiar od strzał.', 'Every other tile: fewer losses to arrows.')], [tx('Ścisk', 'Packed'), tx('Ramię w ramię: zbity kwadrat, gdy oddział stoi.', 'Shoulder to shoulder: a dense square while the troop stands.')]], (i) => events.onArmyForm(i));
+  const marchBtns = seg(tx('Marsz', 'March'), [[tx('Zwykły', 'Plain'), tx('Idą na miejsce, nie zatrzymując się na wroga.', 'They march to the spot without stopping for the enemy.')], [tx('Z walką', 'Fighting'), tx('Idą na miejsce, ale biją każdego wroga, którego spotkają. Ctrl + prawy klik odwraca wybór dla jednego rozkazu.', 'They march to the spot but strike any enemy they meet. Ctrl + right-click flips the choice for a single order.')]], (i) => events.onArmyMarch(i));
+  const stanceBtns = seg(tx('Postawa', 'Stance'), [[tx('Atak', 'Attack'), tx('Goni każdego wroga, którego zobaczy.', 'Chases every enemy in sight.')], [tx('Obrona', 'Defend'), tx('Walczy w pobliżu swojego miejsca i do niego wraca.', 'Fights near its post and returns to it.')], [tx('Stój', 'Hold'), tx('Nie rusza się z miejsca. Bije tylko tych, których sięgnie.', 'Does not budge. Strikes only those within reach.')]], (i) => events.onArmyStance(i));
   // brama: jeden duży przycisk otwórz/zamknij i stan pod spodem
   const gateBox = el('div', 'gate-box');
   const gateBtn = el('button', 'btn-main gate-btn');
@@ -615,8 +616,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const towerBox = el('div', 'gate-box');
   const towerState = el('p', 'gate-state');
   const towerBtns = el('div', 'actions');
-  const tSel = el('button', 'btn-main', 'Zaznacz łuczników'); tSel.type = 'button';
-  const tDown = el('button', 'btn-main', 'Zejdźcie z wieży'); tDown.type = 'button';
+  const tSel = el('button', 'btn-main', tx('Zaznacz łuczników', 'Select archers')); tSel.type = 'button';
+  const tDown = el('button', 'btn-main', tx('Zejdźcie z wieży', 'Come down from the tower')); tDown.type = 'button';
   tSel.addEventListener('click', () => events.onSelectGarrison(infoId));
   tDown.addEventListener('click', () => events.onDismount(infoId));
   towerBtns.append(tSel, tDown);
@@ -625,9 +626,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // twierdza: straż miejska
   const watchState = el('p', 'gate-state');
   watchState.hidden = true;
-  const walkBtn = el('button', 'btn-main walk-btn', 'Przejdź się jego oczami (F)'); walkBtn.type = 'button'; walkBtn.hidden = true;
+  const walkBtn = el('button', 'btn-main walk-btn', tx('Przejdź się jego oczami (F)', 'Walk in his shoes (F)')); walkBtn.type = 'button'; walkBtn.hidden = true;
   walkBtn.addEventListener('click', () => events.onWalk());
-  const areaBtn = el('button', 'btn-main', 'Pokaż teren pracy'); areaBtn.type = 'button'; areaBtn.hidden = true;
+  const areaBtn = el('button', 'btn-main', tx('Pokaż teren pracy', 'Show work area')); areaBtn.type = 'button'; areaBtn.hidden = true;
   areaBtn.addEventListener('click', () => events.onArea(infoId));
   infoActions.append(areaBtn, demolish, close);
   // plac budowy: pasek postępu, materiał (przyniesiony / potrzebny, w drodze), robotnicy i co się teraz dzieje
@@ -639,7 +640,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const prodWho = el('p', 'prod-who');
   // pracownika widać na mapie po złotej szpilce nad głową (gra stawia ją sama, gdy okno budynku jest otwarte)
   const prodEye = el('span', 'prod-pin');
-  prodEye.title = 'Pracownika widać na mapie po złotej szpilce nad głową';
+  prodEye.title = tx('Pracownika widać na mapie po złotej szpilce nad głową', 'The worker is marked on the map by a golden pin above his head');
   prodEye.setAttribute('aria-hidden', 'true');
   prodEye.innerHTML = '<svg viewBox="0 0 24 28" width="16" height="19"><path d="M12 27l-5-9a10 10 0 1 1 10 0z" fill="#e9c145" stroke="#140a05" stroke-width="1.6"/><circle cx="12" cy="7.5" r="2.6" fill="#2a1a0c"/><path d="M7 15.5c0-4 2.2-5.5 5-5.5s5 1.5 5 5.5z" fill="#2a1a0c"/></svg>';
   const prodHead = el('div', 'prod-head');
@@ -778,7 +779,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // oko: patrzymy oczami przypadkowego mieszkańca osady
   const eye = el('button', 'btn-plain hud-eye');
   eye.type = 'button';
-  eye.title = 'Spacer chłopem: kliknij oko, potem miejsce na mapie (F). Drugi raz oko: losowy mieszkaniec';
+  eye.title = tx('Spacer chłopem: kliknij oko, potem miejsce na mapie (F). Drugi raz oko: losowy mieszkaniec', 'Walk as a peasant: click the eye, then a spot on the map (F). Eye again: a random villager');
   eye.setAttribute('aria-label', eye.title);
   eye.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/></svg>';
   eye.addEventListener('click', () => events.onRandomWalk());
@@ -793,8 +794,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const sh = el('span', 'net-shield');
     sh.innerHTML = avatarSvg(m ? m.avatar : 0, 22);
     if (!m) sh.classList.add('guest');
-    acc.append(sh, el('span', 'hud-acc-nick', m ? m.nick : 'Gość · zaloguj'));
-    acc.setAttribute('aria-label', m ? `Konto: ${m.nick}` : 'Zaloguj się');
+    acc.append(sh, el('span', 'hud-acc-nick', m ? m.nick : tx('Gość · zaloguj', 'Guest · sign in')));
+    acc.setAttribute('aria-label', m ? tx(`Konto: ${m.nick}`, `Account: ${m.nick}`) : tx('Zaloguj się', 'Sign in'));
   };
   onAccount(paintAcc);
   paintAcc();
@@ -878,10 +879,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   armyBar.hidden = true;
   const slotsWrap = el('div', 'army-slots');
   slotsWrap.setAttribute('role', 'group');
-  slotsWrap.setAttribute('aria-label', 'Grupy wojska');
+  slotsWrap.setAttribute('aria-label', tx('Grupy wojska', 'Army groups'));
   const pickedBox = el('div', 'army-picked');
   pickedBox.setAttribute('role', 'group');
-  pickedBox.setAttribute('aria-label', 'Zaznaczeni żołnierze');
+  pickedBox.setAttribute('aria-label', t('hud.soldiers'));
   armyBar.append(slotsWrap, pickedBox);
   const slots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => {
     const b = el('button', 'army-slot');
@@ -912,7 +913,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         setText(sl.count, count ? String(count) : '');
         sl.b.classList.toggle('empty', !count);
         sl.b.setAttribute('aria-pressed', String(v.active === sl.n));
-        const label = count ? `Grupa ${sl.n}: ${count}. Klik: wybierz (dwa razy: kamera). Shift + klik: zapisz zaznaczonych. Prawy klik: wyczyść.` : `Grupa ${sl.n} pusta. Klik albo Shift + ${sl.n}: zapisz zaznaczonych.`;
+        const label = count ? tx(`Grupa ${sl.n}: ${count}. Klik: wybierz (dwa razy: kamera). Shift + klik: zapisz zaznaczonych. Prawy klik: wyczyść.`, `Group ${sl.n}: ${count}. Click: select (twice: camera). Shift + click: save selection. Right-click: clear.`) : tx(`Grupa ${sl.n} pusta. Klik albo Shift + ${sl.n}: zapisz zaznaczonych.`, `Group ${sl.n} empty. Click or Shift + ${sl.n}: save selection.`);
         if (sl.b.title !== label) { sl.b.title = label; sl.b.setAttribute('aria-label', label); }
       }
       const key = v.selected.slice(0, 30).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}`).join() + v.selected.length;
@@ -921,8 +922,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       pickedBox.replaceChildren(...v.selected.slice(0, 30).map((u) => {
         const card = el('button', 'roster-card');
         card.type = 'button';
-        card.title = `${u.name}. Klik: odznacz. Shift + klik: zostaw tylko jego.`;
-        card.setAttribute('aria-label', `${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%. Odznacz.`);
+        card.title = tx(`${u.name}. Klik: odznacz. Shift + klik: zostaw tylko jego.`, `${u.name}. Click: deselect. Shift + click: keep only him.`);
+        card.setAttribute('aria-label', tx(`${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%. Odznacz.`, `${u.name}, health ${Math.round((u.hp / u.max) * 100)}%. Deselect.`));
         card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
         const bar = el('span', 'roster-hp');
         const fill = el('span');
@@ -943,7 +944,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       resVals.forEach((node, i) => setText(node, short(v.res[i] ?? 0)));
       const fs = FOOD_RES.reduce((a, id) => a + (v.res[RESOURCES.indexOf(id)] ?? 0), 0);
       setText(foodSumVal, short(fs));
-      foodSum.dataset.tip = `Jedzenie razem: ${fs} (${FOOD_RES.map((id) => `${t(RESOURCE_DEFS[id].name)} ${v.res[RESOURCES.indexOf(id)] ?? 0}`).join(', ')})`;
+      foodSum.dataset.tip = `${tx('Jedzenie razem', 'Total food')}: ${fs} (${FOOD_RES.map((id) => `${t(RESOURCE_DEFS[id].name)} ${v.res[RESOURCES.indexOf(id)] ?? 0}`).join(', ')})`;
       // w pasku zmianę (+/−) pokazuje tylko jedzenie razem — to ono decyduje o głodzie; reszta zapasów ma zmianę w podpowiedzi
       const fd = FOOD_RES.reduce((a, id) => a + (v.trend[RESOURCES.indexOf(id)] ?? 0), 0);
       setText(foodSumTrend, fd ? `${fd > 0 ? '+' : '−'}${short(Math.abs(fd))}` : '');
@@ -962,7 +963,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const tmp = Math.round(v.weather.temp);
         setText(weatherVal, `${v.weather.season} · ${tmp < 0 ? '−' : ''}${Math.abs(tmp)}°C`);
         weatherVal.dataset.t = tmp <= 0 ? 'frost' : tmp < 8 ? 'cold' : tmp > 25 ? 'hot' : '';
-        clockBox.title = `${v.weather.season}, ${v.weather.temp.toFixed(1).replace('.', ',')}°C${tmp < 8 ? ' — ludzie palą w piecach' : ''}`;
+        clockBox.title = `${v.weather.season}, ${lang() === 'en' ? v.weather.temp.toFixed(1) : v.weather.temp.toFixed(1).replace('.', ',')}°C${tmp < 8 ? tx(' — ludzie palą w piecach', ' — folk are lighting their hearths') : ''}`;
       }
       // południe na górze o 12:00, północ o 24:00
       disc.setAttribute('transform', `rotate(${((v.hour - 12) / 24) * 360})`);
@@ -973,10 +974,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       // bilans: suma zmian zapasów w składach (towary) i w spichlerzach (jedzenie) z ostatniej minuty gry
       let ds = 0, df = 0;
       RESOURCES.forEach((id, i) => { const d = v.trend[i] ?? 0; const st = RESOURCE_DEFS[id].store; if (st === 'stockpile') ds += d; else if (st === 'granary') df += d; });
-      for (const [node, d, box, what] of [[stockTrend, ds, stockBox, 'Skład (towary)'], [foodTrend, df, foodBox, 'Spichlerz (jedzenie)']] as const) {
+      for (const [node, d, box, what] of [[stockTrend, ds, stockBox, tx('Skład (towary)', 'Stockpile (goods)')], [foodTrend, df, foodBox, tx('Spichlerz (jedzenie)', 'Granary (food)')]] as const) {
         setText(node, d ? `${d > 0 ? '+' : '−'}${short(Math.abs(d))}` : '±0');
         node.dataset.sign = d > 0 ? 'pos' : d < 0 ? 'neg' : '';
-        box.title = `${what}: ${d > 0 ? 'przybywa' : d < 0 ? 'ubywa' : 'bez zmian'}${d ? ` (${d > 0 ? '+' : '−'}${Math.abs(d)} na minutę)` : ''}`;
+        box.title = `${what}: ${d > 0 ? tx('przybywa', 'rising') : d < 0 ? tx('ubywa', 'falling') : tx('bez zmian', 'steady')}${d ? ` (${d > 0 ? '+' : '−'}${Math.abs(d)} ${t('hud.perMinute')})` : ''}`;
       }
       stockBox.classList.toggle('full', v.stock >= v.stockCap);
       setText(foodVal, `${short(v.food)} / ${short(v.foodCap)}`);
@@ -1058,7 +1059,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         if (!kb) {
           const b = el('button', 'army-kind');
           b.type = 'button';
-          b.title = 'Kliknij: zostaw zaznaczonych tylko tych. Shift + klik: odznacz ich.';
+          b.title = tx('Kliknij: zostaw zaznaczonych tylko tych. Shift + klik: odznacz ich.', 'Click: keep only these selected. Shift + click: deselect them.');
           const pic = el('span', 'army-kind-pic');
           pic.innerHTML = k === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
           const n = el('span', 'army-kind-n');
@@ -1075,7 +1076,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       formBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.form ?? 0))));
       stanceBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.stance ?? -1))));
       marchBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.march ?? 0))));
-      setText(infoName, `${t('hud.soldiers')}: ${army.length}${ctl?.group ? ` · grupa ${ctl.group}` : ''}`);
+      setText(infoName, `${t('hud.soldiers')}: ${army.length}${ctl?.group ? ` · ${tx('grupa', 'group')} ${ctl.group}` : ''}`);
       // portrety odświeżamy tylko, gdy coś się zmieniło (przebudowa co klatkę gubiła kliknięcia)
       const key = army.slice(0, 24).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}`).join() + army.length;
       if (key !== rosterKey) {
@@ -1083,8 +1084,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         roster.replaceChildren(...army.slice(0, 24).map((u) => {
           const card = el('button', 'roster-card');
           card.type = 'button';
-          card.title = `${u.name}. Klik: odznacz. Shift + klik: zostaw tylko jego.`;
-          card.setAttribute('aria-label', `${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%`);
+          card.title = tx(`${u.name}. Klik: odznacz. Shift + klik: zostaw tylko jego.`, `${u.name}. Click: deselect. Shift + click: keep only him.`);
+          card.setAttribute('aria-label', tx(`${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%`, `${u.name}, health ${Math.round((u.hp / u.max) * 100)}%`));
           if (u.id) { const id = u.id; card.addEventListener('click', (e) => events.onArmyUnit(id, e.shiftKey)); }
           card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
           const bar = el('span', 'roster-hp');
@@ -1130,26 +1131,26 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             const line = el('div', 'prod-line');
             if (r.input) line.append(chip(r.input.id, r.input.n, r.input.name), el('span', 'prod-arrow', '→'));
             line.append(chip(r.output.id, r.output.n, r.output.name));
-            prodRecipe.replaceChildren(line, el('p', 'prod-note', `Robota: ${r.secs} s${r.place ? ` ${r.place}` : ''} (bez chodzenia po surowiec i do składu)`));
+            prodRecipe.replaceChildren(line, el('p', 'prod-note', tx(`Robota: ${r.secs} s${r.place ? ` ${r.place}` : ''} (bez chodzenia po surowiec i do składu)`, `Work: ${r.secs} s${r.place ? ` ${r.place}` : ''} (not counting walks for materials and to the stockpile)`)));
           }
         }
         prodWorker.hidden = !pd.worker;
         if (pd.worker) {
-          setText(prodWho, `${pd.worker.name || 'Pracownik'} — ${pd.worker.doing}${pd.worker.pct !== undefined ? ` (${pd.worker.pct}%)` : ''}`);
+          setText(prodWho, `${pd.worker.name || t('hud.worker')} — ${pd.worker.doing}${pd.worker.pct !== undefined ? ` (${pd.worker.pct}%)` : ''}`);
           prodBar.hidden = pd.worker.pct === undefined;
           prodFill.style.width = `${pd.worker.pct ?? 0}%`;
         }
         setText(prodStatus, pd.status.text);
         prodStatus.dataset.level = pd.status.level;
         const row = (label: string, value: string, warn = false): HTMLElement => { const r = el('p', 'site-row'); r.append(el('span', '', label), el('strong', warn ? 'warn' : '', value)); return r; };
-        const out = pd.recipe?.output.name ?? 'towaru';
+        const out = pd.recipe?.output.name ?? tx('towaru', 'goods');
         const rows: HTMLElement[] = [];
         if (pd.recipe) {
-          rows.push(row('Zrobione od postawienia', `${pd.made}`));
-          rows.push(row('W ostatniej dobie', pd.day === undefined ? 'liczy się…' : `${pd.day}`));
-          if (pd.lost) rows.push(row('Przepadło (pełny skład)', `${pd.lost}`, true));
-          if (pd.stockOut !== undefined) rows.push(row(`Na stanie: ${out}`, `${pd.stockOut}`));
-          if (pd.recipe.input && pd.stockIn !== undefined) rows.push(row(`Na stanie: ${pd.recipe.input.name}`, `${pd.stockIn} (na ${pd.cycles ?? 0} ${pd.cycles === 1 ? 'cykl' : 'cykli'})`, (pd.cycles ?? 0) === 0));
+          rows.push(row(tx('Zrobione od postawienia', 'Made since built'), `${pd.made}`));
+          rows.push(row(tx('W ostatniej dobie', 'In the last day'), pd.day === undefined ? tx('liczy się…', 'counting…') : `${pd.day}`));
+          if (pd.lost) rows.push(row(tx('Przepadło (pełny skład)', 'Lost (stockpile full)'), `${pd.lost}`, true));
+          if (pd.stockOut !== undefined) rows.push(row(`${tx('Na stanie', 'In stock')}: ${out}`, `${pd.stockOut}`));
+          if (pd.recipe.input && pd.stockIn !== undefined) rows.push(row(`${tx('Na stanie', 'In stock')}: ${pd.recipe.input.name}`, lang() === 'en' ? `${pd.stockIn} (for ${pd.cycles ?? 0} ${pd.cycles === 1 ? 'cycle' : 'cycles'})` : `${pd.stockIn} (na ${pd.cycles ?? 0} ${pd.cycles === 1 ? 'cykl' : 'cykli'})`, (pd.cycles ?? 0) === 0));
         }
         prodRows.replaceChildren(...rows);
       }
@@ -1165,12 +1166,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       siteBox.hidden = !i.site;
       if (i.site) {
         const st = i.site;
-        siteHead.replaceChildren(icon('hammer'), el('strong', '', `Budowa: ${st.pct}%`), el('span', '', ` · ${st.state}`));
+        siteHead.replaceChildren(icon('hammer'), el('strong', '', `${tx('Budowa', 'Construction')}: ${st.pct}%`), el('span', '', ` · ${st.state}`));
         siteFill.style.width = `${st.pct}%`;
         const row = (label: string, value: string): HTMLElement => { const r = el('p', 'site-row'); r.append(el('span', '', label), el('strong', '', value)); return r; };
         siteRows.replaceChildren(
-          ...(st.loads ? [row('Materiał na placu', `${st.delivered} / ${st.loads} ładunków`), row('W drodze ze składu', `${st.carrying + st.fetching}`)] : []),
-          row('Robotników przy budowie', `${st.builders}`),
+          ...(st.loads ? [row(tx('Materiał na placu', 'Materials on site'), tx(`${st.delivered} / ${st.loads} ładunków`, `${st.delivered} / ${st.loads} loads`)), row(tx('W drodze ze składu', 'On the way from the stockpile'), `${st.carrying + st.fetching}`)] : []),
+          row(tx('Robotników przy budowie', 'Builders at work'), `${st.builders}`),
         );
         infoDesc.hidden = true;
         infoWorker.hidden = true;
@@ -1182,14 +1183,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           storeBox.dataset.key = key;
           storeBox.replaceChildren(...i.stock.flatMap((st) => {
             const head = el('p', 'stock-head');
-            const label = st.kind === 'granary' ? 'Żywność' : 'Towary';
-            head.append(icon(st.kind === 'granary' ? 'granary' : 'store'), el('strong', '', `${label}: ${st.used} / ${st.max}`), el('span', '', ` · ten budynek mieści ${st.here}`));
+            const label = st.kind === 'granary' ? t('cat.food') : tx('Towary', 'Goods');
+            head.append(icon(st.kind === 'granary' ? 'granary' : 'store'), el('strong', '', `${label}: ${st.used} / ${st.max}`), el('span', '', tx(` · ten budynek mieści ${st.here}`, ` · this building holds ${st.here}`)));
             const bar = el('div', 'stock-bar');
             const fillEl = el('span');
             fillEl.style.width = `${Math.min(100, (st.used / Math.max(1, st.max)) * 100)}%`;
             bar.append(fillEl);
             const grid = el('div', 'stock-grid');
-            if (!st.items.length) grid.append(el('span', 'stock-empty', 'Pusto'));
+            if (!st.items.length) grid.append(el('span', 'stock-empty', tx('Pusto', 'Empty')));
             for (const it of st.items) {
               const cell = el('div', 'stock-item');
               cell.title = t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name);
@@ -1203,32 +1204,32 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       watchState.hidden = !(i.own && i.watch);
       if (i.watch) {
         const w = i.watch;
-        setText(watchState, `${w.label ?? 'Straż miejska'}: ${w.have} / ${w.want}` + (w.training ? ` · rekrut szkoli się jeszcze ${w.training} s` : '') + (w.note && (!w.training || w.label) ? ` · ${w.note}` : '') + ' · gdzie są: pinezki na mapie');
+        setText(watchState, `${w.label ?? tx('Straż miejska', 'Town watch')}: ${w.have} / ${w.want}` + (w.training ? tx(` · rekrut szkoli się jeszcze ${w.training} s`, ` · recruit in training for ${w.training} s more`) : '') + (w.note && (!w.training || w.label) ? ` · ${w.note}` : '') + tx(' · gdzie są: pinezki na mapie', ' · where they are: pins on the map'));
       }
       towerBox.hidden = !(i.own && i.garrison !== undefined);
       if (i.garrison !== undefined) {
         const wall = i.def.id === 'stoneWall';
-        setText(towerState, i.garrison ? `${wall ? 'Na murze' : 'Na wieży'}: ${i.garrison} / ${i.garrisonMax ?? (wall ? 2 : 4)} łuczników` : wall ? 'Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.' : 'Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.');
+        setText(towerState, i.garrison ? `${wall ? tx('Na murze', 'On the wall') : tx('Na wieży', 'On the tower')}: ${i.garrison} / ${i.garrisonMax ?? (wall ? 2 : 4)} ${tx('łuczników', 'archers')}` : wall ? tx('Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.', 'No one on the wall. Select archers and right-click the wall — they will climb the ladder.') : tx('Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.', 'The tower is empty. Select archers and right-click the tower.'));
         tSel.disabled = tDown.disabled = !i.garrison;
       }
       powerBox.hidden = !(i.own && i.power);
       if (i.power) {
         powerOn = i.power.on;
-        setText(powerBtn, i.power.on ? 'Wyłącz budynek' : 'Włącz budynek');
-        setText(powerState, i.power.on ? 'Działa — wyłącz, a pracownik pójdzie do innej roboty' : i.power.worker ? 'Wyłączony' : 'Wyłączony — pracownik poszedł do innej roboty');
+        setText(powerBtn, i.power.on ? tx('Wyłącz budynek', 'Shut down building') : tx('Włącz budynek', 'Start up building'));
+        setText(powerState, i.power.on ? tx('Działa — wyłącz, a pracownik pójdzie do innej roboty', 'Working — shut it down and the worker will find other work') : i.power.worker ? tx('Wyłączony', 'Shut down') : tx('Wyłączony — pracownik poszedł do innej roboty', 'Shut down — the worker has gone to other work'));
         powerState.dataset.shut = String(!i.power.on);
       }
       gateBox.hidden = !(i.own && i.gate);
       if (i.gate) {
         gateWant = i.gate.open;
-        setText(gateBtn, i.gate.open ? 'Zamknij bramę' : 'Otwórz bramę');
-        setText(gateState, i.gate.shut ? (i.gate.open ? 'Zamknięta — wróg w pobliżu, otworzy się sama' : 'Zamknięta') : 'Otwarta — swoi przechodzą');
+        setText(gateBtn, i.gate.open ? tx('Zamknij bramę', 'Close the gate') : tx('Otwórz bramę', 'Open the gate'));
+        setText(gateState, i.gate.shut ? (i.gate.open ? tx('Zamknięta — wróg w pobliżu, otworzy się sama', 'Shut — enemy nearby, it will reopen by itself') : tx('Zamknięta', 'Shut')) : tx('Otwarta — swoi przechodzą', 'Open — your people pass through'));
         gateState.dataset.shut = String(i.gate.shut);
       }
       demolish.hidden = !i.own || !i.def.buildable;
       areaBtn.hidden = i.area === undefined;
       const shot = i.def.id === 'watchtower' || i.def.id === 'stoneTower';
-      setText(areaBtn, shot ? (i.area ? 'Ukryj zasięg strzału' : 'Pokaż zasięg strzału') : i.area ? 'Ukryj teren pracy' : 'Pokaż teren pracy');
+      setText(areaBtn, shot ? (i.area ? tx('Ukryj zasięg strzału', 'Hide firing range') : tx('Pokaż zasięg strzału', 'Show firing range')) : i.area ? tx('Ukryj teren pracy', 'Hide work area') : tx('Pokaż teren pracy', 'Show work area'));
       areaBtn.setAttribute('aria-pressed', String(!!i.area));
       trainBtn.hidden = true;
       trainNote.hidden = true;

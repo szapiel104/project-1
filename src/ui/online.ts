@@ -7,6 +7,7 @@ import {
 } from '../net/supa';
 import { AVATAR_COUNT, avatarSvg } from './avatars';
 import { chatLine, cleanChat } from './chat';
+import { lang, tx } from '../i18n';
 
 /** Wszystko, czego potrzebuje gra, żeby wystartować mecz przez sieć */
 export interface OnlineStart {
@@ -42,8 +43,8 @@ interface Ui {
 }
 
 const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota', 'las', 'skala', 'rzeka', 'brod'];
-const MODES: [MapPresetId, string][] = [['1v1', '1 na 1'], ['2v2', '2 na 2'], ['4v4', '4 na 4']];
-const LEVELS = ['Pokojowe', 'Łatwe', 'Średnie', 'Trudne'];
+const MODES: [MapPresetId, string][] = [['1v1', tx('1 na 1', '1 vs 1')], ['2v2', tx('2 na 2', '2 vs 2')], ['4v4', tx('4 na 4', '4 vs 4')]];
+const LEVELS = lang() === 'en' ? ['Peaceful', 'Easy', 'Medium', 'Hard'] : ['Pokojowe', 'Łatwe', 'Średnie', 'Trudne'];
 const seats = (preset: string): number => (MAP_PRESETS[preset as MapPresetId]?.starts.length ?? 1) * 2;
 const modeName = (preset: string): string => MODES.find(([id]) => id === preset)?.[1] ?? preset;
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
@@ -57,7 +58,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   const cleanup = (): void => { stopWatch?.(); stopWatch = null; leaveRoom?.(); leaveRoom = null; };
 
   const msg = (text: string, bad = false): HTMLElement => { const p = el('p', bad ? 'net-msg bad' : 'net-msg', text); p.setAttribute('role', 'status'); return p; };
-  const back = (to: () => void = () => { cleanup(); ui.showMain(); }, text = 'Wróć'): HTMLButtonElement => button(text, to, 'menu-btn menu-back');
+  const back = (to: () => void = () => { cleanup(); ui.showMain(); }, text = tx('Wróć', 'Back')): HTMLButtonElement => button(text, to, 'menu-btn menu-back');
   const field = (label: string, type: string, auto: string): [HTMLElement, HTMLInputElement] => {
     const w = el('div', 'field');
     const id = `net-${label.replace(/\W+/g, '')}-${Math.random().toString(36).slice(2, 6)}`;
@@ -72,23 +73,23 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     cleanup();
     const form = el('form', 'menu-form net-form');
     const [we, email] = field('E-mail', 'email', 'email');
-    const [wp, pass] = field('Hasło (min. 6 znaków)', 'password', register ? 'new-password' : 'current-password');
-    const [wn, nick] = field('Nick w grze (3–20 znaków)', 'text', 'nickname');
+    const [wp, pass] = field(tx('Hasło (min. 6 znaków)', 'Password (min. 6 characters)'), 'password', register ? 'new-password' : 'current-password');
+    const [wn, nick] = field(tx('Nick w grze (3–20 znaków)', 'In-game nickname (3–20 characters)'), 'text', 'nickname');
     email.required = pass.required = true;
     wn.hidden = !register; nick.required = register;
-    const note = msg(info, !!info && !info.startsWith('Konto'));
-    const go = el('button', 'menu-btn', register ? 'Załóż konto' : 'Zaloguj'); go.type = 'submit';
-    const swap = button(register ? 'Mam już konto — zaloguj' : 'Nie mam konta — zarejestruj', () => showLogin(!register, '', then), 'link-btn net-swap');
+    const note = msg(info, !!info && !info.startsWith(tx('Konto', 'Account')));
+    const go = el('button', 'menu-btn', register ? tx('Załóż konto', 'Create account') : tx('Zaloguj', 'Sign in')); go.type = 'submit';
+    const swap = button(register ? tx('Mam już konto — zaloguj', 'I already have an account — sign in') : tx('Nie mam konta — zarejestruj', 'No account yet — register'), () => showLogin(!register, '', then), 'link-btn net-swap');
     form.append(we, wp, wn, note, go, swap);
     form.addEventListener('submit', async (e) => {
-      e.preventDefault(); go.disabled = true; note.textContent = 'Chwila…'; note.classList.remove('bad');
+      e.preventDefault(); go.disabled = true; note.textContent = tx('Chwila…', 'One moment…'); note.classList.remove('bad');
       const err = register ? await signUp(email.value.trim(), pass.value, nick.value) : await signIn(email.value.trim(), pass.value);
       go.disabled = false;
-      if (err && register && err.startsWith('Konto')) { showLogin(false, err, then); return; }
+      if (err && register && err.startsWith(tx('Konto', 'Account'))) { showLogin(false, err, then); return; }
       if (err) { note.textContent = err; note.classList.add('bad'); return; }
       then();
     });
-    screen(register ? 'Nowe konto' : 'Logowanie', false, form, back());
+    screen(register ? tx('Nowe konto', 'New account') : tx('Logowanie', 'Sign in'), false, form, back());
   }
 
   function showAccount(): void {
@@ -104,14 +105,14 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     // herb
     const pick = el('div', 'net-avatars');
     pick.setAttribute('role', 'radiogroup');
-    pick.setAttribute('aria-label', 'Herb');
+    pick.setAttribute('aria-label', tx('Herb', 'Coat of arms'));
     const note = msg('');
     for (let i = 0; i < AVATAR_COUNT; i++) {
       const b = el('button', 'net-avatar');
       b.type = 'button';
       b.setAttribute('role', 'radio');
       b.setAttribute('aria-checked', String(i === m.avatar));
-      b.setAttribute('aria-label', `Herb ${i + 1}`);
+      b.setAttribute('aria-label', `${tx('Herb', 'Coat of arms')} ${i + 1}`);
       b.innerHTML = avatarSvg(i, 34);
       b.addEventListener('click', async () => {
         pick.querySelectorAll('[aria-checked="true"]').forEach((x) => x.setAttribute('aria-checked', 'false'));
@@ -124,44 +125,44 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     }
     // nick
     const nickForm = el('form', 'net-inline');
-    const [wn, nick] = field('Nick', 'text', 'nickname');
+    const [wn, nick] = field(tx('Nick', 'Nickname'), 'text', 'nickname');
     nick.value = m.nick; nick.maxLength = 20;
-    const saveNick = el('button', 'menu-btn', 'Zapisz nick'); saveNick.type = 'submit';
+    const saveNick = el('button', 'menu-btn', tx('Zapisz nick', 'Save nickname')); saveNick.type = 'submit';
     nickForm.append(wn, saveNick);
     nickForm.addEventListener('submit', async (e) => {
       e.preventDefault();
       const err = await setNick(nick.value);
-      note.textContent = err ?? 'Nick zapisany.'; note.classList.toggle('bad', !!err);
+      note.textContent = err ?? tx('Nick zapisany.', 'Nickname saved.'); note.classList.toggle('bad', !!err);
       if (!err) (who.firstElementChild as HTMLElement).textContent = me()!.nick;
     });
     // hasło
     const passForm = el('form', 'net-inline');
-    const [wp, pass] = field('Nowe hasło', 'password', 'new-password');
-    const [wp2, pass2] = field('Powtórz hasło', 'password', 'new-password');
-    const savePass = el('button', 'menu-btn', 'Zmień hasło'); savePass.type = 'submit';
+    const [wp, pass] = field(tx('Nowe hasło', 'New password'), 'password', 'new-password');
+    const [wp2, pass2] = field(tx('Powtórz hasło', 'Repeat password'), 'password', 'new-password');
+    const savePass = el('button', 'menu-btn', tx('Zmień hasło', 'Change password')); savePass.type = 'submit';
     passForm.append(wp, wp2, savePass);
     passForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      if (pass.value !== pass2.value) { note.textContent = 'Hasła się różnią.'; note.classList.add('bad'); return; }
+      if (pass.value !== pass2.value) { note.textContent = tx('Hasła się różnią.', 'Passwords do not match.'); note.classList.add('bad'); return; }
       const err = await setPassword(pass.value);
-      note.textContent = err ?? 'Hasło zmienione.'; note.classList.toggle('bad', !!err);
+      note.textContent = err ?? tx('Hasło zmienione.', 'Password changed.'); note.classList.toggle('bad', !!err);
       if (!err) { pass.value = ''; pass2.value = ''; }
     });
-    const out = button('Wyloguj', async () => { await signOut(); ui.showMain(); }, 'menu-btn menu-back');
+    const out = button(tx('Wyloguj', 'Sign out'), async () => { await signOut(); ui.showMain(); }, 'menu-btn menu-back');
     const left = el('div', 'net-col');
     // bilans i ostatnie mecze przez sieć
-    const record = el('p', 'net-record', 'Bilans: wczytuję…');
+    const record = el('p', 'net-record', tx('Bilans: wczytuję…', 'Record: loading…'));
     const history = el('ol', 'net-history');
-    history.setAttribute('aria-label', 'Ostatnie mecze');
+    history.setAttribute('aria-label', tx('Ostatnie mecze', 'Recent matches'));
     void Promise.all([myRecord(), myResults()]).then(([rec, list]) => {
-      record.replaceChildren(el('strong', '', `${rec?.wins ?? 0}`), ' wygranych · ', el('strong', '', `${rec?.losses ?? 0}`), ' porażek');
+      record.replaceChildren(el('strong', '', `${rec?.wins ?? 0}`), tx(' wygranych · ', ' wins · '), el('strong', '', `${rec?.losses ?? 0}`), tx(' porażek', ' losses'));
       history.replaceChildren(...(list.length ? list.map((x) => {
         const li = el('li', x.won ? 'won' : 'lost');
-        li.append(el('span', 'res', x.won ? 'Wygrana' : 'Porażka'), el('span', '', `${modeName(x.preset)} · ${x.minutes} min`), el('span', 'when', new Date(x.created_at).toLocaleDateString('pl-PL', { day: 'numeric', month: 'short' })));
+        li.append(el('span', 'res', x.won ? tx('Wygrana', 'Victory') : tx('Porażka', 'Defeat')), el('span', '', `${modeName(x.preset)} · ${x.minutes} min`), el('span', 'when', new Date(x.created_at).toLocaleDateString(lang() === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'short' })));
         return li;
-      }) : [el('li', 'none', 'Jeszcze żadnego meczu przez sieć.')]));
+      }) : [el('li', 'none', tx('Jeszcze żadnego meczu przez sieć.', 'No online matches yet.'))]));
     });
-    left.append(card, record, history, el('p', 'net-label', 'Herb'), pick);
+    left.append(card, record, history, el('p', 'net-label', tx('Herb', 'Coat of arms')), pick);
     const right = el('div', 'net-col');
     right.append(nickForm, passForm, note);
     const cols = el('div', 'net-cols');
@@ -169,17 +170,17 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     box.append(cols);
     const foot = el('div', 'menu-foot');
     foot.append(out, back());
-    screen('Twoje konto', true, box, foot);
+    screen(tx('Twoje konto', 'Your account'), true, box, foot);
   }
 
   // ---------------- lista gier ----------------
   let filter: MapPresetId | 'all' = 'all';
   async function showOnline(): Promise<void> {
     cleanup();
-    screen('Gra przez sieć', true, msg('Łączenie…'));
+    screen(tx('Gra przez sieć', 'Online play'), true, msg(tx('Łączenie…', 'Connecting…')));
     await restore();
     const m = me();
-    if (!m) { showLogin(false, 'Zaloguj się, żeby grać przez sieć.', () => void showOnline()); return; }
+    if (!m) { showLogin(false, tx('Zaloguj się, żeby grać przez sieć.', 'Sign in to play online.'), () => void showOnline()); return; }
     // wchodzę do listy, więc żaden mój pokój nie jest już aktywny
     await closeMyStaleRooms();
     const wrap = el('div', 'net-lobby');
@@ -188,34 +189,34 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const tabs = el('div', 'net-filters');
     tabs.setAttribute('role', 'tablist');
     const list = el('div', 'net-list');
-    for (const [id, name] of [['all', 'Wszystkie'], ...MODES] as [MapPresetId | 'all', string][]) {
+    for (const [id, name] of [['all', tx('Wszystkie', 'All')], ...MODES] as [MapPresetId | 'all', string][]) {
       const b = button(name, () => { filter = id; tabs.querySelectorAll('button').forEach((x) => x.setAttribute('aria-selected', String(x === b))); void draw(); }, 'net-filter');
       b.setAttribute('role', 'tab');
       b.setAttribute('aria-selected', String(filter === id));
       tabs.append(b);
     }
-    const friendsBtn = button('Znajomi', () => void showFriends(), 'net-filter net-rank-btn');
+    const friendsBtn = button(tx('Znajomi', 'Friends'), () => void showFriends(), 'net-filter net-rank-btn');
     const paintFriendsBtn = async (): Promise<void> => {
       const { mine } = await listFriends();
       const on = onlinePlayers();
       const n = mine.filter((f) => on.some((o) => o.id === f.id)).length;
-      friendsBtn.textContent = n ? `Znajomi · ${n} w grze` : 'Znajomi';
+      friendsBtn.textContent = n ? tx(`Znajomi · ${n} w grze`, `Friends · ${n} online`) : tx('Znajomi', 'Friends');
     };
     void paintFriendsBtn();
-    tabs.append(friendsBtn, button('Ranking', () => void showRanking(), 'net-filter'));
+    tabs.append(friendsBtn, button(tx('Ranking', 'Ranking'), () => void showRanking(), 'net-filter'));
     bar.append(tabs);
     // zakładanie gry
     const create = el('form', 'net-create');
-    const name = el('input'); name.placeholder = 'Nazwa gry'; name.maxLength = 40; name.value = `Gra ${m.nick}`; name.setAttribute('aria-label', 'Nazwa gry');
-    const mode = el('select'); mode.setAttribute('aria-label', 'Tryb');
+    const name = el('input'); name.placeholder = tx('Nazwa gry', 'Game name'); name.maxLength = 40; name.value = tx(`Gra ${m.nick}`, `${m.nick}'s game`); name.setAttribute('aria-label', tx('Nazwa gry', 'Game name'));
+    const mode = el('select'); mode.setAttribute('aria-label', tx('Tryb', 'Mode'));
     for (const [id, label] of MODES) { const o = el('option', '', label); o.value = id; mode.append(o); }
     if (filter !== 'all') mode.value = filter;
-    const mk = el('button', 'menu-btn', 'Załóż grę'); mk.type = 'submit';
+    const mk = el('button', 'menu-btn', tx('Załóż grę', 'Create game')); mk.type = 'submit';
     create.append(name, mode, mk);
     create.addEventListener('submit', async (e) => {
       e.preventDefault(); mk.disabled = true;
       const seed = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
-      const res = await createRoom(name.value.trim() || `Gra ${m.nick}`, mode.value, seed);
+      const res = await createRoom(name.value.trim() || tx(`Gra ${m.nick}`, `${m.nick}'s game`), mode.value, seed);
       mk.disabled = false;
       if (typeof res === 'string') { list.prepend(msg(res, true)); return; }
       enterRoom(res);
@@ -224,8 +225,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       const rooms = (await listRooms()).filter((r) => filter === 'all' || r.preset === filter);
       if (!rooms.length) {
         const empty = el('div', 'net-empty');
-        empty.append(el('strong', '', filter === 'all' ? 'Nie ma jeszcze żadnych gier' : `Nie ma gier ${modeName(filter)}`),
-          el('span', '', 'Załóż swoją — inni zobaczą ją tu od razu. Wolne miejsca możesz obsadzić botami i grać sam.'));
+        empty.append(el('strong', '', filter === 'all' ? tx('Nie ma jeszcze żadnych gier', 'No games yet') : tx(`Nie ma gier ${modeName(filter)}`, `No ${modeName(filter)} games`)),
+          el('span', '', tx('Załóż swoją — inni zobaczą ją tu od razu. Wolne miejsca możesz obsadzić botami i grać sam.', 'Create your own — others will see it here straight away. You can fill empty seats with bots and play alone.')));
         list.replaceChildren(empty);
         return;
       }
@@ -233,26 +234,26 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         const row = el('div', 'net-room');
         const info = el('div', 'net-room-info');
         const playing = r.status === 'playing';
-        info.append(el('strong', '', r.name), el('span', '', `${modeName(r.preset)} · gospodarz ${r.host_nick}${r.guest_nick ? ` · ${r.guest_nick}` : ''}`));
-        const tag = el('span', playing ? 'net-tag busy' : 'net-tag', playing ? 'trwa mecz' : 'czeka');
+        info.append(el('strong', '', r.name), el('span', '', `${modeName(r.preset)} · ${tx('gospodarz', 'host')} ${r.host_nick}${r.guest_nick ? ` · ${r.guest_nick}` : ''}`));
+        const tag = el('span', playing ? 'net-tag busy' : 'net-tag', playing ? tx('trwa mecz', 'in progress') : tx('czeka', 'waiting'));
         row.append(el('span', 'net-mode', modeName(r.preset)), info, tag);
-        if (!playing) row.append(button(r.host === m.id ? 'Wróć do pokoju' : 'Dołącz', () => enterRoom(r), 'menu-btn net-join'));
+        if (!playing) row.append(button(r.host === m.id ? tx('Wróć do pokoju', 'Back to room') : tx('Dołącz', 'Join'), () => enterRoom(r), 'menu-btn net-join'));
         return row;
       }));
     };
     wrap.append(bar, create, list);
-    screen('Gra przez sieć', true, wrap, back());
+    screen(tx('Gra przez sieć', 'Online play'), true, wrap, back());
     await draw();
     stopWatch = watchRooms(() => void draw());
   }
 
   // ---------------- znajomi ----------------
   const where = (o: OnlinePlayer | undefined): string => {
-    if (!o) return 'poza grą';
-    if (o.where === 'room') return `w pokoju „${o.roomName ?? ''}”`;
-    if (o.where === 'game') return 'w meczu przez sieć';
-    if (o.where === 'solo') return 'gra z botami';
-    return 'w menu';
+    if (!o) return tx('poza grą', 'offline');
+    if (o.where === 'room') return tx(`w pokoju „${o.roomName ?? ''}”`, `in room “${o.roomName ?? ''}”`);
+    if (o.where === 'game') return tx('w meczu przez sieć', 'in an online match');
+    if (o.where === 'solo') return tx('gra z botami', 'playing against bots');
+    return tx('w menu', 'in the menu');
   };
   async function showFriends(): Promise<void> {
     cleanup();
@@ -260,8 +261,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     if (!m) { showLogin(false, '', () => void showFriends()); return; }
     const wrap = el('div', 'net-friends');
     const add = el('form', 'net-create');
-    const nick = el('input'); nick.placeholder = 'Nick znajomego'; nick.maxLength = 20; nick.setAttribute('aria-label', 'Nick znajomego'); nick.autocomplete = 'off';
-    const addBtn = el('button', 'menu-btn', 'Dodaj'); addBtn.type = 'submit';
+    const nick = el('input'); nick.placeholder = tx('Nick znajomego', "Friend's nickname"); nick.maxLength = 20; nick.setAttribute('aria-label', tx('Nick znajomego', "Friend's nickname")); nick.autocomplete = 'off';
+    const addBtn = el('button', 'menu-btn', tx('Dodaj', 'Add')); addBtn.type = 'submit';
     add.append(nick, addBtn);
     const note = msg('');
     const list = el('div', 'net-list');
@@ -273,17 +274,17 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         const r = el('div', `net-room net-friend${o ? ' on' : ''}`);
         const info = el('div', 'net-room-info');
         info.append(el('strong', '', p.nick), el('span', '', where(o)));
-        r.append(shield(o?.avatar ?? 0, 30), info, el('span', o ? 'net-tag' : 'net-tag off', o ? 'w grze' : 'offline'));
-        if (o?.where === 'room' && o.roomId) r.append(button('Dołącz', () => void join(o.roomId!), 'menu-btn net-join'));
-        if (mineList) r.append(button('Usuń', async () => { await removeFriend(p.id); void draw(); }, 'link-btn'));
-        else r.append(button('Dodaj też', async () => { await addFriend(p.nick); void draw(); }, 'menu-btn net-join'));
+        r.append(shield(o?.avatar ?? 0, 30), info, el('span', o ? 'net-tag' : 'net-tag off', o ? tx('w grze', 'online') : 'offline'));
+        if (o?.where === 'room' && o.roomId) r.append(button(tx('Dołącz', 'Join'), () => void join(o.roomId!), 'menu-btn net-join'));
+        if (mineList) r.append(button(tx('Usuń', 'Remove'), async () => { await removeFriend(p.id); void draw(); }, 'link-btn'));
+        else r.append(button(tx('Dodaj też', 'Add back'), async () => { await addFriend(p.nick); void draw(); }, 'menu-btn net-join'));
         return r;
       };
       const out: Node[] = [];
-      out.push(el('p', 'net-label', `Twoi znajomi (${mine.length})`));
+      out.push(el('p', 'net-label', tx(`Twoi znajomi (${mine.length})`, `Your friends (${mine.length})`)));
       if (mine.length) out.push(...mine.map((p) => row(p, true)));
-      else out.push(msg('Nikogo jeszcze nie dodałeś. Wpisz nick znajomego powyżej.'));
-      if (addedMe.length) { out.push(el('p', 'net-label', 'Dodali Cię do znajomych')); out.push(...addedMe.map((p) => row(p, false))); }
+      else out.push(msg(tx('Nikogo jeszcze nie dodałeś. Wpisz nick znajomego powyżej.', "You haven't added anyone yet. Type a friend's nickname above.")));
+      if (addedMe.length) { out.push(el('p', 'net-label', tx('Dodali Cię do znajomych', 'Added you as a friend'))); out.push(...addedMe.map((p) => row(p, false))); }
       list.replaceChildren(...out);
     };
     add.addEventListener('submit', async (e) => {
@@ -292,12 +293,12 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       addBtn.disabled = true;
       const err = await addFriend(nick.value);
       addBtn.disabled = false;
-      note.textContent = err ?? `Dodano: ${nick.value.trim()}.`; note.classList.toggle('bad', !!err);
+      note.textContent = err ?? tx(`Dodano: ${nick.value.trim()}.`, `Added: ${nick.value.trim()}.`); note.classList.toggle('bad', !!err);
       if (!err) nick.value = '';
       void draw();
     });
     wrap.append(add, note, list);
-    screen('Znajomi', true, wrap, back(() => void showOnline(), 'Wróć do listy gier'));
+    screen(tx('Znajomi', 'Friends'), true, wrap, back(() => void showOnline(), tx('Wróć do listy gier', 'Back to game list')));
     await draw();
     stopWatch = onPresence(() => void draw());
   }
@@ -308,11 +309,11 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     document.querySelector('.invite-toast')?.remove();
     const t = el('div', 'invite-toast panel');
     t.setAttribute('role', 'alertdialog');
-    t.setAttribute('aria-label', 'Zaproszenie do gry');
+    t.setAttribute('aria-label', tx('Zaproszenie do gry', 'Game invitation'));
     const txt = el('div', 'invite-text');
-    txt.append(el('strong', '', i.from.nick), ` zaprasza Cię do gry „${i.roomName}”`);
-    const yes = button('Dołącz', () => { t.remove(); ui.openForJoin(i.roomId); }, 'menu-btn');
-    const no = button('Nie teraz', () => t.remove(), 'link-btn');
+    txt.append(el('strong', '', i.from.nick), tx(` zaprasza Cię do gry „${i.roomName}”`, ` invites you to the game “${i.roomName}”`));
+    const yes = button(tx('Dołącz', 'Join'), () => { t.remove(); ui.openForJoin(i.roomId); }, 'menu-btn');
+    const no = button(tx('Nie teraz', 'Not now'), () => t.remove(), 'link-btn');
     const acts = el('div', 'invite-acts');
     acts.append(yes, no);
     t.append(shield(i.from.avatar, 34), txt, acts);
@@ -324,13 +325,13 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   // ---------------- ranking ----------------
   async function showRanking(): Promise<void> {
     cleanup();
-    screen('Ranking', true, msg('Wczytuję…'));
+    screen(tx('Ranking', 'Ranking'), true, msg(tx('Wczytuję…', 'Loading…')));
     const rows = await ranking();
     const m = me();
     const table = el('table', 'net-ranking');
     const thead = el('thead');
     const hr = el('tr');
-    for (const h of ['#', 'Gracz', 'Wygrane', 'Porażki', 'Mecze']) hr.append(el('th', '', h));
+    for (const h of ['#', tx('Gracz', 'Player'), tx('Wygrane', 'Wins'), tx('Porażki', 'Losses'), tx('Mecze', 'Matches')]) hr.append(el('th', '', h));
     thead.append(hr);
     const tbody = el('tbody');
     rows.forEach((x, i) => {
@@ -341,10 +342,10 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       tbody.append(tr);
     });
     table.append(thead, tbody);
-    const body = rows.length ? table : msg('Ranking jest pusty — zagraj pierwszy mecz przez sieć.');
+    const body = rows.length ? table : msg(tx('Ranking jest pusty — zagraj pierwszy mecz przez sieć.', 'The ranking is empty — play the first online match.'));
     const wrap = el('div', 'net-rankwrap');
     wrap.append(body);
-    screen('Ranking', true, wrap, back(() => void showOnline(), 'Wróć do listy gier'));
+    screen(tx('Ranking', 'Ranking'), true, wrap, back(() => void showOnline(), tx('Wróć do listy gier', 'Back to game list')));
   }
 
   // ---------------- pokój ----------------
@@ -382,11 +383,11 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const box = el('div', 'net-roombox');
     const head = el('div', 'net-roomhead');
     const teams = el('div', 'net-teams');
-    const note = msg(host ? 'Czekasz na graczy. Wolne miejsca możesz obsadzić botami albo zostawić — przy starcie zajmą je boty.' : 'Wybierz wolne miejsce. Mecz rozpocznie gospodarz.');
+    const note = msg(host ? tx('Czekasz na graczy. Wolne miejsca możesz obsadzić botami albo zostawić — przy starcie zajmą je boty.', 'Waiting for players. Fill empty seats with bots or leave them — bots will take them when the match starts.') : tx('Wybierz wolne miejsce. Mecz rozpocznie gospodarz.', 'Pick an empty seat. The host will start the match.'));
     const foot = el('div', 'menu-foot');
-    const start = button('Rozpocznij mecz', () => doStart(), 'menu-btn');
+    const start = button(tx('Rozpocznij mecz', 'Start match'), () => doStart(), 'menu-btn');
     start.hidden = !host;
-    const leave = button('Wyjdź z pokoju', () => { cleanup(); void showOnline(); }, 'menu-btn menu-back');
+    const leave = button(tx('Wyjdź z pokoju', 'Leave room'), () => { cleanup(); void showOnline(); }, 'menu-btn menu-back');
     foot.append(leave, start);
     // czat pokoju
     const chatBox = el('div', 'room-chat');
@@ -394,8 +395,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     chatLog.setAttribute('role', 'log');
     chatLog.setAttribute('aria-live', 'polite');
     const chatForm = el('form', 'room-chat-form');
-    const chatIn = el('input'); chatIn.maxLength = 200; chatIn.placeholder = 'Napisz do pokoju…'; chatIn.setAttribute('aria-label', 'Wiadomość czatu'); chatIn.autocomplete = 'off';
-    const chatSend = el('button', 'menu-btn', 'Wyślij'); chatSend.type = 'submit';
+    const chatIn = el('input'); chatIn.maxLength = 200; chatIn.placeholder = tx('Napisz do pokoju…', 'Message the room…'); chatIn.setAttribute('aria-label', tx('Wiadomość czatu', 'Chat message')); chatIn.autocomplete = 'off';
+    const chatSend = el('button', 'menu-btn', tx('Wyślij', 'Send')); chatSend.type = 'submit';
     chatForm.append(chatIn, chatSend);
     chatBox.append(chatLog, chatForm);
     const addChat = (who: Member, text: string): void => {
@@ -412,11 +413,11 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       chatIn.value = '';
     });
     // zaproszenie: link otwiera grę od razu w tym pokoju
-    const invite = button('Kopiuj link zaproszenia', async () => {
+    const invite = button(tx('Kopiuj link zaproszenia', 'Copy invite link'), async () => {
       const url = `${location.origin}${location.pathname}?pokoj=${room.id}`;
-      try { await navigator.clipboard.writeText(url); invite.textContent = 'Skopiowano — wyślij znajomemu'; }
-      catch { prompt('Skopiuj link zaproszenia:', url); }
-      setTimeout(() => { invite.textContent = 'Kopiuj link zaproszenia'; }, 2500);
+      try { await navigator.clipboard.writeText(url); invite.textContent = tx('Skopiowano — wyślij znajomemu', 'Copied — send it to a friend'); }
+      catch { prompt(tx('Skopiuj link zaproszenia:', 'Copy the invite link:'), url); }
+      setTimeout(() => { invite.textContent = tx('Kopiuj link zaproszenia', 'Copy invite link'); }, 2500);
     }, 'link-btn net-invite');
     // zaproszenia dla znajomych, którzy są teraz w grze
     const friendBox = el('div', 'room-friends');
@@ -426,8 +427,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       const here = new Set(slots.filter((x) => x.kind === 'human').map((x) => (x as { id: string }).id));
       const avail = mine.map((f) => on.find((o) => o.id === f.id)).filter((o): o is OnlinePlayer => !!o && !here.has(o.id));
       friendBox.replaceChildren();
-      if (!avail.length) { if (mine.length) friendBox.append(el('span', 'net-msg', 'Żaden z Twoich znajomych nie jest teraz w grze.')); return; }
-      friendBox.append(el('span', 'net-label', 'Zaproś:'));
+      if (!avail.length) { if (mine.length) friendBox.append(el('span', 'net-msg', tx('Żaden z Twoich znajomych nie jest teraz w grze.', 'None of your friends are online right now.'))); return; }
+      friendBox.append(el('span', 'net-label', tx('Zaproś:', 'Invite:')));
       for (const o of avail) {
         const b = button(o.nick, async () => { b.disabled = true; await sendInvite(o.id, room.id, room.name); b.textContent = `${o.nick} ✓`; }, 'net-filter');
         b.prepend(shield(o.avatar, 18));
@@ -449,46 +450,46 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const paint = (): void => {
       head.replaceChildren();
       const title = el('div', 'net-roomtitle');
-      title.append(el('strong', '', room.name), el('span', '', `mapa ${seed}`));
+      title.append(el('strong', '', room.name), el('span', '', `${tx('mapa', 'map')} ${seed}`));
       head.append(title);
       // gospodarz losuje mapę; wszyscy w pokoju widzą ją za panelem
-      if (host) head.append(button('Losuj inną mapę', () => {
+      if (host) head.append(button(tx('Losuj inną mapę', 'Roll another map'), () => {
         seed = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
         paint(); publish(); showMap();
       }, 'link-btn net-reroll'));
       if (host) {
-        const ms = el('select'); ms.setAttribute('aria-label', 'Tryb');
+        const ms = el('select'); ms.setAttribute('aria-label', tx('Tryb', 'Mode'));
         for (const [id, label] of MODES) { const o = el('option', '', label); o.value = id; ms.append(o); }
         ms.value = preset;
         ms.addEventListener('change', () => { preset = ms.value as MapPresetId; slots = fresh(seats(preset), slots); paint(); publish(); showMap(); });
-        const ls = el('select'); ls.setAttribute('aria-label', 'Poziom botów');
-        LEVELS.forEach((n, i) => { const o = el('option', '', `Boty: ${n}`); o.value = String(i); ls.append(o); });
+        const ls = el('select'); ls.setAttribute('aria-label', tx('Poziom botów', 'Bot difficulty'));
+        LEVELS.forEach((n, i) => { const o = el('option', '', `${tx('Boty', 'Bots')}: ${n}`); o.value = String(i); ls.append(o); });
         ls.value = String(level);
         ls.addEventListener('change', () => { level = Number(ls.value); publish(); });
-        const cs = el('select'); cs.setAttribute('aria-label', 'Rodzaj gry');
-        for (const [v, label] of [['0', 'Rywalizacja'], ['1', 'Razem przeciw botom']] as const) { const o = el('option', '', label); o.value = v; cs.append(o); }
+        const cs = el('select'); cs.setAttribute('aria-label', tx('Rodzaj gry', 'Game type'));
+        for (const [v, label] of [['0', tx('Rywalizacja', 'Versus')], ['1', tx('Razem przeciw botom', 'Co-op against bots')]] as const) { const o = el('option', '', label); o.value = v; cs.append(o); }
         cs.value = coop ? '1' : '0';
         cs.addEventListener('change', () => { coop = cs.value === '1'; slots = fresh(seats(preset), slots); paint(); publish(); });
         head.append(ms, cs, ls);
-      } else head.append(el('span', 'net-chip', modeName(preset)), el('span', 'net-chip', coop ? 'Razem przeciw botom' : 'Rywalizacja'), el('span', 'net-chip', `Boty: ${LEVELS[level]}`));
+      } else head.append(el('span', 'net-chip', modeName(preset)), el('span', 'net-chip', coop ? tx('Razem przeciw botom', 'Co-op against bots') : tx('Rywalizacja', 'Versus')), el('span', 'net-chip', `${tx('Boty', 'Bots')}: ${LEVELS[level]}`));
       teams.replaceChildren();
       for (const team of [0, 1]) {
         const col = el('div', 'net-team');
-        const h = el('p', 'net-teamname', coop ? (team === 0 ? 'Drużyna graczy' : 'Wzmocnione boty') : `Drużyna ${team + 1}`);
+        const h = el('p', 'net-teamname', coop ? (team === 0 ? tx('Drużyna graczy', 'Players') : tx('Wzmocnione boty', 'Reinforced bots')) : `${tx('Drużyna', 'Team')} ${team + 1}`);
         h.style.setProperty('--team', hex(TEAM_COLORS[team] ?? 0x888888));
         col.append(h);
         slots.forEach((s, i) => {
           if (i % 2 !== team) return;
           const row = el('div', `net-slot ${s.kind}`);
-          if (s.kind === 'human') row.append(shield(s.avatar, 30), el('strong', '', s.nick + (s.id === room.host ? ' (gospodarz)' : '') + (s.id === m.id ? ' — Ty' : '')));
-          else if (s.kind === 'bot') row.append(el('span', 'net-bot', '⚙'), el('strong', '', coop && !humanSeat(i) ? `Bot (${LEVELS[level]}, wzmocniony)` : `Bot (${LEVELS[level]})`));
-          else row.append(el('span', 'net-open', '+'), el('span', '', 'Wolne miejsce'));
+          if (s.kind === 'human') row.append(shield(s.avatar, 30), el('strong', '', s.nick + (s.id === room.host ? tx(' (gospodarz)', ' (host)') : '') + (s.id === m.id ? tx(' — Ty', ' — you') : '')));
+          else if (s.kind === 'bot') row.append(el('span', 'net-bot', '⚙'), el('strong', '', coop && !humanSeat(i) ? `Bot (${LEVELS[level]}, ${tx('wzmocniony', 'reinforced')})` : `Bot (${LEVELS[level]})`));
+          else row.append(el('span', 'net-open', '+'), el('span', '', tx('Wolne miejsce', 'Empty seat')));
           const act = el('div', 'net-slot-act');
-          if (host && s.kind === 'open') act.append(button('Dodaj bota', () => { slots[i] = { kind: 'bot' }; paint(); publish(); }, 'link-btn'));
-          if (host && s.kind === 'bot' && humanSeat(i)) act.append(button('Usuń bota', () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
-          if (host && s.kind === 'human' && s.id !== m.id) act.append(button('Wyrzuć', () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
+          if (host && s.kind === 'open') act.append(button(tx('Dodaj bota', 'Add bot'), () => { slots[i] = { kind: 'bot' }; paint(); publish(); }, 'link-btn'));
+          if (host && s.kind === 'bot' && humanSeat(i)) act.append(button(tx('Usuń bota', 'Remove bot'), () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
+          if (host && s.kind === 'human' && s.id !== m.id) act.append(button(tx('Wyrzuć', 'Kick'), () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
           if (s.kind === 'open' && humanSeat(i)) {
-            act.append(button('Usiądź tutaj', () => { if (host) { seat(m.id, i); } else link.send({ k: 'seat', id: m.id, slot: i }); }, 'link-btn'));
+            act.append(button(tx('Usiądź tutaj', 'Sit here'), () => { if (host) { seat(m.id, i); } else link.send({ k: 'seat', id: m.id, slot: i }); }, 'link-btn'));
           }
           row.append(act);
           col.append(row);
@@ -533,11 +534,11 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const offMembers = link.onMembers(() => {
       if (host) { sync(); return; }
       // gospodarz zniknął z pokoju
-      if (hostSeen && !link.members().some((x) => x.id === room.host)) { note.textContent = 'Gospodarz wyszedł z pokoju.'; note.classList.add('bad'); }
+      if (hostSeen && !link.members().some((x) => x.id === room.host)) { note.textContent = tx('Gospodarz wyszedł z pokoju.', 'The host has left the room.'); note.classList.add('bad'); }
     });
     const go = (p: MapPresetId, lv: number, seed: string, final: Slot[], co: boolean): void => {
       const meIdx = final.findIndex((s) => s.kind === 'human' && s.id === m.id);
-      if (meIdx < 0) { note.textContent = 'Mecz ruszył bez Ciebie — nie było wolnego miejsca.'; note.classList.add('bad'); return; }
+      if (meIdx < 0) { note.textContent = tx('Mecz ruszył bez Ciebie — nie było wolnego miejsca.', 'The match started without you — there was no free seat.'); note.classList.add('bad'); return; }
       started = true;
       const humans = final.map((s, i) => (s.kind === 'human' ? i : -1)).filter((i) => i >= 0);
       off(); offMembers(); offPresence(); leaveRoom = null;
@@ -562,11 +563,11 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     // gość: gdy gospodarz nie odpowiada, pokój jest porzucony (zamknięta karta) — nie czekamy w nieskończoność
     if (!host) setTimeout(() => {
       if (hostSeen || started) return;
-      note.textContent = 'Gospodarz nie odpowiada — ten pokój jest porzucony. Wróć do listy gier.';
+      note.textContent = tx('Gospodarz nie odpowiada — ten pokój jest porzucony. Wróć do listy gier.', 'The host is not responding — this room has been abandoned. Go back to the game list.');
       note.classList.add('bad');
     }, 6000);
     paint();
-    screen('Pokój', true, box, foot);
+    screen(tx('Pokój', 'Room'), true, box, foot);
     showMap();
   }
 
@@ -575,12 +576,12 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   /** Wejście z linku zaproszenia (?pokoj=…): logowanie, jeśli trzeba, potem prosto do pokoju */
   async function join(id: string): Promise<void> {
     cleanup();
-    screen('Zaproszenie', true, msg('Łączenie z pokojem…'));
+    screen(tx('Zaproszenie', 'Invitation'), true, msg(tx('Łączenie z pokojem…', 'Connecting to the room…')));
     await restore();
-    if (!me()) { showLogin(false, 'Zaloguj się, żeby dołączyć do gry znajomego.', () => void join(id)); return; }
+    if (!me()) { showLogin(false, tx('Zaloguj się, żeby dołączyć do gry znajomego.', "Sign in to join your friend's game."), () => void join(id)); return; }
     const room = await getRoom(id);
     if (typeof room === 'string' || room.status !== 'open') {
-      screen('Zaproszenie', true, msg(typeof room === 'string' ? 'Tej gry już nie ma — gospodarz ją zamknął.' : 'Ten mecz już się zaczął.', true), back(() => void showOnline(), 'Przejdź do listy gier'));
+      screen(tx('Zaproszenie', 'Invitation'), true, msg(typeof room === 'string' ? tx('Tej gry już nie ma — gospodarz ją zamknął.', 'This game is gone — the host closed it.') : tx('Ten mecz już się zaczął.', 'This match has already started.'), true), back(() => void showOnline(), tx('Przejdź do listy gier', 'Go to game list')));
       return;
     }
     enterRoom(room);

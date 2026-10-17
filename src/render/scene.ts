@@ -24,6 +24,7 @@ import { isWetMat, setWetBuildings } from './buildings';
 import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
 import { cloudShade, setCloudShadows } from './ground';
 import { cat } from './cat';
+import { tx } from '../i18n';
 import { GearPool } from './gearpool';
 import { enableShadowLayer } from './shadowlayer';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
@@ -2712,7 +2713,7 @@ export class GameRenderer {
   /** Zachmurzenie 0..1 i mglistość dnia 0..1 (zmienna pogoda) */
   private cover = 0.2;
   private dayMist = 0;
-  get weatherText(): string { return this.rain > 0.3 ? 'deszcz' : this.dayMist > 0.4 ? 'mgła' : this.cover > 0.4 ? 'pochmurno' : 'pogodnie'; }
+  get weatherText(): string { return this.rain > 0.3 ? tx('deszcz', 'rain') : this.dayMist > 0.4 ? tx('mgła', 'mist') : this.cover > 0.4 ? tx('pochmurno', 'overcast') : tx('pogodnie', 'fair'); }
   private wetShown = -1;
   private puddles: THREE.InstancedMesh | null = null;
   private puddleKey = '';

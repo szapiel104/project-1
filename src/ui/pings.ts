@@ -4,10 +4,12 @@
  * krawędzi ekranu; kliknięcie strzałki przenosi tam kamerę. Spacja skacze do ostatniego znacznika.
  * Same znaczniki nie wchodzą do symulacji (idą kanałem pokoju jak czat), więc nie psują zgodności gry przez sieć.
  */
+import { tx } from '../i18n';
+
 export const PINGS = [
-  { label: 'Atakuj tutaj', short: 'Atak', icon: '⚔', color: 0xe0503c },
-  { label: 'Pomocy!', short: 'Pomocy', icon: '!', color: 0xf0b83c },
-  { label: 'Zbiórka', short: 'Zbiórka', icon: '⚑', color: 0x4c9ae6 },
+  { label: tx('Atakuj tutaj', 'Attack here'), short: tx('Atak', 'Attack'), icon: '⚔', color: 0xe0503c },
+  { label: tx('Pomocy!', 'Help!'), short: tx('Pomocy', 'Help'), icon: '!', color: 0xf0b83c },
+  { label: tx('Zbiórka', 'Rally'), short: tx('Zbiórka', 'Rally'), icon: '⚑', color: 0x4c9ae6 },
 ] as const;
 
 export interface PingHost {
@@ -28,7 +30,7 @@ export function createPings(host: PingHost): { openMenu(cx: number, cy: number, 
   menu.className = 'ping-menu';
   menu.hidden = true;
   menu.setAttribute('role', 'menu');
-  menu.setAttribute('aria-label', 'Sygnał dla sojuszników');
+  menu.setAttribute('aria-label', tx('Sygnał dla sojuszników', 'Signal to allies'));
   document.body.append(menu);
   let at: { x: number; y: number } | null = null;
   const close = (): void => { menu.hidden = true; at = null; };
@@ -77,7 +79,7 @@ export function createPings(host: PingHost): { openMenu(cx: number, cy: number, 
       el.type = 'button';
       el.className = 'ping-edge';
       el.style.setProperty('--ping', hex(p.color));
-      el.title = `${who}: ${p.label} — kliknij, żeby tam spojrzeć`;
+      el.title = `${who}: ${p.label} — ${tx('kliknij, żeby tam spojrzeć', 'click to look there')}`;
       el.setAttribute('aria-label', el.title);
       el.innerHTML = '<span class="ping-arrow" aria-hidden="true"></span><span class="ping-ico" aria-hidden="true"></span>';
       (el.children[1] as HTMLElement).textContent = p.icon;

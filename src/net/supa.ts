@@ -1,5 +1,6 @@
 import { createClient, type RealtimeChannel, type Session } from '@supabase/supabase-js';
 import type { Command } from '../sim/step';
+import { tx } from '../i18n';
 
 /**
  * Supabase: konta (e-mail + hasło), lista pokojów i kanał gry.
@@ -61,21 +62,21 @@ export async function restore(): Promise<void> {
 }
 
 const plErr = (m: string): string => {
-  if (/Invalid login/i.test(m)) return 'Zły e-mail albo hasło.';
-  if (/already registered/i.test(m)) return 'To konto już istnieje — zaloguj się.';
-  if (/Password should be/i.test(m)) return 'Hasło musi mieć co najmniej 6 znaków.';
-  if (/duplicate key.*nick/i.test(m) || /profiles_nick_key/.test(m)) return 'Ten nick jest zajęty.';
-  if (/rate limit/i.test(m)) return 'Za dużo prób, spróbuj za chwilę.';
+  if (/Invalid login/i.test(m)) return tx('Zły e-mail albo hasło.', 'Wrong e-mail or password.');
+  if (/already registered/i.test(m)) return tx('To konto już istnieje — zaloguj się.', 'This account already exists — sign in.');
+  if (/Password should be/i.test(m)) return tx('Hasło musi mieć co najmniej 6 znaków.', 'Password must be at least 6 characters.');
+  if (/duplicate key.*nick/i.test(m) || /profiles_nick_key/.test(m)) return tx('Ten nick jest zajęty.', 'This nickname is taken.');
+  if (/rate limit/i.test(m)) return tx('Za dużo prób, spróbuj za chwilę.', 'Too many attempts, try again in a moment.');
   return m;
 };
 
 export async function signUp(email: string, password: string, nick: string): Promise<string | null> {
   const n = nick.trim();
-  if (n.length < 3 || n.length > 20) return 'Nick: od 3 do 20 znaków.';
+  if (n.length < 3 || n.length > 20) return tx('Nick: od 3 do 20 znaków.', 'Nickname: 3 to 20 characters.');
   const { data, error } = await supa.auth.signUp({ email, password, options: { data: { nick: n } } });
   if (error) return plErr(error.message);
   session = data.session;
-  if (!session) return 'Konto utworzone — zaloguj się.';
+  if (!session) return tx('Konto utworzone — zaloguj się.', 'Account created — sign in.');
   const { error: e2 } = await supa.from('profiles').insert({ id: session.user.id, nick: n });
   if (e2) return plErr(e2.message);
   myNick = n;
@@ -105,8 +106,8 @@ export async function signOut(): Promise<void> { await supa.auth.signOut(); sess
 /** Zmiana nicku w profilu (unikalny w bazie) */
 export async function setNick(nick: string): Promise<string | null> {
   const n = nick.trim();
-  if (!session) return 'Zaloguj się.';
-  if (n.length < 3 || n.length > 20) return 'Nick: od 3 do 20 znaków.';
+  if (!session) return tx('Zaloguj się.', 'Please sign in.');
+  if (n.length < 3 || n.length > 20) return tx('Nick: od 3 do 20 znaków.', 'Nickname: 3 to 20 characters.');
   const { error } = await supa.from('profiles').update({ nick: n }).eq('id', session.user.id);
   if (error) return plErr(error.message);
   await supa.auth.updateUser({ data: { nick: n } });
@@ -115,9 +116,9 @@ export async function setNick(nick: string): Promise<string | null> {
 }
 
 export async function setPassword(password: string): Promise<string | null> {
-  if (password.length < 6) return 'Hasło musi mieć co najmniej 6 znaków.';
+  if (password.length < 6) return tx('Hasło musi mieć co najmniej 6 znaków.', 'Password must be at least 6 characters.');
   const { error } = await supa.auth.updateUser({ password });
-  return error ? (/different from the old/i.test(error.message) ? 'Nowe hasło musi być inne niż stare.' : plErr(error.message)) : null;
+  return error ? (/different from the old/i.test(error.message) ? tx('Nowe hasło musi być inne niż stare.', 'The new password must be different from the old one.') : plErr(error.message)) : null;
 }
 
 /** Herb gracza trzymany przy koncie (dane użytkownika w Supabase Auth) */
@@ -146,7 +147,7 @@ export async function closeMyStaleRooms(): Promise<void> {
 
 export async function createRoom(name: string, preset: string, seed: string): Promise<Room | string> {
   const m = me();
-  if (!m) return 'Zaloguj się.';
+  if (!m) return tx('Zaloguj się.', 'Please sign in.');
   const { data, error } = await supa.from('rooms').insert({ host: m.id, host_nick: m.nick, name, preset, seed }).select().single();
   return error ? plErr(error.message) : (data as Room);
 }
@@ -155,7 +156,7 @@ export async function createRoom(name: string, preset: string, seed: string): Pr
 export async function getRoom(id: string): Promise<Room | string> {
   const { data, error } = await supa.from('rooms').select('*').eq('id', id).maybeSingle();
   if (error) return plErr(error.message);
-  return (data as Room | null) ?? 'Tego pokoju już nie ma.';
+  return (data as Room | null) ?? tx('Tego pokoju już nie ma.', 'This room no longer exists.');
 }
 
 /** Gospodarz zmienia opis pokoju: tryb, nazwę albo podsumowanie składu (guest_nick, np. „3/4 · Ola, Kuba”) */
@@ -278,10 +279,10 @@ export async function listFriends(): Promise<{ mine: Profile[]; addedMe: Profile
 
 export async function addFriend(nick: string): Promise<string | null> {
   const m = me();
-  if (!m) return 'Zaloguj się.';
+  if (!m) return tx('Zaloguj się.', 'Please sign in.');
   const p = await findProfile(nick);
-  if (!p) return `Nie ma gracza o nicku „${nick.trim()}”.`;
-  if (p.id === m.id) return 'To Ty :)';
+  if (!p) return tx(`Nie ma gracza o nicku „${nick.trim()}”.`, `No player with the nickname “${nick.trim()}”.`);
+  if (p.id === m.id) return tx('To Ty :)', "That's you :)");
   const { error } = await supa.from('friends').insert({ user_id: m.id, friend_id: p.id });
   if (error && !/duplicate key/i.test(error.message)) return plErr(error.message);
   return null;

@@ -1,8 +1,11 @@
+import { lang } from '../i18n';
+
 /**
  * Odzywki ludzi w osadzie: krótko, szorstko, po chłopsku, w duchu Gothica. Klucz = sytuacja albo zajęcie
  * (id budynku z data/buildings.ts). Dobiera je main.ts (lineFor / sayGuard / chatter).
+ * Wersja angielska niżej (SAY_EN) ma te same klucze, ale własne kwestie — pisane po swojemu, nie słowo w słowo.
  */
-export const SAY: Record<string, string[]> = {
+const SAY_PL = {
   // --- bez zajęcia i przy zwykłej robocie ---
   idle: [
     'Czego?', 'Roboty by się znalazło jakiej…', 'Siedzę i czekam. Jak każdy.', 'Panie, daj jaką robotę.', 'Zimno przy tym ognisku.',
@@ -141,7 +144,7 @@ export const SAY: Record<string, string[]> = {
 };
 
 /** Odzywki straży miejskiej (w duchu strażników Starego Obozu) */
-export const GUARD_SAY = {
+const GUARD_SAY_PL = {
   day: [
     'Czego tu szukasz?', 'Nie szwendaj się tu bez potrzeby.', 'Trzymaj się z dala od kłopotów.', 'Spokojnie. Dopóki ja tu stoję, nikt nie podskoczy.',
     'Pan płaci, ja pilnuję. Proste.', 'Masz jakiś problem?', 'Idź swoją drogą.', 'Widziałem cię wczoraj przy spichlerzu. Uważaj.',
@@ -159,3 +162,164 @@ export const GUARD_SAY = {
   taxHigh: ['Chłopi narzekają na podatki. Pilnuj, żeby się nie zbuntowali.', 'Poborca chodzi z nami, bo sam by nie wrócił.'],
   lord: ['Pan na dziedzińcu. Baczność!', 'Z drogi, pan idzie!', 'Pilnować pana, chłopy!'],
 };
+
+const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
+  // --- idle and everyday work ---
+  idle: [
+    'What?', 'There\'d be work somewhere, surely…', 'Sitting and waiting. Like everyone.', 'Give us some work, my lord.', 'Cold by this fire.',
+    'Got hands, got strength, got no work.', 'Heard the woodcutter needs men.', 'Watching others work. That\'s a job too.',
+    'No work, no coin. Simple as that.', 'Build a workshop, my lord, and I\'ll mind it.', 'Boring. Wish someone\'d chase off a wolf at least.',
+  ],
+  work: [
+    'Working, working.', 'Don\'t bother me, my lord.', 'Work won\'t do itself.', 'Aye, keeping busy.', 'Me again?',
+    'On my feet since dawn.', 'Bit more, then a break.', 'Sweat down my back and the day\'s still long.', 'Work\'s work.',
+    'Just till evening.', 'The lord\'s watching, so I\'m trying.',
+  ],
+  // --- jobs (building id) ---
+  woodcutter: [
+    'Trees won\'t fell themselves.', 'Axe is dull as the reeve.', 'Forest\'s far, my feet ache.', 'Timber!', 'Tough pine, but she\'ll crack.',
+    'Woodchips down my breeches again.', 'Something\'s prowling in the woods. I heard it.', 'One more log and I\'m hauling it in.',
+  ],
+  quarry: [
+    'Stone, stone. My whole life.', 'My back\'s going to snap.', 'A digger\'s got a pick and sore hands. That\'s all.', 'One more block, then a drink.',
+    'Dust in my throat like sand.', 'Walls of this stone\'ll stand a hundred years.', 'Miss once and there go your fingers.',
+  ],
+  mine: [
+    'Dark as a grave down there.', 'Ore won\'t climb out by itself.', 'The digger digs, the lord gets rich.', 'Just pray the roof holds.',
+    'Good vein. Red as blood.', 'Torch is dying and I\'m still hacking.', 'This ore\'ll make iron for spears.',
+  ],
+  farm: [
+    'Just let the rain spare the crop.', 'Good soil. Shame about my hands.', 'Wheat grows fine if you leave it be.',
+    'Crows in the field again.', 'Sharp scythe, long field.', 'No peasant in the field, no bread in the keep.',
+  ],
+  orchard: [
+    'Apples big as fists this year.', 'Half of them wormy, but they\'ll eat.', 'Don\'t pick the green ones. Gut-ache.',
+    'Bees are mean as wasps today.', 'Ladder creaks. Not going any higher.',
+  ],
+  fisher: [
+    'Nothing biting today.', 'Water\'s cold as a tax collector\'s heart.', 'Pike snapped my line, the rascal.', 'Quiet, you\'ll scare them off.',
+    'Fish like peace and quiet. Same as me.', 'Net\'s full of holes, but it\'ll catch something.',
+  ],
+  mill: [
+    'Good wind, the stone\'s grinding.', 'Flour up my nose, flour in my ears.', 'No mill, no baker.', 'Sails stopped? No, still turning.',
+    'Sack after sack, all day long.',
+  ],
+  bakery: [
+    'Fresh from the oven! Hands off, it\'s hot.', 'Dough\'s rising. I\'m not.', 'Need to stoke the oven.', 'Smells good, eh? You\'re not getting any.',
+    'Short on flour. Miller\'s dawdling.',
+  ],
+  brewery: [
+    'Good hops. Ale\'ll be strong.', 'Vat\'s full and I\'m sober. Shameful.', 'Got to taste it to know it.',
+    'Without ale the lads would\'ve run off long ago.', 'Malt smells like bread, only better.',
+  ],
+  tavern: [
+    'No coin, no ale.', 'Bench is free, sit down.', 'Barrel\'s nearly dry, roll in another.', 'It\'ll be packed in here tonight.',
+    'No brawling at the bar!', 'Ale\'s good today. Tried it myself.',
+  ],
+  fletcher: [
+    'Arrow straight as a string.', 'Goose feathers. Best fletching there is.', 'Yew for the bow, gut for the string.', 'An archer with no arrows is just a shepherd.',
+  ],
+  poleturner: [
+    'Shaft\'s straight, point\'s sharp.', 'Long spear, enemy stays far.', 'Three more and I\'m off to the armoury.', 'Ash makes the best shafts.',
+  ],
+  engineers: [
+    'Ram won\'t build itself.', 'Measure twice, cut once.', 'That wall\'s coming down, you\'ll see.', 'Beam\'s crooked? Wasn\'t me.',
+  ],
+  stockpile: [
+    'Planks with planks, stone with stone.', 'Who stacked this mess?', 'Counting and counting, never adds up.', 'Running out of room.',
+  ],
+  granary: [
+    'Rats in the grain again.', 'Granary\'s full, mind\'s at ease.', 'Will it last the winter? It\'ll have to.', 'Dry. Won\'t go damp.',
+  ],
+  barn: ['Hay under the roof before the rain comes.', 'Big barn, and still cramped.'],
+  cemetery: [
+    'Everyone ends up here someday.', 'I dig the hole and keep my mouth shut.', 'May the earth rest light on him.', 'Quiet here. I like quiet.',
+  ],
+  well: ['Water\'s clean and cold as ice.', 'Bucket, crank, bucket, crank…'],
+  // --- building and hauling ---
+  build: [
+    'Knock, knock, and it stands.', 'Whoever drew this never carried a beam.', 'One more beam and we\'re done.', 'Pass the hammer!',
+    'Crooked? Can\'t tell from afar.', 'If it falls down, not my fault.', 'Foundation by the line, the rest by eye.',
+  ],
+  carry: [
+    'Heavy bloody thing.', 'Hauling, hauling.', 'Out of the way!', 'Watch it or I\'ll drop it!', 'My shoulder\'s about to fall off.', 'Bit further to the stockpile.',
+  ],
+  // --- moods and situations ---
+  hungry: [
+    'Folk are going hungry, my lord.', 'My belly\'s stuck to my spine.', 'Can\'t work on an empty stomach.', 'The children are crying from hunger.',
+    'Just a crust of bread…', 'Nothing in the granary but the wind.',
+  ],
+  angry: [
+    'These taxes will be the death of us.', 'Other lords pay better.', 'Bit longer and I\'m off.', 'Fat lord in the keep, and we\'re skin and bone.',
+    'They say it\'s better in the next village.', 'We won\'t put up with this much longer.',
+  ],
+  night: [
+    'Wolves are howling tonight, hear that?', 'Don\'t wander past the palisade after dark.', 'Could do with some sleep.', 'Dark as a sack in here.',
+    'Bright moon, bold wolves.', 'A torch would come in handy.',
+  ],
+  wolves: ['Wolves! Help!', 'Grab a stick, they\'re coming!', 'Mother of God, wolves!', 'Into the huts, quick!', 'Guards! Wolves at the village!'],
+  wolvesNight: ['Hear that? Howling past the palisade.', 'At night the wolves come right up to the huts.', 'Bolt the doors, wolves are circling.'],
+  cold: [
+    'Freezing! Need to light the stove.', 'Can\'t feel my fingers. Off to make a fire.', 'Frost won\'t let up. Need more wood.',
+    'Cold as a dog kennel. Throw a log on!', 'Water in the bucket\'s frozen.', 'Who\'s got dry firewood? Hut\'s freezing.',
+  ],
+  coldNight: ['I\'ll stoke the stove or we\'ll freeze by morning.', 'Shut the door, feed the fire, then sleep.', 'Two blankets and still cold.'],
+  hot: ['This heat\'s unbearable.', 'Water! My throat\'s like pepper.', 'Heat like this, you just sit in the shade.', 'Sun\'s scorching, sweat\'s pouring.'],
+  rain: ['Pours and pours.', 'Mud up to my knees.', 'Soaked to the bone.', 'Rain\'s good for the wheat, bad for me.', 'Need to get under a roof.'],
+  morning: [
+    'Cock\'s crowed, time to get up.', 'Dawn, and I\'m already up.', 'Morning fog thick as milk.', 'New day, same old work.',
+    'Dew on the grass, cold in the feet.',
+  ],
+  evening: [
+    'To the tavern, lads!', 'Done for the day. Finally.', 'Let\'s sit by the fire.', 'My legs are falling off from all this work.', 'Who\'s buying the ale?',
+    'Did I tell you about the time I fought a wolf bare-handed…', 'Sun\'s going down and we\'re still breathing.',
+  ],
+  sleep: ['Yawn… time for bed.', 'Enough for today.', 'Off to sleep. Back to the grind tomorrow.', 'Good night, my lord.', 'The straw awaits.'],
+  sleeping: ['Zzzz…', 'Mmm… just a bit longer…', 'Zzzz… pfff…', 'Mmm… ale… more…'],
+  outside: ['Hard ground and not a roof in sight.', 'Sleeping on straw under the sky, like a dog.', 'Build us a hut, my lord, it\'s cold out here.'],
+  crowded: ['Eight of us in one hut, like herring in a barrel.', 'Whoever snores sleeps outside!', 'Cramped, my lord. We need more huts.'],
+  taxHigh: [
+    'Tax collector came again. Left me a button.', 'The lord\'s skinning us alive.', 'With taxes like these the keep should be gilded.', 'Pay and pay, and live on what?',
+    'Gave him my last coin.',
+  ],
+  bribe: ['The lord\'s handing out ore, God bless him!', 'You won\'t find a lord like this anywhere.', 'Ore from the lord? Next round\'s on me!'],
+  noTax: ['No taxes. Makes a man want to live.', 'Good lord, this one. Doesn\'t fleece us.'],
+  fire: ['Fire! Water!', 'Fire! Get the buckets!', 'It\'ll all burn, help!', 'To the well, run!', 'Roof\'s coming down, move!'],
+  enemy: [
+    'Soldiers coming! Not ours!', 'Hide, lad, a spear in the gut and you\'re done for!', 'Enemy at the village!',
+    'Everyone to the keep!', 'Somebody tell the guards to do something!',
+  ],
+  dry: ['Tavern\'s dry as a desert. No ale.', 'An evening without ale is no evening at all.', 'Brewery\'s idle and my throat\'s parched.'],
+  good: [
+    'Not a bad life here, I\'ll give you that.', 'Full belly, roof overhead. What more do you want?', 'Long live the lord!',
+    'Haven\'t had it this quiet in ages.', 'Think I\'ll stay a while.',
+  ],
+  // --- the lord walks the courtyard ---
+  lord: [
+    'The lord\'s coming! Hats off!', 'Praise be, my lord.', 'Good lord, walks among his people.', 'Quiet, the lord\'s watching.',
+    'My lord, my roof\'s leaking…', 'Bow to the lord, bow!', 'Out on his own? Checking we\'re working, no doubt.',
+  ],
+};
+
+const GUARD_SAY_EN: { [K in keyof typeof GUARD_SAY_PL]: string[] } = {
+  day: [
+    'What are you looking for?', 'Don\'t loiter here without a reason.', 'Stay out of trouble.', 'Easy. As long as I\'m standing here, nobody tries anything.',
+    'The lord pays, I keep watch. Simple.', 'Got a problem?', 'Move along.', 'Saw you by the granary yesterday. Careful.',
+    'Peace and quiet. That\'s how it should be.',
+  ],
+  night: [
+    'After dark you\'d best stay in your hut.', 'Wolves are close tonight. Hear them?', 'Quiet. Something\'s moving by the palisade.', 'Long night, and not a drop of ale.',
+    'Who goes there? Oh, it\'s you. Off to bed.', 'Torches stay lit till dawn.',
+  ],
+  danger: ['To arms!', 'Enemy at the gate! Follow me!', 'They won\'t pass while I stand!', 'Hold the line!', 'Hit them!'],
+  fire: ['Fire! Move it with those buckets!', 'Put it out, don\'t gawk!', 'Everyone to the well!'],
+  cold: ['So cold my armour\'s freezing to my skin.', 'Frost. Could use a fire by the gate.'],
+  rain: ['Pouring buckets, and here I stand.', 'This rain\'s rusting my armour.', 'Wet guard, grumpy guard.'],
+  hungry: ['Empty pot in the barracks. We won\'t last long like this.', 'A hungry guard is a bad guard.'],
+  taxHigh: ['The peasants grumble about taxes. Keep an eye out for trouble.', 'The tax collector walks with us. Wouldn\'t come back alone.'],
+  lord: ['The lord\'s in the courtyard. Attention!', 'Make way, the lord\'s coming!', 'Guard the lord, lads!'],
+};
+
+const EN = lang() === 'en';
+export const SAY: Record<string, string[]> = EN ? SAY_EN : SAY_PL;
+export const GUARD_SAY: { [K in keyof typeof GUARD_SAY_PL]: string[] } = EN ? GUARD_SAY_EN : GUARD_SAY_PL;

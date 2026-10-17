@@ -3,6 +3,8 @@
  * Stawianie jednostek kliknięciem na mapie (swoje albo wroga), wilki, szybkie scenki (wróg pod wieżą),
  * przewijanie czasu, kamera do twierdz. Działa wprost na stanie gry — w grze przez sieć jest wyłączony.
  */
+import { t, tx } from '../i18n';
+
 export type DevSpawn = 'spearman' | 'archer' | 'wolf';
 export interface DevEvents {
   /** Tryb stawiania: następne kliknięcie na mapie stawia `count` jednostek; null = wyłączony */
@@ -39,15 +41,15 @@ export function createDevPanel(root: HTMLElement, ev: DevEvents): DevPanel {
   const box = el('div', 'panel devpanel');
   box.hidden = true;
   box.setAttribute('role', 'dialog');
-  box.setAttribute('aria-label', 'Panel dewelopera');
+  box.setAttribute('aria-label', tx('Panel dewelopera', 'Developer panel'));
   const head = el('div', 'dev-head');
   const close = el('button', 'dev-x', '×');
   close.type = 'button';
-  close.setAttribute('aria-label', 'Zamknij panel dewelopera');
-  head.append(el('p', 'info-name', 'Panel dewelopera'), close);
+  close.setAttribute('aria-label', tx('Zamknij panel dewelopera', 'Close developer panel'));
+  head.append(el('p', 'info-name', tx('Panel dewelopera', 'Developer panel')), close);
 
   let kind: DevSpawn = 'spearman', foe = true, count = 3, placing = false;
-  const status = el('p', 'dev-status', 'Wybierz, kogo postawić, i kliknij „Stawiaj”, potem miejsce na mapie.');
+  const status = el('p', 'dev-status', tx('Wybierz, kogo postawić, i kliknij „Stawiaj”, potem miejsce na mapie.', 'Choose who to place, click “Place”, then a spot on the map.'));
   status.setAttribute('aria-live', 'polite');
 
   /** Grupa przycisków: jeden wybrany */
@@ -68,12 +70,12 @@ export function createDevPanel(root: HTMLElement, ev: DevEvents): DevPanel {
     row.append(seg);
     return row;
   };
-  const place = el('button', 'btn-main dev-place', 'Stawiaj na mapie');
+  const place = el('button', 'btn-main dev-place', tx('Stawiaj na mapie', 'Place on map'));
   place.type = 'button';
   place.setAttribute('aria-pressed', 'false');
   const refresh = (): void => {
     place.setAttribute('aria-pressed', String(placing));
-    place.textContent = placing ? 'Stawianie włączone — kliknij na mapie (Esc kończy)' : 'Stawiaj na mapie';
+    place.textContent = placing ? tx('Stawianie włączone — kliknij na mapie (Esc kończy)', 'Placing on — click the map (Esc stops)') : tx('Stawiaj na mapie', 'Place on map');
     ev.onPlace(placing ? { kind, foe, count } : null);
   };
   place.addEventListener('click', () => { placing = !placing; refresh(); });
@@ -87,28 +89,28 @@ export function createDevPanel(root: HTMLElement, ev: DevEvents): DevPanel {
   };
   const acts = el('div', 'dev-acts');
   acts.append(
-    act('Wróg pod moją wieżą', () => { ev.onFoeAtTower(); status.textContent = 'Trzech wrogich włóczników 6 pól od Twojej wieży z łucznikami.'; }, 'Sprawdzenie, czy wieża strzela'),
-    act('Wywołaj pożar', () => ev.onFire(), 'Podpala Twój budynek najbliżej studni'),
-    act('Przewiń do nocy', () => ev.onSkip('night'), 'Wilki wychodzą o zmierzchu'),
-    act('Przewiń do rana', () => ev.onSkip('day')),
-    act('Kamera: moja twierdza', () => ev.onCamera('mine')),
-    act('Kamera: twierdza wroga', () => ev.onCamera('foe')),
-    act('Ulecz moich', () => { ev.onHeal(); status.textContent = 'Wszyscy Twoi żołnierze mają pełne zdrowie.'; }),
-    act('+1000 wszystkiego', () => { ev.onGive(); status.textContent = 'Dodano po 1000 każdego zapasu.'; }),
-    act('Usuń wrogie wojsko', () => { ev.onKillFoes(); status.textContent = 'Wrogie wojsko i wilki usunięte.'; }),
+    act(tx('Wróg pod moją wieżą', 'Enemy at my tower'), () => { ev.onFoeAtTower(); status.textContent = tx('Trzech wrogich włóczników 6 pól od Twojej wieży z łucznikami.', 'Three enemy spearmen 6 tiles from your archer tower.'); }, tx('Sprawdzenie, czy wieża strzela', 'Checks that the tower shoots')),
+    act(tx('Wywołaj pożar', 'Start a fire'), () => ev.onFire(), tx('Podpala Twój budynek najbliżej studni', 'Sets fire to your building nearest a well')),
+    act(tx('Przewiń do nocy', 'Skip to night'), () => ev.onSkip('night'), tx('Wilki wychodzą o zmierzchu', 'Wolves come out at dusk')),
+    act(tx('Przewiń do rana', 'Skip to morning'), () => ev.onSkip('day')),
+    act(tx('Kamera: moja twierdza', 'Camera: my keep'), () => ev.onCamera('mine')),
+    act(tx('Kamera: twierdza wroga', 'Camera: enemy keep'), () => ev.onCamera('foe')),
+    act(tx('Ulecz moich', 'Heal mine'), () => { ev.onHeal(); status.textContent = tx('Wszyscy Twoi żołnierze mają pełne zdrowie.', 'All your soldiers are at full health.'); }),
+    act(tx('+1000 wszystkiego', '+1000 of everything'), () => { ev.onGive(); status.textContent = tx('Dodano po 1000 każdego zapasu.', 'Added 1000 of every good.'); }),
+    act(tx('Usuń wrogie wojsko', 'Remove enemy army'), () => { ev.onKillFoes(); status.textContent = tx('Wrogie wojsko i wilki usunięte.', 'Enemy army and wolves removed.'); }),
   );
 
   // pora roku: gra przeskakuje do środka wybranej pory (temperatura, dym, opał, nastroje)
   const seasons = el('div', 'dev-acts');
-  for (const [id, label] of [['spring', 'Wiosna'], ['summer', 'Lato'], ['autumn', 'Jesień'], ['winter', 'Zima']] as const)
-    seasons.append(act(label, () => { status.textContent = ev.onSeason(id); }, `Przeskocz do środka pory: ${label.toLowerCase()}`));
+  for (const [id, label] of [['spring', tx('Wiosna', 'Spring')], ['summer', tx('Lato', 'Summer')], ['autumn', tx('Jesień', 'Autumn')], ['winter', tx('Zima', 'Winter')]] as const)
+    seasons.append(act(label, () => { status.textContent = ev.onSeason(id); }, tx(`Przeskocz do środka pory: ${label.toLowerCase()}`, `Jump to mid-${label.toLowerCase()}`)));
   box.append(
     head,
-    pick<DevSpawn>('Kto', [['spearman', 'Włócznik'], ['archer', 'Łucznik'], ['wolf', 'Wilk']], kind, (v) => { kind = v; }),
-    pick<boolean>('Czyj', [[true, 'Wróg'], [false, 'Mój']], foe, (v) => { foe = v; }),
-    pick<number>('Ilu', [[1, '1'], [3, '3'], [6, '6'], [12, '12']], count, (v) => { count = v; }),
-    place, el('p', 'dev-sub', 'Szybkie scenki'), acts,
-    el('p', 'dev-sub', 'Pora roku'), seasons, status,
+    pick<DevSpawn>(tx('Kto', 'Who'), [['spearman', t('u.spearman')], ['archer', t('u.archer')], ['wolf', tx('Wilk', 'Wolf')]], kind, (v) => { kind = v; }),
+    pick<boolean>(tx('Czyj', 'Whose'), [[true, tx('Wróg', 'Enemy')], [false, tx('Mój', 'Mine')]], foe, (v) => { foe = v; }),
+    pick<number>(tx('Ilu', 'How many'), [[1, '1'], [3, '3'], [6, '6'], [12, '12']], count, (v) => { count = v; }),
+    place, el('p', 'dev-sub', tx('Szybkie scenki', 'Quick scenes')), acts,
+    el('p', 'dev-sub', tx('Pora roku', 'Season')), seasons, status,
   );
   root.append(box);
   const hide = (): void => { box.hidden = true; if (placing) { placing = false; refresh(); } };

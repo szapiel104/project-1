@@ -10,6 +10,8 @@
  *
  * Użycie: przed importem modułów renderu `await loadModels()`, potem w module `const X = model('x')`.
  */
+import { tx } from '../i18n';
+
 const URLS = import.meta.glob('./models/*.json', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
 
 const store = new Map<string, unknown>();
@@ -42,7 +44,7 @@ export function loadModels(onProgress?: (done: number, total: number) => void): 
     const name = nameOf(key);
     if (!store.has(name)) {
       const res = await fetch(url);
-      if (!res.ok) throw new Error(`Nie udało się pobrać modelu ${name} (${res.status})`);
+      if (!res.ok) throw new Error(tx(`Nie udało się pobrać modelu ${name} (${res.status})`, `Could not download model ${name} (${res.status})`));
       store.set(name, await res.json());
     }
     done++;

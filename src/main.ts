@@ -8,7 +8,7 @@ import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } f
 import { UNITS } from './data/units';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { BYNAMES, FIRST_NAMES } from './data/names';
-import { t } from './i18n';
+import { lang, t, tx } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
@@ -69,7 +69,7 @@ let netGame: OnlineStart | null = null;
 let netNotes = { desync: false, left: 0 };
 const netWait = document.createElement('div');
 netWait.className = 'net-wait';
-netWait.textContent = 'Czekam na przeciwnika…';
+netWait.textContent = tx('Czekam na przeciwnika…', 'Waiting for your opponent…');
 netWait.hidden = true;
 document.body.append(netWait);
 const chat = createGameChat(document.body, () => play('click'));
@@ -152,7 +152,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
   onSpeed: (s) => {
     // z drugim prawdziwym graczem nie ma pauzy ani przyspieszania: czas płynie tak samo u obu
-    if (net) { hud.toast('W grze z drugim graczem nie można pauzować ani zmieniać tempa.'); return false; }
+    if (net) { hud.toast(tx('W grze z drugim graczem nie można pauzować ani zmieniać tempa.', 'In a game against another player you cannot pause or change the pace.')); return false; }
     speed = s;
     return true;
   },
@@ -189,10 +189,10 @@ const hud = createHud(document.getElementById('ui')!, {
   onPower: (id, on) => { pending.push({ type: 'power', player: ME, id, on }); play('click'); },
   onRally: (id, unit, clear) => {
     const kind = unit ? unitIndex(unit) : -1;
-    if (clear) { pending.push({ type: 'rally', player: ME, building: id, kind, tile: -1 }); hud.toast('Flaga zdjęta: nowi staną przed koszarami.'); return; }
+    if (clear) { pending.push({ type: 'rally', player: ME, building: id, kind, tile: -1 }); hud.toast(tx('Flaga zdjęta: nowi staną przed koszarami.', 'Banner taken down: new recruits will muster before the barracks.')); return; }
     rallyPick = { building: id, kind };
     canvas.classList.add('placing');
-    hud.toast(unit ? 'Wskaż na mapie, gdzie mają iść nowi tego rodzaju (Esc anuluje).' : 'Wskaż na mapie punkt zbiórki dla wszystkich nowych (Esc anuluje).');
+    hud.toast(unit ? tx('Wskaż na mapie, gdzie mają iść nowi tego rodzaju (Esc anuluje).', 'Point on the map where new recruits of this kind should go (Esc cancels).') : tx('Wskaż na mapie punkt zbiórki dla wszystkich nowych (Esc anuluje).', 'Point on the map to set a rally point for all new recruits (Esc cancels).'));
   },
   onTrain: (id, n, unit = 'spearman') => { const k = Math.min(n, recruitInfo().find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
 }, thumbs);
@@ -218,7 +218,7 @@ const previewCover = document.createElement('div');
 previewCover.className = 'preview-cover';
 previewCover.hidden = true;
 previewCover.setAttribute('role', 'status');
-previewCover.innerHTML = '<div class="preview-cover-box"><span class="preview-spin" aria-hidden="true"></span><p>Generuję mapę…</p></div>';
+previewCover.innerHTML = '<div class="preview-cover-box"><span class="preview-spin" aria-hidden="true"></span><p>' + tx('Generuję mapę…', 'Generating the map…') + '</p></div>';
 document.body.append(previewCover);
 const menu = createMenu(document.body, {
   onContinue: () => { menu.close(); if (!net) setStatus({ where: 'solo' }); },
@@ -332,7 +332,7 @@ function showPing(from: number, kind: number, x: number, y: number): void {
   const p = PINGS[kind];
   if (!p || !Number.isFinite(x) || !Number.isFinite(y)) return;
   const slot = netGame?.slots[from];
-  const who = slot?.kind === 'human' ? { id: slot.id, nick: slot.nick, avatar: slot.avatar } : { id: `p${from}`, nick: from === ME ? 'Ty' : `Gracz ${from + 1}`, avatar: 0 };
+  const who = slot?.kind === 'human' ? { id: slot.id, nick: slot.nick, avatar: slot.avatar } : { id: `p${from}`, nick: from === ME ? tx('Ty', 'You') : tx(`Gracz ${from + 1}`, `Player ${from + 1}`), avatar: 0 };
   renderer.ping(x, y, p.color);
   pings.show(kind, x, y, who.nick);
   if (chat.active) chat.note(who, `${p.icon} ${p.label}`, from === ME);
@@ -365,10 +365,10 @@ window.addEventListener('pointerdown', (e) => {
 
 // ---- sojusznicy: wysyłanie surowców wozem (polecenie 'send' w symulacji) i powiadomienia o wozach ----
 const playerName = (p: number): string => {
-  if (p === ME) return 'Ty';
+  if (p === ME) return tx('Ty', 'You');
   const slot = netGame?.slots[p];
   if (slot?.kind === 'human') return slot.nick;
-  return game.players[p]?.bot ? `Bot ${p + 1}` : `Gracz ${p + 1}`;
+  return game.players[p]?.bot ? `Bot ${p + 1}` : tx(`Gracz ${p + 1}`, `Player ${p + 1}`);
 };
 const allies = createAllies({
   name: playerName,
@@ -389,12 +389,12 @@ function caravanNews(now: number): void {
     caravanSeen = n.id;
     const what = `${n.amount} × ${t(RESOURCE_DEFS[RESOURCES[n.res]!].name).toLowerCase()}`;
     if (n.captured) {
-      if (n.owner === ME) hud.toast(`Wróg przechwycił Twój wóz dla: ${playerName(n.to)} (${what}).`);
-      else if (n.by === ME) hud.toast(`Twoi żołnierze przechwycili wóz wroga: +${what}.`);
-      else if (n.to === ME) hud.toast(`Wróg przechwycił wóz, który jechał do Ciebie od: ${playerName(n.owner)}.`);
-    } else if (n.by === ME && n.owner !== ME) { hud.toast(`${playerName(n.owner)} przysłał Ci wóz: +${what}.`); play('select'); }
-    else if (n.owner === ME && n.by !== ME) hud.toast(`Wóz dotarł do: ${playerName(n.to)} (${what}).`);
-    else if (n.owner === ME) hud.toast(`Sojusznik odpadł — wóz wrócił do zamku (${what}).`);
+      if (n.owner === ME) hud.toast(tx(`Wróg przechwycił Twój wóz dla: ${playerName(n.to)} (${what}).`, `The enemy seized your cart bound for ${playerName(n.to)} (${what}).`));
+      else if (n.by === ME) hud.toast(tx(`Twoi żołnierze przechwycili wóz wroga: +${what}.`, `Your soldiers seized an enemy cart: +${what}.`));
+      else if (n.to === ME) hud.toast(tx(`Wróg przechwycił wóz, który jechał do Ciebie od: ${playerName(n.owner)}.`, `The enemy seized a cart sent to you by ${playerName(n.owner)}.`));
+    } else if (n.by === ME && n.owner !== ME) { hud.toast(tx(`${playerName(n.owner)} przysłał Ci wóz: +${what}.`, `${playerName(n.owner)} sent you a cart: +${what}.`)); play('select'); }
+    else if (n.owner === ME && n.by !== ME) hud.toast(tx(`Wóz dotarł do: ${playerName(n.to)} (${what}).`, `Your cart reached ${playerName(n.to)} (${what}).`));
+    else if (n.owner === ME) hud.toast(tx(`Sojusznik odpadł — wóz wrócił do zamku (${what}).`, `Your ally has fallen — the cart returned to the keep (${what}).`));
   }
 }
 
@@ -411,7 +411,7 @@ function startOnline(st: OnlineStart): void {
   });
   pingOff = offPing;
   const names = st.slots.map((x) => (x.kind === 'human' ? x.nick : null)).filter(Boolean);
-  hud.toast(`Mecz przez sieć (${st.preset}): ${names.join(', ')}${st.slots.some((x) => x.kind === 'bot') ? ' + boty' : ''}.`);
+  hud.toast(tx(`Mecz przez sieć (${st.preset}): `, `Online match (${st.preset}): `) + `${names.join(', ')}${st.slots.some((x) => x.kind === 'bot') ? tx(' + boty', ' + bots') : ''}.`);
 }
 /**
  * Gra stoi, bo brakuje czyichś poleceń. Po chwili pokazujemy, na kogo czekamy i ile jeszcze;
@@ -424,13 +424,13 @@ function waitFor(turn: number, now: number): void {
   const waited = now - net.waitingSince;
   const missing = net.missing(turn);
   const here = new Set(netGame.link.members().map((m) => m.id));
-  const nick = (p: number): string => { const x = netGame!.slots[p]; return x?.kind === 'human' ? x.nick : `gracz ${p + 1}`; };
+  const nick = (p: number): string => { const x = netGame!.slots[p]; return x?.kind === 'human' ? x.nick : tx(`gracz ${p + 1}`, `player ${p + 1}`); };
   const absent = missing.filter((p) => { const x = netGame!.slots[p]; return x?.kind === 'human' && !here.has(x.id); });
   for (const p of missing) if ((absent.includes(p) && waited > DROP_ABSENT_MS) || waited > DROP_SILENT_MS) net.drop(p);
   netWait.hidden = waited < 400;
   if (!netWait.hidden) {
     const left = Math.ceil(((absent.length ? DROP_ABSENT_MS : DROP_SILENT_MS) - waited) / 1000);
-    netWait.textContent = `Czekam na: ${missing.map(nick).join(', ') || 'graczy'}${waited > 3000 ? ` — ${absent.length ? 'brak połączenia' : 'słabe połączenie'}, jeszcze ${Math.max(0, left)} s` : '…'}`;
+    netWait.textContent = `${tx('Czekam na', 'Waiting for')}: ${missing.map(nick).join(', ') || tx('graczy', 'players')}${waited > 3000 ? ` — ${absent.length ? tx('brak połączenia', 'connection lost') : tx('słabe połączenie', 'poor connection')}, ${tx('jeszcze', 'another')} ${Math.max(0, left)} s` : '…'}`;
   }
 }
 let pingOff: (() => void) | null = null;
@@ -472,7 +472,7 @@ function applySettings(st: Settings): void {
   renderer.rainOn = st.rain ?? true;
   renderer.fogOn = st.fog ?? true;
   // automat: cienie, cieniowanie zagłębień, rozdzielczość i zasięg trawy z poziomu dobranego do komputera
-  if (st.auto) { const q = TIERS[autoQ.tier]!; renderer.setGraphics({ ...st, ...q, label: `automat ${autoQ.tier + 1}/${TIERS.length}` }); }
+  if (st.auto) { const q = TIERS[autoQ.tier]!; renderer.setGraphics({ ...st, ...q, label: `${tx('automat', 'auto')} ${autoQ.tier + 1}/${TIERS.length}` }); }
   else renderer.setGraphics({ ...st, grass: st.grass ?? 1 });
   setBusVolume('sfx', st.sfx);
   setBusVolume('ui', st.ui);
@@ -603,10 +603,10 @@ function siteInfo(b: GameState['buildings'][number]): NonNullable<BuildingInfo['
   }
   const loads = b.loads ?? 0, delivered = b.delivered ?? 0;
   const starved = loads > 0 && (1 - b.build / work) * loads >= delivered - 0.001;
-  const state = !builders ? 'brak wolnych ludzi — czeka na robotników'
-    : starved && (fetching || carrying) ? 'robotnicy niosą materiał ze składu'
-    : starved ? 'czeka na materiał'
-    : hammering ? 'trwa budowa' : 'robotnicy idą na plac';
+  const state = !builders ? tx('brak wolnych ludzi — czeka na robotników', 'no idle hands — waiting for labourers')
+    : starved && (fetching || carrying) ? tx('robotnicy niosą materiał ze składu', 'labourers are hauling materials from the stockpile')
+    : starved ? tx('czeka na materiał', 'waiting for materials')
+    : hammering ? tx('trwa budowa', 'construction under way') : tx('robotnicy idą na plac', 'labourers are heading to the site');
   return { pct, loads, delivered, carrying, fetching, builders, state };
 }
 
@@ -652,13 +652,13 @@ function sampleMade(): void {
   }
   for (const id of madeLog.keys()) if (!alive.has(id)) madeLog.delete(id);
 }
-const SITE_NAME: Record<string, string> = { home: 'w warsztacie', shore: 'na brzegu wody' };
+const SITE_NAME = (): Record<string, string> => ({ home: tx('w warsztacie', 'in the workshop'), shore: tx('na brzegu wody', 'on the water\'s edge') });
 function prodInfo(b: GameState['buildings'][number]): BuildingInfo['prod'] {
   const def = BUILDINGS[b.type]!, pr = def.production, p = game.players[b.owner]!;
   const u = b.worker ? game.units.find((x) => x.id === b.worker) : undefined;
   const resName = (r: string): string => t(RESOURCE_DEFS[r as ResourceId].name).toLowerCase();
   // przepis
-  const place = !pr ? '' : typeof pr.site === 'string' ? SITE_NAME[pr.site] ?? '' : pr.site === Terrain.Forest ? 'w lesie' : pr.site === Terrain.Stone ? 'w skałach' : pr.site === Terrain.Iron ? 'przy złożu rudy' : '';
+  const place = !pr ? '' : typeof pr.site === 'string' ? SITE_NAME()[pr.site] ?? '' : pr.site === Terrain.Forest ? tx('w lesie', 'in the forest') : pr.site === Terrain.Stone ? tx('w skałach', 'among the rocks') : pr.site === Terrain.Iron ? tx('przy złożu rudy', 'at an ore deposit') : '';
   const recipe = pr ? {
     input: pr.input ? { id: pr.input.res, n: pr.input.amount, name: resName(pr.input.res) } : undefined,
     output: { id: pr.output.res, n: pr.output.amount, name: resName(pr.output.res) },
@@ -677,29 +677,33 @@ function prodInfo(b: GameState['buildings'][number]): BuildingInfo['prod'] {
   const outKind = pr ? RESOURCE_DEFS[pr.output.res].store : undefined;
   const outFull = !!outKind && storeUsed(p, outKind) >= storeCapacity(game, b.owner, outKind);
   const inHave = pr?.input ? p.res[resIndex(pr.input.res)]! : 0;
-  const storeLabel = (k: string): string => (k === 'granary' ? 'spichlerz' : k === 'armory' ? 'zbrojownia' : 'skład');
+  const storeLabel = (k: string): string => (lang() === 'en' ? (k === 'granary' ? 'granary' : k === 'armory' ? 'armoury' : 'stockpile') : k === 'granary' ? 'spichlerz' : k === 'armory' ? 'zbrojownia' : 'skład');
+  /** „postaw spichlerz / zbrojownię” — biernik po polsku, przedimek po angielsku */
+  const buildStore = (k: string): string => (lang() === 'en' ? `build a${k === 'armory' ? 'n' : ''} ${storeLabel(k)}` : `postaw ${storeLabel(k).replace(/a$/, 'ę')}`);
+  /** „Pełny skład / Pełna zbrojownia” */
+  const fullStore = (k: string): string => (lang() === 'en' ? `The ${storeLabel(k)} is full` : `${k === 'armory' ? 'Pełna' : 'Pełny'} ${storeLabel(k)}`);
   let status: { text: string; level: 'ok' | 'warn' | 'bad' };
   if (!u) {
     const free = game.units.some((x) => x.owner === b.owner && x.job === 0 && !x.enlist);
-    status = free ? { text: 'Brak pracownika — wolny chłop zaraz przyjdzie.', level: 'warn' }
-      : { text: 'Brak pracownika: nie ma wolnych chłopów. Postaw chaty, obniż podatki albo podnieś racje, żeby przyszli nowi.', level: 'bad' };
-  } else if (u.phase === Phase.Sleeping || u.phase === Phase.ToSleep) status = { text: 'Noc — pracownik śpi, rano wraca do roboty.', level: 'ok' };
-  else if (u.phase === Phase.Evening || u.phase === Phase.ToEvening) status = { text: 'Wieczór — fajrant, rano wraca do roboty.', level: 'ok' };
-  else if (pr?.input && RESOURCE_DEFS[pr.input.res].store && !storeCapacity(game, b.owner, RESOURCE_DEFS[pr.input.res].store!)) status = { text: `Nie ma skąd wziąć surowca (${resName(pr.input.res)}): postaw ${storeLabel(RESOURCE_DEFS[pr.input.res].store!).replace(/a$/, 'ę')}.`, level: 'bad' };
-  else if (outKind && !storeCapacity(game, b.owner, outKind)) status = { text: `Nie ma gdzie odnieść towaru (${resName(pr!.output.res)}): postaw ${storeLabel(outKind).replace(/a$/, 'ę')}.`, level: 'bad' };
-  else if (pr?.input && u.phase === Phase.ToInputStore && inHave < pr.input.amount) status = { text: `Czeka na surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, potrzeba ${pr.input.amount}.`, level: 'bad' };
-  else if (u.phase === Phase.ToStore && u.carryAmt > 0 && u.timer > 0) status = { text: `${outKind === 'armory' ? 'Pełna' : 'Pełny'} ${storeLabel(outKind ?? '')} — pracownik czeka z towarem, a nadmiar przepadnie. Postaw kolejny.`, level: 'bad' };
-  else if (outFull) status = { text: `${outKind === 'armory' ? 'Pełna' : 'Pełny'} ${storeLabel(outKind ?? '')} — nowy towar nie będzie miał gdzie leżeć.`, level: 'warn' };
-  else if (pr?.input && inHave < pr.input.amount) status = { text: `Kończy się surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, na jeden cykl trzeba ${pr.input.amount}.`, level: 'warn' };
-  else if (u.phase === Phase.Resting || u.phase === Phase.ToRest) status = { text: 'Krótki odpoczynek w chacie, zaraz wraca.', level: 'ok' };
-  else status = { text: 'Pracuje bez przeszkód.', level: 'ok' };
+    status = free ? { text: tx('Brak pracownika — wolny chłop zaraz przyjdzie.', 'No worker — an idle peasant is on his way.'), level: 'warn' }
+      : { text: tx('Brak pracownika: nie ma wolnych chłopów. Postaw chaty, obniż podatki albo podnieś racje, żeby przyszli nowi.', 'No worker: there are no idle peasants. Build hovels, lower taxes or raise rations to draw newcomers.'), level: 'bad' };
+  } else if (u.phase === Phase.Sleeping || u.phase === Phase.ToSleep) status = { text: tx('Noc — pracownik śpi, rano wraca do roboty.', 'Night — the worker sleeps and returns to work at dawn.'), level: 'ok' };
+  else if (u.phase === Phase.Evening || u.phase === Phase.ToEvening) status = { text: tx('Wieczór — fajrant, rano wraca do roboty.', 'Evening — work is done for the day; back at it at dawn.'), level: 'ok' };
+  else if (pr?.input && RESOURCE_DEFS[pr.input.res].store && !storeCapacity(game, b.owner, RESOURCE_DEFS[pr.input.res].store!)) status = { text: tx(`Nie ma skąd wziąć surowca (${resName(pr.input.res)}): `, `Nowhere to fetch materials from (${resName(pr.input.res)}): `) + `${buildStore(RESOURCE_DEFS[pr.input.res].store!)}.`, level: 'bad' };
+  else if (outKind && !storeCapacity(game, b.owner, outKind)) status = { text: tx(`Nie ma gdzie odnieść towaru (${resName(pr!.output.res)}): `, `Nowhere to store the goods (${resName(pr!.output.res)}): `) + `${buildStore(outKind)}.`, level: 'bad' };
+  else if (pr?.input && u.phase === Phase.ToInputStore && inHave < pr.input.amount) status = { text: tx(`Czeka na surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, potrzeba ${pr.input.amount}.`, `Waiting for ${resName(pr.input.res)} — ${inHave} in store, ${pr.input.amount} needed.`), level: 'bad' };
+  else if (u.phase === Phase.ToStore && u.carryAmt > 0 && u.timer > 0) status = { text: `${fullStore(outKind ?? '')} — ${tx('pracownik czeka z towarem, a nadmiar przepadnie. Postaw kolejny.', 'the worker stands waiting with his goods and the surplus will go to waste. Build another.')}`, level: 'bad' };
+  else if (outFull) status = { text: `${fullStore(outKind ?? '')} — ${tx('nowy towar nie będzie miał gdzie leżeć.', 'new goods will have nowhere to go.')}`, level: 'warn' };
+  else if (pr?.input && inHave < pr.input.amount) status = { text: tx(`Kończy się surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, na jeden cykl trzeba ${pr.input.amount}.`, `Running low on ${resName(pr.input.res)} — ${inHave} in store, ${pr.input.amount} needed per cycle.`), level: 'warn' };
+  else if (u.phase === Phase.Resting || u.phase === Phase.ToRest) status = { text: tx('Krótki odpoczynek w chacie, zaraz wraca.', 'A short rest in his hovel; he\'ll be back shortly.'), level: 'ok' };
+  else status = { text: tx('Pracuje bez przeszkód.', 'Working without hindrance.'), level: 'ok' };
   // kopalnia: załoga rośnie z wioską, a z jednego kursu wychodzi kamień, żelazo albo rzadka ruda
   if (def.crew) {
     const pop = game.units.filter((x) => x.owner === b.owner).length;
     const have = (b.worker ? 1 : 0) + (b.crew?.length ?? 0), want = crewWanted(def, pop);
     const yields = MINE_YIELDS.map((y) => `${resName(y.res)} ${y.weight}%`).join(', ');
-    status = { text: `Załoga: ${have} z ${want} górników (1 na ${def.crew.per} mieszkańców, najwyżej ${def.crew.max}). Urobek: ${yields}. ${status.text}`, level: have < want && status.level === 'ok' ? 'warn' : status.level };
-    if (recipe) recipe.place = 'w sztolni';
+    status = { text: `${tx(`Załoga: ${have} z ${want} górników (1 na ${def.crew.per} mieszkańców, najwyżej ${def.crew.max}). Urobek: ${yields}.`, `Crew: ${have} of ${want} miners (1 per ${def.crew.per} inhabitants, at most ${def.crew.max}). Yield: ${yields}.`)} ${status.text}`, level: have < want && status.level === 'ok' ? 'warn' : status.level };
+    if (recipe) recipe.place = tx('w sztolni', 'down the mine shaft');
   }
   // liczby
   let day: number | undefined;
@@ -725,7 +729,7 @@ function watchInfo(owner: number): BuildingInfo['watch'] {
   let note: string | undefined;
   if (!training && have < want) {
     const lack = Object.entries(GUARD_COST).filter(([r, n]) => p.res[resIndex(r as ResourceId)]! < n!).map(([r]) => t(`res.${r}`).toLowerCase());
-    note = lack.length ? `na rekruta brakuje: ${lack.join(', ')}` : !game.units.some((u) => u.owner === owner && u.job === 0) ? 'brak wolnego chłopa na rekruta' : 'werbunek ruszy za dnia, gdy pod zamkiem nie ma wroga';
+    note = lack.length ? `${tx('na rekruta brakuje', 'a recruit still needs')}: ${lack.join(', ')}` : !game.units.some((u) => u.owner === owner && u.job === 0) ? tx('brak wolnego chłopa na rekruta', 'no idle peasant to recruit') : tx('werbunek ruszy za dnia, gdy pod zamkiem nie ma wroga', 'recruiting resumes by day, once no enemy stands before the keep');
   }
   return { have, want, training, note };
 }
@@ -738,15 +742,15 @@ function campWatch(b: GameState['buildings'][number]): BuildingInfo['watch'] {
   const parts: string[] = [];
   if (!training && have < CAMP_GUARDS) {
     const lack = Object.entries(GUARD_COST).filter(([r, n]) => p.res[resIndex(r as ResourceId)]! < n!).map(([r]) => t(`res.${r}`).toLowerCase());
-    parts.push(lack.length ? `na rekruta brakuje: ${lack.join(', ')}` : 'czeka na wolnego chłopa z obozowiska');
+    parts.push(lack.length ? `${tx('na rekruta brakuje', 'a recruit still needs')}: ${lack.join(', ')}` : tx('czeka na wolnego chłopa z obozowiska', 'waiting for an idle peasant from the camp'));
   }
   const held = (b.hold ?? []).map((n, r) => [r, n] as const).filter(([, n]) => n > 0).map(([r, n]) => `${t(`res.${RESOURCES[r]}`).toLowerCase()} ${n}`);
-  parts.push(held.length ? `pod barakiem: ${held.join(', ')}` : 'pod barakiem pusto');
+  parts.push(held.length ? `${tx('pod barakiem', 'at the lodge')}: ${held.join(', ')}` : tx('pod barakiem pusto', 'nothing waiting at the lodge'));
   const cart = (game.caravans ?? []).find((c) => c.camp === b.id);
-  if (cart) parts.push(`wóz w drodze do zamku (eskorta: ${cart.escort?.length ?? 0})`);
+  if (cart) parts.push(tx(`wóz w drodze do zamku (eskorta: ${cart.escort?.length ?? 0})`, `cart on its way to the keep (escort: ${cart.escort?.length ?? 0})`));
   const mine = game.buildings.find((m) => BUILDINGS[m.type]!.id === 'oremine' && campOf(game, m)?.id === b.id);
-  if (!mine) parts.push('brak kopalni w zasięgu 10 pól — barak stoi pusty');
-  return { have, want: CAMP_GUARDS, training, note: parts.join(' · '), label: 'Straż kopalni' };
+  if (!mine) parts.push(tx('brak kopalni w zasięgu 10 pól — barak stoi pusty', 'no mine within 10 tiles — the lodge stands empty'));
+  return { have, want: CAMP_GUARDS, training, note: parts.join(' · '), label: tx('Straż kopalni', 'Mine guard') };
 }
 
 function select(id: number): void {
@@ -889,13 +893,13 @@ function showPlan(): void {
   renderer.setRoadPlan(plan.tiles);
   const costs = (Object.entries(def.cost) as [ResourceId, number][]).map(([res, n]) => {
     const need = n * count, have = p.res[resIndex(res)]!;
-    return `<span class="${need > have ? 'bad' : ''}">${t(`res.${res}`)}: ${need} <small>(masz ${have})</small></span>`;
+    return `<span class="${need > have ? 'bad' : ''}">${t(`res.${res}`)}: ${need} <small>(${tx('masz', 'you have')} ${have})</small></span>`;
   });
   const bad = plan.tiles.length - count;
-  planTip.innerHTML = `<strong>${t(def.name)}: ${count} ${count === 1 ? 'pole' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'pola' : 'pól'}</strong>`
-    + (costs.length ? costs.join('') : '<span>za darmo</span>')
-    + (bad ? `<span class="bad">${bad} poza zasięgiem / zajęte</span>` : '')
-    + (plan.state === 'wait' ? '<em>Lewy przycisk — buduj · prawy — anuluj</em>' : '<em>Puść, żeby zobaczyć plan</em>');
+  planTip.innerHTML = `<strong>${t(def.name)}: ${count} ${lang() === 'en' ? (count === 1 ? 'tile' : 'tiles') : count === 1 ? 'pole' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'pola' : 'pól'}</strong>`
+    + (costs.length ? costs.join('') : `<span>${tx('za darmo', 'free of charge')}</span>`)
+    + (bad ? `<span class="bad">${bad} ${tx('poza zasięgiem / zajęte', 'out of reach / taken')}</span>` : '')
+    + (plan.state === 'wait' ? `<em>${tx('Lewy przycisk — buduj · prawy — anuluj', 'Left click — build · right click — cancel')}</em>` : `<em>${tx('Puść, żeby zobaczyć plan', 'Release to see the plan')}</em>`);
   planTip.hidden = false;
   planTip.style.left = `${mouseX + 18}px`;
   planTip.style.top = `${mouseY + 18}px`;
@@ -978,17 +982,17 @@ let walkPick = false;
 function setWalkPick(on: boolean): void {
   walkPick = on;
   canvas.classList.toggle('placing', on);
-  if (on) hud.toast('Kliknij na mapie miejsce, w którym zaczniesz spacer chłopem. Oko jeszcze raz: losowy mieszkaniec. Esc: anuluj.');
+  if (on) hud.toast(tx('Kliknij na mapie miejsce, w którym zaczniesz spacer chłopem. Oko jeszcze raz: losowy mieszkaniec. Esc: anuluj.', 'Click a spot on the map to start walking as a peasant. Click the eye again for a random villager. Esc: cancel.'));
 }
 /** Spacer od wskazanego pola: najbliższe wolne pole, po którym da się chodzić (nie w wodzie, skale ani w murze) */
-function walkAt(tx: number, ty: number): void {
+function walkAt(atX: number, atY: number): void {
   if (renderer.walking) return;
   const { width: w, height: h } = game.map;
   for (let r = 0; r < 8; r++)
     for (let dy = -r; dy <= r; dy++)
       for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        const x = tx + dx, y = ty + dy;
+        const x = atX + dx, y = atY + dy;
         if (x < 1 || y < 1 || x >= w - 1 || y >= h - 1) continue;
         const t = y * w + x, tile = game.map.tiles[t];
         if (game.occupancy[t] !== 0 || tile === Terrain.Water || tile === Terrain.Mountain) continue;
@@ -997,7 +1001,7 @@ function walkAt(tx: number, ty: number): void {
         renderer.startWalk(x + 0.5, y + 0.5);
         return;
       }
-  hud.toast('Tu nie da się stanąć — wybierz miejsce na lądzie, poza budynkami i skałami.');
+  hud.toast(tx('Tu nie da się stanąć — wybierz miejsce na lądzie, poza budynkami i skałami.', 'You cannot stand here — pick a spot on dry land, clear of buildings and rocks.'));
 }
 
 /** Spacer oczami wybranego mieszkańca */
@@ -1397,8 +1401,8 @@ function updateAlarm(): void {
     const near = Math.min(...coming.map((s) => Math.hypot((s.px >> 8) - keep.x, (s.py >> 8) - keep.y)));
     alarm.dataset.state = 'coming';
     alarm.tabIndex = 0;
-    alarm.title = 'Kliknij, żeby zobaczyć nadciągające wojsko';
-    alarm.innerHTML = `<strong>${t('alarm.coming')}</strong><span>${coming.length} ${t('alarm.soldiers')} · ${Math.round(near)} ${t('alarm.fields')}</span><span class="alarm-bar"><span style="width:${Math.max(4, Math.min(100, 100 - near))}%"></span></span><span class="alarm-go">Pokaż ▸</span>`;
+    alarm.title = tx('Kliknij, żeby zobaczyć nadciągające wojsko', 'Click to see the approaching host');
+    alarm.innerHTML = `<strong>${t('alarm.coming')}</strong><span>${coming.length} ${t('alarm.soldiers')} · ${Math.round(near)} ${t('alarm.fields')}</span><span class="alarm-bar"><span style="width:${Math.max(4, Math.min(100, 100 - near))}%"></span></span><span class="alarm-go">${tx('Pokaż', 'Show')} ▸</span>`;
     return;
   }
   alarm.removeAttribute('tabindex'); alarm.removeAttribute('title');
@@ -1458,18 +1462,18 @@ function endXp(after: Element, win: boolean, mins: number): void {
   box.className = 'end-xp';
   box.setAttribute('aria-live', 'polite');
   const parts = xpParts(stats).filter((x) => x.xp > 0).map((x) => `<li><span>${x.label}</span><span>${x.xp}</span></li>`).join('');
-  const mult = MODE_MULT[mode] < 1 ? `<li><span>rodzaj meczu (${mode === 'coop' ? 'razem przeciw botom' : mode.startsWith('bots') ? 'z botami' : 'przez sieć'})</span><span>×${MODE_MULT[mode]}</span></li>` : '';
-  box.innerHTML = `<strong>Doświadczenie: liczę…</strong><ul>${parts}${mult}</ul>`;
+  const mult = MODE_MULT[mode] < 1 ? `<li><span>${tx('rodzaj meczu', 'match type')} (${mode === 'coop' ? tx('razem przeciw botom', 'together against bots') : mode.startsWith('bots') ? tx('z botami', 'against bots') : tx('przez sieć', 'online')})</span><span>×${MODE_MULT[mode]}</span></li>` : '';
+  box.innerHTML = `<strong>${tx('Doświadczenie: liczę…', 'Experience: tallying…')}</strong><ul>${parts}${mult}</ul>`;
   after.after(box);
   void awardMatch(mode, stats).then((r) => {
     const head = box.querySelector('strong')!;
-    if (!r) { head.textContent = 'Doświadczenia nie udało się zapisać (brak połączenia z bazą).'; return; }
+    if (!r) { head.textContent = tx('Doświadczenia nie udało się zapisać (brak połączenia z bazą).', 'Experience could not be saved (no connection to the server).'); return; }
     const lv = levelOf(r.xp);
-    head.textContent = r.gained > 0 ? `+${r.gained} PD` : mins < 3 ? 'Za krótki mecz — bez doświadczenia' : '+0 PD (dzienny limit)';
+    head.textContent = r.gained > 0 ? `+${r.gained} ${tx('PD', 'XP')}` : mins < 3 ? tx('Za krótki mecz — bez doświadczenia', 'Match too short — no experience') : tx('+0 PD (dzienny limit)', '+0 XP (daily limit)');
     const bar = document.createElement('span'); bar.className = 'acc-xp';
     const fill = document.createElement('span'); fill.className = 'acc-xp-fill'; fill.style.width = '0%'; bar.append(fill);
     const line = document.createElement('span'); line.className = 'end-up';
-    line.textContent = r.level > r.before ? `Nowy poziom: ${r.level} — ${titleOf(r.level)}!` : `${titleOf(lv.level)} · poziom ${lv.level} · ${lv.into}/${lv.need} PD`;
+    line.textContent = r.level > r.before ? `${tx('Nowy poziom', 'New level')}: ${r.level} — ${titleOf(r.level)}!` : `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level} · ${lv.into}/${lv.need} ${tx('PD', 'XP')}`;
     box.append(bar, line);
     requestAnimationFrame(() => { fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`; });
     if (r.level > r.before) play('build');
@@ -1508,17 +1512,17 @@ function winterNotes(p: (typeof game.players)[number]): void {
   const n = (x: number): string => String(Math.round(x));
   if (crossed(0.5)) {
     const w = winterReadiness(game, p);
-    scribe.say('autumn', `Nadeszła jesień. Za ${n(w.days)} dni zima — chaty będą palić w piecach. Gromadźcie drewno na opał (na zimę ok. ${w.fuel}) i jedzenie na zapas.`);
+    scribe.say('autumn', tx(`Nadeszła jesień. Za ${n(w.days)} dni zima — chaty będą palić w piecach. Gromadźcie drewno na opał (na zimę ok. ${w.fuel}) i jedzenie na zapas.`, `Autumn is upon us. Winter comes in ${n(w.days)} days — the hovels will need their hearths lit. Lay in firewood (about ${w.fuel} for the winter) and store up food.`));
   }
   if (crossed(0.68)) {
     const w = winterReadiness(game, p), short = w.wood < w.fuel, hungry = w.foodDays < SEASON_DAYS;
-    const fuel = short ? `drewna na opał za mało: potrzeba ok. ${w.fuel}, w składzie ${w.wood}. Postawcie drwali` : `drewna na opał starczy (potrzeba ok. ${w.fuel}, jest ${w.wood})`;
-    const food = hungry ? `, a jedzenia ledwie na ${n(Math.max(0, w.foodDays))} dni — zróbcie zapasy w spichlerzu` : '';
-    scribe.say('winterSoon', `Panie, za ${Math.max(1, Math.round(w.days))} dni zima: ${fuel}${food}.`, short || hungry);
+    const fuel = short ? tx(`drewna na opał za mało: potrzeba ok. ${w.fuel}, w składzie ${w.wood}. Postawcie drwali`, `we lack firewood: about ${w.fuel} is needed and the stockpile holds ${w.wood}. Set woodcutters to work`) : tx(`drewna na opał starczy (potrzeba ok. ${w.fuel}, jest ${w.wood})`, `there is firewood enough (about ${w.fuel} needed, ${w.wood} in store)`);
+    const food = hungry ? tx(`, a jedzenia ledwie na ${n(Math.max(0, w.foodDays))} dni — zróbcie zapasy w spichlerzu`, `, and food for barely ${n(Math.max(0, w.foodDays))} days — fill the granary`) : '';
+    scribe.say('winterSoon', tx(`Panie, za ${Math.max(1, Math.round(w.days))} dni zima: ${fuel}${food}.`, `My lord, winter comes in ${Math.max(1, Math.round(w.days))} days: ${fuel}${food}.`), short || hungry);
   }
   if (crossed(0.75)) {
     const w = winterReadiness(game, p);
-    scribe.say('winter', w.wood < w.fuel / 2 ? `Zima nadeszła, a drewna na opał mało (${w.wood}). Ludzie zmarzną w chatach — tnijcie drewno.` : 'Zima nadeszła. Chaty palą w piecach; pilnujcie drewna na opał.', w.wood < w.fuel / 2);
+    scribe.say('winter', w.wood < w.fuel / 2 ? tx(`Zima nadeszła, a drewna na opał mało (${w.wood}). Ludzie zmarzną w chatach — tnijcie drewno.`, `Winter has come and firewood is scarce (${w.wood}). The people will freeze in their hovels — cut more wood.`) : tx('Zima nadeszła. Chaty palą w piecach; pilnujcie drewna na opał.', 'Winter has come. The hearths are burning in every hovel; keep the firewood coming.'), w.wood < w.fuel / 2);
   }
 }
 
@@ -1543,12 +1547,12 @@ function refresh(): void {
   const night = hour >= 19.5 || hour < 6;
   // dlaczego nikt nie przychodzi: skryba mówi wprost, co blokuje nowych osadników
   const pop = population(game, ME);
-  if (p.popularity < 50 && pop <= 6) scribe.say('noComers', `Nikt nie chce tu przyjść — popularność ${p.popularity}. Daj więcej jedzenia albo obniż podatki.`, true);
-  else if (p.popularity >= 50 && pop >= housing(game, ME)) scribe.say('noComers', 'Ludzie by przyszli, ale nie ma dla nich dachu. Postaw chatę.');
-  else if (p.popularity >= 50 && idleCount(game, ME) >= idleSlots(game, ME)) scribe.say('noComers', `Przy ogniskach komplet (${idleSlots(game, ME)} miejsc) — nowi kopacze nie przyjdą, a nadmiarowi czekają pod chatami. Daj im pracę albo postaw kolejne obozowisko.`);
-  if (game.wolves.length && !wolvesSeen) scribe.say('wolves', 'Wilki wyszły z lasu! Trzymajcie ludzi za palisadą.', true, 'herald');
+  if (p.popularity < 50 && pop <= 6) scribe.say('noComers', tx(`Nikt nie chce tu przyjść — popularność ${p.popularity}. Daj więcej jedzenia albo obniż podatki.`, `No one wishes to settle here — popularity is ${p.popularity}. Give more food or lower taxes.`), true);
+  else if (p.popularity >= 50 && pop >= housing(game, ME)) scribe.say('noComers', tx('Ludzie by przyszli, ale nie ma dla nich dachu. Postaw chatę.', 'Folk would come, but there is no roof for them. Build a hovel.'));
+  else if (p.popularity >= 50 && idleCount(game, ME) >= idleSlots(game, ME)) scribe.say('noComers', tx(`Przy ogniskach komplet (${idleSlots(game, ME)} miejsc) — nowi kopacze nie przyjdą, a nadmiarowi czekają pod chatami. Daj im pracę albo postaw kolejne obozowisko.`, `The campfires are full (${idleSlots(game, ME)} places) — no new labourers will come, and the surplus wait by the hovels. Give them work or build another camp.`));
+  if (game.wolves.length && !wolvesSeen) scribe.say('wolves', tx('Wilki wyszły z lasu! Trzymajcie ludzi za palisadą.', 'Wolves have come out of the forest! Keep the people behind the palisade.'), true, 'herald');
   wolvesSeen = game.wolves.length > 0;
-  if ((p.wolfKills ?? 0) > wolfKillsSeen) scribe.say('wolfKill', 'Wilki zagryzły naszego człowieka…', true);
+  if ((p.wolfKills ?? 0) > wolfKillsSeen) scribe.say('wolfKill', tx('Wilki zagryzły naszego człowieka…', 'Wolves have savaged one of our people…'), true);
   wolfKillsSeen = p.wolfKills ?? 0;
   winterNotes(p);
   if (night !== wasNight) scribe.say(night ? 'dusk' : 'dawn', t(night ? 'scribe.dusk' : 'scribe.dawn'));
@@ -1698,11 +1702,11 @@ function loop(now: number): void {
   }
   if (steps === 6) acc = 0;
   if (net) {
-    if (net.desync && !netNotes.desync) { netNotes.desync = true; hud.toast('Uwaga: gry u Was się rozjechały (różny stan). Wyniki mogą się nie zgadzać — zacznijcie nowy mecz.'); }
+    if (net.desync && !netNotes.desync) { netNotes.desync = true; hud.toast(tx('Uwaga: gry u Was się rozjechały (różny stan). Wyniki mogą się nie zgadzać — zacznijcie nowy mecz.', 'Warning: your games have fallen out of sync. Results may not match — start a new match.')); }
     if (net.left.length > netNotes.left) {
-      const who = net.left.slice(netNotes.left).map((i) => { const x = netGame?.slots[i]; return x?.kind === 'human' ? x.nick : `gracz ${i + 1}`; });
+      const who = net.left.slice(netNotes.left).map((i) => { const x = netGame?.slots[i]; return x?.kind === 'human' ? x.nick : tx(`gracz ${i + 1}`, `player ${i + 1}`); });
       netNotes.left = net.left.length;
-      hud.toast(`${who.join(', ')} ${who.length > 1 ? 'wyszli' : 'wyszedł'} z meczu — to oznacza poddanie się.`);
+      hud.toast(tx(`${who.join(', ')} ${who.length > 1 ? 'wyszli' : 'wyszedł'} z meczu — to oznacza poddanie się.`, `${who.join(', ')} left the match — that counts as a surrender.`));
     }
   }
   const tu = performance.now();
@@ -1878,7 +1882,7 @@ if (SANDBOX) (window as unknown as { __renderer: unknown }).__renderer = rendere
 declare const __BUILD__: string;
 const badge = document.createElement('div');
 badge.className = 'build';
-badge.textContent = `wersja ${__BUILD__}`;
+badge.textContent = `${tx('wersja', 'version')} ${__BUILD__}`;
 document.body.append(badge);
 
 /** Wywoływane z ekranu wczytywania: kompilacja shaderów i pierwsza klatka jeszcze przed menu */
@@ -1899,7 +1903,7 @@ function raiseAlert(x: number, y: number, kind: Alert['kind']): void {
   const el = document.createElement('button');
   el.type = 'button';
   el.className = `alert alert-${kind}`;
-  el.title = kind === 'wolf' ? 'Wilki atakują — pokaż' : 'Atak wroga — pokaż';
+  el.title = kind === 'wolf' ? tx('Wilki atakują — pokaż', 'Wolves attacking — show') : tx('Atak wroga — pokaż', 'Enemy attack — show');
   el.innerHTML = '<span class="alert-tri">!</span>';
   const a: Alert = { x, y, until: now + 4000, kind, el };
   el.addEventListener('click', () => renderer.lookAt(a.x, a.y, 26));
@@ -1974,7 +1978,7 @@ function groupAction(n: number, action: 'pick' | 'save' | 'clear'): void {
     if (!chosen.size) return;
     groups.set(n, [...chosen]);
     save();
-    hud.toast(`Grupa ${n}: ${chosen.size} ${chosen.size === 1 ? 'żołnierz' : 'żołnierzy'}. Wybierasz ją klawiszem ${n}.`);
+    hud.toast(tx(`Grupa ${n}: ${chosen.size} ${chosen.size === 1 ? 'żołnierz' : chosen.size % 10 >= 2 && chosen.size % 10 <= 4 && (chosen.size % 100 < 10 || chosen.size % 100 >= 20) ? 'żołnierze' : 'żołnierzy'}. Wybierasz ją klawiszem ${n}.`, `Company ${n}: ${chosen.size} ${chosen.size === 1 ? 'soldier' : 'soldiers'}. Press ${n} to select it.`));
     play('select');
     showArmy();
     armyBarUpdate();
@@ -2023,7 +2027,7 @@ window.addEventListener('keydown', (e) => {
 });
 
 // --- okrzyki wojska: potwierdzenie przy zaznaczeniu i rozkazie (dymek nad jednym żołnierzem i szorstki głos) ---
-const SHOUT: Record<string, Record<'select' | 'move' | 'attack', string[]>> = {
+const SHOUT_PL: Record<string, Record<'select' | 'move' | 'attack', string[]>> = {
   spearman: {
     select: ['Słucham, panie.', 'Rozkazuj.', 'Włócznie gotowe.', 'Czego trzeba?', 'Jesteśmy.'],
     move: ['Tak jest!', 'Idziemy.', 'Szykiem, marsz!', 'Ruszać się, chłopy!', 'Według rozkazu.'],
@@ -2035,6 +2039,19 @@ const SHOUT: Record<string, Record<'select' | 'move' | 'attack', string[]>> = {
     attack: ['Napinaj!', 'Puszczaj!', 'Celuj w gardło!', 'Grad strzał!', 'Ognia, znaczy… strzelaj!'],
   },
 };
+const SHOUT_EN: Record<string, Record<'select' | 'move' | 'attack', string[]>> = {
+  spearman: {
+    select: ['Aye, my lord.', 'Command us.', 'Spears ready.', 'What is needed?', 'We are here.'],
+    move: ['Aye!', 'On our way.', 'In formation, march!', 'Move it, lads!', 'As you command.'],
+    attack: ['At them!', 'Strike!', 'For our lord!', 'Spears forward!', 'Give them no quarter!'],
+  },
+  archer: {
+    select: ['Bow drawn.', 'Aye?', 'Arrows ready.', 'Target, my lord?', 'Watching.'],
+    move: ['On our way, my lord.', 'Changing position.', 'Aye.', 'Follow me, lads.'],
+    attack: ['Draw!', 'Loose!', 'Aim for the throat!', 'Rain of arrows!', 'Fire— er, loose!'],
+  },
+};
+const SHOUT = lang() === 'en' ? SHOUT_EN : SHOUT_PL;
 let shoutAt = 0;
 function shout(kind: 'select' | 'move' | 'attack'): void {
   const now = performance.now();
@@ -2154,9 +2171,11 @@ requestAnimationFrame(sayLoop);
 
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): HudView['report'] {
-  const LBL: Record<string, string> = { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach' };
+  const LBL: Record<string, string> = lang() === 'en'
+    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels' }
+    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
-  if (!f.fed) popularity.push({ label: 'Brak jedzenia na wybrane racje', value: 0, note: '(jedzą mniej)' });
+  if (!f.fed) popularity.push({ label: tx('Brak jedzenia na wybrane racje', 'Not enough food for the chosen rations'), value: 0, note: tx('(jedzą mniej)', '(they eat less)') });
   const mine = game.units.filter((u) => u.owner === ME);
   const jobs = new Map<string, number>();
   let idle = 0, builders = 0;
@@ -2167,19 +2186,19 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
     const name = b ? t(BUILDINGS[b.type]!.name) : '?';
     jobs.set(name, (jobs.get(name) ?? 0) + 1);
   }
-  const people: { label: string; value: number }[] = [{ label: 'Wszyscy chłopi', value: mine.length }, { label: 'Kopacze bez fachu', value: idle }, { label: 'Na budowie', value: builders }];
+  const people: { label: string; value: number }[] = [{ label: tx('Wszyscy chłopi', 'All peasants'), value: mine.length }, { label: tx('Kopacze bez fachu', 'Unskilled labourers'), value: idle }, { label: tx('Na budowie', 'On building sites'), value: builders }];
   for (const [k, v] of [...jobs.entries()].sort((a, b) => b[1] - a[1])) people.push({ label: k, value: v });
   const coming = game.travelers.filter((x) => x.owner === ME && !x.leaving).length, going = game.travelers.filter((x) => x.owner === ME && x.leaving).length;
-  if (coming) people.push({ label: 'W drodze do osady', value: coming });
-  if (going) people.push({ label: 'Odchodzą', value: going });
+  if (coming) people.push({ label: tx('W drodze do osady', 'On their way to the settlement'), value: coming });
+  if (going) people.push({ label: tx('Odchodzą', 'Leaving'), value: going });
   const mySoldiers = game.soldiers.filter((s) => s.owner === ME);
-  const army: { label: string; value: number }[] = [{ label: 'Razem', value: mySoldiers.length }];
+  const army: { label: string; value: number }[] = [{ label: tx('Razem', 'Total'), value: mySoldiers.length }];
   for (const [k, def] of UNITS.entries()) { const n = mySoldiers.filter((s) => s.kind === k).length; if (n) army.push({ label: t(def.name), value: n }); }
   const hurt = mySoldiers.filter((s) => s.hp < UNITS[s.kind]!.hp).length;
-  army.push({ label: 'Ranni', value: hurt });
-  army.push({ label: 'W walce', value: mySoldiers.filter((s) => s.target || s.hunt).length });
+  army.push({ label: tx('Ranni', 'Wounded'), value: hurt });
+  army.push({ label: tx('W walce', 'In combat'), value: mySoldiers.filter((s) => s.target || s.hunt).length });
   const p0 = game.players[ME]!;
-  army.push({ label: 'Polegli od początku', value: p0.stats.lost }, { label: 'Zabici wrogowie', value: p0.stats.kills });
+  army.push({ label: tx('Polegli od początku', 'Fallen since the start'), value: p0.stats.lost }, { label: tx('Zabici wrogowie', 'Enemies slain'), value: p0.stats.kills });
   // spichlerz: zapotrzebowanie, zapas, prognoza
   const pop = population(game, ME);
   const lvl = RULES.rations[p0.rations]!;
@@ -2194,21 +2213,26 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
   const perPerson = (lvl.foodPer8 / 8) * MEALS_PER_DAY;
   const feeds = perPerson > 0 ? Math.floor(made / perPerson) : 0;
   const lasts = perDayWant > 0 ? have / perDayWant : Infinity;
-  const fmtLast = (d: number): string => d === Infinity ? 'bez końca' : d >= 2 ? `${Math.floor(d)} dni` : d >= 1 ? '1 dzień' : `${Math.max(0, Math.floor(d * 24))} godz.`;
+  const fmtLast = (d: number): string => d === Infinity ? tx('bez końca', 'indefinitely') : d >= 2 ? `${Math.floor(d)} ${tx('dni', 'days')}` : d >= 1 ? tx('1 dzień', '1 day') : `${Math.max(0, Math.floor(d * 24))} ${tx('godz.', 'h')}`;
   const food: NonNullable<HudView['report']>['food'] = [
-    { label: 'Jedzących', value: String(pop), note: `(racje: ${t(lvl.name).toLowerCase()})` },
-    ...(p0.hungry ? [{ label: 'Głód!', value: 'odchodzą', sign: 'minus' as const, note: '(zabrakło jedzenia — póki go nie ma, ludzie opuszczają osadę)' }] : []),
-    { label: 'Zjadają co miesiąc', value: `${perMonthWant} porcji`, note: '(rozliczenie)' },
-    { label: 'Zjadają na dobę', value: `${perDayWant} porcji`, note: `(${perPerson.toFixed(perPerson % 1 ? 1 : 0)} na osobę)` },
-    { label: 'W spichlerzach', value: `${storeUsed(p0, 'granary')} / ${storeCapacity(game, ME, 'granary')}`, note: `(${have} porcji: jabłko 1, chleb 2, ryba 3)` },
-    { label: 'Zapas starczy na', value: fmtLast(lasts), sign: lasts < 0.5 ? 'minus' : lasts >= 2 ? 'plus' : undefined },
-    { label: 'Gospodarstwa dają na dobę', value: `ok. ${made}`, note: `(sady ${count('orchard')}, rybacy ${count('fisher')}, piekarnie ${bakeries})` },
-    { label: 'Wykarmią', value: `ok. ${feeds} osób`, sign: feeds < pop ? 'minus' : 'plus' },
-    { label: 'Bilans teraz', value: `${net * 6 > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net * 6)} na dobę`, sign: net < 0 ? 'minus' : net > 0 ? 'plus' : undefined, note: '(z ostatnich 4 godzin)' },
+    { label: tx('Jedzących', 'Mouths to feed'), value: String(pop), note: `(${tx('racje', 'rations')}: ${t(lvl.name).toLowerCase()})` },
+    ...(p0.hungry ? [{ label: tx('Głód!', 'Famine!'), value: tx('odchodzą', 'leaving'), sign: 'minus' as const, note: tx('(zabrakło jedzenia — póki go nie ma, ludzie opuszczają osadę)', '(the food has run out — until there is more, people are abandoning the settlement)') }] : []),
+    { label: tx('Zjadają co miesiąc', 'Eaten each month'), value: `${perMonthWant} ${tx('porcji', 'portions')}`, note: tx('(rozliczenie)', '(reckoning)') },
+    { label: tx('Zjadają na dobę', 'Eaten per day'), value: `${perDayWant} ${tx('porcji', 'portions')}`, note: `(${perPerson.toFixed(perPerson % 1 ? 1 : 0)} ${tx('na osobę', 'per head')})` },
+    { label: tx('W spichlerzach', 'In the granaries'), value: `${storeUsed(p0, 'granary')} / ${storeCapacity(game, ME, 'granary')}`, note: tx(`(${have} porcji: jabłko 1, chleb 2, ryba 3)`, `(${have} portions: apple 1, bread 2, fish 3)`) },
+    { label: tx('Zapas starczy na', 'Stores will last'), value: fmtLast(lasts), sign: lasts < 0.5 ? 'minus' : lasts >= 2 ? 'plus' : undefined },
+    { label: tx('Gospodarstwa dają na dobę', 'Farms yield per day'), value: `${tx('ok.', 'c.')} ${made}`, note: tx(`(sady ${count('orchard')}, rybacy ${count('fisher')}, piekarnie ${bakeries})`, `(orchards ${count('orchard')}, fishermen ${count('fisher')}, bakeries ${bakeries})`) },
+    { label: tx('Wykarmią', 'Enough to feed'), value: tx(`ok. ${feeds} osób`, `c. ${feeds} people`), sign: feeds < pop ? 'minus' : 'plus' },
+    { label: tx('Bilans teraz', 'Current balance'), value: `${net * 6 > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net * 6)} ${tx('na dobę', 'per day')}`, sign: net < 0 ? 'minus' : net > 0 ? 'plus' : undefined, note: tx('(z ostatnich 4 godzin)', '(over the last 4 hours)') },
   ];
   const lack = Math.max(0, Math.ceil((pop * perPerson - made) / FOOD_PER_DAY.orchard!));
-  const foodHint = (lack > 0 ? `Brakuje jedzenia dla ${pop - feeds} osób — postaw jeszcze ok. ${lack} ${lack === 1 ? 'sad' : lack < 5 ? 'sady' : 'sadów'} (albo wyłącz mniej ważny budynek, żeby pracownik poszedł do sadu). ` : '')
-    + `Jeden sad wykarmi ok. ${Math.floor(FOOD_PER_DAY.orchard! / (perPerson || 1))} osób, rybak ok. ${Math.floor(FOOD_PER_DAY.fisher! / (perPerson || 1))}, pole z młynem i piekarnią ok. ${Math.floor(FOOD_PER_DAY.bakery! / (perPerson || 1))}. Jeden spichlerz mieści ${BUILDINGS.find((b) => b.id === 'granary')?.capacity?.granary ?? 0}.`;
+  const perOrchard = Math.floor(FOOD_PER_DAY.orchard! / (perPerson || 1)), perFisher = Math.floor(FOOD_PER_DAY.fisher! / (perPerson || 1)), perBakery = Math.floor(FOOD_PER_DAY.bakery! / (perPerson || 1));
+  const granaryCap = BUILDINGS.find((b) => b.id === 'granary')?.capacity?.granary ?? 0;
+  const foodHint = lang() === 'en'
+    ? (lack > 0 ? `Food is short for ${pop - feeds} people — build about ${lack} more ${lack === 1 ? 'orchard' : 'orchards'} (or shut down a less vital building so its worker moves to an orchard). ` : '')
+      + `One orchard feeds about ${perOrchard} people, a fisherman about ${perFisher}, a farm with mill and bakery about ${perBakery}. One granary holds ${granaryCap}.`
+    : (lack > 0 ? `Brakuje jedzenia dla ${pop - feeds} osób — postaw jeszcze ok. ${lack} ${lack === 1 ? 'sad' : lack < 5 ? 'sady' : 'sadów'} (albo wyłącz mniej ważny budynek, żeby pracownik poszedł do sadu). ` : '')
+      + `Jeden sad wykarmi ok. ${perOrchard} osób, rybak ok. ${perFisher}, pole z młynem i piekarnią ok. ${perBakery}. Jeden spichlerz mieści ${granaryCap}.`;
   return { popularity, people, army, food, foodHint };
 }
 
@@ -2223,10 +2247,10 @@ function confirmDemolish(id: number): void {
   const box = document.createElement('div');
   box.className = 'confirm-wrap';
   box.innerHTML = `<div class="panel confirm" role="alertdialog" aria-modal="true" aria-labelledby="cf-t">
-    <p class="confirm-title" id="cf-t">Rozebrać: ${t(def.name)}?</p>
-    <p>${back.length ? `Odzyskasz <strong>${back.join(', ')}</strong> — ludzie wyniosą to z gruzu do składu.` : 'Nic nie odzyskasz.'}</p>
-    ${b.worker ? '<p>Pracownik straci robotę i wróci do obozowiska.</p>' : ''}
-    <div class="confirm-btns"><button type="button" class="menu-btn menu-back" data-no>Nie</button><button type="button" class="menu-btn" data-yes>Tak, rozbierz</button></div>
+    <p class="confirm-title" id="cf-t">${tx('Rozebrać', 'Demolish')}: ${t(def.name)}?</p>
+    <p>${back.length ? tx(`Odzyskasz <strong>${back.join(', ')}</strong> — ludzie wyniosą to z gruzu do składu.`, `You will recover <strong>${back.join(', ')}</strong> — your people will carry it from the rubble to the stockpile.`) : tx('Nic nie odzyskasz.', 'Nothing will be recovered.')}</p>
+    ${b.worker ? `<p>${tx('Pracownik straci robotę i wróci do obozowiska.', 'The worker will lose his post and return to the camp.')}</p>` : ''}
+    <div class="confirm-btns"><button type="button" class="menu-btn menu-back" data-no>${tx('Nie', 'No')}</button><button type="button" class="menu-btn" data-yes>${tx('Tak, rozbierz', 'Yes, tear it down')}</button></div>
   </div>`;
   const close = (): void => { box.remove(); window.removeEventListener('keydown', key); };
   const key = (e: KeyboardEvent): void => { if (e.key === 'Escape') close(); };
@@ -2252,7 +2276,7 @@ document.body.append(perfBox);
 const fpsTag = document.createElement('button');
 fpsTag.type = 'button';
 fpsTag.className = 'fps-tag';
-fpsTag.title = 'Wydajność — kliknij albo F3';
+fpsTag.title = tx('Wydajność — kliknij albo F3', 'Performance — click or press F3');
 fpsTag.textContent = 'FPS —';
 document.body.append(fpsTag);
 const togglePerf = (): void => {
@@ -2290,10 +2314,10 @@ function devPlace(x: number, y: number, kind: DevSpawn, foe: boolean, count: num
         }
         n++;
       }
-  const what = kind === 'wolf' ? 'wilków' : kind === 'archer' ? 'łuczników' : 'włóczników';
+  const what = lang() === 'en' ? (kind === 'wolf' ? 'wolves' : kind === 'archer' ? 'archers' : 'spearmen') : kind === 'wolf' ? 'wilków' : kind === 'archer' ? 'łuczników' : 'włóczników';
   const h = clockAt(game.tick).hour;
-  if (kind === 'wolf' && h >= 6.5 && h < 19.5 && n) { devPanel.placed(`Postawiono ${n} wilków, ale jest dzień — od razu uciekną do lasu. Najpierw „Przewiń do nocy”.`); return n; }
-  devPanel.placed(n ? `Postawiono ${n} ${what}${kind === 'wolf' ? '' : foe ? ' wroga' : ' swoich'}. Klikaj dalej albo Esc.` : 'Tu nie da się postawić — wybierz wolne pole.');
+  if (kind === 'wolf' && h >= 6.5 && h < 19.5 && n) { devPanel.placed(tx(`Postawiono ${n} wilków, ale jest dzień — od razu uciekną do lasu. Najpierw „Przewiń do nocy”.`, `Placed ${n} wolves, but it is daytime — they will flee to the forest at once. Skip to night first.`)); return n; }
+  devPanel.placed(n ? tx(`Postawiono ${n} ${what}${kind === 'wolf' ? '' : foe ? ' wroga' : ' swoich'}. Klikaj dalej albo Esc.`, `Placed ${n} ${kind === 'wolf' ? '' : foe ? 'enemy ' : 'friendly '}${what}. Keep clicking or press Esc.`) : tx('Tu nie da się postawić — wybierz wolne pole.', 'Cannot place here — pick a free tile.'));
   return n;
 }
 const devPanel = createDevPanel(document.body, {
@@ -2302,7 +2326,7 @@ const devPanel = createDevPanel(document.body, {
     const W = game.map.width;
     const towers = game.buildings.filter((b) => b.owner === ME && isTower(BUILDINGS[b.type]!.id));
     const manned = towers.find((t) => game.soldiers.some((s) => s.post === t.id && s.up)) ?? towers[0];
-    if (!manned) { devPanel.placed('Nie masz wieży strażniczej.'); return; }
+    if (!manned) { devPanel.placed(tx('Nie masz wieży strażniczej.', 'You have no watchtower.')); return; }
     for (const [dx, dy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [5, 5], [-5, -5]] as const) {
       const tx = manned.x + 1 + dx, ty = manned.y + 1 + dy;
       if (walkable(game, ty * W + tx, devFoe()) && devPlace(tx, ty, 'spearman', true, 3)) { renderer.lookAt(manned.x + 1 + dx / 2, manned.y + 1 + dy / 2, 16); return; }
@@ -2316,13 +2340,13 @@ const devPanel = createDevPanel(document.body, {
       step(game, []);
     }
     refresh();
-    devPanel.placed(`Jest ${Math.floor(clockAt(game.tick).hour)}:${String(Math.floor((clockAt(game.tick).hour % 1) * 60)).padStart(2, '0')}.`);
+    devPanel.placed(`${tx('Jest', 'It is')} ${Math.floor(clockAt(game.tick).hour)}:${String(Math.floor((clockAt(game.tick).hour % 1) * 60)).padStart(2, '0')}.`);
   },
   onSeason: (s: Season) => {
     game.seasonShift = shiftToSeason(game.tick, s);
     refresh();
     const w = weatherOf(game, rainAt(game.tick));
-    return `${SEASON_NAME[w.season]}: teraz ${w.temp.toFixed(1).replace('.', ',')}°C${w.temp < COLD ? ' — w chatach palą w piecach (drewno na opał)' : ''}.`;
+    return `${SEASON_NAME[w.season]}: ${tx('teraz', 'now')} ${lang() === 'en' ? w.temp.toFixed(1) : w.temp.toFixed(1).replace('.', ',')}°C${w.temp < COLD ? tx(' — w chatach palą w piecach (drewno na opał)', ' — the hovels burn firewood in their hearths') : ''}.`;
   },
   onFire: () => {
     // płonie mój gotowy budynek najbliżej studni albo cechu inżynierów (żeby było widać gaszenie)
@@ -2335,10 +2359,10 @@ const devPanel = createDevPanel(document.body, {
       if (b.owner !== ME || b.type === 0 || b.type === wellT || b.build || b.fire) continue;
       for (const r of ref) { const d = Math.hypot(b.x - r.x, b.y - r.y); if (d < bd) { bd = d; best = b; } }
     }
-    if (!best) { devPanel.placed('Nie masz budynku, który mógłby się zapalić.'); return; }
+    if (!best) { devPanel.placed(tx('Nie masz budynku, który mógłby się zapalić.', 'You have no building that could catch fire.')); return; }
     best.hp = Math.min(best.hp, Math.floor(maxHp(best.type) * 0.5)); best.hpWas = best.hp; best.fire = 600;
     renderer.lookAt(best.x + BUILDINGS[best.type]!.w / 2, best.y + BUILDINGS[best.type]!.h / 2, 18);
-    devPanel.placed(water.length ? 'Pali się budynek przy studni — chłopi powinni zaraz przybiec z wiadrami.' : 'Pali się budynek, ale nie masz studni ani cechu inżynierów — postaw studnię obok.');
+    devPanel.placed(water.length ? tx('Pali się budynek przy studni — chłopi powinni zaraz przybiec z wiadrami.', 'A building near the well is ablaze — peasants should come running with buckets.') : tx('Pali się budynek, ale nie masz studni ani cechu inżynierów — postaw studnię obok.', 'A building is ablaze, but you have no well or engineers\' guild — build a well nearby.'));
   },
   onHeal: () => { for (const s of game.soldiers) if (s.owner === ME) s.hp = UNITS[s.kind]!.hp; },
   onGive: () => { const p = game.players[ME]!; for (let i = 0; i < p.res.length; i++) p.res[i]! += 1000; refresh(); },
@@ -2358,8 +2382,8 @@ window.addEventListener('keydown', (e) => {
 const devBtn = document.createElement('button');
 devBtn.type = 'button';
 devBtn.className = 'dev-open';
-devBtn.textContent = 'Deweloper';
-devBtn.title = 'Panel dewelopera (F9)';
+devBtn.textContent = tx('Deweloper', 'Developer');
+devBtn.title = tx('Panel dewelopera (F9)', 'Developer panel (F9)');
 devBtn.addEventListener('click', () => devPanel.toggle());
 document.body.append(devBtn);
 setInterval(() => { devBtn.hidden = !devAllowed() || document.body.classList.contains('menu-open'); }, 500);
@@ -2410,6 +2434,6 @@ function showPerf(now: number): void {
 const walkHint = document.createElement('p');
 walkHint.className = 'walk-hint';
 walkHint.hidden = true;
-walkHint.textContent = 'W A S D — idź · mysz — rozglądaj się · Shift — biegnij · Spacja — skok · F — pochodnia · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)';
+walkHint.textContent = tx('W A S D — idź · mysz — rozglądaj się · Shift — biegnij · Spacja — skok · F — pochodnia · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)', 'W A S D — walk · mouse — look around · Shift — run · Space — jump · F — torch · Esc — back to the overhead view (click if the cursor was released)');
 document.body.append(walkHint);
 renderer.onWalkEnd = () => { document.body.classList.remove('walking'); walkHint.hidden = true; };

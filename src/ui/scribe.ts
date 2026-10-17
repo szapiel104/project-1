@@ -1,3 +1,5 @@
+import { tx } from '../i18n';
+
 /**
  * Skryba w lewym górnym rogu: okrągły portret z gęsim piórem i krótka wiadomość, która wysuwa się,
  * chwilę wisi i znika. Ta sama wiadomość nie powtarza się częściej niż raz na minutę.
@@ -28,7 +30,7 @@ const FACE = `<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"
 export type Speaker = 'scribe' | 'herald';
 export interface Scribe { say(key: string, text: string, urgent?: boolean, who?: Speaker): void }
 
-const NAMES: Record<Speaker, string> = { scribe: 'Skryba Bartłomiej', herald: 'Wojewoda Mieszko' };
+const NAMES: Record<Speaker, string> = { scribe: tx('Skryba Bartłomiej', 'Bartholomew the Scribe'), herald: tx('Wojewoda Mieszko', 'Mieszko the Voivode') };
 
 export function createScribe(onSpeak: () => void): Scribe {
   const box = document.createElement('div');

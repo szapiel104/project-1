@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { BUILDINGS } from '../data/buildings';
 import { TEAM_COLORS } from '../data/teams';
-import { t } from '../i18n';
+import { t, tx } from '../i18n';
 import { buildingModel } from './buildings';
 import { crowParts, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
 import { Figures } from './peasants';
@@ -13,17 +13,17 @@ import { Figures } from './peasants';
 export interface GalleryEntry { id: string; name: string; group: string; text: string }
 
 const PEOPLE: GalleryEntry[] = [
-  { id: 'peasant', group: 'Ludzie', name: 'Chłopi', text: 'Mieszkańcy osady: noszą drewno, kamień i żywność, pracują w warsztatach, stawiają budynki. Każdy wygląda trochę inaczej — czapka, kaptur, broda, fartuch.' },
-  { id: 'guard', group: 'Ludzie', name: 'Strażnik miejski', text: 'Straż zamku, jak w Starym Obozie: zbroja z czerwonej skóry i żelaznych płyt, naramienniki, miecz w dłoni, pas w barwach pana. Dwóch stoi za dnia przy bramie twierdzy, reszta obchodzi osadę w dzień i w nocy (po zmroku z pochodniami). Nie słucha rozkazów. Poległego zastępuje rekrut szkolony w twierdzy (włócznia i złoto, ok. półtorej minuty).' },
-  { id: 'spearman', group: 'Ludzie', name: 'Włócznik', text: 'Podstawowy żołnierz: kolczuga z czepcem pod waffenrockiem z krzyżem, kapalin albo hełm z nosalem, wypukła tarcza z okuciem i włócznia z liściastym grotem. Trzyma szyk i dźga z bliska. Nosi barwy swojego pana.' },
-  { id: 'archer', group: 'Ludzie', name: 'Łucznik', text: 'Pikowana przeszywanica, kaptur z pelerynką, kołczan na plecach, kord u pasa i długi łuk. Strzela z daleka, najlepiej z wieży albo zza palisady. Słaby w zwarciu, więc trzymaj go za włócznikami.' },
-  { id: 'wolf', group: 'Zwierzęta', name: 'Wilk', text: 'Wychodzi z lasu nocą. Poluje na samotnych chłopów, przegryza palisadę. W ciemności widać jego świecące oczy.' },
-  { id: 'crow', group: 'Zwierzęta', name: 'Kruk', text: 'Zlatuje na ciała poległych po bitwie. Płoszy się, gdy ktoś podejdzie.' },
+  { id: 'peasant', group: tx('Ludzie', 'People'), name: tx('Chłopi', 'Peasants'), text: tx('Mieszkańcy osady: noszą drewno, kamień i żywność, pracują w warsztatach, stawiają budynki. Każdy wygląda trochę inaczej — czapka, kaptur, broda, fartuch.', 'The folk of your settlement: they haul timber, stone and food, toil in the workshops and raise buildings. No two look quite alike — cap, hood, beard, apron.') },
+  { id: 'guard', group: tx('Ludzie', 'People'), name: t('guard.plain'), text: tx('Straż zamku, jak w Starym Obozie: zbroja z czerwonej skóry i żelaznych płyt, naramienniki, miecz w dłoni, pas w barwach pana. Dwóch stoi za dnia przy bramie twierdzy, reszta obchodzi osadę w dzień i w nocy (po zmroku z pochodniami). Nie słucha rozkazów. Poległego zastępuje rekrut szkolony w twierdzy (włócznia i złoto, ok. półtorej minuty).', 'The castle watch, as in the Old Camp: armour of red leather and iron plates, pauldrons, sword in hand, a belt in their lord\'s colours. Two stand at the keep gate by day; the rest patrol the settlement day and night (with torches after dark). They take no orders. A fallen guard is replaced by a recruit trained in the keep (a spear and gold, about a minute and a half).') },
+  { id: 'spearman', group: tx('Ludzie', 'People'), name: t('u.spearman'), text: tx('Podstawowy żołnierz: kolczuga z czepcem pod waffenrockiem z krzyżem, kapalin albo hełm z nosalem, wypukła tarcza z okuciem i włócznia z liściastym grotem. Trzyma szyk i dźga z bliska. Nosi barwy swojego pana.', 'The backbone of any army: mail and coif under a surcoat with a cross, a kettle hat or nasal helm, a domed shield with iron trim and a leaf-bladed spear. Holds the line and stabs up close. Wears his lord\'s colours.') },
+  { id: 'archer', group: tx('Ludzie', 'People'), name: t('u.archer'), text: tx('Pikowana przeszywanica, kaptur z pelerynką, kołczan na plecach, kord u pasa i długi łuk. Strzela z daleka, najlepiej z wieży albo zza palisady. Słaby w zwarciu, więc trzymaj go za włócznikami.', 'A quilted gambeson, a hood with a short cape, a quiver on his back, a long knife at his belt and a longbow. Shoots from afar, best from a tower or behind a palisade. Weak in melee, so keep him behind your spearmen.') },
+  { id: 'wolf', group: tx('Zwierzęta', 'Animals'), name: tx('Wilk', 'Wolf'), text: tx('Wychodzi z lasu nocą. Poluje na samotnych chłopów, przegryza palisadę. W ciemności widać jego świecące oczy.', 'Comes out of the forest at night. Hunts lone peasants and gnaws through palisades. In the dark you can see its glowing eyes.') },
+  { id: 'crow', group: tx('Zwierzęta', 'Animals'), name: tx('Kruk', 'Raven'), text: tx('Zlatuje na ciała poległych po bitwie. Płoszy się, gdy ktoś podejdzie.', 'Swoops down on the fallen after a battle. Takes flight when anyone comes near.') },
 ];
-const CATS: Record<string, string> = { settlement: 'Osada', food: 'Żywność', industry: 'Przemysł', military: 'Wojsko', defense: 'Obrona', roads: 'Drogi' };
+const CATS: Record<string, string> = { settlement: t('cat.settlement'), food: t('cat.food'), industry: t('cat.industry'), military: t('cat.military'), defense: t('cat.defense'), roads: t('cat.roads') };
 const BUILDING_ENTRIES: GalleryEntry[] = BUILDINGS.filter((d) => !d.road).map((d) => ({
-  id: `b:${d.id}`, group: d.category ? CATS[d.category] ?? 'Budynki' : 'Osada', name: t(d.name),
-  text: (t(`d.${d.id}`) !== `d.${d.id}` ? t(`d.${d.id}`) : '') + (d.w ? ` Działka: ${d.w}×${d.h}.` : ''),
+  id: `b:${d.id}`, group: d.category ? CATS[d.category] ?? tx('Budynki', 'Buildings') : t('cat.settlement'), name: t(d.name),
+  text: (t(`d.${d.id}`) !== `d.${d.id}` ? t(`d.${d.id}`) : '') + (d.w ? tx(` Działka: ${d.w}×${d.h}.`, ` Plot: ${d.w}×${d.h}.`) : ''),
 }));
 /** Galeria: postacie i zwierzęta albo budynki (pogrupowane jak na belce budowania) */
 export const GALLERY = { people: PEOPLE, buildings: [...BUILDING_ENTRIES].sort((a, b) => Object.values(CATS).indexOf(a.group) - Object.values(CATS).indexOf(b.group)) };
