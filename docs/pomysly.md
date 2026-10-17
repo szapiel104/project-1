@@ -101,17 +101,19 @@ Większe rzeczy na później:
 - Zrobione 16.10: tekstury KTX2/Basis (src/render/ktx.ts, tools/textures/ktx2.mjs) i teren w 2K. Dalej: tablica tekstur zamiast 11 osobnych próbek w shaderze terenu; łąka, żwir i piasek w 2K (brak w paczkach)
 - Symulacja w Web Workerze (rysowanie nie czeka na logikę), szczególnie przy grze 4 na 4
 
-## Wygląd — do zrobienia (13.10.2026)
-- Nowe modele drzew z teksturą liści/igieł na kartach (alfa) — prawdziwe gałęzie z bliska, impostory z daleka
-- Trawa z teksturą źdźbeł (karty z alfą) zamiast pojedynczych pasków
-- Mgła wysokościowa w dolinach i chmury zahaczające o szczyty
-- Wodospady i strumienie z gór, odbicia brzegu w wodzie
+## Wygląd — do zrobienia (13.10.2026, poprawione 17.10)
+Zrobione wcześniej (16.10): drzewa z Blendera z kartami igliwia i liści, wiatr w koronach, kępy trawy z teksturą źdźbeł.
+Zrobione 17.10 wieczorem: mgła w dolinach za mapą (3 warstwy wlewające się w doliny wg mapy wysokości, gęsta o świcie, w mgliste dni i w deszczu; słabsza grafika = 1 warstwa — src/render/highmist.ts), chmury zahaczające o najwyższe szczyty (kłęby blakną przy zboczu i przy kamerze, więcej przy zachmurzeniu i deszczu), strumienie i wodospady z gór przy brzegu planszy (spływają do stóp gór albo do jeziora/rzeki, na stromiźnie biała piana, u dołu pył wodny; znikają, gdy na ich drodze stanie budynek — src/render/streams.ts), odbicie brzegu w wodzie (ciemny, falujący pas lądu w tafli przy brzegach).
+Dalej:
+- Szum wodospadu i strumienia (dźwięk przy kamerze/spacerze)
+- Strumienie także z dalekich masywów za mapą do dolin
+- Odbicia budynków i drzew w wodzie (prawdziwe, tylko na wysokim poziomie grafiki)
 
 ## Rytm dnia (13.10.2026)
 Zrobione: 19:30 ognisko i karczma, 22:00 sen w chacie/twierdzy, bez łóżka słomiane posłanie przy ognisku, 5:30 do pracy; noc w tickach krótsza (ok. 11% doby), wieczór 8%, dzień pracy 81%; wilki nie dosięgną śpiących pod dachem.
 
 Dalej:
-- Straż miejska (zrobione 13.10: 6 strażników, posterunki i obchód, zastępstwo przez chłopów). Dalej: własny wygląd w barwach straży (zbroja, halabarda), odzywki jak w Gothicu, zmiana warty, koszary straży
+- Straż miejska (zrobione 13.10: 6 strażników, posterunki i obchód, zastępstwo przez chłopów; 15.10 odzywki jak w Gothicu; 16.10 wygląd strażnika ze Starego Obozu). Dalej: zmiana warty, koszary straży
 - Dzieci i rodziny: osada rośnie sama (rodziny przy chatach już są — 14.10)
 
 ## Wojsko i piechota — do zrobienia (13.10.2026)

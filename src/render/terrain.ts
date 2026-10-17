@@ -19,6 +19,8 @@ import { bump, normal, pattern } from './textures';
 import { cloudShade, groundGrassTexture, groundMaterial, waterMaterial } from './ground';
 import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
 import { bladeTexture, createGrassField, type GrassField } from './grass';
+import { buildHighMist, type Atmosphere, type HighMist } from './highmist';
+import { buildStreams, type Streams } from './streams';
 
 const HEIGHT_SCALE = 0.03;
 const smoothstep = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -69,6 +71,8 @@ export interface TerrainView {
   noGrass(tile: number, on?: boolean): void;
   /** Kolor nieba odbijany przez wodę */
   setSky(c: THREE.Color): void;
+  /** Pogoda i pora dnia dla mgły w dolinach, chmur przy szczytach i strumieni */
+  setAtmosphere(a: Atmosphere): void;
   /** Kierunek ku słońcu (świat) i jego barwa: odblaski na wodzie; golden = złota godzina (0..1) */
   setSun(dir: THREE.Vector3, color: THREE.Color, golden: number): void;
   /** Wykop pod budowę (depth 0 = zasypany): opuszcza teren działki tylko w obrazie */
@@ -320,6 +324,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   if (ripples) { ripples.repeat.set(w / 14, h / 14); ripples.needsUpdate = true; }
   // woda (jeziora i morze za mapą) powstaje niżej, gdy znany jest już teren za mapą
   let wm!: ReturnType<typeof waterMaterial>;
+  let mistFx: HighMist | null = null, streams: Streams | null = null, fxTime = 0;
 
   // Ryby: pływają po małych okręgach tuż pod powierzchnią, co jakiś czas któraś wyskakuje
   const waterTiles: number[] = [];
@@ -347,6 +352,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const fp = new THREE.Vector3();
   const fs = new THREE.Vector3(1, 1, 1);
   const animate = (time: number): void => {
+    fxTime = time;
+    streams?.animate(time);
     if (ripples) ripples.offset.set(time * 0.006, time * 0.009);
     windTime.value = time;
     wm.time.value = time;
@@ -589,6 +596,25 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const bot = corner(ix, iy + 1) * (1 - tx) + corner(ix + 1, iy + 1) * tx;
     return top * (1 - ty) + bot * ty;
   };
+
+  // Mgła w dolinach, chmury przy szczytach, strumienie i wodospady z gór (bez trybu testowego: tam teren jest płaski)
+  if (!TEST) {
+    const anyH = (X: number, Y: number): number => (X >= 0 && Y >= 0 && X <= w && Y <= h ? heightAt(X, Y) : outerH(X, Y));
+    const STEP = 2, x0 = -D, z0 = -D, nx = Math.floor((w + 2 * D) / STEP) + 1, ny = Math.floor((h + 2 * D) / STEP) + 1;
+    const data = new Float32Array(nx * ny);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) data[j * nx + i] = anyH(x0 + i * STEP, z0 + j * STEP);
+    mistFx = buildHighMist({ data, nx, ny, x0: x0 + ox, z0: z0 + oz, step: STEP }, { cx: ox + w / 2, cz: oz + h / 2, hw: w / 2, hh: h / 2 }, map.seed);
+    group.add(mistFx.group);
+    const tileOf = (x: number, y: number): Terrain => map.tiles[y * w + x] as Terrain;
+    streams = buildStreams({
+      height: anyH,
+      rock: (x, y) => x < 0 || y < 0 || x >= w || y >= h || tileOf(x, y) === Terrain.Mountain,
+      water: (x, y) => tileOf(x, y) === Terrain.Water || tileOf(x, y) === Terrain.Ford,
+      w, h, ox, oz, seed: map.seed,
+    }, mistFx.noise);
+    group.add(streams.group);
+    mistFx.addSpray(streams.sprays);
+  }
 
   // obiekty na polach: jedna siatka instancjonowana na rodzaj
   type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3; frost?: number };
@@ -1634,9 +1660,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     clear,
     trunkNear,
     animate,
-    setSky(c: THREE.Color) { wm.sky.value.copy(c); },
+    setSky(c: THREE.Color) { wm.sky.value.copy(c); streams?.setSky(c); },
+    setAtmosphere(a: Atmosphere) { mistFx?.update(fxTime, a); },
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
     level(x: number, y: number, fw: number, fh: number, y0: number) {
+      streams?.blocked(x, y, fw, fh);
       levelLock ??= new Uint8Array((w + 1) * (h + 1));
       const lock = levelLock;
       const rockCorner = (cx: number, cy: number): boolean => {
@@ -1702,6 +1730,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     /** Roślinność do wspólnych pul na tę klatkę (wywołanie tuż przed rysowaniem) */
     cullVegetation(view: THREE.Frustum, shadow: THREE.Frustum | null) { cullVeg(view, shadow); },
     lod(x: number, z: number, reach: number, detail = 1) {
+      mistFx?.detail(detail);
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
         if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide * detail + reach;
@@ -1731,6 +1760,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     },
     wear,
     dispose() {
+      mistFx?.dispose(); streams?.dispose();
       // zmiana mapy (także podgląd w menu): zwalniamy wszystko, co ta mapa stworzyła — geometrie, materiały,
       // tekstury robione dla niej (brzeg wody, fale, trawa, trzciny); wspólne zdjęcia i materiał podłoża zostają
       const mats = new Set<THREE.Material>();

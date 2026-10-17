@@ -543,6 +543,7 @@ export class GameRenderer {
   private flames = new Flames();
   private fxAt = 0;
   private mistLevel = 0;
+  private atmoSun = new THREE.Color();
   private buildingMeshes = new Map<number, THREE.Group>();
   /** Dalekie (uproszczone) wersje budynków i ich przełączanie wg odległości od kamery */
   private lods = new Map<number, BuildingLod>();
@@ -3660,6 +3661,7 @@ export class GameRenderer {
     const fog = this.scene.fog as THREE.Fog;
     const m = this.fogOn ? Math.min(1, mist + this.dayMist) : 0;
     this.mistLevel = m;
+    this.view?.setAtmosphere({ mist: m, cover: this.cover, rain: this.rain, night: this.night, fog: bg, sun: this.atmoSun.copy(this.sun.color).multiplyScalar(Math.min(1.4, this.sun.intensity)) });
     // pogodny dzień: daleka widoczność; mgła rano i w mgliste dni, gęsta w deszczu
     // mgła liczy się od kamery: zaczyna się zawsze dopiero za ziemią, na którą patrzymy, więc osady nie zakrywa
     const cd = this.walk ? 2 : this.cam.distance;

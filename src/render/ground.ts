@@ -417,6 +417,23 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
           vec3 skyR = mix(skyCol * 0.62, skyCol * 0.36, smoothstep(0.1, 0.55, rWorld.y)) * vec3(0.8, 0.9, 1.0);
           outgoingLight = mix(outgoingLight, skyR * (0.85 + wRip * 1.2), clamp(fres * 0.9 + 0.28, 0.0, 0.72));
+          // odbicie brzegu: krótki marsz promienia odbitego po masce wody — gdy trafi w ląd, zanim wzniesie się ponad
+          // skarpę i drzewa (ok. 3 m), w tafli widać ciemny, falujący pas brzegu zamiast jasnego nieba
+          {
+            float hl = max(length(rWorld.xz), 1e-3);
+            vec2 rd = rWorld.xz / hl;
+            float rise = max(rWorld.y, 0.0) / hl;
+            float bank = 0.0;
+            for (int i = 1; i <= 5; i++) {
+              float t = float(i) * 0.85;
+              float hgt = rise * t;
+              vec2 q = vWP.xz + rd * t + vec2(wRip, -wRip) * 0.35;
+              float land = 1.0 - texture2D(shore, (q + mapSize * 0.5) / mapSize).g;
+              bank = max(bank, land * smoothstep(3.2, 0.8, hgt));
+            }
+            vec3 bankC = vec3(0.04, 0.055, 0.032) * (0.45 + skyCol.g * 1.1);
+            outgoingLight = mix(outgoingLight, bankC * (0.85 + wRip * 0.8), bank * 0.7 * clamp(fres * 0.9 + 0.3, 0.0, 0.85));
+          }
           // odblask słońca na falach: ostre, migoczące błyski w stronę słońca (najmocniej o złotej godzinie)
           float glint = pow(max(dot(normalize(rWorld), wSunDir), 0.0), 380.0);
           float sheen = pow(max(dot(normalize(rWorld), wSunDir), 0.0), 24.0);
@@ -426,6 +443,6 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
         }
         #include <opaque_fragment>`);
   };
-  mat.customProgramCacheKey = () => 'water-v2';
+  mat.customProgramCacheKey = () => 'water-v3';
   return { mat, time, sky, sunDir, sunCol };
 }
