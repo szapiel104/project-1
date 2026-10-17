@@ -240,6 +240,17 @@ void main() {
   c = mix(c, foamC, foam);
   float a = smoothstep(1.0, 0.5, abs(vEdge) + (n - 0.5) * 0.3);
   a *= mix(0.62, 0.92, foam) * vEnd;
+  if (vSlope > 4.0) {
+    // kurtyna wodospadu: pionowe, szybko spadające pasma wody, między nimi prześwit; brzegi postrzępione,
+    // kolor chłodny i przygaszony w cieniu skały, biały tylko na grzbietach pasm
+    float s1 = texture2D(noise, vec2(vUv.x * 3.1, vUv.y * 0.16 - time * 1.5)).r;
+    float s2 = texture2D(noise, vec2(vUv.x * 8.3 + 0.4, vUv.y * 0.42 - time * 2.3)).g;
+    float st = s1 * 0.62 + s2 * 0.48;
+    vec3 base = vec3(0.42, 0.5, 0.53) * (0.55 + sky.g * 0.6);
+    vec3 hiC = vec3(0.93, 0.96, 0.97) * (0.55 + sky.g * 0.6);
+    c = mix(base, hiC, smoothstep(0.38, 0.82, st));
+    a = smoothstep(1.0, 0.45, abs(vEdge) + (st - 0.5) * 0.7) * (0.3 + 0.62 * smoothstep(0.28, 0.75, st)) * vEnd;
+  }
   if (a < 0.01) discard;
   gl_FragColor = vec4(c, a);
   #include <fog_fragment>
@@ -283,7 +294,9 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
   const group = new THREE.Group();
   // najpierw wodospady wpadające do jezior i rzek pod skałą, potem zwykłe strumienie z gór
   const falls = cliffFalls(S, 5);
-  const paths = [...falls, ...pickSources(S, want)];
+  // same wodospady: zwykłe strumienie po zboczach wyglądały jak białe pasy farby kończące się w pół drogi (17.10)
+  void want;
+  const paths = [...falls];
   const mat = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { noise: { value: noise }, time: { value: 0 }, sky: { value: new THREE.Color(0x8a9aa6) } }]),
     vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, fog: true,
@@ -314,18 +327,18 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
     // wylot nieco dalej niż dół ściany: łuk mija skałę
     const reach = dl + 0.6 + Math.min(1.2, (ly - by) * 0.06);
     const out: THREE.Mesh[] = [];
-    for (const [wMul, shift, phase] of [[1, 0, 0], [0.7, -0.22, 0.37]] as const) {
+    for (const [wMul, reachMul, phase] of [[1, 1, 0], [0.75, 0.82, 0.37]] as const) {
       const P: number[] = [], UV: number[] = [], SL: number[] = [], ED: number[] = [], EN: number[] = [], I: number[] = [];
       const N = 26;
       for (let i = 0; i <= N; i++) {
         const t = i / N;
-        const cx = L.x + dx * (reach * t + shift), cz = L.y + dy * (reach * t + shift);
+        const cx = L.x + dx * reach * reachMul * t, cz = L.y + dy * reach * reachMul * t;
         const y = ly + (by - ly) * t * t;
         const half = (0.55 + t * 0.55) * wMul;
         for (const side of [-1, 1]) {
           P.push(cx - dy * half * side + S.ox, y, cz + dx * half * side + S.oz);
           UV.push(side * 0.5 + 0.5, t * (ly - by) * 0.35 + phase);
-          SL.push(t < 0.08 ? 1 + t * 20 : 3); ED.push(side);
+          SL.push(5); ED.push(side); // 5 = kurtyna (osobny wygląd w shaderze)
           EN.push(Math.min(1, (N - i) / 2 + 0.25));
         }
         if (i < N) { const q = i * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
@@ -372,7 +385,7 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
       const slope = Math.abs(H(a.x, a.y) - H(b.x, b.y)) / horiz;
       const k = i / (n - 1);
       // strumień rośnie z biegiem; wodospad węższy i zwarty
-      const width = 0.32 + k * 0.38 + Math.min(slope, 3) * 0.14;
+      const width = isFall ? 0.42 + k * 0.12 : 0.32 + k * 0.38 + Math.min(slope, 3) * 0.14;
       const hc = H(p.x, p.y);
       // normalna terenu: woda leży tuż nad zboczem także na stromej ścianie (pionowe podniesienie by ją tam schowało)
       const e = 0.35;
