@@ -2,7 +2,7 @@
  * Drogi kopaczy w sztolni (osobna lokacja kopalni, model `minelevel`): od wrót do przodka i z powrotem.
  * Liczone raz z sal i przeszkód modelu: siatka co 0,15 m, A* po wolnych polach, potem prostowanie drogi
  * (punkt widzi punkt bez przeszkody). Przodki na dolnym poziomie dochodzą przez szyb z drabiną.
- * Tylko wygląd — symulacja zna jedynie czas pracy z dojściem (`walkTicks` kopalni).
+ * Tylko wygląd — symulacja zna z tego jedynie czas dojścia do każdego przodka (tabela `MINE_SLOT_WALK` w data/minewalk.ts).
  */
 export type Rect = [number, number, number, number];
 type P = [number, number];
@@ -23,9 +23,8 @@ export interface MineRoute {
 
 /** Ile trwa zejście albo wejście po drabinie (s) */
 export const CLIMB_S = 1.8;
-/** Zwykły krok kopacza w sztolni (m/s) i najszybszy, gdy przodek leży daleko, a czas dojścia jest stały */
+/** Zwykły krok kopacza w sztolni (m/s) */
 export const MINE_WALK = 1.35;
-const MINE_WALK_MAX = 2.6;
 
 const CELL = 0.15;
 const PAD = 0.1;
@@ -166,11 +165,9 @@ export function mineRoutes(m: MineLevelData, spots: [number, number, number, num
   });
 }
 
-/** Ile sekund trwa przejście drogą w stałym czasie dojścia `budget` (s): zwykłym krokiem, a gdy daleko — szybciej */
-export function routeTime(r: MineRoute, budget: number): { walk: number; speed: number } {
-  const climb = r.low ? CLIMB_S : 0, len = r.topLen + r.lowLen;
-  const speed = Math.min(MINE_WALK_MAX, Math.max(MINE_WALK, len / Math.max(0.5, budget - climb)));
-  return { walk: len / speed + climb, speed };
+/** Ile sekund trwa przejście drogą (zwykłym krokiem, z drabiną) i jakim krokiem */
+export function routeTime(r: MineRoute): { walk: number; speed: number } {
+  return { walk: (r.topLen + r.lowLen) / MINE_WALK + (r.low ? CLIMB_S : 0), speed: MINE_WALK };
 }
 
 export interface MineWalkPose { x: number; y: number; z: number; yaw: number; climbing: boolean; moving: boolean }

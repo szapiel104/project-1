@@ -1,14 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import level from '../src/render/models/minelevel.json';
-import { BUILDINGS } from '../src/data/buildings';
+import { MINE_SLOT_WALK } from '../src/data/minewalk';
 import { CLIMB_S, mineGate, mineRoutes, poseOnRoute, routeTime, type MineLevelData } from '../src/render/minepath';
 
 const M = level as unknown as MineLevelData & { spots: [number, number, number][]; spots2: [number, number, number][]; low: number };
-const spots: [number, number, number, number][] = [
-  ...M.spots.map(([x, z, r]) => [x, 0, z, r] as [number, number, number, number]),
-  ...M.spots2.map(([x, z, r]) => [x, M.low, z, r] as [number, number, number, number]),
-];
-const walkS = (BUILDINGS.find((b) => b.id === 'oremine')!.production!.walkTicks ?? 0) / 10;
+// przodki górne i dolne na przemian, jak MINE_LEVEL_SPOTS w render/scene.ts
+const spots: [number, number, number, number][] = [];
+for (let i = 0; i < Math.max(M.spots.length, M.spots2.length); i++) {
+  if (M.spots[i]) spots.push([M.spots[i]![0], 0, M.spots[i]![1], M.spots[i]![2]]);
+  if (M.spots2[i]) spots.push([M.spots2[i]![0], M.low, M.spots2[i]![1], M.spots2[i]![2]]);
+}
 const inRooms = (rooms: number[][], x: number, z: number): boolean => rooms.some((r) => x >= r[0]! - 0.01 && x <= r[1]! + 0.01 && z >= r[2]! - 0.01 && z <= r[3]! + 0.01);
 
 describe('drogi kopaczy w sztolni', () => {
@@ -31,11 +32,12 @@ describe('drogi kopaczy w sztolni', () => {
           }
     });
   });
-  it('dojście mieści się w czasie z symulacji i kończy przy przodku', () => {
-    expect(walkS).toBeGreaterThan(0);
+  it('symulacja zna czas dojścia do każdego przodka (zwykłym krokiem) i kopacz kończy drogę przy skale', () => {
+    // po zmianie modelu sztolni wpisz do data/minewalk.ts wartości z komunikatu błędu
+    expect(MINE_SLOT_WALK).toEqual(routes.map((r) => Math.ceil(routeTime(r).walk * 10)));
     for (const r of routes) {
-      const rt = routeTime(r, walkS);
-      expect(rt.walk).toBeLessThanOrEqual(walkS + 0.01);
+      const rt = routeTime(r);
+      expect(rt.speed).toBeLessThan(1.5);
       const end = poseOnRoute(r, rt.speed, rt.walk, M.low, M.hole, false);
       expect(end.moving).toBe(false);
       if (r.low) {

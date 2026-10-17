@@ -683,7 +683,7 @@ function prodInfo(b: GameState['buildings'][number]): BuildingInfo['prod'] {
   const recipe = pr ? {
     input: pr.input ? { id: pr.input.res, n: pr.input.amount, name: resName(pr.input.res) } : undefined,
     output: { id: pr.output.res, n: pr.output.amount, name: resName(pr.output.res) },
-    secs: Math.round((pr.workTicks + 2 * (pr.walkTicks ?? 0) + (pr.processTicks ?? 0)) / TICKS_PER_SECOND),
+    secs: Math.round((pr.workTicks + (pr.processTicks ?? 0)) / TICKS_PER_SECOND),
     place,
   } : undefined;
   // pracownik: kto i co robi teraz; postęp roboty w warsztacie albo w terenie

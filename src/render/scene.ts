@@ -1,4 +1,5 @@
 import { mineRoutes, poseOnRoute, routeTime, type MineRoute } from './minepath';
+import { mineWalkTicks } from '../data/minewalk';
 import { named, namedTick, remember } from './named';
 import { mineLevelModel } from './buildings';
 import { touch } from './touch';
@@ -115,9 +116,8 @@ const MINE_LEVEL_SPOTS: [number, number, number, number][] = (() => {
 /** Drogi kopaczy od wrót sztolni do każdego przodka (liczone raz, przy pierwszym wejściu do sztolni) */
 let MINE_ROUTES: MineRoute[] | null = null;
 const mineRoute = (i: number): MineRoute => (MINE_ROUTES ??= mineRoutes(MINE_LEVEL, MINE_LEVEL_SPOTS))[i]!;
-/** Kopalnia: ile trwa kopanie, a ile dojście w każdą stronę (s) — z danych budynku, jak liczy symulacja */
+/** Kopalnia: ile trwa samo kopanie przy skale (droga sztolnią dochodzi osobno, data/minewalk.ts — jak liczy symulacja) */
 const OREMINE_PROD = BUILDINGS[OREMINE_T]?.production;
-const MINE_WALK_S = (OREMINE_PROD?.walkTicks ?? 0) / TICKS_PER_SECOND;
 const inRect = (r: Rect, x: number, z: number): boolean => x >= r[0] && x <= r[1] && z >= r[2] && z <= r[3];
 /** Gdzie w świecie stoi wnętrze kopalni: głęboko pod mapą (od dołu terenu nie widać, a strop zasłania niebo) */
 const MINE_AT = new THREE.Vector3(0, -80, 0);
@@ -5185,14 +5185,16 @@ export class GameRenderer {
             t.rotation.set(0, sp[3], 0);
             swing = 0;
             // dojście: wszedł wrotami i idzie sztolnią do swojego przodka, a po robocie wraca do wrót i dopiero tam znika
-            if (MINE_WALK_S > 0 && OREMINE_PROD) {
+            if (OREMINE_PROD) {
               const left = Math.max(0, u.timer - alpha) / TICKS_PER_SECOND;
-              const total = (OREMINE_PROD.workTicks + 2 * (OREMINE_PROD.walkTicks ?? 0)) / TICKS_PER_SECOND;
-              const route = mineRoute(idx), rt = routeTime(route, MINE_WALK_S);
+              const route = mineRoute(idx), rt = routeTime(route);
+              // czas drogi z symulacji (pełne ticki): przy wrotach chwilę postoi, zanim ruszy — bez skoku na końcu
+              const walkS = mineWalkTicks(idx) / TICKS_PER_SECOND;
+              const total = OREMINE_PROD.workTicks / TICKS_PER_SECOND + 2 * walkS;
               const gone = total - left;
-              const tWalk = gone < rt.walk ? gone : left < rt.walk ? left : -1;
+              const tWalk = gone < walkS ? Math.max(0, gone - (walkS - rt.walk)) : left < walkS ? Math.max(0, left - (walkS - rt.walk)) : -1;
               if (tWalk >= 0) {
-                const pose = poseOnRoute(route, rt.speed, tWalk, MINE_LEVEL.low, MINE_LEVEL.hole, gone >= rt.walk);
+                const pose = poseOnRoute(route, rt.speed, tWalk, MINE_LEVEL.low, MINE_LEVEL.hole, gone >= walkS);
                 t.position.set(MINE_AT.x + pose.x, MINE_AT.y + pose.y, MINE_AT.z + pose.z);
                 t.rotation.set(0, pose.yaw, 0);
                 if (pose.moving) {

@@ -7,6 +7,7 @@ import { findPath, walkable } from '../path';
 import { clockAt, hourStarts, rainAt } from '../clock';
 import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
+import { mineWalkTicks } from '../../data/minewalk';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -318,7 +319,7 @@ function beginCycle(u: Unit, prod: ProductionDef): void {
   if (u.batches > 0 && prod.processTicks) { u.phase = Phase.Working; u.timer = prod.processTicks; return; }
   if (prod.input) u.phase = Phase.ToInputStore;
   else if (prod.site !== 'home') u.phase = Phase.ToSite;
-  else { u.phase = Phase.Working; u.timer = prod.workTicks + 2 * (prod.walkTicks ?? 0); }
+  else { u.phase = Phase.Working; u.timer = prod.workTicks; }
 }
 
 function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
@@ -327,6 +328,11 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
     case Phase.Returning:
       if (u.carryRes === CORPSE) { u.carryRes = -1; u.carryAmt = 0; }
       if (prod) beginCycle(u, prod); else u.phase = Phase.Idle;
+      // kopalnia: kopanie zaczyna się dopiero przy skale — doliczamy drogę sztolnią do przodka i z powrotem do wrót
+      if ((u.phase as Phase) === Phase.Working && u.job) {
+        const mine = buildingById(g, u.job);
+        if (mine && mine.type === OREMINE) u.timer += 2 * mineWalkTicks(Math.max(0, crewOf(mine).indexOf(u.id)));
+      }
       break;
     case Phase.ToInputStore: {
       const inp = prod?.input;
