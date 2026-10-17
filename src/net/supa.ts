@@ -47,6 +47,26 @@ export async function awardMatch(mode: string, s: { won: boolean; minutes: numbe
   return { ...row, before };
 }
 
+/** Poziomy innych graczy (do tytułu przy nicku w pokoju i rankingu); pamiętane na czas sesji, żeby nie pytać co chwilę */
+const levelCache = new Map<string, number>();
+const levelAsked = new Set<string>();
+export const knownLevel = (id: string): number | undefined => levelCache.get(id);
+export async function levelsOf(ids: string[]): Promise<Map<string, number>> {
+  const want = [...new Set(ids)].filter((id) => id && !levelCache.has(id) && !levelAsked.has(id));
+  if (want.length && session) {
+    for (const id of want) levelAsked.add(id);
+    const { data, error } = await supa.from('player_progress').select('user_id,level').in('user_id', want);
+    if (!error) {
+      for (const r of (data as { user_id: string; level: number }[] | null) ?? []) levelCache.set(r.user_id, r.level);
+      for (const id of want) if (!levelCache.has(id)) levelCache.set(id, 1); // bez wpisu w bazie = jeszcze bez meczu, poziom 1
+    }
+  }
+  if (session && myProgress) levelCache.set(session.user.id, myProgress.level);
+  const out = new Map<string, number>();
+  for (const id of ids) { const l = levelCache.get(id); if (l !== undefined) out.set(id, l); }
+  return out;
+}
+
 async function loadNick(): Promise<void> {
   if (!session) { myNick = ''; return; }
   const { data } = await supa.from('profiles').select('nick').eq('id', session.user.id).maybeSingle();

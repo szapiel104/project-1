@@ -49,7 +49,15 @@ export function levelOf(xp: number): { level: number; into: number; need: number
   return { level, into: left, need: xpToNext(level) };
 }
 
+/** Drabina tytułów: od którego poziomu, nazwa PL i EN */
+export const TITLES: { from: number; pl: string; en: string }[] = [
+  { from: 1, pl: 'Giermek', en: 'Squire' }, { from: 6, pl: 'Rycerz', en: 'Knight' }, { from: 12, pl: 'Kasztelan', en: 'Castellan' },
+  { from: 20, pl: 'Wojewoda', en: 'Voivode' }, { from: 30, pl: 'Książę', en: 'Duke' }, { from: 40, pl: 'Król', en: 'King' },
+];
+/** Który stopień drabiny tytułów odpowiada poziomowi */
+export const titleRank = (level: number): number => { let r = 0; TITLES.forEach((t, i) => { if (level >= t.from) r = i; }); return r; };
 /** Tytuł pana na zamku według poziomu */
 export function titleOf(level: number): string {
-  return level >= 40 ? tx('Król', 'King') : level >= 30 ? tx('Książę', 'Duke') : level >= 20 ? tx('Wojewoda', 'Voivode') : level >= 12 ? tx('Kasztelan', 'Castellan') : level >= 6 ? tx('Rycerz', 'Knight') : tx('Giermek', 'Squire');
+  const t = TITLES[titleRank(level)]!;
+  return tx(t.pl, t.en);
 }

@@ -228,7 +228,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     if (m) {
       const who = el('button', 'acc-me');
       who.type = 'button';
-      who.setAttribute('aria-label', `Konto: ${m.nick}`);
+      who.setAttribute('aria-label', tx(`Mój ród: ${m.nick}`, `My house: ${m.nick}`));
       const s = el('span', 'net-shield'); s.innerHTML = avatarSvg(m.avatar, 34);
       const txt = el('span', 'acc-text');
       const pr = progress();
@@ -243,7 +243,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         txt.append(el('strong', '', m.nick), el('span', 'acc-level', `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level} · ${lv.into}/${lv.need} ${tx('PD', 'XP')}`), bar);
       } else txt.append(el('strong', '', m.nick), el('span', '', tx('zalogowany · konto', 'signed in · account')));
       who.append(s, txt);
-      who.addEventListener('click', () => online.showAccount());
+      who.addEventListener('click', () => online.showHouse());
       account.append(who);
     } else {
       account.append(button(tx('Zaloguj się', 'Sign in'), () => online.showLogin(false), 'link-btn acc-link'), el('span', 'acc-sep', '·'), button(tx('Załóż konto', 'Create account'), () => online.showLogin(true), 'link-btn acc-link'));

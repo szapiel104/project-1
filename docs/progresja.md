@@ -89,7 +89,7 @@ od poprzedniego przy tempie 5×, dzienny limit 3000 PD), w menu tytuł, poziom i
 rozpiska i „+PD”, awans. Dalej do zrobienia: herb i ekran „Mój ród” (partia 1), zgodność zgłoszeń obu graczy
 w meczu przez sieć (partia 2), statystyki w profilu (partia 4).
 
-1. **Postać w profilu:** tabela postaci (poziom, PD, tytuł, herb: barwy i godło), ekran „Mój ród” w menu (podgląd
+1. **(Zrobione 17.10.2026)** Ekran „Mój ród” (klik w pasek konta nad menu): duży herb, imię, tytuł, poziom, pasek PD, bilans i drabina tytułów z tym, ile poziomów brakuje do kolejnego; kreator herbu z gotowych elementów (10 barw, 8 podziałów, 12 godeł, w tym kilof, korona, klucz, róża), zapis w tym samym numerze herbu co dotąd (`avatar`, od 100000 w górę; dawne 0–63 dalej działają), więc bez zmian w bazie; tytuł z poziomem przy nicku w pokoju i w rankingu (poziomy z `player_progress`). **Pierwotny opis:** **Postać w profilu:** tabela postaci (poziom, PD, tytuł, herb: barwy i godło), ekran „Mój ród” w menu (podgląd
    herbu, poziom, pasek PD, tytuł), tytuł przy nicku w pokoju i rankingu. Bez przyznawania PD — same dane i wygląd.
 2. **Bezpieczny wynik meczu:** Edge Function `report_match_result` (zgodność zgłoszeń, skrót stanu), wyniki i ranking
    tylko przez nią; zamknięcie zapisu `results` z klienta.
@@ -109,4 +109,4 @@ w meczu przez sieć (partia 2), statystyki w profilu (partia 4).
 - Nazwa waluty i tytułów (proponowane wyżej to robocze).
 - Czy premie z umiejętności mają działać w meczach rankingowych, czy tylko poza nimi?
 - Ile PD za przegraną względem wygranej (proponuję ok. 1/3)?
-- Czy herb ma być wybierany z gotowych elementów (tarcza, barwy, godło), czy rysowany?
+- ~~Czy herb ma być wybierany z gotowych elementów, czy rysowany?~~ — 17.10: z gotowych elementów (kreator w „Mój ród”).

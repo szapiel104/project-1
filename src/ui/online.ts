@@ -2,10 +2,11 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { TEAM_COLORS } from '../data/teams';
 import { Lockstep } from '../net/lockstep';
 import {
-  addFriend, closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, removeFriend, sendInvite, setStatus, deleteRoom, getRoom, listRooms, myRecord, myResults, ranking, me, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
+  addFriend, closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, removeFriend, sendInvite, setStatus, deleteRoom, getRoom, listRooms, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
   type Invite, type Member, type NetMsg, type OnlinePlayer, type Room, type RoomLink, type Slot,
 } from '../net/supa';
-import { AVATAR_COUNT, avatarSvg } from './avatars';
+import { avatarSvg, CHARGE_NAMES, CREST_CHARGES, crestPreview, decodeCrest, DIVISIONS, encodeCrest, TINCTURES, type Crest } from './avatars';
+import { levelOf, TITLES, titleOf, titleRank } from '../data/progress';
 import { chatLine, cleanChat } from './chat';
 import { lang, tx } from '../i18n';
 
@@ -49,7 +50,7 @@ const seats = (preset: string): number => (MAP_PRESETS[preset as MapPresetId]?.s
 const modeName = (preset: string): string => MODES.find(([id]) => id === preset)?.[1] ?? preset;
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
+export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
   const { el, button, screen } = ui;
   const inMatch = (): boolean => ui.inMatch();
   let stopWatch: (() => void) | null = null;
@@ -92,6 +93,105 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     screen(register ? tx('Nowe konto', 'New account') : tx('Logowanie', 'Sign in'), false, form, back());
   }
 
+  // ---------------- „Mój ród”: pan na zamku, tytuł, poziom i herb składany z elementów ----------------
+  function showHouse(): void {
+    cleanup();
+    const m = me();
+    if (!m) { showLogin(false, '', showHouse); return; }
+    const crest: Crest = decodeCrest(m.avatar);
+    const saved = { code: m.avatar };
+    const box = el('div', 'net-house');
+    const big = el('div', 'house-crest');
+    const paint = (): void => { big.innerHTML = crestPreview(crest, 132); };
+    // wizytówka: imię, tytuł, poziom, pasek PD, bilans
+    const pr = progress();
+    const lv = levelOf(pr?.xp ?? 0);
+    const card = el('div', 'house-card');
+    const name = el('h3', 'house-name', m.nick);
+    const title = el('p', 'house-title', `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level}`);
+    const bar = el('div', 'acc-xp house-xp');
+    bar.setAttribute('role', 'progressbar');
+    bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(lv.need)); bar.setAttribute('aria-valuenow', String(lv.into));
+    bar.setAttribute('aria-label', tx('Doświadczenie do następnego poziomu', 'Experience to the next level'));
+    const fill = el('span', 'acc-xp-fill'); fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`; bar.append(fill);
+    const xpLine = el('p', 'house-small', pr ? `${lv.into} / ${lv.need} ${tx('PD do poziomu', 'XP to level')} ${lv.level + 1}` : tx('Poziomy pojawią się po pierwszym meczu.', 'Levels appear after your first match.'));
+    const stats = el('p', 'house-small', pr ? tx(`Mecze: ${pr.matches} · wygrane: ${pr.wins} · pokonani wrogowie: ${pr.kills}`, `Matches: ${pr.matches} · victories: ${pr.wins} · foes slain: ${pr.kills}`) : '');
+    card.append(name, title, bar, xpLine, stats);
+    // drabina tytułów: zdobyte, obecny i kolejne (ile poziomów brakuje)
+    const ladder = el('ol', 'house-ladder');
+    ladder.setAttribute('aria-label', tx('Tytuły', 'Titles'));
+    const now = titleRank(lv.level);
+    TITLES.forEach((t, i) => {
+      const li = el('li', i < now ? 'done' : i === now ? 'now' : 'next');
+      if (i === now) li.setAttribute('aria-current', 'true');
+      li.append(el('strong', '', tx(t.pl, t.en)), el('span', '', i <= now ? tx(`od poziomu ${t.from}`, `from level ${t.from}`) : tx(`poziom ${t.from} — brakuje ${t.from - lv.level}`, `level ${t.from} — ${t.from - lv.level} to go`)));
+      ladder.append(li);
+    });
+    const left = el('div', 'net-col house-left');
+    left.append(big, card, el('p', 'net-label', tx('Tytuły', 'Titles')), ladder);
+    // kreator herbu
+    const right = el('div', 'net-col house-right');
+    const note = msg('');
+    const save = button(tx('Zapisz herb', 'Save the arms'), async () => {
+      const code = encodeCrest(crest);
+      save.disabled = true;
+      const err = await setAvatar(code);
+      save.disabled = false;
+      if (err) { note.textContent = err; note.classList.add('bad'); return; }
+      saved.code = code; note.classList.remove('bad');
+      note.textContent = tx('Herb zapisany — widać go w pokojach, na liście znajomych, w rankingu i w czacie.', 'Arms saved — they now show in rooms, your friends list, the ranking and the chat.');
+    }, 'menu-btn');
+    const group = (label: string, count: number, current: () => number, set: (i: number) => void, face: (i: number) => string, name: (i: number) => string, swatch: boolean): HTMLElement => {
+      const w = el('div', 'house-group');
+      const p = el('p', 'net-label', label);
+      const row = el('div', swatch ? 'house-swatches' : 'house-pieces');
+      row.setAttribute('role', 'radiogroup'); row.setAttribute('aria-label', label);
+      const btns: HTMLButtonElement[] = [];
+      const mark = (): void => btns.forEach((b, i) => { b.setAttribute('aria-checked', String(i === current())); b.tabIndex = i === current() ? 0 : -1; });
+      for (let i = 0; i < count; i++) {
+        const b = el('button', swatch ? 'house-swatch' : 'net-avatar') as HTMLButtonElement;
+        b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name(i)); b.title = name(i);
+        if (swatch) b.style.setProperty('--sw', face(i)); else b.innerHTML = face(i);
+        b.addEventListener('click', () => { set(i); mark(); paint(); note.textContent = ''; });
+        btns.push(b); row.append(b);
+      }
+      // strzałki przechodzą między opcjami jak w zwykłej grupie przycisków radiowych
+      row.addEventListener('keydown', (e) => {
+        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+        e.preventDefault();
+        const d = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
+        const i = (current() + d + count) % count;
+        set(i); mark(); paint(); btns[i]!.focus();
+      });
+      mark();
+      w.append(p, row);
+      return w;
+    };
+    const tName = (i: number): string => tx(TINCTURES[i]![1], TINCTURES[i]![2]);
+    const T = TINCTURES.length;
+    right.append(
+      group(tx('Pole', 'Field'), T, () => crest.field, (i) => { crest.field = i; }, (i) => TINCTURES[i]![0], tName, true),
+      group(tx('Podział tarczy', 'Division'), DIVISIONS.length, () => crest.division, (i) => { crest.division = i; }, (i) => crestPreview({ ...crest, division: i, charge: crest.charge }, 30), (i) => tx(DIVISIONS[i]![0], DIVISIONS[i]![1]), false),
+      group(tx('Drugie pole', 'Second field'), T, () => crest.field2, (i) => { crest.field2 = i; }, (i) => TINCTURES[i]![0], tName, true),
+      group(tx('Godło', 'Charge'), CREST_CHARGES, () => crest.charge, (i) => { crest.charge = i; }, (i) => crestPreview({ ...crest, charge: i }, 30), (i) => tx(CHARGE_NAMES[i]![0], CHARGE_NAMES[i]![1]), false),
+      group(tx('Barwa godła', 'Charge colour'), T, () => crest.tincture, (i) => { crest.tincture = i; }, (i) => TINCTURES[i]![0], tName, true),
+      save, note,
+    );
+    paint();
+    const cols = el('div', 'net-cols');
+    cols.append(left, right);
+    box.append(cols);
+    const foot = el('div', 'menu-foot');
+    foot.append(button(tx('Konto i hasło', 'Account and password'), () => showAccount(), 'menu-btn'), back());
+    screen(tx('Mój ród', 'My house'), true, box, foot);
+  }
+
+  /** Tytuł przy nicku (gdy znamy poziom gracza) */
+  const titleChip = (id: string): HTMLElement | null => {
+    const l = knownLevel(id);
+    return l === undefined ? null : el('span', 'net-title', `${titleOf(l)} · ${l}`);
+  };
+
   function showAccount(): void {
     cleanup();
     const m = me();
@@ -102,27 +202,9 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const who = el('div', 'net-card-text');
     who.append(el('strong', '', m.nick), el('span', '', m.email));
     card.append(shield(m.avatar, 64), who);
-    // herb
-    const pick = el('div', 'net-avatars');
-    pick.setAttribute('role', 'radiogroup');
-    pick.setAttribute('aria-label', tx('Herb', 'Coat of arms'));
     const note = msg('');
-    for (let i = 0; i < AVATAR_COUNT; i++) {
-      const b = el('button', 'net-avatar');
-      b.type = 'button';
-      b.setAttribute('role', 'radio');
-      b.setAttribute('aria-checked', String(i === m.avatar));
-      b.setAttribute('aria-label', `${tx('Herb', 'Coat of arms')} ${i + 1}`);
-      b.innerHTML = avatarSvg(i, 34);
-      b.addEventListener('click', async () => {
-        pick.querySelectorAll('[aria-checked="true"]').forEach((x) => x.setAttribute('aria-checked', 'false'));
-        b.setAttribute('aria-checked', 'true');
-        const err = await setAvatar(i);
-        if (err) { note.textContent = err; note.classList.add('bad'); return; }
-        card.firstElementChild!.replaceWith(shield(i, 64));
-      });
-      pick.append(b);
-    }
+    // herb składa się na ekranie „Mój ród” (pole, podział, godło, barwy)
+    const pick = button(tx('Herb i ród →', 'Arms and house →'), () => showHouse(), 'menu-btn');
     // nick
     const nickForm = el('form', 'net-inline');
     const [wn, nick] = field(tx('Nick', 'Nickname'), 'text', 'nickname');
@@ -162,7 +244,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         return li;
       }) : [el('li', 'none', tx('Jeszcze żadnego meczu przez sieć.', 'No online matches yet.'))]));
     });
-    left.append(card, record, history, el('p', 'net-label', tx('Herb', 'Coat of arms')), pick);
+    left.append(card, record, history, pick);
     const right = el('div', 'net-col');
     right.append(nickForm, passForm, note);
     const cols = el('div', 'net-cols');
@@ -327,6 +409,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     cleanup();
     screen(tx('Ranking', 'Ranking'), true, msg(tx('Wczytuję…', 'Loading…')));
     const rows = await ranking();
+    await levelsOf(rows.map((x) => x.user_id));
     const m = me();
     const table = el('table', 'net-ranking');
     const thead = el('thead');
@@ -338,6 +421,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       const tr = el('tr', x.user_id === m?.id ? 'me' : '');
       const who = el('td', 'who');
       who.append(shield(x.avatar, 22), el('span', '', x.nick));
+      const tc = titleChip(x.user_id); if (tc) who.append(tc);
       tr.append(el('td', 'pos', String(i + 1)), who, el('td', '', String(x.wins)), el('td', '', String(x.losses)), el('td', '', String(x.games)));
       tbody.append(tr);
     });
@@ -481,7 +565,12 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         slots.forEach((s, i) => {
           if (i % 2 !== team) return;
           const row = el('div', `net-slot ${s.kind}`);
-          if (s.kind === 'human') row.append(shield(s.avatar, 30), el('strong', '', s.nick + (s.id === room.host ? tx(' (gospodarz)', ' (host)') : '') + (s.id === m.id ? tx(' — Ty', ' — you') : '')));
+          if (s.kind === 'human') {
+            row.append(shield(s.avatar, 30), el('strong', '', s.nick + (s.id === room.host ? tx(' (gospodarz)', ' (host)') : '') + (s.id === m.id ? tx(' — Ty', ' — you') : '')));
+            const tc = titleChip(s.id);
+            if (tc) row.append(tc);
+            else void levelsOf([s.id]).then((got) => { if (got.has(s.id)) paint(); }); // poziom dociągnięty z bazy: odśwież raz
+          }
           else if (s.kind === 'bot') row.append(el('span', 'net-bot', '⚙'), el('strong', '', coop && !humanSeat(i) ? `Bot (${LEVELS[level]}, ${tx('wzmocniony', 'reinforced')})` : `Bot (${LEVELS[level]})`));
           else row.append(el('span', 'net-open', '+'), el('span', '', tx('Wolne miejsce', 'Empty seat')));
           const act = el('div', 'net-slot-act');
@@ -587,5 +676,5 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     enterRoom(room);
   }
 
-  return { showOnline: () => void showOnline(), showAccount, showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
+  return { showOnline: () => void showOnline(), showAccount, showHouse, showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
 }
