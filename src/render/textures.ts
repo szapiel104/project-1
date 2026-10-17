@@ -528,6 +528,10 @@ export function grayPattern(kind: Kind, max = 512): THREE.Texture | null {
       px[i] = px[i + 1] = px[i + 2] = v;
     }
     ctx.putImageData(d, 0, 0);
+    // płótno urosło z 4×4 do pełnego rozmiaru: karta ma już teksturę 4×4 o stałym rozmiarze (texStorage), więc samo
+    // needsUpdate kończyło się błędem GL „offset overflows texture dimensions” i szara wersja zostawała pustym 4×4.
+    // dispose() zwalnia starą teksturę na karcie; przy następnym rysowaniu powstaje nowa, już w dobrym rozmiarze.
+    out.dispose();
     out.needsUpdate = true;
     return true;
   };

@@ -3541,8 +3541,11 @@ export class GameRenderer {
       const free = this.lamps.length - (own ? 1 : 0);
       const chosen = spots.slice(0, free);
       // miękki brzeg: najdalsze z wybranych świecą słabiej, więc gdy wypadają z puli, nie gasną nagle
-      const edge = spots.length > free ? Math.sqrt(spots[free]!.d) : Infinity;
-      const weight = (d: number): number => (edge === Infinity ? 1 : Math.max(0, Math.min(1, (edge - Math.sqrt(d)) / (edge * 0.35))));
+      // UWAGA: „d” to odległość do kwadratu z poprawką pierwszeństwa, więc bywa UJEMNE (ognisko: −2). sqrt(ujemne) = NaN,
+      // NaN szło do siły lampy i zostawało w niej na zawsze (cur += (NaN − cur)·ease), a jedno światło z NaN czerni
+      // każdy oświetlony piksel — stąd „nocą jadę kamerą nad obozem i cały obraz gaśnie”. Dlatego obcinamy do zera.
+      const edge = spots.length > free ? Math.sqrt(Math.max(0, spots[free]!.d)) : Infinity;
+      const weight = (d: number): number => (edge === Infinity || edge <= 0 ? 1 : Math.max(0, Math.min(1, (edge - Math.sqrt(Math.max(0, d))) / (edge * 0.35))));
       const want = new Map(chosen.map((sp) => [sp.key, sp]));
       // lampy już przypięte do wybranych źródeł zostają przy nich
       const taken = new Set<string>();
@@ -3569,6 +3572,8 @@ export class GameRenderer {
       if (lamp === own) return;
       const st = this.lampState[i]!;
       st.cur += ((on ? st.target : 0) - st.cur) * ease;
+      // bezpiecznik: zepsuta liczba (NaN/∞) w sile światła czerni cały obraz i sama nie zniknie — gasimy lampę i zaczynamy od zera
+      if (!Number.isFinite(st.cur) || !Number.isFinite(st.target)) { console.warn('[lampy] zła siła światła', st); st.cur = 0; st.target = 0; st.key = ''; }
       if (st.cur < 0.002) { st.cur = 0; if (!on) st.key = ''; }
       lamp.intensity = st.cur * st.k * this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
     });
