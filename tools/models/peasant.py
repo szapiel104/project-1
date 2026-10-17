@@ -24,6 +24,17 @@ def noise3(x, y, z):
     return (math.sin(x * 129.898 + y * 782.33 + z * 377.19) * 43758.5453) % 1.0
 
 
+def lining(bm, dist=0.0025):
+    """Spodnia warstwa tkaniny: kopia z odwróconymi ścianami, cofnięta o włos do środka. Gra nie rysuje tylnych
+    stron, więc bez niej przez dekolt, rękaw czy postrzępiony dół widać było na wylot (dziury w koszuli)."""
+    back = bm.copy()
+    back.normal_update()
+    for v in back.verts:
+        v.co -= v.normal * dist
+    _bm.ops.reverse_faces(back, faces=back.faces[:])
+    return back
+
+
 HIP = (0.052, 0.235, 0.0)
 SHOULDER = (0.135, 0.45, 0.0)
 HAND = (0.0, -0.185, 0.004)
@@ -65,7 +76,9 @@ arm = lathe('arm', [(0.001, 0.034), (0.022, 0.03), (0.035, 0.01), (0.036, -0.015
 ab = evaluated(arm)
 # postrzępiony brzeg rękawa: wycięte zęby materiału
 keep_faces(ab, lambda x, y, z: not (y < -0.05 and (math.atan2(x, z) * 5) % 2 < 0.8))
+arm_in = lining(ab)
 arm_m = Mesh(ab, lambda x, y, z: (0.55 if y < -0.048 else 0.9 + 0.06 * math.sin(y * 60),) * 3, 'cloth', dyn='tunic')
+arm_in_m = Mesh(arm_in, (0.42,) * 3, 'cloth', dyn='tunic')
 # goła ręka: biceps pod rękawem, mocne przedramię zwężające się do nadgarstka
 fore = lathe('fore', [(0.028, -0.02), (0.03, -0.05), (0.0275, -0.075), (0.029, -0.095), (0.027, -0.12), (0.022, -0.148), (0.02, -0.165), (0.001, -0.168)], seg=14, subsurf=0)
 fore_m = Mesh(evaluated(fore), lambda x, y, z: (1.0 - 0.06 * max(0.0, math.cos(math.atan2(x, z) * 2)) * (y > -0.12),) * 3, 'skin', dyn='skin')
@@ -116,7 +129,9 @@ def shirt_col(x, y, z):
     if z > 0 and abs(x) < 0.07 and y > 0.4 + abs(x) * 1.6 - 0.012:  # brzeg dekoltu ciemniejszy
         k *= 0.7
     return (k,) * 3
+torso_in = lining(tb)
 torso_m = Mesh(tb, shirt_col, 'cloth', dyn='tunic')
+torso_in_m = Mesh(torso_in, lambda x, y, z: (0.42 + (noise3(x, y, z) - 0.5) * 0.06,) * 3, 'cloth', dyn='tunic')
 neckhem_m = Mesh(evaluated(neckhem), lambda x, y, z: (0.62 + (noise3(x, y, z) - 0.5) * 0.1,) * 3, 'cloth', dyn='tunic')
 # naga pierś pod rozdartą koszulą (tuż za tkaniną)
 chest = lathe('chest', [(0.083, 0.4), (0.094, 0.43), (0.088, 0.455), (0.07, 0.474), (0.045, 0.488)], seg=10, depth=0.72, phi0=-0.6, phi=1.2, subsurf=0)
@@ -142,7 +157,9 @@ def face_hole(x, y, z, w=0.62, h=0.6):
 hood = head.shell('hood', 1.16, lambda x, y, z: 1 - face_hole(x, y, z) if y > -0.85 else 0, dyn='hat', show='hood',
                   shade=lambda x, y, z: (0.9 if z > 0.3 else 0.8,) * 3)
 cape = lathe('cape', [(0.128, 0.4), (0.124, 0.428), (0.104, 0.456), (0.074, 0.484), (0.05, 0.505)], seg=18, depth=0.86, subsurf=1)
-cape_m = Mesh(evaluated(cape), lambda x, y, z: (0.6 if y < 0.407 else 0.85,) * 3, 'cloth', dyn='hat', show='hood')
+cape_b = evaluated(cape)
+cape_in_m = Mesh(lining(cape_b), (0.45,) * 3, 'cloth', dyn='hat', show='hood')
+cape_m = Mesh(cape_b, lambda x, y, z: (0.6 if y < 0.407 else 0.85,) * 3, 'cloth', dyn='hat', show='hood')
 kerchief = head.shell('kerchief', 1.11, lambda x, y, z: (1 - face_hole(x, y, z, 0.7, 0.62)) * smooth(-0.6, -0.3, y), dyn=None, show='kerchief',
                       shade=lambda x, y, z: tuple(c * (0.9 + 0.1 * y) for c in LINEN))
 # słomkowy kapelusz z szerokim rondem i czerwoną taśmą
@@ -155,5 +172,5 @@ straw_m = [Mesh(evaluated(hat_cr), lambda x, y, z: hexrgb(0x7a3a2a) if 0.588 < y
 cap = lathe('cap', [(0.061, 0.586), (0.064, 0.603), (0.057, 0.624), (0.034, 0.636), (0.0, 0.639)], seg=16, subsurf=0)
 cap_m = Mesh(evaluated(cap), lambda x, y, z: (0.55 if y < 0.596 else 1.0,) * 3, 'cloth', dyn='hat', show='cap')
 
-static = [torso_m, neckhem_m, chest_m, hips_m, belt_m, buckle_m, pouch_m, head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), hair, beard, hood, cape_m, kerchief, *straw_m, cap_m]
-finish('peasant', static, [leg_m, kband_m, chain_m, shoe_m, wraps_m], [arm_m, fore_m, hand_m], HIP, SHOULDER, HAND)
+static = [torso_m, torso_in_m, neckhem_m, chest_m, hips_m, belt_m, buckle_m, pouch_m, head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), hair, beard, hood, cape_m, cape_in_m, kerchief, *straw_m, cap_m]
+finish('peasant', static, [leg_m, kband_m, chain_m, shoe_m, wraps_m], [arm_m, arm_in_m, fore_m, hand_m], HIP, SHOULDER, HAND)

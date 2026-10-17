@@ -9,15 +9,82 @@ import { grayPattern, normal, type Kind } from './textures';
  * Materiał części ładunku: zdjęciowa tekstura w szarości (barwę daje kolor wierzchołków) i mapa nierówności.
  * Owoce, ryby i grudki rudy zostają gładkie; drewno, wiklina, płótno, skórka chleba, kamień i żelazo mają fakturę.
  */
-type LoadMat = 'plain' | 'wood' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark';
+type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark';
 const MAT_TEX: Record<LoadMat, [Kind | null, number, number, number]> = {
   // [tekstura, gęstość na 1 jednostkę, chropowatość, metaliczność]
-  plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], wicker: ['thatch', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
+  plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], board: [null, 1, 0.8, 0], rope: ['burlap', 14, 1, 0], wicker: ['thatch', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
   crust: ['soil', 7, 0.9, 0], stone: ['rock', 5, 0.95, 0], iron: ['iron', 6, 0.5, 0.55], straw: ['thatch', 6, 0.95, 0], bark: ['bark', 6, 0.95, 0],
 };
 const matCache = new Map<LoadMat, THREE.MeshStandardMaterial>();
+
+/**
+ * Słoje świeżo heblowanej deski, rysowane w kodzie (szare, barwę daje kolor wierzchołków): długie, lekko falujące
+ * słoje wzdłuż deski, ciemniejsze pasma drewna późnego, drobne włókna i jeden sęk z opływającymi go słojami.
+ * Zdjęcie `planks` to stara podłoga ze szparami i plamami — na wąskich deskach w wiązce wyglądało jak brudne łaty.
+ * Kafel powtarza się w obu kierunkach (całkowite częstotliwości), u = wzdłuż deski.
+ */
+let boardTex: THREE.CanvasTexture | null | undefined;
+function boardGrain(): THREE.CanvasTexture | null {
+  if (boardTex !== undefined) return boardTex;
+  if (typeof document === 'undefined') return (boardTex = null);
+  const W = 512, H = 128, TAU = Math.PI * 2;
+  const c = document.createElement('canvas'); c.width = W; c.height = H;
+  const ctx = c.getContext('2d');
+  if (!ctx) return (boardTex = null);
+  const img = ctx.createImageData(W, H), px = img.data;
+  const kx = W * 0.68, ky = H * 0.42; // sęk
+  let seed = 1234567;
+  const rnd = (): number => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const fine = new Float32Array(H).map(() => rnd() - 0.5); // drobne włókna: stała jasność wzdłuż całej linii
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const dx = x - kx, dy = y - ky, d2 = dx * dx * 0.12 + dy * dy;
+      // słoje falują wzdłuż deski i rozchodzą się wokół sęka
+      const bend = 5 * Math.sin((x / W) * TAU + 0.7) + 2.2 * Math.sin((x / W) * TAU * 3 + 2.1) + 14 * Math.sign(dy || 1) * Math.exp(-d2 / 260);
+      const t = ((y + bend) / H) * TAU;
+      const ring = 0.5 + 0.5 * Math.sin(t * 6 + 0.8 * Math.sin(t * 2 + (x / W) * TAU));
+      const late = Math.pow(ring, 7); // wąskie ciemne pasma drewna późnego
+      const soft = 0.5 + 0.5 * Math.sin(t * 2 + 1.3);
+      const fy = Math.round(y + bend) % H;
+      let v = 0.94 - 0.16 * late - 0.05 * soft + fine[(fy + H) % H]! * 0.07 + (rnd() - 0.5) * 0.025;
+      if (d2 < 60) v -= 0.3 * (1 - d2 / 60) * (0.75 + 0.25 * Math.sin(Math.sqrt(d2) * 2.2)); // sęk
+      const g = Math.max(0, Math.min(255, Math.round(v * 255)));
+      const i = (y * W + x) * 4;
+      px[i] = px[i + 1] = px[i + 2] = g; px[i + 3] = 255;
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+  const tex = new THREE.CanvasTexture(c);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.colorSpace = THREE.NoColorSpace;
+  tex.anisotropy = 8;
+  return (boardTex = tex);
+}
+
+/** Współrzędne tekstury deski: u zawsze wzdłuż deski (oś z), v w poprzek; każda deska z innego miejsca kafla */
+function boardUv(geo: THREE.BufferGeometry): void {
+  const p = geo.attributes.position!, n = geo.attributes.normal!;
+  geo.computeBoundingBox();
+  const b = geo.boundingBox!, cx = (b.min.x + b.max.x) / 2, cy = (b.min.y + b.max.y) / 2, cz = (b.min.z + b.max.z) / 2;
+  const off = Math.abs(Math.sin(cx * 913.1 + cy * 377.7 + cz * 151.3) * 43758.5) % 1; // stałe przesunięcie na deskę
+  const uv = new Float32Array(p.count * 2);
+  for (let i = 0; i < p.count; i++) {
+    const ax = Math.abs(n.getX(i)), ay = Math.abs(n.getY(i)), az = Math.abs(n.getZ(i));
+    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
+    // wierzch i spód: słoje na szerokości deski (x); boki: na grubości (y); czoła: przekrój (słoje w poprzek)
+    const [u, v] = az > ax && az > ay ? [x * 3 + off, y * 3] : ay >= ax ? [z * 1.6 + off, (x - cx) * 4 + off] : [z * 1.6 + off, (y - cy) * 4 + off * 0.5];
+    uv[i * 2] = u; uv[i * 2 + 1] = v;
+  }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+}
+
 function loadMat(k: LoadMat): THREE.MeshStandardMaterial {
   let m = matCache.get(k);
+  if (!m && k === 'board') {
+    const g = boardGrain();
+    m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, map: g, bumpMap: g, bumpScale: 0.6 });
+    matCache.set(k, m);
+  }
   if (!m) {
     const [tex, , rough, metal] = MAT_TEX[k];
     m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: rough, metalness: metal, flatShading: k === 'stone' || k === 'iron',
@@ -35,7 +102,7 @@ function assemble(parts: THREE.BufferGeometry[]): THREE.BufferGeometry | null {
     const k = (p0.userData.mat as LoadMat | undefined) ?? 'plain';
     const p = p0.index ? p0.toNonIndexed() : p0;
     if (!p.getAttribute('normal')) p.computeVertexNormals();
-    boxUv(p, MAT_TEX[k][1]);
+    if (k === 'board') boardUv(p); else boxUv(p, MAT_TEX[k][1]);
     for (const name of Object.keys(p.attributes)) if (!['position', 'normal', 'color', 'uv'].includes(name)) p.deleteAttribute(name);
     let l = by.get(k); if (!l) { l = []; by.set(k, l); } l.push(p);
   }
@@ -214,13 +281,17 @@ export function carryArms(planks: boolean, swing: number): [number, number] {
   return planks ? [-2.35, swing * 0.8] : [CARRY_ARM, CARRY_ARM];
 }
 
-/** Wiązka desek na prawym ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami */
+/** Wiązka desek na prawym ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami ze sznura */
 export function plankBundle(): THREE.BufferGeometry {
   const boards: THREE.BufferGeometry[] = [];
-  ([[-0.045, 0, 0.02, 0xd2ab74], [0.045, 0, -0.03, 0xc49a63], [0, 0.03, 0.04, 0xdcb886], [-0.045, 0.06, -0.02, 0xcca26c], [0.045, 0.06, 0.01, 0xd8b07a]] as const).forEach(([x, y, z, c]) => {
-    const b = new THREE.BoxGeometry(0.042, 0.018, 0.5); b.translate(x * 0.45, y * 0.75, z); boards.push(as(tint(b, c), 'wood'));
+  // świeża sosna w kilku odcieniach (ciepły miód do przybrudzonego brązu), bez jasnej żółci
+  ([[-0.045, 0, 0.02, 0xb98a58], [0.045, 0, -0.03, 0xa8794b], [0, 0.03, 0.04, 0xc29462], [-0.045, 0.06, -0.02, 0xae8050], [0.045, 0.06, 0.01, 0xbb8c5a]] as const).forEach(([x, y, z, c]) => {
+    const b = new THREE.BoxGeometry(0.042, 0.018, 0.5); b.translate(x * 0.45, y * 0.75, z); boards.push(as(tint(b, c), 'board'));
   });
-  for (const z of [-0.15, 0.15]) { const tie = new THREE.BoxGeometry(0.09, 0.07, 0.02); tie.translate(0, 0.022, z); boards.push(as(tint(tie, 0x8a6a3a), 'cloth')); }
+  // sznur owinięty dookoła wiązki (cienki, ciemny), a nie gruba płócienna opaska
+  for (const z of [-0.16, 0.15]) for (const dz of [-0.007, 0.007]) {
+    const tie = new THREE.BoxGeometry(0.092, 0.072, 0.009); tie.translate(0, 0.022, z + dz); boards.push(as(tint(tie, dz < 0 ? 0x5b4632 : 0x4f3d2b), 'rope'));
+  }
   const plank = assemble(boards)!;
   // wąska wiązka na barku między głową a ręką (bark ±0,135, głowa ±0,054): ręka idzie obok, dłoń przytrzymuje z boku od góry
   plank.translate(0.09, 0.495, 0);
