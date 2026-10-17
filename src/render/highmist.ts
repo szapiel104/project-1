@@ -61,7 +61,7 @@ function heightTexture(g: HeightGrid): { tex: THREE.DataTexture; box: THREE.Vect
 }
 
 /** Szum powtarzalny (bez szwów przy kafelkowaniu): kilka oktaw szumu wartości na okresowej kratce */
-function mistNoise(seed: number): THREE.DataTexture {
+export function mistNoise(seed: number): THREE.DataTexture {
   const N = 128;
   const data = new Uint8Array(N * N * 4);
   let s = (seed ^ 0x9e3779b9) >>> 0;

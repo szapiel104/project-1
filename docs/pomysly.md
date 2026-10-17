@@ -104,6 +104,7 @@ Większe rzeczy na później:
 ## Wygląd — do zrobienia (13.10.2026, poprawione 17.10)
 Zrobione wcześniej (16.10): drzewa z Blendera z kartami igliwia i liści, wiatr w koronach, kępy trawy z teksturą źdźbeł.
 Zrobione 17.10 wieczorem: mgła w dolinach za mapą (3 warstwy wlewające się w doliny wg mapy wysokości, gęsta o świcie, w mgliste dni i w deszczu; słabsza grafika = 1 warstwa — src/render/highmist.ts), chmury zahaczające o najwyższe szczyty (kłęby blakną przy zboczu i przy kamerze, więcej przy zachmurzeniu i deszczu), strumienie i wodospady z gór przy brzegu planszy (spływają do stóp gór albo do jeziora/rzeki, na stromiźnie biała piana, u dołu pył wodny; znikają, gdy na ich drodze stanie budynek — src/render/streams.ts), odbicie brzegu w wodzie (ciemny, falujący pas lądu w tafli przy brzegach).
+Zrobione 17.10 późnym wieczorem: wodospad z Blendera (tools/models/waterfall.py): skalny próg z rynną, kaskada w dwóch stopniach, mokre i omszone głazy w misie; gra stawia go tam, gdzie woda na planszy dochodzi do skalnej ściany (próg na półce pod wyższym masywem), skaluje do wysokości progu, piana i pył wodny w misie; zwykłe strumienie po zboczach wyłączone. Podgląd: modele.html?id=waterfall.
 Dalej:
 - Szum wodospadu i strumienia (dźwięk przy kamerze/spacerze)
 - Strumienie także z dalekich masywów za mapą do dolin

@@ -1,5 +1,8 @@
 import * as THREE from 'three';
 import { cat } from './cat';
+import { model } from './modelstore';
+import { boxUv, modelGeo } from './peasants';
+import { normal, pattern } from './textures';
 
 /**
  * Strumienie i wodospady spływające z gór na skraju mapy.
@@ -249,7 +252,7 @@ void main() {
     vec3 base = vec3(0.42, 0.5, 0.53) * (0.55 + sky.g * 0.6);
     vec3 hiC = vec3(0.93, 0.96, 0.97) * (0.55 + sky.g * 0.6);
     c = mix(base, hiC, smoothstep(0.38, 0.82, st));
-    a = smoothstep(1.0, 0.45, abs(vEdge) + (st - 0.5) * 0.7) * (0.3 + 0.62 * smoothstep(0.28, 0.75, st)) * vEnd;
+    a = smoothstep(1.0, 0.5, abs(vEdge) + (st - 0.5) * 0.6) * (0.52 + 0.46 * smoothstep(0.28, 0.75, st)) * vEnd;
   }
   if (a < 0.01) discard;
   gl_FragColor = vec4(c, a);
@@ -289,6 +292,77 @@ void main() {
   gl_FragColor = vec4(vec3(0.9, 0.93, 0.93) * (0.6 + sky.g * 0.7), a * 0.85);
   #include <fog_fragment>
 }`;
+
+type WMesh = Parameters<typeof modelGeo>[0];
+let rockMat: THREE.MeshStandardMaterial | null = null;
+/** Materiał mokrej skały wodospadu (tekstura skały z gry, barwa i mech z kolorów wierzchołków) */
+function fallRockMaterial(): THREE.MeshStandardMaterial {
+  rockMat ??= new THREE.MeshStandardMaterial({ vertexColors: true, map: pattern('rock'), normalMap: normal('rock'), roughness: 0.88, metalness: 0 });
+  return rockMat;
+}
+
+/** Materiał wody (ten sam shader co nurt i kurtyna) — do wodospadu w podglądzie modeli */
+export function streamWaterMaterial(noise: THREE.Texture): THREE.ShaderMaterial {
+  const m = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { noise: { value: noise }, time: { value: 0 }, sky: { value: new THREE.Color(0x9aa8b2) } }]),
+    vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, fog: true, side: THREE.DoubleSide,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
+  });
+  m.uniforms.noise!.value = noise;
+  return m;
+}
+
+/**
+ * Wodospad z Blendera (tools/models/waterfall.py): skalny próg z rynną, kaskada w dwóch stopniach, głazy w misie.
+ * Model ma 5 pól wysokości; sy skaluje wysokość (do progu na mapie), sxz szerokość i głębokość.
+ * (0, 0, 0) = tafla wody pod ścianą, woda spada w stronę +z, misa w z ≈ 1,15·sxz.
+ */
+export function waterfallModel(sy: number, sxz: number, waterMat: THREE.Material): THREE.Group {
+  const src = model<{ rock: WMesh; water: WMesh }>('waterfall');
+  const g = new THREE.Group();
+  const rock = modelGeo(src.rock).toNonIndexed();
+  rock.scale(sxz, sy, sxz);
+  rock.computeVertexNormals(); // łupana skała: płaskie ściany (normalne trójkątów po skalowaniu)
+  boxUv(rock, 0.42);
+  const rm = new THREE.Mesh(rock, fallRockMaterial());
+  rm.castShadow = rm.receiveShadow = true;
+  g.add(rm);
+  // woda: wierzchołki parami w rzędach (lewy, prawy brzeg); v = droga wzdłuż nurtu, spad = rząd prawie pionowy
+  const water = modelGeo(src.water);
+  water.scale(sxz, sy, sxz);
+  const p = water.attributes.position as THREE.BufferAttribute;
+  const n = p.count, rows = n >> 1;
+  const UV = new Float32Array(n * 2), SL = new Float32Array(n), ED = new Float32Array(n), EN = new Float32Array(n).fill(1);
+  let along = 0;
+  for (let r = 0; r < rows; r++) {
+    const a = r * 2;
+    const cx = (p.getX(a) + p.getX(a + 1)) / 2, cy = (p.getY(a) + p.getY(a + 1)) / 2, cz = (p.getZ(a) + p.getZ(a + 1)) / 2;
+    const b = Math.min(rows - 1, r + 1) * 2, q = Math.max(0, r - 1) * 2;
+    const nx = (p.getX(b) + p.getX(b + 1)) / 2 - (p.getX(q) + p.getX(q + 1)) / 2;
+    const ny = (p.getY(b) + p.getY(b + 1)) / 2 - (p.getY(q) + p.getY(q + 1)) / 2;
+    const nz = (p.getZ(b) + p.getZ(b + 1)) / 2 - (p.getZ(q) + p.getZ(q + 1)) / 2;
+    const steep = Math.abs(ny) / (Math.hypot(nx, ny, nz) || 1);
+    if (r > 0) {
+      const pa = (r - 1) * 2;
+      along += Math.hypot(cx - (p.getX(pa) + p.getX(pa + 1)) / 2, cy - (p.getY(pa) + p.getY(pa + 1)) / 2, cz - (p.getZ(pa) + p.getZ(pa + 1)) / 2);
+    }
+    for (let k = 0; k < 2; k++) {
+      const i = a + k;
+      UV[i * 2] = k; UV[i * 2 + 1] = along * 0.5;
+      ED[i] = k ? 1 : -1;
+      SL[i] = steep > 0.55 ? 5 : 0.35; // 5 = kurtyna spadu, inaczej spokojny nurt
+    }
+  }
+  water.setAttribute('uv', new THREE.BufferAttribute(UV, 2));
+  water.setAttribute('aSlope', new THREE.BufferAttribute(SL, 1));
+  water.setAttribute('aEdge', new THREE.BufferAttribute(ED, 1));
+  water.setAttribute('aEnd', new THREE.BufferAttribute(EN, 1));
+  water.deleteAttribute('color');
+  const wm = new THREE.Mesh(water, waterMat);
+  wm.renderOrder = 2;
+  g.add(wm);
+  return g;
+}
 
 export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): Streams {
   const group = new THREE.Group();
@@ -366,8 +440,47 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
     tiles.add(Math.floor(hz) * S.w + Math.floor(hx));
     return out;
   };
+  /** Wodospad z modelu: próg na krawędzi L, misa nad wodą w stronę B, skala do wysokości progu */
+  const placeFall = (L: Pt, B: Pt): void => {
+    const ly = H(L.x, L.y), by = -0.08;
+    let dx = B.x - L.x, dy = B.y - L.y;
+    const dl = Math.hypot(dx, dy) || 1;
+    dx /= dl; dy /= dl;
+    const sy = Math.max(0.45, Math.min(1.8, (ly - by) / 5));
+    const sxz = Math.max(0.75, Math.min(1.2, dl / 0.99));
+    // krawędź rynny modelu (z ≈ 0,16) leży na krawędzi progu na mapie
+    const ox0 = L.x - dx * 0.16 * sxz, oy0 = L.y - dy * 0.16 * sxz;
+    const g = waterfallModel(sy, sxz, mat);
+    g.position.set(ox0 + S.ox, by, oy0 + S.oz);
+    g.rotation.y = Math.atan2(dx, dy);
+    group.add(cat(g, 'strumienie i wodospady'));
+    const tiles = new Set<number>();
+    for (let a = -1.8; a <= 2.2; a += 0.5) for (let c = -1.8; c <= 1.8; c += 0.5) {
+      const tx = ox0 + (dx * a - dy * c) * sxz, ty = oy0 + (dy * a + dx * c) * sxz;
+      tiles.add(Math.floor(ty) * S.w + Math.floor(tx));
+    }
+    for (const m of g.children) meshes.push({ mesh: m as THREE.Mesh, tiles });
+    // piana w misie i pył wodny nad nią
+    const hx = ox0 + dx * 1.15 * sxz, hz = oy0 + dy * 1.15 * sxz;
+    const fg = new THREE.CircleGeometry(1.2 + sy * 0.5, 28).rotateX(-Math.PI / 2).translate(hx + S.ox, -0.06, hz + S.oz);
+    extra.push(fg);
+    const fm = new THREE.Mesh(fg, foamMat);
+    fm.renderOrder = 2;
+    group.add(cat(fm, 'strumienie i wodospady'));
+    meshes.push({ mesh: fm, tiles });
+    sprays.push(new THREE.Vector3(hx + S.ox, 0.15, hz + S.oz));
+    // pył także pod pierwszym stopniem (półka w połowie ściany)
+    const mx = ox0 + dx * 0.45 * sxz, mz = oy0 + dy * 0.45 * sxz;
+    sprays.push(new THREE.Vector3(mx + S.ox, by + 2.5 * sy, mz + S.oz));
+  };
+  void curtain;
   paths.forEach((full, pi) => {
     const isFall = pi < falls.length;
+    if (isFall) {
+      const lipI = (full as Pt[] & { lip?: number }).lip ?? 8;
+      placeFall(full[lipI]!, full[full.length - 1]!);
+      return;
+    }
     // przy wodospadzie wstęgą rysujemy tylko nurt nad krawędzią (8 pierwszych punktów + krawędź), resztę robi kurtyna
     const lip = (full as Pt[] & { lip?: number }).lip ?? 8;
     const raw = isFall ? full.slice(0, lip + 1) : full;
@@ -441,6 +554,6 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
           for (let tx = x - 1; tx <= x + w; tx++) if (m.tiles.has(ty * S.w + tx)) { m.mesh.visible = false; break; }
       }
     },
-    dispose() { for (const m of meshes) m.mesh.geometry.dispose(); for (const g of extra) g.dispose(); mat.dispose(); foamMat.dispose(); },
+    dispose() { for (const m of meshes) m.mesh.geometry?.dispose(); for (const g of extra) g.dispose(); mat.dispose(); foamMat.dispose(); },
   };
 }
