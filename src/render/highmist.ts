@@ -178,7 +178,7 @@ void main() {
   float n1 = texture2D(noise, p / 34.0 + vec2(time * 0.0016, time * 0.0009)).r;
   float n2 = texture2D(noise, vec2(p.y, -p.x) / 15.0 - vec2(time * 0.0011, -time * 0.0019)).g;
   float n = n1 * 0.7 + n2 * 0.45;
-  float a = smoothstep(0.05, 0.75, vV) * smoothstep(0.22, 0.78, n + vV * 0.25);
+  float a = smoothstep(0.1, 0.9, vV) * smoothstep(0.42, 0.85, n + vV * 0.12);
   // tuż przy kamerze czysto (widać, czym się gra), dalej doliny toną w oparze
   a *= smoothstep(5.0, 24.0, distance(cameraPosition, vWP));
   a *= opacity;
@@ -365,7 +365,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   for (let k = 0; k < vall.length; k++) {
     const jj = Math.floor(k / BW), ii = k - jj * BW;
     const wet = g.wet ? g.wet[(jj + bj0) * g.nx + ii + bi0]! : 0;
-    vall[k] = hb[k]! > 1.25 ? 0 : Math.min(1, Math.max(0, (avg[k]! - hb[k]!) / 0.35) + wet * 0.75);
+    vall[k] = hb[k]! > 1.25 ? 0 : Math.min(1, Math.max(0, (avg[k]! - hb[k]!) / 0.35) + wet * 0.4);
   }
   vall = boxBlur(vall, 1);
   const DP: number[] = [], DV: number[] = [], DI: number[] = [];
@@ -462,7 +462,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
     update(time: number, a: Atmosphere) {
       const day = 1 - a.night;
       // opar w dolinach: zawsze lekko (surowy klimat), gęsto o świcie, w mgliste dni i w deszczu; o świcie wyżej
-      const dens = Math.min(1, 0.5 + a.mist * 0.5 + a.rain * 0.3 + a.night * 0.12);
+      const dens = Math.min(1, 0.22 + a.mist * 0.7 + a.rain * 0.3 + a.night * 0.12);
       const lift = a.mist * 1.4 + a.rain * 0.6;
       tone.copy(a.fog).lerp(white, 0.08 + day * 0.32 * (1 - a.rain * 0.5));
       layerMats.forEach((m, i) => {
@@ -475,7 +475,8 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
       });
       const du = drapeMat.uniforms;
       du.time!.value = time;
-      du.opacity!.value = Math.min(0.7, 0.3 + a.mist * 0.4 + a.rain * 0.18 + a.night * 0.12);
+      // na planszy opar tylko rano, w mgliste dni, w deszczu i nocą; w zwykły dzień czysto
+      du.opacity!.value = Math.min(0.42, a.mist * 0.42 + a.rain * 0.14 + a.night * 0.1);
       (du.col!.value as THREE.Color).copy(tone);
       const pu = puffMat.uniforms;
       pu.time!.value = time;
