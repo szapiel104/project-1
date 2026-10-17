@@ -114,7 +114,7 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
   const river = new Uint8Array(width * height);
   if (gen >= 2) carveRiver(tiles, elevation, width, height, starts, seed, preset, river);
 
-  // Wokół każdego startu czysta łąka pod zamek, a tuż obok gwarantowane surowce.
+  // Wokół każdego startu czysta łąka pod zamek, a tuż obok las na start.
   for (const s of starts) {
     const dir = s.team === 0 ? 1 : -1;
     clearCircle(tiles, elevation, width, height, s.x, s.y, preset.startRadius, preset.waterLevel);
@@ -130,8 +130,11 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
         elevation[i] = Math.round(elevation[i]! + (flat - elevation[i]!) * k);
       }
     stamp(tiles, width, height, s.x - dir * (preset.startRadius + 1), s.y + dir * 3, 3, Terrain.Forest);
-    stamp(tiles, width, height, s.x + dir * 2, s.y - dir * (preset.startRadius + 2), 1, Terrain.Stone);
-    stamp(tiles, width, height, s.x - dir * 5, s.y - dir * (preset.startRadius + 2), 0, Terrain.Iron);
+    // dawne mapy (generator 1–2) miały złoża kamienia i żelaza tuż za zamkiem; od generatora 3 urobek daje tylko kopalnia w górach
+    if (gen < 3) {
+      stamp(tiles, width, height, s.x + dir * 2, s.y - dir * (preset.startRadius + 2), 1, Terrain.Stone);
+      stamp(tiles, width, height, s.x - dir * 5, s.y - dir * (preset.startRadius + 2), 0, Terrain.Iron);
+    }
   }
 
   const trails = new Uint8Array(width * height);

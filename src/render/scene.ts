@@ -15,6 +15,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
 import { crewOf } from '../sim/systems/workers';
 import { Clutter } from './clutter';
+import { Chips } from './chips';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
 import { crowParts, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
@@ -537,6 +538,10 @@ export class GameRenderer {
   private buildingLayer = new THREE.Group();
   /** Dym z kominów, iskry, blask okien, mgła przy ziemi */
   private ambience = new Ambience();
+  /** Okruchy skały i rudy spod kilofów (tylko z bliska) */
+  private chips = new Chips();
+  /** Który zamach kilofa danego górnika już sypnął okruchami (jeden wysyp na cios) */
+  private chipSwing = new Map<number, number>();
   /** Beczki, worki, siano i śmieci przy domach */
   private clutter = new Clutter();
   /** Chmury jako obiekty nad mapą: płyną, rodzą się i rozpływają, rzucają cień */
@@ -705,6 +710,7 @@ export class GameRenderer {
     this.sun = sun;
     this.scene.add(cat(this.buildingLayer, 'budynki'));
     this.scene.add(cat(this.ambience.group, 'dym, mgła, iskry'));
+    this.scene.add(this.chips.group);
     this.scene.add(cat(this.clutter.group, 'graty przy domach'));
     this.scene.add(cat(this.clouds.group, 'chmury'));
     this.scene.add(cat(this.flames.group, 'płomienie'));
@@ -4578,6 +4584,7 @@ export class GameRenderer {
     this.syncTowerIcons(g);
     this.syncRallyFlags(g, view);
     this.syncSpawnFx(g, view);
+    this.chips.step(1 / 60);
     this.soldierTorches.count = torches;
     touch(this.soldierTorches);
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
@@ -5227,6 +5234,19 @@ export class GameRenderer {
           else if (ph < 0.77) toolArm = -0.2 - Math.sin(((ph - 0.67) / 0.1) * Math.PI) * 0.15;     // odbicie
           else toolArm = -0.2;
           toolLean = ph > 0.55 && ph < 0.85 ? Math.sin(((ph - 0.55) / 0.3) * Math.PI) * (mining ? 0.4 : 0.28) : 0.05;
+          // okruchy spod kilofa: raz na cios i tylko gdy kamera stoi tuż obok (spacer przy górniku albo bliskie zbliżenie)
+          if (mining && ph > 0.66 && ph < 0.78) {
+            const swingNo = Math.floor(this.time * 0.85 + (u.id % 11) * 0.173);
+            if (this.chipSwing.get(u.id) !== swingNo) {
+              this.chipSwing.set(u.id, swingNo);
+              const cp = this.cam.camera.position;
+              const visible = !inMine || this.inMine?.id === job!.id; // z zewnątrz kopalni górników w górze nie widać
+              if (visible && (cp.x - t.position.x) ** 2 + (cp.y - t.position.y) ** 2 + (cp.z - t.position.z) ** 2 < 5 * 5) {
+                const yaw = t.rotation.y, dx = Math.sin(yaw), dz = Math.cos(yaw);
+                this.chips.hit(t.position.x + dx * 0.3, t.position.y + 0.24, t.position.z + dz * 0.3, dx, dz, t.position.y, inMine ? 0.5 : site === Terrain.Iron ? 0.25 : 0);
+              }
+            }
+          }
           if (ph > 0.66 && ph < 0.71) {
             if (!inMine) this.sfxAt(chopping ? 'chop' : 'mine', t.position.x, t.position.z, u.id, 0.5);
             // górnik w sztolni, a my w niej spacerujemy: pełny stuk z jego miejsca pod ziemią (wysokość z pozycji, nie z terenu)

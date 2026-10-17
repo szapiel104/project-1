@@ -24,8 +24,9 @@ export const MAP_PRESETS = {
 
 export type MapPresetId = keyof typeof MAP_PRESETS;
 
-/** Wersja generatora map. Zapis pamięta, z której wersji pochodzi mapa, bo mapę odtwarza się z ziarna. */
-export const MAP_GEN = 2;
+/** Wersja generatora map. Zapis pamięta, z której wersji pochodzi mapa, bo mapę odtwarza się z ziarna.
+ * 3 (17.10.2026): bez kamienia i żelaza tuż przy zamku — urobek jest tylko z kopalni w górach, jak w Gothicu. */
+export const MAP_GEN = 3;
 /** Stare ustawienia (generator 1), żeby dawne zapisy wczytywały się na tej samej mapie co przedtem */
 export const LEGACY_PRESETS: Partial<Record<MapPresetId, MapPreset>> = {
   '1v1': { width: 160, height: 160, waterLevel: 62, startRadius: 12, rim: 10, starts: [{ x: 36, y: 40 }] },
