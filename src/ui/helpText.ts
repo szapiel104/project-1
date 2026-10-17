@@ -10,7 +10,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
   {
     title: 'Pierwsze kroki',
     blocks: [
-      'Zaczynasz z twierdzą, stodołą na zapasy, obozowiskiem przy ognisku i garstką chłopów. Na start masz 150 drewna, 40 kamienia, 100 jabłek i 100 złota (na poziomie łatwym dwa razy więcej i dwóch ludzi ekstra, w pokojowym trzy razy więcej i czterech ekstra).',
+      'Zaczynasz z twierdzą, stodołą na zapasy, obozowiskiem przy ognisku i garstką chłopów. Na start masz 150 drewna, 40 kamienia, 100 jabłek i 100 rudy (na poziomie łatwym dwa razy więcej i dwóch ludzi ekstra, w pokojowym trzy razy więcej i czterech ekstra).',
       { h: 'Dobra kolejność na pierwsze minuty' },
       '1. Chata drwala przy samym lesie — drewno idzie na prawie wszystko.',
       '2. Sad albo rybak nad wodą — jedzenie, zanim skończą się jabłka ze startu.',
@@ -85,7 +85,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       'Co kilka sekund: przy popularności od 50 w górę przychodzi jedna osoba — o ile jest wolne łóżko i wolne miejsce przy ognisku w obozowisku (6 miejsc na obozowisko). Poniżej 50 jedna osoba odchodzi, najpierw kopacze bez fachu. Przy ognisku siedzi najwyżej tylu kopaczy, ile jest miejsc — reszta czeka pod chatami. Jedna osoba na pełnych racjach zjada ok. 16 porcji na dobę; jeden sad wykarmi ok. 9 osób, pole z młynem i piekarnią ok. 15, rybak ok. 12. Jabłko syci najkrócej (1 porcja) i schodzi pierwsze, chleb dłużej (2 porcje), ryba najdłużej (3 porcje). Gdy jedzenia zabraknie, głodni odchodzą od razu, a gdy wróci — przestają (szczegóły po kliknięciu spichlerza na dolnym pasku). Każdy budynek z pracownikiem można wyłączyć w jego oknie — pracownik pójdzie wtedy do innej roboty. Czterech ludzi zostaje zawsze, żeby dało się odbudować osadę.',
       'Twierdza i każda chata dają po 8 łóżek. Kolejne obozowisko (15 drewna) to 6 kolejnych miejsc dla wolnych ludzi.',
       { h: 'Podatki' },
-      'Podatek liczy się od liczby ludzi: niski to 1 złoto na 2 osoby, średni 2, wysoki 3 na miesiąc. Rozdawanie kosztuje 2 złota na 2 osoby — gdy złota brak, liczy się jak „brak podatku”.',
+      'Podatek liczy się od liczby ludzi: niski to 1 ruda na 2 osoby, średni 2, wysoki 3 na miesiąc. Rozdawanie kosztuje 2 rudy na 2 osoby — gdy rudy brak, liczy się jak „brak podatku”.',
     ],
   },
   {
@@ -134,7 +134,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       'Żołnierz to wolny chłop, który w koszarach (30 drewna, 30 kamienia) dostaje broń ze zbrojowni i żołd.',
       { table: [
         ['', 'Włócznik', 'Łucznik'],
-        ['Koszt', '1 włócznia + 8 złota', '1 łuk + 12 złota'],
+        ['Koszt', '1 włócznia + 8 rudy', '1 łuk + 12 rudy'],
         ['Zdrowie', '60', '40'],
         ['Cios', '9 (co 1,2 s)', '7 (co 2,4 s)'],
         ['Zasięg', 'wręcz', '6 pól'],

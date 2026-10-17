@@ -6,6 +6,8 @@ import { createGame as realGame, Phase, playerKeep, type GameState } from '../sr
 import { step } from '../src/sim/step';
 import { backTiles, canPlace, rockBehind } from '../src/sim/systems/placement';
 import { crewWanted, MINE_YIELDS } from '../src/sim/systems/workers';
+import { CAMP_T, campOf, holdTotal } from '../src/sim/systems/minecamp';
+import { clockAt } from '../src/sim/clock';
 
 /** Gra bez botów, z zapasem drewna na kopalnię i chaty */
 const createGame = (seed: number, preset: '1v1' | '2v2' = '1v1'): GameState => {
@@ -83,18 +85,17 @@ describe('kopalnia pod górami', () => {
     for (const id of [mine.worker, ...(mine.crew ?? [])]) expect(g.units.find((u) => u.id === id)!.job).toBe(mine.id);
     // po długiej pracy w składzie jest wszystko po trochu, a ruda najrzadziej
     const p = g.players[0]!;
-    const before = ['stone', 'iron', 'ore'].map((r) => p.res[resIndex(r as 'stone')]!);
+    const before = ['stone', 'iron'].map((r) => p.res[resIndex(r as 'stone')]!);
     run(g, 6000);
-    const got = ['stone', 'iron', 'ore'].map((r, i) => p.res[resIndex(r as 'stone')]! - before[i]!);
+    const got = ['stone', 'iron'].map((r, i) => p.res[resIndex(r as 'stone')]! - before[i]!);
     expect(got[0]).toBeGreaterThan(0);
     expect(got[1]).toBeGreaterThan(0);
-    expect(got[0]).toBeGreaterThan(got[2]!);
     expect(mine.made).toBeGreaterThan(0);
   });
 
-  it('wagi urobku sumują się do 100, a ruda jest rzadka', () => {
+  it('wagi urobku sumują się do 100, a ruda (waluta) jest rzadka', () => {
     expect(MINE_YIELDS.reduce((a, y) => a + y.weight, 0)).toBe(100);
-    expect(MINE_YIELDS.find((y) => y.res === 'ore')!.weight).toBeLessThan(15);
+    expect(MINE_YIELDS.find((y) => y.res === 'gold')!.weight).toBeLessThan(15);
     expect(crewWanted({ crew: { per: 5, max: 8 } }, 0)).toBe(1);
     expect(crewWanted({ crew: { per: 5, max: 8 } }, 12)).toBe(3);
     expect(crewWanted(BUILDINGS[MINE]!, 8)).toBe(3);
@@ -132,5 +133,53 @@ describe('kopalnia pod górami', () => {
     const mines = g.buildings.filter((b) => b.type === MINE && bots.includes(b.owner));
     expect(mines.length).toBeGreaterThan(0);
     for (const m of mines) expect(rockBehind(g, m.x, m.y, m.rot % 2 ? 3 : 3, 3, m.rot)).toBe(true);
+  });
+
+  it('barak przy kopalni: stoi tylko przy kopalni, załoga w nim nocuje, urobek jedzie wozem pod eskortą dwóch strażników', () => {
+    const g = createGame(3);
+    const p = g.players[0]!;
+    p.res[resIndex('spear')] = 4; p.res[resIndex('gold')] = 100; p.res[resIndex('wood')] = 110;
+    const at = rockSpot(g);
+    step(g, [{ type: 'build', player: 0, building: 'oremine', x: at.x, y: at.y, rot: at.rot }]);
+    const mine = g.buildings.find((b) => b.type === MINE)!;
+    // barak: daleko od kopalni nie wolno, przy kopalni tak
+    const keep = playerKeep(g, 0)!;
+    expect(canPlace(g, 0, CAMP_T, keep.x + 3, keep.y + 14, false)).toBe('place.needMine');
+    let spot: { x: number; y: number } | null = null;
+    for (let r = 2; r <= 8 && !spot; r++) for (let dy = -r; dy <= r && !spot; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (canPlace(g, 0, CAMP_T, mine.x + dx, mine.y + dy, false) === null) { spot = { x: mine.x + dx, y: mine.y + dy }; break; }
+    }
+    expect(spot).not.toBeNull();
+    step(g, [{ type: 'build', player: 0, building: 'minecamp', x: spot!.x, y: spot!.y }]);
+    const camp = g.buildings.find((b) => b.type === CAMP_T)!;
+    const tpl = g.units.find((u) => u.owner === 0)!;
+    for (let i = 0; i < 16; i++) g.units.push({ ...tpl, id: g.nextId++, job: 0, home: 0, phase: Phase.Idle, path: [], carryRes: -1, carryAmt: 0, target: 0, wait: 0, timer: 0, batches: 0, trips: 0 });
+    run(g, 3000); // obie budowy, załoga, rekruci straży
+    expect(campOf(g, mine)?.id).toBe(camp.id);
+    // dwóch strażników kopalni, osobno od straży miejskiej
+    run(g, 1500);
+    const guards = g.soldiers.filter((s) => s.camp === camp.id);
+    expect(guards.length).toBe(2);
+    // urobek trafia pod barak, a potem wozem do zamku: w składach przybywa kamienia, a wóz miał eskortę
+    const before = p.res[resIndex('stone')]!;
+    let sawCart = false, sawEscort = false, sawHold = false;
+    for (let i = 0; i < 9000; i++) {
+      step(g, []);
+      if (holdTotal(camp) > 0) sawHold = true;
+      const cart = (g.caravans ?? []).find((c) => c.camp === camp.id);
+      if (cart) { sawCart = true; if ((cart.escort?.length ?? 0) === 2) sawEscort = true; }
+    }
+    expect(sawHold).toBe(true);
+    expect(sawCart).toBe(true);
+    expect(sawEscort).toBe(true);
+    expect(p.res[resIndex('stone')]!).toBeGreaterThan(before);
+    // nocą górnicy śpią w baraku
+    let slept = false;
+    for (let i = 0; i < 3000 && !slept; i++) {
+      step(g, []);
+      const h = clockAt(g.tick).hour;
+      if (h >= 1 && h < 4) slept = [mine.worker, ...(mine.crew ?? [])].some((id) => { const u = g.units.find((x) => x.id === id); return !!u && u.home === camp.id; });
+    }
+    expect(slept).toBe(true);
   });
 });

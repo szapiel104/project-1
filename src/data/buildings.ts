@@ -40,6 +40,8 @@ export interface BuildingDef {
   needsRock?: boolean;
   /** Załoga rośnie z wioską: jeden pracownik na `per` mieszkańców (zawsze co najmniej jeden), najwyżej `max` */
   crew?: { per: number; max: number };
+  /** Barak przy kopalni: tyle miejsc do spania dla załogi pobliskiej kopalni (nie liczy się do mieszkań wioski) */
+  beds?: number;
   /** Stary budynek: zostaje w kodzie dla zapisów i już stojących egzemplarzy, ale nie ma go w menu i nie da się go postawić */
   legacy?: boolean;
   /** Droga zamiast budynku: 1 = piaskowa, 2 = kamienna. Nie blokuje przejścia, przyspiesza chodzenie */
@@ -170,7 +172,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // kamienna brama w murze: baszty z ciosów, łukowy przejazd, okute wrota; wytrzymalsza od drewnianej
   { id: 'stoneGate', category: 'defense', name: 'b.stoneGate', w: 1, h: 1, cost: { stone: 25, wood: 10 }, hp: 1600, gate: true, buildable: true },
   // Kopalnia (jak w Gothic): jedna sztolnia wbita w zbocze gór — stawiana tylko tyłem do skały. Z jednej kopalni idzie
-  // kamień, żelazo i (rzadko) złoto; co wyjdzie z danego kursu, losuje symulacja (workers.ts, MINE_YIELDS).
+  // kamień, żelazo i (rzadko) rudę — walutę; co wyjdzie z danego kursu, losuje symulacja (workers.ts, MINE_YIELDS).
   // Tania w budowie, ale załoga rośnie z wioską (1 górnik na 4 mieszkańców, do 8) — to ludzie są kosztem.
   // Wytrzymała, ale wróg może ją zburzyć; otocz ją murem i wieżami jak osobny obóz. Zastępuje kamieniołom i kopalnię żelaza.
   {
@@ -178,6 +180,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
     workView: 'inside', needsRock: true, crew: { per: 4, max: 8 },
     production: { output: { res: 'stone', amount: 6 }, site: 'home', workTicks: 90 },
   },
+  // Barak górników: stawiany przy kopalni (do 10 pól). Załoga nocuje tu i siedzi wieczorem przy ognisku zamiast wracać
+  // do wioski; urobek odkłada pod barakiem, a do zamku wozi go wóz pod eskortą dwóch strażników kopalni (minecamp.ts).
+  { id: 'minecamp', category: 'industry', name: 'b.minecamp', w: 2, h: 2, cost: { wood: 40 }, hp: 320, beds: 8, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */

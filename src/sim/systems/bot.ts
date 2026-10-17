@@ -13,7 +13,7 @@ import { Terrain } from '../../data/terrain';
  */
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'tavern', 'brewery', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine'];
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'tavern', 'minecamp', 'brewery', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine'];
 /** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
 const ROCK_REACH = 60;
 const ROCK_TRIES = 400;
@@ -60,6 +60,17 @@ function spot(g: GameState, player: number, type: number): { x: number; y: numbe
         if (r % 3 === 0) continue;
         const x = kx + dx, y = ky + dy;
         if (canPlace(g, player, type, x, y) === null) return { x, y };
+      }
+  return null;
+}
+
+/** Pierwsze wolne miejsce w pierścieniach wokół punktu (barak przy kopalni) */
+function spotNear(g: GameState, player: number, type: number, cx: number, cy: number): { x: number; y: number } | null {
+  for (let r = 2; r <= 8; r++)
+    for (let dy = -r; dy <= r; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        if (canPlace(g, player, type, cx + dx, cy + dy) === null) return { x: cx + dx, y: cy + dy };
       }
   return null;
 }
@@ -115,6 +126,16 @@ export function botSystem(g: GameState): void {
       want.set(id, (want.get(id) ?? 0) + 1);
       if ((have.get(id) ?? 0) >= want.get(id)!) continue;
       const type = buildingIndex(id);
+      if (id === 'minecamp') {
+        // barak: przy własnej kopalni (pierścienie wokół niej); bez kopalni bot go pomija
+        const mine = g.buildings.find((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'oremine' && !b.ruined);
+        if (!mine) continue;
+        if (affordable(p, type)) {
+          const at = placementBatch(() => spotNear(g, p.id, type, mine.x + 1, mine.y + 1));
+          if (at) placeBuilding(g, p.id, type, at.x, at.y); else continue;
+        }
+        break;
+      }
       if (BUILDINGS[type]!.needsRock) {
         // kopalnia: gdy w zasięgu nie ma skały (albo wszystko zastawione), bot nie czeka na nią — buduje dalej wg listy
         if ((noRock.get(p.id) ?? 0) > g.tick) continue;

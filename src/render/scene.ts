@@ -59,6 +59,7 @@ import { model } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const KEEP_MODEL = model('keep');
 const OREMINE_MODEL = model('mine');
+const MINECAMP_MODEL = model('minecamp');
 const TAVERN_MODEL = model('tavern');
 const HOUSE_MODEL = model('house');
 const BARN_MODEL = model('barn');
@@ -79,7 +80,7 @@ const KEEP_HALF = KEEP_SIZE / 2;
 /** Budynek z Blendera, do którego wchodzi się spacerem: prostokąty podłogi, przeszkody na swojej wysokości, wysokość posadzki */
 interface WalkModel { floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] }
 const TAVERN = TAVERN_MODEL as unknown as WalkModel & { seats: [number, number, number][] };
-const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel, oremine: OREMINE_MODEL as unknown as WalkModel };
+const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel, oremine: OREMINE_MODEL as unknown as WalkModel, minecamp: MINECAMP_MODEL as unknown as WalkModel };
 /** Kopalnia: miejsca pracy górników w grocie (x, z w układzie modelu, kierunek twarzy) — z tools/models/mine.py */
 const MINE_SPOTS = (OREMINE_MODEL as unknown as { spots: [number, number, number][] }).spots;
 const OREMINE_T = BUILDINGS.findIndex((d) => d.id === 'oremine');

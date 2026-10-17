@@ -6,6 +6,7 @@ import { Terrain } from '../../data/terrain';
 import { findPath, walkable } from '../path';
 import { clockAt, hourStarts, rainAt } from '../clock';
 import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
+import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -16,12 +17,13 @@ const TAVERN = BUILDINGS.findIndex((b) => b.id === 'tavern');
 const OREMINE = BUILDINGS.findIndex((b) => b.id === 'oremine');
 /**
  * Co wychodzi z jednego kursu w kopalni (losowane z ziarna meczu, więc u wszystkich graczy tak samo): wagi i ilości.
- * Ruda (z żyłą złota) jest naprawdę rzadka. Wszystko niosą górnicy do składu. Suma wag = 100.
+ * Ruda (waluta gry, jak w Gothicu; w kodzie 'gold') jest rzadka. Górnicy noszą wszystko: kamień i żelazo do składu,
+ * rudę do skarbca w zamku (albo całość pod barak, skąd jedzie wozem). Suma wag = 100.
  */
-export const MINE_YIELDS: { res: 'stone' | 'iron' | 'ore'; weight: number; amount: number }[] = [
+export const MINE_YIELDS: { res: 'stone' | 'iron' | 'gold'; weight: number; amount: number }[] = [
   { res: 'stone', weight: 58, amount: 6 },
   { res: 'iron', weight: 34, amount: 4 },
-  { res: 'ore', weight: 8, amount: 2 },
+  { res: 'gold', weight: 8, amount: 4 },
 ];
 /** Ilu górników powinna mieć kopalnia przy danej liczbie mieszkańców: 1 + po jednym na każde `per`, najwyżej `max` */
 export function crewWanted(def: { crew?: { per: number; max: number } }, pop: number): number {
@@ -70,6 +72,9 @@ function findBed(g: GameState, u: Unit): void {
     if (o.home) used.set(o.home, (used.get(o.home) ?? 0) + 1);
     else if (o.target) mats.add(o.target - 1);
   }
+  // górnik kopalni z barakiem: nocuje w baraku przy kopalni (prycze dla załogi), a nie wraca do wioski
+  const bunk = u.job ? campOf(g, buildingById(g, u.job)) : undefined;
+  if (bunk && (used.get(bunk.id) ?? 0) < (BUILDINGS[bunk.type]!.beds ?? 0)) { u.home = bunk.id; u.target = 0; return; }
   let best: Building | undefined, bd = Infinity;
   for (const b of g.buildings) {
     const cap = BUILDINGS[b.type]!.housing ?? 0;
@@ -206,8 +211,16 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return (t) => doors.has(t);
     }
     case Phase.ToStore: {
+      // górnik z barakiem: urobek zostaje pod barakiem (do zamku zawiezie go wóz), o ile jest tam miejsce
+      const camp = campOf(g, job);
+      if (camp && u.carryRes >= 0 && holdTotal(camp) < CAMP_HOLD) return (t) => t === camp.door;
       const kind = u.carryRes >= 0 ? RESOURCE_DEFS[RESOURCES[u.carryRes]!].store : null;
-      if (!kind) return null;
+      if (!kind) {
+        // ruda (waluta) nie leży w składzie: górnik niesie ją do skarbca w zamku
+        if (u.carryRes < 0) return null;
+        const keep = playerKeep(g, u.owner);
+        return keep && keep.door >= 0 ? (t) => t === keep.door : null;
+      }
       const doors = storeDoors(g, u.owner, kind);
       return (t) => doors.has(t);
     }
@@ -258,6 +271,9 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.ToEvening: {
       // karczmarz zostaje wieczorem u siebie i nalewa
       if (job && job.type === TAVERN && job.door >= 0) return (t) => t === job.door;
+      // załoga kopalni z barakiem: wieczór przy ognisku pod barakiem
+      const camp = campOf(g, job);
+      if (camp) return (t) => t === camp.door;
       // co drugi idzie do karczmy (o ile jest i ma karczmarza), reszta siada przy ognisku; bez nich — pod twierdzę
       let doors = u.id % 2 === 0 ? eveningDoors(g, u.owner, true) : new Set<number>();
       if (!doors.size) doors = eveningDoors(g, u.owner, false);
@@ -270,6 +286,8 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return mat >= 0 ? (t) => t === mat : null;
     }
     case Phase.ToRest: {
+      const restCamp = campOf(g, job);
+      if (restCamp) return (t) => t === restCamp.door;
       const doors = new Set<number>();
       for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && b.type === HOUSE) doors.add(b.door);
       return doors.size ? (t) => doors.has(t) : null;
@@ -327,6 +345,21 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.phase = Phase.WorkingSite; u.timer = prod?.workTicks ?? 0;
       break;
     case Phase.ToStore:
+      if (u.carryRes >= 0 && u.job) {
+        // przy baraku górników: odkłada urobek pod barakiem; nadmiar (pełny barak) niesie dalej do wioski
+        const mine = buildingById(g, u.job), camp = campOf(g, mine);
+        if (camp && camp.door === tileOf(g, u)) {
+          const put = putInHold(camp, u.carryRes, u.carryAmt);
+          p.stats.gathered += put;
+          if (mine && put) mine.made = (mine.made ?? 0) + put;
+          u.carryAmt -= put;
+          if (u.carryAmt > 0) { u.wait = RETRY_TICKS; break; } // pełno pod barakiem: następna próba pójdzie już do składu
+          u.carryRes = -1;
+          u.phase = Phase.Returning;
+          if (++u.trips >= RULES.restEvery) { u.trips = 0; u.phase = Phase.ToRest; }
+          break;
+        }
+      }
       if (u.carryRes >= 0) {
         // oddaje tyle, ile się zmieści; z resztą czeka przy składzie, aż zwolni się miejsce
         const kind = RESOURCE_DEFS[RESOURCES[u.carryRes]!].store;
@@ -347,7 +380,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.carryRes = -1; u.carryAmt = 0;
       u.phase = u.job ? Phase.Returning : Phase.Idle;
       // co kilka dostaw idzie posiedzieć w chacie, o ile jakaś stoi
-      if (++u.trips >= RULES.restEvery && g.buildings.some((b) => b.owner === u.owner && b.type === HOUSE)) { u.trips = 0; u.phase = Phase.ToRest; }
+      if (++u.trips >= RULES.restEvery && (g.buildings.some((b) => b.owner === u.owner && b.type === HOUSE) || !!campOf(g, u.job ? buildingById(g, u.job) : undefined))) { u.trips = 0; u.phase = Phase.ToRest; }
       break;
     case Phase.ToRubble: {
       const i = g.rubble.findIndex((x) => x.id === u.target);
@@ -412,7 +445,8 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       break;
     case Phase.ToRest: {
       const here = tileOf(g, u);
-      const house = g.buildings.find((b) => b.owner === u.owner && b.type === HOUSE && b.door === here);
+      const restCamp = campOf(g, u.job ? buildingById(g, u.job) : undefined);
+      const house = restCamp && restCamp.door === here ? restCamp : g.buildings.find((b) => b.owner === u.owner && b.type === HOUSE && b.door === here);
       if (house) { u.home = house.id; u.phase = Phase.Resting; u.timer = RULES.restTicks; }
       else u.phase = u.job ? Phase.Returning : Phase.Idle;
       break;

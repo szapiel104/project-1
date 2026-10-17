@@ -73,7 +73,13 @@ export function deserialize(d: SaveData): GameState | null {
     const size = map.width * map.height;
     const g: GameState = {
       tick: d.tick, map, rng: new Rng(d.rng, true), nextId: d.nextId,
-      players: d.players.map((p) => { const res = new Int32Array(RESOURCES.length); res.set(p.res.slice(0, RESOURCES.length)); return { ...p, res, stats: { ...p.stats } }; }),
+      players: d.players.map((p) => {
+        const res = new Int32Array(RESOURCES.length); res.set(p.res.slice(0, RESOURCES.length));
+        // dawna osobna ruda z kopalni (17.10) wchodzi do waluty — ruda to teraz pieniądz gry
+        const ore = RESOURCES.indexOf('ore'), gold = RESOURCES.indexOf('gold');
+        if (ore >= 0 && res[ore]) { res[gold] = res[gold]! + res[ore]!; res[ore] = 0; }
+        return { ...p, res, stats: { ...p.stats } };
+      }),
       buildings: d.buildings.map((b) => ({ ...b })),
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
       soldiers: (d.soldiers ?? []).map((x) => ({ ...x, path: [...x.path] })),

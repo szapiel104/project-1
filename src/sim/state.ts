@@ -86,6 +86,12 @@ export interface Building {
   worker: number;
   /** Kopalnia: reszta załogi (id górników poza `worker`); liczba zależy od wielkości wioski */
   crew?: number[];
+  /** Barak górników: urobek złożony pod barakiem, czekający na wóz (indeks = surowiec) */
+  hold?: number[];
+  /** Barak górników: tick, w którym rekrut straży kopalni skończy szkolenie (0/brak = nikt się nie szkoli) */
+  recruitAt?: number;
+  /** Barak górników: tick ostatniego wozu (wóz rusza też z niepełnym ładunkiem, gdy długo żaden nie jechał) */
+  cartAt?: number;
   /** Czy pochodnia przy budynku jest zapalona (zapalają ją ludzie o zmierzchu, gaśnie o świcie) */
   lit: boolean;
   /** Wytrzymałość; spada od ciosów wroga, naprawia ją inżynier */
@@ -264,6 +270,8 @@ export interface Soldier {
   skipUntil?: number;
   /** Ile ticków maruder jest daleko od swojego miejsca w zwartym marszu */
   lost?: number;
+  /** Strażnik kopalni: id baraku, do którego należy (pilnuje go i eskortuje wóz z urobkiem); brak = zwykły */
+  camp?: number;
 }
 
 /** Oddział w zwartym marszu: punkt prowadzący idzie jedną drogą, każdy żołnierz trzyma swoje miejsce obok niego */
@@ -312,6 +320,10 @@ export interface Traveler {
   leaving: boolean;
   /** Pola do przejścia (ostatnie na końcu tablicy jest najbliższe) */
   path: number[];
+  /** Wóz z urobkiem kopalni: pozostałe surowce na wozie (surowiec, ile), barak, z którego jedzie, i eskorta (id strażników) */
+  more?: [number, number][];
+  camp?: number;
+  escort?: number[];
 }
 
 /** Wóz z surowcami dla sojusznika: chłop ciągnie dwukółkę od zamku nadawcy pod zamek odbiorcy; wróg może go przechwycić */
@@ -330,6 +342,10 @@ export interface Caravan {
   ty: number;
   /** Pola do przejścia (ostatnie na końcu tablicy jest najbliższe) */
   path: number[];
+  /** Wóz z urobkiem kopalni: pozostałe surowce na wozie (surowiec, ile), barak, z którego jedzie, i eskorta (id strażników) */
+  more?: [number, number][];
+  camp?: number;
+  escort?: number[];
 }
 
 /** Co się stało z wozem (dla powiadomień w interfejsie; ostatnie kilkanaście wpisów) */
@@ -642,18 +658,18 @@ export function stateHash(g: GameState): number {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
-  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.lost ?? 0); add(s.path.length); for (const t of s.path) add(t); }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.camp ?? 0); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.lost ?? 0); add(s.path.length); for (const t of s.path) add(t); }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }
   for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); }
-  for (const c of g.caravans ?? []) { add(c.id); add(c.px); add(c.py); add(c.amount); add(c.path.length); }
+  for (const c of g.caravans ?? []) { add(c.id); add(c.px); add(c.py); add(c.amount); add(c.path.length); for (const [r, n] of c.more ?? []) { add(r); add(n); } for (const e of c.escort ?? []) add(e); }
   return h >>> 0;
 }
 

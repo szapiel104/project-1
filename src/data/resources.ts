@@ -20,13 +20,14 @@ export const RESOURCE_DEFS: Record<ResourceId, ResourceDef> = {
   flour: { name: 'res.flour', color: 0xf1ead8, store: 'stockpile' },
   bread: { name: 'res.bread', color: 0xb97a3a, store: 'granary', food: true },
   apples: { name: 'res.apples', color: 0xb3261e, store: 'granary', food: true },
-  gold: { name: 'res.gold', color: 0xe2b93b, store: null },
+  // waluta gry: w kodzie 'gold', dla gracza „Ruda” (jak w Gothicu); nie leży w składzie — trafia do skarbca w zamku
+  gold: { name: 'res.gold', color: 0x5a7ea8, store: null },
   fish: { name: 'res.fish', color: 0x8fb4c9, store: 'granary', food: true },
   // broń trafia do zbrojowni (jak w Twierdzy), skąd biorą ją koszary i straż
   spear: { name: 'res.spear', color: 0x9a7a4a, store: 'armory' },
   bow: { name: 'res.bow', color: 0x7a5232, store: 'armory' },
   ale: { name: 'res.ale', color: 0xc98a2a, store: 'stockpile' },
-  // ruda z kopalni (rzadka, z żyłą złota) — noszona do składu jak kamień; co z niej dalej, rozstrzygnie następna partia (huta?)
+  // NIEUŻYWANE (17.10): krótko osobna ruda z kopalni; ruda jest teraz walutą (dawne 'gold'). Zostaje w liście tylko dla zapisów.
   ore: { name: 'res.ore', color: 0xa8843c, store: 'stockpile' },
 };
 

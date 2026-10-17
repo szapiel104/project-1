@@ -19,9 +19,11 @@ export const CARAVANS_PER_PLAYER = 3;
 const SPEED = Math.round(RULES.unitSpeed * 0.8);
 /** Z jakiej odległości (w polach) żołnierz wroga przechwytuje wóz */
 const GRAB = 1.3;
+/** Wóz z urobkiem kopalni: póki żywy strażnik eskorty jest bliżej niż tyle pól, wroga nie da się do wozu dopuścić */
+const GUARDED = 4;
 
 /** Pola pod zamkiem odbiorcy, do których wóz może dojechać (najpierw tuż przy zamku, gdy mur nie puszcza — dalej) */
-function routeTo(g: GameState, from: number, to: number, owner: number): number[] | null {
+export function routeTo(g: GameState, from: number, to: number, owner: number): number[] | null {
   const k = playerKeep(g, to);
   if (!k) return null;
   const w = g.map.width;
@@ -70,6 +72,11 @@ function note(g: GameState, c: Caravan, captured: boolean, by: number, amount: n
   if (log.length > 16) log.splice(0, log.length - 16);
 }
 
+/** Koniec eskorty: strażnicy wracają pod barak (stanowiska rozdaje im campSystem) */
+function release(guards: { goal: number; path: number[]; amove?: boolean }[]): void {
+  for (const s of guards) { s.goal = -1; s.path = []; s.amove = false; }
+}
+
 export function caravanSystem(g: GameState): void {
   const list = g.caravans;
   if (!list || !list.length) return;
@@ -77,13 +84,27 @@ export function caravanSystem(g: GameState): void {
   const grab2 = (GRAB * FP) ** 2;
   for (let i = list.length - 1; i >= 0; i--) {
     const c = list[i]!;
-    // przechwycenie: najbliższy żołnierz wroga (każdy, kto nie jest z drużyny nadawcy) w zasięgu ręki
-    if (g.tick % 5 === 0) {
+    // eskorta (wóz z urobkiem kopalni): żywi strażnicy idą przy wozie; kto zginął, wypada z listy
+    const guards = c.escort?.length ? c.escort.map((id) => g.soldiers.find((s) => s.id === id && s.hp > 0)).filter((s): s is NonNullable<typeof s> => !!s) : [];
+    if (c.escort) c.escort = guards.map((s) => s.id);
+    const guarded = guards.some((s) => (s.px - c.px) ** 2 + (s.py - c.py) ** 2 <= (GUARDED * FP) ** 2);
+    if (guards.length && g.tick % 10 === 0) {
+      // strażnik bez walki i daleko od wozu: dogania go (w walce zostaje, aż pokona wroga)
+      const tile = (c.py >> 8) * w + (c.px >> 8);
+      for (const s of guards) {
+        if (s.target || s.hunt) continue;
+        if ((s.px - c.px) ** 2 + (s.py - c.py) ** 2 > (1.6 * FP) ** 2) { s.stance = 0; s.hold = -1; s.amove = true; if (s.goal !== tile) { s.goal = tile; s.path = []; } }
+      }
+    }
+    // przechwycenie: najbliższy żołnierz wroga (każdy, kto nie jest z drużyny nadawcy) w zasięgu ręki — o ile eskorta nie pilnuje wozu
+    if (g.tick % 5 === 0 && !guarded) {
       const team = g.players[c.owner]?.team;
       const thief = g.soldiers.find((s) => g.players[s.owner]?.team !== team && s.hp > 0 && (s.px - c.px) ** 2 + (s.py - c.py) ** 2 <= grab2);
       if (thief) {
-        const got = deliver(g, thief.owner, c.res, c.amount);
+        let got = deliver(g, thief.owner, c.res, c.amount);
+        for (const [r, n] of c.more ?? []) got += deliver(g, thief.owner, r, n);
         note(g, c, true, thief.owner, got);
+        release(guards);
         list.splice(i, 1);
         continue;
       }
@@ -92,8 +113,10 @@ export function caravanSystem(g: GameState): void {
       // dojechał: odbiorca odpadł albo wyszedł → towar wraca do nadawcy
       const q = g.players[c.to];
       const who = q && !q.defeated && !q.left ? c.to : c.owner;
-      const got = deliver(g, who, c.res, c.amount);
+      let got = deliver(g, who, c.res, c.amount);
+      for (const [r, n] of c.more ?? []) got += deliver(g, who, r, n);
       note(g, c, false, who, got);
+      release(guards);
       list.splice(i, 1);
       continue;
     }

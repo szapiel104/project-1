@@ -13,7 +13,6 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 
 ## Braki zauważone przy pracy
 
-- Lasy i złoża się nie wyczerpują
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach
 - Test dotyku na prawdziwym telefonie i tablecie (dotąd tylko emulacja)
 - Budynki nie mają paska stanu ani informacji, co produkują i jak szybko
@@ -44,7 +43,7 @@ Czeka:
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
 - **Kopalnia jak w Gothic (17.10, partia 1 zrobiona — mechanika):** jedna „Kopalnia” 3×3 stawiana tyłem do skały (pola gór za budynkiem), zastępuje kamieniołom i kopalnię żelaza (stare zostały tylko dla zapisów). Załoga 1 + 1 na 4 mieszkańców (do 8), kopią w środku, z kursu wychodzi kamień 58% / żelazo 34% / ruda 8% (nowy surowiec „ruda” do składu), wszystko noszą do wioski. 360 hp, wróg poluje na górników. Bot stawia ją pod górami.
   - Partia 2 (17.10, pierwsza wersja wdrożona — do oceny Michała): sztolnia z Blendera (tools/models/mine.py) — portal w zboczu, skalny garb w polach gór, korytarz z przodkami, stemplami, wózkiem i lampami; miejsca pracy w modelu (klucz `spots`), górnicy kopią przy ścianach; wejście w spacerze z kolizjami; teren pod górą nie spłaszczany (`view.level`), pola gór w obrysie sztolni dostępne w spacerze; wnętrze rysowane tylko z bliska (LOD).
-  - Partia 3 (do zrobienia): obóz przy kopalni — załoga nocuje w obozowisku/baraku obok zamiast wracać do wioski (bez noclegu wraca); eskorta: dwóch strażników odprowadza górników z urobkiem do wioski; co zrobić z rudą (huta → złoto?).
+  - Partia 3 (17.10, zrobiona): barak górników (minecamp: nocleg 8 pryczy, ognisko wieczorem, urobek do 60 szt. pod barakiem, wóz do zamku z 2 strażnikami kopalni, którzy chronią go przed przechwyceniem); ruda zastąpiła złoto jako waluta (jak w Gothicu, w kodzie dalej 'gold'). Pierwotny opis: — załoga nocuje w obozowisku/baraku obok zamiast wracać do wioski (bez noclegu wraca); eskorta: dwóch strażników odprowadza górników z urobkiem do wioski; co zrobić z rudą (huta → złoto?).
 - Dźwięki: zrobione 16.10 z nagrań — ptaki, świerszcze, odgłosy wsi, kury, dzwon w południe, róg alarmu, grzmot (docs/zasoby.md). Czeka: kogut o świcie i prawdziwy puszczyk (brak nagrania na wolnej licencji pod ręką), trzask ognisk, gwar, wiwaty
 - Wojsko: zbrojny (łucznik, łuczarz, taran, kamienne mury, drabiny i kamienna wieża już są)
 - Wnętrza pozostałych budynków w stylu nowej chaty

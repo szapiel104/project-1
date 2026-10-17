@@ -29,6 +29,7 @@ const STONE_GATE_MODEL = model('stonegate');
 const STOCKPILE_MODEL = model('stockpile');
 const WOODCUTTER_MODEL = model('woodcutter');
 const OREMINE_MODEL = model('mine');
+const MINECAMP_MODEL = model('minecamp');
 const FISHER_MODEL = model('fisher');
 const FLETCHER_MODEL = model('fletcher');
 const POLETURNER_MODEL = model('poleturner');
@@ -1385,6 +1386,13 @@ const BUILDERS: Record<string, Builder> = {
     // kopalnia pod górami z Blendera (tools/models/mine.py): skalny garb z drewnianym portalem sztolni, w grocie ściany
     // z żyłami rudy, stemple, wózek na szynach, latarnie; górnicy kopią w miejscach z klucza `spots` (scene.ts)
     blenderModel(g, OREMINE_MODEL as unknown as BlenderBuilding, flag);
+  },
+  minecamp(g, _team, flag) {
+    // barak górników z Blendera (tools/models/minecamp.py): chata z bali, prycze ze słomą (tu śpi załoga kopalni), stół,
+    // kilofy i latarnia, piecyk; przed nim ognisko z kłodami i kosze z urobkiem czekającym na wóz
+    blenderModel(g, MINECAMP_MODEL as unknown as BlenderBuilding, flag);
+    const p = (MINECAMP_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
 };
 

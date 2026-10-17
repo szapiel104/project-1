@@ -1,4 +1,5 @@
 import { releaseCrew } from '../state';
+import { mineNear } from './minecamp';
 import { BUILDINGS, footprint, isTower, type BuildingDef } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
@@ -9,7 +10,7 @@ import { FP, inForecourt, Phase, playerKeep, type Building, type GameState } fro
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.needRock' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.needRock' | 'place.needMine' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
@@ -218,6 +219,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     if (!found) return 'place.needTerrain';
   }
   if (def.needsRock && !rockBehind(g, x, y, fw, fh, rot)) return 'place.needRock';
+  if (def.id === 'minecamp' && !mineNear(g, player, x, y, fw, fh)) return 'place.needMine';
   if (!def.wall && !def.gate && findDoor(g, x, y, fw, fh, rot) < 0) return 'place.noAccess';
   if (enemyNear(g, player, x, y, fw, fh)) return 'place.enemy';
   if (!over && wouldBlock(g, player, x, y, fw, fh, rot, !def.wall && !def.gate, !!def.gate || def.id === 'ladder')) return 'place.blocks';

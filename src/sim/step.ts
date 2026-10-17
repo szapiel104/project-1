@@ -7,6 +7,7 @@ import { economySystem } from './systems/economy';
 import { demolish, placeBuilding, removeRoad } from './systems/placement';
 import { wolfSystem } from './systems/wolves';
 import { guardSystem } from './systems/guards';
+import { campSystem } from './systems/minecamp';
 import { GUARD } from '../data/units';
 const isGuard = (g: GameState, id: number): boolean => g.soldiers.some((s) => s.id === id && s.kind === GUARD);
 import { gateSystem } from './systems/gates';
@@ -153,5 +154,6 @@ export function step(g: GameState, commands: readonly Command[]): void {
   stoneWallSystem(g);
   wolfSystem(g);
   guardSystem(g);
+  campSystem(g);
   economySystem(g);
 }

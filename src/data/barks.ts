@@ -121,7 +121,7 @@ export const SAY: Record<string, string[]> = {
     'Poborca znowu był. Zostawił mi guzik.', 'Pan zdziera z nas skórę.', 'Za te podatki to by się zamek złocił.', 'Płać i płać, a z czego żyć?',
     'Ostatni grosz oddałem.',
   ],
-  bribe: ['Pan złotem sypie, niech mu Bóg da zdrowie!', 'Takiego pana to ze świecą szukać.', 'Złoto od pana? Postawię kolejkę!'],
+  bribe: ['Pan rudą sypie, niech mu Bóg da zdrowie!', 'Takiego pana to ze świecą szukać.', 'Ruda od pana? Postawię kolejkę!'],
   noTax: ['Podatków nie ma, to i żyć się chce.', 'Pan dobry, nic nie zdziera.'],
   fire: ['Pali się! Wody!', 'Ogień! Dawaj wiadra!', 'Spłonie wszystko, ratujcie!', 'Do studni, biegiem!', 'Dach się sypie, z drogi!'],
   enemy: [

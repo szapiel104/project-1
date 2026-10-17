@@ -163,7 +163,8 @@ const ICONS: Record<string, string> = {
   pop: '<circle cx="10" cy="6" r="3" fill="#e2bd94" stroke="#2a1c10"/><path d="M4 18c0-5 3-8 6-8s6 3 6 8z" fill="#a8281f" stroke="#2a1c10"/>',
   idle: '<path d="M3 13h14M5 13v4M15 13v4M4 10h12" stroke="#c9a24a" stroke-width="2"/><path d="M12 3h4l-4 4h4" stroke="#f6ecd0" fill="none"/>',
   hammer: '<path d="M9 8l7 9" stroke="#7a5232" stroke-width="2.4" stroke-linecap="round"/><path d="M3 6l5-4 4 4-5 4z" fill="#8a8e96" stroke="#2a1c10"/>',
-  gold: '<circle cx="10" cy="10" r="7" fill="#e9c145" stroke="#2a1c10"/><circle cx="10" cy="10" r="4.5" fill="none" stroke="#9a7a1a"/><path d="M10 7v6M8 8.500h3.500a1.3 1.3 0 010 2.600H8" stroke="#7a5d10" fill="none"/>',
+  // waluta: grudka rudy (jak w Gothicu) — ciemna bryła z jasnoniebieskimi, połyskującymi żyłami
+  gold: '<path d="M3 13l2-6 5-3 5 2 2 6-3 4H6z" fill="#4a4e5c" stroke="#16141c"/><path d="M6 8l3 2 2-3M9 10l-1 4M11 7l3 3 1 4M12 12l-3 2" stroke="#8fd3ff" stroke-width="1.1" fill="none"/><circle cx="9" cy="10" r="1" fill="#d9f2ff"/><circle cx="14" cy="10" r=".8" fill="#d9f2ff"/>',
 };
 
 /** Krótki zapis dużych liczb, żeby pasek się nie rozjeżdżał: 14315 → 14,3k, 1000000 → 1 mln */
@@ -262,7 +263,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   toggleLi.append(resToggle, extra);
   resList.append(toggleLi);
   /** Zapasy dokładane do paska w tej kolejności, póki jest miejsce (broń i piwo, potem składniki jedzenia) */
-  const SECOND: readonly ResourceId[] = ['iron', 'ore', 'ale', 'spear', 'bow', 'bread', 'apples', 'wheat', 'flour', 'fish'];
+  const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'bread', 'apples', 'wheat', 'flour', 'fish'];
   const fitRes = (): void => {
     for (const id of SECOND) resList.insertBefore(resItems[RESOURCES.indexOf(id)]!, toggleLi);
     const over = (): boolean => {
@@ -339,7 +340,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     report.style.left = `${left / k}px`;
     report.style.right = 'auto';
     if (reportKind === 'food' && lastReport.foodHint) report.append(el('p', 'report-hint', lastReport.foodHint));
-    if (reportKind === 'popularity') report.append(el('p', 'report-hint', 'W górę: większe racje, niższe podatki albo rozdawanie złota. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.'));
+    if (reportKind === 'popularity') report.append(el('p', 'report-hint', 'W górę: większe racje, niższe podatki albo rozdawanie rudy. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.'));
   };
   const toggleReport = (k: 'popularity' | 'people' | 'army' | 'food'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
   for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people'], [armyBox, 'army']] as const) {

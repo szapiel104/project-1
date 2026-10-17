@@ -88,7 +88,8 @@ export function guardSystem(g: GameState): void {
     if (p.defeated) continue;
     const keep = playerKeep(g, p.id);
     if (!keep) continue;
-    const mine = g.soldiers.filter((s) => s.owner === p.id && s.kind === GUARD).sort((a, b) => a.id - b.id);
+    // strażnicy kopalni należą do swojego baraku (minecamp.ts), nie do straży miejskiej
+    const mine = g.soldiers.filter((s) => s.owner === p.id && s.kind === GUARD && !s.camp).sort((a, b) => a.id - b.id);
     // pierwsza straż przychodzi z zamku za darmo
     if (p.guards === undefined) {
       p.guards = GUARDS;
