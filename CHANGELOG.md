@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.26.0 — kolejka rozkazów i patrol (2026-10-17)
+
+- Shift + prawy klik (także z przeciąganiem linii frontu) dopisuje kolejny punkt trasy: oddział idzie dalej, gdy cały dojdzie do poprzedniego (najwyżej 12 punktów)
+- Patrol: klawisz P albo przycisk „Patrol” w oknie wojska, potem prawy klik — oddział chodzi tam i z powrotem i bije wrogów po drodze; Shift + prawy klik dodaje kolejne punkty obchodu, Esc anuluje; przycisk pokazuje „Na patrolu”
+- Zwykły rozkaz, atak albo wejście na wieżę kończy kolejkę i patrol; ranni idą się leczyć i nie wstrzymują oddziału
+- Kolejki są częścią stanu gry (zapis, gra przez sieć, skrót stanu); opis w „Jak grać” i w podpowiedzi okna wojska po polsku i angielsku
+
 ## 0.25.2 — ruda zamiast złota (2026-10-17)
 
 - Waluta po polsku nazywa się wszędzie „ruda”: poprawiony rozdział o waluce w „Jak grać” (z dopiskiem, że rudę daje podatek i kopalnia) i opis strażnika w galerii; po angielsku dalej „ore”

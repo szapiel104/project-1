@@ -6,7 +6,7 @@ import { RULES } from '../../data/rules';
 import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable, wallBetween } from '../path';
 import { hash2 } from '../rng';
-import { FP, Phase, type Building, type Corpse, type GameState, type March, type Soldier, type Unit, keepCenter } from '../state';
+import { FP, Phase, type Building, type Corpse, type GameState, type March, type QueuedMove, type Soldier, type Unit, keepCenter } from '../state';
 import { BUILDINGS, footprint, towerBonus, workArea } from '../../data/buildings';
 import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
 import { dayPart } from './workers';
@@ -233,10 +233,11 @@ export function planFormation(g: GameState, player: number, ids: readonly number
 const MARCH_MIN = 4;
 
 /** Rozkaz marszu: zaznaczeni żołnierze idą w szyku na wskazane miejsce i stają twarzą w podanym kierunku. */
-export function orderMove(g: GameState, player: number, ids: readonly number[], target: number, opts: MoveOpts = {}): void {
-  if (!Number.isInteger(target) || target < 0 || target >= g.map.tiles.length) return;
+/** Zwraca numer nowego rozkazu (grp) albo 0, gdy nikt nie dostał miejsca */
+export function orderMove(g: GameState, player: number, ids: readonly number[], target: number, opts: MoveOpts = {}): number {
+  if (!Number.isInteger(target) || target < 0 || target >= g.map.tiles.length) return 0;
   const { spots, slots, face } = planFormation(g, player, ids, target, opts);
-  if (!spots.size) return;
+  if (!spots.size) return 0;
   const grp = g.nextId++;
   // oddział idzie razem: wszyscy tempem najwolniejszego
   let slow = Infinity, fast = 0;
@@ -257,6 +258,108 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
     s.tight = opts.form === 3 ? true : undefined;
     s.wounded = 0;
   }
+  return grp;
+}
+
+// ---- kolejka rozkazów (Shift + prawy klik) i patrol ----
+
+/** Najwięcej punktów w jednej kolejce (dłuższa lista z sieci jest przycinana) */
+export const QUEUE_MAX = 12;
+
+const toStep = (tile: number, opts: MoveOpts): QueuedMove => ({ tile, face: opts.face, form: opts.form, width: opts.width, amove: opts.amove || undefined });
+
+/** Wspólny rozkaz zaznaczonych: numer grp, gdy wszyscy żywi należą do jednego, inaczej 0 */
+function sharedGrp(g: GameState, player: number, ids: readonly number[]): number {
+  const want = new Set(ids);
+  let grp = -1;
+  for (const s of g.soldiers) {
+    if (!want.has(s.id) || s.owner !== player || s.hp <= 0) continue;
+    const k = s.grp ?? 0;
+    if (grp < 0) grp = k; else if (grp !== k) return 0;
+  }
+  return grp > 0 ? grp : 0;
+}
+
+/** Zaznaczeni wypadają z kolejek i patroli (nowy zwykły rozkaz, atak, wejście na wieżę) */
+export function clearOrders(g: GameState, player: number, ids: readonly number[]): void {
+  if (!g.orders?.length) return;
+  const want = new Set(ids);
+  const grps = new Set<number>();
+  for (const s of g.soldiers) if (want.has(s.id) && s.owner === player && s.grp) grps.add(s.grp);
+  if (!grps.size) return;
+  // zostali w kolejce tylko ci z oddziału, których nie ruszono: dostają osobny numer, kolejka idzie z nimi dalej
+  for (const q of g.orders) {
+    if (q.owner !== player || !grps.has(q.grp)) continue;
+    const rest = g.soldiers.filter((s) => s.grp === q.grp && s.owner === player && !want.has(s.id));
+    if (!rest.length) { q.steps = []; continue; }
+    const grp = g.nextId++;
+    for (const s of rest) s.grp = grp;
+    for (const m of g.marches ?? []) if (m.grp === q.grp) m.grp = grp;
+    q.grp = grp;
+  }
+  for (const s of g.soldiers) if (want.has(s.id) && s.owner === player && s.grp && grps.has(s.grp)) s.grp = g.nextId++;
+  g.orders = g.orders.filter((q) => q.steps.length);
+}
+
+/** Shift + prawy klik: punkt dopisany na koniec kolejki. Gdy oddział stoi bez rozkazu, rusza od razu. */
+export function queueMove(g: GameState, player: number, ids: readonly number[], target: number, opts: MoveOpts = {}): void {
+  if (!Number.isInteger(target) || target < 0 || target >= g.map.tiles.length) return;
+  const grp = sharedGrp(g, player, ids);
+  const q = grp ? g.orders?.find((o) => o.owner === player && o.grp === grp) : undefined;
+  if (q) {
+    // dopisanie punktu do patrolu zamienia go w zwykłą kolejkę: punkty obchodu po kolei, a na końcu nowy
+    if (q.patrol) q.patrol = undefined;
+    if (q.steps.length < QUEUE_MAX) q.steps.push(toStep(target, opts));
+    return;
+  }
+  const busy = grp > 0 && g.soldiers.some((s) => s.grp === grp && s.owner === player && s.hp > 0 && (s.goal >= 0 || s.path.length > 0));
+  if (busy) { (g.orders ??= []).push({ grp, owner: player, steps: [toStep(target, opts)] }); return; }
+  clearOrders(g, player, ids);
+  orderMove(g, player, ids, target, opts);
+}
+
+/** Patrol: oddział chodzi w kółko po punktach, a na końcu wraca tam, skąd wyszedł (przy jednym punkcie: tam i z powrotem).
+ *  Domyślnie z walką: bije każdego wroga, którego spotka na obchodzie. */
+export function orderPatrol(g: GameState, player: number, ids: readonly number[], points: readonly number[], opts: MoveOpts = {}): void {
+  const pts = points.filter((t) => Number.isInteger(t) && t >= 0 && t < g.map.tiles.length).slice(0, QUEUE_MAX - 1);
+  if (!pts.length) return;
+  const want = new Set(ids);
+  const list = g.soldiers.filter((s) => want.has(s.id) && s.owner === player && s.hp > 0 && !s.up);
+  if (!list.length) return;
+  // punkt powrotu: środek oddziału (gdzie stoi albo dokąd właśnie idzie)
+  const W = g.map.width;
+  let sx = 0, sy = 0;
+  for (const s of list) { const t = s.goal >= 0 ? s.goal : tileOf(g, s); sx += t % W; sy += Math.floor(t / W); }
+  const home = Math.round(sy / list.length) * W + Math.round(sx / list.length);
+  clearOrders(g, player, ids);
+  const o = { ...opts, amove: opts.amove ?? true };
+  const grp = orderMove(g, player, list.map((s) => s.id), pts[0]!, o);
+  if (!grp) return;
+  // kolejka obraca się: po wykonaniu punkt idzie na koniec, więc po pierwszym punkcie przychodzi drugi… potem dom i znów pierwszy
+  const steps = [...pts.slice(1), home, pts[0]!].map((t) => toStep(t, { form: o.form, amove: o.amove }));
+  (g.orders ??= []).push({ grp, owner: player, steps, patrol: true });
+}
+
+/** Kolejki: gdy cały oddział doszedł (nikt nie idzie i nie walczy), rusza do następnego punktu */
+function ordersSystem(g: GameState): void {
+  if (!g.orders?.length) return;
+  const byGrp = new Map<number, Soldier[]>();
+  for (const s of g.soldiers) if (s.grp && s.hp > 0) { let l = byGrp.get(s.grp); if (!l) { l = []; byGrp.set(s.grp, l); } l.push(s); }
+  g.orders = g.orders.filter((q) => {
+    const team = (byGrp.get(q.grp) ?? []).filter((s) => s.owner === q.owner);
+    if (!team.length) return false;
+    // ranni idą się leczyć i nie wstrzymują oddziału; na wieży nie schodzą z posterunku
+    const fit = team.filter((s) => !s.wounded && !s.up && !s.post);
+    if (!fit.length) return false;
+    if (fit.some((s) => s.goal >= 0 || s.path.length > 0 || s.target)) return true;
+    const next = q.steps.shift();
+    if (next === undefined) return false;
+    const grp = orderMove(g, q.owner, fit.map((s) => s.id), next.tile, { face: next.face, form: next.form, width: next.width, amove: next.amove });
+    if (!grp) return false;
+    q.grp = grp;
+    if (q.patrol) q.steps.push(next);
+    return q.steps.length > 0 || q.patrol === true;
+  });
 }
 
 /** Droga punktu prowadzącego: od żołnierza najbliżej środka oddziału do celu; null, gdy blisko albo nie ma drogi */
@@ -615,6 +718,7 @@ export function armySystem(g: GameState): void {
   }
   // limit drogi szukanej na tick: przy setkach żołnierzy reszta poczeka chwilę, gra się nie zatnie
   budget = 10;
+  ordersSystem(g);
   const marches = marchSystem(g);
   const keeps = new Map<number, Building>();
   for (const b of g.buildings) if (b.type === KEEP && !b.ruined) keeps.set(b.owner, b);

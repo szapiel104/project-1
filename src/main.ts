@@ -142,6 +142,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onArmyForm: (form) => { armyForm = form; reform(); play('rotate'); },
   onArmyStance: (stance) => { if (chosen.size) { pending.push({ type: 'stance', player: ME, ids: [...chosen], stance }); play('select'); shout('move'); } },
   onArmyMarch: (m) => { armyMarch = m; play('select'); showArmy(); },
+  onArmyPatrol: () => setPatrolPick(!patrolPick),
   onArmyUnit: (id, shift) => { if (shift) chooseSoldiers([id], false); else unchoose(id); play('select'); },
   onGroup: (n, action) => groupAction(n, action),
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
@@ -1022,6 +1023,7 @@ function walkAs(id: number): void {
 window.addEventListener('keydown', (e) => {
   if (renderer.walking) return; // spacer oczami chłopa: klawisze należą do spaceru
   if (e.key === 'Escape' && walkPick) { setWalkPick(false); return; }
+  if (e.key === 'Escape' && patrolPick) { setPatrolPick(false); return; }
   if (e.key === 'Escape' && plan.state !== 'none') { cancelPlan(); return; }
   if (e.key === 'Escape') {
     if (menu.isOpen()) { if (!titleScreen) menu.close(); return; }
@@ -1044,6 +1046,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'KeyF' && !selectedUnit && !e.repeat) { setWalkPick(!walkPick); return; } // F bez zaznaczenia: wybierz miejsce startu spaceru
   if (e.code === 'KeyM') hud.setMuted(toggleMute());
   if (e.code === 'KeyN' && !e.repeat) minimap.toggle();
+  if (e.code === 'KeyP' && !e.repeat && chosen.size) setPatrolPick(!patrolPick);
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);
   if (e.key === '-' || e.code === 'NumpadSubtract') hud.stepSpeed(-1);
 });
@@ -1097,8 +1100,30 @@ function reform(): void {
   pending.push({ type: 'move', player: ME, ids: list.map((x) => x.id), x: Math.round(sx / list.length), y: Math.round(sy / list.length), face, form: armyForm });
 }
 
-/** Zwykły prawy klik przy zaznaczonym wojsku: atak na wroga, wejście na wieżę albo marsz */
-function armyRightClick(amove: boolean): void {
+/** Wybieranie punktów patrolu (P albo przycisk „Patrol”): prawy klik = punkt obchodu, Shift = jeszcze jeden punkt */
+let patrolPick: { x: number; y: number }[] | null = null;
+function setPatrolPick(on: boolean): void {
+  if (on && !chosen.size) return;
+  patrolPick = on ? [] : null;
+  canvas.classList.toggle('placing', on);
+  if (on) hud.toast(tx('Patrol: prawy klik wskazuje punkt obchodu (Shift + prawy klik: kolejny punkt). Oddział chodzi tam i z powrotem i bije wrogów po drodze. Esc anuluje.', 'Patrol: right-click marks a waypoint (Shift + right-click: another one). The troop walks there and back, striking any foe on the way. Esc cancels.'));
+  showArmy();
+}
+/** Prawy klik w trybie patrolu: dopisuje punkt; bez Shift kończy wybór i wysyła rozkaz */
+function patrolClick(more: boolean): void {
+  if (!patrolPick || !hoverTile) return;
+  patrolPick.push({ ...hoverTile });
+  renderer.orderMarker(hoverTile);
+  play('rotate');
+  if (more && patrolPick.length < 11) return;
+  const pts = patrolPick.map((p) => [p.x, p.y] as [number, number]);
+  pending.push({ type: 'patrol', player: ME, ids: [...chosen], pts, form: armyForm, amove: true });
+  shout('move');
+  setPatrolPick(false);
+}
+
+/** Zwykły prawy klik przy zaznaczonym wojsku: atak na wroga, wejście na wieżę albo marsz (queue: Shift = dopisz do kolejki) */
+function armyRightClick(amove: boolean, queue = false): void {
   if (!chosen.size) return;
   if (hoverFoe) {
     pending.push({ type: 'attack', player: ME, ids: [...chosen], target: hoverFoe });
@@ -1124,10 +1149,10 @@ function armyRightClick(amove: boolean): void {
     shout('move');
     return;
   }
-  pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y, form: armyForm, amove });
+  pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y, form: armyForm, amove, queue: queue || undefined });
   renderer.orderMarker(hoverTile);
   play('rotate');
-  shout(amove ? 'attack' : 'move');
+  if (!queue) shout(amove ? 'attack' : 'move');
 }
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -1150,16 +1175,18 @@ canvas.addEventListener('pointerup', (e) => {
   renderer.lockRotate = false;
   renderer.setFormationPreview(null);
   if (!d || !chosen.size) return;
+  if (patrolPick) { patrolClick(e.shiftKey); return; }
   const amove = (armyMarch === 1) !== e.ctrlKey;
+  const queue = e.shiftKey;
   const o = d.on ? dragOrder(d.tile, amove) : null;
   if (o) {
-    pending.push({ type: 'move', player: ME, ids: [...chosen], ...o });
+    pending.push({ type: 'move', player: ME, ids: [...chosen], ...o, queue: queue || undefined });
     renderer.orderMarker(o);
     play('rotate');
-    shout(amove ? 'attack' : 'move');
+    if (!queue) shout(amove ? 'attack' : 'move');
     return;
   }
-  armyRightClick(amove);
+  armyRightClick(amove, queue);
 }, { capture: true });
 window.addEventListener('blur', () => { rDrag = null; renderer.lockRotate = false; renderer.setFormationPreview(null); });
 
@@ -1221,11 +1248,18 @@ function unchoose(id: number): void {
 }
 
 /** Karta zaznaczonego wojska: portrety ze zdrowiem; znika, gdy żołnierze zginą */
+/** Zaznaczeni chodzą na patrolu (cały oddział w jednej kolejce z obchodem) */
+function patrolling(list: { grp?: number }[]): boolean {
+  const grp = list[0]?.grp;
+  return !!grp && list.every((s) => s.grp === grp) && !!game.orders?.some((q) => q.owner === ME && q.grp === grp && q.patrol);
+}
+
 function showArmy(): void {
+  if (patrolPick && !chosen.size) { patrolPick = null; canvas.classList.remove('placing'); }
   const list = game.soldiers.filter((s) => chosen.has(s.id));
   if (list.length !== chosen.size) { chosen.clear(); for (const s of list) chosen.add(s.id); renderer.setSoldierSelection(chosen); }
   const st = new Set(list.map((s) => s.stance ?? 0));
-  hud.showArmy(list.map((s) => ({ id: s.id, name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1, march: armyMarch, group: groupOf() });
+  hud.showArmy(list.map((s) => ({ id: s.id, name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1, march: armyMarch, group: groupOf(), patrol: patrolPick ? 2 : patrolling(list) ? 1 : 0 });
 }
 
 canvas.addEventListener('pointerdown', (e) => {

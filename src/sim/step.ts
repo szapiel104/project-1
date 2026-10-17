@@ -19,7 +19,7 @@ import { workerSystem } from './systems/workers';
 import { roadSystem } from './systems/roads';
 import { fireSystem } from './systems/fire';
 import { stoneWallSystem } from './systems/stonewalls';
-import { armySystem, orderAttack, orderMove, orderStance, train , orderDismount, orderGarrison, enlistSystem, setRally } from './systems/army';
+import { armySystem, orderAttack, orderMove, orderPatrol, queueMove, clearOrders, QUEUE_MAX, orderStance, train , orderDismount, orderGarrison, enlistSystem, setRally } from './systems/army';
 import { botSystem } from './systems/bot';
 
 /** Komendy graczy. To jedyna droga, którą gracz (albo bot, albo sieć) wpływa na grę. */
@@ -34,7 +34,9 @@ export type Command =
   /** Punkt zbiórki koszar: kind = rodzaj jednostki (-1 = wszystkie), tile = pole (-1 = usuń flagę) */
   | { type: 'rally'; player: number; building: number; kind: number; tile: number }
   /** face 0–7 (kierunek szyku), form 0–3 (linia, blok, luźno, ścisk), width = ilu w szeregu */
-  | { type: 'move'; player: number; ids: number[]; x: number; y: number; face?: number; form?: number; width?: number; amove?: boolean }
+  | { type: 'move'; player: number; ids: number[]; x: number; y: number; face?: number; form?: number; width?: number; amove?: boolean; queue?: boolean }
+  /** Patrol po punktach [x, y] i z powrotem tam, skąd oddział wyszedł */
+  | { type: 'patrol'; player: number; ids: number[]; pts: [number, number][]; form?: number; amove?: boolean }
   /** 0 atak, 1 obrona, 2 stój */
   | { type: 'stance'; player: number; ids: number[]; stance: number }
   | { type: 'attack'; player: number; ids: number[]; target: number }
@@ -84,20 +86,31 @@ function apply(g: GameState, c: Command): void {
       if (Number.isInteger(c.building) && Number.isInteger(c.kind) && Number.isInteger(c.tile)) setRally(g, c.player, c.building, c.kind, c.tile);
       break;
     case 'move':
-      if (Array.isArray(c.ids) && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.y >= 0 && c.x < g.map.width && c.y < g.map.height)
-        orderMove(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), c.y * g.map.width + c.x, { face: c.face, form: c.form, width: c.width, amove: c.amove === true });
+      if (Array.isArray(c.ids) && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.y >= 0 && c.x < g.map.width && c.y < g.map.height) {
+        const ids = c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), tile = c.y * g.map.width + c.x;
+        const opts = { face: c.face, form: c.form, width: c.width, amove: c.amove === true };
+        if (c.queue === true) queueMove(g, c.player, ids, tile, opts);
+        else { clearOrders(g, c.player, ids); orderMove(g, c.player, ids, tile, opts); }
+      }
+      break;
+    case 'patrol':
+      if (Array.isArray(c.ids) && Array.isArray(c.pts)) {
+        const W = g.map.width, H = g.map.height;
+        const pts = c.pts.slice(0, QUEUE_MAX).filter((p) => Array.isArray(p) && Number.isInteger(p[0]) && Number.isInteger(p[1]) && p[0] >= 0 && p[1] >= 0 && p[0] < W && p[1] < H).map(([x, y]) => y * W + x);
+        orderPatrol(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), pts, { form: c.form, amove: c.amove !== false });
+      }
       break;
     case 'stance':
       if (Array.isArray(c.ids)) orderStance(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), c.stance);
       break;
     case 'attack':
-      if (Array.isArray(c.ids) && Number.isInteger(c.target)) orderAttack(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), c.target);
+      if (Array.isArray(c.ids) && Number.isInteger(c.target)) { const ids = c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)); clearOrders(g, c.player, ids); orderAttack(g, c.player, ids, c.target); }
       break;
     case 'dismount':
       if (Number.isInteger(c.tower)) orderDismount(g, c.player, c.tower);
       break;
     case 'garrison':
-      if (Array.isArray(c.ids) && Number.isInteger(c.tower)) orderGarrison(g, c.player, c.ids.filter((n) => Number.isInteger(n)), c.tower);
+      if (Array.isArray(c.ids) && Number.isInteger(c.tower)) { const ids = c.ids.filter((n) => Number.isInteger(n)); clearOrders(g, c.player, ids); orderGarrison(g, c.player, ids, c.tower); }
       break;
     case 'gate': {
       const b = buildingById(g, c.id);

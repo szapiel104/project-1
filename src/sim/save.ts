@@ -5,7 +5,7 @@ import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
 import { openWalk } from './systems/placement';
-import type { Building, Caravan, Corpse, Traveler, Wolf, GameState, March, PlayerState, Rubble, Soldier, Unit } from './state';
+import type { Building, Caravan, Corpse, Traveler, Wolf, GameState, March, OrderQueue, PlayerState, Rubble, Soldier, Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
 export const SAVE_VERSION = 21;
@@ -36,6 +36,7 @@ export interface SaveData {
   caravans?: Caravan[];
   wolves?: Wolf[];
   marches?: March[];
+  orders?: OrderQueue[];
 }
 
 const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
@@ -58,6 +59,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     units: g.units.map((u) => ({ ...u, path: [...u.path] })),
     soldiers: g.soldiers.map((x) => ({ ...x, path: [...x.path], ...(x.slot ? { slot: [...x.slot] as [number, number] } : {}) })),
     marches: (g.marches ?? []).map((m) => ({ ...m, path: [...m.path] })),
+    orders: (g.orders ?? []).map((q) => ({ ...q, steps: q.steps.map((m) => ({ ...m })) })),
     corpses: g.corpses.map((c) => ({ ...c })),
     travelers: g.travelers.map((t) => ({ ...t, path: [...t.path] })),
     caravans: (g.caravans ?? []).map((c) => ({ ...c, path: [...c.path] })),
@@ -84,6 +86,7 @@ export function deserialize(d: SaveData): GameState | null {
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
       soldiers: (d.soldiers ?? []).map((x) => ({ ...x, path: [...x.path] })),
       marches: (d.marches ?? []).map((m) => ({ ...m, path: [...m.path] })),
+      orders: (d.orders ?? []).map((q) => ({ ...q, steps: q.steps.map((m) => ({ ...m })) })),
       corpses: (d.corpses ?? []).map((c) => ({ ...c })),
       travelers: (d.travelers ?? []).map((t) => ({ ...t, path: [...t.path] })),
       caravans: (d.caravans ?? []).map((c) => ({ ...c, path: [...c.path] })),

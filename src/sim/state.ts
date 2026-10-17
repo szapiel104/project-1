@@ -276,6 +276,13 @@ export interface Soldier {
   camp?: number;
 }
 
+/** Jeden zaplanowany marsz z kolejki rozkazów (Shift + prawy klik) albo punkt obchodu patrolu */
+export interface QueuedMove { tile: number; face?: number; form?: number; width?: number; amove?: boolean }
+
+/** Kolejka rozkazów oddziału: gdy wszyscy z rozkazu `grp` dojdą na miejsce, idą do następnego punktu.
+ *  Patrol: wykonany punkt wraca na koniec kolejki, więc oddział chodzi w kółko (tam i z powrotem przy dwóch punktach). */
+export interface OrderQueue { grp: number; owner: number; steps: QueuedMove[]; patrol?: boolean }
+
 /** Oddział w zwartym marszu: punkt prowadzący idzie jedną drogą, każdy żołnierz trzyma swoje miejsce obok niego */
 export interface March {
   /** Numer rozkazu (Soldier.grp) */
@@ -403,6 +410,8 @@ export interface GameState {
   nextId: number;
   /** Oddziały w zwartym marszu */
   marches?: March[];
+  /** Kolejki rozkazów i patrole oddziałów */
+  orders?: OrderQueue[];
 }
 
 /** Poziom trudności botów: 0 pokojowy (tylko się bronią), 1 łatwy, 2 średni, 3 trudny */
@@ -667,6 +676,7 @@ export function stateHash(g: GameState): number {
     for (const t of u.path) add(t);
   }
   for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.camp ?? 0); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.lost ?? 0); add(s.path.length); for (const t of s.path) add(t); }
+  for (const q of g.orders ?? []) { add(q.grp); add(q.owner); add(q.patrol ? 1 : 0); for (const m of q.steps) { add(m.tile); add(m.face ?? 9); add(m.form ?? 0); add(m.width ?? 0); add(m.amove ? 1 : 0); } }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }

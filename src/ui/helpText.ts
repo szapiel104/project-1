@@ -190,6 +190,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         [tx('Postawa: obrona', 'Stance: defensive'), tx('rusza na wroga w pobliżu i wraca na miejsce', 'engages nearby enemies, then returns to position')],
         [tx('Postawa: stój', 'Stance: hold ground'), tx('nie rusza się z miejsca', 'does not budge')],
         [tx('Marsz z atakiem', 'Attack-move'), tx('po drodze bije każdego wroga (Ctrl + prawy klik odwraca to dla jednego rozkazu)', 'fights every enemy along the way (Ctrl + right-click reverses this for a single order)')],
+        [tx('Kolejka marszu', 'Waypoints'), tx('Shift + prawy klik dopisuje kolejny punkt trasy: oddział idzie po kolei, gdy cały dojdzie do poprzedniego', 'Shift + right-click adds another stop: the troop moves on once all of it has reached the last one')],
+        [tx('Patrol (P)', 'Patrol (P)'), tx('P albo przycisk „Patrol”, potem prawy klik: oddział chodzi tam i z powrotem (Shift + prawy klik dodaje punkty obchodu) i bije wrogów po drodze; zwykły rozkaz kończy patrol', 'P or the Patrol button, then right-click: the troop walks there and back (Shift + right-click adds waypoints), striking foes on the way; any plain order ends the patrol')],
       ] },
       { h: tx('Grupy', 'Groups') },
       tx('Shift + cyfra zapisuje zaznaczonych jako grupę, sama cyfra ją wybiera, podwójne naciśnięcie pokazuje ją na mapie.',

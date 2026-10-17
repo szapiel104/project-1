@@ -15,6 +15,8 @@ export interface HudEvents {
   onArmyStance(stance: number): void;
   /** Marsz: 0 zwykły (nie oglądają się na wroga), 1 z walką (biją każdego po drodze) */
   onArmyMarch(march: number): void;
+  /** Patrol (P): włącza albo wyłącza wybieranie punktów obchodu */
+  onArmyPatrol(): void;
   /** Portret żołnierza: odznacz go (Shift: zostaw tylko jego) */
   onArmyUnit(id: number, shift: boolean): void;
   /** Miejsce grupy na pasku wojska: klik = wybierz (puste: zapisz zaznaczonych), Shift = zapisz, prawy = wyczyść */
@@ -116,7 +118,7 @@ export interface Hud {
   /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
   /** Pasek wojska nad dolnym menu: grupy 1–9 i 0 oraz portrety zaznaczonych */
   setArmyBar(v: { show: boolean; groups: { n: number; count: number; kind?: string }[]; active?: number; selected: { id: number; kind: string; hp: number; max: number; name: string }[] }): void;
-  showArmy(army: { id?: number; name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number; march: number; group?: number }): void;
+  showArmy(army: { id?: number; name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number; march: number; group?: number; patrol?: number }): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
@@ -596,6 +598,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const formBtns = seg(tx('Szyk', 'Formation'), [[tx('Linia', 'Line'), tx('Szeroki front, 1–3 szeregi. Łucznicy z tyłu.', 'Wide front, 1–3 ranks. Archers at the rear.')], [tx('Blok', 'Block'), tx('Zwarty kwadrat: trudny do obejścia.', 'A tight square: hard to outflank.')], [tx('Luźno', 'Loose'), tx('Co drugie pole: mniej ofiar od strzał.', 'Every other tile: fewer losses to arrows.')], [tx('Ścisk', 'Packed'), tx('Ramię w ramię: zbity kwadrat, gdy oddział stoi.', 'Shoulder to shoulder: a dense square while the troop stands.')]], (i) => events.onArmyForm(i));
   const marchBtns = seg(tx('Marsz', 'March'), [[tx('Zwykły', 'Plain'), tx('Idą na miejsce, nie zatrzymując się na wroga.', 'They march to the spot without stopping for the enemy.')], [tx('Z walką', 'Fighting'), tx('Idą na miejsce, ale biją każdego wroga, którego spotkają. Ctrl + prawy klik odwraca wybór dla jednego rozkazu.', 'They march to the spot but strike any enemy they meet. Ctrl + right-click flips the choice for a single order.')]], (i) => events.onArmyMarch(i));
   const stanceBtns = seg(tx('Postawa', 'Stance'), [[tx('Atak', 'Attack'), tx('Goni każdego wroga, którego zobaczy.', 'Chases every enemy in sight.')], [tx('Obrona', 'Defend'), tx('Walczy w pobliżu swojego miejsca i do niego wraca.', 'Fights near its post and returns to it.')], [tx('Stój', 'Hold'), tx('Nie rusza się z miejsca. Bije tylko tych, których sięgnie.', 'Does not budge. Strikes only those within reach.')]], (i) => events.onArmyStance(i));
+  const [patrolBtn] = seg(tx('Rozkazy', 'Orders'), [[tx('Patrol (P)', 'Patrol (P)'), tx('Kliknij, potem prawy klik na mapie: oddział chodzi tam i z powrotem i bije wrogów po drodze (Shift + prawy klik: więcej punktów). Kolejka marszu: Shift + prawy klik bez patrolu dopisuje kolejny punkt trasy.', 'Click, then right-click on the map: the troop walks there and back, striking foes on the way (Shift + right-click: more waypoints). Marching queue: Shift + right-click without patrol adds another stop to the route.')]], () => events.onArmyPatrol());
   // brama: jeden duży przycisk otwórz/zamknij i stan pod spodem
   const gateBox = el('div', 'gate-box');
   const gateBtn = el('button', 'btn-main gate-btn');
@@ -1081,6 +1084,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       formBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.form ?? 0))));
       stanceBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.stance ?? -1))));
       marchBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.march ?? 0))));
+      patrolBtn!.setAttribute('aria-pressed', String((ctl?.patrol ?? 0) > 0));
+      setText(patrolBtn!, ctl?.patrol === 2 ? tx('Wskaż punkt…', 'Mark a point…') : ctl?.patrol === 1 ? tx('Na patrolu', 'On patrol') : tx('Patrol (P)', 'Patrol (P)'));
       setText(infoName, `${t('hud.soldiers')}: ${army.length}${ctl?.group ? ` · ${tx('grupa', 'group')} ${ctl.group}` : ''}`);
       // portrety odświeżamy tylko, gdy coś się zmieniło (przebudowa co klatkę gubiła kliknięcia)
       const key = army.slice(0, 24).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}`).join() + army.length;

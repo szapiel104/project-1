@@ -124,7 +124,7 @@ Zrobione 13.10 wieczorem: kierunek ciosu (bok/plecy), tarcza na strzały, szarż
 Zrobione 13.10: niegubione rozkazy, szyk przeciąganiem z kierunkiem, formacje (linia/blok/luźno), postawy (atak/obrona/stój), panel typów jednostek, atak w marszu, wspólne tempo oddziału, grupy pod cyframi, okrzyki na rozkaz, nowy wygląd włóczników, łuczników i chłopów.
 
 Sterowanie:
-- Kolejka rozkazów: Shift + prawy klik dodaje kolejny punkt trasy
+- ~~Kolejka rozkazów: Shift + prawy klik dodaje kolejny punkt trasy~~ (zrobione 17.10)
 - Patrol między dwoma punktami (np. wzdłuż palisady)
 - Numer grupy widoczny nad oddziałem / na portretach
 
@@ -178,8 +178,8 @@ Wydajność (więcej FPS):
 - Domy z Blendera (ok. 19 tys. trójkątów każdy): prostsza wersja z daleka
 - Zrobione 16.10: roślinność we wspólnych pulach na rodzaj (widok osady 522 → 409 wywołań rysowania, karta 7,5 → 5,4 ms). Dalej: budynki we wspólnym rysowaniu (ok. 160 siatek w kadrze)
 Wojsko — wygoda dowodzenia:
-- Kolejka rozkazów: Shift + prawy klik dodaje kolejne punkty marszu
-- Patrol tam i z powrotem (np. wzdłuż palisady)
+- Zrobione 17.10: kolejka rozkazów (Shift + prawy klik) i patrol tam i z powrotem (P)
+- Dalej: kreski trasy z kolejki i patrolu widoczne na mapie przy zaznaczonym oddziale
 - Numer grupy widoczny nad oddziałem i na portretach
 Balans:
 - Gry bot kontra bot kończą się po ok. godzinie i zwykle przegrywa ten sam typ osady: ceny, tempo produkcji i siła fal do wyrównania (narzędzie: tools/soak)

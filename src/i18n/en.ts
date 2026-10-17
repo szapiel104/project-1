@@ -254,7 +254,7 @@ export const en: Record<TextKey, string> = {
   'hud.trainCost': '1 spear, 8 ore, 1 idle peasant',
   'hud.trainNo': 'Not enough spears, ore or idle peasants',
   'hud.soldiers': 'Selected soldiers',
-  'hud.orderHint': 'Right-click: march or attack (Ctrl: the other march mode). Right-drag: front line and facing. Double-click a soldier: all of that kind. Shift + click a selected soldier or click his portrait: deselect him. Shift + number (or click an empty slot on the bar): save a group, number: select it, twice: camera to the group, right-click on the bar: clear it. Q/E rotates the camera.',
+  'hud.orderHint': 'Right-click: march or attack (Ctrl: the other march mode). Right-drag: front line and facing. Shift + right-click: another waypoint. P: patrol. Double-click a soldier: all of that kind. Shift + click a selected soldier or click his portrait: deselect him. Shift + number (or click an empty slot on the bar): save a group, number: select it, twice: camera to the group, right-click on the bar: clear it. Q/E rotates the camera.',
   'b.roadSand': 'Dirt road',
   'd.roadSand': 'A packed dirt road. People walk a quarter faster on it. Costs nothing. Laid by an idle peasant from the camp.',
   'b.roadWood': 'Log road',
