@@ -84,6 +84,7 @@ const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MO
 /** Kopalnia: miejsca pracy górników w grocie (x, z w układzie modelu, kierunek twarzy) — z tools/models/mine.py */
 const MINE_SPOTS = (OREMINE_MODEL as unknown as { spots: [number, number, number][] }).spots;
 const OREMINE_T = BUILDINGS.findIndex((d) => d.id === 'oremine');
+const OREMINE_WALK = WALK_MODELS.oremine;
 const TAVERN_SEATS = TAVERN.seats;
 /** Obrys budynku z modelu (ściany, sprzęty i wnętrze): poza nim, na podwórku działki, chodzi się jak po łące */
 const footCache = new Map<WalkModel, [number, number, number, number]>();
@@ -1905,7 +1906,10 @@ export class GameRenderer {
     const kp = this.keepAt(w.x, w.z);
     const inRoom = !!kp && Math.abs(kp[1]) < KEEP_HALF && Math.abs(kp[2]) < KEEP_HALF && 'TKCBL1234'.includes(keepRoom(Math.floor(kp[1] + KEEP_HALF), Math.floor(kp[2] + KEEP_HALF)));
     const wbk = this.walkableAt(w.x, w.z), tap = wbk?.[4].open[0];
-    const inTap = !!wbk && !!tap && wbk[1] >= tap[0] && wbk[1] <= tap[1] && wbk[2] >= tap[2] && wbk[2] <= tap[3];
+    // w kopalni „salą” jest cała sztolnia: już w korytarzu za portalem garb skały znika, a pokazuje się grota ze stropem
+    // (inaczej garb, wciąż widoczny w korytarzu, zastawiał przejście do groty)
+    const inside = (r: [number, number, number, number] | undefined): boolean => !!wbk && !!r && wbk[1] >= r[0] && wbk[1] <= r[1] && wbk[2] >= r[2] && wbk[2] <= r[3];
+    const inTap = !!wbk && (wbk[4] === OREMINE_WALK ? wbk[4].open.some(inside) : inside(tap));
     this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
     this.walkNear = wbk ? wbk[0] : kp ? kp[0] : 0; // budynek pod nogami ma pierwszeństwo przed zamkiem obok
     // stopy idą po podłożu z lekkim wygładzeniem: próg chaty, skraj sadu czy bruku to krok, a nie skok kamery
