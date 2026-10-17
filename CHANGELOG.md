@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.27.1 — kopacze chodzą po sztolni (2026-10-17)
+
+- Gdy spacerujesz po sztolni, kopacz nie pojawia się już od razu przy skale: wchodzi wrotami i idzie korytarzem do swojego przodka (na dolny poziom schodzi po drabinie w szybie), a po robocie wraca do wrót i dopiero tam wychodzi na powierzchnię — nikt nie znika w środku
+- Drogi liczą się same z sal i przeszkód modelu sztolni (`src/render/minepath.ts`), omijają stemple, wózki i skrzynie; daleko położone przodki kopacz pokonuje szybszym krokiem
+- Kurs w kopalni: 12 s kopania + po 12 s dojścia w każdą stronę (`walkTicks`); okno kopalni pokazuje pełny czas kursu
+
 ## 0.27.0 — drzewko budowy (2026-10-17)
 
 - Część budynków stawia się dopiero przy innym, gotowym budynku: piekarnię przy młynie, koszary przy zbrojowni, karczmę przy browarze, a barak górników przy kopalni. Budynek w budowie albo zburzony się nie liczy

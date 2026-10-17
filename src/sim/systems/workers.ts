@@ -318,7 +318,7 @@ function beginCycle(u: Unit, prod: ProductionDef): void {
   if (u.batches > 0 && prod.processTicks) { u.phase = Phase.Working; u.timer = prod.processTicks; return; }
   if (prod.input) u.phase = Phase.ToInputStore;
   else if (prod.site !== 'home') u.phase = Phase.ToSite;
-  else { u.phase = Phase.Working; u.timer = prod.workTicks; }
+  else { u.phase = Phase.Working; u.timer = prod.workTicks + 2 * (prod.walkTicks ?? 0); }
 }
 
 function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {

@@ -1,3 +1,4 @@
+import { mineRoutes, poseOnRoute, routeTime, type MineRoute } from './minepath';
 import { named, namedTick, remember } from './named';
 import { mineLevelModel } from './buildings';
 import { touch } from './touch';
@@ -111,6 +112,12 @@ const MINE_LEVEL_SPOTS: [number, number, number, number][] = (() => {
   }
   return out;
 })();
+/** Drogi kopaczy od wrót sztolni do każdego przodka (liczone raz, przy pierwszym wejściu do sztolni) */
+let MINE_ROUTES: MineRoute[] | null = null;
+const mineRoute = (i: number): MineRoute => (MINE_ROUTES ??= mineRoutes(MINE_LEVEL, MINE_LEVEL_SPOTS))[i]!;
+/** Kopalnia: ile trwa kopanie, a ile dojście w każdą stronę (s) — z danych budynku, jak liczy symulacja */
+const OREMINE_PROD = BUILDINGS[OREMINE_T]?.production;
+const MINE_WALK_S = (OREMINE_PROD?.walkTicks ?? 0) / TICKS_PER_SECOND;
 const inRect = (r: Rect, x: number, z: number): boolean => x >= r[0] && x <= r[1] && z >= r[2] && z <= r[3];
 /** Gdzie w świecie stoi wnętrze kopalni: głęboko pod mapą (od dołu terenu nie widać, a strop zasłania niebo) */
 const MINE_AT = new THREE.Vector3(0, -80, 0);
@@ -5141,6 +5148,8 @@ export class GameRenderer {
       }
       // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
       const resting = u.phase === Phase.Resting;
+      /** Kopacz idzie sztolnią (do przodka albo do wrót) zamiast kopać — bez zamachu kilofem */
+      let mineWalk = false;
       const job = resting ? jobs.get(u.home) : u.phase === Phase.Working && u.job ? jobs.get(u.job) : undefined;
       const mode = resting ? 'inside' : job ? BUILDINGS[job.type]!.workView : undefined;
       if (job && mode) {
@@ -5168,11 +5177,30 @@ export class GameRenderer {
           // załoga kopalni: każdy przy swoim przodku z modelu (`spots`), twarzą do ściany; zamach kilofem robi animacja kopania niżej
           if (job.type === OREMINE_T && !resting && this.inMine?.id === job.id) {
             // spacerowicz jest w sztolni tej kopalni: górnicy kopią przy przodkach we wnętrzu
-            const idx = Math.max(0, crewOf(job).indexOf(u.id));
-            const sp = MINE_LEVEL_SPOTS[idx % MINE_LEVEL_SPOTS.length]!;
+            const idx = Math.max(0, crewOf(job).indexOf(u.id)) % MINE_LEVEL_SPOTS.length;
+            const sp = MINE_LEVEL_SPOTS[idx]!;
             t.position.set(MINE_AT.x + sp[0], MINE_AT.y + sp[1], MINE_AT.z + sp[2]);
             t.rotation.set(0, sp[3], 0);
             swing = 0;
+            // dojście: wszedł wrotami i idzie sztolnią do swojego przodka, a po robocie wraca do wrót i dopiero tam znika
+            if (MINE_WALK_S > 0 && OREMINE_PROD) {
+              const left = Math.max(0, u.timer - alpha) / TICKS_PER_SECOND;
+              const total = (OREMINE_PROD.workTicks + 2 * (OREMINE_PROD.walkTicks ?? 0)) / TICKS_PER_SECOND;
+              const route = mineRoute(idx), rt = routeTime(route, MINE_WALK_S);
+              const gone = total - left;
+              const tWalk = gone < rt.walk ? gone : left < rt.walk ? left : -1;
+              if (tWalk >= 0) {
+                const pose = poseOnRoute(route, rt.speed, tWalk, MINE_LEVEL.low, MINE_LEVEL.hole, gone >= rt.walk);
+                t.position.set(MINE_AT.x + pose.x, MINE_AT.y + pose.y, MINE_AT.z + pose.z);
+                t.rotation.set(0, pose.yaw, 0);
+                if (pose.moving) {
+                  mineWalk = true;
+                  const ph = this.time * rt.speed * 9.4 + u.id;
+                  swing = pose.climbing ? Math.sin(this.time * 7 + u.id) * 0.3 : Math.sin(ph) * 0.55;
+                  if (!pose.climbing) t.position.y += Math.abs(Math.cos(ph)) * 0.025;
+                }
+              }
+            }
           } else if (job.type === OREMINE_T && !resting && MINE_SPOTS.length) {
             const idx = Math.max(0, crewOf(job).indexOf(u.id));
             const sp = MINE_SPOTS[idx % MINE_SPOTS.length]!;
@@ -5255,7 +5283,7 @@ export class GameRenderer {
       const site = u.phase === Phase.WorkingSite && !fishing && u.job ? BUILDINGS[jobs.get(u.job)?.type ?? -1]?.production?.site : undefined;
       const chopping = site === Terrain.Forest;
       // górnik w grocie kopalni: ten sam zamach kilofem co na złożu, ale stoi już twarzą do ściany (miejsce z modelu)
-      const inMine = u.phase === Phase.Working && !!job && job.type === OREMINE_T;
+      const inMine = u.phase === Phase.Working && !!job && job.type === OREMINE_T && !mineWalk;
       const mining = site === Terrain.Stone || site === Terrain.Iron || inMine;
       let toolArm = 0, toolLean = 0;
       if (chopping || mining) {

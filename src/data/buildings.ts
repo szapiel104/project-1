@@ -14,6 +14,11 @@ export interface ProductionDef {
   processTicks?: number;
   /** Ile partii towaru powstaje z jednej przyniesionej sztuki surowca (np. cztery partie desek z jednego pnia) */
   batches?: number;
+  /**
+   * Praca w budynku z dojściem: tyle ticków na drogę od wejścia do stanowiska i tyle samo z powrotem, doliczone do `workTicks`
+   * (kopalnia: kopacz idzie sztolnią do rudy i wraca do wrót — widać to w spacerze po sztolni, render/minepath.ts)
+   */
+  walkTicks?: number;
 }
 
 /** Kategorie w menu budowy. Nowa kategoria = wpis tutaj i nazwa w i18n. */
@@ -180,7 +185,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'oremine', category: 'industry', name: 'b.oremine', w: 3, h: 3, cost: { wood: 30 }, hp: 360, buildable: true,
     workView: 'inside', needsRock: true, crew: { per: 4, max: 8 },
-    production: { output: { res: 'stone', amount: 10 }, site: 'home', workTicks: 150 },
+    production: { output: { res: 'stone', amount: 10 }, site: 'home', workTicks: 120, walkTicks: 120 },
   },
   // Barak górników: stawiany przy kopalni (do 10 pól). Załoga nocuje tu i siedzi wieczorem przy ognisku zamiast wracać
   // do wioski; urobek odkłada pod barakiem, a do zamku wozi go wóz pod eskortą dwóch strażników kopalni (minecamp.ts).
