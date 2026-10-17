@@ -1910,6 +1910,8 @@ export class GameRenderer {
     const end = (): void => {
       window.removeEventListener('keydown', down, true); window.removeEventListener('keyup', up, true);
       window.removeEventListener('mousemove', move); document.removeEventListener('pointerlockchange', lock); this.canvas.removeEventListener('click', click);
+      // wyjście bez Esc (śmierć, wyjście z kopalni): zwalniamy kursor, inaczej kamera mapy nie dostaje ruchów myszy aż do Esc
+      if (document.pointerLockElement === this.canvas) document.exitPointerLock();
       // kamera wraca nad miejsce, w którym skończył się spacer (lookAt sam przycina je do dozwolonego obszaru mapy)
       if (this.inMine) this.leaveMine(); // Esc w sztolni: wychodzimy przed kopalnię
       const ex = this.walk?.x ?? tileX, ez = this.walk?.z ?? tileY;
