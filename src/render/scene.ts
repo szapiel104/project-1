@@ -61,6 +61,8 @@ import { N8AOPass } from 'n8ao';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { model } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+/** Promień (w polach mapy), w którym spacerem widać wnętrza budynków przez drzwi i okna */
+const WALK_SEE_R = 9;
 const KEEP_MODEL = model('keep');
 const OREMINE_MODEL = model('mine');
 const MINECAMP_MODEL = model('minecamp');
@@ -2157,6 +2159,13 @@ export class GameRenderer {
     if (this.watchedByEnemy(dt)) return;
     this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
     this.walkNear = wbk ? wbk[0] : kp ? kp[0] : 0; // budynek pod nogami ma pierwszeństwo przed zamkiem obok
+    // budynki w zasięgu wzroku spacerowicza: ich wnętrza (podłoga, sprzęty) widać przez drzwi i okna już z ulicy,
+    // a nie dopiero po wejściu na próg; dalej wnętrze i tak ginie w mroku, więc go nie rysujemy
+    this.walkInView.clear();
+    for (const [id, mesh] of this.buildingMeshes) {
+      const dx = mesh.position.x - cam.position.x, dz = mesh.position.z - cam.position.z;
+      if (dx * dx + dz * dz < WALK_SEE_R * WALK_SEE_R) this.walkInView.add(id);
+    }
     // stopy idą po podłożu z lekkim wygładzeniem: próg chaty, skraj sadu czy bruku to krok, a nie skok kamery
     const gy = Math.max(ground, 0);
     w.gy = w.gy === undefined || Math.abs(gy - w.gy) > 0.4 ? gy : w.gy + (gy - w.gy) * Math.min(1, dt * 12);
@@ -3611,7 +3620,7 @@ export class GameRenderer {
       const mesh = this.buildingMeshes.get(id);
       if (!mesh) { this.lods.delete(id); continue; }
       let want = -1;
-      const pinned = !this.lodOn || this.sites.has(id) || this.quickBuild.has(id) || (this.walk && (id === this.walkHall || id === this.walkNear));
+      const pinned = !this.lodOn || this.sites.has(id) || this.quickBuild.has(id) || (this.walk && (id === this.walkHall || id === this.walkNear || this.walkInView.has(id)));
       if (!pinned) {
         const d = Math.max(0, this.lodW.copy(lod.center).applyMatrix4(mesh.matrixWorld).distanceTo(cp) - lod.radius);
         if (!lod.levels.length) {
@@ -4058,7 +4067,7 @@ export class GameRenderer {
       const ceil = named(mesh, 'ceiling');
       if (ceil) ceil.visible = inHall;
       // spacerem przy zamku: przez drzwi widać wnętrza sal, choć dachy zostają na miejscu
-      if (this.walk && id === this.walkNear && !inHall) { const inn = named(mesh, 'interior'); if (inn) inn.visible = true; }
+      if (this.walk && (id === this.walkNear || this.walkInView.has(id)) && !inHall) { const inn = named(mesh, 'interior'); if (inn) inn.visible = true; }
     }
     // budynek bez pracownika: nad dachem kołysze się mały znak przekreślonego człowieka
     for (const b of g.buildings) {
@@ -4951,6 +4960,8 @@ export class GameRenderer {
   }
   /** Zamek, przy którym (albo w którym) spaceruje gracz */
   private walkNear = 0;
+  /** Budynki blisko spacerowicza: pokazane wnętrza i pełna wersja modelu */
+  private walkInView = new Set<number>();
   /** Zamek, w którego sali stoi teraz spacerowicz (zdejmujemy wtedy bryłę donżonu i kładziemy sufit) */
   private walkHall = 0;
 
