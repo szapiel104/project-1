@@ -37,6 +37,7 @@ import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
+import { SkinnedFigures } from './skinned';
 import { peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
@@ -304,7 +305,7 @@ export class GameRenderer {
   private sanitize!: ShaderPass;
   private rain = 0;
   private hammers!: GearPool;
-  private guardsFig!: Figures;
+  private guardsFig!: SkinnedFigures;
   /** Słomiane posłania pod śpiącymi bez dachu nad głową */
   private bedrolls!: GearPool;
   /** Siekiera drwala i kilof kopacza: w prawej dłoni, obracane w barku jak młotek */
@@ -318,7 +319,7 @@ export class GameRenderer {
   private peasantBodies!: Figures;
   /** Polegli łucznicy i strażnicy leżą we własnych zbrojach (nie w zbroi włócznika) */
   private archerBodies!: Figures;
-  private guardBodies!: Figures;
+  private guardBodies!: SkinnedFigures;
   private archers!: Figures;
   private arrowMesh!: THREE.InstancedMesh;
   private arrowTrail!: THREE.InstancedMesh;
@@ -754,7 +755,8 @@ export class GameRenderer {
     this.figures = new Figures(MAX_UNITS, this.scene);
     this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.archers = new Figures(MAX_UNITS, this.scene, 'archer');
-    this.guardsFig = new Figures(MAX_UNITS, this.scene, 'guard');
+    // strażnik ze szkieletem z Blendera (tools/models/chars/guard.py): prawdziwe animacje chodu, ciosu i śmierci
+    this.guardsFig = new SkinnedFigures(MAX_UNITS, this.scene, 'guard', 'postacie: strażnicy');
     this.kings = new Figures(32, this.scene, 'king');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
       tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
@@ -789,7 +791,7 @@ export class GameRenderer {
     this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.peasantBodies = new Figures(MAX_UNITS, this.scene);
     this.archerBodies = new Figures(512, this.scene, 'archer');
-    this.guardBodies = new Figures(256, this.scene, 'guard');
+    this.guardBodies = new SkinnedFigures(256, this.scene, 'guard', 'postacie: polegli strażnicy');
     this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);
     this.stains.count = 0;
     this.stains.frustumCulled = false;
@@ -4575,7 +4577,8 @@ export class GameRenderer {
       const teamC = TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888;
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
-      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      this.guardsFig.set(udef.guard ? t.matrix : ZERO, walking ? 'walk' : striking ? 'attack' : 'idle',
+        walking ? this.guardsFig.walkTime(st.phase) : this.time + s.id * 0.37, teamC);
       this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
       this.spearmen.set(n, !ranged && !udef.guard && !udef.ram ? t.matrix : ZERO, legs, striking, teamC, s.id);
       if (udef.ram && rams < 256) {
@@ -4650,6 +4653,7 @@ export class GameRenderer {
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
+    const upQ = new THREE.Quaternion(), upE = new THREE.Euler(), upM = new THREE.Matrix4(), upP = new THREE.Vector3(), upS = new THREE.Vector3();
     let pc = 0, ac = 0, gc = 0, sp = 0;
     for (const body of g.corpses) {
       if (c >= MAX_UNITS) break;
@@ -4671,7 +4675,15 @@ export class GameRenderer {
       // każdy leży w swoim stroju: chłop, łucznik, strażnik miejski albo włócznik
       const ud = body.kind >= 0 ? UNITS[body.kind] : undefined;
       if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); }
-      else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id); }
+      else if (ud?.guard) {
+        // strażnik ze szkieletem pada sam (animacja śmierci: osuwa się na kolana i leży twarzą do ziemi), więc stoi prosto
+        if (gc < 256) {
+          upQ.setFromEuler(upE.set(0, yaw, 0));
+          upM.compose(upP.set(fx - width / 2, y, fy - height / 2), upQ, upS.set(1.05 * FIG, 1.05 * FIG * (1 - age * 0.55), 1.05 * FIG));
+          this.guardBodies.set(upM, 'death', this.calm ? 99 : (g.tick - body.at) / TICKS_PER_SECOND, team);
+          gc++;
+        }
+      }
       else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id); }
       else this.bodies.set(sp++, m, 0.3, false, rot, body.id);
       m.compose(new THREE.Vector3(fx - width / 2, y + 0.02, fy - height / 2), new THREE.Quaternion(), sc.set(1 + age * 0.4, 1, 1 + age * 0.4));

@@ -77,6 +77,8 @@ async function load(): Promise<void> {
   // modele z Blendera leżą poza kodem gry: pobierają się tu równolegle (za drugim razem z pamięci przeglądarki)
   const { loadModels } = await import('./render/modelstore');
   await loadModels((n, all) => { if (count) count.textContent = `${done} / ${total} · ${tx('modele', 'models')} ${n}/${all}`; });
+  // postacie ze szkieletem (strażnik): plik .glb i zapieczenie animacji w teksturę kości
+  await import('./render/skinned').then((m) => m.loadChars());
   const assets = await import('./render/assets');
   await assets.preloadAssets();
   done++;

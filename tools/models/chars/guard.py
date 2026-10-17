@@ -173,10 +173,12 @@ def build():
 
 def grip_frame(B):
     """Chwyt prawej dłoni w spoczynku, z budowy dłoni: f = kierunek palców, blade = oś rękojeści (od małego palca
-    ku kciukowi, tędy wychodzi klinga), p = wnętrze dłoni (ku niemu zginają się palce). Zwraca (środek, blade, f, p)."""
+    ku kciukowi; klinga wychodzi z przeciwnej strony, spod małego palca), p = wnętrze dłoni (ku niemu zginają się palce). Zwraca (środek, blade, f, p)."""
     f = (B.tail('RightFingerBase') - B.head('RightFingerBase')).normalized()
     th = (B.tail('RThumb') - B.head('RThumb')).normalized()
-    blade = (th - f * th.dot(f)).normalized()
+    # klinga z dołu pięści (od strony małego palca): w nagraniach CMU tak wychodzi naturalny chód z opuszczonym
+    # mieczem i cios znad głowy zakończony klingą w dół; od strony kciuka miecz sterczał w górę
+    blade = -(th - f * th.dot(f)).normalized()
     f1 = (B.tail('RightHandFinger1') - B.head('RightHandFinger1')).normalized()
     p = f1 - f
     p = (p - f * p.dot(f) - blade * p.dot(blade)).normalized()

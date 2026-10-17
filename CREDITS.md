@@ -41,3 +41,7 @@ RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old To
 
 ## Dźwięki natury
 Śpiew ptaków, odgłosy wsi, kury, róg alarmu i grzmot: gra **0 A.D.** © Wildfire Games (https://www.wildfiregames.com/), licencja CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/). Świerszcze i dzwon: Freesound (rsn267, beambot, Nox_Sound), CC0. Szczegóły w docs/zasoby.md.
+
+## Postacie ze szkieletem
+- Ciało i szkielet: MPFB / MakeHuman Community (https://static.makehumancommunity.org), wynik na licencji CC0.
+- Ruch: Carnegie Mellon University Graphics Lab Motion Capture Database (http://mocap.cs.cmu.edu), konwersja BVH B. Hahne (cgspeed). Dane wolne do użytku, także w grach.
