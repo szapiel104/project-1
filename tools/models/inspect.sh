@@ -1,5 +1,6 @@
 #!/bin/sh
 # Obchód budynku z Blendera: arkusz zdjęć z kilkunastu stron (z góry, dookoła, od dołu, przekrój, z oczu człowieka).
+#   ZIMA=1 sh tools/models/inspect.sh orchard /tmp/x.png   — bez liści i jabłek (drzewa zimą)
 #   sh tools/models/inspect.sh keep /tmp/keep.png
 set -e
 PY=${BPY:-/tmp/claude-0/bpyenv/bin/python}

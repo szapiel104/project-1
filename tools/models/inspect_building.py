@@ -24,6 +24,8 @@ EXTRA = [k for k, v in d.items() if isinstance(v, list) and v and isinstance(v[0
 for g in ('base', 'shell', 'interior', 'floor', 'ceiling', 'leafL', 'leafR'):
     objs[g] = []
     for m in d.get(g, []) + ([x for k in EXTRA for x in d[k]] if g == 'base' else []):
+        if os.environ.get('ZIMA') and m['mat'] in ('leaf', 'leafLight', 'apple', 'appleGreen'):
+            continue   # ZIMA=1: drzewa bez liści i jabłek (jak w grze zimą)
         raw = base64.b64decode(m['pos']); ao = base64.b64decode(m['ao'])
         n = len(raw) // 6
         P = [struct.unpack_from('<3h', raw, i * 6) for i in range(n)]

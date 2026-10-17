@@ -18,6 +18,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 from timber import Timber  # noqa: E402
+from mathutils import Vector  # noqa: E402
 
 b = Building()
 t = Timber(b, T=0.05)
@@ -76,34 +77,94 @@ def blob(x, y, z, r, mat, seg=9):
         b.prism('base', mat, ra * r, rb * r, (yb - ya) * r * 0.85, x, y + ya * r * 0.85, z, seg=seg, top=rb > 0.001, phase=ph)
 
 
+def tube(mat, path, radii, seg=8, cap=True):
+    """Gałąź / pień: rurka po krzywej, przekrój zwęża się wg radii; zamknięta na końcach (od środka nic nie prześwituje)"""
+    rings = []
+    for i, p in enumerate(path):
+        p = Vector(p)
+        d = (Vector(path[min(i + 1, len(path) - 1)]) - Vector(path[max(i - 1, 0)])).normalized()
+        up = Vector((0, 1, 0)) if abs(d.y) < 0.9 else Vector((1, 0, 0))
+        u = d.cross(up).normalized(); v = d.cross(u).normalized()
+        rings.append([p + (u * math.cos(2 * math.pi * k / seg) + v * math.sin(2 * math.pi * k / seg)) * radii[i] for k in range(seg)])
+    for i in range(len(rings) - 1):
+        c = (Vector(path[i]) + Vector(path[i + 1])) / 2
+        for k in range(seg):
+            k2 = (k + 1) % seg
+            b.poly('base', mat, [tuple(rings[i][k]), tuple(rings[i][k2]), tuple(rings[i + 1][k2]), tuple(rings[i + 1][k])], away=tuple(c))
+    a0, a1 = Vector(path[0]), Vector(path[-1])
+    if cap:
+        b.poly('base', mat, [tuple(q) for q in rings[0]], away=tuple(a0 + (a1 - a0).normalized()))
+    b.poly('base', mat, [tuple(q) for q in rings[-1]], away=tuple(a1 - (a1 - a0).normalized()))
+
+
+def bough(r, start, d, length, r0, r1, n=4, rise=0.0, droop=0.0, wob=0.25):
+    """Konar po łuku: z punktu start w kierunku d (wektor), na końcu podnosi się (rise) albo opada (droop); zwraca punkty osi"""
+    d = Vector(d).normalized()
+    side = d.cross(Vector((0, 1, 0)))
+    if side.length < 1e-4:
+        side = Vector((1, 0, 0))
+    side.normalize()
+    pts, rad = [], []
+    for i in range(n + 1):
+        f = i / n
+        q = Vector(start) + d * length * f
+        q.y += (rise - droop) * length * f * f
+        q += side * math.sin(f * math.pi) * (r.random() - 0.5) * wob * length * 0.4
+        pts.append(tuple(q))
+        rad.append(r0 + (r1 - r0) * f)
+    tube('bark', pts, rad, seg=7 if r0 > 0.03 else (6 if r0 > 0.012 else 4))
+    return pts
+
+
 def tree(x, z, h=0.62, lean=0.0, seed=0):
+    """Jabłoń: krzywy pień rozszerzony u nasady, rozwidlony na 4 konary (korona otwarta jak w starym sadzie),
+    z konarów boczne gałęzie i cienkie pędy na końcach — zimą, bez liści, wygląda jak prawdziwe drzewo, a nie kikuty"""
     r = random.Random(seed)
-    # pień: kilka odcinków coraz cieńszych, lekko przechylonych, z grubą korą
-    y, px, pz = FLOOR, x, z
-    for k, (r0, r1, hh) in enumerate(((0.085, 0.07, 0.2), (0.07, 0.06, 0.2), (0.06, 0.05, 0.22))):
-        b.prism('base', 'bark', r0, r1, hh + 0.01, px, y, pz, seg=8, top=k == 2)
-        y += hh
-        px += lean * 0.05
+    FORK = FLOOR + 0.5
+    # pień: jedna gładka bryła, lekko wygięta w stronę przechyłu, gruba nasada
+    path, rad = [], []
+    for k in range(7):
+        f = k / 6
+        path.append((x + lean * 0.05 * math.sin(f * 2.6), FLOOR - 0.02 + (FORK - FLOOR + 0.04) * f, z + lean * 0.02 * math.sin(f * 4.0 + seed)))
+        rad.append(0.075 - 0.022 * f + 0.045 * (1 - f) ** 6)
+    tube('bark', path, rad, seg=10, cap=False)
     t.block(x - 0.11, x + 0.11, z - 0.11, z + 0.11, 0, 0.9)
-    # korzenie przy ziemi
-    for k in range(4):
-        a = k * math.pi / 2 + r.random() * 0.5
-        b.box('base', 'bark', 0.05, 0.05, 0.16, x + math.sin(a) * 0.08, FLOOR - 0.01, z + math.cos(a) * 0.08, a, tilt=0.35)
-    # konary: od czubka pnia w górę i na boki
-    top = (px, y, pz)
+    top = path[-1]
+    # nabiegi korzeniowe: krótkie, zwężające się, wchodzą w ziemię
+    for k in range(5):
+        a = k * 2 * math.pi / 5 + r.random() * 0.6
+        c, sn = math.cos(a), math.sin(a)
+        tube('bark', [(x + sn * 0.04, FLOOR + 0.07, z + c * 0.04), (x + sn * 0.1, FLOOR + 0.02, z + c * 0.1), (x + sn * 0.16, FLOOR - 0.02, z + c * 0.16)],
+             [0.035, 0.026, 0.012], seg=5)
+    # konary od rozwidlenia (zaczynają się w środku pnia — bez szpar), każdy z gałęziami i pędami
     tips = []
     for k in range(4):
-        a = k * math.pi / 2 + r.random() * 0.9
-        L = 0.26 + r.random() * 0.08
-        b.box('base', 'bark', 0.045, L, 0.045, top[0], top[1] - 0.04, top[2], a, tilt=0.75)
-        tips.append((top[0] + math.sin(a) * L * 0.68, top[1] + L * 0.73, top[2] + math.cos(a) * L * 0.68))
-    # korona: kępy liści nad końcami konarów i jedna duża w środku
-    blobs = [(top[0], top[1] + 0.28, top[2], 0.3)]
+        a = k * math.pi / 2 + r.random() * 0.8
+        out = Vector((math.sin(a), 0.95 + r.random() * 0.35, math.cos(a)))
+        L = 0.36 + r.random() * 0.08
+        st = (top[0], top[1] - 0.07, top[2])
+        axis = bough(r, st, out, L, 0.05, 0.016, n=5, rise=0.15, droop=0.12)
+        tips.append(axis[-1])
+        for j, fpos in enumerate((0.45, 0.72)):
+            i0 = round(fpos * (len(axis) - 1))
+            sa = a + (0.9 if j % 2 == 0 else -0.9) * (0.7 + r.random() * 0.5)
+            bd = Vector((math.sin(sa), 0.8 + r.random() * 0.7, math.cos(sa)))
+            sub = bough(r, axis[i0], bd, 0.16 + r.random() * 0.08, 0.02, 0.007, n=3, rise=0.2)
+            for m in range(2):   # pędy (wilki) na końcu gałęzi, prosto w górę jak przycinane jabłonie
+                ta = sa + (m - 0.5) * 1.6
+                bough(r, sub[-1], (math.sin(ta) * 0.35, 1.0, math.cos(ta) * 0.35), 0.08 + r.random() * 0.05, 0.007, 0.0025, n=2, wob=0.6)
+        for m in range(3):       # pędy na końcu konaru
+            ta = a + (m - 1) * 1.1
+            bough(r, axis[-1], (math.sin(ta) * 0.5, 1.0, math.cos(ta) * 0.5), 0.1 + r.random() * 0.06, 0.011, 0.003, n=2, wob=0.6)
+    # krótki przewodnik w środku korony
+    lead = bough(r, (top[0], top[1] - 0.05, top[2]), (0.1 * lean, 1.0, 0.05), 0.24, 0.035, 0.008, n=3)
+    # korona: kępy liści nad końcami konarów i jedna duża w środku (gałęzie chowają się w kępach)
+    blobs = [(lead[-1][0], lead[-1][1] + 0.02, lead[-1][2], 0.28)]
     blob(*blobs[0], LEAF[seed % 2])
     for i, (tx, ty, tz) in enumerate(tips):
         rr = 0.19 + r.random() * 0.05
-        blobs.append((tx, ty, tz, rr))
-        blob(tx, ty, tz, rr, LEAF[(seed + i) % 2])
+        blobs.append((tx, ty + 0.03, tz, rr))
+        blob(tx, ty + 0.03, tz, rr, LEAF[(seed + i) % 2])
     # jabłka wiszą na spodzie i bokach kęp (tuż pod powierzchnią liści, ogonek do góry), nie w powietrzu
     for k in range(14):
         bx, by, bz, br = blobs[1 + k % 4] if k % 3 else blobs[0]
@@ -115,7 +176,6 @@ def tree(x, z, h=0.62, lean=0.0, seed=0):
         mat = 'appleGreen' if k % 5 == 0 else 'apple'
         b.prism('base', mat, 0.022, 0.032, 0.028, ax, ay - 0.028, az, seg=7, top=False)
         b.prism('base', mat, 0.032, 0.018, 0.028, ax, ay, az, seg=7)
-        b.box('base', 'woodDark', 0.006, 0.03, 0.006, ax, ay + 0.028, az)
     return top
 
 

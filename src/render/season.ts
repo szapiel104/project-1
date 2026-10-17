@@ -181,13 +181,18 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     float sNoise = sPatch(vSeasonPos.xz);
     float sAmt = sUp * smoothstep(0.0, 0.1, uSnow * 1.25 - (0.92 - sNoise)) * 0.9;
     sAmt = max(sAmt, uFrost * 0.3 * smoothstep(0.7, 0.95, sWN.y) * (0.5 + sNoise * 0.5));
+    // śnieg nie jest jednolitą białą płytą: miękkie zaspy (jaśniej i ciemniej), chłodniejszy w zagłębieniach,
+    // a spod cienkiej warstwy prześwituje trochę faktury tego, co przykrywa (deski, trawa, strzecha)
+    float sLumIn = dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11));
+    float sDrift = sVal(vSeasonPos.xz * 1.7 + 3.0) * 0.6 + sVal(vSeasonPos.xz * 6.0 - 1.3) * 0.4;
+    vec3 sSnowCol = mix(vec3(0.66, 0.71, 0.8), vec3(0.8, 0.82, 0.86), sDrift) * (0.94 + (sLumIn - 0.3) * 0.22);
     ${kind === 'ground' ? `
     // wydeptane ścieżki: śnieg ubity i przemieszany z ziemią
     // jesień: trawiaste części podłoża płowieją razem z dywanem kęp (inaczej w szparach prześwituje letnia zieleń)
     diffuseColor.rgb = sAutumnGrass(diffuseColor.rgb, vSeasonPos.xz, uAutumn + uBare * 0.5, uBare, 1.0);
     sAmt *= 1.0 - sTrail * 0.65;
-    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84) * (1.0 - sTrail * 0.25), sAmt);` : `
-    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84), sAmt);`}
+    diffuseColor.rgb = mix(diffuseColor.rgb, sSnowCol * (1.0 - sTrail * 0.25), sAmt);` : `
+    diffuseColor.rgb = mix(diffuseColor.rgb, sSnowCol, sAmt);`}
     #ifdef STANDARD
       roughnessFactor = mix(roughnessFactor, 0.8, sAmt);
     #endif`}
