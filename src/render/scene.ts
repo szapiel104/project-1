@@ -1663,6 +1663,17 @@ export class GameRenderer {
   private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number; jy?: number; vy?: number; gy?: number } | null = null;
   /** Wywoływane, gdy spacer się skończy (Esc) */
   onWalkEnd: () => void = () => {};
+  /**
+   * Spacer na ziemiach wroga: 'seen' — straż Cię zauważyła (kilka sekund na ucieczkę), 'safe' — zgubili Cię,
+   * 'killed' — dopadli Cię i spacer się kończy, 'foreign' — próba wejścia do cudzej kopalni
+   */
+  onWalkAlert: (kind: 'seen' | 'safe' | 'killed' | 'foreign') => void = () => {};
+  /** Kończy trwający spacer (jak Esc) */
+  private walkEnd: (() => void) | null = null;
+  /** Ile sekund straż wroga już patrzy na spacerowicza (rośnie, gdy widzi, opada, gdy zgubi) */
+  private walkSeen = 0;
+  private walkSeenShown = false;
+  private foreignAt = -99;
   get walking(): boolean { return !!this.walk; }
   setWalkPitch(p: number): void { if (this.walk) this.walk.pitch = p; }
   private walkFocus = new THREE.Vector3();
@@ -1700,6 +1711,8 @@ export class GameRenderer {
     const g = this.state;
     const b = g?.buildings.find((x) => x.id === id);
     if (!g || !b || BUILDINGS[b.type]!.id !== 'oremine') return;
+    // do cudzej kopalni nie wejdziesz (sztolnia należy do jej pana); sojusznik też trzyma swoją
+    if (b.owner !== this.me) { this.foreign(); return; }
     if (!this.walk) { const w = g.map.width; this.startWalk((b.door % w) + 0.5, Math.floor(b.door / w) + 0.5); }
     if (!this.walk) return;
     if (!this.mineLevel) { this.mineLevel = mineLevelModel(); this.mineLevel.position.copy(MINE_AT); this.scene.add(this.mineLevel); }
@@ -1814,13 +1827,15 @@ export class GameRenderer {
       // kamera wraca nad miejsce, w którym skończył się spacer (lookAt sam przycina je do dozwolonego obszaru mapy)
       if (this.inMine) this.leaveMine(); // Esc w sztolni: wychodzimy przed kopalnię
       const ex = this.walk?.x ?? tileX, ez = this.walk?.z ?? tileY;
-      this.walk = null;
+      this.walk = null; this.walkEnd = null;
       if (this.roomLight) this.roomLight.intensity = 0;
       if (this.torchOn) this.toggleHandTorch();
       cam.fov = 38; cam.near = 0.5; cam.updateProjectionMatrix();
       this.cam.lookAt(ex - this.state!.map.width / 2, ez - this.state!.map.height / 2, 22);
       this.onWalkEnd();
     };
+    this.walkEnd = end;
+    this.walkSeen = 0; this.walkSeenShown = false;
     window.addEventListener('keydown', down, true); window.addEventListener('keyup', up, true);
     window.addEventListener('mousemove', move);
     this.canvas.addEventListener('click', click);
@@ -1890,6 +1905,52 @@ export class GameRenderer {
   private walkPt = new THREE.Vector3();
   private walkHit = { point: new THREE.Vector3(), distance: 0, faceIndex: 0 };
   private walkGatherAt = { x: 1e9, z: 1e9, t: 0 };
+  private foreign(): void {
+    if (this.time - this.foreignAt < 3) return;
+    this.foreignAt = this.time;
+    this.onWalkAlert('foreign');
+  }
+  /**
+   * Straż wroga a spacerowicz (tylko obraz: spacerowicz nie jest jednostką symulacji, więc w grze sieciowej nic się
+   * nie rozjeżdża). Żołnierz wroga w zasięgu wzroku albo wejście na cudzą działkę = zauważony; po chwili w zasięgu
+   * dopadają go i spacer się kończy (kamera wraca nad mapę). True, gdy spacer właśnie się skończył.
+   */
+  private watchedByEnemy(dt: number): boolean {
+    const g = this.state!, w = this.walk!;
+    const myTeam = g.players[this.me]?.team ?? -1;
+    const enemy = (owner: number): boolean => owner !== this.me && (g.players[owner]?.team ?? -2) !== myTeam;
+    const SIGHT = 7;
+    let near = Infinity, spotted = false;
+    for (const s of g.soldiers) {
+      if (s.hp <= 0 || !enemy(s.owner)) continue;
+      const d = Math.hypot(s.px + 0.5 - w.x, s.py + 0.5 - w.z);
+      if (d < (s.up ? SIGHT + 4 : SIGHT)) spotted = true; // z wieży widać dalej
+      if (d < near) near = d;
+    }
+    // na cudzej działce (chata, kopalnia, zamek): ktoś zawsze patrzy — łucznicy z murów, ludzie z okien
+    let trespass = false;
+    for (const b of g.buildings) {
+      if (!enemy(b.owner) || b.ruined) continue;
+      const def = BUILDINGS[b.type]!;
+      if (def.road || def.line) continue;
+      const fp = footprint(def, b.rot), m = def.id === 'keep' ? 2 : 0.3;
+      if (w.x > b.x - m && w.x < b.x + fp.w + m && w.z > b.y - m && w.z < b.y + fp.h + m) { trespass = true; break; }
+    }
+    const seen = spotted || trespass;
+    // im bliżej, tym szybciej dobiegają; tuż obok — cios od razu
+    const rate = near < SIGHT ? 1 + (SIGHT - near) / 3 : 0.8;
+    this.walkSeen = seen ? this.walkSeen + dt * rate : Math.max(0, this.walkSeen - dt * 0.7);
+    if (seen && !this.walkSeenShown && this.walkSeen > 0.15) { this.walkSeenShown = true; playAt('alert', 0.8, 0, 0.6); this.onWalkAlert('seen'); }
+    if (!seen && this.walkSeenShown && this.walkSeen <= 0) { this.walkSeenShown = false; this.onWalkAlert('safe'); }
+    if (near < 1.2 || this.walkSeen > 4) {
+      this.walkSeen = 0; this.walkSeenShown = false;
+      playAt('hit', 1, 0, 0.7);
+      this.onWalkAlert('killed');
+      this.walkEnd?.();
+      return true;
+    }
+    return false;
+  }
   private stepWalk(dt: number): void {
     if (this.inMine) { this.stepMine(dt); return; }
     const w = this.walk!, g = this.state!;
@@ -2004,7 +2065,15 @@ export class GameRenderer {
     const inside = (r: [number, number, number, number] | undefined): boolean => !!wbk && !!r && wbk[1] >= r[0] && wbk[1] <= r[1] && wbk[2] >= r[2] && wbk[2] <= r[3];
     const inTap = !!wbk && (wbk[4] === OREMINE_WALK ? wbk[4].open.some(inside) : inside(tap));
     // korytarz za portalem kopalni: przejście do sztolni (osobna lokacja)
-    if (wbk && wbk[4] === OREMINE_WALK && wbk[2] < 1.1 && Math.abs(wbk[1]) < 0.45) { this.enterMine(wbk[0]); return; }
+    if (wbk && wbk[4] === OREMINE_WALK && wbk[2] < 1.1 && Math.abs(wbk[1]) < 0.45) {
+      const mb = g.buildings.find((x) => x.id === wbk[0]);
+      if (mb && mb.owner === this.me) { this.enterMine(wbk[0]); return; }
+      // cudza kopalnia: wrota zamknięte, spacerowicz odbija się od portalu
+      this.foreign();
+      const th = ((mb?.rot ?? 0) * Math.PI) / 2;
+      w.x += Math.sin(th) * 0.6; w.z += Math.cos(th) * 0.6;
+    }
+    if (this.watchedByEnemy(dt)) return;
     this.walkHall = inRoom ? kp![0] : inTap ? wbk![0] : 0;
     this.walkNear = wbk ? wbk[0] : kp ? kp[0] : 0; // budynek pod nogami ma pierwszeństwo przed zamkiem obok
     // stopy idą po podłożu z lekkim wygładzeniem: próg chaty, skraj sadu czy bruku to krok, a nie skok kamery
@@ -3354,7 +3423,7 @@ export class GameRenderer {
       // budynek siada lekko poniżej najwyższego punktu działki, a teren pod nim się wyrównuje (nasyp od dołu stoku,
       // wkop od góry), więc fundament nigdzie nie wisi nad ziemią i do środka nie zagląda trawa ze zbocza
       const ground = low + (top - low) * 0.35;
-      if (top - low > 0.02 && !def.wall && !def.road) view.level(b.x, b.y, fp.w, fp.h, ground - 0.01);
+      if (!def.wall && !def.road) view.level(b.x, b.y, fp.w, fp.h, ground - 0.01);
       mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
       if (def.id === 'keep') {
         this.keepFloors.set(b.id, [b.x + KEEP_HALF, b.y + KEEP_HALF, ground]);

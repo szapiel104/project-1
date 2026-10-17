@@ -1623,6 +1623,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   };
 
+  /** Narożniki terenu pod stojącymi budynkami (wyrównane): skarpy kolejnych budynków ich nie ruszają */
+  let levelLock: Uint8Array | null = null;
   return {
     group,
     ground,
@@ -1635,6 +1637,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     setSky(c: THREE.Color) { wm.sky.value.copy(c); },
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
     level(x: number, y: number, fw: number, fh: number, y0: number) {
+      levelLock ??= new Uint8Array((w + 1) * (h + 1));
+      const lock = levelLock;
       const rockCorner = (cx: number, cy: number): boolean => {
         for (const [ox, oy] of [[-1, -1], [0, -1], [-1, 0], [0, 0]] as const) {
           const tx = cx + ox, ty = cy + oy;
@@ -1645,15 +1649,22 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       // plac pod budynek jak w prawdziwej budowie: działka równa, a dookoła skarpa łagodnie schodzi do terenu
       const attr = geo.getAttribute('position') as THREE.BufferAttribute;
       const changed: number[] = [];
-      for (let cy = Math.max(0, y - 2); cy <= Math.min(h, y + fh + 2); cy++)
-        for (let cx = Math.max(0, x - 2); cx <= Math.min(w, x + fw + 2); cx++) {
+      // skarpa szersza i mocniejsza: modele wystają trochę poza działkę (cokół, kopiec kopalni), więc pierwszy pierścień
+      // jest prawie równy z placem, a dopiero dalej teren schodzi do zbocza — inaczej brzeg budynku wisiał nad stokiem
+      for (let cy = Math.max(0, y - 3); cy <= Math.min(h, y + fh + 3); cy++)
+        for (let cx = Math.max(0, x - 3); cx <= Math.min(w, x + fw + 3); cx++) {
           const d = Math.max(x - cx, cx - (x + fw), y - cy, cy - (y + fh), 0);
-          const k = d === 0 ? 1 : d === 1 ? 0.6 : 0.22;
+          const k = d === 0 ? 1 : d === 1 ? 0.9 : d === 2 ? 0.55 : 0.2;
           const ci = cy * (w + 1) + cx, old = corners[ci]!;
           if (old < 0 && d > 0) continue; // brzeg wody zostaje
           // narożnik przy górach POZA działką zostaje: zbocze masywu nie schodzi do poziomu działki (kopalnia stoi tyłem do skały).
           // Sama działka jest zawsze równa — inaczej zbocze wjeżdżało w grotę kopalni i zasłaniało ją od środka.
           if (d > 0 && rockCorner(cx, cy)) continue;
+          // narożnik pod innym, już stojącym budynkiem: skarpa nowego go nie rusza (inaczej sąsiad zawisał w powietrzu albo się zapadał)
+          // (także pierwszy pierścień skarpy: tam stoi okap, cokół albo brzeg kopca sąsiada)
+          if (d > 0 && lock[cy * (w + 1) + cx]) continue;
+          if (d === 0) lock[cy * (w + 1) + cx] = 1;
+          else if (d === 1) lock[cy * (w + 1) + cx] = 2;
           const nv = old + (y0 - old) * k;
           if (Math.abs(nv - old) < 0.002) continue;
           corners[ci] = nv; changed.push(ci);
@@ -1661,8 +1672,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         }
       if (!changed.length) return;
       const SLOT_OF: [number, number][] = [[0, 0], [0, 1], [1, 0], [1, 0], [0, 1], [1, 1]];
-      for (let ty = Math.max(0, y - 3); ty < Math.min(h, y + fh + 3); ty++)
-        for (let tx = Math.max(0, x - 3); tx < Math.min(w, x + fw + 3); tx++)
+      for (let ty = Math.max(0, y - 4); ty < Math.min(h, y + fh + 4); ty++)
+        for (let tx = Math.max(0, x - 4); tx < Math.min(w, x + fw + 4); tx++)
           for (let k = 0; k < 6; k++) {
             const [dx, dy] = SLOT_OF[k]!;
             pos[(ty * w + tx) * 18 + k * 3 + 1] = corner(tx + dx, ty + dy);
