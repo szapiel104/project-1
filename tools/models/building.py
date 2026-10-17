@@ -99,6 +99,32 @@ class Building:
         for f in faces:
             self.poly(group, mat, [v[i] for i in f])
 
+    def crystal(self, group, mat, x, y, z, r, seed=0.0, sx=1.0, sy=1.0, sz=1.0, seg=7):
+        """Bryła rudy jak w Gothicu: nieregularny, zamknięty wielościan z płaskimi ściankami (same trójkąty).
+        Środek w (x, y, z), promień r, rozciągnięcie sx/sy/sz; seed zmienia kształt."""
+        def j(a, b, k):
+            return math.sin(a * 12.9898 + b * 78.233 + seed * 3.17) * k
+        rings = [(-0.55, 0.72), (0.05, 1.0), (0.58, 0.62)]
+        pts = []
+        for ri, (hy, rr) in enumerate(rings):
+            ring = []
+            for k in range(seg):
+                a = 2 * math.pi * (k + 0.5 * ri + j(k, ri, 0.18)) / seg
+                q = r * rr * (1 + j(ri, k, 0.22))
+                ring.append((x + math.sin(a) * q * sx, y + (hy + j(k + 3, ri, 0.12)) * r * sy, z + math.cos(a) * q * sz))
+            pts.append(ring)
+        bot = (x + j(1, 2, 0.15) * r, y - 0.95 * r * sy, z + j(2, 1, 0.15) * r)
+        top = (x + j(3, 4, 0.2) * r, y + 0.95 * r * sy, z + j(4, 3, 0.2) * r)
+        c = (x, y, z)
+        for k in range(seg):
+            k2 = (k + 1) % seg
+            self.poly(group, mat, [bot, pts[0][k2], pts[0][k]], away=c)
+            for ri in range(len(pts) - 1):
+                a, b2 = pts[ri], pts[ri + 1]
+                self.poly(group, mat, [a[k], a[k2], b2[k2]], away=c)
+                self.poly(group, mat, [a[k], b2[k2], b2[k]], away=c)
+            self.poly(group, mat, [pts[-1][k], pts[-1][k2], top], away=c)
+
     def prism(self, group, mat, r0, r1, h, x=0.0, y=0.0, z=0.0, seg=12, top=True, phase=0.0):
         """Walec / ścięty stożek o seg bokach (r1 = 0: stożek)"""
         ring = lambda r, yy: [(x + math.sin(phase + 2 * math.pi * k / seg) * r, yy, z + math.cos(phase + 2 * math.pi * k / seg) * r) for k in range(seg)]

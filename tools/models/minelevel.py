@@ -151,9 +151,17 @@ def boulder(x, z, r, h, seed):
 # filar od posadzki do stropu (kopacze zostawili go, żeby strop nie runął)
 boulder(2.2, -1.2, 0.7, 2.7, 1.0)
 # hałdy urobku i rudy
-for (x, z, r, h, m) in ((-3.4, 1.2, 0.5, 0.45, 'stone'), (-3.8, 0.4, 0.35, 0.3, 'magicOre'), (3.6, -2.6, 0.55, 0.5, 'stone'), (3.0, 1.5, 0.35, 0.28, 'magicOre')):
+for (x, z, r, h, m) in ((-3.4, 1.2, 0.5, 0.45, 'stone'), (3.6, -2.6, 0.55, 0.5, 'stone')):
     b.prism(G, m, r, r * 0.3, h, x, 0, z, seg=9, phase=x)
     solid.append([x - r, x + r, z - r, z + r])
+# hałdy rudy: kupa kanciastych brył jak w Gothicu (spodnie wpuszczone w posadzkę)
+for (x, z, n) in ((-3.8, 0.35, 7), (3.0, 1.5, 6)):
+    for k in range(n):
+        a = k * 2.4
+        d = 0.0 if k == 0 else 0.22 + 0.08 * (k % 3)
+        r = 0.2 if k == 0 else 0.11 + 0.03 * (k % 2)
+        b.crystal(G, 'magicOre', x + math.sin(a) * d, r * 0.55 if k else 0.17, z + math.cos(a) * d, r, seed=x * 7 + k, sy=0.85)
+    solid.append([x - 0.45, x + 0.45, z - 0.45, z + 0.45])
 # wózki na torach i obok
 for (x, z, a) in ((0.0, 0.2, 0.0), (-2.4, -2.4, 0.4)):
     b.box(G, 'woodDark', 0.42, 0.3, 0.6, x, 0.1, z, rot=a)
@@ -162,7 +170,9 @@ for (x, z, a) in ((0.0, 0.2, 0.0), (-2.4, -2.4, 0.4)):
             c, s = math.cos(a), math.sin(a)
             wx, wz = sx * 0.22, sz * 0.2
             b.prism(G, 'iron', 0.08, 0.08, 0.04, x + wx * c + wz * s, 0.04, z - wx * s + wz * c, seg=8)
-    b.box(G, 'magicOre', 0.32, 0.1, 0.46, x, 0.4, z, rot=a)
+    # urobek w wózku: kilka brył rudy wystających nad burtę
+    for k, (ox, oz, r) in enumerate(((0.0, 0.0, 0.13), (0.08, -0.15, 0.1), (-0.08, 0.15, 0.1), (-0.06, -0.12, 0.08))):
+        b.crystal(G, 'magicOre', x + ox * math.cos(a) + oz * math.sin(a), 0.42, z - ox * math.sin(a) + oz * math.cos(a), r, seed=k + x, sy=0.8)
     solid.append([x - 0.36, x + 0.36, z - 0.36, z + 0.36])
 # rusztowanie z belek pod tylną ścianą (pomost dla kopiących wyżej)
 for x in (-3.0, -1.6, -0.2, 1.2):
@@ -201,6 +211,12 @@ for (x, y, z, w, h, d) in ((-8.985, 0.6, -1.1, 0.012, 0.5, 0.7), (-8.985, 1.05, 
                            (8.985, 1.0, 0.5, 0.012, 0.3, 0.4), (-2.0, 0.8, -3.49, 0.8, 0.3, 0.012), (1.0, 1.2, -3.49, 0.6, 0.25, 0.012),
                            (-4.49, 0.7, 1.2, 0.012, 0.35, 0.6), (4.49, 1.1, -2.4, 0.012, 0.3, 0.7)):
     b.box(G, 'magicOre', w, h, d, x, y, z)
+
+# wielkie bryły rudy wyrastające ze ścian przy każdym przodku (w nie walą kilofami górnicy, jak w Gothicu)
+for (x, y, z, sx, sz, sd) in ((-8.99, 0.75, -1.2, 0.7, 1.0, 1), (-8.99, 1.0, -0.75, 0.7, 1.0, 2), (8.99, 0.7, 0.45, 0.7, 1.0, 3), (8.99, 1.0, 0.95, 0.7, 1.0, 4),
+                              (-2.0, 0.8, -3.53, 1.0, 0.7, 5), (1.0, 1.0, -3.53, 1.0, 0.7, 6), (-4.53, 0.8, 1.2, 0.7, 1.0, 7), (4.53, 1.0, -2.4, 0.7, 1.0, 8)):
+    b.crystal(G, 'magicOre', x, y, z, 0.3, seed=sd, sx=sx, sz=sz, sy=1.15)
+    b.crystal(G, 'magicOre', x + (0.0 if sx < 1 else 0.28), y - 0.32, z + (0.3 if sx < 1 else 0.0), 0.16, seed=sd + 20, sx=sx, sz=sz)
 
 # ---------------- miejsca pracy górników (x, z, kierunek twarzy: 0 = +z, π/2 = +x) ----------------
 HPI = math.pi / 2

@@ -142,7 +142,11 @@ solid.append([FX - 0.5, FX + 0.25, FZ - 0.22, FZ + 0.45])
 # kosze z urobkiem pod prawą ścianą od frontu (czekają na wóz)
 for (x, z, m) in ((0.55, 0.62, 'magicOre'), (0.75, 0.62, 'stone'), (0.65, 0.82, 'stone'), (0.86, 0.82, 'magicOre')):
     b.prism('base', 'sack', 0.085, 0.075, 0.1, x, 0, z, seg=9)
-    b.prism('base', m, 0.07, 0.025, 0.05, x, 0.1, z, seg=7)
+    if m == 'magicOre':
+        for k, (ox, oz, r) in enumerate(((0.0, 0.0, 0.05), (0.035, -0.03, 0.035), (-0.03, 0.03, 0.035))):
+            b.crystal('base', m, x + ox, 0.11, z + oz, r, seed=x * 9 + k, sy=0.85)
+    else:
+        b.prism('base', m, 0.07, 0.025, 0.05, x, 0.1, z, seg=7)
 solid.append([0.45, 0.96, 0.52, 0.92])
 
 E = P + 0.4

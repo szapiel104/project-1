@@ -41,6 +41,54 @@ type Pattern = Parameters<typeof pattern>[0];
 /** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone, M.roadWood];
 const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, slate: 1.1, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
+/**
+ * Magiczna ruda jak w Gothicu: głęboki granat i fiolet w plamach, gęsto nakrapiany białymi i błękitnymi iskrami.
+ * Wzór rysowany raz na płótnie (to nie zdjęciowa tekstura z pattern(), więc KTX2 go nie dotyczy); iskry lekko świecą
+ * same z siebie (emissiveMap), więc ruda błyszczy też w ciemnej sztolni, a płaskie ścianki brył łapią światło jak kryształ.
+ */
+function oreMaterial(): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.32, metalness: 0.2 });
+  m.userData.tile = 2.2;
+  if (typeof document === 'undefined') { m.color.setHex(0x3a3cc8); return m; }
+  const S = 256;
+  let seed = 7;
+  const rnd = (): number => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  const draw = (glow: boolean): THREE.CanvasTexture => {
+    seed = 7;
+    const c = document.createElement('canvas'); c.width = c.height = S;
+    const x = c.getContext('2d')!;
+    x.fillStyle = glow ? '#000' : '#14123f'; x.fillRect(0, 0, S, S);
+    // plamy granatu, kobaltu i fioletu (rysowane z zawinięciem, żeby wzór się kafelkował bez szwów)
+    const blot = (px: number, py: number, r: number, col: string): void => {
+      for (const ox of [-S, 0, S]) for (const oy of [-S, 0, S]) {
+        const g = x.createRadialGradient(px + ox, py + oy, 0, px + ox, py + oy, r);
+        g.addColorStop(0, col); g.addColorStop(1, 'rgba(0,0,0,0)');
+        x.fillStyle = g; x.fillRect(px + ox - r, py + oy - r, r * 2, r * 2);
+      }
+    };
+    const tones = ['rgba(52,58,210,0.85)', 'rgba(88,48,190,0.75)', 'rgba(30,34,140,0.9)', 'rgba(70,96,235,0.7)', 'rgba(16,14,70,0.9)'];
+    for (let i = 0; i < 70; i++) { const px = rnd() * S, py = rnd() * S, r = 10 + rnd() * 34, col = tones[Math.floor(rnd() * tones.length)]!; if (!glow) blot(px, py, r, col); }
+    // iskry: drobne, ostre, białe i błękitne (z nich bierze się świecenie)
+    for (let i = 0; i < 520; i++) {
+      const px = rnd() * S, py = rnd() * S, big = rnd() < 0.12, r = big ? 1.6 + rnd() * 1.6 : 0.6 + rnd() * 0.9;
+      const t = rnd();
+      const col = t < 0.45 ? '#e8f0ff' : t < 0.8 ? '#8fc4ff' : '#b49cff';
+      x.fillStyle = glow ? (big ? col : 'rgba(120,150,255,0.55)') : col;
+      x.beginPath(); x.arc(px, py, r, 0, Math.PI * 2); x.fill();
+    }
+    const tex = new THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 4;
+    return tex;
+  };
+  m.map = draw(false);
+  m.emissiveMap = draw(true);
+  m.emissive.setHex(0x6f8cff);
+  m.emissiveIntensity = 0.45;
+  return m;
+}
+
 const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   const nm = tex ? normal(tex) : null;
   const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9), bumpScale: tex === 'ashlar' ? 0.9 : tex === 'dressed' ? 0.7 : tex === 'cobble' ? 1.6 : 1.4 });
@@ -79,7 +127,7 @@ const M = {
   hay: mat(0xe0c466, 'thatch'),
   ore: mat(0x8a4a2c), crust: mat(0xe2b06a),
   // magiczna ruda jak w Gothicu: skała z niebieskawym połyskiem, lekko świeci w ciemnej sztolni (żyły, hałdy, urobek w koszach)
-  magicOre: (() => { const m = mat(0x86b4e0, 'rock'); m.emissive.setHex(0x1b3d66); m.emissiveIntensity = 0.55; m.roughness = 0.55; m.metalness = 0.15; return m; })(),
+  magicOre: oreMaterial(),
   cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),

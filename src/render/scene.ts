@@ -1923,7 +1923,7 @@ export class GameRenderer {
     let near = Infinity, spotted = false;
     for (const s of g.soldiers) {
       if (s.hp <= 0 || !enemy(s.owner)) continue;
-      const d = Math.hypot(s.px + 0.5 - w.x, s.py + 0.5 - w.z);
+      const d = Math.hypot(s.px / 256 - w.x, s.py / 256 - w.z); // pozycje w symulacji: stały przecinek ×256
       if (d < (s.up ? SIGHT + 4 : SIGHT)) spotted = true; // z wieży widać dalej
       if (d < near) near = d;
     }
