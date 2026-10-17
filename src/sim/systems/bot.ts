@@ -5,13 +5,20 @@ import { KEEP_SIZE } from '../../data/keep';
 import { keepCenter, keepFront, playerKeep, type GameState, type PlayerState } from '../state';
 import { orderGarrison, orderMove, train } from './army';
 import { canPlace, placeBuilding, placementBatch } from './placement';
+import { Terrain } from '../../data/terrain';
 
 /**
  * Bot przeciwnik. Działa wewnątrz symulacji, więc jest w pełni deterministyczny i może grać także w meczach sieciowych.
  * Buduje osadę według listy, szkoli włóczników i co jakiś czas wysyła coraz większą falę na najbliższy wrogi zamek.
  */
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'quarry', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'quarry', 'tavern', 'brewery', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house'];
+// kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'tavern', 'brewery', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine'];
+/** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
+const ROCK_REACH = 60;
+const ROCK_TRIES = 400;
+/** Gracz → do którego ticku bot nie szuka miejsca pod kopalnię (ostatnio nie znalazł); poza stanem gry, ale liczy się tak samo u wszystkich */
+const noRock = new Map<number, number>();
 /** Promień palisady wokół twierdzy (budynki stawia tylko w środku) */
 const RING = 16;
 const THINK = 40;
@@ -57,6 +64,42 @@ function spot(g: GameState, player: number, type: number): { x: number; y: numbe
   return null;
 }
 
+/**
+ * Miejsce pod kopalnię: stoi tyłem do skały, więc szukamy pól gór najbliżej bramy i próbujemy postawić budynek
+ * przed każdym z nich, drzwiami od gór (cztery obroty). Stała kolejność (odległość, potem numer pola) = ten sam wynik u każdego.
+ */
+function spotRock(g: GameState, player: number, type: number): { x: number; y: number; rot: number } | null {
+  const keep = playerKeep(g, player);
+  if (!keep) return null;
+  const def = BUILDINGS[type]!;
+  const [fx, fy] = keepFront(keep);
+  const { width, height, tiles } = g.map;
+  const rocks: { t: number; d: number }[] = [];
+  for (let y = Math.max(0, fy - ROCK_REACH); y <= Math.min(height - 1, fy + ROCK_REACH); y++)
+    for (let x = Math.max(0, fx - ROCK_REACH); x <= Math.min(width - 1, fx + ROCK_REACH); x++) {
+      const t = y * width + x;
+      if (tiles[t] !== Terrain.Mountain) continue;
+      // tylko skraj masywu (sąsiad nie jest górą) — w głębi i tak nic nie postawimy
+      const edge = (x > 0 && tiles[t - 1] !== Terrain.Mountain) || (x < width - 1 && tiles[t + 1] !== Terrain.Mountain) || (y > 0 && tiles[t - width] !== Terrain.Mountain) || (y < height - 1 && tiles[t + width] !== Terrain.Mountain);
+      if (edge) rocks.push({ t, d: (x - fx) ** 2 + (y - fy) ** 2 });
+    }
+  rocks.sort((a, b) => a.d - b.d || a.t - b.t);
+  let tries = 0;
+  for (const { t } of rocks) {
+    const tx = t % width, ty = (t - tx) / width;
+    // obrót: 0 = wejście od +y (tył -y, skała nad budynkiem), 1 = wejście od +x, 2 = od -y, 3 = od -x
+    for (const rot of [0, 2, 1, 3]) {
+      const w = rot % 2 ? def.h : def.w, h = rot % 2 ? def.w : def.h;
+      const half = Math.floor((rot % 2 ? h : w) / 2);
+      const x = rot === 0 ? tx - half : rot === 2 ? tx - half : rot === 1 ? tx + 1 : tx - w;
+      const y = rot === 0 ? ty + 1 : rot === 2 ? ty - h : ty - half;
+      if (++tries > ROCK_TRIES) return null;
+      if (canPlace(g, player, type, x, y, true, rot) === null) return { x, y, rot };
+    }
+  }
+  return null;
+}
+
 export function botSystem(g: GameState): void {
   for (const p of g.players) {
     // każdy bot myśli w innym ticku (przy 4 na 4 osiem botów naraz zacinało grę co 20 s)
@@ -72,6 +115,15 @@ export function botSystem(g: GameState): void {
       want.set(id, (want.get(id) ?? 0) + 1);
       if ((have.get(id) ?? 0) >= want.get(id)!) continue;
       const type = buildingIndex(id);
+      if (BUILDINGS[type]!.needsRock) {
+        // kopalnia: gdy w zasięgu nie ma skały (albo wszystko zastawione), bot nie czeka na nią — buduje dalej wg listy
+        if ((noRock.get(p.id) ?? 0) > g.tick) continue;
+        if (affordable(p, type)) {
+          const at = placementBatch(() => spotRock(g, p.id, type));
+          if (at) placeBuilding(g, p.id, type, at.x, at.y, at.rot); else { noRock.set(p.id, g.tick + 3000); continue; }
+        }
+        break;
+      }
       if (affordable(p, type)) { const at = placementBatch(() => spot(g, p.id, type)); if (at) placeBuilding(g, p.id, type, at.x, at.y); }
       break;
     }
@@ -140,7 +192,7 @@ export function botSystem(g: GameState): void {
     if (wave && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first / 2 && tk % (THINK * 30) === 0) {
       const idle = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id && !s.post && s.goal < 0 && !s.target);
       if (idle.length >= 6) {
-        const prey = g.units.find((u) => g.players[u.owner]?.team !== p.team && u.job && g.buildings.some((b) => b.id === u.job && ['woodcutter', 'fisher', 'quarry', 'mine'].includes(BUILDINGS[b.type]!.id)));
+        const prey = g.units.find((u) => g.players[u.owner]?.team !== p.team && u.job && g.buildings.some((b) => b.id === u.job && ['woodcutter', 'fisher', 'quarry', 'mine', 'oremine'].includes(BUILDINGS[b.type]!.id)));
         if (prey) orderMove(g, p.id, idle.slice(0, 3).map((s) => s.id), (prey.py >> 8) * g.map.width + (prey.px >> 8));
       }
     }

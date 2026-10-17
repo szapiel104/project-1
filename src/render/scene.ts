@@ -4804,7 +4804,9 @@ export class GameRenderer {
           const lx = mx * cosT + mz * sinT, lz = -mx * sinT + mz * cosT;
           // odpoczywający siedzą przy stole obok siebie, pracujący krzątają się przy warsztacie
           const side = resting ? ((u.id % 3) - 1) * 0.28 : Math.sin(k * 2) * 0.12;
-          t.position.set(cx + lx - width / 2 + side, (mesh?.position.y ?? 0) + (resting ? -0.03 : 0.05), cy + lz - height / 2);
+          // załoga kopalni: każdy przy własnym przodku, rozstawieni po działce (do czasu sztolni z Blendera z miejscami pracy)
+          const crewX = def.crew && !resting ? ((u.id % 4) - 1.5) * 0.55 : 0, crewZ = def.crew && !resting ? (((u.id >> 2) % 3) - 1) * 0.5 : 0;
+          t.position.set(cx + lx - width / 2 + side + crewX * cosT + crewZ * sinT, (mesh?.position.y ?? 0) + (resting ? -0.03 : 0.05), cy + lz - height / 2 - crewX * sinT + crewZ * cosT);
           t.rotation.set(0, resting ? 0 : Math.PI + Math.sin(k * 2) * 0.6, 0);
           if (!resting) swing = Math.sin(k * 6) * 0.35;
         }

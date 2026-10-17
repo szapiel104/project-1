@@ -262,7 +262,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   toggleLi.append(resToggle, extra);
   resList.append(toggleLi);
   /** Zapasy dokładane do paska w tej kolejności, póki jest miejsce (broń i piwo, potem składniki jedzenia) */
-  const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'bread', 'apples', 'wheat', 'flour', 'fish'];
+  const SECOND: readonly ResourceId[] = ['iron', 'ore', 'ale', 'spear', 'bow', 'bread', 'apples', 'wheat', 'flour', 'fish'];
   const fitRes = (): void => {
     for (const id of SECOND) resList.insertBefore(resItems[RESOURCES.indexOf(id)]!, toggleLi);
     const over = (): boolean => {

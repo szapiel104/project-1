@@ -19,6 +19,7 @@ import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } f
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 import { buildWork, canAfford, canPlace, maxHp, tileBuildable } from './sim/systems/placement';
+import { crewWanted, MINE_YIELDS } from './sim/systems/workers';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
@@ -687,6 +688,14 @@ function prodInfo(b: GameState['buildings'][number]): BuildingInfo['prod'] {
   else if (pr?.input && inHave < pr.input.amount) status = { text: `Kończy się surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, na jeden cykl trzeba ${pr.input.amount}.`, level: 'warn' };
   else if (u.phase === Phase.Resting || u.phase === Phase.ToRest) status = { text: 'Krótki odpoczynek w chacie, zaraz wraca.', level: 'ok' };
   else status = { text: 'Pracuje bez przeszkód.', level: 'ok' };
+  // kopalnia: załoga rośnie z wioską, a z jednego kursu wychodzi kamień, żelazo albo rzadka ruda
+  if (def.crew) {
+    const pop = game.units.filter((x) => x.owner === b.owner).length;
+    const have = (b.worker ? 1 : 0) + (b.crew?.length ?? 0), want = crewWanted(def, pop);
+    const yields = MINE_YIELDS.map((y) => `${resName(y.res)} ${y.weight}%`).join(', ');
+    status = { text: `Załoga: ${have} z ${want} górników (1 na ${def.crew.per} mieszkańców, najwyżej ${def.crew.max}). Urobek: ${yields}. ${status.text}`, level: have < want && status.level === 'ok' ? 'warn' : status.level };
+    if (recipe) recipe.place = 'w sztolni';
+  }
   // liczby
   let day: number | undefined;
   const log = madeLog.get(b.id);

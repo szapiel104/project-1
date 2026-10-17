@@ -36,6 +36,12 @@ export interface BuildingDef {
   production?: ProductionDef;
   /** Budynek wymaga terenu danego typu w pobliżu */
   needsTerrain?: { terrain: Terrain; radius: number };
+  /** Kopalnia: stoi tyłem do skały — pola gór muszą przylegać do tylnego boku działki (bok naprzeciw wejścia) */
+  needsRock?: boolean;
+  /** Załoga rośnie z wioską: jeden pracownik na `per` mieszkańców (zawsze co najmniej jeden), najwyżej `max` */
+  crew?: { per: number; max: number };
+  /** Stary budynek: zostaje w kodzie dla zapisów i już stojących egzemplarzy, ale nie ma go w menu i nie da się go postawić */
+  legacy?: boolean;
   /** Droga zamiast budynku: 1 = piaskowa, 2 = kamienna. Nie blokuje przejścia, przyspiesza chodzenie */
   road?: 1 | 2 | 3;
   /** Budynek ma pracownika, choć nic nie produkuje (np. inżynier z cechu, który wynosi gruz) */
@@ -73,12 +79,12 @@ export const BUILDINGS: readonly BuildingDef[] = [
     production: { output: { res: 'wood', amount: 3 }, site: Terrain.Forest, workTicks: 130, processTicks: 60, batches: 4 },
   },
   {
-    id: 'quarry', category: 'industry', name: 'b.quarry', w: 2, h: 2, cost: { wood: 30 }, buildable: true,
+    id: 'quarry', category: 'industry', name: 'b.quarry', w: 2, h: 2, cost: { wood: 30 }, buildable: true, legacy: true,
     needsTerrain: { terrain: Terrain.Stone, radius: 6 },
     production: { output: { res: 'stone', amount: 6 }, site: Terrain.Stone, workTicks: 70 },
   },
   {
-    id: 'mine', category: 'industry', name: 'b.mine', w: 2, h: 2, cost: { wood: 50, stone: 15 }, buildable: true,
+    id: 'mine', category: 'industry', name: 'b.mine', w: 2, h: 2, cost: { wood: 50, stone: 15 }, buildable: true, legacy: true,
     needsTerrain: { terrain: Terrain.Iron, radius: 6 },
     production: { output: { res: 'iron', amount: 4 }, site: Terrain.Iron, workTicks: 90 },
   },
@@ -163,6 +169,15 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'granaryBig', category: 'food', name: 'b.granaryBig', w: 3, h: 3, cost: { wood: 70, stone: 60 }, stores: ['granary'], capacity: { granary: 1200 }, buildable: true },
   // kamienna brama w murze: baszty z ciosów, łukowy przejazd, okute wrota; wytrzymalsza od drewnianej
   { id: 'stoneGate', category: 'defense', name: 'b.stoneGate', w: 1, h: 1, cost: { stone: 25, wood: 10 }, hp: 1600, gate: true, buildable: true },
+  // Kopalnia (jak w Gothic): jedna sztolnia wbita w zbocze gór — stawiana tylko tyłem do skały. Z jednej kopalni idzie
+  // kamień, żelazo i (rzadko) złoto; co wyjdzie z danego kursu, losuje symulacja (workers.ts, MINE_YIELDS).
+  // Tania w budowie, ale załoga rośnie z wioską (1 górnik na 4 mieszkańców, do 8) — to ludzie są kosztem.
+  // Wytrzymała, ale wróg może ją zburzyć; otocz ją murem i wieżami jak osobny obóz. Zastępuje kamieniołom i kopalnię żelaza.
+  {
+    id: 'oremine', category: 'industry', name: 'b.oremine', w: 3, h: 3, cost: { wood: 30 }, hp: 360, buildable: true,
+    workView: 'inside', needsRock: true, crew: { per: 4, max: 8 },
+    production: { output: { res: 'stone', amount: 6 }, site: 'home', workTicks: 90 },
+  },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */

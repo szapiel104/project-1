@@ -1,4 +1,4 @@
-import { buildingById } from '../state';
+import { buildingById, dropWorker } from '../state';
 import { high, isBrave, peasantWeapon } from './army';
 import { clockAt, hourStarts } from '../clock';
 import { WOLF, findPath, walkable } from '../path';
@@ -93,8 +93,7 @@ export function wolfSystem(g: GameState): void {
             // trzecie ugryzienie zabija; ciało zostaje, zabierze je grabarz albo wolny chłop
             const u = g.units[ui]!;
             g.corpses.push({ id: u.id, owner: u.owner, kind: -1, px: u.px, py: u.py, at: g.tick, taken: false });
-            if (u.job) { const b = buildingById(g, u.job); if (b) b.worker = 0; }
-            for (const b of g.buildings) if (b.worker === u.id) b.worker = 0;
+            dropWorker(g, u.id);
             g.units.splice(ui, 1);
             const p = g.players[u.owner];
             if (p) { p.stats.lost++; p.wolfKills = (p.wolfKills ?? 0) + 1; }

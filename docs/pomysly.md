@@ -42,7 +42,9 @@ Zrobione 12.10: palisada, brama (otwieranie, sama się zamyka), wieża, wilki (p
 Czeka:
 - Kości przy cmentarzu, więcej brudu (śmieci, gnój przy chlewie)
 - Bandyci z obozów w lesie napadający drwali; obozy wroga zamiast samych fal
-- Kopalnia rudy z prawdziwego zdarzenia (szyb, wózki)
+- **Kopalnia jak w Gothic (17.10, partia 1 zrobiona — mechanika):** jedna „Kopalnia” 3×3 stawiana tyłem do skały (pola gór za budynkiem), zastępuje kamieniołom i kopalnię żelaza (stare zostały tylko dla zapisów). Załoga 1 + 1 na 4 mieszkańców (do 8), kopią w środku, z kursu wychodzi kamień 58% / żelazo 34% / ruda 8% (nowy surowiec „ruda” do składu), wszystko noszą do wioski. 360 hp, wróg poluje na górników. Bot stawia ją pod górami.
+  - Partia 2 (do zrobienia): sztolnia z Blendera — portal w zboczu, skalny garb w polach gór, korytarz z przodkami, stemplami, wózkiem i lampami; miejsca pracy w modelu (klucz `spots`), górnicy kopią przy ścianach; wejście w spacerze z kolizjami; teren pod górą nie spłaszczany (`view.level`), pola gór w obrysie sztolni dostępne w spacerze; wnętrze rysowane tylko z bliska (LOD).
+  - Partia 3 (do zrobienia): obóz przy kopalni — załoga nocuje w obozowisku/baraku obok zamiast wracać do wioski (bez noclegu wraca); eskorta: dwóch strażników odprowadza górników z urobkiem do wioski; co zrobić z rudą (huta → złoto?).
 - Dźwięki: zrobione 16.10 z nagrań — ptaki, świerszcze, odgłosy wsi, kury, dzwon w południe, róg alarmu, grzmot (docs/zasoby.md). Czeka: kogut o świcie i prawdziwy puszczyk (brak nagrania na wolnej licencji pod ręką), trzask ognisk, gwar, wiwaty
 - Wojsko: zbrojny (łucznik, łuczarz, taran, kamienne mury, drabiny i kamienna wieża już są)
 - Wnętrza pozostałych budynków w stylu nowej chaty

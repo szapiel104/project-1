@@ -1380,6 +1380,8 @@ const BUILDERS: Record<string, Builder> = {
     const p = (BAKERY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
+  // TYMCZASOWO: kopalnia pod górami używa bryły starej kopalni żelaza, dopóki nie powstanie sztolnia z Blendera (następna partia)
+  oremine(g, team, flag) { BUILDERS.mine!(g, team, flag); }
 };
 
 const teamMats = new Map<number, THREE.MeshStandardMaterial>();

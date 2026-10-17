@@ -1,4 +1,4 @@
-import { unitById } from '../state';
+import { releaseCrew } from '../state';
 import { BUILDINGS, footprint, isTower, type BuildingDef } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
@@ -9,7 +9,7 @@ import { FP, inForecourt, Phase, playerKeep, type Building, type GameState } fro
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.needRock' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
@@ -38,6 +38,27 @@ export function findDoor(g: GameState, x: number, y: number, w: number, h: numbe
       if (g.occupancy[t] === 0 && TERRAIN[g.map.tiles[t] as Terrain].walkable) return t;
     }
   return -1;
+}
+
+/** Pola tuż za tylnym bokiem działki (naprzeciw wejścia): tam kopalnia wchodzi w zbocze */
+export function backTiles(g: GameState, x: number, y: number, w: number, h: number, rot = 0): number[] {
+  const { width, height } = g.map;
+  const back = (rot + 2) % 4; // 0 = wejście od +y, więc tył to -y; dalej zgodnie z findDoor
+  const cells: [number, number][] = back === 0 ? Array.from({ length: w }, (_, i) => [x + i, y + h])
+    : back === 1 ? Array.from({ length: h }, (_, i) => [x + w, y + i])
+    : back === 2 ? Array.from({ length: w }, (_, i) => [x + i, y - 1])
+    : Array.from({ length: h }, (_, i) => [x - 1, y + i]);
+  return cells.filter(([tx, ty]) => tx >= 0 && ty >= 0 && tx < width && ty < height).map(([tx, ty]) => ty * width + tx);
+}
+
+/** Czy za budynkiem jest skała: większość pól przy tylnym boku to góry (krawędź masywu bywa poszarpana, więc nie wymagamy wszystkich) */
+export function rockBehind(g: GameState, x: number, y: number, w: number, h: number, rot = 0): boolean {
+  const back = backTiles(g, x, y, w, h, rot);
+  const span = rot % 2 ? h : w;
+  if (back.length < span) return false; // tył wystaje poza mapę
+  let rock = 0;
+  for (const t of back) if (g.map.tiles[t] === Terrain.Mountain) rock++;
+  return rock * 2 > span;
 }
 
 let seen = new Uint8Array(0), before = new Uint8Array(0), beforeKey = '';
@@ -152,7 +173,7 @@ export function tileBuildable(g: GameState, player: number, x: number, y: number
 
 export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true, rot = 0): PlaceError | null {
   const def = BUILDINGS[type];
-  if (!def || !def.buildable || !g.players[player]) return 'place.unknown';
+  if (!def || !def.buildable || def.legacy || !g.players[player]) return 'place.unknown';
   const { w: fw, h: fh } = footprint(def, rot);
   const { width, height } = g.map;
   if (x < 0 || y < 0 || x + fw > width || y + fh > height) return 'place.outside';
@@ -196,6 +217,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
         if (g.map.tiles[ty * width + tx] === def.needsTerrain.terrain) { found = true; break; }
     if (!found) return 'place.needTerrain';
   }
+  if (def.needsRock && !rockBehind(g, x, y, fw, fh, rot)) return 'place.needRock';
   if (!def.wall && !def.gate && findDoor(g, x, y, fw, fh, rot) < 0) return 'place.noAccess';
   if (enemyNear(g, player, x, y, fw, fh)) return 'place.enemy';
   if (!over && wouldBlock(g, player, x, y, fw, fh, rot, !def.wall && !def.gate, !!def.gate || def.id === 'ladder')) return 'place.blocks';
@@ -281,7 +303,7 @@ export function ruin(g: GameState, b: Building): void {
   startSite(b, 0.5); // odbudowa ruiny: część materiału leży w gruzie
   b.hp = maxHp(b.type);
   b.ruined = true;
-  if (b.worker) { const u = unitById(g, b.worker); if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; } b.worker = 0; }
+  releaseCrew(g, b);
   if (def.wall || def.gate) {
     const fp = footprint(def, b.rot);
     for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { g.occupancy[y * g.map.width + x] = 0; g.gates[y * g.map.width + x] = 0; g.walls[y * g.map.width + x] = 0; }

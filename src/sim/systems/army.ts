@@ -1,4 +1,4 @@
-import { buildingById, unitById } from '../state';
+import { buildingById, unitById, dropWorker } from '../state';
 import { WALL_TOP } from '../../data/keep';
 import { buildingIndex } from '../../data/buildings';
 import { type ResourceId, resIndex } from '../../data/resources';
@@ -1132,7 +1132,7 @@ function peasantReacts(g: GameState, u: Unit, attacker: Soldier, ranged: boolean
 function killPeasant(g: GameState, u: Unit, killer: number): void {
   const i = g.units.indexOf(u);
   if (i < 0) return;
-  for (const b of g.buildings) if (b.worker === u.id) b.worker = 0;
+  dropWorker(g, u.id);
   g.units.splice(i, 1);
   g.corpses.push({ id: u.id, owner: u.owner, kind: -1, px: u.px, py: u.py, at: g.tick, taken: false });
   const p = g.players[u.owner];

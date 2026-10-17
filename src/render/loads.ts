@@ -104,6 +104,8 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
     ];
   }).concat([-0.1, 0.12].map((z) => tint(new THREE.TorusGeometry(0.026, 0.006, 4, 10).translate(0, 0, z).rotateX(-0.28).translate(0, 0.01, 0), 0x6b5a3c))),
   bow: () => [0, 1].flatMap((k) => [tint(new THREE.TorusGeometry(0.18, 0.012, 4, 10, Math.PI * 0.9).rotateX(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.05), 0x7a5232), tint(new THREE.CylinderGeometry(0.004, 0.004, 0.34, 3).rotateZ(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.03), 0xe8e0c8)]),
+  // ruda z kopalni: kosz pełen ciemnych brył z jaśniejszymi, złotawymi żyłkami
+  ore: () => [basket(), ...[[-0.05, 0.1, -0.03, 0x5a4a3a], [0.05, 0.1, 0.03, 0x6a5540], [0, 0.14, -0.01, 0xc29a3e], [0.02, 0.13, 0.05, 0x4e4238], [-0.03, 0.15, 0.04, 0xb08a3a]].map(([x, y, z, c]) => ball(0.045, x as number, y as number, z as number, c as number, 1.1, 0.8, 0.9))],
   ale: () => [tint(new THREE.CylinderGeometry(0.12, 0.12, 0.26, 10).rotateZ(Math.PI / 2).translate(0, 0.04, 0), 0x8a5a2b), ...[-0.1, 0, 0.1].map((x) => tint(new THREE.CylinderGeometry(0.128, 0.128, 0.02, 10).rotateZ(Math.PI / 2).translate(x, 0.04, 0), 0x4a4038))],
   // sztaby żelaza jak w składzie: trapezowe odlewy (szersze u dołu), dwie na spodzie i jedna na wierzchu, w poprzek rąk
   iron: () => {

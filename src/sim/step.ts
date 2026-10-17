@@ -1,4 +1,4 @@
-import { buildingById, Phase, unitById } from './state';
+import { buildingById, releaseCrew } from './state';
 import { BUILDINGS } from '../data/buildings';
 import { buildingIndex } from '../data/buildings';
 import { RULES } from '../data/rules';
@@ -109,12 +109,8 @@ function apply(g: GameState, c: Command): void {
       const def = BUILDINGS[b.type]!;
       if (!(def.production || def.staff) || def.id === 'keep') break;
       b.off = !c.on || undefined;
-      if (b.off && b.worker) {
-        // pracownik odkłada robotę (ładunek w rękach przepada, jak przy zburzeniu) i jest wolny dla innego budynku
-        const u = unitById(g, b.worker);
-        if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.target = 0; }
-        b.worker = 0;
-      }
+      // pracownik (w kopalni: cała załoga) odkłada robotę (ładunek w rękach przepada, jak przy zburzeniu) i jest wolny dla innego budynku
+      if (b.off && b.worker) releaseCrew(g, b);
       break;
     }
     case 'signal':

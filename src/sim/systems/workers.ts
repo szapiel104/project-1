@@ -13,6 +13,24 @@ export const PAVE_TICKS = 40;
 const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
 const TAVERN = BUILDINGS.findIndex((b) => b.id === 'tavern');
 /** Wieczór i sen: tych ludzi nikt nie wyciąga do roboty (inaczej wstawaliby w nocy i kładli się od nowa) */
+const OREMINE = BUILDINGS.findIndex((b) => b.id === 'oremine');
+/**
+ * Co wychodzi z jednego kursu w kopalni (losowane z ziarna meczu, więc u wszystkich graczy tak samo): wagi i ilości.
+ * Ruda (z żyłą złota) jest naprawdę rzadka. Wszystko niosą górnicy do składu. Suma wag = 100.
+ */
+export const MINE_YIELDS: { res: 'stone' | 'iron' | 'ore'; weight: number; amount: number }[] = [
+  { res: 'stone', weight: 58, amount: 6 },
+  { res: 'iron', weight: 34, amount: 4 },
+  { res: 'ore', weight: 8, amount: 2 },
+];
+/** Ilu górników powinna mieć kopalnia przy danej liczbie mieszkańców: 1 + po jednym na każde `per`, najwyżej `max` */
+export function crewWanted(def: { crew?: { per: number; max: number } }, pop: number): number {
+  if (!def.crew) return 1;
+  return Math.max(1, Math.min(def.crew.max, 1 + Math.floor(pop / def.crew.per)));
+}
+/** Wszyscy pracujący w budynku: brygadzista i reszta załogi */
+export const crewOf = (b: Building): number[] => (b.worker ? [b.worker, ...(b.crew ?? [])] : [...(b.crew ?? [])]);
+
 const OFF_DUTY = new Set<Phase>([Phase.ToEvening, Phase.Evening, Phase.ToSleep, Phase.Sleeping]);
 /** Zajęcia, które chłop z pustymi rękami rzuca wieczorem (resztę kończy: niesie ładunek do składu, dokańcza wyrób) */
 const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest]);
@@ -318,7 +336,8 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
         p.stats.gathered += put;
         u.carryAmt -= put;
         // licznik warsztatu: towar z własnej produkcji (okno budynku pokazuje, ile zrobił i ile przepadło)
-        const shop = u.job && prod && resIndex(prod.output.res) === u.carryRes ? buildingById(g, u.job) : undefined;
+        const shopB = u.job ? buildingById(g, u.job) : undefined;
+        const shop = shopB && prod && (resIndex(prod.output.res) === u.carryRes || shopB.type === OREMINE) ? shopB : undefined;
         if (shop && put) shop.made = (shop.made ?? 0) + put;
         // skład pełny: chwilę czeka, a gdy dalej nie ma miejsca, zostawia ładunek i wraca do pracy (nie stoi w nieskończoność)
         if (u.carryAmt > 0 && ++u.timer < 6) { u.wait = RETRY_TICKS; break; }
@@ -433,6 +452,28 @@ export function workerSystem(g: GameState): void {
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0;
     b.worker = u.id;
   }
+  // kopalnia: załoga rośnie z wioską (więcej mieszkańców = więcej ludzi w sztolni) i maleje, gdy wioska się kurczy
+  if (OREMINE >= 0 && g.tick % 10 === 0) {
+    const pop = new Map<number, number>();
+    for (const u of g.units) pop.set(u.owner, (pop.get(u.owner) ?? 0) + 1);
+    for (const b of g.buildings) {
+      if (b.type !== OREMINE || b.build || b.off || !b.worker) continue;
+      const def = BUILDINGS[b.type]!;
+      const want = crewWanted(def, pop.get(b.owner) ?? 0);
+      b.crew ??= [];
+      // załoga bez brygadzisty nie zostaje (worker zwalnia się np. przy śmierci) — awans pierwszego z załogi robi dropWorker
+      while (b.crew.length + 1 > want) {
+        const id = b.crew.pop()!;
+        const u = g.units.find((x) => x.id === id);
+        if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.target = 0; }
+      }
+      if (b.crew.length + 1 < want) {
+        const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0);
+        if (u) { u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0; b.crew.push(u.id); }
+      }
+      if (!b.crew.length) delete b.crew;
+    }
+  }
 
   const part = dayPart(g.tick);
   // o trzeciej w nocy liczymy, kto śpi pod gołym niebem; w deszczu marzną (tracą trochę zdrowia, ale nie umierają)
@@ -484,6 +525,13 @@ export function workerSystem(g: GameState): void {
       }
       u.carryRes = resIndex(prod.output.res);
       u.carryAmt = prod.output.amount;
+      if (job && job.type === OREMINE) {
+        // kopalnia: z jednego kursu wychodzi kamień, żelazo albo (rzadko) złoto — losowane z ziarna meczu
+        let roll = g.rng.int(100);
+        let pick = MINE_YIELDS[0]!;
+        for (const y of MINE_YIELDS) { pick = y; if ((roll -= y.weight) < 0) break; }
+        u.carryRes = resIndex(pick.res); u.carryAmt = pick.amount;
+      }
       // z lasu drwal niesie kłodę najpierw do chaty, tam robi deski i dopiero je odnosi do składu
       if (u.phase === Phase.WorkingSite && prod.processTicks) { u.phase = Phase.ToHome; u.batches = prod.batches ?? 1; }
       else { u.phase = Phase.ToStore; if (u.batches > 0) u.batches--; }

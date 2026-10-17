@@ -42,7 +42,8 @@ const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
 /** Zapis z gry, w której było mniej rodzajów budynków (nowe dopisujemy tylko na końcu listy), nadal się wczyta */
 function shapeOk(s: string): boolean {
   const [b, r] = String(s).split('/').map(Number);
-  return r === RESOURCES.length && Number.isInteger(b) && b! > 0 && b! <= BUILDINGS.length;
+  // nowe budynki i surowce dopisujemy na końcu list, więc starszy zapis (krótsze listy) dalej się wczytuje
+  return Number.isInteger(r) && r! > 0 && r! <= RESOURCES.length && Number.isInteger(b) && b! > 0 && b! <= BUILDINGS.length;
 }
 
 /** Zapis gry jako zwykłe dane (JSON). Mapy nie zapisujemy: odtwarza się z ziarna. */
@@ -72,7 +73,7 @@ export function deserialize(d: SaveData): GameState | null {
     const size = map.width * map.height;
     const g: GameState = {
       tick: d.tick, map, rng: new Rng(d.rng, true), nextId: d.nextId,
-      players: d.players.map((p) => ({ ...p, res: Int32Array.from(p.res), stats: { ...p.stats } })),
+      players: d.players.map((p) => { const res = new Int32Array(RESOURCES.length); res.set(p.res.slice(0, RESOURCES.length)); return { ...p, res, stats: { ...p.stats } }; }),
       buildings: d.buildings.map((b) => ({ ...b })),
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
       soldiers: (d.soldiers ?? []).map((x) => ({ ...x, path: [...x.path] })),

@@ -82,8 +82,10 @@ export interface Building {
   rot: number;
   /** Pole, z którego chłopi wchodzą do budynku */
   door: number;
-  /** Id pracującego chłopa albo 0 */
+  /** Id pracującego chłopa albo 0 (w kopalni: brygadzista, pierwszy z załogi) */
   worker: number;
+  /** Kopalnia: reszta załogi (id górników poza `worker`); liczba zależy od wielkości wioski */
+  crew?: number[];
   /** Czy pochodnia przy budynku jest zapalona (zapalają ją ludzie o zmierzchu, gaśnie o świcie) */
   lit: boolean;
   /** Wytrzymałość; spada od ciosów wroga, naprawia ją inżynier */
@@ -640,7 +642,7 @@ export function stateHash(g: GameState): number {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
@@ -673,5 +675,27 @@ function lookup<T extends { id: number }>(cache: WeakMap<GameState, IdIndex<T>>,
   // (splice zmienia długość, splice + push — ostatni element, więc oba unieważniają indeks)
   return id === undefined ? undefined : ix.map.get(id);
 }
+/**
+ * Chłop odchodzi z pracy (śmierć, odejście): zdejmuje go z `worker` i z załogi każdego budynku.
+ * Gdy brygadzista kopalni odpada, a załoga zostaje, pierwszy z załogi zostaje brygadzistą (kopalnia dalej działa).
+ */
+export function dropWorker(g: GameState, unitId: number): void {
+  for (const b of g.buildings) {
+    if (b.crew) { const i = b.crew.indexOf(unitId); if (i >= 0) b.crew.splice(i, 1); }
+    if (b.worker === unitId) b.worker = b.crew?.length ? b.crew.shift()! : 0;
+    if (b.crew && !b.crew.length) delete b.crew;
+  }
+}
+
+/** Cała załoga budynku (brygadzista i reszta) zwalnia się i jest wolna dla innej roboty; ładunki w rękach przepadają */
+export function releaseCrew(g: GameState, b: Building): void {
+  for (const id of [b.worker, ...(b.crew ?? [])]) {
+    if (!id) continue;
+    const u = unitById(g, id);
+    if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.target = 0; }
+  }
+  b.worker = 0; delete b.crew;
+}
+
 export const buildingById = (g: GameState, id: number | undefined): Building | undefined => lookup(bIdx, g, g.buildings, id);
 export const unitById = (g: GameState, id: number | undefined): Unit | undefined => lookup(uIdx, g, g.units, id);

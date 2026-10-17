@@ -19,7 +19,7 @@
 - **Zasady gospodarki** (racje, podatki, tempo) w `data/rules.ts`. Balans zmienia się tam, nie w systemach.
 - **Budowa natychmiastowa**, jak w Twierdzy. Koszt znika od razu.
 - **Zasoby są wspólne dla gracza**, nie leżą fizycznie w konkretnym składzie. Skład i spichlerz to bliższe punkty odbioru; twierdza przyjmuje wszystko.
-- **Lasy i złoża się nie wyczerpują.** Do zmiany, gdy będzie potrzebne dla balansu.
+- **Lasy się wyczerpują (ścięte drzewo = polana), złoża już nie mają znaczenia:** kamień, żelazo i rudę daje jedna kopalnia pod górami (17.10), stare pola złóż zostały na mapie tylko jako wygląd; dawne wyczerpywanie złóż (`depositYields`) dotyczy już tylko starych kamieniołomów z zapisów.
 - **Droga:** Dijkstra po siatce, 8 kierunków, remisy rozstrzyga numer pola. Wystarcza na dziesiątki chłopów; przy wojsku (etap 4) dojdą pola przepływu albo wspólne ścieżki dla grup.
 - **Góry na krańcach** to osobny typ terenu (nie do przejścia). Kamera nie wyjeżdża poza grywalny środek, a za mapą stoją ozdobne szczyty we mgle.
 
