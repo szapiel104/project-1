@@ -3046,13 +3046,31 @@ export class GameRenderer {
     const t = this.tmp;
     const F = this.crowFly.length;
     const flyN = new Array<number>(F).fill(0);
-    let n = 0;
+    let n = 0, total = 0;
+    // Kruków ma być garść na całe pobojowisko, nie 1–3 na każde ciało: ciała liczymy w polach 10×10,
+    // pole dostaje 2 kruki + 1 na każde kolejne 8 ciał (najwyżej 6), a na całą mapę najwyżej 18.
+    const CELL = 10 * FP;
+    const bodies = new Map<number, number>();
     for (const body of g.corpses) {
-      if (n >= 250) break;
+      if (body.taken || g.tick - body.at < 150) continue;
+      const key = Math.floor(body.px / CELL) * 4096 + Math.floor(body.py / CELL);
+      bodies.set(key, (bodies.get(key) ?? 0) + 1);
+    }
+    const used = new Map<number, number>();
+    for (const body of g.corpses) {
+      if (total >= 18) break;
       if (body.taken || g.tick - body.at < 150) continue; // przylatują chwilę po śmierci
+      const key = Math.floor(body.px / CELL) * 4096 + Math.floor(body.py / CELL);
+      const budget = Math.min(6, 2 + Math.floor(((bodies.get(key) ?? 1) - 1) / 8));
+      const had = used.get(key) ?? 0;
+      if (had >= budget) continue;
+      // nie każde ciało ma kruka: przy większej liczbie ciał w polu tylko co któreś (stałe dla danego ciała)
+      if ((bodies.get(key) ?? 1) > 3 && (body.id * 2654435761 >>> 0) % 3 !== 0) continue;
+      const count = Math.min(1 + (body.id % 2), budget - had, 18 - total);
+      used.set(key, had + count);
+      total += count;
       const near = g.units.some((u) => Math.abs(u.px - body.px) < 2.5 * FP && Math.abs(u.py - body.py) < 2.5 * FP)
         || g.soldiers.some((s) => Math.abs(s.px - body.px) < 2.5 * FP && Math.abs(s.py - body.py) < 2.5 * FP);
-      const count = 1 + (body.id % 3);
       const bx = body.px / FP, by = body.py / FP;
       for (let i = 0; i < count; i++) {
         if (near) {
