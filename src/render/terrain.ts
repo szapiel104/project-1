@@ -1728,18 +1728,26 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       for (let cy = Math.max(0, y - 3); cy <= Math.min(h, y + fh + 3); cy++)
         for (let cx = Math.max(0, x - 3); cx <= Math.min(w, x + fw + 3); cx++) {
           const d = Math.max(x - cx, cx - (x + fw), y - cy, cy - (y + fh), 0);
-          const k = d === 0 ? 1 : d === 1 ? 0.9 : d === 2 ? 0.55 : 0.2;
           const ci = cy * (w + 1) + cx, old = corners[ci]!;
+          // ziemia NIŻEJ niż plac (dół stoku): pierwsze dwa pierścienie podsypane mocniej — tam wystaje cokół, okap,
+          // ganek i kosze przy ścianie, a każda szczelina pod nimi wygląda jak budynek w powietrzu.
+          // Ziemia WYŻEJ (góra stoku) może zostać trochę wyżej: najwyżej lekko zasypie brzeg cokołu.
+          const below = old < y0;
+          const k = d === 0 ? 1 : d === 1 ? (below ? 1 : 0.9) : d === 2 ? (below ? 0.8 : 0.55) : below ? 0.35 : 0.2;
           if (old < 0 && d > 0) continue; // brzeg wody zostaje
           // narożnik przy górach POZA działką zostaje: zbocze masywu nie schodzi do poziomu działki (kopalnia stoi tyłem do skały).
           // Sama działka jest zawsze równa — inaczej zbocze wjeżdżało w grotę kopalni i zasłaniało ją od środka.
           if (d > 0 && rockCorner(cx, cy)) continue;
           // narożnik pod innym, już stojącym budynkiem: skarpa nowego go nie rusza (inaczej sąsiad zawisał w powietrzu albo się zapadał)
           // (także pierwszy pierścień skarpy: tam stoi okap, cokół albo brzeg kopca sąsiada)
-          if (d > 0 && lock[cy * (w + 1) + cx]) continue;
-          if (d === 0) lock[cy * (w + 1) + cx] = 1;
-          else if (d === 1) lock[cy * (w + 1) + cx] = 2;
-          const nv = old + (y0 - old) * k;
+          const held = lock[ci]!;
+          if (d > 0 && held) continue;
+          if (d === 0) lock[ci] = 1;
+          else if (d === 1) lock[ci] = 2;
+          let nv = old + (y0 - old) * k;
+          // wspólna krawędź z sąsiadem stojącym tuż obok (narożnik już pod nim albo pod jego okapem): wolno ją tylko
+          // podnieść, nigdy obniżyć — obniżenie odsłaniało szparę pod sąsiadem i ten „latał” (17.10.2026)
+          if (held && nv < old) nv = old;
           if (Math.abs(nv - old) < 0.002) continue;
           corners[ci] = nv; changed.push(ci);
           grass?.setHeight(ci, nv);
