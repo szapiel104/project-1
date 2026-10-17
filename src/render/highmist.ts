@@ -22,6 +22,8 @@ export interface HeightGrid {
   x0: number;
   z0: number;
   step: number;
+  /** Węzły na wodzie planszy (1 = jezioro, rzeka, bród): nad wodą opar gęstnieje */
+  wet?: Uint8Array;
 }
 
 export interface Atmosphere {
@@ -150,6 +152,41 @@ void main() {
   #include <fog_fragment>
 }`;
 
+const DRAPE_VERT = /* glsl */ `
+attribute float aV;
+varying float vV;
+varying vec3 vWP;
+#include <fog_pars_vertex>
+void main() {
+  vV = aV;
+  vec4 wp = modelMatrix * vec4(position, 1.0);
+  vWP = wp.xyz;
+  vec4 mvPosition = viewMatrix * wp;
+  gl_Position = projectionMatrix * mvPosition;
+  #include <fog_vertex>
+}`;
+
+const DRAPE_FRAG = /* glsl */ `
+uniform sampler2D noise;
+uniform float time, opacity;
+uniform vec3 col;
+varying float vV;
+varying vec3 vWP;
+#include <fog_pars_fragment>
+void main() {
+  vec2 p = vWP.xz;
+  float n1 = texture2D(noise, p / 34.0 + vec2(time * 0.0016, time * 0.0009)).r;
+  float n2 = texture2D(noise, vec2(p.y, -p.x) / 15.0 - vec2(time * 0.0011, -time * 0.0019)).g;
+  float n = n1 * 0.7 + n2 * 0.45;
+  float a = smoothstep(0.05, 0.75, vV) * smoothstep(0.22, 0.78, n + vV * 0.25);
+  // tuż przy kamerze czysto (widać, czym się gra), dalej doliny toną w oparze
+  a *= smoothstep(5.0, 24.0, distance(cameraPosition, vWP));
+  a *= opacity;
+  if (a < 0.003) discard;
+  gl_FragColor = vec4(col * (0.92 + n1 * 0.16), a);
+  #include <fog_fragment>
+}`;
+
 const PUFF_VERT = /* glsl */ `
 ${HMAP_GLSL}
 attribute vec4 aCenter; // x, y, z, rozmiar
@@ -173,7 +210,7 @@ void main() {
     float f = fract(time * 0.35 + aMove.w);
     center.y += f * 1.3;
     size *= 0.6 + f * 0.9;
-    a = sin(f * 3.14159) * 0.55;
+    a = sin(f * 3.14159) * 0.3;
   } else {
     center.y += sin(time * 0.13 + aMove.w * 2.0) * 0.6;
     a = smoothstep(aKind.x, aKind.x + 0.18, amount);
@@ -182,9 +219,9 @@ void main() {
   float camD = distance(cameraPosition, center);
   a *= smoothstep(size * 0.7 + 3.0, size * 1.6 + 9.0, camD);
   vA = a;
-  vec3 toCam = normalize(cameraPosition - center);
-  vec3 right = normalize(cross(vec3(0.0, 1.0, 0.0), toCam));
-  vec3 up = cross(toCam, right);
+  // osie ekranu kamery (nie „w stronę kamery” w świecie): z góry kłąb się nie kręci przy przesuwaniu widoku
+  vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
+  vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
   vec3 wp = center + (right * position.x + up * position.y) * size;
   vWP = wp;
   vec4 mvPosition = viewMatrix * vec4(wp, 1.0);
@@ -204,10 +241,10 @@ varying vec3 vWP;
 void main() {
   vec4 t = texture2D(map, vUv);
   // tam, gdzie kłąb wchodzi w zbocze, blednie: miękka linia zamiast twardego cięcia o skałę
-  float a = t.a * vA * smoothstep(-0.3, 1.8, vWP.y - terrainH(vWP.xz));
+  float a = t.a * vA * 0.62 * smoothstep(-0.3, 2.2, vWP.y - terrainH(vWP.xz));
   if (a < 0.004) discard;
   vec3 c = mix(shade, lit, t.r);
-  if (vKind > 0.5) c = mix(c, spray, 0.6);
+  if (vKind > 0.5) c = mix(c, spray, 0.35);
   gl_FragColor = vec4(c, a);
   #include <fog_fragment>
 }`;
@@ -227,7 +264,7 @@ export interface HighMist {
 interface Summit { x: number; z: number; h: number }
 
 /** Najwyższe wierzchołki (lokalne maksima, odsunięte od siebie) — tam przyczepiają się chmury */
-export function findSummits(g: HeightGrid, limit: number, minH: number, minSep: number): Summit[] {
+export function findSummits(g: HeightGrid, limit: number, minH: number, minSep: number, keepOut?: (x: number, z: number) => boolean): Summit[] {
   const out: Summit[] = [];
   const R = Math.max(2, Math.round(8 / g.step));
   const cand: Summit[] = [];
@@ -237,7 +274,8 @@ export function findSummits(g: HeightGrid, limit: number, minH: number, minSep: 
       if (h < minH) continue;
       let top = true;
       for (let dj = -R; dj <= R && top; dj += 2) for (let di = -R; di <= R; di += 2) if (g.data[(j + dj) * g.nx + i + di]! > h) { top = false; break; }
-      if (top) cand.push({ x: g.x0 + i * g.step, z: g.z0 + j * g.step, h });
+      const x = g.x0 + i * g.step, z = g.z0 + j * g.step;
+      if (top && !keepOut?.(x, z)) cand.push({ x, z, h });
     }
   cand.sort((a, b) => b.h - a.h);
   for (const c of cand) {
@@ -280,9 +318,9 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   }
   owned.push(frame);
   const LAYERS = [
-    { y: 1.6, thick: 1.6, op: 0.55, drift: new THREE.Vector2(0.0011, 0.0006) },
-    { y: 3.0, thick: 2.4, op: 0.4, drift: new THREE.Vector2(-0.0007, 0.0009) },
-    { y: 4.8, thick: 3.2, op: 0.28, drift: new THREE.Vector2(0.0005, -0.001) },
+    { y: 1.8, thick: 1.1, op: 0.8, drift: new THREE.Vector2(0.0011, 0.0006) },
+    { y: 3.3, thick: 1.8, op: 0.58, drift: new THREE.Vector2(-0.0007, 0.0009) },
+    { y: 5.2, thick: 2.6, op: 0.42, drift: new THREE.Vector2(0.0005, -0.001) },
   ];
   const layerMats: THREE.ShaderMaterial[] = [];
   const layerMeshes: THREE.Mesh[] = [];
@@ -307,8 +345,57 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
     group.add(cat(m, 'mgła w dolinach'));
   });
 
+  // --- opar na planszy: cienka, poszarpana pierzyna tuż nad ziemią, tylko w obniżeniach (dolina rzeki, niecki,
+  // nad jeziorami). „Dolinność” węzła = o ile leży niżej niż okolica (rozmyta wysokość w promieniu ok. 12 pól).
+  const bi0 = Math.max(0, Math.floor((board.cx - board.hw - g.x0) / g.step)), bi1 = Math.min(g.nx - 1, Math.ceil((board.cx + board.hw - g.x0) / g.step));
+  const bj0 = Math.max(0, Math.floor((board.cz - board.hh - g.z0) / g.step)), bj1 = Math.min(g.ny - 1, Math.ceil((board.cz + board.hh - g.z0) / g.step));
+  const BW = bi1 - bi0 + 1, BH = bj1 - bj0 + 1;
+  const hb = new Float32Array(BW * BH);
+  for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) hb[j * BW + i] = g.data[(j + bj0) * g.nx + i + bi0]!;
+  const boxBlur = (src: Float32Array, R: number): Float32Array => {
+    const tmp = new Float32Array(src.length), out = new Float32Array(src.length);
+    for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) { let a = 0, c = 0; for (let k = -R; k <= R; k++) { const ii = i + k; if (ii >= 0 && ii < BW) { a += src[j * BW + ii]!; c++; } } tmp[j * BW + i] = a / c; }
+    for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) { let a = 0, c = 0; for (let k = -R; k <= R; k++) { const jj = j + k; if (jj >= 0 && jj < BH) { a += tmp[jj * BW + i]!; c++; } } out[j * BW + i] = a / c; }
+    return out;
+  };
+  // góry nie wchodzą do średniej (inaczej każda łąka u ich stóp wyglądałaby na dolinę)
+  const capped = hb.map((v) => Math.min(v, 1.2));
+  const avg = boxBlur(boxBlur(capped, 3), 3);
+  let vall: Float32Array = new Float32Array(BW * BH);
+  for (let k = 0; k < vall.length; k++) {
+    const jj = Math.floor(k / BW), ii = k - jj * BW;
+    const wet = g.wet ? g.wet[(jj + bj0) * g.nx + ii + bi0]! : 0;
+    vall[k] = hb[k]! > 1.25 ? 0 : Math.min(1, Math.max(0, (avg[k]! - hb[k]!) / 0.35) + wet * 0.75);
+  }
+  vall = boxBlur(vall, 1);
+  const DP: number[] = [], DV: number[] = [], DI: number[] = [];
+  for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) {
+    DP.push(g.x0 + (i + bi0) * g.step, Math.max(hb[j * BW + i]!, -0.08) + 0.42, g.z0 + (j + bj0) * g.step);
+    DV.push(vall[j * BW + i]!);
+  }
+  for (let j = 0; j < BH - 1; j++) for (let i = 0; i < BW - 1; i++) {
+    const a = j * BW + i, b = a + 1, c = a + BW, d = c + 1;
+    if (Math.max(vall[a]!, vall[b]!, vall[c]!, vall[d]!) < 0.04) continue;
+    DI.push(a, c, b, b, c, d);
+  }
+  const drapeGeo = new THREE.BufferGeometry();
+  drapeGeo.setAttribute('position', new THREE.Float32BufferAttribute(DP, 3));
+  drapeGeo.setAttribute('aV', new THREE.Float32BufferAttribute(DV, 1));
+  drapeGeo.setIndex(DI);
+  drapeGeo.computeBoundingSphere();
+  const drapeMat = new THREE.ShaderMaterial({
+    uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { noise: { value: noise }, time: { value: 0 }, opacity: { value: 0 }, col: { value: new THREE.Color(0xc8ccc4) } }]),
+    vertexShader: DRAPE_VERT, fragmentShader: DRAPE_FRAG, transparent: true, depthWrite: false, side: THREE.DoubleSide, fog: true,
+  });
+  drapeMat.uniforms.noise!.value = noise;
+  const drape = new THREE.Mesh(drapeGeo, drapeMat);
+  drape.renderOrder = 2;
+  drape.frustumCulled = false;
+  if (DI.length) group.add(cat(drape, 'mgła w dolinach'));
+  owned.push(drapeGeo, drapeMat);
+
   // --- kłęby: chmury przy szczytach (i pył wodny pod wodospadami, dopisywany później)
-  const MAX = 220;
+  const MAX = 400;
   const centers = new Float32Array(MAX * 4), moves = new Float32Array(MAX * 4), kinds = new Float32Array(MAX * 2);
   let count = 0;
   const push = (x: number, y: number, z: number, size: number, orbit: number, ang: number, speed: number, phase: number, thr: number, kind: number): void => {
@@ -318,14 +405,17 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
     kinds.set([thr, kind], count * 2);
     count++;
   };
-  const summits = findSummits(g, 10, 9, 22);
+  // tylko dalekie masywy za mapą (min. 18 pól od brzegu planszy): góry na skraju planszy są za blisko kamery —
+  // płaski kłąb tuż obok widać od razu jako obrazek
+  const nearBoard = (x: number, z: number): boolean => Math.max(Math.abs(x - board.cx) - board.hw, Math.abs(z - board.cz) - board.hh) < 18;
+  const summits = findSummits(g, 10, 12, 24, nearBoard);
   for (const sm of summits) {
     const R = 4 + sm.h * 0.16;
-    const n = 9 + Math.floor(rnd() * 6);
+    const n = 16 + Math.floor(rnd() * 8);
     for (let k = 0; k < n; k++) {
       const ang = rnd() * Math.PI * 2, rr = R * (0.35 + rnd() * 0.75);
       const x = sm.x + Math.cos(ang) * rr, z = sm.z + Math.sin(ang) * rr;
-      const size = 3.5 + sm.h * 0.14 + rnd() * 3;
+      const size = 2.6 + sm.h * 0.09 + rnd() * 2.2;
       // na wysokości pod szczytem albo tuż nad zboczem: chmura „siedzi” na górze
       const y = Math.max(sm.h * (0.68 + rnd() * 0.26), sample(x, z) + size * 0.25);
       // próg pogody: część kłębów jest zawsze (lekka czapa), reszta dochodzi z zachmurzeniem i deszczem
@@ -372,7 +462,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
     update(time: number, a: Atmosphere) {
       const day = 1 - a.night;
       // opar w dolinach: zawsze lekko (surowy klimat), gęsto o świcie, w mgliste dni i w deszczu; o świcie wyżej
-      const dens = Math.min(1, 0.32 + a.mist * 0.6 + a.rain * 0.3 + a.night * 0.12);
+      const dens = Math.min(1, 0.5 + a.mist * 0.5 + a.rain * 0.3 + a.night * 0.12);
       const lift = a.mist * 1.4 + a.rain * 0.6;
       tone.copy(a.fog).lerp(white, 0.08 + day * 0.32 * (1 - a.rain * 0.5));
       layerMats.forEach((m, i) => {
@@ -383,6 +473,10 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
         (u.col!.value as THREE.Color).copy(tone);
         layerMeshes[i]!.visible = i < layersShown && u.opacity!.value > 0.004;
       });
+      const du = drapeMat.uniforms;
+      du.time!.value = time;
+      du.opacity!.value = Math.min(0.7, 0.3 + a.mist * 0.4 + a.rain * 0.18 + a.night * 0.12);
+      (du.col!.value as THREE.Color).copy(tone);
       const pu = puffMat.uniforms;
       pu.time!.value = time;
       pu.amount!.value = Math.min(1.2, 0.28 + a.cover * 0.7 + a.rain * 0.4 + a.mist * 0.25);

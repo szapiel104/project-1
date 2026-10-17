@@ -600,14 +600,28 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // Mgła w dolinach, chmury przy szczytach, strumienie i wodospady z gór (bez trybu testowego: tam teren jest płaski)
   if (!TEST) {
     const anyH = (X: number, Y: number): number => (X >= 0 && Y >= 0 && X <= w && Y <= h ? heightAt(X, Y) : outerH(X, Y));
+    // wysokość dokładnie taka, jak na narysowanej siatce (trójkąty dzielone przekątną (1,0)–(0,1)), a nie dwuliniowa:
+    // na stromym zboczu różnica sięga pół metra i strumień chowałby się pod skałą
+    const cornerAny = (X: number, Y: number): number => (X >= 0 && Y >= 0 && X <= w && Y <= h ? corner(X, Y) : outerH(X, Y));
+    const meshH = (fx: number, fy: number): number => {
+      const ix = Math.floor(fx), iy = Math.floor(fy), tx = fx - ix, ty = fy - iy;
+      if (tx + ty <= 1) { const a = cornerAny(ix, iy); return a + (cornerAny(ix + 1, iy) - a) * tx + (cornerAny(ix, iy + 1) - a) * ty; }
+      const d = cornerAny(ix + 1, iy + 1);
+      return d + (cornerAny(ix, iy + 1) - d) * (1 - tx) + (cornerAny(ix + 1, iy) - d) * (1 - ty);
+    };
     const STEP = 2, x0 = -D, z0 = -D, nx = Math.floor((w + 2 * D) / STEP) + 1, ny = Math.floor((h + 2 * D) / STEP) + 1;
     const data = new Float32Array(nx * ny);
-    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) data[j * nx + i] = anyH(x0 + i * STEP, z0 + j * STEP);
-    mistFx = buildHighMist({ data, nx, ny, x0: x0 + ox, z0: z0 + oz, step: STEP }, { cx: ox + w / 2, cz: oz + h / 2, hw: w / 2, hh: h / 2 }, map.seed);
+    const wet = new Uint8Array(nx * ny);
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const X = x0 + i * STEP, Y = z0 + j * STEP;
+      data[j * nx + i] = anyH(X, Y);
+      if (X >= 0 && Y >= 0 && X < w && Y < h) { const t = map.tiles[Y * w + X]; wet[j * nx + i] = t === Terrain.Water || t === Terrain.Ford ? 1 : 0; }
+    }
+    mistFx = buildHighMist({ data, nx, ny, x0: x0 + ox, z0: z0 + oz, step: STEP, wet }, { cx: ox + w / 2, cz: oz + h / 2, hw: w / 2, hh: h / 2 }, map.seed);
     group.add(mistFx.group);
     const tileOf = (x: number, y: number): Terrain => map.tiles[y * w + x] as Terrain;
     streams = buildStreams({
-      height: anyH,
+      height: meshH,
       rock: (x, y) => x < 0 || y < 0 || x >= w || y >= h || tileOf(x, y) === Terrain.Mountain,
       water: (x, y) => tileOf(x, y) === Terrain.Water || tileOf(x, y) === Terrain.Ford,
       w, h, ox, oz, seed: map.seed,

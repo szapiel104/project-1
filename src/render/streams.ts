@@ -102,21 +102,28 @@ function smooth(pts: Pt[], step: number): Pt[] {
 export function pickSources(S: StreamSampler, want: number): Pt[][] {
   let s = (S.seed ^ 0x7f4a7c15) >>> 0;
   const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-  const found: Pt[][] = [];
-  const heads: Pt[] = [];
-  for (let tries = 0; tries < 900 && found.length < want; tries++) {
+  // najpierw zbieramy wiele dróg, potem bierzemy te z największym spadkiem (długie, wysokie wodospady), odsunięte od siebie
+  const cands: { path: Pt[]; drop: number; x: number; y: number }[] = [];
+  for (let tries = 0; tries < 1400; tries++) {
     const x = Math.floor(rnd() * S.w), y = Math.floor(rnd() * S.h);
     if (!S.rock(x, y)) continue;
     const hh = S.height(x + 0.5, y + 0.5);
     if (hh < 5) continue;
-    if (heads.some((p) => Math.hypot(p.x - x, p.y - y) < 34)) continue;
     const path = traceStream(S, x + 0.5, y + 0.5);
     if (!path) continue;
     // musi zejść na planszę (do stóp gór albo do wody), żeby gracz go widział
     const end = path[path.length - 1]!;
     if (end.x < 0 || end.y < 0 || end.x >= S.w || end.y >= S.h) continue;
-    heads.push({ x, y });
-    found.push(path);
+    cands.push({ path, drop: hh - S.height(end.x, end.y), x: end.x, y: end.y });
+  }
+  cands.sort((p, q) => q.drop - p.drop);
+  const found: Pt[][] = [];
+  const ends: Pt[] = [];
+  for (const c of cands) {
+    if (found.length >= want) break;
+    if (ends.some((p) => Math.hypot(p.x - c.x, p.y - c.y) < 30)) continue;
+    ends.push({ x: c.x, y: c.y });
+    found.push(c.path);
   }
   return found;
 }
@@ -151,7 +158,7 @@ varying float vEnd;
 varying vec3 vWP;
 #include <fog_pars_fragment>
 void main() {
-  float fall = smoothstep(0.55, 1.25, vSlope);
+  float fall = smoothstep(0.45, 1.0, vSlope);
   // woda płynie wzdłuż v; na wodospadzie kilka razy szybciej
   float speed = 0.55 + fall * 2.6 + vSlope * 0.4;
   float n1 = texture2D(noise, vec2(vUv.x * 0.7, vUv.y * 0.55 - time * speed)).r;
@@ -178,7 +185,7 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
   const mat = new THREE.ShaderMaterial({
     uniforms: THREE.UniformsUtils.merge([THREE.UniformsLib.fog, { noise: { value: noise }, time: { value: 0 }, sky: { value: new THREE.Color(0x8a9aa6) } }]),
     vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, fog: true,
-    polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4,
   });
   mat.uniforms.noise!.value = noise;
   const meshes: { mesh: THREE.Mesh; tiles: Set<number> }[] = [];
@@ -189,7 +196,7 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
     const n = pts.length;
     const P: number[] = [], UV: number[] = [], SL: number[] = [], ED: number[] = [], EN: number[] = [], I: number[] = [];
     const tiles = new Set<number>();
-    let along = 0, inFall = false;
+    let along = 0, fallLen = 0;
     for (let i = 0; i < n; i++) {
       const p = pts[i]!, a = pts[Math.max(0, i - 1)]!, b = pts[Math.min(n - 1, i + 1)]!;
       let tx = b.x - a.x, ty = b.y - a.y;
@@ -199,7 +206,7 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
       const slope = Math.abs(H(a.x, a.y) - H(b.x, b.y)) / horiz;
       const k = i / (n - 1);
       // strumień rośnie z biegiem; wodospad węższy i zwarty
-      const width = (0.16 + k * 0.32) * (slope > 1.1 ? 0.8 : 1);
+      const width = 0.32 + k * 0.38 + Math.min(slope, 2.5) * 0.08;
       const hc = H(p.x, p.y);
       // normalna terenu: woda leży tuż nad zboczem także na stromej ścianie (pionowe podniesienie by ją tam schowało)
       const e = 0.35;
@@ -209,8 +216,8 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
       for (const side of [-1, 1]) {
         const ex = p.x - ty * width * side, ey = p.y + tx * width * side;
         // brzeg w korycie: nie wyżej niż środek (inaczej woda wisi nad grzbietem), nie niżej niż zbocze pod nim
-        const he = Math.min(H(ex, ey), hc + 0.04);
-        const lift = 0.06 + slope * 0.02;
+        const he = Math.min(H(ex, ey), hc + 0.08);
+        const lift = 0.1 + Math.min(slope, 3) * 0.05;
         P.push(ex + S.ox + nX * lift, he + nY * lift, ey + S.oz + nZ * lift);
         UV.push(side * 0.5 + 0.5, along);
         SL.push(slope); ED.push(side);
@@ -220,8 +227,9 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
       tiles.add(Math.floor(p.y) * S.w + Math.floor(p.x));
       if (i > 0) along += Math.hypot(p.x - a.x, p.y - a.y) * 0.5;
       // koniec stromego odcinka = dół wodospadu: tam pył wodny
-      if (slope > 1.1) inFall = true;
-      else if (inFall && slope < 0.6) { inFall = false; sprays.push(new THREE.Vector3(p.x + S.ox, hc + 0.3, p.y + S.oz)); }
+      // (tylko pod prawdziwym wodospadem: kilka stromych kroków z rzędu, nie pod jednym progiem)
+      if (slope > 1.1) fallLen++;
+      else if (slope < 0.6) { if (fallLen >= 4) sprays.push(new THREE.Vector3(p.x + S.ox, hc + 0.3, p.y + S.oz)); fallLen = 0; }
       if (i < n - 1) { const q = i * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
     }
     const geo = new THREE.BufferGeometry();
