@@ -1388,8 +1388,17 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const builtOn = new Uint8Array(w * h);
   let roadsNow: Uint8Array | null = null;
   const regrass = (t: number): void => { if (grass) grass.setDensity(t, builtOn[t] ? 0 : roadsNow?.[t] ? (roadsNow[t] === 1 ? 0 : 0) : grassBase[t]!); };
+  let roadMats: THREE.Material[] | null = null;
+  // wyrównanie terenu pod budynek po ułożeniu drogi (np. wczytanie zapisu: drogi rysują się przed budynkami)
+  // zmienia wysokości narożników — drogę trzeba wtedy przeliczyć, inaczej zostaje pod nowym terenem i trawą
+  let roadRefresh = false;
+  const refreshRoadsSoon = (): void => {
+    if (roadRefresh || !roadsNow || !roadMats) return;
+    roadRefresh = true;
+    queueMicrotask(() => { roadRefresh = false; if (roadsNow && roadMats) setRoads(roadsNow, roadMats); });
+  };
   const setRoads = (roads: Uint8Array, materials: THREE.Material[]): void => {
-    roadsNow = roads;
+    roadsNow = roads; roadMats = materials;
     if (grass) for (let t = 0; t < w * h; t++) regrass(t);
     for (const old of roadMeshes) { group.remove(old); old.geometry.dispose(); }
     roadMeshes.length = 0;
@@ -1753,6 +1762,16 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           grass?.setHeight(ci, nv);
         }
       if (!changed.length) return;
+      // droga dotyka zmienionego narożnika: przelicz ją na nowej wysokości (raz na partię wyrównań)
+      if (roadsNow) {
+        const rn = roadsNow;
+        const nearRoad = changed.some((ci) => {
+          const cx = ci % (w + 1), cy = (ci - cx) / (w + 1);
+          for (let ty = cy - 1; ty <= cy; ty++) for (let tx = cx - 1; tx <= cx; tx++) if (tx >= 0 && ty >= 0 && tx < w && ty < h && rn[ty * w + tx]) return true;
+          return false;
+        });
+        if (nearRoad) refreshRoadsSoon();
+      }
       const SLOT_OF: [number, number][] = [[0, 0], [0, 1], [1, 0], [1, 0], [0, 1], [1, 1]];
       for (let ty = Math.max(0, y - 4); ty < Math.min(h, y + fh + 4); ty++)
         for (let tx = Math.max(0, x - 4); tx < Math.min(w, x + fw + 4); tx++)
