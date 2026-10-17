@@ -1781,7 +1781,7 @@ export class GameRenderer {
       const c = m.climb, T = 1.8;
       const before = Math.floor(c.t / 0.3);
       c.t += dt;
-      if (Math.floor(c.t / 0.3) !== before) playAt('stepWood', 0.6, 0, 0.4);
+      if (Math.floor(c.t / 0.3) !== before) playAt('stepWood', 0.8, 0, 0.7);
       const k2 = Math.min(1, c.t / T), e = k2 * k2 * (3 - 2 * k2);
       const y0 = c.down ? 0 : MINE_LEVEL.low, y1 = c.down ? MINE_LEVEL.low : 0;
       const [hx0, hx1, hz0, hz1] = MINE_LEVEL.hole;
@@ -1835,7 +1835,7 @@ export class GameRenderer {
       if (free(m.x + dx / n, m.z)) m.x += dx / n;
       if (free(m.x, m.z + dz / n)) m.z += dz / n;
     }
-    if (fx || fz) { w.bob += dt * (run ? 11 : 7); if (Math.sin(w.bob) * Math.sin(w.bob - dt * 7) < 0) playAt('stepDirt', 0.5, 0, 0.35); }
+    if (fx || fz) { w.bob += dt * (run ? 11 : 7); if (Math.sin(w.bob) * Math.sin(w.bob - dt * 7) < 0) playAt('stepDirt', 0.8, 0, 0.65); }
     if (k.has('Space') && !w.jy) { w.vy = 2.3; w.jy = 0.0001; }
     if (w.jy) { w.jy += (w.vy ?? 0) * dt; w.vy = (w.vy ?? 0) - 9.5 * dt; if (w.jy <= 0) { w.jy = 0; w.vy = 0; } }
     cam.position.set(MINE_AT.x + m.x, MINE_AT.y + floorY(m.lvl) + 0.46 + Math.min(w.jy ?? 0, 0.5) + Math.sin(w.bob) * 0.015, MINE_AT.z + m.z);
@@ -2041,7 +2041,7 @@ export class GameRenderer {
     if (k.has('Space') && !w.jy) { w.vy = 2.5; w.jy = 0.0001; }
     if (w.jy) {
       w.jy += (w.vy ?? 0) * dt; w.vy = (w.vy ?? 0) - 9.5 * dt;
-      if (w.jy <= 0) { w.jy = 0; w.vy = 0; playAt(this.surface(g, w.x, w.z), 0.9, 0, 0.45); }
+      if (w.jy <= 0) { w.jy = 0; w.vy = 0; playAt(this.surface(g, w.x, w.z), 0.9, 0, 0.85); }
     }
     // wysokość stóp spacerowicza (na murach i schodach przeszkody z dołu go nie dotyczą)
     const feet = (this.view ? this.standY(this.view, w.x, w.z) : 0) + (w.jy ?? 0);
@@ -2123,7 +2123,7 @@ export class GameRenderer {
     if ((fx || fz) && !w.jy) w.bob += (run ? 2.7 : 1.8) * Math.PI * dt;
     // własne kroki w spacerze: na każdy krok dźwięk podłoża, lewa i prawa noga lekko z boku
     const stepK = Math.floor(w.bob / Math.PI);
-    if (stepK !== this.walkStep) { this.walkStep = stepK; playAt(this.surface(g, w.x, w.z), 0.8, stepK % 2 ? 0.12 : -0.12, run ? 0.42 : 0.32); }
+    if (stepK !== this.walkStep) { this.walkStep = stepK; playAt(this.surface(g, w.x, w.z), 0.9, stepK % 2 ? 0.12 : -0.12, run ? 0.85 : 0.7); }
     const cam = this.cam.camera;
     const { width, height } = g.map;
     const ground = this.view ? this.standY(this.view, w.x, w.z) : 0;
@@ -4467,7 +4467,7 @@ export class GameRenderer {
         this.towerPose.set(s.id, tp);
         px = tp[0]; pz = tp[1];
       } else this.towerPose.delete(s.id);
-      if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.3);
+      if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.55);
       const y = this.standY(view, px, pz, s.up ? -1 : (s.py >> 8) * width + (s.px >> 8)) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
@@ -5084,7 +5084,7 @@ export class GameRenderer {
       st.phase += Math.min(0.5, Math.hypot(cv.sx - st.x, cv.sy - st.y)) * 7.5;
       st.x = cv.sx; st.y = cv.sy;
       const stride = walking ? st.phase : 0;
-      if (walking) this.footstep(g, u.id, cv.sx, cv.sy, stride, 0.22);
+      if (walking) this.footstep(g, u.id, cv.sx, cv.sy, stride, 0.45);
       let swing = walking ? Math.sin(stride) * 0.55 : 0;
       t.position.set(cv.sx - width / 2, this.standY(view, cv.sx, cv.sy, (u.py >> 8) * width + (u.px >> 8)) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
       t.rotation.set(0, heading, 0);

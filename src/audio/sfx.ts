@@ -50,6 +50,10 @@ export type Bus = 'sfx' | 'ui' | 'amb' | 'music';
 const busGain: Partial<Record<Bus, GainNode>> = {};
 const busLevel: Record<Bus, number> = { sfx: 1, ui: 1, amb: 1, music: 0.5 };
 let out: GainNode | null = null;
+/** Ściszanie muzyki i tła pod efekty (ducking): kroki, ciosy i głosy przebijają się przez muzykę */
+let musicDuck: GainNode | null = null, ambDuck: GainNode | null = null;
+/** Spacer chłopem: muzyka stale ciszej, żeby było słychać kroki i świat dookoła */
+let walkFocus = false;
 let noise: AudioBuffer | null = null;
 let volume = 0.6;
 let muted = false;
@@ -67,8 +71,16 @@ function audio(): AudioContext | null {
   ctx = new AC();
   master = ctx.createGain();
   master.gain.value = muted ? 0 : volume;
-  master.connect(ctx.destination);
-  for (const b of ['sfx', 'ui', 'amb', 'music'] as Bus[]) { const gn = ctx.createGain(); gn.gain.value = busLevel[b]; gn.connect(master); busGain[b] = gn; }
+  // limiter na wyjściu: efekty mogą być głośniej, a suma i tak nie przesteruje
+  const lim = ctx.createDynamicsCompressor();
+  lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.2;
+  master.connect(lim).connect(ctx.destination);
+  musicDuck = ctx.createGain(); musicDuck.connect(master);
+  ambDuck = ctx.createGain(); ambDuck.connect(master);
+  for (const b of ['sfx', 'ui', 'amb', 'music'] as Bus[]) {
+    const gn = ctx.createGain(); gn.gain.value = busLevel[b];
+    gn.connect(b === 'music' ? musicDuck : b === 'amb' ? ambDuck : master); busGain[b] = gn;
+  }
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -108,6 +120,33 @@ export function toggleMute(): boolean {
   if (master) master.gain.value = muted ? 0 : volume;
   try { localStorage.setItem('project1.muted', muted ? '1' : '0'); } catch { /* nic */ }
   return muted;
+}
+
+/**
+ * Ducking: efekt o głośności `level` (0..1) na chwilę ścisza muzykę (do ok. 45%) i trochę tło,
+ * a potem powoli je oddaje. Seria kroków trzyma muzykę niżej, dopóki trwa.
+ */
+function duck(level: number): void {
+  const c = ctx;
+  if (!c || !musicDuck || !ambDuck || level < 0.04) return;
+  const now = c.currentTime, k = Math.min(1, level * 1.6);
+  const base = walkFocus ? 0.6 : 1;
+  for (const [node, depth] of [[musicDuck, 0.55], [ambDuck, 0.35]] as const) {
+    const top = node === musicDuck ? base : 1;
+    const target = Math.min(node.gain.value, top * (1 - depth * k));
+    node.gain.cancelScheduledValues(now);
+    node.gain.setValueAtTime(node.gain.value, now);
+    node.gain.setTargetAtTime(target, now, 0.04);
+    node.gain.setTargetAtTime(top, now + 0.35, 0.7);
+  }
+}
+
+/** Tryb spaceru chłopem: muzyka stale ciszej (wołane co klatkę przez music()) */
+function setWalkFocus(on: boolean): void {
+  if (on === walkFocus || !ctx || !musicDuck) return;
+  walkFocus = on;
+  musicDuck.gain.cancelScheduledValues(ctx.currentTime);
+  musicDuck.gain.setTargetAtTime(on ? 0.6 : 1, ctx.currentTime, 0.8);
 }
 
 export const isMuted = (): boolean => muted;
@@ -154,7 +193,7 @@ function startAmbience(): void {
   src.buffer = buf;
   src.loop = true;
   const g = ctx.createGain();
-  g.gain.value = 0.35;
+  g.gain.value = 0.22;
   src.connect(g).connect(busGain.amb ?? master);
   src.start();
 }
@@ -172,6 +211,7 @@ function sample(c: AudioContext, sound: Sound, t: number): boolean {
   g.gain.value = sound === 'road' ? 0.5 : sound === 'click' ? 0.6 : sound === 'select' ? 0.45 : 1;
   src.connect(g).connect(out ?? master!);
   src.start(t);
+  if (out === busGain.sfx) duck(g.gain.value * 0.6);
   return true;
 }
 
@@ -466,9 +506,12 @@ export function playAt(kind: WorldSound, near: number, pan: number, gain = 1): v
   src.buffer = buf;
   src.playbackRate.value = 0.92 + Math.random() * 0.16;
   const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
-  const g = c.createGain(); g.gain.value = near * near * 0.7 * gain;
+  // głośność z odległości opada łagodniej niż z kwadratem — z bliska wyraźnie, z daleka cicho, ale słychać
+  const level = Math.pow(near, 1.5) * gain;
+  const g = c.createGain(); g.gain.value = level;
   src.connect(g).connect(p).connect(busGain.sfx ?? master!);
   src.start();
+  duck(level);
 }
 
 /**
@@ -482,6 +525,7 @@ export function talk(text: string, voice: number, shout = false, gain = 1, pan =
   const outN = c.createGain(); outN.gain.value = gain;
   const panN = c.createStereoPanner(); panN.pan.value = Math.max(-1, Math.min(1, pan));
   outN.connect(panN).connect(busGain.sfx ?? master!);
+  duck(gain * 0.5);
   // okrzyk żołnierza: niżej, krócej, głośniej i ostrzej niż gadanie chłopa
   const base = (95 + (voice % 7) * 14) * (shout ? 0.82 : 1);
   const n = Math.min(shout ? 10 : 26, Math.max(shout ? 2 : 4, Math.round(text.length / (shout ? 3.2 : 2.6))));
@@ -738,9 +782,10 @@ function drum(c: AudioContext, at: number, low: boolean): void {
 }
 
 /** Woła się co klatkę: night 0..1, danger = wróg nadchodzi albo trwa atak; w menu gra cicho sam bordun */
-export function music(night: number, danger: boolean, inMenu: boolean): void {
+export function music(night: number, danger: boolean, inMenu: boolean, walking = false): void {
   const c = ctx;
   if (!c || muted || c.state !== 'running') return;
+  setWalkFocus(walking && !inMenu);
   const now = c.currentTime;
   const root = night > 0.5 || danger ? 110 : 146.83; // A nocą i w boju, D za dnia
   setDrone(c, root, inMenu ? 0.05 : danger ? 0.09 : 0.06);
@@ -852,7 +897,7 @@ function playTracks(c: AudioContext, mood: Mood, inMenu: boolean): boolean {
   el.crossOrigin = 'anonymous';
   const src = c.createMediaElementSource(el);
   const g = c.createGain(); g.gain.value = 0; src.connect(g).connect(busGain.music ?? master!);
-  g.gain.setTargetAtTime(0.9, c.currentTime, 2);
+  g.gain.setTargetAtTime(0.55, c.currentTime, 2);
   // zdarzenia dotyczą tylko tego utworu: stary, wyciszony utwór nie może skasować bieżącego
   el.addEventListener('ended', () => { fading.delete(el); if (trackEl === el) { trackRestUntil = c.currentTime + 15 + Math.random() * 35; trackEl = null; trackGain = null; trackMood = null; } });
   void el.play().catch(() => { fading.delete(el); if (trackEl === el) { trackEl = null; trackGain = null; trackMood = null; } });

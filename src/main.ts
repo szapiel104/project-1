@@ -1692,7 +1692,7 @@ function loop(now: number): void {
     nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
     if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
   }
-  music(renderer.weather.night, alerts.length > 0 || alarmComing, menu.isOpen());
+  music(renderer.weather.night, alerts.length > 0 || alarmComing, menu.isOpen(), renderer.walking);
   // otwarte menu wstrzymuje grę; na ekranie tytułowym kamera krąży nad osadą
   // w meczu przez sieć menu nie zatrzymuje czasu — inni gracze grają dalej
   if (menu.isOpen() && !net) {
