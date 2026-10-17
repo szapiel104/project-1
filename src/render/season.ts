@@ -85,6 +85,39 @@ export class SnowTrails {
 /** Rodzaj materiału: zwykły (śnieg na górnych ścianach), liście (jesień, gołe zimą), trawa (szarzeje, przysypana) */
 export type SeasonKind = 'solid' | 'ground' | 'leaf' | 'leafFar' | 'grass';
 
+/**
+ * Jesień na trawie — wspólna dla dywanu kęp i ziemi pod nim, żeby w szparach między kępami nie prześwitywała letnia zieleń.
+ * Zamiast płaskiego khaki: barwa zostaje z tekstury (jasność i faktura), zieleń przygasa i ciepleje, w dużych łatach
+ * płowieje na słomkowo, a w drobnych miejscach leżą rude i żółte liście. Działa tylko na zielonych pikselach
+ * (droga, ziemia, kamień i piasek zostają, jakie były). k = siła jesieni, b = późna jesień (gołe drzewa).
+ */
+const AUTUMN_GLSL = `
+vec3 sAutumnGrass(vec3 c, vec2 p, float k, float b, float leaves) {
+  float green = smoothstep(0.0, 0.035, c.g - max(c.r, c.b));
+  float a = clamp(k, 0.0, 1.0) * green;
+  if (a <= 0.0) return c;
+  float lum = dot(c, vec3(0.3, 0.59, 0.11));
+  // przygaszona, chłodniejsza w cieniu, cieplejsza w świetle zieleń (październik, nie sierpień)
+  vec3 dull = mix(c, vec3(lum), 0.32) * vec3(1.07, 1.0, 0.78);
+  // płowe łaty: zeschła trawa, ta sama faktura (lum), barwa słomy
+  vec3 straw = lum * vec3(1.62, 1.36, 0.7) + vec3(0.025, 0.018, 0.0);
+  float n = sPatch(p * 0.55 + 3.1);
+  float sp = smoothstep(0.42, 0.72, n) * (0.55 + b * 0.35);
+  vec3 r = mix(dull, straw, sp);
+  // pod koniec jesieni całość brązowieje i szarzeje
+  r = mix(r, lum * vec3(1.18, 1.02, 0.78), b * 0.4);
+  // opadłe liście: drobne plamki, gęściej w łatach, rude albo żółte
+  vec2 q = p * 5.0;
+  vec2 ci = floor(q);
+  float h = sHash(ci);
+  vec2 o = vec2(fract(h * 7.13), fract(h * 3.71)) * 0.6 + 0.2;
+  float leaf = (1.0 - smoothstep(0.12, 0.2, length(q - ci - o))) * step(h, 0.12 + sp * 0.18);
+  vec3 lc = mix(vec3(0.62, 0.28, 0.06), vec3(0.78, 0.55, 0.12), fract(h * 11.3)) * (0.7 + lum);
+  r = mix(r, lc, leaf * leaves * smoothstep(0.3, 0.8, k) * 0.85);
+  return mix(c, r, a);
+}
+`;
+
 // Mapa śladów: trawa czyta ją w pikselach; ziemia w wierzchołkach (jej shader ma już 14 tekstur, a karty
 // graficzne pozwalają na 16 w pikselach — z jedną więcej cały teren przestaje się rysować); reszta wcale.
 const VERT_HEAD = (kind: SeasonKind): string => 'uniform float uBare;\nvarying vec3 vSeasonPos;\n' +
@@ -104,7 +137,7 @@ const FRAG_HEAD = (kind: SeasonKind): string => (kind === 'grass' ? 'uniform sam
   'float sHash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }\n' +
   'float sVal(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);\n' +
   '  return mix(mix(sHash(i), sHash(i + vec2(1.0, 0.0)), f.x), mix(sHash(i + vec2(0.0, 1.0)), sHash(i + vec2(1.0, 1.0)), f.x), f.y); }\n' +
-  'float sPatch(vec2 p) { return sVal(p * 0.28) * 0.55 + sVal(p * 0.9 + 7.3) * 0.3 + sVal(p * 3.1 - 2.1) * 0.15; }\n';
+  'float sPatch(vec2 p) { return sVal(p * 0.28) * 0.55 + sVal(p * 0.9 + 7.3) * 0.3 + sVal(p * 3.1 - 2.1) * 0.15; }\n' + AUTUMN_GLSL;
 const FRAG_BODY = (kind: SeasonKind): string => `
   {
     vec3 sWN = normalize(inverseTransformDirection(normal, viewMatrix));
@@ -138,7 +171,8 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     // wiosną soczyście zielona, latem pod koniec płowieje
     diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.95, 1.22, 0.7), uSpring * 0.7);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.6, 0.56, 0.3) * (0.55 + sG), uSummer * 0.3);
-    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.55, 0.3) * (0.6 + sG), uAutumn * 0.55 + uBare * 0.25);
+    // jesień: ta sama barwa co ziemia pod spodem (bez liści na źdźbłach — leżą na ziemi)
+    diffuseColor.rgb = sAutumnGrass(diffuseColor.rgb, vSeasonPos.xz, uAutumn + uBare * 0.5, uBare, 0.0);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84), max(smoothstep(0.0, 0.1, uSnow * 1.25 - (0.92 - sPatch(vSeasonPos.xz))) * 0.85, uFrost * 0.35) * (1.0 - sTrail * 0.8));` : `
     // śnieg leży na tym, co patrzy w górę (płaskie dachy i ziemia najmocniej, strome połacie mniej), w plamach;
     // szron rano: cienki, tylko na płaskim
@@ -149,6 +183,8 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     sAmt = max(sAmt, uFrost * 0.3 * smoothstep(0.7, 0.95, sWN.y) * (0.5 + sNoise * 0.5));
     ${kind === 'ground' ? `
     // wydeptane ścieżki: śnieg ubity i przemieszany z ziemią
+    // jesień: trawiaste części podłoża płowieją razem z dywanem kęp (inaczej w szparach prześwituje letnia zieleń)
+    diffuseColor.rgb = sAutumnGrass(diffuseColor.rgb, vSeasonPos.xz, uAutumn + uBare * 0.5, uBare, 1.0);
     sAmt *= 1.0 - sTrail * 0.65;
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84) * (1.0 - sTrail * 0.25), sAmt);` : `
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84), sAmt);`}
