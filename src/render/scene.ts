@@ -3940,7 +3940,11 @@ export class GameRenderer {
         this.sfxAt(want < was ? 'clang' : 'creak', wp.x, wp.z + KEEP_HALF, `port${id}`, want < was ? 0.6 : 1.2, 0.8);
       }
     }
+    // kopalnia zawsze stoi zakryta (kopiec i portal): jej wnętrze to osobna sztolnia, do której wchodzi się spacerem
+    const shut = new Set<number>();
+    for (const b of g.buildings) if (b.type === OREMINE_T) shut.add(b.id);
     for (const [id, mesh] of this.buildingMeshes) {
+      if (shut.has(id) && !this.walk) { animateBuilding(mesh, false, this.time, dt); continue; }
       const inHall = !!this.walk && id === this.walkHall;
       // spacerem z ziemi dachy zostają na miejscu (zdjęty dach widać od dołu jako dziurę); zdejmujemy go tylko nad salą, w której stoimy
       const busy = working.has(id) || id === this.selectedId;
