@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.27.0 — drzewko budowy (2026-10-17)
+
+- Część budynków stawia się dopiero przy innym, gotowym budynku: piekarnię przy młynie, koszary przy zbrojowni, karczmę przy browarze, a barak górników przy kopalni. Budynek w budowie albo zburzony się nie liczy
+- Zablokowana karta na dolnym pasku jest szara, z kłódką i złotym napisem „Najpierw: Młyn” (gdy wymagany budynek już się stawia: „Czeka na: Młyn (w budowie)”); kliknięcie albo skrót nie wybiera jej, tylko podpowiada, czego brakuje. Po angielsku „Requires: Mill” / „Waiting on: Mill (being built)”
+- Bot trzyma się tych samych zasad: browar stawia przed karczmą, a gdy wymaganego budynku jeszcze nie ma, buduje dalej według listy i wraca później
+- Opis w „Jak grać” (PL/EN)
+
 ## 0.26.2 — podnóże gór bez placków złóż (2026-10-17)
 
 - Nowe mapy (generator 4) nie mają już placków kamienia i rudy żelaza także u podnóża gór (przy zamku zniknęły w generatorze 3) — kamień, żelazo i rudę daje kopalnia stawiana pod górą

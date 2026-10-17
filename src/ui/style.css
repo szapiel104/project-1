@@ -1336,3 +1336,14 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .house-swatch[aria-checked='true'] { outline: 3px solid var(--seal); outline-offset: 2px; }
 .house-swatch:focus-visible, .house-pieces .net-avatar:focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
 .net-title { margin-left: 6px; padding: 0 6px; font-family: var(--display); font-size: 12px; letter-spacing: .05em; border: 1px solid var(--gold-dark); color: var(--seal); white-space: nowrap; }
+
+/* drzewko budowy: zablokowana karta (brakuje wymaganego budynku) — szary obrazek, kłódka i „Najpierw: …” złotem */
+.card.locked img { filter: grayscale(1) brightness(.7); opacity: .55; }
+.card.locked .build-name, .card.locked .build-cost { color: var(--ink-soft); }
+.card.locked .build-need { display: inline-flex; align-items: center; justify-content: center; gap: 4px; margin-top: 2px;
+  font-size: 14px; font-weight: 700; color: var(--gold); }
+.card.locked .build-need::before { content: ''; flex: none; width: 12px; height: 14px; background: currentColor;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M3 6V4a3 3 0 0 1 6 0v2h1.5v8h-9V6zm1.6 0h2.8V4a1.4 1.4 0 0 0-2.8 0z'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 14'%3E%3Cpath d='M3 6V4a3 3 0 0 1 6 0v2h1.5v8h-9V6zm1.6 0h2.8V4a1.4 1.4 0 0 0-2.8 0z'/%3E%3C/svg%3E") center / contain no-repeat; }
+.card.locked:hover { cursor: not-allowed; }
+.build-need[hidden] { display: none !important; }

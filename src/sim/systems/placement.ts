@@ -10,13 +10,28 @@ import { FP, inForecourt, Phase, playerKeep, type Building, type GameState } fro
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.needRock' | 'place.needMine' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.needRock' | 'place.needMine' | 'place.needs' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
   if (!p) return false;
   for (const [k, v] of Object.entries(def.cost)) if (p.res[resIndex(k as ResourceId)]! < v) return false;
   return true;
+}
+
+/**
+ * Drzewko budowy: czego brakuje, żeby postawić budynek (null = nic, wolno). `need` = id wymaganego budynku,
+ * `building` = gracz już go stawia, ale budowa jeszcze trwa (liczy się tylko gotowy, nie zburzony).
+ */
+export function missingRequirement(g: GameState, player: number, def: BuildingDef): { need: string; building: boolean } | null {
+  if (!def.requires) return null;
+  let building = false;
+  for (const b of g.buildings) {
+    if (b.owner !== player || b.ruined || BUILDINGS[b.type]!.id !== def.requires) continue;
+    if (b.build === 0) return null;
+    building = true;
+  }
+  return { need: def.requires, building };
 }
 
 /**
@@ -175,6 +190,7 @@ export function tileBuildable(g: GameState, player: number, x: number, y: number
 export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true, rot = 0): PlaceError | null {
   const def = BUILDINGS[type];
   if (!def || !def.buildable || def.legacy || !g.players[player]) return 'place.unknown';
+  if (missingRequirement(g, player, def)) return 'place.needs';
   const { w: fw, h: fh } = footprint(def, rot);
   const { width, height } = g.map;
   if (x < 0 || y < 0 || x + fw > width || y + fh > height) return 'place.outside';

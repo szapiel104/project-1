@@ -153,7 +153,7 @@ Czeka:
 Zrobione 16.10: koszty budynków etapami (start 80 drewna, kamień i złoto na później), jedzenie na tydzień na start, głodni odchodzą tylko z głodu, jedzenie syci różnie (jabłko 1, chleb 2, ryba 3), duży spichlerz, okno spichlerza z prognozą, wyłączanie budynków, limit kopaczy przy ognisku, siatka budowy, budowanie w pauzie.
 
 Czeka:
-- Wymagania budynków (drzewko): piekarnia dopiero przy młynie, młyn przy polu, koszary przy zbrojowni, karczma przy browarze — zablokowane karty z podpowiedzią „najpierw…”
+- ~~Wymagania budynków (drzewko)~~ — zrobione 17.10 (0.27.0): piekarnia przy młynie, koszary przy zbrojowni, karczma przy browarze, barak przy kopalni; zablokowane karty z kłódką i „Najpierw: …”. Dalej do decyzji: młyn dopiero przy polu, browar przy polu, łuczarz/włóczniarz przy drwalu
 - Cele na początek gry (skryba prowadzi): postaw drwala → sad → chatę → kamieniołom; mała nagroda za każdy krok, żeby nowy gracz wiedział, co dalej
 - Jabłka się psują (część zapasu ubywa co dzień, chleb wolniej, ryby wędzone najdłużej) — powód, żeby mieć różne jedzenie
 - Targ: sprzedaż nadmiaru (np. zboża, drewna) za złoto i kupno tego, czego brakuje

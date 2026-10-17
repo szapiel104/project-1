@@ -19,7 +19,7 @@ import { applyCommands, step, type Command } from './sim/step';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
-import { buildWork, canAfford, canPlace, maxHp, tileBuildable } from './sim/systems/placement';
+import { buildWork, canAfford, canPlace, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
 import { crewWanted, MINE_YIELDS } from './sim/systems/workers';
 import { CAMP_GUARDS, campOf } from './sim/systems/minecamp';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
@@ -149,7 +149,12 @@ const hud = createHud(document.getElementById('ui')!, {
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
   // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
   onRandom: (preset) => start(`${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`, preset),
-  onPickBuilding: (id) => { if (wrecking) setWreck(false); pick(id); },
+  onPickBuilding: (id) => {
+    // drzewko budowy: zablokowanej karty nie da się wybrać, gracz od razu słyszy, czego brakuje
+    const lock = id ? missingRequirement(game, ME, BUILDINGS[buildingIndex(id)]!) : null;
+    if (lock) { hud.toast(placeErrorText('place.needs', buildingIndex(id!))); play('error'); return; }
+    if (wrecking) setWreck(false); pick(id);
+  },
   onRations: (level) => pending.push({ type: 'setRations', player: ME, level }),
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
   onSpeed: (s) => {
@@ -528,6 +533,14 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   try { history.replaceState(null, '', `#${preset}/${encodeURIComponent(seedText)}`); } catch { /* podgląd bez dostępu do historii */ }
   refresh();
   save();
+}
+
+/** Komunikat, czemu tu nie wolno budować (przy drzewku budowy z nazwą brakującego budynku) */
+function placeErrorText(error: string, type: number): string {
+  if (error !== 'place.needs') return t(error);
+  const need = BUILDINGS[type]?.requires;
+  const def = need ? BUILDINGS[buildingIndex(need)] : undefined;
+  return t('place.needs').replace('{b}', def ? t(def.name) : need ?? '');
 }
 
 function pick(id: string | null): void {
@@ -973,7 +986,7 @@ renderer.onClick = (tile, touch) => {
   const type = buildingIndex(picked);
   const o = origin(tile, type);
   const error = canPlace(game, ME, type, o.x, o.y, true, placeRot);
-  if (error) { hud.toast(t(error)); play('error'); return; }
+  if (error) { hud.toast(placeErrorText(error, type)); play('error'); return; }
   pending.push({ type: 'build', player: ME, building: picked, x: o.x, y: o.y, rot: placeRot });
   play('build');
   touchTile = null;
@@ -1611,7 +1624,12 @@ function refresh(): void {
   warnedHungry = !f.fed;
   warnedLeaving = p.popularity < 50;
   const affordable = new Set<string>();
-  for (const def of BUILDINGS) if (canAfford(game, ME, def)) affordable.add(def.id);
+  const locked = new Map<string, { need: string; building: boolean }>();
+  for (const def of BUILDINGS) {
+    if (canAfford(game, ME, def)) affordable.add(def.id);
+    const lock = missingRequirement(game, ME, def);
+    if (lock) locked.set(def.id, lock);
+  }
   const clock = clockAt(game.tick);
   hud.update({
     day: clock.day, hour: clock.hour, night: clock.night,
@@ -1619,7 +1637,7 @@ function refresh(): void {
     res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
-    delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable,
+    delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable, locked,
     report: buildReport(f, resTrend(p.res)),
     soldiers: game.soldiers.filter((s) => s.owner === ME).length,
   });

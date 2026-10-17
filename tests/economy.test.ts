@@ -246,6 +246,7 @@ describe('praca chłopów', () => {
     g.players[0]!.res[resIndex('apples')] = 110; // zapas, żeby głód nie przerwał testu (mieści się w spichlerzu twierdzy)
     step(g, [build(g, 'farm')]);
     step(g, [build(g, 'mill')]);
+    g.buildings.find((b) => b.type === buildingIndex('mill'))!.build = 0; // piekarnia dopiero przy gotowym młynie
     step(g, [build(g, 'bakery')]);
     let baked = 0; // chleb jest od razu zjadany, więc patrzymy, czy w ogóle się pojawił
     for (let i = 0; i < 4000; i++) { step(g, []); baked = Math.max(baked, res(g, 'bread')); }

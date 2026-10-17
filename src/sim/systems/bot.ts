@@ -4,7 +4,7 @@ import { UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
 import { keepCenter, keepFront, playerKeep, type GameState, type PlayerState } from '../state';
 import { orderGarrison, orderMove, train } from './army';
-import { canPlace, placeBuilding, placementBatch } from './placement';
+import { canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
 
 /**
@@ -13,7 +13,7 @@ import { Terrain } from '../../data/terrain';
  */
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'tavern', 'minecamp', 'brewery', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine'];
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine'];
 /** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
 const ROCK_REACH = 60;
 const ROCK_TRIES = 400;
@@ -126,6 +126,8 @@ export function botSystem(g: GameState): void {
       want.set(id, (want.get(id) ?? 0) + 1);
       if ((have.get(id) ?? 0) >= want.get(id)!) continue;
       const type = buildingIndex(id);
+      // drzewko budowy: bez gotowego wymaganego budynku (np. karczma bez browaru) bot buduje dalej wg listy i wraca tu później
+      if (missingRequirement(g, p.id, BUILDINGS[type]!)) continue;
       if (id === 'minecamp') {
         // barak: przy własnej kopalni (pierścienie wokół niej); bez kopalni bot go pomija
         const mine = g.buildings.find((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'oremine' && !b.ruined);

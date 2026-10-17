@@ -14,10 +14,10 @@ import { canPlace } from '../src/sim/systems/placement';
 /** Testy gospodarki i wojska bez bota: drugi gracz stoi bezczynnie */
 const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => { const g = realGame(...a); for (const p of g.players) { p.bot = false; p.guards = 0; } return g; }; // bez straży miejskiej: testy liczą własne wojsko
 
-function spot(g: GameState, id: string): { x: number; y: number } {
+function spot(g: GameState, id: string, from = 3): { x: number; y: number } {
   const keep = playerKeep(g, 0)!;
   const type = buildingIndex(id);
-  for (let r = 3; r < RULES.buildRadius; r++)
+  for (let r = from; r < RULES.buildRadius; r++)
     for (let dy = -r; dy <= r; dy++)
       for (let dx = -r; dx <= r; dx++) if (canPlace(g, 0, type, keep.x + dx, keep.y + dy, false) === null) return { x: keep.x + dx, y: keep.y + dy };
   throw new Error('brak miejsca');
@@ -27,6 +27,9 @@ function withBarracks(): { g: GameState; id: number } {
   const g = createGame(7);
   const p = g.players[0]!;
   p.res[resIndex('wood')] = 500; p.res[resIndex('stone')] = 500; p.res[resIndex('spear')] = 5; p.res[resIndex('gold')] = 100;
+  // drzewko budowy: koszary dopiero przy gotowej zbrojowni (zbrojownia dalej, żeby koszary stały tam, gdzie dotąd)
+  step(g, [{ type: 'build', player: 0, building: 'armory', ...spot(g, 'armory', 14) }]);
+  g.buildings.find((x) => x.type === buildingIndex('armory'))!.build = 0;
   step(g, [{ type: 'build', player: 0, building: 'barracks', ...spot(g, 'barracks') }]);
   const b = g.buildings.find((x) => x.type === buildingIndex('barracks'))!;
   return { g, id: b.id };

@@ -81,6 +81,8 @@ export interface HudView {
   rations: number;
   tax: number;
   affordable: Set<string>;
+  /** Drzewko budowy: zablokowane karty (id budynku → czego brakuje; `building` = wymagany budynek jest w budowie) */
+  locked: Map<string, { need: string; building: boolean }>;
 }
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
@@ -139,6 +141,12 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''):
 
 function setText(node: HTMLElement, text: string): void {
   if (node.textContent !== text) node.textContent = text;
+}
+
+/** Napis na zablokowanej karcie: „Najpierw: Młyn” albo „Czeka na: Młyn (w budowie)” */
+export function needText(lock: { need: string; building: boolean }): string {
+  const def = BUILDINGS.find((d) => d.id === lock.need);
+  return t(lock.building ? 'hud.needsBuilding' : 'hud.needs').replace('{b}', def ? t(def.name) : lock.need);
 }
 
 function costText(def: BuildingDef): string {
@@ -753,7 +761,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       b.append(img);
     }
     const text = el('span', 'card-text');
-    text.append(el('span', 'build-name', t(def.name)), el('span', 'build-cost', costText(def)));
+    const need = el('span', 'build-need');
+    need.hidden = true;
+    text.append(el('span', 'build-name', t(def.name)), el('span', 'build-cost', costText(def)), need);
     b.append(text);
     b.addEventListener('click', () => events.onPickBuilding(picked === def.id ? null : def.id));
     buildButtons.set(def.id, b);
@@ -1003,7 +1013,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       if (document.activeElement !== taxSel) taxSel.value = String(v.tax);
       const warn = [v.fed ? '' : t('hud.hungry'), v.bribed ? '' : t('hud.noGold')].filter(Boolean).join('. ');
       setText(forecast, `${t('hud.popularity')}: ${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}${warn ? `. ${warn}.` : ''}`);
-      for (const [id, b] of buildButtons) b.classList.toggle('poor', !v.affordable.has(id));
+      for (const [id, b] of buildButtons) {
+        const lock = v.locked.get(id);
+        b.classList.toggle('poor', !lock && !v.affordable.has(id));
+        b.classList.toggle('locked', !!lock);
+        const need = b.querySelector<HTMLElement>('.build-need')!;
+        const msg = lock ? needText(lock) : '';
+        setText(need, msg);
+        need.hidden = !lock;
+        const title = lock ? `${msg}. ${t(`d.${id}`)}` : t(`d.${id}`);
+        if (b.title !== title) b.title = title;
+      }
       if (wreck.getAttribute('aria-pressed') !== 'true') buildFoot.hidden = picked === null;
       syncPicker();
     },

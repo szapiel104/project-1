@@ -42,6 +42,8 @@ export interface BuildingDef {
   crew?: { per: number; max: number };
   /** Barak przy kopalni: tyle miejsc do spania dla załogi pobliskiej kopalni (nie liczy się do mieszkań wioski) */
   beds?: number;
+  /** Drzewko budowy: ten budynek da się postawić dopiero, gdy gracz ma gotowy (dokończony, nie zburzony) budynek o tym id */
+  requires?: string;
   /** Stary budynek: zostaje w kodzie dla zapisów i już stojących egzemplarzy, ale nie ma go w menu i nie da się go postawić */
   legacy?: boolean;
   /** Droga zamiast budynku: 1 = piaskowa, 2 = kamienna. Nie blokuje przejścia, przyspiesza chodzenie */
@@ -106,7 +108,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     production: { input: { res: 'wheat', amount: 16 }, output: { res: 'flour', amount: 16 }, site: 'home', workTicks: 90 },
   },
   {
-    id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, cost: { wood: 35, stone: 20 }, buildable: true,
+    id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, cost: { wood: 35, stone: 20 }, requires: 'mill', buildable: true,
     workView: 'inside',
     production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 10 }, site: 'home', workTicks: 110 },
   },
@@ -133,7 +135,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     production: { input: { res: 'wood', amount: 2 }, output: { res: 'spear', amount: 1 }, site: 'home', workTicks: 120 },
   },
   // Koszary: tu wolny chłop dostaje broń ze składu i staje się żołnierzem
-  { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 60, stone: 50, gold: 30 }, buildable: true },
+  { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 60, stone: 50, gold: 30 }, requires: 'armory', buildable: true },
   // Cmentarz: grabarz znosi tu ciała poległych z pola bitwy
   { id: 'cemetery', category: 'military', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 20, stone: 15 }, staff: true, area: 14, buildable: true },
   // Warsztat łuczarza: z drewna ze składu wygina łuki i plecie cięciwy
@@ -143,7 +145,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     production: { input: { res: 'wood', amount: 2 }, output: { res: 'bow', amount: 1 }, site: 'home', workTicks: 140 },
   },
   // Karczma: karczmarz nalewa piwo ze składu (warzy je browar); wieczorem ludzie przychodzą posiedzieć, co podnosi popularność
-  { id: 'tavern', category: 'settlement', name: 'b.tavern', w: 4, h: 3, cost: { wood: 60, stone: 20, gold: 40 }, staff: true, workView: 'inside', buildable: true },
+  { id: 'tavern', category: 'settlement', name: 'b.tavern', w: 4, h: 3, cost: { wood: 60, stone: 20, gold: 40 }, staff: true, workView: 'inside', requires: 'brewery', buildable: true },
   // Umocnienia z bali: częstokół stawiany przeciąganiem, brama dla swoich, drewniana wieża strażnicza
   { id: 'palisade', category: 'defense', name: 'b.palisade', w: 1, h: 1, cost: { wood: 1 }, hp: 260, wall: true, line: true, buildable: true },
   { id: 'gate', category: 'defense', name: 'b.gate', w: 1, h: 1, cost: { wood: 10 }, hp: 600, gate: true, buildable: true },
@@ -182,7 +184,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   // Barak górników: stawiany przy kopalni (do 10 pól). Załoga nocuje tu i siedzi wieczorem przy ognisku zamiast wracać
   // do wioski; urobek odkłada pod barakiem, a do zamku wozi go wóz pod eskortą dwóch strażników kopalni (minecamp.ts).
-  { id: 'minecamp', category: 'industry', name: 'b.minecamp', w: 2, h: 2, cost: { wood: 40 }, hp: 320, beds: 8, buildable: true },
+  { id: 'minecamp', category: 'industry', name: 'b.minecamp', w: 2, h: 2, cost: { wood: 40 }, hp: 320, beds: 8, requires: 'oremine', buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */

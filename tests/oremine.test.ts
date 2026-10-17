@@ -144,6 +144,9 @@ describe('kopalnia pod górami', () => {
     const at = rockSpot(g);
     step(g, [{ type: 'build', player: 0, building: 'oremine', x: at.x, y: at.y, rot: at.rot }]);
     const mine = g.buildings.find((b) => b.type === MINE)!;
+    // drzewko budowy: barak dopiero przy gotowej kopalni — na czas wyboru miejsca udajemy gotową, potem budowa trwa jak dotąd
+    const work = mine.build;
+    mine.build = 0;
     // barak: daleko od kopalni nie wolno, przy kopalni tak
     const keep = playerKeep(g, 0)!;
     expect(canPlace(g, 0, CAMP_T, keep.x + 3, keep.y + 14, false)).toBe('place.needMine');
@@ -153,6 +156,7 @@ describe('kopalnia pod górami', () => {
     }
     expect(spot).not.toBeNull();
     step(g, [{ type: 'build', player: 0, building: 'minecamp', x: spot!.x, y: spot!.y }]);
+    mine.build = work;
     const camp = g.buildings.find((b) => b.type === CAMP_T)!;
     const tpl = g.units.find((u) => u.owner === 0)!;
     for (let i = 0; i < 16; i++) g.units.push({ ...tpl, id: g.nextId++, job: 0, home: 0, phase: Phase.Idle, path: [], carryRes: -1, carryAmt: 0, target: 0, wait: 0, timer: 0, batches: 0, trips: 0 });
