@@ -455,7 +455,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
     addSpray(points: THREE.Vector3[]) {
       for (const p of points)
         for (let k = 0; k < 5; k++)
-          push(p.x + (rnd() - 0.5) * 0.6, p.y - 0.2, p.z + (rnd() - 0.5) * 0.6, 0.9 + rnd() * 0.7, 0.15 + rnd() * 0.25, rnd() * 6.28, 0.6 + rnd(), rnd(), 0, 1);
+          push(p.x + (rnd() - 0.5) * 1.0, p.y - 0.2, p.z + (rnd() - 0.5) * 1.0, 0.6 + rnd() * 0.5, 0.15 + rnd() * 0.25, rnd() * 6.28, 0.6 + rnd(), rnd(), 0, 1);
       cA.needsUpdate = mA.needsUpdate = kA.needsUpdate = true;
       pGeo.instanceCount = count;
     },
