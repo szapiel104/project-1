@@ -776,7 +776,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // oko: patrzymy oczami przypadkowego mieszkańca osady
   const eye = el('button', 'btn-plain hud-eye');
   eye.type = 'button';
-  eye.title = 'Przejdź się oczami przypadkowego mieszkańca';
+  eye.title = 'Spacer chłopem: kliknij oko, potem miejsce na mapie (F). Drugi raz oko: losowy mieszkaniec';
   eye.setAttribute('aria-label', eye.title);
   eye.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M1.5 12S5.5 5 12 5s10.5 7 10.5 7-4 7-10.5 7S1.5 12 1.5 12z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.4" fill="currentColor"/></svg>';
   eye.addEventListener('click', () => events.onRandomWalk());

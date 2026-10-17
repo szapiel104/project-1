@@ -10,7 +10,7 @@ const TIPS = [
   'Grabarz zbiera ciała tylko na swoim terenie. Kliknij cmentarz, żeby zobaczyć, gdzie sięga.',
   'Budowniczy najpierw idą do składu po materiał. Skład blisko budowy = szybsza budowa.',
   'Prawy klik z przeciąganiem ustawia oddział w szyku i wskazuje, w którą stronę ma patrzeć.',
-  'Zaznacz chłopa i wciśnij F, żeby przejść się jego oczami. Oko na pasku wybiera kogoś losowo.',
+  'Zaznacz chłopa i wciśnij F, żeby przejść się jego oczami. F bez zaznaczenia (albo oko na pasku) i klik na mapie: spacer od tego miejsca.',
   'Wydeptane ścieżki pokazują, gdzie ludzie chodzą najczęściej. Tam warto położyć drogę.',
   'W nocy ludzie schodzą do ogniska i karczmy, a o świcie wracają do pracy.',
   'F3 pokazuje okno wydajności. Gra sama dobiera jakość grafiki do komputera.',

@@ -164,6 +164,9 @@ const hud = createHud(document.getElementById('ui')!, {
   onAccount: () => menu.account(true),
   onWalk: () => walkAs(selectedUnit),
   onRandomWalk: () => {
+    // oko: najpierw wybór miejsca na mapie (klik = start spaceru tam); drugie kliknięcie oka = losowy mieszkaniec
+    if (!walkPick) { setWalkPick(true); return; }
+    setWalkPick(false);
     // najchętniej ktoś, kto akurat idzie (więcej widać), inaczej ktokolwiek z mojej osady
     const mine = game.units.filter((u) => u.owner === ME);
     const going = mine.filter((u) => u.path.length > 0);
@@ -899,6 +902,7 @@ renderer.onPaintDown = (tile) => {
 renderer.onUnit = (id) => { if (!picked && !wrecking) selectUnit(id === selectedUnit ? 0 : id); };
 
 renderer.onClick = (tile, touch) => {
+  if (walkPick) { setWalkPick(false); walkAt(tile.x, tile.y); return; }
   if (rallyPick) {
     pending.push({ type: 'rally', player: ME, building: rallyPick.building, kind: rallyPick.kind, tile: tile.y * game.map.width + tile.x });
     rallyPick = null; canvas.classList.remove('placing'); play('rotate');
@@ -948,6 +952,33 @@ window.addEventListener('keydown', unlockAudio);
 document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('button')) play('click'); });
 renderer.onCollapse = () => play('collapse');
 
+/** Wybór miejsca startu spaceru: następne kliknięcie na mapie stawia tam chłopa (Esc anuluje) */
+let walkPick = false;
+function setWalkPick(on: boolean): void {
+  walkPick = on;
+  canvas.classList.toggle('placing', on);
+  if (on) hud.toast('Kliknij na mapie miejsce, w którym zaczniesz spacer chłopem. Oko jeszcze raz: losowy mieszkaniec. Esc: anuluj.');
+}
+/** Spacer od wskazanego pola: najbliższe wolne pole, po którym da się chodzić (nie w wodzie, skale ani w murze) */
+function walkAt(tx: number, ty: number): void {
+  if (renderer.walking) return;
+  const { width: w, height: h } = game.map;
+  for (let r = 0; r < 8; r++)
+    for (let dy = -r; dy <= r; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = tx + dx, y = ty + dy;
+        if (x < 1 || y < 1 || x >= w - 1 || y >= h - 1) continue;
+        const t = y * w + x, tile = game.map.tiles[t];
+        if (game.occupancy[t] !== 0 || tile === Terrain.Water || tile === Terrain.Mountain) continue;
+        document.body.classList.add('walking');
+        walkHint.hidden = false;
+        renderer.startWalk(x + 0.5, y + 0.5);
+        return;
+      }
+  hud.toast('Tu nie da się stanąć — wybierz miejsce na lądzie, poza budynkami i skałami.');
+}
+
 /** Spacer oczami wybranego mieszkańca */
 function walkAs(id: number): void {
   const u = game.units.find((x) => x.id === id);
@@ -959,6 +990,7 @@ function walkAs(id: number): void {
 
 window.addEventListener('keydown', (e) => {
   if (renderer.walking) return; // spacer oczami chłopa: klawisze należą do spaceru
+  if (e.key === 'Escape' && walkPick) { setWalkPick(false); return; }
   if (e.key === 'Escape' && plan.state !== 'none') { cancelPlan(); return; }
   if (e.key === 'Escape') {
     if (menu.isOpen()) { if (!titleScreen) menu.close(); return; }
@@ -978,6 +1010,7 @@ window.addEventListener('keydown', (e) => {
   if (e.code === 'Space' && !e.repeat && !renderer.walking && pings.jumpLast()) { e.preventDefault(); return; } // spacja: do ostatniego znacznika sojusznika
   if (e.code === 'KeyR' && picked) rotate();
   if (e.code === 'KeyF' && selectedUnit && !e.repeat) { walkAs(selectedUnit); return; } // F przy zaznaczonym mieszkańcu = przejdź się jego oczami
+  if (e.code === 'KeyF' && !selectedUnit && !e.repeat) { setWalkPick(!walkPick); return; } // F bez zaznaczenia: wybierz miejsce startu spaceru
   if (e.code === 'KeyM') hud.setMuted(toggleMute());
   if (e.code === 'KeyN' && !e.repeat) minimap.toggle();
   if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') hud.stepSpeed(1);

@@ -20,7 +20,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       '6. Przed pierwszą falą wroga: włóczniarz, koszary, kilku żołnierzy i palisada z bramą.',
       { tip: 'Na dolnej belce widać zapasy, miejsce w magazynach, ludzi i popularność. Czerwona ramka przy zapasie znaczy, że magazyn jest pełny.' },
       { h: 'Jak czytać osadę' },
-      'Kliknij budynek, żeby zobaczyć, co robi, czy ma pracownika i ile mu brakuje. Kliknij człowieka, żeby poznać jego imię i zajęcie — przyciskiem „Przejdź się jego oczami” (albo klawiszem F) chodzisz po osadzie jak on. Oko na pasku wybiera kogoś losowo.',
+      'Kliknij budynek, żeby zobaczyć, co robi, czy ma pracownika i ile mu brakuje. Kliknij człowieka, żeby poznać jego imię i zajęcie — przyciskiem „Przejdź się jego oczami” (albo klawiszem F) chodzisz po osadzie jak on. F bez zaznaczenia (albo oko na pasku) i klik na mapie: spacer od wskazanego miejsca; drugi raz oko — losowy mieszkaniec.',
     ],
   },
   {
