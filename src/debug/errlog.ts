@@ -188,11 +188,12 @@ export function watchRenderer(renderer: THREE.WebGLRenderer, name = 'gra'): void
   renderer.render = (scene, camera): void => { lastFrame = performance.now(); frames++; cam = camera; render(scene, camera); };
 
   const GL_NAMES: Record<number, string> = { 0x0500: 'INVALID_ENUM', 0x0501: 'INVALID_VALUE', 0x0502: 'INVALID_OPERATION', 0x0505: 'OUT_OF_MEMORY', 0x0506: 'INVALID_FRAMEBUFFER_OPERATION', 0x9242: 'CONTEXT_LOST_WEBGL' };
+  if (GL_DEBUG) traceGl(gl, name, GL_NAMES);
   const timer = window.setInterval(() => {
     if (!canvas.isConnected) { window.clearInterval(timer); return; }
     if (gl.isContextLost()) return;
     // gl.getError wymusza synchronizację z kartą, więc tylko co kilka sekund
-    for (let i = 0, e = gl.getError(); e && i < 4; i++, e = gl.getError()) report('webgl', 'error', `[${name}] błąd WebGL ${GL_NAMES[e] ?? '0x' + e.toString(16)}`);
+    for (let i = 0, e = gl.getError(); e && i < 4; i++, e = gl.getError()) report('webgl', 'error', `[${name}] błąd WebGL ${GL_NAMES[e] ?? '0x' + e.toString(16)}${GL_DEBUG ? '' : ' (skąd: otwórz grę z ?gldebug=1)'}`);
     const now = performance.now();
     const visible = document.visibilityState === 'visible' && canvas.offsetParent !== null;
     if (frames && visible && now - lastFrame > 5000) {
@@ -204,6 +205,61 @@ export function watchRenderer(renderer: THREE.WebGLRenderer, name = 'gra'): void
       if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !Number.isFinite(p.z)) report('render', 'error', `[${name}] kamera ma złe położenie (NaN/∞)`);
     }
   }, 3000);
+}
+
+/**
+ * `?gldebug=1`: namierzanie błędów WebGL. Przez pierwsze 40 s (wczytywanie i pierwsze klatki) błąd sprawdzany po
+ * KAŻDYM wywołaniu WebGL — wiadomo, która funkcja go zrobiła. Potem tylko na granicach przejść rysowania (cienie,
+ * scena, AO…), co prawie nic nie kosztuje. `?gldebug=all` sprawdza każde wywołanie cały czas (gra bardzo wolna).
+ */
+const GL_PARAM = typeof location !== 'undefined' ? new URLSearchParams(location.search).get('gldebug') : null;
+export const GL_DEBUG = GL_PARAM !== null;
+let glFull = GL_DEBUG;
+let glRaw: (() => number) | null = null;
+let glWho = '';
+let glErrNames: Record<number, string> = {};
+
+/** Krótki opis argumentu wywołania GL (liczby jako stałe GL, gdy pasują, tablice jako typ i długość) */
+function argText(v: unknown, names: Map<number, string>): string {
+  if (typeof v === 'number') return names.get(v) ?? String(v);
+  if (v === null || v === undefined) return String(v);
+  if (ArrayBuffer.isView(v)) return `${v.constructor.name}(${(v as unknown as { length?: number }).length ?? v.byteLength})`;
+  if (typeof v === 'object') return (v as object).constructor?.name ?? 'obj';
+  return String(v).slice(0, 40);
+}
+
+function traceGl(gl: WebGLRenderingContext, name: string, errNames: Record<number, string>): void {
+  const g = gl as unknown as Record<string, unknown>;
+  const raw = gl.getError.bind(gl);
+  glRaw = raw; glWho = name; glErrNames = errNames;
+  // stałe GL po nazwie (np. 3553 → TEXTURE_2D), żeby argumenty dało się czytać
+  const names = new Map<number, string>();
+  for (const k in g) if (/^[A-Z0-9_]+$/.test(k) && typeof g[k] === 'number' && !names.has(g[k] as number) && (g[k] as number) > 1) names.set(g[k] as number, k);
+  for (const k in g) {
+    const f = g[k];
+    if (typeof f !== 'function' || k === 'getError' || k === 'isContextLost') continue;
+    g[k] = function (this: unknown, ...a: unknown[]): unknown {
+      const r = (f as (...x: unknown[]) => unknown).apply(gl, a);
+      if (!glFull) return r;
+      const e = raw();
+      if (e) report('webgl', 'error', `[${name}] ${errNames[e] ?? '0x' + e.toString(16)} w gl.${k}(${a.map((x) => argText(x, names)).join(', ')})${glPass ? ` · przejście: ${glPass}` : ''}`, new Error().stack?.split('\n').slice(2, 9).join('\n'));
+      return r;
+    };
+  }
+  if (GL_PARAM !== 'all') setTimeout(() => { glFull = false; report('webgl', 'warn', `[${name}] ?gldebug: koniec sprawdzania każdego wywołania (40 s), dalej tylko granice przejść`); }, 40000);
+  report('webgl', 'warn', `[${name}] tryb ?gldebug=${GL_PARAM || '1'}: każde wywołanie WebGL sprawdzane${GL_PARAM === 'all' ? '' : ' przez 40 s'} (gra wolniejsza)`);
+}
+
+let glPass = '';
+/**
+ * Nazwa aktualnego przejścia rysowania (cienie, scena, AO…) — w trybie ?gldebug=1 dopisywana do błędów, a na
+ * granicy przejścia sprawdzamy błąd, więc wiadomo, które przejście go zrobiło. Zwraca poprzednią nazwę.
+ */
+export function glSection(n: string): string {
+  const was = glPass;
+  if (glRaw && !glFull) { const e = glRaw(); if (e) report('webgl', 'error', `[${glWho}] ${glErrNames[e] ?? '0x' + e.toString(16)} w przejściu: ${was || 'poza rysowaniem'} (szczegóły: ?gldebug=all)`); }
+  glPass = n;
+  return was;
 }
 
 /** Błędy wczytywania przez menedżer three.js (tekstury, pliki modeli) */

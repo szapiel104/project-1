@@ -4,7 +4,7 @@ import { touch } from './touch';
 import * as THREE from 'three';
 import { initKtx } from './ktx';
 import { MeshBVH } from 'three-mesh-bvh';
-import { watchLoading, watchRenderer } from '../debug/errlog';
+import { GL_DEBUG, glSection, watchLoading, watchRenderer } from '../debug/errlog';
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
 import { RULES } from '../data/rules';
@@ -2218,6 +2218,7 @@ export class GameRenderer {
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
     // okno wydajności otwarte: co 15. klatka mierzona przejście po przejściu (ta jedna klatka jest wolniejsza, więc jej
     // czasu nie wliczamy do zwykłego „karta graficzna”)
+    if (GL_DEBUG) this.tagPasses();
     if (this.gpuProfile && this.profN++ % 15 === 0) { this.profiledRender(); return; }
     const tg = performance.now();
     this.composer.render();
@@ -2225,6 +2226,20 @@ export class GameRenderer {
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;
     this.dynamicResolution(gpu);
     this.timingFrames++;
+  }
+
+  /** Tryb ?gldebug=1: każde przejście rysowania podpisane w dzienniku błędów (wiadomo, czy błąd jest w cieniach, AO, poświacie…) */
+  private passesTagged = false;
+  private tagPasses(): void {
+    glSection('przed rysowaniem');
+    if (this.passesTagged) return;
+    this.passesTagged = true;
+    const wrap = <T extends object>(o: T, key: keyof T, name: string): void => {
+      const f = o[key] as unknown as (...a: unknown[]) => unknown;
+      (o as Record<keyof T, unknown>)[key] = (...a: unknown[]): unknown => { const was = glSection(name); try { return f.apply(o, a); } finally { glSection(was); } };
+    };
+    wrap(this.renderer.shadowMap as unknown as { render: () => void }, 'render', 'cienie');
+    for (const p of this.composer.passes) wrap(p, 'render', this.passName(p));
   }
 
   /** Okno wydajności (F3) otwarte: mierzymy, ile karta graficzna liczy cienie, scenę, AO, poświatę i resztę przejść */
