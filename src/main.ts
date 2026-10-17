@@ -50,6 +50,7 @@ import { createDevPanel, type DevSpawn } from './ui/devpanel';
 import { walkable } from './sim/path';
 import { FP } from './sim/state';
 import { unitIndex } from './data/units';
+import { randomTip } from './data/tips';
 
 let ME = 0; // gracz sterowany lokalnie (w grze przez sieć gość ma 1)
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -450,8 +451,8 @@ window.addEventListener('beforeunload', () => endOnline());
 const LOAD_CREST = '<svg viewBox="0 0 120 120" aria-hidden="true"><path d="M18 34 L102 86 M102 34 L18 86" stroke="#5a3a1c" stroke-width="5" stroke-linecap="round"/><path d="M60 12 L96 22 V56 C96 82 78 98 60 108 C42 98 24 82 24 56 V22 Z" fill="#8c1f18" stroke="#e9c145" stroke-width="4"/><path d="M60 18 L90 26 V56 C90 78 75 92 60 101 Z" fill="#6e1711"/><path d="M46 84 V52 h4 v-6 h5 v6 h10 v-6 h5 v6 h4 V84 Z" fill="#e9c145"/></svg>';
 function loadingMarkup(label: string): string {
   return `<div class="loading-embers" aria-hidden="true">${'<i></i>'.repeat(12)}</div>
-  <div class="loading-head"><div class="loading-crest">${LOAD_CREST}</div><p class="loading-title">Project‑1</p><p class="loading-sub">Zbuduj osadę, wykarm ludzi, obroń zamek</p></div>
-  <div class="loading-card"><p class="loading-tip">Wilki wychodzą z lasu o zmierzchu. Palisada wokół osady daje ludziom spokojniejszą noc.</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${label}</span><strong></strong></p></div>`;
+  <div class="loading-head"><div class="loading-crest">${LOAD_CREST}</div><p class="loading-title">Project‑1</p><p class="loading-sub">${t('menu.subtitle')}</p></div>
+  <div class="loading-card"><p class="loading-tip">${randomTip()}</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${label}</span><strong></strong></p></div>`;
 }
 let titleScreen = true;
 /** Bieżące ustawienia (te same, które zmienia menu) i automat jakości grafiki */

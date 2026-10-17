@@ -2,19 +2,8 @@
  * Gra jest tylko na komputery. Telefon albo tablet (sam dotyk, bez myszy) dostaje tablicę z informacją,
  * a gra w ogóle się nie wczytuje.
  */
-/** Porady na ekranie wczytywania (musi stać przed uruchomieniem load) */
-const TIPS = [
-  'Wilki wychodzą z lasu o zmierzchu. Palisada wokół osady daje ludziom spokojniejszą noc.',
-  'Najpierw jedzenie: sad albo rybak, zanim postawisz kolejne chaty dla nowych ludzi.',
-  'Chata drwala przy samym lesie: krótsza droga po drewno to więcej desek.',
-  'Grabarz zbiera ciała tylko na swoim terenie. Kliknij cmentarz, żeby zobaczyć, gdzie sięga.',
-  'Budowniczy najpierw idą do składu po materiał. Skład blisko budowy = szybsza budowa.',
-  'Prawy klik z przeciąganiem ustawia oddział w szyku i wskazuje, w którą stronę ma patrzeć.',
-  'Zaznacz chłopa i wciśnij F, żeby przejść się jego oczami. F bez zaznaczenia (albo oko na pasku) i klik na mapie: spacer od tego miejsca.',
-  'Wydeptane ścieżki pokazują, gdzie ludzie chodzą najczęściej. Tam warto położyć drogę.',
-  'W nocy ludzie schodzą do ogniska i karczmy, a o świcie wracają do pracy.',
-  'F3 pokazuje okno wydajności. Gra sama dobiera jakość grafiki do komputera.',
-];
+import { t, tx } from './i18n';
+import { randomTip } from './data/tips';
 
 const touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
 const mobileAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -24,9 +13,9 @@ if (touchOnly || mobileAgent) {
   document.getElementById('loading')?.remove();
   const ui = document.getElementById('ui')!;
   ui.innerHTML = `<div class="desktop-only panel" role="alert">
-    <p class="info-name">Tylko na komputerze</p>
-    <p>Ta gra działa w przeglądarce na komputerze, z myszą i klawiaturą. Na telefonie i tablecie się nie uruchomi.</p>
-    <p>Otwórz ten adres na komputerze.</p>
+    <p class="info-name">${tx('Tylko na komputerze', 'Computer only')}</p>
+    <p>${tx('Ta gra działa w przeglądarce na komputerze, z myszą i klawiaturą. Na telefonie i tablecie się nie uruchomi.', 'This game runs in a browser on a computer, with a mouse and keyboard. It will not start on a phone or tablet.')}</p>
+    <p>${tx('Otwórz ten adres na komputerze.', 'Open this address on a computer.')}</p>
   </div>`;
 } else {
   void load();
@@ -47,7 +36,11 @@ async function load(): Promise<void> {
   const count = document.getElementById('loading-count');
   // porada na czas wczytywania (losowanie to tylko ozdoba ekranu, nie symulacja)
   const tip = document.getElementById('loading-tip');
-  if (tip) tip.textContent = TIPS[Math.floor(Math.random() * TIPS.length)]!;
+  if (tip) tip.textContent = randomTip();
+  // napisy wpisane w index.html (zanim gra się wczyta) w wybranym języku
+  const sub = document.querySelector('#loading .loading-sub');
+  if (sub) sub.textContent = t('menu.subtitle');
+  document.getElementById('game')?.setAttribute('aria-label', tx('Mapa gry', 'Game map'));
   // klatka do odświeżenia paska; w karcie w tle przeglądarka wstrzymuje klatki, więc jest też zapasowy zegar
   const frame = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
   let done = 0, total = 3;
@@ -62,38 +55,38 @@ async function load(): Promise<void> {
     if (fill) fill.style.width = `${Math.round((done / total) * 100)}%`;
     await frame();
   };
-  await step('Wczytywanie silnika gry…');
+  await step(tx('Wczytywanie silnika gry…', 'Loading the game engine…'));
   const tex = await import('./render/textures');
   const kinds = tex.KINDS();
   total = 2 + kinds.length + 1;
   done = 1;
-  const names: Record<string, string> = {
-    bricks: 'kamień', planks: 'deski', thatch: 'strzecha', plaster: 'tynk', tiles: 'dachówki', grass: 'trawa', leaves: 'liście',
-    needles: 'igliwie', bark: 'kora', soil: 'ziemia', window: 'okna', water: 'woda', ashlar: 'mur', cobble: 'bruk', rock: 'skała', dressed: 'ciosy', organic: 'żywność', slate: 'łupek',
+  const names: Record<string, [string, string]> = {
+    bricks: ['kamień', 'stone'], planks: ['deski', 'planks'], thatch: ['strzecha', 'thatch'], plaster: ['tynk', 'plaster'], tiles: ['dachówki', 'roof tiles'], grass: ['trawa', 'grass'], leaves: ['liście', 'leaves'],
+    needles: ['igliwie', 'needles'], bark: ['kora', 'bark'], soil: ['ziemia', 'soil'], window: ['okna', 'windows'], water: ['woda', 'water'], ashlar: ['mur', 'masonry'], cobble: ['bruk', 'cobbles'], rock: ['skała', 'rock'], dressed: ['ciosy', 'dressed stone'], organic: ['żywność', 'food'], slate: ['łupek', 'slate'],
   };
   for (const kind of kinds) {
     // zapamiętana z poprzedniej wizyty wczytuje się od razu, bez klatki przerwy
     if (await tex.restore(kind)) { tex.pattern(kind); tex.bump(kind); done++; continue; }
-    await step(`Tekstury: ${names[kind] ?? kind}`);
+    await step(`${tx('Tekstury', 'Textures')}: ${names[kind] ? tx(...names[kind]!) : kind}`);
     tex.pattern(kind);
     tex.bump(kind);
     done++;
   }
-  await step('Modele…');
+  await step(tx('Modele…', 'Models…'));
   // modele z Blendera leżą poza kodem gry: pobierają się tu równolegle (za drugim razem z pamięci przeglądarki)
   const { loadModels } = await import('./render/modelstore');
-  await loadModels((n, all) => { if (count) count.textContent = `${done} / ${total} · modele ${n}/${all}`; });
+  await loadModels((n, all) => { if (count) count.textContent = `${done} / ${total} · ${tx('modele', 'models')} ${n}/${all}`; });
   const assets = await import('./render/assets');
   await assets.preloadAssets();
   done++;
   // miniatury budynków z poprzedniej wizyty (tej samej wersji gry): menu nie rysuje ich od nowa
   await import('./render/thumbcache').then((m) => m.loadThumbs()).catch(() => undefined);
-  await step('Budowanie świata i osady…');
+  await step(tx('Budowanie świata i osady…', 'Building the world and the settlement…'));
   const game = await import('./main');
-  await step('Przygotowanie grafiki…');
+  await step(tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
   game.warmup();
   done = total;
-  await step('Gotowe');
+  await step(tx('Gotowe', 'Ready'));
   (window as unknown as { __loadTimes: unknown }).__loadTimes = times;
   console.info('[wczytywanie]', times.map(([t, ms]) => `${t} ${ms} ms`).join(' | '));
   document.getElementById('loading')?.classList.add('done');
