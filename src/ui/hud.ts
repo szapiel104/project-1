@@ -47,6 +47,8 @@ export interface HudEvents {
   onRandomWalk(): void;
   /** Pokaż / ukryj teren pracy budynku (zielony kwadrat) */
   onArea(building: number): void;
+  /** Kopalnia: wejście do sztolni (spacer w osobnej lokacji) */
+  onEnterMine(building: number): void;
   onSelectGarrison(building: number): void;
 }
 
@@ -629,6 +631,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const walkBtn = el('button', 'btn-main walk-btn', tx('Przejdź się jego oczami (F)', 'Walk in his shoes (F)')); walkBtn.type = 'button'; walkBtn.hidden = true;
   walkBtn.addEventListener('click', () => events.onWalk());
   const areaBtn = el('button', 'btn-main', tx('Pokaż teren pracy', 'Show work area')); areaBtn.type = 'button'; areaBtn.hidden = true;
+  // kopalnia: przejście do sztolni oczami chłopa (osobna lokacja pod ziemią)
+  const mineBtn = el('button', 'btn-main walk-btn', tx('Wejdź do kopalni', 'Enter the mine')); mineBtn.type = 'button'; mineBtn.hidden = true;
+  mineBtn.addEventListener('click', () => events.onEnterMine(infoId));
   areaBtn.addEventListener('click', () => events.onArea(infoId));
   infoActions.append(areaBtn, demolish, close);
   // plac budowy: pasek postępu, materiał (przyniesiony / potrzebny, w drodze), robotnicy i co się teraz dzieje
@@ -663,7 +668,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, gateBox, powerBox, towerBox, watchState, walkBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, gateBox, powerBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -733,7 +738,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     cats.append(b);
   }
   for (const def of BUILDINGS) {
-    if (!def.buildable) continue;
+    if (!def.buildable || def.legacy) continue; // kamieniołom i kopalnia żelaza zastąpione kopalnią pod górami
     const b = el('button', 'card');
     b.type = 'button';
     b.title = t(`d.${def.id}`);
@@ -1033,7 +1038,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       gateBox.hidden = true;
       powerBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
-      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true; infoDesc.hidden = false;
+      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; infoDesc.hidden = false;
       walkBtn.hidden = person.walk === false;
     },
     showArmy(army, ctl) {
@@ -1049,7 +1054,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       towerBox.hidden = true;
       gateBox.hidden = true;
       powerBox.hidden = true;
-      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; watchState.hidden = true;
+      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true;
       walkBtn.hidden = true;
       // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
       const byKind = new Map<string, { name: string; n: number }>();
@@ -1228,6 +1233,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
       demolish.hidden = !i.own || !i.def.buildable;
       areaBtn.hidden = i.area === undefined;
+      mineBtn.hidden = !(i.own && i.def.id === 'oremine');
       const shot = i.def.id === 'watchtower' || i.def.id === 'stoneTower';
       setText(areaBtn, shot ? (i.area ? tx('Ukryj zasięg strzału', 'Hide firing range') : tx('Pokaż zasięg strzału', 'Show firing range')) : i.area ? tx('Ukryj teren pracy', 'Hide work area') : tx('Pokaż teren pracy', 'Show work area'));
       areaBtn.setAttribute('aria-pressed', String(!!i.area));

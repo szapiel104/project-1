@@ -32,14 +32,15 @@ def jit(a, bb, k=0.05):
 
 # ---------------- garb skalny (shell): fasetowane kopce ----------------
 def mound(group, cx, cz, rx, rz, h, seg=12, seed=0.0, mat='rock', dark='rockDark'):
-    levels = [(1.0, 0.0), (0.96, 0.3), (0.84, 0.62), (0.6, 0.86), (0.3, 0.97)]
+    # pierwszy pierścień schodzi 0,9 pola pod ziemię: garb wystaje poza działkę, a tam teren bywa niższy — bez tego wisiał w powietrzu
+    levels = [(1.02, -0.9 / max(h, 0.1)), (1.0, 0.0), (0.96, 0.3), (0.84, 0.62), (0.6, 0.86), (0.3, 0.97)]
     rings = []
     for li, (rk, hk) in enumerate(levels):
         ring = []
         for k in range(seg):
             a = 2 * math.pi * k / seg + li * 0.17
             rr = rk * (1 + jit(k + seed, li, 0.09))
-            ring.append((cx + math.sin(a) * rx * rr, h * hk + jit(k, li + seed, 0.04) * h, cz + math.cos(a) * rz * rr))
+            ring.append((cx + math.sin(a) * rx * rr, h * hk + (jit(k, li + seed, 0.04) * h if li else 0), cz + math.cos(a) * rz * rr))
         rings.append(ring)
     top = (cx + jit(seed, 1, 0.1), h, cz + jit(seed, 2, 0.1))
     away = (cx, h * 0.35, cz)

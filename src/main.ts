@@ -176,6 +176,12 @@ const hud = createHud(document.getElementById('ui')!, {
     const u = pool[Math.floor(Math.random() * pool.length)];
     if (u) { selectUnit(u.id); walkAs(u.id); }
   },
+  onEnterMine: (id) => {
+    // spacer w sztolni kopalni: ta sama klasa „walking” i podpowiedź co przy zwykłym spacerze
+    if (!renderer.walking) { document.body.classList.add('walking'); walkHint.hidden = false; }
+    renderer.enterMine(id);
+    select(0);
+  },
   onArea: (id) => {
     if (!shownAreas.delete(id)) shownAreas.add(id);
     renderer.setAreas(shownAreas);
@@ -2434,6 +2440,6 @@ function showPerf(now: number): void {
 const walkHint = document.createElement('p');
 walkHint.className = 'walk-hint';
 walkHint.hidden = true;
-walkHint.textContent = tx('W A S D — idź · mysz — rozglądaj się · Shift — biegnij · Spacja — skok · F — pochodnia · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)', 'W A S D — walk · mouse — look around · Shift — run · Space — jump · F — torch · Esc — back to the overhead view (click if the cursor was released)');
+walkHint.textContent = tx('W A S D — idź · mysz — rozglądaj się · Shift — biegnij · Spacja — skok · F — pochodnia · portal kopalni — wejście do sztolni (wyjście: wrota na końcu korytarza) · Esc — wróć do widoku z góry (kliknij, jeśli kursor się zwolnił)', 'W A S D — walk · mouse — look around · Shift — run · Space — jump · F — torch · mine portal — enter the adit (way out: the door at the end of the tunnel) · Esc — back to the overhead view (click if the cursor got released)');
 document.body.append(walkHint);
 renderer.onWalkEnd = () => { document.body.classList.remove('walking'); walkHint.hidden = true; };

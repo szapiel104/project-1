@@ -30,6 +30,7 @@ const STOCKPILE_MODEL = model('stockpile');
 const WOODCUTTER_MODEL = model('woodcutter');
 const OREMINE_MODEL = model('mine');
 const MINECAMP_MODEL = model('minecamp');
+const MINE_LEVEL_MODEL = model('minelevel');
 const FISHER_MODEL = model('fisher');
 const FLETCHER_MODEL = model('fletcher');
 const POLETURNER_MODEL = model('poleturner');
@@ -888,6 +889,17 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     f.position.set(x, y, z);
     g.add(f);
   }
+}
+
+/**
+ * Wnętrze kopalni jako osobna lokacja (tools/models/minelevel.py): korytarz, hala i dwa chodniki z przodkami.
+ * Spacer przenosi się tu po wejściu w portal kopalni (scene.ts, enterMine). Znaczniki latarń to obiekty 'lampSpot'.
+ */
+export function mineLevelModel(): THREE.Group {
+  const g = new THREE.Group();
+  blenderModel(g, MINE_LEVEL_MODEL as unknown as BlenderBuilding, M.wood);
+  g.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.castShadow = false; m.receiveShadow = false; } });
+  return g;
 }
 
 /** Modele budynków z brył. Klucz = id z data/buildings.ts. Początek układu = środek działki, 1 = jedno pole. */
