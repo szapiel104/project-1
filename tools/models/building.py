@@ -125,6 +125,26 @@ class Building:
                 self.poly(group, mat, [a[k], b2[k2], b2[k]], away=c)
             self.poly(group, mat, [pts[-1][k], pts[-1][k2], top], away=c)
 
+    def wheel(self, group, x, y, z, r, t=0.035, rot=0.0, seg=12, mat='woodDark', tire='iron'):
+        """Pełne koło wózka (stojące, oś poziomo): drewniana tarcza z obu stron i żelazna obręcz na obwodzie.
+        Środek w (x, y, z); oś koła idzie wzdłuż lokalnego x, obróconego o `rot` wokół pionu (jak `box(rot=...)`)."""
+        c, s = math.cos(rot), math.sin(rot)
+        def P(lx, a, rr):
+            ly, lz = math.cos(a) * rr, math.sin(a) * rr
+            return (x + lx * c + lz * s, y + ly, z - lx * s + lz * c)
+        ring = [2 * math.pi * k / seg for k in range(seg)]
+        for side in (-1, 1):
+            lx = side * t / 2
+            self.poly(group, mat, [P(lx, a, r) for a in ring], away=P(-side * t * 4, 0, 0))
+            # piasta: mały guz żelaza wystający z tarczy
+            self.poly(group, tire, [P(lx + side * 0.012, a, r * 0.28) for a in ring[::2]], away=P(-side * t * 4, 0, 0))
+            for k in range(0, seg, 2):
+                a0, a1 = ring[k], ring[(k + 2) % seg]
+                self.poly(group, tire, [P(lx, a0, r * 0.28), P(lx, a1, r * 0.28), P(lx + side * 0.012, a1, r * 0.28), P(lx + side * 0.012, a0, r * 0.28)], away=P(lx, 0, 0))
+        for k in range(seg):
+            a0, a1 = ring[k], ring[(k + 1) % seg]
+            self.poly(group, tire, [P(-t / 2, a0, r), P(-t / 2, a1, r), P(t / 2, a1, r), P(t / 2, a0, r)], away=P(0, 0, 0))
+
     def prism(self, group, mat, r0, r1, h, x=0.0, y=0.0, z=0.0, seg=12, top=True, phase=0.0):
         """Walec / ścięty stożek o seg bokach (r1 = 0: stożek)"""
         ring = lambda r, yy: [(x + math.sin(phase + 2 * math.pi * k / seg) * r, yy, z + math.cos(phase + 2 * math.pi * k / seg) * r) for k in range(seg)]

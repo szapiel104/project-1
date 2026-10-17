@@ -162,8 +162,9 @@ WX, WZ = -0.78, -0.22
 b.box('interior', 'woodDark', 0.3, 0.22, 0.42, WX, P + 0.09, WZ)
 for sx in (-1, 1):
     for sz in (-1, 1):
-        b.prism('interior', 'iron', 0.06, 0.06, 0.03, WX + sx * 0.16, P + 0.03, WZ + sz * 0.14, seg=8)
-b.box('interior', 'magicOre', 0.22, 0.08, 0.32, WX, P + 0.3, WZ)
+        b.wheel('interior', WX + sx * 0.17, P + 0.065, WZ + sz * 0.13, 0.065, t=0.03)
+for k, (ox, oz, r) in enumerate(((0.0, 0.0, 0.09), (0.06, -0.1, 0.07), (-0.05, 0.1, 0.07))):
+    b.crystal('interior', 'magicOre', WX + ox, P + 0.32, WZ + oz, r, seed=k + 3, sy=0.8)
 solid.append([WX - 0.17, WX + 0.17, WZ - 0.23, WZ + 0.23])
 # latarnie na słupkach w grocie
 for (x, z) in ((0.95, 0.5), (-0.4, -0.35)):

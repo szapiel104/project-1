@@ -79,7 +79,7 @@ def holed(x0, x1, z0, z1, hole, y, up, mat):
         if up:
             b.box(G, mat, a1 - a0, 0.02, c1 - c0, (a0 + a1) / 2, y - 0.02, (c0 + c1) / 2, top=True, bottom=False)
         else:
-            b.poly(G, mat, [(a0, y, c0), (a1, y, c0), (a1, y, c1), (a0, y, c1)], away=((a0 + a1) / 2, y - 5, (c0 + c1) / 2))
+            b.poly(G, mat, [(a0, y, c0), (a1, y, c0), (a1, y, c1), (a0, y, c1)], away=((a0 + a1) / 2, y + 5, (c0 + c1) / 2))
 
 
 def room_walls(name, rooms=None, floor_hole=None, ceil_hole=None):
@@ -197,8 +197,8 @@ for (x, z, a) in ((0.0, 0.2, 0.0), (-2.4, -2.4, 0.4)):
     for sx in (-1, 1):
         for sz in (-1, 1):
             c, s = math.cos(a), math.sin(a)
-            wx, wz = sx * 0.22, sz * 0.2
-            b.prism(G, 'iron', 0.08, 0.08, 0.04, x + wx * c + wz * s, 0.04, z - wx * s + wz * c, seg=8)
+            wx, wz = sx * 0.235, sz * 0.19
+            b.wheel(G, x + wx * c + wz * s, 0.085, z - wx * s + wz * c, 0.085, rot=a)
     # urobek w wózku: kilka brył rudy wystających nad burtę
     for k, (ox, oz, r) in enumerate(((0.0, 0.0, 0.13), (0.08, -0.15, 0.1), (-0.08, 0.15, 0.1), (-0.06, -0.12, 0.08))):
         b.crystal(G, 'magicOre', x + ox * math.cos(a) + oz * math.sin(a), 0.42, z - ox * math.sin(a) + oz * math.cos(a), r, seed=k + x, sy=0.8)
@@ -295,7 +295,7 @@ for k, (ox, oz, r) in enumerate(((0.0, 0.0, 0.13), (0.08, -0.15, 0.1), (-0.08, 0
     b.crystal(G, 'magicOre', 3.2 + ox, 0.42, -6.4 + oz, r, seed=k + 80, sy=0.8)
 for sx in (-1, 1):
     for sz in (-1, 1):
-        b.prism(G, 'iron', 0.08, 0.08, 0.04, 3.2 + sx * 0.22 * math.cos(0.3) + sz * 0.2 * math.sin(0.3), 0.04, -6.4 - sx * 0.22 * math.sin(0.3) + sz * 0.2 * math.cos(0.3), seg=8)
+        b.wheel(G, 3.2 + sx * 0.235 * math.cos(0.3) + sz * 0.19 * math.sin(0.3), 0.085, -6.4 - sx * 0.235 * math.sin(0.3) + sz * 0.19 * math.cos(0.3), 0.085, rot=0.3)
 solid2.append([2.85, 3.55, -6.8, -6.0])
 b.box(G, 'wood', 0.5, 0.35, 0.35, 7.8, 0, -6.0)
 b.box(G, 'wood', 0.35, 0.3, 0.35, 7.9, 0.35, -6.0)
@@ -317,6 +317,10 @@ ct, top = LOW + ROOMS2['L1'][4], -0.025
 hc = ((hx0 + hx1) / 2, (hz0 + hz1) / 2)
 for (ax, az, bx, bz) in ((hx0, hz0, hx1, hz0), (hx1, hz0, hx1, hz1), (hx1, hz1, hx0, hz1), (hx0, hz1, hx0, hz0)):
     b.poly(G, 'rockDark', [(ax, ct, az), (bx, ct, bz), (bx, top, bz), (ax, top, az)], away=(hc[0] + (ax + bx - 2 * hc[0]) * 5, (ct + top) / 2, hc[1] + (az + bz - 2 * hc[1]) * 5))
+# latarnia na haku w połowie szybu: oświetla drabinę i dno, żeby otwór nie był czarną dziurą
+b.box(G, 'iron', 0.1, 0.13, 0.1, 3.42, -0.65, -4.12)
+b.box(G, 'iron', 0.06, 0.02, 0.02, 3.49, -0.52, -4.12)
+lamps.append([3.42, -0.55, -4.12])
 for x in (3.02, 3.38):
     b.box(G, 'woodDark', 0.04, 0.9 - LOW, 0.04, x, LOW, -4.53)
 for k in range(int((0.9 - LOW) / 0.28)):
@@ -332,6 +336,9 @@ VIEWS = [
     ['wnęka szybu', [3.2, 0.46, -2.6], [3.2, -0.6, -4.3], ['base'], 18],
     ['szyb od dołu', [3.2, LOW + 0.46, -3.4], [3.2, 0.5, -4.4], ['base'], 18],
     ['galeria od szybu', [3.2, LOW + 0.46, -5.2], [4.5, LOW + 0.6, -10.0], ['base'], 18],
+    ['pod drabiną w górę', [3.2, LOW + 0.46, -3.75], [3.2, 1.6, -4.35], ['base'], 18],
+    ['komora pod szybem', [3.9, LOW + 0.46, -3.2], [2.6, LOW, -5.2], ['base'], 18],
+    ['szyb z góry w dół', [3.2, 0.46, -3.7], [3.2, LOW, -4.3], ['base'], 18],
     ['galeria z kąta', [8.0, LOW + 0.46, -10.0], [2.0, LOW + 0.3, -7.0], ['base'], 18],
 ]
 b.save('minelevel', maxe=0.3, rays=12, reach=0.6, extra={
