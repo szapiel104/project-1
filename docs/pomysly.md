@@ -93,7 +93,7 @@ Dalej (zmierzone 14.10 w Chrome, widok osady: ok. 2,7 mln trójkątów w scenie,
 - Ok. 1180 wywołań rysowania: kawałki lasu po kilkanaście rodzajów na kawałek, w cieniu drugi raz — BatchedMesh albo większe kawałki
 
 - Zrobione 16.10: pniaki tylko po ścięciu, zastępcze bryły cienia roślinności (warstwa „tylko cień”, src/render/shadowlayer.ts), lżejsze kwiaty, ładunki tylko u niosących.
-- AO w połowie rozdzielczości na jakościach do „Wysokiej”
+- Zrobione 17.10: AO w połowie rozdzielczości (do „Wysokiej” zawsze, na „Wysokiej” przy obrazie > 3,2 mln pikseli), AO bez osobnego rysowania przezroczystych rzeczy (n8ao samo je włączało: 4 przejścia po scenie i 2 dodatkowe rysowania na klatkę), pula świateł punktowych 24 → 12. Symulacja na 4v4 to ok. 0,6 ms na tick (zmierzone), a wątek symulacji już jest (src/sim/simthread.ts) — wąskim gardłem zostaje karta graficzna.
 
 Większe rzeczy na później:
 - Wspólny bufor instancji dla wszystkich kawałków jednego rodzaju (BatchedMesh) — mniej wywołań rysowania

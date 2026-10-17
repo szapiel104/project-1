@@ -787,7 +787,9 @@ export class GameRenderer {
     this.scene.add(this.wave);
     // Prawdziwe światła punktowe są drogie, więc jest ich stała pula: nocą trafiają do pochodni najbliżej środka ekranu.
     // Płomienie świecą na wszystkich pochodniach, ale otoczenie oświetla tylko ta pula.
-    for (let i = 0; i < 24; i++) {
+    // 12 świateł: każde kosztuje każdy piksel każdego oświetlonego materiału (także wygaszone), a 12 najbliższych
+    // środka ekranu wystarcza, żeby osada nocą była oświetlona tam, gdzie się patrzy (dalsze pochodnie mają sam płomień)
+    for (let i = 0; i < 12; i++) {
       const lamp = new THREE.PointLight(0xffa35a, 0, 9, 1.5);   // krótszy zasięg: światło pochodni kończy się kilka kroków dalej, a nie oblewa całej osady
       this.scene.add(lamp);
       this.lamps.push(lamp);
@@ -869,6 +871,9 @@ export class GameRenderer {
     this.ao = new N8AOPass(this.scene, this.cam.camera, canvas.clientWidth || 1, canvas.clientHeight || 1);
     Object.assign(this.ao.configuration, { aoRadius: 1.6, distanceFalloff: 0.6, intensity: 2.2, gammaCorrection: false, color: new THREE.Color(0x1a120a) });
     this.ao.setQualityMode('Medium');
+    // AO bez osobnego rysowania przezroczystych rzeczy: n8ao samo to włączało (w scenie są przezroczyste pierścienie,
+    // dym i woda), a wtedy co klatkę cztery razy przechodziło po całej scenie i dwa razy ją dodatkowo rysowało
+    this.ao.configuration.transparencyAware = false;
     this.plain = new RenderPass(this.scene, this.cam.camera);
     this.plain.enabled = false;
     this.composer.addPass(this.plain);
@@ -1303,6 +1308,8 @@ export class GameRenderer {
     this.ao.enabled = o.ao !== 'off';
     this.plain.enabled = o.ao === 'off';
     if (o.ao !== 'off') this.ao.setQualityMode(o.ao === 'high' ? 'High' : o.ao === 'low' ? 'Low' : 'Medium');
+    this.aoMode = o.ao;
+    this.aoRes();
     this.sun.castShadow = o.shadows > 0;
     this.shadowMax = o.shadows;
     // poświata od średniej jakości w górę (kosztuje kilka przejść w małej rozdzielczości)
@@ -5561,6 +5568,19 @@ export class GameRenderer {
     this.renderer.setSize(w, h, false);
     this.composer?.setSize(w, h);
     this.cam.resize(w, h);
+    this.aoRes();
+  }
+  private aoMode = 'medium';
+  /**
+   * Cienie w zakamarkach (AO) liczone w połowie rozdzielczości i rozciągane z poszanowaniem krawędzi (depthAwareUpsampling):
+   * na niższych jakościach zawsze, na wysokiej — przy dużym obrazie (ultrapanorama, 4K), gdzie różnicy nie widać, a karta
+   * liczy czterokrotnie mniej pikseli. Pełna rozdzielczość zostaje tylko na wysokiej jakości przy zwykłym ekranie.
+   */
+  private aoRes(): void {
+    if (!this.ao) return;
+    const px = this.canvas.clientWidth * this.canvas.clientHeight * this.renderer.getPixelRatio() ** 2;
+    const half = this.aoMode !== 'high' || px > 3.2e6;
+    if (this.ao.configuration.halfRes !== half) this.ao.configuration.halfRes = half;
   }
 
   /** Zaznacza chłopa: pierścień chodzi za nim. 0 zdejmuje zaznaczenie. */
