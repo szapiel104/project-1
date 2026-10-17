@@ -4,7 +4,7 @@ import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
 import { createGallery, GALLERY, type GalleryEntry } from '../render/gallery';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
-import { t } from '../i18n';
+import { t, tx, lang, setLang, LANGS } from '../i18n';
 import { HELP_CHAPTERS, type HelpBlock } from './helpText';
 
 /** Ustawienia zapamiętywane w przeglądarce */
@@ -237,16 +237,16 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         const lv = levelOf(pr.xp);
         const bar = el('span', 'acc-xp');
         bar.setAttribute('role', 'img');
-        bar.setAttribute('aria-label', `Poziom ${lv.level}: ${lv.into} z ${lv.need} PD do następnego`);
+        bar.setAttribute('aria-label', tx(`Poziom ${lv.level}: ${lv.into} z ${lv.need} PD do następnego`, `Level ${lv.level}: ${lv.into} of ${lv.need} XP to the next`));
         const fill = el('span', 'acc-xp-fill'); fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`;
         bar.append(fill);
-        txt.append(el('strong', '', m.nick), el('span', 'acc-level', `${titleOf(lv.level)} · poziom ${lv.level} · ${lv.into}/${lv.need} PD`), bar);
-      } else txt.append(el('strong', '', m.nick), el('span', '', 'zalogowany · konto'));
+        txt.append(el('strong', '', m.nick), el('span', 'acc-level', `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level} · ${lv.into}/${lv.need} ${tx('PD', 'XP')}`), bar);
+      } else txt.append(el('strong', '', m.nick), el('span', '', tx('zalogowany · konto', 'signed in · account')));
       who.append(s, txt);
       who.addEventListener('click', () => online.showAccount());
       account.append(who);
     } else {
-      account.append(button('Zaloguj się', () => online.showLogin(false), 'link-btn acc-link'), el('span', 'acc-sep', '·'), button('Załóż konto', () => online.showLogin(true), 'link-btn acc-link'));
+      account.append(button(tx('Zaloguj się', 'Sign in'), () => online.showLogin(false), 'link-btn acc-link'), el('span', 'acc-sep', '·'), button(tx('Załóż konto', 'Create account'), () => online.showLogin(true), 'link-btn acc-link'));
     }
   };
   onAccount(paintAccount);
@@ -268,10 +268,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       left.append(barBtn(t('menu.newGame'), showNew), barBtn(t('menu.settings'), showSettings), barBtn(t('menu.howTo'), showHelp));
       main = barBtn(t('menu.resume'), () => events.onContinue(), true);
       // w trakcie gry bez „Gry przez sieć” (jest w menu głównym po wyjściu): pasek mieści się też na wąskim ekranie
-      right.append(barBtn('Wyjdź do menu', () => showQuit()), barBtn('Poddaj się', showSurrender));
+      right.append(barBtn(tx('Wyjdź do menu', 'Quit to menu'), () => showQuit()), barBtn(tx('Poddaj się', 'Surrender'), showSurrender));
     } else {
       if (canContinue) left.append(barBtn(t('menu.continue'), () => events.onContinue()));
-      left.append(barBtn('Gra przez sieć', () => online.showOnline()));
+      left.append(barBtn(tx('Gra przez sieć', 'Online play'), () => online.showOnline()));
       main = barBtn(t('menu.newGame'), showNew, true);
       right.append(barBtn(t('menu.settings'), showSettings), barBtn(t('menu.howTo'), showHelp));
     }
@@ -306,30 +306,30 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     wrap.classList.remove('sub-open');
     body.replaceChildren();
     paintBar();
-    foot.textContent = inGame ? 'Esc — wróć do gry · ← → wybór' : `wersja ${BUILD} · ← → wybór · Enter zatwierdza`;
+    foot.textContent = inGame ? tx('Esc — wróć do gry · ← → wybór', 'Esc — back to the game · ← → select') : tx(`wersja ${BUILD} · ← → wybór · Enter zatwierdza`, `version ${BUILD} · ← → select · Enter confirms`);
     bar.querySelector<HTMLButtonElement>('.bar-main')?.focus();
   }
 
   function showQuit(): void {
     if (!events.isOnline()) { events.onQuitToTitle(); return; }
     const box = el('div', 'menu-form');
-    box.append(el('p', '', 'Wyjście z meczu przez sieć oznacza poddanie się. Twój zamek zostanie bez gospodarza.'));
-    const yes = button('Tak, wychodzę', () => events.onQuitToTitle(), 'menu-btn');
-    const no = button('Nie, gram dalej', showMain, 'menu-btn menu-back');
+    box.append(el('p', '', tx('Wyjście z meczu przez sieć oznacza poddanie się. Twój zamek zostanie bez gospodarza.', 'Leaving an online match means surrendering. Your castle will be left without a lord.')));
+    const yes = button(tx('Tak, wychodzę', 'Yes, leave'), () => events.onQuitToTitle(), 'menu-btn');
+    const no = button(tx('Nie, gram dalej', 'No, keep playing'), showMain, 'menu-btn menu-back');
     box.append(yes, no);
-    screen('Wyjść z meczu?', false, box);
+    screen(tx('Wyjść z meczu?', 'Leave the match?'), false, box);
     no.focus();
   }
 
   function showSurrender(): void {
     const box = el('div', 'menu-form');
     box.append(el('p', '', events.isOnline()
-      ? 'Mecz skończy się dla Ciebie porażką. Twój zamek zostanie na mapie bez gospodarza — jeśli to 1 na 1 albo nie masz w drużynie nikogo w grze, przeciwnicy od razu wygrają.'
-      : 'Mecz skończy się porażką. Tej decyzji nie da się cofnąć.'));
-    const yes = button('Tak, poddaję się', () => { events.onSurrender(); }, 'menu-btn');
-    const no = button('Nie, gram dalej', showMain, 'menu-btn menu-back');
+      ? tx('Mecz skończy się dla Ciebie porażką. Twój zamek zostanie na mapie bez gospodarza — jeśli to 1 na 1 albo nie masz w drużynie nikogo w grze, przeciwnicy od razu wygrają.', 'The match will end in defeat for you. Your castle stays on the map without a lord — in a 1 on 1, or if nobody else on your team is still playing, your opponents win at once.')
+      : tx('Mecz skończy się porażką. Tej decyzji nie da się cofnąć.', 'The match will end in defeat. This cannot be undone.')));
+    const yes = button(tx('Tak, poddaję się', 'Yes, I surrender'), () => { events.onSurrender(); }, 'menu-btn');
+    const no = button(tx('Nie, gram dalej', 'No, keep playing'), showMain, 'menu-btn menu-back');
     box.append(yes, no);
-    screen('Poddać się?', false, box);
+    screen(tx('Poddać się?', 'Surrender?'), false, box);
     no.focus();
   }
 
@@ -351,7 +351,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     for (const id of Object.keys(MAP_PRESETS) as MapPresetId[]) {
       const p = MAP_PRESETS[id];
       const [a, b] = id.split('v');
-      modeRow.append(tile('mode', id === preset, `${a} na ${b}`, `${t(`menu.mode.${id}`)} · mapa ${p.width}×${p.height}`, () => { preset = id; preview(); }, `mode-${id}`));
+      modeRow.append(tile('mode', id === preset, `${a} ${tx('na', 'vs')} ${b}`, `${t(`menu.mode.${id}`)} · ${tx('mapa', 'map')} ${p.width}×${p.height}`, () => { preset = id; preview(); }, `mode-${id}`));
     }
     let level = 1;
     const levelRow = el('div', 'pick-row four');
@@ -375,14 +375,14 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     let timer = 0;
     const preview = (delay = 0): void => {
       clearTimeout(timer);
-      status.textContent = 'Generuję mapę…';
+      status.textContent = tx('Generuję mapę…', 'Generating the map…');
       timer = window.setTimeout(() => requestAnimationFrame(() => setTimeout(() => {
         events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev);
-        status.textContent = `Mapa „${seed.value.trim() || 'project-1'}” — widok z lotu ptaka. Losuj, aż trafisz na swoją.`;
+        status.textContent = tx(`Mapa „${seed.value.trim() || 'project-1'}” — widok z lotu ptaka. Losuj, aż trafisz na swoją.`, `Map “${seed.value.trim() || 'project-1'}” — bird’s-eye view. Keep rolling until you find the one you like.`);
       }, 20)), delay);
     };
     seed.addEventListener('input', () => preview(700));
-    const rollBtn = button('Losuj inną mapę', () => { roll(); preview(); }, 'btn-plain');
+    const rollBtn = button(tx('Losuj inną mapę', 'Roll another map'), () => { roll(); preview(); }, 'btn-plain');
     row.append(seed, rollBtn);
     seedWrap.append(seedLabel, row);
 
@@ -392,24 +392,24 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const devBox = el('input');
     devBox.type = 'checkbox'; devBox.setAttribute('role', 'switch');
     devBox.addEventListener('change', () => { dev = devBox.checked; instLab.hidden = !dev; wallLab.hidden = !dev; preview(); });
-    devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Tryb deweloperski'), el('span', 'dev-hint', 'miasto w murach, wojsko, pełne zapasy'));
+    devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', tx('Tryb deweloperski', 'Developer mode')), el('span', 'dev-hint', tx('miasto w murach, wojsko, pełne zapasy', 'walled town, army, full supplies')));
     // w trybie deweloperskim: budynki od razu gotowe albo zwykła budowa (robotnicy noszą materiał, rusztowania)
     let instant = true;
     const instLab = el('label', 'dev-switch');
     const instBox = el('input');
     instBox.type = 'checkbox'; instBox.setAttribute('role', 'switch'); instBox.checked = true;
     instBox.addEventListener('change', () => { instant = instBox.checked; });
-    instLab.append(instBox, el('span', 'dev-knob'), el('span', 'dev-text', 'Budowa od razu'), el('span', 'dev-hint', 'wyłączone: zwykła budowa z noszeniem materiału'));
+    instLab.append(instBox, el('span', 'dev-knob'), el('span', 'dev-text', tx('Budowa od razu', 'Instant building')), el('span', 'dev-hint', tx('wyłączone: zwykła budowa z noszeniem materiału', 'off: normal building with materials carried in')));
     instLab.hidden = true;
     // w trybie deweloperskim: z czego są mury miasta
     let walls: 'mix' | 'stone' | 'wood' = 'mix';
     const wallLab = el('label', 'dev-switch dev-walls');
     const wallSel = el('select');
-    for (const [v, txt] of [['mix', 'mieszane (kamień i bale)'], ['stone', 'kamienne'], ['wood', 'drewniane (palisada)']] as const) {
+    for (const [v, txt] of [['mix', tx('mieszane (kamień i bale)', 'mixed (stone and logs)')], ['stone', tx('kamienne', 'stone')], ['wood', tx('drewniane (palisada)', 'wooden (palisade)')]] as const) {
       const o = el('option'); o.value = v; o.textContent = txt; wallSel.append(o);
     }
     wallSel.addEventListener('change', () => { walls = wallSel.value as typeof walls; });
-    wallLab.append(el('span', 'dev-text', 'Mury miasta'), wallSel);
+    wallLab.append(el('span', 'dev-text', tx('Mury miasta', 'Town walls')), wallSel);
     wallLab.hidden = true;
 
     const warn = el('p', 'hint', canContinue || inGame ? t('menu.overwrite') : '');
@@ -472,55 +472,57 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   function showSettings(): void {
     const tabs = tabbed([
       [t('menu.sound'), () => {
-        const mute = check('Wycisz cały dźwięk', muted, (v) => { if (v !== muted) muted = events.onMute(); });
+        const mute = check(tx('Wycisz cały dźwięk', 'Mute all sound'), muted, (v) => { if (v !== muted) muted = events.onMute(); });
         return [
           mute,
           slider(t('set.master'), volume * 100, (v) => { volume = v / 100; events.onVolume(volume); }),
           slider(t('set.sfx'), settings.sfx * 100, (v) => { settings.sfx = v / 100; save(); }),
           slider(t('set.ui'), settings.ui * 100, (v) => { settings.ui = v / 100; save(); }),
           slider(t('set.amb'), settings.amb * 100, (v) => { settings.amb = v / 100; save(); }),
-          slider('Muzyka', (settings.music ?? 0.45) * 100, (v) => { settings.music = v / 100; save(); }),
+          slider(tx('Muzyka', 'Music'), (settings.music ?? 0.45) * 100, (v) => { settings.music = v / 100; save(); }),
           // autorzy nagrań (CC BY-SA wymaga podpisu w grze)
-          el('p', 'hint', 'Ptaki, odgłosy wsi, kury, róg i grzmot: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0. Świerszcze i dzwon: Freesound (rsn267, beambot, Nox_Sound), CC0. Muzyka: RandomMind, nihilocrat, Tozan (OpenGameArt, CC0). Efekty: Kenney (CC0/MIT).'),
+          el('p', 'hint', tx('Ptaki, odgłosy wsi, kury, róg i grzmot: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0. Świerszcze i dzwon: Freesound (rsn267, beambot, Nox_Sound), CC0. Muzyka: RandomMind, nihilocrat, Tozan (OpenGameArt, CC0). Efekty: Kenney (CC0/MIT).', 'Birds, village sounds, hens, horn and thunder: 0 A.D. © Wildfire Games (wildfiregames.com), CC BY-SA 3.0 licence. Crickets and bell: Freesound (rsn267, beambot, Nox_Sound), CC0. Music: RandomMind, nihilocrat, Tozan (OpenGameArt, CC0). Effects: Kenney (CC0/MIT).')),
         ];
       }],
       [t('menu.graphics'), () => [
-        check('Automatyczna jakość (gra sama dobiera grafikę do komputera)', settings.auto, (v) => { settings.auto = v; save(); }),
+        check(tx('Automatyczna jakość (gra sama dobiera grafikę do komputera)', 'Automatic quality (the game picks graphics to suit your computer)'), settings.auto, (v) => { settings.auto = v; save(); }),
         // ręczna zmiana wyłącza automat: gracz wie lepiej
         choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; manual(); }),
         choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
-        button('Ustaw wszystko na Ultra', () => { Object.assign(settings, { shadows: 4096, ao: 'high', grass: 1.35, scale: 2, soft: true }); manual(); showSettings(); }, 'menu-btn set-ultra'),
-        choice('Trawa', settings.grass, [[0, t('set.off')], [0.6, 'Bliżej kamery'], [1, 'Pełna'], [1.35, 'Daleko (Ultra)']], (v) => { settings.grass = v; manual(); }),
-        check('Dynamiczna rozdzielczość (mniejszy obraz, gdy karta nie wyrabia; może mignąć przy zmianie)', settings.dynRes ?? false, (v) => { settings.dynRes = v; save(); }),
-        check('Miękkie cienie (po ponownym uruchomieniu gry)', settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
+        button(tx('Ustaw wszystko na Ultra', 'Set everything to Ultra'), () => { Object.assign(settings, { shadows: 4096, ao: 'high', grass: 1.35, scale: 2, soft: true }); manual(); showSettings(); }, 'menu-btn set-ultra'),
+        choice(tx('Trawa', 'Grass'), settings.grass, [[0, t('set.off')], [0.6, tx('Bliżej kamery', 'Near the camera')], [1, tx('Pełna', 'Full')], [1.35, tx('Daleko (Ultra)', 'Far (Ultra)')]], (v) => { settings.grass = v; manual(); }),
+        check(tx('Dynamiczna rozdzielczość (mniejszy obraz, gdy karta nie wyrabia; może mignąć przy zmianie)', 'Dynamic resolution (smaller image when the graphics card can’t keep up; may flicker when it changes)'), settings.dynRes ?? false, (v) => { settings.dynRes = v; save(); }),
+        check(tx('Miękkie cienie (po ponownym uruchomieniu gry)', 'Soft shadows (after restarting the game)'), settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
         choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
-        choice('Limit klatek', settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, 'Bez limitu']], (v) => { settings.fpsLimit = v; save(); }),
-        slider('Jasność', (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
-        check('Deszcz', settings.rain ?? true, (v) => { settings.rain = v; save(); }),
-        check('Mgła', settings.fog ?? true, (v) => { settings.fog = v; save(); }),
+        choice(tx('Limit klatek', 'Frame limit'), settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, tx('Bez limitu', 'Unlimited')]], (v) => { settings.fpsLimit = v; save(); }),
+        slider(tx('Jasność', 'Brightness'), (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
+        check(tx('Deszcz', 'Rain'), settings.rain ?? true, (v) => { settings.rain = v; save(); }),
+        check(tx('Mgła', 'Fog'), settings.fog ?? true, (v) => { settings.fog = v; save(); }),
         el('p', 'hint', t('set.graphicsHint')),
       ]],
-      ['Interfejs', () => [
-        choice('Wielkość interfejsu', settings.uiSize ?? 1, [[0.5, '50%'], [0.75, '75%'], [0.85, '85%'], [1, '100%'], [1.15, '115%'], [1.3, '130%'], [1.5, '150%']], (v) => { settings.uiSize = v; save(); }),
-        choice('Paski zdrowia', settings.hpBars ?? 'combat', [['always', 'Zawsze'], ['combat', 'W walce'], ['selected', 'Zaznaczeni'], ['never', 'Nigdy']], (v) => { settings.hpBars = v; save(); }),
-        check('Licznik FPS w rogu ekranu', settings.showFps ?? false, (v) => { settings.showFps = v; save(); }),
-        check('Dymki z tym, co mówią ludzie', settings.bubbles ?? true, (v) => { settings.bubbles = v; save(); }),
-        choice('Podpowiedzi po najechaniu', settings.tips ?? 'now', [['now', 'Od razu'], ['delay', 'Z opóźnieniem'], ['off', 'Wcale']], (v) => { settings.tips = v; save(); }),
-        el('p', 'hint', '„W walce” — paski tylko nad rannymi i zaznaczonymi. Pełne statystyki wydajności zawsze pod klawiszem F3.'),
-        el('p', 'hint', 'Powiększa albo pomniejsza całe menu, paski, okna budynków i wojska. 100% to wielkość dobrana do ekranu; na dużym monitorze daj więcej, na małym laptopie mniej. Zmiana działa od razu.'),
+      [tx('Interfejs', 'Interface'), () => [
+        // etykieta w obu językach, żeby każdy znalazł przełącznik, nawet gdy nie zna obecnego języka
+        choice('Język / Language', lang(), LANGS, (v) => setLang(v)),
+        choice(tx('Wielkość interfejsu', 'Interface size'), settings.uiSize ?? 1, [[0.5, '50%'], [0.75, '75%'], [0.85, '85%'], [1, '100%'], [1.15, '115%'], [1.3, '130%'], [1.5, '150%']], (v) => { settings.uiSize = v; save(); }),
+        choice(tx('Paski zdrowia', 'Health bars'), settings.hpBars ?? 'combat', [['always', tx('Zawsze', 'Always')], ['combat', tx('W walce', 'In combat')], ['selected', tx('Zaznaczeni', 'Selected')], ['never', tx('Nigdy', 'Never')]], (v) => { settings.hpBars = v; save(); }),
+        check(tx('Licznik FPS w rogu ekranu', 'FPS counter in the screen corner'), settings.showFps ?? false, (v) => { settings.showFps = v; save(); }),
+        check(tx('Dymki z tym, co mówią ludzie', 'Speech bubbles with what people say'), settings.bubbles ?? true, (v) => { settings.bubbles = v; save(); }),
+        choice(tx('Podpowiedzi po najechaniu', 'Tooltips on hover'), settings.tips ?? 'now', [['now', tx('Od razu', 'Instantly')], ['delay', tx('Z opóźnieniem', 'Delayed')], ['off', tx('Wcale', 'Off')]], (v) => { settings.tips = v; save(); }),
+        el('p', 'hint', tx('„W walce” — paski tylko nad rannymi i zaznaczonymi. Pełne statystyki wydajności zawsze pod klawiszem F3.', '“In combat” — bars only over the wounded and the selected. Full performance stats are always under F3.')),
+        el('p', 'hint', tx('Powiększa albo pomniejsza całe menu, paski, okna budynków i wojska. 100% to wielkość dobrana do ekranu; na dużym monitorze daj więcej, na małym laptopie mniej. Zmiana działa od razu.', 'Scales the whole menu, bars, building and army windows up or down. 100% is the size fitted to your screen; go higher on a big monitor, lower on a small laptop. Takes effect at once.')),
       ]],
-      ['Rozgrywka', () => [
-        choice('Tempo gry na starcie', settings.startSpeed ?? 1, [[0, 'Pauza'], [1, '1×'], [2, '2×'], [3, '3×']], (v) => { settings.startSpeed = v; save(); }),
-        check('Pytaj przed rozbiórką budynku', settings.confirmDemolish ?? true, (v) => { settings.confirmDemolish = v; save(); }),
-        el('p', 'hint', 'Tempo na starcie działa od następnej gry (w grze przez sieć tempo jest zawsze 1×).'),
+      [tx('Rozgrywka', 'Gameplay'), () => [
+        choice(tx('Tempo gry na starcie', 'Starting game speed'), settings.startSpeed ?? 1, [[0, t('hud.pause')], [1, '1×'], [2, '2×'], [3, '3×']], (v) => { settings.startSpeed = v; save(); }),
+        check(tx('Pytaj przed rozbiórką budynku', 'Ask before demolishing a building'), settings.confirmDemolish ?? true, (v) => { settings.confirmDemolish = v; save(); }),
+        el('p', 'hint', tx('Tempo na starcie działa od następnej gry (w grze przez sieć tempo jest zawsze 1×).', 'Starting speed applies from the next game (online games always run at 1×).')),
       ]],
       [t('set.controls'), () => [
         slider(t('set.camSpeed'), settings.camSpeed * 100, (v) => { settings.camSpeed = v / 100; save(); }, 50, 200),
         check(t('set.edge'), settings.edgeScroll, (v) => { settings.edgeScroll = v; save(); }),
         el('p', 'hint', t('set.controlsHint')),
       ]],
-      ['Dla twórców', () => {
+      [tx('Dla twórców', 'For creators'), () => {
         // stałe odnośniki do narzędzi: podgląd modeli i pusta scena testowa (otwierają się w nowej karcie)
         const link = (label: string, href: string, hint: string): HTMLElement => {
           const box = el('div', 'set-row');
@@ -530,14 +532,14 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           return box;
         };
         return [
-          link('Podgląd modeli', 'modele.html', 'Każdy model gry osobno, na podstawce, w pełnej jakości: obracasz go myszą z każdej strony.'),
-          link('Pusta scena testowa', '?test=1&pusta=1', 'Płaska łąka z samą twierdzą, bez zapisu gry — do sprawdzania jednej rzeczy w grze.'),
+          link(tx('Podgląd modeli', 'Model viewer'), 'modele.html', tx('Każdy model gry osobno, na podstawce, w pełnej jakości: obracasz go myszą z każdej strony.', 'Every game model on its own, on a plinth, in full quality: spin it with the mouse from every side.')),
+          link(tx('Pusta scena testowa', 'Empty test scene'), '?test=1&pusta=1', tx('Płaska łąka z samą twierdzą, bez zapisu gry — do sprawdzania jednej rzeczy w grze.', 'A flat meadow with just the keep, no save — for checking one thing in the game.')),
         ];
       }],
     ], true);
     // zmiany zapisują się od razu; „Zapisz” potwierdza i wraca do menu
     const reset = button(t('set.reset'), () => { Object.assign(settings, DEFAULT_SETTINGS); save(); showSettings(); }, 'menu-btn menu-reset');
-    const ok = button('Zapisz', () => { save(); showMain(); }, 'menu-btn menu-save');
+    const ok = button(tx('Zapisz', 'Save'), () => { save(); showMain(); }, 'menu-btn menu-save');
     const foot = el('div', 'menu-foot set-foot');
     foot.append(back(), reset, ok);
     screen(t('menu.settings'), true, tabs, foot);
@@ -548,7 +550,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const box = el('div', 'gallery');
     const list = el('div', 'gallery-list');
     list.setAttribute('role', 'listbox');
-    list.setAttribute('aria-label', 'Postacie');
+    list.setAttribute('aria-label', tx('Postacie', 'Characters'));
     const view = el('div', 'gallery-view');
     const canvas = el('canvas', 'gallery-canvas');
     canvas.setAttribute('aria-hidden', 'true');
@@ -592,7 +594,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     };
     const tabs = tabbed([
       ...HELP_CHAPTERS.map((c): [string, () => Node[]] => [c.title, () => { const box = el('div', 'help-text'); box.append(...c.blocks.map(block)); return [box]; }]),
-      ['Postacie i zwierzęta', () => [galleryPane(GALLERY.people)]], ['Budynki', () => [galleryPane(GALLERY.buildings)]],
+      [tx('Postacie i zwierzęta', 'People and animals'), () => [galleryPane(GALLERY.people)]], [tx('Budynki', 'Buildings'), () => [galleryPane(GALLERY.buildings)]],
     ], true);
     const foot = el('div', 'menu-foot');
     foot.append(back());

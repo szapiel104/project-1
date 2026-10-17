@@ -238,3 +238,13 @@ Zasada: każda poprawka wyglądu z budżetem wydajności. Mierzymy przed i po (`
 **Na później:** Three.js w trybie WebGPU (WebGPURenderer + TSL) — obliczenia na karcie (cząsteczki, trawa, tłum), więcej klatek na nowszych komputerach; wymaga częściowego przepisania shaderów.
 
 **Proponowana kolejność startu:** 1) wiatr + cienie chmur, 2) symulacja w Web Workerze, 3) tekstury KTX2.
+
+## Tłumaczenie na angielski (od 17.10.2026)
+Zrobione 17.10: przełącznik języka (Ustawienia → Interfejs), angielski dla wszystkich tekstów z `src/i18n/pl.ts` (budynki, opisy, surowce, pasek, racje, podatki, komunikaty budowy, poradnik w skrócie) i całe menu ustawień / ekran startowy / wyjście i poddanie (`menu.ts`).
+Kolejne partie (napisy wciąż na sztywno po polsku), po jednej:
+1. `src/main.ts` (~107 napisów: okna budynków, powiadomienia, alarmy)
+2. `src/ui/hud.ts` (~45) i drobne okna: `allies.ts`, `pings.ts`, `minimap.ts`, `chat.ts`, `scribe.ts`
+3. `src/ui/helpText.ts` — rozdziały „Jak grać” (~120)
+4. `src/ui/online.ts` + `src/net/supa.ts` — logowanie, konto, pokoje (~70)
+5. `src/data/barks.ts` — co mówią ludzie w dymkach (~80), `src/data/names.ts` (imiona zostają polskie albo osobna lista angielska)
+6. `src/render/scene.ts`, `terrain.ts`, `gallery.ts`, `viewer.ts`, `devpanel.ts`, `boot.ts` — reszta

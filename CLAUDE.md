@@ -3,6 +3,14 @@
 - Rozmowa i teksty po polsku. Michał wdraża i ocenia wygląd sam; pracujemy małymi partiami, push na main = wdrożenie (GitHub Pages).
 - Gra tylko na komputery (telefony zablokowane w src/boot.ts).
 
+## Dwa języki: polski i angielski (obowiązkowo dla każdego czatu, od 17.10.2026)
+- Każdy nowy budynek, jednostka, surowiec, okno, przycisk, komunikat i podpowiedź dostaje od razu **obie wersje**. Bez angielskiej wersji zmiana nie jest skończona.
+- Stałe teksty (nazwy i opisy budynków, jednostek, surowców): klucz w `src/i18n/pl.ts` **i** ta sama linijka w `src/i18n/en.ts`, w kodzie `t('klucz')`. `en.ts` jest typowany kluczami z `pl.ts`, więc brakujące tłumaczenie wywala `tsc`; `tests/i18n.test.ts` sprawdza dodatkowo, że każdy budynek z `BUILDINGS` ma nazwę w obu językach.
+- Krótkie napisy w miejscu (etykieta jednego przycisku, dymek): `tx('Po polsku', 'In English')` z `src/i18n`.
+- Angielski pisany naturalnie, w klimacie średniowiecznym (keep, armoury, my lord), nie słowo w słowo z polskiego.
+- Język wybiera się w Ustawienia → Interfejs (zmiana przeładowuje grę, zapis robi się sam). Za pierwszym razem gra bierze język przeglądarki.
+- Starsze napisy wciąż wpisane na sztywno po polsku przenosimy partiami (lista w `docs/pomysly.md`, „Tłumaczenie na angielski”).
+
 ## Modele — gdzie robić i jak sprawdzać (obowiązkowo dla każdego czatu)
 - **Robimy je w Blenderze** skryptem w Pythonie w `tools/models/` (bpy jako moduł, opis w `tools/models/README.md`): `/tmp/bpyenv/bin/python tools/models/<model>.py` → `src/render/models/<model>.json`. Kod gry tylko wczytuje gotowe siatki; nie składamy nowych modeli z prostopadłościanów w TypeScripcie.
 - **Tekstury są obowiązkowe:** drewno, płótno, kamień i ziemia dostają zdjęciowe tekstury z `src/render/textures.ts` (`pattern('planks' | 'burlap' | 'ashlar' | 'soil' | ...)` + `normal(...)`). Gładki kolor zostaje tylko na żelazie, wodzie i liściach. Kolor z wierzchołków to barwa i cień w zagłębieniach (`bake_ao`), a nie zamiennik tekstury.

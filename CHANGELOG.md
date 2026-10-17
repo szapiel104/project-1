@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.25.0 — polski i angielski (2026-10-17)
+
+- Gra ma dwa języki: polski i angielski. Wybór w Ustawienia → Interfejs („Język / Language”); zmiana od razu przeładowuje grę, postęp zapisuje się sam. Za pierwszym razem gra bierze język przeglądarki (polska przeglądarka → polski, każda inna → angielski)
+- Po angielsku są już: nazwy i opisy wszystkich budynków, jednostki, surowce, kategorie, dolny pasek, racje i podatki, komunikaty przy stawianiu, podsumowanie meczu, skrócona pomoc oraz całe menu (start, ustawienia, wyjście, poddanie się). Reszta okien przechodzi na angielski w kolejnych partiach
+- Nowe budynki i teksty muszą mieć od razu obie wersje: brak angielskiego tłumaczenia zatrzymuje kompilację, a test sprawdza nazwy wszystkich budynków
+
 ## 0.24.3 — bez psa (2026-10-16)
 
 - Pies na razie nie pojawia się w osadzie ani nie szczeka; model i zachowanie zostają w kodzie (przełącznik `DOGS_ON` w `src/render/village.ts`), żeby łatwo go przywrócić
