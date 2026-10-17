@@ -140,7 +140,7 @@ for (x, z, a) in ((FX - 0.36, FZ - 0.05, 0.2), (FX + 0.05, FZ + 0.34, 1.5)):   #
     b.box('base', 'bark', 0.38, 0.1, 0.11, x, 0, z, rot=a)
 solid.append([FX - 0.5, FX + 0.25, FZ - 0.22, FZ + 0.45])
 # kosze z urobkiem pod prawą ścianą od frontu (czekają na wóz)
-for (x, z, m) in ((0.55, 0.62, 'ore'), (0.75, 0.62, 'stone'), (0.65, 0.82, 'stone'), (0.86, 0.82, 'ore')):
+for (x, z, m) in ((0.55, 0.62, 'magicOre'), (0.75, 0.62, 'stone'), (0.65, 0.82, 'stone'), (0.86, 0.82, 'magicOre')):
     b.prism('base', 'sack', 0.085, 0.075, 0.1, x, 0, z, seg=9)
     b.prism('base', m, 0.07, 0.025, 0.05, x, 0.1, z, seg=7)
 solid.append([0.45, 0.96, 0.52, 0.92])

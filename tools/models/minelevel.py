@@ -130,8 +130,8 @@ for sx in (-1, 1):
     b.box(G, 'iron', 0.03, 0.035, 3.0, sx * 0.2, 0.03, 0.55)
 # wrota wyjścia na końcu korytarza: deski z jasną szczeliną (światło dnia z zewnątrz)
 b.box(G, 'plank', 1.3, 1.4, 0.06, 0, 0, 6.95)
-b.box(G, 'white', 0.9, 0.05, 0.01, 0, 1.1, 6.915)
-b.box(G, 'white', 0.04, 1.0, 0.01, 0.0, 0.1, 6.915)
+b.box(G, 'plaster', 0.9, 0.05, 0.01, 0, 1.1, 6.915)
+b.box(G, 'plaster', 0.04, 1.0, 0.01, 0.0, 0.1, 6.915)
 lamps.append([0.42, 1.15, 6.6])
 lamps.append([-0.42, 1.15, 3.6])
 
@@ -151,7 +151,7 @@ def boulder(x, z, r, h, seed):
 # filar od posadzki do stropu (kopacze zostawili go, żeby strop nie runął)
 boulder(2.2, -1.2, 0.7, 2.7, 1.0)
 # hałdy urobku i rudy
-for (x, z, r, h, m) in ((-3.4, 1.2, 0.5, 0.45, 'stone'), (-3.8, 0.4, 0.35, 0.3, 'ore'), (3.6, -2.6, 0.55, 0.5, 'stone'), (3.0, 1.5, 0.35, 0.28, 'ore')):
+for (x, z, r, h, m) in ((-3.4, 1.2, 0.5, 0.45, 'stone'), (-3.8, 0.4, 0.35, 0.3, 'magicOre'), (3.6, -2.6, 0.55, 0.5, 'stone'), (3.0, 1.5, 0.35, 0.28, 'magicOre')):
     b.prism(G, m, r, r * 0.3, h, x, 0, z, seg=9, phase=x)
     solid.append([x - r, x + r, z - r, z + r])
 # wózki na torach i obok
@@ -162,7 +162,7 @@ for (x, z, a) in ((0.0, 0.2, 0.0), (-2.4, -2.4, 0.4)):
             c, s = math.cos(a), math.sin(a)
             wx, wz = sx * 0.22, sz * 0.2
             b.prism(G, 'iron', 0.08, 0.08, 0.04, x + wx * c + wz * s, 0.04, z - wx * s + wz * c, seg=8)
-    b.box(G, 'ore', 0.32, 0.1, 0.46, x, 0.4, z, rot=a)
+    b.box(G, 'magicOre', 0.32, 0.1, 0.46, x, 0.4, z, rot=a)
     solid.append([x - 0.36, x + 0.36, z - 0.36, z + 0.36])
 # rusztowanie z belek pod tylną ścianą (pomost dla kopiących wyżej)
 for x in (-3.0, -1.6, -0.2, 1.2):
@@ -200,7 +200,7 @@ lamps.append([6.0, 1.2, 1.25])
 for (x, y, z, w, h, d) in ((-8.985, 0.6, -1.1, 0.012, 0.5, 0.7), (-8.985, 1.05, -0.8, 0.012, 0.25, 0.4), (8.985, 0.5, 0.7, 0.012, 0.55, 0.8),
                            (8.985, 1.0, 0.5, 0.012, 0.3, 0.4), (-2.0, 0.8, -3.49, 0.8, 0.3, 0.012), (1.0, 1.2, -3.49, 0.6, 0.25, 0.012),
                            (-4.49, 0.7, 1.2, 0.012, 0.35, 0.6), (4.49, 1.1, -2.4, 0.012, 0.3, 0.7)):
-    b.box(G, 'crust', w, h, d, x, y, z)
+    b.box(G, 'magicOre', w, h, d, x, y, z)
 
 # ---------------- miejsca pracy górników (x, z, kierunek twarzy: 0 = +z, π/2 = +x) ----------------
 HPI = math.pi / 2

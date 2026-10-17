@@ -1761,7 +1761,7 @@ export class GameRenderer {
     cam.position.set(MINE_AT.x + m.x, MINE_AT.y + 0.46 + Math.min(w.jy ?? 0, 0.5) + Math.sin(w.bob) * 0.015, MINE_AT.z + m.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
     // ciepłe światło latarni w dłoni (w sztolni bez niego byłoby czarno między lampami)
-    this.roomLight.intensity = 2.6 + Math.sin(this.time * 9) * 0.15;
+    this.roomLight.intensity = this.torchOn ? 0.6 : 1.4; // bez pochodni tylko słaba poświata (ciemno między latarniami)
     this.roomLight.position.set(cam.position.x, cam.position.y + 0.25, cam.position.z);
     // wrota na końcu korytarza: wyjście na powierzchnię
     const [ex0, ex1, ez0, ez1] = MINE_LEVEL.exit;
@@ -3632,8 +3632,13 @@ export class GameRenderer {
       const spots = (this.mineLevel.userData.lampSpots ??= (() => { const l: THREE.Object3D[] = []; this.mineLevel!.traverse((o) => { if (o.name === 'lampSpot') l.push(o); }); return l; })()) as THREE.Object3D[];
       const cp = this.cam.camera.position, v = new THREE.Vector3();
       const near = spots.map((o) => ({ o, d: o.getWorldPosition(v).distanceToSquared(cp) })).sort((a, b) => a.d - b.d);
+      // pochodnia w dłoni (F): pierwsza lampa z puli idzie za ręką i świeci mocno, reszta przy latarniach
+      const own = this.torchOn ? this.lamps[0]! : null;
+      if (own) { this.handTip.getWorldPosition(own.position); own.intensity = 9 * (0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07); }
+      let j = 0;
       this.lamps.forEach((lamp, i) => {
-        const sp = near[i];
+        if (lamp === own) return;
+        const sp = near[j++];
         if (!sp) { lamp.intensity = 0; return; }
         sp.o.getWorldPosition(lamp.position);
         lamp.intensity = 5 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * 0.1);

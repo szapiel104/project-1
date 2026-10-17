@@ -78,6 +78,8 @@ const M = {
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
   hay: mat(0xe0c466, 'thatch'),
   ore: mat(0x8a4a2c), crust: mat(0xe2b06a),
+  // magiczna ruda jak w Gothicu: skała z niebieskawym połyskiem, lekko świeci w ciemnej sztolni (żyły, hałdy, urobek w koszach)
+  magicOre: (() => { const m = mat(0x86b4e0, 'rock'); m.emissive.setHex(0x1b3d66); m.emissiveIntensity = 0.55; m.roughness = 0.55; m.metalness = 0.15; return m; })(),
   cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'thatch'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),

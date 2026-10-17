@@ -133,9 +133,9 @@ b.poly('interior', 'rockDark', [(-KX, HK, CZ1), (KX, HK, CZ1), (KX, H, CZ1), (-K
 wall(KX, CZ1, KX, KZ1, P, HK, n=2, amp=0.03)
 wall(-KX, KZ1, -KX, CZ1, P, HK, n=2, amp=0.03)
 # żyły rudy i kamienia w ścianach (wystają 1 cm, żeby nie migotały na licu skały)
-for (x, y, z, w, h, m) in [(-1.14, 0.5, 0.15, 0.03, 0.4, 'ore'), (-1.14, 0.9, -0.3, 0.03, 0.25, 'ore'), (1.14, 0.45, -0.2, 0.03, 0.45, 'ore'),
-                           (1.14, 0.75, 0.45, 0.03, 0.3, 'crust'), (-0.55, 0.55, -0.49, 0.3, 0.03, 'ore'), (0.5, 0.8, -0.49, 0.35, 0.03, 'crust'),
-                           (0.05, 0.4, -0.49, 0.25, 0.03, 'ore')]:
+for (x, y, z, w, h, m) in [(-1.14, 0.5, 0.15, 0.03, 0.4, 'magicOre'), (-1.14, 0.9, -0.3, 0.03, 0.25, 'magicOre'), (1.14, 0.45, -0.2, 0.03, 0.45, 'magicOre'),
+                           (1.14, 0.75, 0.45, 0.03, 0.3, 'magicOre'), (-0.55, 0.55, -0.49, 0.3, 0.03, 'magicOre'), (0.5, 0.8, -0.49, 0.35, 0.03, 'magicOre'),
+                           (0.05, 0.4, -0.49, 0.25, 0.03, 'magicOre')]:
     if abs(x) > 1.0:
         b.box('interior', m, 0.012, h, w if h > w else 0.25, x - 0.006 * (1 if x > 0 else -1), y, z)
     else:
@@ -163,7 +163,7 @@ b.box('interior', 'woodDark', 0.3, 0.22, 0.42, WX, P + 0.09, WZ)
 for sx in (-1, 1):
     for sz in (-1, 1):
         b.prism('interior', 'iron', 0.06, 0.06, 0.03, WX + sx * 0.16, P + 0.03, WZ + sz * 0.14, seg=8)
-b.box('interior', 'ore', 0.22, 0.08, 0.32, WX, P + 0.3, WZ)
+b.box('interior', 'magicOre', 0.22, 0.08, 0.32, WX, P + 0.3, WZ)
 solid.append([WX - 0.17, WX + 0.17, WZ - 0.23, WZ + 0.23])
 # latarnie na słupkach w grocie
 for (x, z) in ((0.95, 0.5), (-0.4, -0.35)):
@@ -175,7 +175,7 @@ for (x, z) in ((0.95, 0.5), (-0.4, -0.35)):
 b.box('interior', 'plank', 0.36, 0.03, 0.14, 0.95, P + 0.5, -0.05)
 for k, z in enumerate((-0.12, -0.02, 0.06)):
     b.box('interior', 'woodDark', 0.025, 0.42, 0.025, 1.05 + k * 0.02, P + 0.53, z, tilt=0.25)
-for (x, z, m) in ((0.55, 0.62, 'ore'), (0.82, 0.62, 'stone'), (-0.6, 0.62, 'stone')):
+for (x, z, m) in ((0.55, 0.62, 'magicOre'), (0.82, 0.62, 'stone'), (-0.6, 0.62, 'stone')):
     b.prism('interior', 'sack', 0.11, 0.1, 0.12, x, P, z, seg=9)
     b.prism('interior', m, 0.09, 0.03, 0.06, x, P + 0.12, z, seg=7)
     solid.append([x - 0.12, x + 0.12, z - 0.12, z + 0.12])
@@ -196,7 +196,7 @@ ceiling_patch(CX0, CX1, CZ0, CZ1, H, 0.22, nx=4, nz=3)
 ceiling_patch(-KX, KX, CZ1, KZ1, HK, 0.05, nx=2, nz=1)
 
 # ---------------- hałda przed wejściem (na przedsionku, po bokach toru) ----------------
-for (x, z, r, hh, m) in ((-1.05, 1.25, 0.32, 0.26, 'stone'), (-0.75, 1.38, 0.2, 0.16, 'rockDark'), (1.0, 1.28, 0.3, 0.22, 'ore'), (0.72, 1.4, 0.18, 0.13, 'rockDark')):
+for (x, z, r, hh, m) in ((-1.05, 1.25, 0.32, 0.26, 'stone'), (-0.75, 1.38, 0.2, 0.16, 'rockDark'), (1.0, 1.28, 0.3, 0.22, 'magicOre'), (0.72, 1.4, 0.18, 0.13, 'rockDark')):
     b.prism('base', m, r, r * 0.35, hh, x, 0, z, seg=8, phase=x)
     solid.append([x - r, x + r, z - r, z + r])
 
