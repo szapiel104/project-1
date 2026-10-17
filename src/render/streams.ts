@@ -156,13 +156,27 @@ export function cliffFalls(S: StreamSampler, want: number): Pt[][] {
           // krawędź progu: zbocze łagodnieje (tam woda wypływa z góry), albo próg już dość wysoki
           if (hn - S.height(px, py) < 0.15 * 0.3) { if (++flat >= 3) break; } else flat = 0;
           px = nx; py = ny; up.push({ x: px, y: py }); top = Math.max(top, hn);
-          if (top - h0 > 11) break;
+          if (top - h0 > 8.5) break;
         }
         const gain = top - h0;
-        if (gain < 2.5) continue;
-        // kawałek spokojnego nurtu nad krawędzią, żeby woda „skądś” płynęła
-        for (let k = 1; k <= 8; k++) up.push({ x: px + vx * 0.25 * k, y: py + vy * 0.25 * k });
-        cands.push({ path: up.reverse(), gain, x, y });
+        // prawdziwy próg: wspinaczka skończyła się na półce (zbocze złagodniało), a nie na zboczu szczytu
+        if (gain < 2.5 || flat < 3) continue;
+        // za progiem góra rośnie dalej (woda spływa z masywu), krawędź nie jest szczytem stożka
+        let behind = top;
+        for (let k = 1; k <= 9; k++) behind = Math.max(behind, S.height(px + vx * k, py + vy * k));
+        if (behind < top + 1) continue;
+        const climbLen = up.length;
+        // kawałek spokojnego nurtu po półce nad krawędzią, żeby woda „skądś” płynęła — tylko dopóki półka jest płaska
+        for (let k = 1; k <= 8; k++) {
+          const qx = px + vx * 0.25 * k, qy = py + vy * 0.25 * k;
+          if (S.height(qx, qy) > top + 0.6) break;
+          up.push({ x: qx, y: qy });
+        }
+        const ext = up.length - climbLen;
+        if (ext < 3) continue;
+        const path: Pt[] & { lip?: number } = up.reverse();
+        path.lip = ext; // indeks krawędzi progu w odwróconej drodze
+        cands.push({ path, gain, x, y });
       }
     }
   cands.sort((a, b) => b.gain - a.gain);
@@ -218,11 +232,14 @@ void main() {
   // odbicie nieba na spokojnej wodzie, zmarszczki jaśniejsze
   c = mix(c, sky * 0.55, 0.28 + n * 0.18);
   // piana: na wodospadzie prawie biało, w nurcie tylko jaśniejsze grzywki
-  float foam = clamp(fall * (0.55 + n * 0.7) + smoothstep(0.62, 0.9, n) * 0.35 * (0.3 + vSlope), 0.0, 1.0);
-  vec3 foamC = mix(vec3(0.84, 0.88, 0.88), vec3(1.0), n2) * (0.62 + sky.g * 0.75);
+  // piana w smugach wzdłuż spadku (nie jednolita biała farba): między smugami prześwituje ciemna, mokra woda
+  float streak = texture2D(noise, vec2(vUv.x * 2.6 + 0.17, vUv.y * 0.22 - time * speed * 0.8)).r;
+  float foam = fall * smoothstep(0.3, 0.72, streak * 0.75 + n * 0.45) + smoothstep(0.66, 0.92, n) * 0.3 * (0.3 + vSlope);
+  foam = clamp(foam, 0.0, 0.92);
+  vec3 foamC = mix(vec3(0.72, 0.77, 0.78), vec3(0.95, 0.97, 0.97), n2) * (0.5 + sky.g * 0.7);
   c = mix(c, foamC, foam);
-  float a = smoothstep(1.0, 0.55 - fall * 0.2, abs(vEdge) + (n - 0.5) * 0.25);
-  a *= mix(0.82, 0.98, foam) * vEnd;
+  float a = smoothstep(1.0, 0.5, abs(vEdge) + (n - 0.5) * 0.3);
+  a *= mix(0.62, 0.92, foam) * vEnd;
   if (a < 0.01) discard;
   gl_FragColor = vec4(c, a);
   #include <fog_fragment>
@@ -339,7 +356,8 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
   paths.forEach((full, pi) => {
     const isFall = pi < falls.length;
     // przy wodospadzie wstęgą rysujemy tylko nurt nad krawędzią (8 pierwszych punktów + krawędź), resztę robi kurtyna
-    const raw = isFall ? full.slice(0, 9) : full;
+    const lip = (full as Pt[] & { lip?: number }).lip ?? 8;
+    const raw = isFall ? full.slice(0, lip + 1) : full;
     const pts = smooth(raw, 0.16);
     const n = pts.length;
     const P: number[] = [], UV: number[] = [], SL: number[] = [], ED: number[] = [], EN: number[] = [], I: number[] = [];
@@ -394,7 +412,7 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
     group.add(cat(mesh, 'strumienie i wodospady'));
     meshes.push({ mesh, tiles });
     if (isFall) {
-      const L = full[8]!, B = full[full.length - 1]!;
+      const L = full[lip]!, B = full[full.length - 1]!;
       for (const m of curtain(L, B, tiles)) { group.add(cat(m, 'strumienie i wodospady')); meshes.push({ mesh: m, tiles }); }
     }
   });

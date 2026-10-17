@@ -53,17 +53,17 @@ describe('chmury przy szczytach', () => {
 describe('wodospady nad wodą', () => {
   it('woda spada ze skalnej ściany prosto do jeziora pod nią', async () => {
     const { cliffFalls } = await import('../src/render/streams');
-    // ściana skalna (y < 20) stromo nad jeziorem (20 ≤ y < 24)
+    // ściana skalna (y < 20) stromo nad jeziorem (20 ≤ y < 24), nad progiem półka, dalej masyw rośnie
     const C: StreamSampler = {
       ...S,
-      height: (_x, y) => (y < 20 ? Math.min(9, (20 - y) * 4) + 0.2 : y < 24 ? -0.25 : 0.12),
+      height: (_x, y) => (y < 20 ? Math.min(6, (20 - y) * 4) + Math.max(0, 15 - y) * 0.7 + 0.2 : y < 24 ? -0.25 : 0.12),
       rock: (_x, y) => y < 20,
       water: (x, y) => y >= 20 && y < 24 && x > 2 && x < 57,
     };
     const f = cliffFalls(C, 3);
     expect(f.length).toBeGreaterThan(0);
     const p = f[0]!, top = p[0]!, end = p[p.length - 1]!;
-    expect(C.height(top.x, top.y) - C.height(end.x, end.y)).toBeGreaterThan(5);
+    expect(C.height(top.x, top.y) - C.height(end.x, end.y)).toBeGreaterThan(4);
     expect(C.water(Math.floor(end.x), Math.floor(end.y))).toBe(true);
   });
 });
