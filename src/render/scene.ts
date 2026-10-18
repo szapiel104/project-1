@@ -3815,26 +3815,45 @@ export class GameRenderer {
       this.shadowSize(d > 34 ? Math.min(this.shadowMax, 2048) : d < 30 ? this.shadowMax : cur);
     }
     const f = this.focusPoint;
-    const half = Math.max(22, Math.min(70, this.cam.distance * 1.15));
-    // skok o stałą siatkę, żeby cienie nie migotały przy przesuwaniu kamery
-    const grid = (half * 2) / this.sun.shadow.mapSize.x * 8;
-    const x = Math.round(f.x / grid) * grid, z = Math.round(f.z / grid) * grid;
-    this.sun.target.position.set(x, 0, z);
-    this.sun.position.set(x + this.sunDir.x, this.sunDir.y, z + this.sunDir.z);
-    const c = this.sun.shadow.camera;
-    if (c.right !== half) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
-    // gdy kamera i słońce stoją, mapa cieni liczy się co drugą klatkę (ludzie chodzą wolno, cień nie odstaje)
+    // obszar cienia rośnie skokami (co ~12%), a nie płynnie: przy płynnym rozmiar piksela cienia zmieniał się
+    // w każdej klatce przybliżania i krawędzie cieni pełzały
+    const raw = Math.max(22, Math.min(70, this.cam.distance * 1.15));
+    const half = Math.min(70, 22 * 1.12 ** Math.ceil(Math.log(raw / 22) / Math.log(1.12) - 1e-6));
+    // przyciąganie do pikseli mapy cieni liczone w układzie słońca (jego osie prawo/góra), a nie w osiach świata:
+    // słońce świeci pod kątem, więc siatka X/Z nie pokrywała się z pikselami i cienie migały przy przelocie kamery
+    const d = this.sunAxisZ.copy(this.sunDir).normalize();
+    const ax = this.sunAxisX.crossVectors(this.sun.up, d).normalize();
+    const ay = this.sunAxisY.crossVectors(d, ax);
+    const texel = (half * 2) / this.sun.shadow.mapSize.x;
+    const px = Math.round(f.dot(ax) / texel) * texel, py = Math.round(f.dot(ay) / texel) * texel, pz = f.dot(d);
+    const tgt = this.sunTgt.set(0, 0, 0).addScaledVector(ax, px).addScaledVector(ay, py).addScaledVector(d, pz);
     const sm = this.renderer.shadowMap;
     sm.autoUpdate = false;
     const cp = this.cam.camera.position;
     const camMove2 = this.camWas.distanceToSquared(cp);
-    const moved = this.sunWas.distanceToSquared(this.sun.position) > 0.0025 || camMove2 > 1e-6;
-    // szybkie przewijanie widoku (ponad ~40% pełnej prędkości kamery): obraz i tak się rozmywa, więc mapa cieni
-    // liczy się co drugą klatkę; przy wolnym ruchu i dojeżdżaniu kamery dalej co klatkę, żeby cień nie odstawał od murów
+    this.camWas.copy(cp);
+    const c = this.sun.shadow.camera;
+    const resized = c.right !== half;
+    const moved = resized || this.sunWas.distanceToSquared(tgt) > 1e-8 || this.sunDirWas.distanceToSquared(this.sunDir) > 1e-8;
+    // szybkie przewijanie widoku: mapa cieni liczy się co drugą klatkę. Słońce przesuwamy TYLKO w klatkach,
+    // w których mapa się liczy — inaczej stara mapa była czytana nową macierzą i cienie skakały co klatkę
     const fast = camMove2 > (0.006 * this.cam.distance) ** 2;
-    this.sunWas.copy(this.sun.position); this.camWas.copy(cp);
-    sm.needsUpdate = this.calm || (moved && !fast) || (this.shadowFrame++ & 1) === 0;
+    const update = this.calm || !fast || resized || !this.sun.shadow.map || (this.shadowFrame++ & 1) === 0;
+    if (!update) { sm.needsUpdate = false; return; }
+    if (moved) {
+      this.sunWas.copy(tgt); this.sunDirWas.copy(this.sunDir);
+      this.sun.target.position.copy(tgt);
+      this.sun.position.copy(tgt).add(this.sunDir);
+      if (resized) { c.left = -half; c.right = half; c.top = half; c.bottom = -half; c.updateProjectionMatrix(); }
+    }
+    // gdy nic się nie rusza, mapa i tak liczy się co drugą klatkę (ludzie chodzą wolno, cień nie odstaje)
+    sm.needsUpdate = moved || this.calm || !this.sun.shadow.map || (this.shadowFrame++ & 1) === 0;
   }
+  private sunAxisX = new THREE.Vector3();
+  private sunAxisY = new THREE.Vector3();
+  private sunAxisZ = new THREE.Vector3();
+  private sunTgt = new THREE.Vector3();
+  private sunDirWas = new THREE.Vector3();
 
   /** Nocą zapala pochodnie przy budynkach i w rękach ludzi oraz rozdaje światła najbliższym z nich. */
   private syncLamps(g: GameState): void {

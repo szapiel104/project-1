@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.4 — cienie nie migają przy przelocie kamery (2026-10-18)
+
+- Przy szybkim przesuwaniu kamery cienie skakały co klatkę: mapa cieni liczyła się co drugą klatkę, a słońce przesuwało się w każdej, więc stara mapa była czytana w nowym miejscu. Teraz słońce idzie za kamerą tylko w klatkach, w których mapa się liczy
+- Przyciąganie obszaru cienia do pikseli mapy liczone w układzie słońca (świeci pod kątem), a nie w osiach X/Z świata — krawędzie cieni nie pełzają przy przesuwaniu
+- Obszar cienia rośnie przy oddalaniu skokami co ok. 12% zamiast płynnie, więc przy przybliżaniu i oddalaniu cienie nie drgają
+
 ## 0.30.3 — mgła bez kanciastych płyt (2026-10-18)
 
 - Ławice mgły przy ziemi nie są już widoczne jako płaskie, kanciaste prostokąty: obraz mgły zanika do zera przy brzegach, ławica siada nad najwyższym punktem terenu pod sobą i znika na stromiźnie (skraj gór, urwiska), zamiast wchodzić w zbocze prostą krawędzią
