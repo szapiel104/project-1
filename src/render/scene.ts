@@ -247,6 +247,8 @@ export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean
 const MAX_UNITS = 2048;
 /** Ręka z pochodnią uniesiona w przód (tak samo w tools/models/tools.py) i koniec pochodni w układzie ręki */
 const TORCH_ARM = -0.55;
+/** Kopacz w drodze: ręka z kilofem lekko w przód, przy boku */
+const CARRY_PICK_ARM = -0.3;
 /** Ręka rybaka z wędką wyciągnięta w przód (tak samo w tools/models/tools.py) */
 const FISH_ARM = -0.9;
 /** Oburęczny chwyt kilofa i siekiery: o tyle ręce schodzą się do środka (dłonie razem na stylisku) */
@@ -5448,7 +5450,11 @@ export class GameRenderer {
       }
       // odważny chłop przed wrogim żołnierzem: twarzą do niego, z bliska okłada go pięściami i kijem
       const enemy = (u.foe ? g.soldiers.find((x) => x.id === u.foe) : undefined) ?? (u.foeU ? g.units.find((x) => x.id === u.foeU) : undefined) ?? wolfNear;
-      const weapon = peasantWeapon(u.id);
+      // kopacz (kopalnia, kamieniołom, żelazo) zawsze ma kilof, nie maczugę — po drodze do roboty niesie go w ręku
+      const workAt = u.job ? jobs.get(u.job) : undefined;
+      const workSite = workAt ? BUILDINGS[workAt.type]?.production?.site : undefined;
+      const miner = !!workAt && (workAt.type === OREMINE_T || workSite === Terrain.Stone || workSite === Terrain.Iron);
+      const weapon = miner ? 'pick' : peasantWeapon(u.id);
       let fighting = false, fightArm = -0.4;
       if (enemy && !this.calm) {
         t.rotation.set(0, Math.atan2(enemy.px - u.px, enemy.py - u.py), 0);
@@ -5618,6 +5624,10 @@ export class GameRenderer {
         this.armM.makeRotationX(work).setPosition(0.135, 0.45, 0);
         this.spades.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
       } else this.spades.setMatrixAt(i, ZERO);
+      // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
+      const torchOn = this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket;
+      // kopacz idący do roboty (także sztolnią w kopalni) niesie kilof w ręku; nocą pochodnia w ręku, a kilof na plecach
+      const pickInHand = miner && (walking || mineWalk) && !mining && !fighting && !torchOn && u.carryRes < 0 && !u.bucket;
       // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką
       if (chopping || mining) {
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
@@ -5631,10 +5641,16 @@ export class GameRenderer {
         (weapon === 'pick' ? this.picks : this.clubs).setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
         (weapon === 'pick' ? this.clubs : this.picks).setMatrixAt(i, ZERO);
         this.axes.setMatrixAt(i, ZERO);
+      } else if (pickInHand) {
+        // kopacz w drodze: kilof w prawej dłoni przy boku, stylisko w przód
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armM.makeRotationX(CARRY_PICK_ARM).setPosition(0.135, 0.45, 0);
+        this.picks.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
+        this.axes.setMatrixAt(i, ZERO);
       } else { this.axes.setMatrixAt(i, ZERO); this.picks.setMatrixAt(i, ZERO); }
       if (!fighting) this.clubs.setMatrixAt(i, ZERO);
-      // na co dzień broń wisi na plecach albo u pasa (kopacz przy pracy trzyma kilof w rękach)
-      const stowed = !fighting && !(mining && weapon === 'pick');
+      // na co dzień broń wisi na plecach albo u pasa (kopacz przy pracy i w drodze trzyma kilof w ręku)
+      const stowed = !fighting && !(mining && weapon === 'pick') && !pickInHand;
       if (stowed) {
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
         this.armS.copy(t.matrix).scale(this.armV.setScalar(sz));
@@ -5645,8 +5661,6 @@ export class GameRenderer {
       // kłodę ciągnie tylko drwal z lasu; włóczniarz niesie ze składu zwykłe deski
       const jb = u.job ? jobs.get(u.job) : undefined;
       const log = wood && u.phase === Phase.ToHome && !!jb && BUILDINGS[jb.type]!.production?.site === Terrain.Forest;
-      // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
-      const torchOn = this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket;
       this.buckets.setMatrixAt(i, u.bucket ? t.matrix : ZERO);
       this.bucketWater.setMatrixAt(i, u.bucket === 2 ? t.matrix : ZERO);
       if (torchOn) {
@@ -5667,7 +5681,7 @@ export class GameRenderer {
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : planting ? work + 0.08 : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || (!!u.bucket && walking) || !!ia?.legs, undefined, chopping || mining ? TWO_HAND : 0);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : pickInHand ? CARRY_PICK_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : planting ? work + 0.08 : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || pickInHand || (!!u.bucket && walking) || !!ia?.legs, undefined, chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
