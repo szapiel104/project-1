@@ -127,9 +127,10 @@ export function collectFx(root: THREE.Object3D, isWindow: (m: THREE.Material) =>
   root.updateMatrixWorld(true);
   const fx: BuildingFx = { chimneys: [], windows: [], fires: [] };
   const box = new THREE.Box3(), v = new THREE.Vector3(), q = new THREE.Quaternion(), n = new THREE.Vector3();
+  const flames: THREE.Vector3[] = [];
   root.traverse((o) => {
     if (o.name === 'chimney') { box.setFromObject(o); fx.chimneys.push(new THREE.Vector3((box.min.x + box.max.x) / 2, box.max.y + 0.05, (box.min.z + box.max.z) / 2)); }
-    if (o.name === 'flame') fx.fires.push(o.getWorldPosition(new THREE.Vector3()));
+    if (o.name === 'flame') flames.push(o.getWorldPosition(new THREE.Vector3()));
     const m = o as THREE.Mesh;
     if (!m.isMesh || Array.isArray(m.material) || !isWindow(m.material)) return;
     // pomijamy okna we wnętrzach (widać je tylko po zdjęciu dachu)
@@ -143,6 +144,9 @@ export function collectFx(root: THREE.Object3D, isWindow: (m: THREE.Material) =>
     if (n.x * p.x + n.z * p.z < 0) n.negate();
     fx.windows.push(p.addScaledVector(n, 0.12));
   });
+  // palenisko pod kominem jest w środku budynku: jego dym wychodzi kominem, a nie przez strop i dach,
+  // więc iskry i dym sypiemy tylko z ognisk pod gołym niebem (obozowisko)
+  if (!fx.chimneys.length) fx.fires.push(...flames);
   return fx;
 }
 
@@ -220,7 +224,7 @@ export class Ambience {
       const step = this.emitAcc; this.emitAcc = 0;
       // komin dymi co ~0,45 s; ognisko sypie iskrami, pożar dużo mocniej
       for (const c of this.chimneys) if (Math.random() < step / 0.45)
-        this.smoke.emit(c.x + (Math.random() - 0.5) * 0.06, c.y, c.z + (Math.random() - 0.5) * 0.06, 0.05, 0.32 + Math.random() * 0.1, 0.02, 6 + Math.random() * 3, 0);
+        this.smoke.emit(c.x + (Math.random() - 0.5) * 0.04, c.y + 0.1, c.z + (Math.random() - 0.5) * 0.04, 0, 0.42 + Math.random() * 0.1, 0, 6 + Math.random() * 3, 0);
       for (const f of this.fires) {
         const rate = f.big ? 0.025 : 0.14;
         for (let k = 0; k < 4 && Math.random() < step / rate; k++)
@@ -236,10 +240,12 @@ export class Ambience {
       if (S.age[i]! >= 1) { S.size[i] = 0; S.alpha[i] = 0; continue; }
       S.age[i] = Math.min(1, S.age[i]! + dt / S.life[i]!);
       const a = S.age[i]!;
-      S.vel[i * 3] = S.vel[i * 3]! + dt * 0.05; // wiatr
+      // wiatr łapie dym dopiero, gdy ten wzniesie się nad dach — przy wylocie komina idzie prosto w górę
+      S.vel[i * 3] = S.vel[i * 3]! + dt * 0.06 * Math.min(1, a * 4); S.vel[i * 3 + 2] = S.vel[i * 3 + 2]! + dt * 0.02 * Math.min(1, a * 4);
       S.pos[i * 3] = S.pos[i * 3]! + S.vel[i * 3]! * dt; S.pos[i * 3 + 1] = S.pos[i * 3 + 1]! + S.vel[i * 3 + 1]! * dt * (1 - a * 0.5); S.pos[i * 3 + 2] = S.pos[i * 3 + 2]! + S.vel[i * 3 + 2]! * dt;
       const black = S.base[i]!; // 1 = dym z pożaru, gęsty i czarny
-      S.size[i] = (0.3 + a * (black ? 2.6 : 1.5)) * (1 + o.rain * 0.3);
+      // smuga zaczyna się wąsko (szerokość wylotu) i rośnie z wysokością, żeby kłąb nie wchodził w dach obok komina
+      S.size[i] = (0.16 + a * a * (black ? 2.6 : 1.6) + a * 0.3) * (1 + o.rain * 0.3);
       S.alpha[i] = Math.min(1, a * 8) * (1 - a) * (black ? 0.7 : 0.42);
       const g = black ? 0.12 : 0.62 - night * 0.42;
       const warm = night * Math.max(0, 1 - a * 5) * 0.5;

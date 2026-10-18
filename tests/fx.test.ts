@@ -8,3 +8,7 @@ it('chaty mają komin i świecące okna, obóz ma ognisko', () => {
   expect(house.windows.length).toBeGreaterThanOrEqual(3);
   expect(collectFx(buildingModel('camp', 0xa32a22), isWindowMat).fires.length).toBe(1);
 });
+
+it('palenisko pod kominem nie dymi w środku budynku (dym idzie kominem)', () => {
+  for (const id of ['house', 'bakery', 'tavern']) expect(collectFx(buildingModel(id, 0xa32a22), isWindowMat).fires.length).toBe(0);
+});
