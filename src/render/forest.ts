@@ -94,7 +94,7 @@ export function treeKinds(): TreeKind[] {
   kinds = Object.entries(data).sort(([a], [b]) => a.localeCompare(b)).map(([name, v]) => {
     const cards = geo(v.cards);
     const box = new THREE.Box3().setFromBufferAttribute(cards.getAttribute('position') as THREE.BufferAttribute);
-    const barkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, metalness: 0, map: tex(`pv_${name}_bark`), normalMap: tex(`pv_${name}_bark_n`, false) });
+    const barkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: tex(`pv_${name}_bark`), normalMap: tex(`pv_${name}_bark_n`, false) });
     // karty mają przód i tył jako osobne trójkąty z normalnymi od pnia, więc rysujemy tylko przednie strony
     const cardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9, metalness: 0, map: maskedTex(`pv_${name}_cards`), alphaTest: 0.5 });
     const imp = impostorFrom(maskedTex(`pv_${name}_far`) ?? new THREE.Texture(), v.far.w, v.far.h);

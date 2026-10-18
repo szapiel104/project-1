@@ -41,9 +41,9 @@ TMP = '/tmp/forest_bake'
 
 # rola → wysokość modelu w polach, budżet trójkątów pnia
 ROLE = {
-    'conifer': {'height': 4.6, 'radius': 1.25, 'trunk': 220},
-    'leaf': {'height': 3.6, 'radius': 1.6, 'trunk': 420},
-    'sapling': {'height': 2.2, 'radius': 0.8, 'trunk': 160},
+    'conifer': {'height': 4.6, 'radius': 1.25, 'trunk': 1400},
+    'leaf': {'height': 3.6, 'radius': 1.6, 'trunk': 3000},
+    'sapling': {'height': 2.2, 'radius': 0.8, 'trunk': 700},
 }
 # id paczki → rola i materiał kory (pień jako bryła); wszystko inne idzie na karty korony
 SPECIES = {
@@ -55,7 +55,7 @@ SPECIES = {
 }
 # plastry: pionowe (kąty w stopniach × liczba plastrów w głąb) i poziome
 V_ANGLES, V_SLABS, H_SLABS = (0, 60, 120), 3, 4
-TILE = 256  # wysokość zdjęcia pionowego plastra w pikselach
+TILE = 384  # wysokość zdjęcia pionowego plastra w pikselach (atlas do ok. 3500 px szerokości)
 FAR_H = 160  # wysokość klatki obrazka z daleka
 
 args = [a for a in sys.argv[1:] if not a.startswith('-')]

@@ -919,8 +919,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     if (k.role === 'leaf') { k.cardMat.userData.season = 'leaf'; leafFar(k.far.material); }
   }
   /** z bliska bryła i karty, dalej niż ok. 16 pól od kawałka obrazek (pień chowa się razem z przełączeniem) */
-  const kindLod = (k: TreeKind): Lod => ({ near: 16, farGeo: k.far.geometry, farMat: k.far.material, shadowGeo: k.shadow });
-  const kindTrunkLod: Lod = { hide: 16 };
+  const kindLod = (k: TreeKind): Lod => ({ near: 26, farGeo: k.far.geometry, farMat: k.far.material, shadowGeo: k.shadow });
+  // pień z bliska pełną bryłą (do kilku tys. trójkątów), cień rzuca prosty graniastosłup w jego miejscu
+  const trunkLods = new Map<TreeKind, Lod>();
+  const kindTrunkLodOf = (k: TreeKind): Lod => {
+    let l = trunkLods.get(k);
+    if (!l) { const h = k.height * (k.role === 'leaf' ? 0.45 : 0.7); l = { hide: 18, shadowGeo: new THREE.CylinderGeometry(0.04 * k.height / 3, 0.07 * k.height / 3, h, 5, 1, true).translate(0, h / 2, 0) }; trunkLods.set(k, l); }
+    return l;
+  };
   /** odmiana dla drzewa: stała dla miejsca (hash pozycji) */
   const kindFor = <T,>(list: T[], it: Item, salt: number): T => list[hash2(Math.round(it.pos.x * 10) + salt, Math.round(it.pos.z * 10), 0x5eed) % list.length]!;
   const splitKinds = (list: Item[], ks: TreeKind[], salt: number): Map<TreeKind, Item[]> => {
@@ -937,7 +943,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // shadowGeo: prostsza bryła tego samego kształtu, która rzuca cień zamiast pełnego modelu (w obrazie zostaje pełny);
   // cień liczony jest z mapy 4096 px na obszar kilkudziesięciu pól, więc różnicy w kształcie cienia nie widać
   type Lod = { hide?: number; near?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material; shadowGeo?: THREE.BufferGeometry };
-  const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean; proxy?: THREE.InstancedMesh }[] = [];
+  const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; r: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean; proxy?: THREE.InstancedMesh }[] = [];
   /**
    * Wspólne pule roślinności: zamiast osobnego wywołania rysowania dla każdego kawałka 40×40 (i drugiego w cieniu)
    * każdy rodzaj (korony, pnie, krzewy, kamyki, kwiaty…) rysuje się jedną siatką na parę bryła–materiał. Co klatkę
@@ -1053,7 +1059,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         if (mat.userData.windDepth) proxy.customDepthMaterial = mat.userData.windDepth as THREE.Material;
       }
       const casts = shadow && !proxy;
-      if (lod && mesh.boundingSphere) lodChunks.push({ mesh, x: mesh.boundingSphere.center.x, z: mesh.boundingSphere.center.z, lod, near: g, nearMat: mat, shadow: casts, proxy });
+      if (lod && mesh.boundingSphere) lodChunks.push({ mesh, x: mesh.boundingSphere.center.x, z: mesh.boundingSphere.center.z, r: chunk * 0.7, lod, near: g, nearMat: mat, shadow: casts, proxy });
       mesh.castShadow = casts;
       if (mat.userData.windDepth) mesh.customDepthMaterial = mat.userData.windDepth as THREE.Material;
       // kępy trawy nie przyjmują cienia: cienkie źdźbła tuż nad ziemią łapały cień samego terenu i czerniały
@@ -1097,9 +1103,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const plantKinds = (list: Item[], ks: TreeKind[], salt: number, stump = true): void => {
     for (const [k, sub] of splitKinds(list, ks, salt)) {
       label = 'drzewa: pnie';
-      const trunk = instanced(k.trunk, 0xffffff, sub, undefined, true, k.barkMat, kindTrunkLod);
+      const trunk = instanced(k.trunk, 0xffffff, sub, undefined, true, k.barkMat, kindTrunkLodOf(k), 16);
       label = 'drzewa: korony';
-      plant(sub, trunk, instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k)), stump);
+      plant(sub, trunk, instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k), 16), stump);
     }
   };
   label = 'drzewa: korony';
@@ -1151,8 +1157,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     label = 'puszcza za mapą: bliska';
     for (const [ks, list, salt] of [[CONIFERS, near.pine, 3], [LEAFS, near.leaf, 4]] as const)
       for (const [k, sub] of splitKinds(list, ks, salt)) {
-        instanced(k.trunk, 0xffffff, sub, undefined, true, k.barkMat, kindTrunkLod);
-        instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k));
+        instanced(k.trunk, 0xffffff, sub, undefined, true, k.barkMat, kindTrunkLodOf(k), 16);
+        instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k), 16);
       }
     // puszcza za mapą: obrazki zamiast brył (dwa trójkąty na drzewo), stąd może być gęstsza
     // dalekie obrazki nie przełączają szczegółów, więc kawałki mogą być duże (120 pól): kilkanaście wywołań rysowania zamiast ~200
@@ -1180,7 +1186,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   plant(deadwood, instanced(models.deadwood(), 0x6b5038, deadwood, 'bark', false, undefined, SMALL_LOD), null, false);
   // młode jodły w podroście (Fir Sapling Medium z Poly Haven): z bliska bryła i karty, dalej obrazki, nie do ścięcia
   label = 'podszyt: młode jodły';
-  for (const [k, sub] of splitKinds(firs, SAPLINGS, 7)) plant(sub, instanced(k.trunk, 0xffffff, sub, undefined, false, k.barkMat, kindTrunkLod), instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k)), false);
+  for (const [k, sub] of splitKinds(firs, SAPLINGS, 7)) plant(sub, instanced(k.trunk, 0xffffff, sub, undefined, false, k.barkMat, kindTrunkLodOf(k), 16), instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k), 16), false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
@@ -1921,7 +1927,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     lod(x: number, z: number, reach: number, detail = 1) {
       mistFx?.detail(detail);
       for (const c of lodChunks) {
-        const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
+        const d = Math.hypot(c.x - x, c.z - z) - c.r; // od krawędzi kawałka, nie od środka
         if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide * detail + reach;
         const far = d > (c.lod.near ?? 30) * detail + reach;
         // cień z daleka: obrazek drzewa nie rzuca cienia (jak dotąd), krzak z daleka dalej rzuca
