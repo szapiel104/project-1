@@ -206,8 +206,8 @@ for x in (-B1, B1):
 b.prism('roof', 'thatchDark', 0.09, 0.03, 0.14, 0, APEX - 0.1, 0, seg=8)
 # żerdź z proporcem w osobnej grupie: cienka, więc daleka wersja (LOD) by ją zjadła
 log(b, 'flagpole', 'woodDark', (0, APEX - 0.05, 0), (0, APEX + 0.55, 0), r=0.018, seg=6)
-for side in (1, -1):  # proporzec z dwóch warstw, żeby był widoczny z obu stron
-    b.box('flagpole', 'flag', 0.3, 0.14, 0.006, 0.16, APEX + 0.36, side * 0.004)
+# proporzec z herbem rysuje gra (src/render/banners.ts): brzeg przy żerdzi, środek wysokości, w grupie żerdzi
+BANNERS = [[0.02, round(APEX + 0.43, 3), 0.0, 0, 0.3, 0.16, 0, 'flagpole']]
 
 # ---------------- drabina od przodu ----------------
 # oparta o krawędź pomostu w przerwie przedpiersia; żerdzie wystają nad pomost jako uchwyty przy wchodzeniu
@@ -231,4 +231,4 @@ VIEWS = [
     ['na pomoście', [0.25, DECK + 0.5, 0.45], [-0.4, DECK + 0.1, -0.5], ['base', 'roof'], 16],
     ['pod okapem', [1.25, DECK + 0.25, 1.25], [0.0, EAVE + 0.2, 0.0], ['base', 'roof'], 20],
 ]
-b.save('watchtower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS})
+b.save('watchtower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS, 'banners': BANNERS})

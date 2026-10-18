@@ -114,7 +114,8 @@ for sx in (-1, 1):
 PX, PZ = -TX, -TD + 0.12
 b.box('base', 'woodDark', 0.04, 0.8, 0.04, PX, T_TOP + 0.05, PZ)
 b.prism('base', 'gold', 0.03, 0.0, 0.06, PX, T_TOP + 0.85, PZ, seg=6)
-b.box('base', 'flag', 0.28, 0.2, 0.012, PX + 0.16, T_TOP + 0.58, PZ)
+# chorągiew z herbem rysuje gra (src/render/banners.ts): brzeg przy drzewcu, środek wysokości
+BANNERS = [[round(PX + 0.022, 3), round(T_TOP + 0.68, 3), round(PZ, 3), 0, 0.28, 0.2, 0, 'base']]
 
 
 # ---------------- skrzydła wrót (zamknięte; gra obraca je wokół zawiasów) ----------------
@@ -145,4 +146,4 @@ VIEWS = [
     ['brama od środka', [-0.4, 0.5, -2.1], [0, 0.9, 0], ['base', 'leafL', 'leafR'], 22],
     ['przejazd (wrota otwarte)', [0.0, 0.35, 1.2], [0, 0.7, -0.4], ['base'], 18],
 ]
-b.save('stonegate', maxe=0.2, rays=16, reach=0.3, extra={'hinge': HINGE, 'flames': flames, 'views': VIEWS})
+b.save('stonegate', maxe=0.2, rays=16, reach=0.3, extra={'hinge': HINGE, 'flames': flames, 'views': VIEWS, 'banners': BANNERS})

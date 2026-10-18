@@ -183,7 +183,8 @@ FPX, FPZ = -1.25, 1.25
 b.box('base', 'woodDark', 0.06, 1.7, 0.06, FPX, 0.0, FPZ)
 b.prism('base', 'gold', 0.035, 0.0, 0.07, FPX, 1.7, FPZ, seg=6)
 b.box('base', 'woodDark', 0.04, 0.04, 0.42, FPX, 1.55, FPZ + 0.2)
-b.box('base', 'flag', 0.02, 0.62, 0.4, FPX, 0.93, FPZ + 0.22)
+# sztandar z herbem rysuje gra (src/render/banners.ts): wisi z poprzeczki, płachtą w bok (+x)
+BANNERS = [[FPX, 1.55, round(FPZ + 0.22, 3), round(math.pi / 2, 4), 0.4, 0.62, 1, 'base']]
 t.block(FPX - 0.06, FPX + 0.06, FPZ - 0.06, FPZ + 0.06)
 
 E = P + 0.46
@@ -193,5 +194,5 @@ VIEWS = [
     ['wnętrze z góry', [0.3, 2.2, 0.6], [0, 0.2, -0.8], ['base', 'interior', 'floor'], 24],
     ['od drzwi', [0.0, E, Z1 - 0.05], [-0.4, 0.3, -1.1], ['base', 'interior', 'floor'], 16],
 ]
-b.save('barracks', maxe=0.3, rays=16, reach=0.4, extra={
+b.save('barracks', maxe=0.3, rays=16, reach=0.4, extra={'banners': BANNERS,
     'solid': t.solid, 'open': t.open, 'floorY': P, 'windows': t.windows, 'chimneys': chimneys, 'flames': flames, 'views': VIEWS})

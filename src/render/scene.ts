@@ -3336,7 +3336,7 @@ export class GameRenderer {
   private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material; pit: THREE.Mesh; dug?: number; rect: [number, number, number, number] }>();
   private static pitMat: THREE.MeshStandardMaterial | undefined;
   /** Części modelu, których na placu budowy nie ma (wnętrze z ludźmi, zapasy, dym, ogień, życie) */
-  private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'armsfill', 'smoke', 'flame', 'flagcloth', 'flagpole']);
+  private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'armsfill', 'smoke', 'flame', 'flagcloth', 'bannercloth', 'flagpole']);
   private siteKey = '';
   private scaffold: THREE.InstancedMesh | null = null;
   private siteStones: THREE.InstancedMesh | null = null;

@@ -92,8 +92,8 @@ t.block(X0, X1, Z0, Z0 + T); t.block(X0, X0 + T, Z0, Z1); t.block(X1 - T, X1, Z0
 # ---------------- tarcza nad drzwiami: barwy pana, skrzyżowane włócznie ----------------
 SY = P + DOOR[2] + 0.1
 b.box('base', 'woodDark', 0.24, 0.24, 0.03, DM, SY - 0.02, Z1 + 0.02)
-b.box('base', 'flag', 0.2, 0.17, 0.02, DM, SY + 0.03, Z1 + 0.045)
-b.prism('base', 'flag', 0.1, 0.0, 0.08, DM, SY - 0.05, Z1 + 0.045, seg=3, phase=math.pi)   # dolny szpic
+# tarcza z herbem pana rysuje gra (src/render/banners.ts, rodzaj 2: środek tarczy przed deską)
+BANNERS = [[round(DM, 3), round(SY + 0.08, 3), round(Z1 + 0.042, 3), 0, 0.21, 0.231, 2, 'base']]
 for sgn in (-1, 1):   # krótkie włócznie skrzyżowane za tarczą (pod okapem)
     L, a = 0.34, 0.75
     b.box('base', 'wood', 0.016, L, 0.016, DM + sgn * math.sin(a) * L / 2, SY - 0.05, Z1 + 0.03, roll=sgn * a)
@@ -157,4 +157,4 @@ VIEWS = [
 ]
 b.save('armory', maxe=0.26, rays=16, reach=0.4, extra={
     'solid': t.solid, 'open': t.open, 'floorY': P, 'windows': [], 'chimneys': [[-0.45, round(H1 + 0.75, 3), round(Z0 + 0.22, 3)]], 'flames': [],
-    'pennant': [round(X1 + 0.05, 3), round(H1 + RISE - 0.08, 3), round(ZM, 3)], 'views': VIEWS})
+    'pennant': [round(X1 + 0.05, 3), round(H1 + RISE - 0.08, 3), round(ZM, 3)], 'views': VIEWS, 'banners': BANNERS})

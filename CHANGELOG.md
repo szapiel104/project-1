@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.8 — herb gracza także na chorągwiach zamku, bram i wież (2026-10-18)
+
+- Chorągwie z modeli Blendera (baszty i donżon twierdzy, kamienna brama, kamienna wieża, strażnica, sztandar koszar) dostały tę samą płachtę z herbem właściciela co reszta budynków; w modelach zostało tylko miejsce zawieszenia, płachtę rysuje gra
+- Nowe wiszące chorągwie na wieżach bramy zamku i przy koszarach: pionowe, na żelaznym drążku, z rękawem u góry, złotym obszyciem i jaskółczym ogonem u dołu, lekko odstają od muru na wietrze
+- Tarcza nad drzwiami zbrojowni pokazuje herb pana zamiast gładkiej barwy
+
 ## 0.30.7 — chorągwie z herbem gracza (2026-10-18)
 
 - Flagi na budynkach i flagi zbiórki koszar noszą herb właściciela: ten złożony w „Mój ród” (w meczu przez sieć — herb każdego gracza z jego konta), boty i gracze bez herbu dostają stały herb z numeru gracza

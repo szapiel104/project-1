@@ -30,6 +30,14 @@ export function bannerGeometry(): THREE.BufferGeometry {
   return geo;
 }
 
+let hangGeo: THREE.BufferGeometry | null = null;
+/** Chorągiew wisząca z drążka: płachta 1 × 1 (skalowana do wymiaru z modelu), górny brzeg w y = 0, środek w x = 0 */
+export function hangingGeometry(): THREE.BufferGeometry {
+  if (hangGeo) return hangGeo;
+  hangGeo = new THREE.PlaneGeometry(1, 1, 6, 14).translate(0, -0.5, 0);
+  return hangGeo;
+}
+
 /** Stały herb bota (albo gracza bez herbu) liczony z numeru gracza — u wszystkich wychodzi ten sam */
 export function defaultCrest(player: number): number {
   const i = Math.abs(player) + 3;
@@ -107,6 +115,60 @@ function paintBanner(ctx: CanvasRenderingContext2D, W: number, H: number, team: 
   ctx.restore();
 }
 
+/** Rysuje chorągiew wiszącą: rękaw na drążek u góry, złote obszycie, jaskółczy ogon u dołu, herb w górnej połowie */
+function paintHanging(ctx: CanvasRenderingContext2D, W: number, H: number, team: number, crestImg: HTMLImageElement | null): void {
+  ctx.clearRect(0, 0, W, H);
+  const notch = H * 0.13, sleeve = H * 0.055;
+  const shape = (): void => {
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(W, 0); ctx.lineTo(W, H); ctx.lineTo(W / 2, H - notch); ctx.lineTo(0, H); ctx.closePath();
+  };
+  ctx.save();
+  shape();
+  ctx.clip();
+  ctx.fillStyle = css(team);
+  ctx.fillRect(0, 0, W, H);
+  let r = 11;
+  const rnd = (): number => { r = (r * 16807) % 2147483647; return r / 2147483647; };
+  for (let x = 0; x < W; x += 2) {
+    const v = rnd();
+    ctx.fillStyle = v < 0.5 ? `rgba(0,0,0,${(0.5 - v) * 0.12})` : `rgba(255,240,220,${(v - 0.5) * 0.06})`;
+    ctx.fillRect(x, 0, 2, H);
+  }
+  for (let n = 0; n < 160; n++) {
+    ctx.fillStyle = `rgba(0,0,0,${0.03 + rnd() * 0.05})`;
+    ctx.fillRect(rnd() * W, rnd() * H, 1 + rnd() * 2, 6 + rnd() * 40);
+  }
+  // fałdy: płachta zwisa luźno, więc w pionie idą jaśniejsze i ciemniejsze pasy
+  const folds = ctx.createLinearGradient(0, 0, W, 0);
+  for (let i = 0; i <= 6; i++) folds.addColorStop(i / 6, i % 2 ? 'rgba(0,0,0,0.16)' : 'rgba(255,255,255,0.03)');
+  ctx.fillStyle = folds;
+  ctx.fillRect(0, 0, W, H);
+  const band = W * 0.055;
+  ctx.strokeStyle = '#3a2a12'; ctx.lineWidth = band * 1.5;
+  shape(); ctx.stroke();
+  ctx.strokeStyle = '#c9a23e'; ctx.lineWidth = band;
+  shape(); ctx.stroke();
+  // rękaw na drążek
+  ctx.fillStyle = shade(team, 0.55);
+  ctx.fillRect(0, 0, W, sleeve);
+  ctx.fillStyle = 'rgba(0,0,0,0.35)';
+  ctx.fillRect(0, sleeve - 2, W, 2);
+  ctx.fillStyle = 'rgba(233,193,69,0.55)';
+  for (let x = W * 0.06; x < W; x += W * 0.09) ctx.fillRect(x, sleeve + 3, W * 0.035, 3);
+  if (crestImg) {
+    const cw = W * 0.66, ch = cw * 1.1;
+    const cx = (W - cw) / 2, cy = sleeve + (H - sleeve - notch) * 0.42 - ch / 2;
+    ctx.save();
+    ctx.globalAlpha = 0.35;
+    ctx.filter = 'blur(3px)';
+    ctx.drawImage(crestImg, cx + 3, cy + 4, cw, ch);
+    ctx.restore();
+    ctx.drawImage(crestImg, cx, cy, cw, ch);
+  }
+  ctx.restore();
+}
+
 /** Falowanie w shaderze: fala biegnie od drzewca do końca, rośnie z odległością; wierzchołki przy drzewcu stoją */
 function addWave(m: THREE.MeshStandardMaterial): void {
   const L = FLAG_LEN.toFixed(4);
@@ -138,6 +200,21 @@ function addWave(m: THREE.MeshStandardMaterial): void {
   m.customProgramCacheKey = (): string => 'flagwave1';
 }
 
+/** Wisząca chorągiew tylko lekko oddycha na wietrze: odstaje od ściany (+z) coraz bardziej ku dołowi, nigdy w mur */
+function addHangWave(m: THREE.MeshStandardMaterial): void {
+  m.onBeforeCompile = (sh) => {
+    sh.uniforms.uFlagTime = flagTime;
+    sh.vertexShader = 'uniform float uFlagTime;\n' + sh.vertexShader.replace('#include <begin_vertex>', `#include <begin_vertex>
+      {
+        float fk = clamp(-position.y, 0.0, 1.0);
+        float ph = uFlagTime * 1.6 + modelMatrix[3][0] * 2.3 + modelMatrix[3][2] * 1.3;
+        transformed.z += fk * (0.01 + 0.012 * (0.5 + 0.5 * sin(fk * 3.5 - ph))) + sin(position.x * 9.0 + ph * 0.8) * 0.003 * fk;
+        transformed.x += sin(ph * 0.6) * 0.015 * fk * fk;
+      }`);
+  };
+  m.customProgramCacheKey = (): string => 'flaghang1';
+}
+
 const mats = new Map<string, THREE.MeshStandardMaterial>();
 let weave: THREE.Texture | null | undefined;
 function addWeave(m: THREE.MeshStandardMaterial): void {
@@ -148,13 +225,14 @@ function addWeave(m: THREE.MeshStandardMaterial): void {
 }
 
 /** Materiał chorągwi dla barwy drużyny i herbu (null = bez herbu, sama płachta z obszyciem) */
-export function bannerMaterial(team: number, crest: number | null): THREE.MeshStandardMaterial {
-  const key = `${team}:${crest ?? '-'}`;
+export function bannerMaterial(team: number, crest: number | null, hang = false): THREE.MeshStandardMaterial {
+  const key = `${team}:${crest ?? '-'}:${hang ? 'h' : 'p'}`;
   const hit = mats.get(key);
   if (hit) return hit;
   const m = new THREE.MeshStandardMaterial({ roughness: 0.92, metalness: 0, side: THREE.DoubleSide, alphaTest: 0.5 });
   if (typeof document !== 'undefined') {
-    const W = 512, H = 320;
+    const W = hang ? 320 : 512, H = hang ? 512 : 320;
+    const paint = hang ? paintHanging : paintBanner;
     const cv = document.createElement('canvas');
     cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
@@ -163,11 +241,11 @@ export function bannerMaterial(team: number, crest: number | null): THREE.MeshSt
     tex.anisotropy = 8;
     m.map = tex;
     if (ctx) {
-      paintBanner(ctx, W, H, team, null);
+      paint(ctx, W, H, team, null);
       if (crest !== null) {
         const svg = avatarSvg(crest, 220).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" ');
         const img = new Image();
-        img.onload = (): void => { paintBanner(ctx, W, H, team, img); tex.needsUpdate = true; };
+        img.onload = (): void => { paint(ctx, W, H, team, img); tex.needsUpdate = true; };
         img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
       }
     }
@@ -179,23 +257,86 @@ export function bannerMaterial(team: number, crest: number | null): THREE.MeshSt
       if (n) void texturesReady().then(() => {
         if (!n.image && !(n as THREE.Texture & { mipmaps?: unknown[] }).mipmaps?.length) return;
         weave = n.clone();
-        weave.repeat.set(3, 2);
+        weave.repeat.set(3, 3);
         weave.needsUpdate = true;
         for (const x of mats.values()) addWeave(x);
       });
     }
     addWeave(m);
   } else m.color.setHex(team);
-  addWave(m);
+  if (hang) addHangWave(m); else addWave(m);
   mats.set(key, m);
+  return m;
+}
+
+const plates = new Map<string, THREE.MeshStandardMaterial>();
+const plateGeo = new THREE.PlaneGeometry(1, 1);
+const SHIELD = 'M50 4 L92 14 V52 C92 80 72 98 50 106 C28 98 8 80 8 52 V14 Z';
+/** Malowana tarcza z herbem (nad drzwiami): sam herb na przezroczystym tle; bez herbu — tarcza w barwie drużyny */
+export function crestPlateMaterial(team: number, crest: number | null): THREE.MeshStandardMaterial {
+  const key = `${team}:${crest ?? '-'}`;
+  const hit = plates.get(key);
+  if (hit) return hit;
+  const m = new THREE.MeshStandardMaterial({ roughness: 0.7, metalness: 0, alphaTest: 0.5, side: THREE.FrontSide });
+  if (typeof document !== 'undefined') {
+    const W = 200, H = 220;
+    const cv = document.createElement('canvas');
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+    const tex = new THREE.CanvasTexture(cv);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    tex.anisotropy = 8;
+    m.map = tex;
+    if (ctx) {
+      const p = new Path2D(SHIELD);
+      ctx.scale(2, 2);
+      ctx.fillStyle = css(team); ctx.fill(p);
+      ctx.strokeStyle = '#e9c145'; ctx.lineWidth = 5; ctx.stroke(p);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      if (crest !== null) {
+        const img = new Image();
+        img.onload = (): void => { ctx.clearRect(0, 0, W, H); ctx.drawImage(img, 0, 0, W, H); tex.needsUpdate = true; };
+        img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(avatarSvg(crest, W).replace('<svg ', '<svg xmlns="http://www.w3.org/2000/svg" '));
+      }
+    }
+  } else m.color.setHex(team);
+  plates.set(key, m);
   return m;
 }
 
 /** Podmienia płachty chorągwi w gotowym budynku na wersję z herbem właściciela */
 export function applyCrest(root: THREE.Object3D, team: number, crest: number | null): void {
-  const m = bannerMaterial(team, crest);
+  const pole = bannerMaterial(team, crest), hang = bannerMaterial(team, crest, true);
   root.traverse((o) => {
-    if (o.name !== 'flagcloth') return;
+    if (o.name !== 'flagcloth' && o.name !== 'bannercloth' && o.name !== 'crestplate') return;
+    const m = o.name === 'crestplate' ? crestPlateMaterial(team, crest) : o.name === 'bannercloth' ? hang : pole;
     for (const c of o.children) if ((c as THREE.Mesh).isMesh) (c as THREE.Mesh).material = m;
   });
+}
+
+/** Chorągwie z modelu Blendera (klucz „banners”): na drzewcu (rodzaj 0), wiszące z drążka (rodzaj 1) albo malowana tarcza (rodzaj 2) */
+export function addModelBanners(g: THREE.Group, list: [number, number, number, number, number, number, number, string][] | undefined, team: number): void {
+  if (!list) return;
+  for (const [x, y, z, rot, w, h, kind, group] of list) {
+    const holder = new THREE.Group();
+    holder.position.set(x, y, z);
+    holder.rotation.y = rot;
+    const cloth = new THREE.Group();
+    if (kind === 2) {
+      cloth.name = 'crestplate';
+      cloth.scale.set(w, h, 1);
+      cloth.add(new THREE.Mesh(plateGeo, crestPlateMaterial(team, null)));
+    } else if (kind === 1) {
+      cloth.name = 'bannercloth';
+      cloth.scale.set(w, h, 1);
+      cloth.add(new THREE.Mesh(hangingGeometry(), bannerMaterial(team, null, true)));
+    } else {
+      cloth.name = 'flagcloth';
+      cloth.scale.set(w / FLAG_LEN, h / FLAG_H, 1);
+      cloth.add(new THREE.Mesh(bannerGeometry(), bannerMaterial(team, null)));
+    }
+    holder.add(cloth);
+    const parent = group === 'base' ? g : (g.getObjectByName(group) ?? g);
+    parent.add(holder);
+  }
 }

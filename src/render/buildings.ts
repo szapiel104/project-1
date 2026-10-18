@@ -7,7 +7,7 @@ import { bump, grayPattern, normal, pattern } from './textures';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
 import { model } from './modelstore';
-import { bannerGeometry, bannerMaterial, flagTime } from './banners';
+import { addModelBanners, bannerGeometry, bannerMaterial, flagTime } from './banners';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const KEEP_MODEL = model('keep');
 const TAVERN_MODEL = model('tavern');
@@ -702,6 +702,8 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     for (const m of meshes(key)) grp.add(m);
     g.add(grp);
   }
+  // chorągwie z herbem: model podaje tylko miejsca, płachty rysuje banners.ts (herb dokłada scena)
+  addModelBanners(g, (model as unknown as { banners?: Parameters<typeof addModelBanners>[1] }).banners, (flag as THREE.MeshStandardMaterial).color?.getHex() ?? 0xa32a22);
   // znaczniki z modelu: szyby (świecą nocą), komin (dym), ogień w palenisku
   const marks = model as unknown as { windows?: [number, number, number, number, number, number, number, string][]; chimneys?: [number, number, number][]; flames?: [number, number, number][]; lights?: [number, number, number][] };
   for (const [x, y, z, nx, nz, w, h, grp] of marks.windows ?? []) {

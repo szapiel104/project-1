@@ -15,6 +15,9 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
+# chorągwie z herbem: tylko miejsce zawieszenia, płachtę rysuje gra (src/render/banners.ts)
+# [x, y, z, obrót, szerokość, wysokość, rodzaj: 0 = na drzewcu (x,y,z = brzeg przy drzewcu, środek wysokości), 1 = wisząca (x,y,z = środek górnej krawędzi), grupa]
+BANNERS = []
 from building import Building  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
@@ -220,7 +223,7 @@ for sx in (-1, 1):
         b.prism('base', 'slate', TR + 0.1, 0.0, 1.25, tx, y_top + 0.3, tz, seg=24)
         b.box('base', 'gold', 0.06, 0.12, 0.06, tx, y_top + 1.53, tz)
         b.box('base', 'woodDark', 0.03, 0.45, 0.03, tx, y_top + 1.6, tz)
-        b.box('base', 'flag', 0.3, 0.17, 0.015, tx + 0.15, y_top + 1.85, tz)
+        BANNERS.append([round(tx + 0.017, 3), round(y_top + 1.935, 3), round(tz, 3), 0, 0.3, 0.17, 0, 'base'])
         for a0 in (out_a - 0.7, out_a + 0.7):
             b.box('base', 'dark', 0.05, 0.22, 0.015, tx + math.sin(a0) * (TR + 0.002), 1.0, tz + math.cos(a0) * (TR + 0.002), a0)
         torch('interior', tx - sx * 0.5, WALK + 0.36, tz - sz * 0.5)
@@ -325,7 +328,7 @@ for x in (-0.45, 0.45):
 b.pyramid('base', 'slate', 2.1, DD + 0.25, 1.5, 0, 3.68, DZ)
 b.box('base', 'gold', 0.07, 0.12, 0.07, 0, 5.17, DZ)
 b.box('base', 'woodDark', 0.04, 0.9, 0.04, 0, 5.2, DZ)
-b.box('base', 'flag', 0.7, 0.4, 0.02, 0.37, 5.65, DZ)
+BANNERS.append([0.022, 5.85, round(DZ, 3), 0, 0.7, 0.4, 0, 'base'])
 
 # ---------------- brama: dwie wieże, przejazd ze sklepieniem, krata, wrota ----------------
 GZ = H - 0.5
@@ -335,7 +338,8 @@ for s in (-1, 1):
     b.box('base', 'castle', 0.9, TOP - G, 1.4, x, G, GZ + 0.2)
     block(x - 0.45, x + 0.45, GZ - 0.5, GZ + 0.9, 0, TOP)
     square_room(x, GZ + 0.2, 0.45, 0.7, WALK + ROOM_UP, doors=[(s, 0)], windows=[(0, 1), (0, -1)])
-    b.box('base', 'flag', 0.32, 0.6, 0.02, x, 0.85, GZ + 0.915)
+    b.box('base', 'iron', 0.36, 0.022, 0.03, x, 1.45, GZ + 0.92)   # drążek, na którym wisi chorągiew
+    BANNERS.append([round(x, 3), 1.45, round(GZ + 0.92, 3), 0, 0.32, 0.6, 1, 'base'])
     torch('interior', x - s * (0.45 - RW - 0.03), WALK + 0.36, GZ + 0.2)  # na ścianie naprzeciw drzwi
 b.box('base', 'castle', 1.0, WALK + ROOM_UP - 0.15 - (G + 0.95), 1.36, cx(gx), G + 0.95, GZ + 0.2, bottom=True)   # sklepienie przejazdu: spód widać z dołu
 b.box('base', 'castleDark', 1.0, 0.06, 1.44, cx(gx), WALK + ROOM_UP - 0.15, GZ + 0.2)
@@ -738,4 +742,4 @@ VIEWS = [
     ['strzelnica baszty z bliska', [-4.55, WY - 0.05, 4.55], [-5.35, WY - 0.1, 5.1], OUT, 14],
     ['z muru na dziedziniec', [4.8, WY, 1.0], [0, 0.3, 1.0], OUT, 22],
 ]
-b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS})
+b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS, 'banners': BANNERS})

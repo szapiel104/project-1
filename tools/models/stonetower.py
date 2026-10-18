@@ -103,11 +103,12 @@ b.box('base', 'stoneDark', 0.52, 0.09, 0.08, 0, 0.19, DZ + 0.12)
 PX, PZ = -OUT + 0.06, -OUT + 0.06
 b.box('base', 'woodDark', 0.045, 0.95, 0.045, PX, DECK + PAR, PZ)
 b.prism('base', 'gold', 0.035, 0.0, 0.07, PX, DECK + PAR + 0.95, PZ, seg=6)
-b.box('base', 'flag', 0.32, 0.22, 0.012, PX + 0.18, DECK + PAR + 0.66, PZ)
+# chorągiew z herbem rysuje gra (src/render/banners.ts): brzeg przy drzewcu, środek wysokości
+BANNERS = [[round(PX + 0.025, 3), round(DECK + PAR + 0.77, 3), round(PZ, 3), 0, 0.32, 0.22, 0, 'base']]
 
 VIEWS = [
     ['wieża od drzwi (oczy chłopa)', [0.4, 0.5, 2.6], [0, 1.3, 0], ['base'], 22],
     ['pod machikułami', [0.95, 0.3, 1.3], [0.4, 2.2, 0.5], ['base'], 18],
     ['pomost łuczników', [0.0, DECK + 0.45, -0.1], [0.6, DECK + 0.2, 0.7], ['base'], 16],
 ]
-b.save('stonetower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS})
+b.save('stonetower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS, 'banners': BANNERS})
