@@ -612,12 +612,21 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const STEP = 2, x0 = -D, z0 = -D, nx = Math.floor((w + 2 * D) / STEP) + 1, ny = Math.floor((h + 2 * D) / STEP) + 1;
     const data = new Float32Array(nx * ny);
     const wet = new Uint8Array(nx * ny);
+    // las i skały wokół węzła (0..4 pól z kratki 2×2): tam poranny opar nie leży płachtą, tylko kończy się delikatnym paskiem
+    const wood = new Uint8Array(nx * ny);
     for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
       const X = x0 + i * STEP, Y = z0 + j * STEP;
       data[j * nx + i] = anyH(X, Y);
       if (X >= 0 && Y >= 0 && X < w && Y < h) { const t = map.tiles[Y * w + X]; wet[j * nx + i] = t === Terrain.Water || t === Terrain.Ford ? 1 : 0; }
+      let c = 0;
+      for (let dy = -1; dy <= 0; dy++) for (let dx = -1; dx <= 0; dx++) {
+        const XX = X + dx, YY = Y + dy;
+        const t = XX >= 0 && YY >= 0 && XX < w && YY < h ? map.tiles[YY * w + XX] : Terrain.Mountain;
+        if (t === Terrain.Forest || t === Terrain.Mountain) c++;
+      }
+      wood[j * nx + i] = c;
     }
-    mistFx = buildHighMist({ data, nx, ny, x0: x0 + ox, z0: z0 + oz, step: STEP, wet }, { cx: ox + w / 2, cz: oz + h / 2, hw: w / 2, hh: h / 2 }, map.seed);
+    mistFx = buildHighMist({ data, nx, ny, x0: x0 + ox, z0: z0 + oz, step: STEP, wet, wood }, { cx: ox + w / 2, cz: oz + h / 2, hw: w / 2, hh: h / 2 }, map.seed);
     group.add(mistFx.group);
     const tileOf = (x: number, y: number): Terrain => map.tiles[y * w + x] as Terrain;
     streams = buildStreams({

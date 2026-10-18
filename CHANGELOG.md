@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.27.2 — poranny opar przy skraju lasu (2026-10-18)
+
+- Mgła poranna na planszy nie leży już płachtą aż pod same drzewa i urwiska (ucinała się o korony prostą, twardą krawędzią): wygasa kilka pól przed lasem i skałami, a wzdłuż skraju zostaje cienki, poszarpany pasek oparu
+- Mgła w dolinach za mapą zaczyna się łagodniej przy brzegu planszy (szersze przejście)
+
 ## 0.27.1 — kopacze chodzą po sztolni (2026-10-17)
 
 - Gdy spacerujesz po sztolni, kopacz nie pojawia się już od razu przy skale: wchodzi wrotami i idzie korytarzem do swojego przodka (na dolny poziom schodzi po drabinie w szybie), a po robocie wraca do wrót i dopiero tam wychodzi na powierzchnię — nikt nie znika w środku

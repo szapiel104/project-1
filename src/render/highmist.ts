@@ -24,6 +24,8 @@ export interface HeightGrid {
   step: number;
   /** Węzły na wodzie planszy (1 = jezioro, rzeka, bród): nad wodą opar gęstnieje */
   wet?: Uint8Array;
+  /** Las i skały wokół węzła (0..4): opar planszy kończy się przed nimi miękkim paskiem, zamiast ciąć się o korony i urwisko */
+  wood?: Uint8Array;
 }
 
 export interface Atmosphere {
@@ -140,7 +142,7 @@ void main() {
   float depth = layerY - terrainH(vWP.xz);
   float a = smoothstep(0.0, thick, depth);
   vec2 q = abs(vWP.xz - board.xy) - board.zw;
-  a *= smoothstep(4.0, 14.0, max(q.x, q.y));
+  a *= smoothstep(5.0, 20.0, max(q.x, q.y));
   if (a < 0.003) discard;
   vec2 p = vWP.xz;
   float n1 = texture2D(noise, p / 61.0 + drift * time).r;
@@ -368,6 +370,19 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
     vall[k] = hb[k]! > 1.25 ? 0 : Math.min(1, Math.max(0, (avg[k]! - hb[k]!) / 0.35) + wet * 0.4);
   }
   vall = boxBlur(vall, 1);
+  // Skraj lasu i urwiska: płachta wygasa kilka pól przed drzewami (pod koronami i tak jej nie widać, a ucięta o nie
+  // dawała twardą, prostą krawędź), a wzdłuż samego skraju zostaje cienki, poszarpany pasek oparu.
+  if (g.wood) {
+    const cov = new Float32Array(BW * BH);
+    for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) cov[j * BW + i] = g.wood[(j + bj0) * g.nx + i + bi0]! / 4;
+    const cb = boxBlur(cov, 1);
+    for (let k = 0; k < vall.length; k++) {
+      const c = cb[k]!;
+      const open = 1 - Math.min(1, Math.max(0, (c - 0.12) / 0.4));
+      const band = Math.exp(-(((c - 0.34) / 0.13) ** 2));
+      vall[k] = Math.min(1, vall[k]! * open * open + band * 0.5);
+    }
+  }
   const DP: number[] = [], DV: number[] = [], DI: number[] = [];
   for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) {
     DP.push(g.x0 + (i + bi0) * g.step, Math.max(hb[j * BW + i]!, -0.08) + 0.42, g.z0 + (j + bj0) * g.step);
