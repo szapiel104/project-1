@@ -19,6 +19,8 @@ Dalsze tekstury ambientCG (CC0), z paczki ambientcg_1024 dostarczonej przez Mich
 - Metal 021 → `iron.jpg` (kute żelazo z rdzą: pancerze, miecze, narzędzia)
 - Chainmail 004 → `mail.jpg` (kolczugi strażników i włóczników)
 
+Młoda jodła w podroście lasu: [Fir Sapling](https://polyhaven.com/a/fir_sapling) z Poly Haven (CC0) — model (wariant a) odchudzony w Blenderze skryptem `tools/models/fir_polyhaven.py` → `src/render/models/fir.json`; tekstury kory i igieł zmniejszone do 512 px → `fir_bark.jpg`, `fir_bark_n.jpg`, `fir_needles.jpg`, `fir_needles_n.jpg`.
+
 Strzecha: [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) z Poly Haven (CC0) → `thatch.jpg`; mapa normalnych liczona z mapy przemieszczeń.
 Dla tekstur bez mapy normalnych mapa jest liczona z jasności obrazu.
 
