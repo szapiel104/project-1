@@ -67,3 +67,15 @@ describe('wodospady nad wodą', () => {
     expect(C.water(Math.floor(end.x), Math.floor(end.y))).toBe(true);
   });
 });
+
+describe('kurtyna wodospadu', () => {
+  it('spada wzdłuż prawdziwej ściany i nigdzie nie wchodzi w skałę', async () => {
+    const { curtainRows } = await import('../src/render/streams');
+    // ściana pochylona (nie pionowa): od krawędzi w y = 10 teren opada o 2 na każde pole aż do tafli
+    const Hf = (_x: number, y: number): number => (y < 10 ? 8 : Math.max(-0.3, 8 - (y - 10) * 2));
+    const { rows, hit } = curtainRows(Hf, { x: 5, y: 10 }, 0, 1, 8.1, -0.07);
+    for (const r of rows.slice(1)) expect(Hf(r.x, r.y)).toBeLessThan(r.h);
+    for (let i = 1; i < rows.length; i++) expect(rows[i]!.y).toBeGreaterThanOrEqual(rows[i - 1]!.y);
+    expect(hit).toBeGreaterThan(4); // dół pochyłej ściany jest ok. 4 pola od krawędzi
+  });
+});

@@ -312,55 +312,90 @@ export function streamWaterMaterial(noise: THREE.Texture): THREE.ShaderMaterial 
   return m;
 }
 
+type FallRocks = { lip: WMesh; pool: WMesh };
+/** Kamienie wodospadu z Blendera (tools/models/waterfall.py): 'lip' na krawędzi progu, 'pool' wokół misy */
+function fallRock(part: keyof FallRocks, scale: number): THREE.Mesh {
+  const geo = modelGeo(model<FallRocks>('waterfall')[part]).toNonIndexed();
+  geo.scale(scale, scale, scale); // tylko równo: nierówne skalowanie robiło z głazów rozciągnięte kluski
+  geo.computeVertexNormals(); // łupana skała: płaskie ściany
+  boxUv(geo, 0.42);
+  const m = new THREE.Mesh(geo, fallRockMaterial());
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+
 /**
- * Wodospad z Blendera (tools/models/waterfall.py): skalny próg z rynną, kaskada w dwóch stopniach, głazy w misie.
- * Model ma 5 pól wysokości; sy skaluje wysokość (do progu na mapie), sxz szerokość i głębokość.
- * (0, 0, 0) = tafla wody pod ścianą, woda spada w stronę +z, misa w z ≈ 1,15·sxz.
+ * Kurtyna wodospadu wzdłuż prawdziwej ściany: od krawędzi L w stronę (dx, dy) woda spada łukiem, ale nigdy nie wchodzi
+ * w skałę — na każdej wysokości trzyma się co najmniej `gap` przed zboczem z mapy wysokości. Zwraca dwie warstwy
+ * (przednia szersza, tylna węższa) w polach mapy, y = wysokość; `hit` = odległość od L, gdzie woda trafia w taflę.
  */
-export function waterfallModel(sy: number, sxz: number, waterMat: THREE.Material): THREE.Group {
-  const src = model<{ rock: WMesh; water: WMesh }>('waterfall');
-  const g = new THREE.Group();
-  const rock = modelGeo(src.rock).toNonIndexed();
-  rock.scale(sxz, sy, sxz);
-  rock.computeVertexNormals(); // łupana skała: płaskie ściany (normalne trójkątów po skalowaniu)
-  boxUv(rock, 0.42);
-  const rm = new THREE.Mesh(rock, fallRockMaterial());
-  rm.castShadow = rm.receiveShadow = true;
-  g.add(rm);
-  // woda: wierzchołki parami w rzędach (lewy, prawy brzeg); v = droga wzdłuż nurtu, spad = rząd prawie pionowy
-  const water = modelGeo(src.water);
-  water.scale(sxz, sy, sxz);
-  const p = water.attributes.position as THREE.BufferAttribute;
-  const n = p.count, rows = n >> 1;
-  const UV = new Float32Array(n * 2), SL = new Float32Array(n), ED = new Float32Array(n), EN = new Float32Array(n).fill(1);
-  let along = 0;
-  for (let r = 0; r < rows; r++) {
-    const a = r * 2;
-    const cx = (p.getX(a) + p.getX(a + 1)) / 2, cy = (p.getY(a) + p.getY(a + 1)) / 2, cz = (p.getZ(a) + p.getZ(a + 1)) / 2;
-    const b = Math.min(rows - 1, r + 1) * 2, q = Math.max(0, r - 1) * 2;
-    const nx = (p.getX(b) + p.getX(b + 1)) / 2 - (p.getX(q) + p.getX(q + 1)) / 2;
-    const ny = (p.getY(b) + p.getY(b + 1)) / 2 - (p.getY(q) + p.getY(q + 1)) / 2;
-    const nz = (p.getZ(b) + p.getZ(b + 1)) / 2 - (p.getZ(q) + p.getZ(q + 1)) / 2;
-    const steep = Math.abs(ny) / (Math.hypot(nx, ny, nz) || 1);
-    if (r > 0) {
-      const pa = (r - 1) * 2;
-      along += Math.hypot(cx - (p.getX(pa) + p.getX(pa + 1)) / 2, cy - (p.getY(pa) + p.getY(pa + 1)) / 2, cz - (p.getZ(pa) + p.getZ(pa + 1)) / 2);
-    }
-    for (let k = 0; k < 2; k++) {
-      const i = a + k;
-      UV[i * 2] = k; UV[i * 2 + 1] = along * 0.5;
-      ED[i] = k ? 1 : -1;
-      SL[i] = steep > 0.55 ? 5 : 0.35; // 5 = kurtyna spadu, inaczej spokojny nurt
-    }
+export function curtainRows(H: (x: number, y: number) => number, L: Pt, dx: number, dy: number, ly: number, by: number): { rows: { x: number; y: number; h: number; t: number }[]; hit: number } {
+  const N = 32, gap = 0.22;
+  const rows: { x: number; y: number; h: number; t: number }[] = [];
+  let s = 0;
+  for (let i = 0; i <= N; i++) {
+    const t = i / N;
+    const h = ly + (by - ly) * t;
+    // łuk: woda wypływa z prędkością nurtu i spada swobodnie (odległość rośnie z pierwiastkiem spadku)
+    const arcS = 0.42 * Math.sqrt(Math.max(0, ly - h));
+    // zbocze: pierwsza odległość, gdzie teren jest już niżej niż woda
+    let face = 0;
+    while (face < 12 && H(L.x + dx * face, L.y + dy * face) > h - 0.05) face += 0.05;
+    s = Math.max(s, arcS, i === 0 ? 0 : face + gap);
+    rows.push({ x: L.x + dx * s, y: L.y + dy * s, h, t });
   }
-  water.setAttribute('uv', new THREE.BufferAttribute(UV, 2));
-  water.setAttribute('aSlope', new THREE.BufferAttribute(SL, 1));
-  water.setAttribute('aEdge', new THREE.BufferAttribute(ED, 1));
-  water.setAttribute('aEnd', new THREE.BufferAttribute(EN, 1));
-  water.deleteAttribute('color');
-  const wm = new THREE.Mesh(water, waterMat);
-  wm.renderOrder = 2;
-  g.add(wm);
+  return { rows, hit: s };
+}
+
+/** Siatka kurtyny z rzędów (dwie warstwy dają grubość) */
+function curtainMeshes(rows: { x: number; y: number; h: number; t: number }[], dx: number, dy: number, ox: number, oz: number, mat: THREE.Material): THREE.Mesh[] {
+  const out: THREE.Mesh[] = [];
+  const drop = rows[0]!.h - rows[rows.length - 1]!.h;
+  for (const [wMul, push, phase] of [[1, 0.05, 0], [0.72, -0.07, 0.37]] as const) {
+    const P: number[] = [], UV: number[] = [], SL: number[] = [], ED: number[] = [], EN: number[] = [], I: number[] = [];
+    rows.forEach((r, i) => {
+      const half = (0.34 + r.t * 0.55) * wMul;
+      for (const side of [-1, 1]) {
+        P.push(r.x + dx * push - dy * half * side + ox, r.h, r.y + dy * push + dx * half * side + oz);
+        UV.push(side * 0.5 + 0.5, r.t * drop * 0.35 + phase);
+        SL.push(5); ED.push(side); // 5 = kurtyna (osobny wygląd w shaderze)
+        EN.push(Math.min(1, (rows.length - 1 - i) / 2 + 0.3));
+      }
+      if (i < rows.length - 1) { const q = i * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
+    });
+    const g = new THREE.BufferGeometry();
+    g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
+    g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
+    g.setAttribute('aSlope', new THREE.Float32BufferAttribute(SL, 1));
+    g.setAttribute('aEdge', new THREE.Float32BufferAttribute(ED, 1));
+    g.setAttribute('aEnd', new THREE.Float32BufferAttribute(EN, 1));
+    g.setIndex(I);
+    g.computeBoundingSphere();
+    const m = new THREE.Mesh(g, mat);
+    m.renderOrder = 2;
+    out.push(m);
+  }
+  return out;
+}
+
+/**
+ * Wodospad do podglądu modeli: kamienna ściana 5 pól nad taflą, kamienie z Blendera i ta sama kurtyna co w grze.
+ * (0, 0, 0) = tafla pod ścianą, woda spada w stronę +z.
+ */
+export function waterfallModel(_sy: number, _sxz: number, waterMat: THREE.Material): THREE.Group {
+  const g = new THREE.Group();
+  const top = 5;
+  const H = (_x: number, y: number): number => (y < 0 ? top : -0.3);
+  const wall = new THREE.BoxGeometry(6, top + 0.3, 4).translate(0, (top - 0.3) / 2, -2).toNonIndexed();
+  boxUv(wall, 0.42);
+  const cols = new Float32Array((wall.attributes.position as THREE.BufferAttribute).count * 3).fill(0.55);
+  wall.setAttribute('color', new THREE.BufferAttribute(cols, 3));
+  g.add(new THREE.Mesh(wall, fallRockMaterial()));
+  const L = { x: 0, y: -0.02 };
+  const { rows, hit } = curtainRows(H, L, 0, 1, top + 0.08, -0.07);
+  for (const m of curtainMeshes(rows, 0, 1, 0, 0, waterMat)) g.add(m);
+  const lip = fallRock('lip', 1); lip.position.set(0, top, -0.05); g.add(lip);
+  const pool = fallRock('pool', 1); pool.position.set(0, -0.1, hit); g.add(pool);
   return g;
 }
 
@@ -389,99 +424,43 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
   foamMat.uniforms.noise!.value = noise;
   const extra: THREE.BufferGeometry[] = [];
   /**
-   * Kurtyna wodospadu: woda wylatuje z krawędzi progu poziomo i spada łukiem (parabola) do toni, odsunięta od skały —
-   * dzięki temu widać ją też z góry, a nie tylko z boku. Dwie warstwy (przednia szersza, tylna węższa i przesunięta)
-   * dają grubość; u dołu na wodzie wiruje piana, nad nią pył wodny.
+   * Wodospad: nurt po półce aż do krawędzi progu L, z niej kurtyna wzdłuż prawdziwej ściany skalnej do toni w stronę B,
+   * omszone głazy przy wylocie, mokre głazy wokół misy, u dołu piana i pył wodny.
    */
-  const curtain = (L: Pt, B: Pt, tiles: Set<number>): THREE.Mesh[] => {
-    const ly = H(L.x, L.y) + 0.12, by = -0.07;
+  const placeFall = (full: Pt[], lipI: number, tiles: Set<number>): void => {
+    const L = full[lipI]!, B = full[full.length - 1]!;
     let dx = B.x - L.x, dy = B.y - L.y;
     const dl = Math.hypot(dx, dy) || 1;
     dx /= dl; dy /= dl;
-    // wylot nieco dalej niż dół ściany: łuk mija skałę
-    const reach = dl + 0.6 + Math.min(1.2, (ly - by) * 0.06);
-    const out: THREE.Mesh[] = [];
-    for (const [wMul, reachMul, phase] of [[1, 1, 0], [0.75, 0.82, 0.37]] as const) {
-      const P: number[] = [], UV: number[] = [], SL: number[] = [], ED: number[] = [], EN: number[] = [], I: number[] = [];
-      const N = 26;
-      for (let i = 0; i <= N; i++) {
-        const t = i / N;
-        const cx = L.x + dx * reach * reachMul * t, cz = L.y + dy * reach * reachMul * t;
-        const y = ly + (by - ly) * t * t;
-        const half = (0.55 + t * 0.55) * wMul;
-        for (const side of [-1, 1]) {
-          P.push(cx - dy * half * side + S.ox, y, cz + dx * half * side + S.oz);
-          UV.push(side * 0.5 + 0.5, t * (ly - by) * 0.35 + phase);
-          SL.push(5); ED.push(side); // 5 = kurtyna (osobny wygląd w shaderze)
-          EN.push(Math.min(1, (N - i) / 2 + 0.25));
-        }
-        if (i < N) { const q = i * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
-      }
-      const g = new THREE.BufferGeometry();
-      g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
-      g.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
-      g.setAttribute('aSlope', new THREE.Float32BufferAttribute(SL, 1));
-      g.setAttribute('aEdge', new THREE.Float32BufferAttribute(ED, 1));
-      g.setAttribute('aEnd', new THREE.Float32BufferAttribute(EN, 1));
-      g.setIndex(I);
-      g.computeBoundingSphere();
-      const m = new THREE.Mesh(g, mat);
-      m.renderOrder = 2;
-      out.push(m);
-    }
-    // piana w misie pod wodospadem
-    const hx = L.x + dx * reach, hz = L.y + dy * reach;
-    const fg = new THREE.CircleGeometry(1.5 + Math.min(1, (ly - by) * 0.08), 28).rotateX(-Math.PI / 2).translate(hx + S.ox, -0.06, hz + S.oz);
-    extra.push(fg);
-    const fm = new THREE.Mesh(fg, foamMat);
-    fm.renderOrder = 2;
-    out.push(fm);
-    sprays.push(new THREE.Vector3(hx + S.ox, 0.15, hz + S.oz));
-    tiles.add(Math.floor(hz) * S.w + Math.floor(hx));
-    return out;
-  };
-  /** Wodospad z modelu: próg na krawędzi L, misa nad wodą w stronę B, skala do wysokości progu */
-  const placeFall = (L: Pt, B: Pt): void => {
-    const ly = H(L.x, L.y), by = -0.08;
-    let dx = B.x - L.x, dy = B.y - L.y;
-    const dl = Math.hypot(dx, dy) || 1;
-    dx /= dl; dy /= dl;
-    const sy = Math.max(0.45, Math.min(1.8, (ly - by) / 5));
-    const sxz = Math.max(0.75, Math.min(1.2, dl / 0.99));
-    // krawędź rynny modelu (z ≈ 0,16) leży na krawędzi progu na mapie
-    const ox0 = L.x - dx * 0.16 * sxz, oy0 = L.y - dy * 0.16 * sxz;
-    const g = waterfallModel(sy, sxz, mat);
-    g.position.set(ox0 + S.ox, by, oy0 + S.oz);
-    g.rotation.y = Math.atan2(dx, dy);
-    group.add(cat(g, 'strumienie i wodospady'));
-    const tiles = new Set<number>();
-    for (let a = -1.8; a <= 2.2; a += 0.5) for (let c = -1.8; c <= 1.8; c += 0.5) {
-      const tx = ox0 + (dx * a - dy * c) * sxz, ty = oy0 + (dy * a + dx * c) * sxz;
-      tiles.add(Math.floor(ty) * S.w + Math.floor(tx));
-    }
-    for (const m of g.children) meshes.push({ mesh: m as THREE.Mesh, tiles });
-    // piana w misie i pył wodny nad nią
-    const hx = ox0 + dx * 1.15 * sxz, hz = oy0 + dy * 1.15 * sxz;
-    const fg = new THREE.CircleGeometry(1.2 + sy * 0.5, 28).rotateX(-Math.PI / 2).translate(hx + S.ox, -0.06, hz + S.oz);
+    const ly = H(L.x, L.y) + 0.1, by = -0.07;
+    const { rows, hit } = curtainRows(H, L, dx, dy, ly, by);
+    for (const m of curtainMeshes(rows, dx, dy, S.ox, S.oz, mat)) { group.add(cat(m, 'strumienie i wodospady')); meshes.push({ mesh: m, tiles }); }
+    for (const r of rows) tiles.add(Math.floor(r.y) * S.w + Math.floor(r.x));
+    const rot = Math.atan2(dx, dy);
+    const sc = Math.max(0.85, Math.min(1.25, (ly - by) / 6));
+    const lip = fallRock('lip', sc);
+    lip.position.set(L.x + S.ox, H(L.x, L.y) - 0.04, L.y + S.oz);
+    lip.rotation.y = rot;
+    group.add(cat(lip, 'strumienie i wodospady'));
+    meshes.push({ mesh: lip, tiles });
+    const hx = L.x + dx * hit, hz = L.y + dy * hit;
+    const pool = fallRock('pool', sc);
+    pool.position.set(hx + S.ox, by - 0.05, hz + S.oz);
+    pool.rotation.y = rot;
+    group.add(cat(pool, 'strumienie i wodospady'));
+    meshes.push({ mesh: pool, tiles });
+    const fg = new THREE.CircleGeometry(1.3 + Math.min(1.2, (ly - by) * 0.09), 28).rotateX(-Math.PI / 2).translate(hx + S.ox, -0.06, hz + S.oz);
     extra.push(fg);
     const fm = new THREE.Mesh(fg, foamMat);
     fm.renderOrder = 2;
     group.add(cat(fm, 'strumienie i wodospady'));
     meshes.push({ mesh: fm, tiles });
     sprays.push(new THREE.Vector3(hx + S.ox, 0.15, hz + S.oz));
-    // pył także pod pierwszym stopniem (półka w połowie ściany)
-    const mx = ox0 + dx * 0.45 * sxz, mz = oy0 + dy * 0.45 * sxz;
-    sprays.push(new THREE.Vector3(mx + S.ox, by + 2.5 * sy, mz + S.oz));
+    for (let a = -2; a <= 2; a += 0.5) for (let c = -2; c <= 2; c += 0.5) tiles.add(Math.floor(hz + dy * a + dx * c) * S.w + Math.floor(hx + dx * a - dy * c));
   };
-  void curtain;
   paths.forEach((full, pi) => {
     const isFall = pi < falls.length;
-    if (isFall) {
-      const lipI = (full as Pt[] & { lip?: number }).lip ?? 8;
-      placeFall(full[lipI]!, full[full.length - 1]!);
-      return;
-    }
-    // przy wodospadzie wstęgą rysujemy tylko nurt nad krawędzią (8 pierwszych punktów + krawędź), resztę robi kurtyna
+    // przy wodospadzie wstęgą rysujemy tylko nurt nad krawędzią (punkty do krawędzi), resztę robi kurtyna
     const lip = (full as Pt[] & { lip?: number }).lip ?? 8;
     const raw = isFall ? full.slice(0, lip + 1) : full;
     const pts = smooth(raw, 0.16);
@@ -497,8 +476,8 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
       const horiz = Math.hypot(b.x - a.x, b.y - a.y) || 1e-3;
       const slope = Math.abs(H(a.x, a.y) - H(b.x, b.y)) / horiz;
       const k = i / (n - 1);
-      // strumień rośnie z biegiem; wodospad węższy i zwarty
-      const width = isFall ? 0.42 + k * 0.12 : 0.32 + k * 0.38 + Math.min(slope, 3) * 0.14;
+      // strumień rośnie z biegiem; nurt nad wodospadem mieści się między głazami wylotu
+      const width = isFall ? 0.26 + k * 0.08 : 0.32 + k * 0.38 + Math.min(slope, 3) * 0.14;
       const hc = H(p.x, p.y);
       // normalna terenu: woda leży tuż nad zboczem także na stromej ścianie (pionowe podniesienie by ją tam schowało)
       const e = 0.35;
@@ -512,19 +491,20 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
         const lift = 0.1 + Math.min(slope, 3) * 0.05;
         P.push(ex + S.ox + nX * lift, he + nY * lift, ey + S.oz + nZ * lift);
         UV.push(side * 0.5 + 0.5, along);
-        SL.push(slope); ED.push(side);
-        // ujście: na końcu (u stóp gór) strumień wsiąka, w jeziorze wtapia się w taflę
-        EN.push((isFall ? 1 : Math.min(1, (n - 1 - i) / 4)) * Math.min(1, i / 3));
+        SL.push(isFall ? Math.min(slope, 0.4) : slope); ED.push(side);
+        // ujście: na końcu (u stóp gór) strumień wsiąka, w jeziorze wtapia się w taflę; nad wodospadem wypływa spod półki
+        EN.push(isFall ? Math.min(1, i / 4) : Math.min(1, (n - 1 - i) / 4) * Math.min(1, i / 3));
       }
       tiles.add(Math.floor(p.y) * S.w + Math.floor(p.x));
       if (i > 0) along += Math.hypot(p.x - a.x, p.y - a.y) * 0.5;
+      if (isFall) continue;
       // koniec stromego odcinka = dół wodospadu: tam pył wodny
       // (tylko pod prawdziwym wodospadem: kilka stromych kroków z rzędu, nie pod jednym progiem)
       if (slope > 1.1) fallLen++;
       else if (slope < 0.6) { if (fallLen >= 3) sprays.push(new THREE.Vector3(p.x + S.ox, hc + 0.3, p.y + S.oz)); fallLen = 0; }
       if (i === n - 1 && fallLen >= 3) sprays.push(new THREE.Vector3(p.x + S.ox, Math.max(hc, -0.1) + 0.3, p.y + S.oz));
-      if (i < n - 1) { const q = i * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
     }
+    for (let i = 0; i < n - 1; i++) { const q = i * 2; I.push(q, q + 2, q + 1, q + 1, q + 2, q + 3); }
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(UV, 2));
@@ -537,10 +517,7 @@ export function buildStreams(S: StreamSampler, noise: THREE.Texture, want = 6): 
     mesh.renderOrder = 1;
     group.add(cat(mesh, 'strumienie i wodospady'));
     meshes.push({ mesh, tiles });
-    if (isFall) {
-      const L = full[lip]!, B = full[full.length - 1]!;
-      for (const m of curtain(L, B, tiles)) { group.add(cat(m, 'strumienie i wodospady')); meshes.push({ mesh: m, tiles }); }
-    }
+    if (isFall) placeFall(full, lip, tiles);
   });
   return {
     group,
