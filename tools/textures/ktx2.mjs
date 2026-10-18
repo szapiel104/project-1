@@ -6,19 +6,29 @@
 //    na karcie BC1/BC7/ETC zależnie od sprzętu, mipmapy policzone tu
 //  - kolor w sRGB; mapy normalnych (*_n.jpg) w trybie normal map, liniowo
 //  - kodowanie trwa ok. 25 s na teksturę 2K (wasm, jeden wątek); pliki można podać jako argumenty
-import { readFileSync, writeFileSync, readdirSync, statSync } from 'node:fs';
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import jpeg from 'jpeg-js';
 import { encodeToKTX2 } from 'ktx2-encoder';
 
 const ROOTS = ['public/textures/terrain', 'public/textures/cc0'];
-const files = process.argv.slice(2).length ? process.argv.slice(2) : ROOTS.flatMap((d) => readdirSync(d).filter((f) => f.endsWith('.jpg')).map((f) => join(d, f)));
+// maska przezroczystości: plik `<nazwa>_a.jpg` obok (jasność = krycie) trafia do kanału alfa `<nazwa>.ktx2`
+// (karty koron i obrazki drzew z tools/models/forest_polyhaven.py); same maski nie są przerabiane osobno
+const files = (process.argv.slice(2).length ? process.argv.slice(2) : ROOTS.flatMap((d) => readdirSync(d).filter((f) => f.endsWith('.jpg')).map((f) => join(d, f)))).filter((f) => !/_a\.jpg$/.test(f));
+let alphaOf = null;
 const imageDecoder = async (buf) => {
   const img = jpeg.decode(buf, { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 1024 });
-  return { width: img.width, height: img.height, data: new Uint8Array(img.data) };
+  const data = new Uint8Array(img.data);
+  if (alphaOf) {
+    const m = jpeg.decode(readFileSync(alphaOf), { useTArray: true, formatAsRGBA: true, maxMemoryUsageInMB: 1024 });
+    for (let i = 0; i < data.length; i += 4) data[i + 3] = m.data[i];
+  }
+  return { width: img.width, height: img.height, data };
 };
 for (const f of files) {
   const normal = /_n\.jpg$/.test(f);
+  const mask = f.replace(/\.jpg$/, '_a.jpg');
+  alphaOf = existsSync(mask) ? mask : null;
   const t0 = Date.now();
   const out = await encodeToKTX2(new Uint8Array(readFileSync(f)), {
     isUASTC: false, qualityLevel: 255, compressionLevel: 2, generateMipmap: true, isYFlip: true,

@@ -43,6 +43,14 @@ export function treeImpostor(parts: ImpostorPart[], px = 96): { geometry: THREE.
   const tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace;
   tex.anisotropy = 4;
+  return impostorFrom(tex, W, H);
+}
+
+/**
+ * Obrazek z daleka z gotowego paska 8 klatek (np. zdjęcia drzewa zrobione w Blenderze: tools/models/forest_polyhaven.py).
+ * Klatka k: kamera na (sin a, cos a) w płaszczyźnie x/z, a = k/8 obrotu; W × H — wymiary obrazka w polach, podstawa w 0.
+ */
+export function impostorFrom(tex: THREE.Texture, W: number, H: number): { geometry: THREE.BufferGeometry; material: (inverse?: number) => THREE.MeshStandardMaterial } {
   const geometry = new THREE.PlaneGeometry(W, H).translate(0, H / 2, 0);
   const material = (inverse?: number): THREE.MeshStandardMaterial => {
     const m = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, roughness: 1, metalness: 0, side: THREE.DoubleSide });

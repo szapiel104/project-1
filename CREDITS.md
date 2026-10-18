@@ -19,7 +19,7 @@ Dalsze tekstury ambientCG (CC0), z paczki ambientcg_1024 dostarczonej przez Mich
 - Metal 021 → `iron.jpg` (kute żelazo z rdzą: pancerze, miecze, narzędzia)
 - Chainmail 004 → `mail.jpg` (kolczugi strażników i włóczników)
 
-Młoda jodła w podroście lasu: [Fir Sapling](https://polyhaven.com/a/fir_sapling) z Poly Haven (CC0) — model (wariant a) odchudzony w Blenderze skryptem `tools/models/fir_polyhaven.py` → `src/render/models/fir.json`; tekstury kory i igieł zmniejszone do 512 px → `fir_bark.jpg`, `fir_bark_n.jpg`, `fir_needles.jpg`, `fir_needles_n.jpg`.
+Las: drzewa z [Poly Haven](https://polyhaven.com) (CC0) — [Fir Tree 01](https://polyhaven.com/a/fir_tree_01), [Pine Tree 01](https://polyhaven.com/a/pine_tree_01), [Island Tree 01](https://polyhaven.com/a/island_tree_01), [Island Tree 02](https://polyhaven.com/a/island_tree_02), [Fir Sapling Medium](https://polyhaven.com/a/fir_sapling_medium). Przerobione w Blenderze skryptem `tools/models/forest_polyhaven.py` (pień odchudzony, korona sfotografowana warstwami na karty, obrazek z daleka z 8 stron) → `src/render/models/forest.json` i `public/textures/cc0/pv_*.jpg` (kora z paczek zmniejszona do 512 px).
 
 Strzecha: [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) z Poly Haven (CC0) → `thatch.jpg`; mapa normalnych liczona z mapy przemieszczeń.
 Dla tekstur bez mapy normalnych mapa jest liczona z jasności obrazu.

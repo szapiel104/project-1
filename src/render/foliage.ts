@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { model } from './modelstore';
-import { loadTexture } from './ktx';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const TREES = model('trees');
 
@@ -10,25 +9,6 @@ const TREES = model('trees');
  */
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
-
-/** Młoda jodła z Poly Haven (fir_sapling, CC0), odchudzona w Blenderze: tools/models/fir_polyhaven.py */
-const FIR = model('fir');
-export const firGeo = (name: 'firTrunk' | 'firCrown' | 'firShadow'): THREE.BufferGeometry => packedGeo((FIR as unknown as Record<string, Packed>)[name]!);
-
-const firTex = new Map<string, THREE.Texture>();
-/** Tekstury jodły z tej samej paczki (kolorowe zdjęcia, 512 px): kora gałęzi i igły, kolor + mapa normalnych */
-export function firTexture(name: 'fir_bark' | 'fir_bark_n' | 'fir_needles' | 'fir_needles_n'): THREE.Texture | null {
-  if (typeof document === 'undefined') return null;
-  let t = firTex.get(name);
-  if (!t) {
-    const base = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './';
-    t = loadTexture(`${base}textures/cc0/${name}.jpg`);
-    if (!name.endsWith('_n')) t.colorSpace = THREE.SRGBColorSpace;
-    t.anisotropy = 8;
-    firTex.set(name, t);
-  }
-  return t;
-}
 
 export function treeGeo(name: 'pineTrunk' | 'pineCrown' | 'pineShadow' | 'leafTrunk' | 'leafCrown' | 'leafShadow' | 'fern' | 'deadwood'): THREE.BufferGeometry {
   return packedGeo((TREES as unknown as Record<string, Packed>)[name]!);

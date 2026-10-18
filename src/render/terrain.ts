@@ -6,12 +6,12 @@ import { cat } from './cat';
 /** Daleki obrazek drzewa liściastego: jesienią rudzieje, zimą szarzeje (bez zwijania korony — obrazek ma pień) */
 const leafFar = <M extends THREE.Material>(m: M): M => { m.userData.season = 'leafFar'; return m; };
 import { createNoise2D } from 'simplex-noise';
-import { treeImpostor } from './impostors';
 import { rng } from './craft';
 import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
-import { leafTexture, needleTexture, fernTexture, firGeo, firTexture } from './foliage';
+import { fernTexture } from './foliage';
+import { kindsOf, type TreeKind } from './forest';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ModelFactory } from './models';
@@ -704,7 +704,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const pos = new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz);
     // drzewa w prawdziwej skali względem ludzi: wyraźnie wyższe od chłopa (korona nad głową), trochę szersze
     const tree = list === pines || list === leafy;
-    const scale = tree ? new THREE.Vector3(s * 1.25, s * 1.6 * (0.9 + ((r >>> 12) & 15) / 60), s * 1.25) : new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60), s);
+    // drzewa z Poly Haven mają prawdziwe proporcje: skala jednakowa, tylko wysokość trochę się waha
+    const scale = new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60) * (tree ? 1.05 : 1), s);
     m.compose(pos, q, scale);
     list.push({ m: m.clone(), shade: 0.8 + (((r >>> 20) & 15) / 15) * 0.4, tile: y * w + x, pos, q: q.clone(), s: scale });
   };
@@ -870,13 +871,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   type Inst = { setMatrixAt(i: number, m: THREE.Matrix4): void; setColorAt(i: number, c: THREE.Color): void; count: number; instanceMatrix: { needsUpdate: boolean; count: number } };
   const CHUNK = 40;
   // korony świerków: kolory z wierzchołków (jasne końce gałęzi, ciemne wnętrze), gładkie cieniowanie, widoczne z obu stron
-  const farPine = models.treeCrownFar();
-  farPine.setAttribute('color', new THREE.Float32BufferAttribute(new Float32Array((farPine.attributes.position as THREE.BufferAttribute).count * 3).fill(0.95), 3));
   // daleki las jako obrazki: świerk i drzewo liściaste sfotografowane z 8 stron (pień + korona w jednym obrazku)
-  const pineImp = treeImpostor([{ geo: models.treeTrunk(), color: 0x6b4a2e, map: pattern('bark') }, { geo: models.treeCrown(), color: 0x3c7a3a, map: needleTexture(), vertexColors: true, alpha: true }]);
-  const leafImp = treeImpostor([{ geo: models.leafTrunk(), color: 0x7a5a3a, map: pattern('bark') }, { geo: models.leafCrown(), color: 0x6fa33d, map: leafTexture(), vertexColors: true, alpha: true }]);
-  const PINE_LOD: Lod = { ...(pineImp ? { farGeo: pineImp.geometry, farMat: pineImp.material(0x3c7a3a) } : { farGeo: farPine }), shadowGeo: models.pineCrownShadow() };
-  const LEAF_LOD: Lod = { ...(leafImp ? { farGeo: leafImp.geometry, farMat: leafFar(leafImp.material(0x6fa33d)) } : { farGeo: models.leafCrownFar() }), shadowGeo: models.leafCrownShadow() };
   // pień znika razem z przełączeniem korony na obrazek (obrazek ma już pień)
   // od ok. 30 pól od środka widoku drzewa są obrazkami (impostorami), drobiazgi znikają — z bliska nic się nie zmienia,
   // a z daleka i tak ich nie widać (wcześniej 40–42 pola: w zwykłym widoku pełne drzewa sięgały do krawędzi ekranu)
@@ -887,10 +882,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     new THREE.CylinderGeometry(0.035, 0.05, 0.4, 3, 1, true).rotateZ(0.8).translate(-0.14, 1.2, 0),
     new THREE.CylinderGeometry(0.035, 0.05, 0.4, 3, 1, true).rotateZ(-0.8).translate(0.14, 1.25, 0.02),
   ])!;
-  const TRUNK_LOD: Lod = { hide: pineImp ? 30 : 62, shadowGeo: pineTrunkShadow }, SMALL_LOD: Lod = { hide: 30 };
-  const LEAF_TRUNK_LOD: Lod = { ...TRUNK_LOD, shadowGeo: leafTrunkShadow };
+  const SMALL_LOD: Lod = { hide: 30 };
+  void pineTrunkShadow; void leafTrunkShadow;
   // korony z kart (drzewa z Blendera): igliwie i liście na przezroczystym tle, cięte alphaTest, widoczne z obu stron
-  const pineMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: needleTexture(), alphaTest: 0.5 });
   // wiatr w koronach: czubek drzewa kołysze się wolno, każde drzewo w swojej fazie (podmuchy przechodzą przez las falą);
   // pień stoi, więc ruch rośnie z wysokością. Ten sam zegar co trawa.
   const windCrown = (m: THREE.Material, amp: number, key: string, base = 0.25, cards = true): void => {
@@ -914,21 +908,35 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     depth.customProgramCacheKey = () => key + '-depth';
     m.userData.windDepth = depth;
   };
-  windCrown(pineMat, 0.08, 'wind-pine', 0.8); // korona zaczyna się wysoko na pniu
-  const leafMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.92, metalness: 0, side: THREE.DoubleSide, map: leafTexture(), alphaTest: 0.5 });
-  leafMat.userData.season = 'leaf';
-  windCrown(leafMat, 0.12, 'wind-leaf', 1.0);
+  // drzewa z Poly Haven (src/render/forest.ts): wiatr zaczyna się nad pniem, siła dobrana do wysokości modelu
+  // (ruch rośnie z kwadratem wysokości), liściaste jesienią rudzieją i zimą tracą liście, z daleka obrazki z 8 stron
+  const CONIFERS = kindsOf('conifer'), LEAFS = kindsOf('leaf'), SAPLINGS = kindsOf('sapling');
+  const WIND: Record<TreeKind['role'], [number, number]> = { conifer: [0.025, 1.5], leaf: [0.03, 1.2], sapling: [0.04, 0.3] };
+  for (const k of [...CONIFERS, ...LEAFS, ...SAPLINGS]) {
+    const [amp, from] = WIND[k.role];
+    windCrown(k.cardMat, amp, `wind-${k.name}`, from);
+    windCrown(k.barkMat, amp, `wind-${k.name}-bark`, from, false);
+    if (k.role === 'leaf') { k.cardMat.userData.season = 'leaf'; leafFar(k.far.material); }
+  }
+  /** z bliska bryła i karty, dalej niż ok. 16 pól od kawałka obrazek (pień chowa się razem z przełączeniem) */
+  const kindLod = (k: TreeKind): Lod => ({ near: 16, farGeo: k.far.geometry, farMat: k.far.material, shadowGeo: k.shadow });
+  const kindTrunkLod: Lod = { hide: 16 };
+  /** odmiana dla drzewa: stała dla miejsca (hash pozycji) */
+  const kindFor = <T,>(list: T[], it: Item, salt: number): T => list[hash2(Math.round(it.pos.x * 10) + salt, Math.round(it.pos.z * 10), 0x5eed) % list.length]!;
+  const splitKinds = (list: Item[], ks: TreeKind[], salt: number): Map<TreeKind, Item[]> => {
+    const m = new Map<TreeKind, Item[]>(ks.map((k) => [k, []]));
+    for (const it of list) m.get(kindFor(ks, it, salt))!.push(it);
+    return m;
+  };
   // pnie gną się tym samym wiatrem co ich korony (ta sama wysokość startu i siła), więc górna część pnia i gałęzie
   // idą razem z liśćmi, a nie sterczą z kołyszącej się korony; dół pnia stoi
   const barkMat = (): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: pattern('bark'), bumpMap: bump('bark'), bumpScale: 1.2, normalMap: normal('bark') });
-  const pineBarkMat = barkMat(), leafBarkMat = barkMat();
-  windCrown(pineBarkMat, 0.08, 'wind-pine-bark', 0.8, false);
-  windCrown(leafBarkMat, 0.12, 'wind-leaf-bark', 1.0, false);
+  void barkMat;
   // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
   // shadowGeo: prostsza bryła tego samego kształtu, która rzuca cień zamiast pełnego modelu (w obrazie zostaje pełny);
   // cień liczony jest z mapy 4096 px na obszar kilkudziesięciu pól, więc różnicy w kształcie cienia nie widać
-  type Lod = { hide?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material; shadowGeo?: THREE.BufferGeometry };
+  type Lod = { hide?: number; near?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material; shadowGeo?: THREE.BufferGeometry };
   const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean; proxy?: THREE.InstancedMesh }[] = [];
   /**
    * Wspólne pule roślinności: zamiast osobnego wywołania rysowania dla każdego kawałka 40×40 (i drugiego w cieniu)
@@ -1085,11 +1093,18 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
   const trunkItems = new Set<Item>([...pines, ...leafy]);
   label = 'drzewa: pnie';
-  const pineTrunks = instanced(models.treeTrunk(), 0x6b4a2e, pines, 'bark', true, pineBarkMat, TRUNK_LOD);
-  const leafTrunks = instanced(models.leafTrunk(), 0x7a5a3a, leafy, 'bark', true, leafBarkMat, LEAF_TRUNK_LOD);
+  /** drzewa jednej roli rozdzielone na odmiany: pień (bryła) i korona (karty), każda odmiana osobną pulą */
+  const plantKinds = (list: Item[], ks: TreeKind[], salt: number, stump = true): void => {
+    for (const [k, sub] of splitKinds(list, ks, salt)) {
+      label = 'drzewa: pnie';
+      const trunk = instanced(k.trunk, 0xffffff, sub, undefined, true, k.barkMat, kindTrunkLod);
+      label = 'drzewa: korony';
+      plant(sub, trunk, instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k)), stump);
+    }
+  };
   label = 'drzewa: korony';
-  plant(pines, pineTrunks, instanced(models.treeCrown(), 0x3c7a3a, pines, 'needles', true, pineMat, PINE_LOD));
-  plant(leafy, leafTrunks, instanced(models.leafCrown(), 0x6fa33d, leafy, 'leaves', true, leafMat, LEAF_LOD));
+  plantKinds(pines, CONIFERS, 1);
+  plantKinds(leafy, LEAFS, 2);
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
   // Las wchodzi na zbocza aż pod granicę lasu; wyżej drzewa rzedną, są niższe i oszronione, nad nimi tylko skała i śnieg.
   // Dalekie drzewa mają uproszczony model (mniej trójkątów), a mgła i tak zaciera szczegóły.
@@ -1128,23 +1143,22 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const leafTree = groundY < 4 && (r >>> 24) % 4 === 0; // wysoko tylko świerki
         const pos = new THREE.Vector3(px, groundY - 0.05, pz);
         const qq = new THREE.Quaternion().setFromEuler(e3.set(0, ((r >>> 4) & 63) / 10, 0));
-        const sc = new THREE.Vector3(size * 1.25, size * 1.6 * (leafTree ? 1 : 1.15), size * 1.25);
+        const sc = new THREE.Vector3(size, size * (leafTree ? 1 : 1.1), size);
         const item = { m: new THREE.Matrix4().compose(pos, qq, sc), shade: (1 - k * 0.5) * (0.82 + ((r >>> 12) & 15) / 60), tile: -1, pos, q: qq, s: sc, frost: smoothstep(treeline - 5.5, treeline - 0.5, groundY) * 0.75 } as Item;
         const bucket = dd < 14 ? near : far;
         (leafTree ? bucket.leaf : bucket.pine).push(item);
       }
     label = 'puszcza za mapą: bliska';
-    instanced(models.treeTrunk(), 0x6b4a2e, near.pine, 'bark', true, pineBarkMat, TRUNK_LOD);
-    instanced(models.treeCrown(), 0x3c7a3a, near.pine, 'needles', true, pineMat, PINE_LOD);
-    instanced(models.leafTrunk(), 0x7a5a3a, near.leaf, 'bark', true, leafBarkMat, LEAF_TRUNK_LOD);
-    instanced(models.leafCrown(), 0x5f9a38, near.leaf, 'leaves', true, leafMat, LEAF_LOD);
+    for (const [ks, list, salt] of [[CONIFERS, near.pine, 3], [LEAFS, near.leaf, 4]] as const)
+      for (const [k, sub] of splitKinds(list, ks, salt)) {
+        instanced(k.trunk, 0xffffff, sub, undefined, true, k.barkMat, kindTrunkLod);
+        instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k));
+      }
     // puszcza za mapą: obrazki zamiast brył (dwa trójkąty na drzewo), stąd może być gęstsza
     // dalekie obrazki nie przełączają szczegółów, więc kawałki mogą być duże (120 pól): kilkanaście wywołań rysowania zamiast ~200
     label = 'puszcza za mapą: obrazki';
-    if (pineImp) instanced(pineImp.geometry, 0xffffff, far.pine, undefined, false, pineImp.material(), undefined, 120);
-    else instanced(models.treeCrownFar(), 0x35703a, far.pine, 'needles', false, undefined, undefined, 120);
-    if (leafImp) instanced(leafImp.geometry, 0xffffff, far.leaf, undefined, false, leafFar(leafImp.material()), undefined, 120);
-    else instanced(models.leafCrownFar(), 0x55903a, far.leaf, 'leaves', false, undefined, undefined, 120);
+    for (const [ks, list, salt] of [[CONIFERS, far.pine, 5], [LEAFS, far.leaf, 6]] as const)
+      for (const [k, sub] of splitKinds(list, ks, salt)) instanced(k.far.geometry, 0xffffff, sub, undefined, false, k.far.material, undefined, 120);
   }
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące
@@ -1164,14 +1178,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   windCrown(fernMat, 0.5, 'wind-fern', 0.05);
   plant(ferns, instanced(models.fern(), 0x5d8a34, ferns, undefined, false, fernMat, SMALL_LOD), null, false);
   plant(deadwood, instanced(models.deadwood(), 0x6b5038, deadwood, 'bark', false, undefined, SMALL_LOD), null, false);
-  // młode jodły: gałęzie z korą i prawdziwe igły (ok. 12 tys. trójkątów), więc tylko z bliska (do 20 pól) i rzadko, cień z prostego stożka
+  // młode jodły w podroście (Fir Sapling Medium z Poly Haven): z bliska bryła i karty, dalej obrazki, nie do ścięcia
   label = 'podszyt: młode jodły';
-  const firBarkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, metalness: 0, map: firTexture('fir_bark'), normalMap: firTexture('fir_bark_n') });
-  const firNeedleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, map: firTexture('fir_needles'), normalMap: firTexture('fir_needles_n') });
-  windCrown(firBarkMat, 0.1, 'wind-fir-bark', 0.3, false);
-  windCrown(firNeedleMat, 0.1, 'wind-fir', 0.3, false);
-  const FIR_LOD: Lod = { hide: 20, shadowGeo: firGeo('firShadow') };
-  plant(firs, instanced(firGeo('firTrunk'), 0xffffff, firs, undefined, false, firBarkMat, FIR_LOD), instanced(firGeo('firCrown'), 0xffffff, firs, undefined, true, firNeedleMat, FIR_LOD), false);
+  for (const [k, sub] of splitKinds(firs, SAPLINGS, 7)) plant(sub, instanced(k.trunk, 0xffffff, sub, undefined, false, k.barkMat, kindTrunkLod), instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k)), false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
@@ -1255,10 +1264,10 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
   // [rodzaj][pień, korona] i ich barwy (jak w lesie z mapy)
   const youngSets: [THREE.InstancedMesh, THREE.InstancedMesh][] = [
-    [youngMesh(models.treeTrunk(), pineBarkMat, 'drzewa leśniczych: pnie'), youngMesh(models.treeCrown(), pineMat, 'drzewa leśniczych: korony')],
-    [youngMesh(models.leafTrunk(), leafBarkMat, 'drzewa leśniczych: pnie'), youngMesh(models.leafCrown(), leafMat, 'drzewa leśniczych: korony')],
+    [youngMesh(CONIFERS[0]!.trunk, CONIFERS[0]!.barkMat, 'drzewa leśniczych: pnie'), youngMesh(CONIFERS[0]!.cards, CONIFERS[0]!.cardMat, 'drzewa leśniczych: korony')],
+    [youngMesh(LEAFS[0]!.trunk, LEAFS[0]!.barkMat, 'drzewa leśniczych: pnie'), youngMesh(LEAFS[0]!.cards, LEAFS[0]!.cardMat, 'drzewa leśniczych: korony')],
   ];
-  const youngTint: [number, number][] = [[0x6b4a2e, 0x3c7a3a], [0x7a5a3a, 0x6fa33d]];
+  const youngTint: [number, number][] = [[0xffffff, 0xffffff], [0xffffff, 0xffffff]];
   const youngPut = (y: Young, mm: THREE.Matrix4): void => {
     for (const mesh of youngSets[y.kind]!) { mesh.setMatrixAt(y.i, mm); touch(mesh); }
   };
@@ -1281,7 +1290,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const pos = new THREE.Vector3(tx + 0.5 + jx + ox, heightAt(tx + 0.5 + jx, ty + 0.5 + jz), ty + 0.5 + jz + oz);
       const qq = new THREE.Quaternion().setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
       const sz = 0.85 + (((r >>> 16) & 255) / 255) * 0.3;   // dorosłe jak zwykłe drzewo w lesie
-      y = { kind, i, pos, q: qq, s: new THREE.Vector3(sz * 1.25, sz * 1.6 * (0.9 + ((r >>> 12) & 15) / 60), sz * 1.25), k: -1 };
+      y = { kind, i, pos, q: qq, s: new THREE.Vector3(sz, sz * (0.9 + ((r >>> 12) & 15) / 60) * 1.05, sz), k: -1 };
       young.set(tile, y);
       const shade = 0.82 + ((r >>> 20) & 15) / 60;
       const [mt, mc] = youngSets[kind]!;
@@ -1914,7 +1923,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - 28; // od krawędzi kawałka, nie od środka
         if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide * detail + reach;
-        const far = d > 30 * detail + reach;
+        const far = d > (c.lod.near ?? 30) * detail + reach;
         // cień z daleka: obrazek drzewa nie rzuca cienia (jak dotąd), krzak z daleka dalej rzuca
         if (c.proxy) c.proxy.visible = c.mesh.visible && !(far && c.lod.farMat);
         if (c.lod.farGeo) {

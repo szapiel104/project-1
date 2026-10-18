@@ -67,3 +67,14 @@ Gospodyni i dziecko (rodziny przy chatach): `tools/models/woman.py` → `woman.j
 gra nie rysuje tylnych stron ścian, więc otwarta powierzchnia (stożek bez denek `cap_ends=False`, sama płaszczyzna, rurka bez grubości) od tyłu lub od środka po prostu znika. Obręcze, rury, deski i blachy robimy z grubością: wszystkie ściany wokół (np. `ring()` w `yard.py` dla obręczy, `box`, zamknięty `cyl`). Płótno i kartki mają dwie warstwy (jak `cloth()` w `yard.py`). W podglądzie obejrzyj model też od tyłu i od środka.
 
 Kamienna wieża (`stoneTower`, 2×2): `tools/models/stonetower.py` → `stonetower.json`; pomost łuczników na wysokości `deck` (gra: `STONE_TOWER_TOP`). Podgląd `modele.html?id=stoneTower`, w grze `?test=1&pusta=1&model=stoneTower`.
+
+## Las z Poly Haven (drzewa robione przez grafików)
+
+`tools/models/forest_polyhaven.py` przerabia gotowe drzewa z Poly Haven (paczki glTF 1K, rozpakowane do katalogu
+po jednym podkatalogu na id) na wersję do gry: pień zostaje bryłą (Decimate), koronę Blender fotografuje plastrami
+(pionowe z trzech stron i poziome od góry) i składa z nich kilkadziesiąt kart z prawdziwymi igłami i liśćmi; do tego
+obrazek z daleka z 8 stron. Wynik: `src/render/models/forest.json`, tekstury `public/textures/cc0/pv_*.jpg` (maski `_a.jpg`
+idą do kanału alfa `.ktx2`, więc po przebiegu: `node tools/textures/ktx2.mjs public/textures/cc0/pv_*.jpg`).
+W grze: `src/render/forest.ts` (odmiany według ról conifer / leaf / sapling), generator lasu w `terrain.ts`.
+
+    /tmp/bpyenv/bin/python tools/models/forest_polyhaven.py /ścieżka/do/paczek [id ...]
