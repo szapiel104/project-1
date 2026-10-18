@@ -3597,6 +3597,24 @@ export class GameRenderer {
             if (r < 2.2) view.wear(cx, cy, Math.max(0, 0.75 - r * 0.3) * (0.85 + (hash2(cx, cy, b.id) & 3) * 0.05));
           }
         }
+        // obóz zbójów: ziemia wydeptana nierówną plamą (brzeg faluje, tu i ówdzie kępa trawy), najmocniej przy ognisku
+        // z przodu; od ogniska wychodzą w las dwie-trzy krótkie, rozmyte dróżki — żadnego równego koła
+        if (def.id === 'banditCamp') {
+          const ox = b.x + fp.w / 2, oy = b.y + fp.h / 2 + 0.6;
+          const k1 = (hash2(b.id, 1, 0x51) & 255) / 255 * 6.28, k2 = (hash2(b.id, 2, 0x51) & 255) / 255 * 6.28;
+          const paths = [0, 1, 2].map((i) => Math.PI / 2 + (((hash2(b.id, i + 7, 0x77) & 255) / 255) - 0.5) * 2.6);
+          for (let cy = b.y - 4; cy <= b.y + fp.h + 4; cy++) for (let cx = b.x - 4; cx <= b.x + fp.w + 4; cx++) {
+            const dx = cx + 0.5 - ox, dy = cy + 0.5 - oy, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+            const edge = 2.1 + Math.sin(a * 3 + k1) * 0.45 + Math.sin(a * 5 + k2) * 0.3 + ((hash2(cx, cy, b.id) & 7) - 3.5) * 0.08;
+            let w = r < edge ? Math.min(0.8, 0.85 - r * 0.16) : Math.max(0, (edge + 1.1 - r) / 1.1) * 0.35;
+            for (const pa of paths) { // dróżka: wąski pas wzdłuż kierunku, słabnący z odległością
+              const along = dx * Math.cos(pa) + dy * Math.sin(pa), side = Math.abs(-dx * Math.sin(pa) + dy * Math.cos(pa));
+              if (along > 0 && along < 5.5 && side < 0.75) w = Math.max(w, (0.42 - along * 0.06) * (1 - side / 0.75));
+            }
+            if ((hash2(cx, cy, b.id ^ 0x3c) & 15) === 0) w *= 0.4; // kępa trawy, której nikt nie zdeptał
+            if (w > 0.02) view.wear(cx, cy, w);
+          }
+        }
         if (b.door >= 0) {
           const dx = b.door % width, dy = Math.floor(b.door / width);
           for (let cy = dy - 1; cy <= dy + 2; cy++) for (let cx = dx - 1; cx <= dx + 2; cx++) view.wear(cx, cy, cx >= dx && cx <= dx + 1 && cy >= dy && cy <= dy + 1 ? 0.4 : 0);

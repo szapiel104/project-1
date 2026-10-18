@@ -57,8 +57,7 @@ def tri_slab(group, mat, a, c, e, away, t=0.02):
     b.slope(group, mat, [a, c, e], away, t)
 
 
-# ---------------- udeptana ziemia obozu ----------------
-b.prism('base', 'soil', 1.46, 1.42, 0.008, 0.0, 0.0, 0.05, seg=15, phase=0.3)
+# udeptanej ziemi nie ma w modelu: maluje ją gra na terenie (scene.ts), nierówną plamą, która miękko przechodzi w trawę
 
 # ---------------- szałas z gałęzi i słomy na rozwidlonych palach (lewy tył) ----------------
 AX0, AX1, AZF, AZB, AH = -1.28, -0.12, -0.42, -1.36, 0.8
