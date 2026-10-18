@@ -921,13 +921,16 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     // z bliska „wyskakiwały” przy ruchu kamery); śnieg i szron dalej leżą na ziemi, pniach i krzakach
     else { k.cardMat.userData.noSeason = true; k.far.material.userData.noSeason = true; }
   }
-  /** z bliska bryła i karty, dalej niż ok. 16 pól od kawałka obrazek (pień chowa się razem z przełączeniem) */
-  const kindLod = (k: TreeKind): Lod => ({ near: 26, farGeo: k.far.geometry, farMat: k.far.material, shadowGeo: k.shadow });
-  // pień z bliska pełną bryłą (do kilku tys. trójkątów), cień rzuca prosty graniastosłup w jego miejscu
+  // Zamiana drzewa na obrazek dopiero w mgle: mgła zaczyna się ok. 70 pól za punktem, na który patrzy kamera
+  // (scene.ts: fog.near), więc do ok. 60 pól drzewo jest zawsze bryłą z kartami i nic nie mruga w zasięgu wzroku.
+  // Karty korony są tanie (52 trójkąty); drogi jest pień, więc ten ma dwa stopnie: pełny do 18 pól, dalej lekki.
+  const FOG_SWITCH = 60;
+  const kindLod = (k: TreeKind): Lod => ({ near: FOG_SWITCH, farGeo: k.far.geometry, farMat: k.far.material, shadowGeo: k.shadow });
+  // pień z bliska pełną bryłą (do kilku tys. trójkątów), dalej lżejszy; cień rzuca prosty graniastosłup w jego miejscu
   const trunkLods = new Map<TreeKind, Lod>();
   const kindTrunkLodOf = (k: TreeKind): Lod => {
     let l = trunkLods.get(k);
-    if (!l) { const h = k.height * (k.role === 'leaf' ? 0.45 : 0.7); l = { hide: 18, shadowGeo: new THREE.CylinderGeometry(0.04 * k.height / 3, 0.07 * k.height / 3, h, 5, 1, true).translate(0, h / 2, 0) }; trunkLods.set(k, l); }
+    if (!l) { const h = k.height * (k.role === 'leaf' ? 0.45 : 0.7); l = { near: 18, farGeo: k.trunkFar, hide: FOG_SWITCH, shadowGeo: new THREE.CylinderGeometry(0.04 * k.height / 3, 0.07 * k.height / 3, h, 5, 1, true).translate(0, h / 2, 0) }; trunkLods.set(k, l); }
     return l;
   };
   /** odmiana dla drzewa: stała dla miejsca (hash pozycji) */
