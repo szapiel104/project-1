@@ -10,7 +10,8 @@ const TERRAIN_WALK = (t: number): boolean => TERRAIN[t as Terrain].walkable;
 const UNIT_HP = (): number => UNITS[0]?.hp ?? 60;
 import { generateMap, type GameMap } from './map';
 import { Rng } from './rng';
-import { addBuilding } from './systems/placement';
+import { addBuilding, rockBehind } from './systems/placement';
+import { mineNear } from './systems/minecamp';
 import { spawnPeasant } from './systems/population';
 
 /** Częstotliwość symulacji. Render interpoluje między tickami. */
@@ -463,7 +464,25 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       p.instantBuild = instantBuild;
       for (let i = 0; i < res.length; i++) res[i] = 2000;
       const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate', 'stoneGate', 'stoneWall']); // mury stawia devFortify
-      for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.legacy && !d.road && !skip.has(d.id)) placeNear(g, i, s.player, s.x, s.y, 20);
+      // kopalnia tylko tyłem do skały (jak w grze), a barak górników przy niej — nie przy twierdzy
+      for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.legacy && !d.road && !skip.has(d.id) && !d.needsRock && d.requires !== 'oremine') placeNear(g, i, s.player, s.x, s.y, 20);
+      for (const [i, d] of BUILDINGS.entries()) {
+        if (!d.buildable || !d.needsRock) continue;
+        const mine = placeByRock(g, i, s.player, s.x, s.y, 70);
+        if (!mine) continue;
+        // barak górników: najbliższe wolne miejsce, które gra uznaje za „przy kopalni” (ta sama reguła co przy stawianiu)
+        for (const [j, dd] of BUILDINGS.entries()) {
+          if (!dd.buildable || dd.requires !== d.id) continue;
+          let done = false;
+          for (let r = 2; r <= 12 && !done; r++)
+            for (let dy = -r; dy <= r && !done; dy++)
+              for (let dx = -r; dx <= r && !done; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+                const x = mine.x + 1 + dx, y = mine.y + 1 + dy;
+                if (startFree(g, dd, x, y) && mineNear(g, s.player, x, y, dd.w, dd.h)) { addBuilding(g, j, s.player, x, y); done = true; }
+              }
+        }
+      }
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
       placeNear(g, buildingIndex('house'), s.player, s.x, s.y, 14);
       placeNear(g, CAMP, s.player, s.x, s.y, 14);
@@ -561,6 +580,28 @@ function startFree(g: GameState, def: { w: number; h: number }, x: number, y: nu
       if (tx < 0 || ty < 0 || tx >= w || ty >= g.map.height || g.map.tiles[t] !== 0 || g.occupancy[t] !== 0 || g.reserved[t] !== 0 || inForecourt(g, tx, ty)) return false;
     }
   return true;
+}
+/** Budynek wymagający skały za plecami (kopalnia): najbliższe miejsce od (cx, cy), w którym tył stoi pod górą,
+ *  a pod budynkiem jest wolny, zwykły teren. Zwraca postawiony budynek albo null, gdy w zasięgu nie ma gór. */
+function placeByRock(g: GameState, type: number, player: number, cx: number, cy: number, reach: number): { x: number; y: number } | null {
+  const def = BUILDINGS[type]!, w = g.map.width;
+  for (let r = 1; r <= reach; r++)
+    for (let dy = -r; dy <= r; dy++)
+      for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const x = cx + dx, y = cy + dy;
+        for (let rot = 0; rot < 4; rot++) {
+          const fw = rot % 2 ? def.h : def.w, fh = rot % 2 ? def.w : def.h;
+          let ok = x > 0 && y > 0 && x + fw < w && y + fh < g.map.height;
+          for (let ty = y; ok && ty < y + fh; ty++)
+            for (let tx = x; ok && tx < x + fw; tx++) {
+              const t = ty * w + tx;
+              if (g.map.tiles[t] !== 0 || g.occupancy[t] !== 0 || g.reserved[t] !== 0 || inForecourt(g, tx, ty)) ok = false;
+            }
+          if (ok && rockBehind(g, x, y, fw, fh, rot)) { addBuilding(g, type, player, x, y, rot); return { x, y }; }
+        }
+      }
+  return null;
 }
 /** Stawia budynek startowy dokładnie tutaj, jeśli miejsce jest wolne */
 function placeAt(g: GameState, type: number, player: number, x: number, y: number): boolean {
