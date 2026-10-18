@@ -40,7 +40,7 @@ import { createAllies } from './ui/allies';
 import { createMinimap } from './ui/minimap';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
-import { alarmBell, daySounds, music, getVolume, isMuted, caveSounds, nature, play, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { alarmBell, daySounds, music, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
 import { GUARDS, GUARD_COST } from './sim/systems/guards';
@@ -1754,6 +1754,8 @@ function loop(now: number): void {
     }
   }
   last = now;
+  // pauza (tempo 0 albo menu w trakcie gry) wycisza odgłosy świata; na ekranie tytułowym i w meczu przez sieć świat brzmi dalej
+  setGamePaused(!net && !titleScreen && (speed === 0 || menu.isOpen()));
   if (renderer.inMineWalk) caveSounds(0, renderer.minePicks);
   else {
     nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);

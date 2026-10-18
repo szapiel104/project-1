@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.30.5 — pauza wycisza odgłosy świata (2026-10-18)
+
+- Pauza (tempo 0 albo menu otwarte w trakcie gry) płynnie wycisza wszystkie odgłosy świata: ludzi, rozmowy, zwierzęta, walkę, róg i dzwon alarmu, wiatr, deszcz, ptaki, świerszcze i tło kopalni — także te, które już grały. Po wznowieniu wracają łagodnie
+- Kliknięcia, dźwięki stawiania i burzenia budynków (można planować w pauzie) oraz muzyka grają dalej; na ekranie tytułowym i w meczu przez sieć nic się nie zmienia
+
 ## 0.30.4 — cienie nie migają przy przelocie kamery (2026-10-18)
 
 - Przy szybkim przesuwaniu kamery cienie skakały co klatkę: mapa cieni liczyła się co drugą klatkę, a słońce przesuwało się w każdej, więc stara mapa była czytana w nowym miejscu. Teraz słońce idzie za kamerą tylko w klatkach, w których mapa się liczy

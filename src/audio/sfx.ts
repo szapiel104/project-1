@@ -52,6 +52,9 @@ const busLevel: Record<Bus, number> = { sfx: 1, ui: 1, amb: 1, music: 0.5 };
 let out: GainNode | null = null;
 /** Ściszanie muzyki i tła pod efekty (ducking): kroki, ciosy i głosy przebijają się przez muzykę */
 let musicDuck: GainNode | null = null, ambDuck: GainNode | null = null;
+/** Pauza: bramki ściszające odgłosy świata (ludzie, zwierzęta, walka, tło przyrody); interfejs, budowanie i muzyka grają dalej */
+let worldSfx: GainNode | null = null, ambGate: GainNode | null = null;
+let gamePaused = false;
 /** Spacer chłopem: muzyka stale ciszej, żeby było słychać kroki i świat dookoła */
 let walkFocus = false;
 let noise: AudioBuffer | null = null;
@@ -76,11 +79,13 @@ function audio(): AudioContext | null {
   lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.2;
   master.connect(lim).connect(ctx.destination);
   musicDuck = ctx.createGain(); musicDuck.connect(master);
-  ambDuck = ctx.createGain(); ambDuck.connect(master);
+  ambGate = ctx.createGain(); ambGate.gain.value = gamePaused ? 0 : 1; ambGate.connect(master);
+  ambDuck = ctx.createGain(); ambDuck.connect(ambGate);
   for (const b of ['sfx', 'ui', 'amb', 'music'] as Bus[]) {
     const gn = ctx.createGain(); gn.gain.value = busLevel[b];
     gn.connect(b === 'music' ? musicDuck : b === 'amb' ? ambDuck : master); busGain[b] = gn;
   }
+  worldSfx = ctx.createGain(); worldSfx.gain.value = gamePaused ? 0 : 1; worldSfx.connect(busGain.sfx!);
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -147,6 +152,23 @@ function setWalkFocus(on: boolean): void {
   walkFocus = on;
   musicDuck.gain.cancelScheduledValues(ctx.currentTime);
   musicDuck.gain.setTargetAtTime(on ? 0.6 : 1, ctx.currentTime, 0.8);
+}
+
+/**
+ * Pauza gry (wołane co klatkę): odgłosy świata płynnie cichną i wracają po wznowieniu,
+ * także te, które już trwały (wiatr, deszcz, ptaki, rozmowy). Kliknięcia, stawianie budynków i muzyka zostają.
+ */
+export function setGamePaused(on: boolean): void {
+  if (on === gamePaused) return;
+  gamePaused = on;
+  const c = ctx;
+  if (!c) return;
+  for (const g of [worldSfx, ambGate]) {
+    if (!g) continue;
+    g.gain.cancelScheduledValues(c.currentTime);
+    g.gain.setValueAtTime(g.gain.value, c.currentTime);
+    g.gain.setTargetAtTime(on ? 0 : 1, c.currentTime, on ? 0.08 : 0.25);
+  }
 }
 
 export const isMuted = (): boolean => muted;
@@ -509,7 +531,7 @@ export function playAt(kind: WorldSound, near: number, pan: number, gain = 1): v
   // głośność z odległości opada łagodniej niż z kwadratem — z bliska wyraźnie, z daleka cicho, ale słychać
   const level = Math.pow(near, 1.5) * gain;
   const g = c.createGain(); g.gain.value = level;
-  src.connect(g).connect(p).connect(busGain.sfx ?? master!);
+  src.connect(g).connect(p).connect(worldSfx ?? master!);
   src.start();
   duck(level);
 }
@@ -524,7 +546,7 @@ export function talk(text: string, voice: number, shout = false, gain = 1, pan =
   // rozmowa w osadzie: ciszej i z boku, tam gdzie stoją rozmówcy
   const outN = c.createGain(); outN.gain.value = gain;
   const panN = c.createStereoPanner(); panN.pan.value = Math.max(-1, Math.min(1, pan));
-  outN.connect(panN).connect(busGain.sfx ?? master!);
+  outN.connect(panN).connect(worldSfx ?? master!);
   duck(gain * 0.5);
   // okrzyk żołnierza: niżej, krócej, głośniej i ostrzej niż gadanie chłopa
   const base = (95 + (voice % 7) * 14) * (shout ? 0.82 : 1);
@@ -625,11 +647,11 @@ export function warHorn(): void {
   if (rec) {
     // nagrany róg (0 A.D.) z echem lasu: wróg wyrusza
     const src = c.createBufferSource(); src.buffer = rec;
-    const g = c.createGain(); g.gain.value = 0.8; src.connect(g).connect(busGain.sfx ?? master!); g.connect(forestEcho(c));
+    const g = c.createGain(); g.gain.value = 0.8; src.connect(g).connect(worldSfx ?? master!); g.connect(forestEcho(c));
     src.start(at);
     return;
   }
-  const o = c.createGain(); o.gain.value = 0.5; o.connect(busGain.sfx ?? master!);
+  const o = c.createGain(); o.gain.value = 0.5; o.connect(worldSfx ?? master!);
   for (const [mul, det] of [[1, 0], [1.005, 3], [2, 0]] as const) {
     const s = c.createOscillator(); s.type = 'sawtooth';
     s.frequency.setValueAtTime(110 * mul, at); s.frequency.linearRampToValueAtTime(130 * mul, at + 0.4); s.frequency.setValueAtTime(130 * mul, at + 2.2); s.frequency.linearRampToValueAtTime(118 * mul, at + 2.8);
@@ -645,7 +667,7 @@ export function alarmBell(): void {
   const c = ctx;
   if (!c || muted || c.state !== 'running') return;
   const at = c.currentTime + 0.02;
-  const o = c.createGain(); o.gain.value = 0.25; o.connect(busGain.sfx ?? master!);
+  const o = c.createGain(); o.gain.value = 0.25; o.connect(worldSfx ?? master!);
   for (let k = 0; k < 4; k++) {
     const t = at + k * 0.28;
     for (const [mul, amp] of [[1, 1], [2.7, 0.4], [4.1, 0.2]] as const) {
@@ -922,7 +944,7 @@ export function animal(kind: 'bark' | 'cluck' | 'grunt', near: number, pan: numb
   if (!c || muted || c.state !== 'running' || near < 0.05) return;
   const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
   const out = c.createGain(); out.gain.value = near * near;
-  out.connect(p).connect(busGain.sfx ?? master!);
+  out.connect(p).connect(worldSfx ?? master!);
   const t0 = c.currentTime + 0.01;
   if (kind === 'bark') {
     // „hau hau”: dwa krótkie, chropawe szczeknięcia z opadającym tonem
