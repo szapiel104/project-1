@@ -180,7 +180,7 @@ void main() {
   float n1 = texture2D(noise, p / 34.0 + vec2(time * 0.0016, time * 0.0009)).r;
   float n2 = texture2D(noise, vec2(p.y, -p.x) / 15.0 - vec2(time * 0.0011, -time * 0.0019)).g;
   float n = n1 * 0.7 + n2 * 0.45;
-  float a = smoothstep(0.1, 0.9, vV) * smoothstep(0.42, 0.85, n + vV * 0.12);
+  float a = vV * vV * (3.0 - 2.0 * vV) * smoothstep(0.38, 0.9, n + vV * 0.1);
   // tuż przy kamerze czysto (widać, czym się gra), dalej doliny toną w oparze
   a *= smoothstep(5.0, 24.0, distance(cameraPosition, vWP));
   a *= opacity;
@@ -380,9 +380,13 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
       const c = cb[k]!;
       const open = 1 - Math.min(1, Math.max(0, (c - 0.12) / 0.4));
       const band = Math.exp(-(((c - 0.34) / 0.13) ** 2));
-      vall[k] = Math.min(1, vall[k]! * open * open + band * 0.9);
+      vall[k] = Math.min(1, vall[k]! * open * open + band * 0.6);
     }
   }
+  // na koniec szerokie rozmycie: przejścia między oparem a czystą ziemią na kilka pól, bez ostrej linii
+  // (węzły co 2 pola — skok 0→1 między sąsiadami wyglądał jak krawędź płyty), i nigdy pełna, zwarta płachta
+  vall = boxBlur(boxBlur(vall, 2), 1);
+  for (let k = 0; k < vall.length; k++) vall[k] = Math.min(1, vall[k]! * 1.15) * 0.8 * Math.max(0, Math.min(1, (1.6 - hb[k]!) / 0.6));
   const DP: number[] = [], DV: number[] = [], DI: number[] = [];
   for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) {
     DP.push(g.x0 + (i + bi0) * g.step, Math.max(hb[j * BW + i]!, -0.08) + 0.42, g.z0 + (j + bj0) * g.step);
@@ -390,7 +394,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   }
   for (let j = 0; j < BH - 1; j++) for (let i = 0; i < BW - 1; i++) {
     const a = j * BW + i, b = a + 1, c = a + BW, d = c + 1;
-    if (Math.max(vall[a]!, vall[b]!, vall[c]!, vall[d]!) < 0.04) continue;
+    if (Math.max(vall[a]!, vall[b]!, vall[c]!, vall[d]!) < 0.01) continue;
     DI.push(a, c, b, b, c, d);
   }
   const drapeGeo = new THREE.BufferGeometry();
