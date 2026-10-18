@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.30.1 — leśniczy z łopatą (2026-10-18)
+
+- Leśniczy kopie łopatą (nowe narzędzie z Blendera w `tools/models/tools.py`: trzonek z poprzeczką, drewniane pióro okute żelazem): stoi pochylony, wbija pióro w ziemię, podważa i odrzuca ziemię; zamiast klęczenia z młotkiem
+- Chata leśniczego: kalenica z grubego wałka słomy związanego powrósłami zamiast płaskiego zielonego pasa darni
+
 ## 0.30.1 — poprawki wieży, studni, cechu i okiennic (2026-10-18)
 
 - Wieża strażnicza: wejście jak w prawdziwej strażnicy — drabina oparta o krawędź pomostu, przerwa w przedpiersiu między dwoma wyższymi słupkami (bez klapy, przez którą drabina szła przez belki); przedpiersie na słupkach, poręcz leży na deskach, pod każdą krawędzią pomostu belka obrzeża; róg wisi na kołku wbitym w słup

@@ -119,7 +119,12 @@ b.gable('shell', 'thatch', X0 - 0.14, X1 + 0.14, Z0 - 0.04, Z1 + 0.04, H1, RISE,
 b.gable('shell', 'thatchDark', X0 - 0.14, X1 + 0.14, Z0 - 0.04, Z1 + 0.04, H1 - 0.04, RISE, along_x=True, over=0.23)
 for x, s in ((X0, -1), (X1, 1)):
     b.gable_boards('shell', 'plank', 'z', x, Z0, Z1, H1, RISE - 0.01, out=s)
-b.box('shell', 'turf', X1 - X0 + 0.36, 0.06, 0.12, (X0 + X1) / 2, H1 + RISE - 0.03, (Z0 + Z1) / 2)   # kalenica z darni
+# kalenica: gruby wałek ze słomy związany powrósłami, przykrywa styk połaci (bez płaskiego pasa)
+RY, RZ = H1 + RISE - 0.005, (Z0 + Z1) / 2
+hlog('shell', X0 - 0.17, X1 + 0.17, RY, RZ, r=0.06, mat='thatchDark', seg=9, ends='thatchDark')
+for k in range(7):
+    x = X0 - 0.08 + k * (X1 - X0 + 0.16) / 6
+    hlog('shell', x - 0.012, x + 0.012, RY, RZ, r=0.066, mat='rope', seg=9, ends='rope')
 CX, CZ = X1 - 0.2, Z0 + 0.16
 b.box('shell', 'stone', 0.19, RISE + 0.34, 0.19, CX, H1 - 0.05, CZ)
 b.box('shell', 'stoneDark', 0.24, 0.05, 0.24, CX, H1 + RISE + 0.29, CZ)

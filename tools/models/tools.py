@@ -168,6 +168,20 @@ def hammer_parts(far=False):
     return wood, iron
 
 
+def spade_parts(far=False):
+    """Łopata leśniczego: trzonek przedłuża rękę w dół (chwyt w pięści, poprzeczka u góry), drewniane pióro okute żelazem.
+    Gra trzyma ją w prawej dłoni ręką lekko w przód, więc pióro wbija się w ziemię przed chłopem."""
+    g = GRIP
+    seg = 4 if far else 8
+    wood = tube([g + Vector((0, 0.03, 0)), g + Vector((0, -0.12, 0.004)), g + Vector((0, -0.25, 0.01))], [0.011, 0.012, 0.012], seg=seg)
+    if not far:
+        wood += box(0, g.y + 0.035, 0.0, 0.07, 0.016, 0.018)                     # poprzeczka chwytu nad pięścią
+    # pióro: drewniana łopatka szersza w dół, na dole kute okucie (ostrze)
+    wood += wedge(0, g.y - 0.24, g.y - 0.33, 0.012, 0.022, 0.016, 0.07, 0.08)
+    iron = wedge(0, g.y - 0.33, g.y - 0.36, 0.012, 0.018, 0.006, 0.082, 0.078)
+    return wood, iron
+
+
 TORCH_ARM = -0.55   # ręka z pochodnią uniesiona w przód (scene.ts: TORCH_ARM); pochodnia wtedy stoi pionowo
 TORCH_DIR = Vector((0, math.cos(-TORCH_ARM), math.sin(-TORCH_ARM)))
 
@@ -252,7 +266,7 @@ def rod_parts(far=False):
     return wood, iron
 
 
-for name, fn in (('axe', axe_parts), ('hammer', hammer_parts), ('torch', torch_parts), ('bucket', bucket_parts),
+for name, fn in (('axe', axe_parts), ('hammer', hammer_parts), ('spade', spade_parts), ('torch', torch_parts), ('bucket', bucket_parts),
                  ('bucketWater', water_parts), ('rod', rod_parts)):
     add(name, fn())
     add(name + 'Far', fn(True))

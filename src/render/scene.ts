@@ -305,6 +305,7 @@ export class GameRenderer {
   private sanitize!: ShaderPass;
   private rain = 0;
   private hammers!: GearPool;
+  private spades!: GearPool;
   private guardsFig!: Figures;
   /** Słomiane posłania pod śpiącymi bez dachu nad głową */
   private bedrolls!: GearPool;
@@ -844,6 +845,7 @@ export class GameRenderer {
     this.backPicks = pool('backPick');
     this.beltClubs = pool('beltClub');
     this.hammers = pool('hammer');
+    this.spades = pool('spade');
     this.rods = pool('rod');
     // pochodnia w ręce: kij, drut i szmaty ze smołą (płomień dokłada system ognia)
     this.handTorches = pool('torch', 'pochodnie w rękach');
@@ -2237,7 +2239,7 @@ export class GameRenderer {
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
-      for (const t of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.hammers, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
+      for (const t of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
@@ -5416,11 +5418,23 @@ export class GameRenderer {
         this.foeSeen.set(u.id, u.foe ?? 0);
       }
       // układanie drogi wygląda jak budowa: pochylony chłop bije młotkiem w ziemię
-      // leśniczy sadzi drzewko: klęczy na polu i kopie dołek (ten sam ruch co przy drodze, wolniej i ciszej)
+      // leśniczy sadzi drzewko: stoi pochylony nad dołkiem i kopie łopatą — wbija pióro w ziemię, podważa i odrzuca ziemię
       const planting = u.phase === Phase.Planting;
-      const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving || planting;
-      let lean = u.phase === Phase.Paving ? 0.35 : planting ? 0.45 : crafting ? 0.18 : toolLean, work = 0;
-      if (planting) t.position.y -= 0.11;
+      const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving;
+      let lean = u.phase === Phase.Paving ? 0.35 : planting ? 0.22 : crafting ? 0.18 : toolLean, work = 0;
+      if (planting) {
+        if (!this.calm) {
+          const ph = (this.time * 0.8 + (u.id % 13) * 0.137) % 1;
+          const ease = (x: number): number => x * x * (3 - 2 * x);
+          // work = kąt prawej ręki z łopatą: uniesiona w przód, pchnięcie w ziemię, podważenie do siebie, odrzut i powrót
+          if (ph < 0.3) work = -0.75 + ease(ph / 0.3) * 0.45;                         // wbija pióro w ziemię przed sobą
+          else if (ph < 0.55) work = -0.3 - ease((ph - 0.3) / 0.25) * 0.15;           // podważa
+          else if (ph < 0.75) work = -0.45 - Math.sin(((ph - 0.55) / 0.2) * Math.PI) * 0.55; // odrzuca ziemię na bok
+          else work = -0.45 - ease((ph - 0.75) / 0.25) * 0.3;                         // z powrotem w górę
+          lean += ph < 0.55 ? ease(Math.min(1, ph / 0.3)) * 0.15 : 0.15 * (1 - ease((ph - 0.55) / 0.45));
+        } else work = -0.4;
+        swing = 0;
+      }
       if (hammering) {
         // robotnicy rozstawiają się wokół budowy, twarzą do ścian; co drugi pracuje na pomoście rusztowania (na wysokości murów)
         const site = u.phase === Phase.Repairing ? g.buildings.find((b) => b.id === u.target) : undefined;
@@ -5442,7 +5456,7 @@ export class GameRenderer {
         // uderzenie młotkiem: powolny zamach w górę, szybki cios w dół, krótkie odbicie i chwila przerwy;
         // przy ciosie tułów pochyla się do przodu, a w chwili trafienia słychać stuk
         if (!this.calm) {
-          const ph = (this.time * (planting ? 0.9 : 1.45) + (u.id % 13) * 0.137) % 1;
+          const ph = (this.time * 1.45 + (u.id % 13) * 0.137) % 1;
           const ease = (x: number): number => x * x * (3 - 2 * x);
           // work = kąt prawej ręki (ujemny = w przód i w górę). Trzonek sterczy z pięści prostopadle do ręki:
           // przy zamachu młotek jest za głową, przy ciosie ręka idzie w przód-w dół, a obuch trafia w mur na wysokości twarzy
@@ -5451,7 +5465,7 @@ export class GameRenderer {
           else if (ph < 0.7) work = -0.6 - Math.sin(((ph - 0.6) / 0.1) * Math.PI) * 0.18; // odbicie od muru
           else work = -0.6;                                                        // chwila przerwy
           lean += ph > 0.5 && ph < 0.75 ? Math.sin(((ph - 0.5) / 0.25) * Math.PI) * 0.22 : 0;
-          if (ph > 0.59 && ph < 0.65 && !planting) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
+          if (ph > 0.59 && ph < 0.65) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
         } else work = -0.6;
         swing = 0;
       }
@@ -5478,7 +5492,7 @@ export class GameRenderer {
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
       t.scale.setScalar(FIG);
       // stojący bez zajęcia nie zamiera: przestępuje, rozgląda się, drapie się, przeciąga, przenosi ciężar
-      const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !chopping && !mining && !crafting && !hammering && !fighting && u.carryRes < 0 && !lean && !u.bucket;
+      const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !chopping && !mining && !crafting && !hammering && !planting && !fighting && u.carryRes < 0 && !lean && !u.bucket;
       const ia = rest ? idle(u.id, this.time) : undefined;
       // rozmowa: obaj zwracają się do siebie, mówiący gestykuluje, słuchający kiwa głową; co kilkanaście sekund chwila ciszy
       const mate = rest ? this.chats.get(u.id) : undefined;
@@ -5540,6 +5554,12 @@ export class GameRenderer {
         this.armM.makeRotationX(work).setPosition(0.135, 0.45, 0);
         this.hammers.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
       } else this.hammers.setMatrixAt(i, ZERO);
+      if (planting) {
+        // łopata w prawej dłoni, obraca się w barku razem z ręką
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armM.makeRotationX(work).setPosition(0.135, 0.45, 0);
+        this.spades.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
+      } else this.spades.setMatrixAt(i, ZERO);
       // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką
       if (chopping || mining) {
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
@@ -5584,12 +5604,12 @@ export class GameRenderer {
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
       // niosący ładunek trzyma go oburącz przed sobą przez cały czas: bez drapania się, machania i rozkładania rąk
       // (inaczej ręce opadały, a kosz czy blok wisiał sam w powietrzu)
-      const carrying = u.carryRes >= 0 && !log && !hammering && !chopping && !mining && !fighting && !crafting;
+      const carrying = u.carryRes >= 0 && !log && !hammering && !planting && !chopping && !mining && !fighting && !crafting;
       const iaArm = carrying ? undefined : ia?.arm;
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || (!!u.bucket && walking) || !!ia?.legs, undefined, chopping || mining ? TWO_HAND : 0);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : planting ? work + 0.08 : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || (!!u.bucket && walking) || !!ia?.legs, undefined, chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       t.scale.setScalar(log ? FIG : 0);
@@ -5689,7 +5709,7 @@ export class GameRenderer {
     k = this.castleFolk(g, k);
     this.figures.finish(k);
     // pule narzędzi: `count` zamyka klatkę (liczba bez znaczenia) i same oznaczają swoje bufory
-    for (const p of [this.rods, this.bedrolls, this.hammers, this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.handTorches, this.buckets, this.bucketWater]) p.count = n;
+    for (const p of [this.rods, this.bedrolls, this.hammers, this.spades, this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.handTorches, this.buckets, this.bucketWater]) p.count = n;
     this.fireFx.end(this.calm ? 0 : Math.min(0.05, this.frameDt), (x, z) => this.standY(view, x + width / 2, z + height / 2));
     for (const [res, m] of this.loads) {
       m.count = loadUsed.get(res) ?? 0;
