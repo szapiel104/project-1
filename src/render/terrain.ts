@@ -18,7 +18,7 @@ import type { ModelFactory } from './models';
 import { bump, normal, pattern } from './textures';
 import { cloudShade, groundGrassTexture, groundMaterial, waterMaterial } from './ground';
 import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
-import { bladeTexture, createGrassField, type GrassField } from './grass';
+import { createGrassField, type GrassField } from './grass';
 import { buildHighMist, type Atmosphere, type HighMist } from './highmist';
 import { buildStreams, type Streams } from './streams';
 
@@ -576,7 +576,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const tt = map.tiles[t] as Terrain;
     grassBase[t] = (tt === Terrain.Grass ? 1 : tt === Terrain.Forest ? 0.35 : tt === Terrain.Stone ? 0.25 : tt === Terrain.Iron ? 0.1 : 0) * (sandTile[t]! > 0.12 ? 0 : 1); // na piasku plaży trawy nie ma wcale
   }
-  const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), bladeTexture(map.seed));
+  const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture());
   if (grass) group.add(cat(grass.mesh, 'trawa (dywan)'));
   // leśne ścieżki z generatora mapy: wydeptana ziemia, najmocniej tam, gdzie spotykają się dwa pola ścieżki (środek dróżki),
   // słabiej na brzegach, z lekką nierównością — wygląda jak dróżka chodzona od lat, a nie jak wyrysowana droga

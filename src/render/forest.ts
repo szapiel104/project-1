@@ -45,9 +45,9 @@ function tex(name: string, color = true): THREE.Texture | null {
 
 /**
  * Zdjęcie z maską przezroczystości (karty korony, obrazek z daleka): kolor `<nazwa>.jpg` i maska `<nazwa>_a.jpg`
- * składane na płótnie w RGBA. Nie przez KTX2: zapasowy JPG nie ma kanału alfa, a bez niego karty są prostokątami.
+ * składane na płótnie w RGBA (maska domyślnie `<nazwa>_a`, inna np. dla suchej trawy, która ma tę samą maskę). Nie przez KTX2: zapasowy JPG nie ma kanału alfa, a bez niego karty są prostokątami.
  */
-function maskedTex(name: string): THREE.Texture | null {
+export function maskedTex(name: string, maskName = `${name}_a`): THREE.Texture | null {
   if (typeof document === 'undefined') return null;
   let t = texCache.get(name);
   if (t) return t;
@@ -57,7 +57,7 @@ function maskedTex(name: string): THREE.Texture | null {
   tt.anisotropy = 8;
   texCache.set(name, tt);
   const load = (url: string): Promise<HTMLImageElement> => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
-  void Promise.all([load(`${base()}${name}.jpg`), load(`${base()}${name}_a.jpg`)]).then(([col, mask]) => {
+  void Promise.all([load(`${base()}${name}.jpg`), load(`${base()}${maskName}.jpg`)]).then(([col, mask]) => {
     cv.width = col.width; cv.height = col.height;
     const c = cv.getContext('2d', { willReadFrequently: true })!;
     c.drawImage(mask, 0, 0);

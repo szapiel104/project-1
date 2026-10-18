@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import { cloudShade } from './ground';
 import { groundGrassTexture2, sharedNoise } from './ground';
+import { maskedTex } from './forest';
+import { SEASON_U } from './season';
 
 /**
  * Trawa jak w nowych grach: gęsty dywan kęp wokół miejsca, na które patrzymy, zamiast pojedynczych kępek na płaskiej ziemi.
@@ -8,10 +10,18 @@ import { groundGrassTexture2, sharedNoise } from './ground';
  *   a położenie, obrót i wielkość każdej kępy wynikają z jej pola w świecie, więc trawa stoi w miejscu, gdy kamera jedzie.
  * - Wysokość terenu i gęstość trawy shader czyta z tekstur mapy (wysokości narożników, maska: łąka gęsto, las rzadko,
  *   droga, budynek, woda, wydeptana ziemia — nic). Na brzegu zasięgu kępy maleją do zera, bez twardej granicy.
- * - Barwa źdźbła pochodzi z tej samej tekstury trawy co ziemia pod nim, więc dywan zlewa się z podłożem,
- *   a tekstura kępy daje tylko kształt źdźbeł, ciemną nasadę i jaśniejsze, miejscami żółte końce.
+ * - Kępy to zdjęcia prawdziwych kęp z Poly Haven (CC0, zrobione przez grafików; Blender robi z nich atlas 4×2,
+ *   tools/models/grass_polyhaven.py): łąka, wysokie źdźbła z kłosami, gęsta niska trawa, rzadkie siewki, mniszek.
+ *   Każda z dwóch kart kępy losuje swoje pole atlasu, więc skrzyżowane karty to dwie różne kępy. Barwa ze zdjęcia,
+ *   lekko podciągnięta do odcienia ziemi pod spodem (dywan się z nią zlewa), plamy jaśniejsze i płowe jak na podłożu,
+ *   a jesienią źdźbła przechodzą w suchą wersję tego samego zdjęcia (pv_grass_dry).
  */
 const GRID = 290; // kępy w rzędzie: siatka na najdalszy zasięg (Ultra); zwykły pełny zasięg używa promienia BASE
+/**
+ * Pola atlasu (kolejność z grass_polyhaven.py) i jak często się trafiają (suma 1): gęsta niska trawa najczęściej,
+ * łąka i kłosy rzadziej, rzadkie siewki i mniszek tu i ówdzie. Pole = 0,42 m na bok w zdjęciu, w grze FRAME pól.
+ */
+const TILE_WEIGHTS = [0.11, 0.07, 0.22, 0.15, 0.08, 0.27, 0.05, 0.05];
 /** Promień (w kępach) pełnego zasięgu trawy = 1 (ok. 20 pól wokół kamery); Ultra sięga do GRID/2 */
 const BASE = 105;
 const STEP = 0.19; // odstęp kęp w polach
@@ -32,7 +42,10 @@ export interface GrassField {
   dispose(): void;
 }
 
-export function createGrassField(w: number, h: number, corners: Float32Array, density: Float32Array, grassTex: THREE.Texture | null, bladeTex: THREE.Texture): GrassField {
+export function createGrassField(w: number, h: number, corners: Float32Array, density: Float32Array, grassTex: THREE.Texture | null): GrassField {
+  const bladeTex = maskedTex('pv_grass') ?? new THREE.Texture();
+  const dryTex = maskedTex('pv_grass_dry', 'pv_grass_a') ?? bladeTex;
+  for (const t of [bladeTex, dryTex]) { t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; }
   // wysokości narożników pól (w+1)×(h+1) w teksturze zmiennoprzecinkowej, czytane w shaderze
   const hTex = new THREE.DataTexture(new Float32Array(corners), w + 1, h + 1, THREE.RedFormat, THREE.FloatType);
   hTex.minFilter = hTex.magFilter = THREE.NearestFilter;
@@ -47,25 +60,26 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   mTex.needsUpdate = true;
   let dirty = false;
 
-  // kępa: dwie skrzyżowane karty, normalne w górę (świeci jak ziemia pod nią)
+  // kępa: dwie skrzyżowane karty, normalne w górę (świeci jak ziemia pod nią); uv.z = numer karty (osobne pole atlasu)
   const card = new THREE.BufferGeometry();
   {
     const P: number[] = [], U: number[] = [], N: number[] = [], I: number[] = [];
     for (let k = 0; k < 2; k++) {
       const a = k * Math.PI / 2 + 0.4, cx = Math.cos(a) * 0.5, cz = Math.sin(a) * 0.5, b = P.length / 3;
       P.push(-cx, 0, -cz, cx, 0, cz, cx, 1, cz, -cx, 1, -cz);
-      U.push(0, 0, 1, 0, 1, 1, 0, 1);
+      U.push(0, 0, k, 1, 0, k, 1, 1, k, 0, 1, k);
       for (let i = 0; i < 4; i++) N.push(0, 1, 0);
       I.push(b, b + 1, b + 2, b, b + 2, b + 3);
     }
     card.setAttribute('position', new THREE.Float32BufferAttribute(P, 3));
-    card.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2));
+    card.setAttribute('aCard', new THREE.Float32BufferAttribute(U.filter((_, i) => i % 3 === 2), 1));
+    card.setAttribute('uv', new THREE.Float32BufferAttribute(U.filter((_, i) => i % 3 !== 2), 2));
     card.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
     card.setIndex(I);
   }
   const geo = new THREE.InstancedBufferGeometry();
   geo.index = card.index;
-  for (const k of ['position', 'uv', 'normal'] as const) geo.setAttribute(k, card.getAttribute(k));
+  for (const k of ['position', 'uv', 'normal', 'aCard'] as const) geo.setAttribute(k, card.getAttribute(k));
   // kępy ułożone od środka na zewnątrz: mniejsza liczba instancji = mniejszy krąg (zasięg przy niższej jakości)
   const cells: [number, number, number][] = [];
   for (let j = 0; j < GRID; j++) for (let i = 0; i < GRID; i++) { const x = i - GRID / 2, y = j - GRID / 2; cells.push([x, y, x * x + y * y]); }
@@ -80,16 +94,16 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   const uni = {
     uOrigin: { value: new THREE.Vector2() }, uTime: { value: 0 }, uReach: { value: 1 }, uMap: { value: new THREE.Vector2(w, h) }, uFade: { value: 1 },
     tNoise: { value: sharedNoise() }, tGround2: { value: groundGrassTexture2() },
-    tH: { value: hTex }, tMask: { value: mTex }, tBlade: { value: bladeTex }, tGround: { value: grassTex },
+    tH: { value: hTex }, tMask: { value: mTex }, tBlade: { value: bladeTex }, tDry: { value: dryTex }, gAutumn: SEASON_U.uAutumn, gBare: SEASON_U.uBare, tGround: { value: grassTex },
   };
   const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, alphaTest: 0.5 });
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = /* glsl */ `
-      attribute vec2 aCell;
+      attribute vec2 aCell; attribute float aCard;
       uniform vec2 uOrigin; uniform float uTime; uniform vec2 uMap; uniform float uFade; uniform float uReach;
       uniform sampler2D tH; uniform sampler2D tMask;
-      varying vec2 vGUv; varying vec2 vGW; varying float vGTone;
+      varying vec2 vGUv; varying vec2 vGW; varying float vGTone; varying vec2 vAUv; varying float vDry;
       float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float gHeight(vec2 p) {
         vec2 c = clamp(p, vec2(0.0), uMap - 0.001);
@@ -109,37 +123,54 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       float rr = length(aCell) / (${BASE.toFixed(1)} * uReach);
       float edge = 1.0 - smoothstep(0.35, 0.97, rr + (gHash(cell + 5.5) - 0.5) * 0.25);
       float keep = step(r3, smoothstep(0.25, 0.9, dens) * 1.1) * step(gHash(cell + 7.7), edge);
-      float sz = mix(0.17, 0.32, gHash(cell + 3.7)) * keep * mix(0.55, 1.0, edge) * uFade;
+      // bok zdjęcia kępy (0,42 m) w polach: kępy w zdjęciach mają prawdziwe proporcje, w grze ok. 2,5 raza większe
+      float sz = mix(0.26, 0.36, gHash(cell + 3.7)) * keep * mix(0.6, 1.0, edge) * uFade;
       float ang = r1 * 6.2831;
-      vec3 transformed = vec3(position.x * sz * 1.4, position.y * sz * mix(0.55, 1.0, r2), position.z * sz * 1.4);
+      // pole atlasu tej karty: losowanie z wagami TILE_WEIGHTS; na rzadkiej trawie (skraj lasu, wydeptane) częściej siewki
+      float pick = gHash(cell + 23.1 + aCard * 11.7);
+      ${(() => {
+        let acc = 0;
+        return TILE_WEIGHTS.slice(0, -1).map((wt, i) => { acc += wt; return `float t${i} = step(${acc.toFixed(3)}, pick);`; }).join(' ');
+      })()}
+      float tile = ${TILE_WEIGHTS.slice(0, -1).map((_, i) => `t${i}`).join(' + ')};
+      tile = dens < 0.5 && gHash(cell + 61.3) < 0.35 ? 6.0 : tile;
+      float flip = step(0.5, gHash(cell + 3.3 + aCard));
+      vec2 tu = vec2(mix(uv.x, 1.0 - uv.x, flip), uv.y);
+      vAUv = vec2((mod(tile, 4.0) + clamp(tu.x, 0.004, 0.996)) / 4.0, (1.0 - floor(tile / 4.0) + clamp(tu.y, 0.0, 0.992)) / 2.0);
+      vDry = gHash(cell + 77.7);
+      vec3 transformed = vec3(position.x * sz, position.y * sz * mix(0.8, 1.1, r2), position.z * sz);
       transformed.xz = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * transformed.xz;
       // wiatr: fale przechodzą przez łąkę, czubki chodzą najmocniej
       float gust = sin(uTime * 1.6 + p.x * 0.35 + p.y * 0.22) * 0.6 + sin(uTime * 3.4 + p.x * 1.7 - p.y * 1.1) * 0.25;
-      transformed.x += gust * 0.07 * uv.y * uv.y * sz;
-      transformed.z += gust * 0.035 * uv.y * uv.y * sz;
+      transformed.x += gust * 0.05 * uv.y * uv.y * sz;
+      transformed.z += gust * 0.025 * uv.y * uv.y * sz;
       transformed += vec3(p.x - uMap.x * 0.5, gHeight(p) - 0.01, p.y - uMap.y * 0.5);
       vGUv = uv; vGW = transformed.xz; vGTone = gHash(cell + 9.1);
     `).replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
     sh.fragmentShader = /* glsl */ `
-      uniform sampler2D tBlade; uniform sampler2D tGround; uniform sampler2D tGround2; uniform sampler2D tNoise;
-      varying vec2 vGUv; varying vec2 vGW; varying float vGTone;
+      uniform float gAutumn; uniform float gBare; uniform sampler2D tBlade; uniform sampler2D tDry; uniform sampler2D tGround; uniform sampler2D tGround2; uniform sampler2D tNoise;
+      varying vec2 vGUv; varying vec2 vGW; varying float vGTone; varying vec2 vAUv; varying float vDry;
     ` + sh.fragmentShader.replace('#include <map_fragment>', /* glsl */ `
-      vec4 bl = texture2D(tBlade, vGUv);
-      // barwa z tekstury trawy pod kępą (jak ziemia), kształt i cieniowanie z tekstury źdźbeł
-      // dokładnie jak podłoże: ta sama trawa, te same plamy jasności i żółtawe łaty, więc dywan nie odcina się od ziemi
+      vec4 bl = texture2D(tBlade, vAUv);
+      // podłoże pod kępą (ta sama trawa, plamy jasności i płowe łaty co ziemia), żeby dywan się z nim zlewał
       vec4 nM = texture2D(tNoise, vGW / 96.0), nS = texture2D(tNoise, vGW / 23.0 + 0.37);
       vec3 gc = texture2D(tGround, vGW / 3.1).rgb;
       vec2 r2 = vec2(cos(2.1) * vGW.x - sin(2.1) * vGW.y, sin(2.1) * vGW.x + cos(2.1) * vGW.y);
       gc = mix(gc, texture2D(tGround2, r2 / 4.3).rgb * vec3(0.92, 0.9, 0.8), smoothstep(0.38, 0.72, nM.r) * 0.85);
-      gc *= 0.74 + nM.b * 0.42 + (nS.r - 0.5) * 0.16;
-      gc = mix(gc, gc * vec3(1.12, 1.04, 0.78), smoothstep(0.62, 0.85, nM.g) * 0.5);
-      gc = mix(gc, gc * vec3(1.18, 1.1, 0.72), smoothstep(0.75, 1.0, vGTone) * 0.7);
-      diffuseColor.rgb *= gc * (0.8 + bl.r * 0.55) * mix(0.72, 1.18, smoothstep(0.0, 0.85, vGUv.y));
+      // suche źdźbła: pojedyncze kępy i płowe łaty latem, jesienią coraz więcej, pod koniec jesieni wszystko
+      float dryAmt = clamp(smoothstep(0.82, 1.0, vDry) * 0.6 + smoothstep(0.62, 0.85, nM.g) * 0.45 + gAutumn * 1.2 + gBare - (1.0 - vDry) * gAutumn * 0.6, 0.0, 1.0);
+      vec3 col = mix(bl.rgb, texture2D(tDry, vAUv).rgb, dryAmt);
+      float gL = max(dot(gc, vec3(0.3, 0.59, 0.11)), 1e-3), cL = dot(col, vec3(0.3, 0.59, 0.11));
+      col = mix(col, cL * gc / gL, 0.28 * (1.0 - dryAmt));
+      col *= (0.84 + nM.b * 0.3 + (nS.r - 0.5) * 0.14) * mix(0.9, 1.08, vGTone);
+      // zdjęcie jest jaśniejsze od ziemi w grze (miękkie światło nieba w Blenderze): ściągamy do jasności podłoża
+      col *= 0.62;
+      diffuseColor.rgb *= col * mix(0.8, 1.06, smoothstep(0.0, 0.6, vGUv.y));
       diffuseColor.a = bl.a;
       diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;
     `).replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);');
   };
-  mat.customProgramCacheKey = () => 'grass-field-v1';
+  mat.customProgramCacheKey = () => 'grass-field-v2';
   mat.userData.season = 'grass';
   cloudShade(mat); // cienie chmur suną też po trawie
   const mesh = new THREE.Mesh(geo, mat);
@@ -169,42 +200,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
     },
     setHeight(corner: number, y: number) { (hTex.image.data as Float32Array)[corner] = y; hTex.needsUpdate = true; },
     setDensity(tile: number, v: number) { if (base[tile] !== v) { base[tile] = v; write(tile); dirty = true; } },
-    dispose() { hTex.dispose(); mTex.dispose(); bladeTex.dispose(); geo.dispose(); card.dispose(); mat.dispose(); },
+    dispose() { hTex.dispose(); mTex.dispose(); geo.dispose(); card.dispose(); mat.dispose(); },
     setWear(tile: number, worn: number) { if (Math.abs(wear[tile]! - worn) > 0.02) { wear[tile] = worn; write(tile); dirty = true; } },
   };
-}
-
-/**
- * Tekstura kępy: ok. 160 źdźbeł w odcieniach szarości (barwę daje ziemia pod spodem), zwężających się ku górze,
- * dalsze ciemniejsze, bliższe jaśniejsze, z jaśniejszym nerwem; tło przezroczyste.
- */
-export function bladeTexture(seed: number): THREE.Texture {
-  if (typeof document === 'undefined') return new THREE.Texture();
-  const N = 256;
-  const c = document.createElement('canvas');
-  c.width = c.height = N;
-  const ctx = c.getContext('2d')!;
-  let s = (seed ^ 0x9e3779b9) >>> 0;
-  const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-  for (let i = 0; i < 160; i++) {
-    const depth = i / 160;
-    const x0 = N * (0.5 + (rnd() - 0.5) * 0.8);
-    const hgt = N * (0.3 + rnd() * 0.68) * (1 - Math.abs(x0 / N - 0.5) * 0.8);
-    const lean = (x0 / N - 0.5) * N * 0.6 + (rnd() - 0.5) * N * 0.3;
-    const wd = N * (0.012 + rnd() * 0.016);
-    const v = Math.round(60 + depth * 150 + rnd() * 40);
-    const x1 = x0 + lean, y1 = N - hgt, cxp = x0 + lean * 0.2, cyp = N - hgt * 0.62;
-    ctx.fillStyle = `rgb(${v},${v},${v})`;
-    ctx.beginPath();
-    ctx.moveTo(x0 - wd, N);
-    ctx.quadraticCurveTo(cxp - wd * 0.6, cyp, x1, y1);
-    ctx.quadraticCurveTo(cxp + wd * 0.6, cyp, x0 + wd, N);
-    ctx.closePath();
-    ctx.fill();
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.generateMipmaps = true;
-  t.minFilter = THREE.LinearMipmapLinearFilter;
-  t.anisotropy = 4;
-  return t;
 }

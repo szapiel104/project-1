@@ -78,3 +78,13 @@ idą do kanału alfa `.ktx2`, więc po przebiegu: `node tools/textures/ktx2.mjs 
 W grze: `src/render/forest.ts` (odmiany według ról conifer / leaf / sapling), generator lasu w `terrain.ts`.
 
     /tmp/bpyenv/bin/python tools/models/forest_polyhaven.py /ścieżka/do/paczek [id ...]
+
+## Trawa z Poly Haven (kępy robione przez grafików)
+
+`tools/models/grass_polyhaven.py` fotografuje gotowe kępy z Poly Haven (paczki glTF 1K + osobne maski `_alpha_1k.jpg`
+i suche kolory `_dry_diff_1k.jpg`, bo JPG w paczce glTF nie ma przezroczystości) w atlas 4×2 pól po 0,42 m:
+
+    /tmp/bpyenv/bin/python tools/models/grass_polyhaven.py /ścieżka/do/paczek
+
+Wynik: `public/textures/cc0/pv_grass.jpg`, `pv_grass_a.jpg` (maska), `pv_grass_dry.jpg`. Kolejność pól zna `src/render/grass.ts`
+(`TILE_WEIGHTS`), więc po zmianie listy `TILES` popraw też wagi. Tekstury idą przez płótno z maską (`maskedTex`), bez KTX2.
