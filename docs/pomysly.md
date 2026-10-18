@@ -171,7 +171,7 @@ Zrobione 14.10: zamek 11×11 z Blendera według wspólnego planu (src/data/keep-
 Czeka:
 - Zrobione 15.10: życie w zamku (ozdoba, poza symulacją): pan na tronie i obchód sali, kucharz, dwoje służby z jedzeniem, więźniowie w celach, wartownicy na bocznych murach z pochodniami nocą. Dalej: prawdziwi jeńcy z bitew w lochach, zmiana warty w bramie, pan wychodzi na dziedziniec
 - Zrobione 15.10: taran (koszary, bot też go buduje) i krata opadająca przy wrogu. Dalej: wrzątek/kamienie z machikuł
-- Zrobione z Blendera: chata i stodoła (14.10), spichlerz i zbrojownia (15.10), piekarnia, młyn i koszary (16.10). Dalej w tym samym potoku: warsztaty (drwal, włóczniarz, łuczarz), kamieniołom, kopalnia, rybak, cech inżynierów, cmentarz, z obchodem inspect.sh i kolizjami w spacerze. Zrobione 14.10: karczma (szachulec, strzecha, ganek, szynkwas, palenisko, stoły, wejście drzwiami z kolizjami)
+- Zrobione z Blendera: chata i stodoła (14.10), spichlerz i zbrojownia (15.10), piekarnia, młyn i koszary (16.10). Zrobione 18.10: drewniana wieża strażnicza, studnia i cech inżynierów. W kodzie zostały jeszcze tylko segmenty murów: palisada, mur kamienny i drabina (łączenia, narożniki). Zrobione 14.10: karczma (szachulec, strzecha, ganek, szynkwas, palenisko, stoły, wejście drzwiami z kolizjami)
 - Zrobione 14.10: karczma 4×3 (trzy stoły, dłuższy szynkwas, wyższy strop, ganek z dwoma stołami)
 - Ulepszanie zamku (poziomy widać na modelu: drewniane hurdycje, druga linia murów, fosa)
 

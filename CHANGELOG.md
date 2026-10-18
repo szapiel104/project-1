@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.28.0 — wieża strażnicza, studnia i cech inżynierów z Blendera (2026-10-18)
+
+- **Wieża strażnicza** od nowa (`tools/models/watchtower.py`): okorowane bale na kamiennych podkładach, lekko zbiegające się ku górze, zastrzały na krzyż w dwóch kondygnacjach z oplotami z liny, pomost z desek wysunięty poza nogi z przedpiersiem i klapą nad drabiną, ławka, kosz strzał, beczka z wodą i róg alarmowy; dach czterospadowy ze strzechy z proporcem. Łucznicy stoją na wysokości pomostu zapisanej w modelu
+- **Studnia** od nowa (`tools/models/well.py`): cembrowina z ciosów układanych na mijankę z kamienną koroną, woda głęboko w szybie, wał z nawiniętą liną i korbą, wiadra okute żelazem, daszek z desek, koryto dla zwierząt
+- **Cech inżynierów** od nowa (`tools/models/engineers.py`): warsztat z szachulca ze strzechą i kominem; w izbie stół kreślarski z planem i cyrklem, model trebusza na półce, skrzynia narzędzi; na obejściu dźwig z ciosanym blokiem nad taczką kamieni, a obok sprzęt do gaszenia pożarów: beczkowóz z wodą, stojak z wiadrami, bosak i drabina
+- Usunięte stare modele tych trzech budynków składane w kodzie (razem z nieużywaną już chatą z brył)
+
 ## 0.27.2 — poranny opar przy skraju lasu (2026-10-18)
 
 - Mgła poranna na planszy nie leży już płachtą aż pod same drzewa i urwiska (ucinała się o korony prostą, twardą krawędzią): wygasa kilka pól przed lasem i skałami, a wzdłuż skraju zostaje cienki, poszarpany pasek oparu

@@ -32,7 +32,7 @@ import { cat } from './cat';
 import { tx } from '../i18n';
 import { GearPool } from './gearpool';
 import { enableShadowLayer } from './shadowlayer';
-import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
+import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, WATCH_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { TEAM_COLORS } from '../data/teams';
@@ -4470,7 +4470,7 @@ export class GameRenderer {
       const ranged = !!udef.range;
       const striking = (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
-      let lift = s.up ? (s.post && BUILDINGS[bById.get(s.post)?.type ?? 0]!.id === 'stoneTower' ? STONE_TOWER_TOP : 1.95) : 0;
+      let lift = s.up ? (s.post && BUILDINGS[bById.get(s.post)?.type ?? 0]!.id === 'stoneTower' ? STONE_TOWER_TOP : WATCH_TOWER_TOP) : 0;
       // życie na wieży: bez walki każdy zajęty czym innym (oparty o barierkę, siedzi, wypatruje, czwarty pod wieżą);
       // przy ataku wszyscy na pomoście obok siebie, od strony wroga, i strzelają w tamtą stronę
       let towerSit = false, towerLean = 0, towerAt: [number, number] | null = null;
