@@ -270,13 +270,27 @@ for sid, spec in SPECIES.items():
     print(sid, '| materiały:', mats)
     tops = sorted([o for o in bpy.data.objects if o.parent is None and o.type in ('MESH', 'EMPTY')
                    and not ('LOD' in o.name and not o.name.endswith('LOD0'))], key=lambda o: o.name)
+    # VARIANT=a|b|c: tylko jedna odmiana na przebieg (duże paczki, np. sosna 17 mln trójkątów, nie mieszczą się
+    # w pamięci razem z Cycles) — pozostałe usuwamy zaraz po wczytaniu
+    one = os.environ.get('VARIANT')
+    if one:
+        for vi, top in enumerate(list(tops)):
+            if chr(97 + vi) != one:
+                for o in [top, *top.children_recursive]:
+                    me = o.data if o.type == 'MESH' else None
+                    bpy.data.objects.remove(o, do_unlink=True)
+                    if me is not None and me.users == 0:
+                        bpy.data.meshes.remove(me)
+        bpy.ops.outliner.orphans_purge(do_recursive=True) if hasattr(bpy.ops.outliner, 'orphans_purge') else None
     co = setup_scene()
     for o in bpy.data.objects:
         if o.type == 'MESH':
             o.hide_render = True
-    for k in [k for k in out if out[k].get('species') == sid]:
+    for k in [k for k in out if out[k].get('species') == sid and (not one or k.endswith('_' + one))]:
         del out[k]
     for vi, top in enumerate(tops):
+        if one and chr(97 + vi) != one:
+            continue
         parts = [o for o in [top, *top.children_recursive] if o.type == 'MESH']
         if not parts:
             continue
@@ -425,7 +439,9 @@ for sid, spec in SPECIES.items():
         bpy.data.objects.remove(tr_ob, do_unlink=True)
         tdir = os.path.join(d, 'textures')
         files = os.listdir(tdir)
-        pick = lambda kind: next((os.path.join(tdir, f) for f in sorted(files) if f.startswith(bark + '_' + kind)), None)
+        # odmiany mogą dzielić teksturę kory (np. trunk_c korzysta z trunk_b): wtedy bierzemy pierwszą pasującą
+        pick = lambda kind: next((os.path.join(tdir, f) for f in sorted(files) if f.startswith(bark + '_' + kind)),
+                                 next((os.path.join(tdir, f) for f in sorted(files) if bark.rsplit('_', 1)[0] in f and '_' + kind + '_' in f), None))
         save_tex(pick('diff'), f'pv_{name}_bark')
         if pick('nor_gl'):
             save_tex(pick('nor_gl'), f'pv_{name}_bark_n')
@@ -434,9 +450,13 @@ for sid, spec in SPECIES.items():
             'trunk': pack(tp, tn, tu, ti, tcol), 'cards': cards, 'shadow': shadow,
             'far': {'w': W * kx, 'h': Hf * k}, 'avg': [round(float(c), 3) for c in avg],
         }
-        print('   pień', len(ti), 'karty', len(idx), 'trójkątów, atlas', AW, 'x', AH)
+        print('   pień', len(ti), 'karty', len(idx), 'trójkątów, atlas', AW, 'x', AH, flush=True)
+        # gotowa odmiana: usuwamy jej siatki, żeby następna (i Cycles) miała pamięć (sosna ma 17 mln trójkątów)
         for o in parts:
-            o.hide_render = True
+            me = o.data
+            bpy.data.objects.remove(o, do_unlink=True)
+            if me.users == 0:
+                bpy.data.meshes.remove(me)
 
 with open(OUT, 'w') as f:
     json.dump(out, f, separators=(',', ':'))
