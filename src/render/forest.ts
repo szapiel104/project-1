@@ -43,6 +43,34 @@ function tex(name: string, color = true): THREE.Texture | null {
   return t;
 }
 
+/**
+ * Zdjęcie z maską przezroczystości (karty korony, obrazek z daleka): kolor `<nazwa>.jpg` i maska `<nazwa>_a.jpg`
+ * składane na płótnie w RGBA. Nie przez KTX2: zapasowy JPG nie ma kanału alfa, a bez niego karty są prostokątami.
+ */
+function maskedTex(name: string): THREE.Texture | null {
+  if (typeof document === 'undefined') return null;
+  let t = texCache.get(name);
+  if (t) return t;
+  const cv = document.createElement('canvas');
+  const tt = new THREE.CanvasTexture(cv);
+  tt.colorSpace = THREE.SRGBColorSpace;
+  tt.anisotropy = 8;
+  texCache.set(name, tt);
+  const load = (url: string): Promise<HTMLImageElement> => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = rej; im.src = url; });
+  void Promise.all([load(`${base()}${name}.jpg`), load(`${base()}${name}_a.jpg`)]).then(([col, mask]) => {
+    cv.width = col.width; cv.height = col.height;
+    const c = cv.getContext('2d', { willReadFrequently: true })!;
+    c.drawImage(mask, 0, 0);
+    const a = c.getImageData(0, 0, cv.width, cv.height).data;
+    c.drawImage(col, 0, 0);
+    const img = c.getImageData(0, 0, cv.width, cv.height);
+    for (let i = 0; i < img.data.length; i += 4) img.data[i + 3] = a[i]!;
+    c.putImageData(img, 0, 0);
+    tt.needsUpdate = true;
+  }).catch(() => { /* brak pliku: dziennik błędów i tak zgłosi nieudane wczytanie */ });
+  return tt;
+}
+
 export interface TreeKind {
   name: string;
   role: Variant['role'];
@@ -66,8 +94,8 @@ export function treeKinds(): TreeKind[] {
     const box = new THREE.Box3().setFromBufferAttribute(cards.getAttribute('position') as THREE.BufferAttribute);
     const barkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, metalness: 0, map: tex(`pv_${name}_bark`), normalMap: tex(`pv_${name}_bark_n`, false) });
     // karty mają przód i tył jako osobne trójkąty z normalnymi od pnia, więc rysujemy tylko przednie strony
-    const cardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9, metalness: 0, map: tex(`pv_${name}_cards`), alphaTest: 0.5 });
-    const imp = impostorFrom(tex(`pv_${name}_far`) ?? new THREE.Texture(), v.far.w, v.far.h);
+    const cardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9, metalness: 0, map: maskedTex(`pv_${name}_cards`), alphaTest: 0.5 });
+    const imp = impostorFrom(maskedTex(`pv_${name}_far`) ?? new THREE.Texture(), v.far.w, v.far.h);
     return { name, role: v.role, trunk: geo(v.trunk), cards, shadow: geo(v.shadow), barkMat, cardMat, far: { geometry: imp.geometry, material: imp.material() }, height: box.max.y };
   });
   return kinds;
