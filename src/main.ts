@@ -6,7 +6,8 @@ import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
 import { RULES } from './data/rules';
 import { Terrain } from './data/terrain';
 import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } from './data/resources';
-import { UNITS } from './data/units';
+import { BANDITS, UNITS } from './data/units';
+import { placeDen } from './sim/systems/bandits';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { BYNAMES, FIRST_NAMES } from './data/names';
 import { lang, t, tx } from './i18n';
@@ -402,7 +403,8 @@ function caravanNews(now: number): void {
     caravanSeen = n.id;
     const what = `${n.amount} × ${t(RESOURCE_DEFS[RESOURCES[n.res]!].name).toLowerCase()}`;
     if (n.captured) {
-      if (n.owner === ME) hud.toast(tx(`Wróg przechwycił Twój wóz dla: ${playerName(n.to)} (${what}).`, `The enemy seized your cart bound for ${playerName(n.to)} (${what}).`));
+      if (n.owner === ME && n.by === BANDITS) hud.toast(tx(`Zbóje z lasu złupili Twój wóz (${what}). Łup leży w ich obozie.`, `Brigands from the wood have plundered your cart (${what}). The haul lies in their camp.`));
+      else if (n.owner === ME) hud.toast(tx(`Wróg przechwycił Twój wóz dla: ${playerName(n.to)} (${what}).`, `The enemy seized your cart bound for ${playerName(n.to)} (${what}).`));
       else if (n.by === ME) hud.toast(tx(`Twoi żołnierze przechwycili wóz wroga: +${what}.`, `Your soldiers seized an enemy cart: +${what}.`));
       else if (n.to === ME) hud.toast(tx(`Wróg przechwycił wóz, który jechał do Ciebie od: ${playerName(n.owner)}.`, `The enemy seized a cart sent to you by ${playerName(n.owner)}.`));
     } else if (n.by === ME && n.owner !== ME) { hud.toast(tx(`${playerName(n.owner)} przysłał Ci wóz: +${what}.`, `${playerName(n.owner)} sent you a cart: +${what}.`)); play('select'); }
@@ -575,6 +577,11 @@ function personCard(id: number): { name: string; lines: string[]; walk?: boolean
     // strażnik miejski: stopień (co trzeci ciężki, w mocniejszym rynsztunku), co teraz robi i zdrowie
     const s = game.soldiers.find((x) => x.id === id);
     const def = s ? UNITS[s.kind]! : undefined;
+    if (s && def?.bandit) {
+      // zbój z obozu w lesie: przydomek z puszczy, co robi i zdrowie
+      const doing = s.den === -1 ? tx('ucieka w las', 'fleeing into the wood') : s.target || s.hitting ? tx('walczy', 'fighting') : s.raid ? tx('na napadzie', 'out on a raid') : s.goal >= 0 ? tx('wraca do obozu', 'going back to camp') : tx('siedzi przy ognisku w obozie', 'sitting by the fire in camp');
+      return { name: `${FIRST_NAMES[h(1) % FIRST_NAMES.length]} ${tx('Zbój', 'the Brigand')}`, walk: false, lines: [`${age} · ${t('u.bandit')}`, `${t('person.doing')}: ${doing}`, `${t('person.hp')}: ${Math.max(0, s.hp)} / ${def.hp}`] };
+    }
     if (!s || !def?.guard) return null;
     const rank = h(4) % 3 === 0 ? t('guard.heavy') : t('guard.light');
     const here = (s.py >> 8) * game.map.width + (s.px >> 8);
@@ -1440,7 +1447,7 @@ function updateAlarm(): void {
   if (!enemies.length || me.defeated) { alarm.hidden = true; return; }
   alarm.hidden = false;
   const keep = game.buildings.find((b) => b.owner === ME && b.type === 0);
-  const foes = game.soldiers.filter((s) => game.players[s.owner]!.team !== me.team);
+  const foes = game.soldiers.filter((s) => s.owner !== BANDITS && game.players[s.owner]?.team !== me.team); // zbóje z lasu to nie wojsko wroga: o nich mówi skryba
   // nadciąga: wrogie wojsko (bez strażników miejskich, którzy chodzą obchodem po swojej osadzie) idzie do celu
   // przy naszej osadzie — cel marszu najwyżej 30 pól od naszej twierdzy albo właśnie bije kogoś z naszych
   const W = game.map.width;
@@ -1536,6 +1543,21 @@ function endXp(after: Element, win: boolean, mins: number): void {
 
 const scribe = createScribe(() => play('babble'));
 let wolvesSeen = false, wolfKillsSeen = 0;
+/** Zbóje z lasu: ostatnio widziane liczniki napadów, zabitych i rozbitych obozów (wiadomość skryby przy każdej zmianie) */
+let banditSeen: { raids: number; kills: number; razed: number } | null = null;
+function banditNotes(p: (typeof game.players)[number]): void {
+  const b = p.bandit ?? { raids: 0, kills: 0, robbed: 0, razed: 0, loot: [] };
+  const was = banditSeen;
+  banditSeen = { raids: b.raids, kills: b.kills, razed: b.razed };
+  if (!was) return; // pierwszy odczyt (nowa gra albo wczytany zapis): bez wiadomości o dawnych sprawach
+  if (b.raids > was.raids) scribe.say('banditRaid', tx('Zbóje z lasu napadli naszych ludzi przy robocie! Ślijcie straż albo wojsko, a ludzie niech uciekają pod zamek.', 'Brigands from the wood have fallen upon our folk at their work! Send the guard or soldiers, and let the people run for the castle.'), true, 'herald');
+  if (b.kills > was.kills) scribe.say('banditKill', tx(`Zbóje zabili naszego człowieka i złupili skarbiec (razem zabrali już ${b.robbed} rudy i drewna). Ich obóz jest w puszczy — rozbijcie go.`, `Brigands have slain one of ours and robbed the treasury (${b.robbed} ore and timber taken so far). Their camp lies in the deep wood — break it.`), true);
+  if (b.razed > was.razed) {
+    const loot = RESOURCES.map((id, i) => ({ id, n: b.loot[i] ?? 0 })).filter((x) => x.n > 0).map((x) => `${x.n} × ${t(RESOURCE_DEFS[x.id].name).toLowerCase()}`).join(', ');
+    scribe.say('banditRazed', tx(`Obóz zbójów rozbity! ${loot ? `Łup trafił do skarbca: ${loot}.` : 'Łupu nie było.'}`, `The brigands' camp is broken! ${loot ? `The plunder is in our stores: ${loot}.` : 'There was no plunder.'}`), false, 'herald');
+    play('build');
+  }
+}
 let wasNight = false, wasComing = false, stockFull = false;
 let alarmComing = false;
 
@@ -1608,6 +1630,7 @@ function refresh(): void {
   wolvesSeen = game.wolves.length > 0;
   if ((p.wolfKills ?? 0) > wolfKillsSeen) scribe.say('wolfKill', tx('Wilki zagryzły naszego człowieka…', 'Wolves have savaged one of our people…'), true);
   wolfKillsSeen = p.wolfKills ?? 0;
+  banditNotes(p);
   winterNotes(p);
   if (night !== wasNight) scribe.say(night ? 'dusk' : 'dawn', t(night ? 'scribe.dusk' : 'scribe.dawn'));
   wasNight = night;
@@ -1615,7 +1638,7 @@ function refresh(): void {
   if (coming && !wasComing) { scribe.say('coming', t('alarm.coming'), true, 'herald'); warHorn(); }
   // nastroje ludzi wobec wojska
   const mine = game.soldiers.filter((x) => x.owner === ME).length;
-  const theirs = game.soldiers.length - mine;
+  const theirs = game.soldiers.filter((x) => x.owner !== BANDITS).length - mine;
   if (mine >= 10 && mine >= theirs) scribe.say('proud', t('herald.proud'), false, 'herald');
   else if (mine === 0 && theirs >= 3) scribe.say('afraid', t('herald.afraid'), true, 'herald');
   else if (theirs > mine * 2 && theirs >= 6) scribe.say('weaker', t('herald.weaker'), false, 'herald');
@@ -1877,6 +1900,8 @@ requestAnimationFrame(loop);
   hour(h: number): void { setHour(game, h); refresh(); },
   /** `n` chłopów przy twierdzy */
   peasants(n = 5, player = ME): number { const r = addPeasants(game, n, player).length; refresh(); return r; },
+  /** Obóz zbójów ze środkiem w (x, y) z czterema zbójami (pusta scena: zbóje napadają dopiero od 2. dnia, poziom pokojowy ich nie zatrzymuje); id obozu albo null */
+  den(x: number, y: number): number | null { const b = placeDen(game, x, y); refresh(); return b?.id ?? null; },
   /**
    * Scena dla nowego modelu: stawia gotowy budynek `id` na środku pustej łąki przed twierdzą (poprzedni model znika),
    * ustawia południe i kamerę od frontu. Potem `view(nazwa)` obchodzi go dookoła — patrz `views`.
@@ -2142,7 +2167,7 @@ function situation(px: number, py: number): string | null {
   const p = game.players[ME]!, R2 = (r: number): number => (r * 256) ** 2;
   const d2 = (x: number, y: number): number => (x - px) ** 2 + (y - py) ** 2;
   if (game.buildings.some((b) => b.owner === ME && (b.fire ?? 0) > 0 && d2(b.x * 256, b.y * 256) < R2(10))) return 'fire';
-  if (game.soldiers.some((o) => game.players[o.owner]!.team !== p.team && d2(o.px, o.py) < R2(14))) return 'enemy';
+  if (game.soldiers.some((o) => game.players[o.owner]?.team !== p.team && d2(o.px, o.py) < R2(14))) return 'enemy';
   if (game.wolves.some((w) => d2(w.px, w.py) < R2(5))) return 'wolves';
   if (renderer.weather.night > 0.5 && game.wolves.length && Math.random() < 0.5) return 'wolvesNight';
   if (lordNear(px, py)) return 'lord';
@@ -2190,7 +2215,7 @@ function sayGuard(id: number): void {
   const s = game.soldiers.find((x) => x.id === id);
   if (!s) return;
   const pick = (l: string[]): string => l[Math.floor(Math.random() * l.length)]!;
-  const near = game.soldiers.some((o) => game.players[o.owner]!.team !== game.players[s.owner]!.team && (o.px - s.px) ** 2 + (o.py - s.py) ** 2 < (8 * 256) ** 2) || game.wolves.some((w) => (w.px - s.px) ** 2 + (w.py - s.py) ** 2 < (8 * 256) ** 2);
+  const near = game.soldiers.some((o) => game.players[o.owner]?.team !== game.players[s.owner]?.team && (o.px - s.px) ** 2 + (o.py - s.py) ** 2 < (8 * 256) ** 2) || game.wolves.some((w) => (w.px - s.px) ** 2 + (w.py - s.py) ** 2 < (8 * 256) ** 2);
   const sit = situation(s.px, s.py);
   const extra = sit === 'lord' ? GUARD_SAY.lord : sit === 'cold' ? GUARD_SAY.cold : sit === 'fire' ? GUARD_SAY.fire : sit === 'rain' ? GUARD_SAY.rain : sit === 'hungry' ? GUARD_SAY.hungry : sit === 'taxHigh' ? GUARD_SAY.taxHigh : null;
   bubble.textContent = pick(near || sit === 'enemy' ? GUARD_SAY.danger : extra ?? (clockAt(game.tick).night ? GUARD_SAY.night : GUARD_SAY.day));
@@ -2444,7 +2469,7 @@ const devPanel = createDevPanel(document.body, {
     const k = game.buildings.find((b) => b.owner === owner && b.type === 0);
     if (k) renderer.lookAt(k.x + 1.5, k.y + 1.5, 26);
   },
-  onKillFoes: () => { const me = game.players[ME]!; game.soldiers = game.soldiers.filter((s) => game.players[s.owner]!.team === me.team); game.wolves = []; },
+  onKillFoes: () => { const me = game.players[ME]!; game.soldiers = game.soldiers.filter((s) => game.players[s.owner]?.team === me.team); game.wolves = []; },
 });
 window.addEventListener('keydown', (e) => {
   if (e.key === 'F9' && devAllowed()) { e.preventDefault(); devPanel.toggle(); return; }

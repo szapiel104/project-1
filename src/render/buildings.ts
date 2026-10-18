@@ -33,6 +33,7 @@ const STOCKPILE_MODEL = model('stockpile');
 const WOODCUTTER_MODEL = model('woodcutter');
 const OREMINE_MODEL = model('mine');
 const MINECAMP_MODEL = model('minecamp');
+const BANDITCAMP_MODEL = model('banditcamp');
 const MINE_LEVEL_MODEL = model('minelevel');
 const FISHER_MODEL = model('fisher');
 const FLETCHER_MODEL = model('fletcher');
@@ -135,6 +136,8 @@ const M = {
   magicOre: oreMaterial(),
   cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'thatch'),
+  // skóry zwierząt na szałasach zbójów (ciemna, wytarta skóra z włosiem; dwa odcienie, żeby płaty się różniły)
+  hide: mat(0x7a5a3e, 'burlap'), hideDark: mat(0x58402c, 'burlap'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
   // woda w studni i korycie: ciemna, gładka tafla z połyskiem (bez tekstury)
   water: new THREE.MeshStandardMaterial({ color: 0x1b3a40, roughness: 0.15, metalness: 0.1 }),
@@ -1204,6 +1207,11 @@ const BUILDERS: Record<string, Builder> = {
     blenderModel(g, MINECAMP_MODEL as unknown as BlenderBuilding, flag);
     const p = (MINECAMP_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  banditCamp(g, _team, flag) {
+    // obóz zbójów z Blendera (tools/models/banditcamp.py): szałas z gałęzi i namiot ze skór, zasieka z pali, ognisko
+    // z rożnem przy przedniej krawędzi (płonie zawsze), stojak z włóczniami, skrzynie z łupem; bez flagi — nie ma pana
+    blenderModel(g, BANDITCAMP_MODEL as unknown as BlenderBuilding, flag);
   },
 };
 

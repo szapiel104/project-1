@@ -1,5 +1,5 @@
 import { BUILDINGS, footprint } from '../data/buildings';
-import { TEAM_COLORS } from '../data/teams';
+import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { t, tx } from '../i18n';
 import { TERRAIN, Terrain } from '../data/terrain';
 import { FP, type GameState } from '../sim/state';
@@ -161,7 +161,9 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
         if (!def) continue;
         const fp = footprint(def, b.rot);
         const team = g.players[b.owner]?.team ?? 0;
-        const col = TEAM_COLORS[team] ?? 0x888888;
+        const col = g.players[b.owner] ? TEAM_COLORS[team] ?? 0x888888 : BANDIT_COLOR;
+        // obóz zbójów: ciemna plama z jasną obwódką, żeby było go widać w puszczy
+        if (!g.players[b.owner]) { ctx.fillStyle = '#e8d9b4'; ctx.fillRect(b.x * sx - dpr, b.y * sy - dpr, fp.w * sx + 2 * dpr, fp.h * sy + 2 * dpr); }
         ctx.fillStyle = b.build ? css(col, 0.6) : css(col, b.owner === me ? 1.25 : 0.95);
         ctx.fillRect(b.x * sx, b.y * sy, Math.max(1.5, fp.w * sx), Math.max(1.5, fp.h * sy));
         if (def.id === 'keep') {
@@ -179,7 +181,7 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
         const x = (s.px / FP) * sx, y = (s.py / FP) * sy, r = 1.6 * dpr;
         ctx.fillStyle = '#0d0804';
         ctx.fillRect(x - r - dpr * 0.6, y - r - dpr * 0.6, 2 * r + dpr * 1.2, 2 * r + dpr * 1.2);
-        ctx.fillStyle = css(TEAM_COLORS[team] ?? 0x888888, s.owner === me ? 1.35 : 1.05);
+        ctx.fillStyle = css(g.players[s.owner] ? TEAM_COLORS[team] ?? 0x888888 : BANDIT_COLOR, s.owner === me ? 1.35 : 1.05);
         ctx.fillRect(x - r, y - r, 2 * r, 2 * r);
       }
       // wozy z surowcami

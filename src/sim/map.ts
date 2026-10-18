@@ -26,6 +26,8 @@ export interface GameMap {
   trails: Uint8Array;
   /** Pola rzeki (generator 2): brzeg rzeki rysuje się bez plaży */
   river?: Uint8Array;
+  /** Polany pod obozy zbójów w puszczy (generator 5): środek polany (pole); parami — obóz i jego odbicie po stronie wroga */
+  dens?: number[];
 }
 
 const FP = 256; // stały przecinek: 8 bitów części ułamkowej
@@ -138,9 +140,62 @@ export function generateMap(seed: number, presetId: keyof typeof MAP_PRESETS = '
     }
   }
 
+  const dens = gen >= 5 ? carveDens(tiles, elevation, width, height, starts, seed, preset, river) : undefined;
   const trails = new Uint8Array(width * height);
-  if (gen >= 2) carveTrails(tiles, elevation, trails, width, height, starts, seed, preset.startRadius);
-  return { seed, width, height, tiles, elevation, starts, gen, trails, river };
+  if (gen >= 2) carveTrails(tiles, elevation, trails, width, height, starts, seed, preset.startRadius, dens);
+  return { seed, width, height, tiles, elevation, starts, gen, trails, river, ...(dens ? { dens } : {}) };
+}
+
+/** Promień polany pod obóz zbójów (pola) */
+export const DEN_CLEAR = 4.3;
+
+/**
+ * Obozy zbójów (generator 5): dla każdej twierdzy drużyny 0 (w 4 na 4 dla dwóch) szukamy w puszczy miejsca
+ * 26–40 pól od zamku — daleko od wszystkich zamków, od wody i gór, w gęstym lesie — i wycinamy tam okrągłą
+ * polanę. Odbicie środkowe daje obóz po stronie wroga, więc obie drużyny mają tak samo. Same liczby całkowite i hash2.
+ */
+function carveDens(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset, river: Uint8Array): number[] {
+  const size = w * h, out: number[] = [];
+  const own = starts.filter((s) => s.team === 0).slice(0, 2);
+  const R = Math.ceil(DEN_CLEAR);
+  for (const s of own) {
+    let best = -1, score = -Infinity;
+    for (let y = s.y - 40; y <= s.y + 40; y += 2)
+      for (let x = s.x - 40; x <= s.x + 40; x += 2) {
+        const edge = Math.min(x, y, w - 1 - x, h - 1 - y);
+        if (edge < preset.rim + 7) continue;
+        const d = Math.hypot(x - s.x, y - s.y);
+        if (d < 26 || d > 40) continue;
+        if (starts.some((o) => Math.hypot(x - o.x, y - o.y) < 26)) continue;
+        const mx = w - 1 - x, my = h - 1 - y;
+        if (Math.hypot(mx - x, my - y) < 34) continue; // obóz i jego odbicie nie spotkają się na środku mapy
+        if (out.some((t) => Math.hypot((t % w) - x, Math.floor(t / w) - y) < 26)) continue;
+        let forest = 0, bad = false;
+        for (let dy = -5; dy <= 5 && !bad; dy++) for (let dx = -5; dx <= 5; dx++) {
+          const t = (y + dy) * w + x + dx, tt = tiles[t]!;
+          if (tt === Terrain.Water || tt === Terrain.Mountain || tt === Terrain.Ford || river[t]) { bad = true; break; }
+          if (tt === Terrain.Forest) forest++;
+        }
+        if (bad || forest < 70) continue;
+        const sc = forest * 4 - Math.abs(d - 32) * 3 + (hash2(x, y, seed ^ 0x0bad1e) & 15);
+        if (sc > score) { score = sc; best = y * w + x; }
+      }
+    if (best < 0) continue;
+    const bx = best % w, by = (best - bx) / w;
+    // polana: łąka w kole, ziemia wyrównana do średniej, żeby namioty i palisada stały prosto
+    let sum = 0, n = 0;
+    for (let dy = -R; dy <= R; dy++) for (let dx = -R; dx <= R; dx++) if (dx * dx + dy * dy <= DEN_CLEAR * DEN_CLEAR) { sum += elev[(by + dy) * w + bx + dx]!; n++; }
+    const flat = Math.max(preset.waterLevel + 8, Math.min(140, Math.round(sum / Math.max(1, n))));
+    for (let dy = -R - 2; dy <= R + 2; dy++) for (let dx = -R - 2; dx <= R + 2; dx++) {
+      const r = Math.hypot(dx, dy), t = (by + dy) * w + bx + dx;
+      if (r <= DEN_CLEAR) tiles[t] = Terrain.Grass;
+      const k = r <= DEN_CLEAR ? 1 : Math.max(0, (DEN_CLEAR + 2 - r) / 2);
+      elev[t] = Math.round(elev[t]! + (flat - elev[t]!) * k);
+      tiles[size - 1 - t] = tiles[t]!; elev[size - 1 - t] = elev[t]!;
+    }
+    out.push(best, size - 1 - best);
+  }
+  return out;
 }
 
 /**
@@ -205,7 +260,7 @@ function carveRiver(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, s
  */
 function carveTrails(
   tiles: Uint8Array, elev: Uint8Array, trails: Uint8Array, w: number, h: number,
-  starts: StartPosition[], seed: number, startRadius: number,
+  starts: StartPosition[], seed: number, startRadius: number, dens?: number[],
 ): void {
   const size = w * h, mirror = (t: number): number => size - 1 - t;
   const wiggle = new Uint8Array(size);
@@ -392,6 +447,17 @@ function carveTrails(
     const close = woods.filter((wd) => { const x = wd.deep % w, y = (wd.deep - x) / w; return Math.hypot(x - s.x, y - s.y) < 72; })
       .sort((a, b) => b.size - a.size || a.deep - b.deep).slice(0, 5);
     for (const wd of close) carve(wander(sIdx(s), wd.deep));
+  }
+  // 4) do obozów zbójów: wąska dróżka od najbliższej ścieżki do polany (co drugi obóz to odbicie — dróżka odbije się sama)
+  for (let i = 0; i < (dens?.length ?? 0); i += 2) {
+    const d = dens![i]!, dx = d % w, dy = (d - dx) / w;
+    let best = -1, bd = Infinity;
+    for (let t = 0; t < size; t++) {
+      if (!trails[t]) continue;
+      const x = t % w, y = (t - x) / w, dd = Math.hypot(x - dx, y - dy);
+      if (dd > 6 && dd < bd) { bd = dd; best = t; }
+    }
+    if (best >= 0) carve(wander(d, best));
   }
   // przez las ścieżka to przecinka: na niej nie ma drzew
   for (let t = 0; t < size; t++) if (trails[t] && tiles[t] === Terrain.Forest) tiles[t] = Terrain.Grass;

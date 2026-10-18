@@ -1,5 +1,17 @@
 # Dziennik zmian
 
+## 0.29.0 — zbóje z puszczy (2026-10-18)
+
+- Nowe mapy (generator 5) mają w puszczy polany z obozami zbójów: po jednym przy każdym zamku (w 4 na 4 dwa na drużynę), 26–40 pól od zamku, z wydeptaną dróżką do najbliższej ścieżki. Obie drużyny mają obóz w tym samym miejscu (odbicie). Na poziomie pokojowym i w starych zapisach obozów nie ma
+- Obóz z Blendera (`tools/models/banditcamp.py`): szałas z gałęzi i słomy pod skórami, namiot ze skór na żerdziach, barłogi, zasieka z zaostrzonych pali z tyłu i po bokach, ognisko z rożnem (płonie zawsze), kłody, stojak z włóczniami i toporem, skrzynie z łupem (jedna otwarta, z rudą), worki, beczka i słup ze skórą. Podgląd: `modele.html?id=banditCamp`
+- W obozie siedzi czterech zbójów (włócznie, skóry w brudnym brązie zamiast barw drużyny; własny model zbója w kolejnej partii). Stracone załogi odrastają co półtorej doby
+- Napady: od drugiego dnia raz na dzień (między 8:30 a 15:00) dwóch, od piątego dnia trzech zbójów wychodzi z obozu na chłopa przy pracy daleko od zamku i bez straży w pobliżu — najchętniej na drwala — i go goni. Kto dobiegnie pod zamek, ocalał; gdy naprzeciw stanie więcej zbrojnych niż ich, zbóje uciekają do lasu, a wieczorem i tak wracają do ogniska. Ciężko ranni wracają leczyć się przy ogniu
+- Za każdego zabitego chłopa zbóje zabierają jego panu do 4 rudy i 5 drewna do obozu; wóz z urobkiem bez eskorty łupią do obozu (wiadomość „Zbóje z lasu złupili Twój wóz”)
+- Rozbicie obozu: rozkaz ataku wojska na obóz (900 wytrzymałości). Cały łup — zapas na start (35 rudy, 20 drewna, 6 żelaza) i wszystko, co zrabowali — trafia do gracza, którego wojsko stoi najbliżej; ocalali zbóje uciekają w puszczę i znikają, obóz znika z mapy
+- Skryba mówi o napadzie, o zabitym człowieku (z sumą zrabowanego) i o rozbitym obozie z łupem; na mapie obóz i zbóje w brązie z jasną obwódką; okno zbója: przydomek, co robi, zdrowie. Pasek „nadciąga wojsko” i licznik wojska wroga nie liczą zbójów
+- „Jak grać” (PL/EN): rozdział „Zbóje z puszczy”. Tryb testowy: `__test.den(x, y)` stawia obóz z załogą (np. na pustej scenie)
+- Logika: `src/sim/systems/bandits.ts` (zbój to żołnierz bez pana — walczy i chodzi system wojska), testy w `tests/bandits.test.ts`
+
 ## 0.28.0 — wieża strażnicza, studnia i cech inżynierów z Blendera (2026-10-18)
 
 - **Wieża strażnicza** od nowa (`tools/models/watchtower.py`): okorowane bale na kamiennych podkładach, lekko zbiegające się ku górze, zastrzały na krzyż w dwóch kondygnacjach z oplotami z liny, pomost z desek wysunięty poza nogi z przedpiersiem i klapą nad drabiną, ławka, kosz strzał, beczka z wodą i róg alarmowy; dach czterospadowy ze strzechy z proporcem. Łucznicy stoją na wysokości pomostu zapisanej w modelu

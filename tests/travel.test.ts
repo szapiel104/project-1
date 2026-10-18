@@ -1,4 +1,5 @@
 import { RULES } from '../src/data/rules';
+import { clearBandits } from '../src/sim/systems/bandits';
 import { describe, expect, it } from 'vitest';
 import { createGame, Phase } from '../src/sim/state';
 import { BUILDINGS } from '../src/data/buildings';
@@ -128,7 +129,7 @@ describe('brama', () => {
 
 describe('wilki polują naprawdę', () => {
   it('dochodzą do człowieka daleko od miejsca, gdzie wyszły, i go zagryzają', () => {
-    const g = createGame(9, '1v1', 2);
+    const g = clearBandits(createGame(9, '1v1', 2)); // wilki mają polować na chłopów, nie na zbójów z lasu
     for (const p of g.players) { p.bot = false; p.guards = 0; } // bez straży miejskiej, która wybiłaby watahę
     // noc, wataha na brzegu mapy; ludzie bez dachu nad głową śpią na słomie pod gołym niebem (w chacie wilk ich nie dosięgnie)
     while (!(clockAt(g.tick).hour >= 22.5 && clockAt(g.tick).hour < 23)) step(g, []);

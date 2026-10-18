@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { clearBandits } from '../src/sim/systems/bandits';
 import { buildingIndex } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
@@ -24,7 +25,7 @@ function spot(g: GameState, id: string, from = 3): { x: number; y: number } {
 }
 
 function withBarracks(): { g: GameState; id: number } {
-  const g = createGame(7);
+  const g = clearBandits(createGame(7));
   const p = g.players[0]!;
   p.res[resIndex('wood')] = 500; p.res[resIndex('stone')] = 500; p.res[resIndex('spear')] = 5; p.res[resIndex('gold')] = 100;
   // drzewko budowy: koszary dopiero przy gotowej zbrojowni (zbrojownia dalej, żeby koszary stały tam, gdzie dotąd)
@@ -166,7 +167,7 @@ describe('szyk i postawy', () => {
   }
 
   it('linia: włócznicy w pierwszym szeregu, łucznicy za nimi, wszyscy na różnych polach', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const c = openField(g), w = g.map.width;
     const spears = [0, 1, 2].map((i) => soldier(g, 0, 'spearman', c - 3 * w + i));
     const bows = [0, 1, 2].map((i) => soldier(g, 0, 'archer', c - 3 * w - 1 - i));
@@ -179,7 +180,7 @@ describe('szyk i postawy', () => {
   });
 
   it('rozkaz marszu zapamiętuje kierunek i formację', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const c = openField(g), w = g.map.width;
     const list = [0, 1, 2, 3].map((i) => soldier(g, 0, 'spearman', c - 2 * w + i - 2));
     step(g, [{ type: 'move', player: 0, ids: list.map((s) => s.id), x: c % w, y: Math.floor(c / w), face: 2, form: 1 }]);
@@ -190,7 +191,7 @@ describe('szyk i postawy', () => {
   });
 
   it('postawa „stój”: nie idzie za wrogiem, którego nie sięgnie', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const c = openField(g);
     const me = soldier(g, 0, 'spearman', c);
     soldier(g, 1, 'spearman', c + 4, { stance: 2 });
@@ -200,7 +201,7 @@ describe('szyk i postawy', () => {
   });
 
   it('postawa „atak”: idzie na wroga w zasięgu wzroku', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const c = openField(g);
     const me = soldier(g, 0, 'spearman', c);
     soldier(g, 1, 'spearman', c + 4, { stance: 2 });
@@ -210,7 +211,7 @@ describe('szyk i postawy', () => {
   });
 
   it('atak w marszu: po drodze bije wroga, a potem idzie dalej na miejsce', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const c = openField(g), w = g.map.width;
     const me = soldier(g, 0, 'spearman', c - 3);
     const foe = soldier(g, 1, 'spearman', c, { stance: 2, hp: 12 });
@@ -222,7 +223,7 @@ describe('szyk i postawy', () => {
   });
 
   it('oddział z łucznikami i włócznikami idzie wspólnym tempem', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const c = openField(g), w = g.map.width;
     const a = soldier(g, 0, 'spearman', c - 2 * w), b = soldier(g, 0, 'archer', c - 2 * w + 1);
     step(g, [{ type: 'move', player: 0, ids: [a.id, b.id], x: c % w, y: Math.floor(c / w) + 3 }]);
@@ -233,7 +234,7 @@ describe('szyk i postawy', () => {
 
 describe('drogi', () => {
   it('droga to najpierw plan: kosztuje od razu, a układa ją wolny chłop', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const keep = playerKeep(g, 0)!, w = g.map.width;
     const p = g.players[0]!;
     p.res[resIndex('wood')] = 50;
@@ -260,7 +261,7 @@ describe('walka z charakterem', () => {
     return s;
   };
   it('cios w plecy boli bardziej niż w twarz, z boku pośrodku', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     // obrońca patrzy na +y (face 0); atakujący z przodu (+y), z boku (+x) i z tyłu (−y)
     const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 });
     const front = mk(g, 0, 'spearman', 50, 51), side = mk(g, 0, 'spearman', 51, 50), back = mk(g, 0, 'spearman', 50, 49);
@@ -270,7 +271,7 @@ describe('walka z charakterem', () => {
     expect(b).toBeGreaterThan(sd);
   });
   it('tarcza łapie połowę strzały z przodu, z tyłu nie', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 });
     const fromFront = mk(g, 0, 'archer', 50, 54), fromBack = mk(g, 0, 'archer', 50, 46);
     const byId = new Map(g.soldiers.map((x) => [x.id, x]));
@@ -278,14 +279,14 @@ describe('walka z charakterem', () => {
     expect(hitDamage(g, fromBack, foe, byId, true)).toBeGreaterThan(UNITS_ATTACK_ARCHER);
   });
   it('szarża po rozbiegu podwaja pierwszy cios włócznika', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 });
     const a = mk(g, 0, 'spearman', 50, 51), b = mk(g, 0, 'spearman', 50, 51, { run: 30 });
     const byId = new Map(g.soldiers.map((x) => [x.id, x]));
     expect(hitDamage(g, b, foe, byId, false)).toBe(hitDamage(g, a, foe, byId, false) * 2);
   });
   it('z daleka łucznik chybia częściej niż z bliska, z wieży trafia lepiej', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     const s = mk(g, 0, 'archer', 50, 50);
     const rate = (dist: number, up = false): number => { let n = 0; s.up = up; for (let t = 0; t < 2000; t++) { g.tick = t; if (arrowHits(g, s, dist * FP)) n++; } s.up = false; return n / 2000; };
     expect(rate(1)).toBeGreaterThan(rate(6));
@@ -296,7 +297,7 @@ const UNITS_ATTACK_ARCHER = 7;
 
 describe('wrodzy chłopi', () => {
   it('rozkaz ataku na chłopa: żołnierz go dopada, a chłop ucieka albo się słabo broni', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     for (const p of g.players) p.bot = false;
     const u = g.units.find((x) => x.owner === 1)!;
     const tx = u.px >> 8, ty = u.py >> 8;
@@ -316,7 +317,7 @@ describe('wrodzy chłopi', () => {
   });
 
   it('uciekający chłop biegnie w przeciwną stronę niż napastnik, szybciej niż zwykle', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     for (const p of g.players) p.bot = false;
     // chłop, który nie jest odważny (ucieka)
     const u = g.units.find((x) => x.owner === 1 && hash2(x.id, 7, 0xbad) % 100 >= 33)!;
@@ -337,7 +338,7 @@ describe('wrodzy chłopi', () => {
   });
 
   it('na widok wrogiego żołnierza tchórz ucieka sam, a odważny staje twarzą do wroga', () => {
-    const g = createGame(7);
+    const g = clearBandits(createGame(7));
     for (const p of g.players) p.bot = false;
     const enemyUnits = g.units.filter((x) => x.owner === 1);
     const coward = enemyUnits.find((x) => hash2(x.id, 7, 0xbad) % 100 >= 33)!;

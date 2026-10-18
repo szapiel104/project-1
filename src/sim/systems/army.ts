@@ -10,6 +10,7 @@ import { FP, Phase, type Building, type Corpse, type GameState, type March, type
 import { BUILDINGS, footprint, towerBonus, workArea } from '../../data/buildings';
 import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
 import { dayPart } from './workers';
+import { robbed } from './bandits';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 
 /** Żołnierz stoi wysoko: na wieży albo na murach zamku (dalej widzi i strzela, wręcz go nie dosięgną) */
@@ -747,7 +748,7 @@ export function armySystem(g: GameState): void {
     const stance = s.stance ?? 0;
     if (stance && s.goal < 0 && !s.target && !s.path.length && (s.hold ?? -1) < 0) s.hold = tileOf(g, s);
     // ciężko ranny w walce cofa się za szyk (nie w postawie „stój”, nie z wieży, nie strażnik miejski)
-    if (!s.wounded && s.target && !def.guard && !def.ram && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) retreat(g, s, byId);
+    if (!s.wounded && s.target && !def.guard && !def.ram && !def.bandit && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) retreat(g, s, byId);
     // jak daleko od pilnowanego pola wolno mu odejść za wrogiem
     const leash = stance === 1 ? 6 : stance === 2 ? 0 : Infinity;
     const tooFar = (t: number): boolean => {
@@ -780,7 +781,7 @@ export function armySystem(g: GameState): void {
           }
         s.target = foe ? foe.id : 0;
         // ranny na widok wroga od razu ustępuje, zanim dostanie kolejny cios
-        if (foe && !def.guard && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) { retreat(g, s, byId); continue; }
+        if (foe && !def.guard && !def.bandit && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) { retreat(g, s, byId); continue; }
       }
       if (foe) {
         // atak w marszu: na widok wroga przerywa marsz (drogę do celu odnajdzie po walce)
@@ -797,7 +798,7 @@ export function armySystem(g: GameState): void {
             if (hit) {
               const dmg = hit === foe ? hitDamage(g, s, foe, byId, !!range) : Math.max(1, def.attack >> 1);
               hit.hp -= dmg;
-              if (hit.hp <= 0) { if (team(g, hit.owner) !== team(g, s.owner)) g.players[s.owner]!.stats.kills++; g.players[hit.owner]!.stats.lost++; }
+              if (hit.hp <= 0) { const k = g.players[s.owner], l = g.players[hit.owner]; if (k && team(g, hit.owner) !== team(g, s.owner)) k.stats.kills++; if (l) l.stats.lost++; } // zbóje nie mają pana: nikt im nie liczy
             }
             s.run = 0;
           }
@@ -849,7 +850,7 @@ export function armySystem(g: GameState): void {
               s.cd = def.cooldown;
               prey.hp = (prey.hp ?? 30) - def.attack;
               prey.wait = Math.max(prey.wait, 6);
-              if (prey.hp <= 0) { killPeasant(g, prey, s.owner); s.prey = 0; }
+              if (prey.hp <= 0) { robbed(g, s, prey); killPeasant(g, prey, s.owner); s.prey = 0; }
               else peasantReacts(g, prey, s, !!range);
             }
             continue;
@@ -1017,7 +1018,7 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
         const keep = BUILDINGS[b.type]!.id === 'keep';
         const owner = g.players[b.owner];
         ruin(g, b);
-        g.players[s.owner]!.stats.razed++;
+        const razer = g.players[s.owner]; if (razer) razer.stats.razed++;
         s.target = 0;
         if (keep && owner) owner.defeated = true;
       }

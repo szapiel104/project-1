@@ -13,6 +13,7 @@ import { Rng } from './rng';
 import { addBuilding, rockBehind } from './systems/placement';
 import { mineNear } from './systems/minecamp';
 import { spawnPeasant } from './systems/population';
+import { seedBandits } from './systems/bandits';
 
 /** Częstotliwość symulacji. Render interpoluje między tickami. */
 export const TICKS_PER_SECOND = 10;
@@ -45,6 +46,8 @@ export interface PlayerState {
   /** Tryb deweloperski: budynki stają od razu (false = zwykła budowa z noszeniem materiału) */
   instantBuild?: boolean;
   stats: { gathered: number; trained: number; kills: number; lost: number; built: number; razed: number };
+  /** Zbóje z lasu: ile napadów na naszych ludzi, ilu zabili, ile rudy i drewna zrabowali, ile obozów rozbiliśmy i jaki był ostatni łup */
+  bandit?: { raids: number; kills: number; robbed: number; razed: number; loot: number[] };
   /** Ilu strażników miejskich ma zamek (brak = jeszcze nie wystawieni; na start 6, poległych zastępują chłopi) */
   guards?: number;
   /** Rekrut straży szkolony w twierdzy: tick, w którym będzie gotowy (0/brak = nikt się nie szkoli) */
@@ -93,6 +96,10 @@ export interface Building {
   recruitAt?: number;
   /** Barak górników: tick ostatniego wozu (wóz rusza też z niepełnym ładunkiem, gdy długo żaden nie jechał) */
   cartAt?: number;
+  /** Obóz zbójów: tick, w którym dołączył ostatni nowy zbój (załoga odradza się co półtorej doby) */
+  spawnAt?: number;
+  /** Obóz zbójów: dzień ostatniego napadu (najwyżej jeden napad na dzień) */
+  raidDay?: number;
   /** Kopalnia: do którego ticku trwa alarm (wróg pod kopalnią — załoga uciekła i czeka w ukryciu) */
   threat?: number;
   /** Czy pochodnia przy budynku jest zapalona (zapalają ją ludzie o zmierzchu, gaśnie o świcie) */
@@ -275,6 +282,10 @@ export interface Soldier {
   lost?: number;
   /** Strażnik kopalni: id baraku, do którego należy (pilnuje go i eskortuje wóz z urobkiem); brak = zwykły */
   camp?: number;
+  /** Zbój: id obozu w lesie, z którego jest (-1 = obóz rozbity, ucieka za mapę); systems/bandits.ts */
+  den?: number;
+  /** Zbój na napadzie (goni ofiarę `prey`); brak = siedzi w obozie */
+  raid?: boolean;
 }
 
 /** Jeden zaplanowany marsz z kolejki rozkazów (Shift + prawy klik) albo punkt obchodu patrolu */
@@ -490,6 +501,8 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       devFortify(g, s.player, devWalls);
     }
   }
+  // obozy zbójów na polanach w puszczy (mapy z generatora 5); w grze pokojowej ich nie ma, jak wilków
+  if (level > 0) seedBandits(g);
   return g;
 }
 
@@ -716,7 +729,7 @@ export function stateHash(g: GameState): number {
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
-  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.camp ?? 0); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.lost ?? 0); add(s.path.length); for (const t of s.path) add(t); }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.camp ?? 0); add((s.den ?? 0) + 1); add(s.raid ? 1 : 0); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.lost ?? 0); add(s.path.length); for (const t of s.path) add(t); }
   for (const q of g.orders ?? []) { add(q.grp); add(q.owner); add(q.patrol ? 1 : 0); for (const m of q.steps) { add(m.tile); add(m.face ?? 9); add(m.form ?? 0); add(m.width ?? 0); add(m.amove ? 1 : 0); } }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }

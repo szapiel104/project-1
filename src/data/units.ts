@@ -27,6 +27,8 @@ export interface UnitDef {
   guard?: boolean;
   /** Taran: bije tylko w budynki (bramy, mury, zamek), na ludzi nie zwraca uwagi; strzały prawie go nie ranią */
   ram?: boolean;
+  /** Zbój z obozu w lesie: nikogo nie słucha, nie szkoli się go, prowadzi go systems/bandits.ts */
+  bandit?: boolean;
 }
 
 export const UNITS: readonly UnitDef[] = [
@@ -37,7 +39,14 @@ export const UNITS: readonly UnitDef[] = [
   { id: 'guard', name: 'u.guard', cost: {}, hp: 70, speed: 100, attack: 8, cooldown: 12, sight: 7, weapon: 'spear', shield: true, guard: true },
   // Taran: wóz z daszkiem i belką z kutą głowicą, pcha go chłop z koszar; wolny, ale rozbija bramy i mury (na końcu listy dla starych zapisów)
   { id: 'ram', name: 'u.ram', cost: { wood: 40, gold: 30 }, hp: 320, speed: 45, attack: 60, cooldown: 40, sight: 12, weapon: 'wood', ram: true },
+  // Zbój z obozu w puszczy: włócznia, skóry, bez tarczy; szybki i zaczepny, ale słabszy od wyszkolonego włócznika
+  { id: 'bandit', name: 'u.bandit', cost: {}, hp: 50, speed: 112, attack: 7, cooldown: 14, sight: 7, weapon: 'spear', bandit: true },
 ];
+
+/** Indeks zbója w UNITS */
+export const BANDIT_KIND = UNITS.findIndex((u) => u.bandit);
+/** „Właściciel” zbójów i ich obozów: nie ma takiego gracza, więc dla każdego gracza to wróg (osobna drużyna) */
+export const BANDITS = 200;
 
 /** Indeks strażnika miejskiego w UNITS */
 export const GUARD = UNITS.findIndex((u) => u.guard);

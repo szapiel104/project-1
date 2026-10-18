@@ -21,6 +21,7 @@ import { fireSystem } from './systems/fire';
 import { stoneWallSystem } from './systems/stonewalls';
 import { armySystem, orderAttack, orderMove, orderPatrol, queueMove, clearOrders, QUEUE_MAX, orderStance, train , orderDismount, orderGarrison, enlistSystem, setRally } from './systems/army';
 import { botSystem } from './systems/bot';
+import { banditSystem } from './systems/bandits';
 
 /** Komendy graczy. To jedyna droga, którą gracz (albo bot, albo sieć) wpływa na grę. */
 export type Command =
@@ -160,6 +161,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   enlistSystem(g);
   fireSystem(g);
   armySystem(g);
+  banditSystem(g);
   migrationSystem(g);
   travelSystem(g);
   caravanSystem(g);

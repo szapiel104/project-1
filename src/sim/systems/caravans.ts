@@ -1,7 +1,8 @@
 import { RULES } from '../../data/rules';
 import { RESOURCE_DEFS, RESOURCES } from '../../data/resources';
 import { findPath } from '../path';
-import { FP, keepCenter, playerKeep, storeCapacity, storeUsed, type Caravan, type GameState } from '../state';
+import { buildingById, FP, keepCenter, playerKeep, storeCapacity, storeUsed, type Caravan, type GameState } from '../state';
+import { BANDITS } from '../../data/units';
 
 /**
  * Wysyłanie surowców sojusznikowi (gra drużynowa). Nadawca oddaje towar od razu, z bramy jego zamku wyjeżdża
@@ -101,8 +102,11 @@ export function caravanSystem(g: GameState): void {
       const team = g.players[c.owner]?.team;
       const thief = g.soldiers.find((s) => g.players[s.owner]?.team !== team && s.hp > 0 && (s.px - c.px) ** 2 + (s.py - c.py) ** 2 <= grab2);
       if (thief) {
-        let got = deliver(g, thief.owner, c.res, c.amount);
-        for (const [r, n] of c.more ?? []) got += deliver(g, thief.owner, r, n);
+        // zbóje z lasu zabierają wóz do swojego obozu (łup leży tam, aż ktoś obóz rozbije)
+        const den = thief.owner === BANDITS && thief.den && thief.den > 0 ? buildingById(g, thief.den) : undefined;
+        const take = (r: number, n: number): number => { if (!den) return deliver(g, thief.owner, r, n); den.hold ??= []; den.hold[r] = (den.hold[r] ?? 0) + n; return n; };
+        let got = take(c.res, c.amount);
+        for (const [r, n] of c.more ?? []) got += take(r, n);
         note(g, c, true, thief.owner, got);
         release(guards);
         list.splice(i, 1);

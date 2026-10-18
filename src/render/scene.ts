@@ -35,7 +35,7 @@ import { enableShadowLayer } from './shadowlayer';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, WATCH_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
-import { TEAM_COLORS } from '../data/teams';
+import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
 import { peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
@@ -4572,7 +4572,8 @@ export class GameRenderer {
       }
       // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
       if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
-      const teamC = TEAM_COLORS[g.players[s.owner]?.team ?? 0] ?? 0x888888;
+      // zbój z lasu nie ma pana: skóry i brudne płótno zamiast barw drużyny
+      const teamC = g.players[s.owner] ? TEAM_COLORS[g.players[s.owner]!.team] ?? 0x888888 : BANDIT_COLOR;
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
       this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
@@ -4666,7 +4667,7 @@ export class GameRenderer {
       lay.setFromEuler(new THREE.Euler((-Math.PI / 2 + 0.08) * (this.calm ? 1 : ease), yaw, 0, 'YXZ'));
       sc.set(1.05 * FIG, 1.05 * FIG, 1.05 * FIG * (1 - age * 0.55));
       m.compose(new THREE.Vector3(fx - width / 2, y + (0.06 - age * 0.04) * (this.calm ? 1 : ease), fy - height / 2), lay, sc);
-      const team = TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
+      const team = body.owner >= 0 && !g.players[body.owner] ? BANDIT_COLOR : TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
       const rot = new THREE.Color(team).lerp(new THREE.Color(0x3b3226), 0.3 + age * 0.6).getHex();
       // każdy leży w swoim stroju: chłop, łucznik, strażnik miejski albo włócznik
       const ud = body.kind >= 0 ? UNITS[body.kind] : undefined;
