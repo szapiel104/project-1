@@ -56,6 +56,9 @@ void main() {
   #endif
   // daleko, tuż przed granicą widzenia kamery, chmura blednie zamiast być uciętą
   vFade = 1.0 - smoothstep(far * 0.62, far * 0.93, -c.z);
+  // tuż przy kamerze kłąb znika: wysoko odsunięta kamera przelatywała przez wielkie kłęby (promień do ~35)
+  // i jeden kłąb na chwilę zakrywał cały ekran — biało-beżowe mignięcie przy szybkim ruchu kamery
+  vFade *= smoothstep(s * 1.1, s * 2.4, distance(cameraPosition, center));
   gl_Position = projectionMatrix * c;
 }`;
 const FRAG = /* glsl */ `
