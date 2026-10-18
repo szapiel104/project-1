@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.30.3 — mgła bez kanciastych płyt (2026-10-18)
+
+- Ławice mgły przy ziemi nie są już widoczne jako płaskie, kanciaste prostokąty: obraz mgły zanika do zera przy brzegach, ławica siada nad najwyższym punktem terenu pod sobą i znika na stromiźnie (skraj gór, urwiska), zamiast wchodzić w zbocze prostą krawędzią
+- Pasek oparu przy skraju lasu i skał jest wyraźniejszy
+
 ## 0.30.2 — obozy zbójów widać (2026-10-18)
 
 - Na początku nowej gry wojewoda mówi, w którą stronę od zamku w puszczy obozują zbóje, z przyciskiem „Pokaż ▸”, który przenosi tam kamerę. Ten sam przycisk mają wiadomości o napadzie (pokazuje ofiarę) i o zabitym człowieku (pokazuje obóz); wiadomość z przyciskiem wisi dłużej (12 s)

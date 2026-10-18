@@ -36,6 +36,15 @@ function mistTexture(): THREE.Texture {
     x.fillStyle = g;
     x.fillRect(0, 0, 128, 128);
   }
+  // brzegi płytki do zera (owalnie): bez tego plamy wychodziły poza obrazek i było widać prosty, kanciasty prostokąt
+  const img = x.getImageData(0, 0, 128, 128);
+  for (let j = 0; j < 128; j++) for (let i = 0; i < 128; i++) {
+    const u = (i + 0.5) / 64 - 1, v = (j + 0.5) / 64 - 1;
+    const d = Math.sqrt(u * u + v * v);
+    const m = d >= 1 ? 0 : 1 - d * d * (3 - 2 * d);
+    img.data[(j * 128 + i) * 4 + 3] = Math.round(img.data[(j * 128 + i) * 4 + 3]! * m);
+  }
+  x.putImageData(img, 0, 0);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   return t;
@@ -291,8 +300,14 @@ export class Ambience {
         const x = o.focus.x + wrap(s.x + this.time * 0.35 * s.v - o.focus.x);
         const z = o.focus.z + wrap(s.z + this.time * 0.12 * s.v - o.focus.z);
         const d = Math.hypot(x - o.focus.x, z - o.focus.z);
-        const k = Math.max(0, Math.min(1, (d - 38) / 22));
-        p.set(x, o.ground(x, z) + 0.18 + (i % 3) * 0.08, z);
+        let k = Math.max(0, Math.min(1, (d - 38) / 22));
+        // płaska ławica nie może wchodzić w zbocze ani w skały: wysokość z kilku punktów pod nią,
+        // a na stromiźnie (skraj gór, urwisko) płynnie znika zamiast ciąć się o teren prostą krawędzią
+        const rr = s.s * 0.9;
+        const h0 = o.ground(x, z), h1 = o.ground(x + rr, z), h2 = o.ground(x - rr, z), h3 = o.ground(x, z + rr), h4 = o.ground(x, z - rr);
+        const hi = Math.max(h0, h1, h2, h3, h4), lo = Math.min(h0, h1, h2, h3, h4);
+        k *= Math.max(0, Math.min(1, (1.6 - (hi - lo)) / 1.0));
+        p.set(x, hi + 0.18 + (i % 3) * 0.08, z);
         q.setFromAxisAngle(Y, s.r + this.time * 0.01 * s.v);
         sc.set(s.s * 2.4 * k, 1, s.s * 0.8 * k);
         this.mist.setMatrixAt(i, M.compose(p, q, sc));

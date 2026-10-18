@@ -380,7 +380,7 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
       const c = cb[k]!;
       const open = 1 - Math.min(1, Math.max(0, (c - 0.12) / 0.4));
       const band = Math.exp(-(((c - 0.34) / 0.13) ** 2));
-      vall[k] = Math.min(1, vall[k]! * open * open + band * 0.5);
+      vall[k] = Math.min(1, vall[k]! * open * open + band * 0.9);
     }
   }
   const DP: number[] = [], DV: number[] = [], DI: number[] = [];
