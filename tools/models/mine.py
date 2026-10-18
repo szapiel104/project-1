@@ -81,6 +81,9 @@ for sx in (-1, 1):
 for sx in (-1, 1):
     b.poly('shell', 'rockDark', [fpt(sx * OX, 0), fpt(sx * OX, OY), (sx * OX, OY, KZ1 - 0.3), (sx * OX, 0, KZ1 - 0.3)], away=(sx * 3, 0.5, 1.0))
 b.poly('shell', 'rockDark', [fpt(-OX, OY), fpt(OX, OY), (OX, OY, KZ1 - 0.3), (-OX, OY, KZ1 - 0.3)], away=(0, 4, 1.0))
+# czeluść w otworze: z zewnątrz sztolnia ginie w mroku (jak wyjście widziane od środka), zamiast oświetlonej groty;
+# należy do garbu, więc znika razem z nim przy podglądzie wnętrza i w spacerze w środku
+b.box('shell', 'void', 2 * OX + 0.04, OY + 0.02, 0.03, 0, 0, KZ1 - 0.33)
 # rama portalu: dwa grube słupy i oczep z belki, zastrzały
 PX, PZ = KX + 0.1, 1.2
 for sx in (-1, 1):
