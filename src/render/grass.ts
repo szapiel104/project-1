@@ -161,19 +161,19 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       float dryAmt = clamp(smoothstep(0.9, 1.0, vDry) * 0.45 + smoothstep(0.7, 0.9, nM.g) * 0.3 + gAutumn * 1.2 + gBare - (1.0 - vDry) * gAutumn * 0.6, 0.0, 1.0);
       vec3 col = mix(bl.rgb, texture2D(tDry, vAUv).rgb, dryAmt);
       float gL = max(dot(gc, vec3(0.3, 0.59, 0.11)), 1e-3), cL = dot(col, vec3(0.3, 0.59, 0.11));
-      col = mix(col, cL * gc / gL, mix(0.5, 0.15, dryAmt));
+      col = mix(col, cL * gc / gL, mix(0.72, 0.15, dryAmt));
       // zdjęcie jest jaśniej oświetlone (miękkie niebo w Blenderze): jasność ściągamy do podłoża pod kępą, z lekkim prześwitem
       col *= mix(1.0, clamp(gL * 3.2 / max(cL, 1e-3), 0.35, 1.0), 0.75);
       col *= (0.84 + nM.b * 0.3 + (nS.r - 0.5) * 0.14) * mix(0.9, 1.08, vGTone);
       col *= 0.9;
-      diffuseColor.rgb *= col * mix(0.8, 1.06, smoothstep(0.0, 0.6, vGUv.y));
+      diffuseColor.rgb *= col * mix(0.8, 1.0, smoothstep(0.0, 0.6, vGUv.y));
       // z daleka mipmapa uśrednia cienkie źdźbła i maska spada pod próg: podbijamy ją z poziomem mipmapy
       float aLod = log2(max(max(fwidth(vAUv.x) * 2048.0, fwidth(vAUv.y) * 1024.0), 1.0));
       diffuseColor.a = bl.a * (1.0 + aLod * 0.45);
       diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;
     `).replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);');
   };
-  mat.customProgramCacheKey = () => 'grass-field-v3';
+  mat.customProgramCacheKey = () => 'grass-field-v4';
   mat.userData.season = 'grass';
   cloudShade(mat); // cienie chmur suną też po trawie
   const mesh = new THREE.Mesh(geo, mat);
