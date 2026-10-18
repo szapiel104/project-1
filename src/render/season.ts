@@ -168,9 +168,8 @@ const FRAG_BODY = (kind: SeasonKind): string => `
     ${kind === 'grass' ? `
     // trawa: jesienią płowieje, zimą szarzeje i niknie pod śniegiem
     float sG = dot(diffuseColor.rgb, vec3(0.33));
-    // wiosną soczyście zielona, latem pod koniec płowieje
-    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.95, 1.22, 0.7), uSpring * 0.7);
-    diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.6, 0.56, 0.3) * (0.55 + sG), uSummer * 0.3);
+    // wiosną i latem tak samo soczyście zielona (Michał, 18.10.2026: latem bez płowienia, jak wiosną)
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.95, 1.22, 0.7), clamp(uSpring + uSummer, 0.0, 1.0) * 0.7);
     // jesień: ta sama barwa co ziemia pod spodem (bez liści na źdźbłach — leżą na ziemi)
     diffuseColor.rgb = sAutumnGrass(diffuseColor.rgb, vSeasonPos.xz, uAutumn + uBare * 0.5, uBare, 0.0);
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.74, 0.78, 0.84), max(smoothstep(0.0, 0.1, uSnow * 1.25 - (0.92 - sPatch(vSeasonPos.xz))) * 0.85, uFrost * 0.35) * (1.0 - sTrail * 0.8));` : `
