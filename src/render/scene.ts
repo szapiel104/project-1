@@ -37,6 +37,7 @@ import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel,
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
+import { applyCrest, bannerGeometry, bannerMaterial, defaultCrest, flagTime } from './banners';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
 import { peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
@@ -329,6 +330,9 @@ export class GameRenderer {
   private towerIcons: THREE.Sprite[] = [];
   /** Flagi zbiórki koszar gracza (drzewce z chorągwią w jego barwach) */
   private rallyFlags: THREE.InstancedMesh | null = null;
+  private rallyCloth: THREE.InstancedMesh | null = null;
+  /** Herby graczy na chorągwiach (numer herbu z konta; brak = stały herb z numeru gracza) */
+  private crests: (number | null)[] = [];
   /** Wyjście nowego żołnierza z koszar: złote iskry w górę, błysk i „+1” (tylko wygląd) */
   private knownSoldiers: Set<number> | null = null;
   private sparks: { p: THREE.Vector3; v: THREE.Vector3; t: number; life: number }[] = [];
@@ -973,6 +977,13 @@ export class GameRenderer {
   /** budynek -> czas, od którego może znowu sypnąć kurzem po trafieniu (żeby seria ciosów nie robiła chmury) */
   private shake = new Map<number, number>();
 
+  /** Herby graczy do chorągwi na budynkach i flagach zbiórki (ustawiać przed setState) */
+  setCrests(list: (number | null)[]): void {
+    this.crests = list.slice();
+    if (this.rallyCloth) { this.scene.remove(this.rallyCloth); this.rallyCloth = null; }
+    if (this.rallyFlags) { this.scene.remove(this.rallyFlags); this.rallyFlags = null; }
+  }
+  private crestOf(player: number): number { return this.crests[player] ?? defaultCrest(player); }
   setState(state: GameState, waterLevel: number, rim: number, focusPlayer = 0): void {
     this.builtAt = 0; this.quickBuild.clear(); // budynki z wczytanej / nowej mapy stoją od razu, bez pokazu budowy
     this.me = focusPlayer;
@@ -3173,11 +3184,16 @@ export class GameRenderer {
     if (!this.rallyFlags) {
       const team = TEAM_COLORS[g.players[this.me]?.team ?? 0] ?? 0xa32a22;
       const geo = mergeGeometries([
-        tint(new THREE.CylinderGeometry(0.018, 0.022, 0.75, 5).translate(0, 0.375, 0), 0x5a3a20),
-        tint(new THREE.BoxGeometry(0.26, 0.17, 0.012).translate(0.13, 0.64, 0), team),
-        tint(new THREE.SphereGeometry(0.03, 6, 4).translate(0, 0.76, 0), 0xe9c766),
+        tint(new THREE.CylinderGeometry(0.014, 0.02, 0.8, 7).translate(0, 0.4, 0), 0x5a3a20),
+        tint(new THREE.SphereGeometry(0.024, 10, 8).translate(0, 0.81, 0), 0xe9c766),
+        tint(new THREE.ConeGeometry(0.014, 0.07, 6).translate(0, 0.86, 0), 0x4a4038),
         tint(new THREE.CylinderGeometry(0.12, 0.14, 0.03, 10).translate(0, 0.015, 0), 0x3b2a1a),
       ])!;
+      // płachta z herbem gracza, falująca jak na budynkach
+      this.rallyCloth = new THREE.InstancedMesh(bannerGeometry().clone().translate(0.016, 0.66, 0), bannerMaterial(team, this.crestOf(this.me)), 64);
+      this.rallyCloth.frustumCulled = false;
+      this.rallyCloth.castShadow = true;
+      this.scene.add(this.rallyCloth);
       this.rallyFlags = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }), 64);
       this.rallyFlags.frustumCulled = false;
       this.rallyFlags.castShadow = true;
@@ -3192,12 +3208,16 @@ export class GameRenderer {
         if (t < 0 || seen.has(t) || n >= 64) continue;
         seen.add(t);
         const x = (t % W) + 0.5, y = Math.floor(t / W) + 0.5;
-        m.makeRotationY(Math.sin(this.time * 1.7 + t) * 0.25).setPosition(x - W / 2, view.heightAt(x, y), y - H / 2);
+        m.makeRotationY(Math.sin(this.time * 0.9 + t) * 0.15).setPosition(x - W / 2, view.heightAt(x, y), y - H / 2);
+        this.rallyCloth!.setMatrixAt(n, m);
         this.rallyFlags.setMatrixAt(n++, m);
       }
     }
     this.rallyFlags.count = n;
     touch(this.rallyFlags);
+    this.rallyCloth!.count = n;
+    touch(this.rallyCloth!);
+    flagTime.value = this.time;
   }
 
   /** Znaczek nad wieżą, której łucznicy strzelają: czerwona tarcza ze skrzyżowanymi strzałami, pulsuje; gaśnie 3 s po ostatnim strzale */
@@ -3553,6 +3573,7 @@ export class GameRenderer {
       const def = BUILDINGS[b.type]!;
       const team = g.players[b.owner]?.team ?? 0;
       const mesh = this.models.building(def.id, TEAM_COLORS[team] ?? 0x888888);
+      applyCrest(mesh, TEAM_COLORS[team] ?? 0x888888, this.crestOf(b.owner));
       mesh.userData.fx = collectFx(mesh, isWindowMat);
       mergeStatic(mesh, def.id + ':' + team);
       // cienie chmur suną też po dachach i ścianach (te same plamy co na ziemi)

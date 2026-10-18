@@ -7,6 +7,7 @@ import { bump, grayPattern, normal, pattern } from './textures';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
 import { model } from './modelstore';
+import { bannerGeometry, bannerMaterial, flagTime } from './banners';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const KEEP_MODEL = model('keep');
 const TAVERN_MODEL = model('tavern');
@@ -496,7 +497,9 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   }
   // flagi łopoczą: płachta kołysze się wokół drzewca, każda w innym rytmie
   const clothes = (model.userData.cloths ??= (() => { const l: THREE.Object3D[] = []; model.traverse((o) => { if (o.name === 'flagcloth') l.push(o); }); return l; })()) as THREE.Object3D[];
-  for (let i = 0; i < clothes.length; i++) { const c = clothes[i]!; c.rotation.y = Math.sin(time * 1.7 + i * 1.3 + model.id) * 0.28; c.rotation.z = Math.sin(time * 2.3 + i) * 0.04; }
+  // płótno faluje w shaderze (banners.ts); tu tylko lekki ruch całej płachty na wietrze
+  flagTime.value = time;
+  for (let i = 0; i < clothes.length; i++) { const c = clothes[i]!; c.rotation.y = Math.sin(time * 0.9 + i * 1.3 + model.id) * 0.12; }
   const flame = named(model, 'flame');
   if (flame) { flame.visible = active; flame.scale.set(1, 0.8 + Math.abs(Math.sin(time * 9)) * 0.5, 1); }
   // życie na murach, niezależnie od tego, czy budynek jest otwarty
@@ -549,35 +552,28 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
 
 type Builder = (g: THREE.Group, team: THREE.Material, flag: THREE.Material) => void;
 
-/** Mała chorągiewka w barwie drużyny (gładka, bez wzoru dachówek) */
-/** Płachta flagi: płótno pofalowane na wietrze, przyczepione lewym brzegiem do drzewca, końce lekko opadają */
-let clothGeo: THREE.BufferGeometry | null = null;
-function flagCloth(): THREE.BufferGeometry {
-  if (clothGeo) return clothGeo;
-  const geo = new THREE.PlaneGeometry(0.3, 0.18, 12, 4).translate(0.15, 0, 0);
-  const p = geo.getAttribute('position');
-  for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i);
-    const k = x / 0.3;
-    p.setXYZ(i, x, y - k * k * 0.03, Math.sin(k * 7.5) * 0.025 * k + Math.sin(y * 18 + k * 4) * 0.004);
-  }
-  geo.computeVertexNormals();
-  clothGeo = geo;
-  return geo;
-}
-/** Flaga na drzewcu z gałką; cała grupa nazywa się 'flagpole' — znika, gdy zaglądamy do wnętrza budynku */
+/** Chorągiew na drzewcu: płachta z obszyciem i jaskółczym ogonem (herb właściciela dokłada scena — applyCrest),
+ *  drzewce z obręczą, złotą gałką i żelaznym grotem; cała grupa nazywa się 'flagpole' — znika, gdy zaglądamy do wnętrza */
+const poleGeo = new THREE.CylinderGeometry(0.011, 0.016, 0.58, 7);
+const ringGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.018, 8);
+const knobGeo = new THREE.SphereGeometry(0.019, 10, 8);
+const spikeGeo = new THREE.ConeGeometry(0.012, 0.06, 6);
 function pennant(g: THREE.Group, flag: THREE.Material, x: number, y: number, z: number): void {
   const fp = new THREE.Group();
   fp.name = 'flagpole';
   fp.position.set(x, y, z);
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.56, 6), M.woodDark);
-  pole.position.y = 0.28; fp.add(pole);
-  const knob = new THREE.Mesh(new THREE.SphereGeometry(0.022, 8, 6), M.gold);
-  knob.position.y = 0.57; fp.add(knob);
+  const pole = new THREE.Mesh(poleGeo, M.woodDark);
+  pole.position.y = 0.29; fp.add(pole);
+  const ring = new THREE.Mesh(ringGeo, M.iron);
+  ring.position.y = 0.02; fp.add(ring);
+  const knob = new THREE.Mesh(knobGeo, M.gold);
+  knob.position.y = 0.585; fp.add(knob);
+  const spike = new THREE.Mesh(spikeGeo, M.iron);
+  spike.position.y = 0.63; fp.add(spike);
   const cloth = new THREE.Group();
   cloth.name = 'flagcloth';
-  cloth.position.y = 0.44;
-  cloth.add(new THREE.Mesh(flagCloth(), flag));
+  cloth.position.set(0.006, 0.455, 0);
+  cloth.add(new THREE.Mesh(bannerGeometry(), bannerMaterial((flag as THREE.MeshStandardMaterial).color?.getHex() ?? 0xa32a22, null)));
   fp.add(cloth);
   g.add(fp);
 }

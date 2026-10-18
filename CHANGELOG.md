@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.30.7 — chorągwie z herbem gracza (2026-10-18)
+
+- Flagi na budynkach i flagi zbiórki koszar noszą herb właściciela: ten złożony w „Mój ród” (w meczu przez sieć — herb każdego gracza z jego konta), boty i gracze bez herbu dostają stały herb z numeru gracza
+- Nowa płachta: płótno w barwie drużyny z nierówno farbowaną wełną, złotym obszyciem, ciemnym rękawem na drzewce i jaskółczym ogonem; splot widać w świetle
+- Płachta faluje jak materiał (fala biegnie od drzewca do końca, każda flaga w innym rytmie), a nie obraca się sztywno jak deska
+- Drzewce z żelazną obręczą, złotą gałką i grotem
+
 ## 0.30.6 — ziemia w obozie zbójów bez równego koła (2026-10-18)
 
 - Obóz zbójów nie stoi już na płaskim, okrągłym placku ziemi z modelu: wydeptaną ziemię maluje teren — nierówna plama z falującym brzegiem, która miękko przechodzi w trawę, najmocniej wydeptana przy ognisku, z kępami niezdeptanej trawy i dwiema–trzema krótkimi dróżkami od ogniska w las

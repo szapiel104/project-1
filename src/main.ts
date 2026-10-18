@@ -526,6 +526,13 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   currentPreset = preset;
   currentSeedText = seedText;
   pending = [];
+  // herby na chorągwiach: gracze z kontem — ich herb z „Mój ród”, boty i gracze bez herbu — stały herb z numeru
+  const myCrest = netMe()?.avatar || null;
+  renderer.setCrests(game.players.map((_, i) => {
+    const slot = online?.slots[i];
+    if (slot?.kind === 'human') return slot.avatar || null;
+    return i === ME && !online ? myCrest : null;
+  }));
   renderer.setState(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME);
   hud.setSeed(seedText, preset);
   pick(null);
