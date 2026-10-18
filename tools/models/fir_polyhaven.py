@@ -95,7 +95,7 @@ def tri_geo(o):
                 pos.append((x, z, -y))
                 n = v.normal
                 nrm.append((n.x, n.z, -n.y))
-                uv.append((u[0], 1 - u[1]))
+                uv.append((u[0], u[1]))  # jak w Blenderze: tekstury gry (KTX2) są zapisane z odwróconą osią Y
             tri.append(seen[key])
         idx.append(tri)
     bm.free()

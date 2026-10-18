@@ -736,7 +736,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
           put((r >>> 3) % 2 === 0 ? leafy : pines, x, y, 0, edgeSize, 0.8);
           if ((r >>> 17) % 3 !== 0) put(bushes, x, y, 4, 0.8 + ((r >>> 21) & 3) * 0.1, 0.95);
           if ((r >>> 23) % 3 === 0) put(ferns, x, y, 6, 0.9, 0.95);
-          if ((r >>> 28) % 9 === 0) put(firs, x, y, 10, 0.55, 0.9);
+          if ((r >>> 28) % 14 === 0) put(firs, x, y, 10, 0.55, 0.9);
           continue;
         }
         const size = age === 0 ? 1.55 : age < 3 ? 1.25 : age < 12 ? 1 : age < 17 ? 0.7 : 0.45;
@@ -746,7 +746,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         // podszyt: paprocie w cieniu koron, tu i ówdzie opadła gałąź
         if ((r >>> 23) % 5 < 2) put(ferns, x, y, 6, 0.85 + ((r >>> 26) & 3) * 0.12, 0.95);
         if ((r >>> 27) % 9 === 0) put(deadwood, x, y, 8, 0.9 + ((r >>> 5) & 3) * 0.15, 0.9);
-        if ((r >>> 28) % 6 === 0) put(firs, x, y, 10, 0.6 + ((r >>> 9) & 3) * 0.06, 0.9);
+        if ((r >>> 28) % 9 === 0) put(firs, x, y, 10, 0.6 + ((r >>> 9) & 3) * 0.06, 0.9);
       } else if (t === Terrain.Stone) { put(rocks, x, y, 0, 1.1); if ((r >>> 6) & 1) put(pebbles, x, y, 5, 0.5, 0.9); }
       else if (t === Terrain.Iron) put(ores, x, y, 0, 1);
       // brzeg wody: kępy trzcin i pałek po obu stronach linii wody, na płyciźnie liście grzybieni
@@ -1164,14 +1164,14 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   windCrown(fernMat, 0.5, 'wind-fern', 0.05);
   plant(ferns, instanced(models.fern(), 0x5d8a34, ferns, undefined, false, fernMat, SMALL_LOD), null, false);
   plant(deadwood, instanced(models.deadwood(), 0x6b5038, deadwood, 'bark', false, undefined, SMALL_LOD), null, false);
-  // młode jodły: gałęzie z korą i prawdziwe igły (ok. 12 tys. trójkątów), więc tylko z bliska (jak paprocie), cień z prostego stożka
+  // młode jodły: gałęzie z korą i prawdziwe igły (ok. 12 tys. trójkątów), więc tylko z bliska (do 20 pól) i rzadko, cień z prostego stożka
   label = 'podszyt: młode jodły';
   const firBarkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, metalness: 0, map: firTexture('fir_bark'), normalMap: firTexture('fir_bark_n') });
   const firNeedleMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9, metalness: 0, side: THREE.DoubleSide, map: firTexture('fir_needles'), normalMap: firTexture('fir_needles_n') });
   windCrown(firBarkMat, 0.1, 'wind-fir-bark', 0.3, false);
   windCrown(firNeedleMat, 0.1, 'wind-fir', 0.3, false);
-  const FIR_LOD: Lod = { hide: 30, shadowGeo: firGeo('firShadow') };
-  plant(firs, instanced(firGeo('firTrunk'), 0xffffff, firs, undefined, false, firBarkMat, SMALL_LOD), instanced(firGeo('firCrown'), 0xffffff, firs, undefined, true, firNeedleMat, FIR_LOD), false);
+  const FIR_LOD: Lod = { hide: 20, shadowGeo: firGeo('firShadow') };
+  plant(firs, instanced(firGeo('firTrunk'), 0xffffff, firs, undefined, false, firBarkMat, FIR_LOD), instanced(firGeo('firCrown'), 0xffffff, firs, undefined, true, firNeedleMat, FIR_LOD), false);
   // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
   for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
