@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-## 0.30.5 — ziemia w obozie zbójów bez równego koła (2026-10-18)
+## 0.30.6 — ziemia w obozie zbójów bez równego koła (2026-10-18)
 
 - Obóz zbójów nie stoi już na płaskim, okrągłym placku ziemi z modelu: wydeptaną ziemię maluje teren — nierówna plama z falującym brzegiem, która miękko przechodzi w trawę, najmocniej wydeptana przy ognisku, z kępami niezdeptanej trawy i dwiema–trzema krótkimi dróżkami od ogniska w las
 ## 0.30.5 — pauza wycisza odgłosy świata (2026-10-18)
