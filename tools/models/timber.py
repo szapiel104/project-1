@@ -8,6 +8,9 @@ przeszkody i prostokąty do chodzenia dla spacerowicza. Karczma ma swoje kopie t
 import math
 
 
+OPEN = 0.45   # o ile uchylone okiennice (radiany od lica ściany)
+
+
 class Timber:
     def __init__(self, b, T=0.08):
         self.b, self.T = b, T
@@ -61,8 +64,14 @@ class Timber:
             b.box(group, 'woodDark', w, 0.02, 0.02, x, y0 + h / 2, zz - nz * 0.03)
             self.windows.append([round(x, 3), round(y0 + h / 2, 3), round(z, 3), 0, nz, round(w, 3), round(h, 3), group])
             if shutters:
+                # skrzydło na zawiasie przy krawędzi okna, uchylone o OPEN od ściany na zewnątrz
                 for side in (-1, 1):
-                    b.box(group, 'wood', w / 2, h + 0.02, 0.02, x + side * (w / 2 + w / 4 + 0.01), y0 - 0.01, zz + nz * 0.04, side * nz * 0.5)
+                    hx, hz = x + side * (w / 2 + 0.012), zz + nz * 0.022
+                    cx = hx + side * math.cos(OPEN) * w / 4
+                    cz = hz + nz * math.sin(OPEN) * w / 4
+                    b.box(group, 'wood', w / 2, h + 0.02, 0.02, cx, y0 - 0.01, cz, -side * nz * OPEN)
+                    for yy in (y0 + 0.03, y1 - 0.05):  # zawiasy z żelaza na ścianie
+                        b.box(group, 'iron', 0.03, 0.015, 0.012, hx, yy, zz + nz * 0.008)
         else:
             xx = x + nx * T / 2
             b.box(group, 'woodDark', 0.05, 0.03, w + 0.05, xx, y0 - 0.03, z)
@@ -72,7 +81,12 @@ class Timber:
             self.windows.append([round(x, 3), round(y0 + h / 2, 3), round(z, 3), nx, 0, round(w, 3), round(h, 3), group])
             if shutters:
                 for side in (-1, 1):
-                    b.box(group, 'wood', 0.02, h + 0.02, w / 2, xx + nx * 0.04, y0 - 0.01, z + side * (w / 2 + w / 4 + 0.01), -side * nx * 0.5)
+                    hx, hz = xx + nx * 0.022, z + side * (w / 2 + 0.012)
+                    cx = hx + nx * math.sin(OPEN) * w / 4
+                    cz = hz + side * math.cos(OPEN) * w / 4
+                    b.box(group, 'wood', 0.02, h + 0.02, w / 2, cx, y0 - 0.01, cz, side * nx * OPEN)
+                    for yy in (y0 + 0.03, y1 - 0.05):
+                        b.box(group, 'iron', 0.012, 0.015, 0.03, xx + nx * 0.008, yy, hz)
 
     # ---------- szachulec na licu ----------
     def frame_x(self, group, z, x0, x1, y0, y1, posts, braces=True, out=1, doors=()):

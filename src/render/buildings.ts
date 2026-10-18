@@ -135,7 +135,7 @@ const M = {
   ore: mat(0x8a4a2c), crust: mat(0xe2b06a),
   // magiczna ruda jak w Gothicu: skała z niebieskawym połyskiem, lekko świeci w ciemnej sztolni (żyły, hałdy, urobek w koszach)
   magicOre: oreMaterial(),
-  cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64), dust: mat(0xd8d3c6, 'soil'),
+  cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64, 'burlap'), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'thatch'),
   // skóry zwierząt na szałasach zbójów (ciemna, wytarta skóra z włosiem; dwa odcienie, żeby płaty się różniły)
   hide: mat(0x7a5a3e, 'burlap'), hideDark: mat(0x58402c, 'burlap'),

@@ -3,7 +3,7 @@ podkładach, zbiegające się lekko ku górze i sięgające aż pod dach; na dw�
 złącza okręcone liną. Na legarach pomost z desek wysunięty poza nogi, dookoła przedpiersie z pionowych desek
 z poręczą, w jednym rogu ławka (tu siada łucznik bez walki), kosz strzał i beczka z wodą, na słupie róg alarmowy.
 Nad pomostem dach czterospadowy ze strzechy w dwóch warstwach, na szczycie żerdź z proporcem. Od przodu (+z)
-drabina do klapy w pomoście.
+drabina oparta o krawędź pomostu, wejście przerwą w przedpiersiu między dwoma wyższymi słupkami.
 
 Łucznicy stoją na pomoście (gra: WATCH_TOWER_TOP = DECK). Wieża nie ma wnętrza: wszystko w 'base', dach w 'roof'.
 Pod wieżą zostaje wolne miejsce między nogami: gdy dochodzi do niej mur, gra stawia tam bale częstokołu.
@@ -88,66 +88,67 @@ for sx in (-1, 1):
             lash(b, 'base', (sx * h, y + 0.03, sz * h), (sx * (B1 - B0) / DECK, 1, sz * (B1 - B0) / DECK), r=LEG + 0.018, w=0.05)
 
 # ---------------- legary i pomost ----------------
-for x in (-0.42, 0.0, 0.42):
-    b.box('base', 'woodDark', 0.08, 0.07, 2 * OUT - 0.04, x, DECK - 0.11, 0)
+# legary wzdłuż z leżą na dwóch podciągach przy nogach, dookoła belki obrzeża — pod każdą krawędzią desek coś jest
 for z in (-B1, B1):
     b.box('base', 'woodDark', 2 * OUT + 0.02, 0.075, 0.09, 0, DECK - 0.19, z)
+for x in (-0.42, 0.0, 0.42):
+    b.box('base', 'woodDark', 0.08, 0.07, 2 * OUT - 0.04, x, DECK - 0.11, 0)
+for s in (-1, 1):
+    b.box('base', 'woodDark', 2 * OUT - 0.04, 0.07, 0.07, 0, DECK - 0.11, s * (OUT - 0.055))
+    b.box('base', 'woodDark', 0.07, 0.07, 2 * OUT - 0.18, s * (OUT - 0.055), DECK - 0.11, 0)
 NP = 9
-HATCH = (0.08, 0.42, OUT - 0.42, OUT - 0.08)   # klapa nad drabiną: x0, x1, z0, z1
 for i in range(NP):
     w = 2 * OUT / NP
     x = -OUT + (i + 0.5) * w
-    # deski różnej długości i lekko przesunięte, żeby krawędź pomostu nie była jak od linijki
-    ext = 0.03 * math.sin(i * 2.3)
-    z0, z1 = -OUT - ext, OUT + 0.02 * math.cos(i * 1.7)
-    mat = 'plank' if i % 3 else 'wood'
-    if HATCH[0] < x < HATCH[1]:
-        b.box('base', mat, w - 0.012, 0.035, HATCH[2] - z0, x, DECK - 0.04, (z0 + HATCH[2]) / 2)
-        b.box('base', mat, w - 0.012, 0.035, z1 - HATCH[3], x, DECK - 0.04, (HATCH[3] + z1) / 2)
-    else:
-        b.box('base', mat, w - 0.012, 0.035, z1 - z0, x, DECK - 0.04, (z0 + z1) / 2)
-# ciemny otwór klapy i odchylone skrzydło klapy (oparte o przedpiersie)
-b.box('base', 'dark', HATCH[1] - HATCH[0], 0.01, HATCH[3] - HATCH[2], (HATCH[0] + HATCH[1]) / 2, DECK - 0.13, (HATCH[2] + HATCH[3]) / 2)
-b.box('base', 'woodDark', HATCH[1] - HATCH[0] - 0.02, HATCH[3] - HATCH[2] - 0.02, 0.03,
-      (HATCH[0] + HATCH[1]) / 2, DECK, HATCH[2] - 0.03, tilt=-0.25)
+    # końce desek nierówne, ale nigdy krótsze niż obrzeże (żadna deska przedpiersia nie wisi nad pustką)
+    z0, z1 = -OUT - 0.015 * abs(math.sin(i * 2.3)), OUT + 0.015 * abs(math.cos(i * 1.7))
+    b.box('base', 'plank' if i % 3 else 'wood', w - 0.008, 0.035, z1 - z0, x, DECK - 0.04, (z0 + z1) / 2)
 
-# ---------------- przedpiersie: pionowe deski z poręczą, róg pod daszkiem ----------------
-WALL = 0.03
-IN = OUT - 0.02
+# ---------------- przedpiersie: słupki, pionowe deski, poręcz na wierzchu ----------------
+# z przodu przerwa nad drabiną (wejście na pomost), obramowana dwoma wyższymi słupkami
+LX, GAP = 0.25, 0.19          # oś drabiny i połowa szerokości wejścia
+IN = OUT - 0.02               # lico desek przedpiersia
+BT = 0.03                     # grubość desek
+PIN = IN - BT / 2 - 0.028     # słupki od środka, przytulone do desek
+PAR_TOP = DECK + PAR
+posts = {0: [-PIN, -0.27, LX - GAP - 0.03, LX + GAP + 0.03, PIN], 1: [-PIN, -0.27, 0.27, PIN],
+         2: [-PIN, 0.0, PIN], 3: [-PIN, 0.0, PIN]}
+for side, fs in posts.items():
+    for f in fs:
+        if side == 0:
+            x, z = f, PIN
+        elif side == 1:
+            x, z = f, -PIN
+        elif side == 2:
+            x, z = PIN, f
+        else:
+            x, z = -PIN, f
+        tall = side == 0 and abs(abs(f - LX) - GAP - 0.03) < 0.01
+        log(b, 'base', 'bark', (x, DECK - 0.01, z), (x, PAR_TOP + (0.12 if tall else 0.035), z), r=0.028, seg=6)
 for side in range(4):
-    n = 11
+    n = 13
     for i in range(n):
         f = -IN + (i + 0.5) * 2 * IN / n
-        hh = PAR + 0.025 * math.sin(i * 1.9 + side)
-        w = 2 * IN / n - 0.016
-        if side == 0 and HATCH[0] - 0.02 < f < HATCH[1] + 0.02:
-            continue  # przejście z drabiny na pomost
+        w = 2 * IN / n - 0.006
+        if side == 0 and abs(f - LX) < GAP + w / 2:
+            continue
+        hh = PAR - 0.012 * abs(math.sin(i * 1.9 + side))   # wierzchy nierówne, ale zawsze pod poręczą
         if side == 0:
-            b.box('base', 'wood', w, hh, WALL, f, DECK, IN)
+            b.box('base', 'wood', w, hh, BT, f, DECK - 0.005, IN)
         elif side == 1:
-            b.box('base', 'wood', w, hh, WALL, f, DECK, -IN)
+            b.box('base', 'wood', w, hh, BT, f, DECK - 0.005, -IN)
         elif side == 2:
-            b.box('base', 'wood', WALL, hh, w, IN, DECK, f)
+            b.box('base', 'wood', BT, hh, w, IN, DECK - 0.005, f)
         else:
-            b.box('base', 'wood', WALL, hh, w, -IN, DECK, f)
-    # poręcz z żerdzi na wierzchu i listwa od środka
-    R = IN - 0.04
-    if side == 0:
-        log(b, 'base', 'bark', (-IN, DECK + PAR + 0.04, IN), (HATCH[0] - 0.02, DECK + PAR + 0.04, IN), r=0.025, seg=6)
-        log(b, 'base', 'bark', (HATCH[1] + 0.02, DECK + PAR + 0.04, IN), (IN, DECK + PAR + 0.04, IN), r=0.025, seg=6)
-        b.box('base', 'woodDark', 2 * IN - 0.1, 0.05, 0.025, 0, DECK + PAR * 0.45, R + 0.0, )
-    elif side == 1:
-        log(b, 'base', 'bark', (-IN, DECK + PAR + 0.04, -IN), (IN, DECK + PAR + 0.04, -IN), r=0.025, seg=6)
-        b.box('base', 'woodDark', 2 * IN - 0.1, 0.05, 0.025, 0, DECK + PAR * 0.45, -R)
-    elif side == 2:
-        log(b, 'base', 'bark', (IN, DECK + PAR + 0.04, -IN), (IN, DECK + PAR + 0.04, IN), r=0.025, seg=6)
-        b.box('base', 'woodDark', 0.025, 0.05, 2 * IN - 0.1, R, DECK + PAR * 0.45, 0)
-    else:
-        log(b, 'base', 'bark', (-IN, DECK + PAR + 0.04, -IN), (-IN, DECK + PAR + 0.04, IN), r=0.025, seg=6)
-        b.box('base', 'woodDark', 0.025, 0.05, 2 * IN - 0.1, -R, DECK + PAR * 0.45, 0)
-# słupki przedpiersia przy klapie
-for x in (HATCH[0] - 0.03, HATCH[1] + 0.03):
-    log(b, 'base', 'bark', (x, DECK, IN), (x, DECK + PAR + 0.08, IN), r=0.026, seg=6)
+            b.box('base', 'wood', BT, hh, w, -IN, DECK - 0.005, f)
+# poręcz z żerdzi leży na deskach i słupkach (wpuszczona o włos w ich wierzch)
+RY = PAR_TOP + 0.018
+RZ = IN - 0.012
+log(b, 'base', 'bark', (-IN, RY, -RZ), (IN, RY, -RZ), r=0.026, seg=6)
+log(b, 'base', 'bark', (RZ, RY, -IN), (RZ, RY, IN), r=0.026, seg=6)
+log(b, 'base', 'bark', (-RZ, RY, -IN), (-RZ, RY, IN), r=0.026, seg=6)
+log(b, 'base', 'bark', (-IN, RY, RZ), (LX - GAP - 0.03, RY, RZ), r=0.026, seg=6)
+log(b, 'base', 'bark', (LX + GAP + 0.03, RY, RZ), (IN, RY, RZ), r=0.026, seg=6)
 
 # ---------------- na pomoście: ławka, kosz strzał, beczka z wodą, róg ----------------
 # ławka w lewym przednim rogu (tam siada łucznik bez walki, ok. (-0.42, 0.38))
@@ -171,12 +172,14 @@ for y in (DECK + 0.04, DECK + 0.17):
 b.prism('base', 'dark', 0.09, 0.09, 0.005, WX, DECK + 0.218, WZ, seg=10)
 # róg alarmowy na rzemieniu przy prawym przednim słupie
 HX, HZ = B1 - 0.01, B1 + 0.09
-b.box('base', 'rope', 0.008, 0.12, 0.008, HX, DECK + 0.5, HZ)
+# kołek wbity w słup i rzemień, na którym wisi róg
+log(b, 'base', 'woodDark', (B1 - 0.01, DECK + 0.62, B1 + 0.04), (HX, DECK + 0.62, HZ + 0.015), r=0.012, seg=5)
+log(b, 'base', 'rope', (HX, DECK + 0.625, HZ + 0.005), (HX + 0.02, DECK + 0.5, HZ + 0.02), r=0.005, seg=4, ends='rope')
 # wygięty róg wołu: odcinki po łuku, coraz grubsze ku czaszy, okuta czasza
 pts = []
 for k in range(7):
     a = k / 6 * 1.9
-    pts.append((HX + 0.02, DECK + 0.5 - math.sin(a) * 0.09, HZ + 0.02 + (1 - math.cos(a)) * 0.06 + k * 0.012))
+    pts.append((HX + 0.02 - (1 - math.cos(a)) * 0.06 - k * 0.012, DECK + 0.5 - math.sin(a) * 0.09, HZ + 0.02))  # róg wygina się do środka pomostu, nie przez przedpiersie
 for k in range(6):
     r0, r1 = 0.006 + k * 0.0045, 0.006 + (k + 1) * 0.0045
     log(b, 'base', 'white', pts[k], pts[k + 1], r=r0, r1=r1, seg=7, ends='white')
@@ -207,17 +210,20 @@ for side in (1, -1):  # proporzec z dwóch warstw, żeby był widoczny z obu str
     b.box('flagpole', 'flag', 0.3, 0.14, 0.006, 0.16, APEX + 0.36, side * 0.004)
 
 # ---------------- drabina od przodu ----------------
-LX = (HATCH[0] + HATCH[1]) / 2
-TOPZ = HATCH[3] - 0.02
-FOOTZ = 0.99
+# oparta o krawędź pomostu w przerwie przedpiersia; żerdzie wystają nad pomost jako uchwyty przy wchodzeniu
+FOOTZ, TOPY = 1.0, DECK + 0.36
+EDGE = OUT + 0.022            # krawędź pomostu, o którą opiera się drabina
+TOPZ = FOOTZ - (FOOTZ - EDGE) * TOPY / (DECK - 0.03)
+b.box('base', 'stoneDark', 0.4, 0.04, 0.12, LX, 0.0, FOOTZ, bottom=False)      # płaski kamień pod stopami drabiny
 for sx in (-1, 1):
-    log(b, 'base', 'bark', (LX + sx * 0.13, 0.0, FOOTZ), (LX + sx * 0.13, DECK + 0.32, TOPZ - 0.03), r=0.022, seg=6)
-n = 8
+    log(b, 'base', 'bark', (LX + sx * 0.14, 0.04, FOOTZ), (LX + sx * 0.14, TOPY, TOPZ), r=0.024, seg=6)
+    # żerdzie przywiązane do słupków wejścia
+    lash(b, 'base', (LX + sx * 0.14, DECK + 0.2, FOOTZ - (FOOTZ - EDGE) * (DECK + 0.2) / (DECK - 0.03)), (0, 1, -0.1), r=0.034, w=0.03)
+n = 9
 for k in range(n):
-    f = (k + 0.6) / (n + 0.4)
-    y = (DECK - 0.05) * f
-    z = FOOTZ + (TOPZ - FOOTZ) * (y / (DECK + 0.32))
-    log(b, 'base', 'wood', (LX - 0.14, y, z), (LX + 0.14, y, z), r=0.015, seg=5)
+    y = 0.22 + k * (DECK - 0.3) / (n - 1)
+    z = FOOTZ - (FOOTZ - EDGE) * y / (DECK - 0.03)
+    log(b, 'base', 'wood', (LX - 0.155, y, z), (LX + 0.155, y, z), r=0.016, seg=5)
 
 VIEWS = [
     ['wieża od drabiny (oczy chłopa)', [0.5, 0.5, 2.8], [0, 1.3, 0], ['base', 'roof'], 24],

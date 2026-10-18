@@ -75,16 +75,27 @@ for sz in (-1, 1):
     lash(b, 'base', (0, 0.43, sz * PZ), (0, 1, 0), r=0.048, w=0.03)
 # wał: gruby walec między słupami, na nim nawinięta lina (kilka zwojów), korba po stronie +z wysunięta do przodu
 log(b, 'base', 'wood', (0, AX, -PZ - 0.05), (0, AX, PZ + 0.07), r=0.045, seg=10, twist=0.2)
-for k in range(5):
-    z = -0.1 + k * 0.045
-    log(b, 'base', 'rope', (0, AX, z - 0.017), (0, AX, z + 0.017), r=0.056, seg=10)
+# lina nawinięta spiralnie (jeden ciągły zwój, nie osobne krążki): odcinki po linii śrubowej wokół wału
+RR = 0.045 + 0.009                 # środek liny nad powierzchnią wału
+TURNS, PER, PITCH = 6, 12, 0.021
+helix = []
+for k in range(TURNS * PER + PER // 4 + 1):   # ćwierć obrotu więcej: lina schodzi z boku wału, pionowo w dół
+    a = 2 * math.pi * k / PER
+    helix.append((math.sin(a) * RR, AX + math.cos(a) * RR, -0.07 + PITCH * k / PER))
+for k in range(len(helix) - 1):
+    p0, p1 = helix[k], helix[k + 1]
+    # odcinki zachodzą na siebie o włos, żeby zwój był ciągły
+    q1 = tuple(p1[i] + (p1[i] - p0[i]) * 0.08 for i in range(3))
+    log(b, 'base', 'rope', p0, q1, r=0.009, seg=5, ends='rope')
 # korba: ramię i rękojeść
 log(b, 'base', 'iron', (0, AX, PZ + 0.07), (0, AX, PZ + 0.1), r=0.012, seg=6)
 log(b, 'base', 'woodDark', (0, AX, PZ + 0.1), (0.13, AX - 0.08, PZ + 0.1), r=0.016, seg=6)
 log(b, 'base', 'woodDark', (0.13, AX - 0.08, PZ + 0.1), (0.13, AX - 0.08, PZ + 0.2), r=0.018, seg=6)
 # lina z wału do wiadra wiszącego nad otworem
 BY = 0.4
-log(b, 'base', 'rope', (0, AX - 0.05, 0.0), (0, BY + 0.13, 0.0), r=0.006, seg=5, ends='rope')
+# lina schodzi z ostatniego zwoju do pałąka wiadra
+ZE = helix[-1][2]
+log(b, 'base', 'rope', (RR, AX, ZE), (RR, BY + 0.11 + 0.058, ZE), r=0.006, seg=5, ends='rope')
 
 
 def bucket(group, x, y, z, r=0.07, h=0.11, handle=True):
@@ -102,7 +113,7 @@ def bucket(group, x, y, z, r=0.07, h=0.11, handle=True):
                 (x + math.cos(a1) * r * 0.95, y + h + math.sin(a1) * 0.06, z), r=0.005, seg=4, ends='iron')
 
 
-bucket('base', 0, BY, 0.0)
+bucket('base', RR, BY, ZE)
 bucket('base', 0.2, RIM, -0.16, r=0.062, h=0.1, handle=False)
 
 # ---------------- daszek dwuspadowy z desek ----------------
@@ -126,11 +137,16 @@ b.box('base', 'woodDark', 0.4, 0.05, 0.06, 0, TOP - 0.04, PZ)
 # ---------------- koryto i mokre kamienie ----------------
 TX, TZ = 0.0, -0.0
 # koryto wydrążone z pnia przy krawędzi pola (-x)
-CX = -0.4
-b.box('base', 'woodDark', 0.13, 0.11, 0.5, CX, 0.0, 0.05)
-b.box('base', 'water', 0.09, 0.005, 0.44, CX, 0.105, 0.05)
-for z in (-0.17, 0.27):
-    b.box('base', 'iron', 0.135, 0.02, 0.02, CX, 0.07, z)
+# koryto puste w środku: dno i cztery ścianki, woda wyraźnie poniżej brzegu (tafla w tej samej płaszczyźnie co brzeg migała)
+CX, CZ, CW, CL, CH, CT = -0.4, 0.05, 0.13, 0.5, 0.11, 0.022
+b.box('base', 'woodDark', CW, 0.03, CL, CX, 0.0, CZ)                                   # dno
+for s_ in (-1, 1):
+    b.box('base', 'woodDark', CT, CH, CL, CX + s_ * (CW / 2 - CT / 2), 0.0, CZ)          # boki
+    b.box('base', 'woodDark', CW - 2 * CT - 0.002, CH, CT, CX, 0.0, CZ + s_ * (CL / 2 - CT / 2))  # czoła
+b.poly('base', 'water', [(CX - CW / 2 + CT, 0.08, CZ - CL / 2 + CT), (CX + CW / 2 - CT, 0.08, CZ - CL / 2 + CT),
+                         (CX + CW / 2 - CT, 0.08, CZ + CL / 2 - CT), (CX - CW / 2 + CT, 0.08, CZ + CL / 2 - CT)], away=(CX, -1, CZ))
+for z in (CZ - 0.2, CZ + 0.2):
+    b.box('base', 'iron', CW + 0.012, 0.02, 0.02, CX, 0.06, z)
 for (x, z, r) in ((0.3, 0.22, 0.04), (0.34, -0.12, 0.035), (-0.18, 0.36, 0.03), (0.15, 0.4, 0.028)):
     b.prism('base', 'stoneDark', r, r * 0.7, r * 0.6, x, 0.0, z, seg=6, phase=x * 7)
 

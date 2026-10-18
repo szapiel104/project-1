@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.30.1 — poprawki wieży, studni, cechu i okiennic (2026-10-18)
+
+- Wieża strażnicza: wejście jak w prawdziwej strażnicy — drabina oparta o krawędź pomostu, przerwa w przedpiersiu między dwoma wyższymi słupkami (bez klapy, przez którą drabina szła przez belki); przedpiersie na słupkach, poręcz leży na deskach, pod każdą krawędzią pomostu belka obrzeża; róg wisi na kołku wbitym w słup
+- Studnia: lina nawinięta na wał jednym zwojem po spirali (zamiast pięciu krążków) i schodzi pionowo do pałąka wiadra; koryto puste w środku, woda poniżej brzegu — koniec z mruganiem tafli
+- Lina we wszystkich budynkach dostała teksturę splotu
+- Cech inżynierów: wiadra z pałąkami, stojak obok okna, a nie przed nim; beczkowóz z osią przytwierdzoną do ramy i hołoblami opartymi o ziemię (dyszel nie wisi już w powietrzu)
+- Okiennice we wszystkich domach z szachulca (chata, piekarnia, koszary, farma, warsztaty, cech) otwierają się na zawiasach przy krawędzi okna, z okuciami; wcześniej obracały się wokół środka i w stronę ściany, przez co wyglądały na krzywe
+
 ## 0.30.0 — leśniczy: las odrasta (2026-10-18)
 
 - Nowy budynek w kategorii Przemysł: **chata leśniczego** (2×2, 20 drewna). Leśniczy sadzi młode drzewka na wolnej łące w swoim terenie (6 pól wokół chaty, widać go po kliknięciu), najchętniej przy skraju lasu i na porębach; omija drogi, leśne ścieżki, wodę i miejsca tuż przy budynkach

@@ -127,40 +127,55 @@ for (lx, lz, r) in ((-0.06, -0.04, 0.05), (0.06, 0.03, 0.045), (0.0, 0.06, 0.04)
     b.crystal('base', 'rock', px, 0.25, pz, r, seed=lx * 9 + lz, sy=0.75)
 
 # ---------------- sprzęt przeciwpożarowy (prawa strona) ----------------
-# beczkowóz: beczka leżąca na ramie, dwa koła, dyszel
+# beczkowóz: beczka leżąca na ramie, dwa koła, hołoble
 FX, FZ = 0.76, 0.74
 b.box('base', 'woodDark', 0.07, 0.04, 0.5, FX - 0.1, 0.16, FZ)
 b.box('base', 'woodDark', 0.07, 0.04, 0.5, FX + 0.1, 0.16, FZ)
 for sx in (-1, 1):
     b.wheel('base', FX + sx * 0.17, 0.12, FZ, 0.12, t=0.035, rot=0.0, seg=12)
 log(b, 'base', 'iron', (FX - 0.2, 0.12, FZ), (FX + 0.2, 0.12, FZ), r=0.015, seg=6, ends='iron')
-# beczka: klepki z obręczami, oś wzdłuż z
+# klocki osi: łączą oś z ramą (rama leży na nich, nic nie wisi w powietrzu)
+for sx in (-1, 1):
+    b.box('base', 'woodDark', 0.07, 0.06, 0.08, FX + sx * 0.1, 0.105, FZ)
+# beczka: klepki z obręczami, oś wzdłuż z, leży w siodłach na ramie
 log(b, 'base', 'wood', (FX, 0.3, FZ - 0.2), (FX, 0.3, FZ + 0.2), r=0.13, seg=12, ends='woodDark')
 for z in (FZ - 0.15, FZ, FZ + 0.15):
     log(b, 'base', 'iron', (FX, 0.3, z - 0.012), (FX, 0.3, z + 0.012), r=0.137 if abs(z - FZ) > 0.01 else 0.14, seg=12, ends='iron')
-b.prism('base', 'woodDark', 0.025, 0.025, 0.04, FX, 0.43, FZ, seg=6)
-# dyszel do przodu (żeby beczkowóz było widać od drogi)
-log(b, 'base', 'woodDark', (FX, 0.17, FZ + 0.25), (FX - 0.02, 0.06, FZ + 0.25 + 0.22 * 0.9), r=0.02, seg=5)
+for z in (FZ - 0.17, FZ + 0.17):
+    b.box('base', 'woodDark', 0.27, 0.05, 0.05, FX, 0.18, z)
+b.prism('base', 'woodDark', 0.025, 0.025, 0.04, FX, 0.425, FZ, seg=6)
+# hołoble: przedłużenia ramy do przodu, opuszczone końcami na ziemię, z poprzeczką do ciągnięcia
+for sx in (-1, 1):
+    log(b, 'base', 'woodDark', (FX + sx * 0.1, 0.18, FZ + 0.22), (FX + sx * 0.085, 0.025, FZ + 0.34), r=0.018, seg=5)
+log(b, 'base', 'wood', (FX - 0.1, 0.035, FZ + 0.32), (FX + 0.1, 0.035, FZ + 0.32), r=0.016, seg=5)
 t.block(FX - 0.22, FX + 0.22, FZ - 0.26, FZ + 0.26)
-# stojak z wiadrami pod prawą ścianą warsztatu
-RX = X1 + 0.13
-for z in (-0.5, 0.25):
-    log(b, 'base', 'woodDark', (RX, 0.0, z), (RX, 0.62, z), r=0.022, seg=6)
-log(b, 'base', 'woodDark', (RX, 0.55, -0.55), (RX, 0.55, 0.3), r=0.018, seg=6)
-
-
-def bucket(x, y, z, r=0.055, h=0.09):
+# wiadra: pałąk z żelaza, wiszą na sznurkach zawiązanych na pałąku; stojak obok okna, nie przed nim
+def bucket(x, y, z, r=0.045, h=0.08, handle=True):
     b.prism('base', 'wood', r * 0.8, r, h, x, y, z, seg=9, top=False)
     b.prism('base', 'dark', r * 0.85, r * 0.85, 0.004, x, y + h - 0.02, z, seg=9)
     b.prism('base', 'wood', r + 0.004, r + 0.004, 0.01, x, y + h - 0.01, z, seg=9)
     b.prism('base', 'iron', r * 0.86 + 0.006, r * 0.9 + 0.006, 0.012, x, y + 0.015, z, seg=9, top=False)
+    if handle:  # pałąk w płaszczyźnie z (wzdłuż stojaka)
+        for k in range(6):
+            a0, a1 = math.pi * k / 6, math.pi * (k + 1) / 6
+            log(b, 'base', 'iron', (x, y + h + math.sin(a0) * 0.045, z + math.cos(a0) * r * 0.95),
+                (x, y + h + math.sin(a1) * 0.045, z + math.cos(a1) * r * 0.95), r=0.004, seg=4, ends='iron')
+    return y + h + 0.045          # wierzch pałąka
 
 
-for k, z in enumerate((-0.42, -0.24, -0.06, 0.12)):
-    log(b, 'base', 'rope', (RX, 0.55, z), (RX, 0.43, z), r=0.005, seg=4, ends='rope')
-    bucket(RX, 0.33, z)
-bucket(RX + 0.04, 0.0, 0.33)
-t.block(RX - 0.06, RX + 0.06, -0.55, 0.36)
+RX = X1 + 0.12
+RZ0, RZ1 = 0.15, 0.4              # okno w prawej ścianie z okiennicami sięga do z ≈ 0,14
+for z in (RZ0, RZ1):
+    log(b, 'base', 'woodDark', (RX, 0.0, z), (RX, 0.6, z), r=0.02, seg=6)
+log(b, 'base', 'woodDark', (RX, 0.56, RZ0 - 0.03), (RX, 0.56, RZ1 + 0.03), r=0.017, seg=6)
+for z in (0.225, 0.325):
+    top = bucket(RX, 0.36, z)
+    log(b, 'base', 'rope', (RX, 0.56 - 0.012, z), (RX, top - 0.003, z), r=0.004, seg=4, ends='rope')
+# dwa wiadra odstawione na ziemię pod tylnym rogiem ściany (pod oknem nic nie wisi)
+bucket(RX + 0.02, 0.0, -0.47)
+bucket(RX - 0.01, 0.0, -0.35, handle=False)
+t.block(RX - 0.06, RX + 0.06, RZ0 - 0.04, RZ1 + 0.04)
+t.block(RX - 0.06, RX + 0.07, -0.53, -0.29)
 # bosak i drabina oparte o tylną ścianę
 log(b, 'base', 'bark', (0.42, 0.0, Z0 - 0.12), (0.5, 1.02, Z0 - 0.015), r=0.016, seg=5)
 b.box('base', 'iron', 0.08, 0.02, 0.015, 0.5, 1.0, Z0 - 0.02)
