@@ -36,6 +36,12 @@ export const RULES = {
   /** Koszt kroku (w %) bez drogi: po leśnej ścieżce taniej, przez gęsty las drożej — chłopi wybierają ścieżki */
   trailPathCost: 82,
   forestPathCost: 125,
+  /** Leśniczy: ile ticków rośnie drzewko do pełnego lasu (dwa dni gry; zimą wzrost stoi) */
+  saplingTicks: 7200,
+  /** Leśniczy: ile ticków sadzi jedno drzewko */
+  plantTicks: 60,
+  /** Leśniczy: najwięcej rosnących naraz drzewek na jedną chatę (żeby nie zarósł całej łąki) */
+  foresterSaplings: 14,
   /** Ile razy można wydobyć surowiec z jednego pola złoża, zanim się wyczerpie */
   depositYields: 5,
   /** Rytm dnia: od tej godziny ludzie kończą robotę i idą do ogniska albo do karczmy */

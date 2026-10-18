@@ -13,7 +13,7 @@ import { Terrain } from '../../data/terrain';
  */
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine'];
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine'];
 /** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
 const ROCK_REACH = 60;
 const ROCK_TRIES = 400;

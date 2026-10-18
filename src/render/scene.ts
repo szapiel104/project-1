@@ -16,6 +16,7 @@ import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
 import { crewOf } from '../sim/systems/workers';
+import { saplingGrowth } from '../sim/systems/forestry';
 import { Clutter } from './clutter';
 import { Chips } from './chips';
 import { Clouds } from './clouds';
@@ -668,6 +669,8 @@ export class GameRenderer {
   private storesTick = -1;
   private selectedId = 0;
   private cutSeen = 0;
+  /** Pola z sadzonkami leśniczych pokazanymi w ostatniej klatce */
+  private youngSeen = new Set<number>();
   private roadSum = -1;
   private planSum = -1;
   private roadPlans!: THREE.InstancedMesh;
@@ -1008,7 +1011,8 @@ export class GameRenderer {
     // brama zostawała nieobrócona, a bale palisady stały jak na poprzedniej mapie)
     // nie puste: mapa bez murów (placów budowy, obszarów) ma klucz '', a stare bale i ciosy z poprzedniej mapy muszą zniknąć
     this.wallKey = '-'; this.siteKey = '-'; this.areaKey = '-';
-    this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie
+    this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie (i odrośnięty las)
+    this.youngSeen = new Set();
   }
 
   /** Nowy stan tej samej gry z wątku symulacji (bez przebudowy terenu i modeli) */
@@ -4044,7 +4048,17 @@ export class GameRenderer {
       const tile = (u.py >> 8) * g.map.width + (u.px >> 8);
       if (g.map.tiles[tile] === Terrain.Forest) { const k = 1 - u.timer / 40; view.fell(tile, k * k); } // powoli rusza, potem wali się coraz szybciej
     }
-    for (; this.cutSeen < g.cut.length; this.cutSeen++) view.clear(g.cut[this.cutSeen]!);
+    // dziennik lasu: wpis ≥ 0 = ścięte (pniak), < 0 = drzewko leśniczego dorosło w zwykłe drzewo
+    for (; this.cutSeen < g.cut.length; this.cutSeen++) {
+      const e = g.cut[this.cutSeen]!;
+      if (e >= 0) view.clear(e);
+      else { view.grow(~e, 1); this.youngSeen.delete(~e); }
+    }
+    // sadzonki rosną na oczach; te, które zniknęły bez dorośnięcia (np. droga na polu), znikają też z obrazu
+    const now = new Set<number>();
+    for (const s of g.saplings ?? []) { now.add(s.t); view.grow(s.t, saplingGrowth(s)); }
+    for (const t of this.youngSeen) if (!now.has(t) && g.map.tiles[t] !== Terrain.Forest) view.grow(t, 0);
+    this.youngSeen = now;
   }
 
   private animate(g: GameState, dt: number): void {
@@ -5402,8 +5416,11 @@ export class GameRenderer {
         this.foeSeen.set(u.id, u.foe ?? 0);
       }
       // układanie drogi wygląda jak budowa: pochylony chłop bije młotkiem w ziemię
-      const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving;
-      let lean = u.phase === Phase.Paving ? 0.35 : crafting ? 0.18 : toolLean, work = 0;
+      // leśniczy sadzi drzewko: klęczy na polu i kopie dołek (ten sam ruch co przy drodze, wolniej i ciszej)
+      const planting = u.phase === Phase.Planting;
+      const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving || planting;
+      let lean = u.phase === Phase.Paving ? 0.35 : planting ? 0.45 : crafting ? 0.18 : toolLean, work = 0;
+      if (planting) t.position.y -= 0.11;
       if (hammering) {
         // robotnicy rozstawiają się wokół budowy, twarzą do ścian; co drugi pracuje na pomoście rusztowania (na wysokości murów)
         const site = u.phase === Phase.Repairing ? g.buildings.find((b) => b.id === u.target) : undefined;
@@ -5425,7 +5442,7 @@ export class GameRenderer {
         // uderzenie młotkiem: powolny zamach w górę, szybki cios w dół, krótkie odbicie i chwila przerwy;
         // przy ciosie tułów pochyla się do przodu, a w chwili trafienia słychać stuk
         if (!this.calm) {
-          const ph = (this.time * 1.45 + (u.id % 13) * 0.137) % 1;
+          const ph = (this.time * (planting ? 0.9 : 1.45) + (u.id % 13) * 0.137) % 1;
           const ease = (x: number): number => x * x * (3 - 2 * x);
           // work = kąt prawej ręki (ujemny = w przód i w górę). Trzonek sterczy z pięści prostopadle do ręki:
           // przy zamachu młotek jest za głową, przy ciosie ręka idzie w przód-w dół, a obuch trafia w mur na wysokości twarzy
@@ -5434,7 +5451,7 @@ export class GameRenderer {
           else if (ph < 0.7) work = -0.6 - Math.sin(((ph - 0.6) / 0.1) * Math.PI) * 0.18; // odbicie od muru
           else work = -0.6;                                                        // chwila przerwy
           lean += ph > 0.5 && ph < 0.75 ? Math.sin(((ph - 0.5) / 0.25) * Math.PI) * 0.22 : 0;
-          if (ph > 0.59 && ph < 0.65) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
+          if (ph > 0.59 && ph < 0.65 && !planting) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
         } else work = -0.6;
         swing = 0;
       }

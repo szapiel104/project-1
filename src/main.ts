@@ -15,7 +15,7 @@ import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
-import { Phase, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
+import { Phase, applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { applyCommands, step, type Command } from './sim/step';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
@@ -1694,7 +1694,7 @@ function onSimResult(r: SimResult): void {
   renderer.snapshot(); // pozycje sprzed porcji kroków: ruch płynny między tickami
   const map = game.map;
   // wycinka lasu i wyczerpane złoża: jedyne zmiany mapy w symulacji — nanosimy je na naszą kopię mapy
-  for (let i = game.cut.length; i < r.state.cut.length; i++) map.tiles[r.state.cut[i]!] = 0;
+  for (let i = game.cut.length; i < r.state.cut.length; i++) applyCut(map.tiles, r.state.cut[i]!);
   const before = game.tick;
   r.state.map = map;
   game = r.state;

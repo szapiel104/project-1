@@ -69,6 +69,8 @@ export interface PlayerState {
 
 export interface Building {
   id: number;
+  /** Chata leśniczego: ostatnie pola, do których leśniczy nie umiał dojść (nie wybiera ich znowu) */
+  miss?: number[];
   /** Pożar: ile ticków jeszcze płonie (0/brak = nie płonie); każde wiadro wody skraca go */
   fire?: number;
   /** Wytrzymałość z poprzedniego ticku (do wykrycia świeżego ciosu, od którego zajmuje się ogień) */
@@ -128,6 +130,28 @@ export interface Building {
   lost?: number;
 }
 
+/** Młode drzewko posadzone przez leśniczego. Rośnie (poza zimą), aż stanie się zwykłym polem lasu do wycinki. */
+export interface Sapling {
+  /** Pole mapy */
+  t: number;
+  owner: number;
+  /** Chata leśniczego, która je posadziła (limit sadzonek na chatę) */
+  by: number;
+  /** Ile ticków już rośnie (zimą stoi) */
+  age: number;
+}
+
+/**
+ * Dziennik zmian lasu w `GameState.cut`: wpis ≥ 0 = pole wycięte (las albo wyczerpane złoże → łąka),
+ * wpis < 0 = pole `~wpis` znowu zarosło lasem (drzewko leśniczego dorosło).
+ */
+export const cutTile = (e: number): number => (e >= 0 ? e : ~e);
+/** Nanosi jeden wpis dziennika lasu na pola mapy */
+export function applyCut(tiles: Uint8Array, e: number): void {
+  if (e >= 0) tiles[e] = Terrain.Grass;
+  else tiles[~e] = Terrain.Forest;
+}
+
 /** Gruz po rozebranym budynku. Leży na działce, dopóki ludzie nie wyniosą wszystkich ładunków. */
 export interface Rubble {
   id: number;
@@ -184,6 +208,10 @@ export const enum Phase {
   Sleeping = 22,
   /** Rekrut: wolny chłop idzie do koszar `job`, gdzie dostanie broń (`enlist` = rodzaj jednostki + 1) */
   ToEnlist = 23,
+  /** Leśniczy idzie posadzić drzewko (`target` = pole + 1) */
+  ToPlant = 24,
+  /** Leśniczy sadzi drzewko na polu `target` - 1 (`timer` = ile jeszcze) */
+  Planting = 25,
 }
 
 export interface Unit {
@@ -410,8 +438,10 @@ export interface GameState {
   occupancy: Int32Array;
   /** Ile wejść do budynków leży na polu (takiego pola nie wolno zabudować) */
   reserved: Uint8Array;
-  /** Pola lasu wycięte przez drwali, w kolejności wycinki (dla zapisu gry i renderera) */
+  /** Dziennik zmian lasu w kolejności zdarzeń (dla zapisu gry i renderera): wycięte pola i odrośnięty las (`cutTile`, `applyCut`) */
   cut: number[];
+  /** Młode drzewka leśniczych */
+  saplings?: Sapling[];
   /** Ile razy wydobyto już surowiec z danego pola złoża */
   wear: Uint8Array;
   /** Drogi na polach: 0 brak, 1 piaskowa, 2 kamienna */
@@ -718,6 +748,7 @@ export function stateHash(g: GameState): number {
   for (let i = 0; i < g.map.tiles.length; i++) { h ^= g.map.tiles[i]!; h = Math.imul(h, 0x01000193); }
   for (let i = 0; i < g.wear.length; i++) if (g.wear[i]) { add(i); add(g.wear[i]!); }
   for (let i = 0; i < g.roads.length; i++) { if (g.roads[i]) { add(i); add(g.roads[i]! + 100); } if (g.roadPlan[i]) { add(i); add(g.roadPlan[i]! + 200); } }
+  for (const s of g.saplings ?? []) { add(s.t); add(s.owner); add(s.by); add(s.age); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0);

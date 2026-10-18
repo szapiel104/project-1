@@ -55,6 +55,8 @@ export interface TerrainView {
   fell(tile: number, k: number): void;
   /** Usuwa drzewa z pola i zostawia pniaki */
   clear(tile: number): void;
+  /** Drzewo posadzone przez leśniczego: wzrost 0..1 (0 = brak drzewka, 1 = dorosłe drzewo) */
+  grow(tile: number, k: number): void;
   /** Spacer: czy punkt (pola, ułamkowo) jest bliżej niż r od pnia drzewa (ścięte już nie przeszkadzają) */
   trunkNear(x: number, y: number, r: number): boolean;
   /** Odbudowuje nawierzchnię dróg z tablicy pól (0 brak, 1 piasek, 2 bruk) */
@@ -1217,7 +1219,83 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const zero = new THREE.Matrix4().makeScale(0, 0, 0);
   const tilt = new THREE.Quaternion();
   const xAxis = new THREE.Vector3(1, 0, 0);
+  // Drzewa leśniczych: osobna pula (pnie i korony świerków i drzew liściastych z tymi samymi bryłami i materiałami co las,
+  // więc wiatr, pory roku i cienie chmur działają same). Drzewko rośnie skalą od sadzonki po dorosłe drzewo; ścięte
+  // przez drwala znika z puli. Pula rysuje tylko zajęte miejsca (licznik rośnie z każdym nowym drzewkiem).
+  const YOUNG_CAP = 2048;
+  type Young = { kind: 0 | 1; i: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3; k: number };
+  const young = new Map<number, Young>();
+  const youngFree: number[] = [];
+  let youngTop = 0;
+  const youngMesh = (geo: THREE.BufferGeometry, mat: THREE.Material, name: string): THREE.InstancedMesh => {
+    const mesh = new THREE.InstancedMesh(geo, mat, YOUNG_CAP);
+    mesh.count = 0;
+    mesh.visible = false;
+    mesh.frustumCulled = false;
+    mesh.userData.noCull = true;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    if (mat.userData.windDepth) mesh.customDepthMaterial = mat.userData.windDepth as THREE.Material;
+    mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(YOUNG_CAP * 3), 3);
+    cat(mesh, name);
+    group.add(mesh);
+    return mesh;
+  };
+  // [rodzaj][pień, korona] i ich barwy (jak w lesie z mapy)
+  const youngSets: [THREE.InstancedMesh, THREE.InstancedMesh][] = [
+    [youngMesh(models.treeTrunk(), pineBarkMat, 'drzewa leśniczych: pnie'), youngMesh(models.treeCrown(), pineMat, 'drzewa leśniczych: korony')],
+    [youngMesh(models.leafTrunk(), leafBarkMat, 'drzewa leśniczych: pnie'), youngMesh(models.leafCrown(), leafMat, 'drzewa leśniczych: korony')],
+  ];
+  const youngTint: [number, number][] = [[0x6b4a2e, 0x3c7a3a], [0x7a5a3a, 0x6fa33d]];
+  const youngPut = (y: Young, mm: THREE.Matrix4): void => {
+    for (const mesh of youngSets[y.kind]!) { mesh.setMatrixAt(y.i, mm); touch(mesh); }
+  };
+  const grow = (tile: number, k: number): void => {
+    let y = young.get(tile);
+    if (k <= 0) {
+      if (!y) return;
+      youngPut(y, zero);
+      youngFree.push(y.i);
+      young.delete(tile);
+      return;
+    }
+    if (!y) {
+      const i = youngFree.pop() ?? (youngTop < YOUNG_CAP ? youngTop++ : -1);
+      if (i < 0) return;
+      const tx = tile % w, ty = Math.floor(tile / w);
+      const r = hash2(tx * 31 + 7, ty * 17 + 3, map.seed ^ 0x51ed27);
+      const kind: 0 | 1 = (r >>> 3) % 3 === 0 ? 1 : 0;   // sadzi głównie świerki, co trzecie drzewo liściaste
+      const jx = ((r & 255) / 255 - 0.5) * 0.5, jz = (((r >>> 8) & 255) / 255 - 0.5) * 0.5;
+      const pos = new THREE.Vector3(tx + 0.5 + jx + ox, heightAt(tx + 0.5 + jx, ty + 0.5 + jz), ty + 0.5 + jz + oz);
+      const qq = new THREE.Quaternion().setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
+      const sz = 0.85 + (((r >>> 16) & 255) / 255) * 0.3;   // dorosłe jak zwykłe drzewo w lesie
+      y = { kind, i, pos, q: qq, s: new THREE.Vector3(sz * 1.25, sz * 1.6 * (0.9 + ((r >>> 12) & 15) / 60), sz * 1.25), k: -1 };
+      young.set(tile, y);
+      const shade = 0.82 + ((r >>> 20) & 15) / 60;
+      const [mt, mc] = youngSets[kind]!;
+      mt.setColorAt(i, tint.setHex(youngTint[kind]![0]).multiplyScalar(shade));
+      mc.setColorAt(i, tint.setHex(youngTint[kind]![1]).multiplyScalar(shade * 1.05));
+      for (const mesh of youngSets[kind]!) {
+        if (mesh.instanceColor) touch(mesh);
+        mesh.count = Math.max(mesh.count, i + 1);
+        mesh.visible = true;
+      }
+    }
+    const kk = Math.min(1, k);
+    if (Math.abs(kk - y.k) < 0.004) return;
+    y.k = kk;
+    // sadzonka po kolana, potem coraz wyższe drzewko; korona rośnie trochę szybciej wszerz niż w górę
+    const f = 0.12 + 0.88 * kk;
+    const wide = f ** 0.8;
+    youngPut(y, m.compose(y.pos, y.q, q2.set(y.s.x * wide, y.s.y * f, y.s.z * wide)));
+  };
+  const q2 = new THREE.Vector3();
   const fell = (tile: number, k: number): void => {
+    const y = young.get(tile);
+    if (y) {
+      tilt.copy(y.q).multiply(q.setFromAxisAngle(xAxis, Math.min(1, k) * 1.45));
+      youngPut(y, m.compose(y.pos, tilt, q2.copy(y.s)));
+    }
     for (const t of trees.get(tile) ?? []) {
       tilt.copy(t.item.q).multiply(q.setFromAxisAngle(xAxis, Math.min(1, k) * 1.45));
       m.compose(t.item.pos, tilt, t.item.s);
@@ -1225,6 +1303,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   };
   const clear = (tile: number): void => {
+    grow(tile, 0);
     for (const t of trees.get(tile) ?? []) {
       for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, zero); touch(mesh); }
       const si = stumpOf.get(t.item);
@@ -1236,6 +1315,12 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const tx = Math.floor(x), ty = Math.floor(y);
     for (let yy = ty - 1; yy <= ty + 1; yy++) for (let xx = tx - 1; xx <= tx + 1; xx++) {
       if (xx < 0 || yy < 0 || xx >= w || yy >= h) continue;
+      const yt = young.get(yy * w + xx);
+      if (yt && yt.k > 0.4) {
+        // drzewko leśniczego: pień zawadza dopiero, gdy podrośnie
+        const R = r + 0.12 * yt.s.x * yt.k;
+        if ((yt.pos.x - ox - x) ** 2 + (yt.pos.z - oz - y) ** 2 < R * R) return true;
+      }
       for (const t of trees.get(yy * w + xx) ?? []) {
         if (!trunkItems.has(t.item)) continue;
         const R = r + 0.12 * t.item.s.x;
@@ -1722,6 +1807,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     heightAt,
     fell,
     clear,
+    grow,
     trunkNear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); streams?.setSky(c); },

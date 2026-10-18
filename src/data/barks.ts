@@ -18,6 +18,10 @@ const SAY_PL = {
     'Byle do wieczora.', 'Pan patrzy, to się staram.',
   ],
   // --- zajęcia (id budynku) ---
+  forester: [
+    'Jedno ścinają, ja sadzę dwa.', 'Za wnuków tu będzie las.', 'Świerczek, rośnij, nie marudź.', 'Ziemia zmarznie, to i robota stanie.',
+    'Drwal to tylko rąbać umie.', 'Korzenie w płótno, inaczej uschnie.', 'Las to nie pole, czeka się latami.',
+  ],
   woodcutter: [
     'Drzewa nie zetną się same.', 'Siekiera tępa jak wójt.', 'Las daleko, nogi bolą.', 'Uwaga, leci!', 'Sosna twarda, ale pęknie.',
     'Wiórów pełno w portkach.', 'W lesie coś łazi, słyszałem.', 'Jeszcze jeden pień i niosę do chaty.',
@@ -176,6 +180,10 @@ const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
     'Just till evening.', 'The lord\'s watching, so I\'m trying.',
   ],
   // --- jobs (building id) ---
+  forester: [
+    'They fell one, I plant two.', 'There\'ll be woods here for the grandchildren.', 'Grow, little spruce, quit your sulking.', 'Ground freezes, work stops.',
+    'Woodcutters only know how to chop.', 'Roots in sacking, or it dries out.', 'A forest\'s not a field. You wait years.',
+  ],
   woodcutter: [
     'Trees won\'t fell themselves.', 'Axe is dull as the reeve.', 'Forest\'s far, my feet ache.', 'Timber!', 'Tough pine, but she\'ll crack.',
     'Woodchips down my breeches again.', 'Something\'s prowling in the woods. I heard it.', 'One more log and I\'m hauling it in.',

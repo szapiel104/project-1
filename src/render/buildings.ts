@@ -39,6 +39,7 @@ const FISHER_MODEL = model('fisher');
 const FLETCHER_MODEL = model('fletcher');
 const POLETURNER_MODEL = model('poleturner');
 const CEMETERY_MODEL = model('cemetery');
+const FORESTER_MODEL = model('forester');
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -1103,6 +1104,13 @@ const BUILDERS: Record<string, Builder> = {
   stoneTower(g, _team, flag) {
     // Kamienna wieża z Blendera (tools/models/stonetower.py): baszta z ciosów, machikuły, blanki, pomost dla łuczników
     blenderModel(g, STONE_TOWER_MODEL as unknown as BlenderBuilding, flag);
+  },
+  forester(g, _team, flag) {
+    // chata leśniczego z Blendera (tools/models/forester.py): chata z bali pod strzechą, szkółka młodych drzewek za płotem
+    // z wikliny, kopczyk z łopatą, sadzonki w płótnie, wiadro i worek z nasionami; w izbie stół z siewkami i prycza
+    blenderModel(g, FORESTER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (FORESTER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   cemetery(g, _team, flag) {
     // cmentarz z Blendera (tools/models/cemetery.py): kamienna kapliczka z sygnaturką i dzwonkiem, mogiły z krzyżami

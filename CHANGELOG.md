@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.30.0 — leśniczy: las odrasta (2026-10-18)
+
+- Nowy budynek w kategorii Przemysł: **chata leśniczego** (2×2, 20 drewna). Leśniczy sadzi młode drzewka na wolnej łące w swoim terenie (6 pól wokół chaty, widać go po kliknięciu), najchętniej przy skraju lasu i na porębach; omija drogi, leśne ścieżki, wodę i miejsca tuż przy budynkach
+- Drzewko rośnie na oczach od sadzonki po kolana do pełnego drzewa przez dwa dni gry (zimą wzrost stoi, a leśniczy nie sadzi), potem to zwykły las, który drwal może ściąć. Najwyżej 14 rosnących drzewek naraz na chatę
+- Na polu z sadzonką nie da się budować; droga położona na sadzonce ją niszczy. Sadzonki i odrośnięty las są w zapisie gry
+- Model z Blendera (`tools/models/forester.py`): chata z bali pod strzechą, szkółka drzewek za płotem z wikliny, kopczyk z łopatą, sadzonki w płótnie, poroże przy drzwiach; w izbie stół z siewkami i prycza
+- Leśniczy klęczy i kopie dołek przy sadzeniu; własne odzywki po polsku i angielsku; bot stawia chatę leśniczego przy drwalach
+- Teksty w obu językach, poprawiona pomoc („Złoża się kończą”) i opis chaty drwala
 ## 0.29.0 — zbóje z puszczy (2026-10-18)
 
 - Nowe mapy (generator 5) mają w puszczy polany z obozami zbójów: po jednym przy każdym zamku (w 4 na 4 dwa na drużynę), 26–40 pól od zamku, z wydeptaną dróżką do najbliższej ścieżki. Obie drużyny mają obóz w tym samym miejscu (odbicie). Na poziomie pokojowym i w starych zapisach obozów nie ma

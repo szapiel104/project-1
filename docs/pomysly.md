@@ -51,7 +51,7 @@ Czeka:
 - Dźwięki: zrobione 16.10 z nagrań — ptaki, świerszcze, odgłosy wsi, kury, dzwon w południe, róg alarmu, grzmot (docs/zasoby.md). Czeka: kogut o świcie i prawdziwy puszczyk (brak nagrania na wolnej licencji pod ręką), trzask ognisk, gwar, wiwaty
 - Wojsko: zbrojny (łucznik, łuczarz, taran, kamienne mury, drabiny i kamienna wieża już są)
 - Wnętrza pozostałych budynków w stylu nowej chaty
-- Leśniczy (sadzi drzewa; lasy się nie odnawiają)
+- ~~Leśniczy~~ — zrobione 18.10.2026 (chata leśniczego, sadzonki rosną dwa dni w las). Dalej: ulepszenie chaty (większy teren, więcej sadzonek), wybór miejsca sadzenia przez gracza
 - Bot dalej: kamienne mury, taran, lepszy wybór celów, poziomy trudności dopracowane (zrobione: palisada, wieże, łucznicy na wieżach, karczma, atak z dwóch stron, wypady)
 - Ulepszanie budynków (wyżej)
 

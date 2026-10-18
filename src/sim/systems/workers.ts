@@ -8,6 +8,7 @@ import { clockAt, hourStarts, rainAt } from '../clock';
 import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
+import { plantSapling } from './forestry';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -37,7 +38,7 @@ export const crewOf = (b: Building): number[] => (b.worker ? [b.worker, ...(b.cr
 
 const OFF_DUTY = new Set<Phase>([Phase.ToEvening, Phase.Evening, Phase.ToSleep, Phase.Sleeping]);
 /** Zajęcia, które chłop z pustymi rękami rzuca wieczorem (resztę kończy: niesie ładunek do składu, dokańcza wyrób) */
-const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest]);
+const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest, Phase.ToPlant]);
 
 /** Do której godziny (po północy) chłop siedzi wieczorem przy ogniu albo w karczmie; 0 = idzie spać o zwykłej porze */
 export function nightOwl(u: { id: number }): number {
@@ -262,6 +263,11 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const t = u.target - 1;
       return t >= 0 && g.roadPlan[t] ? (x) => x === t : null;
     }
+    case Phase.ToPlant: {
+      // leśniczy idzie na pole, które ma obsadzić (gdy ktoś je zajął po drodze — wraca)
+      const t = u.target - 1;
+      return t >= 0 && g.map.tiles[t] === Terrain.Grass && !g.occupancy[t] && !g.reserved[t] ? (x) => x === t : null;
+    }
     case Phase.ToRoadFetch: {
       // po materiał na drogę: najbliższe drzwi składu, który trzyma ten surowiec
       const t = u.target - 1, res = u.timer - 1;
@@ -350,6 +356,9 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       break;
     case Phase.ToSite:
       u.phase = Phase.WorkingSite; u.timer = prod?.workTicks ?? 0;
+      break;
+    case Phase.ToPlant:
+      u.phase = Phase.Planting; u.timer = RULES.plantTicks;
       break;
     case Phase.ToStore:
       if (u.carryRes >= 0 && u.job) {
@@ -549,6 +558,14 @@ export function workerSystem(g: GameState): void {
       u.phase = u.job ? Phase.Returning : Phase.Idle;
       continue;
     }
+    if (u.phase === Phase.Planting) {
+      // sadzi drzewko: po chwili na polu zostaje sadzonka, a leśniczy wraca pod chatę po następną
+      if (--u.timer > 0) continue;
+      plantSapling(g, u);
+      u.target = 0;
+      u.phase = u.job ? Phase.Returning : Phase.Idle;
+      continue;
+    }
     if (u.phase === Phase.Resting) {
       if (--u.timer <= 0) { u.home = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
       continue;
@@ -609,7 +626,7 @@ export function workerSystem(g: GameState): void {
         u.phase = u.phase === Phase.ToSleep ? Phase.Sleeping : Phase.Evening;
         continue;
       }
-      if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair || u.phase === Phase.ToPave) {
+      if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair || u.phase === Phase.ToPave || u.phase === Phase.ToPlant) {
         if (u.phase === Phase.ToRepair && u.carryRes >= 0) { u.carryRes = -1; u.carryAmt = 0; } // budowa skończona po drodze: materiał zostaje
         u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0;
       }
@@ -622,7 +639,12 @@ export function workerSystem(g: GameState): void {
     else if (!path && (u.phase === Phase.ToSleep || u.phase === Phase.ToEvening)) {
       // nie da się dojść (np. zamknięty w murach): śpi albo siedzi tam, gdzie stoi
       if (u.phase === Phase.ToSleep) { u.home = 0; u.target = here + 1; u.phase = Phase.Sleeping; } else u.phase = Phase.Evening;
-    } else if (!path && (u.phase === Phase.ToPave || u.phase === Phase.ToRoadFetch)) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.timer = 0; u.carryRes = -1; u.carryAmt = 0; u.wait = RETRY_TICKS; } // pole drogi albo skład nieosiągalne
+    } else if (!path && u.phase === Phase.ToPlant) {
+      // pole nieosiągalne (np. za wodą): chata je zapamiętuje, leśniczy wraca i wybierze inne
+      if (job) { (job.miss ??= []).push(u.target - 1); if (job.miss.length > 8) job.miss.shift(); }
+      u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.wait = RETRY_TICKS;
+    }
+    else if (!path && (u.phase === Phase.ToPave || u.phase === Phase.ToRoadFetch)) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.timer = 0; u.carryRes = -1; u.carryAmt = 0; u.wait = RETRY_TICKS; } // pole drogi albo skład nieosiągalne
     else u.wait = RETRY_TICKS;
   }
 }

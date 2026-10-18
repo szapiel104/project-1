@@ -5,7 +5,7 @@ import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
 import { openWalk } from './systems/placement';
-import type { Building, Caravan, Corpse, Traveler, Wolf, GameState, March, OrderQueue, PlayerState, Rubble, Soldier, Unit } from './state';
+import { applyCut, type Building, type Caravan, type Corpse, type Traveler, type Wolf, type GameState, type March, type OrderQueue, type PlayerState, type Rubble, type Sapling, type Soldier, type Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
 export const SAVE_VERSION = 21;
@@ -37,6 +37,7 @@ export interface SaveData {
   wolves?: Wolf[];
   marches?: March[];
   orders?: OrderQueue[];
+  saplings?: Sapling[];
 }
 
 const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
@@ -55,7 +56,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     roadPlan: [...g.roadPlan].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     rubble: g.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     players: g.players.map((p) => ({ ...p, res: [...p.res], stats: { ...p.stats } })),
-    buildings: g.buildings.map((b) => ({ ...b })),
+    buildings: g.buildings.map((b) => ({ ...b, ...(b.miss ? { miss: [...b.miss] } : {}) })),
     units: g.units.map((u) => ({ ...u, path: [...u.path] })),
     soldiers: g.soldiers.map((x) => ({ ...x, path: [...x.path], ...(x.slot ? { slot: [...x.slot] as [number, number] } : {}) })),
     marches: (g.marches ?? []).map((m) => ({ ...m, path: [...m.path] })),
@@ -64,6 +65,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     travelers: g.travelers.map((t) => ({ ...t, path: [...t.path] })),
     caravans: (g.caravans ?? []).map((c) => ({ ...c, path: [...c.path] })),
     wolves: g.wolves.map((w) => ({ ...w, path: [...w.path] })),
+    saplings: (g.saplings ?? []).map((x) => ({ ...x })),
   };
 }
 
@@ -93,12 +95,14 @@ export function deserialize(d: SaveData): GameState | null {
       wolves: (d.wolves ?? []).map((w) => ({ ...w, path: [...w.path] })),
       occupancy: new Int32Array(size), gates: new Uint8Array(size), walls: new Uint8Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size),
       rubble: d.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
+      saplings: (d.saplings ?? []).map((x) => ({ ...x })),
     };
     for (const r of g.rubble) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g.reserved[y * map.width + x]!++;
     for (const [t, n] of d.wear) g.wear[t] = n;
     for (const [t, n] of d.roads) g.roads[t] = n;
     for (const [t, n] of d.roadPlan ?? []) g.roadPlan[t] = n;
-    for (const t of g.cut) map.tiles[t] = 0; // wycięty las to łąka
+    for (const e of g.cut) applyCut(map.tiles, e); // wycięty las to łąka, a odrośnięty znowu las
+    for (const x of g.saplings!) g.reserved[x.t]!++;
     for (const b of g.buildings) {
       const def = BUILDINGS[b.type];
       if (!def) return null;

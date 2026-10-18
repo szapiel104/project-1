@@ -188,6 +188,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Obóz zbójów na polanie w puszczy (generator map 5): stoi od początku gry, nie należy do żadnego gracza. Zbóje napadają
   // stąd na drwali i chłopów w lesie i znoszą łup; rozbity obóz oddaje łup temu, kto go rozbił (systems/bandits.ts).
   { id: 'banditCamp', name: 'b.banditCamp', w: 3, h: 3, cost: {}, hp: 900, buildable: false },
+  // Chata leśniczego: leśniczy sadzi młode drzewka na wolnej łące w swoim terenie (najchętniej przy lesie i na
+  // dawnych porębach). Drzewko rośnie dwa dni gry (zimą stoi), potem to zwykły las, który drwal może ściąć (forestry.ts).
+  { id: 'forester', category: 'industry', name: 'b.forester', w: 2, h: 2, cost: { wood: 20 }, staff: true, area: 6, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */
