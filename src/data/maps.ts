@@ -26,9 +26,10 @@ export type MapPresetId = keyof typeof MAP_PRESETS;
 
 /** Wersja generatora map. Zapis pamięta, z której wersji pochodzi mapa, bo mapę odtwarza się z ziarna.
  * 3 (17.10.2026): bez kamienia i żelaza tuż przy zamku — urobek jest tylko z kopalni w górach, jak w Gothicu. */
-export const MAP_GEN = 5;
+export const MAP_GEN = 6;
 // 4 (17.10.2026): bez placków kamienia i żelaza także u podnóża gór; przy skałach leży naturalne rumowisko (render/terrain.ts)
 // 5 (18.10.2026): w puszczy polany pod obozy zbójów (map.ts, carveDens) z dróżką do najbliższej ścieżki
+// 6 (18.10.2026): polany pod obozy szersze (promień 6,6 zamiast 4,3), żeby obóz było widać spod koron
 /** Stare ustawienia (generator 1), żeby dawne zapisy wczytywały się na tej samej mapie co przedtem */
 export const LEGACY_PRESETS: Partial<Record<MapPresetId, MapPreset>> = {
   '1v1': { width: 160, height: 160, waterLevel: 62, startRadius: 12, rim: 10, starts: [{ x: 36, y: 40 }] },

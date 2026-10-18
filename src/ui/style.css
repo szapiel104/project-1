@@ -305,6 +305,11 @@ body.menu-open .alarm { display: none; }
 .scribe-card.by-herald .scribe-face { box-shadow: 0 0 0 2px #e0a04a, 0 0 0 4px #4a0f0b; }
 .scribe-face { display: block; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex: none; box-shadow: 0 0 0 2px var(--gold); }
 .scribe-card.out { opacity: 0; transform: translateX(-30px); }
+/* przycisk przy wiadomości skryby („Pokaż ▸”): tylko on łapie kliknięcia, reszta wiadomości przepuszcza mysz do mapy */
+.scribe-go { pointer-events: auto; justify-self: start; margin-top: 4px; min-height: 32px; padding: 4px 14px; font: inherit; font-size: 15px; color: #2a1a0c;
+  background: var(--gold); border: 2px solid var(--gold-dark); border-radius: 4px; cursor: pointer; }
+.scribe-go:hover { background: #f0d48a; }
+.scribe-go:focus-visible { outline: 2px solid var(--light); outline-offset: 2px; }
 @keyframes scribe-in { from { opacity: 0; transform: translateX(-40px); } }
 body.menu-open .scribe { display: none; }
 .menu-level { grid-template-columns: auto 1fr; }

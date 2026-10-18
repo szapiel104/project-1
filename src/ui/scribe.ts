@@ -28,7 +28,9 @@ const FACE = `<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true"
 </svg>`;
 
 export type Speaker = 'scribe' | 'herald';
-export interface Scribe { say(key: string, text: string, urgent?: boolean, who?: Speaker): void }
+/** Przycisk przy wiadomości (np. „Pokaż” — przenosi kamerę tam, gdzie coś się dzieje) */
+export interface ScribeAction { label: string; run: () => void }
+export interface Scribe { say(key: string, text: string, urgent?: boolean, who?: Speaker, action?: ScribeAction): void }
 
 const NAMES: Record<Speaker, string> = { scribe: tx('Skryba Bartłomiej', 'Bartholomew the Scribe'), herald: tx('Wojewoda Mieszko', 'Mieszko the Voivode') };
 
@@ -40,11 +42,21 @@ export function createScribe(onSpeak: () => void): Scribe {
   document.body.append(box);
   const last = new Map<string, number>();
   // nowa wiadomość pojawia się na górze, starsze zjeżdżają niżej, bledną i znikają
-  const show = (text: string, urgent: boolean, who: Speaker): void => {
+  const show = (text: string, urgent: boolean, who: Speaker, action?: ScribeAction): void => {
     const card = document.createElement('div');
     card.className = `scribe-card by-${who}${urgent ? ' urgent' : ''}`;
     card.innerHTML = `<span class="scribe-face">${who === 'herald' ? HERALD : FACE}</span><span class="scribe-body"><span class="scribe-name">${NAMES[who]}</span><span class="scribe-text"></span></span>`;
     card.querySelector('.scribe-text')!.textContent = text;
+    if (action) {
+      // wiadomość z przyciskiem zostaje dłużej (12 s), żeby zdążyć kliknąć
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'scribe-go';
+      btn.textContent = `${action.label} ▸`;
+      btn.addEventListener('click', () => action.run());
+      card.querySelector('.scribe-body')!.append(btn);
+      card.dataset.action = '1';
+    }
     for (const old of Array.from(box.children) as HTMLElement[]) {
       old.classList.add('older');
       setTimeout(() => old.classList.add('out'), 2500);
@@ -53,15 +65,16 @@ export function createScribe(onSpeak: () => void): Scribe {
     box.prepend(card);
     while (box.children.length > 3) box.lastElementChild!.remove();
     onSpeak();
-    setTimeout(() => card.classList.add('out'), 6500);
-    setTimeout(() => card.remove(), 7100);
+    const stay = action ? 12000 : 6500;
+    setTimeout(() => card.classList.add('out'), stay);
+    setTimeout(() => card.remove(), stay + 600);
   };
   return {
-    say(key, text, urgent = false, who: Speaker = 'scribe') {
+    say(key, text, urgent = false, who: Speaker = 'scribe', action?: ScribeAction) {
       const now = performance.now();
       if ((last.get(key) ?? -1e9) > now - 60000) return;
       last.set(key, now);
-      show(text, urgent, who);
+      show(text, urgent, who, action);
     },
   };
 }

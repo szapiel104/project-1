@@ -24,7 +24,7 @@ import { buildWork, canAfford, canPlace, missingRequirement, maxHp, tileBuildabl
 import { crewWanted, MINE_YIELDS } from './sim/systems/workers';
 import { CAMP_GUARDS, campOf } from './sim/systems/minecamp';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
-import { createScribe } from './ui/scribe';
+import { createScribe, type ScribeAction } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { garrisonRoom, octant, planFormation } from './sim/systems/army';
 import { EMPTY, SANDBOX, TEST } from './testmode';
@@ -1545,13 +1545,39 @@ const scribe = createScribe(() => play('babble'));
 let wolvesSeen = false, wolfKillsSeen = 0;
 /** Zbóje z lasu: ostatnio widziane liczniki napadów, zabitych i rozbitych obozów (wiadomość skryby przy każdej zmianie) */
 let banditSeen: { raids: number; kills: number; razed: number } | null = null;
+/** Gry, w których skryba już powiedział, gdzie obozują zbóje */
+const banditIntro = new WeakSet<object>();
+/** Najbliższy obóz zbójów od naszego zamku: środek i strona świata (na mapie północ jest u góry) */
+function nearestDen(): { x: number; y: number; dir: string } | null {
+  const keep = game.buildings.find((b) => b.owner === ME && b.type === 0);
+  if (!keep) return null;
+  const kx = keep.x + 5, ky = keep.y + 5;
+  let best: { x: number; y: number } | null = null, bd = Infinity;
+  for (const b of game.buildings) if (BUILDINGS[b.type]!.id === 'banditCamp') { const d = Math.hypot(b.x + 1 - kx, b.y + 1 - ky); if (d < bd) { bd = d; best = { x: b.x + 1.5, y: b.y + 1.5 }; } }
+  if (!best) return null;
+  const a = Math.atan2(best.x - kx, -(best.y - ky)) * 180 / Math.PI; // 0 = północ, zgodnie z zegarem
+  const k = Math.round(((a + 360) % 360) / 45) % 8;
+  const dir = [tx('na północ', 'north'), tx('na północny wschód', 'north-east'), tx('na wschód', 'east'), tx('na południowy wschód', 'south-east'), tx('na południe', 'south'), tx('na południowy zachód', 'south-west'), tx('na zachód', 'west'), tx('na północny zachód', 'north-west')][k]!;
+  return { ...best, dir };
+}
+const showAt = (x: number, y: number): ScribeAction => ({ label: tx('Pokaż', 'Show'), run: () => renderer.lookAt(x, y, 28) });
 function banditNotes(p: (typeof game.players)[number]): void {
   const b = p.bandit ?? { raids: 0, kills: 0, robbed: 0, razed: 0, loot: [] };
+  // na początku gry skryba mówi, gdzie w puszczy siedzą zbóje (z przyciskiem, który pokazuje obóz)
+  if (!banditIntro.has(game) && game.tick >= 150 && game.tick < RULES.dayTicks * 2) {
+    const den = nearestDen();
+    if (den) { banditIntro.add(game); scribe.say('banditIntro', tx(`Panie, zwiadowcy donoszą: w puszczy ${den.dir} od zamku obozują zbóje. Od jutra będą napadać na drwali z dala od osady.`, `My lord, the scouts report brigands camped in the deep wood ${den.dir} of the castle. From tomorrow they will waylay woodcutters far from the settlement.`), false, 'herald', showAt(den.x, den.y)); }
+  }
   const was = banditSeen;
   banditSeen = { raids: b.raids, kills: b.kills, razed: b.razed };
   if (!was) return; // pierwszy odczyt (nowa gra albo wczytany zapis): bez wiadomości o dawnych sprawach
-  if (b.raids > was.raids) scribe.say('banditRaid', tx('Zbóje z lasu napadli naszych ludzi przy robocie! Ślijcie straż albo wojsko, a ludzie niech uciekają pod zamek.', 'Brigands from the wood have fallen upon our folk at their work! Send the guard or soldiers, and let the people run for the castle.'), true, 'herald');
-  if (b.kills > was.kills) scribe.say('banditKill', tx(`Zbóje zabili naszego człowieka i złupili skarbiec (razem zabrali już ${b.robbed} rudy i drewna). Ich obóz jest w puszczy — rozbijcie go.`, `Brigands have slain one of ours and robbed the treasury (${b.robbed} ore and timber taken so far). Their camp lies in the deep wood — break it.`), true);
+  if (b.raids > was.raids) {
+    // gdzie jest napad: przy ofierze, którą gonią zbóje
+    const r = game.soldiers.find((s) => s.owner === BANDITS && s.raid && s.prey);
+    const u = r ? game.units.find((x) => x.id === r.prey) : undefined;
+    scribe.say('banditRaid', tx('Zbóje z lasu napadli naszych ludzi przy robocie! Ślijcie straż albo wojsko, a ludzie niech uciekają pod zamek.', 'Brigands from the wood have fallen upon our folk at their work! Send the guard or soldiers, and let the people run for the castle.'), true, 'herald', u ? showAt(u.px / 256, u.py / 256) : undefined);
+  }
+  if (b.kills > was.kills) { const den = nearestDen(); scribe.say('banditKill', tx(`Zbóje zabili naszego człowieka i złupili skarbiec (razem zabrali już ${b.robbed} rudy i drewna). Ich obóz jest w puszczy — rozbijcie go.`, `Brigands have slain one of ours and robbed the treasury (${b.robbed} ore and timber taken so far). Their camp lies in the deep wood — break it.`), true, 'scribe', den ? showAt(den.x, den.y) : undefined); }
   if (b.razed > was.razed) {
     const loot = RESOURCES.map((id, i) => ({ id, n: b.loot[i] ?? 0 })).filter((x) => x.n > 0).map((x) => `${x.n} × ${t(RESOURCE_DEFS[x.id].name).toLowerCase()}`).join(', ');
     scribe.say('banditRazed', tx(`Obóz zbójów rozbity! ${loot ? `Łup trafił do skarbca: ${loot}.` : 'Łupu nie było.'}`, `The brigands' camp is broken! ${loot ? `The plunder is in our stores: ${loot}.` : 'There was no plunder.'}`), false, 'herald');

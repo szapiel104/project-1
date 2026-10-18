@@ -1,3 +1,4 @@
+import { clearBandits } from '../src/sim/systems/bandits';
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS, buildingIndex } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
@@ -138,7 +139,7 @@ describe('kopalnia pod górami', () => {
   });
 
   it('barak przy kopalni: stoi tylko przy kopalni, załoga w nim nocuje, urobek jedzie wozem pod eskortą dwóch strażników', () => {
-    const g = createGame(3);
+    const g = clearBandits(createGame(3)); // zbóje z lasu mogliby napaść na wóz albo strażników kopalni
     const p = g.players[0]!;
     p.res[resIndex('spear')] = 4; p.res[resIndex('gold')] = 100; p.res[resIndex('wood')] = 110;
     const at = rockSpot(g);

@@ -162,8 +162,16 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
         const fp = footprint(def, b.rot);
         const team = g.players[b.owner]?.team ?? 0;
         const col = g.players[b.owner] ? TEAM_COLORS[team] ?? 0x888888 : BANDIT_COLOR;
-        // obóz zbójów: ciemna plama z jasną obwódką, żeby było go widać w puszczy
-        if (!g.players[b.owner]) { ctx.fillStyle = '#e8d9b4'; ctx.fillRect(b.x * sx - dpr, b.y * sy - dpr, fp.w * sx + 2 * dpr, fp.h * sy + 2 * dpr); }
+        // obóz zbójów: znak w puszczy — ciemne koło z jasną obwódką i krzyżem (dwa skrzyżowane ostrza), widoczne z daleka
+        if (!g.players[b.owner]) {
+          const cx = (b.x + fp.w / 2) * sx, cy = (b.y + fp.h / 2) * sy, r = Math.max(4.5 * dpr, fp.w * sx * 0.9);
+          ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#2a1608'; ctx.fill();
+          ctx.lineWidth = 1.5 * dpr; ctx.strokeStyle = '#e8d9b4'; ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(cx - r * 0.5, cy - r * 0.5); ctx.lineTo(cx + r * 0.5, cy + r * 0.5); ctx.moveTo(cx + r * 0.5, cy - r * 0.5); ctx.lineTo(cx - r * 0.5, cy + r * 0.5);
+          ctx.strokeStyle = '#e0655a'; ctx.lineWidth = 1.3 * dpr; ctx.stroke();
+          continue;
+        }
         ctx.fillStyle = b.build ? css(col, 0.6) : css(col, b.owner === me ? 1.25 : 0.95);
         ctx.fillRect(b.x * sx, b.y * sy, Math.max(1.5, fp.w * sx), Math.max(1.5, fp.h * sy));
         if (def.id === 'keep') {

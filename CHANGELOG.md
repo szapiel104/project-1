@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.2 — obozy zbójów widać (2026-10-18)
+
+- Na początku nowej gry wojewoda mówi, w którą stronę od zamku w puszczy obozują zbóje, z przyciskiem „Pokaż ▸”, który przenosi tam kamerę. Ten sam przycisk mają wiadomości o napadzie (pokazuje ofiarę) i o zabitym człowieku (pokazuje obóz); wiadomość z przyciskiem wisi dłużej (12 s)
+- Szersza polana pod obóz (generator map 6: promień 6,6 pola zamiast 4,3) — obóz widać z góry spod koron drzew, nie chowa się w lesie; na każdej mapie z 117 sprawdzonych (1 na 1, 2 na 2, 4 na 4) obozy się mieszczą
+- Na minimapie obóz to ciemne koło z jasną obwódką i czerwonym krzyżem zamiast małego brązowego kwadratu
+- Obozy są tylko w nowej grze (zapis sprzed 0.29.0 wczytuje się na dawnej mapie bez nich)
 ## 0.30.1 — leśniczy z łopatą (2026-10-18)
 
 - Leśniczy kopie łopatą (nowe narzędzie z Blendera w `tools/models/tools.py`: trzonek z poprzeczką, drewniane pióro okute żelazem): stoi pochylony, wbija pióro w ziemię, podważa i odrzuca ziemię; zamiast klęczenia z młotkiem
