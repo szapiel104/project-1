@@ -429,6 +429,25 @@ for sid, spec in SPECIES.items():
             img = shoot(co, C - dv * D, dv, 'z', max(W, Hf), fw, FAR_H, 0.01, 2 * D, f'{TMP}/f.png')
             strip[:, f * fw:(f + 1) * fw] = img
         avg = save_rgba(strip, f'pv_{name}_far')
+        bare = False
+        if spec['role'] == 'leaf':
+            # zima: te same 8 klatek bez liści (gra przełącza obrazek, gdy drzewa liściaste są gołe)
+            hidden = []
+            for o in parts:
+                for i, m in enumerate(o.data.materials):
+                    if m and 'leaves' in m.name.lower():
+                        hidden.append((o, i, m))
+                        o.data.materials[i] = hole
+            strip = np.zeros((FAR_H, fw * 8, 4), np.float32)
+            for f in range(8):
+                a = f / 8 * math.tau
+                dv = Vector((-math.sin(a), math.cos(a), 0))
+                C = Vector((cx, cy, z0 + Hf / 2))
+                strip[:, f * fw:(f + 1) * fw] = shoot(co, C - dv * D, dv, 'z', max(W, Hf), fw, FAR_H, 0.01, 2 * D, f'{TMP}/f.png')
+            save_rgba(strip, f'pv_{name}_farbare')
+            for o, i, m in hidden:
+                o.data.materials[i] = m
+            bare = True
 
         # --- pień
         tr_ob = trunk_mesh(parts, bark)
@@ -448,7 +467,7 @@ for sid, spec in SPECIES.items():
         out[name] = {
             'species': sid, 'role': spec['role'],
             'trunk': pack(tp, tn, tu, ti, tcol), 'cards': cards, 'shadow': shadow,
-            'far': {'w': W * kx, 'h': Hf * k}, 'avg': [round(float(c), 3) for c in avg],
+            'far': {'w': W * kx, 'h': Hf * k, 'bare': bare}, 'avg': [round(float(c), 3) for c in avg],
         }
         print('   pień', len(ti), 'karty', len(idx), 'trójkątów, atlas', AW, 'x', AH, flush=True)
         # gotowa odmiana: usuwamy jej siatki, żeby następna (i Cycles) miała pamięć (sosna ma 17 mln trójkątów)

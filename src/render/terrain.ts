@@ -917,6 +917,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     windCrown(k.cardMat, amp, `wind-${k.name}`, from);
     windCrown(k.barkMat, amp, `wind-${k.name}-bark`, from, false);
     if (k.role === 'leaf') { k.cardMat.userData.season = 'leaf'; leafFar(k.far.material); }
+    // iglaki: korona bez śniegu z bliska i z daleka tak samo (obrazki z daleka nie mają śniegu, więc białe korony
+    // z bliska „wyskakiwały” przy ruchu kamery); śnieg i szron dalej leżą na ziemi, pniach i krzakach
+    else { k.cardMat.userData.noSeason = true; k.far.material.userData.noSeason = true; }
   }
   /** z bliska bryła i karty, dalej niż ok. 16 pól od kawałka obrazek (pień chowa się razem z przełączeniem) */
   const kindLod = (k: TreeKind): Lod => ({ near: 26, farGeo: k.far.geometry, farMat: k.far.material, shadowGeo: k.shadow });

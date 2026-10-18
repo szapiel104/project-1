@@ -10,7 +10,7 @@ import { impostorFrom } from './impostors';
  * młode jodły w podroście.
  */
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
-type Variant = { species: string; role: 'conifer' | 'leaf' | 'sapling'; trunk: Packed; cards: Packed; shadow: Packed; far: { w: number; h: number }; avg: number[] };
+type Variant = { species: string; role: 'conifer' | 'leaf' | 'sapling'; trunk: Packed; cards: Packed; shadow: Packed; far: { w: number; h: number; bare?: boolean }; avg: number[] };
 
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
 const f32 = (u: Uint8Array): Float32Array => new Float32Array(u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength));
@@ -97,7 +97,7 @@ export function treeKinds(): TreeKind[] {
     const barkMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: tex(`pv_${name}_bark`), normalMap: tex(`pv_${name}_bark_n`, false) });
     // karty mają przód i tył jako osobne trójkąty z normalnymi od pnia, więc rysujemy tylko przednie strony
     const cardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9, metalness: 0, map: maskedTex(`pv_${name}_cards`), alphaTest: 0.5 });
-    const imp = impostorFrom(maskedTex(`pv_${name}_far`) ?? new THREE.Texture(), v.far.w, v.far.h);
+    const imp = impostorFrom(maskedTex(`pv_${name}_far`) ?? new THREE.Texture(), v.far.w, v.far.h, v.far.bare ? maskedTex(`pv_${name}_farbare`) : null);
     return { name, role: v.role, trunk: geo(v.trunk), cards, shadow: geo(v.shadow), barkMat, cardMat, far: { geometry: imp.geometry, material: imp.material() }, height: box.max.y };
   });
   return kinds;

@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SEASON_U } from './season';
 
 /** Część drzewa do sfotografowania: bryła, barwa i tekstura */
 export interface ImpostorPart { geo: THREE.BufferGeometry; color: number; map?: THREE.Texture | null; vertexColors?: boolean; /** karty z przezroczystością (liście, igły) */ alpha?: boolean }
@@ -50,13 +51,22 @@ export function treeImpostor(parts: ImpostorPart[], px = 96): { geometry: THREE.
  * Obrazek z daleka z gotowego paska 8 klatek (np. zdjęcia drzewa zrobione w Blenderze: tools/models/forest_polyhaven.py).
  * Klatka k: kamera na (sin a, cos a) w płaszczyźnie x/z, a = k/8 obrotu; W × H — wymiary obrazka w polach, podstawa w 0.
  */
-export function impostorFrom(tex: THREE.Texture, W: number, H: number): { geometry: THREE.BufferGeometry; material: (inverse?: number) => THREE.MeshStandardMaterial } {
+export function impostorFrom(tex: THREE.Texture, W: number, H: number, bare?: THREE.Texture | null): { geometry: THREE.BufferGeometry; material: (inverse?: number) => THREE.MeshStandardMaterial } {
   const geometry = new THREE.PlaneGeometry(W, H).translate(0, H / 2, 0);
   const material = (inverse?: number): THREE.MeshStandardMaterial => {
     const m = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, roughness: 1, metalness: 0, side: THREE.DoubleSide });
     // kawałek lasu przełączany z bryły na obrazek ma w instancjach barwę korony: tu ją znosimy, zostaje sam odcień drzewa
     if (inverse !== undefined) { const c = new THREE.Color(inverse); m.color.setRGB(1 / Math.max(c.r, 0.02), 1 / Math.max(c.g, 0.02), 1 / Math.max(c.b, 0.02)); }
     m.onBeforeCompile = (sh) => {
+      // liściaste zimą: ten sam obrazek bez liści (klatki zrobione w Blenderze), przełączany razem z porą roku
+      if (bare) {
+        sh.uniforms.uBareMap = { value: bare };
+        sh.uniforms.uBare = SEASON_U.uBare;
+        sh.fragmentShader = 'uniform sampler2D uBareMap;\nuniform float uBare;\n' + sh.fragmentShader.replace('#include <map_fragment>', `#include <map_fragment>
+          #ifdef USE_MAP
+            if (uBare > 0.5) { vec4 sBt = texture2D(uBareMap, vMapUv); diffuseColor = vec4(diffuse * sBt.rgb, opacity * sBt.a); }
+          #endif`);
+      }
       sh.vertexShader = `#define FRAMES ${FRAMES}.0\n` + sh.vertexShader
         .replace('#include <uv_vertex>', `#include <uv_vertex>
           vec3 ipos = instanceMatrix[3].xyz;
@@ -73,7 +83,7 @@ export function impostorFrom(tex: THREE.Texture, W: number, H: number): { geomet
         .replace('#include <project_vertex>', 'vec4 mvPosition = modelViewMatrix * vec4(transformed, 1.0);\n gl_Position = projectionMatrix * mvPosition;')
         .replace('#include <worldpos_vertex>', 'vec4 worldPosition = modelMatrix * vec4(transformed, 1.0);');
     };
-    m.customProgramCacheKey = () => 'tree-impostor';
+    m.customProgramCacheKey = () => (bare ? 'tree-impostor-bare' : 'tree-impostor');
     return m;
   };
   return { geometry, material };

@@ -253,7 +253,7 @@ export function applySeason(root: THREE.Object3D): void {
     if (inside && m.isMesh && m.material) m.material = Array.isArray(m.material) ? m.material.map(indoorTwin) : indoorTwin(m.material);
     if (!sk && m.isMesh && m.material) {
       for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
-        if (mat.transparent && !mat.alphaTest) continue;
+        if ((mat.transparent && !mat.alphaTest) || mat.userData.noSeason) continue;
         seasonMaterial(mat, (mat.userData.season as SeasonKind | undefined) ?? 'solid');
       }
     }
