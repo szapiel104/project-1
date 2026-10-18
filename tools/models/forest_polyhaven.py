@@ -48,7 +48,7 @@ ROLE = {
 # id paczki → rola i materiał kory (pień jako bryła); wszystko inne idzie na karty korony
 SPECIES = {
     'fir_tree_01': {'role': 'conifer'},
-    'pine_tree_01': {'role': 'conifer'},
+    # 'pine_tree_01' (17 mln trójkątów) nie mieści się w pamięci przy 7 GB nawet po jednej odmianie
     'island_tree_01': {'role': 'leaf'},
     'island_tree_02': {'role': 'leaf'},
     'fir_sapling_medium': {'role': 'sapling'},
