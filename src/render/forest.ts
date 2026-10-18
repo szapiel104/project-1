@@ -66,6 +66,8 @@ function maskedTex(name: string): THREE.Texture | null {
     const img = c.getImageData(0, 0, cv.width, cv.height);
     for (let i = 0; i < img.data.length; i += 4) img.data[i + 3] = a[i]!;
     c.putImageData(img, 0, 0);
+    // płótno zmieniło rozmiar: stara pamięć tekstury na karcie ma stały rozmiar, więc zwalniamy ją i wgrywamy od nowa
+    tt.dispose();
     tt.needsUpdate = true;
   }).catch(() => { /* brak pliku: dziennik błędów i tak zgłosi nieudane wczytanie */ });
   return tt;
