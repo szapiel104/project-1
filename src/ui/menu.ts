@@ -202,28 +202,6 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     body.replaceChildren(el('p', 'menu-heading', heading), ...nodes);
     body.querySelector<HTMLElement>('button, input, select')?.focus();
   };
-  /** Zakładki: lista przycisków po lewej, wybrana treść po prawej */
-  const tabbed = (tabs: [string, () => Node[]][], top = false): HTMLElement => {
-    const box = el('div', top ? 'menu-tabs top' : 'menu-tabs');
-    const nav = el('div', 'menu-nav');
-    nav.setAttribute('role', 'tablist');
-    const pane = el('div', 'menu-pane');
-    pane.setAttribute('role', 'tabpanel');
-    const buttons: HTMLButtonElement[] = [];
-    const show = (i: number): void => {
-      buttons.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); });
-      pane.replaceChildren(...tabs[i]![1]());
-    };
-    tabs.forEach(([name], i) => {
-      const b = button(name, () => show(i), 'menu-tab');
-      b.setAttribute('role', 'tab');
-      buttons.push(b);
-      nav.append(b);
-    });
-    box.append(nav, pane);
-    show(0);
-    return box;
-  };
 
   // ---- gra przez sieć i konto ----
   const online = createOnline({
@@ -499,8 +477,13 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     return lab;
   };
 
-  function showSettings(): void {
-    const tabs = tabbed([
+  /**
+   * Ustawienia jak księga „Jak grać”: duże okno, spis po lewej, strona po prawej. Grafika rozbita na strony
+   * (od najważniejszych dla wyglądu), a wszystko, co gra poświęca dla płynności, osobno na samym końcu.
+   */
+  function showSettings(startArg?: unknown): void {
+    const start = typeof startArg === 'number' ? startArg : 0;
+    const other: [string, () => Node[]][] = [
       [t('menu.sound'), () => {
         const mute = check(tx('Wycisz cały dźwięk', 'Mute all sound'), muted, (v) => { if (v !== muted) muted = events.onMute(); });
         return [
@@ -512,45 +495,6 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           slider(tx('Muzyka', 'Music'), (settings.music ?? 0.45) * 100, (v) => { settings.music = v / 100; save(); }),
           // autorzy nagrań (CC BY-SA wymaga podpisu w grze)
           el('p', 'hint', tx('Ptaki, odgłosy wsi, kury, róg i grzmot: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0. Świerszcze i dzwon: Freesound (rsn267, beambot, Nox_Sound), CC0. Muzyka: RandomMind, nihilocrat, Tozan (OpenGameArt, CC0). Efekty: Kenney (CC0/MIT).', 'Birds, village sounds, hens, horn and thunder: 0 A.D. © Wildfire Games (wildfiregames.com), CC BY-SA 3.0 licence. Crickets and bell: Freesound (rsn267, beambot, Nox_Sound), CC0. Music: RandomMind, nihilocrat, Tozan (OpenGameArt, CC0). Effects: Kenney (CC0/MIT).')),
-        ];
-      }],
-      [t('menu.graphics'), () => {
-        // sekcje: gotowe poziomy, ostrość obrazu, światło, świat, płynność — przy każdej krótko, co kosztuje, a co nie
-        const group = (title: string, hint: string): HTMLElement[] => [el('h3', 'set-group', title), el('p', 'hint set-group-hint', hint)];
-        const preset = (label: string, tier: number): HTMLButtonElement => button(label, () => {
-          const q = TIERS[tier]!;
-          Object.assign(settings, { scale: q.scale, shadows: q.shadows, ao: q.ao, grass: q.grass, soft: !!q.soft, aa: q.aa, reflections: q.reflections, aniso: 16, sharpen: q.aa === 'fxaa' || q.aa === 'smaa' ? 0.3 : 0 });
-          manual(); showSettings();
-        }, 'menu-btn set-preset');
-        const presets = el('div', 'set-presets');
-        presets.append(preset(tx('Niska', 'Low'), 1), preset(tx('Średnia', 'Medium'), 2), preset(tx('Wysoka', 'High'), 4), preset('Ultra', TIERS.length - 1));
-        return [
-          ...group(tx('Poziom grafiki', 'Graphics level'), tx('Automat sam dobiera jakość do komputera. Gotowy poziom ustawia wszystko poniżej naraz — potem możesz poprawić pojedyncze rzeczy.', 'Auto picks quality to suit your computer. A preset sets everything below at once — you can then fine-tune single options.')),
-          check(tx('Automatyczna jakość', 'Automatic quality'), settings.auto, (v) => { settings.auto = v; save(); }),
-          presets,
-
-          ...group(tx('Ostrość i krawędzie', 'Sharpness and edges'), tx('Tu jest największa różnica w wyglądzie modeli. Filtrowanie 16× prawie nic nie kosztuje — zostaw włączone. MSAA 4× to najlepszy wybór; 8× tylko na mocną kartę. FXAA i SMAA są lżejsze, ale rozmywają — dopiero z nimi ma sens wyostrzenie. Przy MSAA wyostrzenie zwykle zbędne.', 'This is where models gain the most. 16× filtering costs next to nothing — leave it on. MSAA 4× is the best pick; 8× only on a strong card. FXAA and SMAA are lighter but blur — sharpening only makes sense with them. With MSAA it is usually unnecessary.')),
-          choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
-          choice(tx('Wygładzanie krawędzi', 'Anti-aliasing'), settings.aa ?? 'msaa4', [['off', t('set.off')], ['fxaa', 'FXAA'], ['smaa', 'SMAA'], ['msaa2', 'MSAA 2×'], ['msaa4', 'MSAA 4×'], ['msaa8', 'MSAA 8×']], (v) => { settings.aa = v; manual(); }),
-          choice(tx('Filtrowanie tekstur', 'Texture filtering'), settings.aniso ?? 16, [[1, tx('Zwykłe', 'Basic')], [4, '4×'], [8, '8×'], [16, '16×']], (v) => { settings.aniso = v; manual(); }),
-          choice(tx('Wyostrzenie obrazu', 'Image sharpening'), settings.sharpen ?? 0, [[0, t('set.off')], [0.3, tx('Lekkie', 'Light')], [0.6, tx('Mocne', 'Strong')]], (v) => { settings.sharpen = v; manual(); }),
-
-          ...group(tx('Światło i cienie', 'Light and shadows'), tx('Odbicia otoczenia sprawiają, że modele nie są płaskie po stronie cienia — tanie, warto mieć. Cienie i cieniowanie zagłębień kosztują najwięcej: gdy gra przycina, zmniejszaj najpierw je.', 'Environment reflections stop models looking flat on the shaded side — cheap and worth having. Shadows and ambient occlusion cost the most: if the game stutters, lower these first.')),
-          check(tx('Odbicia otoczenia', 'Environment reflections'), settings.reflections ?? true, (v) => { settings.reflections = v; manual(); }),
-          choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; manual(); }),
-          check(tx('Miękkie cienie (po ponownym uruchomieniu gry)', 'Soft shadows (after restarting the game)'), settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
-          choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
-          slider(tx('Jasność', 'Brightness'), (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
-
-          ...group(tx('Świat', 'World'), tx('Trawa daleko (Ultra) jest ciężka na słabszych kartach. Pora dnia, deszcz i mgła to klimat gry, a nie wydajność — wyłączaj je tylko, gdy przeszkadzają.', 'Far grass (Ultra) is heavy on weaker cards. Time of day, rain and fog are atmosphere, not performance — switch them off only if they bother you.')),
-          choice(tx('Trawa', 'Grass'), settings.grass, [[0, t('set.off')], [0.6, tx('Bliżej kamery', 'Near the camera')], [1, tx('Pełna', 'Full')], [1.35, tx('Daleko (Ultra)', 'Far (Ultra)')]], (v) => { settings.grass = v; manual(); }),
-          check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
-          check(tx('Deszcz', 'Rain'), settings.rain ?? true, (v) => { settings.rain = v; save(); }),
-          check(tx('Mgła', 'Fog'), settings.fog ?? true, (v) => { settings.fog = v; save(); }),
-
-          ...group(tx('Płynność', 'Smoothness'), tx('Na mocnym komputerze nic tu nie trzeba. Limit 60 klatek chłodzi kartę i laptop; dynamiczna rozdzielczość ratuje płynność na słabszym sprzęcie, ale może mignąć przy zmianie.', 'On a strong computer nothing here is needed. A 60 fps limit keeps the card and laptop cooler; dynamic resolution saves smoothness on weaker hardware but may flicker when it changes.')),
-          choice(tx('Limit klatek', 'Frame limit'), settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, tx('Bez limitu', 'Unlimited')]], (v) => { settings.fpsLimit = v; save(); }),
-          check(tx('Dynamiczna rozdzielczość', 'Dynamic resolution'), settings.dynRes ?? false, (v) => { settings.dynRes = v; save(); }),
         ];
       }],
       [tx('Interfejs', 'Interface'), () => [
@@ -588,13 +532,113 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           link(tx('Pusta scena testowa', 'Empty test scene'), '?test=1&pusta=1', tx('Płaska łąka z samą twierdzą, bez zapisu gry — do sprawdzania jednej rzeczy w grze.', 'A flat meadow with just the keep, no save — for checking one thing in the game.')),
         ];
       }],
-    ], true);
+    ];
+
+    // ---- strony grafiki ----
+    const tip = (text: string, warn = false): HTMLElement => {
+      const p = el('p', warn ? 'help-tip set-warn' : 'help-tip');
+      p.append(el('strong', '', warn ? tx('Uwaga', 'Note') : tx('Rada', 'Tip')), document.createTextNode(` ${text}`));
+      return p;
+    };
+    const intro = (text: string): HTMLElement => el('p', 'help-p', text);
+    let current = 0;
+    const preset = (label: string, tier: number): HTMLButtonElement => button(label, () => {
+      const q = TIERS[tier]!;
+      Object.assign(settings, { scale: q.scale, shadows: q.shadows, ao: q.ao, grass: q.grass, soft: !!q.soft, aa: q.aa, reflections: q.reflections, aniso: 16, sharpen: q.aa === 'fxaa' || q.aa === 'smaa' ? 0.3 : 0 });
+      manual(); showSettings(current);
+    }, 'menu-btn set-preset');
+    const graphics: [string, () => Node[]][] = [
+      [tx('Poziom grafiki', 'Graphics level'), () => {
+        const presets = el('div', 'set-presets');
+        presets.append(preset(tx('Niska', 'Low'), 1), preset(tx('Średnia', 'Medium'), 2), preset(tx('Wysoka', 'High'), 4), preset('Ultra', TIERS.length - 1));
+        return [
+          intro(tx('Gotowy poziom ustawia wszystkie opcje grafiki naraz. Potem na kolejnych stronach możesz poprawić pojedyncze rzeczy.', 'A preset sets every graphics option at once. You can fine-tune single things on the following pages.')),
+          presets,
+          tip(tx('Na dobrej karcie graficznej wybierz Ultra albo Wysoka. Automatyczna jakość i inne oszczędzanie są na ostatniej stronie, „Tylko dla słabych komputerów”.', 'On a good graphics card pick Ultra or High. Automatic quality and other savers are on the last page, “Weak computers only”.')),
+        ];
+      }],
+      [tx('Ostrość i krawędzie', 'Sharpness and edges'), () => [
+        intro(tx('Tu jest największa różnica w wyglądzie modeli: ostre krawędzie, gładkie liście i wyraźne tekstury.', 'This is where models gain the most: crisp edges, smooth leaves and clear textures.')),
+        choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
+        choice(tx('Wygładzanie krawędzi', 'Anti-aliasing'), settings.aa ?? 'msaa4', [['off', t('set.off')], ['fxaa', 'FXAA'], ['smaa', 'SMAA'], ['msaa2', 'MSAA 2×'], ['msaa4', 'MSAA 4×'], ['msaa8', 'MSAA 8×']], (v) => { settings.aa = v; manual(); }),
+        choice(tx('Filtrowanie tekstur', 'Texture filtering'), settings.aniso ?? 16, [[1, tx('Zwykłe', 'Basic')], [4, '4×'], [8, '8×'], [16, '16×']], (v) => { settings.aniso = v; manual(); }),
+        choice(tx('Wyostrzenie obrazu', 'Image sharpening'), settings.sharpen ?? 0, [[0, t('set.off')], [0.3, tx('Lekkie', 'Light')], [0.6, tx('Mocne', 'Strong')]], (v) => { settings.sharpen = v; manual(); }),
+        tip(tx('MSAA 4× to najlepszy wybór, 8× na mocną kartę. Filtrowanie 16× prawie nic nie kosztuje — zostaw. FXAA i SMAA są lżejsze, ale rozmywają; wyostrzenie ma sens tylko z nimi, przy MSAA jest zbędne.', 'MSAA 4× is the best pick, 8× for a strong card. 16× filtering costs next to nothing — leave it. FXAA and SMAA are lighter but blur; sharpening only makes sense with them and is unnecessary with MSAA.')),
+      ]],
+      [tx('Światło i cienie', 'Light and shadows'), () => [
+        intro(tx('Światło decyduje, czy modele wyglądają jak bryły, czy jak płaskie wycinanki.', 'Light decides whether models look solid or like flat cut-outs.')),
+        check(tx('Odbicia otoczenia', 'Environment reflections'), settings.reflections ?? true, (v) => { settings.reflections = v; manual(); }),
+        choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; manual(); }),
+        check(tx('Miękkie cienie (po ponownym uruchomieniu gry)', 'Soft shadows (after restarting the game)'), settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
+        choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
+        slider(tx('Jasność', 'Brightness'), (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
+        tip(tx('Odbicia otoczenia są tanie, a modele przestają być płaskie po stronie cienia — zostaw włączone. Cienie i cieniowanie zagłębień kosztują najwięcej ze wszystkich opcji.', 'Environment reflections are cheap and stop models looking flat on the shaded side — leave them on. Shadows and ambient occlusion cost the most of all options.')),
+      ]],
+      [tx('Świat', 'World'), () => [
+        intro(tx('Trawa, pora dnia i pogoda — klimat wioski.', 'Grass, time of day and weather — the feel of the village.')),
+        choice(tx('Trawa', 'Grass'), settings.grass, [[0, t('set.off')], [0.6, tx('Bliżej kamery', 'Near the camera')], [1, tx('Pełna', 'Full')], [1.35, tx('Daleko (Ultra)', 'Far (Ultra)')]], (v) => { settings.grass = v; manual(); }),
+        check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
+        check(tx('Deszcz', 'Rain'), settings.rain ?? true, (v) => { settings.rain = v; save(); }),
+        check(tx('Mgła', 'Fog'), settings.fog ?? true, (v) => { settings.fog = v; save(); }),
+        tip(tx('Pora dnia, deszcz i mgła to klimat, a nie wydajność — wyłączaj je tylko, gdy przeszkadzają w grze.', 'Time of day, rain and fog are atmosphere, not performance — switch them off only if they get in the way.')),
+      ]],
+      [tx('Tylko dla słabych komputerów', 'Weak computers only'), () => [
+        intro(tx('Te opcje nie poprawiają wyglądu — robią odwrotnie: obniżają jakość obrazu, żeby gra chodziła płynniej na słabym sprzęcie.', 'These options do not improve the look — the opposite: they lower image quality so the game runs smoother on weak hardware.')),
+        tip(tx('Na mocnym komputerze zostaw automatyczną jakość i dynamiczną rozdzielczość wyłączone. Automat przy każdym spadku płynności sam ścina grafikę (i nigdy nie wchodzi na Ultra), a dynamiczna rozdzielczość zmniejsza obraz — przez to gra potrafi wyglądać brzydziej.', 'On a strong computer leave automatic quality and dynamic resolution off. Auto cuts the graphics on every drop in smoothness (and never goes to Ultra), and dynamic resolution shrinks the image — that is why the game can look worse.'), true),
+        check(tx('Automatyczna jakość (gra sama obniża grafikę, gdy przycina)', 'Automatic quality (the game lowers graphics itself when it stutters)'), settings.auto, (v) => { settings.auto = v; save(); }),
+        check(tx('Dynamiczna rozdzielczość (mniejszy obraz, gdy karta nie wyrabia)', 'Dynamic resolution (smaller image when the card can’t keep up)'), settings.dynRes ?? false, (v) => { settings.dynRes = v; save(); }),
+        choice(tx('Limit klatek', 'Frame limit'), settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, tx('Bez limitu', 'Unlimited')]], (v) => { settings.fpsLimit = v; save(); }),
+        tip(tx('Limit klatek nie psuje obrazu: 60 klatek chłodzi kartę i laptop, 30 tylko na bardzo słabym sprzęcie. Gdy gra mimo wszystko przycina, zmniejszaj po kolei: cieniowanie zagłębień, cienie, trawę, rozdzielczość.', 'The frame limit does not spoil the image: 60 fps keeps the card and laptop cooler, 30 only on very weak hardware. If the game still stutters, lower in turn: ambient occlusion, shadows, grass, resolution.')),
+      ]],
+    ];
+
+    // ---- księga: spis po lewej, strona po prawej ----
+    const pages: { title: string; group: number; make: () => Node[] }[] = [
+      ...graphics.map(([title, make]) => ({ title, group: 0, make })),
+      ...other.map(([title, make]) => ({ title, group: 1, make })),
+    ];
+    const book = el('div', 'help-book set-book');
+    const nav = el('nav', 'help-nav');
+    nav.setAttribute('aria-label', t('menu.settings'));
+    const list = el('div', 'help-toc'); list.setAttribute('role', 'tablist'); list.setAttribute('aria-orientation', 'vertical');
+    const pane = el('div', 'help-pane'); pane.setAttribute('role', 'tabpanel'); pane.id = 'set-pane'; pane.tabIndex = -1;
+    const btns: HTMLButtonElement[] = [];
+    const show = (i: number): void => {
+      current = i;
+      btns.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
+      const pg = pages[i]!;
+      const sheet = el('article', 'help-text set-sheet');
+      sheet.append(el('h2', 'help-title', pg.title), ...pg.make());
+      pane.replaceChildren(sheet);
+      pane.scrollTop = 0;
+    };
+    let group = -1, n = 0;
+    pages.forEach((pg, i) => {
+      if (pg.group !== group) { group = pg.group; list.append(el('p', 'help-toc-group', group === 0 ? t('menu.graphics') : tx('Pozostałe', 'Other'))); n = 0; }
+      n++;
+      const b = button('', () => show(i), 'help-toc-item');
+      b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', pane.id);
+      b.append(el('span', 'help-toc-n', pg.group === 0 ? String(n) : '◆'), el('span', 'help-toc-t', pg.title));
+      btns.push(b); list.append(b);
+    });
+    list.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault();
+      const i = btns.indexOf(document.activeElement as HTMLButtonElement);
+      const k = (Math.max(0, i) + (e.key === 'ArrowDown' ? 1 : btns.length - 1)) % btns.length;
+      show(k); btns[k]!.focus();
+    });
+    nav.append(list);
     // zmiany zapisują się od razu; „Zapisz” potwierdza i wraca do menu
-    const reset = button(t('set.reset'), () => { Object.assign(settings, DEFAULT_SETTINGS); save(); showSettings(); }, 'menu-btn menu-reset');
-    const ok = button(tx('Zapisz', 'Save'), () => { save(); showMain(); }, 'menu-btn menu-save');
-    const foot = el('div', 'menu-foot set-foot');
-    foot.append(back(), reset, ok);
-    screen(t('menu.settings'), true, tabs, foot);
+    const reset = button(t('set.reset'), () => { Object.assign(settings, DEFAULT_SETTINGS); save(); showSettings(current); }, 'btn-plain help-again');
+    const ok = button(tx('Zapisz', 'Save'), () => { save(); showMain(); }, 'menu-btn menu-save set-save');
+    nav.append(reset, ok, back());
+    book.append(nav, pane);
+    screen(t('menu.settings'), true, book);
+    panel.classList.add('book'); wrap.classList.add('book-open');
+    const first = Math.max(0, Math.min(pages.length - 1, start));
+    show(first);
+    btns[first]!.focus();
   }
 
   /** Zakładka z modelami: lista po lewej, obracający się model i opis po prawej */
