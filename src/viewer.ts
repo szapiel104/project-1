@@ -18,7 +18,7 @@ import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './re
 import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
 import { proceduralModels } from './render/models';
 import { fernTexture, leafTexture, needleTexture } from './render/foliage';
-import { bushKinds, treeKinds } from './render/forest';
+import { bushKinds, treeKinds, waterPlants } from './render/forest';
 import { model } from './render/modelstore';
 import { clutterModel } from './render/clutter';
 import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
@@ -231,6 +231,17 @@ const GROUPS: [string, [string, string, Make][]][] = [
       g.scale.setScalar(1.2);
       return { obj: g, size: new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3()) };
     }]),
+    // trzciny i kożuch liści z 0 A.D. (oryginalne siatki i tekstury); skala jak w grze
+    ...[0, 1].map((i): [string, string, Make] => [`reeds-${i + 1}`, tx(`pałka wodna ${i + 1} (0 A.D.)`, `cattails ${i + 1} (0 A.D.)`), () => {
+      const w = waterPlants();
+      return { obj: new THREE.Mesh(w.reeds, new THREE.MeshStandardMaterial({ map: w.reedTex[i] ?? null, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 })) };
+    }]),
+    ['lilies', tx('liście na stawie (0 A.D.)', 'pond leaves (0 A.D.)'), () => {
+      const w = waterPlants();
+      const m = new THREE.Mesh(w.lilies, new THREE.MeshStandardMaterial({ map: w.lilyTex, alphaTest: 0.35, roughness: 0.55 }));
+      m.position.y = 0.01;
+      return { obj: m, size: new THREE.Vector3(1.2, 0.1, 1.2) };
+    }],
     ['plant-bush', tx('krzak (stary, z kul)', 'bush (old, spheres)'), plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
     ['plant-rock', tx('głaz (z bliska | z daleka)', 'boulder (near | far)'), plantPair(proceduralModels.rock(), proceduralModels.rockFar(), 0xc4bfb1, 'rock', true)],
   ]],

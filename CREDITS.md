@@ -44,6 +44,9 @@ Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://g
 ## Muzyka (CC0)
 RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old Tower Inn”, „Medieval Battle”; nihilocrat — „Peasant Theme”; Tozan — „Medievals 5”. Wszystkie z OpenGameArt na licencji CC0 (szczegóły w docs/zasoby.md). Dziękujemy autorom.
 
+## Rośliny wodne
+Pałka wodna (`cattails.dae`, `cattails_1.png`, `cattails_2.png`) i kożuch liści na stawie (`pond_lillies_large.dae`, `water_plants_lg.dds`): gra **0 A.D.** © Wildfire Games (https://www.wildfiregames.com/), licencja CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/). Przeniesione bez zmian rysunku skryptem `tools/models/water_plants_0ad.py` (obrót osi, skala do pól, kolor rozlany pod przezroczystymi pikselami) → `src/render/models/waterplants.json`, `public/textures/cc0/oad_*.jpg`; te pliki udostępniamy na tej samej licencji CC BY-SA 3.0.
+
 ## Dźwięki natury
 Śpiew ptaków, odgłosy wsi, kury, róg alarmu i grzmot: gra **0 A.D.** © Wildfire Games (https://www.wildfiregames.com/), licencja CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/). Świerszcze i dzwon: Freesound (rsn267, beambot, Nox_Sound), CC0. Szczegóły w docs/zasoby.md.
 

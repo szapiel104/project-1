@@ -12,7 +12,7 @@ import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import { fernTexture } from './foliage';
-import { bushKinds, kindsOf, type BushKind, type TreeKind } from './forest';
+import { bushKinds, kindsOf, waterPlants, type BushKind, type TreeKind } from './forest';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ModelFactory } from './models';
@@ -780,7 +780,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const shoreNear = !isW(x + 1, y) || !isW(x - 1, y) || !isW(x, y + 1) || !isW(x, y - 1);
         if (!sandy && shoreNear && (r >>> 9) % 2 === 0) put(reeds, x, y, 23, 1.1, 0.9);
         const near2 = !isW(x + 2, y) || !isW(x - 2, y) || !isW(x, y + 2) || !isW(x, y - 2);
-        if ((shoreNear || near2) && (r >>> 14) % 5 === 0) for (let k = 0; k < 3; k++) put(lilies, x, y, 30 + k, 0.8 + k * 0.2, 0.9);
+        if ((shoreNear || near2) && (r >>> 14) % 5 === 0) put(lilies, x, y, 30, 0.8 + ((r >>> 18) & 3) * 0.12, 0.9); // jeden płat kożucha liści na pole
       }
       else if (t === Terrain.Grass && !sandy && map.trails?.[y * w + x]) {
         // na leśnej ścieżce tylko drobne kamyki w ubitej ziemi
@@ -1220,17 +1220,24 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // młode jodły w podroście (Fir Sapling Medium z Poly Haven): z bliska bryła i karty, dalej obrazki, nie do ścięcia
   label = 'podszyt: młode jodły';
   for (const [k, sub] of splitKinds(firs, SAPLINGS, 7)) plant(sub, instanced(k.trunk, 0xffffff, sub, undefined, false, k.barkMat, kindTrunkLodOf(k), 16), instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k), 16), false);
-  // trzciny: wysokie karty z teksturą trzcin i pałek; grzybienie leżą płasko na tafli
-  for (const it of reeds) { it.s.y *= 2.6; it.s.x *= 1.1; it.s.z *= 1.1; it.m.compose(it.pos, it.q, it.s); }
+  // trzciny (pałka wodna) i kożuch liści na stawach z gry 0 A.D. (src/render/forest.ts → waterPlants): oryginalne
+  // siatki i tekstury bez przeróbek; pałka w dwóch odmianach, liście leżą płasko na tafli
+  const WP = waterPlants();
   for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
-  const reedMat = new THREE.MeshStandardMaterial({ map: reedTexture(map.seed), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 });
-  reedMat.onBeforeCompile = grassMat.onBeforeCompile;
-  reedMat.userData.season = 'grass';
-  reedMat.customProgramCacheKey = () => 'reeds';
   label = 'trzcina i grzybienie';
-  plant(reeds, instanced(grassCards(), 0xffffff, reeds, undefined, false, reedMat, { hide: 70 }), null, false);
-  const lilyGeo = new THREE.CircleGeometry(0.13, 12, 0.35, Math.PI * 2 - 0.5).rotateX(-Math.PI / 2);
-  plant(lilies, instanced(lilyGeo, 0x4a7a32, lilies, undefined, false, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.45, metalness: 0 }), { hide: 70 }), null, false);
+  const reedMats = WP.reedTex.map((tex, i) => {
+    const m = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 });
+    m.onBeforeCompile = grassMat.onBeforeCompile;
+    m.userData.season = 'grass';
+    m.customProgramCacheKey = () => `reeds-${i}`;
+    return m;
+  });
+  const reedSplit = reedMats.map(() => [] as Item[]);
+  for (const it of reeds) reedSplit[kindFor(reedMats.map((_, i) => i), it, 13)]!.push(it);
+  reedMats.forEach((m, i) => plant(reedSplit[i]!, instanced(WP.reeds, 0xffffff, reedSplit[i]!, undefined, false, m, { hide: 70 }), null, false));
+  const lilyMat = new THREE.MeshStandardMaterial({ map: WP.lilyTex, alphaTest: 0.35, roughness: 0.55, metalness: 0 });
+  lilyMat.userData.season = 'leaf';
+  plant(lilies, instanced(WP.lilies, 0xffffff, lilies, undefined, false, lilyMat, { hide: 70 }), null, false);
   label = 'kamyki';
   plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock', true, rockMat, { ...SMALL_LOD, farGeo: rockFar }), null, false);
   label = 'kępy trawy';
@@ -2004,7 +2011,6 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       }
       grass?.dispose();
       grassTex.dispose();
-      reedMat.map?.dispose();
     },
   };
 }
@@ -2093,35 +2099,3 @@ function grassCardTexture(seed: number): THREE.Texture {
 }
 
 
-/** Tekstura trzcin: proste, wysokie, oliwkowe źdźbła i liście, kilka brązowych pałek na sztywnych łodygach */
-function reedTexture(seed: number): THREE.Texture {
-  if (typeof document === 'undefined') return new THREE.Texture();
-  const N = 256;
-  const c = document.createElement('canvas');
-  c.width = c.height = N;
-  const ctx = c.getContext('2d')!;
-  let s = (seed ^ 0x51ed27) >>> 0;
-  const rnd = (): number => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
-  for (let i = 0; i < 70; i++) {
-    const depth = i / 70;
-    const x0 = N * (0.2 + rnd() * 0.6), hgt = N * (0.55 + rnd() * 0.43), lean = (rnd() - 0.5) * N * 0.18, wd = N * (0.01 + rnd() * 0.012);
-    const hue = 62 + rnd() * 25, l = 18 + depth * 20 + rnd() * 6;
-    ctx.fillStyle = `hsl(${hue}, ${30 + rnd() * 20}%, ${l}%)`;
-    ctx.beginPath();
-    ctx.moveTo(x0 - wd, N);
-    ctx.quadraticCurveTo(x0 + lean * 0.3 - wd * 0.5, N - hgt * 0.6, x0 + lean, N - hgt);
-    ctx.quadraticCurveTo(x0 + lean * 0.3 + wd * 0.5, N - hgt * 0.6, x0 + wd, N);
-    ctx.fill();
-    // pałka: brązowy walec u szczytu sztywnej łodygi
-    if (rnd() < 0.18) {
-      const tx = x0 + lean * 0.5, ty = N - hgt * 0.85;
-      ctx.fillStyle = `hsl(25, 45%, ${20 + rnd() * 10}%)`;
-      ctx.beginPath(); ctx.ellipse(tx, ty, 3.2, 11, lean / N, 0, Math.PI * 2); ctx.fill();
-    }
-  }
-  const t = new THREE.CanvasTexture(c);
-  t.colorSpace = THREE.SRGBColorSpace;
-  t.generateMipmaps = true;
-  t.minFilter = THREE.LinearMipmapLinearFilter;
-  return t;
-}

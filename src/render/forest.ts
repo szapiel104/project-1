@@ -136,3 +136,28 @@ export function bushKinds(): BushKind[] {
   });
   return bushes;
 }
+
+/**
+ * Trzciny (pałka wodna) i kożuch liści na stawach z gry 0 A.D. (© Wildfire Games, CC BY-SA 3.0), przeniesione
+ * bez przeróbek skryptem tools/models/water_plants_0ad.py: oryginalne trójkąty, UV, normalne i tekstury.
+ */
+type PlainPacked = { pos: string; nrm: string; uv: string; idx: string };
+function plainGeo(m: PlainPacked): THREE.BufferGeometry {
+  const pos = b64(m.pos), nrm = b64(m.nrm), uv = b64(m.uv), idx = b64(m.idx);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(f32(pos), 3));
+  g.setAttribute('normal', new THREE.BufferAttribute(new Int8Array(nrm.buffer.slice(nrm.byteOffset, nrm.byteOffset + nrm.byteLength)), 3, true));
+  g.setAttribute('uv', new THREE.BufferAttribute(f32(uv), 2));
+  g.setIndex(new THREE.BufferAttribute(new Uint16Array(idx.buffer.slice(idx.byteOffset, idx.byteOffset + idx.byteLength)), 1));
+  g.computeBoundingSphere();
+  return g;
+}
+export interface WaterPlants { reeds: THREE.BufferGeometry; reedTex: THREE.Texture[]; lilies: THREE.BufferGeometry; lilyTex: THREE.Texture | null }
+let water: WaterPlants | null = null;
+export function waterPlants(): WaterPlants {
+  if (water) return water;
+  const d = model<Record<'reeds' | 'lilies', PlainPacked>>('waterplants');
+  const reedTex = ['oad_cattails_1', 'oad_cattails_2'].map((n) => maskedTex(n)).filter((t): t is THREE.Texture => !!t);
+  water = { reeds: plainGeo(d.reeds), reedTex, lilies: plainGeo(d.lilies), lilyTex: maskedTex('oad_lilies') };
+  return water;
+}

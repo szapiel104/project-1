@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.31.2 — prawdziwa pałka wodna i liście na stawach (2026-10-19)
+
+- Trzciny przy wodzie to gotowe kępy pałki wodnej z gry 0 A.D. (dwie odmiany): wygięte liście, brązowe kolby, korzenie przy ziemi — zamiast prostych, malowanych w kodzie źdźbeł
+- Zielone „kółka” na wodzie zastąpione zdjęciem kożucha liści roślin pływających (też z 0 A.D.): nieregularne płaty z prześwitami wody
+- Siatki i tekstury wchodzą do gry bez odchudzania i przeróbek (oryginalne trójkąty, UV i rozdzielczość); w podglądzie modeli: Roślinność → pałka wodna 1 / 2, liście na stawie
+
 ## 0.31.1 — „Plan na start”: przewodnik w grze (2026-10-19)
 
 - Karta zadania po prawej (jak lista zadań w Cities: Skylines): jeden krok naraz — co zrobić, po co i gdzie, licznik postępu („Chata 1 / 3”) liczony ze stanu gry, kropki 9 kroków; po wykonaniu kroku dźwięk i od razu następny

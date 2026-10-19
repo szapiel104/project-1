@@ -135,3 +135,10 @@ i poziome od góry → karty (ok. 56 trójkątów), obrazek z daleka z 8 stron, 
 Wynik: `src/render/models/bushes.json`, `public/textures/cc0/pv_bush_<odmiana>_{cards,far}.jpg` (+ `_a` maska, przez płótno,
 bez KTX2). W grze `bushKinds()` w `src/render/forest.ts`, rozkład w `terrain.ts`; podgląd `modele.html?id=bush-a`.
 **Zawsze porównaj wersję do gry z pobranym modelem** (podgląd modeli w pełnej jakości obok renderu oryginału) — ma wyglądać tak samo, nie gorzej.
+
+## Trzciny i liście na stawach z 0 A.D.
+
+`python3 tools/models/water_plants_0ad.py /katalog` — pliki z repozytorium github.com/0ad/0ad (`art/meshes/gaia/cattails.dae`,
+`pond_lillies_large.dae`, `art/textures/skins/gaia/cattails_1.png`, `cattails_2.png`, `water_plants_lg.dds`; GitHub jest osiągalny
+z warsztatu, więc pobieranie idzie bez komputera Michała). Siatki i tekstury bez przeróbek → `src/render/models/waterplants.json`,
+`public/textures/cc0/oad_*.jpg` (+ `_a`, przez `maskedTex`). W grze `waterPlants()` w `src/render/forest.ts`; podgląd `modele.html?id=reeds-1`, `?id=lilies`.
