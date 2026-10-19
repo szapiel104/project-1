@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.30.13 — nic nie wystaje spod ekranu wczytywania (2026-10-19)
+
+- Przycisk „Mapa” (minimapa) i inne elementy interfejsu nie pokazują się już na ekranie wczytywania zapisu ani nowej gry
+
 ## 0.30.12 — szczegóły pod paskiem wczytywania (2026-10-19)
 
 - Pod paskiem (przy uruchomieniu gry, „Kontynuuj”, „Nowej grze” i meczu) widać, co dokładnie się teraz wczytuje i ile już trwa ten krok (np. która tekstura, ile modeli pobrano, który kierunek obchodu kamerą, ile równych klatek), a niżej listę skończonych kroków z czasami
