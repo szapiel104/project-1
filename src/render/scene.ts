@@ -1406,7 +1406,10 @@ export class GameRenderer {
       this.sun.shadow.radius = o.soft ? 3 : 1;
     }
     this.shadowSize(o.shadows);
-    this.ratioMax = Math.min(window.devicePixelRatio, o.scale);
+    // „Ostra”: na zwykłym monitorze (gęstość 1×) gra liczy obraz w 1,5× rozdzielczości i zmniejsza go (nadpróbkowanie —
+    // wygładza krawędzie, trawę i drobne tekstury); wcześniej było przycinane do gęstości ekranu i na 1× nic nie dawało
+    const dpr = window.devicePixelRatio || 1;
+    this.ratioMax = o.scale >= 2 ? Math.max(dpr, Math.min(2, dpr * 1.5)) : Math.min(dpr, o.scale);
     this.ratioDyn = 1;
     this.dynRes = !!o.dynRes;
     this.applyRatio();

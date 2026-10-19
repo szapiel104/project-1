@@ -146,7 +146,7 @@ export const en: Record<TextKey, string> = {
   'set.scale': 'Render resolution',
   'set.scaleLow': 'Lower (faster)',
   'set.scaleNormal': 'Normal',
-  'set.scaleSharp': 'Sharp (high-density screens)',
+  'set.scaleSharp': 'Sharp (supersampling, strong card)',
   'set.dayNight': 'Day and night cycle (off = always day)',
   'set.graphicsHint': 'If the game stutters, lower ambient occlusion first, then shadows and resolution.',
   'set.controls': 'Controls',
