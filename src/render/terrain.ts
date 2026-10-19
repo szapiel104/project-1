@@ -642,14 +642,19 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   }
   const yAxis = new THREE.Vector3(0, 1, 0);
+  // wysokość dokładnie taka, jak na narysowanej siatce ziemi: pole to dwa trójkąty dzielone przekątną (1,0)–(0,1).
+  // Wcześniej liczona dwuliniowo — na zboczach różnica sięgała pół metra, więc drzewa, ludzie i graty wisiały nad
+  // ziemią albo w nią wchodziły.
   const heightAt = (fx: number, fy: number): number => {
-    const x = Math.max(0, Math.min(w - 1.001, fx)), y = Math.max(0, Math.min(h - 1.001, fy));
+    const x = Math.max(0, Math.min(w - 0.001, fx)), y = Math.max(0, Math.min(h - 0.001, fy));
     const ix = Math.floor(x), iy = Math.floor(y);
     const tx = x - ix, ty = y - iy;
-    const top = corner(ix, iy) * (1 - tx) + corner(ix + 1, iy) * tx;
-    const bot = corner(ix, iy + 1) * (1 - tx) + corner(ix + 1, iy + 1) * tx;
-    return top * (1 - ty) + bot * ty;
+    if (tx + ty <= 1) { const a = corner(ix, iy); return a + (corner(ix + 1, iy) - a) * tx + (corner(ix, iy + 1) - a) * ty; }
+    const d = corner(ix + 1, iy + 1);
+    return d + (corner(ix, iy + 1) - d) * (1 - tx) + (corner(ix + 1, iy) - d) * (1 - ty);
   };
+  /** Spadek terenu w punkcie (metry na pole) — o tyle zagłębiamy drzewa, żeby pień nie wisiał nad zboczem od dołu */
+  const slopeOf = (fx: number, fy: number): number => Math.hypot(heightAt(fx + 0.35, fy) - heightAt(fx - 0.35, fy), heightAt(fx, fy + 0.35) - heightAt(fx, fy - 0.35)) / 0.7;
 
   // Mgła w dolinach, chmury przy szczytach, strumienie i wodospady z gór (bez trybu testowego: tam teren jest płaski)
   if (!TEST) {
@@ -756,6 +761,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const pos = new THREE.Vector3(x + 0.5 + jx + ox, heightAt(x + 0.5 + jx, y + 0.5 + jz), y + 0.5 + jz + oz);
     // drzewa w prawdziwej skali względem ludzi: wyraźnie wyższe od chłopa (korona nad głową), trochę szersze
     const tree = list === pines || list === leafy;
+    // pień i krzak stoją w ziemi, a nie na niej: na zboczu dolna strona pnia zagłębiona o spadek × promień podstawy
+    if (tree || list === firs || list === bushes) pos.y -= 0.04 + slopeOf(x + 0.5 + jx, y + 0.5 + jz) * 0.3 * s;
     // drzewa z Poly Haven mają prawdziwe proporcje: skala jednakowa, tylko wysokość trochę się waha
     const scale = new THREE.Vector3(s, s * (0.9 + ((r >>> 12) & 15) / 60) * (tree ? 1.05 : 1), s);
     m.compose(pos, q, scale);
@@ -957,6 +964,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     m.customProgramCacheKey = () => key;
     // cień korony kołysze się razem z nią (inaczej po koronie wędrują jasne pasy w miejscach, gdzie cień „został”)
     const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
+    // karty rzucają cień tylko tam, gdzie są liście i igły (ta sama maska co w obrazie), a nie całymi prostokątami
+    const src = m as THREE.MeshStandardMaterial;
+    if (cards && src.map) { depth.map = src.map; depth.alphaTest = src.alphaTest || 0.5; }
     depth.onBeforeCompile = m.onBeforeCompile;
     depth.customProgramCacheKey = () => key + '-depth';
     m.userData.windDepth = depth;
@@ -978,7 +988,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // (scene.ts: fog.near), więc do ok. 60 pól drzewo jest zawsze bryłą z kartami i nic nie mruga w zasięgu wzroku.
   // Karty korony są tanie (52 trójkąty); drogi jest pień, więc ten ma dwa stopnie: pełny do 18 pól, dalej lekki.
   const FOG_SWITCH = 60;
-  const kindLod = (k: TreeKind): Lod => ({ near: FOG_SWITCH, farGeo: k.far.geometry, farMat: k.far.material, shadowGeo: k.shadow });
+  // cień korony rzucają te same karty co w obrazie (z wyciętym tłem), więc ma dokładnie kształt drzewa; wcześniej rzucała
+  // go prosta bryła-stożek i na ziemi leżały trójkątne kliny zamiast koron
+  const kindLod = (k: TreeKind): Lod => ({ near: FOG_SWITCH, farGeo: k.far.geometry, farMat: k.far.material });
   // pień z bliska pełną bryłą (do kilku tys. trójkątów), dalej lżejszy; cień rzuca prosty graniastosłup w jego miejscu
   const trunkLods = new Map<TreeKind, Lod>();
   const kindTrunkLodOf = (k: TreeKind): Lod => {
@@ -1206,7 +1218,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const k = Math.min(1, dd / 60);
         const size = (1.25 + k * 1.6) * (0.8 + ((r >>> 16) & 255) / 255 * 0.5) * (1 - alt * 0.45);
         const leafTree = groundY < 4 && (r >>> 24) % 4 === 0; // wysoko tylko świerki
-        const pos = new THREE.Vector3(px, groundY - 0.05, pz);
+        const pos = new THREE.Vector3(px, groundY - 0.05 - slopeAt(X, Y) * 0.3 * size, pz);
         const qq = new THREE.Quaternion().setFromEuler(e3.set(0, ((r >>> 4) & 63) / 10, 0));
         const sc = new THREE.Vector3(size, size * (leafTree ? 1 : 1.1), size);
         const item = { m: new THREE.Matrix4().compose(pos, qq, sc), shade: (1 - k * 0.5) * (0.82 + ((r >>> 12) & 15) / 60), tile: -1, pos, q: qq, s: sc, frost: smoothstep(treeline - 5.5, treeline - 0.5, groundY) * 0.75 } as Item;
@@ -1242,7 +1254,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
   const bushSplit = new Map<BushKind, Item[]>(BUSHES.map((b) => [b, []]));
   for (const it of bushes) bushSplit.get(kindFor(BUSHES, it, 11))!.push(it);
-  for (const [b, sub] of bushSplit) plant(sub, instanced(b.cards, 0xffffff, sub, undefined, true, b.cardMat, { near: FOG_SWITCH, farGeo: b.far.geometry, farMat: b.far.material, shadowGeo: b.shadow }, 16), null, false);
+  for (const [b, sub] of bushSplit) plant(sub, instanced(b.cards, 0xffffff, sub, undefined, true, b.cardMat, { near: FOG_SWITCH, farGeo: b.far.geometry, farMat: b.far.material }, 16), null, false);
   // podszyt lasu: paprocie (karty z przezroczystością, drżą na wietrze, jesienią rudzieją) i opadłe gałęzie z korą
   label = 'podszyt';
   const fernMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: fernTexture(), alphaTest: 0.5 });

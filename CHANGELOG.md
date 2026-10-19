@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.27 — cienie drzew w kształcie drzew, drzewa stoją w ziemi (2026-10-19)
+
+- Korony drzew, młode jodły i krzaki rzucają cień swoimi prawdziwymi liśćmi i igłami (ta sama maska co w obrazie) zamiast prostej bryły — koniec z trójkątnymi klinami na ziemi
+- Wysokość terenu liczona dokładnie tak jak narysowana ziemia (dwa trójkąty na pole), więc drzewa, ludzie i graty nie wiszą nad zboczami ani się w nie nie zapadają
+- Drzewa i krzaki na zboczach lekko wkopane od dolnej strony — pień nie odstaje od stoku, także w puszczy za mapą
+
 ## 0.30.26 — nowe ustawienia grafiki i porządek w zakładce Grafika (2026-10-19)
 
 - Wygładzanie krawędzi naprawdę działa: wcześniej obraz szedł przez składanie efektów i zwykłe wygładzanie przeglądarki się wyłączało. Do wyboru FXAA, SMAA, MSAA 2×/4×/8× (domyślnie MSAA 4×)
