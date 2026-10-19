@@ -217,9 +217,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     onStart: (st) => events.onOnlineStart(st),
     openForJoin: (id) => { inGame = false; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
     inMatch: () => events.isOnline(),
-    // menu nie pokazuje podglądu mapy (generowanie i rysowanie mapy za menu przycinało grę)
-    preview: () => undefined,
-    previewEnd: () => undefined,
+    preview: (seedText, preset) => { wrap.classList.add('previewing'); events.onPreviewMap(seedText, preset, 2, false); },
+    previewEnd: () => { if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); } },
   });
   /** Pasek konta nad menu: herb, nick i przycisk konta albo zaproszenie do logowania */
   const account = el('div', 'menu-account');
@@ -352,7 +351,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     for (const id of Object.keys(MAP_PRESETS) as MapPresetId[]) {
       const p = MAP_PRESETS[id];
       const [a, b] = id.split('v');
-      modeRow.append(tile('mode', id === preset, `${a} ${tx('na', 'vs')} ${b}`, `${t(`menu.mode.${id}`)} · ${tx('mapa', 'map')} ${p.width}×${p.height}`, () => { preset = id; }, `mode-${id}`));
+      modeRow.append(tile('mode', id === preset, `${a} ${tx('na', 'vs')} ${b}`, `${t(`menu.mode.${id}`)} · ${tx('mapa', 'map')} ${p.width}×${p.height}`, () => { preset = id; preview(); }, `mode-${id}`));
     }
     let level = 1;
     const levelRow = el('div', 'pick-row four');
@@ -370,7 +369,20 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
     const roll = (): void => { seed.value = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`; };
     roll();
-    const rollBtn = button(tx('Losuj inną mapę', 'Roll another map'), () => { roll(); }, 'btn-plain');
+    // podgląd: po każdej zmianie mapa generuje się od nowa i widać ją z lotu ptaka za menu
+    const status = el('p', 'preview-status', '');
+    status.setAttribute('aria-live', 'polite');
+    let timer = 0;
+    const preview = (delay = 0): void => {
+      clearTimeout(timer);
+      status.textContent = tx('Generuję mapę…', 'Generating the map…');
+      timer = window.setTimeout(() => requestAnimationFrame(() => setTimeout(() => {
+        events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev);
+        status.textContent = tx(`Mapa „${seed.value.trim() || 'project-1'}” — widok z lotu ptaka. Losuj, aż trafisz na swoją.`, `Map “${seed.value.trim() || 'project-1'}” — bird’s-eye view. Keep rolling until you find the one you like.`);
+      }, 20)), delay);
+    };
+    seed.addEventListener('input', () => preview(700));
+    const rollBtn = button(tx('Losuj inną mapę', 'Roll another map'), () => { roll(); preview(); }, 'btn-plain');
     row.append(seed, rollBtn);
     seedWrap.append(seedLabel, row);
 
@@ -379,7 +391,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const devLab = el('label', 'dev-switch');
     const devBox = el('input');
     devBox.type = 'checkbox'; devBox.setAttribute('role', 'switch');
-    devBox.addEventListener('change', () => { dev = devBox.checked; instLab.hidden = !dev; wallLab.hidden = !dev; });
+    devBox.addEventListener('change', () => { dev = devBox.checked; instLab.hidden = !dev; wallLab.hidden = !dev; preview(); });
     devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', tx('Tryb deweloperski', 'Developer mode')), el('span', 'dev-hint', tx('miasto w murach, wojsko, pełne zapasy', 'walled town, army, full supplies')));
     // w trybie deweloperskim: budynki od razu gotowe albo zwykła budowa (robotnicy noszą materiał, rusztowania)
     let instant = true;
@@ -405,9 +417,11 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     start.type = 'submit';
     const foot = el('div', 'newgame-foot');
     foot.append(back(), start);
-    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, devLab, instLab, wallLab, warn, foot);
-    form.addEventListener('submit', (e) => { e.preventDefault(); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant, walls); });
+    form.append(section(t('hud.mode'), modeRow), section(t('menu.level'), levelRow), seedWrap, status, devLab, instLab, wallLab, warn, foot);
+    form.addEventListener('submit', (e) => { e.preventDefault(); clearTimeout(timer); wrap.classList.remove('previewing'); events.onNewGame(seed.value.trim() || 'project-1', preset, level, dev, instant, walls); });
     screen(t('menu.newGame'), true, form);
+    wrap.classList.add('previewing');
+    preview();
   }
 
   /** Suwak 0–100 % z wartością obok */

@@ -1343,4 +1343,4 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .build-need[hidden] { display: none !important; }
 
 /* Menu bez podglądu gry: pełne, ciemne tło jak na ekranie wczytywania (świat pod spodem nie jest rysowany) */
-.menu, .menu.previewing { background: radial-gradient(ellipse 90% 70% at 50% 38%, #2a1a0e 0%, #120a05 55%, #050302 100%); }
+.menu:not(.previewing) { background: radial-gradient(ellipse 90% 70% at 50% 38%, #2a1a0e 0%, #120a05 55%, #050302 100%); }

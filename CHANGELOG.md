@@ -9,7 +9,7 @@
 
 - Ekran wczytywania to sam herb, tytuł, rada i pasek postępu: bez unoszących się iskier i przesuwającego się blasku na pasku, które przycinały się, gdy gra się wczytywała
 - Menu ma pełne, ciemne tło jak ekran wczytywania; osada i mapa nie są już rysowane pod spodem, więc menu nie przycina
-- Nowa gra i pokój przez sieć bez podglądu mapy z lotu ptaka (generowanie mapy przy każdej zmianie zatrzymywało menu); mapa powstaje dopiero po „Rozpocznij”, za ekranem wczytywania
+- Podgląd mapy z lotu ptaka przy „Nowej grze” i w pokoju przez sieć zostaje jak był (świat rysuje się tylko wtedy)
 
 ## 0.30.8 — herb gracza także na chorągwiach zamku, bram i wież (2026-10-18)
 

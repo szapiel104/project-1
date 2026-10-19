@@ -1777,7 +1777,8 @@ function loop(now: number): void {
   // otwarte menu wstrzymuje grę
   // w meczu przez sieć menu nie zatrzymuje czasu — inni gracze grają dalej
   if (menu.isOpen() && !net) {
-    // menu zasłania świat w całości: nie rysujemy mapy pod spodem (rysowanie i krążenie kamery przycinało menu)
+    // samo menu zasłania świat w całości (nie rysujemy osady pod spodem); rysujemy tylko podgląd mapy przy nowej grze
+    if (renderer.isPreviewing) { renderer.orbit(elapsed / 1000); renderer.frame(elapsed / 1000, 1); }
     requestAnimationFrame(loop);
     return;
   }
