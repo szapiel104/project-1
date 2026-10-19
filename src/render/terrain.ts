@@ -545,7 +545,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     // daleko za górami płaska ciemna równina, którą i tak zakrywa mgła
     const far = new THREE.Mesh(new THREE.PlaneGeometry(W2 + 600, H2 + 600), new THREE.MeshStandardMaterial({ color: 0x2c3a1c, roughness: 1 }));
     far.rotation.x = -Math.PI / 2;
-    far.position.y = -0.2;
+    far.position.y = -4; // pod najgłębszym dnem (morze do -3,5): wyżej przykrywała dno jezior ciemnozieloną płytą
     group.add(cat(far, 'teren za mapą'));
   }
 
@@ -596,7 +596,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     group.add(cat(water, 'woda'));
     const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x2b281a, roughness: 1 }) /* muł pod mętną wodą */);
     shallow.rotation.x = -Math.PI / 2;
-    shallow.position.y = -0.32;
+    shallow.position.y = -3.6; // tylko łata pod dnem — na -0,32 przykrywała głębsze dno jezior
     group.add(cat(shallow, 'woda'));
   }
 
