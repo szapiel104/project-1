@@ -42,7 +42,13 @@ export interface GrassField {
   dispose(): void;
 }
 
-export function createGrassField(w: number, h: number, corners: Float32Array, density: Float32Array, grassTex: THREE.Texture | null): GrassField {
+/**
+ * lush: bujność pola 0…1 (1 przy samej wodzie, maleje z odległością) — tam trawa rośnie wszędzie, wyższa i z kłosami.
+ * Gdzie indziej łąka nie jest równym dywanem: kępy stoją płatami (szum w skali kilku pól), między płatami
+ * zostaje sama tekstura trawy na ziemi i pojedyncze siewki. Na zboczach trawa rzednie i znika (jak w edytorach
+ * terenu: zakres nachylenia dla trawy), więc przy górach zostaje ziemia i kamień.
+ */
+export function createGrassField(w: number, h: number, corners: Float32Array, density: Float32Array, grassTex: THREE.Texture | null, lush?: Float32Array): GrassField {
   const bladeTex = maskedTex('pv_grass') ?? new THREE.Texture();
   const dryTex = maskedTex('pv_grass_dry', 'pv_grass_a') ?? bladeTex;
   for (const t of [bladeTex, dryTex]) { t.generateMipmaps = true; t.minFilter = THREE.LinearMipmapLinearFilter; }
@@ -54,7 +60,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   const wear = new Float32Array(w * h);
   const mask = new Uint8Array(w * h * 4);
   const write = (t: number): void => { mask[t * 4] = Math.round(Math.max(0, Math.min(1, base[t]! * (1 - wear[t]!))) * 255); };
-  for (let t = 0; t < w * h; t++) { write(t); mask[t * 4 + 3] = 255; }
+  for (let t = 0; t < w * h; t++) { write(t); mask[t * 4 + 1] = Math.round(Math.max(0, Math.min(1, lush?.[t] ?? 0)) * 255); mask[t * 4 + 3] = 255; }
   const mTex = new THREE.DataTexture(mask, w, h, THREE.RGBAFormat);
   mTex.magFilter = THREE.LinearFilter; mTex.minFilter = THREE.LinearFilter;
   mTex.needsUpdate = true;
@@ -105,7 +111,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
     sh.vertexShader = /* glsl */ `
       attribute vec2 aCell; attribute float aCard;
       uniform vec2 uOrigin; uniform float uTime; uniform vec2 uMap; uniform float uFade; uniform float uReach;
-      uniform sampler2D tH; uniform sampler2D tMask;
+      uniform sampler2D tH; uniform sampler2D tMask; uniform sampler2D tNoise;
       varying vec2 vGUv; varying vec2 vGW; varying float vGTone; varying vec2 vAUv; varying float vDry;
       float gHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
       float gHeight(vec2 p) {
@@ -120,14 +126,23 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       vec2 cell = floor(uOrigin / ${STEP.toFixed(3)}) + aCell;
       float r1 = gHash(cell), r2 = gHash(cell + 17.3), r3 = gHash(cell + 41.9);
       vec2 p = (cell + vec2(r1, r2)) * ${STEP.toFixed(3)};         // pozycja w polach mapy
-      float dens = texture2D(tMask, (p + 0.5 * vec2(0.0)) / uMap).r;
+      vec4 mk = texture2D(tMask, p / uMap);
+      float lush = mk.g;
+      // płaty: duży szum (plamy ok. 5–6 pól) z postrzępionym brzegiem; przy wodzie płat wszędzie
+      float pn = texture2D(tNoise, p / 34.0 + vec2(0.31, 0.77)).g * 0.75 + texture2D(tNoise, p / 7.0 + vec2(0.13, 0.52)).b * 0.25;
+      float gPatch = smoothstep(0.42, 0.6, pn + lush * 0.45);
+      // nachylenie terenu (różnica wysokości na polu): od ok. 20° trawa rzednie, powyżej ok. 35° nie ma jej wcale
+      vec2 gr = vec2(gHeight(p + vec2(0.5, 0.0)) - gHeight(p - vec2(0.5, 0.0)), gHeight(p + vec2(0.0, 0.5)) - gHeight(p - vec2(0.0, 0.5)));
+      float slopeK = 1.0 - smoothstep(0.36, 0.7, length(gr));
+      // poza płatami zostają pojedyncze, rzadkie kępy (łąka nie jest łysa, tylko niska)
+      float dens = mk.r * slopeK * mix(0.32, 1.0, gPatch);
       // im dalej od środka, tym mniejsze kępy (miękki brzeg dywanu)
       // brzeg dywanu: kępy rzedną i maleją stopniowo przez całą drugą połowę zasięgu (bez widocznego koła)
       float rr = length(aCell) / (${BASE.toFixed(1)} * uReach);
       float edge = 1.0 - smoothstep(0.35, 0.97, rr + (gHash(cell + 5.5) - 0.5) * 0.25);
       float keep = step(r3, smoothstep(0.25, 0.9, dens) * 1.1) * step(gHash(cell + 7.7), edge);
       // bok zdjęcia kępy (0,42 m) w polach: kępy w zdjęciach mają prawdziwe proporcje, w grze ok. 2,5 raza większe
-      float sz = mix(0.4, 0.55, gHash(cell + 3.7)) * keep * mix(0.6, 1.0, edge) * uFade;
+      float sz = mix(0.32, 0.46, gHash(cell + 3.7)) * keep * mix(0.6, 1.0, edge) * uFade * mix(0.7, 1.0, gPatch) * mix(1.0, 1.35, lush) * mix(0.75, 1.0, slopeK);
       vec3 gBase = vec3(p.x - uMap.x * 0.5, gHeight(p) - 0.01, p.y - uMap.y * 0.5);
       // pole atlasu tej karty: losowanie z wagami TILE_WEIGHTS; na rzadkiej trawie (skraj lasu, wydeptane) częściej siewki
       float pick = gHash(cell + 23.1 + aCard * 11.7);
@@ -137,6 +152,9 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       })()}
       float tile = ${TILE_WEIGHTS.slice(0, -1).map((_, i) => `t${i}`).join(' + ')};
       tile = dens < 0.5 && gHash(cell + 61.3) < 0.35 ? 6.0 : tile;
+      // przy wodzie częściej wysokie źdźbła z kłosami i wysoka łąka
+      float lp1 = gHash(cell + 83.9 + aCard);
+      tile = lp1 < lush * 0.55 ? (lp1 < lush * 0.3 ? 4.0 : 1.0) : tile;
       float flip = step(0.5, gHash(cell + 3.3 + aCard));
       vec2 tu = vec2(mix(uv.x, 1.0 - uv.x, flip), uv.y);
       vAUv = vec2((mod(tile, 4.0) + clamp(tu.x, 0.004, 0.996)) / 4.0, (1.0 - floor(tile / 4.0) + clamp(tu.y, 0.0, 0.992)) / 2.0);
@@ -181,7 +199,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;
     `).replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);');
   };
-  mat.customProgramCacheKey = () => 'grass-field-v6';
+  mat.customProgramCacheKey = () => 'grass-field-v7';
   mat.userData.season = 'grass';
   cloudShade(mat); // cienie chmur suną też po trawie
   const mesh = new THREE.Mesh(geo, mat);

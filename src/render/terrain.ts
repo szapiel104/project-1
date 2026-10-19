@@ -575,7 +575,28 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const tt = map.tiles[t] as Terrain;
     grassBase[t] = (tt === Terrain.Grass ? 1 : tt === Terrain.Forest ? 0.35 : tt === Terrain.Stone ? 0.25 : tt === Terrain.Iron ? 0.1 : 0) * (sandTile[t]! > 0.12 ? 0 : 1); // na piasku plaży trawy nie ma wcale
   }
-  const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture());
+  // bujność przy wodzie: 1 na brzegu, maleje do zera ok. 4 pola od wody (BFS po polach)
+  const grassLush = new Float32Array(w * h);
+  {
+    const LUSH_R = 4;
+    const d = new Int16Array(w * h).fill(LUSH_R + 1);
+    let q: number[] = [];
+    for (let t = 0; t < w * h; t++) if (map.tiles[t] === Terrain.Water || map.tiles[t] === Terrain.Ford) { d[t] = 0; q.push(t); }
+    for (let r = 1; r <= LUSH_R && q.length; r++) {
+      const nq: number[] = [];
+      for (const t of q) {
+        const x = t % w, y = (t / w) | 0;
+        for (const [nx, ny] of [[x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]] as const) {
+          if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+          const n = ny * w + nx;
+          if (d[n]! > r) { d[n] = r; nq.push(n); }
+        }
+      }
+      q = nq;
+    }
+    for (let t = 0; t < w * h; t++) grassLush[t] = d[t]! === 0 ? 0 : Math.max(0, 1 - (d[t]! - 1) / LUSH_R);
+  }
+  const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), grassLush);
   if (grass) group.add(cat(grass.mesh, 'trawa (dywan)'));
   // leśne ścieżki z generatora mapy: wydeptana ziemia, najmocniej tam, gdzie spotykają się dwa pola ścieżki (środek dróżki),
   // słabiej na brzegach, z lekką nierównością — wygląda jak dróżka chodzona od lat, a nie jak wyrysowana droga
