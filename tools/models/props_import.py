@@ -5,11 +5,12 @@
 W katalogu: BarramundiFish.glb (Khronos glTF-Sample-Assets, CC0, Microsoft), torch.glb (Secret Histories, CC-BY-SA 4.0)
 i wicker_basket_02/, food_apple_01/, hamburger_buns/, wine_barrel_01/ (Poly Haven, CC0, paczki glTF 1K).
 
-Zasada: model ma wyglądać w grze dokładnie jak w Blenderze, więc wersja z bliska NIE jest odchudzana ani przerabiana:
+Zasada Michała (19.10.2026, CLAUDE.md): modeli z paczek NIE odchudzamy i nie docinamy — w grze mają wyglądać jak oryginał:
   - oryginalne trójkąty, oryginalne UV i oryginalne normalne (gładkie cieniowanie, ostre krawędzie tam, gdzie były),
   - pozycje w pełnej precyzji (float32, bez zaokrąglania do int16 jak w budynkach),
-  - tekstury z paczki (kolor + mapa normalnych) zmniejszone tylko do 1024 px.
-Odchudzana jest wyłącznie wersja z daleka (ryby w wodzie, pochodnia daleko od kamery) — sprawdzana porównaniem obok oryginału.
+  - tekstury z paczki (kolor + mapa normalnych) w pełnej rozdzielczości paczki, w grze jako zwykły JPG (bez KTX2).
+Wersja z daleka (klucz <nazwa>Far) to na razie ta sama siatka; uprościć ją wolno dopiero, gdy w grze widać spadek FPS
+(funkcja `lighter` zostaje do tego celu — przed użyciem porównanie z oryginałem, tools/models/props_check.py).
 Płetwy i część szmat to pojedyncze płaszczyzny, więc gra rysuje te modele z obu stron (materiał dwustronny).
 
 Wynik:
@@ -35,7 +36,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.join(HERE, '..', '..')
 OUT = os.path.join(ROOT, 'src', 'render', 'models', 'props.json')
 TEX = os.path.join(ROOT, 'public', 'textures', 'cc0')
-TEX_SIZE = 1024
+TEX_SIZE = 1024   # tylko dla tekstur wypalanych tutaj (bake_low); tekstury z paczek zostają w swojej rozdzielczości
 
 GRIP = Vector((0.0, -0.19, 0.0))
 TORCH_ARM = -0.55
@@ -224,7 +225,7 @@ def pad(images, passes=24):
 
 
 def textures(o, name, padding=False):
-    """Kolor i mapa normalnych z materiału paczki → prop_<name>.jpg, prop_<name>_n.jpg (1024 px);
+    """Kolor i mapa normalnych z materiału paczki → prop_<name>.jpg, prop_<name>_n.jpg (rozdzielczość paczki);
     padding=True: rozlanie barwy poza kawałki tekstury (skany na czarnym tle, odchudzane)"""
     found = {}
     for n in o.active_material.node_tree.nodes:
@@ -238,10 +239,7 @@ def textures(o, name, padding=False):
     assert set(found) == {'', '_n'}, found
     copies = {}
     for suf, img in found.items():
-        im = img.copy()
-        if im.size[0] > TEX_SIZE:
-            im.scale(TEX_SIZE, TEX_SIZE)
-        copies[suf] = im
+        copies[suf] = img.copy()   # pełna rozdzielczość paczki
     if padding:
         pad([copies[''], copies['_n']])
     for suf, im in copies.items():
@@ -315,7 +313,7 @@ c = (mn + mx) / 2
 # w paczce ryba leży wzdłuż osi y Blendera pyskiem w -y; w grze pysk w +z: (x, y, z) → (x, z, -y)
 FM = Matrix.Scale(1 / L, 4) @ B2G @ Matrix.Translation(-c)
 out['fish'], t1 = export(fish, FM)
-out['fishFar'], t2 = export(lighter(fish, 0.3), FM)
+out['fishFar'] = out['fish']; t2 = t1
 info.append(f'ryba: {t1} / {t2} trójkątów, wymiary {round((mx.x - mn.x) / L, 3)} × {round((mx.z - mn.z) / L, 3)} × 1')
 
 # ---------------- pochodnia w dłoni ----------------
@@ -330,7 +328,7 @@ c = Vector(((mn.x + mx.x) / 2, (mn.y + mx.y) / 2, mn.z))
 TM = (Matrix.Translation(GRIP - TORCH_DIR * 0.09) @ Matrix.Rotation(-TORCH_ARM, 4, 'X')
       @ Matrix.Scale(s, 4) @ B2G @ Matrix.Translation(-c))
 out['torch'], t1 = export(torch, TM)
-out['torchFar'], t2 = export(lighter(torch, 0.4), TM)
+out['torchFar'] = out['torch']; t2 = t1
 info.append(f'pochodnia: {t1} / {t2} trójkątów, długość 0.4, szerokość {round((mx.x - mn.x) * s, 3)}')
 
 # ---------------- kosz z wikliny (Poly Haven wicker_basket_02, CC0), bez wieka ----------------
@@ -345,13 +343,12 @@ mn = Vector([min(p[i] for p in pts) for i in range(3)]); mx = Vector([max(p[i] f
 D = max(mx.x - mn.x, mx.y - mn.y)
 c = Vector(((mn.x + mx.x) / 2, (mn.y + mx.y) / 2, mn.z))
 BM = Matrix.Scale(1 / D, 4) @ B2G @ Matrix.Translation(-c)
-out['basket'], t1 = export(lighter(basket, 0.15), BM)
-out['basketFar'], t2 = export(lighter(basket, 0.08), BM)
+out['basket'], t1 = export(basket, BM)
+out['basketFar'] = out['basket']; t2 = t1
 out['basketH'] = round((mx.z - mn.z) / D, 4)
 info.append(f'kosz: {t1} / {t2} trójkątów, wysokość {out["basketH"]} szerokości')
 
 # ---------------- jabłko, chleb, beczka (Poly Haven, CC0; skany prawdziwych przedmiotów) ----------------
-# Próba z oryginałem obok: skany pękały na szwach tekstury przy odchudzaniu, po sklejeniu wierzchołków (weld) już nie.
 # Wszystkie w układzie gry: dno w y = 0, środek podstawy w (0, 0), największa szerokość = 1 (beczka: wysokość = 1).
 def upright(o, by_height=False):
     mn, mx = bounds(o)
@@ -360,42 +357,37 @@ def upright(o, by_height=False):
 
 
 apple = load_all(os.path.join(src, 'food_apple_01', 'food_apple_01_1k.gltf'))
-textures(apple, 'apple', padding=True)
+textures(apple, 'apple')
 AM, (mn, mx) = upright(apple)
-# z bliska 30% bez sklejania (czyste na próbie; sklejone szwy przy 15% dawały ciemne trójkąty przy szypułce),
-# z daleka 15% ze sklejeniem (bez rys, a drobiazgi przy szypułce z tej odległości znikają)
-out['apple'], t1 = export(lighter(apple, 0.3), AM)
-out['appleFar'], t2 = export(lighter(apple, 0.15, weld=True), AM)
-# najlżejsze do budynków (sad: kilkadziesiąt jabłek na koronach, w trawie i w skrzynkach; z kamery strategii po kilka pikseli)
-out['appleLow'], t3 = export(lighter(apple, 0.06, weld=True), AM)
-out['appleLowFar'] = out['appleLow']
+out['apple'], t1 = export(apple, AM)
+out['appleFar'] = out['apple']; t2 = t3 = t1
 info.append(f'jabłko: {t1} / {t2} / {t3} trójkątów, wysokość {round((mx.z - mn.z) / max(mx.x - mn.x, mx.y - mn.y), 3)} szerokości')
 
 for k in (1, 2, 3):
     bun = load_all(os.path.join(src, 'hamburger_buns', 'hamburger_buns_1k.gltf'), only=f'hamburger_buns_0{k}')
     if k == 1:
-        textures(bun, 'bread', padding=True)
+        textures(bun, 'bread')
     BM2, (mn, mx) = upright(bun)
-    out[f'bun{k}'], t1 = export(lighter(bun, 0.15, weld=True), BM2)
-    out[f'bun{k}Far'], t2 = export(lighter(bun, 0.08, weld=True), BM2)
+    out[f'bun{k}'], t1 = export(bun, BM2)
+    out[f'bun{k}Far'] = out[f'bun{k}']; t2 = t1
     out[f'bun{k}H'] = round((mx.z - mn.z) / max(mx.x - mn.x, mx.y - mn.y), 4)
     info.append(f'chleb {k}: {t1} / {t2} trójkątów, wysokość {out[f"bun{k}H"]} szerokości')
 
-# beczka: obręcze i klepki to osobne bryły, każde odchudzenie je rwie — w ręce chłopa pełna (barrel), w stosach
-# w składzie prosta bryła z wypalonym wyglądem pełnej (barrelLow, tools/models/props_import.py → bake_low)
+# beczka: wszędzie pełna (zasada: bez odchudzania). bake_low (prosta bryła z wypalonym wyglądem pełnej) zostaje
+# w skrypcie na wypadek spadku FPS przy wielu beczkach w składzie — wtedy jako wersja z daleka, po porównaniu
 barrel = load_all(os.path.join(src, 'wine_barrel_01', 'wine_barrel_01_1k.gltf'))
 textures(barrel, 'barrel')
 RM, (mn, mx) = upright(barrel, by_height=True)
 out['barrel'], t1 = export(barrel, RM)
 out['barrelFar'] = out['barrel']
-low = bake_low(barrel, 'barrelLow')
-out['barrelLow'], t2 = export(low, RM)
-out['barrelLowFar'] = out['barrelLow']
+t2 = t1
 out['barrelW'] = round(max(mx.x - mn.x, mx.y - mn.y) / (mx.z - mn.z), 4)
-info.append(f'beczka: {t1} trójkątów pełna, {t2} wypalona, szerokość {out["barrelW"]} wysokości')
+info.append(f'beczka: {t1} trójkątów, szerokość {out["barrelW"]} wysokości')
 
 import json  # noqa: E402
+# dopisujemy do pliku: inne skrypty też kładą tu swoje modele (np. worek z tools/models/sack.py)
+prev = json.load(open(OUT)) if os.path.exists(OUT) else {}
 with open(OUT, 'w') as f:
-    json.dump(out, f, separators=(',', ':'))
+    json.dump({**prev, **out}, f, separators=(',', ':'))
 print('\n'.join(info))
 print(OUT, os.path.getsize(OUT) // 1024, 'KB')

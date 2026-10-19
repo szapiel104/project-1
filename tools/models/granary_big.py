@@ -115,9 +115,7 @@ t.open.append([DOOR[0], DOOR[1], Z1 - T - 0.02, Z1 + 0.05])
 
 # ---------------- przed spichlerzem: worki, beczka, kosze z jabłkami ----------------
 def sack(x, z, s=1.0):
-    b.prism('base', 'sack', 0.08 * s, 0.09 * s, 0.1 * s, x, 0.0, z, seg=9)
-    b.prism('base', 'sack', 0.09 * s, 0.06 * s, 0.07 * s, x, 0.1 * s, z, seg=9)
-    b.prism('base', 'rope', 0.035 * s, 0.03 * s, 0.03 * s, x, 0.17 * s, z, seg=7)
+    b.sack('base', x, 0.0, z, w=0.18 * s, rot=x * 7 + z)   # worek z płótna (tools/models/sack.py)
 
 
 sack(-0.75, Z1 + 0.2); sack(-0.56, Z1 + 0.22, 0.9); sack(-0.66, Z1 + 0.38, 0.85); sack(-0.95, Z1 + 0.3, 0.95)

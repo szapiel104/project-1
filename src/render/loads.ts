@@ -10,18 +10,18 @@ import { basketAt, propAt, propGeometryFlat, propMaterial, type PropName } from 
  * Materiał części ładunku: zdjęciowa tekstura w szarości (barwę daje kolor wierzchołków) i mapa nierówności.
  * Owoce, ryby i grudki rudy zostają gładkie; drewno, wiklina, płótno, skórka chleba, kamień i żelazo mają fakturę.
  */
-type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish' | 'basket' | 'apple' | 'bread' | 'barrel';
+type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish' | 'basket' | 'apple' | 'bread' | 'barrel' | 'sack';
 const MAT_TEX: Record<LoadMat, [Kind | null, number, number, number]> = {
   // [tekstura, gęstość na 1 jednostkę, chropowatość, metaliczność]
   plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], board: [null, 1, 0.8, 0], rope: ['burlap', 14, 1, 0], wicker: ['thatch', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
   crust: ['soil', 7, 0.9, 0], stone: ['rock', 5, 0.95, 0], iron: ['iron', 6, 0.5, 0.55], straw: ['thatch', 6, 0.95, 0], bark: ['bark', 6, 0.95, 0],
   fish: [null, 1, 0.42, 0.08], // ryba z paczki: własne UV i tekstura (src/render/props.ts)
   basket: [null, 1, 0.9, 0], // kosz z paczki: własne UV i tekstura
-  apple: [null, 1, 0.45, 0], bread: [null, 1, 0.85, 0], barrel: [null, 1, 0.75, 0.05], // modele z paczek (props.ts)
+  apple: [null, 1, 0.45, 0], bread: [null, 1, 0.85, 0], barrel: [null, 1, 0.75, 0.05], sack: [null, 1, 0.95, 0], // modele z paczek i worek (props.ts)
 };
 const matCache = new Map<LoadMat, THREE.MeshStandardMaterial>();
 /** Części z modeli z paczek: mają własne UV i teksturę (src/render/props.ts), nie dostają rzutowanych współrzędnych */
-const PROP_MAT: Partial<Record<LoadMat, PropName>> = { fish: 'fish', basket: 'basket', apple: 'apple', bread: 'bun1', barrel: 'barrel' };
+const PROP_MAT: Partial<Record<LoadMat, PropName>> = { fish: 'fish', basket: 'basket', apple: 'apple', bread: 'bun1', barrel: 'barrel', sack: 'sack' };
 
 /**
  * Słoje świeżo heblowanej deski, rysowane w kodzie (szare, barwę daje kolor wierzchołków): długie, lekko falujące
@@ -171,26 +171,8 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
   },
   // worek mąki z płótna: pękaty u dołu, zwężony i przewiązany sznurkiem pod szyjką, z wywiniętym brzegiem;
   // fałdy płótna i biały pył mąki na wierzchu (ten sam kształt co worki w spichlerzu)
-  flour: () => {
-    const prof = [[0, 0], [0.075, 0], [0.105, 0.025], [0.116, 0.075], [0.112, 0.14], [0.095, 0.195], [0.06, 0.232], [0.03, 0.248], [0.028, 0.258], [0.046, 0.285], [0.034, 0.3], [0, 0.302]].map(([x, y]) => new THREE.Vector2(x, y));
-    const sack = new THREE.LatheGeometry(prof, 14).scale(1.05, 1, 0.92);
-    const p = sack.attributes.position!;
-    const col = new Float32Array(p.count * 3);
-    const c = new THREE.Color();
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      const a = Math.atan2(x, z);
-      // fałdy: płótno marszczy się pionowo, mocniej u góry pod sznurkiem
-      const fold = 1 + Math.sin(a * 7) * 0.05 * Math.min(1, y / 0.2);
-      p.setXYZ(i, x * fold, y - 0.15, z * fold);
-      const shade = (0.82 + 0.18 * Math.min(1, y / 0.12)) * (0.94 + Math.sin(a * 7) * 0.06);
-      c.setHex(y > 0.27 ? 0xf2ede0 : 0xcdb68a).multiplyScalar(y > 0.27 ? 1 : shade);
-      col[i * 3] = c.r; col[i * 3 + 1] = c.g; col[i * 3 + 2] = c.b;
-    }
-    sack.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    sack.computeVertexNormals();
-    return [as(sack, 'cloth'), as(tint(new THREE.TorusGeometry(0.032, 0.008, 4, 12).rotateX(Math.PI / 2).translate(0, 0.252 - 0.15, 0), 0x7a5a32), 'cloth')];
-  },
+  // worek mąki z płótna (tools/models/sack.py, symulacja tkaniny w Blenderze): szerokość 0,23, dno w -0,15 jak dawny
+  flour: () => [as(propAt('sack', 0, -0.15, 0, 0.23, 0.5, false), 'sack')],
   // ciosany blok z kamieniołomu: nieregularna bryła z płaskimi ścianami po ciosaniu, odpryski na krawędziach,
   // barwa szara z jaśniejszymi i ciemniejszymi płatami (płaskie cieniowanie daje ostre ściany jak u prawdziwego kamienia)
   stone: () => {

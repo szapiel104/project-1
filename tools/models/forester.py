@@ -215,8 +215,7 @@ b.prism('base', 'wood', 0.06, 0.07, 0.11, 0.3, 0.0, 0.48, seg=10)               
 b.prism('base', 'dark', 0.058, 0.058, 0.004, 0.3, 0.104, 0.48, seg=10)
 for yy in (0.02, 0.08):
     b.prism('base', 'iron', 0.067 + yy * 0.08, 0.067 + yy * 0.08, 0.012, 0.3, yy, 0.48, seg=10)
-b.prism('base', 'sack', 0.07, 0.05, 0.16, 0.86, 0.0, 0.36, seg=8)                              # worek z nasionami
-b.prism('base', 'rope', 0.04, 0.04, 0.02, 0.86, 0.13, 0.36, seg=8)
+b.sack('base', 0.86, 0.0, 0.36, w=0.14, rot=0.6)                                               # worek z nasionami
 solid.append([0.22, 0.95, 0.27, 0.56])
 
 E = P + 0.38

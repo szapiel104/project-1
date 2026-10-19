@@ -26,12 +26,16 @@ class Building:
         # (tools/models/props_import.py) wstawia gra — w pliku budynku nie ma jego trójkątów
         self.baskets = []
         # jabłka i bochenki ze skanów (tools/models/props_import.py): [grupa, rodzaj, x, y dna, z, szerokość, obrót];
-        # rodzaj 'apple' albo 'bun' — trójkąty dokłada gra (src/render/buildings.ts), w pliku budynku ich nie ma
+        # rodzaj 'apple', 'bun' albo 'sack' — trójkąty dokłada gra (src/render/buildings.ts), w pliku budynku ich nie ma
         self.foods = []
 
     def apple(self, group, x, y, z, w=0.055, rot=0.0):
         """Jabłko ze skanu: dno w (x, y, z), szerokość w (dawne jabłka z brył miały ok. 0,05–0,06)"""
         self.foods.append([group, 'apple', round(x, 4), round(y, 4), round(z, 4), round(w, 4), round(rot, 3)])
+
+    def sack(self, group, x, y, z, w=0.15, rot=0.0):
+        """Worek z płótna (tools/models/sack.py, symulacja tkaniny): dno w (x, y, z), szerokość w (wysokość ok. 1,3 w)"""
+        self.foods.append([group, 'sack', round(x, 4), round(y, 4), round(z, 4), round(w, 4), round(rot, 3)])
 
     def bun(self, group, x, y, z, w=0.12, rot=0.0):
         """Bochenek ze skanu (jeden z trzech, wybiera gra): dno w (x, y, z), szerokość w, obrót rot"""

@@ -105,8 +105,7 @@ b.box('shell', 'thatchDark', HX1 - HX0 + 0.36, 0.07, 0.13, (HX0 + HX1) / 2, H1 +
 
 # ---------------- w chałupie: worki ziarna, skrzynia na zboże, cep, sierpy, kosa, snopek ----------------
 def sack(x, z, s=1.0, group='interior'):
-    b.prism(group, 'sack', 0.075 * s, 0.06 * s, 0.17 * s, x, HP + 0.02, z, seg=9)
-    b.prism(group, 'rope', 0.035 * s, 0.03 * s, 0.03 * s, x, HP + 0.02 + 0.17 * s, z, seg=7)
+    b.sack(group, x, HP + 0.02, z, w=0.15 * s, rot=x * 7 + z)   # worek z płótna (tools/models/sack.py)
 for x, z, s in ((HX0 + T + 0.1, HZ0 + T + 0.1, 1.0), (HX0 + T + 0.26, HZ0 + T + 0.1, 0.9), (HX0 + T + 0.1, HZ0 + T + 0.26, 0.85)):
     sack(x, z, s)
 t.block(HX0 + T, HX0 + T + 0.36, HZ0 + T, HZ0 + T + 0.36, 0, HP + 0.22)

@@ -97,30 +97,25 @@ i suche kolory `_dry_diff_1k.jpg`, bo JPG w paczce glTF nie ma przezroczystości
 Wynik: `public/textures/cc0/pv_grass.jpg`, `pv_grass_a.jpg` (maska), `pv_grass_dry.jpg`. Kolejność pól zna `src/render/grass.ts`
 (`TILE_WEIGHTS`), więc po zmianie listy `TILES` popraw też wagi. Tekstury idą przez płótno z maską (`maskedTex`), bez KTX2.
 
-## Gotowe modele z paczek (ryba, pochodnia wyciągana w spacerze, kosz z wikliny)
+## Gotowe modele z paczek (ryba, pochodnia, kosz, jabłko, chleb, beczka)
 
-`tools/models/props_import.py <katalog>` przerabia paczki glTF (BarramundiFish.glb, torch.glb — źródła w `CREDITS.md`)
-na `src/render/models/props.json` i tekstury `public/textures/cc0/prop_*.jpg` (potem `node tools/textures/ktx2.mjs
-public/textures/cc0/prop_*.jpg`). **Wersja z bliska idzie do gry bez przeróbek**: oryginalne trójkąty, UV i normalne,
-pozycje w float32. Właśnie odchudzanie, własne UV i zaokrąglanie pozycji psuły wcześniej gotowe modele w grze („pocięte”).
-Otwarte części (płetwy) rysuje gra z obu stron (materiał dwustronny w `src/render/props.ts`).
+`tools/models/props_import.py <katalog>` przerabia paczki glTF (źródła w `CREDITS.md`) na `src/render/models/props.json`
+i tekstury `public/textures/cc0/prop_*.jpg`. **Zasada Michała (19.10.2026): bez odchudzania i docinania** — oryginalne
+trójkąty, UV i normalne, pozycje w float32, tekstury w rozdzielczości paczki, w grze jako zwykły JPG (bez KTX2).
+Skrypt tylko ustawia model (skala, osie bez lustra, dno w zerze). Wersja z daleka (`<nazwa>Far`) to na razie ta sama
+siatka; uprościć ją wolno dopiero, gdy w grze widać spadek FPS — funkcje `lighter` (Decimate, `weld` dla skanów)
+i `bake_low` (prosta bryła z wypalonym wyglądem, np. beczka) zostają do tego, zawsze z porównaniem:
+`tools/models/props_check.py <katalog> /tmp/props.png` (oryginał | gra z bliska | gra z daleka, z dwóch stron).
+Test `tests/props.test.ts` pilnuje pełnej liczby trójkątów. Otwarte części (płetwy) gra rysuje dwustronnie.
 
-Przed wgraniem zawsze: `tools/models/props_check.py <katalog> /tmp/props.png` — arkusz: oryginał | gra z bliska | gra
-z daleka, z dwóch stron, złożony z tych samych buforów co w przeglądarce. Test `tests/props.test.ts` pilnuje liczby
-trójkątów i wymiarów. Ryby w budynkach (suszarnia i kosz u rybaka, stół w kuchni twierdzy) zapisują skrypty budynków
-tylko jako miejsca (`fishSpots`), a rybę z paczki wstawia gra (`buildingFish` w `src/render/buildings.ts`).
-
-Kosze: w skryptach budynków nadal piszemy `b.prism(grupa, 'basket', r0, r1, h, x, y, z)`, ale `building.py` nie robi
-z tego brył — zapisuje miejsce i wymiary w kluczu `baskets`, a gra (`blenderModel` w `src/render/buildings.ts`) stawia
-tam kosz z paczki (`basketAt` w `src/render/props.ts`). Tak samo kosz niesiony (`loads.ts`), w składzie (`inBasket`)
-i z praniem przy chacie (`family.ts`). Odchudzać wolno tylko modele, które mają szczegóły w teksturze, nie w geometrii
-— najpierw próba z oryginałem obok (jak przy koszach: wicker_basket_01 z prętów się rozpadał, 02 nie).
-
-Jabłka i chleb w budynkach: `b.apple(grupa, x, y, z, w, rot)` i `b.bun(grupa, x, y, z, w, rot)` z `building.py` zapisują
-miejsca (klucz `foods`), a jabłka (najlżejsza wersja, `appleLow`) i bochenki (trzy skany na zmianę) stawia gra
-(`foodGeos` w `src/render/buildings.ts`). Nie robić jabłek ani chleba z brył (`'apple'`, `'bread'`) — to wyglądało jak
-graniastosłupy. Bryły z tymi materiałami zostały tylko tam, gdzie nie są jedzeniem z koszyka: szyld z obwarzankiem
-(piekarnia), zacier w kadzi (browar), kwiaty w skrzynce na oknie (chata), wiszące pęki pod belkami (chata, karczma).
+W budynkach skrypty zapisują tylko miejsca, model stawia gra (`src/render/buildings.ts`):
+- kosze: `b.prism(grupa, 'basket', r0, r1, h, x, y, z)` → klucz `baskets` (`basketAt`);
+- jabłka i chleb: `b.apple(...)`, `b.bun(...)` → klucz `foods` (`foodGeos`); nie robić jedzenia z brył `'apple'`/`'bread'`
+  (wyglądało jak graniastosłupy) — zostały tylko szyld z obwarzankiem, zacier w kadzi, kwiaty na oknie i wiszące pęki;
+- ryby: `fishSpots` (`buildingFish`);
+- worki z płótna: `b.sack(...)` → klucz `foods` (rodzaj `'sack'`); sam worek robi `tools/models/sack.py` (symulacja tkaniny
+  z ciśnieniem, sznur, juta `burlap.jpg` powtarzana, cień w fałdach w kolorach wierzchołków) → `props.json` (`sack`).
+Kosz niesiony i w składzie: `loads.ts`, `inBasket` w `buildings.ts`; kosz z praniem: `family.ts`.
 
 ## Krzaki z Poly Haven (krzewy robione przez grafików)
 

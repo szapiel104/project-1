@@ -128,8 +128,7 @@ b.box('interior', 'wood', 0.2, 0.16, 0.2, 0, PL + 0.36, MZ, math.pi / 4)        
 b.box('interior', 'wheat', 0.17, 0.01, 0.17, 0, PL + 0.52, MZ, math.pi / 4)
 b.box('interior', 'woodDark', 0.05, 0.7, 0.05, 0, PL + 0.3, MZ + 0.14)                  # wał z góry
 for x, z, s in ((0.36, 0.14, 1.0), (0.4, -0.1, 0.85), (0.22, 0.3, 0.9)):
-    b.prism('interior', 'sack', 0.075 * s, 0.06 * s, 0.17 * s, x, PL, z, seg=9)
-    b.prism('interior', 'rope', 0.035 * s, 0.03 * s, 0.03 * s, x, PL + 0.17 * s, z, seg=7)
+    b.sack('interior', x, PL, z, w=0.15 * s, rot=x * 7 + z)   # worek mąki (tools/models/sack.py)
 b.box('interior', 'wood', 0.28, 0.2, 0.2, -0.33, PL, 0.18)
 b.box('interior', 'wheat', 0.24, 0.02, 0.16, -0.33, PL + 0.2, 0.18)
 
@@ -179,8 +178,7 @@ for i in range(4):
 
 # ---------------- przy drzwiach: worki mąki, zapasowy kamień młyński, taczka ----------------
 for x, z, s in ((0.42, 0.72, 1.0), (0.56, 0.6, 0.85), (0.5, 0.86, 0.8)):
-    b.prism('base', 'sack', 0.07 * s, 0.055 * s, 0.16 * s, x, 0.0, z, seg=9)
-    b.prism('base', 'rope', 0.032 * s, 0.028 * s, 0.03 * s, x, 0.16 * s, z, seg=7)
+    b.sack('base', x, 0.0, z, w=0.14 * s, rot=x * 7 + z)   # worek mąki (tools/models/sack.py)
 # kamień oparty o podmurówkę (stoi na krawędzi): walec w płaszczyźnie yz
 SX, SZ, SR = -0.7, 0.62, 0.19
 for k in range(16):

@@ -1,28 +1,35 @@
 import * as THREE from 'three';
 import { model } from './modelstore';
-import { loadTexture } from './ktx';
 
 /**
  * Gotowe modele z sieci, przerobione w Blenderze skryptem tools/models/props_import.py (porównanie z oryginałem:
  * tools/models/props_check.py): ryba (Barramundi, Khronos glTF-Sample-Assets, CC0), pochodnia wyciągana w spacerze
- * (Secret Histories, CC-BY-SA 4.0), kosz z wikliny (Poly Haven wicker_basket_02, CC0, bez wieka; splot w teksturze,
- * więc lżejsza wersja nie różni się od oryginału).
+ * (Secret Histories, CC-BY-SA 4.0), kosz z wikliny (Poly Haven wicker_basket_02, CC0, bez wieka), jabłko, trzy bochenki
+ * i beczka (Poly Haven, CC0, skany).
  *
- * Siatki idą do gry bez przeróbek: oryginalne trójkąty, UV i normalne, pozycje w pełnej precyzji, tekstura z paczki.
+ * Siatki idą do gry bez przeróbek: oryginalne trójkąty, UV i normalne, pozycje w pełnej precyzji, tekstura z paczki;
+ * wersja z daleka (`far`) to na razie ta sama siatka.
  * Płetwy i część szmat to pojedyncze płaszczyzny, więc materiał jest dwustronny (inaczej znikałyby z jednej strony).
  *
  * Układy: ryba — długość 1 wzdłuż z (pysk w +z), grzbiet w +y, środek w (0, 0, 0);
  * pochodnia — układ ręki jak narzędzia z tools.py (dłoń w (0, -0.19, 0), ręka uniesiona o TORCH_ARM);
  * kosz — dno w y = 0, środek podstawy w (0, 0), największa szerokość 1, wysokość `basketH` (ok. 0,93);
  * jabłko, bułki (bun1–3) — tak samo, szerokość 1 (jabłko: wysokość 0,875, bułki ok. 0,53);
- * beczka — dno w y = 0, wysokość 1, szerokość `barrelW` (0,87); `barrel` pełna (10,8 tys. trójkątów, tylko w rękach),
- * `barrelLow` prosta bryła z wypalonym wyglądem pełnej (560 trójkątów, stosy w składzie).
+ * beczka — dno w y = 0, wysokość 1, szerokość `barrelW` (0,87); worek — dno w 0, szerokość 1, wysokość `sackH` (1,3).
+ *
+ * Zasada Michała (19.10.2026): siatki i tekstury z paczek bez odchudzania i w pełnej rozdzielczości; tekstury jako
+ * zwykły JPG (TextureLoader) — kompresja KTX2 (ETC1S) robiła na małych teksturach z paczek widoczne kwadraty.
  */
-export type PropName = 'fish' | 'torch' | 'basket' | 'apple' | 'appleLow' | 'bun1' | 'bun2' | 'bun3' | 'barrel' | 'barrelLow';
+export type PropName = 'fish' | 'torch' | 'basket' | 'apple' | 'bun1' | 'bun2' | 'bun3' | 'barrel' | 'sack';
 /** Tekstura modelu, gdy kilka modeli dzieli jedną (trzy bułki z jednej paczki) */
-const TEX_OF: Partial<Record<PropName, string>> = { appleLow: 'apple', bun1: 'bread', bun2: 'bread', bun3: 'bread' };
+const TEX_OF: Partial<Record<PropName, string>> = { bun1: 'bread', bun2: 'bread', bun3: 'bread' };
+/**
+ * Worek (tools/models/sack.py, symulacja tkaniny w Blenderze) nie ma własnej tekstury: juta z gry (burlap.jpg, ambientCG
+ * Fabric 011, CC0) powtarzana wokół płótna (UV w metrach / 0,3), barwa lnu i cień w fałdach w kolorach wierzchołków
+ */
+const TEX_FILE: Partial<Record<PropName, string>> = { sack: 'burlap' };
 /** Chropowatość i metaliczność powierzchni (połysk skórki jabłka i łusek ryby, matowy chleb i drewno) */
-const SURFACE: Partial<Record<PropName, [number, number]>> = { fish: [0.42, 0.08], basket: [0.9, 0], apple: [0.45, 0], barrel: [0.75, 0.05], barrelLow: [0.75, 0.05] };
+const SURFACE: Partial<Record<PropName, [number, number]>> = { fish: [0.42, 0.08], basket: [0.9, 0], apple: [0.45, 0], barrel: [0.75, 0.05], sack: [0.95, 0] };
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
 
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -87,10 +94,14 @@ export function propMaterial(name: PropName): THREE.MeshStandardMaterial {
   m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness, metalness, side: THREE.DoubleSide });
   const tex = TEX_OF[name] ?? name;
   if (typeof document !== 'undefined') {
-    const map = loadTexture(`${base()}prop_${tex}.jpg`);
+    const tl = new THREE.TextureLoader();
+    const file = TEX_FILE[name] ?? `prop_${tex}`;
+    const map = tl.load(`${base()}${file}.jpg`);
     map.colorSpace = THREE.SRGBColorSpace;
-    map.anisotropy = 8;
-    const nm = loadTexture(`${base()}prop_${tex}_n.jpg`);
+    map.anisotropy = 16;
+    const nm = tl.load(`${base()}${file}_n.jpg`);
+    nm.anisotropy = 16;
+    if (TEX_FILE[name]) for (const t of [map, nm]) t.wrapS = t.wrapT = THREE.RepeatWrapping;   // tekstura powtarzana
     m.map = map;
     m.normalMap = nm;
   }

@@ -154,8 +154,7 @@ b.prism('interior', 'wood', 0.08, 0.08, 0.22, X1 - T - 0.14, P + 0.22, 0.16, seg
 b.prism('interior', 'iron', 0.084, 0.084, 0.015, X1 - T - 0.14, P + 0.38, 0.16, seg=10)
 # worki pszenicy przy drzwiach, snopek oparty o ścianę
 for x, z, s in ((-0.45, 0.25, 1.0), (-0.3, 0.32, 0.85)):
-    b.prism('interior', 'sack', 0.07 * s, 0.05 * s, 0.17 * s, x, P, z, seg=8)
-    b.prism('interior', 'rope', 0.035 * s, 0.03 * s, 0.03 * s, x, P + 0.17 * s, z, seg=6)
+    b.sack('interior', x, P, z, w=0.14 * s, rot=x * 7)   # worek z płótna (tools/models/sack.py)
 b.prism('interior', 'hay', 0.06, 0.04, 0.3, -0.62, P, Z1 - T - 0.08, seg=8)
 # półka z kuflami i chochlą nad kadzią
 b.box('interior', 'woodDark', 0.4, 0.02, 0.08, -0.45, P + 0.5, Z0 + T + 0.04)

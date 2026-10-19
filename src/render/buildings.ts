@@ -157,18 +157,6 @@ M.orchardGrass.userData.orchardFloor = true;
 // Przesunięcie głębi „do przodu” rozstrzyga ten remis zawsze na ich korzyść.
 for (const m of [M.window, M.pane, M.dark]) { m.polygonOffset = true; m.polygonOffsetFactor = -2; m.polygonOffsetUnits = -4; }
 
-let sackGeo: THREE.BufferGeometry | null = null;
-/** Bryła worka: obrócony profil — oklapnięty spód, pękate boki, ramiona, przewiązana szyjka i rozchylona góra */
-export function sackGeometry(): THREE.BufferGeometry {
-  if (sackGeo) return sackGeo;
-  const prof = [[0, 0], [0.075, 0], [0.105, 0.025], [0.116, 0.075], [0.112, 0.14], [0.095, 0.195], [0.06, 0.232], [0.03, 0.248], [0.028, 0.258], [0.046, 0.285], [0.034, 0.3], [0, 0.302]].map(([px, py]) => new THREE.Vector2(px, py));
-  sackGeo = new THREE.LatheGeometry(prof, 16).scale(1.05, 1, 0.92);
-  // drobniejszy splot płótna: wzór powtarza się kilka razy dookoła worka
-  const uv = sackGeo.getAttribute('uv');
-  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 4, uv.getY(i) * 2);
-  return sackGeo;
-}
-
 function box(g: THREE.Group, m: THREE.Material, w: number, h: number, d: number, x = 0, y = 0, z = 0): THREE.Mesh {
   const geo = new THREE.BoxGeometry(w, h, d);
   const k = (m.userData.tile as number) || 0;
@@ -276,15 +264,14 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     })),
   },
   flour: {
-    tex: 'burlap',
-    // worki z płótna: trzy stoją (każdy trochę inaczej obrócony), czwarty leży bokiem z przodu
-    geo: merge([
-      ...([[-0.1, -0.06, 0.2, 1], [0.1, -0.07, -0.5, 0.95], [0.0, 0.08, 1.1, 0.9]] as const).flatMap(([x, z, rot, sc]) => [
-        paint(sackGeometry().clone().scale(sc, sc, sc).rotateY(rot).translate(x, -0.15, z), 0xcdb68a),
-        paint(new THREE.TorusGeometry(0.03, 0.007, 4, 10).rotateX(Math.PI / 2).scale(sc, sc, sc).translate(x, -0.15 + 0.25 * sc, z), 0x7a5a32),
-      ]),
-      paint(sackGeometry().clone().scale(0.85, 0.85, 0.7).rotateZ(Math.PI / 2).translate(0.12, -0.055, 0.15), 0xc4ad80),
-    ]),
+    // worki mąki z płótna (tools/models/sack.py, symulacja tkaniny): trzy stoją, każdy inaczej obrócony, czwarty leży
+    // bokiem z przodu (dno stosu w y = -0,15; worek: wysokość 1,3 szerokości, spłaszczony na dole)
+    withProp: 'sack',
+    noCode: true,
+    geo: mergeGeometries([merge([
+      ...([[-0.1, -0.06, 0.2, 1], [0.1, -0.07, -0.5, 0.95], [0.0, 0.08, 1.1, 0.9]] as const).map(([x, z, rot, sc]) => propAt('sack', x, -0.15, z, 0.2 * sc, rot)),
+      propGeometryFlat('sack').scale(0.17, 0.17, 0.17).translate(0, -0.11, 0).rotateZ(Math.PI / 2).rotateY(0.3).translate(0.1, -0.07, 0.17),
+    ])], true)!,
   },
   bread: {
     // kosz z wikliny, w nim cztery bochenki ze skanów (trzy różne, Poly Haven hamburger_buns): trzy na dnie, czwarty
@@ -329,16 +316,15 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
   },
   ale: {
     tex: 'planks',
-    // beczki piwa z paczki (Poly Haven wine_barrel_01, wypalona wersja 560 trójkątów — w składzie może ich stać
-    // kilkadziesiąt): dwie leżą na legarach, trzecia stoi na nich w rowku między nimi
-    withProp: 'barrelLow',
+    // beczki piwa z paczki (Poly Haven wine_barrel_01, pełne): dwie leżą na legarach, trzecia stoi na nich w rowku
+    withProp: 'barrel',
     geo: mergeGeometries([
       // legary w poprzek beczek (beczki leżą wzdłuż x, długość 0,26), wierzch legara w -0,12 = spód leżących beczek
       merge([-0.08, 0.08].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.03, 0.46), x, -0.135, 0), 0x5a3e24))),
       merge([
-        ...[-0.113, 0.113].map((z) => propGeometryFlat('barrelLow').translate(0, -0.5, 0).scale(0.26, 0.26, 0.26).rotateZ(Math.PI / 2).rotateX(z * 9).translate(0, -0.007, z)),
+        ...[-0.113, 0.113].map((z) => propGeometryFlat('barrel').translate(0, -0.5, 0).scale(0.26, 0.26, 0.26).rotateZ(Math.PI / 2).rotateX(z * 9).translate(0, -0.007, z)),
         // stojąca: średnica 0,19, dno 0,106 — tam leżące beczki (promień 0,113) mają powierzchnię pod jej krawędzią
-        propGeometryFlat('barrelLow').scale(0.22, 0.22, 0.22).rotateY(0.8).translate(0, 0.106, 0),
+        propGeometryFlat('barrel').scale(0.22, 0.22, 0.22).rotateY(0.8).translate(0, 0.106, 0),
       ]),
     ], true)!,
   },
@@ -681,23 +667,24 @@ function buildingFish(model: unknown): THREE.Mesh {
   return mesh;
 }
 
-/** Jabłko albo bochenek w modelu budynku: [grupa, 'apple' | 'bun', x, y dna, z, szerokość, obrót] (building.py) */
-type FoodSpot = [string, 'apple' | 'bun', number, number, number, number, number];
-const foodCache = new Map<unknown, [string, 'apple' | 'bun', THREE.BufferGeometry][]>();
+/** Jabłko, bochenek albo worek w modelu budynku: [grupa, rodzaj, x, y dna, z, szerokość, obrót] (building.py) */
+type FoodKind = 'apple' | 'bun' | 'sack';
+type FoodSpot = [string, FoodKind, number, number, number, number, number];
+const foodCache = new Map<unknown, [string, FoodKind, THREE.BufferGeometry][]>();
 /**
- * Siatki jabłek i bochenków budynku, po jednej na grupę i rodzaj. Jabłka w najlżejszej wersji (420 trójkątów —
- * w sadzie jest ich ponad sto, a każde ma kilka centymetrów), bochenki z trzech skanów na zmianę (wspólna tekstura).
+ * Siatki jabłek i bochenków budynku, po jednej na grupę i rodzaj; jabłka i bochenki w oryginale ze skanów (zasada:
+ * bez odchudzania), bochenki z trzech skanów na zmianę (wspólna tekstura).
  */
-function foodGeos(model: unknown, spots: FoodSpot[]): [string, 'apple' | 'bun', THREE.BufferGeometry][] {
+function foodGeos(model: unknown, spots: FoodSpot[]): [string, FoodKind, THREE.BufferGeometry][] {
   let out = foodCache.get(model);
   if (out) return out;
   const by = new Map<string, THREE.BufferGeometry[]>();
   spots.forEach(([grp, kind, x, y, z, w, rot], i) => {
     const key = `${grp}|${kind}`;
     let l = by.get(key); if (!l) { l = []; by.set(key, l); }
-    l.push(kind === 'apple' ? propAt('appleLow', x, y, z, w, rot) : propAt((['bun1', 'bun2', 'bun3'] as const)[i % 3]!, x, y, z, w, rot));
+    l.push(kind === 'apple' ? propAt('apple', x, y, z, w, rot) : kind === 'sack' ? propAt('sack', x, y, z, w, rot) : propAt((['bun1', 'bun2', 'bun3'] as const)[i % 3]!, x, y, z, w, rot));
   });
-  out = [...by].map(([key, l]) => { const [grp, kind] = key.split('|') as [string, 'apple' | 'bun']; return [grp, kind, mergeGeometries(l)!] as [string, 'apple' | 'bun', THREE.BufferGeometry]; });
+  out = [...by].map(([key, l]) => { const [grp, kind] = key.split('|') as [string, FoodKind]; return [grp, kind, mergeGeometries(l)!] as [string, FoodKind, THREE.BufferGeometry]; });
   foodCache.set(model, out);
   return out;
 }
@@ -792,12 +779,12 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
       (groups[name] ?? g.getObjectByName(name) ?? g).add(mesh);
     }
   }
-  // jabłka i bochenki ze skanów: model zapisuje tylko miejsca (building.py → 'foods'), jedna siatka na grupę i rodzaj
+  // jabłka i bochenki ze skanów, worki z płótna: model zapisuje tylko miejsca (building.py → 'foods'), jedna siatka na grupę i rodzaj
   const foods = (model as unknown as { foods?: FoodSpot[] }).foods;
   if (foods?.length) {
     const groups: Record<string, THREE.Object3D> = { base: g, shell, interior, floor: interior, ceiling };
     for (const [name, kind, geo] of foodGeos(model, foods)) {
-      const mesh = new THREE.Mesh(geo, propMaterial(kind === 'apple' ? 'apple' : 'bun1'));
+      const mesh = new THREE.Mesh(geo, propMaterial(kind === 'apple' ? 'apple' : kind === 'sack' ? 'sack' : 'bun1'));
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       (groups[name] ?? g.getObjectByName(name) ?? g).add(mesh);

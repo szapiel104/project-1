@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.24 — worki z płótna i modele z paczek w oryginale (2026-10-19)
+
+- Worek mąki i ziarna to model z Blendera z symulacją tkaniny: pełny worek siada pod własnym ciężarem, płótno marszczy się w fałdy zbiegające do sznura, nad sznurem zebrany kołnierz; tekstura juty powtarzana na płótnie, cień w fałdach. Gotowego worka z płótna na wolnej licencji w sieci nie ma (tylko papierowe i plastikowe albo bez licencji)
+- Worek jest wszędzie: niesiony przez chłopa, w stosach w składzie, w piekarni, browarze, chacie chłopa, leśniczówce, obu spichlerzach, młynie i obozie bandytów
+- Zgodnie z zasadą Michała ryba, pochodnia, kosz, jabłko, chleb i beczka wchodzą do gry w oryginale (wszystkie trójkąty, tekstury w rozdzielczości paczki jako zwykły JPG, bez KTX2), a nie w wersjach odchudzonych
+
 ## 0.31.3 — liście na stawach nie migają (2026-10-19)
 
 - Kożuch liści na wodzie leży 2,5 cm nad taflą z przesunięciem głębi: przy ruchu kamery nie miga już i nie „sypie się” (wcześniej walczył z taflą wody, która sięga po horyzont)

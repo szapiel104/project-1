@@ -121,8 +121,7 @@ b.prism('interior', 'white', 0.13, 0.08, 0.04, -0.05, P + 0.14, 0.25, seg=12)
 t.block(-0.2, 0.1, 0.1, 0.4, 0, P + 0.18)
 # worki mąki pod lewą ścianą
 for x, z, s in ((X0 + T + 0.1, 0.3, 1.0), (X0 + T + 0.11, 0.12, 0.9), (X0 + T + 0.26, 0.38, 0.85)):
-    b.prism('interior', 'sack', 0.075 * s, 0.06 * s, 0.17 * s, x, P, z, seg=9)
-    b.prism('interior', 'rope', 0.035 * s, 0.03 * s, 0.03 * s, x, P + 0.17 * s, z, seg=7)
+    b.sack('interior', x, P, z, w=0.15 * s, rot=x * 7)   # worek z płótna (tools/models/sack.py)
 t.block(X0 + T, X0 + T + 0.36, 0.02, 0.48, 0, P + 0.2)
 # półka z chlebem na prawej ścianie
 b.box('interior', 'woodDark', 0.08, 0.02, 0.5, X1 - T - 0.04, P + 0.5, -0.25)

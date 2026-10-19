@@ -176,8 +176,7 @@ chest(1.08, 1.02, -0.15, open_=True)
 for k, (ox, oz, r) in enumerate(((0.0, 0.0, 0.06), (0.06, -0.03, 0.045), (-0.07, 0.025, 0.045), (0.03, 0.05, 0.04))):
     b.crystal('base', 'magicOre', 1.08 + ox, 0.2, 1.02 + oz, r, seed=k * 3.1, sy=0.8)
 for (x, z) in ((0.62, 1.12), (0.78, 1.26)):
-    b.prism('base', 'sack', 0.085, 0.075, 0.15, x, 0.0, z, seg=9, phase=x)
-    b.prism('base', 'sack', 0.075, 0.025, 0.05, x, 0.15, z, seg=9, phase=x)
+    b.sack('base', x, 0.0, z, w=0.17, rot=x * 7)   # łupy w workach z płótna (tools/models/sack.py)
 # beczka z obręczami (obręcze o włos szersze od klepek)
 BX, BZ = 1.22, 0.3
 b.prism('base', 'woodDark', 0.13, 0.15, 0.17, BX, 0.0, BZ, seg=12)
