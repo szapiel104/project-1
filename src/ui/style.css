@@ -1614,12 +1614,17 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .help-pane .gallery-list { height: auto; max-height: calc(100vh / var(--ui, 1) - 250px); }
 /* ustawienia jak księga „Jak grać”: wiersze opcji na stronie, gotowe poziomy w rzędzie, ostrzeżenie na stronie dla słabych komputerów */
 .help-nav:has(.set-save) { grid-template-rows: minmax(0, 1fr) auto auto auto; }
-.help-pane .set-sheet { gap: 4px; max-width: 820px; }
+.help-pane .set-sheet { gap: 4px; max-width: none; max-height: none; overflow: visible; padding-right: 0; }
 .help-pane .set-sheet > .help-p { margin-bottom: 8px; }
 .help-pane .set-sheet > .help-tip { margin-top: 12px; }
 .set-sheet .set-row, .set-sheet .set-toggle { padding: 12px 2px; min-height: 0; border-bottom: 1px solid #2e2312; }
 .set-sheet .set-name { font-size: 17px; color: #f1e4c4; }
 .set-sheet > .hint { margin: 10px 0 0; font-size: 15.5px; line-height: 1.5; }
+/* szeroki ekran: opcje w dwóch kolumnach, żeby strona nie była pustym pasem po prawej */
+@media (min-width: 1500px) {
+  .help-pane .set-sheet { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 36px; align-content: start; }
+  .help-pane .set-sheet > .help-title, .help-pane .set-sheet > .help-p, .help-pane .set-sheet > .help-tip, .help-pane .set-sheet > .set-presets, .help-pane .set-sheet > .hint, .help-pane .set-sheet > .set-row:only-of-type { grid-column: 1 / -1; }
+}
 .set-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 6px 0 4px; }
 .set-presets .set-preset { min-height: 52px; margin: 0; padding: 0 8px; min-width: 0; font-size: 17px; }
 .help-pane .help-tip.set-warn { border-left-color: #e9c766; background: #1c1409; }
