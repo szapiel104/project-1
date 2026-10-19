@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.9 — płynne wczytywanie i menu bez podglądu mapy (2026-10-19)
+
+- Ekran wczytywania to sam herb, tytuł, rada i pasek postępu: bez unoszących się iskier i przesuwającego się blasku na pasku, które przycinały się, gdy gra się wczytywała
+- Menu ma pełne, ciemne tło jak ekran wczytywania; osada i mapa nie są już rysowane pod spodem, więc menu nie przycina
+- Nowa gra i pokój przez sieć bez podglądu mapy z lotu ptaka (generowanie mapy przy każdej zmianie zatrzymywało menu); mapa powstaje dopiero po „Rozpocznij”, za ekranem wczytywania
+
 ## 0.30.8 — herb gracza także na chorągwiach zamku, bram i wież (2026-10-18)
 
 - Chorągwie z modeli Blendera (baszty i donżon twierdzy, kamienna brama, kamienna wieża, strażnica, sztandar koszar) dostały tę samą płachtę z herbem właściciela co reszta budynków; w modelach zostało tylko miejsce zawieszenia, płachtę rysuje gra
