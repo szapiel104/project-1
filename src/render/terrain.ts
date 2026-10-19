@@ -29,14 +29,15 @@ const smoothstep = (a: number, b: number, x: number): number => { const t = Math
 export const HAZE = 0xcfc9b4;
 
 /** Wysokość pola w świecie 3D. Woda leży poniżej zera, góry wyrastają stromo. */
-function tileHeight(map: GameMap, x: number, y: number, waterLevel: number): number {
+function tileHeight(map: GameMap, x: number, y: number, waterLevel: number, shelf?: Float32Array): number {
   const cx = Math.min(map.width - 1, Math.max(0, x));
   const cy = Math.min(map.height - 1, Math.max(0, y));
   const e = map.elevation[cy * map.width + cx]!;
   const t = map.tiles[cy * map.width + cx] as Terrain;
   if (t === Terrain.Mountain) return 1.3 + (e - 170) * 0.15;
   const h = (e - waterLevel) * HEIGHT_SCALE;
-  if (t === Terrain.Water) return Math.min(h, -0.25);
+  // dno jeziora: przy brzegu łagodna półka (płycizna, przez którą widać dno), dalej coraz głębiej aż do dna z mapy
+  if (t === Terrain.Water) return shelf ? Math.max(Math.min(h, -0.25), shelf[cy * map.width + cx]!) : Math.min(h, -0.25);
   if (t === Terrain.Ford) return -0.17; // bród: dno tuż pod taflą, woda po kostki
   // ląd w większości płaski: łagodne falowanie, a wyraźne pagórki tylko tam, gdzie teren jest naprawdę wysoko
   const d = e - waterLevel;
@@ -102,13 +103,38 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const ox = -w / 2;
   const oz = -h / 2;
 
+  // Półka przy brzegu: odległość pola wody od lądu (w polach) wyznacza najmniejszą głębokość dna. Pierwsze pole
+  // to płycizna (ok. 20 cm przy samym brzegu), każde następne ok. 30 cm głębiej, z losowymi płyciznami i dołkami, więc linia, za którą
+  // dna już nie widać, faluje zamiast biec równo z brzegiem. Głęboki środek zostaje taki, jak z mapy.
+  const shelf = new Float32Array(w * h).fill(-99);
+  {
+    const sd = new Int16Array(w * h).fill(-1);
+    const q: number[] = [];
+    for (let i = 0; i < w * h; i++) if (map.tiles[i] !== Terrain.Water) { sd[i] = 0; q.push(i); }
+    for (let qi = 0; qi < q.length; qi++) {
+      const i = q[qi]!, x = i % w, y = (i - x) / w;
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
+        const nx = x + dx, ny = y + dy;
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
+        const j = ny * w + nx;
+        if (sd[j]! >= 0) continue;
+        sd[j] = sd[i]! + 1; q.push(j);
+      }
+    }
+    for (let i = 0; i < w * h; i++) {
+      if (map.tiles[i] !== Terrain.Water) continue;
+      const x = i % w, y = (i - x) / w, d = sd[i]!;
+      const n = ((hash2(x >> 1, y >> 1, map.seed ^ 0x5a17) & 255) / 255 - 0.5) * 0.22 + ((hash2(x, y, map.seed ^ 0x2c3) & 255) / 255 - 0.5) * 0.08;
+      shelf[i] = Math.min(-0.28, -0.3 - 0.28 * (d - 1) + (d > 1 ? n : 0)); // pole przy lądzie -0,3: narożnik wspólny z lądem wypada tuż pod taflą, więc woda sięga brzegu pola, a nie kończy się w połowie
+    }
+  }
   // wysokości narożników = średnia z czterech sąsiednich pól
   const corners = new Float32Array((w + 1) * (h + 1));
   for (let y = 0; y <= h; y++)
     for (let x = 0; x <= w; x++)
       corners[y * (w + 1) + x] =
-        (tileHeight(map, x - 1, y - 1, waterLevel) + tileHeight(map, x, y - 1, waterLevel) +
-          tileHeight(map, x - 1, y, waterLevel) + tileHeight(map, x, y, waterLevel)) / 4;
+        (tileHeight(map, x - 1, y - 1, waterLevel, shelf) + tileHeight(map, x, y - 1, waterLevel, shelf) +
+          tileHeight(map, x - 1, y, waterLevel, shelf) + tileHeight(map, x, y, waterLevel, shelf)) / 4;
   // Góry na planszy (pole gór przy krawędzi): bryła z szumu grzbietowego, im wyżej, tym bardziej poszarpana —
   // granie, żleby i turnie zamiast gładkiego kopca. To tylko wygląd: po górach i tak nikt nie chodzi.
   const nz = createNoise2D(rng(map.seed ^ 0x6d0f));
@@ -336,7 +362,16 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
 
   // Ryby: pływają po małych okręgach tuż pod powierzchnią, co jakiś czas któraś wyskakuje
   const waterTiles: number[] = [];
-  for (let i = 0; i < map.tiles.length; i++) if (map.tiles[i] === Terrain.Water) waterTiles.push(i);
+  // ryby tylko tam, gdzie całe ich kółko (do ok. 0,6 pola od środka pola) ma dno głębiej niż 40 cm pod taflą —
+  // inaczej pływały w ziemi przy brzegu i na płyciznach
+  for (let i = 0; i < map.tiles.length; i++) {
+    if (map.tiles[i] !== Terrain.Water) continue;
+    const x = i % w, y = (i - x) / w;
+    if (x < 1 || y < 1 || x >= w - 1 || y >= h - 1) continue;
+    let deep = true;
+    for (let cy = y - 1; cy <= y + 2 && deep; cy++) for (let cx = x - 1; cx <= x + 2; cx++) if (corner(cx, cy) > WATER_Y - 0.4) { deep = false; break; }
+    if (deep) waterTiles.push(i);
+  }
   const fishCount = Math.min(90, Math.floor(waterTiles.length / 5));
   // ryba z paczki (tools/models/props_import.py, wersja z daleka sprawdzona obok oryginału), długość ok. 0,42 pola
   const fishGeo = propGeometry('fish', true).clone().scale(0.42, 0.42, 0.42);
@@ -536,7 +571,15 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         depthData[sy * SW + sx] = THREE.DataUtils.toHalfFloat(dep);
       }
     }
-    const depthTex = new THREE.DataTexture(depthData, SW, SH, THREE.RedFormat, THREE.HalfFloatType);
+    // G: ta sama głębokość rozmyta (promień ok. 1,5 pola) — do przejrzystości, R zostaje dokładne — do linii brzegu
+    const raw = new Float32Array(SW * SH);
+    for (let i = 0; i < raw.length; i++) raw[i] = Math.max(0, THREE.DataUtils.fromHalfFloat(depthData[i]!));
+    const R = 6, tmpB = new Float32Array(raw.length), sm = new Float32Array(raw.length);
+    for (let y = 0; y < SH; y++) { let acc = 0; const row = y * SW; for (let x = -R; x <= R; x++) acc += raw[row + Math.min(SW - 1, Math.max(0, x))]!; for (let x = 0; x < SW; x++) { tmpB[row + x] = acc / (2 * R + 1); acc += raw[row + Math.min(SW - 1, x + R + 1)]! - raw[row + Math.max(0, x - R)]!; } }
+    for (let x = 0; x < SW; x++) { let acc = 0; for (let y = -R; y <= R; y++) acc += tmpB[Math.min(SH - 1, Math.max(0, y)) * SW + x]!; for (let y = 0; y < SH; y++) { sm[y * SW + x] = acc / (2 * R + 1); acc += tmpB[Math.min(SH - 1, y + R + 1) * SW + x]! - tmpB[Math.max(0, y - R) * SW + x]!; } }
+    const rg = new Uint16Array(SW * SH * 2);
+    for (let i = 0; i < SW * SH; i++) { rg[i * 2] = depthData[i]!; rg[i * 2 + 1] = THREE.DataUtils.toHalfFloat(sm[i]!); }
+    const depthTex = new THREE.DataTexture(rg, SW, SH, THREE.RGFormat, THREE.HalfFloatType);
     depthTex.magFilter = THREE.LinearFilter; depthTex.minFilter = THREE.LinearFilter; depthTex.needsUpdate = true;
     hasWater = anyWater;
     wm = waterMaterial(depthTex, EW, EH, reflection.uniforms);

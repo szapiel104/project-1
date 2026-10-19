@@ -388,12 +388,15 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = `uniform sampler2D wN, wDepth, tRefl; uniform mat4 mRefl; uniform float uRefl; uniform float wTime; uniform vec3 skyCol; uniform vec3 wSunDir; uniform vec3 wSunCol; uniform vec2 mapSize; varying vec3 vWP; float wD; vec2 wSlope;\n` + sh.fragmentShader
+    sh.fragmentShader = `uniform sampler2D wN, wDepth, tRefl; uniform mat4 mRefl; uniform float uRefl; uniform float wTime; uniform vec3 skyCol; uniform vec3 wSunDir; uniform vec3 wSunCol; uniform vec2 mapSize; varying vec3 vWP; float wD; float wDs; vec2 wSlope;\n` + sh.fragmentShader
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           vec2 suv = (vWP.xz + mapSize * 0.5) / mapSize;
           // głębokość z siatki terenu, lekko zaburzona szumem: linia wody nie biegnie po prostych krawędziach trójkątów
-          wD = texture2D(wDepth, suv).r + (texture2D(wN, vWP.xz / 1.9).r - 0.5) * 0.04;
+          vec2 dd = texture2D(wDepth, suv).rg;
+          wD = dd.r + (texture2D(wN, vWP.xz / 1.9).r - 0.5) * 0.04;
+          // głębokość do przejrzystości: wygładzona (ok. 1,5 pola), więc granica widocznego dna nie biegnie po trójkątach terenu
+          wDs = max(min(dd.g, dd.r * 2.0 + 0.02), 0.0);
           if (wD <= 0.0) discard;
           // barwa toni (światło rozproszone w wodzie): leśne jezioro, oliwkowo-brunatne od torfu
           diffuseColor.rgb = vec3(0.05, 0.064, 0.038);
@@ -419,8 +422,9 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
           float F = 0.02 + 0.98 * pow(1.0 - clamp(dot(normal, vdir), 0.0, 1.0), 5.0);   // Fresnel (Schlick, woda)
           // pochłanianie (Beer–Lambert): droga promienia w wodzie rośnie, im płaściej patrzymy
           vec3 V = normalize(cameraPosition - vWP);
-          float path = wD / max(V.y, 0.12);
-          float tr = dot(exp(-vec3(2.4, 1.9, 2.7) * path), vec3(0.3333));
+          float path = wDs / max(V.y, 0.15);
+          // przy brzegu woda jest czysta (dno widać do ok. metra), głębiej toń gęstnieje i od ok. 2,5 m dna już nie ma
+          float tr = dot(exp(-vec3(1.25, 0.95, 1.45) * path), vec3(0.3333));
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
           vec3 refl;
@@ -443,6 +447,6 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
         }
         #include <opaque_fragment>`);
   };
-  mat.customProgramCacheKey = () => 'water-v5';
+  mat.customProgramCacheKey = () => 'water-v6';
   return { mat, time, sky, sunDir, sunCol };
 }
