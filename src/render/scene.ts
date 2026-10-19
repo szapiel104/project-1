@@ -2334,6 +2334,8 @@ export class GameRenderer {
     if (++this.matSweep % 90 === 0) this.matQ.sweep(this.scene);
     if (this.gpuProfile && this.profN++ % 15 === 0) { this.profiledRender(); return; }
     const tg = performance.now();
+    // odbicie w wodzie (od średniej grafiki w górę, jak poświata)
+    this.view?.reflectWater(this.renderer, this.scene, this.cam.camera, this.bloom.enabled);
     this.composer.render();
     const gpu = performance.now() - tg;
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;

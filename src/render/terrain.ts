@@ -17,7 +17,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ModelFactory } from './models';
 import { bump, normal, pattern } from './textures';
-import { cloudShade, groundGrassTexture, groundMaterial, waterMaterial } from './ground';
+import { cloudShade, groundGrassTexture, groundMaterial, waterMaterial, WATER_Y } from './ground';
+import { WaterReflection } from './waterReflect';
 import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
 import { createGrassField, type GrassField } from './grass';
 import { buildHighMist, type Atmosphere, type HighMist } from './highmist';
@@ -74,6 +75,8 @@ export interface TerrainView {
   noGrass(tile: number, on?: boolean): void;
   /** Kolor nieba odbijany przez wodę */
   setSky(c: THREE.Color): void;
+  /** Odbicie lustrzane w wodzie: rysowane raz na klatkę przed obrazem (on = false: tańsze odbicie nieba) */
+  reflectWater(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, on: boolean): void;
   /** Pogoda i pora dnia dla mgły w dolinach, chmur przy szczytach i strumieni */
   setAtmosphere(a: Atmosphere): void;
   /** Kierunek ku słońcu (świat) i jego barwa: odblaski na wodzie; golden = złota godzina (0..1) */
@@ -327,6 +330,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   if (ripples) { ripples.repeat.set(w / 14, h / 14); ripples.needsUpdate = true; }
   // woda (jeziora i morze za mapą) powstaje niżej, gdy znany jest już teren za mapą
   let wm!: ReturnType<typeof waterMaterial>;
+  const reflection = new WaterReflection(WATER_Y);
+  let hasWater = false;
   let mistFx: HighMist | null = null, streams: Streams | null = null, fxTime = 0;
 
   // Ryby: pływają po małych okręgach tuż pod powierzchnią, co jakiś czas któraś wyskakuje
@@ -507,60 +512,40 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   }
 
   // Woda na całym obszarze (plansza i teren za nią): jeziora na planszy i morze za mapą jedną taflą.
-  // Tekstura brzegu (2 podpola na pole): R = głębia, G = gładka maska wody (rozmyta granica): tafla wygasa
-  // miękko i nieregularnie zamiast kończyć się kantem pól.
+  // Mapa głębokości (4 próbki na pole): tafla minus dno w metrach, liczona dokładnie jak narysowana siatka terenu
+  // (trójkąty dzielone przekątną (1,0)–(0,1)), więc przejrzystość i linia brzegu zgadzają się z terenem co do centymetra.
   {
-    const EW = w + 2 * D, EH = h + 2 * D, SS = 2, SW = EW * SS, SH = EH * SS;
-    const dist = new Int16Array(w * h).fill(-1);
-    const queue: number[] = [];
-    for (let i = 0; i < w * h; i++) if (map.tiles[i] !== Terrain.Water) { dist[i] = 0; queue.push(i); }
-    for (let qi = 0; qi < queue.length; qi++) {
-      const i = queue[qi]!, x = i % w, y = (i - x) / w;
-      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) {
-        const nx = x + dx, ny = y + dy;
-        if (nx < 0 || ny < 0 || nx >= w || ny >= h) continue;
-        const j = ny * w + nx;
-        if (dist[j]! >= 0) continue;
-        dist[j] = dist[i]! + 1; queue.push(j);
+    const EW = w + 2 * D, EH = h + 2 * D, SS = 4, SW = EW * SS, SH = EH * SS, CW = EW + 1;
+    const oc = new Float32Array(CW * (EH + 1));
+    for (let y = 0; y <= EH; y++) for (let x = 0; x <= EW; x++) {
+      const X = x - D, Y = y - D;
+      oc[y * CW + x] = X >= 0 && Y >= 0 && X <= w && Y <= h ? corner(X, Y) : outerH(X, Y);
+    }
+    const depthData = new Uint16Array(SW * SH);
+    let anyWater = false;
+    for (let sy = 0; sy < SH; sy++) {
+      const fy = (sy + 0.5) / SS, iy = Math.min(EH - 1, Math.floor(fy)), ty = fy - iy;
+      for (let sx = 0; sx < SW; sx++) {
+        const fx = (sx + 0.5) / SS, ix = Math.min(EW - 1, Math.floor(fx)), tx = fx - ix;
+        const k = iy * CW + ix;
+        let hh: number;
+        if (tx + ty <= 1) { const c0 = oc[k]!; hh = c0 + (oc[k + 1]! - c0) * tx + (oc[k + CW]! - c0) * ty; }
+        else { const c3 = oc[k + CW + 1]!; hh = c3 + (oc[k + CW]! - c3) * (1 - tx) + (oc[k + 1]! - c3) * (1 - ty); }
+        const dep = Math.max(-1, Math.min(8, WATER_Y - hh));
+        if (dep > 0) anyWater = true;
+        depthData[sy * SW + sx] = THREE.DataUtils.toHalfFloat(dep);
       }
     }
-    // wysokość terenu za mapą w siatce pól (raz, potem odczyt)
-    const oh = new Float32Array(EW * EH);
-    for (let y = 0; y < EH; y++) for (let x = 0; x < EW; x++) {
-      const X = x - D + 0.5, Y = y - D + 0.5;
-      oh[y * EW + x] = X >= 0 && X < w && Y >= 0 && Y < h ? 1 : outerH(X, Y);
-    }
-    let m: Float32Array = new Float32Array(SW * SH), d: Float32Array = new Float32Array(SW * SH);
-    for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) {
-      const tx = ((x / SS) | 0) - D, ty = ((y / SS) | 0) - D;
-      if (tx >= 0 && ty >= 0 && tx < w && ty < h) {
-        const t = ty * w + tx;
-        m[y * SW + x] = map.tiles[t] === Terrain.Water || map.tiles[t] === Terrain.Ford ? 1 : 0;
-        d[y * SW + x] = map.tiles[t] === Terrain.Ford ? 0 : Math.max(0, dist[t]! - 0.5) / 6;
-      } else {
-        const hh = oh[(ty + D) * EW + (tx + D)]!;
-        m[y * SW + x] = hh < -0.07 ? 1 : 0;
-        d[y * SW + x] = Math.max(0, Math.min(1.4, -hh * 0.45));
-      }
-    }
-    const blur = (src: Float32Array): Float32Array => {
-      const tmpB = new Float32Array(src.length), out = new Float32Array(src.length), R = 2;
-      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) { let a = 0, n = 0; for (let k = -R; k <= R; k++) { const xx = x + k; if (xx >= 0 && xx < SW) { a += src[y * SW + xx]!; n++; } } tmpB[y * SW + x] = a / n; }
-      for (let y = 0; y < SH; y++) for (let x = 0; x < SW; x++) { let a = 0, n = 0; for (let k = -R; k <= R; k++) { const yy = y + k; if (yy >= 0 && yy < SH) { a += tmpB[yy * SW + x]!; n++; } } out[y * SW + x] = a / n; }
-      return out;
-    };
-    m = blur(blur(m)); d = blur(d);
-    const shoreData = new Uint8Array(SW * SH * 4);
-    for (let i = 0; i < SW * SH; i++) { shoreData[i * 4] = Math.min(255, d[i]! * 255); shoreData[i * 4 + 1] = Math.min(255, m[i]! * 255); shoreData[i * 4 + 3] = 255; }
-    const shoreTex = new THREE.DataTexture(shoreData, SW, SH, THREE.RGBAFormat);
-    shoreTex.magFilter = THREE.LinearFilter; shoreTex.minFilter = THREE.LinearFilter; shoreTex.needsUpdate = true;
-    wm = waterMaterial(shoreTex, EW, EH);
+    const depthTex = new THREE.DataTexture(depthData, SW, SH, THREE.RedFormat, THREE.HalfFloatType);
+    depthTex.magFilter = THREE.LinearFilter; depthTex.minFilter = THREE.LinearFilter; depthTex.needsUpdate = true;
+    hasWater = anyWater;
+    wm = waterMaterial(depthTex, EW, EH, reflection.uniforms);
     const waterMat = wm.mat;
     if (TEST) { waterMat.bumpMap = ripples; waterMat.bumpScale = 0.7; }
-    // tafla sięga daleko za obszar (morze aż po horyzont); poza nim tekstura brzegu powtarza wartości z krawędzi
+    // tafla sięga daleko za obszar (morze aż po horyzont); poza nim tekstura głębokości powtarza wartości z krawędzi
     const water = new THREE.Mesh(new THREE.PlaneGeometry(EW + 600, EH + 600), waterMat);
     water.rotation.x = -Math.PI / 2;
-    water.position.y = -0.08;
+    water.position.y = WATER_Y;
     water.receiveShadow = true;
     group.add(cat(water, 'woda'));
     const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x2b281a, roughness: 1 }) /* muł pod mętną wodą */);
@@ -1880,6 +1865,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     trunkNear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); streams?.setSky(c); },
+    reflectWater(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, on: boolean) { reflection.render(renderer, scene, camera, on && hasWater && !TEST); },
     setAtmosphere(a: Atmosphere) { mistFx?.update(fxTime, a); },
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
     level(x: number, y: number, fw: number, fh: number, y0: number) {
@@ -1997,7 +1983,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     },
     wear,
     dispose() {
-      mistFx?.dispose(); streams?.dispose();
+      mistFx?.dispose(); streams?.dispose(); reflection.dispose();
       // zmiana mapy (także podgląd w menu): zwalniamy wszystko, co ta mapa stworzyła — geometrie, materiały,
       // tekstury robione dla niej (brzeg wody, fale, trawa, trzciny); wspólne zdjęcia i materiał podłoża zostają
       const mats = new Set<THREE.Material>();

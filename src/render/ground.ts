@@ -363,49 +363,52 @@ function waveNormals(): THREE.DataTexture {
   return t;
 }
 
+/** Wysokość tafli wody (świat) */
+export const WATER_Y = -0.08;
+
 /**
- * Woda: przy brzegu jasna, przejrzysta i z pianą, dalej ciemna i głęboka; dwie warstwy fal płyną w różne strony,
- * pod kątem (efekt Fresnela) tafla odbija kolor nieba, a słońce daje ostry połysk.
- * `shore` to tekstura odległości od lądu (0 = brzeg, 1 = głębia) rozpięta na całej mapie.
+ * Woda jak w grach z prawdziwą wodą (podejście znane m.in. z wody w Unity Boat Attack i UE):
+ * - przejrzystość z prawdziwej głębokości (tekstura `depth`: tafla minus dno, w metrach, liczona z siatki terenu)
+ *   i pochłaniania światła (Beer–Lambert): przy brzegu widać dno, dalej toń gęstnieje do ciemnej, torfowej barwy,
+ *   brzeg wygasa miękko na ostatnich centymetrach zamiast kończyć się kantem pól;
+ * - odbicie: lustrzany obraz sceny z drugiej kamery (`WaterReflection`), zniekształcony falą; siła z Fresnela
+ *   (z góry ciemna toń, płasko patrząc lustro); bez lustra (słabsza grafika) gradient nieba z ciemnym pasem lasu;
+ * - trzy warstwy drobnych zmarszczek płyną w różne strony, z odległością łagodnieją (bez migotania w oddali);
+ * - ostry odblask słońca. Tafla zapisuje głębokość, więc AO i cienie chmur z dna nie prześwitują przez wodę.
  */
-export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat: THREE.MeshStandardMaterial; time: { value: number }; sky: { value: THREE.Color }; sunDir: { value: THREE.Vector3 }; sunCol: { value: THREE.Color } } {
+export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: { tRefl: { value: THREE.Texture | null }; mRefl: { value: THREE.Matrix4 }; uRefl: { value: number } }): { mat: THREE.MeshStandardMaterial; time: { value: number }; sky: { value: THREE.Color }; sunDir: { value: THREE.Vector3 }; sunCol: { value: THREE.Color } } {
   const time = { value: 0 };
   const sky = { value: new THREE.Color(0x8a9aa6) };
   const sunDir = { value: new THREE.Vector3(0, 1, 0) }, sunCol = { value: new THREE.Color(0) };
-  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, roughness: 0.06, metalness: 0.0, depthWrite: false });
-  if (TEST || !loader) { mat.color.setHex(0x1f2214); mat.opacity = 0.9; return { mat, time, sky, sunDir, sunCol }; }
+  const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, roughness: 0.45, metalness: 0.0, depthWrite: true });
+  if (TEST || !loader) { mat.color.setHex(0x1f2214); mat.opacity = 0.9; mat.depthWrite = false; return { mat, time, sky, sunDir, sunCol }; }
   const wN = waveNormals();
-  mat.userData.owned = [wN, shore];
-  const uni = { wN: { value: wN }, shore: { value: shore }, wTime: time, skyCol: sky, wSunDir: sunDir, wSunCol: sunCol, mapSize: { value: new THREE.Vector2(w, h) } };
+  mat.userData.owned = [wN, depth];
+  const uni = { wN: { value: wN }, wDepth: { value: depth }, wTime: time, skyCol: sky, wSunDir: sunDir, wSunCol: sunCol, mapSize: { value: new THREE.Vector2(w, h) }, ...refl };
   mat.onBeforeCompile = (sh) => {
     Object.assign(sh.uniforms, uni);
     sh.vertexShader = 'varying vec3 vWP;\n' + sh.vertexShader.replace('#include <worldpos_vertex>', '#include <worldpos_vertex>\nvWP = (modelMatrix * vec4(transformed, 1.0)).xyz;');
-    sh.fragmentShader = `uniform sampler2D wN, shore; uniform float wTime; uniform vec3 skyCol; uniform vec3 wSunDir; uniform vec3 wSunCol; uniform vec2 mapSize; varying vec3 vWP; float wDepth; float wFoam; float wRip;\n` + sh.fragmentShader
+    sh.fragmentShader = `uniform sampler2D wN, wDepth, tRefl; uniform mat4 mRefl; uniform float uRefl; uniform float wTime; uniform vec3 skyCol; uniform vec3 wSunDir; uniform vec3 wSunCol; uniform vec2 mapSize; varying vec3 vWP; float wD; vec2 wSlope;\n` + sh.fragmentShader
       .replace('#include <color_fragment>', `#include <color_fragment>
         {
           vec2 suv = (vWP.xz + mapSize * 0.5) / mapSize;
-          wDepth = texture2D(shore, suv).r;
-          float wMask = texture2D(shore, suv).g;
-          float d = smoothstep(0.0, 0.55, wDepth);
-          // mętna woda jak w stawie przy lesie: przy brzegu herbaciano-oliwkowa (widać trochę mułu), dalej prawie czarna
-          vec3 shallowC = vec3(0.085, 0.074, 0.038), deepC = vec3(0.018, 0.024, 0.014);
-          diffuseColor.rgb = mix(shallowC, deepC, d);
-          diffuseColor.a = mix(0.7, 0.97, smoothstep(0.0, 0.25, wDepth));
-          // miękki, nieregularny brzeg: tafla wygasa na ostatnich centymetrach zamiast kończyć się kantem
-          float edgeN = texture2D(wN, vWP.xz / 1.7).r;
-          diffuseColor.a *= smoothstep(0.42, 0.62, wMask + (edgeN - 0.5) * 0.18);
-          // piana: postrzępiona linia tuż przy brzegu, przesuwa się z falami
-          float fn = texture2D(wN, vWP.xz / 2.3 + vec2(wTime * 0.03, -wTime * 0.02)).r;
-          wFoam = smoothstep(0.07, 0.0, wDepth + (fn - 0.5) * 0.06) * (0.5 + 0.5 * sin(wTime * 1.3 + wDepth * 60.0)) * smoothstep(0.35, 0.6, fn);
+          // głębokość z siatki terenu, lekko zaburzona szumem: linia wody nie biegnie po prostych krawędziach trójkątów
+          wD = texture2D(wDepth, suv).r + (texture2D(wN, vWP.xz / 1.9).r - 0.5) * 0.04;
+          if (wD <= 0.0) discard;
+          // barwa toni (światło rozproszone w wodzie): leśne jezioro, oliwkowo-brunatne od torfu
+          diffuseColor.rgb = vec3(0.05, 0.064, 0.038);
         }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         {
-          // stojąca woda: drobna zmarszczka, dwie warstwy płyną powoli w różne strony, duża fala ledwo zaznaczona
-          vec3 n1 = texture2D(wN, vWP.xz / 2.8 + vec2(wTime * 0.014, wTime * 0.009)).xyz * 2.0 - 1.0;
-          vec3 n2 = texture2D(wN, vec2(vWP.z, -vWP.x) / 1.5 - vec2(wTime * 0.011, wTime * 0.018)).xyz * 2.0 - 1.0;
-          vec3 n3 = texture2D(wN, vWP.xz / 19.0 + vec2(-wTime * 0.004, wTime * 0.003)).xyz * 2.0 - 1.0;
-          vec3 wn = normalize(vec3((n1.xy * 0.7 + n2.xy * 0.6 + n3.xy * 0.08) * 0.32, 1.0));
-          wRip = wn.x;
+          float camD = length(vViewPosition);
+          vec2 g1 = texture2D(wN, vWP.xz / 3.4 + vec2(wTime * 0.019, wTime * 0.012)).xy * 2.0 - 1.0;
+          vec2 g2 = texture2D(wN, vec2(vWP.z, -vWP.x) / 1.9 + vec2(-wTime * 0.015, wTime * 0.021)).xy * 2.0 - 1.0;
+          vec2 g3 = texture2D(wN, vWP.xz / 0.75 + vec2(wTime * 0.034, -wTime * 0.027)).xy * 2.0 - 1.0;
+          vec2 g = g1 * 0.55 + g2 * 0.45 + g3 * 0.35 * (1.0 - smoothstep(6.0, 30.0, camD));
+          // stojąca woda: zmarszczki płytkie, w oddali gładsze (bez migotania), na samej płyciźnie prawie lustro
+          g *= mix(0.2, 0.06, smoothstep(15.0, 120.0, camD)) * mix(0.4, 1.0, smoothstep(0.0, 0.3, wD));
+          wSlope = g;
+          vec3 wn = normalize(vec3(g, 1.0));
           vec3 T = normalize((viewMatrix * vec4(1.0, 0.0, 0.0, 0.0)).xyz);
           vec3 B = normalize((viewMatrix * vec4(0.0, 0.0, 1.0, 0.0)).xyz);
           normal = normalize(T * wn.x - B * wn.y + normal * wn.z);
@@ -413,42 +416,33 @@ export function waterMaterial(shore: THREE.Texture, w: number, h: number): { mat
       .replace('#include <opaque_fragment>', `
         {
           vec3 vdir = normalize(vViewPosition);
-          // Fresnel (Schlick, woda F0 = 0.02): z góry widać ciemną toń, dopiero płasko patrząc tafla staje się lustrem
-          float fres = 0.02 + 0.98 * pow(1.0 - clamp(dot(normal, vdir), 0.0, 1.0), 5.0);
+          float F = 0.02 + 0.98 * pow(1.0 - clamp(dot(normal, vdir), 0.0, 1.0), 5.0);   // Fresnel (Schlick, woda)
+          // pochłanianie (Beer–Lambert): droga promienia w wodzie rośnie, im płaściej patrzymy
+          vec3 V = normalize(cameraPosition - vWP);
+          float path = wD / max(V.y, 0.12);
+          float tr = dot(exp(-vec3(2.4, 1.9, 2.7) * path), vec3(0.3333));
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
-          // co odbija tafla: tuż nad horyzontem ciemna ściana lasu i trzcin dookoła stawu, wyżej przygaszone niebo
-          // (bez tego woda w spacerze odbijała samą jasną mgłę i robiła się mleczna)
-          vec3 treeR = vec3(0.035, 0.045, 0.025) * (0.4 + skyCol.g * 1.2);
-          vec3 skyR = mix(treeR, skyCol * vec3(0.62, 0.68, 0.7), smoothstep(0.06, 0.4, rWorld.y));
-          outgoingLight = mix(outgoingLight, skyR * (0.96 + wRip * 0.2), clamp(fres * 0.8, 0.0, 0.6));
-          // odbicie brzegu: krótki marsz promienia odbitego po masce wody — gdy trafi w ląd, zanim wzniesie się ponad
-          // skarpę i drzewa (ok. 3 m), w tafli widać ciemny, falujący pas brzegu zamiast jasnego nieba
-          {
-            float hl = max(length(rWorld.xz), 1e-3);
-            vec2 rd = rWorld.xz / hl;
-            float rise = max(rWorld.y, 0.0) / hl;
-            float bank = 0.0;
-            for (int i = 1; i <= 5; i++) {
-              float t = float(i) * 0.85;
-              float hgt = rise * t;
-              vec2 q = vWP.xz + rd * t + vec2(wRip, -wRip) * 0.35;
-              float land = 1.0 - texture2D(shore, (q + mapSize * 0.5) / mapSize).g;
-              bank = max(bank, land * smoothstep(3.2, 0.8, hgt));
-            }
-            vec3 bankC = vec3(0.04, 0.055, 0.032) * (0.45 + skyCol.g * 1.1);
-            outgoingLight = mix(outgoingLight, bankC * (0.85 + wRip * 0.8), bank * 0.7 * clamp(fres * 0.9 + 0.3, 0.0, 0.85));
+          vec3 refl;
+          if (uRefl > 0.5) {
+            vec4 rc = mRefl * vec4(vWP, 1.0);
+            refl = texture2D(tRefl, clamp(rc.xy / rc.w + wSlope * 0.25, 0.002, 0.998)).rgb;
+          } else {
+            vec3 treeR = vec3(0.035, 0.045, 0.025) * (0.4 + skyCol.g * 1.2);
+            refl = mix(treeR, skyCol * vec3(0.62, 0.68, 0.7), smoothstep(0.06, 0.4, rWorld.y));
           }
-          // odblask słońca na falach: ostre, migoczące błyski w stronę słońca (najmocniej o złotej godzinie)
-          float glint = pow(max(dot(normalize(rWorld), wSunDir), 0.0), 380.0);
-          float sheen = pow(max(dot(normalize(rWorld), wSunDir), 0.0), 24.0);
-          outgoingLight += wSunCol * (glint * 2.4 + sheen * 0.12);
-          // stojąca woda prawie nie pieni się: przy brzegu tylko lekki, brudnawy nalot
-          outgoingLight += vec3(0.42, 0.42, 0.34) * wFoam * 0.08 * (0.3 + skyCol.g);
-          diffuseColor.a = clamp(max(diffuseColor.a, fres) + wFoam * 0.08, 0.0, 1.0);
+          // odblask słońca: ostre błyski na zmarszczkach
+          float glint = pow(max(dot(normalize(rWorld), wSunDir), 0.0), 700.0);
+          vec3 spec = wSunCol * glint * 3.0;
+          // skład: odbicie (F) + toń (rozproszenie) + dno widoczne przez resztę (przezroczystość)
+          float body = (1.0 - F) * (1.0 - tr);
+          float a = clamp(F + body, 0.0, 1.0);
+          outgoingLight = min((refl * F + outgoingLight * body + spec) / max(a, 0.002), vec3(30.0));
+          // przy samym brzegu woda wygasa: cieniutka warstwa na piasku, bez kantu
+          diffuseColor.a = a * smoothstep(0.0, 0.035, wD);
         }
         #include <opaque_fragment>`);
   };
-  mat.customProgramCacheKey = () => 'water-v4';
+  mat.customProgramCacheKey = () => 'water-v5';
   return { mat, time, sky, sunDir, sunCol };
 }
