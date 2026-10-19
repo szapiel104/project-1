@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.30.9 — herb na chorągwiach idzie za kontem (2026-10-19)
+
+- Gra startowała, zanim wczytało się konto, więc na chorągwiach był herb zastępczy (niebieska tarcza z mieczami), także po resecie. Teraz flagi na mapie podmieniają się same, gdy tylko konto się wczyta
+- Zmiana herbu w „Mój ród” w trakcie gry od razu zmienia chorągwie na wszystkich Twoich budynkach i flagi zbiórki, bez nowej gry
+
 ## 0.30.9 — płynne wczytywanie i menu bez podglądu mapy (2026-10-19)
 
 - Ekran wczytywania to sam herb, tytuł, rada i pasek postępu: bez unoszących się iskier i przesuwającego się blasku na pasku, które przycinały się, gdy gra się wczytywała

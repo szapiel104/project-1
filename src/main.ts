@@ -31,7 +31,7 @@ import { EMPTY, SANDBOX, TEST } from './testmode';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
-import { awardMatch, deleteRoom, me as netMe, saveResult, setStatus } from './net/supa';
+import { awardMatch, deleteRoom, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
 import { levelOf, MODE_MULT, titleOf, xpParts, type MatchMode } from './data/progress';
 import type { OnlineStart } from './ui/online';
 import { createGameChat } from './ui/chat';
@@ -495,6 +495,18 @@ function applySettings(st: Settings): void {
 }
 applySettings(gfx);
 
+/** Herby na chorągwiach: gracze z kontem — ich herb z „Mój ród” (mój zawsze aktualny z konta), boty i gracze bez herbu — stały herb z numeru */
+function crestList(): (number | null)[] {
+  const mine = netMe()?.avatar || null;
+  return game.players.map((_, i) => {
+    if (i === ME) return mine;
+    const slot = netGame?.slots[i];
+    return slot?.kind === 'human' ? slot.avatar || null : null;
+  });
+}
+// konto wczytuje się chwilę po starcie gry, a herb można zmienić w trakcie: flagi na mapie idą za kontem od razu
+onAccount(() => { if (game) renderer.setCrests(crestList()); });
+
 function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS): void {
   endShown = false;
   gameOver = false;
@@ -525,13 +537,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   currentPreset = preset;
   currentSeedText = seedText;
   pending = [];
-  // herby na chorągwiach: gracze z kontem — ich herb z „Mój ród”, boty i gracze bez herbu — stały herb z numeru
-  const myCrest = netMe()?.avatar || null;
-  renderer.setCrests(game.players.map((_, i) => {
-    const slot = online?.slots[i];
-    if (slot?.kind === 'human') return slot.avatar || null;
-    return i === ME && !online ? myCrest : null;
-  }));
+  renderer.setCrests(crestList());
   renderer.setState(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME);
   hud.setSeed(seedText, preset);
   pick(null);

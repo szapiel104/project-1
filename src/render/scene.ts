@@ -984,6 +984,15 @@ export class GameRenderer {
     this.crests = list.slice();
     if (this.rallyCloth) { this.scene.remove(this.rallyCloth); this.rallyCloth = null; }
     if (this.rallyFlags) { this.scene.remove(this.rallyFlags); this.rallyFlags = null; }
+    // budynki, które już stoją (konto wczytało się po starcie gry albo gracz zmienił herb w trakcie): podmień płachty
+    const g = this.state;
+    if (!g) return;
+    for (const b of g.buildings) {
+      const mesh = this.buildingMeshes.get(b.id);
+      if (!mesh) continue;
+      const team = TEAM_COLORS[g.players[b.owner]?.team ?? 0] ?? 0x888888;
+      applyCrest(mesh, team, this.crestOf(b.owner));
+    }
   }
   private crestOf(player: number): number { return this.crests[player] ?? defaultCrest(player); }
   setState(state: GameState, waterLevel: number, rim: number, focusPlayer = 0): void {
