@@ -79,7 +79,7 @@ export interface MenuEvents {
   /** Czy to mecz przez sieć (inny opis poddania) */
   isOnline(): boolean;
   /** Podgląd mapy przy tworzeniu nowej gry: wygeneruj i pokaż z lotu ptaka */
-  onPreviewMap(seedText: string, preset: MapPresetId, level: number, dev: boolean): void;
+  onPreviewMap(seedText: string, preset: MapPresetId, level: number, dev: boolean, walls?: 'mix' | 'stone' | 'wood'): void;
   /** Koniec podglądu (powrót z ekranu nowej gry bez startu) */
   onPreviewEnd(): void;
   /** Mecz przez sieć się zaczyna: pokój, skład, mój numer gracza i kanał gry */
@@ -385,7 +385,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       clearTimeout(timer);
       status.textContent = tx('Generuję mapę…', 'Generating the map…');
       timer = window.setTimeout(() => requestAnimationFrame(() => setTimeout(() => {
-        events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev);
+        events.onPreviewMap(seed.value.trim() || 'project-1', preset, level, dev, walls);
         status.textContent = tx(`Mapa „${seed.value.trim() || 'project-1'}” — widok z lotu ptaka. Losuj, aż trafisz na swoją.`, `Map “${seed.value.trim() || 'project-1'}” — bird’s-eye view. Keep rolling until you find the one you like.`);
       }, 20)), delay);
     };
@@ -416,7 +416,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     for (const [v, txt] of [['mix', tx('mieszane (kamień i bale)', 'mixed (stone and logs)')], ['stone', tx('kamienne', 'stone')], ['wood', tx('drewniane (palisada)', 'wooden (palisade)')]] as const) {
       const o = el('option'); o.value = v; o.textContent = txt; wallSel.append(o);
     }
-    wallSel.addEventListener('change', () => { walls = wallSel.value as typeof walls; });
+    wallSel.addEventListener('change', () => { walls = wallSel.value as typeof walls; preview(); });
     wallLab.append(el('span', 'dev-text', tx('Mury miasta', 'Town walls')), wallSel);
     wallLab.hidden = true;
 

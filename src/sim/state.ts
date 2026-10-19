@@ -544,9 +544,12 @@ const CAMP = buildingIndex('camp');
 function devFortify(g: GameState, player: number, walls: DevWalls = 'mix'): void {
   const { width: w, height: h } = g.map;
   let x0 = w, y0 = h, x1 = 0, y1 = 0;
+  // kopalnia stoi przy górach, często daleko od osady — razem z barakiem górników nie wchodzi w obrys murów miasta
+  const rock = new Set(BUILDINGS.filter((d) => d.needsRock).map((d) => d.id));
   for (const b of g.buildings) {
     if (b.owner !== player) continue;
     const d = BUILDINGS[b.type]!;
+    if (d.needsRock || (d.requires && rock.has(d.requires))) continue;
     const fw = b.rot % 2 ? d.h : d.w, fh = b.rot % 2 ? d.w : d.h;
     x0 = Math.min(x0, b.x); y0 = Math.min(y0, b.y); x1 = Math.max(x1, b.x + fw - 1); y1 = Math.max(y1, b.y + fh - 1);
   }

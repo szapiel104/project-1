@@ -245,7 +245,7 @@ const menu = createMenu(document.body, {
     enterGame(tx('Wczytywanie zapisu…', 'Loading the saved game…'), () => { if (!net) setStatus({ where: 'solo' }); });
   },
   // podgląd nowej mapy: generujemy ją obok bieżącej gry i pokazujemy z lotu ptaka; bieżąca gra czeka nietknięta
-  onPreviewMap: (seedText, preset, level, dev) => {
+  onPreviewMap: (seedText, preset, level, dev, walls) => {
     // generowanie mapy zatrzymuje stronę na chwilę: najpierw ciemna zasłona z kręciołkiem za menu (lewy panel zostaje),
     // potem mapa, a zasłona schodzi dopiero, gdy pierwsze klatki nowej mapy są narysowane i kamera rusza
     const job = ++previewJob;
@@ -253,7 +253,7 @@ const menu = createMenu(document.body, {
     previewCover.classList.remove('gone');
     requestAnimationFrame(() => requestAnimationFrame(() => {
       if (job !== previewJob) return; // w międzyczasie wylosowano kolejną mapę
-      preview = createGame(seedFromText(seedText), preset, level, dev);
+      preview = createGame(seedFromText(seedText), preset, level, dev, undefined, true, walls ?? 'mix');
       renderer.setState(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0);
       renderer.startPreview();
       renderer.warmup();
