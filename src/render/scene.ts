@@ -5022,7 +5022,10 @@ export class GameRenderer {
     let h = view.heightAt(x, y);
     // na drodze stopy stoją na nawierzchni, nie w niej: ścieżka, bruk i dyle są trochę nad ziemią
     const g = this.state;
-    if (g && !k) {
+    // także tuż przed murami zamku (pas do pola od murów, w którym działa keepAt): strażnicy przy bramie i chłopi
+    // na bruku pod murem stoją na nawierzchni, a nie po kostki w niej
+    const outsideKeep = !k || Math.abs(k[1]) >= KEEP_HALF || Math.abs(k[2]) >= KEEP_HALF;
+    if (g && outsideKeep) {
       // wejście na drogę krótkim krokiem w górę (przy samym brzegu pola), nie skokiem
       const W = g.map.width, H = g.map.height;
       const top = (tx: number, ty: number): number => (tx >= 0 && ty >= 0 && tx < W && ty < H ? ROAD_TOP[g.roads[ty * W + tx]!] ?? 0 : 0);
