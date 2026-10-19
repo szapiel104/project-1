@@ -1349,7 +1349,8 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .menu:not(.previewing) { background: radial-gradient(ellipse 90% 70% at 50% 38%, #2a1a0e 0%, #120a05 55%, #050302 100%); }
 
 /* ===== Tabliczka konta (19.10.2026): lewy dolny róg, w pasie stopki menu; herb z poziomem, nick, tytuł, pasek PD ===== */
-.menu > .menu-account { position: relative; grid-row: 4; grid-column: 1; justify-self: start; align-self: end; top: auto; left: auto; margin: 0 0 16px 20px; z-index: 2; }
+.menu > .menu-fine { grid-column: 1 / -1; }
+.menu > .menu-account { zoom: var(--ui, 1); position: relative; grid-row: 4; grid-column: 1 / -1; justify-self: start; align-self: end; top: auto; left: auto; margin: 0 0 16px 20px; z-index: 2; }
 .menu-account .acc-me, .menu-account .acc-guest { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 4px 14px; min-height: 0;
   width: clamp(270px, 22vw, 340px); padding: 10px 14px 10px 10px; text-align: left; color: var(--ink);
   background: linear-gradient(#211810, #120d08); border: 1px solid #6e5420; border-radius: 0;
