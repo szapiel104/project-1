@@ -189,6 +189,18 @@ const FRAG_ALBEDO = /* glsl */ `
   // brzeg wody: ziemia tuż przy linii wody mokra i ciemna, kamyki i piasek tylko w niektórych zatoczkach
   float wetK = 1.0 - smoothstep(-0.12, 0.07, vWP.y);
   alb = mix(alb, alb * vec3(0.52, 0.5, 0.45), wetK * 0.85);
+  // dno pod wodą: zamiast trawy piasek, żwir i kamyki na płyciźnie, głębiej ciemny muł z resztkami liści
+  // (przez czystą wodę przy brzegu widać je wyraźnie, dalej toń je zakrywa)
+  float under = smoothstep(-0.075, -0.16, vWP.y);
+  if (under > 0.0) {
+    float bedN = nS.g * 0.6 + nD.b * 0.5;
+    vec3 shallowBed = mix(sandC * vec3(0.86, 0.8, 0.66), pebble * vec3(0.82, 0.77, 0.66), smoothstep(0.45, 0.75, bedN));
+    shallowBed = mix(shallowBed, grit * vec3(0.9), smoothstep(0.62, 0.85, nD.a) * 0.6);
+    vec3 silt = mix(dirt * vec3(0.55, 0.53, 0.44), forest * vec3(0.46, 0.5, 0.36), smoothstep(0.4, 0.8, nM.r) * 0.6);
+    float deepK = smoothstep(-0.3, -0.95, vWP.y + (nS.a - 0.5) * 0.35);
+    alb = mix(alb, mix(shallowBed, silt, deepK), under);
+    gNormal = normalize(mix(gNormal, tnP, under * (1.0 - deepK) * 0.6));
+  }
   // światło i cień w dużej skali: kępy wilgotniejsze i ciemniejsze, suche placki jaśniejsze
   float macro = 0.74 + nM.b * 0.42 + (nS.r - 0.5) * 0.16;
   // wnęki między źdźbłami i kamieniami ciemnieją (fałszywe AO z jasności)
