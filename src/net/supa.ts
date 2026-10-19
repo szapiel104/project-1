@@ -211,6 +211,17 @@ export async function myResults(limit = 12): Promise<Result[]> {
   return (data as Result[] | null) ?? [];
 }
 
+/** Jeden wpis kroniki: nagroda za mecz z tabeli xp_awards (gracz widzi tylko swoje) */
+export interface Award { mode: string; won: boolean; minutes: number; kills: number; razed: number; built: number; xp: number; created_at: string }
+/** Kronika ostatnich meczów gracza (wszystkie rodzaje: przez sieć i z botami); null, gdy baza bez tabeli albo błąd */
+export async function myAwards(limit = 20): Promise<Award[] | null> {
+  const m = me();
+  if (!m) return [];
+  const { data, error } = await supa.from('xp_awards').select('mode,won,minutes,kills,razed,built,xp,created_at').eq('user_id', m.id).order('created_at', { ascending: false }).limit(limit);
+  if (error) return null;
+  return (data as Award[] | null) ?? [];
+}
+
 export async function myRecord(): Promise<RankRow | null> {
   const m = me();
   if (!m) return null;

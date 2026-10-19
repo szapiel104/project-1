@@ -95,7 +95,7 @@ w meczu przez sieć (partia 2), statystyki w profilu (partia 4).
    tylko przez nią; zamknięcie zapisu `results` z klienta.
 3. **PD za mecz:** statystyki meczu liczone w symulacji (wybici, zburzone, przetrwane zimy, budynki…), PD przyznawane
    na serwerze, ekran podsumowania meczu z rozpisaną listą i paskiem poziomu.
-4. **Statystyki i osiągnięcia** w profilu (pierwsze 10–15 odznak).
+4. **Statystyki i osiągnięcia** w profilu (pierwsze 10–15 odznak). **Częściowo 19.10.2026:** „Mój ród” przebudowany na zakładki (Przegląd, Kronika bitew z `xp_awards`, Herb), statystyki z `player_progress` i 8 odznak liczonych z liczników (`BADGES` w `src/data/progress.ts`). Zostało: statystyki z symulacji (zimy, budynki, najdłuższy mecz) zapisywane na serwerze i kolejne odznaki.
 5. **Drzewko umiejętności:** dane w `src/data/`, ekran wydawania punktów, premie w symulacji jako część stanu meczu
    (test determinizmu), limity.
 6. **Premie startowe i odblokowania** zależne od poziomu; tryb „równe szanse” w meczach rankingowych.

@@ -61,3 +61,30 @@ export function titleOf(level: number): string {
   const t = TITLES[titleRank(level)]!;
   return tx(t.pl, t.en);
 }
+
+/** Ile PD brakuje do osiągnięcia poziomu `target` (0, gdy już osiągnięty) */
+export function xpUntil(xp: number, target: number): number {
+  const lv = levelOf(xp);
+  if (lv.level >= target) return 0;
+  let sum = lv.need - lv.into;
+  for (let l = lv.level + 1; l < target; l++) sum += xpToNext(l);
+  return sum;
+}
+
+/** Następny tytuł na drabinie (null: gracz jest już królem) */
+export function nextTitle(level: number): { from: number; pl: string; en: string } | null {
+  return TITLES[titleRank(level) + 1] ?? null;
+}
+
+/** Odznaki liczone z liczników postępu (mecze, wygrane, pokonani, poziom) — kamienie milowe w „Moim rodzie” */
+export interface BadgeDef { id: string; icon: 'sword' | 'swords' | 'banner' | 'tower' | 'skull' | 'crown'; pl: [string, string]; en: [string, string]; of: (p: { matches: number; wins: number; kills: number; level: number }) => number; goal: number }
+export const BADGES: BadgeDef[] = [
+  { id: 'first', icon: 'sword', pl: ['Pierwsza bitwa', 'Rozegraj pierwszy mecz'], en: ['First battle', 'Play your first match'], of: (p) => p.matches, goal: 1 },
+  { id: 'win1', icon: 'banner', pl: ['Pierwsze zwycięstwo', 'Wygraj mecz'], en: ['First victory', 'Win a match'], of: (p) => p.wins, goal: 1 },
+  { id: 'vet', icon: 'tower', pl: ['Weteran', 'Rozegraj 10 meczów'], en: ['Veteran', 'Play 10 matches'], of: (p) => p.matches, goal: 10 },
+  { id: 'win10', icon: 'swords', pl: ['Zdobywca', 'Wygraj 10 meczów'], en: ['Conqueror', 'Win 10 matches'], of: (p) => p.wins, goal: 10 },
+  { id: 'kill100', icon: 'skull', pl: ['Pogromca', 'Pokonaj 100 wrogów'], en: ['Slayer', 'Slay 100 foes'], of: (p) => p.kills, goal: 100 },
+  { id: 'kill1000', icon: 'skull', pl: ['Postrach ziem', 'Pokonaj 1000 wrogów'], en: ['Terror of the realm', 'Slay 1000 foes'], of: (p) => p.kills, goal: 1000 },
+  { id: 'knight', icon: 'sword', pl: ['Pasowany', 'Zdobądź tytuł rycerza (poziom 6)'], en: ['Dubbed', 'Earn the rank of knight (level 6)'], of: (p) => p.level, goal: 6 },
+  { id: 'castellan', icon: 'crown', pl: ['Pan na zamku', 'Zostań kasztelanem (poziom 12)'], en: ['Lord of the keep', 'Become a castellan (level 12)'], of: (p) => p.level, goal: 12 },
+];

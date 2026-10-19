@@ -2,11 +2,11 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { TEAM_COLORS } from '../data/teams';
 import { Lockstep } from '../net/lockstep';
 import {
-  addFriend, closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, removeFriend, sendInvite, setStatus, deleteRoom, getRoom, listRooms, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
+  addFriend, closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, removeFriend, sendInvite, setStatus, deleteRoom, getRoom, listRooms, myAwards, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
   type Invite, type Member, type NetMsg, type OnlinePlayer, type Room, type RoomLink, type Slot,
 } from '../net/supa';
 import { avatarSvg, CHARGE_NAMES, CREST_CHARGES, crestPreview, decodeCrest, DIVISIONS, encodeCrest, TINCTURES, type Crest } from './avatars';
-import { levelOf, TITLES, titleOf, titleRank } from '../data/progress';
+import { BADGES, levelOf, nextTitle, TITLES, titleOf, titleRank, xpUntil, type BadgeDef } from '../data/progress';
 import { chatLine, cleanChat } from './chat';
 import { lang, tx } from '../i18n';
 
@@ -41,6 +41,8 @@ interface Ui {
   /** Podgląd mapy za panelem pokoju (ta sama, którą wszyscy dostaną po starcie) */
   preview(seed: string, preset: MapPresetId): void;
   previewEnd(): void;
+  /** Otwiera wybór nowej gry (przycisk „Do boju” w „Moim rodzie”) */
+  play?(): void;
 }
 
 const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota', 'las', 'skala', 'rzeka', 'brod'];
@@ -50,7 +52,7 @@ const seats = (preset: string): number => (MAP_PRESETS[preset as MapPresetId]?.s
 const modeName = (preset: string): string => MODES.find(([id]) => id === preset)?.[1] ?? preset;
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
+export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(tab?: number): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
   const { el, button, screen } = ui;
   const inMatch = (): boolean => ui.inMatch();
   let stopWatch: (() => void) | null = null;
@@ -93,97 +95,238 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     screen(register ? tx('Nowe konto', 'New account') : tx('Logowanie', 'Sign in'), false, form, back());
   }
 
-  // ---------------- „Mój ród”: pan na zamku, tytuł, poziom i herb składany z elementów ----------------
-  function showHouse(): void {
+  // ---------------- „Mój ród”: pan na zamku — wizytówka, cel, przegląd, kronika meczów i herb ----------------
+  /** Małe ikony odznak (rysowane, bez emoji) */
+  const BADGE_ICONS: Record<BadgeDef['icon'], string> = {
+    sword: '<path d="M16 3l3 3-9 9-2 0 0-2z M7 14l3 3 M5 16l3 3-2 2-3-3z"/>',
+    swords: '<path d="M4 3l11 11 M14 14l2 4 4-4-4-2 M20 3L9 14 M10 14l-2 4-4-4 4-2"/>',
+    banner: '<path d="M6 21V3 M6 4h12l-3 4 3 4H6"/>',
+    tower: '<path d="M6 21V8h12v13z M6 8V4h2v2h2V4h4v2h2V4h2v4 M10 21v-5h4v5"/>',
+    skull: '<path d="M12 3a7 7 0 0 0-7 7c0 3 2 4 2 6v2h10v-2c0-2 2-3 2-6a7 7 0 0 0-7-7z M9 11h.01 M15 11h.01 M10 18v3 M14 18v3"/>',
+    crown: '<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/>',
+  };
+  const icon = (k: BadgeDef['icon']): string => `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BADGE_ICONS[k]}</svg>`;
+  const modeLabel = (mode: string): string => mode === 'online' ? tx('Przez sieć', 'Online') : mode === 'coop' ? tx('Razem przeciw botom', 'Co-op vs bots') : mode.startsWith('bots') ? `${tx('Z botami', 'Vs bots')} · ${LEVELS[Number(mode.slice(4))] ?? ''}` : mode;
+  const when = (iso: string): string => {
+    const d = new Date(iso);
+    return d.toLocaleDateString(lang() === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString(lang() === 'en' ? 'en-GB' : 'pl-PL', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  function showHouse(tab = 0): void {
     cleanup();
     const m = me();
-    if (!m) { showLogin(false, '', showHouse); return; }
+    if (!m) { showLogin(false, '', () => showHouse(tab)); return; }
     const crest: Crest = decodeCrest(m.avatar);
-    const saved = { code: m.avatar };
-    const box = el('div', 'net-house');
-    const big = el('div', 'house-crest');
-    const paint = (): void => { big.innerHTML = crestPreview(crest, 132); };
-    // wizytówka: imię, tytuł, poziom, pasek PD, bilans
     const pr = progress();
-    const lv = levelOf(pr?.xp ?? 0);
-    const card = el('div', 'house-card');
-    const name = el('h3', 'house-name', m.nick);
-    const title = el('p', 'house-title', `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level}`);
-    const bar = el('div', 'acc-xp house-xp');
+    const p = pr ?? { xp: 0, level: 1, matches: 0, wins: 0, kills: 0 };
+    const lv = levelOf(p.xp);
+    const box = el('div', 'house');
+
+    // --- wizytówka: herb, imię, tytuł, poziom i pasek PD ---
+    const hero = el('div', 'house-hero');
+    const heroCrest = el('div', 'house-crest');
+    const paintHero = (): void => { heroCrest.innerHTML = crestPreview(crest, 92); };
+    const id = el('div', 'house-id');
+    id.append(el('h3', 'house-name', m.nick), el('p', 'house-title', titleOf(lv.level)));
+    const bar = el('div', 'house-xp');
     bar.setAttribute('role', 'progressbar');
     bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(lv.need)); bar.setAttribute('aria-valuenow', String(lv.into));
     bar.setAttribute('aria-label', tx('Doświadczenie do następnego poziomu', 'Experience to the next level'));
-    const fill = el('span', 'acc-xp-fill'); fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`; bar.append(fill);
-    const xpLine = el('p', 'house-small', pr ? `${lv.into} / ${lv.need} ${tx('PD do poziomu', 'XP to level')} ${lv.level + 1}` : tx('Poziomy pojawią się po pierwszym meczu.', 'Levels appear after your first match.'));
-    const stats = el('p', 'house-small', pr ? tx(`Mecze: ${pr.matches} · wygrane: ${pr.wins} · pokonani wrogowie: ${pr.kills}`, `Matches: ${pr.matches} · victories: ${pr.wins} · foes slain: ${pr.kills}`) : '');
-    card.append(name, title, bar, xpLine, stats);
-    // drabina tytułów: zdobyte, obecny i kolejne (ile poziomów brakuje)
-    const ladder = el('ol', 'house-ladder');
-    ladder.setAttribute('aria-label', tx('Tytuły', 'Titles'));
-    const now = titleRank(lv.level);
-    TITLES.forEach((t, i) => {
-      const li = el('li', i < now ? 'done' : i === now ? 'now' : 'next');
-      if (i === now) li.setAttribute('aria-current', 'true');
-      li.append(el('strong', '', tx(t.pl, t.en)), el('span', '', i <= now ? tx(`od poziomu ${t.from}`, `from level ${t.from}`) : tx(`poziom ${t.from} — brakuje ${t.from - lv.level}`, `level ${t.from} — ${t.from - lv.level} to go`)));
-      ladder.append(li);
-    });
-    const left = el('div', 'net-col house-left');
-    left.append(big, card, el('p', 'net-label', tx('Tytuły', 'Titles')), ladder);
-    // kreator herbu
-    const right = el('div', 'net-col house-right');
-    const note = msg('');
-    const save = button(tx('Zapisz herb', 'Save the arms'), async () => {
-      const code = encodeCrest(crest);
-      save.disabled = true;
-      const err = await setAvatar(code);
-      save.disabled = false;
-      if (err) { note.textContent = err; note.classList.add('bad'); return; }
-      saved.code = code; note.classList.remove('bad');
-      note.textContent = tx('Herb zapisany — widać go w pokojach, na liście znajomych, w rankingu i w czacie.', 'Arms saved — they now show in rooms, your friends list, the ranking and the chat.');
-    }, 'menu-btn');
-    const group = (label: string, count: number, current: () => number, set: (i: number) => void, face: (i: number) => string, name: (i: number) => string, swatch: boolean): HTMLElement => {
-      const w = el('div', 'house-group');
-      const p = el('p', 'net-label', label);
-      const row = el('div', swatch ? 'house-swatches' : 'house-pieces');
-      row.setAttribute('role', 'radiogroup'); row.setAttribute('aria-label', label);
-      const btns: HTMLButtonElement[] = [];
-      const mark = (): void => btns.forEach((b, i) => { b.setAttribute('aria-checked', String(i === current())); b.tabIndex = i === current() ? 0 : -1; });
-      for (let i = 0; i < count; i++) {
-        const b = el('button', swatch ? 'house-swatch' : 'net-avatar') as HTMLButtonElement;
-        b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name(i)); b.title = name(i);
-        if (swatch) b.style.setProperty('--sw', face(i)); else b.innerHTML = face(i);
-        b.addEventListener('click', () => { set(i); mark(); paint(); note.textContent = ''; });
-        btns.push(b); row.append(b);
+    const fill = el('span', 'house-xp-fill'); fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`; bar.append(fill);
+    const xpLine = el('p', 'house-xp-line');
+    xpLine.append(el('strong', '', `${lv.into} / ${lv.need} ${tx('PD', 'XP')}`), el('span', '', tx(`do poziomu ${lv.level + 1}`, `to level ${lv.level + 1}`)));
+    id.append(bar, xpLine);
+    const medal = el('div', 'house-level');
+    medal.setAttribute('aria-label', tx(`Poziom ${lv.level}`, `Level ${lv.level}`));
+    medal.append(el('span', 'house-level-n', String(lv.level)), el('span', 'house-level-t', tx('poziom', 'level')));
+    hero.append(heroCrest, id, medal);
+
+    // --- najbliższy cel: kolejny tytuł i przycisk do gry ---
+    const goal = el('div', 'house-goal');
+    const nt = nextTitle(lv.level);
+    const goalText = el('p', 'house-goal-text');
+    if (nt) {
+      const need = xpUntil(p.xp, nt.from);
+      goalText.append(el('span', 'house-goal-k', tx('Następny tytuł', 'Next rank')), el('strong', '', tx(nt.pl, nt.en)),
+        el('span', '', tx(`poziom ${nt.from} · brakuje ${need} PD`, `level ${nt.from} · ${need} XP to go`)));
+    } else goalText.append(el('span', 'house-goal-k', tx('Najwyższy tytuł', 'Highest rank')), el('strong', '', titleOf(lv.level)), el('span', '', tx('Bij się o miejsce w rankingu.', 'Fight for your place in the ranking.')));
+    goal.append(goalText);
+    if (ui.play) goal.append(button(tx('Do boju', 'To battle'), () => ui.play!(), 'menu-btn house-play'));
+
+    // --- zakładki ---
+    const tabs = el('div', 'menu-tabs top house-tabs');
+    const nav = el('div', 'menu-nav'); nav.setAttribute('role', 'tablist'); nav.setAttribute('aria-label', tx('Mój ród', 'My house'));
+    const pane = el('div', 'menu-pane house-pane'); pane.setAttribute('role', 'tabpanel'); pane.id = 'house-pane';
+    const tabBtns: HTMLButtonElement[] = [];
+
+    const overview = (): Node[] => {
+      const out: Node[] = [];
+      // statystyki
+      const stats = el('dl', 'house-stats');
+      const rate = p.matches ? `${Math.round((p.wins / p.matches) * 100)}%` : '—';
+      for (const [k, v] of [[tx('Bitwy', 'Battles'), String(p.matches)], [tx('Zwycięstwa', 'Victories'), String(p.wins)], [tx('Skuteczność', 'Win rate'), rate], [tx('Pokonani wrogowie', 'Foes slain'), String(p.kills)]] as const) {
+        const d = el('div', 'house-stat'); d.append(el('dt', '', k), el('dd', '', v)); stats.append(d);
       }
-      // strzałki przechodzą między opcjami jak w zwykłej grupie przycisków radiowych
-      row.addEventListener('keydown', (e) => {
-        if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
-        e.preventDefault();
-        const d = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
-        const i = (current() + d + count) % count;
-        set(i); mark(); paint(); btns[i]!.focus();
+      out.push(stats);
+      // droga tytułów
+      out.push(el('h4', 'house-h', tx('Droga do korony', 'The road to the crown')));
+      const road = el('ol', 'house-road');
+      const now = titleRank(lv.level);
+      TITLES.forEach((t, i) => {
+        const li = el('li', i < now ? 'done' : i === now ? 'now' : 'next');
+        if (i === now) li.setAttribute('aria-current', 'step');
+        const dot = el('span', 'house-road-dot'); dot.append(el('span', '', i < now ? '✓' : String(i + 1)));
+        li.append(dot, el('strong', '', tx(t.pl, t.en)), el('span', '', tx(`poziom ${t.from}`, `level ${t.from}`)));
+        road.append(li);
       });
-      mark();
-      w.append(p, row);
-      return w;
+      out.push(road);
+      // odznaki
+      const got = BADGES.filter((b) => b.of({ ...p, level: lv.level }) >= b.goal).length;
+      out.push(el('h4', 'house-h', tx(`Odznaki · ${got} z ${BADGES.length}`, `Badges · ${got} of ${BADGES.length}`)));
+      const badges = el('ul', 'house-badges');
+      for (const b of BADGES) {
+        const have = Math.min(b.goal, b.of({ ...p, level: lv.level }));
+        const ok = have >= b.goal;
+        const li = el('li', ok ? 'house-badge got' : 'house-badge');
+        const ic = el('span', 'house-badge-ic'); ic.innerHTML = icon(b.icon);
+        const txt = el('div', 'house-badge-txt');
+        const [name, desc] = lang() === 'en' ? b.en : b.pl;
+        txt.append(el('strong', '', name), el('span', '', ok ? tx('zdobyta', 'earned') : `${desc} · ${have}/${b.goal}`));
+        if (!ok && b.goal > 1) { const pb = el('span', 'house-badge-bar'); const f = el('span', ''); f.style.width = `${Math.round((have / b.goal) * 100)}%`; pb.append(f); txt.append(pb); }
+        li.append(ic, txt);
+        badges.append(li);
+      }
+      out.push(badges);
+      // skąd PD
+      out.push(el('h4', 'house-h', tx('Skąd brać doświadczenie', 'How to earn experience')));
+      const how = el('ul', 'house-how');
+      for (const [a, b] of [
+        [tx('Zwycięstwo', 'Victory'), '+100'], [tx('Porażka — też uczy', 'Defeat — still a lesson'), '+30'], [tx('Minuta bitwy (do 60)', 'Minute of battle (up to 60)'), '+2'],
+        [tx('Pokonany wróg', 'Foe slain'), '+2'], [tx('Zburzony budynek wroga', 'Enemy building razed'), '+5'], [tx('Postawiony budynek', 'Building raised'), '+1'],
+      ]) { const li = el('li'); li.append(el('span', '', a!), el('strong', '', b!)); how.append(li); }
+      out.push(how, el('p', 'house-note', tx('Najwięcej daje gra przez sieć z ludźmi. Mecze z botami liczą się słabiej — im trudniejszy bot, tym więcej PD.', 'Online matches against people pay best. Matches against bots count for less — the harder the bot, the more XP.')));
+      return out;
     };
-    const tName = (i: number): string => tx(TINCTURES[i]![1], TINCTURES[i]![2]);
-    const T = TINCTURES.length;
-    right.append(
-      group(tx('Pole', 'Field'), T, () => crest.field, (i) => { crest.field = i; }, (i) => TINCTURES[i]![0], tName, true),
-      group(tx('Podział tarczy', 'Division'), DIVISIONS.length, () => crest.division, (i) => { crest.division = i; }, (i) => crestPreview({ ...crest, division: i, charge: crest.charge }, 30), (i) => tx(DIVISIONS[i]![0], DIVISIONS[i]![1]), false),
-      group(tx('Drugie pole', 'Second field'), T, () => crest.field2, (i) => { crest.field2 = i; }, (i) => TINCTURES[i]![0], tName, true),
-      group(tx('Godło', 'Charge'), CREST_CHARGES, () => crest.charge, (i) => { crest.charge = i; }, (i) => crestPreview({ ...crest, charge: i }, 30), (i) => tx(CHARGE_NAMES[i]![0], CHARGE_NAMES[i]![1]), false),
-      group(tx('Barwa godła', 'Charge colour'), T, () => crest.tincture, (i) => { crest.tincture = i; }, (i) => TINCTURES[i]![0], tName, true),
-      save, note,
-    );
-    paint();
-    const cols = el('div', 'net-cols');
-    cols.append(left, right);
-    box.append(cols);
+
+    const chronicle = (): Node[] => {
+      const wrapC = el('div', 'house-chron');
+      wrapC.append(msg(tx('Wczytuję kronikę…', 'Loading the chronicle…')));
+      void myAwards(25).then((rows) => {
+        if (!wrapC.isConnected) return;
+        if (rows === null) { wrapC.replaceChildren(msg(tx('Kronika jest chwilowo niedostępna.', 'The chronicle is unavailable right now.'), true)); return; }
+        if (!rows.length) {
+          const empty = el('div', 'house-empty');
+          empty.append(el('p', '', tx('Kronika jest jeszcze pusta. Każdy rozegrany mecz trafi tutaj — z wynikiem, czasem i zdobytym doświadczeniem.', 'The chronicle is still empty. Every match you play lands here — with the result, time and experience earned.')));
+          if (ui.play) empty.append(button(tx('Rozegraj pierwszą bitwę', 'Fight your first battle'), () => ui.play!(), 'menu-btn'));
+          wrapC.replaceChildren(empty);
+          return;
+        }
+        const table = el('table', 'house-table');
+        const cap = el('caption', '', tx('Ostatnie bitwy', 'Recent battles')); table.append(cap);
+        const head = el('tr');
+        for (const h of [tx('Kiedy', 'When'), tx('Rodzaj', 'Type'), tx('Wynik', 'Result'), tx('Czas', 'Time'), tx('Wrogowie', 'Foes'), tx('PD', 'XP')]) { const th = el('th', '', h); th.scope = 'col'; head.append(th); }
+        const thead = el('thead'); thead.append(head); table.append(thead);
+        const tb = el('tbody');
+        for (const r of rows) {
+          const tr = el('tr');
+          const res = el('td', r.won ? 'won' : 'lost', r.won ? tx('Zwycięstwo', 'Victory') : tx('Porażka', 'Defeat'));
+          tr.append(el('td', '', when(r.created_at)), el('td', '', modeLabel(r.mode)), res, el('td', '', `${r.minutes} min`), el('td', '', String(r.kills)), el('td', 'xp', `+${r.xp}`));
+          tb.append(tr);
+        }
+        table.append(tb);
+        wrapC.replaceChildren(table);
+      });
+      return [wrapC];
+    };
+
+    const arms = (): Node[] => {
+      const wrapA = el('div', 'house-arms');
+      const prev = el('div', 'house-arms-prev');
+      const paintPrev = (): void => { prev.innerHTML = crestPreview(crest, 150); paintHero(); };
+      const note = msg('');
+      const save = button(tx('Zapisz herb', 'Save the arms'), async () => {
+        const code = encodeCrest(crest);
+        save.disabled = true;
+        const err = await setAvatar(code);
+        save.disabled = false;
+        if (err) { note.textContent = err; note.classList.add('bad'); return; }
+        note.classList.remove('bad');
+        note.textContent = tx('Herb zapisany — widać go w pokojach, na liście znajomych, w rankingu i w czacie.', 'Arms saved — they now show in rooms, your friends list, the ranking and the chat.');
+      }, 'menu-btn');
+      const left = el('div', 'house-arms-left'); left.append(prev, save, note);
+      const right = el('div', 'house-arms-right');
+      const group = (label: string, count: number, current: () => number, set: (i: number) => void, face: (i: number) => string, name: (i: number) => string, swatch: boolean): HTMLElement => {
+        const w = el('div', 'house-group');
+        const lab = el('h4', 'house-h', label);
+        const row = el('div', swatch ? 'house-swatches' : 'house-pieces');
+        row.setAttribute('role', 'radiogroup'); row.setAttribute('aria-label', label);
+        const btns: HTMLButtonElement[] = [];
+        const mark = (): void => btns.forEach((b, i) => { b.setAttribute('aria-checked', String(i === current())); b.tabIndex = i === current() ? 0 : -1; });
+        const repaintFaces = (): void => { if (!swatch) btns.forEach((b, i) => { b.innerHTML = face(i); }); };
+        for (let i = 0; i < count; i++) {
+          const b = el('button', swatch ? 'house-swatch' : 'house-piece') as HTMLButtonElement;
+          b.type = 'button'; b.setAttribute('role', 'radio'); b.setAttribute('aria-label', name(i)); b.title = name(i);
+          if (swatch) b.style.setProperty('--sw', face(i)); else b.innerHTML = face(i);
+          b.addEventListener('click', () => { set(i); mark(); paintPrev(); refresh(); note.textContent = ''; });
+          btns.push(b); row.append(b);
+        }
+        row.addEventListener('keydown', (e) => {
+          if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown'].includes(e.key)) return;
+          e.preventDefault();
+          const d = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
+          const i = (current() + d + count) % count;
+          set(i); mark(); paintPrev(); refresh(); btns[i]!.focus();
+        });
+        mark();
+        refreshers.push(repaintFaces);
+        w.append(lab, row);
+        return w;
+      };
+      // podglądy podziałów i godeł odświeżają się po zmianie barw, żeby było widać, jak będzie wyglądał herb
+      const refreshers: (() => void)[] = [];
+      const refresh = (): void => refreshers.forEach((f) => f());
+      const tName = (i: number): string => tx(TINCTURES[i]![1], TINCTURES[i]![2]);
+      const T = TINCTURES.length;
+      right.append(
+        group(tx('Pole', 'Field'), T, () => crest.field, (i) => { crest.field = i; }, (i) => TINCTURES[i]![0], tName, true),
+        group(tx('Podział tarczy', 'Division'), DIVISIONS.length, () => crest.division, (i) => { crest.division = i; }, (i) => crestPreview({ ...crest, division: i }, 34), (i) => tx(DIVISIONS[i]![0], DIVISIONS[i]![1]), false),
+        group(tx('Drugie pole', 'Second field'), T, () => crest.field2, (i) => { crest.field2 = i; }, (i) => TINCTURES[i]![0], tName, true),
+        group(tx('Godło', 'Charge'), CREST_CHARGES, () => crest.charge, (i) => { crest.charge = i; }, (i) => crestPreview({ ...crest, charge: i }, 34), (i) => tx(CHARGE_NAMES[i]![0], CHARGE_NAMES[i]![1]), false),
+        group(tx('Barwa godła', 'Charge colour'), T, () => crest.tincture, (i) => { crest.tincture = i; }, (i) => TINCTURES[i]![0], tName, true),
+      );
+      paintPrev();
+      wrapA.append(left, right);
+      return [wrapA];
+    };
+
+    const TABS: [string, () => Node[]][] = [[tx('Przegląd', 'Overview'), overview], [tx('Kronika bitew', 'Battle chronicle'), chronicle], [tx('Herb', 'Coat of arms'), arms]];
+    const show = (i: number): void => {
+      tabBtns.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
+      pane.replaceChildren(...TABS[i]![1]());
+    };
+    TABS.forEach(([name], i) => {
+      const b = button(name, () => show(i), 'menu-tab');
+      b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', pane.id);
+      tabBtns.push(b); nav.append(b);
+    });
+    nav.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+      e.preventDefault(); e.stopPropagation();
+      const i = tabBtns.indexOf(document.activeElement as HTMLButtonElement);
+      const n = (Math.max(0, i) + (e.key === 'ArrowRight' ? 1 : tabBtns.length - 1)) % tabBtns.length;
+      show(n); tabBtns[n]!.focus();
+    });
+    tabs.append(nav, pane);
+    paintHero();
+    show(Math.max(0, Math.min(TABS.length - 1, tab)));
+
+    if (!pr) goalText.append(el('span', '', tx('Poziomy i statystyki ruszą po pierwszym meczu.', 'Levels and statistics start after your first match.')));
+    hero.append(goal);
+    box.append(hero, tabs);
     const foot = el('div', 'menu-foot');
-    foot.append(button(tx('Konto i hasło', 'Account and password'), () => showAccount(), 'menu-btn'), back());
+    foot.append(button(tx('Konto i hasło', 'Account and password'), () => showAccount(), 'menu-btn menu-back'), back());
     screen(tx('Mój ród', 'My house'), true, box, foot);
+    tabBtns[Math.max(0, Math.min(TABS.length - 1, tab))]?.focus();
   }
 
   /** Tytuł przy nicku (gdy znamy poziom gracza) */
@@ -676,5 +819,5 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     enterRoom(room);
   }
 
-  return { showOnline: () => void showOnline(), showAccount, showHouse, showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
+  return { showOnline: () => void showOnline(), showAccount, showHouse: (tab = 0) => showHouse(tab), showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
 }

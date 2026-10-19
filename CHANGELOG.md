@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.30.17 — nowy „Mój ród” i tabliczka gracza w lewym dolnym rogu (2026-10-19)
+
+- Tabliczka konta przeniesiona z lewego górnego rogu na dół, w lewy róg: herb z numerem poziomu, nick, tytuł, pasek PD z liczbami; cała jest przyciskiem do „Mojego rodu”, z wyraźnym podświetleniem po najechaniu
+- „Mój ród” od nowa: wizytówka (duży herb, imię, tytuł, gruby pasek PD, poziom w czerwonym rombie), pod nią najbliższy cel — kolejny tytuł i ile PD brakuje — z przyciskiem „Do boju” (otwiera nową grę)
+- Zakładki: **Przegląd** (bitwy, zwycięstwa, skuteczność, pokonani; droga tytułów od giermka do króla; 8 odznak z postępem; skąd brać PD), **Kronika bitew** (ostatnie 25 meczów z tabeli `xp_awards`: kiedy, rodzaj, wynik, czas, wrogowie, +PD), **Herb** (kreator z dużym podglądem; podglądy podziałów i godeł zmieniają barwy razem z herbem)
+- Bez zmian w bazie: kronika czyta istniejącą tabelę `xp_awards`, odznaki liczą się z liczników `player_progress`; test `tests/house.test.ts`
+
 ## 0.30.16 — prawdziwe kosze z wikliny wszędzie (2026-10-19)
 
 - Wszystkie kosze w grze to jeden gotowy model z Poly Haven (Wicker Basket 02, CC0, bez wieka): niesione przez chłopów (jabłka, chleb, ryby, ruda), w składzie i spichlerzu, przy piekarni, rybaku, spichlerzach, w sadzie, u łuczarza, włóczniarza i inżynierów, na wieży strażniczej, w kopalni i obozie górników (dawne „kosze z urobkiem” z worków), a także kosz z praniem przy chatach

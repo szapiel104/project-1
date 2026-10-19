@@ -219,34 +219,39 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     inMatch: () => events.isOnline(),
     preview: (seedText, preset) => { wrap.classList.add('previewing'); events.onPreviewMap(seedText, preset, 2, false); },
     previewEnd: () => { if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); } },
+    play: () => showNew(),
   });
-  /** Pasek konta nad menu: herb, nick i przycisk konta albo zaproszenie do logowania */
+  /** Tabliczka konta w lewym dolnym rogu: herb z poziomem, nick, tytuł i pasek PD; klik otwiera „Mój ród” */
   const account = el('div', 'menu-account');
   const paintAccount = (): void => {
     const m = netMe();
     account.replaceChildren();
     if (m) {
+      const pr = progress();
+      const lv = levelOf(pr?.xp ?? 0);
       const who = el('button', 'acc-me');
       who.type = 'button';
-      who.setAttribute('aria-label', tx(`Mój ród: ${m.nick}`, `My house: ${m.nick}`));
-      const s = el('span', 'net-shield'); s.innerHTML = avatarSvg(m.avatar, 34);
+      who.setAttribute('aria-label', tx(`Mój ród: ${m.nick}, ${titleOf(lv.level)}, poziom ${lv.level}, ${lv.into} z ${lv.need} PD`, `My house: ${m.nick}, ${titleOf(lv.level)}, level ${lv.level}, ${lv.into} of ${lv.need} XP`));
+      const seal = el('span', 'acc-seal');
+      const s = el('span', 'net-shield'); s.innerHTML = avatarSvg(m.avatar, 50);
+      seal.append(s, el('span', 'acc-lvl', String(lv.level)));
       const txt = el('span', 'acc-text');
-      const pr = progress();
-      if (pr) {
-        // poziom pana na zamku: tytuł, poziom i pasek PD do następnego
-        const lv = levelOf(pr.xp);
-        const bar = el('span', 'acc-xp');
-        bar.setAttribute('role', 'img');
-        bar.setAttribute('aria-label', tx(`Poziom ${lv.level}: ${lv.into} z ${lv.need} PD do następnego`, `Level ${lv.level}: ${lv.into} of ${lv.need} XP to the next`));
-        const fill = el('span', 'acc-xp-fill'); fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`;
-        bar.append(fill);
-        txt.append(el('strong', '', m.nick), el('span', 'acc-level', `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level} · ${lv.into}/${lv.need} ${tx('PD', 'XP')}`), bar);
-      } else txt.append(el('strong', '', m.nick), el('span', '', tx('zalogowany · konto', 'signed in · account')));
-      who.append(s, txt);
+      const bar = el('span', 'acc-xp');
+      const fill = el('span', 'acc-xp-fill'); fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`;
+      bar.append(fill);
+      txt.append(el('strong', 'acc-nick', m.nick), el('span', 'acc-level', `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level}`), bar,
+        el('span', 'acc-pd', pr ? `${lv.into} / ${lv.need} ${tx('PD', 'XP')}` : tx('pierwszy mecz da pierwsze PD', 'your first match brings XP')));
+      const go = el('span', 'acc-go'); go.setAttribute('aria-hidden', 'true'); go.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M9 5l7 7-7 7"/></svg>';
+      who.append(seal, txt, go);
       who.addEventListener('click', () => online.showHouse());
       account.append(who);
     } else {
-      account.append(button(tx('Zaloguj się', 'Sign in'), () => online.showLogin(false), 'link-btn acc-link'), el('span', 'acc-sep', '·'), button(tx('Załóż konto', 'Create account'), () => online.showLogin(true), 'link-btn acc-link'));
+      const box = el('div', 'acc-guest');
+      box.append(el('strong', 'acc-nick', tx('Gość', 'Guest')), el('span', 'acc-level', tx('Zaloguj się, by zbierać poziomy i tytuły', 'Sign in to earn levels and ranks')));
+      const row = el('span', 'acc-guest-row');
+      row.append(button(tx('Zaloguj się', 'Sign in'), () => online.showLogin(false), 'link-btn acc-link'), el('span', 'acc-sep', '·'), button(tx('Załóż konto', 'Create account'), () => online.showLogin(true), 'link-btn acc-link'));
+      box.append(row);
+      account.append(box);
     }
   };
   onAccount(paintAccount);
