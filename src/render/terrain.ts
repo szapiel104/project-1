@@ -40,7 +40,8 @@ function tileHeight(map: GameMap, x: number, y: number, waterLevel: number, shel
   if (t === Terrain.Mountain) return 1.3 + (e - 170) * 0.15;
   const h = (e - waterLevel) * HEIGHT_SCALE;
   // dno jeziora: przy brzegu łagodna półka (płycizna, przez którą widać dno), dalej coraz głębiej aż do dna z mapy
-  if (t === Terrain.Water) return shelf ? Math.max(Math.min(h, -0.25), shelf[cy * map.width + cx]!) : Math.min(h, -0.25);
+  // (jeziora z mapy są płytkie, ok. 60 cm, więc środek pogłębiamy według odległości od brzegu: tam dna już nie widać)
+  if (t === Terrain.Water) return shelf ? Math.max(-2.6, Math.min(shelf[cy * map.width + cx]!, Math.min(h, -0.25) * 0.5 - 0.15)) : Math.min(h, -0.25);
   if (t === Terrain.Ford) return -0.17; // bród: dno tuż pod taflą, woda po kostki
   // ląd w większości płaski: łagodne falowanie, a wyraźne pagórki tylko tam, gdzie teren jest naprawdę wysoko
   const d = e - waterLevel;
@@ -128,7 +129,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       if (map.tiles[i] !== Terrain.Water) continue;
       const x = i % w, y = (i - x) / w, d = sd[i]!;
       const n = ((hash2(x >> 1, y >> 1, map.seed ^ 0x5a17) & 255) / 255 - 0.5) * 0.22 + ((hash2(x, y, map.seed ^ 0x2c3) & 255) / 255 - 0.5) * 0.08;
-      shelf[i] = Math.min(-0.28, -0.3 - 0.28 * (d - 1) + (d > 1 ? n : 0)); // pole przy lądzie -0,3: narożnik wspólny z lądem wypada tuż pod taflą, więc woda sięga brzegu pola, a nie kończy się w połowie
+      shelf[i] = Math.min(-0.28, -0.3 - 0.36 * (d - 1) - 0.05 * (d - 1) * (d - 1) + (d > 1 ? n * 1.6 : 0)); // pole przy lądzie -0,3: narożnik wspólny z lądem wypada tuż pod taflą, więc woda sięga brzegu pola, a nie kończy się w połowie
     }
   }
   // wysokości narożników = średnia z czterech sąsiednich pól

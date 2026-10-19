@@ -411,7 +411,7 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
           wDs = max(min(dd.g, dd.r * 2.0 + 0.02), 0.0);
           if (wD <= 0.0) discard;
           // barwa toni (światło rozproszone w wodzie): leśne jezioro, oliwkowo-brunatne od torfu
-          diffuseColor.rgb = vec3(0.07, 0.085, 0.048);
+          diffuseColor.rgb = vec3(0.055, 0.07, 0.038);
         }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         {
@@ -436,7 +436,7 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
           vec3 V = normalize(cameraPosition - vWP);
           float path = wDs / max(V.y, 0.15);
           // przy brzegu dno widać przez zielonkawą toń, od ok. 1,5 m znika
-          float tr = dot(exp(-vec3(2.3, 1.7, 2.6) * path), vec3(0.3333));
+          float tr = dot(exp(-vec3(2.7, 2.1, 3.1) * path), vec3(0.3333));
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
           vec3 refl;
@@ -459,6 +459,6 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
         }
         #include <opaque_fragment>`);
   };
-  mat.customProgramCacheKey = () => 'water-v7';
+  mat.customProgramCacheKey = () => 'water-v8';
   return { mat, time, sky, sunDir, sunCol };
 }
