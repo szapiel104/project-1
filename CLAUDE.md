@@ -66,6 +66,8 @@
 ## Tekstury — po każdej zmianie obowiązkowo KTX2
 - Gra wczytuje tekstury ze zdjęć jako `.ktx2` (skompresowane dla karty graficznej, `src/render/ktx.ts`); `.jpg` obok to tylko zapas. Dotyczy `public/textures/terrain/` i `public/textures/cc0/`.
 - **Po dodaniu albo podmianie każdego `.jpg` (także mapy normalnych `*_n.jpg`) uruchom:** `node tools/textures/ktx2.mjs public/textures/<folder>/<plik>.jpg` (kilka plików naraz można podać po spacji; bez argumentów przerabia wszystkie, ok. 15 min). Ok. 25 s na teksturę 2K. Bez tego gra pokaże stary `.ktx2` albo weźmie `.jpg`. Wynikowy `.ktx2` commitujemy razem z `.jpg`.
+- Wyjątek: małe tekstury z paczek (np. koń `horse_coat*.jpg`, 1024 px) idą jako zwykły JPG przez `THREE.TextureLoader` — ETC1S robiło na nich widoczne kwadraty.
+- Import modeli z paczek: przekształcenie osi musi mieć wyznacznik +1 (bez lustra). Lustro odwraca kolejność wierzchołków i gra (bez tylnych ścian) pokazuje model „od środka”, z dziurami — w Blenderze tego nie widać, bo tam rysuje obie strony.
 - Nowa tekstura terenu: podbij numer wersji `?v=` w `tex()` w `src/render/ground.ts`.
 - Mapy normalnych w konwencji OpenGL (Y w górę); z paczek z DirectX (np. s&box, `cc0-texture-pack`) odwróć kanał zielony.
 - Kopie tekstury (`.clone()` dla innej skali) działają, bo `ktx.ts` dopisuje im dane po wczytaniu; nie rysować tekstur z `pattern()` na płótnie (KTX2 nie ma obrazka) — szare wersje robi `grayPattern()` z `.jpg`.

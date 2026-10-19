@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import { model } from './modelstore';
-import { loadTexture } from './ktx';
 import { maskedTex } from './forest';
 
 /**
@@ -62,10 +61,13 @@ export function horseMaterial(part: 'body' | 'hair'): THREE.MeshStandardMaterial
   if (part === 'body') {
     m = new THREE.MeshStandardMaterial({ roughness: 0.72, metalness: 0 });
     if (typeof document !== 'undefined') {
-      const map = loadTexture(`${base()}horse_coat.jpg`);
-      map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 8;
+      // zwykły JPG, bez KTX2: tekstura z paczki jest mała, a kompresja ETC1S robiła na niej widoczne kwadraty
+      const tl = new THREE.TextureLoader();
+      const map = tl.load(`${base()}horse_coat.jpg`);
+      map.colorSpace = THREE.SRGBColorSpace; map.anisotropy = 16;
       m.map = map;
-      m.normalMap = loadTexture(`${base()}horse_coat_n.jpg`);
+      const nm = tl.load(`${base()}horse_coat_n.jpg`); nm.anisotropy = 16;
+      m.normalMap = nm;
     }
   } else {
     // grzywa i ogon to pojedyncze płaty z maską — z obu stron, z wycinaniem po masce (bez sortowania przezroczystości)

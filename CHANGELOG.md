@@ -17,6 +17,7 @@
 - Koń z gładkich brył zastąpiony modelem zrobionym przez grafików z gry 0 A.D. (Wildfire Games, CC BY-SA 3.0): gniady, z czarnymi nogami, grzywą i ogonem, z prawdziwą anatomią i teksturą sierści
 - Żyje: na zmianę skubie trawę z łbem przy ziemi i podnosi łeb, czasem się czujnie rozgląda, ogonem odgania muchy — każdy koń w swoim rytmie (pozy liczone na karcie graficznej, dalej dwa wywołania rysowania na wszystkie konie)
 - Grzywa i ogon: bez szarego połysku jak blacha (oświetlone jak sierść pod spodem), obie strony płata, miękkie brzegi pasm, tekstura włosia 2× ostrzejsza; przy skubaniu grzywa opada i przylega do szyi zamiast odstawać
+- Naprawione dziury: przy wgrywaniu model był odbity lustrzanie, więc gra rysowała go „od środka”; sierść ostrzejsza (2× większa tekstura, bez kompresji robiącej kwadraty)
 - Bez odchudzania: 2074 trójkąty, oryginalne UV i tekstury; skala dopasowana do ludzi (kłąb trochę poniżej barku człowieka). W podglądzie modeli: Zwierzęta → koń / koń skubie trawę / koń czujny
 
 ## 0.30.19 — podsumowanie doświadczenia jak w grach sieciowych (2026-10-19)

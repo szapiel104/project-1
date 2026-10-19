@@ -242,9 +242,10 @@ def main():
     poses['swish'] = pose(joints, arm, anims['idle_01'], 0, tail)
     print(f'klatka pozy czujnej: {look_f}')
 
-    # układ gry: z (0 A.D. w górę) → y, łeb (0 A.D. −y) → +z
+    # układ gry: z (0 A.D. w górę) → y, łeb (0 A.D. −y) → +z. Bez lustra (wyznacznik +1): przy odbiciu kolejność
+    # wierzchołków trójkątów się odwraca i gra, która nie rysuje tylnych ścian, pokazywała konia „od środka”, z dziurami
     def to_game(p):
-        return np.c_[-p[:, 0], p[:, 2], -p[:, 1]]
+        return np.c_[p[:, 0], p[:, 2], -p[:, 1]]
 
     baked = {}
     res_body = {}
@@ -319,14 +320,16 @@ def main():
     # tekstury: sierść (kolor + normalne z paczki), grzywa i ogon (kolor + maska)
     from PIL import Image
     tx = os.path.join(art, 'textures/skins')
-    coat = Image.open(os.path.join(tx, f'skeletal/{COAT}.png')).convert('RGB')
-    coat.save(os.path.join(TEX, 'horse_coat.jpg'), quality=92)
-    Image.open(os.path.join(tx, 'skeletal/horse_norm.png')).convert('RGB').save(os.path.join(TEX, 'horse_coat_n.jpg'), quality=92)
+    # sierść w paczce ma tylko 512×256: powiększona 2× (Lanczos), żeby z bliska nie było pikselowych schodków;
+    # do gry idzie jako JPG w wysokiej jakości (bez KTX2 — kompresja ETC1S na tak małej teksturze dawała kwadraty)
+    up = lambda im: im.resize((im.width * 2, im.height * 2), Image.LANCZOS)
+    up(Image.open(os.path.join(tx, f'skeletal/{COAT}.png')).convert('RGB')).save(os.path.join(TEX, 'horse_coat.jpg'), quality=96)
+    up(Image.open(os.path.join(tx, 'skeletal/horse_norm.png')).convert('RGB')).save(os.path.join(TEX, 'horse_coat_n.jpg'), quality=96)
     # włosie w paczce: 512×256 w 256 kolorach — powiększone 2× (Lanczos), żeby krawędzie pasm przy maskowaniu nie były
     # schodkowe; nic nie jest wycinane ani upraszczane
     hair = Image.open(os.path.join(tx, f'props/horse/{HAIR}.png')).convert('RGBA')
     hair = hair.resize((hair.width * 2, hair.height * 2), Image.LANCZOS)
-    hair.convert('RGB').save(os.path.join(TEX, 'horse_hair.jpg'), quality=92)
+    hair.convert('RGB').save(os.path.join(TEX, 'horse_hair.jpg'), quality=96)
     hair.getchannel('A').convert('RGB').save(os.path.join(TEX, 'horse_hair_a.jpg'), quality=95)
 
     if preview:
