@@ -191,10 +191,13 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Chata leśniczego: leśniczy sadzi młode drzewka na wolnej łące w swoim terenie (najchętniej przy lesie i na
   // dawnych porębach). Drzewko rośnie dwa dni gry (zimą stoi), potem to zwykły las, który drwal może ściąć (forestry.ts).
   { id: 'forester', category: 'industry', name: 'b.forester', w: 2, h: 2, cost: { wood: 20 }, staff: true, area: 6, buildable: true },
+  // Namiot polowy z medykiem: stawiany dowolnie, np. tuż za linią frontu. Ranni żołnierze idą do najbliższego miejsca
+  // leczenia (twierdza albo namiot z medykiem) i tam szybciej wracają do zdrowia (army.ts, healSpot).
+  { id: 'fieldTent', category: 'military', name: 'b.fieldTent', w: 3, h: 3, cost: { wood: 30, gold: 10 }, staff: true, hp: 320, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */
-export const NO_TORCH = new Set(['camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp']);
+export const NO_TORCH = new Set(['camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp', 'fieldTent']);
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
 /** Wieże z łucznikami: drewniana strażnica i kamienna wieża */

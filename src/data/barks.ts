@@ -18,6 +18,10 @@ const SAY_PL = {
     'Byle do wieczora.', 'Pan patrzy, to się staram.',
   ],
   // --- zajęcia (id budynku) ---
+  fieldTent: [
+    'Zaciśnij zęby, będzie bolało.', 'Kto następny?', 'Bandaży znowu brakuje.', 'Przeżyjesz. Chyba.',
+    'Woda gorąca? To dawaj.', 'Rękę zostawię, nogi nie obiecuję.',
+  ],
   forester: [
     'Jedno ścinają, ja sadzę dwa.', 'Za wnuków tu będzie las.', 'Świerczek, rośnij, nie marudź.', 'Ziemia zmarznie, to i robota stanie.',
     'Drwal to tylko rąbać umie.', 'Korzenie w płótno, inaczej uschnie.', 'Las to nie pole, czeka się latami.',
@@ -180,6 +184,10 @@ const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
     'Just till evening.', 'The lord\'s watching, so I\'m trying.',
   ],
   // --- jobs (building id) ---
+  fieldTent: [
+    'Bite down. This\'ll hurt.', 'Who\'s next?', 'Out of bandages again.', 'You\'ll live. Probably.',
+    'Is the water boiling? Then bring it.', 'I\'ll save the arm. The leg, I promise nothing.',
+  ],
   forester: [
     'They fell one, I plant two.', 'There\'ll be woods here for the grandchildren.', 'Grow, little spruce, quit your sulking.', 'Ground freezes, work stops.',
     'Woodcutters only know how to chop.', 'Roots in sacking, or it dries out.', 'A forest\'s not a field. You wait years.',

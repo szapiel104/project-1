@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.31.0 — namiot polowy z medykiem (2026-10-19)
+
+- Nowy budynek w zakładce Wojsko: namiot polowy (3×3, 30 drewna i 10 rudy). Pracuje w nim medyk, a ranni żołnierze idą do najbliższego miejsca leczenia — twierdzy albo namiotu z medykiem — zamiast biec zawsze do zamku
+- W namiocie rany goją się dwa razy szybciej niż pod twierdzą; namiot wyłączony albo bez medyka nikogo nie leczy, a ranny, który stoi z dala od leczenia (np. namiot zburzono), sam idzie do następnego najbliższego
+- Model z Blendera: płócienny namiot na dwóch masztach z proporcem, podwinięte wejście, w środku posłania ze słomy, stół medyka z misą, bandażami i ziołami, skrzynia; przed namiotem ognisko z kociołkiem, beczka z wodą i sznur z bandażami
+- Nazwa, opis i odzywki medyka po polsku i angielsku
 ## 0.30.23 — menu na środku, „Wygraj mecz” w panelu dewelopera (2026-10-19)
 
 - Menu ma na sztywno jedną kolumnę: tytuł, pasek i okna są zawsze na środku ekranu, także z tabliczką gracza w lewym dolnym rogu

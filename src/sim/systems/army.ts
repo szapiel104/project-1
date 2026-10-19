@@ -521,7 +521,29 @@ const WOUNDED = 30;
 const HEALED = 90;
 /** Przy własnej twierdzy co tyle ticków odzyskuje punkt zdrowia */
 const HEAL_EVERY = 15;
+/** W namiocie polowym z medykiem co tyle ticków (dwa razy szybciej niż pod twierdzą) */
+const TENT_HEAL_EVERY = 7;
 const KEEP = buildingIndex('keep');
+const FIELD_TENT = buildingIndex('fieldTent');
+
+/** Miejsca leczenia gracza: twierdza i namioty polowe z medykiem (gotowe, włączone, nie zburzone) */
+function healers(g: GameState): Map<number, Building[]> {
+  const m = new Map<number, Building[]>();
+  for (const b of g.buildings) {
+    if (b.ruined) continue;
+    if (b.type === KEEP || (b.type === FIELD_TENT && b.worker && !b.build && !b.off)) {
+      let l = m.get(b.owner); if (!l) { l = []; m.set(b.owner, l); } l.push(b);
+    }
+  }
+  return m;
+}
+
+/** Najbliższe miejsce leczenia od pola `t` (twierdza albo namiot z medykiem) */
+function nearestHealer(g: GameState, list: Building[] | undefined, t: number): Building | undefined {
+  let best: Building | undefined, d = Infinity;
+  for (const b of list ?? []) { const k = rectGap(g, t, b); if (k < d) { d = k; best = b; } }
+  return best;
+}
 
 /** Ranny wycofuje się: 4 pola za szyk (od wroga), bez walki; stamtąd idzie do twierdzy */
 function retreat(g: GameState, s: Soldier, byId: Map<number, Soldier>): void {
@@ -539,6 +561,13 @@ function retreat(g: GameState, s: Soldier, byId: Map<number, Soldier>): void {
   }
   s.wounded = 1; s.target = 0; s.siegeOf = 0; s.amove = false; s.prey = 0; s.hunt = 0; s.slot = undefined; s.pace = undefined; s.wait = 0; s.path = [];
   s.goal = rear;
+}
+
+/** Ranny rusza do najbliższego miejsca leczenia: twierdzy albo namiotu polowego z medykiem */
+function goHeal(g: GameState, s: Soldier, list: Building[] | undefined, here: number): void {
+  const h = nearestHealer(g, list, here);
+  const spot = h ? besideTower(g, h) : -1;
+  if (spot >= 0 && rectGap(g, here, h!) > 2) { s.goal = spot; s.path = []; }
 }
 
 /** Postawa oddziału: atak, obrona albo stój. Pilnowane pole to miejsce w szyku albo to, na którym stoi. */
@@ -721,17 +750,22 @@ export function armySystem(g: GameState): void {
   budget = 10;
   ordersSystem(g);
   const marches = marchSystem(g);
-  const keeps = new Map<number, Building>();
-  for (const b of g.buildings) if (b.type === KEEP && !b.ruined) keeps.set(b.owner, b);
+  const heals = healers(g);
   for (const s of g.soldiers) {
     if (s.hp <= 0) continue;
     if (s.cd > 0) s.cd--;
     s.hitting = 0;
     if (!s.path.length && s.run) s.run = Math.max(0, s.run - 3); // stoi: rozbieg gaśnie
     const def = UNITS[s.kind]!;
-    // przy własnej twierdzy rany powoli się goją; wyleczony ranny wraca na swoje miejsce w szyku
-    const keep = keeps.get(s.owner);
-    if (s.hp < def.hp && !def.guard && keep && g.tick % HEAL_EVERY === 0 && !s.up && rectGap(g, tileOf(g, s), keep) <= 3) s.hp++;
+    // przy własnej twierdzy rany powoli się goją, w namiocie polowym z medykiem dwa razy szybciej;
+    // wyleczony ranny wraca na swoje miejsce w szyku
+    const healList = heals.get(s.owner);
+    if (s.hp < def.hp && !def.guard && !s.up && healList && (g.tick % TENT_HEAL_EVERY === 0 || g.tick % HEAL_EVERY === 0)) {
+      const here = tileOf(g, s);
+      let rate = 0;
+      for (const b of healList) if (rectGap(g, here, b) <= 3) { const r = b.type === KEEP ? HEAL_EVERY : TENT_HEAL_EVERY; if (!rate || r < rate) rate = r; }
+      if (rate && g.tick % rate === 0) s.hp++;
+    }
     if (s.wounded === 2 && s.hp * 100 >= def.hp * HEALED) { s.wounded = 0; if ((s.hold ?? -1) >= 0) { s.goal = s.hold!; s.path = []; } }
     // wieża: łucznik przy niej wchodzi na górę; gdy wieżę zniszczą, spada na ziemię
     if (s.post) {
@@ -900,9 +934,14 @@ export function armySystem(g: GameState): void {
         for (let gy = cy - 1; gy <= cy + 1; gy++) for (let gx = cx - 1; gx <= cx + 1; gx++)
           for (const o of grid.get(gy * cw + gx) ?? []) if (o.hp > 0 && team(g, o.owner) !== team(g, s.owner) && gap(s, o) < best) { best = gap(s, o); near = o; }
         if (near && best <= 3 * FP) { s.target = near.id; retreat(g, s, byId); }
-        else if (!near) { s.wounded = 2; const spot = keep ? besideTower(g, keep) : -1; if (spot >= 0 && rectGap(g, here, keep!) > 2) s.goal = spot; }
+        else if (!near) { s.wounded = 2; goHeal(g, s, healList, here); }
         else s.wait = 10;
         continue;
+      }
+      // ranny stoi z dala od leczenia (namiot zwinięty, medyk odszedł, doszedł nie tam): idzie do najbliższego miejsca
+      if (s.wounded === 2 && g.tick % 20 === s.id % 20) {
+        const h = nearestHealer(g, healList, here);
+        if (h && rectGap(g, here, h) > 3) { goHeal(g, s, healList, here); continue; }
       }
       // obrona: po walce wraca na swoje miejsce w szyku (ranny najpierw się leczy)
       if (stance && !s.wounded && (s.hold ?? -1) >= 0 && here !== s.hold && !s.target && !s.post) { s.goal = s.hold!; continue; }

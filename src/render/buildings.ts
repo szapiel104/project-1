@@ -42,6 +42,7 @@ const FLETCHER_MODEL = model('fletcher');
 const POLETURNER_MODEL = model('poleturner');
 const CEMETERY_MODEL = model('cemetery');
 const FORESTER_MODEL = model('forester');
+const FIELD_TENT_MODEL = model('fieldtent');
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -141,6 +142,8 @@ const M = {
   wattle: mat(0x9a7a4a, 'thatch'),
   // skóry zwierząt na szałasach zbójów (ciemna, wytarta skóra z włosiem; dwa odcienie, żeby płaty się różniły)
   hide: mat(0x7a5a3e, 'burlap'), hideDark: mat(0x58402c, 'burlap'),
+  // płótno namiotu polowego: jasny, zgrzebny len i ciemniejsze, zabłocone pasy i koce
+  canvas: mat(0xd8cba6, 'burlap'), canvasDark: mat(0x9a8f78, 'burlap'),
   thatchDark: mat(0xa9862f, 'thatch'), fish: mat(0x9cc3d6), sawdust: mat(0xd9c08a, 'soil'), needle: mat(0x3c7a3a, 'needles'),
   // woda w studni i korycie: ciemna, gładka tafla z połyskiem (bez tekstury)
   water: new THREE.MeshStandardMaterial({ color: 0x1b3a40, roughness: 0.15, metalness: 0.1 }),
@@ -1194,6 +1197,13 @@ const BUILDERS: Record<string, Builder> = {
     blenderModel(g, FORESTER_MODEL as unknown as BlenderBuilding, flag);
     const p = (FORESTER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  fieldTent(g, _team, flag) {
+    // namiot polowy z medykiem z Blendera (tools/models/fieldtent.py): płócienny namiot na dwóch masztach z podwiniętym
+    // wejściem, w środku posłania ze słomy i stół medyka; przed nim ognisko z kociołkiem, beczka i sznur z bandażami
+    blenderModel(g, FIELD_TENT_MODEL as unknown as BlenderBuilding, flag);
+    const p = (FIELD_TENT_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g, flag, p[0], p[1], p[2]);
   },
   cemetery(g, _team, flag) {
     // cmentarz z Blendera (tools/models/cemetery.py): kamienna kapliczka z sygnaturką i dzwonkiem, mogiły z krzyżami
