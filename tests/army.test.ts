@@ -118,6 +118,30 @@ describe('oblężenie', () => {
     expect(g.players[1]!.defeated).toBe(true);
   });
 
+  it('oblegający zamek przerywa, gdy podejdzie wróg: najpierw żołnierz, potem wraca do zamku', () => {
+    const { g, id } = withBarracks();
+    step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
+    waitSoldiers(g, 1);
+    const enemyKeep = playerKeep(g, 1)!;
+    enemyKeep.hp = 5000;
+    const s = g.soldiers[0]!;
+    const [kx, ky] = keepFront(enemyKeep); s.px = kx * 256 + 128; s.py = ky * 256 + 128; s.path = []; s.goal = -1;
+    step(g, [{ type: 'attack', player: 0, ids: [s.id], target: enemyKeep.id }]);
+    for (let i = 0; i < 60; i++) step(g, []);
+    expect(enemyKeep.hp).toBeLessThan(5000); // bije w zamek
+    // podchodzi wrogi włócznik
+    const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('spearman'), px: s.px, py: s.py + 3 * 256, path: [], hp: 20, goal: -1, wait: 0, target: 0, cd: 0 };
+    g.soldiers.push(foe);
+    step(g, []);
+    expect(s.target).toBe(foe.id);
+    const hp = enemyKeep.hp;
+    for (let i = 0; i < 300 && g.soldiers.includes(foe) && foe.hp > 0; i++) step(g, []);
+    expect(foe.hp).toBeLessThanOrEqual(0);
+    expect(enemyKeep.hp).toBe(hp); // w czasie walki zamku nie ruszał
+    for (let i = 0; i < 200; i++) step(g, []);
+    expect(enemyKeep.hp).toBeLessThan(hp); // po walce wrócił do zamku
+  });
+
   it('inżynier naprawia uszkodzony budynek', () => {
     const { g } = withBarracks();
     step(g, [{ type: 'build', player: 0, building: 'engineers', ...spot(g, 'engineers') }]);

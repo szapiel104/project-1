@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.22 — żołnierz przy zamku odpowiada na atak (2026-10-19)
+
+- Żołnierz, który bije w zamek albo inny budynek (z rozkazu lub sam), na widok wrogiego żołnierza przerywa oblężenie i walczy z nim; po walce sam wraca do tego samego budynku
+- Wyjątek: wroga na murze lub wieży, którego wręcz nie dosięgnie, pomija i dalej bije w budynek (łucznik strzela do niego normalnie)
+- Nowy rozkaz (ruch, atak, wieża) kasuje zapamiętane oblężenie; test w `tests/army.test.ts`
+
 ## 0.30.21 — jabłka i chleb ze skanów także w budynkach (2026-10-19)
 
 - W koszach przy spichlerzach, w sadzie (na drzewach, w trawie, w skrzynkach i koszach), w piekarni (na blacie, półce i ławie), na stołach w twierdzy, karczmie i chacie oraz przy ognisku bandytów leżą jabłka i bochenki ze skanów zamiast graniastosłupów

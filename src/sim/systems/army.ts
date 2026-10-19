@@ -131,20 +131,20 @@ export function orderAttack(g: GameState, player: number, ids: readonly number[]
   const peasant = unitById(g, target);
   if (peasant) {
     if (team(g, peasant.owner) === team(g, player)) return;
-    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.prey = peasant.id; s.target = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.amove = false; s.slot = undefined; s.wounded = 0; }
+    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.prey = peasant.id; s.target = 0; s.siegeOf = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.amove = false; s.slot = undefined; s.wounded = 0; }
     return;
   }
   const wolf = g.wolves.find((w) => w.id === target);
   if (wolf) {
     // polowanie na wilka: idą za nim, aż go dopadną albo ucieknie do lasu
-    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.hunt = wolf.id; s.target = 0; s.goal = (wolf.py >> 8) * g.map.width + (wolf.px >> 8); s.path = []; s.wait = 0; s.slot = undefined; s.wounded = 0; }
+    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.hunt = wolf.id; s.target = 0; s.siegeOf = 0; s.goal = (wolf.py >> 8) * g.map.width + (wolf.px >> 8); s.path = []; s.wait = 0; s.slot = undefined; s.wounded = 0; }
     return;
   }
   const foeSoldier = g.soldiers.find((s) => s.id === target);
   const foeBuilding = foeSoldier ? undefined : buildingById(g, target);
   const owner = foeSoldier?.owner ?? foeBuilding?.owner;
   if (owner === undefined || team(g, owner) === team(g, player)) return;
-  for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.target = target; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.slot = undefined; s.wounded = 0; }
+  for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.target = target; s.siegeOf = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.slot = undefined; s.wounded = 0; }
 }
 
 /** Kierunki szyku co 45°: 0 = twarzą na +y, dalej tak jak kąt obrotu figur (kąt = numer × 45°) */
@@ -252,7 +252,7 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
     if (spot === undefined || s.owner !== player) continue;
     leavePost(g, s);
     s.goal = spot; s.hold = spot; s.face = face; s.grp = grp;
-    s.path = []; s.wait = 0; s.target = 0; s.hunt = 0;
+    s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.siegeOf = 0;
     s.amove = !!opts.amove;
     s.pace = slow < fast ? slow : undefined;
     s.slot = march ? slots.get(s.id) : undefined;
@@ -537,7 +537,7 @@ function retreat(g: GameState, s: Soldier, byId: Map<number, Soldier>): void {
     if (qx < 0 || qy < 0 || qx >= W || qy >= g.map.height) continue;
     if (walkable(g, qy * W + qx, s.owner)) { rear = qy * W + qx; break; }
   }
-  s.wounded = 1; s.target = 0; s.amove = false; s.prey = 0; s.hunt = 0; s.slot = undefined; s.pace = undefined; s.wait = 0; s.path = [];
+  s.wounded = 1; s.target = 0; s.siegeOf = 0; s.amove = false; s.prey = 0; s.hunt = 0; s.slot = undefined; s.pace = undefined; s.wait = 0; s.path = [];
   s.goal = rear;
 }
 
@@ -595,7 +595,7 @@ export function orderGarrison(g: GameState, player: number, ids: readonly number
     if (s.owner !== player || !ids.includes(s.id) || s.post === towerId) continue;
     const ranged = !!UNITS[s.kind]!.range;
     if (ranged && room > 0) { leavePost(g, s); s.post = towerId; room--; }
-    s.goal = spot; s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.slot = undefined; s.wounded = 0;
+    s.goal = spot; s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.siegeOf = 0; s.slot = undefined; s.wounded = 0;
   }
 }
 
@@ -756,30 +756,52 @@ export function armySystem(g: GameState): void {
       const hx = s.hold! % W, hy = (s.hold! - hx) / W, x = t % W, y = (t - x) / W;
       return Math.max(Math.abs(hx - x), Math.abs(hy - y)) > leash + (range || 1);
     };
+    // najbliższy wróg w zasięgu wzroku, którego da się dosięgnąć (na wieżę wręcz nie sięgnie, na mur tylko z muru)
+    const nearestFoe = (s: Soldier, range: number): Soldier | undefined => {
+      let foe: Soldier | undefined, best = (def.sight + (high(g, s) ? 3 : 0)) * FP + 1;
+      const t = tileOf(g, s), x = t % W, y = (t - x) / W;
+      const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
+      for (let gy = cy - 1; gy <= cy + 1; gy++)
+        for (let gx = cx - 1; gx <= cx + 1; gx++) {
+          for (const o of grid.get(gy * cw + gx) ?? []) {
+            if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (high(g, o) && !range && (o.up || !high(g, s)))) continue;
+            if (o.id === s.skip && g.tick < (s.skipUntil ?? 0)) continue; // do tego wroga nie ma przejścia (za murem): na razie inny cel
+            const d = gap(s, o);
+            if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
+          }
+        }
+      return foe;
+    };
+    // przywraca oblegany budynek jako cel, jeśli jeszcze stoi i jest wrogi
+    const resumeSiege = (s: Soldier): boolean => {
+      if (!s.siegeOf) return false;
+      const b = buildingById(g, s.siegeOf);
+      s.siegeOf = 0;
+      if (!b || b.ruined || team(g, b.owner) === team(g, s.owner)) return false;
+      s.target = b.id;
+      return true;
+    };
     // taran: nie walczy z ludźmi, tylko podjeżdża pod najbliższą wrogą bramę, mur albo zamek i bije w nie belką
     if (def.ram) {
       if ((s.goal < 0 || s.amove) && siege(g, s, def, taken)) continue;
     } else
     // walka: tylko gdy nie maszeruje na rozkaz (albo maszeruje z rozkazem „atak w marszu”)
     if (!s.wounded && (s.goal < 0 || s.amove)) {
-      // rozkaz ataku na budynek ma pierwszeństwo przed szukaniem żołnierzy
-      if (s.target && !byId.has(s.target) && g.buildings.some((b) => b.id === s.target && !b.ruined) && siege(g, s, def, taken)) continue;
+      // po walce (albo gdy wróg okazał się nieosiągalny) wraca do oblężenia
+      if (!s.target) resumeSiege(s);
+      // oblega budynek (z rozkazu albo sam): wrogi żołnierz w zasięgu wzroku ma pierwszeństwo przed zamkiem.
+      // Budynek zapamiętany, po walce wraca do niego. Wroga na murze/wieży, którego wręcz nie dosięgnie, pomija.
+      if (s.target && !byId.has(s.target) && g.buildings.some((b) => b.id === s.target && !b.ruined)) {
+        const foe = nearestFoe(s, range);
+        if (foe) { s.siegeOf = s.target; s.target = foe.id; s.path = []; }
+        else if (siege(g, s, def, taken)) continue;
+      }
       let foe = s.target ? byId.get(s.target) : undefined;
       if (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP) {
-        foe = undefined;
-        let best = (def.sight + (high(g, s) ? 3 : 0)) * FP + 1;
-        const t = tileOf(g, s), x = t % W, y = (t - x) / W;
-        const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
-        for (let gy = cy - 1; gy <= cy + 1; gy++)
-          for (let gx = cx - 1; gx <= cx + 1; gx++) {
-            for (const o of grid.get(gy * cw + gx) ?? []) {
-              if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (high(g, o) && !range && (o.up || !high(g, s)))) continue; // na wieżę wręcz nie sięgnie, na mur tylko z muru
-              if (o.id === s.skip && g.tick < (s.skipUntil ?? 0)) continue; // do tego wroga nie ma przejścia (za murem): na razie inny cel
-              const d = gap(s, o);
-              if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
-            }
-          }
+        foe = nearestFoe(s, range);
         s.target = foe ? foe.id : 0;
+        // nikogo do bicia: wraca do budynku, który oblegał przed walką
+        if (!foe && resumeSiege(s) && siege(g, s, def, taken)) continue;
         // ranny na widok wroga od razu ustępuje, zanim dostanie kolejny cios
         if (foe && !def.guard && !def.bandit && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) { retreat(g, s, byId); continue; }
       }
