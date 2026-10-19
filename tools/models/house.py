@@ -92,7 +92,7 @@ for sx in (-1, 1):
 t.boxs('interior', 'woodDark', 0.3, 0.11, 0.07, -0.05, P, 0.3)
 b.prism('interior', 'rockDark', 0.03, 0.04, 0.08, -0.12, P + 0.23, 0.08, seg=8)
 b.prism('interior', 'wood', 0.05, 0.035, 0.025, 0.02, P + 0.23, 0.12, seg=10)
-b.box('interior', 'bread', 0.07, 0.035, 0.045, 0.0, P + 0.23, 0.04)
+b.bun('interior', 0.0, P + 0.23, 0.04, w=0.075, rot=0.4)   # bochenek ze skanu na stole
 # skrzynia pod oknem z przodu, półka z garnkami nad nią
 t.boxs('interior', 'woodDark', 0.24, 0.14, 0.13, -0.38, P, Z1 - T - 0.08)
 b.box('interior', 'iron', 0.25, 0.015, 0.02, -0.38, P + 0.1, Z1 - T - 0.01)

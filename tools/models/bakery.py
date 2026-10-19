@@ -57,22 +57,9 @@ b.box('base', 'woodDark', 0.012, HATCH[3] - HATCH[2], 0.012, HX, HATCH[2], Z1 - 
 b.slope('base', 'roadWood', [(HATCH[0] - 0.06, HATCH[3] + 0.06, Z1), (HATCH[1] + 0.06, HATCH[3] + 0.06, Z1),
                              (HATCH[1] + 0.06, HATCH[3] - 0.02, Z1 + 0.2), (HATCH[0] - 0.06, HATCH[3] - 0.02, Z1 + 0.2)], away=(HX, 0, Z1 - 0.5), t=0.02)
 def loaf(group, x, y, z, rot=0.0, s=1.0):
-    """Bochenek: owalny, wypieczony, z jaśniejszym nacięciem na grzbiecie"""
-    c, si = math.cos(rot), math.sin(rot)
-    rings = []
-    for k, (rr, yy) in enumerate(((0.05, 0.0), (0.062, 0.018), (0.055, 0.036), (0.032, 0.05), (0.0, 0.055))):
-        rings.append([(x + (math.cos(a) * rr * 1.4 * c + math.sin(a) * rr * 0.9 * si) * s, y + yy * s,
-                       z + (-math.cos(a) * rr * 1.4 * si + math.sin(a) * rr * 0.9 * c) * s) for a in [2 * math.pi * j / 10 for j in range(10)]])
-    for i in range(len(rings) - 1):
-        for j in range(10):
-            j2 = (j + 1) % 10
-            q = [rings[i][j], rings[i][j2], rings[i + 1][j2], rings[i + 1][j]]
-            if i == len(rings) - 2:
-                b.poly(group, 'bread', [rings[i][j], rings[i][j2], rings[i + 1][0]], away=(x, y + 0.01, z))
-            else:
-                b.poly(group, 'bread', q, away=(x, y + 0.02 * s, z))
-    b.poly(group, 'bread', rings[0], away=(x, y + 0.1, z))
-    b.box(group, 'crust', 0.1 * s, 0.006, 0.014 * s, x, y + 0.05 * s, z, rot)
+    """Bochenek ze skanu (Poly Haven hamburger_buns, tools/models/props_import.py): tylko miejsce, model stawia gra.
+    Dawny bochenek z pierścieni miał ok. 0,17·s długości."""
+    b.bun(group, x, y, z, w=0.16 * s, rot=rot)
 for k, (dx, rot) in enumerate(((-0.14, 0.2), (0.0, -0.1), (0.14, 0.3))):
     loaf('base', HX + dx, HATCH[2] + 0.015, Z1 + 0.09, rot, 0.85)
 # drzwi uchylone do środka, nadproże, kamienny próg

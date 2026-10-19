@@ -555,7 +555,8 @@ for s in (-1, 1):
     for s2 in (-1, 1):
         boxs('interior', 'woodDark', 0.12, 0.14, 1.4, x + s2 * 0.33, G, (tz0 + tz1) / 2 + 0.25)
     for i in range(4):
-        b.box('interior', 'bread' if i % 2 else 'apple', 0.07, 0.05, 0.07, x, G + 0.3, (tz0 + tz1) / 2 - 0.3 + i * 0.36)
+        zz = (tz0 + tz1) / 2 - 0.3 + i * 0.36   # chleb i jabłka ze skanów na stole
+        (b.bun('interior', x, G + 0.3, zz, w=0.09, rot=i) if i % 2 else b.apple('interior', x, G + 0.3, zz, w=0.06, rot=i))
     # kolumny i kosze z ogniem
     for zz in (tz0 + 1.2, tz1 - 0.5):
         b.prism('interior', 'castleDark', 0.1, 0.1, 1.27, tmx + s * 0.85, G, zz, seg=8)
@@ -584,7 +585,8 @@ for i, (x, z) in enumerate(((kx0 + 0.22, kz1 - 0.25), (kx0 + 0.22, kz1 - 0.6), (
     block(x - 0.15, x + 0.15, z - 0.15, z + 0.15)
 boxs('interior', 'woodDark', 0.12, 0.7, 0.6, kx1 - 0.09, G, (kz0 + kz1) / 2 + 0.35)
 for i in range(3):
-    b.box('interior', 'apple' if i % 2 else 'bread', 0.06, 0.05, 0.08, kx1 - 0.09, G + 0.42 + i * 0.12, (kz0 + kz1) / 2 + 0.2 + i * 0.1)
+    yy, zz = G + 0.42 + i * 0.12, (kz0 + kz1) / 2 + 0.2 + i * 0.1   # na półkach: jabłko albo bochenek ze skanu
+    (b.apple('interior', kx1 - 0.09, yy, zz, w=0.06, rot=i) if i % 2 else b.bun('interior', kx1 - 0.09, yy, zz, w=0.085, rot=1.57))
 
 # ---------------- komnata pana ----------------
 # pochodnie w sali tronowej i kuchni

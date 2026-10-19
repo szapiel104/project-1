@@ -366,7 +366,10 @@ AM, (mn, mx) = upright(apple)
 # z daleka 15% ze sklejeniem (bez rys, a drobiazgi przy szypułce z tej odległości znikają)
 out['apple'], t1 = export(lighter(apple, 0.3), AM)
 out['appleFar'], t2 = export(lighter(apple, 0.15, weld=True), AM)
-info.append(f'jabłko: {t1} / {t2} trójkątów, wysokość {round((mx.z - mn.z) / max(mx.x - mn.x, mx.y - mn.y), 3)} szerokości')
+# najlżejsze do budynków (sad: kilkadziesiąt jabłek na koronach, w trawie i w skrzynkach; z kamery strategii po kilka pikseli)
+out['appleLow'], t3 = export(lighter(apple, 0.06, weld=True), AM)
+out['appleLowFar'] = out['appleLow']
+info.append(f'jabłko: {t1} / {t2} / {t3} trójkątów, wysokość {round((mx.z - mn.z) / max(mx.x - mn.x, mx.y - mn.y), 3)} szerokości')
 
 for k in (1, 2, 3):
     bun = load_all(os.path.join(src, 'hamburger_buns', 'hamburger_buns_1k.gltf'), only=f'hamburger_buns_0{k}')

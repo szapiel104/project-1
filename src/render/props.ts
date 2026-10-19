@@ -18,9 +18,9 @@ import { loadTexture } from './ktx';
  * beczka — dno w y = 0, wysokość 1, szerokość `barrelW` (0,87); `barrel` pełna (10,8 tys. trójkątów, tylko w rękach),
  * `barrelLow` prosta bryła z wypalonym wyglądem pełnej (560 trójkątów, stosy w składzie).
  */
-export type PropName = 'fish' | 'torch' | 'basket' | 'apple' | 'bun1' | 'bun2' | 'bun3' | 'barrel' | 'barrelLow';
+export type PropName = 'fish' | 'torch' | 'basket' | 'apple' | 'appleLow' | 'bun1' | 'bun2' | 'bun3' | 'barrel' | 'barrelLow';
 /** Tekstura modelu, gdy kilka modeli dzieli jedną (trzy bułki z jednej paczki) */
-const TEX_OF: Partial<Record<PropName, string>> = { bun1: 'bread', bun2: 'bread', bun3: 'bread' };
+const TEX_OF: Partial<Record<PropName, string>> = { appleLow: 'apple', bun1: 'bread', bun2: 'bread', bun3: 'bread' };
 /** Chropowatość i metaliczność powierzchni (połysk skórki jabłka i łusek ryby, matowy chleb i drewno) */
 const SURFACE: Partial<Record<PropName, [number, number]>> = { fish: [0.42, 0.08], basket: [0.9, 0], apple: [0.45, 0], barrel: [0.75, 0.05], barrelLow: [0.75, 0.05] };
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };

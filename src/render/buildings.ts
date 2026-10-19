@@ -676,6 +676,27 @@ function buildingFish(model: unknown): THREE.Mesh {
   return mesh;
 }
 
+/** Jabłko albo bochenek w modelu budynku: [grupa, 'apple' | 'bun', x, y dna, z, szerokość, obrót] (building.py) */
+type FoodSpot = [string, 'apple' | 'bun', number, number, number, number, number];
+const foodCache = new Map<unknown, [string, 'apple' | 'bun', THREE.BufferGeometry][]>();
+/**
+ * Siatki jabłek i bochenków budynku, po jednej na grupę i rodzaj. Jabłka w najlżejszej wersji (420 trójkątów —
+ * w sadzie jest ich ponad sto, a każde ma kilka centymetrów), bochenki z trzech skanów na zmianę (wspólna tekstura).
+ */
+function foodGeos(model: unknown, spots: FoodSpot[]): [string, 'apple' | 'bun', THREE.BufferGeometry][] {
+  let out = foodCache.get(model);
+  if (out) return out;
+  const by = new Map<string, THREE.BufferGeometry[]>();
+  spots.forEach(([grp, kind, x, y, z, w, rot], i) => {
+    const key = `${grp}|${kind}`;
+    let l = by.get(key); if (!l) { l = []; by.set(key, l); }
+    l.push(kind === 'apple' ? propAt('appleLow', x, y, z, w, rot) : propAt((['bun1', 'bun2', 'bun3'] as const)[i % 3]!, x, y, z, w, rot));
+  });
+  out = [...by].map(([key, l]) => { const [grp, kind] = key.split('|') as [string, 'apple' | 'bun']; return [grp, kind, mergeGeometries(l)!] as [string, 'apple' | 'bun', THREE.BufferGeometry]; });
+  foodCache.set(model, out);
+  return out;
+}
+
 /** Kosz w modelu budynku: [grupa, x, y dna, z, szerokość, wysokość] (tools/models/building.py) */
 type BasketSpot = [string, number, number, number, number, number];
 const basketCache = new Map<unknown, [string, THREE.BufferGeometry][]>();
@@ -761,6 +782,17 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     const groups: Record<string, THREE.Object3D> = { base: g, shell, interior, floor: interior, ceiling };
     for (const [name, geo] of basketGeos(model, baskets)) {
       const mesh = new THREE.Mesh(geo, propMaterial('basket'));
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      (groups[name] ?? g.getObjectByName(name) ?? g).add(mesh);
+    }
+  }
+  // jabłka i bochenki ze skanów: model zapisuje tylko miejsca (building.py → 'foods'), jedna siatka na grupę i rodzaj
+  const foods = (model as unknown as { foods?: FoodSpot[] }).foods;
+  if (foods?.length) {
+    const groups: Record<string, THREE.Object3D> = { base: g, shell, interior, floor: interior, ceiling };
+    for (const [name, kind, geo] of foodGeos(model, foods)) {
+      const mesh = new THREE.Mesh(geo, propMaterial(kind === 'apple' ? 'apple' : 'bun1'));
       mesh.castShadow = true;
       mesh.receiveShadow = true;
       (groups[name] ?? g.getObjectByName(name) ?? g).add(mesh);

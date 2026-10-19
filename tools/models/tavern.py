@@ -202,7 +202,7 @@ for tx, tz in TABLES:
         boxs('interior', 'woodDark', 0.56, 0.14, 0.09, tx, P, tz + sz * 0.27)
     for i, (ox, oz) in enumerate(((-0.18, -0.06), (0.05, 0.07), (0.2, -0.04))):
         b.prism('interior', 'woodDark', 0.022, 0.02, 0.06, tx + ox, P + 0.275, tz + oz, seg=6)
-    b.box('interior', 'bread', 0.08, 0.04, 0.05, tx - 0.02, P + 0.275, tz - 0.02)
+    b.bun('interior', tx - 0.02, P + 0.275, tz - 0.02, w=0.085, rot=0.3 + tx)   # bochenek ze skanu na stole
     b.prism('interior', 'white', 0.012, 0.012, 0.05, tx + 0.12, P + 0.275, tz + 0.06, seg=5)
     b.prism('interior', 'ember', 0.009, 0.0, 0.025, tx + 0.12, P + 0.325, tz + 0.06, seg=5)
     seats.append([round(tx - 0.12, 3), round(tz - 0.27, 3), 0.0])

@@ -112,7 +112,7 @@ ENTRIES = [  # nazwa, paczka, wersja z bliska, z daleka, tekstura z daleka, czę
     ('fish', 'BarramundiFish.glb', 'fish', 'fishFar', 'fish', None),
     ('torch', 'torch.glb', 'torch', 'torchFar', 'torch', None),
     ('basket', os.path.join('wicker_basket_02', 'wicker_basket_02_1k.gltf'), 'basket', 'basketFar', 'basket', None),
-    ('apple', os.path.join('food_apple_01', 'food_apple_01_1k.gltf'), 'apple', 'appleFar', 'apple', None),
+    ('apple', os.path.join('food_apple_01', 'food_apple_01_1k.gltf'), 'apple', 'appleLow', 'apple', None),
     ('bread', os.path.join('hamburger_buns', 'hamburger_buns_1k.gltf'), 'bun1', 'bun1Far', 'bread', 'hamburger_buns_01'),
     ('barrel', os.path.join('wine_barrel_01', 'wine_barrel_01_1k.gltf'), 'barrel', 'barrelLow', 'barrelLow', None),
 ]

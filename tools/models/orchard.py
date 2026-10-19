@@ -173,9 +173,7 @@ def tree(x, z, h=0.62, lean=0.0, seed=0):
         ax = bx + math.sin(a) * math.cos(el) * br * 0.92
         az = bz + math.cos(a) * math.cos(el) * br * 0.92
         ay = by + math.sin(el) * br * 0.85 * 0.9 - 0.035
-        mat = 'appleGreen' if k % 5 == 0 else 'apple'
-        b.prism('base', mat, 0.022, 0.032, 0.028, ax, ay - 0.028, az, seg=7, top=False)
-        b.prism('base', mat, 0.032, 0.018, 0.028, ax, ay, az, seg=7)
+        b.apple('base', ax, ay - 0.028, az, w=0.062, rot=a)   # jabłko ze skanu na koronie
     return top
 
 
@@ -186,7 +184,7 @@ for x, z, s in TREES:
     for k in range(5):
         a = k * 1.7 + s
         ax, az = x + math.sin(a) * (0.22 + 0.06 * k % 3), z + math.cos(a) * (0.2 + 0.05 * (k % 2))
-        b.prism('base', 'apple' if k % 3 else 'appleGreen', 0.028, 0.02, 0.035, ax, FLOOR, az, seg=7)
+        b.apple('base', ax, FLOOR, az, w=0.056, rot=a * 1.3)
 
 # ---------------- skład jabłek: szopa z desek w lewym tylnym rogu, otwarta od frontu ----------------
 SX0, SX1, SZ0, SZ1 = -1.36, -0.42, -1.36, -0.68
@@ -229,8 +227,7 @@ def crate(x, y, z, rot=0.0, full=True, s=1.0):
             for j in range(2):
                 ax, az = (i - 1) * 0.065 * s, (j - 0.5) * 0.065 * s
                 px, pz = x + ax * c + az * si, z - ax * si + az * c
-                mat = 'appleGreen' if (i + j) % 4 == 3 else 'apple'
-                b.prism('base', mat, 0.03 * s, 0.02 * s, 0.03 * s, px, y + h, pz, seg=7)
+                b.apple('base', px, y + h - 0.012 * s, pz, w=0.058 * s, rot=(i * 3 + j) * 1.1)
 # regał pod tylną ścianą: dwie półki, na nich skrzynki
 RX0, RX1 = SX0 + T + 0.04, SX1 - T - 0.04
 for x in (RX0, RX1):
@@ -246,7 +243,7 @@ for x, z in ((SX1 - 0.18, SZ1 - 0.14), (SX1 - 0.34, SZ1 - 0.12)):
     b.prism('base', 'basket', 0.07, 0.09, 0.1, x, FLOOR, z, seg=10)
     for k in range(5):
         a = k * 1.26
-        b.prism('base', 'apple', 0.025, 0.018, 0.03, x + math.cos(a) * 0.035, FLOOR + 0.1, z + math.sin(a) * 0.035, seg=7)
+        b.apple('base', x + math.cos(a) * 0.035, FLOOR + 0.06, z + math.sin(a) * 0.035, w=0.05, rot=a * 2.3)
 t.block(SX1 - 0.43, SX1 - 0.1, SZ1 - 0.23, SZ1 - 0.04, 0, FLOOR + 0.14)
 b.prism('base', 'wood', 0.08, 0.085, 0.22, SX0 + T + 0.12, FLOOR, SZ1 - 0.15, seg=10)
 for y in (0.03, 0.17):

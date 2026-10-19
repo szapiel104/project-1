@@ -128,7 +128,7 @@ for bx, bz in ((0.98, Z1 + 0.25), (0.88, Z1 + 0.45)):
     b.prism('base', 'basket', 0.08, 0.1, 0.1, bx, 0.0, bz, seg=10)
     for k in range(6):
         a = 2 * math.pi * k / 6
-        b.prism('base', 'apple', 0.025, 0.02, 0.03, bx + math.cos(a) * 0.045, 0.1, bz + math.sin(a) * 0.045, seg=6)
+        b.apple('base', bx + math.cos(a) * 0.045, 0.06, bz + math.sin(a) * 0.045, rot=a * 2.3)   # w koszu, wierzch nad brzegiem
 
 E = P + 0.46
 OUT = ['base', 'shell']

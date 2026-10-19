@@ -116,6 +116,12 @@ tam kosz z paczki (`basketAt` w `src/render/props.ts`). Tak samo kosz niesiony (
 i z praniem przy chacie (`family.ts`). Odchudzać wolno tylko modele, które mają szczegóły w teksturze, nie w geometrii
 — najpierw próba z oryginałem obok (jak przy koszach: wicker_basket_01 z prętów się rozpadał, 02 nie).
 
+Jabłka i chleb w budynkach: `b.apple(grupa, x, y, z, w, rot)` i `b.bun(grupa, x, y, z, w, rot)` z `building.py` zapisują
+miejsca (klucz `foods`), a jabłka (najlżejsza wersja, `appleLow`) i bochenki (trzy skany na zmianę) stawia gra
+(`foodGeos` w `src/render/buildings.ts`). Nie robić jabłek ani chleba z brył (`'apple'`, `'bread'`) — to wyglądało jak
+graniastosłupy. Bryły z tymi materiałami zostały tylko tam, gdzie nie są jedzeniem z koszyka: szyld z obwarzankiem
+(piekarnia), zacier w kadzi (browar), kwiaty w skrzynce na oknie (chata), wiszące pęki pod belkami (chata, karczma).
+
 ## Krzaki z Poly Haven (krzewy robione przez grafików)
 
 `tools/models/bushes_polyhaven.py` składa kilka krzewów Searsia lucida (paczka glTF 1K + maska `_alpha_1k.jpg`) w gęste

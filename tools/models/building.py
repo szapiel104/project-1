@@ -25,6 +25,17 @@ class Building:
         # kosze z wikliny: tylko miejsce i wymiary [grupa, x, y, z, szerokość, wysokość]; model kosza z paczki
         # (tools/models/props_import.py) wstawia gra — w pliku budynku nie ma jego trójkątów
         self.baskets = []
+        # jabłka i bochenki ze skanów (tools/models/props_import.py): [grupa, rodzaj, x, y dna, z, szerokość, obrót];
+        # rodzaj 'apple' albo 'bun' — trójkąty dokłada gra (src/render/buildings.ts), w pliku budynku ich nie ma
+        self.foods = []
+
+    def apple(self, group, x, y, z, w=0.055, rot=0.0):
+        """Jabłko ze skanu: dno w (x, y, z), szerokość w (dawne jabłka z brył miały ok. 0,05–0,06)"""
+        self.foods.append([group, 'apple', round(x, 4), round(y, 4), round(z, 4), round(w, 4), round(rot, 3)])
+
+    def bun(self, group, x, y, z, w=0.12, rot=0.0):
+        """Bochenek ze skanu (jeden z trzech, wybiera gra): dno w (x, y, z), szerokość w, obrót rot"""
+        self.foods.append([group, 'bun', round(x, 4), round(y, 4), round(z, 4), round(w, 4), round(rot, 3)])
 
     def poly(self, group, mat, pts, away=None):
         """Wielokąt; z `away` (punkt) przód ściany odwraca się od tego punktu (gra rysuje tylko przednią stronę)"""
@@ -289,6 +300,6 @@ class Building:
             out.setdefault(g, []).append({'mat': m, 'pos': base64.b64encode(bytes(pos)).decode(), 'ao': base64.b64encode(bytes(ao)).decode()})
         dst = os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'render', 'models', f'{name}.json')
         with open(dst, 'w') as f:
-            json.dump({'q': Q, **(extra or {}), **({'baskets': self.baskets} if self.baskets else {}), **out}, f, separators=(',', ':'))
+            json.dump({'q': Q, **(extra or {}), **({'baskets': self.baskets} if self.baskets else {}), **({'foods': self.foods} if self.foods else {}), **out}, f, separators=(',', ':'))
         draws = sum(len(v) for v in out.values())
         print(f'{name}: {ntri} trójkątów, {draws} siatek ({", ".join(f"{g} {len(v)}" for g, v in out.items())}), plik {os.path.getsize(dst) // 1024} KB')

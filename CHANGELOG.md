@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.21 — jabłka i chleb ze skanów także w budynkach (2026-10-19)
+
+- W koszach przy spichlerzach, w sadzie (na drzewach, w trawie, w skrzynkach i koszach), w piekarni (na blacie, półce i ławie), na stołach w twierdzy, karczmie i chacie oraz przy ognisku bandytów leżą jabłka i bochenki ze skanów zamiast graniastosłupów
+- Skrypty budynków zapisują tylko miejsca (`b.apple`, `b.bun`), modele stawia gra
+- Jabłka i chleb w niesionych koszach zsunięte do środka, nie przebijają ścianek
+
 ## 0.30.20 — prawdziwy koń przy koszarach (2026-10-19)
 
 - Koń z gładkich brył zastąpiony modelem zrobionym przez grafików z gry 0 A.D. (Wildfire Games, CC BY-SA 3.0): gniady, z czarnymi nogami, grzywą i ogonem, z prawdziwą anatomią i teksturą sierści

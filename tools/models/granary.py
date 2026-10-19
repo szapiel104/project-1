@@ -105,7 +105,7 @@ sack(-0.46, Z1 + 0.36, 0.85)
 b.prism('base', 'basket', 0.08, 0.1, 0.1, 0.85, 0.0, 0.25, seg=10)
 for k in range(6):
     a = 2 * math.pi * k / 6
-    b.prism('base', 'apple', 0.025, 0.02, 0.03, 0.85 + math.cos(a) * 0.045, 0.1, 0.25 + math.sin(a) * 0.045, seg=6)
+    b.apple('base', 0.85 + math.cos(a) * 0.045, 0.06, 0.25 + math.sin(a) * 0.045, rot=a * 2.3)   # w koszu, wierzch nad brzegiem
 
 E = P + 0.46
 OUT, ROOM = ['base', 'shell'], ['base', 'interior', 'floor', 'ceiling']
