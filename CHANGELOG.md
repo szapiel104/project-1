@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.20 — prawdziwy koń przy koszarach (2026-10-19)
+
+- Koń z gładkich brył zastąpiony modelem zrobionym przez grafików z gry 0 A.D. (Wildfire Games, CC BY-SA 3.0): gniady, z czarnymi nogami, grzywą i ogonem, z prawdziwą anatomią i teksturą sierści
+- Żyje: na zmianę skubie trawę z łbem przy ziemi i podnosi łeb, czasem się czujnie rozgląda, ogonem odgania muchy — każdy koń w swoim rytmie (pozy liczone na karcie graficznej, dalej dwa wywołania rysowania na wszystkie konie)
+- Bez odchudzania: 1870 trójkątów, oryginalne UV i tekstury; skala dopasowana do ludzi (kłąb trochę poniżej barku człowieka). W podglądzie modeli: Zwierzęta → koń / koń skubie trawę / koń czujny
+
 ## 0.30.19 — podsumowanie doświadczenia jak w grach sieciowych (2026-10-19)
 
 - Na końcu meczu każda pozycja PD (czas, wynik, pokonani, zburzone, postawione) wpada po kolei i nabija liczbę, potem duża świecąca suma, a pasek poziomu ładuje się od starego stanu do nowego; przy awansie romb z poziomem błyska, gra fanfara i pojawia się „Awans! Poziom X — nowy tytuł”
