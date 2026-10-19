@@ -26,6 +26,7 @@ import { YARD_KEYS, yardModel } from './render/family';
 import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
 import { ANIMAL_AT, animalGeo } from './render/village';
+import { HORSE_MORPH, horseObject } from './render/horse';
 import { watchRenderer } from './debug/errlog';
 import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
@@ -67,11 +68,10 @@ function carrier(res: string): Make {
     return { obj: holder, size: new THREE.Vector3(0.3, 0.64, 0.3) };
   };
 }
-function horse(): THREE.Object3D {
-  const g = new THREE.Group();
-  g.add(mesh(animalGeo('horse_body')));
-  const neck = mesh(animalGeo('horse_neck')); neck.position.set(...ANIMAL_AT.neck); g.add(neck);
-  const tail = mesh(animalGeo('horse_tail')); tail.position.set(...ANIMAL_AT.tail); g.add(tail);
+/** Koń z 0 A.D. (render/horse.ts) w pozie: base, graze (skubie), look (czujny), swish (ogon w bok) */
+function horse(pose?: keyof typeof HORSE_MORPH): THREE.Object3D {
+  const g = horseObject();
+  if (pose) for (const m of g.children as THREE.Mesh[]) { m.updateMorphTargets(); m.morphTargetInfluences![HORSE_MORPH[pose]] = 1; }
   return g;
 }
 function dog(): THREE.Object3D {
@@ -189,6 +189,8 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['hen', tx('Kura', 'Hen'), () => ({ obj: mesh(animalGeo('hen_brown')) })],
     ['pig', tx('Świnia', 'Pig'), () => ({ obj: mesh(animalGeo('pig')) })],
     ['horse', tx('Koń', 'Horse'), () => ({ obj: horse() })],
+    ['horse-graze', tx('Koń skubie trawę', 'Horse, grazing'), () => ({ obj: horse('graze') })],
+    ['horse-look', tx('Koń czujny', 'Horse, alert'), () => ({ obj: horse('look') })],
     ['dog', tx('Pies', 'Dog'), () => ({ obj: dog() })],
     ['wolf', tx('Wilk', 'Wolf'), () => ({ obj: wolf() })],
     ['crow', tx('Kruk', 'Raven'), () => ({ obj: mesh(crowParts().stand, crowParts().mat) })],

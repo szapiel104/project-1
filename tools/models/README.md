@@ -27,7 +27,15 @@ Budowa modelu i podgląd (Cycles na procesorze, kilka sekund):
 Układ współrzędnych: jak w grze (x w prawo, y w górę, twarz w +z). Środki obrotu: biodro `hip`, bark `shoulder`,
 dłoń `hand` (w układzie ręki).
 
-Zwierzęta w osadzie (kury, świnia, koń, pies): `/tmp/bpyenv/bin/python tools/models/animals.py` → `src/render/models/animals.json`, podgląd `podglad-zwierzeta.html?osada=1`.
+Zwierzęta w osadzie (kury, świnia, pies): `/tmp/bpyenv/bin/python tools/models/animals.py` → `src/render/models/animals.json`, podgląd `podglad-zwierzeta.html?osada=1`.
+
+Koń: gotowy model z gry 0 A.D. (CC BY-SA 3.0), `tools/models/horse_0ad.py <0ad>/binaries/data/mods/public/art [--preview /tmp/kon.png]`
+→ `src/render/models/horse.json` + `public/textures/cc0/horse_*.jpg` (potem KTX2 dla `horse_coat*.jpg`). Pliki z repozytorium
+`0ad/0ad` (sparse checkout: `art/meshes/skeletal/horse_breed.dae`, `art/meshes/props/horse/hair_*_01_breed.dae`,
+`art/animation/quadraped/horse_breed_idle_0*.dae`, `art/textures/skins/skeletal/horse_*.png`, `art/textures/skins/props/horse/hair_*.png`).
+COLLADA czyta i skóruje sam skrypt (numpy), bez Blendera; pozy (stoi, w pół drogi, skubie, czujny, ogon w bok) idą do gry jako
+morph targets, mieszane osobno dla każdego konia w `src/render/horse.ts`. Zgięcie szyi do skubania: słownik `GRAZE` w skrypcie.
+Podgląd wszystkich póz w Blenderze: `tools/models/horse_preview.py` (ujęcia side / front / high / back), w grze `modele.html?id=horse`, `?id=horse-graze`, `?id=horse-look`.
 
 ## Budynki i obchód
 

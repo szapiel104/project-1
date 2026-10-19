@@ -6,6 +6,7 @@ import { TERRAIN } from '../data/terrain';
 import { FP, keepFront, type GameState } from '../sim/state';
 import { modelGeo, type ModelMesh } from './peasants';
 import { model } from './modelstore';
+import { horseGeometry, horseMaterial, horseWeights } from './horse';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const ANIMALS = model('animals');
 
@@ -28,10 +29,10 @@ const MAX_HENS = 120, MAX_PIGS = 48, MAX_HORSES = 8, MAX_DOGS = 8;
 const DOGS_ON = false;
 
 /** Modele zwierząt z Blendera (tools/models/animals.py) */
-const A = ANIMALS as unknown as Record<string, ModelMesh[]> & { horse_neck_at: [number, number, number]; horse_tail_at: [number, number, number]; dog_hips: [number, number, number][]; dog_tail_at: [number, number, number] };
+const A = ANIMALS as unknown as Record<string, ModelMesh[]> & { dog_hips: [number, number, number][]; dog_tail_at: [number, number, number] };
 const geo = (k: string): THREE.BufferGeometry => modelGeo(A[k]![0]!);
-export const animalGeo = (k: 'hen_white' | 'hen_brown' | 'hen_black' | 'pig' | 'horse_body' | 'horse_neck' | 'horse_tail' | 'dog_body' | 'dog_leg' | 'dog_hind' | 'dog_tail'): THREE.BufferGeometry => geo(k);
-export const ANIMAL_AT = { neck: A.horse_neck_at, tail: A.horse_tail_at, dogHips: A.dog_hips, dogTail: A.dog_tail_at };
+export const animalGeo = (k: 'hen_white' | 'hen_brown' | 'hen_black' | 'pig' | 'dog_body' | 'dog_leg' | 'dog_hind' | 'dog_tail'): THREE.BufferGeometry => geo(k);
+export const ANIMAL_AT = { dogHips: A.dog_hips, dogTail: A.dog_tail_at };
 
 const rand = (): number => Math.random();
 
@@ -40,8 +41,9 @@ export class Village {
   private hensBy: THREE.InstancedMesh[];
   private pigs: THREE.InstancedMesh;
   private horseBody: THREE.InstancedMesh;
-  private horseNeck: THREE.InstancedMesh;
-  private horseTail: THREE.InstancedMesh;
+  private horseHair: THREE.InstancedMesh;
+  /** pomocnik do setMorphAt (wagi póz jednego konia) */
+  private horsePose = new THREE.Mesh(horseGeometry('body'));
   private dogBody: THREE.InstancedMesh;
   private dogLegF: THREE.InstancedMesh;
   private dogLegH: THREE.InstancedMesh;
@@ -67,9 +69,14 @@ export class Village {
     };
     this.hensBy = (['hen_white', 'hen_brown', 'hen_black'] as const).map((k) => inst(geo(k), MAX_HENS));
     this.pigs = inst(geo('pig'), MAX_PIGS);
-    this.horseBody = inst(geo('horse_body'), MAX_HORSES);
-    this.horseNeck = inst(geo('horse_neck'), MAX_HORSES);
-    this.horseTail = inst(geo('horse_tail'), MAX_HORSES);
+    // koń z 0 A.D. (src/render/horse.ts): sierść i włosie, pozy (skubanie, rozglądanie, ogon) osobno dla każdego
+    this.horseBody = inst(horseGeometry('body'), MAX_HORSES, horseMaterial('body'));
+    this.horseHair = inst(horseGeometry('hair'), MAX_HORSES, horseMaterial('hair'));
+    this.horseBody.receiveShadow = true;
+    this.horsePose.updateMorphTargets();
+    // pierwsze ustawienie póz, żeby morphTexture istniała od początku (jak instanceColor świń niżej); three robi ją
+    // na tyle instancji, ile wynosi `count` w chwili pierwszego wywołania — więc na chwilę pełna liczba
+    for (const m of [this.horseBody, this.horseHair]) { m.count = MAX_HORSES; for (let i = 0; i < MAX_HORSES; i++) m.setMorphAt(i, this.horsePose); m.count = 0; }
     this.dogBody = inst(geo('dog_body'), MAX_DOGS);
     this.dogLegF = inst(geo('dog_leg'), MAX_DOGS * 2);
     this.dogLegH = inst(geo('dog_hind'), MAX_DOGS * 2);
@@ -199,15 +206,13 @@ export class Village {
         let hx = dx + 1.2, hy = dy;
         if (!this.free(g, hx, hy)) { hx = dx - 1.2; if (!this.free(g, hx, hy)) { hx = b.x + fp.w + 0.6; hy = b.y + 1; } }
         const yaw = ((b.id * 1.7) % 1) * Math.PI * 2;
-        const graze = ctx.calm ? 0.2 : 0.55 + Math.sin(time * 0.25 + b.id) * 0.75;
         const y = ctx.height(hx, hy);
         this.place(hx - W2, y, hy - H2, yaw + Math.sin(time * 0.1 + b.id) * 0.15);
         this.horseBody.setMatrixAt(horses, this.m);
-        const body = this.p.copy(this.m);
-        this.m.compose(this.v.set(...ANIMAL_AT.neck), this.q.setFromEuler(this.e.set(Math.max(-0.25, Math.min(1.25, graze)), 0, 0)), this.s.setScalar(1));
-        this.horseNeck.setMatrixAt(horses, this.m.premultiply(body));
-        this.m.compose(this.v.set(...ANIMAL_AT.tail), this.q.setFromEuler(this.e.set(0.35, 0, ctx.calm ? 0 : Math.sin(time * 2.3 + b.id) * 0.35)), this.s.setScalar(1));
-        this.horseTail.setMatrixAt(horses, this.m.premultiply(body));
+        this.horseHair.setMatrixAt(horses, this.m);
+        horseWeights(time, b.id, ctx.calm, this.horsePose.morphTargetInfluences!);
+        this.horseBody.setMorphAt(horses, this.horsePose);
+        this.horseHair.setMorphAt(horses, this.horsePose);
         horses++;
       }
     }
@@ -288,7 +293,8 @@ export class Village {
     for (const [k, c] of this.dogs) if (this.frame - c.seen > 120) this.dogs.delete(k);
     const fin = (m: THREE.InstancedMesh, n: number): void => { m.count = n; m.visible = n > 0; touch(m); if (m.instanceColor) touch(m); };
     this.hensBy.forEach((m, k) => fin(m, henN[k]!)); fin(this.pigs, pigs);
-    fin(this.horseBody, horses); fin(this.horseNeck, horses); fin(this.horseTail, horses);
+    fin(this.horseBody, horses); fin(this.horseHair, horses);
+    if (horses) { this.horseBody.morphTexture!.needsUpdate = true; this.horseHair.morphTexture!.needsUpdate = true; }
     fin(this.dogBody, dogs); fin(this.dogLegF, dogs * 2); fin(this.dogLegH, dogs * 2); fin(this.dogTail, dogs);
   }
 }

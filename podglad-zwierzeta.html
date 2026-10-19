@@ -37,9 +37,9 @@ if (q.get('osada')) {
   const put = (geo, x, z, ry, color) => { const m = new THREE.Mesh(geo, color ? new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, color }) : vm); m.position.set(x, 0, z); m.rotation.y = ry; m.castShadow = true; s.add(m); return m; };
   [[-0.5, 0.3, 0.6, 'hen_white'], [-0.35, 0.45, 2.2, 'hen_brown'], [-0.6, 0.5, -0.8, 'hen_black']].forEach(([x, z, r, k]) => put(animalGeo(k), x, z, r));
   put(animalGeo('pig'), -0.05, 0.25, 0.9);
-  const hb = put(animalGeo('horse_body'), 0.5, -0.2, -0.5);
-  const nk = new THREE.Mesh(animalGeo('horse_neck'), vm); nk.position.set(...ANIMAL_AT.neck); nk.rotation.x = Number(q.get('graze') ?? 0.2); hb.add(nk);
-  const tl = new THREE.Mesh(animalGeo('horse_tail'), vm); tl.position.set(...ANIMAL_AT.tail); tl.rotation.x = 0.35; hb.add(tl);
+  const { horseObject, HORSE_MORPH } = await import('./src/render/horse.ts');
+  const hb = horseObject(); hb.position.set(0.5, 0, -0.2); hb.rotation.y = -0.5; s.add(hb);
+  for (const m of hb.children) { m.updateMorphTargets(); m.morphTargetInfluences[HORSE_MORPH.graze] = Number(q.get('graze') ?? 0.2); }
   const dog = new THREE.Group(); dog.add(new THREE.Mesh(animalGeo('dog_body'), vm));
   ANIMAL_AT.dogHips.forEach(([hx, hy, hz], k) => { const m = new THREE.Mesh(animalGeo(k < 2 ? 'dog_leg' : 'dog_hind'), vm); m.position.set(hx, hy, hz); dog.add(m); });
   const dt = new THREE.Mesh(animalGeo('dog_tail'), vm); dt.position.set(...ANIMAL_AT.dogTail); dt.rotation.x = 2.5; dog.add(dt);

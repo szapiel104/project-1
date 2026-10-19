@@ -47,6 +47,9 @@ RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old To
 ## Dźwięki natury
 Śpiew ptaków, odgłosy wsi, kury, róg alarmu i grzmot: gra **0 A.D.** © Wildfire Games (https://www.wildfiregames.com/), licencja CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/). Świerszcze i dzwon: Freesound (rsn267, beambot, Nox_Sound), CC0. Szczegóły w docs/zasoby.md.
 
+## Koń
+Koń przy koszarach: model `horse_breed` z grą **0 A.D.** © Wildfire Games (https://play0ad.com, kod i grafika w repozytorium https://github.com/0ad/0ad) — siatka ciała, grzywa i ogon (`hair_*_01_breed`), szkielet, ruch spoczynkowy (`horse_breed_idle_01/02`) i tekstury (`horse_bay_01`, `horse_norm`, `hair_black`), licencja [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/). Przerobione skryptem `tools/models/horse_0ad.py` (pozy wypieczone ze szkieletu, wygładzone normalne, skala do naszej gry) → `src/render/models/horse.json`, `public/textures/cc0/horse_*.jpg`/`.ktx2`; nasza wersja jest na tej samej licencji.
+
 ## Postacie ze szkieletem
 - Ciało i szkielet: MPFB / MakeHuman Community (https://static.makehumancommunity.org), wynik na licencji CC0.
 - Ruch: Carnegie Mellon University Graphics Lab Motion Capture Database (http://mocap.cs.cmu.edu), konwersja BVH B. Hahne (cgspeed). Dane wolne do użytku, także w grach.

@@ -1,11 +1,10 @@
-"""Zwierzęta w osadzie z Blendera: kura (trzy umaszczenia), świnia, koń, pies — gładkie bryły (Skin + Subdivision),
+"""Zwierzęta w osadzie z Blendera: kura (trzy umaszczenia), świnia, pies (koń: horse_0ad.py) — gładkie bryły (Skin + Subdivision),
 sierść i pióra w kolorach wierzchołków, cień w zagłębieniach.
 
 Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/animals.py
 Wynik: src/render/models/animals.json
   hen_white, hen_brown, hen_black — kura w jednej siatce (stoi na ziemi, przód +z)
   pig — świnia w jednej siatce
-  horse_body (z nogami), horse_neck (szyja z łbem, oś w kłębie: horse_neck_at), horse_tail (oś u nasady: horse_tail_at)
   dog_body, dog_leg, dog_hind (oś w barku/biodrze: dog_hips), dog_tail (oś u nasady: dog_tail_at, zwisa w dół)
 """
 import json
@@ -161,47 +160,7 @@ parts.append(Mesh(evaluated(tail), PINK, 'fur'))
 bake_ao([(m, (0, 0, 0)) for m in parts], reach=0.05)
 out['pig'] = [pack(merged(parts))]
 
-# ================= KOŃ (gniady) =================
-reset()
-COAT, DARKC, HOOFC, MUZ, BLAZE, BLANKET = hexrgb(0x6b4527), hexrgb(0x241810), hexrgb(0x1c1612), hexrgb(0x3a2616), hexrgb(0xe8dcc8), hexrgb(0x6a2a18)
-coat = lambda x, y, z: speck(mix(COAT, tuple(c * 0.82 for c in COAT), (y - 0.43) / 0.05) if y > 0.2 else mix(COAT, DARKC, (0.2 - y) / 0.06), x, y, z, 0.06)
-b = skin('horse', [(0, 0.42, -0.22), (0, 0.4, -0.15), (0, 0.37, 0.0), (0, 0.38, 0.14), (0, 0.42, 0.19)],
-         [(0, 1), (1, 2), (2, 3), (3, 4)],
-         [(0.05, 0.05), (0.1, 0.1), (0.098, 0.108), (0.085, 0.1), (0.06, 0.07)], subsurf=2)
-parts = [Mesh(evaluated(b), coat, 'fur')]
-for sx in (-1, 1):
-    fl = skin(f'hfl{sx}', [(sx * 0.05, 0.33, 0.14), (sx * 0.05, 0.2, 0.15), (sx * 0.05, 0.1, 0.15), (sx * 0.05, 0.035, 0.155), (sx * 0.05, 0.01, 0.16)],
-              [(0, 1), (1, 2), (2, 3), (3, 4)],
-              [(0.04, 0.045), (0.024, 0.026), (0.018, 0.019), (0.02, 0.02), (0.024, 0.026)], subsurf=1)
-    parts.append(Mesh(evaluated(fl), lambda x, y, z: HOOFC if y < 0.025 else coat(x, y, z), 'fur'))
-    hl = skin(f'hhl{sx}', [(sx * 0.05, 0.36, -0.15), (sx * 0.055, 0.24, -0.19), (sx * 0.05, 0.14, -0.16), (sx * 0.05, 0.035, -0.15), (sx * 0.05, 0.01, -0.145)],
-              [(0, 1), (1, 2), (2, 3), (3, 4)],
-              [(0.055, 0.06), (0.03, 0.032), (0.018, 0.02), (0.02, 0.02), (0.024, 0.026)], subsurf=1)
-    parts.append(Mesh(evaluated(hl), lambda x, y, z: HOOFC if y < 0.025 else coat(x, y, z), 'fur'))
-blanket = skin('blanket', [(0, 0.455, -0.08), (0, 0.46, 0.06)], [(0, 1)], [(0.104, 0.03), (0.1, 0.03)], subsurf=1)
-parts.append(Mesh(evaluated(blanket), lambda x, y, z: speck(BLANKET, x, y, z, 0.05), 'cloth'))
-bake_ao([(m, (0, 0, 0)) for m in parts], reach=0.08)
-out['horse_body'] = [pack(merged(parts))]
-NECK_AT = (0, 0.4, 0.17)
-neck = skin('neck', [(0, 0, 0), (0, 0.12, 0.06), (0, 0.2, 0.1), (0, 0.225, 0.13), (0, 0.17, 0.26)],
-            [(0, 1), (1, 2), (2, 3), (3, 4)],
-            [(0.06, 0.075), (0.045, 0.062), (0.038, 0.046), (0.042, 0.04), (0.03, 0.028)], subsurf=2)
-headcol = lambda x, y, z: speck(MUZ if z > 0.23 else coat(x, y + 0.4, z), x, y, z, 0.05)
-np = [Mesh(evaluated(neck), headcol, 'fur')]
-mane = skin('mane', [(0, 0.03, -0.035), (0, 0.13, 0.02), (0, 0.215, 0.085)], [(0, 1), (1, 2)], [(0.008, 0.03), (0.008, 0.026), (0.006, 0.014)], subsurf=1)
-np.append(fluff(Mesh(evaluated(mane), lambda x, y, z: speck(DARKC, x, y, z, 0.15), 'fur'), 0.01))
-for sx in (-1, 1):
-    ear = lathe(f'hear{sx}', [(0.012, 0.0), (0.008, 0.025), (0.001, 0.045)], seg=6, depth=0.6, subsurf=0)
-    np.append(Mesh(rotated(ear, rx=-0.2, rz=sx * 0.2, move=(sx * 0.02, 0.24, 0.12)), coat, 'fur'))
-    eye = sphere(f'hoeye{sx}', (sx * 0.034, 0.215, 0.17), 0.006, seg=6, rings=4)
-    np.append(Mesh(evaluated(eye), (0.04, 0.03, 0.02), 'fur'))
-bake_ao([(m, (0, 0, 0)) for m in np], reach=0.05)
-out['horse_neck'] = [pack(merged(np))]
-out['horse_neck_at'] = NECK_AT
-tail = skin('htail2', [(0, 0, 0), (0, -0.1, -0.035), (0, -0.2, -0.03), (0, -0.28, -0.02)], [(0, 1), (1, 2), (2, 3)],
-            [(0.018, 0.02), (0.03, 0.034), (0.026, 0.03), (0.01, 0.012)], subsurf=1)
-out['horse_tail'] = [pack(fluff(Mesh(evaluated(tail), lambda x, y, z: speck(DARKC, x, y, z, 0.15), 'fur'), 0.012))]
-out['horse_tail_at'] = (0, 0.42, -0.22)
+# koń: gotowy model z 0 A.D. — tools/models/horse_0ad.py → horse.json
 
 # ================= PIES (płowy kundel) =================
 reset()
