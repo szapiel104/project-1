@@ -210,9 +210,11 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
     g.computeVertexNormals();
     return [as(g, 'stone')];
   },
-  // kosz z trzema rybami z paczki (tools/models/props_import.py): leżą na boku, łby i ogony wystają ponad brzeg kosza
-  fish: () => [basket(), ...([[-0.035, 0.085, -0.02, 0.35, 1], [0.04, 0.095, 0.025, -0.4, -1], [0, 0.125, 0, 0.1, 1]] as const).map(([x, y, z, yaw, side]) =>
-    as(propGeometryFlat('fish', true).scale(0.2, 0.2, 0.2).rotateZ(side * Math.PI / 2).rotateY(yaw).translate(x, y, z), 'fish'))],
+  // kosz z trzema rybami z paczki (tools/models/props_import.py), leżą na boku W koszu: dwie obok siebie na dnie
+  // (dno kosza ok. -0,06, ryba długości 0,2 ma 0,09 wysokości i 0,044 grubości), trzecia na nich, odwrócona łbem w drugą
+  // stronę; wierzch trzeciej wystaje trochę ponad brzeg (0,065), żeby z góry było widać, co niesie
+  fish: () => [basket(), ...([[0, -0.038, -0.046, 0.06, 1, 0], [0, -0.038, 0.046, -0.06, -1, 0], [0.005, 0.01, 0, 0.12, 1, Math.PI]] as const).map(([x, y, z, yaw, side, turn]) =>
+    as(propGeometryFlat('fish', true).scale(0.2, 0.2, 0.2).rotateZ(side * Math.PI / 2).rotateY(Math.PI / 2 + yaw + turn).translate(x, y, z), 'fish'))],
   // wiązka włóczni na prawym ramieniu (jak deski): trzy drzewca z grotami w przód i lekko w górę, przewiązane sznurem
   spear: () => [0, 1, 2].flatMap((k) => {
     const x = (k - 1) * 0.022, y = (k === 1 ? 0.02 : 0);
