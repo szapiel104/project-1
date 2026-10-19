@@ -1,6 +1,6 @@
 import { named } from './named';
 import * as THREE from 'three';
-import { basketAt, propGeometryFlat, propMaterial, type PropName } from './props';
+import { basketAt, propAt, propGeometryFlat, propMaterial, type PropName } from './props';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -213,13 +213,16 @@ const merge = (parts: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeom
  * deski z usłojeniem, ciosany kamień, snopki zboża ze związanymi kłosami, worki z płótna, sztaby, kosze.
  */
 /**
- * Kosz z wikliny w składzie: kosz z paczki (src/render/props.ts, Poly Haven wicker_basket_02) w miejscu dawnego
- * kosza z brył — dno w y = -0,14, szerokość 0,4, brzeg w y = 0 (na tej wysokości leżą bochny i jabłka).
- * Zawartość i kosz to dwie grupy jednej bryły: pierwsza z materiałem stosu, druga z teksturą kosza (`withProp`).
+ * Kosz z wikliny w składzie: kosz z paczki (src/render/props.ts, Poly Haven wicker_basket_02) — dno w y = -0,14,
+ * szerokość 0,4, brzeg w y = 0. W nim modele z paczek (jabłka, bochenki): dwie grupy bryły, kosz i zawartość,
+ * każda z własną teksturą (`withProp: ['basket', …]`, `noCode`).
  */
-const inBasket = (contents: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries([merge(contents), basketAt(0, -0.14, 0, 0.4, 0.14, 0.3)], true)!;
-/** `withProp`: druga grupa bryły to gotowy model z paczki (src/render/props.ts) z własną teksturą — np. ryby w skrzynce */
-const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean; withProp?: PropName }> = {
+const inBasket = (contents: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries([basketAt(0, -0.14, 0, 0.4, 0.14, 0.3), merge(contents)], true)!;
+/**
+ * `withProp`: kolejne grupy bryły to gotowe modele z paczek (src/render/props.ts) z własnymi teksturami — np. ryby
+ * w skrzynce, beczki na legarach; `noCode`: bryła ma same modele z paczek (kosz jabłek, kosz chleba), bez części z kodu.
+ */
+const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean; withProp?: PropName | PropName[]; noCode?: boolean }> = {
   wood: {
     tex: 'planks',
     geo: merge([0, 1, 2].flatMap((layer) => [-0.115, 0.115].map((z) => paint(part(new THREE.BoxGeometry(0.46, 0.07, 0.21), (layer % 2 ? 0.015 : -0.01), -0.1 + layer * 0.088, z), layer === 2 ? 0xe2bf8a : 0xd2ab74)))
@@ -279,38 +282,22 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     ]),
   },
   bread: {
-    tex: 'organic',
-    // kosz z wikliny (obręcz, plecione pasy), w nim bochny z naciętą skórką i jasnym oprószeniem mąką
-    withProp: 'basket',
+    // kosz z wikliny, w nim cztery bochenki ze skanów (trzy różne, Poly Haven hamburger_buns): trzy na dnie, czwarty
+    // na nich skosem, wierzch wystaje nad brzeg kosza
+    withProp: ['basket', 'bun1'],
+    noCode: true,
     geo: inBasket([
-      ...([[-0.08, -0.05, 0.4, 0xb8743a], [0.08, -0.04, -0.5, 0xc4823f], [0, 0.08, 1.2, 0xae6a33]] as const).flatMap(([x, z, rot, col]) => [
-        paint(new THREE.IcosahedronGeometry(0.07, 2).scale(1.55, 0.72, 1).rotateY(rot).translate(x, 0.02, z), col),
-        // trzy ukośne nacięcia na skórce
-        ...[-0.04, 0, 0.04].map((d) => paint(new THREE.BoxGeometry(0.012, 0.012, 0.06).rotateY(rot + 0.6).translate(x + Math.cos(rot) * d, 0.072, z - Math.sin(rot) * d), 0x6e3e1c)),
-        paint(new THREE.IcosahedronGeometry(0.04, 1).scale(1.6, 0.25, 0.8).rotateY(rot).translate(x, 0.066, z), 0xe9d8b8), // mąka na wierzchu
-      ]),
-      paint(new THREE.IcosahedronGeometry(0.06, 2).scale(1, 0.75, 1).translate(0.03, 0.1, 0.01), 0xc98a45), // okrągły bochenek na górze
+      propAt('bun1', -0.075, -0.125, -0.02, 0.17, 0.3), propAt('bun2', 0.08, -0.125, -0.03, 0.17, -0.5),
+      propAt('bun3', 0.0, -0.125, 0.085, 0.17, 1.4), propAt('bun2', 0.01, -0.06, -0.01, 0.17, 2.2),
     ]),
   },
   apples: {
-    tex: 'organic',
-    // kosz jabłek: każde trochę inne (czerwone, rumiane, zielone), z ogonkiem; jedno z listkiem
-    withProp: 'basket',
-    geo: inBasket([
-      ...[0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap((k) => {
-        const top = k >= 7;
-        const ang = k * 0.9 + (top ? 0.4 : 0), rr = top ? 0.04 : k ? 0.11 : 0;
-        const x = Math.cos(ang) * rr, z = Math.sin(ang) * rr, y = top ? 0.09 : 0.03 + (k ? 0 : 0.03);
-        const col = [0xc8261d, 0xb31d18, 0xd9452a, 0x9fbf3a, 0xc8261d, 0xe0582c, 0xb8301f, 0xa8c040, 0xcf3322][k]!;
-        const parts = [
-          paint(new THREE.IcosahedronGeometry(0.052, 2).scale(1, 0.92, 1).translate(x, y, z), col),
-          paint(new THREE.SphereGeometry(0.02, 6, 4).scale(1, 0.4, 1).translate(x + 0.01, y + 0.03, z - 0.012), 0xf2d27a), // rumieniec / połysk
-          paint(new THREE.CylinderGeometry(0.004, 0.005, 0.03, 4).rotateZ(0.3).translate(x, y + 0.055, z), 0x4a3018), // ogonek
-        ];
-        if (k === 8) parts.push(paint(new THREE.IcosahedronGeometry(0.022, 0).scale(1.6, 0.25, 0.8).rotateY(0.6).translate(x + 0.02, y + 0.06, z), 0x4f8a2c));
-        return parts;
-      }),
-    ]),
+    // kosz jabłek ze skanu (Poly Haven food_apple_01): trzy w środku, trzy na wierzchu wystają nad brzeg
+    // (głębiej i tak nie widać; kosz: dno -0,14, brzeg 0, jabłko szerokości 0,1 i wysokości 0,088)
+    withProp: ['basket', 'apple'],
+    noCode: true,
+    geo: inBasket(([[0.07, -0.08, 0.03], [-0.065, -0.08, 0.05], [0.0, -0.08, -0.08], [0.03, -0.035, 0.0], [-0.045, -0.03, -0.03], [-0.01, -0.03, 0.065]] as const)
+      .map(([x, y, z], k) => propAt('apple', x, y, z, 0.1, k * 2.1))),
   },
   spear: {
     tex: 'planks',
@@ -336,16 +323,18 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
   },
   ale: {
     tex: 'planks',
-    // beczki piwa: dwie leżą na legarach, trzecia stoi na nich; klepki ciemniejsze, obręcze z żelaza
-    geo: merge([
-      ...[-0.15, 0.15].map((z) => paint(part(new THREE.BoxGeometry(0.42, 0.03, 0.04), 0, -0.135, z), 0x5a3e24)),
-      ...([[-0.1, 0], [0.1, 0]] as const).flatMap(([z]) => [
-        paint(new THREE.CylinderGeometry(0.1, 0.1, 0.34, 10).rotateZ(Math.PI / 2).translate(0, -0.02, z), 0x8a5a2b),
-        ...[-0.12, 0, 0.12].map((x) => paint(new THREE.CylinderGeometry(0.106, 0.106, 0.02, 10).rotateZ(Math.PI / 2).translate(x, -0.02, z), 0x4a4038)),
+    // beczki piwa z paczki (Poly Haven wine_barrel_01, wypalona wersja 560 trójkątów — w składzie może ich stać
+    // kilkadziesiąt): dwie leżą na legarach, trzecia stoi na nich w rowku między nimi
+    withProp: 'barrelLow',
+    geo: mergeGeometries([
+      // legary w poprzek beczek (beczki leżą wzdłuż x, długość 0,26), wierzch legara w -0,12 = spód leżących beczek
+      merge([-0.08, 0.08].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.03, 0.46), x, -0.135, 0), 0x5a3e24))),
+      merge([
+        ...[-0.113, 0.113].map((z) => propGeometryFlat('barrelLow').translate(0, -0.5, 0).scale(0.26, 0.26, 0.26).rotateZ(Math.PI / 2).rotateX(z * 9).translate(0, -0.007, z)),
+        // stojąca: średnica 0,19, dno 0,106 — tam leżące beczki (promień 0,113) mają powierzchnię pod jej krawędzią
+        propGeometryFlat('barrelLow').scale(0.22, 0.22, 0.22).rotateY(0.8).translate(0, 0.106, 0),
       ]),
-      paint(new THREE.CylinderGeometry(0.085, 0.085, 0.22, 10).translate(0, 0.17, 0), 0x9a6634),
-      ...[0.1, 0.24].map((y) => paint(new THREE.CylinderGeometry(0.09, 0.09, 0.018, 10).translate(0, y, 0), 0x4a4038)),
-    ]),
+    ], true)!,
   },
   fish: {
     tex: 'planks',
@@ -387,7 +376,8 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
       m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: pile.metal ? 0.45 : 0.92, metalness: pile.metal ? 0.6 : 0, map: pile.tex ? pattern(pile.tex) : null, bumpMap: pile.tex ? bump(pile.tex) : null, bumpScale: 1.2 });
       pileMats.set(r.id, m);
     }
-    const mat: THREE.Material | THREE.Material[] = pile.withProp ? [m, propMaterial(pile.withProp)] : m;
+    const props = pile.withProp === undefined ? [] : (Array.isArray(pile.withProp) ? pile.withProp : [pile.withProp]).map(propMaterial);
+    const mat: THREE.Material | THREE.Material[] = props.length ? (pile.noCode ? props : [m, ...props]) : m;
     while (items > 0 && slot < STOCK_SLOTS) {
       for (let layer = 0; layer < STOCK_LAYERS && items > 0; layer++, items--) {
         const mesh = fill.children[layer * STOCK_SLOTS + slot] as THREE.Mesh;

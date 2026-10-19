@@ -18,7 +18,7 @@ describe('modele z paczek: ryba i pochodnia', () => {
   });
 
   it('wersje z daleka są lżejsze, ale w tym samym miejscu', () => {
-    for (const n of ['fish', 'torch', 'basket'] as const) {
+    for (const n of ['fish', 'torch', 'basket', 'apple', 'bun1'] as const) {
       const near = propGeometry(n), far = propGeometry(n, true);
       expect(tris(far)).toBeLessThan(tris(near));
       const a = box(near), b = box(far);
@@ -43,5 +43,14 @@ describe('modele z paczek: ryba i pochodnia', () => {
     const b = box(near);
     expect(b.min.y).toBeCloseTo(0, 2);
     expect(Math.max(b.max.x - b.min.x, b.max.z - b.min.z)).toBeCloseTo(1, 2);
+  });
+
+  it('jabłko, chleb i beczka: dno w zerze; wypalona beczka lekka i tej samej wielkości co pełna', () => {
+    for (const n of ['apple', 'bun1', 'bun2', 'bun3', 'barrel', 'barrelLow'] as const) expect(box(propGeometry(n)).min.y).toBeCloseTo(0, 2);
+    expect(tris(propGeometry('apple'))).toBeLessThan(2500);
+    expect(tris(propGeometry('barrelLow'))).toBeLessThan(1000);
+    const full = box(propGeometry('barrel')), low = box(propGeometry('barrelLow'));
+    expect(low.max.y).toBeCloseTo(full.max.y, 1);
+    expect(low.max.x - low.min.x).toBeCloseTo(full.max.x - full.min.x, 1);
   });
 });

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.18 — jabłka, chleb i beczka piwa ze skanów (2026-10-19)
+
+- Jabłka, chleb i beczka piwa to gotowe modele z Poly Haven (CC0, skany prawdziwych przedmiotów): jabłka w koszu niesionym przez chłopa i w koszach w składzie i spichlerzu, trzy różne bochenki w koszach chleba, dębowa beczka z obręczami i czopem niesiona przez chłopa i w stosach beczek w składzie
+- Beczka w ręce chłopa jest pełna (10,8 tys. trójkątów); w stosach, gdzie może ich stać kilkadziesiąt, prosta bryła (560) z wypalonym w Blenderze wyglądem pełnej — na porównaniu nie do odróżnienia
+- Ryby i ruda w niesionym koszu leżą w środku, a nie nad brzegiem
+
 ## 0.30.17 — nowy „Mój ród” i tabliczka gracza w lewym dolnym rogu (2026-10-19)
 
 - Tabliczka konta przeniesiona z lewego górnego rogu na dół, w lewy róg: herb z numerem poziomu, nick, tytuł, pasek PD z liczbami; cała jest przyciskiem do „Mojego rodu”, z wyraźnym podświetleniem po najechaniu

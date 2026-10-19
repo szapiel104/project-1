@@ -4,21 +4,24 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RESOURCES } from '../data/resources';
 import { boxUv } from './peasants';
 import { grayPattern, normal, type Kind } from './textures';
-import { basketAt, propGeometryFlat, propMaterial } from './props';
+import { basketAt, propAt, propGeometryFlat, propMaterial, type PropName } from './props';
 
 /**
  * Materiał części ładunku: zdjęciowa tekstura w szarości (barwę daje kolor wierzchołków) i mapa nierówności.
  * Owoce, ryby i grudki rudy zostają gładkie; drewno, wiklina, płótno, skórka chleba, kamień i żelazo mają fakturę.
  */
-type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish' | 'basket';
+type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish' | 'basket' | 'apple' | 'bread' | 'barrel';
 const MAT_TEX: Record<LoadMat, [Kind | null, number, number, number]> = {
   // [tekstura, gęstość na 1 jednostkę, chropowatość, metaliczność]
   plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], board: [null, 1, 0.8, 0], rope: ['burlap', 14, 1, 0], wicker: ['thatch', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
   crust: ['soil', 7, 0.9, 0], stone: ['rock', 5, 0.95, 0], iron: ['iron', 6, 0.5, 0.55], straw: ['thatch', 6, 0.95, 0], bark: ['bark', 6, 0.95, 0],
   fish: [null, 1, 0.42, 0.08], // ryba z paczki: własne UV i tekstura (src/render/props.ts)
   basket: [null, 1, 0.9, 0], // kosz z paczki: własne UV i tekstura
+  apple: [null, 1, 0.45, 0], bread: [null, 1, 0.85, 0], barrel: [null, 1, 0.75, 0.05], // modele z paczek (props.ts)
 };
 const matCache = new Map<LoadMat, THREE.MeshStandardMaterial>();
+/** Części z modeli z paczek: mają własne UV i teksturę (src/render/props.ts), nie dostają rzutowanych współrzędnych */
+const PROP_MAT: Partial<Record<LoadMat, PropName>> = { fish: 'fish', basket: 'basket', apple: 'apple', bread: 'bun1', barrel: 'barrel' };
 
 /**
  * Słoje świeżo heblowanej deski, rysowane w kodzie (szare, barwę daje kolor wierzchołków): długie, lekko falujące
@@ -83,7 +86,7 @@ function boardUv(geo: THREE.BufferGeometry): void {
 
 function loadMat(k: LoadMat): THREE.MeshStandardMaterial {
   let m = matCache.get(k);
-  if (!m && (k === 'fish' || k === 'basket')) { m = propMaterial(k); matCache.set(k, m); }
+  if (!m && PROP_MAT[k]) { m = propMaterial(PROP_MAT[k]); matCache.set(k, m); }
   if (!m && k === 'board') {
     const g = boardGrain();
     m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, map: g, bumpMap: g, bumpScale: 0.6 });
@@ -106,7 +109,7 @@ function assemble(parts: THREE.BufferGeometry[]): THREE.BufferGeometry | null {
     const k = (p0.userData.mat as LoadMat | undefined) ?? 'plain';
     const p = p0.index ? p0.toNonIndexed() : p0;
     if (!p.getAttribute('normal')) p.computeVertexNormals();
-    if (k === 'board') boardUv(p); else if (k !== 'fish' && k !== 'basket') boxUv(p, MAT_TEX[k][1]);
+    if (k === 'board') boardUv(p); else if (!PROP_MAT[k]) boxUv(p, MAT_TEX[k][1]);
     for (const name of Object.keys(p.attributes)) if (!['position', 'normal', 'color', 'uv'].includes(name)) p.deleteAttribute(name);
     let l = by.get(k); if (!l) { l = []; by.set(k, l); } l.push(p);
   }
@@ -142,8 +145,13 @@ const basket = (): THREE.BufferGeometry => as(basketAt(0, -0.065, 0, 0.23, 0.13,
  * Początek układu = środek ładunku; scena ustawia go nad głową albo w rękach.
  */
 const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
-  apples: () => [basket(), ...[0, 1, 2, 3, 4, 5].map((k) => ball(0.045, Math.cos(k * 1.05) * 0.06, 0.08, Math.sin(k * 1.05) * 0.06, k % 3 ? 0xd0281f : 0xa9c23f)), ball(0.05, 0, 0.11, 0, 0xd0281f)],
-  bread: () => [basket(), ...[-0.06, 0.06].map((x) => as(ball(0.07, x, 0.09, 0, 0xc9843d, 0.8, 0.7, 1.6), 'crust')), as(ball(0.06, 0, 0.14, 0.02, 0xd99a4f, 1.5, 0.7, 0.8), 'crust')],
+  // kosz jabłek z paczki (skan, tools/models/props_import.py): trzy na dnie, cztery wyżej, dwa na wierzchu wystają nad brzeg
+  // (kosz: dno -0,065, brzeg 0,065, szerokość 0,23; jabłko 0,09 szerokości, 0,079 wysokości)
+  apples: () => [basket(), ...([[0.035, -0.06, 0.0], [-0.02, -0.06, 0.03], [-0.02, -0.06, -0.035], [0.055, -0.005, 0.03], [-0.05, -0.005, 0.04], [-0.045, -0.005, -0.045], [0.05, -0.005, -0.04], [0.015, 0.035, 0.005], [-0.03, 0.04, -0.005]] as const)
+    .map(([x, y, z], k) => as(propAt('apple', x, y, z, 0.09, k * 1.7, false), 'apple'))],
+  // kosz chleba z paczki (skany trzech bochenków, tools/models/props_import.py): dwa na dnie, trzeci na nich skosem
+  bread: () => [basket(), as(propAt('bun1', -0.045, -0.058, 0.0, 0.12, 0.4, false), 'bread'), as(propAt('bun2', 0.05, -0.058, 0.01, 0.12, -0.3, false), 'bread'),
+    as(propAt('bun3', 0.0, -0.005, -0.005, 0.12, 1.2, false), 'bread')],
   // snop zboża niesiony w poprzek na rękach (jak w stodole): pęk źdźbeł przewiązany powrósłem, z jednej strony
   // rozchylone ścięte końce, z drugiej opadające kłosy
   wheat: () => {
@@ -226,9 +234,11 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
     ];
   }).concat([-0.1, 0.12].map((z) => as(tint(new THREE.TorusGeometry(0.026, 0.006, 4, 10).translate(0, 0, z).rotateX(-0.28).translate(0, 0.01, 0), 0x6b5a3c), 'cloth'))),
   bow: () => [0, 1].flatMap((k) => [as(tint(new THREE.TorusGeometry(0.18, 0.012, 4, 10, Math.PI * 0.9).rotateX(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.05), 0x7a5232), 'wood'), tint(new THREE.CylinderGeometry(0.004, 0.004, 0.34, 3).rotateZ(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.03), 0xe8e0c8)]),
-  // ruda (waluta, w kodzie 'gold'): kosz pełen ciemnych brył z jasnoniebieskimi, połyskującymi grudkami jak w Gothicu
-  gold: () => [basket(), ...[[-0.05, 0.1, -0.03, 0x3e424e], [0.05, 0.1, 0.03, 0x4a4e5c], [0, 0.14, -0.01, 0x8fd3ff], [0.02, 0.13, 0.05, 0x3a3d48], [-0.03, 0.15, 0.04, 0x7cc4f0]].map(([x, y, z, c]) => { const b = ball(0.045, x as number, y as number, z as number, c as number, 1.1, 0.8, 0.9); return (c as number) > 0x700000 ? b : as(b, 'stone'); })],
-  ale: () => [as(tint(new THREE.CylinderGeometry(0.12, 0.12, 0.26, 10).rotateZ(Math.PI / 2).translate(0, 0.04, 0), 0x8a5a2b), 'wood'), ...[-0.1, 0, 0.1].map((x) => as(tint(new THREE.CylinderGeometry(0.128, 0.128, 0.02, 10).rotateZ(Math.PI / 2).translate(x, 0.04, 0), 0x4a4038), 'iron'))],
+  // ruda (waluta, w kodzie 'gold'): bryły leżą W koszu (dno -0,065, brzeg 0,065), wierzch wystaje; kosz pełen ciemnych brył z jasnoniebieskimi, połyskującymi grudkami jak w Gothicu
+  gold: () => [basket(), ...[[-0.05, -0.02, -0.03, 0x3e424e], [0.05, -0.02, 0.03, 0x4a4e5c], [0, 0.03, -0.01, 0x8fd3ff], [0.03, 0.02, 0.05, 0x3a3d48], [-0.03, 0.045, 0.04, 0x7cc4f0]].map(([x, y, z, c]) => { const b = ball(0.045, x as number, y as number, z as number, c as number, 1.1, 0.8, 0.9); return (c as number) > 0x700000 ? b : as(b, 'stone'); })],
+  // beczka piwa z paczki (Poly Haven wine_barrel_01, pełna: klepki, obręcze, czop) niesiona na leżąco przed sobą,
+  // długość 0,28 jak dawna (środek w y = 0,04)
+  ale: () => [as(propGeometryFlat('barrel', false).translate(0, -0.5, 0).scale(0.28, 0.28, 0.28).rotateZ(Math.PI / 2).rotateX(0.3).translate(0, 0.04, 0), 'barrel')],
   // sztaby żelaza jak w składzie: trapezowe odlewy (szersze u dołu), dwie na spodzie i jedna na wierzchu, w poprzek rąk
   iron: () => {
     // sztaby z kuźni: trapezowe odlewy, stal ciemna z rdzawobrązowymi zaciekami (żelazo bez ochrony szybko rdzewieje)

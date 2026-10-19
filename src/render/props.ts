@@ -13,9 +13,16 @@ import { loadTexture } from './ktx';
  *
  * Układy: ryba — długość 1 wzdłuż z (pysk w +z), grzbiet w +y, środek w (0, 0, 0);
  * pochodnia — układ ręki jak narzędzia z tools.py (dłoń w (0, -0.19, 0), ręka uniesiona o TORCH_ARM);
- * kosz — dno w y = 0, środek podstawy w (0, 0), największa szerokość 1, wysokość `basketH` (ok. 0,93).
+ * kosz — dno w y = 0, środek podstawy w (0, 0), największa szerokość 1, wysokość `basketH` (ok. 0,93);
+ * jabłko, bułki (bun1–3) — tak samo, szerokość 1 (jabłko: wysokość 0,875, bułki ok. 0,53);
+ * beczka — dno w y = 0, wysokość 1, szerokość `barrelW` (0,87); `barrel` pełna (10,8 tys. trójkątów, tylko w rękach),
+ * `barrelLow` prosta bryła z wypalonym wyglądem pełnej (560 trójkątów, stosy w składzie).
  */
-export type PropName = 'fish' | 'torch' | 'basket';
+export type PropName = 'fish' | 'torch' | 'basket' | 'apple' | 'bun1' | 'bun2' | 'bun3' | 'barrel' | 'barrelLow';
+/** Tekstura modelu, gdy kilka modeli dzieli jedną (trzy bułki z jednej paczki) */
+const TEX_OF: Partial<Record<PropName, string>> = { bun1: 'bread', bun2: 'bread', bun3: 'bread' };
+/** Chropowatość i metaliczność powierzchni (połysk skórki jabłka i łusek ryby, matowy chleb i drewno) */
+const SURFACE: Partial<Record<PropName, [number, number]>> = { fish: [0.42, 0.08], basket: [0.9, 0], apple: [0.45, 0], barrel: [0.75, 0.05], barrelLow: [0.75, 0.05] };
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
 
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -64,6 +71,11 @@ export function basketAt(x: number, y: number, z: number, w: number, h: number, 
   return propGeometryFlat('basket', far).scale(w, h / nativeH, w).rotateY(yaw).translate(x, y, z);
 }
 
+/** Model z paczki ustawiony w miejscu: dno w (x, y, z), szerokość `w`, obrót `yaw` — bez indeksu, do sklejania */
+export function propAt(name: PropName, x: number, y: number, z: number, w: number, yaw = 0, far = true): THREE.BufferGeometry {
+  return propGeometryFlat(name, far).scale(w, w, w).rotateY(yaw).translate(x, y, z);
+}
+
 const base = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/cc0/';
 const mats = new Map<PropName, THREE.MeshStandardMaterial>();
 
@@ -71,13 +83,14 @@ const mats = new Map<PropName, THREE.MeshStandardMaterial>();
 export function propMaterial(name: PropName): THREE.MeshStandardMaterial {
   let m = mats.get(name);
   if (m) return m;
-  const fish = name === 'fish';
-  m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: fish ? 0.42 : name === 'basket' ? 0.9 : 0.85, metalness: fish ? 0.08 : 0, side: THREE.DoubleSide });
+  const [roughness, metalness] = SURFACE[name] ?? [0.85, 0];
+  m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness, metalness, side: THREE.DoubleSide });
+  const tex = TEX_OF[name] ?? name;
   if (typeof document !== 'undefined') {
-    const map = loadTexture(`${base()}prop_${name}.jpg`);
+    const map = loadTexture(`${base()}prop_${tex}.jpg`);
     map.colorSpace = THREE.SRGBColorSpace;
     map.anisotropy = 8;
-    const nm = loadTexture(`${base()}prop_${name}_n.jpg`);
+    const nm = loadTexture(`${base()}prop_${tex}_n.jpg`);
     m.map = map;
     m.normalMap = nm;
   }

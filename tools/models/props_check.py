@@ -35,7 +35,7 @@ def unpack(p):
     return pos, nrm, uv, idx
 
 
-def game_mesh(name, key):
+def game_mesh(name, key, tex=None):
     pos, nrm, uv, idx = unpack(D[key])
     me = bpy.data.meshes.new(key)
     me.from_pydata([tuple(G2B @ Vector(p)) for p in pos], [], [tuple(int(i) for i in f) for f in idx])
@@ -46,7 +46,7 @@ def game_mesh(name, key):
     me.normals_split_custom_set([tuple((G2B.to_3x3() @ Vector(nrm[l.vertex_index])).normalized()) for l in me.loops])
     o = bpy.data.objects.new(key, me)
     bpy.context.scene.collection.objects.link(o)
-    me.materials.append(game_mat(name))
+    me.materials.append(game_mat(tex or name))
     return o
 
 
@@ -108,16 +108,35 @@ def scene():
 tiles = []
 TMP = '/tmp/props_check'
 os.makedirs(TMP, exist_ok=True)
-for name, pack_file, M in (('fish', 'BarramundiFish.glb', None), ('torch', 'torch.glb', None),
-                            ('basket', os.path.join('wicker_basket_02', 'wicker_basket_02_1k.gltf'), None)):
+ENTRIES = [  # nazwa, paczka, wersja z bliska, z daleka, tekstura z daleka, część paczki
+    ('fish', 'BarramundiFish.glb', 'fish', 'fishFar', 'fish', None),
+    ('torch', 'torch.glb', 'torch', 'torchFar', 'torch', None),
+    ('basket', os.path.join('wicker_basket_02', 'wicker_basket_02_1k.gltf'), 'basket', 'basketFar', 'basket', None),
+    ('apple', os.path.join('food_apple_01', 'food_apple_01_1k.gltf'), 'apple', 'appleFar', 'apple', None),
+    ('bread', os.path.join('hamburger_buns', 'hamburger_buns_1k.gltf'), 'bun1', 'bun1Far', 'bread', 'hamburger_buns_01'),
+    ('barrel', os.path.join('wine_barrel_01', 'wine_barrel_01_1k.gltf'), 'barrel', 'barrelLow', 'barrelLow', None),
+]
+ONLY = os.environ.get('ONLY', '').split(',') if os.environ.get('ONLY') else None
+for name, pack_file, nk, fk, ftex, part in ENTRIES:
+    if ONLY and name not in ONLY:
+        continue
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene()
     bpy.ops.import_scene.gltf(filepath=os.path.join(SRC, pack_file))
-    for o in [o for o in bpy.context.scene.objects if o.type == 'MESH' and 'lid' in o.name]:
-        bpy.data.objects.remove(o)   # kosz bez wieka, jak w grze
-    orig = [o for o in bpy.context.scene.objects if o.type == 'MESH'][0]
-    near = game_mesh(name, name)
-    far = game_mesh(name, name + 'Far')
+    obs = [o for o in bpy.context.scene.objects if o.type == 'MESH']
+    for o in obs:
+        if (name == 'basket' and 'lid' in o.name) or (part and o.name != part):
+            bpy.data.objects.remove(o)   # kosz bez wieka, z chleba jedna bułka — jak w grze
+    obs = [o for o in bpy.context.scene.objects if o.type == 'MESH']
+    bpy.ops.object.select_all(action='DESELECT')
+    for o in obs:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = obs[0]
+    if len(obs) > 1:
+        bpy.ops.object.join()
+    orig = bpy.context.view_layer.objects.active
+    near = game_mesh(name, nk)
+    far = game_mesh(name, fk, ftex)
     # oryginał obok w tej samej skali i ustawieniu: dopasowany do ramki siatki gry
     oc, orr = frame([orig]); nc, nr = frame([near])
     orig.matrix_world = Matrix.Translation(nc) @ Matrix.Scale(nr / orr, 4) @ Matrix.Translation(-oc) @ orig.matrix_world
