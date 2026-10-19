@@ -6,7 +6,7 @@ import { SEASON_U } from './season';
 
 /**
  * Trawa jak w nowych grach: gęsty dywan kęp wokół miejsca, na które patrzymy, zamiast pojedynczych kępek na płaskiej ziemi.
- * - Siatka kilkudziesięciu tysięcy kęp (instancje, 2 skrzyżowane karty = 4 trójkąty) jedzie za kamerą skokami o oczko,
+ * - Siatka kilkudziesięciu tysięcy kęp (instancje, 3 karty w wachlarzu przodem do kamery = 6 trójkątów) jedzie za kamerą skokami o oczko,
  *   a położenie, obrót i wielkość każdej kępy wynikają z jej pola w świecie, więc trawa stoi w miejscu, gdy kamera jedzie.
  * - Wysokość terenu i gęstość trawy shader czyta z tekstur mapy (wysokości narożników, maska: łąka gęsto, las rzadko,
  *   droga, budynek, woda, wydeptana ziemia — nic). Na brzegu zasięgu kępy maleją do zera, bez twardej granicy.
@@ -60,13 +60,15 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
   mTex.needsUpdate = true;
   let dirty = false;
 
-  // kępa: dwie skrzyżowane karty, normalne w górę (świeci jak ziemia pod nią); uv.z = numer karty (osobne pole atlasu)
+  // kępa: trzy karty w wachlarzu, obracane w shaderze przodem do kamery i pochylone od niej (zdjęcia kęp są robione
+  // z boku, a kamera patrzy z góry — skrzyżowane pionowe karty dawały z góry same cienkie paski „X”);
+  // normalne w górę (świeci jak ziemia pod nią); aCard = numer karty (osobne pole atlasu)
   const card = new THREE.BufferGeometry();
   {
     const P: number[] = [], U: number[] = [], N: number[] = [], I: number[] = [];
-    for (let k = 0; k < 2; k++) {
-      const a = k * Math.PI / 2 + 0.4, cx = Math.cos(a) * 0.5, cz = Math.sin(a) * 0.5, b = P.length / 3;
-      P.push(-cx, 0, -cz, cx, 0, cz, cx, 1, cz, -cx, 1, -cz);
+    for (let k = 0; k < 3; k++) {
+      const b = P.length / 3;
+      P.push(-0.5, 0, 0, 0.5, 0, 0, 0.5, 1, 0, -0.5, 1, 0);
       U.push(0, 0, k, 1, 0, k, 1, 1, k, 0, 1, k);
       for (let i = 0; i < 4; i++) N.push(0, 1, 0);
       I.push(b, b + 1, b + 2, b, b + 2, b + 3);
@@ -125,7 +127,11 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       float keep = step(r3, smoothstep(0.25, 0.9, dens) * 1.1) * step(gHash(cell + 7.7), edge);
       // bok zdjęcia kępy (0,42 m) w polach: kępy w zdjęciach mają prawdziwe proporcje, w grze ok. 2,5 raza większe
       float sz = mix(0.4, 0.55, gHash(cell + 3.7)) * keep * mix(0.6, 1.0, edge) * uFade;
-      float ang = r1 * 6.2831;
+      // kierunek i wysokość kamery nad kępą: karty patrzą w jej stronę, im wyżej kamera, tym mocniej odchylone
+      vec3 gBase = vec3(p.x - uMap.x * 0.5, gHeight(p) - 0.01, p.y - uMap.y * 0.5);
+      vec3 toCam = cameraPosition - gBase;
+      float yaw = atan(toCam.x, toCam.z);
+      float elev = atan(toCam.y, max(length(toCam.xz), 1e-3));
       // pole atlasu tej karty: losowanie z wagami TILE_WEIGHTS; na rzadkiej trawie (skraj lasu, wydeptane) częściej siewki
       float pick = gHash(cell + 23.1 + aCard * 11.7);
       ${(() => {
@@ -138,13 +144,19 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       vec2 tu = vec2(mix(uv.x, 1.0 - uv.x, flip), uv.y);
       vAUv = vec2((mod(tile, 4.0) + clamp(tu.x, 0.004, 0.996)) / 4.0, (1.0 - floor(tile / 4.0) + clamp(tu.y, 0.0, 0.992)) / 2.0);
       vDry = gHash(cell + 77.7);
-      vec3 transformed = vec3(position.x * sz, position.y * sz * mix(0.8, 1.1, r2), position.z * sz);
-      transformed.xz = mat2(cos(ang), -sin(ang), sin(ang), cos(ang)) * transformed.xz;
+      // wachlarz: środkowa karta z przodu, boczne przesunięte w bok i lekko do tyłu, każda trochę inaczej obrócona;
+      // pochylenie od kamery ok. 60% kąta patrzenia — zdjęcie widać prawie w całości, ale kępa dalej stoi, a nie leży
+      float kc = aCard - 1.0;
+      float lean = min(elev * 0.6, 0.85) * mix(0.8, 1.15, gHash(cell + 13.1 + aCard));
+      float hgt = sz * mix(0.8, 1.1, r2);
+      vec3 lp = vec3((position.x + kc * 0.32) * sz, position.y * hgt * cos(lean), -position.y * hgt * sin(lean) - abs(kc) * 0.08 * sz);
+      float cy = yaw + kc * 0.55 + (r1 - 0.5) * 0.5;
+      vec3 transformed = vec3(lp.x * cos(cy) + lp.z * sin(cy), lp.y, -lp.x * sin(cy) + lp.z * cos(cy));
       // wiatr: fale przechodzą przez łąkę, czubki chodzą najmocniej
       float gust = sin(uTime * 1.6 + p.x * 0.35 + p.y * 0.22) * 0.6 + sin(uTime * 3.4 + p.x * 1.7 - p.y * 1.1) * 0.25;
       transformed.x += gust * 0.05 * uv.y * uv.y * sz;
       transformed.z += gust * 0.025 * uv.y * uv.y * sz;
-      transformed += vec3(p.x - uMap.x * 0.5, gHeight(p) - 0.01, p.y - uMap.y * 0.5);
+      transformed += gBase;
       vGUv = uv; vGW = transformed.xz; vGTone = gHash(cell + 9.1);
     `).replace('#include <beginnormal_vertex>', 'vec3 objectNormal = vec3(0.0, 1.0, 0.0);');
     sh.fragmentShader = /* glsl */ `
@@ -173,7 +185,7 @@ export function createGrassField(w: number, h: number, corners: Float32Array, de
       diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;
     `).replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\n  normal = normalize(vNormal);');
   };
-  mat.customProgramCacheKey = () => 'grass-field-v4';
+  mat.customProgramCacheKey = () => 'grass-field-v5';
   mat.userData.season = 'grass';
   cloudShade(mat); // cienie chmur suną też po trawie
   const mesh = new THREE.Mesh(geo, mat);
