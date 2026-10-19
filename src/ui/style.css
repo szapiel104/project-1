@@ -1506,6 +1506,9 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
   background: linear-gradient(90deg, transparent, rgba(176, 38, 28, .55), transparent); text-shadow: 0 0 14px rgba(255, 170, 60, .8), 0 2px 2px #000; animation: xpr-up .6s ease-out; }
 @keyframes xpr-up { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
 .xpr-note { margin: 0; font-size: 15px; line-height: 1.4; color: #e7c9a0; padding: 8px 12px; border-left: 3px solid #b0261c; background: #150f09; }
+.xpr-demo-tag { margin-left: 4px; padding: 3px 8px; font-family: var(--body, inherit); font-size: 12px; letter-spacing: .08em; color: #fff3e6; background: #8e1d14; border: 1px solid #c9473a; }
+.xpr-demo-note { margin-bottom: 10px; font-weight: 600; }
+.xpr.demo .xpr-sum { color: #c9b896; text-shadow: none; }
 .xpr-act { justify-self: start; }
 @media (prefers-reduced-motion: reduce) { .xpr-row, .xpr-total, .xpr-level { transition: none; opacity: 1; transform: none; } .xpr-gem.flash, .xpr-up { animation: none; } }
 /* menu: zawsze jedna kolumna na całą szerokość — tabliczka i napis z wersją nie mogą dołożyć drugiej i przesunąć środka */

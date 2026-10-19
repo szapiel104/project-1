@@ -72,6 +72,13 @@ export function xpReport(host: HTMLElement, o: XpReportOpts): void {
   const up = h('p', 'xpr-up'); up.hidden = true; up.setAttribute('role', 'status');
   const note = h('p', 'xpr-note'); note.hidden = true; note.setAttribute('role', 'status');
   box.append(head, list, total, lvl, up, note);
+  // pokaz w trybie deweloperskim: od razu wyraźnie na górze, że PD nie są zapisywane (inaczej wygląda jak prawdziwa nagroda)
+  if (o.demo) {
+    box.classList.add('demo');
+    head.querySelector('h3')!.append(h('span', 'xpr-demo-tag', tx('pokaz — nie liczy się', 'preview — not counted')));
+    const warn = h('p', 'xpr-note xpr-demo-note', o.demo); warn.setAttribute('role', 'status');
+    head.after(warn);
+  }
   host.append(box);
 
   const paintLevel = (xp: number, ghostFrom?: number): void => {
@@ -120,7 +127,7 @@ export function xpReport(host: HTMLElement, o: XpReportOpts): void {
       return;
     }
     if (r.gained !== o.preview) await countUp(sum, o.preview, r.gained, 400, (n) => `+${n} ${PD}`);
-    if (o.demo) { note.hidden = false; note.textContent = o.demo; }
+    if (o.demo) sum.textContent = `+${r.gained} ${PD} · ${tx('na niby', 'not saved')}`;
     else if (r.gained === 0 || r.gained < o.preview) {
       note.hidden = false;
       note.textContent = r.gained === 0 && o.preview === 0 ? tx('Mecz krótszy niż 3 minuty nie daje doświadczenia.', 'Matches under 3 minutes give no experience.')
