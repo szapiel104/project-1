@@ -1644,3 +1644,12 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .info .unit-btns button:last-child { grid-column: auto; font-size: 15px; }
 .info .rally-row { grid-template-columns: auto auto 1fr; }
 .info .rally-row .hint { grid-column: auto; }
+
+/* skróty do koszar i składu w dolnym pasku: kwadratowe przyciski z obrazkiem budynku */
+.status .people > .jumps { padding: 2px 3px; gap: 2px; }
+.jumps .jump { display: grid; place-items: center; width: 42px; height: 42px; min-height: 0; padding: 0; background: transparent; border: 1px solid transparent; border-radius: 0; box-shadow: none; cursor: pointer; }
+.jumps .jump .store-pic, .jumps .jump .ico svg { width: 34px; height: 34px; margin: 0; object-fit: contain; filter: drop-shadow(0 1px 1px #000); }
+.jumps .jump:hover:not(:disabled) { background: rgba(233, 199, 102, .14); border-color: #e9c766; }
+.jumps .jump:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
+.jumps .jump:disabled { cursor: default; opacity: .38; filter: grayscale(1); }
+@media (prefers-reduced-motion: no-preference) { .jumps .jump .store-pic { transition: transform .12s; } .jumps .jump:hover:not(:disabled) .store-pic { transform: scale(1.1); } }

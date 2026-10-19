@@ -150,6 +150,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onArmyPatrol: () => setPatrolPick(!patrolPick),
   onArmyUnit: (id, shift) => { if (shift) chooseSoldiers([id], false); else unchoose(id); play('select'); },
   onGroup: (n, action) => groupAction(n, action),
+  onJump: (kind) => jumpTo(kind),
   onNewGame: (seedText, preset) => start(seedText || 'project-1', preset),
   // losowanie nazwy mapy to interfejs, nie symulacja, więc Math.random jest tu w porządku
   onRandom: (preset) => start(`${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`, preset),
@@ -881,6 +882,22 @@ function campWatch(b: GameState['buildings'][number]): BuildingInfo['watch'] {
   if (!mine) parts.push(tx('brak kopalni w zasięgu 10 pól — barak stoi pusty', 'no mine within 10 tiles — the lodge stands empty'));
   return { have, want: CAMP_GUARDS, training, note: parts.join(' · '), label: tx('Straż kopalni', 'Mine guard') };
 }
+
+/** Skrót z paska: kamera do własnych koszar albo składu i okno budynku; kolejne kliknięcia idą po kolejnych */
+const jumpAt: Record<string, number> = {};
+function jumpTo(kind: 'barracks' | 'stockpile'): void {
+  const list = game.buildings.filter((b) => b.owner === ME && BUILDINGS[b.type]!.id === kind).sort((a, b) => a.id - b.id);
+  if (!list.length) return;
+  const cur = list.findIndex((b) => b.id === selected);
+  const next = cur >= 0 ? (cur + 1) % list.length : (jumpAt[kind] ?? 0) % list.length;
+  jumpAt[kind] = next;
+  const b = list[next]!;
+  const d = BUILDINGS[b.type]!;
+  renderer.lookAt(b.x + d.w / 2, b.y + d.h / 2, 22);
+  select(b.id);
+  play('select');
+}
+const jumpCount = (kind: string): number => { let n = 0; for (const b of game.buildings) if (b.owner === ME && BUILDINGS[b.type]!.id === kind) n++; return n; };
 
 function select(id: number): void {
   if (id && selectedUnit) { selectedUnit = 0; renderer.setUnitSelection(0); }
@@ -1779,6 +1796,7 @@ function refresh(): void {
   }
   const clock = clockAt(game.tick);
   hud.update({
+    jumps: { barracks: jumpCount('barracks'), stockpile: jumpCount('stockpile') },
     day: clock.day, hour: clock.hour, night: clock.night,
     weather: (() => { const w = weatherOf(game, rainAt(game.tick)); return { season: SEASON_NAME[w.season], temp: w.temp }; })(),
     res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),

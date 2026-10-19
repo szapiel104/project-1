@@ -52,12 +52,16 @@ export interface HudEvents {
   /** Kopalnia: wejście do sztolni (spacer w osobnej lokacji) */
   onEnterMine(building: number): void;
   onSelectGarrison(building: number): void;
+  /** Skrót w dolnym pasku: kamera do koszar albo składu (kolejne kliknięcia przechodzą po kolejnych budynkach) */
+  onJump(kind: 'barracks' | 'stockpile'): void;
 }
 
 export interface HudView {
   /** Rozpiska popularności (składniki z plusem i minusem) i ludności (kto co robi) */
   report?: { popularity: { label: string; value: number; note?: string }[]; people: { label: string; value: number }[]; army: { label: string; value: number }[]; food: { label: string; value: string; note?: string; sign?: 'plus' | 'minus' }[]; foodHint: string };
   soldiers?: number;
+  /** Ile własnych koszar i składów stoi na mapie (skróty w pasku; 0 = przycisk nieczynny) */
+  jumps?: { barracks: number; stockpile: number };
   res: ArrayLike<number>;
   /** Zmiana zapasu każdego surowca w ciągu ostatniej minuty gry */
   trend: ArrayLike<number>;
@@ -425,7 +429,36 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const clockText = el('span', 'clock-text');
   clockText.append(clockVal, weatherVal);
   clockBox.append(clockIcon, clockText);
-  people.append(stockBox, foodBox, popBox, armyBox, idleBox, popularBox);
+  // skróty: obrazek koszar i składu; klik przenosi kamerę do budynku i otwiera jego okno
+  const jumpBox = el('div', 'jumps');
+  jumpBox.setAttribute('role', 'group');
+  jumpBox.setAttribute('aria-label', tx('Skróty do budynków', 'Building shortcuts'));
+  const jumpBtn = (kind: 'barracks' | 'stockpile', fallback: string): HTMLButtonElement => {
+    const b = el('button', 'jump');
+    b.type = 'button';
+    b.append(pic(kind, fallback));
+    b.addEventListener('click', () => events.onJump(kind));
+    jumpBox.append(b);
+    return b;
+  };
+  const jumpBarracks = jumpBtn('barracks', 'barracks');
+  const jumpStock = jumpBtn('stockpile', 'store');
+  let jumpKey = '';
+  const paintJumps = (j: { barracks: number; stockpile: number }): void => {
+    const key = `${j.barracks}:${j.stockpile}`;
+    if (key === jumpKey) return;
+    jumpKey = key;
+    const set = (b: HTMLButtonElement, n: number, name: string, none: string): void => {
+      b.disabled = !n;
+      const label = n ? (n > 1 ? tx(`${name} (${n}): pokaż. Kolejny klik — następny budynek.`, `${name} (${n}): show. Click again for the next one.`) : tx(`${name}: pokaż na mapie`, `${name}: show on the map`)) : none;
+      b.title = label;
+      b.setAttribute('aria-label', label);
+    };
+    set(jumpBarracks, j.barracks, tx('Koszary', 'Barracks'), tx('Nie masz jeszcze koszar', 'You have no barracks yet'));
+    set(jumpStock, j.stockpile, tx('Skład', 'Stockpile'), tx('Nie masz jeszcze składu', 'You have no stockpile yet'));
+  };
+  paintJumps({ barracks: 0, stockpile: 0 });
+  people.append(jumpBox, stockBox, foodBox, popBox, armyBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');
   const stepper = (label: string, onStep: (dir: number) => void): HTMLElement => {
@@ -961,6 +994,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     update(v) {
       if (v.report) { lastReport = v.report; if (reportKind) drawReport(); }
       setText(armyVal, String(v.soldiers ?? 0));
+      if (v.jumps) paintJumps(v.jumps);
       resVals.forEach((node, i) => setText(node, short(v.res[i] ?? 0)));
       const fs = FOOD_RES.reduce((a, id) => a + (v.res[RESOURCES.indexOf(id)] ?? 0), 0);
       setText(foodSumVal, short(fs));
