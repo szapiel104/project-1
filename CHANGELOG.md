@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.30.26 — nowe ustawienia grafiki i porządek w zakładce Grafika (2026-10-19)
+
+- Wygładzanie krawędzi naprawdę działa: wcześniej obraz szedł przez składanie efektów i zwykłe wygładzanie przeglądarki się wyłączało. Do wyboru FXAA, SMAA, MSAA 2×/4×/8× (domyślnie MSAA 4×)
+- Przy MSAA liście, igły, trawa i włosy dostają miękkie brzegi (alpha to coverage) zamiast poszarpanych schodków
+- Odbicia otoczenia: ta sama mapa otoczenia co w podglądzie modeli — modele nie są płaskie po stronie cienia; słabnie nocą, w deszczu i w sztolni
+- Filtrowanie tekstur 1×/4×/8×/16× dla wszystkich tekstur, także terenu (domyślnie 16×)
+- Wyostrzenie obrazu (lekkie / mocne) — do FXAA i SMAA
+- Zakładka Grafika w sekcjach: Poziom grafiki (automat + gotowe poziomy Niska/Średnia/Wysoka/Ultra), Ostrość i krawędzie, Światło i cienie, Świat, Płynność; przy każdej sekcji krótko, co kosztuje dużo, co mało, a co jest zbędne
 ## 0.30.25 — „Jak grać” na cały ekran, pasek w grze w jednej linii (2026-10-19)
 
 - „Jak grać” jako duża księga na prawie cały ekran: spis po lewej (Nauka gry 1–10, Encyklopedia: postacie i budynki), treść szeroko po prawej — duży tytuł rozdziału, większy tekst, rady w wyróżnionych ramkach, czytelne tabele, w encyklopedii duży podgląd modelu

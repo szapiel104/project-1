@@ -64,6 +64,9 @@ import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { N8AOPass } from 'n8ao';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
+import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
+import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
+import { MaterialQuality, makeEnvironment, msaaSamples, sharpenPass, type AaMode } from './postfx';
 import { model } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 /** Promień (w polach mapy), w którym spacerem widać wnętrza budynków przez drzwi i okna */
@@ -294,6 +297,16 @@ export class GameRenderer {
   /** Obraz przechodzi przez cieniowanie zagłębień (AO): ciemniejsze kąty, styki ścian z ziemią, szczeliny */
   private composer!: EffectComposer;
   private ao!: N8AOPass;
+  private fxaa!: FXAAPass;
+  private smaa!: SMAAPass;
+  private sharpen!: ShaderPass;
+  private matQ!: MaterialQuality;
+  private envTex!: THREE.Texture;
+  /** Odbicia otoczenia (mapa otoczenia jak w podglądzie modeli) */
+  private envOn = true;
+  /** Bieżące MSAA (próbki × 2 + AO), -1 = jeszcze nie ustawione */
+  private msaa = -1;
+  private matSweep = 0;
   /** Zwykłe renderowanie, gdy cieniowanie zagłębień jest wyłączone w ustawieniach */
   private plain!: RenderPass;
   private view: TerrainView | null = null;
@@ -955,6 +968,18 @@ export class GameRenderer {
         }`,
     });
     this.composer.addPass(this.grade);
+    // wygładzanie krawędzi w obrazie (FXAA / SMAA) i wyostrzenie — na samym końcu, na gotowym obrazie
+    this.fxaa = new FXAAPass();
+    this.fxaa.enabled = false;
+    this.composer.addPass(this.fxaa);
+    this.smaa = new SMAAPass();
+    this.smaa.enabled = false;
+    this.composer.addPass(this.smaa);
+    this.sharpen = sharpenPass();
+    this.sharpen.enabled = false;
+    this.composer.addPass(this.sharpen);
+    this.matQ = new MaterialQuality(this.renderer.capabilities.getMaxAnisotropy());
+    this.envTex = makeEnvironment(this.renderer);
     canvas.addEventListener('pointermove', (e) => {
       if (e.pointerType !== 'touch') this.hover(this.pick(e));
       if (this.painting && e.buttons === 1) { const tile = this.pick(e); if (tile) this.onPaint(tile); }
@@ -1353,8 +1378,8 @@ export class GameRenderer {
   }
 
   /** Ustawienia grafiki i kamery z menu */
-  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; soft?: boolean; dynRes?: boolean; label?: string }): void {
-    if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false };
+  setGraphics(o: { ao: string; shadows: number; scale: number; dayNight: boolean; camSpeed: number; edgeScroll: boolean; grass?: number; detail?: number; soft?: boolean; dynRes?: boolean; label?: string; aa?: AaMode; aniso?: number; reflections?: boolean; sharpen?: number }): void {
+    if (TEST) o = { ...o, ao: 'off', shadows: 0, scale: 0.5, edgeScroll: false, aa: 'off', reflections: false, sharpen: 0 };
     this.quality = `${o.label ? o.label + ': ' : ''}AO ${o.ao}, cienie ${o.shadows || 'wył.'}, skala ${o.scale}, trawa ${(o.grass ?? 1) > 0 ? Math.round((o.grass ?? 1) * 100) + '%' : 'wył.'}`;
     this.grassReach = o.grass ?? 1;
     // zasięg szczegółów: z automatu jakości, a przy ręcznych ustawieniach z trawy (bez trawy = bliżej)
@@ -1385,6 +1410,7 @@ export class GameRenderer {
     this.ratioDyn = 1;
     this.dynRes = !!o.dynRes;
     this.applyRatio();
+    this.imageQuality(o.aa ?? 'msaa4', o.aniso ?? 16, o.reflections ?? true, o.sharpen ?? 0);
     this.alwaysDay = !o.dayNight;
     this.cam.speed = o.camSpeed;
     this.cam.edgeScroll = o.edgeScroll;
@@ -1431,6 +1457,7 @@ export class GameRenderer {
       // wspólne rysowanie budynków to inny wariant shaderów (instancjonowanie): też kompilujemy go z góry
       this.syncBatches(batchProbe);
     }
+    this.matQ.sweep(this.scene);
     this.renderer.compile(this.scene, this.cam.camera);
     this.composer.render();
     if (probe) { this.scene.remove(probe); this.syncBatches(); }
@@ -2265,7 +2292,7 @@ export class GameRenderer {
     if (this.state) this.setDaylight(this.menuNight ? MENU_HOUR : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     if (this.inMine) {
       // w sztolni: bez słońca i nieba, ciemna mgła, światło tylko z latarń
-      this.sun.intensity = 0; this.hemi.intensity = 0.1;
+      this.sun.intensity = 0; this.hemi.intensity = 0.1; this.scene.environmentIntensity = this.envOn ? 0.03 : 0;
       const fog = this.scene.fog as THREE.Fog;
       fog.color.setHex(0x0b0806); fog.near = 3; fog.far = 20;
       (this.scene.background as THREE.Color).setHex(0x0b0806);
@@ -2303,6 +2330,8 @@ export class GameRenderer {
     // okno wydajności otwarte: co 15. klatka mierzona przejście po przejściu (ta jedna klatka jest wolniejsza, więc jej
     // czasu nie wliczamy do zwykłego „karta graficzna”)
     if (GL_DEBUG) this.tagPasses();
+    // nowe modele w scenie (budynki, drzewa, ludzie) dostają filtrowanie tekstur i wygładzanie liści z ustawień
+    if (++this.matSweep % 90 === 0) this.matQ.sweep(this.scene);
     if (this.gpuProfile && this.profN++ % 15 === 0) { this.profiledRender(); return; }
     const tg = performance.now();
     this.composer.render();
@@ -2334,7 +2363,8 @@ export class GameRenderer {
   private gpuLast: Record<string, string | number> = {};
   private passName(p: object): string {
     return p === this.ao ? 'AO' : p === this.plain ? 'obraz' : p === this.bloom ? 'poświata' : p === this.sanitize ? 'czyszczenie obrazu'
-      : p === this.grade ? 'barwy' : p instanceof OutputPass ? 'wyjście' : 'inne';
+      : p === this.grade ? 'barwy' : p === this.fxaa ? 'FXAA' : p === this.smaa ? 'SMAA' : p === this.sharpen ? 'wyostrzenie'
+      : p instanceof OutputPass ? 'wyjście' : 'inne';
   }
   /**
    * Jedna klatka mierzona dokładnie: przed i po każdym kawałku czekamy, aż karta skończy (gl.finish), więc czas kawałka
@@ -3807,6 +3837,9 @@ export class GameRenderer {
     this.sun.color.setHex(a.sun).lerp(tmpColor.setHex(b.sun), k);
     this.sun.intensity = a.power + (b.power - a.power) * k;
     this.hemi.intensity = a.sky + (b.sky - a.sky) * k;
+    // z mapą otoczenia część światła nieba przychodzi z niej (z odbiciami), więc samo niebo trochę słabsze — proporcje jak w podglądzie modeli
+    this.scene.environmentIntensity = this.envOn ? 0.45 * (this.hemi.intensity / 1.15) * (1 - this.rain * 0.3) : 0;
+    if (this.envOn) this.hemi.intensity *= 0.78;
     this.sun.intensity *= 1 - this.rain * 0.55; // w deszczu słońce przygasa
     const bg = this.scene.background as THREE.Color;
     bg.setHex(a.haze).lerp(tmpColor.setHex(b.haze), k);
@@ -5850,9 +5883,46 @@ export class GameRenderer {
     if (!w || !h) return;
     this.renderer.setSize(w, h, false);
     this.composer?.setSize(w, h);
+    this.sharpenTexel();
     this.cam.resize(w, h);
     this.aoRes();
   }
+  /** Wyostrzenie liczy sąsiednie piksele, więc musi znać wielkość obrazu */
+  private sharpenTexel(): void {
+    if (!this.sharpen) return;
+    const r = this.renderer.getPixelRatio();
+    (this.sharpen.uniforms.texel!.value as THREE.Vector2).set(1 / Math.max(1, this.canvas.clientWidth * r), 1 / Math.max(1, this.canvas.clientHeight * r));
+  }
+
+  /**
+   * Jakość obrazu z ustawień: wygładzanie krawędzi, filtrowanie tekstur, odbicia otoczenia i wyostrzenie.
+   * MSAA trzeba włączyć w buforach, do których rysuje się scena: w buforze AO (n8ao rysuje tam scenę sam), a bez AO
+   * w buforach składania obrazu — samo antialias: true przy tworzeniu renderera nic nie daje, gdy obraz idzie przez composer.
+   */
+  private imageQuality(aa: AaMode, aniso: number, reflections: boolean, sharpen: number): void {
+    const max = (this.renderer.capabilities as unknown as { maxSamples?: number }).maxSamples ?? 4;
+    const samples = Math.min(msaaSamples(aa), max);
+    const aoOn = this.ao.enabled;
+    const key = samples * 2 + (aoOn ? 1 : 0);
+    if (key !== this.msaa) {
+      this.msaa = key;
+      // z AO scena rysuje się tylko do bufora n8ao; bufory składania dostają MSAA tylko bez AO (inaczej to zbędny koszt)
+      const want = (t: THREE.WebGLRenderTarget, n: number): void => { if (t.samples !== n) { t.samples = n; t.dispose(); } }; // nowy bufor powstanie przy następnej klatce
+      want(this.ao.beautyRenderTarget, samples);
+      want(this.composer.renderTarget1, aoOn ? 0 : samples);
+      want(this.composer.renderTarget2, aoOn ? 0 : samples);
+    }
+    this.fxaa.enabled = aa === 'fxaa';
+    this.smaa.enabled = aa === 'smaa';
+    this.sharpen.enabled = sharpen > 0;
+    this.sharpen.uniforms.amount!.value = sharpen;
+    this.sharpenTexel();
+    this.envOn = reflections;
+    this.scene.environment = reflections ? this.envTex : null;
+    this.matQ.set(aniso, samples > 0);
+    this.matQ.sweep(this.scene);
+  }
+
   private aoMode = 'medium';
   /**
    * Cienie w zakamarkach (AO) liczone w połowie rozdzielczości i rozciągane z poszanowaniem krawędzi (depthAwareUpsampling):

@@ -1612,3 +1612,9 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .help-toc-n { width: 26px; height: 26px; font-size: 13px; }
 .help-toc-group { margin: 8px 0 4px; }
 .help-pane .gallery-list { height: auto; max-height: calc(100vh / var(--ui, 1) - 250px); }
+/* ustawienia grafiki: sekcje z nagłówkiem w tym samym kroju co reszta menu, gotowe poziomy w jednym rzędzie */
+.set-group { margin: 18px 0 0; padding-bottom: 6px; border-bottom: 2px solid var(--gold-dark); font-family: var(--text); font-size: 18px; font-weight: 700; color: var(--gold); letter-spacing: 0; text-transform: none; }
+.menu-pane > .set-group:first-child { margin-top: 0; }
+.set-group-hint { margin: 0; font-size: 15px; line-height: 1.45; }
+.set-presets { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.set-presets .set-preset { min-height: 44px; margin: 0; padding: 0 8px; min-width: 0; }

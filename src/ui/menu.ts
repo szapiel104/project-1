@@ -6,6 +6,8 @@ import { createGallery, GALLERY, type GalleryEntry } from '../render/gallery';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { t, tx, lang, setLang, LANGS } from '../i18n';
 import { HELP_CHAPTERS, type HelpBlock } from './helpText';
+import type { AaMode } from '../render/postfx';
+import { TIERS } from '../render/autoquality';
 
 /** Ustawienia zapamiętywane w przeglądarce */
 export interface Settings {
@@ -50,9 +52,17 @@ export interface Settings {
   /** Deszcz i mgła */
   rain?: boolean;
   fog?: boolean;
+  /** Wygładzanie krawędzi (domyślnie MSAA 4×) */
+  aa?: AaMode;
+  /** Filtrowanie anizotropowe tekstur: 1 (wyłączone), 4, 8, 16 */
+  aniso?: number;
+  /** Odbicia otoczenia (mapa otoczenia na materiałach) */
+  reflections?: boolean;
+  /** Wyostrzenie obrazu: 0 wyłączone, 0.3 lekkie, 0.6 mocne */
+  sharpen?: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true, grass: 1 };
+export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true, grass: 1, aa: 'msaa4', aniso: 16, reflections: true, sharpen: 0 };
 
 export interface MenuEvents {
   onContinue(): void;
@@ -504,23 +514,45 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           el('p', 'hint', tx('Ptaki, odgłosy wsi, kury, róg i grzmot: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0. Świerszcze i dzwon: Freesound (rsn267, beambot, Nox_Sound), CC0. Muzyka: RandomMind, nihilocrat, Tozan (OpenGameArt, CC0). Efekty: Kenney (CC0/MIT).', 'Birds, village sounds, hens, horn and thunder: 0 A.D. © Wildfire Games (wildfiregames.com), CC BY-SA 3.0 licence. Crickets and bell: Freesound (rsn267, beambot, Nox_Sound), CC0. Music: RandomMind, nihilocrat, Tozan (OpenGameArt, CC0). Effects: Kenney (CC0/MIT).')),
         ];
       }],
-      [t('menu.graphics'), () => [
-        check(tx('Automatyczna jakość (gra sama dobiera grafikę do komputera)', 'Automatic quality (the game picks graphics to suit your computer)'), settings.auto, (v) => { settings.auto = v; save(); }),
-        // ręczna zmiana wyłącza automat: gracz wie lepiej
-        choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; manual(); }),
-        choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
-        button(tx('Ustaw wszystko na Ultra', 'Set everything to Ultra'), () => { Object.assign(settings, { shadows: 4096, ao: 'high', grass: 1.35, scale: 2, soft: true }); manual(); showSettings(); }, 'menu-btn set-ultra'),
-        choice(tx('Trawa', 'Grass'), settings.grass, [[0, t('set.off')], [0.6, tx('Bliżej kamery', 'Near the camera')], [1, tx('Pełna', 'Full')], [1.35, tx('Daleko (Ultra)', 'Far (Ultra)')]], (v) => { settings.grass = v; manual(); }),
-        check(tx('Dynamiczna rozdzielczość (mniejszy obraz, gdy karta nie wyrabia; może mignąć przy zmianie)', 'Dynamic resolution (smaller image when the graphics card can’t keep up; may flicker when it changes)'), settings.dynRes ?? false, (v) => { settings.dynRes = v; save(); }),
-        check(tx('Miękkie cienie (po ponownym uruchomieniu gry)', 'Soft shadows (after restarting the game)'), settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
-        choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
-        check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
-        choice(tx('Limit klatek', 'Frame limit'), settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, tx('Bez limitu', 'Unlimited')]], (v) => { settings.fpsLimit = v; save(); }),
-        slider(tx('Jasność', 'Brightness'), (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
-        check(tx('Deszcz', 'Rain'), settings.rain ?? true, (v) => { settings.rain = v; save(); }),
-        check(tx('Mgła', 'Fog'), settings.fog ?? true, (v) => { settings.fog = v; save(); }),
-        el('p', 'hint', t('set.graphicsHint')),
-      ]],
+      [t('menu.graphics'), () => {
+        // sekcje: gotowe poziomy, ostrość obrazu, światło, świat, płynność — przy każdej krótko, co kosztuje, a co nie
+        const group = (title: string, hint: string): HTMLElement[] => [el('h3', 'set-group', title), el('p', 'hint set-group-hint', hint)];
+        const preset = (label: string, tier: number): HTMLButtonElement => button(label, () => {
+          const q = TIERS[tier]!;
+          Object.assign(settings, { scale: q.scale, shadows: q.shadows, ao: q.ao, grass: q.grass, soft: !!q.soft, aa: q.aa, reflections: q.reflections, aniso: 16, sharpen: q.aa === 'fxaa' || q.aa === 'smaa' ? 0.3 : 0 });
+          manual(); showSettings();
+        }, 'menu-btn set-preset');
+        const presets = el('div', 'set-presets');
+        presets.append(preset(tx('Niska', 'Low'), 1), preset(tx('Średnia', 'Medium'), 2), preset(tx('Wysoka', 'High'), 4), preset('Ultra', TIERS.length - 1));
+        return [
+          ...group(tx('Poziom grafiki', 'Graphics level'), tx('Automat sam dobiera jakość do komputera. Gotowy poziom ustawia wszystko poniżej naraz — potem możesz poprawić pojedyncze rzeczy.', 'Auto picks quality to suit your computer. A preset sets everything below at once — you can then fine-tune single options.')),
+          check(tx('Automatyczna jakość', 'Automatic quality'), settings.auto, (v) => { settings.auto = v; save(); }),
+          presets,
+
+          ...group(tx('Ostrość i krawędzie', 'Sharpness and edges'), tx('Tu jest największa różnica w wyglądzie modeli. Filtrowanie 16× prawie nic nie kosztuje — zostaw włączone. MSAA 4× to najlepszy wybór; 8× tylko na mocną kartę. FXAA i SMAA są lżejsze, ale rozmywają — dopiero z nimi ma sens wyostrzenie. Przy MSAA wyostrzenie zwykle zbędne.', 'This is where models gain the most. 16× filtering costs next to nothing — leave it on. MSAA 4× is the best pick; 8× only on a strong card. FXAA and SMAA are lighter but blur — sharpening only makes sense with them. With MSAA it is usually unnecessary.')),
+          choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
+          choice(tx('Wygładzanie krawędzi', 'Anti-aliasing'), settings.aa ?? 'msaa4', [['off', t('set.off')], ['fxaa', 'FXAA'], ['smaa', 'SMAA'], ['msaa2', 'MSAA 2×'], ['msaa4', 'MSAA 4×'], ['msaa8', 'MSAA 8×']], (v) => { settings.aa = v; manual(); }),
+          choice(tx('Filtrowanie tekstur', 'Texture filtering'), settings.aniso ?? 16, [[1, tx('Zwykłe', 'Basic')], [4, '4×'], [8, '8×'], [16, '16×']], (v) => { settings.aniso = v; manual(); }),
+          choice(tx('Wyostrzenie obrazu', 'Image sharpening'), settings.sharpen ?? 0, [[0, t('set.off')], [0.3, tx('Lekkie', 'Light')], [0.6, tx('Mocne', 'Strong')]], (v) => { settings.sharpen = v; manual(); }),
+
+          ...group(tx('Światło i cienie', 'Light and shadows'), tx('Odbicia otoczenia sprawiają, że modele nie są płaskie po stronie cienia — tanie, warto mieć. Cienie i cieniowanie zagłębień kosztują najwięcej: gdy gra przycina, zmniejszaj najpierw je.', 'Environment reflections stop models looking flat on the shaded side — cheap and worth having. Shadows and ambient occlusion cost the most: if the game stutters, lower these first.')),
+          check(tx('Odbicia otoczenia', 'Environment reflections'), settings.reflections ?? true, (v) => { settings.reflections = v; manual(); }),
+          choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; manual(); }),
+          check(tx('Miękkie cienie (po ponownym uruchomieniu gry)', 'Soft shadows (after restarting the game)'), settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
+          choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
+          slider(tx('Jasność', 'Brightness'), (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
+
+          ...group(tx('Świat', 'World'), tx('Trawa daleko (Ultra) jest ciężka na słabszych kartach. Pora dnia, deszcz i mgła to klimat gry, a nie wydajność — wyłączaj je tylko, gdy przeszkadzają.', 'Far grass (Ultra) is heavy on weaker cards. Time of day, rain and fog are atmosphere, not performance — switch them off only if they bother you.')),
+          choice(tx('Trawa', 'Grass'), settings.grass, [[0, t('set.off')], [0.6, tx('Bliżej kamery', 'Near the camera')], [1, tx('Pełna', 'Full')], [1.35, tx('Daleko (Ultra)', 'Far (Ultra)')]], (v) => { settings.grass = v; manual(); }),
+          check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
+          check(tx('Deszcz', 'Rain'), settings.rain ?? true, (v) => { settings.rain = v; save(); }),
+          check(tx('Mgła', 'Fog'), settings.fog ?? true, (v) => { settings.fog = v; save(); }),
+
+          ...group(tx('Płynność', 'Smoothness'), tx('Na mocnym komputerze nic tu nie trzeba. Limit 60 klatek chłodzi kartę i laptop; dynamiczna rozdzielczość ratuje płynność na słabszym sprzęcie, ale może mignąć przy zmianie.', 'On a strong computer nothing here is needed. A 60 fps limit keeps the card and laptop cooler; dynamic resolution saves smoothness on weaker hardware but may flicker when it changes.')),
+          choice(tx('Limit klatek', 'Frame limit'), settings.fpsLimit ?? 0, [[30, '30'], [60, '60'], [0, tx('Bez limitu', 'Unlimited')]], (v) => { settings.fpsLimit = v; save(); }),
+          check(tx('Dynamiczna rozdzielczość', 'Dynamic resolution'), settings.dynRes ?? false, (v) => { settings.dynRes = v; save(); }),
+        ];
+      }],
       [tx('Interfejs', 'Interface'), () => [
         // etykieta w obu językach, żeby każdy znalazł przełącznik, nawet gdy nie zna obecnego języka
         choice('Język / Language', lang(), LANGS, (v) => setLang(v)),
