@@ -744,6 +744,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     b.type = 'button';
     b.setAttribute('aria-expanded', 'false');
     b.setAttribute('aria-controls', cards.id);
+    b.dataset.cat = id;
     b.addEventListener('click', () => showCategory(category === id ? null : id));
     catButtons.set(id, b);
     cats.append(b);
@@ -753,6 +754,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const b = el('button', 'card');
     b.type = 'button';
     b.title = t(`d.${def.id}`);
+    b.dataset.build = def.id;
     b.setAttribute('aria-pressed', 'false');
     const src = thumbs.get(def.id);
     if (src) {

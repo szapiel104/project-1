@@ -1,11 +1,21 @@
 # Dziennik zmian
 
+<<<<<<< HEAD
 ## 0.31.0 — namiot polowy z medykiem (2026-10-19)
 
 - Nowy budynek w zakładce Wojsko: namiot polowy (3×3, 30 drewna i 10 rudy). Pracuje w nim medyk, a ranni żołnierze idą do najbliższego miejsca leczenia — twierdzy albo namiotu z medykiem — zamiast biec zawsze do zamku
 - W namiocie rany goją się dwa razy szybciej niż pod twierdzą; namiot wyłączony albo bez medyka nikogo nie leczy, a ranny, który stoi z dala od leczenia (np. namiot zburzono), sam idzie do następnego najbliższego
 - Model z Blendera: płócienny namiot na dwóch masztach z proporcem, podwinięte wejście, w środku posłania ze słomy, stół medyka z misą, bandażami i ziołami, skrzynia; przed namiotem ognisko z kociołkiem, beczka z wodą i sznur z bandażami
 - Nazwa, opis i odzywki medyka po polsku i angielsku
+=======
+## 0.30.24 — „Plan na start”: przewodnik w grze (2026-10-19)
+
+- Karta zadania po prawej (jak lista zadań w Cities: Skylines): jeden krok naraz — co zrobić, po co i gdzie, licznik postępu („Chata 1 / 3”) liczony ze stanu gry, kropki 9 kroków; po wykonaniu kroku dźwięk i od razu następny
+- Kroki: drwal → jedzenie (sad albo rybak) → 3 chaty → spichlerz → kopalnia pod górami → farma, młyn, piekarnia → warsztat włóczniarza, zbrojownia, koszary → 5 żołnierzy → palisada z bramą
+- Złota pulsująca obwódka na tym, co trzeba kliknąć: najpierw kategoria na pasku budowy, potem karta budynku; przy stawianiu podpowiedź „kliknij miejsce na mapie”
+- Kartę można zwinąć do paska z kropkami (zapamiętane); po ostatnim kroku „Zamknij plan”. Tylko w zwykłej grze solo (bez trybu deweloperskiego, testowego i gry przez sieć); do sprawdzania wyglądu: `?test=1&plan=1`
+
+>>>>>>> c6c7082 („Plan na start”: przewodnik w grze — karta zadania, postęp ze stanu gry, złota obwódka na przycisku do kliknięcia)
 ## 0.30.23 — menu na środku, „Wygraj mecz” w panelu dewelopera (2026-10-19)
 
 - Menu ma na sztywno jedną kolumnę: tytuł, pasek i okna są zawsze na środku ekranu, także z tabliczką gracza w lewym dolnym rogu

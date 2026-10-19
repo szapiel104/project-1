@@ -35,6 +35,7 @@ import { Lockstep, TURN } from './net/lockstep';
 import { awardMatch, deleteRoom, me as netMe, progress, onAccount, saveResult, setStatus } from './net/supa';
 import { matchXp, MODE_MULT, xpParts, type MatchMode } from './data/progress';
 import { xpReport } from './ui/xpReport';
+import { createTutorial } from './ui/tutorial';
 import type { OnlineStart } from './ui/online';
 import { createGameChat } from './ui/chat';
 import { createPings, PINGS } from './ui/pings';
@@ -2239,6 +2240,22 @@ function armyBarUpdate(): void {
   hud.setArmyBar({ show: mine.length > 0 || groups.size > 0, groups: gl, active, selected: sel.map((x) => ({ id: x.id, kind: UNITS[x.kind]!.id, hp: x.hp, max: UNITS[x.kind]!.hp, name: t(UNITS[x.kind]!.name) })) });
 }
 setInterval(() => { if (game) armyBarUpdate(); }, 250);
+/** ?test=1&plan=1: przewodnik widoczny także w trybie testowym (do sprawdzania wyglądu) */
+const TUT_TEST = new URLSearchParams(location.search).has('plan');
+// „Plan na start”: przewodnik w grze (tylko zwykła gra solo — bez trybu deweloperskiego, testowego i gry przez sieć)
+const tutorial = createTutorial(() => {
+  if (!game) return null;
+  const counts = new Map<string, number>();
+  for (const b of game.buildings) if (b.owner === ME) { const id = BUILDINGS[b.type]!.id; counts.set(id, (counts.get(id) ?? 0) + 1); }
+  let soldiers = 0;
+  for (const u of game.soldiers) if (u.owner === ME) soldiers++;
+  return { count: (id) => counts.get(id) ?? 0, soldiers: () => soldiers };
+}, () => play('build'));
+setInterval(() => {
+  const p = game?.players[ME];
+  tutorial.show(!!game && !!p && !p.dev && (!SANDBOX || TUT_TEST) && !netGame && !endShown && !document.body.classList.contains('menu-open') && !document.body.classList.contains('walking'));
+  tutorial.update();
+}, 400);
 
 window.addEventListener('keydown', (e) => {
   if (!e.code.startsWith('Digit') || e.ctrlKey || e.metaKey || e.altKey || renderer.walking || menu.isOpen()) return;
