@@ -4,6 +4,9 @@ import { propGeometry, propMaterial } from './props';
 import { TEST } from '../testmode';
 import { cat } from './cat';
 
+/** Kwiaty na łąkach — na razie wyłączone (19.10.2026); `true` przywraca stare kwiatki z models.flower() */
+const FLOWERS = false;
+
 /** Daleki obrazek drzewa liściastego: jesienią rudzieje, zimą szarzeje (bez zwijania korony — obrazek ma pień) */
 const leafFar = <M extends THREE.Material>(m: M): M => { m.userData.season = 'leafFar'; return m; };
 import { createNoise2D } from 'simplex-noise';
@@ -853,7 +856,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
         const lush = (hash2(x >> 3, y >> 3, map.seed ^ 0x6a5d) & 255) / 255;
         // trawę rysuje gęsty dywan (grass.ts); tu tylko pojedyncze wyższe kępy dla urozmaicenia
         if (TEST && ((r >>> 7) & 3) === 0) put(tufts, x, y, 2, 1, 0.95);
-        if ((r >>> 13) % 15 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
+        // kwiaty wyłączone na razie (19.10.2026, prośba Michała) — wrócą z gotowych modeli; włącza się je z powrotem tą flagą
+        if (FLOWERS && (r >>> 13) % 15 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
         if ((r >>> 16) % 23 === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
         if ((r >>> 19) % 31 === 0) put(pebbles, x, y, 5, 0.35 + ((r >>> 24) & 7) / 20, 0.8);
         if ((r >>> 21) % 173 === 0) put(pebbles, x, y, 10, 1.5, 0.4);
