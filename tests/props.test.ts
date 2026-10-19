@@ -18,7 +18,7 @@ describe('modele z paczek: ryba i pochodnia', () => {
   });
 
   it('wersje z daleka są lżejsze, ale w tym samym miejscu', () => {
-    for (const n of ['fish', 'torch'] as const) {
+    for (const n of ['fish', 'torch', 'basket'] as const) {
       const near = propGeometry(n), far = propGeometry(n, true);
       expect(tris(far)).toBeLessThan(tris(near));
       const a = box(near), b = box(far);
@@ -34,5 +34,14 @@ describe('modele z paczek: ryba i pochodnia', () => {
     const tipY = -0.19 + Math.cos(0.55) * 0.34;
     expect(box(g).max.y).toBeGreaterThan(tipY - 0.06);
     expect(box(g).max.y).toBeLessThan(tipY + 0.02);
+  });
+
+  it('kosz: lekka powłoka (splot w teksturze), dno w zerze, szerokość 1', () => {
+    const near = propGeometry('basket'), far = propGeometry('basket', true);
+    expect(tris(near)).toBeLessThan(2000);
+    expect(tris(far)).toBeLessThan(tris(near));
+    const b = box(near);
+    expect(b.min.y).toBeCloseTo(0, 2);
+    expect(Math.max(b.max.x - b.min.x, b.max.z - b.min.z)).toBeCloseTo(1, 2);
   });
 });

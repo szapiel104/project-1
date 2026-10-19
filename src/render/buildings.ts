@@ -1,6 +1,6 @@
 import { named } from './named';
 import * as THREE from 'three';
-import { propGeometryFlat, propMaterial, type PropName } from './props';
+import { basketAt, propGeometryFlat, propMaterial, type PropName } from './props';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -212,16 +212,12 @@ const merge = (parts: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeom
  * Jak wygląda jedna porcja surowca w składzie. Każda ma własny kształt i teksturę:
  * deski z usłojeniem, ciosany kamień, snopki zboża ze związanymi kłosami, worki z płótna, sztaby, kosze.
  */
-/** Kosz z wikliny: dno, ścianki zwężające się w dół, obręcz u góry i ciemniejsze plecione pasy */
-function basket(light: number, dark: number): THREE.BufferGeometry[] {
-  return [
-    paint(part(new THREE.CylinderGeometry(0.2, 0.15, 0.14, 14, 1, true), 0, -0.07, 0), light),
-    paint(part(new THREE.CylinderGeometry(0.15, 0.15, 0.01, 14), 0, -0.135, 0), dark),
-    paint(new THREE.TorusGeometry(0.2, 0.014, 5, 20).rotateX(Math.PI / 2).translate(0, 0.0, 0), dark),
-    ...[-0.1, -0.05].map((y) => paint(new THREE.TorusGeometry(0.18 + (y + 0.1) * 0.4, 0.008, 4, 20).rotateX(Math.PI / 2).translate(0, y, 0), dark)),
-    paint(part(new THREE.CylinderGeometry(0.185, 0.185, 0.02, 14), 0, -0.02, 0), 0x5a3e22), // ciemne wnętrze pod owocami
-  ];
-}
+/**
+ * Kosz z wikliny w składzie: kosz z paczki (src/render/props.ts, Poly Haven wicker_basket_02) w miejscu dawnego
+ * kosza z brył — dno w y = -0,14, szerokość 0,4, brzeg w y = 0 (na tej wysokości leżą bochny i jabłka).
+ * Zawartość i kosz to dwie grupy jednej bryły: pierwsza z materiałem stosu, druga z teksturą kosza (`withProp`).
+ */
+const inBasket = (contents: THREE.BufferGeometry[]): THREE.BufferGeometry => mergeGeometries([merge(contents), basketAt(0, -0.14, 0, 0.4, 0.14, 0.3)], true)!;
 /** `withProp`: druga grupa bryły to gotowy model z paczki (src/render/props.ts) z własną teksturą — np. ryby w skrzynce */
 const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean; withProp?: PropName }> = {
   wood: {
@@ -285,8 +281,8 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
   bread: {
     tex: 'organic',
     // kosz z wikliny (obręcz, plecione pasy), w nim bochny z naciętą skórką i jasnym oprószeniem mąką
-    geo: merge([
-      ...basket(0x8a6438, 0x6b4a2a),
+    withProp: 'basket',
+    geo: inBasket([
       ...([[-0.08, -0.05, 0.4, 0xb8743a], [0.08, -0.04, -0.5, 0xc4823f], [0, 0.08, 1.2, 0xae6a33]] as const).flatMap(([x, z, rot, col]) => [
         paint(new THREE.IcosahedronGeometry(0.07, 2).scale(1.55, 0.72, 1).rotateY(rot).translate(x, 0.02, z), col),
         // trzy ukośne nacięcia na skórce
@@ -299,8 +295,8 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
   apples: {
     tex: 'organic',
     // kosz jabłek: każde trochę inne (czerwone, rumiane, zielone), z ogonkiem; jedno z listkiem
-    geo: merge([
-      ...basket(0x8a6438, 0x6b4a2a),
+    withProp: 'basket',
+    geo: inBasket([
       ...[0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap((k) => {
         const top = k >= 7;
         const ang = k * 0.9 + (top ? 0.4 : 0), rr = top ? 0.04 : k ? 0.11 : 0;
@@ -689,6 +685,24 @@ function buildingFish(model: unknown): THREE.Mesh {
   return mesh;
 }
 
+/** Kosz w modelu budynku: [grupa, x, y dna, z, szerokość, wysokość] (tools/models/building.py) */
+type BasketSpot = [string, number, number, number, number, number];
+const basketCache = new Map<unknown, [string, THREE.BufferGeometry][]>();
+/** Siatki koszy budynku, po jednej na grupę; każdy kosz lekko inaczej obrócony (stały obrót z położenia) */
+function basketGeos(model: unknown, spots: BasketSpot[]): [string, THREE.BufferGeometry][] {
+  let out = basketCache.get(model);
+  if (out) return out;
+  const by = new Map<string, THREE.BufferGeometry[]>();
+  for (const [grp, x, y, z, w, h] of spots) {
+    const yaw = (Math.abs(Math.sin(x * 127.1 + z * 311.7) * 43758.5) % 1) * Math.PI * 2;
+    let l = by.get(grp); if (!l) { l = []; by.set(grp, l); }
+    l.push(basketAt(x, y, z, w, h, yaw));
+  }
+  out = [...by].map(([grp, l]) => [grp, mergeGeometries(l)!] as [string, THREE.BufferGeometry]);
+  basketCache.set(model, out);
+  return out;
+}
+
 function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
   const mats = M as unknown as Record<string, THREE.Material>;
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
@@ -748,6 +762,18 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     c.name = 'chimney';
     c.position.set(x, y, z);
     shell.add(c);
+  }
+  // kosze z wikliny: model zapisuje tylko miejsca (building.py → 'baskets'), kosz z paczki wstawiamy tutaj,
+  // wszystkie kosze jednej grupy w jednej siatce (jedno rysowanie)
+  const baskets = (model as unknown as { baskets?: BasketSpot[] }).baskets;
+  if (baskets?.length) {
+    const groups: Record<string, THREE.Object3D> = { base: g, shell, interior, floor: interior, ceiling };
+    for (const [name, geo] of basketGeos(model, baskets)) {
+      const mesh = new THREE.Mesh(geo, propMaterial('basket'));
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      (groups[name] ?? g.getObjectByName(name) ?? g).add(mesh);
+    }
   }
   // pochodnie zrobione w bryle modelu (zamek): niewidoczne znaczniki, przy których scena nocą zapala lekkie światło
   for (const [x, y, z] of marks.lights ?? []) {

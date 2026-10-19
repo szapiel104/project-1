@@ -89,7 +89,7 @@ i suche kolory `_dry_diff_1k.jpg`, bo JPG w paczce glTF nie ma przezroczystości
 Wynik: `public/textures/cc0/pv_grass.jpg`, `pv_grass_a.jpg` (maska), `pv_grass_dry.jpg`. Kolejność pól zna `src/render/grass.ts`
 (`TILE_WEIGHTS`), więc po zmianie listy `TILES` popraw też wagi. Tekstury idą przez płótno z maską (`maskedTex`), bez KTX2.
 
-## Gotowe modele z paczek (ryba, pochodnia wyciągana w spacerze)
+## Gotowe modele z paczek (ryba, pochodnia wyciągana w spacerze, kosz z wikliny)
 
 `tools/models/props_import.py <katalog>` przerabia paczki glTF (BarramundiFish.glb, torch.glb — źródła w `CREDITS.md`)
 na `src/render/models/props.json` i tekstury `public/textures/cc0/prop_*.jpg` (potem `node tools/textures/ktx2.mjs
@@ -101,6 +101,12 @@ Przed wgraniem zawsze: `tools/models/props_check.py <katalog> /tmp/props.png` �
 z daleka, z dwóch stron, złożony z tych samych buforów co w przeglądarce. Test `tests/props.test.ts` pilnuje liczby
 trójkątów i wymiarów. Ryby w budynkach (suszarnia i kosz u rybaka, stół w kuchni twierdzy) zapisują skrypty budynków
 tylko jako miejsca (`fishSpots`), a rybę z paczki wstawia gra (`buildingFish` w `src/render/buildings.ts`).
+
+Kosze: w skryptach budynków nadal piszemy `b.prism(grupa, 'basket', r0, r1, h, x, y, z)`, ale `building.py` nie robi
+z tego brył — zapisuje miejsce i wymiary w kluczu `baskets`, a gra (`blenderModel` w `src/render/buildings.ts`) stawia
+tam kosz z paczki (`basketAt` w `src/render/props.ts`). Tak samo kosz niesiony (`loads.ts`), w składzie (`inBasket`)
+i z praniem przy chacie (`family.ts`). Odchudzać wolno tylko modele, które mają szczegóły w teksturze, nie w geometrii
+— najpierw próba z oryginałem obok (jak przy koszach: wicker_basket_01 z prętów się rozpadał, 02 nie).
 
 ## Krzaki z Poly Haven (krzewy robione przez grafików)
 

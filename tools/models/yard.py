@@ -287,10 +287,9 @@ parts.append(Mesh(ev(bowl, move=(0.1, 0.117, 0.005)), wood(WOOD_L), 'wood'))
 finish('bench', parts)
 
 # ================= KOSZ Z PRANIEM =================
+# Sam kosz to model z paczki (Poly Haven wicker_basket_02, tools/models/props_import.py), stawiany przez grę
+# (src/render/family.ts, BASKET: szerokość 0,19, wysokość 0,072, dno w 0); tu zostaje tylko pranie w koszu.
 parts = []
-basket = lathe('basket', [(0.0, 0.0), (0.075, 0.0), (0.09, 0.05), (0.095, 0.07), (0.088, 0.072), (0.08, 0.05), (0.0, 0.008)], seg=16, depth=0.7)
-bm = evaluated(basket)
-parts.append(Mesh(bm, lambda x, y, z: speck(hexc(0xa88850) if (int(y * 160) + int(math.atan2(x, z) * 8)) % 2 else hexc(0x8a6a3a), x, y, z, 0.1), 'wood'))
 for i in range(6):
     a = i * 1.1
     s = sphere(f'heap{i}', (math.sin(a) * 0.035, 0.07, math.cos(a) * 0.02), (0.04, 0.022, 0.03), seg=10, rings=6)

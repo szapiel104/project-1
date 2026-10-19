@@ -1,5 +1,6 @@
 import { touch } from './touch';
 import * as THREE from 'three';
+import { basketAt, propMaterial } from './props';
 import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, NO_TORCH, footprint } from '../data/buildings';
@@ -78,12 +79,16 @@ function yardMaterials(): Record<string, [THREE.Material, number]> {
 /** Nazwy przedmiotów podwórka z yard.json (do podglądu modeli) */
 export const YARD_KEYS = ['tub', 'post', 'woodpile', 'bench', 'basket', 'bucket', 'garden', 'handcart', ...CLOTHS];
 /** Jeden przedmiot podwórka jako zwykła grupa siatek (podgląd modeli) */
+/** Kosz z praniem: kosz z paczki w wymiarach dawnego (szerokość 0,19, wysokość 0,072, dno na ziemi) */
+const yardBasket = (): THREE.BufferGeometry => basketAt(0, 0, 0, 0.19, 0.072, 0, false);
+
 export function yardModel(key: string): THREE.Group {
   const g = new THREE.Group(), MAT = yardMaterials();
   for (const part of Y[key] ?? []) {
     const [mat, scale] = MAT[part.mat] ?? MAT.plain!;
     g.add(new THREE.Mesh(boxUv(modelGeo(part), scale), mat));
   }
+  if (key === 'basket') g.add(new THREE.Mesh(yardBasket(), propMaterial('basket')));
   return g;
 }
 
@@ -133,6 +138,8 @@ export class Family {
         if (key.startsWith('cloth')) mesh.setColorAt(0, this.c.setHex(0xffffff));
         list.push(mesh);
       }
+      // kosz z praniem: sam kosz z paczki (Poly Haven wicker_basket_02), w yard.py zostało tylko pranie
+      if (key === 'basket') list.push(inst(yardBasket(), 256, propMaterial('basket')));
       this.props.set(key, list);
     }
     // sznur: odcinek liny (instancje układają się w zwisający łuk między słupkami)

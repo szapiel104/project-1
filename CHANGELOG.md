@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.16 — prawdziwe kosze z wikliny wszędzie (2026-10-19)
+
+- Wszystkie kosze w grze to jeden gotowy model z Poly Haven (Wicker Basket 02, CC0, bez wieka): niesione przez chłopów (jabłka, chleb, ryby, ruda), w składzie i spichlerzu, przy piekarni, rybaku, spichlerzach, w sadzie, u łuczarza, włóczniarza i inżynierów, na wieży strażniczej, w kopalni i obozie górników (dawne „kosze z urobkiem” z worków), a także kosz z praniem przy chatach
+- Splot jest w teksturze, więc kosz odchudzony do 1700 / 906 trójkątów wygląda jak oryginał (porównanie przed wgraniem). Drugi kosz z Poly Haven (Wicker Basket 01) odrzucony: jest spleciony z prętów z geometrii, które rozpadają się przy każdym odchudzeniu, a w pełnej wersji ma 22 tys. trójkątów
+- Skrypty budynków nie robią już brył koszy: `building.py` zapisuje miejsca (`baskets`), a kosz stawia gra
+
 ## 0.30.15 — prawdziwe krzaki z Poly Haven (2026-10-19)
 
 - Krzaki z kul zastąpione prawdziwymi krzewami zrobionymi przez grafików (Searsia lucida z Poly Haven, CC0): trzy odmiany gęstych kęp (kopulasta, niska rozłożysta, wyższa), z liśćmi i gałązkami, w soczystej leśnej zieleni

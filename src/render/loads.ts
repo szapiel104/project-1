@@ -4,18 +4,19 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RESOURCES } from '../data/resources';
 import { boxUv } from './peasants';
 import { grayPattern, normal, type Kind } from './textures';
-import { propGeometryFlat, propMaterial } from './props';
+import { basketAt, propGeometryFlat, propMaterial } from './props';
 
 /**
  * Materiał części ładunku: zdjęciowa tekstura w szarości (barwę daje kolor wierzchołków) i mapa nierówności.
  * Owoce, ryby i grudki rudy zostają gładkie; drewno, wiklina, płótno, skórka chleba, kamień i żelazo mają fakturę.
  */
-type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish';
+type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish' | 'basket';
 const MAT_TEX: Record<LoadMat, [Kind | null, number, number, number]> = {
   // [tekstura, gęstość na 1 jednostkę, chropowatość, metaliczność]
   plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], board: [null, 1, 0.8, 0], rope: ['burlap', 14, 1, 0], wicker: ['thatch', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
   crust: ['soil', 7, 0.9, 0], stone: ['rock', 5, 0.95, 0], iron: ['iron', 6, 0.5, 0.55], straw: ['thatch', 6, 0.95, 0], bark: ['bark', 6, 0.95, 0],
   fish: [null, 1, 0.42, 0.08], // ryba z paczki: własne UV i tekstura (src/render/props.ts)
+  basket: [null, 1, 0.9, 0], // kosz z paczki: własne UV i tekstura
 };
 const matCache = new Map<LoadMat, THREE.MeshStandardMaterial>();
 
@@ -82,7 +83,7 @@ function boardUv(geo: THREE.BufferGeometry): void {
 
 function loadMat(k: LoadMat): THREE.MeshStandardMaterial {
   let m = matCache.get(k);
-  if (!m && k === 'fish') { m = propMaterial('fish'); matCache.set(k, m); }
+  if (!m && (k === 'fish' || k === 'basket')) { m = propMaterial(k); matCache.set(k, m); }
   if (!m && k === 'board') {
     const g = boardGrain();
     m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, map: g, bumpMap: g, bumpScale: 0.6 });
@@ -105,7 +106,7 @@ function assemble(parts: THREE.BufferGeometry[]): THREE.BufferGeometry | null {
     const k = (p0.userData.mat as LoadMat | undefined) ?? 'plain';
     const p = p0.index ? p0.toNonIndexed() : p0;
     if (!p.getAttribute('normal')) p.computeVertexNormals();
-    if (k === 'board') boardUv(p); else if (k !== 'fish') boxUv(p, MAT_TEX[k][1]);
+    if (k === 'board') boardUv(p); else if (k !== 'fish' && k !== 'basket') boxUv(p, MAT_TEX[k][1]);
     for (const name of Object.keys(p.attributes)) if (!['position', 'normal', 'color', 'uv'].includes(name)) p.deleteAttribute(name);
     let l = by.get(k); if (!l) { l = []; by.set(k, l); } l.push(p);
   }
@@ -132,8 +133,9 @@ export function tint(geo: THREE.BufferGeometry, hex: number): THREE.BufferGeomet
 
 const ball = (r: number, x: number, y: number, z: number, hex: number, sx = 1, sy = 1, sz = 1): THREE.BufferGeometry =>
   tint(new THREE.IcosahedronGeometry(r, 1).scale(sx, sy, sz).translate(x, y, z), hex);
-// kosz mieści się między dłońmi (ręce chłopa są ±0,135 od środka): dłonie obejmują go z boków, a nie wchodzą w środek
-const basket = (): THREE.BufferGeometry => as(tint(new THREE.CylinderGeometry(0.115, 0.09, 0.13, 10).translate(0, 0, 0), 0xb08a4e), 'wicker');
+// kosz z paczki (Poly Haven wicker_basket_02, src/render/props.ts) w wymiarach dawnego: szerokość 0,23, dno w -0,065,
+// brzeg w 0,065 — mieści się między dłońmi (ręce chłopa są ±0,135 od środka), dłonie obejmują go z boków
+const basket = (): THREE.BufferGeometry => as(basketAt(0, -0.065, 0, 0.23, 0.13, 0.4), 'basket');
 
 /**
  * Jak wygląda ładunek niesiony przez chłopa, osobno dla każdego surowca.

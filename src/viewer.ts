@@ -248,7 +248,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
   [tx('Podwórko', 'Yard'), YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', tx('pranie: ', 'washing: ')), () => ({ obj: yardModel(k) })] as [string, string, Make])],
   [tx('Graty', 'Clutter'), (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: mesh(clutterModel(k), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
   // gotowe modele z paczek (tools/models/props_import.py): z lewej wersja z bliska, z prawej z daleka; ryba w rozmiarze z kosza
-  [tx('Z paczek', 'From packs'), ([['fish', tx('ryba', 'fish'), 0.3], ['torch', tx('pochodnia wyciągana w spacerze', 'torch drawn on a walk'), 1]] as const).map(([k, l, sc]) => [`prop-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, () => {
+  [tx('Z paczek', 'From packs'), ([['fish', tx('ryba', 'fish'), 0.3], ['torch', tx('pochodnia wyciągana w spacerze', 'torch drawn on a walk'), 1], ['basket', tx('kosz z wikliny', 'wicker basket'), 0.3]] as const).map(([k, l, sc]) => [`prop-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, () => {
     const g = new THREE.Group();
     for (const [far, x] of [[false, -0.25], [true, 0.25]] as const) {
       const m = new THREE.Mesh(propGeometry(k, far).clone().scale(sc * 2, sc * 2, sc * 2), propMaterial(k));

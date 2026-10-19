@@ -108,10 +108,13 @@ def scene():
 tiles = []
 TMP = '/tmp/props_check'
 os.makedirs(TMP, exist_ok=True)
-for name, pack_file, M in (('fish', 'BarramundiFish.glb', None), ('torch', 'torch.glb', None)):
+for name, pack_file, M in (('fish', 'BarramundiFish.glb', None), ('torch', 'torch.glb', None),
+                            ('basket', os.path.join('wicker_basket_02', 'wicker_basket_02_1k.gltf'), None)):
     bpy.ops.wm.read_factory_settings(use_empty=True)
     scene()
     bpy.ops.import_scene.gltf(filepath=os.path.join(SRC, pack_file))
+    for o in [o for o in bpy.context.scene.objects if o.type == 'MESH' and 'lid' in o.name]:
+        bpy.data.objects.remove(o)   # kosz bez wieka, jak w grze
     orig = [o for o in bpy.context.scene.objects if o.type == 'MESH'][0]
     near = game_mesh(name, name)
     far = game_mesh(name, name + 'Far')

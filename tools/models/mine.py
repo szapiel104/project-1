@@ -180,7 +180,7 @@ b.box('interior', 'plank', 0.36, 0.03, 0.14, 0.95, P + 0.5, -0.05)
 for k, z in enumerate((-0.12, -0.02, 0.06)):
     b.box('interior', 'woodDark', 0.025, 0.42, 0.025, 1.05 + k * 0.02, P + 0.53, z, tilt=0.25)
 for (x, z, m) in ((0.55, 0.62, 'magicOre'), (0.82, 0.62, 'stone'), (-0.6, 0.62, 'stone')):
-    b.prism('interior', 'sack', 0.11, 0.1, 0.12, x, P, z, seg=9)
+    b.prism('interior', 'basket', 0.11, 0.1, 0.12, x, P, z, seg=9)
     b.prism('interior', m, 0.09, 0.03, 0.06, x, P + 0.12, z, seg=7)
     solid.append([x - 0.12, x + 0.12, z - 0.12, z + 0.12])
 

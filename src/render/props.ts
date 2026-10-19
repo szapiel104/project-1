@@ -4,16 +4,18 @@ import { loadTexture } from './ktx';
 
 /**
  * Gotowe modele z sieci, przerobione w Blenderze skryptem tools/models/props_import.py (porównanie z oryginałem:
- * tools/models/props_check.py): ryba (Barramundi, Khronos glTF-Sample-Assets, CC0) i pochodnia w ręce chłopa
- * (Secret Histories, CC-BY-SA 4.0).
+ * tools/models/props_check.py): ryba (Barramundi, Khronos glTF-Sample-Assets, CC0), pochodnia wyciągana w spacerze
+ * (Secret Histories, CC-BY-SA 4.0), kosz z wikliny (Poly Haven wicker_basket_02, CC0, bez wieka; splot w teksturze,
+ * więc lżejsza wersja nie różni się od oryginału).
  *
  * Siatki idą do gry bez przeróbek: oryginalne trójkąty, UV i normalne, pozycje w pełnej precyzji, tekstura z paczki.
  * Płetwy i część szmat to pojedyncze płaszczyzny, więc materiał jest dwustronny (inaczej znikałyby z jednej strony).
  *
  * Układy: ryba — długość 1 wzdłuż z (pysk w +z), grzbiet w +y, środek w (0, 0, 0);
- * pochodnia — układ ręki jak narzędzia z tools.py (dłoń w (0, -0.19, 0), ręka uniesiona o TORCH_ARM).
+ * pochodnia — układ ręki jak narzędzia z tools.py (dłoń w (0, -0.19, 0), ręka uniesiona o TORCH_ARM);
+ * kosz — dno w y = 0, środek podstawy w (0, 0), największa szerokość 1, wysokość `basketH` (ok. 0,93).
  */
-export type PropName = 'fish' | 'torch';
+export type PropName = 'fish' | 'torch' | 'basket';
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
 
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -53,6 +55,15 @@ export function propGeometryFlat(name: PropName, far = false): THREE.BufferGeome
   return g;
 }
 
+/**
+ * Kosz z paczki w miejscu kosza z dawnych brył: dno w (x, y, z), szerokość `w`, wysokość `h` (wysokość dopasowana,
+ * bo w koszu leżą na tej wysokości jabłka, chleb, ryby, ruda), obrócony o `yaw`. Bez indeksu — do sklejania.
+ */
+export function basketAt(x: number, y: number, z: number, w: number, h: number, yaw = 0, far = true): THREE.BufferGeometry {
+  const nativeH = model<{ basketH: number }>('props').basketH;
+  return propGeometryFlat('basket', far).scale(w, h / nativeH, w).rotateY(yaw).translate(x, y, z);
+}
+
 const base = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/cc0/';
 const mats = new Map<PropName, THREE.MeshStandardMaterial>();
 
@@ -61,7 +72,7 @@ export function propMaterial(name: PropName): THREE.MeshStandardMaterial {
   let m = mats.get(name);
   if (m) return m;
   const fish = name === 'fish';
-  m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: fish ? 0.42 : 0.85, metalness: fish ? 0.08 : 0, side: THREE.DoubleSide });
+  m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: fish ? 0.42 : name === 'basket' ? 0.9 : 0.85, metalness: fish ? 0.08 : 0, side: THREE.DoubleSide });
   if (typeof document !== 'undefined') {
     const map = loadTexture(`${base()}prop_${name}.jpg`);
     map.colorSpace = THREE.SRGBColorSpace;

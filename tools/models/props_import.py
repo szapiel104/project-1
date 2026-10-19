@@ -2,7 +2,8 @@
 
     /tmp/bpyenv/bin/python tools/models/props_import.py <katalog z paczkami>
 
-W katalogu: BarramundiFish.glb (Khronos glTF-Sample-Assets, CC0, Microsoft) i torch.glb (Secret Histories, CC-BY-SA 4.0).
+W katalogu: BarramundiFish.glb (Khronos glTF-Sample-Assets, CC0, Microsoft), torch.glb (Secret Histories, CC-BY-SA 4.0)
+i wicker_basket_02/ (Poly Haven, CC0, paczka glTF 1K).
 
 Zasada: model ma wyglądać w grze dokładnie jak w Blenderze, więc wersja z bliska NIE jest odchudzana ani przerabiana:
   - oryginalne trójkąty, oryginalne UV i oryginalne normalne (gładkie cieniowanie, ostre krawędzie tam, gdzie były),
@@ -53,10 +54,13 @@ def pack(pos, nrm, uv, idx):
     }
 
 
-def load(path):
-    """Wczytuje paczkę i zwraca jedną siatkę z zastosowanymi przekształceniami (układ Blendera, z w górę)"""
+def load(path, skip=()):
+    """Wczytuje paczkę i zwraca jedną siatkę z zastosowanymi przekształceniami (układ Blendera, z w górę).
+    `skip`: części paczki pominięte (np. wieko kosza)"""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     bpy.ops.import_scene.gltf(filepath=path)
+    for o in [o for o in bpy.context.scene.objects if o.type == 'MESH' and any(k in o.name for k in skip)]:
+        bpy.data.objects.remove(o)
     obs = [o for o in bpy.context.scene.objects if o.type == 'MESH']
     assert len(obs) == 1, [o.name for o in obs]
     o = obs[0]
@@ -163,6 +167,23 @@ TM = (Matrix.Translation(GRIP - TORCH_DIR * 0.09) @ Matrix.Rotation(-TORCH_ARM, 
 out['torch'], t1 = export(torch, TM)
 out['torchFar'], t2 = export(lighter(torch, 0.4), TM)
 info.append(f'pochodnia: {t1} / {t2} trójkątów, długość 0.4, szerokość {round((mx.x - mn.x) * s, 3)}')
+
+# ---------------- kosz z wikliny (Poly Haven wicker_basket_02, CC0), bez wieka ----------------
+# Splot jest w teksturze, a bryła to pełna powłoka, więc odchudzanie jej nie psuje: próba z oryginałem obok wersji
+# 30/15/8% nie pokazała różnicy ani z bliska, ani z odległości gry (wicker_basket_01 z prętów z geometrii rozpadał się
+# już przy 30%, a w pełnej wersji ma 22 tys. trójkątów — dlatego nie jest używany).
+# Układ gry: dno w y = 0, środek podstawy w (0, 0), największa szerokość = 1; wysokość w proporcji (klucz basketH).
+basket = load(os.path.join(src, 'wicker_basket_02', 'wicker_basket_02_1k.gltf'), skip=('lid',))
+textures(basket, 'basket')
+pts = [basket.matrix_world @ v.co for v in basket.data.vertices]
+mn = Vector([min(p[i] for p in pts) for i in range(3)]); mx = Vector([max(p[i] for p in pts) for i in range(3)])
+D = max(mx.x - mn.x, mx.y - mn.y)
+c = Vector(((mn.x + mx.x) / 2, (mn.y + mx.y) / 2, mn.z))
+BM = Matrix.Scale(1 / D, 4) @ B2G @ Matrix.Translation(-c)
+out['basket'], t1 = export(lighter(basket, 0.15), BM)
+out['basketFar'], t2 = export(lighter(basket, 0.08), BM)
+out['basketH'] = round((mx.z - mn.z) / D, 4)
+info.append(f'kosz: {t1} / {t2} trójkątów, wysokość {out["basketH"]} szerokości')
 
 import json  # noqa: E402
 with open(OUT, 'w') as f:
