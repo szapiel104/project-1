@@ -571,8 +571,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         choice(t('set.shadows'), settings.shadows, [[0, t('set.off')], [1024, t('set.low')], [2048, t('set.medium')], [4096, t('set.high')]], (v) => { settings.shadows = v; manual(); }),
         check(tx('Miękkie cienie (po ponownym uruchomieniu gry)', 'Soft shadows (after restarting the game)'), settings.soft ?? false, (v) => { settings.soft = v; manual(); }),
         choice(t('set.ao'), settings.ao, [['off', t('set.off')], ['low', t('set.low')], ['medium', t('set.medium')], ['high', t('set.high')]], (v) => { settings.ao = v; manual(); }),
-        slider(tx('Jasność', 'Brightness'), (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
-        tip(tx('Odbicia otoczenia są tanie, a modele przestają być płaskie po stronie cienia — zostaw włączone. Cienie i cieniowanie zagłębień kosztują najwięcej ze wszystkich opcji.', 'Environment reflections are cheap and stop models looking flat on the shaded side — leave them on. Shadows and ambient occlusion cost the most of all options.')),
+        slider(tx('Jasność (100% = jak zaprojektowano)', 'Brightness (100% = as designed)'), (settings.brightness ?? 1) * 100, (v) => { settings.brightness = v / 100; save(); }, 60, 200),
+        tip(tx('Jasność to nie jakość — zostaw 100%, chyba że monitor jest ciemny; więcej rozjaśnia wszystko i spłaszcza obraz. Odbicia otoczenia są tanie, a modele przestają być płaskie po stronie cienia — zostaw włączone. Cienie i cieniowanie zagłębień kosztują najwięcej ze wszystkich opcji.', 'Brightness is not quality — keep it at 100% unless your monitor is dark; more washes everything out. Environment reflections are cheap and stop models looking flat on the shaded side — leave them on. Shadows and ambient occlusion cost the most of all options.')),
       ]],
       [tx('Świat', 'World'), () => [
         intro(tx('Trawa, pora dnia i pogoda — klimat wioski.', 'Grass, time of day and weather — the feel of the village.')),

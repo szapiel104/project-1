@@ -69,7 +69,7 @@ let waterMat: THREE.Material | null = null;
  * z Poly Haven), wiadro to wiadro z wodą, które noszą chłopi (pełna wersja, z obręczami). Reszta to bryły z `geometry`.
  */
 function models(kind: Kind): [THREE.BufferGeometry, THREE.Material | THREE.Material[]][] | null {
-  if (kind === 'barrel') return [[propGeometry('barrelLow').clone().scale(BARREL_H, BARREL_H, BARREL_H), propMaterial('barrelLow')]];
+  if (kind === 'barrel') return [[propGeometry('barrel').clone().scale(BARREL_H, BARREL_H, BARREL_H), propMaterial('barrel')]];
   if (kind === 'bucket') {
     waterMat ??= new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 });
     return [[toGround(toolGeometry('bucket')), toolMaterials()], [toGround(toolGeometry('bucketWater')), [waterMat, waterMat, waterMat]]];
