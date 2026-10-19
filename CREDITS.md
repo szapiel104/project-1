@@ -63,4 +63,9 @@ Kosz z wikliny: [Wicker Basket 02](https://polyhaven.com/a/wicker_basket_02) z P
 
 Jabłko, chleb i beczka piwa z Poly Haven (CC0, skany): [Food Apple 01](https://polyhaven.com/a/food_apple_01), [Hamburger Buns](https://polyhaven.com/a/hamburger_buns) (trzy bochenki), [Wine Barrel 01](https://polyhaven.com/a/wine_barrel_01). Skrypt `tools/models/props_import.py` (oryginały, bez odchudzania) → `props.json`, `public/textures/cc0/prop_{apple,bread,barrel}*.jpg`.
 
+Skład (kamień, zboże, żelazo) — modele z [Sketchfab](https://sketchfab.com), licencja [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), przerobione skryptem `tools/models/stock_import.py` bez odchudzania (tylko skala i ustawienie, tekstury w rozdzielczości paczki) → `props.json` (`granite1–3`, `sheaf`, `ingots`), `public/textures/cc0/prop_{granite1,granite2,granite3,sheaf,ingots}*.jpg`:
+- [Granite block](https://sketchfab.com/3d-models/granite-block-ffb822afb855487885addfa7dfe13ac2) — autor [matousekfoto](https://sketchfab.com/matousekfoto) (skan fotogrametryczny),
+- [KCISA-볏단 (Sheaf of Rice)](https://sketchfab.com/3d-models/kcisa-sheafofrice-f89a4abb08b94a70956d9d038208c6ff) — autor [Korea Culture Information Service Agency](https://sketchfab.com/kcisameta),
+- [Blacksmith Ingots (game ready asset)](https://sketchfab.com/3d-models/blacksmith-ingots-game-ready-asset-6ea0ab1141de40d68db5bcdccdb91d68) — autor [Aparicio Silva 3D](https://sketchfab.com/apariciosilva3D) (w grze tylko trzy żelazne sztaby).
+
 Worek z płótna: własny model z Blendera (`tools/models/sack.py`, symulacja tkaniny), tekstura juty `burlap.jpg` (ambientCG Fabric 011, CC0, wyżej).

@@ -222,46 +222,32 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
       .concat([-0.18, 0.18].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.03, 0.46), x, -0.135, 0), 0x6b4a2e)))),
   },
   stone: {
-    tex: 'dressed',
-    geo: merge([
-      paint(part(new THREE.BoxGeometry(0.4, 0.17, 0.38), 0, -0.065, 0), 0xc9c4b6),
-      paint(part(new THREE.BoxGeometry(0.22, 0.13, 0.2).rotateY(0.3), -0.07, 0.09, -0.05), 0xb9b3a4),
-      paint(part(new THREE.BoxGeometry(0.17, 0.11, 0.16).rotateY(-0.4), 0.1, 0.08, 0.08), 0xd6d0c2),
-    ]),
+    // blok granitu ze skanu (Sketchfab „Granite block”, matousekfoto, CC BY 4.0; tools/models/stock_import.py), na nim
+    // mniejszy odłamek z tego samego skanu, obrócony; skan ma trzy części z własnymi teksturami → trzy grupy bryły
+    withProp: ['granite1', 'granite2', 'granite3'],
+    noCode: true,
+    geo: mergeGeometries((['granite1', 'granite2', 'granite3'] as const).map((n) => merge([
+      propAt(n, 0, -0.15, 0, 0.4, 0.2),
+      propAt(n, 0.04, 0.012, -0.02, 0.22, 2.1),
+    ])), true)!,
   },
   iron: {
-    metal: true,
-    // sztaby żelaza: trapezowe odlewy ułożone w krzyż (warstwa wzdłuż, warstwa w poprzek), na drewnianym podkładzie
-    geo: merge([
-      ...[-0.15, 0.15].map((x) => paint(part(new THREE.BoxGeometry(0.05, 0.03, 0.4), x, -0.135, 0), 0x5a3e24)),
-      ...[0, 1, 2].flatMap((layer) => [-0.12, 0, 0.12].map((o) => {
-        const bar = new THREE.CylinderGeometry(0.035, 0.055, 0.36, 4, 1).rotateY(Math.PI / 4).scale(1, 0.6, 1).rotateX(Math.PI / 2);
-        if (layer % 2) bar.rotateY(Math.PI / 2);
-        return paint(part(bar, layer % 2 ? 0 : o, -0.09 + layer * 0.048, layer % 2 ? o : 0), layer === 2 ? 0x7a7c84 : 0x5f6168);
-      })),
-    ]),
+    // trzy kute sztaby żelaza z patyną (Sketchfab „Blacksmith Ingots”, Aparicio Silva 3D, CC BY 4.0): dwie na deskach,
+    // trzecia na nich (układ z paczki)
+    withProp: 'ingots',
+    noCode: true,
+    geo: mergeGeometries([merge([propAt('ingots', 0, -0.15, 0, 0.4, 0.05)])], true)!,
   },
   wheat: {
-    tex: 'thatch',
-    // dwa snopki oparte o siebie: pęk źdźbeł rozchylony u dołu, przewiązany powrósłem, u góry opadające kłosy
-    geo: merge([-0.1, 0.1].flatMap((x, side) => {
-      const lean = side ? -0.18 : 0.18;
-      const parts: THREE.BufferGeometry[] = [];
-      for (let k = 0; k < 22; k++) {
-        const a = (k / 22) * Math.PI * 2 + (k % 2) * 0.15;
-        const spread = 0.04 + (k % 3) * 0.012;
-        // źdźbło: od rozchylonej stopy do przewiązki i dalej do kłosa
-        // dół źdźbeł rozchodzi się na boki (snop stoi na szerokiej stopie), w przewiązce są ściśnięte
-        const stalk = new THREE.CylinderGeometry(0.009, 0.007, 0.3, 3).rotateX(-Math.sin(a) * 0.22).rotateZ(Math.cos(a) * 0.22 + lean);
-        parts.push(paint(part(stalk, x + Math.cos(a) * spread * 0.5, -0.02, Math.sin(a) * spread * 0.5), k % 2 ? 0xd9b452 : 0xc9a240));
-        // kłos: wydłużony, lekko opadający na zewnątrz
-        // kłosy zbite w pióropusz, lekko opadające na boki
-        const ear = new THREE.IcosahedronGeometry(0.017, 0).scale(0.75, 2.4, 0.75).rotateZ(-Math.cos(a) * 0.45 + lean).rotateX(Math.sin(a) * 0.45);
-        parts.push(paint(part(ear, x + Math.cos(a) * 0.028 - lean * 0.14, 0.15 + (k % 3) * 0.008, Math.sin(a) * 0.028), k % 3 ? 0xe8c766 : 0xd4ad4a));
-      }
-      parts.push(paint(part(new THREE.CylinderGeometry(0.048, 0.048, 0.025, 10).rotateZ(lean), x - lean * 0.03, 0.0, 0), 0x8a6a28)); // powrósło
-      return parts;
-    })),
+    // snopki zboża (Sketchfab „KCISA-볏단 (Sheaf of Rice)”, Korea Culture Information Service Agency, CC BY 4.0):
+    // dwa leżą obok siebie, trzeci na nich w rowku, kłosami w drugą stronę
+    withProp: 'sheaf',
+    noCode: true,
+    geo: mergeGeometries([merge([
+      propAt('sheaf', 0, -0.15, -0.095, 0.44, 0.04),
+      propAt('sheaf', 0.01, -0.15, 0.095, 0.44, -0.05),
+      propAt('sheaf', -0.01, -0.088, 0, 0.44, Math.PI + 0.06),
+    ])], true)!,
   },
   flour: {
     // worki mąki z płótna (tools/models/sack.py, symulacja tkaniny): trzy stoją, każdy inaczej obrócony, czwarty leży

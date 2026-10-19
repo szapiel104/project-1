@@ -8,7 +8,9 @@ describe('modele z paczek: oryginalne siatki', () => {
   const tris = (g: THREE.BufferGeometry): number => g.index!.count / 3;
   const box = (g: THREE.BufferGeometry): THREE.Box3 => { g.computeBoundingBox(); return g.boundingBox!; };
   // liczba trójkątów oryginału z paczki (kosz bez wieka); worek z tools/models/sack.py
-  const ORIGINAL: Record<PropName, number> = { fish: 3864, torch: 935, basket: 11338, apple: 7012, bun1: 3888, bun2: 3950, bun3: 3750, barrel: 10820, sack: 4576 };
+  const ORIGINAL: Record<PropName, number> = { fish: 3864, torch: 935, basket: 11338, apple: 7012, bun1: 3888, bun2: 3950, bun3: 3750, barrel: 10820, sack: 4576,
+    // skład (tools/models/stock_import.py, Sketchfab): skan granitu w trzech częściach, snopek, trzy sztaby żelaza
+    granite1: 31375, granite2: 32014, granite3: 26336, sheaf: 4998, ingots: 1392 };
 
   it('każdy model ma wszystkie trójkąty oryginału, z bliska i z daleka', () => {
     for (const [n, t] of Object.entries(ORIGINAL) as [PropName, number][]) {
@@ -38,5 +40,14 @@ describe('modele z paczek: oryginalne siatki', () => {
       if (n === 'barrel') expect(b.max.y).toBeCloseTo(1, 2);
       else expect(Math.max(b.max.x - b.min.x, b.max.z - b.min.z), n).toBeCloseTo(1, 2);
     }
+  });
+
+  it('skład: snopek i sztaby długości 1 (snopek wzdłuż x, sztaby wzdłuż z), granit szerokości 1; wszystko z dnem w zerze', () => {
+    const s = box(propGeometry('sheaf')), i = box(propGeometry('ingots'));
+    expect(s.max.x - s.min.x).toBeCloseTo(1, 2);
+    expect(i.max.z - i.min.z).toBeCloseTo(1, 2);
+    const g = (['granite1', 'granite2', 'granite3'] as const).map((n) => box(propGeometry(n))).reduce((a, b) => a.union(b));
+    expect(Math.max(g.max.x - g.min.x, g.max.z - g.min.z)).toBeCloseTo(1, 2);
+    for (const b of [s, i, g]) expect(b.min.y).toBeCloseTo(0, 2);
   });
 });

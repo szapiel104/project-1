@@ -16,11 +16,15 @@ import { model } from './modelstore';
  * kosz — dno w y = 0, środek podstawy w (0, 0), największa szerokość 1, wysokość `basketH` (ok. 0,93);
  * jabłko, bułki (bun1–3) — tak samo, szerokość 1 (jabłko: wysokość 0,875, bułki ok. 0,53);
  * beczka — dno w y = 0, wysokość 1, szerokość `barrelW` (0,87); worek — dno w 0, szerokość 1, wysokość `sackH` (1,3).
+ * Skład (tools/models/stock_import.py, Sketchfab, CC BY 4.0): granit — trzy części jednego skanu (granite1–3, każda
+ * z własną teksturą), dno w 0, szerokość 1, wysokość `graniteH`; snopek — leży wzdłuż x, długość 1; sztaby żelaza —
+ * trzy sztaby wzdłuż z, długość 1.
  *
  * Zasada Michała (19.10.2026): siatki i tekstury z paczek bez odchudzania i w pełnej rozdzielczości; tekstury jako
  * zwykły JPG (TextureLoader) — kompresja KTX2 (ETC1S) robiła na małych teksturach z paczek widoczne kwadraty.
  */
-export type PropName = 'fish' | 'torch' | 'basket' | 'apple' | 'bun1' | 'bun2' | 'bun3' | 'barrel' | 'sack';
+export type PropName = 'fish' | 'torch' | 'basket' | 'apple' | 'bun1' | 'bun2' | 'bun3' | 'barrel' | 'sack'
+  | 'granite1' | 'granite2' | 'granite3' | 'sheaf' | 'ingots';
 /** Tekstura modelu, gdy kilka modeli dzieli jedną (trzy bułki z jednej paczki) */
 const TEX_OF: Partial<Record<PropName, string>> = { bun1: 'bread', bun2: 'bread', bun3: 'bread' };
 /**
@@ -29,7 +33,12 @@ const TEX_OF: Partial<Record<PropName, string>> = { bun1: 'bread', bun2: 'bread'
  */
 const TEX_FILE: Partial<Record<PropName, string>> = { sack: 'burlap' };
 /** Chropowatość i metaliczność powierzchni (połysk skórki jabłka i łusek ryby, matowy chleb i drewno) */
-const SURFACE: Partial<Record<PropName, [number, number]>> = { fish: [0.42, 0.08], basket: [0.9, 0], apple: [0.45, 0], barrel: [0.75, 0.05], sack: [0.95, 0] };
+const SURFACE: Partial<Record<PropName, [number, number]>> = {
+  fish: [0.42, 0.08], basket: [0.9, 0], apple: [0.45, 0], barrel: [0.75, 0.05], sack: [0.95, 0],
+  granite1: [0.9, 0], granite2: [0.9, 0], granite3: [0.9, 0], sheaf: [0.92, 0], ingots: [0.55, 0.5],
+};
+/** Skan granitu (tools/models/stock_import.py) ma tylko kolor ze zdjęć, bez mapy normalnych */
+const NO_NORMAL = new Set<PropName>(['granite1', 'granite2', 'granite3']);
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
 
 const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
@@ -100,9 +109,9 @@ export function propMaterial(name: PropName): THREE.MeshStandardMaterial {
     const map = tl.load(`${base()}${file}.jpg`);
     map.colorSpace = THREE.SRGBColorSpace;
     map.anisotropy = 16;
-    const nm = tl.load(`${base()}${file}_n.jpg`);
-    nm.anisotropy = 16;
-    if (TEX_FILE[name]) for (const t of [map, nm]) t.wrapS = t.wrapT = THREE.RepeatWrapping;   // tekstura powtarzana
+    const nm = NO_NORMAL.has(name) ? null : tl.load(`${base()}${file}_n.jpg`);
+    if (nm) nm.anisotropy = 16;
+    if (TEX_FILE[name]) for (const t of [map, nm]) if (t) t.wrapS = t.wrapT = THREE.RepeatWrapping;   // tekstura powtarzana
     m.map = map;
     m.normalMap = nm;
   }
