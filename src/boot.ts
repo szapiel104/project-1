@@ -5,6 +5,7 @@
 import './debug/errlog'; // dziennik błędów od pierwszej chwili (window.__errors())
 import { t, tx } from './i18n';
 import { randomTip } from './data/tips';
+import { loadInfo } from './ui/loadinfo';
 
 const touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
 const mobileAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -44,6 +45,7 @@ async function load(): Promise<void> {
   document.getElementById('game')?.setAttribute('aria-label', tx('Mapa gry', 'Game map'));
   // klatka do odświeżenia paska; w karcie w tle przeglądarka wstrzymuje klatki, więc jest też zapasowy zegar
   const frame = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
+  const info = loadInfo(document.querySelector('#loading .loading-card'));
   let done = 0, total = 3;
   const times: [string, number][] = [];
   let last = performance.now(), lastText = '';
@@ -56,6 +58,7 @@ async function load(): Promise<void> {
     if (fill) fill.style.width = `${Math.round((done / total) * 100)}%`;
     await frame();
   };
+  info.step(tx('Silnik gry', 'Game engine'), tx('pobieranie kodu gry i biblioteki 3D', 'downloading the game code and the 3D library'));
   await step(tx('Wczytywanie silnika gry…', 'Loading the game engine…'));
   const tex = await import('./render/textures');
   const kinds = tex.KINDS();
@@ -65,27 +68,39 @@ async function load(): Promise<void> {
     bricks: ['kamień', 'stone'], planks: ['deski', 'planks'], thatch: ['strzecha', 'thatch'], plaster: ['tynk', 'plaster'], tiles: ['dachówki', 'roof tiles'], grass: ['trawa', 'grass'], leaves: ['liście', 'leaves'],
     needles: ['igliwie', 'needles'], bark: ['kora', 'bark'], soil: ['ziemia', 'soil'], window: ['okna', 'windows'], water: ['woda', 'water'], ashlar: ['mur', 'masonry'], cobble: ['bruk', 'cobbles'], rock: ['skała', 'rock'], dressed: ['ciosy', 'dressed stone'], organic: ['żywność', 'food'], slate: ['łupek', 'slate'],
   };
+  let fromCache = 0, drawn = 0;
+  info.step(tx('Tekstury', 'Textures'), `${kinds.length} ${tx('rodzajów', 'kinds')}`);
   for (const kind of kinds) {
+    info.detail(`${names[kind] ? tx(...names[kind]!) : kind} · ${tx('z pamięci', 'cached')} ${fromCache}, ${tx('rysowane', 'drawn')} ${drawn} / ${kinds.length}`);
     // zapamiętana z poprzedniej wizyty wczytuje się od razu, bez klatki przerwy
-    if (await tex.restore(kind)) { tex.pattern(kind); tex.bump(kind); done++; continue; }
+    if (await tex.restore(kind)) { tex.pattern(kind); tex.bump(kind); done++; fromCache++; continue; }
+    drawn++;
     await step(`${tx('Tekstury', 'Textures')}: ${names[kind] ? tx(...names[kind]!) : kind}`);
     tex.pattern(kind);
     tex.bump(kind);
     done++;
   }
+  info.step(tx('Modele', 'Models'), tx('pobieranie modeli budynków, ludzi i zwierząt', 'downloading models of buildings, people and animals'));
   await step(tx('Modele…', 'Models…'));
   // modele z Blendera leżą poza kodem gry: pobierają się tu równolegle (za drugim razem z pamięci przeglądarki)
   const { loadModels } = await import('./render/modelstore');
-  await loadModels((n, all) => { if (count) count.textContent = `${done} / ${total} · ${tx('modele', 'models')} ${n}/${all}`; });
+  await loadModels((n, all) => {
+    if (count) count.textContent = `${done} / ${total} · ${tx('modele', 'models')} ${n}/${all}`;
+    info.detail(`${tx('pobrane modele', 'models downloaded')}: ${n} / ${all}`);
+  });
+  info.step(tx('Drzewa, trawa i postacie', 'Trees, grass and characters'), tx('pliki z zasobów (las, trawa, strażnik)', 'asset files (forest, grass, guard)'));
   const assets = await import('./render/assets');
   await assets.preloadAssets();
   done++;
   // miniatury budynków z poprzedniej wizyty (tej samej wersji gry): menu nie rysuje ich od nowa
   await import('./render/thumbcache').then((m) => m.loadThumbs()).catch(() => undefined);
+  info.step(tx('Świat i osada', 'World and settlement'), tx('teren, rzeki, lasy, budynki i mieszkańcy z zapisu — przy tym kroku licznik może na chwilę stanąć, to normalne', 'terrain, rivers, forests, buildings and villagers from the save — the timer may pause for a moment here, that is normal'));
   await step(tx('Budowanie świata i osady…', 'Building the world and the settlement…'));
   const game = await import('./main');
+  info.step(tx('Grafika', 'Graphics'), tx('kompilacja shaderów wszystkich budynków — licznik może na chwilę stanąć', 'compiling shaders for every building — the timer may pause for a moment'));
   await step(tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
   game.warmup();
+  info.done();
   done = total;
   await step(tx('Gotowe', 'Ready'));
   (window as unknown as { __loadTimes: unknown }).__loadTimes = times;

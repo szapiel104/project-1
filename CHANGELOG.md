@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.30.12 — szczegóły pod paskiem wczytywania (2026-10-19)
+
+- Pod paskiem (przy uruchomieniu gry, „Kontynuuj”, „Nowej grze” i meczu) widać, co dokładnie się teraz wczytuje i ile już trwa ten krok (np. która tekstura, ile modeli pobrano, który kierunek obchodu kamerą, ile równych klatek), a niżej listę skończonych kroków z czasami
+- Przy krokach liczonych w jednym kawałku (budowa świata, kompilacja shaderów) opis mówi wprost, że licznik może na chwilę stanąć
+
 ## 0.30.11 — dokładniejsze wczytywanie przy wejściu do gry (2026-10-19)
 
 - Pod zasłoną kamera robi obchód: osiem kierunków z bliska i dwa z daleka, po kilka klatek każdy, więc drzewa, trawa, budynki, ich dalekie wersje i cienie dookoła osady trafiają do karty graficznej przed wejściem, a nie przy pierwszym obrocie kamery

@@ -977,6 +977,9 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
   box-shadow: 0 0 14px rgba(255, 120, 30, .75), inset 0 1px 0 rgba(255, 240, 200, .6); }
 #loading .loading-line { font-size: 15px; letter-spacing: .06em; color: #b9a782; }
 #loading .loading-line strong { color: #e9c766; }
+/* szczegóły pod paskiem: co się teraz wczytuje i ile trwa, niżej skończone kroki z czasami (kontrast ok. 7:1 i 6:1 na tle #120a05) */
+#loading .loading-detail { margin: -4px 0 0; min-height: 1.35em; font-size: 14px; line-height: 1.35; color: #c9b48a; text-align: left; font-variant-numeric: tabular-nums; }
+#loading .loading-log { margin: 0; min-height: 1.3em; font-size: 13px; line-height: 1.45; color: #ab9670; text-align: left; font-variant-numeric: tabular-nums; word-spacing: .05em; }
 /* ekran wczytywania bez animowanych ozdób: wątek główny wczytuje grę, więc każda animacja by przycinała — tylko pasek */
 /* nowa gra przy lewej krawędzi: szersze okno, treść na środku wysokości, kafelki z oddechem i miejscem na znaczek wyboru */
 .menu.previewing .menu-panel.wide { width: min(720px, calc(100vw / var(--ui, 1) - 380px)); min-width: min(560px, 100vw); align-content: center; padding: 28px 36px; }

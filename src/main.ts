@@ -1,3 +1,4 @@
+import { loadInfo } from './ui/loadinfo';
 import { counts as errCounts, entries as errEntries, formatText as errText, onReport } from './debug/errlog';
 import { GUARD_SAY, SAY } from './data/barks';
 import { COLD, SEASON_DAYS, SEASON_NAME, shiftToSeason, weatherOf, yearPos, type Season } from './sim/weather';
@@ -471,15 +472,18 @@ function enterGame(label: string, prep?: () => void): void {
   const bar = cover.querySelector('.loading-bar span') as HTMLElement;
   const text = cover.querySelector('.loading-line span') as HTMLElement;
   const pct = cover.querySelector('.loading-line strong') as HTMLElement;
+  const info = loadInfo(cover.querySelector('.loading-card'));
   const show = (p: number, what?: string): void => {
     bar.style.width = `${Math.round(p)}%`;
     pct.textContent = `${Math.round(p)}%`;
     if (what) text.textContent = what;
   };
   show(4);
+  info.step(label.replace(/…$/, ''), prep ? tx('teren, rzeki, lasy, osady i boty — licznik może na chwilę stanąć', 'terrain, rivers, forests, settlements and bots — the timer may pause for a moment') : '');
   // każdy krok w osobnej klatce, żeby pasek zdążył się odświeżyć
   const next = (fn: () => void): void => { requestAnimationFrame(() => setTimeout(fn, 0)); };
   const finish = (): void => {
+    info.done();
     show(100, tx('Gotowe', 'Ready'));
     titleScreen = false;
     autoQ.reset();
@@ -495,12 +499,15 @@ function enterGame(label: string, prep?: () => void): void {
     menu.close();
     renderer.endOrbit(); // od razu widok gracza: to jego rozgrzewamy
     show(25, tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
+    info.step(tx('Shadery', 'Shaders'), tx(`kompilacja grafiki ${BUILDINGS.length} rodzajów budynków (gotowe i place budowy) — licznik może na chwilę stanąć`, `compiling graphics for ${BUILDINGS.length} kinds of buildings (finished and under construction) — the timer may pause for a moment`));
     next(() => {
       renderer.warmup();
       show(45, tx('Wczytywanie tekstur…', 'Loading the textures…'));
+      info.step(tx('Tekstury w karcie', 'Textures on the GPU'), tx('wysyłanie tekstur do karty graficznej', 'sending textures to the graphics card'));
       next(() => {
-        renderer.uploadTextures();
+        const nTex = renderer.uploadTextures();
         show(55, tx('Rozgrzewanie świata…', 'Warming up the world…'));
+        info.step(tx('Panel', 'Panel'), tx(`wgrano ${nTex} tekstur · rysowanie panelu i minimapy`, `${nTex} textures uploaded · drawing the panel and minimap`));
         try { refresh(); updateBars(); } catch (e) { console.error(e); } // pierwszy, najcięższy obraz panelu też pod zasłoną
         // 1) obchód kamerą: osiem kierunków z bliska i dwa z daleka, po kilka klatek — wszystko dookoła (drzewa, trawa,
         //    budynki, dalekie wersje modeli, cienie) wgrywa się do karty teraz, a nie przy pierwszym obrocie w grze
@@ -510,8 +517,10 @@ function enterGame(label: string, prep?: () => void): void {
         shots.push({ yaw: home.yaw, dist: home.dist * 2.2 }, { yaw: home.yaw + Math.PI, dist: home.dist * 2.2 });
         const PER = 4;
         let shot = 0, inShot = 0;
+        info.step(tx('Obchód kamerą', 'Camera sweep'));
         const sweep = (): void => {
           if (shot < shots.length) {
+            if (inShot === 0) info.detail(shot < 8 ? tx(`kierunek ${shot + 1} z 8 — drzewa, trawa, budynki i cienie dookoła`, `direction ${shot + 1} of 8 — trees, grass, buildings and shadows all around`) : tx(`widok z daleka ${shot - 7} z 2 — dalekie wersje modeli`, `distant view ${shot - 7} of 2 — far versions of models`));
             if (inShot === 0) renderer.setCamView({ x: home.x, z: home.z, dist: shots[shot]!.dist, yaw: shots[shot]!.yaw });
             show(55 + (25 * (shot * PER + inShot)) / (shots.length * PER), undefined);
             if (++inShot >= PER) { inShot = 0; shot++; }
@@ -524,6 +533,7 @@ function enterGame(label: string, prep?: () => void): void {
         // 2) uspokojenie: zasłona schodzi dopiero po 30 równych klatkach z rzędu (bez skoków ponad typową klatkę tego komputera)
         const settle = (): void => {
           show(80, tx('Ostatnie przygotowania…', 'Final preparations…'));
+          info.step(tx('Równe klatki', 'Steady frames'));
           const t0 = performance.now();
           let prev = t0, frames = 0, calm = 0;
           const recent: number[] = [];
@@ -533,6 +543,7 @@ function enterGame(label: string, prep?: () => void): void {
             const typical = [...recent].sort((x, y) => x - y)[Math.floor(recent.length * 0.3)] ?? dt;
             calm = dt < Math.max(20, typical * 1.5) ? calm + 1 : 0;
             show(80 + Math.min(19, calm * 0.63), undefined);
+            info.detail(tx(`równe klatki z rzędu: ${calm} / 30 · ostatnia ${Math.round(dt)} ms, typowa ${Math.round(typical)} ms`, `steady frames in a row: ${calm} / 30 · last ${Math.round(dt)} ms, typical ${Math.round(typical)} ms`));
             // najdłużej 12 s: bardzo słaby komputer i tak wejdzie do gry
             if ((frames >= 30 && calm >= 30) || now - t0 > 12000) finish();
             else requestAnimationFrame(watch);
