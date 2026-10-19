@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.15 — prawdziwe krzaki z Poly Haven (2026-10-19)
+
+- Krzaki z kul zastąpione prawdziwymi krzewami zrobionymi przez grafików (Searsia lucida z Poly Haven, CC0): trzy odmiany gęstych kęp (kopulasta, niska rozłożysta, wyższa), z liśćmi i gałązkami, w soczystej leśnej zieleni
+- Każda kępa to zdjęcia prawdziwego krzewu na kilkunastu kartach (ok. 56 trójkątów zamiast ok. 220), z daleka obrazek z 8 stron, cień z prostej bryły — krzaków jest kilka tysięcy, więc dalej lekko
+- Dalej drżą na wietrze, jesienią rudzieją, zimą tracą liście; w podglądzie modeli: Roślinność → krzak a / b / c
+
 ## 0.30.14 — prawdziwa ryba i pochodnia z paczek (2026-10-19)
 
 - Ryby wszędzie, gdzie występują, to jeden gotowy model zrobiony przez grafika (Barramundi, CC0): pływające i wyskakujące w wodzie, w koszu niesionym przez rybaka, w skrzynce w składzie i spichlerzu, na suszarni i w koszu przy chacie rybaka, na stole w kuchni twierdzy

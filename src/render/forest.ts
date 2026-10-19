@@ -107,3 +107,32 @@ export function treeKinds(): TreeKind[] {
 
 /** Odmiany danej roli (stała kolejność) */
 export const kindsOf = (role: TreeKind['role']): TreeKind[] => treeKinds().filter((k) => k.role === role);
+
+/**
+ * Krzaki z Poly Haven (Searsia lucida, CC0), przerobione skryptem tools/models/bushes_polyhaven.py: kilka krzewów
+ * zsuniętych w gęstą kępę, sfotografowanych na karty (ok. 44 trójkąty, prawdziwe liście i gałązki), z daleka
+ * obrazek z 8 stron, cień z prostej bryły.
+ */
+type BushVariant = { cards: Packed; shadow: Packed; far: { w: number; h: number } };
+export interface BushKind {
+  name: string;
+  cards: THREE.BufferGeometry;
+  shadow: THREE.BufferGeometry;
+  cardMat: THREE.MeshStandardMaterial;
+  far: { geometry: THREE.BufferGeometry; material: THREE.MeshStandardMaterial };
+  height: number;
+}
+let bushes: BushKind[] | null = null;
+export function bushKinds(): BushKind[] {
+  if (bushes) return bushes;
+  const data = model<Record<string, BushVariant>>('bushes');
+  bushes = Object.entries(data).sort(([a], [b]) => a.localeCompare(b)).map(([id, v]) => {
+    const name = `pv_bush_${id}`;
+    const cards = geo(v.cards);
+    const box = new THREE.Box3().setFromBufferAttribute(cards.getAttribute('position') as THREE.BufferAttribute);
+    const cardMat = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9, metalness: 0, map: maskedTex(`${name}_cards`), alphaTest: 0.5 });
+    const imp = impostorFrom(maskedTex(`${name}_far`) ?? new THREE.Texture(), v.far.w, v.far.h, null);
+    return { name, cards, shadow: geo(v.shadow), cardMat, far: { geometry: imp.geometry, material: imp.material() }, height: box.max.y };
+  });
+  return bushes;
+}

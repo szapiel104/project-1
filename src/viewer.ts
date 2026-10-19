@@ -18,7 +18,7 @@ import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './re
 import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
 import { proceduralModels } from './render/models';
 import { fernTexture, leafTexture, needleTexture } from './render/foliage';
-import { treeKinds } from './render/forest';
+import { bushKinds, treeKinds } from './render/forest';
 import { model } from './render/modelstore';
 import { clutterModel } from './render/clutter';
 import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
@@ -222,7 +222,14 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['tree-leaf', tx('drzewo liściaste (stare)', 'broadleaf tree (old)'), treeMake(proceduralModels.leafTrunk(), proceduralModels.leafCrown(), leafTexture(), 0x7a5a3a, 0x6fa33d)],
     ['plant-fern', tx('paproć', 'fern'), () => ({ obj: new THREE.Mesh(proceduralModels.fern(), new THREE.MeshStandardMaterial({ color: 0x5d8a34, side: THREE.DoubleSide, map: fernTexture(), alphaTest: 0.5 })) })],
     ['plant-deadwood', tx('opadła gałąź', 'fallen branch'), () => ({ obj: new THREE.Mesh(proceduralModels.deadwood(), new THREE.MeshStandardMaterial({ color: 0x6b5038, vertexColors: true, map: pattern('bark') })) })],
-    ['plant-bush', tx('krzak (z bliska | z daleka)', 'bush (near | far)'), plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
+    // krzaki z Poly Haven (karty z bliska; obrazek z daleka obraca się do kamery tylko w grze); skala jak średni krzak w grze
+    ...bushKinds().map((k): [string, string, Make] => [k.name.replace('pv_', '').replace(/_/g, '-'), tx(`krzak ${k.name.slice(-1)} (Poly Haven)`, `bush ${k.name.slice(-1)} (Poly Haven)`), () => {
+      const g = new THREE.Group();
+      g.add(new THREE.Mesh(k.cards, k.cardMat));
+      g.scale.setScalar(1.2);
+      return { obj: g, size: new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3()) };
+    }]),
+    ['plant-bush', tx('krzak (stary, z kul)', 'bush (old, spheres)'), plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
     ['plant-rock', tx('głaz (z bliska | z daleka)', 'boulder (near | far)'), plantPair(proceduralModels.rock(), proceduralModels.rockFar(), 0xc4bfb1, 'rock', true)],
   ]],
   [tx('W pracy', 'At work'), [

@@ -12,7 +12,7 @@ import { TERRAIN, Terrain } from '../data/terrain';
 import type { GameMap } from '../sim/map';
 import { hash2 } from '../sim/rng';
 import { fernTexture } from './foliage';
-import { kindsOf, type TreeKind } from './forest';
+import { bushKinds, kindsOf, type BushKind, type TreeKind } from './forest';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import type { ModelFactory } from './models';
@@ -1174,14 +1174,21 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące
   // krzaki i głazy z Blendera (tools/models/plants.py) w wersji z bliska i z daleka; cień w zagłębieniach w kolorach wierzchołków
-  const bushFar = models.bushFar();
   const plantMat = (tex: Parameters<typeof pattern>[0], flat: boolean): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({
     color: 0xffffff, vertexColors: true, flatShading: flat, roughness: 0.95, metalness: 0, map: pattern(tex), bumpMap: bump(tex), bumpScale: 1.2, normalMap: normal(tex) });
   const rockMat = plantMat('rock', true), rockFar = models.rockFar();
+  // krzaki z Poly Haven (src/render/forest.ts → bushKinds): gęste kępy krzewów na kartach, z daleka obrazki;
+  // drżą na wietrze (przy ziemi prawie nic, u góry najwięcej), jesienią rudzieją, zimą gubią liście jak dawniej
   label = 'krzewy';
-  const bushMat = plantMat('leaves', false);
-  windCrown(bushMat, 0.22, 'wind-bush', 0.04);   // krzaki też drżą na wietrze (nisko przy ziemi prawie nic, u góry najwięcej)
-  plant(bushes, instanced(models.bush(), 0x4f8a36, bushes, 'leaves', true, bushMat, { farGeo: bushFar, shadowGeo: bushFar }), null, false);
+  const BUSHES = bushKinds();
+  for (const b of BUSHES) {
+    windCrown(b.cardMat, 0.22, `wind-${b.name}`, 0.04);
+    b.cardMat.userData.season = 'leaf';
+    leafFar(b.far.material);
+  }
+  const bushSplit = new Map<BushKind, Item[]>(BUSHES.map((b) => [b, []]));
+  for (const it of bushes) bushSplit.get(kindFor(BUSHES, it, 11))!.push(it);
+  for (const [b, sub] of bushSplit) plant(sub, instanced(b.cards, 0xffffff, sub, undefined, true, b.cardMat, { near: FOG_SWITCH, farGeo: b.far.geometry, farMat: b.far.material, shadowGeo: b.shadow }, 16), null, false);
   // podszyt lasu: paprocie (karty z przezroczystością, drżą na wietrze, jesienią rudzieją) i opadłe gałęzie z korą
   label = 'podszyt';
   const fernMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: fernTexture(), alphaTest: 0.5 });

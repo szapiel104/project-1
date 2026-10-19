@@ -101,3 +101,17 @@ Przed wgraniem zawsze: `tools/models/props_check.py <katalog> /tmp/props.png` �
 z daleka, z dwóch stron, złożony z tych samych buforów co w przeglądarce. Test `tests/props.test.ts` pilnuje liczby
 trójkątów i wymiarów. Ryby w budynkach (suszarnia i kosz u rybaka, stół w kuchni twierdzy) zapisują skrypty budynków
 tylko jako miejsca (`fishSpots`), a rybę z paczki wstawia gra (`buildingFish` w `src/render/buildings.ts`).
+
+## Krzaki z Poly Haven (krzewy robione przez grafików)
+
+`tools/models/bushes_polyhaven.py` składa kilka krzewów Searsia lucida (paczka glTF 1K + maska `_alpha_1k.jpg`) w gęste
+kępy (odmiany w `BUSHES`), barwi liście na leśną zieleń i fotografuje je jak korony drzew: pionowe plastry z 4 stron
+i poziome od góry → karty (ok. 56 trójkątów), obrazek z daleka z 8 stron, bryła cienia:
+
+    /tmp/bpyenv/bin/python tools/models/bushes_polyhaven.py /ścieżka/do/paczek
+    COMPARE=1 ... → /tmp/bush_cmp_pv_bush_<odmiana>.png (oryginał nad kartami; Cycles cieniuje karty inaczej niż gra,
+                    więc to tylko kontrola obrysu i gęstości — wygląd sprawdza się w modele.html)
+
+Wynik: `src/render/models/bushes.json`, `public/textures/cc0/pv_bush_<odmiana>_{cards,far}.jpg` (+ `_a` maska, przez płótno,
+bez KTX2). W grze `bushKinds()` w `src/render/forest.ts`, rozkład w `terrain.ts`; podgląd `modele.html?id=bush-a`.
+**Zawsze porównaj wersję do gry z pobranym modelem** (podgląd modeli w pełnej jakości obok renderu oryginału) — ma wyglądać tak samo, nie gorzej.
