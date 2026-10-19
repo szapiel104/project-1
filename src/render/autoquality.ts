@@ -78,6 +78,9 @@ export class AutoQuality {
     return null;
   }
 
+  /** Nowy start pomiaru (wejście do gry z menu albo z ekranu wczytywania): pierwsze sekundy się nie liczą */
+  reset(): void { this.settle = SETTLE_MS; this.time = 0; this.frames = 0; this.smoothWindows = 0; }
+
   private change(t: number): number {
     this.tier = t;
     this.settle = 2000;

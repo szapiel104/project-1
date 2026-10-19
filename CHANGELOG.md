@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.10 — ekran wczytywania przy wejściu do gry (2026-10-19)
+
+- „Kontynuuj”, „Nowa gra” i mecz przez sieć wchodzą do gry przez ekran wczytywania z paskiem i procentami: przygotowanie świata, kompilacja grafiki, wgranie wszystkich tekstur do karty graficznej i rozgrzanie świata (kilkanaście klatek rysowanych pod zasłoną z widoku gracza). Zasłona schodzi dopiero, gdy klatki są równe, więc po wejściu gra nie przycina
+- Automat jakości grafiki nie liczy już pustych klatek menu: wcześniej szybkie menu podbijało jakość i po wejściu do gry obraz się ciął, aż automat zszedł niżej
+- Powrót z pauzy (Esc → „Wróć do gry”) dalej jest od razu, bez wczytywania
+
 ## 0.30.9 — herb na chorągwiach idzie za kontem (2026-10-19)
 
 - Gra startowała, zanim wczytało się konto, więc na chorągwiach był herb zastępczy (niebieska tarcza z mieczami), także po resecie. Teraz flagi na mapie podmieniają się same, gdy tylko konto się wczyta

@@ -1436,6 +1436,26 @@ export class GameRenderer {
   }
   private prewarmed = false;
 
+  /**
+   * Wgrywa do karty graficznej wszystkie tekstury sceny z góry. Bez tego three.js wysyła teksturę dopiero przy pierwszym
+   * rysowaniu obiektu, więc pierwsze obroty kamery po wejściu do gry przycinają. Zwraca liczbę tekstur.
+   */
+  uploadTextures(): number {
+    const seen = new Set<THREE.Texture>();
+    const take = (m: THREE.Material): void => {
+      for (const v of Object.values(m)) if (v && (v as THREE.Texture).isTexture && !seen.has(v as THREE.Texture)) seen.add(v as THREE.Texture);
+      const u = (m as THREE.ShaderMaterial).uniforms;
+      if (u) for (const k in u) { const v = u[k]?.value; if (v && (v as THREE.Texture).isTexture) seen.add(v as THREE.Texture); }
+    };
+    this.scene.traverse((o) => {
+      const mat = (o as THREE.Mesh).material;
+      if (!mat) return;
+      if (Array.isArray(mat)) mat.forEach(take); else take(mat);
+    });
+    for (const tex of seen) { try { this.renderer.initTexture(tex); } catch { /* tekstura jeszcze bez obrazka: wgra się przy rysowaniu */ } }
+    return seen.size;
+  }
+
   /** Powolny obrót kamery wokół osady, gdy otwarte jest menu */
   orbit(dt: number): void {
     // podgląd nowej mapy: kamera wzlatuje nad całą mapę, w dzień, i powoli ją obraca

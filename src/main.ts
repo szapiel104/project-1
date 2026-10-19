@@ -235,7 +235,11 @@ previewCover.setAttribute('role', 'status');
 previewCover.innerHTML = '<div class="preview-cover-box"><span class="preview-spin" aria-hidden="true"></span><p>' + tx('Generuję mapę…', 'Generating the map…') + '</p></div>';
 document.body.append(previewCover);
 const menu = createMenu(document.body, {
-  onContinue: () => { menu.close(); if (!net) setStatus({ where: 'solo' }); },
+  // z ekranu tytułowego (zapis wczytany przy starcie) wchodzimy przez ekran wczytywania, a powrót z pauzy jest od razu
+  onContinue: () => {
+    if (!titleScreen) { menu.close(); if (!net) setStatus({ where: 'solo' }); return; }
+    enterGame(tx('Wczytywanie zapisu…', 'Loading the saved game…'), () => { if (!net) setStatus({ where: 'solo' }); });
+  },
   // podgląd nowej mapy: generujemy ją obok bieżącej gry i pokazujemy z lotu ptaka; bieżąca gra czeka nietknięta
   onPreviewMap: (seedText, preset, level, dev) => {
     // generowanie mapy zatrzymuje stronę na chwilę: najpierw ciemna zasłona z kręciołkiem za menu (lewy panel zostaje),
@@ -273,19 +277,10 @@ const menu = createMenu(document.body, {
     preview = null;
     renderer.endPreview();
     // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
-    const cover = document.createElement('div');
-    cover.id = 'loading';
-    cover.innerHTML = loadingMarkup(t('load.map'));
-    document.body.append(cover);
-    requestAnimationFrame(() => setTimeout(() => {
+    enterGame(t('load.map'), () => {
       start(seedText, preset, undefined, level, dev, undefined, instant, walls);
       setStatus({ where: 'solo' });
-      renderer.warmup();
-      menu.close();
-      (cover.querySelector('.loading-bar span') as HTMLElement).style.width = '100%';
-      cover.classList.add('done');
-      setTimeout(() => cover.remove(), 500);
-    }, 30));
+    });
   },
   onVolume: (v) => setVolume(v),
   onMute: () => { const m = toggleMute(); hud.setMuted(m); return m; },
@@ -314,18 +309,7 @@ const menu = createMenu(document.body, {
   onOnlineStart: (st) => {
     // podgląd mapy z pokoju znika bez wracania do poprzedniej gry: od razu startuje mecz
     previewJob++; previewCover.hidden = true; preview = null; renderer.endPreview();
-    const cover = document.createElement('div');
-    cover.id = 'loading';
-    cover.innerHTML = loadingMarkup(t('load.map'));
-    document.body.append(cover);
-    requestAnimationFrame(() => setTimeout(() => {
-      startOnline(st);
-      renderer.warmup();
-      menu.close();
-      (cover.querySelector('.loading-bar span') as HTMLElement).style.width = '100%';
-      cover.classList.add('done');
-      setTimeout(() => cover.remove(), 500);
-    }, 30));
+    enterGame(t('load.map'), () => startOnline(st));
   },
 });
 
@@ -469,6 +453,71 @@ function loadingMarkup(label: string): string {
   <div class="loading-card"><p class="loading-tip">${randomTip()}</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${label}</span><strong></strong></p></div>`;
 }
 let titleScreen = true;
+/** Trwa wejście do gry za ekranem wczytywania: pętla rysuje świat pod zasłoną, ale symulacja i automat jakości stoją */
+let entering = false;
+/**
+ * Wejście do gry (Kontynuuj, nowa gra, mecz przez sieć) za ekranem wczytywania z paskiem. Kolejno: przygotowanie świata
+ * (`prep`), kompilacja shaderów, wgranie tekstur do karty, a potem kilkanaście klatek rysowanych pod zasłoną z widoku
+ * gracza (cienie, trawa, drzewa, ludzie). Zasłona schodzi dopiero, gdy klatki są równe — w grze nic już nie przycina.
+ */
+function enterGame(label: string, prep?: () => void): void {
+  if (entering) return;
+  entering = true;
+  document.getElementById('loading')?.remove();
+  const cover = document.createElement('div');
+  cover.id = 'loading';
+  cover.innerHTML = loadingMarkup(label);
+  document.body.append(cover);
+  const bar = cover.querySelector('.loading-bar span') as HTMLElement;
+  const text = cover.querySelector('.loading-line span') as HTMLElement;
+  const pct = cover.querySelector('.loading-line strong') as HTMLElement;
+  const show = (p: number, what?: string): void => {
+    bar.style.width = `${Math.round(p)}%`;
+    pct.textContent = `${Math.round(p)}%`;
+    if (what) text.textContent = what;
+  };
+  show(4);
+  // każdy krok w osobnej klatce, żeby pasek zdążył się odświeżyć
+  const next = (fn: () => void): void => { requestAnimationFrame(() => setTimeout(fn, 0)); };
+  const finish = (): void => {
+    show(100, tx('Gotowe', 'Ready'));
+    titleScreen = false;
+    autoQ.reset();
+    last = performance.now();
+    entering = false;
+    cover.classList.add('done');
+    setTimeout(() => cover.remove(), 500);
+  };
+  next(() => {
+    try { prep?.(); } catch (e) { console.error(e); }
+    previewJob++; previewCover.hidden = true; preview = null;
+    renderer.endPreview();
+    menu.close();
+    renderer.endOrbit(); // od razu widok gracza: to jego rozgrzewamy
+    show(25, tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
+    next(() => {
+      renderer.warmup();
+      show(45, tx('Wczytywanie tekstur…', 'Loading the textures…'));
+      next(() => {
+        renderer.uploadTextures();
+        show(60, tx('Rozgrzewanie świata…', 'Warming up the world…'));
+        // klatki rysuje zwykła pętla (gałąź `entering`); tu tylko mierzymy, kiedy obraz się uspokoi
+        const t0 = performance.now();
+        let prev = t0, frames = 0, calm = 0;
+        const watch = (now: number): void => {
+          const dt = now - prev; prev = now; frames++;
+          calm = dt < 40 ? calm + 1 : 0;
+          const spent = now - t0;
+          show(60 + Math.min(38, frames * 1.6), undefined);
+          // min. 12 klatek, potem 10 równych z rzędu; najdłużej 6 s (bardzo słaby komputer i tak wejdzie)
+          if ((frames >= 12 && calm >= 10) || spent > 6000) finish();
+          else requestAnimationFrame(watch);
+        };
+        requestAnimationFrame(watch);
+      });
+    });
+  });
+}
 /** Bieżące ustawienia (te same, które zmienia menu) i automat jakości grafiki */
 let gfx: Settings = loadSettings();
 const autoQ = new AutoQuality(gfx.autoTier ?? TOP_TIER - 1);
@@ -1757,7 +1806,15 @@ function loop(now: number): void {
   if (cap > 0 && now - lastDraw < 1000 / cap - 2) { requestAnimationFrame(loop); return; }
   lastDraw = now;
   const elapsed = Math.min(250, now - last);
-  if (gfx.auto && !document.hidden) {
+  if (entering) {
+    // ekran wczytywania: świat rysuje się pod zasłoną (wgrywa się wszystko, co widać), czas gry stoi
+    last = now;
+    renderer.frame(elapsed / 1000, 1, true);
+    requestAnimationFrame(loop);
+    return;
+  }
+  // automat jakości mierzy tylko prawdziwą grę: puste klatki menu podbijały go i po wejściu gra przycinała
+  if (gfx.auto && !document.hidden && !(menu.isOpen() && !renderer.isPreviewing)) {
     const tier = autoQ.frame(now - last);
     if (tier !== null) {
       gfx.autoTier = tier;
