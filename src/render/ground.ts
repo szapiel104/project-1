@@ -411,7 +411,7 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
           wDs = max(min(dd.g, dd.r * 2.0 + 0.02), 0.0);
           if (wD <= 0.0) discard;
           // barwa toni (światło rozproszone w wodzie): leśne jezioro, oliwkowo-brunatne od torfu
-          diffuseColor.rgb = vec3(0.05, 0.064, 0.038);
+          diffuseColor.rgb = vec3(0.07, 0.085, 0.048);
         }`)
       .replace('#include <normal_fragment_maps>', `#include <normal_fragment_maps>
         {
@@ -431,12 +431,12 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
       .replace('#include <opaque_fragment>', `
         {
           vec3 vdir = normalize(vViewPosition);
-          float F = 0.02 + 0.98 * pow(1.0 - clamp(dot(normal, vdir), 0.0, 1.0), 5.0);   // Fresnel (Schlick, woda)
+          float F = 0.035 + 0.965 * pow(1.0 - clamp(dot(normal, vdir), 0.0, 1.0), 5.0);   // Fresnel (Schlick, woda)
           // pochłanianie (Beer–Lambert): droga promienia w wodzie rośnie, im płaściej patrzymy
           vec3 V = normalize(cameraPosition - vWP);
           float path = wDs / max(V.y, 0.15);
-          // przy brzegu woda jest czysta (dno widać do ok. metra), głębiej toń gęstnieje i od ok. 2,5 m dna już nie ma
-          float tr = dot(exp(-vec3(1.25, 0.95, 1.45) * path), vec3(0.3333));
+          // przy brzegu dno widać przez zielonkawą toń, od ok. 1,5 m znika
+          float tr = dot(exp(-vec3(2.3, 1.7, 2.6) * path), vec3(0.3333));
           vec3 rw = reflect(-vdir, normal);
           vec3 rWorld = (vec4(rw, 0.0) * viewMatrix).xyz;
           vec3 refl;
@@ -459,6 +459,6 @@ export function waterMaterial(depth: THREE.Texture, w: number, h: number, refl: 
         }
         #include <opaque_fragment>`);
   };
-  mat.customProgramCacheKey = () => 'water-v6';
+  mat.customProgramCacheKey = () => 'water-v7';
   return { mat, time, sky, sunDir, sunCol };
 }
