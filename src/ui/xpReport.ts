@@ -22,6 +22,8 @@ export interface XpReportOpts {
   action?: { label: string; run: () => void };
   /** Dźwięki: krótki stuk przy pozycji, fanfara przy awansie */
   sound?: (kind: 'tick' | 'level') => void;
+  /** Pokaz bez zapisu (tryb deweloperski): napis pod paskiem */
+  demo?: string;
 }
 
 const reduced = (): boolean => typeof matchMedia !== 'undefined' && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -118,7 +120,8 @@ export function xpReport(host: HTMLElement, o: XpReportOpts): void {
       return;
     }
     if (r.gained !== o.preview) await countUp(sum, o.preview, r.gained, 400, (n) => `+${n} ${PD}`);
-    if (r.gained === 0 || r.gained < o.preview) {
+    if (o.demo) { note.hidden = false; note.textContent = o.demo; }
+    else if (r.gained === 0 || r.gained < o.preview) {
       note.hidden = false;
       note.textContent = r.gained === 0 && o.preview === 0 ? tx('Mecz krótszy niż 3 minuty nie daje doświadczenia.', 'Matches under 3 minutes give no experience.')
         : tx('Część doświadczenia przepadła przez limit (najwyżej 600 PD za mecz i 3000 PD na dobę).', 'Some experience was lost to the cap (600 XP per match, 3000 XP a day).');

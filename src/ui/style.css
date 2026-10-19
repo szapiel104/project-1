@@ -1508,3 +1508,14 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .xpr-note { margin: 0; font-size: 15px; line-height: 1.4; color: #e7c9a0; padding: 8px 12px; border-left: 3px solid #b0261c; background: #150f09; }
 .xpr-act { justify-self: start; }
 @media (prefers-reduced-motion: reduce) { .xpr-row, .xpr-total, .xpr-level { transition: none; opacity: 1; transform: none; } .xpr-gem.flash, .xpr-up { animation: none; } }
+/* menu: zawsze jedna kolumna na całą szerokość — tabliczka i napis z wersją nie mogą dołożyć drugiej i przesunąć środka */
+.menu:not(.previewing) { grid-template-columns: minmax(0, 1fr); }
+.menu > .menu-head, .menu > .menu-panel, .menu > .menu-bar, .menu > .menu-fine, .menu > .menu-account { grid-column: 1; }
+/* pasek menu bez ciemnych prostokątów za napisami: linie są osobnymi elementami między pozycjami */
+.menu-bar .bar-side::before, .menu-bar .bar-side::after { display: none; }
+.menu-bar .bar-side { gap: 0; align-items: center; }
+.menu-bar .bar-item:not(.bar-main), .menu-bar .bar-item:not(.bar-main):hover, .menu-bar .bar-item:not(.bar-main):focus-visible, .menu-bar .bar-item:not(.bar-main)[aria-current='page'] { background: none; }
+.bar-sep, .bar-line { flex: 0 0 clamp(14px, 1.6vw, 30px); height: 5px; border-top: 1px solid rgba(233, 199, 102, .75); border-bottom: 1px solid rgba(154, 122, 42, .4); pointer-events: none; }
+.bar-line { flex: 1 1 0; min-width: 20px; }
+.bar-side.left .bar-line { border-image: linear-gradient(90deg, transparent, #9a7a2a 40%, #e9c766) 1; }
+.bar-side.right .bar-line { border-image: linear-gradient(90deg, #e9c766, #9a7a2a 60%, transparent) 1; }

@@ -10,6 +10,8 @@ export interface DevEvents {
   /** Tryb stawiania: następne kliknięcie na mapie stawia `count` jednostek; null = wyłączony */
   onPlace(spawn: { kind: DevSpawn; foe: boolean; count: number } | null): void;
   onFoeAtTower(): void;
+  /** Od razu kończy mecz wygraną (ekran końca z pokazem podsumowania PD) */
+  onWin(): void;
   onSkip(to: 'night' | 'day'): void;
   onFire(): void;
   /** Ustawia porę roku (środek wybranej pory); zwraca opis pogody */
@@ -89,6 +91,7 @@ export function createDevPanel(root: HTMLElement, ev: DevEvents): DevPanel {
   };
   const acts = el('div', 'dev-acts');
   acts.append(
+    act(tx('Wygraj mecz', 'Win the match'), () => ev.onWin(), tx('Od razu ekran zwycięstwa z pokazem podsumowania PD (w trybie deweloperskim PD się nie zapisuje)', 'Straight to the victory screen with the XP summary shown (developer mode saves no XP)')),
     act(tx('Wróg pod moją wieżą', 'Enemy at my tower'), () => { ev.onFoeAtTower(); status.textContent = tx('Trzech wrogich włóczników 6 pól od Twojej wieży z łucznikami.', 'Three enemy spearmen 6 tiles from your archer tower.'); }, tx('Sprawdzenie, czy wieża strzela', 'Checks that the tower shoots')),
     act(tx('Wywołaj pożar', 'Start a fire'), () => ev.onFire(), tx('Podpala Twój budynek najbliżej studni', 'Sets fire to your building nearest a well')),
     act(tx('Przewiń do nocy', 'Skip to night'), () => ev.onSkip('night'), tx('Wilki wychodzą o zmierzchu', 'Wolves come out at dusk')),

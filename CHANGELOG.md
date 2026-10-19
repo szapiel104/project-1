@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.23 — menu na środku, „Wygraj mecz” w panelu dewelopera (2026-10-19)
+
+- Menu ma na sztywno jedną kolumnę: tytuł, pasek i okna są zawsze na środku ekranu, także z tabliczką gracza w lewym dolnym rogu
+- Pasek menu bez czarnej poświaty za napisami: złote linie są tylko w odstępach między pozycjami, więc napisy nie potrzebują ciemnego tła
+- Panel dewelopera: przycisk „Wygraj mecz” — od razu ekran zwycięstwa z pokazem podsumowania PD (pasek liczy od obecnego stanu konta, nic nie trafia do bazy, pod spodem napis, że to pokaz)
+
 ## 0.30.22 — żołnierz przy zamku odpowiada na atak (2026-10-19)
 
 - Żołnierz, który bije w zamek albo inny budynek (z rozkazu lub sam), na widok wrogiego żołnierza przerywa oblężenie i walczy z nim; po walce sam wraca do tego samego budynku

@@ -32,7 +32,7 @@ import { EMPTY, SANDBOX, TEST } from './testmode';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
-import { awardMatch, deleteRoom, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
+import { awardMatch, deleteRoom, me as netMe, progress, onAccount, saveResult, setStatus } from './net/supa';
 import { matchXp, MODE_MULT, xpParts, type MatchMode } from './data/progress';
 import { xpReport } from './ui/xpReport';
 import type { OnlineStart } from './ui/online';
@@ -1626,11 +1626,16 @@ function endXp(after: Element, win: boolean, mins: number): void {
     : SANDBOX ? tx('Tryb testowy (?test w adresie) nie daje doświadczenia.', 'Test mode (?test in the address) gives no experience.')
     : !netMe() ? tx('Zaloguj się, żeby zbierać doświadczenie, poziomy i tytuły.', 'Sign in to earn experience, levels and ranks.') : undefined;
   const counts = !reason;
+  // tryb deweloperski: pokaz animacji na niby (od obecnego stanu konta), nic nie trafia do bazy
+  const demo = p.dev && !SANDBOX;
+  const raw = Math.min(600, Math.round(xpParts(stats).reduce((a, x) => a + x.xp, 0) * MODE_MULT[mode])) || 150;
+  const now = progress()?.xp ?? 0;
   xpReport(host, {
+    demo: demo ? tx('Pokaz w trybie deweloperskim — to doświadczenie nie zostało zapisane.', 'Developer mode preview — this experience was not saved.') : undefined,
     parts: xpParts(stats).filter((x) => x.xp > 0),
     mult: { label: multLabel, value: MODE_MULT[mode] },
-    preview: matchXp(stats, mode),
-    award: counts ? awardMatch(mode, stats) : null,
+    preview: demo ? raw : matchXp(stats, mode),
+    award: demo ? Promise.resolve({ gained: raw, xp: now + raw, level: 0 }) : counts ? awardMatch(mode, stats) : null,
     reason,
     action: !netMe() && !p.dev && !SANDBOX ? { label: tx('Zaloguj się', 'Sign in'), run: () => { document.querySelector('.end')?.remove(); menu.account(false); } } : undefined,
     sound: (k) => play(k === 'level' ? 'build' : 'click'),
@@ -2551,6 +2556,7 @@ function devPlace(x: number, y: number, kind: DevSpawn, foe: boolean, count: num
   return n;
 }
 const devPanel = createDevPanel(document.body, {
+  onWin: () => { if (!endShown) { devPanel.close(); showEnd(true); } },
   onPlace: (sp) => { devSpawn = sp; canvas.classList.toggle('placing', !!sp); },
   onFoeAtTower: () => {
     const W = game.map.width;

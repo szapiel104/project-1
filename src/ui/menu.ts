@@ -282,6 +282,16 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       main = barBtn(t('menu.newGame'), showNew, true);
       right.append(barBtn(t('menu.settings'), showSettings), barBtn(t('menu.howTo'), showHelp));
     }
+    // złote linie tylko w odstępach między napisami (osobne elementy), więc napisy nie potrzebują ciemnego tła, które by je zasłaniało
+    const line = (cls: string): HTMLElement => { const s = el('span', cls); s.setAttribute('aria-hidden', 'true'); return s; };
+    const lace = (side: HTMLElement, isLeft: boolean): void => {
+      const items = [...side.children];
+      side.replaceChildren();
+      if (isLeft) side.append(line('bar-line'));
+      items.forEach((it) => { if (!isLeft) side.append(line('bar-sep')); side.append(it); if (isLeft) side.append(line('bar-sep')); });
+      if (!isLeft) side.append(line('bar-line'));
+    };
+    lace(left, true); lace(right, false);
     bar.replaceChildren(left, main, right);
     barItems = [...bar.querySelectorAll<HTMLButtonElement>('.bar-item')];
   }
