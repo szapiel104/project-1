@@ -35,7 +35,7 @@ const TEX_FILE: Partial<Record<PropName, string>> = { sack: 'burlap' };
 /** Chropowatość i metaliczność powierzchni (połysk skórki jabłka i łusek ryby, matowy chleb i drewno) */
 const SURFACE: Partial<Record<PropName, [number, number]>> = {
   fish: [0.42, 0.08], basket: [0.9, 0], apple: [0.45, 0], barrel: [0.75, 0.05], sack: [0.95, 0],
-  granite1: [0.9, 0], granite2: [0.9, 0], granite3: [0.9, 0], sheaf: [0.92, 0], ingots: [0.55, 0.5],
+  granite1: [0.9, 0], granite2: [0.9, 0], granite3: [0.9, 0], sheaf: [0.92, 0], ingots: [0.62, 0.12],
 };
 /** Skan granitu (tools/models/stock_import.py) ma tylko kolor ze zdjęć, bez mapy normalnych */
 const NO_NORMAL = new Set<PropName>(['granite1', 'granite2', 'granite3']);
