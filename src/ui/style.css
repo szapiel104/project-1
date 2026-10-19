@@ -1468,3 +1468,43 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .house-piece:focus-visible, .menu .house-swatch:focus-visible { outline: 3px solid #e9c766; outline-offset: 2px; }
 @media (max-width: 860px) { .house-stats { grid-template-columns: repeat(2, 1fr); } .house-badges, .house-how { grid-template-columns: 1fr; } .house-arms { grid-template-columns: 1fr; } .house-arms-left { position: static; } }
 @media (prefers-reduced-motion: reduce) { .house-xp-fill { transition: none; } }
+
+/* ===== Podsumowanie PD na końcu meczu (19.10.2026): pozycje wpadają po kolei, suma, ładujący się pasek poziomu ===== */
+.end-panel { width: min(600px, calc(100vw / var(--ui, 1) - 32px)); max-height: calc(100vh / var(--ui, 1) - 24px); overflow-y: auto; }
+.xpr { display: grid; gap: 10px; margin-top: 4px; padding: 14px 16px 16px; background: #0d0905; border: 1px solid #6e5420; box-shadow: inset 0 0 0 3px #0b0704, inset 0 0 0 4px rgba(154, 122, 42, .3); }
+.xpr-head h3 { margin: 0; font-family: var(--display); font-size: 16px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: #e9c766; display: flex; align-items: center; gap: 12px; }
+.xpr-head h3::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, #6e5420, transparent); }
+.xpr-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.xpr-row { display: flex; justify-content: space-between; gap: 16px; padding: 5px 10px; font-size: 16px; color: #e7d6b2; background: #150f09;
+  opacity: 0; transform: translateX(-14px); transition: opacity .25s ease, transform .25s ease; }
+.xpr-row.in { opacity: 1; transform: none; }
+.xpr-row strong { font-family: var(--display); font-size: 17px; color: #ffe7a6; font-variant-numeric: tabular-nums; }
+.xpr-row.mult { background: none; color: #c9b48a; font-style: italic; }
+.xpr-row.mult strong { color: #e9c766; font-style: normal; }
+.xpr-total { display: flex; justify-content: space-between; align-items: baseline; padding: 8px 10px 4px; border-top: 1px solid #6e5420;
+  opacity: 0; transition: opacity .3s ease; }
+.xpr-total.in { opacity: 1; }
+.xpr-total > span { font-family: var(--display); font-size: 15px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #cbb68a; }
+.xpr-sum { font-family: 'Cinzel Decorative', var(--display); font-size: 34px; font-weight: 900; color: #ffcf6a; text-shadow: 0 0 18px rgba(255, 140, 40, .55), 0 2px 2px #000; font-variant-numeric: tabular-nums; }
+.xpr.none .xpr-sum { font-size: 20px; color: #b9a782; text-shadow: none; }
+.xpr-level { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 16px; padding-top: 6px; opacity: 0; transform: translateY(8px); transition: opacity .3s ease, transform .3s ease; }
+.xpr-level.in { opacity: 1; transform: none; }
+.xpr-gem { position: relative; display: grid; place-items: center; width: 74px; height: 74px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: linear-gradient(#e9c766, #8a5e18); }
+.xpr-gem::before { content: ''; position: absolute; inset: 4px; clip-path: polygon(50% 0, 100% 50%, 50% 100%, 0 50%); background: linear-gradient(#a32419, #4a0c07); }
+.xpr-gem-n, .xpr-gem-t { position: relative; grid-area: 1 / 1; }
+.xpr-gem-n { font-family: 'Cinzel Decorative', var(--display); font-size: 28px; font-weight: 900; color: #ffe7a6; transform: translateY(-5px); text-shadow: 0 2px 2px #000; }
+.xpr-gem-t { align-self: end; margin-bottom: 19px; font-family: var(--display); font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #f3d78a; }
+.xpr-gem.flash { animation: xpr-flash .7s ease-out; }
+@keyframes xpr-flash { 0% { transform: scale(1); filter: brightness(1); } 30% { transform: scale(1.25); filter: brightness(2) drop-shadow(0 0 20px #ffb347); } 100% { transform: scale(1); filter: brightness(1); } }
+.xpr-right { display: grid; gap: 5px; min-width: 0; }
+.xpr-title { font-family: var(--display); font-size: 17px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #e9c766; }
+.xpr-bar { position: relative; height: 16px; background: #0b0704; border: 1px solid #9a7a2a; box-shadow: 0 0 0 2px #0b0704, inset 0 2px 4px rgba(0, 0, 0, .9); overflow: hidden; }
+.xpr-fill { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(90deg, #9c2a0c, #e2741c 55%, #ffcf6a); box-shadow: 0 0 12px rgba(255, 120, 30, .6); }
+.xpr-gain { position: absolute; top: 0; bottom: 0; z-index: 1; background: linear-gradient(90deg, rgba(255, 245, 210, .0), rgba(255, 245, 210, .45)); mix-blend-mode: screen; }
+.xpr-nums { font-size: 14px; color: #c9b48a; font-variant-numeric: tabular-nums; }
+.xpr-up { margin: 4px 0 0; padding: 8px 12px; text-align: center; font-family: var(--display); font-size: 19px; font-weight: 700; letter-spacing: .06em; color: #fff0c8;
+  background: linear-gradient(90deg, transparent, rgba(176, 38, 28, .55), transparent); text-shadow: 0 0 14px rgba(255, 170, 60, .8), 0 2px 2px #000; animation: xpr-up .6s ease-out; }
+@keyframes xpr-up { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+.xpr-note { margin: 0; font-size: 15px; line-height: 1.4; color: #e7c9a0; padding: 8px 12px; border-left: 3px solid #b0261c; background: #150f09; }
+.xpr-act { justify-self: start; }
+@media (prefers-reduced-motion: reduce) { .xpr-row, .xpr-total, .xpr-level { transition: none; opacity: 1; transform: none; } .xpr-gem.flash, .xpr-up { animation: none; } }

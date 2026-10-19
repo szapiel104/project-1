@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.19 — podsumowanie doświadczenia jak w grach sieciowych (2026-10-19)
+
+- Na końcu meczu każda pozycja PD (czas, wynik, pokonani, zburzone, postawione) wpada po kolei i nabija liczbę, potem duża świecąca suma, a pasek poziomu ładuje się od starego stanu do nowego; przy awansie romb z poziomem błyska, gra fanfara i pojawia się „Awans! Poziom X — nowy tytuł”
+- Gdy PD nie ma, okno mówi dlaczego zamiast znikać: tryb deweloperski, tryb testowy, brak konta (z przyciskiem logowania), mecz krótszy niż 3 minuty, limit dzienny albo brak połączenia z bazą
+- Na końcu meczu przycisk „Mój ród” (otwiera kronikę bitew); kod w `src/ui/xpReport.ts`
+
 ## 0.30.18 — jabłka, chleb i beczka piwa ze skanów (2026-10-19)
 
 - Jabłka, chleb i beczka piwa to gotowe modele z Poly Haven (CC0, skany prawdziwych przedmiotów): jabłka w koszu niesionym przez chłopa i w koszach w składzie i spichlerzu, trzy różne bochenki w koszach chleba, dębowa beczka z obręczami i czopem niesiona przez chłopa i w stosach beczek w składzie

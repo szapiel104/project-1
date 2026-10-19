@@ -78,6 +78,8 @@ export interface Menu {
   open(inGame: boolean): void;
   /** Otwiera menu od razu na koncie (albo logowaniu, gdy nikt nie jest zalogowany) */
   account(inGame: boolean): void;
+  /** „Mój ród” na zakładce kroniki (przycisk na końcu meczu) */
+  house(inGame: boolean): void;
   /** Otwiera menu prosto w pokoju z linku zaproszenia */
   join(roomId: string): void;
   close(): void;
@@ -608,6 +610,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
 
   return {
     open(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); },
+    house(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.showHouse(1); },
     account(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); if (netMe()) online.showAccount(); else online.showLogin(false); },
     join(id) { inGame = false; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
     close() { if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); } wrap.hidden = true; document.body.classList.remove('menu-open'); },

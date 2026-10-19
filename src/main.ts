@@ -33,7 +33,8 @@ import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
 import { awardMatch, deleteRoom, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
-import { levelOf, MODE_MULT, titleOf, xpParts, type MatchMode } from './data/progress';
+import { matchXp, MODE_MULT, xpParts, type MatchMode } from './data/progress';
+import { xpReport } from './ui/xpReport';
 import type { OnlineStart } from './ui/online';
 import { createGameChat } from './ui/chat';
 import { createPings, PINGS } from './ui/pings';
@@ -1601,41 +1602,38 @@ function showEnd(win: boolean): void {
   const list = box.querySelector('.menu-list')!;
   const btn = (text: string, fn: () => void): void => { const b = document.createElement('button'); b.type = 'button'; b.className = 'menu-btn'; b.textContent = text; b.addEventListener('click', () => { box.remove(); fn(); }); list.append(b); };
   btn(t('end.again'), () => { menu.open(false); });
+  if (netMe() && !SANDBOX) btn(tx('Mój ród', 'My house'), () => { menu.house(false); });
   document.body.append(box);
   play(win ? 'build' : 'collapse');
   endXp(box.querySelector('.summary')!, win, mins);
 }
 
 /**
- * Doświadczenie za mecz (konto): rozpiska z gry od razu, a liczba PD i poziom z bazy (award_match liczy z limitami —
- * to, co policzy przeglądarka, to tylko podgląd). Tryb deweloperski, testy i mecz bez konta nic nie dają.
+ * Doświadczenie za mecz (konto): rozpiska nabija się po kolei, suma i pasek poziomu dochodzą z bazy (award_match liczy
+ * z limitami — to, co policzy przeglądarka, to tylko podgląd). Gdy PD nie ma, okno mówi dlaczego (tryb deweloperski,
+ * testowy, brak konta).
  */
 function endXp(after: Element, win: boolean, mins: number): void {
   const p = game.players[ME]!;
-  if (SANDBOX || p.dev || !netMe()) return;
   const enemy = game.players.find((q) => q.id !== ME && q.bot);
   const mode: MatchMode = netGame ? (netGame.coop ? 'coop' : 'online') : (`bots${Math.max(0, Math.min(3, enemy?.level ?? 2))}` as MatchMode);
   const st = p.stats;
   const stats = { won: win, minutes: mins, kills: st.kills, razed: st.razed, built: st.built };
-  const box = document.createElement('div');
-  box.className = 'end-xp';
-  box.setAttribute('aria-live', 'polite');
-  const parts = xpParts(stats).filter((x) => x.xp > 0).map((x) => `<li><span>${x.label}</span><span>${x.xp}</span></li>`).join('');
-  const mult = MODE_MULT[mode] < 1 ? `<li><span>${tx('rodzaj meczu', 'match type')} (${mode === 'coop' ? tx('razem przeciw botom', 'together against bots') : mode.startsWith('bots') ? tx('z botami', 'against bots') : tx('przez sieć', 'online')})</span><span>×${MODE_MULT[mode]}</span></li>` : '';
-  box.innerHTML = `<strong>${tx('Doświadczenie: liczę…', 'Experience: tallying…')}</strong><ul>${parts}${mult}</ul>`;
-  after.after(box);
-  void awardMatch(mode, stats).then((r) => {
-    const head = box.querySelector('strong')!;
-    if (!r) { head.textContent = tx('Doświadczenia nie udało się zapisać (brak połączenia z bazą).', 'Experience could not be saved (no connection to the server).'); return; }
-    const lv = levelOf(r.xp);
-    head.textContent = r.gained > 0 ? `+${r.gained} ${tx('PD', 'XP')}` : mins < 3 ? tx('Za krótki mecz — bez doświadczenia', 'Match too short — no experience') : tx('+0 PD (dzienny limit)', '+0 XP (daily limit)');
-    const bar = document.createElement('span'); bar.className = 'acc-xp';
-    const fill = document.createElement('span'); fill.className = 'acc-xp-fill'; fill.style.width = '0%'; bar.append(fill);
-    const line = document.createElement('span'); line.className = 'end-up';
-    line.textContent = r.level > r.before ? `${tx('Nowy poziom', 'New level')}: ${r.level} — ${titleOf(r.level)}!` : `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level} · ${lv.into}/${lv.need} ${tx('PD', 'XP')}`;
-    box.append(bar, line);
-    requestAnimationFrame(() => { fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`; });
-    if (r.level > r.before) play('build');
+  const host = document.createElement('div');
+  after.after(host);
+  const multLabel = mode === 'coop' ? tx('razem przeciw botom', 'together against bots') : mode.startsWith('bots') ? tx('mecz z botami', 'match against bots') : tx('przez sieć', 'online');
+  const reason = p.dev ? tx('Tryb deweloperski nie daje doświadczenia — zagraj zwykłą grę bez trybu deweloperskiego.', 'Developer mode gives no experience — play a regular match without it.')
+    : SANDBOX ? tx('Tryb testowy (?test w adresie) nie daje doświadczenia.', 'Test mode (?test in the address) gives no experience.')
+    : !netMe() ? tx('Zaloguj się, żeby zbierać doświadczenie, poziomy i tytuły.', 'Sign in to earn experience, levels and ranks.') : undefined;
+  const counts = !reason;
+  xpReport(host, {
+    parts: xpParts(stats).filter((x) => x.xp > 0),
+    mult: { label: multLabel, value: MODE_MULT[mode] },
+    preview: matchXp(stats, mode),
+    award: counts ? awardMatch(mode, stats) : null,
+    reason,
+    action: !netMe() && !p.dev && !SANDBOX ? { label: tx('Zaloguj się', 'Sign in'), run: () => { document.querySelector('.end')?.remove(); menu.account(false); } } : undefined,
+    sound: (k) => play(k === 'level' ? 'build' : 'click'),
   });
 }
 
