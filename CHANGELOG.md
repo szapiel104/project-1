@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.30.28 — drwal ciągnie to samo drzewo, które ściął (2026-10-19)
+
+- Ścięte drzewo ciągnięte do chaty drwala to teraz ta sama odmiana z Poly Haven, która stała w lesie (jodła, sosna albo liściaste), w pełnej jakości — zamiast starego świerka z kodu
+- Korona leżącego drzewa szura po ziemi, ale się w nią nie zapada (szersze korony liściastych są mocniej uniesione); cień korony z kształtu liści, nie z prostokątów kart
+
 ## 0.30.27 — cienie drzew w kształcie drzew, drzewa stoją w ziemi (2026-10-19)
 
 - Korony drzew, młode jodły i krzaki rzucają cień swoimi prawdziwymi liśćmi i igłami (ta sama maska co w obrazie) zamiast prostej bryły — koniec z trójkątnymi klinami na ziemi

@@ -60,6 +60,8 @@ export interface TerrainView {
   heightAt(x: number, y: number): number;
   /** Przechyla drzewa na polu podczas ścinania (0 = stoi, 1 = leży) */
   fell(tile: number, k: number): void;
+  /** Odmiana drzewa rosnącego na polu (także drzewka leśniczego), żeby drwal ciągnął to samo drzewo, które ściął */
+  treeKindAt(tile: number): TreeKind | null;
   /** Usuwa drzewa z pola i zostawia pniaki */
   clear(tile: number): void;
   /** Drzewo posadzone przez leśniczego: wzrost 0..1 (0 = brak drzewka, 1 = dorosłe drzewo) */
@@ -1157,13 +1159,13 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     };
   };
   // drzewa zapamiętujemy według pola, żeby drwal mógł je ściąć
-  const trees = new Map<number, { meshes: Inst[]; index: number; item: Item }[]>();
+  const trees = new Map<number, { meshes: Inst[]; index: number; item: Item; kind?: TreeKind }[]>();
   const stumpItems: Item[] = [];
   const stumpOf = new Map<Item, number>();
-  const plant = (list: Item[], trunk: Inst | null, crown: Inst | null, stump = true): void => {
+  const plant = (list: Item[], trunk: Inst | null, crown: Inst | null, stump = true, kind?: TreeKind): void => {
     list.forEach((item, index) => {
       const here = trees.get(item.tile) ?? [];
-      here.push({ meshes: [trunk, crown].filter((x): x is Inst => !!x), index, item });
+      here.push({ meshes: [trunk, crown].filter((x): x is Inst => !!x), index, item, kind });
       trees.set(item.tile, here);
       if (stump) { stumpOf.set(item, stumpItems.length); stumpItems.push(item); }
     });
@@ -1176,7 +1178,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       label = 'drzewa: pnie';
       const trunk = instanced(k.trunk, 0xffffff, sub, undefined, true, k.barkMat, kindTrunkLodOf(k), 16);
       label = 'drzewa: korony';
-      plant(sub, trunk, instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k), 16), stump);
+      plant(sub, trunk, instanced(k.cards, 0xffffff, sub, undefined, true, k.cardMat, kindLod(k), 16), stump, k);
     }
   };
   label = 'drzewa: korony';
@@ -1415,6 +1417,11 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       m.compose(t.item.pos, tilt, t.item.s);
       for (const mesh of t.meshes) { mesh.setMatrixAt(t.index, m); touch(mesh); }
     }
+  };
+  const treeKindAt = (tile: number): TreeKind | null => {
+    for (const t of trees.get(tile) ?? []) if (t.kind) return t.kind;
+    const y = young.get(tile);
+    return y ? (y.kind === 1 ? LEAFS[0]! : CONIFERS[0]!) : null;
   };
   const clear = (tile: number): void => {
     grow(tile, 0);
@@ -1920,6 +1927,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     setRoads,
     heightAt,
     fell,
+    treeKindAt,
     clear,
     grow,
     trunkNear,

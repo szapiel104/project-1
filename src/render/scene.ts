@@ -48,7 +48,7 @@ import { applySeason, SEASON_U, SnowTrails } from './season';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
-import { needleTexture } from './foliage';
+import { kindsOf, type TreeKind } from './forest';
 import { Figures } from './peasants';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
@@ -664,7 +664,10 @@ export class GameRenderer {
   private strides = new Map<number, { x: number; y: number; phase: number }>();
   private camps = new Map<number, GameState['buildings'][number]>();
   private loads: Map<number, THREE.InstancedMesh>;
-  private logs: THREE.InstancedMesh;
+  /** Ścięte drzewa ciągnięte przez drwali: po parze siatek [pień, korona] na każdą odmianę z lasu */
+  private logs = new Map<TreeKind, [THREE.InstancedMesh, THREE.InstancedMesh]>();
+  /** Które drzewo ściął drwal (id ludzika → odmiana), żeby ciągnął to samo, które stało w lesie */
+  private felled = new Map<number, TreeKind>();
   private planks: THREE.InstancedMesh;
   private time = 0;
   /** Bez animacji (tylko na życzenie: ?spokoj=1). Systemowe „ogranicz ruch” zatrzymywało wszystkie animacje w grze (ludzie sunęli, bramy stały) */
@@ -900,19 +903,31 @@ export class GameRenderer {
     this.fireFx = new FireCrewFx(this.scene);
 
     this.loads = createLoads(MAX_UNITS, this.scene);
-    // drewno niesione jako kłoda na ramieniu, reszta jako pakunek nad głową
-    // całe ścięte drzewo ciągnięte po ziemi za drwalem: ten sam świerk z Blendera co w lesie (młody, ok. 6 m),
-    // położony czubkiem do tyłu — pień z korą w dłoniach, korona z igliwia wlecze się po ziemi
-    const lay = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.rotateX(-Math.PI / 2 + 0.12).scale(0.6, 0.6, 0.6).translate(0, 0.3, -0.2);
-    const log = mergeGeometries([lay(this.models.treeTrunk()), lay(this.models.treeCrown())], true)!;
-    this.logs = new THREE.InstancedMesh(log, [
-      new THREE.MeshStandardMaterial({ color: 0x6b4a2e, vertexColors: true, roughness: 0.95, map: pattern('bark'), normalMap: normal('bark') }),
-      new THREE.MeshStandardMaterial({ color: 0x3c7a3a, vertexColors: true, roughness: 0.95, side: THREE.DoubleSide, map: needleTexture(), alphaTest: 0.5 }),
-    ], MAX_UNITS);
+    // całe ścięte drzewo ciągnięte po ziemi za drwalem: ta sama odmiana z Poly Haven co w lesie (src/render/forest.ts),
+    // położona czubkiem do tyłu — pień z korą w dłoniach, korona wlecze się po ziemi. Bez odchudzania modelu:
+    // pełny pień i karty korony jak w lesie, tylko bez wiatru (leżące drzewo się nie kołysze).
+    for (const k of [...kindsOf('conifer'), ...kindsOf('leaf')]) {
+      // długość w układzie postaci jak dawny świerk; liściaste krótsze, bo mają szeroką koronę
+      const s = (k.role === 'leaf' ? 1.7 : 2.1) / k.height;
+      const box = new THREE.Box3().setFromBufferAttribute(k.cards.getAttribute('position') as THREE.BufferAttribute);
+      const r = Math.max(-box.min.x, box.max.x, -box.min.z, box.max.z) * s; // promień korony po skali
+      // pochylenie czubka w górę: korona szura po ziemi, ale nie zapada się w nią (szeroka korona = mocniej uniesiona)
+      let tilt = 0.12;
+      while (tilt < 0.6 && 0.3 + Math.sin(tilt) * ((box.min.y + box.max.y) / 2) * s - r * Math.cos(tilt) < -0.06) tilt += 0.02;
+      const lay = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.clone().scale(s, s, s).rotateX(-Math.PI / 2 + tilt).translate(0, 0.3, -0.2);
+      const bark = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.95, metalness: 0, side: THREE.DoubleSide, map: k.barkMat.map, normalMap: k.barkMat.normalMap });
+      const leaves = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.9, metalness: 0, map: k.cardMat.map, alphaTest: 0.5 });
+      const trunk = new THREE.InstancedMesh(lay(k.trunk), bark, MAX_UNITS);
+      const crown = new THREE.InstancedMesh(lay(k.cards), leaves, MAX_UNITS);
+      // cień korony z kształtu liści na kartach, nie z prostokątów kart
+      crown.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: k.cardMat.map, alphaTest: 0.5 });
+      for (const m of [trunk, crown]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'niesione bale i deski')); }
+      this.logs.set(k, [trunk, crown]);
+    }
     // wiązka desek na ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami
     const plank = plankBundle();
     this.planks = new THREE.InstancedMesh(plank, loadMaterials(plank), MAX_UNITS); // deski z fakturą drewna, przewiązki z płótna
-    for (const m of [this.logs, this.planks]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'niesione bale i deski')); }
+    this.planks.count = 0; this.planks.frustumCulled = false; this.planks.castShadow = true; this.scene.add(cat(this.planks, 'niesione bale i deski'));
 
     this.cam = new StrategyCamera(canvas);
     this.composer = new EffectComposer(this.renderer);
@@ -4192,12 +4207,24 @@ export class GameRenderer {
     if (this.roadPlans.instanceColor) touch(this.roadPlans);
   }
 
+  /** Odmiana ciągniętego drzewa, gdy nie widzieliśmy ścinania (np. wczytany zapis): stała dla ludzika, zwykle iglak */
+  private logKindFor(id: number): TreeKind | null {
+    const all = [...this.logs.keys()];
+    const con = all.filter((k) => k.role === 'conifer');
+    const list = con.length ? con : all;
+    return list.length ? list[(id * 2654435761 >>> 0) % list.length]! : null;
+  }
+
   /** Drzewo przechyla się pod koniec rąbania, a po ścięciu znika i zostaje pniak. */
   private syncForest(g: GameState, view: TerrainView): void {
     for (const u of g.units) {
       if (u.phase !== Phase.WorkingSite || u.timer > 40) continue;
       const tile = (u.py >> 8) * g.map.width + (u.px >> 8);
-      if (g.map.tiles[tile] === Terrain.Forest) { const k = 1 - u.timer / 40; view.fell(tile, k * k); } // powoli rusza, potem wali się coraz szybciej
+      if (g.map.tiles[tile] === Terrain.Forest) {
+        const k = 1 - u.timer / 40; view.fell(tile, k * k); // powoli rusza, potem wali się coraz szybciej
+        const kind = view.treeKindAt(tile);
+        if (kind) this.felled.set(u.id, kind); // to samo drzewo potem ciągnie do chaty
+      }
     }
     // dziennik lasu: wpis ≥ 0 = ścięte (pniak), < 0 = drzewko leśniczego dorosło w zwykłe drzewo
     for (; this.cutSeen < g.cut.length; this.cutSeen++) {
@@ -5776,9 +5803,11 @@ export class GameRenderer {
       this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : pickInHand ? CARRY_PICK_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : planting ? work + 0.08 : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || pickInHand || (!!u.bucket && walking) || !!ia?.legs, undefined, chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
-      t.scale.setScalar(log ? FIG : 0);
+      // ciągnie odmianę, którą ściął (po wczytaniu zapisu w trakcie drogi: stała odmiana dla ludzika)
+      const logKind = log ? this.felled.get(u.id) ?? this.logKindFor(u.id) : null;
+      t.scale.setScalar(FIG);
       t.updateMatrix();
-      this.logs.setMatrixAt(i, t.matrix);
+      for (const [k, pair] of this.logs) for (const m of pair) m.setMatrixAt(i, k === logKind ? t.matrix : ZERO);
       t.scale.setScalar(wood && !log ? FIG : 0);
       t.updateMatrix();
       this.planks.setMatrixAt(i, t.matrix);
@@ -5879,7 +5908,7 @@ export class GameRenderer {
       m.count = loadUsed.get(res) ?? 0;
       touch(m);
     }
-    for (const m of [this.logs, this.planks]) {
+    for (const m of [this.planks, ...[...this.logs.values()].flat()]) {
       m.count = n;
       touch(m);
     }
