@@ -150,6 +150,8 @@ const M = {
   castle: mat(0xa9a08c, 'ashlar'), castleDark: mat(0x857b68, 'ashlar'), castlePlain: mat(0xd6c49a),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
+/** Płyta łąki w modelu sadu: w podglądzie modeli widać ją jak w Blenderze, w grze chowa ją scena (sad stoi na łące z dywanu trawy) */
+M.orchardGrass.userData.orchardFloor = true;
 
 // Szyby, ciemne wnęki i rysy leżą tuż przy ścianie: z daleka karta graficzna myli je ze ścianą i obraz mruga.
 // Przesunięcie głębi „do przodu” rozstrzyga ten remis zawsze na ich korzyść.

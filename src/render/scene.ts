@@ -3616,19 +3616,30 @@ export class GameRenderer {
       applyCrest(mesh, TEAM_COLORS[team] ?? 0x888888, this.crestOf(b.owner));
       mesh.userData.fx = collectFx(mesh, isWindowMat);
       mergeStatic(mesh, def.id + ':' + team);
+      // sad: płyta łąki z modelu niewidoczna, spod spodu rośnie zwykła trawa mapy (ten sam kolor i kępy co dookoła)
+      if (def.id === 'orchard') mesh.traverse((o) => { const mm = (o as THREE.Mesh).material; if (mm) for (const x of Array.isArray(mm) ? mm : [mm]) if (x.userData?.orchardFloor) x.visible = false; });
       // cienie chmur suną też po dachach i ścianach (te same plamy co na ziemi)
       mesh.traverse((o) => { const mm = (o as THREE.Mesh).material; if (mm) for (const x of Array.isArray(mm) ? mm : [mm]) cloudShade(x); });
       let top = -99, low = 99;
       const fp = footprint(def, b.rot);
-      // pod budynkiem nie rośnie trawa, krzewy ani nie leżą kamyki
-      for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { view.clear(y * width + x); view.noGrass(y * width + x); }
+      // pod budynkiem nie rośnie trawa, krzewy ani nie leżą kamyki; sad stoi na zwykłej łące (trawa z dywanu rośnie
+      // dalej, ten sam kolor i kępy co dookoła), łysy jest tylko narożnik ze szopą
+      const orchard = def.id === 'orchard';
+      const shed = orchard ? orchardShedTile(b.x, b.y, b.rot) : null;
+      for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) {
+        view.clear(y * width + x);
+        if (!shed || (x === shed[0] && y === shed[1])) view.noGrass(y * width + x);
+      }
       for (let y = b.y; y <= b.y + fp.h; y++)
         for (let x = b.x; x <= b.x + fp.w; x++) { const hh = view.heightAt(x, y); top = Math.max(top, hh); low = Math.min(low, hh); }
       // budynek siada lekko poniżej najwyższego punktu działki, a teren pod nim się wyrównuje (nasyp od dołu stoku,
       // wkop od góry), więc fundament nigdzie nie wisi nad ziemią i do środka nie zagląda trawa ze zbocza
       const ground = low + (top - low) * 0.35;
       if (!def.wall && !def.road) view.level(b.x, b.y, fp.w, fp.h, ground - 0.01);
-      mesh.position.set(b.x + fp.w / 2 - width / 2, ground, b.y + fp.h / 2 - height / 2);
+      // model sadu stoi na płycie łąki grubej na ORCHARD_FLOOR (w grze niewidocznej): opuszczamy go, żeby płot, jabłka
+      // i szopa stały na terenie, a nie 5 cm nad nim
+      const sink = orchard ? ORCHARD_FLOOR : 0;
+      mesh.position.set(b.x + fp.w / 2 - width / 2, ground - sink, b.y + fp.h / 2 - height / 2);
       if (def.id === 'keep') {
         this.keepFloors.set(b.id, [b.x + KEEP_HALF, b.y + KEEP_HALF, ground]);
         this.keepOwner.set((b.x + KEEP_HALF) * 1000 + (b.y + KEEP_HALF), b.owner);
@@ -3642,7 +3653,7 @@ export class GameRenderer {
         }
       }
       const wm = WALK_MODELS[def.id];
-      if (wm) this.walkables.set(b.id, { cx: b.x + fp.w / 2, cy: b.y + fp.h / 2, rot: b.rot, base: ground, hw: fp.w / 2, hh: fp.h / 2, m: wm });
+      if (wm) this.walkables.set(b.id, { cx: b.x + fp.w / 2, cy: b.y + fp.h / 2, rot: b.rot, base: ground - sink, hw: fp.w / 2, hh: fp.h / 2, m: wm });
       mesh.rotation.y = (b.rot * Math.PI) / 2;
       // ziemia wydeptana tylko tuż przy ścianach (z przerwami) i przy drzwiach; dalej trawa ledwo naruszona
       if (!def.wall && !def.gate && !def.road && def.id !== 'torch') {
@@ -5913,4 +5924,14 @@ export class GameRenderer {
     } else this.cursor.visible = false;
     this.onHover(tile);
   }
+}
+
+/** Grubość płyty łąki w modelu sadu (FLOOR w tools/models/orchard.py) */
+const ORCHARD_FLOOR = 0.05;
+/** Pole mapy, na którym stoi szopa sadu (lewy tylny róg modelu, obrócony razem z budynkiem o rot·90°) */
+function orchardShedTile(bx: number, by: number, rot: number): [number, number] {
+  const a = (rot * Math.PI) / 2, c = Math.round(Math.cos(a)), sn = Math.round(Math.sin(a));
+  // środek szopy w modelu ≈ (-1, -1) pole od środka; obrót jak mesh.rotation.y: x' = x·cos + z·sin, z' = -x·sin + z·cos
+  const dx = -c - sn, dz = sn - c;
+  return [bx + 1 + dx, by + 1 + dz];
 }
