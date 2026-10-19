@@ -353,7 +353,9 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   const bj0 = Math.max(0, Math.floor((board.cz - board.hh - g.z0) / g.step)), bj1 = Math.min(g.ny - 1, Math.ceil((board.cz + board.hh - g.z0) / g.step));
   const BW = bi1 - bi0 + 1, BH = bj1 - bj0 + 1;
   const hb = new Float32Array(BW * BH);
-  for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) hb[j * BW + i] = g.data[(j + bj0) * g.nx + i + bi0]!;
+  // tafla wody liczy się jak ziemia: jezioro na płaskiej łące to nie dolina (dno pod wodą udawało niecki i opar
+  // leżał zwartą, mleczną płachtą akurat nad stawami, zasłaniając odbicia w wodzie)
+  for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) hb[j * BW + i] = Math.max(-0.08, g.data[(j + bj0) * g.nx + i + bi0]!);
   const boxBlur = (src: Float32Array, R: number): Float32Array => {
     const tmp = new Float32Array(src.length), out = new Float32Array(src.length);
     for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) { let a = 0, c = 0; for (let k = -R; k <= R; k++) { const ii = i + k; if (ii >= 0 && ii < BW) { a += src[j * BW + ii]!; c++; } } tmp[j * BW + i] = a / c; }
@@ -367,7 +369,8 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   for (let k = 0; k < vall.length; k++) {
     const jj = Math.floor(k / BW), ii = k - jj * BW;
     const wet = g.wet ? g.wet[(jj + bj0) * g.nx + ii + bi0]! : 0;
-    vall[k] = hb[k]! > 1.25 ? 0 : Math.min(1, Math.max(0, (avg[k]! - hb[k]!) / 0.35) + wet * 0.4);
+    // nad otwartą wodą tylko lekki opar przy brzegu, nie pierzyna na całej tafli
+    vall[k] = hb[k]! > 1.25 ? 0 : Math.min(1, Math.max(0, (avg[k]! - hb[k]!) / 0.35)) * (1 - wet * 0.8);
   }
   vall = boxBlur(vall, 1);
   // Skraj lasu i urwiska: płachta wygasa kilka pól przed drzewami (pod koronami i tak jej nie widać, a ucięta o nie
