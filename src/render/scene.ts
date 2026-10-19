@@ -1409,7 +1409,8 @@ export class GameRenderer {
     // „Ostra”: na zwykłym monitorze (gęstość 1×) gra liczy obraz w 1,5× rozdzielczości i zmniejsza go (nadpróbkowanie —
     // wygładza krawędzie, trawę i drobne tekstury); wcześniej było przycinane do gęstości ekranu i na 1× nic nie dawało
     const dpr = window.devicePixelRatio || 1;
-    this.ratioMax = o.scale >= 2 ? Math.max(dpr, Math.min(2, dpr * 1.5)) : Math.min(dpr, o.scale);
+    // „Ostrzejsza” (1,25): pośredni stopień nadpróbkowania — złoty środek na szerokie monitory (ultrapanorama, 4K na 1×)
+    this.ratioMax = o.scale >= 2 ? Math.max(dpr, Math.min(2, dpr * 1.5)) : o.scale > 1 ? Math.min(2, dpr * o.scale) : Math.min(dpr, o.scale);
     this.ratioDyn = 1;
     this.dynRes = !!o.dynRes;
     this.applyRatio();
