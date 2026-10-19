@@ -47,7 +47,8 @@ export function propGeometry(name: PropName, far = false): THREE.BufferGeometry 
   g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(slice(b64(m.pos))), 3));
   g.setAttribute('normal', new THREE.BufferAttribute(new Int8Array(slice(b64(m.nrm))), 3, true));
   const col = b64(m.col), lin = new Float32Array(col.length);
-  for (let i = 0; i < col.length; i++) lin[i] = col[i]! / 255;
+  // kolory wierzchołków zapisane w sRGB (barwa lnu i cień w fałdach worka; u modeli z paczek biel) → liniowe, jak w lesie
+  for (let i = 0; i < col.length; i++) { const c = col[i]! / 255; lin[i] = c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4; }
   g.setAttribute('color', new THREE.BufferAttribute(lin, 3));
   g.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(slice(b64(m.uv))), 2));
   g.setIndex(new THREE.BufferAttribute(new Uint16Array(slice(b64(m.idx))), 1));
