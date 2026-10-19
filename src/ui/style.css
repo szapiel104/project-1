@@ -1629,3 +1629,18 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .set-presets .set-preset { min-height: 52px; margin: 0; padding: 0 8px; min-width: 0; font-size: 17px; }
 .help-pane .help-tip.set-warn { border-left-color: #e9c766; background: #1c1409; }
 .help-nav .set-save { width: 100%; margin: 0; }
+/* koszary (19.10.2026): szersze okno, trzy karty w jednym rzędzie, niższe karty — całość mieści się nad dolnym paskiem także na laptopie */
+.info:has(.recruit:not([hidden])), .floaters .info:has(.recruit:not([hidden])) {
+  width: min(760px, calc(100vw / var(--ui, 1) - 16px)); max-height: calc(100vh / var(--ui, 1) - 150px); overflow-y: auto; }
+.info .recruit { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+.info .unit-card { grid-template-columns: auto 1fr; justify-items: start; align-items: center; column-gap: 10px; row-gap: 6px; padding: 8px 10px; text-align: left; }
+.info .unit-card .unit-pic { grid-row: span 2; }
+.info .unit-card .unit-needs, .info .unit-card .unit-btns, .info .unit-card .unit-flag { grid-column: 1 / -1; }
+.info .unit-card .unit-needs { justify-content: flex-start; }
+.info .unit-pic.shot, .info .unit-pic svg { width: 72px; height: 72px; }
+.info .unit-name { font-size: 19px; line-height: 1.1; }
+.info .unit-btns { grid-template-columns: 1fr 1fr 1.4fr; }
+.info .unit-btns button { min-height: 40px; font-size: 17px; }
+.info .unit-btns button:last-child { grid-column: auto; font-size: 15px; }
+.info .rally-row { grid-template-columns: auto auto 1fr; }
+.info .rally-row .hint { grid-column: auto; }

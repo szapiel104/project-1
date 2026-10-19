@@ -53,7 +53,7 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   const def = UNITS[kind];
   const p = g.players[player];
   const b = buildingById(g, barracksId);
-  if (!def || def.guard || !p || !b || b.owner !== player || b.type !== BARRACKS || b.door < 0) return false;
+  if (!def || def.guard || def.bandit || !p || !b || b.owner !== player || b.type !== BARRACKS || b.door < 0) return false;
   for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
   // wolny chłop (najlepiej ten, co siedzi przy ognisku) idzie do koszar; w środku dostaje broń i wychodzi żołnierzem
   const free = g.units.filter((u) => u.owner === player && u.job === 0 && !u.enlist && u.carryRes < 0);

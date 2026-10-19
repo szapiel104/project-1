@@ -1325,7 +1325,7 @@ function recruitInfo(): RecruitUnit[] {
   const p = game.players[ME]!;
   const gold = p.res[resIndex('gold')]!;
   const idle = game.units.filter((u) => u.owner === ME && u.job === 0).length;
-  return UNITS.filter((def) => !def.guard).map((def) => {
+  return UNITS.filter((def) => !def.guard && !def.bandit).map((def) => {
     const have = p.res[resIndex(def.weapon)]!;
     const cost = def.cost.gold ?? 0;
     // ile sztuk broni (albo drewna na taran) idzie na jednego
