@@ -238,6 +238,7 @@ previewCover.setAttribute('role', 'status');
 previewCover.innerHTML = '<div class="preview-cover-box"><span class="preview-spin" aria-hidden="true"></span><p>' + tx('Generuję mapę…', 'Generating the map…') + '</p></div>';
 document.body.append(previewCover);
 const menu = createMenu(document.body, {
+  onTutorialReset: () => tutorial.reset(),
   // z ekranu tytułowego (zapis wczytany przy starcie) wchodzimy przez ekran wczytywania, a powrót z pauzy jest od razu
   onContinue: () => {
     if (!titleScreen) { menu.close(); if (!net) setStatus({ where: 'solo' }); return; }

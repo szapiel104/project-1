@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.25 — „Jak grać” na cały ekran, pasek w grze w jednej linii (2026-10-19)
+
+- „Jak grać” jako duża księga na prawie cały ekran: spis po lewej (Nauka gry 1–10, Encyklopedia: postacie i budynki), treść szeroko po prawej — duży tytuł rozdziału, większy tekst, rady w wyróżnionych ramkach, czytelne tabele, w encyklopedii duży podgląd modelu
+- W spisie przycisk „Plan na start od nowa” (włącza przewodnik w grze jeszcze raz); strzałki góra/dół przechodzą między rozdziałami
+- Menu w trakcie gry: pasek znów w jednej linii (trzy pozycje po lewej się nie zawijają; krótsze kreski i ciaśniejsze napisy)
+
 ## 0.30.24 — worki z płótna i modele z paczek w oryginale (2026-10-19)
 
 - Worek mąki i ziarna to model z Blendera z symulacją tkaniny: pełny worek siada pod własnym ciężarem, płótno marszczy się w fałdy zbiegające do sznura, nad sznurem zebrany kołnierz; tekstura juty powtarzana na płótnie, cień w fałdach. Gotowego worka z płótna na wolnej licencji w sieci nie ma (tylko papierowe i plastikowe albo bez licencji)

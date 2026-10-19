@@ -56,6 +56,8 @@ export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 
 
 export interface MenuEvents {
   onContinue(): void;
+  /** „Plan na start od nowa” (przycisk w „Jak grać”) */
+  onTutorialReset?(): void;
   onNewGame(seedText: string, preset: MapPresetId, level: number, dev: boolean, instant: boolean, walls: 'mix' | 'stone' | 'wood'): void;
   onVolume(v: number): void;
   onMute(): boolean;
@@ -183,6 +185,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   /** Ekran z nagłówkiem; szeroki = dwie kolumny (zakładki po lewej, treść po prawej) */
   const screen = (heading: string, wide: boolean, ...nodes: Node[]): void => {
     panel.classList.toggle('wide', wide);
+    panel.classList.remove('book'); wrap.classList.remove('book-open');
     panel.hidden = false;
     wrap.classList.add('sub-open');
     markBar(heading);
@@ -317,7 +320,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
 
   function showMain(): void {
     online.leave();
-    panel.classList.remove('wide');
+    panel.classList.remove('wide', 'book'); wrap.classList.remove('book-open');
     if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); }
     panel.hidden = true;
     wrap.classList.remove('sub-open');
@@ -596,11 +599,14 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     return box;
   }
 
-  function showHelp(): void {
+  /** „Jak grać” jak księga: duże okno na prawie cały ekran, spis po lewej (nauka gry i encyklopedia), treść po prawej */
+  function showHelp(startArg?: unknown): void {
+    // wywoływane też prosto z kliknięcia (wtedy argumentem jest zdarzenie) — liczy się tylko liczba
+    const start = typeof startArg === 'number' ? startArg : 0;
     const block = (b: HelpBlock): Node => {
       if (typeof b === 'string') return el('p', 'help-p', b);
       if ('h' in b) return el('h3', 'help-h', b.h);
-      if ('tip' in b) return el('p', 'help-tip', b.tip);
+      if ('tip' in b) { const p = el('p', 'help-tip'); p.append(el('strong', '', tx('Rada', 'Tip')), document.createTextNode(` ${b.tip}`)); return p; }
       const table = el('table', 'help-table');
       b.table.forEach((row, i) => {
         const tr = el('tr');
@@ -609,13 +615,49 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       });
       return table;
     };
-    const tabs = tabbed([
-      ...HELP_CHAPTERS.map((c): [string, () => Node[]] => [c.title, () => { const box = el('div', 'help-text'); box.append(...c.blocks.map(block)); return [box]; }]),
-      [tx('Postacie i zwierzęta', 'People and animals'), () => [galleryPane(GALLERY.people)]], [tx('Budynki', 'Buildings'), () => [galleryPane(GALLERY.buildings)]],
-    ], true);
-    const foot = el('div', 'menu-foot');
-    foot.append(back());
-    screen(t('menu.howTo'), true, tabs, foot);
+    const pages: { title: string; group: number; make: () => Node[] }[] = [
+      ...HELP_CHAPTERS.map((c) => ({ title: c.title, group: 0, make: () => { const box = el('article', 'help-text'); box.append(el('h2', 'help-title', c.title), ...c.blocks.map(block)); return [box]; } })),
+      { title: tx('Postacie i zwierzęta', 'People and animals'), group: 1, make: () => [galleryPane(GALLERY.people)] },
+      { title: tx('Budynki', 'Buildings'), group: 1, make: () => [galleryPane(GALLERY.buildings)] },
+    ];
+    const book = el('div', 'help-book');
+    const nav = el('nav', 'help-nav');
+    nav.setAttribute('aria-label', tx('Rozdziały', 'Chapters'));
+    const list = el('div', 'help-toc'); list.setAttribute('role', 'tablist'); list.setAttribute('aria-orientation', 'vertical');
+    const pane = el('div', 'help-pane'); pane.setAttribute('role', 'tabpanel'); pane.id = 'help-pane'; pane.tabIndex = -1;
+    const btns: HTMLButtonElement[] = [];
+    const show = (i: number): void => {
+      btns.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
+      pane.replaceChildren(...pages[i]!.make());
+      pane.scrollTop = 0;
+    };
+    let group = -1, n = 0;
+    pages.forEach((pg, i) => {
+      if (pg.group !== group) { group = pg.group; list.append(el('p', 'help-toc-group', group === 0 ? tx('Nauka gry', 'Learning the game') : tx('Encyklopedia', 'Encyclopaedia'))); n = 0; }
+      n++;
+      const b = button('', () => show(i), 'help-toc-item');
+      b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', pane.id);
+      b.append(el('span', 'help-toc-n', pg.group === 0 ? String(n) : '◆'), el('span', 'help-toc-t', pg.title));
+      btns.push(b); list.append(b);
+    });
+    list.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault();
+      const i = btns.indexOf(document.activeElement as HTMLButtonElement);
+      const k = (Math.max(0, i) + (e.key === 'ArrowDown' ? 1 : btns.length - 1)) % btns.length;
+      show(k); btns[k]!.focus();
+    });
+    nav.append(list);
+    if (events.onTutorialReset) {
+      const again = button(tx('Plan na start od nowa', 'Restart the opening plan'), () => { events.onTutorialReset!(); again.textContent = tx('Plan włączony — zobaczysz go w grze', 'Plan on — you will see it in game'); }, 'btn-plain help-again');
+      nav.append(again);
+    }
+    nav.append(back());
+    book.append(nav, pane);
+    screen(t('menu.howTo'), true, book);
+    panel.classList.add('book'); wrap.classList.add('book-open');
+    show(Math.max(0, Math.min(pages.length - 1, start)));
+    btns[Math.max(0, Math.min(pages.length - 1, start))]!.focus();
   }
 
   return {
