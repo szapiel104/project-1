@@ -572,8 +572,13 @@ b.prism('interior', 'iron', 0.13, 0.15, 0.16, (kx0 + kx1) / 2, G + 0.1, kz0 + 0.
 boxs('interior', 'wood', 0.85, 0.05, 0.45, (kx0 + kx1) / 2, G + 0.28, (kz0 + kz1) / 2 + 0.15)
 for s in (-1, 1):
     b.box('interior', 'woodDark', 0.05, 0.28, 0.4, (kx0 + kx1) / 2 + s * 0.38, G, (kz0 + kz1) / 2 + 0.15)
+FISH_SPOTS = []   # ryba na stole: gotowy model z paczki stawiany przez grę (x, y, z pyska, yaw, wisi?, długość — jak w fisher.py)
 for i, m in enumerate(('bread', 'apple', 'fish', 'bread', 'apple')):
-    b.box('interior', m, 0.07, 0.05, 0.07, (kx0 + kx1) / 2 - 0.3 + i * 0.15, G + 0.33, (kz0 + kz1) / 2 + 0.15)
+    x = (kx0 + kx1) / 2 - 0.3 + i * 0.15
+    if m == 'fish':
+        FISH_SPOTS.append([round(x - 0.07, 4), round(G + 0.33, 4), round((kz0 + kz1) / 2 + 0.15, 4), 0.25, 0, 0.14])
+        continue
+    b.box('interior', m, 0.07, 0.05, 0.07, x, G + 0.33, (kz0 + kz1) / 2 + 0.15)
 for i, (x, z) in enumerate(((kx0 + 0.22, kz1 - 0.25), (kx0 + 0.22, kz1 - 0.6), (kx0 + 0.2, kz0 + 0.62))):
     b.prism('interior', 'wood', 0.15, 0.13, 0.36, x, G, z, seg=10)
     block(x - 0.15, x + 0.15, z - 0.15, z + 0.15)
@@ -742,4 +747,4 @@ VIEWS = [
     ['strzelnica baszty z bliska', [-4.55, WY - 0.05, 4.55], [-5.35, WY - 0.1, 5.1], OUT, 14],
     ['z muru na dziedziniec', [4.8, WY, 1.0], [0, 0.3, 1.0], OUT, 22],
 ]
-b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS, 'banners': BANNERS})
+b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS, 'banners': BANNERS, 'fishSpots': FISH_SPOTS})

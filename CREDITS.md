@@ -49,3 +49,5 @@ RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old To
 ## Postacie ze szkieletem
 - Ciało i szkielet: MPFB / MakeHuman Community (https://static.makehumancommunity.org), wynik na licencji CC0.
 - Ruch: Carnegie Mellon University Graphics Lab Motion Capture Database (http://mocap.cs.cmu.edu), konwersja BVH B. Hahne (cgspeed). Dane wolne do użytku, także w grach.
+
+Ryba: [Barramundi Fish](https://github.com/KhronosGroup/glTF-Sample-Assets/tree/main/Models/BarramundiFish) z KhronosGroup glTF-Sample-Assets, © 2017 Microsoft, CC0. Pochodnia wyciągana w spacerze: model `torch.glb` z gry [Secret Histories](https://github.com/Mooses2k/SecretHistories) (Mooses2k), licencja grafiki [CC-BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/) — nasza wersja (`src/render/models/props.json` w części `torch`, `public/textures/cc0/prop_torch*.jpg`/`.ktx2`) jest na tej samej licencji. Przerobione w Blenderze skryptem `tools/models/props_import.py` bez odchudzania wersji z bliska (tylko skala, ustawienie i tekstury 1024 px); wersje z daleka odchudzone, porównanie z oryginałem: `tools/models/props_check.py`.

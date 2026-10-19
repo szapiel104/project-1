@@ -1,5 +1,6 @@
 import { touch } from './touch';
 import * as THREE from 'three';
+import { propGeometry, propMaterial } from './props';
 import { TEST } from '../testmode';
 import { cat } from './cat';
 
@@ -332,11 +333,9 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const waterTiles: number[] = [];
   for (let i = 0; i < map.tiles.length; i++) if (map.tiles[i] === Terrain.Water) waterTiles.push(i);
   const fishCount = Math.min(90, Math.floor(waterTiles.length / 5));
-  const fishGeo = mergeGeometries([
-    new THREE.IcosahedronGeometry(0.09, 1).scale(0.55, 0.75, 1.9),
-    new THREE.ConeGeometry(0.07, 0.14, 4).toNonIndexed().rotateX(-Math.PI / 2).translate(0, 0, -0.2),
-  ]);
-  const fishMesh = fishCount && fishGeo ? new THREE.InstancedMesh(fishGeo, new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.35, metalness: 0.4, flatShading: true }), fishCount) : null;
+  // ryba z paczki (tools/models/props_import.py, wersja z daleka sprawdzona obok oryginału), długość ok. 0,42 pola
+  const fishGeo = propGeometry('fish', true).clone().scale(0.42, 0.42, 0.42);
+  const fishMesh = fishCount ? new THREE.InstancedMesh(fishGeo, propMaterial('fish'), fishCount) : null;
   const fish: { x: number; z: number; r: number; speed: number; phase: number }[] = [];
   if (fishMesh) {
     const fc = new THREE.Color();
@@ -344,7 +343,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       const rr = hash2(i * 31, i * 17 + 5, map.seed ^ 0x1f123bb5);
       const tile = waterTiles[rr % waterTiles.length]!;
       fish.push({ x: (tile % w) + 0.5 + ox, z: Math.floor(tile / w) + 0.5 + oz, r: 0.25 + ((rr >>> 8) & 15) / 40, speed: 0.6 + ((rr >>> 12) & 15) / 20, phase: ((rr >>> 16) & 255) / 40 });
-      fishMesh.setColorAt(i, fc.setHex((rr >>> 24) % 4 === 0 ? 0xe08a3c : 0xb9c9d4));
+      fishMesh.setColorAt(i, fc.setHex([0xffffff, 0xeef0e6, 0xdfe3d6, 0xf4efe2][(rr >>> 24) % 4]!)); // lekkie różnice odcienia, barwa z tekstury
     }
     group.add(cat(fishMesh, 'ryby'));
   }

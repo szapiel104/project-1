@@ -107,46 +107,16 @@ b.box('shell', 'thatchDark', 0.13, 0.07, Z1 - Z0 + 0.4, (X0 + X1) / 2, H1 + RISE
 b.box('shell', 'wood', 0.22, 0.07, 0.02, (X0 + X1) / 2, H1 + 0.12, Z1 + 0.04)
 b.pyramid('shell', 'wood', 0.08, 0.02, 0.07, (X0 + X1) / 2 + 0.14, H1 + 0.11, Z1 + 0.04)
 
-# ---------------- ryba: wrzecionowate ciało spłaszczone z boków, płetwy, oko ----------------
-def fish(group, x, y, z, L=0.17, H=0.05, Wd=0.022, hang=True, yaw=0.0):
-    """Ryba długości L. hang=True: wisi pyskiem w górę (pysk w (x, y, z)), ogon w dół; inaczej leży na boku wzdłuż x.
-    Ciało to pierścienie (elipsy) od pyska do nasady ogona; ogon rozwidlony, płetwa grzbietowa, ciemne oko z obu stron."""
-    cy, sy = math.cos(yaw), math.sin(yaw)
+# ---------------- ryby: gotowy model z paczki (tools/models/props_import.py), stawiany przez grę ----------------
+# Tu zapisujemy tylko miejsce i ułożenie każdej ryby (klucz 'fishSpots'); gra wstawia w nie rybę z teksturą z paczki
+# (src/render/buildings.ts → fisher). Dawne ryby z pierścieni w skrypcie wyglądały jak wrzeciona.
+FISH_SPOTS = []
 
-    def P(u, h, w):
-        # u: wzdłuż ryby od pyska (0) do ogona (L); h: grzbiet(+)/brzuch(-); w: na boki
-        if hang:
-            return (x + h * cy - w * sy, y - u, z + h * sy + w * cy)
-        return (x + u * cy - w * sy, y + 0.0 + (H / 2 + 0.005) + h, z + u * sy + w * cy)
-    rings, n = [], 8
-    prof = [(0.0, 0.18), (0.06, 0.62), (0.18, 0.92), (0.34, 1.0), (0.55, 0.82), (0.74, 0.5), (0.86, 0.26), (0.9, 0.2)]
-    for f, r in prof:
-        u = f * L
-        rings.append([P(u, math.cos(2 * math.pi * k / n) * H / 2 * r + (0.004 if math.cos(2 * math.pi * k / n) > 0 else 0),
-                        math.sin(2 * math.pi * k / n) * Wd / 2 * r) for k in range(n)])
-    axis = [P(f * L, 0, 0) for f, _ in prof]
-    for i in range(len(rings) - 1):
-        for k in range(n):
-            j = (k + 1) % n
-            mid = ((axis[i][0] + axis[i + 1][0]) / 2, (axis[i][1] + axis[i + 1][1]) / 2, (axis[i][2] + axis[i + 1][2]) / 2)
-            b.poly(group, 'fish', [rings[i][k], rings[i][j], rings[i + 1][j], rings[i + 1][k]], away=mid)
-    b.poly(group, 'fish', rings[0], away=P(L * 0.3, 0, 0))                    # pysk
-    b.poly(group, 'fish', list(reversed(rings[-1])), away=P(L * 0.3, 0, 0))    # nasada ogona (zamknięta)
-    # ogon: dwa płaty w kształt litery V, każdy z dwóch warstw (widać z obu stron)
-    for sgn in (1, -1):
-        q = [P(0.88 * L, 0, 0), P(1.0 * L + 0.01, sgn * H * 0.55, 0), P(1.06 * L, sgn * H * 0.3, 0), P(0.95 * L, 0, 0)]
-        for d in (0.002, -0.002):
-            qq = [(p[0] + (-sy * d if True else 0), p[1], p[2] + cy * d) for p in q]
-            if not hang:
-                qq = [(p[0] - sy * d, p[1], p[2] + cy * d) for p in q]
-            b.poly(group, 'fish', qq, away=P(0.9 * L, 0, -d * 100))
-    # płetwa grzbietowa
-    for d in (0.0015, -0.0015):
-        q = [P(0.3 * L, H * 0.48, d), P(0.58 * L, H * 0.42, d), P(0.52 * L, H * 0.72, d)]
-        b.poly(group, 'fish', q, away=P(0.45 * L, H * 0.5, -d * 100))
-    # oko po obu stronach
-    for side in (1, -1):
-        b.box(group, 'dark', 0.008, 0.008, 0.004, *P(0.07 * L, H * 0.1, side * (Wd / 2 * 0.62 + 0.002)), rot=yaw)
+
+def fish(group, x, y, z, L=0.17, H=0.05, Wd=0.022, hang=True, yaw=0.0):
+    """Ryba długości L z pyskiem w (x, y, z). hang=True: wisi pyskiem w górę, grzbiet w kierunku (cos yaw, 0, sin yaw);
+    inaczej leży na boku na wysokości y, ogonem w kierunku (cos yaw, 0, sin yaw). H i Wd zostają dla zgodności wywołań."""
+    FISH_SPOTS.append([round(x, 4), round(y, 4), round(z, 4), round(yaw, 4), 1 if hang else 0, round(L, 4)])
 
 
 # ---------------- suszarnia ryb (prawy przód) ----------------
@@ -228,5 +198,5 @@ VIEWS = [
     ['ryby z bliska', [0.62, 0.45, 1.15], [0.64, 0.42, 0.72], ['base', 'shell'], 14],
     ['szczyt od boku', [-0.35, 1.0, 1.3], [-0.35, 0.95, 0.0], ['base', 'shell'], 18],
 ]
-b.save('fisher', maxe=0.22, rays=16, reach=0.3, extra={'solid': solid, 'floorY': F, 'views': VIEWS,
+b.save('fisher', maxe=0.22, rays=16, reach=0.3, extra={'solid': solid, 'floorY': F, 'views': VIEWS, 'fishSpots': FISH_SPOTS,
        'pennant': [round(X0 - 0.05, 3), round(H1 + RISE - 0.12, 3), round((Z0 + Z1) / 2, 3)]})

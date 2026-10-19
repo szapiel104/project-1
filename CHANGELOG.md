@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.30.14 — prawdziwa ryba i pochodnia z paczek (2026-10-19)
+
+- Ryby wszędzie, gdzie występują, to jeden gotowy model zrobiony przez grafika (Barramundi, CC0): pływające i wyskakujące w wodzie, w koszu niesionym przez rybaka, w skrzynce w składzie i spichlerzu, na suszarni i w koszu przy chacie rybaka, na stole w kuchni twierdzy
+- Pochodnia wyciągana w spacerze (F) to gotowy model (Secret Histories, CC-BY-SA 4.0): trzonek i szmaty ze smołą owinięte sznurem; pochodnie noszone nocą przez chłopów bez zmian
+- Wersje z bliska trafiają do gry bez odchudzania (oryginalne trójkąty, UV, normalne i tekstura), płetwy rysowane z obu stron; przed wgraniem arkusz porównania z oryginałem (`tools/models/props_check.py`), test `tests/props.test.ts`
+- Podgląd modeli: nowa grupa „Z paczek”
+
 ## 0.30.13 — nic nie wystaje spod ekranu wczytywania (2026-10-19)
 
 - Przycisk „Mapa” (minimapa) i inne elementy interfejsu nie pokazują się już na ekranie wczytywania zapisu ani nowej gry

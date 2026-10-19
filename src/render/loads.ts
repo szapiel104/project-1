@@ -4,16 +4,18 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RESOURCES } from '../data/resources';
 import { boxUv } from './peasants';
 import { grayPattern, normal, type Kind } from './textures';
+import { propGeometryFlat, propMaterial } from './props';
 
 /**
  * Materiał części ładunku: zdjęciowa tekstura w szarości (barwę daje kolor wierzchołków) i mapa nierówności.
  * Owoce, ryby i grudki rudy zostają gładkie; drewno, wiklina, płótno, skórka chleba, kamień i żelazo mają fakturę.
  */
-type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark';
+type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish';
 const MAT_TEX: Record<LoadMat, [Kind | null, number, number, number]> = {
   // [tekstura, gęstość na 1 jednostkę, chropowatość, metaliczność]
   plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], board: [null, 1, 0.8, 0], rope: ['burlap', 14, 1, 0], wicker: ['thatch', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
   crust: ['soil', 7, 0.9, 0], stone: ['rock', 5, 0.95, 0], iron: ['iron', 6, 0.5, 0.55], straw: ['thatch', 6, 0.95, 0], bark: ['bark', 6, 0.95, 0],
+  fish: [null, 1, 0.42, 0.08], // ryba z paczki: własne UV i tekstura (src/render/props.ts)
 };
 const matCache = new Map<LoadMat, THREE.MeshStandardMaterial>();
 
@@ -80,6 +82,7 @@ function boardUv(geo: THREE.BufferGeometry): void {
 
 function loadMat(k: LoadMat): THREE.MeshStandardMaterial {
   let m = matCache.get(k);
+  if (!m && k === 'fish') { m = propMaterial('fish'); matCache.set(k, m); }
   if (!m && k === 'board') {
     const g = boardGrain();
     m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8, metalness: 0, map: g, bumpMap: g, bumpScale: 0.6 });
@@ -102,7 +105,7 @@ function assemble(parts: THREE.BufferGeometry[]): THREE.BufferGeometry | null {
     const k = (p0.userData.mat as LoadMat | undefined) ?? 'plain';
     const p = p0.index ? p0.toNonIndexed() : p0;
     if (!p.getAttribute('normal')) p.computeVertexNormals();
-    if (k === 'board') boardUv(p); else boxUv(p, MAT_TEX[k][1]);
+    if (k === 'board') boardUv(p); else if (k !== 'fish') boxUv(p, MAT_TEX[k][1]);
     for (const name of Object.keys(p.attributes)) if (!['position', 'normal', 'color', 'uv'].includes(name)) p.deleteAttribute(name);
     let l = by.get(k); if (!l) { l = []; by.set(k, l); } l.push(p);
   }
@@ -205,7 +208,9 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
     g.computeVertexNormals();
     return [as(g, 'stone')];
   },
-  fish: () => [basket(), ...[-0.05, 0.05].map((x, k) => ball(0.05, x, 0.09, k ? 0.03 : -0.03, 0x9cc3d6, 0.7, 0.6, 2.2)), ball(0.045, 0, 0.13, 0, 0x7aa6bd, 2.2, 0.6, 0.7)],
+  // kosz z trzema rybami z paczki (tools/models/props_import.py): leżą na boku, łby i ogony wystają ponad brzeg kosza
+  fish: () => [basket(), ...([[-0.035, 0.085, -0.02, 0.35, 1], [0.04, 0.095, 0.025, -0.4, -1], [0, 0.125, 0, 0.1, 1]] as const).map(([x, y, z, yaw, side]) =>
+    as(propGeometryFlat('fish', true).scale(0.2, 0.2, 0.2).rotateZ(side * Math.PI / 2).rotateY(yaw).translate(x, y, z), 'fish'))],
   // wiązka włóczni na prawym ramieniu (jak deski): trzy drzewca z grotami w przód i lekko w górę, przewiązane sznurem
   spear: () => [0, 1, 2].flatMap((k) => {
     const x = (k - 1) * 0.022, y = (k === 1 ? 0.02 : 0);

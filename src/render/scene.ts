@@ -32,6 +32,7 @@ import { cloudShade, setCloudShadows } from './ground';
 import { cat } from './cat';
 import { tx } from '../i18n';
 import { GearPool } from './gearpool';
+import { propGeometry, propMaterial } from './props';
 import { enableShadowLayer } from './shadowlayer';
 import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, WATCH_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
@@ -1922,14 +1923,22 @@ export class GameRenderer {
   private toggleHandTorch(): void {
     if (!this.handTorch) {
       const g = new THREE.Group();
-      const stick = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 0.32, 6), new THREE.MeshBasicMaterial({ color: 0x3a2818 }));
-      const head = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.017, 0.06, 7).translate(0, 0.17, 0), new THREE.MeshBasicMaterial({ color: 0x1e140c }));
+      // pochodnia wyciągnięta w spacerze (F): gotowy model z sieci (tools/models/props_import.py) — trzonek, szmaty
+      // ze smołą owinięte sznurem; siatka i tekstura bez przeróbek. W pliku leży w układzie ręki chłopa (pochylona),
+      // tu stawiamy ją pionowo: koniec trzonka w y = -0,21, góra głowicy w 0,19 (tam płomień, jak dotąd)
+      // odwrotność ustawienia z props_import.py: przesunięcie końca trzonka (dłoń - d·0,09) do zera i obrót o TORCH_ARM
+      const butt = new THREE.Vector3(0, -0.19 - Math.cos(0.55) * 0.09, -Math.sin(0.55) * 0.09);
+      const torch = propGeometry('torch').clone()
+        .translate(-butt.x, -butt.y, -butt.z)
+        .applyMatrix4(new THREE.Matrix4().makeRotationX(-0.55))
+        .translate(0, -0.21, 0);
+      const stick = new THREE.Mesh(torch, propMaterial('torch'));
       this.handTip.position.set(0, 0.19, 0);
       // płomień jako płaska siatka przypięta do pochodni w kamerze (billboard świata rozciągał się tuż przy oku)
       const fl = flameSprite(this.handFlameTime, 0.07, 0.15);
       fl.position.set(0, 0.18, 0);
       fl.rotation.x = 0.35;
-      g.add(stick, head, this.handTip, fl);
+      g.add(stick, this.handTip, fl);
       g.rotation.x = -0.35;
       g.position.set(0.22, -0.24, -0.42);
       this.handTorch = g;

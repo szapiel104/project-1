@@ -1,5 +1,6 @@
 import { named } from './named';
 import * as THREE from 'three';
+import { propGeometryFlat, propMaterial, type PropName } from './props';
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -221,7 +222,8 @@ function basket(light: number, dark: number): THREE.BufferGeometry[] {
     paint(part(new THREE.CylinderGeometry(0.185, 0.185, 0.02, 14), 0, -0.02, 0), 0x5a3e22), // ciemne wnętrze pod owocami
   ];
 }
-const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean }> = {
+/** `withProp`: druga grupa bryły to gotowy model z paczki (src/render/props.ts) z własną teksturą — np. ryby w skrzynce */
+const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean; withProp?: PropName }> = {
   wood: {
     tex: 'planks',
     geo: merge([0, 1, 2].flatMap((layer) => [-0.115, 0.115].map((z) => paint(part(new THREE.BoxGeometry(0.46, 0.07, 0.21), (layer % 2 ? 0.015 : -0.01), -0.1 + layer * 0.088, z), layer === 2 ? 0xe2bf8a : 0xd2ab74)))
@@ -350,23 +352,20 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     ]),
   },
   fish: {
-    tex: 'organic',
-    // skrzynka z listew, w niej ryby: ciemny grzbiet, srebrny brzuch, płetwa ogonowa i grzbietowa, oko
-    geo: merge([
-      paint(part(new THREE.BoxGeometry(0.38, 0.02, 0.3), 0, -0.12, 0), 0x6b4f30),
-      ...[-0.14, 0.14].map((z) => paint(part(new THREE.BoxGeometry(0.4, 0.08, 0.02), 0, -0.08, z), 0x8a6a45)),
-      ...[-0.19, 0.19].map((x) => paint(part(new THREE.BoxGeometry(0.02, 0.08, 0.3), x, -0.08, 0), 0x7a5a3a)),
-      ...([[-0.08, 0.1, 0], [0, -0.05, 0.03], [0.08, 0.06, 0], [-0.02, 0.02, 0.08]] as const).flatMap(([z, rot, lift]) => {
-        const y = -0.03 + lift;
-        return [
-          paint(new THREE.IcosahedronGeometry(0.06, 2).scale(2.4, 0.5, 0.75).rotateY(rot).translate(0, y, z), 0xc9d6dc), // brzuch
-          paint(new THREE.IcosahedronGeometry(0.058, 2).scale(2.35, 0.35, 0.6).rotateY(rot).translate(0, y + 0.012, z), 0x4f6470), // grzbiet
-          paint(new THREE.ConeGeometry(0.04, 0.07, 3).rotateZ(Math.PI / 2).scale(1, 1, 0.25).rotateY(rot).translate(-Math.cos(rot) * 0.17, y, z + Math.sin(rot) * 0.17), 0x5f7480), // ogon
-          paint(new THREE.ConeGeometry(0.02, 0.05, 3).scale(1.6, 1, 0.3).rotateY(rot).translate(0, y + 0.035, z), 0x5a6e7a), // płetwa grzbietowa
-          paint(new THREE.SphereGeometry(0.008, 5, 4).translate(Math.cos(rot) * 0.115, y + 0.008, z - Math.sin(rot) * 0.115 + 0.02), 0x111111), // oko
-        ];
-      }),
-    ]),
+    tex: 'planks',
+    withProp: 'fish',
+    // skrzynka z listew, w niej trzy ryby z paczki (tools/models/props_import.py) — prawdziwe łuski, płetwy i oko
+    geo: mergeGeometries([
+      merge([
+        paint(part(new THREE.BoxGeometry(0.38, 0.02, 0.3), 0, -0.12, 0), 0x6b4f30),
+        ...[-0.14, 0.14].map((z) => paint(part(new THREE.BoxGeometry(0.4, 0.08, 0.02), 0, -0.08, z), 0x8a6a45)),
+        ...[-0.19, 0.19].map((x) => paint(part(new THREE.BoxGeometry(0.02, 0.08, 0.3), x, -0.08, 0), 0x7a5a3a)),
+      ]),
+      // ryby leżą na boku wzdłuż skrzynki (długość 0,3, szerokość ok. 0,13, grubość 0,067): dwie obok siebie na dnie,
+      // trzecia na nich, odwrócona łbem w drugą stronę — bez przenikania
+      merge(([[-0.066, 0.03, -0.076, 1, 0], [0.066, -0.03, -0.076, -1, 0], [0.0, 0.05, -0.011, 1, Math.PI]] as const).map(([z, yaw, y, side, turn]) =>
+        propGeometryFlat('fish', true).scale(0.3, 0.3, 0.3).rotateZ(side * Math.PI / 2).rotateY(Math.PI / 2 + yaw + turn).translate(0, y, z))),
+    ], true)!,
   },
 };
 const pileMats = new Map<string, THREE.MeshStandardMaterial>();
@@ -392,11 +391,12 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
       m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: pile.metal ? 0.45 : 0.92, metalness: pile.metal ? 0.6 : 0, map: pile.tex ? pattern(pile.tex) : null, bumpMap: pile.tex ? bump(pile.tex) : null, bumpScale: 1.2 });
       pileMats.set(r.id, m);
     }
+    const mat: THREE.Material | THREE.Material[] = pile.withProp ? [m, propMaterial(pile.withProp)] : m;
     while (items > 0 && slot < STOCK_SLOTS) {
       for (let layer = 0; layer < STOCK_LAYERS && items > 0; layer++, items--) {
         const mesh = fill.children[layer * STOCK_SLOTS + slot] as THREE.Mesh;
         if (pile.geo) mesh.geometry = pile.geo;
-        mesh.material = m;
+        mesh.material = mat;
         mesh.visible = true;
       }
       slot++;
@@ -656,6 +656,39 @@ function blenderGeo(pos: string, ao: string, q: number, k: number): THREE.Buffer
   geoCache.set(key, g);
   return g;
 }
+/**
+ * Ryby w budynkach z Blendera (suszarnia i kosz u rybaka, stół w kuchni twierdzy): gotowy model z paczki
+ * (src/render/props.ts) w miejscach zapisanych przez skrypt budynku (`fishSpots`: x, y, z pyska, yaw, wisi?, długość).
+ * Wszystkie ryby budynku w jednej siatce (jedno rysowanie), wersja lżejsza — na porównaniu nie różni się od pełnej.
+ */
+type FishSpot = [number, number, number, number, number, number];
+const fishGeos = new Map<unknown, THREE.BufferGeometry>();
+function buildingFish(model: unknown): THREE.Mesh {
+  let geo = fishGeos.get(model);
+  if (!geo) {
+    const spots = (model as { fishSpots: FishSpot[] }).fishSpots;
+    const m = new THREE.Matrix4(), X = new THREE.Vector3(), B = new THREE.Vector3(), H = new THREE.Vector3(), C = new THREE.Vector3(), S = new THREE.Vector3();
+    geo = mergeGeometries(spots.map(([x, y, z, yaw, hang, L]) => {
+      const cy = Math.cos(yaw), sy = Math.sin(yaw);
+      if (hang) {
+        // wisi pyskiem w górę na sznurku przez skrzela, grzbiet w stronę yaw
+        H.set(0, 1, 0); B.set(cy, 0, sy); C.set(x, y - L / 2, z);
+      } else {
+        // leży na boku: od pyska w (x, z) ogonem w stronę yaw; grubość ryby to ok. 0,22 długości
+        H.set(-cy, 0, -sy); B.set(-sy, 0, cy); C.set(x + cy * L / 2, y + L * 0.111 + 0.004, z + sy * L / 2);
+      }
+      X.crossVectors(B, H);
+      m.makeBasis(X, B, H).scale(S.set(L, L, L)).setPosition(C);
+      return propGeometryFlat('fish', true).applyMatrix4(m);
+    }))!;
+    fishGeos.set(model, geo);
+  }
+  const mesh = new THREE.Mesh(geo, propMaterial('fish'));
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  return mesh;
+}
+
 function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Material): void {
   const mats = M as unknown as Record<string, THREE.Material>;
   const meshes = (name: string): THREE.Mesh[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
@@ -762,6 +795,8 @@ const BUILDERS: Record<string, Builder> = {
     // Zamek z Blendera (tools/models/keep.py): mury z dziedzińcem, baszty, brama z mostem, donżon z salą i komnatą,
     // koszary straży. Przy podglądzie wnętrza znikają dachy i piętra donżonu — widać pomieszczenia i śpiących.
     blenderModel(g, KEEP_MODEL as unknown as BlenderBuilding, flag);
+    // ryba na stole w kuchni (wnętrze: widać ją razem z resztą wnętrza)
+    (g.getObjectByName('interior') as THREE.Group | undefined)?.add(buildingFish(KEEP_MODEL));
     // krata na start podniesiona (opuszcza ją gra, gdy pod zamek podejdzie wróg)
     const port = g.getObjectByName('portcullis');
     if (port) port.position.y = (KEEP_MODEL as unknown as { portLift?: number }).portLift ?? 0.86;
@@ -1014,6 +1049,7 @@ const BUILDERS: Record<string, Builder> = {
     // chata rybaka z Blendera (tools/models/fisher.py): chata z desek na palach z gankiem i strzechą, suszarnia ryb,
     // sieci na tyczkach, łódka z wiosłami wyciągnięta na brzeg, beczka do solenia, kosz z rybami
     blenderModel(g, FISHER_MODEL as unknown as BlenderBuilding, flag);
+    g.add(buildingFish(FISHER_MODEL));
     const p = (FISHER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },

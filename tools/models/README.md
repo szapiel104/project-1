@@ -88,3 +88,16 @@ i suche kolory `_dry_diff_1k.jpg`, bo JPG w paczce glTF nie ma przezroczystości
 
 Wynik: `public/textures/cc0/pv_grass.jpg`, `pv_grass_a.jpg` (maska), `pv_grass_dry.jpg`. Kolejność pól zna `src/render/grass.ts`
 (`TILE_WEIGHTS`), więc po zmianie listy `TILES` popraw też wagi. Tekstury idą przez płótno z maską (`maskedTex`), bez KTX2.
+
+## Gotowe modele z paczek (ryba, pochodnia wyciągana w spacerze)
+
+`tools/models/props_import.py <katalog>` przerabia paczki glTF (BarramundiFish.glb, torch.glb — źródła w `CREDITS.md`)
+na `src/render/models/props.json` i tekstury `public/textures/cc0/prop_*.jpg` (potem `node tools/textures/ktx2.mjs
+public/textures/cc0/prop_*.jpg`). **Wersja z bliska idzie do gry bez przeróbek**: oryginalne trójkąty, UV i normalne,
+pozycje w float32. Właśnie odchudzanie, własne UV i zaokrąglanie pozycji psuły wcześniej gotowe modele w grze („pocięte”).
+Otwarte części (płetwy) rysuje gra z obu stron (materiał dwustronny w `src/render/props.ts`).
+
+Przed wgraniem zawsze: `tools/models/props_check.py <katalog> /tmp/props.png` — arkusz: oryginał | gra z bliska | gra
+z daleka, z dwóch stron, złożony z tych samych buforów co w przeglądarce. Test `tests/props.test.ts` pilnuje liczby
+trójkątów i wymiarów. Ryby w budynkach (suszarnia i kosz u rybaka, stół w kuchni twierdzy) zapisują skrypty budynków
+tylko jako miejsca (`fishSpots`), a rybę z paczki wstawia gra (`buildingFish` w `src/render/buildings.ts`).
