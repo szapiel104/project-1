@@ -1,5 +1,4 @@
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js';
 import { ShaderPass } from 'three/examples/jsm/postprocessing/ShaderPass.js';
 
 /**
@@ -16,15 +15,29 @@ export function msaaSamples(mode: AaMode | undefined): number {
 }
 
 /**
- * Mapa otoczenia jak w podglądzie modeli (tam modele wyglądają dobrze właśnie dzięki niej): materiały PBR dostają
- * rozproszone światło i delikatne odbicia z każdej strony, więc nie są płaskie ani „plastikowe” po stronie cienia.
+ * Mapa otoczenia pod plener: łagodne niebo bez gorących punktów (chłodny zenit, jasny, mglisty widnokrąg, ciemna,
+ * brunatna ziemia). Materiały PBR dostają z niej rozproszone światło i delikatne odbicia z każdej strony, więc nie są
+ * płaskie po stronie cienia. Celowo nie RoomEnvironment z podglądu modeli: ma jaskrawe lampy pod sufitem, które
+ * odbijały się w trawie i liściach skierowanych do góry (trawa „świeciła”).
  */
 export function makeEnvironment(renderer: THREE.WebGLRenderer): THREE.Texture {
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const room = new RoomEnvironment();
-  const tex = pmrem.fromScene(room, 0.04).texture;
-  room.traverse((o) => { const m = o as THREE.Mesh; if (m.isMesh) { m.geometry.dispose(); (m.material as THREE.Material).dispose(); } });
-  pmrem.dispose();
+  const scene = new THREE.Scene();
+  const mat = new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false,
+    vertexShader: 'varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+    fragmentShader: `varying vec3 vDir;
+      void main() {
+        float y = vDir.y;
+        vec3 zenith = vec3(0.52, 0.6, 0.72), horizon = vec3(0.86, 0.84, 0.78), ground = vec3(0.2, 0.17, 0.12);
+        vec3 c = y > 0.0 ? mix(horizon, zenith, pow(y, 0.6)) : mix(horizon * 0.55, ground, pow(-y, 0.4));
+        gl_FragColor = vec4(c, 1.0);
+      }`,
+  });
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(10, 48, 24), mat);
+  scene.add(dome);
+  const tex = pmrem.fromScene(scene, 0).texture;
+  dome.geometry.dispose(); mat.dispose(); pmrem.dispose();
   return tex;
 }
 
@@ -103,6 +116,9 @@ export class MaterialQuality {
     }
     // przycinane przezroczystością (liście, igły, trawa, włosy) — przy MSAA brzeg wygładza karta graficzna
     if (m.alphaTest > 0 && !m.transparent) {
+      // liście, trawa, igły: cienkie karty z normalnymi do góry — odbicie nieba robiło na nich połysk, więc tylko trochę
+      const sm2 = m as THREE.MeshStandardMaterial;
+      if (sm2.isMeshStandardMaterial && !(m.userData as { envKeep?: boolean }).envKeep && sm2.envMapIntensity === 1) sm2.envMapIntensity = 0.35;
       const want = this.coverage;
       const tag = m.userData as { a2c?: boolean };
       if (tag.a2c === undefined) tag.a2c = m.alphaToCoverage; // materiał, który miał to od początku (koń), zostawiamy

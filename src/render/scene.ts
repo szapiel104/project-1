@@ -3841,7 +3841,7 @@ export class GameRenderer {
     this.hemi.intensity = a.sky + (b.sky - a.sky) * k;
     // z mapą otoczenia część światła nieba przychodzi z niej (z odbiciami), więc samo niebo trochę słabsze — proporcje jak w podglądzie modeli
     // bilans: o ile dochodzi światła z mapy otoczenia, o tyle słabsze niebo — obraz nie jaśnieje, tylko modele dostają bryłę i połysk
-    this.scene.environmentIntensity = this.envOn ? 0.28 * (this.hemi.intensity / 1.15) * (1 - this.rain * 0.3) : 0;
+    this.scene.environmentIntensity = this.envOn ? 0.42 * (this.hemi.intensity / 1.15) * (1 - this.rain * 0.3) : 0;
     if (this.envOn) this.hemi.intensity *= 0.62;
     this.sun.intensity *= 1 - this.rain * 0.55; // w deszczu słońce przygasa
     const bg = this.scene.background as THREE.Color;
