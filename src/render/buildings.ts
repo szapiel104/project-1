@@ -287,8 +287,9 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     withProp: ['basket', 'bun1'],
     noCode: true,
     geo: inBasket([
-      propAt('bun1', -0.075, -0.125, -0.02, 0.17, 0.3), propAt('bun2', 0.08, -0.125, -0.03, 0.17, -0.5),
-      propAt('bun3', 0.0, -0.125, 0.085, 0.17, 1.4), propAt('bun2', 0.01, -0.06, -0.01, 0.17, 2.2),
+      // kosz zwęża się ku dołowi: dolne bochenki (szer. 0,14) bliżej środka, żeby nie przebijały ścianek
+      propAt('bun1', -0.055, -0.125, -0.02, 0.14, 0.3), propAt('bun2', 0.06, -0.125, -0.025, 0.14, -0.5),
+      propAt('bun3', 0.0, -0.125, 0.065, 0.14, 1.4), propAt('bun2', 0.005, -0.065, 0.0, 0.16, 2.2),
     ]),
   },
   apples: {
@@ -296,7 +297,7 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
     // (głębiej i tak nie widać; kosz: dno -0,14, brzeg 0, jabłko szerokości 0,1 i wysokości 0,088)
     withProp: ['basket', 'apple'],
     noCode: true,
-    geo: inBasket(([[0.07, -0.08, 0.03], [-0.065, -0.08, 0.05], [0.0, -0.08, -0.08], [0.03, -0.035, 0.0], [-0.045, -0.03, -0.03], [-0.01, -0.03, 0.065]] as const)
+    geo: inBasket(([[0.055, -0.085, 0.025], [-0.05, -0.085, 0.04], [0.0, -0.085, -0.06], [0.03, -0.035, 0.0], [-0.045, -0.03, -0.03], [-0.01, -0.03, 0.06]] as const)
       .map(([x, y, z], k) => propAt('apple', x, y, z, 0.1, k * 2.1))),
   },
   spear: {

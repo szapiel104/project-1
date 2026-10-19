@@ -146,12 +146,13 @@ const basket = (): THREE.BufferGeometry => as(basketAt(0, -0.065, 0, 0.23, 0.13,
  */
 const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
   // kosz jabłek z paczki (skan, tools/models/props_import.py): trzy na dnie, cztery wyżej, dwa na wierzchu wystają nad brzeg
-  // (kosz: dno -0,065, brzeg 0,065, szerokość 0,23; jabłko 0,09 szerokości, 0,079 wysokości)
-  apples: () => [basket(), ...([[0.035, -0.06, 0.0], [-0.02, -0.06, 0.03], [-0.02, -0.06, -0.035], [0.055, -0.005, 0.03], [-0.05, -0.005, 0.04], [-0.045, -0.005, -0.045], [0.05, -0.005, -0.04], [0.015, 0.035, 0.005], [-0.03, 0.04, -0.005]] as const)
+  // (kosz: dno -0,065, brzeg 0,065, szerokość 0,23 u góry, ku dołowi węższy — dolna warstwa bliżej środka, żeby jabłka
+  // nie przebijały ścianek; jabłko 0,09 szerokości, 0,079 wysokości)
+  apples: () => [basket(), ...([[0.025, -0.055, 0.0], [-0.02, -0.055, 0.025], [-0.02, -0.055, -0.025], [0.04, -0.008, 0.02], [-0.04, -0.008, 0.03], [-0.035, -0.008, -0.035], [0.035, -0.008, -0.035], [0.015, 0.035, 0.005], [-0.025, 0.04, -0.005]] as const)
     .map(([x, y, z], k) => as(propAt('apple', x, y, z, 0.09, k * 1.7, false), 'apple'))],
   // kosz chleba z paczki (skany trzech bochenków, tools/models/props_import.py): dwa na dnie, trzeci na nich skosem
-  bread: () => [basket(), as(propAt('bun1', -0.045, -0.058, 0.0, 0.12, 0.4, false), 'bread'), as(propAt('bun2', 0.05, -0.058, 0.01, 0.12, -0.3, false), 'bread'),
-    as(propAt('bun3', 0.0, -0.005, -0.005, 0.12, 1.2, false), 'bread')],
+  bread: () => [basket(), as(propAt('bun1', -0.033, -0.052, 0.0, 0.1, 0.4, false), 'bread'), as(propAt('bun2', 0.036, -0.052, 0.008, 0.1, -0.3, false), 'bread'),
+    as(propAt('bun3', 0.0, -0.002, -0.004, 0.115, 1.2, false), 'bread')],
   // snop zboża niesiony w poprzek na rękach (jak w stodole): pęk źdźbeł przewiązany powrósłem, z jednej strony
   // rozchylone ścięte końce, z drugiej opadające kłosy
   wheat: () => {
