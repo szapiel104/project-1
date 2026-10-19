@@ -247,6 +247,7 @@ def main():
         return np.c_[-p[:, 0], p[:, 2], -p[:, 1]]
 
     baked = {}
+    res_body = {}
     for part, meshes in parts.items():
         res = {}
         uv = np.vstack([m['uv'] for m in meshes])
@@ -256,13 +257,36 @@ def main():
         for pn, w in poses.items():
             ps, ns = zip(*(skin(m, w) for m in meshes))
             p = to_game(np.vstack(ps))
-            res[pn] = (p, smooth(p, np.vstack(idx)) if part == 'body' else to_game(np.vstack(ns)))
+            if part == 'body':
+                res[pn] = (p, smooth(p, np.vstack(idx)))
+            else:
+                # włosie: płaty z paczki mają normalne prostopadłe do płata, więc grzywa świeciła jak szara blacha
+                # (z jednej strony jasna, z drugiej czarna). Bierzemy normalną najbliższego miejsca na sierści —
+                # grzywa i ogon są oświetlone jak szyja i zad, na których leżą
+                bp, bn = res_body[pn]
+                d = ((p[:, None, :] - bp[None, :, :]) ** 2).sum(-1)
+                near = d.argmin(1)
+                # grzywa jest sztywnym płatem na kościach szyi: przy łbie w dół odstawała od szyi jak zasłona.
+                # W pozach z opuszczonym łbem dociągamy ją do szyi (opada i przylega, jak prawdziwa grzywa)
+                hug = {'half': 0.6, 'graze': 0.35}.get(pn)
+                if hug:
+                    nm = len(meshes[0]['pos'])   # pierwsza siatka to grzywa, druga ogon
+                    p = p.copy()
+                    p[:nm] = bp[near[:nm]] + (p[:nm] - bp[near[:nm]]) * hug
+                res[pn] = (p, bn[near])
+        if part == 'body':
+            res_body = dict(res)
         # spawanie: ten sam punkt, UV i normalna we wszystkich pozach = jeden wierzchołek (paczka ma osobny na każdy róg)
         idx = np.vstack(idx)
         sig = np.hstack([np.round(res[pn][0] / 1e-5) for pn in res] + [np.round(res[pn][1] * 1e3) for pn in res] + [np.round(uv[:, :2] * 1e5)])
         _, first, inv = np.unique(sig, axis=0, return_index=True, return_inverse=True)
         res = {pn: (p[first], n[first]) for pn, (p, n) in res.items()}
-        baked[part] = (res, uv[first], inv.ravel()[idx])
+        idx = inv.ravel()[idx]
+        if part == 'hair':
+            # obie strony płata jako osobne trójkąty (odwrócona kolejność), żeby obie miały tę samą normalną z sierści;
+            # materiał rysuje tylko przody (przy DoubleSide three odwraca normalną dla tyłu)
+            idx = np.vstack([idx, idx[:, ::-1]])
+        baked[part] = (res, uv[first], idx)
     # skala i ustawienie: kopyta na 0, środek tułowia w (0, 0), kłąb na WITHERS
     bp = baked['body'][0]['base'][0]
     ground = bp[:, 1].min()
@@ -298,7 +322,10 @@ def main():
     coat = Image.open(os.path.join(tx, f'skeletal/{COAT}.png')).convert('RGB')
     coat.save(os.path.join(TEX, 'horse_coat.jpg'), quality=92)
     Image.open(os.path.join(tx, 'skeletal/horse_norm.png')).convert('RGB').save(os.path.join(TEX, 'horse_coat_n.jpg'), quality=92)
+    # włosie w paczce: 512×256 w 256 kolorach — powiększone 2× (Lanczos), żeby krawędzie pasm przy maskowaniu nie były
+    # schodkowe; nic nie jest wycinane ani upraszczane
     hair = Image.open(os.path.join(tx, f'props/horse/{HAIR}.png')).convert('RGBA')
+    hair = hair.resize((hair.width * 2, hair.height * 2), Image.LANCZOS)
     hair.convert('RGB').save(os.path.join(TEX, 'horse_hair.jpg'), quality=92)
     hair.getchannel('A').convert('RGB').save(os.path.join(TEX, 'horse_hair_a.jpg'), quality=95)
 

@@ -69,8 +69,9 @@ export function horseMaterial(part: 'body' | 'hair'): THREE.MeshStandardMaterial
     }
   } else {
     // grzywa i ogon to pojedyncze płaty z maską — z obu stron, z wycinaniem po masce (bez sortowania przezroczystości)
-    // matowe: przy niskiej szorstkości płat grzywy odbijał niebo jak blacha
-    m = new THREE.MeshStandardMaterial({ roughness: 0.95, metalness: 0, envMapIntensity: 0.4, side: THREE.DoubleSide, alphaTest: 0.45, map: maskedTex('horse_hair') });
+    // grzywa i ogon: płaty z obu stron (osobne trójkąty w modelu) z normalnymi z sierści pod spodem, więc rysujemy
+    // tylko przody; brzegi pasm z alphaToCoverage (miękkie przy wygładzaniu krawędzi zamiast ostrych schodków)
+    m = new THREE.MeshStandardMaterial({ roughness: 0.85, metalness: 0, envMapIntensity: 0.5, alphaTest: 0.35, alphaToCoverage: true, map: maskedTex('horse_hair') });
   }
   mats.set(part, m);
   return m;
