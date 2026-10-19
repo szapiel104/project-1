@@ -269,7 +269,8 @@ def rod_parts(far=False):
 for name, fn in (('axe', axe_parts), ('hammer', hammer_parts), ('spade', spade_parts), ('torch', torch_parts), ('bucket', bucket_parts),
                  ('bucketWater', water_parts), ('rod', rod_parts)):
     add(name, fn())
-    add(name + 'Far', fn(True))
+    # wiadro z daleka to samo pełne wiadro (uproszczone 8-ścienne bez obręczy wyglądało beznadziejnie)
+    add(name + 'Far', fn(name not in ('bucket', 'bucketWater')))
 
 # wersje z daleka kilofa i maczugi: te same kształty z mniejszej liczby ścian (stylisko czworokątne, bez sęków)
 def club_far():

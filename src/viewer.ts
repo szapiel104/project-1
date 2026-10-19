@@ -20,7 +20,7 @@ import { proceduralModels } from './render/models';
 import { fernTexture, leafTexture, needleTexture } from './render/foliage';
 import { bushKinds, treeKinds, waterPlants } from './render/forest';
 import { model } from './render/modelstore';
-import { clutterModel } from './render/clutter';
+import { clutterObject } from './render/clutter';
 import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
 import { YARD_KEYS, yardModel } from './render/family';
 import { Figures, idWithHead, type FigureKind } from './render/peasants';
@@ -259,7 +259,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
   ]],
   [tx('Narzędzia', 'Tools'), ([['axe', tx('siekiera', 'axe')], ['pick', tx('kilof', 'pick')], ['hammer', tx('młotek', 'hammer')], ['club', tx('maczuga', 'club')], ['torch', tx('pochodnia', 'torch')], ['bucket', tx('wiadro', 'bucket')], ['rod', tx('wędka', 'fishing rod')], ['backPick', tx('kilof na plecach', 'pick on the back')], ['beltClub', tx('maczuga u pasa', 'club at the belt')]] as const).map(([k, l]) => [`tool-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, toolPair(k)] as [string, string, Make])],
   [tx('Podwórko', 'Yard'), YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', tx('pranie: ', 'washing: ')), () => ({ obj: yardModel(k) })] as [string, string, Make])],
-  [tx('Graty', 'Clutter'), (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: mesh(clutterModel(k), new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
+  [tx('Graty', 'Clutter'), (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: clutterObject(k, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
   // gotowe modele z paczek (tools/models/props_import.py): z lewej wersja z bliska, z prawej z daleka; ryba w rozmiarze z kosza
   [tx('Z paczek', 'From packs'), ([['fish', tx('ryba', 'fish'), 0.3], ['torch', tx('pochodnia wyciągana w spacerze', 'torch drawn on a walk'), 1], ['basket', tx('kosz z wikliny', 'wicker basket'), 0.3], ['apple', tx('jabłko', 'apple'), 0.15], ['bun1', tx('chleb', 'bread'), 0.2], ['barrel', tx('beczka', 'barrel'), 0.4], ['sack', tx('worek z płótna', 'linen sack'), 0.25]] as const).map(([k, l, sc]) => [`prop-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, () => {
     const g = new THREE.Group();

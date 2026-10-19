@@ -7,6 +7,8 @@ import { hash2 } from '../sim/rng';
 import type { GameState } from '../sim/state';
 import { tint } from './loads';
 import { bump, pattern } from './textures';
+import { propGeometry, propMaterial } from './props';
+import { toolGeometry, toolMaterials } from './gear';
 
 /**
  * Graty przy domach: beczki, worki, siano, skrzynie, kupki śmieci, wiadra i taczki pod ścianami.
@@ -56,16 +58,39 @@ function crate(w: number, h: number, x: number, y: number, z: number, rot: numbe
 /** Model jednego rodzaju gratów (podgląd w podglad-wojsko.html?graty=1) */
 export const clutterModel = (kind: Kind): THREE.BufferGeometry => geometry(kind);
 
+/** Wysokość stojącej beczki przy domu (model z paczki ma wysokość 1, dno w zerze) */
+const BARREL_H = 0.2;
+/** Wiadro z Blendera wisi w dłoni (tools.py: środek w (0,15; 0,02), dno na 0,1) — tu stoi na ziemi */
+const toGround = (g: THREE.BufferGeometry): THREE.BufferGeometry => g.clone().translate(-0.15, -0.1, -0.02);
+let waterMat: THREE.Material | null = null;
+
+/**
+ * Gotowe modele gratów: [siatka, materiał] — beczka to ta sama wypalona beczka co w stosach w składzie (`barrelLow`
+ * z Poly Haven), wiadro to wiadro z wodą, które noszą chłopi (pełna wersja, z obręczami). Reszta to bryły z `geometry`.
+ */
+function models(kind: Kind): [THREE.BufferGeometry, THREE.Material | THREE.Material[]][] | null {
+  if (kind === 'barrel') return [[propGeometry('barrelLow').clone().scale(BARREL_H, BARREL_H, BARREL_H), propMaterial('barrelLow')]];
+  if (kind === 'bucket') {
+    waterMat ??= new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 });
+    return [[toGround(toolGeometry('bucket')), toolMaterials()], [toGround(toolGeometry('bucketWater')), [waterMat, waterMat, waterMat]]];
+  }
+  return null;
+}
+
+/** Graty do podglądu modeli: gotowy model z właściwymi materiałami albo bryła z kodu */
+export function clutterObject(kind: Kind, fallback: THREE.Material): THREE.Object3D {
+  const ms = models(kind);
+  if (!ms) return new THREE.Mesh(geometry(kind), fallback);
+  const g = new THREE.Group();
+  for (const [geo, mat] of ms) { const m = new THREE.Mesh(geo, mat); m.castShadow = true; g.add(m); }
+  return g;
+}
+
 function geometry(kind: Kind): THREE.BufferGeometry {
   const wood = 0x7a5232, dark = 0x3e2a1a, iron = 0x4a4844;
   switch (kind) {
-    case 'barrel': return merge([
-      tint(new THREE.CylinderGeometry(0.075, 0.075, 0.2, 9).translate(0, 0.1, 0), wood),
-      tint(new THREE.CylinderGeometry(0.085, 0.085, 0.13, 9).translate(0, 0.1, 0), 0x6b4728), // brzuchaty środek
-      tint(new THREE.CylinderGeometry(0.079, 0.079, 0.016, 9).translate(0, 0.04, 0), iron),
-      tint(new THREE.CylinderGeometry(0.079, 0.079, 0.016, 9).translate(0, 0.16, 0), iron),
-      tint(new THREE.CylinderGeometry(0.07, 0.07, 0.01, 9).translate(0, 0.2, 0), dark),
-    ]);
+    // beczka i wiadro to gotowe modele (beczka z paczki, wiadro z wodą z Blendera) — patrz `models()` niżej
+    case 'barrel': case 'bucket': return new THREE.BufferGeometry();
     case 'sack': return merge([
       tint(new THREE.IcosahedronGeometry(0.075, 1).scale(1, 1.2, 0.85).translate(0, 0.085, 0), 0xb59a6a),
       tint(new THREE.CylinderGeometry(0.02, 0.035, 0.05, 6).translate(0, 0.18, 0), 0xa58a5a),
@@ -94,10 +119,6 @@ function geometry(kind: Kind): THREE.BufferGeometry {
       tint(new THREE.BoxGeometry(0.06, 0.012, 0.03).rotateY(0.7).translate(0.05, 0.04, 0.02), 0x8a7a5a), // deska
       tint(new THREE.CylinderGeometry(0.02, 0.025, 0.04, 6).rotateZ(1.3).translate(-0.05, 0.035, 0.01), 0x6a5a48), // skorupa dzbana
       tint(new THREE.IcosahedronGeometry(0.02, 0).translate(0.01, 0.045, -0.04), 0x5a6a3a), // łupiny
-    ]);
-    case 'bucket': return merge([
-      tint(new THREE.CylinderGeometry(0.045, 0.035, 0.07, 8).translate(0, 0.035, 0), wood),
-      tint(new THREE.TorusGeometry(0.04, 0.004, 4, 10, Math.PI).translate(0, 0.07, 0), iron),
     ]);
     case 'barrow': {
       // taczka: skrzynia zwężająca się ku przodowi, koło ze szprychami na osi z przodu, dwa długie uchwyty i nóżki z tyłu
@@ -147,7 +168,8 @@ export const clutterTaken = new Set<number>();
 
 export class Clutter {
   readonly group = new THREE.Group();
-  private meshes = new Map<Kind, THREE.InstancedMesh>();
+  /** Każdy rodzaj: jedna siatka instancjonowana albo kilka (wiadro + woda), ustawiane razem */
+  private meshes = new Map<Kind, THREE.InstancedMesh[]>();
   private key = '';
 
   constructor() {
@@ -155,15 +177,26 @@ export class Clutter {
     // drewniane graty ze słojami desek (tekstura w mniejszej skali, żeby na małej klepce było widać jedno usłojenie)
     // tekstura ta sama co na budynkach (dociąga się do niej zdjęcie desek), a skalę słojów zmniejsza geometria
     const woodMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') });
-    const WOODEN = new Set<Kind>(['crate', 'barrel', 'barrow', 'logs', 'bucket']);
+    const WOODEN = new Set<Kind>(['crate', 'barrow', 'logs']);
     // siano dostaje teksturę strzechy (źdźbła), reszta gratów gładkie barwy
     const hayMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('thatch'), bumpMap: bump('thatch'), bumpScale: 1.2 });
     for (const k of ALL) {
+      const ready = models(k);
+      if (ready) {
+        const list = ready.map(([geo, mat]) => {
+          const m = new THREE.InstancedMesh(geo, mat, MAX);
+          m.count = 0; m.castShadow = true; m.receiveShadow = true;
+          this.group.add(m);
+          return m;
+        });
+        this.meshes.set(k, list);
+        continue;
+      }
       const geo = geometry(k);
       if (WOODEN.has(k)) { const uv = geo.attributes.uv; if (uv) { for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * 0.35, uv.getY(i) * 0.35); uv.needsUpdate = true; } }
       const m = new THREE.InstancedMesh(geo, k === 'hay' ? hayMat : WOODEN.has(k) ? woodMat : mat, MAX);
       m.count = 0; m.castShadow = true; m.receiveShadow = true;
-      this.meshes.set(k, m);
+      this.meshes.set(k, [m]);
       this.group.add(m);
     }
   }
@@ -215,13 +248,14 @@ export class Clutter {
         P.set(px - w / 2, heightAt(px, py) - 0.01, py - h / 2);
         Q.setFromAxisAngle(Y, r(5) * Math.PI * 2);
         S.setScalar(0.85 + r(6) * 0.35);
-        this.meshes.get(kind)!.setMatrixAt(c, M.compose(P, Q, S));
+        M.compose(P, Q, S);
+        for (const m of this.meshes.get(kind)!) m.setMatrixAt(c, M);
         counts.set(kind, c + 1);
         placed++;
       }
     }
-    for (const [k, m] of this.meshes) { m.count = counts.get(k)!; touch(m); m.computeBoundingSphere(); }
+    for (const [k, list] of this.meshes) for (const m of list) { m.count = counts.get(k)!; touch(m); m.computeBoundingSphere(); }
   }
 
-  reset(): void { this.key = ''; for (const m of this.meshes.values()) m.count = 0; }
+  reset(): void { this.key = ''; for (const list of this.meshes.values()) for (const m of list) m.count = 0; }
 }
