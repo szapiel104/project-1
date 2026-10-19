@@ -500,20 +500,46 @@ function enterGame(label: string, prep?: () => void): void {
       show(45, tx('Wczytywanie tekstur…', 'Loading the textures…'));
       next(() => {
         renderer.uploadTextures();
-        show(60, tx('Rozgrzewanie świata…', 'Warming up the world…'));
-        // klatki rysuje zwykła pętla (gałąź `entering`); tu tylko mierzymy, kiedy obraz się uspokoi
-        const t0 = performance.now();
-        let prev = t0, frames = 0, calm = 0;
-        const watch = (now: number): void => {
-          const dt = now - prev; prev = now; frames++;
-          calm = dt < 40 ? calm + 1 : 0;
-          const spent = now - t0;
-          show(60 + Math.min(38, frames * 1.6), undefined);
-          // min. 12 klatek, potem 10 równych z rzędu; najdłużej 6 s (bardzo słaby komputer i tak wejdzie)
-          if ((frames >= 12 && calm >= 10) || spent > 6000) finish();
-          else requestAnimationFrame(watch);
+        show(55, tx('Rozgrzewanie świata…', 'Warming up the world…'));
+        try { refresh(); updateBars(); } catch (e) { console.error(e); } // pierwszy, najcięższy obraz panelu też pod zasłoną
+        // 1) obchód kamerą: osiem kierunków z bliska i dwa z daleka, po kilka klatek — wszystko dookoła (drzewa, trawa,
+        //    budynki, dalekie wersje modeli, cienie) wgrywa się do karty teraz, a nie przy pierwszym obrocie w grze
+        const home = renderer.camView;
+        const shots: { yaw: number; dist: number }[] = [];
+        for (let k = 0; k < 8; k++) shots.push({ yaw: home.yaw + (k * Math.PI) / 4, dist: home.dist });
+        shots.push({ yaw: home.yaw, dist: home.dist * 2.2 }, { yaw: home.yaw + Math.PI, dist: home.dist * 2.2 });
+        const PER = 4;
+        let shot = 0, inShot = 0;
+        const sweep = (): void => {
+          if (shot < shots.length) {
+            if (inShot === 0) renderer.setCamView({ x: home.x, z: home.z, dist: shots[shot]!.dist, yaw: shots[shot]!.yaw });
+            show(55 + (25 * (shot * PER + inShot)) / (shots.length * PER), undefined);
+            if (++inShot >= PER) { inShot = 0; shot++; }
+            requestAnimationFrame(sweep);
+            return;
+          }
+          renderer.setCamView(home);
+          settle();
         };
-        requestAnimationFrame(watch);
+        // 2) uspokojenie: zasłona schodzi dopiero po 30 równych klatkach z rzędu (bez skoków ponad typową klatkę tego komputera)
+        const settle = (): void => {
+          show(80, tx('Ostatnie przygotowania…', 'Final preparations…'));
+          const t0 = performance.now();
+          let prev = t0, frames = 0, calm = 0;
+          const recent: number[] = [];
+          const watch = (now: number): void => {
+            const dt = now - prev; prev = now; frames++;
+            recent.push(dt); if (recent.length > 40) recent.shift();
+            const typical = [...recent].sort((x, y) => x - y)[Math.floor(recent.length * 0.3)] ?? dt;
+            calm = dt < Math.max(20, typical * 1.5) ? calm + 1 : 0;
+            show(80 + Math.min(19, calm * 0.63), undefined);
+            // najdłużej 12 s: bardzo słaby komputer i tak wejdzie do gry
+            if ((frames >= 30 && calm >= 30) || now - t0 > 12000) finish();
+            else requestAnimationFrame(watch);
+          };
+          requestAnimationFrame(watch);
+        };
+        requestAnimationFrame(sweep);
       });
     });
   });

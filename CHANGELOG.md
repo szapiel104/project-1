@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.30.11 — dokładniejsze wczytywanie przy wejściu do gry (2026-10-19)
+
+- Pod zasłoną kamera robi obchód: osiem kierunków z bliska i dwa z daleka, po kilka klatek każdy, więc drzewa, trawa, budynki, ich dalekie wersje i cienie dookoła osady trafiają do karty graficznej przed wejściem, a nie przy pierwszym obrocie kamery
+- Panel na dole rysuje się pierwszy raz jeszcze pod zasłoną
+- Zasłona schodzi dopiero po 30 równych klatkach z rzędu (porównywanych z typową klatką danego komputera), najdłużej po 12 s; nowy krok na pasku: „Ostatnie przygotowania…”
+
 ## 0.30.10 — ekran wczytywania przy wejściu do gry (2026-10-19)
 
 - „Kontynuuj”, „Nowa gra” i mecz przez sieć wchodzą do gry przez ekran wczytywania z paskiem i procentami: przygotowanie świata, kompilacja grafiki, wgranie wszystkich tekstur do karty graficznej i rozgrzanie świata (kilkanaście klatek rysowanych pod zasłoną z widoku gracza). Zasłona schodzi dopiero, gdy klatki są równe, więc po wejściu gra nie przycina
