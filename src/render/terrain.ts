@@ -1208,8 +1208,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // trzciny (pałka wodna) i kożuch liści na stawach z gry 0 A.D. (src/render/forest.ts → waterPlants): oryginalne
   // siatki i tekstury bez przeróbek; pałka w dwóch odmianach, liście leżą płasko na tafli
   const WP = waterPlants();
-  // 2,5 cm nad taflą (woda: y = -0,08) i przesunięcie głębi — tafla sięga po horyzont, więc przy samej wodzie liście migały
-  for (const it of lilies) { it.pos.y = -0.055; it.m.compose(it.pos, it.q, it.s); }
+  // 2,5 cm nad taflą (WATER_Y) i przesunięcie głębi — tafla sięga po horyzont, więc przy samej wodzie liście migały
+  for (const it of lilies) { it.pos.y = WATER_Y + 0.025; it.m.compose(it.pos, it.q, it.s); }
   label = 'trzcina i grzybienie';
   const reedMats = WP.reedTex.map((tex, i) => {
     const m = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 });
