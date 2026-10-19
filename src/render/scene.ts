@@ -251,8 +251,10 @@ export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean
 const MAX_UNITS = 2048;
 /** Ręka z pochodnią uniesiona w przód (tak samo w tools/models/tools.py) i koniec pochodni w układzie ręki */
 const TORCH_ARM = -0.55;
-/** Kopacz w drodze: ręka z kilofem lekko w przód, przy boku */
-const CARRY_PICK_ARM = -0.3;
+/** Ile sekund kopacz wyciąga kilof z pleców, zanim zacznie kopać */
+const PICK_DRAW = 0.75;
+/** Część wyciągania, po której dłoń chwyta stylisko i kilof przechodzi z pleców do ręki */
+const PICK_GRAB = 0.42;
 /** Ręka rybaka z wędką wyciągnięta w przód (tak samo w tools/models/tools.py) */
 const FISH_ARM = -0.9;
 /** Oburęczny chwyt kilofa i siekiery: o tyle ręce schodzą się do środka (dłonie razem na stylisku) */
@@ -576,6 +578,8 @@ export class GameRenderer {
   private chips = new Chips();
   /** Który zamach kilofa danego górnika już sypnął okruchami (jeden wysyp na cios) */
   private chipSwing = new Map<number, number>();
+  /** Kiedy kopacz stanął przy złożu (od tego liczy się wyciąganie kilofa z pleców i zamachy) */
+  private mineStart = new Map<number, number>();
   /** Beczki, worki, siano i śmieci przy domach */
   private clutter = new Clutter();
   /** Chmury jako obiekty nad mapą: płyną, rodzą się i rozpływają, rzucają cień */
@@ -5504,13 +5508,27 @@ export class GameRenderer {
       const inMine = u.phase === Phase.Working && !!job && job.type === OREMINE_T && !mineWalk;
       const mining = site === Terrain.Stone || site === Terrain.Iron || inMine;
       let toolArm = 0, toolLean = 0;
+      // kopacz przy złożu najpierw sięga przez bark po kilof z pleców (PICK_DRAW s), dopiero potem zaczyna walić
+      let drawing = -1; // 0..1 = postęp wyciągania kilofa; -1 = nie wyciąga
+      let mineT = 0;    // czas od chwili, gdy kilof jest już w rękach (zamachy liczone od zera)
+      if (mining && !this.calm) {
+        let st = this.mineStart.get(u.id);
+        if (st === undefined) { st = this.time; this.mineStart.set(u.id, st); }
+        const el = this.time - st;
+        if (el < PICK_DRAW) drawing = el / PICK_DRAW; else mineT = el - PICK_DRAW;
+      } else if (!mining) this.mineStart.delete(u.id);
       if (chopping || mining) {
         // twarzą do najbliższego drzewa albo skały obok
         const tx = u.px >> 8, ty = u.py >> 8, want = chopping ? Terrain.Forest : site!;
         if (!inMine) for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]] as const)
           if (g.map.tiles[(ty + dy) * width + tx + dx] === want) { t.rotation.set(0, Math.atan2(dx, dy), 0); break; }
-        if (!this.calm) {
-          const ph = (this.time * (chopping ? 1.15 : 0.85) + (u.id % 11) * 0.173) % 1;
+        if (drawing >= 0) {
+          // ręka w górę za bark (chwyta stylisko), potem kilof zjeżdża przed siebie do pozycji wyjściowej
+          const ease = (x: number): number => x * x * (3 - 2 * x);
+          toolArm = drawing < PICK_GRAB ? -0.5 - ease(drawing / PICK_GRAB) * 2.45 : -2.95 + ease((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * 2.6;
+          toolLean = 0.05;
+        } else if (!this.calm) {
+          const ph = mining ? (mineT * 0.85) % 1 : (this.time * 1.15 + (u.id % 11) * 0.173) % 1;
           const ease = (x: number): number => x * x * (3 - 2 * x);
           const high = chopping ? 2.3 : 2.75;
           if (ph < 0.55) toolArm = -0.35 - ease(ph / 0.55) * high;                    // zamach nad ramię albo nad głowę
@@ -5520,7 +5538,7 @@ export class GameRenderer {
           toolLean = ph > 0.55 && ph < 0.85 ? Math.sin(((ph - 0.55) / 0.3) * Math.PI) * (mining ? 0.4 : 0.28) : 0.05;
           // okruchy spod kilofa: raz na cios i tylko gdy kamera stoi tuż obok (spacer przy górniku albo bliskie zbliżenie)
           if (mining && ph > 0.66 && ph < 0.78) {
-            const swingNo = Math.floor(this.time * 0.85 + (u.id % 11) * 0.173);
+            const swingNo = Math.floor(mineT * 0.85);
             if (this.chipSwing.get(u.id) !== swingNo) {
               this.chipSwing.set(u.id, swingNo);
               const cp = this.cam.camera.position;
@@ -5745,12 +5763,13 @@ export class GameRenderer {
       } else this.spades.setMatrixAt(i, ZERO);
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       const torchOn = this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket;
-      // kopacz idący do roboty (także sztolnią w kopalni) niesie kilof w ręku; nocą pochodnia w ręku, a kilof na plecach
-      const pickInHand = miner && (walking || mineWalk) && !mining && !fighting && !torchOn && u.carryRes < 0 && !u.bucket;
+      // kopacz w drodze (także sztolnią) ma kilof na plecach; do ręki bierze go dopiero przy złożu, gdy dłoń chwyci stylisko
+      const pickOnBack = drawing >= 0 && drawing < PICK_GRAB;
       // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką
-      if (chopping || mining) {
+      if (pickOnBack) { this.axes.setMatrixAt(i, ZERO); this.picks.setMatrixAt(i, ZERO); }
+      else if (chopping || mining) {
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
-        this.armM.makeRotationFromEuler(this.gripE.set(toolArm, 0, -TWO_HAND)).setPosition(0.135, 0.45, 0);
+        this.armM.makeRotationFromEuler(this.gripE.set(toolArm, 0, drawing >= 0 ? -TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB) : -TWO_HAND)).setPosition(0.135, 0.45, 0);
         (chopping ? this.axes : this.picks).setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
         (chopping ? this.picks : this.axes).setMatrixAt(i, ZERO);
       } else if (fighting) {
@@ -5760,16 +5779,10 @@ export class GameRenderer {
         (weapon === 'pick' ? this.picks : this.clubs).setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
         (weapon === 'pick' ? this.clubs : this.picks).setMatrixAt(i, ZERO);
         this.axes.setMatrixAt(i, ZERO);
-      } else if (pickInHand) {
-        // kopacz w drodze: kilof w prawej dłoni przy boku, stylisko w przód
-        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
-        this.armM.makeRotationX(CARRY_PICK_ARM).setPosition(0.135, 0.45, 0);
-        this.picks.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
-        this.axes.setMatrixAt(i, ZERO);
       } else { this.axes.setMatrixAt(i, ZERO); this.picks.setMatrixAt(i, ZERO); }
       if (!fighting) this.clubs.setMatrixAt(i, ZERO);
-      // na co dzień broń wisi na plecach albo u pasa (kopacz przy pracy i w drodze trzyma kilof w ręku)
-      const stowed = !fighting && !(mining && weapon === 'pick') && !pickInHand;
+      // na co dzień broń wisi na plecach albo u pasa (kopacz trzyma kilof w ręku tylko przy złożu)
+      const stowed = !fighting && (!(mining && weapon === 'pick') || pickOnBack);
       if (stowed) {
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
         this.armS.copy(t.matrix).scale(this.armV.setScalar(sz));
@@ -5800,7 +5813,7 @@ export class GameRenderer {
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : pickInHand ? CARRY_PICK_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : planting ? work + 0.08 : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || pickInHand || (!!u.bucket && walking) || !!ia?.legs, undefined, chopping || mining ? TWO_HAND : 0);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       // ciągnie odmianę, którą ściął (po wczytaniu zapisu w trakcie drogi: stała odmiana dla ludzika)
