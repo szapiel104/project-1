@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.31.3 — liście na stawach nie migają (2026-10-19)
+
+- Kożuch liści na wodzie leży 2,5 cm nad taflą z przesunięciem głębi: przy ruchu kamery nie miga już i nie „sypie się” (wcześniej walczył z taflą wody, która sięga po horyzont)
+- Przyciemniony i matowy, w barwie mętnej wody wokół, zamiast jasnego zdjęcia w pełnym słońcu; wygładzone brzegi liści
+
 ## 0.31.2 — prawdziwa pałka wodna i liście na stawach (2026-10-19)
 
 - Trzciny przy wodzie to gotowe kępy pałki wodnej z gry 0 A.D. (dwie odmiany): wygięte liście, brązowe kolby, korzenie przy ziemi — zamiast prostych, malowanych w kodzie źdźbeł

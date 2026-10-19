@@ -1223,7 +1223,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // trzciny (pałka wodna) i kożuch liści na stawach z gry 0 A.D. (src/render/forest.ts → waterPlants): oryginalne
   // siatki i tekstury bez przeróbek; pałka w dwóch odmianach, liście leżą płasko na tafli
   const WP = waterPlants();
-  for (const it of lilies) { it.pos.y = -0.072; it.m.compose(it.pos, it.q, it.s); }
+  // 2,5 cm nad taflą (woda: y = -0,08) i przesunięcie głębi — tafla sięga po horyzont, więc przy samej wodzie liście migały
+  for (const it of lilies) { it.pos.y = -0.055; it.m.compose(it.pos, it.q, it.s); }
   label = 'trzcina i grzybienie';
   const reedMats = WP.reedTex.map((tex, i) => {
     const m = new THREE.MeshStandardMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.9 });
@@ -1235,7 +1236,8 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   const reedSplit = reedMats.map(() => [] as Item[]);
   for (const it of reeds) reedSplit[kindFor(reedMats.map((_, i) => i), it, 13)]!.push(it);
   reedMats.forEach((m, i) => plant(reedSplit[i]!, instanced(WP.reeds, 0xffffff, reedSplit[i]!, undefined, false, m, { hide: 70 }), null, false));
-  const lilyMat = new THREE.MeshStandardMaterial({ map: WP.lilyTex, alphaTest: 0.35, roughness: 0.55, metalness: 0 });
+  // zdjęcie z południa jest jasne: przyciemnione do mętnej wody wokół, matowe (bez odblasku słońca)
+  const lilyMat = new THREE.MeshStandardMaterial({ map: WP.lilyTex, color: 0x7f8a72, alphaTest: 0.35, alphaToCoverage: true, roughness: 0.85, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
   lilyMat.userData.season = 'leaf';
   plant(lilies, instanced(WP.lilies, 0xffffff, lilies, undefined, false, lilyMat, { hide: 70 }), null, false);
   label = 'kamyki';
