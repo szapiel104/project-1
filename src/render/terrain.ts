@@ -563,7 +563,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     water.position.y = -0.08;
     water.receiveShadow = true;
     group.add(cat(water, 'woda'));
-    const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x46533f, roughness: 1 }));
+    const shallow = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshStandardMaterial({ color: 0x2b281a, roughness: 1 }) /* muł pod mętną wodą */);
     shallow.rotation.x = -Math.PI / 2;
     shallow.position.y = -0.32;
     group.add(cat(shallow, 'woda'));
