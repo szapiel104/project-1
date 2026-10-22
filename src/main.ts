@@ -21,7 +21,7 @@ import { applyCommands, step, type Command } from './sim/step';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
-import { buildWork, canAfford, canPlace, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
+import { buildWork, canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
 import { crewWanted, MINE_YIELDS } from './sim/systems/workers';
 import { CAMP_GUARDS, campOf } from './sim/systems/minecamp';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
@@ -924,7 +924,10 @@ function updateGhost(): void {
   renderer.setBuildGrid(tile, road ? (x, y) => canPlace(game, ME, type, x, y, false) === null : (x, y) => tileBuildable(game, ME, x, y));
   const fp = footprint(BUILDINGS[type]!, placeRot);
   const o = origin(tile, type);
-  renderer.setGhost({ ...o, w: fp.w, h: fp.h, ok: canPlace(game, ME, type, o.x, o.y, true, placeRot) === null, id: picked, team: game.players[ME]!.team, rot: placeRot });
+  // wyjście liczone tak samo jak przy stawianiu: gdy pole przed frontem jest zajęte, drzwi przechodzą na inny bok
+  const def = BUILDINGS[type]!;
+  const door = def.wall || def.gate || def.road || def.line || def.id === 'torch' ? -1 : findDoor(game, o.x, o.y, fp.w, fp.h, placeRot);
+  renderer.setGhost({ ...o, w: fp.w, h: fp.h, ok: canPlace(game, ME, type, o.x, o.y, true, placeRot) === null, id: picked, team: game.players[ME]!.team, rot: placeRot, door });
 }
 
 renderer.onHover = (tile) => { hoverTile = tile; if (!touchTile) updateGhost(); };
@@ -2022,6 +2025,13 @@ requestAnimationFrame(loop);
           if (canPlace(game, player, type, x, y, false) === null) { step(game, [{ type: 'build', player, building: id, x, y }]); refresh(); return { x, y }; }
         }
     return null;
+  },
+  /** Podgląd stawiania (duch budynku ze strzałką wyjścia) na polu x, y, jak przy najechaniu kursorem; ghost(null) chowa */
+  ghost(id: string | null, x = 0, y = 0, rot = 0): void {
+    placeRot = rot;
+    pick(id);
+    hoverTile = id ? { x, y } : null;
+    updateGhost();
   },
   /** Nowa gra z botami na wybranej mapie (np. '2v2' — z botem-sojusznikiem) */
   play(preset: MapPresetId = '1v1', seed = 'test'): void { start(seed, preset); },

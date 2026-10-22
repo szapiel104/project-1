@@ -11,6 +11,16 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Zarabianie: mikropłatności i reklamy (po wersji, która trzyma graczy)
 - Docelowa nazwa gry zamiast „Project‑1”
 
+## Uwagi testera — Mikołaj (22.10.2026)
+- Budynki z wyższym priorytetem: gracz zaznacza, które mają być obsadzane w pierwszej kolejności (np. piekarnie przed łuczarzem), gdy brakuje ludzi.
+- Żelazo zapycha skład, a nic z niego nie robimy — potrzebne zastosowanie (kowal/płatnerz niżej) i może osobna kupka/skład na urobek kopalni.
+- Zboże (pszenica, mąka) do spichlerza albo stodoły, nie do zwykłego składu.
+- Kowal, płatnerz i zbrojni (ciężka piechota w zbroi) — żelazo → miecze i zbroje → nowa jednostka.
+- Cech inżynierów: dziś tylko wynosi gruz; pokazać graczowi, po co jest (naprawa i odbudowa budynków, później machiny oblężnicze) i opisać w „Jak grać”.
+- Ulepszanie budynków — patrz „Ulepszanie budynków” niżej.
+- Obracanie już postawionego budynku (przycisk w oknie budynku; drzwi liczone na nowo). Zrobione 22.10: strzałka wyjścia w podglądzie stawiania.
+- „Jak grać”: zebrać uwagi w pliku online (wspólny dokument z Mikołajem), dopisywać brakujące odpowiedzi.
+
 ## Braki zauważone przy pracy
 
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach

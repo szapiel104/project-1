@@ -246,7 +246,8 @@ function noWorkerMaterial(): THREE.SpriteMaterial {
   return noWorkerMat;
 }
 
-export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number }
+/** door: pole wyjścia (indeks pola mapy) liczone tak jak przy stawianiu (findDoor), -1 albo brak = budowla bez wejścia */
+export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number; door?: number }
 
 const MAX_UNITS = 2048;
 /** Ręka z pochodnią uniesiona w przód (tak samo w tools/models/tools.py) i koniec pochodni w układzie ręki */
@@ -571,6 +572,8 @@ export class GameRenderer {
   private selection: THREE.Mesh;
   private ghostModels = new Map<string, THREE.Group>();
   private ghostModel: THREE.Group | null = null;
+  /** Czerwone pole ze strzałką: tędy ludzie będą wchodzić i wychodzić z budynku */
+  private ghostDoor = new THREE.Group();
   private buildingLayer = new THREE.Group();
   /** Dym z kominów, iskry, blask okien, mgła przy ziemi */
   private ambience = new Ambience();
@@ -769,6 +772,21 @@ export class GameRenderer {
     this.cursor = flat(new THREE.RingGeometry(0.5, 0.66, 4, 1, Math.PI / 4), 0xfff3c4);
     this.ghost = flat(new THREE.PlaneGeometry(1, 1), 0x3f9b3f, 0.16);
     this.selection = flat(new THREE.RingGeometry(0.62, 0.72, 4, 1, Math.PI / 4), 0xfff3c4);
+    {
+      // znacznik wyjścia w podglądzie budowy: czerwone pole z obwódką i biała strzałka od budynku na zewnątrz
+      // (bez testu głębokości, żeby nie chował się pod modelem ani w trawie)
+      const mat = (color: number, opacity: number): THREE.MeshBasicMaterial => new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, depthTest: false, toneMapped: false, fog: false, side: THREE.DoubleSide });
+      const fill = new THREE.Mesh(new THREE.PlaneGeometry(0.94, 0.94).rotateX(-Math.PI / 2), mat(0xd42a1e, 0.55));
+      const edge = new THREE.Mesh(new THREE.RingGeometry(0.6, 0.68, 4, 1, Math.PI / 4).rotateX(-Math.PI / 2), mat(0xff3b2a, 0.95));
+      const arrow = new THREE.Shape();
+      arrow.moveTo(0, 0.36); arrow.lineTo(0.24, 0.06); arrow.lineTo(0.09, 0.06); arrow.lineTo(0.09, -0.3);
+      arrow.lineTo(-0.09, -0.3); arrow.lineTo(-0.09, 0.06); arrow.lineTo(-0.24, 0.06); arrow.closePath();
+      const tip = new THREE.Mesh(new THREE.ShapeGeometry(arrow).rotateX(-Math.PI / 2), mat(0xfff6e8, 0.95));
+      tip.position.y = 0.01;
+      for (const m of [fill, edge, tip]) { m.renderOrder = 22; this.ghostDoor.add(m); }
+      this.ghostDoor.visible = false;
+      this.scene.add(this.ghostDoor);
+    }
     // podgląd planowanej drogi: zielone pola da się wybudować, czerwone nie
     this.plan = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.92, 0.92).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false }), 512);
     this.plan.count = 0;
@@ -1074,7 +1092,7 @@ export class GameRenderer {
     this.cam.ground = (x, z) => view.heightAt(x + width / 2, z + height / 2);
     const s = starts.find((p) => p.player === focusPlayer) ?? starts[0];
     if (s) this.cam.lookAt(s.x + 0.5 - width / 2, s.y + 0.5 - height / 2, 30);
-    this.cursor.visible = this.ghost.visible = this.selection.visible = false;
+    this.cursor.visible = this.ghost.visible = this.ghostDoor.visible = this.selection.visible = false;
     this.roadSum = -1; this.planSum = -1;
     // nowa mapa: mury, place budowy i obszary liczone od nowa (te same id budynków na nowej mapie dawały ten sam klucz —
     // brama zostawała nieobrócona, a bale palisady stały jak na poprzedniej mapie)
@@ -1251,8 +1269,17 @@ export class GameRenderer {
 
   setGhost(g: Ghost | null): void {
     if (this.ghostModel) this.ghostModel.visible = false;
-    if (!g || !this.view || !this.state) { this.ghost.visible = false; return; }
+    if (!g || !this.view || !this.state) { this.ghost.visible = this.ghostDoor.visible = false; return; }
     const { width, height } = this.state.map;
+    if (g.door !== undefined && g.door >= 0) {
+      const dx = g.door % width, dy = (g.door / width) | 0;
+      // strzałka od środka działki w stronę wyjścia (domyślnie geometria wskazuje −z)
+      const vx = dx + 0.5 - (g.x + g.w / 2), vz = dy + 0.5 - (g.y + g.h / 2);
+      const [ax, az] = Math.abs(vx) >= Math.abs(vz) ? [Math.sign(vx), 0] : [0, Math.sign(vz)];
+      this.ghostDoor.rotation.y = Math.atan2(-ax, -az);
+      this.ghostDoor.position.set(dx + 0.5 - width / 2, this.view.heightAt(dx + 0.5, dy + 0.5) + 0.1, dy + 0.5 - height / 2);
+      this.ghostDoor.visible = true;
+    } else this.ghostDoor.visible = false;
     let top = 0;
     for (let y = g.y; y <= g.y + g.h; y++) for (let x = g.x; x <= g.x + g.w; x++) top = Math.max(top, this.view.heightAt(x, y));
     this.ghost.scale.set(g.w, g.h, 1);
