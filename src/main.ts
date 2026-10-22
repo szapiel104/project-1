@@ -1760,7 +1760,7 @@ function refresh(): void {
   stockFull = full;
   // broń idzie do zbrojowni: gdy są warsztaty broni, a zbrojowni brak albo jest pełna, skryba o tym mówi
   const myB = game.buildings.filter((b) => b.owner === ME && !b.build);
-  const smiths = myB.some((b) => ['poleturner', 'fletcher', 'smithy'].includes(BUILDINGS[b.type]!.id));
+  const smiths = myB.some((b) => ['poleturner', 'fletcher', 'smithy', 'armorer'].includes(BUILDINGS[b.type]!.id));
   if (smiths && !myB.some((b) => BUILDINGS[b.type]!.stores?.includes('armory'))) scribe.say('noArmory', t('scribe.noArmory'));
   else if (smiths && storeUsed(p, 'armory') >= storeCapacity(game, ME, 'armory')) scribe.say('armoryFull', t('scribe.armoryFull'));
   const hour = clockAt(game.tick).hour;

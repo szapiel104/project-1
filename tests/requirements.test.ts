@@ -22,7 +22,7 @@ function spot(g: GameState, id: string): { x: number; y: number } | null {
 describe('drzewko budowy', () => {
   it('wymagania wskazują istniejące budynki do postawienia', () => {
     const req = Object.fromEntries(BUILDINGS.filter((d) => d.requires).map((d) => [d.id, d.requires]));
-    expect(req).toEqual({ bakery: 'mill', barracks: 'armory', tavern: 'brewery', minecamp: 'oremine', smithy: 'oremine' });
+    expect(req).toEqual({ bakery: 'mill', barracks: 'armory', tavern: 'brewery', minecamp: 'oremine' });
     for (const d of BUILDINGS) if (d.requires) {
       const need = BUILDINGS[buildingIndex(d.requires)]!;
       expect(need.buildable && !need.legacy).toBe(true);

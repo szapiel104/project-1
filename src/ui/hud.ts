@@ -175,6 +175,8 @@ const ICONS: Record<string, string> = {
   spear: '<path d="M3 17L15 5" stroke="#8a5a2b" stroke-width="2"/><path d="M14 3l4-1-1 4-3 1z" fill="#b9bec6" stroke="#2a1c10"/>',
   // miecz: głownia ze zbroczem, jelec, rękojeść ze skórą
   sword: '<path d="M10 2l1.3 2v9h-2.6V4z" fill="#c4c9d0" stroke="#2a1c10" stroke-width=".8"/><path d="M10 4v9" stroke="#7d838c" stroke-width=".7"/><path d="M5.5 13h9v1.6h-9z" fill="#8f8a96" stroke="#2a1c10" stroke-width=".8"/><path d="M9 14.6h2v2.6H9z" fill="#6b4a2e" stroke="#2a1c10" stroke-width=".7"/><circle cx="10" cy="18.1" r="1.1" fill="#8f8a96" stroke="#2a1c10" stroke-width=".7"/>',
+  // kolczuga: tułów z rękawami w rzędach kółek
+  armor: '<path d="M6 3h8l4 4-2 2-2-1v9H6V8L4 9 2 7z" fill="#8f949c" stroke="#2a1c10" stroke-width=".9"/><path d="M6.3 10.5h7.4M6.3 13h7.4M6.3 15.5h7.4M7 5.5h6" stroke="#4a4d54" stroke-width=".8"/><path d="M8 3c.5 1.5 3.5 1.5 4 0" fill="#6b4a2e" stroke="#2a1c10" stroke-width=".7"/>',
   crown: '<path d="M3 15l1-9 4 4 2-6 2 6 4-4 1 9z" fill="#e9c145" stroke="#2a1c10"/><rect x="3" y="15" width="14" height="2.5" fill="#c9a23a" stroke="#2a1c10"/>',
   store: '<rect x="3" y="6" width="14" height="10" fill="#a8743a" stroke="#2a1c10"/><path d="M3 6l2-3h10l2 3M3 11h14M10 6v10" stroke="#2a1c10" fill="none"/>',
   granary: '<path d="M4 9l6-5 6 5v8H4z" fill="#c9a24a" stroke="#2a1c10"/><rect x="8" y="12" width="4" height="5" fill="#5e4329" stroke="#2a1c10"/>',
@@ -284,7 +286,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   toggleLi.append(resToggle, extra);
   resList.append(toggleLi);
   /** Zapasy dokładane do paska w tej kolejności, póki jest miejsce (broń i piwo, potem składniki jedzenia) */
-  const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'sword', 'bread', 'apples', 'wheat', 'flour', 'fish'];
+  const SECOND: readonly ResourceId[] = ['iron', 'ale', 'spear', 'bow', 'sword', 'armor', 'bread', 'apples', 'wheat', 'flour', 'fish'];
   const fitRes = (): void => {
     for (const id of SECOND) resList.insertBefore(resItems[RESOURCES.indexOf(id)]!, toggleLi);
     const over = (): boolean => {

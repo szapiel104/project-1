@@ -262,7 +262,7 @@ describe('zbrojownia', () => {
     expect(storeUsed(p0, 'armory')).toBe(p0.res[SPEAR]! + p0.res[resIndex('bow')]!);
   });
 
-  it('kowal bierze żelazo ze składu i odnosi miecze do zbrojowni', async () => {
+  it('kowal i płatnerz biorą żelazo ze składu i odnoszą miecze i kolczugi do zbrojowni', async () => {
     const { placeBuilding, canPlace } = await import('../src/sim/systems/placement');
     const { BUILDINGS, buildingIndex } = await import('../src/data/buildings');
     const { resIndex } = await import('../src/data/resources');
@@ -273,18 +273,18 @@ describe('zbrojownia', () => {
       for (let r = 4; r < 24; r++) for (let d = -r; d <= r; d++) if (canPlace(g, 0, buildingIndex(id), keep.x + d, keep.y + r) === null) return placeBuilding(g, 0, buildingIndex(id), keep.x + d, keep.y + r);
       return false;
     };
-    // kuźnia normalnie wymaga kopalni pod górami; w teście zdejmujemy wymaganie na chwilę i dajemy żelazo do składu
-    const def = BUILDINGS[buildingIndex('smithy')]! as { requires?: string };
-    const req = def.requires; def.requires = undefined;
-    const p0 = g.players[0]!, IRON = resIndex('iron'), SWORD = resIndex('sword');
-    p0.res[resIndex('wood')] = 300; p0.res[resIndex('stone')] = 100; p0.res[IRON] = 20; p0.res[SWORD] = 0;
-    try {
-      expect(put('armory')).toBe(true);
-      expect(put('smithy')).toBe(true);
-    } finally { def.requires = req; }
-    for (let i = 0; i < 4000 && !p0.res[SWORD]; i++) step(g, []);
+    // kuźnia i płatnerz stoją bez wymagań (Michał 22.10: wszędzie); żelazo dajemy do składu
+    expect(BUILDINGS[buildingIndex('smithy')]!.requires).toBeUndefined();
+    expect(BUILDINGS[buildingIndex('armorer')]!.requires).toBeUndefined();
+    const p0 = g.players[0]!, IRON = resIndex('iron'), SWORD = resIndex('sword'), ARMOR = resIndex('armor');
+    p0.res[resIndex('wood')] = 300; p0.res[resIndex('stone')] = 100; p0.res[IRON] = 30; p0.res[SWORD] = 0; p0.res[ARMOR] = 0;
+    expect(put('armory')).toBe(true);
+    expect(put('smithy')).toBe(true);
+    expect(put('armorer')).toBe(true);
+    for (let i = 0; i < 6000 && !(p0.res[SWORD] && p0.res[ARMOR]); i++) step(g, []);
     expect(p0.res[SWORD]).toBeGreaterThan(0);
-    expect(p0.res[IRON]).toBeLessThan(20);
+    expect(p0.res[ARMOR]).toBeGreaterThan(0);
+    expect(p0.res[IRON]).toBeLessThan(30);
   });
 });
 

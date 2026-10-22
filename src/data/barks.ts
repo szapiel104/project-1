@@ -69,6 +69,10 @@ const SAY_PL = {
   fletcher: [
     'Strzała prosta jak sznurek.', 'Lotki z gęsiego pióra, najlepsze.', 'Łuk z cisu, cięciwa z jelita.', 'Łucznik bez strzał to pastuch.',
   ],
+  armorer: [
+    'Kółko do kółka, nit do nitu.', 'Dobra kolczuga zatrzyma i topór.', 'Jeszcze rękaw i gotowa.', 'Drut cienki, ręce zdarte.',
+    'Kto oszczędza na zbroi, ten oszczędza na życiu.',
+  ],
   smithy: [
     'Żelazo trzeba bić, póki gorące.', 'Dmuchaj w miech, nie śpij!', 'Dobra stal, nie pęknie na tarczy.', 'Jeszcze hartowanie i miecz gotowy.',
     'Bez węgla nie ma żaru, bez żaru nie ma miecza.',
@@ -238,6 +242,10 @@ const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
   ],
   fletcher: [
     'Arrow straight as a string.', 'Goose feathers. Best fletching there is.', 'Yew for the bow, gut for the string.', 'An archer with no arrows is just a shepherd.',
+  ],
+  armorer: [
+    'Ring to ring, rivet to rivet.', 'Good mail will turn an axe.', 'One more sleeve and she\'s done.', 'Fine wire, raw hands.',
+    'Skimp on your mail, skimp on your life.',
   ],
   smithy: [
     'Strike while the iron\'s hot.', 'Work the bellows, don\'t doze off!', 'Good steel. Won\'t snap on a shield.', 'Quench it, and the blade\'s done.',

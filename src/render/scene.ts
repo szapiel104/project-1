@@ -149,7 +149,7 @@ const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
  * zostają osobno, bo animacje i podgląd wnętrza ich szukają.
  */
 /** Budynki, w których pali się w piecu: z komina idzie dym */
-const SMOKY = new Set(['armory', 'house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy']);
+const SMOKY = new Set(['armory', 'house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy', 'armorer']);
 
 /** Grupy, w których też łączymy bryły (ściany i dach znikają w całości przy podglądzie wnętrza, więc wspólna siatka nic nie psuje) */
 const MERGE_IN = new Set(['shell', 'roof', 'chimney', 'spin', 'flagpole']);
@@ -5601,6 +5601,8 @@ export class GameRenderer {
           if (jid === 'woodcutter' || jid === 'poleturner') this.sfxAt('plank', t.position.x, t.position.z, u.id, 1.3, 0.7);
           // kowal: stuk młota w kowadło (ten sam metaliczny stuk co kilof w sztolni)
           else if (jid === 'smithy') this.sfxAt('mine', t.position.x, t.position.z, u.id, 1.1, 0.7);
+          // płatnerz: drobne, ciche stuknięcia młotka przy nitowaniu kółek
+          else if (jid === 'armorer') this.sfxAt('mine', t.position.x, t.position.z, u.id, 0.8, 0.35);
           else if (jid === 'mill') this.sfxAt('creak', t.position.x, t.position.z, u.id, 3.5, 0.8);
         }
       }

@@ -44,6 +44,7 @@ const CEMETERY_MODEL = model('cemetery');
 const FORESTER_MODEL = model('forester');
 const FIELD_TENT_MODEL = model('fieldtent');
 const SMITHY_MODEL = model('smithy');
+const ARMORER_MODEL = model('armorer');
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -313,6 +314,21 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
           paint(new THREE.BoxGeometry(0.02, 0.014, 0.1).translate(-d * 0.14, y, z), 0x5c5a60),
           paint(new THREE.BoxGeometry(0.07, 0.018, 0.02).translate(-d * 0.185, y, z), 0x5a3e24),
           paint(new THREE.BoxGeometry(0.024, 0.024, 0.024).translate(-d * 0.23, y, z), 0x7a7f86),
+        ];
+      }),
+    ]),
+  },
+  armor: {
+    tex: 'planks',
+    // kolczugi złożone na kozłach jedna na drugiej: szare płaty z ciemnymi rzędami kółek i skórzanym kołnierzem
+    geo: merge([
+      ...[-0.16, 0.16].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.12, 0.3), x, -0.1, 0), 0x6b4a2e)),
+      ...[0, 1, 2].flatMap((k) => {
+        const y = -0.03 + k * 0.035, r = (k - 1) * 0.12;
+        return [
+          paint(new THREE.BoxGeometry(0.38, 0.03, 0.26).rotateY(r).translate(0, y, 0), k % 2 ? 0x7d828a : 0x8f949c),
+          ...[-0.08, 0, 0.08].map((z) => paint(new THREE.BoxGeometry(0.385, 0.006, 0.012).translate(0, y + 0.016, z).rotateY(r), 0x4a4d54)),
+          paint(new THREE.BoxGeometry(0.1, 0.012, 0.06).translate(-0.15, y + 0.02, 0).rotateY(r), 0x5a3e24),
         ];
       }),
     ]),
@@ -1123,6 +1139,13 @@ const BUILDERS: Record<string, Builder> = {
     // kowadło na pniu, cebrzyk do hartowania, miecze i narzędzia na ścianie; przed nią szlifierz, stojak z mieczami, węgiel
     blenderModel(g, SMITHY_MODEL as unknown as BlenderBuilding, flag);
     const p = (SMITHY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  armorer(g, _team, flag) {
+    // płatnerz z Blendera (tools/models/armorer.py): warsztat z szachulca; w izbie stół z kolczugą w robocie, półka
+    // z hełmami, kukła z gotową kolczugą, żar pod kominem; przed nim stojaki z kolczugami, beczka z piaskiem i kloc do nitów
+    blenderModel(g, ARMORER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (ARMORER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   poleturner(g, _team, flag) {

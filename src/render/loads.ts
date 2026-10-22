@@ -225,6 +225,12 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
       as(tint(new THREE.BoxGeometry(0.018, 0.018, 0.07).translate(x, y, -0.17), 0x5a3e24), 'wood'),
     ];
   }),
+  // złożona kolczuga niesiona przed sobą na rękach: szary płat z rzędami kółek, na wierzchu skórzany kołnierz
+  armor: () => [
+    as(tint(new THREE.BoxGeometry(0.26, 0.05, 0.2).translate(0, 0.025, 0), 0x8f949c), 'iron'),
+    ...[-0.06, 0, 0.06].map((z) => as(tint(new THREE.BoxGeometry(0.265, 0.006, 0.012).translate(0, 0.052, z), 0x4a4d54), 'iron')),
+    as(tint(new THREE.BoxGeometry(0.1, 0.012, 0.05).translate(0, 0.058, -0.07), 0x5a3e24), 'wood'),
+  ],
   bow: () => [0, 1].flatMap((k) => [as(tint(new THREE.TorusGeometry(0.18, 0.012, 4, 10, Math.PI * 0.9).rotateX(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.05), 0x7a5232), 'wood'), tint(new THREE.CylinderGeometry(0.004, 0.004, 0.34, 3).rotateZ(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.03), 0xe8e0c8)]),
   // ruda (waluta, w kodzie 'gold'): bryły leżą W koszu (dno -0,065, brzeg 0,065), wierzch wystaje; kosz pełen ciemnych brył z jasnoniebieskimi, połyskującymi grudkami jak w Gothicu
   gold: () => [basket(), ...[[-0.05, -0.02, -0.03, 0x3e424e], [0.05, -0.02, 0.03, 0x4a4e5c], [0, 0.03, -0.01, 0x8fd3ff], [0.03, 0.02, 0.05, 0x3a3d48], [-0.03, 0.045, 0.04, 0x7cc4f0]].map(([x, y, z, c]) => { const b = ball(0.045, x as number, y as number, z as number, c as number, 1.1, 0.8, 0.9); return (c as number) > 0x700000 ? b : as(b, 'stone'); })],

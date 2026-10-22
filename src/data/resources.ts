@@ -1,5 +1,5 @@
 // KOLEJNOŚĆ MA ZNACZENIE (indeks w stanie gry i zapisach): nowe surowce dopisujemy na końcu
-export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword'] as const;
+export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor'] as const;
 export type ResourceId = (typeof RESOURCES)[number];
 export type StoreKind = 'stockpile' | 'granary' | 'armory';
 
@@ -31,6 +31,8 @@ export const RESOURCE_DEFS: Record<ResourceId, ResourceDef> = {
   ore: { name: 'res.ore', color: 0xa8843c, store: 'stockpile' },
   // miecze z kuźni: z żelaza ze składu, trafiają do zbrojowni jak włócznie i łuki (dla zbrojnych)
   sword: { name: 'res.sword', color: 0x9aa0a8, store: 'armory' },
+  // kolczugi od płatnerza: z żelaza ze składu, do zbrojowni (dla zbrojnych)
+  armor: { name: 'res.armor', color: 0x6f747c, store: 'armory' },
 };
 
 export const resIndex = (id: ResourceId): number => RESOURCES.indexOf(id);

@@ -195,11 +195,18 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // leczenia (twierdza albo namiot z medykiem) i tam szybciej wracają do zdrowia (army.ts, healSpot).
   { id: 'fieldTent', category: 'military', name: 'b.fieldTent', w: 3, h: 3, cost: { wood: 30, gold: 10 }, staff: true, hp: 320, buildable: true },
   // Kuźnia: kowal bierze ze składu dwie sztaby żelaza z kopalni i wykuwa miecz, który odnosi do zbrojowni.
-  // Stawiana dopiero przy kopalni (bez niej nie ma żelaza). Miecze są dla zbrojnych (ciężka piechota, następna partia).
+  // Stawiana gdziekolwiek (bez wymagań). Miecze są dla zbrojnych (ciężka piechota).
   {
-    id: 'smithy', category: 'military', name: 'b.smithy', w: 2, h: 2, cost: { wood: 40, stone: 30 }, requires: 'oremine', buildable: true,
+    id: 'smithy', category: 'military', name: 'b.smithy', w: 2, h: 2, cost: { wood: 40, stone: 30 }, buildable: true,
     workView: 'inside',
     production: { input: { res: 'iron', amount: 2 }, output: { res: 'sword', amount: 1 }, site: 'home', workTicks: 160 },
+  },
+  // Płatnerz: z trzech sztab żelaza ze składu plecie i nituje kolczugę, którą odnosi do zbrojowni (dla zbrojnych).
+  // Stawiany gdziekolwiek, bez wymagań; wolniejszy od kowala, bo kolczuga to tysiące kółek.
+  {
+    id: 'armorer', category: 'military', name: 'b.armorer', w: 2, h: 2, cost: { wood: 40, stone: 30 }, buildable: true,
+    workView: 'inside',
+    production: { input: { res: 'iron', amount: 3 }, output: { res: 'armor', amount: 1 }, site: 'home', workTicks: 220 },
   },
 ];
 
