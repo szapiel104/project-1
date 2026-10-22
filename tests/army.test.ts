@@ -330,9 +330,9 @@ describe('walka z charakterem', () => {
   it('przy chorążym oddział bije mocniej, z dala od proporca jak zwykle', () => {
     const g = clearBandits(createGame(7));
     const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 }), foe2 = mk(g, 1, 'spearman', 70, 50, { face: 0 });
-    // oddział 900: chorąży (najniższy numer) przy wrogu, żołnierz obok niego, drugi daleko i czwarty obok
+    // oddział 900: chorąży (najniższy numer) przy wrogu, żołnierz obok niego, drugi daleko i reszta oddziału
     const bearer = mk(g, 0, 'spearman', 51, 51, { grp: 900 }), near = mk(g, 0, 'spearman', 50, 51, { grp: 900 }), far = mk(g, 0, 'spearman', 70, 51, { grp: 900 });
-    mk(g, 0, 'spearman', 49, 51, { grp: 900 });   // czwarty: po śmierci chorążego oddział dalej ma trzech
+    for (let k = 0; k < 8; k++) mk(g, 0, 'spearman', 40 + k, 60, { grp: 900 });   // reszta oddziału z dala: razem 11, po śmierci chorążego dalej 10
     const lone = mk(g, 0, 'spearman', 50, 51);
     const byId = new Map(g.soldiers.map((x) => [x.id, x]));
     expect(bearer.id).toBeLessThan(near.id);

@@ -1,5 +1,5 @@
 /**
- * Chorążowie: w każdym oddziale (żołnierze z jednego rozkazu, co najmniej trzech) jeden niesie na plecach proporzec
+ * Chorążowie: w każdym oddziale (żołnierze z jednego rozkazu, co najmniej dziesięciu) jeden niesie na plecach proporzec
  * w barwach pana z jego herbem. Drzewce z Blendera (tools/models/standard.py), płachta z banners.ts (łopocze w shaderze).
  * Kto jest chorążym i premię do ducha liczy symulacja (src/sim/systems/standards.ts); tu tylko wygląd: drzewce na plecach
  * i proporzec, a gdy chorąży padnie — proporzec przewraca się razem z nim.

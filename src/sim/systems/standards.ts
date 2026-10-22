@@ -1,6 +1,6 @@
 /**
- * Chorążowie i duch oddziału. W każdym oddziale (żołnierze z jednego rozkazu, Soldier.grp) z co najmniej trzema
- * ludźmi jeden piechur niesie proporzec pana. Żołnierz z tego samego oddziału, który walczy w pobliżu swojego
+ * Chorążowie i duch oddziału. W każdym oddziale (żołnierze z jednego rozkazu, Soldier.grp) z co najmniej dziesięcioma
+ * ludźmi (Michał 22.10) jeden piechur niesie proporzec pana. Żołnierz z tego samego oddziału, który walczy w pobliżu swojego
  * chorążego, bije mocniej (STANDARD_BONUS). Chorąży nie jest zapisany w stanie gry — wynika z niego (najniższy numer),
  * więc u wszystkich graczy w meczu sieciowym wychodzi ten sam; gdy padnie, proporzec przejmuje następny.
  */
@@ -8,7 +8,7 @@ import { UNITS } from '../../data/units';
 import { FP, type GameState, type Soldier } from '../state';
 
 /** Od ilu żołnierzy w rozkazie oddział dostaje chorążego */
-export const STANDARD_MIN = 3;
+export const STANDARD_MIN = 10;
 /** Promień ducha oddziału wokół chorążego (w polach) */
 export const STANDARD_RANGE = 4;
 /** O ile procent mocniej bije żołnierz przy swoim chorążym */
@@ -18,7 +18,7 @@ export const STANDARD_BONUS = 15;
  * Kto niesie proporzec: w każdym rozkazie (Soldier.grp) z co najmniej STANDARD_MIN żołnierzami — piechur wręcz
  * o najniższym numerze (gdy w oddziale są sami łucznicy, to łucznik). Strażnicy, tarany i zbóje nie mają chorążych.
  */
-export function standardBearers(soldiers: readonly { id: number; owner: number; grp?: number; kind: number }[], isRanged: (kind: number) => boolean, skip: (kind: number) => boolean): Set<number> {
+export function standardBearers(soldiers: readonly { id: number; owner: number; grp?: number; kind: number }[], isRanged: (kind: number) => boolean, skip: (kind: number) => boolean, min = STANDARD_MIN): Set<number> {
   const best = new Map<string, { id: number; melee: boolean; n: number }>();
   for (const s of soldiers) {
     if (!s.grp || skip(s.kind)) continue;
@@ -29,7 +29,7 @@ export function standardBearers(soldiers: readonly { id: number; owner: number; 
     if ((melee && !b.melee) || (melee === b.melee && s.id < b.id)) { b.id = s.id; b.melee = melee; }
   }
   const out = new Set<number>();
-  for (const b of best.values()) if (b.n >= STANDARD_MIN) out.add(b.id);
+  for (const b of best.values()) if (b.n >= min) out.add(b.id);
   return out;
 }
 
