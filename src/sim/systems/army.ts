@@ -15,6 +15,7 @@ import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 
 /** Żołnierz stoi wysoko: na wieży albo na murach zamku (dalej widzi i strzela, wręcz go nie dosięgną) */
 export const high = (g: GameState, s: { up?: boolean; px: number; py: number }): boolean => !!s.up || (g.walls[(s.py >> 8) * g.map.width + (s.px >> 8)]! & WALL_TOP) !== 0;
+import { nearStandard, STANDARD_BONUS } from './standards';
 import type { UnitDef } from '../../data/units';
 
 const BARRACKS = buildingIndex('barracks');
@@ -677,6 +678,8 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
     else if (ranged && fdef.shield) dmg = dmg / 2;
   }
   if (!ranged && def.charge && (s.run ?? 0) >= CHARGE_RUN) dmg = (dmg * def.charge) / 100;
+  // duch oddziału: przy swoim chorążym żołnierz bije mocniej
+  if (nearStandard(g, s)) dmg = (dmg * (100 + STANDARD_BONUS)) / 100;
   // taran pod daszkiem ze skór: strzały ledwo go drasną, toporem i włócznią rąbie się go powoli
   if (fdef.ram) dmg = ranged ? dmg / 6 : dmg / 2;
   // zbroja (kolczuga zbrojnego): cios wręcz słabszy o armor %, strzała o półtora raza tyle (najwyżej 75%)

@@ -50,7 +50,8 @@ import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { kindsOf, type TreeKind } from './forest';
 import { Figures } from './peasants';
-import { Standards, standardBearers } from './standards';
+import { Standards } from './standards';
+import { bearerIds } from '../sim/systems/standards';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
 import { Family, yardModel } from './family';
@@ -345,6 +346,9 @@ export class GameRenderer {
   private menAtArms!: Figures;
   /** Chorążowie z proporcami (po jednym w oddziale) */
   private standards!: Standards;
+  /** Chorążowie z poprzedniej klatki i polegli chorążowie (numer ciała) — przy ich ciałach leży przewrócony proporzec */
+  private lastBearers = new Set<number>();
+  private fallenBearers = new Set<number>();
   private manAtArmsBodies!: Figures;
   private archers!: Figures;
   private arrowMesh!: THREE.InstancedMesh;
@@ -4657,7 +4661,13 @@ export class GameRenderer {
     const bById = new Map<number, (typeof g.buildings)[number]>();
     for (const b of g.buildings) bById.set(b.id, b);
     // chorążowie: po jednym w każdym oddziale (rozkazie) z co najmniej trzema żołnierzami
-    const bearers = standardBearers(g.soldiers, (k) => !!UNITS[k]?.range, (k) => { const u = UNITS[k]; return !u || !!u.guard || !!u.ram || !!u.bandit; });
+    const bearers = bearerIds(g);
+    // chorąży zniknął z wojska, a w tym miejscu leży jego ciało: padł, więc proporzec pada razem z nim
+    if (this.lastBearers.size) {
+      const dead = new Set(g.corpses.map((c) => c.id));
+      for (const id of this.lastBearers) if (!bearers.has(id) && dead.has(id)) this.fallenBearers.add(id);
+    }
+    this.lastBearers = bearers;
     this.standards.begin();
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
@@ -4879,7 +4889,6 @@ export class GameRenderer {
     this.archers.finish(n);
     this.guardsFig.finish(n);
     this.menAtArms.finish(n);
-    this.standards.finish();
     this.flyArrows();
     this.syncTowerIcons(g);
     this.syncRallyFlags(g, view);
@@ -4913,6 +4922,13 @@ export class GameRenderer {
       if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); }
       else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id); }
       else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id); }
+      // poległy chorąży: drzewce przewraca się na bok razem z nim i proporzec leży na ziemi obok ciała
+      if (this.fallenBearers.has(body.id) && g.players[body.owner]) {
+        const k = this.calm ? 1 : ease;
+        const fallM = new THREE.Matrix4().compose(new THREE.Vector3(fx - width / 2, y, fy - height / 2),
+          new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw + 0.5, 1.45 * k, 'YXZ')), new THREE.Vector3().setScalar(1.08 * FIG));
+        this.standards.add(fallM, body.owner, team, this.crestOf(body.owner));
+      }
       else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id); }
       else this.bodies.set(sp++, m, 0.3, false, rot, body.id);
       m.compose(new THREE.Vector3(fx - width / 2, y + 0.02, fy - height / 2), new THREE.Quaternion(), sc.set(1 + age * 0.4, 1, 1 + age * 0.4));
@@ -4924,6 +4940,13 @@ export class GameRenderer {
     this.archerBodies.finish(ac);
     this.guardBodies.finish(gc);
     this.manAtArmsBodies.finish(mc);
+    // proporce żywych chorążych (wyżej) i przewrócone przy poległych: wszystko naraz
+    this.standards.finish();
+    // ciała już nie ma (pochowane albo rozłożone): zapominamy, że był chorążym
+    if (this.fallenBearers.size && g.tick % 60 === 0) {
+      const dead = new Set(g.corpses.map((cc) => cc.id));
+      for (const id of this.fallenBearers) if (!dead.has(id)) this.fallenBearers.delete(id);
+    }
     this.stains.count = c;
     touch(this.stains);
     this.rings.count = rings;

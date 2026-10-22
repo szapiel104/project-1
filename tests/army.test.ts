@@ -327,6 +327,23 @@ describe('walka z charakterem', () => {
     waitSoldiers(g, 1);
     expect(g.soldiers.some((s) => s.owner === 0 && s.kind === unitIndex('manatarms'))).toBe(true);
   });
+  it('przy chorążym oddział bije mocniej, z dala od proporca jak zwykle', () => {
+    const g = clearBandits(createGame(7));
+    const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 }), foe2 = mk(g, 1, 'spearman', 70, 50, { face: 0 });
+    // oddział 900: chorąży (najniższy numer) przy wrogu, żołnierz obok niego, drugi daleko i czwarty obok
+    const bearer = mk(g, 0, 'spearman', 51, 51, { grp: 900 }), near = mk(g, 0, 'spearman', 50, 51, { grp: 900 }), far = mk(g, 0, 'spearman', 70, 51, { grp: 900 });
+    mk(g, 0, 'spearman', 49, 51, { grp: 900 });   // czwarty: po śmierci chorążego oddział dalej ma trzech
+    const lone = mk(g, 0, 'spearman', 50, 51);
+    const byId = new Map(g.soldiers.map((x) => [x.id, x]));
+    expect(bearer.id).toBeLessThan(near.id);
+    const plain = hitDamage(g, lone, foe, byId, false);
+    expect(hitDamage(g, near, foe, byId, false)).toBeGreaterThan(plain);
+    expect(hitDamage(g, far, foe2, byId, false)).toBe(plain);
+    // chorąży padł: proporzec przejmuje następny w oddziale (tu: ten obok), a premia zostaje przy nim
+    g.soldiers.splice(g.soldiers.indexOf(bearer), 1);
+    g.tick++;
+    expect(hitDamage(g, near, foe, byId, false)).toBeGreaterThan(plain);
+  });
   it('szarża po rozbiegu podwaja pierwszy cios włócznika', () => {
     const g = clearBandits(createGame(7));
     const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 });

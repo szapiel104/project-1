@@ -1,21 +1,21 @@
 /**
  * Chorążowie: w każdym oddziale (żołnierze z jednego rozkazu, co najmniej trzech) jeden niesie na plecach proporzec
  * w barwach pana z jego herbem. Drzewce z Blendera (tools/models/standard.py), płachta z banners.ts (łopocze w shaderze).
- * Tylko wygląd — symulacja nic o chorążych nie wie; dzięki temu oddział łatwo znaleźć na mapie i widać, czyj jest.
+ * Kto jest chorążym i premię do ducha liczy symulacja (src/sim/systems/standards.ts); tu tylko wygląd: drzewce na plecach
+ * i proporzec, a gdy chorąży padnie — proporzec przewraca się razem z nim.
  */
 import * as THREE from 'three';
 import { bannerGeometry, bannerMaterial } from './banners';
 import { toolMaterials } from './gear';
 import { model } from './modelstore';
 import { boxUv, modelGeo } from './peasants';
+export { standardBearers } from '../sim/systems/standards';
 
 type Part = Parameters<typeof modelGeo>[0] & { mat: string };
 type StandardModel = { flag: [number, number, number]; parts: Part[] };
 
 /** Ilu najwyżej chorążych naraz (wszyscy gracze razem) */
 const MAX = 96;
-/** Od ilu żołnierzy w rozkazie oddział dostaje chorążego */
-export const STANDARD_MIN = 3;
 
 export class Standards {
   private poles: THREE.InstancedMesh[] = [];
@@ -78,23 +78,4 @@ export class Standards {
       c.count = k; c.visible = k > 0; c.instanceMatrix.needsUpdate = true;
     }
   }
-}
-
-/**
- * Kto niesie proporzec: w każdym rozkazie (Soldier.grp) z co najmniej STANDARD_MIN żołnierzami — piechur wręcz
- * o najniższym numerze (gdy w oddziale są sami łucznicy, to łucznik). Strażnicy, tarany i zbóje nie mają chorążych.
- */
-export function standardBearers(soldiers: readonly { id: number; owner: number; grp?: number; kind: number }[], isRanged: (kind: number) => boolean, skip: (kind: number) => boolean): Set<number> {
-  const best = new Map<string, { id: number; melee: boolean; n: number }>();
-  for (const s of soldiers) {
-    if (!s.grp || skip(s.kind)) continue;
-    const key = s.owner + ':' + s.grp, melee = !isRanged(s.kind);
-    const b = best.get(key);
-    if (!b) { best.set(key, { id: s.id, melee, n: 1 }); continue; }
-    b.n++;
-    if ((melee && !b.melee) || (melee === b.melee && s.id < b.id)) { b.id = s.id; b.melee = melee; }
-  }
-  const out = new Set<number>();
-  for (const b of best.values()) if (b.n >= STANDARD_MIN) out.add(b.id);
-  return out;
 }
