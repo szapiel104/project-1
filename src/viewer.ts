@@ -5,6 +5,8 @@
  * Budynki mają też daleką wersję (przycisk „Z daleka”, &daleko=1..3): ta sama bryła uproszczona tak, jak gra rysuje ją z oddali.
  */
 import * as THREE from 'three';
+import { Standards } from './render/standards';
+import { defaultCrest } from './render/banners';
 import { propGeometry, propMaterial } from './render/props';
 import { initKtx } from './render/ktx';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
@@ -180,6 +182,17 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['archer', t('u.archer'), figure('archer', 5)],
     ['guard', tx('Strażnik', 'Guard'), figure('guard', 6)],
     ['manatarms', tx('Zbrojny', 'Man-at-arms'), figure('manatarms', 6)],
+    ['standard', tx('Chorąży z proporcem', 'Standard-bearer'), () => {
+      // włócznik z drzewcem i proporcem na plecach, tak jak chorąży w oddziale (src/render/standards.ts)
+      const holder = new THREE.Scene();
+      Figures.FAR2 = 1e9;
+      const f = new Figures(1, holder, 'spearman');
+      f.set(0, new THREE.Matrix4(), 0, false, RED, 4);
+      f.finish(1);
+      const st = new Standards(holder);
+      st.begin(); st.add(new THREE.Matrix4(), 0, RED, defaultCrest(0)); st.finish();
+      return { obj: holder, size: new THREE.Vector3(0.5, 1.2, 0.5) };
+    }],
     ['king', tx('Pan zamku', 'Lord of the castle'), figure('king', 7)],
   ]],
   [tx('Niosą', 'Carrying'), [

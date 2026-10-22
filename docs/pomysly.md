@@ -151,7 +151,7 @@ Sterowanie:
 Walka:
 
 Wygląd i ruch:
-- Chorąży z proporcem w barwach pana w każdym oddziale
+- ~~Chorąży z proporcem w barwach pana w każdym oddziale~~ — zrobione 22.10: w każdym oddziale (rozkaz) z co najmniej 3 żołnierzy jeden piechur niesie na plecach drzewce z Blendera (tools/models/standard.py) z proporcem w barwach i z herbem pana (src/render/standards.ts, tylko wygląd). Dalej: chorąży jako osobna postać z drzewcem w ręku, premia do ducha oddziału przy chorążym, padający proporzec, gdy chorąży zginie
 - Ulepszenia widoczne na modelu (za monety z bitew): płytowe naramienniki, hełm z przyłbicą itd.
 - Prawdziwy głos okrzyków (np. syntezator mowy po polsku) zamiast bełkotu
 

@@ -50,6 +50,7 @@ import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
 import { kindsOf, type TreeKind } from './forest';
 import { Figures } from './peasants';
+import { Standards, standardBearers } from './standards';
 import { Crowd, idle } from './motion';
 import { Village } from './village';
 import { Family, yardModel } from './family';
@@ -342,6 +343,8 @@ export class GameRenderer {
   private archerBodies!: Figures;
   private guardBodies!: Figures;
   private menAtArms!: Figures;
+  /** Chorążowie z proporcami (po jednym w oddziale) */
+  private standards!: Standards;
   private manAtArmsBodies!: Figures;
   private archers!: Figures;
   private arrowMesh!: THREE.InstancedMesh;
@@ -807,6 +810,7 @@ export class GameRenderer {
     this.archers = new Figures(MAX_UNITS, this.scene, 'archer');
     this.guardsFig = new Figures(MAX_UNITS, this.scene, 'guard');
     this.menAtArms = new Figures(MAX_UNITS, this.scene, 'manatarms');
+    this.standards = new Standards(this.scene);
     this.kings = new Figures(32, this.scene, 'king');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
       tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
@@ -4652,6 +4656,9 @@ export class GameRenderer {
     for (const x of g.soldiers) byId.set(x.id, x);
     const bById = new Map<number, (typeof g.buildings)[number]>();
     for (const b of g.buildings) bById.set(b.id, b);
+    // chorążowie: po jednym w każdym oddziale (rozkazie) z co najmniej trzema żołnierzami
+    const bearers = standardBearers(g.soldiers, (k) => !!UNITS[k]?.range, (k) => { const u = UNITS[k]; return !u || !!u.guard || !!u.ram || !!u.bandit; });
+    this.standards.begin();
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
       const prev = this.prevPos.get(s.id);
@@ -4801,6 +4808,7 @@ export class GameRenderer {
       if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
       // zbój z lasu nie ma pana: skóry i brudne płótno zamiast barw drużyny
       const teamC = g.players[s.owner] ? TEAM_COLORS[g.players[s.owner]!.team] ?? 0x888888 : BANDIT_COLOR;
+      if (bearers.has(s.id)) this.standards.add(t.matrix, s.owner, teamC, this.crestOf(s.owner));
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
       this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
@@ -4871,6 +4879,7 @@ export class GameRenderer {
     this.archers.finish(n);
     this.guardsFig.finish(n);
     this.menAtArms.finish(n);
+    this.standards.finish();
     this.flyArrows();
     this.syncTowerIcons(g);
     this.syncRallyFlags(g, view);
