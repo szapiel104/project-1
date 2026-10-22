@@ -179,6 +179,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['spearman', t('u.spearman'), figure('spearman', 4)],
     ['archer', t('u.archer'), figure('archer', 5)],
     ['guard', tx('Strażnik', 'Guard'), figure('guard', 6)],
+    ['manatarms', tx('Zbrojny', 'Man-at-arms'), figure('manatarms', 6)],
     ['king', tx('Pan zamku', 'Lord of the castle'), figure('king', 7)],
   ]],
   [tx('Niosą', 'Carrying'), [

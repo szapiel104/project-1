@@ -8,6 +8,7 @@ import { charTexture } from './chartex';
 import { model } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const GUARD_MODEL = model('guard');
+const MANATARMS_MODEL = model('manatarms');
 const PEASANT_MODEL = model('peasant');
 const SPEARMAN_MODEL = model('spearman');
 const ARCHER_MODEL = model('archer');
@@ -185,7 +186,7 @@ function lookOf(id: number, tunic: number, muted = false): Look {
  * a do tego jedno z kilku nakryć głowy, czasem broda albo fartuch. Każda część to jedna siatka instancjonowana.
  */
 /** Rodzaje postaci z Blendera */
-export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king';
+export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms';
 
 export class Figures {
   private parts: Part[] = [];
@@ -229,7 +230,7 @@ export class Figures {
       // a każda część to osobne rysowanie do mapy cieni
       mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
-      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
+      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod });
       if (lod) this.hasFar = true;
     };
@@ -267,9 +268,9 @@ export class Figures {
       n.setAttribute('color', new THREE.BufferAttribute(arr, 3));
       return n;
     };
-    if (kind === 'guard') {
-      // Strażnik Starego Obozu (tools/models/guard.py)
-      const M = GUARD_MODEL as FigureModel;
+    if (kind === 'guard' || kind === 'manatarms') {
+      // Strażnik Starego Obozu (tools/models/guard.py) i zbrojny w pełnej zbroi (tools/models/manatarms.py): ten sam miecz i ruchy
+      const M = (kind === 'guard' ? GUARD_MODEL : MANATARMS_MODEL) as FigureModel;
       // prawa ręka z mieczem: przy marszu luźno, w walce zamach z góry
       const swordArm = (sw: number, up: boolean): number => (up ? -2.2 : sw * 0.55 - 0.15);
       model(M, armL, swordArm);

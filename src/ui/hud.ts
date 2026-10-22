@@ -109,7 +109,7 @@ export interface ProdInfo {
   /** Na stanie: gotowy towar i surowiec (ile pełnych cykli wystarczy) */
   stockOut?: number; stockIn?: number; cycles?: number;
 }
-export interface RecruitUnit { id: string; name: string; weapon: string; need?: number; have: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean }
+export interface RecruitUnit { id: string; name: string; weapon: string; need?: number; have: number; gear?: { res: string; have: number }; armor?: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -227,6 +227,21 @@ const ARCHER_PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria-hi
   <path d="M8.5 18c0-9 15-9 15 0l-2-5c-2-3-9-3-11 0z" fill="#3f6a2e" stroke="#1c120a"/>
   <path d="M26 3c5 7 5 19 0 26" fill="none" stroke="#7a5232" stroke-width="1.8"/><path d="M26 3v26" stroke="#e8e0c8" stroke-width=".6"/>
 </svg>`;
+
+// zbrojny: hełm z nosalem, czepiec kolczy, wapenrok i ciężkie naramienniki, miecz przy boku
+const MANATARMS_PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true">
+  <rect width="32" height="32" fill="#2a2420"/>
+  <path d="M4 32c0-7 4-10 12-10s12 3 12 10z" fill="#7d828a" stroke="#1c120a"/>
+  <path d="M11 32V24h10v8z" fill="#a32a22" stroke="#1c120a"/>
+  <path d="M3 24c1-3 4-4 7-3l-1 5zM29 24c-1-3-4-4-7-3l1 5z" fill="#5a5f68" stroke="#1c120a"/>
+  <path d="M9 22c0-4 2-6 7-6s7 2 7 6z" fill="#8c929c" stroke="#1c120a"/>
+  <circle cx="16" cy="15" r="5.2" fill="#e2bd94" stroke="#1c120a"/>
+  <path d="M10 13c0-7 12-7 12 0z" fill="#9aa0a8" stroke="#1c120a"/><path d="M9.6 13h12.8" stroke="#5a5f68" stroke-width="1.6"/>
+  <path d="M16 13v5" stroke="#5a5f68" stroke-width="1.4"/>
+  <path d="M27 8v16" stroke="#c4c9d0" stroke-width="1.6"/><path d="M25 22h4" stroke="#5c5a60" stroke-width="1.4"/>
+</svg>`;
+/** Portret do karty jednostki: włócznik jako domyślny */
+const portraitOf = (kind: string | undefined): string => (kind === 'archer' ? ARCHER_PORTRAIT : kind === 'manatarms' ? MANATARMS_PORTRAIT : PORTRAIT);
 
 export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
   root.replaceChildren();
@@ -566,7 +581,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   rallyRow.append(rallyAll, rallyOff, el('p', 'hint', tx('Rekrut idzie z obozowiska do koszar, wychodzi w zbroi i staje na fladze (bez flagi — przed koszarami).', 'A recruit walks from the camp to the barracks, comes out armoured and stands at the flag (with no flag — outside the barracks).')));
   // taran: wóz z daszkiem i belką z kutą głowicą
   const RAM_PORTRAIT = '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M5 15l11-7 11 7z" fill="#8a6a44" stroke="#2a1c10"/><rect x="6" y="15" width="20" height="2" fill="#5e4329"/><path d="M8 17v7M24 17v7" stroke="#5e4329" stroke-width="2"/><rect x="3" y="18" width="24" height="3" rx="1.5" fill="#8a5a2b" stroke="#2a1c10"/><path d="M27 17.5l3 1.5v1.5l-3 1.5z" fill="#6a6e76" stroke="#2a1c10"/><circle cx="10" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/><circle cx="22" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/></svg>';
-  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT };
+  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT, manatarms: MANATARMS_PORTRAIT };
   const drawRecruit = (): void => {
     for (const r of lastRecruit) {
       let c = unitCards.get(r.id);
@@ -595,9 +610,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         c = { card, stats, needs, b1, b5, bAll, flag };
         unitCards.set(r.id, c);
       }
-      setText(c.stats, `${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · ${tx('zasięg', 'range')} ${r.range}` : ''}`);
+      setText(c.stats, `${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · ${tx('zasięg', 'range')} ${r.range}` : ''}${r.armor ? ` · ${tx('zbroja', 'armour')} ${r.armor}%` : ''}`);
       const row = (icon: string, have: number, need: number): string => `<span class="need${have < need ? ' short' : ''}"><svg viewBox="0 0 20 20" width="22" height="22">${ICONS[icon] ?? ''}</svg><strong>${need}</strong><em>(${have})</em></span>`;
-      c.needs.innerHTML = row(r.weapon, r.have, r.need ?? 1) + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
+      c.needs.innerHTML = row(r.weapon, r.have, r.need ?? 1) + (r.gear ? row(r.gear.res, r.gear.have, 1) : '') + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
       c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;
       setText(c.bAll, tx(`+ wszyscy (${r.max})`, `+ all (${r.max})`));
       c.card.classList.toggle('cant', r.max < 1);
@@ -966,7 +981,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const g = v.groups.find((x) => x.n === sl.n);
         const count = g?.count ?? 0;
         const kind = count ? g?.kind ?? 'spearman' : '';
-        if (sl.kind !== kind) { sl.kind = kind; sl.pic.innerHTML = kind ? (kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT) : ''; }
+        if (sl.kind !== kind) { sl.kind = kind; sl.pic.innerHTML = kind ? portraitOf(kind) : ''; }
         setText(sl.count, count ? String(count) : '');
         sl.b.classList.toggle('empty', !count);
         sl.b.setAttribute('aria-pressed', String(v.active === sl.n));
@@ -981,7 +996,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         card.type = 'button';
         card.title = tx(`${u.name}. Klik: odznacz. Shift + klik: zostaw tylko jego.`, `${u.name}. Click: deselect. Shift + click: keep only him.`);
         card.setAttribute('aria-label', tx(`${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%. Odznacz.`, `${u.name}, health ${Math.round((u.hp / u.max) * 100)}%. Deselect.`));
-        card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
+        card.innerHTML = portraitOf(u.kind);
         const bar = el('span', 'roster-hp');
         const fill = el('span');
         fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;
@@ -1129,7 +1144,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           b.type = 'button';
           b.title = tx('Kliknij: zostaw zaznaczonych tylko tych. Shift + klik: odznacz ich.', 'Click: keep only these selected. Shift + click: deselect them.');
           const pic = el('span', 'army-kind-pic');
-          pic.innerHTML = k === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
+          pic.innerHTML = portraitOf(k);
           const n = el('span', 'army-kind-n');
           b.append(pic, el('span', 'army-kind-name', v.name), n);
           b.addEventListener('click', (e) => events.onArmyKind(k, e.shiftKey));
@@ -1157,7 +1172,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           card.title = tx(`${u.name}. Klik: odznacz. Shift + klik: zostaw tylko jego.`, `${u.name}. Click: deselect. Shift + click: keep only him.`);
           card.setAttribute('aria-label', tx(`${u.name}, zdrowie ${Math.round((u.hp / u.max) * 100)}%`, `${u.name}, health ${Math.round((u.hp / u.max) * 100)}%`));
           if (u.id) { const id = u.id; card.addEventListener('click', (e) => events.onArmyUnit(id, e.shiftKey)); }
-          card.innerHTML = u.kind === 'archer' ? ARCHER_PORTRAIT : PORTRAIT;
+          card.innerHTML = portraitOf(u.kind);
           const bar = el('span', 'roster-hp');
           const fill = el('span');
           fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;

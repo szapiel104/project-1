@@ -13,7 +13,7 @@ import { Terrain } from '../../data/terrain';
  */
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine'];
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine', 'smithy', 'armorer'];
 /** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
 const ROCK_REACH = 60;
 const ROCK_TRIES = 400;
@@ -173,7 +173,8 @@ export function botSystem(g: GameState): void {
       // przy większym wojsku jeden taran na bramy i mury wroga (gdy starcza drewna i rudy na resztę)
       const rams = mine.filter((s) => UNITS[s.kind]!.ram).length;
       const wantRam = rams === 0 && mine.length >= 6 && p.res[resIndex('wood')]! >= 90 && p.res[resIndex('gold')]! >= 60;
-      if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
+      // zbrojny, gdy w zbrojowni leży miecz i kolczuga (bot stawia kuźnię i płatnerza pod koniec listy budowy)
+      if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !train(g, p.id, barracks.id, 'manatarms') && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
       // łucznicy wchodzą na wolne wieże (po dwóch), reszta zostaje do ataku
       for (const t of g.buildings) {
         if (t.owner !== p.id || t.build || !isTower(BUILDINGS[t.type]!.id)) continue;

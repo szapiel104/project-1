@@ -29,6 +29,10 @@ export interface UnitDef {
   ram?: boolean;
   /** Zbój z obozu w lesie: nikogo nie słucha, nie szkoli się go, prowadzi go systems/bandits.ts */
   bandit?: boolean;
+  /** Drugi sprzęt ze zbrojowni potrzebny do wyszkolenia (oprócz broni), np. kolczuga zbrojnego */
+  gear?: ResourceId;
+  /** Zbroja: o tyle procent mniej boli cios wręcz; strzała półtora raza mniej (najwyżej 75%) */
+  armor?: number;
 }
 
 export const UNITS: readonly UnitDef[] = [
@@ -41,6 +45,9 @@ export const UNITS: readonly UnitDef[] = [
   { id: 'ram', name: 'u.ram', cost: { wood: 40, gold: 30 }, hp: 320, speed: 45, attack: 60, cooldown: 40, sight: 12, weapon: 'wood', ram: true },
   // Zbój z obozu w puszczy: włócznia, skóry, bez tarczy; szybki i zaczepny, ale słabszy od wyszkolonego włócznika
   { id: 'bandit', name: 'u.bandit', cost: {}, hp: 50, speed: 112, attack: 7, cooldown: 14, sight: 7, weapon: 'spear', bandit: true },
+  // Zbrojny: ciężka piechota w klimacie Starego Obozu — miecz z kuźni, kolczuga od płatnerza, hełm. Wolniejszy, ale twardy:
+  // zbroja zjada część każdego ciosu i większość strzał; bez szarży i bez tarczy (na końcu listy dla starych zapisów)
+  { id: 'manatarms', name: 'u.manatarms', cost: { sword: 1, armor: 1, gold: 20 }, hp: 110, speed: 88, attack: 13, cooldown: 14, sight: 6, weapon: 'sword', gear: 'armor', armor: 35 },
 ];
 
 /** Indeks zbója w UNITS */

@@ -302,6 +302,31 @@ describe('walka z charakterem', () => {
     expect(hitDamage(g, fromFront, foe, byId, true)).toBeLessThan(UNITS_ATTACK_ARCHER);
     expect(hitDamage(g, fromBack, foe, byId, true)).toBeGreaterThan(UNITS_ATTACK_ARCHER);
   });
+  it('kolczuga zbrojnego zjada część ciosu i jeszcze więcej strzały', () => {
+    const g = clearBandits(createGame(7));
+    const pike = mk(g, 1, 'spearman', 50, 50, { face: 0 }), heavy = mk(g, 1, 'manatarms', 60, 50, { face: 0 });
+    const a1 = mk(g, 0, 'spearman', 50, 51), a2 = mk(g, 0, 'spearman', 60, 51);
+    const r1 = mk(g, 0, 'archer', 50, 46), r2 = mk(g, 0, 'archer', 60, 46);   // z tyłu: tarcza włócznika nie pomaga
+    const byId = new Map(g.soldiers.map((x) => [x.id, x]));
+    const meleePike = hitDamage(g, a1, pike, byId, false), meleeHeavy = hitDamage(g, a2, heavy, byId, false);
+    const arrowPike = hitDamage(g, r1, pike, byId, true), arrowHeavy = hitDamage(g, r2, heavy, byId, true);
+    expect(meleeHeavy).toBeLessThan(meleePike);
+    expect(arrowHeavy / arrowPike).toBeLessThan(meleeHeavy / meleePike);
+  });
+  it('koszary szkolą zbrojnego tylko z mieczem i kolczugą', async () => {
+    const { train } = await import('../src/sim/systems/army');
+    const { g, id } = withBarracks();
+    g.buildings.find((x) => x.id === id)!.build = 0;
+    const p0 = g.players[0]!, SWORD = resIndex('sword'), ARMOR = resIndex('armor');
+    p0.res[SWORD] = 1; p0.res[ARMOR] = 0;
+    expect(train(g, 0, id, 'manatarms')).toBe(false);
+    p0.res[ARMOR] = 1;
+    expect(train(g, 0, id, 'manatarms')).toBe(true);
+    expect(p0.res[SWORD]).toBe(0);
+    expect(p0.res[ARMOR]).toBe(0);
+    waitSoldiers(g, 1);
+    expect(g.soldiers.some((s) => s.owner === 0 && s.kind === unitIndex('manatarms'))).toBe(true);
+  });
   it('szarża po rozbiegu podwaja pierwszy cios włócznika', () => {
     const g = clearBandits(createGame(7));
     const foe = mk(g, 1, 'spearman', 50, 50, { face: 0 });

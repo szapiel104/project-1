@@ -1350,7 +1350,10 @@ function recruitInfo(): RecruitUnit[] {
     const cost = def.cost.gold ?? 0;
     // ile sztuk broni (albo drewna na taran) idzie na jednego
     const need = def.cost[def.weapon] ?? 1;
-    return { id: def.id, name: t(def.name), weapon: def.weapon, need, have, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, max: Math.max(0, Math.min(Math.floor(have / need), cost ? Math.floor(gold / cost) : 999, idle)) };
+    // drugi sprzęt ze zbrojowni (kolczuga zbrojnego)
+    const gear = def.gear ? { res: def.gear, have: p.res[resIndex(def.gear)]! } : undefined;
+    const gearMax = gear ? Math.floor(gear.have / (def.cost[def.gear!] ?? 1)) : 999;
+    return { id: def.id, name: t(def.name), weapon: def.weapon, need, have, gear, armor: def.armor, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, max: Math.max(0, Math.min(Math.floor(have / need), gearMax, cost ? Math.floor(gold / cost) : 999, idle)) };
   });
 }
 
@@ -2298,6 +2301,11 @@ const SHOUT_PL: Record<string, Record<'select' | 'move' | 'attack', string[]>> =
     move: ['Tak jest!', 'Idziemy.', 'Szykiem, marsz!', 'Ruszać się, chłopy!', 'Według rozkazu.'],
     attack: ['Na nich!', 'Bij!', 'Za pana!', 'Włócznie naprzód!', 'Nie dać im tchu!'],
   },
+  manatarms: {
+    select: ['Stal gotowa, panie.', 'Słucham.', 'Zbroja dopięta.', 'Kogo mamy rozbić?', 'Czekamy na rozkaz.'],
+    move: ['Idziemy, równo!', 'Tak jest.', 'Ciężko, ale idziemy.', 'Szyk trzymać!', 'Według rozkazu, panie.'],
+    attack: ['Miecze w dłoń!', 'Rąbać!', 'Za pana, bez litości!', 'Nie cofać się!', 'Na nich, chłopy!'],
+  },
   archer: {
     select: ['Łuk napięty.', 'Słucham.', 'Strzały gotowe.', 'Cel, panie?', 'Patrzymy.'],
     move: ['Idziemy, panie.', 'Zmieniamy miejsce.', 'Tak jest.', 'Za mną, chłopy.'],
@@ -2309,6 +2317,11 @@ const SHOUT_EN: Record<string, Record<'select' | 'move' | 'attack', string[]>> =
     select: ['Aye, my lord.', 'Command us.', 'Spears ready.', 'What is needed?', 'We are here.'],
     move: ['Aye!', 'On our way.', 'In formation, march!', 'Move it, lads!', 'As you command.'],
     attack: ['At them!', 'Strike!', 'For our lord!', 'Spears forward!', 'Give them no quarter!'],
+  },
+  manatarms: {
+    select: ['Steel ready, my lord.', 'Aye?', 'Mail\'s buckled.', 'Who do we break?', 'Awaiting orders.'],
+    move: ['Steady, march!', 'Aye.', 'Heavy going, but going.', 'Hold the line!', 'As you command, my lord.'],
+    attack: ['Swords out!', 'Cut them down!', 'For our lord, no mercy!', 'Not one step back!', 'At them, lads!'],
   },
   archer: {
     select: ['Bow drawn.', 'Aye?', 'Arrows ready.', 'Target, my lord?', 'Watching.'],

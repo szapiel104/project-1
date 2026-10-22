@@ -663,7 +663,7 @@ function facingOf(g: GameState, s: Soldier, byId: Map<number, Soldier>): number 
 
 /**
  * Obrażenia ciosu albo strzały z uwzględnieniem, skąd przychodzą: z boku o 30% mocniej, w plecy o 60%;
- * tarcza z przodu łapie połowę strzały; szarża po rozbiegu podwaja pierwszy cios włócznika.
+ * tarcza z przodu łapie połowę strzały; szarża po rozbiegu podwaja pierwszy cios włócznika; zbroja zjada część ciosu.
  */
 export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<number, Soldier>, ranged: boolean): number {
   const def = UNITS[s.kind]!, fdef = UNITS[foe.kind]!;
@@ -679,6 +679,8 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
   if (!ranged && def.charge && (s.run ?? 0) >= CHARGE_RUN) dmg = (dmg * def.charge) / 100;
   // taran pod daszkiem ze skór: strzały ledwo go drasną, toporem i włócznią rąbie się go powoli
   if (fdef.ram) dmg = ranged ? dmg / 6 : dmg / 2;
+  // zbroja (kolczuga zbrojnego): cios wręcz słabszy o armor %, strzała o półtora raza tyle (najwyżej 75%)
+  if (fdef.armor) dmg = (dmg * (100 - (ranged ? Math.min(75, (fdef.armor * 3) >> 1) : fdef.armor))) / 100;
   return Math.max(1, Math.round(dmg / 100));
 }
 

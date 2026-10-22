@@ -341,6 +341,8 @@ export class GameRenderer {
   /** Polegli łucznicy i strażnicy leżą we własnych zbrojach (nie w zbroi włócznika) */
   private archerBodies!: Figures;
   private guardBodies!: Figures;
+  private menAtArms!: Figures;
+  private manAtArmsBodies!: Figures;
   private archers!: Figures;
   private arrowMesh!: THREE.InstancedMesh;
   private arrowTrail!: THREE.InstancedMesh;
@@ -804,6 +806,7 @@ export class GameRenderer {
     this.spearmen = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.archers = new Figures(MAX_UNITS, this.scene, 'archer');
     this.guardsFig = new Figures(MAX_UNITS, this.scene, 'guard');
+    this.menAtArms = new Figures(MAX_UNITS, this.scene, 'manatarms');
     this.kings = new Figures(32, this.scene, 'king');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
       tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
@@ -839,6 +842,7 @@ export class GameRenderer {
     this.peasantBodies = new Figures(MAX_UNITS, this.scene);
     this.archerBodies = new Figures(512, this.scene, 'archer');
     this.guardBodies = new Figures(256, this.scene, 'guard');
+    this.manAtArmsBodies = new Figures(256, this.scene, 'manatarms');
     this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);
     this.stains.count = 0;
     this.stains.frustumCulled = false;
@@ -2366,7 +2370,7 @@ export class GameRenderer {
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
-      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies]) f.view(cp);
+      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies]) f.view(cp);
       for (const t of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
@@ -4801,7 +4805,9 @@ export class GameRenderer {
       const legs = ia?.legs ? ia.legs : swing;
       this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id);
       this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
-      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      const heavy = udef.id === 'manatarms';
+      this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy ? t.matrix : ZERO, legs, striking, teamC, s.id);
       if (udef.ram && rams < 256) {
         // wóz jedzie przodem (głowicą) w stronę marszu; belka cofa się, gdy taran szykuje cios, i wybija się do przodu przy uderzeniu
         // pod budynkiem: głowicą prosto w najbliższy kawałek ściany celu (nie bokiem, jak stanął po drodze)
@@ -4864,6 +4870,7 @@ export class GameRenderer {
     this.spearmen.finish(n);
     this.archers.finish(n);
     this.guardsFig.finish(n);
+    this.menAtArms.finish(n);
     this.flyArrows();
     this.syncTowerIcons(g);
     this.syncRallyFlags(g, view);
@@ -4874,7 +4881,7 @@ export class GameRenderer {
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
-    let pc = 0, ac = 0, gc = 0, sp = 0;
+    let pc = 0, ac = 0, gc = 0, sp = 0, mc = 0;
     for (const body of g.corpses) {
       if (c >= MAX_UNITS) break;
       if (body.kind === -2) continue; // zabity wilk: rysuje go syncWolves (leży na boku)
@@ -4896,6 +4903,7 @@ export class GameRenderer {
       const ud = body.kind >= 0 ? UNITS[body.kind] : undefined;
       if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); }
       else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id); }
+      else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id); }
       else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id); }
       else this.bodies.set(sp++, m, 0.3, false, rot, body.id);
       m.compose(new THREE.Vector3(fx - width / 2, y + 0.02, fy - height / 2), new THREE.Quaternion(), sc.set(1 + age * 0.4, 1, 1 + age * 0.4));
@@ -4906,6 +4914,7 @@ export class GameRenderer {
     this.peasantBodies.finish(pc);
     this.archerBodies.finish(ac);
     this.guardBodies.finish(gc);
+    this.manAtArmsBodies.finish(mc);
     this.stains.count = c;
     touch(this.stains);
     this.rings.count = rings;
