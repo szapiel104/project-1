@@ -69,6 +69,10 @@ const SAY_PL = {
   fletcher: [
     'Strzała prosta jak sznurek.', 'Lotki z gęsiego pióra, najlepsze.', 'Łuk z cisu, cięciwa z jelita.', 'Łucznik bez strzał to pastuch.',
   ],
+  smithy: [
+    'Żelazo trzeba bić, póki gorące.', 'Dmuchaj w miech, nie śpij!', 'Dobra stal, nie pęknie na tarczy.', 'Jeszcze hartowanie i miecz gotowy.',
+    'Bez węgla nie ma żaru, bez żaru nie ma miecza.',
+  ],
   poleturner: [
     'Drzewce równe, grot ostry.', 'Włócznia długa, wróg daleko.', 'Jeszcze ze trzy i odnoszę do zbrojowni.', 'Jesion najlepszy na drzewce.',
   ],
@@ -234,6 +238,10 @@ const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
   ],
   fletcher: [
     'Arrow straight as a string.', 'Goose feathers. Best fletching there is.', 'Yew for the bow, gut for the string.', 'An archer with no arrows is just a shepherd.',
+  ],
+  smithy: [
+    'Strike while the iron\'s hot.', 'Work the bellows, don\'t doze off!', 'Good steel. Won\'t snap on a shield.', 'Quench it, and the blade\'s done.',
+    'No charcoal, no fire. No fire, no sword.',
   ],
   poleturner: [
     'Shaft\'s straight, point\'s sharp.', 'Long spear, enemy stays far.', 'Three more and I\'m off to the armoury.', 'Ash makes the best shafts.',

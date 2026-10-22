@@ -16,6 +16,9 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Żelazo zapycha skład, a nic z niego nie robimy — potrzebne zastosowanie (kowal/płatnerz niżej) i może osobna kupka/skład na urobek kopalni.
 - Zboże (pszenica, mąka) do spichlerza albo stodoły, nie do zwykłego składu.
 - Kowal, płatnerz i zbrojni (ciężka piechota w zbroi) — żelazo → miecze i zbroje → nowa jednostka.
+  - Partia 1 (22.10, zrobiona): kuźnia z Blendera (tools/models/smithy.py; palenisko z żarem, miech, kowadło, cebrzyk, szlifierz, stojak z mieczami), stawiana przy kopalni; 2 żelaza → 1 miecz (160 ticków), miecze do zbrojowni; stuk młota, odzywki kowala, miecz w zbrojowni i w rękach, „Jak grać”.
+  - Partia 2: płatnerz (warsztat z Blendera), żelazo → zbroja (kolczuga), też do zbrojowni.
+  - Partia 3: zbrojny w koszarach (miecz + zbroja + ruda): własny model z body.py w klimacie Starego Obozu, wolniejszy, mocny w zwarciu, odporny na strzały; bot stawia kuźnię i szkoli zbrojnych.
 - Cech inżynierów: dziś tylko wynosi gruz; pokazać graczowi, po co jest (naprawa i odbudowa budynków, później machiny oblężnicze) i opisać w „Jak grać”.
 - Ulepszanie budynków — patrz „Ulepszanie budynków” niżej.
 - Obracanie już postawionego budynku (przycisk w oknie budynku; drzwi liczone na nowo). Zrobione 22.10: strzałka wyjścia w podglądzie stawiania.

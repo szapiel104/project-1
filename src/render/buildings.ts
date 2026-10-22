@@ -43,6 +43,7 @@ const POLETURNER_MODEL = model('poleturner');
 const CEMETERY_MODEL = model('cemetery');
 const FORESTER_MODEL = model('forester');
 const FIELD_TENT_MODEL = model('fieldtent');
+const SMITHY_MODEL = model('smithy');
 
 type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
@@ -298,6 +299,22 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
         paint(new THREE.TorusGeometry(0.2, 0.012, 4, 12, Math.PI * 0.9).rotateZ(Math.PI * 0.05).translate(0, 0.02, -0.09 + k * 0.06), 0x7a5232),
         paint(new THREE.CylinderGeometry(0.004, 0.004, 0.39, 3).rotateZ(Math.PI / 2).translate(0, 0.03, -0.09 + k * 0.06), 0xe8e0c8),
       ]),
+    ]),
+  },
+  sword: {
+    tex: 'planks',
+    // miecze na kozłach: jasne głownie, ciemne jelce i rękojeści owinięte skórą
+    geo: merge([
+      ...[-0.16, 0.16].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.12, 0.3), x, -0.1, 0), 0x6b4a2e)),
+      ...[0, 1, 2, 3].flatMap((k) => {
+        const y = -0.03 + (k % 2) * 0.012, z = -0.09 + k * 0.06, d = k % 2 ? -1 : 1;
+        return [
+          paint(new THREE.BoxGeometry(0.34, 0.008, 0.03).translate(d * 0.04, y, z), 0xb9bec6),
+          paint(new THREE.BoxGeometry(0.02, 0.014, 0.1).translate(-d * 0.14, y, z), 0x5c5a60),
+          paint(new THREE.BoxGeometry(0.07, 0.018, 0.02).translate(-d * 0.185, y, z), 0x5a3e24),
+          paint(new THREE.BoxGeometry(0.024, 0.024, 0.024).translate(-d * 0.23, y, z), 0x7a7f86),
+        ];
+      }),
     ]),
   },
   ale: {
@@ -1099,6 +1116,13 @@ const BUILDERS: Record<string, Builder> = {
     // beczka strzał, lotki; przed nim tarcza ze słomy, stojak z łukami do sezonowania
     blenderModel(g, FLETCHER_MODEL as unknown as BlenderBuilding, flag);
     const p = (FLETCHER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  smithy(g, _team, flag) {
+    // kuźnia z Blendera (tools/models/smithy.py): warsztat z szachulca; w izbie palenisko z żarem pod kominem, miech,
+    // kowadło na pniu, cebrzyk do hartowania, miecze i narzędzia na ścianie; przed nią szlifierz, stojak z mieczami, węgiel
+    blenderModel(g, SMITHY_MODEL as unknown as BlenderBuilding, flag);
+    const p = (SMITHY_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   poleturner(g, _team, flag) {

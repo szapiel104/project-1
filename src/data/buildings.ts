@@ -194,6 +194,13 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Namiot polowy z medykiem: stawiany dowolnie, np. tuż za linią frontu. Ranni żołnierze idą do najbliższego miejsca
   // leczenia (twierdza albo namiot z medykiem) i tam szybciej wracają do zdrowia (army.ts, healSpot).
   { id: 'fieldTent', category: 'military', name: 'b.fieldTent', w: 3, h: 3, cost: { wood: 30, gold: 10 }, staff: true, hp: 320, buildable: true },
+  // Kuźnia: kowal bierze ze składu dwie sztaby żelaza z kopalni i wykuwa miecz, który odnosi do zbrojowni.
+  // Stawiana dopiero przy kopalni (bez niej nie ma żelaza). Miecze są dla zbrojnych (ciężka piechota, następna partia).
+  {
+    id: 'smithy', category: 'military', name: 'b.smithy', w: 2, h: 2, cost: { wood: 40, stone: 30 }, requires: 'oremine', buildable: true,
+    workView: 'inside',
+    production: { input: { res: 'iron', amount: 2 }, output: { res: 'sword', amount: 1 }, site: 'home', workTicks: 160 },
+  },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */

@@ -159,6 +159,7 @@ const KINDS: Record<string, Kind[]> = {
   engineers: ['crate', 'logs', 'barrow'],
   poleturner: ['logs', 'crate'],
   fletcher: ['logs', 'crate'],
+  smithy: ['barrel', 'crate'],
   camp: ['trash', 'logs'],
 };
 const ALL: Kind[] = ['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'];
