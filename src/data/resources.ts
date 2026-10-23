@@ -16,8 +16,9 @@ export const RESOURCE_DEFS: Record<ResourceId, ResourceDef> = {
   wood: { name: 'res.wood', color: 0x8a5a2b, store: 'stockpile' },
   stone: { name: 'res.stone', color: 0xb5b0a2, store: 'stockpile' },
   iron: { name: 'res.iron', color: 0x8a4a2c, store: 'stockpile' },
-  wheat: { name: 'res.wheat', color: 0xd9b84a, store: 'stockpile' },
-  flour: { name: 'res.flour', color: 0xf1ead8, store: 'stockpile' },
+  // pszenica i mąka leżą w spichlerzu razem z jedzeniem (uwaga testera 22.10), ale jedzeniem nie są — tylko surowcem dla młyna, piekarni i browaru
+  wheat: { name: 'res.wheat', color: 0xd9b84a, store: 'granary' },
+  flour: { name: 'res.flour', color: 0xf1ead8, store: 'granary' },
   bread: { name: 'res.bread', color: 0xb97a3a, store: 'granary', food: true },
   apples: { name: 'res.apples', color: 0xb3261e, store: 'granary', food: true },
   // waluta gry: w kodzie 'gold', dla gracza „Ruda” (jak w Gothicu); nie leży w składzie — trafia do skarbca w zamku

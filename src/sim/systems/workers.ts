@@ -5,7 +5,7 @@ import { RULES } from '../../data/rules';
 import { Terrain } from '../../data/terrain';
 import { findPath, walkable } from '../path';
 import { clockAt, hourStarts, rainAt } from '../clock';
-import { FP, Phase, playerKeep, storeCapacity, storeUsed, type Building, type GameState, type Unit } from '../state';
+import { FP, Phase, playerKeep, storeRoom, type Building, type GameState, type Unit } from '../state';
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
@@ -378,8 +378,8 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       }
       if (u.carryRes >= 0) {
         // oddaje tyle, ile się zmieści; z resztą czeka przy składzie, aż zwolni się miejsce
-        const kind = RESOURCE_DEFS[RESOURCES[u.carryRes]!].store;
-        const free = kind ? storeCapacity(g, u.owner, kind) - storeUsed(p, kind) : u.carryAmt;
+        // zboże w spichlerzu najwyżej do połowy (storeRoom), żeby zostało miejsce na jedzenie
+        const free = Math.min(u.carryAmt, storeRoom(g, u.owner, u.carryRes));
         const put = Math.max(0, Math.min(u.carryAmt, free));
         p.res[u.carryRes]! += put;
         p.stats.gathered += put;

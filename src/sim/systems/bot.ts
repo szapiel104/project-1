@@ -1,9 +1,9 @@
-import { BUILDINGS, buildingIndex, isTower } from '../../data/buildings';
+import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
-import { UNITS } from '../../data/units';
+import { SAPPER, UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
-import { keepCenter, keepFront, playerKeep, type GameState, type PlayerState } from '../state';
-import { orderGarrison, orderMove, train } from './army';
+import { FP, keepCenter, keepFront, playerKeep, type Building, type GameState, type PlayerState, type Soldier } from '../state';
+import { orderAttack, orderGarrison, orderMove, train } from './army';
 import { canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
 
@@ -13,7 +13,7 @@ import { Terrain } from '../../data/terrain';
  */
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'orchard', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine', 'smithy', 'armorer'];
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'mill', 'orchard', 'bakery', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'engineers', 'house', 'fletcher', 'house', 'oremine', 'smithy', 'armorer'];
 /** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
 const ROCK_REACH = 60;
 const ROCK_TRIES = 400;
@@ -173,8 +173,14 @@ export function botSystem(g: GameState): void {
       // przy większym wojsku jeden taran na bramy i mury wroga (gdy starcza drewna i rudy na resztę)
       const rams = mine.filter((s) => UNITS[s.kind]!.ram).length;
       const wantRam = rams === 0 && mine.length >= 6 && p.res[resIndex('wood')]! >= 90 && p.res[resIndex('gold')]! >= 60;
+      // saperzy: przy większym wojsku dwóch (trzech, gdy u wroga leżą ruiny) — rozbierają ruiny wroga po atakach;
+      // tylko gdy po ich wyszkoleniu zostaje ruda na żołnierzy
+      // liczą się też ci w drodze do koszar i w środku (inaczej bot szkolił sapera co chwilę, zanim pierwszy wyszedł)
+      const sappers = mine.filter((s) => UNITS[s.kind]!.sapper).length + g.units.filter((u) => u.owner === p.id && u.enlist === SAPPER + 1).length
+        + g.buildings.reduce((n, b) => n + (b.owner === p.id ? (b.enlistQ ?? []).filter((q) => q.k === SAPPER).length : 0), 0);
+      const wantSapper = mine.length - sappers >= SAPPER_ARMY && sappers < (foeRuins(g, p).length ? SAPPERS_MAX : SAPPERS_MAX - 1) && p.res[resIndex('gold')]! >= SAPPER_GOLD;
       // zbrojny, gdy w zbrojowni leży miecz i kolczuga (bot stawia kuźnię i płatnerza pod koniec listy budowy)
-      if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !train(g, p.id, barracks.id, 'manatarms') && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
+      if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantSapper && train(g, p.id, barracks.id, 'sapper')) && !train(g, p.id, barracks.id, 'manatarms') && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
       // łucznicy wchodzą na wolne wieże (po dwóch), reszta zostaje do ataku
       for (const t of g.buildings) {
         if (t.owner !== p.id || t.build || !isTower(BUILDINGS[t.type]!.id)) continue;
@@ -188,7 +194,7 @@ export function botSystem(g: GameState): void {
     if (p.call) {
       const c = p.call;
       p.call = undefined;
-      const field = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id && !s.post);
+      const field = g.soldiers.filter((s) => fighter(s) && s.owner === p.id && !s.post);
       const n = c.kind === 1 ? Math.ceil(field.length / 2) : field.length;
       if (n && g.tick - c.tick < 2400) orderMove(g, p.id, field.slice(0, n).map((s) => s.id), c.tile, { amove: c.kind !== 2 });
     }
@@ -196,7 +202,7 @@ export function botSystem(g: GameState): void {
     // kooperacja: wzmocniony bot rusza przy tej samej liczebności co zwykły, ale ma więcej wojska (zapasy, dostawy broni)
     const wave = nextWave(g.tick, p.level);
     if (wave && wave.at - g.tick < THINK && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first) {
-      const army = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id);
+      const army = g.soldiers.filter((s) => fighter(s) && s.owner === p.id);
       const foes = g.players.filter((o) => o.team !== p.team && !o.defeated).map((o) => playerKeep(g, o.id)).filter((k) => !!k);
       // kooperacja: boty rozkładają fale na wszystkich ludzi po kolei (zwykle cała drużyna szła na pierwszego)
       const foe = p.boost ? foes[(p.id + Math.floor(g.tick / WAVE_EVERY)) % Math.max(1, foes.length)] : foes[0];
@@ -214,11 +220,72 @@ export function botSystem(g: GameState): void {
     }
     // wypady: między falami dwóch, trzech żołnierzy poluje na drwali i rybaków wroga poza murami
     if (wave && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first / 2 && tk % (THINK * 30) === 0) {
-      const idle = g.soldiers.filter((s) => !UNITS[s.kind]!.guard && s.owner === p.id && !s.post && s.goal < 0 && !s.target);
+      const idle = g.soldiers.filter((s) => fighter(s) && s.owner === p.id && !s.post && s.goal < 0 && !s.target);
       if (idle.length >= 6) {
         const prey = g.units.find((u) => g.players[u.owner]?.team !== p.team && u.job && g.buildings.some((b) => b.id === u.job && ['woodcutter', 'fisher', 'quarry', 'mine', 'oremine'].includes(BUILDINGS[b.type]!.id)));
         if (prey) orderMove(g, p.id, idle.slice(0, 3).map((s) => s.id), (prey.py >> 8) * g.map.width + (prey.px >> 8));
       }
+    }
+    // saperzy: wolni idą rozbierać bezpieczne ruiny wroga (najbliższe twierdzy), dalekie z eskortą
+    if (tk % (THINK * 2) === 0) sendSappers(g, p);
+  }
+}
+
+/** Saperów bot szkoli dopiero przy co najmniej tylu żołnierzach i trzyma ich najwyżej tylu */
+const SAPPER_ARMY = 6;
+const SAPPERS_MAX = 3;
+/** Ruda, którą bot musi mieć, żeby wyszkolić sapera (10 na sapera + zapas na zwykłe wojsko) */
+const SAPPER_GOLD = 40;
+/** Ruina jest bezpieczna, gdy w tym promieniu (pola) wróg nie ma więcej wojska niż bot */
+const SAFE_R = 8;
+/** Dalsza ruina (od twierdzy bota) dostaje eskortę: tylu wolnych żołnierzy idzie z saperami */
+const ESCORT_FROM = 20;
+const ESCORT = 3;
+
+/** Żołnierz do walki: bez straży i saperów (saperzy nie walczą — nie idą w fale ani na wypady) */
+const fighter = (s: Soldier): boolean => !UNITS[s.kind]!.guard && !UNITS[s.kind]!.sapper;
+const ruinCenter = (b: Building): [number, number] => { const fp = footprint(BUILDINGS[b.type]!, b.rot); return [b.x + fp.w / 2, b.y + fp.h / 2]; };
+
+/** Ruiny wrogich drużyn, które saper może rozebrać (bez dróg i twierdz) */
+function foeRuins(g: GameState, p: PlayerState): Building[] {
+  return g.buildings.filter((b) => b.ruined && g.players[b.owner]?.team !== p.team && !BUILDINGS[b.type]!.road && BUILDINGS[b.type]!.id !== 'keep');
+}
+
+/** Ile wojska do walki drużyny `team` (albo poza nią) stoi w promieniu `r` pól od punktu */
+function armyNear(g: GameState, team: number, mine: boolean, cx: number, cy: number, r: number): number {
+  let n = 0;
+  for (const s of g.soldiers) {
+    if (!fighter(s) || s.hp <= 0) continue;
+    if ((g.players[s.owner]?.team === team) !== mine) continue;
+    if (Math.abs(s.px / FP - cx) <= r && Math.abs(s.py / FP - cy) <= r) n++;
+  }
+  return n;
+}
+
+/**
+ * Wolni saperzy bota (bez celu, łupu i rozkazu marszu) idą do najbliższej twierdzy bota ruiny wroga, przy której
+ * wróg nie ma przewagi. Każdy saper bierze inną ruinę; do ruiny daleko od twierdzy idzie też eskorta z wolnych żołnierzy.
+ * Wszystko w stałej kolejności (odległość, potem numer), więc u każdego gracza tak samo.
+ */
+function sendSappers(g: GameState, p: PlayerState): void {
+  const free = g.soldiers.filter((s) => s.owner === p.id && UNITS[s.kind]!.sapper && s.hp > 0 && !s.target && !s.loot && s.goal < 0 && !s.path.length);
+  if (!free.length) return;
+  const keep = playerKeep(g, p.id);
+  if (!keep) return;
+  const [kx, ky] = keepCenter(keep);
+  const busy = new Set(g.soldiers.filter((s) => s.owner === p.id && UNITS[s.kind]!.sapper && s.target).map((s) => s.target));
+  const ruins = foeRuins(g, p)
+    .filter((b) => !busy.has(b.id))
+    .map((b) => { const [x, y] = ruinCenter(b); return { b, x, y, d: Math.abs(x - kx) + Math.abs(y - ky) }; })
+    .filter((r) => armyNear(g, p.team, false, r.x, r.y, SAFE_R) <= armyNear(g, p.team, true, r.x, r.y, SAFE_R))
+    .sort((a, b) => a.d - b.d || a.b.id - b.b.id);
+  for (const s of free.sort((a, b) => a.id - b.id)) {
+    const r = ruins.shift();
+    if (!r) break;
+    orderAttack(g, p.id, [s.id], r.b.id);
+    if (r.d >= ESCORT_FROM && armyNear(g, p.team, true, r.x, r.y, SAFE_R) < ESCORT) {
+      const guard = g.soldiers.filter((o) => o.owner === p.id && fighter(o) && !o.post && o.goal < 0 && !o.target).sort((a, b) => a.id - b.id).slice(0, ESCORT);
+      if (guard.length) orderMove(g, p.id, guard.map((o) => o.id), Math.floor(r.y) * g.map.width + Math.floor(r.x), { amove: true });
     }
   }
 }

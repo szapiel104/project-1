@@ -8,7 +8,7 @@ import { RULES } from '../data/rules';
 import { Terrain } from '../data/terrain';
 import { UNITS } from '../data/units';
 import { lang, t, tx } from '../i18n';
-import { Phase, TICKS_PER_SECOND, storeCapacity, storeUsed, type GameState } from '../sim/state';
+import { Phase, TICKS_PER_SECOND, storeCapacity, storeRoom, storeUsed, type GameState } from '../sim/state';
 import { engineerJob } from '../sim/systems/army';
 import { GUARDS, GUARD_COST } from '../sim/systems/guards';
 import { CAMP_GUARDS, campOf } from '../sim/systems/minecamp';
@@ -87,7 +87,8 @@ export function prodInfo(game: GameState, b: GameState['buildings'][number], nam
   }
   // stan: co blokuje robotę (najważniejsze pierwsze)
   const outKind = pr ? RESOURCE_DEFS[pr.output.res].store : undefined;
-  const outFull = !!outKind && storeUsed(p, outKind) >= storeCapacity(game, b.owner, outKind);
+  const outFull = !!outKind && !!pr && storeRoom(game, b.owner, resIndex(pr.output.res)) <= 0;
+  const grainFull = outFull && outKind === 'granary' && !RESOURCE_DEFS[pr!.output.res].food && storeUsed(p, 'granary') < storeCapacity(game, b.owner, 'granary');
   const inHave = pr?.input ? p.res[resIndex(pr.input.res)]! : 0;
   const storeLabel = (k: string): string => (lang() === 'en' ? (k === 'granary' ? 'granary' : k === 'armory' ? 'armoury' : 'stockpile') : k === 'granary' ? 'spichlerz' : k === 'armory' ? 'zbrojownia' : 'skład');
   /** „postaw spichlerz / zbrojownię” — biernik po polsku, przedimek po angielsku */
@@ -104,6 +105,8 @@ export function prodInfo(game: GameState, b: GameState['buildings'][number], nam
   else if (pr?.input && RESOURCE_DEFS[pr.input.res].store && !storeCapacity(game, b.owner, RESOURCE_DEFS[pr.input.res].store!)) status = { text: tx(`Nie ma skąd wziąć surowca (${resName(pr.input.res)}): `, `Nowhere to fetch materials from (${resName(pr.input.res)}): `) + `${buildStore(RESOURCE_DEFS[pr.input.res].store!)}.`, level: 'bad' };
   else if (outKind && !storeCapacity(game, b.owner, outKind)) status = { text: tx(`Nie ma gdzie odnieść towaru (${resName(pr!.output.res)}): `, `Nowhere to store the goods (${resName(pr!.output.res)}): `) + `${buildStore(outKind)}.`, level: 'bad' };
   else if (pr?.input && u.phase === Phase.ToInputStore && inHave < pr.input.amount) status = { text: tx(`Czeka na surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, potrzeba ${pr.input.amount}.`, `Waiting for ${resName(pr.input.res)} — ${inHave} in store, ${pr.input.amount} needed.`), level: 'bad' };
+  // zboże: spichlerz ma jeszcze miejsce na jedzenie, ale pszenica i mąka zajęły już swoją połowę
+  else if (grainFull && (outFull || (u.phase === Phase.ToStore && u.carryAmt > 0 && u.timer > 0))) status = { text: tx(`Zboże zajęło już połowę spichlerzy (${resName(pr!.output.res)} czeka) — reszta zostaje na jedzenie. Postaw młyn albo piekarnię, żeby zboże schodziło, albo kolejny spichlerz.`, `Grain already fills half the granaries (${resName(pr!.output.res)} is piling up) — the rest is kept for food. Build a mill or a bakery to use the grain up, or another granary.`), level: 'warn' };
   else if (u.phase === Phase.ToStore && u.carryAmt > 0 && u.timer > 0) status = { text: `${fullStore(outKind ?? '')} — ${tx('pracownik czeka z towarem, a nadmiar przepadnie. Postaw kolejny.', 'the worker stands waiting with his goods and the surplus will go to waste. Build another.')}`, level: 'bad' };
   else if (outFull) status = { text: `${fullStore(outKind ?? '')} — ${tx('nowy towar nie będzie miał gdzie leżeć.', 'new goods will have nowhere to go.')}`, level: 'warn' };
   else if (pr?.input && inHave < pr.input.amount) status = { text: tx(`Kończy się surowiec: ${resName(pr.input.res)} — na stanie ${inHave}, na jeden cykl trzeba ${pr.input.amount}.`, `Running low on ${resName(pr.input.res)} — ${inHave} in store, ${pr.input.amount} needed per cycle.`), level: 'warn' };

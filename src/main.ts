@@ -1615,7 +1615,8 @@ function refresh(): void {
   const f = monthlyForecast(game, p);
   // ostrzeżenia pokazujemy raz, w chwili gdy problem się zaczyna
   // skryba: ważne wiadomości w lewym górnym rogu, z „mową”
-  const food = storeUsed(p, 'granary');
+  // samo jedzenie (jabłka, chleb, ryby) — pszenica i mąka też leżą w spichlerzu, ale nikt ich nie zje
+  const food = RESOURCES.reduce((n, id, i) => n + (RESOURCE_DEFS[id].food ? p.res[i]! : 0), 0);
   if (!f.fed && !warnedHungry) scribe.say('hungry', t('warn.hungry'), true);
   else if (f.fed && food < 15 && population(game, ME) > 0) scribe.say('foodLow', t('scribe.foodLow'));
   if (p.popularity < 50 && !warnedLeaving) scribe.say('leaving', t('warn.leaving'), true);

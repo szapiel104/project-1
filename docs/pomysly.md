@@ -14,13 +14,13 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 ## Uwagi testera — Mikołaj (22.10.2026)
 - Budynki z wyższym priorytetem: gracz zaznacza, które mają być obsadzane w pierwszej kolejności (np. piekarnie przed łuczarzem), gdy brakuje ludzi.
 - Żelazo zapycha skład, a nic z niego nie robimy — potrzebne zastosowanie (kowal/płatnerz niżej) i może osobna kupka/skład na urobek kopalni.
-- Zboże (pszenica, mąka) do spichlerza albo stodoły, nie do zwykłego składu.
+- Zboże (pszenica, mąka) do spichlerza — zrobione 23.10 (0.34.0): w spichlerzu, najwyżej połowa pojemności (`GRAIN_SHARE`, `storeRoom` w state.ts). Do decyzji: stodoła też na zboże?
 - Kowal, płatnerz i zbrojni (ciężka piechota w zbroi) — żelazo → miecze i zbroje → nowa jednostka.
   - Partia 1 (22.10, zrobiona): kuźnia z Blendera (tools/models/smithy.py; palenisko z żarem, miech, kowadło, cebrzyk, szlifierz, stojak z mieczami), stawiana wszędzie (Michał: bez wymogu kopalni); 2 żelaza → 1 miecz (160 ticków), miecze do zbrojowni; stuk młota, odzywki kowala, miecz w zbrojowni i w rękach, „Jak grać”.
   - Partia 2 (22.10, zrobiona): płatnerz z Blendera (tools/models/armorer.py; stół z kolczugą w robocie, hełmy na półce, kukła z kolczugą, stojaki przed warsztatem), stawiany wszędzie; 3 żelaza → 1 kolczuga (220 ticków), do zbrojowni; ciche stuknięcia nitowania, odzywki, kolczugi w zbrojowni i w rękach, „Jak grać”.
   - Partia 3 (22.10, zrobiona): zbrojny w koszarach (1 miecz + 1 kolczuga + 20 rudy): model z Blendera (tools/models/manatarms.py, z guard.py: hełm z nosalem, czepiec kolczy, kolczuga, wapenrok w barwach pana, ciężkie naramienniki, miecz strażnika), 110 HP, cios 13, wolniejszy (88%), zbroja 35% (strzały 52%); portret, okrzyki, galeria, „Jak grać”; bot stawia kuźnię i płatnerza na końcu listy i szkoli zbrojnych, gdy ma sprzęt. Dalej: własne odzywki w walce, animacja ciężkiego zamachu, ulepszenia zbroi za monety.
 - Cech inżynierów — zrobione 23.10 (0.32.0): załoga rośnie z wioską (1 + 1 na 8 mieszkańców, do 4), bez zasięgu (Michał 23.10: zasięg wywalony), kolejność ruiny → umocnienia → reszta → pomoc przy budowie, budują 2× szybciej, okno cechu z tym, co robią, rozdział w „Jak grać”. Dalej: naprawa kosztuje drewno/kamień, machiny oblężnicze (katapulta, wieża oblężnicza) budowane przez inżynierów.
-- Ruiny (Michał 23.10): zrobione 0.33.0 — odbudowa za połowę ceny, saperzy rozbierają wrogie ruiny i znoszą łup do twierdzy. Model sapera z Blendera zrobiony (0.33.1). Dalej: bot szkoli saperów i rozbiera ruiny gracza, przycisk „Porzuć ruinę” (gruz bez odbudowy)
+- Ruiny (Michał 23.10): zrobione 0.33.0 — odbudowa za połowę ceny, saperzy rozbierają wrogie ruiny i znoszą łup do twierdzy. Model sapera z Blendera zrobiony (0.33.1). Bot z saperami zrobiony 23.10 (0.34.0). Dalej: przycisk „Porzuć ruinę” (gruz bez odbudowy)
 - Ulepszanie budynków — patrz „Ulepszanie budynków” niżej.
 - Obracanie już postawionego budynku (przycisk w oknie budynku; drzwi liczone na nowo). Zrobione 22.10: strzałka wyjścia w podglądzie stawiania.
 - „Jak grać”: zebrać uwagi w pliku online (wspólny dokument z Mikołajem), dopisywać brakujące odpowiedzi.
@@ -38,6 +38,8 @@ Stan: dobry (strict TS bez `as any`, symulacja oddzielona od grafiki, 230 testó
 
 ## Braki zauważone przy pracy
 
+- **Błąd fal bota (znaleziony 23.10):** bot myśli co 40 ticków z przesunięciem o numer gracza (`tk = tick - id*5`), a fala rusza tylko gdy `tick >= first` i do fali zostało < 40 ticków — przez to bot gracza 1 (i dalszych) pomija pierwszą falę i atakuje dopiero przy drugiej. Do poprawy razem z balansem (zmienia tempo gry z botem)
+- Bot nie stawia piekarni mimo młyna (brak kamienia na liście?) — mąka dobija do połowy spichlerza i stoi; sprawdzić w tools/soak
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach
 - Test dotyku na prawdziwym telefonie i tablecie (dotąd tylko emulacja)
 - Budynki nie mają paska stanu ani informacji, co produkują i jak szybko

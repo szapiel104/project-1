@@ -1055,7 +1055,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(stockVal, `${short(v.stock)} / ${short(v.stockCap)}`);
       // bilans: suma zmian zapasów w składach (towary) i w spichlerzach (jedzenie) z ostatniej minuty gry
       let ds = 0, df = 0;
-      RESOURCES.forEach((id, i) => { const d = v.trend[i] ?? 0; const st = RESOURCE_DEFS[id].store; if (st === 'stockpile') ds += d; else if (st === 'granary') df += d; });
+      RESOURCES.forEach((id, i) => { const d = v.trend[i] ?? 0; const st = RESOURCE_DEFS[id].store; if (st === 'stockpile') ds += d; else if (RESOURCE_DEFS[id].food) df += d; });
       for (const [node, d, box, what] of [[stockTrend, ds, stockBox, tx('Skład (towary)', 'Stockpile (goods)')], [foodTrend, df, foodBox, tx('Spichlerz (jedzenie)', 'Granary (food)')]] as const) {
         setText(node, d ? `${d > 0 ? '+' : '−'}${short(Math.abs(d))}` : '±0');
         node.dataset.sign = d > 0 ? 'pos' : d < 0 ? 'neg' : '';

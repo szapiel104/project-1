@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.34.0 — bot z saperami, zboże w spichlerzu (2026-10-23)
+
+- Komputer też szkoli saperów: przy co najmniej 6 żołnierzach i zapasie rudy trzyma dwóch (trzech, gdy u gracza leżą ruiny). Wolni saperzy sami idą rozbierać ruiny gracza — najbliższe twierdzy bota, i tylko te, przy których gracz nie ma przewagi w wojsku; do dalekich ruin idzie z nimi eskorta z trzech żołnierzy. Saperzy nie idą już z falą ani na wypady (fala liczy tylko wojsko do walki)
+- Bot buduje młyn i piekarnię po farmie (wcześniej stawiał samą farmę, a pszenica leżała bez użytku)
+- Pszenica i mąka leżą w spichlerzu, nie w składzie (uwaga Mikołaja). Zboże może zająć najwyżej połowę spichlerzy — reszta zawsze zostaje na jedzenie, więc farma bez młyna nie zagłodzi osady; okno farmy i młyna mówi, gdy zboże dobiło do połowy. Licznik jedzenia i ostrzeżenia skryby liczą samo jedzenie, bez zboża
+- „Jak grać”: magazyny, chleb i saperzy komputera opisane na nowo, po polsku i angielsku
+
 ## 0.33.4 — porządki: kruki, oczy w puszczy, kałuże i iskry w osobnych plikach (2026-10-23)
 
 - Bez zmian w grze. Ze `scene.ts` wyniesione: kruki na ciałach (`src/render/crows.ts`), czerwone oczy nocą w puszczy (`foresteyes.ts`), kałuże na drogach (`puddles.ts`) i iskry z „+1” przy nowym żołnierzu z koszar (`spawnfx.ts`) — `scene.ts` krótszy o ok. 190 linii
