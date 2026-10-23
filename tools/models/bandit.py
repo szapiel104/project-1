@@ -132,7 +132,7 @@ roll = lathe('roll', [(0.033, -0.092), (0.038, -0.088), (0.039, -0.078), (0.035,
 roll_m = Mesh(evaluated(roll), grime(LINEN_DK, 0.15), 'cloth')
 fore = skin('fore', [(0, -0.08, 0.0), (0, -0.12, 0.003), (0, -0.155, 0.004)], [(0, 1), (1, 2)],
             [(0.029, 0.028), (0.025, 0.024), (0.021, 0.019)], subsurf=1)
-fore_m = Mesh(evaluated(fore), WHITE, 'skin', dyn='skin')
+fore_m = Mesh(evaluated(fore), lambda x, y, z: (0.78 + (noise3(x, y, z) - 0.5) * 0.14,) * 3, 'skin', dyn='skin')
 # skórzany karwasz na przedramieniu, ściągnięty rzemieniem
 brace = lathe('brace', [(0.024, -0.152), (0.028, -0.146), (0.029, -0.11), (0.028, -0.102)], seg=14, subsurf=0)
 brace_b = evaluated(brace)
@@ -141,7 +141,7 @@ bstr = lathe('bstrap', [(0.0295, -0.132), (0.031, -0.13), (0.031, -0.124), (0.02
 bstr_m = Mesh(evaluated(bstr), LEATHER_DK, 'leather')
 hand = skin('hand', [(0, -0.152, 0.002), (0, -0.185, 0.006), (0, -0.204, 0.008)], [(0, 1), (1, 2)],
             [(0.022, 0.02), (0.024, 0.016), (0.018, 0.013)], subsurf=1)
-hand_m = Mesh(evaluated(hand), WHITE, 'skin', dyn='skin')
+hand_m = Mesh(evaluated(hand), lambda x, y, z: (0.72 + (noise3(x, y, z) - 0.5) * 0.16,) * 3, 'skin', dyn='skin')
 
 # ================= TUŁÓW =================
 # lniana koszula do pół uda, brudna i przetarta
@@ -198,32 +198,79 @@ pelt_in_m = Mesh(plb_lin, grime(hexrgb(0x6e5a44), 0.2), 'leather')
 ridge = skin('ridge', [(0.0, 0.48, -0.06), (0.0, 0.44, -0.095), (0.0, 0.4, -0.112), (0.0, 0.36, -0.116)], [(0, 1), (1, 2), (2, 3)],
              [(0.016, 0.006), (0.02, 0.007), (0.018, 0.007), (0.012, 0.005)], subsurf=1)
 ridge_m = Mesh(evaluated(ridge), shag(WOLF_DK, WOLF, 0.3), 'cloth')
-# łeb wilka przewieszony przez lewy bark: spłaszczona czaszka, pysk, uszy (sucha skóra, bez oczu)
-skull = sphere('wolfhead', (-0.105, 0.47, 0.012), (0.03, 0.018, 0.036), seg=14, rings=10)
-skb = evaluated(skull)
-moved(skb, at=(0, 0, 0))
-skull_m = Mesh(skb, shag(WOLF, WOLF_LT, 0.3), 'cloth')
-snout = skin('snout', [(-0.11, 0.466, 0.04), (-0.114, 0.452, 0.07)], [(0, 1)], [(0.014, 0.01), (0.008, 0.007)], subsurf=1)
-snout_m = Mesh(evaluated(snout), shag(WOLF_DK, WOLF, 0.25), 'cloth')
-nose = sphere('wnose', (-0.115, 0.452, 0.077), (0.005, 0.004, 0.004), seg=6, rings=4)
-nose_m = Mesh(evaluated(nose), hexrgb(0x1a1614), 'leather')
+# łeb wilka na lewym barku, pyskiem do przodu nad piersią: czaszka, długi pysk z czarnym nosem, sterczące uszy,
+# ciemne oczodoły (wyprawiona skóra, bez oczu) i dolna szczęka lekko opadnięta — ma być czytelny jako wilk także z wysokości kamery
+WX, WY, WZ = -0.112, 0.492, 0.022
+skull = sphere('wolfhead', (WX, WY, WZ), (0.044, 0.03, 0.05), seg=18, rings=12)
+skull_m = Mesh(evaluated(skull), shag(WOLF, hexrgb(0x77695c), 0.3), 'cloth')
+# czoło jaśniejsze, pręga przez środek czaszki ciemniejsza
+brow = sphere('wolfbrow', (WX, WY + 0.016, WZ + 0.018), (0.03, 0.016, 0.032), seg=12, rings=8)
+brow_m = Mesh(evaluated(brow), shag(WOLF_DK, WOLF, 0.25), 'cloth')
+snout = skin('snout', [(WX, WY - 0.004, WZ + 0.038), (WX - 0.002, WY - 0.012, WZ + 0.08), (WX - 0.003, WY - 0.02, WZ + 0.112)], [(0, 1), (1, 2)],
+             [(0.024, 0.02), (0.017, 0.013), (0.011, 0.009)], subsurf=1)
+snout_m = Mesh(evaluated(snout), shag(WOLF, hexrgb(0x77695c), 0.25), 'cloth')
+jaw = skin('jaw', [(WX, WY - 0.026, WZ + 0.04), (WX - 0.002, WY - 0.036, WZ + 0.08), (WX - 0.003, WY - 0.044, WZ + 0.1)], [(0, 1), (1, 2)],
+           [(0.016, 0.008), (0.012, 0.006), (0.008, 0.004)], subsurf=1)
+jaw_m = Mesh(evaluated(jaw), shag(WOLF_LT, (0.75, 0.7, 0.62), 0.2), 'cloth')
+# kły w szczelinie pyska
+fangs = []
+for sx in (-1, 1):
+    f = skin(f'fang{sx}', [(WX + sx * 0.007, WY - 0.026, WZ + 0.098), (WX + sx * 0.007, WY - 0.037, WZ + 0.1)], [(0, 1)], [(0.0028, 0.0028), (0.0006, 0.0006)], subsurf=0)
+    fangs.append(Mesh(evaluated(f), hexrgb(0xd8cfb8), 'skin'))
+nose = sphere('wnose', (WX - 0.003, WY - 0.016, WZ + 0.121), (0.009, 0.007, 0.007), seg=10, rings=6)
+nose_m = Mesh(evaluated(nose), hexrgb(0x141110), 'leather')
+sockets = []
+for sx in (-1, 1):
+    e = sphere(f'wsock{sx}', (WX + sx * 0.022, WY + 0.008, WZ + 0.042), (0.008, 0.005, 0.006), seg=8, rings=5)
+    sockets.append(Mesh(evaluated(e), hexrgb(0x16120f), 'leather'))
 ears = []
-for k, dx in enumerate((-0.015, 0.012)):
-    e = skin(f'wear{k}', [(-0.104 + dx, 0.484, -0.006), (-0.104 + dx * 1.3, 0.5, -0.014)], [(0, 1)], [(0.007, 0.003), (0.002, 0.002)], subsurf=0)
-    ears.append(Mesh(evaluated(e), WOLF_DK, 'cloth'))
+for sx in (-1, 1):
+    e = skin(f'wear{sx}', [(WX + sx * 0.026, WY + 0.022, WZ - 0.004), (WX + sx * 0.032, WY + 0.05, WZ - 0.014)], [(0, 1)], [(0.014, 0.005), (0.0015, 0.0015)], subsurf=0)
+    ears.append(Mesh(evaluated(e), shag(WOLF_DK, WOLF, 0.2), 'cloth'))
 # ================= GŁOWA: wełniany kaptur, gęsta broda =================
-head = Head((0.0, 0.546, 0.004), (0.054, 0.065, 0.058), seg=32, rings=24, strong=1.3)
+head = Head((0.0, 0.546, 0.004), (0.054, 0.065, 0.058), seg=36, rings=28, strong=1.3)
+# ogorzała, brudna twarz: ciemniej pod oczami i na policzkach, smugi brudu (kolor skóry i tak dobiera gra, to tylko cień)
+def _dirt(x, y, z):
+    ux, uy, uz = head.unit(x, y, z)
+    k = 0.8 + (noise3(x * 2, y * 2, z * 2) - 0.5) * 0.16
+    k -= 0.14 * math.exp(-((uy + 0.02) / 0.09) ** 2) * math.exp(-((abs(ux) - 0.34) / 0.14) ** 2) * (uz > 0.5)  # sińce pod oczami
+    k -= 0.08 * smooth(0.1, 0.5, abs(ux)) * smooth(-0.6, -0.2, -uy)  # policzki w cieniu zarostu
+    return (k, k * 0.95, k * 0.9)
+head.skin.col = [_dirt(*p) for p in head.skin.pos]
 neck = lathe('neck', [(0.027, 0.47), (0.027, 0.5), (0.029, 0.52)], seg=10, subsurf=0)
-neck_m = Mesh(evaluated(neck), WHITE, 'skin', dyn='skin')
-beard = head.shell('beard', 1.12, lambda x, y, z: head.beard_mask()(x, y, z) * 1.3)
+neck_m = Mesh(evaluated(neck), (0.72, 0.68, 0.64), 'skin', dyn='skin')
+
+
+def beard_mask(x, y, z):
+    """Gęsta, skołtuniona broda: od kości policzkowych w dół, z wąsem nad ustami; odsłonięte tylko oczy, nos i czoło"""
+    below = smooth(0.0, 0.14, -0.14 - y)
+    front = smooth(-0.55, -0.15, z)
+    nose = (1 - smooth(0.1, 0.18, abs(x))) * smooth(-0.36, -0.28, y)
+    return below * front * (1 - nose)
+
+
+def beard_shade(x, y, z):
+    # pasma włosa w dół, kołtuny, jaśniejsze końce na brodzie
+    a = math.atan2(x, z)
+    st = 0.5 + 0.5 * math.sin(a * 38 + noise3(x, 0, z) * 5)
+    k = 0.62 + 0.22 * st + (noise3(x * 4, y * 4, z * 4) - 0.5) * 0.2 + 0.12 * smooth(-0.6, -1.0, y)
+    return (k, k, k)
+
+
+beard = head.shell('beard', 1.24, beard_mask, shade=beard_shade)
+# broda opada niżej niż podbródek: druga warstwa pod szczęką, wydłużona w dół
+chin = sphere('beardchin', (0.0, 0.497, 0.03), (0.04, 0.03, 0.03), seg=16, rings=10)
+cb = evaluated(chin)
+keep_faces(cb, lambda x, y, z: z > -0.01)
+chin_m = Mesh(cb, lambda x, y, z: (0.58 + 0.25 * (0.5 + 0.5 * math.sin(math.atan2(x, z) * 30)) + (noise3(x, y, z) - 0.5) * 0.15,) * 3, 'cloth', dyn='hair')
 hair = head.shell('hair', 1.04, lambda x, y, z: smooth(0.1, 0.35, 0.5 - z) * smooth(-0.3, 0.0, y + 0.1))
 
 
-def face_hole(x, y, z, w=0.68, h=0.6):
-    return smooth(0.15, 0.4, z) * smooth(-0.05, 0.1, h - abs(y + 0.06)) * smooth(-0.05, 0.1, w - abs(x))
+def face_hole(x, y, z, w=0.76, h=0.74):
+    return smooth(0.1, 0.35, z) * smooth(-0.05, 0.1, h - abs(y + 0.12)) * smooth(-0.05, 0.1, w - abs(x))
 
 
-hood = head.shell('hood', 1.19, lambda x, y, z: 1 - face_hole(x, y, z) if y > -0.85 else 0, dyn=None, mat='cloth',
+hood = head.shell('hood', 1.3, lambda x, y, z: 1 - face_hole(x, y, z) if y > -0.88 else 0, dyn=None, mat='cloth',
                   shade=lambda x, y, z: tuple(c * ((0.9 if z > 0.3 else 0.78) + (noise3(x, y, z) - 0.5) * 0.18) for c in WOOL_DK))
 # kołnierz kaptura opadający na barki, z postrzępionym brzegiem
 cowl = lathe('cowl', [(0.1, 0.45), (0.094, 0.47), (0.08, 0.49), (0.06, 0.51), (0.048, 0.522)], seg=20, depth=0.86, subsurf=1)
@@ -234,8 +281,8 @@ cowl_m = Mesh(cwb, grime(WOOL_DK, 0.2), 'cloth')
 cowl_in_m = Mesh(cwb_lin, tuple(c * 0.5 for c in WOOL_DK), 'cloth')
 
 static = [shirt_m, shirt_in_m, neckcut_m, vest_m, vest_in_m, hips_m, belt_m, cord_m, ends_m, knot_m, pouch_m, sheath_m, knife_m,
-          pelt_m, pelt_in_m, ridge_m, skull_m, snout_m, nose_m, *ears,
-          head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), beard, hair, hood, cowl_m, cowl_in_m]
+          pelt_m, pelt_in_m, ridge_m, skull_m, brow_m, snout_m, jaw_m, *fangs, nose_m, *sockets, *ears,
+          head.skin, neck_m, *head.ears(), *head.eyes(), *head.brows(), beard, chin_m, hair, hood, cowl_m, cowl_in_m]
 
 
 # ================= TOPÓR (w dłoni; początek układu w chwycie, drzewce w dół jak klinga miecza) =================

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.35.2 — zbój: broda, brudna twarz, wilczy łeb (2026-10-23)
+
+- Zbój ma gęstą, skołtunioną brodę z wąsem i brodą opadającą pod szczękę (wcześniej chował ją kaptur), ogorzałą i brudną twarz z cieniem pod oczami oraz brudne dłonie
+- Wilczy łeb na lewym barku jest większy i czytelny z wysokości kamery: długi pysk z czarnym nosem, opadnięta dolna szczęka z kłami, sterczące uszy, ciemne oczodoły
+- Szerszy otwór kaptura, żeby z przodu było widać brodę
+
 ## 0.35.1 — zbój z puszczy z własnym modelem i odzywkami (2026-10-23)
 
 - Zbóje z obozów w lesie mają własny model z Blendera (tools/models/bandit.py) zamiast przyciemnionego włócznika z tarczą: brudna, połatana lniana koszula z podwiniętymi rękawami, kamizela z owczej skóry, na barkach wyliniała wilcza skóra z łbem przewieszonym przez ramię, wełniany kaptur z postrzępionym kołnierzem, gęsta broda, portki z łatą na kolanie, onuce przewiązane rzemieniem, niskie ciżmy, pas ze sznurem, sakwa i nóż w pochwie, skórzany karwasz
