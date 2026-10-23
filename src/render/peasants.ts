@@ -15,6 +15,7 @@ const ARCHER_MODEL = model('archer');
 const WOMAN_MODEL = model('woman');
 const KING_MODEL = model('king');
 const CHILD_MODEL = model('child');
+const SAPPER_MODEL = model('sapper');
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
 export interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
@@ -186,7 +187,7 @@ function lookOf(id: number, tunic: number, muted = false): Look {
  * a do tego jedno z kilku nakryć głowy, czasem broda albo fartuch. Każda część to jedna siatka instancjonowana.
  */
 /** Rodzaje postaci z Blendera */
-export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms';
+export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms' | 'sapper';
 
 export class Figures {
   private parts: Part[] = [];
@@ -230,7 +231,7 @@ export class Figures {
       // a każda część to osobne rysowanie do mapy cieni
       mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
-      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
+      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod });
       if (lod) this.hasFar = true;
     };
@@ -327,6 +328,8 @@ export class Figures {
       return;
     }
     // ---- gospodyni i dziecko z Blendera (tools/models/woman.py, child.py) ----
+    // saper (tools/models/sapper.py): skórzany kaftan i kaptur, kotwice jak u chłopa — kilof i ładunki z puli chłopów
+    if (kind === 'sapper') { model(SAPPER_MODEL as FigureModel, armL, armR); return; }
     if (kind === 'woman' || kind === 'child') { model((kind === 'woman' ? WOMAN_MODEL : CHILD_MODEL) as FigureModel, armL, armR); return; }
     // pan zamku z Blendera (tools/models/king.py): korona, gronostaj, płaszcz w barwach pana
     if (kind === 'king') { model(KING_MODEL as FigureModel, armL, armR); return; }

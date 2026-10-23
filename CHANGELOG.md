@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.33.1 — saper z własnym modelem (2026-10-23)
+
+- Saper ma własny model z Blendera (tools/models/sapper.py): przeszywany skórzany kaftan nabijany ćwiekami i sznurowany z przodu, rękawy i kołnierz koszuli w barwach pana, skórzany kaptur z postrzępioną pelerynką, karwasze i grube rękawice, skórzany fartuch, portki z nakolannikami, wysokie buty z wywiniętą cholewą; u pasa młotek, przecinak i sakwa, przy boku żelazny łom, przez bark zwój liny
+- Kilof (w dłoni przy ruinie, na plecach w drodze) i niesiony łup jak dotąd; poległy saper leży w swoim stroju
+- Saper w podglądzie modeli (modele.html?id=sapper)
+
 ## 0.33.0 — odbudowa ruin kosztuje, saperzy rozbierają wrogie ruiny (2026-10-23)
 
 - Odbudowa własnej ruiny nie jest już za darmo: kosztuje połowę ceny budynku (drewno, kamień, żelazo, ruda). Zapłata schodzi sama, gdy starcza surowców — najpierw za mury, bramy i wieże — i dopiero wtedy robotnicy i inżynierowie biorą się do roboty. Okno ruiny pokazuje koszt i czego brakuje
