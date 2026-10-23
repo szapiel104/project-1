@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.35.5 — cięcie mieczem u strażników i zbrojnych, włócznia w dłoni (2026-10-23)
+
+- Strażnik miejski i zbrojny nie podnoszą już miecza skokiem przy każdym ciosie. Cios idzie fazami jak u zbója: garda (sztych skośnie w górę przed sobą), zamach z mieczem za głową, cięcie w dół i trafienie na końcu cięcia; lewa ręka w walce przed sobą
+- Włócznik w walce trzyma włócznię w dłoni (wcześniej wisiała przy boku na stałej osi i ręka jej nie dotykała): garda na wysokości pasa, cofnięcie ręki, pchnięcie z wyprostowaną ręką. Tarcza stale uniesiona
+- Podgląd z Blendera rysuje też włócznię włócznika (`SPEAR="kąt,wysunięcie" POSE="ręka,0" render_preview.py spearman …`)
+
 ## 0.35.4 — włócznicy pchają włócznią zamiast skakać (2026-10-23)
 
 - Włócznik w walce nie przeskakuje już co cios z włócznią pionowo / poziomo. Przez całą walkę trzyma włócznię opuszczoną poziomo na wroga, a tarczę uniesioną przed sobą. Cios idzie fazami w rytmie jego ciosów: garda, cofnięcie ręki z włócznią, szybki wypad w przód (włócznia wysuwa się wzdłuż drzewca, grot w przeciwniku) i wycofanie. Ruch płynny między klatkami symulacji

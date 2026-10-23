@@ -63,6 +63,34 @@ for key, rest, up, arm_rest, arm_up in (('sword', -0.55, -0.9, -0.15, -2.2), ('a
             pose = os.environ.get('POSE')  # POSE="ręka,broń" — dowolna faza ciosu (kąty jak w grze)
             a, w = (float(v) for v in pose.split(',')) if pose else ((arm_up, up) if STRIKE else (arm_rest, rest))
             unpack(m, (d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=a, sub=(d['hand'], w))
+# włócznik: włócznię składa gra w kodzie (src/render/peasants.ts) — tu ta sama bryła i oś obrotu, SPEAR="kąt,wysunięcie"
+if os.environ.get('SPEAR'):
+    import bmesh as _bmesh
+    from mathutils import Matrix as _Mx
+    ang, push = (float(v) for v in os.environ['SPEAR'].split(','))
+    bm = _bmesh.new()
+    def _cyl(r0, r1, length, y0, seg=8):
+        ring = lambda r, y: [bm.verts.new((math.sin(2 * math.pi * k / seg) * r, 0, 0)) for k in range(0)]
+    # w walce włócznia leży w dłoni: oś obrotu = dłoń po obrocie ręki (POSE), wysunięcie wzdłuż przodu
+    arm_a = float(os.environ['POSE'].split(',')[0]) if os.environ.get('POSE') else -0.25
+    hx, hy, hz = d['hand']
+    piv = Vector((d['shoulder'][0] + hx, d['shoulder'][1] + hy * math.cos(arm_a) - hz * math.sin(arm_a), d['shoulder'][2] + hy * math.sin(arm_a) + hz * math.cos(arm_a) + push))
+    def seg_mesh(r0, r1, ya, yb, col):
+        me = bpy.data.meshes.new('sp'); n = 8; vs = []; fs = []
+        for k in range(n):
+            a = 2 * math.pi * k / n
+            for r, yy in ((r0, ya), (r1, yb)):
+                y, z = yy * math.cos(ang), yy * math.sin(ang)
+                p = piv + Vector((math.sin(a) * r, y - 0, 0)) + Vector((0, 0, z)) + Vector((0, math.cos(a) * r * -math.sin(ang), math.cos(a) * r * math.cos(ang)))
+                vs.append((p.x, -p.z, p.y))
+        for k in range(n):
+            a0, b0, a1, b1 = 2 * k, 2 * k + 1, 2 * ((k + 1) % n), 2 * ((k + 1) % n) + 1
+            fs.append((a0, a1, b1, b0))
+        me.from_pydata(vs, [], fs)
+        ob = bpy.data.objects.new('sp', me); bpy.context.scene.collection.objects.link(ob)
+        mt = bpy.data.materials.new('spm'); mt.use_nodes = True; mt.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*col, 1); me.materials.append(mt)
+    seg_mesh(0.0105, 0.009, -0.3, 0.54, (0.27, 0.19, 0.11))
+    seg_mesh(0.012, 0.0001, 0.56, 0.715, (0.6, 0.62, 0.65))
 sc = bpy.context.scene
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam)
 views = [(0.0, 0.0), (0.9, 0.0)]

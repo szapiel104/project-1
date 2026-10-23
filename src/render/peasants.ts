@@ -215,6 +215,8 @@ export class Figures {
   /** Broń jako osobna część (włócznia): pose[1] = jej kąt, pose[2] = wysunięcie do przodu (pchnięcie) */
   private weaponRot: Part['rot'] | null = null;
   private push = new THREE.Vector3();
+  /** Dłoń względem barku (z modelu) — w walce włócznia leży w dłoni, a nie na stałej osi przy boku */
+  private hand = new THREE.Vector3(0, -0.185, 0.004);
 
   /** Bark względem stóp (x, y, z) — tam zaczepia się narzędzie w dłoni */
   shoulder: [number, number, number] = [0.135, 0.45, 0];
@@ -257,6 +259,7 @@ export class Figures {
     };
     const model = (M: FigureModel, armLeft: Part['rot'], armRight: Part['rot']): void => {
       this.shoulder = [M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!];
+      this.hand.set(M.hand[0]!, M.hand[1]!, M.hand[2]!);
       const dyn = (d: string | null): number | Part['color'] => (d ? DYN[d] ?? 0xffffff : 0xffffff);
       const showOf = (sh: string | null): Part['shown'] => (sh ? SHOW[sh] ?? always : always);
       for (const lod of [0, 1] as const) {
@@ -283,6 +286,7 @@ export class Figures {
       // prawa ręka z mieczem: przy marszu luźno, w walce zamach z góry
       const swordArm = (sw: number, up: boolean): number => (up ? -2.2 : sw * 0.55 - 0.15);
       model(M, armL, swordArm);
+      this.weaponArm = swordArm; this.freeArmRot = armL; // w walce cięcie fazami (scene.ts: swordCut), lewa ręka przed sobą
       // miecz: rękojeść w dłoni, jelec, głowica, prosta klinga; w spoczynku ostrzem w dół i lekko w przód
       const sword = { at: new THREE.Vector3(M.hand[0]!, M.hand[1]!, M.hand[2]!), rot: (_s: number, up: boolean): number => (up ? -0.9 : -0.55) };
       const at = new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!);
@@ -393,12 +397,18 @@ export class Figures {
       const roll = grip && (p.rot === armR || p.rot === armL) ? (p.rot === armR ? -grip : grip) : 0;
       this.q.setFromEuler(this.e.set(sitLegs !== undefined && (p.rot === legL || p.rot === legR) ? sitLegs : r, 0, roll));
       // pchnięcie włócznią: cała broń przesuwa się wzdłuż drzewca (w przód postaci), nie tylko obraca
-      this.local.compose(pose && pose[2] && p.rot === this.weaponRot ? this.push.copy(p.pos).setZ(p.pos.z + pose[2]) : p.pos, this.q, this.one);
+      this.local.compose(pose && p.rot === this.weaponRot ? this.gripAt(pose[0], pose[2] ?? 0) : p.pos, this.q, this.one);
       if (p.sub) { this.q.setFromEuler(this.e.set(pose && p.rot === this.weaponArm ? pose[1] : p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);
       p.mesh.setMatrixAt(i, this.out);
       if (p.color) p.mesh.setColorAt(i, this.color.setHex(p.color(look)));
     }
+  }
+
+  /** Dłoń prawej ręki obróconej o `arm` (układ postaci) + wysunięcie w przód: tam leży włócznia w walce */
+  private gripAt(arm: number, push: number): THREE.Vector3 {
+    const [sx, sy, sz] = this.shoulder, h = this.hand, c = Math.cos(arm), s = Math.sin(arm);
+    return this.push.set(sx + h.x, sy + h.y * c - h.z * s, sz + h.y * s + h.z * c + push);
   }
 
   /** Skąd patrzy kamera (do wyboru wersji z bliska / z daleka); wywoływane co klatkę przed set() */
