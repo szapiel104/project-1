@@ -209,6 +209,10 @@ export class Figures {
   /** Od tej odległości od kamery (do kwadratu) postać rysuje się w wersji uproszczonej */
   static FAR2 = 13 * 13;
 
+  /** Ręka z bronią prowadzoną fazą ciosu (topór zbója): set(…, pose) ustawia ją i broń w dłoni wprost */
+  private weaponArm: Part['rot'] | null = null;
+  private freeArmRot: Part['rot'] | null = null;
+
   /** Bark względem stóp (x, y, z) — tam zaczepia się narzędzie w dłoni */
   shoulder: [number, number, number] = [0.135, 0.45, 0];
 
@@ -293,6 +297,7 @@ export class Figures {
       // lewa ręka luźno, w walce wysunięta do przodu dla równowagi
       const freeArm = (sw: number, up: boolean): number => (up ? -0.7 : -sw * 0.55);
       model(M, freeArm, axeArm);
+      this.weaponArm = axeArm; this.freeArmRot = freeArm;
       // topór: chwyt w dłoni, obuch na końcu drzewca; w spoczynku zwisa ostrzem w dół, lekko w przód
       const grip = { at: new THREE.Vector3(M.hand[0]!, M.hand[1]!, M.hand[2]!), rot: (_s: number, up: boolean): number => (up ? -0.75 : -0.55) };
       const at = new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!);
@@ -362,7 +367,8 @@ export class Figures {
    * Bez tego `swing` rusza rękami i nogami jak przy chodzie.
    */
   /** grip: o ile obie ręce schodzą się do środka (oburęczny chwyt kilofa czy siekiery), w radianach; 0 = zwykle */
-  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number, grip = 0): void {
+  /** `pose` = [kąt ręki z bronią, kąt broni w dłoni] — faza ciosu liczona w scenie (bandit: zamach zza głowy i cięcie) */
+  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number, grip = 0, pose?: [number, number]): void {
     // ukryta postać (macierz o zerowej skali) nie zajmuje miejsca: karta graficzna liczy tylko widoczne
     const e = base.elements;
     if (e[0] === 0 && e[5] === 0 && e[10] === 0) return;
@@ -376,14 +382,14 @@ export class Figures {
     for (const p of this.parts) {
       if (p.lod !== lod) continue;
       if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
-      const r = work === undefined ? p.rot(swing, armsUp)
+      const r = pose && p.rot === this.weaponArm ? pose[0] : pose && p.rot === this.freeArmRot ? p.rot(0, true) : work === undefined ? p.rot(swing, armsUp)
         : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
       // siedzi: obie nogi wyciągnięte przed siebie
       // oburęczny chwyt: ręce obrócone do środka (przed uniesieniem), dłonie spotykają się na stylisku
       const roll = grip && (p.rot === armR || p.rot === armL) ? (p.rot === armR ? -grip : grip) : 0;
       this.q.setFromEuler(this.e.set(sitLegs !== undefined && (p.rot === legL || p.rot === legR) ? sitLegs : r, 0, roll));
       this.local.compose(p.pos, this.q, this.one);
-      if (p.sub) { this.q.setFromEuler(this.e.set(p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
+      if (p.sub) { this.q.setFromEuler(this.e.set(pose && p.rot === this.weaponArm ? pose[1] : p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);
       p.mesh.setMatrixAt(i, this.out);
       if (p.color) p.mesh.setColorAt(i, this.color.setHex(p.color(look)));

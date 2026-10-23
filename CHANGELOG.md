@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.35.3 — prawdziwy cios toporem u zbója (2026-10-23)
+
+- Zbój nie trzyma już topora sztywno w górze przez całą walkę. Cios idzie fazami w rytmie jego ciosów: po trafieniu dociąga cięcie, wraca do gardy (topór skośnie przed piersią), bierze zamach i odchyla topór za głowę, a potem tnie szybko w dół — trafienie wypada na końcu cięcia. Ruch jest płynny między klatkami symulacji
+- Druga ręka w walce wysunięta do przodu dla równowagi
+- Podgląd z Blendera przyjmuje dowolną fazę ciosu (`POSE="ręka,broń" render_preview.py bandit …`)
+
 ## 0.35.2 — zbój: broda, brudna twarz, wilczy łeb (2026-10-23)
 
 - Zbój ma gęstą, skołtunioną brodę z wąsem i brodą opadającą pod szczękę (wcześniej chował ją kaptur), ogorzałą i brudną twarz z cieniem pod oczami oraz brudne dłonie

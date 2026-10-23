@@ -301,6 +301,28 @@ const ALE = RESOURCES.indexOf('ale');
 const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 
 /** Renderer: czyta stan symulacji, nigdy go nie zmienia. */
+/** Cios toporem zbója: [kąt ręki, kąt topora w dłoni] dla fazy u (0 = chwila trafienia, 1 = następne trafienie).
+ *  Klatki kluczowe sprawdzone w Blenderze (tools/models/render_preview.py, POSE="ręka,broń"). */
+const AXE_KEYS: [number, number, number][] = [
+  [0, -1.25, -0.15],   // cięcie dociągnięte: topór przed sobą, ostrzem w dół
+  [0.25, -0.7, -1.5],  // garda: topór uniesiony skośnie przed piersią
+  [0.6, -0.7, -1.5],
+  [0.86, -3.25, -1.3], // zamach: ręka w górze, topór za głową
+  [0.94, -2.2, -0.9],  // w pół cięcia
+  [1, -1.25, -0.15],
+];
+function axeChop(u: number): [number, number] {
+  u = Math.min(1, Math.max(0, u));
+  for (let k = 1; k < AXE_KEYS.length; k++) {
+    const a = AXE_KEYS[k - 1]!, b = AXE_KEYS[k]!;
+    if (u <= b[0]) {
+      const t = (u - a[0]) / Math.max(1e-6, b[0] - a[0]), e = t * t * (3 - 2 * t);
+      return [a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e];
+    }
+  }
+  return [AXE_KEYS[0]![1], AXE_KEYS[0]![2]];
+}
+
 export class GameRenderer {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -4556,7 +4578,13 @@ export class GameRenderer {
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id);
       this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper && !udef.bandit ? t.matrix : ZERO, legs, striking, teamC, s.id);
       // zbój z puszczy: własny model z toporem (tools/models/bandit.py)
-      if (udef.bandit && bandits < 256) this.banditsFig.set(bandits++, t.matrix, legs, striking, teamC, s.id);
+      if (udef.bandit && bandits < 256) {
+        // w walce cios toporem idzie fazami według odliczania do następnego ciosu: po trafieniu dociąga cięcie,
+        // wraca do gardy, potem zamach zza głowy i szybkie cięcie w dół — trafienie wypada na końcu cięcia
+        const fighting = (!!foe || !!wall || !!victim) && !walking;
+        const pose = fighting && !this.calm ? axeChop(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
+        this.banditsFig.set(bandits++, t.matrix, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, pose);
+      }
       // saper: postać chłopa w barwach pana z kilofem; rysuje go pula chłopów (syncUnits) w następnej klatce
       if (udef.sapper) this.sapperDraw.push({ m: t.matrix.clone(), swing: legs, walking, work: !!wall && !walking && !s.loot && wall.ruined === true, carry: s.loot ? s.loot - 1 : -1, team: teamC, id: s.id });
       if (udef.ram && rams < 256) {

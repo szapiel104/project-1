@@ -53,13 +53,16 @@ for m in d['static']:
     unpack(m, (0, 0, 0))
 for sx in (-1, 1):
     for m in filter(ok, d['leg']): unpack(m, (sx * d['hip'][0], d['hip'][1], d['hip'][2]))
-    for m in filter(ok, d['arm']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=-0.25 if sx > 0 else 0.1)
+    pa = float(os.environ['POSE'].split(',')[0]) if os.environ.get('POSE') else -0.25
+    for m in filter(ok, d['arm']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=pa if sx > 0 else 0.1)
 # broń w prawej dłoni (miecz strażnika, topór zbója); STRIKE=1 — zamach znad głowy jak w grze
 STRIKE = os.environ.get('STRIKE') == '1'
 for key, rest, up, arm_rest, arm_up in (('sword', -0.55, -0.9, -0.15, -2.2), ('axe', -0.55, -0.75, -0.1, -2.4)):
     if key in d:
         for m in d[key]:
-            unpack(m, (d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=arm_up if STRIKE else arm_rest, sub=(d['hand'], up if STRIKE else rest))
+            pose = os.environ.get('POSE')  # POSE="ręka,broń" — dowolna faza ciosu (kąty jak w grze)
+            a, w = (float(v) for v in pose.split(',')) if pose else ((arm_up, up) if STRIKE else (arm_rest, rest))
+            unpack(m, (d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=a, sub=(d['hand'], w))
 sc = bpy.context.scene
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam)
 views = [(0.0, 0.0), (0.9, 0.0)]
