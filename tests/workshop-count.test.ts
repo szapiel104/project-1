@@ -14,7 +14,7 @@ it('warsztat liczy, ile oddał do składu (okno budynku pokazuje to i tempo)', (
   p.res[resIndex('flour')] = 40;
   const id = placeReady(g, 'bakery', hx - 1, hy + 5)!;
   placeReady(g, 'granary', hx + 3, hy + 5);
-  placeReady(g, 'stockpile', hx - 4, hy + 5); // mąka leży w składzie
+  placeReady(g, 'barn', hx - 5, hy + 5); // mąka leży w stodole (osobne miejsce na zboże)
   addPeasants(g, 2);
   setHour(g, 7);
   for (let i = 0; i < 1500; i++) step(g, []);

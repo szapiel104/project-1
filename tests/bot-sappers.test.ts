@@ -90,15 +90,17 @@ describe('bot i saperzy', () => {
   });
 });
 
-describe('zboże w spichlerzu', () => {
-  it('pszenica i mąka leżą w spichlerzu, ale nie są jedzeniem', () => {
+describe('zboże w stodole', () => {
+  it('pszenica i mąka leżą w stodole (osobno od towarów), nie w spichlerzu i nie są jedzeniem', () => {
+    expect(BUILDINGS.find((b) => b.id === 'barn')!.stores).toContain('grain');
+    expect(BUILDINGS.find((b) => b.id === 'granary')!.stores).not.toContain('grain');
     for (const r of ['wheat', 'flour'] as const) {
-      expect(RESOURCE_DEFS[r].store).toBe('granary');
+      expect(RESOURCE_DEFS[r].store).toBe('grain');
       expect(RESOURCE_DEFS[r].food).toBeFalsy();
     }
   });
 
-  it('farma odnosi pszenicę do spichlerza, a młyn bierze ją stamtąd i mieli', () => {
+  it('farma odnosi pszenicę do stodoły, a młyn bierze ją stamtąd i mieli; spichlerz zostaje na jedzenie', () => {
     const g = createGame(7);
     for (const p of g.players) { p.bot = false; p.guards = 0; }
     g.soldiers = [];
@@ -108,13 +110,13 @@ describe('zboże w spichlerzu', () => {
     expect(placeReady(g, 'farm', a.x, a.y)).toBeTruthy();
     expect(placeReady(g, 'mill', a.x + 4, a.y)).toBeTruthy();
     addPeasants(g, 6);
-    const grainBefore = storeUsed(p, 'granary');
+    const foodBefore = storeUsed(p, 'granary');
     const stockBefore = storeUsed(p, 'stockpile');
     for (let i = 0; i < 6000 && !p.res[resIndex('flour')]; i++) step(g, []);
     expect(p.res[resIndex('flour')]).toBeGreaterThan(0);
-    // zboże liczy się do spichlerza, nie do składu
+    // zboże liczy się do stodoły — ani do towarów w składzie, ani do jedzenia w spichlerzu
+    expect(storeUsed(p, 'grain')).toBeGreaterThan(0);
     expect(storeUsed(p, 'stockpile')).toBeLessThanOrEqual(stockBefore);
-    expect(storeUsed(p, 'granary')).toBeGreaterThanOrEqual(grainBefore - 100);
-    expect(BUILDINGS.find((b) => b.id === 'granary')!.stores).toContain('granary');
+    expect(storeUsed(p, 'granary')).toBeLessThanOrEqual(foodBefore);
   });
 });

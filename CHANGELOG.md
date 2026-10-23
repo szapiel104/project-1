@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.34.1 — zboże w stodole, spichlerz tylko na jedzenie (2026-10-23)
+
+- Pszenica i mąka leżą teraz wyłącznie w stodole, na osobnym miejscu na zboże (200 na stodołę, obok 250 towarów). Spichlerz trzyma tylko jedzenie, więc zboże go nie zapycha (zamiast „najwyżej połowa spichlerza” z 0.34.0)
+- Okno stodoły pokazuje osobno towary i zboże; farma i młyn bez stodoły piszą „postaw stodołę”
+- „Jak grać”: magazyny i chleb opisane na nowo, po polsku i angielsku
+
 ## 0.34.0 — bot z saperami, zboże w spichlerzu (2026-10-23)
 
 - Komputer też szkoli saperów: przy co najmniej 6 żołnierzach i zapasie rudy trzyma dwóch (trzech, gdy u gracza leżą ruiny). Wolni saperzy sami idą rozbierać ruiny gracza — najbliższe twierdzy bota, i tylko te, przy których gracz nie ma przewagi w wojsku; do dalekich ruin idzie z nimi eskorta z trzech żołnierzy. Saperzy nie idą już z falą ani na wypady (fala liczy tylko wojsko do walki)

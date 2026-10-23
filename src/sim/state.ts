@@ -738,24 +738,12 @@ export function storeCapacity(g: GameState, player: number, kind: StoreKind): nu
   return n;
 }
 
-/** Zboże (pszenica, mąka) może zająć najwyżej tę część spichlerzy — reszta zostaje na jedzenie (farma bez młyna nie zagłodzi osady) */
-export const GRAIN_SHARE = 0.5;
-/**
- * Ile sztuk surowca `res` zmieści się jeszcze w magazynach gracza: wolne miejsce w składach jego rodzaju,
- * a dla zboża w spichlerzu dodatkowo do połowy pojemności spichlerzy (GRAIN_SHARE).
- */
+/** Ile sztuk surowca `res` zmieści się jeszcze w magazynach gracza (wolne miejsce w magazynach jego rodzaju) */
 export function storeRoom(g: GameState, player: number, res: number): number {
   const def = RESOURCE_DEFS[RESOURCES[res]!];
   const p = g.players[player];
   if (!def.store || !p) return Infinity;
-  const cap = storeCapacity(g, player, def.store);
-  let room = cap - storeUsed(p, def.store);
-  if (def.store === 'granary' && !def.food) {
-    let grain = 0;
-    for (let i = 0; i < RESOURCES.length; i++) { const d = RESOURCE_DEFS[RESOURCES[i]!]; if (d.store === 'granary' && !d.food) grain += p.res[i]!; }
-    room = Math.min(room, Math.floor(cap * GRAIN_SHARE) - grain);
-  }
-  return Math.max(0, room);
+  return Math.max(0, storeCapacity(g, player, def.store) - storeUsed(p, def.store));
 }
 
 /** Ile surowców danego rodzaju gracz ma teraz w składach albo spichlerzach. */

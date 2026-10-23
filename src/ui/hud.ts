@@ -1277,8 +1277,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           storeBox.dataset.key = key;
           storeBox.replaceChildren(...i.stock.flatMap((st) => {
             const head = el('p', 'stock-head');
-            const label = st.kind === 'granary' ? t('cat.food') : tx('Towary', 'Goods');
-            head.append(icon(st.kind === 'granary' ? 'granary' : 'store'), el('strong', '', `${label}: ${st.used} / ${st.max}`), el('span', '', tx(` · ten budynek mieści ${st.here}`, ` · this building holds ${st.here}`)));
+            const label = st.kind === 'granary' ? t('cat.food') : st.kind === 'grain' ? tx('Zboże', 'Grain') : tx('Towary', 'Goods');
+            head.append(icon(st.kind === 'granary' ? 'granary' : st.kind === 'grain' ? 'wheat' : 'store'), el('strong', '', `${label}: ${st.used} / ${st.max}`), el('span', '', tx(` · ten budynek mieści ${st.here}`, ` · this building holds ${st.here}`)));
             const bar = el('div', 'stock-bar');
             const fillEl = el('span');
             fillEl.style.width = `${Math.min(100, (st.used / Math.max(1, st.max)) * 100)}%`;

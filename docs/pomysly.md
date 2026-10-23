@@ -14,7 +14,7 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 ## Uwagi testera — Mikołaj (22.10.2026)
 - Budynki z wyższym priorytetem: gracz zaznacza, które mają być obsadzane w pierwszej kolejności (np. piekarnie przed łuczarzem), gdy brakuje ludzi.
 - Żelazo zapycha skład, a nic z niego nie robimy — potrzebne zastosowanie (kowal/płatnerz niżej) i może osobna kupka/skład na urobek kopalni.
-- Zboże (pszenica, mąka) do spichlerza — zrobione 23.10 (0.34.0): w spichlerzu, najwyżej połowa pojemności (`GRAIN_SHARE`, `storeRoom` w state.ts). Do decyzji: stodoła też na zboże?
+- Zboże (pszenica, mąka) — zrobione 23.10 (0.34.1, Michał: spichlerz tylko na jedzenie): osobny rodzaj magazynu `grain`, tylko w stodole (200 na stodołę). Dalej: worki zboża widoczne w stodole (dziś stodoła pokazuje tylko towary)
 - Kowal, płatnerz i zbrojni (ciężka piechota w zbroi) — żelazo → miecze i zbroje → nowa jednostka.
   - Partia 1 (22.10, zrobiona): kuźnia z Blendera (tools/models/smithy.py; palenisko z żarem, miech, kowadło, cebrzyk, szlifierz, stojak z mieczami), stawiana wszędzie (Michał: bez wymogu kopalni); 2 żelaza → 1 miecz (160 ticków), miecze do zbrojowni; stuk młota, odzywki kowala, miecz w zbrojowni i w rękach, „Jak grać”.
   - Partia 2 (22.10, zrobiona): płatnerz z Blendera (tools/models/armorer.py; stół z kolczugą w robocie, hełmy na półce, kukła z kolczugą, stojaki przed warsztatem), stawiany wszędzie; 3 żelaza → 1 kolczuga (220 ticków), do zbrojowni; ciche stuknięcia nitowania, odzywki, kolczugi w zbrojowni i w rękach, „Jak grać”.
@@ -39,7 +39,7 @@ Stan: dobry (strict TS bez `as any`, symulacja oddzielona od grafiki, 230 testó
 ## Braki zauważone przy pracy
 
 - **Błąd fal bota (znaleziony 23.10):** bot myśli co 40 ticków z przesunięciem o numer gracza (`tk = tick - id*5`), a fala rusza tylko gdy `tick >= first` i do fali zostało < 40 ticków — przez to bot gracza 1 (i dalszych) pomija pierwszą falę i atakuje dopiero przy drugiej. Do poprawy razem z balansem (zmienia tempo gry z botem)
-- Bot nie stawia piekarni mimo młyna (brak kamienia na liście?) — mąka dobija do połowy spichlerza i stoi; sprawdzić w tools/soak
+- Bot nie stawia piekarni mimo młyna (brak kamienia na liście?) — mąka stoi w stodole; sprawdzić w tools/soak
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach
 - Test dotyku na prawdziwym telefonie i tablecie (dotąd tylko emulacja)
 - Budynki nie mają paska stanu ani informacji, co produkują i jak szybko
