@@ -16,6 +16,7 @@ const WOMAN_MODEL = model('woman');
 const KING_MODEL = model('king');
 const CHILD_MODEL = model('child');
 const SAPPER_MODEL = model('sapper');
+const BANDIT_MODEL = model('bandit');
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
 export interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
@@ -187,7 +188,7 @@ function lookOf(id: number, tunic: number, muted = false): Look {
  * a do tego jedno z kilku nakryć głowy, czasem broda albo fartuch. Każda część to jedna siatka instancjonowana.
  */
 /** Rodzaje postaci z Blendera */
-export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms' | 'sapper';
+export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms' | 'sapper' | 'bandit';
 
 export class Figures {
   private parts: Part[] = [];
@@ -231,7 +232,7 @@ export class Figures {
       // a każda część to osobne rysowanie do mapy cieni
       mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
-      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
+      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod });
       if (lod) this.hasFar = true;
     };
@@ -282,6 +283,21 @@ export class Figures {
       const SW = M as FigureModel & { sword: ModelMesh[]; swordFar: ModelMesh[] };
       for (const lod of [0, 1] as const)
         for (const m of lod ? SW.swordFar : SW.sword) mk(modelGeo(m), 0xffffff, at.clone(), swordArm, always, m.mat as Mat, sword, lod);
+      return;
+    }
+    if (kind === 'bandit') {
+      // zbój z puszczy (tools/models/bandit.py): skóry, kaptur, onuce; topór w prawej dłoni, bez tarczy
+      const M = BANDIT_MODEL as FigureModel & { axe: ModelMesh[]; axeFar: ModelMesh[] };
+      // prawa ręka z toporem: w marszu luźno przy boku, w walce zamach znad głowy (jak miecz strażnika, ale szerzej)
+      const axeArm = (sw: number, up: boolean): number => (up ? -2.4 : sw * 0.5 - 0.1);
+      // lewa ręka luźno, w walce wysunięta do przodu dla równowagi
+      const freeArm = (sw: number, up: boolean): number => (up ? -0.7 : -sw * 0.55);
+      model(M, freeArm, axeArm);
+      // topór: chwyt w dłoni, obuch na końcu drzewca; w spoczynku zwisa ostrzem w dół, lekko w przód
+      const grip = { at: new THREE.Vector3(M.hand[0]!, M.hand[1]!, M.hand[2]!), rot: (_s: number, up: boolean): number => (up ? -0.75 : -0.55) };
+      const at = new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!);
+      for (const lod of [0, 1] as const)
+        for (const m of lod ? M.axeFar : M.axe) mk(modelGeo(m), 0xffffff, at.clone(), axeArm, always, m.mat as Mat, grip, lod);
       return;
     }
     if (kind === 'spearman' || kind === 'archer') {

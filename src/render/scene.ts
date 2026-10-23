@@ -353,6 +353,8 @@ export class GameRenderer {
   private guardBodies!: Figures;
   private menAtArms!: Figures;
   private sappersFig!: Figures;
+  private banditsFig!: Figures;
+  private banditBodies!: Figures;
   private sapperBodies!: Figures;
   /** Chorążowie z proporcami (po jednym w oddziale) */
   private standards!: Standards;
@@ -829,6 +831,7 @@ export class GameRenderer {
     this.guardsFig = new Figures(MAX_UNITS, this.scene, 'guard');
     this.menAtArms = new Figures(MAX_UNITS, this.scene, 'manatarms');
     this.sappersFig = new Figures(MAX_UNITS, this.scene, 'sapper');
+    this.banditsFig = new Figures(256, this.scene, 'bandit');
     this.standards = new Standards(this.scene);
     this.kings = new Figures(32, this.scene, 'king');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
@@ -868,6 +871,7 @@ export class GameRenderer {
     this.guardBodies = new Figures(256, this.scene, 'guard');
     this.manAtArmsBodies = new Figures(256, this.scene, 'manatarms');
     this.sapperBodies = new Figures(256, this.scene, 'sapper');
+    this.banditBodies = new Figures(256, this.scene, 'bandit');
     this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);
     this.stains.count = 0;
     this.stains.frustumCulled = false;
@@ -2395,7 +2399,7 @@ export class GameRenderer {
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncBraziers(g, v); this.syncGates(g, dt); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
-      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies]) f.view(cp);
+      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies]) f.view(cp);
       for (const t of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
@@ -4381,6 +4385,7 @@ export class GameRenderer {
     this.lastBearers = bearers;
     this.standards.begin();
     this.sapperDraw = [];
+    let bandits = 0;
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
       const prev = this.prevPos.get(s.id);
@@ -4549,7 +4554,9 @@ export class GameRenderer {
       this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
       const heavy = udef.id === 'manatarms';
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id);
-      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper && !udef.bandit ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      // zbój z puszczy: własny model z toporem (tools/models/bandit.py)
+      if (udef.bandit && bandits < 256) this.banditsFig.set(bandits++, t.matrix, legs, striking, teamC, s.id);
       // saper: postać chłopa w barwach pana z kilofem; rysuje go pula chłopów (syncUnits) w następnej klatce
       if (udef.sapper) this.sapperDraw.push({ m: t.matrix.clone(), swing: legs, walking, work: !!wall && !walking && !s.loot && wall.ruined === true, carry: s.loot ? s.loot - 1 : -1, team: teamC, id: s.id });
       if (udef.ram && rams < 256) {
@@ -4615,6 +4622,7 @@ export class GameRenderer {
     this.archers.finish(n);
     this.guardsFig.finish(n);
     this.menAtArms.finish(n);
+    this.banditsFig.finish(bandits);
     this.flyArrows();
     this.syncTowerIcons(g);
     this.syncRallyFlags(g, view);
@@ -4625,7 +4633,7 @@ export class GameRenderer {
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
-    let pc = 0, ac = 0, gc = 0, sp = 0, mc = 0, sc2 = 0;
+    let pc = 0, ac = 0, gc = 0, sp = 0, mc = 0, sc2 = 0, bc = 0;
     for (const body of g.corpses) {
       if (c >= MAX_UNITS) break;
       if (body.kind === -2) continue; // zabity wilk: rysuje go syncWolves (leży na boku)
@@ -4648,6 +4656,7 @@ export class GameRenderer {
       // każde ciało rysuje się tylko jednym modelem (wcześniej chłop, strażnik i zbrojny leżeli dodatkowo jako włócznik)
       if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); }
       else if (ud?.sapper) { if (sc2 < 256) this.sapperBodies.set(sc2++, m, 0.3, false, team, body.id); }
+      else if (ud?.bandit) { if (bc < 256) this.banditBodies.set(bc++, m, 0.3, false, team, body.id); }
       else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id); }
       else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id); }
       else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id); }
@@ -4669,6 +4678,7 @@ export class GameRenderer {
     this.guardBodies.finish(gc);
     this.manAtArmsBodies.finish(mc);
     this.sapperBodies.finish(sc2);
+    this.banditBodies.finish(bc);
     // proporce żywych chorążych (wyżej) i przewrócone przy poległych: wszystko naraz
     this.standards.finish();
     // ciała już nie ma (pochowane albo rozłożone): zapominamy, że był chorążym

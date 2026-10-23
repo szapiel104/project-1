@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.35.1 — zbój z puszczy z własnym modelem i odzywkami (2026-10-23)
+
+- Zbóje z obozów w lesie mają własny model z Blendera (tools/models/bandit.py) zamiast przyciemnionego włócznika z tarczą: brudna, połatana lniana koszula z podwiniętymi rękawami, kamizela z owczej skóry, na barkach wyliniała wilcza skóra z łbem przewieszonym przez ramię, wełniany kaptur z postrzępionym kołnierzem, gęsta broda, portki z łatą na kolanie, onuce przewiązane rzemieniem, niskie ciżmy, pas ze sznurem, sakwa i nóż w pochwie, skórzany karwasz
+- W prawej dłoni topór z brodą (drzewce owinięte rzemieniem w chwycie, klin w oku obucha), bez tarczy; w walce zamach znad głowy. Poległy zbój leży w swoich skórach
+- Odzywki zbójów jak w Gothicu, po polsku i angielsku: zaczepki przy napadzie na drwala, groźby w walce z wojskiem, drwiny przy obozie za dnia, straszenie nocą i ucieczka po spaleniu obozu. Zbój blisko kamery odzywa się sam, a kliknięty od razu
+- Zbój w podglądzie modeli (modele.html?id=bandit); podgląd z Blendera pokazuje teraz także broń w dłoni (`STRIKE=1` — zamach)
+
 ## 0.35.0 — większe kamienne wieże i koksownik z ognistymi strzałami (2026-10-23)
 
 - Dwie nowe kamienne wieże w umocnieniach: **Duża baszta** (3×3 pola, 10 łuczników, strzelają o 2 pola dalej, wykusze z blankami na rogach) i **Wielka baszta** (4×4, 16 łuczników, o 3 pola dalej, skarpowany cokół, wykusze pod łupkowymi daszkami). Jak zwykła kamienna wieża stają na wolnym polu albo wprost na murze. Modele z Blendera (`tools/models/stonetower_big.py`)

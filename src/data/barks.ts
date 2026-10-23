@@ -180,6 +180,23 @@ const GUARD_SAY_PL = {
   lord: ['Pan na dziedzińcu. Baczność!', 'Z drogi, pan idzie!', 'Pilnować pana, chłopy!'],
 };
 
+/** Odzywki zbójów z puszczy (jak bandyci z Gothica: zaczepnie, chciwie, z drwiną) */
+const BANDIT_SAY_PL = {
+  camp: [
+    'Czego się gapisz? Zgubiłeś się?', 'To nasz las. Za przejście się płaci.', 'Ruda jest? To pokaż.', 'Szef mówi, że jutro będzie łup.',
+    'Siedź cicho, to może przeżyjesz.', 'Pan z zamku myśli, że las jest jego. Śmieszne.', 'Mięso się kończy. Trzeba będzie kogoś odwiedzić.',
+  ],
+  night: [
+    'Noc to nasza pora.', 'Przy ognisku ciepło, a w lesie wilki. Wybieraj.', 'Słyszałeś? To nie wilk. To my.', 'Po ciemku i drwal nie ucieknie daleko.',
+  ],
+  raid: [
+    'Ej, ty! Dawaj, co masz!', 'Rudę i drewno, a może puścimy cię wolno.', 'Nie uciekaj, i tak dogonimy!', 'Daleko od zamku, chłopie. Za daleko.',
+    'Nikt cię tu nie usłyszy.', 'Siekierę zostaw. Przyda się nam.',
+  ],
+  fight: ['Na nich, chłopaki!', 'Wojsko? Zaraz zobaczymy, ile warte.', 'Topór lepszy niż wasze włócznie!', 'Nie dać się, to nasz las!', 'Krew za krew!'],
+  flee: ['Spalili obóz! W nogi!', 'Wszystko przepadło… Uciekać!', 'Jeszcze wrócimy, panie z zamku!'],
+};
+
 const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
   // --- idle and everyday work ---
   idle: [
@@ -354,6 +371,23 @@ const GUARD_SAY_EN: { [K in keyof typeof GUARD_SAY_PL]: string[] } = {
   lord: ['The lord\'s in the courtyard. Attention!', 'Make way, the lord\'s coming!', 'Guard the lord, lads!'],
 };
 
+const BANDIT_SAY_EN: { [K in keyof typeof BANDIT_SAY_PL]: string[] } = {
+  camp: [
+    'What are you staring at? Lost, are you?', 'This is our wood. Passage costs.', 'Got any ore? Let\'s see it.', 'Boss says there\'ll be pickings tomorrow.',
+    'Keep quiet and you might live.', 'The lord in his castle thinks the forest is his. Funny.', 'Meat\'s running low. Time we paid someone a visit.',
+  ],
+  night: [
+    'Night is our time.', 'Warm by the fire, wolves out in the trees. Your pick.', 'Hear that? That\'s no wolf. That\'s us.', 'In the dark even a woodcutter won\'t get far.',
+  ],
+  raid: [
+    'Oi, you! Hand it over!', 'Ore and timber, and maybe we let you walk.', 'Run if you like, we\'ll catch you anyway!', 'Long way from the castle, friend. Too long.',
+    'Nobody\'ll hear you out here.', 'Leave the axe. We\'ve a use for it.',
+  ],
+  fight: ['Get them, lads!', 'Soldiers? Let\'s see what they\'re worth.', 'An axe beats your spears!', 'Hold fast, this is our wood!', 'Blood for blood!'],
+  flee: ['They\'ve burned the camp! Run!', 'All of it, gone… Run for it!', 'We\'ll be back, castle lord!'],
+};
+
 const EN = lang() === 'en';
 export const SAY: Record<string, string[]> = EN ? SAY_EN : SAY_PL;
 export const GUARD_SAY: { [K in keyof typeof GUARD_SAY_PL]: string[] } = EN ? GUARD_SAY_EN : GUARD_SAY_PL;
+export const BANDIT_SAY: { [K in keyof typeof BANDIT_SAY_PL]: string[] } = EN ? BANDIT_SAY_EN : BANDIT_SAY_PL;

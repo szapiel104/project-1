@@ -1,6 +1,6 @@
 import { loadInfo } from './ui/loadinfo';
 import { counts as errCounts, entries as errEntries, formatText as errText, onReport } from './debug/errlog';
-import { GUARD_SAY, SAY } from './data/barks';
+import { BANDIT_SAY, GUARD_SAY, SAY } from './data/barks';
 import { COLD, SEASON_DAYS, SEASON_NAME, shiftToSeason, weatherOf, yearPos, type Season } from './sim/weather';
 import { winterReadiness } from './sim/systems/economy';
 import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
@@ -711,7 +711,7 @@ function selectUnit(id: number): void {
   if (id) { selected = 0; renderer.setSelection(0); renderer.setWorkerMark(0); }
   renderer.setUnitSelection(id);
   hud.showPerson(id ? personCard(id) : null);
-  if (id) speak(id);
+  if (id) { if (isBandit(id)) sayBandit(id); else speak(id); }
 }
 
 /** Budynki, których teren pracy jest pokazany na mapie (zielony kwadrat) */
@@ -2287,6 +2287,20 @@ function sayGuard(id: number): void {
   sayUntil = performance.now() + 3200;
   talk(bubble.textContent ?? '', id, true);
 }
+const isBandit = (id: number): boolean => { const s = game.soldiers.find((x) => x.id === id); return !!s && !!UNITS[s.kind]!.bandit; };
+/** Zbój z puszczy: zaczepia przy napadzie, odgraża się w walce, w obozie drwi (za dnia) albo straszy (nocą); po spaleniu obozu ucieka */
+function sayBandit(id: number): void {
+  const s = game.soldiers.find((x) => x.id === id);
+  if (!s) return;
+  const pick = (l: string[]): string => l[Math.floor(Math.random() * l.length)]!;
+  const foe = s.target ? game.soldiers.find((o) => o.id === s.target) : undefined;
+  const lines = s.den === -1 ? BANDIT_SAY.flee : foe ? BANDIT_SAY.fight : s.raid || s.hitting ? BANDIT_SAY.raid : clockAt(game.tick).night ? BANDIT_SAY.night : BANDIT_SAY.camp;
+  bubble.textContent = pick(lines);
+  bubble.hidden = false;
+  sayUnit = id;
+  sayUntil = performance.now() + 3200;
+  talk(bubble.textContent ?? '', id, true);
+}
 function speak(id: number): void {
   bubble.textContent = lineFor(id);
   bubble.hidden = false;
@@ -2303,10 +2317,12 @@ function chatter(): void {
   const f = renderer.focusTile, near = (px: number, py: number): boolean => Math.hypot(px / 256 - f.x, py / 256 - f.y) < 12;
   const people = game.units.filter((u) => u.owner === ME && near(u.px, u.py) && u.phase !== 22);
   const guards = game.soldiers.filter((s) => s.owner === ME && UNITS[s.kind]!.guard && near(s.px, s.py));
-  const pool = [...people.map((u) => ['u', u.id] as const), ...guards.map((s) => ['g', s.id] as const)];
+  // zbóje z puszczy blisko kamery też się odzywają (napad, walka, obóz)
+  const bandits = game.soldiers.filter((s) => s.owner === BANDITS && near(s.px, s.py));
+  const pool = [...people.map((u) => ['u', u.id] as const), ...guards.map((s) => ['g', s.id] as const), ...bandits.map((s) => ['b', s.id] as const)];
   if (!pool.length) return;
   const [kind, id] = pool[Math.floor(Math.random() * pool.length)]!;
-  if (kind === 'g') sayGuard(id); else speak(id);
+  if (kind === 'g') sayGuard(id); else if (kind === 'b') sayBandit(id); else speak(id);
 }
 function sayLoop(): void {
   chatter();

@@ -11,13 +11,17 @@ DYN = {'skin': (0.85, 0.66, 0.5), 'hair': (0.25, 0.17, 0.11), 'tunic': (0.62, 0.
 SHOW = os.environ.get('SHOW')
 SHOWN = None if SHOW is None else set(SHOW.split(','))
 ok = lambda m: m['show'] is None or SHOWN is None or m['show'] in SHOWN
-def unpack(m, off, arm=0.0):
+def unpack(m, off, arm=0.0, sub=None):
     raw = lambda k: base64.b64decode(m[k])
     pos = [struct.unpack_from('<3f', raw('pos'), i * 12) for i in range(len(raw('pos')) // 12)]
     col = [struct.unpack_from('<3B', raw('col'), i * 3) for i in range(len(pos))]
     idx = [struct.unpack_from('<3H', raw('idx'), i * 6) for i in range(len(raw('idx')) // 6)]
     verts = []
     for x, y, z in pos:
+        if sub:  # broń w dłoni: najpierw obrót w chwycie, potem przesunięcie do dłoni (układ ręki)
+            (hx, hy, hz), a = sub
+            y, z = y * math.cos(a) - z * math.sin(a), y * math.sin(a) + z * math.cos(a)
+            x, y, z = x + hx, y + hy, z + hz
         if arm:  # obrót ręki wokół barku (oś x)
             y, z = y * math.cos(arm) - z * math.sin(arm), y * math.sin(arm) + z * math.cos(arm)
         x, y, z = x + off[0], y + off[1], z + off[2]
@@ -50,6 +54,12 @@ for m in d['static']:
 for sx in (-1, 1):
     for m in filter(ok, d['leg']): unpack(m, (sx * d['hip'][0], d['hip'][1], d['hip'][2]))
     for m in filter(ok, d['arm']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=-0.25 if sx > 0 else 0.1)
+# broń w prawej dłoni (miecz strażnika, topór zbója); STRIKE=1 — zamach znad głowy jak w grze
+STRIKE = os.environ.get('STRIKE') == '1'
+for key, rest, up, arm_rest, arm_up in (('sword', -0.55, -0.9, -0.15, -2.2), ('axe', -0.55, -0.75, -0.1, -2.4)):
+    if key in d:
+        for m in d[key]:
+            unpack(m, (d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=arm_up if STRIKE else arm_rest, sub=(d['hand'], up if STRIKE else rest))
 sc = bpy.context.scene
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam)
 views = [(0.0, 0.0), (0.9, 0.0)]

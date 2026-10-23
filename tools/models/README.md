@@ -137,3 +137,5 @@ bez KTX2). W grze `bushKinds()` w `src/render/forest.ts`, rozkład w `terrain.ts
 `pond_lillies_large.dae`, `art/textures/skins/gaia/cattails_1.png`, `cattails_2.png`, `water_plants_lg.dds`; GitHub jest osiągalny
 z warsztatu, więc pobieranie idzie bez komputera Michała). Siatki i tekstury bez przeróbek → `src/render/models/waterplants.json`,
 `public/textures/cc0/oad_*.jpg` (+ `_a`, przez `maskedTex`). W grze `waterPlants()` w `src/render/forest.ts`; podgląd `modele.html?id=reeds-1`, `?id=lilies`.
+
+Zbój z puszczy: `tools/models/bandit.py` → `bandit.json` (ciało jak u chłopa + topór w kluczach `axe` / `axeFar`, kotwica w dłoni jak miecz strażnika). Podgląd: `render_preview.py bandit /tmp/b.png 0.9`, zamach: `STRIKE=1 render_preview.py bandit /tmp/b.png 1.57`; w przeglądarce `modele.html?id=bandit`.

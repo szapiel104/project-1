@@ -67,7 +67,7 @@ Zrobione 12.10: palisada, brama (otwieranie, sama się zamyka), wieża, wilki (p
 Czeka:
 - Kości przy cmentarzu, więcej brudu (śmieci, gnój przy chlewie)
 - **Zbóje z puszczy (18.10, partia 1 zrobiona — 0.28.0):** obozy na polanach (generator map 5), napady na drwali i chłopów z dala od zamku, rabunek rudy i drewna, łupienie wozów bez eskorty, rozbicie obozu wojskiem = łup dla gracza. Dalej:
-  - Partia 2: własny model zbója z Blendera (skóry, kaptur, topór/maczuga, bez tarczy) zamiast przyciemnionego włócznika; odzywki zbójów jak w Gothicu
+  - ~~Partia 2: własny model zbója z Blendera~~ — zrobione 23.10 (0.35.1): skóry, wilcza skóra na barkach, kaptur, topór, bez tarczy; odzywki (napad, walka, obóz, noc, ucieczka). Dalej: drugi wariant z maczugą i bez kaptura, okrzyki zbójów głosem
   - Partia 3: obóz rośnie, gdy nikt go nie rusza (więcej zbójów, mocniejsza zasieka), napady na wozy sojuszników i na kopalnię; bot rozbija obozy
   - Do decyzji: obozy wroga (drugi gracz) zamiast samych fal; czy zbójów można przekupić rudą
 - **Kopalnia jak w Gothic (17.10, partia 1 zrobiona — mechanika):** jedna „Kopalnia” 3×3 stawiana tyłem do skały (pola gór za budynkiem), zastępuje kamieniołom i kopalnię żelaza (stare zostały tylko dla zapisów). Załoga 1 + 1 na 4 mieszkańców (do 8), kopią w środku, z kursu wychodzi kamień 58% / żelazo 34% / ruda 8% (nowy surowiec „ruda” do składu), wszystko noszą do wioski. 360 hp, wróg poluje na górników. Bot stawia ją pod górami.
