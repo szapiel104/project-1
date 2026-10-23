@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.35.4 — włócznicy pchają włócznią zamiast skakać (2026-10-23)
+
+- Włócznik w walce nie przeskakuje już co cios z włócznią pionowo / poziomo. Przez całą walkę trzyma włócznię opuszczoną poziomo na wroga, a tarczę uniesioną przed sobą. Cios idzie fazami w rytmie jego ciosów: garda, cofnięcie ręki z włócznią, szybki wypad w przód (włócznia wysuwa się wzdłuż drzewca, grot w przeciwniku) i wycofanie. Ruch płynny między klatkami symulacji
+- Dotyczy też włóczników bota; strażnicy miejscy, zbrojni i łucznicy bez zmian
+
 ## 0.35.3 — prawdziwy cios toporem u zbója (2026-10-23)
 
 - Zbój nie trzyma już topora sztywno w górze przez całą walkę. Cios idzie fazami w rytmie jego ciosów: po trafieniu dociąga cięcie, wraca do gardy (topór skośnie przed piersią), bierze zamach i odchyla topór za głowę, a potem tnie szybko w dół — trafienie wypada na końcu cięcia. Ruch jest płynny między klatkami symulacji

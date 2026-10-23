@@ -311,6 +311,28 @@ const AXE_KEYS: [number, number, number][] = [
   [0.94, -2.2, -0.9],  // w pół cięcia
   [1, -1.25, -0.15],
 ];
+/** Pchnięcie włócznią: [kąt ręki, kąt włóczni, wysunięcie] dla fazy u (0 = trafienie, 1 = następne trafienie).
+ *  Włócznia przez całą walkę opuszczona poziomo na wroga (1,57 = poziomo); cios to cofnięcie i wypad w przód. */
+const SPEAR_KEYS: [number, number, number, number][] = [
+  [0, -1.3, 1.6, 0.13],    // pchnięcie: ręka wyprostowana, grot w przeciwniku
+  [0.22, -0.8, 1.52, 0.02], // wycofanie po ciosie
+  [0.62, -0.75, 1.5, 0],    // garda: włócznia poziomo na wysokości piersi, grotem we wroga
+  [0.84, -0.6, 1.47, -0.09], // cofnięcie do zamachu
+  [1, -1.3, 1.6, 0.13],
+];
+function spearThrust(u: number): [number, number, number] {
+  u = Math.min(1, Math.max(0, u));
+  for (let k = 1; k < SPEAR_KEYS.length; k++) {
+    const a = SPEAR_KEYS[k - 1]!, b = SPEAR_KEYS[k]!;
+    if (u <= b[0]) {
+      const t = (u - a[0]) / Math.max(1e-6, b[0] - a[0]);
+      // wypad jest szybki (zaczyna się ostro), reszta płynna
+      const e = k === SPEAR_KEYS.length - 1 ? 1 - (1 - t) ** 3 : t * t * (3 - 2 * t);
+      return [a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e, a[3] + (b[3] - a[3]) * e];
+    }
+  }
+  return [SPEAR_KEYS[0]![1], SPEAR_KEYS[0]![2], SPEAR_KEYS[0]![3]];
+}
 function axeChop(u: number): [number, number] {
   u = Math.min(1, Math.max(0, u));
   for (let k = 1; k < AXE_KEYS.length; k++) {
@@ -4576,7 +4598,9 @@ export class GameRenderer {
       this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
       const heavy = udef.id === 'manatarms';
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id);
-      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper && !udef.bandit ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      // włócznik w walce: włócznia opuszczona na wroga, cofnięcie i pchnięcie fazami według odliczania do ciosu
+      const spearPose = !ranged && !udef.ram && (!!foe || !!wall || !!victim) && !walking && !this.calm ? spearThrust(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
+      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper && !udef.bandit ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, spearPose);
       // zbój z puszczy: własny model z toporem (tools/models/bandit.py)
       if (udef.bandit && bandits < 256) {
         // w walce cios toporem idzie fazami według odliczania do następnego ciosu: po trafieniu dociąga cięcie,
