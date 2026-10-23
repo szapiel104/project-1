@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.35.6 — kombinacja mieczem z obrotem, większy grot włóczni (2026-10-23)
+
+- Strażnik miejski i zbrojny walczą kombinacją czterech ciosów po kolei: cięcie z góry (zamach za głowę), cięcie poziome z lewej na prawą, z prawej na lewą (ciało skręca się w poprzek ciosu, klinga idzie poziomo) i cięcie z pełnym obrotem z wyciągniętym mieczem. Między ciosami wraca do gardy; trafienie wypada na końcu każdego cięcia
+- Grot włóczni większy i lepiej widoczny z wysokości kamery
+
 ## 0.35.5 — cięcie mieczem u strażników i zbrojnych, włócznia w dłoni (2026-10-23)
 
 - Strażnik miejski i zbrojny nie podnoszą już miecza skokiem przy każdym ciosie. Cios idzie fazami jak u zbója: garda (sztych skośnie w górę przed sobą), zamach z mieczem za głową, cięcie w dół i trafienie na końcu cięcia; lewa ręka w walce przed sobą

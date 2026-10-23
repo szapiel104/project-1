@@ -338,7 +338,7 @@ export class Figures {
           // włócznia ok. półtora raza wyższa od człowieka (dawniej dwa razy): drzewce od kostki do nad głowę
           tinted(new THREE.CylinderGeometry(0.009, 0.0105, 0.84, 6).translate(0, 0.12, 0), WOOD),
           tinted(new THREE.CylinderGeometry(0.011, 0.0095, 0.025, 6).translate(0, -0.3, 0), WOOD),
-          tinted(new THREE.OctahedronGeometry(1, 0).scale(0.021, 0.07, 0.007).translate(0, 0.645, 0), STEEL),
+          tinted(new THREE.OctahedronGeometry(1, 0).scale(0.027, 0.085, 0.01).translate(0, 0.66, 0), STEEL),
           tinted(new THREE.CylinderGeometry(0.0105, 0.012, 0.04, 6).translate(0, 0.565, 0), STEEL),
         ])!, 0xffffff, 0.15, sy - 0.09, 0.075, thrustSpear, always, 'metal');
         return;

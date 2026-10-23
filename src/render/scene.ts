@@ -333,26 +333,35 @@ function spearThrust(u: number): [number, number, number] {
   }
   return [SPEAR_KEYS[0]![1], SPEAR_KEYS[0]![2], SPEAR_KEYS[0]![3]];
 }
-/** Cięcie mieczem: [kąt ręki, kąt miecza w dłoni]; klatki sprawdzone w Blenderze (render_preview.py guard, POSE) */
-const SWORD_KEYS: [number, number, number][] = [
-  [0, -1.2, -0.1],    // cięcie dociągnięte: klinga przed sobą, lekko w dół
-  [0.25, -0.6, -1.6], // garda: sztych skośnie w górę przed sobą
-  [0.6, -0.6, -1.6],
-  [0.86, -3.1, -1.4], // zamach: miecz za głową
-  [0.94, -2.0, -0.9], // w pół cięcia
-  [1, -1.2, -0.1],
+/** Kombinacja mieczem (strażnik miejski, zbrojny): cięcie z góry, z lewej na prawą, z prawej na lewą i cięcie z obrotem.
+ *  Każdy cios: [kąt ręki, kąt miecza w dłoni, obrót ciała]. Faza u: 0 = chwila trafienia, 1 = następne trafienie.
+ *  Do u = 0,25 wraca do gardy po poprzednim ciosie, potem szykuje i zadaje następny. Klatki sprawdzone w Blenderze. */
+type SwordKey = [number, number, number, number];
+const GARDA: [number, number, number] = [-0.6, -1.6, 0];
+const SWORD_BLOWS: { keys: SwordKey[]; end: [number, number, number] }[] = [
+  // z góry: zamach za głowę i cięcie w dół
+  { keys: [[0.6, ...GARDA], [0.86, -3.1, -1.4, 0], [0.94, -2.0, -0.9, 0], [1, -1.2, -0.1, 0]], end: [-1.2, -0.1, 0] },
+  // z lewej na prawą: ciało skręcone w lewo (miecz po lewej stronie), klinga poziomo, zamaszyste cięcie w poprzek
+  { keys: [[0.55, ...GARDA], [0.8, -1.45, -0.2, 1.25], [1, -1.45, -0.05, -0.95]], end: [-1.45, -0.05, -0.95] },
+  // z prawej na lewą: skręt w prawo i cięcie w drugą stronę
+  { keys: [[0.55, ...GARDA], [0.8, -1.5, -0.2, -1.25], [1, -1.45, -0.05, 0.95]], end: [-1.45, -0.05, 0.95] },
+  // z obrotem: krótki skręt, pełny obrót z wyciągniętym mieczem i cięcie na końcu obrotu
+  { keys: [[0.5, ...GARDA], [0.68, -1.5, -0.15, 0.7], [1, -1.45, -0.05, 0.7 - Math.PI * 2]], end: [-1.45, -0.05, 0.7] },
 ];
-const swordCut = (u: number): [number, number] => keyed(SWORD_KEYS, u);
-function keyed(keys: [number, number, number][], u: number): [number, number] {
+function swordCombo(hits: number, u: number): [number, number, number] {
   u = Math.min(1, Math.max(0, u));
-  for (let k = 1; k < keys.length; k++) {
-    const a = keys[k - 1]!, b = keys[k]!;
-    if (u <= b[0]) {
-      const t = (u - a[0]) / Math.max(1e-6, b[0] - a[0]), e = t * t * (3 - 2 * t);
-      return [a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e];
-    }
+  const prev = SWORD_BLOWS[(hits + SWORD_BLOWS.length - 1) % SWORD_BLOWS.length]!, next = SWORD_BLOWS[hits % SWORD_BLOWS.length]!;
+  const ease = (t: number): number => t * t * (3 - 2 * t);
+  const mix = (a: readonly number[], b: readonly number[], t: number): [number, number, number] => [a[0]! + (b[0]! - a[0]!) * t, a[1]! + (b[1]! - a[1]!) * t, a[2]! + (b[2]! - a[2]!) * t];
+  // powrót do gardy po poprzednim ciosie
+  if (u < 0.25) return hits ? mix(prev.end, GARDA, ease(u / 0.25)) : GARDA;
+  const k = next.keys;
+  if (u <= k[0]![0]) return GARDA;
+  for (let i = 1; i < k.length; i++) {
+    const a = k[i - 1]!, b = k[i]!;
+    if (u <= b[0]) return mix(a.slice(1), b.slice(1), ease((u - a[0]) / Math.max(1e-6, b[0] - a[0])));
   }
-  return [keys[0]![1], keys[0]![2]];
+  return next.end;
 }
 function axeChop(u: number): [number, number] {
   u = Math.min(1, Math.max(0, u));
@@ -443,6 +452,8 @@ export class GameRenderer {
   private towerPose = new Map<number, [number, number]>();
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number; fire?: boolean }[] = [];
   private lastCd = new Map<number, number>();
+  /** Ile ciosów zadał żołnierz (do kombinacji mieczem: cięcie z góry, z lewej, z prawej, obrót) */
+  private hits = new Map<number, number>();
   /** Trafienia: kiedy żołnierz ostatnio oberwał (odrzut do tyłu) i ile miał zdrowia */
   private soldierHp = new Map<number, number>();
   private hitAt = new Map<number, number>();
@@ -4585,7 +4596,11 @@ export class GameRenderer {
         this.arrows.push({ from: new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0, fire: fireArrow(g, s) });
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
+      if (s.cd > pc) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);
       this.lastCd.set(s.id, s.cd);
+      // miecz (strażnik miejski, zbrojny): kombinacja ciosów fazami według odliczania do ciosu; obrót ciała w poprzek ciosu
+      const swordPose = (udef.guard || udef.id === 'manatarms') && (!!foe || !!wall || !!victim) && !walking && !this.calm
+        ? swordCombo(this.hits.get(s.id) ?? 0, 1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
       // trafiony odchyla się do tyłu i lekko cofa na ułamek sekundy
       const was = this.soldierHp.get(s.id);
       if (was !== undefined && s.hp < was && !this.calm) this.hitAt.set(s.id, this.time);
@@ -4596,7 +4611,7 @@ export class GameRenderer {
       // stojący bez walki: przenosi ciężar, rozgląda się, przestępuje, opiera o włócznię; w marszu kołysze się z krokiem
       const ia = !walking && !striking && !foe && !wall && !victim && !this.calm ? idle(s.id, this.time, true) : undefined;
       const sway = ia ? ia.roll : walking ? Math.sin(st.phase) * 0.025 : 0;
-      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, heading + (towerAt ? 0 : ia?.yaw ?? 0), sway, 'YXZ');
+      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, heading + (towerAt ? 0 : ia?.yaw ?? 0) + (swordPose?.[2] ?? 0), sway, 'YXZ');
       if (ia) t.position.y += ia.dy;
       t.scale.setScalar(1.08 * FIG);
       t.updateMatrix();
@@ -4615,12 +4630,10 @@ export class GameRenderer {
       if (bearers.has(s.id)) this.standards.add(t.matrix, s.owner, teamC, this.crestOf(s.owner));
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
-      // miecz (strażnik miejski, zbrojny): garda, zamach zza głowy i cięcie w dół fazami według odliczania do ciosu
-      const swordPose = (udef.guard || udef.id === 'manatarms') && (!!foe || !!wall || !!victim) && !walking && !this.calm ? swordCut(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
-      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose);
+      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
       this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
       const heavy = udef.id === 'manatarms';
-      this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose);
+      this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
       // włócznik w walce: włócznia opuszczona na wroga, cofnięcie i pchnięcie fazami według odliczania do ciosu
       const spearPose = !ranged && !udef.ram && (!!foe || !!wall || !!victim) && !walking && !this.calm ? spearThrust(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
       this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper && !udef.bandit ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, spearPose);
