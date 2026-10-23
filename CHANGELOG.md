@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.32.1 — cech inżynierów bez zasięgu (2026-10-23)
+
+- Inżynierowie znowu działają w całej osadzie, bez granicy 24 pól; przy równym priorytecie biorą najpierw roboty bliżej cechu
+
 ## 0.32.0 — cech inżynierów: ekipa naprawcza z zasięgiem (2026-10-23)
 
 - Załoga cechu rośnie z wioską: jeden inżynier i jeden więcej na każde 8 mieszkańców, najwyżej czterech

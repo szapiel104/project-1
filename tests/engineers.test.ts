@@ -60,14 +60,14 @@ describe('cech inżynierów', () => {
     expect(b.hp).toBe(maxHp(b.type));
   });
 
-  it('odbudowują ruinę w swoim zasięgu, a dalekich budynków nie ruszają', () => {
+  it('odbudowują ruinę, także daleko od cechu', () => {
     const { g, guild, a } = setup();
     for (let i = 0; i < 600; i++) step(g, []);
     ruin(g, a);
     expect(a.ruined).toBe(true);
     expect(engineerJob(g, guild, a)).toBe(true);
-    // ta sama chata daleko poza zasięgiem cechu
-    expect(engineerJob(g, guild, { ...a, x: guild.x + 60 })).toBe(false);
+    // zasięgu nie ma: chata daleko od cechu też jest robotą dla inżyniera
+    expect(engineerJob(g, guild, { ...a, x: guild.x + 60 })).toBe(true);
     let engineerOnRuin = false;
     for (let i = 0; i < 6000 && a.ruined; i++) {
       step(g, []);

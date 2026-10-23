@@ -873,10 +873,10 @@ function engineersStatus(b: GameState['buildings'][number], base: { text: string
   }
   const busy = new Set(ids.map((id) => game.units.find((x) => x.id === id)?.target ?? 0));
   const waiting = game.buildings.filter((o) => !busy.has(o.id) && (o.ruined || !o.build) && engineerJob(game, b, o)).length;
-  const head = tx(`Inżynierów: ${ids.length} z ${want} (1 na ${def.crew!.per} mieszkańców, najwyżej ${def.crew!.max}). Odbudowują ruiny, łatają uszkodzone budynki (najpierw mury, bramy i wieże), pomagają przy budowie i gaszą pożary — w zasięgu ${def.area} pól od cechu.`,
-    `Engineers: ${ids.length} of ${want} (1 per ${def.crew!.per} inhabitants, at most ${def.crew!.max}). They rebuild ruins, patch damaged buildings (walls, gates and towers first), lend a hand on building sites and fight fires — within ${def.area} tiles of the guild.`);
+  const head = tx(`Inżynierów: ${ids.length} z ${want} (1 na ${def.crew!.per} mieszkańców, najwyżej ${def.crew!.max}). Odbudowują ruiny, łatają uszkodzone budynki (najpierw mury, bramy i wieże), pomagają przy budowie i gaszą pożary.`,
+    `Engineers: ${ids.length} of ${want} (1 per ${def.crew!.per} inhabitants, at most ${def.crew!.max}). They rebuild ruins, patch damaged buildings (walls, gates and towers first), lend a hand on building sites and fight fires.`);
   const now = doing.length ? tx(`Teraz: ${doing.join('; ')}.`, `Now: ${doing.join('; ')}.`) : '';
-  const queue = waiting ? tx(`Czeka jeszcze w zasięgu: ${waiting}.`, `Still waiting within reach: ${waiting}.`) : '';
+  const queue = waiting ? tx(`Czeka jeszcze: ${waiting}.`, `Still waiting: ${waiting}.`) : '';
   const level = ids.length < want && base.level === 'ok' ? 'warn' : base.level;
   return { text: [head, now, queue, doing.length ? '' : base.text].filter(Boolean).join(' '), level };
 }

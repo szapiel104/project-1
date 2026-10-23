@@ -1214,20 +1214,15 @@ function engineerRank(b: Building): number {
   if (b.build) return b.ruined ? 0 : 3;
   return d.wall || d.gate || d.line || d.id === 'keep' || isTower(d.id) ? 1 : 2;
 }
-/** Co inżynier z cechu mógłby teraz robić przy tym budynku (ruina, uszkodzenie, nowa budowa) — w zasięgu cechu i bez wroga obok */
+/** Co inżynier z cechu mógłby teraz robić przy tym budynku (ruina, uszkodzenie, nowa budowa) — bez wroga obok */
 export function engineerJob(g: GameState, guild: Building, b: Building): boolean {
   if (b.owner !== guild.owner || b.id === guild.id || BUILDINGS[b.type]!.road) return false;
   if (!b.build && b.hp >= maxHp(b.type)) return false;
-  const a = workArea(guild);
-  if (a) {
-    const fp = footprint(BUILDINGS[b.type]!, b.rot);
-    if (b.x + fp.w - 1 < a.x0 || b.x > a.x1 || b.y + fp.h - 1 < a.y0 || b.y > a.y1) return false;
-  }
   return !siteUnderThreat(g, b);
 }
 /**
- * Wolni inżynierowie z cechu biorą roboty w zasięgu cechu, każdy inną: najpierw ruiny (odbudowa), potem uszkodzone
- * mury, bramy, wieże i twierdza, potem reszta (najbardziej rozbite pierwsze), a gdy nic nie trzeba łatać — pomagają przy nowej budowie.
+ * Wolni inżynierowie z cechu biorą roboty w całej osadzie, każdy inną: najpierw ruiny (odbudowa), potem uszkodzone
+ * mury, bramy, wieże i twierdza, potem reszta (najbardziej rozbite i najbliższe cechu pierwsze), a gdy nic nie trzeba łatać — pomagają przy nowej budowie.
  */
 function engineerOrders(g: GameState): void {
   const taken = new Set<number>();

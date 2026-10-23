@@ -222,7 +222,7 @@ export const pl = {
   'b.bakery': 'Piekarnia',
   'b.camp': 'Obozowisko',
   'b.engineers': 'Cech inżynierów',
-  'd.engineers': 'Inżynierowie odbudowują ruiny, łatają rozbite mury i budynki, budują dwa razy szybciej od chłopów i gaszą pożary — w zasięgu 24 pól. Jeden na 8 mieszkańców, najwyżej czterech.',
+  'd.engineers': 'Inżynierowie odbudowują ruiny, łatają rozbite mury i budynki, budują dwa razy szybciej od chłopów i gaszą pożary. Jeden na 8 mieszkańców, najwyżej czterech.',
   'b.poleturner': 'Warsztat włóczniarza',
   'd.poleturner': 'Włóczniarz bierze drewno ze składu, struga drzewce i oprawia grot. Gotowe włócznie odnosi do zbrojowni.',
   'b.barracks': 'Koszary',
