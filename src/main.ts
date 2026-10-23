@@ -27,7 +27,7 @@ import { CAMP_GUARDS, campOf } from './sim/systems/minecamp';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
-import { garrisonRoom, octant, planFormation } from './sim/systems/army';
+import { engineerJob, garrisonRoom, octant, planFormation } from './sim/systems/army';
 import { EMPTY, SANDBOX, TEST } from './testmode';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
@@ -828,7 +828,8 @@ function prodInfo(b: GameState['buildings'][number]): BuildingInfo['prod'] {
   else if (u.phase === Phase.Resting || u.phase === Phase.ToRest) status = { text: tx('Krótki odpoczynek w chacie, zaraz wraca.', 'A short rest in his hovel; he\'ll be back shortly.'), level: 'ok' };
   else status = { text: tx('Pracuje bez przeszkód.', 'Working without hindrance.'), level: 'ok' };
   // kopalnia: załoga rośnie z wioską, a z jednego kursu wychodzi kamień, żelazo albo rzadka ruda
-  if (def.crew) {
+  if (def.id === 'engineers') status = engineersStatus(b, status);
+  else if (def.crew) {
     const pop = game.units.filter((x) => x.owner === b.owner).length;
     const have = (b.worker ? 1 : 0) + (b.crew?.length ?? 0), want = crewWanted(def, pop);
     const yields = MINE_YIELDS.map((y) => `${resName(y.res)} ${y.weight}%`).join(', ');
@@ -848,6 +849,36 @@ function prodInfo(b: GameState['buildings'][number]): BuildingInfo['prod'] {
     stockIn: pr?.input ? inHave : undefined,
     cycles: pr?.input ? Math.floor(inHave / pr.input.amount) : undefined,
   };
+}
+
+/** Cech inżynierów: ilu ich jest, co który teraz robi (z postępem) i ile roboty czeka w zasięgu cechu */
+function engineersStatus(b: GameState['buildings'][number], base: { text: string; level: 'ok' | 'warn' | 'bad' }): { text: string; level: 'ok' | 'warn' | 'bad' } {
+  const def = BUILDINGS[b.type]!;
+  const pop = game.units.filter((x) => x.owner === b.owner).length;
+  const ids = [b.worker, ...(b.crew ?? [])].filter((id) => id);
+  const want = crewWanted(def, pop);
+  const name = (o: GameState['buildings'][number]): string => t(BUILDINGS[o.type]!.name);
+  const doing: string[] = [];
+  for (const id of ids) {
+    const u = game.units.find((x) => x.id === id);
+    const o = u?.target ? game.buildings.find((x) => x.id === u.target) : undefined;
+    if (!u || !o || !(u.phase === Phase.ToRepair || u.phase === Phase.Repairing || u.phase === Phase.ToFetch)) continue;
+    if (o.build) {
+      const pct = Math.round(100 * (1 - o.build / Math.max(1, buildWork(o.type))));
+      doing.push(o.ruined ? tx(`odbudowuje: ${name(o)} (${pct}%)`, `rebuilding the ${name(o).toLowerCase()} (${pct}%)`) : tx(`pomaga budować: ${name(o)} (${pct}%)`, `helping to raise the ${name(o).toLowerCase()} (${pct}%)`));
+    } else {
+      const pct = Math.round((100 * o.hp) / maxHp(o.type));
+      doing.push(tx(`łata: ${name(o)} (${pct}%)`, `patching the ${name(o).toLowerCase()} (${pct}%)`));
+    }
+  }
+  const busy = new Set(ids.map((id) => game.units.find((x) => x.id === id)?.target ?? 0));
+  const waiting = game.buildings.filter((o) => !busy.has(o.id) && (o.ruined || !o.build) && engineerJob(game, b, o)).length;
+  const head = tx(`Inżynierów: ${ids.length} z ${want} (1 na ${def.crew!.per} mieszkańców, najwyżej ${def.crew!.max}). Odbudowują ruiny, łatają uszkodzone budynki (najpierw mury, bramy i wieże), pomagają przy budowie i gaszą pożary — w zasięgu ${def.area} pól od cechu.`,
+    `Engineers: ${ids.length} of ${want} (1 per ${def.crew!.per} inhabitants, at most ${def.crew!.max}). They rebuild ruins, patch damaged buildings (walls, gates and towers first), lend a hand on building sites and fight fires — within ${def.area} tiles of the guild.`);
+  const now = doing.length ? tx(`Teraz: ${doing.join('; ')}.`, `Now: ${doing.join('; ')}.`) : '';
+  const queue = waiting ? tx(`Czeka jeszcze w zasięgu: ${waiting}.`, `Still waiting within reach: ${waiting}.`) : '';
+  const level = ids.length < want && base.level === 'ok' ? 'warn' : base.level;
+  return { text: [head, now, queue, doing.length ? '' : base.text].filter(Boolean).join(' '), level };
 }
 
 /** Straż miejska do panelu twierdzy: ilu jest, szkolenie rekruta i co blokuje werbunek */

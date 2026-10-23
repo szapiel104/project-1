@@ -502,13 +502,13 @@ export function workerSystem(g: GameState): void {
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0;
     b.worker = u.id;
   }
-  // kopalnia: załoga rośnie z wioską (więcej mieszkańców = więcej ludzi w sztolni) i maleje, gdy wioska się kurczy
-  if (OREMINE >= 0 && g.tick % 10 === 0) {
+  // kopalnia i cech inżynierów: załoga rośnie z wioską (więcej mieszkańców = więcej ludzi w pracy) i maleje, gdy wioska się kurczy
+  if (g.tick % 10 === 0) {
     const pop = new Map<number, number>();
     for (const u of g.units) pop.set(u.owner, (pop.get(u.owner) ?? 0) + 1);
     for (const b of g.buildings) {
-      if (b.type !== OREMINE || b.build || b.off || !b.worker) continue;
       const def = BUILDINGS[b.type]!;
+      if (!def.crew || b.build || b.off || b.ruined || !b.worker) continue;
       const want = crewWanted(def, pop.get(b.owner) ?? 0);
       b.crew ??= [];
       // załoga bez brygadzisty nie zostaje (worker zwalnia się np. przy śmierci) — awans pierwszego z załogi robi dropWorker

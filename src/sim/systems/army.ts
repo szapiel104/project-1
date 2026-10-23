@@ -7,9 +7,9 @@ import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable, wallBetween } from '../path';
 import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type March, type QueuedMove, type Soldier, type Unit, keepCenter } from '../state';
-import { BUILDINGS, footprint, towerBonus, workArea } from '../../data/buildings';
+import { BUILDINGS, footprint, isTower, towerBonus, workArea } from '../../data/buildings';
 import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
-import { dayPart } from './workers';
+import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 
@@ -1158,11 +1158,14 @@ function repairSystem(g: GameState): void {
             if (done * L >= work * (b.delivered ?? 0)) continue; // inni już niosą — czeka na materiał
           }
         }
-        b.build = Math.max(0, b.build - 12); if (!b.build && b.ruined && !restore(g, b)) b.build = 1; continue;
+        // inżynier z cechu zna fach: buduje i odbudowuje dwa razy szybciej niż chłop z młotkiem
+        b.build = Math.max(0, b.build - (isEngineer(g, u) ? ENGINEER_BUILD : 12)); if (!b.build && b.ruined && !restore(g, b)) b.build = 1; continue;
       }
       if (b && !u.job) { u.target = 0; u.phase = Phase.Idle; continue; }
       if (!b || b.hp >= maxHp(b.type)) { u.target = 0; u.phase = Phase.Returning; continue; }
-      b.hp = Math.min(maxHp(b.type), b.hp + 15);
+      // pod okiem wroga nikt nie łata murów — inżynier wraca do cechu i czeka, aż wróg odejdzie
+      if (siteUnderThreat(g, b)) { u.target = 0; u.phase = Phase.Returning; continue; }
+      b.hp = Math.min(maxHp(b.type), b.hp + REPAIR_HP);
     }
   }
   // do każdego placu budowy przychodzi do trzech wolnych chłopów z młotkami
@@ -1197,17 +1200,55 @@ function repairSystem(g: GameState): void {
       crew++;
     }
   }
+  engineerOrders(g);
+}
+
+/** Ile wytrzymałości łata inżynier na raz (co 10 ticków) */
+export const REPAIR_HP = 15;
+/** O ile skraca budowę jeden inżynier na raz (chłop: 12) */
+export const ENGINEER_BUILD = 24;
+const isEngineer = (g: GameState, u: Unit): boolean => !!u.job && buildingById(g, u.job)?.type === ENGINEERS;
+/** Kolejność robót cechu: 0 = ruina do odbudowy, 1 = umocnienia i twierdza, 2 = reszta, 3 = pomoc przy nowej budowie */
+function engineerRank(b: Building): number {
+  const d = BUILDINGS[b.type]!;
+  if (b.build) return b.ruined ? 0 : 3;
+  return d.wall || d.gate || d.line || d.id === 'keep' || isTower(d.id) ? 1 : 2;
+}
+/** Co inżynier z cechu mógłby teraz robić przy tym budynku (ruina, uszkodzenie, nowa budowa) — w zasięgu cechu i bez wroga obok */
+export function engineerJob(g: GameState, guild: Building, b: Building): boolean {
+  if (b.owner !== guild.owner || b.id === guild.id || BUILDINGS[b.type]!.road) return false;
+  if (!b.build && b.hp >= maxHp(b.type)) return false;
+  const a = workArea(guild);
+  if (a) {
+    const fp = footprint(BUILDINGS[b.type]!, b.rot);
+    if (b.x + fp.w - 1 < a.x0 || b.x > a.x1 || b.y + fp.h - 1 < a.y0 || b.y > a.y1) return false;
+  }
+  return !siteUnderThreat(g, b);
+}
+/**
+ * Wolni inżynierowie z cechu biorą roboty w zasięgu cechu, każdy inną: najpierw ruiny (odbudowa), potem uszkodzone
+ * mury, bramy, wieże i twierdza, potem reszta (najbardziej rozbite pierwsze), a gdy nic nie trzeba łatać — pomagają przy nowej budowie.
+ */
+function engineerOrders(g: GameState): void {
+  const taken = new Set<number>();
+  for (const u of g.units) if ((u.phase === Phase.ToRepair || u.phase === Phase.Repairing || u.phase === Phase.ToFetch) && isEngineer(g, u)) taken.add(u.target);
+  // nocą i wieczorem nie zaczynają nowych robót (pożar gasi osobny system)
+  if (dayPart(g.tick) !== 'work') return;
   for (const guild of g.buildings) {
-    if (guild.type !== ENGINEERS || !guild.worker) continue;
-    const u = unitById(g, guild.worker);
-    if (!u || u.phase !== Phase.Idle || u.path.length) continue;
-    let best: Building | undefined, bd = Infinity;
-    for (const b of g.buildings) {
-      if (b.owner !== guild.owner || b.hp >= maxHp(b.type) || b.build) continue;
-      const d = Math.abs(b.x - guild.x) + Math.abs(b.y - guild.y);
-      if (d < bd) { bd = d; best = b; }
+    if (guild.type !== ENGINEERS || !guild.worker || guild.build || guild.ruined || guild.off) continue;
+    const free = crewOf(guild).map((id) => unitById(g, id)).filter((u): u is Unit => !!u && u.phase === Phase.Idle && !u.path.length && !u.bucket && u.carryRes < 0);
+    if (!free.length) continue;
+    const jobs = g.buildings.filter((b) => !taken.has(b.id) && engineerJob(g, guild, b));
+    if (!jobs.length) continue;
+    const [gx, gy] = [guild.x, guild.y];
+    jobs.sort((a, b) => engineerRank(a) - engineerRank(b) || a.hp * maxHp(b.type) - b.hp * maxHp(a.type) || (Math.abs(a.x - gx) + Math.abs(a.y - gy)) - (Math.abs(b.x - gx) + Math.abs(b.y - gy)) || a.id - b.id);
+    for (const u of free) {
+      const b = jobs.shift();
+      if (!b) break;
+      taken.add(b.id);
+      u.target = b.id; u.path = []; u.wait = 0; u.timer = 0;
+      if (!(b.build && sendForMaterial(g, u, b))) u.phase = Phase.ToRepair;
     }
-    if (best) { u.target = best.id; u.phase = Phase.ToRepair; }
   }
 }
 

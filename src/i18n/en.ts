@@ -228,7 +228,7 @@ export const en: Record<TextKey, string> = {
   'b.bakery': 'Bakery',
   'b.camp': 'Camp',
   'b.engineers': 'Engineers’ guild',
-  'd.engineers': 'Engineers carry away the rubble after demolition when there are not enough idle peasants.',
+  'd.engineers': 'Engineers rebuild ruins, patch battered walls and buildings, build twice as fast as peasants and fight fires — within 24 tiles. One per 8 inhabitants, four at most.',
   'b.poleturner': 'Spear maker’s workshop',
   'd.poleturner': 'The spear maker takes wood from the stockpile, shapes the shafts and fits the heads. Finished spears go to the armoury.',
   'b.barracks': 'Barracks',

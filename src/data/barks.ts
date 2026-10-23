@@ -82,6 +82,7 @@ const SAY_PL = {
   ],
   engineers: [
     'Taran nie zbuduje się sam.', 'Liczymy, mierzymy, potem tniemy.', 'Ten mur padnie, zobaczysz.', 'Belka krzywa? To nie ja.',
+    'Znowu ta palisada. Wczoraj łatałem.', 'Gdzie walnęli, tam ja z młotkiem.', 'Postawię, ale niech już nikt nie podpala.',
   ],
   stockpile: [
     'Deski do desek, kamień do kamienia.', 'Kto tu tak naskładał?', 'Liczę, liczę, ciągle się nie zgadza.', 'Miejsca coraz mniej.',
@@ -256,6 +257,7 @@ const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
   ],
   engineers: [
     'Ram won\'t build itself.', 'Measure twice, cut once.', 'That wall\'s coming down, you\'ll see.', 'Beam\'s crooked? Wasn\'t me.',
+    'This palisade again. Patched it only yesterday.', 'Wherever they smash it, there I go with my hammer.', 'I\'ll put it back up — just stop setting it alight.',
   ],
   stockpile: [
     'Planks with planks, stone with stone.', 'Who stacked this mess?', 'Counting and counting, never adds up.', 'Running out of room.',

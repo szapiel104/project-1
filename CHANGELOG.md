@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.32.0 — cech inżynierów: ekipa naprawcza z zasięgiem (2026-10-23)
+
+- Załoga cechu rośnie z wioską: jeden inżynier i jeden więcej na każde 8 mieszkańców, najwyżej czterech
+- Inżynierowie pracują w zasięgu 24 pól od cechu (przycisk zasięgu w oknie budynku), każdy przy innej robocie: najpierw ruiny po ataku, potem rozbite mury, bramy, wieże i twierdza, potem reszta (najbardziej zniszczone pierwsze), a gdy nie ma czego łatać — pomagają przy nowej budowie
+- Inżynier buduje i odbudowuje dwa razy szybciej niż chłop; pod okiem wroga nikt nie łata — wracają do cechu i czekają
+- Okno cechu pokazuje, ilu jest inżynierów, co który robi (z postępem) i ile roboty czeka w zasięgu
+- Nowy opis cechu, rozdział „Cech inżynierów” w „Jak grać” i nowe odzywki — po polsku i angielsku
+
 ## 0.30.28 — drwal ciągnie to samo drzewo, które ściął (2026-10-19)
 
 - Ścięte drzewo ciągnięte do chaty drwala to teraz ta sama odmiana z Poly Haven, która stała w lesie (jodła, sosna albo liściaste), w pełnej jakości — zamiast starego świerka z kodu

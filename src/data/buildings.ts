@@ -127,7 +127,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'roadSand', category: 'roads', name: 'b.roadSand', w: 1, h: 1, cost: {}, road: 1, buildable: true },
   { id: 'roadStone', category: 'roads', name: 'b.roadStone', w: 1, h: 1, cost: { stone: 1 }, road: 2, buildable: true },
   // Cech inżynierów: jego człowiek wynosi gruz po rozbiórkach, gdy brakuje chłopów bez pracy
-  { id: 'engineers', category: 'settlement', name: 'b.engineers', w: 2, h: 2, cost: { wood: 50, stone: 30 }, staff: true, buildable: true },
+  { id: 'engineers', category: 'settlement', name: 'b.engineers', w: 2, h: 2, cost: { wood: 50, stone: 30 }, staff: true, crew: { per: 8, max: 4 }, area: 24, buildable: true },
   // Warsztat włóczniarza: z drewna ze składu struga drzewca i oprawia groty
   {
     id: 'poleturner', category: 'military', name: 'b.poleturner', w: 2, h: 2, cost: { wood: 35 }, buildable: true,
