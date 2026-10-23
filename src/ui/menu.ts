@@ -39,6 +39,8 @@ export interface Settings {
   showFps?: boolean;
   /** Dymki z tym, co mówią ludzie po kliknięciu */
   bubbles?: boolean;
+  /** Numery grup nad oddziałami na mapie */
+  groupTags?: boolean;
   /** Podpowiedzi po najechaniu myszą: od razu, z opóźnieniem, wcale */
   tips?: 'now' | 'delay' | 'off';
   /** Tempo gry na starcie (0 = pauza) */
@@ -504,6 +506,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         choice(tx('Paski zdrowia', 'Health bars'), settings.hpBars ?? 'combat', [['always', tx('Zawsze', 'Always')], ['combat', tx('W walce', 'In combat')], ['selected', tx('Zaznaczeni', 'Selected')], ['never', tx('Nigdy', 'Never')]], (v) => { settings.hpBars = v; save(); }),
         check(tx('Licznik FPS w rogu ekranu', 'FPS counter in the screen corner'), settings.showFps ?? false, (v) => { settings.showFps = v; save(); }),
         check(tx('Dymki z tym, co mówią ludzie', 'Speech bubbles with what people say'), settings.bubbles ?? true, (v) => { settings.bubbles = v; save(); }),
+        check(tx('Numery grup nad oddziałami', 'Company numbers above your troops'), settings.groupTags ?? true, (v) => { settings.groupTags = v; save(); }),
         choice(tx('Podpowiedzi po najechaniu', 'Tooltips on hover'), settings.tips ?? 'now', [['now', tx('Od razu', 'Instantly')], ['delay', tx('Z opóźnieniem', 'Delayed')], ['off', tx('Wcale', 'Off')]], (v) => { settings.tips = v; save(); }),
         el('p', 'hint', tx('„W walce” — paski tylko nad rannymi i zaznaczonymi. Pełne statystyki wydajności zawsze pod klawiszem F3.', '“In combat” — bars only over the wounded and the selected. Full performance stats are always under F3.')),
         el('p', 'hint', tx('Powiększa albo pomniejsza całe menu, paski, okna budynków i wojska. 100% to wielkość dobrana do ekranu; na dużym monitorze daj więcej, na małym laptopie mniej. Zmiana działa od razu.', 'Scales the whole menu, bars, building and army windows up or down. 100% is the size fitted to your screen; go higher on a big monitor, lower on a small laptop. Takes effect at once.')),

@@ -159,7 +159,7 @@ Zrobione 13.10: niegubione rozkazy, szyk przeciąganiem z kierunkiem, formacje (
 Sterowanie:
 - ~~Kolejka rozkazów: Shift + prawy klik dodaje kolejny punkt trasy~~ (zrobione 17.10)
 - Patrol między dwoma punktami (np. wzdłuż palisady)
-- Numer grupy widoczny nad oddziałem / na portretach
+- ~~Numer grupy widoczny nad oddziałem / na portretach~~ — zrobione 23.10 (0.36.0)
 
 Walka:
 
@@ -213,7 +213,7 @@ Wydajność (więcej FPS):
 Wojsko — wygoda dowodzenia:
 - Zrobione 17.10: kolejka rozkazów (Shift + prawy klik) i patrol tam i z powrotem (P)
 - Dalej: kreski trasy z kolejki i patrolu widoczne na mapie przy zaznaczonym oddziale
-- Numer grupy widoczny nad oddziałem i na portretach
+- ~~Numer grupy widoczny nad oddziałem i na portretach~~ — zrobione 23.10 (0.36.0)
 Balans:
 - Gry bot kontra bot kończą się po ok. godzinie i zwykle przegrywa ten sam typ osady: ceny, tempo produkcji i siła fal do wyrównania (narzędzie: tools/soak)
 

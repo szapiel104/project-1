@@ -52,9 +52,11 @@ for m in d['static']:
     if not ok(m): continue
     unpack(m, (0, 0, 0))
 for sx in (-1, 1):
-    for m in filter(ok, d['leg']): unpack(m, (sx * d['hip'][0], d['hip'][1], d['hip'][2]))
+    lg = float(os.environ['LEGS']) if os.environ.get('LEGS') else 0.0  # LEGS = kąt nóg (siad: −1,45)
+    for m in filter(ok, d['leg']): unpack(m, (sx * d['hip'][0], d['hip'][1], d['hip'][2]), arm=lg)
     pa = float(os.environ['POSE'].split(',')[0]) if os.environ.get('POSE') else -0.25
-    for m in filter(ok, d['arm']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=pa if sx > 0 else 0.1)
+    la = float(os.environ['LARM']) if os.environ.get('LARM') else 0.1  # LARM = kąt lewej ręki (łucznik: ręka z łukiem)
+    for m in filter(ok, d['arm']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=pa if sx > 0 else la)
 # broń w prawej dłoni (miecz strażnika, topór zbója); STRIKE=1 — zamach znad głowy jak w grze
 STRIKE = os.environ.get('STRIKE') == '1'
 for key, rest, up, arm_rest, arm_up in (('sword', -0.55, -0.9, -0.15, -2.2), ('axe', -0.55, -0.75, -0.1, -2.4)):
@@ -91,6 +93,35 @@ if os.environ.get('SPEAR'):
         mt = bpy.data.materials.new('spm'); mt.use_nodes = True; mt.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (*col, 1); me.materials.append(mt)
     seg_mesh(0.0105, 0.009, -0.3, 0.54, (0.27, 0.19, 0.11))
     seg_mesh(0.012, 0.0001, 0.56, 0.715, (0.6, 0.62, 0.65))
+# łuk łucznika (składany w grze w kodzie): pionowy łuk w lewej dłoni, cięciwa po stronie łucznika
+if os.environ.get('LARM') and name == 'archer':
+    la = float(os.environ['LARM']); hx, hy, hz = d['hand']; S = d['shoulder']
+    c, s_ = math.cos(la), math.sin(la)
+    hp = Vector((-S[0] + hx, S[1] + hy * c - hz * s_, S[2] + hy * s_ + hz * c))
+    pts = []
+    chord, sag = 0.58, 0.07
+    for k in range(17):
+        t = k / 16 - 0.5
+        pts.append(hp + Vector((0, t * chord, sag * (1 - (2 * t) ** 2) + 0.0)))
+    me = bpy.data.meshes.new('bow'); vs = []; fs = []
+    for i, p in enumerate(pts):
+        for dx, dz in ((0.008, 0), (-0.008, 0), (0, 0.008)):
+            q = p + Vector((dx, 0, dz)); vs.append((q.x, -q.z, q.y))
+    for i in range(len(pts) - 1):
+        for j in range(3):
+            a, b = i * 3 + j, i * 3 + (j + 1) % 3
+            fs.append((a, b, b + 3, a + 3))
+    me.from_pydata(vs, [], fs)
+    ob = bpy.data.objects.new('bow', me); bpy.context.scene.collection.objects.link(ob)
+    mt = bpy.data.materials.new('bowm'); mt.use_nodes = True; mt.node_tree.nodes['Principled BSDF'].inputs['Base Color'].default_value = (0.2, 0.12, 0.06, 1); me.materials.append(mt)
+# BODY="przechył,przewrót,obniżenie" — cała postać obrócona jak ciało poległego w grze (oś x: na plecy/twarz, oś z: na bok)
+if os.environ.get('BODY'):
+    bx, bz, by = (float(v) for v in os.environ['BODY'].split(','))
+    from mathutils import Matrix as _MM
+    M = _MM.Translation((0, 0, by + 0.06)) @ _MM.Rotation(bx, 4, 'X') @ _MM.Rotation(-bz, 4, 'Y')
+    for o in list(bpy.context.scene.objects):
+        if o.type == 'MESH':
+            o.data.transform(M)
 sc = bpy.context.scene
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam)
 views = [(0.0, 0.0), (0.9, 0.0)]
@@ -105,6 +136,10 @@ r = float(sys.argv[4]) if len(sys.argv) > 4 else 2.6
 h = float(sys.argv[5]) if len(sys.argv) > 5 else 0.34
 cam.location = (math.sin(yaw) * r, -math.cos(yaw) * r, h + r * 0.1)
 cam.rotation_euler = (math.radians(84.3), 0, yaw)
+if os.environ.get('CAMDOWN'):  # CAMDOWN=stopnie — kamera z góry pod kątem (jak w grze), patrzy na punkt (0, h) przy ziemi
+    dn = math.radians(float(os.environ['CAMDOWN']))
+    cam.location = (math.sin(yaw) * r * math.cos(dn), -math.cos(yaw) * r * math.cos(dn), h + r * math.sin(dn))
+    cam.rotation_euler = (math.pi / 2 - dn, 0, yaw)
 sc.render.filepath = out
 bpy.ops.render.render(write_still=True)
 print('ok', out)

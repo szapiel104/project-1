@@ -123,8 +123,8 @@ export interface Hud {
   showPerson(person: { name: string; lines: string[]; walk?: boolean } | null): void;
   /** Zaznaczone wojsko: portret każdego żołnierza z paskiem zdrowia */
   /** Pasek wojska nad dolnym menu: grupy 1–9 i 0 oraz portrety zaznaczonych */
-  setArmyBar(v: { show: boolean; groups: { n: number; count: number; kind?: string }[]; active?: number; selected: { id: number; kind: string; hp: number; max: number; name: string }[] }): void;
-  showArmy(army: { id?: number; name: string; hp: number; max: number; kind?: string }[], ctl?: { form: number; stance: number; march: number; group?: number; patrol?: number }): void;
+  setArmyBar(v: { show: boolean; groups: { n: number; count: number; kind?: string }[]; active?: number; selected: { id: number; kind: string; hp: number; max: number; name: string; group?: number }[] }): void;
+  showArmy(army: { id?: number; name: string; hp: number; max: number; kind?: string; group?: number }[], ctl?: { form: number; stance: number; march: number; group?: number; patrol?: number }): void;
   toast(text: string): void;
   /** Zmienia tempo gry o jeden stopień (-1 wolniej, +1 szybciej) */
   stepSpeed(dir: number): void;
@@ -250,6 +250,14 @@ const SAPPER_PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria-hi
   <path d="M6 28L26 5" stroke="#7a5a36" stroke-width="2"/><path d="M21 3c3 0 6 2 7 5l-4-2-4 1z" fill="#8f949c" stroke="#1c120a" stroke-width=".8"/>
 </svg>`;
 /** Portret do karty jednostki: włócznik jako domyślny */
+/** Numer grupy w rogu portretu (złota cyfra, jak nad oddziałem na mapie) */
+const groupBadge = (card: HTMLElement, n: number | undefined): void => {
+  if (!n) return;
+  const b = document.createElement('span');
+  b.className = 'roster-grp';
+  b.textContent = String(n);
+  card.append(b);
+};
 const portraitOf = (kind: string | undefined): string => (kind === 'archer' ? ARCHER_PORTRAIT : kind === 'manatarms' ? MANATARMS_PORTRAIT : kind === 'sapper' ? SAPPER_PORTRAIT : PORTRAIT);
 
 export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
@@ -997,7 +1005,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const label = count ? tx(`Grupa ${sl.n}: ${count}. Klik: wybierz (dwa razy: kamera). Shift + klik: zapisz zaznaczonych. Prawy klik: wyczyść.`, `Group ${sl.n}: ${count}. Click: select (twice: camera). Shift + click: save selection. Right-click: clear.`) : tx(`Grupa ${sl.n} pusta. Klik albo Shift + ${sl.n}: zapisz zaznaczonych.`, `Group ${sl.n} empty. Click or Shift + ${sl.n}: save selection.`);
         if (sl.b.title !== label) { sl.b.title = label; sl.b.setAttribute('aria-label', label); }
       }
-      const key = v.selected.slice(0, 30).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}`).join() + v.selected.length;
+      const key = v.selected.slice(0, 30).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}:${u.group ?? 0}`).join() + v.selected.length;
       if (key === pickedKey) return;
       pickedKey = key;
       pickedBox.replaceChildren(...v.selected.slice(0, 30).map((u) => {
@@ -1011,6 +1019,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;
         bar.append(fill);
         card.append(bar);
+        groupBadge(card, u.group);
         card.addEventListener('click', (e) => events.onArmyUnit(u.id, e.shiftKey));
         return card;
       }));
@@ -1172,7 +1181,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(patrolBtn!, ctl?.patrol === 2 ? tx('Wskaż punkt…', 'Mark a point…') : ctl?.patrol === 1 ? tx('Na patrolu', 'On patrol') : tx('Patrol (P)', 'Patrol (P)'));
       setText(infoName, `${t('hud.soldiers')}: ${army.length}${ctl?.group ? ` · ${tx('grupa', 'group')} ${ctl.group}` : ''}`);
       // portrety odświeżamy tylko, gdy coś się zmieniło (przebudowa co klatkę gubiła kliknięcia)
-      const key = army.slice(0, 24).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}`).join() + army.length;
+      const key = army.slice(0, 24).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}:${u.group ?? 0}`).join() + army.length;
       if (key !== rosterKey) {
         rosterKey = key;
         roster.replaceChildren(...army.slice(0, 24).map((u) => {
@@ -1187,6 +1196,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           fill.style.width = `${Math.round((u.hp / u.max) * 100)}%`;
           bar.append(fill);
           card.append(bar);
+          groupBadge(card, u.group);
           return card;
         }));
         if (army.length > 24) roster.append(el('span', 'roster-more', `+${army.length - 24}`));

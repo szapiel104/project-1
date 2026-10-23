@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.36.0 — łucznik naciąga i sięga do kołczanu, różne upadki poległych, numery grup nad oddziałami (2026-10-23)
+
+- Łucznik w walce strzela fazami zamiast skoku do pozy: wypuszczenie (dłoń odskakuje od cięciwy), sięgnięcie przez bark do kołczanu, wyciągnięcie strzały, nałożenie jej na łuk i pełny naciąg bokiem do celu. Łuk zostaje pionowo w dłoni przez cały ruch; strzała leci w chwili wypuszczenia
+- Polegli padają na cztery sposoby: na plecy, na twarz, na bok albo osuwają się (siadają, a potem przewracają się na plecy, nogi kładą się płasko). Dotyczy wszystkich: chłopów, wojska, strażników, zbrojnych, saperów i zbójów
+- Numer grupy wisi nad oddziałem na mapie (złota cyfra na ciemnej tarczy, jaśniejsza, gdy grupa jest zaznaczona) i widnieje w rogu portretów zaznaczonych żołnierzy. Wyłącznik: Ustawienia → Interfejs → „Numery grup nad oddziałami”
+- „Jak grać”: numery grup opisane po polsku i angielsku
+- Podgląd z Blendera: łuk łucznika (`LARM`), pozy poległych (`BODY`, `LEGS`) i kamera z góry (`CAMDOWN`)
+
 ## 0.35.7 — poprawiony kosz koksownika (2026-10-23)
 
 - Pręty kosza koksownika rozchylają się teraz na zewnątrz i kończą w górnej obręczy (wcześniej szły do środka, a obręcz wisiała nad żarem jak samotne kółko)

@@ -347,6 +347,8 @@ export class Figures {
       const bowArm = (s: number, up: boolean): number => (up ? -1.5 : -s * 0.6);
       const drawArm = (s: number, up: boolean): number => (up ? -1.35 : s * 0.6);
       model(M, bowArm, drawArm);
+      // w walce strzał fazami (scene.ts: bowShot): pose[0] = ręka cięciwy, pose[3] = ręka z łukiem (łuk zawsze pionowo)
+      this.weaponArm = drawArm; this.freeArmRot = bowArm;
       // długi łuk: w dłoni, ale zawsze pionowo (druga oś obrotu znosi uniesienie ręki); cięciwa po stronie łucznika
       const chord = 0.58, sag = 0.07, R = (chord * chord / 4 + sag * sag) / (2 * sag), arc = 2 * Math.asin(chord / 2 / R);
       const bowSub = { at: new THREE.Vector3(M.hand[0]!, M.hand[1]!, M.hand[2]!), rot: (s: number, up: boolean): number => -bowArm(s, up) + (up ? 0 : 0.28) };
@@ -376,7 +378,7 @@ export class Figures {
    */
   /** grip: o ile obie ręce schodzą się do środka (oburęczny chwyt kilofa czy siekiery), w radianach; 0 = zwykle */
   /** `pose` = [kąt ręki z bronią, kąt broni w dłoni] — faza ciosu liczona w scenie (bandit: zamach zza głowy i cięcie) */
-  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number, grip = 0, pose?: [number, number, number?]): void {
+  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number, grip = 0, pose?: [number, number, number?, number?]): void {
     // ukryta postać (macierz o zerowej skali) nie zajmuje miejsca: karta graficzna liczy tylko widoczne
     const e = base.elements;
     if (e[0] === 0 && e[5] === 0 && e[10] === 0) return;
@@ -390,7 +392,7 @@ export class Figures {
     for (const p of this.parts) {
       if (p.lod !== lod) continue;
       if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
-      const r = pose && p.rot === this.weaponArm ? pose[0] : pose && p.rot === this.weaponRot ? pose[1] : pose && p.rot === this.freeArmRot ? p.rot(0, true) : work === undefined ? p.rot(swing, armsUp)
+      const r = pose && p.rot === this.weaponArm ? pose[0] : pose && p.rot === this.weaponRot ? pose[1] : pose && p.rot === this.freeArmRot ? (pose[3] ?? p.rot(0, true)) : work === undefined ? p.rot(swing, armsUp)
         : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
       // siedzi: obie nogi wyciągnięte przed siebie
       // oburęczny chwyt: ręce obrócone do środka (przed uniesieniem), dłonie spotykają się na stylisku
@@ -398,7 +400,8 @@ export class Figures {
       this.q.setFromEuler(this.e.set(sitLegs !== undefined && (p.rot === legL || p.rot === legR) ? sitLegs : r, 0, roll));
       // pchnięcie włócznią: cała broń przesuwa się wzdłuż drzewca (w przód postaci), nie tylko obraca
       this.local.compose(pose && p.rot === this.weaponRot ? this.gripAt(pose[0], pose[2] ?? 0) : p.pos, this.q, this.one);
-      if (p.sub) { this.q.setFromEuler(this.e.set(pose && p.rot === this.weaponArm ? pose[1] : p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
+      // łuk w dłoni ręki prowadzonej pozą: obrót odwrotny do ręki, więc łuk zostaje pionowo
+      if (p.sub) { this.q.setFromEuler(this.e.set(pose && p.rot === this.weaponArm ? pose[1] : pose && pose[3] !== undefined && p.rot === this.freeArmRot ? -pose[3] : p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);
       p.mesh.setMatrixAt(i, this.out);
       if (p.color) p.mesh.setColorAt(i, this.color.setHex(p.color(look)));

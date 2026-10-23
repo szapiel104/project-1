@@ -1254,12 +1254,18 @@ function patrolling(list: { grp?: number }[]): boolean {
   return !!grp && list.every((s) => s.grp === grp) && !!game.orders?.some((q) => q.owner === ME && q.grp === grp && q.patrol);
 }
 
+/** Numer grupy, do której należy żołnierz (najniższy, gdy jest w kilku); 0 = bez grupy */
+function groupOfUnit(id: number): number {
+  let best = 0;
+  for (const [n, ids] of groups) if (ids.includes(id) && (!best || n < best)) best = n;
+  return best;
+}
 function showArmy(): void {
   if (patrolPick && !chosen.size) { patrolPick = null; canvas.classList.remove('placing'); }
   const list = game.soldiers.filter((s) => chosen.has(s.id));
   if (list.length !== chosen.size) { chosen.clear(); for (const s of list) chosen.add(s.id); renderer.setSoldierSelection(chosen); }
   const st = new Set(list.map((s) => s.stance ?? 0));
-  hud.showArmy(list.map((s) => ({ id: s.id, name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1, march: armyMarch, group: groupOf(), patrol: patrolPick ? 2 : patrolling(list) ? 1 : 0 });
+  hud.showArmy(list.map((s) => ({ id: s.id, name: t(UNITS[s.kind]!.name), hp: s.hp, max: UNITS[s.kind]!.hp, kind: UNITS[s.kind]!.id, group: groupOfUnit(s.id) })), { form: armyForm, stance: st.size === 1 ? [...st][0]! : -1, march: armyMarch, group: groupOf(), patrol: patrolPick ? 2 : patrolling(list) ? 1 : 0 });
 }
 
 canvas.addEventListener('pointerdown', (e) => {
@@ -2123,10 +2129,10 @@ function armyBarUpdate(): void {
   });
   const sel = mine.filter((x) => chosen.has(x.id));
   const active = groupOf();
-  const key = `${mine.length > 0}|${gl.map((g) => `${g.n}:${g.count}:${g.kind}`).join()}|${active}|${sel.map((x) => `${x.id}:${x.hp}`).join()}`;
+  const key = `${mine.length > 0}|${gl.map((g) => `${g.n}:${g.count}:${g.kind}`).join()}|${active}|${sel.map((x) => `${x.id}:${x.hp}:${groupOfUnit(x.id)}`).join()}`;
   if (key === armyBarKey) return;
   armyBarKey = key;
-  hud.setArmyBar({ show: mine.length > 0 || groups.size > 0, groups: gl, active, selected: sel.map((x) => ({ id: x.id, kind: UNITS[x.kind]!.id, hp: x.hp, max: UNITS[x.kind]!.hp, name: t(UNITS[x.kind]!.name) })) });
+  hud.setArmyBar({ show: mine.length > 0 || groups.size > 0, groups: gl, active, selected: sel.map((x) => ({ id: x.id, kind: UNITS[x.kind]!.id, hp: x.hp, max: UNITS[x.kind]!.hp, name: t(UNITS[x.kind]!.name), group: groupOfUnit(x.id) })) });
 }
 setInterval(() => { if (game) armyBarUpdate(); }, 250);
 /** ?test=1&plan=1: przewodnik widoczny także w trybie testowym (do sprawdzania wyglądu) */
@@ -2324,8 +2330,44 @@ function chatter(): void {
   const [kind, id] = pool[Math.floor(Math.random() * pool.length)]!;
   if (kind === 'g') sayGuard(id); else if (kind === 'b') sayBandit(id); else speak(id);
 }
+// --- numery grup nad oddziałami: złota cyfra na ciemnej tarczy nad środkiem grupy (tylko moje, żywe, nie na wieżach) ---
+const groupTags = new Map<number, HTMLDivElement>();
+let groupTagMembers = new Map<number, number[]>();
+let groupTagAt = 0;
+function syncGroupTags(): void {
+  const now = performance.now();
+  // skład grup liczymy rzadziej (co 0,25 s), położenie co klatkę
+  if (now - groupTagAt > 250) {
+    groupTagAt = now;
+    const mine = new Set(game.soldiers.filter((x) => x.owner === ME && !x.post).map((x) => x.id));
+    groupTagMembers = new Map([...groups].map(([n, ids]) => [n, ids.filter((id) => mine.has(id))] as [number, number[]]).filter(([, l]) => l.length > 0));
+  }
+  const hide = menu.isOpen() || titleScreen || renderer.walking || gfx.groupTags === false;
+  const byId = new Map(game.soldiers.map((x) => [x.id, x]));
+  for (const [n, tag] of groupTags) if (hide || !groupTagMembers.has(n)) tag.hidden = true;
+  if (hide) return;
+  for (const [n, ids] of groupTagMembers) {
+    let x = 0, y = 0, k = 0;
+    for (const id of ids) { const s = byId.get(id); if (s) { x += s.px; y += s.py; k++; } }
+    if (!k) continue;
+    let tag = groupTags.get(n);
+    if (!tag) {
+      tag = document.createElement('div');
+      tag.className = 'group-tag';
+      tag.textContent = String(n);
+      tag.setAttribute('aria-hidden', 'true');
+      document.body.append(tag);
+      groupTags.set(n, tag);
+    }
+    const p = renderer.project(x / k / 256, y / k / 256);
+    tag.hidden = !p.front;
+    tag.classList.toggle('on', ids.some((id) => chosen.has(id)));
+    tag.style.transform = `translate(${Math.round(p.sx)}px, ${Math.round(p.sy - 58)}px) translate(-50%, -100%)`;
+  }
+}
 function sayLoop(): void {
   chatter();
+  if (game) syncGroupTags();
   if (!bubble.hidden) {
     const u = game.units.find((x) => x.id === sayUnit) ?? game.soldiers.find((x) => x.id === sayUnit);
     if (!u || performance.now() > sayUntil || menu.isOpen()) bubble.hidden = true;

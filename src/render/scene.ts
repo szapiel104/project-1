@@ -348,6 +348,32 @@ const SWORD_BLOWS: { keys: SwordKey[]; end: [number, number, number] }[] = [
   // z obrotem: krótki skręt, pełny obrót z wyciągniętym mieczem i cięcie na końcu obrotu
   { keys: [[0.5, ...GARDA], [0.68, -1.5, -0.15, 0.7], [1, -1.45, -0.05, 0.7 - Math.PI * 2]], end: [-1.45, -0.05, 0.7] },
 ];
+/** Strzał z łuku: [ręka cięciwy, ręka z łukiem, skręt ciała]; u: 0 = chwila strzału, 1 = następny strzał */
+const BOW_KEYS: [number, number, number, number][] = [
+  [0, -1.15, -1.5, -0.35],   // wypuszczenie: dłoń odskakuje od cięciwy do tyłu
+  [0.12, -1.05, -1.45, -0.3],
+  [0.3, -2.9, -0.95, 0],     // sięga przez bark do kołczanu, łuk opuszczony
+  [0.42, -2.55, -1.0, 0],    // wyciąga strzałę
+  [0.56, -1.5, -1.45, -0.15], // nakłada strzałę: obie dłonie przy łuku
+  [0.88, -1.32, -1.55, -0.35], // pełny naciąg, bokiem do celu (lewy bark do przodu), celuje
+  [1, -1.32, -1.55, -0.35],
+];
+function bowShot(u: number): [number, number, number] {
+  u = Math.min(1, Math.max(0, u));
+  for (let k = 1; k < BOW_KEYS.length; k++) {
+    const a = BOW_KEYS[k - 1]!, b = BOW_KEYS[k]!;
+    if (u <= b[0]) {
+      const t = (u - a[0]) / Math.max(1e-6, b[0] - a[0]), e = t * t * (3 - 2 * t);
+      return [a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e, a[3] + (b[3] - a[3]) * e];
+    }
+  }
+  return [BOW_KEYS[0]![1], BOW_KEYS[0]![2], BOW_KEYS[0]![3]];
+}
+/** Jak pada poległy: 0 na plecy (40%), 1 na twarz (25%), 2 na bok (20%), 3 osuwa się i przewraca na plecy (15%) */
+function deathKind(id: number): 0 | 1 | 2 | 3 {
+  const h = (Math.imul(id, 2654435761) >>> 0) % 100;
+  return h < 40 ? 0 : h < 65 ? 1 : h < 85 ? 2 : 3;
+}
 function swordCombo(hits: number, u: number): [number, number, number] {
   u = Math.min(1, Math.max(0, u));
   const prev = SWORD_BLOWS[(hits + SWORD_BLOWS.length - 1) % SWORD_BLOWS.length]!, next = SWORD_BLOWS[hits % SWORD_BLOWS.length]!;
@@ -4599,6 +4625,8 @@ export class GameRenderer {
       if (s.cd > pc) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);
       this.lastCd.set(s.id, s.cd);
       // miecz (strażnik miejski, zbrojny): kombinacja ciosów fazami według odliczania do ciosu; obrót ciała w poprzek ciosu
+      // łucznik: wypuszczenie, sięgnięcie do kołczanu, nałożenie strzały i naciąg (bokiem do celu) fazami do następnego strzału
+      const bowPose = ranged && (!!foe || !!wall || !!victim) && !walking && !this.calm ? bowShot(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
       const swordPose = (udef.guard || udef.id === 'manatarms') && (!!foe || !!wall || !!victim) && !walking && !this.calm
         ? swordCombo(this.hits.get(s.id) ?? 0, 1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
       // trafiony odchyla się do tyłu i lekko cofa na ułamek sekundy
@@ -4611,7 +4639,7 @@ export class GameRenderer {
       // stojący bez walki: przenosi ciężar, rozgląda się, przestępuje, opiera o włócznię; w marszu kołysze się z krokiem
       const ia = !walking && !striking && !foe && !wall && !victim && !this.calm ? idle(s.id, this.time, true) : undefined;
       const sway = ia ? ia.roll : walking ? Math.sin(st.phase) * 0.025 : 0;
-      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, heading + (towerAt ? 0 : ia?.yaw ?? 0) + (swordPose?.[2] ?? 0), sway, 'YXZ');
+      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, heading + (towerAt ? 0 : ia?.yaw ?? 0) + (swordPose?.[2] ?? bowPose?.[2] ?? 0), sway, 'YXZ');
       if (ia) t.position.y += ia.dy;
       t.scale.setScalar(1.08 * FIG);
       t.updateMatrix();
@@ -4631,7 +4659,7 @@ export class GameRenderer {
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
       this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
-      this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
+      this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined, 0, bowPose && [bowPose[0], 0, 0, bowPose[1]]);
       const heavy = udef.id === 'manatarms';
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
       // włócznik w walce: włócznia opuszczona na wroga, cofnięcie i pchnięcie fazami według odliczania do ciosu
@@ -4728,27 +4756,40 @@ export class GameRenderer {
       const fx = body.px / FP, fy = body.py / FP;
       const age = Math.min(1, (g.tick - body.at) / 6000);
       const y = view.heightAt(fx, fy);
-      // padanie: przez 0,7 s przewraca się do tyłu (coraz szybciej, z małym odbiciem przy ziemi), potem leży
-      const fall = Math.max(0, Math.min(1, (g.tick - body.at) / (TICKS_PER_SECOND * 0.7)));
+      // padanie — każdy pada inaczej (zależnie od numeru ciała): na plecy, na twarz, na bok albo osuwa się na ziemię
+      // i dopiero wtedy przewraca na plecy. Przewrót przyspiesza i kończy się małym odbiciem przy ziemi
+      const how = deathKind(body.id);
+      const fall = Math.max(0, Math.min(1, (g.tick - body.at) / (TICKS_PER_SECOND * (how === 3 ? 1.4 : 0.7))));
       // krzyk w chwili śmierci (raz)
       if (fall < 0.3 && !this.calm && !this.screamed.has(body.id)) { this.screamed.add(body.id); this.voiceAt('scream', fx - width / 2, fy - height / 2, 1); }
       const ease = fall < 0.85 ? (fall / 0.85) ** 2 : 1 - Math.sin(((fall - 0.85) / 0.15) * Math.PI) * 0.06;
       const yaw = this.fallYaw.get(body.id) ?? ((body.id * 2.39) % 6.28);
-      lay.setFromEuler(new THREE.Euler((-Math.PI / 2 + 0.08) * (this.calm ? 1 : ease), yaw, 0, 'YXZ'));
-      sc.set(1.05 * FIG, 1.05 * FIG, 1.05 * FIG * (1 - age * 0.55));
-      m.compose(new THREE.Vector3(fx - width / 2, y + (0.06 - age * 0.04) * (this.calm ? 1 : ease), fy - height / 2), lay, sc);
+      const e = this.calm ? 1 : ease;
+      // osuwa się: najpierw siada (nogi w przód, ciało w dół), potem przewraca się na plecy, a nogi kładą się płasko
+      const e1 = how === 3 ? (this.calm ? 1 : Math.min(1, fall / 0.45) ** 2) : 0;
+      const e2 = how === 3 ? (this.calm ? 1 : Math.max(0, (fall - 0.45) / 0.55) ** 2) : 0;
+      const side = (body.id & 1) ? 1 : -1;
+      const tilt = how === 1 ? (Math.PI / 2 - 0.08) * e : how === 3 ? (-Math.PI / 2 + 0.08) * e2 : how === 2 ? -0.1 * e : (-Math.PI / 2 + 0.08) * e;
+      const roll = how === 2 ? side * (Math.PI / 2 - 0.12) * e : 0;
+      lay.setFromEuler(new THREE.Euler(tilt, yaw, roll, 'YXZ'));
+      // rozkład spłaszcza ciało w grubości: u leżącego na boku w osi barków, u reszty przód–tył
+      const flat = 1 - age * 0.55;
+      sc.set(1.05 * FIG * (how === 2 ? flat : 1), 1.05 * FIG, 1.05 * FIG * (how === 2 ? 1 : flat));
+      const sink = how === 3 ? -0.21 * 1.05 * FIG * e1 * (1 - e2) : 0;
+      m.compose(new THREE.Vector3(fx - width / 2, y + sink + (0.06 - age * 0.04) * (how === 3 ? e2 : e), fy - height / 2), lay, sc);
+      const legs = how === 3 ? -1.45 * e1 * (1 - e2) : undefined;
       const team = body.owner >= 0 && !g.players[body.owner] ? BANDIT_COLOR : TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
       const rot = new THREE.Color(team).lerp(new THREE.Color(0x3b3226), 0.3 + age * 0.6).getHex();
       // każdy leży w swoim stroju: chłop, łucznik, strażnik miejski albo włócznik
       const ud = body.kind >= 0 ? UNITS[body.kind] : undefined;
       // każde ciało rysuje się tylko jednym modelem (wcześniej chłop, strażnik i zbrojny leżeli dodatkowo jako włócznik)
-      if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); }
-      else if (ud?.sapper) { if (sc2 < 256) this.sapperBodies.set(sc2++, m, 0.3, false, team, body.id); }
-      else if (ud?.bandit) { if (bc < 256) this.banditBodies.set(bc++, m, 0.3, false, team, body.id); }
-      else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id); }
-      else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id); }
-      else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id); }
-      else this.bodies.set(sp++, m, 0.3, false, rot, body.id);
+      if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id, undefined, -0.5, false, legs); }
+      else if (ud?.sapper) { if (sc2 < 256) this.sapperBodies.set(sc2++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
+      else if (ud?.bandit) { if (bc < 256) this.banditBodies.set(bc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
+      else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
+      else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
+      else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id, undefined, -0.5, false, legs); }
+      else this.bodies.set(sp++, m, 0.3, false, rot, body.id, undefined, -0.5, false, legs);
       // poległy chorąży: drzewce przewraca się na bok razem z nim i proporzec leży na ziemi obok ciała
       if (this.fallenBearers.has(body.id) && g.players[body.owner]) {
         const k = this.calm ? 1 : ease;
