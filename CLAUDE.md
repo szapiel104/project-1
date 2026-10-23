@@ -3,6 +3,12 @@
 - Rozmowa i teksty po polsku. Michał wdraża i ocenia wygląd sam; pracujemy małymi partiami, push na main = wdrożenie (GitHub Pages).
 - Gra tylko na komputery (telefony zablokowane w src/boot.ts).
 
+## Git — obowiązkowo dla każdego czatu (Michał, 23.10.2026)
+Nad grą pracuje kilka czatów naraz, więc:
+1. **Przed rozpoczęciem każdej roboty** (także kolejnej w tym samym czacie): `git pull --rebase origin main` — praca zawsze na najnowszym stanie.
+2. **Przed każdym pushem:** `git fetch origin main && git rebase origin/main`, a po rebase **pełne sprawdzenie od nowa:** `npx tsc --noEmit && npx vitest run && npm run build`. Push dopiero, gdy wszystko przejdzie (zmiany innego czatu mogą logicznie gryźć się z naszymi, nawet bez konfliktu w git).
+3. Konflikt przy rebase rozwiązujemy ręcznie, zachowując zmiany obu czatów — nigdy `--force` ani nadpisywanie cudzych zmian.
+
 ## Dwa języki: polski i angielski (obowiązkowo dla każdego czatu, od 17.10.2026)
 - Każdy nowy budynek, jednostka, surowiec, okno, przycisk, komunikat i podpowiedź dostaje od razu **obie wersje**. Bez angielskiej wersji zmiana nie jest skończona.
 - Stałe teksty (nazwy i opisy budynków, jednostek, surowców): klucz w `src/i18n/pl.ts` **i** ta sama linijka w `src/i18n/en.ts`, w kodzie `t('klucz')`. `en.ts` jest typowany kluczami z `pl.ts`, więc brakujące tłumaczenie wywala `tsc`; `tests/i18n.test.ts` sprawdza dodatkowo, że każdy budynek z `BUILDINGS` ma nazwę w obu językach.
