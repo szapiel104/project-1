@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.33.4 — porządki: kruki, oczy w puszczy, kałuże i iskry w osobnych plikach (2026-10-23)
+
+- Bez zmian w grze. Ze `scene.ts` wyniesione: kruki na ciałach (`src/render/crows.ts`), czerwone oczy nocą w puszczy (`foresteyes.ts`), kałuże na drogach (`puddles.ts`) i iskry z „+1” przy nowym żołnierzu z koszar (`spawnfx.ts`) — `scene.ts` krótszy o ok. 190 linii
+- Nowe testy rysują te części bez przeglądarki
+
 ## 0.33.3 — porządki: wilki w osobnym pliku (2026-10-23)
 
 - Bez zmian w grze. Rysowanie wilków (żywe, zabite, znaczki polowania i linia do celu) wyniesione z `scene.ts` do `src/render/wolves.ts` — `scene.ts` krótszy o ok. 170 linii

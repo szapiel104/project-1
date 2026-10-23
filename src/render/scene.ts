@@ -21,8 +21,11 @@ import { Clutter } from './clutter';
 import { Chips } from './chips';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
-import { crowParts } from './creatures';
 import { WolfLayer } from './wolves';
+import { CrowLayer } from './crows';
+import { ForestEyes } from './foresteyes';
+import { PuddleLayer } from './puddles';
+import { SpawnFx } from './spawnfx';
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
@@ -367,10 +370,6 @@ export class GameRenderer {
   /** Herby graczy na chorągwiach (numer herbu z konta; brak = stały herb z numeru gracza) */
   private crests: (number | null)[] = [];
   /** Wyjście nowego żołnierza z koszar: złote iskry w górę, błysk i „+1” (tylko wygląd) */
-  private knownSoldiers: Set<number> | null = null;
-  private sparks: { p: THREE.Vector3; v: THREE.Vector3; t: number; life: number }[] = [];
-  private sparkMesh: THREE.InstancedMesh | null = null;
-  private plusIcons: { s: THREE.Sprite; t: number }[] = [];
   /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
   private towerPose = new Map<number, [number, number]>();
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
@@ -1100,7 +1099,7 @@ export class GameRenderer {
     this.clouds.reset();
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
-    this.knownSoldiers = null;
+    this.spawnFx.reset();
     this.view.grassReach(this.grassReach);
     this.scene.add(this.view.group);
     this.snowNow = -1; this.seasonScan = 0;
@@ -1667,7 +1666,7 @@ export class GameRenderer {
     // po deszczu długo jest mokro: błoto i kałuże schną powoli
     this.wet = Math.max(0, Math.min(1, this.wet + (this.rain > 0.15 ? dt * 0.12 : -dt * 0.003)));
     if (Math.abs(this.wet - this.wetShown) > 0.01) { this.view?.setWet(this.wet); setWetBuildings(this.wet); this.wetShown = this.wet; }
-    if (g && this.view) this.syncPuddles(g, this.view);
+    if (g && this.view) this.puddleLayer.sync(g, this.view, this.wet, this.roadSum);
     if (!this.rainLines) {
       // dwie identyczne warstwy jedna nad drugą: przesuwanie o 25 w kółko jest niewidoczne
       const n = 1500, pos = new Float32Array(n * 12);
@@ -2391,7 +2390,7 @@ export class GameRenderer {
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
-      T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.syncCrows(g, v); this.syncForestEyes(g, v); this.syncVillage(g, v, dt); });
+      T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.forestEyes.sync(g, v, { time: this.time, calm: this.calm, night: this.night }); this.syncVillage(g, v, dt); });
       T('budynki razem', () => this.syncBatches());
       T('kadr', () => { this.cullInstances(); this.cullVegetation(v); });
     }
@@ -2982,169 +2981,14 @@ export class GameRenderer {
   private dayMist = 0;
   get weatherText(): string { return this.rain > 0.3 ? tx('deszcz', 'rain') : this.dayMist > 0.4 ? tx('mgła', 'mist') : this.cover > 0.4 ? tx('pochmurno', 'overcast') : tx('pogodnie', 'fair'); }
   private wetShown = -1;
-  private puddles: THREE.InstancedMesh | null = null;
-  private puddleKey = '';
-  /** Kałuże na ścieżkach gruntowych (co któreś pole), widoczne tylko gdy mokro */
-  private syncPuddles(g: GameState, view: TerrainView): void {
-    if (!this.puddles) {
-      this.puddles = new THREE.InstancedMesh(new THREE.CircleGeometry(0.5, 18).rotateX(-Math.PI / 2),
-        new THREE.MeshStandardMaterial({ color: 0x3a3c38, roughness: 0.05, metalness: 0.5, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4 }), 1024);
-      this.puddles.frustumCulled = false; this.puddles.renderOrder = 1;
-      this.scene.add(this.puddles);
-    }
-    (this.puddles.material as THREE.MeshStandardMaterial).opacity = Math.min(0.85, this.wet * 1.6);
-    this.puddles.visible = this.wet > 0.03;
-    if (!this.puddles.visible) return;
-    const key = `${this.roadSum}`;
-    if (key === this.puddleKey) return;
-    this.puddleKey = key;
-    const { width, height } = g.map;
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3();
-    let n = 0;
-    for (let t = 0; t < g.roads.length && n < 1024; t++) {
-      if (g.roads[t] !== 1) continue;
-      const hsh = (t * 2654435761) >>> 0;
-      if (hsh % 3 !== 0) continue;
-      const x = (t % width) + 0.3 + ((hsh >>> 8) & 255) / 640, y = Math.floor(t / width) + 0.3 + ((hsh >>> 16) & 255) / 640;
-      q.setFromAxisAngle(new THREE.Vector3(0, 1, 0), (hsh & 63) / 10);
-      m.compose(p.set(x - width / 2, view.heightAt(x, y) + 0.05, y - height / 2), q, sc.set(0.5 + ((hsh >>> 4) & 15) / 30, 1, 0.3 + ((hsh >>> 12) & 15) / 40));
-      this.puddles.setMatrixAt(n++, m);
-    }
-    this.puddles.count = n;
-    touch(this.puddles);
-  }
+  /** Kałuże (src/render/puddles.ts) */
+  private puddleLayer = new PuddleLayer(this.scene);
 
-  private crows: THREE.InstancedMesh | null = null;
-  /** Kruki w locie: jedna siatka na klatkę machania skrzydłami (model CC0 z animacją lotu) */
-  private crowFly: THREE.InstancedMesh[] = [];
-  /** Kruki na ciałach poległych: dziobią, podskakują; gdy ktoś podejdzie, zrywają się i krążą nad ciałem, aż odejdzie */
-  private syncCrows(g: GameState, view: TerrainView): void {
-    if (!this.crows) {
-      const c = crowParts();
-      this.crows = new THREE.InstancedMesh(c.stand, c.mat, 256);
-      this.crows.frustumCulled = false; this.crows.castShadow = true;
-      this.scene.add(this.crows);
-      this.crowFly = c.fly.map((geo) => { const m = new THREE.InstancedMesh(geo, c.mat, 128); m.frustumCulled = false; m.castShadow = true; m.count = 0; this.scene.add(cat(m, 'kruki')); return m; });
-    }
-    const { width, height } = g.map;
-    const t = this.tmp;
-    const F = this.crowFly.length;
-    const flyN = new Array<number>(F).fill(0);
-    let n = 0, total = 0;
-    // Kruków ma być garść na całe pobojowisko, nie 1–3 na każde ciało: ciała liczymy w polach 10×10,
-    // pole dostaje 2 kruki + 1 na każde kolejne 8 ciał (najwyżej 6), a na całą mapę najwyżej 18.
-    const CELL = 10 * FP;
-    const bodies = new Map<number, number>();
-    for (const body of g.corpses) {
-      if (body.taken || g.tick - body.at < 150) continue;
-      const key = Math.floor(body.px / CELL) * 4096 + Math.floor(body.py / CELL);
-      bodies.set(key, (bodies.get(key) ?? 0) + 1);
-    }
-    const used = new Map<number, number>();
-    for (const body of g.corpses) {
-      if (total >= 18) break;
-      if (body.taken || g.tick - body.at < 150) continue; // przylatują chwilę po śmierci
-      const key = Math.floor(body.px / CELL) * 4096 + Math.floor(body.py / CELL);
-      const budget = Math.min(6, 2 + Math.floor(((bodies.get(key) ?? 1) - 1) / 8));
-      const had = used.get(key) ?? 0;
-      if (had >= budget) continue;
-      // nie każde ciało ma kruka: przy większej liczbie ciał w polu tylko co któreś (stałe dla danego ciała)
-      if ((bodies.get(key) ?? 1) > 3 && (body.id * 2654435761 >>> 0) % 3 !== 0) continue;
-      const count = Math.min(1 + (body.id % 2), budget - had, 18 - total);
-      used.set(key, had + count);
-      total += count;
-      const near = g.units.some((u) => Math.abs(u.px - body.px) < 2.5 * FP && Math.abs(u.py - body.py) < 2.5 * FP)
-        || g.soldiers.some((s) => Math.abs(s.px - body.px) < 2.5 * FP && Math.abs(s.py - body.py) < 2.5 * FP);
-      const bx = body.px / FP, by = body.py / FP;
-      for (let i = 0; i < count; i++) {
-        if (near) {
-          // spłoszone: krążą nad ciałem na różnych wysokościach, machając skrzydłami
-          const ang = (this.calm ? 0 : this.time) * (0.9 + i * 0.15) + body.id + i * 2.1;
-          const r = 1.1 + i * 0.35;
-          const x = bx + Math.cos(ang) * r, y = by + Math.sin(ang) * r;
-          t.position.set(x - width / 2, view.heightAt(bx, by) + 1.6 + i * 0.35 + Math.sin(ang * 2) * 0.12, y - height / 2);
-          // leci po okręgu (stycznie), lekko przechylony do środka zakrętu
-          t.rotation.set(0, Math.atan2(-Math.sin(ang), Math.cos(ang)), -0.35, 'YXZ');
-          t.scale.setScalar(1.1);
-          t.updateMatrix();
-          const f = Math.floor(((this.calm ? 0 : this.time) * 9 + i * 2.7 + body.id) % F);
-          const mesh = this.crowFly[f]!;
-          if (flyN[f]! < 128) mesh.setMatrixAt(flyN[f]!++, t.matrix);
-          continue;
-        }
-        const a = body.id * 1.7 + i * 2.3, r = 0.28 + (i % 2) * 0.12;
-        const k = this.calm ? 0 : this.time * 3 + body.id + i * 1.9;
-        const hop = Math.max(0, Math.sin(k * 0.7)) > 0.97 ? 0.05 : 0;
-        const x = bx + Math.cos(a) * r, y = by + Math.sin(a) * r;
-        t.position.set(x - width / 2, view.heightAt(x, y) + hop, y - height / 2);
-        // dziobanie: tułów pochyla się do ciała (przód modelu w +z)
-        t.rotation.set(Math.max(0, Math.sin(k * 2.3)) * 0.5, Math.atan2(-Math.cos(a), -Math.sin(a)), 0, 'YXZ');
-        t.scale.setScalar(1);
-        t.updateMatrix();
-        this.crows.setMatrixAt(n++, t.matrix);
-      }
-    }
-    this.crows.count = n;
-    touch(this.crows);
-    this.crowFly.forEach((m, f) => { m.count = flyN[f]!; m.visible = m.count > 0; touch(m); });
-  }
+  /** Kruki (src/render/crows.ts) */
+  private crowLayer = new CrowLayer(this.scene);
 
-  private syncSpawnFx(g: GameState, view: TerrainView): void {
-    const W = g.map.width, H = g.map.height;
-    if (!this.knownSoldiers) { this.knownSoldiers = new Set(g.soldiers.map((s) => s.id)); return; }
-    const doors = new Set(g.buildings.filter((b) => BUILDINGS[b.type]!.id === 'barracks').map((b) => b.door));
-    for (const s of g.soldiers) {
-      if (this.knownSoldiers.has(s.id)) continue;
-      this.knownSoldiers.add(s.id);
-      const tile = (s.py >> 8) * W + (s.px >> 8);
-      if (!doors.has(tile) || this.calm) continue;
-      const x = s.px / FP - W / 2, z = s.py / FP - H / 2, y = view.heightAt(s.px / FP, s.py / FP);
-      for (let i = 0; i < 26; i++) {
-        const a = Math.random() * Math.PI * 2, r = 0.4 + Math.random() * 0.9;
-        this.sparks.push({ p: new THREE.Vector3(x, y + 0.15 + Math.random() * 0.3, z), v: new THREE.Vector3(Math.cos(a) * r * 0.6, 1.1 + Math.random() * 1.3, Math.sin(a) * r * 0.6), t: 0, life: 0.7 + Math.random() * 0.6 });
-      }
-      // „+1” nad drzwiami, unosi się i gaśnie
-      const c = document.createElement('canvas'); c.width = 96; c.height = 64;
-      const ctx = c.getContext('2d')!;
-      ctx.font = 'bold 44px Cinzel, Georgia, serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-      ctx.lineWidth = 6; ctx.strokeStyle = '#2a1406'; ctx.strokeText('+1', 48, 34);
-      ctx.fillStyle = '#ffe08a'; ctx.fillText('+1', 48, 34);
-      const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, fog: false }));
-      sp.renderOrder = 12; sp.scale.set(0.6, 0.4, 1); sp.position.set(x, y + 1.0, z);
-      this.scene.add(sp); this.plusIcons.push({ s: sp, t: 0 });
-    }
-    for (const id of this.knownSoldiers) if (!g.soldiers.some((s) => s.id === id)) this.knownSoldiers.delete(id);
-    // ruch iskier: lecą w górę, zwalniają, opadają i gasną
-    const dt = 1 / 60;
-    if (!this.sparkMesh) {
-      // okrągła, miękka iskra (jasny środek, złota poświata), nie kwadracik
-      const c = document.createElement('canvas'); c.width = c.height = 32;
-      const x = c.getContext('2d')!, gr = x.createRadialGradient(16, 16, 0, 16, 16, 16);
-      gr.addColorStop(0, 'rgba(255,250,220,1)'); gr.addColorStop(0.25, 'rgba(255,200,90,0.9)'); gr.addColorStop(1, 'rgba(255,120,20,0)');
-      x.fillStyle = gr; x.fillRect(0, 0, 32, 32);
-      const sparkTex = new THREE.CanvasTexture(c);
-      this.sparkMesh = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.09, 0.09), new THREE.MeshBasicMaterial({ map: sparkTex, color: 0xffffff, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide }), 512);
-      this.sparkMesh.frustumCulled = false; this.sparkMesh.renderOrder = 11; this.scene.add(this.sparkMesh);
-    }
-    this.sparks = this.sparks.filter((k) => (k.t += dt) < k.life);
-    const m = new THREE.Matrix4(), q = this.cam.camera.quaternion, sc = new THREE.Vector3();
-    let n = 0;
-    for (const k of this.sparks) {
-      k.v.y -= 1.6 * dt; k.v.multiplyScalar(0.985); k.p.addScaledVector(k.v, dt);
-      const f = 1 - k.t / k.life;
-      sc.setScalar(0.5 + f);
-      if (n < 512) this.sparkMesh.setMatrixAt(n++, m.compose(k.p, q, sc));
-    }
-    this.sparkMesh.count = n; touch(this.sparkMesh);
-    this.plusIcons = this.plusIcons.filter((p) => {
-      p.t += dt;
-      p.s.position.y += dt * 0.5;
-      (p.s.material as THREE.SpriteMaterial).opacity = Math.max(0, 1 - Math.max(0, p.t - 0.6) / 0.8);
-      if (p.t > 1.4) { this.scene.remove(p.s); (p.s.material as THREE.SpriteMaterial).map?.dispose(); p.s.material.dispose(); return false; }
-      return true;
-    });
-  }
+  /** Iskry i „+1” przy nowym żołnierzu (src/render/spawnfx.ts) */
+  private spawnFx = new SpawnFx(this.scene);
 
   /** Flagi zbiórki: nad polem, na które idą nowi żołnierze z koszar (tylko moje koszary) */
   private syncRallyFlags(g: GameState, view: TerrainView): void {
@@ -3245,43 +3089,8 @@ export class GameRenderer {
     touch(this.arrowTrail);
   }
 
-  private eyes: THREE.InstancedMesh | null = null;
-  private eyeSpots: { a: number; d: number; speed: number; blink: number }[] = [];
-  /** Nocą w lesie za mapą świecą czerwone oczy: pary krążą wolno, mrugają, czasem znikają między drzewami */
-  private syncForestEyes(g: GameState, view: TerrainView): void {
-    const on = this.night > 0.35;
-    if (!this.eyes) {
-      const pair = mergeGeometries([new THREE.SphereGeometry(0.035, 6, 4).translate(-0.06, 0, 0), new THREE.SphereGeometry(0.035, 6, 4).translate(0.06, 0, 0)])!;
-      this.eyes = new THREE.InstancedMesh(pair, new THREE.MeshBasicMaterial({ color: 0xff3322, fog: false }), 48);
-      this.eyes.frustumCulled = false;
-      this.scene.add(this.eyes);
-      for (let i = 0; i < 48; i++) this.eyeSpots.push({ a: (i / 48) * Math.PI * 2 + Math.random() * 0.1, d: 1.5 + Math.random() * 6, speed: (Math.random() - 0.5) * 0.02, blink: Math.random() * 10 });
-    }
-    this.eyes.visible = on;
-    if (!on) return;
-    const { width, height } = g.map;
-    const t = this.tmp;
-    // więcej oczu, gdy wataha jest na mapie
-    const shown = g.wolves.length ? 48 : 30;
-    for (let i = 0; i < 48; i++) {
-      const e = this.eyeSpots[i]!;
-      if (!this.calm) e.a += e.speed * 0.016;
-      // punkt na brzegu mapy (prostokąt), odsunięty w las
-      const per = (((e.a / (Math.PI * 2)) % 1) + 1) % 1, L = 2 * (width + height);
-      let p = per * L, x = 0, y = 0, nx = 0, ny = 0;
-      if (p < width) { x = p; y = 0; ny = -1; } else if ((p -= width) < height) { x = width; y = p; nx = 1; } else if ((p -= height) < width) { x = width - p; y = height; ny = 1; } else { p -= width; x = 0; y = height - p; nx = -1; }
-      x += nx * e.d + Math.sin(this.time * 0.3 + i) * 0.4; y += ny * e.d + Math.cos(this.time * 0.25 + i) * 0.4;
-      // mrugnięcie i chowanie się za drzewami
-      const k = (this.time + e.blink) % 9;
-      const open = i < shown && !(k > 8.7 || (k > 4 && k < 4.6 && i % 3 === 0));
-      t.position.set(x - width / 2, view.heightAt(Math.max(0, Math.min(width, x)), Math.max(0, Math.min(height, y))) + 0.35 + (i % 4) * 0.05, y - height / 2);
-      t.rotation.set(0, Math.atan2(-nx, -ny), 0);
-      t.scale.set(1, open ? 1 : 0.05, 1);
-      t.updateMatrix();
-      this.eyes.setMatrixAt(i, t.matrix);
-    }
-    touch(this.eyes);
-  }
+  /** Oczy w puszczy (src/render/foresteyes.ts) */
+  private forestEyes = new ForestEyes(this.scene);
 
   private dustAt = new Map<number, number>();
   /** Gruzowiska na miejscu zniszczonych budynków (do odbudowy) */
@@ -4728,7 +4537,7 @@ export class GameRenderer {
     this.flyArrows();
     this.syncTowerIcons(g);
     this.syncRallyFlags(g, view);
-    this.syncSpawnFx(g, view);
+    this.spawnFx.sync(g, view, this.cam.camera, this.calm);
     this.chips.step(1 / 60);
     this.soldierTorches.count = torches;
     touch(this.soldierTorches);
