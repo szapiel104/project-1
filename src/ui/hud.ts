@@ -1,6 +1,6 @@
 import { me, onAccount } from '../net/supa';
 import { avatarSvg } from './avatars';
-import { BUILDINGS, CATEGORIES, type BuildingDef, type CategoryId } from '../data/buildings';
+import { BUILDINGS, CATEGORIES, isTower, type BuildingDef, type CategoryId } from '../data/buildings';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, type ResourceId } from '../data/resources';
 import { RULES } from '../data/rules';
@@ -1324,7 +1324,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(demolish, i.ruined ? tx('Porzuć ruinę', 'Abandon the ruins') : t('hud.demolish'));
       areaBtn.hidden = i.area === undefined;
       mineBtn.hidden = !(i.own && i.def.id === 'oremine');
-      const shot = i.def.id === 'watchtower' || i.def.id === 'stoneTower';
+      const shot = isTower(i.def.id);
       setText(areaBtn, shot ? (i.area ? tx('Ukryj zasięg strzału', 'Hide firing range') : tx('Pokaż zasięg strzału', 'Show firing range')) : i.area ? tx('Ukryj teren pracy', 'Hide work area') : tx('Pokaż teren pracy', 'Show work area'));
       areaBtn.setAttribute('aria-pressed', String(!!i.area));
       trainBtn.hidden = true;

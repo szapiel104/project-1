@@ -104,6 +104,8 @@ export interface Building {
   raidDay?: number;
   /** Kopalnia: do którego ticku trwa alarm (wróg pod kopalnią — załoga uciekła i czeka w ukryciu) */
   threat?: number;
+  /** Mur kamienny albo kamienna wieża: stoi na nim koksownik (łucznicy obok strzelają ognistymi strzałami) */
+  brazier?: number;
   /** Czy pochodnia przy budynku jest zapalona (zapalają ją ludzie o zmierzchu, gaśnie o świcie) */
   lit: boolean;
   /** Wytrzymałość; spada od ciosów wroga, naprawia ją inżynier */

@@ -38,13 +38,13 @@ import { tx } from '../i18n';
 import { GearPool } from './gearpool';
 import { propGeometry, propMaterial } from './props';
 import { enableShadowLayer } from './shadowlayer';
-import { animateBuilding, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, STONE_TOWER_TOP, WATCH_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
+import { animateBuilding, brazierModel, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, TOWER_TOP, towerBrazierAt, WATCH_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { applyCrest, bannerGeometry, bannerMaterial, defaultCrest, flagTime } from './banners';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
-import { peasantWeapon } from '../sim/systems/army';
+import { fireArrow, peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
 import { COLD, weatherOf, yearPos } from '../sim/weather';
@@ -75,6 +75,8 @@ import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { MaterialQuality, makeEnvironment, msaaSamples, sharpenPass, type AaMode } from './postfx';
 import { model } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
+/** Barwa smugi za strzałą: zwykła (jasna) i ognista (pomarańczowa) */
+const PLAIN_TRAIL = new THREE.Color(0xd8d0c0), FIRE_TRAIL = new THREE.Color(0xff8a30);
 /** Promień (w polach mapy), w którym spacerem widać wnętrza budynków przez drzwi i okna */
 const WALK_SEE_R = 9;
 const KEEP_MODEL = model('keep');
@@ -372,7 +374,7 @@ export class GameRenderer {
   /** Wyjście nowego żołnierza z koszar: złote iskry w górę, błysk i „+1” (tylko wygląd) */
   /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
   private towerPose = new Map<number, [number, number]>();
-  private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number }[] = [];
+  private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number; fire?: boolean }[] = [];
   private lastCd = new Map<number, number>();
   /** Trafienia: kiedy żołnierz ostatnio oberwał (odrzut do tyłu) i ile miał zdrowia */
   private soldierHp = new Map<number, number>();
@@ -588,6 +590,13 @@ export class GameRenderer {
   /** Czerwone pole ze strzałką: tędy ludzie będą wchodzić i wychodzić z budynku */
   private ghostDoor = new THREE.Group();
   private buildingLayer = new THREE.Group();
+  /** Koksowniki na murach i wieżach (osobna warstwa: mur kamienny nie ma własnego modelu budynku) */
+  private brazierLayer = new THREE.Group();
+  private brazierMeshes = new Map<number, THREE.Group>();
+  private brazierKey = '';
+  /** Groty płonących strzał w locie (płomyki dokłada syncFlames) */
+  private arrowFires: THREE.Vector3[] = [];
+  private arrowFireN = 0;
   /** Dym z kominów, iskry, blask okien, mgła przy ziemi */
   private ambience = new Ambience();
   /** Okruchy skały i rudy spod kilofów (tylko z bliska) */
@@ -768,6 +777,7 @@ export class GameRenderer {
     this.scene.add(sun, sun.target);
     this.sun = sun;
     this.scene.add(cat(this.buildingLayer, 'budynki'));
+    this.scene.add(cat(this.brazierLayer, 'koksowniki'));
     this.scene.add(cat(this.ambience.group, 'dym, mgła, iskry'));
     this.scene.add(this.chips.group);
     this.scene.add(cat(this.clutter.group, 'graty przy domach'));
@@ -835,7 +845,8 @@ export class GameRenderer {
       trailGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
     }
     this.arrowTrail = new THREE.InstancedMesh(trailGeo,
-      new THREE.MeshBasicMaterial({ color: 0xd8d0c0, vertexColors: true, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }), 256);
+      new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }), 256);
+    this.arrowTrail.setColorAt(0, PLAIN_TRAIL); // barwa smugi na instancję: zwykła jasna, ognista pomarańczowa
     this.arrowTrail.count = 0; this.arrowTrail.frustumCulled = false; this.scene.add(this.arrowTrail);
     this.arrowMesh.count = 0; this.arrowMesh.frustumCulled = false; this.scene.add(this.arrowMesh);
     // znaczniki zaznaczenia rysują się nad wszystkim (trawa, krzaki), z ciemną obwódką, żeby było je widać na każdym tle
@@ -2381,7 +2392,7 @@ export class GameRenderer {
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.syncRubble(g, v, dt));
       T('światła', () => this.syncLamps(g));
-      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncGates(g, dt); this.syncStores(g); });
+      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncBraziers(g, v); this.syncGates(g, dt); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies]) f.view(cp);
@@ -2502,6 +2513,16 @@ export class GameRenderer {
     const dark = this.night > 0.12;
     if (dark) for (const b of g.buildings) if (b.lit) lit.add(b.id);
     for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
+    // koksowniki na murach i wieżach: płoną dniem i nocą (łucznicy maczają w nich strzały)
+    for (const [id, m] of this.brazierMeshes) {
+      if ((m.position.x - f.x) ** 2 + (m.position.z - f.z) ** 2 > 110 * 110) continue;
+      const fire = m.getObjectByName('warFire');
+      if (!fire) continue;
+      fire.getWorldPosition(w);
+      F.add(w, 0.34 * m.scale.y, 0.2 * m.scale.y, (id * 0.173) % 1, Math.max(0.35, glow));
+    }
+    // ogniste strzały w locie: mały płomyk na grocie
+    for (let i = 0; i < this.arrowFireN; i++) F.add(this.arrowFires[i]!, 0.12, 0.07, (i * 0.531) % 1, Math.max(0.25, glow * 0.8));
     this.handFlameN = 0;
     this.handFlameTime.value = this.time;
     for (const [id, mesh] of this.buildingMeshes) {
@@ -3071,6 +3092,7 @@ export class GameRenderer {
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), nx = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
     let n = 0;
     this.arrows = this.arrows.filter((a) => (a.t += dt / 0.45) < 1);
+    this.arrowFireN = 0;
     for (const a of this.arrows) {
       const arc = Math.sin(a.t * Math.PI) * a.from.distanceTo(a.to) * 0.12;
       p.lerpVectors(a.from, a.to, a.t); p.y += arc;
@@ -3079,13 +3101,21 @@ export class GameRenderer {
       q.setFromRotationMatrix(m);
       m.compose(p, q, one);
       this.arrowMesh.setMatrixAt(n, m);
+      // ognista strzała: płomyk na grocie (rysuje go system ognia) i pomarańczowa, dłuższa smuga dymu i iskier
+      if (a.fire) {
+        const v = this.arrowFires[this.arrowFireN] ?? (this.arrowFires[this.arrowFireN] = new THREE.Vector3());
+        v.copy(nx).sub(p).normalize().multiplyScalar(0.24).add(p).setY(v.y - 0.06);
+        this.arrowFireN++;
+      }
+      this.arrowTrail.setColorAt(n, a.fire ? FIRE_TRAIL : PLAIN_TRAIL);
       // smuga: rozciągnięta do tyłu, dłuższa przy szybkim, dalekim strzale
-      m.compose(p, q, new THREE.Vector3(1, 1, Math.min(1.6, 0.4 + a.from.distanceTo(a.to) * 0.12)));
+      m.compose(p, q, new THREE.Vector3(a.fire ? 1.8 : 1, 1, Math.min(1.6, 0.4 + a.from.distanceTo(a.to) * 0.12) * (a.fire ? 1.4 : 1)));
       this.arrowTrail.setMatrixAt(n++, m);
     }
     this.arrowMesh.count = n;
     touch(this.arrowMesh);
     this.arrowTrail.count = n;
+    if (this.arrowTrail.instanceColor) this.arrowTrail.instanceColor.needsUpdate = true;
     touch(this.arrowTrail);
   }
 
@@ -3337,6 +3367,45 @@ export class GameRenderer {
     touch(this.scaffold);
     touch(this.siteStones!);
     if (this.siteStones!.instanceColor) touch(this.siteStones!);
+  }
+
+  /**
+   * Koksowniki (Building.brazier): na kamiennej wieży stoją w rogu pomostu (miejsce z modelu wieży, obrócone razem
+   * z nią), na murze kamiennym — na chodniku, przesunięte ku twierdzy, żeby łucznicy mieli miejsce przy blankach.
+   */
+  private syncBraziers(g: GameState, view: TerrainView): void {
+    const list = g.buildings.filter((b) => b.brazier && !b.ruined);
+    const key = list.map((b) => `${b.id}:${this.buildingMeshes.has(b.id) ? 1 : 0}:${g.occupancy[b.y * g.map.width + b.x - 1] ? 1 : 0}${g.occupancy[(b.y - 1) * g.map.width + b.x] ? 1 : 0}`).join(',');
+    if (key === this.brazierKey) return;
+    this.brazierKey = key;
+    const { width, height } = g.map;
+    const keep = new Set(list.map((b) => b.id));
+    for (const [id, m] of this.brazierMeshes) if (!keep.has(id)) { this.brazierLayer.remove(m); this.brazierMeshes.delete(id); }
+    for (const b of list) {
+      let m = this.brazierMeshes.get(b.id);
+      if (!m) { m = brazierModel(); this.brazierMeshes.set(b.id, m); this.brazierLayer.add(m); }
+      const def = BUILDINGS[b.type]!;
+      const host = this.buildingMeshes.get(b.id);
+      if (def.id !== 'stoneWall' && host) {
+        const [ax, ay, az] = towerBrazierAt(def.id);
+        const p = new THREE.Vector3(ax, ay, az).applyAxisAngle(new THREE.Vector3(0, 1, 0), host.rotation.y);
+        m.position.set(host.position.x + p.x, host.position.y + p.y + 0.02, host.position.z + p.z);
+        m.rotation.y = host.rotation.y;
+        m.scale.setScalar(1);
+      } else {
+        // mur biegnie wzdłuż x, gdy ma sąsiada z lewej albo prawej; koksownik odsunięty od blank w stronę twierdzy
+        const W = width;
+        const along = !!(g.occupancy[b.y * W + b.x - 1] || g.occupancy[b.y * W + b.x + 1]);
+        const kp = g.buildings.find((o) => o.type === 0 && o.owner === b.owner);
+        const kx = kp ? kp.x + 5.5 : b.x, ky = kp ? kp.y + 5.5 : b.y;
+        const off = 0.27;
+        const cx = b.x + 0.5 + (along ? 0 : (kx > b.x + 0.5 ? off : -off));
+        const cy = b.y + 0.5 + (along ? (ky > b.y + 0.5 ? off : -off) : 0);
+        m.position.set(cx - width / 2, view.heightAt(b.x + 0.5, b.y + 0.5) + STONE_WALL_TOP + 0.005, cy - height / 2);
+        m.rotation.y = along ? 0 : Math.PI / 2;
+        m.scale.setScalar(0.8);
+      }
+    }
   }
 
   private syncBuildings(g: GameState, view: TerrainView): void {
@@ -4357,7 +4426,7 @@ export class GameRenderer {
       const ranged = !!udef.range;
       const striking = !udef.sapper && (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
-      let lift = s.up ? (s.post && BUILDINGS[bById.get(s.post)?.type ?? 0]!.id === 'stoneTower' ? STONE_TOWER_TOP : WATCH_TOWER_TOP) : 0;
+      let lift = s.up ? (s.post ? TOWER_TOP[BUILDINGS[bById.get(s.post)?.type ?? 0]!.id] ?? WATCH_TOWER_TOP : WATCH_TOWER_TOP) : 0;
       // życie na wieży: bez walki każdy zajęty czym innym (oparty o barierkę, siedzi, wypatruje, czwarty pod wieżą);
       // przy ataku wszyscy na pomoście obok siebie, od strony wroga, i strzelają w tamtą stronę
       let towerSit = false, towerLean = 0, towerAt: [number, number] | null = null;
@@ -4381,10 +4450,22 @@ export class GameRenderer {
       if (tw) {
         const fpT = footprint(BUILDINGS[tw.type]!, tw.rot), tcx = tw.x + fpT.w / 2, tcy = tw.y + fpT.h / 2;
         const crew = crews.get(tw.id) ?? [s.id], idx = crew.indexOf(s.id), fight = crewFight.get(tw.id);
+        // większe baszty (3×3, 4×4): szerszy pomost, łucznicy rozstawieni dalej od środka i gęściej przy barierce
+        const big = fpT.w > 2, rr = (fpT.w / 2) * 0.42;
         if (fight) {
-          const ang = Math.atan2(fight[0] - tcx, fight[1] - tcy), side = (idx - (crew.length - 1) / 2) * 0.32;
-          towerAt = [tcx + Math.sin(ang) * 0.42 + Math.cos(ang) * side, tcy + Math.cos(ang) * 0.42 - Math.sin(ang) * side];
+          const ang = Math.atan2(fight[0] - tcx, fight[1] - tcy);
+          // przy barierce od strony wroga mieści się tylu, ilu zmieści bok pomostu; reszta stoi w drugim szeregu
+          const row = big ? Math.max(4, Math.floor((rr * 2.6) / 0.3)) : crew.length, rank = Math.floor(idx / row), inRow = Math.min(row, crew.length - rank * row);
+          const side = ((idx % row) - (inRow - 1) / 2) * (big ? 0.3 : 0.32), dist = rr - rank * 0.36;
+          towerAt = [tcx + Math.sin(ang) * dist + Math.cos(ang) * side, tcy + Math.cos(ang) * dist - Math.sin(ang) * side];
           if (!foe) { heading = ang; this.facing.set(s.id, heading); }
+        } else if (big) {
+          // bez walki rozchodzą się po pomoście (każdy w swoim miejscu, przodem na zewnątrz), co trzeci przysiada
+          const a = idx * 2.39996 + tw.id, r = rr * (0.55 + 0.45 * ((idx * 0.618) % 1));
+          towerAt = [tcx + Math.sin(a) * r, tcy + Math.cos(a) * r];
+          heading = a + Math.sin(this.time * 0.2 + s.id) * 0.5;
+          if (idx % 3 === 1) { towerSit = true; lift -= 0.17; } else if (idx % 3 === 0) towerLean = 0.12;
+          this.facing.set(s.id, heading);
         } else {
           const role = idx % 4;
           const corner = [[0.42, 0.42], [-0.42, 0.38], [0.4, -0.42], [0, 0]][role]!;
@@ -4431,7 +4512,7 @@ export class GameRenderer {
         else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; }
         else { const fp = footprint(BUILDINGS[wall!.type]!, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; }
         if (s.up && s.post) this.towerShots.set(s.post, this.time);
-        this.arrows.push({ from: new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0 });
+        this.arrows.push({ from: new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0, fire: fireArrow(g, s) });
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
       this.lastCd.set(s.id, s.cd);

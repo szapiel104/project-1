@@ -27,6 +27,9 @@ const CAMP_MODEL = model('camp');
 const BREWERY_MODEL = model('brewery');
 const GATE_MODEL = model('gate');
 const STONE_TOWER_MODEL = model('stonetower');
+const STONE_TOWER_BIG_MODEL = model('stonetower_big');
+const STONE_TOWER_GREAT_MODEL = model('stonetower_great');
+const BRAZIER_MODEL = model('brazier');
 const WATCH_TOWER_MODEL = model('watchtower');
 const WELL_MODEL = model('well');
 const ENGINEERS_MODEL = model('engineers');
@@ -1213,6 +1216,19 @@ const BUILDERS: Record<string, Builder> = {
     // Kamienna wieża z Blendera (tools/models/stonetower.py): baszta z ciosów, machikuły, blanki, pomost dla łuczników
     blenderModel(g, STONE_TOWER_MODEL as unknown as BlenderBuilding, flag);
   },
+  stoneTowerBig(g, _team, flag) {
+    // Duża baszta 3×3 z Blendera (tools/models/stonetower_big.py): przypory, dwa rzędy strzelnic, wykusze z blankami na rogach
+    blenderModel(g, STONE_TOWER_BIG_MODEL as unknown as BlenderBuilding, flag);
+  },
+  stoneTowerGreat(g, _team, flag) {
+    // Wielka baszta 4×4 z Blendera (tools/models/stonetower_big.py): skarpowany cokół, dwa gzymsy, wykusze pod łupkowymi daszkami
+    blenderModel(g, STONE_TOWER_GREAT_MODEL as unknown as BlenderBuilding, flag);
+  },
+  brazier(g) {
+    // koksownik z Blendera (tools/models/brazier.py); w grze stoi na murze albo wieży (scene.ts → syncBraziers),
+    // tu tylko sam model (podgląd modeli). Płomień: znacznik 'warFire', rysuje go system ognia
+    g.add(brazierModel());
+  },
   forester(g, _team, flag) {
     // chata leśniczego z Blendera (tools/models/forester.py): chata z bali pod strzechą, szkółka młodych drzewek za płotem
     // z wikliny, kopczyk z łopatą, sadzonki w płótnie, wiadro i worek z nasionami; w izbie stół z siewkami i prycza
@@ -1401,6 +1417,32 @@ export const STONE_WALL_TOP = 1.14;
 /** Wysokość pomostu drewnianej wieży (tu stoją łucznicy) — z tools/models/watchtower.py */
 export const WATCH_TOWER_TOP: number = (WATCH_TOWER_MODEL as unknown as { deck?: number }).deck ?? 1.95;
 export const STONE_TOWER_TOP: number = (STONE_TOWER_MODEL as unknown as { deck?: number }).deck ?? 2.3;
+/** Wysokość pomostu każdej wieży (tu stoją łucznicy) — z plików modeli */
+export const TOWER_TOP: Readonly<Record<string, number>> = {
+  watchtower: WATCH_TOWER_TOP,
+  stoneTower: STONE_TOWER_TOP,
+  stoneTowerBig: (STONE_TOWER_BIG_MODEL as unknown as { deck?: number }).deck ?? 2.95,
+  stoneTowerGreat: (STONE_TOWER_GREAT_MODEL as unknown as { deck?: number }).deck ?? 3.55,
+};
+/** Miejsce koksownika na pomoście wieży (układ modelu, przed obrotem budynku): róg z dala od klapy i chorągwi */
+export function towerBrazierAt(id: string): [number, number, number] {
+  const m = id === 'stoneTowerBig' ? STONE_TOWER_BIG_MODEL : id === 'stoneTowerGreat' ? STONE_TOWER_GREAT_MODEL : null;
+  const at = (m as { brazierAt?: [number, number, number] } | null)?.brazierAt;
+  return at ?? [0.4, TOWER_TOP[id] ?? STONE_TOWER_TOP, 0.45];
+}
+/** Koksownik (tools/models/brazier.py): kosz z żarem; punkt płomienia to obiekt 'warFire' */
+export function brazierModel(): THREE.Group {
+  const g = new THREE.Group();
+  g.name = 'warBrazier';
+  blenderModel(g, BRAZIER_MODEL as unknown as BlenderBuilding, M.iron);
+  const at = (BRAZIER_MODEL as unknown as { flame?: [number, number, number] }).flame ?? [0, 0.45, 0];
+  const f = new THREE.Object3D();
+  f.name = 'warFire';
+  f.position.set(at[0], at[1], at[2]);
+  g.add(f);
+  g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return g;
+}
 export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.BufferGeometry; ladder: THREE.BufferGeometry; mat: THREE.Material; wood: THREE.Material } {
   const k = (M.castle.userData.tile as number) || 1;
   const shade = (geo: THREE.BufferGeometry, v: number): THREE.BufferGeometry => {

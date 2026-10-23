@@ -7,7 +7,7 @@ import { UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable, wallBetween } from '../path';
 import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type March, type QueuedMove, type Soldier, type Unit, keepCenter } from '../state';
-import { BUILDINGS, footprint, isTower, towerBonus, workArea } from '../../data/buildings';
+import { BUILDINGS, TOWERS, footprint, isTower, towerBonus, workArea } from '../../data/buildings';
 import { buildWork, demolish, enemyNear, maxHp, rebuildCost, restore, ruin } from './placement';
 import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
@@ -613,7 +613,7 @@ export function orderDismount(g: GameState, player: number, towerId: number): vo
 }
 
 /** Ilu łuczników zmieści się na budynku: wieża strażnicza 4, pole muru kamiennego 2 (wchodzą po drabinie) */
-export const garrisonRoom = (id: string): number => (id === 'watchtower' ? 4 : id === 'stoneTower' ? 6 : 0);
+export const garrisonRoom = (id: string): number => TOWERS[id]?.room ?? 0;
 
 /** Łucznicy wchodzą na wieżę strażniczą albo mur kamienny; inni żołnierze stają przy nim */
 export function orderGarrison(g: GameState, player: number, ids: readonly number[], towerId: number): void {
@@ -682,9 +682,32 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
   if (nearStandard(g, s)) dmg = (dmg * (100 + STANDARD_BONUS)) / 100;
   // taran pod daszkiem ze skór: strzały ledwo go drasną, toporem i włócznią rąbie się go powoli
   if (fdef.ram) dmg = ranged ? dmg / 6 : dmg / 2;
+  // ognista strzała (łucznik na murze albo wieży przy koksowniku): rani mocniej
+  if (ranged && fireArrow(g, s)) dmg = (dmg * (100 + FIRE_BONUS)) / 100;
   // zbroja (kolczuga zbrojnego): cios wręcz słabszy o armor %, strzała o półtora raza tyle (najwyżej 75%)
   if (fdef.armor) dmg = (dmg * (100 - (ranged ? Math.min(75, (fdef.armor * 3) >> 1) : fdef.armor))) / 100;
   return Math.max(1, Math.round(dmg / 100));
+}
+
+/** O ile procent mocniej rani ognista strzała */
+export const FIRE_BONUS = 50;
+/** Z jak daleka (w polach, od brzegu budynku z koksownikiem) łucznik sięga do żaru */
+export const FIRE_REACH = 2;
+
+/**
+ * Czy łucznik strzela ognistą strzałą: stoi wysoko (mur, wieża) najwyżej FIRE_REACH pól od własnego muru albo wieży
+ * z koksownikiem. Liczy to symulacja przy strzale i obrazek (płonąca strzała), więc wynik jest taki sam u każdego gracza.
+ */
+export function fireArrow(g: GameState, s: Soldier): boolean {
+  if (!UNITS[s.kind]!.range || !high(g, s)) return false;
+  const x = s.px >> 8, y = s.py >> 8;
+  for (const b of g.buildings) {
+    if (!b.brazier || b.ruined || b.build || b.owner !== s.owner) continue;
+    const fp = footprint(BUILDINGS[b.type]!, b.rot);
+    const dx = Math.max(b.x - x, x - (b.x + fp.w - 1), 0), dy = Math.max(b.y - y, y - (b.y + fp.h - 1), 0);
+    if (Math.max(dx, dy) <= FIRE_REACH) return true;
+  }
+  return false;
 }
 
 /** Czy strzała trafia: im dalej, tym częściej chybia; z wieży celniej (losowanie z numeru strzelca i chwili, takie samo u każdego gracza) */

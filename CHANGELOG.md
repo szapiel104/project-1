@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.35.0 — większe kamienne wieże i koksownik z ognistymi strzałami (2026-10-23)
+
+- Dwie nowe kamienne wieże w umocnieniach: **Duża baszta** (3×3 pola, 10 łuczników, strzelają o 2 pola dalej, wykusze z blankami na rogach) i **Wielka baszta** (4×4, 16 łuczników, o 3 pola dalej, skarpowany cokół, wykusze pod łupkowymi daszkami). Jak zwykła kamienna wieża stają na wolnym polu albo wprost na murze. Modele z Blendera (`tools/models/stonetower_big.py`)
+- **Koksownik**: żelazny kosz z żarem stawiany na gotowym murze kamiennym albo kamiennej wieży (nie zajmuje pola, koszt 2 żelaza i 4 kamienia). Łucznicy na murach i wieżach do 2 pól od niego strzelają ognistymi strzałami: rana o połowę mocniejsza, a strzała leci z płomykiem na grocie i pomarańczową smugą. Koksownik płonie dniem i nocą, spada razem ze zburzonym murem (`tools/models/brazier.py`)
+- Łucznicy na dużych basztach rozchodzą się po całym pomoście, a w walce stają przy barierce od strony wroga w dwóch szeregach
+- Nazwy i opisy po polsku i angielsku
+
 ## 0.34.2 — pierwsza fala każdego bota, „Porzuć ruinę” (2026-10-23)
 
 - Poprawka: boty gracza 1 i dalszych pomijały pierwszą falę i atakowały dopiero przy drugiej (myślą co 40 ticków z przesunięciem o numer gracza, a warunek „po terminie pierwszej fali” wypadał im akurat po terminie). Teraz każdy bot rusza z pierwszą falą o czasie — gra z botem robi się wcześniej gorąca

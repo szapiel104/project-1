@@ -1,6 +1,6 @@
 import { releaseCrew } from '../state';
 import { mineNear } from './minecamp';
-import { BUILDINGS, footprint, isTower, type BuildingDef } from '../../data/buildings';
+import { BUILDINGS, brazierHost, footprint, isTower, type BuildingDef } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { TERRAIN, Terrain } from '../../data/terrain';
@@ -10,7 +10,7 @@ import { FP, inForecourt, Phase, playerKeep, type Building, type GameState } fro
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.needRock' | 'place.needMine' | 'place.needs' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.brazier' | 'place.brazierTaken' | 'place.needRock' | 'place.needMine' | 'place.needs' | 'place.unknown';
 
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
@@ -204,6 +204,14 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     if (checkCost && !canAfford(g, player, def)) return 'place.cost';
     return null;
   }
+  // koksownik: wyposaża stojący już własny mur kamienny albo kamienną wieżę (nie zajmuje pola)
+  if (def.addon) {
+    const host = brazierHostAt(g, player, x, y);
+    if (!host) return 'place.brazier';
+    if (host.brazier) return 'place.brazierTaken';
+    if (checkCost && !canAfford(g, player, def)) return 'place.cost';
+    return null;
+  }
   // brama, wieża albo mur kamienny na istniejącym własnym murze: zastępuje przęsła pod sobą
   const over = wallsUnder(g, player, type, x, y, fw, fh);
   const overTiles = new Set<number>();
@@ -261,6 +269,15 @@ export function wallsUnder(g: GameState, player: number, type: number, x: number
     out.push(b);
   }
   return out.length ? out : undefined;
+}
+
+/** Własny, gotowy mur kamienny albo kamienna wieża na polu (x, y), na której można postawić koksownik */
+export function brazierHostAt(g: GameState, player: number, x: number, y: number): Building | undefined {
+  if (x < 0 || y < 0 || x >= g.map.width || y >= g.map.height) return undefined;
+  const id = g.occupancy[y * g.map.width + x];
+  const b = id ? g.buildings.find((o) => o.id === id) : undefined;
+  if (!b || b.owner !== player || b.ruined || b.build || !brazierHost(BUILDINGS[b.type]!.id)) return undefined;
+  return b;
 }
 
 /** Zamek: pola dziedzińca i sal są przechodnie dla właściciela, a między pomieszczeniami stoją ściany (wejście tylko bramą) */
@@ -324,6 +341,7 @@ export function ruin(g: GameState, b: Building): void {
   // odbudowa nie jest za darmo: zanim ktokolwiek chwyci za młotek, pan płaci połowę kosztu budynku (systems/army.ts)
   b.unpaid = rebuildCost(b.type).length > 0 || undefined;
   b.salvage = undefined;
+  b.brazier = undefined; // koksownik spada razem z murem
   releaseCrew(g, b);
   if (def.wall || def.gate) {
     const fp = footprint(def, b.rot);
@@ -363,6 +381,7 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   const def = BUILDINGS[type]!;
   const p = g.players[player]!;
   for (const [k, v] of Object.entries(def.cost)) p.res[resIndex(k as ResourceId)]! -= v;
+  if (def.addon) { brazierHostAt(g, player, x, y)!.brazier = 1; return true; }
   if (def.road) {
     // droga powstaje dopiero, gdy chłop ją ułoży; w trybie deweloperskim od razu
     const t = y * g.map.width + x;

@@ -64,6 +64,8 @@ export interface BuildingDef {
   gate?: boolean;
   /** Stawiany przeciąganiem w linii, jak droga */
   line?: boolean;
+  /** Dodatek stawiany na istniejącym murze albo wieży (koksownik): nie zajmuje pola, tylko wyposaża budynek pod spodem */
+  addon?: boolean;
   /** Czy gracz może go postawić (twierdza powstaje sama) */
   buildable: boolean;
 }
@@ -208,16 +210,33 @@ export const BUILDINGS: readonly BuildingDef[] = [
     workView: 'inside',
     production: { input: { res: 'iron', amount: 3 }, output: { res: 'armor', amount: 1 }, site: 'home', workTicks: 220 },
   },
+  // Większe kamienne wieże: im większa baszta, tym więcej łuczników mieści i tym wyżej stoją (dalej strzelają).
+  // Jak zwykła kamienna wieża stają na wolnym polu albo wprost na swoim murze.
+  { id: 'stoneTowerBig', category: 'defense', name: 'b.stoneTowerBig', w: 3, h: 3, cost: { stone: 100, wood: 20 }, hp: 3800, wall: true, buildable: true },
+  { id: 'stoneTowerGreat', category: 'defense', name: 'b.stoneTowerGreat', w: 4, h: 4, cost: { stone: 180, wood: 35, iron: 10 }, hp: 5600, wall: true, buildable: true },
+  // Koksownik: żelazny kosz z żarem stawiany na murze kamiennym albo na kamiennej wieży (nie zajmuje pola).
+  // Łucznicy na murze i wieżach do 2 pól od niego maczają strzały w ogniu — ognista strzała rani mocniej (army.ts, FIRE_BONUS).
+  { id: 'brazier', category: 'defense', name: 'b.brazier', w: 1, h: 1, cost: { iron: 2, stone: 4 }, addon: true, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */
 export const NO_TORCH = new Set(['camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp', 'fieldTent']);
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
-/** Wieże z łucznikami: drewniana strażnica i kamienna wieża */
-export const isTower = (id: string): boolean => id === 'watchtower' || id === 'stoneTower';
-/** O ile dalej strzela łucznik z danej wieży (ponad zwykłe +3 z wysokości): kamienna wieża jest wyższa */
-export const towerBonus = (id: string): number => (id === 'stoneTower' ? 1 : 0);
+/** Wieże z łucznikami: ilu łuczników mieści i o ile pól dalej z niej strzelają (ponad zwykłe +3 z wysokości) */
+export const TOWERS: Readonly<Record<string, { room: number; bonus: number }>> = {
+  watchtower: { room: 4, bonus: 0 },
+  stoneTower: { room: 6, bonus: 1 },
+  stoneTowerBig: { room: 10, bonus: 2 },
+  stoneTowerGreat: { room: 16, bonus: 3 },
+};
+export const isTower = (id: string): boolean => id in TOWERS;
+/** Kamienne wieże (wszystkie rozmiary) */
+export const isStoneTower = (id: string): boolean => isTower(id) && id !== 'watchtower';
+/** O ile dalej strzela łucznik z danej wieży (ponad zwykłe +3 z wysokości): większa wieża jest wyższa */
+export const towerBonus = (id: string): number => TOWERS[id]?.bonus ?? 0;
+/** Na czym można postawić koksownik: mur kamienny i kamienne wieże (drewniana strażnica by się zajęła) */
+export const brazierHost = (id: string): boolean => id === 'stoneWall' || isStoneTower(id);
 
 /** Wymiary działki po obrocie: przy obrocie o 90° i 270° szerokość zamienia się z głębokością. */
 export function footprint(def: BuildingDef, rot = 0): { w: number; h: number } {
