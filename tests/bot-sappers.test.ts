@@ -120,3 +120,19 @@ describe('zboże w stodole', () => {
     expect(storeUsed(p, 'granary')).toBeLessThanOrEqual(foodBefore);
   });
 });
+
+describe('fale bota', () => {
+  it('bot gracza 1 (myśli w przesuniętym ticku) rusza już z pierwszą falą', () => {
+    const g = createGame(7);
+    for (const p of g.players) p.guards = 0;
+    g.soldiers = [];
+    g.players[1]!.level = 3; // pierwsza fala w ticku 9000
+    const keep = playerKeep(g, 1)!;
+    for (let i = 0; i < 12; i++) soldier(g, 1, unitIndex('spearman'), keep.x + 3 + (i % 6), keep.y + 14 + Math.floor(i / 6));
+    g.tick = 9000 - 100;
+    let marched = false;
+    for (let i = 0; i < 140 && !marched; i++) { step(g, []); marched = g.soldiers.some((s) => s.owner === 1 && s.goal >= 0); }
+    expect(marched).toBe(true);
+    expect(g.tick).toBeLessThanOrEqual(9000);
+  });
+});
