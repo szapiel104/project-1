@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.34.2 — pierwsza fala każdego bota, „Porzuć ruinę” (2026-10-23)
+
+- Poprawka: boty gracza 1 i dalszych pomijały pierwszą falę i atakowały dopiero przy drugiej (myślą co 40 ticków z przesunięciem o numer gracza, a warunek „po terminie pierwszej fali” wypadał im akurat po terminie). Teraz każdy bot rusza z pierwszą falą o czasie — gra z botem robi się wcześniej gorąca
+- Okno własnej ruiny ma przycisk **„Porzuć ruinę”** zamiast „Rozbierz”: ruina znika bez zwrotu surowców, zostaje sam gruz, a po jego wyniesieniu miejsce jest wolne pod nowy budynek. Wcześniej rozbiórka ruiny zwracała połowę ceny budynku, co dawało darmowe surowce z każdej zburzonej chaty
+- „Jak grać”: porzucanie ruin opisane po polsku i angielsku
+
 ## 0.34.1 — zboże w stodole, spichlerz tylko na jedzenie (2026-10-23)
 
 - Pszenica i mąka leżą teraz wyłącznie w stodole, na osobnym miejscu na zboże (200 na stodołę, obok 250 towarów). Spichlerz trzyma tylko jedzenie, więc zboże go nie zapycha (zamiast „najwyżej połowa spichlerza” z 0.34.0)

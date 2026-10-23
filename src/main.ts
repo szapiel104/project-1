@@ -727,7 +727,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
       items: RESOURCES.map((id, i) => ({ id, amount: p.res[i]! })).filter((x) => RESOURCE_DEFS[x.id].store === kind && x.amount > 0),
     }))
     : undefined;
-  return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
+  return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, ruined: b.ruined, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: def.id === 'barracks' ? recruitInfo().map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     power: !b.build && (def.production || def.staff) && def.id !== 'keep' ? { on: !b.off, worker: b.worker !== 0 } : undefined,
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
@@ -2393,14 +2393,15 @@ function confirmDemolish(id: number): void {
   // Ustawienia → Rozgrywka: bez pytania rozbiera od razu
   if (gfx.confirmDemolish === false) { pending.push({ type: 'demolish', player: ME, id }); play('demolish'); select(0); return; }
   const def = BUILDINGS[b.type]!;
-  const back = (Object.entries(def.cost) as [ResourceId, number][]).map(([r, n]) => `${Math.floor((n * RULES_REFUND) / 100)} × ${t(`res.${r}`).toLowerCase()}`);
+  const ruinNote = tx('Porzucona ruina nic nie zwraca — zostanie sam gruz, a po jego wyniesieniu miejsce jest wolne pod nowy budynek.', 'Abandoned ruins return nothing — only rubble is left, and once it is cleared the ground is free to build on.');
+  const back = b.ruined ? [] : (Object.entries(def.cost) as [ResourceId, number][]).map(([r, n]) => `${Math.floor((n * RULES_REFUND) / 100)} × ${t(`res.${r}`).toLowerCase()}`);
   const box = document.createElement('div');
   box.className = 'confirm-wrap';
   box.innerHTML = `<div class="panel confirm" role="alertdialog" aria-modal="true" aria-labelledby="cf-t">
-    <p class="confirm-title" id="cf-t">${tx('Rozebrać', 'Demolish')}: ${t(def.name)}?</p>
-    <p>${back.length ? tx(`Odzyskasz <strong>${back.join(', ')}</strong> — ludzie wyniosą to z gruzu do składu.`, `You will recover <strong>${back.join(', ')}</strong> — your people will carry it from the rubble to the stockpile.`) : tx('Nic nie odzyskasz.', 'Nothing will be recovered.')}</p>
+    <p class="confirm-title" id="cf-t">${b.ruined ? tx('Porzucić ruinę', 'Abandon the ruins') : tx('Rozebrać', 'Demolish')}: ${t(def.name)}?</p>
+    <p>${b.ruined ? ruinNote : back.length ? tx(`Odzyskasz <strong>${back.join(', ')}</strong> — ludzie wyniosą to z gruzu do składu.`, `You will recover <strong>${back.join(', ')}</strong> — your people will carry it from the rubble to the stockpile.`) : tx('Nic nie odzyskasz.', 'Nothing will be recovered.')}</p>
     ${b.worker ? `<p>${tx('Pracownik straci robotę i wróci do obozowiska.', 'The worker will lose his post and return to the camp.')}</p>` : ''}
-    <div class="confirm-btns"><button type="button" class="menu-btn menu-back" data-no>${tx('Nie', 'No')}</button><button type="button" class="menu-btn" data-yes>${tx('Tak, rozbierz', 'Yes, tear it down')}</button></div>
+    <div class="confirm-btns"><button type="button" class="menu-btn menu-back" data-no>${tx('Nie', 'No')}</button><button type="button" class="menu-btn" data-yes>${b.ruined ? tx('Tak, porzuć', 'Yes, abandon them') : tx('Tak, rozbierz', 'Yes, tear it down')}</button></div>
   </div>`;
   const close = (): void => { box.remove(); window.removeEventListener('keydown', key); };
   const key = (e: KeyboardEvent): void => { if (e.key === 'Escape') close(); };

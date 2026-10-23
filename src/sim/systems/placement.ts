@@ -426,9 +426,10 @@ export function demolish(g: GameState, player: number, id: number, destroyed = f
     if (u.job === id) continue;
     else if (u.home === id) { u.home = 0; u.timer = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
   }
-  // Zwrot połowy kosztu nie wpada od razu: leży w gruzie i wraca do składu ładunek po ładunku
+  // Zwrot połowy kosztu nie wpada od razu: leży w gruzie i wraca do składu ładunek po ładunku.
+  // Porzucona ruina nie zwraca nic (zostaje sam gruz) — inaczej ruina byłaby darmowym źródłem surowców.
   const loads: [number, number][] = [];
-  if (!destroyed) for (const [k, v] of Object.entries(def.cost)) {
+  if (!destroyed && !b.ruined) for (const [k, v] of Object.entries(def.cost)) {
     let left = Math.floor((v * RULES.refundPercent) / 100);
     while (left > 0) { const n = Math.min(left, RULES.rubbleLoad); loads.push([resIndex(k as ResourceId), n]); left -= n; }
   }

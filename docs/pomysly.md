@@ -20,7 +20,7 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
   - Partia 2 (22.10, zrobiona): płatnerz z Blendera (tools/models/armorer.py; stół z kolczugą w robocie, hełmy na półce, kukła z kolczugą, stojaki przed warsztatem), stawiany wszędzie; 3 żelaza → 1 kolczuga (220 ticków), do zbrojowni; ciche stuknięcia nitowania, odzywki, kolczugi w zbrojowni i w rękach, „Jak grać”.
   - Partia 3 (22.10, zrobiona): zbrojny w koszarach (1 miecz + 1 kolczuga + 20 rudy): model z Blendera (tools/models/manatarms.py, z guard.py: hełm z nosalem, czepiec kolczy, kolczuga, wapenrok w barwach pana, ciężkie naramienniki, miecz strażnika), 110 HP, cios 13, wolniejszy (88%), zbroja 35% (strzały 52%); portret, okrzyki, galeria, „Jak grać”; bot stawia kuźnię i płatnerza na końcu listy i szkoli zbrojnych, gdy ma sprzęt. Dalej: własne odzywki w walce, animacja ciężkiego zamachu, ulepszenia zbroi za monety.
 - Cech inżynierów — zrobione 23.10 (0.32.0): załoga rośnie z wioską (1 + 1 na 8 mieszkańców, do 4), bez zasięgu (Michał 23.10: zasięg wywalony), kolejność ruiny → umocnienia → reszta → pomoc przy budowie, budują 2× szybciej, okno cechu z tym, co robią, rozdział w „Jak grać”. Dalej: naprawa kosztuje drewno/kamień, machiny oblężnicze (katapulta, wieża oblężnicza) budowane przez inżynierów.
-- Ruiny (Michał 23.10): zrobione 0.33.0 — odbudowa za połowę ceny, saperzy rozbierają wrogie ruiny i znoszą łup do twierdzy. Model sapera z Blendera zrobiony (0.33.1). Bot z saperami zrobiony 23.10 (0.34.0). Dalej: przycisk „Porzuć ruinę” (gruz bez odbudowy)
+- Ruiny (Michał 23.10): zrobione 0.33.0 — odbudowa za połowę ceny, saperzy rozbierają wrogie ruiny i znoszą łup do twierdzy. Model sapera z Blendera zrobiony (0.33.1). Bot z saperami zrobiony 23.10 (0.34.0). Przycisk „Porzuć ruinę” zrobiony 23.10 (0.34.2, bez zwrotu, sam gruz).
 - Ulepszanie budynków — patrz „Ulepszanie budynków” niżej.
 - Obracanie już postawionego budynku (przycisk w oknie budynku; drzwi liczone na nowo). Zrobione 22.10: strzałka wyjścia w podglądzie stawiania.
 - „Jak grać”: zebrać uwagi w pliku online (wspólny dokument z Mikołajem), dopisywać brakujące odpowiedzi.
@@ -38,7 +38,7 @@ Stan: dobry (strict TS bez `as any`, symulacja oddzielona od grafiki, 230 testó
 
 ## Braki zauważone przy pracy
 
-- **Błąd fal bota (znaleziony 23.10):** bot myśli co 40 ticków z przesunięciem o numer gracza (`tk = tick - id*5`), a fala rusza tylko gdy `tick >= first` i do fali zostało < 40 ticków — przez to bot gracza 1 (i dalszych) pomija pierwszą falę i atakuje dopiero przy drugiej. Do poprawy razem z balansem (zmienia tempo gry z botem)
+- ~~**Błąd fal bota (znaleziony 23.10):** bot myśli co 40 ticków z przesunięciem o numer gracza (`tk = tick - id*5`), a fala rusza tylko gdy `tick >= first` i do fali zostało < 40 ticków — przez to bot gracza 1 (i dalszych) pomija pierwszą falę i atakuje dopiero przy drugiej. ~~ — poprawione 23.10 (0.34.2); tempo gry z botem do sprawdzenia przy balansie
 - Bot nie stawia piekarni mimo młyna (brak kamienia na liście?) — mąka stoi w stodole; sprawdzić w tools/soak
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach
 - Test dotyku na prawdziwym telefonie i tablecie (dotąd tylko emulacja)
@@ -185,7 +185,7 @@ Zrobione 16.10: koszty budynków etapami (start 80 drewna, kamień i złoto na p
 
 Czeka:
 - ~~Wymagania budynków (drzewko)~~ — zrobione 17.10 (0.27.0): piekarnia przy młynie, koszary przy zbrojowni, karczma przy browarze, barak przy kopalni; zablokowane karty z kłódką i „Najpierw: …”. Dalej do decyzji: młyn dopiero przy polu, browar przy polu, łuczarz/włóczniarz przy drwalu
-- Cele na początek gry (skryba prowadzi): postaw drwala → sad → chatę → kamieniołom; mała nagroda za każdy krok, żeby nowy gracz wiedział, co dalej
+- ~~Cele na początek gry~~ — zrobione 19.10 (0.31.1, „Plan na start”). Dalej: mała nagroda w rudzie za każdy krok
 - Jabłka się psują (część zapasu ubywa co dzień, chleb wolniej, ryby wędzone najdłużej) — powód, żeby mieć różne jedzenie
 - Targ: sprzedaż nadmiaru (np. zboża, drewna) za złoto i kupno tego, czego brakuje
 - Sprawdzić na żywo pacing pierwszych 30 minut (narzędzie tools/soak + zwykła gra Michała) i dostroić koszty

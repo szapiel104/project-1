@@ -91,7 +91,7 @@ export interface HudView {
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
 export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
-export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; garrison?: number;
+export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
@@ -1321,6 +1321,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         gateState.dataset.shut = String(i.gate.shut);
       }
       demolish.hidden = !i.own || !i.def.buildable;
+      setText(demolish, i.ruined ? tx('Porzuć ruinę', 'Abandon the ruins') : t('hud.demolish'));
       areaBtn.hidden = i.area === undefined;
       mineBtn.hidden = !(i.own && i.def.id === 'oremine');
       const shot = i.def.id === 'watchtower' || i.def.id === 'stoneTower';

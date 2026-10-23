@@ -201,7 +201,9 @@ export function botSystem(g: GameState): void {
     // atak falami: im później, tym większa fala; na poziomie pokojowym bot tylko się broni
     // kooperacja: wzmocniony bot rusza przy tej samej liczebności co zwykły, ale ma więcej wojska (zapasy, dostawy broni)
     const wave = nextWave(g.tick, p.level);
-    if (wave && wave.at - g.tick < THINK && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first) {
+    // nextWave nigdy nie daje terminu przed pierwszą falą, więc wystarczy okno THINK przed terminem
+    // (dawny warunek tick >= first sprawiał, że boty myślące w ticku przesuniętym o id pomijały pierwszą falę)
+    if (wave && wave.at - g.tick < THINK) {
       const army = g.soldiers.filter((s) => fighter(s) && s.owner === p.id);
       const foes = g.players.filter((o) => o.team !== p.team && !o.defeated).map((o) => playerKeep(g, o.id)).filter((k) => !!k);
       // kooperacja: boty rozkładają fale na wszystkich ludzi po kolei (zwykle cała drużyna szła na pierwszego)
