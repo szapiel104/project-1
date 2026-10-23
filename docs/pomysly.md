@@ -24,6 +24,18 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Obracanie już postawionego budynku (przycisk w oknie budynku; drzwi liczone na nowo). Zrobione 22.10: strzałka wyjścia w podglądzie stawiania.
 - „Jak grać”: zebrać uwagi w pliku online (wspólny dokument z Mikołajem), dopisywać brakujące odpowiedzi.
 
+## Porządek w kodzie i repo — przegląd 23.10.2026 (Claude podpowiada stąd przy „co dalej”)
+Stan: dobry (strict TS bez `as any`, symulacja oddzielona od grafiki, 230 testów w CI przed wdrożeniem). Do poprawy, małymi partiami, bez zmiany działania gry (każda partia: tsc + vitest + build):
+1. **Podział za dużych plików** — `src/render/scene.ts` (ok. 6100 linii), `src/main.ts` (ok. 2800), `src/render/terrain.ts` (ok. 2150), też `buildings.ts`, `hud.ts`, `army.ts` (1300–1500). Kolejność: scene.ts (ludzie, zwierzęta, efekty, kamera osobno) → main.ts (okna budynków `buildingInfo`/`prodInfo`/`engineersStatus` do `src/ui/`) → terrain.ts. Mniej konfliktów między równoległymi czatami, łatwiej szukać.
+2. **Modele binarnie** — `src/render/models/*.json` to base64 w JSON (19 MB, sam `props.json` 8 MB, gra ok. 114 MB). Zapis jako GLB albo skompresowane bufory (np. meshopt) — ok. 30–60% mniej do pobrania i szybsze wczytywanie. Bez odchudzania siatek (zasada Michała z 19.10).
+3. **Git LFS na duże pliki** — repo ok. 126 MB i rośnie z każdą podmianą tekstury/modelu (historia trzyma wszystkie wersje). LFS dla `public/textures`, `public/music`, `src/render/models`, `*.blend`.
+4. **Linter i formatowanie** — ESLint + Prettier, sprawdzane w CI razem z testami, żeby styl kodu z kilku czatów się nie rozjeżdżał.
+5. Drobiazgi:
+   - stare podglądy w katalogu głównym (`podglad.html`, `podglad-wojsko.html`, `podglad-zwierzeta.html`) nie wchodzą do builda — sprawdzić i usunąć;
+   - akcje GitHub do podbicia (ostrzeżenie o Node 20);
+   - wersja w `package.json` (0.1.0) zgodna z grą;
+   - `npm run check:console` wymaga przeglądarki Playwright — dopisać instalację do README / skryptu.
+
 ## Braki zauważone przy pracy
 
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach
