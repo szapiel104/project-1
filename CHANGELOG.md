@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.33.2 — porządki w kodzie (2026-10-23)
+
+- Bez zmian w grze. Okno budynku (plac budowy, warsztat, cech inżynierów, straż miejska i straż kopalni) wyniesione z `main.ts` do `src/ui/buildingPanel.ts` — `main.ts` krótszy o ok. 200 linii, mniej konfliktów między czatami
+- Akcje GitHub podbite do wersji na Node 24 (checkout, setup-node, upload-pages-artifact, deploy-pages v5) — koniec ostrzeżenia o Node 20
+- Wersja w `package.json` zgodna z grą
+
 ## 0.33.1 — saper z własnym modelem (2026-10-23)
 
 - Saper ma własny model z Blendera (tools/models/sapper.py): przeszywany skórzany kaftan nabijany ćwiekami i sznurowany z przodu, rękawy i kołnierz koszuli w barwach pana, skórzany kaptur z postrzępioną pelerynką, karwasze i grube rękawice, skórzany fartuch, portki z nakolannikami, wysokie buty z wywiniętą cholewą; u pasa młotek, przecinak i sakwa, przy boku żelazny łom, przez bark zwój liny

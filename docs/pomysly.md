@@ -27,14 +27,13 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 
 ## Porządek w kodzie i repo — przegląd 23.10.2026 (Claude podpowiada stąd przy „co dalej”)
 Stan: dobry (strict TS bez `as any`, symulacja oddzielona od grafiki, 230 testów w CI przed wdrożeniem). Do poprawy, małymi partiami, bez zmiany działania gry (każda partia: tsc + vitest + build):
-1. **Podział za dużych plików** — `src/render/scene.ts` (ok. 6100 linii), `src/main.ts` (ok. 2800), `src/render/terrain.ts` (ok. 2150), też `buildings.ts`, `hud.ts`, `army.ts` (1300–1500). Kolejność: scene.ts (ludzie, zwierzęta, efekty, kamera osobno) → main.ts (okna budynków `buildingInfo`/`prodInfo`/`engineersStatus` do `src/ui/`) → terrain.ts. Mniej konfliktów między równoległymi czatami, łatwiej szukać.
+1. **Podział za dużych plików** — `src/render/scene.ts` (ok. 6100 linii), `src/main.ts` (ok. 2800), `src/render/terrain.ts` (ok. 2150), też `buildings.ts`, `hud.ts`, `army.ts` (1300–1500). Zrobione 23.10 (0.33.2): okno budynku z main.ts do `src/ui/buildingPanel.ts`. Dalej: scene.ts (ludzie, zwierzęta, efekty, kamera osobno) → reszta main.ts → terrain.ts. Mniej konfliktów między równoległymi czatami, łatwiej szukać.
 2. **Modele binarnie** — `src/render/models/*.json` to base64 w JSON (19 MB, sam `props.json` 8 MB, gra ok. 114 MB). Zapis jako GLB albo skompresowane bufory (np. meshopt) — ok. 30–60% mniej do pobrania i szybsze wczytywanie. Bez odchudzania siatek (zasada Michała z 19.10).
 3. **Git LFS na duże pliki** — repo ok. 126 MB i rośnie z każdą podmianą tekstury/modelu (historia trzyma wszystkie wersje). LFS dla `public/textures`, `public/music`, `src/render/models`, `*.blend`.
 4. **Linter i formatowanie** — ESLint + Prettier, sprawdzane w CI razem z testami, żeby styl kodu z kilku czatów się nie rozjeżdżał.
 5. Drobiazgi:
-   - stare podglądy w katalogu głównym (`podglad.html`, `podglad-wojsko.html`, `podglad-zwierzeta.html`) nie wchodzą do builda — sprawdzić i usunąć;
-   - akcje GitHub do podbicia (ostrzeżenie o Node 20);
-   - wersja w `package.json` (0.1.0) zgodna z grą;
+   - stare podglądy w katalogu głównym (`podglad*.html`) zostają — to strony serwera deweloperskiego, odsyła do nich README modeli (sprawdzone 23.10); ewentualnie przenieść do `tools/` razem z odnośnikami;
+   - zrobione 23.10: akcje GitHub na Node 24, wersja w `package.json`;
    - `npm run check:console` wymaga przeglądarki Playwright — dopisać instalację do README / skryptu.
 
 ## Braki zauważone przy pracy
@@ -43,7 +42,6 @@ Stan: dobry (strict TS bez `as any`, symulacja oddzielona od grafiki, 230 testó
 - Test dotyku na prawdziwym telefonie i tablecie (dotąd tylko emulacja)
 - Budynki nie mają paska stanu ani informacji, co produkują i jak szybko
 - Przy dużych bitwach wyszukiwanie drogi trzeba będzie przerobić na wspólne ścieżki dla grup
-- Akcje GitHub używają wersji z ostrzeżeniem o Node 20, do podbicia
 
 ## Ulepszanie budynków (12.10.2026)
 - Budynki będą miały poziomy ulepszeń; każdy poziom musi być widać na modelu: dochodzą detale (płot, skrzynie, beczki, flagi, dobudówki, lepszy dach, kamienna podmurówka).
