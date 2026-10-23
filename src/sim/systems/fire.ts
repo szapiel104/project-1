@@ -89,7 +89,7 @@ export function fireSystem(g: GameState): void {
       const busy = g.units.filter((u) => u.bucket && u.fireAt === b.id).length;
       if (busy >= CREW) continue;
       const [fx, fy] = center(b);
-      const cands = g.units.filter((u) => u.owner === b.owner && !u.bucket && !u.enlist && u.carryRes < 0 && u.phase !== Phase.Sleeping && u.phase !== Phase.ToSleep
+      const cands = g.units.filter((u) => u.owner === b.owner && !u.bucket && !u.enlist && !u.riot && u.carryRes < 0 && u.phase !== Phase.Sleeping && u.phase !== Phase.ToSleep
         && (u.job === 0 ? u.phase === Phase.Idle || u.phase === Phase.Evening || u.phase === Phase.ToEvening : buildingById(g, u.job)?.type === ENGINEERS)
         && Math.hypot(u.px / FP - fx, u.py / FP - fy) < 30);
       cands.sort((a, c) => Math.hypot(a.px / FP - fx, a.py / FP - fy) - Math.hypot(c.px / FP - fx, c.py / FP - fy));

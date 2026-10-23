@@ -107,6 +107,8 @@ export const en: Record<TextKey, string> = {
   'herald.afraid': 'The people are afraid. The enemy has an army and we have no one to defend the keep.',
   'herald.weaker': 'The enemy outnumbers us. We need more spearmen.',
   'scribe.foodLow': 'My lord, the granary is running low.',
+  'scribe.revolt': 'My lord, the folk have downed tools and gathered at the gate. Until their bellies are full, the workshops stand idle. Better rations and the watch will calm them sooner.',
+  'scribe.revoltOver': 'My lord, the crowd at the gate has gone home. The folk are back at work.',
   'scribe.stockFull': 'The stockpile is full. We need another stockpile or a barn.',
   'scribe.noArmory': 'My lord, we have no armoury. The spear maker and the bowyer have nowhere to take their weapons.',
   'scribe.armoryFull': 'The armoury is full. Build another one or train some troops.',

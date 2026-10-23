@@ -17,11 +17,11 @@ export function spawnPeasant(g: GameState, player: number): Unit | null {
 }
 
 function removePeasant(g: GameState, player: number): void {
-  // najpierw odchodzą bezrobotni, potem najmłodsi stażem
+  // najpierw odchodzą bezrobotni, potem najmłodsi stażem; buntownicy spod bramy zostają i domagają się chleba
   let pick = -1;
   for (let i = g.units.length - 1; i >= 0; i--) {
     const u = g.units[i]!;
-    if (u.owner !== player) continue;
+    if (u.owner !== player || u.riot) continue;
     if (u.job === 0) { pick = i; break; }
     if (pick < 0) pick = i;
   }

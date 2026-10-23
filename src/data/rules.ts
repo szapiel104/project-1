@@ -23,6 +23,14 @@ export const RULES = {
   migrationThreshold: 50,
   /** Gdy jedzenia zabrakło (a nie gracz skąpi racji): łagodna kara popularności co miesiąc — głodni i tak odchodzą sami */
   hungerPenalty: -2,
+  /** Bunt głodowy: po tylu pustych posiłkach z rzędu (rozliczenie co miesiąc gry, ok. 3,5 godziny gry) część chłopów
+   *  rzuca robotę i staje pod bramą twierdzy — wcześniej niż głodni zdążą rozejść się z osady */
+  revoltMeals: 5,
+  /** Jaka część ludzi buntuje się bez straży miejskiej, a jaka, gdy straż pilnuje porządku */
+  revoltShare: 0.5,
+  revoltShareGuarded: 0.34,
+  /** Bunt w osadzie psuje nastroje co miesiąc */
+  revoltPenalty: -3,
   startResources: { wood: 80, stone: 0, apples: 100, bread: 300, gold: 60 } as Partial<Record<ResourceId, number>>,
   /** Jak daleko od własnej twierdzy wolno budować (w polach) */
   buildRadius: 30,

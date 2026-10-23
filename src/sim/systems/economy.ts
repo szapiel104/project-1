@@ -100,6 +100,8 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const w = weatherOf(g, rainAt(g.tick));
   parts.push({ key: 'winter', value: w.chill >= 1 ? -1 : 0 });
   parts.push({ key: 'freezing', value: w.chill > 0 && p.freezing ? -3 : 0 });
+  // bunt głodowy: tłum pod bramą i stojące warsztaty psują nastroje całej osady
+  parts.push({ key: 'revolt', value: p.revolt ? RULES.revoltPenalty : 0 });
   const delta = parts.reduce((n, x) => n + x.value, 0);
   return { delta, food, gold, fed, bribed, parts, ale };
 }
@@ -120,6 +122,13 @@ export function economySystem(g: GameState): void {
     }
     // głodni: zabrakło na racje, które gracz ustawił (zjedli mniej albo nic)
     p.hungry = !f.fed || undefined;
+    // licznik głodu z rzędu (do buntu, unrest.ts): każdy pusty posiłek dokłada, każdy pełny ujmuje —
+    // szybciej przy większych racjach (rozdawanie jedzenia) i gdy straż miejska pilnuje porządku
+    if (!f.fed) p.famine = (p.famine ?? 0) + 1;
+    else if (p.famine) {
+      const calm = 1 + Math.max(0, p.rations - 2) + ((p.guards ?? 0) > 0 ? 1 : 0);
+      p.famine = Math.max(0, p.famine - calm) || undefined;
+    }
     if (f.bribed) p.res[GOLD]! += f.gold;
     p.res[ALE]! -= f.ale * RULES.alePerTavern; // piwo wypite
     // opał: w zimne dni chaty palą w piecach — z drewna w składzie znika po trochu (ułamki się zbierają)

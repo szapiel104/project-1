@@ -95,6 +95,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       ] },
       tx('Gdy jedzenia zabraknie, ludzie sami schodzą na mniejsze racje, aż do zera — a to szybko zbija popularność. Skryba ostrzega, kiedy ludzie są głodni.',
         'When food runs short, rations drop on their own, all the way to nothing — and popularity plummets fast. The scribe will warn you when your people go hungry.'),
+      tx('Bunt głodowy: gdy jedzenia brakuje przez kilka godzin gry z rzędu (5 posiłków), część ludzi rzuca robotę i staje tłumem pod bramą twierdzy — bez straży miejskiej połowa osady, ze strażą mniej więcej co trzeci. Ich warsztaty, pola i kopalnie stoją, a bunt co miesiąc zbija popularność. Buntownicy nie odchodzą z osady jak reszta głodnych — zostają i czekają na chleb. Tłum rozchodzi się sam, gdy ludzie znów się najedzą; szybciej, gdy podniesiesz racje powyżej zwykłych i gdy straż pilnuje porządku.',
+        'Bread riot: when food has been short for several hours running (5 meals), some of your folk down tools and crowd at the keep gate — half the settlement without a town watch, about one in three with one. Their workshops, fields and mines stand idle, and the riot costs popularity every month. Rioters do not drift away like the other hungry folk — they stay and wait for bread. The crowd breaks up once the folk are fed again, sooner if you raise rations above normal and the watch keeps order.'),
       { h: tx('Ile daje jeden budynek', 'What one building yields') },
       { table: [
         [tx('Źródło', 'Source'), tx('Jeden kurs', 'One run'), tx('W porcjach', 'In portions'), tx('Ilu ludzi i budynków', 'People and buildings')],

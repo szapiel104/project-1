@@ -286,6 +286,7 @@ describe('pojemność składów', () => {
     const p = g.players[0]!;
     const cap = storeCapacity(g, 0, 'stockpile');
     expect(cap).toBe(250);
+    p.res[resIndex('bread')] = 250; // jedzenia na cały test: głodny drwal stanąłby z buntownikami pod bramą
     step(g, [build(g, 'woodcutter')]);
     p.res[resIndex('wood')] = cap - storeUsed(p, 'stockpile') + p.res[resIndex('wood')]! - 3; // zostają 3 wolne miejsca
     run(g, 1500);

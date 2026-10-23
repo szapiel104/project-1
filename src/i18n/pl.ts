@@ -101,6 +101,8 @@ export const pl = {
   'herald.afraid': 'Ludzie się boją. Wróg ma wojsko, a my nie mamy kim bronić twierdzy.',
   'herald.weaker': 'Wróg ma przewagę liczebną. Trzeba więcej włóczników.',
   'scribe.foodLow': 'Panie, kończy się żywność w spichlerzu.',
+  'scribe.revolt': 'Panie, ludzie rzucili robotę i stoją tłumem pod bramą. Póki się nie najedzą, warsztaty stoją. Większe racje i straż szybciej ich uspokoją.',
+  'scribe.revoltOver': 'Panie, tłum spod bramy się rozszedł. Ludzie wrócili do roboty.',
   'scribe.stockFull': 'Skład jest pełny. Trzeba nowego składu albo stodoły.',
   'scribe.noArmory': 'Panie, nie mamy zbrojowni. Włóczniarz i łuczarz nie mają gdzie odnieść broni.',
   'scribe.armoryFull': 'Zbrojownia jest pełna. Trzeba drugiej albo wyszkolić wojsko.',

@@ -497,7 +497,7 @@ export function workerSystem(g: GameState): void {
     // najpierw ktoś, kto nic nie robi; budowniczego, latarnika czy tragarza gruzu zabieramy dopiero, gdy nie ma innych,
     // a nikogo z ładunkiem w rękach. Stare zadanie (target) się kasuje, żeby nie blokowało go później.
     const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0)
-      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && x.phase !== Phase.ToCorpse && !OFF_DUTY.has(x.phase));
+      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && !x.riot && x.phase !== Phase.ToCorpse && !OFF_DUTY.has(x.phase));
     if (!u) continue;
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0;
     b.worker = u.id;
@@ -544,6 +544,8 @@ export function workerSystem(g: GameState): void {
     if (u.enlist) { if (u.path.length) move(g, u); continue; }
     // gasi pożar (prowadzi go fireSystem): tylko krok
     if (u.bucket) { if (u.path.length) move(g, u); continue; }
+    // bunt głodowy (prowadzi go unrestSystem): idzie pod bramę twierdzy i stoi, nie pracuje, nie idzie do ogniska
+    if (u.riot) { if (u.path.length) move(g, u); continue; }
     if (!u.path.length && routine(g, u, part) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;
     if (u.phase === Phase.Evening || u.phase === Phase.Sleeping) continue;
     const job = u.job ? byId.get(u.job) : undefined;

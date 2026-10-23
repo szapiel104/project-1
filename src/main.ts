@@ -16,7 +16,7 @@ import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
-import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
+import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { applyCommands, step, type Command } from './sim/step';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
@@ -1589,6 +1589,7 @@ function resTrend(res: ArrayLike<number>): number[] {
 
 let warnedHungry = false;
 let warnedLeaving = false;
+let warnedRevolt = false;
 
 /** Skryba przed zimą: na początku jesieni zapowiedź, ok. półtora dnia przed zimą rachunek drewna i jedzenia, a gdy zima
  * przyjdzie — krótko, co robić. Progi liczone z położenia w roku; skok pory roku z menu dewelopera nic nie ogłasza. */
@@ -1626,6 +1627,13 @@ function refresh(): void {
   if (!f.fed && !warnedHungry) scribe.say('hungry', t('warn.hungry'), true);
   else if (f.fed && food < 15 && population(game, ME) > 0) scribe.say('foodLow', t('scribe.foodLow'));
   if (p.popularity < 50 && !warnedLeaving) scribe.say('leaving', t('warn.leaving'), true);
+  // bunt głodowy: raz na początku (z przyciskiem do tłumu pod bramą) i raz, gdy się rozejdą
+  if (p.revolt && !warnedRevolt) {
+    const keep = playerKeep(game, ME);
+    const w = game.map.width;
+    scribe.say('revolt', t('scribe.revolt'), true, 'scribe', keep && keep.door >= 0 ? showAt(keep.door % w, Math.floor(keep.door / w)) : undefined);
+  } else if (!p.revolt && warnedRevolt) scribe.say('revoltOver', t('scribe.revoltOver'));
+  warnedRevolt = !!p.revolt;
   const full = storeUsed(p, 'stockpile') >= storeCapacity(game, ME, 'stockpile');
   if (full && !stockFull) scribe.say('stockFull', t('scribe.stockFull'));
   stockFull = full;
@@ -2265,6 +2273,8 @@ function lineFor(id: number): string {
   const pick = (k: string): string => { const l = SAY[k]!; return l[Math.floor(Math.random() * l.length)]!; };
   if (!u) return pick('work');
   void p;
+  // buntownik pod bramą krzyczy swoje, bez względu na resztę
+  if (u.riot) return pick('revolt');
   const sit = situation(u.px, u.py);
   if (sit) return pick(sit);
   if (renderer.weather.night > 0.5 && Math.random() < 0.4) return pick('night');
@@ -2285,8 +2295,8 @@ function sayGuard(id: number): void {
   if (!s) return;
   const pick = (l: string[]): string => l[Math.floor(Math.random() * l.length)]!;
   const near = game.soldiers.some((o) => game.players[o.owner]?.team !== game.players[s.owner]?.team && (o.px - s.px) ** 2 + (o.py - s.py) ** 2 < (8 * 256) ** 2) || game.wolves.some((w) => (w.px - s.px) ** 2 + (w.py - s.py) ** 2 < (8 * 256) ** 2);
-  const sit = situation(s.px, s.py);
-  const extra = sit === 'lord' ? GUARD_SAY.lord : sit === 'cold' ? GUARD_SAY.cold : sit === 'fire' ? GUARD_SAY.fire : sit === 'rain' ? GUARD_SAY.rain : sit === 'hungry' ? GUARD_SAY.hungry : sit === 'taxHigh' ? GUARD_SAY.taxHigh : null;
+  const sit = game.players[s.owner]?.revolt && Math.random() < 0.6 ? 'revolt' : situation(s.px, s.py);
+  const extra = sit === 'lord' ? GUARD_SAY.lord : sit === 'cold' ? GUARD_SAY.cold : sit === 'fire' ? GUARD_SAY.fire : sit === 'rain' ? GUARD_SAY.rain : sit === 'hungry' ? GUARD_SAY.hungry : sit === 'revolt' ? GUARD_SAY.revolt : sit === 'taxHigh' ? GUARD_SAY.taxHigh : null;
   bubble.textContent = pick(near || sit === 'enemy' ? GUARD_SAY.danger : extra ?? (clockAt(game.tick).night ? GUARD_SAY.night : GUARD_SAY.day));
   bubble.hidden = false;
   sayUnit = id;
@@ -2380,8 +2390,8 @@ requestAnimationFrame(sayLoop);
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): HudView['report'] {
   const LBL: Record<string, string> = lang() === 'en'
-    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels' }
-    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach' };
+    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate' }
+    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: tx('Brak jedzenia na wybrane racje', 'Not enough food for the chosen rations'), value: 0, note: tx('(jedzą mniej)', '(they eat less)') });
   const mine = game.units.filter((u) => u.owner === ME);
@@ -2425,6 +2435,7 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
   const food: NonNullable<HudView['report']>['food'] = [
     { label: tx('Jedzących', 'Mouths to feed'), value: String(pop), note: `(${tx('racje', 'rations')}: ${t(lvl.name).toLowerCase()})` },
     ...(p0.hungry ? [{ label: tx('Głód!', 'Famine!'), value: tx('odchodzą', 'leaving'), sign: 'minus' as const, note: tx('(zabrakło jedzenia — póki go nie ma, ludzie opuszczają osadę)', '(the food has run out — until there is more, people are abandoning the settlement)') }] : []),
+    ...(p0.revolt ? [{ label: tx('Bunt!', 'Riot!'), value: tx(`${game.units.filter((u) => u.owner === ME && u.riot).length} pod bramą`, `${game.units.filter((u) => u.owner === ME && u.riot).length} at the gate`), sign: 'minus' as const, note: tx('(nie pracują, póki się nie najedzą; pomagają większe racje i straż)', '(no work until they are fed; better rations and the watch help)') }] : []),
     { label: tx('Zjadają co miesiąc', 'Eaten each month'), value: `${perMonthWant} ${tx('porcji', 'portions')}`, note: tx('(rozliczenie)', '(reckoning)') },
     { label: tx('Zjadają na dobę', 'Eaten per day'), value: `${perDayWant} ${tx('porcji', 'portions')}`, note: `(${perPerson.toFixed(perPerson % 1 ? 1 : 0)} ${tx('na osobę', 'per head')})` },
     { label: tx('W spichlerzach', 'In the granaries'), value: `${storeUsed(p0, 'granary')} / ${storeCapacity(game, ME, 'granary')}`, note: tx(`(${have} porcji: jabłko 1, chleb 2, ryba 3)`, `(${have} portions: apple 1, bread 2, fish 3)`) },

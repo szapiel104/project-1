@@ -11,6 +11,8 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Zarabianie: mikropłatności i reklamy (po wersji, która trzyma graczy)
 - Docelowa nazwa gry zamiast „Project‑1”
 
+- **Głód i bunt (23.10.2026):** partia 1 zrobiona (0.37.0) — po 5 pustych posiłkach z rzędu część ludzi staje tłumem pod bramą i nie pracuje, straż zmniejsza tłum, większe racje i straż szybciej go uspokajają, buntownicy nie odchodzą. Dalej: tłum z widłami i pochodniami (własna poza i animacja), przycisk „Rozdaj chleb” w oknie twierdzy (jednorazowe rozdanie zapasu, od razu ucisza), straż rozpędzająca tłum siłą (szybciej, ale z karą popularności), przy długim buncie podpalenie spichlerza albo napad na skład.
+
 ## Uwagi testera — Mikołaj (22.10.2026)
 - Budynki z wyższym priorytetem: gracz zaznacza, które mają być obsadzane w pierwszej kolejności (np. piekarnie przed łuczarzem), gdy brakuje ludzi.
 - Żelazo zapycha skład, a nic z niego nie robimy — potrzebne zastosowanie (kowal/płatnerz niżej) i może osobna kupka/skład na urobek kopalni.

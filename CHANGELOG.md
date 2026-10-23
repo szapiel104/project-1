@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.37.0 — bunt głodowy (2026-10-23)
+
+- Gdy jedzenia brakuje przez 5 posiłków z rzędu (kilka godzin gry), część ludzi rzuca robotę i staje tłumem pod bramą twierdzy: bez straży miejskiej połowa osady, ze strażą mniej więcej co trzeci. Najpierw dołączają ci, którzy pracują, więc warsztaty, pola i kopalnie stają
+- Buntownicy nie odchodzą z osady jak reszta głodnych — zostają i czekają na chleb. Zostają też przy swoim zajęciu, więc po buncie wracają prosto do roboty
+- Bunt co miesiąc zbija popularność (−3, osobny wiersz w rozpisce popularności), a w rozpisce jedzenia widać, ilu ludzi stoi pod bramą
+- Tłum rozchodzi się, gdy ludzie się najedzą. Szybciej przy racjach większych niż zwykłe i gdy jest straż miejska
+- Skryba ostrzega na początku buntu (przycisk „Pokaż” do bramy) i daje znać, gdy tłum się rozejdzie. Buntownicy mają własne okrzyki, a straż własne odzywki do tłumu (PL i EN)
+- Rozdział w „Jak grać” (Jedzenie), testy w `tests/unrest.test.ts`
 ## 0.36.0 — łucznik naciąga i sięga do kołczanu, różne upadki poległych, numery grup nad oddziałami (2026-10-23)
 
 - Łucznik w walce strzela fazami zamiast skoku do pozy: wypuszczenie (dłoń odskakuje od cięciwy), sięgnięcie przez bark do kołczanu, wyciągnięcie strzały, nałożenie jej na łuk i pełny naciąg bokiem do celu. Łuk zostaje pionowo w dłoni przez cały ruch; strzała leci w chwili wypuszczenia

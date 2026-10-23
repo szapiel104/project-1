@@ -104,6 +104,11 @@ const SAY_PL = {
     'Ciężkie to cholerstwo.', 'Niosę, niosę.', 'Z drogi!', 'Uważaj, bo upuszczę!', 'Ramię mi odpadnie.', 'Jeszcze kawałek do składu.',
   ],
   // --- nastroje i sytuacje ---
+  revolt: [
+    'Chleba, nie podatków!', 'Nie ruszę palcem, póki brzuch pusty.', 'Pan w zamku je, a my patrzymy.',
+    'Otwierać spichlerz!', 'Stoimy tu, aż ktoś nas nakarmi.', 'Niech pan wyjdzie i spojrzy nam w oczy.',
+    'Z głodu nikt jeszcze nie zbudował twierdzy.',
+  ],
   hungry: [
     'Głodno w osadzie, panie.', 'Brzuch mi do krzyża przyrasta.', 'Z pustym brzuchem nie popracuję.', 'Dzieci płaczą z głodu.',
     'Chleba by choć kromkę.', 'W spichlerzu wiatr hula.',
@@ -176,6 +181,7 @@ const GUARD_SAY_PL = {
   cold: ['Zimno, aż zbroja do skóry przymarza.', 'Mróz. Ogień by się przydał przy bramie.'],
   rain: ['Leje jak z cebra, a ja tu stoję.', 'Zbroja rdzewieje od tego deszczu.', 'Mokry strażnik, zły strażnik.'],
   hungry: ['Pusty kocioł w koszarach. Długo tak nie postoimy.', 'Głodny strażnik to zły strażnik.'],
+  revolt: ['Rozejść się! Nie ma tu nic do oglądania.', 'Spokój pod bramą, bo pałka pójdzie w ruch.', 'Wiem, że głodno. Mnie też.'],
   taxHigh: ['Chłopi narzekają na podatki. Pilnuj, żeby się nie zbuntowali.', 'Poborca chodzi z nami, bo sam by nie wrócił.'],
   lord: ['Pan na dziedzińcu. Baczność!', 'Z drogi, pan idzie!', 'Pilnować pana, chłopy!'],
 };
@@ -296,6 +302,11 @@ const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
     'Heavy bloody thing.', 'Hauling, hauling.', 'Out of the way!', 'Watch it or I\'ll drop it!', 'My shoulder\'s about to fall off.', 'Bit further to the stockpile.',
   ],
   // --- moods and situations ---
+  revolt: [
+    'Bread, not taxes!', 'Not lifting a finger on an empty belly.', 'His lordship feasts while we starve.',
+    'Open the granary!', 'We stand here till someone feeds us.', 'Let the lord come out and look us in the eye.',
+    'No keep was ever built on hunger.',
+  ],
   hungry: [
     'Folk are going hungry, my lord.', 'My belly\'s stuck to my spine.', 'Can\'t work on an empty stomach.', 'The children are crying from hunger.',
     'Just a crust of bread…', 'Nothing in the granary but the wind.',
@@ -367,6 +378,7 @@ const GUARD_SAY_EN: { [K in keyof typeof GUARD_SAY_PL]: string[] } = {
   cold: ['So cold my armour\'s freezing to my skin.', 'Frost. Could use a fire by the gate.'],
   rain: ['Pouring buckets, and here I stand.', 'This rain\'s rusting my armour.', 'Wet guard, grumpy guard.'],
   hungry: ['Empty pot in the barracks. We won\'t last long like this.', 'A hungry guard is a bad guard.'],
+  revolt: ['Break it up! Nothing to see here.', 'Quiet at the gate, or the cudgel comes out.', 'I know you\'re hungry. So am I.'],
   taxHigh: ['The peasants grumble about taxes. Keep an eye out for trouble.', 'The tax collector walks with us. Wouldn\'t come back alone.'],
   lord: ['The lord\'s in the courtyard. Attention!', 'Make way, the lord\'s coming!', 'Guard the lord, lads!'],
 };
