@@ -1,4 +1,4 @@
-import { buildingById, unitById, dropWorker } from '../state';
+import { buildingById, unitById, dropWorker, storeCapacity, storeUsed } from '../state';
 import { WALL_TOP } from '../../data/keep';
 import { buildingIndex } from '../../data/buildings';
 import { type ResourceId, resIndex } from '../../data/resources';
@@ -8,7 +8,7 @@ import { findPath, walkable, wallBetween } from '../path';
 import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type March, type QueuedMove, type Soldier, type Unit, keepCenter } from '../state';
 import { BUILDINGS, footprint, isTower, towerBonus, workArea } from '../../data/buildings';
-import { buildWork, enemyNear, maxHp, restore, ruin } from './placement';
+import { buildWork, demolish, enemyNear, maxHp, rebuildCost, restore, ruin } from './placement';
 import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
@@ -787,7 +787,7 @@ export function armySystem(g: GameState): void {
     const stance = s.stance ?? 0;
     if (stance && s.goal < 0 && !s.target && !s.path.length && (s.hold ?? -1) < 0) s.hold = tileOf(g, s);
     // ciężko ranny w walce cofa się za szyk (nie w postawie „stój”, nie z wieży, nie strażnik miejski)
-    if (!s.wounded && s.target && !def.guard && !def.ram && !def.bandit && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) retreat(g, s, byId);
+    if (!s.wounded && s.target && !def.guard && !def.ram && !def.sapper && !def.bandit && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) retreat(g, s, byId);
     // jak daleko od pilnowanego pola wolno mu odejść za wrogiem
     const leash = stance === 1 ? 6 : stance === 2 ? 0 : Infinity;
     const tooFar = (t: number): boolean => {
@@ -823,6 +823,9 @@ export function armySystem(g: GameState): void {
     // taran: nie walczy z ludźmi, tylko podjeżdża pod najbliższą wrogą bramę, mur albo zamek i bije w nie belką
     if (def.ram) {
       if ((s.goal < 0 || s.amove) && siege(g, s, def, taken)) continue;
+    } else if (def.sapper) {
+      // saper nie walczy: rozbiera wrogie ruiny i znosi łup do twierdzy (rozkaz marszu ma pierwszeństwo)
+      if (s.goal < 0 && salvageStep(g, s)) continue;
     } else
     // walka: tylko gdy nie maszeruje na rozkaz (albo maszeruje z rozkazem „atak w marszu”)
     if (!s.wounded && (s.goal < 0 || s.amove)) {
@@ -1142,9 +1145,12 @@ function sendForMaterial(g: GameState, u: Unit, b: Building): boolean {
 /** Inżynier z cechu naprawia uszkodzone budynki swojego gracza (najbliższy pierwszy). */
 function repairSystem(g: GameState): void {
   if (g.tick % 10 !== 0) return;
+  payRebuilds(g);
   for (const u of g.units) {
     if (u.phase === Phase.Repairing) {
       const b = buildingById(g, u.target);
+      // ruina jeszcze niezapłacona: robotnik odchodzi, dopóki pan nie zapłaci za odbudowę
+      if (b && b.unpaid) { u.target = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; continue; }
       // budowa: każdy robotnik dokłada swoją część, ostatni kończy
       if (b && b.build > 0) {
         // pod okiem wrogiego wojska nikt nie buduje ani nie odbudowuje — robota stoi
@@ -1171,6 +1177,7 @@ function repairSystem(g: GameState): void {
   // do każdego placu budowy przychodzi do trzech wolnych chłopów z młotkami
   for (const b of g.buildings) {
     if (!b.build) continue; // budowa rusza dopiero, gdy robotnicy dojdą na plac
+    if (b.unpaid) continue; // ruina czeka, aż pan zapłaci za odbudowę
     if (siteUnderThreat(g, b)) continue; // ruina pod wrogimi włóczniami czeka, aż wróg odejdzie
     // ładunki „zgubione” po drodze (niosący dostał inną pracę albo zginął) wracają do puli do przyniesienia
     if (b.loads) {
@@ -1203,6 +1210,121 @@ function repairSystem(g: GameState): void {
   engineerOrders(g);
 }
 
+/**
+ * Zapłata za odbudowę ruin: z zapasów gracza schodzi połowa kosztu budynku, dopiero wtedy robotnicy i inżynierowie
+ * biorą się do roboty. Najpierw umocnienia (mury, bramy, wieże), potem reszta; na co nie starcza, czeka.
+ */
+function payRebuilds(g: GameState): void {
+  const due = g.buildings.filter((b) => b.ruined && b.unpaid);
+  if (!due.length) return;
+  const rank = (b: Building): number => { const d = BUILDINGS[b.type]!; return d.wall || d.gate || d.line || isTower(d.id) ? 0 : 1; };
+  due.sort((a, b) => rank(a) - rank(b) || a.id - b.id);
+  for (const b of due) {
+    const p = g.players[b.owner];
+    if (!p || p.defeated) continue;
+    const cost = rebuildCost(b.type);
+    if (cost.some(([k, v]) => p.res[resIndex(k)]! < v)) continue;
+    for (const [k, v] of cost) p.res[resIndex(k)]! -= v;
+    b.unpaid = undefined;
+  }
+}
+
+/** Ile ticków saper rąbie i podważa ruinę, zanim wyniesie jeden ładunek */
+export const SALVAGE_TICKS = 50;
+/** Z jak daleka (w polach) od ostatniej ruiny saper sam szuka następnej */
+const SALVAGE_SEEK = 12;
+
+/** Wroga ruina, którą ten saper może rozbierać (nie twierdza, nie droga) */
+function salvageable(g: GameState, s: Soldier, b: Building | undefined): b is Building {
+  return !!b && !!b.ruined && team(g, b.owner) !== team(g, s.owner) && !BUILDINGS[b.type]!.road && b.type !== KEEP;
+}
+/** Co leży w ruinie do wyniesienia: połowa drewna, kamienia i żelaza z kosztu budynku, w ładunkach po RULES.rubbleLoad */
+export function salvageLoads(type: number): [number, number][] {
+  const out: [number, number][] = [];
+  const c = BUILDINGS[type]!.cost as Record<string, number>;
+  for (const k of ['wood', 'stone', 'iron'] as const) {
+    let left = Math.floor((c[k] ?? 0) / 2);
+    while (left > 0) { const n = Math.min(left, RULES.rubbleLoad); out.push([resIndex(k), n]); left -= n; }
+  }
+  return out;
+}
+
+/**
+ * Saper: idzie pod wrogą ruinę (z rozkazu albo sam, gdy jakaś jest w pobliżu), rąbie ją, wynosi ładunek do własnej
+ * twierdzy i wraca po następny. Gdy ruina jest pusta, zostaje po niej tylko bezwartościowy gruz — wróg musi go wynieść
+ * i postawić budynek od nowa, za pełną cenę. Zwraca true, gdy saper miał co robić w tym ticku.
+ */
+function salvageStep(g: GameState, s: Soldier): boolean {
+  if (s.wait > 0) return false;
+  const here = tileOf(g, s), W = g.map.width;
+  // 1. niesie łup: pod mur albo do bramy własnej twierdzy; tam łup trafia do składu (co się nie mieści, przepada)
+  if (s.loot) {
+    const keep = g.buildings.find((b) => b.owner === s.owner && b.type === KEEP);
+    if (!keep) { s.loot = 0; s.lootN = 0; return false; }
+    if (rectGap(g, here, keep) <= 1 && !s.path.length) {
+      const p = g.players[s.owner], res = s.loot - 1;
+      if (p) {
+        const kind = RESOURCE_DEFS[RESOURCES[res]!].store;
+        const room = kind ? Math.max(0, storeCapacity(g, s.owner, kind) - storeUsed(p, kind)) : Infinity;
+        const n = Math.min(s.lootN ?? 0, room);
+        p.res[res]! += n;
+        p.stats.gathered += n;
+      }
+      s.loot = 0; s.lootN = 0;
+      return true;
+    }
+    if (!s.path.length) {
+      if (budget <= 0) return true;
+      budget--;
+      const path = findPath(g, here, (t) => rectGap(g, t, keep) <= 1, 4000, s.owner);
+      if (path && path.length) s.path = path; else { s.wait = RETRY; return true; }
+    }
+    step(g, s);
+    return true;
+  }
+  // 2. cel: ruina z rozkazu, a bez niej najbliższa wroga ruina koło poprzedniej (albo koło sapera)
+  let b = s.target ? buildingById(g, s.target) : undefined;
+  if (!salvageable(g, s, b)) {
+    b = undefined;
+    const from = s.dig ?? here, fx = from % W, fy = (from - fx) / W;
+    let best = Infinity;
+    for (const o of g.buildings) {
+      if (!salvageable(g, s, o)) continue;
+      const fp = footprint(BUILDINGS[o.type]!, o.rot);
+      const d = Math.max(o.x - fx, 0, fx - (o.x + fp.w - 1), o.y - fy, 0, fy - (o.y + fp.h - 1));
+      if (d <= Math.max(SALVAGE_SEEK, UNITS[s.kind]!.sight) && (d < best || (d === best && b && o.id < b.id))) { best = d; b = o; }
+    }
+    s.target = b ? b.id : 0;
+    if (!b) { s.cd = 0; return false; }
+  }
+  s.dig = b.y * W + b.x;
+  // 3. pod ruiną: rąbie; po SALVAGE_TICKS bierze jeden ładunek i niesie go do twierdzy
+  if (rectGap(g, here, b) <= 1 && !s.path.length) {
+    b.salvage ??= salvageLoads(b.type);
+    if (s.cd === 0) s.cd = SALVAGE_TICKS;
+    else if (s.cd === 1) {
+      const load = b.salvage.shift();
+      if (load) { s.loot = load[0] + 1; s.lootN = load[1]; }
+      // ruina rozebrana do gołej ziemi: znika z mapy, zostaje tylko gruz do wyniesienia przez wroga
+      if (!b.salvage.length) {
+        const razer = g.players[s.owner]; if (razer) razer.stats.razed++;
+        demolish(g, b.owner, b.id, true);
+        s.target = 0;
+      }
+    }
+    return true;
+  }
+  if (!s.path.length) {
+    if (budget <= 0) return true;
+    budget--;
+    const target = b;
+    const path = findPath(g, here, (t) => rectGap(g, t, target) <= 1, 2400, s.owner);
+    if (path && path.length) s.path = path; else { s.target = 0; s.wait = RETRY; return true; }
+  }
+  step(g, s);
+  return true;
+}
+
 /** Ile wytrzymałości łata inżynier na raz (co 10 ticków) */
 export const REPAIR_HP = 15;
 /** O ile skraca budowę jeden inżynier na raz (chłop: 12) */
@@ -1218,6 +1340,7 @@ function engineerRank(b: Building): number {
 export function engineerJob(g: GameState, guild: Building, b: Building): boolean {
   if (b.owner !== guild.owner || b.id === guild.id || BUILDINGS[b.type]!.road) return false;
   if (!b.build && b.hp >= maxHp(b.type)) return false;
+  if (b.unpaid) return false; // ruina bez zapłaty za odbudowę: nie ma z czego jej stawiać
   return !siteUnderThreat(g, b);
 }
 /**

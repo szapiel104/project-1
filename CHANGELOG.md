@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.33.0 — odbudowa ruin kosztuje, saperzy rozbierają wrogie ruiny (2026-10-23)
+
+- Odbudowa własnej ruiny nie jest już za darmo: kosztuje połowę ceny budynku (drewno, kamień, żelazo, ruda). Zapłata schodzi sama, gdy starcza surowców — najpierw za mury, bramy i wieże — i dopiero wtedy robotnicy i inżynierowie biorą się do roboty. Okno ruiny pokazuje koszt i czego brakuje
+- Nowa jednostka z koszar: **saper** (2 żelaza + 10 rudy). Nie walczy; prawy klik na wrogą ruinę — rozbiera ją, a połowę drewna, kamienia i żelaza, z których była postawiona, znosi ładunek po ładunku do twierdzy (co się nie mieści w składzie, przepada). Rozebrana ruina znika z mapy, zostaje tylko gruz: wróg musi postawić budynek od nowa za pełną cenę. Sam przechodzi do kolejnej wrogiej ruiny w pobliżu
+- Póki saperzy stoją przy ruinie, wróg nie może jej odbudować; saperzy są bezbronni, więc warto dać im eskortę
+- Na razie saper wygląda jak chłop w barwach pana z kilofem (przy ruinie kuje oburącz, łup niesie przed sobą); własny model z Blendera w kolejnej partii
+- Karta sapera w koszarach, okrzyki po polsku i angielsku, rozdziały „Saperzy” i „Rozbiórka i ruiny” w „Jak grać”
+- Poprawka: polegli chłopi, strażnicy i zbrojni nie leżą już dodatkowo jako ciało włócznika, a poległy chorąży znów zostawia swoje ciało obok proporca
+
 ## 0.32.1 — cech inżynierów bez zasięgu (2026-10-23)
 
 - Inżynierowie znowu działają w całej osadzie, bez granicy 24 pól; przy równym priorytecie biorą najpierw roboty bliżej cechu

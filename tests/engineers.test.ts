@@ -65,6 +65,11 @@ describe('cech inżynierów', () => {
     for (let i = 0; i < 600; i++) step(g, []);
     ruin(g, a);
     expect(a.ruined).toBe(true);
+    // ruina czeka na zapłatę za odbudowę (pobiera ją pierwszy przegląd robót)
+    expect(a.unpaid).toBe(true);
+    expect(engineerJob(g, guild, a)).toBe(false);
+    for (let i = 0; i < 10 && a.unpaid; i++) step(g, []);
+    expect(a.unpaid).toBeFalsy();
     expect(engineerJob(g, guild, a)).toBe(true);
     // zasięgu nie ma: chata daleko od cechu też jest robotą dla inżyniera
     expect(engineerJob(g, guild, { ...a, x: guild.x + 60 })).toBe(true);

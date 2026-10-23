@@ -31,6 +31,8 @@ export interface UnitDef {
   bandit?: boolean;
   /** Drugi sprzęt ze zbrojowni potrzebny do wyszkolenia (oprócz broni), np. kolczuga zbrojnego */
   gear?: ResourceId;
+  /** Saper: nie walczy; rozbiera wrogie ruiny i znosi z nich surowce do własnej twierdzy (systems/army.ts) */
+  sapper?: boolean;
   /** Zbroja: o tyle procent mniej boli cios wręcz; strzała półtora raza mniej (najwyżej 75%) */
   armor?: number;
 }
@@ -48,7 +50,13 @@ export const UNITS: readonly UnitDef[] = [
   // Zbrojny: ciężka piechota w klimacie Starego Obozu — miecz z kuźni, kolczuga od płatnerza, hełm. Wolniejszy, ale twardy:
   // zbroja zjada część każdego ciosu i większość strzał; bez szarży i bez tarczy (na końcu listy dla starych zapisów)
   { id: 'manatarms', name: 'u.manatarms', cost: { sword: 1, armor: 1, gold: 20 }, hp: 110, speed: 88, attack: 13, cooldown: 14, sight: 6, weapon: 'sword', gear: 'armor', armor: 35 },
+  // Saper (inżynier wojskowy): kilof i łom z żelaza, skórzany kaftan; nie walczy, rozbiera wrogie ruiny do gołej ziemi
+  // i znosi z nich drewno, kamień i żelazo do własnej twierdzy — wróg musi stawiać od nowa, za pełną cenę (na końcu listy dla starych zapisów)
+  { id: 'sapper', name: 'u.sapper', cost: { iron: 2, gold: 10 }, hp: 45, speed: 100, attack: 0, cooldown: 14, sight: 10, weapon: 'iron', sapper: true },
 ];
+
+/** Indeks sapera w UNITS */
+export const SAPPER = UNITS.findIndex((u) => u.sapper);
 
 /** Indeks zbója w UNITS */
 export const BANDIT_KIND = UNITS.findIndex((u) => u.bandit);

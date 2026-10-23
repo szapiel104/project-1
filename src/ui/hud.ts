@@ -240,8 +240,17 @@ const MANATARMS_PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria
   <path d="M16 13v5" stroke="#5a5f68" stroke-width="1.4"/>
   <path d="M27 8v16" stroke="#c4c9d0" stroke-width="1.6"/><path d="M25 22h4" stroke="#5c5a60" stroke-width="1.4"/>
 </svg>`;
+// saper: skórzany kaptur i kaftan, kilof na ramieniu
+const SAPPER_PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true">
+  <rect width="32" height="32" fill="#2f2419"/>
+  <path d="M5 32c0-7 4-10 11-10s11 3 11 10z" fill="#6b4a2c" stroke="#1c120a"/>
+  <path d="M10 25h12M16 22v10" stroke="#3e2a18" stroke-width="1.4"/>
+  <circle cx="16" cy="15" r="5.5" fill="#e2bd94" stroke="#1c120a"/>
+  <path d="M9.5 17c-1-8 13-8 13 0l-1.5-4c-2-3-8-3-10 0z" fill="#5a3e24" stroke="#1c120a"/>
+  <path d="M6 28L26 5" stroke="#7a5a36" stroke-width="2"/><path d="M21 3c3 0 6 2 7 5l-4-2-4 1z" fill="#8f949c" stroke="#1c120a" stroke-width=".8"/>
+</svg>`;
 /** Portret do karty jednostki: włócznik jako domyślny */
-const portraitOf = (kind: string | undefined): string => (kind === 'archer' ? ARCHER_PORTRAIT : kind === 'manatarms' ? MANATARMS_PORTRAIT : PORTRAIT);
+const portraitOf = (kind: string | undefined): string => (kind === 'archer' ? ARCHER_PORTRAIT : kind === 'manatarms' ? MANATARMS_PORTRAIT : kind === 'sapper' ? SAPPER_PORTRAIT : PORTRAIT);
 
 export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
   root.replaceChildren();
@@ -581,7 +590,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   rallyRow.append(rallyAll, rallyOff, el('p', 'hint', tx('Rekrut idzie z obozowiska do koszar, wychodzi w zbroi i staje na fladze (bez flagi — przed koszarami).', 'A recruit walks from the camp to the barracks, comes out armoured and stands at the flag (with no flag — outside the barracks).')));
   // taran: wóz z daszkiem i belką z kutą głowicą
   const RAM_PORTRAIT = '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M5 15l11-7 11 7z" fill="#8a6a44" stroke="#2a1c10"/><rect x="6" y="15" width="20" height="2" fill="#5e4329"/><path d="M8 17v7M24 17v7" stroke="#5e4329" stroke-width="2"/><rect x="3" y="18" width="24" height="3" rx="1.5" fill="#8a5a2b" stroke="#2a1c10"/><path d="M27 17.5l3 1.5v1.5l-3 1.5z" fill="#6a6e76" stroke="#2a1c10"/><circle cx="10" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/><circle cx="22" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/></svg>';
-  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT, manatarms: MANATARMS_PORTRAIT };
+  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT, manatarms: MANATARMS_PORTRAIT, sapper: SAPPER_PORTRAIT };
   const drawRecruit = (): void => {
     for (const r of lastRecruit) {
       let c = unitCards.get(r.id);
@@ -610,7 +619,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         c = { card, stats, needs, b1, b5, bAll, flag };
         unitCards.set(r.id, c);
       }
-      setText(c.stats, `${t('hud.hp')} ${r.hp} · ${t('hud.attack')} ${r.attack}${r.range ? ` · ${tx('zasięg', 'range')} ${r.range}` : ''}${r.armor ? ` · ${tx('zbroja', 'armour')} ${r.armor}%` : ''}`);
+      setText(c.stats, `${t('hud.hp')} ${r.hp} · ${r.attack ? `${t('hud.attack')} ${r.attack}` : tx('nie walczy, rozbiera wrogie ruiny', 'does not fight, strips enemy ruins')}${r.range ? ` · ${tx('zasięg', 'range')} ${r.range}` : ''}${r.armor ? ` · ${tx('zbroja', 'armour')} ${r.armor}%` : ''}`);
       const row = (icon: string, have: number, need: number): string => `<span class="need${have < need ? ' short' : ''}"><svg viewBox="0 0 20 20" width="22" height="22">${ICONS[icon] ?? ''}</svg><strong>${need}</strong><em>(${have})</em></span>`;
       c.needs.innerHTML = row(r.weapon, r.have, r.need ?? 1) + (r.gear ? row(r.gear.res, r.gear.have, 1) : '') + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
       c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;

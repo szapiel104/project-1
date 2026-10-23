@@ -258,7 +258,7 @@ export const en: Record<TextKey, string> = {
   'd.watchtower': 'A wooden watchtower. You can also place it on a finished wall (palisade or stone). It strengthens the wall and gives a view of the surroundings; archers will stand on it later.',
   'd.cemetery': 'The gravedigger collects the fallen from the battlefield and buries them here. Without him the bodies lie and rot.',
   'u.spearman': 'Spearman',
-  'u.archer': 'Archer', 'u.guard': 'Guard', 'u.ram': 'Battering ram', 'u.bandit': 'Brigand', 'u.manatarms': 'Man-at-arms',
+  'u.archer': 'Archer', 'u.guard': 'Guard', 'u.ram': 'Battering ram', 'u.bandit': 'Brigand', 'u.manatarms': 'Man-at-arms', 'u.sapper': 'Sapper',
   'hud.train': 'Train a spearman',
   'hud.trainCost': '1 spear, 8 ore, 1 idle peasant',
   'hud.trainNo': 'Not enough spears, ore or idle peasants',

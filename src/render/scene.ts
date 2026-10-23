@@ -334,6 +334,8 @@ export class GameRenderer {
   /** Siekiera drwala i kilof kopacza: w prawej dłoni, obracane w barku jak młotek */
   private axes!: GearPool;
   private picks!: GearPool;
+  /** Saperzy z poprzedniej klatki wojska: rysuje ich pula chłopów (ta sama postać, kilof i ładunek co u kopacza) */
+  private sapperDraw: { m: THREE.Matrix4; swing: number; walking: boolean; work: boolean; carry: number; team: number; id: number }[] = [];
   /** Broń chłopa: maczuga w dłoni w walce, kilof na plecach i maczuga u pasa na co dzień */
   private clubs!: GearPool;
   private backPicks!: GearPool;
@@ -4669,6 +4671,7 @@ export class GameRenderer {
     }
     this.lastBearers = bearers;
     this.standards.begin();
+    this.sapperDraw = [];
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
       const prev = this.prevPos.get(s.id);
@@ -4712,7 +4715,7 @@ export class GameRenderer {
       const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
       const udef = UNITS[s.kind]!;
       const ranged = !!udef.range;
-      const striking = (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
+      const striking = !udef.sapper && (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
       let lift = s.up ? (s.post && BUILDINGS[bById.get(s.post)?.type ?? 0]!.id === 'stoneTower' ? STONE_TOWER_TOP : WATCH_TOWER_TOP) : 0;
       // życie na wieży: bez walki każdy zajęty czym innym (oparty o barierkę, siedzi, wypatruje, czwarty pod wieżą);
@@ -4825,7 +4828,9 @@ export class GameRenderer {
       this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined);
       const heavy = udef.id === 'manatarms';
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id);
-      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper ? t.matrix : ZERO, legs, striking, teamC, s.id);
+      // saper: postać chłopa w barwach pana z kilofem; rysuje go pula chłopów (syncUnits) w następnej klatce
+      if (udef.sapper) this.sapperDraw.push({ m: t.matrix.clone(), swing: legs, walking, work: !!wall && !walking && !s.loot && wall.ruined === true, carry: s.loot ? s.loot - 1 : -1, team: teamC, id: s.id });
       if (udef.ram && rams < 256) {
         // wóz jedzie przodem (głowicą) w stronę marszu; belka cofa się, gdy taran szykuje cios, i wybija się do przodu przy uderzeniu
         // pod budynkiem: głowicą prosto w najbliższy kawałek ściany celu (nie bokiem, jak stanął po drodze)
@@ -4919,9 +4924,12 @@ export class GameRenderer {
       const rot = new THREE.Color(team).lerp(new THREE.Color(0x3b3226), 0.3 + age * 0.6).getHex();
       // każdy leży w swoim stroju: chłop, łucznik, strażnik miejski albo włócznik
       const ud = body.kind >= 0 ? UNITS[body.kind] : undefined;
-      if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id); }
+      // każde ciało rysuje się tylko jednym modelem (wcześniej chłop, strażnik i zbrojny leżeli dodatkowo jako włócznik)
+      if (body.kind < 0 || ud?.sapper) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, body.kind < 0 ? rot : team, body.id); }
       else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id); }
       else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id); }
+      else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id); }
+      else this.bodies.set(sp++, m, 0.3, false, rot, body.id);
       // poległy chorąży: drzewce przewraca się na bok razem z nim i proporzec leży na ziemi obok ciała
       if (this.fallenBearers.has(body.id) && g.players[body.owner]) {
         const k = this.calm ? 1 : ease;
@@ -4929,8 +4937,6 @@ export class GameRenderer {
           new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw + 0.5, 1.45 * k, 'YXZ')), new THREE.Vector3().setScalar(1.08 * FIG));
         this.standards.add(fallM, body.owner, team, this.crestOf(body.owner));
       }
-      else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id); }
-      else this.bodies.set(sp++, m, 0.3, false, rot, body.id);
       m.compose(new THREE.Vector3(fx - width / 2, y + 0.02, fy - height / 2), new THREE.Quaternion(), sc.set(1 + age * 0.4, 1, 1 + age * 0.4));
       this.stains.setMatrixAt(c, m);
       c++;
@@ -4973,6 +4979,41 @@ export class GameRenderer {
    * przy palenisku, dwoje służby noszącej jedzenie z kuchni do sali i dwóch więźniów w celach. Rysowani tą samą
    * siatką co chłopi (dalsze miejsca w puli), więc nie kosztują osobnych wywołań rysowania.
    */
+  /** Saperzy (żołnierze, ale z wyglądu chłopi z kilofem): rąbią ruinę, niosą łup oburącz, w drodze kilof na plecach */
+  private drawSappers(k: number, loadUsed: Map<number, number>): number {
+    for (const d of this.sapperDraw) {
+      if (k >= MAX_UNITS) break;
+      const sz = this.figures.sizeOf(d.id, d.team);
+      let armR = -0.5, armL = -0.5, grip = 0;
+      const carrying = d.carry >= 0;
+      if (carrying) [armR, armL] = carryArms(false, d.swing);
+      else if (d.work && !this.calm) {
+        // zamach kilofem znad głowy, cios, odbicie — jak kopacz przy złożu
+        const ph = (this.time * 0.95 + (d.id % 7) * 0.21) % 1;
+        const ease = (x: number): number => x * x * (3 - 2 * x);
+        const high = 2.75;
+        armR = ph < 0.55 ? -0.35 - ease(ph / 0.55) * high : ph < 0.67 ? -0.35 - high + ((ph - 0.55) / 0.12) ** 2 * (high + 0.15) : -0.2;
+        armL = armR; grip = TWO_HAND;
+        if (ph > 0.62 && ph < 0.68) this.sfxAt('plank', d.m.elements[12]!, d.m.elements[14]!, `sap${d.id}`, 0.6, 0.7);
+      }
+      const posed = carrying || (d.work && !this.calm);
+      this.figures.set(k, d.m, d.swing, false, d.team, d.id, posed ? armR : undefined, armL, carrying, undefined, grip);
+      this.armS.copy(d.m).scale(this.armV.setScalar(sz));
+      if (d.work && !carrying) {
+        this.armM.makeRotationFromEuler(this.gripE.set(armR, 0, -TWO_HAND)).setPosition(0.135, 0.45, 0);
+        this.picks.setMatrixAt(k, this.armM.premultiply(this.armS));
+      } else this.backPicks.setMatrixAt(k, this.armS);
+      const load = carrying ? this.loads.get(d.carry) : undefined;
+      if (load) {
+        const j = loadUsed.get(d.carry) ?? 0;
+        loadUsed.set(d.carry, j + 1);
+        load.setMatrixAt(j, this.armS.copy(d.m).scale(this.armV.setScalar(sz)));
+      }
+      k++;
+    }
+    return k;
+  }
+
   private castleFolk(g: GameState, k0: number): number {
     let k = k0;
     const { width, height } = g.map;
@@ -5984,6 +6025,7 @@ export class GameRenderer {
       k++;
     }
     for (const [id, cart] of this.carts) if (!seenCarts.has(id)) { if (cart.icon) { this.scene.remove(cart.icon); cart.icon.material.dispose(); } this.scene.remove(cart.obj); cart.obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose()); this.carts.delete(id); }
+    k = this.drawSappers(k, loadUsed);
     k = this.castleFolk(g, k);
     this.figures.finish(k);
     // pule narzędzi: `count` zamyka klatkę (liczba bez znaczenia) i same oznaczają swoje bufory

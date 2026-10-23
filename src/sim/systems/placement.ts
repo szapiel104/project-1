@@ -321,11 +321,28 @@ export function ruin(g: GameState, b: Building): void {
   startSite(b, 0.5); // odbudowa ruiny: część materiału leży w gruzie
   b.hp = maxHp(b.type);
   b.ruined = true;
+  // odbudowa nie jest za darmo: zanim ktokolwiek chwyci za młotek, pan płaci połowę kosztu budynku (systems/army.ts)
+  b.unpaid = rebuildCost(b.type).length > 0 || undefined;
+  b.salvage = undefined;
   releaseCrew(g, b);
   if (def.wall || def.gate) {
     const fp = footprint(def, b.rot);
     for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) { g.occupancy[y * g.map.width + x] = 0; g.gates[y * g.map.width + x] = 0; g.walls[y * g.map.width + x] = 0; }
   }
+}
+
+/** Koszt odbudowy ruiny: połowa kosztu budynku (w górę) — drewno, kamień, żelazo i ruda */
+export function rebuildCost(type: number): [ResourceId, number][] {
+  const out: [ResourceId, number][] = [];
+  for (const [k, v] of Object.entries(BUILDINGS[type]!.cost)) { const n = Math.ceil((v as number) / 2); if (n > 0) out.push([k as ResourceId, n]); }
+  return out;
+}
+
+/** Czego brakuje graczowi do zapłaty za odbudowę (puste = stać go) */
+export function rebuildShort(g: GameState, b: Building): [ResourceId, number][] {
+  const p = g.players[b.owner];
+  if (!p) return [];
+  return rebuildCost(b.type).filter(([k, v]) => p.res[resIndex(k)]! < v).map(([k, v]) => [k, v - p.res[resIndex(k)]!]);
 }
 
 /** Koniec odbudowy ruiny: mur znów zamyka przejście (o ile nikt na nim akurat nie stoi) */
@@ -337,7 +354,7 @@ export function restore(g: GameState, b: Building): boolean {
     for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) g.occupancy[y * w + x] = b.id;
     if (def.gate) g.gates[b.y * w + b.x] = b.owner + 1;
   }
-  b.ruined = false;
+  b.ruined = false; b.unpaid = undefined; b.salvage = undefined;
   return true;
 }
 

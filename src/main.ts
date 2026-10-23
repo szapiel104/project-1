@@ -21,7 +21,7 @@ import { applyCommands, step, type Command } from './sim/step';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
-import { buildWork, canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
+import { buildWork, canAfford, canPlace, findDoor, missingRequirement, maxHp, rebuildCost, rebuildShort, tileBuildable } from './sim/systems/placement';
 import { crewWanted, MINE_YIELDS } from './sim/systems/workers';
 import { CAMP_GUARDS, campOf } from './sim/systems/minecamp';
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
@@ -733,7 +733,13 @@ function siteInfo(b: GameState['buildings'][number]): NonNullable<BuildingInfo['
   }
   const loads = b.loads ?? 0, delivered = b.delivered ?? 0;
   const starved = loads > 0 && (1 - b.build / work) * loads >= delivered - 0.001;
-  const state = !builders ? tx('brak wolnych ludzi — czeka na robotników', 'no idle hands — waiting for labourers')
+  // ruina przed zapłatą: pokazujemy, ile kosztuje odbudowa i czego brakuje
+  const cost = (list: [ResourceId, number][]): string => list.map(([k, v]) => `${v} ${t(RESOURCE_DEFS[k].name).toLowerCase()}`).join(', ');
+  const short = b.unpaid ? rebuildShort(game, b) : [];
+  const state = b.unpaid ? (short.length
+      ? tx(`ruina — odbudowa kosztuje ${cost(rebuildCost(b.type))}; brakuje: ${cost(short)}`, `in ruins — rebuilding costs ${cost(rebuildCost(b.type))}; still short of ${cost(short)}`)
+      : tx(`ruina — odbudowa kosztuje ${cost(rebuildCost(b.type))}, zapłata za chwilę`, `in ruins — rebuilding costs ${cost(rebuildCost(b.type))}, payment in a moment`))
+    : !builders ? tx('brak wolnych ludzi — czeka na robotników', 'no idle hands — waiting for labourers')
     : starved && (fetching || carrying) ? tx('robotnicy niosą materiał ze składu', 'labourers are hauling materials from the stockpile')
     : starved ? tx('czeka na materiał', 'waiting for materials')
     : hammering ? tx('trwa budowa', 'construction under way') : tx('robotnicy idą na plac', 'labourers are heading to the site');
@@ -1527,6 +1533,12 @@ function updateHoverFoe(): void {
     if (!hoverFoe && hoverTile) {
       const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
       if (b && game.players[b.owner]?.team !== game.players[ME]!.team) hoverFoe = b.id;
+      // wroga ruina muru albo bramy nie zajmuje pól (da się przejść): saperzy też mogą ją wskazać
+      if (!b && [...chosen].some((id) => { const s = game.soldiers.find((x) => x.id === id); return !!s && !!UNITS[s.kind]!.sapper; })) {
+        const r = game.buildings.find((o) => o.ruined && game.players[o.owner]?.team !== game.players[ME]!.team && hoverTile!.x >= o.x && hoverTile!.y >= o.y
+          && hoverTile!.x < o.x + footprint(BUILDINGS[o.type]!, o.rot).w && hoverTile!.y < o.y + footprint(BUILDINGS[o.type]!, o.rot).h);
+        if (r) hoverFoe = r.id;
+      }
     }
   }
   canvas.classList.toggle('attack', hoverFoe !== 0);
@@ -2337,6 +2349,11 @@ const SHOUT_PL: Record<string, Record<'select' | 'move' | 'attack', string[]>> =
     move: ['Idziemy, równo!', 'Tak jest.', 'Ciężko, ale idziemy.', 'Szyk trzymać!', 'Według rozkazu, panie.'],
     attack: ['Miecze w dłoń!', 'Rąbać!', 'Za pana, bez litości!', 'Nie cofać się!', 'Na nich, chłopy!'],
   },
+  sapper: {
+    select: ['Kilof ostry, panie.', 'Słucham.', 'Co rozbieramy?', 'Łom gotowy.', 'Jesteśmy.'],
+    move: ['Idziemy.', 'Tak jest.', 'Narzędzia na plecy!', 'Już się robi.'],
+    attack: ['Rozbierać do gołej ziemi!', 'Co się nada, do zamku!', 'Belki, kamień — wszystko bierzemy!', 'Do roboty, chłopy!'],
+  },
   archer: {
     select: ['Łuk napięty.', 'Słucham.', 'Strzały gotowe.', 'Cel, panie?', 'Patrzymy.'],
     move: ['Idziemy, panie.', 'Zmieniamy miejsce.', 'Tak jest.', 'Za mną, chłopy.'],
@@ -2353,6 +2370,11 @@ const SHOUT_EN: Record<string, Record<'select' | 'move' | 'attack', string[]>> =
     select: ['Steel ready, my lord.', 'Aye?', 'Mail\'s buckled.', 'Who do we break?', 'Awaiting orders.'],
     move: ['Steady, march!', 'Aye.', 'Heavy going, but going.', 'Hold the line!', 'As you command, my lord.'],
     attack: ['Swords out!', 'Cut them down!', 'For our lord, no mercy!', 'Not one step back!', 'At them, lads!'],
+  },
+  sapper: {
+    select: ['Pick\'s sharp, my lord.', 'Aye?', 'What are we pulling down?', 'Crowbar ready.', 'We\'re here.'],
+    move: ['On our way.', 'Aye.', 'Tools on your backs!', 'Right away.'],
+    attack: ['Strip it to the ground!', 'Anything useful goes to the keep!', 'Beams, stone — take it all!', 'To work, lads!'],
   },
   archer: {
     select: ['Bow drawn.', 'Aye?', 'Arrows ready.', 'Target, my lord?', 'Watching.'],

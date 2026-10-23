@@ -124,6 +124,10 @@ export interface Building {
   shut?: boolean;
   /** Ruina po zniszczeniu: nie działa, a mur w tym miejscu da się przejść, dopóki go nie odbudują */
   ruined?: boolean;
+  /** Ruina czeka na zapłatę za odbudowę (połowa kosztu budynku); dopóki nie zapłacone, nikt jej nie odbudowuje */
+  unpaid?: boolean;
+  /** Wroga ruina, którą rozbierają saperzy: ładunki, które jeszcze w niej leżą [indeks surowca, ilość] */
+  salvage?: [number, number][];
   /** Warsztat: ile towaru jego pracownik oddał do składu od postawienia (do okna budynku) */
   made?: number;
   /** Warsztat: ile towaru przepadło, bo skład był pełny */
@@ -316,6 +320,11 @@ export interface Soldier {
   den?: number;
   /** Zbój na napadzie (goni ofiarę `prey`); brak = siedzi w obozie */
   raid?: boolean;
+  /** Saper: niesiony łup z rozebranej ruiny (indeks surowca + 1) i ilość */
+  loot?: number;
+  lootN?: number;
+  /** Saper: pole ostatnio rozbieranej ruiny (stąd szuka następnej) */
+  dig?: number;
 }
 
 /** Jeden zaplanowany marsz z kolejki rozkazów (Shift + prawy klik) albo punkt obchodu patrolu */
