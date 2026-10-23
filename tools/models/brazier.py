@@ -34,12 +34,15 @@ for k in range(3):
 
 # kosz: dno (misa) i pręty wygięte w kielich, dwie obręcze
 b.prism('base', 'iron', 0.07, 0.13, 0.05, 0, YB, 0, seg=12)           # misa (ma dno, wierzch przykryje żar)
+# pręty rozchylone na zewnątrz (kielich): od brzegu misy (r 0,125) do górnej obręczy (r 0,175), końcami w obręczy
+FLARE = math.atan2(0.05, 0.16)
 for k in range(12):
     a = 2 * math.pi * (k + 0.5) / 12
     sa, ca = math.sin(a), math.cos(a)
-    b.box('base', 'iron', 0.016, 0.17, 0.016, sa * 0.13, YB + 0.03, ca * 0.13, rot=a, tilt=-0.32)
-# obręcze z grubością (zamknięte pierścienie z pudełek)
-for (yy, r) in ((YB + 0.04, 0.135), (YB + 0.17, 0.185)):
+    b.box('base', 'iron', 0.016, 0.175, 0.016, sa * 0.125, YB + 0.03, ca * 0.125, rot=a, tilt=FLARE)
+TOP = YB + 0.03 + 0.16
+# obręcze z grubością (zamknięte pierścienie z pudełek), obie na prętach: dolna przy misie, górna przy końcach prętów
+for (yy, r) in ((YB + 0.045, 0.13), (TOP - 0.012, 0.176)):
     n = 16
     for k in range(n):
         a = 2 * math.pi * k / n

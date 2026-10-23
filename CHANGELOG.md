@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.35.7 — poprawiony kosz koksownika (2026-10-23)
+
+- Pręty kosza koksownika rozchylają się teraz na zewnątrz i kończą w górnej obręczy (wcześniej szły do środka, a obręcz wisiała nad żarem jak samotne kółko)
+
 ## 0.35.6 — kombinacja mieczem z obrotem, większy grot włóczni (2026-10-23)
 
 - Strażnik miejski i zbrojny walczą kombinacją czterech ciosów po kolei: cięcie z góry (zamach za głowę), cięcie poziome z lewej na prawą, z prawej na lewą (ciało skręca się w poprzek ciosu, klinga idzie poziomo) i cięcie z pełnym obrotem z wyciągniętym mieczem. Między ciosami wraca do gardy; trafienie wypada na końcu każdego cięcia
