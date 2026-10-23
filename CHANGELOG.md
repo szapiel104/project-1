@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.33.3 — porządki: wilki w osobnym pliku (2026-10-23)
+
+- Bez zmian w grze. Rysowanie wilków (żywe, zabite, znaczki polowania i linia do celu) wyniesione z `scene.ts` do `src/render/wolves.ts` — `scene.ts` krótszy o ok. 170 linii
+- Nowy test rysuje wilki bez przeglądarki, więc błąd w tej części wyjdzie przed wdrożeniem
+
 ## 0.33.2 — porządki w kodzie (2026-10-23)
 
 - Bez zmian w grze. Okno budynku (plac budowy, warsztat, cech inżynierów, straż miejska i straż kopalni) wyniesione z `main.ts` do `src/ui/buildingPanel.ts` — `main.ts` krótszy o ok. 200 linii, mniej konfliktów między czatami
