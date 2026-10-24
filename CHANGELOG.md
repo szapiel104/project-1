@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-## ..1 — naturalniejsze dłonie posągu w kapliczce (2026-10-24)
+## 0.40.5 — naturalniejsze dłonie posągu w kapliczce (2026-10-24)
 
 - Palce posągu nie sterczą już wzdłuż czary jak patyki: są krótsze i grubsze, ułożone jeden nad drugim i lekko podkurczone, obejmują czarę od boku ku przodowi (wskazujący najwyżej, mały najniżej). Kciuk leży na brzegu czary i wskazuje do przodu
 
