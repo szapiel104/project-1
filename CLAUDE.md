@@ -17,6 +17,10 @@ Nad grą pracuje kilka czatów naraz, więc:
 - Język wybiera się w Ustawienia → Interfejs (zmiana przeładowuje grę, zapis robi się sam). Za pierwszym razem gra bierze język przeglądarki.
 - Starsze napisy wciąż wpisane na sztywno po polsku przenosimy partiami (lista w `docs/pomysly.md`, „Tłumaczenie na angielski”).
 
+## Boty dostają to samo co gracz (obowiązkowo dla każdego czatu, Michał 24.10.2026)
+- Każdy nowy budynek, jednostka i mechanika, z której korzysta gracz, od razu trafia też do bota (`src/sim/systems/bot.ts`): bot ją stawia, szkoli albo używa w sensownym momencie (np. kolejność w `ORDER`, warunki na wielkość osady i zapasy, te same limity co gracz). Bez tego zmiana nie jest skończona — tak jak bez angielskiej wersji.
+- Jeśli bot czegoś świadomie nie używa (np. czysto ozdobny budynek), napisz to w komentarzu przy `ORDER` i w wpisie w CHANGELOG.
+
 ## Modele — gdzie robić i jak sprawdzać (obowiązkowo dla każdego czatu)
 - **Zasada Michała (19.10.2026, na zawsze, dla wszystkich modeli: koń, jabłka, kosze, drzewa, krzaki…): NIE odchudzać i nie docinać gotowych modeli z paczek.** Mamy dobrą kartę graficzną i ustawienia; oryginały były ładniejsze, a po Decimate i przeróbkach w grze wychodziły gorzej. Wersja z bliska = oryginalne trójkąty, UV, normalne i tekstury w pełnej rozdzielczości paczki. Upraszczać wolno tylko wersję z daleka, i to tylko gdy naprawdę widać spadek FPS.
 - **Robimy je w Blenderze** skryptem w Pythonie w `tools/models/` (bpy jako moduł, opis w `tools/models/README.md`): `/tmp/bpyenv/bin/python tools/models/<model>.py` → `src/render/models/<model>.json`. Kod gry tylko wczytuje gotowe siatki; nie składamy nowych modeli z prostopadłościanów w TypeScripcie.

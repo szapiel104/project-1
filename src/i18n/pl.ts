@@ -278,7 +278,7 @@ export const pl = {
   'd.shrine': 'Kamienny posąg Ojca Płomienia ze świecami. Wieczorem część ludzi zamiast do karczmy przychodzi tu się modlić. Kapliczka lekko podnosi popularność (+1, przy dwóch +2).',
   'd.cemetery': 'Grabarz zbiera ciała poległych z pola bitwy i chowa je tutaj. Bez niego ciała leżą i gniją.',
   'u.spearman': 'Włócznik',
-  'u.archer': 'Łucznik', 'u.guard': 'Strażnik', 'u.ram': 'Taran', 'u.bandit': 'Zbój', 'u.manatarms': 'Zbrojny', 'u.sapper': 'Saper',
+  'u.archer': 'Łucznik', 'u.guard': 'Strażnik', 'u.ram': 'Taran', 'u.bandit': 'Zbój', 'u.manatarms': 'Zbrojny', 'u.sapper': 'Saper', 'u.mageFire': 'Mag Płomienia', 'u.mageWater': 'Mag Źródła',
   'hud.train': 'Szkol włócznika',
   'hud.trainCost': '1 włócznia, 8 rudy, 1 wolny chłop',
   'hud.trainNo': 'Brakuje włóczni, rudy albo wolnego chłopa',

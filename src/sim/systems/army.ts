@@ -3,7 +3,7 @@ import { WALL_TOP } from '../../data/keep';
 import { buildingIndex } from '../../data/buildings';
 import { type ResourceId, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
-import { UNITS, unitIndex } from '../../data/units';
+import { MAGE_CAP, MAGE_HALL, UNITS, unitIndex } from '../../data/units';
 import { findPath, walkable, wallBetween } from '../path';
 import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type March, type QueuedMove, type Soldier, type Unit, keepCenter } from '../state';
@@ -19,6 +19,20 @@ import { nearStandard, STANDARD_BONUS } from './standards';
 import type { UnitDef } from '../../data/units';
 
 const BARRACKS = buildingIndex('barracks');
+const MAGE_HALLS = new Set([buildingIndex(MAGE_HALL.fire), buildingIndex(MAGE_HALL.water)]);
+/** Budynek, w którym się szkoli wojsko: koszary albo siedziba zakonu magów (tylko jego magów) */
+export const trainHall = (type: number): boolean => type === BARRACKS || MAGE_HALLS.has(type);
+/** Czy w tym budynku szkoli się taka jednostka: magowie tylko w siedzibie swojego zakonu, reszta w koszarach */
+export const trainsAt = (def: UnitDef, type: number): boolean => (def.magic ? type === buildingIndex(MAGE_HALL[def.magic]) : type === BARRACKS);
+
+/** Ilu magów bojowych ma gracz: żywych, w drodze do siedziby i w środku na szkoleniu */
+export function battleMages(g: GameState, player: number): number {
+  let n = 0;
+  for (const s of g.soldiers) if (s.owner === player && s.hp > 0 && UNITS[s.kind]!.magic) n++;
+  for (const u of g.units) if (u.owner === player && u.enlist && UNITS[u.enlist - 1]?.magic) n++;
+  for (const b of g.buildings) if (b.owner === player) for (const q of b.enlistQ ?? []) if (UNITS[q.k]?.magic) n++;
+  return n;
+}
 const RETRY = 15;
 /** Ilu żołnierzy można poprowadzić jednym rozkazem (ochrona przed złośliwą komendą z sieci) */
 const MAX_ORDER = 200;
@@ -54,7 +68,8 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   const def = UNITS[kind];
   const p = g.players[player];
   const b = buildingById(g, barracksId);
-  if (!def || def.guard || def.bandit || !p || !b || b.owner !== player || b.type !== BARRACKS || b.door < 0) return false;
+  if (!def || def.guard || def.bandit || !p || !b || b.owner !== player || !trainsAt(def, b.type) || b.door < 0) return false;
+  if (def.magic && battleMages(g, player) >= MAGE_CAP) return false;
   for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
   // wolny chłop (najlepiej ten, co siedzi przy ognisku) idzie do koszar; w środku dostaje broń i wychodzi żołnierzem
   const free = g.units.filter((u) => u.owner === player && u.job === 0 && !u.enlist && !u.riot && !u.sick && u.carryRes < 0);
@@ -80,7 +95,7 @@ const tileOf2 = (g: GameState, u: { px: number; py: number }): number => (u.py >
 /** Punkt zbiórki koszar: dla jednego rodzaju jednostki albo dla wszystkich (kind < 0); tile < 0 = bez flagi */
 export function setRally(g: GameState, player: number, barracksId: number, kind: number, tile: number): void {
   const b = buildingById(g, barracksId);
-  if (!b || b.owner !== player || b.type !== BARRACKS) return;
+  if (!b || b.owner !== player || !trainHall(b.type)) return;
   if (tile >= g.map.tiles.length || !Number.isInteger(tile)) return;
   const r = b.rally ?? UNITS.map(() => -1);
   if (kind < 0) for (let i = 0; i < r.length; i++) r[i] = tile < 0 ? -1 : tile;
@@ -93,7 +108,7 @@ export function enlistSystem(g: GameState): void {
   for (let i = g.units.length - 1; i >= 0; i--) {
     const u = g.units[i]!;
     if (!u.enlist) continue;
-    const b = g.buildings.find((x) => x.id === u.job && x.type === BARRACKS);
+    const b = g.buildings.find((x) => x.id === u.job && trainHall(x.type));
     if (!b || b.door < 0) { u.enlist = 0; u.job = 0; u.phase = Phase.Idle; u.path = []; continue; }
     // ktoś go zawrócił (ucieczka przed wrogiem): po chwili idzie dalej do koszar
     if (u.phase !== Phase.ToEnlist && !u.path.length) u.phase = Phase.ToEnlist;
@@ -642,7 +657,8 @@ function step(g: GameState, s: Soldier): void {
   const dx = tx - s.px, dy = ty - s.py;
   const base = dx !== 0 && dy !== 0 ? RULES.unitSpeedDiagonal : RULES.unitSpeed;
   // strażnik w pogoni za wilkiem biegnie (o 40% szybciej) — widać, że rusza na pomoc
-  const run = s.hunt && UNITS[s.kind]!.guard ? 1.4 : 1;
+  // trafiony czarem wody brnie jak przez wodę: o połowę wolniej, dopóki czar nie minie
+  const run = (s.hunt && UNITS[s.kind]!.guard ? 1.4 : 1) * ((s.slow ?? 0) > g.tick ? 0.5 : 1);
   const speed = Math.round((base * (s.goal >= 0 && s.pace ? s.pace : UNITS[s.kind]!.speed) * run * (100 + RULES.roadSpeedBonus[g.roads[tileOf(g, s)]!]!)) / 10000);
   s.px += Math.max(-speed, Math.min(speed, dx));
   s.py += Math.max(-speed, Math.min(speed, dy));
@@ -666,6 +682,59 @@ function facingOf(g: GameState, s: Soldier, byId: Map<number, Soldier>): number 
  * Obrażenia ciosu albo strzały z uwzględnieniem, skąd przychodzą: z boku o 30% mocniej, w plecy o 60%;
  * tarcza z przodu łapie połowę strzały; szarża po rozbiegu podwaja pierwszy cios włócznika; zbroja zjada część ciosu.
  */
+/** Pożar od kuli ognia (w tickach, jak pożar od ciosu wroga) i ile ognia gasi jeden czar wody */
+const SPELL_BURN = 300;
+const SPELL_DOUSE = 140;
+/** Czar wody: tyle ticków trafiony idzie o połowę wolniej */
+const SPELL_SLOW = 60;
+
+/**
+ * Skutki czaru po trafieniu. Kula ognia parzy też wrogów stojących tuż przy celu (połowa ciosu, bez zbroi).
+ * Czar wody spowalnia trafionego i odrzuca go o pole od maga (gdy za nim jest wolne, przechodnie pole; nie z wieży i nie taran).
+ */
+function spellEffect(g: GameState, s: Soldier, foe: Soldier, byId: Map<number, Soldier>): void {
+  const def = UNITS[s.kind]!;
+  if (def.magic === 'fire') {
+    for (const o of g.soldiers) {
+      if (o === foe || o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || gap(o, foe) > FP + FP / 2) continue;
+      o.hp -= Math.max(1, def.attack >> 1);
+      if (o.hp <= 0) { const k = g.players[s.owner], l = g.players[o.owner]; if (k) k.stats.kills++; if (l) l.stats.lost++; }
+    }
+    return;
+  }
+  if (foe.hp <= 0) return;
+  foe.slow = g.tick + SPELL_SLOW;
+  const fdef = UNITS[foe.kind]!;
+  if (foe.up || fdef.ram) return;
+  const dir = octant(foe.px - s.px, foe.py - s.py);
+  if (dir < 0) return;
+  const [dx, dy] = DIRS[dir]!;
+  const w = g.map.width, ft = tileOf(g, foe), nx = (ft % w) + dx, ny = Math.floor(ft / w) + dy;
+  if (nx < 0 || ny < 0 || nx >= w || ny >= g.map.height) return;
+  const to = ny * w + nx;
+  if (!walkable(g, to, foe.owner) || (g.walls[to]! & WALL_TOP) || (g.walls[ft]! && wallBetween(g, ft, dx, dy))) return;
+  if (g.soldiers.some((o) => o !== foe && o.hp > 0 && tileOf(g, o) === to)) return;
+  foe.px = nx * FP + FP / 2; foe.py = ny * FP + FP / 2;
+  foe.path = [];
+  void byId;
+}
+
+/** Mag Źródła gasi najbliższy własny (albo sojuszniczy) płonący budynek w zasięgu czaru; true = rzucił czar */
+function douse(g: GameState, s: Soldier, range: number): boolean {
+  const here = tileOf(g, s);
+  let best: Building | undefined, bd = range + 1;
+  for (const b of g.buildings) {
+    if (!b.fire || b.ruined || team(g, b.owner) !== team(g, s.owner)) continue;
+    const d = rectGap(g, here, b);
+    if (d < bd) { bd = d; best = b; }
+  }
+  if (!best) return false;
+  best.fire = Math.max(0, best.fire! - SPELL_DOUSE);
+  s.cd = UNITS[s.kind]!.cooldown;
+  s.douse = best.id;
+  return true;
+}
+
 export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<number, Soldier>, ranged: boolean): number {
   const def = UNITS[s.kind]!, fdef = UNITS[foe.kind]!;
   let dmg = def.attack * 100;
@@ -843,6 +912,9 @@ export function armySystem(g: GameState): void {
       s.target = b.id;
       return true;
     };
+    // mag Źródła bez wroga w zasięgu wzroku gasi własne płonące budynki w swoim zasięgu (czar co swoje odliczanie)
+    if (s.cd === 0 || s.target) s.douse = undefined;
+    if (def.magic === 'water' && !s.target && !s.up && s.cd === 0 && !nearestFoe(s, range) && douse(g, s, range)) continue;
     // taran: nie walczy z ludźmi, tylko podjeżdża pod najbliższą wrogą bramę, mur albo zamek i bije w nie belką
     if (def.ram) {
       if ((s.goal < 0 || s.amove) && siege(g, s, def, taken)) continue;
@@ -878,7 +950,7 @@ export function armySystem(g: GameState): void {
             s.cd = def.cooldown;
             // strzała może chybić; chybiona spada w kłąb walki i może zranić swojego, który stoi tuż przy celu
             let hit: Soldier | undefined = foe;
-            if (range && !arrowHits(g, s, gap(s, foe))) {
+            if (range && !def.magic && !arrowHits(g, s, gap(s, foe))) {
               hit = undefined;
               for (const o of g.soldiers) if (o !== foe && o.hp > 0 && team(g, o.owner) === team(g, s.owner) && gap(o, foe) <= FP + FP / 4 && hash2(o.id, g.tick, 0xf1e) % 100 < 35) { hit = o; break; }
             }
@@ -886,6 +958,7 @@ export function armySystem(g: GameState): void {
               const dmg = hit === foe ? hitDamage(g, s, foe, byId, !!range) : Math.max(1, def.attack >> 1);
               hit.hp -= dmg;
               if (hit.hp <= 0) { const k = g.players[s.owner], l = g.players[hit.owner]; if (k && team(g, hit.owner) !== team(g, s.owner)) k.stats.kills++; if (l) l.stats.lost++; } // zbóje nie mają pana: nikt im nie liczy
+              if (def.magic && hit === foe) spellEffect(g, s, foe, byId);
             }
             s.run = 0;
           }
@@ -1106,6 +1179,8 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
     if (s.cd === 0) {
       b.hp -= def.attack;
       s.cd = def.cooldown;
+      // kula ognia podpala budynek (pali się jak od ciosu; gaszą go ludzie z wiadrami albo mag Źródła)
+      if (def.magic === 'fire' && !BUILDINGS[b.type]!.wall && !BUILDINGS[b.type]!.gate) b.fire = Math.max(b.fire ?? 0, SPELL_BURN);
       if (b.hp <= 0) {
         const keep = BUILDINGS[b.type]!.id === 'keep';
         const owner = g.players[b.owner];

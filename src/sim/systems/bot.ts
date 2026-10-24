@@ -1,10 +1,10 @@
 import { dole, quell } from './unrest';
 import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
-import { SAPPER, UNITS } from '../../data/units';
+import { MAGE_CAP, SAPPER, UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
-import { FP, keepCenter, keepFront, playerKeep, type Building, type GameState, type PlayerState, type Soldier } from '../state';
-import { orderAttack, orderGarrison, orderMove, train } from './army';
+import { FP, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
+import { battleMages, orderAttack, orderGarrison, orderMove, train } from './army';
 import { canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
 
@@ -14,7 +14,12 @@ import { Terrain } from '../../data/terrain';
  */
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'mill', 'orchard', 'bakery', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'shrine', 'house', 'fletcher', 'house', 'oremine', 'smithy', 'armorer'];
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'mill', 'orchard', 'bakery', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'shrine', 'house', 'fletcher', 'house', 'oremine', 'smithy', 'armorer', 'mageSeat'];
+/** `mageSeat` na liście: siedziba zakonu magów — boty o parzystym numerze stawiają Sanktuarium Źródła, o nieparzystym Wieżę Płomienia;
+ *  dopiero w większej osadzie (BOT_SEAT_POP ludzi), bo to droga budowla. Stoją w niej uzdrowiciele i szkolą się magowie bojowi */
+const BOT_SEAT_POP = 30;
+/** Ilu magów bojowych trzyma bot (limit gracza to MAGE_CAP; bot na trudnym bierze pełny limit) */
+const botMages = (level: number): number => (level >= 3 ? MAGE_CAP : 6);
 /** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
 const ROCK_REACH = 60;
 const ROCK_TRIES = 400;
@@ -124,7 +129,9 @@ export function botSystem(g: GameState): void {
     const have = new Map<string, number>();
     for (const b of g.buildings) if (b.owner === p.id) { const id = BUILDINGS[b.type]!.id; have.set(id, (have.get(id) ?? 0) + 1); }
     const want = new Map<string, number>();
-    for (const id of ORDER) {
+    for (const raw of ORDER) {
+      const id = raw === 'mageSeat' ? (p.id % 2 ? 'mageFire' : 'mageWater') : raw;
+      if (raw === 'mageSeat' && population(g, p.id) < BOT_SEAT_POP) continue;
       want.set(id, (want.get(id) ?? 0) + 1);
       if ((have.get(id) ?? 0) >= want.get(id)!) continue;
       const type = buildingIndex(id);
@@ -183,6 +190,10 @@ export function botSystem(g: GameState): void {
       const wantSapper = mine.length - sappers >= SAPPER_ARMY && sappers < (foeRuins(g, p).length ? SAPPERS_MAX : SAPPERS_MAX - 1) && p.res[resIndex('gold')]! >= SAPPER_GOLD;
       // zbrojny, gdy w zbrojowni leży miecz i kolczuga (bot stawia kuźnię i płatnerza pod koniec listy budowy)
       if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantSapper && train(g, p.id, barracks.id, 'sapper')) && !train(g, p.id, barracks.id, 'manatarms') && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
+      // magowie bojowi: gdy stoi siedziba zakonu i jest już trochę wojska, po jednym naraz, aż do limitu bota;
+      // ruda musi zostać jeszcze na zwykłych żołnierzy
+      const hall = g.buildings.find((b) => b.owner === p.id && !b.build && !b.ruined && (BUILDINGS[b.type]!.id === 'mageFire' || BUILDINGS[b.type]!.id === 'mageWater'));
+      if (hall && mine.length >= 6 && battleMages(g, p.id) < botMages(p.level) && p.res[resIndex('gold')]! >= 90) train(g, p.id, hall.id, BUILDINGS[hall.type]!.id);
       // łucznicy wchodzą na wolne wieże (po dwóch), reszta zostaje do ataku
       for (const t of g.buildings) {
         if (t.owner !== p.id || t.build || !isTower(BUILDINGS[t.type]!.id)) continue;

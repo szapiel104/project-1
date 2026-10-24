@@ -17,6 +17,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
 import { crewOf } from '../sim/systems/workers';
 import { mageKindOf } from '../sim/systems/plague';
+import { SpellLayer } from './spells';
 import { saplingGrowth } from '../sim/systems/forestry';
 import { Clutter } from './clutter';
 import { Chips } from './chips';
@@ -683,6 +684,12 @@ export class GameRenderer {
   /** Magowie: Zakonu Płomienia i Bractwa Źródła (wędrowny mag z chatki wygląda jak brat Źródła) */
   private magesFireFig!: Figures;
   private magesWaterFig!: Figures;
+  /** Magowie bojowi (żołnierze) obu zakonów i ich czary w locie */
+  private battleFireFig!: Figures;
+  private battleWaterFig!: Figures;
+  private spells!: SpellLayer;
+  private mageBodiesFire!: Figures;
+  private mageBodiesWater!: Figures;
   private readonly eye = new THREE.Matrix4();
   private lamps: THREE.PointLight[] = [];
   /** Poświata pochodni na ziemi: tania plama ciepłego światła pod każdą zapaloną pochodnią (bez kosztu prawdziwego
@@ -991,6 +998,9 @@ export class GameRenderer {
     this.banditsFig = new Figures(256, this.scene, 'bandit');
     this.magesFireFig = new Figures(128, this.scene, 'mageFire');
     this.magesWaterFig = new Figures(128, this.scene, 'mageWater');
+    this.battleFireFig = new Figures(160, this.scene, 'mageFire');
+    this.battleWaterFig = new Figures(160, this.scene, 'mageWater');
+    this.spells = new SpellLayer(this.scene);
     this.standards = new Standards(this.scene);
     this.kings = new Figures(32, this.scene, 'king');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
@@ -1027,6 +1037,8 @@ export class GameRenderer {
     this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
     this.peasantBodies = new Figures(MAX_UNITS, this.scene);
     this.archerBodies = new Figures(512, this.scene, 'archer');
+    this.mageBodiesFire = new Figures(160, this.scene, 'mageFire');
+    this.mageBodiesWater = new Figures(160, this.scene, 'mageWater');
     this.guardBodies = new Figures(256, this.scene, 'guard');
     this.manAtArmsBodies = new Figures(256, this.scene, 'manatarms');
     this.sapperBodies = new Figures(256, this.scene, 'sapper');
@@ -2559,7 +2571,7 @@ export class GameRenderer {
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncBraziers(g, v); this.syncGates(g, dt); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
-      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig]) f.view(cp);
+      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig, this.battleFireFig, this.battleWaterFig, this.mageBodiesFire, this.mageBodiesWater]) f.view(cp);
       for (const t of [this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
@@ -2687,6 +2699,8 @@ export class GameRenderer {
     }
     // ogniste strzały w locie: mały płomyk na grocie
     for (let i = 0; i < this.arrowFireN; i++) F.add(this.arrowFires[i]!, 0.12, 0.07, (i * 0.531) % 1, Math.max(0.25, glow * 0.8));
+    // kule ognia magów w locie i rozbłyski przy celu
+    this.spells.flames().forEach((v, i) => F.add(v, 0.2, 0.13, (i * 0.377) % 1, Math.max(0.5, glow)));
     this.handFlameN = 0;
     this.handFlameTime.value = this.time;
     for (const [id, mesh] of this.buildingMeshes) {
@@ -4573,7 +4587,7 @@ export class GameRenderer {
       const victim = !foe && s.hitting ? g.units.find((u) => u.id === s.hitting) : undefined;
       if (victim && !walking) { heading = Math.atan2((victim.px - s.px) / FP, (victim.py - s.py) / FP); this.facing.set(s.id, heading); }
       // oblężenie: zwraca się do budynku i bije w niego włócznią
-      const wall = !foe && s.target ? bById.get(s.target) : undefined;
+      const wall = !foe && s.target ? bById.get(s.target) : !foe && s.douse ? bById.get(s.douse) : undefined;
       if (wall && !walking) {
         const fp = footprint(BUILDINGS[wall.type]!, wall.rot);
         heading = Math.atan2(wall.x + fp.w / 2 - fx, wall.y + fp.h / 2 - fy);
@@ -4677,14 +4691,19 @@ export class GameRenderer {
         else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; }
         else { const fp = footprint(BUILDINGS[wall!.type]!, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; }
         if (s.up && s.post) this.towerShots.set(s.post, this.time);
-        this.arrows.push({ from: new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0, fire: fireArrow(g, s) });
+        if (udef.magic) {
+          // czar z dłoni: kula ognia albo wody leci do celu (trafienie liczy symulacja, to tylko wygląd)
+          const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
+          this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.set(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), udef.magic === 'fire');
+          this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.35, udef.magic === 'fire' ? 0.7 : 1.3);
+        } else this.arrows.push({ from: new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0, fire: fireArrow(g, s) });
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
       if (s.cd > pc) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);
       this.lastCd.set(s.id, s.cd);
       // miecz (strażnik miejski, zbrojny): kombinacja ciosów fazami według odliczania do ciosu; obrót ciała w poprzek ciosu
       // łucznik: wypuszczenie, sięgnięcie do kołczanu, nałożenie strzały i naciąg (bokiem do celu) fazami do następnego strzału
-      const bowPose = ranged && (!!foe || !!wall || !!victim) && !walking && !this.calm ? bowShot(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
+      const bowPose = ranged && !udef.magic && (!!foe || !!wall || !!victim) && !walking && !this.calm ? bowShot(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
       const swordPose = (udef.guard || udef.id === 'manatarms') && (!!foe || !!wall || !!victim) && !walking && !this.calm
         ? swordCombo(this.hits.get(s.id) ?? 0, 1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
       // trafiony odchyla się do tyłu i lekko cofa na ułamek sekundy
@@ -4704,7 +4723,7 @@ export class GameRenderer {
       t.scale.setScalar(1);
       t.rotation.order = 'XYZ';
       this.fallYaw.set(s.id, heading);
-      if (striking && !this.calm) {
+      if (striking && !this.calm && !udef.magic) {
         // zamach włócznią i uderzenie: w człowieka głucho, w mur jak w drewno
         this.sfxAt('swing', t.position.x, t.position.z, s.id, 1.1, 0.6);
         if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
@@ -4717,7 +4736,13 @@ export class GameRenderer {
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
       this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
-      this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined, 0, bowPose && [bowPose[0]!, 0, 0, bowPose[4]!, bowPose[3]!, bowPose[1]!, bowPose[2]!]);
+      // mag bojowy: postać swojego zakonu; ręce w górze z kulą w dłoni, gdy szykuje czar (od połowy odliczania do rzutu)
+      if (udef.magic) {
+        const u = 1 - Math.max(0, s.cd - alpha) / udef.cooldown;
+        const casting = (!!foe || !!wall || !!victim) && !walking && (u > 0.45 || u < 0.1);
+        (udef.magic === 'fire' ? this.battleFireFig : this.battleWaterFig).set(0, t.matrix, legs, casting, teamC, s.id);
+      }
+      this.archers.set(n, ranged && !udef.magic ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined, 0, bowPose && [bowPose[0]!, 0, 0, bowPose[4]!, bowPose[3]!, bowPose[1]!, bowPose[2]!]);
       const heavy = udef.id === 'manatarms';
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
       // włócznik w walce: włócznia opuszczona na wroga, cofnięcie i pchnięcie fazami według odliczania do ciosu
@@ -4797,7 +4822,10 @@ export class GameRenderer {
     this.guardsFig.finish(n);
     this.menAtArms.finish(n);
     this.banditsFig.finish(bandits);
+    this.battleFireFig.finish(0);
+    this.battleWaterFig.finish(0);
     this.flyArrows();
+    this.spells.update(this.calm ? 1 : 1 / 60, this.time);
     this.syncTowerIcons(g);
     this.syncRallyFlags(g, view);
     this.spawnFx.sync(g, view, this.cam.camera, this.calm);
@@ -4846,6 +4874,7 @@ export class GameRenderer {
       else if (ud?.bandit) { if (bc < 256) this.banditBodies.set(bc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
       else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
       else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
+      else if (ud?.magic) (ud.magic === 'fire' ? this.mageBodiesFire : this.mageBodiesWater).set(0, m, 0.3, false, team, body.id, undefined, -0.5, false, legs);
       else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id, undefined, -0.5, false, legs); }
       else this.bodies.set(sp++, m, 0.3, false, rot, body.id, undefined, -0.5, false, legs);
       // poległy chorąży: drzewce przewraca się na bok razem z nim i proporzec leży na ziemi obok ciała
@@ -4862,6 +4891,8 @@ export class GameRenderer {
     this.bodies.finish(sp);
     this.peasantBodies.finish(pc);
     this.archerBodies.finish(ac);
+    this.mageBodiesFire.finish(0);
+    this.mageBodiesWater.finish(0);
     this.guardBodies.finish(gc);
     this.manAtArmsBodies.finish(mc);
     this.sapperBodies.finish(sc2);

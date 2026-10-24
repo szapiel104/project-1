@@ -550,7 +550,7 @@ export function workerSystem(g: GameState): void {
   }
   for (const u of g.units) {
     // magowie (chatka maga, siedziby zakonów): prowadzi ich plagueSystem — chodzą do chorych, nie śpią i nie idą do ogniska
-    if (u.job && mageKindOf(byId.get(u.job)?.type ?? -1)) continue;
+    if (u.job && !u.enlist && mageKindOf(byId.get(u.job)?.type ?? -1)) continue;
     if (u.wait > 0) { u.wait--; continue; }
     // rekrut idzie do koszar (prowadzi go enlistSystem): tylko krok, bez pracy, wieczoru i snu
     if (u.enlist) { if (u.path.length) move(g, u); continue; }

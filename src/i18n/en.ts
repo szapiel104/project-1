@@ -284,7 +284,7 @@ export const en: Record<TextKey, string> = {
   'd.shrine': 'A stone likeness of the Father of Flame, lit with candles. Of an evening some folk come here to pray instead of heading to the tavern. A shrine lifts popularity a little (+1, or +2 with two).',
   'd.cemetery': 'The gravedigger collects the fallen from the battlefield and buries them here. Without him the bodies lie and rot.',
   'u.spearman': 'Spearman',
-  'u.archer': 'Archer', 'u.guard': 'Guard', 'u.ram': 'Battering ram', 'u.bandit': 'Brigand', 'u.manatarms': 'Man-at-arms', 'u.sapper': 'Sapper',
+  'u.archer': 'Archer', 'u.guard': 'Guard', 'u.ram': 'Battering ram', 'u.bandit': 'Brigand', 'u.manatarms': 'Man-at-arms', 'u.sapper': 'Sapper', 'u.mageFire': 'Mage of the Flame', 'u.mageWater': 'Mage of the Spring',
   'hud.train': 'Train a spearman',
   'hud.trainCost': '1 spear, 8 ore, 1 idle peasant',
   'hud.trainNo': 'Not enough spears, ore or idle peasants',

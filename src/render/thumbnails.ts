@@ -79,7 +79,7 @@ export function renderUnitPortraits(teamColor: number, size = 192): Map<string, 
   const rim = new THREE.DirectionalLight(0xffa860, 1.6); rim.position.set(2, 1.5, -2); scene.add(rim);
   const cam = new THREE.PerspectiveCamera(26, 1, 0.05, 20);
   const m = new THREE.Matrix4();
-  for (const kind of ['spearman', 'archer'] as const) {
+  for (const kind of ['spearman', 'archer', 'mageFire', 'mageWater'] as const) {
     const root = new THREE.Group();
     scene.add(root);
     const f = new Figures(1, root as unknown as THREE.Scene, kind);

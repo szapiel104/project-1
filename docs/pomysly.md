@@ -18,7 +18,6 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 - **Strach albo łaska (jak w Twierdzy):** budynki grozy na placu (pręgierz, szubienica, klatka) i budynki dobroci (kapliczka Ojca Płomienia, studnia z ławą, ogródek). Przewaga grozy = ludzie pracują szybciej, ale popularność niżej; przewaga dobroci = odwrotnie. Suwak widoczny w rozpisce popularności.
 - **Kapliczka (24.10, partia 1 zrobiona — 0.40.0):** własny model z Blendera (`tools/models/shrine.py`, Michał chciał klimatu kaplicy z Gothica; posąg i nazwa są nasze, bez kopiowania Innosa): posąg Ojca Płomienia w ostrołukowej niszy z czarą wiecznego ognia, świeczniki, ofiarna ruda, klęcznik. Wieczorem co czwarty chłop idzie się modlić (klęczą przy klęczniku, reszta stoi ze spuszczonymi głowami), kapliczka daje +1 do popularności (przy dwóch +2), bot stawia jedną. Dalej: kaznodzieja (postać z Blendera, kazanie wieczorem), cichy szept modlitw i dzwonek, święto raz w tygodniu (tłum na placu, +nastroje), bez kapliczki pogrzeby psują nastroje.
 - **Cmentarz i grabarz:** polegli i zmarli z głodu leżą, dopóki grabarz ich nie zaniesie na cmentarz; ciała przy osadzie ściągają kruki i wilki, a po kilku dniach chorobę.
-- **Choroba i łaziebnik:** brud, gnój, niepochowani i głód podnoszą ryzyko zarazy w chacie (kaszel, chorzy leżą); łaziebnik/cyrulik z ziołami leczy, zielarka zbiera zioła w lesie.
 - **Myśliwy:** chata myśliwego przy lesie — jelenie i dziki w puszczy (mięso jako 4. jedzenie, skóry), myśliwy przepędza wilki z okolicy i odsłania polany ze zbójami.
 - **Złodzieje nocą:** gdy popularność niska, nocą ktoś podkrada ze składu; straż na obchodzie może go złapać i odprowadzić do lochów (pierwsi prawdziwi więźniowie, do pręgierza albo do kopalni jako kara).
 - **Burze i susza:** piorun potrafi podpalić strzechę (gaszenie wiadrami już jest), latem susza zmniejsza zbiory sadu i pola, a studnie stają się ważniejsze.
@@ -29,7 +28,7 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 Zrobione: modele magów ognia i wody (0.40.x, łokcie, kula czaru w dłoni), siedziby 5×5 z dziedzińcem i tania chatka maga (0.42.0), zaraza i magowie przy pracy (0.44.0: `src/sim/systems/plague.ts`, balans w `RULES.plague` / `RULES.mages`).
 Kolejne partie:
 - Zaraza — dalej: wóz z chorymi do lazaretu, kwarantanna (zamknięcie chaty przyciskiem), zaraza u żołnierzy w koszarach, przenoszenie przez karawany do sojusznika; bot stawiający sanktuarium, gdy urośnie.
-- **Magowie jako jednostka bojowa (Michał):** tylko kilku na gracza; mag ognia rzuca kulami ognia, mag wody czarem wody (np. odrzuca, gasi, spowalnia) — „czerwony wali ogniem, niebieski wodnym czarem”.
+- Magowie bojowi — zrobione 0.45.0 (najwyżej 10 na gracza, ogień: kula z rozpryskiem i podpalaniem, woda: odrzut, spowolnienie, gaszenie). Dalej: własne okrzyki magów w walce, czar obszarowy na dłuższym odliczaniu, ulepszenia w siedzibie za rudę.
 
 ## Uwagi testera — Mikołaj (22.10.2026)
 - Budynki z wyższym priorytetem: gracz zaznacza, które mają być obsadzane w pierwszej kolejności (np. piekarnie przed łuczarzem), gdy brakuje ludzi.

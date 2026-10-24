@@ -114,7 +114,7 @@ export interface ProdInfo {
   /** Na stanie: gotowy towar i surowiec (ile pełnych cykli wystarczy) */
   stockOut?: number; stockIn?: number; cycles?: number;
 }
-export interface RecruitUnit { id: string; name: string; weapon: string; need?: number; have: number; gear?: { res: string; have: number }; armor?: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean }
+export interface RecruitUnit { id: string; name: string; weapon: string; need?: number; have: number; gear?: { res: string; have: number }; armor?: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean; /** Mag bojowy: ilu już jest i ile wolno (limit na gracza) */ magic?: { have: number; cap: number } }
 
 export interface Hud {
   setSeed(text: string, preset: MapPresetId): void;
@@ -603,8 +603,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   rallyRow.append(rallyAll, rallyOff, el('p', 'hint', tx('Rekrut idzie z obozowiska do koszar, wychodzi w zbroi i staje na fladze (bez flagi — przed koszarami).', 'A recruit walks from the camp to the barracks, comes out armoured and stands at the flag (with no flag — outside the barracks).')));
   // taran: wóz z daszkiem i belką z kutą głowicą
   const RAM_PORTRAIT = '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M5 15l11-7 11 7z" fill="#8a6a44" stroke="#2a1c10"/><rect x="6" y="15" width="20" height="2" fill="#5e4329"/><path d="M8 17v7M24 17v7" stroke="#5e4329" stroke-width="2"/><rect x="3" y="18" width="24" height="3" rx="1.5" fill="#8a5a2b" stroke="#2a1c10"/><path d="M27 17.5l3 1.5v1.5l-3 1.5z" fill="#6a6e76" stroke="#2a1c10"/><circle cx="10" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/><circle cx="22" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/></svg>';
-  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT, manatarms: MANATARMS_PORTRAIT, sapper: SAPPER_PORTRAIT };
+  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT, manatarms: MANATARMS_PORTRAIT, sapper: SAPPER_PORTRAIT, mageFire: ARCHER_PORTRAIT, mageWater: ARCHER_PORTRAIT };
   const drawRecruit = (): void => {
+    // koszary i siedziby magów mają różne karty: widać tylko te, które szkoli otwarty budynek
+    for (const [id, c] of unitCards) c.card.hidden = !lastRecruit.some((r) => r.id === id);
     for (const r of lastRecruit) {
       let c = unitCards.get(r.id);
       if (!c) {
@@ -634,7 +636,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
       setText(c.stats, `${t('hud.hp')} ${r.hp} · ${r.attack ? `${t('hud.attack')} ${r.attack}` : tx('nie walczy, rozbiera wrogie ruiny', 'does not fight, strips enemy ruins')}${r.range ? ` · ${tx('zasięg', 'range')} ${r.range}` : ''}${r.armor ? ` · ${tx('zbroja', 'armour')} ${r.armor}%` : ''}`);
       const row = (icon: string, have: number, need: number): string => `<span class="need${have < need ? ' short' : ''}"><svg viewBox="0 0 20 20" width="22" height="22">${ICONS[icon] ?? ''}</svg><strong>${need}</strong><em>(${have})</em></span>`;
-      c.needs.innerHTML = row(r.weapon, r.have, r.need ?? 1) + (r.gear ? row(r.gear.res, r.gear.have, 1) : '') + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
+      c.needs.innerHTML = r.magic
+        ? row('gold', r.gold, r.cost) + row('idle', r.idle, 1) + `<span class="need${r.magic.have >= r.magic.cap ? ' short' : ''}">${tx(`magów ${r.magic.have} / ${r.magic.cap}`, `mages ${r.magic.have} / ${r.magic.cap}`)}</span>`
+        : row(r.weapon, r.have, r.need ?? 1) + (r.gear ? row(r.gear.res, r.gear.have, 1) : '') + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
       c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;
       setText(c.bAll, tx(`+ wszyscy (${r.max})`, `+ all (${r.max})`));
       c.card.classList.toggle('cant', r.max < 1);

@@ -42,7 +42,7 @@ export const mageKindOf = (type: number): MageKind | undefined => KIND_OF.get(ty
 
 /** Czy chłop jest magiem (pracuje w chatce maga albo w siedzibie zakonu) */
 export function mageOf(g: GameState, u: Unit): MageKind | undefined {
-  if (!u.job) return undefined;
+  if (!u.job || u.enlist) return undefined; // rekrut w drodze do siedziby na szkolenie bojowe to jeszcze nie mag-uzdrowiciel
   const b = buildingById(g, u.job);
   return b ? KIND_OF.get(b.type) : undefined;
 }
@@ -358,7 +358,7 @@ export function plagueSystem(g: GameState): void {
   if (g.tick % RULES.plague.every === 0) plagueTick(g);
   const both = new Map<number, boolean>();
   for (const u of g.units) {
-    if (!u.job) continue;
+    if (!u.job || u.enlist) continue;
     const b = buildingById(g, u.job);
     const kind = b ? KIND_OF.get(b.type) : undefined;
     if (!b || !kind || b.build) continue;

@@ -35,6 +35,10 @@ export interface UnitDef {
   sapper?: boolean;
   /** Zbroja: o tyle procent mniej boli cios wręcz; strzała półtora raza mniej (najwyżej 75%) */
   armor?: number;
+  /** Mag bojowy (szkoli się w siedzibie swojego zakonu, nie w koszarach; najwyżej `MAGE_CAP` na gracza):
+   *  'fire' — kula ognia nie chybia, parzy też stojących tuż obok celu i podpala budynki;
+   *  'water' — czar wody odrzuca trafionego o pole i spowalnia go, a bez walki gasi własne płonące budynki */
+  magic?: 'fire' | 'water';
 }
 
 export const UNITS: readonly UnitDef[] = [
@@ -53,7 +57,16 @@ export const UNITS: readonly UnitDef[] = [
   // Saper (inżynier wojskowy): kilof i łom z żelaza, skórzany kaftan; nie walczy, rozbiera wrogie ruiny do gołej ziemi
   // i znosi z nich drewno, kamień i żelazo do własnej twierdzy — wróg musi stawiać od nowa, za pełną cenę (na końcu listy dla starych zapisów)
   { id: 'sapper', name: 'u.sapper', cost: { iron: 2, gold: 10 }, hp: 45, speed: 100, attack: 0, cooldown: 14, sight: 10, weapon: 'iron', sapper: true },
+  // Magowie bojowi (na końcu listy dla starych zapisów): mag Płomienia rzuca kulami ognia, mag Źródła czarem wody.
+  // Kruche (mało zdrowia), ale biją z daleka i nigdy nie chybiają; drodzy w rudzie i jest ich najwyżej 10 na gracza
+  { id: 'mageFire', name: 'u.mageFire', cost: { gold: 50 }, hp: 55, speed: 95, attack: 15, cooldown: 40, sight: 9, range: 7, weapon: 'gold', magic: 'fire' },
+  { id: 'mageWater', name: 'u.mageWater', cost: { gold: 45 }, hp: 65, speed: 95, attack: 8, cooldown: 30, sight: 9, range: 6, weapon: 'gold', magic: 'water' },
 ];
+
+/** Najwyżej tylu magów bojowych może mieć jeden gracz (razem obu zakonów, z tymi w drodze do siedziby) */
+export const MAGE_CAP = 10;
+/** Siedziba, w której szkoli się mag danego zakonu */
+export const MAGE_HALL: Record<'fire' | 'water', string> = { fire: 'mageFire', water: 'mageWater' };
 
 /** Indeks sapera w UNITS */
 export const SAPPER = UNITS.findIndex((u) => u.sapper);

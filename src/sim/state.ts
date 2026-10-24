@@ -369,6 +369,10 @@ export interface Soldier {
   /** Saper: niesiony łup z rozebranej ruiny (indeks surowca + 1) i ilość */
   loot?: number;
   lootN?: number;
+  /** Trafiony czarem wody: do tego ticku idzie o połowę wolniej */
+  slow?: number;
+  /** Mag Źródła gasi teraz ten budynek (do wyglądu: zwrócony do niego, struga wody) */
+  douse?: number;
   /** Saper: pole ostatnio rozbieranej ruiny (stąd szuka następnej) */
   dig?: number;
 }
@@ -829,7 +833,7 @@ export function stateHash(g: GameState): number {
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }
-  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.camp ?? 0); add((s.den ?? 0) + 1); add(s.raid ? 1 : 0); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.siegeOf ?? 0); add(s.lost ?? 0); add(s.path.length); for (const t of s.path) add(t); }
+  for (const s of g.soldiers) { add(s.id); add(s.owner); add(s.kind); add(s.camp ?? 0); add((s.den ?? 0) + 1); add(s.raid ? 1 : 0); add(s.px); add(s.py); add(s.hp); add(s.goal + 1); add(s.wait); add(s.target); add(s.cd); add(s.face ?? 9); add(s.stance ?? 0); add((s.hold ?? -1) + 1); add(s.amove ? 1 : 0); add(s.pace ?? 0); add(s.run ?? 0); add(s.prey ?? 0); add(s.hitting ?? 0); add(s.slot ? s.slot[0] + 50 : 0); add(s.slot ? s.slot[1] + 50 : 0); add(s.wounded ?? 0); add(s.skip ?? 0); add(s.skipUntil ?? 0); add(s.siegeOf ?? 0); add(s.lost ?? 0); add(s.slow ?? 0); add(s.douse ?? 0); add(s.path.length); for (const t of s.path) add(t); }
   for (const q of g.orders ?? []) { add(q.grp); add(q.owner); add(q.patrol ? 1 : 0); for (const m of q.steps) { add(m.tile); add(m.face ?? 9); add(m.form ?? 0); add(m.width ?? 0); add(m.amove ? 1 : 0); } }
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }

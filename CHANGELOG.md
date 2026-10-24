@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.46.0 — magowie bojowi (2026-10-24)
+
+- **Magowie do walki** szkolą się w siedzibie swojego zakonu (okno Wieży Płomienia / Sanktuarium Źródła, karty jak w koszarach): mag Płomienia za 50 rudy, mag Źródła za 45, do tego wolny chłop. **Najwyżej 10 na gracza**, razem obu zakonów (licznik na karcie). Uzdrowiciele w siedzibie zostają osobno
+- **Mag Płomienia:** kula ognia (nigdy nie chybia), parzy też wrogów tuż przy celu, podpala budynki. **Mag Źródła:** czar wody — odrzuca trafionego o pole i spowalnia go o połowę na chwilę; bez walki gasi własne płonące budynki w zasięgu
+- Wygląd: postacie zakonów z Blendera (te same co uzdrowiciele), przy czarze ręce w górze z kulą w dłoni; kula ognia z płomieniem i rozbłyskiem, błękitna kula wody z rozpryskiem; ciała magów w ich szatach; portrety z modelu
+- **Boty:** w osadzie od 30 ludzi stawiają siedzibę zakonu (parzyste Źródła, nieparzyste Płomienia) i szkolą magów — do 6, na trudnym do 10
+- Nowa zasada projektu w CLAUDE.md: każdy nowy budynek, jednostka i mechanika od razu trafia też do bota
+- „Jak grać” → Wojsko: magowie bojowi (tabela, porada)
+
 ## 0.45.0 — powrót do meczu przez sieć, bot przejmuje zamek po rozłączeniu (2026-10-24)
 
 - **Zerwane połączenie to już nie poddanie.** Gdy ktoś zamknie albo odświeży kartę lub zgubi sieć, jego zamkiem rządzi bot (buduje, szkoli wojsko, broni się), a mecz toczy się dalej. Poddanie zostaje porażką tylko wtedy, gdy gracz sam się podda albo wyjdzie z meczu przez menu

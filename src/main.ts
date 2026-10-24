@@ -7,7 +7,7 @@ import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
 import { RULES } from './data/rules';
 import { Terrain } from './data/terrain';
 import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } from './data/resources';
-import { BANDITS, GUARD, UNITS } from './data/units';
+import { BANDITS, GUARD, MAGE_CAP, UNITS } from './data/units';
 import { placeDen } from './sim/systems/bandits';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { BYNAMES, FIRST_NAMES } from './data/names';
@@ -27,7 +27,7 @@ import { canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable
 import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
-import { garrisonRoom, octant, planFormation } from './sim/systems/army';
+import { battleMages, garrisonRoom, octant, planFormation, trainsAt } from './sim/systems/army';
 import { campWatch, prodInfo, sampleMade, siteInfo, watchInfo } from './ui/buildingPanel';
 import { EMPTY, SANDBOX, TEST } from './testmode';
 import { createSimThread, type SimResult } from './sim/simthread';
@@ -217,7 +217,7 @@ const hud = createHud(document.getElementById('ui')!, {
     canvas.classList.add('placing');
     hud.toast(unit ? tx('Wskaż na mapie, gdzie mają iść nowi tego rodzaju (Esc anuluje).', 'Point on the map where new recruits of this kind should go (Esc cancels).') : tx('Wskaż na mapie punkt zbiórki dla wszystkich nowych (Esc anuluje).', 'Point on the map to set a rally point for all new recruits (Esc cancels).'));
   },
-  onTrain: (id, n, unit = 'spearman') => { const k = Math.min(n, recruitInfo().find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
+  onTrain: (id, n, unit = 'spearman') => { const hall = game.buildings.find((x) => x.id === id)?.type; const k = Math.min(n, recruitInfo(hall).find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
 }, thumbs);
 
 // Miniatury rysują się od razu, a gdy dojdą tekstury zdjęciowe (deski, strzecha, bruk), rysujemy je jeszcze raz w pełnych barwach
@@ -803,7 +803,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     }))
     : undefined;
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, ruined: b.ruined, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
-    recruit: def.id === 'barracks' ? recruitInfo().map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
+    recruit: (def.id === 'barracks' || def.id === 'mageFire' || def.id === 'mageWater') && !b.build && !b.ruined ? recruitInfo(b.type).map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     power: !b.build && (def.production || def.staff) && def.id !== 'keep' ? { on: !b.off, worker: b.worker !== 0 } : undefined,
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     garrisonMax: garrisonRoom(def.id) || undefined,
@@ -1272,11 +1272,16 @@ document.body.append(selBox);
 let boxStart: { x: number; y: number } | null = null;
 let lastPick = { id: 0, at: 0 };
 
-function recruitInfo(): RecruitUnit[] {
+function recruitInfo(hall = buildingIndex('barracks')): RecruitUnit[] {
   const p = game.players[ME]!;
   const gold = p.res[resIndex('gold')]!;
   const idle = game.units.filter((u) => u.owner === ME && u.job === 0).length;
-  return UNITS.filter((def) => !def.guard && !def.bandit).map((def) => {
+  const magesLeft = Math.max(0, MAGE_CAP - battleMages(game, ME));
+  return UNITS.filter((def) => !def.guard && !def.bandit && trainsAt(def, hall)).map((def) => {
+    if (def.magic) {
+      const cost = def.cost.gold ?? 0;
+      return { id: def.id, name: t(def.name), weapon: 'gold', have: gold, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, magic: { have: MAGE_CAP - magesLeft, cap: MAGE_CAP }, max: Math.max(0, Math.min(cost ? Math.floor(gold / cost) : 999, idle, magesLeft)) };
+    }
     const have = p.res[resIndex(def.weapon)]!;
     const cost = def.cost.gold ?? 0;
     // ile sztuk broni (albo drewna na taran) idzie na jednego
@@ -2046,6 +2051,15 @@ requestAnimationFrame(loop);
   enemy(n = 3): void {
     const b = game.buildings.find((x) => x.owner === ME && BUILDINGS[x.type]!.id === 'barracks') ?? game.buildings[0]!;
     for (let i = 0; i < n; i++) game.soldiers.push({ id: game.nextId++, owner: 1, kind: 0, px: (b.x + 5 + i) * 256 + 128, py: (b.y + 4) * 256 + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 });
+  },
+  /** Żołnierz od ręki w polu (x, y): rodzaj z UNITS (np. 'mageFire', 'mageWater', 'spearman'), właściciel; zwraca id */
+  soldier(kind: string, x: number, y: number, player = ME): number {
+    const k = unitIndex(kind), def = UNITS[k];
+    if (!def) return 0;
+    const id = game.nextId++;
+    game.soldiers.push({ id, owner: player, kind: k, px: x * 256 + 128, py: y * 256 + 128, path: [], hp: def.hp, goal: -1, wait: 0, target: 0, cd: 0 });
+    refresh();
+    return id;
   },
   /** Pole przed bramą twierdzy gracza (punkt odniesienia na pustej scenie) */
   home(player = ME): { x: number; y: number } | null { const k = game.buildings.find((b) => b.owner === player && b.type === 0); return k && k.door >= 0 ? { x: k.door % game.map.width, y: Math.floor(k.door / game.map.width) } : null; },
