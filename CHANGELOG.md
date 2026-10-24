@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.47.1 — mniej rudy z podatków (2026-10-24)
+
+- Podatek liczy się teraz na 6 ludzi, nie na 2: niski 1 ruda na 6 osób miesięcznie, średni 2, wysoki 3; rozdawanie 2 rudy na 6 osób. Przy 40 ludziach i niskim podatku ok. 170 rudy na dobę zamiast ok. 500. Popularność od podatków bez zmian. Boty płacą i zarabiają tak samo jak gracz
+- „Jak grać”: nowe stawki podatku (PL/EN)
+
 ## 0.47.0 — wolniejsze tempo gry: etapy osady i droższe kolejne budynki (2026-10-24)
 
 - **Etapy osady:** wioska na start, osada od 20 ludzi, gród od 40, miasto od 70. Późniejsze budynki dopiero na wyższym etapie (osada: młyn, piekarnia, browar, karczma, cech, mury i brama z kamienia, kamienna wieża, namiot medyka, kosz z ogniem; gród: kuźnia, płatnerz, duży spichlerz, duża wieża, siedziby magów; miasto: wielka wieża). Raz osiągnięty etap zostaje. Zablokowana karta pisze „Od etapu: Gród (40 ludzi)”, skryba ogłasza nowy etap i to, co się odblokowało, rozpiska ludności pokazuje etap i próg następnego

@@ -95,13 +95,14 @@ export const RULES = {
     { name: 'rations.extra', foodPer8: 6, effect: 4 },
     { name: 'rations.double', foodPer8: 8, effect: 8 },
   ],
-  /** Podatki: ruda miesięcznie na 2 chłopów (ujemne = rozdawanie rudy) i wpływ na popularność */
+  /** Podatki: ruda miesięcznie na 6 chłopów (ujemne = rozdawanie rudy) i wpływ na popularność.
+   *  Do 0.47 liczone na 2 chłopów — rudy było za dużo (przy 40 ludziach i niskim podatku ok. 500 na dobę, teraz ok. 170) */
   taxes: [
-    { name: 'tax.bribe', goldPer2: -2, effect: 4 },
-    { name: 'tax.none', goldPer2: 0, effect: 1 },
-    { name: 'tax.low', goldPer2: 1, effect: -2 },
-    { name: 'tax.mid', goldPer2: 2, effect: -4 },
-    { name: 'tax.high', goldPer2: 3, effect: -6 },
+    { name: 'tax.bribe', goldPer6: -2, effect: 4 },
+    { name: 'tax.none', goldPer6: 0, effect: 1 },
+    { name: 'tax.low', goldPer6: 1, effect: -2 },
+    { name: 'tax.mid', goldPer6: 2, effect: -4 },
+    { name: 'tax.high', goldPer6: 3, effect: -6 },
   ],
   /** Etapy osady: od tylu ludzi wioska staje się osadą, grodem i miastem; późniejsze budynki wymagają wyższego etapu (BuildingDef.tier) */
   tiers: [0, 20, 40, 70],

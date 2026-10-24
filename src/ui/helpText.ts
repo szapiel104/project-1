@@ -137,8 +137,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       tx('Twierdza daje 12 łóżek, a każda chata 8. Kolejne obozowisko (15 drewna) to 6 kolejnych miejsc dla wolnych ludzi.',
         'The keep provides 12 beds and each house 8. Another camp (15 wood) adds 6 more spots for idle peasants.'),
       { h: tx('Podatki', 'Taxes') },
-      tx('Podatek liczy się od liczby ludzi: niski to 1 ruda na 2 osoby, średni 2, wysoki 3 na miesiąc. Rozdawanie kosztuje 2 rudy na 2 osoby — gdy rudy brak, liczy się jak „brak podatku”.',
-        'Tax depends on your population: low is 1 ore per 2 people, average 2, high 3 per month. Handouts cost 2 ore per 2 people — if you have no ore, it counts as "no tax".'),
+      tx('Podatek liczy się od liczby ludzi: niski to 1 ruda na 6 osób, średni 2, wysoki 3 na miesiąc. Rozdawanie kosztuje 2 rudy na 6 osób — gdy rudy brak, liczy się jak „brak podatku”.',
+        'Tax depends on your population: low is 1 ore per 6 people, average 2, high 3 per month. Handouts cost 2 ore per 6 people — if you have no ore, it counts as "no tax".'),
     ],
   },
   {

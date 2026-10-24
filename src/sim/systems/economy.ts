@@ -82,7 +82,7 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const fed = have >= need(level);
   while (level > 0 && have < need(level)) level--;
   const food = need(level);
-  const gold = Math.trunc((pop * tax.goldPer2) / 2);
+  const gold = Math.trunc((pop * tax.goldPer6) / 6);
   const bribed = gold >= 0 || p.res[GOLD]! >= -gold;
   // rozbicie na składniki, żeby gracz widział, co podnosi, a co obniża popularność
   const parts: { key: string; value: number; level?: string }[] = [];
