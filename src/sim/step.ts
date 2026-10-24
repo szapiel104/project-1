@@ -55,6 +55,10 @@ export type Command =
   | { type: 'signal'; player: number; kind: number; x: number; y: number }
   /** Gracz wyszedł z meczu przez sieć: przegrywa (wysyła ją lockstep, nie gracz) */
   | { type: 'surrender'; player: number }
+  /** Gracz stracił połączenie: jego zamkiem rządzi bot (wysyła ją lockstep) */
+  | { type: 'leave'; player: number }
+  /** Gracz `who` wrócił do meczu: bot oddaje mu zamek (wysyła gracz, który przesyła mu stan gry) */
+  | { type: 'rejoin'; player: number; who: number }
   /** Bunt głodowy: rozdaj chleb tłumowi pod bramą (od razu się rozchodzi) albo każ straży rozpędzić go siłą */
   | { type: 'dole'; player: number }
   | { type: 'quell'; player: number };
@@ -69,6 +73,14 @@ function apply(g: GameState, c: Command): void {
       p.left = true;
       const mates = g.players.filter((o) => o.team === p.team && o.id !== p.id && !o.defeated && !o.left);
       if (!mates.length) p.defeated = true;
+      break;
+    }
+    case 'leave':
+      if (!p.defeated && !p.left) { p.away = true; p.bot = true; }
+      break;
+    case 'rejoin': {
+      const q = Number.isInteger(c.who) ? g.players[c.who] : undefined;
+      if (q && q.away && !q.defeated && !q.left) { q.away = false; q.bot = false; }
       break;
     }
     case 'build':

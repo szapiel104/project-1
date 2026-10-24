@@ -19,7 +19,6 @@ const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orcha
 const ROCK_REACH = 60;
 const ROCK_TRIES = 400;
 /** Gracz → do którego ticku bot nie szuka miejsca pod kopalnię (ostatnio nie znalazł); poza stanem gry, ale liczy się tak samo u wszystkich */
-const noRock = new Map<number, number>();
 /** Promień palisady wokół twierdzy (budynki stawia tylko w środku) */
 const RING = 16;
 const THINK = 40;
@@ -143,10 +142,10 @@ export function botSystem(g: GameState): void {
       }
       if (BUILDINGS[type]!.needsRock) {
         // kopalnia: gdy w zasięgu nie ma skały (albo wszystko zastawione), bot nie czeka na nią — buduje dalej wg listy
-        if ((noRock.get(p.id) ?? 0) > g.tick) continue;
+        if ((p.noRock ?? 0) > g.tick) continue;
         if (affordable(p, type)) {
           const at = placementBatch(() => spotRock(g, p.id, type));
-          if (at) placeBuilding(g, p.id, type, at.x, at.y, at.rot); else { noRock.set(p.id, g.tick + 3000); continue; }
+          if (at) placeBuilding(g, p.id, type, at.x, at.y, at.rot); else { p.noRock = g.tick + 3000; continue; }
         }
         break;
       }

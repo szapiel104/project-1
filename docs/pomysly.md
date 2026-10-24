@@ -113,8 +113,7 @@ Zrobione 13.10: czat w pokoju i w meczu (Enter), ranking i historia meczów (tab
 Zrobione 16.10: znaczniki dla drużyny (Alt + klik, boty-sojusznicy też słuchają), wóz z surowcami dla sojusznika (do przechwycenia), kooperacja „Razem przeciw botom”.
 
 Czeka — gra przez sieć:
-- Gracz, który wyszedł z meczu, oddaje miasto botowi
-- Powrót do meczu po zerwaniu połączenia (odświeżenie strony)
+- ~~Gracz, który wyszedł z meczu, oddaje miasto botowi~~ i ~~powrót do meczu po zerwaniu połączenia~~ — zrobione 24.10 (0.45.0). Dalej: wynik dla gracza, który nie wrócił przed końcem (dziś nie trafia do rankingu), gospodarz odchodzący na stałe nie sprząta pokoju
 - Szybka gra (dobór przeciwnika o podobnym rankingu, po 30 s bot), sezony i ligi, powtórki i oglądanie na żywo (lockstep: powtórka = lista poleceń)
 - Eskorta wozu: zaznaczone wojsko idzie za wozem
 

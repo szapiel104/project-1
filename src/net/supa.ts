@@ -250,7 +250,12 @@ export type NetMsg =
   | { k: 'chat'; who: Member; text: string }
   /** Znacznik dla sojuszników (Alt + klik): 0 atak, 1 pomocy, 2 zbiórka; x, y w polach mapy */
   | { k: 'ping'; from: number; kind: number; x: number; y: number }
-  | { k: 'bye'; from: number; last: number };
+  /** Wyjście z meczu; give = poddanie (bez tego: zerwane połączenie, zamkiem rządzi bot, można wrócić) */
+  | { k: 'bye'; from: number; last: number; give?: boolean }
+  /** Gracz po odświeżeniu albo zerwaniu połączenia prosi o powrót na swoje miejsce */
+  | { k: 'rejoin'; id: string; slot: number }
+  /** Stan gry dla wracającego gracza (`to`), w kawałkach: skompresowany zapis gry i lockstepu po turze `turn` */
+  | { k: 'state'; to: number; turn: number; part: number; parts: number; data: string };
 
 /** Kanał pokoju: jeden na lobby i mecz. Obecność (presence) mówi, kto jest w pokoju. */
 export interface RoomLink {

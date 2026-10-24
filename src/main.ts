@@ -34,6 +34,7 @@ import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
 import { awardMatch, deleteRoom, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
+import { forgetMatch, recallMatch, rejoinMatch, rememberMatch, sendState, type MatchMemo } from './net/rejoin';
 import { matchXp, MODE_MULT, xpParts, type MatchMode } from './data/progress';
 import { xpReport } from './ui/xpReport';
 import { createTutorial } from './ui/tutorial';
@@ -71,7 +72,9 @@ let speed = 1;
 /** Mecz przez sieć (null = gra sama z botami) */
 let net: Lockstep | null = null;
 let netGame: OnlineStart | null = null;
-let netNotes = { desync: false, left: 0 };
+let netNotes = { desync: false, left: 0, back: 0 };
+/** Prośby o powrót do meczu, na które już wydaliśmy polecenie `rejoin` (miejsce → kiedy), żeby nie powtarzać ich co 3 s */
+const rejoinAsked = new Map<number, number>();
 const netWait = document.createElement('div');
 netWait.className = 'net-wait';
 netWait.textContent = tx('Czekam na przeciwnika…', 'Waiting for your opponent…');
@@ -405,8 +408,23 @@ function caravanNews(now: number): void {
 }
 
 /** Mecz 1 na 1 przez sieć: obie przeglądarki stawiają tę samą mapę z tego samego ziarna, bez botów na miejscach graczy. */
-function startOnline(st: OnlineStart): void {
-  start(st.seed, st.preset, undefined, st.level, false, st);
+function startOnline(st: OnlineStart, loaded?: GameState): void {
+  start(st.seed, st.preset, loaded, st.level, false, st);
+  // przeglądarka pamięta mecz: po odświeżeniu strony albo zerwanym połączeniu da się do niego wrócić
+  rememberMatch({ room: st.room, seed: st.seed, preset: st.preset, level: st.level, slots: st.slots, me: st.me, humans: st.humans, coop: st.coop });
+  rejoinAsked.clear();
+  // ktoś wraca do meczu: odpowiada gracz o najniższym numerze, który jest w grze — wydaje polecenie powrotu,
+  // a po jego wykonaniu (w pętli gry) przesyła wracającemu stan gry
+  const offRejoin = st.link.on((m) => {
+    if (m.k !== 'rejoin' || !net || !netGame || net.leader() !== ME || !Number.isInteger(m.slot)) return;
+    const seat = netGame.slots[m.slot];
+    if (seat?.kind !== 'human' || seat.id !== m.id || m.slot === ME) return;
+    const now = performance.now();
+    if ((rejoinAsked.get(m.slot) ?? -1e9) > now - 10_000) return;
+    if (!net.canTakeBack(m.slot, Math.floor(game.tick / TURN))) return;
+    rejoinAsked.set(m.slot, now);
+    pending.push({ type: 'rejoin', player: ME, who: m.slot });
+  });
   const mine = st.slots[st.me];
   if (mine?.kind === 'human') chat.attach(st.link, { id: mine.id, nick: mine.nick, avatar: mine.avatar });
   // znaczniki sojuszników (tylko z mojej drużyny; obcy ich nie widzą — ale też nie powinni ich wysyłać)
@@ -415,7 +433,7 @@ function startOnline(st: OnlineStart): void {
     const a = game.players[m.from], b = game.players[ME];
     if (a && b && a.team === b.team) showPing(m.from, m.kind, m.x, m.y);
   });
-  pingOff = offPing;
+  pingOff = () => { offPing(); offRejoin(); };
   const names = st.slots.map((x) => (x.kind === 'human' ? x.nick : null)).filter(Boolean);
   hud.toast(tx(`Mecz przez sieć (${st.preset}): `, `Online match (${st.preset}): `) + `${names.join(', ')}${st.slots.some((x) => x.kind === 'bot') ? tx(' + boty', ' + bots') : ''}.`);
 }
@@ -439,20 +457,72 @@ function waitFor(turn: number, now: number): void {
     netWait.textContent = `${tx('Czekam na', 'Waiting for')}: ${missing.map(nick).join(', ') || tx('graczy', 'players')}${waited > 3000 ? ` — ${absent.length ? tx('brak połączenia', 'connection lost') : tx('słabe połączenie', 'poor connection')}, ${tx('jeszcze', 'another')} ${Math.max(0, left)} s` : '…'}`;
   }
 }
+/** Trwa powrót do meczu (prośba o miejsce, pobieranie stanu gry) */
+let returning = false;
+/**
+ * Powrót do meczu przez sieć: prośba o miejsce, pobranie stanu gry od grających i wejście do gry za ekranem wczytywania.
+ * Napis na środku ekranu mówi, na co czekamy; gdy się nie uda, wracamy do menu z wyjaśnieniem.
+ */
+async function backToMatch(memo: MatchMemo): Promise<void> {
+  if (returning) return;
+  returning = true;
+  document.querySelector('.net-return')?.remove();
+  speed = 0;
+  netWait.hidden = false;
+  const r = await rejoinMatch(memo, (text) => { netWait.textContent = text; });
+  netWait.hidden = true;
+  returning = false;
+  if (typeof r === 'string') {
+    hud.toast(r);
+    menu.open(false);
+    return;
+  }
+  const { memo: m, link, net: ls, game: loaded } = r;
+  const st: OnlineStart = { room: m.room, seed: m.seed, preset: m.preset, level: m.level, slots: m.slots, me: m.me, humans: m.humans, coop: m.coop, link, net: ls };
+  menu.close();
+  previewJob++; previewCover.hidden = true; preview = null; renderer.endPreview();
+  enterGame(t('load.map'), () => { startOnline(st, loaded); hud.toast(tx('Wróciłeś do meczu — bot oddał Ci zamek.', 'You are back in the match — the bot handed back your keep.')); });
+}
+/** Po uruchomieniu gry: trwa mecz przez sieć, z którego wyszliśmy (odświeżenie, zamknięta karta) — okienko z powrotem */
+function offerReturn(memo: MatchMemo): void {
+  document.querySelector('.net-return')?.remove();
+  const box = document.createElement('div');
+  box.className = 'invite-toast panel net-return';
+  box.setAttribute('role', 'alertdialog');
+  box.setAttribute('aria-label', tx('Trwa Twój mecz przez sieć', 'Your online match is still on'));
+  const txt = document.createElement('div');
+  txt.className = 'invite-text';
+  const head = document.createElement('strong');
+  head.textContent = tx('Twój mecz przez sieć trwa', 'Your online match is still on');
+  txt.append(head, document.createElement('br'), tx(`${memo.room.name || memo.preset} — zamkiem rządzi teraz bot. Wróć, a odda Ci go.`, `${memo.room.name || memo.preset} — a bot holds your keep for now. Return and it will hand it back.`));
+  const acts = document.createElement('div');
+  acts.className = 'invite-acts';
+  const yes = document.createElement('button');
+  yes.type = 'button'; yes.className = 'menu-btn'; yes.textContent = tx('Wróć do meczu', 'Return to match');
+  yes.addEventListener('click', () => { play('click'); box.remove(); void backToMatch(memo); });
+  const no = document.createElement('button');
+  no.type = 'button'; no.className = 'link-btn'; no.textContent = tx('Porzuć mecz', 'Abandon match');
+  no.addEventListener('click', () => { play('click'); box.remove(); forgetMatch(); });
+  acts.append(yes, no);
+  box.append(txt, acts);
+  document.body.append(box);
+  yes.focus();
+}
 let pingOff: (() => void) | null = null;
-function endOnline(): void {
+/** Koniec meczu przez sieć. `give` = koniec gry albo poddanie; bez niego (zamknięta karta) zamkiem rządzi bot, a pokój i pamięć meczu zostają, żeby dało się wrócić */
+function endOnline(give = true): void {
   if (!net || !netGame) return;
-  net.close();
+  net.close(give);
   chat.detach();
   pingOff?.(); pingOff = null;
   pings.clear();
   netGame.link.close();
   // koniec meczu: gospodarz usuwa pokój z bazy (nic po meczu nie zostaje)
-  if (netMe()?.id === netGame.room.host) void deleteRoom(netGame.room.id);
+  if (give) { forgetMatch(); if (netMe()?.id === netGame.room.host) void deleteRoom(netGame.room.id); }
   net = null; netGame = null; netWait.hidden = true;
   setStatus({ where: 'menu' });
 }
-window.addEventListener('beforeunload', () => endOnline());
+window.addEventListener('beforeunload', () => endOnline(false));
 /** Ekran wczytywania nowej mapy: ten sam układ co przy starcie gry (herb, złoty tytuł, rada, żarzący się pasek) */
 const LOAD_CREST = '<svg viewBox="0 0 120 120" aria-hidden="true"><path d="M18 34 L102 86 M102 34 L18 86" stroke="#5a3a1c" stroke-width="5" stroke-linecap="round"/><path d="M60 12 L96 22 V56 C96 82 78 98 60 108 C42 98 24 82 24 56 V22 Z" fill="#8c1f18" stroke="#e9c145" stroke-width="4"/><path d="M60 18 L90 26 V56 C90 78 75 92 60 101 Z" fill="#6e1711"/><path d="M46 84 V52 h4 v-6 h5 v6 h10 v-6 h5 v6 h4 V84 Z" fill="#e9c145"/></svg>';
 function loadingMarkup(label: string): string {
@@ -619,7 +689,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   shownAreas.clear(); renderer.setAreas(shownAreas);
   setStatus({ where: online ? 'game' : 'menu' });
   if (online) {
-    net = online.net; netGame = online; netNotes = { desync: false, left: 0 };
+    net = online.net; netGame = online; netNotes = { desync: false, left: 0, back: 0 };
     speed = 1; acc = 0;
   } else if (!loaded) {
     // nowa gra: tempo na starcie z ustawień (Rozgrywka)
@@ -1844,6 +1914,8 @@ function loop(now: number): void {
     renderer.snapshot();
     const ts = performance.now();
     step(game, cmds);
+    // wykonane polecenie powrotu, które wydaliśmy: wracający dostaje stan gry z tej chwili (po turze, u wszystkich taki sam)
+    if (net && netGame) for (const c of cmds) if (c.type === 'rejoin' && c.player === ME) { const turn = (game.tick - 1) / TURN; sendState(netGame.link, c.who, turn, serialize(game, currentPreset), net.exportNet(turn)); }
     perf.sim += performance.now() - ts; perf.ticks++;
     acc -= TICK_MS;
     steps++;
@@ -1855,7 +1927,19 @@ function loop(now: number): void {
     if (net.left.length > netNotes.left) {
       const who = net.left.slice(netNotes.left).map((i) => { const x = netGame?.slots[i]; return x?.kind === 'human' ? x.nick : tx(`gracz ${i + 1}`, `player ${i + 1}`); });
       netNotes.left = net.left.length;
-      hud.toast(tx(`${who.join(', ')} ${who.length > 1 ? 'wyszli' : 'wyszedł'} z meczu — to oznacza poddanie się.`, `${who.join(', ')} left the match — that counts as a surrender.`));
+      hud.toast(tx(`${who.join(', ')} ${who.length > 1 ? 'stracili' : 'stracił'} połączenie albo ${who.length > 1 ? 'się poddali' : 'się poddał'}. Po zerwanym połączeniu zamkiem rządzi bot, dopóki gracz nie wróci do meczu.`, `${who.join(', ')} lost connection or surrendered. After a lost connection a bot holds the keep until the player returns.`));
+    }
+    if (net.back.length > netNotes.back) {
+      const who = net.back.slice(netNotes.back).map((i) => { rejoinAsked.delete(i); const x = netGame?.slots[i]; return x?.kind === 'human' ? x.nick : tx(`gracz ${i + 1}`, `player ${i + 1}`); });
+      netNotes.back = net.back.length;
+      hud.toast(tx(`${who.join(', ')} ${who.length > 1 ? 'wrócili' : 'wrócił'} do meczu — bot oddał zamek.`, `${who.join(', ')} rejoined the match — the bot handed back the keep.`));
+    }
+    // inni uznali nas za rozłączonych (długo nie dochodziły nasze polecenia): wracamy do meczu od nowa
+    if (net.kicked && netGame) {
+      const memo = recallMatch();
+      endOnline(false);
+      hud.toast(tx('Połączenie było zerwane i zamek przejął bot — wracam do meczu…', 'The connection dropped and a bot took the keep — rejoining the match…'));
+      if (memo) void backToMatch(memo);
     }
   }
   const tu = performance.now();
@@ -1899,6 +1983,10 @@ const invite = new URLSearchParams(location.search).get('pokoj');
 if (invite && !SANDBOX) {
   try { const u = new URL(location.href); u.searchParams.delete('pokoj'); history.replaceState(null, '', u.toString()); } catch { /* nic */ }
   menu.join(invite);
+} else if (!SANDBOX) {
+  // mecz przez sieć przerwany odświeżeniem albo zamknięciem karty: okienko z powrotem do niego
+  const memo = recallMatch();
+  if (memo) offerReturn(memo);
 }
 // Interfejs skaluje się do okna: na mniejszym ekranie wszystko jest proporcjonalnie mniejsze i nic nie ucieka za krawędź,
 // na dużym monitorze trochę większe. Wzorzec: pełny pasek dolny mieści się w ok. 2000 × 1100 px.

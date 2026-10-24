@@ -315,8 +315,10 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         'Team play: Alt + click on the map places a marker for your team — "Attack here", "Help!" or "Rally" (allies see a pillar of light, an arrow at the screen edge and a line in chat; Space jumps to the latest marker). Bots on your team obey as well: for attack and rally they send all their free troops, for help half.'),
       tx('Przycisk „Sojusznicy” (w pasku minimapy w prawym dolnym rogu, gdy masz sojusznika) wysyła mu surowce: chłop ciągnie dwukółkę od twojego zamku pod jego zamek (najwyżej 100 sztuk na wóz, 3 wozy naraz). Wrogi żołnierz, który dopadnie wóz, zabiera towar — pilnuj drogi albo daj eskortę.',
         'The "Allies" button (on the minimap bar, bottom right, when you have an ally) sends them resources: a peasant pulls a handcart from your keep to theirs (up to 100 goods per cart, 3 carts at a time). An enemy soldier who catches a cart takes the goods — guard the road or send an escort.'),
-      { tip: tx('W grze przez sieć czas płynie tak samo dla wszystkich: nie ma pauzy ani zmiany tempa, a otwarte menu nie zatrzymuje gry. Wyjście z meczu oznacza poddanie się.',
-        'Online, time runs the same for everyone: there is no pause or speed change, and opening the menu doesn\'t stop the game. Leaving a match counts as surrender.') },
+      { tip: tx('W grze przez sieć czas płynie tak samo dla wszystkich: nie ma pauzy ani zmiany tempa, a otwarte menu nie zatrzymuje gry. Wyjście z meczu przez menu oznacza poddanie się.',
+        'Online, time runs the same for everyone: there is no pause or speed change, and opening the menu doesn\'t stop the game. Leaving a match through the menu counts as surrender.') },
+      { tip: tx('Gdy zerwie się połączenie albo odświeżysz stronę, zamkiem rządzi bot, a gra czeka na Ciebie: po ponownym wejściu (na tym samym koncie) pojawi się „Wróć do meczu” i bot odda Ci zamek. Gra przez sieć wymaga zalogowania.',
+        'If your connection drops or you refresh the page, a bot holds your keep and the match goes on: when you come back (on the same account), "Return to match" appears and the bot hands the keep back. Online play requires signing in.') },
     ],
   },
   {

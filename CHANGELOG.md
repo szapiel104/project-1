@@ -1,5 +1,16 @@
 # Dziennik zmian
 
+## 0.45.0 — powrót do meczu przez sieć, bot przejmuje zamek po rozłączeniu (2026-10-24)
+
+- **Zerwane połączenie to już nie poddanie.** Gdy ktoś zamknie albo odświeży kartę lub zgubi sieć, jego zamkiem rządzi bot (buduje, szkoli wojsko, broni się), a mecz toczy się dalej. Poddanie zostaje porażką tylko wtedy, gdy gracz sam się podda albo wyjdzie z meczu przez menu
+- **Powrót do meczu:** przeglądarka pamięta trwający mecz. Po ponownym wejściu do gry (na tym samym koncie) pojawia się okienko „Wróć do meczu”. Jeden z grających przesyła wtedy stan gry (skompresowany, w kawałkach), bot oddaje zamek i gra rusza od tego miejsca u wszystkich tak samo. Inni widzą komunikat, kto stracił połączenie i kto wrócił
+- Gracz, którego inni odcięli za długie milczenie (słabe łącze), dowiaduje się o tym i sam wraca do meczu tą samą drogą
+- Spóźnione polecenia gracza, który już wyszedł, nie wchodzą do gry (u jednych by doszły, u innych nie)
+- Gospodarz, który odświeży stronę, nie kasuje już pokoju — mecz trwa, a on może do niego wrócić
+- Pamięć bota o braku skały pod kopalnię jest teraz w stanie gry (wcześniej wspólna dla wszystkich gier na stronie), więc gra wczytana w trakcie liczy się dalej identycznie
+- „Jak grać”: rozdział o grze przez sieć mówi o powrocie do meczu i o wymaganym logowaniu (PL/EN)
+- Testy: zapis w środku meczu 2 na 2 liczy się dalej krok w krok z oryginałem; trzech graczy, jeden odświeża stronę, wraca i dalej wszyscy mają ten sam stan
+
 ## 0.44.0 — zaraza i magowie przy pracy (2026-10-24)
 
 - **Zaraza.** Bierze się z niepochowanych ciał (po bitwie, po wilkach), głodu, ciasnoty w chatach, spania pod gołym niebem i zimy, trochę z samej liczby ludzi; pierwsze trzy doby gry są spokojne, poziom pokojowy bez zarazy z niczego. Chory najpierw pracuje i już zaraża (przy robocie, przy ognisku), potem leży w gorączce w chacie albo na słomie — jego warsztat, pole czy kopalnia stoją. Leżący zaraża śpiących pod tym samym dachem
