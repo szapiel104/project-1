@@ -88,3 +88,60 @@ describe('bunt głodowy', () => {
     expect(back.players[0]!.revolt).toBe(true);
   });
 });
+
+describe('bunt — rozdaj chleb i rozpędzenie przez straż', () => {
+  const riot = (seed: number): GameState => {
+    const g = hungryGame(seed, 24);
+    run(g, RULES.monthTicks * RULES.revoltMeals + 20);
+    expect(g.players[0]!.revolt).toBe(true);
+    return g;
+  };
+
+  it('„Rozdaj chleb” od razu rozpędza tłum, bierze chleb pierwszy i podnosi popularność', () => {
+    const g = riot(21);
+    const p = g.players[0]!, n = rioters(g), BREAD = resIndex('bread'), APPLES = resIndex('apples');
+    p.res[BREAD] = 1000; p.res[APPLES] = 50;
+    const pop = p.popularity;
+    step(g, [{ type: 'dole', player: 0 }]);
+    expect(p.revolt).toBeFalsy();
+    expect(rioters(g)).toBe(0);
+    expect(p.famine ?? 0).toBe(0);
+    expect(p.res[BREAD]).toBe(1000 - (n * RULES.dolePortions) / 2);
+    expect(p.res[APPLES]).toBe(50);
+    expect(p.popularity).toBeGreaterThan(pop);
+  });
+
+  it('bez jedzenia na wszystkich „Rozdaj chleb” nic nie robi', () => {
+    const g = riot(22);
+    const p = g.players[0]!;
+    p.res[resIndex('apples')] = 1;
+    step(g, [{ type: 'dole', player: 0 }]);
+    expect(p.revolt).toBe(true);
+    expect(p.res[resIndex('apples')]).toBe(1);
+  });
+
+  it('straż rozpędza tłum siłą: popularność spada od razu, a pod bramą robi się pusto', () => {
+    const g = riot(23);
+    const p = g.players[0]!;
+    expect(g.soldiers.some((s) => s.owner === 0 && s.hp > 0)).toBe(true);
+    const pop = p.popularity;
+    step(g, [{ type: 'quell', player: 0 }]);
+    expect(p.quell).toBe(true);
+    expect(p.popularity).toBe(Math.max(0, pop + RULES.quellPenalty));
+    for (let i = 0; i < 3000 && p.revolt; i++) step(g, []);
+    expect(p.revolt).toBeFalsy();
+    expect(p.quell).toBeFalsy();
+    expect(rioters(g)).toBe(0);
+    // głód nie minął: zostaje tuż pod progiem buntu
+    expect(p.famine ?? 0).toBeLessThan(RULES.revoltMeals);
+  });
+
+  it('rozkazy w zapisie i hashu stanu', () => {
+    const g = riot(24);
+    step(g, [{ type: 'quell', player: 0 }]);
+    const h = stateHash(g);
+    const back = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!;
+    expect(back.players[0]!.quell).toBe(true);
+    expect(stateHash(back)).toBe(h);
+  });
+});

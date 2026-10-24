@@ -51,6 +51,9 @@ export interface HudEvents {
   onArea(building: number): void;
   /** Kopalnia: wejście do sztolni (spacer w osobnej lokacji) */
   onEnterMine(building: number): void;
+  /** Bunt głodowy (okno twierdzy): rozdaj chleb tłumowi albo każ straży rozpędzić go siłą */
+  onDole(): void;
+  onQuell(): void;
   onSelectGarrison(building: number): void;
   /** Skrót w dolnym pasku: kamera do koszar albo składu (kolejne kliknięcia przechodzą po kolejnych budynkach) */
   onJump(kind: 'barracks' | 'stockpile'): void;
@@ -94,6 +97,8 @@ export interface StockInfo { kind: string; here: number; used: number; max: numb
 export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
+  /** Twierdza w czasie buntu: ilu stoi pod bramą, ile porcji kosztuje rozdanie chleba, czy jest z czego, czy straż już rozgania tłum */
+  riot?: { count: number; cost: number; food: number; guards: number; quelling: boolean };
   /** Plac budowy: postęp, materiał na placu i w drodze, robotnicy, stan */
   site?: { pct: number; loads: number; delivered: number; carrying: number; fetching: number; builders: number; state: string };
   /** Ilu łuczników mieści wieża / mur */
@@ -705,6 +710,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   towerBtns.append(tSel, tDown);
   towerBox.append(towerState, towerBtns);
   towerBox.hidden = true;
+  // twierdza w czasie buntu: tłum pod bramą i dwa wyjścia — chleb albo pałki straży
+  const riotBox = el('div', 'gate-box riot-box');
+  const riotState = el('p', 'gate-state');
+  const riotBtns = el('div', 'actions');
+  const doleBtn = el('button', 'btn-main', ''); doleBtn.type = 'button';
+  const quellBtn = el('button', 'btn-main', ''); quellBtn.type = 'button';
+  doleBtn.addEventListener('click', () => events.onDole());
+  quellBtn.addEventListener('click', () => events.onQuell());
+  riotBtns.append(doleBtn, quellBtn);
+  riotBox.append(riotState, riotBtns);
+  riotBox.hidden = true;
   // twierdza: straż miejska
   const watchState = el('p', 'gate-state');
   watchState.hidden = true;
@@ -748,7 +764,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, gateBox, powerBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, riotBox, gateBox, powerBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -1134,7 +1150,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       gateBox.hidden = true;
       powerBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
-      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; infoDesc.hidden = false;
+      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true; infoDesc.hidden = false;
       walkBtn.hidden = person.walk === false;
     },
     showArmy(army, ctl) {
@@ -1150,7 +1166,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       towerBox.hidden = true;
       gateBox.hidden = true;
       powerBox.hidden = true;
-      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true;
+      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true;
       walkBtn.hidden = true;
       // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
       const byKind = new Map<string, { name: string; n: number }>();
@@ -1304,6 +1320,22 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             return [head, bar, grid];
           }));
         }
+      }
+      riotBox.hidden = !(i.own && i.riot);
+      if (i.riot) {
+        const r = i.riot;
+        setText(riotState, r.quelling
+          ? tx(`Straż rozgania tłum spod bramy — zostało ${r.count}.`, `The watch is driving the mob from the gate — ${r.count} left.`)
+          : tx(`Bunt! Pod bramą stoi ${r.count} głodnych i nikt z nich nie pracuje.`, `Riot! ${r.count} hungry folk crowd the gate and none of them will work.`));
+        const short = r.food < r.cost;
+        setText(doleBtn, tx(`Rozdaj chleb (${r.cost} porcji)`, `Hand out bread (${r.cost} portions)`));
+        doleBtn.disabled = short || r.quelling;
+        doleBtn.title = short ? tx(`W spichlerzach jest tylko ${r.food} porcji`, `Only ${r.food} portions in the granaries`) : tx(`Tłum od razu się rozejdzie, popularność +${RULES.dolePopularity}`, `The mob breaks up at once, popularity +${RULES.dolePopularity}`);
+        setText(quellBtn, tx(`Rozpędź strażą (popularność ${RULES.quellPenalty})`, `Send in the watch (popularity ${RULES.quellPenalty})`));
+        quellBtn.disabled = !r.guards || r.quelling;
+        quellBtn.title = !r.guards ? tx('Nie masz straży miejskiej', 'You have no town watch') : tx('Głód nie minie — bez jedzenia tłum szybko wróci', 'The hunger remains — without food the mob soon returns');
+        quellBtn.hidden = r.quelling;
+        doleBtn.hidden = r.quelling;
       }
       watchState.hidden = !(i.own && i.watch);
       if (i.watch) {

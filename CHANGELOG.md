@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.38.0 — bunt: chleb albo pałki, tłum z widłami i pochodniami (2026-10-24)
+
+- W oknie twierdzy w czasie buntu pojawia się osobny blok z liczbą ludzi pod bramą i dwoma przyciskami
+- „Rozdaj chleb”: po 4 porcje na każdego buntownika ze spichlerzy (chleb pierwszy, potem jabłka i ryby). Tłum rozchodzi się od razu, głód z rzędu znika, popularność +2. Gdy jedzenia nie starczy, przycisk jest wyszarzony i podpowiada, ile porcji leży w spichlerzach
+- „Rozpędź strażą”: popularność −8 od razu, straż miejska idzie pod bramę i rozgania buntowników po kolei (z guzem: −5 zdrowia). Nikt nowy nie dołącza, a gdy pod bramą zrobi się pusto, bunt się kończy. Głód zostaje tuż pod progiem, więc bez jedzenia tłum wraca po dwóch pustych posiłkach. Bez straży przycisk jest wyszarzony
+- Buntownicy stoją twarzą do bramy: co trzeci z płonącą pochodnią (także za dnia) i pięścią w górze, reszta wymachuje widłami nad głową. Widły z Blendera (`tools/models/tools.py`, kuta tuleja i trzy zęby), są w podglądzie modeli (Narzędzia i W pracy)
+- Bot rozdaje chleb, gdy ma z czego, a bez jedzenia każe straży rozpędzić tłum
+- `__test.riot()` w trybie testowym od razu wywołuje bunt
+- Rozdział w „Jak grać” (Jedzenie), testy w `tests/unrest.test.ts`
+
 ## 0.37.1 — łucznik z łokciami (2026-10-24)
 
 - Łucznik ma łokcie (tools/models/soldier.py: ramię i przedramię osobno, kula łokcia zakrywa styk przy zgięciu). Prawa ręka zgina się naturalnie: przy pełnym naciągu ramię jest poziomo, a dłoń z cięciwą przy twarzy; przy wypuszczeniu dłoń odskakuje za ucho, przy sięganiu do kołczanu ręka idzie przez bark ze zgiętym łokciem. Lewa ręka zostaje prosta — trzyma łuk. W marszu prawa ręka lekko zgięta

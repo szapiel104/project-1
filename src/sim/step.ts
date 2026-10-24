@@ -16,7 +16,7 @@ import { caravanSystem, sendCaravan } from './systems/caravans';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
-import { unrestSystem } from './systems/unrest';
+import { dole, quell, unrestSystem } from './systems/unrest';
 import { forestSystem } from './systems/forestry';
 import { roadSystem } from './systems/roads';
 import { fireSystem } from './systems/fire';
@@ -53,7 +53,10 @@ export type Command =
   /** Znacznik dla sojuszników (Alt + klik): boty z drużyny wysyłają wojsko (0 atak, 1 pomocy, 2 zbiórka) */
   | { type: 'signal'; player: number; kind: number; x: number; y: number }
   /** Gracz wyszedł z meczu przez sieć: przegrywa (wysyła ją lockstep, nie gracz) */
-  | { type: 'surrender'; player: number };
+  | { type: 'surrender'; player: number }
+  /** Bunt głodowy: rozdaj chleb tłumowi pod bramą (od razu się rozchodzi) albo każ straży rozpędzić go siłą */
+  | { type: 'dole'; player: number }
+  | { type: 'quell'; player: number };
 
 function apply(g: GameState, c: Command): void {
   const p = g.players[c.player];
@@ -75,6 +78,12 @@ function apply(g: GameState, c: Command): void {
       break;
     case 'unroad':
       if (Number.isInteger(c.x) && Number.isInteger(c.y)) removeRoad(g, c.player, c.x, c.y);
+      break;
+    case 'dole':
+      dole(g, c.player);
+      break;
+    case 'quell':
+      quell(g, c.player);
       break;
     case 'setRations':
       if (Number.isInteger(c.level) && c.level >= 0 && c.level < RULES.rations.length) p.rations = c.level;

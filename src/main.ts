@@ -7,7 +7,7 @@ import { BUILDINGS, buildingIndex, footprint, isTower } from './data/buildings';
 import { RULES } from './data/rules';
 import { Terrain } from './data/terrain';
 import { RESOURCE_DEFS, RESOURCES, resIndex, type ResourceId, type StoreKind } from './data/resources';
-import { BANDITS, UNITS } from './data/units';
+import { BANDITS, GUARD, UNITS } from './data/units';
 import { placeDen } from './sim/systems/bandits';
 import { MAP_PRESETS, type MapPresetId } from './data/maps';
 import { BYNAMES, FIRST_NAMES } from './data/names';
@@ -18,6 +18,7 @@ import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
 import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { applyCommands, step, type Command } from './sim/step';
+import { doleCost, rioters } from './sim/systems/unrest';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
@@ -159,6 +160,8 @@ const hud = createHud(document.getElementById('ui')!, {
     if (wrecking) setWreck(false); pick(id);
   },
   onRations: (level) => pending.push({ type: 'setRations', player: ME, level }),
+  onDole: () => { pending.push({ type: 'dole', player: ME }); play('click'); },
+  onQuell: () => { pending.push({ type: 'quell', player: ME }); play('click'); },
   onTax: (level) => pending.push({ type: 'setTax', player: ME, level }),
   onSpeed: (s) => {
     // z drugim prawdziwym graczem nie ma pauzy ani przyspieszania: czas płynie tak samo u obu
@@ -733,6 +736,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     garrisonMax: garrisonRoom(def.id) || undefined,
     prod: b.owner === ME && !b.build && (def.production || def.staff) ? prodInfo(game, b, (id) => personCard(id)?.name ?? '') : undefined,
+    riot: def.id === 'keep' && b.owner === ME && p.revolt ? { count: rioters(game, ME), cost: doleCost(game, ME), food: foodTotal(p), guards: game.soldiers.filter((s) => s.owner === ME && s.kind === GUARD && !s.camp && s.hp > 0).length, quelling: !!p.quell } : undefined,
     watch: def.id === 'keep' ? watchInfo(game, b.owner) : def.id === 'minecamp' ? campWatch(game, b) : undefined,
     area: def.area || isTower(def.id) ? shownAreas.has(b.id) : undefined,
     site: b.build ? siteInfo(game, b) : undefined };
@@ -1941,6 +1945,8 @@ requestAnimationFrame(loop);
   hour(h: number): void { setHour(game, h); refresh(); },
   /** `n` chłopów przy twierdzy */
   peasants(n = 5, player = ME): number { const r = addPeasants(game, n, player).length; refresh(); return r; },
+  /** Bunt głodowy od ręki: pusty licznik głodu dobity do progu, tłum zbiera się przy następnym przejściu symulacji */
+  riot(player = ME): void { const p = game.players[player]; if (p) { p.famine = RULES.revoltMeals; step(game, []); refresh(); } },
   /** Obóz zbójów ze środkiem w (x, y) z czterema zbójami (pusta scena: zbóje napadają dopiero od 2. dnia, poziom pokojowy ich nie zatrzymuje); id obozu albo null */
   den(x: number, y: number): number | null { const b = placeDen(game, x, y); refresh(); return b?.id ?? null; },
   /**

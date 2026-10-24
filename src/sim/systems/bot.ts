@@ -1,3 +1,4 @@
+import { dole, quell } from './unrest';
 import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { SAPPER, UNITS } from '../../data/units';
@@ -117,6 +118,8 @@ export function botSystem(g: GameState): void {
     const tk = g.tick - p.id * 5;
     if (tk % THINK !== 0) continue;
     if (!p.bot || p.defeated || !playerKeep(g, p.id)) continue;
+    // bunt głodowy: bot rozdaje chleb, gdy ma z czego, a bez jedzenia każe straży rozpędzić tłum
+    if (p.revolt && !dole(g, p.id)) quell(g, p.id);
     // budowa: następny budynek z listy, którego jeszcze brakuje (rzadziej, bo szukanie miejsca kosztuje)
     if (tk % (THINK * 5) === 0) {
     const have = new Map<string, number>();

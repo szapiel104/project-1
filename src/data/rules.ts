@@ -31,6 +31,14 @@ export const RULES = {
   revoltShareGuarded: 0.34,
   /** Bunt w osadzie psuje nastroje co miesiąc */
   revoltPenalty: -3,
+  /** „Rozdaj chleb” w oknie twierdzy: tyle porcji na każdego buntownika pod bramą (chleb idzie pierwszy, potem jabłka i ryby);
+   *  tłum od razu się rozchodzi, a ludzie cenią pana, który się z nimi podzielił */
+  dolePortions: 4,
+  dolePopularity: 2,
+  /** „Rozpędź tłum” (straż siłą): od razu tyle popularności w dół — ludzie nie zapominają pałek */
+  quellPenalty: -8,
+  /** Po rozpędzeniu głód z rzędu spada do progu buntu minus tyle posiłków: bez jedzenia tłum wróci szybko */
+  quellMargin: 2,
   startResources: { wood: 80, stone: 0, apples: 100, bread: 300, gold: 60 } as Partial<Record<ResourceId, number>>,
   /** Jak daleko od własnej twierdzy wolno budować (w polach) */
   buildRadius: 30,

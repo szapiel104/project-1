@@ -421,6 +421,11 @@ body.menu-open .scribe { display: none; }
 .gate-btn { min-height: 44px; font-size: 16px; }
 .gate-state { margin: 0; font-size: 15px; }
 .gate-state[data-shut='true'] { color: #b5342a; font-weight: 700; }
+/* bunt w oknie twierdzy: osobny blok z czerwoną krawędzią, żeby nie zginął wśród zwykłych wierszy */
+.riot-box { padding: 8px 10px; border-left: 4px solid #8f1f17; background: rgba(143, 31, 23, .08); }
+.riot-box .gate-state { color: #7a1a12; font-weight: 700; }
+.riot-box .actions { display: grid; gap: 6px; }
+.riot-box .btn-main { min-height: 44px; }
 /* alarm na mapie: trójkąt z wykrzyknikiem; poza ekranem — strzałka przy krawędzi */
 .alerts { position: fixed; inset: 0; pointer-events: none; z-index: 24; }
 .alert { position: absolute; left: 0; top: 0; width: 0; height: 0; padding: 0; border: 0; background: none; pointer-events: auto; cursor: pointer; }

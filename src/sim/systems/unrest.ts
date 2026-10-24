@@ -1,6 +1,9 @@
+import { resIndex } from '../../data/resources';
+import { GUARD } from '../../data/units';
 import { RULES } from '../../data/rules';
 import { findPath } from '../path';
-import { Phase, playerKeep, population, type GameState, type Unit } from '../state';
+import { Phase, playerKeep, population, type GameState, type PlayerState, type Unit } from '../state';
+import { FOOD_VALUE, foodTotal } from './economy';
 
 /**
  * Bunt głodowy.
@@ -19,6 +22,72 @@ export function famineLimit(): number {
   return RULES.revoltMeals;
 }
 
+/** Ilu ludzi gracza stoi teraz w tłumie pod bramą */
+export function rioters(g: GameState, player: number): number {
+  let n = 0;
+  for (const u of g.units) if (u.owner === player && u.riot) n++;
+  return n;
+}
+
+/** Ile porcji jedzenia kosztuje „Rozdaj chleb” (po kilka na każdego buntownika) */
+export function doleCost(g: GameState, player: number): number {
+  return rioters(g, player) * RULES.dolePortions;
+}
+
+/** Kolejność rozdawania: najpierw chleb (o niego krzyczą), potem jabłka, ryby na końcu */
+const DOLE_ORDER = (['bread', 'apples', 'fish'] as const).map((r) => ({ i: resIndex(r), v: FOOD_VALUE[r] ?? 1 }));
+
+/** Bunt się kończy: wszyscy wracają do roboty, rozkaz dla straży znika */
+function endRevolt(g: GameState, p: PlayerState): void {
+  p.revolt = undefined;
+  p.quell = undefined;
+  for (const u of g.units) if (u.owner === p.id && u.riot) calmDown(u);
+}
+
+/**
+ * „Rozdaj chleb” z okna twierdzy: jednorazowo ze spichlerzy idzie po kilka porcji na każdego buntownika
+ * (chleb pierwszy). Tłum od razu się rozchodzi, głód z rzędu znika, a popularność trochę rośnie.
+ * Gdy jedzenia nie starczy na wszystkich, nic się nie dzieje (przycisk jest wtedy wyszarzony).
+ */
+export function dole(g: GameState, player: number): boolean {
+  const p = g.players[player];
+  if (!p || !p.revolt) return false;
+  let need = doleCost(g, player);
+  if (!need || foodTotal(p) < need) return false;
+  for (const { i, v } of DOLE_ORDER) {
+    if (need <= 0) break;
+    const take = Math.min(p.res[i]!, Math.ceil(need / v));
+    p.res[i]! -= take;
+    need -= take * v;
+  }
+  p.famine = undefined;
+  p.popularity = Math.min(RULES.maxPopularity, p.popularity + RULES.dolePopularity);
+  endRevolt(g, p);
+  return true;
+}
+
+/**
+ * „Rozpędź tłum”: straż miejska idzie pod bramę i rozgania buntowników po kolei (każdy strażnik co chwilę jednego).
+ * Popularność spada od razu, a głód nie mija — gdy dalej nie ma jedzenia, tłum zbierze się znów po kilku posiłkach.
+ * Bez straży rozkaz nic nie robi.
+ */
+export function quell(g: GameState, player: number): boolean {
+  const p = g.players[player];
+  if (!p || !p.revolt || p.quell || !guardsOf(g, player).length) return false;
+  p.quell = true;
+  p.popularity = Math.max(0, p.popularity + RULES.quellPenalty);
+  p.famine = Math.min(p.famine ?? 0, famineLimit() - RULES.quellMargin) || undefined;
+  return true;
+}
+
+/** Żywi strażnicy miejscy gracza (bez straży kopalni) */
+function guardsOf(g: GameState, player: number): GameState['soldiers'] {
+  return g.soldiers.filter((s) => s.owner === player && s.kind === GUARD && !s.camp && s.hp > 0);
+}
+
+/** Strażnik rozgania buntowników w tym promieniu (w polach) */
+const QUELL_REACH = 2;
+
 function calmDown(u: Unit): void {
   u.riot = undefined;
   u.path = []; u.timer = 0; u.target = 0; u.wait = 0;
@@ -36,11 +105,20 @@ export function unrestSystem(g: GameState): void {
   const w = g.map.width;
   for (const p of g.players) {
     if (!p.revolt && (p.famine ?? 0) >= famineLimit()) p.revolt = true;
-    else if (p.revolt && !p.famine) {
-      p.revolt = undefined;
-      for (const u of g.units) if (u.owner === p.id && u.riot) calmDown(u);
-    }
+    else if (p.revolt && !p.famine) endRevolt(g, p);
     if (!p.revolt) continue;
+    // straż rozpędza tłum: każdy strażnik przy tłumie odsyła jednego buntownika obok siebie do roboty (z guzem: −5 zdrowia);
+    // nikt nowy nie dołącza, a gdy pod bramą nikogo nie zostanie, bunt się kończy
+    if (p.quell) {
+      for (const s of guardsOf(g, p.id)) {
+        const u = g.units.find((x) => x.owner === p.id && x.riot && Math.max(Math.abs((x.px >> 8) - (s.px >> 8)), Math.abs((x.py >> 8) - (s.py >> 8))) <= QUELL_REACH);
+        if (!u) continue;
+        u.hp = Math.max(5, (u.hp ?? 30) - 5);
+        calmDown(u);
+      }
+      if (!rioters(g, p.id) || !guardsOf(g, p.id).length) endRevolt(g, p);
+      continue;
+    }
     const keep = playerKeep(g, p.id);
     if (!keep || keep.door < 0) continue;
     const dx0 = keep.door % w, dy0 = (keep.door - dx0) / w;

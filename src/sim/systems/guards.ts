@@ -144,6 +144,21 @@ export function guardSystem(g: GameState): void {
           return;
         }
       }
+      // bunt i rozkaz „Rozpędź tłum” (unrest.ts): cała straż idzie do najbliższego buntownika pod bramą;
+      // rozgania go unrestSystem, gdy strażnik stanie obok
+      if (p.quell && p.revolt) {
+        if (s.target || s.hunt || (s.goal >= 0 && s.path.length)) return;
+        const w = g.map.width, sx = s.px >> 8, sy = s.py >> 8;
+        let best = -1, bd = Infinity;
+        for (const u of g.units) {
+          if (u.owner !== p.id || !u.riot) continue;
+          const d = Math.max(Math.abs((u.px >> 8) - sx), Math.abs((u.py >> 8) - sy));
+          if (d < bd) { bd = d; best = (u.py >> 8) * w + (u.px >> 8); }
+        }
+        s.stance = 0; s.hold = -1; s.amove = false;
+        if (best >= 0 && bd > 1) { s.goal = best; s.path = []; }
+        return;
+      }
       // w walce albo w drodze: nie przeszkadzamy
       if (s.target || s.path.length || s.goal >= 0 || s.hunt) return;
       const here = (s.py >> 8) * g.map.width + (s.px >> 8);

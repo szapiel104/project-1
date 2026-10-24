@@ -269,11 +269,12 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['work-pick2', tx('kamieniarz z kilofem (cios)', 'stonecutter with pick (blow)'), worker('pick', -0.7, true, undefined, 0.5)],
     ['work-club', tx('chłop z maczugą', 'peasant with club'), worker('club', -1.4, true)],
     ['work-torch', tx('z pochodnią nocą', 'with torch at night'), worker('torch', -0.55, true)],
+    ['work-fork', tx('buntownik z widłami', 'rioter with a pitchfork'), worker('fork', -2.3, true)],
     ['work-bucket', tx('z wiadrem wody', 'with a bucket of water'), worker('bucket', 0, false, 'bucketWater')],
     ['work-rod', tx('rybak z wędką', 'fisherman with rod'), worker('rod', -0.9, true)],
     ['work-back', tx('kilof na plecach', 'pick on the back'), worker('backPick', 0, false)],
   ]],
-  [tx('Narzędzia', 'Tools'), ([['axe', tx('siekiera', 'axe')], ['pick', tx('kilof', 'pick')], ['hammer', tx('młotek', 'hammer')], ['club', tx('maczuga', 'club')], ['torch', tx('pochodnia', 'torch')], ['bucket', tx('wiadro', 'bucket')], ['rod', tx('wędka', 'fishing rod')], ['backPick', tx('kilof na plecach', 'pick on the back')], ['beltClub', tx('maczuga u pasa', 'club at the belt')]] as const).map(([k, l]) => [`tool-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, toolPair(k)] as [string, string, Make])],
+  [tx('Narzędzia', 'Tools'), ([['axe', tx('siekiera', 'axe')], ['pick', tx('kilof', 'pick')], ['hammer', tx('młotek', 'hammer')], ['club', tx('maczuga', 'club')], ['fork', tx('widły', 'pitchfork')], ['torch', tx('pochodnia', 'torch')], ['bucket', tx('wiadro', 'bucket')], ['rod', tx('wędka', 'fishing rod')], ['backPick', tx('kilof na plecach', 'pick on the back')], ['beltClub', tx('maczuga u pasa', 'club at the belt')]] as const).map(([k, l]) => [`tool-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, toolPair(k)] as [string, string, Make])],
   [tx('Podwórko', 'Yard'), YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', tx('pranie: ', 'washing: ')), () => ({ obj: yardModel(k) })] as [string, string, Make])],
   [tx('Graty', 'Clutter'), (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: clutterObject(k, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
   // gotowe modele z paczek (tools/models/props_import.py): z lewej wersja z bliska, z prawej z daleka; ryba w rozmiarze z kosza

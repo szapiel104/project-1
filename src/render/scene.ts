@@ -266,6 +266,8 @@ const PICK_DRAW = 0.75;
 const PICK_GRAB = 0.42;
 /** Ręka rybaka z wędką wyciągnięta w przód (tak samo w tools/models/tools.py) */
 const FISH_ARM = -0.9;
+/** Buntownik wymachuje widłami nad głową (tools.py: FORK_ARM — przy tym kącie widły stoją prawie pionowo) */
+const FORK_ARM = -2.3;
 /** Oburęczny chwyt kilofa i siekiery: o tyle ręce schodzą się do środka (dłonie razem na stylisku) */
 const TWO_HAND = 0.5;
 const TORCH_TIP = new THREE.Vector3(0, -0.19 + Math.cos(0.55) * 0.34, Math.sin(0.55) * 0.34);
@@ -445,6 +447,8 @@ export class GameRenderer {
   private sapperDraw: { m: THREE.Matrix4; swing: number; walking: boolean; work: boolean; carry: number; team: number; id: number }[] = [];
   /** Broń chłopa: maczuga w dłoni w walce, kilof na plecach i maczuga u pasa na co dzień */
   private clubs!: GearPool;
+  /** Widły buntowników spod bramy (bunt głodowy) */
+  private forks!: GearPool;
   private backPicks!: GearPool;
   private beltClubs!: GearPool;
   private soldierTorches!: THREE.InstancedMesh;
@@ -672,6 +676,20 @@ export class GameRenderer {
     this.handFlameN++;
   }
   private handTorches: GearPool;
+  /** Brama twierdzy gracza (środek pola przed drzwiami) — buntownicy patrzą w jej stronę; liczone raz na klatkę */
+  private riotDoors = new Map<number, [number, number] | null>();
+  private riotDoorsAt = -1;
+  private riotDoor(g: GameState, owner: number): [number, number] | null {
+    if (this.riotDoorsAt !== g.tick) { this.riotDoors.clear(); this.riotDoorsAt = g.tick; }
+    let d = this.riotDoors.get(owner);
+    if (d === undefined) {
+      const keep = g.buildings.find((b) => b.owner === owner && b.door >= 0 && BUILDINGS[b.type]!.id === 'keep');
+      const w = g.map.width;
+      d = keep ? [(keep.door % w) + 0.5, Math.floor(keep.door / w) + 0.5] : null;
+      this.riotDoors.set(owner, d);
+    }
+    return d;
+  }
   private ramBodies!: THREE.InstancedMesh;
   private ramBeams!: THREE.InstancedMesh;
   /** wiadro w prawej ręce gaszącego (puste i z wodą) */
@@ -1023,6 +1041,7 @@ export class GameRenderer {
     this.axes = pool('axe');
     this.picks = pool('pick');
     this.clubs = pool('club');
+    this.forks = pool('fork', 'widły buntowników');
     this.backPicks = pool('backPick');
     this.beltClubs = pool('beltClub');
     this.hammers = pool('hammer');
@@ -2503,7 +2522,7 @@ export class GameRenderer {
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies]) f.view(cp);
-      for (const t of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
+      for (const t of [this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
@@ -5322,6 +5341,18 @@ export class GameRenderer {
         heading += this.calm ? diff : diff * 0.2;
         this.facing.set(u.id, heading);
       }
+      // buntownik w tłumie: stoi twarzą do bramy twierdzy i krzyczy w jej stronę
+      const rioting = !!u.riot && !this.calm;
+      if (rioting && still && cv.speed <= 0.3) {
+        const door = this.riotDoor(g, u.owner);
+        if (door) {
+          let diff = Math.atan2(door[0] - cv.sx, door[1] - cv.sy) - heading;
+          while (diff > Math.PI) diff -= Math.PI * 2;
+          while (diff < -Math.PI) diff += Math.PI * 2;
+          heading += diff * 0.2;
+          this.facing.set(u.id, heading);
+        }
+      }
       const walking = (!still || cv.speed > 0.35) && !this.calm;
       let st = this.strides.get(u.id);
       if (!st) { st = { x: cv.sx, y: cv.sy, phase: u.id }; this.strides.set(u.id, st); }
@@ -5739,7 +5770,12 @@ export class GameRenderer {
         this.spades.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
       } else this.spades.setMatrixAt(i, ZERO);
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
-      const torchOn = this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket;
+      // buntownik: co trzeci z płonącą pochodnią (dzień i noc), reszta z widłami; wymachują nimi w swoim rytmie
+      const riotTorch = rioting && u.id % 3 === 0;
+      const shake = rioting ? Math.sin(this.time * (5.5 + (u.id % 5) * 0.4) + u.id * 1.7) : 0;
+      const torchArm = riotTorch ? TORCH_ARM - 0.45 + shake * 0.18 : TORCH_ARM;
+      const forkArm = FORK_ARM + shake * 0.28;
+      const torchOn = riotTorch || (this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket);
       // kopacz w drodze (także sztolnią) ma kilof na plecach; do ręki bierze go dopiero przy złożu, gdy dłoń chwyci stylisko
       const pickOnBack = drawing >= 0 && drawing < PICK_GRAB;
       // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką
@@ -5775,11 +5811,20 @@ export class GameRenderer {
       if (torchOn) {
         // pochodnia w prawej dłoni, obracana w barku razem z uniesioną ręką (TORCH_ARM); płomień nad jej końcem
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
-        this.armM.makeRotationX(TORCH_ARM).setPosition(0.135, 0.45, 0);
+        this.armM.makeRotationX(torchArm).setPosition(0.135, 0.45, 0);
         this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz)));
         this.handTorches.setMatrixAt(i, this.armM);
         this.pushHandFlameAt(this.armM, TORCH_TIP);
       } else this.handTorches.setMatrixAt(i, ZERO);
+      const forkUp = rioting && !riotTorch && !fighting && u.carryRes < 0;
+      if (forkUp) {
+        // widły w prawej dłoni nad głową, obracane w barku razem z ręką
+        const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
+        this.armM.makeRotationX(forkArm).setPosition(0.135, 0.45, 0);
+        this.forks.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
+      } else this.forks.setMatrixAt(i, ZERO);
+      // druga ręka buntownika: z pochodnią potrząsa pięścią nad głową, z widłami podpiera trzonek przed sobą
+      const riotL = riotTorch ? -2.35 - shake * 0.35 : -1.1 + shake * 0.12;
       // uciekający w panice: długi, szybki krok i ręce machające nad głową
       const panic = (u.fled ?? 0) > g.tick && !still && !this.calm;
       const flail = panic ? Math.sin(this.time * 16 + u.id) * 0.6 : 0;
@@ -5790,7 +5835,7 @@ export class GameRenderer {
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : torchOn ? TORCH_ARM : u.bucket ? 0 : iaArm, carrying ? carryL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0);
+      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       // ciągnie odmianę, którą ściął (po wczytaniu zapisu w trakcie drogi: stała odmiana dla ludzika)
@@ -5893,7 +5938,7 @@ export class GameRenderer {
     k = this.castleFolk(g, k);
     this.figures.finish(k);
     // pule narzędzi: `count` zamyka klatkę (liczba bez znaczenia) i same oznaczają swoje bufory
-    for (const p of [this.rods, this.bedrolls, this.hammers, this.spades, this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs, this.handTorches, this.buckets, this.bucketWater]) p.count = n;
+    for (const p of [this.rods, this.bedrolls, this.hammers, this.spades, this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.handTorches, this.buckets, this.bucketWater]) p.count = n;
     this.fireFx.end(this.calm ? 0 : Math.min(0.05, this.frameDt), (x, z) => this.standY(view, x + width / 2, z + height / 2));
     for (const [res, m] of this.loads) {
       m.count = loadUsed.get(res) ?? 0;

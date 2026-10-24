@@ -1,7 +1,7 @@
 """Broń i narzędzia chłopa: kilof i maczuga — w dłoni (układ ręki) i schowane na ciele (układ postaci).
 
 Uruchomienie (z katalogu repo):  python tools/models/tools.py   →  src/render/models/tools.json
-Grupy w pliku: 'pick', 'club' (w dłoni), 'backPick' (kilof płasko na plecach), 'beltClub' (maczuga za sznurem u biodra).
+Grupy w pliku: 'pick', 'club', 'fork' (widły buntownika) (w dłoni), 'backPick' (kilof płasko na plecach), 'beltClub' (maczuga za sznurem u biodra).
 Każda grupa ma siatki 'wood' i 'iron'; gra kładzie na drewno teksturę, żelazo zostaje metaliczne.
 
 Układ ręki (jak w peasant.py): początek w barku, dłoń 0,19 niżej (y = -0,19), stylisko wychodzi z pięści w przód (+z).
@@ -266,7 +266,31 @@ def rod_parts(far=False):
     return wood, iron
 
 
-for name, fn in (('axe', axe_parts), ('hammer', hammer_parts), ('spade', spade_parts), ('torch', torch_parts), ('bucket', bucket_parts),
+FORK_ARM = -2.3   # buntownik wymachuje widłami nad głową (scene.ts: FORK_ARM); widły stoją wtedy prawie pionowo
+
+
+def fork_parts(far=False):
+    """Widły buntownika (układ ręki): długi trzonek przez pięść, u góry kuta tuleja z poprzeczką i trzy zęby
+    wygięte lekko w przód. Przy ręce uniesionej o FORK_ARM trzonek stoi pionowo, zęby nad głową."""
+    seg = 4 if far else 7
+    g = GRIP
+    d = arm_dir(0, 1, 0.18, FORK_ARM)          # oś trzonka: w górę i odrobinę w przód
+    fwd = arm_dir(0, -0.18, 1, FORK_ARM)       # „przód” prostopadle do trzonka (w stronę wygięcia zębów)
+    side = Vector((1, 0, 0))                   # poprzeczka w poprzek ciała
+    top = g + d * 0.33
+    wood = tube([g - d * 0.24, g + d * 0.05, top], [0.0115, 0.012, 0.011], seg=seg)
+    # tuleja na końcu trzonka (szersza niż trzonek, który kończy się w jej środku) i poprzeczka z trzema zębami
+    iron = tube([top - d * 0.02, top + d * 0.03], [0.015, 0.015], seg=seg)
+    bar = top + d * 0.035
+    iron += tube([bar - side * 0.05, bar, bar + side * 0.05], [0.007, 0.0085, 0.007], seg=5 if not far else 4)
+    for k in (-1, 0, 1):
+        base = bar + side * (0.045 * k)
+        pts = [base, base + d * 0.05 + fwd * 0.004, base + d * 0.1 + fwd * 0.012, base + d * 0.135 + fwd * 0.024]
+        iron += tube(pts, [0.006, 0.0052, 0.0038, 0.0012], seg=4 if far else 5)
+    return wood, iron
+
+
+for name, fn in (('fork', fork_parts), ('axe', axe_parts), ('hammer', hammer_parts), ('spade', spade_parts), ('torch', torch_parts), ('bucket', bucket_parts),
                  ('bucketWater', water_parts), ('rod', rod_parts)):
     add(name, fn())
     # wiadro z daleka to samo pełne wiadro (uproszczone 8-ścienne bez obręczy wyglądało beznadziejnie)
