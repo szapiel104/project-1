@@ -77,11 +77,18 @@ shoe = skin('mshoe', [(0, -0.18, 0), (0, -0.214, 0.0), (0, -0.218, 0.052)], [(0,
 shoe_m = Mesh(evaluated(shoe), lambda x, y, z: tuple(c * (0.75 if y < -0.228 else 1) for c in SHOE), 'leather')
 
 # ---------- ręka: szeroki rękaw rozszerzony przy dłoni, obrąbek, dłoń ----------
-arm = lathe('marm', [(0.001, 0.034), (0.025, 0.03), (0.036, 0.01), (0.036, -0.03), (0.039, -0.08), (0.046, -0.13), (0.052, -0.158), (0.05, -0.162)], seg=16, subsurf=0)
-ab = evaluated(arm)
+# rękaw z łokciem: ramię (bark–łokieć) obraca się w barku, przedramię z rozszerzonym rękawem, mankietem i dłonią — w łokciu
+# (gra: 'fore' / 'foreFar' i 'elbow', jak u łucznika). Kula łokcia w kolorze szaty zakrywa styk przy zgięciu.
+ELBOW = -0.082
+upper = lathe('marm', [(0.001, 0.034), (0.025, 0.03), (0.036, 0.01), (0.036, -0.03), (0.038, -0.07), (0.034, -0.088), (0.02, -0.096)], seg=16, subsurf=0)
+arm_m = Mesh(evaluated(upper), cloth(ROBE, 0.1, 6), 'cloth')
+elbow_ball = sphere('melbow', (0.0, ELBOW, 0.0), (0.035, 0.03, 0.035), seg=14, rings=10)
+elbow_m = Mesh(evaluated(elbow_ball), cloth(ROBE, 0.1, 6), 'cloth')
+lower = lathe('mfore', [(0.03, -0.07), (0.038, -0.08), (0.04, -0.1), (0.046, -0.13), (0.052, -0.158), (0.05, -0.162)], seg=16, subsurf=0)
+ab = evaluated(lower)
 ab_lin = lining(ab)
-arm_m = Mesh(ab, cloth(ROBE, 0.1, 6), 'cloth')
-arm_in_m = Mesh(ab_lin, tuple(c * 0.4 for c in ROBE_DK), 'cloth')
+fore_m = Mesh(ab, cloth(ROBE, 0.1, 6), 'cloth')
+fore_in_m = Mesh(ab_lin, tuple(c * 0.4 for c in ROBE_DK), 'cloth')
 cuff = lathe('mcuff', [(0.049, -0.138), (0.054, -0.142), (0.055, -0.16), (0.051, -0.165)], seg=16, subsurf=0)
 cuff_m = Mesh(evaluated(cuff), lambda x, y, z: tuple(c * (0.85 + 0.15 * abs(math.sin(math.atan2(x, z) * 10))) for c in TRIM), 'cloth')
 wrist = skin('mwrist', [(0, -0.12, 0.0), (0, -0.172, 0.003)], [(0, 1)], [(0.016, 0.016), (0.014, 0.012)], subsurf=1)
@@ -283,4 +290,20 @@ static = [robe_m, cord_m, knot_m, *tassels, mantle_m, mantle_in_m, hood_m, hood_
           head.skin, neck_m, *head.ears(1.3), *mage_eyes(), *brows, *hairs]
 
 
-finish(f'mage_{KIND}', static, [leg_m, shoe_m], [arm_m, arm_in_m, cuff_m, wrist_m, *hand_ms], HIP, SHOULDER, HAND)
+# przedramię: cień w zagłębieniach w pozie spoczynkowej (z całym ciałem), potem współrzędne względem łokcia
+from body import decimated, groups, fixed_cloth, pack, thicken  # noqa: E402
+from common import bake_ao  # noqa: E402
+fore = [fore_m, fore_in_m, cuff_m, wrist_m, *hand_ms]
+arms = [arm_m, elbow_m]
+occ = [(m, (0, 0, 0)) for m in static] + [(m, (sx * SHOULDER[0], SHOULDER[1], SHOULDER[2])) for sx in (-1, 1) for m in fore + arms]
+bake_ao(occ, sample=[(m, (SHOULDER[0], SHOULDER[1], SHOULDER[2])) for m in fore])
+for m in fore:
+    if m.mat in ('metal', 'mail', 'skin'):
+        thicken(m)
+    m.pos = [(x, y - ELBOW, z) for x, y, z in m.pos]
+near = groups(fore, fixed_cloth)
+far = [decimated(m, 0.22) for m in groups(fore, lambda m: 'leather' if m.dyn is None else m.mat)]
+# kula czaru w prawej dłoni (gra rysuje ją świecącą tylko przy czarowaniu): środek przy wnętrzu dłoni, względem łokcia
+ORB = [-0.02, -0.207 + HY - ELBOW, 0.022]
+finish(f'mage_{KIND}', static, [leg_m, shoe_m], arms, HIP, SHOULDER, HAND,
+       extra={'elbow': [0.0, ELBOW, 0.0], 'fore': [pack(m) for m in near], 'foreFar': [pack(m) for m in far], 'orb': ORB})

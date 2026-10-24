@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.40.3 — magowie: łokcie i kula czaru w dłoni (2026-10-24)
+
+- Magowie mają łokcie (rękaw podzielony na ramię i przedramię z szerokim mankietem, kula łokcia w kolorze szaty). W marszu ręce lekko zgięte, przy czarowaniu obie uniesione przed pierś ze zgiętymi łokciami
+- Przy czarowaniu w prawej dłoni świeci kula: u maga ognia pomarańczowa, u maga wody niebieska (świeci własnym światłem, z poświatą)
+- Podgląd modeli: „Mag ognia — czar” i „Mag wody — czar” (modele.html?id=mageFire-cast, ?id=mageWater-cast)
+
 ## 0.40.2 — magowie ognia i wody: modele (2026-10-24)
 
 - Dwa nowe modele z Blendera (tools/models/mage.py fire|water), na razie tylko w podglądzie modeli (modele.html?id=mageFire, ?id=mageWater) — w grze pojawią się razem z budynkami magów i chorobą w kolejnych partiach

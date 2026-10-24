@@ -56,6 +56,8 @@ interface Part {
   sub?: { at: THREE.Vector3; rot: (swing: number, armsUp: boolean) => number };
   /** Przedramię za łokciem (łucznik): w walce kąt łokcia z pozy (pose[4]) */
   elbow?: boolean;
+  /** Kula czaru w dłoni maga: widać ją tylko przy czarowaniu (armsUp) */
+  orb?: boolean;
   /** 0 = wersja z bliska, 1 = uproszczona wersja z daleka */
   lod: 0 | 1;
 }
@@ -63,7 +65,7 @@ interface Part {
 const legL = (s: number): number => s, legR = (s: number): number => -s;
 const armL = (s: number, up: boolean): number => (up ? -1.35 : -s * 0.8), armR = (s: number, up: boolean): number => (up ? -1.35 : s * 0.8);
 
-type Mat = 'cloth' | 'leather' | 'metal' | 'mail' | 'skin' | 'wood';
+type Mat = 'cloth' | 'leather' | 'metal' | 'mail' | 'skin' | 'wood' | 'glow';
 const MATS: Record<Mat, { roughness: number; metalness: number; side?: THREE.Side }> = {
   cloth: { roughness: 0.95, metalness: 0, side: THREE.DoubleSide },
   leather: { roughness: 0.72, metalness: 0, side: THREE.DoubleSide },
@@ -71,6 +73,8 @@ const MATS: Record<Mat, { roughness: number; metalness: number; side?: THREE.Sid
   mail: { roughness: 0.5, metalness: 0.35 },
   skin: { roughness: 0.78, metalness: 0 },
   wood: { roughness: 0.82, metalness: 0, side: THREE.DoubleSide },
+  // świeci własnym światłem (kula czaru maga) — z poświatą w grafice
+  glow: { roughness: 0.4, metalness: 0 },
 };
 
 /** Każda siatka dostaje kolory wierzchołków (cieniowanie fałd, pikowania, obrębków); bez nich byłaby czarna */
@@ -246,7 +250,8 @@ export class Figures {
       mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
       scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', mageFire: 'magowie ognia', mageWater: 'magowie wody', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
-      this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod, elbow });
+      if (mat === 'glow') { const mm = mesh.material as THREE.MeshStandardMaterial; mm.emissive.setHex(fixed ? color : 0xffffff); mm.emissiveIntensity = 2.2; mesh.castShadow = false; }
+      this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod, elbow, orb: mat === 'glow' });
       if (lod) this.hasFar = true;
     };
     const add = (geo: THREE.BufferGeometry, color: number | Part['color'], x: number, y: number, z: number, rot: Part['rot'], shown: Part['shown'] = always, mat: Mat = 'cloth', sub?: Part['sub']): void =>
@@ -303,8 +308,20 @@ export class Figures {
     if (kind === 'mageFire' || kind === 'mageWater') {
       // mag ognia / wody (tools/models/mage.py): szata do ziemi, płaszcz z kapturem, bez kostura — czaruje z dłoni
       // (efekt ognia / wody w dłoniach dokłada scena); spokojny krok, ręce kołyszą się słabiej niż u chłopa
-      const calmL = (sw: number, up: boolean): number => (up ? -1.3 : -sw * 0.4), calmR = (sw: number, up: boolean): number => (up ? -1.3 : sw * 0.4);
-      model((kind === 'mageFire' ? MAGE_FIRE_MODEL : MAGE_WATER_MODEL) as FigureModel, calmL, calmR);
+      // czarowanie (armsUp): obie ręce uniesione przed pierś, łokcie zgięte, w prawej dłoni świecąca kula ognia albo wody
+      const calmL = (sw: number, up: boolean): number => (up ? -0.9 : -sw * 0.4), calmR = (sw: number, up: boolean): number => (up ? -1.0 : sw * 0.4);
+      const M = (kind === 'mageFire' ? MAGE_FIRE_MODEL : MAGE_WATER_MODEL) as FigureModel & { fore: ModelMesh[]; foreFar: ModelMesh[]; elbow: number[]; orb: number[] };
+      model(M, calmL, calmR);
+      const at = new THREE.Vector3(M.elbow[0]!, M.elbow[1]!, M.elbow[2]!);
+      const elbowL = (sw: number, up: boolean): number => (up ? -1.0 : -0.2 - Math.max(0, -sw) * 0.3);
+      const elbowR = (sw: number, up: boolean): number => (up ? -1.1 : -0.2 - Math.max(0, sw) * 0.3);
+      for (const lod of [0, 1] as const)
+        for (const m of lod ? M.foreFar : M.fore)
+          for (const [sx, rot, el] of [[-1, calmL, elbowL], [1, calmR, elbowR]] as const)
+            mk(modelGeo(m), m.dyn ? DYN[m.dyn] ?? 0xffffff : 0xffffff, new THREE.Vector3(sx * M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), rot,
+              m.show ? SHOW[m.show] ?? always : always, m.mat as Mat, { at: at.clone(), rot: el }, lod, true);
+      const orb = new THREE.SphereGeometry(0.024, 16, 12).translate(M.orb[0]!, M.orb[1]!, M.orb[2]!);
+      mk(orb, kind === 'mageFire' ? 0xff7a22 : 0x5ab4ff, new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), calmR, always, 'glow', { at: at.clone(), rot: elbowR });
       return;
     }
     if (kind === 'bandit') {
@@ -415,7 +432,7 @@ export class Figures {
     this.one.setScalar(1);
     for (const p of this.parts) {
       if (p.lod !== lod) continue;
-      if (!p.shown(look)) { p.mesh.setMatrixAt(i, this.none); continue; }
+      if (!p.shown(look) || (p.orb && !armsUp)) { p.mesh.setMatrixAt(i, this.none); continue; }
       const r = pose && p.rot === this.weaponArm ? pose[0] : pose && p.rot === this.weaponRot ? pose[1] : pose && p.rot === this.freeArmRot ? (pose[3] ?? p.rot(0, true)) : work === undefined ? p.rot(swing, armsUp)
         : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
       // siedzi: obie nogi wyciągnięte przed siebie

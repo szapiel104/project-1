@@ -40,12 +40,12 @@ const vc = (): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({ ve
 const mesh = (g: THREE.BufferGeometry, m: THREE.Material = vc()): THREE.Mesh => new THREE.Mesh(g, m);
 
 /** Postać z instancjonowanych części gry, w kontenerze (żeby dało się ją usunąć ze sceny) */
-function figure(kind: FigureKind, id: number, h = 0.64): Make {
+function figure(kind: FigureKind, id: number, h = 0.64, up = false): Make {
   return () => {
     const holder = new THREE.Scene();
     Figures.FAR2 = 1e9;
     const f = new Figures(1, holder, kind);
-    f.set(0, new THREE.Matrix4(), 0, false, RED, id);
+    f.set(0, new THREE.Matrix4(), 0, up, RED, id);
     f.finish(1);
     return { obj: holder, size: new THREE.Vector3(0.3, h, 0.2) };
   };
@@ -186,6 +186,8 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['bandit', t('u.bandit'), figure('bandit', 8)],
     ['mageFire', tx('Mag ognia', 'Fire mage'), figure('mageFire', 9)],
     ['mageWater', tx('Mag wody', 'Water mage'), figure('mageWater', 10)],
+    ['mageFire-cast', tx('Mag ognia — czar', 'Fire mage — casting'), figure('mageFire', 9, 0.64, true)],
+    ['mageWater-cast', tx('Mag wody — czar', 'Water mage — casting'), figure('mageWater', 10, 0.64, true)],
     ['standard', tx('Chorąży z proporcem', 'Standard-bearer'), () => {
       // włócznik z drzewcem i proporcem na plecach, tak jak chorąży w oddziale (src/render/standards.ts)
       const holder = new THREE.Scene();

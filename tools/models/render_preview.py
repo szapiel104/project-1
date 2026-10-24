@@ -69,7 +69,7 @@ for sx in (-1, 1):
     for m in filter(ok, d['arm']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=pa if sx > 0 else la)
     # przedramię za łokciem (łucznik); ELBOW = zgięcie prawego łokcia, lewy prosty
     if 'fore' in d:
-        el = float(os.environ['ELBOW']) if (sx > 0 and os.environ.get('ELBOW')) else (-0.25 if sx > 0 else 0.0)
+        el = float(os.environ['ELBOW']) if (sx > 0 and os.environ.get('ELBOW')) else float(os.environ['LELBOW']) if (sx < 0 and os.environ.get('LELBOW')) else (-0.25 if sx > 0 else 0.0)
         for m in filter(ok, d['fore']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=pa if sx > 0 else la, sub=(d['elbow'], el))
 # broń w prawej dłoni (miecz strażnika, topór zbója); STRIKE=1 — zamach znad głowy jak w grze
 STRIKE = os.environ.get('STRIKE') == '1'
@@ -139,7 +139,16 @@ if os.environ.get('BODY'):
 # ORB="r,g,b" — świecąca kula czaru przed dłońmi (mag: ogień / woda), tylko do podglądu
 if os.environ.get('ORB'):
     col = tuple(float(v) for v in os.environ['ORB'].split(','))
-    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.035, location=(0, -0.24, 0.31))
+    loc = (0, -0.24, 0.31)
+    if 'orb' in d:  # kula w prawej dłoni maga: przez łokieć i bark jak przedramię
+        ox, oy, oz = d['orb']; el = float(os.environ.get('ELBOW', '-0.25'))
+        a = os.environ.get('POSE'); a = float(a.split(',')[0]) if a else -0.25
+        ey, ez = oy * math.cos(el) - oz * math.sin(el), oy * math.sin(el) + oz * math.cos(el)
+        x, y, z = ox, ey + d['elbow'][1], ez
+        y, z = y * math.cos(a) - z * math.sin(a), y * math.sin(a) + z * math.cos(a)
+        x, y, z = x + d['shoulder'][0], y + d['shoulder'][1], z + d['shoulder'][2]
+        loc = (x, -z, y)
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.022, location=loc)
     ob = bpy.context.active_object
     mt = bpy.data.materials.new('orb'); mt.use_nodes = True
     b = mt.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (*col, 1)
