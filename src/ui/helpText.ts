@@ -326,8 +326,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         'The "Allies" button (on the minimap bar, bottom right, when you have an ally) sends them resources: a peasant pulls a handcart from your keep to theirs (up to 100 goods per cart, 3 carts at a time). An enemy soldier who catches a cart takes the goods — guard the road or send an escort.'),
       { tip: tx('W grze przez sieć czas płynie tak samo dla wszystkich: nie ma pauzy ani zmiany tempa, a otwarte menu nie zatrzymuje gry. Wyjście z meczu przez menu oznacza poddanie się.',
         'Online, time runs the same for everyone: there is no pause or speed change, and opening the menu doesn\'t stop the game. Leaving a match through the menu counts as surrender.') },
-      { tip: tx('Gdy zerwie się połączenie albo odświeżysz stronę, zamkiem rządzi bot, a gra czeka na Ciebie: po ponownym wejściu (na tym samym koncie) pojawi się „Wróć do meczu” i bot odda Ci zamek. Gra przez sieć wymaga zalogowania.',
-        'If your connection drops or you refresh the page, a bot holds your keep and the match goes on: when you come back (on the same account), "Return to match" appears and the bot hands the keep back. Online play requires signing in.') },
+      { tip: tx('Gdy zerwie się połączenie albo odświeżysz stronę, zamkiem rządzi bot, a gra czeka na Ciebie: po ponownym wejściu (na tym samym koncie) pojawi się „Wróć do meczu” i bot odda Ci zamek. Kto nie wróci do końca meczu, dostaje w rankingu porażkę. Gra przez sieć wymaga zalogowania.',
+        'If your connection drops or you refresh the page, a bot holds your keep and the match goes on: when you come back (on the same account), "Return to match" appears and the bot hands the keep back. Anyone who does not return before the match ends takes a loss in the ranking. Online play requires signing in.') },
     ],
   },
   {

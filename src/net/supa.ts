@@ -197,10 +197,27 @@ export function watchRooms(onChange: () => void): () => void {
 export interface Result { nick: string; avatar: number; preset: string; won: boolean; minutes: number; created_at: string }
 export interface RankRow { user_id: string; nick: string; avatar: number; wins: number; losses: number; games: number }
 
-/** Każdy gracz zapisuje swój wynik po meczu przez sieć (zasady w bazie pozwalają tylko na własny) */
-export async function saveResult(preset: string, won: boolean, minutes: number): Promise<void> {
+/**
+ * Start meczu przez sieć: w wynikach od razu wpis „w toku”, liczony jako porażka, jeśli gracz uciekł i nie wrócił
+ * (funkcja match_begin w bazie; bez niej — przed wykonaniem migracji 20261024 — nic się nie dzieje).
+ */
+export async function matchBegin(room: string, preset: string): Promise<void> {
   const m = me();
   if (!m) return;
+  await supa.rpc('match_begin', { p_room: room, p_preset: preset, p_nick: m.nick, p_avatar: m.avatar });
+}
+
+/**
+ * Każdy gracz zapisuje swój wynik po meczu przez sieć (zasady w bazie pozwalają tylko na własny).
+ * Z numerem pokoju wynik zastępuje wpis „w toku” z początku meczu; gdy baza jeszcze nie ma tej funkcji, zwykły zapis.
+ */
+export async function saveResult(preset: string, won: boolean, minutes: number, room?: string): Promise<void> {
+  const m = me();
+  if (!m) return;
+  if (room) {
+    const { error } = await supa.rpc('match_end', { p_room: room, p_preset: preset, p_nick: m.nick, p_avatar: m.avatar, p_won: won, p_minutes: minutes });
+    if (!error) return;
+  }
   await supa.from('results').insert({ user_id: m.id, nick: m.nick, avatar: m.avatar, preset, won, minutes });
 }
 

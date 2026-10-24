@@ -33,7 +33,7 @@ import { EMPTY, SANDBOX, TEST } from './testmode';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
-import { awardMatch, deleteRoom, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
+import { awardMatch, deleteRoom, matchBegin, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
 import { forgetMatch, recallMatch, rejoinMatch, rememberMatch, sendState, type MatchMemo } from './net/rejoin';
 import { matchXp, MODE_MULT, xpParts, type MatchMode } from './data/progress';
 import { xpReport } from './ui/xpReport';
@@ -413,6 +413,8 @@ function startOnline(st: OnlineStart, loaded?: GameState): void {
   // przeglądarka pamięta mecz: po odświeżeniu strony albo zerwanym połączeniu da się do niego wrócić
   rememberMatch({ room: st.room, seed: st.seed, preset: st.preset, level: st.level, slots: st.slots, me: st.me, humans: st.humans, coop: st.coop });
   rejoinAsked.clear();
+  // ranking: od startu wpis „w toku” — kto ucieknie z meczu i nie wróci, zostaje z porażką (kooperacja się nie liczy)
+  if (!st.coop) void matchBegin(st.room.id, st.preset);
   // ktoś wraca do meczu: odpowiada gracz o najniższym numerze, który jest w grze — wydaje polecenie powrotu,
   // a po jego wykonaniu (w pętli gry) przesyła wracającemu stan gry
   const offRejoin = st.link.on((m) => {
@@ -1554,7 +1556,7 @@ function showEnd(win: boolean): void {
   endShown = true;
   speed = 0;
   // mecz przez sieć: wynik trafia do historii i rankingu gracza (kooperacja przeciw botom nie liczy się do rankingu)
-  if (netGame && !netGame.coop) void saveResult(netGame.preset, win, Math.floor(game.tick / TICKS_PER_SECOND / 60));
+  if (netGame && !netGame.coop) void saveResult(netGame.preset, win, Math.floor(game.tick / TICKS_PER_SECOND / 60), netGame.room.id);
   // mecz przez sieć się skończył: zamykamy kanał i pokój, żeby nie dało się do niego wrócić
   endOnline();
   // skończona gra (wygrana, porażka, poddanie) znika z zapisu: w menu nie ma już „Kontynuuj”

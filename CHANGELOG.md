@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.46.1 — ucieczka z meczu przez sieć to porażka w rankingu (2026-10-24)
+
+- Na starcie meczu przez sieć każdy gracz dostaje w wynikach wpis „w toku”. Kto dogra mecz do końca (także po powrocie po zerwanym połączeniu), dostaje prawdziwy wynik; kto uciekł i nie wrócił, zostaje z porażką. Ranking liczy taki wpis dopiero po 3 godzinach, więc trwający mecz nie psuje nikomu bilansu. Kooperacja przeciw botom dalej nie liczy się do rankingu
+- Wymaga wykonania w Supabase migracji `supabase/migrations/20261024_results_pending.sql` (SQL Editor). Do tego czasu gra zapisuje wyniki jak dotąd
+- „Jak grać”: zdanie o porażce za ucieczkę (PL/EN)
 ## 0.46.0 — magowie bojowi (2026-10-24)
 
 - **Magowie do walki** szkolą się w siedzibie swojego zakonu (okno Wieży Płomienia / Sanktuarium Źródła, karty jak w koszarach): mag Płomienia za 50 rudy, mag Źródła za 45, do tego wolny chłop. **Najwyżej 10 na gracza**, razem obu zakonów (licznik na karcie). Uzdrowiciele w siedzibie zostają osobno
