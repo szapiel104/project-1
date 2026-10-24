@@ -69,9 +69,10 @@ Nad grą pracuje kilka czatów naraz, więc:
    - w Chrome Michała: `window.__errors()` (lista wpisów, `previous` = dziennik z poprzedniego wejścia, gdy karta się zawiesiła), `__errors.text()` do wklejenia, `__errors.clear()`;
    - w grze: F3 → sekcja „Dziennik błędów” z przyciskiem kopiowania, a przy FPS pojawia się ⚠ z liczbą błędów.
    Znane nieszkodliwe ostrzeżenie biblioteki wyciszamy w miejscu (jak `maxLeafSize` w `cutBox`), nie globalnie.
-5. Wydajność: w grze F3 pokazuje okno wydajności; w Chrome `window.__perf()` zwraca FPS, czasy symulacji/rysowania i liczniki.
-6. Nie robić serii zrzutów „na wszelki wypadek”; jeden zrzut na zmianę wyglądu wystarczy.
-7. **Po skończonym teście zamknij karty, które otworzyłeś w Chrome Michała** (`tabs_close_mcp` na swoje karty; nie ruszaj kart, których nie otworzyłeś). W Playwright zamykaj przeglądarkę (`browser.close()`), a serwer `npx vite` zostaw tylko, jeśli jeszcze go potrzebujesz.
+5. **Przebudowa kodu rysowania bez zmiany obrazu** (np. dzielenie `scene.ts`): spis sceny 3D przed i po — `node tools/check/census.mjs --dist=<build sprzed> --out=a.json`, to samo dla nowego buildu, potem `--compare=a.json,b.json --struct` (budowa sceny) i bez `--struct` (z położeniami). Budowa ma wyjść taka sama poza losowymi rzeczami (krople deszczu, gwiazdy, dym); położenia ludzi i zwierząt różnią się też między dwoma uruchomieniami tego samego buildu, więc porównuj z takim szumem. Build sprzed zrób z czystego `git worktree` (z dodanym tym samym `src/debug/census.ts`). Ok. 5 min na przebieg (Chromium bez karty graficznej).
+6. Wydajność: w grze F3 pokazuje okno wydajności; w Chrome `window.__perf()` zwraca FPS, czasy symulacji/rysowania i liczniki.
+7. Nie robić serii zrzutów „na wszelki wypadek”; jeden zrzut na zmianę wyglądu wystarczy.
+8. **Po skończonym teście zamknij karty, które otworzyłeś w Chrome Michała** (`tabs_close_mcp` na swoje karty; nie ruszaj kart, których nie otworzyłeś). W Playwright zamykaj przeglądarkę (`browser.close()`), a serwer `npx vite` zostaw tylko, jeśli jeszcze go potrzebujesz.
 
 ## Modele — gdzie robić i jak sprawdzać (obowiązkowo dla każdego czatu)
 1. **Robienie:** modele z Blendera w `tools/models/*.py` (bpy bez okna, `/tmp/bpyenv/bin/python tools/models/X.py`), wynik do `src/render/models/*.json`. Opis narzędzi: `tools/models/README.md`. Budynki przez `building.py` (grupy `base`/`shell`/`interior`…), postacie przez `body.py`, drobne rzeczy jak `yard.py`/`animals.py`.

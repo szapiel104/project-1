@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.47.2 — podział scene.ts na mniejsze pliki, bez zmiany obrazu (2026-10-24)
+
+- Z `src/render/scene.ts` (6241 linii) wyszło do osobnych plików ok. 1160 linii — samodzielne części obrazu, każda w swoim module: animacje ciosów i strzałów (`combatanim.ts`), znaki nad głowami (`marks.ts`), scalanie budynków (`merge.ts`), modele do chodzenia — zamek, karczma, kopalnia (`walkmodels.ts`), strzały w locie (`arrows.ts`), flagi zbiórki i znaczki strzelających wież (`rally.ts`), wrota bram (`gates.ts`), niebo — kopuła, gwiazdy, księżyc, słońce (`sky.ts`), kurz i odpryski (`dust.ts`), koksowniki (`braziers.ts`), gruz i zapadające się budynki (`rubble.ts`), częstokół i mury kamienne (`walls.ts`), place budowy z rusztowaniami (`sites.ts`), poświata pochodni (`torchglow.ts`)
+- W grze nic się nie zmienia. Sprawdzone nowym spisem sceny 3D (`tools/check/census.mjs`, `__test.census()` w trybie testowym): mapa 2 na 2 z osadą, wojskiem i bitwą — w dzień, nocą, z bliska i na spacerze — przed i po podziale ma te same obiekty, siatki, materiały i liczby kopii; różnią się tylko rzeczy losowe (krople deszczu, gwiazdy, dym) i klatki ruchu ludzi, tak samo jak przy dwóch uruchomieniach starej wersji
+- Testy każdej wyniesionej części bez przeglądarki (`tests/scene-split.test.ts`): strzały lecą i znikają, wrota skrzypią i się domykają, flagi tylko nad moimi koszarami, mury z bali i bloków, pokazowa budowa z rusztowaniem, gruz maleje, niebo nocą z księżycem
+- Dalsza kolejka podziału w `docs/pomysly.md`; sposób sprawdzania opisany w CLAUDE.md (Testy, punkt 5)
 ## 0.47.1 — mniej rudy z podatków (2026-10-24)
 
 - Podatek liczy się teraz na 6 ludzi, nie na 2: niski 1 ruda na 6 osób miesięcznie, średni 2, wysoki 3; rozdawanie 2 rudy na 6 osób. Przy 40 ludziach i niskim podatku ok. 170 rudy na dobę zamiast ok. 500. Popularność od podatków bez zmian. Boty płacą i zarabiają tak samo jak gracz

@@ -1,4 +1,4 @@
-import { mineRoutes, poseOnRoute, routeTime, type MineRoute } from './minepath';
+import { poseOnRoute, routeTime } from './minepath';
 import { mineWalkTicks } from '../data/minewalk';
 import { named, namedTick, remember } from './named';
 import { mineLevelModel } from './buildings';
@@ -11,7 +11,6 @@ import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
 import { RULES } from '../data/rules';
 import { animal, playAt, pluck, talk, type WorldSound } from '../audio/sfx';
-import { buildWork } from '../sim/systems/placement';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
@@ -24,6 +23,16 @@ import { Chips } from './chips';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
 import { WolfLayer } from './wolves';
+import { ArrowLayer, MAX_ARROWS } from './arrows';
+import { RallyFlags, TowerIcons } from './rally';
+import { GateMotion } from './gates';
+import { SkyDome } from './sky';
+import { DustFx } from './dust';
+import { Braziers } from './braziers';
+import { RubbleLayer } from './rubble';
+import { WallLayer } from './walls';
+import { SiteLayer } from './sites';
+import { TorchGlow } from './torchglow';
 import { CrowLayer } from './crows';
 import { ForestEyes } from './foresteyes';
 import { PuddleLayer } from './puddles';
@@ -31,7 +40,6 @@ import { SpawnFx } from './spawnfx';
 import { KEEP_GATE, KEEP_SIZE, keepRoom, keepTile, keepWalk } from '../data/keep';
 import { wallBetween } from '../sim/path';
 import { Ambience, collectFx, type BuildingFx, type FxSource } from './ambience';
-import { ladderSides } from '../sim/systems/stonewalls';
 import { isWetMat, setWetBuildings } from './buildings';
 import { attachLod, LOD_STEPS, prepareLod, showLod, lodStats, type BuildingLod } from './lod';
 import { cloudShade, setCloudShadows } from './ground';
@@ -40,11 +48,11 @@ import { tx } from '../i18n';
 import { GearPool } from './gearpool';
 import { propGeometry, propMaterial } from './props';
 import { enableShadowLayer } from './shadowlayer';
-import { animateBuilding, brazierModel, isWindowMat, palisadeLogs, roadMaterials, rubbleModel, setNight, stoneWallKit, STONE_WALL_TOP, TOWER_TOP, towerBrazierAt, WATCH_TOWER_TOP, setRubble, setStockFill, torchModel } from './buildings';
+import { animateBuilding, isWindowMat, roadMaterials, setNight, STONE_WALL_TOP, TOWER_TOP, WATCH_TOWER_TOP, setStockFill, torchModel } from './buildings';
 import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
-import { applyCrest, bannerGeometry, bannerMaterial, defaultCrest, flagTime } from './banners';
+import { applyCrest, defaultCrest } from './banners';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
 import { fireArrow, peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
@@ -75,210 +83,19 @@ import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { FXAAPass } from 'three/examples/jsm/postprocessing/FXAAPass.js';
 import { SMAAPass } from 'three/examples/jsm/postprocessing/SMAAPass.js';
 import { MaterialQuality, makeEnvironment, msaaSamples, sharpenPass, type AaMode } from './postfx';
-import { model } from './modelstore';
+import { spearThrust, bowShot, deathKind, swordCombo, axeChop } from './combatanim';
+import { sadMaterial, sickMaterial, noWorkerMaterial } from './marks';
+import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
+import { KEEP_MODEL, RAM_MODEL, SHRINE_SPOTS, CAMP_SEATS, KEEP_SOLID, KEEP_FLOOR, KEEP_WALL, KEEP_HALF, type WalkModel, WALK_MODELS, MINE_SPOTS, OREMINE_T, OREMINE_WALK, MINE_LEVEL, MINE_LEVEL_SPOTS, mineRoute, OREMINE_PROD, inRect, MINE_AT, TAVERN_SEATS, walkFoot, TAVERN_FLOOR } from './walkmodels';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
-/** Barwa smugi za strzałą: zwykła (jasna) i ognista (pomarańczowa) */
-const PLAIN_TRAIL = new THREE.Color(0xd8d0c0), FIRE_TRAIL = new THREE.Color(0xff8a30);
 /** Promień (w polach mapy), w którym spacerem widać wnętrza budynków przez drzwi i okna */
 const WALK_SEE_R = 9;
-const KEEP_MODEL = model('keep');
-const OREMINE_MODEL = model('mine');
-const MINECAMP_MODEL = model('minecamp');
-const TAVERN_MODEL = model('tavern');
-const HOUSE_MODEL = model('house');
-const BARN_MODEL = model('barn');
-const ORCHARD_MODEL = model('orchard');
-const FARM_MODEL = model('farm');
-const CAMP_MODEL = model('camp');
-const RAM_MODEL = model('ram');
-/** Miejsca modlitwy przed kapliczką (układ modelu: środek działki, przód = +z): trzy przy klęczniku, potem dwa rzędy stojących */
-const SHRINE_SPOTS: [number, number][] = [[-0.2, 0.5], [0.2, 0.5], [0, 0.52], [-0.35, 0.8], [0.35, 0.8], [0, 0.82], [-0.18, 1.05], [0.18, 1.05]];
-const CAMP_SEATS = (CAMP_MODEL as unknown as { seats: [number, number, number][] }).seats;
-
 /** Godzina na ekranie tytułowym: późne popołudnie, ciepłe światło przed zachodem */
 const MENU_HOUR = 17.6;
 
 export interface TileRef { x: number; y: number }
-/** Pola zamku, po których się chodzi (dy * 3 + dx): sala donżonu, koszary, dziedziniec, brama; posadzka na tej wysokości */
-/** Przeszkody w zamku (ściany pomieszczeń, kraty, sprzęty) z modelu z Blendera: prostokąty x0, x1, z0, z1 względem środka */
-const KEEP_SOLID = (KEEP_MODEL as unknown as { solid: [number, number, number, number, number, number][] }).solid;
-const KEEP_FLOOR = (KEEP_MODEL as unknown as { floorY: number }).floorY;
-const KEEP_WALL = (KEEP_MODEL as unknown as { wallY: number }).wallY;
-const KEEP_HALF = KEEP_SIZE / 2;
-/** Karczma z Blendera: miejsca dla gości (x, z, obrót), posadzka izby, obszar do chodzenia i przeszkody */
-/** Budynek z Blendera, do którego wchodzi się spacerem: prostokąty podłogi, przeszkody na swojej wysokości, wysokość posadzki */
-interface WalkModel { floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] }
-const TAVERN = TAVERN_MODEL as unknown as WalkModel & { seats: [number, number, number][] };
-const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel, oremine: OREMINE_MODEL as unknown as WalkModel, minecamp: MINECAMP_MODEL as unknown as WalkModel };
-/** Kopalnia: miejsca pracy górników w grocie (x, z w układzie modelu, kierunek twarzy) — z tools/models/mine.py */
-const MINE_SPOTS = (OREMINE_MODEL as unknown as { spots: [number, number, number][] }).spots;
-const OREMINE_T = BUILDINGS.findIndex((d) => d.id === 'oremine');
-const OREMINE_WALK = WALK_MODELS.oremine;
-/** Wnętrze kopalni (osobna lokacja): sale do chodzenia, przeszkody, latarnie, miejsca górników, wejście i strefa wyjścia */
-type Rect = [number, number, number, number];
-const MINE_LEVEL = model('minelevel') as unknown as {
-  rooms: Rect[]; solid: Rect[]; spots: [number, number, number][]; entry: [number, number, number]; exit: Rect;
-  /** Niższy poziom (posadzka na y = low): sale, przeszkody, przodki; szyb z drabiną w otworze `hole` */
-  rooms2: Rect[]; solid2: Rect[]; spots2: [number, number, number][]; low: number; hole: Rect; down: [number, number]; up: [number, number];
-};
-/** Przodki obu poziomów na przemian (x, y posadzki, z, kierunek): mała załoga kopie i na górze, i na dole */
-const MINE_LEVEL_SPOTS: [number, number, number, number][] = (() => {
-  const out: [number, number, number, number][] = [];
-  const up = MINE_LEVEL.spots, low = MINE_LEVEL.spots2 ?? [];
-  for (let i = 0; i < Math.max(up.length, low.length); i++) {
-    if (up[i]) out.push([up[i]![0], 0, up[i]![1], up[i]![2]]);
-    if (low[i]) out.push([low[i]![0], MINE_LEVEL.low, low[i]![1], low[i]![2]]);
-  }
-  return out;
-})();
-/** Drogi kopaczy od wrót sztolni do każdego przodka (liczone raz, przy pierwszym wejściu do sztolni) */
-let MINE_ROUTES: MineRoute[] | null = null;
-const mineRoute = (i: number): MineRoute => (MINE_ROUTES ??= mineRoutes(MINE_LEVEL, MINE_LEVEL_SPOTS))[i]!;
-/** Kopalnia: ile trwa samo kopanie przy skale (droga sztolnią dochodzi osobno, data/minewalk.ts — jak liczy symulacja) */
-const OREMINE_PROD = BUILDINGS[OREMINE_T]?.production;
-const inRect = (r: Rect, x: number, z: number): boolean => x >= r[0] && x <= r[1] && z >= r[2] && z <= r[3];
-/** Gdzie w świecie stoi wnętrze kopalni: głęboko pod mapą (od dołu terenu nie widać, a strop zasłania niebo) */
-const MINE_AT = new THREE.Vector3(0, -80, 0);
-const TAVERN_SEATS = TAVERN.seats;
-/** Obrys budynku z modelu (ściany, sprzęty i wnętrze): poza nim, na podwórku działki, chodzi się jak po łące */
-const footCache = new Map<WalkModel, [number, number, number, number]>();
-function walkFoot(m: WalkModel): [number, number, number, number] {
-  let f = footCache.get(m);
-  if (!f) {
-    f = [Infinity, -Infinity, Infinity, -Infinity];
-    for (const r of [...m.open, ...m.solid.filter((b) => b[4] < 0.3)]) { f[0] = Math.min(f[0], r[0]); f[1] = Math.max(f[1], r[1]); f[2] = Math.min(f[2], r[2]); f[3] = Math.max(f[3], r[3]); }
-    footCache.set(m, f);
-  }
-  return f;
-}
-const TAVERN_FLOOR = TAVERN.floorY;
 const FIRE_A = new THREE.MeshBasicMaterial({ color: 0xff8a2a });
 const FIRE_B = new THREE.MeshBasicMaterial({ color: 0xffd25a });
-
-/**
- * Łączy nieruchome części budynku o tym samym materiale w jedną siatkę: zamiast kilkudziesięciu
- * wywołań rysowania na budynek jest kilka. Części nazwane (dach, wnętrze, skrzydła młyna, pochodnia…)
- * zostają osobno, bo animacje i podgląd wnętrza ich szukają.
- */
-/** Budynki, w których pali się w piecu: z komina idzie dym */
-const SMOKY = new Set(['armory', 'house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy', 'armorer']);
-
-/** Grupy, w których też łączymy bryły (ściany i dach znikają w całości przy podglądzie wnętrza, więc wspólna siatka nic nie psuje) */
-const MERGE_IN = new Set(['shell', 'roof', 'chimney', 'spin', 'flagpole']);
-/** Wspólne scalone siatki dla budynków tego samego rodzaju: dzięki temu wszystkie chaty mają te same siatki i karta rysuje je razem */
-const mergedCache = new Map<string, THREE.BufferGeometry>();
-/** Warstwa, na którą odkładamy bryły budynków rysowane wspólnie (nie 1 — tę rysuje mapa cieni, SHADOW_LAYER) */
-const BATCH_LAYER = 5;
-function mergeStatic(root: THREE.Object3D, kind = ''): void {
-  root.updateMatrixWorld(true);
-  // klucz: grupa, do której trafi wspólna siatka (korzeń albo „shell” / „roof” / „chimney”) + materiał
-  const groups = new Map<THREE.Object3D, Map<THREE.Material, { geos: THREE.BufferGeometry[]; meshes: THREE.Mesh[] }>>();
-  const m4 = new THREE.Matrix4();
-  root.traverse((o) => {
-    const m = o as THREE.Mesh;
-    if (!m.isMesh || (m as THREE.InstancedMesh).isInstancedMesh || Array.isArray(m.material) || m.name || !m.visible) return;
-    // wszystko pod inną nazwaną grupą zostaje nietknięte (animacje, wnętrza, zapasy w składzie, ludzie w twierdzy)
-    let into: THREE.Object3D | null = null;
-    for (let p: THREE.Object3D | null = m.parent; p; p = p.parent) {
-      if (p === root) { into ??= root; break; }
-      if (!p.visible) return;
-      if (p.name) { if (!MERGE_IN.has(p.name)) return; into ??= p; }
-    }
-    if (!into) return;
-    m4.copy(into.matrixWorld).invert().multiply(m.matrixWorld);
-    if (m4.determinant() <= 0) return; // lustrzane odbicie odwróciłoby ściany
-    const g = m.geometry.index ? m.geometry.toNonIndexed() : m.geometry.clone();
-    g.applyMatrix4(m4);
-    let byMat = groups.get(into); if (!byMat) { byMat = new Map(); groups.set(into, byMat); }
-    let e = byMat.get(m.material); if (!e) { e = { geos: [], meshes: [] }; byMat.set(m.material, e); }
-    e.geos.push(g); e.meshes.push(m);
-  });
-  for (const [into, byMat] of groups) for (const [mat, e] of byMat) {
-    if (e.meshes.length < 2) { for (const g of e.geos) g.dispose(); continue; }
-    // wspólne atrybuty muszą się zgadzać; inaczej zostawiamy jak jest
-    const keys = Object.keys(e.geos[0]!.attributes).sort().join();
-    if (e.geos.some((g) => Object.keys(g.attributes).sort().join() !== keys)) { for (const g of e.geos) g.dispose(); continue; }
-    for (const g of e.geos) g.morphAttributes = {};
-    let verts = 0;
-    for (const g of e.geos) verts += g.getAttribute('position').count;
-    const ck = kind ? kind + '|' + (into === root ? '' : into.name) + '|' + mat.uuid + '|' + e.meshes.length + '|' + verts : '';
-    const merged = (ck && mergedCache.get(ck)) || mergeGeometries(e.geos);
-    if (ck && merged && !mergedCache.has(ck)) mergedCache.set(ck, merged);
-    for (const g of e.geos) g.dispose();
-    if (!merged) continue;
-    const one = new THREE.Mesh(merged, mat);
-    one.castShadow = e.meshes.some((m) => m.castShadow);
-    one.receiveShadow = true;
-    one.userData.merged = true;
-    one.userData.shared = !!ck; // wspólna dla wszystkich budynków tego rodzaju: nie zwalniać przy rozbiórce
-    into.add(one);
-    for (const m of e.meshes) m.parent?.remove(m);
-  }
-}
-
-let sadMat: THREE.SpriteMaterial | null = null;
-/** Smutna minka nad głową chłopa, który opuszcza osadę */
-function sadMaterial(): THREE.SpriteMaterial {
-  if (sadMat) return sadMat;
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const x = c.getContext('2d')!;
-  x.fillStyle = 'rgba(30,18,8,0.85)'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
-  x.lineWidth = 7; x.strokeStyle = '#e9c145'; x.stroke();
-  x.fillStyle = '#f2d27a'; x.beginPath(); x.arc(64, 64, 44, 0, Math.PI * 2); x.fill();
-  x.fillStyle = '#3a2410';
-  x.beginPath(); x.arc(48, 54, 6, 0, Math.PI * 2); x.fill();
-  x.beginPath(); x.arc(80, 54, 6, 0, Math.PI * 2); x.fill();
-  x.strokeStyle = '#3a2410'; x.lineWidth = 6; x.lineCap = 'round';
-  x.beginPath(); x.arc(64, 96, 20, Math.PI * 1.15, Math.PI * 1.85); x.stroke(); // usta w podkówkę
-  x.fillStyle = '#6fb6ff'; x.beginPath(); x.ellipse(84, 70, 4, 7, 0, 0, Math.PI * 2); x.fill(); // łza
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  sadMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
-  return sadMat;
-}
-
-let sickMat: THREE.SpriteMaterial | null = null;
-/** Znak zarazy: blada, zielonkawa twarz w gorączce (krople potu, krzywe usta) w złotym kole, rysowana raz na płótnie */
-function sickMaterial(): THREE.SpriteMaterial {
-  if (sickMat) return sickMat;
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const x = c.getContext('2d')!;
-  x.fillStyle = 'rgba(30,18,8,0.85)'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
-  x.lineWidth = 7; x.strokeStyle = '#e9c145'; x.stroke();
-  x.fillStyle = '#b9c77e'; x.beginPath(); x.arc(64, 64, 44, 0, Math.PI * 2); x.fill();
-  x.fillStyle = 'rgba(150,40,30,0.35)'; x.beginPath(); x.ellipse(42, 72, 9, 6, 0, 0, Math.PI * 2); x.ellipse(86, 72, 9, 6, 0, 0, Math.PI * 2); x.fill(); // rozpalone policzki
-  x.strokeStyle = '#3a2410'; x.lineWidth = 6; x.lineCap = 'round';
-  x.beginPath(); x.moveTo(40, 52); x.lineTo(54, 56); x.moveTo(88, 52); x.lineTo(74, 56); x.stroke(); // przymknięte oczy
-  x.beginPath(); x.moveTo(46, 92); x.quadraticCurveTo(55, 84, 64, 92); x.quadraticCurveTo(73, 100, 82, 92); x.stroke(); // falujące usta
-  x.fillStyle = '#6fb6ff';
-  for (const [ex, ey] of [[30, 40], [98, 36], [104, 60]] as const) { x.beginPath(); x.moveTo(ex, ey - 9); x.quadraticCurveTo(ex + 6, ey, ex, ey + 4); x.quadraticCurveTo(ex - 6, ey, ex, ey - 9); x.fill(); } // pot
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  sickMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
-  return sickMat;
-}
-
-let noWorkerMat: THREE.SpriteMaterial | null = null;
-/** Znak „brak pracownika”: ludzik w złotym kole przekreślony na czerwono, rysowany raz na płótnie */
-function noWorkerMaterial(): THREE.SpriteMaterial {
-  if (noWorkerMat) return noWorkerMat;
-  const c = document.createElement('canvas');
-  c.width = c.height = 128;
-  const x = c.getContext('2d')!;
-  x.fillStyle = 'rgba(30,18,8,0.85)'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
-  x.lineWidth = 8; x.strokeStyle = '#e9c145'; x.stroke();
-  x.fillStyle = '#f6ecd0';
-  x.beginPath(); x.arc(64, 40, 13, 0, Math.PI * 2); x.fill();
-  x.beginPath(); x.moveTo(40, 98); x.quadraticCurveTo(42, 60, 64, 58); x.quadraticCurveTo(86, 60, 88, 98); x.closePath(); x.fill();
-  x.strokeStyle = '#d6372b'; x.lineWidth = 12; x.lineCap = 'round';
-  x.beginPath(); x.moveTo(26, 26); x.lineTo(102, 102); x.stroke();
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  noWorkerMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
-  return noWorkerMat;
-}
 
 /** door: pole wyjścia (indeks pola mapy) liczone tak jak przy stawianiu (findDoor), -1 albo brak = budowla bez wejścia */
 export interface Ghost { x: number; y: number; w: number; h: number; ok: boolean; id: string; team: number; rot: number; door?: number }
@@ -328,111 +145,14 @@ const WOOD = RESOURCES.indexOf('wood');
 const ALE = RESOURCES.indexOf('ale');
 const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 
-/** Renderer: czyta stan symulacji, nigdy go nie zmienia. */
-/** Cios toporem zbója: [kąt ręki, kąt topora w dłoni] dla fazy u (0 = chwila trafienia, 1 = następne trafienie).
- *  Klatki kluczowe sprawdzone w Blenderze (tools/models/render_preview.py, POSE="ręka,broń"). */
-const AXE_KEYS: [number, number, number][] = [
-  [0, -1.25, -0.15],   // cięcie dociągnięte: topór przed sobą, ostrzem w dół
-  [0.25, -0.7, -1.5],  // garda: topór uniesiony skośnie przed piersią
-  [0.6, -0.7, -1.5],
-  [0.86, -3.25, -1.3], // zamach: ręka w górze, topór za głową
-  [0.94, -2.2, -0.9],  // w pół cięcia
-  [1, -1.25, -0.15],
-];
-/** Pchnięcie włócznią: [kąt ręki, kąt włóczni, wysunięcie] dla fazy u (0 = trafienie, 1 = następne trafienie).
- *  Włócznia przez całą walkę opuszczona poziomo na wroga (1,57 = poziomo); cios to cofnięcie i wypad w przód. */
-const SPEAR_KEYS: [number, number, number, number][] = [
-  [0, -1.4, 1.6, 0.05],     // pchnięcie: ręka wyprostowana w przód, grot w przeciwniku
-  [0.22, -0.85, 1.54, 0],   // wycofanie po ciosie
-  [0.62, -0.8, 1.52, 0],    // garda: włócznia w dłoni poziomo na wysokości pasa, grotem we wroga
-  [0.84, -0.4, 1.48, -0.03], // cofnięcie ręki do pchnięcia
-  [1, -1.4, 1.6, 0.05],
-];
-function spearThrust(u: number): [number, number, number] {
-  u = Math.min(1, Math.max(0, u));
-  for (let k = 1; k < SPEAR_KEYS.length; k++) {
-    const a = SPEAR_KEYS[k - 1]!, b = SPEAR_KEYS[k]!;
-    if (u <= b[0]) {
-      const t = (u - a[0]) / Math.max(1e-6, b[0] - a[0]);
-      // wypad jest szybki (zaczyna się ostro), reszta płynna
-      const e = k === SPEAR_KEYS.length - 1 ? 1 - (1 - t) ** 3 : t * t * (3 - 2 * t);
-      return [a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e, a[3] + (b[3] - a[3]) * e];
-    }
-  }
-  return [SPEAR_KEYS[0]![1], SPEAR_KEYS[0]![2], SPEAR_KEYS[0]![3]];
-}
-/** Kombinacja mieczem (strażnik miejski, zbrojny): cięcie z góry, z lewej na prawą, z prawej na lewą i cięcie z obrotem.
- *  Każdy cios: [kąt ręki, kąt miecza w dłoni, obrót ciała]. Faza u: 0 = chwila trafienia, 1 = następne trafienie.
- *  Do u = 0,25 wraca do gardy po poprzednim ciosie, potem szykuje i zadaje następny. Klatki sprawdzone w Blenderze. */
-type SwordKey = [number, number, number, number];
-const GARDA: [number, number, number] = [-0.6, -1.6, 0];
-const SWORD_BLOWS: { keys: SwordKey[]; end: [number, number, number] }[] = [
-  // z góry: zamach za głowę i cięcie w dół
-  { keys: [[0.6, ...GARDA], [0.86, -3.1, -1.4, 0], [0.94, -2.0, -0.9, 0], [1, -1.2, -0.1, 0]], end: [-1.2, -0.1, 0] },
-  // z lewej na prawą: ciało skręcone w lewo (miecz po lewej stronie), klinga poziomo, zamaszyste cięcie w poprzek
-  { keys: [[0.55, ...GARDA], [0.8, -1.45, -0.2, 1.25], [1, -1.45, -0.05, -0.95]], end: [-1.45, -0.05, -0.95] },
-  // z prawej na lewą: skręt w prawo i cięcie w drugą stronę
-  { keys: [[0.55, ...GARDA], [0.8, -1.5, -0.2, -1.25], [1, -1.45, -0.05, 0.95]], end: [-1.45, -0.05, 0.95] },
-  // z obrotem: krótki skręt, pełny obrót z wyciągniętym mieczem i cięcie na końcu obrotu
-  { keys: [[0.5, ...GARDA], [0.68, -1.5, -0.15, 0.7], [1, -1.45, -0.05, 0.7 - Math.PI * 2]], end: [-1.45, -0.05, 0.7] },
-];
-/** Strzał z łuku. Ręka cięciwy ma pełny obrót w barku [x, y, z] (Euler 'YXZ') i zgięcie łokcia — kąty policzone
- *  odwrotną kinematyką tak, żeby dłoń trafiała w miejsca: przy naciągu do policzka, przy kołczanie nad prawy bark itd.
- *  (sprawdzone w Blenderze: render_preview.py archer z POSE, ARMYZ, ELBOW, LARM).
- *  Klatka: [u, x, y, z, łokieć, ręka z łukiem, skręt ciała]; u: 0 = chwila strzału, 1 = następny strzał. */
-const BOW_KEYS: number[][] = [
-  [0, -2.099, 0.296, 0.456, -2.387, -1.5, -0.35],    // wypuszczenie: dłoń odskakuje od cięciwy za ucho
-  [0.12, -2.064, 1.519, -0.911, -2.524, -1.45, -0.3],
-  [0.3, -3.01, 0.989, 0.253, -0.944, -0.95, 0],      // sięga przez bark do kołczanu, łuk opuszczony
-  [0.42, -2.659, 1.195, -0.137, -0.839, -1.0, 0],    // wyciąga strzałę
-  [0.56, -2.927, 0.881, -1.566, -0.107, -1.45, -0.15], // nakłada strzałę: dłoń przy łuku
-  [0.88, -2.806, 1.913, -1.512, -1.885, -1.55, -0.35], // pełny naciąg: łokieć w bok na wysokości barku, dłoń przy policzku
-  [1, -2.806, 1.913, -1.512, -1.885, -1.55, -0.35],
-];
-/** [x, y, z, łokieć, ręka z łukiem, skręt ciała] */
-function bowShot(u: number): number[] {
-  u = Math.min(1, Math.max(0, u));
-  for (let k = 1; k < BOW_KEYS.length; k++) {
-    const a = BOW_KEYS[k - 1]!, b = BOW_KEYS[k]!;
-    if (u <= b[0]!) {
-      const t = (u - a[0]!) / Math.max(1e-6, b[0]! - a[0]!), e = t * t * (3 - 2 * t);
-      return a.slice(1).map((v, i) => v + (b[i + 1]! - v) * e);
-    }
-  }
-  return BOW_KEYS[0]!.slice(1);
-}
-/** Jak pada poległy: 0 na plecy (40%), 1 na twarz (25%), 2 na bok (20%), 3 osuwa się i przewraca na plecy (15%) */
-function deathKind(id: number): 0 | 1 | 2 | 3 {
-  const h = (Math.imul(id, 2654435761) >>> 0) % 100;
-  return h < 40 ? 0 : h < 65 ? 1 : h < 85 ? 2 : 3;
-}
-function swordCombo(hits: number, u: number): [number, number, number] {
-  u = Math.min(1, Math.max(0, u));
-  const prev = SWORD_BLOWS[(hits + SWORD_BLOWS.length - 1) % SWORD_BLOWS.length]!, next = SWORD_BLOWS[hits % SWORD_BLOWS.length]!;
-  const ease = (t: number): number => t * t * (3 - 2 * t);
-  const mix = (a: readonly number[], b: readonly number[], t: number): [number, number, number] => [a[0]! + (b[0]! - a[0]!) * t, a[1]! + (b[1]! - a[1]!) * t, a[2]! + (b[2]! - a[2]!) * t];
-  // powrót do gardy po poprzednim ciosie
-  if (u < 0.25) return hits ? mix(prev.end, GARDA, ease(u / 0.25)) : GARDA;
-  const k = next.keys;
-  if (u <= k[0]![0]) return GARDA;
-  for (let i = 1; i < k.length; i++) {
-    const a = k[i - 1]!, b = k[i]!;
-    if (u <= b[0]) return mix(a.slice(1), b.slice(1), ease((u - a[0]) / Math.max(1e-6, b[0] - a[0])));
-  }
-  return next.end;
-}
-function axeChop(u: number): [number, number] {
-  u = Math.min(1, Math.max(0, u));
-  for (let k = 1; k < AXE_KEYS.length; k++) {
-    const a = AXE_KEYS[k - 1]!, b = AXE_KEYS[k]!;
-    if (u <= b[0]) {
-      const t = (u - a[0]) / Math.max(1e-6, b[0] - a[0]), e = t * t * (3 - 2 * t);
-      return [a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e];
-    }
-  }
-  return [AXE_KEYS[0]![1], AXE_KEYS[0]![2]];
-}
+/** Budynki, w których pali się w piecu: z komina idzie dym */
+const SMOKY = new Set(['armory', 'house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy', 'armorer']);
 
+/**
+ * Renderer: czyta stan symulacji, nigdy go nie zmienia. Samodzielne części obrazu są w osobnych plikach
+ * (strzały, mury, place budowy, gruz, niebo, kurz, koksowniki, bramy, znaczniki wojska, poświata pochodni,
+ * wilki, kruki, kałuże…) — tu zostaje to, co je łączy: kamera, światło, budynki, ludzie i żołnierze.
+ */
 export class GameRenderer {
   private renderer: THREE.WebGLRenderer;
   private scene = new THREE.Scene();
@@ -497,20 +217,18 @@ export class GameRenderer {
   private fallenBearers = new Set<number>();
   private manAtArmsBodies!: Figures;
   private archers!: Figures;
-  private arrowMesh!: THREE.InstancedMesh;
-  private arrowTrail!: THREE.InstancedMesh;
   /** Wieże, których łucznicy właśnie strzelają: id → czas ostatniego strzału (znaczek ataku nad wieżą) */
-  private towerShots = new Map<number, number>();
-  private towerIcons: THREE.Sprite[] = [];
+  /** Znaczki strzelających wież i flagi zbiórki (src/render/rally.ts) */
+  private towerIcons = new TowerIcons(this.scene);
   /** Flagi zbiórki koszar gracza (drzewce z chorągwią w jego barwach) */
-  private rallyFlags: THREE.InstancedMesh | null = null;
-  private rallyCloth: THREE.InstancedMesh | null = null;
+  private rallyFlags = new RallyFlags(this.scene);
   /** Herby graczy na chorągwiach (numer herbu z konta; brak = stały herb z numeru gracza) */
   private crests: (number | null)[] = [];
   /** Wyjście nowego żołnierza z koszar: złote iskry w górę, błysk i „+1” (tylko wygląd) */
   /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
   private towerPose = new Map<number, [number, number]>();
-  private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number; fire?: boolean }[] = [];
+  /** Strzały w locie (src/render/arrows.ts) */
+  private arrows = new ArrowLayer(this.scene);
   private lastCd = new Map<number, number>();
   /** Ile ciosów zadał żołnierz (do kombinacji mieczem: cięcie z góry, z lewej, z prawej, obrót) */
   private hits = new Map<number, number>();
@@ -694,7 +412,7 @@ export class GameRenderer {
   private lamps: THREE.PointLight[] = [];
   /** Poświata pochodni na ziemi: tania plama ciepłego światła pod każdą zapaloną pochodnią (bez kosztu prawdziwego
    *  światła), więc nocą osada świeci w całym kadrze, a nie tylko tam, gdzie sięgają lampy z puli */
-  private torchGlow: THREE.InstancedMesh | null = null;
+  private torchGlow = new TorchGlow(this.scene); // src/render/torchglow.ts
   /** Stan lamp z puli: do jakiego źródła przypięta (klucz), docelowa i bieżąca jasność — lampy przechodzą płynnie,
    *  zamiast skakać, gdy kamera przesuwa się nad osadą i zmienia się zestaw najbliższych pochodni */
   private lampState: { key: string; k: number; target: number; cur: number }[] = [];
@@ -756,13 +474,12 @@ export class GameRenderer {
   /** Czerwone pole ze strzałką: tędy ludzie będą wchodzić i wychodzić z budynku */
   private ghostDoor = new THREE.Group();
   private buildingLayer = new THREE.Group();
+  /** Gruz i zapadające się budynki (src/render/rubble.ts) */
+  private rubble = new RubbleLayer(this.scene, this.buildingLayer);
   /** Koksowniki na murach i wieżach (osobna warstwa: mur kamienny nie ma własnego modelu budynku) */
-  private brazierLayer = new THREE.Group();
-  private brazierMeshes = new Map<number, THREE.Group>();
-  private brazierKey = '';
+  /** Koksowniki (src/render/braziers.ts) */
+  private braziers = new Braziers(this.scene);
   /** Groty płonących strzał w locie (płomyki dokłada syncFlames) */
-  private arrowFires: THREE.Vector3[] = [];
-  private arrowFireN = 0;
   /** Dym z kominów, iskry, blask okien, mgła przy ziemi */
   private ambience = new Ambience();
   /** Okruchy skały i rudy spod kilofów (tylko z bliska) */
@@ -893,9 +610,7 @@ export class GameRenderer {
   private roadSum = -1;
   private planSum = -1;
   private roadPlans!: THREE.InstancedMesh;
-  private rubbleMeshes = new Map<number, THREE.Group>();
   /** Budynki w trakcie zawalania się po rozbiórce */
-  private dying: { mesh: THREE.Group; t: number }[] = [];
   /** Gdy prawda, przeciąganie lewym przyciskiem maluje (np. drogę) zamiast przesuwać kamerę */
   painting = false;
   private plan!: THREE.InstancedMesh;
@@ -943,7 +658,6 @@ export class GameRenderer {
     this.scene.add(sun, sun.target);
     this.sun = sun;
     this.scene.add(cat(this.buildingLayer, 'budynki'));
-    this.scene.add(cat(this.brazierLayer, 'koksowniki'));
     this.scene.add(cat(this.ambience.group, 'dym, mgła, iskry'));
     this.scene.add(this.chips.group);
     this.scene.add(cat(this.clutter.group, 'graty przy domach'));
@@ -1003,24 +717,6 @@ export class GameRenderer {
     this.spells = new SpellLayer(this.scene);
     this.standards = new Standards(this.scene);
     this.kings = new Figures(32, this.scene, 'king');
-    this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
-      tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
-      tint(new THREE.ConeGeometry(0.02, 0.07, 4).rotateX(Math.PI / 2).translate(0, 0, 0.27), 0x6a6e76),
-      tint(new THREE.BoxGeometry(0.04, 0.002, 0.08).translate(0, 0, -0.22), 0xe8e0c8),
-    ])!, new THREE.MeshStandardMaterial({ vertexColors: true }), 256);
-    // smuga za strzałą: jasny, gasnący pas, żeby lot było widać z daleka i nocą
-    // smuga: delikatna, jaśniejsza przy strzale i zanikająca ku tyłowi (gradient w kolorach wierzchołków)
-    const trailGeo = new THREE.PlaneGeometry(0.03, 1, 1, 1).rotateX(-Math.PI / 2).translate(0, 0, -0.5);
-    {
-      const pos = trailGeo.getAttribute('position'), col = new Float32Array(pos.count * 3);
-      for (let i = 0; i < pos.count; i++) { const k = 1 + pos.getZ(i); col[i * 3] = col[i * 3 + 1] = col[i * 3 + 2] = Math.max(0, k) ** 1.5; }
-      trailGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    }
-    this.arrowTrail = new THREE.InstancedMesh(trailGeo,
-      new THREE.MeshBasicMaterial({ color: 0xffffff, vertexColors: true, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }), 256);
-    this.arrowTrail.setColorAt(0, PLAIN_TRAIL); // barwa smugi na instancję: zwykła jasna, ognista pomarańczowa
-    this.arrowTrail.count = 0; this.arrowTrail.frustumCulled = false; this.scene.add(this.arrowTrail);
-    this.arrowMesh.count = 0; this.arrowMesh.frustumCulled = false; this.scene.add(this.arrowMesh);
     // znaczniki zaznaczenia rysują się nad wszystkim (trawa, krzaki), z ciemną obwódką, żeby było je widać na każdym tle
     const mark = (inner: number, outer: number, color: number, opacity: number, order: number): THREE.InstancedMesh => {
       const mesh = new THREE.InstancedMesh(new THREE.RingGeometry(inner, outer, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthWrite: false, depthTest: false, toneMapped: false, fog: false }), MAX_UNITS);
@@ -1250,8 +946,7 @@ export class GameRenderer {
   /** Herby graczy do chorągwi na budynkach i flagach zbiórki (ustawiać przed setState) */
   setCrests(list: (number | null)[]): void {
     this.crests = list.slice();
-    if (this.rallyCloth) { this.scene.remove(this.rallyCloth); this.rallyCloth = null; }
-    if (this.rallyFlags) { this.scene.remove(this.rallyFlags); this.rallyFlags = null; }
+    this.rallyFlags.reset();
     // budynki, które już stoją (konto wczytało się po starcie gry albo gracz zmienił herb w trakcie): podmień płachty
     const g = this.state;
     if (!g) return;
@@ -1264,7 +959,7 @@ export class GameRenderer {
   }
   private crestOf(player: number): number { return this.crests[player] ?? defaultCrest(player); }
   setState(state: GameState, waterLevel: number, rim: number, focusPlayer = 0): void {
-    this.builtAt = 0; this.quickBuild.clear(); // budynki z wczytanej / nowej mapy stoją od razu, bez pokazu budowy
+    this.builtAt = 0; this.sites.reset(); // budynki z wczytanej / nowej mapy stoją od razu, bez pokazu budowy
     this.me = focusPlayer;
     if (this.view) { this.scene.remove(this.view.group); this.view.dispose(); }
     for (const g of this.buildingMeshes.values()) this.buildingLayer.remove(g);
@@ -1272,17 +967,12 @@ export class GameRenderer {
     for (const b of this.batches.values()) { this.buildingLayer.remove(b.mesh); b.mesh.dispose(); }
     this.batches.clear();
     this.lods.clear();
-    for (const pile of this.rubbleMeshes.values()) this.scene.remove(pile);
-    this.rubbleMeshes.clear();
-    for (const d of this.dying) this.buildingLayer.remove(d.mesh);
-    this.dying = [];
+    this.rubble.clear();
     this.prevPos.clear();
     this.facing.clear();
     this.strides.clear();
     this.storesTick = -1;
     this.clutter.reset();
-    for (const p of this.ruinPiles.values()) this.buildingLayer.remove(p);
-    this.ruinPiles.clear();
     this.clouds.reset();
     this.state = state;
     this.view = buildTerrain(state.map, this.models, waterLevel);
@@ -1302,7 +992,7 @@ export class GameRenderer {
     // nowa mapa: mury, place budowy i obszary liczone od nowa (te same id budynków na nowej mapie dawały ten sam klucz —
     // brama zostawała nieobrócona, a bale palisady stały jak na poprzedniej mapie)
     // nie puste: mapa bez murów (placów budowy, obszarów) ma klucz '', a stare bale i ciosy z poprzedniej mapy muszą zniknąć
-    this.wallKey = '-'; this.siteKey = '-'; this.areaKey = '-';
+    this.walls.invalidate(); this.areaKey = '-';
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie (i odrośnięty las)
     this.youngSeen = new Set();
   }
@@ -1761,78 +1451,15 @@ export class GameRenderer {
   /** Ujęcie z menu: osada w złotej godzinie (ciepłe, niskie słońce), a nie w nocy */
   private menuNight = false;
 
-  private puffs: { group: THREE.Group; age: number; soft?: boolean; bits: { m: THREE.Mesh; v: THREE.Vector3 }[] }[] = [];
-  private static puffGeo = new THREE.IcosahedronGeometry(0.16, 1);
-  private static chipGeo = new THREE.DodecahedronGeometry(0.05, 0);
+  /** Kurz i odpryski (src/render/dust.ts) */
+  private dust = new DustFx(this.scene);
   /** Rozbita droga: kłąb kurzu i odpryski kamieni lub grudki ziemi rozlatują się i opadają */
   roadDust(x: number, y: number, stone: boolean, soft = false): void {
-    const g = this.state;
-    if (!g || !this.view) return;
-    const { width, height } = g.map;
-    const group = new THREE.Group();
-    group.position.set(x + 0.5 - width / 2, Math.max(this.view.heightAt(x + 0.5, y + 0.5), 0) + 0.05, y + 0.5 - height / 2);
-    const bits: { m: THREE.Mesh; v: THREE.Vector3 }[] = [];
-    // kurz z placu budowy: kilka małych, przejrzystych kłębków (nie biała „dynia”)
-    const puffMat = new THREE.MeshStandardMaterial({ color: stone ? 0xbdb3a0 : soft ? 0x9c8a6c : 0xa08660, transparent: true, opacity: soft ? 0.22 : 0.7, depthWrite: false, roughness: 1 });
-    const nPuff = soft ? 4 : 7;
-    for (let i = 0; i < nPuff; i++) {
-      const m = new THREE.Mesh(GameRenderer.puffGeo, puffMat);
-      if (soft) m.scale.setScalar(0.45);
-      const a = (i / nPuff) * Math.PI * 2;
-      m.position.set(Math.cos(a) * 0.15, 0.05, Math.sin(a) * 0.15);
-      bits.push({ m, v: new THREE.Vector3(Math.cos(a) * 0.5, 0.5 + (i % 3) * 0.15, Math.sin(a) * 0.5) });
-      group.add(m);
-    }
-    const chipMat = new THREE.MeshStandardMaterial({ color: stone ? 0x9a9182 : 0x6b5236, roughness: 0.9 });
-    for (let i = 0; i < (soft ? 3 : 8); i++) {
-      const m = new THREE.Mesh(GameRenderer.chipGeo, chipMat);
-      const a = i * 2.4;
-      bits.push({ m, v: new THREE.Vector3(Math.cos(a) * (0.6 + (i % 3) * 0.3), 1.6 + (i % 4) * 0.35, Math.sin(a) * (0.6 + (i % 3) * 0.3)) });
-      group.add(m);
-    }
-    this.scene.add(group);
-    this.puffs.push({ group, age: 0, bits, soft });
+    if (this.state && this.view) this.dust.roadDust(this.state, this.view, x, y, stone, soft);
   }
-
-  /** Trafiony budynek: w losowym miejscu przy ścianie, na wysokości uderzenia, wysypuje się mały, rzadki obłoczek
-   *  kurzu (powoli rośnie i znika) i kilka okruchów spada pod mur. Tylko wygląd, bez wpływu na symulację. */
+  /** Trafiony budynek: obłoczek kurzu i okruchy pod murem */
   private hitDust(b: { type: number; x: number; y: number; rot: number }): void {
-    const g = this.state;
-    if (!g || !this.view || this.calm) return;
-    const { width, height } = g.map;
-    const fp = footprint(BUILDINGS[b.type]!, b.rot);
-    // punkt na obwodzie budynku (tuż przed ścianą)
-    const per = 2 * (fp.w + fp.h);
-    let t = Math.random() * per, px: number, py: number;
-    if (t < fp.w) { px = b.x + t; py = b.y - 0.05; }
-    else if ((t -= fp.w) < fp.h) { px = b.x + fp.w + 0.05; py = b.y + t; }
-    else if ((t -= fp.h) < fp.w) { px = b.x + t; py = b.y + fp.h + 0.05; }
-    else { px = b.x - 0.05; py = b.y + (t - fp.w); }
-    const cx = b.x + fp.w / 2, cy = b.y + fp.h / 2;
-    const ox = px - cx, oy = py - cy, ol = Math.hypot(ox, oy) || 1;
-    const group = new THREE.Group();
-    group.position.set(px - width / 2, Math.max(this.view.heightAt(px, py), 0), py - height / 2);
-    const bits: { m: THREE.Mesh; v: THREE.Vector3 }[] = [];
-    const hy = 0.15 + Math.random() * 0.35;
-    const puffMat = new THREE.MeshStandardMaterial({ color: 0xb3a68e, transparent: true, opacity: 0.22, depthWrite: false, roughness: 1 });
-    for (let i = 0; i < 4; i++) {
-      const m = new THREE.Mesh(GameRenderer.puffGeo, puffMat);
-      m.scale.setScalar(0.45);
-      m.position.set((Math.random() - 0.5) * 0.2, hy + (Math.random() - 0.5) * 0.15, (Math.random() - 0.5) * 0.2);
-      // od ściany na zewnątrz i lekko w górę, wolno
-      bits.push({ m, v: new THREE.Vector3((ox / ol) * 0.25 + (Math.random() - 0.5) * 0.15, 0.12 + Math.random() * 0.12, (oy / ol) * 0.25 + (Math.random() - 0.5) * 0.15) });
-      group.add(m);
-    }
-    const chipMat = new THREE.MeshStandardMaterial({ color: 0x8e8473, roughness: 0.9 });
-    for (let i = 0; i < 3; i++) {
-      const m = new THREE.Mesh(GameRenderer.chipGeo, chipMat);
-      m.scale.setScalar(0.45);
-      m.position.set((Math.random() - 0.5) * 0.15, hy, (Math.random() - 0.5) * 0.15);
-      bits.push({ m, v: new THREE.Vector3((ox / ol) * 0.35 + (Math.random() - 0.5) * 0.2, 0.3, (oy / ol) * 0.35 + (Math.random() - 0.5) * 0.2) });
-      group.add(m);
-    }
-    this.scene.add(group);
-    this.puffs.push({ group, age: 0, bits, soft: true });
+    if (this.state && this.view && !this.calm) this.dust.hitDust(this.state, this.view, b);
   }
 
   /** Deszcz: przychodzi i odchodzi co kilka dni gry (czysto wizualnie, z zegara gry, więc bez losowania) */
@@ -1877,171 +1504,10 @@ export class GameRenderer {
     }
   }
 
-  // --- niebo nocą: gwiazdy, księżyc z poświatą; w deszczu ciemne chmury zasłaniają niebo ---
-  private sky: { group: THREE.Group; stars: THREE.Points; moon: THREE.Sprite; dome: THREE.Mesh; sunDisc: THREE.Sprite } | null = null;
-  private updateSky(): void {
-    if (!this.sky) {
-      const group = new THREE.Group();
-      const n = 1400, pos = new Float32Array(n * 3), col = new Float32Array(n * 3);
-      for (let i = 0; i < n; i++) {
-        // tylko górna półkula, gęściej nad horyzontem nie trzeba
-        const u = Math.random(), v = Math.random() * 0.95;
-        const th = u * Math.PI * 2, ph = Math.acos(v);
-        pos.set([Math.sin(ph) * Math.cos(th) * 380, Math.cos(ph) * 380, Math.sin(ph) * Math.sin(th) * 380], i * 3);
-        const b = 0.6 + Math.random() * 0.4, warm = Math.random() < 0.2;
-        col.set([b, b * (warm ? 0.9 : 1), b * (warm ? 0.75 : 1.05)], i * 3);
-      }
-      const geo = new THREE.BufferGeometry();
-      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
-      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      // każda gwiazda mruga we własnym rytmie (faza i tempo w atrybucie), jasne bywają większe
-      const ph = new Float32Array(n), sz = new Float32Array(n);
-      for (let i = 0; i < n; i++) { ph[i] = Math.random() * 6.28; sz[i] = Math.random() < 0.08 ? 3.2 : 1.4 + Math.random() * 1.2; }
-      geo.setAttribute('phase', new THREE.BufferAttribute(ph, 1));
-      geo.setAttribute('size', new THREE.BufferAttribute(sz, 1));
-      const stars = new THREE.Points(geo, new THREE.ShaderMaterial({
-        uniforms: { time: { value: 0 }, opacity: { value: 0 } },
-        vertexShader: 'attribute float phase; attribute float size; attribute vec3 color; uniform float time; varying vec3 vC; varying float vA; void main() { vC = color; float tw = 0.55 + 0.45 * sin(time * (1.5 + fract(phase * 7.1) * 3.0) + phase); vA = tw; gl_PointSize = size * (0.7 + tw * 0.5); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-        fragmentShader: 'uniform float opacity; varying vec3 vC; varying float vA; void main() { vec2 d = gl_PointCoord - 0.5; float r = length(d); if (r > 0.5) discard; float a = smoothstep(0.5, 0.0, r); gl_FragColor = vec4(vC, a * vA * opacity); }',
-        transparent: true, depthWrite: false, fog: false,
-      }));
-      // księżyc jak prawdziwy: tarcza z ciemnymi „morzami”, drobnymi kraterami, ciemniejszym brzegiem i szeroką, słabą poświatą
-      const cv = document.createElement('canvas'); cv.width = cv.height = 512;
-      const x = cv.getContext('2d')!;
-      const glow = x.createRadialGradient(256, 256, 40, 256, 256, 256);
-      glow.addColorStop(0, 'rgba(200,215,255,0.35)'); glow.addColorStop(0.3, 'rgba(160,180,230,0.10)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
-      x.fillStyle = glow; x.fillRect(0, 0, 512, 512);
-      const R = 46;
-      x.save(); x.beginPath(); x.arc(256, 256, R, 0, Math.PI * 2); x.clip();
-      x.fillStyle = '#e6e4dc'; x.fillRect(256 - R, 256 - R, R * 2, R * 2);
-      const rnd = (k: number): number => { const v = Math.sin(k * 91.7) * 43758.5; return v - Math.floor(v); };
-      // morza: duże, nieregularne, szarawe plamy
-      for (let i = 0; i < 26; i++) { x.fillStyle = `rgba(120,124,132,${0.18 + rnd(i) * 0.2})`; x.beginPath(); x.ellipse(232 + rnd(i + 3) * 40, 236 + rnd(i + 7) * 36, 4 + rnd(i + 11) * 13, 3 + rnd(i + 13) * 10, rnd(i + 17) * 3, 0, Math.PI * 2); x.fill(); }
-      // kratery: jasny brzeg, ciemny środek
-      for (let i = 0; i < 40; i++) { const cx = 214 + rnd(i + 50) * 84, cy = 214 + rnd(i + 70) * 84, cr = 0.8 + rnd(i + 90) * 3.2; x.fillStyle = 'rgba(95,98,106,0.45)'; x.beginPath(); x.arc(cx, cy, cr, 0, Math.PI * 2); x.fill(); x.strokeStyle = 'rgba(250,250,245,0.35)'; x.lineWidth = 0.7; x.stroke(); }
-      // ciemniejszy brzeg tarczy (kula, nie płaski krążek)
-      const limb = x.createRadialGradient(250, 250, R * 0.2, 256, 256, R);
-      limb.addColorStop(0, 'rgba(0,0,0,0)'); limb.addColorStop(0.85, 'rgba(0,0,10,0.12)'); limb.addColorStop(1, 'rgba(0,0,20,0.35)');
-      x.fillStyle = limb; x.fillRect(256 - R, 256 - R, R * 2, R * 2);
-      x.restore();
-      const tex = new THREE.CanvasTexture(cv); tex.colorSpace = THREE.SRGBColorSpace;
-      const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, fog: false, depthWrite: false }));
-      moon.scale.setScalar(110);
-      // kopuła nieba: u góry głęboki błękit, przy horyzoncie kolor mgły (płynne przejście w krajobraz)
-      const domeGeo = new THREE.SphereGeometry(420, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2 + 0.15);
-      // Niebo jak w nowoczesnych grach: barwa zależna od wysokości nad horyzontem i od położenia słońca,
-      // rozświetlony pas przy horyzoncie, poświata wokół słońca (szeroka i wąska), ciepła łuna o świcie i zmierzchu,
-      // nocą granat z jaśniejszym horyzontem i poświatą księżyca; drobny szum usuwa pasy w gradiencie
-      const dome = new THREE.Mesh(domeGeo, new THREE.ShaderMaterial({
-        uniforms: {
-          zenith: { value: new THREE.Color(0x3d6fb4) }, horizon: { value: new THREE.Color(0xc9d6e2) }, fogCol: { value: new THREE.Color(0xb4b7ae) },
-          glow: { value: new THREE.Color(0xffd9a0) }, sun: { value: new THREE.Vector3(0, 1, 0) }, moon: { value: new THREE.Vector3(0, 1, 0) },
-          night: { value: 0 }, dusk: { value: 0 }, haze: { value: 0 },
-        },
-        vertexShader: 'varying vec3 vDir; void main() { vDir = normalize(position); gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
-        fragmentShader: `
-          uniform vec3 zenith; uniform vec3 horizon; uniform vec3 fogCol; uniform vec3 glow; uniform vec3 sun; uniform vec3 moon;
-          uniform float night; uniform float dusk; uniform float haze;
-          varying vec3 vDir;
-          float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
-          void main() {
-            vec3 d = normalize(vDir);
-            float h = max(d.y, 0.0);
-            // gradient: przy horyzoncie jaśniej (gruba warstwa powietrza), w zenicie głęboki kolor
-            vec3 col = mix(horizon, zenith, pow(h, 0.45));
-            // łuna o wschodzie/zachodzie: ciepły pas nad horyzontem, najmocniej od strony słońca
-            float sunSide = max(dot(normalize(vec3(d.x, 0.0, d.z)), normalize(vec3(sun.x, 0.0, sun.z))), 0.0);
-            col += glow * dusk * pow(1.0 - h, 6.0) * (0.35 + 0.65 * sunSide);
-            // poświata słońca: szeroka mgiełka i jaśniejszy środek (słabnie w zachmurzeniu)
-            float cs = max(dot(d, normalize(sun)), 0.0);
-            float above = smoothstep(-0.15, 0.05, sun.y);
-            col += glow * above * (1.0 - haze * 0.7) * (pow(cs, 6.0) * 0.35 + pow(cs, 64.0) * 0.6);
-            // poświata księżyca nocą
-            float cm = max(dot(d, normalize(moon)), 0.0);
-            col += vec3(0.35, 0.42, 0.6) * night * pow(cm, 24.0) * 0.5;
-            // poniżej horyzontu i tuż przy nim niebo przechodzi w kolor mgły nad ziemią
-            col = mix(col, fogCol, smoothstep(0.08, -0.02, d.y));
-            col += (hash(gl_FragCoord.xy) - 0.5) / 255.0;
-            gl_FragColor = vec4(col, 1.0);
-          }`,
-        side: THREE.BackSide, depthWrite: true, fog: false, // kopuła zapisuje głębię, inaczej efekt cieni (AO) traktuje niebo jak puste tło i je zamalowuje
-      }));
-      dome.renderOrder = -20;
-      // słońce jak prawdziwe: mała, oślepiająca tarcza, wokół szeroka mgiełka; kolor ociepla się przy horyzoncie
-      const sc = document.createElement('canvas'); sc.width = sc.height = 256;
-      const sx2 = sc.getContext('2d')!;
-      const sg = sx2.createRadialGradient(128, 128, 0, 128, 128, 128);
-      sg.addColorStop(0, 'rgba(255,255,250,1)'); sg.addColorStop(0.07, 'rgba(255,253,240,1)'); sg.addColorStop(0.1, 'rgba(255,240,210,0.65)');
-      sg.addColorStop(0.25, 'rgba(255,225,180,0.22)'); sg.addColorStop(0.6, 'rgba(255,215,170,0.06)'); sg.addColorStop(1, 'rgba(255,215,170,0)');
-      sx2.fillStyle = sg; sx2.fillRect(0, 0, 256, 256);
-      const stex = new THREE.CanvasTexture(sc); stex.colorSpace = THREE.SRGBColorSpace;
-      const sunDisc = new THREE.Sprite(new THREE.SpriteMaterial({ map: stex, transparent: true, fog: false, depthWrite: false, blending: THREE.AdditiveBlending }));
-      sunDisc.scale.setScalar(160);
-      group.add(dome, stars, moon, sunDisc);
-      for (const o of [stars, moon, sunDisc]) o.renderOrder = -10;
-      this.scene.add(group);
-      this.sky = { group, stars, moon, dome, sunDisc };
-    }
-    const sk = this.sky;
-    const clear = 1 - this.rain;
-    sk.group.position.copy(this.cam.camera.position);
-    // niebo zawsze tuż przed granicą widzenia kamery (kopuła ma promień 420)
-    sk.group.scale.setScalar(Math.min(1, (this.cam.camera.far * 0.92) / 420));
-    const su = (sk.stars.material as THREE.ShaderMaterial).uniforms;
-    su.opacity!.value = Math.max(0, (this.night - 0.2) / 0.8) * (1 - this.cover * 0.8);
-    su.time!.value = this.time;
-    // księżyc idzie łukiem po nocnym niebie
-    const d = this.sunDir.clone().normalize();
-    sk.moon.position.set(d.x * 340, Math.max(60, d.y * 340), d.z * 340); // nocą kierunek „słońca” to droga księżyca
-    (sk.moon.material as THREE.SpriteMaterial).opacity = Math.max(0, (this.night - 0.15) / 0.85) * (0.3 + 0.7 * clear);
-    // kolory kopuły: zenit zależny od pory (dzień błękit, świt/zmierzch cieplej, noc granat), horyzont = mgła
-    const bg = this.scene.background as THREE.Color;
-    const u = (this.sky.dome.material as THREE.ShaderMaterial).uniforms;
-    const grey = Math.max(this.rain * 0.9, this.cover * 0.55, this.dayMist * 0.7);
-    // prawdziwe położenie słońca z godziny (nocą pod horyzontem); „sunDir” nocą prowadzi księżyc
-    const hour = this.state ? clockAt(this.state.tick).hour : 12;
-    const ang = ((hour - 6) / 24) * Math.PI * 2;
-    const realSun = new THREE.Vector3(-Math.cos(ang), Math.sin(ang) * 0.85, 0.4).normalize();
-    const duskK = Math.max(0, 1 - Math.abs(realSun.y) * 4.5) * (1 - grey * 0.6); // tylko nisko przy horyzoncie
-    (u.sun!.value as THREE.Vector3).copy(realSun);
-    (u.moon!.value as THREE.Vector3).copy(this.sunDir).normalize();
-    u.night!.value = this.night; u.dusk!.value = duskK; u.haze!.value = grey;
-    (u.fogCol!.value as THREE.Color).copy(bg);
-    // zenit: dzień błękit (szary w niepogodę), o zmierzchu głębszy fiolet, nocą granat
-    const zen = new THREE.Color(0x2f62ad).lerp(new THREE.Color(0x737a84), grey).lerp(new THREE.Color(0x3b3f73), duskK * 0.5).lerp(new THREE.Color(0x050914), this.night);
-    (u.zenith!.value as THREE.Color).copy(zen);
-    // horyzont: dzień jasny, lekko mleczny; o zmierzchu pomarańczowo-różowy; nocą przygaszony granat
-    const hor = new THREE.Color(0xd2dde8).lerp(new THREE.Color(0xa9adb2), grey).lerp(new THREE.Color(0xe7a27a), duskK * 0.8).lerp(new THREE.Color(0x141c30), this.night);
-    (u.horizon!.value as THREE.Color).copy(hor);
-    (u.glow!.value as THREE.Color).set(0xffe2b0).lerp(new THREE.Color(0xff8a40), duskK);
-    // słońce widać tylko w dzień i bez deszczu
-    const sd = this.sunDir.clone().normalize();
-    sk.sunDisc.position.set(sd.x * 360, Math.max(30, sd.y * 360), sd.z * 360);
-    const sm2 = sk.sunDisc.material as THREE.SpriteMaterial;
-    sm2.opacity = (1 - this.night) * (1 - Math.max(this.rain * 0.9, this.cover * 0.6)) * Math.min(1, Math.max(0, (sd.y - 0.02) * 6));
-    sm2.color.set(0xffffff).lerp(new THREE.Color(0xff9a50), Math.max(0, 1 - sd.y * 2.5)); // nisko nad horyzontem pomarańczowe
-  }
+  /** Niebo: kopuła, gwiazdy, księżyc, słońce (src/render/sky.ts) */
+  private skyDome = new SkyDome(this.scene);
 
-  private updatePuffs(dt: number): void {
-    for (let i = this.puffs.length - 1; i >= 0; i--) {
-      const p = this.puffs[i]!;
-      p.age += dt;
-      for (const b of p.bits) {
-        const chip = b.m.geometry === GameRenderer.chipGeo;
-        if (chip) { b.v.y -= 6 * dt; b.m.position.addScaledVector(b.v, dt); if (b.m.position.y < 0) { b.m.position.y = 0; b.v.set(0, 0, 0); } b.m.rotation.x += dt * 8; }
-        else {
-          b.m.position.addScaledVector(b.v, dt); b.v.multiplyScalar(1 - dt * 2.5);
-          b.m.scale.setScalar(p.soft ? 0.45 + p.age * 1.1 : 1 + p.age * 3);
-          (b.m.material as THREE.MeshStandardMaterial).opacity = Math.max(0, (p.soft ? 0.22 : 0.7) * (1 - p.age / 1.2));
-        }
-      }
-      if (p.age > 1.4) {
-        this.scene.remove(p.group);
-        for (const b of p.bits) if (b.m.geometry !== GameRenderer.chipGeo || b === p.bits[p.bits.length - 1]) (b.m.material as THREE.Material).dispose();
-        this.puffs.splice(i, 1);
-      }
-    }
-  }
+
 
   // --- spacer oczami chłopa: kamera na wysokości głowy, WASD i mysz, zderzenia z budynkami i wodą ---
   private walk: { x: number; z: number; yaw: number; pitch: number; keys: Set<string>; bob: number; jy?: number; vy?: number; gy?: number } | null = null;
@@ -2541,9 +2007,9 @@ export class GameRenderer {
     const dt = paused ? 0 : realDt;
     this.time += dt;
     this.frameDt = dt;
-    this.updatePuffs(dt);
+    this.dust.update(dt);
     this.updateRain(dt);
-    this.updateSky();
+    this.skyDome.update({ camera: this.cam.camera, rain: this.rain, cover: this.cover, dayMist: this.dayMist, night: this.night, time: this.time, sunDir: this.sunDir, hour: this.state ? clockAt(this.state.tick).hour : 12 });
     if (this.state) this.setDaylight(this.menuNight ? MENU_HOUR : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
     if (this.inMine) {
       // w sztolni: bez słońca i nieba, ciemna mgła, światło tylko z latarń
@@ -2566,9 +2032,9 @@ export class GameRenderer {
       { const f = this.focusPoint; v.updateGrass(f.x, f.z, this.calm ? 0 : this.time, this.walk ? 0 : this.cam.distance); }
       if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail); }
       T('drogi', () => this.syncRoads(g, v));
-      T('gruz', () => this.syncRubble(g, v, dt));
+      T('gruz', () => this.rubble.sync(g, v, dt));
       T('światła', () => this.syncLamps(g));
-      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncBraziers(g, v); this.syncGates(g, dt); this.syncStores(g); });
+      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig, this.battleFireFig, this.battleWaterFig, this.mageBodiesFire, this.mageBodiesWater]) f.view(cp);
@@ -2690,7 +2156,7 @@ export class GameRenderer {
     if (dark) for (const b of g.buildings) if (b.lit) lit.add(b.id);
     for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
     // koksowniki na murach i wieżach: płoną dniem i nocą (łucznicy maczają w nich strzały)
-    for (const [id, m] of this.brazierMeshes) {
+    for (const [id, m] of this.braziers.meshes) {
       if ((m.position.x - f.x) ** 2 + (m.position.z - f.z) ** 2 > 110 * 110) continue;
       const fire = m.getObjectByName('warFire');
       if (!fire) continue;
@@ -2698,7 +2164,7 @@ export class GameRenderer {
       F.add(w, 0.34 * m.scale.y, 0.2 * m.scale.y, (id * 0.173) % 1, Math.max(0.35, glow));
     }
     // ogniste strzały w locie: mały płomyk na grocie
-    for (let i = 0; i < this.arrowFireN; i++) F.add(this.arrowFires[i]!, 0.12, 0.07, (i * 0.531) % 1, Math.max(0.25, glow * 0.8));
+    for (let i = 0; i < this.arrows.fireN; i++) F.add(this.arrows.fires[i]!, 0.12, 0.07, (i * 0.531) % 1, Math.max(0.25, glow * 0.8));
     // kule ognia magów w locie i rozbłyski przy celu
     this.spells.flames().forEach((v, i) => F.add(v, 0.2, 0.13, (i * 0.377) % 1, Math.max(0.5, glow)));
     this.handFlameN = 0;
@@ -2870,7 +2336,7 @@ export class GameRenderer {
     this.buildingLayer.updateMatrixWorld();
     for (const [id, root] of roots) {
       const parts = this.staticParts(root);
-      const own = !on || this.sites.has(id) || !root.visible;
+      const own = !on || this.sites.sites.has(id) || !root.visible;
       for (const m of parts) {
         if (own) { m.layers.set(0); continue; }
         let vis = m.visible;
@@ -2995,184 +2461,17 @@ export class GameRenderer {
     this.culled = culled;
   }
 
-  private wallKey = '';
-  private wallShafts: THREE.InstancedMesh | null = null;
-  private wallTips: THREE.InstancedMesh | null = null;
-  /** Pola u stóp drabin na mur kamienny → kierunek do muru (wspinaczka w wyglądzie) */
-  private ladderFeet = new Map<number, [number, number]>();
-  private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
-  /** Częstokół: bale łączą się z sąsiednimi palisadami, bramami i wieżami; brama obraca się w linii muru */
-  private syncWalls(g: GameState, view: TerrainView): void {
-    const { width, height } = g.map;
-    const walls = g.buildings.filter((b) => { const d = BUILDINGS[b.type]!; return d.wall || d.gate; });
-    // w kluczu też to, czy model już jest: na nowej mapie mur liczy się czasem przed modelami bram, a brama bez obrotu
-    // stała wzdłuż muru (po odświeżeniu kolejność była inna i wszystko wracało)
-    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}:${this.buildingMeshes.has(b.id) ? 1 : 0}`).join(',');
-    if (key === this.wallKey) return;
-    this.wallKey = key;
-    const solid = new Map<number, GameState['buildings'][number]>();
-    for (const b of walls) { const fp = footprint(BUILDINGS[b.type]!, b.rot); for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) solid.set(y * width + x, b); }
-    const at = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && solid.has(y * width + x);
-    if (!this.wallShafts) {
-      const bark = (new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.95, map: pattern('bark'), normalMap: normal('bark') }));
-      this.wallShafts = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.1, 1, 7).translate(0, 0.5, 0), bark, 4096);
-      this.wallTips = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7).translate(0, 0.5, 0), bark, 4096);
-      for (const m of [this.wallShafts, this.wallTips]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'palisada')); }
-    }
-    const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
-    let n = 0;
-    const sn = { block: 0, edge: 0, ladder: 0 };
-    this.ladderFeet.clear();
-    const stoneAt = (x: number, y: number): boolean => { const o = solid.get(y * width + x); return !!o && BUILDINGS[o.type]!.id === 'stoneWall'; };
-    if (!this.stoneKit) {
-      const k = stoneWallKit();
-      const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, max: number): THREE.InstancedMesh => {
-        const m = new THREE.InstancedMesh(geo, mat, max);
-        m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(cat(m, 'mury kamienne'));
-        return m;
-      };
-      this.stoneKit = { block: mk(k.block, k.mat, 8192), edge: mk(k.edge, k.mat, 16384), ladder: mk(k.ladder, k.wood, 2048) };
-    }
-    const keeps = new Map<number, [number, number]>();
-    for (const b of g.buildings) if (b.type === 0) { const fp = footprint(BUILDINGS[0]!, b.rot); keeps.set(b.owner, [b.x + fp.w / 2, b.y + fp.h / 2]); }
-    for (const b of walls) {
-      const def = BUILDINGS[b.type]!;
-      if (def.gate) {
-        // brama staje w poprzek muru: gdy sąsiedzi są po bokach w osi x, wrota idą wzdłuż x
-        const mesh = this.buildingMeshes.get(b.id);
-        // liczą się przede wszystkim przęsła muru (palisada, mur kamienny), a nie stojąca obok wieża czy budynek:
-        // wygrywa oś, na której mur jest po obu stronach, potem ta z większą liczbą przęseł
-        const line = (x: number, y: number): number => { const o = solid.get(y * width + x); return !o ? 0 : BUILDINGS[o.type]!.line ? 2 : 1; };
-        const ax = line(b.x - 1, b.y) + line(b.x + 1, b.y) + (line(b.x - 1, b.y) && line(b.x + 1, b.y) ? 3 : 0);
-        const az = line(b.x, b.y - 1) + line(b.x, b.y + 1) + (line(b.x, b.y - 1) && line(b.x, b.y + 1) ? 3 : 0);
-        if (mesh) mesh.rotation.y = ax >= az ? 0 : Math.PI / 2;
-        continue;
-      }
-      if (def.id === 'watchtower' && !b.build) {
-        // mur przechodzi pod wieżą: między nogami wieży stoją bale (albo kamień), żeby było widać, że tędy nie ma przejścia
-        const fp = footprint(def, b.rot);
-        const inside = (x: number, y: number): boolean => x >= b.x && y >= b.y && x < b.x + fp.w && y < b.y + fp.h;
-        for (let ty = b.y; ty < b.y + fp.h; ty++) for (let tx = b.x; tx < b.x + fp.w; tx++) {
-          // rząd albo kolumna wieży, do której z zewnątrz dochodzi mur
-          const rowIn = at(b.x - 1, ty) || at(b.x + fp.w, ty), colIn = at(tx, b.y - 1) || at(tx, b.y + fp.h);
-          const lk: [boolean, boolean, boolean, boolean] = [
-            rowIn && (inside(tx + 1, ty) || at(tx + 1, ty)), rowIn && (inside(tx - 1, ty) || at(tx - 1, ty)),
-            colIn && (inside(tx, ty + 1) || at(tx, ty + 1)), colIn && (inside(tx, ty - 1) || at(tx, ty - 1)),
-          ];
-          if (!lk.some(Boolean)) continue;
-          const stone = stoneAt(b.x - 1, ty) || stoneAt(b.x + fp.w, ty) || stoneAt(tx, b.y - 1) || stoneAt(tx, b.y + fp.h);
-          const lx0 = tx + 0.5, lz0 = ty + 0.5;
-          if (stone && this.stoneKit) {
-            // pod wieżą pełny blok muru kamiennego (bez blanek — przykrywa go pomost wieży)
-            e.set(0, 0, 0); q.setFromEuler(e);
-            M4.compose(p.set(lx0 - width / 2, view.heightAt(lx0, lz0) - 0.06, lz0 - height / 2), q, sc.set(1, 1, 1));
-            this.stoneKit.block.setMatrixAt(sn.block++, M4);
-            continue;
-          }
-          for (const log of palisadeLogs(lk, b.id + tx * 3 + ty)) {
-            if (n >= 4096) break;
-            const lx = lx0 + log.x, lz = lz0 + log.z, y = view.heightAt(lx, lz) - 0.05, h = log.h * 0.92;
-            M4.compose(p.set(lx - width / 2, y, lz - height / 2), q.identity(), sc.set(log.r, h, log.r));
-            this.wallShafts.setMatrixAt(n, M4);
-            M4.compose(p.set(lx - width / 2, y + h, lz - height / 2), q, sc.set(log.r, log.r * 2.2, log.r));
-            this.wallTips!.setMatrixAt(n, M4);
-            n++;
-          }
-        }
-        continue;
-      }
-      if (!def.line) continue;
-      // budowa częstokołu: bale stają jeden po drugim (pełnej wysokości), a nie rosną z ziemi
-      const built = b.build ? 1 - b.build / buildWork(b.type) : 1;
-      const links: [boolean, boolean, boolean, boolean] = [at(b.x + 1, b.y), at(b.x - 1, b.y), at(b.x, b.y + 1), at(b.x, b.y - 1)];
-      const cx = b.x + 0.5, cz = b.y + 0.5;
-      if (def.id === 'stoneWall') {
-        // mur kamienny jak w Twierdzy: pełny blok na polu, sąsiednie bloki zlewają się w gruby mur; blanki tylko na
-        // krawędziach bez sąsiedniego muru kamiennego; co kilka pól drabina od strony twierdzy; w budowie rośnie od ziemi
-        const kit = this.stoneKit!;
-        const y0 = view.heightAt(cx, cz) - 0.06, hk = Math.max(0.08, built);
-        const put = (mesh: THREE.InstancedMesh, rotY: number, cnt: number): number => {
-          e.set(0, rotY, 0); q.setFromEuler(e);
-          M4.compose(p.set(cx - width / 2, y0, cz - height / 2), q, sc.set(1, hk, 1));
-          mesh.setMatrixAt(cnt, M4);
-          return cnt + 1;
-        };
-        if (sn.block < 8192) sn.block = put(kit.block, 0, sn.block);
-        // drabiny postawione przez gracza przy tym polu muru (te same, którymi symulacja wpuszcza na mur)
-        const ls = built >= 1 ? ladderSides(g, b) : 0;
-        for (const [bit, dx, dz, rot] of [[1, 0, -1, Math.PI], [2, 1, 0, Math.PI / 2], [4, 0, 1, 0], [8, -1, 0, -Math.PI / 2]] as const) {
-          if (!(ls & bit)) continue;
-          this.ladderFeet.set((b.y + dz) * width + b.x + dx, [-dx, -dz]);
-          if (sn.ladder < 2048) sn.ladder = put(kit.ladder, rot, sn.ladder);
-        }
-        for (const [dx, dz, rot] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]] as const) {
-          if (stoneAt(b.x + dx, b.y + dz) || sn.edge >= 16384) continue;
-          sn.edge = put(kit.edge, rot, sn.edge);
-        }
-        continue;
-      }
-      const logs = palisadeLogs(links, b.id);
-      const shown = Math.floor(logs.length * built + 0.001);
-      for (let li = 0; li < logs.length; li++) {
-        const log = logs[li]!;
-        if (n >= 4096) break;
-        if (li >= shown) {
-          // miejsce na kolejny bal: wbity kołek znacznikowy
-          if (li === shown) {
-            const lx = cx + log.x, lz = cz + log.z, y = view.heightAt(lx, lz) - 0.05;
-            M4.compose(p.set(lx - width / 2, y, lz - height / 2), q.identity(), sc.set(log.r * 0.4, 0.18, log.r * 0.4));
-            this.wallShafts.setMatrixAt(n, M4);
-            this.wallTips!.setMatrixAt(n, M4.makeScale(0, 0, 0));
-            n++;
-          }
-          continue;
-        }
-        const lx = cx + log.x, lz = cz + log.z;
-        const y = view.heightAt(lx, lz) - 0.05;
-        const h = log.h;
-        e.set((log.x * 7 % 1) * 0.05, 0, (log.z * 5 % 1) * 0.05);
-        q.setFromEuler(e);
-        M4.compose(p.set(lx - width / 2, y, lz - height / 2), q, sc.set(log.r, h, log.r));
-        this.wallShafts.setMatrixAt(n, M4);
-        M4.compose(p.set(lx - width / 2, y + h, lz - height / 2), q, sc.set(log.r, log.r * 2.2, log.r));
-        this.wallTips!.setMatrixAt(n, M4);
-        n++;
-      }
-    }
-    this.wallShafts.count = n; this.wallTips!.count = n;
-    for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; touch(m); }
-    touch(this.wallShafts); touch(this.wallTips!);
-  }
+  /** Częstokół i mury kamienne (src/render/walls.ts) */
+  private walls = new WallLayer(this.scene);
+
+
 
   get wolvesNear(): number { return this.state?.wolves.length ?? 0; }
   /** Wilki (src/render/wolves.ts) */
   private wolves = new WolfLayer(this.scene, (kind, x, z, key, every, gain) => this.sfxAt(kind, x, z, key, every, gain));
 
-  private gateAngle = new Map<number, number>();
-  private gateShut = new Map<number, boolean>();
-  /** Wrota bramy płynnie się otwierają i zamykają; skrzypienie przy ruchu, łomot przy domknięciu */
-  private syncGates(g: GameState, dt: number): void {
-    for (const b of g.buildings) {
-      if (!BUILDINGS[b.type]!.gate) continue;
-      const mesh = this.buildingMeshes.get(b.id);
-      if (!mesh) continue;
-      const shut = !!b.shut;
-      const was = this.gateShut.get(b.id);
-      const want = shut ? 0 : 1.3;
-      let a = this.gateAngle.get(b.id) ?? want;
-      if (was !== undefined && was !== shut) this.sfxAt('creak', mesh.position.x, mesh.position.z, `g${b.id}`, 0.1, 1.6);
-      this.gateShut.set(b.id, shut);
-      const before = a;
-      a += Math.max(-dt * 1.1, Math.min(dt * 1.1, want - a)); // ok. 1,2 s na pełny ruch
-      if (this.calm) a = want;
-      if (before > 0.02 && a <= 0.02 && shut) this.sfxAt('plank', mesh.position.x, mesh.position.z, `gt${b.id}`, 0.1, 1.8);
-      this.gateAngle.set(b.id, a);
-      const l = mesh.getObjectByName('leafL'), r = mesh.getObjectByName('leafR');
-      if (l) l.rotation.y = -a;
-      if (r) r.rotation.y = a;
-      mesh.traverse((o) => { if (o.name === 'torchFlame') o.visible = false; }); // stożek to tylko znacznik: płomień rysuje system ognia (syncFlames)
-    }
-  }
+  /** Wrota bram (src/render/gates.ts) */
+  private gates = new GateMotion((kind, x, z, key, every, gain) => this.sfxAt(kind, x, z, key, every, gain));
 
   private wet = 0;
   /** Zachmurzenie 0..1 i mglistość dnia 0..1 (zmienna pogoda) */
@@ -3189,402 +2488,14 @@ export class GameRenderer {
   /** Iskry i „+1” przy nowym żołnierzu (src/render/spawnfx.ts) */
   private spawnFx = new SpawnFx(this.scene);
 
-  /** Flagi zbiórki: nad polem, na które idą nowi żołnierze z koszar (tylko moje koszary) */
-  private syncRallyFlags(g: GameState, view: TerrainView): void {
-    if (!this.rallyFlags) {
-      const team = TEAM_COLORS[g.players[this.me]?.team ?? 0] ?? 0xa32a22;
-      const geo = mergeGeometries([
-        tint(new THREE.CylinderGeometry(0.014, 0.02, 0.8, 7).translate(0, 0.4, 0), 0x5a3a20),
-        tint(new THREE.SphereGeometry(0.024, 10, 8).translate(0, 0.81, 0), 0xe9c766),
-        tint(new THREE.ConeGeometry(0.014, 0.07, 6).translate(0, 0.86, 0), 0x4a4038),
-        tint(new THREE.CylinderGeometry(0.12, 0.14, 0.03, 10).translate(0, 0.015, 0), 0x3b2a1a),
-      ])!;
-      // płachta z herbem gracza, falująca jak na budynkach
-      this.rallyCloth = new THREE.InstancedMesh(bannerGeometry().clone().translate(0.016, 0.66, 0), bannerMaterial(team, this.crestOf(this.me)), 64);
-      this.rallyCloth.frustumCulled = false;
-      this.rallyCloth.castShadow = true;
-      this.scene.add(this.rallyCloth);
-      this.rallyFlags = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }), 64);
-      this.rallyFlags.frustumCulled = false;
-      this.rallyFlags.castShadow = true;
-      this.scene.add(this.rallyFlags);
-    }
-    const W = g.map.width, H = g.map.height, m = new THREE.Matrix4();
-    let n = 0;
-    const seen = new Set<number>();
-    for (const b of g.buildings) {
-      if (b.owner !== this.me || !b.rally) continue;
-      for (const t of b.rally) {
-        if (t < 0 || seen.has(t) || n >= 64) continue;
-        seen.add(t);
-        const x = (t % W) + 0.5, y = Math.floor(t / W) + 0.5;
-        m.makeRotationY(Math.sin(this.time * 0.9 + t) * 0.15).setPosition(x - W / 2, view.heightAt(x, y), y - H / 2);
-        this.rallyCloth!.setMatrixAt(n, m);
-        this.rallyFlags.setMatrixAt(n++, m);
-      }
-    }
-    this.rallyFlags.count = n;
-    touch(this.rallyFlags);
-    this.rallyCloth!.count = n;
-    touch(this.rallyCloth!);
-    flagTime.value = this.time;
-  }
-
-  /** Znaczek nad wieżą, której łucznicy strzelają: czerwona tarcza ze skrzyżowanymi strzałami, pulsuje; gaśnie 3 s po ostatnim strzale */
-  private syncTowerIcons(g: GameState): void {
-    const view = this.view;
-    let n = 0;
-    if (view) for (const [id, at] of this.towerShots) {
-      const age = this.time - at;
-      const b = g.buildings.find((x) => x.id === id);
-      if (!b || age > 3) { this.towerShots.delete(id); continue; }
-      let icon = this.towerIcons[n];
-      if (!icon) {
-        const c = document.createElement('canvas'); c.width = c.height = 64;
-        const x = c.getContext('2d')!;
-        x.fillStyle = '#7a120c'; x.strokeStyle = '#e9c766'; x.lineWidth = 4;
-        x.beginPath(); x.moveTo(32, 4); x.lineTo(58, 12); x.lineTo(56, 34); x.quadraticCurveTo(52, 52, 32, 60); x.quadraticCurveTo(12, 52, 8, 34); x.lineTo(6, 12); x.closePath(); x.fill(); x.stroke();
-        x.strokeStyle = '#fff1c8'; x.lineWidth = 3.5; x.lineCap = 'round';
-        for (const [a, b2, c2, d] of [[18, 46, 46, 18], [46, 46, 18, 18]] as const) { x.beginPath(); x.moveTo(a, b2); x.lineTo(c2, d); x.stroke(); }
-        x.fillStyle = '#fff1c8';
-        for (const [px, py, dx, dy] of [[46, 18, 1, -1], [18, 18, -1, -1]] as const) { x.beginPath(); x.moveTo(px + dx * 5, py + dy * 5); x.lineTo(px - dx * 6, py + dy * 1); x.lineTo(px + dx * 1, py - dy * 6); x.closePath(); x.fill(); }
-        const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-        icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false, fog: false }));
-        icon.renderOrder = 11; this.scene.add(icon); this.towerIcons[n] = icon;
-      }
-      const fp = footprint(BUILDINGS[b.type]!, b.rot);
-      const cx = b.x + fp.w / 2, cy = b.y + fp.h / 2;
-      const pulse = 1 + Math.sin(this.time * 8) * 0.08;
-      icon.position.set(cx - g.map.width / 2, view.heightAt(cx, cy) + 3.4 + Math.sin(this.time * 3) * 0.05, cy - g.map.height / 2);
-      icon.scale.setScalar(0.62 * pulse);
-      (icon.material as THREE.SpriteMaterial).opacity = Math.min(1, (3 - age) * 1.5);
-      icon.visible = true;
-      n++;
-    }
-    for (let i = n; i < this.towerIcons.length; i++) this.towerIcons[i]!.visible = false;
-  }
-
-  /** Strzały w locie: łuk balistyczny od łucznika do celu, ok. 0,45 s */
-  private flyArrows(): void {
-    const dt = this.calm ? 1 : 1 / 60;
-    const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), nx = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
-    let n = 0;
-    this.arrows = this.arrows.filter((a) => (a.t += dt / 0.45) < 1);
-    this.arrowFireN = 0;
-    for (const a of this.arrows) {
-      const arc = Math.sin(a.t * Math.PI) * a.from.distanceTo(a.to) * 0.12;
-      p.lerpVectors(a.from, a.to, a.t); p.y += arc;
-      nx.lerpVectors(a.from, a.to, Math.min(1, a.t + 0.05)); nx.y += Math.sin(Math.min(1, a.t + 0.05) * Math.PI) * a.from.distanceTo(a.to) * 0.12;
-      m.lookAt(nx, p, new THREE.Vector3(0, 1, 0));
-      q.setFromRotationMatrix(m);
-      m.compose(p, q, one);
-      this.arrowMesh.setMatrixAt(n, m);
-      // ognista strzała: płomyk na grocie (rysuje go system ognia) i pomarańczowa, dłuższa smuga dymu i iskier
-      if (a.fire) {
-        const v = this.arrowFires[this.arrowFireN] ?? (this.arrowFires[this.arrowFireN] = new THREE.Vector3());
-        v.copy(nx).sub(p).normalize().multiplyScalar(0.24).add(p).setY(v.y - 0.06);
-        this.arrowFireN++;
-      }
-      this.arrowTrail.setColorAt(n, a.fire ? FIRE_TRAIL : PLAIN_TRAIL);
-      // smuga: rozciągnięta do tyłu, dłuższa przy szybkim, dalekim strzale
-      m.compose(p, q, new THREE.Vector3(a.fire ? 1.8 : 1, 1, Math.min(1.6, 0.4 + a.from.distanceTo(a.to) * 0.12) * (a.fire ? 1.4 : 1)));
-      this.arrowTrail.setMatrixAt(n++, m);
-    }
-    this.arrowMesh.count = n;
-    touch(this.arrowMesh);
-    this.arrowTrail.count = n;
-    if (this.arrowTrail.instanceColor) this.arrowTrail.instanceColor.needsUpdate = true;
-    touch(this.arrowTrail);
-  }
-
   /** Oczy w puszczy (src/render/foresteyes.ts) */
   private forestEyes = new ForestEyes(this.scene);
 
-  private dustAt = new Map<number, number>();
-  /** Gruzowiska na miejscu zniszczonych budynków (do odbudowy) */
-  private ruinPiles = new Map<number, THREE.Group>();
   /** Do kiedy (czas sceny) pali się uszkodzony budynek */
   private burnUntil = new Map<number, number>();
-  /**
-   * Plac budowy: budynek nie rośnie ani się nie rozciąga — wznosi się warstwa po warstwie. Model jest przycięty
-   * poziomą płaszczyzną na wysokości postępu (widać mury do połowy, puste wnętrze, potem dach), dookoła stoją
-   * rusztowania z pomostem na bieżącej wysokości, obok leży stos desek i kamieni, nad placem kurz.
-   * Wydajność: osobne kopie materiałów tylko dla budynków właśnie w budowie (zwykle kilka), rusztowania i stosy
-   * to dwie wspólne siatki instancji przeliczane tylko, gdy postęp przeskoczy o 1/20.
-   */
-  /** Czas, od kiedy trwa pokazowa budowa gotowego od razu budynku (sama grafika, ok. 3 s) */
-  private quickBuild = new Map<number, number>();
   private builtAt = 0;
-  private sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material; pit: THREE.Mesh; dug?: number; rect: [number, number, number, number] }>();
-  private static pitMat: THREE.MeshStandardMaterial | undefined;
-  /** Części modelu, których na placu budowy nie ma (wnętrze z ludźmi, zapasy, dym, ogień, życie) */
-  private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'armsfill', 'smoke', 'flame', 'flagcloth', 'bannercloth', 'flagpole']);
-  private siteKey = '';
-  private scaffold: THREE.InstancedMesh | null = null;
-  private siteStones: THREE.InstancedMesh | null = null;
-  private beginSite(id: number, mesh: THREE.Object3D): void {
-    const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
-    mesh.updateMatrixWorld(true);
-    const box = new THREE.Box3().setFromObject(mesh);
-    const swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
-    const clones = new Map<THREE.Material, THREE.Material>();
-    const clip = (m: THREE.Material): THREE.Material => {
-      let c = clones.get(m);
-      if (!c) { c = m.clone(); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clones.set(m, c); }
-      return c;
-    };
-    // wykop pod fundament: ciemna, wilgotna ziemia z ciemniejszym dnem i jaśniejszym, rozkopanym brzegiem
-    const def = BUILDINGS[this.state!.buildings.find((b) => b.id === id)!.type]!;
-    const b0 = this.state!.buildings.find((b) => b.id === id)!;
-    const fp = footprint(def, b0.rot);
-    const pitGeo = new THREE.PlaneGeometry(fp.w - 0.1, fp.h - 0.1, 6, 6).rotateX(-Math.PI / 2);
-    const pc = new Float32Array(pitGeo.attributes.position!.count * 3);
-    for (let i = 0; i < pitGeo.attributes.position!.count; i++) {
-      const x = pitGeo.attributes.position!.getX(i) / ((fp.w - 0.1) / 2), z = pitGeo.attributes.position!.getZ(i) / ((fp.h - 0.1) / 2);
-      const edge = Math.max(Math.abs(x), Math.abs(z));
-      const v = 0.32 + edge * edge * 0.55; // środek ciemny (głęboko), brzegi jaśniejsze
-      pc[i * 3] = v; pc[i * 3 + 1] = v * 0.86; pc[i * 3 + 2] = v * 0.7;
-    }
-    pitGeo.setAttribute('color', new THREE.BufferAttribute(pc, 3));
-    const pit = new THREE.Mesh(pitGeo, GameRenderer.pitMat ??= new THREE.MeshStandardMaterial({ vertexColors: true, color: 0x5a4430, map: pattern('soil'), roughness: 1, polygonOffset: true, polygonOffsetFactor: -3 }));
-    pit.position.set(mesh.position.x, mesh.position.y + 0.012, mesh.position.z);
-    pit.receiveShadow = true;
-    pit.visible = false; // dno wykopu robi teren (dig), a mokra ziemia przyciemnia się w shaderze sama
-    const site = { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped, clip, pit, rect: [b0.x, b0.y, fp.w, fp.h] as [number, number, number, number] };
-    this.sites.set(id, site);
-    this.clipNew(mesh, site);
-  }
-  /** Przycina części modelu, które jeszcze nie są przycięte (np. zapasy dodane później) */
-  private clipNew(mesh: THREE.Object3D, site: { swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material }): void {
-    mesh.traverse((o) => {
-      const me = o as THREE.Mesh;
-      if (!me.isMesh || !me.material || me.userData.siteClip) return;
-      me.userData.siteClip = true;
-      site.swapped.push([me, me.material]);
-      me.material = Array.isArray(me.material) ? me.material.map(site.clip) : site.clip(me.material);
-    });
-  }
-  private endSite(id: number): void {
-    const s = this.sites.get(id);
-    if (!s) return;
-    const done = new Set<THREE.Material>();
-    for (const [me, orig] of s.swapped) {
-      for (const m of Array.isArray(me.material) ? me.material : [me.material]) if (!done.has(m)) { done.add(m); m.dispose(); }
-      me.material = orig;
-      me.userData.siteClip = false;
-    }
-    this.buildingLayer.remove(s.pit);
-    s.pit.geometry.dispose();
-    if (s.dug) this.view?.dig(s.rect[0], s.rect[1], s.rect[2], s.rect[3], 0);
-    const mesh = this.buildingMeshes.get(id);
-    if (mesh) for (const ch of mesh.children) if (GameRenderer.SITE_HIDE.has(ch.name)) ch.visible = true;
-    this.sites.delete(id);
-  }
-  private syncSites(g: GameState): void {
-    const live = new Set<number>();
-    const scaffolds: { b: GameState['buildings'][number]; k: number; cut: number; site: { base: number; top: number } }[] = [];
-    for (const b of g.buildings) {
-      const mesh = this.buildingMeshes.get(b.id);
-      if (!mesh) continue;
-      const def = BUILDINGS[b.type]!;
-      // ruina po zniszczeniu: kupa gruzu i resztki ścian; dopiero odbudowa podnosi budynek z gruzowiska
-      const pile = this.ruinPiles.get(b.id);
-      const ruinShown = !!b.ruined && !def.wall && !def.gate;
-      if (mesh.scale.y !== 1) mesh.scale.y = 1;
-      if (b.build && def.line) {
-        // częstokół w budowie: niskie rusztowanie przy odcinku, bale stają jeden po drugim (syncWalls)
-        const k = 1 - b.build / buildWork(b.type);
-        scaffolds.push({ b, k: Math.max(0.1, k), cut: mesh.position.y + 0.7, site: { base: mesh.position.y, top: mesh.position.y + 0.9 } });
-        continue;
-      }
-      // pokazowa budowa: gotowy w symulacji, ale na ekranie wznosi się przez kilka sekund
-      const qb = this.quickBuild.get(b.id);
-      let k = b.build ? 1 - b.build / buildWork(b.type) : 1;
-      if (qb !== undefined && !b.build) {
-        const t = (this.time - qb) / 3;
-        if (t >= 1 || this.calm) this.quickBuild.delete(b.id); else k = t;
-      }
-      if (k >= 1 || def.line) {
-        if (pile && !b.build) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
-        if (this.sites.has(b.id)) { this.endSite(b.id); mesh.visible = true; this.roadDust(b.x, b.y, false); }
-        continue;
-      }
-      live.add(b.id);
-      if (!this.sites.has(b.id)) this.beginSite(b.id, mesh);
-      const site = this.sites.get(b.id)!;
-      if (this.lodTick % 30 === 0) this.clipNew(mesh, site);
-      if (ruinShown) {
-        if (!pile) {
-          const fp = footprint(def, b.rot);
-          const p2 = rubbleModel(fp.w, fp.h, b.id);
-          p2.position.copy(mesh.position);
-          p2.scale.set(1, 1.6, 1);
-          this.buildingLayer.add(p2);
-          this.ruinPiles.set(b.id, p2);
-        }
-        const pl = this.ruinPiles.get(b.id)!;
-        pl.visible = k < 0.7;
-        pl.scale.y = 1.6 * (1 - k);
-      } else if (pile) { this.buildingLayer.remove(pile); this.ruinPiles.delete(b.id); }
-      // najpierw wykop (pierwsze 12% pracy: sama dziura w ziemi), potem fundament, mury i na końcu dach
-      const cut = site.base + 0.03 + Math.max(0, (k - 0.12) / 0.88) * (site.top - site.base) * 1.01;
-      site.plane.constant = cut;
-      mesh.visible = k >= 0.12;
-      // wykop: teren działki opada w miarę kopania, fundament go potem zasypuje
-      const want = k < 0.12 ? 0.08 + (k / 0.12) * 0.3 : 0;
-      if (Math.abs((site.dug ?? 0) - want) > 0.02) {
-        site.dug = want;
-        const fp2 = footprint(def, b.rot);
-        this.view?.dig(b.x, b.y, fp2.w, fp2.h, want);
-      }
-      for (const ch of mesh.children) if (GameRenderer.SITE_HIDE.has(ch.name)) ch.visible = false;
-      scaffolds.push({ b, k, cut, site });
-      if (this.calm) continue;
-      const next = this.dustAt.get(b.id) ?? 0;
-      if (this.time > next) {
-        const fp = footprint(def, b.rot);
-        this.roadDust(b.x + Math.floor(Math.random() * fp.w), b.y + Math.floor(Math.random() * fp.h), false, true);
-        this.dustAt.set(b.id, this.time + 1.6 + Math.random() * 1.6);
-      }
-    }
-    for (const id of [...this.sites.keys()]) if (!live.has(id)) this.endSite(id);
-    this.syncScaffolds(g, scaffolds);
-  }
-
-  /** Rusztowania, pomosty i stosy materiału przy wszystkich placach budowy (dwie siatki instancji) */
-  private syncScaffolds(g: GameState, list: { b: GameState['buildings'][number]; k: number; cut: number; site: { base: number; top: number } }[]): void {
-    const key = list.map((s) => `${s.b.id}:${Math.round(s.k * 20)}:${s.b.delivered ?? 0}`).join(',');
-    if (key === this.siteKey) return;
-    this.siteKey = key;
-    if (!this.scaffold) {
-      const wood = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: 0.95, map: pattern('planks') });
-      this.scaffold = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1).translate(0, 0.5, 0), wood, 6000);
-      this.siteStones = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0).translate(0, 0.35, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true, map: pattern('rock') }), 600);
-      for (const m of [this.scaffold, this.siteStones]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.buildingLayer.add(cat(m, 'budowy (rusztowania)')); }
-    }
-    const { width, height } = g.map;
-    const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), Y = new THREE.Vector3(0, 1, 0);
-    let n = 0, ns = 0;
-    const put = (x: number, y: number, z: number, sx: number, sy: number, sz: number, rot = 0): void => {
-      if (n >= 6000) return;
-      q.setFromAxisAngle(Y, rot);
-      this.scaffold!.setMatrixAt(n++, M4.compose(p.set(x, y, z), q, sc.set(sx, sy, sz)));
-    };
-    for (const { b, k, cut, site } of list) {
-      const def = BUILDINGS[b.type]!;
-      const fp = footprint(def, b.rot);
-      const x0 = b.x - width / 2 - 0.12, z0 = b.y - height / 2 - 0.12, x1 = x0 + fp.w + 0.24, z1 = z0 + fp.h + 0.24;
-      const base = site.base;
-      // Skład materiału przy placu (przed frontem działki, za rusztowaniem): każdy przyniesiony, a jeszcze niewbudowany
-      // ładunek leży osobno — wiązka desek ułożonych na krzyż albo kupka ciosanych kamieni. Przy wykopie hałda ziemi.
-      const L = b.loads ?? 0;
-      const used = L ? Math.floor(Math.max(0, (k - 0.12) / 0.88) * L) : 0;
-      const delivered = L ? (b.delivered ?? 0) : Math.ceil(4 * (1 - k));
-      const cost = def.cost as Record<string, number>;
-      const kinds = (['wood', 'stone', 'iron'] as const).filter((r) => (cost[r] ?? 0) > 0);
-      let wi = 0, si = 0;
-      const yardZ = z1 + 0.62, yardX = x0 + 0.35;
-      for (let n = used; n < delivered; n++) {
-        const kind = kinds.length ? kinds[n % kinds.length]! : 'wood';
-        if (kind === 'wood') {
-          // wiązka: dwie warstwy po trzy deski, warstwy na krzyż
-          const bx = yardX + (wi % 3) * 0.62, by = base + Math.floor(wi / 3) * 0.13;
-          for (let layer = 0; layer < 2; layer++)
-            for (let j = 0; j < 3; j++) {
-              const off = (j - 1) * 0.11;
-              if (layer === 0) put(bx, by + 0.0, yardZ + off, 0.5, 0.05, 0.09, 0);
-              else put(bx + off, by + 0.055, yardZ, 0.09, 0.05, 0.5, 0);
-            }
-          wi++;
-        } else {
-          // kupka: trzy ciosane kamienie
-          const bx = x1 - 0.35 - (si % 3) * 0.45, bz = yardZ;
-          for (let j = 0; j < 3 && ns < 600; j++) {
-            q.setFromAxisAngle(Y, j * 1.3 + si);
-            this.siteStones!.setColorAt(ns, tmpColor.setHex(0xa39c90));
-            this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(bx + (j - 1) * 0.15, base + (j === 2 ? 0.13 : 0) + Math.floor(si / 3) * 0.2, bz + (j === 1 ? 0.08 : -0.04)), q, sc.set(0.26, 0.2, 0.22)));
-          }
-          si++;
-        }
-      }
-      // hałda ziemi z wykopu: rośnie przy kopaniu, potem ją rozgarniają
-      const spoil = k < 0.12 ? 0.4 + k * 5 : Math.max(0, 1 - (k - 0.12) * 3);
-      if (spoil > 0.05 && ns < 598) {
-        q.setFromAxisAngle(Y, b.id);
-        this.siteStones!.setColorAt(ns, tmpColor.setHex(0x4e3a28));
-        this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(x1 + 0.45, base - 0.05, z0 + 0.4), q, sc.set(0.9 * spoil, 0.45 * spoil, 0.7 * spoil)));
-        this.siteStones!.setColorAt(ns, tmpColor.setHex(0x55402c));
-        this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(x1 + 0.4, base - 0.05, z0 + 0.95), q, sc.set(0.6 * spoil, 0.3 * spoil, 0.55 * spoil)));
-      }
-      if (k < 0.14) continue; // wykop i fundament: jeszcze bez rusztowań
-      // słupy co ~0,8 pola po obwodzie, sięgają nieco ponad bieżącą wysokość
-      const poleTop = Math.min(site.top + 0.2, cut + 0.45) - base;
-      const posts: [number, number][] = [];
-      const nx = Math.max(1, Math.round((x1 - x0) / 0.8)), nz = Math.max(1, Math.round((z1 - z0) / 0.8));
-      for (let i = 0; i <= nx; i++) { posts.push([x0 + (x1 - x0) * i / nx, z0], [x0 + (x1 - x0) * i / nx, z1]); }
-      for (let i = 1; i < nz; i++) { posts.push([x0, z0 + (z1 - z0) * i / nz], [x1, z0 + (z1 - z0) * i / nz]); }
-      for (const [px, pz] of posts) put(px, base, pz, 0.045, poleTop, 0.045);
-      // poprzeczki co 0,45 i pomost z desek na bieżącej wysokości (tam, gdzie pracują murarze)
-      const levels: number[] = [];
-      for (let y = 0.45; y < poleTop - 0.05; y += 0.45) levels.push(y);
-      const deck = Math.max(0.3, cut - base - 0.1);
-      for (const ly of levels) {
-        put((x0 + x1) / 2, base + ly, z0, x1 - x0, 0.03, 0.03); put((x0 + x1) / 2, base + ly, z1, x1 - x0, 0.03, 0.03);
-        put(x0, base + ly, (z0 + z1) / 2, 0.03, 0.03, z1 - z0); put(x1, base + ly, (z0 + z1) / 2, 0.03, 0.03, z1 - z0);
-      }
-      put((x0 + x1) / 2, base + deck, z0 - 0.12, x1 - x0 + 0.2, 0.035, 0.26); put((x0 + x1) / 2, base + deck, z1 + 0.12, x1 - x0 + 0.2, 0.035, 0.26);
-      put(x0 - 0.12, base + deck, (z0 + z1) / 2, 0.26, 0.035, z1 - z0); put(x1 + 0.12, base + deck, (z0 + z1) / 2, 0.26, 0.035, z1 - z0);
-      // ukośne zastrzały na dwóch bokach i drabina
-      const diag = Math.hypot(x1 - x0, poleTop);
-      put((x0 + x1) / 2, base, z0, 0.03, diag, 0.03); this.scaffold!.setMatrixAt(n - 1, M4.compose(p.set(x0, base, z0 - 0.02), q.setFromAxisAngle(new THREE.Vector3(0, 0, -1), Math.atan2(x1 - x0, poleTop)), sc.set(0.03, diag, 0.03)));
-      put(x1 + 0.3, base, (z0 + z1) / 2, 0.05, poleTop + 0.2, 0.05); put(x1 + 0.3, base, (z0 + z1) / 2 + 0.22, 0.05, poleTop + 0.2, 0.05);
-      for (let y = 0.15; y < poleTop; y += 0.18) put(x1 + 0.3, base + y, (z0 + z1) / 2 + 0.11, 0.025, 0.025, 0.24);
-    }
-    this.scaffold.count = n;
-    this.siteStones!.count = ns;
-    touch(this.scaffold);
-    touch(this.siteStones!);
-    if (this.siteStones!.instanceColor) touch(this.siteStones!);
-  }
-
-  /**
-   * Koksowniki (Building.brazier): na kamiennej wieży stoją w rogu pomostu (miejsce z modelu wieży, obrócone razem
-   * z nią), na murze kamiennym — na chodniku, przesunięte ku twierdzy, żeby łucznicy mieli miejsce przy blankach.
-   */
-  private syncBraziers(g: GameState, view: TerrainView): void {
-    const list = g.buildings.filter((b) => b.brazier && !b.ruined);
-    const key = list.map((b) => `${b.id}:${this.buildingMeshes.has(b.id) ? 1 : 0}:${g.occupancy[b.y * g.map.width + b.x - 1] ? 1 : 0}${g.occupancy[(b.y - 1) * g.map.width + b.x] ? 1 : 0}`).join(',');
-    if (key === this.brazierKey) return;
-    this.brazierKey = key;
-    const { width, height } = g.map;
-    const keep = new Set(list.map((b) => b.id));
-    for (const [id, m] of this.brazierMeshes) if (!keep.has(id)) { this.brazierLayer.remove(m); this.brazierMeshes.delete(id); }
-    for (const b of list) {
-      let m = this.brazierMeshes.get(b.id);
-      if (!m) { m = brazierModel(); this.brazierMeshes.set(b.id, m); this.brazierLayer.add(m); }
-      const def = BUILDINGS[b.type]!;
-      const host = this.buildingMeshes.get(b.id);
-      if (def.id !== 'stoneWall' && host) {
-        const [ax, ay, az] = towerBrazierAt(def.id);
-        const p = new THREE.Vector3(ax, ay, az).applyAxisAngle(new THREE.Vector3(0, 1, 0), host.rotation.y);
-        m.position.set(host.position.x + p.x, host.position.y + p.y + 0.02, host.position.z + p.z);
-        m.rotation.y = host.rotation.y;
-        m.scale.setScalar(1);
-      } else {
-        // mur biegnie wzdłuż x, gdy ma sąsiada z lewej albo prawej; koksownik odsunięty od blank w stronę twierdzy
-        const W = width;
-        const along = !!(g.occupancy[b.y * W + b.x - 1] || g.occupancy[b.y * W + b.x + 1]);
-        const kp = g.buildings.find((o) => o.type === 0 && o.owner === b.owner);
-        const kx = kp ? kp.x + 5.5 : b.x, ky = kp ? kp.y + 5.5 : b.y;
-        const off = 0.27;
-        const cx = b.x + 0.5 + (along ? 0 : (kx > b.x + 0.5 ? off : -off));
-        const cy = b.y + 0.5 + (along ? (ky > b.y + 0.5 ? off : -off) : 0);
-        m.position.set(cx - width / 2, view.heightAt(b.x + 0.5, b.y + 0.5) + STONE_WALL_TOP + 0.005, cy - height / 2);
-        m.rotation.y = along ? 0 : Math.PI / 2;
-        m.scale.setScalar(0.8);
-      }
-    }
-  }
+  /** Place budowy (src/render/sites.ts) */
+  private sites = new SiteLayer(this.buildingLayer, (x, y, stone, soft) => this.roadDust(x, y, stone, soft));
 
   private syncBuildings(g: GameState, view: TerrainView): void {
     if (this.buildingMeshes.size === g.buildings.length && g.buildings.every((b) => this.buildingMeshes.has(b.id))) return;
@@ -3699,14 +2610,14 @@ export class GameRenderer {
       this.buildingLayer.add(mesh);
       this.buildingMeshes.set(b.id, mesh);
       // budynek postawiony od razu gotowy (tryb deweloperski, rozkaz bota z gotowcem): krótki pokaz budowy
-      if (this.builtAt > 0 && !this.noBuildShow && !b.build && !def.wall && !def.gate && !def.road && def.id !== 'torch') this.quickBuild.set(b.id, this.time);
+      if (this.builtAt > 0 && !this.noBuildShow && !b.build && !def.wall && !def.gate && !def.road && def.id !== 'torch') this.sites.quickBuild.set(b.id, this.time);
     }
     this.builtAt = 1;
     for (const [id, mesh] of this.buildingMeshes) {
       if (alive.has(id)) continue;
       // rozebrany budynek nie znika od razu: zapada się i przechyla, a pod nim zostaje gruz
       for (const m of this.staticParts(mesh)) m.layers.set(0); // zapadający się budynek rysuje się już sam (poza wspólnym rysowaniem)
-      this.dying.push({ mesh, t: 0 });
+      this.rubble.collapse(mesh);
       this.onCollapse();
       this.buildingMeshes.delete(id);
       this.lods.delete(id);
@@ -3731,7 +2642,7 @@ export class GameRenderer {
       const mesh = this.buildingMeshes.get(id);
       if (!mesh) { this.lods.delete(id); continue; }
       let want = -1;
-      const pinned = !this.lodOn || this.sites.has(id) || this.quickBuild.has(id) || (this.walk && (id === this.walkHall || id === this.walkNear || this.walkInView.has(id)));
+      const pinned = !this.lodOn || this.sites.sites.has(id) || this.sites.quickBuild.has(id) || (this.walk && (id === this.walkHall || id === this.walkNear || this.walkInView.has(id)));
       if (!pinned) {
         const d = Math.max(0, this.lodW.copy(lod.center).applyMatrix4(mesh.matrixWorld).distanceTo(cp) - lod.radius);
         if (!lod.levels.length) {
@@ -3754,32 +2665,7 @@ export class GameRenderer {
     }
   }
 
-  /** Zawalanie się rozebranych budynków i stosy gruzu, które maleją z każdym wyniesionym ładunkiem. */
-  private syncRubble(g: GameState, view: TerrainView, dt: number): void {
-    for (let i = this.dying.length - 1; i >= 0; i--) {
-      const d = this.dying[i]!;
-      d.t += Math.max(dt, 0.016);
-      const k = Math.min(1, d.t / 1.1);
-      d.mesh.scale.y = Math.max(0.04, 1 - k * k);
-      d.mesh.rotation.z = k * 0.18;
-      d.mesh.rotation.x = k * -0.1;
-      if (k >= 1) { this.buildingLayer.remove(d.mesh); d.mesh.traverse((o) => { if (o.userData.merged && !o.userData.shared) (o as THREE.Mesh).geometry.dispose(); }); this.dying.splice(i, 1); }
-    }
-    const { width, height } = g.map;
-    const alive = new Set<number>();
-    for (const r of g.rubble) {
-      alive.add(r.id);
-      let pile = this.rubbleMeshes.get(r.id);
-      if (!pile) {
-        pile = rubbleModel(r.w, r.h, r.id);
-        pile.position.set(r.x + r.w / 2 - width / 2, view.heightAt(r.x + r.w / 2, r.y + r.h / 2), r.y + r.h / 2 - height / 2);
-        this.scene.add(pile);
-        this.rubbleMeshes.set(r.id, pile);
-      }
-      setRubble(pile, r.loads.length / r.total);
-    }
-    for (const [id, pile] of this.rubbleMeshes) if (!alive.has(id)) { this.scene.remove(pile); this.rubbleMeshes.delete(id); }
-  }
+
 
   /** Pora dnia: kolor i siła słońca, światło nieba, barwa mgły. W nocy świeci chłodny księżyc. */
   private setDaylight(hour: number): void {
@@ -3968,7 +2854,7 @@ export class GameRenderer {
     // pochodnia w ręce przy spacerze świeci zawsze, gdy jest zapalona (pierwsza lampa z puli)
     const own = this.walk && this.torchOn ? this.lamps[0]! : null;
     if (own) { this.handTip.getWorldPosition(own.position); own.intensity = (this.night > 0.15 ? 7 : 3) * flicker; }
-    this.syncTorchGlow(g, lit);
+    this.torchGlow.sync(g, this.view, this.buildingMeshes, lit, this.night);
     // nocą lampy rozjaśniają się, w dzień gasną — płynnie, bez przeskoku
     const dt = Math.min(0.1, this.frameDt || 0.016);
     const ease = Math.min(1, dt * 3.5);
@@ -4062,55 +2948,7 @@ export class GameRenderer {
     return l;
   }
 
-  private syncTorchGlow(g: GameState, lit: Set<number>): void {
-    const view = this.view;
-    if (!view) return;
-    if (!this.torchGlow) {
-      // miękka, ciepła plama: jasny środek, długie wygaszanie ku brzegom (bez ostrej krawędzi)
-      const c = document.createElement('canvas');
-      c.width = c.height = 128;
-      const x = c.getContext('2d')!;
-      const gr = x.createRadialGradient(64, 64, 0, 64, 64, 64);
-      gr.addColorStop(0, 'rgba(255,190,120,1)');
-      gr.addColorStop(0.25, 'rgba(255,160,90,0.55)');
-      gr.addColorStop(0.6, 'rgba(255,130,60,0.15)');
-      gr.addColorStop(1, 'rgba(255,120,50,0)');
-      x.fillStyle = gr; x.fillRect(0, 0, 128, 128);
-      const tex = new THREE.CanvasTexture(c);
-      tex.colorSpace = THREE.SRGBColorSpace;
-      const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0, fog: true, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
-      this.torchGlow = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), mat, 1024);
-      this.torchGlow.count = 0;
-      this.torchGlow.frustumCulled = false;
-      this.torchGlow.renderOrder = 2;
-      this.scene.add(cat(this.torchGlow, 'poświata pochodni'));
-    }
-    const glow = this.torchGlow;
-    const mat = glow.material as THREE.MeshBasicMaterial;
-    const k = Math.max(0, Math.min(1, (this.night - 0.1) / 0.4));
-    mat.opacity = k * 0.1;   // delikatna plama (0,45 przepalała ziemię na biało-żółto)
-    glow.visible = k > 0.01;
-    if (!glow.visible) return;
-    const { width, height } = g.map;
-    const m = new THREE.Matrix4(), v = new THREE.Vector3(), sc = new THREE.Vector3(), q = new THREE.Quaternion();
-    let n = 0;
-    const put = (wx: number, wz: number, r: number): void => {
-      if (n >= 1024) return;
-      const y = Math.max(view.heightAt(wx + width / 2, wz + height / 2), 0) + 0.04;
-      m.compose(v.set(wx, y, wz), q, sc.set(r * 2, 1, r * 2));
-      glow.setMatrixAt(n++, m);
-    };
-    for (const [id, mesh] of this.buildingMeshes) {
-      if (!lit.has(id)) continue;
-      const torch = named(mesh, 'torch');
-      if (!torch) continue;
-      torch.getWorldPosition(v);
-      put(v.x, v.z, 1.8);   // mała plama pod pochodnią (4 pola zlewały się w jedną pomarańczową łunę nad osadą)
-    }
-    for (const u of g.units) if (u.path.length > 0 && !u.bucket && u.carryRes < 0) put(u.px / FP - width / 2, u.py / FP - height / 2, 0.8);
-    glow.count = n;
-    touch(glow);
-  }
+
 
   private syncRoads(g: GameState, view: TerrainView): void {
     if (g.tick % 3 !== 0 && this.roadSum >= 0) return;
@@ -4685,18 +3523,18 @@ export class GameRenderer {
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
       const pc = this.lastCd.get(s.id) ?? 0;
-      if (ranged && (foe || wall || victim) && s.cd > pc && !this.calm && this.arrows.length < 256) {
+      if (ranged && (foe || wall || victim) && s.cd > pc && !this.calm && this.arrows.count < MAX_ARROWS) {
         let tx: number, ty: number, th: number;
         if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : 0.4; }
         else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; }
         else { const fp = footprint(BUILDINGS[wall!.type]!, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; }
-        if (s.up && s.post) this.towerShots.set(s.post, this.time);
+        if (s.up && s.post) this.towerIcons.shot(s.post, this.time);
         if (udef.magic) {
           // czar z dłoni: kula ognia albo wody leci do celu (trafienie liczy symulacja, to tylko wygląd)
           const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
           this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.set(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), udef.magic === 'fire');
           this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.35, udef.magic === 'fire' ? 0.7 : 1.3);
-        } else this.arrows.push({ from: new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), to: new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), t: 0, fire: fireArrow(g, s) });
+        } else this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), fireArrow(g, s));
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
       if (s.cd > pc) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);
@@ -4824,10 +3662,10 @@ export class GameRenderer {
     this.banditsFig.finish(bandits);
     this.battleFireFig.finish(0);
     this.battleWaterFig.finish(0);
-    this.flyArrows();
+    this.arrows.fly(this.calm);
     this.spells.update(this.calm ? 1 : 1 / 60, this.time);
-    this.syncTowerIcons(g);
-    this.syncRallyFlags(g, view);
+    this.towerIcons.sync(g, this.view, this.time);
+    this.rallyFlags.sync(g, view, this.me, this.crestOf(this.me), this.time);
     this.spawnFx.sync(g, view, this.cam.camera, this.calm);
     this.chips.step(1 / 60);
     this.soldierTorches.count = torches;
@@ -5256,7 +4094,7 @@ export class GameRenderer {
       const W = g.map.width, t = sim >= 0 ? sim : Math.floor(y) * W + Math.floor(x), tx = t % W, ty = (t - tx) / W;
       if (tx >= 0 && ty >= 0 && tx < W && ty < g.map.height) {
         if ((g.walls[t]! & 16) && g.gates[t]) return h + STONE_WALL_TOP;
-        const lf = this.ladderFeet.get(t);
+        const lf = this.walls.ladderFeet.get(t);
         if (lf) {
           const off = (x - tx - 0.5) * lf[0] + (y - ty - 0.5) * lf[1];
           if (off > 0) return h + STONE_WALL_TOP * Math.min(1, off * 2);
@@ -5806,7 +4644,7 @@ export class GameRenderer {
           const fp = footprint(BUILDINGS[site.type]!, site.rot);
           const a = (u.id * 2.39996) % (Math.PI * 2);
           const cx = site.x + fp.w / 2, cy = site.y + fp.h / 2;
-          const sc = this.sites.get(site.id);
+          const sc = this.sites.sites.get(site.id);
           const deck = sc ? sc.plane.constant - 0.1 : 0;
           const onDeck = !!sc && u.id % 2 === 0 && deck - sc.base > 0.35;
           // tuż przy ścianie, żeby młotek trafiał w mur; co trzeci na ziemi klęczy i bije nisko (przy wykopie wszyscy)

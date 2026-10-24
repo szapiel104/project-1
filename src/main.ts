@@ -30,6 +30,7 @@ import { nextWave } from './sim/systems/bot';
 import { battleMages, garrisonRoom, octant, planFormation, trainsAt } from './sim/systems/army';
 import { campWatch, prodInfo, sampleMade, siteInfo, watchInfo } from './ui/buildingPanel';
 import { EMPTY, SANDBOX, TEST } from './testmode';
+import { census } from './debug/census';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
@@ -2126,6 +2127,10 @@ requestAnimationFrame(loop);
   /** Wilk w polu (x, y) */
   wolf(x: number, y: number): void { addWolf(game, x, y); },
   state: () => game,
+  /** Tempo gry (0 = pauza, czas w obrazie stoi) */
+  speed(n: number): void { speed = n; hud.setSpeed(n); },
+  /** Spis sceny 3D do porównań przy przebudowie kodu rysowania (src/debug/census.ts) */
+  census: () => census((renderer as unknown as { scene: Parameters<typeof census>[0] }).scene),
 };
 /** Model na scenie testowej (__test.model) */
 let stage: { id: number; x: number; y: number; w: number; h: number } | null = null;
