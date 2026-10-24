@@ -52,6 +52,8 @@ interface Part {
   shown: (look: Look) => boolean;
   /** Druga oś obrotu w dłoni (łuk zostaje pionowo, choć ręka się unosi) */
   sub?: { at: THREE.Vector3; rot: (swing: number, armsUp: boolean) => number };
+  /** Przedramię za łokciem (łucznik): w walce kąt łokcia z pozy (pose[4]) */
+  elbow?: boolean;
   /** 0 = wersja z bliska, 1 = uproszczona wersja z daleka */
   lod: 0 | 1;
 }
@@ -224,7 +226,7 @@ export class Figures {
   constructor(max: number, scene: THREE.Scene, kind: FigureKind = 'peasant') {
     this.muted = kind === 'peasant' || kind === 'woman' || kind === 'child';
     const always = (): boolean => true;
-    const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub'], lod: 0 | 1 = 0): void => {
+    const mk = (geo: THREE.BufferGeometry, color: number | Part['color'], pos: THREE.Vector3, rot: Part['rot'], shown: Part['shown'], mat: Mat, sub?: Part['sub'], lod: 0 | 1 = 0, elbow = false): void => {
       const fixed = typeof color === 'number';
       const m = MATS[mat];
       const tex = (lod === 0 ? NEAR_TEX[mat]?.() : null) ?? TEX[mat]?.();
@@ -242,7 +244,7 @@ export class Figures {
       mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
       scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
-      this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod });
+      this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod, elbow });
       if (lod) this.hasFar = true;
     };
     const add = (geo: THREE.BufferGeometry, color: number | Part['color'], x: number, y: number, z: number, rot: Part['rot'], shown: Part['shown'] = always, mat: Mat = 'cloth', sub?: Part['sub']): void =>
@@ -347,6 +349,19 @@ export class Figures {
       const bowArm = (s: number, up: boolean): number => (up ? -1.5 : -s * 0.6);
       const drawArm = (s: number, up: boolean): number => (up ? -1.35 : s * 0.6);
       model(M, bowArm, drawArm);
+      // łokcie (tools/models/soldier.py: 'fore' za łokciem 'elbow'): prawe przedramię zgina się przy naciągu i sięganiu do kołczanu,
+      // lewe zostaje proste — trzyma łuk. W marszu prawa ręka lekko zgięta
+      const FA = M as FigureModel & { fore?: ModelMesh[]; foreFar?: ModelMesh[]; elbow?: number[] };
+      if (FA.fore && FA.elbow) {
+        const at = new THREE.Vector3(FA.elbow[0]!, FA.elbow[1]!, FA.elbow[2]!);
+        const elbowR = (sw: number, up: boolean): number => (up ? -1.0 : -0.25 - Math.max(0, sw) * 0.4);
+        const elbowL = (): number => 0;
+        for (const lod of [0, 1] as const)
+          for (const m of (lod ? FA.foreFar : FA.fore) ?? [])
+            for (const [sx, rot, el] of [[-1, bowArm, elbowL], [1, drawArm, elbowR]] as const)
+              mk(modelGeo(m), m.dyn ? DYN[m.dyn] ?? 0xffffff : 0xffffff, new THREE.Vector3(sx * M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), rot,
+                m.show ? SHOW[m.show] ?? always : always, m.mat as Mat, { at: at.clone(), rot: el }, lod, true);
+      }
       // w walce strzał fazami (scene.ts: bowShot): pose[0] = ręka cięciwy, pose[3] = ręka z łukiem (łuk zawsze pionowo)
       this.weaponArm = drawArm; this.freeArmRot = bowArm;
       // długi łuk: w dłoni, ale zawsze pionowo (druga oś obrotu znosi uniesienie ręki); cięciwa po stronie łucznika
@@ -378,7 +393,7 @@ export class Figures {
    */
   /** grip: o ile obie ręce schodzą się do środka (oburęczny chwyt kilofa czy siekiery), w radianach; 0 = zwykle */
   /** `pose` = [kąt ręki z bronią, kąt broni w dłoni] — faza ciosu liczona w scenie (bandit: zamach zza głowy i cięcie) */
-  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number, grip = 0, pose?: [number, number, number?, number?]): void {
+  set(_i: number, base: THREE.Matrix4, swing: number, armsUp: boolean, tunic: number, id = _i, work?: number, workL = -0.5, walkLegs = false, sitLegs?: number, grip = 0, pose?: [number, number, number?, number?, number?]): void {
     // ukryta postać (macierz o zerowej skali) nie zajmuje miejsca: karta graficzna liczy tylko widoczne
     const e = base.elements;
     if (e[0] === 0 && e[5] === 0 && e[10] === 0) return;
@@ -401,7 +416,7 @@ export class Figures {
       // pchnięcie włócznią: cała broń przesuwa się wzdłuż drzewca (w przód postaci), nie tylko obraca
       this.local.compose(pose && p.rot === this.weaponRot ? this.gripAt(pose[0], pose[2] ?? 0) : p.pos, this.q, this.one);
       // łuk w dłoni ręki prowadzonej pozą: obrót odwrotny do ręki, więc łuk zostaje pionowo
-      if (p.sub) { this.q.setFromEuler(this.e.set(pose && p.rot === this.weaponArm ? pose[1] : pose && pose[3] !== undefined && p.rot === this.freeArmRot ? -pose[3] : p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
+      if (p.sub) { this.q.setFromEuler(this.e.set(p.elbow ? (pose && p.rot === this.weaponArm && pose[4] !== undefined ? pose[4] : p.sub.rot(swing, armsUp)) : pose && p.rot === this.weaponArm ? pose[1] : pose && pose[3] !== undefined && p.rot === this.freeArmRot ? -pose[3] : p.sub.rot(swing, armsUp), 0, 0)); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);
       p.mesh.setMatrixAt(i, this.out);
       if (p.color) p.mesh.setColorAt(i, this.color.setHex(p.color(look)));

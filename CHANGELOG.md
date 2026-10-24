@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.37.1 — łucznik z łokciami (2026-10-24)
+
+- Łucznik ma łokcie (tools/models/soldier.py: ramię i przedramię osobno, kula łokcia zakrywa styk przy zgięciu). Prawa ręka zgina się naturalnie: przy pełnym naciągu ramię jest poziomo, a dłoń z cięciwą przy twarzy; przy wypuszczeniu dłoń odskakuje za ucho, przy sięganiu do kołczanu ręka idzie przez bark ze zgiętym łokciem. Lewa ręka zostaje prosta — trzyma łuk. W marszu prawa ręka lekko zgięta
+- Podgląd z Blendera rysuje przedramię i zgięcie łokcia (`ELBOW=kąt`)
+
 ## 0.37.0 — bunt głodowy (2026-10-23)
 
 - Gdy jedzenia brakuje przez 5 posiłków z rzędu (kilka godzin gry), część ludzi rzuca robotę i staje tłumem pod bramą twierdzy: bez straży miejskiej połowa osady, ze strażą mniej więcej co trzeci. Najpierw dołączają ci, którzy pracują, więc warsztaty, pola i kopalnie stają

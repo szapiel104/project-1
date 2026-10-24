@@ -28,6 +28,8 @@ TROUSERS = hexrgb(0x4a3f2c if archer else 0x3b3226)
 HIP = (0.052, 0.27, 0.0)
 SHOULDER = (0.128, 0.485, 0.0)
 HAND = (0.0, -0.195, 0.005)
+# łokieć łucznika: tyle pod barkiem (w układzie ręki)
+ELBOW = -0.09
 
 
 def turned(ob, rx=0.0, rz=0.0, at=(0, 0, 0)):
@@ -58,18 +60,23 @@ def leg_col(x, y, z):
 leg_m = Mesh(evaluated(leg), leg_col, 'leather')
 
 # ---------- ręka: rękaw (kolczy albo pikowany) i rękawica ----------
-arm = lathe('arm', [(0.001, 0.034), (0.022, 0.029), (0.034, 0.01), (0.034, -0.015), (0.03, -0.05), (0.026, -0.1), (0.028, -0.15), (0.028, -0.168), (0.02, -0.17)], seg=12, subsurf=0)
-if archer:
-    arm_m = Mesh(evaluated(arm), lambda x, y, z: (0.8 + 0.12 * math.cos(y * math.pi * 2 / 0.034),) * 3, 'cloth', dyn='tunic')
-else:
-    arm_m = Mesh(evaluated(arm), mail(STEEL), 'mail')
 glove = skin('glove', [(0, -0.162, 0.003), (0, -0.198, 0.006), (0, -0.217, 0.009)], [(0, 1), (1, 2)],
              [(0.024, 0.022), (0.027, 0.018), (0.02, 0.013)], subsurf=1)
 glove_m = Mesh(evaluated(glove), lambda x, y, z: tuple(c * (1.2 if y > -0.17 else 1) for c in GLOVE), 'leather')
-arms = [arm_m, glove_m]
+fore = []
 if archer:
+    # łucznik ma łokieć: ramię (od barku do łokcia) obraca się w barku, przedramię z karwaszem i rękawicą osobno w łokciu
+    # (gra: src/render/peasants.ts, klucze 'fore' / 'foreFar' i 'elbow'). Kula łokcia w ramieniu zakrywa styk przy zgięciu.
+    sleeve = lambda x, y, z: (0.8 + 0.12 * math.cos(y * math.pi * 2 / 0.034),) * 3
+    upper = lathe('upperarm', [(0.001, 0.034), (0.022, 0.029), (0.034, 0.01), (0.034, -0.015), (0.03, -0.05), (0.027, -0.085), (0.02, -0.098)], seg=12, subsurf=0)
+    elbow = sphere('elbow', (0.0, ELBOW, 0.0), (0.026, 0.026, 0.026), seg=12, rings=8)
+    arms = [Mesh(evaluated(upper), sleeve, 'cloth', dyn='tunic'), Mesh(evaluated(elbow), sleeve, 'cloth', dyn='tunic')]
+    lower = lathe('forearm', [(0.001, -0.074), (0.018, -0.077), (0.026, -0.085), (0.026, -0.1), (0.028, -0.15), (0.028, -0.168), (0.02, -0.17)], seg=12, subsurf=0)
     bracer = lathe('bracer', [(0.03, -0.125), (0.032, -0.14), (0.031, -0.16)], seg=10, subsurf=0)
-    arms.append(Mesh(evaluated(bracer), LEATHER, 'leather'))
+    fore = [Mesh(evaluated(lower), sleeve, 'cloth', dyn='tunic'), glove_m, Mesh(evaluated(bracer), LEATHER, 'leather')]
+else:
+    arm = lathe('arm', [(0.001, 0.034), (0.022, 0.029), (0.034, 0.01), (0.034, -0.015), (0.03, -0.05), (0.026, -0.1), (0.028, -0.15), (0.028, -0.168), (0.02, -0.17)], seg=12, subsurf=0)
+    arms = [Mesh(evaluated(arm), mail(STEEL), 'mail'), glove_m]
 
 # ---------- głowa (jak u strażnika) ----------
 head = Head((0.0, 0.579, 0.004), (0.046, 0.058, 0.05))
@@ -160,4 +167,20 @@ else:
         f = sphere(f'flet{i}', (dx, 0.2, dz), (0.007, 0.026, 0.007), seg=6, rings=5)
         static.append(Mesh(turned(f, QR, QZ, QAT), hexrgb(0xeae3d0) if i % 2 == 0 else hexrgb(0x9a2a20), 'cloth'))
 
-finish(kind, static, [leg_m], arms, HIP, SHOULDER, HAND)
+if not archer:
+    finish(kind, static, [leg_m], arms, HIP, SHOULDER, HAND)
+else:
+    # przedramię: cień w zagłębieniach w pozie spoczynkowej, potem współrzędne względem łokcia (tam jest oś zgięcia)
+    from body import decimated, groups, fixed_cloth, pack, thicken  # noqa: E402
+    from common import bake_ao  # noqa: E402
+    occ = [(m, (0, 0, 0)) for m in static] + [(m, (sx * SHOULDER[0], SHOULDER[1], SHOULDER[2])) for sx in (-1, 1) for m in fore + arms]
+    bake_ao(occ, sample=[(m, (SHOULDER[0], SHOULDER[1], SHOULDER[2])) for m in fore])
+    for m in fore:
+        if m.mat in ('metal', 'mail', 'skin'):
+            thicken(m)
+        m.pos = [(x, y - ELBOW, z) for x, y, z in m.pos]
+    near = groups(fore, fixed_cloth)
+    far = [decimated(m, 0.22) for m in groups(fore, lambda m: 'leather' if m.dyn is None else m.mat)]
+    finish(kind, static, [leg_m], arms, HIP, SHOULDER, HAND,
+           extra={'elbow': [0.0, ELBOW, 0.0], 'fore': [pack(m) for m in near], 'foreFar': [pack(m) for m in far]})
+
