@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.47.0 — wolniejsze tempo gry: etapy osady i droższe kolejne budynki (2026-10-24)
+
+- **Etapy osady:** wioska na start, osada od 20 ludzi, gród od 40, miasto od 70. Późniejsze budynki dopiero na wyższym etapie (osada: młyn, piekarnia, browar, karczma, cech, mury i brama z kamienia, kamienna wieża, namiot medyka, kosz z ogniem; gród: kuźnia, płatnerz, duży spichlerz, duża wieża, siedziby magów; miasto: wielka wieża). Raz osiągnięty etap zostaje. Zablokowana karta pisze „Od etapu: Gród (40 ludzi)”, skryba ogłasza nowy etap i to, co się odblokowało, rozpiska ludności pokazuje etap i próg następnego
+- **Każdy kolejny taki sam budynek +10% ceny** (najwyżej 2× pierwszego); karta pokazuje cenę następnego. Drogi, palisada, mury, bramy, drabiny, pochodnie, kosze z ogniem i studnie zawsze po zwykłej cenie. Zwrot przy wyburzeniu i odbudowa ruin liczą się od zwykłej ceny
+- **Droższe późne budynki:** kuźnia i płatnerz 70 drewna, 60 kamienia, 30 rudy; kamienne wieże 80/170/300 kamienia; duży spichlerz 110 drewna, 100 kamienia; karczma 90 drewna, 40 kamienia, 60 rudy; cech 80/50; browar, młyn, piekarnia, namiot medyka i koszary też trochę drożej
+- **Boty** podlegają tym samym etapom i cenom. Żeby rosły jak gracz: najpierw sad, gdy jedzenia zaczyna brakować (sad karmi ok. 6 ludzi), i drwal, gdy wolni ludzie czekają na drewno; drugie obozowisko (bez wolnego miejsca przy ognisku nikt nie przychodził — boty stały na 17 ludziach); koszary przed obozowiskami; palisada nie zjada drewna, gdy brakuje jedzenia
+- „Jak grać” → Budowa i drogi: etapy osady (tabela) i rosnące ceny; poprawione stare koszty w pomocy (koszary, cech, brama, wieże)
+
 ## 0.46.1 — ucieczka z meczu przez sieć to porażka w rankingu (2026-10-24)
 
 - Na starcie meczu przez sieć każdy gracz dostaje w wynikach wpis „w toku”. Kto dogra mecz do końca (także po powrocie po zerwanym połączeniu), dostaje prawdziwy wynik; kto uciekł i nie wrócił, zostaje z porażką. Ranking liczy taki wpis dopiero po 3 godzinach, więc trwający mecz nie psuje nikomu bilansu. Kooperacja przeciw botom dalej nie liczy się do rankingu

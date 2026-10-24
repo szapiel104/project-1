@@ -89,7 +89,9 @@ export interface HudView {
   tax: number;
   affordable: Set<string>;
   /** Drzewko budowy: zablokowane karty (id budynku → czego brakuje; `building` = wymagany budynek jest w budowie) */
-  locked: Map<string, { need: string; building: boolean }>;
+  locked: Map<string, { need: string; building: boolean; tier?: number }>;
+  /** Cena następnego budynku każdego rodzaju (z dopłatą za kolejne takie same) */
+  costs: Map<string, Partial<Record<ResourceId, number>>>;
 }
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
@@ -153,13 +155,21 @@ function setText(node: HTMLElement, text: string): void {
 }
 
 /** Napis na zablokowanej karcie: „Najpierw: Młyn” albo „Czeka na: Młyn (w budowie)” */
-export function needText(lock: { need: string; building: boolean }): string {
+export function needText(lock: { need: string; building: boolean; tier?: number }): string {
+  if (lock.tier) return tierNeedText(lock.tier);
   const def = BUILDINGS.find((d) => d.id === lock.need);
   return t(lock.building ? 'hud.needsBuilding' : 'hud.needs').replace('{b}', def ? t(def.name) : lock.need);
 }
 
-function costText(def: BuildingDef): string {
-  const parts = Object.entries(def.cost).map(([k, v]) => `${t(RESOURCE_DEFS[k as ResourceId].name)}: ${v}`);
+/** Nazwy etapów osady (indeks = etap) */
+export const TIER_NAMES = (): string[] => [tx('Wioska', 'Hamlet'), tx('Osada', 'Village'), tx('Gród', 'Town'), tx('Miasto', 'City')];
+/** „Od etapu: Gród (40 ludzi)” — napis na zablokowanej karcie budynku */
+export function tierNeedText(tier: number): string {
+  return tx(`Od etapu: ${TIER_NAMES()[tier]} (${RULES.tiers[tier]} ludzi)`, `From stage: ${TIER_NAMES()[tier]} (${RULES.tiers[tier]} people)`);
+}
+
+function costText(def: BuildingDef, cost: Partial<Record<ResourceId, number>> = def.cost): string {
+  const parts = Object.entries(cost).map(([k, v]) => `${t(RESOURCE_DEFS[k as ResourceId].name)}: ${v}`);
   return parts.length ? parts.join(' · ') : t('hud.free');
 }
 
@@ -1108,6 +1118,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(forecast, `${t('hud.popularity')}: ${v.delta > 0 ? '+' : ''}${v.delta} ${t('hud.perMonth')}${warn ? `. ${warn}.` : ''}`);
       for (const [id, b] of buildButtons) {
         const lock = v.locked.get(id);
+        const def = BUILDINGS.find((d) => d.id === id);
+        const costEl = b.querySelector<HTMLElement>('.build-cost');
+        if (def && costEl) setText(costEl, costText(def, v.costs.get(id)));
         b.classList.toggle('poor', !lock && !v.affordable.has(id));
         b.classList.toggle('locked', !!lock);
         const need = b.querySelector<HTMLElement>('.build-need')!;

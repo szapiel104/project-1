@@ -23,8 +23,8 @@ import { magesOf, startPlague } from './sim/systems/plague';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
-import { canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
-import { createHud, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
+import { buildCost, canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
+import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { nextWave } from './sim/systems/bot';
 import { battleMages, garrisonRoom, octant, planFormation, trainsAt } from './sim/systems/army';
@@ -672,6 +672,7 @@ function crestList(): (number | null)[] {
 onAccount(() => { if (game) renderer.setCrests(crestList()); });
 
 function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS): void {
+  tierSeen = -1;
   endShown = false;
   gameOver = false;
   endOnline();
@@ -716,6 +717,8 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
 /** Komunikat, czemu tu nie wolno budować (przy drzewku budowy z nazwą brakującego budynku) */
 function placeErrorText(error: string, type: number): string {
   if (error !== 'place.needs') return t(error);
+  const lock = BUILDINGS[type] ? missingRequirement(game, ME, BUILDINGS[type]!) : null;
+  if (lock?.tier) return tierNeedText(lock.tier);
   const need = BUILDINGS[type]?.requires;
   const def = need ? BUILDINGS[buildingIndex(need)] : undefined;
   return t('place.needs').replace('{b}', def ? t(def.name) : need ?? '');
@@ -1702,6 +1705,8 @@ function winterNotes(p: (typeof game.players)[number]): void {
 }
 
 let plagueSeen = 0, plagueToll = 0, plagueOverSeen = 0;
+/** Etap osady przy ostatnim odświeżeniu (-1 = świeży start: nie ogłaszamy etapu wczytanego z zapisu) */
+let tierSeen = -1;
 function refresh(): void {
   const p = game.players[ME]!;
   const f = monthlyForecast(game, p);
@@ -1726,6 +1731,15 @@ function refresh(): void {
     const fp = rb ? footprint(BUILDINGS[rb.type]!, rb.rot) : null;
     scribe.say(`raid${raidSeen}`, t(p.lastRaid.kind === 2 ? 'scribe.riotFire' : 'scribe.riotLoot'), true, 'scribe', rb && fp ? showAt(rb.x + fp.w / 2, rb.y + fp.h / 2) : undefined);
   }
+  // etap osady: skryba ogłasza awans i to, co się odblokowało
+  const tierNow = p.tier ?? 0;
+  if (tierNow > tierSeen && tierSeen >= 0) {
+    const opened = BUILDINGS.filter((d) => d.tier === tierNow && d.buildable).map((d) => t(d.name)).join(', ');
+    const next = RULES.tiers[tierNow + 1];
+    scribe.say(`tier${tierNow}`, tx(`Panie, nasza wioska urosła — jesteśmy teraz: ${TIER_NAMES()[tierNow]}. Wolno stawiać: ${opened}.${next ? ` Następny etap od ${next} ludzi.` : ''}`,
+      `My lord, our settlement has grown — we are now a ${(TIER_NAMES()[tierNow] ?? '').toLowerCase()}. You may now build: ${opened}.${next ? ` The next stage comes at ${next} people.` : ''}`));
+  }
+  tierSeen = tierNow;
   // zaraza: skryba ogłasza wybuch (z przyciskiem do pierwszego chorego), zgony bez magów i koniec zarazy z liczbą ofiar
   if (p.plague && p.plague !== plagueSeen) {
     plagueSeen = p.plague;
@@ -1777,9 +1791,11 @@ function refresh(): void {
   warnedHungry = !f.fed;
   warnedLeaving = p.popularity < 50;
   const affordable = new Set<string>();
-  const locked = new Map<string, { need: string; building: boolean }>();
+  const locked = new Map<string, { need: string; building: boolean; tier?: number }>();
+  const costs = new Map<string, Partial<Record<ResourceId, number>>>();
   for (const def of BUILDINGS) {
     if (canAfford(game, ME, def)) affordable.add(def.id);
+    costs.set(def.id, buildCost(game, ME, BUILDINGS.indexOf(def)));
     const lock = missingRequirement(game, ME, def);
     if (lock) locked.set(def.id, lock);
   }
@@ -1791,7 +1807,7 @@ function refresh(): void {
     res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
-    delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable, locked,
+    delta: f.delta, fed: f.fed, bribed: f.bribed, rations: p.rations, tax: p.tax, affordable, locked, costs,
     report: buildReport(f, resTrend(p.res)),
     soldiers: game.soldiers.filter((s) => s.owner === ME).length,
   });
@@ -2548,6 +2564,7 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
   }
   const people: { label: string; value: number }[] = [{ label: tx('Wszyscy chłopi', 'All peasants'), value: mine.length }, { label: tx('Kopacze bez fachu', 'Unskilled labourers'), value: idle }, { label: tx('Na budowie', 'On building sites'), value: builders }];
   if (sick) people.push({ label: tx('Leżą w gorączce', 'Laid low with fever'), value: sick });
+  { const tr = game.players[ME]!.tier ?? 0, next = RULES.tiers[tr + 1]; people.unshift({ label: tx(`Etap osady: ${TIER_NAMES()[tr]}${next ? ` (następny od ${next} ludzi)` : ''}`, `Settlement stage: ${TIER_NAMES()[tr]}${next ? ` (next at ${next} people)` : ''}`), value: tr + 1 }); }
   for (const [k, v] of [...jobs.entries()].sort((a, b) => b[1] - a[1])) people.push({ label: k, value: v });
   const coming = game.travelers.filter((x) => x.owner === ME && !x.leaving).length, going = game.travelers.filter((x) => x.owner === ME && x.leaving).length;
   if (coming) people.push({ label: tx('W drodze do osady', 'On their way to the settlement'), value: coming });

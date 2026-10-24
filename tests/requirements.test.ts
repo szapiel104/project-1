@@ -8,7 +8,7 @@ import { createGame as realGame, playerKeep, type GameState } from '../src/sim/s
 import { canPlace, missingRequirement, placeBuilding } from '../src/sim/systems/placement';
 
 /** Drzewko budowy: piekarnia przy młynie, koszary przy zbrojowni, karczma przy browarze, barak przy kopalni */
-const createGame = (seed: number): GameState => { const g = realGame(seed); for (const p of g.players) { p.bot = false; p.guards = 0; } return g; };
+const createGame = (seed: number): GameState => { const g = realGame(seed); for (const p of g.players) { p.bot = false; p.guards = 0; p.tier = 3; } return g; };
 
 function spot(g: GameState, id: string): { x: number; y: number } | null {
   const keep = playerKeep(g, 0)!;

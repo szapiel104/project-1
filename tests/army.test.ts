@@ -13,7 +13,7 @@ import { step, type Command } from '../src/sim/step';
 import { canPlace } from '../src/sim/systems/placement';
 
 /** Testy gospodarki i wojska bez bota: drugi gracz stoi bezczynnie */
-const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => { const g = realGame(...a); for (const p of g.players) { p.bot = false; p.guards = 0; } return g; }; // bez straży miejskiej: testy liczą własne wojsko
+const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => { const g = realGame(...a); for (const p of g.players) { p.bot = false; p.guards = 0; p.tier = 3; } return g; }; // etap miasta: testy wojska stawiają też późne budynki // bez straży miejskiej: testy liczą własne wojsko
 
 function spot(g: GameState, id: string, from = 3): { x: number; y: number } {
   const keep = playerKeep(g, 0)!;

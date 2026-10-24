@@ -5,7 +5,8 @@ import { step } from '../src/sim/step';
 
 describe('bot', () => {
   it('buduje osadę, szkoli wojsko i rusza na wroga; wszystko deterministycznie', () => {
-    const play = (): ReturnType<typeof createGame> => { const g = createGame(11); for (let i = 0; i < 20000; i++) step(g, []); return g; };
+    // ok. 6,5 doby: od 0.47 gospodarka jest wolniejsza (etapy osady, droższe kolejne budynki), koszary stają ok. 5,5 doby
+    const play = (): ReturnType<typeof createGame> => { const g = createGame(11); for (let i = 0; i < 24000; i++) step(g, []); return g; };
     const g = play();
     const mine = g.buildings.filter((b) => b.owner === 1).map((b) => BUILDINGS[b.type]!.id);
     expect(mine).toContain('woodcutter');

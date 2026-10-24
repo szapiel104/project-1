@@ -103,6 +103,12 @@ export const RULES = {
     { name: 'tax.mid', goldPer2: 2, effect: -4 },
     { name: 'tax.high', goldPer2: 3, effect: -6 },
   ],
+  /** Etapy osady: od tylu ludzi wioska staje się osadą, grodem i miastem; późniejsze budynki wymagają wyższego etapu (BuildingDef.tier) */
+  tiers: [0, 20, 40, 70],
+  /** Każdy następny budynek tego samego rodzaju drożeje o tyle procent ceny (najwyżej `costStepMax` procent więcej);
+   *  drogi, palisada, mury, bramy, drabiny, pochodnie i kosze ognia zawsze po zwykłej cenie */
+  costStep: 10,
+  costStepMax: 100,
   defaultRations: 2,
   defaultTax: 1,
   /**

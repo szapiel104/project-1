@@ -1,11 +1,11 @@
 import { dole, quell } from './unrest';
 import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
-import { resIndex, type ResourceId } from '../../data/resources';
+import { resIndex } from '../../data/resources';
 import { MAGE_CAP, SAPPER, UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
-import { FP, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
+import { FP, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
 import { battleMages, orderAttack, orderGarrison, orderMove, train } from './army';
-import { canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
+import { canAfford, canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
 
 /**
@@ -14,10 +14,11 @@ import { Terrain } from '../../data/terrain';
  */
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kamieniołom zanim cokolwiek z kamienia
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'house', 'farm', 'mill', 'orchard', 'bakery', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'shrine', 'house', 'fletcher', 'house', 'oremine', 'smithy', 'armorer', 'mageSeat'];
+// 'camp' dwa razy: pierwsze obozowisko stoi od startu, drugie daje miejsca na nowych przybyszów (bez wolnego miejsca przy ognisku nikt nie przychodzi)
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'mill', 'orchard', 'bakery', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'oremine', 'smithy', 'armorer', 'mageSeat'];
 /** `mageSeat` na liście: siedziba zakonu magów — boty o parzystym numerze stawiają Sanktuarium Źródła, o nieparzystym Wieżę Płomienia;
- *  dopiero w większej osadzie (BOT_SEAT_POP ludzi), bo to droga budowla. Stoją w niej uzdrowiciele i szkolą się magowie bojowi */
-const BOT_SEAT_POP = 30;
+ *  dopiero w grodzie (etap osady jak u gracza, BuildingDef.tier). Stoją w niej uzdrowiciele i szkolą się magowie bojowi.
+ *  Budynki z wyższego etapu osady bot pomija (missingRequirement), dopóki nie urośnie, i buduje dalej wg listy */
 /** Ilu magów bojowych trzyma bot (limit gracza to MAGE_CAP; bot na trudnym bierze pełny limit) */
 const botMages = (level: number): number => (level >= 3 ? MAGE_CAP : 6);
 /** Jak daleko od bramy bot szuka skały pod kopalnię i ile miejsc najwyżej sprawdza w jednym myśleniu */
@@ -46,9 +47,8 @@ export function nextWave(tick: number, level = 2): { at: number; size: number } 
   return { at, size: Math.min(L.base + Math.floor((at - L.first) / L.every) * L.grow, L.cap) };
 }
 
-function affordable(p: PlayerState, type: number): boolean {
-  for (const [res, n] of Object.entries(BUILDINGS[type]!.cost)) if (p.res[resIndex(res as ResourceId)]! < n!) return false;
-  return true;
+function affordable(g: GameState, p: PlayerState, type: number): boolean {
+  return canAfford(g, p.id, BUILDINGS[type]!); // z dopłatą za kolejny taki sam budynek, jak u gracza
 }
 
 /** Pierwsze wolne miejsce wokół twierdzy, szukane pierścieniami (stała kolejność = ten sam wynik u każdego) */
@@ -129,9 +129,16 @@ export function botSystem(g: GameState): void {
     const have = new Map<string, number>();
     for (const b of g.buildings) if (b.owner === p.id) { const id = BUILDINGS[b.type]!.id; have.set(id, (have.get(id) ?? 0) + 1); }
     const want = new Map<string, number>();
-    for (const raw of ORDER) {
+    // najpierw to, czego osada pilnie potrzebuje: jedzenie dla wszystkich (sad karmi ok. 6 ludzi) i drwale,
+    // gdy wolni ludzie czekają, a drewna brak na nowe warsztaty (drwal jest tani, a drewno to wąskie gardło)
+    const pop = population(g, p.id);
+    const feeders = (have.get('orchard') ?? 0) + (have.get('fisher') ?? 0) + (have.get('bakery') ?? 0) * 2;
+    const urgent = feeders * 6 < pop + 3 ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
+    if (urgent && affordable(g, p, buildingIndex(urgent))) {
+      const at = placementBatch(() => spot(g, p.id, buildingIndex(urgent)));
+      if (at && placeBuilding(g, p.id, buildingIndex(urgent), at.x, at.y)) have.set(urgent, (have.get(urgent) ?? 0) + 1);
+    } else for (const raw of ORDER) {
       const id = raw === 'mageSeat' ? (p.id % 2 ? 'mageFire' : 'mageWater') : raw;
-      if (raw === 'mageSeat' && population(g, p.id) < BOT_SEAT_POP) continue;
       want.set(id, (want.get(id) ?? 0) + 1);
       if ((have.get(id) ?? 0) >= want.get(id)!) continue;
       const type = buildingIndex(id);
@@ -141,7 +148,7 @@ export function botSystem(g: GameState): void {
         // barak: przy własnej kopalni (pierścienie wokół niej); bez kopalni bot go pomija
         const mine = g.buildings.find((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'oremine' && !b.ruined);
         if (!mine) continue;
-        if (affordable(p, type)) {
+        if (affordable(g, p, type)) {
           const at = placementBatch(() => spotNear(g, p.id, type, mine.x + 1, mine.y + 1));
           if (at) placeBuilding(g, p.id, type, at.x, at.y); else continue;
         }
@@ -150,19 +157,21 @@ export function botSystem(g: GameState): void {
       if (BUILDINGS[type]!.needsRock) {
         // kopalnia: gdy w zasięgu nie ma skały (albo wszystko zastawione), bot nie czeka na nią — buduje dalej wg listy
         if ((p.noRock ?? 0) > g.tick) continue;
-        if (affordable(p, type)) {
+        if (affordable(g, p, type)) {
           const at = placementBatch(() => spotRock(g, p.id, type));
           if (at) placeBuilding(g, p.id, type, at.x, at.y, at.rot); else { p.noRock = g.tick + 3000; continue; }
         }
         break;
       }
-      if (affordable(p, type)) { const at = placementBatch(() => spot(g, p.id, type)); if (at) placeBuilding(g, p.id, type, at.x, at.y); }
+      if (affordable(g, p, type)) { const at = placementBatch(() => spot(g, p.id, type)); if (at) placeBuilding(g, p.id, type, at.x, at.y); }
       break;
     }
     }
     // umocnienia: gdy osada ma już kilkanaście budynków, otacza się palisadą z bramami i wieżami w narożnikach
     // (dopiero gdy stoją koszary: najpierw gospodarka i wojsko, potem drewno na palisadę)
-    if (tk % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
+    // (palisada nie zjada drewna potrzebnego na sady, gdy jedzenia zaczyna brakować)
+    const fed = g.buildings.filter((b) => b.owner === p.id && ['orchard', 'fisher'].includes(BUILDINGS[b.type]!.id)).length * 6 >= population(g, p.id) + 3;
+    if (fed && tk % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
       && g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks')) placementBatch(() => fortify(g, p));
     // kooperacja: wzmocniony bot co ok. 2 minuty dostaje dostawę broni i rudy (więcej wojska na fale)
     if (p.boost && tk % (THINK * 60) === 0) {

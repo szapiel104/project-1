@@ -277,7 +277,8 @@ describe('zbrojownia', () => {
     expect(BUILDINGS[buildingIndex('smithy')]!.requires).toBeUndefined();
     expect(BUILDINGS[buildingIndex('armorer')]!.requires).toBeUndefined();
     const p0 = g.players[0]!, IRON = resIndex('iron'), SWORD = resIndex('sword'), ARMOR = resIndex('armor');
-    p0.res[resIndex('wood')] = 300; p0.res[resIndex('stone')] = 100; p0.res[IRON] = 30; p0.res[SWORD] = 0; p0.res[ARMOR] = 0;
+    p0.tier = 3; // kuźnia i płatnerz dopiero w grodzie
+    p0.res[resIndex('wood')] = 300; p0.res[resIndex('stone')] = 200; p0.res[resIndex('gold')] = 100; p0.res[IRON] = 30; p0.res[SWORD] = 0; p0.res[ARMOR] = 0;
     expect(put('armory')).toBe(true);
     expect(put('smithy')).toBe(true);
     expect(put('armorer')).toBe(true);

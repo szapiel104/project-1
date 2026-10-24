@@ -12,10 +12,34 @@ export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
   | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.brazier' | 'place.brazierTaken' | 'place.needRock' | 'place.needMine' | 'place.needs' | 'place.unknown';
 
+/** Te budynki zawsze kosztują tyle samo (stawia się ich dużo naraz: linie, drogi, drobne dodatki) */
+const FLAT = new Set(['torch', 'palisade', 'gate', 'stoneWall', 'stoneGate', 'ladder', 'brazier', 'well']);
+const flatCost = (def: BuildingDef): boolean => !!def.road || !!def.line || !!def.addon || FLAT.has(def.id);
+
+/** Etap osady według liczby ludzi (0 wioska, 1 osada, 2 gród, 3 miasto) */
+export function tierFor(pop: number): number {
+  let t = 0;
+  RULES.tiers.forEach((n, i) => { if (pop >= n) t = i; });
+  return t;
+}
+
+/** Ile kosztuje następny budynek tego rodzaju: każdy już postawiony (także w budowie, bez ruin) podnosi cenę o RULES.costStep % */
+export function buildCost(g: GameState, player: number, type: number): Partial<Record<ResourceId, number>> {
+  const def = BUILDINGS[type]!;
+  if (flatCost(def)) return def.cost;
+  let n = 0;
+  for (const b of g.buildings) if (b.owner === player && b.type === type && !b.ruined) n++;
+  const pct = 100 + Math.min(RULES.costStepMax, n * RULES.costStep);
+  if (pct === 100) return def.cost;
+  const out: Partial<Record<ResourceId, number>> = {};
+  for (const [k, v] of Object.entries(def.cost) as [ResourceId, number][]) out[k] = Math.ceil((v * pct) / 100);
+  return out;
+}
+
 export function canAfford(g: GameState, player: number, def: BuildingDef): boolean {
   const p = g.players[player];
   if (!p) return false;
-  for (const [k, v] of Object.entries(def.cost)) if (p.res[resIndex(k as ResourceId)]! < v) return false;
+  for (const [k, v] of Object.entries(buildCost(g, player, BUILDINGS.indexOf(def))) as [ResourceId, number][]) if (p.res[resIndex(k)]! < v) return false;
   return true;
 }
 
@@ -23,7 +47,10 @@ export function canAfford(g: GameState, player: number, def: BuildingDef): boole
  * Drzewko budowy: czego brakuje, żeby postawić budynek (null = nic, wolno). `need` = id wymaganego budynku,
  * `building` = gracz już go stawia, ale budowa jeszcze trwa (liczy się tylko gotowy, nie zburzony).
  */
-export function missingRequirement(g: GameState, player: number, def: BuildingDef): { need: string; building: boolean } | null {
+export function missingRequirement(g: GameState, player: number, def: BuildingDef): { need: string; building: boolean; tier?: number } | null {
+  const p = g.players[player];
+  // etap osady: budynek z wyższego etapu czeka, aż osada urośnie (tryb deweloperski bez ograniczeń)
+  if (def.tier && p && !p.dev && (p.tier ?? 0) < def.tier) return { need: '', building: false, tier: def.tier };
   if (!def.requires) return null;
   let building = false;
   for (const b of g.buildings) {
@@ -380,7 +407,7 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
   if (canPlace(g, player, type, x, y, true, rot) !== null) return false;
   const def = BUILDINGS[type]!;
   const p = g.players[player]!;
-  for (const [k, v] of Object.entries(def.cost)) p.res[resIndex(k as ResourceId)]! -= v;
+  for (const [k, v] of Object.entries(buildCost(g, player, type)) as [ResourceId, number][]) p.res[resIndex(k)]! -= v;
   if (def.addon) { brazierHostAt(g, player, x, y)!.brazier = 1; return true; }
   if (def.road) {
     // droga powstaje dopiero, gdy chłop ją ułoży; w trybie deweloperskim od razu

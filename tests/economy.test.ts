@@ -16,7 +16,7 @@ import { keepEdge } from '../src/data/keep';
 const OLD_START: Partial<Record<Parameters<typeof resIndex>[0], number>> = { wood: 150, stone: 40, apples: 100, bread: 0, gold: 100 };
 const createGame = (...a: Parameters<typeof realGame>): ReturnType<typeof realGame> => {
   const g = realGame(...a);
-  for (const p of g.players) { p.bot = false; for (const [k, v] of Object.entries(OLD_START)) p.res[resIndex(k as Parameters<typeof resIndex>[0])] = v!; }
+  for (const p of g.players) { p.bot = false; p.tier = 3; for (const [k, v] of Object.entries(OLD_START)) p.res[resIndex(k as Parameters<typeof resIndex>[0])] = v!; }
   return g;
 };
 
@@ -130,7 +130,7 @@ describe('budowanie', () => {
 
   it('gdy nie ma bezrobotnych, gruz wynosi inżynier z cechu; zapis pamięta gruz', () => {
     const g = createGame(5);
-    g.players[0]!.res[resIndex('wood')] = 200;
+    g.players[0]!.res[resIndex('wood')] = 200; g.players[0]!.res[resIndex('stone')] = 100;
     step(g, [build(g, 'engineers')]);
     step(g, [build(g, 'house')]);
     for (const b of g.buildings) b.build = 0; // budowa skończona
@@ -244,6 +244,7 @@ describe('praca chłopów', () => {
   it('łańcuch farma → młyn → piekarnia daje chleb', () => {
     const g = createGame(5);
     g.players[0]!.res[resIndex('apples')] = 110; // zapas, żeby głód nie przerwał testu (mieści się w spichlerzu twierdzy)
+    g.players[0]!.res[resIndex('stone')] = 100;
     step(g, [build(g, 'farm')]);
     step(g, [build(g, 'mill')]);
     g.buildings.find((b) => b.type === buildingIndex('mill'))!.build = 0; // piekarnia dopiero przy gotowym młynie

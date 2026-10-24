@@ -4,6 +4,7 @@ import { BUILDINGS } from '../../data/buildings';
 import { housing, population, type GameState, type PlayerState } from '../state';
 import { dayPart } from './workers';
 import { magesOf, ordersQuarrel } from './plague';
+import { tierFor } from './placement';
 import { rainAt } from '../clock';
 import { COLD, SEASON_DAYS, temperatureAt, weatherOf, yearPos, YEAR_DAYS } from '../weather';
 
@@ -122,6 +123,9 @@ export function economySystem(g: GameState): void {
   // nocą wszyscy śpią: nikt nie je, podatków nikt nie zbiera, nastroje stoją (noc i tak mija szybko)
   if (dayPart(g.tick) === 'sleep') return;
   for (const p of g.players) {
+    // etap osady: rośnie z liczbą ludzi i już nie spada (odbudowa po klęsce nie cofa drzewka budowy)
+    const tier = tierFor(population(g, p.id));
+    if (tier > (p.tier ?? 0)) p.tier = tier;
     const f = monthlyForecast(g, p);
     let toEat = f.food;
     for (const i of FOOD) {

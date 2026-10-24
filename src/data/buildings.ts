@@ -44,6 +44,9 @@ export interface BuildingDef {
   beds?: number;
   /** Drzewko budowy: ten budynek da się postawić dopiero, gdy gracz ma gotowy (dokończony, nie zburzony) budynek o tym id */
   requires?: string;
+  /** Etap osady potrzebny do postawienia (0 wioska — od razu, 1 osada, 2 gród, 3 miasto; progi ludności w RULES.tiers).
+   *  Raz osiągnięty etap zostaje, nawet gdy ludzi ubędzie */
+  tier?: number;
   /** Stary budynek: zostaje w kodzie dla zapisów i już stojących egzemplarzy, ale nie ma go w menu i nie da się go postawić */
   legacy?: boolean;
   /** Droga zamiast budynku: 1 = piaskowa, 2 = kamienna. Nie blokuje przejścia, przyspiesza chodzenie */
@@ -105,12 +108,12 @@ export const BUILDINGS: readonly BuildingDef[] = [
     production: { output: { res: 'wheat', amount: 16 }, site: 'home', workTicks: 110 },
   },
   {
-    id: 'mill', category: 'food', name: 'b.mill', w: 2, h: 2, cost: { wood: 40, stone: 20 }, buildable: true,
+    id: 'mill', category: 'food', name: 'b.mill', w: 2, h: 2, tier: 1, cost: { wood: 55, stone: 30 }, buildable: true,
     workView: 'inside',
     production: { input: { res: 'wheat', amount: 16 }, output: { res: 'flour', amount: 16 }, site: 'home', workTicks: 90 },
   },
   {
-    id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, cost: { wood: 35, stone: 20 }, requires: 'mill', buildable: true,
+    id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, tier: 1, cost: { wood: 50, stone: 30 }, requires: 'mill', buildable: true,
     workView: 'inside',
     production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 10 }, site: 'home', workTicks: 110 },
   },
@@ -129,7 +132,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'roadSand', category: 'roads', name: 'b.roadSand', w: 1, h: 1, cost: {}, road: 1, buildable: true },
   { id: 'roadStone', category: 'roads', name: 'b.roadStone', w: 1, h: 1, cost: { stone: 1 }, road: 2, buildable: true },
   // Cech inżynierów: jego człowiek wynosi gruz po rozbiórkach, gdy brakuje chłopów bez pracy
-  { id: 'engineers', category: 'settlement', name: 'b.engineers', w: 2, h: 2, cost: { wood: 50, stone: 30 }, staff: true, crew: { per: 8, max: 4 }, buildable: true },
+  { id: 'engineers', category: 'settlement', name: 'b.engineers', w: 2, h: 2, tier: 1, cost: { wood: 80, stone: 50 }, staff: true, crew: { per: 8, max: 4 }, buildable: true },
   // Warsztat włóczniarza: z drewna ze składu struga drzewca i oprawia groty
   {
     id: 'poleturner', category: 'military', name: 'b.poleturner', w: 2, h: 2, cost: { wood: 35 }, buildable: true,
@@ -137,7 +140,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     production: { input: { res: 'wood', amount: 2 }, output: { res: 'spear', amount: 1 }, site: 'home', workTicks: 120 },
   },
   // Koszary: tu wolny chłop dostaje broń ze składu i staje się żołnierzem
-  { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 60, stone: 50, gold: 30 }, requires: 'armory', buildable: true },
+  { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 70, stone: 60, gold: 40 }, requires: 'armory', buildable: true },
   // Cmentarz: grabarz znosi tu ciała poległych z pola bitwy
   { id: 'cemetery', category: 'military', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 20, stone: 15 }, staff: true, area: 14, buildable: true },
   // Warsztat łuczarza: z drewna ze składu wygina łuki i plecie cięciwy
@@ -147,7 +150,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     production: { input: { res: 'wood', amount: 2 }, output: { res: 'bow', amount: 1 }, site: 'home', workTicks: 140 },
   },
   // Karczma: karczmarz nalewa piwo ze składu (warzy je browar); wieczorem ludzie przychodzą posiedzieć, co podnosi popularność
-  { id: 'tavern', category: 'settlement', name: 'b.tavern', w: 4, h: 3, cost: { wood: 60, stone: 20, gold: 40 }, staff: true, workView: 'inside', requires: 'brewery', buildable: true },
+  { id: 'tavern', category: 'settlement', name: 'b.tavern', w: 4, h: 3, tier: 1, cost: { wood: 90, stone: 40, gold: 60 }, staff: true, workView: 'inside', requires: 'brewery', buildable: true },
   // Umocnienia z bali: częstokół stawiany przeciąganiem, brama dla swoich, drewniana wieża strażnicza
   { id: 'palisade', category: 'defense', name: 'b.palisade', w: 1, h: 1, cost: { wood: 1 }, hp: 260, wall: true, line: true, buildable: true },
   { id: 'gate', category: 'defense', name: 'b.gate', w: 1, h: 1, cost: { wood: 10 }, hp: 600, gate: true, buildable: true },
@@ -158,23 +161,23 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'well', category: 'settlement', name: 'b.well', w: 1, h: 1, cost: { wood: 15, stone: 10 }, hp: 300, wall: true, buildable: true },
   // Browar: piwowar warzy piwo z pszenicy ze składu, beczki idą do składu, a stamtąd do karczmy
   {
-    id: 'brewery', category: 'food', name: 'b.brewery', w: 2, h: 2, cost: { wood: 45, stone: 20 }, buildable: true,
+    id: 'brewery', category: 'food', name: 'b.brewery', w: 2, h: 2, tier: 1, cost: { wood: 60, stone: 30 }, buildable: true,
     workView: 'inside',
     production: { input: { res: 'wheat', amount: 2 }, output: { res: 'ale', amount: 3 }, site: 'home', workTicks: 90 },
   },
   // Mur kamienny: stawiany przeciąganiem jak częstokół (także wprost na częstokole — zamienia bale na kamień), dużo mocniejszy
-  { id: 'stoneWall', category: 'defense', name: 'b.stoneWall', w: 1, h: 1, cost: { stone: 3 }, hp: 1100, wall: true, line: true, buildable: true },
+  { id: 'stoneWall', category: 'defense', name: 'b.stoneWall', w: 1, h: 1, tier: 1, cost: { stone: 3 }, hp: 1100, wall: true, line: true, buildable: true },
   // Drabina na mur kamienny: stawiasz ją na polu tuż przy murze; tędy Twoi ludzie wchodzą na mur i z niego schodzą
   { id: 'ladder', category: 'defense', name: 'b.ladder', w: 1, h: 1, cost: { wood: 3 }, hp: 120, wall: true, buildable: true },
   // Kamienna wieża: jak strażnica, ale z kamienia — wytrzymalsza, mieści sześciu łuczników, z wyższego pomostu strzelają dalej
-  { id: 'stoneTower', category: 'defense', name: 'b.stoneTower', w: 2, h: 2, cost: { stone: 50, wood: 10 }, hp: 2400, wall: true, buildable: true },
+  { id: 'stoneTower', category: 'defense', name: 'b.stoneTower', w: 2, h: 2, tier: 1, cost: { stone: 80, wood: 15 }, hp: 2400, wall: true, buildable: true },
   // Zbrojownia: tu włóczniarz i łuczarz odnoszą gotową broń, stąd biorą ją koszary i straż
-  { id: 'armory', category: 'military', name: 'b.armory', w: 2, h: 2, cost: { wood: 40, stone: 30 }, stores: ['armory'], capacity: { armory: 60 }, buildable: true },
+  { id: 'armory', category: 'military', name: 'b.armory', w: 2, h: 2, cost: { wood: 45, stone: 30 }, stores: ['armory'], capacity: { armory: 60 }, buildable: true },
   // duży spichlerz: kamienna podmurówka, piętro z szachulca, dach z łupka — trzy razy więcej miejsca za kamień
   // (na końcu listy: typ budynku w zapisach gry to numer na tej liście, więc nowe budynki dopisujemy na końcu)
-  { id: 'granaryBig', category: 'food', name: 'b.granaryBig', w: 3, h: 3, cost: { wood: 70, stone: 60 }, stores: ['granary'], capacity: { granary: 1200 }, buildable: true },
+  { id: 'granaryBig', category: 'food', name: 'b.granaryBig', w: 3, h: 3, tier: 2, cost: { wood: 110, stone: 100 }, stores: ['granary'], capacity: { granary: 1200 }, buildable: true },
   // kamienna brama w murze: baszty z ciosów, łukowy przejazd, okute wrota; wytrzymalsza od drewnianej
-  { id: 'stoneGate', category: 'defense', name: 'b.stoneGate', w: 1, h: 1, cost: { stone: 25, wood: 10 }, hp: 1600, gate: true, buildable: true },
+  { id: 'stoneGate', category: 'defense', name: 'b.stoneGate', w: 1, h: 1, tier: 1, cost: { stone: 25, wood: 10 }, hp: 1600, gate: true, buildable: true },
   // Kopalnia (jak w Gothic): jedna sztolnia wbita w zbocze gór — stawiana tylko tyłem do skały. Z jednej kopalni idzie
   // kamień, żelazo i (rzadko) rudę — walutę; co wyjdzie z danego kursu, losuje symulacja (workers.ts, MINE_YIELDS).
   // Tania w budowie, ale załoga rośnie z wioską (1 górnik na 4 mieszkańców, do 8) — to ludzie są kosztem.
@@ -195,28 +198,28 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'forester', category: 'industry', name: 'b.forester', w: 2, h: 2, cost: { wood: 20 }, staff: true, area: 6, buildable: true },
   // Namiot polowy z medykiem: stawiany dowolnie, np. tuż za linią frontu. Ranni żołnierze idą do najbliższego miejsca
   // leczenia (twierdza albo namiot z medykiem) i tam szybciej wracają do zdrowia (army.ts, healSpot).
-  { id: 'fieldTent', category: 'military', name: 'b.fieldTent', w: 3, h: 3, cost: { wood: 30, gold: 10 }, staff: true, hp: 320, buildable: true },
+  { id: 'fieldTent', category: 'military', name: 'b.fieldTent', w: 3, h: 3, tier: 1, cost: { wood: 45, gold: 25 }, staff: true, hp: 320, buildable: true },
   // Kuźnia: kowal bierze ze składu dwie sztaby żelaza z kopalni i wykuwa miecz, który odnosi do zbrojowni.
   // Stawiana gdziekolwiek (bez wymagań). Miecze są dla zbrojnych (ciężka piechota).
   {
-    id: 'smithy', category: 'military', name: 'b.smithy', w: 2, h: 2, cost: { wood: 40, stone: 30 }, buildable: true,
+    id: 'smithy', category: 'military', name: 'b.smithy', w: 2, h: 2, tier: 2, cost: { wood: 70, stone: 60, gold: 30 }, buildable: true,
     workView: 'inside',
     production: { input: { res: 'iron', amount: 2 }, output: { res: 'sword', amount: 1 }, site: 'home', workTicks: 160 },
   },
   // Płatnerz: z trzech sztab żelaza ze składu plecie i nituje kolczugę, którą odnosi do zbrojowni (dla zbrojnych).
   // Stawiany gdziekolwiek, bez wymagań; wolniejszy od kowala, bo kolczuga to tysiące kółek.
   {
-    id: 'armorer', category: 'military', name: 'b.armorer', w: 2, h: 2, cost: { wood: 40, stone: 30 }, buildable: true,
+    id: 'armorer', category: 'military', name: 'b.armorer', w: 2, h: 2, tier: 2, cost: { wood: 70, stone: 60, gold: 30 }, buildable: true,
     workView: 'inside',
     production: { input: { res: 'iron', amount: 3 }, output: { res: 'armor', amount: 1 }, site: 'home', workTicks: 220 },
   },
   // Większe kamienne wieże: im większa baszta, tym więcej łuczników mieści i tym wyżej stoją (dalej strzelają).
   // Jak zwykła kamienna wieża stają na wolnym polu albo wprost na swoim murze.
-  { id: 'stoneTowerBig', category: 'defense', name: 'b.stoneTowerBig', w: 3, h: 3, cost: { stone: 100, wood: 20 }, hp: 3800, wall: true, buildable: true },
-  { id: 'stoneTowerGreat', category: 'defense', name: 'b.stoneTowerGreat', w: 4, h: 4, cost: { stone: 180, wood: 35, iron: 10 }, hp: 5600, wall: true, buildable: true },
+  { id: 'stoneTowerBig', category: 'defense', name: 'b.stoneTowerBig', w: 3, h: 3, tier: 2, cost: { stone: 170, wood: 35 }, hp: 3800, wall: true, buildable: true },
+  { id: 'stoneTowerGreat', category: 'defense', name: 'b.stoneTowerGreat', w: 4, h: 4, tier: 3, cost: { stone: 300, wood: 60, iron: 20 }, hp: 5600, wall: true, buildable: true },
   // Koksownik: żelazny kosz z żarem stawiany na murze kamiennym albo na kamiennej wieży (nie zajmuje pola).
   // Łucznicy na murze i wieżach do 2 pól od niego maczają strzały w ogniu — ognista strzała rani mocniej (army.ts, FIRE_BONUS).
-  { id: 'brazier', category: 'defense', name: 'b.brazier', w: 1, h: 1, cost: { iron: 2, stone: 4 }, addon: true, buildable: true },
+  { id: 'brazier', category: 'defense', name: 'b.brazier', w: 1, h: 1, tier: 1, cost: { iron: 2, stone: 4 }, addon: true, buildable: true },
   // Kapliczka: kamienny posąg Ojca Płomienia w ostrołukowej niszy (tools/models/shrine.py). Wieczorem część ludzi
   // zamiast do karczmy albo do ogniska idzie tu się modlić (workers.ts), a sama kapliczka lekko podnosi popularność
   // (economy.ts: +1, przy dwóch i więcej +2). Bez pracownika, nic nie produkuje.
@@ -224,8 +227,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Magowie (tools/models/magefire.py, magewater.py): Wieża Płomienia i Sanktuarium Źródła. Mieszka w nich
   // do trzech magów (załoga rośnie z osadą), którzy leczą zarazę (src/sim/systems/plague.ts). Zakony nie przepadają za sobą, ale współpracują.
   // Siedziby z dziedzińcem, murem i skrzydłem z celami (5×5) — drogie: to cel na później, gdy osada urośnie
-  { id: 'mageFire', category: 'settlement', name: 'b.mageFire', w: 5, h: 5, cost: { stone: 320, wood: 140, iron: 40, gold: 220 }, hp: 3200, staff: true, crew: { per: 12, max: 3 }, buildable: true },
-  { id: 'mageWater', category: 'settlement', name: 'b.mageWater', w: 5, h: 5, cost: { stone: 280, wood: 160, iron: 30, gold: 220 }, hp: 2800, staff: true, crew: { per: 12, max: 3 }, buildable: true },
+  { id: 'mageFire', category: 'settlement', name: 'b.mageFire', w: 5, h: 5, tier: 2, cost: { stone: 320, wood: 140, iron: 40, gold: 220 }, hp: 3200, staff: true, crew: { per: 12, max: 3 }, buildable: true },
+  { id: 'mageWater', category: 'settlement', name: 'b.mageWater', w: 5, h: 5, tier: 2, cost: { stone: 280, wood: 160, iron: 30, gold: 220 }, hp: 2800, staff: true, crew: { per: 12, max: 3 }, buildable: true },
   // Chatka maga (tools/models/magehut.py): tani punkt dla jednego wędrownego maga — żeby choroby nie wybiły osady,
   // zanim stać ją na wieżę albo sanktuarium. Leczy słabiej i wolniej niż siedziby kręgów.
   { id: 'mageHut', category: 'settlement', name: 'b.mageHut', w: 2, h: 2, cost: { wood: 30, stone: 10 }, hp: 420, staff: true, buildable: true },
