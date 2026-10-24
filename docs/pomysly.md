@@ -13,6 +13,18 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 
 - **Głód i bunt (23.10.2026):** partia 1 zrobiona (0.37.0) — po 5 pustych posiłkach z rzędu część ludzi staje tłumem pod bramą i nie pracuje, straż zmniejsza tłum, większe racje i straż szybciej go uspokajają, buntownicy nie odchodzą. Partia 2 zrobiona 24.10 (0.38.0): „Rozdaj chleb” i „Rozpędź strażą” w oknie twierdzy, tłum z widłami (model z Blendera) i pochodniami, twarzą do bramy; bot też z tego korzysta. Dalej: przy długim buncie podpalenie spichlerza albo napad na skład, okrzyki tłumu głosem (nagrania), rozpędzani uciekają w popłochu zamiast od razu wracać do roboty.
 
+## Nowe pomysły Claude'a (24.10.2026) — do wyboru przy „co dalej”
+Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
+- **Strach albo łaska (jak w Twierdzy):** budynki grozy na placu (pręgierz, szubienica, klatka) i budynki dobroci (kapliczka Innosa, studnia z ławą, ogródek). Przewaga grozy = ludzie pracują szybciej, ale popularność niżej; przewaga dobroci = odwrotnie. Suwak widoczny w rozpisce popularności.
+- **Kapliczka Innosa i kaznodzieja:** wieczorem część ludzi idzie na modły zamiast do karczmy; raz w tygodniu święto (dzwon, tłum na placu, +nastroje). Bez kapliczki pogrzeby psują nastroje.
+- **Cmentarz i grabarz:** polegli i zmarli z głodu leżą, dopóki grabarz ich nie zaniesie na cmentarz; ciała przy osadzie ściągają kruki i wilki, a po kilku dniach chorobę.
+- **Choroba i łaziebnik:** brud, gnój, niepochowani i głód podnoszą ryzyko zarazy w chacie (kaszel, chorzy leżą); łaziebnik/cyrulik z ziołami leczy, zielarka zbiera zioła w lesie.
+- **Myśliwy:** chata myśliwego przy lesie — jelenie i dziki w puszczy (mięso jako 4. jedzenie, skóry), myśliwy przepędza wilki z okolicy i odsłania polany ze zbójami.
+- **Złodzieje nocą:** gdy popularność niska, nocą ktoś podkrada ze składu; straż na obchodzie może go złapać i odprowadzić do lochów (pierwsi prawdziwi więźniowie, do pręgierza albo do kopalni jako kara).
+- **Burze i susza:** piorun potrafi podpalić strzechę (gaszenie wiadrami już jest), latem susza zmniejsza zbiory sadu i pola, a studnie stają się ważniejsze.
+- **Kronika meczu:** po meczu strona kroniki pisana jak przez skrybę — najważniejsze chwile (pierwsza fala, bunt, oblężenie, upadek wroga) z godziną gry; przy grze przez sieć do podejrzenia przez obu graczy.
+- **Wyprawa pana:** pan zamku jako postać na polu bitwy (dowódca: wojsko obok bije mocniej), powiązane z progresją z `progresja.md`; gdy padnie, wraca do zamku ranny na dobę.
+
 ## Uwagi testera — Mikołaj (22.10.2026)
 - Budynki z wyższym priorytetem: gracz zaznacza, które mają być obsadzane w pierwszej kolejności (np. piekarnie przed łuczarzem), gdy brakuje ludzi.
 - Żelazo zapycha skład, a nic z niego nie robimy — potrzebne zastosowanie (kowal/płatnerz niżej) i może osobna kupka/skład na urobek kopalni.
