@@ -1,11 +1,15 @@
-"""Wieża magów ognia (3×3 pola): ośmioboczna baszta z ciosów na szerszym cokole, pasy ciemniejszego kamienia,
+"""Wieża magów ognia (5×5 pól — siedziba z dziedzińcem): z tyłu ośmioboczna baszta z ciosów na szerszym cokole, pasy ciemniejszego kamienia,
 wąskie ostrołukowe okna, okute drzwi pod ostrołukiem na kamiennych schodkach, dach ośmiospadowy z czerwonej
 dachówki na wysuniętym okapie, na szczycie żelazny grot z tarczą słońca. Przy wieży niższa przybudówka z kominem
 (pracownia — tu warzą mikstury), przed wejściem brukowany krąg z wielkim kamiennym zniczem (ogień płonie cały czas),
 po bokach drzwi żelazne kosze z żarem na słupach, czerwone płachty pod oknami, ława z ciosu, stos polan i kosz z węglem.
 
+Dziedziniec przed wieżą (dobudowany do dawnej zabudowy 3×3, mageyard.py): plac z płyt, niski mur z bramą na dwóch
+filarach z koszami ognia, z prawej skrzydło z dachówką (cele magów i biblioteka), z lewej przed murem krąg ćwiczeń
+z osmaloną ziemią i opalonymi słupami-celami, pod prawym murem drewutnia z węglem.
+
 Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/magefire.py  →  src/render/models/magefire.json
-Układ: środek działki = (0, 0), działka ±1,5, przód (drzwi) = +z.
+Układ: środek działki = (0, 0), działka ±2,5, przód (brama) = +z.
 """
 import math
 import os
@@ -152,21 +156,98 @@ for k in (2, 6):
     b.box('base', 'gold', 0.28, 0.035, 0.016, px, 1.27, pz, rot=a)
     b.box('base', 'gold', 0.07, 0.07, 0.016, px, 1.6, pz, rot=a)
 
-# ---------------- ława z ciosu, stos polan, kosz z węglem ----------------
+# ---------------- ława z ciosu ----------------
 b.box('base', 'castleDark', 0.5, 0.18, 0.16, -0.65, 0.0, 0.42)
 b.box('base', 'castle', 0.56, 0.05, 0.2, -0.65, 0.18, 0.42)
+# (polana i kosz z węglem przeniesione do drewutni na dziedzińcu)
+
+# ================= dziedziniec (siedziba 5×5): dawna zabudowa 3×3 idzie w tył działki =================
+from mageyard import flagstones, gate_pillars, low_wall, shift  # noqa: E402
+SH = -1.0
+shift(b, 0.0, SH, flames, lights, chimneys, windows)
+FX, FZ, DZ = FX, FZ + SH, DZ + SH
+E = 2.33      # mur wokół dziedzińca
+GW = 1.0      # szerokość bramy
+
+# plac z płyt od schodów wieży po bramę (bez miejsca pod zniczem i krąg ćwiczeń zostaje ziemią)
+TX, TZ, TR = -1.45, 1.3, 0.55     # krąg ćwiczeń
+flagstones(b, -E + 0.12, E - 0.12, DZ + 0.3, E - 0.1, step=0.32,
+           skip=lambda x, z: math.hypot(x - FX, z - FZ) < 0.52 or math.hypot(x - TX, z - TZ) < TR + 0.12 or (x > 1.4 and z < 1.2 and z > 0.35))
+low_wall(b, -E, E, -E, E, gate_w=GW)
+# brama: dwa filary z koszami ognia i czerwonymi płachtami
+for (px, py, pz) in gate_pillars(b, 0.0, E, GW, h=1.1):
+    b.prism('base', 'iron', 0.05, 0.11, 0.1, px, py, pz, seg=8, top=False)
+    b.prism('base', 'ember', 0.095, 0.095, 0.004, px, py + 0.09, pz, seg=8)
+    flames.append([round(px, 4), round(py + 0.09, 4), round(pz, 4)])
+    lights.append([px, py + 0.3, pz])
+    b.box('base', 'robeRed', 0.2, 0.5, 0.012, px, py - 0.62, pz + 0.135)
+    b.box('base', 'gold', 0.2, 0.03, 0.016, px, py - 0.6, pz + 0.136)
+
+# skrzydło z prawej: cele magów i biblioteka — kamień pod dachówką, drzwi na dziedziniec, okna w obu bokach
+WX0, WX1, WZ0, WZ1 = 1.35, E - 0.12, -E + 0.12, -0.45
+WH2 = 0.92
+b.box('base', 'castleDark', WX1 - WX0 + 0.06, 0.12, WZ1 - WZ0 + 0.06, (WX0 + WX1) / 2, 0.0, (WZ0 + WZ1) / 2, bottom=False)
+b.box('base', 'castle', WX1 - WX0, WH2 - 0.12, WZ1 - WZ0, (WX0 + WX1) / 2, 0.12, (WZ0 + WZ1) / 2, top=False)
+b.gable('shell', 'roofTile', WX0, WX1, WZ0, WZ1, WH2, 0.48, along_x=False, over=0.1)
+wx = (WX0 + WX1) / 2
+for z, d in ((WZ1, 1), (WZ0, -1)):  # szczyty z drobnych trójkątów (cień w wierzchołkach)
+    rows = 5
+    for i in range(rows):
+        n = rows - i
+        def P(ii, jj, z=z):
+            t = ii / rows
+            xa, xb = WX0 + (wx - WX0) * t, WX1 + (wx - WX1) * t
+            nn = rows - ii
+            return (xa + (xb - xa) * (jj / nn) if nn else wx, WH2 + 0.48 * t, z)
+        for j in range(n):
+            b.poly('shell', 'castle', [P(i, j), P(i, j + 1), P(i + 1, j) if n > 1 else (wx, WH2 + 0.48, z)], away=(wx, WH2, z - d))
+            if j < n - 1:
+                b.poly('shell', 'castle', [P(i, j + 1), P(i + 1, j + 1), P(i + 1, j)], away=(wx, WH2, z - d))
+    b.poly('shell', 'castleDark', [(WX0, WH2, z - d * 0.012), (WX1, WH2, z - d * 0.012), (wx, WH2 + 0.48, z - d * 0.012)], away=(wx, WH2, z + d))
+# drzwi skrzydła od dziedzińca i okna
+b.box('base', 'woodDark', 0.3, 0.52, 0.03, wx, 0.12, WZ1 + 0.01)
+b.box('base', 'iron', 0.31, 0.025, 0.04, wx, 0.42, WZ1 + 0.012)
+b.box('base', 'castleDark', 0.42, 0.07, 0.05, wx, 0.66, WZ1 + 0.01)
+for z in (WZ0 + 0.35, WZ0 + 0.85, WZ0 + 1.35):
+    for x, sd in ((WX0, -1), (WX1, 1)):
+        if x == WX1 and False:
+            continue
+        b.box('base', 'castleDark', 0.05, 0.36, 0.2, x + sd * 0.006, 0.36, z)
+        b.box('base', 'dark', 0.03, 0.28, 0.13, x + sd * 0.016, 0.4, z)
+        windows.append([round(x + sd * 0.035, 4), 0.68, round(z, 4), sd, 0, 0.11, 0.26, 'base'])
+# komin skrzydła
+b.box('base', 'castleDark', 0.2, WH2 + 0.7, 0.2, WX1 - 0.25, 0.0, WZ0 + 0.3)
+chimneys.append([round(WX1 - 0.25, 4), round(WH2 + 0.72, 4), round(WZ0 + 0.3, 4)])
+
+# krąg ćwiczeń: osmalona ziemia, krąg kamieni, trzy opalone słupy-cele i zwęglona kłoda
+b.prism('base', 'ash', TR, TR, 0.012, TX, 0.0, TZ, seg=18)
+for k in range(10):
+    a = 2 * math.pi * k / 10
+    b.crystal('base', 'rockDark', TX + math.sin(a) * (TR + 0.04), 0.0, TZ + math.cos(a) * (TR + 0.04), 0.06, seed=k * 2.3, sy=0.6)
+for k, (dx, dz) in enumerate(((-0.2, -0.18), (0.18, -0.12), (0.02, 0.22))):
+    b.prism('base', 'castleDark', 0.07, 0.06, 0.48 - k * 0.06, TX + dx, 0.01, TZ + dz, seg=7)
+    b.prism('base', 'dark', 0.062, 0.05, 0.12, TX + dx, 0.4 - k * 0.06, TZ + dz, seg=7)
+log(b, 'base', 'dark', (TX - 0.25, 0.04, TZ + 0.05), (TX + 0.05, 0.04, TZ + 0.28), r=0.04, seg=6, ends='dark')
+flames.append([round(TX + 0.18, 4), round(0.42 - 0.06, 4), round(TZ - 0.12, 4)])
+
+# drewutnia pod prawym murem: daszek na słupach, polana i kopiec węgla
+DX0, DZ0 = 1.85, 0.75
+for x in (DX0 - 0.3, DX0 + 0.3):
+    for z in (DZ0 - 0.3, DZ0 + 0.3):
+        log(b, 'base', 'woodDark', (x, 0.0, z), (x, 0.72 if z < DZ0 else 0.6, z), r=0.025, seg=6)
+b.slope('base', 'roofTile', [(DX0 - 0.38, 0.76, DZ0 - 0.38), (DX0 + 0.38, 0.76, DZ0 - 0.38), (DX0 + 0.38, 0.62, DZ0 + 0.4), (DX0 - 0.38, 0.62, DZ0 + 0.4)], away=(DX0, 0.0, DZ0))
 for k in range(3):
     for j in range(4 - k):
-        z = 1.12 - 0.11 * j - 0.055 * k
-        log(b, 'base', 'bark', (1.05, 0.055 + k * 0.095, z), (1.42, 0.055 + k * 0.095, z), r=0.05, seg=7, ends='wood')
-b.prism('base', 'basket', 0.1, 0.12, 0.17, 1.2, 0.0, 0.62)
-for (dx, dz, r) in ((0.0, 0.0, 0.04), (0.04, 0.02, 0.03), (-0.035, 0.03, 0.032)):
-    b.crystal('base', 'dark', 1.2 + dx, 0.17, 0.62 + dz, r, seed=dx * 13 + dz)
+        z = DZ0 - 0.2 + 0.13 * j + 0.065 * k
+        log(b, 'base', 'bark', (DX0 - 0.27, 0.055 + k * 0.095, z), (DX0 + 0.12, 0.055 + k * 0.095, z), r=0.05, seg=7, ends='wood')
+for (dx, dz, r) in ((0.2, 0.05, 0.08), (0.24, -0.08, 0.06), (0.16, 0.18, 0.06)):
+    b.crystal('base', 'dark', DX0 + dx, 0.0, DZ0 + dz, r, seed=dx * 7 + dz, sy=0.7)
 
 VIEWS = [
-    ['wieża z przodu (oczy chłopa)', [0.0, 0.5, 2.9], [0.1, 1.2, -0.2], ['base', 'shell'], 34],
-    ['znicz i drzwi', [-0.9, 0.55, 2.1], [-0.2, 0.6, 0.6], ['base', 'shell'], 30],
-    ['przybudówka z boku', [-2.6, 0.6, 0.4], [-0.6, 0.6, -0.3], ['base', 'shell'], 30],
-    ['spod okapu', [CX + 0.95, 0.3, CZ + 0.9], [CX, TOP, CZ], ['base', 'shell'], 40],
+    ['siedziba od bramy (oczy chłopa)', [0.0, 0.5, 4.2], [0.0, 1.0, -0.8], ['base', 'shell'], 40],
+    ['brama z bliska', [0.6, 0.5, 3.2], [0.0, 0.7, E], ['base', 'shell'], 34],
+    ['znicz i drzwi wieży', [-0.9, 0.55, 1.4], [-0.2, 0.6, DZ], ['base', 'shell'], 34],
+    ['krąg ćwiczeń', [-0.4, 0.6, 2.3], [TX, 0.2, TZ], ['base', 'shell'], 30],
+    ['skrzydło z cel', [0.5, 0.6, 0.6], [wx, 0.6, WZ1], ['base', 'shell'], 34],
 ]
 b.save('magefire', maxe=0.18, rays=16, reach=0.3, extra={'views': VIEWS, 'flames': flames, 'lights': lights, 'chimneys': chimneys, 'windows': windows})

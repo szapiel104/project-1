@@ -1,11 +1,15 @@
-"""Sanktuarium magów wody (3×3 pola): jasna, kamienna sala z ciosanego kamienia pod wysokim dachem z łupka,
+"""Sanktuarium magów wody (5×5 pól — siedziba z dziedzińcem): z tyłu jasna, kamienna sala z ciosanego kamienia pod wysokim dachem z łupka,
 z przodu portyk na dwóch kolumnach z trójkątnym szczytem, nad drzwiami okrągłe okno-rozeta. Po bokach smukłe,
 wąskie okna, granatowe płachty z srebrnym obrąbkiem. Z prawej przed salą okrągła sadzawka w kamiennej cembrowinie
 z fontanną (kolumienka z misą, woda spływa do sadzawki), wokół trzciny i kamienne ławy; z lewej dzbany na wodę i
 żelazne latarnie. Tył: niższa, okrągła cysterna z kopulastym daszkiem.
 
+Dziedziniec przed salą (dobudowany do dawnej zabudowy 3×3, mageyard.py): jasny plac z płyt, długi prostokątny staw
+na osi od bramy do portyku, kanał z sadzawki z fontanną do stawu, z lewej kolumnada pod łupkiem (kryty chodnik
+wzdłuż muru), z prawej podniesione grządki z ziołami, ławy przy stawie, niski mur z bramą na filarach z latarniami.
+
 Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/magewater.py  →  src/render/models/magewater.json
-Układ: środek działki = (0, 0), działka ±1,5, przód (drzwi) = +z.
+Układ: środek działki = (0, 0), działka ±2,5, przód (brama) = +z.
 """
 import math
 import os
@@ -171,10 +175,89 @@ for k in range(5):
     b.prism('shell', 'slate', TR + 0.06 - k * 0.085, max(0.0, TR - 0.03 - k * 0.085), 0.06, TX, y0, TZ, seg=12, top=k == 4)
 b.box('base', 'woodDark', 0.24, 0.36, 0.03, TX, 0.12, TZ + TR - 0.01)
 
+# ================= dziedziniec (siedziba 5×5): dawna zabudowa 3×3 idzie w tył działki =================
+from mageyard import flagstones, gate_pillars, low_wall, shift, wing  # noqa: E402
+SH = -0.95
+shift(b, 0.0, SH, lights, windows)
+SZ, PZ, HZ1 = SZ + SH, PZ + SH, HZ1 + SH
+E, GW = 2.33, 1.0
+# długi staw na osi: od bramy po schody portyku
+RX0, RX1, RZ0, RZ1 = -0.32, 0.32, 0.55, 1.85
+# kolumnada z lewej i grządki z prawej (pod nimi bez płyt)
+CX0, CX1 = -E + 0.08, -1.55
+GX0, GX1, GZ0, GZ1 = 1.15, E - 0.15, 0.95, E - 0.15
+flagstones(b, -E + 0.12, E - 0.12, HZ1 + 0.72, E - 0.1, step=0.32, mats=('cut', 'cutDark'),
+           skip=lambda x, z: (RX0 - 0.1 < x < RX1 + 0.1 and RZ0 - 0.1 < z < RZ1 + 0.1) or math.hypot(x - SX, z - SZ) < SR + 0.12
+           or (GX0 - 0.05 < x and z > GZ0 - 0.05) or (x < CX1 + 0.02 and z > -0.1))
+low_wall(b, -E, E, -E, E, gate_w=GW, mat='cut', cap='cutDark')
+
+# staw: cembrowina z ciosów, dno, tafla, na końcu od portyku mała kaskada (płyta z wodą wyżej)
+for (x0, x1, z0, z1) in ((RX0 - 0.08, RX1 + 0.08, RZ0 - 0.08, RZ0), (RX0 - 0.08, RX1 + 0.08, RZ1, RZ1 + 0.08),
+                         (RX0 - 0.08, RX0, RZ0, RZ1), (RX1, RX1 + 0.08, RZ0, RZ1)):
+    b.box('base', 'cut', x1 - x0, 0.14, z1 - z0, (x0 + x1) / 2, 0.0, (z0 + z1) / 2)
+    b.box('base', 'cutDark', x1 - x0 + 0.02, 0.025, z1 - z0 + 0.02, (x0 + x1) / 2, 0.14, (z0 + z1) / 2)
+b.box('base', 'castleDark', RX1 - RX0, 0.02, RZ1 - RZ0, 0.0, 0.0, (RZ0 + RZ1) / 2)
+b.box('base', 'water', RX1 - RX0, 0.005, RZ1 - RZ0, 0.0, 0.105, (RZ0 + RZ1) / 2)
+b.box('base', 'cut', 0.4, 0.26, 0.12, 0.0, 0.0, RZ0 + 0.06)
+b.box('base', 'water', 0.34, 0.006, 0.1, 0.0, 0.26, RZ0 + 0.06)
+b.box('base', 'water', 0.3, 0.16, 0.012, 0.0, 0.1, RZ0 + 0.123)
+# lilie wodne na tafli (płaskie liście)
+for k, (dx, dz) in enumerate(((-0.15, 1.0), (0.12, 1.25), (-0.05, 1.55), (0.18, 1.7))):
+    b.prism('base', 'leaf', 0.05 + 0.01 * (k % 2), 0.05 + 0.01 * (k % 2), 0.006, dx, 0.11, dz, seg=7)
+# kanał z sadzawki z fontanną do stawu
+for (x0, x1, z0, z1) in ((RX1 + 0.08, SX - SR + 0.05, 0.86, 0.9), (RX1 + 0.08, SX - SR + 0.05, 1.04, 1.08)):
+    b.box('base', 'cut', x1 - x0, 0.12, z1 - z0, (x0 + x1) / 2, 0.0, (z0 + z1) / 2)
+b.box('base', 'castleDark', SX - SR + 0.05 - RX1 - 0.08, 0.02, 0.14, (RX1 + 0.08 + SX - SR + 0.05) / 2, 0.0, 0.97)
+b.box('base', 'water', SX - SR + 0.05 - RX1 - 0.08, 0.005, 0.14, (RX1 + 0.08 + SX - SR + 0.05) / 2, 0.1, 0.97)
+# ławy przy stawie
+for x in (RX0 - 0.42, RX1 + 0.42):
+    for z in (1.35,):
+        for dz in (-0.22, 0.22):
+            b.box('base', 'cutDark', 0.12, 0.15, 0.1, x, 0.0, z + dz)
+        b.box('base', 'cut', 0.16, 0.05, 0.6, x, 0.15, z)
+
+# kolumnada z lewej: rząd kolumn i daszek z łupka opadający ku murowi, posadzka z płyt
+CZ0, CZ1 = -0.05, E - 0.18
+b.box('base', 'cutDark', CX1 - CX0 + 0.02, 0.04, CZ1 - CZ0, (CX0 + CX1) / 2, 0.0, (CZ0 + CZ1) / 2)
+ncol = 5
+for k in range(ncol):
+    z = CZ0 + 0.15 + (CZ1 - CZ0 - 0.3) * k / (ncol - 1)
+    b.prism('base', 'cutDark', 0.07, 0.07, 0.05, CX1 - 0.06, 0.04, z, seg=10)
+    b.prism('base', 'cut', 0.05, 0.045, 0.78, CX1 - 0.06, 0.09, z, seg=12)
+    b.prism('base', 'cutDark', 0.055, 0.07, 0.06, CX1 - 0.06, 0.87, z, seg=10)
+b.box('base', 'cutDark', 0.12, 0.08, CZ1 - CZ0, CX1 - 0.06, 0.93, (CZ0 + CZ1) / 2)
+b.slope('shell', 'slate', [(CX1 + 0.05, 1.01, CZ0 - 0.06), (CX1 + 0.05, 1.01, CZ1 + 0.06), (CX0 - 0.04, 0.72, CZ1 + 0.06), (CX0 - 0.04, 0.72, CZ0 - 0.06)], away=(CX0 + 0.3, 0.0, (CZ0 + CZ1) / 2))
+# granatowe płachty na murze pod kolumnadą
+for z in (0.6, 1.4):
+    b.box('base', 'robeBlue', 0.012, 0.34, 0.22, -E + 0.09, 0.08, z)
+    b.box('base', 'white', 0.016, 0.025, 0.22, -E + 0.091, 0.1, z)
+
+# podniesione grządki z ziołami z prawej
+for k in range(3):
+    z0 = GZ0 + 0.05 + k * 0.45
+    b.box('base', 'cutDark', GX1 - GX0, 0.14, 0.34, (GX0 + GX1) / 2, 0.0, z0 + 0.17)
+    b.box('base', 'soil', GX1 - GX0 - 0.06, 0.006, 0.28, (GX0 + GX1) / 2, 0.14, z0 + 0.17)
+    for j in range(5):
+        x = GX0 + 0.1 + j * (GX1 - GX0 - 0.2) / 4
+        b.crystal('base', 'leafLight' if (j + k) % 2 else 'leaf', x, 0.145, z0 + 0.17 + 0.04 * math.sin(j * 2 + k), 0.055, seed=j + k * 5, sy=0.9)
+
+# skrzydło z lewej za kolumnadą: cele magów wody
+wx = wing(b, -E + 0.12, -1.2, -E + 0.12, -0.55, 0.92, 'slate', 'cut', 'cutDark', windows=windows)
+
+# brama: filary z latarniami i granatowymi płachtami
+for (px, py, pz) in gate_pillars(b, 0.0, E, GW, h=1.05, mat='cut', cap='cutDark'):
+    b.box('base', 'iron', 0.12, 0.015, 0.12, px, py, pz)
+    b.box('base', 'window', 0.09, 0.13, 0.09, px, py + 0.015, pz)
+    b.pyramid('base', 'iron', 0.13, 0.13, 0.08, px, py + 0.145, pz)
+    lights.append([px, py + 0.08, pz])
+    b.box('base', 'robeBlue', 0.2, 0.48, 0.012, px, py - 0.6, pz + 0.135)
+    b.box('base', 'white', 0.2, 0.025, 0.016, px, py - 0.58, pz + 0.136)
+
 VIEWS = [
-    ['sanktuarium z przodu (oczy chłopa)', [0.0, 0.5, 3.0], [0, 0.8, -0.2], ['base', 'shell'], 34],
-    ['portyk z bliska', [-0.4, 0.5, 1.8], [HXC, 0.8, HZ1], ['base', 'shell'], 30],
-    ['sadzawka', [1.9, 0.6, 1.9], [SX, 0.3, SZ], ['base', 'shell'], 28],
-    ['spod okapu portyku', [HXC + 0.3, 0.3, PZ + 0.25], [HXC, 1.4, HZ1], ['base', 'shell'], 40],
+    ['siedziba od bramy (oczy chłopa)', [0.0, 0.5, 4.2], [0.0, 0.9, -0.6], ['base', 'shell'], 40],
+    ['staw i portyk', [0.9, 0.55, 2.2], [0.0, 0.6, HZ1], ['base', 'shell'], 34],
+    ['kolumnada', [-0.9, 0.5, 1.9], [CX1, 0.6, 1.0], ['base', 'shell'], 34],
+    ['grządki z ziołami', [0.7, 0.6, 2.2], [1.7, 0.2, 1.5], ['base', 'shell'], 30],
+    ['skrzydło z cel', [-1.0, 0.6, 0.6], [wx, 0.6, -0.55], ['base', 'shell'], 34],
 ]
 b.save('magewater', maxe=0.18, rays=16, reach=0.3, extra={'views': VIEWS, 'lights': lights, 'windows': windows})

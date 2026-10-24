@@ -35,6 +35,7 @@ const WELL_MODEL = model('well');
 const SHRINE_MODEL = model('shrine');
 const MAGE_FIRE_MODEL = model('magefire');
 const MAGE_WATER_MODEL = model('magewater');
+const MAGE_HUT_MODEL = model('magehut');
 const ENGINEERS_MODEL = model('engineers');
 const STONE_GATE_MODEL = model('stonegate');
 const STOCKPILE_MODEL = model('stockpile');
@@ -1125,14 +1126,20 @@ const BUILDERS: Record<string, Builder> = {
     g.add(torchModel());
   },
   mageFire(g, _team, flag) {
-    // wieża magów ognia z Blendera (tools/models/magefire.py): ośmioboczna baszta pod dachówką, przybudówka z kominem,
-    // wielki znicz na brukowanym kręgu i kosze z żarem przy drzwiach (znaczniki 'flame' płoną cały czas, nocą lightSpot)
+    // siedziba magów ognia z Blendera (tools/models/magefire.py, 5×5): ośmioboczna baszta pod dachówką, przybudówka z kominem,
+    // znicz i kosze z żarem (znaczniki 'flame' płoną cały czas, nocą lightSpot); dziedziniec z murem, brama z koszami ognia,
+    // skrzydło z celami, krąg ćwiczeń, drewutnia
     blenderModel(g, MAGE_FIRE_MODEL as unknown as BlenderBuilding, flag);
   },
   mageWater(g, _team, flag) {
-    // sanktuarium magów wody z Blendera (tools/models/magewater.py): jasna sala z portykiem i rozetą, sadzawka z fontanną,
-    // okrągła cysterna z tyłu, dzbany i latarnie
+    // siedziba magów wody z Blendera (tools/models/magewater.py, 5×5): jasna sala z portykiem i rozetą, sadzawka z fontanną,
+    // cysterna, dziedziniec ze stawem i kanałem, kolumnada, grządki z ziołami, skrzydło z celami, brama z latarniami
     blenderModel(g, MAGE_WATER_MODEL as unknown as BlenderBuilding, flag);
+  },
+  mageHut(g, _team, flag) {
+    // chatka maga z Blendera (tools/models/magehut.py): okrągła chata z polnego kamienia pod strzechą, zioła pod okapem,
+    // misa z żarem (znacznik 'flame') i koryto z wodą przy drzwiach
+    blenderModel(g, MAGE_HUT_MODEL as unknown as BlenderBuilding, flag);
   },
   shrine(g, _team, flag) {
     // kapliczka z Blendera (tools/models/shrine.py): posąg Ojca Płomienia z czarą wiecznego ognia w ostrołukowej niszy,

@@ -535,7 +535,8 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
       p.dev = true;
       p.instantBuild = instantBuild;
       for (let i = 0; i < res.length; i++) res[i] = 2000;
-      const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate', 'stoneGate', 'stoneWall']); // mury stawia devFortify
+      // mury stawia devFortify; siedziby magów (5×5 z murem) zatkałyby osadę przy twierdzy — tryb deweloperski ma chatkę maga
+      const skip = new Set(['keep', 'barn', 'camp', 'torch', 'palisade', 'gate', 'stoneGate', 'stoneWall', 'mageFire', 'mageWater']);
       // kopalnia tylko tyłem do skały (jak w grze), a barak górników przy niej — nie przy twierdzy
       for (const [i, d] of BUILDINGS.entries()) if (d.buildable && !d.legacy && !d.road && !skip.has(d.id) && !d.needsRock && d.requires !== 'oremine') placeNear(g, i, s.player, s.x, s.y, 20);
       for (const [i, d] of BUILDINGS.entries()) {

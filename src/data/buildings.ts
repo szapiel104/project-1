@@ -223,12 +223,16 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'shrine', category: 'settlement', name: 'b.shrine', w: 2, h: 2, cost: { wood: 10, stone: 40 }, hp: 700, buildable: true },
   // Magowie (tools/models/magefire.py, magewater.py): wieża magów ognia i sanktuarium magów wody. Na razie same budynki;
   // magowie, choroba i leczenie przychodzą w kolejnych partiach. Dwa kręgi nie przepadają za sobą, ale współpracują.
-  { id: 'mageFire', category: 'settlement', name: 'b.mageFire', w: 3, h: 3, cost: { stone: 80, wood: 30, gold: 40 }, hp: 1600, buildable: true },
-  { id: 'mageWater', category: 'settlement', name: 'b.mageWater', w: 3, h: 3, cost: { stone: 70, wood: 30, gold: 40 }, hp: 1400, buildable: true },
+  // Siedziby z dziedzińcem, murem i skrzydłem z celami (5×5) — drogie: to cel na później, gdy osada urośnie
+  { id: 'mageFire', category: 'settlement', name: 'b.mageFire', w: 5, h: 5, cost: { stone: 320, wood: 140, iron: 40, gold: 220 }, hp: 3200, buildable: true },
+  { id: 'mageWater', category: 'settlement', name: 'b.mageWater', w: 5, h: 5, cost: { stone: 280, wood: 160, iron: 30, gold: 220 }, hp: 2800, buildable: true },
+  // Chatka maga (tools/models/magehut.py): tani punkt dla jednego wędrownego maga — żeby choroby nie wybiły osady,
+  // zanim stać ją na wieżę albo sanktuarium. Leczy słabiej i wolniej niż siedziby kręgów.
+  { id: 'mageHut', category: 'settlement', name: 'b.mageHut', w: 2, h: 2, cost: { wood: 30, stone: 10 }, hp: 420, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */
-export const NO_TORCH = new Set(['camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp', 'fieldTent', 'mageFire', 'mageWater']);
+export const NO_TORCH = new Set(['camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp', 'fieldTent', 'mageFire', 'mageWater', 'mageHut']);
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
 /** Wieże z łucznikami: ilu łuczników mieści i o ile pól dalej z niej strzelają (ponad zwykłe +3 z wysokości) */

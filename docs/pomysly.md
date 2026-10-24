@@ -25,6 +25,13 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 - **Kronika meczu:** po meczu strona kroniki pisana jak przez skrybę — najważniejsze chwile (pierwsza fala, bunt, oblężenie, upadek wroga) z godziną gry; przy grze przez sieć do podejrzenia przez obu graczy.
 - **Wyprawa pana:** pan zamku jako postać na polu bitwy (dowódca: wojsko obok bije mocniej), powiązane z progresją z `progresja.md`; gdy padnie, wraca do zamku ranny na dobę.
 
+## Magowie i choroby (Michał, 24.10.2026)
+Zrobione: modele magów ognia i wody (0.40.x, łokcie, kula czaru w dłoni), siedziby 5×5 z dziedzińcem i tania chatka maga (0.42.0).
+Kolejne partie:
+- **Choroba:** brud, niepochowani i głód grożą zarazą w chacie; chory leży i nie pracuje, bez leczenia zaraza idzie do sąsiadów, część umiera.
+- **Magowie przy pracy:** mag wody leczy (kula wody w dłoni), mag ognia pali zarażone posłania i ciała (zaraza staje szybciej, część zapasów z dymem); chatka maga leczy słabiej i wolniej; oba kręgi naraz = najszybciej. Kręgi się nie lubią: siedziby blisko siebie = kłótnie i niższe nastroje w okolicy, ale współpracują.
+- **Magowie jako jednostka bojowa (Michał):** tylko kilku na gracza; mag ognia rzuca kulami ognia, mag wody czarem wody (np. odrzuca, gasi, spowalnia) — „czerwony wali ogniem, niebieski wodnym czarem”.
+
 ## Uwagi testera — Mikołaj (22.10.2026)
 - Budynki z wyższym priorytetem: gracz zaznacza, które mają być obsadzane w pierwszej kolejności (np. piekarnie przed łuczarzem), gdy brakuje ludzi.
 - Żelazo zapycha skład, a nic z niego nie robimy — potrzebne zastosowanie (kowal/płatnerz niżej) i może osobna kupka/skład na urobek kopalni.

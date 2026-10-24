@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.42.0 — siedziby magów 5×5 z dziedzińcem, chatka maga (2026-10-24)
+
+- **Siedziba magów ognia** i **siedziba magów wody** urosły do 5×5 pól. Dawna wieża i sala zostały jak były, a przed nimi dobudowany dziedziniec za niskim murem z bramą (tools/models/mageyard.py):
+  - ogień: plac z płyt, brama na filarach z koszami ognia i czerwonymi płachtami, skrzydło z celami magów pod dachówką (z kominem), krąg ćwiczeń z osmaloną ziemią i opalonymi słupami-celami, drewutnia z węglem
+  - woda: jasny plac z płyt, długi staw z liliami i małą kaskadą na osi od bramy do portyku, kanał z sadzawki z fontanną, kolumnada pod łupkiem wzdłuż muru, grządki z ziołami, ławy przy stawie, skrzydło z celami, brama z latarniami i granatowymi płachtami
+- Siedziby są drogie (ogień: 320 kamienia, 140 drewna, 40 żelaza, 220 rudy; woda: 280 kamienia, 160 drewna, 30 żelaza, 220 rudy) — to cel na czas, gdy osada urośnie
+- Nowy, tani budynek: **chatka maga** (2×2, 30 drewna i 10 kamienia; tools/models/magehut.py) — okrągła chata z polnego kamienia pod strzechą, zioła pod okapem, misa z żarem i koryto z wodą przy drzwiach. Jeden wędrowny mag będzie w niej leczył słabiej niż siedziby, ale osada nie wymrze, zanim zbierzesz na wieżę albo sanktuarium
+- Opisy po polsku i angielsku. W trybie deweloperskim przy twierdzy staje tylko chatka maga (siedziby 5×5 z murem zatkałyby osadę)
+
 ## 0.41.0 — budynki magów: wieża magów ognia i sanktuarium magów wody (2026-10-24)
 
 - Dwa nowe budynki z Blendera w zakładce Osada (3×3 pola):
