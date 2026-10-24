@@ -221,14 +221,14 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // zamiast do karczmy albo do ogniska idzie tu się modlić (workers.ts), a sama kapliczka lekko podnosi popularność
   // (economy.ts: +1, przy dwóch i więcej +2). Bez pracownika, nic nie produkuje.
   { id: 'shrine', category: 'settlement', name: 'b.shrine', w: 2, h: 2, cost: { wood: 10, stone: 40 }, hp: 700, buildable: true },
-  // Magowie (tools/models/magefire.py, magewater.py): wieża magów ognia i sanktuarium magów wody. Na razie same budynki;
-  // magowie, choroba i leczenie przychodzą w kolejnych partiach. Dwa kręgi nie przepadają za sobą, ale współpracują.
+  // Magowie (tools/models/magefire.py, magewater.py): Wieża Płomienia i Sanktuarium Źródła. Mieszka w nich
+  // do trzech magów (załoga rośnie z osadą), którzy leczą zarazę (src/sim/systems/plague.ts). Zakony nie przepadają za sobą, ale współpracują.
   // Siedziby z dziedzińcem, murem i skrzydłem z celami (5×5) — drogie: to cel na później, gdy osada urośnie
-  { id: 'mageFire', category: 'settlement', name: 'b.mageFire', w: 5, h: 5, cost: { stone: 320, wood: 140, iron: 40, gold: 220 }, hp: 3200, buildable: true },
-  { id: 'mageWater', category: 'settlement', name: 'b.mageWater', w: 5, h: 5, cost: { stone: 280, wood: 160, iron: 30, gold: 220 }, hp: 2800, buildable: true },
+  { id: 'mageFire', category: 'settlement', name: 'b.mageFire', w: 5, h: 5, cost: { stone: 320, wood: 140, iron: 40, gold: 220 }, hp: 3200, staff: true, crew: { per: 12, max: 3 }, buildable: true },
+  { id: 'mageWater', category: 'settlement', name: 'b.mageWater', w: 5, h: 5, cost: { stone: 280, wood: 160, iron: 30, gold: 220 }, hp: 2800, staff: true, crew: { per: 12, max: 3 }, buildable: true },
   // Chatka maga (tools/models/magehut.py): tani punkt dla jednego wędrownego maga — żeby choroby nie wybiły osady,
   // zanim stać ją na wieżę albo sanktuarium. Leczy słabiej i wolniej niż siedziby kręgów.
-  { id: 'mageHut', category: 'settlement', name: 'b.mageHut', w: 2, h: 2, cost: { wood: 30, stone: 10 }, hp: 420, buildable: true },
+  { id: 'mageHut', category: 'settlement', name: 'b.mageHut', w: 2, h: 2, cost: { wood: 30, stone: 10 }, hp: 420, staff: true, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */

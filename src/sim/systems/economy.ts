@@ -3,6 +3,7 @@ import { RULES } from '../../data/rules';
 import { BUILDINGS } from '../../data/buildings';
 import { housing, population, type GameState, type PlayerState } from '../state';
 import { dayPart } from './workers';
+import { magesOf, ordersQuarrel } from './plague';
 import { rainAt } from '../clock';
 import { COLD, SEASON_DAYS, temperatureAt, weatherOf, yearPos, YEAR_DAYS } from '../weather';
 
@@ -105,6 +106,12 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   parts.push({ key: 'shrine', value: Math.min(shrines, 2) });
   // bunt głodowy: tłum pod bramą i stojące warsztaty psują nastroje całej osady
   parts.push({ key: 'revolt', value: p.revolt ? RULES.revoltPenalty : 0 });
+  // zaraza: strach w osadzie (zgony liczą się osobno, od razu); magowie dają ludziom poczucie, że ktoś nad nimi czuwa,
+  // ale gdy siedziby obu zakonów stoją blisko siebie, ich kłótnie słychać w całej osadzie
+  parts.push({ key: 'plague', value: p.plague ? -2 : 0 });
+  const m = magesOf(g, p.id);
+  parts.push({ key: 'mages', value: m.water.length || m.fire.length || m.hut.length ? 1 : 0 });
+  parts.push({ key: 'quarrel', value: ordersQuarrel(g, p.id) ? RULES.mages.quarrelPenalty : 0 });
   const delta = parts.reduce((n, x) => n + x.value, 0);
   return { delta, food, gold, fed, bribed, parts, ale };
 }

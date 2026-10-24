@@ -57,7 +57,7 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   if (!def || def.guard || def.bandit || !p || !b || b.owner !== player || b.type !== BARRACKS || b.door < 0) return false;
   for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
   // wolny chłop (najlepiej ten, co siedzi przy ognisku) idzie do koszar; w środku dostaje broń i wychodzi żołnierzem
-  const free = g.units.filter((u) => u.owner === player && u.job === 0 && !u.enlist && !u.riot && u.carryRes < 0);
+  const free = g.units.filter((u) => u.owner === player && u.job === 0 && !u.enlist && !u.riot && !u.sick && u.carryRes < 0);
   if (!free.length) return false;
   const pick = free.find((u) => u.phase === Phase.Idle) ?? free[0]!;
   for (const [res, amount] of Object.entries(def.cost)) p.res[resIndex(res as ResourceId)]! -= amount!;

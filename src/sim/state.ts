@@ -77,6 +77,12 @@ export interface PlayerState {
   boost?: number;
   /** Bot: sygnał od sojusznika-człowieka (znacznik na mapie) — 0 atak, 1 pomocy, 2 zbiórka; pole i tick */
   call?: { kind: number; tile: number; tick: number };
+  /** Zaraza w osadzie: tick wybuchu (brak = spokój), ilu zmarło w tej zarazie, do kiedy spokój po ostatniej (plague.ts) */
+  plague?: number;
+  plagueDead?: number;
+  plagueCalm?: number;
+  /** Koniec ostatniej zarazy do ogłoszenia przez skrybę: tick końca i ilu zmarło */
+  plagueOver?: { tick: number; dead: number };
 }
 
 export interface Building {
@@ -85,6 +91,8 @@ export interface Building {
   miss?: number[];
   /** Pożar: ile ticków jeszcze płonie (0/brak = nie płonie); każde wiadro wody skraca go */
   fire?: number;
+  /** Chata wypalona z zarazy przez maga Płomienia: do tego ticku nikt się w niej nie zaraża (plague.ts) */
+  clean?: number;
   /** Wytrzymałość z poprzedniego ticku (do wykrycia świeżego ciosu, od którego zajmuje się ogień) */
   hpWas?: number;
   /** Koszary: punkt zbiórki dla każdego rodzaju jednostki (pole albo -1 = przed koszarami) */
@@ -232,6 +240,12 @@ export const enum Phase {
   Planting = 25,
   /** Bunt głodowy: rzucił robotę i idzie pod bramę twierdzy albo tam stoi (unrest.ts) */
   Riot = 26,
+  /** Mag czeka przy swojej siedzibie albo do niej wraca (plague.ts) */
+  Vigil = 27,
+  /** Mag idzie do chorego, do zwłok albo do chaty z zarazą (`target` = cel, `timer` = rodzaj zadania) */
+  ToPatient = 28,
+  /** Mag rzuca czar: leczy chorego, wypala zarazę z chaty albo pali zwłoki (`timer` = ile jeszcze) */
+  Healing = 29,
 }
 
 export interface Unit {
@@ -276,6 +290,14 @@ export interface Unit {
   riot?: number;
   /** Długi bunt: buntownik idzie z tłumem na napad na ten budynek (skład albo spichlerz), potem wraca pod bramę */
   raid?: number;
+  /** Zaraza: tick, w którym choroba minie (brak = zdrowy). Do `sickFrom` choroba się wylęga — chłop pracuje, ale już zaraża;
+   *  od `sickFrom` leży w gorączce (w chacie albo na słomie), nie pracuje i może umrzeć (plague.ts) */
+  sick?: number;
+  sickFrom?: number;
+  /** Opieka maga: o ile procent mniejsza szansa śmierci chorego (mag Źródła najwięcej, chatka mniej, mag Płomienia najmniej) */
+  care?: number;
+  /** Przechorował: do tego ticku nie zachoruje znowu */
+  immune?: number;
 }
 
 /** Żołnierz: osobno od chłopów, bo nie pracuje, nie mieszka i nie liczy się do ludności osady */
@@ -794,12 +816,12 @@ export function stateHash(g: GameState): number {
   for (const s of g.saplings ?? []) { add(s.t); add(s.owner); add(s.by); add(s.age); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
-    add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0); add(p.famine ?? 0); add(p.revolt ? 1 : 0); add(p.quell ? 1 : 0); add(p.revoltSince ?? 0); add(p.raidAt ?? 0); add(p.raids ?? 0);
+    add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0); add(p.famine ?? 0); add(p.revolt ? 1 : 0); add(p.quell ? 1 : 0); add(p.revoltSince ?? 0); add(p.raidAt ?? 0); add(p.raids ?? 0); add(p.plague ?? 0); add(p.plagueDead ?? 0); add(p.plagueCalm ?? 0);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.threat ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.threat ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.clean ?? 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
-    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0);
+    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0); add(u.sick ?? 0); add(u.sickFrom ?? 0); add(u.care ?? 0); add(u.immune ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }

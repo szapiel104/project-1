@@ -16,6 +16,7 @@ import { caravanSystem, sendCaravan } from './systems/caravans';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
+import { plagueSystem } from './systems/plague';
 import { dole, quell, unrestSystem } from './systems/unrest';
 import { forestSystem } from './systems/forestry';
 import { roadSystem } from './systems/roads';
@@ -169,6 +170,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   rubbleSystem(g);
   roadSystem(g);
   workerSystem(g);
+  plagueSystem(g);
   forestSystem(g);
   enlistSystem(g);
   fireSystem(g);

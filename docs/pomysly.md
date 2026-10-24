@@ -26,10 +26,9 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 - **Wyprawa pana:** pan zamku jako postać na polu bitwy (dowódca: wojsko obok bije mocniej), powiązane z progresją z `progresja.md`; gdy padnie, wraca do zamku ranny na dobę.
 
 ## Magowie i choroby (Michał, 24.10.2026)
-Zrobione: modele magów ognia i wody (0.40.x, łokcie, kula czaru w dłoni), siedziby 5×5 z dziedzińcem i tania chatka maga (0.42.0).
+Zrobione: modele magów ognia i wody (0.40.x, łokcie, kula czaru w dłoni), siedziby 5×5 z dziedzińcem i tania chatka maga (0.42.0), zaraza i magowie przy pracy (0.44.0: `src/sim/systems/plague.ts`, balans w `RULES.plague` / `RULES.mages`).
 Kolejne partie:
-- **Choroba:** brud, niepochowani i głód grożą zarazą w chacie; chory leży i nie pracuje, bez leczenia zaraza idzie do sąsiadów, część umiera.
-- **Magowie przy pracy:** mag wody leczy (kula wody w dłoni), mag ognia pali zarażone posłania i ciała (zaraza staje szybciej, część zapasów z dymem); chatka maga leczy słabiej i wolniej; oba kręgi naraz = najszybciej. Kręgi się nie lubią: siedziby blisko siebie = kłótnie i niższe nastroje w okolicy, ale współpracują.
+- Zaraza — dalej: wóz z chorymi do lazaretu, kwarantanna (zamknięcie chaty przyciskiem), zaraza u żołnierzy w koszarach, przenoszenie przez karawany do sojusznika; bot stawiający sanktuarium, gdy urośnie.
 - **Magowie jako jednostka bojowa (Michał):** tylko kilku na gracza; mag ognia rzuca kulami ognia, mag wody czarem wody (np. odrzuca, gasi, spowalnia) — „czerwony wali ogniem, niebieski wodnym czarem”.
 
 ## Uwagi testera — Mikołaj (22.10.2026)

@@ -142,6 +142,27 @@ export const HELP_CHAPTERS: HelpChapter[] = [
     ],
   },
   {
+    title: tx('Zaraza i magowie', 'Plague and Mages'),
+    blocks: [
+      tx('Zaraza przychodzi tam, gdzie jest brudno i głodno: z niepochowanych ciał (po bitwie, po wilkach), z głodu, z ciasnoty w chatach i ze spania pod gołym niebem, zimą łatwiej. Trochę ryzyka niesie też sama liczba ludzi — duże osady chorują częściej. Pierwsze trzy doby gry są spokojne.',
+        'Plague comes where there is filth and hunger: from unburied bodies (after a battle, after the wolves), from famine, from crowded hovels and from sleeping under the open sky, and more readily in winter. Sheer numbers carry some risk too — big settlements fall sick more often. The first three days of a game are safe.'),
+      tx('Chory najpierw nic nie wie: pracuje dalej, ale już zaraża tych obok — przy robocie, przy ognisku, w karczmie. Potem kładzie się w gorączce w swojej chacie (albo na słomie) i nie wstaje do roboty, więc jego warsztat, pole czy kopalnia stoją. Leżący zaraża wszystkich, którzy śpią pod tym samym dachem. Nad chatami z chorymi widać znak zarazy.',
+        'At first the sick man knows nothing of it: he goes on working but is already passing it on to those around him — at work, by the fire, in the tavern. Then he takes to his bed with fever, in his hovel (or on straw), and does not rise for work, so his workshop, field or mine stands idle. The bedridden infect everyone who sleeps under the same roof. Hovels with the sick inside bear the mark of the plague.'),
+      tx('Bez magów umiera mniej więcej co trzeci chory, a głodni i śpiący pod gołym niebem częściej. Do tego stają warsztaty, więc przychodzi głód. Osada nie wymiera do końca: kto przechoruje, jest długo odporny, więc zaraza w końcu sama wygasa, a ostatnich czterech ludzi śmierć oszczędza — ale ofiar bywa bardzo dużo.',
+        'Without mages roughly one sick person in three dies, and more of the hungry and of those sleeping rough. On top of that the workshops fall silent and famine follows. The settlement never dies out entirely: those who survive are immune for a long while, so the plague burns itself out in the end, and death spares the last four souls — but the toll can be terrible.'),
+      { table: [
+        [tx('Magowie', 'Mages'), tx('Co robią', 'What they do'), tx('Ilu', 'How many')],
+        [tx('Chatka maga (tania)', 'Mage\'s hut (cheap)'), tx('leczy wolniej i słabiej, ale przy nim umiera dużo mniej chorych', 'heals more slowly and weakly, but far fewer of the sick die'), '1'],
+        [tx('Sanktuarium Źródła', 'Sanctuary of the Spring'), tx('leczy najlepiej: prawie każdy przeżyje i szybciej wstaje', 'heals best: nearly everyone lives and is up sooner'), tx('do 3', 'up to 3')],
+        [tx('Wieża Płomienia', 'Tower of the Flame'), tx('pali niepochowane ciała, wypala zarazę z chat (dobę nikt się w nich nie zaraża); gorączkę zbija słabiej', 'burns the unburied dead, purges the plague from hovels (no one catches it there for a day); eases fever less well'), tx('do 3', 'up to 3')],
+      ] },
+      tx('Magowie sami chodzą do chorych, nie śpią i nie chorują. Każda siedziba magów, a nawet studnia, zmniejsza szansę, że zaraza w ogóle wybuchnie, a sami magowie trochę poprawiają nastroje. Oba zakony razem czarują szybciej, bo współpracują — ale się nie lubią: gdy ich siedziby stoją bliżej niż 12 pól od siebie, kłótnie psują popularność.',
+        'Mages go to the sick on their own; they neither sleep nor fall ill. Every mages\' seat, and even a well, lowers the chance of plague breaking out at all, and the mages themselves lift spirits a little. With both orders in your settlement their spells are swifter, for they work together — yet they have no love for each other: if their seats stand closer than 12 tiles apart, their quarrels cost you popularity.'),
+      tx('Najtaniej: grabarz na cmentarzu (chowa ciała, zanim zaczną szkodzić), dość chat i jedzenia, a na start chatka maga za 30 drewna i 10 kamienia.',
+        'The cheapest cure: a gravedigger at the cemetery (he buries bodies before they turn foul), enough hovels and food, and to begin with a mage\'s hut for 30 wood and 10 stone.'),
+    ],
+  },
+  {
     title: tx('Budowa i drogi', 'Building and Roads'),
     blocks: [
       tx('Wybierz kategorię na dolnej belce i kartę budynku, kliknij miejsce na mapie. R obraca budynek, prawy przycisk albo Esc anuluje. Budować możesz na całej mapie (daleko od twierdzy trudniej obronić), ale nie na ziemi wroga: 6 pól wokół każdego jego budynku należy do niego, dopóki budynek stoi. Wroga budynek trzeba najpierw zburzyć.',

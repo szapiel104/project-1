@@ -95,6 +95,12 @@ const SAY_PL = {
     'Każdy tu kiedyś trafi.', 'Kopię dół i nie gadam.', 'Niech mu ziemia lekką będzie.', 'Cicho tu. Lubię ciszę.',
   ],
   well: ['Woda czysta, zimna jak lód.', 'Wiadro, korba, wiadro, korba…'],
+  // --- zaraza i magowie ---
+  fever: ['Khe… khe-khe…', 'Pali mnie… wody…', 'Głowa mi pęka, panie…', 'Zimno… a cały płonę.', 'Zawołajcie maga…', 'Khe-khe… nie wstanę dziś.', 'Matko… nie dam rady…'],
+  plague: ['Zaraza chodzi po chatach. Strach spać.', 'Sąsiad leży w gorączce od wczoraj.', 'Tylko nie kaszlcie na mnie!', 'Ciała by trzeba pogrzebać, bo gorzej będzie.', 'Mówią, że magowie by pomogli…', 'Trzymaj się z dala od tej chaty.'],
+  mageWater: ['Źródło nie odmawia nikomu.', 'Woda obmywa gorączkę.', 'Kolejna chata, kolejny chory.', 'Pij, dobry człowieku, i śpij.', 'Byle ci od Płomienia nie palili mi ziół.'],
+  mageFire: ['Ogień oczyszcza.', 'To, co zgniłe, pójdzie z dymem.', 'Spalić posłanie, zanim zaraza pójdzie dalej.', 'Bractwo leczy, my pilnujemy, żeby było kogo leczyć.', 'Woda gasi, ale nie oczyszcza.'],
+  mageHut: ['Trochę ziół, trochę czaru — wstaniesz.', 'Sam jeden na całą osadę…', 'Zakony w wieżach, a ja po chatach.', 'Napar z rumianku i dużo snu.'],
   // --- przy budowie i noszeniu ---
   build: [
     'Stuk, stuk, i stoi.', 'Kto to projektował, ten nie nosił belek.', 'Jeszcze jedna belka i fajrant.', 'Podaj młotek!',
@@ -293,6 +299,11 @@ const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
     'Everyone ends up here someday.', 'I dig the hole and keep my mouth shut.', 'May the earth rest light on him.', 'Quiet here. I like quiet.',
   ],
   well: ['Water\'s clean and cold as ice.', 'Bucket, crank, bucket, crank…'],
+  fever: ['Cough… cough-cough…', 'Burning up… water…', 'My head\'s splitting, my lord…', 'So cold… yet I\'m on fire.', 'Fetch the mage…', 'Cough-cough… I\'ll not rise today.', 'Mother… I can\'t…'],
+  plague: ['The plague goes from hovel to hovel. I\'m afraid to sleep.', 'My neighbour\'s been in a fever since yesterday.', 'Don\'t you cough on me!', 'Someone should bury the dead, or it\'ll get worse.', 'They say the mages could help…', 'Keep away from that hovel.'],
+  mageWater: ['The Spring refuses no one.', 'Water washes the fever away.', 'Another hovel, another sick man.', 'Drink, good man, and sleep.', 'So long as the Flame lot keep their fire off my herbs.'],
+  mageFire: ['Fire cleanses.', 'What is rotten goes up in smoke.', 'Burn the bedding before the plague spreads.', 'The Brotherhood heals; we see there is someone left to heal.', 'Water quenches, but it does not cleanse.'],
+  mageHut: ['A few herbs, a little magic — you\'ll be up.', 'Just me, for the whole settlement…', 'The orders sit in their towers; I make the rounds.', 'Chamomile tea and plenty of sleep.'],
   // --- building and hauling ---
   build: [
     'Knock, knock, and it stands.', 'Whoever drew this never carried a beam.', 'One more beam and we\'re done.', 'Pass the hammer!',

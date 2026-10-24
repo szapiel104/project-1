@@ -1,5 +1,19 @@
 # Dziennik zmian
 
+## 0.44.0 — zaraza i magowie przy pracy (2026-10-24)
+
+- **Zaraza.** Bierze się z niepochowanych ciał (po bitwie, po wilkach), głodu, ciasnoty w chatach, spania pod gołym niebem i zimy, trochę z samej liczby ludzi; pierwsze trzy doby gry są spokojne, poziom pokojowy bez zarazy z niczego. Chory najpierw pracuje i już zaraża (przy robocie, przy ognisku), potem leży w gorączce w chacie albo na słomie — jego warsztat, pole czy kopalnia stoją. Leżący zaraża śpiących pod tym samym dachem
+- Bez magów umiera mniej więcej co trzeci chory (głodni i śpiący pod gołym niebem częściej), a stojące warsztaty dokładają głód. Osada nie wymiera: kto przechoruje, ma odporność na 6 dób, więc zaraza sama wygasa, a śmierć oszczędza ostatnich czterech ludzi. Po zarazie 2 doby spokoju
+- **Magowie przy pracy:** chatka maga ma jednego maga, siedziby zakonów do trzech (1 na 12 mieszkańców). Magowie sami chodzą do chorych, nie śpią i nie chorują; przy czarze mają ręce w górze z kulą w dłoni:
+  - Bractwo Źródła leczy najlepiej (prawie każdy przeżyje i szybciej wstaje), z dłoni leci struga wody;
+  - wędrowny mag z chatki leczy wolniej i słabiej, ale dużo ratuje;
+  - Zakon Płomienia pali niepochowane ciała i wypala zarazę z chat (dobę nikt się w nich nie zaraża), ogień w dłoniach i dym u celu;
+  - oba zakony razem czarują szybciej, ale siedziby bliżej niż 12 pól od siebie kłócą się (−1 popularności)
+- Siedziby magów, chatka i studnia zmniejszają szansę wybuchu zarazy. Popularność: zaraza −2 co miesiąc, każdy zgon −1, magowie w osadzie +1
+- Skryba ogłasza wybuch zarazy (z przyciskiem do chorego), ostrzega, gdy nikt nie leczy, i podaje liczbę ofiar po końcu. Nad chatami z chorymi i nad chorymi na słomie znak zarazy; leżący kaszlą. Okno siedziby magów: ilu magów, co robią, ilu chorych. Karta chłopa: wylęga się / w gorączce / pod opieką maga / odporny. Rozpiska ludności: leżący w gorączce
+- Odzywki chorych, ludzi w czasie zarazy i magów (PL/EN), nowy rozdział „Zaraza i magowie” w „Jak grać”, nazwy faz pracy 23–29
+- Bot stawia chatkę maga po cmentarzu. Tryb testowy: `__test.plague(n, gorączka?)`
+
 ## 0.43.0 — własne nazwy zakonów magów, autorzy w grze (2026-10-24)
 
 - Magowie dostali własne zakony zamiast nazw z innych gier: **Wieża Płomienia** (Zakon Płomienia) i **Sanktuarium Źródła** (Bractwo Źródła); w podglądzie modeli Mag Płomienia i Mag Źródła. Kapliczka zostaje przy Ojcu Płomienia, więc zakon i wiara są spójne. Opisy po polsku i angielsku

@@ -105,4 +105,75 @@ export const RULES = {
   ],
   defaultRations: 2,
   defaultTax: 1,
+  /**
+   * Zaraza (plague.ts). Szanse liczone co `every` ticków; wybuch losowany co miesiąc gry (na 100 000).
+   * Bez magów umiera mniej więcej co trzeci chory, a stojące warsztaty i pola dokładają głód — osada słabnie bardzo,
+   * ale nie wymiera: kto przechoruje, ma odporność, więc zaraza w końcu wygasa, a śmierć nie bierze ostatnich `minPeasants`.
+   */
+  plague: {
+    every: 25,
+    /** Pierwsze dni gry bez zarazy z niczego (gracz dopiero stawia osadę) */
+    graceTicks: 3 * 3600,
+    /** Po wygaśnięciu zarazy tyle ticków spokoju (2 doby), zanim nowa wybuchnie sama z siebie */
+    calmTicks: 2 * 3600,
+    /** Osada mniejsza niż tyle ludzi nie łapie zarazy z niczego */
+    minPop: 10,
+    /** Ryzyko wybuchu (na 100 000 co miesiąc): od każdego mieszkańca, od każdych niepochowanych zwłok w osadzie (najwyżej 12),
+     *  od każdego pustego posiłku z rzędu, od ciasnoty i od każdego śpiącego pod gołym niebem */
+    riskPerHead: 4,
+    riskCorpse: 70,
+    riskFamine: 120,
+    riskCrowd: 90,
+    riskRough: 15,
+    /** Zwłoki zaczynają szkodzić po tylu tickach leżenia (grabarz zdąży, jeśli jest) */
+    corpseAge: 400,
+    /** Zima mnoży ryzyko (w %) */
+    winterRisk: 150,
+    /** Mnożnik ryzyka (w %) według poziomu trudności: pokojowy, łatwy, zwykły, trudny */
+    levelRisk: [0, 60, 100, 130],
+    /** Zapobieganie (mnożnik w %): siedziba Bractwa Źródła, Zakonu Płomienia, chatka maga, studnia */
+    guardWater: 40,
+    guardFire: 55,
+    guardHut: 75,
+    guardWell: 85,
+    /** Na start zarazy choruje tylu ludzi: 1 + co dwudziesty mieszkaniec */
+    firstPer: 20,
+    /** Wylęganie: tyle ticków chory jeszcze pracuje i już zaraża (od–do) */
+    incubate: [250, 550],
+    /** Gorączka: tyle ticków leży (od–do), potem zdrowieje */
+    fever: [1500, 2700],
+    /** Zarażenie co `every` ticków (na 10 000): śpiący pod jednym dachem z gorączkującym, stojący tuż obok gorączkującego
+     *  na dworze, obok chaty z chorym, obok wylęgającego */
+    spreadHome: 300,
+    spreadNear: 500,
+    spreadDoor: 120,
+    spreadCarrier: 160,
+    /** Śmierć gorączkującego co `every` ticków (na 10 000); głód, sen pod gołym niebem i zima mnożą (w %) */
+    death: 52,
+    deathHungry: 150,
+    deathRough: 130,
+    deathWinter: 120,
+    /** Odporność po przechorowaniu (6 dób) */
+    immuneTicks: 6 * 3600,
+    /** Śmierć z zarazy psuje nastroje */
+    deathPenalty: -1,
+  },
+  /** Magowie (plague.ts): czas czaru w tickach, opieka (o ile % mniej zgonów), o ile skraca gorączkę (najwyżej do tylu ticków) */
+  mages: {
+    /** Bractwo Źródła: leczy najlepiej i najszybciej */
+    water: { cast: 70, care: 90, feverLeft: 500 },
+    /** Chatka maga (jeden wędrowny mag, służy obu kręgom): wolniej i słabiej, ale lepiej niż nic */
+    hut: { cast: 150, care: 70, feverLeft: 1100 },
+    /** Zakon Płomienia: przede wszystkim pali zwłoki i wypala zarazę z chat; chorym zbija gorączkę słabiej */
+    fire: { cast: 90, care: 50, feverLeft: 1400 },
+    /** Wypalona chata: tyle ticków bez zarażania się w niej (doba) */
+    cleanTicks: 3600,
+    /** Oba zakony w osadzie: czary szybsze (w %) — współpracują, choć się nie lubią */
+    together: 70,
+    /** Siedziby obu zakonów bliżej niż tyle pól od siebie: kłótnie pod oknami psują nastroje */
+    quarrelRange: 12,
+    quarrelPenalty: -1,
+    /** Mag idzie do chorego najdalej tyle pól */
+    reach: 45,
+  },
 } as const;

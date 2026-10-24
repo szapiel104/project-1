@@ -9,6 +9,7 @@ import { FP, Phase, playerKeep, storeRoom, type Building, type GameState, type U
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
+import { mageKindOf } from './plague';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -481,7 +482,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
   }
 }
 
-function move(g: GameState, u: Unit): void {
+export function move(g: GameState, u: Unit): void {
   const next = u.path[0]!;
   if (!walkable(g, next, u.owner)) { u.path = []; return; } // ktoś postawił budynek na drodze
   const w = g.map.width;
@@ -548,6 +549,8 @@ export function workerSystem(g: GameState): void {
     }
   }
   for (const u of g.units) {
+    // magowie (chatka maga, siedziby zakonów): prowadzi ich plagueSystem — chodzą do chorych, nie śpią i nie idą do ogniska
+    if (u.job && mageKindOf(byId.get(u.job)?.type ?? -1)) continue;
     if (u.wait > 0) { u.wait--; continue; }
     // rekrut idzie do koszar (prowadzi go enlistSystem): tylko krok, bez pracy, wieczoru i snu
     if (u.enlist) { if (u.path.length) move(g, u); continue; }
@@ -555,7 +558,13 @@ export function workerSystem(g: GameState): void {
     if (u.bucket) { if (u.path.length) move(g, u); continue; }
     // bunt głodowy (prowadzi go unrestSystem): idzie pod bramę twierdzy i stoi, nie pracuje, nie idzie do ogniska
     if (u.riot) { if (u.path.length) move(g, u); continue; }
-    if (!u.path.length && routine(g, u, part) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;
+    // zaraza: gorączkujący rzuca robotę (ładunek przepada) i kładzie się w swojej chacie albo na słomie; nie wstaje rano
+    const bedridden = !!u.sick && g.tick >= (u.sickFrom ?? 0);
+    if (bedridden && u.phase !== Phase.ToSleep && u.phase !== Phase.Sleeping) {
+      u.phase = Phase.ToSleep; u.path = []; u.timer = 0; u.target = 0; u.carryRes = -1; u.carryAmt = 0; u.foe = undefined; u.foeU = undefined;
+      findBed(g, u);
+    }
+    if (!bedridden && !u.path.length && routine(g, u, part) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;
     if (u.phase === Phase.Evening || u.phase === Phase.Sleeping) continue;
     const job = u.job ? byId.get(u.job) : undefined;
     const prod = job ? BUILDINGS[job.type]!.production : undefined;

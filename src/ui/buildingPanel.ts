@@ -14,6 +14,7 @@ import { GUARDS, GUARD_COST } from '../sim/systems/guards';
 import { CAMP_GUARDS, campOf } from '../sim/systems/minecamp';
 import { buildWork, maxHp, rebuildCost, rebuildShort } from '../sim/systems/placement';
 import { crewWanted, MINE_YIELDS } from '../sim/systems/workers';
+import { mageKindOf, magesOf, ordersQuarrel, sickCount } from '../sim/systems/plague';
 import type { BuildingInfo } from './hud';
 
 /** Plac budowy w panelu: postęp, materiał, robotnicy i co się teraz dzieje */
@@ -111,6 +112,7 @@ export function prodInfo(game: GameState, b: GameState['buildings'][number], nam
   else status = { text: tx('Pracuje bez przeszkód.', 'Working without hindrance.'), level: 'ok' };
   // kopalnia: załoga rośnie z wioską, a z jednego kursu wychodzi kamień, żelazo albo rzadka ruda
   if (def.id === 'engineers') status = engineersStatus(game, b, status);
+  else if (mageKindOf(b.type)) status = magesStatus(game, b);
   else if (def.crew) {
     const pop = game.units.filter((x) => x.owner === b.owner).length;
     const have = (b.worker ? 1 : 0) + (b.crew?.length ?? 0), want = crewWanted(def, pop);
@@ -161,6 +163,34 @@ function engineersStatus(game: GameState, b: GameState['buildings'][number], bas
   const queue = waiting ? tx(`Czeka jeszcze: ${waiting}.`, `Still waiting: ${waiting}.`) : '';
   const level = ids.length < want && base.level === 'ok' ? 'warn' : base.level;
   return { text: [head, now, queue, doing.length ? '' : base.text].filter(Boolean).join(' '), level };
+}
+
+/** Siedziba magów: ilu magów, co robią, ilu chorych w osadzie i czy zaraza trwa */
+function magesStatus(game: GameState, b: GameState['buildings'][number]): { text: string; level: 'ok' | 'warn' | 'bad' } {
+  const def = BUILDINGS[b.type]!, kind = mageKindOf(b.type)!;
+  const pop = game.units.filter((x) => x.owner === b.owner).length;
+  const ids = [b.worker, ...(b.crew ?? [])].filter((id) => id);
+  const want = def.crew ? crewWanted(def, pop) : 1;
+  const role = kind === 'water' ? tx('Leczą chorych: przy nich prawie każdy przeżyje gorączkę i szybciej wstaje.', 'They heal the sick: in their care nearly everyone survives the fever and is up sooner.')
+    : kind === 'fire' ? tx('Palą niepochowane ciała i wypalają zarazę z chat (przez dobę nikt się w nich nie zaraża); gorączkę zbijają słabiej.', 'They burn the unburied dead and purge the plague from hovels (no one catches it there for a day); they ease fever less well.')
+    : tx('Wędrowny mag leczy chorych wolniej i słabiej niż zakony, ale przy nim umiera dużo mniej ludzi.', 'The wandering mage heals more slowly and weakly than the orders, but far fewer die in his care.');
+  const head = def.crew
+    ? tx(`Magów: ${ids.length} z ${want} (1 na ${def.crew.per} mieszkańców, najwyżej ${def.crew.max}).`, `Mages: ${ids.length} of ${want} (1 per ${def.crew.per} inhabitants, at most ${def.crew.max}).`)
+    : ids.length ? tx('Mag jest na miejscu.', 'The mage is in residence.') : tx('Brak maga — wolny chłop zaraz przyjdzie.', 'No mage yet — an idle peasant is on his way.');
+  let healing = 0, going = 0;
+  for (const id of ids) { const u = game.units.find((x) => x.id === id); if (u?.phase === Phase.Healing) healing++; else if (u?.phase === Phase.ToPatient) going++; }
+  const { sick, bed } = sickCount(game, b.owner);
+  const p = game.players[b.owner]!;
+  const now = p.plague
+    ? tx(`Zaraza w osadzie: chorych ${sick} (w gorączce ${bed}), zmarło ${p.plagueDead ?? 0}. Teraz: ${healing} czaruje, ${going} w drodze.`, `Plague in the settlement: ${sick} sick (${bed} in fever), ${p.plagueDead ?? 0} dead. Now: ${healing} casting, ${going} on their way.`)
+    : tx('W osadzie spokój — magowie czuwają.', 'All is quiet in the settlement — the mages keep watch.');
+  const both = magesOf(game, b.owner);
+  const extra = both.water.length && both.fire.length
+    ? ' ' + (ordersQuarrel(game, b.owner)
+      ? tx('Oba zakony współpracują (czary szybsze), ale ich siedziby stoją za blisko i kłótnie psują nastroje.', 'Both orders work together (faster spells), but their seats stand too close and their quarrels sour the mood.')
+      : tx('Oba zakony współpracują: czary są szybsze.', 'Both orders work together: their spells are swifter.'))
+    : '';
+  return { text: `${head} ${role} ${now}${extra}`, level: ids.length < want ? 'warn' : p.plague && !healing && !going && bed ? 'warn' : 'ok' };
 }
 
 /** Straż miejska do panelu twierdzy: ilu jest, szkolenie rekruta i co blokuje werbunek */

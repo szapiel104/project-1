@@ -16,6 +16,7 @@ import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
 import { crewOf } from '../sim/systems/workers';
+import { mageKindOf } from '../sim/systems/plague';
 import { saplingGrowth } from '../sim/systems/forestry';
 import { Clutter } from './clutter';
 import { Chips } from './chips';
@@ -234,6 +235,28 @@ function sadMaterial(): THREE.SpriteMaterial {
   tex.colorSpace = THREE.SRGBColorSpace;
   sadMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
   return sadMat;
+}
+
+let sickMat: THREE.SpriteMaterial | null = null;
+/** Znak zarazy: blada, zielonkawa twarz w gorączce (krople potu, krzywe usta) w złotym kole, rysowana raz na płótnie */
+function sickMaterial(): THREE.SpriteMaterial {
+  if (sickMat) return sickMat;
+  const c = document.createElement('canvas');
+  c.width = c.height = 128;
+  const x = c.getContext('2d')!;
+  x.fillStyle = 'rgba(30,18,8,0.85)'; x.beginPath(); x.arc(64, 64, 58, 0, Math.PI * 2); x.fill();
+  x.lineWidth = 7; x.strokeStyle = '#e9c145'; x.stroke();
+  x.fillStyle = '#b9c77e'; x.beginPath(); x.arc(64, 64, 44, 0, Math.PI * 2); x.fill();
+  x.fillStyle = 'rgba(150,40,30,0.35)'; x.beginPath(); x.ellipse(42, 72, 9, 6, 0, 0, Math.PI * 2); x.ellipse(86, 72, 9, 6, 0, 0, Math.PI * 2); x.fill(); // rozpalone policzki
+  x.strokeStyle = '#3a2410'; x.lineWidth = 6; x.lineCap = 'round';
+  x.beginPath(); x.moveTo(40, 52); x.lineTo(54, 56); x.moveTo(88, 52); x.lineTo(74, 56); x.stroke(); // przymknięte oczy
+  x.beginPath(); x.moveTo(46, 92); x.quadraticCurveTo(55, 84, 64, 92); x.quadraticCurveTo(73, 100, 82, 92); x.stroke(); // falujące usta
+  x.fillStyle = '#6fb6ff';
+  for (const [ex, ey] of [[30, 40], [98, 36], [104, 60]] as const) { x.beginPath(); x.moveTo(ex, ey - 9); x.quadraticCurveTo(ex + 6, ey, ex, ey + 4); x.quadraticCurveTo(ex - 6, ey, ex, ey - 9); x.fill(); } // pot
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  sickMat = new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true });
+  return sickMat;
 }
 
 let noWorkerMat: THREE.SpriteMaterial | null = null;
@@ -655,6 +678,12 @@ export class GameRenderer {
   get weather(): { night: number; rain: number } { return { night: this.night, rain: this.rain }; }
   private rainLines: THREE.LineSegments | null = null;
   private sadFaces: THREE.Sprite[] = [];
+  /** Znaki zarazy nad chatami z gorączkującymi i nad chorymi leżącymi pod gołym niebem */
+  private sickIcons: THREE.Sprite[] = [];
+  /** Magowie: Zakonu Płomienia i Bractwa Źródła (wędrowny mag z chatki wygląda jak brat Źródła) */
+  private magesFireFig!: Figures;
+  private magesWaterFig!: Figures;
+  private readonly eye = new THREE.Matrix4();
   private lamps: THREE.PointLight[] = [];
   /** Poświata pochodni na ziemi: tania plama ciepłego światła pod każdą zapaloną pochodnią (bez kosztu prawdziwego
    *  światła), więc nocą osada świeci w całym kadrze, a nie tylko tam, gdzie sięgają lampy z puli */
@@ -960,6 +989,8 @@ export class GameRenderer {
     this.menAtArms = new Figures(MAX_UNITS, this.scene, 'manatarms');
     this.sappersFig = new Figures(MAX_UNITS, this.scene, 'sapper');
     this.banditsFig = new Figures(256, this.scene, 'bandit');
+    this.magesFireFig = new Figures(128, this.scene, 'mageFire');
+    this.magesWaterFig = new Figures(128, this.scene, 'mageWater');
     this.standards = new Standards(this.scene);
     this.kings = new Figures(32, this.scene, 'king');
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
@@ -2528,7 +2559,7 @@ export class GameRenderer {
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.syncSites(g); this.syncWalls(g, v); this.syncBraziers(g, v); this.syncGates(g, dt); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
-      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies]) f.view(cp);
+      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig]) f.view(cp);
       for (const t of [this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
@@ -5098,6 +5129,76 @@ export class GameRenderer {
   }
   /** Wysokość, na której stoi człowiek: teren, a w zamku posadzka dziedzińca i sal (most z bramy łagodnie wznosi się do niej) */
   /** sim: pole człowieka w symulacji (o wejściu na mur decyduje ono, a nie wygładzona pozycja obrazka); -1 = z pozycji, -2 = nigdy na mur */
+  /** Mag w osadzie: postać zakonu; przy czarze ręce w górze z kulą w dłoni, twarzą do celu — brat Źródła leje strugę wody
+   *  na chorego (albo w drzwi chaty), brat Płomienia ma ogień w dłoniach i dymi tam, gdzie wypala zarazę albo pali zwłoki */
+  private drawMage(g: GameState, u: GameState['units'][number], t: THREE.Object3D, kind: 'water' | 'hut' | 'fire', swing: number, heading: number, view: TerrainView, jobs: Map<number, GameState['buildings'][number]>): void {
+    const fig = kind === 'fire' ? this.magesFireFig : this.magesWaterFig;
+    const casting = u.phase === Phase.Healing;
+    const team = TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888;
+    if (!casting) { fig.set(0, t.matrix, swing, false, team, u.id); return; }
+    const { width, height } = g.map;
+    // cel czaru: chata (drzwi), leżący chory albo zwłoki
+    let tx = t.position.x + Math.sin(heading), tz = t.position.z + Math.cos(heading);
+    const goal = u.batches === 2 ? g.corpses.find((c) => c.id === u.target) : u.batches === 3 ? jobs.get(u.target) : g.units.find((o) => o.id === u.target);
+    let house: GameState['buildings'][number] | undefined = u.batches === 3 ? (goal as GameState['buildings'][number] | undefined) : undefined;
+    if (goal && u.batches !== 3) {
+      const o = goal as { px: number; py: number; home?: number; phase?: Phase };
+      if (o.home && o.phase === Phase.Sleeping) house = jobs.get(o.home);
+      if (!house) { tx = o.px / FP - width / 2; tz = o.py / FP - height / 2; }
+    }
+    if (house) { const fp = footprint(BUILDINGS[house.type]!, house.rot); tx = house.x + fp.w / 2 - width / 2; tz = house.y + fp.h / 2 - height / 2; }
+    const yaw = Math.atan2(tx - t.position.x, tz - t.position.z);
+    t.rotation.set(0, yaw, 0);
+    t.updateMatrix();
+    this.facing.set(u.id, yaw);
+    fig.set(0, t.matrix, 0, true, team, u.id);
+    if (this.calm) return;
+    const dx = Math.sin(yaw), dz = Math.cos(yaw), y0 = t.position.y + 0.58 * FIG;
+    if (kind === 'fire') {
+      // ogień w obu dłoniach przed twarzą, a u celu dym (spalane posłania albo zwłoki)
+      this.eye.identity();
+      for (const s of [-1, 1]) this.pushHandFlameAt(this.eye, this.armV.set(t.position.x + dx * 0.16 + dz * 0.07 * s, y0, t.position.z + dz * 0.16 - dx * 0.07 * s));
+      if ((Math.floor(this.time * 6) + u.id) % 3 === 0) this.fireFx.steam(tx, this.standY(view, tx + width / 2, tz + height / 2) + 0.3, tz, 2);
+    } else {
+      // struga wody z dłoni w stronę chorego
+      this.mouth.set(t.position.x + dx * 0.18, y0, t.position.z + dz * 0.18);
+      this.fireFx.pour(this.mouth, this.armV.set(dx, -0.35, dz).normalize(), 0.55 + Math.sin(this.time * 7 + u.id) * 0.2);
+    }
+  }
+
+  /** Znaki zarazy: nad chatą, w której ktoś leży w gorączce, i nad chorym leżącym na słomie pod gołym niebem */
+  private drawSickIcons(g: GameState, view: TerrainView): void {
+    const { width, height } = g.map;
+    let k = 0;
+    const seen = new Set<number>();
+    const put = (x: number, y: number, z: number, sc: number): void => {
+      let s = this.sickIcons[k];
+      if (!s) { s = new THREE.Sprite(sickMaterial()); s.renderOrder = 5; this.scene.add(s); this.sickIcons.push(s); }
+      const dist = this.cam.camera.position.distanceTo(this.armV.set(x, y, z));
+      const size = Math.max(sc, dist * 0.03) * (1 + Math.sin(this.time * 3 + k) * 0.05);
+      s.scale.setScalar(size);
+      s.position.set(x, y + size * 0.5, z);
+      s.visible = true;
+      k++;
+    };
+    for (const u of g.units) {
+      if (k >= 200) break;
+      if (!u.sick || g.tick < (u.sickFrom ?? 0) || u.phase !== Phase.Sleeping) continue;
+      if (u.home) {
+        if (seen.has(u.home)) continue;
+        seen.add(u.home);
+        const b = g.buildings.find((x) => x.id === u.home);
+        if (!b) continue;
+        const fp = footprint(BUILDINGS[b.type]!, b.rot), cx = b.x + fp.w / 2, cy = b.y + fp.h / 2;
+        put(cx - width / 2, this.standY(view, cx, cy) + 1.55, cy - height / 2, 0.42);
+      } else {
+        const x = u.px / FP, y = u.py / FP;
+        put(x - width / 2, this.standY(view, x, y) + 0.4, y - height / 2, 0.3);
+      }
+    }
+    for (let i = k; i < this.sickIcons.length; i++) this.sickIcons[i]!.visible = false;
+  }
+
   private standY(view: TerrainView, x: number, y: number, sim = -1): number {
     const k = this.keepAt(x, y);
     let h = view.heightAt(x, y);
@@ -5716,6 +5817,8 @@ export class GameRenderer {
         // postać obraca się wokół stóp, więc stawiamy ją stopami na końcu siennika i kładziemy na plecy
         t.position.set(fx2, fy2 + 0.045, fz2);
         lean = -Math.PI / 2;
+        // chory w gorączce: co chwilę zanosi się kaszlem (unosi się lekko na posłaniu)
+        if (u.sick && !this.calm) { const c = Math.sin(this.time * 2.3 + u.id * 1.7); if (c > 0.88) lean += (c - 0.88) * 3 * (1 + Math.sin(this.time * 30) * 0.3); }
         swing = 0;
       } else this.bedrolls.setMatrixAt(i, ZERO);
       // śpiących w chacie nie da się kliknąć przez ściany: kliknięcie trafia w chatę i odsłania wnętrze
@@ -5858,7 +5961,9 @@ export class GameRenderer {
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0);
+      const mage = u.job ? mageKindOf(jobs.get(u.job)?.type ?? -1) : undefined;
+      if (mage) this.drawMage(g, u, t, mage, swing, heading, view, jobs);
+      else this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
       // ciągnie odmianę, którą ściął (po wczytaniu zapisu w trakcie drogi: stała odmiana dla ludzika)
@@ -5960,6 +6065,9 @@ export class GameRenderer {
     this.drawSappers(loadUsed);
     k = this.castleFolk(g, k);
     this.figures.finish(k);
+    this.magesFireFig.finish(0);
+    this.magesWaterFig.finish(0);
+    this.drawSickIcons(g, view);
     // pule narzędzi: `count` zamyka klatkę (liczba bez znaczenia) i same oznaczają swoje bufory
     for (const p of [this.rods, this.bedrolls, this.hammers, this.spades, this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.handTorches, this.buckets, this.bucketWater]) p.count = n;
     this.fireFx.end(this.calm ? 0 : Math.min(0.05, this.frameDt), (x, z) => this.standY(view, x + width / 2, z + height / 2));

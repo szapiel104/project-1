@@ -19,6 +19,7 @@ import { deserialize, serialize, type SaveData } from './sim/save';
 import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { applyCommands, step, type Command } from './sim/step';
 import { doleCost, rioters } from './sim/systems/unrest';
+import { magesOf, startPlague } from './sim/systems/plague';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
@@ -704,6 +705,7 @@ function personCard(id: number): { name: string; lines: string[]; walk?: boolean
       age,
       work,
       `${t('person.doing')}: ${t(`phase.${u.phase}`)}`,
+      ...(u.sick ? [t(game.tick < (u.sickFrom ?? 0) ? 'person.incubating' : u.care ? 'person.feverCare' : 'person.fever')] : (u.immune ?? 0) > game.tick ? [t('person.immune')] : []),
     ],
   };
 }
@@ -1622,6 +1624,7 @@ function winterNotes(p: (typeof game.players)[number]): void {
   }
 }
 
+let plagueSeen = 0, plagueToll = 0, plagueOverSeen = 0;
 function refresh(): void {
   const p = game.players[ME]!;
   const f = monthlyForecast(game, p);
@@ -1645,6 +1648,21 @@ function refresh(): void {
     const rb = game.buildings.find((x) => x.id === p.lastRaid!.building);
     const fp = rb ? footprint(BUILDINGS[rb.type]!, rb.rot) : null;
     scribe.say(`raid${raidSeen}`, t(p.lastRaid.kind === 2 ? 'scribe.riotFire' : 'scribe.riotLoot'), true, 'scribe', rb && fp ? showAt(rb.x + fp.w / 2, rb.y + fp.h / 2) : undefined);
+  }
+  // zaraza: skryba ogłasza wybuch (z przyciskiem do pierwszego chorego), zgony bez magów i koniec zarazy z liczbą ofiar
+  if (p.plague && p.plague !== plagueSeen) {
+    plagueSeen = p.plague;
+    const m = magesOf(game, ME), any = m.water.length + m.fire.length + m.hut.length > 0;
+    const first = game.units.find((u) => u.owner === ME && u.sick);
+    scribe.say(`plague${p.plague}`, t(any ? 'scribe.plagueMages' : 'scribe.plague'), true, 'scribe', first ? showAt(first.px / 256, first.py / 256) : undefined);
+  }
+  if (p.plague && (p.plagueDead ?? 0) >= 3 && plagueToll !== p.plague) {
+    const m = magesOf(game, ME);
+    if (!m.water.length && !m.fire.length && !m.hut.length) { plagueToll = p.plague; scribe.say(`plagueToll${p.plague}`, t('scribe.plagueToll'), true); }
+  }
+  if (p.plagueOver && p.plagueOver.tick !== plagueOverSeen && game.tick - p.plagueOver.tick < 200) {
+    plagueOverSeen = p.plagueOver.tick;
+    scribe.say(`plagueOver${plagueOverSeen}`, t('scribe.plagueOver').replace('{n}', String(p.plagueOver.dead)));
   }
   const full = storeUsed(p, 'stockpile') >= storeCapacity(game, ME, 'stockpile');
   if (full && !stockFull) scribe.say('stockFull', t('scribe.stockFull'));
@@ -1953,6 +1971,8 @@ requestAnimationFrame(loop);
   hour(h: number): void { setHour(game, h); refresh(); },
   /** `n` chłopów przy twierdzy */
   peasants(n = 5, player = ME): number { const r = addPeasants(game, n, player).length; refresh(); return r; },
+  /** Zaraza od ręki: tylu ludzi gracza zaczyna chorować (gorączka po chwili wylęgania; `fever` = od razu w gorączce) */
+  plague(n = 4, fever = false, player = ME): number { const k = startPlague(game, player, n); if (fever) for (const u of game.units) if (u.owner === player && u.sick && (u.sickFrom ?? 0) > game.tick) { u.sick -= u.sickFrom! - game.tick; u.sickFrom = game.tick; } refresh(); return k; },
   /** Bunt głodowy od ręki: pusty licznik głodu dobity do progu, tłum zbiera się przy następnym przejściu symulacji */
   riot(player = ME): void { const p = game.players[player]; if (p) { p.famine = RULES.revoltMeals; step(game, []); refresh(); } },
   /** Obóz zbójów ze środkiem w (x, y) z czterema zbójami (pusta scena: zbóje napadają dopiero od 2. dnia, poziom pokojowy ich nie zatrzymuje); id obozu albo null */
@@ -2286,9 +2306,12 @@ function lineFor(id: number): string {
   const p = game.players[ME]!;
   const pick = (k: string): string => { const l = SAY[k]!; return l[Math.floor(Math.random() * l.length)]!; };
   if (!u) return pick('work');
-  void p;
   // buntownik pod bramą krzyczy swoje, bez względu na resztę
   if (u.riot) return pick('revolt');
+  // zaraza: leżący w gorączce kaszle i jęczy; zdrowi w czasie zarazy częściej o niej mówią
+  if (u.sick && game.tick >= (u.sickFrom ?? 0)) return pick('fever');
+  if (p.plague && !u.job && Math.random() < 0.5) return pick('plague');
+  if (p.plague && Math.random() < 0.25) return pick('plague');
   const sit = situation(u.px, u.py);
   if (sit) return pick(sit);
   if (renderer.weather.night > 0.5 && Math.random() < 0.4) return pick('night');
@@ -2404,14 +2427,15 @@ requestAnimationFrame(sayLoop);
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): HudView['report'] {
   const LBL: Record<string, string> = lang() === 'en'
-    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate', shrine: 'Shrines (evening prayers)' }
-    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy', shrine: 'Kapliczki (wieczorne modły)' };
+    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate', shrine: 'Shrines (evening prayers)', plague: 'Plague in the settlement (fear)', mages: 'Mages watching over the sick', quarrel: 'The two orders quarrelling (seats too close)' }
+    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy', shrine: 'Kapliczki (wieczorne modły)', plague: 'Zaraza w osadzie (strach)', mages: 'Magowie czuwają nad chorymi', quarrel: 'Kłótnie zakonów (siedziby za blisko siebie)' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: tx('Brak jedzenia na wybrane racje', 'Not enough food for the chosen rations'), value: 0, note: tx('(jedzą mniej)', '(they eat less)') });
   const mine = game.units.filter((u) => u.owner === ME);
   const jobs = new Map<string, number>();
-  let idle = 0, builders = 0;
+  let idle = 0, builders = 0, sick = 0;
   for (const u of mine) {
+    if (u.sick && game.tick >= (u.sickFrom ?? 0)) { sick++; continue; }
     if (u.phase === 13 || u.phase === 14) { builders++; continue; }
     if (!u.job) { idle++; continue; }
     const b = game.buildings.find((x) => x.id === u.job);
@@ -2419,6 +2443,7 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
     jobs.set(name, (jobs.get(name) ?? 0) + 1);
   }
   const people: { label: string; value: number }[] = [{ label: tx('Wszyscy chłopi', 'All peasants'), value: mine.length }, { label: tx('Kopacze bez fachu', 'Unskilled labourers'), value: idle }, { label: tx('Na budowie', 'On building sites'), value: builders }];
+  if (sick) people.push({ label: tx('Leżą w gorączce', 'Laid low with fever'), value: sick });
   for (const [k, v] of [...jobs.entries()].sort((a, b) => b[1] - a[1])) people.push({ label: k, value: v });
   const coming = game.travelers.filter((x) => x.owner === ME && !x.leaving).length, going = game.travelers.filter((x) => x.owner === ME && x.leaving).length;
   if (coming) people.push({ label: tx('W drodze do osady', 'On their way to the settlement'), value: coming });
