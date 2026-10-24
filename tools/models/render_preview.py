@@ -43,6 +43,9 @@ def unpack(m, off, arm=0.0, sub=None):
     mat.node_tree.links.new(attr.outputs['Color'], bsdf.inputs['Base Color'])
     bsdf.inputs['Metallic'].default_value = 0.5 if m['mat'] == 'metal' else 0
     bsdf.inputs['Roughness'].default_value = 0.45 if m['mat'] == 'metal' else 0.85
+    if m['mat'] == 'glow':  # żar w koszu kostura, kryształ: świecą własnym światłem
+        mat.node_tree.links.new(attr.outputs['Color'], bsdf.inputs['Emission Color'])
+        bsdf.inputs['Emission Strength'].default_value = 2.5
     me.materials.append(mat)
 if 'hindLeg' in d:  # wilk: łapy w barkach i biodrach, kita u nasady
     for m in d['body']: unpack(m, (0, 0, 0))
@@ -70,7 +73,7 @@ for sx in (-1, 1):
         for m in filter(ok, d['fore']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=pa if sx > 0 else la, sub=(d['elbow'], el))
 # broń w prawej dłoni (miecz strażnika, topór zbója); STRIKE=1 — zamach znad głowy jak w grze
 STRIKE = os.environ.get('STRIKE') == '1'
-for key, rest, up, arm_rest, arm_up in (('sword', -0.55, -0.9, -0.15, -2.2), ('axe', -0.55, -0.75, -0.1, -2.4)):
+for key, rest, up, arm_rest, arm_up in (('sword', -0.55, -0.9, -0.15, -2.2), ('axe', -0.55, -0.75, -0.1, -2.4), ('staff', 0.25, 0.25, -0.25, -0.25)):
     if key in d:
         for m in d[key]:
             pose = os.environ.get('POSE')  # POSE="ręka,broń" — dowolna faza ciosu (kąty jak w grze)
@@ -133,6 +136,15 @@ if os.environ.get('BODY'):
     for o in list(bpy.context.scene.objects):
         if o.type == 'MESH':
             o.data.transform(M)
+# ORB="r,g,b" — świecąca kula czaru przed dłońmi (mag: ogień / woda), tylko do podglądu
+if os.environ.get('ORB'):
+    col = tuple(float(v) for v in os.environ['ORB'].split(','))
+    bpy.ops.mesh.primitive_uv_sphere_add(radius=0.035, location=(0, -0.24, 0.31))
+    ob = bpy.context.active_object
+    mt = bpy.data.materials.new('orb'); mt.use_nodes = True
+    b = mt.node_tree.nodes['Principled BSDF']; b.inputs['Base Color'].default_value = (*col, 1)
+    b.inputs['Emission Color'].default_value = (*col, 1); b.inputs['Emission Strength'].default_value = 6
+    ob.data.materials.append(mt)
 sc = bpy.context.scene
 cam = bpy.data.objects.new('cam', bpy.data.cameras.new('cam')); sc.collection.objects.link(cam)
 views = [(0.0, 0.0), (0.9, 0.0)]

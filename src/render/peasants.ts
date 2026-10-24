@@ -17,6 +17,8 @@ const KING_MODEL = model('king');
 const CHILD_MODEL = model('child');
 const SAPPER_MODEL = model('sapper');
 const BANDIT_MODEL = model('bandit');
+const MAGE_FIRE_MODEL = model('mage_fire');
+const MAGE_WATER_MODEL = model('mage_water');
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
 export interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
@@ -190,7 +192,7 @@ function lookOf(id: number, tunic: number, muted = false): Look {
  * a do tego jedno z kilku nakryć głowy, czasem broda albo fartuch. Każda część to jedna siatka instancjonowana.
  */
 /** Rodzaje postaci z Blendera */
-export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms' | 'sapper' | 'bandit';
+export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms' | 'sapper' | 'bandit' | 'mageFire' | 'mageWater';
 
 export class Figures {
   private parts: Part[] = [];
@@ -243,7 +245,7 @@ export class Figures {
       // a każda część to osobne rysowanie do mapy cieni
       mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
-      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
+      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', mageFire: 'magowie ognia', mageWater: 'magowie wody', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod, elbow });
       if (lod) this.hasFar = true;
     };
@@ -296,6 +298,13 @@ export class Figures {
       const SW = M as FigureModel & { sword: ModelMesh[]; swordFar: ModelMesh[] };
       for (const lod of [0, 1] as const)
         for (const m of lod ? SW.swordFar : SW.sword) mk(modelGeo(m), 0xffffff, at.clone(), swordArm, always, m.mat as Mat, sword, lod);
+      return;
+    }
+    if (kind === 'mageFire' || kind === 'mageWater') {
+      // mag ognia / wody (tools/models/mage.py): szata do ziemi, płaszcz z kapturem, bez kostura — czaruje z dłoni
+      // (efekt ognia / wody w dłoniach dokłada scena); spokojny krok, ręce kołyszą się słabiej niż u chłopa
+      const calmL = (sw: number, up: boolean): number => (up ? -1.3 : -sw * 0.4), calmR = (sw: number, up: boolean): number => (up ? -1.3 : sw * 0.4);
+      model((kind === 'mageFire' ? MAGE_FIRE_MODEL : MAGE_WATER_MODEL) as FigureModel, calmL, calmR);
       return;
     }
     if (kind === 'bandit') {

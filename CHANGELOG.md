@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.40.2 — magowie ognia i wody: modele (2026-10-24)
+
+- Dwa nowe modele z Blendera (tools/models/mage.py fire|water), na razie tylko w podglądzie modeli (modele.html?id=mageFire, ?id=mageWater) — w grze pojawią się razem z budynkami magów i chorobą w kolejnych partiach
+- Mag ognia: szata w kolorze zaschniętej krwi z obrąbkiem w kolorze żaru, płaszcz z opuszczonym kapturem, ogolona głowa i krótka siwa broda, mosiężna tarcza słońca na łańcuszku. Mag wody: granatowa szata ze srebrzystoniebieskim obrąbkiem, płaszcz w odcieniu nocnego jeziora, włosy i broda, srebrny pierścień z niebieskim kamieniem. Obaj z pasem z plecionego sznura w barwach pana
+- Bez kostura — magię rzucają z dłoni. Dłonie z osobnymi palcami i kciukiem, wysunięte spod szerokich rękawów; twarze rzeźbione mocniej niż u chłopów (łuk brwiowy, oczodoły z białkiem i tęczówką, powieki, nos ze skrzydełkami, kości policzkowe, wargi, zmarszczki)
+
 ## 0.40.1 — dłonie posągu w kapliczce (2026-10-24)
 
 - Posąg w kapliczce trzyma czarę prawdziwymi dłońmi: dłoń podpiera czarę od spodu, cztery palce w trzech członach leżą wzdłuż ścianki, a kciuk zahacza o brzeg od góry (wcześniej ręce kończyły się kikutami przy czarze)
