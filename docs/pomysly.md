@@ -58,7 +58,7 @@ Stan: dobry (strict TS bez `as any`, symulacja oddzielona od grafiki, 230 testó
 ## Braki zauważone przy pracy
 
 - ~~**Błąd fal bota (znaleziony 23.10):** bot myśli co 40 ticków z przesunięciem o numer gracza (`tk = tick - id*5`), a fala rusza tylko gdy `tick >= first` i do fali zostało < 40 ticków — przez to bot gracza 1 (i dalszych) pomija pierwszą falę i atakuje dopiero przy drugiej. ~~ — poprawione 23.10 (0.34.2); tempo gry z botem do sprawdzenia przy balansie
-- Bot nie stawia piekarni mimo młyna (brak kamienia na liście?) — mąka stoi w stodole; sprawdzić w tools/soak
+- ~~Bot nie stawia piekarni mimo młyna~~ — poprawione 24.10: palisada zjadała drewno ponad 25, a piekarnia kosztuje 35; teraz bot odkłada drewno na następny budynek z listy, mur stawia z nadwyżki (mur powstaje później). Soak zgłasza „mąka-bez-piekarni”.
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach
 - Test dotyku na prawdziwym telefonie i tablecie (dotąd tylko emulacja)
 - Przy dużych bitwach wyszukiwanie drogi trzeba będzie przerobić na wspólne ścieżki dla grup
