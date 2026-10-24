@@ -4,7 +4,9 @@
  * zatrzymany czas) i zapisuje spis sceny (src/debug/census.ts) do pliku JSON. Dwa spisy porównuje `--compare`.
  *
  *   node tools/check/census.mjs --dist=dist --out=/tmp/a.json
- *   node tools/check/census.mjs --compare=/tmp/a.json,/tmp/b.json
+ *   node tools/check/census.mjs --compare=/tmp/a.json,/tmp/b.json [--struct]
+ *   --spacer: dodatkowo ujęcie ze spaceru oczami chłopa; --lite: uboga grafika testowa (spacer w pełnej grafice
+ *   bez karty graficznej trwa za długo, więc spacer sprawdzaj z --lite --spacer)
  *
  * Najpierw puść ten sam build dwa razy: różnice między nimi to rzeczy losowe (iskry, dym) — szum, który wolno pominąć.
  */
@@ -68,7 +70,8 @@ await page.addInitScript(() => {
   localStorage.setItem('project1.settings', JSON.stringify({ auto: false, ao: 'off', shadows: 512, scale: 0.5, grass: 1, dayNight: true, reflections: false, aa: 'off', dynRes: false, lang: 'pl' }));
   localStorage.setItem('project1.lang', 'pl');
 });
-await page.goto(`${base}?test=1&hd=1#2v2/census`, { waitUntil: 'load', timeout: 120000 });
+const LITE = !!arg('lite', false);
+await page.goto(`${base}?test=1${LITE ? '' : '&hd=1'}#2v2/census`, { waitUntil: 'load', timeout: 120000 });
 say('strona wczytana');
 await page.waitForFunction(() => !!window.__test && !!window.__renderer, null, { timeout: 600000 });
 say('gra gotowa');
@@ -115,11 +118,15 @@ for (const [name, hour] of [['dzien', 12], ['noc', 20.5]]) {
 await page.evaluate(() => { const h = window.__test.home(); window.__test.at(h.x, h.y + 3, 9); window.__test.hour(9); });
 await freeze(); await settle(15000); await freeze(); await settle(5000);
 out.blisko = await page.evaluate(() => window.__test.census());
+say('spis blisko');
+if (arg('spacer', false)) {
 // spacer oczami chłopa przed bramą (modele do chodzenia, wnętrza widoczne przez drzwi, pochodnia)
-await page.evaluate(() => { const h = window.__test.home(); window.__renderer.startWalk(h.x + 0.5, h.y + 2.5, 0); window.__test.hour(21); });
+await page.evaluate(() => { const h = window.__test.home(); window.__renderer.startWalk(h.x + 0.5, h.y + 2.5, 0); window.__test.hour(21); }).catch((e) => say(`spacer: ${e.message}`));
+say('spacer rozpoczęty');
 await freeze(); await settle(12000); await freeze(); await settle(4000);
 out.spacer = await page.evaluate(() => window.__test.census());
 say('spis spacer');
+}
 out.perf = await page.evaluate(() => window.__perf?.() ?? null);
 out.errors = { items: errors.map((e) => `pageerror ${e}`), kinds: {} };
 const log = await page.evaluate(() => window.__errors?.() ?? null);
