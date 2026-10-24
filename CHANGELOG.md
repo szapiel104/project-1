@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.40.1 — dłonie posągu w kapliczce (2026-10-24)
+
+- Posąg w kapliczce trzyma czarę prawdziwymi dłońmi: dłoń podpiera czarę od spodu, cztery palce w trzech członach leżą wzdłuż ścianki, a kciuk zahacza o brzeg od góry (wcześniej ręce kończyły się kikutami przy czarze)
+- W arkuszu modelu (`inspect.sh shrine`) dwa nowe widoki z bliska: dłonie z czarą od przodu i z boku
+
 ## 0.40.0 — kapliczka (2026-10-24)
 
 - Nowy budynek w osadzie: kapliczka (2×2, 10 drewna i 40 kamienia). Model z Blendera (`tools/models/shrine.py`): kamienny posąg Ojca Płomienia — brodaty starzec w kapturze z czarą wiecznego ognia — w ostrołukowej niszy ze złotym słońcem pod kluczem łuku; dwustopniowy cokół, żelazne świeczniki z grubymi świecami, małe świece z zaciekami wosku, złota misa z ofiarną rudą i klęcznik z desek. Ogień w czarze płonie zawsze, świece świecą nocą

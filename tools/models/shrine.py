@@ -115,11 +115,11 @@ def V(x, y, z):
 
 # szkielet: szata od ziemi do barków, szyja, głowa w kapturze; ręce od barków do dłoni przy czarze
 verts = [V(0, 0.0, 0), V(0, 0.16, 0), V(0, 0.36, 0), V(0, 0.55, 0), V(0, 0.62, 0), V(0, 0.68, 0), V(0, 0.76, -0.01),
-         V(-0.14, 0.6, 0), V(-0.16, 0.47, 0.04), V(-0.06, 0.43, 0.11),
-         V(0.14, 0.6, 0), V(0.16, 0.47, 0.04), V(0.06, 0.43, 0.11)]
+         V(-0.14, 0.6, 0), V(-0.16, 0.47, 0.04), V(-0.085, 0.42, 0.15),
+         V(0.14, 0.6, 0), V(0.16, 0.47, 0.04), V(0.085, 0.42, 0.15)]
 edges = [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 6), (3, 7), (7, 8), (8, 9), (3, 10), (10, 11), (11, 12)]
 radii = [(0.15, 0.12), (0.14, 0.11), (0.13, 0.1), (0.15, 0.09), (0.065, 0.055), (0.04, 0.04), (0.07, 0.075),
-         (0.06, 0.055), (0.05, 0.05), (0.032, 0.036), (0.06, 0.055), (0.05, 0.05), (0.032, 0.036)]
+         (0.06, 0.055), (0.05, 0.05), (0.024, 0.026), (0.06, 0.055), (0.05, 0.05), (0.024, 0.026)]
 body = skin('statue', verts, edges, radii, subsurf=2)
 # kaptur: większa, wydłużona do tyłu powłoka na głowie, z przodu otwarta na twarz (twarz to osobna bryła wpuszczona w głąb)
 def hood_shape(x, y, z):
@@ -159,6 +159,54 @@ push(nose, 'cutDark')
 push(beard, 'cutDark')
 push(belt, 'cutDark')
 push(bowl, 'castleDark', (0, Y0 + 0.43, SZ + 0.15))
+
+# ---------------- dłonie z palcami obejmujące czarę ----------------
+# Dłoń podpiera czarę od spodu z boku, cztery palce idą w górę wzdłuż ścianki (lekko rozstawione), kciuk zahacza
+# o brzeg od góry. Punkty liczone po zewnętrznej ściance czary (profil jak w lathe), więc palce leżą na niej, a nie w niej.
+BC = (0.0, Y0 + 0.43, SZ + 0.15)          # dno czary (oś)
+
+
+def r_out(h):
+    prof = ((0.0, 0.035), (0.035, 0.06), (0.07, 0.075))
+    if h <= 0:
+        return 0.035
+    for (h0, r0), (h1, r1) in zip(prof, prof[1:]):
+        if h <= h1:
+            return r0 + (r1 - r0) * (h - h0) / (h1 - h0)
+    return 0.075
+
+
+def on_bowl(a, h, off):
+    r = r_out(h) + off
+    return (BC[0] + math.cos(a) * r, BC[1] + h, BC[2] + math.sin(a) * r)
+
+
+hand_parts = []
+for side, base_a in ((-1, math.pi), (1, 0.0)):
+    # dłoń: spłaszczona bryła pod bokiem czary (szeroka w poprzek, cienka promieniście)
+    palm_c = on_bowl(base_a, -0.004, 0.012)
+    hand_parts.append(sphere(f'palm{side}', palm_c, (0.017, 0.013, 0.03)))
+    # nasada dłoni łącząca nadgarstek z dłonią
+    wrist = (side * 0.085, Y0 + 0.42, SZ + 0.15)
+    hand_parts.append(skin(f'heel{side}', [wrist, palm_c], [(0, 1)], [(0.022, 0.02), (0.018, 0.012)], subsurf=1))
+    # palce: wskazujący, środkowy, serdeczny, mały — rozstawione wokół czary, każdy w trzech członach
+    for k, (da, top) in enumerate(((-0.5, 0.05), (-0.17, 0.057), (0.16, 0.053), (0.46, 0.043))):
+        a = base_a + da * (1 if side < 0 else -1)
+        rad = 0.0068 - k * 0.0004 if k < 3 else 0.0056
+        pts = [on_bowl(a * 0.92 + base_a * 0.08, 0.002, rad + 0.006)]            # kostka
+        for j, f in enumerate((0.34, 0.68, 1.0)):
+            pts.append(on_bowl(a + da * 0.04 * f, top * f, rad + 0.001))
+        radii = [(rad * 1.15, rad * 1.1), (rad, rad), (rad * 0.92, rad * 0.9), (rad * 0.78, rad * 0.75)]
+        hand_parts.append(skin(f'finger{side}{k}', pts, [(0, 1), (1, 2), (2, 3)], radii, subsurf=1))
+        # paznokieć: maleńkie spłaszczenie na końcu palca od zewnątrz
+    # kciuk: od nasady dłoni z tyłu, w górę po ściance i przez brzeg do środka czary
+    ta = base_a + (0.62 if side < 0 else -0.62)
+    tpts = [on_bowl(base_a + (0.35 if side < 0 else -0.35), 0.0, 0.02), on_bowl(ta, 0.035, 0.009),
+            on_bowl(ta, 0.068, 0.008), (BC[0] + math.cos(ta) * 0.066, BC[1] + 0.082, BC[2] + math.sin(ta) * 0.066)]
+    hand_parts.append(skin(f'thumb{side}', tpts, [(0, 1), (1, 2), (2, 3)],
+                           [(0.0095, 0.009), (0.0078, 0.0075), (0.0068, 0.0065), (0.0055, 0.0052)], subsurf=1))
+for ob in hand_parts:
+    push(ob, 'cut')
 flames.append([0, Y0 + 0.48, SZ + 0.15])
 lights.append([0, Y0 + 0.55, SZ + 0.15])
 
@@ -209,6 +257,8 @@ for (x, z) in ((-0.36, SZ + 0.18), (0.36, SZ + 0.16)):
     b.crystal('base', 'leaf', x, S1, z, 0.03, seed=x * 5, sy=0.4)
 
 VIEWS = [
+    ['dłonie z czarą', [0.16, Y0 + 0.62, SZ + 0.42], [0, Y0 + 0.45, SZ + 0.15], ['base'], 16],
+    ['dłonie z boku', [0.32, Y0 + 0.5, SZ + 0.2], [0, Y0 + 0.45, SZ + 0.15], ['base'], 16],
     ['kapliczka (oczy chłopa)', [0.0, 0.5, 1.6], [0, 0.6, SZ], ['base'], 30],
     ['przy klęczniku', [0.15, 0.35, 0.55], [0, 0.75, SZ], ['base'], 26],
     ['z boku', [1.4, 0.6, 0.2], [0, 0.6, SZ], ['base'], 28],
