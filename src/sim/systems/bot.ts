@@ -309,12 +309,35 @@ function sendSappers(g: GameState, p: PlayerState): void {
  * Palisada bota: kwadrat wokół twierdzy, bramy pośrodku boków, wieże w narożnikach w środku.
  * Stawia po kilka odcinków naraz, gdy ma drewno; pola zajęte albo nieprzechodnie pomija (wyłomy zamykają woda i góry).
  */
+/**
+ * Budynek z listy, na który bot teraz czeka (te same pominięcia co w budowie): mur nie może zjadać na niego drewna.
+ * Bez tego palisada (1 drewna za odcinek, 8 naraz) brała każde drewno ponad 25 i bot latami nie miał na młyn ani piekarnię.
+ */
+function waitingFor(g: GameState, p: PlayerState): number | null {
+  const have = new Map<string, number>();
+  for (const b of g.buildings) if (b.owner === p.id) { const id = BUILDINGS[b.type]!.id; have.set(id, (have.get(id) ?? 0) + 1); }
+  const want = new Map<string, number>();
+  for (const id of ORDER) {
+    want.set(id, (want.get(id) ?? 0) + 1);
+    if ((have.get(id) ?? 0) >= want.get(id)!) continue;
+    const type = buildingIndex(id);
+    if (missingRequirement(g, p.id, BUILDINGS[type]!)) continue;
+    if (id === 'minecamp' && !g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'oremine' && !b.ruined)) continue;
+    if (BUILDINGS[type]!.needsRock && (p.noRock ?? 0) > g.tick) continue;
+    return type;
+  }
+  return null;
+}
+
 function fortify(g: GameState, p: PlayerState): void {
   const keep = playerKeep(g, p.id);
   if (!keep) return;
   const [cx, cy] = keepCenter(keep), w = g.map.width;
   const pal = buildingIndex('palisade'), gate = buildingIndex('gate'), tower = buildingIndex('watchtower');
-  const wood = p.res[resIndex('wood')]!;
+  // zapas na następny budynek z listy (np. młyn, piekarnia) — mur stawia dopiero z nadwyżki
+  const next = waitingFor(g, p);
+  const reserve = next === null ? 0 : BUILDINGS[next]!.cost.wood ?? 0;
+  const wood = p.res[resIndex('wood')]! - reserve;
   if (wood < 25) return;
   let placed = 0;
   const x0 = cx - RING, x1 = cx + RING, y0 = cy - RING, y1 = cy + RING;
@@ -337,12 +360,14 @@ function fortify(g: GameState, p: PlayerState): void {
     if (++tries > 44) break;
     const isGate = (x === cx && (y === y0 || y === y1)) || (y === cy && (x === x0 || x === x1));
     const type = isGate ? gate : pal;
+    if (p.res[resIndex('wood')]! - reserve < (BUILDINGS[type]!.cost.wood ?? 0)) break;
     if (canPlace(g, p.id, type, x, y) === null && placeBuilding(g, p.id, type, x, y)) placed++;
   }
   if (placed) return;
   // gdy mur stoi, wieże w narożnikach (w środku muru)
   for (const [x, y] of [[x0 + 1, y0 + 1], [x1 - 2, y0 + 1], [x0 + 1, y1 - 2], [x1 - 2, y1 - 2]] as const) {
     if (g.occupancy[y * w + x] !== 0) continue;
+    if (p.res[resIndex('wood')]! - reserve < (BUILDINGS[tower]!.cost.wood ?? 0)) return;
     if (canPlace(g, p.id, tower, x, y) === null) { placeBuilding(g, p.id, tower, x, y); return; }
   }
 }

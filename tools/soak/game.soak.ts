@@ -1,5 +1,6 @@
 import { it } from 'vitest';
 import { BUILDINGS } from '../../src/data/buildings';
+import { resIndex } from '../../src/data/resources';
 import { UNITS } from '../../src/data/units';
 import { clockAt } from '../../src/sim/clock';
 import { walkable } from '../../src/sim/path';
@@ -34,6 +35,8 @@ function soak(seed: number): void {
   // ostatnie położenie i od kiedy się nie rusza (ludzie i żołnierze)
   const still = new Map<number, { x: number; y: number; since: number; phase: number }>();
   const siteSeen = new Map<number, { build: number; since: number }>();
+  /** Gracz → od kiedy ma mąkę, a nie ma piekarni */
+  const flourSince = new Map<number, number>();
   const t0 = Date.now();
   let simMs = 0, maxStep = 0;
   const slow: string[] = [];
@@ -73,6 +76,15 @@ function soak(seed: number): void {
       const s = siteSeen.get(b.id);
       if (!s || s.build !== b.build) { siteSeen.set(b.id, { build: b.build, since: g.tick }); continue; }
       if (g.tick - s.since > 6000) add('budowa-stoi', `budowa ${BUILDINGS[b.type]!.id} gracza ${b.owner} bez postępu od ${(g.tick - s.since) / 10}s (zostało ${b.build}), dostarczono ${b.delivered ?? 0}/${b.loads ?? 0}, wolnych chłopów gracza ${g.units.filter((u) => u.owner === b.owner && !u.job).length}`, b.id);
+    }
+    // ---- łańcuch chleba: mąka leży, a piekarni brak (dawniej palisada zjadała drewno na nią) ----
+    for (const p of g.players) {
+      const flour = p.res[resIndex('flour')]!;
+      const bakery = g.buildings.some((b) => b.owner === p.id && !b.ruined && BUILDINGS[b.type]!.id === 'bakery');
+      if (flour < 8 || bakery) { flourSince.delete(p.id); continue; }
+      const since = flourSince.get(p.id) ?? g.tick;
+      flourSince.set(p.id, since);
+      if (g.tick - since > 6000) add('mąka-bez-piekarni', `gracz ${p.id} ma ${flour} mąki od ${(g.tick - since) / 10}s i nie stawia piekarni (drewno ${p.res[resIndex('wood')]}, kamień ${p.res[resIndex('stone')]})`, p.id);
     }
     // ---- zgodność zapisu i sieci: kopia z zapisu liczy dalej to samo ----
     if (g.tick % 36000 === 0) {

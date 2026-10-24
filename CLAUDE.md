@@ -9,6 +9,11 @@ Nad grą pracuje kilka czatów naraz, więc:
 2. **Przed każdym pushem:** `git fetch origin main && git rebase origin/main`, a po rebase **pełne sprawdzenie od nowa:** `npx tsc --noEmit && npx vitest run && npm run build`. Push dopiero, gdy wszystko przejdzie (zmiany innego czatu mogą logicznie gryźć się z naszymi, nawet bez konfliktu w git).
 3. Konflikt przy rebase rozwiązujemy ręcznie, zachowując zmiany obu czatów — nigdy `--force` ani nadpisywanie cudzych zmian.
 
+## Podział kodu na pliki (Michał, 24.10.2026, dla wszystkich czatów)
+- Dobre praktyki: jeden plik = jedna odpowiedzialność. Nie dopisujemy kolejnych setek linii do plików, które już mają po kilka tysięcy (np. ~6000 linii).
+- Nowa funkcja gry (system, okno, budynek z logiką) trafia do osobnego modułu; gdy ruszasz duży plik, wydziel przy okazji spójny kawałek (np. jedno okno UI, jeden system) do własnego pliku z importem.
+- Dzielimy małymi partiami (jeden plik na raz), bez zmiany zachowania gry; po każdym podziale `tsc` + `vitest` + `build`. Uwaga na równoległe czaty: przed podziałem dużego pliku `git pull --rebase`, żeby nie rozjechać cudzych zmian.
+
 ## Dwa języki: polski i angielski (obowiązkowo dla każdego czatu, od 17.10.2026)
 - Każdy nowy budynek, jednostka, surowiec, okno, przycisk, komunikat i podpowiedź dostaje od razu **obie wersje**. Bez angielskiej wersji zmiana nie jest skończona.
 - Stałe teksty (nazwy i opisy budynków, jednostek, surowców): klucz w `src/i18n/pl.ts` **i** ta sama linijka w `src/i18n/en.ts`, w kodzie `t('klucz')`. `en.ts` jest typowany kluczami z `pl.ts`, więc brakujące tłumaczenie wywala `tsc`; `tests/i18n.test.ts` sprawdza dodatkowo, że każdy budynek z `BUILDINGS` ma nazwę w obu językach.
