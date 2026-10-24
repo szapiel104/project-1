@@ -14,7 +14,7 @@ from mathutils import Vector
 name, out = sys.argv[1], sys.argv[2]
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 d = json.load(open(os.path.join(ROOT, 'src', 'render', 'models', f'{name}.json')))
-COL = {'needle': 0x3c7a3a, 'turf': 0x5f7a3a, 'leaf': 0x5c9a3c, 'leafLight': 0x7fb548, 'orchardGrass': 0x86b54a, 'appleGreen': 0xa9c23f, 'wattle': 0x9a7a4a, 'rock': 0xb3ae9f, 'cut': 0xe6dfcf, 'wheat': 0xd9b84a, 'ash': 0x4a4540, 'castle': 0xc9bb9a, 'castleDark': 0xa89a7a, 'slate': 0x6a6d74, 'woodDark': 0x5e4329, 'wood': 0x85603a, 'plank': 0xd9b27a, 'roadWood': 0xc49a6a,
+COL = {'window': 0xb08a5a, 'castlePlain': 0xd6c49a, 'roofTile': 0x8a3a26, 'robeRed': 0x6a1a14, 'robeBlue': 0x24406e, 'ember': 0xff8a2a, 'needle': 0x3c7a3a, 'turf': 0x5f7a3a, 'leaf': 0x5c9a3c, 'leafLight': 0x7fb548, 'orchardGrass': 0x86b54a, 'appleGreen': 0xa9c23f, 'wattle': 0x9a7a4a, 'rock': 0xb3ae9f, 'cut': 0xe6dfcf, 'wheat': 0xd9b84a, 'ash': 0x4a4540, 'castle': 0xc9bb9a, 'castleDark': 0xa89a7a, 'slate': 0x6a6d74, 'woodDark': 0x5e4329, 'wood': 0x85603a, 'plank': 0xd9b27a, 'roadWood': 0xc49a6a,
        'pathCobble': 0x9e968a, 'stone': 0xcfc7b3, 'stoneDark': 0xa39b88, 'dark': 0x1c1611, 'iron': 0x4a4038, 'gold': 0xe9c145, 'flag': 0xb02020,
        'plaster': 0xf0e4c4, 'thatch': 0xd1ad4c, 'thatchDark': 0xa9862f, 'roadStone': 0xf4f0e8, 'hay': 0xe0c466, 'ember': 0xff8a2a, 'bread': 0xa8652c, 'apple': 0xd0281f, 'fish': 0x9cc3d6, 'white': 0xf1ead8, 'sack': 0xbfa77c, 'ore': 0xb0623a, 'magicOre': 0x3a3cc8, 'caveWater': 0x1d2c33, 'crust': 0xe2b06a, 'cutDark': 0xc9c1ae, 'rope': 0xb89a64, 'bark': 0x7a5a3a, 'rockDark': 0x8d877a, 'basket': 0xb08a4e, 'soil': 0x86633d, 'water': 0x1b3a40, 'hide': 0x7a5a3e, 'hideDark': 0x58402c, 'canvas': 0xd8cba6, 'canvasDark': 0x9a8f78}
 q = d['q']

@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.41.0 — budynki magów: wieża magów ognia i sanktuarium magów wody (2026-10-24)
+
+- Dwa nowe budynki z Blendera w zakładce Osada (3×3 pola):
+  - **Wieża magów ognia** (80 kamienia, 30 drewna, 40 rudy; tools/models/magefire.py): ośmioboczna baszta z ciosów na cokole, wąskie ostrołukowe okna w trzech kondygnacjach, okute drzwi pod ostrołukiem na schodkach, dach ośmiospadowy z czerwonej dachówki z lukarną i grotem z tarczą słońca; z boku pracownia z kominem; przed wejściem brukowany krąg z wielkim zniczem z brązu (płonie cały czas) i żelazne kosze z żarem przy drzwiach; czerwone płachty, ława, stos polan, kosz z węglem
+  - **Sanktuarium magów wody** (70 kamienia, 30 drewna, 40 rudy; tools/models/magewater.py): jasna sala z ciosanego kamienia pod łupkiem, portyk na dwóch kolumnach z trójkątnym szczytem, okrągła rozeta nad drzwiami, smukłe okna i granatowe płachty; sadzawka z fontanną w kamiennej cembrowinie, trzciny i ława; z tyłu okrągła cysterna, z przodu dzbany na wodę i latarnie
+- Na razie same budynki — magowie (modele są już gotowe), choroba i leczenie dojdą w kolejnych partiach. Opisy po polsku i angielsku
+- Nowe materiały budynków: czerwona dachówka, płachty w barwach obu kręgów; podgląd Cycles (render_building.py) chowa tylne strony ścian jak gra
+
 ## 0.40.5 — naturalniejsze dłonie posągu w kapliczce (2026-10-24)
 
 - Palce posągu nie sterczą już wzdłuż czary jak patyki: są krótsze i grubsze, ułożone jeden nad drugim i lekko podkurczone, obejmują czarę od boku ku przodowi (wskazujący najwyżej, mały najniżej). Kciuk leży na brzegu czary i wskazuje do przodu

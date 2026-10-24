@@ -33,6 +33,8 @@ const BRAZIER_MODEL = model('brazier');
 const WATCH_TOWER_MODEL = model('watchtower');
 const WELL_MODEL = model('well');
 const SHRINE_MODEL = model('shrine');
+const MAGE_FIRE_MODEL = model('magefire');
+const MAGE_WATER_MODEL = model('magewater');
 const ENGINEERS_MODEL = model('engineers');
 const STONE_GATE_MODEL = model('stonegate');
 const STOCKPILE_MODEL = model('stockpile');
@@ -154,6 +156,8 @@ const M = {
   // woda w studni i korycie: ciemna, gładka tafla z połyskiem (bez tekstury)
   water: new THREE.MeshStandardMaterial({ color: 0x1b3a40, roughness: 0.15, metalness: 0.1 }),
   castle: mat(0xa9a08c, 'ashlar'), castleDark: mat(0x857b68, 'ashlar'), castlePlain: mat(0xd6c49a),
+  // magowie: czerwona dachówka wieży magów ognia, płachty w barwach obu kręgów (zgrzebna wełna)
+  roofTile: mat(0x8a3a26, 'tiles'), robeRed: mat(0x6a1a14, 'burlap'), robeBlue: mat(0x24406e, 'burlap'),
   smoke: new THREE.MeshStandardMaterial({ color: 0xd8d4c8, flatShading: true, transparent: true, opacity: 0.8 }),
 };
 /** Płyta łąki w modelu sadu: w podglądzie modeli widać ją jak w Blenderze, w grze chowa ją scena (sad stoi na łące z dywanu trawy) */
@@ -1119,6 +1123,16 @@ const BUILDERS: Record<string, Builder> = {
   },
   torch(g) {
     g.add(torchModel());
+  },
+  mageFire(g, _team, flag) {
+    // wieża magów ognia z Blendera (tools/models/magefire.py): ośmioboczna baszta pod dachówką, przybudówka z kominem,
+    // wielki znicz na brukowanym kręgu i kosze z żarem przy drzwiach (znaczniki 'flame' płoną cały czas, nocą lightSpot)
+    blenderModel(g, MAGE_FIRE_MODEL as unknown as BlenderBuilding, flag);
+  },
+  mageWater(g, _team, flag) {
+    // sanktuarium magów wody z Blendera (tools/models/magewater.py): jasna sala z portykiem i rozetą, sadzawka z fontanną,
+    // okrągła cysterna z tyłu, dzbany i latarnie
+    blenderModel(g, MAGE_WATER_MODEL as unknown as BlenderBuilding, flag);
   },
   shrine(g, _team, flag) {
     // kapliczka z Blendera (tools/models/shrine.py): posąg Ojca Płomienia z czarą wiecznego ognia w ostrołukowej niszy,
