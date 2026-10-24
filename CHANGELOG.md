@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## ..1 — naturalniejsze dłonie posągu w kapliczce (2026-10-24)
+
+- Palce posągu nie sterczą już wzdłuż czary jak patyki: są krótsze i grubsze, ułożone jeden nad drugim i lekko podkurczone, obejmują czarę od boku ku przodowi (wskazujący najwyżej, mały najniżej). Kciuk leży na brzegu czary i wskazuje do przodu
+
 ## 0.40.4 — poprawiony klęcznik w kapliczce (2026-10-24)
 
 - Deska i słupki klęcznika stoją na posadzce kapliczki (wcześniej deska tkwiła w płycie i z góry było widać czarny prostokąt)

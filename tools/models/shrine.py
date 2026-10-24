@@ -183,28 +183,31 @@ def on_bowl(a, h, off):
 
 hand_parts = []
 for side, base_a in ((-1, math.pi), (1, 0.0)):
-    # dłoń: spłaszczona bryła pod bokiem czary (szeroka w poprzek, cienka promieniście)
-    palm_c = on_bowl(base_a, -0.004, 0.012)
-    hand_parts.append(sphere(f'palm{side}', palm_c, (0.017, 0.013, 0.03)))
-    # nasada dłoni łącząca nadgarstek z dłonią
+    # Dłonie trzymają czarę z boków jak przy ofiarowaniu: dłoń przylega do boku czary, cztery palce ułożone jeden
+    # nad drugim zawijają się poziomo wokół ścianki ku przodowi (wskazujący najwyżej, mały najniżej), lekko podkurczone,
+    # kciuk leży na brzegu i wskazuje do przodu. dir = kierunek „ku przodowi” po obwodzie czary.
+    d = -1 if side < 0 else 1
+    palm_c = on_bowl(base_a, 0.022, 0.013)
+    hand_parts.append(sphere(f'palm{side}', palm_c, (0.014, 0.03, 0.025)))
     wrist = (side * 0.085, Y0 + 0.42, SZ + 0.15)
-    hand_parts.append(skin(f'heel{side}', [wrist, palm_c], [(0, 1)], [(0.022, 0.02), (0.018, 0.012)], subsurf=1))
-    # palce: wskazujący, środkowy, serdeczny, mały — rozstawione wokół czary, każdy w trzech członach
-    for k, (da, top) in enumerate(((-0.5, 0.05), (-0.17, 0.057), (0.16, 0.053), (0.46, 0.043))):
-        a = base_a + da * (1 if side < 0 else -1)
-        rad = 0.0068 - k * 0.0004 if k < 3 else 0.0056
-        pts = [on_bowl(a * 0.92 + base_a * 0.08, 0.002, rad + 0.006)]            # kostka
-        for j, f in enumerate((0.34, 0.68, 1.0)):
-            pts.append(on_bowl(a + da * 0.04 * f, top * f, rad + 0.001))
-        radii = [(rad * 1.15, rad * 1.1), (rad, rad), (rad * 0.92, rad * 0.9), (rad * 0.78, rad * 0.75)]
+    hand_parts.append(skin(f'heel{side}', [wrist, on_bowl(base_a - d * 0.12, 0.014, 0.018)], [(0, 1)],
+                           [(0.021, 0.019), (0.017, 0.013)], subsurf=1))
+    for k in range(4):
+        h = 0.033 - k * 0.0092
+        rad = (0.0068, 0.007, 0.0066, 0.0058)[k]
+        reach = (0.62, 0.68, 0.62, 0.5)[k]                 # jak daleko palec sięga wokół czary (w radianach)
+        a0 = base_a + d * 0.12
+        pts = [on_bowl(a0, h + 0.002, rad + 0.006)]        # kostka przy dłoni
+        for f, press in ((0.4, 0.95), (0.75, 0.85), (1.0, 0.55)):   # człony coraz mocniej przyciśnięte (podkurczony koniuszek)
+            pts.append(on_bowl(a0 + d * reach * f, h - 0.004 * f, rad * press))
+        radii = [(rad * 1.12, rad * 1.1), (rad, rad), (rad * 0.93, rad * 0.92), (rad * 0.8, rad * 0.78)]
         hand_parts.append(skin(f'finger{side}{k}', pts, [(0, 1), (1, 2), (2, 3)], radii, subsurf=1))
-        # paznokieć: maleńkie spłaszczenie na końcu palca od zewnątrz
-    # kciuk: od nasady dłoni z tyłu, w górę po ściance i przez brzeg do środka czary
-    ta = base_a + (0.62 if side < 0 else -0.62)
-    tpts = [on_bowl(base_a + (0.35 if side < 0 else -0.35), 0.0, 0.02), on_bowl(ta, 0.035, 0.009),
-            on_bowl(ta, 0.068, 0.008), (BC[0] + math.cos(ta) * 0.066, BC[1] + 0.082, BC[2] + math.sin(ta) * 0.066)]
+    # kciuk: z tyłu dłoni w górę na brzeg czary, dalej leży na brzegu skierowany do przodu
+    tpts = [on_bowl(base_a - d * 0.06, 0.05, 0.012), on_bowl(base_a + d * 0.02, 0.066, 0.008),
+            (BC[0] + math.cos(base_a + d * 0.16) * 0.076, BC[1] + 0.078, BC[2] + math.sin(base_a + d * 0.16) * 0.076),
+            (BC[0] + math.cos(base_a + d * 0.34) * 0.072, BC[1] + 0.078, BC[2] + math.sin(base_a + d * 0.34) * 0.072)]
     hand_parts.append(skin(f'thumb{side}', tpts, [(0, 1), (1, 2), (2, 3)],
-                           [(0.0095, 0.009), (0.0078, 0.0075), (0.0068, 0.0065), (0.0055, 0.0052)], subsurf=1))
+                           [(0.0095, 0.009), (0.008, 0.0078), (0.0072, 0.007), (0.006, 0.0058)], subsurf=1))
 for ob in hand_parts:
     push(ob, 'cut')
 flames.append([0, Y0 + 0.48, SZ + 0.15])
