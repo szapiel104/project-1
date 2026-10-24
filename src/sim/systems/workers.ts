@@ -10,6 +10,7 @@ import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
 import { mageKindOf } from './plague';
+import { harvestPct } from './storms';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -602,7 +603,8 @@ export function workerSystem(g: GameState): void {
         if (g.map.tiles[tile] === prod.site && ++g.wear[tile]! >= RULES.depositYields) { g.map.tiles[tile] = Terrain.Grass; g.cut.push(tile); }
       }
       u.carryRes = resIndex(prod.output.res);
-      u.carryAmt = prod.output.amount;
+      // susza: sad i pole bez studni obok rodzą o połowę mniej (storms.ts)
+      u.carryAmt = job ? Math.max(1, Math.round((prod.output.amount * harvestPct(g, job)) / 100)) : prod.output.amount;
       if (job && job.type === OREMINE) {
         // kopalnia: z jednego kursu wychodzi kamień, żelazo albo (rzadko) ruda — losowane z ziarna meczu
         let roll = g.rng.int(100);

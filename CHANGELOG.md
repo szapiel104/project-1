@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.48.0 — burze i susza (2026-10-24)
+
+- **Burza:** przy mocnym deszczu poza zimą piorun od czasu do czasu trafia w budynek i go podpala (ok. 1–2 uderzenia na burzę na gracza). Gaszą ludzie z wiadrami i magowie Źródła, a deszcz sam przygasza każdy pożar. Kamienne budowle (mury, wieże, twierdza, studnia, kapliczka, siedziby magów) się nie palą. W scenie poszarpany kanał pioruna z odnogami do dachu, błysk i trzask grzmotu; skryba z przyciskiem do pożaru (src/sim/systems/storms.ts, src/render/bolts.ts)
+- **Susza:** w gorące letnie dni bez deszczu sady i pola rodzą o połowę mniej; studnia najwyżej 8 pól obok ratuje 90% plonu. Skryba ostrzega, pod zegarem napis „burza” albo „susza” z podpowiedzią
+- **Boty:** stawiają studnię przy polach (po farmie); pożary od piorunów gaszą jak każde inne
+- „Jak grać” → Dzień i noc: burze i susza (PL/EN). Balans w `RULES.storm` i `RULES.drought`. Tryb testowy: `__test.strike(id?)` — piorun od ręki
+
 ## 0.47.2 — podział scene.ts na mniejsze pliki, bez zmiany obrazu (2026-10-24)
 
 - Z `src/render/scene.ts` (6241 linii) wyszło do osobnych plików ok. 1160 linii — samodzielne części obrazu, każda w swoim module: animacje ciosów i strzałów (`combatanim.ts`), znaki nad głowami (`marks.ts`), scalanie budynków (`merge.ts`), modele do chodzenia — zamek, karczma, kopalnia (`walkmodels.ts`), strzały w locie (`arrows.ts`), flagi zbiórki i znaczki strzelających wież (`rally.ts`), wrota bram (`gates.ts`), niebo — kopuła, gwiazdy, księżyc, słońce (`sky.ts`), kurz i odpryski (`dust.ts`), koksowniki (`braziers.ts`), gruz i zapadające się budynki (`rubble.ts`), częstokół i mury kamienne (`walls.ts`), place budowy z rusztowaniami (`sites.ts`), poświata pochodni (`torchglow.ts`)

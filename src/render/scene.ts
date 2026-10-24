@@ -17,6 +17,7 @@ import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '.
 import { crewOf } from '../sim/systems/workers';
 import { mageKindOf } from '../sim/systems/plague';
 import { SpellLayer } from './spells';
+import { BoltLayer } from './bolts';
 import { saplingGrowth } from '../sim/systems/forestry';
 import { Clutter } from './clutter';
 import { Chips } from './chips';
@@ -394,6 +395,15 @@ export class GameRenderer {
   private flash = 0;
   /** Błyskawica: na ułamek sekundy rozjaśnia całą scenę */
   lightning(): void { this.flash = 1; }
+  /** Pioruny w budynki (src/render/bolts.ts) */
+  private bolts = new BoltLayer(this.scene);
+  /** Piorun trafia w pole mapy (x, y): kanał z chmur do dachu i błysk całej sceny */
+  strike(x: number, y: number): void {
+    if (!this.state) return;
+    const { width, height } = this.state.map;
+    this.bolts.strike(x - width / 2, (this.view?.heightAt(x, y) ?? 0) + 1.2, y - height / 2);
+    this.flash = 1;
+  }
   get weather(): { night: number; rain: number } { return { night: this.night, rain: this.rain }; }
   private rainLines: THREE.LineSegments | null = null;
   private sadFaces: THREE.Sprite[] = [];
@@ -2018,6 +2028,7 @@ export class GameRenderer {
       fog.color.setHex(0x0b0806); fog.near = 3; fog.far = 20;
       (this.scene.background as THREE.Color).setHex(0x0b0806);
     }
+    this.bolts.update(dt);
     if (this.flash > 0) { this.flash = Math.max(0, this.flash - dt * 4); this.hemi.intensity += this.flash * 3 * (Math.random() < 0.7 ? 1 : 0.3); }
     this.aimSun();
     this.updateSeason(dt);

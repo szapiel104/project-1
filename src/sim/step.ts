@@ -17,6 +17,7 @@ import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
 import { plagueSystem } from './systems/plague';
+import { stormSystem } from './systems/storms';
 import { dole, quell, unrestSystem } from './systems/unrest';
 import { forestSystem } from './systems/forestry';
 import { roadSystem } from './systems/roads';
@@ -185,6 +186,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   plagueSystem(g);
   forestSystem(g);
   enlistSystem(g);
+  stormSystem(g);
   fireSystem(g);
   armySystem(g);
   banditSystem(g);

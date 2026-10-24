@@ -20,6 +20,7 @@ import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, 
 import { applyCommands, step, type Command } from './sim/step';
 import { doleCost, rioters } from './sim/systems/unrest';
 import { magesOf, startPlague } from './sim/systems/plague';
+import { droughtAt, stormAt } from './sim/systems/storms';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
@@ -46,7 +47,7 @@ import { createAllies } from './ui/allies';
 import { createMinimap } from './ui/minimap';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
-import { alarmBell, daySounds, music, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { alarmBell, thunderClap, daySounds, music, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
 import { WOLF_HP } from './sim/systems/wolves';
@@ -1705,7 +1706,9 @@ function winterNotes(p: (typeof game.players)[number]): void {
   }
 }
 
-let plagueSeen = 0, plagueToll = 0, plagueOverSeen = 0;
+let plagueSeen = 0, plagueToll = 0, plagueOverSeen = 0, droughtDay = -1;
+/** Ostatni piorun każdego gracza, który już pokazaliśmy (tick) */
+const strikesSeen = new Map<number, number>();
 /** Etap osady przy ostatnim odświeżeniu (-1 = świeży start: nie ogłaszamy etapu wczytanego z zapisu) */
 let tierSeen = -1;
 function refresh(): void {
@@ -1741,6 +1744,11 @@ function refresh(): void {
       `My lord, our settlement has grown — we are now a ${(TIER_NAMES()[tierNow] ?? '').toLowerCase()}. You may now build: ${opened}.${next ? ` The next stage comes at ${next} people.` : ''}`));
   }
   tierSeen = tierNow;
+  // susza latem: skryba raz na dzień suszy mówi, że sady i pola rodzą mniej, i radzi studnie
+  if (droughtAt(game)) {
+    const day = clockAt(game.tick).day;
+    if (droughtDay !== day) { droughtDay = day; scribe.say(`drought${day}`, tx('Panie, susza! Sady i pola rodzą dziś o połowę mniej. Studnia blisko sadu albo pola ratuje większość plonu.', 'My lord, a drought! Orchards and fields will yield half today. A well close to an orchard or field saves most of the harvest.')); }
+  }
   // zaraza: skryba ogłasza wybuch (z przyciskiem do pierwszego chorego), zgony bez magów i koniec zarazy z liczbą ofiar
   if (p.plague && p.plague !== plagueSeen) {
     plagueSeen = p.plague;
@@ -1804,7 +1812,7 @@ function refresh(): void {
   hud.update({
     jumps: { barracks: jumpCount('barracks'), stockpile: jumpCount('stockpile') },
     day: clock.day, hour: clock.hour, night: clock.night,
-    weather: (() => { const w = weatherOf(game, rainAt(game.tick)); return { season: SEASON_NAME[w.season], temp: w.temp }; })(),
+    weather: (() => { const w = weatherOf(game, rainAt(game.tick)); return { season: SEASON_NAME[w.season], temp: w.temp, note: stormAt(game) ? tx('burza', 'storm') : droughtAt(game) ? tx('susza', 'drought') : undefined }; })(),
     res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
     stock: storeUsed(p, 'stockpile'), stockCap: storeCapacity(game, ME, 'stockpile'),
     food: storeUsed(p, 'granary'), foodCap: storeCapacity(game, ME, 'granary'),
@@ -1890,6 +1898,20 @@ function loop(now: number): void {
   else {
     nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
     if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
+    // piorun w budynek (storms.ts): kanał z chmur, błysk i trzask; w swój budynek — skryba z przyciskiem do pożaru
+    for (const pl of game.players) {
+      const st = pl.lastStrike;
+      if (!st || strikesSeen.get(pl.id) === st.tick) continue;
+      strikesSeen.set(pl.id, st.tick);
+      if (game.tick - st.tick > 30) continue; // stary piorun z wczytanego zapisu
+      renderer.strike(st.x, st.y);
+      thunderClap();
+      if (pl.id === ME) {
+        const hit = game.buildings.find((x) => x.id === st.building);
+        const name = hit ? t(BUILDINGS[hit.type]!.name).toLowerCase() : '';
+        scribe.say(`strike${st.tick}`, tx(`Panie, piorun trafił w budynek: ${name}! Pali się — ludzie biegną z wiadrami.`, `My lord, lightning has struck the ${name}! It is burning — the folk are running with buckets.`), true, 'scribe', showAt(st.x, st.y));
+      }
+    }
   }
   music(renderer.weather.night, alerts.length > 0 || alarmComing, menu.isOpen(), renderer.walking);
   // otwarte menu wstrzymuje grę
@@ -2070,6 +2092,16 @@ requestAnimationFrame(loop);
   enemy(n = 3): void {
     const b = game.buildings.find((x) => x.owner === ME && BUILDINGS[x.type]!.id === 'barracks') ?? game.buildings[0]!;
     for (let i = 0; i < n; i++) game.soldiers.push({ id: game.nextId++, owner: 1, kind: 0, px: (b.x + 5 + i) * 256 + 128, py: (b.y + 4) * 256 + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 });
+  },
+  /** Piorun od ręki: trafia w budynek o tym id (albo w pierwszy drewniany budynek gracza) i podpala go */
+  strike(id = 0, player = ME): boolean {
+    const b = game.buildings.find((x) => (id ? x.id === id : x.owner === player && !x.build && !['keep', 'well'].includes(BUILDINGS[x.type]!.id)));
+    if (!b) return false;
+    const fp = footprint(BUILDINGS[b.type]!, b.rot);
+    b.fire = Math.max(b.fire ?? 0, 600);
+    game.players[b.owner]!.lastStrike = { tick: game.tick, building: b.id, x: b.x + fp.w / 2, y: b.y + fp.h / 2 };
+    refresh();
+    return true;
   },
   /** Żołnierz od ręki w polu (x, y): rodzaj z UNITS (np. 'mageFire', 'mageWater', 'spearman'), właściciel; zwraca id */
   soldier(kind: string, x: number, y: number, player = ME): number {

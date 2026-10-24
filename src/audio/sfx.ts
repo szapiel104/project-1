@@ -620,6 +620,13 @@ function owl(c: AudioContext, at: number): void {
   }
 }
 
+/** Grzmot od pioruna, który właśnie trafił w budynek: trzask prawie od razu (blisko) */
+export function thunderClap(): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running') return;
+  thunder(c, c.currentTime + 0.08);
+}
+
 /** Grzmot: trzask i długi, toczący się niski pomruk */
 function thunder(c: AudioContext, at: number): void {
   const rec = pick(NATURE.thunder);

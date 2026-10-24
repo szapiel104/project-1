@@ -73,7 +73,7 @@ export interface HudView {
   popularity: number;
   day: number;
   /** Pora roku i temperatura (°C) */
-  weather?: { season: string; temp: number };
+  weather?: { season: string; temp: number; /** burza albo susza (storms.ts) */ note?: string };
   hour: number;
   night: boolean;
   idle: number;
@@ -1082,9 +1082,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(clockVal, `${t('hud.day')} ${v.day}, ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')}`);
       if (v.weather) {
         const tmp = Math.round(v.weather.temp);
-        setText(weatherVal, `${v.weather.season} · ${tmp < 0 ? '−' : ''}${Math.abs(tmp)}°C`);
+        setText(weatherVal, `${v.weather.season} · ${tmp < 0 ? '−' : ''}${Math.abs(tmp)}°C${v.weather.note ? ` · ${v.weather.note}` : ''}`);
         weatherVal.dataset.t = tmp <= 0 ? 'frost' : tmp < 8 ? 'cold' : tmp > 25 ? 'hot' : '';
-        clockBox.title = `${v.weather.season}, ${lang() === 'en' ? v.weather.temp.toFixed(1) : v.weather.temp.toFixed(1).replace('.', ',')}°C${tmp < 8 ? tx(' — ludzie palą w piecach', ' — folk are lighting their hearths') : ''}`;
+        clockBox.title = `${v.weather.season}, ${lang() === 'en' ? v.weather.temp.toFixed(1) : v.weather.temp.toFixed(1).replace('.', ',')}°C${tmp < 8 ? tx(' — ludzie palą w piecach', ' — folk are lighting their hearths') : ''}${v.weather.note === tx('burza', 'storm') ? tx(' — piorun może podpalić budynek', ' — lightning may set a building alight') : v.weather.note ? tx(' — sady i pola bez studni obok rodzą o połowę mniej', ' — orchards and fields without a well nearby yield half') : ''}`;
       }
       // południe na górze o 12:00, północ o 24:00
       disc.setAttribute('transform', `rotate(${((v.hour - 12) / 24) * 360})`);

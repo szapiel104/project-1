@@ -104,6 +104,12 @@ export const RULES = {
     { name: 'tax.mid', goldPer6: 2, effect: -4 },
     { name: 'tax.high', goldPer6: 3, effect: -6 },
   ],
+  /** Burze (storms.ts): przy deszczu od `rain` (poza zimą, od `minTemp` °C) co `every` ticków każdy gracz ma `chance` %, że piorun
+   *  podpali mu budynek (pożar na `burn` ticków); deszcz przygasza każdy pożar o `rainDouse` × siła deszczu na tick */
+  storm: { rain: 0.75, minTemp: 4, every: 50, chance: 9, burn: 600, rainDouse: 2 },
+  /** Susza (storms.ts): w gorące letnie dni bez deszczu (od `temp` °C) sad i pole dają `yield` % plonu, a ze studnią
+   *  najwyżej `wellRange` pól od budynku — `withWell` % */
+  drought: { temp: 20, yield: 50, withWell: 90, wellRange: 8 },
   /** Etapy osady: od tylu ludzi wioska staje się osadą, grodem i miastem; późniejsze budynki wymagają wyższego etapu (BuildingDef.tier) */
   tiers: [0, 20, 40, 70],
   /** Każdy następny budynek tego samego rodzaju drożeje o tyle procent ceny (najwyżej `costStepMax` procent więcej);
