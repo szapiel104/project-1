@@ -248,10 +248,10 @@ for k, (dx, dz, r) in enumerate(((0.0, 0.0, 0.022), (0.025, 0.012, 0.016), (-0.0
 
 # ---------------- klęcznik z desek przed kapliczką ----------------
 KZ = 0.38
-b.box('base', 'woodDark', 0.62, 0.06, 0.14, 0, 0, KZ)                            # poduszka do klęczenia (deska na legarach)
+b.box('base', 'woodDark', 0.62, 0.05, 0.14, 0, P, KZ)                            # poduszka do klęczenia (deska na legarach)
 for sx in (-1, 1):
-    b.box('base', 'woodDark', 0.04, 0.24, 0.04, sx * 0.27, 0, KZ - 0.1)             # słupki
-b.box('base', 'wood', 0.66, 0.035, 0.08, 0, 0.24, KZ - 0.1)                      # poręcz
+    b.box('base', 'woodDark', 0.04, 0.22, 0.04, sx * 0.27, P, KZ - 0.1)             # słupki
+b.box('base', 'wood', 0.66, 0.035, 0.08, 0, P + 0.22, KZ - 0.1)                      # poręcz
 # zeschnięte wieńce i kępka ziół położone na stopniu (płaskie bryły)
 for (x, z) in ((-0.36, SZ + 0.18), (0.36, SZ + 0.16)):
     b.crystal('base', 'leaf', x, S1, z, 0.03, seed=x * 5, sy=0.4)

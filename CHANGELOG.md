@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.40.4 — poprawiony klęcznik w kapliczce (2026-10-24)
+
+- Deska i słupki klęcznika stoją na posadzce kapliczki (wcześniej deska tkwiła w płycie i z góry było widać czarny prostokąt)
+
 ## 0.40.3 — magowie: łokcie i kula czaru w dłoni (2026-10-24)
 
 - Magowie mają łokcie (rękaw podzielony na ramię i przedramię z szerokim mankietem, kula łokcia w kolorze szaty). W marszu ręce lekko zgięte, przy czarowaniu obie uniesione przed pierś ze zgiętymi łokciami
