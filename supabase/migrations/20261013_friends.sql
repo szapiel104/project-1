@@ -1,4 +1,4 @@
--- Znajomi (13.10.2026)
+-- Znajomi (13.10.2026, wykonane — sprawdzone 24.10.2026)
 create table public.friends (
   user_id uuid not null references auth.users on delete cascade default auth.uid(),
   friend_id uuid not null references auth.users on delete cascade,

@@ -17,6 +17,10 @@ Nad grą pracuje kilka czatów naraz, więc:
 - Język wybiera się w Ustawienia → Interfejs (zmiana przeładowuje grę, zapis robi się sam). Za pierwszym razem gra bierze język przeglądarki.
 - Starsze napisy wciąż wpisane na sztywno po polsku przenosimy partiami (lista w `docs/pomysly.md`, „Tłumaczenie na angielski”).
 
+## Migracje Supabase (Michał 24.10.2026)
+- Michał wykonuje je ręcznie w SQL Editorze, gdy ma dostęp. Każda nowa migracja trafia do `supabase/migrations/` **i** na listę „Czekają” w `supabase/migrations/DO_WYKONANIA.md`. Kod gry musi działać także przed jej wykonaniem (jak `saveResult` → zwykły zapis, gdy funkcji w bazie jeszcze nie ma).
+- Gdy Michał pyta o stan bazy albo wraca do pracy przy Supabase, przypomnij mu listę z `DO_WYKONANIA.md`.
+
 ## Boty dostają to samo co gracz (obowiązkowo dla każdego czatu, Michał 24.10.2026)
 - Każdy nowy budynek, jednostka i mechanika, z której korzysta gracz, od razu trafia też do bota (`src/sim/systems/bot.ts`): bot ją stawia, szkoli albo używa w sensownym momencie (np. kolejność w `ORDER`, warunki na wielkość osady i zapasy, te same limity co gracz). Bez tego zmiana nie jest skończona — tak jak bez angielskiej wersji.
 - Jeśli bot czegoś świadomie nie używa (np. czysto ozdobny budynek), napisz to w komentarzu przy `ORDER` i w wpisie w CHANGELOG.

@@ -1,4 +1,4 @@
--- Poziomy gracza i doświadczenie (PD) za mecze (16.10.2026). Wzór jak w src/data/progress.ts.
+-- Poziomy gracza i doświadczenie (PD) za mecze (16.10.2026, wykonane — sprawdzone 24.10.2026). Wzór jak w src/data/progress.ts.
 -- Postęp zmienia wyłącznie funkcja award_match (security definer); klient może tylko czytać.
 
 create table public.player_progress (
