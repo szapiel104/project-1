@@ -32,6 +32,7 @@ const STONE_TOWER_GREAT_MODEL = model('stonetower_great');
 const BRAZIER_MODEL = model('brazier');
 const WATCH_TOWER_MODEL = model('watchtower');
 const WELL_MODEL = model('well');
+const SHRINE_MODEL = model('shrine');
 const ENGINEERS_MODEL = model('engineers');
 const STONE_GATE_MODEL = model('stonegate');
 const STOCKPILE_MODEL = model('stockpile');
@@ -1118,6 +1119,11 @@ const BUILDERS: Record<string, Builder> = {
   },
   torch(g) {
     g.add(torchModel());
+  },
+  shrine(g, _team, flag) {
+    // kapliczka z Blendera (tools/models/shrine.py): posąg Ojca Płomienia z czarą wiecznego ognia w ostrołukowej niszy,
+    // świeczniki, ofiarna ruda i klęcznik; płomień w czarze to znacznik 'flame', świece świecą nocą (lightSpot)
+    blenderModel(g, SHRINE_MODEL as unknown as BlenderBuilding, flag);
   },
   well(g, _team, flag) {
     // studnia z Blendera (tools/models/well.py): cembrowina z ciosów na mijankę, wał z liną i korbą, wiadra, daszek z desek, koryto

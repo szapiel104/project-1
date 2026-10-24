@@ -127,6 +127,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         [tx('Racje', 'Rations'), tx('od −8 (brak) do +8 (podwójne)', 'from −8 (none) to +8 (double)')],
         [tx('Podatki', 'Taxes'), tx('rozdawanie +4, brak +1, niskie −2, średnie −4, wysokie −6', 'handouts +4, none +1, low −2, average −4, high −6')],
         [tx('Karczma', 'Tavern'), tx('+3 za jedną, +5 za dwie (z karczmarzem i piwem w składzie); sucha karczma −2', '+3 for one, +5 for two (with a tavernkeeper and ale in stock); a dry tavern −2')],
+        [tx('Kapliczka', 'Shrine'), tx('+1 za jedną, +2 za dwie i więcej', '+1 for one, +2 for two or more')],
         [tx('Ciasnota', 'Overcrowding'), tx('−2, gdy ludzi jest więcej niż miejsc w domach', '−2 when people outnumber beds')],
         [tx('Zabity chłop', 'Peasant slain'), tx('−2 od razu za każdego zabitego przez wrogich żołnierzy', '−2 at once for each one killed by enemy soldiers')],
       ] },
@@ -187,7 +188,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       { table: [
         [tx('Pora', 'Time'), tx('Godziny', 'Hours'), tx('Co robią ludzie', 'What people do')],
         [tx('Dzień', 'Day'), '5:30–19:30', tx('pracują, budują, noszą (najdłuższa część doby)', 'work, build, haul (the longest part of the day)')],
-        [tx('Wieczór', 'Evening'), '19:30–22:00', tx('schodzą do ogniska albo do karczmy', 'gather at the campfire or the tavern')],
+        [tx('Wieczór', 'Evening'), '19:30–22:00', tx('schodzą do ogniska, do karczmy albo modlą się pod kapliczką', 'gather at the campfire, the tavern, or pray at the shrine')],
         [tx('Noc', 'Night'), '22:00–5:30', tx('śpią w chacie albo w twierdzy, bez łóżka — na słomie przy ognisku', 'sleep in a house or the keep; those without a bed sleep on straw by the fire')],
       ] },
       { h: tx('Wilki', 'Wolves') },

@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.40.0 — kapliczka (2026-10-24)
+
+- Nowy budynek w osadzie: kapliczka (2×2, 10 drewna i 40 kamienia). Model z Blendera (`tools/models/shrine.py`): kamienny posąg Ojca Płomienia — brodaty starzec w kapturze z czarą wiecznego ognia — w ostrołukowej niszy ze złotym słońcem pod kluczem łuku; dwustopniowy cokół, żelazne świeczniki z grubymi świecami, małe świece z zaciekami wosku, złota misa z ofiarną rudą i klęcznik z desek. Ogień w czarze płonie zawsze, świece świecą nocą
+- Wieczorem część ludzi (co czwarty) zamiast do karczmy albo do ogniska idzie pod kapliczkę: trzech klęczy przy klęczniku, reszta stoi za nimi ze spuszczonymi głowami
+- Kapliczka lekko podnosi popularność: +1, przy dwóch i więcej +2 (osobny wiersz w rozpisce popularności)
+- Bot stawia jedną kapliczkę; „Jak grać” (popularność, rytm dnia) po polsku i angielsku; testy w `tests/shrine.test.ts`
+
 ## 0.39.0 — długi bunt: napady na skład i spichlerz, rozpędzeni uciekają w popłochu (2026-10-24)
 
 - Gdy bunt trwa dłużej (600 ticków, ok. minuta przy tempie 1×), część tłumu (najwyżej połowa, do 6 ludzi) idzie z pochodniami na napad, potem co 400 ticków na kolejny. Reszta zostaje pod bramą

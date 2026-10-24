@@ -89,6 +89,8 @@ const ORCHARD_MODEL = model('orchard');
 const FARM_MODEL = model('farm');
 const CAMP_MODEL = model('camp');
 const RAM_MODEL = model('ram');
+/** Miejsca modlitwy przed kapliczką (układ modelu: środek działki, przód = +z): trzy przy klęczniku, potem dwa rzędy stojących */
+const SHRINE_SPOTS: [number, number][] = [[-0.2, 0.5], [0.2, 0.5], [0, 0.52], [-0.35, 0.8], [0.35, 0.8], [0, 0.82], [-0.18, 1.05], [0.18, 1.05]];
 const CAMP_SEATS = (CAMP_MODEL as unknown as { seats: [number, number, number][] }).seats;
 
 /** Godzina na ekranie tytułowym: późne popołudnie, ciepłe światło przed zachodem */
@@ -499,6 +501,8 @@ export class GameRenderer {
   private screamed = new Set<number>();
   private taverns = new Map<number, GameState['buildings'][number]>();
   private innDoors = new Map<number, GameState['buildings'][number]>();
+  /** Drzwi kapliczek: wieczorem modlący się klęczą przy klęczniku i stoją za nimi ze spuszczonymi głowami */
+  private shrineDoors = new Map<number, GameState['buildings'][number]>();
   private luteAt = 0;
   /** Kto pił dziś w karczmie (wraca potem chwiejnym krokiem); czyszczone rano */
   private drank = new Set<number>();
@@ -5281,6 +5285,8 @@ export class GameRenderer {
     // karczmy z karczmarzem: wieczorem schodzą się do nich ludzie (rytm dnia w symulacji)
     this.taverns.clear();
     this.innDoors.clear();
+    this.shrineDoors.clear();
+    for (const b of g.buildings) if (BUILDINGS[b.type]!.id === 'shrine' && !b.build && !b.ruined && b.door >= 0) this.shrineDoors.set(b.door, b);
     for (const b of g.buildings) if (BUILDINGS[b.type]!.id === 'tavern' && b.worker && !b.build) { if (!this.taverns.has(b.owner)) this.taverns.set(b.owner, b); if (b.door >= 0) this.innDoors.set(b.door, b); }
     const { width, height } = g.map;
     const n = Math.min(g.units.length, MAX_UNITS);
@@ -5446,6 +5452,7 @@ export class GameRenderer {
       // wieczorem w karczmie: ci, którzy przyszli pod jej drzwi (rytm dnia), i dawny skrót dla wolnych z obozowiska
       // wieczorem w karczmie siedzą ci, którzy przyszli pod jej drzwi (każda karczma osobno)
       const inn = evening ? this.innDoors.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
+      const shrine = evening && !inn ? this.shrineDoors.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
       if (inn) {
         const mesh = this.buildingMeshes.get(inn.id);
         const turn = (inn.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
@@ -5476,6 +5483,19 @@ export class GameRenderer {
             talk('x'.repeat(6 + (u.id * 5 + Math.floor(this.time)) % 14), u.id, (u.id + Math.floor(this.time / 3)) % 5 === 0, Math.max(0, 1 - (dist - 2) / 12) * 0.28, pan);
           }
         }
+      } else if (shrine) {
+        const mesh = this.buildingMeshes.get(shrine.id);
+        const turn = (shrine.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
+        // miejsca przed posągiem (układ modelu, przód = +z): trzech klęczy za klęcznikiem, reszta stoi za nimi w dwóch rzędach
+        const slot = (u.id >> 2) % SHRINE_SPOTS.length;
+        const [lx, lz] = SHRINE_SPOTS[slot]!;
+        const kneel = slot < 3;
+        const wx = lx * cosT + lz * sinT, wz = -lx * sinT + lz * cosT;
+        const sfp = footprint(BUILDINGS[shrine.type]!, shrine.rot);
+        // klęczący: niżej (golenie chowa deska klęcznika), pochyleni; stojący ze spuszczoną głową i lekkim kołysaniem
+        t.position.set(shrine.x + sfp.w / 2 + wx - width / 2, (mesh?.position.y ?? 0) + (kneel ? -0.1 : 0.01), shrine.y + sfp.h / 2 + wz - height / 2);
+        t.rotation.set(kneel ? 0.22 : 0.14 + Math.sin(this.time * 0.8 + u.id) * 0.03, Math.PI + turn, 0);
+        swing = kneel ? -0.5 : 0;
       } else if (camp && camp.owner === u.owner) {
         const mesh = this.buildingMeshes.get(camp.id);
         // przy stołkach wokół ogniska (miejsca z modelu), kolejni stoją za nimi w drugim kręgu

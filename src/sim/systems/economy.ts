@@ -100,6 +100,9 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const w = weatherOf(g, rainAt(g.tick));
   parts.push({ key: 'winter', value: w.chill >= 1 ? -1 : 0 });
   parts.push({ key: 'freezing', value: w.chill > 0 && p.freezing ? -3 : 0 });
+  // kapliczki: ludzie mają gdzie się pomodlić, nastroje lekko w górę (+1, przy dwóch i więcej +2)
+  const shrines = g.buildings.filter((b) => b.owner === p.id && !b.build && !b.ruined && BUILDINGS[b.type]!.id === 'shrine').length;
+  parts.push({ key: 'shrine', value: Math.min(shrines, 2) });
   // bunt głodowy: tłum pod bramą i stojące warsztaty psują nastroje całej osady
   parts.push({ key: 'revolt', value: p.revolt ? RULES.revoltPenalty : 0 });
   const delta = parts.reduce((n, x) => n + x.value, 0);

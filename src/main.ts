@@ -2404,8 +2404,8 @@ requestAnimationFrame(sayLoop);
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): HudView['report'] {
   const LBL: Record<string, string> = lang() === 'en'
-    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate' }
-    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy' };
+    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate', shrine: 'Shrines (evening prayers)' }
+    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy', shrine: 'Kapliczki (wieczorne modły)' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: tx('Brak jedzenia na wybrane racje', 'Not enough food for the chosen rations'), value: 0, note: tx('(jedzą mniej)', '(they eat less)') });
   const mine = game.units.filter((u) => u.owner === ME);

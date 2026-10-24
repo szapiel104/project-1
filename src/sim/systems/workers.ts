@@ -63,6 +63,14 @@ function eveningDoors(g: GameState, owner: number, tavern: boolean): Set<number>
   return doors;
 }
 
+const SHRINE = BUILDINGS.findIndex((b) => b.id === 'shrine');
+/** Drzwi (miejsce modlitwy przed klęcznikiem) gotowych kapliczek gracza */
+export function shrineDoors(g: GameState, owner: number): Set<number> {
+  const doors = new Set<number>();
+  for (const b of g.buildings) if (b.owner === owner && b.type === SHRINE && b.door >= 0 && !b.build && !b.ruined) doors.add(b.door);
+  return doors;
+}
+
 /**
  * Łóżko na noc: wolne miejsce w chacie (albo w twierdzy), a gdy wszystkie zajęte — słomiane posłanie na ziemi
  * obok obozowiska albo twierdzy. Zwraca true, gdy znalazł nocleg.
@@ -282,8 +290,9 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       // załoga kopalni z barakiem: wieczór przy ognisku pod barakiem
       const camp = campOf(g, job);
       if (camp) return (t) => t === camp.door;
-      // co drugi idzie do karczmy (o ile jest i ma karczmarza), reszta siada przy ognisku; bez nich — pod twierdzę
-      let doors = u.id % 2 === 0 ? eveningDoors(g, u.owner, true) : new Set<number>();
+      // co drugi idzie do karczmy (o ile jest i ma karczmarza), co czwarty na modlitwę pod kapliczkę,
+      // reszta siada przy ognisku; bez nich — pod twierdzę
+      let doors = u.id % 2 === 0 ? eveningDoors(g, u.owner, true) : u.id % 4 === 1 ? shrineDoors(g, u.owner) : new Set<number>();
       if (!doors.size) doors = eveningDoors(g, u.owner, false);
       if (!doors.size) { const keep = playerKeep(g, u.owner); if (keep && keep.door >= 0) doors.add(keep.door); }
       return doors.size ? (t) => doors.has(t) : null;

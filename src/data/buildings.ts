@@ -217,6 +217,10 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Koksownik: żelazny kosz z żarem stawiany na murze kamiennym albo na kamiennej wieży (nie zajmuje pola).
   // Łucznicy na murze i wieżach do 2 pól od niego maczają strzały w ogniu — ognista strzała rani mocniej (army.ts, FIRE_BONUS).
   { id: 'brazier', category: 'defense', name: 'b.brazier', w: 1, h: 1, cost: { iron: 2, stone: 4 }, addon: true, buildable: true },
+  // Kapliczka: kamienny posąg Ojca Płomienia w ostrołukowej niszy (tools/models/shrine.py). Wieczorem część ludzi
+  // zamiast do karczmy albo do ogniska idzie tu się modlić (workers.ts), a sama kapliczka lekko podnosi popularność
+  // (economy.ts: +1, przy dwóch i więcej +2). Bez pracownika, nic nie produkuje.
+  { id: 'shrine', category: 'settlement', name: 'b.shrine', w: 2, h: 2, cost: { wood: 10, stone: 40 }, hp: 700, buildable: true },
 ];
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */
