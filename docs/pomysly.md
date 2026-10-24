@@ -56,7 +56,6 @@ Stan: dobry (strict TS bez `as any`, symulacja oddzielona od grafiki, 230 testó
 - Bot nie stawia piekarni mimo młyna (brak kamienia na liście?) — mąka stoi w stodole; sprawdzić w tools/soak
 - Balans gospodarki wymaga strojenia na prawdziwych rozgrywkach
 - Test dotyku na prawdziwym telefonie i tablecie (dotąd tylko emulacja)
-- Budynki nie mają paska stanu ani informacji, co produkują i jak szybko
 - Przy dużych bitwach wyszukiwanie drogi trzeba będzie przerobić na wspólne ścieżki dla grup
 
 ## Ulepszanie budynków (12.10.2026)
