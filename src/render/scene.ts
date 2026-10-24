@@ -350,27 +350,30 @@ const SWORD_BLOWS: { keys: SwordKey[]; end: [number, number, number] }[] = [
   // z obrotem: krótki skręt, pełny obrót z wyciągniętym mieczem i cięcie na końcu obrotu
   { keys: [[0.5, ...GARDA], [0.68, -1.5, -0.15, 0.7], [1, -1.45, -0.05, 0.7 - Math.PI * 2]], end: [-1.45, -0.05, 0.7] },
 ];
-/** Strzał z łuku: [ramię ręki cięciwy, ręka z łukiem, skręt ciała, łokieć ręki cięciwy]; u: 0 = chwila strzału, 1 = następny.
- *  Łokieć: 0 = ręka prosta, ujemny = przedramię zgina się w przód i w górę (przy −2,7 dłoń dochodzi do brody). */
-const BOW_KEYS: [number, number, number, number, number][] = [
-  [0, -1.5, -1.5, -0.35, -2.95],   // wypuszczenie: dłoń odskakuje od cięciwy za ucho
-  [0.12, -1.42, -1.45, -0.3, -2.6],
-  [0.3, -2.85, -0.95, 0, -0.75],    // sięga przez bark do kołczanu, łuk opuszczony
-  [0.42, -2.5, -1.0, 0, -0.25],     // wyciąga strzałę
-  [0.56, -1.25, -1.45, -0.15, -0.45], // nakłada strzałę: dłoń przy łuku
-  [0.88, -1.55, -1.55, -0.35, -2.7],  // pełny naciąg: ramię poziomo, dłoń przy brodzie, bokiem do celu
-  [1, -1.55, -1.55, -0.35, -2.7],
+/** Strzał z łuku. Ręka cięciwy ma pełny obrót w barku [x, y, z] (Euler 'YXZ') i zgięcie łokcia — kąty policzone
+ *  odwrotną kinematyką tak, żeby dłoń trafiała w miejsca: przy naciągu do policzka, przy kołczanie nad prawy bark itd.
+ *  (sprawdzone w Blenderze: render_preview.py archer z POSE, ARMYZ, ELBOW, LARM).
+ *  Klatka: [u, x, y, z, łokieć, ręka z łukiem, skręt ciała]; u: 0 = chwila strzału, 1 = następny strzał. */
+const BOW_KEYS: number[][] = [
+  [0, -2.099, 0.296, 0.456, -2.387, -1.5, -0.35],    // wypuszczenie: dłoń odskakuje od cięciwy za ucho
+  [0.12, -2.064, 1.519, -0.911, -2.524, -1.45, -0.3],
+  [0.3, -3.01, 0.989, 0.253, -0.944, -0.95, 0],      // sięga przez bark do kołczanu, łuk opuszczony
+  [0.42, -2.659, 1.195, -0.137, -0.839, -1.0, 0],    // wyciąga strzałę
+  [0.56, -2.927, 0.881, -1.566, -0.107, -1.45, -0.15], // nakłada strzałę: dłoń przy łuku
+  [0.88, -2.806, 1.913, -1.512, -1.885, -1.55, -0.35], // pełny naciąg: łokieć w bok na wysokości barku, dłoń przy policzku
+  [1, -2.806, 1.913, -1.512, -1.885, -1.55, -0.35],
 ];
-function bowShot(u: number): [number, number, number, number] {
+/** [x, y, z, łokieć, ręka z łukiem, skręt ciała] */
+function bowShot(u: number): number[] {
   u = Math.min(1, Math.max(0, u));
   for (let k = 1; k < BOW_KEYS.length; k++) {
     const a = BOW_KEYS[k - 1]!, b = BOW_KEYS[k]!;
-    if (u <= b[0]) {
-      const t = (u - a[0]) / Math.max(1e-6, b[0] - a[0]), e = t * t * (3 - 2 * t);
-      return [a[1] + (b[1] - a[1]) * e, a[2] + (b[2] - a[2]) * e, a[3] + (b[3] - a[3]) * e, a[4] + (b[4] - a[4]) * e];
+    if (u <= b[0]!) {
+      const t = (u - a[0]!) / Math.max(1e-6, b[0]! - a[0]!), e = t * t * (3 - 2 * t);
+      return a.slice(1).map((v, i) => v + (b[i + 1]! - v) * e);
     }
   }
-  return [BOW_KEYS[0]![1], BOW_KEYS[0]![2], BOW_KEYS[0]![3], BOW_KEYS[0]![4]];
+  return BOW_KEYS[0]!.slice(1);
 }
 /** Jak pada poległy: 0 na plecy (40%), 1 na twarz (25%), 2 na bok (20%), 3 osuwa się i przewraca na plecy (15%) */
 function deathKind(id: number): 0 | 1 | 2 | 3 {
@@ -4659,7 +4662,7 @@ export class GameRenderer {
       // stojący bez walki: przenosi ciężar, rozgląda się, przestępuje, opiera o włócznię; w marszu kołysze się z krokiem
       const ia = !walking && !striking && !foe && !wall && !victim && !this.calm ? idle(s.id, this.time, true) : undefined;
       const sway = ia ? ia.roll : walking ? Math.sin(st.phase) * 0.025 : 0;
-      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, heading + (towerAt ? 0 : ia?.yaw ?? 0) + (swordPose?.[2] ?? bowPose?.[2] ?? 0), sway, 'YXZ');
+      t.rotation.set(-flinch * 0.32 + (walking ? 0.04 : 0) + towerLean, heading + (towerAt ? 0 : ia?.yaw ?? 0) + (swordPose?.[2] ?? bowPose?.[5] ?? 0), sway, 'YXZ');
       if (ia) t.position.y += ia.dy;
       t.scale.setScalar(1.08 * FIG);
       t.updateMatrix();
@@ -4679,7 +4682,7 @@ export class GameRenderer {
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
       this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
-      this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined, 0, bowPose && [bowPose[0], 0, 0, bowPose[1], bowPose[3]]);
+      this.archers.set(n, ranged ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined, 0, bowPose && [bowPose[0]!, 0, 0, bowPose[4]!, bowPose[3]!, bowPose[1]!, bowPose[2]!]);
       const heavy = udef.id === 'manatarms';
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
       // włócznik w walce: włócznia opuszczona na wroga, cofnięcie i pchnięcie fazami według odliczania do ciosu

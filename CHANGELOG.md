@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.38.1 — łucznik: prawdziwy naciąg do policzka (2026-10-24)
+
+- Ręka cięciwy obraca się teraz w barku we wszystkich kierunkach, nie tylko w przód: przy pełnym naciągu łokieć idzie w bok na wysokości barku, a dłoń z cięciwą dochodzi do policzka (wcześniej przedramię składało się na samo ramię i dłoń lądowała przy barku). Kąty policzone tak, żeby dłoń trafiała w swoje miejsca: za ucho przy wypuszczeniu, nad prawy bark przy kołczanie, przy łuku przy nakładaniu strzały
+- Podgląd z Blendera: łuk trzymany w dłoni za majdan, końce ramion ku łucznikowi (wcześniej podgląd rysował łuk przesunięty przed dłoń); obrót ręki w trzech osiach (`ARMYZ="y,z"`)
+
 ## 0.38.0 — bunt: chleb albo pałki, tłum z widłami i pochodniami (2026-10-24)
 
 - W oknie twierdzy w czasie buntu pojawia się osobny blok z liczbą ludzi pod bramą i dwoma przyciskami

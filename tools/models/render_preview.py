@@ -22,7 +22,12 @@ def unpack(m, off, arm=0.0, sub=None):
             (hx, hy, hz), a = sub
             y, z = y * math.cos(a) - z * math.sin(a), y * math.sin(a) + z * math.cos(a)
             x, y, z = x + hx, y + hy, z + hz
-        if arm:  # obrót ręki wokół barku (oś x)
+        if isinstance(arm, tuple):  # pełny obrót ręki jak w grze: Euler (x, y, z) w kolejności 'YXZ' (R = Ry·Rx·Rz)
+            ax, ay, az = arm
+            x, y = x * math.cos(az) - y * math.sin(az), x * math.sin(az) + y * math.cos(az)
+            y, z = y * math.cos(ax) - z * math.sin(ax), y * math.sin(ax) + z * math.cos(ax)
+            x, z = x * math.cos(ay) + z * math.sin(ay), -x * math.sin(ay) + z * math.cos(ay)
+        elif arm:  # obrót ręki wokół barku (oś x)
             y, z = y * math.cos(arm) - z * math.sin(arm), y * math.sin(arm) + z * math.cos(arm)
         x, y, z = x + off[0], y + off[1], z + off[2]
         verts.append((x, -z, y))
@@ -55,6 +60,8 @@ for sx in (-1, 1):
     lg = float(os.environ['LEGS']) if os.environ.get('LEGS') else 0.0  # LEGS = kąt nóg (siad: −1,45)
     for m in filter(ok, d['leg']): unpack(m, (sx * d['hip'][0], d['hip'][1], d['hip'][2]), arm=lg)
     pa = float(os.environ['POSE'].split(',')[0]) if os.environ.get('POSE') else -0.25
+    if os.environ.get('ARMYZ'):  # ARMYZ="y,z" — prawa ręka obrócona też w poziomie i w przekroju (łucznik przy naciągu)
+        pa = (pa, *(float(v) for v in os.environ['ARMYZ'].split(',')))
     la = float(os.environ['LARM']) if os.environ.get('LARM') else 0.1  # LARM = kąt lewej ręki (łucznik: ręka z łukiem)
     for m in filter(ok, d['arm']): unpack(m, (sx * d['shoulder'][0], d['shoulder'][1], d['shoulder'][2]), arm=pa if sx > 0 else la)
     # przedramię za łokciem (łucznik); ELBOW = zgięcie prawego łokcia, lewy prosty
@@ -106,7 +113,7 @@ if os.environ.get('LARM') and name == 'archer':
     chord, sag = 0.58, 0.07
     for k in range(17):
         t = k / 16 - 0.5
-        pts.append(hp + Vector((0, t * chord, sag * (1 - (2 * t) ** 2) + 0.0)))
+        pts.append(hp + Vector((0, t * chord, -sag * (2 * t) ** 2)))  # chwyt w dłoni, końce ramion łuku ku łucznikowi
     me = bpy.data.meshes.new('bow'); vs = []; fs = []
     for i, p in enumerate(pts):
         for dx, dz in ((0.008, 0), (-0.008, 0), (0, 0.008)):
