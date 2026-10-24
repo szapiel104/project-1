@@ -535,6 +535,22 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
           link(tx('Pusta scena testowa', 'Empty test scene'), '?test=1&pusta=1', tx('Płaska łąka z samą twierdzą, bez zapisu gry — do sprawdzania jednej rzeczy w grze.', 'A flat meadow with just the keep, no save — for checking one thing in the game.')),
         ];
       }],
+      // autorzy grafiki z paczek (CC BY i CC BY-SA wymagają podpisu w grze; pełna lista w CREDITS.md)
+      [tx('Autorzy', 'Credits'), () => [
+        el('p', 'help-p', tx(
+          'Koń, pałka wodna i liście na stawie: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0.',
+          'Horse, cattails and pond leaves: 0 A.D. © Wildfire Games (wildfiregames.com), CC BY-SA 3.0 licence.')),
+        el('p', 'help-p', tx(
+          'Pochodnia: Secret Histories (Mooses2k), licencja CC BY-SA 4.0.',
+          'Torch: Secret Histories (Mooses2k), CC BY-SA 4.0 licence.')),
+        el('p', 'help-p', tx(
+          'Kamień, snopek i sztaby żelaza w składzie (Sketchfab, licencja CC BY 4.0): matousekfoto („Granite block”), Korea Culture Information Service Agency („Sheaf of Rice”), Aparicio Silva 3D („Blacksmith Ingots”).',
+          'Stone, sheaf and iron bars in the stockpile (Sketchfab, CC BY 4.0 licence): matousekfoto ("Granite block"), Korea Culture Information Service Agency ("Sheaf of Rice"), Aparicio Silva 3D ("Blacksmith Ingots").')),
+        el('p', 'help-p', tx(
+          'Na licencji CC0 (dziękujemy autorom): drzewa, trawa, krzaki, kosz, jabłko, chleb, beczka i strzecha — Poly Haven; tekstury — ambientCG; kruk — OpenGameArt; ryba — Khronos glTF Sample Assets (Microsoft); ciała postaci — MakeHuman / MPFB; ruch — CMU Graphics Lab Motion Capture Database.',
+          'Under CC0 (with thanks to the authors): trees, grass, bushes, basket, apple, bread, barrel and thatch — Poly Haven; textures — ambientCG; raven — OpenGameArt; fish — Khronos glTF Sample Assets (Microsoft); character bodies — MakeHuman / MPFB; motion — CMU Graphics Lab Motion Capture Database.')),
+        el('p', 'hint', tx('Dźwięki i muzyka: zakładka Dźwięk.', 'Sounds and music: see the Sound tab.')),
+      ]],
     ];
 
     // ---- strony grafiki ----

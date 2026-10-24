@@ -69,3 +69,18 @@ Skład (kamień, zboże, żelazo) — modele z [Sketchfab](https://sketchfab.com
 - [Blacksmith Ingots (game ready asset)](https://sketchfab.com/3d-models/blacksmith-ingots-game-ready-asset-6ea0ab1141de40d68db5bcdccdb91d68) — autor [Aparicio Silva 3D](https://sketchfab.com/apariciosilva3D) (w grze tylko trzy żelazne sztaby).
 
 Worek z płótna: własny model z Blendera (`tools/models/sack.py`, symulacja tkaniny), tekstura juty `burlap.jpg` (ambientCG Fabric 011, CC0, wyżej).
+
+## Kruk
+„Raven” z [OpenGameArt](https://opengameart.org/content/raven-0), CC0 — przeróbka `tools/models/crow_import.py` → `public/textures/crow.png` (szczegóły w docs/zasoby.md).
+
+## Efekty dźwiękowe i głosy
+- Kenney — [Starter Kit City Builder](https://github.com/KenneyNL/starter-kit-city-builder) i [Starter Kit 3D Platformer](https://github.com/KenneyNL/starter-kit-3d-platformer) (MIT, © Kenney; licencja wymaga zachowania tej informacji), „RPG Audio” i „Impact Sounds” (CC0).
+- „RPG Sound Pack”, artisticdude, OpenGameArt (CC0).
+- Krzyki, okrzyki i buchnięcie pochodni: Freesound przez [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) — JohnsonBrandEditing, davdud101, Adam_N, Julien Matthey (CC0).
+Pełna lista plików w docs/zasoby.md.
+
+## Podpis w grze
+Autorzy grafiki na licencjach CC BY i CC BY-SA są wymienieni w grze: Ustawienia → Autorzy; dźwięki i muzyka: Ustawienia → Dźwięk.
+
+## Nazwy i świat gry
+Zakony, bóstwa, miejsca i postacie w grze są nasze (np. Zakon Płomienia, Bractwo Źródła, Ojciec Płomienia). Gra nie używa nazw, postaci ani grafiki z innych gier.

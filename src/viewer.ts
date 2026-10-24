@@ -184,10 +184,10 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['manatarms', tx('Zbrojny', 'Man-at-arms'), figure('manatarms', 6)],
     ['sapper', t('u.sapper'), figure('sapper', 7)],
     ['bandit', t('u.bandit'), figure('bandit', 8)],
-    ['mageFire', tx('Mag ognia', 'Fire mage'), figure('mageFire', 9)],
-    ['mageWater', tx('Mag wody', 'Water mage'), figure('mageWater', 10)],
-    ['mageFire-cast', tx('Mag ognia — czar', 'Fire mage — casting'), figure('mageFire', 9, 0.64, true)],
-    ['mageWater-cast', tx('Mag wody — czar', 'Water mage — casting'), figure('mageWater', 10, 0.64, true)],
+    ['mageFire', tx('Mag Płomienia', 'Mage of the Flame'), figure('mageFire', 9)],
+    ['mageWater', tx('Mag Źródła', 'Mage of the Spring'), figure('mageWater', 10)],
+    ['mageFire-cast', tx('Mag Płomienia — czar', 'Mage of the Flame — casting'), figure('mageFire', 9, 0.64, true)],
+    ['mageWater-cast', tx('Mag Źródła — czar', 'Mage of the Spring — casting'), figure('mageWater', 10, 0.64, true)],
     ['standard', tx('Chorąży z proporcem', 'Standard-bearer'), () => {
       // włócznik z drzewcem i proporcem na plecach, tak jak chorąży w oddziale (src/render/standards.ts)
       const holder = new THREE.Scene();

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.43.0 — własne nazwy zakonów magów, autorzy w grze (2026-10-24)
+
+- Magowie dostali własne zakony zamiast nazw z innych gier: **Wieża Płomienia** (Zakon Płomienia) i **Sanktuarium Źródła** (Bractwo Źródła); w podglądzie modeli Mag Płomienia i Mag Źródła. Kapliczka zostaje przy Ojcu Płomienia, więc zakon i wiara są spójne. Opisy po polsku i angielsku
+- Z opisów w grze zniknęły odwołania do innych gier (pomoc o rudzie, opisy strażnika i zbrojnego w podglądzie modeli). Ruda zostaje rudą
+- Nowa zakładka **Ustawienia → Autorzy**: autorzy grafiki na licencjach CC BY i CC BY-SA (0 A.D., Secret Histories, autorzy modeli ze Sketchfab) oraz podziękowania dla źródeł CC0. CREDITS.md uzupełniony o kruka, efekty Kenneya i głosy
+
 ## 0.42.0 — siedziby magów 5×5 z dziedzińcem, chatka maga (2026-10-24)
 
 - **Siedziba magów ognia** i **siedziba magów wody** urosły do 5×5 pól. Dawna wieża i sala zostały jak były, a przed nimi dobudowany dziedziniec za niskim murem z bramą (tools/models/mageyard.py):

@@ -12,7 +12,7 @@ Gdy nagranie się nie wczyta, gra odtwarza zastępczy dźwięk syntezowany (src/
 
 - Kruk: „Raven” z OpenGameArt (https://opengameart.org/content/raven-0, CC0) — plik źródłowy tools/models/src/raven.blend, przeróbka do gry tools/models/crow_import.py (poza stojąca, 8 klatek lotu, tekstura przyciemniona do kruczej czerni → public/textures/crow.png).
 
-- Budynki: KayKit Medieval Hexagon Pack 1.0 (Kay Lousberg, CC0) — public/models/kaykit, licencja w public/models/kaykit/LICENSE.txt. Na razie chata, chata drwala, kopalnia i młyn; reszta z kodu.
+- Budynki: KayKit Medieval Hexagon Pack 1.0 (Kay Lousberg, CC0) — wyłączone 12.10.2026 (styl zbyt bajkowy), pliki usunięte z gry; wszystkie budynki są nasze, z Blendera.
 
 ## Dźwięki świata (CC0, bez wymogu podpisu)
 

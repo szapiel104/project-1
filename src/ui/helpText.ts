@@ -76,8 +76,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       tx('Po trzech dostawach robotnik idzie na chwilę odpocząć do najbliższej chaty. Bez chat pracuje bez przerwy, ale chaty i tak są potrzebne na nowych ludzi.',
         'After three deliveries a worker goes to the nearest house for a short rest. Without houses they work without a break — but you need houses for newcomers anyway.'),
       { h: tx('Ruda', 'Ore') },
-      tx('Ruda to pieniądz — jak w Gothicu. Masz trzy źródła: podatki (najpewniejsze, zależą od liczby ludzi), kopalnię (mniej więcej co dwunasty kurs górnika daje 6 rudy, więc im większa załoga, tym więcej) i łup z rozbitego obozu zbójów w puszczy. Ruda nie leży w składzie — trafia prosto do skarbca w zamku. Wydajesz ją na żołnierzy, rybaka, koszary, karczmę, namiot medyka i rozdawanie ludziom.',
-        'Ore is your coin, as in Gothic. It comes from three places: taxes (the steadiest, rising with your population), the mine (roughly one miner\'s run in twelve brings up 6 ore, so a bigger crew means more) and the loot of a brigand camp razed in the deep wood. Ore is never stockpiled — it goes straight to the treasury in the keep. You spend it on soldiers, the fisherman, barracks, the tavern, the field surgeon\'s tent and handouts to your people.'),
+      tx('Ruda to pieniądz. Masz trzy źródła: podatki (najpewniejsze, zależą od liczby ludzi), kopalnię (mniej więcej co dwunasty kurs górnika daje 6 rudy, więc im większa załoga, tym więcej) i łup z rozbitego obozu zbójów w puszczy. Ruda nie leży w składzie — trafia prosto do skarbca w zamku. Wydajesz ją na żołnierzy, rybaka, koszary, karczmę, namiot medyka i rozdawanie ludziom.',
+        'Ore is your coin. It comes from three places: taxes (the steadiest, rising with your population), the mine (roughly one miner\'s run in twelve brings up 6 ore, so a bigger crew means more) and the loot of a brigand camp razed in the deep wood. Ore is never stockpiled — it goes straight to the treasury in the keep. You spend it on soldiers, the fisherman, barracks, the tavern, the field surgeon\'s tent and handouts to your people.'),
     ],
   },
   {
