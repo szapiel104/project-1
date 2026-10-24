@@ -62,6 +62,12 @@ export interface PlayerState {
   revolt?: boolean;
   /** Bunt: gracz kazał straży rozpędzić tłum siłą (strażnicy idą pod bramę i rozganiają buntowników, unrest.ts) */
   quell?: boolean;
+  /** Bunt: tick, w którym się zaczął, kiedy następny napad tłumu i ile już było (parzysty = na skład, nieparzysty = podpalenie spichlerza) */
+  revoltSince?: number;
+  raidAt?: number;
+  raids?: number;
+  /** Ostatni napad tłumu do ogłoszenia przez skrybę: tick, budynek, rodzaj (1 = rozkradli skład, 2 = podpalili spichlerz) */
+  lastRaid?: { tick: number; building: number; kind: number };
   cold?: number;
   /** Opał: ułamek drewna spalonego w piecach, którego jeszcze nie zdjęto ze składu (zima) */
   fuel?: number;
@@ -268,6 +274,8 @@ export interface Unit {
   fled?: number;
   /** Bunt głodowy: 1 = rzucił robotę i stoi pod twierdzą (jego budynek stoi bez rąk do pracy) */
   riot?: number;
+  /** Długi bunt: buntownik idzie z tłumem na napad na ten budynek (skład albo spichlerz), potem wraca pod bramę */
+  raid?: number;
 }
 
 /** Żołnierz: osobno od chłopów, bo nie pracuje, nie mieszka i nie liczy się do ludności osady */
@@ -785,12 +793,12 @@ export function stateHash(g: GameState): number {
   for (const s of g.saplings ?? []) { add(s.t); add(s.owner); add(s.by); add(s.age); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
-    add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0); add(p.famine ?? 0); add(p.revolt ? 1 : 0); add(p.quell ? 1 : 0);
+    add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0); add(p.famine ?? 0); add(p.revolt ? 1 : 0); add(p.quell ? 1 : 0); add(p.revoltSince ?? 0); add(p.raidAt ?? 0); add(p.raids ?? 0);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.threat ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
-    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0);
+    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }

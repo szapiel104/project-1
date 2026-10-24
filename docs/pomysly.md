@@ -11,7 +11,7 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Zarabianie: mikropłatności i reklamy (po wersji, która trzyma graczy)
 - Docelowa nazwa gry zamiast „Project‑1”
 
-- **Głód i bunt (23.10.2026):** partia 1 zrobiona (0.37.0) — po 5 pustych posiłkach z rzędu część ludzi staje tłumem pod bramą i nie pracuje, straż zmniejsza tłum, większe racje i straż szybciej go uspokajają, buntownicy nie odchodzą. Partia 2 zrobiona 24.10 (0.38.0): „Rozdaj chleb” i „Rozpędź strażą” w oknie twierdzy, tłum z widłami (model z Blendera) i pochodniami, twarzą do bramy; bot też z tego korzysta. Dalej: przy długim buncie podpalenie spichlerza albo napad na skład, okrzyki tłumu głosem (nagrania), rozpędzani uciekają w popłochu zamiast od razu wracać do roboty.
+- **Głód i bunt (23.10.2026):** partia 1 zrobiona (0.37.0) — po 5 pustych posiłkach z rzędu część ludzi staje tłumem pod bramą i nie pracuje, straż zmniejsza tłum, większe racje i straż szybciej go uspokajają, buntownicy nie odchodzą. Partia 2 zrobiona 24.10 (0.38.0): „Rozdaj chleb” i „Rozpędź strażą” w oknie twierdzy, tłum z widłami (model z Blendera) i pochodniami, twarzą do bramy; bot też z tego korzysta. Partia 3 zrobiona 24.10 (0.39.0): przy długim buncie napady na zmianę — rozkradanie składu i podpalenie spichlerza, skryba z przyciskiem do miejsca; rozpędzeni uciekają w popłochu. Dalej: okrzyki tłumu głosem (nagrania), straż broniąca napadniętego budynku, rabusie niosący łup do chat (widoczne worki).
 
 ## Nowe pomysły Claude'a (24.10.2026) — do wyboru przy „co dalej”
 Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.

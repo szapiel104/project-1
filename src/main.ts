@@ -1594,6 +1594,7 @@ function resTrend(res: ArrayLike<number>): number[] {
 let warnedHungry = false;
 let warnedLeaving = false;
 let warnedRevolt = false;
+let raidSeen = 0;
 
 /** Skryba przed zimą: na początku jesieni zapowiedź, ok. półtora dnia przed zimą rachunek drewna i jedzenia, a gdy zima
  * przyjdzie — krótko, co robić. Progi liczone z położenia w roku; skok pory roku z menu dewelopera nic nie ogłasza. */
@@ -1638,6 +1639,13 @@ function refresh(): void {
     scribe.say('revolt', t('scribe.revolt'), true, 'scribe', keep && keep.door >= 0 ? showAt(keep.door % w, Math.floor(keep.door / w)) : undefined);
   } else if (!p.revolt && warnedRevolt) scribe.say('revoltOver', t('scribe.revoltOver'));
   warnedRevolt = !!p.revolt;
+  // napad tłumu w czasie długiego buntu: skryba z przyciskiem do napadniętego budynku
+  if (p.lastRaid && p.lastRaid.tick !== raidSeen && game.tick - p.lastRaid.tick < 100) {
+    raidSeen = p.lastRaid.tick;
+    const rb = game.buildings.find((x) => x.id === p.lastRaid!.building);
+    const fp = rb ? footprint(BUILDINGS[rb.type]!, rb.rot) : null;
+    scribe.say(`raid${raidSeen}`, t(p.lastRaid.kind === 2 ? 'scribe.riotFire' : 'scribe.riotLoot'), true, 'scribe', rb && fp ? showAt(rb.x + fp.w / 2, rb.y + fp.h / 2) : undefined);
+  }
   const full = storeUsed(p, 'stockpile') >= storeCapacity(game, ME, 'stockpile');
   if (full && !stockFull) scribe.say('stockFull', t('scribe.stockFull'));
   stockFull = full;

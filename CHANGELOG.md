@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.39.0 — długi bunt: napady na skład i spichlerz, rozpędzeni uciekają w popłochu (2026-10-24)
+
+- Gdy bunt trwa dłużej (600 ticków, ok. minuta przy tempie 1×), część tłumu (najwyżej połowa, do 6 ludzi) idzie z pochodniami na napad, potem co 400 ticków na kolejny. Reszta zostaje pod bramą
+- Napady na zmianę: najpierw skład albo stodoła (znika ćwierć drewna, kamienia, towarów i zboża), potem spichlerz — podpalony, 20% jedzenia w dym, gaszą go ludzie z wiadrami jak zwykły pożar. Gdy jednego z celów nie ma, idą na drugi. Po robocie wracają pod bramę
+- Skryba ogłasza każdy napad z przyciskiem „Pokaż” do budynku; ostrzeżenie na początku buntu mówi o przyciskach w oknie twierdzy i o tym, że przeciągający się bunt skończy się plądrowaniem (PL i EN)
+- Rozpędzeni przez straż uciekają w popłochu (szybszy krok, ręce nad głową), zanim wrócą do roboty
+- „Rozdaj chleb” i rozpędzenie strażą zatrzymują też napady
+- „Jak grać” i testy w `tests/unrest.test.ts`
+
 ## 0.38.1 — łucznik: prawdziwy naciąg do policzka (2026-10-24)
 
 - Ręka cięciwy obraca się teraz w barku we wszystkich kierunkach, nie tylko w przód: przy pełnym naciągu łokieć idzie w bok na wysokości barku, a dłoń z cięciwą dochodzi do policzka (wcześniej przedramię składało się na samo ramię i dłoń lądowała przy barku). Kąty policzone tak, żeby dłoń trafiała w swoje miejsca: za ucho przy wypuszczeniu, nad prawy bark przy kołczanie, przy łuku przy nakładaniu strzały

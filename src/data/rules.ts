@@ -39,6 +39,15 @@ export const RULES = {
   quellPenalty: -8,
   /** Po rozpędzeniu głód z rzędu spada do progu buntu minus tyle posiłków: bez jedzenia tłum wróci szybko */
   quellMargin: 2,
+  /** Długi bunt: po tylu tickach od początku (6 rozliczeń, ok. minuta przy tempie 1×, 4 godziny gry) tłum rusza na pierwszy
+   *  napad, potem co tyle ticków na kolejny. Na zmianę: napad na skład (rozkradają część towaru) i podpalenie spichlerza */
+  riotRaidAfter: 600,
+  riotRaidEvery: 400,
+  /** Napad: tylu buntowników najwyżej idzie z tłumu i taka część towaru ze składu znika (rozkradziona) */
+  riotRaiders: 6,
+  riotLoot: 0.25,
+  /** Podpalony spichlerz: taka część jedzenia idzie z dymem */
+  riotBurn: 0.2,
   startResources: { wood: 80, stone: 0, apples: 100, bread: 300, gold: 60 } as Partial<Record<ResourceId, number>>,
   /** Jak daleko od własnej twierdzy wolno budować (w polach) */
   buildRadius: 30,

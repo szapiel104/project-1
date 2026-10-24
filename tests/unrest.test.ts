@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { resIndex, RESOURCES, RESOURCE_DEFS } from '../src/data/resources';
+import { BUILDINGS } from '../src/data/buildings';
 import { RULES } from '../src/data/rules';
 import { createGame, Phase, playerKeep, population, stateHash, type GameState } from '../src/sim/state';
 import { step } from '../src/sim/step';
@@ -143,5 +144,50 @@ describe('bunt — rozdaj chleb i rozpędzenie przez straż', () => {
     const back = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!;
     expect(back.players[0]!.quell).toBe(true);
     expect(stateHash(back)).toBe(h);
+  });
+});
+
+describe('długi bunt — napady tłumu', () => {
+  const riot = (seed: number): GameState => {
+    const g = hungryGame(seed, 24);
+    run(g, RULES.monthTicks * RULES.revoltMeals + 20);
+    expect(g.players[0]!.revolt).toBe(true);
+    return g;
+  };
+  const kindOf = (g: GameState, id: number): string => BUILDINGS[g.buildings.find((b) => b.id === id)!.type]!.id;
+
+  it('najpierw rozkradają skład, potem podpalają spichlerz', () => {
+    const g = riot(31);
+    const p = g.players[0]!, WOOD = resIndex('wood');
+    p.res[WOOD] = 100;
+    for (let i = 0; i < RULES.riotRaidAfter + 1500 && !p.lastRaid; i++) step(g, []);
+    expect(p.lastRaid?.kind).toBe(1);
+    expect(['stockpile', 'barn']).toContain(kindOf(g, p.lastRaid!.building));
+    expect(p.res[WOOD]).toBe(100 - Math.floor(100 * RULES.riotLoot));
+    const first = p.lastRaid!.tick;
+    for (let i = 0; i < RULES.riotRaidEvery + 1500 && p.lastRaid!.tick === first; i++) step(g, []);
+    expect(p.lastRaid?.kind).toBe(2);
+    const granary = g.buildings.find((b) => b.id === p.lastRaid!.building)!;
+    expect(BUILDINGS[granary.type]!.id).toMatch(/^granary/);
+    expect(granary.fire ?? 0).toBeGreaterThan(0);
+  });
+
+  it('przed czasem nie ma napadu, a po „Rozdaj chleb” licznik napadów znika', () => {
+    const g = riot(32);
+    const p = g.players[0]!;
+    run(g, RULES.riotRaidAfter - 100);
+    expect(p.lastRaid).toBeUndefined();
+    p.res[resIndex('bread')] = 1000;
+    step(g, [{ type: 'dole', player: 0 }]);
+    expect(p.raidAt).toBeUndefined();
+    expect(g.units.some((u) => u.raid)).toBe(false);
+  });
+
+  it('rozpędzeni przez straż uciekają w popłochu', () => {
+    const g = riot(33);
+    step(g, [{ type: 'quell', player: 0 }]);
+    let fled = false;
+    for (let i = 0; i < 3000 && !fled; i++) { step(g, []); fled = g.units.some((u) => u.owner === 0 && !u.riot && (u.fled ?? 0) > g.tick); }
+    expect(fled).toBe(true);
   });
 });

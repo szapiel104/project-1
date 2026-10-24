@@ -5773,8 +5773,8 @@ export class GameRenderer {
         this.spades.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
       } else this.spades.setMatrixAt(i, ZERO);
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
-      // buntownik: co trzeci z płonącą pochodnią (dzień i noc), reszta z widłami; wymachują nimi w swoim rytmie
-      const riotTorch = rioting && u.id % 3 === 0;
+      // buntownik: co trzeci z płonącą pochodnią (dzień i noc, na napad wszyscy), reszta z widłami; wymachują nimi w swoim rytmie
+      const riotTorch = rioting && (u.id % 3 === 0 || !!u.raid); // na napad idą z pochodniami
       const shake = rioting ? Math.sin(this.time * (5.5 + (u.id % 5) * 0.4) + u.id * 1.7) : 0;
       const torchArm = riotTorch ? TORCH_ARM - 0.45 + shake * 0.18 : TORCH_ARM;
       const forkArm = FORK_ARM + shake * 0.28;
