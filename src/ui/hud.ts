@@ -197,8 +197,8 @@ const ICONS: Record<string, string> = {
   store: '<rect x="3" y="6" width="14" height="10" fill="#a8743a" stroke="#2a1c10"/><path d="M3 6l2-3h10l2 3M3 11h14M10 6v10" stroke="#2a1c10" fill="none"/>',
   granary: '<path d="M4 9l6-5 6 5v8H4z" fill="#c9a24a" stroke="#2a1c10"/><rect x="8" y="12" width="4" height="5" fill="#5e4329" stroke="#2a1c10"/>',
   pop: '<circle cx="10" cy="6" r="3" fill="#e2bd94" stroke="#2a1c10"/><path d="M4 18c0-5 3-8 6-8s6 3 6 8z" fill="#a8281f" stroke="#2a1c10"/>',
-  // bez pracy: chłop w szarej sukmanie, obok młotek przekreślony na czerwono (nikt go nie trzyma)
-  idle: '<circle cx="7" cy="5.5" r="2.6" fill="#e2bd94" stroke="#2a1c10"/><path d="M2 18c0-4.5 2.2-7.5 5-7.5s5 3 5 7.5z" fill="#7d7464" stroke="#2a1c10"/><path d="M14.6 9.5l3.2 6.5" stroke="#7a5232" stroke-width="1.6" stroke-linecap="round"/><path d="M12 10.5l3.4-2.6 1.9 2.6-3.4 2.4z" fill="#8a8e96" stroke="#2a1c10" stroke-width=".8"/><path d="M11.5 17.5l7-9" stroke="#c8281f" stroke-width="1.8" stroke-linecap="round"/>',
+  // bez pracy: ognisko jak w Twierdzy — tam wolni chłopi czekają na robotę
+  idle: '<path d="M3 17.5l14-3.5M3 14l14 3.5" stroke="#7a5232" stroke-width="2.2" stroke-linecap="round"/><path d="M10 2.5c1.5 2.5 4.5 4.5 4.5 8 0 2.5-2 4-4.5 4s-4.5-1.5-4.5-4c0-2 1-3 1.8-4 .2 1.2.8 2 1.5 2.3C8.5 6.5 9 4.5 10 2.5z" fill="#e0782a" stroke="#2a1c10" stroke-width=".9"/><path d="M10 8c1 1.5 2 2.5 2 4 0 1.2-.9 2-2 2s-2-.8-2-2c0-1.3.9-2.3 2-4z" fill="#f6d36a"/>',
   hammer: '<path d="M9 8l7 9" stroke="#7a5232" stroke-width="2.4" stroke-linecap="round"/><path d="M3 6l5-4 4 4-5 4z" fill="#8a8e96" stroke="#2a1c10"/>',
   // waluta: grudka rudy (jak w Gothicu) — ciemna bryła z jasnoniebieskimi, połyskującymi żyłami
   // kryształ magii: fioletowy, wieloboczny kryształ z jaśniejszym rdzeniem i drobnym odpryskiem obok
