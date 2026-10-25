@@ -112,7 +112,7 @@ export const en: Record<TextKey, string> = {
   'herald.weaker': 'The enemy outnumbers us. We need more spearmen.',
   'scribe.foodLow': 'My lord, the granary is running low.',
   'scribe.revolt': 'My lord, the folk have downed tools and gathered at the gate. Until their bellies are full, the workshops stand idle. Better rations and the watch will calm them sooner, and from the keep you may hand out bread or send in the watch. Let it drag on and they will start to plunder.',
-  'scribe.plague': 'My lord, plague has come to the settlement! The sick lie in fever and cannot work, and they pass it on to all who sleep under the same roof. Without mages many will die — raise at least a mage\'s hut, bury the dead and keep the folk well fed.',
+  'scribe.plague': 'My lord, plague has come to the settlement! The sick lie in fever and cannot work, and they pass it on to all who sleep under the same roof. Without mages many will die — raise at least a mage\'s hut, bury the dead and keep the folk well fed. You can shut a hovel with the sick inside for quarantine from its window.',
   'scribe.plagueMages': 'My lord, plague has come to the settlement! The mages are already on their way to the sick. See that the dead are buried and the folk are fed, and it will pass all the sooner.',
   'scribe.plagueToll': 'My lord, the plague is reaping a grim harvest and no one tends the sick. A mage\'s hut costs little — raise one before half the settlement is in the ground.',
   'scribe.plagueOver': 'My lord, the plague has burnt itself out. Those who lived through it will not fall sick again for a long while. We buried {n} souls.',

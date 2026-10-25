@@ -16,7 +16,7 @@ import { caravanSystem, sendCaravan } from './systems/caravans';
 import { rubbleSystem } from './systems/rubble';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
-import { plagueSystem } from './systems/plague';
+import { plagueSystem, setQuarantine } from './systems/plague';
 import { stormSystem } from './systems/storms';
 import { dole, quell, unrestSystem } from './systems/unrest';
 import { forestSystem } from './systems/forestry';
@@ -48,6 +48,8 @@ export type Command =
   | { type: 'gate'; player: number; id: number; open: boolean }
   /** Wyłącza albo włącza budynek z pracownikiem (wyłączony stoi pusty, pracownik idzie do innej roboty) */
   | { type: 'power'; player: number; id: number; on: boolean }
+  /** Kwarantanna chaty w czasie zarazy (plague.ts) */
+  | { type: 'quarantine'; player: number; id: number; on: boolean }
   | { type: 'garrison'; player: number; ids: number[]; tower: number }
   | { type: 'dismount'; player: number; tower: number }
   /** Wóz z surowcami dla sojusznika: res = indeks w RESOURCES, amount = ile sztuk (najwyżej 100) */
@@ -153,6 +155,9 @@ function apply(g: GameState, c: Command): void {
       if (b.off && b.worker) releaseCrew(g, b);
       break;
     }
+    case 'quarantine':
+      setQuarantine(g, c.player, c.id, !!c.on);
+      break;
     case 'signal':
       if (Number.isInteger(c.kind) && c.kind >= 0 && c.kind <= 2 && Number.isInteger(c.x) && Number.isInteger(c.y) && c.x >= 0 && c.y >= 0 && c.x < g.map.width && c.y < g.map.height)
         for (const b of g.players) if (b.bot && b.team === p.team && b.id !== p.id && !b.defeated) b.call = { kind: c.kind, tile: c.y * g.map.width + c.x, tick: g.tick };

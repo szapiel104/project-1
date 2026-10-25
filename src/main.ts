@@ -19,7 +19,7 @@ import { deserialize, serialize, type SaveData } from './sim/save';
 import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { applyCommands, step, type Command } from './sim/step';
 import { doleCost, rioters } from './sim/systems/unrest';
-import { magesOf, startPlague } from './sim/systems/plague';
+import { canQuarantine, magesOf, startPlague } from './sim/systems/plague';
 import { droughtAt, stormAt } from './sim/systems/storms';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
@@ -212,6 +212,7 @@ const hud = createHud(document.getElementById('ui')!, {
   onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
   onPower: (id, on) => { pending.push({ type: 'power', player: ME, id, on }); play('click'); },
+  onQuarantine: (id, on) => { pending.push({ type: 'quarantine', player: ME, id, on }); play('click'); },
   onRally: (id, unit, clear) => {
     const kind = unit ? unitIndex(unit) : -1;
     if (clear) { pending.push({ type: 'rally', player: ME, building: id, kind, tile: -1 }); hud.toast(tx('Flaga zdjęta: nowi staną przed koszarami.', 'Banner taken down: new recruits will muster before the barracks.')); return; }
@@ -812,6 +813,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, ruined: b.ruined, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: (def.id === 'barracks' || def.id === 'mageFire' || def.id === 'mageWater') && !b.build && !b.ruined ? recruitInfo(b.type).map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     power: !b.build && (def.production || def.staff) && def.id !== 'keep' ? { on: !b.off, worker: b.worker !== 0 } : undefined,
+    quarantine: canQuarantine(b) && (game.players[b.owner]?.plague || b.quarantine) ? { on: !!b.quarantine, sick: game.units.filter((u) => u.home === b.id && u.sick && u.phase === 22).length } : undefined,
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     garrisonMax: garrisonRoom(def.id) || undefined,
     prod: b.owner === ME && !b.build && (def.production || def.staff) ? prodInfo(game, b, (id) => personCard(id)?.name ?? '') : undefined,
@@ -2584,8 +2586,8 @@ requestAnimationFrame(sayLoop);
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): HudView['report'] {
   const LBL: Record<string, string> = lang() === 'en'
-    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate', shrine: 'Shrines (evening prayers)', plague: 'Plague in the settlement (fear)', mages: 'Mages watching over the sick', quarrel: 'The two orders quarrelling (seats too close)' }
-    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy', shrine: 'Kapliczki (wieczorne modły)', plague: 'Zaraza w osadzie (strach)', mages: 'Magowie czuwają nad chorymi', quarrel: 'Kłótnie zakonów (siedziby za blisko siebie)' };
+    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate', shrine: 'Shrines (evening prayers)', plague: 'Plague in the settlement (fear)', mages: 'Mages watching over the sick', quarrel: 'The two orders quarrelling (seats too close)', quarantine: 'Hovels shut for quarantine' }
+    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy', shrine: 'Kapliczki (wieczorne modły)', plague: 'Zaraza w osadzie (strach)', mages: 'Magowie czuwają nad chorymi', quarrel: 'Kłótnie zakonów (siedziby za blisko siebie)', quarantine: 'Chaty zamknięte na kwarantannę' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: tx('Brak jedzenia na wybrane racje', 'Not enough food for the chosen rations'), value: 0, note: tx('(jedzą mniej)', '(they eat less)') });
   const mine = game.units.filter((u) => u.owner === ME);

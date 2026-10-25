@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.49.0 — kwarantanna w czasie zarazy (2026-10-25)
+
+- **Kwarantanna:** w czasie zarazy okno chaty ma przycisk „Zamknij chatę (kwarantanna)”. W zamkniętej chacie leżą tylko chorzy (inni chorzy idą tam najpierw), zdrowi domownicy wychodzą i śpią gdzie indziej (i nie odpoczywają w niej po robocie), a zaraza nie wychodzi za drzwi. Ludzie tego nie lubią: −1 do popularności, póki jakaś chata jest zamknięta. Po zarazie chaty same się otwierają. Magowie dalej wchodzą i leczą
+- Zaraza szerzy się teraz głównie pod wspólnym dachem; na dworze (tłum przy ognisku, przy robocie) dużo wolniej i z górnym limitem — wcześniej tłum bezrobotnych przy ognisku zarażał się prawie cały w pół dnia
+- **Boty** zamykają chaty, w których ktoś leży w gorączce
+- Skryba przy wybuchu zarazy podpowiada kwarantannę; „Jak grać” → Zaraza i magowie: kwarantanna (PL/EN)
+
 ## 0.48.0 — burze i susza (2026-10-24)
 
 - **Burza:** przy mocnym deszczu poza zimą piorun od czasu do czasu trafia w budynek i go podpala (ok. 1–2 uderzenia na burzę na gracza). Gaszą ludzie z wiadrami i magowie Źródła, a deszcz sam przygasza każdy pożar. Kamienne budowle (mury, wieże, twierdza, studnia, kapliczka, siedziby magów) się nie palą. W scenie poszarpany kanał pioruna z odnogami do dachu, błysk i trzask grzmotu; skryba z przyciskiem do pożaru (src/sim/systems/storms.ts, src/render/bolts.ts)

@@ -43,6 +43,7 @@ export interface HudEvents {
   onGate(building: number, open: boolean): void;
   /** Wyłącza/włącza budynek z pracownikiem */
   onPower(building: number, on: boolean): void;
+  onQuarantine(building: number, on: boolean): void;
   onDismount(building: number): void;
   onWalk(): void;
   /** Oko: spacer oczami losowego mieszkańca */
@@ -96,7 +97,7 @@ export interface HudView {
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
 export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
-export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; garrison?: number;
+export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Twierdza w czasie buntu: ilu stoi pod bramą, ile porcji kosztuje rozdanie chleba, czy jest z czego, czy straż już rozgania tłum */
@@ -713,6 +714,15 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   powerBtn.addEventListener('click', () => events.onPower(infoId, !powerOn));
   powerBox.append(powerBtn, powerState);
   powerBox.hidden = true;
+  // kwarantanna chaty w czasie zarazy: zdrowi śpią gdzie indziej, chorzy leżą tutaj, zaraza nie wychodzi za drzwi
+  const quarBox = el('div', 'gate-box power-box');
+  const quarBtn = el('button', 'btn-main gate-btn');
+  quarBtn.type = 'button';
+  const quarState = el('p', 'gate-state');
+  let quarOn = false;
+  quarBtn.addEventListener('click', () => events.onQuarantine(infoId, !quarOn));
+  quarBox.append(quarBtn, quarState);
+  quarBox.hidden = true;
   // wieża: ilu łuczników stoi na pomoście, zaznacz ich albo każ zejść
   const towerBox = el('div', 'gate-box');
   const towerState = el('p', 'gate-state');
@@ -778,7 +788,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, riotBox, gateBox, powerBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -1166,6 +1176,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       towerBox.hidden = true;
       gateBox.hidden = true;
       powerBox.hidden = true;
+      quarBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
       siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true; infoDesc.hidden = false;
       walkBtn.hidden = person.walk === false;
@@ -1183,6 +1194,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       towerBox.hidden = true;
       gateBox.hidden = true;
       powerBox.hidden = true;
+      quarBox.hidden = true;
       siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true;
       walkBtn.hidden = true;
       // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
@@ -1364,6 +1376,15 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const wall = i.def.id === 'stoneWall';
         setText(towerState, i.garrison ? `${wall ? tx('Na murze', 'On the wall') : tx('Na wieży', 'On the tower')}: ${i.garrison} / ${i.garrisonMax ?? (wall ? 2 : 4)} ${tx('łuczników', 'archers')}` : wall ? tx('Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.', 'No one on the wall. Select archers and right-click the wall — they will climb the ladder.') : tx('Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.', 'The tower is empty. Select archers and right-click the tower.'));
         tSel.disabled = tDown.disabled = !i.garrison;
+      }
+      quarBox.hidden = !(i.own && i.quarantine);
+      if (i.quarantine) {
+        quarOn = i.quarantine.on;
+        setText(quarBtn, i.quarantine.on ? tx('Otwórz chatę', 'Open the hovel') : tx('Zamknij chatę (kwarantanna)', 'Shut the hovel (quarantine)'));
+        setText(quarState, i.quarantine.on
+          ? tx(`Kwarantanna: leżą tu tylko chorzy (${i.quarantine.sick}), zdrowi śpią gdzie indziej, zaraza nie wychodzi za drzwi. Ludzie tego nie lubią. Po zarazie chata sama się otworzy.`, `Quarantine: only the sick lie here (${i.quarantine.sick}), the healthy sleep elsewhere and the plague does not get out the door. Folk dislike it. The hovel opens by itself once the plague is over.`)
+          : tx(`Chorych w środku: ${i.quarantine.sick}. Zamknięcie chaty zatrzyma zarazę w środku — zdrowi domownicy pójdą spać gdzie indziej.`, `Sick inside: ${i.quarantine.sick}. Shutting the hovel keeps the plague within — the healthy will go to sleep elsewhere.`));
+        quarState.dataset.shut = String(i.quarantine.on);
       }
       powerBox.hidden = !(i.own && i.power);
       if (i.power) {

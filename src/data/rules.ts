@@ -158,9 +158,11 @@ export const RULES = {
     /** Zarażenie co `every` ticków (na 10 000): śpiący pod jednym dachem z gorączkującym, stojący tuż obok gorączkującego
      *  na dworze, obok chaty z chorym, obok wylęgającego */
     spreadHome: 300,
-    spreadNear: 500,
-    spreadDoor: 120,
-    spreadCarrier: 160,
+    spreadNear: 60,
+    spreadDoor: 40,
+    spreadCarrier: 15,
+    /** Na dworze (tłum przy ognisku, przy robocie) najwyżej tyle na raz, choćby obok stało wielu chorych */
+    spreadCrowdMax: 40,
     /** Śmierć gorączkującego co `every` ticków (na 10 000); głód, sen pod gołym niebem i zima mnożą (w %) */
     death: 52,
     deathHungry: 150,

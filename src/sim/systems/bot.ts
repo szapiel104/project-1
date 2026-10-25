@@ -1,9 +1,10 @@
 import { dole, quell } from './unrest';
+import { canQuarantine, setQuarantine } from './plague';
 import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
 import { resIndex } from '../../data/resources';
 import { MAGE_CAP, SAPPER, UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
-import { FP, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
+import { FP, Phase, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
 import { battleMages, orderAttack, orderGarrison, orderMove, train } from './army';
 import { canAfford, canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
@@ -125,6 +126,8 @@ export function botSystem(g: GameState): void {
     if (!p.bot || p.defeated || !playerKeep(g, p.id)) continue;
     // bunt głodowy: bot rozdaje chleb, gdy ma z czego, a bez jedzenia każe straży rozpędzić tłum
     if (p.revolt && !dole(g, p.id)) quell(g, p.id);
+    // zaraza: bot zamyka chaty, w których ktoś leży w gorączce (kwarantanna jak u gracza; po zarazie otwierają się same)
+    if (p.plague) for (const u of g.units) if (u.owner === p.id && u.sick && u.home && u.phase === Phase.Sleeping && g.tick >= (u.sickFrom ?? 0)) { const h = g.buildings.find((b) => b.id === u.home); if (h && !h.quarantine && canQuarantine(h)) setQuarantine(g, p.id, h.id, true); }
     // budowa: następny budynek z listy, którego jeszcze brakuje (rzadziej, bo szukanie miejsca kosztuje)
     if (tk % (THINK * 5) === 0) {
     const have = new Map<string, number>();

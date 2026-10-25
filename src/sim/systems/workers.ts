@@ -77,7 +77,7 @@ export function shrineDoors(g: GameState, owner: number): Set<number> {
  * Łóżko na noc: wolne miejsce w chacie (albo w twierdzy), a gdy wszystkie zajęte — słomiane posłanie na ziemi
  * obok obozowiska albo twierdzy. Zwraca true, gdy znalazł nocleg.
  */
-function findBed(g: GameState, u: Unit): void {
+export function findBed(g: GameState, u: Unit): void {
   const used = new Map<number, number>();
   const mats = new Set<number>();
   for (const o of g.units) {
@@ -92,7 +92,9 @@ function findBed(g: GameState, u: Unit): void {
   for (const b of g.buildings) {
     const cap = BUILDINGS[b.type]!.housing ?? 0;
     if (b.owner !== u.owner || !cap || b.door < 0 || b.build || (used.get(b.id) ?? 0) >= cap) continue;
-    const d = Math.abs((b.door % g.map.width) * FP - u.px) + Math.abs(Math.floor(b.door / g.map.width) * FP - u.py);
+    // kwarantanna: zdrowy tam nie śpi, a chory idzie najpierw do zamkniętej chaty (plague.ts)
+    if (b.quarantine && !u.sick) continue;
+    const d = Math.abs((b.door % g.map.width) * FP - u.px) + Math.abs(Math.floor(b.door / g.map.width) * FP - u.py) - (b.quarantine ? 1 << 24 : 0);
     if (d < bd) { bd = d; best = b; }
   }
   if (best) { u.home = best.id; u.target = 0; return; }
@@ -308,7 +310,7 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const restCamp = campOf(g, job);
       if (restCamp) return (t) => t === restCamp.door;
       const doors = new Set<number>();
-      for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && b.type === HOUSE) doors.add(b.door);
+      for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && b.type === HOUSE && !b.quarantine) doors.add(b.door);
       return doors.size ? (t) => doors.has(t) : null;
     }
     case Phase.ToSite: {
@@ -473,7 +475,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
     case Phase.ToRest: {
       const here = tileOf(g, u);
       const restCamp = campOf(g, u.job ? buildingById(g, u.job) : undefined);
-      const house = restCamp && restCamp.door === here ? restCamp : g.buildings.find((b) => b.owner === u.owner && b.type === HOUSE && b.door === here);
+      const house = restCamp && restCamp.door === here ? restCamp : g.buildings.find((b) => b.owner === u.owner && b.type === HOUSE && b.door === here && !b.quarantine);
       if (house) { u.home = house.id; u.phase = Phase.Resting; u.timer = RULES.restTicks; }
       else u.phase = u.job ? Phase.Returning : Phase.Idle;
       break;

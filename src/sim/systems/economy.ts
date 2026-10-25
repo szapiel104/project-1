@@ -113,6 +113,8 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   const m = magesOf(g, p.id);
   parts.push({ key: 'mages', value: m.water.length || m.fire.length || m.hut.length ? 1 : 0 });
   parts.push({ key: 'quarrel', value: ordersQuarrel(g, p.id) ? RULES.mages.quarrelPenalty : 0 });
+  // kwarantanna: zamknięte chaty i rozdzielone rodziny psują nastroje (ale mniej niż szerząca się zaraza)
+  parts.push({ key: 'quarantine', value: g.buildings.some((b) => b.owner === p.id && b.quarantine) ? -1 : 0 });
   const delta = parts.reduce((n, x) => n + x.value, 0);
   return { delta, food, gold, fed, bribed, parts, ale };
 }

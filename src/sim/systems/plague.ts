@@ -4,7 +4,7 @@ import { rainAt } from '../clock';
 import { findPath } from '../path';
 import { buildingById, dropWorker, FP, housing, Phase, playerKeep, population, unitById, type Building, type GameState, type PlayerState, type Unit } from '../state';
 import { weatherOf } from '../weather';
-import { move } from './workers';
+import { findBed, move } from './workers';
 
 /**
  * Zaraza i magowie.
@@ -183,14 +183,17 @@ function plagueTick(g: GameState): void {
       for (const o of mine) {
         if (!susceptible(g, o)) continue;
         const here = spotOf(g, o);
-        let chance = 0;
+        let chance = 0, outside = 0;
         for (const { at, bed } of src) {
           if (at.house && at.house.clean && at.house.clean > g.tick) continue; // chata wypalona przez maga Płomienia
+          if (at.house && at.house.quarantine && here.house !== at.house) continue; // kwarantanna: zaraza nie wychodzi za drzwi
           if (bed && at.house) {
             if (here.house === at.house) chance += R.spreadHome;
-            else if (cheb(w, here.tile, at.tile) <= 1) chance += R.spreadDoor;
-          } else if (cheb(w, here.tile, at.tile) <= 1 && !(here.house && here.house !== at.house)) chance += bed ? R.spreadNear : R.spreadCarrier;
+            else if (cheb(w, here.tile, at.tile) <= 1) outside += R.spreadDoor;
+          } else if (cheb(w, here.tile, at.tile) <= 1 && !(here.house && here.house !== at.house)) outside += bed ? R.spreadNear : R.spreadCarrier;
         }
+        // na dworze w tłumie zaraża się wolniej niż pod jednym dachem: tłum przy ognisku dokłada najwyżej `spreadCrowdMax`
+        chance += Math.min(outside, R.spreadCrowdMax);
         if (chance > 0 && g.rng.int(10000) < Math.min(chance, 6000)) infect(g, o);
       }
       // gorączka: zgony, zdrowienie
@@ -209,6 +212,8 @@ function plagueTick(g: GameState): void {
       }
     }
     if (p.plague && !g.units.some((u) => u.owner === p.id && u.sick)) {
+      // po zarazie chaty same się otwierają
+      for (const b of g.buildings) if (b.owner === p.id && b.quarantine) b.quarantine = undefined;
       p.plagueOver = { tick: g.tick, dead: p.plagueDead ?? 0 };
       p.plague = undefined; p.plagueDead = undefined;
       p.plagueCalm = g.tick + R.calmTicks;
@@ -219,6 +224,30 @@ function plagueTick(g: GameState): void {
       if (risk > 0 && g.rng.int(100000) < risk) startPlague(g, p.id);
     }
   }
+}
+
+/** Chata, którą wolno zamknąć na kwarantannę (zwykła chata gracza, gotowa) */
+export const canQuarantine = (b: Building): boolean => BUILDINGS[b.type]!.id === 'house' && !b.build && !b.ruined;
+
+/**
+ * Kwarantanna chaty: w środku leżą tylko chorzy (inni chorzy idą tu najpierw), zdrowi domownicy szukają łóżka gdzie indziej
+ * (w ciasnej osadzie — pod gołym niebem), a zaraza nie wychodzi za drzwi. Magowie dalej wchodzą i leczą.
+ * Ludzie nie lubią zamkniętych chat (składnik popularności `quarantine`). Po wygaśnięciu zarazy chaty same się otwierają.
+ */
+export function setQuarantine(g: GameState, player: number, id: number, on: boolean): boolean {
+  const b = buildingById(g, id);
+  if (!b || b.owner !== player || !canQuarantine(b)) return false;
+  b.quarantine = on || undefined;
+  if (!on) return true;
+  // zdrowi wychodzą z zamkniętej chaty i szukają innego posłania (śpiący, odpoczywający i ci w drodze do niej)
+  for (const u of g.units) {
+    if (u.owner !== player || u.sick || u.home !== b.id) continue;
+    const asleep = u.phase === Phase.Sleeping || u.phase === Phase.ToSleep;
+    u.home = 0; u.target = 0; u.path = []; u.timer = 0;
+    u.phase = asleep ? Phase.ToSleep : u.job ? Phase.Returning : Phase.Idle;
+    if (asleep) findBed(g, u);
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------- magowie przy pracy

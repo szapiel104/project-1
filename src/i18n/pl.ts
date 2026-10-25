@@ -106,7 +106,7 @@ export const pl = {
   'herald.weaker': 'Wróg ma przewagę liczebną. Trzeba więcej włóczników.',
   'scribe.foodLow': 'Panie, kończy się żywność w spichlerzu.',
   'scribe.revolt': 'Panie, ludzie rzucili robotę i stoją tłumem pod bramą. Póki się nie najedzą, warsztaty stoją. Większe racje i straż szybciej ich uspokoją, a w oknie twierdzy możesz rozdać chleb albo posłać straż. Jeśli to potrwa, zaczną plądrować.',
-  'scribe.plague': 'Panie, w osadzie zaraza! Chorzy leżą w gorączce i nie pracują, a zarażają tych, co śpią pod jednym dachem. Bez magów umrze wielu — postaw choćby chatkę maga, pochowaj zmarłych i pilnuj, żeby ludzie byli syci.',
+  'scribe.plague': 'Panie, w osadzie zaraza! Chorzy leżą w gorączce i nie pracują, a zarażają tych, co śpią pod jednym dachem. Bez magów umrze wielu — postaw choćby chatkę maga, pochowaj zmarłych i pilnuj, żeby ludzie byli syci. Chatę z chorymi możesz zamknąć na kwarantannę w jej oknie.',
   'scribe.plagueMages': 'Panie, w osadzie zaraza! Magowie już idą do chorych. Pilnuj jedzenia i grzebania zmarłych, a przejdzie szybciej.',
   'scribe.plagueToll': 'Panie, zaraza zbiera żniwo, a nikt nie leczy chorych. Chatka maga jest tania — postaw ją, zanim pomrze pół osady.',
   'scribe.plagueOver': 'Panie, zaraza wygasła. Kto przechorował, długo już nie zachoruje. Pochowaliśmy {n} ludzi.',
