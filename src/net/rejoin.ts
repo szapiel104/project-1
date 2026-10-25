@@ -2,7 +2,7 @@ import type { MapPresetId } from '../data/maps';
 import { deserialize, type SaveData } from '../sim/save';
 import type { GameState } from '../sim/state';
 import { tx } from '../i18n';
-import { Lockstep, type NetSnapshot } from './lockstep';
+import { Lockstep, TURN, type NetSnapshot } from './lockstep';
 import { getRoom, me, restore, roomLink, type NetMsg, type Room, type RoomLink, type Slot } from './supa';
 
 /**
@@ -63,13 +63,16 @@ export function sendState(link: Pick<RoomLink, 'send'>, to: number, turn: number
   void packState(save, net).then((parts) => parts.forEach((data, part) => link.send({ k: 'state', to, turn, part, parts: parts.length, data })));
 }
 
-export interface Rejoined { game: GameState; memo: MatchMemo; link: RoomLink; net: Lockstep }
+/** `solo` = w meczu nie ma innych ludzi: stan gry wczytany z tej przeglądarki, a nie przesłany przez grających */
+export interface Rejoined { game: GameState; memo: MatchMemo; link: RoomLink; net: Lockstep; solo?: boolean }
 
 /**
  * Wraca do zapamiętanego meczu: łączy się z kanałem pokoju, prosi o miejsce (co 3 s, bo grający mogą jeszcze nie wiedzieć,
  * że wyszliśmy) i czeka na stan gry. Zwraca grę gotową do wznowienia albo opis, czemu się nie udało.
+ * Gdy w meczu nie ma innych ludzi (same boty, które liczą się w naszej przeglądarce), nikt nie przyśle stanu —
+ * wtedy gra bierze stan meczu z tej przeglądarki (`local`) i rusza od razu.
  */
-export async function rejoinMatch(memo: MatchMemo, note: (text: string) => void, wait = 45_000): Promise<Rejoined | string> {
+export async function rejoinMatch(memo: MatchMemo, note: (text: string) => void, local: () => GameState | null, wait = 45_000): Promise<Rejoined | string> {
   await restore();
   const m = me();
   const seat = memo.slots[memo.me];
@@ -79,6 +82,14 @@ export async function rejoinMatch(memo: MatchMemo, note: (text: string) => void,
   if (typeof room === 'string' || room.status !== 'playing') { forgetMatch(); return tx('Ten mecz już się skończył.', 'This match has already ended.'); }
   const link = roomLink(room.id, { id: m.id, nick: m.nick, avatar: m.avatar });
   await link.ready;
+  if (memo.humans.every((h) => h === memo.me)) {
+    const game = local();
+    if (!game) { link.close(); forgetMatch(); return tx('Nie ma zapisu tego meczu w tej przeglądarce — zacznij nowy.', 'This browser has no save of that match — start a new one.'); }
+    const net = new Lockstep(link, memo.me, memo.humans);
+    // stan „po turze”: następna tura zaczyna się od pierwszego pełnego TURN (tick w zapisie nie musi trafiać w granicę tury)
+    net.resume(Math.ceil(game.tick / TURN) - 1, { inbox: [], gone: [], gives: [], quiet: [], lastFrom: [] });
+    return { game, memo: { ...memo, room }, link, net, solo: true };
+  }
   // lockstep słucha od razu: polecenia, które przyjdą w czasie czekania na stan, nie przepadną
   const net = new Lockstep(link, memo.me, memo.humans);
   const parts: string[] = [];

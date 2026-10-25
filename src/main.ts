@@ -475,7 +475,17 @@ async function backToMatch(memo: MatchMemo): Promise<void> {
   document.querySelector('.net-return')?.remove();
   speed = 0;
   netWait.hidden = false;
-  const r = await rejoinMatch(memo, (text) => { netWait.textContent = text; });
+  // mecz bez innych ludzi: stan z tej przeglądarki — po zerwanym połączeniu gra jest jeszcze w pamięci karty,
+  // a po odświeżeniu w zapisie (przy zamknięciu karty `endOnline` odpina sieć przed `pagehide`, więc `save()` zapisuje mecz)
+  let localUi: UiSave | undefined;
+  const local = (): GameState | null => {
+    if (!titleScreen && currentSeedText === memo.seed && currentPreset === memo.preset && game.tick > 0) return deserialize(serialize(game, currentPreset));
+    const s = loadSave();
+    if (!s || s.seedText !== memo.seed || s.data.preset !== memo.preset) return null;
+    localUi = s.ui;
+    return deserialize(s.data);
+  };
+  const r = await rejoinMatch(memo, (text) => { netWait.textContent = text; }, local);
   netWait.hidden = true;
   returning = false;
   if (typeof r === 'string') {
@@ -487,7 +497,11 @@ async function backToMatch(memo: MatchMemo): Promise<void> {
   const st: OnlineStart = { room: m.room, seed: m.seed, preset: m.preset, level: m.level, slots: m.slots, me: m.me, humans: m.humans, coop: m.coop, link, net: ls };
   menu.close();
   previewJob++; previewCover.hidden = true; preview = null; renderer.endPreview();
-  enterGame(t('load.map'), () => { startOnline(st, loaded); hud.toast(tx('Wróciłeś do meczu — bot oddał Ci zamek.', 'You are back in the match — the bot handed back your keep.')); });
+  enterGame(t('load.map'), () => {
+    startOnline(st, loaded);
+    if (r.solo) { applyUi(localUi); hud.toast(tx('Wróciłeś do meczu.', 'You are back in the match.')); }
+    else hud.toast(tx('Wróciłeś do meczu — bot oddał Ci zamek.', 'You are back in the match — the bot handed back your keep.'));
+  });
 }
 /** Po uruchomieniu gry: trwa mecz przez sieć, z którego wyszliśmy (odświeżenie, zamknięta karta) — okienko z powrotem */
 function offerReturn(memo: MatchMemo): void {

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.51.5 — powrót do meczu z samymi botami (2026-10-25)
+
+- **Mecz przez sieć, w którym jesteś jedynym człowiekiem** (reszta to boty): „Wróć do meczu” wczytuje stan od razu z tej przeglądarki (z pamięci karty po zerwanym połączeniu albo z zapisu po odświeżeniu) i gra dalej przez sieć, z rankingiem jak wcześniej. Wcześniej gra czekała 45 s, aż „grający” wpuszczą z powrotem — a boty nie mają jak odpowiedzieć
+
 ## 0.51.4 — nowa ikonka „bez pracy” (2026-10-25)
 
 - Pasek u góry: licznik wolnych chłopów ma nową ikonkę — chłop i przekreślony młotek zamiast łóżka z „z”, które myliło się ze snem
