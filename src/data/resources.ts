@@ -1,5 +1,5 @@
 // KOLEJNOŚĆ MA ZNACZENIE (indeks w stanie gry i zapisach): nowe surowce dopisujemy na końcu
-export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor'] as const;
+export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor', 'crystal'] as const;
 export type ResourceId = (typeof RESOURCES)[number];
 export type StoreKind = 'stockpile' | 'granary' | 'armory' | 'grain';
 
@@ -34,6 +34,9 @@ export const RESOURCE_DEFS: Record<ResourceId, ResourceDef> = {
   sword: { name: 'res.sword', color: 0x9aa0a8, store: 'armory' },
   // kolczugi od płatnerza: z żelaza ze składu, do zbrojowni (dla zbrojnych)
   armor: { name: 'res.armor', color: 0x6f747c, store: 'armory' },
+  // kryształ magii: rzadki urobek z głębokiej galerii kopalni; jak ruda nie leży w składzie, trafia do skarbca w zamku.
+  // Potrzebny magom bojowym i siedzibom zakonów
+  crystal: { name: 'res.crystal', color: 0x9a6cff, store: null },
 };
 
 export const resIndex = (id: ResourceId): number => RESOURCES.indexOf(id);

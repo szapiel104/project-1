@@ -71,7 +71,7 @@ describe('kopalnia pod górami', () => {
     step(g, [{ type: 'build', player: 0, building: 'oremine', x: at.x, y: at.y, rot: at.rot }]);
     const mine = g.buildings.find((b) => b.type === MINE)!;
     expect(mine).toBeDefined();
-    expect(mine.hp).toBe(360);
+    expect(mine.hp).toBe(3000); // kopalnia twarda (Michał 25.10): jej zburzenie to dramat dla osady
     // na starcie mało ludzi: tylko brygadzista albo dwóch
     const pop0 = g.units.filter((u) => u.owner === 0).length;
     run(g, 3000); // budowa: chłopi noszą materiał ze składu pod góry, potem budują

@@ -123,12 +123,12 @@ describe('oblężenie', () => {
     step(g, [{ type: 'train', player: 0, building: id, unit: 'spearman' }]);
     waitSoldiers(g, 1);
     const enemyKeep = playerKeep(g, 1)!;
-    enemyKeep.hp = 5000;
+    enemyKeep.hp = 14000; // powyżej 60% wytrzymałości: zamek nie zajmuje się ogniem od ciosów
     const s = g.soldiers[0]!;
     const [kx, ky] = keepFront(enemyKeep); s.px = kx * 256 + 128; s.py = ky * 256 + 128; s.path = []; s.goal = -1;
     step(g, [{ type: 'attack', player: 0, ids: [s.id], target: enemyKeep.id }]);
     for (let i = 0; i < 60; i++) step(g, []);
-    expect(enemyKeep.hp).toBeLessThan(5000); // bije w zamek
+    expect(enemyKeep.hp).toBeLessThan(14000); // bije w zamek
     // podchodzi wrogi włócznik
     const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('spearman'), px: s.px, py: s.py + 3 * 256, path: [], hp: 20, goal: -1, wait: 0, target: 0, cd: 0 };
     g.soldiers.push(foe);

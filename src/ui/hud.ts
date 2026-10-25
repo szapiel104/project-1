@@ -200,6 +200,8 @@ const ICONS: Record<string, string> = {
   idle: '<path d="M3 13h14M5 13v4M15 13v4M4 10h12" stroke="#c9a24a" stroke-width="2"/><path d="M12 3h4l-4 4h4" stroke="#f6ecd0" fill="none"/>',
   hammer: '<path d="M9 8l7 9" stroke="#7a5232" stroke-width="2.4" stroke-linecap="round"/><path d="M3 6l5-4 4 4-5 4z" fill="#8a8e96" stroke="#2a1c10"/>',
   // waluta: grudka rudy (jak w Gothicu) — ciemna bryła z jasnoniebieskimi, połyskującymi żyłami
+  // kryształ magii: fioletowy, wieloboczny kryształ z jaśniejszym rdzeniem i drobnym odpryskiem obok
+  crystal: '<path d="M10 2l4 5-1.5 10h-5L6 7z" fill="#7a52d6" stroke="#1c1430"/><path d="M10 2v15M6 7h8" stroke="#c9b4ff" stroke-width=".9" fill="none"/><path d="M14.5 11l2.5 2-1 4h-2z" fill="#9a7cf0" stroke="#1c1430" stroke-width=".8"/><circle cx="9" cy="8" r=".9" fill="#efe6ff"/>',
   gold: '<path d="M3 13l2-6 5-3 5 2 2 6-3 4H6z" fill="#4a4e5c" stroke="#16141c"/><path d="M6 8l3 2 2-3M9 10l-1 4M11 7l3 3 1 4M12 12l-3 2" stroke="#8fd3ff" stroke-width="1.1" fill="none"/><circle cx="9" cy="10" r="1" fill="#d9f2ff"/><circle cx="14" cy="10" r=".8" fill="#d9f2ff"/>',
 };
 
@@ -648,7 +650,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(c.stats, `${t('hud.hp')} ${r.hp} · ${r.attack ? `${t('hud.attack')} ${r.attack}` : tx('nie walczy, rozbiera wrogie ruiny', 'does not fight, strips enemy ruins')}${r.range ? ` · ${tx('zasięg', 'range')} ${r.range}` : ''}${r.armor ? ` · ${tx('zbroja', 'armour')} ${r.armor}%` : ''}`);
       const row = (icon: string, have: number, need: number): string => `<span class="need${have < need ? ' short' : ''}"><svg viewBox="0 0 20 20" width="22" height="22">${ICONS[icon] ?? ''}</svg><strong>${need}</strong><em>(${have})</em></span>`;
       c.needs.innerHTML = r.magic
-        ? row('gold', r.gold, r.cost) + row('idle', r.idle, 1) + `<span class="need${r.magic.have >= r.magic.cap ? ' short' : ''}">${tx(`magów ${r.magic.have} / ${r.magic.cap}`, `mages ${r.magic.have} / ${r.magic.cap}`)}</span>`
+        ? row('gold', r.gold, r.cost) + (r.gear ? row(r.gear.res, r.gear.have, 1) : '') + row('idle', r.idle, 1) + `<span class="need${r.magic.have >= r.magic.cap ? ' short' : ''}">${tx(`magów ${r.magic.have} / ${r.magic.cap}`, `mages ${r.magic.have} / ${r.magic.cap}`)}</span>`
         : row(r.weapon, r.have, r.need ?? 1) + (r.gear ? row(r.gear.res, r.gear.have, 1) : '') + row('gold', r.gold, r.cost) + row('idle', r.idle, 1);
       c.b1.disabled = r.max < 1; c.b5.disabled = r.max < 5; c.bAll.disabled = r.max < 1;
       setText(c.bAll, tx(`+ wszyscy (${r.max})`, `+ all (${r.max})`));

@@ -212,6 +212,7 @@ export const en: Record<TextKey, string> = {
   'res.bread': 'Bread',
   'res.apples': 'Apples',
   'res.gold': 'Ore',
+  'res.crystal': 'Magic crystal',
   'res.fish': 'Fish',
   'res.spear': 'Spears',
   'res.bow': 'Bows',

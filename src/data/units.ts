@@ -59,8 +59,8 @@ export const UNITS: readonly UnitDef[] = [
   { id: 'sapper', name: 'u.sapper', cost: { iron: 2, gold: 10 }, hp: 45, speed: 100, attack: 0, cooldown: 14, sight: 10, weapon: 'iron', sapper: true },
   // Magowie bojowi (na końcu listy dla starych zapisów): mag Płomienia rzuca kulami ognia, mag Źródła czarem wody.
   // Kruche (mało zdrowia), ale biją z daleka i nigdy nie chybiają; drodzy w rudzie i jest ich najwyżej 10 na gracza
-  { id: 'mageFire', name: 'u.mageFire', cost: { gold: 50 }, hp: 55, speed: 95, attack: 15, cooldown: 40, sight: 9, range: 7, weapon: 'gold', magic: 'fire' },
-  { id: 'mageWater', name: 'u.mageWater', cost: { gold: 45 }, hp: 65, speed: 95, attack: 8, cooldown: 30, sight: 9, range: 6, weapon: 'gold', magic: 'water' },
+  { id: 'mageFire', name: 'u.mageFire', cost: { gold: 50, crystal: 1 }, hp: 55, speed: 95, attack: 15, cooldown: 40, sight: 9, range: 7, weapon: 'gold', magic: 'fire' },
+  { id: 'mageWater', name: 'u.mageWater', cost: { gold: 45, crystal: 1 }, hp: 65, speed: 95, attack: 8, cooldown: 30, sight: 9, range: 6, weapon: 'gold', magic: 'water' },
 ];
 
 /** Najwyżej tylu magów bojowych może mieć jeden gracz (razem obu zakonów, z tymi w drodze do siedziby) */

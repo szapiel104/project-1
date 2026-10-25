@@ -42,4 +42,12 @@ describe('tempo gry', () => {
     expect(buildCost(g, 0, H).wood).toBe(Math.ceil((base * (100 + RULES.costStepMax)) / 100));
     expect(buildCost(g, 0, buildingIndex('palisade'))).toEqual(BUILDINGS[buildingIndex('palisade')]!.cost);
   });
+
+  it('druga kopalnia kosztuje fortunę, pierwsza zwykłą cenę', () => {
+    const g = game();
+    const M = buildingIndex('oremine');
+    expect(buildCost(g, 0, M)).toEqual(BUILDINGS[M]!.cost);
+    g.buildings.push({ ...g.buildings[0]!, id: g.nextId++, type: M, owner: 0 });
+    expect(buildCost(g, 0, M)).toEqual(BUILDINGS[M]!.nextCost);
+  });
 });

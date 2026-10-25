@@ -234,6 +234,9 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
   bow: () => [0, 1].flatMap((k) => [as(tint(new THREE.TorusGeometry(0.18, 0.012, 4, 10, Math.PI * 0.9).rotateX(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.05), 0x7a5232), 'wood'), tint(new THREE.CylinderGeometry(0.004, 0.004, 0.34, 3).rotateZ(Math.PI / 2).translate(0, 0.02 + k * 0.03, -0.03), 0xe8e0c8)]),
   // ruda (waluta, w kodzie 'gold'): bryły leżą W koszu (dno -0,065, brzeg 0,065), wierzch wystaje; kosz pełen ciemnych brył z jasnoniebieskimi, połyskującymi grudkami jak w Gothicu
   gold: () => [basket(), ...[[-0.05, -0.02, -0.03, 0x3e424e], [0.05, -0.02, 0.03, 0x4a4e5c], [0, 0.03, -0.01, 0x8fd3ff], [0.03, 0.02, 0.05, 0x3a3d48], [-0.03, 0.045, 0.04, 0x7cc4f0]].map(([x, y, z, c]) => { const b = ball(0.045, x as number, y as number, z as number, c as number, 1.1, 0.8, 0.9); return (c as number) > 0x700000 ? b : as(b, 'stone'); })],
+  // kryształ magii: jeden duży fioletowy kryształ w koszu (wieloboczna bryła, wierzch wystaje nad brzeg) i dwa mniejsze obok
+  crystal: () => [basket(), ...[[0, 0.03, 0, 0.05, 1.8], [0.045, 0.0, 0.03, 0.028, 1.5], [-0.04, -0.005, -0.03, 0.03, 1.4]].map(([x, y, z, r, h]) =>
+    tint(new THREE.OctahedronGeometry(r as number, 0).scale(1, h as number, 1).rotateY((x as number) * 9).translate(x as number, y as number, z as number), 0x9a6cff))],
   // beczka piwa z paczki (Poly Haven wine_barrel_01, pełna: klepki, obręcze, czop) niesiona na leżąco przed sobą,
   // długość 0,28 jak dawna (środek w y = 0,04)
   ale: () => [as(propGeometryFlat('barrel', false).translate(0, -0.5, 0).scale(0.28, 0.28, 0.28).rotateZ(Math.PI / 2).rotateX(0.3).translate(0, 0.04, 0), 'barrel')],

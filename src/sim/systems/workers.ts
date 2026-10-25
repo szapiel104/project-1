@@ -26,10 +26,12 @@ const OREMINE = BUILDINGS.findIndex((b) => b.id === 'oremine');
  * rudę do skarbca w zamku (albo całość pod barak, skąd jedzie wozem). Suma wag = 100.
  * Kurs jest długi (15 s), a urobek z niego większy: górnicy dłużej siedzą w sztolni, więc w środku widać ich więcej naraz.
  */
-export const MINE_YIELDS: { res: 'stone' | 'iron' | 'gold'; weight: number; amount: number }[] = [
-  { res: 'stone', weight: 58, amount: 10 },
-  { res: 'iron', weight: 34, amount: 7 },
+export const MINE_YIELDS: { res: 'stone' | 'iron' | 'gold' | 'crystal'; weight: number; amount: number }[] = [
+  { res: 'stone', weight: 56, amount: 10 },
+  { res: 'iron', weight: 33, amount: 7 },
   { res: 'gold', weight: 8, amount: 6 },
+  // kryształ magii z głębokiej galerii: rzadko, po jednym (dla magów bojowych i siedzib zakonów)
+  { res: 'crystal', weight: 3, amount: 1 },
 ];
 /** Ilu górników powinna mieć kopalnia przy danej liczbie mieszkańców: 1 + po jednym na każde `per`, najwyżej `max` */
 export function crewWanted(def: { crew?: { per: number; max: number } }, pop: number): number {

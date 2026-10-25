@@ -47,6 +47,8 @@ export interface BuildingDef {
   /** Etap osady potrzebny do postawienia (0 wioska — od razu, 1 osada, 2 gród, 3 miasto; progi ludności w RULES.tiers).
    *  Raz osiągnięty etap zostaje, nawet gdy ludzi ubędzie */
   tier?: number;
+  /** Cena drugiego i każdego następnego takiego budynku (zamiast zwykłej dopłaty 10%), np. druga kopalnia */
+  nextCost?: Partial<Record<ResourceId, number>>;
   /** Stary budynek: zostaje w kodzie dla zapisów i już stojących egzemplarzy, ale nie ma go w menu i nie da się go postawić */
   legacy?: boolean;
   /** Droga zamiast budynku: 1 = piaskowa, 2 = kamienna. Nie blokuje przejścia, przyspiesza chodzenie */
@@ -78,7 +80,7 @@ export interface BuildingDef {
  * KOLEJNOŚĆ MA ZNACZENIE: indeks trafia do stanu gry i skrótu, nowe wpisy dopisujemy na końcu.
  */
 export const BUILDINGS: readonly BuildingDef[] = [
-  { id: 'keep', name: 'b.keep', w: 11, h: 11, cost: {}, housing: 12, hp: 6000, buildable: false },
+  { id: 'keep', name: 'b.keep', w: 11, h: 11, cost: {}, housing: 12, hp: 15000, buildable: false },
   { id: 'house', category: 'settlement', name: 'b.house', w: 2, h: 2, cost: { wood: 25 }, housing: 8, buildable: true },
   { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 15 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
   { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 25 }, stores: ['granary'], capacity: { granary: 400 }, buildable: true },
@@ -183,7 +185,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Tania w budowie, ale załoga rośnie z wioską (1 górnik na 4 mieszkańców, do 8) — to ludzie są kosztem.
   // Wytrzymała, ale wróg może ją zburzyć; otocz ją murem i wieżami jak osobny obóz. Zastępuje kamieniołom i kopalnię żelaza.
   {
-    id: 'oremine', category: 'industry', name: 'b.oremine', w: 3, h: 3, cost: { wood: 30 }, hp: 360, buildable: true,
+    id: 'oremine', category: 'industry', name: 'b.oremine', w: 3, h: 3, cost: { wood: 30 }, hp: 3000, buildable: true,
+    // druga i każda następna kopalnia kosztuje fortunę (Michał 25.10): pierwsza tanio, żeby było z czego żyć
+    nextCost: { wood: 300, stone: 300, iron: 60, gold: 400 },
     workView: 'inside', needsRock: true, crew: { per: 4, max: 8 },
     production: { output: { res: 'stone', amount: 10 }, site: 'home', workTicks: 150 },
   },
@@ -227,8 +231,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Magowie (tools/models/magefire.py, magewater.py): Wieża Płomienia i Sanktuarium Źródła. Mieszka w nich
   // do trzech magów (załoga rośnie z osadą), którzy leczą zarazę (src/sim/systems/plague.ts). Zakony nie przepadają za sobą, ale współpracują.
   // Siedziby z dziedzińcem, murem i skrzydłem z celami (5×5) — drogie: to cel na później, gdy osada urośnie
-  { id: 'mageFire', category: 'settlement', name: 'b.mageFire', w: 5, h: 5, tier: 2, cost: { stone: 320, wood: 140, iron: 40, gold: 220 }, hp: 3200, staff: true, crew: { per: 12, max: 3 }, buildable: true },
-  { id: 'mageWater', category: 'settlement', name: 'b.mageWater', w: 5, h: 5, tier: 2, cost: { stone: 280, wood: 160, iron: 30, gold: 220 }, hp: 2800, staff: true, crew: { per: 12, max: 3 }, buildable: true },
+  { id: 'mageFire', category: 'settlement', name: 'b.mageFire', w: 5, h: 5, tier: 2, cost: { stone: 320, wood: 140, iron: 40, gold: 220, crystal: 4 }, hp: 3200, staff: true, crew: { per: 12, max: 3 }, buildable: true },
+  { id: 'mageWater', category: 'settlement', name: 'b.mageWater', w: 5, h: 5, tier: 2, cost: { stone: 280, wood: 160, iron: 30, gold: 220, crystal: 4 }, hp: 2800, staff: true, crew: { per: 12, max: 3 }, buildable: true },
   // Chatka maga (tools/models/magehut.py): tani punkt dla jednego wędrownego maga — żeby choroby nie wybiły osady,
   // zanim stać ją na wieżę albo sanktuarium. Leczy słabiej i wolniej niż siedziby kręgów.
   { id: 'mageHut', category: 'settlement', name: 'b.mageHut', w: 2, h: 2, cost: { wood: 30, stone: 10 }, hp: 420, staff: true, buildable: true },

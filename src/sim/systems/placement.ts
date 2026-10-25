@@ -29,6 +29,7 @@ export function buildCost(g: GameState, player: number, type: number): Partial<R
   if (flatCost(def)) return def.cost;
   let n = 0;
   for (const b of g.buildings) if (b.owner === player && b.type === type && !b.ruined) n++;
+  if (n && def.nextCost) return def.nextCost;
   const pct = 100 + Math.min(RULES.costStepMax, n * RULES.costStep);
   if (pct === 100) return def.cost;
   const out: Partial<Record<ResourceId, number>> = {};

@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.51.0 — kryształy magii z kopalni, droga druga kopalnia, twardsza kopalnia i zamek (2026-10-25)
+
+- **Kryształ magii:** nowy, rzadki urobek z głębokiej galerii kopalni (ok. 3% kursów, po 1 sztuce), trafia do skarbca w zamku jak ruda; kafelek w pasku zapasów, fioletowy kryształ w koszu u niosącego. Mag bojowy kosztuje teraz też 1 kryształ, a siedziba zakonu 4
+- **Druga kopalnia kosztuje fortunę:** pierwsza jak dotąd (30 drewna), druga i każda następna 300 drewna, 300 kamienia, 60 żelaza i 400 rudy (karta pokazuje cenę)
+- **Twardsze cele:** kopalnia 3000 wytrzymałości (było 360), zamek 15 000 (było 6000)
+- **Boty:** drugą kopalnię stawiają dopiero na samym końcu listy budowy; magów szkolą i siedziby stawiają, gdy mają kryształy (ta sama cena co u gracza)
+- „Jak grać”: kopalnia (kryształy, cena drugiej, wytrzymałość) i magowie bojowi (koszt w kryształach), PL/EN
+
 ## 0.50.0 — kaznodzieja przy kapliczce i święto (2026-10-25)
 
 - **Kaznodzieja:** kapliczka ma teraz pracownika. Nowa postać z Blendera (`tools/models/mage.py preacher`): wełniana szata, płaszcz z ciemnego sukna, żelazny znak Ojca Płomienia, ogolona głowa i siwa broda. Za dnia stoi przy kapliczce, o zmierzchu dzwoni dzwonek i mówi kazanie: staje z boku posągu przodem do ludzi, co kilka sekund wznosi ręce, słychać go z bliska

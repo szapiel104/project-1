@@ -1290,7 +1290,8 @@ function recruitInfo(hall = buildingIndex('barracks')): RecruitUnit[] {
   return UNITS.filter((def) => !def.guard && !def.bandit && trainsAt(def, hall)).map((def) => {
     if (def.magic) {
       const cost = def.cost.gold ?? 0;
-      return { id: def.id, name: t(def.name), weapon: 'gold', have: gold, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, magic: { have: MAGE_CAP - magesLeft, cap: MAGE_CAP }, max: Math.max(0, Math.min(cost ? Math.floor(gold / cost) : 999, idle, magesLeft)) };
+      const crystals = p.res[resIndex('crystal')]!, needC = def.cost.crystal ?? 0;
+      return { id: def.id, name: t(def.name), weapon: 'gold', have: gold, gold, idle, cost, hp: def.hp, attack: def.attack, range: def.range, gear: needC ? { res: 'crystal', have: crystals } : undefined, magic: { have: MAGE_CAP - magesLeft, cap: MAGE_CAP }, max: Math.max(0, Math.min(cost ? Math.floor(gold / cost) : 999, needC ? Math.floor(crystals / needC) : 999, idle, magesLeft)) };
     }
     const have = p.res[resIndex(def.weapon)]!;
     const cost = def.cost.gold ?? 0;

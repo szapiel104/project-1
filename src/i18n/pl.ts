@@ -206,6 +206,7 @@ export const pl = {
   'res.bread': 'Chleb',
   'res.apples': 'Jabłka',
   'res.gold': 'Ruda',
+  'res.crystal': 'Kryształ magii',
   'res.fish': 'Ryby',
   'res.spear': 'Włócznie',
   'res.bow': 'Łuki',
