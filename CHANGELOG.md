@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.51.3 — siedziby magów nie tracą dachów (2026-10-25)
+
+- **Poprawka:** gdy w Wieży Płomienia, Sanktuarium Źródła (chatka maga ma już własne wnętrze, więc u niej dach dalej się zdejmuje) ktoś był w środku, gra zdejmowała dach i ściany jak przy budynkach z wnętrzem — a te modele wnętrza nie mają, więc zostawały same dziurawe mury. Teraz budynek bez wnętrza zawsze stoi w całości
+
 ## 0.51.2 — poprawki po graniu: wieże, koksowniki, łóżka, upadki, magowie, chatka maga (2026-10-25)
 
 - **Wielka baszta** strzela o 6 pól dalej (było 3) — najdalej ze wszystkich wież; **koksowniki** mniejsze (na wieżach 60%, na murach 50% dawnej wielkości), płomień razem z nimi
