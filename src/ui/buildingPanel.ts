@@ -75,6 +75,7 @@ export function prodInfo(game: GameState, b: GameState['buildings'][number], nam
   const recipe = pr ? {
     input: pr.input ? { id: pr.input.res, n: pr.input.amount, name: resName(pr.input.res) } : undefined,
     output: { id: pr.output.res, n: pr.output.amount, name: resName(pr.output.res) },
+    alts: undefined as { id: string; n: number; name: string; pct: number }[] | undefined,
     secs: Math.round((pr.workTicks + (pr.processTicks ?? 0)) / TICKS_PER_SECOND),
     place,
   } : undefined;
@@ -116,9 +117,12 @@ export function prodInfo(game: GameState, b: GameState['buildings'][number], nam
   else if (def.crew) {
     const pop = game.units.filter((x) => x.owner === b.owner).length;
     const have = (b.worker ? 1 : 0) + (b.crew?.length ?? 0), want = crewWanted(def, pop);
-    const yields = MINE_YIELDS.map((y) => `${resName(y.res)} ${y.weight}%`).join(', ');
-    status = { text: `${tx(`Załoga: ${have} z ${want} górników (1 na ${def.crew.per} mieszkańców, najwyżej ${def.crew.max}). Urobek: ${yields}.`, `Crew: ${have} of ${want} miners (1 per ${def.crew.per} inhabitants, at most ${def.crew.max}). Yield: ${yields}.`)} ${status.text}`, level: have < want && status.level === 'ok' ? 'warn' : status.level };
-    if (recipe) recipe.place = tx('w sztolni', 'down the mine shaft');
+    status = { text: `${tx(`Załoga: ${have} z ${want} górników (1 na ${def.crew.per} mieszkańców, najwyżej ${def.crew.max}).`, `Crew: ${have} of ${want} miners (1 per ${def.crew.per} inhabitants, at most ${def.crew.max}).`)} ${status.text}`, level: have < want && status.level === 'ok' ? 'warn' : status.level };
+    if (recipe) {
+      recipe.place = tx('w sztolni', 'down the mine shaft');
+      const sum = MINE_YIELDS.reduce((a, y) => a + y.weight, 0);
+      recipe.alts = MINE_YIELDS.map((y) => ({ id: y.res, n: y.amount, name: resName(y.res), pct: Math.round((100 * y.weight) / sum) }));
+    }
   }
   // liczby
   let day: number | undefined;

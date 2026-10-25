@@ -701,14 +701,15 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 /* ---- zapasy w składzie (panel budynku) ---- */
 .info-stock { display: grid; gap: 6px; padding: 6px 0 8px; border-bottom: 1px solid rgba(154, 122, 42, .5); }
 .stock-head { display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: 14px; }
-.stock-head span:last-child { color: var(--ink-soft); font-size: 12px; }
+.stock-head span:last-child { color: var(--ink-soft); font-size: 14px; }
 .stock-bar { height: 8px; background: #1c120a; border: 1px solid var(--gold-dark); }
 .stock-bar span { display: block; height: 100%; background: linear-gradient(#c9a24a, #8a6a1f); }
 .stock-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 4px; }
-.stock-item { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 6px; align-items: center; padding: 3px 6px; background: rgba(255, 240, 200, .45); border: 1px solid rgba(154, 122, 42, .6); }
+/* kafelki jak przy produkcji: ciemne tło, jasna liczba (kontrast ok. 14:1, podpis ok. 8:1) */
+.stock-item { display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 8px; align-items: center; padding: 5px 8px; background: linear-gradient(#2a1f15, #160f09); border: 1px solid #6e5420; }
 .stock-item .ico { grid-row: 1 / 3; }
-.stock-item strong { font-family: var(--display); font-size: 16px; line-height: 1; }
-.stock-item span:last-child { font-size: 11px; color: var(--ink-soft); line-height: 1.1; }
+.stock-item strong { font-family: var(--display); font-size: 18px; line-height: 1; color: #ffe7a6; }
+.stock-item span:last-child { font-size: 13px; color: var(--ink); line-height: 1.15; }
 .stock-empty { font-style: italic; color: var(--ink-soft); }
 
 /* ---- skalowanie interfejsu do wielkości okna (liczone w main.ts: --ui) ---- */
@@ -1170,6 +1171,11 @@ body.tips-delay .res li[data-tip]:hover::after { animation: tip-late .9s steps(1
 .prod-chip strong { font-family: var(--display); font-size: 18px; line-height: 1; color: #ffe7a6; }
 .prod-chip span:last-child { font-size: 13px; color: var(--ink-soft); line-height: 1.1; }
 .prod-arrow { font-size: 20px; color: #e9c766; }
+.prod-line.prod-alts { flex-wrap: wrap; row-gap: 4px; }
+.prod-alts .prod-chip .ico { grid-row: 1 / 4; }
+.prod-alts .prod-chip span { font-size: 13px; color: var(--ink); line-height: 1.1; }
+.prod-or { font-size: 14px; font-style: italic; color: var(--ink-soft); }
+.prod-chip .prod-pct { grid-column: 2; font-style: normal; font-size: 12px; color: var(--ink-soft); line-height: 1.1; }
 .prod-note { margin: 4px 0 0; font-size: 14px; color: var(--ink-soft); }
 .prod-worker { display: grid; gap: 4px; }
 .prod-who { margin: 0; font-weight: 700; }

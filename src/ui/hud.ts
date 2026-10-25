@@ -109,7 +109,7 @@ export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDe
   /** Warsztat: przepis, pracownik, stan i liczby */
   prod?: ProdInfo }
 export interface ProdInfo {
-  recipe?: { input?: { id: string; n: number; name: string }; output: { id: string; n: number; name: string }; secs: number; place: string };
+  recipe?: { input?: { id: string; n: number; name: string }; output: { id: string; n: number; name: string }; alts?: { id: string; n: number; name: string; pct: number }[]; secs: number; place: string };
   worker?: { name: string; doing: string; pct?: number };
   status: { text: string; level: 'ok' | 'warn' | 'bad' };
   /** Oddane do składu od postawienia, przepadłe przez pełny skład, tempo z ostatniej doby (brak = za krótko liczone) */
@@ -1281,7 +1281,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             const chip = (id: string, n: number, name: string): HTMLElement => { const c = el('span', 'prod-chip'); c.title = name; c.append(icon(id), el('strong', '', `${n}`), el('span', '', name)); return c; };
             const line = el('div', 'prod-line');
             if (r.input) line.append(chip(r.input.id, r.input.n, r.input.name), el('span', 'prod-arrow', '→'));
-            line.append(chip(r.output.id, r.output.n, r.output.name));
+            // kopalnia: jeden kurs daje jedno z kilku (kamień, żelazo, ruda, kryształ) — pokazujemy wszystkie z szansą
+            if (r.alts?.length) {
+              line.classList.add('prod-alts');
+              r.alts.forEach((a, k) => {
+                if (k) line.append(el('span', 'prod-or', tx('albo', 'or')));
+                const c = chip(a.id, a.n, a.name);
+                c.append(el('em', 'prod-pct', tx(`${a.pct}% kursów`, `${a.pct}% of runs`)));
+                line.append(c);
+              });
+            } else line.append(chip(r.output.id, r.output.n, r.output.name));
             prodRecipe.replaceChildren(line, el('p', 'prod-note', tx(`Robota: ${r.secs} s${r.place ? ` ${r.place}` : ''} (bez chodzenia po surowiec i do składu)`, `Work: ${r.secs} s${r.place ? ` ${r.place}` : ''} (not counting walks for materials and to the stockpile)`)));
           }
         }
