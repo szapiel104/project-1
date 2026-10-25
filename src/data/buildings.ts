@@ -247,7 +247,8 @@ export const TOWERS: Readonly<Record<string, { room: number; bonus: number }>> =
   watchtower: { room: 4, bonus: 0 },
   stoneTower: { room: 6, bonus: 1 },
   stoneTowerBig: { room: 10, bonus: 2 },
-  stoneTowerGreat: { room: 16, bonus: 3 },
+  // wielka wieża: najwyższa, strzela wyraźnie dalej niż duża (Michał 25.10)
+  stoneTowerGreat: { room: 16, bonus: 6 },
 };
 export const isTower = (id: string): boolean => id in TOWERS;
 /** Kamienne wieże (wszystkie rozmiary) */

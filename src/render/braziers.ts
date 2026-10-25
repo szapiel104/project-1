@@ -37,7 +37,8 @@ export class Braziers {
         const p = new THREE.Vector3(ax, ay, az).applyAxisAngle(new THREE.Vector3(0, 1, 0), host.rotation.y);
         m.position.set(host.position.x + p.x, host.position.y + p.y + 0.02, host.position.z + p.z);
         m.rotation.y = host.rotation.y;
-        m.scale.setScalar(1);
+        // mniejszy kosz (Michał 25.10: na wieży wyglądał jak beczka): płomień maleje razem z nim
+        m.scale.setScalar(0.6);
       } else {
         // mur biegnie wzdłuż x, gdy ma sąsiada z lewej albo prawej; koksownik odsunięty od blank w stronę twierdzy
         const W = width;
@@ -49,7 +50,7 @@ export class Braziers {
         const cy = b.y + 0.5 + (along ? (ky > b.y + 0.5 ? off : -off) : 0);
         m.position.set(cx - width / 2, view.heightAt(b.x + 0.5, b.y + 0.5) + STONE_WALL_TOP + 0.005, cy - height / 2);
         m.rotation.y = along ? 0 : Math.PI / 2;
-        m.scale.setScalar(0.8);
+        m.scale.setScalar(0.5);
       }
     }
   }
