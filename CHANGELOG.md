@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.51.4 — nowa ikonka „bez pracy” (2026-10-25)
+
+- Pasek u góry: licznik wolnych chłopów ma nową ikonkę — chłop i przekreślony młotek zamiast łóżka z „z”, które myliło się ze snem
+
 ## 0.51.3 — siedziby magów nie tracą dachów (2026-10-25)
 
 - **Poprawka:** gdy w Wieży Płomienia, Sanktuarium Źródła (chatka maga ma już własne wnętrze, więc u niej dach dalej się zdejmuje) ktoś był w środku, gra zdejmowała dach i ściany jak przy budynkach z wnętrzem — a te modele wnętrza nie mają, więc zostawały same dziurawe mury. Teraz budynek bez wnętrza zawsze stoi w całości
