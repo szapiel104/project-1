@@ -21,16 +21,61 @@ CX, CZ, R, H = 0.0, -0.2, 0.55, 0.62
 SEG = 12
 
 # ---------------- chata: kamienny cokół, mur z polnych kamieni (dwa odcienie na mijankę) ----------------
+# mur jest pusty w środku (pierścień z pełnych ciosów), żeby po zdjęciu dachu było widać izbę maga
+WALL = 0.07
 b.prism('base', 'stoneDark', R + 0.05, R + 0.04, 0.08, CX, 0.0, CZ, seg=SEG)
 rows = 6
 for i in range(rows):
     y0 = 0.08 + i * (H - 0.08) / rows
-    b.prism('base', 'stone' if i % 2 == 0 else 'stoneDark', R, R, (H - 0.08) / rows + 0.002, CX, y0, CZ, seg=SEG, phase=(i % 2) * math.pi / SEG, top=i == rows - 1)
+    hh = (H - 0.08) / rows + 0.002
+    off = (i % 2) * math.pi / SEG
+    for k in range(SEG):
+        a = off + 2 * math.pi * (k + 0.5) / SEG
+        rm = R - WALL / 2
+        chord = 2 * R * math.sin(math.pi / SEG) + 0.012
+        mat = 'stone' if (i + k) % 2 == 0 else 'stoneDark'
+        b.box('base', mat, chord, hh - 0.004, WALL, CX + math.sin(a) * rm, y0, CZ + math.cos(a) * rm, rot=a)
+
 # kilka wystających kamieni w murze (z lica o 1–2 cm), żeby mur nie był gładki
 for k in range(14):
     a = k * 2.399
     y = 0.15 + (k * 0.37) % (H - 0.2)
     b.crystal('base', 'rock', CX + math.sin(a) * (R + 0.01), y, CZ + math.cos(a) * (R + 0.01), 0.04, seed=k * 1.3, sy=0.7)
+
+# ---------------- izba maga (widać ją po zdjęciu dachu) ----------------
+IN = R - WALL
+b.prism('floor', 'plank', IN + 0.004, IN + 0.004, 0.012, CX, 0.08, CZ, seg=SEG)
+F = 0.092
+# posłanie ze słomy na drewnianej ramie pod ścianą (lewy tył)
+b.box('interior', 'woodDark', 0.44, 0.06, 0.2, CX - 0.2, F, CZ - 0.24, rot=0.5)
+b.box('interior', 'thatch', 0.4, 0.035, 0.17, CX - 0.2, F + 0.06, CZ - 0.24, rot=0.5)
+b.box('interior', 'sack', 0.14, 0.03, 0.15, CX - 0.36, F + 0.09, CZ - 0.15, rot=0.5)
+# stół z ksiegą, moździerzem i świecą (prawy bok)
+TX0, TZ0 = CX + 0.2, CZ + 0.05
+b.box('interior', 'wood', 0.26, 0.025, 0.16, TX0, F + 0.17, TZ0, rot=-0.3)
+for dx, dz in ((-0.1, -0.05), (0.1, -0.05), (-0.1, 0.05), (0.1, 0.05)):
+    c, sn = math.cos(-0.3), math.sin(-0.3)
+    b.box('interior', 'woodDark', 0.025, 0.17, 0.025, TX0 + dx * c + dz * sn, F, TZ0 - dx * sn + dz * c)
+b.box('interior', 'sack', 0.09, 0.025, 0.07, TX0 - 0.05, F + 0.195, TZ0, rot=-0.1)
+b.box('interior', 'dark', 0.085, 0.006, 0.065, TX0 - 0.05, F + 0.221, TZ0, rot=-0.1)
+b.prism('interior', 'stoneDark', 0.03, 0.025, 0.04, TX0 + 0.06, F + 0.195, TZ0 - 0.02, seg=8)
+b.prism('interior', 'white', 0.009, 0.009, 0.05, TX0 + 0.08, F + 0.195, TZ0 + 0.04, seg=6)
+lights.append([TX0 + 0.08, F + 0.29, TZ0 + 0.04])
+# półka na ścianie z dzbanami i pękami ziół (tył po prawej)
+SA = -2.4
+sx, sz = CX + math.sin(SA) * (IN - 0.05), CZ + math.cos(SA) * (IN - 0.05)
+b.box('interior', 'wood', 0.3, 0.02, 0.07, sx, 0.36, sz, rot=SA)
+for k, d in enumerate((-0.1, 0.0, 0.1)):
+    jx, jz = sx + math.cos(SA) * d, sz - math.sin(SA) * d
+    b.prism('interior', 'stoneDark' if k % 2 else 'hide', 0.022, 0.018, 0.06, jx, 0.38, jz, seg=8)
+b.crystal('interior', 'leaf', sx, 0.31, sz, 0.035, seed=2.2, sy=1.5)
+# palenisko z kamieni pod dymnikiem, z żarem
+HX, HZ = CX - 0.2, CZ - 0.12 + 0.18
+b.prism('interior', 'stoneDark', 0.1, 0.11, 0.04, HX, F, HZ, seg=10)
+b.prism('interior', 'ember', 0.075, 0.075, 0.004, HX, F + 0.04, HZ, seg=10)
+flames.append([HX, F + 0.04, HZ])
+# mały kociołek na trójnogu przy palenisku
+b.prism('interior', 'iron', 0.045, 0.035, 0.05, HX + 0.14, F + 0.03, HZ + 0.02, seg=10)
 
 # ---------------- strzecha: stożek z wywiniętym okapem i wiązką na szczycie ----------------
 b.prism('shell', 'thatch', R + 0.2, R + 0.12, 0.06, CX, H - 0.02, CZ, seg=SEG)

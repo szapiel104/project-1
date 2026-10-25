@@ -179,7 +179,7 @@ export class WolfLayer {
     for (const body of g.corpses) {
       if (body.kind !== -2 || n + dead >= 64) continue;
       const fx = body.px / FP, fy = body.py / FP;
-      const fall = this.calm ? 1 : Math.max(0, Math.min(1, (g.tick - body.at) / (TICKS_PER_SECOND * 0.6)));
+      const fall = this.calm ? 1 : Math.max(0, Math.min(1, (g.tick + alpha - body.at) / (TICKS_PER_SECOND * 0.6))); // z ułamkiem ticku: płynnie, nie skokami
       const yaw = this.wolfHeading.get(body.id) ?? ((body.id * 2.39) % 6.28);
       const k = n + dead;
       t.position.set(fx - width / 2, view.heightAt(fx, fy), fy - height / 2);

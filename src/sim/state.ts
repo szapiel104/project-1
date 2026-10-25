@@ -308,6 +308,8 @@ export interface Unit {
   care?: number;
   /** Przechorował: do tego ticku nie zachoruje znowu */
   immune?: number;
+  /** Mag-uzdrowiciel: tick ostatniego czaru rzuconego we wroga (obrona osady, army.ts lookout) */
+  zap?: number;
 }
 
 /** Żołnierz: osobno od chłopów, bo nie pracuje, nie mieszka i nie liczy się do ludności osady */
@@ -835,7 +837,7 @@ export function stateHash(g: GameState): number {
   }
   for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.threat ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.clean ?? 0); add(b.quarantine ? 1 : 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
-    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0); add(u.sick ?? 0); add(u.sickFrom ?? 0); add(u.care ?? 0); add(u.immune ?? 0);
+    add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0); add(u.sick ?? 0); add(u.sickFrom ?? 0); add(u.care ?? 0); add(u.immune ?? 0); add(u.zap ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);
     for (const t of u.path) add(t);
   }

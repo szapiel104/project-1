@@ -1474,6 +1474,9 @@ function engineerOrders(g: GameState): void {
  */
 /** Ten chłop staje do walki (sześciu na dziesięciu, zawsze ci sami); reszta ucieka */
 export const isBrave = (id: number): boolean => hash2(id, 7, 0xbad) % 100 < 60;
+/** Mag-uzdrowiciel w obronie (chatka maga, siedziby zakonów): razi wroga czarem z tylu pól, co tyle ticków, za tyle */
+const MAGE_PEASANT_RANGE = 5, MAGE_PEASANT_EVERY = 30, MAGE_PEASANT_HIT = 7;
+const MAGE_TYPES = new Map<number, 'fire' | 'water' | 'hut'>([[buildingIndex('mageFire'), 'fire'], [buildingIndex('mageWater'), 'water'], [buildingIndex('mageHut'), 'hut']]);
 /** Czym się bije chłop: kilof noszony na plecach albo drewniana maczuga u pasa (zawsze to samo dla danej osoby) */
 export const peasantWeapon = (id: number): 'pick' | 'club' => (hash2(id, 9, 0x77) & 1 ? 'pick' : 'club');
 
@@ -1510,6 +1513,21 @@ function lookout(g: GameState): void {
         foe.hp = (foe.hp ?? 30) - (peasantWeapon(u.id) === 'pick' ? 3 : 2);
         foe.wait = Math.max(foe.wait, 6);
         if (foe.hp <= 0 && !dead.some(([x]) => x === foe)) dead.push([foe, u.owner]);
+      }
+      continue;
+    }
+    // mag z siedziby albo chatki nie bierze maczugi: z miejsca razi wroga czarem (ogień albo woda), nie ucieka
+    const mk = u.job && !u.enlist ? MAGE_TYPES.get(buildingById(g, u.job)?.type ?? -1) : undefined;
+    if (mk) {
+      u.foe = best.id;
+      if (bd <= MAGE_PEASANT_RANGE * FP) {
+        u.wait = Math.max(u.wait, 6);
+        if ((g.tick - (u.zap ?? -999)) >= MAGE_PEASANT_EVERY) {
+          u.zap = g.tick;
+          best.hp -= MAGE_PEASANT_HIT;
+          if (mk !== 'fire') best.slow = g.tick + 40;
+          if (best.hp <= 0) { const k = g.players[u.owner], l = g.players[best.owner]; if (k) k.stats.kills++; if (l) l.stats.lost++; }
+        }
       }
       continue;
     }

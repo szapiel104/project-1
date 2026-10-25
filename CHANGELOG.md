@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.51.2 — poprawki po graniu: wieże, koksowniki, łóżka, upadki, magowie, chatka maga (2026-10-25)
+
+- **Wielka baszta** strzela o 6 pól dalej (było 3) — najdalej ze wszystkich wież; **koksowniki** mniejsze (na wieżach 60%, na murach 50% dawnej wielkości), płomień razem z nimi
+- **Śpiący w chacie:** po trzy posłania pod każdą ścianą z odstępem (wcześniej czterech leżało na sobie, a nogi wchodziły na ławę i stół), koc przykrywa nogi i brzuch; kto się nie mieści, śpi niewidoczny
+- **Upadek poległych płynnie:** przewrót liczony z ułamkiem ticku (wcześniej szedł skokami, 10 razy na sekundę); to samo u zabitych wilków
+- **Magowie:** nie noszą już kilofa, maczugi ani pochodni; rekrut w drodze do siedziby na szkolenie wygląda jak chłop (wcześniej już jak mag, więc magowie się „dublowali”); uzdrowiciele bez roboty czekają w siedzibie, a nie przed nią (wyglądali jak drugi mag bojowy); w obronie mag z chatki i z siedziby razi wroga czarem z 5 pól (ogień albo woda ze spowolnieniem), zamiast walić pałką
+- **Chatka maga ma wnętrze:** mur pusty w środku, a w izbie posłanie na ramie, stół z księgą, moździerzem i świecą, półka z dzbanami i ziołami, palenisko z żarem i kociołek (po zdjęciu dachu było widać płaską pokrywę)
+
 ## 0.51.1 — trawa rzadsza, ciemniejsza i lżejsza (2026-10-25)
 
 - **Trawa:** kępy co 0,26 pola zamiast co 0,19, przy tym samym zasięgu wokół kamery — ok. połowa mniej kęp do narysowania (szybciej na karcie graficznej)

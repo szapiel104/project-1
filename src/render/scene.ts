@@ -819,7 +819,9 @@ export class GameRenderer {
     const bed = mergeGeometries([
       tint(new THREE.BoxGeometry(0.2, 0.025, 0.58).translate(0, 0.0125, 0), 0xffffff),
       tint(new THREE.CylinderGeometry(0.035, 0.04, 0.17, 7).rotateZ(Math.PI / 2).translate(0, 0.04, -0.24), 0xe8d29a),
-      tint(new THREE.BoxGeometry(0.21, 0.02, 0.24).translate(0, 0.06, 0.13), 0x7d6a52),
+      // koc przykrywa śpiącemu nogi i brzuch (leży nad postacią, nie pod nią — wcześniej nogi sterczały nad kocem)
+      tint(new THREE.BoxGeometry(0.25, 0.045, 0.34).translate(0, 0.1, 0.1), 0x7d6a52),
+      tint(new THREE.BoxGeometry(0.255, 0.012, 0.03).translate(0, 0.122, -0.075), 0x6a5844),
     ]);
     this.bedrolls = new GearPool(this.scene, bed, null, straw, MAX_UNITS, 'posłania', false);
     // taran z Blendera (tools/models/ram.py): wóz z daszkiem i osobno belka, która wysuwa się przy uderzeniu
@@ -3699,7 +3701,8 @@ export class GameRenderer {
       // padanie — każdy pada inaczej (zależnie od numeru ciała): na plecy, na twarz, na bok albo osuwa się na ziemię
       // i dopiero wtedy przewraca na plecy. Przewrót przyspiesza i kończy się małym odbiciem przy ziemi
       const how = deathKind(body.id);
-      const fall = Math.max(0, Math.min(1, (g.tick - body.at) / (TICKS_PER_SECOND * (how === 3 ? 1.4 : 0.7))));
+      // czas z ułamkiem ticku (alpha): ticków jest 10 na sekundę, więc bez tego upadek szedł skokami jak w kilku klatkach
+      const fall = Math.max(0, Math.min(1, (g.tick + alpha - body.at) / (TICKS_PER_SECOND * (how === 3 ? 1.4 : 0.7))));
       // krzyk w chwili śmierci (raz)
       if (fall < 0.3 && !this.calm && !this.screamed.has(body.id)) { this.screamed.add(body.id); this.voiceAt('scream', fx - width / 2, fy - height / 2, 1); }
       const ease = fall < 0.85 ? (fall / 0.85) ** 2 : 1 - Math.sin(((fall - 0.85) / 0.15) * Math.PI) * 0.06;
@@ -4020,6 +4023,23 @@ export class GameRenderer {
     const fig = kind === 'fire' ? this.magesFireFig : this.magesWaterFig;
     const casting = u.phase === Phase.Healing;
     const team = TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888;
+    // uzdrowiciel bez roboty czeka w swojej siedzibie (stojąc przed nią wyglądał jak zdublowany mag bojowy);
+    // wychodzi dopiero do chorego, do zwłok albo do zarażonej chaty
+    if (u.phase === Phase.Vigil && !u.path.length && kind !== 'hut' && !u.foe) return;
+    // obrona: wróg blisko — zwrócony do niego, ręce w górze, a przy każdym czarze (u.zap) leci kula ognia albo wody
+    const foe = u.foe ? g.soldiers.find((s) => s.id === u.foe) : undefined;
+    if (foe && !casting) {
+      const { width: W, height: H } = g.map;
+      const fx = foe.px / FP - W / 2, fz = foe.py / FP - H / 2;
+      const yaw = Math.atan2(fx - t.position.x, fz - t.position.z);
+      t.rotation.set(0, yaw, 0); t.updateMatrix(); this.facing.set(u.id, yaw);
+      fig.set(0, t.matrix, 0, true, team, u.id);
+      if (u.zap !== undefined && this.zapSeen.get(u.id) !== u.zap) {
+        this.zapSeen.set(u.id, u.zap);
+        if (!this.calm && g.tick - u.zap < 10) this.spells.cast(this.armV.set(t.position.x + Math.sin(yaw) * 0.2, t.position.y + 0.5, t.position.z + Math.cos(yaw) * 0.2), this.mouth.set(fx, view.heightAt(foe.px / FP, foe.py / FP) + 0.4, fz), kind === 'fire');
+      }
+      return;
+    }
     if (!casting) { fig.set(0, t.matrix, swing, false, team, u.id); return; }
     const { width, height } = g.map;
     // cel czaru: chata (drzwi), leżący chory albo zwłoki
@@ -4201,8 +4221,11 @@ export class GameRenderer {
         hx = bb.min.x + m + cw * col + (cw - L) / 2; fxl = hx + L;
         z = bb.min.z + m + ((bb.max.z - bb.min.z - 2 * m) / rows) * (row + 0.5);
       } else {
-        const k = idx % 8, col = k % 2, row = k >> 1;
-        const m = 0.09, dz = (bb.max.z - bb.min.z - 2 * m) / 4;
+        // chata: po trzy posłania pod każdą ścianą, z odstępem na ramiona; kto się nie zmieści, śpi niewidoczny w kącie
+        // (wcześniej cztery na ścianę leżały na sobie, a nogi wchodziły na ławę i stół)
+        if (idx >= 6) { this.bedHidden = true; return null; }
+        const k = idx, col = k % 2, row = k >> 1;
+        const m = 0.1, dz = (bb.max.z - bb.min.z - 2 * m) / 3;
         z = bb.min.z + m + dz * (row + 0.5);
         hx = col === 0 ? bb.min.x + m : bb.max.x - m;
         fxl = col === 0 ? hx + L : hx - L;
@@ -4218,6 +4241,10 @@ export class GameRenderer {
     const y = view.heightAt(cx, cy);
     return [cx - sx - width / 2, y, cy - sz - height / 2, cx + sx - width / 2, y, cy + sz - height / 2];
   }
+  /** Śpiący w chacie bez wolnego posłania na widoku (więcej niż 6): nie rysujemy go, zamiast stawiać go w izbie */
+  private bedHidden = false;
+  /** Ostatni czar obronny maga-uzdrowiciela, który już pokazaliśmy (tick) */
+  private zapSeen = new Map<number, number>();
   private bedA = new THREE.Vector3();
   private bedB = new THREE.Vector3();
 
@@ -4709,6 +4736,7 @@ export class GameRenderer {
       // sen: każdy leży na wznak na sienniku — w chacie (widać po kliknięciu, gdy zdejmie się dach)
       // albo bez dachu nad głową na słomie obok ogniska
       const sleeping = u.phase === Phase.Sleeping;
+      this.bedHidden = false;
       const bed = sleeping ? this.bedSpot(g, u, view, sleepers) : null;
       if (bed) {
         const [hx, hy, hz, fx2, fy2, fz2] = bed;
@@ -4729,7 +4757,7 @@ export class GameRenderer {
       if (!(sleeping && u.home)) this.unitSpots.push({ id: u.id, x: t.position.x, z: t.position.z });
       this.unitY.set(u.id, t.position.y);
       if (u.id === this.selectedUnit) { this.selection.scale.set(0.5, 0.5, 1); this.selection.position.set(t.position.x, t.position.y + 0.05, t.position.z); this.selection.visible = true; }
-      t.scale.setScalar(FIG);
+      t.scale.setScalar(this.bedHidden ? 0 : FIG);
       // stojący bez zajęcia nie zamiera: przestępuje, rozgląda się, drapie się, przeciąga, przenosi ciężar
       const rest = !walking && !this.calm && !(job && mode) && !inn && !bed && !fishing && !chopping && !mining && !crafting && !hammering && !planting && !fighting && u.carryRes < 0 && !lean && !u.bucket;
       const ia = rest ? idle(u.id, this.time) : undefined;
@@ -4799,13 +4827,16 @@ export class GameRenderer {
         this.armM.makeRotationX(work).setPosition(0.135, 0.45, 0);
         this.spades.setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
       } else this.spades.setMatrixAt(i, ZERO);
+      // mag i kaznodzieja nie noszą narzędzi, maczugi ani pochodni (mag ma czar w dłoniach)
+      const robedJob = u.job && !u.enlist ? jobs.get(u.job) : undefined; // rekrut w drodze na szkolenie to jeszcze chłop
+      const robed = !!robedJob && (!!mageKindOf(robedJob.type) || BUILDINGS[robedJob.type]?.id === 'shrine');
       // nocą idący niosą pochodnię (ci z ładunkiem mają zajęte ręce)
       // buntownik: co trzeci z płonącą pochodnią (dzień i noc, na napad wszyscy), reszta z widłami; wymachują nimi w swoim rytmie
       const riotTorch = rioting && (u.id % 3 === 0 || !!u.raid); // na napad idą z pochodniami
       const shake = rioting ? Math.sin(this.time * (5.5 + (u.id % 5) * 0.4) + u.id * 1.7) : 0;
       const torchArm = riotTorch ? TORCH_ARM - 0.45 + shake * 0.18 : TORCH_ARM;
       const forkArm = FORK_ARM + shake * 0.28;
-      const torchOn = riotTorch || (this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket);
+      const torchOn = !robed && (riotTorch || (this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket));
       // kopacz w drodze (także sztolnią) ma kilof na plecach; do ręki bierze go dopiero przy złożu, gdy dłoń chwyci stylisko
       const pickOnBack = drawing >= 0 && drawing < PICK_GRAB;
       // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką
@@ -4832,6 +4863,7 @@ export class GameRenderer {
         (weapon === 'pick' ? this.backPicks : this.beltClubs).setMatrixAt(i, this.armS);
         (weapon === 'pick' ? this.beltClubs : this.backPicks).setMatrixAt(i, ZERO);
       } else { this.backPicks.setMatrixAt(i, ZERO); this.beltClubs.setMatrixAt(i, ZERO); }
+      if (robed) for (const pool of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs]) pool.setMatrixAt(i, ZERO);
       const wood = u.carryRes === WOOD;
       // kłodę ciągnie tylko drwal z lasu; włóczniarz niesie ze składu zwykłe deski
       const jb = u.job ? jobs.get(u.job) : undefined;
@@ -4865,7 +4897,7 @@ export class GameRenderer {
       // deski niesie na prawym ramieniu: prawa ręka w górze przytrzymuje wiązkę, lewa macha jak przy chodzie
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
-      const mage = u.job ? mageKindOf(jobs.get(u.job)?.type ?? -1) : undefined;
+      const mage = u.job && !u.enlist ? mageKindOf(jobs.get(u.job)?.type ?? -1) : undefined;
       const preacher = !mage && !!u.job && BUILDINGS[jobs.get(u.job)?.type ?? -1]?.id === 'shrine';
       if (mage) this.drawMage(g, u, t, mage, swing, heading, view, jobs);
       else if (preacher) {
