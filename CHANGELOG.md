@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.51.1 — trawa rzadsza, ciemniejsza i lżejsza (2026-10-25)
+
+- **Trawa:** kępy co 0,26 pola zamiast co 0,19, przy tym samym zasięgu wokół kamery — ok. połowa mniej kęp do narysowania (szybciej na karcie graficznej)
+- Łąka stoi płatami z gołą ziemią między nimi, zamiast równego dywanu; kępy nieco mniejsze
+- Barwa ciemniejsza i przygaszona (oliwkowa, nie jaskrawa), żeby pasowała do surowego klimatu gry
+
 ## 0.51.0 — kryształy magii z kopalni, droga druga kopalnia, twardsza kopalnia i zamek (2026-10-25)
 
 - **Kryształ magii:** nowy, rzadki urobek z głębokiej galerii kopalni (ok. 3% kursów, po 1 sztuce), trafia do skarbca w zamku jak ruda; kafelek w pasku zapasów, fioletowy kryształ w koszu u niosącego. Mag bojowy kosztuje teraz też 1 kryształ, a siedziba zakonu 4
