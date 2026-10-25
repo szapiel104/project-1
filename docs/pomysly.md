@@ -20,7 +20,6 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 - **Cmentarz i grabarz:** polegli i zmarli z głodu leżą, dopóki grabarz ich nie zaniesie na cmentarz; ciała przy osadzie ściągają kruki i wilki, a po kilku dniach chorobę.
 - **Myśliwy:** chata myśliwego przy lesie — jelenie i dziki w puszczy (mięso jako 4. jedzenie, skóry), myśliwy przepędza wilki z okolicy i odsłania polany ze zbójami.
 - **Złodzieje nocą:** gdy popularność niska, nocą ktoś podkrada ze składu; straż na obchodzie może go złapać i odprowadzić do lochów (pierwsi prawdziwi więźniowie, do pręgierza albo do kopalni jako kara).
-- **Burze i susza:** piorun potrafi podpalić strzechę (gaszenie wiadrami już jest), latem susza zmniejsza zbiory sadu i pola, a studnie stają się ważniejsze.
 - **Kronika meczu:** po meczu strona kroniki pisana jak przez skrybę — najważniejsze chwile (pierwsza fala, bunt, oblężenie, upadek wroga) z godziną gry; przy grze przez sieć do podejrzenia przez obu graczy.
 - **Wyprawa pana:** pan zamku jako postać na polu bitwy (dowódca: wojsko obok bije mocniej), powiązane z progresją z `progresja.md`; gdy padnie, wraca do zamku ranny na dobę.
 
