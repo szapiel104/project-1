@@ -497,7 +497,7 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
   if (interior) {
     // ktoś pracuje w środku: zdejmujemy dach i ściany, żeby było go widać
     interior.visible = active;
-    // budynek bez wnętrza w modelu (np. siedziby magów, chatka maga): pusta grupa — dachu nie zdejmujemy,
+    // budynek bez wnętrza w modelu (np. siedziby magów ognia i wody): pusta grupa — dachu nie zdejmujemy,
     // bo pod nim nic nie ma i zostają same dziurawe mury
     const hollow = !interior.children.length;
     // wszystkie części o tych nazwach (np. twierdza ma kilka warstw „shell”: donżon i bryłę murów z dziedzińcem)
