@@ -6,8 +6,10 @@
 Wspólne: szata do ziemi z fałdami (nogi pod nią tylko jako trzewiki), szerokie rękawy rozszerzone przy dłoniach,
 płaszcz z opuszczonym kapturem na barkach rozchylony z przodu, pas z plecionego sznura w barwach pana (frędzle z przodu).
 Bez kostura: magię rzucają z gołych dłoni (ogień / woda w dłoniach dokłada gra jako efekt).
+  preacher — kaznodzieja przy kapliczce Ojca Płomienia: ten sam krój, ale z szarobrązowej wełny, płaszcz z ciemnego
+          sukna, obrąbki z niebielonego lnu, żelazny znak płomienia (słońca) na piersi, ogolona głowa i siwa broda.
 
-Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/mage.py fire|water  →  src/render/models/mage_<odmiana>.json
+Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/mage.py fire|water|preacher  →  src/render/models/mage_<odmiana>.json
 Kotwice jak u pana zamku: biodro (±0,045; 0,2), bark (±0,118; 0,445), dłoń 0,18 pod barkiem.
 """
 import math
@@ -18,13 +20,18 @@ sys.path.insert(0, os.path.dirname(__file__))
 from common import Mesh, evaluated, hexrgb, keep_faces, lathe, reset, skin, sphere  # noqa: E402
 
 KIND = sys.argv[1] if len(sys.argv) > 1 else 'fire'
-FIRE = KIND == 'fire'
+PREACHER = KIND == 'preacher'
+# kaznodzieja nosi znak Ojca Płomienia i ogoloną głowę jak mag ognia
+FIRE = KIND == 'fire' or PREACHER
 reset()
 import bmesh as _bm  # noqa: E402
 from body import Head, finish, smooth  # noqa: E402
 
 WHITE = (1.0, 1.0, 1.0)
-if FIRE:
+if PREACHER:
+    ROBE, ROBE_DK, MANTLE, TRIM, TRIM2 = hexrgb(0x46392b), hexrgb(0x241c14), hexrgb(0x2e251c), hexrgb(0x9c8c6c), hexrgb(0x3a2e22)
+    BADGE = hexrgb(0x6e6c6a)
+elif FIRE:
     ROBE, ROBE_DK, MANTLE, TRIM, TRIM2 = hexrgb(0x4a1210), hexrgb(0x240907), hexrgb(0x6a1a14), hexrgb(0xc9772a), hexrgb(0x2e140c)
     BADGE = hexrgb(0xb08a3e)
 else:

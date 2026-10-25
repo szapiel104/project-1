@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.50.0 — kaznodzieja przy kapliczce i święto (2026-10-25)
+
+- **Kaznodzieja:** kapliczka ma teraz pracownika. Nowa postać z Blendera (`tools/models/mage.py preacher`): wełniana szata, płaszcz z ciemnego sukna, żelazny znak Ojca Płomienia, ogolona głowa i siwa broda. Za dnia stoi przy kapliczce, o zmierzchu dzwoni dzwonek i mówi kazanie: staje z boku posągu przodem do ludzi, co kilka sekund wznosi ręce, słychać go z bliska
+- Z kaznodzieją na modlitwę przychodzi dwa razy więcej ludzi (co drugi spoza karczmy), a kazanie daje +1 do popularności ponad samą kapliczkę
+- **Święto co 7 dni** (z kaznodzieją): skryba ogłasza je rano, przez cały dzień +2 do popularności, a wieczorem pod kapliczkę idzie cała osada; dzwon bije dłużej
+- Odzywki kaznodziei (PL/EN), cech „kaznodziejów” na karcie, opis kapliczki i tabela popularności w „Jak grać”, kaznodzieja w podglądzie modeli (zwykły i w kazaniu)
+- **Boty:** stawiają kapliczkę jak dotąd, kaznodzieja przychodzi do niej sam, więc kazania i święta mają tak jak gracz
+
 ## 0.49.0 — kwarantanna w czasie zarazy (2026-10-25)
 
 - **Kwarantanna:** w czasie zarazy okno chaty ma przycisk „Zamknij chatę (kwarantanna)”. W zamkniętej chacie leżą tylko chorzy (inni chorzy idą tam najpierw), zdrowi domownicy wychodzą i śpią gdzie indziej (i nie odpoczywają w niej po robocie), a zaraza nie wychodzi za drzwi. Ludzie tego nie lubią: −1 do popularności, póki jakaś chata jest zamknięta. Po zarazie chaty same się otwierają. Magowie dalej wchodzą i leczą

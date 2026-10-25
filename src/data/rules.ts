@@ -110,6 +110,8 @@ export const RULES = {
   /** Susza (storms.ts): w gorące letnie dni bez deszczu (od `temp` °C) sad i pole dają `yield` % plonu, a ze studnią
    *  najwyżej `wellRange` pól od budynku — `withWell` % */
   drought: { temp: 20, yield: 50, withWell: 90, wellRange: 8 },
+  /** Wiara (faith.ts): co tyle dni święto pod kapliczką z kaznodzieją; ile popularności daje kazanie i dzień święta */
+  faith: { feastEvery: 7, sermon: 1, feast: 2 },
   /** Etapy osady: od tylu ludzi wioska staje się osadą, grodem i miastem; późniejsze budynki wymagają wyższego etapu (BuildingDef.tier) */
   tiers: [0, 20, 40, 70],
   /** Każdy następny budynek tego samego rodzaju drożeje o tyle procent ceny (najwyżej `costStepMax` procent więcej);

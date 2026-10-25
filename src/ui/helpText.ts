@@ -128,6 +128,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         [tx('Podatki', 'Taxes'), tx('rozdawanie +4, brak +1, niskie −2, średnie −4, wysokie −6', 'handouts +4, none +1, low −2, average −4, high −6')],
         [tx('Karczma', 'Tavern'), tx('+3 za jedną, +5 za dwie (z karczmarzem i piwem w składzie); sucha karczma −2', '+3 for one, +5 for two (with a tavernkeeper and ale in stock); a dry tavern −2')],
         [tx('Kapliczka', 'Shrine'), tx('+1 za jedną, +2 za dwie i więcej', '+1 for one, +2 for two or more')],
+        [tx('Kazanie (kapliczka z kaznodzieją)', 'Sermon (a shrine with a preacher)'), tx('+1, na modlitwę przychodzi dwa razy więcej ludzi', '+1, twice as many folk come to pray')],
+        [tx('Święto (co 7 dni, z kaznodzieją)', 'Feast day (every 7 days, with a preacher)'), tx('+2 przez cały dzień, wieczorem cała osada pod kapliczką', '+2 all day; of an evening the whole settlement gathers at the shrine')],
         [tx('Ciasnota', 'Overcrowding'), tx('−2, gdy ludzi jest więcej niż miejsc w domach', '−2 when people outnumber beds')],
         [tx('Zabity chłop', 'Peasant slain'), tx('−2 od razu za każdego zabitego przez wrogich żołnierzy', '−2 at once for each one killed by enemy soldiers')],
       ] },

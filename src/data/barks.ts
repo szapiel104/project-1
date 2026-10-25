@@ -95,6 +95,7 @@ const SAY_PL = {
     'Każdy tu kiedyś trafi.', 'Kopię dół i nie gadam.', 'Niech mu ziemia lekką będzie.', 'Cicho tu. Lubię ciszę.',
   ],
   well: ['Woda czysta, zimna jak lód.', 'Wiadro, korba, wiadro, korba…'],
+  shrine: ['Ojciec Płomienia widzi każdą pracę i każde lenistwo.', 'Ogień grzeje sprawiedliwych, a pali kłamców.', 'Módlcie się o deszcz w porę i o słońce w porę.', 'Kto dzieli chleb z bliźnim, temu płomień nie zgaśnie.', 'Bracia, nie piją się z karczmarzem modlitwy!', 'Dziś wieczorem kazanie — przyjdźcie wszyscy.'],
   // --- zaraza i magowie ---
   fever: ['Khe… khe-khe…', 'Pali mnie… wody…', 'Głowa mi pęka, panie…', 'Zimno… a cały płonę.', 'Zawołajcie maga…', 'Khe-khe… nie wstanę dziś.', 'Matko… nie dam rady…'],
   plague: ['Zaraza chodzi po chatach. Strach spać.', 'Sąsiad leży w gorączce od wczoraj.', 'Tylko nie kaszlcie na mnie!', 'Ciała by trzeba pogrzebać, bo gorzej będzie.', 'Mówią, że magowie by pomogli…', 'Trzymaj się z dala od tej chaty.'],
@@ -299,6 +300,7 @@ const SAY_EN: Record<keyof typeof SAY_PL, string[]> = {
     'Everyone ends up here someday.', 'I dig the hole and keep my mouth shut.', 'May the earth rest light on him.', 'Quiet here. I like quiet.',
   ],
   well: ['Water\'s clean and cold as ice.', 'Bucket, crank, bucket, crank…'],
+  shrine: ['The Father of Flame sees every labour and every idle hand.', 'Fire warms the just and burns the liar.', 'Pray for rain in its season and sun in its season.', 'Whoever shares his bread, his flame shall never die.', 'Brothers, prayers are not to be found at the bottom of a tankard!', 'A sermon tonight — come, all of you.'],
   fever: ['Cough… cough-cough…', 'Burning up… water…', 'My head\'s splitting, my lord…', 'So cold… yet I\'m on fire.', 'Fetch the mage…', 'Cough-cough… I\'ll not rise today.', 'Mother… I can\'t…'],
   plague: ['The plague goes from hovel to hovel. I\'m afraid to sleep.', 'My neighbour\'s been in a fever since yesterday.', 'Don\'t you cough on me!', 'Someone should bury the dead, or it\'ll get worse.', 'They say the mages could help…', 'Keep away from that hovel.'],
   mageWater: ['The Spring refuses no one.', 'Water washes the fever away.', 'Another hovel, another sick man.', 'Drink, good man, and sleep.', 'So long as the Flame lot keep their fire off my herbs.'],

@@ -21,6 +21,7 @@ import { applyCommands, step, type Command } from './sim/step';
 import { doleCost, rioters } from './sim/systems/unrest';
 import { canQuarantine, magesOf, startPlague } from './sim/systems/plague';
 import { droughtAt, stormAt } from './sim/systems/storms';
+import { feastDay, preached } from './sim/systems/faith';
 import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
@@ -47,7 +48,7 @@ import { createAllies } from './ui/allies';
 import { createMinimap } from './ui/minimap';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
-import { alarmBell, thunderClap, daySounds, music, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { alarmBell, shrineBell, thunderClap, daySounds, music, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
 import { WOLF_HP } from './sim/systems/wolves';
@@ -1708,9 +1709,10 @@ function winterNotes(p: (typeof game.players)[number]): void {
   }
 }
 
-let plagueSeen = 0, plagueToll = 0, plagueOverSeen = 0, droughtDay = -1;
+let plagueSeen = 0, plagueToll = 0, plagueOverSeen = 0, droughtDay = -1, feastSeen = -1;
 /** Ostatni piorun każdego gracza, który już pokazaliśmy (tick) */
 const strikesSeen = new Map<number, number>();
+let lastHourBell = 0;
 /** Etap osady przy ostatnim odświeżeniu (-1 = świeży start: nie ogłaszamy etapu wczytanego z zapisu) */
 let tierSeen = -1;
 function refresh(): void {
@@ -1746,6 +1748,11 @@ function refresh(): void {
       `My lord, our settlement has grown — we are now a ${(TIER_NAMES()[tierNow] ?? '').toLowerCase()}. You may now build: ${opened}.${next ? ` The next stage comes at ${next} people.` : ''}`));
   }
   tierSeen = tierNow;
+  // święto pod kapliczką z kaznodzieją: skryba ogłasza je raz, z rana
+  if (feastDay(game) && preached(game, ME)) {
+    const day = clockAt(game.tick).day;
+    if (feastSeen !== day) { feastSeen = day; scribe.say(`feast${day}`, tx('Panie, dziś święto Ojca Płomienia! Ludzie są w dobrym nastroju, a wieczorem cała osada zbierze się pod kapliczką na kazanie.', 'My lord, today is the feast of the Father of Flame! The folk are in good spirits, and this evening the whole settlement will gather at the shrine for the sermon.')); }
+  }
   // susza latem: skryba raz na dzień suszy mówi, że sady i pola rodzą mniej, i radzi studnie
   if (droughtAt(game)) {
     const day = clockAt(game.tick).day;
@@ -1900,6 +1907,8 @@ function loop(now: number): void {
   else {
     nature(renderer.weather.night, renderer.weather.rain, menu.isOpen(), renderer.wolvesNear);
     if (daySounds(clockAt(game.tick).hour, renderer.weather.rain, menu.isOpen())) renderer.lightning();
+    // dzwonek kapliczki o zmierzchu, gdy jest kaznodzieja: zaczyna się kazanie (w święto dłużej)
+    { const hr = clockAt(game.tick).hour; if (lastHourBell < RULES.eveningHour && hr >= RULES.eveningHour && hr < RULES.eveningHour + 0.5 && preached(game, ME)) shrineBell(feastDay(game) ? 6 : 3); lastHourBell = hr; }
     // piorun w budynek (storms.ts): kanał z chmur, błysk i trzask; w swój budynek — skryba z przyciskiem do pożaru
     for (const pl of game.players) {
       const st = pl.lastStrike;
@@ -2586,8 +2595,8 @@ requestAnimationFrame(sayLoop);
 /** Rozpiska do panelu: składniki popularności i podział ludności */
 function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): HudView['report'] {
   const LBL: Record<string, string> = lang() === 'en'
-    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate', shrine: 'Shrines (evening prayers)', plague: 'Plague in the settlement (fear)', mages: 'Mages watching over the sick', quarrel: 'The two orders quarrelling (seats too close)', quarantine: 'Hovels shut for quarantine' }
-    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy', shrine: 'Kapliczki (wieczorne modły)', plague: 'Zaraza w osadzie (strach)', mages: 'Magowie czuwają nad chorymi', quarrel: 'Kłótnie zakonów (siedziby za blisko siebie)', quarantine: 'Chaty zamknięte na kwarantannę' };
+    ? { food: 'Food rations', tax: 'Taxes', tavern: 'Tavern (ale from the brewery)', crowd: 'Overcrowded hovels', rough: 'Sleeping on straw under the open sky', cold: 'Chilled in the rain', winter: 'Cold (season)', freezing: 'No firewood — freezing in their hovels', revolt: 'Bread riot at the keep gate', shrine: 'Shrines (evening prayers)', plague: 'Plague in the settlement (fear)', mages: 'Mages watching over the sick', quarrel: 'The two orders quarrelling (seats too close)', quarantine: 'Hovels shut for quarantine', sermon: 'Preacher\'s evening sermon', feast: 'Feast day at the shrine' }
+    : { food: 'Racje jedzenia', tax: 'Podatki', tavern: 'Karczma (piwo z browaru)', crowd: 'Ciasnota w chatach', rough: 'Spanie na słomie pod gołym niebem', cold: 'Zmarznięci w deszczu', winter: 'Zimno (pora roku)', freezing: 'Brak drewna na opał — marzną w chatach', revolt: 'Bunt głodowy pod bramą twierdzy', shrine: 'Kapliczki (wieczorne modły)', plague: 'Zaraza w osadzie (strach)', mages: 'Magowie czuwają nad chorymi', quarrel: 'Kłótnie zakonów (siedziby za blisko siebie)', quarantine: 'Chaty zamknięte na kwarantannę', sermon: 'Wieczorne kazanie kaznodziei', feast: 'Święto pod kapliczką' };
   const popularity = f.parts.map((x) => ({ label: LBL[x.key] ?? x.key, value: x.value, note: x.level ? `(${t(x.level).toLowerCase()})` : undefined }));
   if (!f.fed) popularity.push({ label: tx('Brak jedzenia na wybrane racje', 'Not enough food for the chosen rations'), value: 0, note: tx('(jedzą mniej)', '(they eat less)') });
   const mine = game.units.filter((u) => u.owner === ME);

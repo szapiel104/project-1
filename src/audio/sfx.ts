@@ -620,6 +620,18 @@ function owl(c: AudioContext, at: number): void {
   }
 }
 
+/** Dzwonek kapliczki przed wieczornym kazaniem (nagranie dzwonu, ciszej i wyżej, `n` uderzeń) */
+export function shrineBell(n = 3): void {
+  const c = ctx;
+  if (!c || muted || c.state !== 'running') return;
+  const b = pick(NATURE.bell);
+  if (!b) return;
+  for (let i = 0; i < n; i++) {
+    const src = c.createBufferSource(); src.buffer = b; src.playbackRate.value = 1.5;
+    src.connect(out2(c, 0, 0.18)); src.start(c.currentTime + 0.1 + i * 1.1);
+  }
+}
+
 /** Grzmot od pioruna, który właśnie trafił w budynek: trzask prawie od razu (blisko) */
 export function thunderClap(): void {
   const c = ctx;

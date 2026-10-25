@@ -417,6 +417,10 @@ export class GameRenderer {
   private battleWaterFig!: Figures;
   private spells!: SpellLayer;
   private mageBodiesFire!: Figures;
+  /** Kaznodzieje przy kapliczkach (pracownicy kapliczki) */
+  private preacherFig!: Figures;
+  /** Kaznodzieja w tej klatce stoi przy kapliczce i mówi kazanie (ręce w górę co kilka sekund) */
+  private sermon = false;
   private mageBodiesWater!: Figures;
   private readonly eye = new THREE.Matrix4();
   private lamps: THREE.PointLight[] = [];
@@ -722,6 +726,7 @@ export class GameRenderer {
     this.banditsFig = new Figures(256, this.scene, 'bandit');
     this.magesFireFig = new Figures(128, this.scene, 'mageFire');
     this.magesWaterFig = new Figures(128, this.scene, 'mageWater');
+    this.preacherFig = new Figures(64, this.scene, 'preacher');
     this.battleFireFig = new Figures(160, this.scene, 'mageFire');
     this.battleWaterFig = new Figures(160, this.scene, 'mageWater');
     this.spells = new SpellLayer(this.scene);
@@ -2048,7 +2053,7 @@ export class GameRenderer {
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
-      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig, this.battleFireFig, this.battleWaterFig, this.mageBodiesFire, this.mageBodiesWater]) f.view(cp);
+      for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig, this.battleFireFig, this.battleWaterFig, this.mageBodiesFire, this.mageBodiesWater, this.preacherFig]) f.view(cp);
       for (const t of [this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
@@ -4464,6 +4469,25 @@ export class GameRenderer {
             talk('x'.repeat(6 + (u.id * 5 + Math.floor(this.time)) % 14), u.id, (u.id + Math.floor(this.time / 3)) % 5 === 0, Math.max(0, 1 - (dist - 2) / 12) * 0.28, pan);
           }
         }
+      } else if (shrine && u.job === shrine.id) {
+        // kaznodzieja tej kapliczki: stoi z boku posągu przodem do modlących się i mówi kazanie
+        const mesh = this.buildingMeshes.get(shrine.id);
+        const turn = (shrine.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
+        const lx = 0.44, lz = 0.3, wx = lx * cosT + lz * sinT, wz = -lx * sinT + lz * cosT;
+        const sfp = footprint(BUILDINGS[shrine.type]!, shrine.rot);
+        t.position.set(shrine.x + sfp.w / 2 + wx - width / 2, (mesh?.position.y ?? 0) + 0.01, shrine.y + sfp.h / 2 + wz - height / 2);
+        t.rotation.set(0, turn - 0.35 + (this.calm ? 0 : Math.sin(this.time * 0.6 + u.id) * 0.35), 0);
+        swing = 0;
+        this.sermon = true;
+        if (!this.calm && this.time > this.murmurAt) {
+          const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);
+          if (dist < 16) {
+            this.murmurAt = this.time + 0.6;
+            const right = this.armV.setFromMatrixColumn(cam.matrixWorld, 0);
+            const pan = ((t.position.x - cam.position.x) * right.x + (t.position.z - cam.position.z) * right.z) / Math.max(1, dist) * 1.4;
+            talk('x'.repeat(14 + (u.id * 7 + Math.floor(this.time)) % 12), u.id, false, Math.max(0, 1 - (dist - 2) / 14) * 0.4, pan);
+          }
+        }
       } else if (shrine) {
         const mesh = this.buildingMeshes.get(shrine.id);
         const turn = (shrine.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
@@ -4842,7 +4866,14 @@ export class GameRenderer {
       const [carryR, carryL] = carryArms(wood || (u.carryRes >= 0 && ON_SHOULDER.has(RESOURCES[u.carryRes] ?? '')), swing);
       const wave = waving && !carrying, flee = panic && !carrying;
       const mage = u.job ? mageKindOf(jobs.get(u.job)?.type ?? -1) : undefined;
+      const preacher = !mage && !!u.job && BUILDINGS[jobs.get(u.job)?.type ?? -1]?.id === 'shrine';
       if (mage) this.drawMage(g, u, t, mage, swing, heading, view, jobs);
+      else if (preacher) {
+        // w kazaniu wznosi ręce co kilka sekund (ku posągowi Ojca Płomienia), poza nim chodzi i stoi jak zwykle
+        const up = this.sermon && !this.calm && Math.floor(this.time / 2.6 + u.id) % 3 === 0;
+        this.preacherFig.set(0, t.matrix, swing, up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
+        this.sermon = false;
+      }
       else this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
@@ -4946,6 +4977,7 @@ export class GameRenderer {
     k = this.castleFolk(g, k);
     this.figures.finish(k);
     this.magesFireFig.finish(0);
+    this.preacherFig.finish(0);
     this.magesWaterFig.finish(0);
     this.drawSickIcons(g, view);
     // pule narzędzi: `count` zamyka klatkę (liczba bez znaczenia) i same oznaczają swoje bufory

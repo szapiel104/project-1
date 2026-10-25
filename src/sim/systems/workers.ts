@@ -11,6 +11,7 @@ import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
 import { mageKindOf } from './plague';
 import { harvestPct } from './storms';
+import { feastDay, goesToPray } from './faith';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -291,12 +292,15 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.ToEvening: {
       // karczmarz zostaje wieczorem u siebie i nalewa
       if (job && job.type === TAVERN && job.door >= 0) return (t) => t === job.door;
+      // kaznodzieja zostaje wieczorem przy swojej kapliczce i mówi kazanie (faith.ts)
+      if (job && job.type === SHRINE && job.door >= 0) return (t) => t === job.door;
       // załoga kopalni z barakiem: wieczór przy ognisku pod barakiem
       const camp = campOf(g, job);
       if (camp) return (t) => t === camp.door;
       // co drugi idzie do karczmy (o ile jest i ma karczmarza), co czwarty na modlitwę pod kapliczkę,
       // reszta siada przy ognisku; bez nich — pod twierdzę
-      let doors = u.id % 2 === 0 ? eveningDoors(g, u.owner, true) : u.id % 4 === 1 ? shrineDoors(g, u.owner) : new Set<number>();
+      // z kaznodzieją idzie co drugi z tych spoza karczmy, w święto wszyscy (faith.ts)
+      let doors = goesToPray(g, u) && (u.id % 2 !== 0 || feastDay(g)) ? shrineDoors(g, u.owner) : u.id % 2 === 0 ? eveningDoors(g, u.owner, true) : new Set<number>();
       if (!doors.size) doors = eveningDoors(g, u.owner, false);
       if (!doors.size) { const keep = playerKeep(g, u.owner); if (keep && keep.door >= 0) doors.add(keep.door); }
       return doors.size ? (t) => doors.has(t) : null;

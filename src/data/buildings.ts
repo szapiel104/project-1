@@ -223,7 +223,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Kapliczka: kamienny posąg Ojca Płomienia w ostrołukowej niszy (tools/models/shrine.py). Wieczorem część ludzi
   // zamiast do karczmy albo do ogniska idzie tu się modlić (workers.ts), a sama kapliczka lekko podnosi popularność
   // (economy.ts: +1, przy dwóch i więcej +2). Bez pracownika, nic nie produkuje.
-  { id: 'shrine', category: 'settlement', name: 'b.shrine', w: 2, h: 2, cost: { wood: 10, stone: 40 }, hp: 700, buildable: true },
+  { id: 'shrine', category: 'settlement', name: 'b.shrine', w: 2, h: 2, cost: { wood: 10, stone: 40 }, hp: 700, staff: true, buildable: true },
   // Magowie (tools/models/magefire.py, magewater.py): Wieża Płomienia i Sanktuarium Źródła. Mieszka w nich
   // do trzech magów (załoga rośnie z osadą), którzy leczą zarazę (src/sim/systems/plague.ts). Zakony nie przepadają za sobą, ale współpracują.
   // Siedziby z dziedzińcem, murem i skrzydłem z celami (5×5) — drogie: to cel na później, gdy osada urośnie

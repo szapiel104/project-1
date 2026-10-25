@@ -19,6 +19,7 @@ const SAPPER_MODEL = model('sapper');
 const BANDIT_MODEL = model('bandit');
 const MAGE_FIRE_MODEL = model('mage_fire');
 const MAGE_WATER_MODEL = model('mage_water');
+const PREACHER_MODEL = model('mage_preacher');
 
 /** Siatka z modelu wygenerowanego w Blenderze: pozycje (float32), normalne (int8), kolory sRGB (uint8), indeksy (uint16), wszystko w base64 */
 export interface ModelMesh { mat: string; dyn: string | null; show: string | null; pos: string; nrm: string; col: string; idx: string }
@@ -196,7 +197,7 @@ function lookOf(id: number, tunic: number, muted = false): Look {
  * a do tego jedno z kilku nakryć głowy, czasem broda albo fartuch. Każda część to jedna siatka instancjonowana.
  */
 /** Rodzaje postaci z Blendera */
-export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms' | 'sapper' | 'bandit' | 'mageFire' | 'mageWater';
+export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms' | 'sapper' | 'bandit' | 'mageFire' | 'mageWater' | 'preacher';
 
 export class Figures {
   private parts: Part[] = [];
@@ -249,7 +250,7 @@ export class Figures {
       // a każda część to osobne rysowanie do mapy cieni
       mesh.castShadow = lod === 0;
       cloudShade(mesh.material as THREE.Material); // ludzie też wchodzą w cień chmury
-      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', mageFire: 'magowie ognia', mageWater: 'magowie wody', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
+      scene.add(cat(mesh, `postacie: ${{ peasant: 'chłopi', spearman: 'włócznicy', archer: 'łucznicy', guard: 'strażnicy', manatarms: 'zbrojni', sapper: 'saperzy', bandit: 'zbóje', mageFire: 'magowie ognia', mageWater: 'magowie wody', preacher: 'kaznodzieje', woman: 'gospodynie', child: 'dzieci', king: 'pan zamku' }[kind]}`));
       if (mat === 'glow') { const mm = mesh.material as THREE.MeshStandardMaterial; mm.emissive.setHex(fixed ? color : 0xffffff); mm.emissiveIntensity = 2.2; mesh.castShadow = false; }
       this.parts.push({ mesh, pos, rot, color: fixed ? null : color, shown, sub, lod, elbow, orb: mat === 'glow' });
       if (lod) this.hasFar = true;
@@ -305,12 +306,13 @@ export class Figures {
         for (const m of lod ? SW.swordFar : SW.sword) mk(modelGeo(m), 0xffffff, at.clone(), swordArm, always, m.mat as Mat, sword, lod);
       return;
     }
-    if (kind === 'mageFire' || kind === 'mageWater') {
+    if (kind === 'mageFire' || kind === 'mageWater' || kind === 'preacher') {
       // mag ognia / wody (tools/models/mage.py): szata do ziemi, płaszcz z kapturem, bez kostura — czaruje z dłoni
       // (efekt ognia / wody w dłoniach dokłada scena); spokojny krok, ręce kołyszą się słabiej niż u chłopa
       // czarowanie (armsUp): obie ręce uniesione przed pierś, łokcie zgięte, w prawej dłoni świecąca kula ognia albo wody
       const calmL = (sw: number, up: boolean): number => (up ? -0.9 : -sw * 0.4), calmR = (sw: number, up: boolean): number => (up ? -1.0 : sw * 0.4);
-      const M = (kind === 'mageFire' ? MAGE_FIRE_MODEL : MAGE_WATER_MODEL) as FigureModel & { fore: ModelMesh[]; foreFar: ModelMesh[]; elbow: number[]; orb: number[] };
+      // kaznodzieja (ten sam krój z mage.py, wełna i żelazny znak Ojca Płomienia): ręce w górze = wznosi je w kazaniu, bez kuli
+      const M = (kind === 'mageFire' ? MAGE_FIRE_MODEL : kind === 'preacher' ? PREACHER_MODEL : MAGE_WATER_MODEL) as FigureModel & { fore: ModelMesh[]; foreFar: ModelMesh[]; elbow: number[]; orb: number[] };
       model(M, calmL, calmR);
       const at = new THREE.Vector3(M.elbow[0]!, M.elbow[1]!, M.elbow[2]!);
       const elbowL = (sw: number, up: boolean): number => (up ? -1.0 : -0.2 - Math.max(0, -sw) * 0.3);
@@ -320,6 +322,7 @@ export class Figures {
           for (const [sx, rot, el] of [[-1, calmL, elbowL], [1, calmR, elbowR]] as const)
             mk(modelGeo(m), m.dyn ? DYN[m.dyn] ?? 0xffffff : 0xffffff, new THREE.Vector3(sx * M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), rot,
               m.show ? SHOW[m.show] ?? always : always, m.mat as Mat, { at: at.clone(), rot: el }, lod, true);
+      if (kind === 'preacher') return;
       const orb = new THREE.SphereGeometry(0.024, 16, 12).translate(M.orb[0]!, M.orb[1]!, M.orb[2]!);
       mk(orb, kind === 'mageFire' ? 0xff7a22 : 0x5ab4ff, new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), calmR, always, 'glow', { at: at.clone(), rot: elbowR });
       return;

@@ -5,6 +5,7 @@ import { housing, population, type GameState, type PlayerState } from '../state'
 import { dayPart } from './workers';
 import { magesOf, ordersQuarrel } from './plague';
 import { tierFor } from './placement';
+import { feastDay, preached } from './faith';
 import { rainAt } from '../clock';
 import { COLD, SEASON_DAYS, temperatureAt, weatherOf, yearPos, YEAR_DAYS } from '../weather';
 
@@ -105,6 +106,10 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   // kapliczki: ludzie mają gdzie się pomodlić, nastroje lekko w górę (+1, przy dwóch i więcej +2)
   const shrines = g.buildings.filter((b) => b.owner === p.id && !b.build && !b.ruined && BUILDINGS[b.type]!.id === 'shrine').length;
   parts.push({ key: 'shrine', value: Math.min(shrines, 2) });
+  // kaznodzieja: wieczorne kazanie (+1), a w dzień święta cała osada świętuje (faith.ts)
+  const preach = preached(g, p.id);
+  parts.push({ key: 'sermon', value: preach ? RULES.faith.sermon : 0 });
+  parts.push({ key: 'feast', value: preach && feastDay(g) ? RULES.faith.feast : 0 });
   // bunt głodowy: tłum pod bramą i stojące warsztaty psują nastroje całej osady
   parts.push({ key: 'revolt', value: p.revolt ? RULES.revoltPenalty : 0 });
   // zaraza: strach w osadzie (zgony liczą się osobno, od razu); magowie dają ludziom poczucie, że ktoś nad nimi czuwa,

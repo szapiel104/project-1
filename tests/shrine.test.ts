@@ -58,6 +58,25 @@ describe('kapliczka', () => {
     while (!(clockAt(g.tick).hour >= 21.5 && clockAt(g.tick).hour < 21.9) && guard++ < RULES.dayTicks * 2) step(g, []);
     const praying = g.units.filter((u) => u.owner === 0 && u.phase === Phase.Evening && (u.py >> 8) * g.map.width + (u.px >> 8) === shrine.door);
     expect(praying.length).toBeGreaterThan(0);
-    expect(praying.every((u) => u.id % 4 === 1)).toBe(true);
+    // z kaznodzieją: co drugi z tych spoza karczmy (nieparzyści), sam kaznodzieja stoi przy swojej kapliczce
+    expect(shrine.worker).toBeGreaterThan(0);
+    expect(praying.filter((u) => u.id !== shrine.worker).every((u) => u.id % 2 === 1)).toBe(true);
+    expect(praying.some((u) => u.id % 4 === 3)).toBe(true);
+  });
+
+  it('kaznodzieja: kazanie +1, w dzień święta +2 i wieczorem cała osada pod kapliczką', () => {
+    const g = createGame(6);
+    for (const p of g.players) p.bot = false;
+    const shrine = withShrine(g);
+    const part = (k: string): number => monthlyForecast(g, g.players[0]!).parts.find((x) => x.key === k)!.value;
+    for (let i = 0; i < 60 && !shrine.worker; i++) step(g, []);
+    expect(shrine.worker).toBeGreaterThan(0);
+    expect(part('sermon')).toBe(RULES.faith.sermon);
+    // do dnia święta
+    while (clockAt(g.tick).day % RULES.faith.feastEvery !== 0) g.tick += 100;
+    expect(part('feast')).toBe(RULES.faith.feast);
+    shrine.off = true;
+    expect(part('sermon')).toBe(0);
+    expect(part('feast')).toBe(0);
   });
 });

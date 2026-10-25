@@ -188,6 +188,8 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['mageWater', tx('Mag Źródła', 'Mage of the Spring'), figure('mageWater', 10)],
     ['mageFire-cast', tx('Mag Płomienia — czar', 'Mage of the Flame — casting'), figure('mageFire', 9, 0.64, true)],
     ['mageWater-cast', tx('Mag Źródła — czar', 'Mage of the Spring — casting'), figure('mageWater', 10, 0.64, true)],
+    ['preacher', tx('Kaznodzieja', 'Preacher'), figure('preacher', 11)],
+    ['preacher-sermon', tx('Kaznodzieja — kazanie', 'Preacher — sermon'), figure('preacher', 11, 0.64, true)],
     ['standard', tx('Chorąży z proporcem', 'Standard-bearer'), () => {
       // włócznik z drzewcem i proporcem na plecach, tak jak chorąży w oddziale (src/render/standards.ts)
       const holder = new THREE.Scene();
