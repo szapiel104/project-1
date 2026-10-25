@@ -70,7 +70,10 @@ WALK = TOP + 0.06     # chodnik na koronie muru (wierzch płyt)
 
 # ---------------- podmurówka, posadzki ----------------
 b.box('base', 'stoneDark', N + 0.3, 0.06, N + 0.3, 0, 0, 0)
-b.box('base', 'stoneDark', N, G - 0.06, N, 0, 0.06, 0)
+# wierzch podmurówki 8 cm pod posadzką, a płyty posadzki sięgają w dół do niego: przy 1,2 cm odstępu z daleka
+# podmurówka (detal o włos bliżej kamery, withAo w buildings.ts) przebijała przez posadzkę i dziedziniec ciemniał
+SUB = 0.08
+b.box('base', 'stoneDark', N, G - 0.06 - SUB, N, 0, 0.06, 0)
 FLOOR = {'.': 'pathCobble', 'T': 'plank', 'K': 'stone', 'C': 'plank', 'L': 'stoneDark', 'B': 'plank'}
 for dy in range(N):
     for dx in range(N):
@@ -78,10 +81,10 @@ for dy in range(N):
         if not walk(dx, dy) and r != 'o':
             continue
         if r in '1234':
-            b.box('interior', 'stoneDark', 1.0, 0.012, 1.0, cx(dx), G, cz(dy))
+            b.box('interior', 'stoneDark', 1.0, 0.012 + SUB, 1.0, cx(dx), G - SUB, cz(dy))
             continue
         grp = 'floor' if r == 'B' else 'base' if r in '.o' else 'interior'
-        b.box(grp, FLOOR.get(r, 'pathCobble'), 1.0, 0.012, 1.0, cx(dx), G, cz(dy))
+        b.box(grp, FLOOR.get(r, 'pathCobble'), 1.0, 0.012 + SUB, 1.0, cx(dx), G - SUB, cz(dy))
 
 # ---------------- mury kurtynowe ----------------
 def curtain(x0, x1, z0, z1, y0=G, y1=TOP):

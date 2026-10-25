@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.51.7 — posadzka zamku nie ciemnieje z daleka (2026-10-25)
+
+- **Poprawka:** po oddaleniu kamery dziedziniec i sale zamku robiły się ciemne i plamiste, jakby leżał na nich dziwny cień. To nie był cień: 1,2 cm pod płytami posadzki leżał wierzch podmurówki, a gra rysuje drobne detale „o włos bliżej” kamery (żeby nie migały na murach) — z daleka ten zapas rósł i ciemna podmurówka przebijała przez posadzkę. Podmurówka jest teraz 8 cm niżej, a płyty posadzki sięgają do niej, więc z każdej odległości widać bruk i deski
+
 ## 0.51.6 — ognisko jako znak „bez pracy” (2026-10-25)
 
 - Licznik wolnych chłopów w pasku ma ikonkę ogniska (jak w Twierdzy, gdzie wolni ludzie czekają przy ognisku) zamiast chłopa z przekreślonym młotkiem
