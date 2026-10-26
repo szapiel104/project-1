@@ -104,6 +104,30 @@ export interface TerrainView {
 
 /** Buduje widok mapy: podłoże, wodę, drzewa, skały i góry na horyzoncie. Tylko czyta stan. */
 export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: number): TerrainView {
+  const it = terrainSteps(map, models, waterLevel);
+  for (;;) { const r = it.next(); if (r.done) return r.value; }
+}
+
+/**
+ * To samo co `buildTerrain`, ale z przerwą na klatkę między etapami (teren, woda, góry, las, trawa, drogi…), żeby
+ * strona nie stawała na całe budowanie mapy, a zasłona i pasek dalej się ruszały. Czasy etapów idą do konsoli.
+ */
+export async function buildTerrainAsync(map: GameMap, models: ModelFactory, waterLevel: number, pause: () => Promise<void>): Promise<TerrainView> {
+  const it = terrainSteps(map, models, waterLevel);
+  const times: number[] = [];
+  let t = performance.now();
+  for (;;) {
+    const r = it.next();
+    const now = performance.now();
+    times.push(Math.round(now - t));
+    if (r.done) { console.info('[teren] etapy ms:', times.join(' ')); return r.value; }
+    await pause();
+    t = performance.now();
+  }
+}
+
+/** Etapy budowy terenu (generator: `yield` = miejsce na przerwę między etapami) */
+function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): Generator<void, TerrainView, void> {
   const group = new THREE.Group();
   const { width: w, height: h } = map;
   const ox = -w / 2;
@@ -134,6 +158,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       shelf[i] = Math.min(-0.28, -0.3 - 0.36 * (d - 1) - 0.05 * (d - 1) * (d - 1) + (d > 1 ? n * 1.6 : 0)); // pole przy lądzie -0,3: narożnik wspólny z lądem wypada tuż pod taflą, więc woda sięga brzegu pola, a nie kończy się w połowie
     }
   }
+  yield;
   // wysokości narożników = średnia z czterech sąsiednich pól
   const corners = new Float32Array((w + 1) * (h + 1));
   for (let y = 0; y <= h; y++)
@@ -158,6 +183,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   const corner = (x: number, y: number): number => corners[y * (w + 1) + x]!;
 
+  yield;
   // Kolor i normalna liczone w narożnikach i dzielone przez sąsiednie pola: teren przechodzi płynnie,
   // bez widocznej szachownicy. Kolor narożnika to średnia z czterech pól dookoła plus łagodne plamy.
   const snow = new THREE.Color(0xf2efe6);
@@ -288,6 +314,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   geo.setAttribute('splat', new THREE.BufferAttribute(spl, 4));
   geo.setAttribute('sand', new THREE.BufferAttribute(snd, 1));
+  yield;
   // Wydeptana ziemia: kolor narożnika przechodzi od trawy do brunatnej, ubitej gleby (przy domach, na ścieżkach chłopów)
   const baseCol = cornerCol.slice();
   const worn = new Float32Array((w + 1) * (h + 1));
@@ -357,6 +384,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   ground.castShadow = false;
   group.add(cat(ground, 'teren'));
 
+  yield;
   // Woda: dwie warstwy drobnych fal przesuwające się w różne strony, lekko przejrzysta, z połyskiem słońca
   const ripples = bump('water')?.clone() ?? null;
   if (ripples) { ripples.repeat.set(w / 14, h / 14); ripples.needsUpdate = true; }
@@ -417,6 +445,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     touch(fishMesh);
   };
 
+  yield;
   // Za mapą: puszcza i prawdziwe góry. Brzeg planszy przechodzi płynnie w las, dalej wznoszą się pasma
   // (grzbiety z szumu „ridged”) i 2–3 wielkie masywy z ośnieżonymi szczytami, które giną we mgle.
   // Siatka indeksowana: każdy wierzchołek raz, gęsta przy planszy, rzadsza daleko (tam i tak mgła).
@@ -552,6 +581,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     group.add(cat(far, 'teren za mapą'));
   }
 
+  yield;
   // Woda na całym obszarze (plansza i teren za nią): jeziora na planszy i morze za mapą jedną taflą.
   // Mapa głębokości (4 próbki na pole): tafla minus dno w metrach, liczona dokładnie jak narysowana siatka terenu
   // (trójkąty dzielone przekątną (1,0)–(0,1)), więc przejrzystość i linia brzegu zgadzają się z terenem co do centymetra.
@@ -603,6 +633,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     group.add(cat(shallow, 'woda'));
   }
 
+  yield;
   // gęsta trawa: łąka pełna, las i złoża rzadko, woda i góry bez trawy
   const grassBase = new Float32Array(w * h);
   for (let t = 0; t < w * h; t++) {
@@ -658,6 +689,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   /** Spadek terenu w punkcie (metry na pole) — o tyle zagłębiamy drzewa, żeby pień nie wisiał nad zboczem od dołu */
   const slopeOf = (fx: number, fy: number): number => Math.hypot(heightAt(fx + 0.35, fy) - heightAt(fx - 0.35, fy), heightAt(fx, fy + 0.35) - heightAt(fx, fy - 0.35)) / 0.7;
 
+  yield;
   // Mgła w dolinach, chmury przy szczytach, strumienie i wodospady z gór (bez trybu testowego: tam teren jest płaski)
   if (!TEST) {
     const anyH = (X: number, Y: number): number => (X >= 0 && Y >= 0 && X <= w && Y <= h ? heightAt(X, Y) : outerH(X, Y));
@@ -700,6 +732,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     mistFx.addSpray(streams.sprays);
   }
 
+  yield;
   // obiekty na polach: jedna siatka instancjonowana na rodzaj
   type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3; frost?: number };
   const FROST = new THREE.Color(0xdfe7ea);
@@ -877,6 +910,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       }
     }
   }
+  yield;
   // murki z polnych kamieni: stare miedze na łąkach — proste odcinki po kilka pól, z przerwą na przejście,
   // tylko na łące (nie przez las, wodę, ścieżki ani plac pod zamkiem)
   const walls: Item[] = [];
@@ -898,6 +932,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     }
   }
   const tint = new THREE.Color();
+  yield;
   // trawa: kolory z wierzchołków (ciemna nasada, jasny koniec) i lekki wiatr kołyszący czubki
   const windTime = { value: 0 };
   // Trawa jak w nowych grach: tekstura z setkami cienkich źdźbeł (rysowana raz na starcie, z przezroczystością)
@@ -1011,6 +1046,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   // idą razem z liśćmi, a nie sterczą z kołyszącej się korony; dół pnia stoi
   const barkMat = (): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({ color: 0xffffff, flatShading: true, roughness: 0.95, metalness: 0, map: pattern('bark'), bumpMap: bump('bark'), bumpScale: 1.2, normalMap: normal('bark') });
   void barkMat;
+  yield;
   // Poziomy szczegółów: każdy kawałek (40×40 pól) wie, gdzie leży. Drobiazgi (kępy, kwiaty, kamyki) znikają daleko
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
   // shadowGeo: prostsza bryła tego samego kształtu, która rzuca cień zamiast pełnego modelu (w obrazie zostaje pełny);
@@ -1158,6 +1194,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
       instanceMatrix: flag,
     };
   };
+  yield;
   // drzewa zapamiętujemy według pola, żeby drwal mógł je ściąć
   const trees = new Map<number, { meshes: Inst[]; index: number; item: Item; kind?: TreeKind }[]>();
   const stumpItems: Item[] = [];
@@ -1184,6 +1221,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   label = 'drzewa: korony';
   plantKinds(pines, CONIFERS, 1);
   plantKinds(leafy, LEAFS, 2);
+  yield;
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
   // Las wchodzi na zbocza aż pod granicę lasu; wyżej drzewa rzedną, są niższe i oszronione, nad nimi tylko skała i śnieg.
   // Dalekie drzewa mają uproszczony model (mniej trójkątów), a mgła i tak zaciera szczegóły.
@@ -1239,6 +1277,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     for (const [ks, list, salt] of [[CONIFERS, far.pine, 5], [LEAFS, far.leaf, 6]] as const)
       for (const [k, sub] of splitKinds(list, ks, salt)) instanced(k.far.geometry, 0xffffff, sub, undefined, false, k.far.material, undefined, 120);
   }
+  yield;
   // drobna roślinność i kamienie też są przypisane do pól, żeby znikały pod budynkami i drogami
   // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące
   // krzaki i głazy z Blendera (tools/models/plants.py) w wersji z bliska i z daleka; cień w zagłębieniach w kolorach wierzchołków
@@ -1305,6 +1344,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   plant(walls, instanced(models.drywall(), 0xb9b3a4, walls, 'rock', true, rockMat), null, false);
   plant(ores, instanced(models.rock(), 0xa05a36, ores, 'rock', true, rockMat, { farGeo: rockFar }), null, false);
   label = 'pniaki (ukryte)';
+  yield;
   // Pniaki pojawiają się dopiero po ścięciu drzewa. Wcześniej wszystkie stały w scenie z zerową skalą i karta
   // i tak je przetwarzała (ok. 300 tys. trójkątów w zwykłym widoku); teraz rysujemy tylko te już widoczne:
   // jedna siatka, liczba instancji rośnie z każdym ściętym drzewem.
@@ -1452,6 +1492,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
   };
 
 
+  yield;
   // Drogi. Kamienna to równe pola bruku. Piaskowa to wydeptana ścieżka: każde pole dostaje miękką,
   // nieregularną plamę większą od pola, a sąsiednie plamy zlewają się w jeden trakt o poszarpanych brzegach.
   const roadMeshes: THREE.Mesh[] = [];
@@ -1599,6 +1640,7 @@ export function buildTerrain(map: GameMap, models: ModelFactory, waterLevel: num
     const moss = (r >>> 15) % 6 === 0 ? 0.06 : 0;
     im.setColorAt(i, kerbTone.setRGB(t * 1.02 - moss, t + moss * 0.6, t * 0.92 - moss));
   };
+  yield;
   // trawa znika pod budynkami i na drogach (bruk całkiem, ścieżka z piasku prawie)
   const builtOn = new Uint8Array(w * h);
   let roadsNow: Uint8Array | null = null;

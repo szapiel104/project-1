@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.51.12 — pory roku bez drugiej kompilacji, „Nowa gra” bez zatrzymania (2026-10-26)
+
+- **Pory roku:** łatki śniegu, jesieni i szronu dokładały się do materiałów skanem co 3 s, więc każdy nowy budynek, plac budowy czy kępa trawy kilka sekund po pojawieniu się kompilował shadery drugi raz, już na żywo (krótka zwiecha). Rozgrzewka przy starcie też kompilowała wersje bez łatek. Teraz łatka trafia na nowe obiekty od razu, przed kompilacją w tle, a rozgrzewka kompiluje budynki i mapę już z nią
+- **„Nowa gra” i „Wstecz”:** teren podglądu mapy budowany etapami (podłoże, woda, góry, las, trawa, drogi…) z przerwą na klatkę między nimi, zamiast ok. 0,7 s zatrzymania strony. Czasy etapów w konsoli (`[teren]`)
+- Lista pozostałych rzeczy od płynności: `docs/pomysly.md` → „Płynność wczytywania i gry”
+
 ## 0.51.11 — stawianie wieży i bramy bez zwiechy (2026-10-26)
 
 - **Poprawka:** pierwsza wieża, brama, plac budowy czy podgląd stawiania potrzebowały nowych shaderów, a karta kompilowała je w chwili pierwszego rysowania — gra stawała na 0,1–1 s przy każdym (pierwsza wieża: 11 shaderów). Teraz każdy nowy obiekt w trakcie gry kompiluje się w tle i pokazuje dopiero, gdy jest gotowy (zwykle po kilku klatkach, najdłużej 1,5 s). Obiekty z gotowymi shaderami pokazują się od razu (`src/render/precompile.ts`)

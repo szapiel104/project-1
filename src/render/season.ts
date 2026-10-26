@@ -216,10 +216,10 @@ function indoorTwin(m: THREE.Material): THREE.Material {
   return t;
 }
 /** Dokłada wstawki pór roku do materiału (raz); istniejące onBeforeCompile zostają i działają pierwsze */
-export function seasonMaterial(m: THREE.Material, kind: SeasonKind): void {
-  if (done.has(m)) return;
+export function seasonMaterial(m: THREE.Material, kind: SeasonKind): boolean {
+  if (done.has(m)) return false;
   const s = m as THREE.MeshStandardMaterial;
-  if (!s.isMeshStandardMaterial) return;
+  if (!s.isMeshStandardMaterial) return false;
   done.add(m);
   const prev = m.onBeforeCompile;
   const prevKey = m.customProgramCacheKey;
@@ -234,14 +234,19 @@ export function seasonMaterial(m: THREE.Material, kind: SeasonKind): void {
   };
   m.customProgramCacheKey = function (this: THREE.Material) { return indoor.has(this) ? prevKey.call(this) : `${prevKey.call(this)}|season-${kind}`; };
   m.needsUpdate = true;
+  return true;
 }
 
 /** Podpisy grup (cat), których nie przysypujemy: ludzie, zwierzęta, niesione rzeczy, woda, chmury, dym, ogień */
 const INSIDE = new Set(['interior', 'floor', 'ceiling']);
 const SKIP = /^(postacie|wilki|kruki|niesione|narzędzia|zwierzęta|woda|chmury|dym|płomienie|ryby|tarany)/;
 
-/** Przechodzi po obiekcie i łata jego materiały; rodzaj z material.userData.season (domyślnie zwykły) */
-export function applySeason(root: THREE.Object3D): void {
+/**
+ * Przechodzi po obiekcie i łata jego materiały; rodzaj z material.userData.season (domyślnie zwykły).
+ * Zwraca siatki, którym coś się zmieniło (nowa łatka albo bliźniak do wnętrz) — ich shadery trzeba skompilować od nowa.
+ */
+export function applySeason(root: THREE.Object3D): THREE.Mesh[] {
+  const changed: THREE.Mesh[] = [];
   const walk = (o: THREE.Object3D, skip: boolean): void => {
     const cat = o.userData.cat as string | undefined;
     // wnętrza budynków (podłogi, sprzęty, sufity sal) są pod dachem: bez śniegu, szronu i pór roku
@@ -249,14 +254,21 @@ export function applySeason(root: THREE.Object3D): void {
     const m = o as THREE.Mesh;
     const inside = INSIDE.has(o.name) || (skip && o.userData.seasonInside);
     if (inside) o.userData.seasonInside = true;
-    if (inside && m.isMesh && m.material) m.material = Array.isArray(m.material) ? m.material.map(indoorTwin) : indoorTwin(m.material);
+    if (inside && m.isMesh && m.material) {
+      const before = m.material;
+      m.material = Array.isArray(m.material) ? m.material.map(indoorTwin) : indoorTwin(m.material);
+      if (Array.isArray(before) ? before.some((x, i) => x !== (m.material as THREE.Material[])[i]) : before !== m.material) changed.push(m);
+    }
     if (!sk && m.isMesh && m.material) {
+      let hit = false;
       for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
         if ((mat.transparent && !mat.alphaTest) || mat.userData.noSeason) continue;
-        seasonMaterial(mat, (mat.userData.season as SeasonKind | undefined) ?? 'solid');
+        if (seasonMaterial(mat, (mat.userData.season as SeasonKind | undefined) ?? 'solid')) hit = true;
       }
+      if (hit) changed.push(m);
     }
     for (const ch of o.children) { if (inside) ch.userData.seasonInside = true; walk(ch, sk); }
   };
   walk(root, false);
+  return changed;
 }

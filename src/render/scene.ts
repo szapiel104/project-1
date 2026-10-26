@@ -73,7 +73,7 @@ import { Family, yardModel } from './family';
 import { createLoads, tint, carryArms, plankBundle, ON_SHOULDER, loadMaterials } from './loads';
 import { FireCrewFx } from './firecrew';
 import { DRAW as FIRE_DRAW } from '../sim/systems/fire';
-import { HAZE, buildTerrain, type TerrainView } from './terrain';
+import { HAZE, buildTerrain, buildTerrainAsync, type TerrainView } from './terrain';
 import { normal, pattern } from './textures';
 import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
@@ -978,6 +978,33 @@ export class GameRenderer {
   }
   private crestOf(player: number): number { return this.crests[player] ?? defaultCrest(player); }
   setState(state: GameState, waterLevel: number, rim: number, focusPlayer = 0): void {
+    this.stateJob++;
+    this.building = false; // ewentualna wcześniejsza budowa etapami (setStateAsync) właśnie przestała się liczyć
+    this.beginState(state, focusPlayer);
+    this.finishState(state, buildTerrain(state.map, this.models, waterLevel), rim, focusPlayer);
+  }
+
+  /**
+   * To samo co `setState`, ale teren budowany etapami z przerwą na klatkę (`buildTerrainAsync`): strona nie staje na
+   * całe budowanie mapy. Przez ten czas nic się nie rysuje. Zwraca false, gdy w międzyczasie przyszła inna mapa
+   * (np. „Losuj inną mapę” kliknięte jeszcze raz) — wtedy zbudowany teren od razu idzie do kosza.
+   */
+  async setStateAsync(state: GameState, waterLevel: number, rim: number, focusPlayer: number, pause: () => Promise<void>): Promise<boolean> {
+    const job = ++this.stateJob;
+    this.building = true;
+    try {
+      this.beginState(state, focusPlayer);
+      const view = await buildTerrainAsync(state.map, this.models, waterLevel, pause);
+      if (job !== this.stateJob) { view.dispose(); return false; }
+      this.finishState(state, view, rim, focusPlayer);
+      return true;
+    } finally { if (job === this.stateJob) this.building = false; }
+  }
+  private stateJob = 0;
+  /** Teren nowej mapy w budowie etapami: nic nie rysujemy (stary teren już zwolniony) */
+  private building = false;
+
+  private beginState(state: GameState, focusPlayer: number): void {
     this.builtAt = 0; this.sites.reset(); // budynki z wczytanej / nowej mapy stoją od razu, bez pokazu budowy
     this.me = focusPlayer;
     if (this.view) { this.scene.remove(this.view.group); this.view.dispose(); }
@@ -994,7 +1021,10 @@ export class GameRenderer {
     this.clutter.reset();
     this.clouds.reset();
     this.state = state;
-    this.view = buildTerrain(state.map, this.models, waterLevel);
+  }
+
+  private finishState(state: GameState, view0: TerrainView, rim: number, focusPlayer: number): void {
+    this.view = view0;
     this.spawnFx.reset();
     this.view.grassReach(this.grassReach);
     this.scene.add(this.view.group);
@@ -1014,7 +1044,7 @@ export class GameRenderer {
     this.walls.invalidate(); this.areaKey = '-';
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie (i odrośnięty las)
     this.youngSeen = new Set();
-  }
+    }
 
   /** Nowy stan tej samej gry z wątku symulacji (bez przebudowy terenu i modeli) */
   swapState(state: GameState): void { this.state = state; }
@@ -1396,6 +1426,7 @@ export class GameRenderer {
    * rysowała nową scenę jeszcze przed `warmup()` i karta kompilowała jej shadery „na żywo”, blokując stronę.
    */
   private held = false;
+  private seasonPatchAt = 0;
   /** Shadery nowych obiektów w trakcie gry: kompilacja w tle, obiekt pokazuje się gotowy (precompile.ts) */
   private pre!: Precompiler;
   hold(on: boolean): void { this.held = on; }
@@ -1406,7 +1437,7 @@ export class GameRenderer {
    * pierwsza prawdziwa klatka z tego miejsca — bez kompilacji „na żywo”, która blokowała stronę na 1–2 s.
    */
   async prepareView(): Promise<void> {
-    if (this.warming || this.held) return;
+    if (this.warming || this.held || this.building) return;
     this.dry = true;
     try { this.frame(0, 1, true); } finally { this.dry = false; }
     this.matQ.sweep(this.scene);
@@ -1469,6 +1500,7 @@ export class GameRenderer {
       lap('modele próbne');
       this.scene.add(probe);
       probe.updateMatrixWorld(true);
+      applySeason(this.scene);   // łatki pór roku przed kompilacją: gra rysuje budynki już z nimi
       await compile();   // zwykły wariant (budynek rysowany sam: rozbiórka, ?razem=0)
       lap('shadery');
       // wspólne rysowanie budynków to inny wariant shaderów (instancjonowanie): też kompilujemy go z góry
@@ -1476,6 +1508,7 @@ export class GameRenderer {
       lap('scalanie');
     }
     this.matQ.sweep(this.scene);
+    applySeason(this.scene);   // teren, las i trawa nowej mapy też od razu z łatkami pór roku
     await compile();
     lap('shadery wspólne');
     this.composer.render();
@@ -2076,7 +2109,7 @@ export class GameRenderer {
   /** `paused` = pauza: kamera dalej się rusza, ale ludzie, zwierzęta, ogień i woda stoją w miejscu */
   frame(realDt: number, alpha: number, paused = false): void {
     // w trakcie kompilacji shaderów w tle nie rysujemy: rysowanie czekałoby na kartę i strona by zamarzła
-    if (this.warming || this.held) return;
+    if (this.warming || this.held || this.building) return;
     namedTick();
     // co pół sekundy: wyjątki od granicy kamery przy własnych budynkach poza środkiem mapy (kopalnia pod górami)
     if (this.state && (this.reachTick = (this.reachTick + 1) % 30) === 0) this.updateReach(this.state);
@@ -2136,6 +2169,9 @@ export class GameRenderer {
     const tg = performance.now();
     // odbicie w wodzie (od średniej grafiki w górę, jak poświata)
     // nowe obiekty z shaderami w trakcie kompilacji nie są rysowane w tej klatce (bez blokowania strony)
+    // nowe obiekty dostają łatkę pór roku od razu, przed kompilacją (inaczej skan co 3 s łatał je później
+    // i shadery kompilowały się drugi raz, już na żywo)
+    if (this.pre.hasFresh() && tg - this.seasonPatchAt > 150) { this.seasonPatchAt = tg; for (const m of applySeason(this.scene)) this.pre.watch(m); }
     const restore = this.pre.beforeRender(this.cam.camera);
     try {
       this.view?.reflectWater(this.renderer, this.scene, this.cam.camera, this.bloom.enabled);
@@ -4014,7 +4050,7 @@ export class GameRenderer {
   private updateSeason(dt: number): void {
     const g = this.state;
     if (!g) return;
-    if ((this.seasonScan -= dt) <= 0) { this.seasonScan = 3; applySeason(this.scene); }
+    if ((this.seasonScan -= dt) <= 0) { this.seasonScan = 3; for (const m of applySeason(this.scene)) this.pre.watch(m); }
     const w = weatherOf(g, this.rain);
     const p = yearPos(g.tick, g.seasonShift ?? 0);
     const sm = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };

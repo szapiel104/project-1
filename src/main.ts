@@ -261,10 +261,12 @@ const menu = createMenu(document.body, {
     const job = ++previewJob;
     previewCover.hidden = false;
     previewCover.classList.remove('gone');
-    requestAnimationFrame(() => requestAnimationFrame(() => {
+    requestAnimationFrame(() => requestAnimationFrame(async () => {
       if (job !== previewJob) return; // w międzyczasie wylosowano kolejną mapę
       preview = createGame(seedFromText(seedText), preset, level, dev, undefined, true, walls ?? 'mix');
-      renderer.setState(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0);
+      // teren etapami, z przerwą na klatkę między nimi: kręciołek się kręci, strona nie staje
+      const built = await renderer.setStateAsync(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0, pauseFrame);
+      if (!built || job !== previewJob) return;
       renderer.startPreview();
       let frames = 0, done = false;
       const reveal = (): void => {
@@ -284,7 +286,8 @@ const menu = createMenu(document.body, {
     if (!preview) return;
     preview = null;
     renderer.endPreview();
-    renderer.setState(game, MAP_PRESETS[currentPreset].waterLevel, MAP_PRESETS[currentPreset].rim, ME);
+    // powrót do bieżącej gry: teren etapami, bez zatrzymania strony
+    void renderer.setStateAsync(game, MAP_PRESETS[currentPreset].waterLevel, MAP_PRESETS[currentPreset].rim, ME, pauseFrame).catch((e) => console.error(e));
   },
   onNewGame: (seedText, preset, level, dev, instant, walls) => {
     previewJob++; previewCover.hidden = true;
@@ -557,6 +560,9 @@ let entering = false;
  * (`prep`), kompilacja shaderów, wgranie tekstur do karty, a potem kilkanaście klatek rysowanych pod zasłoną z widoku
  * gracza (cienie, trawa, drzewa, ludzie). Zasłona schodzi dopiero, gdy klatki są równe — w grze nic już nie przycina.
  */
+/** Przerwa na jedną klatkę (z zapasowym zegarem, gdy karta jest w tle i klatki stoją) */
+const pauseFrame = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
+
 function enterGame(label: string, prep?: () => void): void {
   if (entering) return;
   entering = true;

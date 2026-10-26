@@ -44,6 +44,19 @@ export class Precompiler {
     sink = (o) => { if (this.on && !this.done.has(o) && !this.pending.has(o)) this.pending.set(o, { since: performance.now(), mats: null }); };
   }
 
+  /** Obiekt, któremu zmieniły się materiały (np. łatka pór roku): znowu pilnujemy jego shaderów */
+  watch(o: THREE.Object3D): void {
+    if (!this.on) return;
+    this.done.delete(o);
+    this.pending.set(o, { since: performance.now(), mats: null });
+  }
+
+  /** Są nowe obiekty jeszcze nie sprawdzone (przed nimi warto dołożyć łatki materiałów, żeby kompilować raz) */
+  hasFresh(): boolean {
+    for (const e of this.pending.values()) if (!e.mats) return true;
+    return false;
+  }
+
   private inScene(o: THREE.Object3D): boolean {
     for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === this.scene) return true;
     return false;
@@ -52,8 +65,12 @@ export class Precompiler {
   /** `strict`: materiał bez programu też liczy się jako niegotowy (jeszcze nigdy nie rysowany) */
   private ready(mats: Iterable<THREE.Material>, strict = false): boolean {
     for (const m of mats) {
-      const prog = (this.renderer.properties.get(m) as { currentProgram?: { isReady(): boolean } }).currentProgram;
-      if (prog ? !prog.isReady() : strict) return false;
+      const p = this.renderer.properties.get(m) as { currentProgram?: { isReady(): boolean }; __version?: number };
+      const prog = p.currentProgram;
+      if (!prog) { if (strict) return false; continue; }
+      // materiał zmieniony od ostatniego rysowania (needsUpdate): może potrzebować innego programu
+      if (strict && p.__version !== m.version) return false;
+      if (!prog.isReady()) return false;
     }
     return true;
   }
