@@ -99,7 +99,11 @@ async function load(): Promise<void> {
   const game = await import('./main');
   info.step(tx('Grafika', 'Graphics'), tx('kompilacja shaderów wszystkich budynków — licznik może na chwilę stanąć', 'compiling shaders for every building — the timer may pause for a moment'));
   await step(tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
-  game.warmup();
+  // shadery kompiluje karta w tle, modele próbne budują się partiami — pasek idzie, strona nie zamarza
+  await game.warmup((n, all) => {
+    if (count) count.textContent = `${done} / ${total} · ${tx('budynki', 'buildings')} ${n}/${all}`;
+    info.detail(`${tx('budynki', 'buildings')}: ${n} / ${all}`);
+  });
   info.done();
   done = total;
   await step(tx('Gotowe', 'Ready'));

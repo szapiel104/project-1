@@ -266,7 +266,6 @@ const menu = createMenu(document.body, {
       preview = createGame(seedFromText(seedText), preset, level, dev, undefined, true, walls ?? 'mix');
       renderer.setState(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0);
       renderer.startPreview();
-      renderer.warmup();
       let frames = 0, done = false;
       const reveal = (): void => {
         if (done || job !== previewJob) return;
@@ -275,7 +274,8 @@ const menu = createMenu(document.body, {
         setTimeout(() => { if (job === previewJob) previewCover.hidden = true; }, 450);
       };
       const wait = (): void => { if (++frames < 4) requestAnimationFrame(wait); else reveal(); };
-      requestAnimationFrame(wait);
+      // shadery nowej mapy kompilują się w tle; zasłona schodzi po kilku klatkach od ich gotowości
+      void renderer.warmup().catch((e) => console.error(e)).then(() => { if (job === previewJob) requestAnimationFrame(wait); });
       setTimeout(reveal, 2500); // bardzo wolna karta: zasłona i tak schodzi po chwili
     }));
   },
@@ -596,8 +596,8 @@ function enterGame(label: string, prep?: () => void): void {
     renderer.endOrbit(); // od razu widok gracza: to jego rozgrzewamy
     show(25, tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
     info.step(tx('Shadery', 'Shaders'), tx(`kompilacja grafiki ${BUILDINGS.length} rodzajów budynków (gotowe i place budowy) — licznik może na chwilę stanąć`, `compiling graphics for ${BUILDINGS.length} kinds of buildings (finished and under construction) — the timer may pause for a moment`));
-    next(() => {
-      renderer.warmup();
+    next(async () => {
+      try { await renderer.warmup(); } catch (e) { console.error(e); }
       show(45, tx('Wczytywanie tekstur…', 'Loading the textures…'));
       info.step(tx('Tekstury w karcie', 'Textures on the GPU'), tx('wysyłanie tekstur do karty graficznej', 'sending textures to the graphics card'));
       next(() => {
@@ -2231,7 +2231,7 @@ badge.textContent = `${tx('wersja', 'version')} ${__BUILD__}`;
 document.body.append(badge);
 
 /** Wywoływane z ekranu wczytywania: kompilacja shaderów i pierwsza klatka jeszcze przed menu */
-export function warmup(): void { renderer.warmup(); }
+export function warmup(onProgress?: (done: number, total: number) => void): Promise<void> { return renderer.warmup(onProgress); }
 
 // --- alarmy na mapie: czerwony trójkąt z wykrzyknikiem nad miejscem ataku, a gdy poza ekranem, strzałka przy krawędzi ---
 const alertLayer = document.createElement('div');

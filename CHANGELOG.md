@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.51.9 — wczytywanie bez zamarzania (2026-10-26)
+
+- **Poprawka:** krok „Przygotowanie grafiki” zatrzymywał stronę na 12 s przy pierwszym wejściu (ok. 5 s przy kolejnych) — przeglądarka stała, pasek ani drgnął, a Chrome potrafił pytać, czy zamknąć kartę. Kompilacja shaderów wszystkich budynków idzie teraz w tle na karcie graficznej (`compileAsync`, równoległa kompilacja), a modele próbne budują się partiami z przerwą na klatkę — pasek pokazuje „budynki n / 49”. Na czas kompilacji gra nie rysuje klatek (rysowanie i tak czekałoby na kartę). To samo przy wejściu do gry i przy podglądzie nowej mapy
+
 ## 0.51.8 — pomosty wież nie ciemnieją z daleka (2026-10-26)
 
 - **Poprawka:** to samo co przy posadzce zamku, tylko na wieżach kamiennych (zwykłej i wielkiej baszcie): po oddaleniu kamery deski pomostu łuczników robiły się ciemne i plamiste. Pod deskami leżał wierzch ciemnej płyty chodnika, który gra rysuje „o włos bliżej” kamery, więc z daleka przebijał przez deski. Płyta ma teraz tylko boki i spód, a pod deskami leży zwykły kamień 3 cm niżej

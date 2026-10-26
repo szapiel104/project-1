@@ -1378,12 +1378,27 @@ export class GameRenderer {
     this.cam.edgeScroll = o.edgeScroll;
   }
 
-  /** Kompiluje z góry wszystkie shadery sceny, żeby gra nie przycinała przy pierwszym widoku */
-  warmup(): void {
+  /**
+   * Kompiluje z góry wszystkie shadery sceny, żeby gra nie przycinała przy pierwszym widoku.
+   * Asynchronicznie: modele próbne budujemy partiami z przerwą na klatkę, a shadery kompiluje karta w tle
+   * (`compileAsync`, rozszerzenie KHR_parallel_shader_compile) — strona nie zamarza na kilkanaście sekund,
+   * pasek wczytywania się rusza. `onProgress(gotowe, wszystkich)` po każdej partii modeli.
+   */
+  async warmup(onProgress?: (done: number, total: number) => void): Promise<void> {
+    this.warming = true;
+    try { await this.warmupInner(onProgress); } finally { this.warming = false; }
+  }
+  private warming = false;
+  private async warmupInner(onProgress?: (done: number, total: number) => void): Promise<void> {
     // Pierwszy budynek danego rodzaju (i pierwszy plac budowy, przycięty płaszczyzną) potrzebuje nowych shaderów: karta
     // kompiluje je w chwili pierwszego rysowania i gra wtedy przycina, a po odświeżeniu już nie (przeglądarka pamięta
     // skompilowane shadery). Dlatego raz, przy wczytywaniu, stawiamy pod mapą po jednym egzemplarzu każdego budynku —
     // gotowy i jako plac budowy, z widocznym wnętrzem — kompilujemy wszystko i od razu sprzątamy.
+    const pause = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
+    const compile = async (): Promise<void> => {
+      try { await this.renderer.compileAsync(this.scene, this.cam.camera); }
+      catch { this.renderer.compile(this.scene, this.cam.camera); }
+    };
     let probe: THREE.Group | null = null;
     const batchProbe: [number, THREE.Object3D][] = [];
     if (!this.prewarmed) {
@@ -1396,6 +1411,7 @@ export class GameRenderer {
         if (!c) { c = m.clone(); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clips.set(m, c); }
         return c;
       };
+      let t0 = performance.now(), done = 0;
       for (const def of BUILDINGS) {
         for (const site of [false, true]) {
           const m = this.models.building(def.id, TEAM_COLORS[0] ?? 0x888888);
@@ -1412,15 +1428,19 @@ export class GameRenderer {
           probe.add(m);
           if (!site) batchProbe.push([-1 - batchProbe.length, m], [-2 - batchProbe.length, m]);   // dwa razy: wspólne rysowanie zaczyna się od dwóch sztuk
         }
+        done++;
+        // co ~40 ms przerwa na klatkę: pasek idzie dalej, a przeglądarka nie uznaje karty za zawieszoną
+        if (performance.now() - t0 > 40) { onProgress?.(done, BUILDINGS.length); await pause(); t0 = performance.now(); }
       }
+      onProgress?.(BUILDINGS.length, BUILDINGS.length);
       this.scene.add(probe);
       probe.updateMatrixWorld(true);
-      this.renderer.compile(this.scene, this.cam.camera);   // zwykły wariant (budynek rysowany sam: rozbiórka, ?razem=0)
+      await compile();   // zwykły wariant (budynek rysowany sam: rozbiórka, ?razem=0)
       // wspólne rysowanie budynków to inny wariant shaderów (instancjonowanie): też kompilujemy go z góry
       this.syncBatches(batchProbe);
     }
     this.matQ.sweep(this.scene);
-    this.renderer.compile(this.scene, this.cam.camera);
+    await compile();
     this.composer.render();
     if (probe) { this.scene.remove(probe); this.syncBatches(); }
   }
@@ -2017,6 +2037,8 @@ export class GameRenderer {
 
   /** `paused` = pauza: kamera dalej się rusza, ale ludzie, zwierzęta, ogień i woda stoją w miejscu */
   frame(realDt: number, alpha: number, paused = false): void {
+    // w trakcie kompilacji shaderów w tle nie rysujemy: rysowanie czekałoby na kartę i strona by zamarzła
+    if (this.warming) return;
     namedTick();
     // co pół sekundy: wyjątki od granicy kamery przy własnych budynkach poza środkiem mapy (kopalnia pod górami)
     if (this.state && (this.reachTick = (this.reachTick + 1) % 30) === 0) this.updateReach(this.state);
