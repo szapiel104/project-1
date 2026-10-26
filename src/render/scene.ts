@@ -1395,6 +1395,11 @@ export class GameRenderer {
     // skompilowane shadery). Dlatego raz, przy wczytywaniu, stawiamy pod mapą po jednym egzemplarzu każdego budynku —
     // gotowy i jako plac budowy, z widocznym wnętrzem — kompilujemy wszystko i od razu sprzątamy.
     const pause = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
+    // czasy kroków do sprawdzania w konsoli: window.__warmTimes
+    const times: [string, number][] = [];
+    let tm = performance.now();
+    const lap = (name: string): void => { const n = performance.now(); times.push([name, Math.round(n - tm)]); tm = n; };
+    (window as unknown as { __warmTimes: unknown }).__warmTimes = times;
     const compile = async (): Promise<void> => {
       try { await this.renderer.compileAsync(this.scene, this.cam.camera); }
       catch { this.renderer.compile(this.scene, this.cam.camera); }
@@ -1433,15 +1438,20 @@ export class GameRenderer {
         if (performance.now() - t0 > 40) { onProgress?.(done, BUILDINGS.length); await pause(); t0 = performance.now(); }
       }
       onProgress?.(BUILDINGS.length, BUILDINGS.length);
+      lap('modele próbne');
       this.scene.add(probe);
       probe.updateMatrixWorld(true);
       await compile();   // zwykły wariant (budynek rysowany sam: rozbiórka, ?razem=0)
+      lap('shadery');
       // wspólne rysowanie budynków to inny wariant shaderów (instancjonowanie): też kompilujemy go z góry
       this.syncBatches(batchProbe);
+      lap('scalanie');
     }
     this.matQ.sweep(this.scene);
     await compile();
+    lap('shadery wspólne');
     this.composer.render();
+    lap('pierwsza klatka');
     if (probe) { this.scene.remove(probe); this.syncBatches(); }
   }
   private prewarmed = false;
