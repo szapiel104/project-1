@@ -72,7 +72,11 @@ def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter)
             dx, dz = ((0, 1), (0, -1), (1, 0), (-1, 0))[side]
             for j, (o, h) in enumerate(((0.05, 0.09), (0.1, 0.08), (0.15, 0.07))):
                 b.box('base', 'castleDark', 0.11 if dz else 2 * o, h, 2 * o if dz else 0.11, x + dx * o, DECK - 0.4 + j * 0.09, z + dz * o)
-    b.box('base', 'castleDark', 2 * OUT, 0.12, 2 * OUT, 0, DECK - 0.12, 0, bottom=True)   # płyta chodnika
+    # Płyta chodnika bez wierzchu: ciemny cios (castleDark) gra rysuje „o włos bliżej” kamery (withAo w buildings.ts),
+    # więc z daleka jej wierzch przebijał przez deski pomostu 2 cm wyżej i pomost ciemniał. Pod deskami leży zwykły
+    # kamień (bez przesunięcia), 3 cm niżej od ich wierzchu, a płyta zostaje tylko z boków i od spodu.
+    b.box('base', 'castleDark', 2 * OUT, 0.12, 2 * OUT, 0, DECK - 0.12, 0, top=False, bottom=True)   # płyta chodnika
+    b.box('base', 'castle', 2 * OUT - 0.01, 0.03, 2 * OUT - 0.01, 0, DECK - 0.04, 0)
     planks = int(2 * (OUT - WALL) / 0.2)
     for i in range(planks):
         x = -OUT + WALL + (i + 0.5) * (2 * (OUT - WALL)) / planks

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.51.8 — pomosty wież nie ciemnieją z daleka (2026-10-26)
+
+- **Poprawka:** to samo co przy posadzce zamku, tylko na wieżach kamiennych (zwykłej i wielkiej baszcie): po oddaleniu kamery deski pomostu łuczników robiły się ciemne i plamiste. Pod deskami leżał wierzch ciemnej płyty chodnika, który gra rysuje „o włos bliżej” kamery, więc z daleka przebijał przez deski. Płyta ma teraz tylko boki i spód, a pod deskami leży zwykły kamień 3 cm niżej
+
 ## 0.51.7 — posadzka zamku nie ciemnieje z daleka (2026-10-25)
 
 - **Poprawka:** po oddaleniu kamery dziedziniec i sale zamku robiły się ciemne i plamiste, jakby leżał na nich dziwny cień. To nie był cień: 1,2 cm pod płytami posadzki leżał wierzch podmurówki, a gra rysuje drobne detale „o włos bliżej” kamery (żeby nie migały na murach) — z daleka ten zapas rósł i ciemna podmurówka przebijała przez posadzkę. Podmurówka jest teraz 8 cm niżej, a płyty posadzki sięgają do niej, więc z każdej odległości widać bruk i deski

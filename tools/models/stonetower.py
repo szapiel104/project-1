@@ -47,7 +47,11 @@ for side in range(4):
         for j, (o, h) in enumerate(((0.04, 0.08), (0.08, 0.07), (0.12, 0.06))):
             b.box('base', 'castleDark', 0.1 if dz else 2 * o, h, 2 * o if dz else 0.1, x + dx * o, DECK - 0.36 + j * 0.08, z + dz * o)
 # płyta chodnika (wysunięta na wspornikach), od spodu też ściana (widać ją z ziemi)
-b.box('base', 'castleDark', 2 * OUT, 0.12, 2 * OUT, 0, DECK - 0.12, 0, bottom=True)
+# Płyta chodnika bez wierzchu: ciemny cios (castleDark) gra rysuje „o włos bliżej” kamery (withAo w buildings.ts),
+# więc z daleka jej wierzch przebijał przez deski pomostu 2 cm wyżej i pomost ciemniał. Pod deskami leży zwykły
+# kamień (bez przesunięcia), 3 cm niżej od ich wierzchu, a płyta zostaje tylko z boków i od spodu.
+b.box('base', 'castleDark', 2 * OUT, 0.12, 2 * OUT, 0, DECK - 0.12, 0, top=False, bottom=True)
+b.box('base', 'castle', 2 * OUT - 0.01, 0.03, 2 * OUT - 0.01, 0, DECK - 0.04, 0)
 # deski pomostu w środku przedpiersia
 for i in range(8):
     x = -OUT + WALL + (i + 0.5) * (2 * (OUT - WALL)) / 8
