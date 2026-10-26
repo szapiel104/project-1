@@ -87,6 +87,7 @@ import { MaterialQuality, makeEnvironment, msaaSamples, sharpenPass, type AaMode
 import { spearThrust, bowShot, deathKind, swordCombo, axeChop } from './combatanim';
 import { sadMaterial, sickMaterial, noWorkerMaterial } from './marks';
 import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
+import { Precompiler } from './precompile';
 import { KEEP_MODEL, RAM_MODEL, SHRINE_SPOTS, CAMP_SEATS, KEEP_SOLID, KEEP_FLOOR, KEEP_WALL, KEEP_HALF, type WalkModel, WALK_MODELS, MINE_SPOTS, OREMINE_T, OREMINE_WALK, MINE_LEVEL, MINE_LEVEL_SPOTS, mineRoute, OREMINE_PROD, inRect, MINE_AT, TAVERN_SEATS, walkFoot, TAVERN_FLOOR } from './walkmodels';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 /** Promień (w polach mapy), w którym spacerem widać wnętrza budynków przez drzwi i okna */
@@ -645,6 +646,7 @@ export class GameRenderer {
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    this.pre = new Precompiler(this.renderer, this.scene);
     initKtx(this.renderer);
     watchRenderer(this.renderer, 'gra');
     watchLoading(THREE.DefaultLoadingManager);
@@ -1386,7 +1388,7 @@ export class GameRenderer {
    */
   async warmup(onProgress?: (done: number, total: number) => void): Promise<void> {
     this.warming = true;
-    try { await this.warmupInner(onProgress); } finally { this.warming = false; }
+    try { await this.warmupInner(onProgress); } finally { this.warming = false; this.pre.start(); }
   }
   private warming = false;
   /**
@@ -1394,6 +1396,8 @@ export class GameRenderer {
    * rysowała nową scenę jeszcze przed `warmup()` i karta kompilowała jej shadery „na żywo”, blokując stronę.
    */
   private held = false;
+  /** Shadery nowych obiektów w trakcie gry: kompilacja w tle, obiekt pokazuje się gotowy (precompile.ts) */
+  private pre!: Precompiler;
   hold(on: boolean): void { this.held = on; }
   private dry = false;
   /**
@@ -2131,8 +2135,12 @@ export class GameRenderer {
     if (this.gpuProfile && this.profN++ % 15 === 0) { this.profiledRender(); return; }
     const tg = performance.now();
     // odbicie w wodzie (od średniej grafiki w górę, jak poświata)
-    this.view?.reflectWater(this.renderer, this.scene, this.cam.camera, this.bloom.enabled);
-    this.composer.render();
+    // nowe obiekty z shaderami w trakcie kompilacji nie są rysowane w tej klatce (bez blokowania strony)
+    const restore = this.pre.beforeRender(this.cam.camera);
+    try {
+      this.view?.reflectWater(this.renderer, this.scene, this.cam.camera, this.bloom.enabled);
+      this.composer.render();
+    } finally { restore(); }
     const gpu = performance.now() - tg;
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;
     this.dynamicResolution(gpu);

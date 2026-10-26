@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.51.11 — stawianie wieży i bramy bez zwiechy (2026-10-26)
+
+- **Poprawka:** pierwsza wieża, brama, plac budowy czy podgląd stawiania potrzebowały nowych shaderów, a karta kompilowała je w chwili pierwszego rysowania — gra stawała na 0,1–1 s przy każdym (pierwsza wieża: 11 shaderów). Teraz każdy nowy obiekt w trakcie gry kompiluje się w tle i pokazuje dopiero, gdy jest gotowy (zwykle po kilku klatkach, najdłużej 1,5 s). Obiekty z gotowymi shaderami pokazują się od razu (`src/render/precompile.ts`)
+
 ## 0.51.10 — płynne wejście do gry (2026-10-26)
 
 - **Poprawka:** po „Kontynuuj” i „Rozpocznij” pętla gry rysowała nową mapę, zanim jej shadery zdążyły się skompilować w tle — każda taka klatka blokowała stronę na 1–3 s. Teraz od zbudowania mapy do końca kompilacji gra nic nie rysuje (pasek chodzi dalej)
