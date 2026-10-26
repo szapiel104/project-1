@@ -275,7 +275,7 @@ const menu = createMenu(document.body, {
       };
       const wait = (): void => { if (++frames < 4) requestAnimationFrame(wait); else reveal(); };
       // shadery nowej mapy kompilują się w tle; zasłona schodzi po kilku klatkach od ich gotowości
-      void renderer.warmup().catch((e) => console.error(e)).then(() => { if (job === previewJob) requestAnimationFrame(wait); });
+      void renderer.warmup().then(() => renderer.prepareView()).catch((e) => console.error(e)).then(() => { if (job === previewJob) requestAnimationFrame(wait); });
       setTimeout(reveal, 2500); // bardzo wolna karta: zasłona i tak schodzi po chwili
     }));
   },
@@ -589,15 +589,18 @@ function enterGame(label: string, prep?: () => void): void {
     setTimeout(() => cover.remove(), 500);
   };
   next(() => {
+    // od zbudowania mapy do końca rozgrzewki nic nie rysujemy: shadery nowej mapy skompiluje w tle warmup(),
+    // a nie pierwsza klatka (ta blokowała stronę na 1–3 s)
+    renderer.hold(true);
     try { prep?.(); } catch (e) { console.error(e); }
     previewJob++; previewCover.hidden = true; preview = null;
     renderer.endPreview();
     menu.close();
     renderer.endOrbit(); // od razu widok gracza: to jego rozgrzewamy
     show(25, tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
-    info.step(tx('Shadery', 'Shaders'), tx(`kompilacja grafiki ${BUILDINGS.length} rodzajów budynków (gotowe i place budowy) — licznik może na chwilę stanąć`, `compiling graphics for ${BUILDINGS.length} kinds of buildings (finished and under construction) — the timer may pause for a moment`));
+    info.step(tx('Shadery', 'Shaders'), tx('kompilacja grafiki mapy w tle (teren, woda, las, trawa, budynki)', 'compiling the map graphics in the background (terrain, water, forest, grass, buildings)'));
     next(async () => {
-      try { await renderer.warmup(); } catch (e) { console.error(e); }
+      try { await renderer.warmup(); } catch (e) { console.error(e); } finally { renderer.hold(false); }
       show(45, tx('Wczytywanie tekstur…', 'Loading the textures…'));
       info.step(tx('Tekstury w karcie', 'Textures on the GPU'), tx('wysyłanie tekstur do karty graficznej', 'sending textures to the graphics card'));
       next(() => {
@@ -614,10 +617,17 @@ function enterGame(label: string, prep?: () => void): void {
         const PER = 4;
         let shot = 0, inShot = 0;
         info.step(tx('Obchód kamerą', 'Camera sweep'));
+        let prepared = -1;
         const sweep = (): void => {
           if (shot < shots.length) {
-            if (inShot === 0) info.detail(shot < 8 ? tx(`kierunek ${shot + 1} z 8 — drzewa, trawa, budynki i cienie dookoła`, `direction ${shot + 1} of 8 — trees, grass, buildings and shadows all around`) : tx(`widok z daleka ${shot - 7} z 2 — dalekie wersje modeli`, `distant view ${shot - 7} of 2 — far versions of models`));
-            if (inShot === 0) renderer.setCamView({ x: home.x, z: home.z, dist: shots[shot]!.dist, yaw: shots[shot]!.yaw });
+            if (inShot === 0 && prepared !== shot) {
+              info.detail(shot < 8 ? tx(`kierunek ${shot + 1} z 8 — drzewa, trawa, budynki i cienie dookoła`, `direction ${shot + 1} of 8 — trees, grass, buildings and shadows all around`) : tx(`widok z daleka ${shot - 7} z 2 — dalekie wersje modeli`, `distant view ${shot - 7} of 2 — far versions of models`));
+              renderer.setCamView({ x: home.x, z: home.z, dist: shots[shot]!.dist, yaw: shots[shot]!.yaw });
+              // najpierw to, co widać z tego miejsca, powstaje i kompiluje się w tle, dopiero potem rysujemy
+              prepared = shot;
+              void renderer.prepareView().catch((e) => console.error(e)).then(() => requestAnimationFrame(sweep));
+              return;
+            }
             show(55 + (25 * (shot * PER + inShot)) / (shots.length * PER), undefined);
             if (++inShot >= PER) { inShot = 0; shot++; }
             requestAnimationFrame(sweep);

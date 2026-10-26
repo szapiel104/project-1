@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.51.10 — płynne wejście do gry (2026-10-26)
+
+- **Poprawka:** po „Kontynuuj” i „Rozpocznij” pętla gry rysowała nową mapę, zanim jej shadery zdążyły się skompilować w tle — każda taka klatka blokowała stronę na 1–3 s. Teraz od zbudowania mapy do końca kompilacji gra nic nie rysuje (pasek chodzi dalej)
+- Obchód kamerą przy wczytywaniu: z każdego kierunku najpierw powstaje to, co widać (kępy trawy, paprocie, trzciny, dalekie wersje modeli) i kompiluje się w tle, dopiero potem rysujemy — bez przycięć po 1–2 s. To samo przy podglądzie mapy w „Nowej grze”
+
 ## 0.51.9 — wczytywanie bez zamarzania (2026-10-26)
 
 - **Poprawka:** krok „Przygotowanie grafiki” zatrzymywał stronę na 12 s przy pierwszym wejściu (ok. 5 s przy kolejnych) — przeglądarka stała, pasek ani drgnął, a Chrome potrafił pytać, czy zamknąć kartę. Kompilacja shaderów wszystkich budynków idzie teraz w tle na karcie graficznej (`compileAsync`, równoległa kompilacja), a modele próbne budują się partiami z przerwą na klatkę — pasek pokazuje „budynki n / 49”. Plac budowy do rozgrzewki to kopia gotowego modelu (wcześniej każdy budynek budował się dwa razy od zera). Na czas kompilacji gra nie rysuje klatek (rysowanie i tak czekałoby na kartę). To samo przy wejściu do gry i przy podglądzie nowej mapy

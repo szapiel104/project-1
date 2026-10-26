@@ -1389,6 +1389,28 @@ export class GameRenderer {
     try { await this.warmupInner(onProgress); } finally { this.warming = false; }
   }
   private warming = false;
+  /**
+   * Wstrzymanie rysowania na czas przygotowania nowej mapy (od jej zbudowania do końca rozgrzewki): bez tego pętla gry
+   * rysowała nową scenę jeszcze przed `warmup()` i karta kompilowała jej shadery „na żywo”, blokując stronę.
+   */
+  private held = false;
+  hold(on: boolean): void { this.held = on; }
+  private dry = false;
+  /**
+   * Przygotowanie bieżącego widoku bez rysowania: klatka bez czasu tworzy wszystko, co widać z tej kamery (kępy trawy,
+   * paprocie, trzciny, dalekie wersje modeli), a shadery tych nowych rzeczy kompiluje karta w tle. Dopiero potem
+   * pierwsza prawdziwa klatka z tego miejsca — bez kompilacji „na żywo”, która blokowała stronę na 1–2 s.
+   */
+  async prepareView(): Promise<void> {
+    if (this.warming || this.held) return;
+    this.dry = true;
+    try { this.frame(0, 1, true); } finally { this.dry = false; }
+    this.matQ.sweep(this.scene);
+    this.warming = true;
+    try { await this.renderer.compileAsync(this.scene, this.cam.camera); }
+    catch { /* bez kompilacji w tle shadery skompilują się przy rysowaniu */ }
+    finally { this.warming = false; }
+  }
   private async warmupInner(onProgress?: (done: number, total: number) => void): Promise<void> {
     // Pierwszy budynek danego rodzaju (i pierwszy plac budowy, przycięty płaszczyzną) potrzebuje nowych shaderów: karta
     // kompiluje je w chwili pierwszego rysowania i gra wtedy przycina, a po odświeżeniu już nie (przeglądarka pamięta
@@ -2050,7 +2072,7 @@ export class GameRenderer {
   /** `paused` = pauza: kamera dalej się rusza, ale ludzie, zwierzęta, ogień i woda stoją w miejscu */
   frame(realDt: number, alpha: number, paused = false): void {
     // w trakcie kompilacji shaderów w tle nie rysujemy: rysowanie czekałoby na kartę i strona by zamarzła
-    if (this.warming) return;
+    if (this.warming || this.held) return;
     namedTick();
     // co pół sekundy: wyjątki od granicy kamery przy własnych budynkach poza środkiem mapy (kopalnia pod górami)
     if (this.state && (this.reachTick = (this.reachTick + 1) % 30) === 0) this.updateReach(this.state);
@@ -2099,6 +2121,7 @@ export class GameRenderer {
       T('budynki razem', () => this.syncBatches());
       T('kadr', () => { this.cullInstances(); this.cullVegetation(v); });
     }
+    if (this.dry) return; // przygotowanie widoku: obiekty zaktualizowane, rysowanie pomijamy
     this.renderer.info.reset(); // liczymy wszystkie przejścia klatki razem (AO, wyjście)
     // okno wydajności otwarte: co 15. klatka mierzona przejście po przejściu (ta jedna klatka jest wolniejsza, więc jej
     // czasu nie wliczamy do zwykłego „karta graficzna”)
