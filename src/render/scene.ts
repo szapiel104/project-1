@@ -1418,21 +1418,23 @@ export class GameRenderer {
       };
       let t0 = performance.now(), done = 0;
       for (const def of BUILDINGS) {
-        for (const site of [false, true]) {
-          const m = this.models.building(def.id, TEAM_COLORS[0] ?? 0x888888);
-          m.userData.fx = collectFx(m, isWindowMat);
-          mergeStatic(m, site ? '' : def.id + ':0');
-          m.traverse((o) => {
-            o.visible = true;
-            const me = o as THREE.Mesh;
-            if (!me.isMesh) return;
-            me.castShadow = me.receiveShadow = true;
-            if (site) me.material = Array.isArray(me.material) ? me.material.map(clip) : clip(me.material);
-          });
-          m.position.set(0, -50, 0);
-          probe.add(m);
-          if (!site) batchProbe.push([-1 - batchProbe.length, m], [-2 - batchProbe.length, m]);   // dwa razy: wspólne rysowanie zaczyna się od dwóch sztuk
-        }
+        const m = this.models.building(def.id, TEAM_COLORS[0] ?? 0x888888);
+        m.userData.fx = collectFx(m, isWindowMat);
+        mergeStatic(m, def.id + ':0');
+        m.traverse((o) => {
+          o.visible = true;
+          const me = o as THREE.Mesh;
+          if (me.isMesh) me.castShadow = me.receiveShadow = true;
+        });
+        // plac budowy: ta sama siatka (kopia dzieli geometrię), tylko materiały przycięte płaszczyzną — bez drugiego
+        // budowania modelu od zera (to była połowa czasu rozgrzewania)
+        const site = m.clone(true);
+        site.traverse((o) => {
+          const me = o as THREE.Mesh;
+          if (me.isMesh) me.material = Array.isArray(me.material) ? me.material.map(clip) : clip(me.material);
+        });
+        for (const g of [m, site]) { g.position.set(0, -50, 0); probe.add(g); }
+        batchProbe.push([-1 - batchProbe.length, m], [-2 - batchProbe.length, m]);   // dwa razy: wspólne rysowanie zaczyna się od dwóch sztuk
         done++;
         // co ~40 ms przerwa na klatkę: pasek idzie dalej, a przeglądarka nie uznaje karty za zawieszoną
         if (performance.now() - t0 > 40) { onProgress?.(done, BUILDINGS.length); await pause(); t0 = performance.now(); }

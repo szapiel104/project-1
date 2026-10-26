@@ -2,7 +2,7 @@
 
 ## 0.51.9 — wczytywanie bez zamarzania (2026-10-26)
 
-- **Poprawka:** krok „Przygotowanie grafiki” zatrzymywał stronę na 12 s przy pierwszym wejściu (ok. 5 s przy kolejnych) — przeglądarka stała, pasek ani drgnął, a Chrome potrafił pytać, czy zamknąć kartę. Kompilacja shaderów wszystkich budynków idzie teraz w tle na karcie graficznej (`compileAsync`, równoległa kompilacja), a modele próbne budują się partiami z przerwą na klatkę — pasek pokazuje „budynki n / 49”. Na czas kompilacji gra nie rysuje klatek (rysowanie i tak czekałoby na kartę). To samo przy wejściu do gry i przy podglądzie nowej mapy
+- **Poprawka:** krok „Przygotowanie grafiki” zatrzymywał stronę na 12 s przy pierwszym wejściu (ok. 5 s przy kolejnych) — przeglądarka stała, pasek ani drgnął, a Chrome potrafił pytać, czy zamknąć kartę. Kompilacja shaderów wszystkich budynków idzie teraz w tle na karcie graficznej (`compileAsync`, równoległa kompilacja), a modele próbne budują się partiami z przerwą na klatkę — pasek pokazuje „budynki n / 49”. Plac budowy do rozgrzewki to kopia gotowego modelu (wcześniej każdy budynek budował się dwa razy od zera). Na czas kompilacji gra nie rysuje klatek (rysowanie i tak czekałoby na kartę). To samo przy wejściu do gry i przy podglądzie nowej mapy
 
 ## 0.51.8 — pomosty wież nie ciemnieją z daleka (2026-10-26)
 
