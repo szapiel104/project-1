@@ -4,6 +4,7 @@
 
 - **Pory roku:** łatki śniegu, jesieni i szronu dokładały się do materiałów skanem co 3 s, więc każdy nowy budynek, plac budowy czy kępa trawy kilka sekund po pojawieniu się kompilował shadery drugi raz, już na żywo (krótka zwiecha). Rozgrzewka przy starcie też kompilowała wersje bez łatek. Teraz łatka trafia na nowe obiekty od razu, przed kompilacją w tle, a rozgrzewka kompiluje budynki i mapę już z nią
 - **„Nowa gra” i „Wstecz”:** teren podglądu mapy budowany etapami (podłoże, woda, góry, las, trawa, drogi…) z przerwą na klatkę między nimi, zamiast ok. 0,7 s zatrzymania strony; najdłuższy etap (mapa głębokości wody, ok. 0,3 s) podzielony na kawałki. Czasy etapów w konsoli (`[teren]`)
+- **Poprawka do 0.51.11:** po wczytaniu mapy kompilacja w tle dostawała naraz tysiące obiektów i przeglądała je w każdej klatce od nowa (nawet 0,4–0,5 s na klatkę przez kilka sekund po wejściu). Teraz materiały obiektu zbierane są raz, a po pełnej rozgrzewce lista startuje pusta
 - Lista pozostałych rzeczy od płynności: `docs/pomysly.md` → „Płynność wczytywania i gry”
 
 ## 0.51.11 — stawianie wieży i bramy bez zwiechy (2026-10-26)

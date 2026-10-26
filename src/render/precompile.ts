@@ -7,11 +7,16 @@ import * as THREE from 'three';
  *
  * Tu: każdy obiekt dodany do sceny po rozgrzewce trafia na listę. Przed klatką jego shadery są zlecane karcie
  * (`renderer.compile` przy równoległej kompilacji nie blokuje), a sam obiekt nie jest rysowany, dopóki nie są gotowe —
- * zwykle kilka klatek. Stare obiekty z gotowymi shaderami schodzą z listy od razu, bez czekania.
+ * zwykle kilka klatek. Obiekty z gotowymi shaderami schodzą z listy od razu.
+ *
+ * Koszt pilnujemy: materiały obiektu zbieramy raz, kompilacja najwyżej kilku obiektów na klatkę, a po pełnej
+ * rozgrzewce (nowa mapa) lista jest czyszczona — wszystko w scenie jest wtedy już skompilowane.
  */
 
 /** Najdłużej tyle czekamy na shadery (wolna karta): potem obiekt i tak się pokazuje */
 const MAX_WAIT_MS = 1500;
+/** Tyle obiektów na klatkę może zlecić kompilację (compile przegląda światła całej sceny) */
+const COMPILES_PER_FRAME = 4;
 
 let sink: ((o: THREE.Object3D) => void) | null = null;
 let patched = false;
@@ -28,8 +33,10 @@ function patchAdd(): void {
   } as typeof add;
 }
 
+interface Entry { since: number; mats: THREE.Material[] | null; compiled: boolean }
+
 export class Precompiler {
-  private pending = new Map<THREE.Object3D, { since: number; mats: Set<THREE.Material> | null }>();
+  private pending = new Map<THREE.Object3D, Entry>();
   private on = false;
   /** Obiekty już sprawdzone (przeniesione do innej grupy nie wracają na listę) */
   private done = new WeakSet<THREE.Object3D>();
@@ -38,17 +45,18 @@ export class Precompiler {
     patchAdd();
   }
 
-  /** Włączane po rozgrzewce (wcześniej wszystko kompiluje warmup) */
+  /** Po pełnej rozgrzewce: wszystko w scenie skompilowane, lista od zera; od teraz pilnujemy nowych obiektów */
   start(): void {
+    this.pending.clear();
     this.on = true;
-    sink = (o) => { if (this.on && !this.done.has(o) && !this.pending.has(o)) this.pending.set(o, { since: performance.now(), mats: null }); };
+    sink = (o) => { if (this.on && !this.done.has(o) && !this.pending.has(o)) this.pending.set(o, { since: performance.now(), mats: null, compiled: false }); };
   }
 
   /** Obiekt, któremu zmieniły się materiały (np. łatka pór roku): znowu pilnujemy jego shaderów */
   watch(o: THREE.Object3D): void {
     if (!this.on) return;
     this.done.delete(o);
-    this.pending.set(o, { since: performance.now(), mats: null });
+    this.pending.set(o, { since: performance.now(), mats: null, compiled: false });
   }
 
   /** Są nowe obiekty jeszcze nie sprawdzone (przed nimi warto dołożyć łatki materiałów, żeby kompilować raz) */
@@ -57,18 +65,20 @@ export class Precompiler {
     return false;
   }
 
+  /** Ile obiektów czeka (do okna wydajności) */
+  get size(): number { return this.pending.size; }
+
   private inScene(o: THREE.Object3D): boolean {
     for (let p: THREE.Object3D | null = o; p; p = p.parent) if (p === this.scene) return true;
     return false;
   }
 
-  /** `strict`: materiał bez programu też liczy się jako niegotowy (jeszcze nigdy nie rysowany) */
-  private ready(mats: Iterable<THREE.Material>, strict = false): boolean {
+  /** `strict`: materiał bez programu albo zmieniony od ostatniego rysowania też liczy się jako niegotowy */
+  private ready(mats: THREE.Material[], strict: boolean): boolean {
     for (const m of mats) {
       const p = this.renderer.properties.get(m) as { currentProgram?: { isReady(): boolean }; __version?: number };
       const prog = p.currentProgram;
       if (!prog) { if (strict) return false; continue; }
-      // materiał zmieniony od ostatniego rysowania (needsUpdate): może potrzebować innego programu
       if (strict && p.__version !== m.version) return false;
       if (!prog.isReady()) return false;
     }
@@ -91,14 +101,14 @@ export class Precompiler {
       let covered = false;
       for (let p = o.parent; p && !covered; p = p.parent) if (this.pending.has(p)) covered = true;
       if (covered) { this.pending.delete(o); continue; }
-      if (!e.mats) {
-        // zwykle wszystkie materiały mają już gotowe shadery (ten sam budynek drugi raz, przeniesiony obiekt): koniec
-        const mats = materialsOf(o);
-        if (this.ready(mats, true)) { this.pending.delete(o); this.done.add(o); continue; }
-        // nowe shadery: zlecamy kompilację (kilka obiektów na klatkę — compile przegląda światła całej sceny)
-        if (compiles++ < 4) e.mats = this.renderer.compile(o, camera, this.scene) as Set<THREE.Material>;
+      e.mats ??= materialsOf(o);
+      if (this.ready(e.mats, !e.compiled) || now - e.since > MAX_WAIT_MS) { this.pending.delete(o); this.done.add(o); continue; }
+      if (!e.compiled && compiles < COMPILES_PER_FRAME) {
+        compiles++;
+        e.compiled = true;
+        e.mats = [...(this.renderer.compile(o, camera, this.scene) as Set<THREE.Material>)];
+        if (this.ready(e.mats, false)) { this.pending.delete(o); this.done.add(o); continue; }
       }
-      if ((e.mats && this.ready(e.mats)) || now - e.since > MAX_WAIT_MS) { this.pending.delete(o); this.done.add(o); continue; }
       if (o.visible) { o.visible = false; hidden.push(o); }
     }
     return hidden.length ? () => { for (const o of hidden) o.visible = true; } : noop;
@@ -108,11 +118,11 @@ export class Precompiler {
 const noop = (): void => undefined;
 
 function materialsOf(root: THREE.Object3D): THREE.Material[] {
-  const out: THREE.Material[] = [];
+  const out = new Set<THREE.Material>();
   root.traverse((o) => {
     const m = (o as THREE.Mesh).material as THREE.Material | THREE.Material[] | undefined;
     if (!m) return;
-    if (Array.isArray(m)) out.push(...m); else out.push(m);
+    if (Array.isArray(m)) for (const x of m) out.add(x); else out.add(m);
   });
-  return out;
+  return [...out];
 }
