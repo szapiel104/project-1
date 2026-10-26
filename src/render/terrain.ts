@@ -606,13 +606,17 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         if (dep > 0) anyWater = true;
         depthData[sy * SW + sx] = THREE.DataUtils.toHalfFloat(dep);
       }
+      if ((sy & 511) === 511) yield; // ok. 2,7 mln próbek: przerwy na klatkę co kilkaset wierszy
     }
+    yield;
     // G: ta sama głębokość rozmyta (promień ok. 1,5 pola) — do przejrzystości, R zostaje dokładne — do linii brzegu
     const raw = new Float32Array(SW * SH);
     for (let i = 0; i < raw.length; i++) raw[i] = Math.max(0, THREE.DataUtils.fromHalfFloat(depthData[i]!));
+    yield;
     const R = 6, tmpB = new Float32Array(raw.length), sm = new Float32Array(raw.length);
     for (let y = 0; y < SH; y++) { let acc = 0; const row = y * SW; for (let x = -R; x <= R; x++) acc += raw[row + Math.min(SW - 1, Math.max(0, x))]!; for (let x = 0; x < SW; x++) { tmpB[row + x] = acc / (2 * R + 1); acc += raw[row + Math.min(SW - 1, x + R + 1)]! - raw[row + Math.max(0, x - R)]!; } }
     for (let x = 0; x < SW; x++) { let acc = 0; for (let y = -R; y <= R; y++) acc += tmpB[Math.min(SH - 1, Math.max(0, y)) * SW + x]!; for (let y = 0; y < SH; y++) { sm[y * SW + x] = acc / (2 * R + 1); acc += tmpB[Math.min(SH - 1, y + R + 1) * SW + x]! - tmpB[Math.max(0, y - R) * SW + x]!; } }
+    yield;
     const rg = new Uint16Array(SW * SH * 2);
     for (let i = 0; i < SW * SH; i++) { rg[i * 2] = depthData[i]!; rg[i * 2 + 1] = THREE.DataUtils.toHalfFloat(sm[i]!); }
     const depthTex = new THREE.DataTexture(rg, SW, SH, THREE.RGFormat, THREE.HalfFloatType);
