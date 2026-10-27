@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { tint } from './loads';
 import { touch } from './touch';
+import type { WorldSound } from '../audio/bank';
 
 /** Barwa smugi za strzałą: zwykła (jasna) i ognista (pomarańczowa) */
 const UP = new THREE.Vector3(0, 1, 0);
@@ -16,12 +17,14 @@ export const MAX_ARROWS = 256;
 export class ArrowLayer {
   private arrowMesh: THREE.InstancedMesh;
   private arrowTrail: THREE.InstancedMesh;
-  private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number; fire?: boolean; arc: number }[] = [];
+  private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number; fire?: boolean; arc: number; hit?: WorldSound; whoosh?: boolean }[] = [];
   /** Groty ognistych strzał w locie (pierwsze `fireN`) — płomyki rysuje system ognia */
   readonly fires: THREE.Vector3[] = [];
   fireN = 0;
 
-  constructor(scene: THREE.Scene) {
+  /** `land` — strzała doleciała: dźwięk trafienia (ciało, drewno, kamień, zbroja, ziemia) w miejscu celu;
+   *  `pass` — strzała mija słuchacza: świst lotu w połowie toru */
+  constructor(scene: THREE.Scene, private land: (kind: WorldSound, at: THREE.Vector3) => void = () => {}, private pass: (at: THREE.Vector3) => void = () => {}) {
     this.arrowMesh = new THREE.InstancedMesh(mergeGeometries([
       tint(new THREE.CylinderGeometry(0.008, 0.008, 0.5, 4).rotateX(Math.PI / 2), 0x8a6a42),
       tint(new THREE.ConeGeometry(0.02, 0.07, 4).rotateX(Math.PI / 2).translate(0, 0, 0.27), 0x6a6e76),
@@ -47,12 +50,12 @@ export class ArrowLayer {
 
   /** Nowa strzała z `from` do `to` (położenia w świecie) */
   /** Każda strzała wylatuje z innego miejsca dłoni i celuje w inne miejsce sylwetki, więc kilka naraz nie leci jedną kreską */
-  shoot(from: THREE.Vector3, to: THREE.Vector3, fire: boolean): void {
+  shoot(from: THREE.Vector3, to: THREE.Vector3, fire: boolean, hit?: WorldSound): void {
     const j = (): number => (Math.random() - 0.5);
     from.x += j() * 0.22; from.z += j() * 0.22; from.y += j() * 0.1;
     to.x += j() * 0.3; to.z += j() * 0.3; to.y += j() * 0.25;
     // strzały lecą prawie prosto: część zupełnie płasko, reszta z lekkim łukiem (bez paraboli góra–dół)
-    this.arrows.push({ from, to, t: 0, fire, arc: Math.random() < 0.4 ? 0 : 0.015 + Math.random() * 0.03 });
+    this.arrows.push({ from, to, t: 0, fire, hit, arc: Math.random() < 0.4 ? 0 : 0.015 + Math.random() * 0.03 });
   }
 
   /** Strzały w locie: prawie prosto od łucznika do celu (najwyżej lekki łuk), ok. 0,4 s (tyle leci w symulacji, army.ts ARROW_TICKS — trafia, gdy doleci) */
@@ -60,7 +63,13 @@ export class ArrowLayer {
     const dt = calm ? 1 : 1 / 60;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), nx = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
     let n = 0;
-    this.arrows = this.arrows.filter((a) => (a.t += dt / 0.4) < 1);
+    this.arrows = this.arrows.filter((a) => {
+      a.t += dt / 0.4;
+      if (!calm && !a.whoosh && a.t >= 0.45) { a.whoosh = true; this.pass(new THREE.Vector3().lerpVectors(a.from, a.to, 0.5)); }
+      if (a.t < 1) return true;
+      if (!calm && a.hit) this.land(a.hit, a.to);
+      return false;
+    });
     this.fireN = 0;
     for (const a of this.arrows) {
       const arc = Math.sin(a.t * Math.PI) * a.from.distanceTo(a.to) * a.arc;

@@ -52,7 +52,7 @@ import { createAllies } from './ui/allies';
 import { createMinimap } from './ui/minimap';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
-import { alarmBell, shrineBell, thunderClap, daySounds, music, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio } from './audio/sfx';
+import { alarmBell, shrineBell, thunderClap, daySounds, music, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio, audioStats, listenerPos, play3d, type WorldSound } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
 import { WOLF_HP } from './sim/systems/wolves';
@@ -1105,7 +1105,8 @@ renderer.onClick = (tile, touch) => {
 window.addEventListener('pointerdown', unlockAudio);
 window.addEventListener('keydown', unlockAudio);
 document.addEventListener('click', (e) => { if ((e.target as HTMLElement).closest('button')) play('click'); });
-renderer.onCollapse = () => play('collapse');
+// zawalenie budynku gra scena z jego miejsca (play3d), więc nie słychać go z drugiego końca mapy
+renderer.onCollapse = () => {};
 
 /** Wybór miejsca startu spaceru: następne kliknięcie na mapie stawia tam chłopa (Esc anuluje) */
 let walkPick = false;
@@ -2856,6 +2857,7 @@ function showPerf(now: number): void {
   perf.last['jakość'] = renderer.quality;
   perf.last['rozdzielczość'] = renderer.resolution;
   perf.last['wątek symulacji'] = simMode ? 'tak' : 'nie';
+  { const a = audioStats(); perf.last['dźwięki (głosy · pętle · pliki)'] = `${a.voices} · ${a.loops} · ${a.buffers}`; }
   perf.last['budynki z daleka'] = renderer.lodInfo;
   // karta graficzna przejście po przejściu (tylko przy otwartym oknie; mierzona co 15. klatka)
   const gpu = renderer.readGpu();
@@ -2885,6 +2887,8 @@ function showPerf(now: number): void {
   perf.frames = 0; perf.sim = 0; perf.ticks = 0; perf.render = 0; perf.ui = 0; perf.worst = 0; perf.since = now;
 }
 (window as unknown as { __perf: () => Record<string, number | string> }).__perf = () => perf.last;
+// do testów dźwięku: stan silnika i dźwięk z miejsca na mapie (pola świata, jak w scenie)
+(window as unknown as { __audio: unknown }).__audio = { stats: audioStats, ear: listenerPos, play: (k: WorldSound, x: number, z: number) => play3d(k, x, z) };
 // nowy błąd od razu podbija licznik przy FPS (bez czekania na kolejne odświeżenie statystyk)
 onReport(() => { const n = errCounts().errors; if (n) { fpsTag.textContent = `FPS ${perf.last.fps ?? '—'} · ⚠ ${n}`; fpsTag.dataset.err = 'true'; } });
 (window as unknown as { __heavy: (n?: number) => unknown }).__heavy = (n) => renderer.heavy(n);

@@ -1,5 +1,18 @@
 # Dziennik zmian
 
+## 0.54.0 — prawdziwe dźwięki i silnik dźwięku przestrzennego (2026-10-27)
+
+- **Nowe nagrania zamiast „drewnianych” dźwięków** (gra 0 A.D., CC BY-SA 3.0, ok. 480 plików w `public/sounds/0ad/`): młotek, piła i dłuto na budowie, siekiera, kilof, uderzenia kowala, puszczenie cięciwy, świst strzały mijającej kamerę, trafienia strzał (w ziemię, drewno, kamień, zbroję i ciało), zamach mieczem i włócznią, szczęk ostrzy, uderzenia w tarczę, krzyk umierającego, głosy i okrzyki ludzi (zamiast syntezowanego bełkotu), pies, świnia, deszcz, trzask płonącego budynku i ogniska, gwar osady, zawalenie budynku. Każdy dźwięk ma kilkanaście–kilkadziesiąt wariantów, a ten sam plik nie leci dwa razy z rzędu
+- **Silnik dźwięku przestrzennego** (`audio/engine.ts`, ustawienia każdego rodzaju w `audio/bank.ts`): słuchacz stoi tam, gdzie patrzy kamera, a oddalenie kamery dokłada „wysokość ucha” — z bliska słychać każdy krok i rozmowę, przy zwykłym widoku kroki i gadanie milkną, a z drugiego końca mapy nic nie krzyczy do ucha (wcześniej głośność liczyła się od samej kamery: przy oddaleniu cisza, przy zbliżeniu nagle za głośno). Z daleka dźwięk jest głuchszy (filtr wysokich tonów) i ma więcej pogłosu, z boku ekranu słychać go z boku. Każdy rodzaj ma własną krzywą odległości: zawalenie i walkę słychać daleko, kroki tylko z bliska
+- **Porządek w miksie:** limit głosów na rodzaj i na cały świat (w tłoku cichszy, dalszy dźwięk ustępuje bliższemu), ten sam dźwięk w tym samym miejscu nie startuje dwa razy naraz, głośność wszystkich nagrań wyrównana przy wczytaniu, łagodny kompresor i limiter na wyjściu. Walka, śmierć i zawalenia ściszają na chwilę muzykę i tło
+- **Strzały:** dźwięk puszczenia z łucznika (także z wieży), świst w połowie lotu, trafienie dopiero, gdy strzała doleci — w miejscu celu i z dźwiękiem podłoża
+- **Ciągłe źródła:** płonący budynek i ogniska trzaskają ze swojego miejsca i cichną, gdy ogień zgaśnie; przy środku ekranu, gdzie krząta się sporo ludzi, cichy gwar
+- **Śmierć:** zamiast zdjętego w 0.53.14 krzyku (brzmiał jak dmuchanie) cichy jęk albo krzyk umierającego z prawdziwych nagrań, nie przy każdym poległym (w bitwie co trzeci milczy)
+- Zawalenie budynku gra z jego miejsca (wcześniej zawsze na pełny głos, nawet z drugiego końca mapy)
+- Wszystkie nagrania wczytują się w tle po kolei (najpierw praca i walka), więc pierwsze uderzenie nie milczy
+- F3: liczba grających głosów, pętli i wczytanych plików; w trybie testowym `window.__audio` (`stats`, `ear`, `play`)
+- Testy: `tests/audio.test.ts` (krzywa odległości, panorama, czy wszystkie pliki z banku istnieją)
+- Bot: bez zmian (sam dźwięk)
 ## 0.53.15 — bez migania kamienia, prawdziwe sprzęty w zamku, odbudowa nie zabiera wszystkich ludzi (2026-10-27)
 
 - Miganie kamiennych ścian: w zamku lico muru przy bramie leżało w jednej płaszczyźnie z licem wież bramy (mur wchodził w wieże) — teraz kończy się przy nich; posadzki izb w basztach są 6 mm nad płytami chodnika, szczyty dachów sal 6 mm od muru, złoty brzeg chodnika w sali tronowej nad suknem. Wieże kamienne (zwykła, duża i wielka): ciemna listwa na koronie przedpiersia leżała wierzchem równo z kamieniem i migała z góry — podniesiona o 5 mm, bez zakładek w narożnikach. Sprawdzone skryptem, który szuka nachodzących na siebie ścian w modelu

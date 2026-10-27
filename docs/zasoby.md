@@ -39,6 +39,27 @@ Z Freesound przez paczkę dźwięków [CDDA-Soundpacks](https://github.com/Fris0
 - bell — „church bells”, [Nox_Sound](https://freesound.org/people/Nox_Sound/sounds/563885/) (CC0): dzwon w południe
 Puszczyk i dźwięki zastępcze (gdy nagranie się nie wczyta) dalej są syntezowane.
 
+## Odgłosy świata z 0 A.D. (27.10.2026) — `public/sounds/0ad/`
+
+Gra **0 A.D.** © Wildfire Games (https://www.wildfiregames.com/, repozytorium https://github.com/0ad/0ad,
+`binaries/data/mods/public/audio/`), licencja [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/)
+(plik licencji obok nagrań: `public/sounds/0ad/LICENSE.txt`). Przerobione skryptem `tools/audio/import_0ad.py`:
+mono 44,1 kHz, wycięta cisza na początku i cichy ogon, wyrównana głośność; tła (deszcz, ogień, gwar) stereo, 45 s.
+Przerobione pliki udostępniamy na tej samej licencji CC BY-SA 3.0. Lista wariantów: `src/audio/bank.gen.ts`.
+- hammer, saw, chisel — budowa (`resource/construction/con_wood`, `con_saw`, `con_stone`)
+- axe, treefall — drwal (`resource/lumbering/lumber_tree`, `lumber_treeexpire`)
+- pick, metal — kilof w skałę i rudę, kuźnia (`resource/mining/mine_stone`, `mine_metal`)
+- bow, arrowfly — cięciwa i świst strzały (`attack/weapon/bow_attack`, `arrowfly`)
+- arrowDirt, arrowWood, arrowStone, arrowMetal, flesh — trafienia (`attack/impact/arrow_*`, `fleshimp`, `fleshstab`)
+- swordSwing, spear, swordHit, shieldWood, shieldMetal — walka wręcz (`attack/weapon/sword_attack`, `spear_attack`, `swordhit`, `attack/impact/shield_*`)
+- deathMale, deathFemale — krzyk umierającego (`actor/human/death`)
+- talkMale, talkFemale, shoutMale — głosy i okrzyki ludzi (`voice/latin`, `greek`, `persian`, `napatan/civ`)
+- dog, pig, cow, sheep, horse — zwierzęta (`voice/global/civ_dog_bark`, `actor/fauna/animal`)
+- collapse, gateOpen, gateClose — zawalenie budynku i brama (`attack/destruction`, `actor/gate`)
+- rain, fire, crowd — tła: deszcz, trzask ognia, gwar osady (`ambient/weather/rain`, `attack/fire/c_*`, `ambient/building/amb_trade`)
+
+Jak brzmią w miksie (głośność, zasięg, rozrzut wysokości, limity naraz): `src/audio/bank.ts`; silnik przestrzenny: `src/audio/engine.ts`.
+
 ## Głosy ludzi (CC0, bez wymogu podpisu)
 
 Z repozytorium gry [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) (`sounds/chars`), które zebrało je z Freesound — w grze tylko nagrania na CC0:

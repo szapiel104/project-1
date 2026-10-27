@@ -10,7 +10,7 @@ import { GL_DEBUG, glSection, watchLoading, watchRenderer } from '../debug/errlo
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
 import { RULES } from '../data/rules';
-import { animal, musicPlaying, playAt, pluck, talk, type WorldSound } from '../audio/sfx';
+import { loop3d, musicPlaying, play3d, playAt, pluck, setListener, updateLoops, type WorldSound } from '../audio/sfx';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
@@ -233,7 +233,9 @@ export class GameRenderer {
   /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
   private towerPose = new Map<number, [number, number]>();
   /** Strzały w locie (src/render/arrows.ts) */
-  private arrows = new ArrowLayer(this.scene);
+  private arrows = new ArrowLayer(this.scene,
+    (kind, at) => this.playHere(kind, at.x, at.z, 1, at.y),
+    (at) => this.playHere('arrowfly', at.x, at.z, 1, at.y));
   private lastCd = new Map<number, number>();
   /** Ostatnia chwila strzału każdego strzelca (Soldier.shot), żeby strzała wyleciała raz, w chwili wypuszczenia */
   private lastShot = new Map<number, number>();
@@ -247,6 +249,11 @@ export class GameRenderer {
   /** Do dźwięków: kiedy chłop zaczął uciekać, przed kim stanął, którzy polegli już krzyknęli */
   private fledSeen = new Map<number, number>();
   private foeSeen = new Map<number, number>();
+  private screamed = new Set<number>();
+  /** Kiedy żołnierz może znów zabrzmieć ciosem (szczęk, tarcza, ciało) */
+  private blowAt = new Map<number, number>();
+  /** Kierunek „w prawo” ekranu dla panoramy dźwięku */
+  private earRight = new THREE.Vector3();
   private taverns = new Map<number, GameState['buildings'][number]>();
   private innDoors = new Map<number, GameState['buildings'][number]>();
   /** Drzwi kapliczek: wieczorem modlący się klęczą przy klęczniku i stoją za nimi ze spuszczonymi głowami */
@@ -265,8 +272,9 @@ export class GameRenderer {
     const len = [0.3, 0.3, 0.3, 0.6, 0.3, 0.3, 0.6, 0.3, 0.3, 0.3, 0.3, 0.6, 0.3, 0.3, 0.3, 0.9];
     const i = this.luteNote++ % tune.length;
     this.luteAt = this.time + len[i]!;
-    const d = this.cam.camera.position.distanceTo(new THREE.Vector3(x, 0.5, z));
-    pluck(tune[i]!, Math.max(0, Math.min(1, 1 - (d - 8) / 30)));
+    // jak inne dźwięki świata: odległość od punktu, na który patrzy kamera, plus „wysokość ucha” z oddalenia
+    const f = this.focusPoint, d = Math.hypot(x - f.x, z - f.z, this.walk ? 0 : this.cam.distance * 0.42);
+    pluck(tune[i]!, Math.max(0, Math.min(1, 1 - (d - 5) / 18)));
   }
   private pullNow = new Map<number, [number, number]>();
   private armM = new THREE.Matrix4();
@@ -294,18 +302,33 @@ export class GameRenderer {
     this.playHere(kind, x, z, gain);
   }
 
-  private playHere(kind: WorldSound, x: number, z: number, gain = 1, y?: number): void {
-    // słychać jak w rzeczywistości: z odległości od kamery (ucha), nie od środka ekranu;
-    // blisko — głośno, przy zwykłym widoku cicho, a z daleka od osady wcale
-    // `y` podajemy, gdy źródło nie stoi na terenie (np. górnik w sztolni pod mapą)
-    const cam = this.cam.camera;
-    const src = new THREE.Vector3(x, y ?? this.view?.heightAt(x + (this.state?.map.width ?? 0) / 2, z + (this.state?.map.height ?? 0) / 2) ?? 0, z);
-    const d = cam.position.distanceTo(src);
-    const near = Math.max(0, Math.min(1, 1 - (d - 8) / 30)); // ok. 38 jednostek = cisza
-    const rel = src.sub(cam.position);
-    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
-    const pan = (rel.dot(right) / Math.max(1, d)) * 1.4;
-    playAt(kind, near, pan, gain);
+  /** Dźwięk z miejsca w świecie: odległość, panoramę i stłumienie z oddali liczy silnik (audio/engine.ts) względem słuchacza.
+   *  `y` podajemy, gdy źródło nie stoi na terenie (np. górnik w sztolni pod mapą) */
+  private playHere(kind: WorldSound, x: number, z: number, gain = 1, y?: number, rate?: number): void {
+    play3d(kind, x, z, { gain, y, rate });
+  }
+  /** Gwar osady: gdy przy środku ekranu krząta się sporo ludzi, z ich środka ciężkości słychać cichy gwar (nagranie targu, 0 A.D.) */
+  private crowdSnd = { at: 0, x: 0, z: 0, y: 0, level: 0 };
+  private syncCrowdSound(g: GameState, v: TerrainView): void {
+    const c = this.crowdSnd;
+    if (this.time >= c.at) {
+      c.at = this.time + 0.5;
+      const f = this.focusPoint, { width, height } = g.map;
+      let n = 0, sx = 0, sz = 0;
+      for (const u of g.units) {
+        if (u.phase === Phase.Resting) continue;
+        const x = u.px / FP - width / 2, z = u.py / FP - height / 2;
+        if ((x - f.x) ** 2 + (z - f.z) ** 2 > 16 * 16) continue;
+        n++; sx += x; sz += z;
+      }
+      c.level = n < 5 ? 0 : Math.min(1, (n - 4) / 14) * (1 - this.night * 0.8) * (1 - this.rain * 0.5);
+      if (n) { c.x = sx / n; c.z = sz / n; c.y = v.heightAt(c.x + width / 2, c.z + height / 2); }
+    }
+    if (c.level > 0.01 && !this.calm) loop3d('crowd', 'crowd', c.x, c.y + 1, c.z, c.level);
+  }
+  /** Głos człowieka z jego miejsca: gadanie albo okrzyk (nagrania 0 A.D.), każdy z własną barwą (wysokość z id) */
+  private say(id: number, shout: boolean, p: THREE.Vector3, gain = 1): void {
+    this.playHere(shout ? 'shout' : 'talk', p.x, p.z, gain, p.y + 1.4, 0.9 + (id % 9) * 0.025);
   }
   /** Podłoże pod stopami (do dźwięku kroków): bruk, deski, żwir, błoto po deszczu albo ziemia z trawą */
   private surface(g: GameState, x: number, y: number): WorldSound {
@@ -329,13 +352,10 @@ export class GameRenderer {
     const cam = this.cam.camera, { width, height } = g.map;
     const wx = x - width / 2, wz = y - height / 2, wy = this.view?.heightAt(x, y) ?? 0;
     const d = Math.hypot(cam.position.x - wx, cam.position.y - wy, cam.position.z - wz);
-    if (d > 11) return;
+    if (d > 24) return;
     this.stepTimes = this.stepTimes.filter((s) => this.time - s < 1);
-    if (this.stepTimes.length >= 5) return;
-    this.stepTimes.push(this.time);
-    const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
-    const pan = ((wx - cam.position.x) * right.x + (wz - cam.position.z) * right.z) / Math.max(1, d) * 1.4;
-    playAt(this.surface(g, x, y), Math.max(0, Math.min(1, 1 - (d - 2.5) / 8.5)), pan, gain);
+    if (this.stepTimes.length >= 6) return;
+    if (play3d(this.surface(g, x, y), wx, wz, { gain, y: wy })) this.stepTimes.push(this.time);
   }
 
   /**
@@ -389,12 +409,8 @@ export class GameRenderer {
     this.village.sync(g, {
       time: this.time, dt, night: this.night, calm: this.calm, height: (x, y) => this.standY(view, x, y, -2),
       cam: { x: cam.position.x + width / 2, y: cam.position.z + height / 2, h: cam.position.y },
-      sound: (kind, x, y) => {
-        const wx = x - width / 2, wz = y - height / 2, d = Math.hypot(cam.position.x - wx, cam.position.y - view.heightAt(x, y), cam.position.z - wz);
-        if (d > 16) return;
-        const right = new THREE.Vector3().setFromMatrixColumn(cam.matrixWorld, 0);
-        animal(kind, Math.max(0, Math.min(1, 1 - (d - 3) / 13)) * (kind === 'bark' ? 0.9 : 0.6), ((wx - cam.position.x) * right.x + (wz - cam.position.z) * right.z) / Math.max(1, d) * 1.4);
-      },
+      // pies, kura, świnia: nagrania (0 A.D.) z miejsca zwierzęcia
+      sound: (kind, x, y) => { play3d(kind === 'bark' ? 'dog' : kind === 'cluck' ? 'hen' : 'pig', x - width / 2, y - height / 2, { y: view.heightAt(x, y) }); },
     }, people);
   }
 
@@ -2123,6 +2139,14 @@ export class GameRenderer {
     // co pół sekundy: wyjątki od granicy kamery przy własnych budynkach poza środkiem mapy (kopalnia pod górami)
     if (this.state && (this.reachTick = (this.reachTick + 1) % 30) === 0) this.updateReach(this.state);
     if (this.walk && this.state) this.stepWalk(realDt); else this.cam.update(realDt);
+    {
+      // słuch: w widoku z góry ucho w punkcie, na który patrzy kamera (wyżej przy oddaleniu), w spacerze w oczach postaci
+      const f = this.focusPoint, cam = this.cam.camera;
+      cam.updateMatrixWorld();
+      const r = this.earRight.setFromMatrixColumn(cam.matrixWorld, 0);
+      setListener(f.x, f.y, f.z, this.walk ? 0 : this.cam.distance, r.x, r.z, !!this.walk);
+      updateLoops(paused);
+    }
     const dt = paused ? 0 : realDt;
     this.time += dt;
     this.frameDt = dt;
@@ -2162,6 +2186,7 @@ export class GameRenderer {
       for (const t of [this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
+      this.syncCrowdSound(g, v);
       T('wojsko', () => this.syncSoldiers(g, v, alpha));
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
       T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.forestEyes.sync(g, v, { time: this.time, calm: this.calm, night: this.night }); this.syncVillage(g, v, dt); });
@@ -2332,7 +2357,7 @@ export class GameRenderer {
         for (let p: THREE.Object3D | null = o.parent; p && p !== mesh; p = p.parent) if (!p.visible) { shown = false; break; }
         if (!shown) continue;
         o.getWorldPosition(w);
-        if (o.name === 'campfire') { F.add(w, 0.42, 0.3, (o.id * 0.311) % 1, glow); F.add(w.set(w.x + 0.04, w.y, w.z - 0.03), 0.3, 0.2, (o.id * 0.731) % 1, 0); }
+        if (o.name === 'campfire') { F.add(w, 0.42, 0.3, (o.id * 0.311) % 1, glow); F.add(w.set(w.x + 0.04, w.y, w.z - 0.03), 0.3, 0.2, (o.id * 0.731) % 1, 0); if (!this.calm) loop3d(`camp${o.id}`, 'campfire', w.x, w.y, w.z); }
         else F.add(w, 0.16, 0.09, (o.id * 0.419) % 1, 0.5);
       }
       const camp = named(mesh, 'flame');
@@ -2341,10 +2366,13 @@ export class GameRenderer {
         for (const ch of camp.children) ch.visible = false;
         F.add(w, 0.42, 0.3, (id * 0.311) % 1, glow);
         F.add(w.set(w.x + 0.04, w.y, w.z - 0.03), 0.3, 0.2, (id * 0.731) % 1, 0);
+        if (!this.calm) loop3d(`flame${id}`, 'campfire', w.x, w.y, w.z);
       }
       const fire = named(mesh, 'fire');
       if (fire && fire.visible) {
         for (const ch of fire.children) { ch.visible = false; ch.getWorldPosition(w); F.add(w.setY(w.y - 0.1), 0.75, 0.5, (ch.id * 0.193) % 1, glow * 0.6 + 0.3); }
+        // trzask pożaru z miejsca budynku: im więcej ognisk na budynku, tym głośniej
+        if (!this.calm) loop3d(`fire${id}`, 'fire', mesh.position.x, mesh.position.y + 1, mesh.position.z, Math.min(1, 0.5 + fire.children.length * 0.15));
       }
     }
     if (this.inMine && this.mineLevel) {
@@ -2751,6 +2779,8 @@ export class GameRenderer {
       // rozebrany budynek nie znika od razu: zapada się i przechyla, a pod nim zostaje gruz
       for (const m of this.staticParts(mesh)) m.layers.set(0); // zapadający się budynek rysuje się już sam (poza wspólnym rysowaniem)
       this.rubble.collapse(mesh);
+      // łoskot walącego się budynku z jego miejsca (nagrania 0 A.D.)
+      this.playHere('collapse', mesh.position.x, mesh.position.z, 1, mesh.position.y);
       this.onCollapse();
       this.buildingMeshes.delete(id);
       this.lods.delete(id);
@@ -3171,7 +3201,7 @@ export class GameRenderer {
       port.position.y = was + Math.max(-sp * dt, Math.min(sp * dt, want - was));
       if (Math.abs(port.position.y - was) > 1e-4 && !this.calm) {
         const wp = this.buildingMeshes.get(id)!.position;
-        this.sfxAt(want < was ? 'clang' : 'creak', wp.x, wp.z + KEEP_HALF, `port${id}`, want < was ? 0.6 : 1.2, 0.8);
+        this.sfxAt(want < was ? 'portcullis' : 'creak', wp.x, wp.z + KEEP_HALF, `port${id}`, want < was ? 0.6 : 1.2, 0.8);
       }
     }
     // kopalnia zawsze stoi zakryta (kopiec i portal): jej wnętrze to osobna sztolnia, do której wchodzi się spacerem
@@ -3665,17 +3695,22 @@ export class GameRenderer {
       this.lastShot.set(s.id, s.shot ?? -1);
       if (ranged && fired && (foe || wall || victim) && !this.calm && this.arrows.count < MAX_ARROWS) {
         let tx: number, ty: number, th: number;
-        if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : 0.4; }
-        else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; }
-        else { const fp = footprint(BUILDINGS[wall!.type]!, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; }
+        // dźwięk trafienia: w ciało, w zbroję (strażnik, zbrojny), w drewno albo w kamień muru; część strzał wbija się w ziemię obok
+        let hit: WorldSound;
+        if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : 0.4; const fd = UNITS[foe.kind]; hit = Math.random() < 0.25 ? 'arrowDirt' : fd?.guard || fd?.id === 'manatarms' ? 'arrowMetal' : 'flesh'; }
+        else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; hit = Math.random() < 0.25 ? 'arrowDirt' : 'flesh'; }
+        else { const wd = BUILDINGS[wall!.type]!, fp = footprint(wd, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; hit = (wd.cost.stone ?? 0) > (wd.cost.wood ?? 0) ? 'arrowStone' : 'arrowWood'; }
         if (s.up && s.post) this.towerIcons.shot(s.post, this.time);
         if (udef.magic) {
           // czar z dłoni: kula ognia albo wody leci do celu (trafienie liczy symulacja, to tylko wygląd)
           const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
           this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.set(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), udef.magic === 'fire');
-          this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.35, udef.magic === 'fire' ? 0.7 : 1.3);
-        } else this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), fireArrow(g, s));
-        this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
+          this.playHere('swing', t.position.x, t.position.z, 0.8, t.position.y + 1, udef.magic === 'fire' ? 0.7 : 1.3);
+        } else {
+          this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), fireArrow(g, s), hit);
+          // puszczenie cięciwy (nagrania 0 A.D.) z miejsca łucznika, także z wieży
+          this.playHere('bow', t.position.x, t.position.z, 1, t.position.y + 1);
+        }
       }
       if (fired) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);
       this.lastCd.set(s.id, s.cd);
@@ -3702,9 +3737,17 @@ export class GameRenderer {
       t.rotation.order = 'XYZ';
       this.fallYaw.set(s.id, heading);
       if (striking && !this.calm && !udef.magic) {
-        // zamach włócznią i uderzenie: w człowieka głucho, w mur jak w drewno
-        this.sfxAt('swing', t.position.x, t.position.z, s.id, 1.1, 0.6);
-        if (s.cd > 10) this.sfxAt(wall ? 'plank' : Math.random() < 0.3 ? 'clang' : 'hit', t.position.x, t.position.z, `h${s.id}`, 1.1, 0.8);
+        // zamach (miecz albo włócznia) i uderzenie: w mur jak w drewno, w człowieka — szczęk ostrzy, tarcza albo ciało
+        const sword = udef.guard || udef.id === 'manatarms';
+        this.sfxAt(sword ? 'swing' : 'spear', t.position.x, t.position.z, s.id, 1.1, 0.9);
+        if (s.cd > 10 && this.time >= (this.blowAt.get(s.id) ?? 0)) {
+          // jeden zegar na żołnierza (a nie na rodzaj dźwięku), żeby losowy rodzaj ciosu nie mnożył uderzeń
+          const first = !this.blowAt.has(s.id);
+          this.blowAt.set(s.id, this.time + 1.1 * (0.85 + Math.random() * 0.3));
+          const r = Math.random();
+          const blow: WorldSound = wall ? 'plank' : r < 0.4 ? 'clang' : r < 0.65 ? 'shield' : r < 0.75 ? 'shieldMetal' : 'flesh';
+          if (!first) this.playHere(blow, t.position.x, t.position.z, 1, t.position.y + 1);
+        }
       }
       // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
       if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
@@ -3829,7 +3872,9 @@ export class GameRenderer {
       const how = deathKind(body.id);
       // czas z ułamkiem ticku (alpha): ticków jest 10 na sekundę, więc bez tego upadek szedł skokami jak w kilku klatkach
       const fall = Math.max(0, Math.min(1, (g.tick + alpha - body.at) / (TICKS_PER_SECOND * (how === 3 ? 1.4 : 0.7))));
-      // bez krzyku przy śmierci (Michał 27.10.2026: brzmiał jak dmuchanie albo zjawa); słychać tylko sam cios
+      // śmierć: dawny krzyk (C-Dogs) brzmiał jak dmuchanie albo zjawa i został zdjęty (Michał 27.10.2026, 0.53.14);
+      // teraz prawdziwe nagrania jęku i krzyku umierającego (0 A.D.), cicho i nie przy każdym — w tłumie bitwy co któryś
+      if (fall < 0.3 && !this.calm && !this.screamed.has(body.id)) { this.screamed.add(body.id); if (body.id % 3 !== 0) this.voiceAt('death', fx - width / 2, fy - height / 2, 0.8); }
       const ease = fall < 0.85 ? (fall / 0.85) ** 2 : 1 - Math.sin(((fall - 0.85) / 0.15) * Math.PI) * 0.06;
       const yaw = this.fallYaw.get(body.id) ?? ((body.id * 2.39) % 6.28);
       const e = this.calm ? 1 : ease;
@@ -4622,10 +4667,8 @@ export class GameRenderer {
         if (wet && !this.calm && this.time > this.murmurAt && (u.id + Math.floor(this.time * 3)) % 4 === 0) {
           const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);
           if (dist < 14) {
-            this.murmurAt = this.time + 0.35 + ((u.id * 13) % 7) * 0.08;
-            const right = this.armV.setFromMatrixColumn(cam.matrixWorld, 0);
-            const pan = ((t.position.x - cam.position.x) * right.x + (t.position.z - cam.position.z) * right.z) / Math.max(1, dist) * 1.4;
-            talk('x'.repeat(6 + (u.id * 5 + Math.floor(this.time)) % 14), u.id, (u.id + Math.floor(this.time / 3)) % 5 === 0, Math.max(0, 1 - (dist - 2) / 12) * 0.28, pan);
+            this.murmurAt = this.time + 0.9 + ((u.id * 13) % 7) * 0.15;
+            this.say(u.id, (u.id + Math.floor(this.time / 3)) % 5 === 0, t.position);
           }
         }
       } else if (shrine && u.job === shrine.id) {
@@ -4642,9 +4685,7 @@ export class GameRenderer {
           const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);
           if (dist < 16) {
             this.murmurAt = this.time + 0.6;
-            const right = this.armV.setFromMatrixColumn(cam.matrixWorld, 0);
-            const pan = ((t.position.x - cam.position.x) * right.x + (t.position.z - cam.position.z) * right.z) / Math.max(1, dist) * 1.4;
-            talk('x'.repeat(14 + (u.id * 7 + Math.floor(this.time)) % 12), u.id, false, Math.max(0, 1 - (dist - 2) / 14) * 0.4, pan);
+            this.say(u.id, false, t.position);
           }
         }
       } else if (shrine) {
@@ -4677,9 +4718,7 @@ export class GameRenderer {
             const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);
             if (dist < 14) {
               this.murmurAt = this.time + 0.5 + ((u.id * 13) % 7) * 0.1;
-              const right = this.armV.setFromMatrixColumn(cam.matrixWorld, 0);
-              const pan = ((t.position.x - cam.position.x) * right.x + (t.position.z - cam.position.z) * right.z) / Math.max(1, dist) * 1.4;
-              talk('x'.repeat(8 + (u.id * 5 + Math.floor(this.time)) % 14), u.id, (u.id + Math.floor(this.time / 3)) % 4 === 0, Math.max(0, 1 - (dist - 2) / 12) * 0.25, pan);
+              this.say(u.id, (u.id + Math.floor(this.time / 3)) % 4 === 0, t.position);
             }
           }
         }
@@ -4741,7 +4780,7 @@ export class GameRenderer {
             }
           }
           if (ph > 0.66 && ph < 0.71) {
-            if (!inMine) this.sfxAt(chopping ? 'chop' : 'mine', t.position.x, t.position.z, u.id, 0.5);
+            if (!inMine) this.sfxAt(chopping ? 'chop' : 'mine', t.position.x, t.position.z, u.id, 0.5, 0.9);
             // górnik w sztolni, a my w niej spacerujemy: pełny stuk z jego miejsca pod ziemią (wysokość z pozycji, nie z terenu)
             else if (this.inMine?.id === job!.id) this.sfxAt('mine', t.position.x, t.position.z, u.id, 0.5, 1.1, t.position.y + 0.8);
             // z zewnątrz kopalni: kopią w głębi góry — jeden przytłumiony stuk na całą kopalnię, nie każdy górnik osobno
@@ -4762,11 +4801,12 @@ export class GameRenderer {
         const jt = jobs.get(u.job);
         const jid = jt ? BUILDINGS[jt.type]!.id : '';
         if (u.phase === Phase.Working) {
-          if (jid === 'woodcutter' || jid === 'poleturner') this.sfxAt('plank', t.position.x, t.position.z, u.id, 1.3, 0.7);
-          // kowal: stuk młota w kowadło (ten sam metaliczny stuk co kilof w sztolni)
-          else if (jid === 'smithy') this.sfxAt('mine', t.position.x, t.position.z, u.id, 1.1, 0.7);
+          // tartak i tokarz: piła w drewnie, czasem stuk młotka
+          if (jid === 'woodcutter' || jid === 'poleturner') this.sfxAt(Math.random() < 0.7 ? 'saw' : 'hammer', t.position.x, t.position.z, u.id, 1.3, 0.8);
+          // kowal: metaliczne uderzenia młota
+          else if (jid === 'smithy') this.sfxAt('smith', t.position.x, t.position.z, u.id, 1.1, 0.9);
           // płatnerz: drobne, ciche stuknięcia młotka przy nitowaniu kółek
-          else if (jid === 'armorer') this.sfxAt('mine', t.position.x, t.position.z, u.id, 0.8, 0.35);
+          else if (jid === 'armorer') this.sfxAt('smith', t.position.x, t.position.z, u.id, 0.8, 0.45);
           else if (jid === 'mill') this.sfxAt('creak', t.position.x, t.position.z, u.id, 3.5, 0.8);
         }
       }
@@ -4777,7 +4817,7 @@ export class GameRenderer {
         if (w.hp <= 0 || (w.px - u.px) ** 2 + (w.py - u.py) ** 2 > (1.5 * FP) ** 2) continue;
         t.rotation.set(0, Math.atan2(w.px - u.px, w.py - u.py), 0);
         wolfNear = w;
-        if ((u.hp ?? 30) < 30) this.sfxAt('hit', t.position.x, t.position.z, `bite${u.id}`, 0.9, 0.8);
+        if ((u.hp ?? 30) < 30) this.sfxAt('flesh', t.position.x, t.position.z, `bite${u.id}`, 0.9, 0.8);
         break;
       }
       // odważny chłop przed wrogim żołnierzem: twarzą do niego, z bliska okłada go pięściami i kijem
@@ -4800,7 +4840,7 @@ export class GameRenderer {
           else if (ph < 0.62) fightArm = -0.4 - high + ((ph - 0.5) / 0.12) ** 2 * (high + 0.2);
           else fightArm = -0.3;
           toolLean = ph > 0.5 && ph < 0.8 ? Math.sin(((ph - 0.5) / 0.3) * Math.PI) * 0.3 : 0.08;
-          if (ph > 0.6 && ph < 0.65) this.sfxAt('hit', t.position.x, t.position.z, `pf${u.id}`, 0.4, 0.6);
+          if (ph > 0.6 && ph < 0.65) this.sfxAt('punch', t.position.x, t.position.z, `pf${u.id}`, 0.4, 0.8);
           swing = 0;
         }
       }
@@ -4861,7 +4901,8 @@ export class GameRenderer {
           else if (ph < 0.7) work = -0.6 - Math.sin(((ph - 0.6) / 0.1) * Math.PI) * 0.18; // odbicie od muru
           else work = -0.6;                                                        // chwila przerwy
           lean += ph > 0.5 && ph < 0.75 ? Math.sin(((ph - 0.5) / 0.25) * Math.PI) * 0.22 : 0;
-          if (ph > 0.59 && ph < 0.65) this.sfxAt('plank', t.position.x, t.position.z, u.id, 0.5);
+          // budowa: młotek w drewno (nagrania 0 A.D.), przy murach z kamienia dłuto
+          if (ph > 0.59 && ph < 0.65) this.sfxAt(Math.random() < 0.85 ? 'hammer' : 'saw', t.position.x, t.position.z, u.id, 0.5);
         } else work = -0.6;
         swing = 0;
       }
@@ -4918,9 +4959,7 @@ export class GameRenderer {
               this.chatTurn.set(u.id, turn);
               const cam = this.cam.camera, dist = cam.position.distanceTo(t.position);
               if (dist < 9 && !this.calm) {
-                const right = this.armV.setFromMatrixColumn(cam.matrixWorld, 0);
-                const pan = ((t.position.x - cam.position.x) * right.x + (t.position.z - cam.position.z) * right.z) / Math.max(1, dist) * 1.4;
-                talk('x'.repeat(14 + (turn * 7 + u.id) % 18), u.id, false, Math.max(0, 1 - (dist - 2) / 7) * 0.35, pan);
+                this.say(u.id, false, t.position);
               }
             }
           } else lean = Math.max(0, Math.sin(this.time * 2.6 + u.id)) * 0.07; // kiwa głową, słuchając

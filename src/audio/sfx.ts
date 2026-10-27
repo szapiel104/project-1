@@ -1,8 +1,17 @@
 /**
- * Dźwięki gry: nagrania Kenney (public/sounds, licencja w docs/zasoby.md), a gdy plik się jeszcze nie wczytał,
- * zastępczy dźwięk syntezowany w przeglądarce. Do tego tło: szum otoczenia w pętli.
+ * Dźwięki gry: interfejs (Kenney), tła przyrody i muzyka. Odgłosy świata (praca, walka, ludzie, zwierzęta, ogień)
+ * gra silnik przestrzenny z engine.ts według banku bank.ts — nagrania 0 A.D., Kenney i Freesound (docs/zasoby.md).
+ * Gdy plik się jeszcze nie wczytał, część dźwięków ma zastępczą wersję syntezowaną w przeglądarce.
  * Przeglądarka pozwala grać dopiero po pierwszym kliknięciu, więc kontekst powstaje leniwie.
+ *
+ * Szyny miksu: efekty świata (z bramką pauzy) → sfx; tła przyrody i ciągłe źródła (ogień, gwar) → amb (ściszane
+ * pod walkę i krzyki); interfejs → ui; muzyka → music (ściszana pod efekty). Na końcu łagodny kompresor i limiter.
  */
+import { initEngine, play2d, hasKind } from './engine';
+import type { WorldSound } from './bank';
+import { BANK_0AD } from './bank.gen';
+export type { WorldSound } from './bank';
+export { play3d, loop3d, updateLoops, setListener, audioStats, preload, listenerPos } from './engine';
 export type Sound = 'babble' | 'click' | 'build' | 'demolish' | 'collapse' | 'error' | 'road' | 'rotate' | 'select';
 
 /** Nagrania dla każdego dźwięku; przy kilku wariantach losujemy jeden, żeby się nie powtarzało. */
@@ -11,33 +20,18 @@ const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
   build: ['placement-a', 'placement-b', 'placement-c', 'placement-d'],
   road: ['placement-a', 'placement-c'],
   demolish: ['removal-a', 'removal-b', 'removal-c', 'removal-d'],
-  collapse: ['break'],
+  collapse: BANK_0AD.collapse.map((n) => `0ad/${n}`),
   rotate: ['rotate'],
   select: ['placement-b', 'placement-d'],
   ambience: ['ambience'],
-};
-/** Dźwięki świata (CC0, Kenney i OpenGameArt — docs/zasoby.md), grane z miejsca na mapie */
-export type WorldSound = 'chop' | 'mine' | 'smith' | 'plank' | 'creak' | 'coins' | 'hit' | 'swing' | 'clang' | 'growl' | 'scream' | 'alert' | 'torch' | 'stepDirt' | 'stepStone' | 'stepWood' | 'stepGravel' | 'stepMud';
-const WORLD: Record<WorldSound, string[]> = {
-  chop: ['chop'], mine: ['mine-0', 'mine-1', 'mine-2'], smith: ['smith-0', 'smith-1', 'smith-2'], plank: ['plank-0', 'plank-1', 'plank-2'],
-  creak: ['creak-1', 'creak-2', 'creak-3'], coins: ['coins'], hit: ['hit-0', 'hit-1', 'hit-2'], swing: ['swing-0', 'swing-1', 'swing-2'],
-  clang: ['clang-0', 'clang-1'], growl: ['wolf'],
-  // krzyk uciekającego albo poległego i zaskoczone „hę?!” chłopa na widok wroga (CC0, Freesound, przez C-Dogs SDL)
-  scream: ['scream-0', 'scream-1', 'scream-2', 'scream-3', 'scream-4'], alert: ['alert-0', 'alert-1'],
-  // buchnięcie płomienia przy zapalaniu pochodni w ręce (CC0, Freesound, przez C-Dogs SDL)
-  torch: ['torch'],
-  // kroki na różnym podłożu (CC0, Kenney: Impact Sounds i OGA Footsteps)
-  stepDirt: ['step-dirt-0', 'step-dirt-1', 'step-dirt-2', 'step-dirt-3', 'step-dirt-4'],
-  stepStone: ['step-stone-0', 'step-stone-1', 'step-stone-2', 'step-stone-3', 'step-stone-4', 'step-stone-5'],
-  stepWood: ['step-wood-0', 'step-wood-1', 'step-wood-2', 'step-wood-3', 'step-wood-4'],
-  stepGravel: ['step-gravel-0', 'step-stone-5'],
-  stepMud: ['step-mud-0'],
 };
 /** Nagrania świata do teł i pojedynczych zdarzeń (docs/zasoby.md): ptaki za dnia, świerszcze nocą, odgłosy wsi,
  *  kury, dzwon w południe, róg alarmu, grzmot — 0 A.D. (Wildfire Games, CC-BY-SA 3.0) i Freesound (CC0) */
 const NATURE = {
   day: ['day-0', 'day-1', 'day-2', 'day-3'], night: ['night-0', 'night-1'], farm: ['farm-0', 'farm-1'],
-  hen: ['hen-0', 'hen-1', 'hen-2', 'hen-3'], bell: ['bell'], horn: ['horn'], thunder: ['thunder-0', 'thunder-1'],
+  bell: ['bell'], horn: ['horn'], thunder: ['thunder-0', 'thunder-1'],
+  // prawdziwy deszcz (0 A.D.) w miejsce syntezowanego szumu
+  rain: BANK_0AD.rain.map((n) => `0ad/${n}`),
 };
 const buffers = new Map<string, AudioBuffer>();
 const pick = (list: string[]): AudioBuffer | undefined => { const ok = list.filter((n) => buffers.has(n)); return ok.length ? buffers.get(ok[Math.floor(Math.random() * ok.length)]!) : undefined; };
@@ -74,10 +68,13 @@ function audio(): AudioContext | null {
   ctx = new AC();
   master = ctx.createGain();
   master.gain.value = muted ? 0 : volume;
-  // limiter na wyjściu: efekty mogą być głośniej, a suma i tak nie przesteruje
+  // sklejenie miksu: łagodny kompresor (bitwa nie skacze głośnością, cichsze detale wychodzą),
+  // a za nim twardy limiter — suma nigdy nie przesteruje, nawet przy zawaleniu się budynku w środku walki
+  const glue = ctx.createDynamicsCompressor();
+  glue.threshold.value = -20; glue.knee.value = 10; glue.ratio.value = 2.5; glue.attack.value = 0.012; glue.release.value = 0.25;
   const lim = ctx.createDynamicsCompressor();
-  lim.threshold.value = -8; lim.knee.value = 6; lim.ratio.value = 12; lim.attack.value = 0.003; lim.release.value = 0.2;
-  master.connect(lim).connect(ctx.destination);
+  lim.threshold.value = -3; lim.knee.value = 0; lim.ratio.value = 20; lim.attack.value = 0.002; lim.release.value = 0.12;
+  master.connect(glue).connect(lim).connect(ctx.destination);
   musicDuck = ctx.createGain(); musicDuck.connect(master);
   ambGate = ctx.createGain(); ambGate.gain.value = gamePaused ? 0 : 1; ambGate.connect(master);
   ambDuck = ctx.createGain(); ambDuck.connect(ambGate);
@@ -86,11 +83,13 @@ function audio(): AudioContext | null {
     gn.connect(b === 'music' ? musicDuck : b === 'amb' ? ambDuck : master); busGain[b] = gn;
   }
   worldSfx = ctx.createGain(); worldSfx.gain.value = gamePaused ? 0 : 1; worldSfx.connect(busGain.sfx!);
+  // silnik przestrzenny: odgłosy świata przez bramkę pauzy, ciągłe źródła (ogień, gwar) przez szynę otoczenia
+  initEngine(ctx, worldSfx, busGain.amb!, duck);
   noise = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate);
   const d = noise.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
   const c = ctx;
-  const names = new Set([...Object.values(FILES).flat(), ...Object.values(WORLD).flat(), ...Object.values(NATURE).flat()]);
+  const names = new Set([...Object.values(FILES).flat(), ...Object.values(NATURE).flat()]);
   for (const name of names) {
     fetch(`sounds/${name}.ogg`)
       .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(name))))
@@ -425,9 +424,15 @@ export function nature(night: number, rain: number, paused: boolean, wolvesNear 
   if (!c || muted || c.state !== 'running') return;
   // szumu wiatru nie ma (Michał 27.10.2026: „dziwny dźwięk wiatru” — syntetyczny szum brzmiał sztucznie)
   const now = c.currentTime;
-  startRain(c);
-  if (rainNoise) rainNoise.gain.gain.setTargetAtTime(rain * 0.22, now, 0.8);
-  if (rain > 0.1 && now > nextDrop) { for (let i = 0; i < 3; i++) drop(c, now + Math.random() * 0.1); nextDrop = now + 0.05 + (1 - rain) * 0.3; }
+  // deszcz: nagranie (0 A.D.) w pętli, głośność za siłą opadu; syntezowany szum tylko, gdy nagranie się jeszcze nie wczytało
+  if (pick(NATURE.rain)) {
+    bed(c, 'rain', NATURE.rain, Math.min(1, rain * 1.2) ** 1.5 * 0.45);
+    if (rainNoise) rainNoise.gain.gain.setTargetAtTime(0, now, 0.8);
+  } else {
+    startRain(c);
+    if (rainNoise) rainNoise.gain.gain.setTargetAtTime(rain * 0.22, now, 0.8);
+    if (rain > 0.1 && now > nextDrop) { for (let i = 0; i < 3; i++) drop(c, now + Math.random() * 0.1); nextDrop = now + 0.05 + (1 - rain) * 0.3; }
+  }
   if (paused) return;
   if (!nextCrow) nextCrow = now + 6 + Math.random() * 10;
   if (!nextWolf) nextWolf = now + 90 + Math.random() * 90;
@@ -471,6 +476,7 @@ export function caveSounds(water: number, picks: number): void {
   if (!c || muted || c.state !== 'running') return;
   const now = c.currentTime;
   if (rainNoise) rainNoise.gain.gain.setTargetAtTime(0, now, 0.4);
+  bed(c, 'rain', NATURE.rain, 0);
   if (now > nextDrip) {
     drip(c, now, Math.random() * 1.4 - 0.7, 0.5 + water * 0.7);
     if (Math.random() < 0.3) drip(c, now + 0.18 + Math.random() * 0.2, Math.random() * 1.4 - 0.7, 0.4 + water * 0.5);
@@ -490,25 +496,12 @@ export function caveSounds(water: number, picks: number): void {
 }
 
 /**
- * Dźwięk z miejsca na mapie: `near` 0..1 (1 = przy środku ekranu), `pan` -1..1 (lewo/prawo).
- * Daleko — cicho i bez wysokich tonów nie ma sensu grać, więc poniżej progu po prostu milczymy.
+ * Dźwięk „przy uchu”: `near` 0..1 (siła), `pan` -1..1. Do spaceru (własne kroki, skrzypienie drabiny, pochodnia w ręce);
+ * dźwięki z miejsca w świecie idą przez play3d (engine.ts), który sam liczy odległość od słuchacza.
  */
 export function playAt(kind: WorldSound, near: number, pan: number, gain = 1): void {
-  const c = ctx;
-  if (!c || muted || c.state !== 'running' || near < 0.05) return;
-  const list = WORLD[kind];
-  const buf = buffers.get(list[Math.floor(Math.random() * list.length)]!);
-  if (!buf) return;
-  const src = c.createBufferSource();
-  src.buffer = buf;
-  src.playbackRate.value = 0.92 + Math.random() * 0.16;
-  const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
-  // głośność z odległości opada łagodniej niż z kwadratem — z bliska wyraźnie, z daleka cicho, ale słychać
-  const level = Math.pow(near, 1.5) * gain;
-  const g = c.createGain(); g.gain.value = level;
-  src.connect(g).connect(p).connect(worldSfx ?? master!);
-  src.start();
-  duck(level);
+  if (muted || near < 0.05) return;
+  play2d(kind, near * gain, pan);
 }
 
 /**
@@ -518,6 +511,9 @@ export function playAt(kind: WorldSound, near: number, pan: number, gain = 1): v
 export function talk(text: string, voice: number, shout = false, gain = 1, pan = 0): void {
   const c = ctx;
   if (!c || muted || c.state !== 'running' || gain <= 0.01) return;
+  // nagrane głosy (0 A.D.): każdy człowiek ma swoją barwę (z id) — niżej albo wyżej o kilka procent
+  const kind: WorldSound = shout ? 'shout' : 'talk';
+  if (hasKind(kind)) { play2d(kind, gain, pan, 0.9 + (voice % 9) * 0.025); return; }
   // rozmowa w osadzie: ciszej i z boku, tam gdzie stoją rozmówcy
   const outN = c.createGain(); outN.gain.value = gain;
   const panN = c.createStereoPanner(); panN.pan.value = Math.max(-1, Math.min(1, pan));
@@ -931,65 +927,4 @@ function stopTrack(c: AudioContext): void {
   fading.add(el);
   setTimeout(() => { el.pause(); el.removeAttribute('src'); el.load(); fading.delete(el); }, 3000);
   trackEl = null; trackGain = null; trackMood = null;
-}
-
-/**
- * Zwierzęta w osadzie (syntezowane): szczekanie psa, gdakanie kury, chrząkanie świni.
- * `near` 0..1 (blisko kamery = głośno), `pan` -1..1.
- */
-export function animal(kind: 'bark' | 'cluck' | 'grunt', near: number, pan: number): void {
-  const c = ctx;
-  if (!c || muted || c.state !== 'running' || near < 0.05) return;
-  const p = c.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan));
-  const out = c.createGain(); out.gain.value = near * near;
-  out.connect(p).connect(worldSfx ?? master!);
-  const t0 = c.currentTime + 0.01;
-  if (kind === 'bark') {
-    // „hau hau”: dwa krótkie, chropawe szczeknięcia z opadającym tonem
-    const n = 1 + Math.floor(Math.random() * 3);
-    for (let i = 0; i < n; i++) {
-      const at = t0 + i * (0.22 + Math.random() * 0.08);
-      const o = c.createOscillator(); o.type = 'sawtooth';
-      const f0 = 330 + Math.random() * 80;
-      o.frequency.setValueAtTime(f0, at); o.frequency.exponentialRampToValueAtTime(f0 * 0.55, at + 0.13);
-      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 2.2;
-      const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.5, at + 0.012); g.gain.exponentialRampToValueAtTime(0.001, at + 0.15);
-      o.connect(f).connect(g).connect(out); o.start(at); o.stop(at + 0.17);
-      if (noise) {
-        const ns = c.createBufferSource(); ns.buffer = noise; ns.playbackRate.value = 0.8;
-        const nf = c.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 1300; nf.Q.value = 1.2;
-        const ng = c.createGain(); ng.gain.setValueAtTime(0.0001, at); ng.gain.exponentialRampToValueAtTime(0.25, at + 0.01); ng.gain.exponentialRampToValueAtTime(0.001, at + 0.1);
-        ns.connect(nf).connect(ng).connect(out); ns.start(at); ns.stop(at + 0.12);
-      }
-    }
-  } else if (kind === 'cluck' && pick(NATURE.hen)) {
-    // nagrane gdakanie kury (0 A.D.)
-    const src = c.createBufferSource(); src.buffer = pick(NATURE.hen)!; src.playbackRate.value = 0.92 + Math.random() * 0.18;
-    const g = c.createGain(); g.gain.value = 0.7; src.connect(g).connect(out); src.start(t0);
-  } else if (kind === 'cluck') {
-    // gdakanie: kilka szybkich, wysokich „ko-ko-ko” i dłuższe na końcu
-    const n = 3 + Math.floor(Math.random() * 4);
-    for (let i = 0; i < n; i++) {
-      const at = t0 + i * 0.09 + (i === n - 1 ? 0.08 : 0);
-      const o = c.createOscillator(); o.type = 'square';
-      const f0 = 700 + Math.random() * 200, len = i === n - 1 ? 0.16 : 0.05;
-      o.frequency.setValueAtTime(f0, at); o.frequency.linearRampToValueAtTime(f0 * (i === n - 1 ? 1.4 : 0.85), at + len);
-      const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1500; f.Q.value = 3;
-      const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.12, at + 0.008); g.gain.exponentialRampToValueAtTime(0.001, at + len);
-      o.connect(f).connect(g).connect(out); o.start(at); o.stop(at + len + 0.02);
-    }
-  } else {
-    // chrząkanie: niski, chrapliwy pomruk raz albo dwa razy
-    const n = 1 + Math.floor(Math.random() * 2);
-    for (let i = 0; i < n; i++) {
-      const at = t0 + i * 0.3;
-      const o = c.createOscillator(); o.type = 'sawtooth';
-      o.frequency.setValueAtTime(95 + Math.random() * 20, at); o.frequency.linearRampToValueAtTime(70, at + 0.22);
-      const am = c.createGain(); am.gain.value = 0.6;
-      const lfo = c.createOscillator(); lfo.frequency.value = 28; const lg = c.createGain(); lg.gain.value = 0.4; lfo.connect(lg).connect(am.gain);
-      const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 600;
-      const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.6, at + 0.03); g.gain.exponentialRampToValueAtTime(0.001, at + 0.25);
-      o.connect(am).connect(f).connect(g).connect(out); o.start(at); lfo.start(at); o.stop(at + 0.27); lfo.stop(at + 0.27);
-    }
-  }
 }

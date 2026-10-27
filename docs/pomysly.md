@@ -15,6 +15,13 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - [ ] `idleCount` liczony przez pasek u dołu w każdej klatce — wystarczy raz na kilka ticków
 - [ ] `render/scene.ts` ma ok. 5300 linii: wydzielić kolejne warstwy (ludzie, budynki, światła) do osobnych plików jak `piles.ts`, `rubble.ts`
 
+## Dźwięk — dalej (po 0.54.0, silnik w `src/audio/engine.ts`, bank w `src/audio/bank.ts`)
+- Wilki (wycie, ujadanie), wrony, puszczyk i wieczorne ptaki dalej są syntezowane — szukać prawdziwych nagrań CC0/CC BY (w 0 A.D. i paczkach z GitHuba ich nie ma)
+- Brak nagrań: kowadło kowala (teraz uderzenia w metal z kopalni), młyn, zwodzony most, wiatr w liściach przy burzy (Michałowi nie pasował syntetyczny), kroki konia
+- Kobiety i dzieci z chat: głosy kobiece są już w banku (`talkFemale`, `deathFemale`) — podpiąć, gdy będą miały własne odzywki
+- Wnętrza: w chacie, karczmie i sztolni inny pogłos (osobna szyna z krótkim, ciasnym echem) zamiast wspólnego pogłosu osady
+- Zasłanianie dźwięku murami (źródło za murem twierdzy głuchsze) — z linii widzenia z `sim/systems/sight.ts`
+
 ## Magazyny — dalej (po 0.52.0, opis logiki w `docs/magazyny.md`)
 - Magazynier widocznie inny niż chłop (fartuch, worek na plecach) i w oknie budynku podpowiedź, który to
 - Wóz magazynu: przy dużej osadzie dwukółka przewozi towar między odległymi magazynami (np. spod kopalni do stodoły)
