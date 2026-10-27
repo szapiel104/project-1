@@ -17,6 +17,7 @@ import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
 import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
+import { createGameAsync } from './sim/mapthread';
 import { applyCommands, step, type Command } from './sim/step';
 import { doleCost, rioters } from './sim/systems/unrest';
 import { canQuarantine, magesOf, startPlague } from './sim/systems/plague';
@@ -243,6 +244,9 @@ if (!TEST && !savedThumbs) void texturesReady().then(() => {
 mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
 /** Mapa generowana w podglądzie nowej gry (null = brak podglądu) */
 let preview: GameState | null = null;
+/** Ustawienia, z którymi policzono `preview` — „Graj” z tymi samymi bierze gotową mapę zamiast liczyć ją drugi raz */
+let previewKey = '';
+const previewKeyOf = (seedText: string, preset: MapPresetId, level: number, dev: boolean, walls: DevWalls | undefined): string => JSON.stringify([seedText, preset, level, dev, walls ?? 'mix']);
 /** Zasłona na czas generowania mapy w podglądzie nowej gry (za panelem menu) */
 let previewJob = 0;
 const previewCover = document.createElement('div');
@@ -260,14 +264,18 @@ const menu = createMenu(document.body, {
   },
   // podgląd nowej mapy: generujemy ją obok bieżącej gry i pokazujemy z lotu ptaka; bieżąca gra czeka nietknięta
   onPreviewMap: (seedText, preset, level, dev, walls) => {
-    // generowanie mapy zatrzymuje stronę na chwilę: najpierw ciemna zasłona z kręciołkiem za menu (lewy panel zostaje),
+    // najpierw ciemna zasłona z kręciołkiem za menu (lewy panel zostaje),
     // potem mapa, a zasłona schodzi dopiero, gdy pierwsze klatki nowej mapy są narysowane i kamera rusza
     const job = ++previewJob;
     previewCover.hidden = false;
     previewCover.classList.remove('gone');
     requestAnimationFrame(() => requestAnimationFrame(async () => {
       if (job !== previewJob) return; // w międzyczasie wylosowano kolejną mapę
-      preview = createGame(seedFromText(seedText), preset, level, dev, undefined, true, walls ?? 'mix');
+      // sama mapa liczy się w osobnym wątku (sim/mapthread.ts): kręciołek się kręci, menu nie staje
+      const next = await createGameAsync(seedFromText(seedText), preset, level, dev, walls ?? 'mix');
+      if (job !== previewJob) return; // w międzyczasie wylosowano kolejną mapę albo zamknięto podgląd
+      preview = next;
+      previewKey = previewKeyOf(seedText, preset, level, dev, walls);
       // teren etapami, z przerwą na klatkę między nimi: kręciołek się kręci, strona nie staje
       const built = await renderer.setStateAsync(preview, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, 0, pauseFrame);
       if (!built || job !== previewJob) return;
@@ -295,11 +303,13 @@ const menu = createMenu(document.body, {
   },
   onNewGame: (seedText, preset, level, dev, instant, walls) => {
     previewJob++; previewCover.hidden = true;
+    // mapa z podglądu jest jeszcze nieruszona (tick 0, symulacja w podglądzie nie rusza): przy tych samych ustawieniach bierzemy ją
+    const ready = preview && instant && preview.tick === 0 && previewKey === previewKeyOf(seedText, preset, level, dev, walls) ? preview : undefined;
     preview = null;
     renderer.endPreview();
     // nowa mapa buduje się za ekranem wczytywania, a nie w zawieszonym menu
     enterGame(t('load.map'), () => {
-      start(seedText, preset, undefined, level, dev, undefined, instant, walls);
+      start(seedText, preset, undefined, level, dev, undefined, instant, walls, ready);
       setStatus({ where: 'solo' });
     });
   },
@@ -709,14 +719,15 @@ function crestList(): (number | null)[] {
 // konto wczytuje się chwilę po starcie gry, a herb można zmienić w trakcie: flagi na mapie idą za kontem od razu
 onAccount(() => { if (game) renderer.setCrests(crestList()); });
 
-function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS): void {
+/** `fresh` = nowa, jeszcze nieruszona gra policzona wcześniej z tymi samymi ustawieniami (mapa z podglądu „Nowej gry”) */
+function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS, fresh?: GameState): void {
   tierSeen = -1;
   endShown = false;
   gameOver = false;
   endOnline();
   ME = online ? online.me : 0;
   caravanSeen = -1; allies.close(); pings.clear();
-  game = loaded ?? createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true);
+  game = loaded ?? (!online && fresh ? fresh : createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true));
   if (EMPTY && !loaded && !online) emptyScene(game);
   // wątek symulacji: tylko gra z botami bez trybu dewelopera i testów (tam wątek główny też zmienia stan gry)
   simGen++; simBusy = false;

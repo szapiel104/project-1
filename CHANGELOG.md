@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.54.3 — menu nie staje przy losowaniu mapy, szybszy start nowej gry (2026-10-27)
+
+- **„Losuj inną mapę” bez zacięcia:** nowa mapa do podglądu (teren, lasy, złoża, twierdze, ok. 150–300 ms liczenia, przy 4 na 4 najdłużej) liczy się teraz w osobnym wątku (`sim/mapworker.ts`, `sim/mapthread.ts`). Menu, kręciołek i przyciski działają w tym czasie normalnie. Szybkie klikanie „Losuj” kilka razy z rzędu nie układa kolejki: pokazuje się tylko ostatnio wylosowana mapa
+- **Szybszy start:** „Graj” z tymi samymi ustawieniami co podgląd (ziarno, tryb, poziom, tryb dewelopera, mury) bierze gotową mapę z podglądu zamiast liczyć ją drugi raz. Gdy ustawienia się różnią albo wyłączone jest „budowanie od razu”, mapa liczy się jak dotąd
+- Gdy przeglądarka nie obsługuje wątków albo wątek padnie, mapa liczy się po staremu w wątku głównym
+- Wynik z wątku to ta sama gra co policzona na miejscu (generator z ziarnem); test `tests/mapthread.test.ts`
+- Bot: bez zmian (samo liczenie mapy)
 ## 0.54.2 — szybsze wczytywanie: modele spakowane bez strat (2026-10-27)
 
 - **Modele jadą do gry spakowane:** zamiast 71 plików JSON (ok. 10,8 MB przez sieć po gzip) gra pobiera pliki `.bin` o łącznej wadze ok. 6 MB, czyli **o ok. 44% mniej do pobrania** przy pierwszym wejściu i po każdej aktualizacji modeli. Liczby siatek nie są już zapisane w base64, te same strumienie (np. wersja z bliska i z daleka tego samego przedmiotu) lecą raz, a dane przechodzą przez kodek wierzchołków meshoptimizer (ten sam co w glTF) i deflate

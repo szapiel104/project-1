@@ -5,7 +5,7 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 ## Płynność wczytywania i gry — po przeglądzie 26.10.2026 (Claude podpowiada stąd przy „co dalej”)
 - [x] Pory roku: łatki materiałów dokładane od razu (przed kompilacją), a nie skanem co 3 s — bez drugiej kompilacji na żywo (0.51.12)
 - [x] „Nowa gra”: teren podglądu budowany etapami z przerwą na klatkę, zamiast ~0,7 s zatrzymania strony; to samo przy „Wstecz” (0.51.12)
-- [ ] „Nowa gra” dalej staje na ok. 0,6–1 s: to już samo generowanie mapy w symulacji (`createGame`), przed budową terenu. Do zrobienia: generowanie w wątku (jest już `createSimThread`, `?watek`) i przekazanie stanu przez `serialize`/`deserialize`
+- [x] „Nowa gra” stawała na ok. 0,6–1 s przez generowanie mapy (`createGame`) — zrobione 27.10.2026 (0.54.3): podgląd liczy mapę w osobnym wątku (`sim/mapthread.ts`), a „Graj” bierze gotową mapę z podglądu zamiast liczyć ją drugi raz. Start z zapisu i gra online nadal liczą mapę w wątku głównym (za ekranem wczytywania)
 - [ ] Start gry: krok „Budowanie świata i osady” (1,8–2,4 s jednym ciągiem) podzielić na etapy z paskiem — teren już ma `buildTerrainAsync`, zostaje `start()`/`createGame` i wejście przez `enterGame` (tam `setState` nadal w jednym kawałku)
 - [ ] Liczba trójkątów 6,5–8,7 mln w kadrze: na RTX 5070 karta liczy klatkę w 6–10 ms, ale na słabszym laptopie (Mikołaj) to pierwsze wąskie gardło — upraszczać tylko wersje z daleka (zasada Michała z 19.10)
 - [ ] Cienie nowych obiektów: shader cienia nowego rodzaju modelu kompiluje się przy pierwszym rzucie cienia (`precompile.ts` łapie tylko zwykłe rysowanie) — rzadkie, małe przycięcie
