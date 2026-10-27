@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.52.2 — pasek budowy na całą szerokość (2026-10-27)
+
+- Po otwarciu kategorii (Osada, Żywność, Przemysł…) pasek z budynkami rozciąga się od lewej do prawej krawędzi ekranu, więc mieści się więcej kart. Grupy wojska 1–0 i minimapa w tym czasie chowają się płynnie, a po zamknięciu wracają dokładnie tak, jak były (zwinięta minimapa zostaje zwinięta)
+- Koszt budynku na karcie to krótki rząd ikon z liczbami zamiast „Drewno: 99 · Kamień: 44 · Ruda: 66” w kilku linijkach — karty są niższe i równe; pełny opis kosztu w podpowiedzi
+- Grupy wojska 1–0 można zwinąć strzałką obok (zostaje mały przycisk „1–0”); stan zapamiętuje przeglądarka. Skróty klawiszowe grup działają też po zwinięciu
+
 ## 0.52.1 — każdy magazyn ma swoją zawartość (2026-10-27)
 
 - Okno składu, stodoły, spichlerza i zbrojowni pokazuje dokładnie to, co leży w tym jednym budynku, i ile sztuk (pasek też liczy tylko ten budynek); pod spodem suma ze wszystkich magazynów tego rodzaju, gdy jest ich więcej

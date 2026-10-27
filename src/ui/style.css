@@ -119,6 +119,13 @@ ul { list-style: none; }
 
 /* karty budynków wyskakują nad belką, na środku, jak paleta narzędzi */
 .buildbar { justify-self: center; padding: 8px 10px; display: grid; gap: 6px; width: fit-content; max-width: calc(100% - 16px); margin-bottom: -2px; }
+/* otwarte kategorie: pasek od lewej do prawej krawędzi, a grupy wojska i minimapa schodzą z drogi (wracają po zamknięciu) */
+body.build-open .buildbar { justify-self: stretch; width: auto; max-width: none; margin: 0 8px -2px; animation: build-in .16s ease-out; }
+body.build-open .armybar { display: none; }
+.minimap, .minimap-show { transition: opacity .16s ease, transform .16s ease, visibility 0s linear 0s; }
+body.build-open .minimap, body.build-open .minimap-show { opacity: 0; transform: translateY(14px); visibility: hidden; pointer-events: none; transition: opacity .16s ease, transform .16s ease, visibility 0s linear .16s; }
+@keyframes build-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { body.build-open .buildbar { animation: none; } .minimap, .minimap-show, body.build-open .minimap, body.build-open .minimap-show { transition: none; } }
 .cards { display: flex; gap: 6px; overflow-x: auto; min-width: 0; padding: 0 2px; scrollbar-width: thin; scrollbar-color: var(--wood) transparent; }
 
 /* przyciski: deska z fazą, czerwone jak lak, wciskane */
@@ -150,7 +157,9 @@ button:active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, .6); transform: transl
 .card:hover { background: linear-gradient(#fffaf0, var(--parchment-light)); color: var(--ink); border-color: var(--seal); box-shadow: inset 0 0 0 2px var(--seal); }
 .card[aria-pressed='true'] { background: linear-gradient(#a8281f, #6e1711); color: #fff; border-color: var(--gold); box-shadow: inset 0 0 0 1px var(--gold); }
 .build-name { font-family: var(--display); font-weight: 600; font-size: 13px; letter-spacing: .03em; }
-.build-cost { font-size: 14px; }
+.build-cost { display: flex; flex-wrap: wrap; justify-content: center; gap: 1px 7px; margin-top: 2px; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+.cost-chip { display: inline-flex; align-items: center; gap: 2px; white-space: nowrap; }
+.cost-chip .ico { display: inline-grid; line-height: 0; }
 .card.poor .build-cost { color: var(--bad); font-weight: 700; }
 .card.poor[aria-pressed='true'] .build-cost { color: #fff; }
 .card.poor img { filter: grayscale(1); opacity: .6; }
@@ -749,6 +758,14 @@ body.walking #ui, body.walking .scribe, body.walking .scribe-log, body.walking .
 .army-slot-pic svg { width: 32px; height: 32px; }
 .army-slot-n { position: absolute; left: 3px; top: 1px; font-family: var(--display); font-weight: 700; font-size: 13px; color: var(--gold); text-shadow: 0 1px 0 #000, 0 0 3px #000; }
 .army-slot-count { position: absolute; right: 2px; bottom: 1px; font-weight: 700; font-size: 13px; color: #fff; text-shadow: 0 1px 0 #000, 0 0 3px #000; font-variant-numeric: tabular-nums; }
+.army-groups { display: flex; align-items: stretch; }
+.army-slots[hidden] { display: none; }
+.army-toggle { min-height: 0; width: auto; min-width: 28px; padding: 0 6px; display: flex; align-items: center; justify-content: center; gap: 3px; color: var(--gold); background: linear-gradient(#4a321c, #2e1d0f); border: 1px solid var(--gold-dark); box-shadow: inset 0 1px 0 rgba(255, 220, 160, .25), 0 0 0 1px var(--wood-edge); }
+.army-slots:not([hidden]) + .army-toggle { border-left: 0; }
+.army-toggle:hover { color: #fff; }
+.army-toggle[aria-expanded="false"] { height: 50px; padding: 0 10px; }
+.army-toggle-n { font: 700 14px var(--display); letter-spacing: .04em; }
+.army-toggle:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 .army-slot:focus-visible { outline: 3px solid var(--focus); outline-offset: 1px; }
 .army-picked { display: flex; flex-wrap: wrap; align-content: flex-end; gap: 3px; width: max-content; max-width: min(760px, calc(100vw - 560px)); padding: 3px; background: rgba(35, 22, 11, .82); border: 1px solid var(--gold-dark); }
 .army-picked .roster-card { width: 34px; flex: none; }

@@ -177,6 +177,31 @@ function costText(def: BuildingDef, cost: Partial<Record<ResourceId, number>> = 
   return parts.length ? parts.join(' · ') : t('hud.free');
 }
 
+/** Koszt budynku jako rząd ikon z liczbami (krótko, zamiast „Drewno: 33 · Kamień: 44”); pełny opis w title/aria. */
+function paintCost(box: HTMLElement, def: BuildingDef, cost: Partial<Record<ResourceId, number>> = def.cost): void {
+  const key = JSON.stringify(cost);
+  if (box.dataset.k === key) return;
+  box.dataset.k = key;
+  const full = costText(def, cost);
+  box.title = full;
+  box.setAttribute('aria-label', full);
+  const parts = Object.entries(cost);
+  if (!parts.length) { box.replaceChildren(document.createTextNode(t('hud.free'))); return; }
+  box.replaceChildren(...parts.map(([k, v]) => {
+    const chip = document.createElement('span');
+    chip.className = 'cost-chip';
+    if (ICONS[k]) {
+      const ico = document.createElement('span');
+      ico.className = 'ico';
+      ico.setAttribute('aria-hidden', 'true');
+      ico.innerHTML = `<svg viewBox="0 0 20 20" width="16" height="16">${ICONS[k]}</svg>`;
+      chip.append(ico);
+    } else chip.append(document.createTextNode(`${t(RESOURCE_DEFS[k as ResourceId].name).slice(0, 4)}. `));
+    chip.append(document.createTextNode(String(v)));
+    return chip;
+  }));
+}
+
 /** Proste ikony surowców (SVG 20x20), rysowane ręcznie w jednym stylu. */
 const ICONS: Record<string, string> = {
   // jedzenie razem: wiklinowy kosz z bochenkiem i jabłkiem (inna ikona niż same jabłka)
@@ -854,7 +879,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     syncPicker();
   };
   // panel z kartami wyskakuje nad paskiem narzędzi tylko wtedy, gdy jest co pokazać
-  const syncPicker = (): void => { buildbar.hidden = cards.hidden && buildFoot.hidden; };
+  // otwarty pasek budowy zajmuje całą szerokość: grupy wojska i minimapa chowają się (CSS: body.build-open), a po zamknięciu wracają w tym stanie, w jakim były
+  const syncPicker = (): void => { buildbar.hidden = cards.hidden && buildFoot.hidden; document.body.classList.toggle('build-open', !cards.hidden); };
   const CAT_ICON: Record<string, string> = { settlement: 'house', food: 'farm', industry: 'woodcutter', military: 'barracks', defense: 'watchtower', roads: 'roadStone' };
   for (const id of CATEGORIES) {
     const b = el('button', 'cat');
@@ -885,7 +911,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const text = el('span', 'card-text');
     const need = el('span', 'build-need');
     need.hidden = true;
-    text.append(el('span', 'build-name', t(def.name)), el('span', 'build-cost', costText(def)), need);
+    const costBox = el('span', 'build-cost');
+    paintCost(costBox, def);
+    text.append(el('span', 'build-name', t(def.name)), costBox, need);
     b.append(text);
     b.addEventListener('click', () => events.onPickBuilding(picked === def.id ? null : def.id));
     buildButtons.set(def.id, b);
@@ -1037,7 +1065,28 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const pickedBox = el('div', 'army-picked');
   pickedBox.setAttribute('role', 'group');
   pickedBox.setAttribute('aria-label', t('hud.soldiers'));
-  armyBar.append(slotsWrap, pickedBox);
+  // grupy 1–0 można zwinąć do jednego przycisku (stan zapamiętany w przeglądarce)
+  const slotsToggle = el('button', 'army-toggle');
+  slotsToggle.type = 'button';
+  slotsToggle.setAttribute('aria-controls', 'army-slots');
+  slotsWrap.id = 'army-slots';
+  let slotsOpen = true;
+  try { slotsOpen = localStorage.getItem('project1.armyOpen') !== '0'; } catch { /* bez pamięci przeglądarki */ }
+  const paintSlotsToggle = (): void => {
+    slotsWrap.hidden = !slotsOpen;
+    slotsToggle.setAttribute('aria-expanded', String(slotsOpen));
+    const label = slotsOpen ? tx('Zwiń grupy wojska', 'Fold army groups') : tx('Pokaż grupy wojska (1–0)', 'Show army groups (1–0)');
+    slotsToggle.title = label;
+    slotsToggle.setAttribute('aria-label', label);
+    slotsToggle.innerHTML = slotsOpen
+      ? '<svg viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M12.5 4l-6 6 6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>'
+      : `<span class="army-toggle-n">1–0</span><svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M7.5 4l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4"/></svg>`;
+  };
+  slotsToggle.addEventListener('click', () => { slotsOpen = !slotsOpen; try { localStorage.setItem('project1.armyOpen', slotsOpen ? '1' : '0'); } catch { /* jw. */ } paintSlotsToggle(); });
+  paintSlotsToggle();
+  const slotsBox = el('div', 'army-groups');
+  slotsBox.append(slotsWrap, slotsToggle);
+  armyBar.append(slotsBox, pickedBox);
   const slots = [1, 2, 3, 4, 5, 6, 7, 8, 9, 0].map((n) => {
     const b = el('button', 'army-slot');
     b.type = 'button';
@@ -1155,7 +1204,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const lock = v.locked.get(id);
         const def = BUILDINGS.find((d) => d.id === id);
         const costEl = b.querySelector<HTMLElement>('.build-cost');
-        if (def && costEl) setText(costEl, costText(def, v.costs.get(id)));
+        if (def && costEl) paintCost(costEl, def, v.costs.get(id));
         b.classList.toggle('poor', !lock && !v.affordable.has(id));
         b.classList.toggle('locked', !!lock);
         const need = b.querySelector<HTMLElement>('.build-need')!;
