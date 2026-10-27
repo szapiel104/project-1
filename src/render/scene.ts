@@ -4978,7 +4978,7 @@ export class GameRenderer {
         this.armM.makeRotationFromEuler(this.gripE.set(toolArm, 0, drawing >= 0 ? -TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB) : -TWO_HAND)).setPosition(0.135, 0.45, 0);
         (chopping ? this.axes : this.picks).setMatrixAt(i, this.armM.premultiply(this.armS.copy(t.matrix).scale(this.armV.setScalar(sz))));
         (chopping ? this.picks : this.axes).setMatrixAt(i, ZERO);
-      } else if (fighting) {
+      } else if (fighting && !robed) {
         // broń z pleców albo zza pasa w dłoni
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
         this.armM.makeRotationX(fightArm).setPosition(0.135, 0.45, 0);
@@ -4988,14 +4988,14 @@ export class GameRenderer {
       } else { this.axes.setMatrixAt(i, ZERO); this.picks.setMatrixAt(i, ZERO); }
       if (!fighting) this.clubs.setMatrixAt(i, ZERO);
       // na co dzień broń wisi na plecach albo u pasa (kopacz trzyma kilof w ręku tylko przy złożu)
-      const stowed = !fighting && (!(mining && weapon === 'pick') || pickOnBack);
+      // magowie i kaznodzieja nie noszą kilofa ani maczugi (pula narzędzi tylko dokłada, więc nie wolno ich nawet wstawić)
+      const stowed = !robed && !fighting && (!(mining && weapon === 'pick') || pickOnBack);
       if (stowed) {
         const sz = this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888);
         this.armS.copy(t.matrix).scale(this.armV.setScalar(sz));
         (weapon === 'pick' ? this.backPicks : this.beltClubs).setMatrixAt(i, this.armS);
         (weapon === 'pick' ? this.beltClubs : this.backPicks).setMatrixAt(i, ZERO);
       } else { this.backPicks.setMatrixAt(i, ZERO); this.beltClubs.setMatrixAt(i, ZERO); }
-      if (robed) for (const pool of [this.axes, this.picks, this.clubs, this.backPicks, this.beltClubs]) pool.setMatrixAt(i, ZERO);
       const wood = u.carryRes === WOOD;
       // kłodę ciągnie tylko drwal z lasu; włóczniarz niesie ze składu zwykłe deski
       const jb = u.job ? jobs.get(u.job) : undefined;

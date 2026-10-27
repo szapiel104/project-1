@@ -121,10 +121,10 @@ export class SpellLayer {
       n++;
       // ogon: iskry i żar (ogień) albo krople i mgiełka (woda), wyrzucane do tyłu i lekko na boki
       const back = this.d.clone().multiplyScalar(-1.6);
-      const count = a.fire ? 3 : 2;
+      const count = a.fire ? 5 : 4;
       for (let i = 0; i < count; i++) {
         const v = back.clone().add(this.jitter(a.fire ? 1.4 : 1.1));
-        this.emit(this.p, v, 0.25 + this.rand() * 0.3, a.fire ? (this.rand() < 0.6 ? 0 : 1) : 2, (a.fire ? 0.028 : 0.024) * (0.6 + this.rand() * 0.8));
+        this.emit(this.p.clone().addScaledVector(this.d, -this.rand() * 0.15), v, 0.18 + this.rand() * 0.25, a.fire ? (this.rand() < 0.6 ? 0 : 1) : 2, (a.fire ? 0.022 : 0.019) * (0.6 + this.rand() * 0.8));
       }
       if (a.fire && this.rand() < 0.35) this.emit(this.p, back.clone().multiplyScalar(0.3).add(new THREE.Vector3(0, 0.4, 0)), 0.5, 3, 0.05);
       if (a.fire) {
@@ -139,7 +139,7 @@ export class SpellLayer {
     for (const b of this.bursts) {
       const k = 1 - b.t;
       const flashK = Math.max(0, 1 - b.t * 2.4); // błysk krótszy niż fala
-      if (flashK > 0) this.put(this.flash, f, b.at, (b.fire ? 0.28 : 0.24) + b.t * 0.6, this.c.copy(b.fire ? FIRE_CORE : WATER_CORE).multiplyScalar(flashK));
+      if (flashK > 0) this.put(this.flash, f, b.at, (b.fire ? 0.17 : 0.15) + b.t * 0.32, this.c.copy(b.fire ? FIRE_CORE : WATER_CORE).multiplyScalar(flashK));
       else this.put(this.flash, f, b.at, 0.0001, this.c.setRGB(0, 0, 0));
       // cel jest ok. 0,4 nad ziemią (pierś) — fala rozchodzi się tuż nad gruntem pod nim
       this.p.copy(b.at).setY(b.at.y - 0.36);
