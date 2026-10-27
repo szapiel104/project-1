@@ -901,7 +901,8 @@ export function armySystem(g: GameState): void {
   const heals = healers(g);
   for (const s of g.soldiers) {
     if (s.hp <= 0) continue;
-    if (s.cd > 0) s.cd--;
+    // przymrożony czarem wody wolniej się porusza i wolniej zadaje ciosy (odliczanie co drugi tick)
+    if (s.cd > 0 && !((s.slow ?? 0) > g.tick && g.tick % 2)) s.cd--;
     s.hitting = 0;
     if (!s.path.length && s.run) s.run = Math.max(0, s.run - 3); // stoi: rozbieg gaśnie
     const def = UNITS[s.kind]!;
@@ -1002,6 +1003,7 @@ export function armySystem(g: GameState): void {
           if (s.cd === 0) {
             // strzelcy nie strzelają równo jak na komendę: każdy naciąga łuk w swoim rytmie (kilka ticków rozrzutu)
             s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
+            if (range) s.shot = g.tick;
             // strzała może chybić; chybiona spada w kłąb walki i może zranić swojego, który stoi tuż przy celu
             let hit: Soldier | undefined = foe;
             if (range && !def.magic && !arrowHits(g, s, gap(s, foe))) {
@@ -1012,7 +1014,8 @@ export function armySystem(g: GameState): void {
               const dmg = hit === foe ? hitDamage(g, s, foe, byId, !!range) : Math.max(1, def.attack >> 1);
               if (range) {
                 // strzała albo czar leci: trafienie (i śmierć) w chwili dolecenia, ognista strzała dodatkowo podpala
-                const fire = !def.magic && fireArrow(g, s);
+                // kula ognia też podpala (płomień na trafionym, zdrowie schodzi po trochu)
+                const fire = def.magic === 'fire' || (!def.magic && fireArrow(g, s));
                 (g.missiles ??= []).push({ to: hit.id, dmg, at: g.tick + (def.magic ? spellTicks(gap(s, foe)) : ARROW_TICKS), from: s.id, by: s.owner, ...(fire ? { burn: burnFor(dmg) } : {}), ...(def.magic && hit === foe ? { magic: true } : {}) });
               } else {
                 hit.hp -= dmg;
@@ -1067,6 +1070,7 @@ export function armySystem(g: GameState): void {
             s.hitting = prey.id;
             if (s.cd === 0) {
               s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
+              if (range) s.shot = g.tick;
               if (range) (g.missiles ??= []).push({ to: prey.id, unit: true, dmg: def.attack, at: g.tick + (def.magic ? spellTicks(Math.max(Math.abs(prey.px - s.px), Math.abs(prey.py - s.py))) : ARROW_TICKS), from: s.id, by: s.owner });
               else {
                 prey.hp = (prey.hp ?? 30) - def.attack;

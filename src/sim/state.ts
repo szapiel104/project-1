@@ -411,6 +411,8 @@ export interface Soldier {
   douse?: number;
   /** Saper: pole ostatnio rozbieranej ruiny (stąd szuka następnej) */
   dig?: number;
+  /** Strzelec: tick ostatniego wypuszczenia strzały albo czaru (obraz puszcza strzałę dokładnie w tej chwili) */
+  shot?: number;
   /** Płonie po ognistej strzale: ile jeszcze zdrowia zabierze ogień (po 1 co kilka ticków) i czyj to ogień */
   burn?: number;
   burnBy?: number;

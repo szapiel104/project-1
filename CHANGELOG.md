@@ -1,5 +1,18 @@
 # Dziennik zmian
 
+## 0.53.6 — magia mocniejsza, ogień i lód widać, strzały prosto i w rytm łuku (2026-10-27)
+
+- **Magowie mocniejsi:** mag Płomienia 26 obrażeń co 3,2 s (było 15 co 4 s) i podpala trafionego, mag Źródła 15 co 2,6 s (było 8 co 3 s)
+- **Przymrożenie czarem wody:** trafiony przez 6 s chodzi o połowę wolniej i wolniej zadaje ciosy; widać lodowe kryształki wokół stóp i chłodną poświatę, a jego pasek zdrowia świeci na niebiesko
+- **Płonący** (ognista strzała, kula ognia): zamiast dwóch świeczek nad głową — języki ognia na ubraniu, ciepła poświata, żar i smużka dymu; pasek zdrowia świeci na pomarańczowo, zdrowie schodzi po 1
+- **Paski zdrowia:** każdy cios widać — pasek schodzi płynnie, za nim przez chwilę zostaje jasny ślad utraconego zdrowia, nad paskiem wyskakuje „−N” (miecz, strzała, czar, ogień). Pasek jest przypisany do żołnierza, więc nie przeskakuje między ludźmi (`ui/hpBars.ts`, wydzielone z main.ts)
+- **Strzały lecą prawie prosto** (część zupełnie płasko, reszta lekkim łukiem) zamiast paraboli
+- **Strzała wylatuje dokładnie, gdy ręka puszcza cięciwę:** symulacja zapisuje chwilę strzału, a obraz już nie zgaduje po odliczaniu (przy mierzeniu do nowego celu wylatywała strzała „z powietrza”); animacja łuku liczy się od prawdziwego strzału
+- **Magowie bez kilofa i maczugi:** magowie (i kaznodzieja) mieli kilof na plecach — pula narzędzi tylko dokłada instancje, więc późniejsze „zdjęcie” go nie chowało. Teraz narzędzie w ogóle nie jest im wstawiane
+- Mniejszy błysk przy trafieniu czarem, gęstszy i drobniejszy ogon iskier i kropel
+
+## 0.53.4 — mur nie płonie od miecza (2026-10-27)
+
 ## 0.53.5 — mur nie płonie od miecza (2026-10-27)
 
 - Cios mieczem albo włócznią już nie podpala murów, bram ani wież — pękają (0.53.2), ale nie płoną. Drewniany częstokół, bramę i wieżę strażniczą podpali tylko prawdziwy ogień (ognista strzała, piorun); kamień (mur, kamienne bramy i wieże, twierdza) nie płonie wcale. Chaty i warsztaty dalej zajmują się ogniem po mocnych ciosach (`sim/systems/fire.ts`)

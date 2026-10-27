@@ -37,6 +37,15 @@ export class SpellLayer {
   private readonly wave: THREE.InstancedMesh;
   private readonly spark: THREE.InstancedMesh;
   private readonly smoke: THREE.InstancedMesh;
+  /** Przymrożenie czarem wody: kryształki lodu wokół stóp i chłodna poświata na postaci */
+  private readonly ice: THREE.InstancedMesh;
+  private readonly frostShell: THREE.InstancedMesh;
+  private frostAt: { p: THREE.Vector3; id: number }[] = [];
+  private frostN = 0;
+  /** Płonący po ognistej strzale albo kuli ognia: języki ognia na ubraniu, żar i dym */
+  private readonly lick: THREE.InstancedMesh;
+  private burnAt: { p: THREE.Vector3; id: number }[] = [];
+  private burnN = 0;
   private readonly flameAt: THREE.Vector3[] = [];
   private flameN = 0;
   private readonly m = new THREE.Matrix4();
@@ -45,6 +54,7 @@ export class SpellLayer {
   private readonly q = new THREE.Quaternion();
   private readonly qFlat = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.PI / 2);
   private readonly s = new THREE.Vector3();
+  private readonly ax = new THREE.Vector3();
   private readonly c = new THREE.Color();
   private rnd = 1;
 
@@ -68,6 +78,26 @@ export class SpellLayer {
     this.wave = add(new THREE.RingGeometry(0.78, 1, 40), 0.6, MAX);
     this.spark = add(new THREE.IcosahedronGeometry(1, 0), 0.95, MAX_P);
     this.smoke = add(new THREE.IcosahedronGeometry(1, 1), 0.38, MAX_P, false);
+    this.ice = add(new THREE.OctahedronGeometry(1, 0), 0.85, MAX * 6);
+    this.frostShell = add(new THREE.SphereGeometry(1, 14, 10), 0.22, MAX * 2);
+    // język ognia: stożek o podstawie na ubraniu, czubek ku górze
+    this.lick = add(new THREE.ConeGeometry(1, 1, 7, 1, true).translate(0, 0.5, 0), 0.85, MAX * 7);
+  }
+
+  /** Ten żołnierz płonie (w tej klatce): `at` = jego pozycja na ziemi */
+  burning(at: THREE.Vector3, id: number): void {
+    if (this.burnN >= MAX) return;
+    const f = this.burnAt[this.burnN] ?? (this.burnAt[this.burnN] = { p: new THREE.Vector3(), id: 0 });
+    f.p.copy(at); f.id = id;
+    this.burnN++;
+  }
+
+  /** Ten żołnierz jest przymrożony (w tej klatce): `at` = jego pozycja na ziemi */
+  frost(at: THREE.Vector3, id: number): void {
+    if (this.frostN >= MAX) return;
+    const f = this.frostAt[this.frostN] ?? (this.frostAt[this.frostN] = { p: new THREE.Vector3(), id: 0 });
+    f.p.copy(at); f.id = id;
+    this.frostN++;
   }
 
   /** Rzut czaru z dłoni maga (`from`) do celu (`to`), oba w układzie świata */
@@ -177,10 +207,56 @@ export class SpellLayer {
     }
     this.parts = alive;
 
+    // przymrożeni: kilka lodowych kryształków wokół stóp (powoli krążą) i chłodna poświata na sylwetce
+    let ic = 0;
+    for (let k = 0; k < this.frostN; k++) {
+      const f = this.frostAt[k]!;
+      for (let j = 0; j < 6; j++) {
+        const a = j * (Math.PI / 3) + time * 0.6 + f.id;
+        this.p.set(f.p.x + Math.cos(a) * 0.2, f.p.y + 0.05 + (j % 2) * 0.05, f.p.z + Math.sin(a) * 0.2);
+        this.q.setFromAxisAngle(UP, a);
+        this.m.compose(this.p, this.q, this.s.set(0.03, 0.075 + (j % 3) * 0.02, 0.03));
+        this.ice.setMatrixAt(ic, this.m);
+        this.ice.setColorAt(ic, this.c.setRGB(0.65, 0.88, 1));
+        ic++;
+      }
+      this.p.copy(f.p).setY(f.p.y + 0.45);
+      this.m.compose(this.p, this.q.identity(), this.s.set(0.26, 0.5, 0.26));
+      this.frostShell.setMatrixAt(k, this.m);
+      this.frostShell.setColorAt(k, this.c.setRGB(0.35, 0.65, 1).multiplyScalar(0.8 + Math.sin(time * 3 + f.id) * 0.2));
+    }
+    // płonący: kilka języków ognia przy ciele (ramiona, plecy, biodra), każdy migocze w swoim rytmie, nad nim żar i dym
+    let lk = 0, shell = this.frostN;
+    for (let k = 0; k < this.burnN; k++) {
+      const f = this.burnAt[k]!;
+      for (let j = 0; j < 7; j++) {
+        const a = j * 2.39 + f.id * 0.7;
+        const flick = 0.75 + 0.25 * Math.sin(time * (11 + j * 1.7) + f.id + j) + 0.15 * Math.sin(time * 23 + j * 3);
+        const h = 0.22 + (j % 4) * 0.13;
+        this.p.set(f.p.x + Math.cos(a) * 0.11, f.p.y + h, f.p.z + Math.sin(a) * 0.11);
+        this.q.setFromAxisAngle(this.ax.set(Math.cos(a + 1.57), 0, Math.sin(a + 1.57)), Math.sin(time * 7 + j) * 0.18);
+        this.m.compose(this.p, this.q, this.s.set(0.035 + (j % 2) * 0.012, (0.1 + (j % 3) * 0.04) * flick, 0.035 + (j % 2) * 0.012));
+        this.lick.setMatrixAt(lk, this.m);
+        this.lick.setColorAt(lk, this.c.setRGB(1, 0.45 + 0.35 * flick * (j % 2 ? 1 : 0.6), 0.08));
+        lk++;
+      }
+      // ciepła poświata na sylwetce
+      this.p.copy(f.p).setY(f.p.y + 0.45);
+      this.m.compose(this.p, this.q.identity(), this.s.set(0.24, 0.46, 0.24));
+      this.frostShell.setMatrixAt(shell, this.m);
+      this.frostShell.setColorAt(shell, this.c.setRGB(1, 0.42, 0.1).multiplyScalar(0.55 + Math.sin(time * 9 + f.id) * 0.15));
+      shell++;
+      // drobny żar w górę i czasem smużka dymu
+      if (this.rand() < 0.5) this.emit(new THREE.Vector3(f.p.x + (this.rand() - 0.5) * 0.2, f.p.y + 0.4 + this.rand() * 0.3, f.p.z + (this.rand() - 0.5) * 0.2), new THREE.Vector3((this.rand() - 0.5) * 0.3, 0.6 + this.rand() * 0.5, (this.rand() - 0.5) * 0.3), 0.4 + this.rand() * 0.3, this.rand() < 0.5 ? 0 : 1, 0.014);
+      if (this.rand() < 0.12) this.emit(new THREE.Vector3(f.p.x, f.p.y + 0.8, f.p.z), new THREE.Vector3((this.rand() - 0.5) * 0.15, 0.45, (this.rand() - 0.5) * 0.15), 0.9, 3, 0.045);
+    }
+    this.lick.count = lk;
+    this.ice.count = ic; this.frostShell.count = shell;
+    this.frostN = 0; this.burnN = 0;
     this.halo.count = n; this.glow.count = n; this.core.count = n;
     this.flash.count = f; this.wave.count = f;
     this.spark.count = sp; this.smoke.count = sm;
-    for (const mesh of [this.halo, this.glow, this.core, this.flash, this.wave, this.spark, this.smoke]) {
+    for (const mesh of [this.halo, this.glow, this.core, this.flash, this.wave, this.spark, this.smoke, this.ice, this.frostShell, this.lick]) {
       mesh.visible = mesh.count > 0;
       if (!mesh.visible) continue;
       mesh.instanceMatrix.needsUpdate = true;

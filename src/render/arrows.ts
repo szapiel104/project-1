@@ -50,10 +50,11 @@ export class ArrowLayer {
     const j = (): number => (Math.random() - 0.5);
     from.x += j() * 0.22; from.z += j() * 0.22; from.y += j() * 0.1;
     to.x += j() * 0.3; to.z += j() * 0.3; to.y += j() * 0.25;
-    this.arrows.push({ from, to, t: 0, fire, arc: 0.08 + Math.random() * 0.08 });
+    // strzały lecą prawie prosto: część zupełnie płasko, reszta z lekkim łukiem (bez paraboli góra–dół)
+    this.arrows.push({ from, to, t: 0, fire, arc: Math.random() < 0.4 ? 0 : 0.015 + Math.random() * 0.03 });
   }
 
-  /** Strzały w locie: łuk balistyczny od łucznika do celu, ok. 0,4 s (tyle leci w symulacji, army.ts ARROW_TICKS — trafia, gdy doleci) */
+  /** Strzały w locie: prawie prosto od łucznika do celu (najwyżej lekki łuk), ok. 0,4 s (tyle leci w symulacji, army.ts ARROW_TICKS — trafia, gdy doleci) */
   fly(calm: boolean): void {
     const dt = calm ? 1 : 1 / 60;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), nx = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);

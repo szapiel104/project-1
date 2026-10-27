@@ -30,6 +30,7 @@ import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, t
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { storeLogistics } from './ui/storePanel';
 import { storeNotes } from './ui/storeNotes';
+import { createHpBars } from './ui/hpBars';
 import { usedIn } from './sim/systems/stock';
 import { nextWave } from './sim/systems/bot';
 import { battleMages, garrisonRoom, octant, planFormation, trainsAt } from './sim/systems/army';
@@ -1507,49 +1508,15 @@ function updateHoverFoe(): void {
   renderer.setAttackHighlight(game.buildings.some((b) => b.id === hoverFoe) ? hoverFoe : 0);
 }
 
-// ---- paski zdrowia nad żołnierzami: ranni, zaznaczeni i wróg pod kursorem ----
-const barLayer = document.createElement('div');
-barLayer.className = 'hpbars';
-document.body.append(barLayer);
-const bars: HTMLElement[] = [];
-function updateBars(): void {
-  renderer.barLift = 0.78;
-  const list = renderer.soldiersOnScreen(-1);
-  renderer.barLift = 0.45;
-  const kinds = new Map<number, number>();
-  for (const x of game.soldiers) kinds.set(x.id, x.kind);
-  let n = 0;
-  // Ustawienia → Interfejs → Paski zdrowia: zawsze / w walce (ranni i zaznaczeni) / tylko zaznaczeni / nigdy
-  const mode = gfx.hpBars ?? 'combat';
-  for (const s of list) {
-    if (mode === 'never') break;
-    const max = UNITS[kinds.get(s.id) ?? 0]!.hp;
-    const marked = chosen.has(s.id) || s.id === hoverFoe;
-    if (mode === 'selected' ? !marked : mode === 'combat' ? s.hp >= max && !marked : false) continue;
-    let bar = bars[n];
-    if (!bar) { bar = document.createElement('div'); bar.className = 'hpbar'; bar.append(document.createElement('span')); barLayer.append(bar); bars.push(bar); }
-    bar.hidden = false;
-    bar.style.transform = `translate(${Math.round(s.x - 17)}px, ${Math.round(s.y - 4)}px)`;
-    bar.dataset.team = game.players[s.owner]?.team === game.players[ME]!.team ? 'own' : 'foe';
-    const fill = bar.firstChild as HTMLElement;
-    fill.style.width = `${Math.max(0, (s.hp / max) * 100)}%`;
-    fill.dataset.low = String(s.hp < max * 0.35);
-    n++;
-  }
-  // wilki: pasek zdrowia zawsze, w barwie wroga
-  for (const w of mode === 'never' || mode === 'selected' ? [] : renderer.wolvesOnScreen()) {
-    let bar = bars[n];
-    if (!bar) { bar = document.createElement('div'); bar.className = 'hpbar'; bar.append(document.createElement('span')); barLayer.append(bar); bars.push(bar); }
-    bar.hidden = false;
-    bar.style.transform = `translate(${Math.round(w.x - 17)}px, ${Math.round(w.y - 4)}px)`;
-    bar.dataset.team = 'foe';
-    const fill = bar.firstChild as HTMLElement;
-    fill.style.width = `${Math.max(0, (w.hp / WOLF_HP) * 100)}%`;
-    fill.dataset.low = String(w.hp < WOLF_HP * 0.35);
-    n++;
-  }
-  for (let i = n; i < bars.length; i++) bars[i]!.hidden = true;
-}
+// ---- paski zdrowia nad żołnierzami: ranni, zaznaczeni i wróg pod kursorem (ui/hpBars.ts) ----
+const updateBars = createHpBars({
+  game: () => game, me: () => ME,
+  mode: () => gfx.hpBars ?? 'combat',
+  marked: (id) => chosen.has(id) || id === hoverFoe,
+  soldiers: () => { renderer.barLift = 0.78; const l = renderer.soldiersOnScreen(-1); renderer.barLift = 0.45; return l; },
+  wolves: () => renderer.wolvesOnScreen(),
+  wolfHp: WOLF_HP,
+});
 
 // ---- pasek ostrzeżeń u góry: kiedy wróg wyśle wojsko i czy już nadciąga ----
 const alarm = document.createElement('div');

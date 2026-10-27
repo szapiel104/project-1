@@ -235,6 +235,8 @@ export class GameRenderer {
   /** Strzały w locie (src/render/arrows.ts) */
   private arrows = new ArrowLayer(this.scene);
   private lastCd = new Map<number, number>();
+  /** Ostatnia chwila strzału każdego strzelca (Soldier.shot), żeby strzała wyleciała raz, w chwili wypuszczenia */
+  private lastShot = new Map<number, number>();
   /** Ile ciosów zadał żołnierz (do kombinacji mieczem: cięcie z góry, z lewej, z prawej, obrót) */
   private hits = new Map<number, number>();
   /** Trafienia: kiedy żołnierz ostatnio oberwał (odrzut do tyłu) i ile miał zdrowia */
@@ -2295,18 +2297,6 @@ export class GameRenderer {
     for (let i = 0; i < this.arrows.fireN; i++) F.add(this.arrows.fires[i]!, 0.12, 0.07, (i * 0.531) % 1, Math.max(0.25, glow * 0.8));
     // kule ognia magów w locie i rozbłyski przy celu
     this.spells.flames().forEach((v, i) => F.add(v, 0.2, 0.13, (i * 0.377) % 1, Math.max(0.5, glow)));
-    // trafiony ognistą strzałą płonie, dopóki ogień nie zgaśnie (zdrowie schodzi mu po 1, army.ts BURN_EVERY)
-    if (this.view) for (const sd of g.soldiers) {
-      if (!sd.burn || sd.hp <= 0) continue;
-      const bx = sd.px / FP, by = sd.py / FP;
-      const wx = bx - g.map.width / 2, wz = by - g.map.height / 2;
-      if ((wx - f.x) ** 2 + (wz - f.z) ** 2 > 110 * 110) continue;
-      const base = this.view.heightAt(bx, by) + (sd.up ? 1.9 : 0);
-      w.set(wx + Math.sin(sd.id) * 0.06, base + 0.45, wz + Math.cos(sd.id) * 0.06);
-      F.add(w, 0.16, 0.09, (sd.id * 0.291) % 1, Math.max(0.45, glow));
-      w.set(wx - Math.sin(sd.id) * 0.08, base + 0.75, wz - Math.cos(sd.id) * 0.05);
-      F.add(w, 0.12, 0.07, (sd.id * 0.613) % 1, Math.max(0.45, glow));
-    }
     this.handFlameN = 0;
     this.handFlameTime.value = this.time;
     for (const [id, mesh] of this.buildingMeshes) {
@@ -3664,9 +3654,17 @@ export class GameRenderer {
       if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.55);
       const y = this.standY(view, px, pz, s.up ? -1 : (s.py >> 8) * width + (s.px >> 8)) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
-      // strzał: cooldown właśnie wskoczył na pełną wartość — leci strzała do celu
+      // przymrożony czarem wody: lód wokół stóp i chłodna poświata (spells.ts), dopóki czar trwa
+      if ((s.slow ?? 0) > g.tick && !this.calm && s.hp > 0) this.spells.frost(t.position, s.id);
+      // płonący po ognistej strzale albo kuli ognia: języki ognia na ubraniu, żar i dym (spells.ts), dopóki ogień nie zgaśnie
+      if (s.burn && !this.calm && s.hp > 0) this.spells.burning(t.position, s.id);
+      // strzał: symulacja zapisała chwilę wypuszczenia (s.shot) — strzała wylatuje dokładnie wtedy, gdy ręka puszcza cięciwę
+      // (wcześniej obraz zgadywał po skoku odliczania i przy mierzeniu do nowego celu puszczał strzałę „z powietrza”)
       const pc = this.lastCd.get(s.id) ?? 0;
-      if (ranged && (foe || wall || victim) && s.cd > pc && !this.calm && this.arrows.count < MAX_ARROWS) {
+      const ls = this.lastShot.get(s.id);
+      const fired = ranged ? ls !== undefined && (s.shot ?? -1) !== ls : s.cd > pc;
+      this.lastShot.set(s.id, s.shot ?? -1);
+      if (ranged && fired && (foe || wall || victim) && !this.calm && this.arrows.count < MAX_ARROWS) {
         let tx: number, ty: number, th: number;
         if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : 0.4; }
         else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; }
@@ -3680,11 +3678,11 @@ export class GameRenderer {
         } else this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), fireArrow(g, s));
         this.sfxAt('swing', t.position.x, t.position.z, `a${s.id}`, 0.3, 0.5);
       }
-      if (s.cd > pc) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);
+      if (fired) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);
       this.lastCd.set(s.id, s.cd);
       // miecz (strażnik miejski, zbrojny): kombinacja ciosów fazami według odliczania do ciosu; obrót ciała w poprzek ciosu
       // łucznik: wypuszczenie, sięgnięcie do kołczanu, nałożenie strzały i naciąg (bokiem do celu) fazami do następnego strzału
-      const bowPose = ranged && !udef.magic && (!!foe || !!wall || !!victim) && !walking && !this.calm ? bowShot(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
+      const bowPose = ranged && !udef.magic && (!!foe || !!wall || !!victim) && !walking && !this.calm ? bowShot(1 - Math.max(0, s.cd - alpha) / Math.max(1, s.shot !== undefined && g.tick - s.shot < udef.cooldown * 2 ? s.cd + (g.tick - s.shot) : udef.cooldown)) : undefined;
       const swordPose = (udef.guard || udef.id === 'manatarms') && (!!foe || !!wall || !!victim) && !walking && !this.calm
         ? swordCombo(this.hits.get(s.id) ?? 0, 1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
       // trafiony odchyla się do tyłu i lekko cofa na ułamek sekundy
