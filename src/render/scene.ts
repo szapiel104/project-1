@@ -1,3 +1,4 @@
+import './lightskip'; // pierwsze: łatka shadera świateł przed kompilacją czegokolwiek
 import { poseOnRoute, routeTime } from './minepath';
 import { mineWalkTicks } from '../data/minewalk';
 import { named, namedTick, remember } from './named';
