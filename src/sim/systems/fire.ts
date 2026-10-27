@@ -1,17 +1,20 @@
 import { buildingById } from '../state';
-import { BUILDINGS, buildingIndex, footprint } from '../../data/buildings';
+import { BUILDINGS, buildingIndex, footprint, isStoneTower } from '../../data/buildings';
 import { findPath, walkable } from '../path';
 import { FP, Phase, type Building, type GameState, type Unit } from '../state';
 import { maxHp } from './placement';
 
 /**
  * Pożary i gaszenie.
- * Budynek mocno uszkodzony świeżym ciosem (poniżej 60% wytrzymałości) zajmuje się ogniem. Płonący traci powoli
+ * Budynek mocno uszkodzony świeżym ciosem (poniżej 60% wytrzymałości) zajmuje się ogniem — ale nie mur, brama ani wieża
+ * (te pękają, a podpala je tylko prawdziwy ogień), a kamień (mur, kamienne bramy i wieże, twierdza) nie płonie wcale. Płonący traci powoli
  * wytrzymałość (ale ogień sam go nie zburzy: zostawia 15%), a pożar gaśnie sam po minucie, chyba że wróg dalej bije.
  * Ludzie gaszą: wolni chłopi (i inżynier z cechu) biegną do najbliższej studni — studnia albo podwórze cechu
  * inżynierów — czerpią wodę, niosą wiadro do ognia i wylewają; każde wiadro skraca pożar. Potem inżynier naprawia.
  */
 const WELL = buildingIndex('well');
+/** Budowle z kamienia, które nigdy się nie palą */
+const STONE = new Set(BUILDINGS.map((d, i) => (d.id === 'keep' || d.id === 'stoneWall' || d.id === 'stoneGate' || isStoneTower(d.id) ? i : -1)).filter((i) => i >= 0));
 const ENGINEERS = buildingIndex('engineers');
 /** Tyle ticków płonie świeżo podpalony budynek (bez gaszenia) */
 const BURN = 600;
@@ -74,8 +77,10 @@ export function fireSystem(g: GameState): void {
     const max = maxHp(b.type), def = BUILDINGS[b.type]!;
     const hit = b.hpWas !== undefined && b.hp < b.hpWas;
     b.hpWas = b.hp;
-    if (def.road || b.build || b.ruined || b.type === WELL) { b.fire = 0; continue; }
-    if (hit && b.hp < max * 0.6) b.fire = Math.max(b.fire ?? 0, BURN);
+    // kamień nie płonie: mur kamienny, kamienne bramy i wieże, twierdza
+    if (def.road || b.build || b.ruined || b.type === WELL || STONE.has(b.type)) { b.fire = 0; continue; }
+    // mur, brama i wieża pękają od ciosów, ale miecz ich nie podpala (drewniane podpali tylko ogień: strzała, czar, piorun)
+    if (hit && b.hp < max * 0.6 && !def.wall && !def.gate) b.fire = Math.max(b.fire ?? 0, BURN);
     if (!b.fire) continue;
     b.fire--;
     if (g.tick % 10 === 0 && b.hp > max * 0.15) { b.hp = Math.max(Math.ceil(max * 0.15), b.hp - 1); b.hpWas = b.hp; } // to nie cios wroga: nie rozpala ognia na nowo
