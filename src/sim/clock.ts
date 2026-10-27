@@ -11,13 +11,13 @@ export interface GameClock {
 /**
  * Doba nie płynie równo: ludzie śpią w nocy, więc noc mija szybko, a dzień pracy trwa dłużej.
  * Każdy odcinek to [godzina końca, ile części doby w tickach zajmuje]. Razem = 1.
- * Noc 22:00–5:30 (7,5 h) to ok. 11% doby, wieczór 19:30–22:00 ok. 8%, a dzień pracy 5:30–19:30 ok. 81%.
+ * Noc 22:00–5:30 (7,5 h) to ok. 13% doby, wieczór 19:30–22:00 ok. 9%, a dzień pracy 5:30–19:30 ok. 78%.
  */
 const SEGMENTS: [number, number][] = [
-  [5.5, 0.08],
-  [19.5, 0.81],
-  [22, 0.08],
-  [24, 0.03],
+  [5.5, 0.09],
+  [19.5, 0.78],
+  [22, 0.09],
+  [24, 0.04],
 ];
 
 /** Godzina (0..24) dla ułamka doby w tickach (0..1) */

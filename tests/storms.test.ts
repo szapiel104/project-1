@@ -21,8 +21,8 @@ describe('burze i susza', () => {
     const ids = [placeReady(g, 'house', x - 6, y + 5)!, placeReady(g, 'woodcutter', x - 2, y + 5)!, placeReady(g, 'stoneTower', x + 3, y + 5)!];
     expect(ids.every(Boolean)).toBe(true);
     // pora poza zimą i ulewa: przesuwamy czas do pierwszej burzy
-    g.seasonShift = shiftToSeason(g.tick, 'summer');
     while (rainAt(g.tick) < RULES.storm.rain) g.tick++;
+    g.seasonShift = shiftToSeason(g.tick, 'summer'); // pora po znalezieniu ulewy: pora roku trwa tylko 3 doby
     expect(stormAt(g)).toBe(true);
     let strikes = 0, last = -1;
     for (let i = 0; i < 3000; i++) {
@@ -32,8 +32,8 @@ describe('burze i susza', () => {
     }
     expect(strikes).toBeGreaterThan(0);
     // zimą nie grzmi
-    g.seasonShift = shiftToSeason(g.tick, 'winter');
     while (rainAt(g.tick) < RULES.storm.rain) g.tick++;
+    g.seasonShift = shiftToSeason(g.tick, 'winter');
     expect(seasonAt(g.tick, g.seasonShift)).toBe('winter');
     expect(stormAt(g)).toBe(false);
   });

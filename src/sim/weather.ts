@@ -10,8 +10,9 @@ import { clockAt, dayFraction } from './clock';
  * (najcieplej w połowie lata, najzimniej w połowie zimy), dobowa (najzimniej przed świtem, najcieplej po południu)
  * i losowe odchylenie każdego dnia (cieplejsze i chłodniejsze dni przechodzą jedne w drugie płynnie); deszcz chłodzi.
  */
-/** Dni gry na jedną porę roku: cały rok to ok. 2 godziny gry (20 dni po ok. 6 minut), jak w grach z porami roku na jedną dłuższą rozgrywkę */
-export const SEASON_DAYS = 5;
+/** Dni gry na jedną porę roku: cały rok to ok. 2,4 godziny gry (12 dni po 12 minut), jak w grach z porami roku na jedną dłuższą rozgrywkę */
+/** 3 doby po 12 minut (od 27.10.2026, gdy doba wydłużyła się dwukrotnie) — pora roku trwa mniej więcej tyle co wcześniej */
+export const SEASON_DAYS = 3;
 export const YEAR_DAYS = SEASON_DAYS * 4;
 export type Season = 'spring' | 'summer' | 'autumn' | 'winter';
 export const SEASONS: Season[] = ['spring', 'summer', 'autumn', 'winter'];

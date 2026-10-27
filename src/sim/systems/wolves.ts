@@ -79,7 +79,8 @@ export function wolfSystem(g: GameState): void {
       for (const u of g.units) { if (u.phase === Phase.Sleeping && u.home) continue; const dx = (u.px - w.px) / FP, dy = (u.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = u.id; } }
       for (const s of g.soldiers) { if (high(g, s)) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; prey = s.id; } }
       w.target = prey;
-      if (prey && best <= 1.2) {
+      // gryzie z sąsiedniego pola, także po skosie (d² = 2): wcześniej wilk po skosie od śpiącego nie gryzł, nie znajdował drogi i wracał do lasu
+      if (prey && best <= 2.1) {
         w.path = [];
         if (w.cd === 0) {
           w.cd = BITE;

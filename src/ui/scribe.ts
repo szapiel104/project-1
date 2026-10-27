@@ -3,8 +3,9 @@ import { tx } from '../i18n';
 /**
  * Skryba w lewym górnym rogu (przebudowa 27.10.2026): krótka wiadomość z kwadratowym portretem wysuwa się, chwilę
  * wisi i znika, a wszystkie wiadomości trafiają do kroniki — przycisk „Kronika” nad nimi otwiera listę ostatnich
- * (z godziną gry i przyciskiem „Pokaż”), więc można wrócić nawet do kilkudziesięciu wstecz.
- * Ta sama wiadomość (ten sam klucz) nie powtarza się częściej niż raz na minutę.
+ * (z godziną gry i przyciskiem „Pokaż”), więc można wrócić do 20 ostatnich (starsze wypadają).
+ * Skryba mówi tylko o ważnych sprawach (braki, zagrożenia, awanse) — bez „świta dzień” / „zapada noc” (27.10.2026).
+ * Ta sama wiadomość (ten sam klucz) nie powtarza się częściej niż raz na 3 minuty (pilna — raz na minutę).
  */
 /** Doradca wojenny: wąsy, kapalin, kolczuga, w tle sztandar */
 const HERALD = `<svg viewBox="0 0 48 48" width="48" height="48" aria-hidden="true">
@@ -39,8 +40,8 @@ export interface ScribeAction { label: string; run: () => void }
 export interface Scribe { say(key: string, text: string, urgent?: boolean, who?: Speaker, action?: ScribeAction): void }
 
 const NAMES = (): Record<Speaker, string> => ({ scribe: tx('Skryba Bartłomiej', 'Bartholomew the Scribe'), herald: tx('Wojewoda Mieszko', 'Mieszko the Voivode') });
-/** Ile wiadomości pamięta kronika */
-const LOG_MAX = 60;
+/** Ile wiadomości pamięta kronika: 20 ostatnich, przy kolejnej najstarsza wypada */
+const LOG_MAX = 20;
 
 interface Entry { text: string; who: Speaker; urgent: boolean; action?: ScribeAction; when: string }
 
@@ -151,7 +152,7 @@ export function createScribe(onSpeak: () => void, clock: () => string = () => ''
   return {
     say(key, text, urgent = false, who: Speaker = 'scribe', action?: ScribeAction) {
       const now = performance.now();
-      if ((last.get(key) ?? -1e9) > now - 60000) return;
+      if ((last.get(key) ?? -1e9) > now - (urgent ? 60000 : 180000)) return;
       last.set(key, now);
       show({ text, who, urgent, action, when: clock() });
     },

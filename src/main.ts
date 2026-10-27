@@ -1705,7 +1705,7 @@ function banditNotes(p: (typeof game.players)[number]): void {
     play('build');
   }
 }
-let wasNight = false, wasComing = false;
+let wasComing = false;
 let alarmComing = false;
 
 // historia zapasów co 5 sekund gry: trend = różnica wobec stanu sprzed minuty
@@ -1821,8 +1821,6 @@ function refresh(): void {
   const myB = game.buildings.filter((b) => b.owner === ME && !b.build);
   const smiths = myB.some((b) => ['poleturner', 'fletcher', 'smithy', 'armorer'].includes(BUILDINGS[b.type]!.id));
   if (smiths && !myB.some((b) => BUILDINGS[b.type]!.stores?.includes('armory'))) scribe.say('noArmory', t('scribe.noArmory'));
-  const hour = clockAt(game.tick).hour;
-  const night = hour >= 19.5 || hour < 6;
   // dlaczego nikt nie przychodzi: skryba mówi wprost, co blokuje nowych osadników
   const pop = population(game, ME);
   if (p.popularity < 50 && pop <= 6) scribe.say('noComers', tx(`Nikt nie chce tu przyjść — popularność ${p.popularity}. Daj więcej jedzenia albo obniż podatki.`, `No one wishes to settle here — popularity is ${p.popularity}. Give more food or lower taxes.`), true);
@@ -1834,15 +1832,13 @@ function refresh(): void {
   wolfKillsSeen = p.wolfKills ?? 0;
   banditNotes(p);
   winterNotes(p);
-  if (night !== wasNight) scribe.say(night ? 'dusk' : 'dawn', t(night ? 'scribe.dusk' : 'scribe.dawn'));
-  wasNight = night;
   const coming = alarm.dataset.state === 'coming';
   if (coming && !wasComing) { scribe.say('coming', t('alarm.coming'), true, 'herald'); warHorn(); }
   // nastroje ludzi wobec wojska
   const mine = game.soldiers.filter((x) => x.owner === ME).length;
   const theirs = game.soldiers.filter((x) => x.owner !== BANDITS).length - mine;
-  if (mine >= 10 && mine >= theirs) scribe.say('proud', t('herald.proud'), false, 'herald');
-  else if (mine === 0 && theirs >= 3) scribe.say('afraid', t('herald.afraid'), true, 'herald');
+  // „dumni z wojska” wypadło z kroniki (27.10.2026) — skryba mówi tylko o brakach i zagrożeniach
+  if (mine === 0 && theirs >= 3) scribe.say('afraid', t('herald.afraid'), true, 'herald');
   else if (theirs > mine * 2 && theirs >= 6) scribe.say('weaker', t('herald.weaker'), false, 'herald');
   wasComing = coming;
   alarmComing = coming;

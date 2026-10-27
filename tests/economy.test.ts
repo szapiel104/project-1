@@ -578,9 +578,13 @@ describe('budowa z noszeniem materiału', () => {
   });
 });
 
+/** Doba trwa 12 minut (7200 ticków): pierwszy wieczór to już ok. 50 posiłków, więc zapas ze startu by nie wystarczył i głodni
+ *  zbuntowaliby się pod bramą — w testach rytmu dnia ludzie mają chleba pod dostatkiem */
+const feed = (g: GameState): GameState => { for (const p of g.players) p.res[resIndex('bread')] = 3000; return g; };
+
 describe('rytm dnia', () => {
   it('wieczorem ludzie siedzą przy ogniu, nocą śpią pod dachem, rano wracają do pracy', () => {
-    const g = createGame(5);
+    const g = feed(createGame(5));
     step(g, [build(g, 'woodcutter')]);
     const at = (h0: number, h1: number): void => { while (!(clockAt(g.tick).hour >= h0 && clockAt(g.tick).hour < h1)) step(g, []); };
     at(21, 21.5);
@@ -595,7 +599,7 @@ describe('rytm dnia', () => {
   });
 
   it('bez wolnego łóżka chłop śpi na słomie obok ogniska', () => {
-    const g = createGame(5);
+    const g = feed(createGame(5));
     const at = (h0: number, h1: number): void => { while (!(clockAt(g.tick).hour >= h0 && clockAt(g.tick).hour < h1)) step(g, []); };
     at(21, 21.5);
     // twierdza spłonęła z dachem: nie ma gdzie spać
@@ -614,7 +618,7 @@ describe('rytm dnia', () => {
 describe('rytm dnia: poprawki', () => {
   const at = (g: GameState, h0: number, h1: number): void => { while (!(clockAt(g.tick).hour >= h0 && clockAt(g.tick).hour < h1)) step(g, []); };
   it('nocą nikt nie buduje ani nie czeka pod pustym składem, rano budowa rusza dalej', () => {
-    const g = createGame(5);
+    const g = feed(createGame(5));
     at(g, 20, 21);
     step(g, [build(g, 'house')]); // postawiona wieczorem: nikt jej nie zacznie przed rankiem
     const site = g.buildings[g.buildings.length - 1]!;
@@ -628,7 +632,7 @@ describe('rytm dnia: poprawki', () => {
     expect(site.build).toBeLessThan(work);
   });
   it('nocą nikt nie je: zapasy jedzenia stoją od 22 do 5:30', () => {
-    const g = createGame(5);
+    const g = feed(createGame(5));
     at(g, 22.5, 23);
     const before = g.players[0]!.res.reduce((n, v) => n + v, 0);
     at(g, 4, 5);

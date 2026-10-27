@@ -2,6 +2,7 @@ import { clearBandits } from '../src/sim/systems/bandits';
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS, buildingIndex } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
+import { RULES } from '../src/data/rules';
 import { Terrain } from '../src/data/terrain';
 import { createGame as realGame, Phase, playerKeep, type GameState } from '../src/sim/state';
 import { step } from '../src/sim/step';
@@ -77,7 +78,8 @@ describe('kopalnia pod górami', () => {
     run(g, 3000); // budowa: chłopi noszą materiał ze składu pod góry, potem budują
     const size = (): number => (mine.worker ? 1 : 0) + (mine.crew?.length ?? 0);
     expect(size()).toBeGreaterThanOrEqual(1);
-    expect(size()).toBeLessThanOrEqual(crewWanted(BUILDINGS[MINE]!, pop0));
+    // przez 3000 ticków (cały dzień pracy przy dłuższej dobie) ktoś mógł doprowadzić się do osady — liczy się obecna liczba ludzi
+    expect(size()).toBeLessThanOrEqual(crewWanted(BUILDINGS[MINE]!, Math.max(pop0, g.units.filter((u) => u.owner === 0).length)));
     // więcej mieszkańców = większa załoga (dokładamy ludzi wprost do stanu, jak przy migracji)
     const tpl = g.units.find((u) => u.owner === 0)!;
     for (let i = 0; i < 30; i++) g.units.push({ ...tpl, id: g.nextId++, job: 0, home: 0, phase: Phase.Idle, path: [], carryRes: -1, carryAmt: 0, target: 0, wait: 0, timer: 0, batches: 0, trips: 0 });
@@ -182,7 +184,7 @@ describe('kopalnia pod górami', () => {
     expect(p.res[resIndex('stone')]!).toBeGreaterThan(before);
     // nocą górnicy śpią w baraku
     let slept = false;
-    for (let i = 0; i < 3000 && !slept; i++) {
+    for (let i = 0; i < RULES.dayTicks && !slept; i++) {
       step(g, []);
       const h = clockAt(g.tick).hour;
       if (h >= 1 && h < 4) slept = [mine.worker, ...(mine.crew ?? [])].some((id) => { const u = g.units.find((x) => x.id === id); return !!u && u.home === camp.id; });

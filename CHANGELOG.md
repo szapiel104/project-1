@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.52.6 — dłuższa doba, spokojniejsza muzyka nocą, zwięzła kronika (2026-10-27)
+
+- **Doba dwa razy dłuższa:** 12 minut zamiast 6 przy tempie 1× — dzień pracy ok. 9,5 min, wieczór ok. 1 min, noc ok. 1,5 min (wieczór i noc dostały też trochę większy kawałek doby). Pora roku trwa teraz 3 doby zamiast 5, więc rok w czasie rzeczywistym jest podobny (ok. 2,4 h). Chata pali na dobę 2 drewna zamiast 1 — zużycie opału na minutę bez zmian. Jedzenie, podatki i nastroje liczą się jak dotąd co „miesiąc” (100 ticków), więc gospodarka w czasie rzeczywistym się nie zmienia; wilki i napady zbójów (raz na dobę) zdarzają się rzadziej
+- **Muzyka nie nakłada się wieczorem:** generowany bordun już nie gra pod utworami z plików, lutnia spod karczmy milknie, gdy leci muzyka, a karczemny utwór „Old Tower Inn” gra tylko w menu (nocą w grze zostaje spokojny utwór nocny)
+- **Wilki rzadko i cicho:** nocą wycie raz na kilka minut (i nie za każdym razem), jeden–dwa głosy, ciszej, bez warczenia z daleka; gdy wataha jest na mapie, słychać ją co pół minuty–minutę zamiast co kilka sekund
+- **Kronika tylko o ważnym:** bez „Świta. Nowy dzień” / „Zapada zmrok” i bez „lud raduje się drużyną”; ta sama zwykła wiadomość wraca najwcześniej po 3 minutach (pilna po minucie). Kronika trzyma 20 ostatnich wiadomości — przy kolejnej najstarsza wypada
+- Poprawka: wilk stojący po skosie obok człowieka teraz gryzie (wcześniej nie znajdował drogi i wracał do lasu)
 ## 0.52.5 — większe karty budynków, szersze okno budynku (2026-10-27)
 
 - Pasek budowy zajmuje teraz całą szerokość, więc karty są szersze (132 zamiast 104 px) i z większym podglądem budynku (112 zamiast 84 px). Gdy wszystkie się nie mieszczą, przewijają się w bok: widoczny pasek przewijania pod kartami, a kółko myszy nad kartami też przewija w lewo i prawo

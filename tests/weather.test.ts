@@ -31,12 +31,12 @@ it('zima: chaty palą drewno (po trochu), zimno psuje nastroje, a bez drewna lud
   g.seasonShift = shiftToSeason(g.tick, 'summer');
   p.res[W] = 500;
   const before = p.res[W]!;
-  for (let i = 0; i < 1200; i++) step(g, []);
+  for (let i = 0; i < RULES.dayTicks / 3; i++) step(g, []); // ok. 8 godzin gry, także chłodny wieczór
   const summerUse = before - p.res[W]!;
   // zima: znika po trochu
   g.seasonShift = shiftToSeason(g.tick, 'winter');
   p.res[W] = 500;
-  for (let i = 0; i < 1200; i++) step(g, []);
+  for (let i = 0; i < RULES.dayTicks / 3; i++) step(g, []); // ok. 8 godzin gry, także chłodny wieczór
   const winterUse = 500 - p.res[W]!;
   expect(winterUse).toBeGreaterThan(summerUse);
   expect(winterUse).toBeLessThan(60); // „bardzo malutko”
@@ -56,8 +56,8 @@ describe('gotowość na zimę (skryba jesienią)', () => {
     g.seasonShift = shiftToSeason(g.tick, 'autumn'); // środek jesieni
     const p = g.players[0]!;
     const w = winterReadiness(g, p);
-    expect(w.days).toBeGreaterThan(1.5);
-    expect(w.days).toBeLessThan(3.5);
+    expect(w.days).toBeGreaterThan(SEASON_DAYS * 0.3); // środek jesieni: do zimy pół pory roku
+    expect(w.days).toBeLessThan(SEASON_DAYS * 0.7);
     expect(w.fuel).toBeGreaterThan(0); // zamek liczy się za dwie chaty, a zimą jest zimno
     expect(w.foodDays).toBeGreaterThan(0);
     g.seasonShift = shiftToSeason(g.tick, 'winter');

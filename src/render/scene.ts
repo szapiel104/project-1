@@ -10,7 +10,7 @@ import { GL_DEBUG, glSection, watchLoading, watchRenderer } from '../debug/errlo
 import { hash2 } from '../sim/rng';
 import { TOWER_RANGE, UNITS } from '../data/units';
 import { RULES } from '../data/rules';
-import { animal, playAt, pluck, talk, type WorldSound } from '../audio/sfx';
+import { animal, musicPlaying, playAt, pluck, talk, type WorldSound } from '../audio/sfx';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
@@ -256,6 +256,8 @@ export class GameRenderer {
   /** Lutnia przed karczmą: prosta melodia nuta po nucie, słyszalna z bliska */
   private lutePlay(x: number, z: number): void {
     if (this.time < this.luteAt) return;
+    // gdy gra muzyka z pliku, lutni nie słychać (dwie melodie w różnych tonacjach naraz to kakofonia)
+    if (musicPlaying()) { this.luteAt = this.time + 1; return; }
     const tune = [0, 3, 5, 7, 5, 3, 0, -2, 0, 3, 7, 10, 7, 5, 3, 0];
     const len = [0.3, 0.3, 0.3, 0.6, 0.3, 0.3, 0.6, 0.3, 0.3, 0.3, 0.3, 0.6, 0.3, 0.3, 0.3, 0.9];
     const i = this.luteNote++ % tune.length;

@@ -13,7 +13,8 @@ const FOOD_VALUE_OF: Record<string, number> = { apples: 1, bread: 2, fish: 3 };
 
 const WOOD = resIndex('wood');
 /** Drewno na opał: na jedną zamieszkaną chatę i dobę przy ok. 0°C (zamek liczy się za dwie); przy mrozie więcej */
-export const FUEL_PER_HOUSE_DAY = 1;
+/** 2 od 27.10.2026: doba trwa dwa razy dłużej, więc chata pali na dobę dwa razy więcej — w czasie rzeczywistym bez zmian */
+export const FUEL_PER_HOUSE_DAY = 2;
 
 /** Ile drewna na opał na miesiąc gry (ułamek) przy obecnej pogodzie */
 export function fuelNeed(g: GameState, p: PlayerState): number {

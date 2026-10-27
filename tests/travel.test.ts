@@ -1,3 +1,4 @@
+import { resIndex } from '../src/data/resources';
 import { RULES } from '../src/data/rules';
 import { clearBandits } from '../src/sim/systems/bandits';
 import { describe, expect, it } from 'vitest';
@@ -130,10 +131,15 @@ describe('brama', () => {
 describe('wilki polują naprawdę', () => {
   it('dochodzą do człowieka daleko od miejsca, gdzie wyszły, i go zagryzają', () => {
     const g = clearBandits(createGame(9, '1v1', 2)); // wilki mają polować na chłopów, nie na zbójów z lasu
-    for (const p of g.players) { p.bot = false; p.guards = 0; } // bez straży miejskiej, która wybiłaby watahę
+    for (const p of g.players) { p.bot = false; p.guards = 0; p.res[resIndex('bread')] = 3000; } // bez straży miejskiej, która wybiłaby watahę; chleba dość na długi pierwszy dzień (bez buntu głodowego)
     // noc, wataha na brzegu mapy; ludzie bez dachu nad głową śpią na słomie pod gołym niebem (w chacie wilk ich nie dosięgnie)
     while (!(clockAt(g.tick).hour >= 22.5 && clockAt(g.tick).hour < 23)) step(g, []);
-    for (const u of g.units) { u.phase = Phase.Sleeping; u.home = 0; u.target = (u.py >> 8) * g.map.width + (u.px >> 8) + 1; u.path = []; }
+    // śpią na słomie pod gołym niebem, za murami (przy dłuższej dobie o 22:30 część stoi jeszcze na dziedzińcu, gdzie wilk nie wejdzie):
+    // pole (40, 62) leży na drodze watahy z lasu do osady, ok. 40 pól od miejsca, gdzie wyszła
+    for (const u of g.units) {
+      if (u.owner === 0) { u.px = 40 * 256 + 128; u.py = 62 * 256 + 128; }
+      u.phase = Phase.Sleeping; u.home = 0; u.target = (u.py >> 8) * g.map.width + (u.px >> 8) + 1; u.path = [];
+    }
     for (let i = 0; i < 3; i++) g.wolves.push({ id: 99001 + i, px: 2 * 256 + 128, py: (29 + i) * 256 + 128, hp: 45, path: [], target: 0, cd: 0, leaving: false });
     // nie ma dokąd uciec: twierdza bez izb (gdy jest dach, obudzeni chowają się pod nim)
     const keepDef = BUILDINGS[0] as { housing?: number };

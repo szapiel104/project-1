@@ -402,15 +402,15 @@ function snarl(c: AudioContext, at: number, pan: number): void {
   src.start(at); lfo.start(at); src.stop(at + len + 0.05); lfo.stop(at + len + 0.05);
 }
 
-function wolf(c: AudioContext, at: number, pan: number): void {
+function wolf(c: AudioContext, at: number, pan: number, near = false): void {
   const p = c.createStereoPanner(); p.pan.value = pan;
-  const dry = c.createGain(); dry.gain.value = 0.6;
+  const dry = c.createGain(); dry.gain.value = 0.3;
   p.connect(dry).connect(busGain.amb ?? master!);
   p.connect(forestEcho(c));
-  // wataha: kilka głosów jeden po drugim, a na koniec warknięcie blisko
-  const voices = 2 + Math.floor(Math.random() * 3);
+  // daleko za lasem: jeden, czasem dwa głosy, cicho; warknięcie tylko gdy wataha jest blisko (27.10.2026 — było za głośno i za często)
+  const voices = 1 + (Math.random() < 0.3 ? 1 : 0);
   const growl = buffers.get('wolf');
-  if (growl && Math.random() < 0.6) {
+  if (growl && near && Math.random() < 0.4) {
     const src = c.createBufferSource(); src.buffer = growl; src.playbackRate.value = 0.75;
     const g = c.createGain(); g.gain.value = 0.9;
     src.connect(g).connect(p); src.start(at + 3.5 + Math.random() * 2);
@@ -427,8 +427,8 @@ function wolf(c: AudioContext, at: number, pan: number): void {
     const vib = c.createOscillator(); vib.frequency.value = 5.5; const vg = c.createGain(); vg.gain.value = 6; vib.connect(vg).connect(o.frequency);
     const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
     const g = c.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32, t + 0.5);
-    g.gain.setValueAtTime(0.32, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.001, t + len);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.5);
+    g.gain.setValueAtTime(0.16, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.001, t + len);
     o.connect(f).connect(g).connect(p);
     o.start(t); vib.start(t); o.stop(t + len + 0.05); vib.stop(t + len + 0.05);
   }
@@ -436,7 +436,7 @@ function wolf(c: AudioContext, at: number, pan: number): void {
 
 /**
  * Wołane co klatkę: `night` 0..1, `rain` 0..1. Wiatr zawsze szumi (mocniej w deszczu i nocą, z porywami),
- * wrony kraczą co kilkanaście sekund za dnia, wilki wyją co pół minuty–minutę nocą.
+ * wrony kraczą co kilkanaście sekund za dnia, wilki rzadko i cicho: nocą raz na kilka minut, przy watasze na mapie co pół minuty–minutę.
  */
 export function nature(night: number, rain: number, paused: boolean, wolvesNear = 0): void {
   const c = ctx;
@@ -454,14 +454,14 @@ export function nature(night: number, rain: number, paused: boolean, wolvesNear 
   if (rain > 0.1 && now > nextDrop) { for (let i = 0; i < 3; i++) drop(c, now + Math.random() * 0.1); nextDrop = now + 0.05 + (1 - rain) * 0.3; }
   if (paused) return;
   if (!nextCrow) nextCrow = now + 6 + Math.random() * 10;
-  if (!nextWolf) nextWolf = now + 15 + Math.random() * 20;
+  if (!nextWolf) nextWolf = now + 90 + Math.random() * 90;
   if (now > nextCrow) { if (night < 0.3 && rain < 0.5) crow(c, now, Math.random() * 1.6 - 0.8); nextCrow = now + 12 + Math.random() * 25; }
   if (now > nextWolf) {
     // gdy wataha jest na mapie, słychać ją dużo częściej i bliżej: wycie, ujadanie, warczenie
     const pan = Math.random() * 1.6 - 0.8, pick = Math.random();
-    if (wolvesNear) { if (pick < 0.4) wolf(c, now, pan); else if (pick < 0.7) yips(c, now, pan); else snarl(c, now, pan); }
-    else if (night > 0.6) { if (pick < 0.75) wolf(c, now, pan); else yips(c, now, pan); }
-    nextWolf = now + (wolvesNear ? 7 + Math.random() * 9 : 25 + Math.random() * 30);
+    if (wolvesNear) { if (pick < 0.5) wolf(c, now, pan, true); else if (pick < 0.8) yips(c, now, pan); else snarl(c, now, pan); }
+    else if (night > 0.6 && pick < 0.5) wolf(c, now, pan);
+    nextWolf = now + (wolvesNear ? 30 + Math.random() * 30 : 150 + Math.random() * 150);
   }
 }
 
@@ -829,7 +829,8 @@ export function music(night: number, danger: boolean, inMenu: boolean, walking =
   setWalkFocus(walking && !inMenu);
   const now = c.currentTime;
   const root = night > 0.5 || danger ? 110 : 146.83; // A nocą i w boju, D za dnia
-  setDrone(c, root, inMenu ? 0.05 : danger ? 0.09 : 0.06);
+  // bordun gra tylko pod muzyką generowaną; pod utworem z pliku (i w przerwie między utworami) milknie, bo inaczej dwie muzyki grają naraz
+  setDrone(c, root, MUSIC_TRACKS.length ? 0 : inMenu ? 0.05 : danger ? 0.09 : 0.06);
   if (now < musicNext - 0.2) return;
   const t = Math.max(now, musicNext);
   if (danger && playTracks(c, 'battle', false)) { musicNext = now + 1; return; }
@@ -909,10 +910,13 @@ export const MUSIC_TRACKS: { file: string; moods: Mood[] }[] = [
   { file: 'kings-feast.ogg', moods: ['menu', 'day'] },
   { file: 'minstrel-dance.ogg', moods: ['day'] },
   { file: 'peasantry.ogg', moods: ['day'] },
-  { file: 'old-tower-inn.ogg', moods: ['night', 'menu'] },
+  // karczemny utwór tylko w menu: nocą w grze mieszał się z lutnią spod karczmy (27.10.2026)
+  { file: 'old-tower-inn.ogg', moods: ['menu'] },
   { file: 'medievals5.ogg', moods: ['night'] },
   { file: 'battle.ogg', moods: ['battle'] },
 ];
+/** Czy gra teraz utwór z pliku (albo jeszcze wybrzmiewa poprzedni) — lutnia przed karczmą wtedy milknie, żeby nie grały dwie melodie naraz */
+export const musicPlaying = (): boolean => !!trackEl || fading.size > 0;
 let trackEl: HTMLAudioElement | null = null, trackGain: GainNode | null = null, trackMood: Mood | null = null, trackFile = '', trackRestUntil = 0;
 /** Nastrój, o który prosi gra, i od kiedy (zmiana utworu dopiero, gdy prośba się utrzyma — alarm migający co sekundę nie przełącza muzyki) */
 let askMood: Mood | null = null, askSince = 0;
