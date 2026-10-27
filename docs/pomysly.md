@@ -162,6 +162,9 @@ Dalej (zmierzone 14.10 w Chrome, widok osady: ok. 2,7 mln trójkątów w scenie,
 - Ok. 1180 wywołań rysowania: kawałki lasu po kilkanaście rodzajów na kawałek, w cieniu drugi raz — BatchedMesh albo większe kawałki
 
 - Zrobione 16.10: pniaki tylko po ścięciu, zastępcze bryły cienia roślinności (warstwa „tylko cień”, src/render/shadowlayer.ts), lżejsze kwiaty, ładunki tylko u niosących.
+- Zrobione 27.10 (0.53.4): ziemia brała 17 tekstur przy limicie 16 (ostrzeżenie three.js co klatkę) — mapy normalnych spakowane parami, teraz 15.
+- Do sprawdzenia (27.10): pula 12 świateł punktowych (pochodnie, ogniska) jest liczona w KAŻDYM oświetlonym shaderze na każdy piksel, także gdy światło jest daleko i ma moc 0 — przy pełnym ekranie i dużej rozdzielczości to może być spory koszt karty. Zmierzyć w F3 czas „scena” przy 12 vs 4–6 światłach; ewentualnie mniejsza pula albo światła tylko najbliżej kamery. Pilnować też, żeby liczba świateł w scenie się nie zmieniała (zmiana = przekompilowanie shaderów = przycięcie).
+- Zasada (27.10): shader ziemi ma limit 16 tekstur (z mapą cieni, odbiciami otoczenia i śladami w śniegu); nowa tekstura w `ground.ts` = najpierw sprawdzić licznik w komentarzu w `normalpack.ts`.
 - Zrobione 17.10: AO w połowie rozdzielczości (do „Wysokiej” zawsze, na „Wysokiej” przy obrazie > 3,2 mln pikseli), AO bez osobnego rysowania przezroczystych rzeczy (n8ao samo je włączało: 4 przejścia po scenie i 2 dodatkowe rysowania na klatkę), pula świateł punktowych 24 → 12. Symulacja na 4v4 to ok. 0,6 ms na tick (zmierzone), a wątek symulacji już jest (src/sim/simthread.ts) — wąskim gardłem zostaje karta graficzna.
 
 Większe rzeczy na później:

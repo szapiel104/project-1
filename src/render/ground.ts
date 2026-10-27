@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { TEST } from '../testmode';
 import { loadTexture } from './ktx';
+import { packNormals } from './normalpack';
 
 /**
  * Podłoże jak w nowych silnikach: kilka zdjęciowych warstw (dwie trawy, łąka z ziemią i kamykami, ściółka leśna,
@@ -83,13 +84,14 @@ vWN = normalize(mat3(modelMatrix) * objectNormal);
 
 const FRAG_HEAD = /* glsl */ `
 uniform sampler2D tGrass1, tGrass2, tMeadow, tForest, tPebble, tDirt, tRock, tCliff, tSand, tNoise;
-uniform sampler2D nGrass, nForest, nPebble, nRock;
+uniform sampler2D nGF, nPR; // pary normalnych: RG = trawa/żwir, BA = las/skała (normalpack.ts)
 uniform float uDark;
 varying vec4 vSplat;
 varying float vSand;
 varying vec3 vWP;
 varying vec3 vWN;
 vec3 gNormal;
+vec3 unN(vec2 v) { v = v * 2.0 - 1.0; return vec3(v, sqrt(max(1.0 - dot(v, v), 0.0))); }
 float lum(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
 vec2 rot(vec2 p, float a) { float s = sin(a), c = cos(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
 `;
@@ -169,12 +171,12 @@ const FRAG_ALBEDO = /* glsl */ `
   float dg = (bG + bM) / sum, dd = (bD + bF + bP) / sum;
   alb *= mix(1.0, clamp(det * 2.3, 0.55, 1.45), near * 0.55 * dg) * mix(1.0, clamp(detD * 2.4, 0.6, 1.4), near * 0.45 * dd);
   // normalna z tekstur w tych samych proporcjach
-  vec3 tnG = texture2D(nGrass, w / 3.1).xyz * 2.0 - 1.0;
-  vec3 tnF = texture2D(nForest, rot(w, 1.3) / 4.2).xyz * 2.0 - 1.0;
-  vec3 tnP = texture2D(nPebble, rot(w, 2.6) / 2.9).xyz * 2.0 - 1.0;
-  vec3 tnR = texture2D(nRock, w / 6.0).xyz * 2.0 - 1.0;
+  vec3 tnG = unN(texture2D(nGF, w / 3.1).xy);
+  vec3 tnF = unN(texture2D(nGF, rot(w, 1.3) / 4.2).zw);
+  vec3 tnP = unN(texture2D(nPR, rot(w, 2.6) / 2.9).xy);
+  vec3 tnR = unN(texture2D(nPR, w / 6.0).zw);
   gNormal = normalize((tnG * (bG + bM * 0.6) + tnF * (bF + bD * 0.4 + bM * 0.4) + tnP * (bP * 1.4 + bD * 0.9 + bS * 0.5) + tnR * bR * 1.3 + vec3(0.0, 0.0, 1.0) * bS * 0.6) / sum);
-  vec3 tnDet = texture2D(nGrass, rot(w, 1.7) / 0.85).xyz * 2.0 - 1.0;
+  vec3 tnDet = unN(texture2D(nGF, rot(w, 1.7) / 0.85).xy);
   gNormal = normalize(gNormal + vec3(tnDet.xy * near * 0.8 * dg, 0.0));
 
   // góry: na płaskich półkach trawa i mech, wysoko śnieg (mniej na stromiznach), granica postrzępiona szumem
@@ -302,11 +304,14 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
   if (shared) return shared;
   const mat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.97, metalness: 0 });
   if (TEST || !loader) { shared = mat; return mat; }
+  // pary normalnych w jednej teksturze (o 2 próbniki mniej: limit 16 na wielu kartach, opis w normalpack.ts)
+  const packGF = packNormals(tex('grass_n', false), tex('forest_n', false), 2048), packPR = packNormals(tex('pebble_n', false), tex('rock_n', false), 2048);
+  mat.onBeforeRender = (renderer) => { packGF.update(renderer); packPR.update(renderer); };
   const uniforms = {
     tGrass1: { value: tex('grass1', true) }, tGrass2: { value: tex('grass2', true) }, tMeadow: { value: tex('meadow', true) },
     tForest: { value: tex('forest', true) }, tPebble: { value: tex('pebble', true) }, tDirt: { value: tex('dirt', true) }, tRock: { value: tex('rock', true) }, tCliff: { value: tex('cliff', true) }, tSand: { value: tex('sand', true) },
     tNoise: { value: sharedNoise() },
-    nGrass: { value: tex('grass_n', false) }, nForest: { value: tex('forest_n', false) }, nPebble: { value: tex('pebble_n', false) }, nRock: { value: tex('rock_n', false) },
+    nGF: packGF.uniform, nPR: packPR.uniform,
     uDark: { value: 1.0 },
     uCloudT: cloudT, uCloud: cloudK,
   };
@@ -333,7 +338,7 @@ export function groundMaterial(): THREE.MeshStandardMaterial {
     sh.fragmentShader = 'uniform float uCloudT; uniform float uCloud;\n' + sh.fragmentShader;
     sh.fragmentShader = withoutDfgLut(sh.fragmentShader);
   };
-  mat.customProgramCacheKey = () => 'ground-v3';
+  mat.customProgramCacheKey = () => 'ground-v4';
   shared = mat;
   return mat;
 }
