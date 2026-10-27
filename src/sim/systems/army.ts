@@ -1175,7 +1175,7 @@ export function armySystem(g: GameState): void {
   }
   // polegli zostają na polu jako ciała, aż zabierze je grabarz
   if (g.soldiers.some((s) => s.hp <= 0)) {
-    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false }); // rozbity taran nie zostawia ciała
+    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false, ...(s.up && s.post ? { post: s.post } : {}) }); // rozbity taran nie zostawia ciała; poległy na wieży albo murze leży na górze
     g.soldiers = g.soldiers.filter((s) => s.hp > 0);
   }
   lookout(g);

@@ -3,6 +3,7 @@ import { BUILDINGS, footprint, type ProductionDef } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { Terrain } from '../../data/terrain';
+import { WALL_TOP } from '../../data/keep';
 import { findPath, walkable } from '../path';
 import { clockAt, hourStarts, rainAt } from '../clock';
 import { FP, Phase, playerKeep, storeRoom, type Building, type GameState, type Unit } from '../state';
@@ -308,7 +309,15 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.ToCorpse: {
       const c = g.corpses.find((x) => x.id === u.target);
       if (!c) return null;
-      const ct = (c.py >> 8) * g.map.width + (c.px >> 8);
+      const w = g.map.width, cx = c.px >> 8, cy = c.py >> 8, ct = cy * w + cx;
+      // ciało na wieży albo na murze: grabarz podchodzi pod budynek i wnosi je stamtąd (Michał 27.10.2026)
+      const on = c.post ? buildingById(g, c.post) : undefined;
+      if (on && !on.ruined) {
+        const fp = footprint(BUILDINGS[on.type]!, on.rot);
+        return (t) => { const x = t % w, y = (t - x) / w; return x >= on.x - 1 && x <= on.x + fp.w && y >= on.y - 1 && y <= on.y + fp.h && !(x >= on.x && x < on.x + fp.w && y >= on.y && y < on.y + fp.h); };
+      }
+      // na koronie muru twierdzy (bez wieży): wystarczy dojść do stóp muru tuż obok
+      if (g.walls[ct]! & WALL_TOP) return (t) => t === ct || Math.max(Math.abs((t % w) - cx), Math.abs(Math.floor(t / w) - cy)) <= 1;
       return (t) => t === ct;
     }
     case Phase.ToPave: {

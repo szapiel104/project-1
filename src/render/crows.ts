@@ -1,7 +1,11 @@
 /**
- * Kruki na ciałach poległych (wyniesione z scene.ts, 23.10.2026): dziobią i podskakują, a gdy ktoś podejdzie,
- * zrywają się i krążą nad ciałem. Garść na całe pobojowisko (najwyżej 18 na mapę).
+ * Kruki na ciałach poległych (wyniesione z scene.ts, 23.10.2026): przylatują chwilę po śmierci, dziobią i podskakują,
+ * a gdy ktoś podejdzie, zrywają się i krążą nad ciałem. Po kilkudziesięciu sekundach odlatują w siną dal
+ * (Michał 27.10.2026: nie mają siedzieć nad ciałem bez końca). Garść na całe pobojowisko (najwyżej 18 na mapę).
+ * Ciała na wieżach i murach kruki omijają.
  */
+/** Sekundy od śmierci: przylot, odlot (koniec siedzenia) i zniknięcie */
+const ARRIVE = 15, LAND = 19, LEAVE = 50, GONE = 57;
 import * as THREE from 'three';
 import { FP, type GameState } from '../sim/state';
 import { cat } from './cat';
@@ -13,6 +17,9 @@ export class CrowLayer {
   private time = 0;
   private calm = false;
   private tmp = new THREE.Object3D();
+  /** Ułamek bieżącego ticku (płynny lot między tickami symulacji, 10 na sekundę) */
+  private lastTick = -1;
+  private tickAt = 0;
   constructor(private scene: THREE.Scene) {}
 
   private crows: THREE.InstancedMesh | null = null;
@@ -29,6 +36,9 @@ export class CrowLayer {
       this.crowFly = c.fly.map((geo) => { const m = new THREE.InstancedMesh(geo, c.mat, 128); m.frustumCulled = false; m.castShadow = true; m.count = 0; this.scene.add(cat(m, 'kruki')); return m; });
     }
     const { width, height } = g.map;
+    if (g.tick !== this.lastTick) { this.lastTick = g.tick; this.tickAt = this.time; }
+    const frac = this.calm ? 0 : Math.min(1, (this.time - this.tickAt) * 10);
+    const ageOf = (at: number): number => (g.tick - at + frac) / 10;
     const t = this.tmp;
     const F = this.crowFly.length;
     const flyN = new Array<number>(F).fill(0);
@@ -37,15 +47,16 @@ export class CrowLayer {
     // pole dostaje 2 kruki + 1 na każde kolejne 8 ciał (najwyżej 6), a na całą mapę najwyżej 18.
     const CELL = 10 * FP;
     const bodies = new Map<number, number>();
+    const visit = (body: GameState['corpses'][number]): boolean => !body.taken && !body.post && ageOf(body.at) >= ARRIVE && ageOf(body.at) < GONE;
     for (const body of g.corpses) {
-      if (body.taken || g.tick - body.at < 150) continue;
+      if (!visit(body)) continue;
       const key = Math.floor(body.px / CELL) * 4096 + Math.floor(body.py / CELL);
       bodies.set(key, (bodies.get(key) ?? 0) + 1);
     }
     const used = new Map<number, number>();
     for (const body of g.corpses) {
       if (total >= 18) break;
-      if (body.taken || g.tick - body.at < 150) continue; // przylatują chwilę po śmierci
+      if (!visit(body)) continue; // przylatują chwilę po śmierci, po chwili odlatują
       const key = Math.floor(body.px / CELL) * 4096 + Math.floor(body.py / CELL);
       const budget = Math.min(6, 2 + Math.floor(((bodies.get(key) ?? 1) - 1) / 8));
       const had = used.get(key) ?? 0;
@@ -58,7 +69,26 @@ export class CrowLayer {
       const near = g.units.some((u) => Math.abs(u.px - body.px) < 2.5 * FP && Math.abs(u.py - body.py) < 2.5 * FP)
         || g.soldiers.some((s) => Math.abs(s.px - body.px) < 2.5 * FP && Math.abs(s.py - body.py) < 2.5 * FP);
       const bx = body.px / FP, by = body.py / FP;
+      const age = ageOf(body.at);
       for (let i = 0; i < count; i++) {
+        // przylot i odlot: z daleka, z góry, po łuku; kierunek stały dla danego ciała
+        if (age < LAND || age >= LEAVE) {
+          const dir = body.id * 2.399 + i * 0.5;
+          const k = age < LAND ? 1 - (age - ARRIVE) / (LAND - ARRIVE) : (age - LEAVE) / (GONE - LEAVE); // 0 = przy ciele, 1 = daleko
+          const e = k * k;
+          const dist = e * 28, up = 0.5 + e * 9 + Math.sin(k * Math.PI) * 1.2;
+          const x = bx + Math.cos(dir) * dist + Math.cos(dir + 1.57) * 0.35 * i, y = by + Math.sin(dir) * dist + Math.sin(dir + 1.57) * 0.35 * i;
+          t.position.set(x - width / 2, view.heightAt(bx, by) + up + i * 0.2, y - height / 2);
+          // dziobem w stronę lotu: przylot do ciała, odlot od ciała
+          const away = age >= LEAVE;
+          t.rotation.set(away ? -0.25 : 0.2, Math.atan2(away ? Math.cos(dir) : -Math.cos(dir), away ? Math.sin(dir) : -Math.sin(dir)), 0, 'YXZ');
+          t.scale.setScalar(1.1);
+          t.updateMatrix();
+          const f = Math.floor(((this.calm ? 0 : this.time) * 10 + i * 2.7 + body.id) % F);
+          const mesh = this.crowFly[f]!;
+          if (flyN[f]! < 128) mesh.setMatrixAt(flyN[f]!++, t.matrix);
+          continue;
+        }
         if (near) {
           // spłoszone: krążą nad ciałem na różnych wysokościach, machając skrzydłami
           const ang = (this.calm ? 0 : this.time) * (0.9 + i * 0.15) + body.id + i * 2.1;

@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.53.14 — polegli leżą na wieży i murze, kruki odlatują, bez krzyku śmierci (2026-10-27)
+
+- **Ciało zostaje tam, gdzie żołnierz zginął:** łucznik poległy na wieży leży na jej pomoście, na murze kamiennym — na chodniku muru, na murach twierdzy — na koronie muru (wcześniej spadał od razu na ziemię pod wieżę). Gdy wieżę zburzą, ciało spada na ziemię
+- **Grabarz i wolni chłopi zabierają poległych z wież i murów:** podchodzą pod wieżę albo do stóp muru i znoszą ciało (wcześniej nie mieli jak do niego dojść i leżało tam do rozkładu)
+- **Kruki tylko na chwilę:** przylatują z daleka kilkanaście sekund po śmierci, posiedzą i podziobią ok. pół minuty, potem odlatują w siną dal (wcześniej siedziały nad ciałem, aż je zabrano). Na ciała na wieżach i murach nie siadają
+- **Bez krzyku przy śmierci:** dźwięk przy padającym ciele (brzmiał jak dmuchanie albo zjawa) usunięty
+- Bot: bez osobnych zmian (grabarze i chłopi bota korzystają z tych samych zasad)
+- Test: `tests/tower-shoot.test.ts` — ciało na wieży zostaje na górze i zostaje zabrane
+
 ## 0.53.13 — gruz wygląda jak kamień (2026-10-27)
 
 - Odłamki i gruz to nieregularne kamienie z teksturą i mapą wypukłości zamiast kanciastych, białych brył; mniejsze, ciemniejsze i w różnych odcieniach, mniej ich wokół ruin

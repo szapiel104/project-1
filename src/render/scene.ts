@@ -247,7 +247,6 @@ export class GameRenderer {
   /** Do dźwięków: kiedy chłop zaczął uciekać, przed kim stanął, którzy polegli już krzyknęli */
   private fledSeen = new Map<number, number>();
   private foeSeen = new Map<number, number>();
-  private screamed = new Set<number>();
   private taverns = new Map<number, GameState['buildings'][number]>();
   private innDoors = new Map<number, GameState['buildings'][number]>();
   /** Drzwi kapliczek: wieczorem modlący się klęczą przy klęczniku i stoją za nimi ze spuszczonymi głowami */
@@ -3820,14 +3819,17 @@ export class GameRenderer {
       if (body.kind === -2) continue; // zabity wilk: rysuje go syncWolves (leży na boku)
       const fx = body.px / FP, fy = body.py / FP;
       const age = Math.min(1, (g.tick - body.at) / 6000);
-      const y = view.heightAt(fx, fy);
+      // poległ na wieży albo na murze: leży na pomoście/chodniku (dopóki budynek stoi), na koronie muru twierdzy — na murze
+      const onPost = body.post ? bById.get(body.post) : undefined;
+      const postId = onPost && !onPost.ruined ? BUILDINGS[onPost.type]!.id : '';
+      const y = postId ? view.heightAt(fx, fy) + (postId === 'stoneWall' ? STONE_WALL_TOP : TOWER_TOP[postId] ?? WATCH_TOWER_TOP)
+        : this.standY(view, fx, fy, (body.py >> 8) * width + (body.px >> 8));
       // padanie — każdy pada inaczej (zależnie od numeru ciała): na plecy, na twarz, na bok albo osuwa się na ziemię
       // i dopiero wtedy przewraca na plecy. Przewrót przyspiesza i kończy się małym odbiciem przy ziemi
       const how = deathKind(body.id);
       // czas z ułamkiem ticku (alpha): ticków jest 10 na sekundę, więc bez tego upadek szedł skokami jak w kilku klatkach
       const fall = Math.max(0, Math.min(1, (g.tick + alpha - body.at) / (TICKS_PER_SECOND * (how === 3 ? 1.4 : 0.7))));
-      // krzyk w chwili śmierci (raz)
-      if (fall < 0.3 && !this.calm && !this.screamed.has(body.id)) { this.screamed.add(body.id); this.voiceAt('scream', fx - width / 2, fy - height / 2, 1); }
+      // bez krzyku przy śmierci (Michał 27.10.2026: brzmiał jak dmuchanie albo zjawa); słychać tylko sam cios
       const ease = fall < 0.85 ? (fall / 0.85) ** 2 : 1 - Math.sin(((fall - 0.85) / 0.15) * Math.PI) * 0.06;
       const yaw = this.fallYaw.get(body.id) ?? ((body.id * 2.39) % 6.28);
       const e = this.calm ? 1 : ease;
