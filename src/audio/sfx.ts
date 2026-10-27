@@ -293,7 +293,6 @@ export function play(sound: Sound): void {
 }
 
 // --- przyroda: wiatr przez cały czas, wrony za dnia, wilki nocą (wszystko syntezowane, bez plików) ---
-let wind: { src: AudioBufferSourceNode; filter: BiquadFilterNode; gain: GainNode } | null = null;
 let nextCrow = 0, nextWolf = 0, nextDrop = 0;
 let rainNoise: { gain: GainNode } | null = null;
 
@@ -322,23 +321,6 @@ function drop(c: AudioContext, at: number): void {
   const p = c.createStereoPanner(); p.pan.value = Math.random() * 2 - 1;
   o.connect(g).connect(p).connect(busGain.amb ?? master!);
   o.start(at); o.stop(at + 0.06);
-}
-
-function startWind(c: AudioContext): void {
-  if (wind || !noise) return;
-  const src = c.createBufferSource();
-  src.buffer = noise;
-  src.loop = true;
-  src.playbackRate.value = 0.35;
-  const filter = c.createBiquadFilter();
-  filter.type = 'lowpass';
-  filter.frequency.value = 400;
-  filter.Q.value = 1.2;
-  const gain = c.createGain();
-  gain.gain.value = 0;
-  src.connect(filter).connect(gain).connect(busGain.amb ?? master!);
-  src.start();
-  wind = { src, filter, gain };
 }
 
 /** Kracz wrony: chrapliwy, krótki „kraa” opadający w tonie, 1–3 razy */
@@ -441,14 +423,8 @@ function wolf(c: AudioContext, at: number, pan: number, near = false): void {
 export function nature(night: number, rain: number, paused: boolean, wolvesNear = 0): void {
   const c = ctx;
   if (!c || muted || c.state !== 'running') return;
-  startWind(c);
+  // szumu wiatru nie ma (Michał 27.10.2026: „dziwny dźwięk wiatru” — syntetyczny szum brzmiał sztucznie)
   const now = c.currentTime;
-  if (wind) {
-    const gust = 0.5 + 0.5 * Math.sin(now * 0.31) * Math.sin(now * 0.17 + 1);
-    const level = (0.05 + gust * 0.07 + rain * 0.1 + night * 0.03) * (paused ? 0.5 : 1);
-    wind.gain.gain.setTargetAtTime(level, now, 0.5);
-    wind.filter.frequency.setTargetAtTime(280 + gust * 420 + rain * 500, now, 0.5);
-  }
   startRain(c);
   if (rainNoise) rainNoise.gain.gain.setTargetAtTime(rain * 0.22, now, 0.8);
   if (rain > 0.1 && now > nextDrop) { for (let i = 0; i < 3; i++) drop(c, now + Math.random() * 0.1); nextDrop = now + 0.05 + (1 - rain) * 0.3; }
@@ -494,7 +470,6 @@ export function caveSounds(water: number, picks: number): void {
   const c = ctx;
   if (!c || muted || c.state !== 'running') return;
   const now = c.currentTime;
-  if (wind) wind.gain.gain.setTargetAtTime(0, now, 0.4);
   if (rainNoise) rainNoise.gain.gain.setTargetAtTime(0, now, 0.4);
   if (now > nextDrip) {
     drip(c, now, Math.random() * 1.4 - 0.7, 0.5 + water * 0.7);

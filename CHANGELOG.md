@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.53.11 — panel dewelopera z ikonami, bez szumu wiatru, strzały bez skrętu, skrót do spichlerza (2026-10-27)
+
+- **Panel dewelopera (F9) od nowa:** każdy przycisk ma ikonę i krótki podpis. Kolejność jak przy użyciu: kogo postawić (kafelki z całym wojskiem — włócznik, łucznik, strażnik, zbój, zbrojny, saper, **mag Płomienia, mag Źródła** — i wilk), czyj (Wróg / Mój), ilu (×1, ×3, ×6, ×12), „Stawiaj na mapie”; potem Czas (Rano, Noc, cztery pory roku), Szybko (wróg pod wieżą, pożar, ulecz, +1000, usuń wrogów, wygraj) i Kamera (moja / wroga twierdza). Wcześniej nie dało się postawić magów
+- **Bez szumu wiatru:** syntetyczny szum (słychać go było zwłaszcza w ciszy po walce, gdy przylatują kruki) usunięty; zostaje tło dźwiękowe z nagrań, deszcz, ptaki i wilki (`audio/sfx.ts`)
+- **Strzały nie skręcają nagle o 90°:** kierunek strzały liczony wprost z toru lotu; wcześniej pod sam koniec lotu punkt „chwilę dalej” zbiegał się z celem i strzała obracała się w bok tuż przed trafieniem (`render/arrows.ts`)
+- **Skrót do spichlerza** na dolnym pasku obok koszar i składu: klik pokazuje spichlerz i otwiera jego okno, kolejny klik — następny (mały i duży). Skrót do składu obejmuje teraz też duży skład (stodołę)
+- Bot: bez zmian (poprawki interfejsu, dźwięku i wyglądu)
 ## 0.53.10 — daszek karczmy w dobrą stronę, detale na zamku (2026-10-27)
 
 - Karczma: daszek nad gankiem opadał do środka (wyżej na zewnątrz) — teraz spada od ściany na zewnątrz, wysoko przy ścianie pod belkami piętra i niżej nad belką na słupach; doszły krokwie pod deskami i deska czołowa na okapie (`tools/models/tavern.py`)
@@ -16,6 +23,7 @@
 - **Ruina muru:** zamiast gładkiej „posadzki” zostaje poszarpany kikut — korona z wyłamanych kamieni, wyrwy na bokach, bez przedpiersia i blanek (wracają pod koniec odbudowy). Wokół ciosy i kamienie; po częstokole kikuty bali, połamane bale, drzazgi i szczapy. Gruzu ubywa w miarę odbudowy. Tak samo gruz wokół ruin bram i wież
 - **Pęknięcia przyklejone do ściany:** naklejka 3 mm przed licem zamiast 12 mm (wcześniej było widać odstęp od muru), na wieżach mniejsze, żeby nie odstawały od zaokrągleń
 - „Jak grać” → Cech inżynierów: dopisane, że odłamane bale i gruz leżą do naprawy
+
 
 ## 0.53.8 — płonący i przymrożeni wyglądają naturalnie (2026-10-27)
 

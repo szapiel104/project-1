@@ -26,7 +26,7 @@ import { FOOD_PER_DAY, FOOD_VALUE, GRAIN_PER_DAY, MEALS_PER_DAY, foodTotal, mont
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 import { buildCost, canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
-import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
+import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, type JumpKind, type RecruitUnit } from './ui/hud';
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { storeLogistics } from './ui/storePanel';
 import { storeNotes } from './ui/storeNotes';
@@ -863,8 +863,11 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
 
 /** Skrót z paska: kamera do własnych koszar albo składu i okno budynku; kolejne kliknięcia idą po kolejnych */
 const jumpAt: Record<string, number> = {};
-function jumpTo(kind: 'barracks' | 'stockpile'): void {
-  const list = game.buildings.filter((b) => b.owner === ME && BUILDINGS[b.type]!.id === kind).sort((a, b) => a.id - b.id);
+/** Skróty na dolnym pasku: koszary, składy (mały i duży) i spichlerze (mały i duży) */
+const JUMP_IDS: Record<JumpKind, readonly string[]> = { barracks: ['barracks'], stockpile: ['stockpile', 'barn'], granary: ['granary', 'granaryBig'] };
+function jumpTo(kind: JumpKind): void {
+  const ids = JUMP_IDS[kind];
+  const list = game.buildings.filter((b) => b.owner === ME && ids.includes(BUILDINGS[b.type]!.id)).sort((a, b) => a.id - b.id);
   if (!list.length) return;
   const cur = list.findIndex((b) => b.id === selected);
   const next = cur >= 0 ? (cur + 1) % list.length : (jumpAt[kind] ?? 0) % list.length;
@@ -875,7 +878,7 @@ function jumpTo(kind: 'barracks' | 'stockpile'): void {
   select(b.id);
   play('select');
 }
-const jumpCount = (kind: string): number => { let n = 0; for (const b of game.buildings) if (b.owner === ME && BUILDINGS[b.type]!.id === kind) n++; return n; };
+const jumpCount = (kind: JumpKind): number => { const ids = JUMP_IDS[kind]; let n = 0; for (const b of game.buildings) if (b.owner === ME && ids.includes(BUILDINGS[b.type]!.id)) n++; return n; };
 
 function select(id: number): void {
   if (id && selectedUnit) { selectedUnit = 0; renderer.setUnitSelection(0); }
@@ -1822,7 +1825,7 @@ function refresh(): void {
   }
   const clock = clockAt(game.tick);
   hud.update({
-    jumps: { barracks: jumpCount('barracks'), stockpile: jumpCount('stockpile') },
+    jumps: { barracks: jumpCount('barracks'), stockpile: jumpCount('stockpile'), granary: jumpCount('granary') },
     day: clock.day, hour: clock.hour, night: clock.night,
     weather: (() => { const w = weatherOf(game, rainAt(game.tick)); return { season: SEASON_NAME[w.season], temp: w.temp, note: stormAt(game) ? tx('burza', 'storm') : droughtAt(game) ? tx('susza', 'drought') : undefined }; })(),
     res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
@@ -2753,14 +2756,15 @@ function devPlace(x: number, y: number, kind: DevSpawn, foe: boolean, count: num
         else {
           if (owner < 0) return 0;
           const k = unitIndex(kind);
+          if (k < 0) return 0;
           game.soldiers.push({ id: game.nextId++, owner, kind: k, px, py, path: [], hp: UNITS[k]!.hp, goal: -1, wait: 0, target: 0, cd: 0 });
         }
         n++;
       }
-  const what = lang() === 'en' ? (kind === 'wolf' ? 'wolves' : kind === 'archer' ? 'archers' : 'spearmen') : kind === 'wolf' ? 'wilków' : kind === 'archer' ? 'łuczników' : 'włóczników';
+  const what = kind === 'wolf' ? tx('wilk', 'wolf') : t(UNITS[unitIndex(kind)]?.name ?? 'u.spearman').toLowerCase();
   const h = clockAt(game.tick).hour;
   if (kind === 'wolf' && h >= 6.5 && h < 19.5 && n) { devPanel.placed(tx(`Postawiono ${n} wilków, ale jest dzień — od razu uciekną do lasu. Najpierw „Przewiń do nocy”.`, `Placed ${n} wolves, but it is daytime — they will flee to the forest at once. Skip to night first.`)); return n; }
-  devPanel.placed(n ? tx(`Postawiono ${n} ${what}${kind === 'wolf' ? '' : foe ? ' wroga' : ' swoich'}. Klikaj dalej albo Esc.`, `Placed ${n} ${kind === 'wolf' ? '' : foe ? 'enemy ' : 'friendly '}${what}. Keep clicking or press Esc.`) : tx('Tu nie da się postawić — wybierz wolne pole.', 'Cannot place here — pick a free tile.'));
+  devPanel.placed(n ? tx(`Postawiono: ${what} ×${n}${kind === 'wolf' ? '' : foe ? ' (wróg)' : ' (moi)'}. Klikaj dalej albo Esc.`, `Placed: ${what} ×${n}${kind === 'wolf' ? '' : foe ? ' (enemy)' : ' (mine)'}. Keep clicking or press Esc.`) : tx('Tu nie da się postawić — wybierz wolne pole.', 'Cannot place here — pick a free tile.'));
   return n;
 }
 const devPanel = createDevPanel(document.body, {

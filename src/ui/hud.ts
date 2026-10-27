@@ -59,7 +59,7 @@ export interface HudEvents {
   onQuell(): void;
   onSelectGarrison(building: number): void;
   /** Skrót w dolnym pasku: kamera do koszar albo składu (kolejne kliknięcia przechodzą po kolejnych budynkach) */
-  onJump(kind: 'barracks' | 'stockpile'): void;
+  onJump(kind: JumpKind): void;
 }
 
 export interface HudView {
@@ -67,7 +67,7 @@ export interface HudView {
   report?: { popularity: { label: string; value: number; note?: string }[]; people: { label: string; value: number }[]; army: { label: string; value: number }[]; food: { label: string; value: string; note?: string; sign?: 'plus' | 'minus' }[]; foodHint: string };
   soldiers?: number;
   /** Ile własnych koszar i składów stoi na mapie (skróty w pasku; 0 = przycisk nieczynny) */
-  jumps?: { barracks: number; stockpile: number };
+  jumps?: Record<JumpKind, number>;
   res: ArrayLike<number>;
   /** Zmiana zapasu każdego surowca w ciągu ostatniej minuty gry */
   trend: ArrayLike<number>;
@@ -100,6 +100,8 @@ export interface HudView {
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
 /** Okno magazynu: `here` — pojemność tego budynku, `hereUsed` i `items` — co leży w nim samym; `used`/`max` — suma ze wszystkich `stores` magazynów tego rodzaju */
 export interface StockInfo { kind: string; here: number; hereUsed: number; used: number; max: number; stores: number; items: { id: string; amount: number }[] }
+/** Skróty na dolnym pasku: koszary, skład, spichlerz */
+export type JumpKind = 'barracks' | 'stockpile' | 'granary';
 export interface BuildingInfo { stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
@@ -517,11 +519,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const clockText = el('span', 'clock-text');
   clockText.append(clockVal, weatherVal);
   clockBox.append(clockIcon, clockText);
-  // skróty: obrazek koszar i składu; klik przenosi kamerę do budynku i otwiera jego okno
+  // skróty: obrazek koszar, składu i spichlerza; klik przenosi kamerę do budynku i otwiera jego okno
   const jumpBox = el('div', 'jumps');
   jumpBox.setAttribute('role', 'group');
   jumpBox.setAttribute('aria-label', tx('Skróty do budynków', 'Building shortcuts'));
-  const jumpBtn = (kind: 'barracks' | 'stockpile', fallback: string): HTMLButtonElement => {
+  const jumpBtn = (kind: JumpKind, fallback: string): HTMLButtonElement => {
     const b = el('button', 'jump');
     b.type = 'button';
     b.append(pic(kind, fallback));
@@ -531,9 +533,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   };
   const jumpBarracks = jumpBtn('barracks', 'barracks');
   const jumpStock = jumpBtn('stockpile', 'store');
+  const jumpGranary = jumpBtn('granary', 'granary');
   let jumpKey = '';
-  const paintJumps = (j: { barracks: number; stockpile: number }): void => {
-    const key = `${j.barracks}:${j.stockpile}`;
+  const paintJumps = (j: Record<JumpKind, number>): void => {
+    const key = `${j.barracks}:${j.stockpile}:${j.granary}`;
     if (key === jumpKey) return;
     jumpKey = key;
     const set = (b: HTMLButtonElement, n: number, name: string, none: string): void => {
@@ -544,8 +547,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     };
     set(jumpBarracks, j.barracks, tx('Koszary', 'Barracks'), tx('Nie masz jeszcze koszar', 'You have no barracks yet'));
     set(jumpStock, j.stockpile, tx('Skład', 'Stockpile'), tx('Nie masz jeszcze składu', 'You have no stockpile yet'));
+    set(jumpGranary, j.granary, tx('Spichlerz', 'Granary'), tx('Nie masz jeszcze spichlerza', 'You have no granary yet'));
   };
-  paintJumps({ barracks: 0, stockpile: 0 });
+  paintJumps({ barracks: 0, stockpile: 0, granary: 0 });
   people.append(jumpBox, stockBox, foodBox, popBox, armyBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');

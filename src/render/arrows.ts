@@ -8,6 +8,7 @@ import { tint } from './loads';
 import { touch } from './touch';
 
 /** Barwa smugi za strzałą: zwykła (jasna) i ognista (pomarańczowa) */
+const UP = new THREE.Vector3(0, 1, 0);
 const PLAIN_TRAIL = new THREE.Color(0xd8d0c0), FIRE_TRAIL = new THREE.Color(0xff8a30);
 /** Najwięcej strzał naraz w powietrzu */
 export const MAX_ARROWS = 256;
@@ -64,8 +65,12 @@ export class ArrowLayer {
     for (const a of this.arrows) {
       const arc = Math.sin(a.t * Math.PI) * a.from.distanceTo(a.to) * a.arc;
       p.lerpVectors(a.from, a.to, a.t); p.y += arc;
-      nx.lerpVectors(a.from, a.to, Math.min(1, a.t + 0.05)); nx.y += Math.sin(Math.min(1, a.t + 0.05) * Math.PI) * a.from.distanceTo(a.to) * a.arc;
-      m.lookAt(nx, p, new THREE.Vector3(0, 1, 0));
+      // kierunek lotu liczony wprost (pochodna toru), a nie z punktu „chwilę dalej”: tamten pod koniec lotu
+      // zbiegał się z celem i strzała potrafiła nagle obrócić się o 90° tuż przed trafieniem (Michał 27.10.2026)
+      nx.subVectors(a.to, a.from); nx.y += Math.cos(a.t * Math.PI) * Math.PI * a.from.distanceTo(a.to) * a.arc;
+      if (nx.lengthSq() < 1e-8) nx.set(0, 0, 1);
+      nx.normalize().add(p);
+      m.lookAt(nx, p, UP);
       q.setFromRotationMatrix(m);
       m.compose(p, q, one);
       this.arrowMesh.setMatrixAt(n, m);
