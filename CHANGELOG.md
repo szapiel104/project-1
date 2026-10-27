@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.51.13 — chleb się opłaca, opis studni, leśniczy na ilu drwali (2026-10-27)
+
+- **Chleb:** młyn mieli naraz do 128 zboża (wcześniej 16), więc przerobi zbiory z ok. 5 pól; piekarnia bierze 16 mąki i piecze 40 chlebów (wcześniej 4 → 10), czyli jeden młyn wystarcza na ok. 8 piekarni. Zmierzone w symulacji na dobę: pole ok. 150 zboża, młyn ok. 770 mąki, piekarnia ok. 240 chlebów (480 porcji). Pełny łańcuch daje teraz więcej jedzenia na pracownika niż sady (wcześniej mniej niż połowę, stąd wrażenie, że piekarnia nic nie daje)
+- Młyn i piekarnia przy pustawej stodole biorą, co jest (byle ćwierć wsadu), i robią odpowiednio mniej — przy jednym polu młyn nie stoi pół dnia
+- Prognoza w oknie spichlerza liczy piekarnie po tym, ile starcza im mąki i zboża (młyn ok. 8 piekarni, pole ok. 1,5), a nie „po jednej na młyn i pole”
+- Bot stawia drugie pole i drugą piekarnię w dalszej części rozbudowy
+- **Studnia** ma wreszcie opis: gaszenie pożarów (bez studni nikt nie gasi), susza przy sadach i polach do 8 pól, mniejsze ryzyko zarazy
+- **Chata leśniczego:** w opisie, ile trwa sadzenie i ścinanie — leśniczy ok. 7 dorosłych drzew na dobę (limit 14 sadzonek, 2 dni wzrostu), drwal 2–3 drzewa na dobę, więc jeden leśniczy na 2–3 drwali (na zimę lepiej jeden na dwóch)
+- Opisy pola, młyna i piekarni oraz „Jak grać” z nowymi liczbami (PL i EN)
+
 ## 0.51.12 — pory roku bez drugiej kompilacji, „Nowa gra” bez zatrzymania (2026-10-26)
 
 - **Pory roku:** łatki śniegu, jesieni i szronu dokładały się do materiałów skanem co 3 s, więc każdy nowy budynek, plac budowy czy kępa trawy kilka sekund po pojawieniu się kompilował shadery drugi raz, już na żywo (krótka zwiecha). Rozgrzewka przy starcie też kompilowała wersje bez łatek. Teraz łatka trafia na nowe obiekty od razu, przed kompilacją w tle, a rozgrzewka kompiluje budynki i mapę już z nią

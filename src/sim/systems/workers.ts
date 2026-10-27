@@ -363,14 +363,17 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       const inp = prod?.input;
       if (!inp) { u.phase = Phase.Returning; break; }
       const i = resIndex(inp.res);
-      if (p.res[i]! >= inp.amount) {
-        p.res[i]! -= inp.amount;
-        u.carryRes = i; u.carryAmt = inp.amount; u.phase = Phase.ToHome;
+      // bierze pełny wsad, a gdy w magazynie mniej — co jest, byle choć ćwierć wsadu (młyn przy jednym polu też mieli)
+      const take = Math.min(inp.amount, p.res[i]!);
+      if (take >= Math.ceil(inp.amount / 4)) {
+        p.res[i]! -= take;
+        u.carryRes = i; u.carryAmt = take; u.phase = Phase.ToHome;
       } else u.wait = RETRY_TICKS; // brak surowca: czeka przy magazynie
       break;
     }
     case Phase.ToHome:
-      u.carryRes = -1; u.carryAmt = 0;
+      // carryAmt zostaje na czas pracy: z niepełnego wsadu wychodzi odpowiednio mniej towaru
+      u.carryRes = -1; if (!prod?.input) u.carryAmt = 0;
       u.phase = Phase.Working; u.timer = (prod?.input ? prod.workTicks : prod?.processTicks) ?? prod?.workTicks ?? 0;
       break;
     case Phase.ToSite:
@@ -612,7 +615,8 @@ export function workerSystem(g: GameState): void {
       }
       u.carryRes = resIndex(prod.output.res);
       // susza: sad i pole bez studni obok rodzą o połowę mniej (storms.ts)
-      u.carryAmt = job ? Math.max(1, Math.round((prod.output.amount * harvestPct(g, job)) / 100)) : prod.output.amount;
+      const batch = prod.input && u.carryAmt > 0 ? Math.min(1, u.carryAmt / prod.input.amount) : 1;
+      u.carryAmt = job ? Math.max(1, Math.round((prod.output.amount * batch * harvestPct(g, job)) / 100)) : prod.output.amount;
       if (job && job.type === OREMINE) {
         // kopalnia: z jednego kursu wychodzi kamień, żelazo albo (rzadko) ruda — losowane z ziarna meczu
         let roll = g.rng.int(100);

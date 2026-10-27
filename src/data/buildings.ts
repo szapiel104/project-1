@@ -112,12 +112,14 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'mill', category: 'food', name: 'b.mill', w: 2, h: 2, tier: 1, cost: { wood: 55, stone: 30 }, buildable: true,
     workView: 'inside',
-    production: { input: { res: 'wheat', amount: 16 }, output: { res: 'flour', amount: 16 }, site: 'home', workTicks: 90 },
+    // jeden młyn przerabia zboże z około pięciu pól (pole ok. 150 zboża na dobę, młyn ok. 6 kursów na dobę)
+    production: { input: { res: 'wheat', amount: 128 }, output: { res: 'flour', amount: 128 }, site: 'home', workTicks: 90 },
   },
   {
     id: 'bakery', category: 'food', name: 'b.bakery', w: 2, h: 2, tier: 1, cost: { wood: 50, stone: 30 }, requires: 'mill', buildable: true,
     workView: 'inside',
-    production: { input: { res: 'flour', amount: 4 }, output: { res: 'bread', amount: 10 }, site: 'home', workTicks: 110 },
+    // jeden młyn starcza na około osiem piekarni; z pełnego łańcucha (pola, młyn, piekarnie) wychodzi więcej jedzenia na człowieka niż z sadu
+    production: { input: { res: 'flour', amount: 16 }, output: { res: 'bread', amount: 40 }, site: 'home', workTicks: 110 },
   },
   // Obozowisko stoi od początku przy twierdzy: tu czekają chłopi bez pracy. Ma limit miejsc, więc bez wolnego miejsca nowi nie przyjdą
   { id: 'camp', category: 'settlement', name: 'b.camp', w: 2, h: 2, cost: { wood: 20 }, idleSlots: 6, buildable: true },

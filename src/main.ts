@@ -22,7 +22,7 @@ import { doleCost, rioters } from './sim/systems/unrest';
 import { canQuarantine, magesOf, startPlague } from './sim/systems/plague';
 import { droughtAt, stormAt } from './sim/systems/storms';
 import { feastDay, preached } from './sim/systems/faith';
-import { FOOD_PER_DAY, FOOD_VALUE, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
+import { FOOD_PER_DAY, FOOD_VALUE, GRAIN_PER_DAY, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 import { buildCost, canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
@@ -2665,8 +2665,9 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
   const net = FOOD_RES_ALL.reduce((n, i) => n + (trend[i] ?? 0) * (FOOD_VALUE[RESOURCES[i]!] ?? 1), 0); // zmiana z ostatnich ok. 600 ticków (1/6 doby)
   const mineB = game.buildings.filter((b) => b.owner === ME && !b.build);
   const count = (id: string, worked = true): number => mineB.filter((b) => BUILDINGS[b.type]!.id === id && (!worked || b.worker) && !b.off).length;
-  const bakeries = Math.min(count('bakery'), count('mill'), count('farm'));
-  const made = count('orchard') * FOOD_PER_DAY.orchard! + count('fisher') * FOOD_PER_DAY.fisher! + bakeries * FOOD_PER_DAY.bakery!;
+  // piekarnie liczone tyle, ile starcza im mąki z młynów i zboża z pól (młyn ok. 8 piekarni, pole ok. 1,5 piekarni)
+  const bakeries = Math.min(count('bakery'), (count('mill') * GRAIN_PER_DAY.mill) / GRAIN_PER_DAY.bakery, (count('farm') * GRAIN_PER_DAY.farm) / GRAIN_PER_DAY.bakery);
+  const made = Math.round(count('orchard') * FOOD_PER_DAY.orchard! + count('fisher') * FOOD_PER_DAY.fisher! + bakeries * FOOD_PER_DAY.bakery!);
   const perPerson = (lvl.foodPer8 / 8) * MEALS_PER_DAY;
   const feeds = perPerson > 0 ? Math.floor(made / perPerson) : 0;
   const lasts = perDayWant > 0 ? have / perDayWant : Infinity;
@@ -2679,7 +2680,7 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
     { label: tx('Zjadają na dobę', 'Eaten per day'), value: `${perDayWant} ${tx('porcji', 'portions')}`, note: `(${perPerson.toFixed(perPerson % 1 ? 1 : 0)} ${tx('na osobę', 'per head')})` },
     { label: tx('W spichlerzach', 'In the granaries'), value: `${storeUsed(p0, 'granary')} / ${storeCapacity(game, ME, 'granary')}`, note: tx(`(${have} porcji: jabłko 1, chleb 2, ryba 3)`, `(${have} portions: apple 1, bread 2, fish 3)`) },
     { label: tx('Zapas starczy na', 'Stores will last'), value: fmtLast(lasts), sign: lasts < 0.5 ? 'minus' : lasts >= 2 ? 'plus' : undefined },
-    { label: tx('Gospodarstwa dają na dobę', 'Farms yield per day'), value: `${tx('ok.', 'c.')} ${made}`, note: tx(`(sady ${count('orchard')}, rybacy ${count('fisher')}, piekarnie ${bakeries})`, `(orchards ${count('orchard')}, fishermen ${count('fisher')}, bakeries ${bakeries})`) },
+    { label: tx('Gospodarstwa dają na dobę', 'Farms yield per day'), value: `${tx('ok.', 'c.')} ${made}`, note: tx(`(sady ${count('orchard')}, rybacy ${count('fisher')}, piekarnie ${count('bakery', false)})`, `(orchards ${count('orchard')}, fishermen ${count('fisher')}, bakeries ${count('bakery', false)})`) },
     { label: tx('Wykarmią', 'Enough to feed'), value: tx(`ok. ${feeds} osób`, `c. ${feeds} people`), sign: feeds < pop ? 'minus' : 'plus' },
     { label: tx('Bilans teraz', 'Current balance'), value: `${net * 6 > 0 ? '+' : net < 0 ? '−' : ''}${Math.abs(net * 6)} ${tx('na dobę', 'per day')}`, sign: net < 0 ? 'minus' : net > 0 ? 'plus' : undefined, note: tx('(z ostatnich 4 godzin)', '(over the last 4 hours)') },
   ];
@@ -2688,9 +2689,9 @@ function buildReport(f: ReturnType<typeof monthlyForecast>, trend: number[]): Hu
   const granaryCap = BUILDINGS.find((b) => b.id === 'granary')?.capacity?.granary ?? 0;
   const foodHint = lang() === 'en'
     ? (lack > 0 ? `Food is short for ${pop - feeds} people — build about ${lack} more ${lack === 1 ? 'orchard' : 'orchards'} (or shut down a less vital building so its worker moves to an orchard). ` : '')
-      + `One orchard feeds about ${perOrchard} people, a fisherman about ${perFisher}, a farm with mill and bakery about ${perBakery}. One granary holds ${granaryCap}.`
+      + `One orchard feeds about ${perOrchard} people, a fisherman about ${perFisher}, a bakery with its supply chain about ${perBakery} (one mill serves about 5 farms and 8 bakeries). One granary holds ${granaryCap}.`
     : (lack > 0 ? `Brakuje jedzenia dla ${pop - feeds} osób — postaw jeszcze ok. ${lack} ${lack === 1 ? 'sad' : lack < 5 ? 'sady' : 'sadów'} (albo wyłącz mniej ważny budynek, żeby pracownik poszedł do sadu). ` : '')
-      + `Jeden sad wykarmi ok. ${perOrchard} osób, rybak ok. ${perFisher}, pole z młynem i piekarnią ok. ${perBakery}. Jeden spichlerz mieści ${granaryCap}.`;
+      + `Jeden sad wykarmi ok. ${perOrchard} osób, rybak ok. ${perFisher}, piekarnia z zapleczem ok. ${perBakery} (młyn obsłuży ok. 5 pól i 8 piekarni). Jeden spichlerz mieści ${granaryCap}.`;
   return { popularity, people, army, food, foodHint };
 }
 
