@@ -58,7 +58,8 @@ describe('magowie bojowi', () => {
     const a = soldier(g, 1, 'manatarms', x, y + 25);
     m.stance = 2; a.stance = 2;
     const y0 = a.py;
-    for (let i = 0; i < 3; i++) step(g, []);
+    // mag chwilę mierzy, potem kula leci kilka ticków — skutek przychodzi, gdy doleci
+    for (let i = 0; i < 16 && !(a.slow && a.slow > g.tick); i++) step(g, []);
     expect(a.slow ?? 0).toBeGreaterThan(g.tick);
     expect(a.py).toBeGreaterThan(y0);
   });

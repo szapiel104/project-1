@@ -2293,6 +2293,18 @@ export class GameRenderer {
     for (let i = 0; i < this.arrows.fireN; i++) F.add(this.arrows.fires[i]!, 0.12, 0.07, (i * 0.531) % 1, Math.max(0.25, glow * 0.8));
     // kule ognia magów w locie i rozbłyski przy celu
     this.spells.flames().forEach((v, i) => F.add(v, 0.2, 0.13, (i * 0.377) % 1, Math.max(0.5, glow)));
+    // trafiony ognistą strzałą płonie, dopóki ogień nie zgaśnie (zdrowie schodzi mu po 1, army.ts BURN_EVERY)
+    if (this.view) for (const sd of g.soldiers) {
+      if (!sd.burn || sd.hp <= 0) continue;
+      const bx = sd.px / FP, by = sd.py / FP;
+      const wx = bx - g.map.width / 2, wz = by - g.map.height / 2;
+      if ((wx - f.x) ** 2 + (wz - f.z) ** 2 > 110 * 110) continue;
+      const base = this.view.heightAt(bx, by) + (sd.up ? 1.9 : 0);
+      w.set(wx + Math.sin(sd.id) * 0.06, base + 0.45, wz + Math.cos(sd.id) * 0.06);
+      F.add(w, 0.16, 0.09, (sd.id * 0.291) % 1, Math.max(0.45, glow));
+      w.set(wx - Math.sin(sd.id) * 0.08, base + 0.75, wz - Math.cos(sd.id) * 0.05);
+      F.add(w, 0.12, 0.07, (sd.id * 0.613) % 1, Math.max(0.45, glow));
+    }
     this.handFlameN = 0;
     this.handFlameTime.value = this.time;
     for (const [id, mesh] of this.buildingMeshes) {

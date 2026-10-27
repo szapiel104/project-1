@@ -754,15 +754,62 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
   if (nearStandard(g, s)) dmg = (dmg * (100 + STANDARD_BONUS)) / 100;
   // taran pod daszkiem ze skór: strzały ledwo go drasną, toporem i włócznią rąbie się go powoli
   if (fdef.ram) dmg = ranged ? dmg / 6 : dmg / 2;
-  // ognista strzała (łucznik na murze albo wieży przy koksowniku): rani mocniej
-  if (ranged && fireArrow(g, s)) dmg = (dmg * (100 + FIRE_BONUS)) / 100;
+  // ognista strzała: zwykłe obrażenia przy trafieniu, a premia FIRE_BONUS schodzi z celu płomieniem (burnFor, missiles)
   // zbroja (kolczuga zbrojnego): cios wręcz słabszy o armor %, strzała o półtora raza tyle (najwyżej 75%)
   if (fdef.armor) dmg = (dmg * (100 - (ranged ? Math.min(75, (fdef.armor * 3) >> 1) : fdef.armor))) / 100;
   return Math.max(1, Math.round(dmg / 100));
 }
 
-/** O ile procent mocniej rani ognista strzała */
+/** O ile procent mocniej rani ognista strzała (ta część schodzi z płonącego celu po 1 zdrowia co BURN_EVERY ticków) */
 export const FIRE_BONUS = 50;
+/** Co ile ticków płonący traci 1 zdrowia (10 ticków = 1 s przy zwykłym tempie) */
+export const BURN_EVERY = 4;
+/** Ile ticków leci strzała (tyle samo trwa jej lot na ekranie, ok. 0,45 s) */
+export const ARROW_TICKS = 4;
+/** Ile ticków leci czar maga (jak kula na ekranie: szybciej z bliska, najwyżej ok. 0,6 s) */
+export const spellTicks = (dist: number): number => Math.max(2, Math.min(6, Math.round((0.22 + (dist / FP) * 0.05) * 10)));
+/** Ile zdrowia zabierze ogień po ognistej strzale za `dmg` obrażeń */
+export const burnFor = (dmg: number): number => Math.max(2, Math.round((dmg * FIRE_BONUS) / 100));
+
+/**
+ * Pociski w locie: trafienie liczy się w chwili dolecenia (cel pada, gdy strzała go dosięgnie), a płonący po
+ * ognistej strzale traci po 1 zdrowia co BURN_EVERY ticków — widać ogień na nim i pasek zdrowia schodzi płynnie.
+ */
+function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
+  const list = g.missiles;
+  if (list?.length) {
+    let keep = 0;
+    for (const m of list) {
+      if (m.at > g.tick) { list[keep++] = m; continue; }
+      const k = g.players[m.by];
+      if (m.unit) {
+        const u = unitById(g, m.to);
+        if (!u) continue;
+        u.hp = (u.hp ?? 30) - m.dmg;
+        u.wait = Math.max(u.wait, 6);
+        const shooter = byId.get(m.from);
+        if (u.hp <= 0) { if (shooter) robbed(g, shooter, u); killPeasant(g, u, m.by); if (shooter && shooter.prey === u.id) shooter.prey = 0; }
+        else if (shooter) peasantReacts(g, u, shooter, true);
+        continue;
+      }
+      const t = byId.get(m.to);
+      if (!t || t.hp <= 0) continue;
+      t.hp -= m.dmg;
+      if (m.burn && t.hp > 0) { t.burn = (t.burn ?? 0) + m.burn; t.burnBy = m.by; }
+      if (t.hp <= 0) { const l = g.players[t.owner]; if (k && team(g, t.owner) !== team(g, m.by)) k.stats.kills++; if (l) l.stats.lost++; }
+      const caster = byId.get(m.from);
+      if (m.magic && caster) spellEffect(g, caster, t, byId);
+    }
+    list.length = keep;
+  }
+  if (g.tick % BURN_EVERY !== 0) return;
+  for (const s of g.soldiers) {
+    if (!s.burn || s.hp <= 0) continue;
+    s.hp -= 1; s.burn--;
+    if (!s.burn) { delete s.burn; }
+    if (s.hp <= 0) { const k = g.players[s.burnBy ?? -1], l = g.players[s.owner]; if (k && team(g, s.owner) !== team(g, s.burnBy ?? -1)) k.stats.kills++; if (l) l.stats.lost++; }
+  }
+}
 /** Z jak daleka (w polach, od brzegu budynku z koksownikiem) łucznik sięga do żaru */
 export const FIRE_REACH = 2;
 
@@ -848,6 +895,7 @@ export function armySystem(g: GameState): void {
   }
   // limit drogi szukanej na tick: przy setkach żołnierzy reszta poczeka chwilę, gra się nie zatnie
   budget = 10;
+  missileSystem(g, byId);
   ordersSystem(g);
   const marches = marchSystem(g);
   const heals = healers(g);
@@ -940,6 +988,8 @@ export function armySystem(g: GameState): void {
       if (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP) {
         foe = nearestFoe(s, range);
         s.target = foe ? foe.id : 0;
+        // nowy cel: łucznik chwilę mierzy (każdy inaczej), więc kilku na wieży nie wypuszcza strzał w tej samej chwili
+        if (foe && range && s.cd === 0) s.cd = 1 + hash2(s.id, g.tick, 0xa1e) % 6;
         // nikogo do bicia: wraca do budynku, który oblegał przed walką
         if (!foe && resumeSiege(s) && siege(g, s, def, taken)) continue;
         // ranny na widok wroga od razu ustępuje, zanim dostanie kolejny cios
@@ -950,7 +1000,8 @@ export function armySystem(g: GameState): void {
         if (s.amove && s.goal >= 0 && (s.path.length > 1 || s.slot)) s.path = [];
         if (gap(s, foe) <= (range ? range * FP : FP + FP / 2) && !s.path.length) {
           if (s.cd === 0) {
-            s.cd = def.cooldown;
+            // strzelcy nie strzelają równo jak na komendę: każdy naciąga łuk w swoim rytmie (kilka ticków rozrzutu)
+            s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
             // strzała może chybić; chybiona spada w kłąb walki i może zranić swojego, który stoi tuż przy celu
             let hit: Soldier | undefined = foe;
             if (range && !def.magic && !arrowHits(g, s, gap(s, foe))) {
@@ -959,9 +1010,14 @@ export function armySystem(g: GameState): void {
             }
             if (hit) {
               const dmg = hit === foe ? hitDamage(g, s, foe, byId, !!range) : Math.max(1, def.attack >> 1);
-              hit.hp -= dmg;
-              if (hit.hp <= 0) { const k = g.players[s.owner], l = g.players[hit.owner]; if (k && team(g, hit.owner) !== team(g, s.owner)) k.stats.kills++; if (l) l.stats.lost++; } // zbóje nie mają pana: nikt im nie liczy
-              if (def.magic && hit === foe) spellEffect(g, s, foe, byId);
+              if (range) {
+                // strzała albo czar leci: trafienie (i śmierć) w chwili dolecenia, ognista strzała dodatkowo podpala
+                const fire = !def.magic && fireArrow(g, s);
+                (g.missiles ??= []).push({ to: hit.id, dmg, at: g.tick + (def.magic ? spellTicks(gap(s, foe)) : ARROW_TICKS), from: s.id, by: s.owner, ...(fire ? { burn: burnFor(dmg) } : {}), ...(def.magic && hit === foe ? { magic: true } : {}) });
+              } else {
+                hit.hp -= dmg;
+                if (hit.hp <= 0) { const k = g.players[s.owner], l = g.players[hit.owner]; if (k && team(g, hit.owner) !== team(g, s.owner)) k.stats.kills++; if (l) l.stats.lost++; } // zbóje nie mają pana: nikt im nie liczy
+              }
             }
             s.run = 0;
           }
@@ -1010,11 +1066,14 @@ export function armySystem(g: GameState): void {
             s.path = [];
             s.hitting = prey.id;
             if (s.cd === 0) {
-              s.cd = def.cooldown;
-              prey.hp = (prey.hp ?? 30) - def.attack;
-              prey.wait = Math.max(prey.wait, 6);
-              if (prey.hp <= 0) { robbed(g, s, prey); killPeasant(g, prey, s.owner); s.prey = 0; }
-              else peasantReacts(g, prey, s, !!range);
+              s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
+              if (range) (g.missiles ??= []).push({ to: prey.id, unit: true, dmg: def.attack, at: g.tick + (def.magic ? spellTicks(Math.max(Math.abs(prey.px - s.px), Math.abs(prey.py - s.py))) : ARROW_TICKS), from: s.id, by: s.owner });
+              else {
+                prey.hp = (prey.hp ?? 30) - def.attack;
+                prey.wait = Math.max(prey.wait, 6);
+                if (prey.hp <= 0) { robbed(g, s, prey); killPeasant(g, prey, s.owner); s.prey = 0; }
+                else peasantReacts(g, prey, s, !!range);
+              }
             }
             continue;
           }

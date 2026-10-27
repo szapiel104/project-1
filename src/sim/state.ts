@@ -411,6 +411,29 @@ export interface Soldier {
   douse?: number;
   /** Saper: pole ostatnio rozbieranej ruiny (stąd szuka następnej) */
   dig?: number;
+  /** Płonie po ognistej strzale: ile jeszcze zdrowia zabierze ogień (po 1 co kilka ticków) i czyj to ogień */
+  burn?: number;
+  burnBy?: number;
+}
+
+/**
+ * Strzała albo czar w locie (army.ts): trafienie liczy się dopiero, gdy pocisk doleci (`at`), a nie w chwili strzału —
+ * cel pada wtedy, gdy strzała go dosięgnie (Michał 27.10.2026).
+ */
+export interface Missile {
+  /** Cel: id żołnierza albo (gdy `unit`) chłopa */
+  to: number;
+  unit?: boolean;
+  dmg: number;
+  /** Tick trafienia */
+  at: number;
+  /** Strzelec (id żołnierza) i jego pan */
+  from: number;
+  by: number;
+  /** Ognista strzała: po trafieniu cel płonie i traci po trochu zdrowia (`burn`) */
+  burn?: number;
+  /** Czar maga (rozprysk ognia, odrzut wody — spellEffect przy trafieniu) */
+  magic?: boolean;
 }
 
 /** Jeden zaplanowany marsz z kolejki rozkazów (Shift + prawy klik) albo punkt obchodu patrolu */
@@ -553,6 +576,8 @@ export interface GameState {
   marches?: March[];
   /** Kolejki rozkazów i patrole oddziałów */
   orders?: OrderQueue[];
+  /** Strzały i czary w locie (trafienie przy doleceniu) */
+  missiles?: Missile[];
 }
 
 /** Poziom trudności botów: 0 pokojowy (tylko się bronią), 1 łatwy, 2 średni, 3 trudny */
@@ -868,6 +893,8 @@ export function stateHash(g: GameState): number {
   for (let i = 0; i < g.wear.length; i++) if (g.wear[i]) { add(i); add(g.wear[i]!); }
   for (let i = 0; i < g.roads.length; i++) { if (g.roads[i]) { add(i); add(g.roads[i]! + 100); } if (g.roadPlan[i]) { add(i); add(g.roadPlan[i]! + 200); } }
   for (const s of g.saplings ?? []) { add(s.t); add(s.owner); add(s.by); add(s.age); }
+  for (const m of g.missiles ?? []) { add(m.to); add(m.unit ? 1 : 0); add(m.dmg); add(m.at); add(m.from); add(m.burn ?? 0); }
+  for (const s of g.soldiers) if (s.burn) { add(s.id); add(s.burn); }
   for (const x of g.piles ?? []) { add(x.id); add(x.owner); add(x.res); add(x.amt); add(x.store); add(x.t); add(x.claim); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {

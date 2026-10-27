@@ -3,7 +3,7 @@ import { BUILDINGS, buildingIndex, footprint } from '../src/data/buildings';
 import { UNITS } from '../src/data/units';
 import { createGame, FP, type GameState } from '../src/sim/state';
 import { canPlace, placeBuilding } from '../src/sim/systems/placement';
-import { FIRE_BONUS, fireArrow, garrisonRoom, hitDamage, orderGarrison } from '../src/sim/systems/army';
+import { burnFor, FIRE_BONUS, fireArrow, garrisonRoom, hitDamage, orderGarrison } from '../src/sim/systems/army';
 import { step } from '../src/sim/step';
 
 function game(): GameState {
@@ -91,6 +91,7 @@ it('koksownik: tylko na własnym gotowym murze kamiennym albo kamiennej wieży, 
   t.brazier = undefined;
   expect(fireArrow(g, a)).toBe(false);
   const cold = hitDamage(g, a, foe, byId, true);
-  expect(hot).toBeGreaterThan(cold);
-  expect(hot).toBeLessThanOrEqual(Math.ceil((cold * (100 + FIRE_BONUS)) / 100) + 1);
+  // od 0.53: ognista strzała rani przy trafieniu tak samo, a premia schodzi z celu płomieniem (po 1 zdrowia co BURN_EVERY ticków)
+  expect(hot).toBe(cold);
+  expect(burnFor(cold)).toBe(Math.max(2, Math.round((cold * FIRE_BONUS) / 100)));
 });

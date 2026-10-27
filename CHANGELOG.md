@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.53.0 — strzały trafiają, gdy dolecą; ogień płonie; czary lecą prosto (2026-10-27)
+
+- **Strzały i czary trafiają w chwili dolecenia**, a nie w chwili strzału: cel pada, gdy strzała albo kula go dosięgnie (strzała leci 0,4 s, czar 0,2–0,6 s — tyle samo w symulacji i na ekranie). Pociski w locie są w zapisie gry
+- **Ognista strzała podpala:** przy trafieniu zwykłe obrażenia, a premia za ogień (+50%) schodzi z celu płomieniem — po 1 zdrowia co 0,4 s, a na trafionym widać ogień, dopóki nie zgaśnie
+- **Łucznicy nie strzelają jak na komendę:** każdy chwilę mierzy do nowego celu i naciąga łuk w swoim rytmie; strzały wylatują z różnych miejsc i lecą różnym łukiem, więc kilka naraz nie leci jedną kreską
+- **Czary magów lecą prosto w cel** (bez łuku góra–dół). Kula ognia: jasne jądro, płomień, smuga w kierunku lotu, ogon iskier i żaru z dymem; przy celu błysk, fala po ziemi, snop iskier i kłąb dymu. Kula wody: jasne jądro, błękitna otoczka, ogon kropel; przy celu rozprysk kropel i krąg wody. Błysk w dłoni przy rzucie
+- **Magazynierzy:** drugi magazynier w stodole i dużym spichlerzu stoi obok pierwszego przy drzwiach, a nie na nim
+
 ## 0.52.6 — dłuższa doba, spokojniejsza muzyka nocą, zwięzła kronika (2026-10-27)
 
 - **Doba dwa razy dłuższa:** 12 minut zamiast 6 przy tempie 1× — dzień pracy ok. 9,5 min, wieczór ok. 1 min, noc ok. 1,5 min (wieczór i noc dostały też trochę większy kawałek doby). Pora roku trwa teraz 3 doby zamiast 5, więc rok w czasie rzeczywistym jest podobny (ok. 2,4 h). Chata pali na dobę 2 drewna zamiast 1 — zużycie opału na minutę bez zmian. Jedzenie, podatki i nastroje liczą się jak dotąd co „miesiąc” (100 ticków), więc gospodarka w czasie rzeczywistym się nie zmienia; wilki i napady zbójów (raz na dobę) zdarzają się rzadziej

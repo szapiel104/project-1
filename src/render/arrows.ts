@@ -15,7 +15,7 @@ export const MAX_ARROWS = 256;
 export class ArrowLayer {
   private arrowMesh: THREE.InstancedMesh;
   private arrowTrail: THREE.InstancedMesh;
-  private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number; fire?: boolean }[] = [];
+  private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number; fire?: boolean; arc: number }[] = [];
   /** Groty ognistych strzał w locie (pierwsze `fireN`) — płomyki rysuje system ognia */
   readonly fires: THREE.Vector3[] = [];
   fireN = 0;
@@ -45,19 +45,25 @@ export class ArrowLayer {
   get count(): number { return this.arrows.length; }
 
   /** Nowa strzała z `from` do `to` (położenia w świecie) */
-  shoot(from: THREE.Vector3, to: THREE.Vector3, fire: boolean): void { this.arrows.push({ from, to, t: 0, fire }); }
+  /** Każda strzała wylatuje z innego miejsca dłoni i celuje w inne miejsce sylwetki, więc kilka naraz nie leci jedną kreską */
+  shoot(from: THREE.Vector3, to: THREE.Vector3, fire: boolean): void {
+    const j = (): number => (Math.random() - 0.5);
+    from.x += j() * 0.22; from.z += j() * 0.22; from.y += j() * 0.1;
+    to.x += j() * 0.3; to.z += j() * 0.3; to.y += j() * 0.25;
+    this.arrows.push({ from, to, t: 0, fire, arc: 0.08 + Math.random() * 0.08 });
+  }
 
-  /** Strzały w locie: łuk balistyczny od łucznika do celu, ok. 0,45 s */
+  /** Strzały w locie: łuk balistyczny od łucznika do celu, ok. 0,4 s (tyle leci w symulacji, army.ts ARROW_TICKS — trafia, gdy doleci) */
   fly(calm: boolean): void {
     const dt = calm ? 1 : 1 / 60;
     const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), nx = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
     let n = 0;
-    this.arrows = this.arrows.filter((a) => (a.t += dt / 0.45) < 1);
+    this.arrows = this.arrows.filter((a) => (a.t += dt / 0.4) < 1);
     this.fireN = 0;
     for (const a of this.arrows) {
-      const arc = Math.sin(a.t * Math.PI) * a.from.distanceTo(a.to) * 0.12;
+      const arc = Math.sin(a.t * Math.PI) * a.from.distanceTo(a.to) * a.arc;
       p.lerpVectors(a.from, a.to, a.t); p.y += arc;
-      nx.lerpVectors(a.from, a.to, Math.min(1, a.t + 0.05)); nx.y += Math.sin(Math.min(1, a.t + 0.05) * Math.PI) * a.from.distanceTo(a.to) * 0.12;
+      nx.lerpVectors(a.from, a.to, Math.min(1, a.t + 0.05)); nx.y += Math.sin(Math.min(1, a.t + 0.05) * Math.PI) * a.from.distanceTo(a.to) * a.arc;
       m.lookAt(nx, p, new THREE.Vector3(0, 1, 0));
       q.setFromRotationMatrix(m);
       m.compose(p, q, one);
