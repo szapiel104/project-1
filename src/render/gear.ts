@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { grayPattern, normal, pattern } from './textures';
-import { model } from './modelstore';
+import { model, bytes } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const TOOLS_MODEL = model('tools');
 
@@ -13,7 +13,7 @@ const TOOLS_MODEL = model('tools');
 type ToolPart = { mat: string; pos: string; ao: string };
 const T = TOOLS_MODEL as unknown as { q: number } & Record<string, ToolPart[]>;
 const COLOR: Record<string, number> = { wood: 0x8a6440, iron: 0x8a8d92, dark: 0x2e231a };
-const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
+const b64 = (s: string | Uint8Array): Uint8Array => bytes(s);
 
 function partGeo(p: ToolPart): THREE.BufferGeometry {
   const raw = b64(p.pos), p16 = new Int16Array(raw.buffer, raw.byteOffset, raw.byteLength / 2), ao = b64(p.ao);

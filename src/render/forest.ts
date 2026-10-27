@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { model } from './modelstore';
+import { model, bytes } from './modelstore';
 import { loadTexture } from './ktx';
 import { impostorFrom } from './impostors';
 
@@ -12,7 +12,7 @@ import { impostorFrom } from './impostors';
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
 type Variant = { species: string; role: 'conifer' | 'leaf' | 'sapling'; trunk: Packed; trunkFar?: Packed; cards: Packed; shadow: Packed; far: { w: number; h: number; bare?: boolean }; avg: number[] };
 
-const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const b64 = (s: string | Uint8Array): Uint8Array => bytes(s);
 const f32 = (u: Uint8Array): Float32Array => new Float32Array(u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength));
 
 function geo(m: Packed): THREE.BufferGeometry {

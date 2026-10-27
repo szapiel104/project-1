@@ -9,6 +9,12 @@ Zasady dla wszystkich czatów są w `CLAUDE.md`, w sekcji „Modele”.
 pełna jakość, obrót myszą, liczba trójkątów), potem budynki arkuszem `inspect.sh`, a na końcu w grze na pustej scenie
 `?test=1&pusta=1&model=<id>`. Nowy model dopisz do listy `GROUPS` w `src/viewer.ts`. Szczegóły: CLAUDE.md, „Modele”.
 
+**Dostarczanie do gry (od 0.54.2):** pliki `src/render/models/*.json` zostają źródłem, ale przez sieć jadą spakowane
+do `.bin` (bezstratnie, ok. 44% mniej niż JSON z gzip): przy `npm run build` robi to sama wtyczka
+`tools/models/vite-plugin.mjs` z kodekiem `tools/models/pack.mjs`, gra rozpakowuje w `src/render/modelpack.ts`.
+Nic nie trzeba uruchamiać ręcznie. Strumienie siatek (`pos`, `nrm`, `col`, `uv`, `idx`, `ao`…) czytaj w kodzie gry
+zawsze przez `bytes()` z `src/render/modelstore.ts` (w grze to bajty, w testach napisy base64), nigdy własnym `atob`.
+
 Postacie rzeźbi skrypt w Pythonie z Blenderem jako modułem (`bpy`): gładkie bryły (Skin + Subdivision), twarz z
 przesunięć kuli, włosy i broda jako powłoki chowające się pod skórę, cień w zagłębieniach liczony promieniami
 i zapisany w kolorach wierzchołków. Wynik trafia do `src/render/models/*.json` i gra wczytuje go do `Figures`

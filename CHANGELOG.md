@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.54.2 — szybsze wczytywanie: modele spakowane bez strat (2026-10-27)
+
+- **Modele jadą do gry spakowane:** zamiast 71 plików JSON (ok. 10,8 MB przez sieć po gzip) gra pobiera pliki `.bin` o łącznej wadze ok. 6 MB, czyli **o ok. 44% mniej do pobrania** przy pierwszym wejściu i po każdej aktualizacji modeli. Liczby siatek nie są już zapisane w base64, te same strumienie (np. wersja z bliska i z daleka tego samego przedmiotu) lecą raz, a dane przechodzą przez kodek wierzchołków meshoptimizer (ten sam co w glTF) i deflate
+- **Bez strat i bez zmiany wyglądu:** po rozpakowaniu gra dostaje bajt w bajt te same trójkąty, UV, normalne i kolory co w `src/render/models/*.json` (zasada „nie odchudzać modeli” zostaje). Każdy strumień jest przy pakowaniu od razu rozpakowany i porównany z oryginałem; test `tests/modelpack.test.ts` sprawdza wszystkie 71 modeli
+- Mniej pamięci: strumienie siatek trzymane są jako bajty, a nie długie napisy base64
+- Pakowanie robi się samo przy `npm run build` (wtyczka `tools/models/vite-plugin.mjs`, kodek `tools/models/pack.mjs`); `npx vite` pakuje na żądanie. Skrypty Blendera i pliki JSON bez zmian. Porównanie rozmiarów: `node tools/models/pack.mjs`
+- Pamięć podręczna (Service Worker) usuwa stare wersje plików `.bin` po aktualizacji
+- Bot: bez zmian (samo dostarczanie modeli)
 ## 0.54.1 — komnata królowej w donżonie, poprawki sprzętów w zamku (2026-10-27)
 
 - Donżon przebudowany: szerszy (trzy pola tylnego muru), z cokołem, gzymsami między piętrami, oknami z okiennicami od pola, oknem nad salą tronową, machikułami, blankami, czterema narożnymi wieżyczkami na kroksztynach ze stożkowymi dachami, dachem dwuspadowym z łupka, kominem i masztem z chorągwią

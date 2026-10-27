@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { model } from './modelstore';
+import { model, bytes } from './modelstore';
 
 /**
  * Gotowe modele z sieci, przerobione w Blenderze skryptem tools/models/props_import.py (porównanie z oryginałem:
@@ -41,7 +41,7 @@ const SURFACE: Partial<Record<PropName, [number, number]>> = {
 const NO_NORMAL = new Set<PropName>(['granite1', 'granite2', 'granite3']);
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
 
-const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const b64 = (s: string | Uint8Array): Uint8Array => bytes(s);
 const slice = (u: Uint8Array): ArrayBuffer => u.buffer.slice(u.byteOffset, u.byteOffset + u.byteLength) as ArrayBuffer;
 
 const geos = new Map<string, THREE.BufferGeometry>();

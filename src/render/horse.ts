@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { model } from './modelstore';
+import { model, bytes } from './modelstore';
 import { maskedTex } from './forest';
 
 /**
@@ -18,7 +18,7 @@ type HorseModel = { withers: number; body: Packed; hair: Packed };
 export const HORSE_MORPHS = ['half', 'graze', 'look', 'swish'] as const;
 export const HORSE_MORPH = { half: 0, graze: 1, look: 2, swish: 3 } as const;
 
-const b64 = (s: string): ArrayBuffer => { const u = Uint8Array.from(atob(s), (c) => c.charCodeAt(0)); return u.buffer; };
+const b64 = (s: string | Uint8Array): ArrayBuffer => bytes(s).buffer as ArrayBuffer;
 
 const geos = new Map<string, THREE.BufferGeometry>();
 

@@ -5,7 +5,7 @@ import { cat } from './cat';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { grayPattern, normal, pattern } from './textures';
 import { charTexture } from './chartex';
-import { model } from './modelstore';
+import { model, bytes } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const GUARD_MODEL = model('guard');
 const MANATARMS_MODEL = model('manatarms');
@@ -29,7 +29,7 @@ interface FigureModel {
   static: ModelMesh[]; leg: ModelMesh[]; arm: ModelMesh[];
   far_static: ModelMesh[]; far_leg: ModelMesh[]; far_arm: ModelMesh[];
 }
-const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const b64 = (s: string | Uint8Array): Uint8Array => bytes(s);
 export function modelGeo(m: ModelMesh): THREE.BufferGeometry {
   const geo = new THREE.BufferGeometry();
   const pos = b64(m.pos), nrm = b64(m.nrm), col = b64(m.col), idx = b64(m.idx);

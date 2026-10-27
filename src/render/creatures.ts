@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { modelGeo, type ModelMesh } from './peasants';
-import { model } from './modelstore';
+import { model, bytes } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const WOLF_MODEL = model('wolf');
 const CROW_MODEL = model('crow');
@@ -26,7 +26,7 @@ export function crowGeometry(): THREE.BufferGeometry {
 }
 
 interface Crow2Mesh { pos: string; nrm: string; uv?: string; idx?: string }
-const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const b64 = (s: string | Uint8Array): Uint8Array => bytes(s);
 let crowCache: { stand: THREE.BufferGeometry; fly: THREE.BufferGeometry[]; mat: THREE.MeshStandardMaterial } | null = null;
 /**
  * Kruk z gotowego modelu CC0 („Raven”, OpenGameArt; tools/models/crow_import.py): poza „stoi” i 8 klatek machania

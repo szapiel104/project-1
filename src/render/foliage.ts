@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { model } from './modelstore';
+import { model, bytes } from './modelstore';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const TREES = model('trees');
 
@@ -8,7 +8,7 @@ const TREES = model('trees');
  * rysowane raz na płótnie z przezroczystym tłem (przezroczystość tnie alphaTest w materiale korony).
  */
 type Packed = { pos: string; nrm: string; col: string; uv: string; idx: string };
-const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const b64 = (s: string | Uint8Array): Uint8Array => bytes(s);
 
 export function treeGeo(name: 'pineTrunk' | 'pineCrown' | 'pineShadow' | 'leafTrunk' | 'leafCrown' | 'leafShadow' | 'fern' | 'deadwood'): THREE.BufferGeometry {
   return packedGeo((TREES as unknown as Record<string, Packed>)[name]!);

@@ -1,15 +1,15 @@
 import { defineConfig } from 'vite';
 import { viteSingleFile } from 'vite-plugin-singlefile';
+// @ts-expect-error — wtyczka w czystym JS (tools/models/vite-plugin.mjs): modele jadą do gry spakowane
+import { modelPacks } from './tools/models/vite-plugin.mjs';
 
-// base './' = ścieżki względne, więc ten sam build działa na GitHub Pages,
-// Cloudflare Pages i pod własną domeną bez zmian.
 export default defineConfig(({ mode }) => ({
   base: './',
   // godzina zbudowania trafia do gry, żeby było widać, czy przeglądarka pokazuje najnowszą wersję
   define: { __BUILD__: JSON.stringify(new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })) },
   // długie symulacje (bot, 10 000 ticków) potrzebują więcej czasu niż domyślne 5 s
   test: { testTimeout: 60000, setupFiles: ['tests/setup/lang.ts', 'tests/setup/models.ts'] },
-  plugins: mode === 'single' ? [viteSingleFile()] : [],
+  plugins: mode === 'single' ? [modelPacks(true), viteSingleFile()] : [modelPacks(false)],
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     chunkSizeWarningLimit: 1200,

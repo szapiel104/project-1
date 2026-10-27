@@ -37,9 +37,9 @@ async function cacheFirst(req) {
   const res = await fetch(req);
   if (res.ok) {
     c.put(req, res.clone());
-    // stara wersja tego samego pliku (main-AAAA.js → main-BBBB.js) nie jest już potrzebna
+    // stara wersja tego samego pliku (main-AAAA.js → main-BBBB.js, keep-AAAA.bin → keep-BBBB.bin) nie jest już potrzebna
     const name = new URL(req.url).pathname.split('/').pop() ?? '';
-    const stem = name.replace(/-[\w-]{6,}\.(js|css)$/, '');
+    const stem = name.replace(/-[\w-]{6,}\.(js|css|bin|json)$/, '');
     if (stem && stem !== name) for (const k of await c.keys()) { const n = new URL(k.url).pathname.split('/').pop() ?? ''; if (n !== name && n.startsWith(stem + '-') && /\/assets\//.test(k.url)) c.delete(k); }
   }
   return res;

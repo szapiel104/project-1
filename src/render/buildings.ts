@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { bump, grayPattern, normal, pattern } from './textures';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
-import { model } from './modelstore';
+import { model, bytes } from './modelstore';
 import { wheatDepthMat, wheatMat, wheatRow } from './wheat';
 import { addModelBanners, bannerGeometry, bannerMaterial, flagTime } from './banners';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
@@ -611,7 +611,7 @@ function withAo(m: THREE.Material): THREE.Material {
   }
   return c;
 }
-const b64 = (s: string): Uint8Array => Uint8Array.from(atob(s), (ch) => ch.charCodeAt(0));
+const b64 = (s: string | Uint8Array): Uint8Array => bytes(s);
 const geoCache = new Map<string, THREE.BufferGeometry>();
 function blenderGeo(pos: string, ao: string, q: number, k: number): THREE.BufferGeometry {
   const key = pos.length + ':' + pos.slice(0, 40) + ':' + k;
