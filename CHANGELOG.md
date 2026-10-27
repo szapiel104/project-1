@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.53.1 — czytelniejsze okno budynku (2026-10-27)
+
+- Okno budynku ma większe litery i odstępy między częściami, opis budynku jest na dole, oddzielony kreską i spokojniejszym kolorem, żeby nie mieszał się z ustawieniami
+- Zamiast wielkiego czerwonego „Wyłącz budynek” jest stan: zielona kropka „Budynek działa” albo czerwona „Budynek wyłączony”, obok mały przycisk Wyłącz/Włącz, a pod spodem jednym zdaniem, co to zmienia
+- Magazyn: przy każdym rodzaju towaru po prawej „8 942 z 250 miejsc” (na czerwono, z czerwonym paskiem, gdy leży więcej, niż się mieści), pod spodem osobne wiersze „Ponad miejsce w tym budynku” i „Razem we wszystkich (4)”; duże liczby z odstępami tysięcy
+- Przyciski na dole: pomocniczy („Pokaż teren pracy”, „Pokaż zasięg strzału”) na całą szerokość, pod nim Rozbierz z czerwonym obrysem (już nie wygląda jak zwykła akcja) i Zamknij
+- Okno stoi na dolnej belce bez przerwy, także gdy po lewej jest pasek grup wojska
+
 ## 0.53.0 — strzały trafiają, gdy dolecą; ogień płonie; czary lecą prosto (2026-10-27)
 
 - **Strzały i czary trafiają w chwili dolecenia**, a nie w chwili strzału: cel pada, gdy strzała albo kula go dosięgnie (strzała leci 0,4 s, czar 0,2–0,6 s — tyle samo w symulacji i na ekranie). Pociski w locie są w zapisie gry

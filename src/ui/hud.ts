@@ -236,6 +236,9 @@ const ICONS: Record<string, string> = {
   gold: '<path d="M3 13l2-6 5-3 5 2 2 6-3 4H6z" fill="#4a4e5c" stroke="#16141c"/><path d="M6 8l3 2 2-3M9 10l-1 4M11 7l3 3 1 4M12 12l-3 2" stroke="#8fd3ff" stroke-width="1.1" fill="none"/><circle cx="9" cy="10" r="1" fill="#d9f2ff"/><circle cx="14" cy="10" r=".8" fill="#d9f2ff"/>',
 };
 
+/** Liczba z odstępami tysięcy (1 000 000), żeby duże pojemności dało się przeczytać */
+function num(n: number): string { return n.toLocaleString(lang() === 'en' ? 'en-GB' : 'pl-PL'); }
+
 /** Krótki zapis dużych liczb, żeby pasek się nie rozjeżdżał: 14315 → 14,3k, 1000000 → 1 mln */
 function short(n: number): string {
   const a = Math.abs(n);
@@ -605,6 +608,14 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
     const r = info.getBoundingClientRect();
     if (!r.height) return;
+    // okno stoi na dolnej belce (bez przerwy), także gdy w tym samym rzędzie jest pasek grup wojska
+    const dockEl = root.querySelector<HTMLElement>('.dock');
+    if (dockEl) {
+      const mb = parseFloat(info.style.marginBottom || '0') || 0;
+      const rowBottom = r.bottom + mb * k;
+      const want = Math.round((rowBottom - (dockEl.getBoundingClientRect().top + 2 * k)) / k);
+      if (Math.abs(want - mb) >= 1) { info.style.marginBottom = `${want}px`; requestAnimationFrame(fitInfo); return; }
+    }
     const top = 136 * k; // pod przyciskiem „Deweloper” (top 92 + 34 px w skali interfejsu) z małym zapasem
     const want = `${Math.max(140, Math.floor((r.bottom - top) / k))}px`;
     if (info.style.maxHeight !== want) info.style.maxHeight = want;
@@ -619,12 +630,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   void document.fonts?.ready.then(() => { resW = 0; refit(); });
   info.hidden = true;
   // okno po prawej zasłaniało minimapę — gdy jest otwarte, minimapa się chowa (CSS: body.info-open)
-  new MutationObserver(() => document.body.classList.toggle('info-open', !info.hidden)).observe(info, { attributes: true, attributeFilter: ['hidden'] });
+  new MutationObserver(() => { document.body.classList.toggle('info-open', !info.hidden); if (!info.hidden) requestAnimationFrame(fitInfo); }).observe(info, { attributes: true, attributeFilter: ['hidden'] });
   const infoName = el('p', 'info-name');
-  const infoDesc = el('p');
+  const infoDesc = el('p', 'info-desc');
   const infoWorker = el('p');
   const infoActions = el('div', 'actions');
-  const demolish = el('button', 'btn-main', t('hud.demolish'));
+  const demolish = el('button', 'btn-danger', t('hud.demolish'));
   demolish.type = 'button';
   const close = el('button', 'btn-plain', t('hud.close'));
   close.type = 'button';
@@ -741,13 +752,18 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   gateBox.append(gateBtn, gateState);
   gateBox.hidden = true;
   // wyłączanie budynku: pracownik odchodzi do innej roboty (np. do sadu, gdy brakuje jedzenia)
-  const powerBox = el('div', 'gate-box power-box');
-  const powerBtn = el('button', 'btn-main gate-btn');
+  // czytelnie: po lewej stan (zielona albo czerwona kropka i słowo), po prawej mały przełącznik, pod spodem co to zmienia
+  const powerBox = el('div', 'power-row-box');
+  const powerRow = el('div', 'power-row');
+  const powerBadge = el('span', 'power-badge');
+  powerBadge.setAttribute('role', 'status');
+  const powerBtn = el('button', 'btn-plain power-btn');
   powerBtn.type = 'button';
-  const powerState = el('p', 'gate-state');
+  const powerState = el('p', 'power-note');
   let powerOn = true;
   powerBtn.addEventListener('click', () => events.onPower(infoId, !powerOn));
-  powerBox.append(powerBtn, powerState);
+  powerRow.append(powerBadge, powerBtn);
+  powerBox.append(powerRow, powerState);
   powerBox.hidden = true;
   // kwarantanna chaty w czasie zarazy: zdrowi śpią gdzie indziej, chorzy leżą tutaj, zaraza nie wychodzi za drzwi
   const quarBox = el('div', 'gate-box power-box');
@@ -785,7 +801,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   watchState.hidden = true;
   const walkBtn = el('button', 'btn-main walk-btn', tx('Przejdź się jego oczami (F)', 'Walk in his shoes (F)')); walkBtn.type = 'button'; walkBtn.hidden = true;
   walkBtn.addEventListener('click', () => events.onWalk());
-  const areaBtn = el('button', 'btn-main', tx('Pokaż teren pracy', 'Show work area')); areaBtn.type = 'button'; areaBtn.hidden = true;
+  const areaBtn = el('button', 'btn-plain area-btn', tx('Pokaż teren pracy', 'Show work area')); areaBtn.type = 'button'; areaBtn.hidden = true;
   // kopalnia: przejście do sztolni oczami chłopa (osobna lokacja pod ziemią)
   const mineBtn = el('button', 'btn-main walk-btn', tx('Wejdź do kopalni', 'Enter the mine')); mineBtn.type = 'button'; mineBtn.hidden = true;
   mineBtn.addEventListener('click', () => events.onEnterMine(infoId));
@@ -1422,11 +1438,17 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         if (storeBox.dataset.key !== key) {
           storeBox.dataset.key = key;
           storeBox.replaceChildren(...i.stock.flatMap((st) => {
-            const head = el('p', 'stock-head');
+            // nagłówek: po lewej rodzaj towaru, po prawej ile leży w TYM budynku i ile miejsca (czerwono, gdy ponad miejsce)
+            const head = el('div', 'stock-head2');
             const label = st.kind === 'granary' ? t('cat.food') : st.kind === 'grain' ? tx('Zboże', 'Grain') : tx('Towary', 'Goods');
-            // na górze to, co leży w tym magazynie; niżej suma ze wszystkich magazynów tego rodzaju
-            head.append(icon(st.kind === 'granary' ? 'granary' : st.kind === 'grain' ? 'wheat' : 'store'), el('strong', '', `${label}: ${st.hereUsed} / ${st.here}`), el('span', '', tx(' · w tym budynku', ' · in this building')));
+            const over = st.hereUsed > st.here;
+            const title = el('span', 'stock-title');
+            title.append(icon(st.kind === 'granary' ? 'granary' : st.kind === 'grain' ? 'wheat' : 'store'), el('strong', '', label));
+            const fill = el('span', 'stock-fill', tx(`${num(st.hereUsed)} z ${num(st.here)} miejsc`, `${num(st.hereUsed)} of ${num(st.here)} spaces`));
+            if (over) fill.dataset.over = 'true';
+            head.append(title, fill);
             const bar = el('div', 'stock-bar');
+            if (over) bar.dataset.over = 'true';
             const fillEl = el('span');
             fillEl.style.width = `${Math.min(100, (st.hereUsed / Math.max(1, st.here)) * 100)}%`;
             bar.append(fillEl);
@@ -1439,9 +1461,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
               grid.append(cell);
             }
             const extra: HTMLElement[] = [];
-            if (st.stores > 1) extra.push(el('p', 'stock-total', tx(`We wszystkich magazynach tego rodzaju (${st.stores}): ${Math.min(st.used, st.max)} / ${st.max}`, `Across all ${st.stores} stores of this kind: ${Math.min(st.used, st.max)} / ${st.max}`)));
+            const kv = (k: string, v: string, bad = false): HTMLElement => { const r = el('p', 'stock-total'); r.append(el('span', '', k), el('strong', '', v)); if (bad) r.dataset.over = 'true'; return r; };
+            if (over) extra.push(kv(tx('Ponad miejsce w tym budynku', 'Beyond this building\'s room'), num(st.hereUsed - st.here), true));
+            if (st.stores > 1) extra.push(kv(tx(`Razem we wszystkich (${st.stores})`, `Across all ${st.stores}`), `${num(Math.min(st.used, st.max))} / ${num(st.max)}`));
             // zapas większy niż pojemność (np. łup, tryb testowy): ta część nie leży w żadnym magazynie
-            if (st.used > st.max) extra.push(el('p', 'stock-total', tx(`Ponad pojemność magazynów: ${st.used - st.max} (nie mieści się w żadnym)`, `Beyond the stores' capacity: ${st.used - st.max} (fits in none of them)`)));
+            if (st.used > st.max) extra.push(kv(tx('Nie mieści się w żadnym magazynie', 'Fits in no store at all'), num(st.used - st.max), true));
             return [head, bar, grid, ...extra];
           }));
         }
@@ -1490,9 +1514,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       powerBox.hidden = !(i.own && i.power);
       if (i.power) {
         powerOn = i.power.on;
-        setText(powerBtn, i.power.on ? tx('Wyłącz budynek', 'Shut down building') : tx('Włącz budynek', 'Start up building'));
-        setText(powerState, i.power.on ? tx('Działa — wyłącz, a pracownik pójdzie do innej roboty', 'Working — shut it down and the worker will find other work') : i.power.worker ? tx('Wyłączony', 'Shut down') : tx('Wyłączony — pracownik poszedł do innej roboty', 'Shut down — the worker has gone to other work'));
-        powerState.dataset.shut = String(!i.power.on);
+        setText(powerBadge, i.power.on ? tx('Budynek działa', 'Building at work') : tx('Budynek wyłączony', 'Building shut down'));
+        powerBadge.dataset.shut = String(!i.power.on);
+        setText(powerBtn, i.power.on ? tx('Wyłącz', 'Shut down') : tx('Włącz', 'Start up'));
+        powerBtn.setAttribute('aria-label', i.power.on ? tx('Wyłącz budynek', 'Shut down the building') : tx('Włącz budynek', 'Start up the building'));
+        setText(powerState, i.power.on ? tx('Po wyłączeniu pracownik pójdzie do innej roboty.', 'Shut it down and the worker will go to other work.') : i.power.worker ? tx('Pracownik czeka, aż znów włączysz budynek.', 'The worker waits for you to start it up again.') : tx('Pracownik poszedł do innej roboty. Po włączeniu wróci pierwszy wolny chłop.', 'The worker has gone to other work. Start it up and the first idle peasant will come back.'));
       }
       gateBox.hidden = !(i.own && i.gate);
       if (i.gate) {
