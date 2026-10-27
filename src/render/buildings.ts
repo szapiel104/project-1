@@ -8,6 +8,7 @@ import { bump, grayPattern, normal, pattern } from './textures';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
 import { model } from './modelstore';
+import { wheatDepthMat, wheatMat, wheatRow } from './wheat';
 import { addModelBanners, bannerGeometry, bannerMaterial, flagTime } from './banners';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const KEEP_MODEL = model('keep');
@@ -587,32 +588,6 @@ function pennant(g: THREE.Group, flag: THREE.Material, x: number, y: number, z: 
   g.add(fp);
 }
 
-/** Jeden rząd zboża jako wspólna bryła: kilkadziesiąt źdźbeł różnej wysokości z kłosami, barwy w wierzchołkach. */
-const wheatMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, flatShading: true });
-const wheatRows = new Map<number, THREE.BufferGeometry>();
-function wheatRow(variant: number): THREE.BufferGeometry {
-  const v = variant % 3;
-  const hit = wheatRows.get(v);
-  if (hit) return hit;
-  const parts: THREE.BufferGeometry[] = [];
-  let r = 1234 + v * 977;
-  const rnd = (): number => { r = (r * 1103515245 + 12345) & 0x7fffffff; return r / 0x7fffffff; };
-  for (let x = -0.86; x <= 0.86; x += 0.045)
-    for (const lane of [-0.08, 0, 0.08]) {
-      const px = x + (rnd() - 0.5) * 0.04, pz = lane + (rnd() - 0.5) * 0.05;
-      const h = 0.26 + rnd() * 0.14;
-      const lean = (rnd() - 0.5) * 0.25;
-      const shade = 0.85 + rnd() * 0.25;
-      const stalk = new THREE.CylinderGeometry(0.006, 0.009, h, 3).translate(0, h / 2, 0).rotateX(lean).translate(px, 0, pz);
-      parts.push(paint(stalk, new THREE.Color(0xb89a3c).multiplyScalar(shade).getHex()));
-      const ear = new THREE.ConeGeometry(0.018, 0.09, 4).rotateX(Math.PI).translate(0, h + 0.03, 0).rotateZ((rnd() - 0.5) * 0.5).rotateX(lean).translate(px, 0, pz);
-      parts.push(paint(ear, new THREE.Color(0xe6c55c).multiplyScalar(shade).getHex()));
-      if (rnd() < 0.35) parts.push(paint(new THREE.PlaneGeometry(0.02, 0.12).translate(0, h * 0.4, 0).rotateY(rnd() * 3).rotateZ(0.6).translate(px, 0, pz), 0x9aa046));
-    }
-  const geo = merge(parts);
-  wheatRows.set(v, geo);
-  return geo;
-}
 
 
 
@@ -1330,6 +1305,7 @@ const BUILDERS: Record<string, Builder> = {
       row.position.set(x, y, z);
       const m = new THREE.Mesh(wheatRow(i), wheatMat);
       m.scale.x = len / 1.78;
+      m.customDepthMaterial = wheatDepthMat;
       row.add(m);
       g.add(row);
       ((g.userData.crops ??= []) as THREE.Object3D[]).push(row);

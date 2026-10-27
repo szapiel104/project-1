@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.52.3 — zboże na polu z teksturą (2026-10-27)
+
+- Pszenica na zagonach farmy nie jest już gołymi stożkami w jednym kolorze: każda kępa to skrzyżowane karty z teksturą (źdźbła z kolankami, liście, kłosy z ziarnami w dwóch rzędach i długimi ośćmi), w czterech odmianach kęp, u dołu łanu ciemniej. Cień rzuca tylko to, co widać na teksturze, nie cała karta. Kod wydzielony do `src/render/wheat.ts`; łan dalej faluje i rośnie jak wcześniej
+
 ## 0.52.2 — pasek budowy na całą szerokość (2026-10-27)
 
 - Po otwarciu kategorii (Osada, Żywność, Przemysł…) pasek z budynkami rozciąga się od lewej do prawej krawędzi ekranu, więc mieści się więcej kart. Grupy wojska 1–0 i minimapa w tym czasie chowają się płynnie, a po zamknięciu wracają dokładnie tak, jak były (zwinięta minimapa zostaje zwinięta)
