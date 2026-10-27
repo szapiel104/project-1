@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.51.14 — mniejsze karty budynków, pogrupowane po funkcji (2026-10-27)
+
+- Karty w pasku budowy mniejsze (104 px zamiast 150 px, obrazek 84 px zamiast 134 px) — mniej zasłaniają mapę. Skalowanie interfejsu z ustawień działa jak dotąd
+- W każdej kategorii karty ułożone w grupy z podpisem i kreską między nimi, np. Osada: Mieszkania · Życie osady (obozowisko, karczma, kapliczka, studnia, pochodnia) · Składy · Rzemiosło i magia; Jedzenie: Z natury · Chleb · Piwo · Spichlerze; Obrona: Mury i bramy · Wieże i ogień. Lista grup w `src/ui/buildGroups.ts` — nowy budynek dopisz do grupy, bez wpisu trafi do „Inne”
+
 ## 0.51.13 — chleb się opłaca, opis studni, leśniczy na ilu drwali (2026-10-27)
 
 - **Chleb:** młyn mieli naraz do 128 zboża (wcześniej 16), więc przerobi zbiory z ok. 5 pól; piekarnia bierze 16 mąki i piecze 40 chlebów (wcześniej 4 → 10), czyli jeden młyn wystarcza na ok. 8 piekarni. Zmierzone w symulacji na dobę: pole ok. 150 zboża, młyn ok. 770 mąki, piekarnia ok. 240 chlebów (480 porcji). Pełny łańcuch daje teraz więcej jedzenia na pracownika niż sady (wcześniej mniej niż połowę, stąd wrażenie, że piekarnia nic nie daje)

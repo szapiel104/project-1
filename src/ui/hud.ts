@@ -1,5 +1,6 @@
 import { me, onAccount } from '../net/supa';
 import { avatarSvg } from './avatars';
+import { BUILD_GROUPS } from './buildGroups';
 import { BUILDINGS, CATEGORIES, isTower, type BuildingDef, type CategoryId } from '../data/buildings';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, type ResourceId } from '../data/resources';
@@ -842,6 +843,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     category = id;
     for (const [cid, b] of catButtons) b.setAttribute('aria-expanded', String(cid === id));
     for (const [bid, b] of buildButtons) b.hidden = BUILDINGS.find((d) => d.id === bid)?.category !== id;
+    for (const g of groupEls) g.el.hidden = g.cat !== id;
     cards.hidden = id === null;
     syncPicker();
   };
@@ -881,10 +883,24 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     b.append(text);
     b.addEventListener('click', () => events.onPickBuilding(picked === def.id ? null : def.id));
     buildButtons.set(def.id, b);
-    cards.append(b);
   }
-  // droga z dyli stoi na końcu listy budynków (zgodność zapisów), ale na pasku między piaskową a kamienną
-  { const rw = buildButtons.get('roadWood'), rs = buildButtons.get('roadStone'); if (rw && rs) rs.before(rw); }
+  // karty ułożone w grupy po funkcji (buildGroups.ts), z podpisem nad każdą grupą; budynek bez grupy trafia do „Inne”
+  const groupEls: { cat: CategoryId; el: HTMLElement }[] = [];
+  const addGroup = (cat: CategoryId, label: string, ids: readonly string[]): void => {
+    const list = ids.map((id) => buildButtons.get(id)).filter((b): b is HTMLButtonElement => !!b);
+    if (!list.length) return;
+    const box = el('div', 'card-group');
+    box.setAttribute('role', 'group');
+    box.setAttribute('aria-label', label);
+    const row = el('div', 'card-row');
+    row.append(...list);
+    box.append(el('span', 'card-group-name', label), row);
+    cards.append(box);
+    groupEls.push({ cat, el: box });
+  };
+  const grouped = new Set(BUILD_GROUPS.flatMap((g) => g.ids));
+  for (const g of BUILD_GROUPS) addGroup(g.cat, tx(g.pl, g.en), g.ids);
+  for (const cat of CATEGORIES) addGroup(cat, tx('Inne', 'Other'), [...buildButtons.keys()].filter((id) => !grouped.has(id) && BUILDINGS.find((d) => d.id === id)?.category === cat));
 
   const buildFoot = el('div', 'buildfoot');
   const buildHint = el('p', 'hint');
