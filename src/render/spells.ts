@@ -98,7 +98,7 @@ export class SpellLayer {
 
   constructor(scene: THREE.Scene) {
     const add = (geo: THREE.BufferGeometry, opacity: number, max: number, additive = true, map?: THREE.Texture): THREE.InstancedMesh => {
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, map, transparent: true, opacity, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false, toneMapped: false });
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, ...(map ? { map } : {}), transparent: true, opacity, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false, toneMapped: false });
       const mesh = new THREE.InstancedMesh(geo, mat, max);
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       mesh.setColorAt(0, FIRE);
