@@ -32,7 +32,8 @@ export function storeNotes(g: GameState, me: number, scribe: Scribe, showAt: (x:
     const kind = RESOURCE_DEFS[id].store;
     if (!kind) continue;
     const s = stalled.get(kind) ?? { shops: [], res: new Set<string>() };
-    s.shops.push(t(BUILDINGS[b.type]!.name));
+    // w zdaniu po polsku nazwy budynków małą literą („a sad czeka”), po angielsku z przedimkiem dokleja go zdanie
+    s.shops.push(t(BUILDINGS[b.type]!.name).toLowerCase());
     s.res.add(t(RESOURCE_DEFS[id as ResourceId].name).toLowerCase());
     stalled.set(kind, s);
   }

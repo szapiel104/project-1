@@ -701,7 +701,7 @@ body.walking #ui, body.walking .scribe, body.walking .scribe-log, body.walking .
 .logi-tip { color: var(--ink-soft); }
 /* pełny magazyn: wyraźny blok z czerwoną krawędzią (tekst #ffd9c9 na #2a120c — kontrast ok. 13:1) */
 .logi-alert { padding: 8px 10px; background: linear-gradient(#2a120c, #1a0b07); border: 1px solid #c23a2c; box-shadow: inset 3px 0 0 #c23a2c; }
-.logi-alert .logi-head strong { color: #ffd9c9; font-family: var(--display); letter-spacing: .03em; }
+.logi-alert .logi-head strong { color: #ffd9c9; }
 .logi-pile { border-color: #c23a2c; }
 
 /* ---- skalowanie interfejsu do wielkości okna (liczone w main.ts: --ui) ---- */

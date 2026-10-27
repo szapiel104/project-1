@@ -105,7 +105,10 @@ export function renderLogistics(s: StoreLogistics, icon: (id: string) => HTMLEle
     if (s.elsewhere) box.append(node('p', 'logi-note', tx(`Pod innymi magazynami leży jeszcze ${s.elsewhere} sztuk.`, `Another ${s.elsewhere} lie at the doors of other stores.`)));
     if (s.waiting.length) {
       const p = node('p', 'logi-note');
-      p.append(node('strong', '', tx('Czekają na miejsce: ', 'Waiting for room: ')), s.waiting.map((w) => `${w.name} (${w.res})`).join(', '));
+      // te same warsztaty razem: „Sad ×2 (jabłka)”
+      const groups = new Map<string, number>();
+      for (const w of s.waiting) { const k = `${w.name}|${w.res}`; groups.set(k, (groups.get(k) ?? 0) + 1); }
+      p.append(node('strong', '', tx('Czekają na miejsce: ', 'Waiting for room: ')), [...groups].map(([k, n]) => { const [name, res] = k.split('|'); return `${name}${n > 1 ? ` ×${n}` : ''} (${res})`; }).join(', '));
       box.append(p);
     }
     box.append(node('p', 'logi-tip', tx('Postaw kolejny magazyn albo zużyj zapas. Gdy zwolni się miejsce, magazynierzy wniosą towar spod drzwi, a warsztaty same wrócą do pracy.', 'Build another store or use up the stock. As soon as there is room, the storekeepers carry the goods in and the workshops go back to work on their own.')));

@@ -17,7 +17,9 @@ import type { TerrainView } from './terrain';
 const UNIT: Record<string, number> = { stone: 10, iron: 7, wheat: 16, flour: 16, bread: 10, apples: 18, fish: 8, gold: 6, crystal: 1, ale: 3, spear: 3, bow: 2, sword: 2, armor: 1 };
 /** Najwięcej sztuk na jednym stosie (dalej stos już nie rośnie, choć towaru przybywa) */
 const MAX_ITEMS = 12;
-const PALLET_W = 0.84, PALLET_D = 0.58, PALLET_H = 0.075;
+const PALLET_W = 0.8, PALLET_D = 0.56, PALLET_H = 0.075;
+/** Towar na ziemi większy niż niesiony w rękach (model ładunku jest w skali chłopa): stos ma być czytelny z kamery */
+const GROUND_SCALE = 1.55;
 
 interface Built { geo: THREE.BufferGeometry; mats: THREE.Material[] }
 const cache = new Map<string, Built | null>();
@@ -84,6 +86,8 @@ function pileModel(res: string, n: number): Built | null {
   else {
     const item = groundLoad(res);
     if (!item) { cache.set(key, null); return null; }
+    item.scale(GROUND_SCALE, GROUND_SCALE, GROUND_SCALE);
+    item.computeBoundingBox();
     const box = item.boundingBox!;
     const w = box.max.x - box.min.x, d = box.max.z - box.min.z, h = box.max.y - box.min.y;
     // ile sztuk w rzędzie i ile rzędów zmieści paleta; reszta idzie warstwą wyżej (najwyżej trzy warstwy)
@@ -157,7 +161,7 @@ export class PileLayer {
   }
 
   /** Pola obok drzwi magazynu, na których kładzie się kolejne stosy: wzdłuż ściany po obu stronach wejścia, potem rząd dalej */
-  private slots(g: GameState, storeId: number): { x: number; y: number; turn: number }[] {
+  private slots(g: GameState, storeId: number): { x: number; y: number; turn: number; ox: number; oy: number }[] {
     const b = g.buildings.find((o) => o.id === storeId);
     if (!b || b.door < 0) return [];
     const W = g.map.width;
@@ -167,13 +171,13 @@ export class PileLayer {
     // wyjście w osi x (drzwi z boku) albo y (z przodu/tyłu): stosy idą wzdłuż ściany, prostopadle do wyjścia
     const alongX = Math.abs(dy - cy) >= Math.abs(dx - cx);
     const out = alongX ? Math.sign(dy - cy) || 1 : Math.sign(dx - cx) || 1;
-    const res: { x: number; y: number; turn: number }[] = [];
+    const res: { x: number; y: number; turn: number; ox: number; oy: number }[] = [];
     for (const row of [0, 1]) for (const k of [1, -1, 2, -2, 3, -3]) {
       const x = alongX ? dx + k : dx + row * out, y = alongX ? dy + row * out : dy + k;
       if (x < 1 || y < 1 || x >= W - 1 || y >= g.map.height - 1) continue;
       const t = y * W + x;
       if (g.occupancy[t] || g.reserved[t]) continue;
-      res.push({ x, y, turn: alongX ? 0 : Math.PI / 2 });
+      res.push({ x, y, turn: alongX ? 0 : Math.PI / 2, ox: alongX ? 0 : -out * (row ? 0 : 0.18), oy: alongX ? -out * (row ? 0 : 0.18) : 0 });
     }
     return res;
   }
@@ -210,8 +214,9 @@ export class PileLayer {
           this.shown.set(p.id, s);
         }
         const spot = spots[i % Math.max(1, spots.length)];
-        const tx = spot ? spot.x : p.t % W, ty = spot ? spot.y : Math.floor(p.t / W);
-        s.obj.position.set(tx + 0.5 - W / 2, view.heightAt(tx + 0.5, ty + 0.5), ty + 0.5 - H / 2);
+        // na polu obok wejścia, dosunięty do ściany magazynu
+        const tx = (spot ? spot.x : p.t % W) + 0.5 + (spot?.ox ?? 0), ty = (spot ? spot.y : Math.floor(p.t / W)) + 0.5 + (spot?.oy ?? 0);
+        s.obj.position.set(tx - W / 2, view.heightAt(tx, ty), ty - H / 2);
         s.obj.rotation.y = (spot?.turn ?? 0) + jitter(p.id) * 0.12;
       });
     }
@@ -223,10 +228,10 @@ export class PileLayer {
       const b = g.buildings.find((o) => o.id === id);
       if (!b) continue;
       let sign = this.signs.get(id);
-      if (!sign) { sign = new THREE.Sprite(fullSignMaterial()); sign.scale.setScalar(0.6); sign.renderOrder = 4; this.root.add(sign); this.signs.set(id, sign); }
+      if (!sign) { sign = new THREE.Sprite(fullSignMaterial()); sign.scale.setScalar(0.5); sign.renderOrder = 4; this.root.add(sign); this.signs.set(id, sign); }
       const fp = footprint(BUILDINGS[b.type]!, b.rot);
       const cx = b.x + fp.w / 2, cy = b.y + fp.h / 2;
-      sign.position.set(cx - W / 2 + 0.35, view.heightAt(cx, cy) + 3.1 + Math.sin(time * 2 + id) * 0.06, cy - H / 2);
+      sign.position.set(cx - W / 2 + 0.35, view.heightAt(cx, cy) + 2.6 + Math.sin(time * 2 + id) * 0.06, cy - H / 2);
       sign.material.rotation = Math.sin(time * 1.6 + id) * 0.15;
     }
     for (const [id, s] of this.signs) if (!full.has(id)) { this.root.remove(s); this.signs.delete(id); }
