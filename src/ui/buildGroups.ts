@@ -9,7 +9,7 @@ export interface BuildGroup { cat: CategoryId; pl: string; en: string; ids: read
 
 export const BUILD_GROUPS: readonly BuildGroup[] = [
   { cat: 'settlement', pl: 'Mieszkania', en: 'Housing', ids: ['house'] },
-  { cat: 'settlement', pl: 'Życie osady', en: 'Village life', ids: ['camp', 'tavern', 'shrine', 'well', 'torch'] },
+  { cat: 'settlement', pl: 'Życie osady', en: 'Village life', ids: ['camp', 'tavern', 'shrine', 'cemetery', 'well', 'torch'] },
   { cat: 'settlement', pl: 'Składy', en: 'Storage', ids: ['stockpile', 'barn'] },
   { cat: 'settlement', pl: 'Rzemiosło i magia', en: 'Craft and magic', ids: ['engineers', 'mageHut', 'mageFire', 'mageWater'] },
 
@@ -22,7 +22,7 @@ export const BUILD_GROUPS: readonly BuildGroup[] = [
   { cat: 'industry', pl: 'Góry', en: 'Mountains', ids: ['oremine', 'minecamp'] },
 
   { cat: 'military', pl: 'Broń i zbroje', en: 'Arms and armour', ids: ['fletcher', 'poleturner', 'smithy', 'armorer'] },
-  { cat: 'military', pl: 'Wojsko', en: 'Troops', ids: ['armory', 'barracks', 'fieldTent', 'cemetery'] },
+  { cat: 'military', pl: 'Wojsko', en: 'Troops', ids: ['armory', 'barracks', 'fieldTent'] },
 
   { cat: 'defense', pl: 'Mury i bramy', en: 'Walls and gates', ids: ['palisade', 'gate', 'stoneWall', 'stoneGate', 'ladder'] },
   { cat: 'defense', pl: 'Wieże i ogień', en: 'Towers and fire', ids: ['watchtower', 'stoneTower', 'stoneTowerBig', 'stoneTowerGreat', 'brazier'] },

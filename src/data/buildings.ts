@@ -148,7 +148,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Koszary: tu wolny chłop dostaje broń ze składu i staje się żołnierzem
   { id: 'barracks', category: 'military', name: 'b.barracks', w: 3, h: 3, cost: { wood: 70, stone: 60, gold: 40 }, requires: 'armory', buildable: true },
   // Cmentarz: grabarz znosi tu ciała poległych z pola bitwy
-  { id: 'cemetery', category: 'military', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 20, stone: 15 }, staff: true, area: 14, buildable: true },
+  { id: 'cemetery', category: 'settlement', name: 'b.cemetery', w: 3, h: 3, cost: { wood: 20, stone: 15 }, staff: true, area: 14, buildable: true },
   // Warsztat łuczarza: z drewna ze składu wygina łuki i plecie cięciwy
   {
     id: 'fletcher', category: 'military', name: 'b.fletcher', w: 2, h: 2, cost: { wood: 40 }, buildable: true,
