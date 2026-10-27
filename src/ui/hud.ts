@@ -618,6 +618,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   window.addEventListener('resize', refit);
   void document.fonts?.ready.then(() => { resW = 0; refit(); });
   info.hidden = true;
+  // okno po prawej zasłaniało minimapę — gdy jest otwarte, minimapa się chowa (CSS: body.info-open)
+  new MutationObserver(() => document.body.classList.toggle('info-open', !info.hidden)).observe(info, { attributes: true, attributeFilter: ['hidden'] });
   const infoName = el('p', 'info-name');
   const infoDesc = el('p');
   const infoWorker = el('p');
@@ -866,6 +868,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   cats.setAttribute('aria-label', t('hud.build'));
   const cards = el('div', 'cards');
   cards.id = 'build-cards';
+  // kółko myszy nad kartami przewija je w bok, gdy się nie mieszczą
+  cards.addEventListener('wheel', (e) => {
+    if (cards.scrollWidth <= cards.clientWidth || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+    e.preventDefault();
+    cards.scrollLeft += e.deltaY;
+  }, { passive: false });
   const catButtons = new Map<CategoryId, HTMLButtonElement>();
   const buildButtons = new Map<string, HTMLButtonElement>();
   let picked: string | null = null;

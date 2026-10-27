@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.52.5 — większe karty budynków, szersze okno budynku (2026-10-27)
+
+- Pasek budowy zajmuje teraz całą szerokość, więc karty są szersze (132 zamiast 104 px) i z większym podglądem budynku (112 zamiast 84 px). Gdy wszystkie się nie mieszczą, przewijają się w bok: widoczny pasek przewijania pod kartami, a kółko myszy nad kartami też przewija w lewo i prawo
+- Okno budynku, wojska i postaci po prawej jest szersze (440 zamiast 340 px), a gdy jest otwarte, minimapa się chowa i nie nachodzi na nie; po zamknięciu okna wraca
+
 ## 0.52.4 — kałuże po deszczu bez migania (2026-10-27)
 
 - Kałuże nie migają, nie znikają przy przybliżaniu i oddalaniu i nie są pocięte: każda leży na terenie (idzie za nierównościami drogi), a w obrazie jest odsuwana o kilka cm ku kamerze, więc zawsze leży nad nawierzchnią drogi. Wcześniej były płaskimi dyskami, których brzeg wchodził pod drogę
