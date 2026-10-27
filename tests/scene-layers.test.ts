@@ -21,7 +21,7 @@ describe('części obrazu wyniesione z scene.ts', () => {
   it('kruki siadają na ciałach, a spłoszone krążą', () => {
     const g = createGame(7);
     const k = playerKeep(g, 0)!;
-    for (let i = 0; i < 3; i++) g.corpses.push({ id: 500 + i, kind: 0, owner: 1, px: (k.x + 20 + i * 2) * FP, py: (k.y + 20) * FP, at: g.tick - 1000 } as (typeof g.corpses)[number]);
+    for (let i = 0; i < 3; i++) g.corpses.push({ id: 500 + i, kind: 0, owner: 1, px: (k.x + 20 + i * 2) * FP, py: (k.y + 20) * FP, at: g.tick - 250 } as (typeof g.corpses)[number]);
     const scene = new THREE.Scene(), crows = new CrowLayer(scene);
     crows.sync(g, view, { time: 1, calm: false });
     const stand = instanced(scene)[0]!;
@@ -31,6 +31,16 @@ describe('części obrazu wyniesione z scene.ts', () => {
     g.units[0]!.px = g.corpses[0]!.px; g.units[0]!.py = g.corpses[0]!.py;
     crows.sync(g, view, { time: 2, calm: false });
     expect(stand.count).toBeLessThan(before);
+  });
+
+  it('kruki po chwili odlatują: nad starym ciałem już ich nie ma', () => {
+    const g = createGame(7);
+    const k = playerKeep(g, 0)!;
+    g.tick = 2000;
+    g.corpses.push({ id: 600, kind: 0, owner: 1, px: (k.x + 20) * FP, py: (k.y + 20) * FP, at: g.tick - 1000 } as (typeof g.corpses)[number]);
+    const scene = new THREE.Scene(), crows = new CrowLayer(scene);
+    crows.sync(g, view, { time: 1, calm: false });
+    expect(instanced(scene).reduce((n, m) => n + m.count, 0)).toBe(0);
   });
 
   it('oczy w puszczy świecą tylko nocą', () => {
