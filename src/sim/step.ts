@@ -14,6 +14,7 @@ import { gateSystem } from './systems/gates';
 import { migrationSystem, travelSystem } from './systems/population';
 import { caravanSystem, sendCaravan } from './systems/caravans';
 import { rubbleSystem } from './systems/rubble';
+import { storageSystem } from './systems/storage';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
 import { plagueSystem, setQuarantine } from './systems/plague';
@@ -186,6 +187,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   botSystem(g);
   torchSystem(g);
   rubbleSystem(g);
+  storageSystem(g);
   roadSystem(g);
   workerSystem(g);
   plagueSystem(g);

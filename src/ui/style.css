@@ -298,36 +298,12 @@ body.menu-open .hpbars { display: none; }
 @keyframes alarm-pulse { 50% { box-shadow: 0 0 0 2px var(--wood-edge), 0 0 18px rgba(255, 90, 70, .7); } }
 body.menu-open .alarm { display: none; }
 
-/* skryba: okrągły portret i wiadomość w lewym górnym rogu */
-.scribe { position: fixed; top: 10px; left: 12px; z-index: 25; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; pointer-events: none; }
-.scribe-card { display: flex; align-items: center; gap: 12px; max-width: 420px; padding: 4px 18px 4px 4px; font-size: 16px; line-height: 1.3; color: var(--light);
-  background: linear-gradient(90deg, rgba(46, 29, 15, .95), rgba(46, 29, 15, .8)); border: 2px solid var(--gold-dark); border-radius: 30px 6px 6px 30px;
-  box-shadow: 0 0 0 1px var(--wood-edge), 3px 4px 0 rgba(30, 18, 8, .45); animation: scribe-in .35s ease-out; transition: opacity .6s, transform .6s; font-weight: 700; }
-.scribe-card.urgent { border-color: #e0655a; }
-.scribe-card.urgent .scribe-face { box-shadow: 0 0 0 2px #e0655a; }
-.scribe-body { display: grid; gap: 1px; }
-.scribe-name { font-family: var(--display); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--gold); }
-.scribe-card.by-herald { border-color: #b5463a; background: linear-gradient(90deg, rgba(74, 15, 11, .95), rgba(46, 29, 15, .85)); }
-.scribe-card.by-herald .scribe-face { box-shadow: 0 0 0 2px #e0a04a, 0 0 0 4px #4a0f0b; }
-.scribe-face { display: block; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; flex: none; box-shadow: 0 0 0 2px var(--gold); }
-.scribe-card.out { opacity: 0; transform: translateX(-30px); }
-/* przycisk przy wiadomości skryby („Pokaż ▸”): tylko on łapie kliknięcia, reszta wiadomości przepuszcza mysz do mapy */
-.scribe-go { pointer-events: auto; justify-self: start; margin-top: 4px; min-height: 32px; padding: 4px 14px; font: inherit; font-size: 15px; color: #2a1a0c;
-  background: var(--gold); border: 2px solid var(--gold-dark); border-radius: 4px; cursor: pointer; }
-.scribe-go:hover { background: #f0d48a; }
-.scribe-go:focus-visible { outline: 2px solid var(--light); outline-offset: 2px; }
-@keyframes scribe-in { from { opacity: 0; transform: translateX(-40px); } }
-body.menu-open .scribe { display: none; }
 .menu-level { grid-template-columns: auto 1fr; }
 .summary { display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; margin: 6px 0 10px; padding: 10px 0; border-top: 1px solid var(--gold-dark); border-bottom: 1px solid var(--gold-dark); font-size: 17px; }
 .summary dt { margin: 0; }
 .summary dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; text-align: right; }
 
-.scribe-face svg { width: 56px; height: 56px; }
 
-.scribe-card { position: relative; flex: none; }
-.scribe-card.older { opacity: .75; transform: scale(.94); transform-origin: left top; }
-.scribe-card.older.out { opacity: 0; transform: scale(.94) translateY(10px); }
 
 /* zapasy na dolnym pasku: większe ikony i liczby, trend obok, podpowiedź po najechaniu */
 .status .res li { position: relative; min-height: 38px; padding: 2px 10px; gap: 6px; }
@@ -351,11 +327,6 @@ body.menu-open .scribe { display: none; }
 .toolbar .cat img { width: 44px; height: 44px; }
 .toolbar .stepper strong { font-size: 19px; }
 .toolbar .step { min-width: 34px; min-height: 34px; font-size: 22px; }
-/* skryba: większy, odsunięty od krawędzi, żeby obwódka nie była ucięta */
-.scribe { top: 18px; left: 18px; gap: 12px; }
-.scribe-card { max-width: 560px; min-height: 84px; gap: 16px; padding: 6px 24px 6px 6px; font-size: 20px; border-radius: 44px 8px 8px 44px; box-sizing: border-box; }
-.scribe-name { font-size: 14px; }
-.scribe-face, .scribe-face svg { width: 72px; height: 72px; }
 .toast { top: 66px; z-index: 22; }
 /* podgląd planowanej drogi przy kursorze */
 .plan-tip { position: fixed; z-index: 30; pointer-events: none; display: grid; gap: 2px; padding: 8px 14px; font-size: 16px; color: var(--light);
@@ -530,7 +501,7 @@ body.menu-open .scribe { display: none; }
 .perf { top: 92px; }
 body.menu-open .fps-tag { display: none; }
 /* spacer oczami chłopa: bez interfejsu, tylko podpowiedź na dole */
-body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbars, body.walking .alerts, body.walking .report, body.walking .fps-tag, body.walking .perf { display: none !important; }
+body.walking #ui, body.walking .scribe, body.walking .scribe-log, body.walking .alarm, body.walking .hpbars, body.walking .alerts, body.walking .report, body.walking .fps-tag, body.walking .perf { display: none !important; }
 .walk-hint { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 40; margin: 0; padding: 8px 18px; font-size: 17px; font-weight: 700;
   color: var(--light); background: rgba(35, 22, 11, .8); border: 1px solid var(--gold-dark); pointer-events: none; }
 .walk-btn { width: 100%; min-height: 44px; }
@@ -720,9 +691,21 @@ body.walking #ui, body.walking .scribe, body.walking .alarm, body.walking .hpbar
 .stock-item strong { font-family: var(--display); font-size: 18px; line-height: 1; color: #ffe7a6; }
 .stock-item span:last-child { font-size: 13px; color: var(--ink); line-height: 1.15; }
 .stock-empty { font-style: italic; color: var(--ink-soft); }
+/* logistyka magazynu (storePanel.ts): magazynierzy, towar pod drzwiami, czekające warsztaty — ten sam krój i kafelki co zapasy */
+.info-logi { display: grid; gap: 8px; padding: 6px 0 8px; border-bottom: 1px solid rgba(154, 122, 42, .5); }
+.logi-block { display: grid; gap: 4px; }
+.logi-head { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; }
+.logi-list { display: grid; gap: 2px; margin: 0; padding: 0 0 0 30px; list-style: none; font-size: 14px; color: var(--ink); }
+.logi-list strong { color: #ffe7a6; font-weight: 700; }
+.logi-note, .logi-tip { margin: 0; font-size: 14px; line-height: 1.35; color: var(--ink); }
+.logi-tip { color: var(--ink-soft); }
+/* pełny magazyn: wyraźny blok z czerwoną krawędzią (tekst #ffd9c9 na #2a120c — kontrast ok. 13:1) */
+.logi-alert { padding: 8px 10px; background: linear-gradient(#2a120c, #1a0b07); border: 1px solid #c23a2c; box-shadow: inset 3px 0 0 #c23a2c; }
+.logi-alert .logi-head strong { color: #ffd9c9; font-family: var(--display); letter-spacing: .03em; }
+.logi-pile { border-color: #c23a2c; }
 
 /* ---- skalowanie interfejsu do wielkości okna (liczone w main.ts: --ui) ---- */
-#ui, .build, .scribe, .alarm, .alerts, .report, .fps-tag, .perf, .invite-toast, .game-chat, .net-wait, .menu-panel, .end-panel, .menu-bar, .menu-fine, .ping-menu { zoom: var(--ui, 1); }
+#ui, .build, .scribe, .scribe-log, .alarm, .alerts, .report, .fps-tag, .perf, .invite-toast, .game-chat, .net-wait, .menu-panel, .end-panel, .menu-bar, .menu-fine, .ping-menu { zoom: var(--ui, 1); }
 
 /* oko na dolnym pasku: spacer oczami przypadkowego mieszkańca */
 .hud-eye { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; }
@@ -1076,7 +1059,6 @@ button:hover { background: linear-gradient(#4a3622, #2c1e12 60%, #21160c); color
 .say, .res li[data-tip]:hover::after { background: #1b140e; color: var(--ink); border: 1px solid #9a7a2a; }
 input, select { background: #0d0905; border: 1px solid #6e5420; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .6); }
 :is(button, input, select):focus-visible { outline: 2px solid #e9c766; outline-offset: 2px; box-shadow: 0 0 0 5px rgba(233, 199, 102, .25); }
-.scribe-card { background: linear-gradient(90deg, rgba(20, 14, 9, .94), rgba(27, 20, 14, .86)); border: 1px solid #6e5420; }
 .alarm { background: linear-gradient(#1f1710, #120d08); border: 1px solid #9a7a2a; box-shadow: 0 0 0 2px #0b0704, 0 6px 18px rgba(0, 0, 0, .55); }
 .build { background: rgba(14, 9, 5, .82); border-color: #6e5420; font-family: var(--display); font-size: 15px; letter-spacing: .06em; }
 /* pasek menu skaluje się z szerokością ekranu, żeby zawsze mieścił się w jednym rzędzie (od 1024 px) */
@@ -1681,3 +1663,53 @@ body.walking .minimap, body.walking .minimap-show { display: none !important; }
 .jumps .jump:focus-visible { outline: 2px solid var(--gold); outline-offset: 1px; }
 .jumps .jump:disabled { cursor: default; opacity: .38; filter: grayscale(1); }
 @media (prefers-reduced-motion: no-preference) { .jumps .jump .store-pic { transition: transform .12s; } .jumps .jump:hover:not(:disabled) .store-pic { transform: scale(1.1); } }
+
+
+/* ===== Skryba (27.10.2026): dymki w stylu paneli gry, kwadratowy portret, kronika wiadomości (scribe.ts) =====
+   Kontrast: treść #f3e7c9 na #1a120b ok. 14:1, imię #e9c766 ok. 10:1, godzina #c2b08a ok. 8:1, przyciski #ffe7a6 na #2a1d10 ok. 12:1. */
+.scribe { position: fixed; top: 16px; left: 16px; z-index: 25; display: grid; gap: 10px; justify-items: start; pointer-events: none; }
+.scribe-toasts { display: grid; gap: 10px; justify-items: start; }
+.scribe.log-open .scribe-toasts { display: none; }
+.scribe-card, .scribe-entry { position: relative; display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: start; box-sizing: border-box;
+  color: #f3e7c9; background: linear-gradient(#1f1710, #120d08); border: 1px solid #6e5420; border-left: 4px solid #e9c766; }
+.scribe-card { width: min(540px, calc(100vw / var(--ui, 1) - 32px)); padding: 8px 18px 10px 8px;
+  box-shadow: 0 0 0 2px #0b0704, 0 0 0 3px rgba(154, 122, 42, .5), 0 8px 22px rgba(0, 0, 0, .55); animation: scribe-in .3s ease-out; transition: opacity .6s, transform .6s; }
+.scribe-card.by-herald, .scribe-entry.by-herald { border-left-color: #c23a2c; background: linear-gradient(#2a1410, #140a07); }
+.scribe-card.urgent, .scribe-entry.urgent { border-left-color: #e0655a; }
+.scribe-card.older { opacity: .72; transform: scale(.95); transform-origin: left top; }
+.scribe-card.out { opacity: 0; transform: translateX(-30px); }
+.scribe-card.older.out { opacity: 0; transform: scale(.95) translateY(10px); }
+/* portret: kwadrat w złotej ramce, bez zaokrągleń i cienia */
+.scribe-face { display: block; width: 64px; height: 64px; flex: none; border: 2px solid #9a7a2a; background: #2a1f15; }
+.scribe-face svg { display: block; width: 100%; height: 100%; }
+.scribe-body { display: grid; gap: 3px; min-width: 0; }
+/* imię tym samym krojem i rozmiarem co treść, tylko pogrubione i złote */
+.scribe-name { font-size: 17px; font-weight: 700; line-height: 1.25; color: #e9c766; }
+.scribe-when { font-weight: 600; color: #c2b08a; }
+.scribe-text { font-size: 17px; font-weight: 600; line-height: 1.38; }
+.scribe-go { pointer-events: auto; justify-self: start; margin-top: 6px; min-height: 36px; padding: 4px 16px; font: inherit; font-size: 16px; font-weight: 700; color: #ffe7a6;
+  background: linear-gradient(#3a2a1a, #23180e); border: 1px solid #9a7a2a; border-radius: 0; cursor: pointer; }
+.scribe-go:hover { background: linear-gradient(#4a3520, #2c1f12); color: #fff3d0; border-color: #e9c766; }
+.scribe-go:focus-visible, .scribe-log-btn:focus-visible, .scribe-log-close:focus-visible { outline: 3px solid #e9c766; outline-offset: 2px; }
+/* przycisk kroniki: zawsze w rogu nad dymkami */
+.scribe-log-btn { pointer-events: auto; display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 4px 14px 4px 10px; font-size: 16px; font-weight: 700; color: #ffe7a6;
+  background: linear-gradient(#1f1710, #120d08); border: 1px solid #6e5420; border-radius: 0; box-shadow: 0 0 0 2px #0b0704, 0 0 0 3px rgba(154, 122, 42, .5); }
+.scribe-log-btn:hover, .scribe-log-btn[aria-expanded='true'] { color: #fff3d0; border-color: #e9c766; }
+.scribe-log-new { min-width: 22px; height: 22px; padding: 0 6px; display: inline-grid; place-items: center; box-sizing: border-box; font-size: 14px; color: #fff; background: #b0261c; border: 1px solid #ffb0a0; }
+.scribe-log-new[hidden] { display: none; }
+/* kronika: lista ostatnich wiadomości do przewijania */
+.scribe-log { position: fixed; top: 72px; left: 16px; z-index: 26; width: min(560px, calc(100vw / var(--ui, 1) - 32px)); max-height: calc(100vh / var(--ui, 1) - 260px);
+  display: grid; grid-template-rows: auto 1fr auto; padding: 0; overflow: hidden; color: #f3e7c9; }
+.scribe-log[hidden] { display: none; }
+.scribe-log-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px 10px 16px; border-bottom: 1px solid #6e5420; }
+.scribe-log-title { margin: 0; font-size: 18px; font-weight: 700; color: #e9c766; }
+.scribe-log-close { min-width: 40px; min-height: 40px; padding: 0; font-size: 18px; border-radius: 0; }
+.scribe-log-list { display: grid; align-content: start; gap: 8px; padding: 10px 12px 12px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #6e5420 transparent; }
+.scribe-entry { padding: 8px 14px 10px 8px; }
+.scribe-entry .scribe-face { width: 48px; height: 48px; }
+.scribe-entry .scribe-name, .scribe-entry .scribe-text { font-size: 16px; }
+.scribe-log-empty { margin: 0; padding: 14px 16px; color: #c2b08a; }
+.scribe-log-empty[hidden] { display: none; }
+@keyframes scribe-in { from { opacity: 0; transform: translateX(-40px); } }
+@media (prefers-reduced-motion: reduce) { .scribe-card { animation: none; transition: none; } }
+body.menu-open .scribe, body.menu-open .scribe-log { display: none; }

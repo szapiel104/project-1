@@ -1,4 +1,5 @@
 import { BUILDINGS } from '../../data/buildings';
+import { spareKeeper } from './storage';
 import { resIndex, type ResourceId } from '../../data/resources';
 import { GUARD, UNITS } from '../../data/units';
 import { walkable } from '../path';
@@ -119,8 +120,10 @@ export function guardSystem(g: GameState): void {
         }
       }
     } else if (mine.length < p.guards && part === 'work' && !threat) {
-      const ui = g.units.findIndex((u) => u.owner === p.id && u.job === 0 && u.phase === Phase.Idle && u.carryRes < 0 && !u.path.length);
       const pay = Object.entries(GUARD_COST).every(([r, n]) => p.res[resIndex(r as ResourceId)]! >= n!);
+      // nikogo przy ognisku: rekrutem zostaje wolny magazynier (rezerwa, storage.ts)
+      if (pay && !g.units.some((u) => u.owner === p.id && u.job === 0 && u.phase === Phase.Idle && u.carryRes < 0 && !u.path.length)) spareKeeper(g, p.id);
+      const ui = g.units.findIndex((u) => u.owner === p.id && u.job === 0 && u.phase === Phase.Idle && u.carryRes < 0 && !u.path.length);
       if (ui >= 0 && pay) {
         for (const [r, n] of Object.entries(GUARD_COST)) p.res[resIndex(r as ResourceId)]! -= n!;
         g.units.splice(ui, 1); // rekrut jest w twierdzy na szkoleniu

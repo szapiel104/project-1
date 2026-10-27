@@ -28,6 +28,8 @@ const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).f
 import { buildCost, canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
 import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, type RecruitUnit } from './ui/hud';
 import { createScribe, type ScribeAction } from './ui/scribe';
+import { storeLogistics } from './ui/storePanel';
+import { storeNotes } from './ui/storeNotes';
 import { nextWave } from './sim/systems/bot';
 import { battleMages, garrisonRoom, octant, planFormation, trainsAt } from './sim/systems/army';
 import { campWatch, prodInfo, sampleMade, siteInfo, watchInfo } from './ui/buildingPanel';
@@ -847,7 +849,8 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     quarantine: canQuarantine(b) && (game.players[b.owner]?.plague || b.quarantine) ? { on: !!b.quarantine, sick: game.units.filter((u) => u.home === b.id && u.sick && u.phase === 22).length } : undefined,
     garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
     garrisonMax: garrisonRoom(def.id) || undefined,
-    prod: b.owner === ME && !b.build && (def.production || def.staff) ? prodInfo(game, b, (id) => personCard(id)?.name ?? '') : undefined,
+    prod: b.owner === ME && !b.build && (def.production || def.staff) && !def.keepers ? prodInfo(game, b, (id) => personCard(id)?.name ?? '') : undefined,
+    logistics: b.owner === ME ? storeLogistics(game, b, (id) => personCard(id)?.name ?? '') : undefined,
     riot: def.id === 'keep' && b.owner === ME && p.revolt ? { count: rioters(game, ME), cost: doleCost(game, ME), food: foodTotal(p), guards: game.soldiers.filter((s) => s.owner === ME && s.kind === GUARD && !s.camp && s.hp > 0).length, quelling: !!p.quell } : undefined,
     watch: def.id === 'keep' ? watchInfo(game, b.owner) : def.id === 'minecamp' ? campWatch(game, b) : undefined,
     area: def.area || isTower(def.id) ? shownAreas.has(b.id) : undefined,
@@ -1651,7 +1654,12 @@ function endXp(after: Element, win: boolean, mins: number): void {
   });
 }
 
-const scribe = createScribe(() => play('babble'));
+// kronika skryby: każda wiadomość z dniem i godziną gry
+const scribeClock = (): string => {
+  const c = clockAt(game.tick), h = Math.floor(c.hour), m = Math.floor((c.hour - h) * 60);
+  return tx(`dzień ${c.day}, ${h}:${String(m).padStart(2, '0')}`, `day ${c.day}, ${h}:${String(m).padStart(2, '0')}`);
+};
+const scribe = createScribe(() => play('babble'), scribeClock);
 let wolvesSeen = false, wolfKillsSeen = 0;
 /** Zbóje z lasu: ostatnio widziane liczniki napadów, zabitych i rozbitych obozów (wiadomość skryby przy każdej zmianie) */
 let banditSeen: { raids: number; kills: number; razed: number } | null = null;
@@ -1694,7 +1702,7 @@ function banditNotes(p: (typeof game.players)[number]): void {
     play('build');
   }
 }
-let wasNight = false, wasComing = false, stockFull = false;
+let wasNight = false, wasComing = false;
 let alarmComing = false;
 
 // historia zapasów co 5 sekund gry: trend = różnica wobec stanu sprzed minuty
@@ -1804,14 +1812,12 @@ function refresh(): void {
     plagueOverSeen = p.plagueOver.tick;
     scribe.say(`plagueOver${plagueOverSeen}`, t('scribe.plagueOver').replace('{n}', String(p.plagueOver.dead)));
   }
-  const full = storeUsed(p, 'stockpile') >= storeCapacity(game, ME, 'stockpile');
-  if (full && !stockFull) scribe.say('stockFull', t('scribe.stockFull'));
-  stockFull = full;
-  // broń idzie do zbrojowni: gdy są warsztaty broni, a zbrojowni brak albo jest pełna, skryba o tym mówi
+  // pełne magazyny: kto stoi, co leży pod drzwiami i co postawić (storeNotes.ts, logika w storage.ts)
+  storeNotes(game, ME, scribe, showAt);
+  // broń idzie do zbrojowni: gdy są warsztaty broni, a zbrojowni brak, skryba o tym mówi
   const myB = game.buildings.filter((b) => b.owner === ME && !b.build);
   const smiths = myB.some((b) => ['poleturner', 'fletcher', 'smithy', 'armorer'].includes(BUILDINGS[b.type]!.id));
   if (smiths && !myB.some((b) => BUILDINGS[b.type]!.stores?.includes('armory'))) scribe.say('noArmory', t('scribe.noArmory'));
-  else if (smiths && storeUsed(p, 'armory') >= storeCapacity(game, ME, 'armory')) scribe.say('armoryFull', t('scribe.armoryFull'));
   const hour = clockAt(game.tick).hour;
   const night = hour >= 19.5 || hour < 6;
   // dlaczego nikt nie przychodzi: skryba mówi wprost, co blokuje nowych osadników

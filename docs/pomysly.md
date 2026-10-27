@@ -9,6 +9,18 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - [ ] Start gry: krok „Budowanie świata i osady” (1,8–2,4 s jednym ciągiem) podzielić na etapy z paskiem — teren już ma `buildTerrainAsync`, zostaje `start()`/`createGame` i wejście przez `enterGame` (tam `setState` nadal w jednym kawałku)
 - [ ] Liczba trójkątów 6,5–8,7 mln w kadrze: na RTX 5070 karta liczy klatkę w 6–10 ms, ale na słabszym laptopie (Mikołaj) to pierwsze wąskie gardło — upraszczać tylko wersje z daleka (zasada Michała z 19.10)
 - [ ] Cienie nowych obiektów: shader cienia nowego rodzaju modelu kompiluje się przy pierwszym rzucie cienia (`precompile.ts` łapie tylko zwykłe rysowanie) — rzadkie, małe przycięcie
+- [ ] Zauważone przy magazynach (27.10, do zmierzenia przy 4 na 4): `storeCapacity` przechodzi po wszystkich budynkach przy każdej dostawie, a `roomLeft` po wszystkich chłopach gracza — licznik pojemności i ładunków w drodze trzymany na gracza (aktualizowany przy postawieniu/zburzeniu i odłożeniu) zdejmie to całkiem
+- [ ] `workerSystem`: przy każdym budynku bez pracownika `g.units.find` po wszystkich chłopach w każdym ticku (O(budynki × chłopi)); lista wolnych chłopów raz na tick wystarczy
+- [ ] `storeDoors` (workers.ts) buduje nowy zbiór drzwi przy każdym szukaniu drogi do magazynu — można trzymać zbiór na gracza i rodzaj, odświeżany przy zmianie budynków
+- [ ] `idleCount` liczony przez pasek u dołu w każdej klatce — wystarczy raz na kilka ticków
+- [ ] `render/scene.ts` ma ok. 5300 linii: wydzielić kolejne warstwy (ludzie, budynki, światła) do osobnych plików jak `piles.ts`, `rubble.ts`
+
+## Magazyny — dalej (po 0.52.0, opis logiki w `docs/magazyny.md`)
+- Magazynier widocznie inny niż chłop (fartuch, worek na plecach) i w oknie budynku podpowiedź, który to
+- Wóz magazynu: przy dużej osadzie dwukółka przewozi towar między odległymi magazynami (np. spod kopalni do stodoły)
+- Priorytety magazynu: gracz zaznacza, co ma pierwszeństwo, gdy miejsca brakuje (np. drewno przed kamieniem)
+- Towar pod drzwiami przy deszczu moknie (zboże i mąka powoli się psują), co dodatkowo zachęca do budowy magazynów
+- Złodzieje nocą (pomysł niżej) najpierw biorą to, co leży pod drzwiami
 
 ## Zgłoszone przez Michała
 
@@ -130,7 +142,7 @@ Czeka — gra przez sieć:
 Czeka — poprawki:
 - Czytelność nocy: pochodnie o większym zasięgu jako opcja
 - Wszystkie panele w grze (dolna belka, okna budynków, skryba, alarm) w stylu nowego menu: ciemna skóra, złote żyłki, napisy Cinzel (menu i wczytywanie zrobione 13.10)
-- Pełny magazyn: dziś robotnik po chwili wyrzuca nadmiar (przepada) — do decyzji, czy ma czekać
+- ~~Pełny magazyn: dziś robotnik po chwili wyrzuca nadmiar (przepada)~~ — zrobione 27.10 (0.52.0): towar zostaje pod drzwiami, robotnik czeka w warsztacie, magazynierzy wnoszą (`docs/magazyny.md`)
 
 ## Wydajność — do zrobienia (13.10.2026, gra dla wielu graczy w przeglądarce)
 Zrobione 13.10 wieczorem: daleki las jako obrazki z 8 stron, Service Worker z pamięcią plików gry, zapamiętane miniatury budynków.

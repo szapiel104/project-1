@@ -55,6 +55,8 @@ export interface BuildingDef {
   road?: 1 | 2 | 3;
   /** Budynek ma pracownika, choć nic nie produkuje (np. inżynier z cechu, który wynosi gruz) */
   staff?: boolean;
+  /** Magazyn: ilu magazynierów (mały 1, duży 2) — znoszą towar spod drzwi i gruz z rozbiórek (storage.ts) */
+  keepers?: number;
   /** Teren pracy: ile pól od krawędzi działki sięga praca (np. grabarz zbiera ciała tylko tutaj) */
   area?: number;
   /** Ilu chłopów bez pracy może tu czekać */
@@ -82,8 +84,8 @@ export interface BuildingDef {
 export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'keep', name: 'b.keep', w: 11, h: 11, cost: {}, housing: 12, hp: 15000, buildable: false },
   { id: 'house', category: 'settlement', name: 'b.house', w: 2, h: 2, cost: { wood: 25 }, housing: 8, buildable: true },
-  { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 15 }, stores: ['stockpile'], capacity: { stockpile: 200 }, buildable: true },
-  { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 25 }, stores: ['granary'], capacity: { granary: 400 }, buildable: true },
+  { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 15 }, stores: ['stockpile'], capacity: { stockpile: 200 }, staff: true, keepers: 1, buildable: true },
+  { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 25 }, stores: ['granary'], capacity: { granary: 400 }, staff: true, keepers: 1, buildable: true },
   {
     id: 'woodcutter', category: 'industry', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 15 }, buildable: true,
     workView: 'inside',
@@ -124,7 +126,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Obozowisko stoi od początku przy twierdzy: tu czekają chłopi bez pracy. Ma limit miejsc, więc bez wolnego miejsca nowi nie przyjdą
   { id: 'camp', category: 'settlement', name: 'b.camp', w: 2, h: 2, cost: { wood: 20 }, idleSlots: 6, buildable: true },
   // Stodoła stoi od początku obok twierdzy i mieści zapasy startowe; można ją rozebrać i postawić gdzie indziej
-  { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 40 }, stores: ['stockpile', 'grain'], capacity: { stockpile: 250, grain: 200 }, buildable: true },
+  { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 40 }, stores: ['stockpile', 'grain'], capacity: { stockpile: 250, grain: 200 }, staff: true, keepers: 2, buildable: true },
   {
     id: 'fisher', category: 'food', name: 'b.fisher', w: 2, h: 2, cost: { wood: 50, gold: 20 }, buildable: true,
     needsTerrain: { terrain: Terrain.Water, radius: 7 },
@@ -176,10 +178,10 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Kamienna wieża: jak strażnica, ale z kamienia — wytrzymalsza, mieści sześciu łuczników, z wyższego pomostu strzelają dalej
   { id: 'stoneTower', category: 'defense', name: 'b.stoneTower', w: 2, h: 2, tier: 1, cost: { stone: 80, wood: 15 }, hp: 2400, wall: true, buildable: true },
   // Zbrojownia: tu włóczniarz i łuczarz odnoszą gotową broń, stąd biorą ją koszary i straż
-  { id: 'armory', category: 'military', name: 'b.armory', w: 2, h: 2, cost: { wood: 45, stone: 30 }, stores: ['armory'], capacity: { armory: 60 }, buildable: true },
+  { id: 'armory', category: 'military', name: 'b.armory', w: 2, h: 2, cost: { wood: 45, stone: 30 }, stores: ['armory'], capacity: { armory: 60 }, staff: true, keepers: 1, buildable: true },
   // duży spichlerz: kamienna podmurówka, piętro z szachulca, dach z łupka — trzy razy więcej miejsca za kamień
   // (na końcu listy: typ budynku w zapisach gry to numer na tej liście, więc nowe budynki dopisujemy na końcu)
-  { id: 'granaryBig', category: 'food', name: 'b.granaryBig', w: 3, h: 3, tier: 2, cost: { wood: 110, stone: 100 }, stores: ['granary'], capacity: { granary: 1200 }, buildable: true },
+  { id: 'granaryBig', category: 'food', name: 'b.granaryBig', w: 3, h: 3, tier: 2, cost: { wood: 110, stone: 100 }, stores: ['granary'], capacity: { granary: 1200 }, staff: true, keepers: 2, buildable: true },
   // kamienna brama w murze: baszty z ciosów, łukowy przejazd, okute wrota; wytrzymalsza od drewnianej
   { id: 'stoneGate', category: 'defense', name: 'b.stoneGate', w: 1, h: 1, tier: 1, cost: { stone: 25, wood: 10 }, hp: 1600, gate: true, buildable: true },
   // Kopalnia (jak w Gothic): jedna sztolnia wbita w zbocze gór — stawiana tylko tyłem do skały. Z jednej kopalni idzie

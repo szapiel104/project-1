@@ -252,7 +252,7 @@ describe('praca chłopów', () => {
     let baked = 0; // chleb jest od razu zjadany, więc patrzymy, czy w ogóle się pojawił
     for (let i = 0; i < 4000; i++) { step(g, []); baked = Math.max(baked, res(g, 'bread')); }
     expect(baked).toBeGreaterThan(0);
-    expect(g.buildings.filter((b) => b.owner === 0 && b.worker).length).toBe(3);
+    expect(g.buildings.filter((b) => b.owner === 0 && b.worker && !BUILDINGS[b.type]!.keepers).length).toBe(3); // bez magazynierów
   });
 
   it('chłopi nie wchodzą na wodę, góry ani w budynki (poza dziedzińcem i salami własnego zamku)', () => {

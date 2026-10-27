@@ -31,6 +31,7 @@ import { SkyDome } from './sky';
 import { DustFx } from './dust';
 import { Braziers } from './braziers';
 import { RubbleLayer } from './rubble';
+import { PileLayer } from './piles';
 import { WallLayer } from './walls';
 import { SiteLayer } from './sites';
 import { TorchGlow } from './torchglow';
@@ -491,6 +492,8 @@ export class GameRenderer {
   private buildingLayer = new THREE.Group();
   /** Gruz i zapadające się budynki (src/render/rubble.ts) */
   private rubble = new RubbleLayer(this.scene, this.buildingLayer);
+  /** Towar odłożony pod pełnymi magazynami i znak „pełno” nad nimi (piles.ts) */
+  private piles = new PileLayer(this.scene);
   /** Koksowniki na murach i wieżach (osobna warstwa: mur kamienny nie ma własnego modelu budynku) */
   /** Koksowniki (src/render/braziers.ts) */
   private braziers = new Braziers(this.scene);
@@ -1014,6 +1017,7 @@ export class GameRenderer {
     this.batches.clear();
     this.lods.clear();
     this.rubble.clear();
+    this.piles.clear();
     this.prevPos.clear();
     this.facing.clear();
     this.strides.clear();
@@ -2144,6 +2148,7 @@ export class GameRenderer {
       if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.rubble.sync(g, v, dt));
+      T('towar pod magazynami', () => this.piles.sync(g, v, this.me, this.time));
       T('światła', () => this.syncLamps(g));
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
@@ -3131,7 +3136,8 @@ export class GameRenderer {
   private animate(g: GameState, dt: number): void {
     const working = new Set<number>();
     for (const u of g.units) {
-      if (u.phase === Phase.Working) working.add(u.job);
+      // czekający na miejsce w magazynie siedzi w warsztacie (storage.ts): też go widać w środku
+      if (u.phase === Phase.Working || u.phase === Phase.Stalled) working.add(u.job);
       else if (u.phase === Phase.Resting) working.add(u.home);
       else if ((u.phase === Phase.Idle || u.phase === Phase.Evening) && u.path.length === 0) { const camp = this.camps.get((u.py >> 8) * g.map.width + (u.px >> 8)); if (camp && BUILDINGS[camp.type]!.id !== 'keep') working.add(camp.id); }
     }
@@ -3211,7 +3217,8 @@ export class GameRenderer {
         fire.children.forEach((f, k) => { const k2 = 0.35 + heat * 0.65; f.scale.set(k2, (0.7 + Math.abs(Math.sin(this.time * 9 + k)) * 0.6 * (0.5 + hurt)) * k2, k2); });
       }
       const def = BUILDINGS[b.type]!;
-      const needs = b.owner === this.me && (def.production || def.staff) && b.worker === 0;
+      // magazyn bez magazyniera nie dostaje znaku: magazynierzy to rezerwa, a towar i tak wnoszą sami robotnicy (storage.ts)
+      const needs = b.owner === this.me && (def.production || def.staff) && !def.keepers && b.worker === 0;
       let sign = named(mesh, 'noworker') as THREE.Sprite | undefined;
       if (!needs) { if (sign) sign.visible = false; continue; }
       if (!sign) {
@@ -4494,10 +4501,12 @@ export class GameRenderer {
         t.rotation.set(Math.sin(this.time * 2.2 + u.id) * 0.1, heading + Math.sin(this.time * 1.3 + u.id) * 0.35, Math.sin(this.time * 1.7 + u.id) * 0.18);
       }
       // pracujący: rolnik chodzi po polu, rzemieślnik stoi w odsłoniętym wnętrzu
-      const resting = u.phase === Phase.Resting;
+      // czeka na miejsce w magazynie (storage.ts): siedzi w swoim warsztacie albo stoi w sadzie/na polu, nic nie robi
+      const stalled = u.phase === Phase.Stalled && !!u.job;
+      const resting = u.phase === Phase.Resting || (stalled && BUILDINGS[jobs.get(u.job)?.type ?? -1]?.workView === 'inside');
       /** Kopacz idzie sztolnią (do przodka albo do wrót) zamiast kopać — bez zamachu kilofem */
       let mineWalk = false;
-      const job = resting ? jobs.get(u.home) : u.phase === Phase.Working && u.job ? jobs.get(u.job) : undefined;
+      const job = u.phase === Phase.Resting ? jobs.get(u.home) : (u.phase === Phase.Working || stalled) && u.job ? jobs.get(u.job) : undefined;
       const mode = resting ? 'inside' : job ? BUILDINGS[job.type]!.workView : undefined;
       if (job && mode) {
         const def = BUILDINGS[job.type]!;
@@ -4506,7 +4515,12 @@ export class GameRenderer {
         const cx = job.x + fp.w / 2, cy = job.y + fp.h / 2;
         const turn = (job.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
         const k = this.calm ? 0 : this.time;
-        if (mode === 'field') {
+        if (mode === 'field' && stalled) {
+          // stoi na skraju pola i czeka (bez schylania się)
+          t.position.set(cx + fp.w * 0.3 - width / 2, (mesh?.position.y ?? 0) + 0.05, cy + fp.h * 0.3 - height / 2);
+          t.rotation.set(0, u.id * 1.3, 0);
+          swing = 0;
+        } else if (mode === 'field') {
           const wx = cx + Math.sin(k * 0.5 + u.id) * fp.w * 0.3, wy = cy + Math.cos(k * 0.37 + u.id * 2) * fp.h * 0.3;
           t.position.set(wx - width / 2, (mesh?.position.y ?? 0) + 0.05, wy - height / 2);
           t.rotation.set(Math.max(0, Math.sin(k * 5)) * 0.5, k * 0.4 + u.id, 0, 'YXZ'); // schyla się przy pracy

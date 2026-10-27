@@ -318,6 +318,35 @@ export function plankBundle(): THREE.BufferGeometry {
   return plank;
 }
 
+/**
+ * Jedna sztuka towaru postawiona na ziemi (stosy pod magazynami, render/piles.ts): ten sam model co niesiony ładunek,
+ * dnem na y = 0 i wyśrodkowany. Deski nie mają osobnego kształtu ładunku (wiązka na ramieniu) — stos desek składa piles.ts.
+ */
+export function groundLoad(res: string): THREE.BufferGeometry | null {
+  const parts = SHAPES[res]?.();
+  if (!parts) return null;
+  const geo = assemble(parts);
+  if (!geo) return null;
+  const k = LOAD_SCALE[res] ?? 1;
+  geo.scale(k, k, k);
+  geo.computeBoundingBox();
+  const b = geo.boundingBox!;
+  geo.translate(-(b.min.x + b.max.x) / 2, -b.min.y, -(b.min.z + b.max.z) / 2);
+  geo.computeBoundingBox();
+  return geo;
+}
+
+/** Deska albo belka z fakturą świeżego drewna (do stosów i palet pod magazynami) */
+export function boardPiece(w: number, h: number, d: number, hex: number): THREE.BufferGeometry {
+  return as(tint(new THREE.BoxGeometry(w, h, d), hex), 'board');
+}
+/** Belka z kory albo ciemnego drewna (podkłady pod stosem) */
+export function beamPiece(w: number, h: number, d: number, hex: number): THREE.BufferGeometry {
+  return as(tint(new THREE.BoxGeometry(w, h, d), hex), 'wood');
+}
+/** Składa części (z boardPiece, beamPiece) w jedną bryłę z grupami materiałów; materiały: loadMaterials */
+export const assembleParts = (parts: THREE.BufferGeometry[]): THREE.BufferGeometry | null => assemble(parts);
+
 /** Jeden ładunek jako zwykła siatka (podgląd modeli): ten sam kształt i położenie co w grze, w układzie postaci */
 export function loadGeometry(res: string): THREE.BufferGeometry | null {
   const parts = SHAPES[res]?.();

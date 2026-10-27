@@ -1,4 +1,5 @@
 import { buildingById, unitById, dropWorker, storeCapacity, storeUsed } from '../state';
+import { spareKeeper } from './storage';
 import { WALL_TOP } from '../../data/keep';
 import { buildingIndex } from '../../data/buildings';
 import { type ResourceId, resIndex } from '../../data/resources';
@@ -73,6 +74,8 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
   // wolny chłop (najlepiej ten, co siedzi przy ognisku) idzie do koszar; w środku dostaje broń i wychodzi żołnierzem
   const free = g.units.filter((u) => u.owner === player && u.job === 0 && !u.enlist && !u.riot && !u.sick && u.carryRes < 0);
+  // przy ognisku pusto: idzie wolny magazynier (rezerwa, storage.ts) — ale dopiero gdy zapłata jest pewna
+  if (!free.length && def.cost && Object.entries(def.cost).every(([res, amount]) => p.res[resIndex(res as ResourceId)]! >= amount!)) { const k = spareKeeper(g, player); if (k) free.push(k); }
   if (!free.length) return false;
   const pick = free.find((u) => u.phase === Phase.Idle) ?? free[0]!;
   for (const [res, amount] of Object.entries(def.cost)) p.res[resIndex(res as ResourceId)]! -= amount!;
@@ -1289,7 +1292,7 @@ function repairSystem(g: GameState): void {
     // wieczorem i nocą nikt nie zaczyna budowy, rano wrócą
     if (dayPart(g.tick) !== 'work') continue;
     while (crew < 3) {
-      const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0);
+      const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0) ?? spareKeeper(g, b.owner);
       if (!u) break;
       // najpierw do składu po materiał (o ile jest jeszcze co nosić), potem na plac
       if (!sendForMaterial(g, u, b)) { u.target = b.id; u.phase = Phase.ToRepair; u.path = []; }

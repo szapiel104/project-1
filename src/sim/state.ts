@@ -162,8 +162,30 @@ export interface Building {
   salvage?: [number, number][];
   /** Warsztat: ile towaru jego pracownik oddał do składu od postawienia (do okna budynku) */
   made?: number;
-  /** Warsztat: ile towaru przepadło, bo skład był pełny */
+  /** Warsztat: ile towaru przepadło, bo skład był pełny (stare zapisy; dziś nadmiar leży pod magazynem) */
   lost?: number;
+  /** Warsztat czeka na miejsce w magazynie: indeks surowca + 1 (towar leży pod magazynem, pracownik nie robi kolejnego) */
+  stall?: number;
+}
+
+/**
+ * Towar pod magazynem: gdy magazyn był pełny, robotnik odłożył ładunek pod drzwiami. Leży tam naprawdę (widać go),
+ * dopóki magazynier albo sam robotnik nie wniesie go do środka, gdy zwolni się miejsce (storage.ts).
+ */
+export interface Pile {
+  id: number;
+  owner: number;
+  /** Indeks surowca */
+  res: number;
+  amt: number;
+  /** Magazyn, pod którym leży (0 = magazyn zniknął) */
+  store: number;
+  /** Pole, na którym leży (drzwi magazynu w chwili odłożenia): stąd się go zabiera */
+  t: number;
+  /** Kto już po niego idzie (id chłopa) — jeden stos, jeden tragarz */
+  claim: number;
+  /** Tick odłożenia (do kolejności: najstarszy stos wnoszony pierwszy) */
+  at: number;
 }
 
 /** Młode drzewko posadzone przez leśniczego. Rośnie (poza zimą), aż stanie się zwykłym polem lasu do wycinki. */
@@ -256,6 +278,10 @@ export const enum Phase {
   ToPatient = 28,
   /** Mag rzuca czar: leczy chorego, wypala zarazę z chaty albo pali zwłoki (`timer` = ile jeszcze) */
   Healing = 29,
+  /** Magazyn pełny: towar leży pod magazynem, a pracownik czeka w warsztacie, aż zwolni się miejsce (storage.ts) */
+  Stalled = 30,
+  /** Magazynier (albo czekający pracownik) idzie po towar spod magazynu (`target` = id stosu) */
+  ToPile = 31,
 }
 
 export interface Unit {
@@ -518,6 +544,8 @@ export interface GameState {
   /** Drogi zaplanowane, jeszcze nie ułożone (rodzaj na polu, 0 = brak): układają je wolni chłopi */
   roadPlan: Uint8Array;
   rubble: Rubble[];
+  /** Towar odłożony pod pełnymi magazynami (brak w starych zapisach) */
+  piles?: Pile[];
   nextId: number;
   /** Oddziały w zwartym marszu */
   marches?: March[];
@@ -749,7 +777,15 @@ export function idleSlots(g: GameState, player: number): number {
 
 export function idleCount(g: GameState, player: number): number {
   let n = 0;
-  for (const u of g.units) if (u.owner === player && u.job === 0) n++;
+  // magazynierzy to rezerwa rąk do pracy (każdy warsztat może ich zabrać, storage.ts): liczą się jak wolni przy ognisku,
+  // inaczej każdy magazyn ściągałby do osady nowych ludzi za darmo
+  let stores: Set<number> | undefined;
+  for (const u of g.units) {
+    if (u.owner !== player) continue;
+    if (u.job === 0) { n++; continue; }
+    if (!stores) { stores = new Set(); for (const b of g.buildings) if (b.owner === player && BUILDINGS[b.type]!.keepers) stores.add(b.id); }
+    if (stores.has(u.job)) n++;
+  }
   for (const t of g.travelers) if (t.owner === player && !t.leaving) n++; // idący do obozowiska już mają w nim miejsce
   return n;
 }
@@ -830,12 +866,13 @@ export function stateHash(g: GameState): number {
   for (let i = 0; i < g.wear.length; i++) if (g.wear[i]) { add(i); add(g.wear[i]!); }
   for (let i = 0; i < g.roads.length; i++) { if (g.roads[i]) { add(i); add(g.roads[i]! + 100); } if (g.roadPlan[i]) { add(i); add(g.roadPlan[i]! + 200); } }
   for (const s of g.saplings ?? []) { add(s.t); add(s.owner); add(s.by); add(s.age); }
+  for (const x of g.piles ?? []) { add(x.id); add(x.owner); add(x.res); add(x.amt); add(x.store); add(x.t); add(x.claim); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.away ? 1 : 0); add(p.noRock ?? 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0); add(p.famine ?? 0); add(p.revolt ? 1 : 0); add(p.quell ? 1 : 0); add(p.revoltSince ?? 0); add(p.raidAt ?? 0); add(p.raids ?? 0); add(p.tier ?? 0); add(p.lastStrike?.tick ?? 0); add(p.plague ?? 0); add(p.plagueDead ?? 0); add(p.plagueCalm ?? 0);
     for (let i = 0; i < p.res.length; i++) add(p.res[i]!);
   }
-  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.threat ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.clean ?? 0); add(b.quarantine ? 1 : 0); add(b.off ? 1 : 0); for (const r of b.rally ?? []) add(r + 1); }
+  for (const b of g.buildings) { add(b.id); add(b.type); add(b.owner); add(b.x); add(b.y); add(b.door); add(b.worker); for (const c of b.crew ?? []) add(c); for (const v of b.hold ?? []) add(v); add(b.recruitAt ?? 0); add(b.threat ?? 0); add(b.lit ? 1 : 0); add(b.rot); add(b.hp); add(b.build); add(b.shut ? 1 : 0); add(b.loads ?? 0); add(b.delivered ?? 0); add(b.haul ?? 0); add(b.enlistQ?.length ?? 0); add(b.fire ?? 0); add(b.clean ?? 0); add(b.quarantine ? 1 : 0); add(b.off ? 1 : 0); add(b.stall ?? 0); for (const r of b.rally ?? []) add(r + 1); }
   for (const u of g.units) {
     add(u.id); add(u.owner); add(u.px); add(u.py); add(u.job); add(u.phase); add(u.timer); add(u.wait); add(u.fled ?? 0); add(u.foe ?? 0); add(u.foeU ?? 0); add(u.enlist ?? 0); add(u.bucket ?? 0); add(u.fireAt ?? 0); add(u.riot ?? 0); add(u.raid ?? 0); add(u.sick ?? 0); add(u.sickFrom ?? 0); add(u.care ?? 0); add(u.immune ?? 0); add(u.zap ?? 0);
     add(u.carryRes); add(u.carryAmt); add(u.trips); add(u.home); add(u.batches); add(u.target); add(u.path.length); add(u.hp ?? 30);

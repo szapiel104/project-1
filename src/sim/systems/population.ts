@@ -1,4 +1,5 @@
 import { dropWorker } from '../state';
+import { BUILDINGS } from '../../data/buildings';
 import { RULES } from '../../data/rules';
 import { findPath } from '../path';
 import { FP, Phase, housing, idleCount, idleSlots, playerKeep, population, type GameState, type Unit } from '../state';
@@ -22,7 +23,8 @@ function removePeasant(g: GameState, player: number): void {
   for (let i = g.units.length - 1; i >= 0; i--) {
     const u = g.units[i]!;
     if (u.owner !== player || u.riot) continue;
-    if (u.job === 0) { pick = i; break; }
+    // magazynier to rezerwa (storage.ts): odchodzi tak samo jak bezrobotny
+    if (u.job === 0 || BUILDINGS[g.buildings.find((b) => b.id === u.job)?.type ?? -1]?.keepers) { pick = i; break; }
     if (pick < 0) pick = i;
   }
   const u = g.units[pick];

@@ -5,7 +5,7 @@ import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
 import { openWalk } from './systems/placement';
-import { applyCut, type Building, type Caravan, type Corpse, type Traveler, type Wolf, type GameState, type March, type OrderQueue, type PlayerState, type Rubble, type Sapling, type Soldier, type Unit } from './state';
+import { applyCut, type Building, type Caravan, type Corpse, type Traveler, type Wolf, type GameState, type March, type OrderQueue, type PlayerState, type Pile, type Rubble, type Sapling, type Soldier, type Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
 export const SAVE_VERSION = 21;
@@ -38,6 +38,7 @@ export interface SaveData {
   marches?: March[];
   orders?: OrderQueue[];
   saplings?: Sapling[];
+  piles?: Pile[];
 }
 
 const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
@@ -66,6 +67,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     caravans: (g.caravans ?? []).map((c) => ({ ...c, path: [...c.path] })),
     wolves: g.wolves.map((w) => ({ ...w, path: [...w.path] })),
     saplings: (g.saplings ?? []).map((x) => ({ ...x })),
+    piles: (g.piles ?? []).map((x) => ({ ...x })),
   };
 }
 
@@ -96,6 +98,7 @@ export function deserialize(d: SaveData): GameState | null {
       occupancy: new Int32Array(size), gates: new Uint8Array(size), walls: new Uint8Array(size), reserved: new Uint8Array(size), cut: [...d.cut], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size),
       rubble: d.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
       saplings: (d.saplings ?? []).map((x) => ({ ...x })),
+      piles: (d.piles ?? []).map((x) => ({ ...x })),
     };
     for (const r of g.rubble) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g.reserved[y * map.width + x]!++;
     for (const [t, n] of d.wear) g.wear[t] = n;

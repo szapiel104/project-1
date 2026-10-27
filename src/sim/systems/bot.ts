@@ -1,7 +1,7 @@
 import { dole, quell } from './unrest';
 import { canQuarantine, setQuarantine } from './plague';
 import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
-import { resIndex } from '../../data/resources';
+import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
 import { MAGE_CAP, SAPPER, UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
 import { FP, Phase, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
@@ -138,8 +138,19 @@ export function botSystem(g: GameState): void {
     // gdy wolni ludzie czekają, a drewna brak na nowe warsztaty (drwal jest tani, a drewno to wąskie gardło)
     const pop = population(g, p.id);
     const feeders = (have.get('orchard') ?? 0) + (have.get('fisher') ?? 0) + (have.get('bakery') ?? 0) * 2;
-    const urgent = feeders * 6 < pop + 3 ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
-    if (urgent && affordable(g, p, buildingIndex(urgent))) {
+    // pierwszy drwal przed wszystkim: bez niego drewno się kończy i osada staje (zapas chleba starcza na start)
+    const urgent = !(have.get('woodcutter') ?? 0) ? 'woodcutter' : feeders * 6 < pop + 3 ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
+    // pełny magazyn (storage.ts): warsztaty stoją, a towar leży pod drzwiami — bot stawia kolejny magazyn tego rodzaju
+    // (spichlerza nie: pełny spichlerz to po prostu dużo jedzenia, a sady same ruszą, gdy ludzie zjedzą zapas)
+    const storeNeed = fullStoreNeed(g, p.id);
+    const urgentStore = storeNeed && (have.get(storeNeed) ?? 0) < 6 ? storeNeed : null;
+    if (urgentStore) {
+      // oszczędza na magazyn, dopóki go nie postawi (bez niego warsztaty i tak stoją)
+      if (affordable(g, p, buildingIndex(urgentStore))) {
+        const at = placementBatch(() => spot(g, p.id, buildingIndex(urgentStore)));
+        if (at && placeBuilding(g, p.id, buildingIndex(urgentStore), at.x, at.y)) have.set(urgentStore, (have.get(urgentStore) ?? 0) + 1);
+      }
+    } else if (urgent && affordable(g, p, buildingIndex(urgent))) {
       const at = placementBatch(() => spot(g, p.id, buildingIndex(urgent)));
       if (at && placeBuilding(g, p.id, buildingIndex(urgent), at.x, at.y)) have.set(urgent, (have.get(urgent) ?? 0) + 1);
     } else for (const raw of ORDER) {
@@ -276,6 +287,21 @@ const fighter = (s: Soldier): boolean => !UNITS[s.kind]!.guard && !UNITS[s.kind]
 const ruinCenter = (b: Building): [number, number] => { const fp = footprint(BUILDINGS[b.type]!, b.rot); return [b.x + fp.w / 2, b.y + fp.h / 2]; };
 
 /** Ruiny wrogich drużyn, które saper może rozebrać (bez dróg i twierdz) */
+/** Jaki magazyn bot powinien dostawić: rodzaj, przy którym warsztaty czekają na miejsce (storage.ts), albo null */
+function fullStoreNeed(g: GameState, owner: number): string | null {
+  const STORE_FOR: Record<string, string> = { stockpile: 'stockpile', grain: 'barn', armory: 'armory' };
+  for (const b of g.buildings) {
+    if (b.owner !== owner || !b.stall) continue;
+    const kind = RESOURCE_DEFS[RESOURCES[b.stall - 1]!]?.store;
+    if (!kind || !STORE_FOR[kind]) continue;
+    // plac budowy takiego magazynu już stoi: czekamy, aż go skończą
+    const id = STORE_FOR[kind]!;
+    if (g.buildings.some((x) => x.owner === owner && x.build && BUILDINGS[x.type]!.id === id)) continue;
+    return id;
+  }
+  return null;
+}
+
 function foeRuins(g: GameState, p: PlayerState): Building[] {
   return g.buildings.filter((b) => b.ruined && g.players[b.owner]?.team !== p.team && !BUILDINGS[b.type]!.road && BUILDINGS[b.type]!.id !== 'keep');
 }

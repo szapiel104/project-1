@@ -1,6 +1,7 @@
 import { me, onAccount } from '../net/supa';
 import { avatarSvg } from './avatars';
 import { BUILD_GROUPS } from './buildGroups';
+import { renderLogistics, type StoreLogistics } from './storePanel';
 import { BUILDINGS, CATEGORIES, isTower, type BuildingDef, type CategoryId } from '../data/buildings';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { RESOURCES, RESOURCE_DEFS, type ResourceId } from '../data/resources';
@@ -98,7 +99,7 @@ export interface HudView {
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
 export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
-export interface BuildingInfo { stock?: StockInfo[]; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
+export interface BuildingInfo { stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Twierdza w czasie buntu: ilu stoi pod bramą, ile porcji kosztuje rozdanie chleba, czy jest z czego, czy straż już rozgania tłum */
@@ -194,6 +195,8 @@ const ICONS: Record<string, string> = {
   sword: '<path d="M10 2l1.3 2v9h-2.6V4z" fill="#c4c9d0" stroke="#2a1c10" stroke-width=".8"/><path d="M10 4v9" stroke="#7d838c" stroke-width=".7"/><path d="M5.5 13h9v1.6h-9z" fill="#8f8a96" stroke="#2a1c10" stroke-width=".8"/><path d="M9 14.6h2v2.6H9z" fill="#6b4a2e" stroke="#2a1c10" stroke-width=".7"/><circle cx="10" cy="18.1" r="1.1" fill="#8f8a96" stroke="#2a1c10" stroke-width=".7"/>',
   // kolczuga: tułów z rękawami w rzędach kółek
   armor: '<path d="M6 3h8l4 4-2 2-2-1v9H6V8L4 9 2 7z" fill="#8f949c" stroke="#2a1c10" stroke-width=".9"/><path d="M6.3 10.5h7.4M6.3 13h7.4M6.3 15.5h7.4M7 5.5h6" stroke="#4a4d54" stroke-width=".8"/><path d="M8 3c.5 1.5 3.5 1.5 4 0" fill="#6b4a2e" stroke="#2a1c10" stroke-width=".7"/>',
+  // ostrzeżenie: czerwony trójkąt z wykrzyknikiem (pełny magazyn)
+  alert: '<path d="M10 2.5l8 14.5H2z" fill="#c23a2c" stroke="#2a1c10" stroke-width=".9"/><path d="M10 7.5v4.8" stroke="#fff3d6" stroke-width="2" stroke-linecap="round"/><circle cx="10" cy="14.8" r="1.1" fill="#fff3d6"/>',
   crown: '<path d="M3 15l1-9 4 4 2-6 2 6 4-4 1 9z" fill="#e9c145" stroke="#2a1c10"/><rect x="3" y="15" width="14" height="2.5" fill="#c9a23a" stroke="#2a1c10"/>',
   store: '<rect x="3" y="6" width="14" height="10" fill="#a8743a" stroke="#2a1c10"/><path d="M3 6l2-3h10l2 3M3 11h14M10 6v10" stroke="#2a1c10" fill="none"/>',
   granary: '<path d="M4 9l6-5 6 5v8H4z" fill="#c9a24a" stroke="#2a1c10"/><rect x="8" y="12" width="4" height="5" fill="#5e4329" stroke="#2a1c10"/>',
@@ -792,7 +795,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   siteBox.append(siteHead, siteBar, siteRows);
   const storeBox = el('div', 'info-stock');
   storeBox.hidden = true;
-  info.append(infoName, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  const logiBox = el('div', 'info-logi');
+  logiBox.hidden = true;
+  info.append(infoName, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -1197,7 +1202,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       powerBox.hidden = true;
       quarBox.hidden = true;
       // resztki okna budynku (plac budowy, zapasy, zasięg strzału) nie mogą zostać na karcie człowieka
-      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true; infoDesc.hidden = false;
+      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true; infoDesc.hidden = false;
       walkBtn.hidden = person.walk === false;
     },
     showArmy(army, ctl) {
@@ -1214,7 +1219,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       gateBox.hidden = true;
       powerBox.hidden = true;
       quarBox.hidden = true;
-      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true;
+      siteBox.hidden = true; prodBox.hidden = true; storeBox.hidden = true; logiBox.hidden = true; areaBtn.hidden = true; mineBtn.hidden = true; watchState.hidden = true; riotBox.hidden = true;
       walkBtn.hidden = true;
       // typy jednostek: przycisk na każdy typ z liczbą zaznaczonych
       const byKind = new Map<string, { name: string; n: number }>();
@@ -1377,6 +1382,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
             return [head, bar, grid];
           }));
         }
+      }
+      logiBox.hidden = !i.logistics;
+      if (i.logistics) {
+        const key = JSON.stringify(i.logistics);
+        if (logiBox.dataset.key !== key) { logiBox.dataset.key = key; logiBox.replaceChildren(...renderLogistics(i.logistics, icon)); }
       }
       riotBox.hidden = !(i.own && i.riot);
       if (i.riot) {

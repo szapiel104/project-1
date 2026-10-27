@@ -1,4 +1,5 @@
 import { BUILDINGS, footprint } from '../../data/buildings';
+import { spareKeeper } from './storage';
 import { RESOURCES, resIndex, type ResourceId } from '../../data/resources';
 import { GUARD, UNITS } from '../../data/units';
 import { findPath, walkable } from '../path';
@@ -137,8 +138,10 @@ export function campSystem(g: GameState): void {
         mine.push(s);
       }
     } else if (mine.length < CAMP_GUARDS) {
-      const ui = g.units.findIndex((u) => u.owner === b.owner && u.job === 0 && u.phase === Phase.Idle && u.carryRes < 0 && !u.path.length);
       const pay = Object.entries(GUARD_COST).every(([r, n]) => p.res[resIndex(r as ResourceId)]! >= n!);
+      // nikogo przy ognisku: rekrutem zostaje wolny magazynier (rezerwa, storage.ts)
+      if (pay && !g.units.some((u) => u.owner === b.owner && u.job === 0 && u.phase === Phase.Idle && u.carryRes < 0 && !u.path.length)) spareKeeper(g, b.owner);
+      const ui = g.units.findIndex((u) => u.owner === b.owner && u.job === 0 && u.phase === Phase.Idle && u.carryRes < 0 && !u.path.length);
       if (ui >= 0 && pay) {
         for (const [r, n] of Object.entries(GUARD_COST)) p.res[resIndex(r as ResourceId)]! -= n!;
         g.units.splice(ui, 1);

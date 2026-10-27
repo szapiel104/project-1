@@ -1,5 +1,18 @@
 # Dziennik zmian
 
+## 0.52.0 — magazyny jako prawdziwa logistyka, nowy skryba z kroniką (2026-10-27)
+
+- **Pełny magazyn:** nadmiar już nie przepada. Robotnik kładzie ładunek pod drzwiami magazynu (stos leży naprawdę, jest w zapisie gry) i wraca do warsztatu, gdzie czeka i nie robi kolejnego towaru, dopóki nie zwolni się miejsce. Potem warsztat rusza sam. Bez żadnego magazynu danego rodzaju towar zostaje na ziemi, a nowy magazyn go przejmuje
+- **Magazynierzy:** skład, spichlerz i zbrojownia mają po jednym, stodoła i duży spichlerz po dwóch. Gdy jest miejsce, wnoszą towar spod drzwi, w wolnej chwili wynoszą gruz z rozbiórek (jeden na rozbiórkę). Magazyny są połączone: jedna lista stosów, na każdy stos idzie dokładnie jeden człowiek (najbliższy, najpierw z tego magazynu). Bez wolnego magazyniera czekający robotnik sam wnosi swój towar
+- Magazynier to rezerwa: warsztat, koszary, straż i budowa biorą go, gdy przy ognisku nikogo nie ma; liczy się do miejsc przy ognisku i odchodzi z osady jak bezrobotny (magazyny nie ściągają ludzi za darmo)
+- **Na mapie:** stosy ładnie ułożone wzdłuż ściany po obu stronach wejścia — worki, kosze i beczki na palecie, deski w sztaplu z przekładkami — i znak nad pełnym magazynem (tarcza ze skrzynią i wykrzyknikiem). Czekający robotnik siedzi w warsztacie albo stoi na skraju pola. Magazyn bez magazyniera nie dostaje znaku „brak pracownika”
+- **Okno magazynu:** magazynierzy i co robią, towar pod drzwiami (i pod innymi magazynami), które warsztaty czekają i co z tym zrobić. Okno warsztatu mówi wprost, że towar leży pod magazynem, a pracownik czeka
+- **Skryba:** jedna wiadomość przy każdym zapełnieniu (kto stoi, co leży, co postawić, przycisk „Pokaż”) i jedna, gdy magazyn znowu ma miejsce
+- **Skryba — nowy wygląd:** dymki w stylu paneli gry, kwadratowy portret w złotej ramce, imię tym samym krojem co treść. **Kronika:** przycisk „Kronika” w rogu otwiera listę ostatnich 60 wiadomości z dniem i godziną gry (z przyciskami „Pokaż”), z licznikiem nieprzeczytanych; Esc zamyka
+- **Bot** stawia kolejny skład, stodołę albo zbrojownię, gdy jego warsztaty czekają na miejsce (spichlerza nie — pełny spichlerz to dużo jedzenia), a pierwszego drwala stawia przed wszystkim innym
+- Opisy składu, stodoły, spichlerzy i zbrojowni poprawione (stodoła trzyma zboże, skład piwo, zbrojownia także miecze i kolczugi), „Jak grać”: rozdziały „Pełny magazyn” i „Magazynierzy”
+- Logika opisana w `docs/magazyny.md`, uwagi o wydajności dopisane do `docs/pomysly.md`
+
 ## 0.51.14 — mniejsze karty budynków, pogrupowane po funkcji (2026-10-27)
 
 - Karty w pasku budowy mniejsze (104 px zamiast 150 px, obrazek 84 px zamiast 134 px) — mniej zasłaniają mapę. Skalowanie interfejsu z ustawień działa jak dotąd

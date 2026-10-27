@@ -12,6 +12,7 @@ import { plantSapling } from './forestry';
 import { mageKindOf } from './plague';
 import { harvestPct } from './storms';
 import { feastDay, goesToPray } from './faith';
+import { dropPile, isStore, spareKeeper, stalledStep, takePile } from './storage';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -43,7 +44,7 @@ export const crewOf = (b: Building): number[] => (b.worker ? [b.worker, ...(b.cr
 
 const OFF_DUTY = new Set<Phase>([Phase.ToEvening, Phase.Evening, Phase.ToSleep, Phase.Sleeping]);
 /** Zajęcia, które chłop z pustymi rękami rzuca wieczorem (resztę kończy: niesie ładunek do składu, dokańcza wyrób) */
-const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest, Phase.ToPlant]);
+const AFTER_HOURS = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToInputStore, Phase.Repairing, Phase.ToRepair, Phase.ToFetch, Phase.Paving, Phase.ToPave, Phase.ToRoadFetch, Phase.ToRubble, Phase.ToRest, Phase.ToPlant, Phase.Stalled]);
 
 /** Do której godziny (po północy) chłop siedzi wieczorem przy ogniu albo w karczmie; 0 = idzie spać o zwykłej porze */
 export function nightOwl(u: { id: number }): number {
@@ -180,6 +181,15 @@ function storeDoors(g: GameState, owner: number, kind: StoreKind): Set<number> {
   return doors;
 }
 
+/** Niesie towar, dla którego gracz nie ma żadnego magazynu (ani baraku górników pod ręką) */
+function noStoreFor(g: GameState, u: Unit): boolean {
+  const kind = RESOURCE_DEFS[RESOURCES[u.carryRes]!]?.store;
+  if (!kind) return false;
+  if (u.job && campOf(g, buildingById(g, u.job))) return false;
+  for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.stores?.includes(kind)) return false;
+  return true;
+}
+
 /** Dokąd jednostka zmierza w obecnej fazie. null = nigdzie nie idzie. */
 function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: ProductionDef | undefined): ((t: number) => boolean) | null {
   switch (u.phase) {
@@ -245,6 +255,11 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.ToLight: {
       const target = buildingById(g, u.target);
       return target ? (t) => t === target.door : null;
+    }
+    case Phase.ToPile: {
+      // po towar spod magazynu (storage.ts): stos leży na polu przed drzwiami
+      const pile = g.piles?.find((x) => x.id === u.target && x.claim === u.id);
+      return pile ? (t) => t === pile.t : null;
     }
     case Phase.ToRubble: {
       const r = g.rubble.find((x) => x.id === u.target);
@@ -350,14 +365,20 @@ function beginCycle(u: Unit, prod: ProductionDef): void {
 function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
   const p = g.players[u.owner]!;
   switch (u.phase) {
-    case Phase.Returning:
+    case Phase.Returning: {
       if (u.carryRes === CORPSE) { u.carryRes = -1; u.carryAmt = 0; }
+      // magazyn pełny, a towar leży pod nim: robotnik czeka w warsztacie, nie robi kolejnego (storage.ts)
+      if (prod && u.job && buildingById(g, u.job)?.stall) { u.phase = Phase.Stalled; u.wait = 0; break; }
       if (prod) beginCycle(u, prod); else u.phase = Phase.Idle;
       // kopalnia: kopanie zaczyna się dopiero przy skale — doliczamy drogę sztolnią do przodka i z powrotem do wrót
       if ((u.phase as Phase) === Phase.Working && u.job) {
         const mine = buildingById(g, u.job);
         if (mine && mine.type === OREMINE) u.timer += 2 * mineWalkTicks(Math.max(0, crewOf(mine).indexOf(u.id)));
       }
+      break;
+    }
+    case Phase.ToPile:
+      if (!takePile(g, u)) u.phase = u.job ? Phase.Returning : Phase.Idle;
       break;
     case Phase.ToInputStore: {
       const inp = prod?.input;
@@ -410,9 +431,12 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
         const shopB = u.job ? buildingById(g, u.job) : undefined;
         const shop = shopB && prod && (resIndex(prod.output.res) === u.carryRes || shopB.type === OREMINE) ? shopB : undefined;
         if (shop && put) shop.made = (shop.made ?? 0) + put;
-        // skład pełny: chwilę czeka, a gdy dalej nie ma miejsca, zostawia ładunek i wraca do pracy (nie stoi w nieskończoność)
-        if (u.carryAmt > 0 && ++u.timer < 6) { u.wait = RETRY_TICKS; break; }
-        if (shop && u.carryAmt > 0) shop.lost = (shop.lost ?? 0) + u.carryAmt;
+        // magazyn pełny: reszta ładunku zostaje pod drzwiami (prawdziwy stos), a robotnik wraca do warsztatu i czeka,
+        // aż zwolni się miejsce — nie robi kolejnego towaru (storage.ts). Magazynier i tragarz gruzu tylko odkładają.
+        if (u.carryAmt > 0) {
+          dropPile(g, u, u.carryRes, u.carryAmt);
+          if (shop && prod && !isStore(shop)) shop.stall = u.carryRes + 1;
+        }
         u.timer = 0;
       }
       u.carryRes = -1; u.carryAmt = 0;
@@ -515,11 +539,20 @@ export function workerSystem(g: GameState): void {
   for (const b of g.buildings) byId.set(b.id, b);
 
   for (const b of g.buildings) {
-    if (b.worker !== 0 || b.build || b.off || !(BUILDINGS[b.type]!.production || BUILDINGS[b.type]!.staff)) continue;
+    const def = BUILDINGS[b.type]!;
+    if (b.worker !== 0 || b.build || b.off || !(def.production || def.staff)) continue;
+    // magazynier ma najniższy priorytet: bierze go tylko ktoś, kto naprawdę nic nie robi (czeka przy ognisku)
+    if (def.keepers) {
+      const k = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && !x.path.length && x.carryRes < 0 && x.target === 0 && !x.riot);
+      if (k) { k.job = b.id; k.phase = Phase.Returning; k.path = []; k.wait = 0; b.worker = k.id; }
+      continue;
+    }
     // najpierw ktoś, kto nic nie robi; budowniczego, latarnika czy tragarza gruzu zabieramy dopiero, gdy nie ma innych,
     // a nikogo z ładunkiem w rękach. Stare zadanie (target) się kasuje, żeby nie blokowało go później.
+    // Na końcu wolny magazynier: warsztat bez rąk do pracy jest ważniejszy niż wnoszenie towaru spod drzwi.
     const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0)
-      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && !x.riot && x.phase !== Phase.ToCorpse && !OFF_DUTY.has(x.phase));
+      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && !x.riot && x.phase !== Phase.ToCorpse && !OFF_DUTY.has(x.phase))
+      ?? spareKeeper(g, b.owner);
     if (!u) continue;
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0;
     b.worker = u.id;
@@ -530,8 +563,9 @@ export function workerSystem(g: GameState): void {
     for (const u of g.units) pop.set(u.owner, (pop.get(u.owner) ?? 0) + 1);
     for (const b of g.buildings) {
       const def = BUILDINGS[b.type]!;
-      if (!def.crew || b.build || b.off || b.ruined || !b.worker) continue;
-      const want = crewWanted(def, pop.get(b.owner) ?? 0);
+      // magazyn: stała obsada (mały 1, duży 2 magazynierów), reszta załóg rośnie z wioską
+      if ((!def.crew && !((def.keepers ?? 0) > 1)) || b.build || b.off || b.ruined || !b.worker) continue;
+      const want = def.keepers ?? crewWanted(def, pop.get(b.owner) ?? 0);
       b.crew ??= [];
       // załoga bez brygadzisty nie zostaje (worker zwalnia się np. przy śmierci) — awans pierwszego z załogi robi dropWorker
       while (b.crew.length + 1 > want) {
@@ -540,7 +574,8 @@ export function workerSystem(g: GameState): void {
         if (u) { u.job = 0; u.phase = Phase.Idle; u.path = []; u.carryRes = -1; u.carryAmt = 0; u.timer = 0; u.target = 0; }
       }
       if (b.crew.length + 1 < want) {
-        const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0);
+        // drugi magazynier: tylko ktoś, kto stoi bezczynnie (nie zabieramy idącego)
+        const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0 && (!def.keepers || (!x.path.length && x.target === 0 && !x.riot)));
         if (u) { u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0; b.crew.push(u.id); }
       }
       if (!b.crew.length) delete b.crew;
@@ -629,6 +664,7 @@ export function workerSystem(g: GameState): void {
       else { u.phase = Phase.ToStore; if (u.batches > 0) u.batches--; }
       continue;
     }
+    if (u.phase === Phase.Stalled) { stalledStep(g, u, job); continue; }
     if (u.path.length) { move(g, u); continue; }
     // wróg pod kopalnią: górnik czeka w ukryciu (pod barakiem albo w zamku), aż alarm minie (minecamp.ts, mineThreats)
     if (job && job.type === OREMINE && u.phase === Phase.Returning && (job.threat ?? 0) > g.tick) { u.wait = 10; continue; }
@@ -660,13 +696,21 @@ export function workerSystem(g: GameState): void {
         u.phase = u.phase === Phase.ToSleep ? Phase.Sleeping : Phase.Evening;
         continue;
       }
-      if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair || u.phase === Phase.ToPave || u.phase === Phase.ToPlant) {
+      if (u.phase === Phase.ToRest || u.phase === Phase.ToLight || u.phase === Phase.ToRubble || u.phase === Phase.ToPile || u.phase === Phase.ToCorpse || u.phase === Phase.ToRepair || u.phase === Phase.ToPave || u.phase === Phase.ToPlant) {
         if (u.phase === Phase.ToRepair && u.carryRes >= 0) { u.carryRes = -1; u.carryAmt = 0; } // budowa skończona po drodze: materiał zostaje
         u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0;
       }
       continue;
     }
     const here = tileOf(g, u);
+    if (u.phase === Phase.ToStore && u.carryRes >= 0 && u.carryRes !== CORPSE && noStoreFor(g, u)) {
+      // nie ma żadnego magazynu na ten towar: ładunek zostaje tu, na ziemi, a robotnik czeka; nowy magazyn go przejmie
+      dropPile(g, u, u.carryRes, u.carryAmt);
+      if (job && prod && !isStore(job) && (resIndex(prod.output.res) === u.carryRes || job.type === OREMINE)) job.stall = u.carryRes + 1;
+      u.carryRes = -1; u.carryAmt = 0;
+      u.phase = u.job ? Phase.Returning : Phase.Idle;
+      continue;
+    }
     if (goal(here)) { arrive(g, u, prod); continue; }
     const path = findPath(g, here, goal, 900, u.owner, -1, 0, true);
     if (path && path.length) u.path = path;
