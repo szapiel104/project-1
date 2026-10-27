@@ -1592,7 +1592,7 @@ export class GameRenderer {
     // po deszczu długo jest mokro: błoto i kałuże schną powoli
     this.wet = Math.max(0, Math.min(1, this.wet + (this.rain > 0.15 ? dt * 0.12 : -dt * 0.003)));
     if (Math.abs(this.wet - this.wetShown) > 0.01) { this.view?.setWet(this.wet); setWetBuildings(this.wet); this.wetShown = this.wet; }
-    if (g && this.view) this.puddleLayer.sync(g, this.view, this.wet, this.roadSum);
+    if (g && this.view) this.puddleLayer.sync(g, this.view, this.wet, this.roadSum, this.rain, this.time);
     if (!this.rainLines) {
       // dwie identyczne warstwy jedna nad drugą: przesuwanie o 25 w kółko jest niewidoczne
       const n = 1500, pos = new Float32Array(n * 12);

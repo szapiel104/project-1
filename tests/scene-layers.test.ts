@@ -49,11 +49,16 @@ describe('części obrazu wyniesione z scene.ts', () => {
     for (let t = 0; t < 60; t++) g.roads[1000 + t] = 1;
     const scene = new THREE.Scene(), puddles = new PuddleLayer(scene);
     puddles.sync(g, view, 0.5, 1);
-    const mesh = instanced(scene)[0]!;
+    const mesh = scene.getObjectByName('kałuże')!;
     expect(mesh.visible).toBe(true);
-    expect(mesh.count).toBeGreaterThan(0);
+    expect(puddles.count).toBeGreaterThan(0);
     puddles.sync(g, view, 0, 1);
     expect(mesh.visible).toBe(false);
+    // na stromym zboczu woda spływa: kałuż nie ma
+    const steep = { heightAt: (x: number) => x * 0.5 } as unknown as TerrainView;
+    const scene2 = new THREE.Scene(), p2 = new PuddleLayer(scene2);
+    p2.sync(g, steep, 0.5, 1);
+    expect(p2.count).toBe(0);
   });
 
   it('nowy żołnierz przy drzwiach koszar sypie iskrami i pokazuje „+1”', () => {

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.52.4 — kałuże po deszczu bez migania (2026-10-27)
+
+- Kałuże nie migają, nie znikają przy przybliżaniu i oddalaniu i nie są pocięte: każda leży na terenie (idzie za nierównościami drogi), a w obrazie jest odsuwana o kilka cm ku kamerze, więc zawsze leży nad nawierzchnią drogi. Wcześniej były płaskimi dyskami, których brzeg wchodził pod drogę
+- Nowy wygląd: nieregularny, miękki brzeg, ciemna obwódka mokrego błota, gładka woda odbijająca niebo, drobna fala od wiatru i kręgi od kropel w deszczu
+- Rosną, gdy pada, i kurczą się od brzegów przy schnięciu (małe znikają pierwsze), zamiast całe blaknąć. Tylko na płaskich kawałkach drogi i wydłużone wzdłuż drogi, jak w koleinach (`src/render/puddles.ts`)
+
 ## 0.52.3 — zboże na polu z teksturą (2026-10-27)
 
 - Pszenica na zagonach farmy nie jest już gołymi stożkami w jednym kolorze: każda kępa to skrzyżowane karty z teksturą (źdźbła z kolankami, liście, kłosy z ziarnami w dwóch rzędach i długimi ośćmi), w czterech odmianach kęp, u dołu łanu ciemniej. Cień rzuca tylko to, co widać na teksturze, nie cała karta. Kod wydzielony do `src/render/wheat.ts`; łan dalej faluje i rośnie jak wcześniej
