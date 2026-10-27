@@ -4,7 +4,6 @@
  * Do sprawdzania nowych i zmienionych modeli bez uruchamiania gry: modele.html?id=tavern (&tlo=powietrze|trawa, &noc=1).
  * Budynki mają też daleką wersję (przycisk „Z daleka”, &daleko=1..3): ta sama bryła uproszczona tak, jak gra rysuje ją z oddali.
  */
-import './render/lightskip';
 import * as THREE from 'three';
 import { Standards } from './render/standards';
 import { defaultCrest } from './render/banners';
