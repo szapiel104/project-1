@@ -302,7 +302,7 @@ export const en: Record<TextKey, string> = {
   'b.barn': 'Barn',
   'd.barn': 'Holds 250 goods (wood, stone, iron, ale) and, separately, 200 grain — wheat and flour. Two storekeepers work here, carrying in whatever the workers left at the door while it was full. Stands by the keep from the start; you can take it down and rebuild it in a better spot.',
   'd.camp': 'A shelter with benches and a campfire for 6 idle peasants. Without free places no new people arrive: give them work or build another camp.',
-  'd.keep': 'The lord’s seat: walls with towers, a gate with a bridge, a courtyard, a throne room, a kitchen, a chamber, barracks and dungeons. Stairs lead up to the walls, and an archer on the wall shoots further. Home to 12 people.',
+  'd.keep': 'The lord’s seat: walls with towers, a gate with a bridge, a courtyard, a throne room, a kitchen, the lord’s chamber, barracks and dungeons, with the queen’s chamber up in the donjon. Stairs lead up to the walls and along the back wall into the donjon, and an archer on the wall shoots further. Home to 12 people.',
   'd.house': 'Room for 8 more settlers. Peasants come here to rest after work.',
   'd.armory': 'Holds 60 weapons: spears, bows, swords and mail. The workshops bring finished weapons here, and the barracks and the guard take them from here. One storekeeper.',
   'd.stockpile': 'Holds 200 goods: wood, stone, iron and ale. One storekeeper carries in whatever the workers left at the door while it was full, and in quiet moments clears rubble from demolitions.',

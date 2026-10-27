@@ -129,6 +129,8 @@ const M = {
   stone: mat(0xcfc7b3, 'bricks'), stoneDark: mat(0xa39b88, 'bricks'), wood: mat(0x85603a, 'planks'), woodDark: mat(0x5e4329, 'planks'),
   plaster: mat(0xf0e4c4, 'plaster'), thatch: mat(0xd1ad4c, 'thatch'), soil: mat(0x86633d, 'soil'), wheat: mat(0xd9b84a),
   leaf: mat(0x5c9a3c, 'leaves'), apple: mat(0xd0281f), iron: mat(0x4a4038), white: mat(0xf1ead8),
+  // jasna, szlifowana stal (ostrza noży, groty włóczni): gładka z połyskiem, bez tekstury (jak żelazo)
+  steel: new THREE.MeshStandardMaterial({ color: 0xaeb3b8, roughness: 0.32, metalness: 0.85, flatShading: true }),
   plank: mat(0xd9b27a, 'planks'),
   orchardGrass: mat(0x86b54a, 'grass'), bark: mat(0x7a5a3a, 'bark'), leafLight: mat(0x7fb548, 'leaves'),
   appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xa8652c),

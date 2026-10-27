@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.54.1 — komnata królowej w donżonie, poprawki sprzętów w zamku (2026-10-27)
+
+- Donżon przebudowany: szerszy (trzy pola tylnego muru), z cokołem, gzymsami między piętrami, oknami z okiennicami od pola, oknem nad salą tronową, machikułami, blankami, czterema narożnymi wieżyczkami na kroksztynach ze stożkowymi dachami, dachem dwuspadowym z łupka, kominem i masztem z chorągwią
+- Komnata królowej (nowe pomieszczenie, w planie zamku pola Q): na wysokości chodnika muru. Wchodzi się po schodach z dziedzińca na mury i tylnym murem przez drzwi w boku donżonu. W środku łoże z półbaldachimem, kominek, toaletka z lustrem i stołkiem, kołowrotek, ława pod oknem, skrzynia z wianem, gobelin, dywan i dwie pochodnie. W spacerze chodzi się po niej jak po murze; obcy nie wejdą (plan zamku jest wspólny dla gry i modelu)
+- Poprawki po zgłoszeniu: poduszki w komnacie pana z lnu (z teksturą) i wypchane zamiast białych klocków; nóż w kuchni z cienkim, stalowym ostrzem i drewnianą rękojeścią (nowy materiał `steel`, jasna stal z połyskiem), groty włóczni i topór też ze stali; pergamin i karty księgi z płótna; skrzynia z jaśniejszego drewna (nie zlewa się w ciemności)
+- Opis zamku w obu językach wspomina komnatę królowej
+- Bot: bez zmian (zamek stoi od początku gry, nikt go nie buduje)
+
 ## 0.54.0 — prawdziwe dźwięki i silnik dźwięku przestrzennego (2026-10-27)
 
 - **Nowe nagrania zamiast „drewnianych” dźwięków** (gra 0 A.D., CC BY-SA 3.0, ok. 480 plików w `public/sounds/0ad/`): młotek, piła i dłuto na budowie, siekiera, kilof, uderzenia kowala, puszczenie cięciwy, świst strzały mijającej kamerę, trafienia strzał (w ziemię, drewno, kamień, zbroję i ciało), zamach mieczem i włócznią, szczęk ostrzy, uderzenia w tarczę, krzyk umierającego, głosy i okrzyki ludzi (zamiast syntezowanego bełkotu), pies, świnia, deszcz, trzask płonącego budynku i ogniska, gwar osady, zawalenie budynku. Każdy dźwięk ma kilkanaście–kilkadziesiąt wariantów, a ten sam plik nie leci dwa razy z rzędu

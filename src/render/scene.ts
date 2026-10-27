@@ -2091,7 +2091,7 @@ export class GameRenderer {
     const ground = this.view ? this.standY(this.view, w.x, w.z) : 0;
     // w pomieszczeniu (nie na dziedzińcu): dach znika, widać sufit; przy zamku jego wnętrza są zawsze widoczne
     const kp = this.keepAt(w.x, w.z);
-    const inRoom = !!kp && Math.abs(kp[1]) < KEEP_HALF && Math.abs(kp[2]) < KEEP_HALF && 'TKCBL1234'.includes(keepRoom(Math.floor(kp[1] + KEEP_HALF), Math.floor(kp[2] + KEEP_HALF)));
+    const inRoom = !!kp && Math.abs(kp[1]) < KEEP_HALF && Math.abs(kp[2]) < KEEP_HALF && 'TKCBLQ1234'.includes(keepRoom(Math.floor(kp[1] + KEEP_HALF), Math.floor(kp[2] + KEEP_HALF)));
     const wbk = this.walkableAt(w.x, w.z), tap = wbk?.[4].open[0];
     // w kopalni „salą” jest cała sztolnia: już w korytarzu za portalem garb skały znika, a pokazuje się grota ze stropem
     // (inaczej garb, wciąż widoczny w korytarzu, zastawiał przejście do groty)
@@ -4326,8 +4326,8 @@ export class GameRenderer {
       cx = ks[1]; cz = ks[2];
     }
     const dx = Math.floor(cx + KEEP_HALF), dy = Math.floor(cz + KEEP_HALF), c = keepTile(dx, dy);
-    if (sim === -2 && (c === '=' || c === 'S')) return h;
-    if (c === '=') return base + KEEP_WALL;
+    if (sim === -2 && (c === '=' || c === 'S' || c === 'Q')) return h;
+    if (c === '=' || c === 'Q') return base + KEEP_WALL; // Q: komnata królowej w donżonie, na wysokości chodnika
     if (c === 'S') {
       // schody: od dolnego końca biegu (dziedziniec) do korony muru
       let y0 = dy, y1 = dy;

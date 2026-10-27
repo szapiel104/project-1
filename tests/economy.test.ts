@@ -645,10 +645,12 @@ describe('zamek', () => {
     const g = createGame(5);
     const keep = playerKeep(g, 0)!;
     const w = g.map.width;
-    const gate = (keep.y + 10) * w + keep.x + 5, hall = (keep.y + 1) * w + keep.x + 5, tower = keep.y * w + keep.x + 5; // donżon nad tylnym murem
+    const gate = (keep.y + 10) * w + keep.x + 5, hall = (keep.y + 1) * w + keep.x + 5, tower = keep.y * w + keep.x + 5; // komnata królowej w donżonie nad tylnym murem
     expect(walkable(g, gate, 0)).toBe(true);
     expect(walkable(g, hall, 0)).toBe(true);
-    expect(walkable(g, tower, 0)).toBe(false);
+    expect(walkable(g, tower, 0)).toBe(true);   // swoi wchodzą do komnaty królowej (z chodnika na murze)
+    expect(walkable(g, tower, 1)).toBe(false);
+    expect(walkable(g, keep.y * w + keep.x + 4, 0)).toBe(true);
     expect(walkable(g, hall, 1)).toBe(false);
     expect(walkable(g, hall, WOLF)).toBe(false);
     const outside = (keep.y + 12) * w + keep.x + 5;
@@ -747,5 +749,18 @@ describe('wyłączanie budynku', () => {
     run(g, 50);
     expect(wc.off).toBeUndefined();
     expect(wc.worker).toBeGreaterThan(0);
+  });
+});
+
+describe('komnata królowej', () => {
+  it('jest na wysokości muru, wchodzi się do niej tylko z lewego chodnika', async () => {
+    const { KEEP_CELLS, WALL_TOP, keepEdge } = await import('../src/data/keep');
+    for (const x of [4, 5, 6]) {
+      const c = KEEP_CELLS.find((k) => k.dx === x && k.dy === 0)!;
+      expect(c.walls & WALL_TOP).toBe(WALL_TOP);
+      expect(keepEdge(x, 0, x, 1)).toBe('wall');          // nie ma przejścia do sali tronowej
+    }
+    expect(keepEdge(3, 0, 4, 0)).toBe('door');
+    expect(keepEdge(6, 0, 7, 0)).toBe('wall');
   });
 });

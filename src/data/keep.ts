@@ -42,7 +42,7 @@ export const KEEP_CELLS: { dx: number; dy: number; walls: number }[] = (() => {
     for (let dx = 0; dx < KEEP_SIZE; dx++) {
       if (!keepWalk(dx, dy)) continue;
       const walls = (shut(dx, dy, dx, dy - 1) ? 1 : 0) | (shut(dx, dy, dx + 1, dy) ? 2 : 0) | (shut(dx, dy, dx, dy + 1) ? 4 : 0) | (shut(dx, dy, dx - 1, dy) ? 8 : 0);
-      out.push({ dx, dy, walls: walls | (keepTile(dx, dy) === '=' ? WALL_TOP : 0) });
+      out.push({ dx, dy, walls: walls | (keepTile(dx, dy) === '=' || keepTile(dx, dy) === 'Q' ? WALL_TOP : 0) }); // komnata królowej leży na wysokości chodnika
     }
   return out;
 })();

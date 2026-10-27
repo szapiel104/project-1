@@ -296,7 +296,7 @@ export const pl = {
   'b.barn': 'Stodoła',
   'd.barn': 'Mieści 250 towarów (drewno, kamień, żelazo, piwo) i osobno 200 zboża — pszenicę i mąkę. Pracuje w niej dwóch magazynierów: wnoszą towar, który robotnicy zostawili pod drzwiami, gdy było pełno. Stoi od początku przy twierdzy; można ją rozebrać i postawić w lepszym miejscu.',
   'd.camp': 'Wiata z ławami i ogniskiem na 6 chłopów bez pracy. Gdy brakuje wolnych miejsc, nowi ludzie nie przychodzą: daj im pracę albo dobuduj obozowisko.',
-  'd.keep': 'Siedziba władcy: mury z basztami, brama z mostem, dziedziniec, sala tronowa, kuchnia, komnata, koszary i lochy. Na mury wchodzi się schodami, a łucznik na murze strzela dalej. Mieszka tu 12 osób.',
+  'd.keep': 'Siedziba władcy: mury z basztami, brama z mostem, dziedziniec, sala tronowa, kuchnia, komnata pana, koszary i lochy, a w donżonie komnata królowej. Na mury wchodzi się schodami, z tylnego muru do donżonu, a łucznik na murze strzela dalej. Mieszka tu 12 osób.',
   'd.house': 'Miejsce dla 8 kolejnych mieszkańców. Chłopi przychodzą tu odpocząć po pracy.',
   'd.armory': 'Mieści 60 sztuk broni: włócznie, łuki, miecze i kolczugi. Tu warsztaty odnoszą gotową broń, stąd biorą ją koszary i straż. Jeden magazynier.',
   'd.stockpile': 'Mieści 200 towarów: drewno, kamień, żelazo i piwo. Jeden magazynier wnosi towar, który robotnicy zostawili pod drzwiami, gdy było pełno, a w wolnej chwili wynosi gruz z rozbiórek.',

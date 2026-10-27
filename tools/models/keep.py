@@ -80,6 +80,8 @@ for dy in range(N):
         r = room(dx, dy)
         if not walk(dx, dy) and r != 'o':
             continue
+        if r == 'Q':
+            continue  # komnata królowej ma posadzkę na wysokości chodnika (donżon)
         if r in '1234':
             b.box('interior', 'stoneDark', 1.0, 0.012 + SUB, 1.0, cx(dx), G - SUB, cz(dy))
             continue
@@ -129,7 +131,7 @@ for dy in range(N):
         for ox, oy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
             nx, ny = dx + ox, dy + oy
             outside = not (0 <= nx < N and 0 <= ny < N)
-            if not outside and tile(nx, ny) in '=#':
+            if not outside and tile(nx, ny) in '=#Q':
                 continue  # dalej mur albo wieża
             if outside:   # od pola: przedpiersie i blanki
                 ex, ez = x + ox * 0.44, z + oy * 0.44
@@ -317,39 +319,212 @@ for dx in range(N):
         b.box('base', 'woodDark', 0.04, 0.04, math.hypot(z1 - z0, WALK - G), x, G + 0.32 + (WALK - G) / 2, (z0 + z1) / 2, tilt=-math.atan2(WALK - G, z1 - z0))
         block(x - 0.03, x + 0.03, z0, z1)
 
-# ---------------- donżon nad tylnym murem: wysoka wieża z chorągwią ----------------
-# donżon stoi w tylnym murze i wystaje tylko na zewnątrz: przód kończy się tuż za tylną ścianą sali tronowej
-DD = 1.13
-DZ = -H - 0.15 + DD / 2
-b.box('base', 'castle', 1.9, 3.6 - G, DD, 0, G, DZ)
-b.box('base', 'castleDark', 2.0, 0.08, DD + 0.1, 0, 1.6, DZ - 0.05)
-b.box('base', 'castleDark', 2.04, 0.08, DD + 0.14, 0, 3.6, DZ)
+# ---------------- donżon nad tylnym murem: wieża mieszkalna z komnatą królowej ----------------
+# Donżon zajmuje trzy pola tylnego muru (Q w planie) i wystaje 0,45 pola na zewnątrz. Na wysokości chodnika jest komnata
+# królowej: wchodzi się do niej z lewego chodnika muru (po schodach z dziedzińca, wzdłuż tylnego muru), drzwiami w boku wieży.
+# Pas komnaty za linią muru (z < -H + 0,05) to sprzęty pod tylną ścianą — tam się nie chodzi (pola mapy kończą się na murze).
+DX0, DX1 = -1.5, 1.5
+DZB, DZF = -H - 0.45, -H + 1 - 0.02     # tył (od pola) i przód (od sali tronowej)
+DD = DZF - DZB
+DZ = (DZB + DZF) / 2
+DW = DX1 - DX0
+QY2 = WALK + 1.0                          # strop komnaty
+QDZ = cz(0)                               # oś drzwi i chodnika
+def dwall(axis_x, fixed, a0, a1, y0, y1, holes, mat='castle', t=RW, grp='base'):
+    """Ściana donżonu z otworami (u0, u1, v0, v1): axis_x = biegnie wzdłuż x w z = fixed (środek grubości)"""
+    us = sorted({a0, a1, *[h[0] for h in holes], *[h[1] for h in holes]})
+    for u0, u1 in zip(us, us[1:]):
+        hs = [h for h in holes if h[0] <= u0 and h[1] >= u1]
+        spans = [(y0, y1)] if not hs else [(y0, hs[0][2]), (hs[0][3], y1)]
+        for v0, v1 in spans:
+            if v1 - v0 < 1e-4:
+                continue
+            if axis_x:
+                b.box(grp, mat, u1 - u0, v1 - v0, t, (u0 + u1) / 2, v0, fixed)
+            else:
+                b.box(grp, mat, t, v1 - v0, u1 - u0, fixed, v0, (u0 + u1) / 2)
+# cokół (przykrywa skarpę muru), trzon do wysokości chodnika, posadzka komnaty
+b.box('base', 'castleDark', DW + 0.1, 0.36, DD + 0.1, 0, 0, DZ - 0.05 + 0.025, bottom=False)
+b.box('base', 'castle', DW, TOP - 0.36, DD, 0, 0.36, DZ)
+b.box('base', 'castleDark', DW, WALK - TOP, DD, 0, TOP, DZ)
+block(DX0, DX1, DZB, DZF, 0, WALK - 0.05)
+# ściany komnaty: drzwi w lewym boku, dwa okna od pola, jedno nad salą tronową
+QW1 = (0.3 - 0.11, 0.3 + 0.11)
+BACKW = [(-0.75, -0.53, WALK + 0.3, WALK + 0.72), (0.53, 0.75, WALK + 0.3, WALK + 0.72)]
+FRONTW = [(-0.16, 0.16, WALK + 0.32, WALK + 0.72)]
+dwall(True, DZB + RW / 2, DX0, DX1, WALK, QY2, BACKW)
+dwall(True, DZF - RW / 2, DX0, DX1, WALK, QY2, FRONTW)
+dwall(False, DX0 + RW / 2, DZB + RW, DZF - RW, WALK, QY2, [(QDZ - DOORW / 2, QDZ + DOORW / 2, WALK, WALK + 0.62)])
+dwall(False, DX1 - RW / 2, DZB + RW, DZF - RW, WALK, QY2, [])
+block(DX0, DX0 + RW, DZB, QDZ - DOORW / 2, WALK - 0.1, 9); block(DX0, DX0 + RW, QDZ + DOORW / 2, DZF, WALK - 0.1, 9)
+block(DX1 - RW, DX1, DZB, DZF, WALK - 0.1, 9); block(DX0, DX1, DZF - RW, DZF, WALK - 0.1, 9)
+block(DX0, DX1, DZB, -H + 0.05, WALK - 0.1, 9)          # pas pod tylną ścianą: łoże, kominek, toaletka
+# ościeża, nadproże i próg drzwi, skrzydło otwarte do środka
+for side in (-1, 1):
+    b.box('base', 'castleDark', 0.15, 0.64, 0.06, DX0 + RW / 2, WALK, QDZ + side * (DOORW / 2 + 0.02))
+b.box('base', 'woodDark', RW + 0.03, 0.05, DOORW + 0.1, DX0 + RW / 2, WALK + 0.6, QDZ)
+b.box('interior', 'woodDark', 0.035, 0.6, DOORW - 0.04, DX0 + RW + 0.2, WALK + 0.01, QDZ - DOORW / 2 + 0.22, math.pi / 2 - 1.2)
+# parapety i obramienia okien (wystają 3 cm przed lico), okiennice przy oknach od pola
+for u0, u1, v0, v1 in BACKW:
+    b.box('base', 'castleDark', u1 - u0 + 0.08, 0.04, RW + 0.06, (u0 + u1) / 2, v0 - 0.04, DZB + RW / 2)
+    b.box('base', 'castleDark', u1 - u0 + 0.1, 0.05, 0.05, (u0 + u1) / 2, v1, DZB - 0.015)
+    for sgn in (-1, 1):
+        b.box('base', 'woodDark', 0.13, v1 - v0, 0.025, (u0 + u1) / 2 + sgn * ((u1 - u0) / 2 + 0.075), v0, DZB - 0.03, sgn * 0.5)
+for u0, u1, v0, v1 in FRONTW:
+    b.box('base', 'castleDark', u1 - u0 + 0.08, 0.04, RW + 0.06, (u0 + u1) / 2, v0 - 0.04, DZF - RW / 2)
+    b.box('base', 'castleDark', u1 - u0 + 0.1, 0.05, 0.05, (u0 + u1) / 2, v1, DZF + 0.015)
+# nad komnatą: pełne piętro (strych i izba straży), gzymsy na styku pięter
+b.box('base', 'castle', DW, 3.6 - QY2, DD, 0, QY2, DZ, bottom=False)
+for y in (TOP - 0.06, QY2 - 0.03):
+    b.box('base', 'castleDark', DW + 0.1, 0.07, DD + 0.05, 0, y, DZ - 0.025)
+for x in (-0.95, 0.95):   # okna górnej izby od pola i strzelnice w trzonie
+    b.box('base', 'dark', 0.14, 0.3, 0.015, x, 2.95, DZB - 0.008)
+    b.box('base', 'castleDark', 0.22, 0.04, 0.05, x, 2.91, DZB - 0.015)
+    b.box('base', 'dark', 0.05, 0.26, 0.015, x * 0.6, 0.85, DZB - 0.008)
 for sx in (-1, 1):
-    for sz in (-1, 1):
-        b.box('base', 'castle', 0.26, 0.2, 0.26, sx * 0.88, 3.68, DZ + sz * (DD / 2 - 0.08))
-for x in (-0.45, 0.45):
-    for y in (2.0, 2.85):
-        b.box('base', 'dark', 0.16, 0.34, 0.015, x, y, DZ - DD / 2 - 0.008)
-# wsporniki (machikuły) pod koroną donżonu: z tyłu i z boków, wpuszczone 2 cm w mur
-for i in range(10):
-    x = -0.85 + i * 1.7 / 9
-    b.box('base', 'castleDark', 0.07, 0.14, 0.085, x, 3.46, DZ - DD / 2 + 0.0225)
-    b.box('base', 'castleDark', 0.07, 0.06, 0.05, x, 3.4, DZ - DD / 2 + 0.005)
+    b.box('base', 'dark', 0.015, 0.3, 0.14, sx * (DX1 + 0.008), 2.95, DZ)
+# korona: gzyms, wsporniki machikuł z tyłu i z boków, blanki, narożne wieżyczki na kroksztynach
+b.box('base', 'castleDark', DW + 0.14, 0.08, DD + 0.14, 0, 3.6, DZ)
+n = 14
+for i in range(n):
+    x = DX0 + 0.12 + i * (DW - 0.24) / (n - 1)
+    b.box('base', 'castleDark', 0.07, 0.14, 0.085, x, 3.46, DZB + 0.0225)
+    b.box('base', 'castleDark', 0.07, 0.06, 0.05, x, 3.4, DZB + 0.005)
 for sx in (-1, 1):
     for i in range(6):
-        z = DZ - DD / 2 + 0.1 + i * (DD - 0.2) / 5
-        b.box('base', 'castleDark', 0.085, 0.14, 0.07, sx * (0.95 + 0.0225), 3.46, z)
-        b.box('base', 'castleDark', 0.05, 0.06, 0.07, sx * (0.95 + 0.005), 3.4, z)
-b.pyramid('base', 'slate', 2.1, DD + 0.25, 1.5, 0, 3.68, DZ)
-# lukarna w dachu donżonu od pola: okienko z daszkiem
-LZ = DZ - (DD + 0.25) / 2 + 0.07          # lico lukarny: tu połać jest jeszcze nisko (ok. 3,83), więc okno wystaje ponad nią
-b.box('base', 'castle', 0.3, 0.32, 0.34, 0, 3.68, LZ + 0.17)
-b.box('base', 'dark', 0.13, 0.13, 0.01, 0, 3.85, LZ - 0.004)
-b.box('base', 'castleDark', 0.17, 0.025, 0.03, 0, 3.835, LZ - 0.008)
-b.gable('base', 'slate', -0.15, 0.15, LZ, LZ + 0.34, 4.0, 0.14, along_x=False, over=0.03, end_mat='castle')
-b.box('base', 'gold', 0.07, 0.12, 0.07, 0, 5.17, DZ)
-b.box('base', 'woodDark', 0.04, 0.9, 0.04, 0, 5.2, DZ)
-BANNERS.append([0.022, 5.85, round(DZ, 3), 0, 0.7, 0.4, 0, 'base'])
+        z = DZB + 0.12 + i * (DD - 0.24) / 5
+        b.box('base', 'castleDark', 0.085, 0.14, 0.07, sx * (DX1 - 0.0225), 3.46, z)
+        b.box('base', 'castleDark', 0.05, 0.06, 0.07, sx * (DX1 - 0.005), 3.4, z)
+b.merlons_line('base', 'castle', DX0 + 0.35, DZB + 0.04, DX1 - 0.35, DZB + 0.04, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
+b.merlons_line('base', 'castle', DX0 + 0.35, DZF - 0.04, DX1 - 0.35, DZF - 0.04, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
+for sx in (-1, 1):
+    b.merlons_line('base', 'castle', sx * (DX1 - 0.04), DZB + 0.3, sx * (DX1 - 0.04), DZF - 0.3, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
+    for zc in (DZB, DZF):
+        tx, tz = sx * (DX1 - 0.02), zc + (0.02 if zc == DZB else -0.02)
+        b.prism('base', 'castleDark', 0.05, 0.2, 0.32, tx, 3.3, tz, seg=12, top=False)      # kroksztyn
+        b.prism('base', 'castle', 0.2, 0.2, 0.52, tx, 3.62, tz, seg=12, top=False)
+        b.prism('base', 'castleDark', 0.215, 0.215, 0.05, tx, 4.14, tz, seg=12)
+        b.prism('base', 'slate', 0.24, 0.0, 0.5, tx, 4.19, tz, seg=12)
+        b.prism('base', 'iron', 0.012, 0.0, 0.14, tx, 4.68, tz, seg=6)
+        out_a = math.atan2(sx, -1 if zc == DZB else 1)
+        b.box('base', 'dark', 0.05, 0.2, 0.012, tx + math.sin(out_a) * 0.202, 3.8, tz + math.cos(out_a) * 0.202, out_a)
+# dach dwuspadowy z łupka za blankami, gąsior, komin kominka komnaty, maszt z chorągwią na kalenicy
+RZ0, RZ1, RYB, RRISE = DZB + 0.14, DZF - 0.14, 3.68, 0.85
+b.gable('base', 'slate', DX0 + 0.2, DX1 - 0.2, RZ0, RZ1, RYB, RRISE, along_x=True, over=0.04, end_mat='castle')
+sh = 0.035 * math.sin(math.pi / 4)
+b.box('base', 'castleDark', DW - 0.3, 0.07, 0.07, 0, RYB + RRISE - 0.035, DZ - sh, tilt=math.pi / 4)
+CHX = 1.0
+b.box('base', 'castle', 0.24, 1.05, 0.24, CHX, RYB, DZB + 0.35)
+b.box('base', 'castleDark', 0.3, 0.05, 0.3, CHX, RYB + 1.05, DZB + 0.35)
+b.box('base', 'dark', 0.16, 0.005, 0.16, CHX, RYB + 1.1, DZB + 0.35)
+b.box('base', 'gold', 0.07, 0.12, 0.07, 0, RYB + RRISE - 0.02, DZ)
+b.box('base', 'woodDark', 0.04, 0.9, 0.04, 0, RYB + RRISE, DZ)
+BANNERS.append([0.022, round(RYB + RRISE + 0.68, 3), round(DZ, 3), 0, 0.7, 0.4, 0, 'base'])
+
+# ---------------- komnata królowej (wnętrze donżonu) ----------------
+QX0, QX1, QZ0, QZ1 = DX0 + RW, DX1 - RW, DZB + RW, DZF - RW
+QF = WALK + 0.006
+b.box('interior', 'plank', QX1 - QX0, 0.006, QZ1 - QZ0, 0, WALK, DZ)
+b.box('ceiling', 'wood', QX1 - QX0, 0.03, QZ1 - QZ0, 0, QY2 - 0.03, DZ, bottom=True)
+for x in (-0.9, -0.3, 0.3, 0.9):
+    b.box('ceiling', 'woodDark', 0.06, 0.06, QZ1 - QZ0, x, QY2 - 0.09, DZ, bottom=True)
+# łoże królowej wezgłowiem do prawej ściany, pod tylną ścianą: rama, siennik, poduszki, pierzyna, baldachim ze ściany
+LB0, LB1, LZ0, LZ1 = 0.35, QX1, QZ0 + 0.02, QZ0 + 0.58
+LM = (LZ0 + LZ1) / 2
+for x in (LB0 + 0.03, LB1 - 0.03):
+    for z in (LZ0 + 0.03, LZ1 - 0.03):
+        b.box('interior', 'woodDark', 0.05, 0.13, 0.05, x, QF, z)
+for z in (LZ0 + 0.03, LZ1 - 0.03):
+    b.box('interior', 'woodDark', LB1 - LB0 - 0.04, 0.08, 0.035, (LB0 + LB1) / 2, QF + 0.09, z)
+b.box('interior', 'woodDark', 0.045, 0.52, LZ1 - LZ0, LB1 - 0.03, QF, LM)                    # wezgłowie przy ścianie
+b.box('interior', 'wood', 0.012, 0.3, LZ1 - LZ0 - 0.12, LB1 - 0.058, QF + 0.16, LM)            # płycina
+b.box('interior', 'woodDark', 0.05, 0.25, LZ1 - LZ0, LB0 + 0.025, QF, LM)                      # deska w nogach
+b.box('interior', 'canvas', LB1 - LB0 - 0.1, 0.08, LZ1 - LZ0 - 0.07, (LB0 + LB1) / 2 + 0.01, QF + 0.14, LM)
+for oz in (-0.12, 0.12):
+    b.box('interior', 'canvas', 0.14, 0.045, 0.22, LB1 - 0.15, QF + 0.22, LM + oz, roll=0.25)
+    b.box('interior', 'canvas', 0.1, 0.03, 0.17, LB1 - 0.15, QF + 0.25, LM + oz, roll=0.25)
+b.box('interior', 'flag', 0.6, 0.03, LZ1 - LZ0 - 0.03, (LB0 + LB1) / 2 - 0.06, QF + 0.215, LM)
+b.box('interior', 'flag', 0.012, 0.13, LZ1 - LZ0 - 0.03, LB0 + 0.052, QF + 0.105, LM)
+b.box('interior', 'flag', 0.6, 0.12, 0.012, (LB0 + LB1) / 2 - 0.06, QF + 0.11, LZ1 - 0.006)
+# półbaldachim: korona na ścianie nad wezgłowiem i spływające zasłony
+b.box('interior', 'woodDark', 0.22, 0.05, LZ1 - LZ0 + 0.1, LB1 - 0.11, QF + 0.88, LM)
+b.box('interior', 'gold', 0.24, 0.02, LZ1 - LZ0 + 0.12, LB1 - 0.11, QF + 0.93, LM)
+for oz in (-1, 1):
+    b.box('interior', 'flag', 0.2, 0.62, 0.014, LB1 - 0.12, QF + 0.26, LM + oz * (LZ1 - LZ0 + 0.06) / 2)
+b.box('interior', 'flag', 0.012, 0.66, LZ1 - LZ0 + 0.08, LB1 - 0.06, QF + 0.22, LM)
+block(LB0, LB1, LZ0, LZ1 + 0.02, WALK - 0.1, WALK + 0.9)
+# kominek pod tylną ścianą (w lewej części): obudowa, gzyms, palenisko z żarem, komin w murze
+FX = -0.95
+b.box('interior', 'castleDark', 0.5, 0.42, 0.16, FX, QF, QZ0 + 0.08)
+b.box('interior', 'dark', 0.3, 0.26, 0.01, FX, QF, QZ0 + 0.162)
+b.box('interior', 'ember', 0.22, 0.04, 0.08, FX, QF + 0.01, QZ0 + 0.11)
+b.box('interior', 'woodDark', 0.58, 0.04, 0.2, FX, QF + 0.42, QZ0 + 0.1)
+b.box('interior', 'castle', 0.36, QY2 - QF - 0.46, 0.12, FX, QF + 0.46, QZ0 + 0.06)
+for k, ox in enumerate((-0.2, 0.18)):
+    b.prism('interior', 'white', 0.012, 0.012, 0.05, FX + ox, QF + 0.46, QZ0 + 0.1, seg=6)
+    b.prism('interior', 'ember', 0.008, 0.0, 0.025, FX + ox, QF + 0.51, QZ0 + 0.1, seg=5)
+block(FX - 0.27, FX + 0.27, QZ0, QZ0 + 0.2, WALK - 0.1, 9)
+# toaletka z lustrem i stołkiem między kominkiem a łożem
+TX = -0.25
+b.box('interior', 'wood', 0.42, 0.03, 0.2, TX, QF + 0.26, QZ0 + 0.11)
+for sx in (-1, 1):
+    b.box('interior', 'woodDark', 0.04, 0.26, 0.18, TX + sx * 0.19, QF, QZ0 + 0.11)
+b.box('interior', 'woodDark', 0.24, 0.3, 0.02, TX, QF + 0.29, QZ0 + 0.015)
+b.box('interior', 'steel', 0.18, 0.24, 0.006, TX, QF + 0.32, QZ0 + 0.028)                   # lustro z polerowanej stali
+for k, ox in enumerate((-0.12, 0.12)):
+    b.prism('interior', 'gold', 0.02, 0.016, 0.04, TX + ox, QF + 0.29, QZ0 + 0.13, seg=8)   # flakonik i szkatułka
+b.box('interior', 'woodDark', 0.08, 0.05, 0.06, TX + 0.03, QF + 0.29, QZ0 + 0.14)
+b.box('interior', 'gold', 0.084, 0.01, 0.064, TX + 0.03, QF + 0.34, QZ0 + 0.14)
+b.prism('interior', 'flag', 0.07, 0.07, 0.03, TX, QF + 0.15, QZ0 + 0.34, seg=10)              # stołek z poduszką
+for k in range(3):
+    a = k * 2.1
+    b.box('interior', 'woodDark', 0.022, 0.15, 0.022, TX + math.sin(a) * 0.05, QF, QZ0 + 0.34 + math.cos(a) * 0.05)
+block(TX - 0.23, TX + 0.23, QZ0, QZ0 + 0.22, WALK - 0.1, WALK + 0.65)
+# kołowrotek i ława pod oknem od sali tronowej, skrzynia z wianem, gobelin i dywan
+WX = -0.7
+b.box('interior', 'woodDark', 0.36, 0.04, 0.1, WX, QF + 0.16, QZ1 - 0.12)                    # ława kołowrotka
+for sx in (-1, 1):
+    b.box('interior', 'woodDark', 0.03, 0.16, 0.03, WX + sx * 0.15, QF, QZ1 - 0.12)
+# koło kołowrotka: cienka obręcz na szprychach (nie pełna tarcza), oś wzdłuż x
+WR, WY0, WZ0 = 0.15, QF + 0.38, QZ1 - 0.12
+for k in range(18):
+    a0, a1 = 2 * math.pi * k / 18, 2 * math.pi * (k + 1) / 18
+    pts = lambda rr, dx: [(WX + 0.08 + dx, WY0 + math.cos(a) * rr, WZ0 + math.sin(a) * rr) for a in (a0, a1)]
+    for rr, inner in ((WR, False), (WR - 0.018, True)):
+        q = pts(rr, -0.012) + pts(rr, 0.012)[::-1]
+        b.poly('interior', 'wood', q, away=(WX + 0.08, WY0, WZ0) if not inner else (WX + 0.08, WY0 + math.cos((a0 + a1) / 2) * 3, WZ0 + math.sin((a0 + a1) / 2) * 3))
+    for dx in (-0.012, 0.012):
+        o, i = pts(WR, dx), pts(WR - 0.018, dx)
+        b.poly('interior', 'wood', [o[0], o[1], i[1], i[0]], away=(WX + 0.08 - dx * 50, WY0, WZ0))
+for k in range(8):
+    b.box('interior', 'woodDark', 0.012, WR - 0.012, 0.012, WX + 0.08, WY0, WZ0, tilt=2 * math.pi * k / 8 + 0.2, bottom=True)
+b.box('interior', 'woodDark', 0.05, 0.03, 0.03, WX + 0.08, WY0 - 0.015, WZ0, bottom=True)
+for sx in (-1, 1):
+    b.box('interior', 'woodDark', 0.025, 0.24, 0.025, WX + 0.08, QF + 0.2, QZ1 - 0.12 + sx * 0.03)
+b.prism('interior', 'canvas', 0.025, 0.018, 0.12, WX - 0.12, QF + 0.2, QZ1 - 0.12, seg=8)       # kądziel z lnem
+b.box('interior', 'woodDark', 0.012, 0.22, 0.012, WX - 0.12, QF + 0.2, QZ1 - 0.12)
+block(WX - 0.22, WX + 0.28, QZ1 - 0.24, QZ1, WALK - 0.1, WALK + 0.6)
+SBX = 0.15
+b.box('interior', 'woodDark', 0.42, 0.04, 0.16, SBX, QF + 0.18, QZ1 - 0.08)                 # ława pod oknem
+for sx in (-1, 1):
+    b.box('interior', 'woodDark', 0.04, 0.18, 0.14, SBX + sx * 0.18, QF, QZ1 - 0.08)
+b.box('interior', 'flag', 0.38, 0.025, 0.13, SBX, QF + 0.22, QZ1 - 0.085)
+block(SBX - 0.22, SBX + 0.22, QZ1 - 0.17, QZ1, WALK - 0.1, WALK + 0.45)
+KX = 0.95
+boxs('interior', 'wood', 0.38, 0.2, 0.22, KX, QF, QZ1 - 0.13)
+b.box('interior', 'plank', 0.4, 0.05, 0.24, KX, QF + 0.2, QZ1 - 0.13)
+for ox in (-0.12, 0.12):
+    b.box('interior', 'iron', 0.025, 0.26, 0.25, KX + ox, QF - 0.001, QZ1 - 0.13, bottom=False)
+b.box('interior', 'iron', 0.05, 0.06, 0.014, KX, QF + 0.15, QZ1 - 0.252)
+b.box('interior', 'canvas', 0.22, 0.03, 0.15, KX - 0.03, QF + 0.25, QZ1 - 0.13, 0.2)          # złożone płótno na wieku
+b.box('interior', 'gold', 0.72, 0.02, 0.02, -0.95, QF + 0.83, QZ1 - 0.02)               # drążek gobelinu
+b.box('interior', 'flag', 0.66, 0.44, 0.01, -0.95, QF + 0.38, QZ1 - 0.012)                    # gobelin nad kołowrotkiem
+b.box('interior', 'gold', 0.66, 0.02, 0.012, -0.95, QF + 0.38, QZ1 - 0.016)
+b.box('interior', 'flag', 1.0, 0.008, 0.36, -0.2, QF, QDZ + 0.06, bottom=False)                # dywan w barwach pana
+for sz in (-1, 1):
+    b.box('interior', 'gold', 1.0, 0.012, 0.025, -0.2, QF, QDZ + 0.06 + sz * 0.17, bottom=False)
+torch('interior', 0.62, WALK + 0.42, QZ1 - 0.02)
+torch('interior', QX0 + 0.04, WALK + 0.42, QZ0 + 0.35)
 
 # ---------------- brama: dwie wieże, przejazd ze sklepieniem, krata, wrota ----------------
 GZ = H - 0.5
@@ -407,8 +582,8 @@ for dy in range(N):
             k = edge_key((ax, ay, bx2, by2))
             if ra == rb and k not in BARS:
                 continue
-            if ra in 'S=' or rb in 'S=':
-                continue  # schody i chodnik na murach mają własne bryły (stopnie, przedpiersia)
+            if ra in 'S=Q' or rb in 'S=Q':
+                continue  # schody, chodnik na murach i komnata w donżonie mają własne bryły
             h = height_of(ra, rb)
             mat = mat_of(ra, rb)
             if ex:   # ściana pionowa x = granica, wzdłuż z
@@ -661,8 +836,11 @@ for sx in (-1, 1):
         b.box('interior', 'woodDark', 0.05, 0.28, 0.05, KTX + sx * 0.37, G, KTZ + sz * 0.17)
     b.box('interior', 'woodDark', 0.03, 0.05, 0.3, KTX + sx * 0.37, G + 0.06, KTZ)       # spinacze nóg
 b.box('interior', 'plank', 0.24, 0.02, 0.16, KTX + 0.25, G + 0.33, KTZ - 0.08)             # deska do krojenia
-b.box('interior', 'iron', 0.12, 0.006, 0.02, KTX + 0.26, G + 0.35, KTZ - 0.08, 0.4)         # nóż
-b.box('interior', 'woodDark', 0.05, 0.012, 0.022, KTX + 0.17, G + 0.35, KTZ - 0.045, 0.4)
+# nóż: cienkie stalowe ostrze zwężające się ku czubkowi i drewniana rękojeść z mosiężnym nitem
+for k, (ln, wd) in enumerate(((0.06, 0.016), (0.035, 0.011), (0.015, 0.006))):
+    b.box('interior', 'steel', ln, 0.003, wd, KTX + 0.235 + (0.0 if k == 0 else 0.03 + k * 0.012), G + 0.35, KTZ - 0.08 + (0.0 if k == 0 else 0.004), 0.4)
+b.box('interior', 'wood', 0.055, 0.011, 0.016, KTX + 0.185, G + 0.35, KTZ - 0.059, 0.4)
+b.box('interior', 'gold', 0.008, 0.013, 0.018, KTX + 0.205, G + 0.349, KTZ - 0.068, 0.4)
 FISH_SPOTS = []   # ryba na stole: gotowy model z paczki stawiany przez grę (x, y, z pyska, yaw, wisi?, długość — jak w fisher.py)
 FISH_SPOTS.append([round(KTX - 0.07, 4), round(G + 0.33, 4), round(KTZ + 0.05, 4), 0.25, 0, 0.14])
 b.bun('interior', KTX - 0.28, G + 0.33, KTZ + 0.06, w=0.1, rot=0.4)
@@ -719,7 +897,10 @@ b.box('interior', 'wood', 0.5, 0.3, 0.012, BX, G + 0.17, BZ0 + 0.048)           
 b.box('interior', 'woodDark', 0.66, 0.24, 0.045, BX, G + 0.05, BZ1 - 0.02)                              # deska w nogach
 b.box('interior', 'canvas', 0.64, 0.08, 0.9, BX, G + 0.16, (BZ0 + BZ1) / 2)                              # siennik
 for ox in (-0.15, 0.15):
-    b.box('interior', 'white', 0.26, 0.07, 0.15, BX + ox, G + 0.24, BZ0 + 0.16, tilt=-0.25)              # poduszki
+    # poduszki z lnu: wypchane (niższe brzegi, wyższy środek), oparte o wezgłowie
+    b.box('interior', 'canvas', 0.26, 0.045, 0.15, BX + ox, G + 0.24, BZ0 + 0.16, tilt=-0.25)
+    b.box('interior', 'canvas', 0.22, 0.03, 0.11, BX + ox, G + 0.27, BZ0 + 0.165, tilt=-0.25)
+    b.box('interior', 'canvas', 0.16, 0.015, 0.07, BX + ox, G + 0.293, BZ0 + 0.171, tilt=-0.25)
 b.box('interior', 'flag', 0.7, 0.03, 0.62, BX, G + 0.235, BZ1 - 0.36)                                    # pierzyna
 b.box('interior', 'flag', 0.72, 0.05, 0.09, BX, G + 0.24, BZ1 - 0.66)                                    # wywinięty brzeg
 for s2 in (-1, 1):
@@ -733,8 +914,8 @@ b.box('interior', 'flag', 0.78, 0.12, 0.012, BX, G + 0.87, BZ1 + 0.031)
 b.box('interior', 'hide', 0.55, 0.012, 0.36, BX - 0.05, G + 0.014, BZ1 + 0.3, 0.15, bottom=False)       # skóra przy łożu
 # skrzynia na skarby: korpus, wieko, okucia, zamek i puchar na wieku
 CX, CZ = qx0 + 0.45, qz0 + 0.2
-boxs('interior', 'woodDark', 0.42, 0.22, 0.26, CX, G, CZ)
-b.box('interior', 'wood', 0.44, 0.06, 0.28, CX, G + 0.22, CZ)
+boxs('interior', 'wood', 0.42, 0.22, 0.26, CX, G, CZ)
+b.box('interior', 'plank', 0.44, 0.06, 0.28, CX, G + 0.22, CZ)
 for ox in (-0.13, 0.13):
     b.box('interior', 'iron', 0.03, 0.29, 0.29, CX + ox, G - 0.001, CZ, bottom=False)
 b.box('interior', 'iron', 0.06, 0.07, 0.016, CX, G + 0.17, CZ + 0.145)
@@ -750,9 +931,9 @@ boxs('interior', 'wood', 0.5, 0.04, 0.32, DX, G + 0.3, DZ)
 for sx in (-1, 1):
     for sz in (-1, 1):
         b.box('interior', 'woodDark', 0.04, 0.3, 0.04, DX + sx * 0.21, G, DZ + sz * 0.12)
-b.box('interior', 'white', 0.2, 0.006, 0.15, DX, G + 0.34, DZ, 0.2)
+b.box('interior', 'canvas', 0.2, 0.006, 0.15, DX, G + 0.34, DZ, 0.2)                                    # pergamin
 b.box('interior', 'woodDark', 0.13, 0.035, 0.1, DX - 0.15, G + 0.34, DZ + 0.03, -0.3)                    # księga
-b.box('interior', 'white', 0.12, 0.025, 0.09, DX - 0.15, G + 0.345, DZ + 0.03, -0.3)
+b.box('interior', 'canvas', 0.12, 0.025, 0.09, DX - 0.15, G + 0.345, DZ + 0.03, -0.3)
 b.prism('interior', 'dark', 0.018, 0.014, 0.03, DX + 0.13, G + 0.34, DZ + 0.08, seg=8)                   # kałamarz
 b.box('interior', 'white', 0.004, 0.08, 0.004, DX + 0.135, G + 0.36, DZ + 0.08, roll=0.4)                # pióro
 b.prism('interior', 'white', 0.015, 0.015, 0.05, DX + 0.16, G + 0.34, DZ - 0.08, seg=6)
@@ -881,7 +1062,7 @@ for x, z in ((cx(6) + 0.1, cz(6) + 0.1), (cx(6) + 0.1, cz(5) + 0.2)):
 # pieniek z wbitym toporem przy stosie drewna, obok kilka szczap
 PX, PZ = cx(1) + 0.55, cz(4) - 0.25
 b.prism('base', 'wood', 0.11, 0.1, 0.17, PX, G, PZ, seg=12)
-b.box('base', 'iron', 0.012, 0.07, 0.1, PX + 0.01, G + 0.12, PZ + 0.02, bottom=True)
+b.box('base', 'steel', 0.012, 0.07, 0.1, PX + 0.01, G + 0.12, PZ + 0.02, bottom=True)
 b.box('base', 'woodDark', 0.024, 0.34, 0.024, PX + 0.01, G + 0.15, PZ - 0.02, tilt=-0.55)
 for k, (ox, oz, r) in enumerate(((0.12, 0.13, 0.3), (-0.13, 0.12, 1.4), (0.16, -0.06, 2.2))):
     b.box('base', 'wood', 0.05, 0.04, 0.2, PX + ox, G, PZ + oz, r)
@@ -896,7 +1077,7 @@ for k in range(4):
     z = RZ - 0.18 + k * 0.12
     b.box('base', 'woodDark', 0.02, 0.8, 0.02, RX - 0.03, G, z, roll=-0.08)
     tx_, ty_ = RX - 0.03 + 0.8 * math.sin(0.08), G + 0.8 * math.cos(0.08)
-    b.box('base', 'iron', 0.012, 0.09, 0.03, tx_, ty_ - 0.005, z, roll=-0.08)
+    b.box('base', 'steel', 0.012, 0.09, 0.03, tx_, ty_ - 0.005, z, roll=-0.08)
 b.box('base', 'woodDark', 0.025, 0.28, 0.24, RX - 0.08, G, RZ + 0.42, roll=-0.18)
 b.box('base', 'iron', 0.03, 0.06, 0.06, RX - 0.08 - 0.012 - 0.14 * math.sin(0.18), G + 0.11, RZ + 0.42, roll=-0.18)
 block(RX - 0.15, RX + 0.18, RZ - 0.3, RZ + 0.56, 0, 0.9)
@@ -941,5 +1122,10 @@ VIEWS = [
     ['wóz z sianem', [-0.1, E, 2.5], [-1.05, 0.25, 1.6], OUT, 18],
     ['strzelnica baszty z bliska', [-4.55, WY - 0.05, 4.55], [-5.35, WY - 0.1, 5.1], OUT, 14],
     ['z muru na dziedziniec', [4.8, WY, 1.0], [0, 0.3, 1.0], OUT, 22],
+    ['chodnik do donżonu', [-3.3, WY, -5.0], [-1.4, WY - 0.05, -5.0], OUT, 18],
+    ['komnata królowej', [-1.2, WY, -4.85], [1.0, WY - 0.15, -5.5], ['base', 'interior', 'floor', 'ceiling'], 16],
+    ['komnata: kominek i toaletka', [0.6, WY, -4.8], [-0.9, WY - 0.1, -5.7], ['base', 'interior', 'floor', 'ceiling'], 16],
+    ['donżon od pola', [0, 1.6, -9.0], [0, 2.6, -5.5], OUT, 22],
+    ['dach donżonu', [2.5, 6.5, -8.0], [0, 3.9, -5.2], OUT, 20],
 ]
 b.save('keep', maxe=0.45, rays=16, reach=0.5, extra={'lights': lights, 'solid': solid, 'floorY': G, 'wallY': WALK, 'portLift': 0.86, 'views': VIEWS, 'banners': BANNERS, 'fishSpots': FISH_SPOTS})
