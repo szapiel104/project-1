@@ -98,7 +98,8 @@ export interface HudView {
 }
 
 /** Zapasy jednego rodzaju składu: ile mieści ten budynek, ile jest razem i co leży (z ikonami) */
-export interface StockInfo { kind: string; here: number; used: number; max: number; items: { id: string; amount: number }[] }
+/** Okno magazynu: `here` — pojemność tego budynku, `hereUsed` i `items` — co leży w nim samym; `used`/`max` — suma ze wszystkich `stores` magazynów tego rodzaju */
+export interface StockInfo { kind: string; here: number; hereUsed: number; used: number; max: number; stores: number; items: { id: string; amount: number }[] }
 export interface BuildingInfo { stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
@@ -1366,10 +1367,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
           storeBox.replaceChildren(...i.stock.flatMap((st) => {
             const head = el('p', 'stock-head');
             const label = st.kind === 'granary' ? t('cat.food') : st.kind === 'grain' ? tx('Zboże', 'Grain') : tx('Towary', 'Goods');
-            head.append(icon(st.kind === 'granary' ? 'granary' : st.kind === 'grain' ? 'wheat' : 'store'), el('strong', '', `${label}: ${st.used} / ${st.max}`), el('span', '', tx(` · ten budynek mieści ${st.here}`, ` · this building holds ${st.here}`)));
+            // na górze to, co leży w tym magazynie; niżej suma ze wszystkich magazynów tego rodzaju
+            head.append(icon(st.kind === 'granary' ? 'granary' : st.kind === 'grain' ? 'wheat' : 'store'), el('strong', '', `${label}: ${st.hereUsed} / ${st.here}`), el('span', '', tx(' · w tym budynku', ' · in this building')));
             const bar = el('div', 'stock-bar');
             const fillEl = el('span');
-            fillEl.style.width = `${Math.min(100, (st.used / Math.max(1, st.max)) * 100)}%`;
+            fillEl.style.width = `${Math.min(100, (st.hereUsed / Math.max(1, st.here)) * 100)}%`;
             bar.append(fillEl);
             const grid = el('div', 'stock-grid');
             if (!st.items.length) grid.append(el('span', 'stock-empty', tx('Pusto', 'Empty')));
@@ -1379,7 +1381,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
               cell.append(icon(it.id), el('strong', '', String(it.amount)), el('span', '', t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name)));
               grid.append(cell);
             }
-            return [head, bar, grid];
+            const total = el('p', 'stock-total');
+            total.textContent = st.stores > 1
+              ? tx(`We wszystkich magazynach tego rodzaju (${st.stores}): ${st.used} / ${st.max}`, `Across all ${st.stores} stores of this kind: ${st.used} / ${st.max}`)
+              : tx(`To jedyny taki magazyn: ${st.used} / ${st.max}`, `This is your only store of this kind: ${st.used} / ${st.max}`);
+            return st.stores > 1 || st.used !== st.hereUsed ? [head, bar, grid, total] : [head, bar, grid];
           }));
         }
       }

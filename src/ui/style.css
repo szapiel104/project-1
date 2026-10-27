@@ -691,6 +691,7 @@ body.walking #ui, body.walking .scribe, body.walking .scribe-log, body.walking .
 .stock-item strong { font-family: var(--display); font-size: 18px; line-height: 1; color: #ffe7a6; }
 .stock-item span:last-child { font-size: 13px; color: var(--ink); line-height: 1.15; }
 .stock-empty { font-style: italic; color: var(--ink-soft); }
+.stock-total { margin: 0; font-size: 14px; color: var(--ink-soft); }
 /* logistyka magazynu (storePanel.ts): magazynierzy, towar pod drzwiami, czekające warsztaty — ten sam krój i kafelki co zapasy */
 .info-logi { display: grid; gap: 8px; padding: 6px 0 8px; border-bottom: 1px solid rgba(154, 122, 42, .5); }
 .logi-block { display: grid; gap: 4px; }

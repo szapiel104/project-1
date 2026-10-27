@@ -13,6 +13,7 @@ import { mageKindOf } from './plague';
 import { harvestPct } from './storms';
 import { feastDay, goesToPray } from './faith';
 import { dropPile, isStore, spareKeeper, stalledStep, takePile } from './storage';
+import { depositAt, freeIn, storeAtDoor, withdrawAt } from './stock';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -174,11 +175,15 @@ function tileOf(g: GameState, u: Unit): number {
   return (u.py >> 8) * g.map.width + (u.px >> 8);
 }
 
-function storeDoors(g: GameState, owner: number, kind: StoreKind): Set<number> {
-  const doors = new Set<number>();
-  for (const b of g.buildings)
-    if (b.owner === owner && b.door >= 0 && BUILDINGS[b.type]!.stores?.includes(kind)) doors.add(b.door);
-  return doors;
+/** Drzwi magazynów danego rodzaju; z `prefer` — tylko tych, które go spełniają, o ile jest choć jeden taki */
+function storeDoors(g: GameState, owner: number, kind: StoreKind, prefer?: (b: Building) => boolean): Set<number> {
+  const doors = new Set<number>(), best = new Set<number>();
+  for (const b of g.buildings) {
+    if (b.owner !== owner || b.door < 0 || !BUILDINGS[b.type]!.stores?.includes(kind)) continue;
+    doors.add(b.door);
+    if (prefer && !b.build && prefer(b)) best.add(b.door);
+  }
+  return best.size ? best : doors;
 }
 
 /** Niesie towar, dla którego gracz nie ma żadnego magazynu (ani baraku górników pod ręką) */
@@ -235,7 +240,8 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.ToInputStore: {
       const kind = prod?.input ? RESOURCE_DEFS[prod.input.res].store : null;
       if (!kind) return null;
-      const doors = storeDoors(g, u.owner, kind);
+      // po surowiec do magazynu, w którym on naprawdę leży (stock.ts); gdy nigdzie go nie ma — do dowolnego
+      const doors = storeDoors(g, u.owner, kind, (b) => (b.stock?.[resIndex(prod!.input!.res)] ?? 0) > 0);
       return (t) => doors.has(t);
     }
     case Phase.ToStore: {
@@ -249,7 +255,9 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
         const keep = playerKeep(g, u.owner);
         return keep && keep.door >= 0 ? (t) => t === keep.door : null;
       }
-      const doors = storeDoors(g, u.owner, kind);
+      // do magazynu, w którym jest miejsce na ten towar; gdy wszystkie pełne — do najbliższego (towar zostanie pod drzwiami)
+      const res = u.carryRes;
+      const doors = storeDoors(g, u.owner, kind, (b) => freeIn(g, b, res) > 0);
       return (t) => doors.has(t);
     }
     case Phase.ToLight: {
@@ -388,6 +396,9 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       const take = Math.min(inp.amount, p.res[i]!);
       if (take >= Math.ceil(inp.amount / 4)) {
         p.res[i]! -= take;
+        // z tego magazynu, pod którego drzwiami stoi (resztę, gdyby tu zabrakło, zdejmie wyrównanie w stock.ts)
+        const here = storeAtDoor(g, u.owner, tileOf(g, u), i);
+        if (here) withdrawAt(here, i, take);
         u.carryRes = i; u.carryAmt = take; u.phase = Phase.ToHome;
       } else u.wait = RETRY_TICKS; // brak surowca: czeka przy magazynie
       break;
@@ -423,8 +434,12 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
         // oddaje tyle, ile się zmieści; z resztą czeka przy składzie, aż zwolni się miejsce
         // zboże w spichlerzu najwyżej do połowy (storeRoom), żeby zostało miejsce na jedzenie
         const free = Math.min(u.carryAmt, storeRoom(g, u.owner, u.carryRes));
-        const put = Math.max(0, Math.min(u.carryAmt, free));
-        p.res[u.carryRes]! += put;
+        // do tego magazynu, pod którego drzwiami stoi, ile się w nim zmieści (stock.ts); ruda bez magazynu — do skarbca
+        const kind = RESOURCE_DEFS[RESOURCES[u.carryRes]!]?.store;
+        const here = kind ? storeAtDoor(g, u.owner, tileOf(g, u), u.carryRes) : undefined;
+        let put: number;
+        if (!kind) { put = Math.max(0, Math.min(u.carryAmt, free)); p.res[u.carryRes]! += put; }
+        else put = here ? depositAt(g, here, u.carryRes, Math.max(0, free)) : 0;
         p.stats.gathered += put;
         u.carryAmt -= put;
         // licznik warsztatu: towar z własnej produkcji (okno budynku pokazuje, ile zrobił i ile przepadło)

@@ -30,6 +30,7 @@ import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, t
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { storeLogistics } from './ui/storePanel';
 import { storeNotes } from './ui/storeNotes';
+import { usedIn } from './sim/systems/stock';
 import { nextWave } from './sim/systems/bot';
 import { battleMages, garrisonRoom, octant, planFormation, trainsAt } from './sim/systems/army';
 import { campWatch, prodInfo, sampleMade, siteInfo, watchInfo } from './ui/buildingPanel';
@@ -839,8 +840,10 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
   const p = game.players[b.owner]!;
   const stock = b.owner === ME && def.capacity && !b.build
     ? (Object.entries(def.capacity) as [StoreKind, number][]).map(([kind, here]) => ({
-      kind, here, used: storeUsed(p, kind), max: storeCapacity(game, b.owner, kind),
-      items: RESOURCES.map((id, i) => ({ id, amount: p.res[i]! })).filter((x) => RESOURCE_DEFS[x.id].store === kind && x.amount > 0),
+      // to, co leży w tym jednym magazynie (stock.ts), i osobno suma ze wszystkich magazynów tego rodzaju
+      kind, here, hereUsed: usedIn(b, kind), used: storeUsed(p, kind), max: storeCapacity(game, b.owner, kind),
+      stores: game.buildings.filter((o) => o.owner === b.owner && !o.build && BUILDINGS[o.type]!.capacity?.[kind]).length,
+      items: RESOURCES.map((id, i) => ({ id, amount: b.stock?.[i] ?? 0 })).filter((x) => RESOURCE_DEFS[x.id].store === kind && x.amount > 0),
     }))
     : undefined;
   return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, ruined: b.ruined, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,

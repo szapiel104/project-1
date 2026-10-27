@@ -15,6 +15,7 @@ import { migrationSystem, travelSystem } from './systems/population';
 import { caravanSystem, sendCaravan } from './systems/caravans';
 import { rubbleSystem } from './systems/rubble';
 import { storageSystem } from './systems/storage';
+import { syncStock } from './systems/stock';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
 import { plagueSystem, setQuarantine } from './systems/plague';
@@ -207,4 +208,6 @@ export function step(g: GameState, commands: readonly Command[]): void {
   guardSystem(g);
   campSystem(g);
   economySystem(g);
+  // zawartość każdego magazynu osobno zgodna z zapasami gracza (zjedzone, zapłacone, łup — stock.ts)
+  syncStock(g);
 }

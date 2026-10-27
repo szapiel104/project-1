@@ -3235,26 +3235,23 @@ export class GameRenderer {
     }
   }
 
-  /** Zapełnia najpierw otwarte składy w kolejności budowy, a zamkniętą stodołę na końcu, żeby było widać każdą dostawę. */
+  /** Każdy magazyn pokazuje to, co naprawdę w nim leży (Building.stock, sim/systems/stock.ts): stosy rosną przy każdej dostawie. */
   private syncStores(g: GameState): void {
     if (g.tick === this.storesTick) return;
     this.storesTick = g.tick;
-    for (const p of g.players) {
+    for (const b of g.buildings) {
+      const cap = BUILDINGS[b.type]!.capacity;
+      if (!cap) continue;
+      const mesh = this.buildingMeshes.get(b.id);
+      if (!mesh) continue;
       for (const [kind, group] of [['stockpile', 'fill'], ['granary', 'foodfill'], ['armory', 'armsfill']] as const) {
-        let sum = 0;
+        const max = cap[kind];
+        if (!max) continue;
+        let here = 0;
         const stock: { id: string; share: number }[] = [];
-        RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === kind) sum += p.res[i]!; });
-        RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === kind && p.res[i]! > 0) stock.push({ id: r, share: p.res[i]! / sum }); });
-        let left = sum;
-        const stores = g.buildings.filter((b) => b.owner === p.id && BUILDINGS[b.type]!.capacity?.[kind]);
-        stores.sort((a, b) => Number(BUILDINGS[a.type]!.id === 'barn') - Number(BUILDINGS[b.type]!.id === 'barn') || a.id - b.id);
-        for (const b of stores) {
-          const cap = BUILDINGS[b.type]!.capacity![kind]!;
-          const here = Math.min(cap, left);
-          left -= here;
-          const mesh = this.buildingMeshes.get(b.id);
-          if (mesh) setStockFill(mesh, here / cap, stock, group);
-        }
+        RESOURCES.forEach((r, i) => { if (RESOURCE_DEFS[r].store === kind) here += b.stock?.[i] ?? 0; });
+        if (here > 0) RESOURCES.forEach((r, i) => { const n = b.stock?.[i] ?? 0; if (RESOURCE_DEFS[r].store === kind && n > 0) stock.push({ id: r, share: n / here }); });
+        setStockFill(mesh, Math.min(1, here / max), stock, group);
       }
     }
   }

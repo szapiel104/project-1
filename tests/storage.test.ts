@@ -139,3 +139,30 @@ describe('magazyny', () => {
     expect(p.res[resIndex('apples')]).toBeGreaterThan(0);
   });
 });
+
+describe('zawartość każdego magazynu', () => {
+  it('każdy magazyn wie, co w nim leży; suma zgadza się z zapasami, a zjedzone znika z magazynów', () => {
+    const g = createGame(11, '1v1', 2, false);
+    for (const p of g.players) p.bot = false;
+    const W = g.map.width;
+    const keep = g.buildings.find((b) => b.owner === 0 && b.type === 0)!;
+    const hx = keep.door % W, hy = Math.floor(keep.door / W);
+    // drugi spichlerz z dala od pierwszego
+    let second: number | null = null;
+    for (let r = 8; r < 25 && !second; r++) for (const [dx, dy] of [[r, 0], [-r, 0], [0, r], [r, r], [-r, r]]) { second = placeReady(g, 'granary', hx + dx!, hy + dy!); if (second) break; }
+    expect(second).toBeTruthy();
+    run(g, 2);
+    const grans = g.buildings.filter((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'granary');
+    const p = g.players[0]!;
+    const sum = (i: number): number => grans.reduce((n, b) => n + (b.stock?.[i] ?? 0), 0);
+    for (const r of ['bread', 'apples'] as const) expect(sum(resIndex(r))).toBe(p.res[resIndex(r)]);
+    // zapas startowy leży w spichlerzu przy zamku (pierwszy z miejscem), drugi jest pusty
+    expect(grans.find((b) => b.id === second)!.stock?.reduce((a, b) => a + b, 0) ?? 0).toBe(0);
+    // ludzie jedzą: ubywa też w magazynach
+    run(g, 400);
+    for (const r of ['bread', 'apples'] as const) expect(sum(resIndex(r))).toBe(p.res[resIndex(r)]);
+    // zapis gry pamięta zawartość magazynów
+    const back = deserialize(JSON.parse(JSON.stringify(serialize(g, '1v1'))))!;
+    expect(back.buildings.find((b) => b.id === second)!.stock).toEqual(g.buildings.find((b) => b.id === second)!.stock);
+  });
+});

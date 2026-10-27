@@ -57,7 +57,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     roadPlan: [...g.roadPlan].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     rubble: g.rubble.map((r) => ({ ...r, loads: r.loads.map((l) => [...l] as [number, number]) })),
     players: g.players.map((p) => ({ ...p, res: [...p.res], stats: { ...p.stats } })),
-    buildings: g.buildings.map((b) => ({ ...b, ...(b.miss ? { miss: [...b.miss] } : {}) })),
+    buildings: g.buildings.map((b) => ({ ...b, ...(b.miss ? { miss: [...b.miss] } : {}), ...(b.stock ? { stock: [...b.stock] } : {}) })),
     units: g.units.map((u) => ({ ...u, path: [...u.path] })),
     soldiers: g.soldiers.map((x) => ({ ...x, path: [...x.path], ...(x.slot ? { slot: [...x.slot] as [number, number] } : {}) })),
     marches: (g.marches ?? []).map((m) => ({ ...m, path: [...m.path] })),
@@ -86,7 +86,7 @@ export function deserialize(d: SaveData): GameState | null {
         if (ore >= 0 && res[ore]) { res[gold] = res[gold]! + res[ore]!; res[ore] = 0; }
         return { ...p, res, stats: { ...p.stats } };
       }),
-      buildings: d.buildings.map((b) => ({ ...b })),
+      buildings: d.buildings.map((b) => ({ ...b, ...(b.stock ? { stock: [...b.stock] } : {}) })),
       units: d.units.map((u) => ({ ...u, path: [...u.path] })),
       soldiers: (d.soldiers ?? []).map((x) => ({ ...x, path: [...x.path] })),
       marches: (d.marches ?? []).map((m) => ({ ...m, path: [...m.path] })),

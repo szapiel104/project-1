@@ -13,7 +13,15 @@ co się dzieje (nad magazynem, w oknie magazynu i u skryby). Przy tym ma to nie 
 | Duży spichlerz | jak spichlerz | 1200 | 2 |
 | Zbrojownia | włócznie, łuki, miecze, kolczugi | 60 | 1 |
 
-Zapasy są wspólne dla gracza: wszystkie magazyny jednego rodzaju liczą się razem (`storeCapacity`, `storeRoom` w `sim/state.ts`).
+Zapasy gracza są jedną sumą (`PlayerState.res`, `storeCapacity`, `storeRoom` w `sim/state.ts`) — z niej korzysta cała gra.
+Od 0.52.1 każdy magazyn wie też, co leży w nim samym (`Building.stock`, `sim/systems/stock.ts`):
+- towar wnoszony przez drzwi trafia do tego magazynu, ile się w nim zmieści; robotnik idzie do magazynu, w którym jest
+  miejsce na jego towar (a gdy wszystkie pełne — do najbliższego i zostawia towar pod drzwiami);
+- po surowiec (młyn, piekarnia…) idzie się do magazynu, w którym on leży, i stamtąd go ubywa;
+- resztę zmian sumy (zjedzone racje, zapłata za budynek, łup, wozy, rozkradzione w buncie) wyrównuje `syncStock` w każdym
+  kroku: ubytek z magazynów, w których leży najwięcej, przybytek do magazynów z miejscem po kolei;
+- okno magazynu pokazuje zawartość tego jednego budynku, a pod nią sumę ze wszystkich magazynów tego rodzaju;
+  stosy w modelu magazynu też rosną z jego własnej zawartości.
 Ruda (waluta) nie leży w magazynach — trafia do skarbca w twierdzy.
 
 ## Pełny magazyn

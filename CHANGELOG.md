@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.52.1 — każdy magazyn ma swoją zawartość (2026-10-27)
+
+- Okno składu, stodoły, spichlerza i zbrojowni pokazuje dokładnie to, co leży w tym jednym budynku, i ile sztuk (pasek też liczy tylko ten budynek); pod spodem suma ze wszystkich magazynów tego rodzaju, gdy jest ich więcej
+- Zawartość jest prawdziwa: robotnik wnosi towar do magazynu, w którym jest miejsce, a po surowiec idzie tam, gdzie on leży. Zjedzone racje, zapłata za budynki i łup zmieniają zawartość magazynów (najpierw ubywa tam, gdzie leży najwięcej). Stosy w modelach magazynów pokazują ich własną zawartość (`sim/systems/stock.ts`, opis w `docs/magazyny.md`)
+
 ## 0.52.0 — magazyny jako prawdziwa logistyka, nowy skryba z kroniką (2026-10-27)
 
 - **Pełny magazyn:** nadmiar już nie przepada. Robotnik kładzie ładunek pod drzwiami magazynu (stos leży naprawdę, jest w zapisie gry) i wraca do warsztatu, gdzie czeka i nie robi kolejnego towaru, dopóki nie zwolni się miejsce. Potem warsztat rusza sam. Bez żadnego magazynu danego rodzaju towar zostaje na ziemi, a nowy magazyn go przejmuje
