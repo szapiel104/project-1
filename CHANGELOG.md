@@ -4,6 +4,7 @@
 
 - Płonący żołnierz: zamiast twardych stożków i pomarańczowego „jaja” wokół postaci — 9 miękkich języków ognia (rozmyta kropla zwrócona do kamery), które wyrastają z ubrania, rosną, unoszą się i gasną, każdy w swoim rytmie; u dołu jasnożółte, wyżej pomarańczowe i czerwone. Pod nimi delikatna ciepła poświata, w górę żar i smużki dymu (`render/spells.ts`)
 - Przymrożony: bez niebieskiej powłoki — drobne kryształki lodu u stóp, opadający szron i lekka chłodna poświata
+- Ogień w barwach głębokiej pomarańczy (nie bieli), języki większe i na całej sylwetce
 - Wydajność: dalej dwie wspólne siatki instancji, tekstury rysowane raz (64 px)
 
 ## 0.53.7 — wyraźniejsze pęknięcia, mniej drzazg (2026-10-27)

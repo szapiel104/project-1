@@ -278,21 +278,21 @@ export class SpellLayer {
         const life = (time * (1.6 + (j % 3) * 0.35) + j / FLAMES + f.id * 0.37) % 1;
         const a = j * 2.39 + f.id * 0.7;
         const r = 0.07 + (j % 3) * 0.035;
-        const h = 0.12 + ((j * 5) % FLAMES) / FLAMES * 0.42 + life * 0.22;
+        const h = 0.1 + ((j * 5) % FLAMES) / FLAMES * 0.4 + life * 0.25;
         const sway = Math.sin(time * 6 + j * 1.3) * 0.02;
         this.p.set(f.p.x + Math.cos(a) * r + sway, f.p.y + h, f.p.z + Math.sin(a) * r);
-        const size = (0.13 + (j % 4) * 0.03) * Math.sin(Math.PI * Math.min(1, life * 1.15));
+        const size = (0.19 + (j % 4) * 0.045) * Math.sin(Math.PI * Math.min(1, life * 1.15));
         this.m.compose(this.p, this.camQ, this.s.set(size * 0.75, size * 1.35, size));
         this.lick.setMatrixAt(lk, this.m);
         // barwa: młody płomień jasnożółty, starszy pomarańczowy, na końcu ciemnieje ku czerwieni
-        this.c.setRGB(1, 0.78 - life * 0.5, 0.32 - life * 0.3);
+        this.c.setRGB(0.95, 0.5 - life * 0.3, 0.1 - life * 0.08);
         this.lick.setColorAt(lk, this.c);
         lk++;
       }
       this.p.copy(f.p).setY(f.p.y + 0.38);
-      this.m.compose(this.p, this.camQ, this.s.setScalar(0.75 + Math.sin(time * 11 + f.id) * 0.05));
+      this.m.compose(this.p, this.camQ, this.s.setScalar(0.6 + Math.sin(time * 11 + f.id) * 0.05));
       this.blob.setMatrixAt(bl, this.m);
-      this.blob.setColorAt(bl, this.c.setRGB(1, 0.38, 0.08).multiplyScalar(0.55 + Math.sin(time * 9 + f.id) * 0.12));
+      this.blob.setColorAt(bl, this.c.setRGB(1, 0.36, 0.06).multiplyScalar(0.42 + Math.sin(time * 9 + f.id) * 0.1));
       bl++;
       if (this.rand() < 0.45) this.emit(new THREE.Vector3(f.p.x + (this.rand() - 0.5) * 0.2, f.p.y + 0.45 + this.rand() * 0.3, f.p.z + (this.rand() - 0.5) * 0.2), new THREE.Vector3((this.rand() - 0.5) * 0.3, 0.7 + this.rand() * 0.5, (this.rand() - 0.5) * 0.3), 0.35 + this.rand() * 0.3, this.rand() < 0.5 ? 0 : 1, 0.011);
       if (this.rand() < 0.1) this.emit(new THREE.Vector3(f.p.x, f.p.y + 0.85, f.p.z), new THREE.Vector3((this.rand() - 0.5) * 0.15, 0.45, (this.rand() - 0.5) * 0.15), 1, 3, 0.04);
