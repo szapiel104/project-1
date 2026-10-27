@@ -1787,3 +1787,5 @@ body.menu-open .scribe, body.menu-open .scribe-log { display: none; }
 .floaters .info .logi-alert .logi-head strong { color: #ffd9c9; }
 .floaters .info .logi-list { font-size: 16px; gap: 4px; }
 .floaters .info .logi-note, .floaters .info .logi-tip { font-size: 15px; line-height: 1.4; }
+/* panel dewelopera nie wisi nad menu gry */
+body.menu-open .devpanel { display: none; }

@@ -2853,7 +2853,9 @@ const devPanel = createDevPanel(document.body, {
 window.addEventListener('keydown', (e) => {
   if (e.key === 'F9' && devAllowed()) { e.preventDefault(); devPanel.toggle(); return; }
   if (e.key === 'Escape' && rallyPick) { e.preventDefault(); e.stopImmediatePropagation(); rallyPick = null; canvas.classList.remove('placing'); return; }
-  if (e.key === 'Escape' && devPanel.isPlacing()) { e.preventDefault(); e.stopImmediatePropagation(); devPanel.stop(); }
+  if (e.key === 'Escape' && devPanel.isPlacing()) { e.preventDefault(); e.stopImmediatePropagation(); devPanel.stop(); return; }
+  // Esc najpierw zamyka otwarty panel dewelopera (także nad menu gry), dopiero następny Esc robi resztę
+  if (e.key === 'Escape' && devPanel.isOpen() && !document.body.classList.contains('menu-open')) { e.preventDefault(); e.stopImmediatePropagation(); devPanel.close(); }
 }, true);
 // przycisk na dolnej belce (obok Menu), widoczny tylko gdy panel jest dostępny
 const devBtn = document.createElement('button');

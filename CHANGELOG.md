@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.53.2 — Esc zamyka panel dewelopera (2026-10-27)
+
+- Esc przy otwartym panelu dewelopera najpierw go zamyka (dopiero kolejny Esc odznacza albo otwiera menu), a w menu gry panel się nie pokazuje — nie wisi już nad ustawieniami
+
 ## 0.53.2 — pękające mury i rusztowania przy naprawie (2026-10-27)
 
 - **Uszkodzenia widać na budowlach:** mury kamienne, częstokół, bramy, wieże i twierdza pokazują, ile już przyjęły. Przy ubytku 10% wytrzymałości pojawiają się rysy, od 35% pęknięcia z odpryskami i okruchy pod ścianą, od 65% długie pęknięcia, wyrwy po wybitych kamieniach i kupki gruzu u stóp. Drewno łupie się: jasne drzazgi w korze, odłamki pod ścianą, a bale częstokołu przekrzywiają się i łamią (ścięty czubek, krótszy kikut)

@@ -30,6 +30,8 @@ export interface DevPanel {
   /** Kończy stawianie (panel zostaje otwarty) */
   stop(): void;
   close(): void;
+  /** Panel jest teraz widoczny */
+  isOpen(): boolean;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] => {
@@ -124,5 +126,6 @@ export function createDevPanel(root: HTMLElement, ev: DevEvents): DevPanel {
     isPlacing: () => placing,
     stop() { if (placing) { placing = false; refresh(); } },
     close: hide,
+    isOpen: () => !box.hidden,
   };
 }
