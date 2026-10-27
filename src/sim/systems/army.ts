@@ -12,6 +12,7 @@ import { BUILDINGS, TOWERS, footprint, isTower, towerBonus, workArea } from '../
 import { buildWork, demolish, enemyNear, maxHp, rebuildCost, restore, ruin } from './placement';
 import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
+import { lineOfSight } from './sight';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 
 /** Żołnierz stoi wysoko: na wieży albo na murach zamku (dalej widzi i strzela, wręcz go nie dosięgną) */
@@ -947,9 +948,13 @@ export function armySystem(g: GameState): void {
       for (let gy = cy - 1; gy <= cy + 1; gy++)
         for (let gx = cx - 1; gx <= cx + 1; gx++) {
           for (const o of grid.get(gy * cw + gx) ?? []) {
-            if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || (high(g, o) && !range && (o.up || !high(g, s)))) continue;
+            if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner)) continue;
+            // wręcz tylko na tym samym poziomie: z ziemi nie sięgnie na mur ani wieżę, z muru nie bije w dół (Michał 27.10.2026)
+            if (!range && (o.up || high(g, o) !== high(g, s))) continue;
             if (o.id === s.skip && g.tick < (s.skipUntil ?? 0)) continue; // do tego wroga nie ma przejścia (za murem): na razie inny cel
-            const d = gap(s, o);
+            let d = gap(s, o);
+            // strzelec woli wroga, którego widzi (bez muru ani budynku na linii strzału); zasłoniętego bierze dopiero, gdy nie ma innego
+            if (range && d <= range * FP && !lineOfSight(g, s, o, high(g, s), high(g, o))) d += 48 * FP;
             if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
           }
         }
@@ -999,7 +1004,9 @@ export function armySystem(g: GameState): void {
       if (foe) {
         // atak w marszu: na widok wroga przerywa marsz (drogę do celu odnajdzie po walce)
         if (s.amove && s.goal >= 0 && (s.path.length > 1 || s.slot)) s.path = [];
-        if (gap(s, foe) <= (range ? range * FP : FP + FP / 2) && !s.path.length) {
+        // wręcz: wróg zszedł na mur albo z muru (inny poziom) — nie dosięgnie, szuka innego
+        if (!range && (foe.up || high(g, foe) !== high(g, s))) { s.target = 0; s.path = []; continue; }
+        if (gap(s, foe) <= (range ? range * FP : FP + FP / 2) && !s.path.length && (!range || lineOfSight(g, s, foe, high(g, s), high(g, foe)))) {
           if (s.cd === 0) {
             // strzelcy nie strzelają równo jak na komendę: każdy naciąga łuk w swoim rytmie (kilka ticków rozrzutu)
             s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
@@ -1065,7 +1072,7 @@ export function armySystem(g: GameState): void {
         if (prey && prey !== ordered && (stance === 2 || tooFar((prey.py >> 8) * W + (prey.px >> 8))) && (prey.px - s.px) ** 2 + (prey.py - s.py) ** 2 > ((range || 1.5) * FP) ** 2) prey = undefined;
         if (prey) {
           const reach = range ? range : 1.5;
-          if (best <= reach * reach) {
+          if (best <= reach * reach && (!range || lineOfSight(g, s, prey, high(g, s), false))) {
             s.path = [];
             s.hitting = prey.id;
             if (s.cd === 0) {

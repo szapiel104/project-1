@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.53.12 — linia strzału: strzały nie lecą przez mury i budynki (2026-10-27)
+
+- **Strzała i czar potrzebują czystej linii strzału:** łucznik albo mag na ziemi strzela tylko wtedy, gdy między nim a wrogiem nie stoi mur (częstokół, mur kamienny), zamknięta brama, chata ani inny budynek, a po drodze nie ma ściany twierdzy. Inaczej podchodzi, aż znajdzie miejsce, z którego widzi wroga, albo bierze innego, widocznego wroga. Niskie rzeczy (pochodnia, kosz ognia, studnia, cmentarz, drabina, ruiny, place budowy) nie zasłaniają (`sim/systems/sight.ts`)
+- **Z muru i wieży strzela się ponad przeszkodami:** kto stoi wysoko, widzi wroga przed sobą. Obrońcę na koronie muru albo na wieży da się trafić z ziemi (wystaje nad blanki), wroga ukrytego za murem — nie
+- **Wręcz tylko na tym samym poziomie:** żołnierz na murze nie bije już stojącego pod murem, a z ziemi nie dosięgnie nikogo na murze ani na wieży
+- Bot: korzysta z tych samych zasad (wspólny system walki), bez osobnych zmian
+- Testy: `tests/line-of-sight.test.ts`
+
 ## 0.53.11 — panel dewelopera z ikonami, bez szumu wiatru, strzały bez skrętu, skrót do spichlerza (2026-10-27)
 
 - **Panel dewelopera (F9) od nowa:** każdy przycisk ma ikonę i krótki podpis. Kolejność jak przy użyciu: kogo postawić (kafelki z całym wojskiem — włócznik, łucznik, strażnik, zbój, zbrojny, saper, **mag Płomienia, mag Źródła** — i wilk), czyj (Wróg / Mój), ilu (×1, ×3, ×6, ×12), „Stawiaj na mapie”; potem Czas (Rano, Noc, cztery pory roku), Szybko (wróg pod wieżą, pożar, ulecz, +1000, usuń wrogów, wygraj) i Kamera (moja / wroga twierdza). Wcześniej nie dało się postawić magów
