@@ -14,7 +14,10 @@ Dotyczy budynków z kategorii obrony (bez drabiny) i twierdzy. Drewno: częstok�
 ## Rysowanie (`src/render/damage.ts`)
 - Tekstury pęknięć i drzazg rysowane na płótnie (3 na kamień, 3 na drewno), nakładane jako płaskie naklejki 12 mm przed licem.
 - Miejsca na ścianie: mur kamienny — odsłonięte boki bloku między cokołem a gzymsem; wieże, bramy, twierdza — promienie z zewnątrz przez `boundsTree` (BVH), tylko pionowe ściany zwrócone na zewnątrz, w dolnych 2/3 wysokości. Liczone raz na budynek.
-- Częstokół: złamane i przekrzywione bale w `src/render/walls.ts` (klucz przeliczenia ma stopień zużycia).
+- Częstokół (`src/render/walls.ts`): złamane bale (15/35/60% bali na stopniach 1–3) — odłamany kawał z czubkiem leży na ziemi w poprzek muru; na stopniu 3 ok. 22% bali wyrwanych w całości (leżą obok); przechył 0,03/0,08/0,16 rad. Po naprawie wszystko wraca.
+- Mur kamienny, stopień 2–3: strącone ciosy/blanki pod murem (30% / 75% odsłoniętych miejsc).
+- Ruina (mur, brama, wieża): postęp odbudowy `ruinRebuilt` (ruina zaczyna od połowy pracy). Mur kamienny: poszarpana korona z kamieni zamiast gładkiego wierzchu, wyrwy na bokach, bez przedpiersia i blanek do 95% odbudowy. Częstokół: kikuty 25–45% wysokości rosnące z odbudową, połamane bale obok. Wokół gruz (ciosy, kamienie albo drzazgi i szczapy), ubywa go z postępem.
+- Naklejki pęknięć 3 mm przed licem (wcześniej 12 mm — było widać odstęp), na modelach najwyżej 0,75 pola.
 - Wszystko w 8 siatkach instancji, przeliczane tylko przy zmianie stopnia którejś budowli.
 
 ## Rusztowania (`src/render/repairs.ts`)

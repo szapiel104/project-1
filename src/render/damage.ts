@@ -14,13 +14,13 @@ import * as THREE from 'three';
 import { MeshBVH } from 'three-mesh-bvh';
 import { BUILDINGS, footprint } from '../data/buildings';
 import type { GameState } from '../sim/state';
-import { maxHp } from '../sim/systems/placement';
+import { buildWork, maxHp } from '../sim/systems/placement';
 import { STONE_WALL_TOP } from './buildings';
 import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { pattern } from './textures';
 import { touch } from './touch';
-import { showsWear, wearMaterial, wearStage } from './wear';
+import { ruinRebuilt, showsWear, wearMaterial, wearStage } from './wear';
 
 type Kind = 'stone' | 'wood';
 /** Miejsce na ścianie: punkt i kierunek na zewnątrz (świat); decal = false — tylko odłamki pod ścianą */
@@ -28,7 +28,7 @@ interface Spot { p: THREE.Vector3; n: THREE.Vector3; decal: boolean }
 
 /** Części modelu, na których nie rysujemy pęknięć (wnętrza, ludzie, ogień, znaki, flagi) */
 const SKIP = new Set(['interior', 'life', 'fire', 'flame', 'smoke', 'noworker', 'fill', 'foodfill', 'armsfill', 'flagcloth', 'bannercloth', 'flagpole', 'ceiling']);
-const MAX_DECALS = 1500, MAX_ROCKS = 3000, MAX_SPLINTERS = 2000;
+const MAX_DECALS = 1500, MAX_ROCKS = 5000, MAX_SPLINTERS = 3000, MAX_BLOCKS = 1500;
 
 const rnd = (seed: number, i: number): number => { const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453; return v - Math.floor(v); };
 
@@ -121,6 +121,7 @@ export class WearLayer {
   private decals = new Map<string, THREE.InstancedMesh>();
   private rocks: THREE.InstancedMesh | null = null;
   private splinters: THREE.InstancedMesh | null = null;
+  private blocks: THREE.InstancedMesh | null = null;
   private spots = new Map<number, { at: string; list: Spot[] }>();
 
   private mesh(kind: Kind, level: 1 | 2 | 3): THREE.InstancedMesh {
@@ -136,10 +137,20 @@ export class WearLayer {
     return m;
   }
 
+  private view: TerrainView | null = null;
   sync(g: GameState, view: TerrainView, meshes: Map<number, THREE.Group>): void {
+    this.view = view;
     const hurt: { b: GameState['buildings'][number]; s: 1 | 2 | 3 }[] = [];
+    const ruins: { b: GameState['buildings'][number]; k: number }[] = [];
     let key = '';
     for (const b of g.buildings) {
+      if (b.ruined && showsWear(b.type) && BUILDINGS[b.type]!.id !== 'keep') {
+        // ruina muru, bramy albo wieży: gruz wokół maleje w miarę odbudowy (ruina zaczyna od połowy pracy)
+        const k = ruinRebuilt(b.build, buildWork(b.type));
+        ruins.push({ b, k });
+        key += `${b.id}:r${Math.round(k * 10)},`;
+        continue;
+      }
       if (b.build || b.ruined || !showsWear(b.type)) continue;
       const s = wearStage(b.hp, maxHp(b.type));
       if (!s) continue;
@@ -152,20 +163,76 @@ export class WearLayer {
     if (!this.rocks) {
       this.rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true, map: pattern('rock') }), MAX_ROCKS);
       this.splinters = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x8a6c4a, roughness: 0.95, map: pattern('bark') }), MAX_SPLINTERS);
-      for (const m of [this.rocks, this.splinters]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'uszkodzenia murów')); }
+      this.blocks = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: pattern('rock') }), MAX_BLOCKS);
+      for (const m of [this.rocks, this.splinters, this.blocks]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'uszkodzenia murów')); }
     }
     const used = new Map<string, number>();
-    let nr = 0, ns = 0;
+    let nr = 0, ns = 0, nb = 0;
     const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), qr = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3(), Z = new THREE.Vector3(0, 0, 1), col = new THREE.Color();
     const { width, height } = g.map;
     const ground = (x: number, z: number): number => view.heightAt(x + width / 2, z + height / 2);
+    const E = new THREE.Euler();
+    /** odłamek kamienia (nieregularna bryła) */
+    const rock = (x: number, y: number, z: number, k: number, seed: number, hex = 0xa39c90): void => {
+      if (nr >= MAX_ROCKS) return;
+      q.setFromEuler(E.set(rnd(seed, 1) * 3, rnd(seed, 2) * 6, rnd(seed, 3) * 3));
+      this.rocks!.setColorAt(nr, col.setHex(hex).multiplyScalar(0.78 + rnd(seed, 4) * 0.32));
+      this.rocks!.setMatrixAt(nr++, M4.compose(p.set(x, y, z), q, sc.set(k, k * (0.55 + rnd(seed, 5) * 0.3), k * (0.75 + rnd(seed, 6) * 0.3))));
+    };
+    /** strącony ciosany kamień (blanka, cios z lica) — leży krzywo, trochę wbity w ziemię */
+    const block = (x: number, z: number, seed: number, k = 1): void => {
+      if (nb >= MAX_BLOCKS) return;
+      const sx = (0.17 + rnd(seed, 7) * 0.08) * k, sy = (0.14 + rnd(seed, 8) * 0.06) * k, sz = (0.12 + rnd(seed, 9) * 0.06) * k;
+      q.setFromEuler(E.set((rnd(seed, 10) - 0.5) * 0.7, rnd(seed, 11) * 6, (rnd(seed, 12) - 0.5) * 0.9));
+      this.blocks!.setColorAt(nb, col.setHex(0xb8b0a2).multiplyScalar(0.8 + rnd(seed, 13) * 0.25));
+      this.blocks!.setMatrixAt(nb++, M4.compose(p.set(x, ground(x, z) + sy * 0.3, z), q, sc.set(sx, sy, sz)));
+    };
+    /** drzazga albo odłupana szczapa */
+    const splinter = (x: number, z: number, seed: number, long = 1): void => {
+      if (ns >= MAX_SPLINTERS) return;
+      q.setFromEuler(E.set(0, rnd(seed, 14) * 6, (rnd(seed, 15) - 0.5) * 0.3));
+      const L = (0.06 + rnd(seed, 16) * 0.1) * long;
+      this.splinters!.setMatrixAt(ns++, M4.compose(p.set(x, ground(x, z) + 0.015, z), q, sc.set(L, 0.016 * Math.sqrt(long), 0.022 * Math.sqrt(long))));
+    };
+    for (const { b, k } of ruins) {
+      const def = BUILDINGS[b.type]!, fp = footprint(def, b.rot), kind = wearMaterial(b.type);
+      const left = 1 - k; // ile gruzu jeszcze leży
+      const cx = b.x + fp.w / 2 - width / 2, cz = b.y + fp.h / 2 - height / 2;
+      const area = fp.w * fp.h;
+      if (def.id === 'stoneWall') {
+        // resztka muru: poszarpana korona z wyłamanych kamieni zamiast gładkiej posadzki, wyrwy na bokach
+        const y0 = ground(cx, cz) - 0.06, top = y0 + (STONE_WALL_TOP + 0.02) * Math.max(0.08, 1 - b.build / buildWork(b.type));
+        for (let i = 0; i < 9; i++) {
+          const x = cx + (rnd(b.id, i) - 0.5) * 0.9, z = cz + (rnd(b.id, i + 40) - 0.5) * 0.9;
+          rock(x, top - 0.03 + rnd(b.id, i + 80) * 0.07, z, 0.2 + rnd(b.id, i + 120) * 0.16, b.id * 31 + i, 0xb0a898);
+        }
+        for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) for (let i = 0; i < 3; i++) {
+          const u = (i - 1) * 0.32 + (rnd(b.id + dx * 3 + dz * 5, i) - 0.5) * 0.1;
+          rock(cx + dx * 0.47 + (dz ? u : 0), top - 0.12 - rnd(b.id, i + dx * 7 + dz * 11) * 0.25, cz + dz * 0.47 + (dx ? u : 0), 0.16 + rnd(b.id, i + 60) * 0.1, b.id * 17 + i + dx * 5 + dz * 9, 0xa8a090);
+        }
+      }
+      // gruz dookoła: ciosy, kamienie, przy drewnie drzazgi i szczapy; uprzątają go w trakcie odbudowy
+      const n = Math.round((def.line ? 14 : 8 + area * 3) * left);
+      const reach = Math.max(fp.w, fp.h) / 2 + 0.9;
+      for (let i = 0; i < n; i++) {
+        const a = rnd(b.id, i + 200) * Math.PI * 2, d = Math.max(fp.w, fp.h) / 2 + 0.05 + rnd(b.id, i + 300) ** 1.6 * (reach - Math.max(fp.w, fp.h) / 2);
+        const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
+        if (kind === 'stone') {
+          if (i % 3 === 0) block(x, z, b.id * 7 + i, 1.2);
+          else rock(x, ground(x, z) + 0.02, z, 0.08 + rnd(b.id, i + 400) ** 2 * 0.24, b.id * 13 + i);
+        } else {
+          splinter(x, z, b.id * 11 + i, i % 4 === 0 ? 2.2 : 1);
+          if (i % 5 === 0) splinter(x + 0.05, z + 0.04, b.id * 11 + i + 1000, 1);
+        }
+      }
+    }
     for (const { b, s } of hurt) {
       const kind = wearMaterial(b.type);
       const spots = this.spotsFor(g, b, meshes.get(b.id));
       if (!spots.length) continue;
       const fp = footprint(BUILDINGS[b.type]!, b.rot);
       const big = Math.max(fp.w, fp.h);
-      const size = (kind === 'wood' ? 0.3 : big <= 1 ? 0.62 : Math.min(1.2, 0.45 + big * 0.12)) * [0, 1, 1.15, 1.35][s]!;
+      const size = (kind === 'wood' ? 0.3 : big <= 1 ? 0.62 : Math.min(0.75, 0.45 + big * 0.08)) * [0, 1, 1.15, 1.35][s]!;
       const wantDecals = Math.min(spots.length, [0, 2, 4, 7][s]! * (big >= 6 ? 3 : 1));
       const dm = this.mesh(kind, s);
       let placed = 0;
@@ -179,10 +246,16 @@ export class WearLayer {
             qr.setFromAxisAngle(Z, kind === 'wood' ? (rnd(b.id, i) - 0.5) * 0.2 : (rnd(b.id, i) - 0.5) * 1.4);
             q.multiply(qr);
             const k = size * (0.85 + rnd(b.id, i + 50) * 0.3);
-            dm.setMatrixAt(n, M4.compose(p.copy(sp.p).addScaledVector(sp.n, 0.012), q, sc.set(k, k, 1)));
+            dm.setMatrixAt(n, M4.compose(p.copy(sp.p).addScaledVector(sp.n, 0.003), q, sc.set(k, k, 1)));
             used.set(`${kind}${s}`, n + 1);
           }
           placed++;
+        }
+        // strącone blanki i ciosy pod murem kamiennym (drugi stopień co trzeci bok, trzeci prawie każdy)
+        if (BUILDINGS[b.type]!.line && kind === 'stone' && s >= 2 && rnd(b.id, i + 700) < (s === 3 ? 0.75 : 0.3)) {
+          const d = 0.25 + rnd(b.id, i + 710) * 0.45, side = (rnd(b.id, i + 720) - 0.5) * 0.6;
+          block(sp.p.x + sp.n.x * d - sp.n.z * side, sp.p.z + sp.n.z * d + sp.n.x * side, b.id * 5 + i);
+          if (s === 3 && rnd(b.id, i + 730) < 0.5) block(sp.p.x + sp.n.x * (d + 0.2) - sp.n.z * (side + 0.15), sp.p.z + sp.n.z * (d + 0.2) + sp.n.x * (side + 0.15), b.id * 5 + i + 900, 0.8);
         }
         // okruchy i drzazgi pod ścianą: od drugiego stopnia, przy trzecim kupki gruzu
         if (s < 2 || (s === 2 && i % 2)) continue;
@@ -207,8 +280,8 @@ export class WearLayer {
       }
     }
     for (const [id, m] of this.decals) { m.count = used.get(id) ?? 0; touch(m); }
-    this.rocks.count = nr; this.splinters!.count = ns;
-    touch(this.rocks); touch(this.splinters!);
+    this.rocks.count = nr; this.splinters!.count = ns; this.blocks!.count = nb;
+    touch(this.rocks); touch(this.splinters!); touch(this.blocks!);
   }
 
   /** Miejsca na pęknięcia dla budowli (liczone raz, dopóki budowla się nie przesunie ani nie obróci) */
@@ -228,7 +301,7 @@ export class WearLayer {
     const def = BUILDINGS[b.type]!;
     const same = (x: number, y: number): boolean => g.buildings.some((o) => o.x === x && o.y === y && o.type === b.type);
     const cx = b.x + 0.5 - width / 2, cz = b.y + 0.5 - height / 2;
-    const y0 = mesh ? mesh.position.y : 0;
+    const y0 = this.view ? this.view.heightAt(b.x + 0.5, b.y + 0.5) : mesh ? mesh.position.y : 0;
     const out: Spot[] = [];
     const sides: [number, number][] = [[0, 1], [0, -1], [1, 0], [-1, 0]];
     const stone = def.id === 'stoneWall';

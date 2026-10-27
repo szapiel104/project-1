@@ -29,3 +29,10 @@ export function wearMaterial(type: number): 'stone' | 'wood' {
   const id = BUILDINGS[type]?.id ?? '';
   return id === 'palisade' || id === 'gate' || id === 'watchtower' ? 'wood' : 'stone';
 }
+
+/** Ile odbudowano z ruiny (0 = świeża ruina, 1 = stoi): ruina zaczyna od połowy pracy (placement.ts → ruin) */
+export function ruinRebuilt(build: number, work: number): number {
+  if (work <= 0) return 1;
+  const built = 1 - build / work;
+  return Math.min(1, Math.max(0, (built - 0.5) / 0.5));
+}

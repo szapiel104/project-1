@@ -13,7 +13,7 @@ import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { normal, pattern } from './textures';
 import { touch } from './touch';
-import { wearStage } from './wear';
+import { ruinRebuilt, wearStage } from './wear';
 
 const hash = (seed: number, i: number): number => { const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453; return v - Math.floor(v); };
 
@@ -135,13 +135,36 @@ export class WallLayer {
         }
         for (const [dx, dz, rot] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]] as const) {
           if (stoneAt(b.x + dx, b.y + dz) || sn.edge >= 16384) continue;
+          // ruina: przedpiersie i blanki strącone (leżą w gruzie, damage.ts), wracają dopiero pod koniec odbudowy
+          if (b.ruined && ruinRebuilt(b.build, buildWork(b.type)) < 0.95) continue;
           sn.edge = put(kit.edge, rot, sn.edge);
         }
         continue;
       }
       const logs = palisadeLogs(links, b.id);
       const wear = b.build ? 0 : wearStage(b.hp, maxHp(b.type));
-      const shown = Math.floor(logs.length * built + 0.001);
+      // ruina częstokołu: same połamane kikuty, rosną w czasie odbudowy; połamane bale leżą obok, dopóki ich nie zabiorą
+      const kr = b.ruined ? ruinRebuilt(b.build, buildWork(b.type)) : -1;
+      const shown = kr >= 0 ? logs.length : Math.floor(logs.length * built + 0.001);
+      // bale padają w poprzek muru (na zewnątrz albo do środka), nie wzdłuż
+      const alongX = links[0] || links[1] || !(links[2] || links[3]);
+      const [px, pz] = alongX ? [0, 1] : [1, 0];
+      /** bal (albo jego odłamana część) leżący na ziemi przy murze, z czubkiem albo bez */
+      const lying = (lx: number, lz: number, len: number, r: number, side: number, seed: number, tip: boolean): void => {
+        if (n >= 4096) return;
+        const d = 0.18 + hash(seed, 3) * 0.4, sl = (hash(seed, 4) - 0.5) * 0.5;
+        const gx = lx + px * side * d + pz * sl, gz = lz + pz * side * d + px * sl;
+        // leży mniej więcej wzdłuż muru, trochę krzywo
+        const yaw = (alongX ? 0 : Math.PI / 2) + (hash(seed, 5) - 0.5) * 1.1;
+        e.set(0, yaw, Math.PI / 2 - 0.04 + hash(seed, 6) * 0.08); q.setFromEuler(e);
+        const gy = view.heightAt(gx, gz) + r * 0.8;
+        M4.compose(p.set(gx - width / 2, gy, gz - height / 2), q, sc.set(r, len, r));
+        this.wallShafts!.setMatrixAt(n, M4);
+        const end = new THREE.Vector3(0, len, 0).applyQuaternion(q);
+        M4.compose(p.set(gx - width / 2 + end.x, gy + end.y, gz - height / 2 + end.z), q, tip ? sc.set(r, r * 2.2, r) : sc.set(r * 0.9, r * 0.5, r * 0.9));
+        this.wallTips!.setMatrixAt(n, M4);
+        n++;
+      };
       for (let li = 0; li < logs.length; li++) {
         const log = logs[li]!;
         if (n >= 4096) break;
@@ -158,12 +181,30 @@ export class WallLayer {
         }
         const lx = cx + log.x, lz = cz + log.z;
         const y = view.heightAt(lx, lz) - 0.05;
-        // rozbity częstokół: im mniej wytrzymałości, tym więcej bali złamanych (ścięty czubek, krótszy bal)
-        // i mocniej przekrzywionych; po naprawie bale znowu stoją prosto
+        // rozbity częstokół: im mniej wytrzymałości, tym więcej bali złamanych (odłamany kawał leży pod murem),
+        // przy najgorszym stopniu część bali wyrwana w całości i leży na ziemi; po naprawie wszystko wraca na miejsce
         const r1 = hash(b.id, li), r2 = hash(b.id, li + 17), r3 = hash(b.id, li + 31);
+        const side = r3 < 0.5 ? 1 : -1;
+        if (kr >= 0) {
+          // ruina: kikut 25–45% wysokości, w odbudowie rośnie do pełnego bala
+          const stump = log.h * (0.25 + r2 * 0.2);
+          const h = stump + (log.h - stump) * kr;
+          e.set((r2 - 0.5) * 0.22 * (1 - kr), 0, (r3 - 0.5) * 0.22 * (1 - kr)); q.setFromEuler(e);
+          M4.compose(p.set(lx - width / 2, y, lz - height / 2), q, sc.set(log.r, h, log.r));
+          this.wallShafts.setMatrixAt(n, M4);
+          const top = new THREE.Vector3(0, h, 0).applyQuaternion(q);
+          M4.compose(p.set(lx - width / 2 + top.x, y + top.y, lz - height / 2 + top.z), q, kr > 0.97 ? sc.set(log.r, log.r * 2.2, log.r) : sc.set(log.r * 0.9, log.r * 0.5, log.r * 0.9));
+          this.wallTips!.setMatrixAt(n, M4);
+          n++;
+          // odłamane części leżą obok, ubywa ich w miarę odbudowy
+          if (hash(b.id, li + 50) < 1 - kr) lying(lx, lz, log.h - stump, log.r, side, b.id * 13 + li, true);
+          continue;
+        }
+        const knocked = wear === 3 && r1 < 0.22;
+        if (knocked) { lying(lx, lz, log.h, log.r, side, b.id * 7 + li, true); continue; }
         const broken = wear > 0 && r1 < [0, 0.15, 0.35, 0.6][wear]!;
-        const h = broken ? log.h * (0.55 + r2 * 0.3) : log.h;
-        const lean = [0, 0.03, 0.07, 0.13][wear]!;
+        const h = broken ? log.h * (0.5 + r2 * 0.3) : log.h;
+        const lean = [0, 0.03, 0.08, 0.16][wear]!;
         e.set((log.x * 7 % 1) * 0.05 + (r2 - 0.5) * 2 * lean, 0, (log.z * 5 % 1) * 0.05 + (r3 - 0.5) * 2 * lean);
         q.setFromEuler(e);
         M4.compose(p.set(lx - width / 2, y, lz - height / 2), q, sc.set(log.r, h, log.r));
@@ -173,6 +214,8 @@ export class WallLayer {
         M4.compose(p.set(lx - width / 2 + top.x, y + top.y, lz - height / 2 + top.z), q, broken ? sc.set(log.r * 0.9, log.r * 0.5, log.r * 0.9) : sc.set(log.r, log.r * 2.2, log.r));
         this.wallTips!.setMatrixAt(n, M4);
         n++;
+        // odłamany kawał z czubkiem leży pod murem, dopóki inżynier nie wstawi nowego bala
+        if (broken) lying(lx, lz, log.h - h, log.r * 0.95, side, b.id * 5 + li, true);
       }
     }
     this.wallShafts.count = n; this.wallTips!.count = n;

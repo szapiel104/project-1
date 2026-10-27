@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.53.9 — bale spadają na ziemię, gruz po rozbitym murze (2026-10-27)
+
+- **Częstokół:** złamany bal zrzuca odłamany kawał z czubkiem — leży pod murem w poprzek, dopóki inżynier nie naprawi muru. Przy mocno rozbitym częstokole część bali jest wyrwana w całości i leży obok, a reszta przechyla się mocniej
+- **Mur kamienny:** od drugiego stopnia zniszczeń pod murem leżą strącone ciosy i blanki, przy trzecim prawie przy każdym boku
+- **Ruina muru:** zamiast gładkiej „posadzki” zostaje poszarpany kikut — korona z wyłamanych kamieni, wyrwy na bokach, bez przedpiersia i blanek (wracają pod koniec odbudowy). Wokół ciosy i kamienie; po częstokole kikuty bali, połamane bale, drzazgi i szczapy. Gruzu ubywa w miarę odbudowy. Tak samo gruz wokół ruin bram i wież
+- **Pęknięcia przyklejone do ściany:** naklejka 3 mm przed licem zamiast 12 mm (wcześniej było widać odstęp od muru), na wieżach mniejsze, żeby nie odstawały od zaokrągleń
+- „Jak grać” → Cech inżynierów: dopisane, że odłamane bale i gruz leżą do naprawy
+
 ## 0.53.8 — płonący i przymrożeni wyglądają naturalnie (2026-10-27)
 
 - Płonący żołnierz: zamiast twardych stożków i pomarańczowego „jaja” wokół postaci — 9 miękkich języków ognia (rozmyta kropla zwrócona do kamery), które wyrastają z ubrania, rosną, unoszą się i gasną, każdy w swoim rytmie; u dołu jasnożółte, wyżej pomarańczowe i czerwone. Pod nimi delikatna ciepła poświata, w górę żar i smużki dymu (`render/spells.ts`)
