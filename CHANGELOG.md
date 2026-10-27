@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-## 0.53.4 — mur nie płonie od miecza (2026-10-27)
+## 0.53.5 — mur nie płonie od miecza (2026-10-27)
 
 - Cios mieczem albo włócznią już nie podpala murów, bram ani wież — pękają (0.53.2), ale nie płoną. Drewniany częstokół, bramę i wieżę strażniczą podpali tylko prawdziwy ogień (ognista strzała, piorun); kamień (mur, kamienne bramy i wieże, twierdza) nie płonie wcale. Chaty i warsztaty dalej zajmują się ogniem po mocnych ciosach (`sim/systems/fire.ts`)
 ## 0.53.4 — ziemia mieści się w limicie tekstur karty (2026-10-27)
