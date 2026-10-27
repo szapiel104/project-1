@@ -83,7 +83,7 @@ function wearTexture(kind: Kind, level: 1 | 2 | 3): THREE.Texture {
       spall(at[0], at[1], rad, 'rgba(52,46,40,0.92)', 'rgba(118,108,96,0.55)', 'rgba(222,214,198,0.55)');
     }
     for (const [i, p] of cracks.entries()) {
-      const w = i < 2 ? 3 + level * 1.6 : 2 + level * 0.6;
+      const w = i < 2 ? 5 + level * 2.2 : 3 + level * 1;
       stroke(p, w + 6, 'rgba(0,0,0,0.18)');            // cień wokół szczeliny
       stroke(p, w, 'rgba(26,22,18,0.95)');              // szczelina
       stroke(p, 1.3, 'rgba(225,216,200,0.45)', 1.5, -1.5); // wykruszona, jaśniejsza krawędź
@@ -151,7 +151,7 @@ export class WearLayer {
     this.key = key;
     if (!this.rocks) {
       this.rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true, map: pattern('rock') }), MAX_ROCKS);
-      this.splinters = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xc9a473, roughness: 0.95, map: pattern('planks') }), MAX_SPLINTERS);
+      this.splinters = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x8a6c4a, roughness: 0.95, map: pattern('bark') }), MAX_SPLINTERS);
       for (const m of [this.rocks, this.splinters]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'uszkodzenia murów')); }
     }
     const used = new Map<string, number>();
@@ -165,7 +165,7 @@ export class WearLayer {
       if (!spots.length) continue;
       const fp = footprint(BUILDINGS[b.type]!, b.rot);
       const big = Math.max(fp.w, fp.h);
-      const size = (kind === 'wood' ? 0.3 : big <= 1 ? 0.48 : Math.min(1.2, 0.45 + big * 0.12)) * [0, 1, 1.15, 1.35][s]!;
+      const size = (kind === 'wood' ? 0.3 : big <= 1 ? 0.62 : Math.min(1.2, 0.45 + big * 0.12)) * [0, 1, 1.15, 1.35][s]!;
       const wantDecals = Math.min(spots.length, [0, 2, 4, 7][s]! * (big >= 6 ? 3 : 1));
       const dm = this.mesh(kind, s);
       let placed = 0;
@@ -186,7 +186,7 @@ export class WearLayer {
         }
         // okruchy i drzazgi pod ścianą: od drugiego stopnia, przy trzecim kupki gruzu
         if (s < 2 || (s === 2 && i % 2)) continue;
-        const pieces = s === 3 ? 4 : 2;
+        const pieces = kind === 'wood' ? (s === 3 ? 2 : 1) : s === 3 ? 4 : 2;
         for (let j = 0; j < pieces; j++) {
           const d = 0.12 + rnd(b.id + i, j) * 0.35, side = (rnd(b.id + i, j + 9) - 0.5) * 0.5;
           const x = sp.p.x + sp.n.x * d - sp.n.z * side, z = sp.p.z + sp.n.z * d + sp.n.x * side;
@@ -200,8 +200,8 @@ export class WearLayer {
           } else {
             if (ns >= MAX_SPLINTERS) continue;
             q.setFromEuler(new THREE.Euler(0, rnd(b.id, j + i * 5) * 6, (rnd(i, j) - 0.5) * 0.3));
-            const L = 0.12 + rnd(b.id, j + i) * 0.22;
-            this.splinters!.setMatrixAt(ns++, M4.compose(p.set(x, y + 0.015, z), q, sc.set(L, 0.025, 0.035)));
+            const L = 0.06 + rnd(b.id, j + i) * 0.1;
+            this.splinters!.setMatrixAt(ns++, M4.compose(p.set(x, y + 0.015, z), q, sc.set(L, 0.016, 0.022)));
           }
         }
       }

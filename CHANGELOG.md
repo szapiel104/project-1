@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.53.7 — wyraźniejsze pęknięcia, mniej drzazg (2026-10-27)
+
+- Pęknięcia na murze kamiennym większe i grubsze, widać je też z dalszej kamery
+- Pod rozbitym częstokołem mniej i mniejszych drzazg, w kolorze kory zamiast jasnych desek (wcześniej wyglądały jak rozsypane zapałki)
 ## 0.53.7 — zgaszone pochodnie nie obciążają karty (2026-10-27)
 
 - **Szybsze rysowanie, zwłaszcza w dzień:** pula 13 świateł punktowych (pochodnie, ogniska, światło sal) była liczona w każdym oświetlonym shaderze dla każdego piksela — pełne odbicie światła także wtedy, gdy lampa jest zgaszona (cały dzień) albo piksel leży poza jej zasięgiem i wynik i tak wychodzi zerem. Teraz shader pomija takie światło (`src/render/lightskip.ts`, łatka pętli świateł three.js). Obraz identyczny, liczba świateł bez zmian (bez przebudowy shaderów i przycięć). Do porównania: `?lampy=stare` w adresie włącza dawne liczenie
