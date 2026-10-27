@@ -1381,11 +1381,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
               cell.append(icon(it.id), el('strong', '', String(it.amount)), el('span', '', t(RESOURCE_DEFS[it.id as keyof typeof RESOURCE_DEFS].name)));
               grid.append(cell);
             }
-            const total = el('p', 'stock-total');
-            total.textContent = st.stores > 1
-              ? tx(`We wszystkich magazynach tego rodzaju (${st.stores}): ${st.used} / ${st.max}`, `Across all ${st.stores} stores of this kind: ${st.used} / ${st.max}`)
-              : tx(`To jedyny taki magazyn: ${st.used} / ${st.max}`, `This is your only store of this kind: ${st.used} / ${st.max}`);
-            return st.stores > 1 || st.used !== st.hereUsed ? [head, bar, grid, total] : [head, bar, grid];
+            const extra: HTMLElement[] = [];
+            if (st.stores > 1) extra.push(el('p', 'stock-total', tx(`We wszystkich magazynach tego rodzaju (${st.stores}): ${Math.min(st.used, st.max)} / ${st.max}`, `Across all ${st.stores} stores of this kind: ${Math.min(st.used, st.max)} / ${st.max}`)));
+            // zapas większy niż pojemność (np. łup, tryb testowy): ta część nie leży w żadnym magazynie
+            if (st.used > st.max) extra.push(el('p', 'stock-total', tx(`Ponad pojemność magazynów: ${st.used - st.max} (nie mieści się w żadnym)`, `Beyond the stores' capacity: ${st.used - st.max} (fits in none of them)`)));
+            return [head, bar, grid, ...extra];
           }));
         }
       }
