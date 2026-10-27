@@ -6,13 +6,16 @@
 import * as THREE from 'three';
 import { BUILDINGS, footprint } from '../data/buildings';
 import type { GameState } from '../sim/state';
-import { buildWork } from '../sim/systems/placement';
+import { buildWork, maxHp } from '../sim/systems/placement';
 import { ladderSides } from '../sim/systems/stonewalls';
 import { palisadeLogs, stoneWallKit } from './buildings';
 import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { normal, pattern } from './textures';
 import { touch } from './touch';
+import { wearStage } from './wear';
+
+const hash = (seed: number, i: number): number => { const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453; return v - Math.floor(v); };
 
 export class WallLayer {
   constructor(private scene: THREE.Scene) {}
@@ -31,7 +34,8 @@ export class WallLayer {
     const walls = g.buildings.filter((b) => { const d = BUILDINGS[b.type]!; return d.wall || d.gate; });
     // w kluczu też to, czy model już jest: na nowej mapie mur liczy się czasem przed modelami bram, a brama bez obrotu
     // stała wzdłuż muru (po odświeżeniu kolejność była inna i wszystko wracało)
-    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}:${buildingMeshes.has(b.id) ? 1 : 0}`).join(',');
+    // stopień zużycia też w kluczu: rozbity częstokół ma złamane i przekrzywione bale
+    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}:${buildingMeshes.has(b.id) ? 1 : 0}:${b.build ? 0 : wearStage(b.hp, maxHp(b.type))}`).join(',');
     if (key === this.key) return;
     this.key = key;
     const solid = new Map<number, GameState['buildings'][number]>();
@@ -136,6 +140,7 @@ export class WallLayer {
         continue;
       }
       const logs = palisadeLogs(links, b.id);
+      const wear = b.build ? 0 : wearStage(b.hp, maxHp(b.type));
       const shown = Math.floor(logs.length * built + 0.001);
       for (let li = 0; li < logs.length; li++) {
         const log = logs[li]!;
@@ -153,12 +158,19 @@ export class WallLayer {
         }
         const lx = cx + log.x, lz = cz + log.z;
         const y = view.heightAt(lx, lz) - 0.05;
-        const h = log.h;
-        e.set((log.x * 7 % 1) * 0.05, 0, (log.z * 5 % 1) * 0.05);
+        // rozbity częstokół: im mniej wytrzymałości, tym więcej bali złamanych (ścięty czubek, krótszy bal)
+        // i mocniej przekrzywionych; po naprawie bale znowu stoją prosto
+        const r1 = hash(b.id, li), r2 = hash(b.id, li + 17), r3 = hash(b.id, li + 31);
+        const broken = wear > 0 && r1 < [0, 0.15, 0.35, 0.6][wear]!;
+        const h = broken ? log.h * (0.55 + r2 * 0.3) : log.h;
+        const lean = [0, 0.03, 0.07, 0.13][wear]!;
+        e.set((log.x * 7 % 1) * 0.05 + (r2 - 0.5) * 2 * lean, 0, (log.z * 5 % 1) * 0.05 + (r3 - 0.5) * 2 * lean);
         q.setFromEuler(e);
         M4.compose(p.set(lx - width / 2, y, lz - height / 2), q, sc.set(log.r, h, log.r));
         this.wallShafts.setMatrixAt(n, M4);
-        M4.compose(p.set(lx - width / 2, y + h, lz - height / 2), q, sc.set(log.r, log.r * 2.2, log.r));
+        // czubek idzie za przechylonym balem; złamany bal nie ma czubka (zostaje poszarpany kikut)
+        const top = new THREE.Vector3(0, h, 0).applyQuaternion(q);
+        M4.compose(p.set(lx - width / 2 + top.x, y + top.y, lz - height / 2 + top.z), q, broken ? sc.set(log.r * 0.9, log.r * 0.5, log.r * 0.9) : sc.set(log.r, log.r * 2.2, log.r));
         this.wallTips!.setMatrixAt(n, M4);
         n++;
       }

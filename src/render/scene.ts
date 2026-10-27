@@ -32,6 +32,8 @@ import { DustFx } from './dust';
 import { Braziers } from './braziers';
 import { RubbleLayer } from './rubble';
 import { PileLayer } from './piles';
+import { WearLayer } from './damage';
+import { RepairLayer } from './repairs';
 import { WallLayer } from './walls';
 import { SiteLayer } from './sites';
 import { TorchGlow } from './torchglow';
@@ -1047,7 +1049,7 @@ export class GameRenderer {
     // nowa mapa: mury, place budowy i obszary liczone od nowa (te same id budynków na nowej mapie dawały ten sam klucz —
     // brama zostawała nieobrócona, a bale palisady stały jak na poprzedniej mapie)
     // nie puste: mapa bez murów (placów budowy, obszarów) ma klucz '', a stare bale i ciosy z poprzedniej mapy muszą zniknąć
-    this.walls.invalidate(); this.areaKey = '-';
+    this.walls.invalidate(); this.wear.invalidate(); this.repairs.invalidate(); this.areaKey = '-';
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie (i odrośnięty las)
     this.youngSeen = new Set();
     }
@@ -2152,7 +2154,7 @@ export class GameRenderer {
       T('gruz', () => this.rubble.sync(g, v, dt));
       T('towar pod magazynami', () => this.piles.sync(g, v, this.me, this.time));
       T('światła', () => this.syncLamps(g));
-      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });
+      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.wear.sync(g, v, this.buildingMeshes); this.repairs.sync(g, v, this.buildingMeshes, this.time, this.calm); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig, this.battleFireFig, this.battleWaterFig, this.mageBodiesFire, this.mageBodiesWater, this.preacherFig]) f.view(cp);
@@ -2601,6 +2603,10 @@ export class GameRenderer {
 
   /** Częstokół i mury kamienne (src/render/walls.ts) */
   private walls = new WallLayer(this.scene);
+  /** Pęknięcia i gruz przy rozbitych murach, wieżach i bramach (src/render/damage.ts) */
+  private wear = new WearLayer(this.scene);
+  /** Rusztowania przy naprawie (src/render/repairs.ts) */
+  private repairs = new RepairLayer(this.buildingLayer);
 
 
 

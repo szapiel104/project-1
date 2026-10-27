@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.53.2 — pękające mury i rusztowania przy naprawie (2026-10-27)
+
+- **Uszkodzenia widać na budowlach:** mury kamienne, częstokół, bramy, wieże i twierdza pokazują, ile już przyjęły. Przy ubytku 10% wytrzymałości pojawiają się rysy, od 35% pęknięcia z odpryskami i okruchy pod ścianą, od 65% długie pęknięcia, wyrwy po wybitych kamieniach i kupki gruzu u stóp. Drewno łupie się: jasne drzazgi w korze, odłamki pod ścianą, a bale częstokołu przekrzywiają się i łamią (ścięty czubek, krótszy kikut)
+- **Rusztowanie przy naprawie:** gdy inżynier z cechu zaczyna łatać, przy ścianie wyrasta rusztowanie — najpierw słupy, potem poprzeczki, na końcu pomost z desek i zastrzał. Przy odcinku muru stoi po stronie inżyniera, wokół wież, bram i budynków dookoła, a przy twierdzy na trzech polach przy łatanej ścianie. Stoi, dopóki ekipa ma tam robotę (także gdy poszła po kamień), a po naprawie jest rozbierane. Pęknięcia znikają w tym czasie jedno po drugim, bo idą za wytrzymałością
+- Sama grafika, bez zmian w symulacji: bot naprawia tak samo jak dotąd (jego mury też pękają i dostają rusztowania). Kod: `src/render/damage.ts`, `src/render/repairs.ts`, progi w `src/render/wear.ts`, opis w `docs/uszkodzenia.md`
+- „Jak grać” → Cech inżynierów: akapit o pękających murach i rusztowaniach
 ## 0.53.1 — czytelniejsze okno budynku (2026-10-27)
 
 - Okno budynku ma większe litery i odstępy między częściami, opis budynku jest na dole, oddzielony kreską i spokojniejszym kolorem, żeby nie mieszał się z ustawieniami
