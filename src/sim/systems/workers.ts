@@ -186,6 +186,18 @@ function storeDoors(g: GameState, owner: number, kind: StoreKind, prefer?: (b: B
   return best.size ? best : doors;
 }
 
+/** Wolne pole tuż obok drzwi (w bok wzdłuż ściany, potem przed nimi), gdzie może stanąć drugi człowiek; inaczej same drzwi */
+function beside(g: GameState, door: number, owner: number): number {
+  const w = g.map.width;
+  for (const d of [1, -1, w, -w, w + 1, w - 1]) {
+    const t = door + d;
+    if (t < 0 || t >= g.map.tiles.length || g.occupancy[t] || g.reserved[t]) continue;
+    if (Math.abs((t % w) - (door % w)) > 1) continue; // bez przeskoku przez krawędź mapy
+    if (walkable(g, t, owner)) return t;
+  }
+  return door;
+}
+
 /** Niesie towar, dla którego gracz nie ma żadnego magazynu (ani baraku górników pod ręką) */
 function noStoreFor(g: GameState, u: Unit): boolean {
   const kind = RESOURCE_DEFS[RESOURCES[u.carryRes]!]?.store;
@@ -199,6 +211,8 @@ function noStoreFor(g: GameState, u: Unit): boolean {
 function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: ProductionDef | undefined): ((t: number) => boolean) | null {
   switch (u.phase) {
     case Phase.Idle: {
+      // drugi magazynier stoi obok pierwszego, na polu przy drzwiach (nie jeden na drugim)
+      if (job && job.door >= 0 && BUILDINGS[job.type]!.keepers && job.worker !== u.id) { const side = beside(g, job.door, u.owner); return (t) => t === side; }
       // inżynier bez zajęcia czeka przy swoim cechu
       if (job) return job.door >= 0 ? (t) => t === job.door : null;
       // bezrobotni czekają w obozowisku przy ognisku, a gdy go nie ma, pod twierdzą
