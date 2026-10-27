@@ -72,9 +72,9 @@ for side in range(4):
         b.merlons_line('base', 'castle', x, -OUT + 0.12, x, OUT - 0.12, DECK + PAR, step=0.3, w=0.17, h=0.17, t=WALL)
 # ciemniejsza listwa na koronie przedpiersia
 for z in (OUT - WALL / 2, -OUT + WALL / 2):
-    b.box('base', 'castleDark', 2 * OUT + 0.02, 0.03, WALL + 0.02, 0, DECK + PAR - 0.03, z)
+    b.box('base', 'castleDark', 2 * OUT + 0.02, 0.03, WALL + 0.02, 0, DECK + PAR - 0.025, z)   # wierzch 5 mm nad przedpiersiem
 for x in (OUT - WALL / 2, -OUT + WALL / 2):
-    b.box('base', 'castleDark', WALL + 0.02, 0.03, 2 * OUT - 2 * WALL, x, DECK + PAR - 0.03, 0)
+    b.box('base', 'castleDark', WALL + 0.02, 0.03, 2 * OUT - 2 * WALL - 0.02, x, DECK + PAR - 0.025, 0)   # bez zakładki na listwy z przodu i z tyłu
 
 # ---------------- strzelnice: wąskie, ciemne szczeliny z kamiennym obramieniem ----------------
 for y in (0.72, 1.62):

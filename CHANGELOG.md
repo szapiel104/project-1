@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.53.15 — bez migania kamienia, prawdziwe sprzęty w zamku, odbudowa nie zabiera wszystkich ludzi (2026-10-27)
+
+- Miganie kamiennych ścian: w zamku lico muru przy bramie leżało w jednej płaszczyźnie z licem wież bramy (mur wchodził w wieże) — teraz kończy się przy nich; posadzki izb w basztach są 6 mm nad płytami chodnika, szczyty dachów sal 6 mm od muru, złoty brzeg chodnika w sali tronowej nad suknem. Wieże kamienne (zwykła, duża i wielka): ciemna listwa na koronie przedpiersia leżała wierzchem równo z kamieniem i migała z góry — podniesiona o 5 mm, bez zakładek w narożnikach. Sprawdzone skryptem, który szuka nachodzących na siebie ścian w modelu
+- Kuchnia w zamku: zamiast kostek w kolorze chleba i jabłek leżą bochenki, jabłka i worek mąki ze skanów; stół na nogach z deską i nożem, otwarty regał z półkami (chleb, jabłka, dzbany, kosz), beczki z obręczami, nad paleniskiem belka, półka z garnkami, okap i haki z chochlą i patelnią
+- Komnata pana: łoże na nogach z siennikiem, dwiema poduszkami, pierzyną, baldachimem z lambrekinem i zasłonami; skrzynia z wiekiem, okuciami, zamkiem, pucharem i monetami; stół do pisania na nogach z krzesłem, księgą, kałamarzem i piórem; szafa z drzwiami, płycinami i uchwytami; skóra przy łożu
+- Odbudowa: dotąd każdy plac budowy mógł oderwać od pracy dwóch ludzi, więc po wielkim zniszczeniu kilkanaście ruin zabierało wszystkich z lasu, pól i warsztatów i nikt nie wytwarzał surowców. Teraz na całą osadę naraz pomaga przy budowach najwyżej co piąty pracownik (co najmniej dwóch); bezrobotni chłopi i inżynierowie z cechu chodzą jak dotąd (`borrowLimit` w `sim/systems/army.ts`, test w `tests/ruins.test.ts`)
+- Bot: korzysta z tej samej reguły (wspólny system)
 ## 0.53.14 — polegli leżą na wieży i murze, kruki odlatują, bez krzyku śmierci (2026-10-27)
 
 - **Ciało zostaje tam, gdzie żołnierz zginął:** łucznik poległy na wieży leży na jej pomoście, na murze kamiennym — na chodniku muru, na murach twierdzy — na koronie muru (wcześniej spadał od razu na ziemię pod wieżę). Gdy wieżę zburzą, ciało spada na ziemię

@@ -92,12 +92,12 @@ def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter)
             z = OUT - WALL / 2 if side == 0 else -OUT + WALL / 2
             b.box('base', 'castle', 2 * OUT, PAR, WALL, 0, DECK, z)
             b.merlons_line('base', 'castle', -OUT + br + 0.08, z, OUT - br - 0.08, z, DECK + PAR, step=0.3, w=0.17, h=0.18, t=WALL)
-            b.box('base', 'castleDark', 2 * OUT + 0.02, 0.03, WALL + 0.02, 0, DECK + PAR - 0.03, z)
+            b.box('base', 'castleDark', 2 * OUT + 0.02, 0.03, WALL + 0.02, 0, DECK + PAR - 0.025, z)   # wierzch 5 mm nad przedpiersiem
         else:
             x = OUT - WALL / 2 if side == 2 else -OUT + WALL / 2
             b.box('base', 'castle', WALL, PAR, 2 * OUT - 2 * WALL, x, DECK, 0)
             b.merlons_line('base', 'castle', x, -OUT + br + 0.08, x, OUT - br - 0.08, DECK + PAR, step=0.3, w=0.17, h=0.18, t=WALL)
-            b.box('base', 'castleDark', WALL + 0.02, 0.03, 2 * OUT - 2 * WALL, x, DECK + PAR - 0.03, 0)
+            b.box('base', 'castleDark', WALL + 0.02, 0.03, 2 * OUT - 2 * WALL - 0.02, x, DECK + PAR - 0.025, 0)   # bez zakładki na listwy z przodu i z tyłu
 
     # ---------------- wykusze (okrągłe wieżyczki) na narożnikach ----------------
     seg = 14

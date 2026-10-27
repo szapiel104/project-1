@@ -91,3 +91,31 @@ describe('saperzy', () => {
     expect(sappers.every((s) => !s.loot && !s.target)).toBe(true);
   });
 });
+
+describe('odbudowa nie zabiera wszystkich ludzi z roboty', () => {
+  it('przy wielu ruinach z warsztatów i pól pomaga przy budowie najwyżej co piąty pracownik', async () => {
+    const { borrowLimit } = await import('../src/sim/systems/army');
+    const { Phase } = await import('../src/sim/state');
+    const g = createGame(7);
+    const me = g.players[0]!;
+    me.res[WOOD] = 5000;
+    // dziesięć miejsc pracy (leśniczówki) i dziesięć chat do zburzenia
+    for (let i = 0; i < 10; i++) { const p = openArea(g, 3, 3, 12); placeReady(g, 'forester', p.x, p.y); }
+    const houses: Building[] = [];
+    for (let i = 0; i < 10; i++) { const p = openArea(g, 3, 3, 12); const id = placeReady(g, 'house', p.x, p.y)!; houses.push(g.buildings.find((b) => b.id === id)!); }
+    setHour(g, 8);
+    addPeasants(g, 10);
+    for (let i = 0; i < 300; i++) step(g, []);
+    const employed = (): number => g.units.filter((u) => u.owner === 0 && u.job).length;
+    expect(employed()).toBeGreaterThanOrEqual(8);
+    for (const h of houses) ruin(g, h);
+    let worst = 0;
+    for (let i = 0; i < 3000; i++) {
+      step(g, []);
+      const helping = g.units.filter((u) => u.owner === 0 && u.job && (u.phase === Phase.ToRepair || u.phase === Phase.Repairing || u.phase === Phase.ToFetch) && g.buildings.find((b) => b.id === u.target)?.build).length;
+      worst = Math.max(worst, helping);
+    }
+    expect(worst).toBeGreaterThan(0);
+    expect(worst).toBeLessThanOrEqual(borrowLimit(employed()));
+  });
+});

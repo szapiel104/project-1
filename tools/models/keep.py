@@ -94,8 +94,10 @@ curtain(-H, -H + 1, -H + 1, H - 1)             # lewy
 curtain(H - 1, H, -H + 1, H - 1)               # prawy
 gx = L['tiles'][N - 1].index('G')
 gl, gr = cx(gx) - 0.5, cx(gx) + 0.5
-curtain(-H, gl, H - 1, H)                      # przód po bokach bramy
-curtain(gr, H, H - 1, H)
+# przód po bokach bramy: mur kończy się przy wieżach bramy (x ±1,4), nie wchodzi w nie — inaczej lico muru od dziedzińca
+# i lico wieży leżały w jednej płaszczyźnie i migały
+curtain(-H, gl - 0.9, H - 1, H)
+curtain(gr + 0.9, H, H - 1, H)
 curtain(gl, gr, H - 1, H, G + 0.95, TOP)       # nad przejazdem
 # skarpa u stóp murów, gzyms; przed bramą skarpy nie ma: most kładzie się prosto na ziemi
 gx0 = L['tiles'][N - 1].index('G') - H + 0.5
@@ -184,7 +186,7 @@ for sx in (-1, 1):
         R0 = TR + 0.12
         for ax, az in ((0.92, 0.38), (0.38, 0.92), (0.7, 0.7)):
             block(tx - R0 * ax, tx + R0 * ax, tz - R0 * az, tz + R0 * az, 0, TOP)
-        b.prism('base', 'castleDark', TR - RW, TR - RW, 0.06, tx, TOP, tz, seg=24)   # podłoga izby
+        b.prism('base', 'castleDark', TR - RW, TR - RW, 0.066, tx, TOP, tz, seg=24)   # podłoga izby (6 mm nad płytami chodnika, które wchodzą pod baszty)
         seg = 24
         kinds = []
         for k in range(seg):
@@ -265,7 +267,7 @@ def square_room(tx, tz, hx, hz, y_top, doors, windows, roof_merlons=True):
     for sgn in (-1, 1):
         side_wall(True, sgn, hx, tz, (0, sgn) in doors, (0, sgn) in windows)
         side_wall(False, sgn, hz - RW, tx, (sgn, 0) in doors, (sgn, 0) in windows)
-    b.box('base', 'castleDark', 2 * hx - 0.1, 0.06, 2 * hz - 0.1, tx, TOP, tz)
+    b.box('base', 'castleDark', 2 * hx - 0.1, 0.066, 2 * hz - 0.1, tx, TOP, tz)   # posadzka 6 mm nad płytami chodnika
     b.box('base', 'wood', 2 * hx - 2 * RW, 0.02, 2 * hz - 2 * RW, tx, y_top - 0.02, tz, bottom=True)
     b.box('base', 'castleDark', 2 * hx + 0.1, 0.07, 2 * hz + 0.1, tx, y_top, tz)
     if roof_merlons:
@@ -488,7 +490,9 @@ for chars, mat, rise in ROOFS:
     h = ROOM_H.get(chars[0], 0.9)
     if rise:
         # koszary i lochy stoją przy schodach na mury: krótki okap, żeby dach nie wchodził w bieg schodów
-        b.gable('shell', mat, x0, x1, z0, z1, G + h, rise, along_x=(x1 - x0) >= (z1 - z0), over=0.03 if chars[0] in 'BL' else 0.1, end_mat=WALL_MAT.get(chars[0], 'castle'))
+        # szczyty 6 mm od muru kurtynowego: lico szczytu i lico muru nie leżą w jednej płaszczyźnie (miganie)
+        e = 0.006
+        b.gable('shell', mat, x0 + e, x1 - e, z0 + e, z1 - e, G + h, rise, along_x=(x1 - x0) >= (z1 - z0), over=0.03 if chars[0] in 'BL' else 0.1, end_mat=WALL_MAT.get(chars[0], 'castle'))
         ax = (x1 - x0) >= (z1 - z0)
         ov = 0.03 if chars[0] in 'BL' else 0.1
         ry = G + h + rise
@@ -600,7 +604,7 @@ for sx in (-1, 1):
 cl = tz1 - (tz0 + 1.1)
 b.box('interior', 'flag', 0.62, 0.008, cl, tmx, G + 0.013, tz0 + 1.1 + cl / 2)
 for sx in (-1, 1):
-    b.box('interior', 'gold', 0.035, 0.009, cl, tmx + sx * 0.3, G + 0.013, tz0 + 1.1 + cl / 2)
+    b.box('interior', 'gold', 0.035, 0.014, cl, tmx + sx * 0.3, G + 0.013, tz0 + 1.1 + cl / 2)
 # żyrandol z kutego żelaza ze świecami (pod sufitem, widać go od środka sali)
 for zz in (tz0 + 1.25, tz1 - 0.55):
     b.prism('ceiling', 'iron', 0.32, 0.32, 0.025, tmx, G + 1.0, zz, seg=12)
@@ -634,23 +638,65 @@ boxs('interior', 'stone', 1.1, 0.75, 0.42, (kx0 + kx1) / 2, G, kz0 + 0.21)
 b.box('interior', 'dark', 0.6, 0.38, 0.02, (kx0 + kx1) / 2, G + 0.05, kz0 + 0.425)
 b.box('interior', 'ember', 0.5, 0.06, 0.2, (kx0 + kx1) / 2, G + 0.05, kz0 + 0.3)
 b.prism('interior', 'iron', 0.13, 0.15, 0.16, (kx0 + kx1) / 2, G + 0.1, kz0 + 0.3, seg=10)
-boxs('interior', 'wood', 0.85, 0.05, 0.45, (kx0 + kx1) / 2, G + 0.28, (kz0 + kz1) / 2 + 0.15)
-for s in (-1, 1):
-    b.box('interior', 'woodDark', 0.05, 0.28, 0.4, (kx0 + kx1) / 2 + s * 0.38, G, (kz0 + kz1) / 2 + 0.15)
+# palenisko: belka nad otworem, półka z garnkami, okap zwężający się ku kominowi, kamienny przypiecek
+HX = (kx0 + kx1) / 2
+b.box('interior', 'woodDark', 1.16, 0.07, 0.08, HX, G + 0.44, kz0 + 0.44)
+b.box('interior', 'wood', 1.2, 0.03, 0.16, HX, G + 0.75, kz0 + 0.4)
+for k, ox in enumerate((-0.4, -0.22, 0.3)):
+    b.prism('interior', 'iron', 0.05 - k * 0.008, 0.045 - k * 0.008, 0.07, HX + ox, G + 0.78, kz0 + 0.4, seg=10)
+b.prism('interior', 'soil', 0.03, 0.022, 0.1, HX + 0.45, G + 0.78, kz0 + 0.4, seg=10)
+b.box('interior', 'stone', 0.9, 0.12, 0.3, HX, G + 0.75, kz0 + 0.15)
+b.box('interior', 'stone', 0.6, 0.1, 0.22, HX, G + 0.87, kz0 + 0.11)
+b.box('interior', 'stoneDark', 1.2, 0.05, 0.2, HX, G + 0.006, kz0 + 0.52, bottom=False)
+for ox in (-0.42, 0.42):   # haki z chochlą i patelnią na bokach
+    b.box('interior', 'iron', 0.012, 0.05, 0.012, HX + ox, G + 0.38, kz0 + 0.43)
+b.box('interior', 'woodDark', 0.012, 0.18, 0.012, HX - 0.42, G + 0.2, kz0 + 0.44)
+b.prism('interior', 'iron', 0.03, 0.025, 0.012, HX - 0.42, G + 0.19, kz0 + 0.44, seg=8)
+b.prism('interior', 'iron', 0.07, 0.07, 0.015, HX + 0.42, G + 0.22, kz0 + 0.45, seg=12)
+# stół kuchenny na czterech nogach, na nim deska z nożem, bochenki i jabłka ze skanów, ryba z paczki
+KTX, KTZ = (kx0 + kx1) / 2, (kz0 + kz1) / 2 + 0.15
+boxs('interior', 'wood', 0.85, 0.05, 0.45, KTX, G + 0.28, KTZ)
+for sx in (-1, 1):
+    for sz in (-1, 1):
+        b.box('interior', 'woodDark', 0.05, 0.28, 0.05, KTX + sx * 0.37, G, KTZ + sz * 0.17)
+    b.box('interior', 'woodDark', 0.03, 0.05, 0.3, KTX + sx * 0.37, G + 0.06, KTZ)       # spinacze nóg
+b.box('interior', 'plank', 0.24, 0.02, 0.16, KTX + 0.25, G + 0.33, KTZ - 0.08)             # deska do krojenia
+b.box('interior', 'iron', 0.12, 0.006, 0.02, KTX + 0.26, G + 0.35, KTZ - 0.08, 0.4)         # nóż
+b.box('interior', 'woodDark', 0.05, 0.012, 0.022, KTX + 0.17, G + 0.35, KTZ - 0.045, 0.4)
 FISH_SPOTS = []   # ryba na stole: gotowy model z paczki stawiany przez grę (x, y, z pyska, yaw, wisi?, długość — jak w fisher.py)
-for i, m in enumerate(('bread', 'apple', 'fish', 'bread', 'apple')):
-    x = (kx0 + kx1) / 2 - 0.3 + i * 0.15
-    if m == 'fish':
-        FISH_SPOTS.append([round(x - 0.07, 4), round(G + 0.33, 4), round((kz0 + kz1) / 2 + 0.15, 4), 0.25, 0, 0.14])
-        continue
-    b.box('interior', m, 0.07, 0.05, 0.07, x, G + 0.33, (kz0 + kz1) / 2 + 0.15)
+FISH_SPOTS.append([round(KTX - 0.07, 4), round(G + 0.33, 4), round(KTZ + 0.05, 4), 0.25, 0, 0.14])
+b.bun('interior', KTX - 0.28, G + 0.33, KTZ + 0.06, w=0.1, rot=0.4)
+b.bun('interior', KTX + 0.2, G + 0.33, KTZ + 0.12, w=0.09, rot=2.1)
+for i, (ox, oz) in enumerate(((-0.27, -0.1), (-0.2, -0.13), (0.08, -0.12), (0.31, 0.1))):
+    b.apple('interior', KTX + ox, G + 0.33, KTZ + oz, w=0.055, rot=i * 1.3)
+b.sack('interior', KTX + 0.47, G + 0.012, KTZ + 0.25, w=0.15, rot=0.6)                    # worek mąki pod stołem
 for i, (x, z) in enumerate(((kx0 + 0.22, kz1 - 0.25), (kx0 + 0.22, kz1 - 0.6), (kx0 + 0.2, kz0 + 0.62))):
     b.prism('interior', 'wood', 0.15, 0.13, 0.36, x, G, z, seg=10)
+    for yy in (G + 0.05, G + 0.29):
+        b.prism('interior', 'iron', 0.152, 0.152, 0.02, x, yy, z, seg=10, top=False)
     block(x - 0.15, x + 0.15, z - 0.15, z + 0.15)
-boxs('interior', 'woodDark', 0.12, 0.7, 0.6, kx1 - 0.09, G, (kz0 + kz1) / 2 + 0.35)
-for i in range(3):
-    yy, zz = G + 0.42 + i * 0.12, (kz0 + kz1) / 2 + 0.2 + i * 0.1   # na półkach: jabłko albo bochenek ze skanu
-    (b.apple('interior', kx1 - 0.09, yy, zz, w=0.06, rot=i) if i % 2 else b.bun('interior', kx1 - 0.09, yy, zz, w=0.085, rot=1.57))
+# regał na ścianie: boki, trzy półki i plecy z desek, a na półkach chleb, jabłka, dzbany i kosz
+SX, SZ = kx1 - 0.09, (kz0 + kz1) / 2 + 0.35
+for sz in (-1, 1):
+    b.box('interior', 'woodDark', 0.14, 0.72, 0.025, SX, G, SZ + sz * 0.29)
+b.box('interior', 'plank', 0.015, 0.72, 0.56, kx1 - 0.024, G, SZ)
+block(SX - 0.08, SX + 0.08, SZ - 0.31, SZ + 0.31)
+for k, yy in enumerate((G + 0.04, G + 0.29, G + 0.52)):
+    b.box('interior', 'wood', 0.13, 0.022, 0.555, SX, yy, SZ)
+    top = yy + 0.022
+    if k == 0:
+        b.prism('interior', 'basket', 0.065, 0.065, 0.09, SX, top, SZ - 0.12)   # kosz z wikliny z paczki
+        b.sack('interior', SX, top, SZ + 0.13, w=0.11, rot=1.0)
+    elif k == 1:
+        b.bun('interior', SX, top, SZ - 0.16, w=0.09, rot=1.57)
+        b.bun('interior', SX, top, SZ - 0.04, w=0.085, rot=1.2)
+        for j in range(3):
+            b.apple('interior', SX - 0.02 + (j % 2) * 0.03, top, SZ + 0.1 + j * 0.055, w=0.05, rot=j)
+    else:
+        for j, zz in enumerate((SZ - 0.17, SZ - 0.05, SZ + 0.09)):   # gliniane dzbany i kubek
+            b.prism('interior', 'soil', 0.032, 0.022, 0.1 - j * 0.02, SX, top, zz, seg=10)
+            b.prism('interior', 'soil', 0.022, 0.028, 0.02, SX, top + 0.1 - j * 0.02, zz, seg=10)
+        b.apple('interior', SX, top, SZ + 0.2, w=0.055, rot=0.7)
 
 # ---------------- komnata pana ----------------
 # pochodnie w sali tronowej i kuchni
@@ -659,23 +705,75 @@ for xx in (tx0 + 0.09, tx1 - 0.09):
         torch('interior', xx, G + 0.7, zz)
 torch('interior', kx1 - 0.08, G + 0.55, kz0 + 0.5)
 qx0, qx1, qz0, qz1 = bbox('C')
-boxs('interior', 'woodDark', 0.75, 0.2, 1.05, qx1 - 0.45, G, qz0 + 0.6)
-b.box('interior', 'flag', 0.7, 0.06, 0.82, qx1 - 0.45, G + 0.2, qz0 + 0.72)
-b.box('interior', 'white', 0.55, 0.08, 0.2, qx1 - 0.45, G + 0.2, qz0 + 0.22)
-b.box('interior', 'woodDark', 0.75, 0.55, 0.06, qx1 - 0.45, G, qz0 + 0.09)
-for s in (-1, 1):
-    b.box('interior', 'woodDark', 0.05, 1.0, 0.05, qx1 - 0.45 + s * 0.35, G, qz0 + 0.09)
-    b.box('interior', 'woodDark', 0.05, 1.0, 0.05, qx1 - 0.45 + s * 0.35, G, qz0 + 1.1)
-b.box('interior', 'flag', 0.75, 0.04, 1.05, qx1 - 0.45, G + 0.98, qz0 + 0.6)
-boxs('interior', 'woodDark', 0.42, 0.24, 0.26, qx0 + 0.45, G, qz0 + 0.2)
-b.box('interior', 'gold', 0.36, 0.04, 0.2, qx0 + 0.45, G + 0.24, qz0 + 0.2)
-boxs('interior', 'wood', 0.5, 0.04, 0.32, qx0 + 0.5, G + 0.3, qz1 - 0.35)
-b.box('interior', 'white', 0.2, 0.01, 0.15, qx0 + 0.5, G + 0.34, qz1 - 0.35)
-b.prism('interior', 'white', 0.015, 0.015, 0.05, qx0 + 0.66, G + 0.34, qz1 - 0.35, seg=6)
-b.prism('interior', 'ember', 0.01, 0.0, 0.03, qx0 + 0.66, G + 0.39, qz1 - 0.35, seg=5)
-for s in (-1, 1):
-    b.box('interior', 'woodDark', 0.04, 0.3, 0.28, qx0 + 0.5 + s * 0.22, G, qz1 - 0.35)
-boxs('interior', 'woodDark', 0.4, 0.85, 0.3, qx1 - 0.25, G, qz1 - 0.2)
+# łoże z baldachimem: nogi, rama, siennik, poduszki, pierzyna zwisająca po bokach, zasłony przy wezgłowiu
+BX, BZ0, BZ1 = qx1 - 0.45, qz0 + 0.09, qz0 + 1.1
+block(BX - 0.38, BX + 0.38, BZ0, BZ1)
+for s2 in (-1, 1):
+    for zz in (BZ0, BZ1):
+        b.box('interior', 'woodDark', 0.05, 1.0, 0.05, BX + s2 * 0.35, G, zz)                         # słupki baldachimu
+        b.box('interior', 'gold', 0.065, 0.04, 0.065, BX + s2 * 0.35, G + 1.0, zz)
+    b.box('interior', 'woodDark', 0.04, 0.09, BZ1 - BZ0 - 0.05, BX + s2 * 0.35, G + 0.1, (BZ0 + BZ1) / 2)  # boki ramy
+b.box('interior', 'woodDark', 0.66, 0.5, 0.045, BX, G + 0.05, BZ0 + 0.02)                               # wezgłowie
+b.box('interior', 'woodDark', 0.72, 0.045, 0.06, BX, G + 0.55, BZ0 + 0.02)
+b.box('interior', 'wood', 0.5, 0.3, 0.012, BX, G + 0.17, BZ0 + 0.048)                                    # płycina
+b.box('interior', 'woodDark', 0.66, 0.24, 0.045, BX, G + 0.05, BZ1 - 0.02)                              # deska w nogach
+b.box('interior', 'canvas', 0.64, 0.08, 0.9, BX, G + 0.16, (BZ0 + BZ1) / 2)                              # siennik
+for ox in (-0.15, 0.15):
+    b.box('interior', 'white', 0.26, 0.07, 0.15, BX + ox, G + 0.24, BZ0 + 0.16, tilt=-0.25)              # poduszki
+b.box('interior', 'flag', 0.7, 0.03, 0.62, BX, G + 0.235, BZ1 - 0.36)                                    # pierzyna
+b.box('interior', 'flag', 0.72, 0.05, 0.09, BX, G + 0.24, BZ1 - 0.66)                                    # wywinięty brzeg
+for s2 in (-1, 1):
+    b.box('interior', 'flag', 0.014, 0.13, 0.62, BX + s2 * 0.357, G + 0.135, BZ1 - 0.36)                 # zwisa po bokach
+b.box('interior', 'flag', 0.75, 0.04, 1.05, BX, G + 0.98, (BZ0 + BZ1) / 2)                               # nieba baldachimu
+for s2 in (-1, 1):   # lambrekin dookoła i zasłony zebrane przy słupkach wezgłowia
+    b.box('interior', 'flag', 0.012, 0.12, 1.05, BX + s2 * 0.381, G + 0.87, (BZ0 + BZ1) / 2)
+    b.box('interior', 'flag', 0.07, 0.72, 0.09, BX + s2 * 0.3, G + 0.26, BZ0 + 0.08)
+    b.box('interior', 'gold', 0.075, 0.025, 0.095, BX + s2 * 0.3, G + 0.55, BZ0 + 0.08)
+b.box('interior', 'flag', 0.78, 0.12, 0.012, BX, G + 0.87, BZ1 + 0.031)
+b.box('interior', 'hide', 0.55, 0.012, 0.36, BX - 0.05, G + 0.014, BZ1 + 0.3, 0.15, bottom=False)       # skóra przy łożu
+# skrzynia na skarby: korpus, wieko, okucia, zamek i puchar na wieku
+CX, CZ = qx0 + 0.45, qz0 + 0.2
+boxs('interior', 'woodDark', 0.42, 0.22, 0.26, CX, G, CZ)
+b.box('interior', 'wood', 0.44, 0.06, 0.28, CX, G + 0.22, CZ)
+for ox in (-0.13, 0.13):
+    b.box('interior', 'iron', 0.03, 0.29, 0.29, CX + ox, G - 0.001, CZ, bottom=False)
+b.box('interior', 'iron', 0.06, 0.07, 0.016, CX, G + 0.17, CZ + 0.145)
+b.box('interior', 'dark', 0.012, 0.025, 0.006, CX, G + 0.19, CZ + 0.154)
+b.prism('interior', 'gold', 0.035, 0.022, 0.012, CX - 0.1, G + 0.28, CZ, seg=10)                         # puchar
+b.prism('interior', 'gold', 0.008, 0.008, 0.05, CX - 0.1, G + 0.292, CZ, seg=6)
+b.prism('interior', 'gold', 0.022, 0.04, 0.06, CX - 0.1, G + 0.342, CZ, seg=10)
+for k in range(5):
+    b.prism('interior', 'gold', 0.02, 0.02, 0.008, CX + 0.07 + (k % 2) * 0.03, G + 0.28 + (k // 2) * 0.008, CZ - 0.03 + k * 0.012, seg=8)
+# stół do pisania na nogach z krzesłem: pergamin, księga, kałamarz i świeca
+DX, DZ = qx0 + 0.5, qz1 - 0.35
+boxs('interior', 'wood', 0.5, 0.04, 0.32, DX, G + 0.3, DZ)
+for sx in (-1, 1):
+    for sz in (-1, 1):
+        b.box('interior', 'woodDark', 0.04, 0.3, 0.04, DX + sx * 0.21, G, DZ + sz * 0.12)
+b.box('interior', 'white', 0.2, 0.006, 0.15, DX, G + 0.34, DZ, 0.2)
+b.box('interior', 'woodDark', 0.13, 0.035, 0.1, DX - 0.15, G + 0.34, DZ + 0.03, -0.3)                    # księga
+b.box('interior', 'white', 0.12, 0.025, 0.09, DX - 0.15, G + 0.345, DZ + 0.03, -0.3)
+b.prism('interior', 'dark', 0.018, 0.014, 0.03, DX + 0.13, G + 0.34, DZ + 0.08, seg=8)                   # kałamarz
+b.box('interior', 'white', 0.004, 0.08, 0.004, DX + 0.135, G + 0.36, DZ + 0.08, roll=0.4)                # pióro
+b.prism('interior', 'white', 0.015, 0.015, 0.05, DX + 0.16, G + 0.34, DZ - 0.08, seg=6)
+b.prism('interior', 'ember', 0.01, 0.0, 0.03, DX + 0.16, G + 0.39, DZ - 0.08, seg=5)
+CHZ = DZ - 0.3
+b.box('interior', 'woodDark', 0.2, 0.03, 0.2, DX, G + 0.17, CHZ)
+for sx in (-1, 1):
+    for sz in (-1, 1):
+        b.box('interior', 'woodDark', 0.03, 0.17 if sz > 0 else 0.48, 0.03, DX + sx * 0.085, G, CHZ + sz * 0.085)
+b.box('interior', 'woodDark', 0.2, 0.18, 0.025, DX, G + 0.3, CHZ - 0.085)
+block(DX - 0.12, DX + 0.12, CHZ - 0.12, CHZ + 0.12)
+# szafa: plecy przy ścianie, dwoje drzwi z płycinami i kutymi uchwytami, gzyms i cokół
+WX, WZ = qx1 - 0.25, qz1 - 0.2
+boxs('interior', 'woodDark', 0.4, 0.8, 0.3, WX, G + 0.03, WZ)
+b.box('interior', 'woodDark', 0.44, 0.03, 0.32, WX, G, WZ)
+b.box('interior', 'woodDark', 0.46, 0.05, 0.34, WX, G + 0.83, WZ)
+for ox in (-0.1, 0.1):
+    b.box('interior', 'wood', 0.17, 0.66, 0.012, WX + ox, G + 0.1, WZ - 0.156)
+    b.box('interior', 'woodDark', 0.11, 0.22, 0.008, WX + ox, G + 0.18, WZ - 0.165)
+    b.box('interior', 'woodDark', 0.11, 0.22, 0.008, WX + ox, G + 0.48, WZ - 0.165)
+    b.box('interior', 'iron', 0.012, 0.06, 0.012, WX + ox * 0.2, G + 0.42, WZ - 0.168)
 
 # ---------------- koszary straży (na podłodze śpią mieszkańcy zamku) ----------------
 bx0, bx1, bz0, bz1 = bbox('B')

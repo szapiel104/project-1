@@ -1345,6 +1345,19 @@ function repairSystem(g: GameState): void {
       b.hp = Math.min(maxHp(b.type), b.hp + REPAIR_HP);
     }
   }
+  // Pracowników z warsztatów, pól i lasu wolno oderwać do budowy tylko część naraz (na całą osadę, nie na plac):
+  // po wielkim zniszczeniu kilkanaście ruin nie może zabrać wszystkich ludzi z roboty, bo wtedy nikt nie wytwarza
+  // drewna, kamienia ani jedzenia i odbudowa dusi gospodarkę. Bezrobotni i inżynierowie z cechu idą bez limitu.
+  const borrowed = new Map<number, number>(), employed = new Map<number, number>();
+  for (const u of g.units) {
+    if (!u.job || isEngineer(g, u)) continue;
+    employed.set(u.owner, (employed.get(u.owner) ?? 0) + 1);
+    if (u.phase === Phase.ToRepair || u.phase === Phase.Repairing || u.phase === Phase.ToFetch) {
+      const t = buildingById(g, u.target);
+      if (t && t.build) borrowed.set(u.owner, (borrowed.get(u.owner) ?? 0) + 1);
+    }
+  }
+  const canBorrow = (owner: number): boolean => (borrowed.get(owner) ?? 0) < borrowLimit(employed.get(owner) ?? 0);
   // do każdego placu budowy przychodzi do trzech wolnych chłopów z młotkami
   for (const b of g.buildings) {
     if (!b.build) continue; // budowa rusza dopiero, gdy robotnicy dojdą na plac
@@ -1370,10 +1383,11 @@ function repairSystem(g: GameState): void {
     }
     // brak wolnych chłopów: do dwóch pracowników rzuca robotę (drwal w lesie, kamieniarz w kamieniołomie, ktoś w warsztacie
     // albo na odpoczynku), byle nie mieli nic w rękach — budują, a potem wracają do siebie
-    while (crew < 2) {
+    while (crew < 2 && canBorrow(b.owner)) {
       // te zajęcia nie używają celu, więc stary cel (np. po przerwanym zapalaniu pochodni) nie blokuje
-      const u = g.units.find((x) => x.owner === b.owner && x.job !== 0 && x.carryRes < 0 && DROPPABLE.has(x.phase));
+      const u = g.units.find((x) => x.owner === b.owner && x.job !== 0 && x.carryRes < 0 && DROPPABLE.has(x.phase) && !isEngineer(g, x));
       if (!u) break;
+      borrowed.set(b.owner, (borrowed.get(b.owner) ?? 0) + 1);
       if (!sendForMaterial(g, u, b)) { u.target = b.id; u.phase = Phase.ToRepair; u.path = []; u.timer = 0; u.wait = 0; }
       crew++;
     }
@@ -1498,6 +1512,8 @@ function salvageStep(g: GameState, s: Soldier): boolean {
 
 /** Ile wytrzymałości łata inżynier na raz (co 10 ticków) */
 export const REPAIR_HP = 15;
+/** Ilu pracowników (z warsztatów, pól, lasu) naraz może pomagać przy budowach: co piąty, ale co najmniej dwóch */
+export const borrowLimit = (employed: number): number => Math.max(2, Math.floor(employed / 5));
 /** O ile skraca budowę jeden inżynier na raz (chłop: 12) */
 export const ENGINEER_BUILD = 24;
 const isEngineer = (g: GameState, u: Unit): boolean => !!u.job && buildingById(g, u.job)?.type === ENGINEERS;
