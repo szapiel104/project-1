@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-## 0.53.2 — Esc zamyka panel dewelopera (2026-10-27)
+## 0.53.3 — Esc zamyka panel dewelopera (2026-10-27)
 
 - Esc przy otwartym panelu dewelopera najpierw go zamyka (dopiero kolejny Esc odznacza albo otwiera menu), a w menu gry panel się nie pokazuje — nie wisi już nad ustawieniami
 
