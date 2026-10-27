@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.53.10 — daszek karczmy w dobrą stronę, detale na zamku (2026-10-27)
+
+- Karczma: daszek nad gankiem opadał do środka (wyżej na zewnątrz) — teraz spada od ściany na zewnątrz, wysoko przy ścianie pod belkami piętra i niżej nad belką na słupach; doszły krokwie pod deskami i deska czołowa na okapie (`tools/models/tavern.py`)
+- Zamek, dachy: gąsiory na kalenicach sali tronowej, komnaty, kuchni i koszar, kute iglice na końcach kalenic, sygnaturka z dzwonkiem na środku dachu sali tronowej, wywietrznik dymu nad koszarami
+- Zamek, płaski strop lochów: kamienny krawężnik, dwa świetliki z żelazną kratą i rzygacze od strony dziedzińca
+- Donżon: wsporniki (machikuły) pod koroną z tyłu i z boków oraz lukarna z oknem w dachu
+- Dziedziniec: pieniek z wbitym toporem i szczapami przy stosie drewna, stojak z włóczniami i tarczą pod koszarami, koryto z wodą przy studni (przeszkody dla spacerowicza dopisane)
+- Bot: bez zmian — to tylko wygląd istniejących budynków
+
 ## 0.53.9 — bale spadają na ziemię, gruz po rozbitym murze (2026-10-27)
 
 - **Częstokół:** złamany bal zrzuca odłamany kawał z czubkiem — leży pod murem w poprzek, dopóki inżynier nie naprawi muru. Przy mocno rozbitym częstokole część bali jest wyrwana w całości i leży obok, a reszta przechyla się mocniej

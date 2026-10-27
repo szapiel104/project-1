@@ -221,9 +221,21 @@ open_.append([DOOR[0], DOOR[1], Z1 - T - 0.02, Z1 + 0.05])
 GZ0, GZ1 = Z1, 1.4
 b.box('base', 'roadWood', X1 - X0, 0.05, GZ1 - GZ0, 0, P - 0.05, (GZ0 + GZ1) / 2)
 for x in (X0 + 0.05, -0.9, 0.1, 1.1, X1 - 0.05):
-    boxs('base', 'woodDark', 0.07, 0.72, 0.07, x, P, GZ1 - 0.04)
-b.box('base', 'woodDark', X1 - X0 + 0.1, 0.06, 0.07, 0, P + 0.72, GZ1 - 0.04)
-b.box('base', 'roadWood', X1 - X0 + 0.2, 0.04, GZ1 - GZ0 + 0.18, 0, P + 0.74, (GZ0 + GZ1) / 2 + 0.04, tilt=-0.18)
+    boxs('base', 'woodDark', 0.07, 0.68, 0.07, x, P, GZ1 - 0.04)
+b.box('base', 'woodDark', X1 - X0 + 0.1, 0.06, 0.07, 0, P + 0.68, GZ1 - 0.04)
+# daszek opada OD ściany NA zewnątrz (woda spływa przed ganek): wysoko przy ścianie, pod belkami piętra,
+# nisko nad belką na słupach. Tył deski chowa się w ścianie parteru, przód wystaje okapem przed słupy.
+GT = 0.13                       # spadek daszku (rad)
+GD, GC = 0.86, 1.13             # długość deski (w spadku) i środek w z
+GBZ = GZ1 - 0.04                # belka na słupach
+GY = P + 0.746 + (GBZ - GC) / math.cos(GT) * math.sin(GT)   # spód deski 6 mm nad belką
+b.box('base', 'roadWood', X1 - X0 + 0.2, 0.04, GD, 0, GY, GC, tilt=GT)
+# krokwie pod deskami (wpuszczone w nie o 1 cm) i deska czołowa na okapie
+for x in (X0 + 0.05, -0.9, 0.1, 1.1, X1 - 0.05):
+    b.box('base', 'woodDark', 0.045, 0.045, GD - 0.06, x, GY - 0.045 * math.cos(GT) + 0.01, GC - 0.01, tilt=GT)
+EZ = GC + GD / 2 * math.cos(GT)                 # przednia krawędź daszku
+EY = GY - GD / 2 * math.sin(GT)
+b.box('base', 'woodDark', X1 - X0 + 0.22, 0.06, 0.025, 0, EY - 0.03, EZ + 0.008, tilt=GT)
 for tx in (-1.3, -0.45):
     boxs('base', 'wood', 0.66, 0.04, 0.24, tx, P + 0.24, 1.07)
     for sz in (-1, 1):

@@ -328,7 +328,23 @@ for sx in (-1, 1):
 for x in (-0.45, 0.45):
     for y in (2.0, 2.85):
         b.box('base', 'dark', 0.16, 0.34, 0.015, x, y, DZ - DD / 2 - 0.008)
+# wsporniki (machikuły) pod koroną donżonu: z tyłu i z boków, wpuszczone 2 cm w mur
+for i in range(10):
+    x = -0.85 + i * 1.7 / 9
+    b.box('base', 'castleDark', 0.07, 0.14, 0.085, x, 3.46, DZ - DD / 2 + 0.0225)
+    b.box('base', 'castleDark', 0.07, 0.06, 0.05, x, 3.4, DZ - DD / 2 + 0.005)
+for sx in (-1, 1):
+    for i in range(6):
+        z = DZ - DD / 2 + 0.1 + i * (DD - 0.2) / 5
+        b.box('base', 'castleDark', 0.085, 0.14, 0.07, sx * (0.95 + 0.0225), 3.46, z)
+        b.box('base', 'castleDark', 0.05, 0.06, 0.07, sx * (0.95 + 0.005), 3.4, z)
 b.pyramid('base', 'slate', 2.1, DD + 0.25, 1.5, 0, 3.68, DZ)
+# lukarna w dachu donżonu od pola: okienko z daszkiem
+LZ = DZ - (DD + 0.25) / 2 + 0.07          # lico lukarny: tu połać jest jeszcze nisko (ok. 3,83), więc okno wystaje ponad nią
+b.box('base', 'castle', 0.3, 0.32, 0.34, 0, 3.68, LZ + 0.17)
+b.box('base', 'dark', 0.13, 0.13, 0.01, 0, 3.85, LZ - 0.004)
+b.box('base', 'castleDark', 0.17, 0.025, 0.03, 0, 3.835, LZ - 0.008)
+b.gable('base', 'slate', -0.15, 0.15, LZ, LZ + 0.34, 4.0, 0.14, along_x=False, over=0.03, end_mat='castle')
 b.box('base', 'gold', 0.07, 0.12, 0.07, 0, 5.17, DZ)
 b.box('base', 'woodDark', 0.04, 0.9, 0.04, 0, 5.2, DZ)
 BANNERS.append([0.022, 5.85, round(DZ, 3), 0, 0.7, 0.4, 0, 'base'])
@@ -473,8 +489,53 @@ for chars, mat, rise in ROOFS:
     if rise:
         # koszary i lochy stoją przy schodach na mury: krótki okap, żeby dach nie wchodził w bieg schodów
         b.gable('shell', mat, x0, x1, z0, z1, G + h, rise, along_x=(x1 - x0) >= (z1 - z0), over=0.03 if chars[0] in 'BL' else 0.1, end_mat=WALL_MAT.get(chars[0], 'castle'))
-    else:   # lochy: płaski kamienny strop z otworem świetlnym
+        ax = (x1 - x0) >= (z1 - z0)
+        ov = 0.03 if chars[0] in 'BL' else 0.1
+        ry = G + h + rise
+        ln = (x1 - x0 if ax else z1 - z0) + 2 * ov + 0.02
+        ridge = {'T': 'castleDark', 'C': 'castleDark', 'K': 'thatchDark', 'B': 'woodDark'}[chars[0]]
+        # gąsior na kalenicy: belka postawiona na kant, okrakiem na grzbiecie dachu
+        sh = 0.035 * math.sin(math.pi / 4)   # pudło obraca się wokół krawędzi spodu: przesunięcie, żeby kant leżał na grzbiecie
+        b.box('shell', ridge, ln, 0.07, 0.07, (x0 + x1) / 2 - (0 if ax else sh), ry - 0.035, (z0 + z1) / 2 - (sh if ax else 0), 0.0 if ax else math.pi / 2, tilt=math.pi / 4)
+        if chars[0] in 'TC':   # kute iglice na końcach kalenicy
+            for e in (-1, 1):
+                ex = (x0 + x1) / 2 + (e * (ln / 2 - 0.04) if ax else 0)
+                ez = (z0 + z1) / 2 + (0 if ax else e * (ln / 2 - 0.04))
+                b.prism('shell', 'iron', 0.018, 0.0, 0.28, ex, ry + 0.03, ez, seg=6)
+                b.prism('shell', 'iron', 0.035, 0.035, 0.03, ex, ry + 0.1, ez, seg=8)
+        if chars[0] == 'T':    # sygnaturka: mała wieżyczka z dzwonkiem na środku kalenicy sali tronowej
+            mx, mz = (x0 + x1) / 2, (z0 + z1) / 2
+            b.box('shell', 'woodDark', 0.26, 0.42, 0.26, mx, ry - 0.12, mz)
+            for ox in (-1, 1):
+                for oz in (-1, 1):
+                    b.box('shell', 'woodDark', 0.04, 0.2, 0.04, mx + ox * 0.11, ry + 0.3, mz + oz * 0.11)
+            b.prism('shell', 'iron', 0.045, 0.06, 0.09, mx, ry + 0.405, mz, seg=10)          # dzwonek
+            b.box('shell', 'woodDark', 0.3, 0.03, 0.3, mx, ry + 0.5, mz)
+            b.pyramid('shell', 'slate', 0.34, 0.34, 0.38, mx, ry + 0.53, mz)
+            b.prism('shell', 'iron', 0.014, 0.0, 0.24, mx, ry + 0.88, mz, seg=6)
+            b.box('shell', 'gold', 0.04, 0.04, 0.04, mx, ry + 0.95, mz)
+        if chars[0] == 'B':    # wywietrznik dymu z daszkiem nad koszarami
+            vx, vz = (x0 + x1) / 2, z0 + (z1 - z0) * 0.3
+            b.box('shell', 'woodDark', 0.2, 0.2, 0.2, vx, ry - 0.08, vz)
+            b.box('shell', 'dark', 0.14, 0.07, 0.205, vx, ry + 0.02, vz, bottom=False)
+            b.gable('shell', 'roadWood', vx - 0.12, vx + 0.12, vz - 0.12, vz + 0.12, ry + 0.12, 0.1, along_x=False, over=0.03)
+    else:   # lochy: płaski kamienny strop z krawężnikiem, kratą świetlika i rzygaczami
         b.box('shell', mat, x1 - x0 + 0.1, 0.08, z1 - z0 + 0.1, (x0 + x1) / 2, G + h, (z0 + z1) / 2, bottom=True)
+        ty, mx, mz = G + h + 0.08, (x0 + x1) / 2, (z0 + z1) / 2
+        W, D = x1 - x0 + 0.1, z1 - z0 + 0.1
+        for sz in (-1, 1):
+            b.box('shell', 'castle', W, 0.09, 0.1, mx, ty - 0.01, mz + sz * (D / 2 - 0.05), bottom=False)
+        for sx in (-1, 1):
+            b.box('shell', 'castle', 0.1, 0.09, D - 0.2, mx + sx * (W / 2 - 0.05), ty - 0.01, mz, bottom=False)
+        for i, gz in enumerate((mz - D / 4, mz + D / 4)):   # dwa świetliki z kratą nad korytarzem i celami
+            b.box('shell', 'castleDark', 0.42, 0.05, 0.42, mx, ty - 0.01, gz, bottom=False)
+            b.box('shell', 'dark', 0.3, 0.002, 0.3, mx, ty + 0.042, gz, bottom=False)
+            for k in (-1, 0, 1):
+                b.box('shell', 'iron', 0.018, 0.02, 0.32, mx + k * 0.08, ty + 0.04, gz, bottom=False)
+                b.box('shell', 'iron', 0.32, 0.02, 0.018, mx, ty + 0.045, gz + k * 0.08, bottom=False)
+        for zz in (z0 + 0.5, z0 + 1.5):   # rzygacze: woda z dachu leci na dziedziniec, nie na schody
+            b.box('shell', 'castleDark', 0.22, 0.06, 0.07, x1 + 0.12, G + h + 0.02, zz)
+            b.box('shell', 'dark', 0.06, 0.006, 0.03, x1 + 0.2, G + h + 0.08, zz, bottom=False)
     b.box('ceiling', 'wood' if chars[0] != 'L' else 'castleDark', x1 - x0, 0.03, z1 - z0, (x0 + x1) / 2, G + h - 0.03, (z0 + z1) / 2, bottom=True)
     if chars[0] in 'TCB':
         n = int((x1 - x0) / 0.5)
@@ -719,6 +780,37 @@ for x, z in ((cx(6) + 0.1, cz(6) + 0.1), (cx(6) + 0.1, cz(5) + 0.2)):
     b.box('base', 'sack', 0.16, 0.22, 0.12, x, G + 0.3, z)
     b.box('base', 'sack', 0.11, 0.1, 0.11, x, G + 0.55, z)
     block(x - 0.12, x + 0.12, z - 0.08, z + 0.08)
+# pieniek z wbitym toporem przy stosie drewna, obok kilka szczap
+PX, PZ = cx(1) + 0.55, cz(4) - 0.25
+b.prism('base', 'wood', 0.11, 0.1, 0.17, PX, G, PZ, seg=12)
+b.box('base', 'iron', 0.012, 0.07, 0.1, PX + 0.01, G + 0.12, PZ + 0.02, bottom=True)
+b.box('base', 'woodDark', 0.024, 0.34, 0.024, PX + 0.01, G + 0.15, PZ - 0.02, tilt=-0.55)
+for k, (ox, oz, r) in enumerate(((0.12, 0.13, 0.3), (-0.13, 0.12, 1.4), (0.16, -0.06, 2.2))):
+    b.box('base', 'wood', 0.05, 0.04, 0.2, PX + ox, G, PZ + oz, r)
+block(PX - 0.14, PX + 0.14, PZ - 0.14, PZ + 0.14, 0, 0.4)
+# stojak z włóczniami i tarczą pod ścianą koszar
+RX, RZ = cx(7) + 0.3, cz(6)
+for oz in (-0.25, 0.25):
+    b.box('base', 'woodDark', 0.05, 0.6, 0.05, RX, G, RZ + oz)
+for y in (0.12, 0.46):
+    b.box('base', 'woodDark', 0.06, 0.04, 0.56, RX, G + y, RZ)
+for k in range(4):
+    z = RZ - 0.18 + k * 0.12
+    b.box('base', 'woodDark', 0.02, 0.8, 0.02, RX - 0.03, G, z, roll=-0.08)
+    tx_, ty_ = RX - 0.03 + 0.8 * math.sin(0.08), G + 0.8 * math.cos(0.08)
+    b.box('base', 'iron', 0.012, 0.09, 0.03, tx_, ty_ - 0.005, z, roll=-0.08)
+b.box('base', 'woodDark', 0.025, 0.28, 0.24, RX - 0.08, G, RZ + 0.42, roll=-0.18)
+b.box('base', 'iron', 0.03, 0.06, 0.06, RX - 0.08 - 0.012 - 0.14 * math.sin(0.18), G + 0.11, RZ + 0.42, roll=-0.18)
+block(RX - 0.15, RX + 0.18, RZ - 0.3, RZ + 0.56, 0, 0.9)
+# koryto z wodą dla koni przy studni
+QX, QZ = wx + 0.62, wz
+for sx in (-1, 1):
+    b.box('base', 'woodDark', 0.03, 0.16, 0.56, QX + sx * 0.09, G, QZ)
+for sz in (-1, 1):
+    b.box('base', 'woodDark', 0.15, 0.16, 0.03, QX, G, QZ + sz * 0.265)
+b.box('base', 'wood', 0.15, 0.03, 0.5, QX, G, QZ)
+b.box('base', 'water', 0.15, 0.002, 0.5, QX, G + 0.12, QZ, bottom=False)
+block(QX - 0.12, QX + 0.12, QZ - 0.3, QZ + 0.3, 0, 0.3)
 # kosze z ogniem przy wewnętrznej stronie bramy
 for s in (-1, 1):
     x, z = cx(gx) + s * 0.75, cz(N - 2) + 0.2
