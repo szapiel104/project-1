@@ -1,9 +1,16 @@
 # Dziennik zmian
 
+## 0.53.8 — płonący i przymrożeni wyglądają naturalnie (2026-10-27)
+
+- Płonący żołnierz: zamiast twardych stożków i pomarańczowego „jaja” wokół postaci — 9 miękkich języków ognia (rozmyta kropla zwrócona do kamery), które wyrastają z ubrania, rosną, unoszą się i gasną, każdy w swoim rytmie; u dołu jasnożółte, wyżej pomarańczowe i czerwone. Pod nimi delikatna ciepła poświata, w górę żar i smużki dymu (`render/spells.ts`)
+- Przymrożony: bez niebieskiej powłoki — drobne kryształki lodu u stóp, opadający szron i lekka chłodna poświata
+- Wydajność: dalej dwie wspólne siatki instancji, tekstury rysowane raz (64 px)
+
 ## 0.53.7 — wyraźniejsze pęknięcia, mniej drzazg (2026-10-27)
 
 - Pęknięcia na murze kamiennym większe i grubsze, widać je też z dalszej kamery
 - Pod rozbitym częstokołem mniej i mniejszych drzazg, w kolorze kory zamiast jasnych desek (wcześniej wyglądały jak rozsypane zapałki)
+
 ## 0.53.6 — magia mocniejsza, ogień i lód widać, strzały prosto i w rytm łuku (2026-10-27)
 
 - **Magowie mocniejsi:** mag Płomienia 26 obrażeń co 3,2 s (było 15 co 4 s) i podpala trafionego, mag Źródła 15 co 2,6 s (było 8 co 3 s)

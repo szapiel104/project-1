@@ -25,6 +25,42 @@ const WATER = new THREE.Color(0x3d9cff), WATER_CORE = new THREE.Color(0xeefaff),
 /** Barwy cząstek: iskra ognia, żar (ciemniejszy), kropla wody, dym */
 const P_COLOR = [new THREE.Color(0xffc25a), new THREE.Color(0xff5a14), new THREE.Color(0x9fd8ff), new THREE.Color(0x3a332c)];
 const UP = new THREE.Vector3(0, 0, 1);
+/** Języków ognia na płonącym */
+const FLAMES = 9;
+
+/**
+ * Miękka tekstura (64 px, rysowana raz na płótnie): kropla płomienia (jasny środek, rozmyta ku górze) albo okrągła plama
+ * światła. Same jasności w kanałach — barwę daje kolor instancji, mieszanie addytywne.
+ */
+function softTexture(flame: boolean): THREE.Texture {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = flame ? 96 : 64;
+  const x = c.getContext('2d');
+  if (x) {
+    if (flame) {
+      // kropla: szeroka u dołu, zwężona ku górze; jasność maleje od środka-dołu
+      const img = x.createImageData(64, 96);
+      for (let py = 0; py < 96; py++) for (let px = 0; px < 64; px++) {
+        const v = 1 - py / 96; // 0 u dołu .. 1 u góry
+        const half = 0.5 * Math.pow(Math.sin(Math.PI * Math.min(1, v * 1.05 + 0.04)), 0.7) * (1 - v * 0.55);
+        const dx = Math.abs(px / 63 - 0.5) / Math.max(0.01, half);
+        const across = Math.max(0, 1 - dx * dx);
+        const along = Math.min(1, v * 6) * Math.pow(1 - v, 0.8);
+        const k = Math.round(255 * Math.min(1, across * along * 1.5));
+        const i = (py * 64 + px) * 4;
+        img.data[i] = img.data[i + 1] = img.data[i + 2] = k; img.data[i + 3] = k;
+      }
+      x.putImageData(img, 0, 0);
+    } else {
+      const g = x.createRadialGradient(32, 32, 0, 32, 32, 32);
+      g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.35, 'rgba(255,255,255,0.45)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g; x.fillRect(0, 0, 64, 64);
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
 
 export class SpellLayer {
   private shots: Shot[] = [];
@@ -37,13 +73,15 @@ export class SpellLayer {
   private readonly wave: THREE.InstancedMesh;
   private readonly spark: THREE.InstancedMesh;
   private readonly smoke: THREE.InstancedMesh;
-  /** Przymrożenie czarem wody: kryształki lodu wokół stóp i chłodna poświata na postaci */
+  /** Przymrożenie czarem wody: kryształki lodu wokół stóp, szron w powietrzu i miękka chłodna poświata */
   private readonly ice: THREE.InstancedMesh;
-  private readonly frostShell: THREE.InstancedMesh;
+  /** Miękkie plamy światła (zwrócone do kamery): ciepło płonącego, chłód przymrożonego */
+  private readonly blob: THREE.InstancedMesh;
   private frostAt: { p: THREE.Vector3; id: number }[] = [];
   private frostN = 0;
-  /** Płonący po ognistej strzale albo kuli ognia: języki ognia na ubraniu, żar i dym */
+  /** Płonący po ognistej strzale albo kuli ognia: miękkie języki ognia (zwrócone do kamery), żar i dym */
   private readonly lick: THREE.InstancedMesh;
+  private readonly camQ = new THREE.Quaternion();
   private burnAt: { p: THREE.Vector3; id: number }[] = [];
   private burnN = 0;
   private readonly flameAt: THREE.Vector3[] = [];
@@ -59,8 +97,8 @@ export class SpellLayer {
   private rnd = 1;
 
   constructor(scene: THREE.Scene) {
-    const add = (geo: THREE.BufferGeometry, opacity: number, max: number, additive = true): THREE.InstancedMesh => {
-      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false, toneMapped: false });
+    const add = (geo: THREE.BufferGeometry, opacity: number, max: number, additive = true, map?: THREE.Texture): THREE.InstancedMesh => {
+      const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, map, transparent: true, opacity, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, depthWrite: false, toneMapped: false });
       const mesh = new THREE.InstancedMesh(geo, mat, max);
       mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
       mesh.setColorAt(0, FIRE);
@@ -79,9 +117,10 @@ export class SpellLayer {
     this.spark = add(new THREE.IcosahedronGeometry(1, 0), 0.95, MAX_P);
     this.smoke = add(new THREE.IcosahedronGeometry(1, 1), 0.38, MAX_P, false);
     this.ice = add(new THREE.OctahedronGeometry(1, 0), 0.85, MAX * 6);
-    this.frostShell = add(new THREE.SphereGeometry(1, 14, 10), 0.22, MAX * 2);
-    // język ognia: stożek o podstawie na ubraniu, czubek ku górze
-    this.lick = add(new THREE.ConeGeometry(1, 1, 7, 1, true).translate(0, 0.5, 0), 0.85, MAX * 7);
+    // płaskie kwadraty z miękką teksturą, co klatkę obrócone do kamery (bez twardych brzegów brył)
+    this.blob = add(new THREE.PlaneGeometry(1, 1), 0.5, MAX * 2, true, softTexture(false));
+    // język ognia: kropla rozmyta ku górze; podstawa przy ubraniu
+    this.lick = add(new THREE.PlaneGeometry(1, 1).translate(0, 0.42, 0), 0.9, MAX * FLAMES, true, softTexture(true));
   }
 
   /** Ten żołnierz płonie (w tej klatce): `at` = jego pozycja na ziemi */
@@ -122,7 +161,8 @@ export class SpellLayer {
   }
 
   /** Klatka: kule lecą prosto w cel, sypią iskrami albo kroplami, przy celu rozbłysk albo rozprysk */
-  update(dt: number, time: number): void {
+  update(dt: number, time: number, cam?: THREE.Camera): void {
+    if (cam) this.camQ.copy(cam.quaternion);
     // zatrzymany obraz (dt = 1): bez lecących czarów i cząstek
     if (dt >= 1) { this.shots = []; this.bursts = []; this.parts = []; }
     const step = Math.min(dt, 0.05);
@@ -207,56 +247,63 @@ export class SpellLayer {
     }
     this.parts = alive;
 
-    // przymrożeni: kilka lodowych kryształków wokół stóp (powoli krążą) i chłodna poświata na sylwetce
-    let ic = 0;
+    // przymrożeni: drobne kryształki lodu wokół stóp (powoli krążą), szron w powietrzu i miękka chłodna poświata
+    let ic = 0, bl = 0;
     for (let k = 0; k < this.frostN; k++) {
       const f = this.frostAt[k]!;
-      for (let j = 0; j < 6; j++) {
-        const a = j * (Math.PI / 3) + time * 0.6 + f.id;
-        this.p.set(f.p.x + Math.cos(a) * 0.2, f.p.y + 0.05 + (j % 2) * 0.05, f.p.z + Math.sin(a) * 0.2);
-        this.q.setFromAxisAngle(UP, a);
-        this.m.compose(this.p, this.q, this.s.set(0.03, 0.075 + (j % 3) * 0.02, 0.03));
+      for (let j = 0; j < 7; j++) {
+        const a = j * 0.9 + time * 0.5 + f.id;
+        const r = 0.13 + (j % 3) * 0.04;
+        this.p.set(f.p.x + Math.cos(a) * r, f.p.y + 0.03 + (j % 2) * 0.03, f.p.z + Math.sin(a) * r);
+        this.q.setFromAxisAngle(this.ax.set(Math.cos(a), 0, Math.sin(a)), 0.3 + (j % 3) * 0.15);
+        this.m.compose(this.p, this.q, this.s.set(0.018, 0.05 + (j % 3) * 0.018, 0.018));
         this.ice.setMatrixAt(ic, this.m);
-        this.ice.setColorAt(ic, this.c.setRGB(0.65, 0.88, 1));
+        this.ice.setColorAt(ic, this.c.setRGB(0.55, 0.82, 1));
         ic++;
       }
-      this.p.copy(f.p).setY(f.p.y + 0.45);
-      this.m.compose(this.p, this.q.identity(), this.s.set(0.26, 0.5, 0.26));
-      this.frostShell.setMatrixAt(k, this.m);
-      this.frostShell.setColorAt(k, this.c.setRGB(0.35, 0.65, 1).multiplyScalar(0.8 + Math.sin(time * 3 + f.id) * 0.2));
+      this.p.copy(f.p).setY(f.p.y + 0.4);
+      this.m.compose(this.p, this.camQ, this.s.setScalar(0.62));
+      this.blob.setMatrixAt(bl, this.m);
+      this.blob.setColorAt(bl, this.c.setRGB(0.25, 0.55, 1).multiplyScalar(0.5 + Math.sin(time * 2.5 + f.id) * 0.1));
+      bl++;
+      // szron: drobinki opadają powoli wokół postaci
+      if (this.rand() < 0.3) this.emit(new THREE.Vector3(f.p.x + (this.rand() - 0.5) * 0.3, f.p.y + 0.5 + this.rand() * 0.3, f.p.z + (this.rand() - 0.5) * 0.3), new THREE.Vector3((this.rand() - 0.5) * 0.1, 0.5, (this.rand() - 0.5) * 0.1), 0.5, 2, 0.008);
     }
-    // płonący: kilka języków ognia przy ciele (ramiona, plecy, biodra), każdy migocze w swoim rytmie, nad nim żar i dym
-    let lk = 0, shell = this.frostN;
+    // płonący: języki ognia wyrastają z ubrania, rosną, unoszą się i gasną (każdy w swoim rytmie),
+    // od spodu jasnożółte, wyżej pomarańczowe i czerwone; pod nimi ciepła poświata, w górę żar i dym
+    let lk = 0;
     for (let k = 0; k < this.burnN; k++) {
       const f = this.burnAt[k]!;
-      for (let j = 0; j < 7; j++) {
+      for (let j = 0; j < FLAMES; j++) {
+        const life = (time * (1.6 + (j % 3) * 0.35) + j / FLAMES + f.id * 0.37) % 1;
         const a = j * 2.39 + f.id * 0.7;
-        const flick = 0.75 + 0.25 * Math.sin(time * (11 + j * 1.7) + f.id + j) + 0.15 * Math.sin(time * 23 + j * 3);
-        const h = 0.22 + (j % 4) * 0.13;
-        this.p.set(f.p.x + Math.cos(a) * 0.11, f.p.y + h, f.p.z + Math.sin(a) * 0.11);
-        this.q.setFromAxisAngle(this.ax.set(Math.cos(a + 1.57), 0, Math.sin(a + 1.57)), Math.sin(time * 7 + j) * 0.18);
-        this.m.compose(this.p, this.q, this.s.set(0.035 + (j % 2) * 0.012, (0.1 + (j % 3) * 0.04) * flick, 0.035 + (j % 2) * 0.012));
+        const r = 0.07 + (j % 3) * 0.035;
+        const h = 0.12 + ((j * 5) % FLAMES) / FLAMES * 0.42 + life * 0.22;
+        const sway = Math.sin(time * 6 + j * 1.3) * 0.02;
+        this.p.set(f.p.x + Math.cos(a) * r + sway, f.p.y + h, f.p.z + Math.sin(a) * r);
+        const size = (0.13 + (j % 4) * 0.03) * Math.sin(Math.PI * Math.min(1, life * 1.15));
+        this.m.compose(this.p, this.camQ, this.s.set(size * 0.75, size * 1.35, size));
         this.lick.setMatrixAt(lk, this.m);
-        this.lick.setColorAt(lk, this.c.setRGB(1, 0.45 + 0.35 * flick * (j % 2 ? 1 : 0.6), 0.08));
+        // barwa: młody płomień jasnożółty, starszy pomarańczowy, na końcu ciemnieje ku czerwieni
+        this.c.setRGB(1, 0.78 - life * 0.5, 0.32 - life * 0.3);
+        this.lick.setColorAt(lk, this.c);
         lk++;
       }
-      // ciepła poświata na sylwetce
-      this.p.copy(f.p).setY(f.p.y + 0.45);
-      this.m.compose(this.p, this.q.identity(), this.s.set(0.24, 0.46, 0.24));
-      this.frostShell.setMatrixAt(shell, this.m);
-      this.frostShell.setColorAt(shell, this.c.setRGB(1, 0.42, 0.1).multiplyScalar(0.55 + Math.sin(time * 9 + f.id) * 0.15));
-      shell++;
-      // drobny żar w górę i czasem smużka dymu
-      if (this.rand() < 0.5) this.emit(new THREE.Vector3(f.p.x + (this.rand() - 0.5) * 0.2, f.p.y + 0.4 + this.rand() * 0.3, f.p.z + (this.rand() - 0.5) * 0.2), new THREE.Vector3((this.rand() - 0.5) * 0.3, 0.6 + this.rand() * 0.5, (this.rand() - 0.5) * 0.3), 0.4 + this.rand() * 0.3, this.rand() < 0.5 ? 0 : 1, 0.014);
-      if (this.rand() < 0.12) this.emit(new THREE.Vector3(f.p.x, f.p.y + 0.8, f.p.z), new THREE.Vector3((this.rand() - 0.5) * 0.15, 0.45, (this.rand() - 0.5) * 0.15), 0.9, 3, 0.045);
+      this.p.copy(f.p).setY(f.p.y + 0.38);
+      this.m.compose(this.p, this.camQ, this.s.setScalar(0.75 + Math.sin(time * 11 + f.id) * 0.05));
+      this.blob.setMatrixAt(bl, this.m);
+      this.blob.setColorAt(bl, this.c.setRGB(1, 0.38, 0.08).multiplyScalar(0.55 + Math.sin(time * 9 + f.id) * 0.12));
+      bl++;
+      if (this.rand() < 0.45) this.emit(new THREE.Vector3(f.p.x + (this.rand() - 0.5) * 0.2, f.p.y + 0.45 + this.rand() * 0.3, f.p.z + (this.rand() - 0.5) * 0.2), new THREE.Vector3((this.rand() - 0.5) * 0.3, 0.7 + this.rand() * 0.5, (this.rand() - 0.5) * 0.3), 0.35 + this.rand() * 0.3, this.rand() < 0.5 ? 0 : 1, 0.011);
+      if (this.rand() < 0.1) this.emit(new THREE.Vector3(f.p.x, f.p.y + 0.85, f.p.z), new THREE.Vector3((this.rand() - 0.5) * 0.15, 0.45, (this.rand() - 0.5) * 0.15), 1, 3, 0.04);
     }
     this.lick.count = lk;
-    this.ice.count = ic; this.frostShell.count = shell;
+    this.ice.count = ic; this.blob.count = bl;
     this.frostN = 0; this.burnN = 0;
     this.halo.count = n; this.glow.count = n; this.core.count = n;
     this.flash.count = f; this.wave.count = f;
     this.spark.count = sp; this.smoke.count = sm;
-    for (const mesh of [this.halo, this.glow, this.core, this.flash, this.wave, this.spark, this.smoke, this.ice, this.frostShell, this.lick]) {
+    for (const mesh of [this.halo, this.glow, this.core, this.flash, this.wave, this.spark, this.smoke, this.ice, this.blob, this.lick]) {
       mesh.visible = mesh.count > 0;
       if (!mesh.visible) continue;
       mesh.instanceMatrix.needsUpdate = true;

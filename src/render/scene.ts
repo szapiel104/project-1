@@ -3804,7 +3804,7 @@ export class GameRenderer {
     this.battleFireFig.finish(0);
     this.battleWaterFig.finish(0);
     this.arrows.fly(this.calm);
-    this.spells.update(this.calm ? 1 : 1 / 60, this.time);
+    this.spells.update(this.calm ? 1 : 1 / 60, this.time, this.cam.camera);
     this.towerIcons.sync(g, this.view, this.time);
     this.rallyFlags.sync(g, view, this.me, this.crestOf(this.me), this.time);
     this.spawnFx.sync(g, view, this.cam.camera, this.calm);
