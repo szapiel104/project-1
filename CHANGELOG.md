@@ -11,11 +11,10 @@
 - **Magowie bez kilofa i maczugi:** magowie (i kaznodzieja) mieli kilof na plecach — pula narzędzi tylko dokłada instancje, więc późniejsze „zdjęcie” go nie chowało. Teraz narzędzie w ogóle nie jest im wstawiane
 - Mniejszy błysk przy trafieniu czarem, gęstszy i drobniejszy ogon iskier i kropel
 
-## 0.53.4 — mur nie płonie od miecza (2026-10-27)
-
 ## 0.53.5 — mur nie płonie od miecza (2026-10-27)
 
 - Cios mieczem albo włócznią już nie podpala murów, bram ani wież — pękają (0.53.2), ale nie płoną. Drewniany częstokół, bramę i wieżę strażniczą podpali tylko prawdziwy ogień (ognista strzała, piorun); kamień (mur, kamienne bramy i wieże, twierdza) nie płonie wcale. Chaty i warsztaty dalej zajmują się ogniem po mocnych ciosach (`sim/systems/fire.ts`)
+
 ## 0.53.4 — ziemia mieści się w limicie tekstur karty (2026-10-27)
 
 - **Koniec ostrzeżenia „Trying to use 17 texture units while this GPU supports only 16”:** shader ziemi brał 17 tekstur (14 własnych + mapa cieni + odbicia otoczenia + ślady w śniegu), a wiele kart (ANGLE/D3D11) daje 16. Three.js sypał ostrzeżeniem przy każdym rysowaniu ziemi (~60 na sekundę, ponad 2600 wpisów w dzienniku na minutę gry), co samo w sobie zjadało czas klatki przy otwartej konsoli. Cztery mapy normalnych ziemi są teraz spakowane w dwie tekstury (para x/y na teksturę, z liczy shader; pakuje karta graficzna raz po wczytaniu — `src/render/normalpack.ts`). Ziemia bierze 15 tekstur, więc jest zapas na kolejne efekty. Wygląd bez zmian (różnica w odtworzonej składowej z jest niewidoczna)
