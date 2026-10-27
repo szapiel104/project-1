@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.53.13 — gruz wygląda jak kamień (2026-10-27)
+
+- Odłamki i gruz to nieregularne kamienie z teksturą i mapą wypukłości zamiast kanciastych, białych brył; mniejsze, ciemniejsze i w różnych odcieniach, mniej ich wokół ruin
+- Ruina muru bez rusztowania, dopóki nikt jej nie odbudowuje (wcześniej pomost z desek stał na gruzie od razu po zniszczeniu)
 ## 0.53.12 — linia strzału: strzały nie lecą przez mury i budynki (2026-10-27)
 
 - **Strzała i czar potrzebują czystej linii strzału:** łucznik albo mag na ziemi strzela tylko wtedy, gdy między nim a wrogiem nie stoi mur (częstokół, mur kamienny), zamknięta brama, chata ani inny budynek, a po drodze nie ma ściany twierdzy. Inaczej podchodzi, aż znajdzie miejsce, z którego widzi wroga, albo bierze innego, widocznego wroga. Niskie rzeczy (pochodnia, kosz ognia, studnia, cmentarz, drabina, ruiny, place budowy) nie zasłaniają (`sim/systems/sight.ts`)

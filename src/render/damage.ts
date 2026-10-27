@@ -18,7 +18,8 @@ import { buildWork, maxHp } from '../sim/systems/placement';
 import { STONE_WALL_TOP } from './buildings';
 import { cat } from './cat';
 import type { TerrainView } from './terrain';
-import { pattern } from './textures';
+import { normal, pattern } from './textures';
+import { mergeVertices } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { touch } from './touch';
 import { ruinRebuilt, showsWear, wearMaterial, wearStage } from './wear';
 
@@ -29,6 +30,25 @@ interface Spot { p: THREE.Vector3; n: THREE.Vector3; decal: boolean }
 /** Części modelu, na których nie rysujemy pęknięć (wnętrza, ludzie, ogień, znaki, flagi) */
 const SKIP = new Set(['interior', 'life', 'fire', 'flame', 'smoke', 'noworker', 'fill', 'foodfill', 'armsfill', 'flagcloth', 'bannercloth', 'flagpole', 'ceiling']);
 const MAX_DECALS = 1500, MAX_ROCKS = 5000, MAX_SPLINTERS = 3000, MAX_BLOCKS = 1500;
+
+/** Nieregularny kamień: kula z poszarpaną powierzchnią (gładkie cieniowanie, bez kanciastych „wielościanów”) */
+function stoneGeometry(): THREE.BufferGeometry {
+  const geo = mergeVertices(new THREE.IcosahedronGeometry(0.5, 1).deleteAttribute('normal').deleteAttribute('uv'));
+  const pos = geo.getAttribute('position') as THREE.BufferAttribute, v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i);
+    // spłaszczony spód i ścięte boki jak u odłupanego kamienia
+    const k = 0.78 + rnd(i, 91) * 0.34;
+    v.multiplyScalar(k);
+    if (v.y < -0.12) v.y = -0.12 - (v.y + 0.12) * 0.3;
+    pos.setXYZ(i, v.x, v.y, v.z);
+  }
+  const uv = new Float32Array(pos.count * 2);
+  for (let i = 0; i < pos.count; i++) { uv[i * 2] = pos.getX(i) + 0.5; uv[i * 2 + 1] = pos.getY(i) + pos.getZ(i) * 0.5 + 0.5; }
+  geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  geo.computeVertexNormals();
+  return geo;
+}
 
 const rnd = (seed: number, i: number): number => { const v = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453; return v - Math.floor(v); };
 
@@ -161,7 +181,7 @@ export class WearLayer {
     if (key === this.key) return;
     this.key = key;
     if (!this.rocks) {
-      this.rocks = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(0.5, 0), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, flatShading: true, map: pattern('rock') }), MAX_ROCKS);
+      this.rocks = new THREE.InstancedMesh(stoneGeometry(), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: pattern('rock'), normalMap: normal('rock') }), MAX_ROCKS);
       this.splinters = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0x8a6c4a, roughness: 0.95, map: pattern('bark') }), MAX_SPLINTERS);
       this.blocks = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, map: pattern('rock') }), MAX_BLOCKS);
       for (const m of [this.rocks, this.splinters, this.blocks]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'uszkodzenia murów')); }
@@ -176,7 +196,7 @@ export class WearLayer {
     const rock = (x: number, y: number, z: number, k: number, seed: number, hex = 0xa39c90): void => {
       if (nr >= MAX_ROCKS) return;
       q.setFromEuler(E.set(rnd(seed, 1) * 3, rnd(seed, 2) * 6, rnd(seed, 3) * 3));
-      this.rocks!.setColorAt(nr, col.setHex(hex).multiplyScalar(0.78 + rnd(seed, 4) * 0.32));
+      this.rocks!.setColorAt(nr, col.setHex(hex).multiplyScalar(0.62 + rnd(seed, 4) * 0.3));
       this.rocks!.setMatrixAt(nr++, M4.compose(p.set(x, y, z), q, sc.set(k, k * (0.55 + rnd(seed, 5) * 0.3), k * (0.75 + rnd(seed, 6) * 0.3))));
     };
     /** strącony ciosany kamień (blanka, cios z lica) — leży krzywo, trochę wbity w ziemię */
@@ -184,7 +204,7 @@ export class WearLayer {
       if (nb >= MAX_BLOCKS) return;
       const sx = (0.17 + rnd(seed, 7) * 0.08) * k, sy = (0.14 + rnd(seed, 8) * 0.06) * k, sz = (0.12 + rnd(seed, 9) * 0.06) * k;
       q.setFromEuler(E.set((rnd(seed, 10) - 0.5) * 0.7, rnd(seed, 11) * 6, (rnd(seed, 12) - 0.5) * 0.9));
-      this.blocks!.setColorAt(nb, col.setHex(0xb8b0a2).multiplyScalar(0.8 + rnd(seed, 13) * 0.25));
+      this.blocks!.setColorAt(nb, col.setHex(0xa8a092).multiplyScalar(0.7 + rnd(seed, 13) * 0.25));
       this.blocks!.setMatrixAt(nb++, M4.compose(p.set(x, ground(x, z) + sy * 0.3, z), q, sc.set(sx, sy, sz)));
     };
     /** drzazga albo odłupana szczapa */
@@ -202,24 +222,24 @@ export class WearLayer {
       if (def.id === 'stoneWall') {
         // resztka muru: poszarpana korona z wyłamanych kamieni zamiast gładkiej posadzki, wyrwy na bokach
         const y0 = ground(cx, cz) - 0.06, top = y0 + (STONE_WALL_TOP + 0.02) * Math.max(0.08, 1 - b.build / buildWork(b.type));
-        for (let i = 0; i < 9; i++) {
+        for (let i = 0; i < 8; i++) {
           const x = cx + (rnd(b.id, i) - 0.5) * 0.9, z = cz + (rnd(b.id, i + 40) - 0.5) * 0.9;
-          rock(x, top - 0.03 + rnd(b.id, i + 80) * 0.07, z, 0.2 + rnd(b.id, i + 120) * 0.16, b.id * 31 + i, 0xb0a898);
+          rock(x, top - 0.02 + rnd(b.id, i + 80) * 0.05, z, 0.14 + rnd(b.id, i + 120) * 0.12, b.id * 31 + i, 0xb0a898);
         }
         for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]] as const) for (let i = 0; i < 3; i++) {
           const u = (i - 1) * 0.32 + (rnd(b.id + dx * 3 + dz * 5, i) - 0.5) * 0.1;
-          rock(cx + dx * 0.47 + (dz ? u : 0), top - 0.12 - rnd(b.id, i + dx * 7 + dz * 11) * 0.25, cz + dz * 0.47 + (dx ? u : 0), 0.16 + rnd(b.id, i + 60) * 0.1, b.id * 17 + i + dx * 5 + dz * 9, 0xa8a090);
+          rock(cx + dx * 0.47 + (dz ? u : 0), top - 0.12 - rnd(b.id, i + dx * 7 + dz * 11) * 0.25, cz + dz * 0.47 + (dx ? u : 0), 0.12 + rnd(b.id, i + 60) * 0.08, b.id * 17 + i + dx * 5 + dz * 9, 0xa8a090);
         }
       }
       // gruz dookoła: ciosy, kamienie, przy drewnie drzazgi i szczapy; uprzątają go w trakcie odbudowy
-      const n = Math.round((def.line ? 14 : 8 + area * 3) * left);
+      const n = Math.round((def.line ? 10 : 6 + area * 2) * left);
       const reach = Math.max(fp.w, fp.h) / 2 + 0.9;
       for (let i = 0; i < n; i++) {
         const a = rnd(b.id, i + 200) * Math.PI * 2, d = Math.max(fp.w, fp.h) / 2 + 0.05 + rnd(b.id, i + 300) ** 1.6 * (reach - Math.max(fp.w, fp.h) / 2);
         const x = cx + Math.cos(a) * d, z = cz + Math.sin(a) * d;
         if (kind === 'stone') {
           if (i % 3 === 0) block(x, z, b.id * 7 + i, 1.2);
-          else rock(x, ground(x, z) + 0.02, z, 0.08 + rnd(b.id, i + 400) ** 2 * 0.24, b.id * 13 + i);
+          else rock(x, ground(x, z) + 0.015, z, 0.05 + rnd(b.id, i + 400) ** 2 * 0.15, b.id * 13 + i);
         } else {
           splinter(x, z, b.id * 11 + i, i % 4 === 0 ? 2.2 : 1);
           if (i % 5 === 0) splinter(x + 0.05, z + 0.04, b.id * 11 + i + 1000, 1);
@@ -267,8 +287,8 @@ export class WearLayer {
           q.setFromEuler(new THREE.Euler(rnd(b.id, j + i * 7) * 3, rnd(b.id, j + i * 5) * 6, rnd(b.id, j + i * 3) * 3));
           if (kind === 'stone') {
             if (nr >= MAX_ROCKS) continue;
-            const k = (s === 3 && j === 0 ? 0.2 : 0.09) + rnd(b.id, j + i) * 0.08;
-            this.rocks.setColorAt(nr, col.setHex(0xa39c90).multiplyScalar(0.8 + rnd(i, j) * 0.3));
+            const k = (s === 3 && j === 0 ? 0.13 : 0.06) + rnd(b.id, j + i) * 0.06;
+            this.rocks.setColorAt(nr, col.setHex(0xa39c90).multiplyScalar(0.62 + rnd(i, j) * 0.3));
             this.rocks.setMatrixAt(nr++, M4.compose(p.set(x, y + k * 0.25, z), q, sc.set(k, k * 0.7, k * 0.9)));
           } else {
             if (ns >= MAX_SPLINTERS) continue;

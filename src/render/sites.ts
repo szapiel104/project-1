@@ -6,7 +6,7 @@
  */
 import * as THREE from 'three';
 import { BUILDINGS, footprint } from '../data/buildings';
-import type { GameState } from '../sim/state';
+import { Phase, type GameState } from '../sim/state';
 import { buildWork } from '../sim/systems/placement';
 import { rubbleModel } from './buildings';
 import { cat } from './cat';
@@ -115,6 +115,8 @@ export class SiteLayer {
   sync(g: GameState, view: TerrainView | null, meshes: Map<number, THREE.Group>, ctx: { time: number; calm: boolean; lodTick: number }): void {
     this.g = g; this.view = view; this.meshes = meshes; this.time = ctx.time; this.calm = ctx.calm;
     const live = new Set<number>();
+    const crew = new Set<number>();
+    for (const u of g.units) if (u.phase === Phase.Repairing || u.phase === Phase.ToRepair) crew.add(u.target);
     const scaffolds: { b: GameState['buildings'][number]; k: number; cut: number; site: { base: number; top: number } }[] = [];
     for (const b of g.buildings) {
       const mesh = this.meshes.get(b.id);
@@ -125,6 +127,8 @@ export class SiteLayer {
       const ruinShown = !!b.ruined && !def.wall && !def.gate;
       if (mesh.scale.y !== 1) mesh.scale.y = 1;
       if (b.build && def.line) {
+        // ruina muru czeka na zapłatę albo na ludzi: bez rusztowania, sam gruz (damage.ts)
+        if (b.ruined && !crew.has(b.id)) continue;
         // częstokół w budowie: niskie rusztowanie przy odcinku, bale stają jeden po drugim (syncWalls)
         const k = 1 - b.build / buildWork(b.type);
         scaffolds.push({ b, k: Math.max(0.1, k), cut: mesh.position.y + 0.7, site: { base: mesh.position.y, top: mesh.position.y + 0.9 } });
