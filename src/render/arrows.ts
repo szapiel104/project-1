@@ -10,7 +10,7 @@ import type { WorldSound } from '../audio/bank';
 
 /** Barwa smugi za strzałą: zwykła (jasna) i ognista (pomarańczowa) */
 const UP = new THREE.Vector3(0, 1, 0);
-const PLAIN_TRAIL = new THREE.Color(0xd8d0c0), FIRE_TRAIL = new THREE.Color(0xff8a30);
+const PLAIN_TRAIL = new THREE.Color(0xd8d0c0), FIRE_TRAIL = new THREE.Color(0xb85a26);
 /** Najwięcej strzał naraz w powietrzu */
 export const MAX_ARROWS = 256;
 
@@ -91,7 +91,7 @@ export class ArrowLayer {
       }
       this.arrowTrail.setColorAt(n, a.fire ? FIRE_TRAIL : PLAIN_TRAIL);
       // smuga: rozciągnięta do tyłu, dłuższa przy szybkim, dalekim strzale
-      m.compose(p, q, new THREE.Vector3(a.fire ? 1.8 : 1, 1, Math.min(1.6, 0.4 + a.from.distanceTo(a.to) * 0.12) * (a.fire ? 1.4 : 1)));
+      m.compose(p, q, new THREE.Vector3(1, 1, Math.min(1.6, 0.4 + a.from.distanceTo(a.to) * 0.12))); // ognista: ta sama szerokość smugi (tylko kolor), bez rozlanej łuny
       this.arrowTrail.setMatrixAt(n++, m);
     }
     this.arrowMesh.count = n;

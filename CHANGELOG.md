@@ -1,5 +1,16 @@
 # Dziennik zmian
 
+## 0.58.1 — cel ataku na czerwono, większe obrażenia, wilki pod ostrzałem, krótszy cios włócznią (2026-10-28)
+
+- **Miecz nad wrogiem:** kursor z mieczem pojawia się nad całą sylwetką wroga — chłopa, strażnika miejskiego, łucznika, maga — od stóp po głowę, przy każdym zbliżeniu. Dawniej liczył się jeden punkt (u żołnierzy przy pasku nad głową, u chłopów metr nad ziemią), więc kursor na postaci często nie łapał celu
+- **Cel ataku na czerwono:** wrogi budynek pod kursorem świeci głęboką czerwienią zamiast pomarańczu, a pod wrogą postacią (żołnierz, chłop, wilk) pulsuje czerwony krąg
+- **Większe liczby obrażeń** („−4”, „−1”) nad paskiem zdrowia: ok. dwa razy większe, grubsze, z obrysem, dłużej widoczne
+- **Łucznicy i magowie strzelają do każdego wilka w zasięgu** — gdziekolwiek wilk napada (u nas, u wroga, na wojsko). Strzała leci jak do ludzi, wilk dostaje dopiero, gdy doleci. Dawniej rana wchodziła od razu, bez strzału w obrazie. Strzelanie do wrogich żołnierzy i chłopów ma pierwszeństwo. Test w `tests/archer-wolf.test.ts`
+- **Krótszy zasięg ciosu wręcz:** włócznik (i każdy walczący wręcz) sięga tylko sąsiada — 1,25 pola zamiast 1,5, więc nie bije już przez puste miejsce. Gdy stoi obok, a wróg jest w pół kroku, czeka albo dochodzi na środek swojego pola, zamiast odpuszczać wroga
+- **Pochodnia łucznika** przy strzelaniu w budynek stoi wbita w ziemię w jednym miejscu (pół kroku przed nim, z boku) i jest wielkości pochodni, a nie człowieka. Wcześniej była „przyspawana” do łucznika: obracała się z nim przy naciągu i unosiła w powietrzu
+- **Ognista strzała z daleka** nie wygląda już na większą od człowieka: mniejszy, przygaszony płomyk i zwykła szerokość smugi (różni się tylko kolorem)
+- **Kursor z mieczem nad wrogim chłopem:** przy zaznaczonym wojsku najechanie na wrogiego chłopa pokazuje miecz i prawy klik wysyła żołnierzy na niego. Gra szukała chłopa w jednym punkcie metr nad ziemią (nad jego głową), więc przy zbliżeniu kursor na samej postaci nie łapał celu. Teraz trafia w całą sylwetkę, od stóp po głowę, tak samo jak zwykłe klikanie w chłopa, przy każdym zbliżeniu kamery
+- Bot: kursor i podświetlenie dotyczą tylko gracza; łucznicy bota tak samo strzelają do wilków, a krótszy cios wręcz dotyczy wszystkich
 ## 0.58.0 — rąbanie z biedy: osada bez składu i drwala nie staje (2026-10-28)
 
 - **Sytuacja kryzysowa:** gdy osada nie ma składu na drewno albo chaty drwala, a drewna brakuje nawet na nie (skład 15, drwal 15), jeden wolny chłop sam idzie do lasu, ścina drzewo i obrabia je przy pniu — wolno (30 s na drzewo, 5 drewna). Bez składu drewno od razu liczy się do zapasów, ze składem chłop zanosi je do niego. Gdy przy ognisku nikogo nie ma, rąbie wolny magazynier

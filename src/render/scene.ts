@@ -125,6 +125,8 @@ const TORCH_TIP = new THREE.Vector3(0, -0.19 + Math.cos(0.55) * 0.34, Math.sin(0
 const BUCKET_C = new THREE.Vector3(0.15, 0.15, 0.02);
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
+/** Pochodnia łucznika wbita w ziemię: powiększenie bryły pochodni z ręki i wysokość płomienia nad ziemią */
+const TORCH_K = 1.25, STICK_TIP = 0.34 * TORCH_K;
 /** Miejsca w zamku z modelu (tools/models/keep.py, układ modelu: środek działki, przód z bramą = +z) */
 const CASTLE = { floorY: 0.15, walkY: 1.71, throneZ: -4.16, seatY: 0.34 };
 /** O ile podnosi się krata bramy zamku (z modelu) */
@@ -478,9 +480,13 @@ export class GameRenderer {
     this.handFlameN++;
   }
   private handTorches: GearPool;
-  /** Pochodnia łucznika wbita w ziemię: z ręki (x −0,17, wys. 0,35–0,7) przesunięta w bok i w dół, wyższa i lekko pochylona */
-  private fireStick = new THREE.Matrix4().makeTranslation(0.45, -0.52, 0.22).multiply(new THREE.Matrix4().makeRotationZ(-0.18)).multiply(new THREE.Matrix4().makeScale(1, 1.5, 1));
-  private fireStickTip = new THREE.Vector3(-0.17, 0.69, 0.1);
+  /**
+   * Pochodnie łuczników wbite w ziemię przy strzelaniu w budynek: miejsce w świecie ustalone raz, gdy łucznik ją wbija
+   * (nie jeździ za nim i nie obraca się z naciągiem łuku); klucz = łucznik, `b` = budynek, w który strzela oddział
+   */
+  private planted = new Map<number, { x: number; y: number; z: number; b: number }>();
+  /** Bryła pochodni z ręki (kij x −0,17, wys. 0,35–0,7) przesunięta stopą do zera i powiększona do ok. 0,45 wysokości */
+  private fireStick = new THREE.Matrix4().makeScale(TORCH_K, TORCH_K, TORCH_K).multiply(new THREE.Matrix4().makeTranslation(0.17, -0.36, -0.1));
   /** Płomienie pochodni łuczników przy budynku (palą się też w dzień, jak koksowniki) */
   private stickFlames: THREE.Vector3[] = [];
   private stickFlameN = 0;
@@ -2201,7 +2207,7 @@ export class GameRenderer {
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
       this.syncCrowdSound(g, v);
-      T('wojsko', () => this.syncSoldiers(g, v, alpha));
+      T('wojsko', () => { this.syncSoldiers(g, v, alpha); this.placeFoeMark(); });
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
       T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.forestEyes.sync(g, v, { time: this.time, calm: this.calm, night: this.night }); this.syncVillage(g, v, dt); });
       T('budynki razem', () => this.syncBatches());
@@ -2325,7 +2331,7 @@ export class GameRenderer {
     const dark = this.night > 0.12;
     if (dark) for (const b of g.buildings) if (b.lit && !b.ruined && !b.build) lit.add(b.id);
     for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
-    for (let i = 0; i < this.stickFlameN; i++) F.add(this.stickFlames[i]!, 0.24, 0.13, (i * 0.531) % 1, Math.max(0.35, glow));
+    for (let i = 0; i < this.stickFlameN; i++) F.add(this.stickFlames[i]!, 0.17, 0.1, (i * 0.531) % 1, Math.max(0.35, glow));
     // koksowniki na murach i wieżach: płoną dniem i nocą (łucznicy maczają w nich strzały)
     for (const [id, m] of this.braziers.meshes) {
       if ((m.position.x - f.x) ** 2 + (m.position.z - f.z) ** 2 > 110 * 110) continue;
@@ -2335,7 +2341,8 @@ export class GameRenderer {
       F.add(w, 0.34 * m.scale.y, 0.2 * m.scale.y, (id * 0.173) % 1, Math.max(0.35, glow));
     }
     // ogniste strzały w locie: mały płomyk na grocie
-    for (let i = 0; i < this.arrows.fireN; i++) F.add(this.arrows.fires[i]!, 0.12, 0.07, (i * 0.531) % 1, Math.max(0.25, glow * 0.8));
+    // płomyk mały i przygaszony: jasny płomień z poświatą rozlewał się (z daleka strzała wyglądała na większą od człowieka)
+    for (let i = 0; i < this.arrows.fireN; i++) F.add(this.arrows.fires[i]!, 0.07, 0.04, (i * 0.531) % 1, glow * 0.35);
     // kule ognia magów w locie i rozbłyski przy celu
     this.spells.flames().forEach((v, i) => F.add(v, 0.2, 0.13, (i * 0.377) % 1, Math.max(0.5, glow)));
     this.handFlameN = 0;
@@ -3359,6 +3366,33 @@ export class GameRenderer {
   }
 
   private hl = 0;
+  /** Wróg (żołnierz, chłop, wilk) pod kursorem przy zaznaczonym wojsku: czerwony krąg pod stopami */
+  private foeMarkId = 0;
+  private foeMark: THREE.Mesh | null = null;
+  setFoeMark(id: number): void { this.foeMarkId = id; }
+  private placeFoeMark(): void {
+    if (!this.foeMark) {
+      const ring = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.4, 40).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0xd8231a, transparent: true, opacity: 0.9, depthWrite: false }));
+      const inner = new THREE.Mesh(new THREE.CircleGeometry(0.3, 40).rotateX(-Math.PI / 2),
+        new THREE.MeshBasicMaterial({ color: 0xb3120c, transparent: true, opacity: 0.28, depthWrite: false }));
+      ring.add(inner);
+      ring.renderOrder = 3;
+      this.scene.add(ring);
+      this.foeMark = ring;
+    }
+    const id = this.foeMarkId;
+    let p: THREE.Vector3 | undefined = id ? this.soldierPos.get(id) ?? this.wolfPos.get(id) : undefined;
+    if (id && !p) { const u = this.unitSpots.find((x) => x.id === id); if (u) p = this.markV.set(u.x, this.unitY.get(id) ?? 0, u.z); }
+    // żołnierz już nie istnieje (pozycja z pamięci zostaje): krąg tylko pod żywymi
+    if (p && this.state && this.soldierPos.has(id) && !this.state.soldiers.some((x) => x.id === id)) p = undefined;
+    this.foeMark.visible = !!p && !this.walk;
+    if (!p) return;
+    const pulse = this.calm ? 1 : 1 + Math.sin(this.time * 7) * 0.06;
+    this.foeMark.position.set(p.x, p.y + 0.04, p.z);
+    this.foeMark.scale.setScalar(pulse);
+  }
+  private markV = new THREE.Vector3();
   private hlMats = new Map<THREE.Material, THREE.Material>();
   /** Wrogi budynek pod kursorem przy zaznaczonym wojsku: delikatnie czerwienieje (0 = bez podświetlenia) */
   setAttackHighlight(id: number): void {
@@ -3372,7 +3406,9 @@ export class GameRenderer {
           if (!red) {
             red = m.material.clone();
             const st = red as THREE.MeshStandardMaterial;
-            if (st.emissive) { st.emissive = new THREE.Color(0xff2a1a); st.emissiveIntensity = 0.35; }
+            // głęboka czerwień „do ataku”: barwa przyciemniona ku czerwieni i czerwona poświata (dawniej wychodził pomarańcz)
+            if (st.color) st.color = st.color.clone().multiply(new THREE.Color(1, 0.42, 0.38));
+            if (st.emissive) { st.emissive = new THREE.Color(0xb3120c); st.emissiveIntensity = 0.6; }
             this.hlMats.set(m.material, red);
             red.userData.orig = m.material;
           }
@@ -3625,6 +3661,7 @@ export class GameRenderer {
       if (was === undefined || x.id < was) fireKeeper.set(k, x.id);
     }
     const torchBearers = new Set(fireKeeper.values());
+    for (const id of this.planted.keys()) if (!torchBearers.has(id)) this.planted.delete(id);
     // chorążowie: po jednym w każdym oddziale (rozkazie) z co najmniej trzema żołnierzami
     const bearers = bearerIds(g);
     // chorąży zniknął z wojska, a w tym miejscu leży jego ciało: padł, więc proporzec pada razem z nim
@@ -3662,7 +3699,9 @@ export class GameRenderer {
       const foe = s.target ? byId.get(s.target) : undefined;
       if (foe && !walking) { heading = Math.atan2((foe.px - s.px) / FP, (foe.py - s.py) / FP); this.facing.set(s.id, heading); }
       // bije wrogiego chłopa: zwraca się do niego i dźga albo strzela tak jak do żołnierza
-      const victim = !foe && s.hitting ? g.units.find((u) => u.id === s.hitting) : undefined;
+      // cel bez zbroi: chłop, w którego bije, albo wilk, do którego strzela łucznik (wolves.ts)
+      const wolfT = !foe && !s.hitting && s.hitWolf ? g.wolves.find((w) => w.id === s.hitWolf) : undefined;
+      const victim: { px: number; py: number } | undefined = !foe && s.hitting ? g.units.find((u) => u.id === s.hitting) : wolfT;
       if (victim && !walking) { heading = Math.atan2((victim.px - s.px) / FP, (victim.py - s.py) / FP); this.facing.set(s.id, heading); }
       // oblężenie: zwraca się do budynku i bije w niego włócznią
       const wall = !foe && s.target ? bById.get(s.target) : !foe && s.douse ? bById.get(s.douse) : undefined;
@@ -3778,12 +3817,12 @@ export class GameRenderer {
         let hit: WorldSound;
         // wysokość celu jak jego obrazek (standY): na koronie muru, na murach zamku i na wieży — strzała leci w człowieka, nie w mur pod nim
         if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : this.standY(view, tx, ty, (foe.py >> 8) * width + (foe.px >> 8)) - view.heightAt(tx, ty) + 0.45; const fd = UNITS[foe.kind]; hit = Math.random() < 0.25 ? 'arrowDirt' : fd?.guard || fd?.id === 'manatarms' ? 'arrowMetal' : 'flesh'; }
-        else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = this.standY(view, tx, ty, (victim.py >> 8) * width + (victim.px >> 8)) - view.heightAt(tx, ty) + 0.4; hit = Math.random() < 0.25 ? 'arrowDirt' : 'flesh'; }
+        else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = wolfT ? 0.25 : this.standY(view, tx, ty, (victim.py >> 8) * width + (victim.px >> 8)) - view.heightAt(tx, ty) + 0.4; hit = Math.random() < 0.25 ? 'arrowDirt' : 'flesh'; }
         else { const wd = BUILDINGS[wall!.type]!, fp = footprint(wd, wall!.rot); tx = wall!.x + fp.w * (0.25 + Math.random() * 0.5); ty = wall!.y + fp.h * (0.25 + Math.random() * 0.5); th = 0.5 + Math.random() * 0.7; /* rozrzut po ścianach i dachu, nie wszystkie w jeden punkt */ hit = (wd.cost.stone ?? 0) > (wd.cost.wood ?? 0) ? 'arrowStone' : 'arrowWood'; }
         if (s.up && s.post) this.towerIcons.shot(s.post, this.time);
         // cel: pierś narysowanego wroga (pozycja z poprzedniej klatki), a gdy go jeszcze nie ma — wyliczona wysokość
-        const seen = foe ? this.drawnAt.get(foe.id) : undefined;
-        const aim = seen ? new THREE.Vector3(seen.x, seen.y + 0.95, seen.z) : new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2);
+        const seen = foe ? this.drawnAt.get(foe.id) : wolfT ? this.wolfPos.get(wolfT.id) : undefined;
+        const aim = seen ? new THREE.Vector3(seen.x, seen.y + (foe ? 0.95 : 0.28), seen.z) : new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2);
         if (udef.magic) {
           // czar z dłoni: kula ognia albo wody leci do celu (trafienie liczy symulacja, to tylko wygląd)
           const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
@@ -3836,9 +3875,15 @@ export class GameRenderer {
       if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
       // pochodnia wbita w ziemię obok łucznika, który strzela w budynek (płomień palący się także w dzień)
       if (torchBearers.has(s.id) && !this.calm && torches < 256) {
-        this.armM.copy(t.matrix).multiply(this.fireStick);
-        this.soldierTorches.setMatrixAt(torches++, this.armM);
-        if (this.stickFlameN < 64) (this.stickFlames[this.stickFlameN++] ??= new THREE.Vector3()).copy(this.fireStickTip).applyMatrix4(this.armM);
+        let pl = this.planted.get(s.id);
+        if (!pl || pl.b !== s.target) {
+          // pół kroku przed nim i w bok (po prawej, z dala od łuku), stoi na ziemi w tym miejscu
+          const fx = px + Math.sin(heading) * 0.25 + Math.cos(heading) * 0.3, fz = pz + Math.cos(heading) * 0.25 - Math.sin(heading) * 0.3;
+          pl = { x: fx - width / 2, y: this.standY(view, fx, fz, -2), z: fz - height / 2, b: s.target };
+          this.planted.set(s.id, pl);
+        }
+        this.soldierTorches.setMatrixAt(torches++, this.armM.makeTranslation(pl.x, pl.y, pl.z).multiply(this.fireStick));
+        if (this.stickFlameN < 64) (this.stickFlames[this.stickFlameN++] ??= new THREE.Vector3()).set(pl.x, pl.y + STICK_TIP, pl.z);
       }
       // zbój z lasu nie ma pana: skóry i brudne płótno zamiast barw drużyny
       const teamC = g.players[s.owner] ? TEAM_COLORS[g.players[s.owner]!.team] ?? 0x888888 : BANDIT_COLOR;
@@ -5347,6 +5392,29 @@ export class GameRenderer {
 
   /** Zaznacza chłopa: pierścień chodzi za nim. 0 zdejmuje zaznaczenie. */
   setUnitSelection(id: number): void { this.selectedUnit = id; if (id) this.selectedId = 0; else if (!this.selectedId) this.selection.visible = false; }
+
+  /**
+   * Chłop pod kursorem (współrzędne ekranu jak w zdarzeniu myszy), tylko z tych, które przepuści `ok` — promień z kamery
+   * jak przy klikaniu w chłopa, więc trafia w całą sylwetkę przy każdym zbliżeniu (wskazywanie wroga do ataku)
+   */
+  unitAt(clientX: number, clientY: number, ok: (id: number) => boolean): number {
+    if (!this.view) return 0;
+    const r = this.canvas.getBoundingClientRect();
+    const ndc = new THREE.Vector2(((clientX - r.left) / r.width) * 2 - 1, -((clientY - r.top) / r.height) * 2 + 1);
+    this.ray.setFromCamera(ndc, this.cam.camera);
+    let best = 0, bestD = 0.35;
+    const p = new THREE.Vector3();
+    for (const u of this.unitSpots) {
+      if (!ok(u.id)) continue;
+      // najbliższy punkt sylwetki od stóp po głowę, nie jeden punkt w pasie
+      const y0 = this.unitY.get(u.id) ?? 0;
+      for (const h of [0.12, 0.33, 0.55]) {
+        const d = this.ray.ray.distanceToPoint(p.set(u.x, y0 + h, u.z));
+        if (d < bestD) { bestD = d; best = u.id; }
+      }
+    }
+    return best;
+  }
 
   private pickUnit(e: PointerEvent): number {
     if (!this.view) return 0;

@@ -1504,18 +1504,23 @@ function updateHoverFoe(): void {
   hoverFoe = 0;
   if (chosen.size && mouseX >= 0) {
     let bd = 26 * 26;
+    // wrogi żołnierz (także strażnik miejski, łucznik, mag): odległość kursora od całej sylwetki — odcinka od stóp
+    // do paska zdrowia nad głową; dawniej liczył się tylko punkt przy pasku, więc kursor na tułowiu nie dawał miecza
     for (const s of renderer.soldiersOnScreen(-1)) {
       if (game.players[s.owner]?.team === game.players[ME]!.team) continue;
-      const d = (s.x - mouseX) ** 2 + (s.y - mouseY) ** 2;
+      const vx = s.x - s.fx, vy = s.y - s.feet, len = vx * vx + vy * vy;
+      const k = len > 0 ? Math.max(0, Math.min(1, ((mouseX - s.fx) * vx + (mouseY - s.feet) * vy) / len)) : 0;
+      const d = (s.fx + vx * k - mouseX) ** 2 + (s.feet + vy * k - mouseY) ** 2;
       if (d < bd) { bd = d; hoverFoe = s.id; }
     }
     // wrodzy chłopi pod kursorem: prawy klik = żołnierze idą na nich
-    for (const u of game.units) {
-      if (game.players[u.owner]?.team === game.players[ME]!.team) continue;
-      const p = renderer.project(u.px / 256, u.py / 256);
-      if (!p.front) continue;
-      const d = (p.sx - mouseX) ** 2 + (p.sy - 12 - mouseY) ** 2;
-      if (d < bd) { bd = d; hoverFoe = u.id; }
+    // (promień z kamery w sylwetkę, jak przy klikaniu w chłopa — dawniej jeden punkt metr nad ziemią, nad głową chłopa,
+    // więc przy zbliżeniu kursor na chłopie nie dawał miecza i nie dało się go wskazać)
+    if (!hoverFoe) {
+      const myTeam = game.players[ME]!.team;
+      const foeIds = new Set(game.units.filter((u) => game.players[u.owner]?.team !== myTeam).map((u) => u.id));
+      const u = foeIds.size ? renderer.unitAt(mouseX, mouseY, (id) => foeIds.has(id)) : 0;
+      if (u) hoverFoe = u;
     }
     // wilki pod kursorem też można zaatakować
     for (const w of game.wolves) {
@@ -1547,6 +1552,7 @@ function updateHoverFoe(): void {
   }
   canvas.classList.toggle('enter', enter);
   renderer.setAttackHighlight(game.buildings.some((b) => b.id === hoverFoe) ? hoverFoe : 0);
+  renderer.setFoeMark(hoverFoe && !game.buildings.some((b) => b.id === hoverFoe) ? hoverFoe : 0);
 }
 
 // ---- paski zdrowia nad żołnierzami: ranni, zaznaczeni i wróg pod kursorem (ui/hpBars.ts) ----

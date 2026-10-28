@@ -802,6 +802,11 @@ function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
     for (const m of list) {
       if (m.at > g.tick) { list[keep++] = m; continue; }
       const k = g.players[m.by];
+      if (m.wolf) {
+        const w = g.wolves.find((x) => x.id === m.to);
+        if (w && w.hp > 0) w.hp -= m.dmg; // padły wilk zostaje na ziemi jako ciało (wolfSystem)
+        continue;
+      }
       if (m.bld) {
         const b = buildingById(g, m.to);
         const shooter = byId.get(m.from);
@@ -887,6 +892,8 @@ function greedy(g: GameState, from: number, to: number, taken: Set<number>, play
 
 const team = (g: GameState, player: number): number => g.players[player]?.team ?? player;
 /** Odległość w stałym przecinku (metryka szachowa, wystarcza do walki wręcz) */
+/** Zasięg ciosu wręcz (włócznia, miecz): tuż obok, na sąsiednim polu (dawniej 1,5 pola — bili przez wolne pole, gdy wróg odchodził) */
+const MELEE = FP + FP / 4;
 const gap = (a: Soldier, b: Soldier): number => Math.max(Math.abs(a.px - b.px), Math.abs(a.py - b.py));
 
 /**
@@ -937,6 +944,7 @@ export function armySystem(g: GameState): void {
     // przymrożony czarem wody wolniej się porusza i wolniej zadaje ciosy (odliczanie co drugi tick)
     if (s.cd > 0 && !((s.slow ?? 0) > g.tick && g.tick % 2)) s.cd--;
     s.hitting = 0;
+    if (s.hitWolf) delete s.hitWolf;
     if (!s.path.length && s.run) s.run = Math.max(0, s.run - 3); // stoi: rozbieg gaśnie
     const def = UNITS[s.kind]!;
     // przy własnej twierdzy rany powoli się goją, w namiocie polowym z medykiem dwa razy szybciej;
@@ -1042,7 +1050,7 @@ export function armySystem(g: GameState): void {
         if (s.amove && s.goal >= 0 && (s.path.length > 1 || s.slot)) s.path = [];
         // wręcz: wróg zszedł na mur albo z muru (inny poziom) — nie dosięgnie, szuka innego
         if (!range && (foe.up || high(g, foe) !== high(g, s))) { s.target = 0; s.path = []; continue; }
-        if (gap(s, foe) <= (range ? range * FP : FP + FP / 2) && !s.path.length && (!range || lineOfSight(g, s, foe, high(g, s), high(g, foe)))) {
+        if (gap(s, foe) <= (range ? range * FP : MELEE) && !s.path.length && (!range || lineOfSight(g, s, foe, high(g, s), high(g, foe)))) {
           if (s.cd === 0) {
             // strzelcy nie strzelają równo jak na komendę: każdy naciąga łuk w swoim rytmie (kilka ticków rozrzutu)
             s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
@@ -1075,6 +1083,16 @@ export function armySystem(g: GameState): void {
       if (foe) {
         // podchodzi na wolne pole obok wroga (nie tam, gdzie stoi już ktoś inny); drogę odświeża co kilka ticków
         // bez szukania drogi: krok na sąsiednie wolne pole najbliżej wroga (tanie nawet przy setkach walczących)
+        // już na sąsiednim polu, tylko wróg jest w pół kroku (za daleko na cios): czeka chwilę, aż stanie albo podejdzie,
+        // zamiast szukać drogi, której nie ma (i odpuszczać wroga, żeby bić mur)
+        if (!s.path.length && !range) {
+          const a = tileOf(g, s), b = tileOf(g, foe);
+          if (Math.max(Math.abs((a % W) - (b % W)), Math.abs(Math.floor(a / W) - Math.floor(b / W))) <= 1) {
+            // sam stoi w pół kroku (np. po marszu w szyku): dochodzi na środek swojego pola, wtedy sięga sąsiada
+            if (((s.px & 255) - 128) ** 2 + ((s.py & 255) - 128) ** 2 > 24 * 24) { s.path = [a]; step(g, s); }
+            continue;
+          }
+        }
         if (!s.path.length) {
           const next = greedy(g, tileOf(g, s), tileOf(g, foe), taken, s.owner);
           if (next >= 0) { s.path = [next]; taken.add(next); }
@@ -1110,9 +1128,9 @@ export function armySystem(g: GameState): void {
             if (d < best || (prey && d === best && i < bi)) { best = d; prey = u; bi = i; }
           });
         }
-        if (prey && prey !== ordered && (stance === 2 || tooFar((prey.py >> 8) * W + (prey.px >> 8))) && (prey.px - s.px) ** 2 + (prey.py - s.py) ** 2 > ((range || 1.5) * FP) ** 2) prey = undefined;
+        if (prey && prey !== ordered && (stance === 2 || tooFar((prey.py >> 8) * W + (prey.px >> 8))) && (prey.px - s.px) ** 2 + (prey.py - s.py) ** 2 > (range ? range * FP : MELEE) ** 2) prey = undefined;
         if (prey) {
-          const reach = range ? range : 1.5;
+          const reach = range ? range : MELEE / FP;
           if (best <= reach * reach && (!range || lineOfSight(g, s, prey, high(g, s), false))) {
             s.path = [];
             s.hitting = prey.id;

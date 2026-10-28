@@ -55,10 +55,10 @@ export function createHpBars(d: HpBarsDeps): () => void {
     const p = document.createElement('span');
     p.className = `hpdmg${kind ? ` ${kind}` : ''}`;
     p.textContent = `−${n}`;
-    p.style.transform = `translate(${Math.round(x + 10 + ((n * 7) % 9) - 4)}px, ${Math.round(y - 18)}px)`;
+    p.style.transform = `translate(${Math.round(x + 4 + ((n * 7) % 13) - 6)}px, ${Math.round(y - 30)}px)`;
     layer.append(p);
     pops++;
-    setTimeout(() => { p.remove(); pops--; }, reduced ? 700 : 950);
+    setTimeout(() => { p.remove(); pops--; }, reduced ? 700 : 1200);
   };
 
   const place = (key: string, u: ScreenUnit, max: number, team: 'own' | 'foe', state: string): void => {

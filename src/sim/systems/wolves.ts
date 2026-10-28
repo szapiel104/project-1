@@ -1,5 +1,6 @@
 import { buildingById, dropWorker } from '../state';
-import { high, isBrave, peasantWeapon } from './army';
+import { ARROW_TICKS, high, isBrave, peasantWeapon, spellTicks } from './army';
+import { hash2 } from '../rng';
 import { clockAt, hourStarts } from '../clock';
 import { WOLF, findPath, walkable } from '../path';
 import { BUILDINGS } from '../../data/buildings';
@@ -178,6 +179,19 @@ export function wolfSystem(g: GameState): void {
     // uciekającego rannego wilka strażnik też dobija (pościg kończy smycz obchodu w guards.ts)
     for (const w of g.wolves) { if (w.hp <= 0) continue; const dx = (s.px - w.px) / FP, dy = (s.py - w.py) / FP, d = dx * dx + dy * dy; if (d < best) { best = d; wolf = w; } }
     if (!wolf) continue;
+    if (best <= reach && def.range) {
+      // łucznik i mag: strzelają do każdego wilka w zasięgu (gdziekolwiek wilk napada — u nas, u wroga, na wojsko),
+      // strzała leci jak do ludzi i rani dopiero, gdy doleci; nie przerywa strzelania do wrogich żołnierzy i chłopów
+      if (s.shot === g.tick || s.hitting || (s.target && !s.hunt && g.soldiers.some((o) => o.id === s.target))) continue;
+      s.hitWolf = wolf.id;
+      if (s.cd === 0) {
+        s.cd = def.cooldown + hash2(s.id, g.tick, 0x3017) % 4;
+        s.shot = g.tick;
+        const far = Math.max(Math.abs(wolf.px - s.px), Math.abs(wolf.py - s.py));
+        (g.missiles ??= []).push({ to: wolf.id, wolf: true, dmg: def.attack, at: g.tick + (def.magic ? spellTicks(far) : ARROW_TICKS), from: s.id, by: s.owner, ...(def.magic ? { magic: true } : {}) });
+      }
+      continue;
+    }
     if (best <= reach) { if ((g.tick + s.id) % def.cooldown === 0) wolf.hp -= def.attack; }
     else if (def.guard && !s.target && !s.hunt) {
       // strażnik: pościg za wilkiem (obchód czeka, aż wilk padnie albo ucieknie za osadę)

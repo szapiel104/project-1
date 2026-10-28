@@ -396,6 +396,8 @@ export interface Soldier {
   prey?: number;
   /** Chłop, w którego właśnie bije (dla animacji ciosu i strzału) */
   hitting?: number;
+  /** Łucznik albo mag mierzy w wilka w zasięgu (wolves.ts; dla animacji naciągu i lotu strzały) */
+  hitWolf?: number;
   /** Strażnik miejski: numer punktu obchodu, do którego idzie */
   beat?: number;
   /** Miejsce w zwartym szyku w marszu: [w bok, w tył] w polach względem punktu prowadzącego oddział */
@@ -443,6 +445,8 @@ export interface Missile {
   unit?: boolean;
   /** Strzała albo czar w budynek: obrażenia i podpalenie dopiero, gdy doleci */
   bld?: boolean;
+  /** Strzała albo czar w wilka: rana, gdy doleci */
+  wolf?: boolean;
   dmg: number;
   /** Tick trafienia */
   at: number;
