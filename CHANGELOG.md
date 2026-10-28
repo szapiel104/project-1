@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.64.7 — trawa wyłączona, lobby gry przez sieć bez skakania (2026-10-28)
+
+- **Trawa wyłączona na razie** (prośba Michała): dywan kęp trawy z pobranych zdjęć (`render/grass.ts`) nie jest tworzony (`GRASS = false` w `render/terrain.ts`); łąka zostaje z teksturą ziemi. Kod i atlas zostają — trawa wraca po zmianie flagi
+- **Gra przez sieć bez skakania:** zalogowany widzi od razu całe okno lobby (zakładki, zakładanie gry, lista), a lista gier doczytuje się w miejscu z napisem „Wczytuję gry…” — wcześniej najpierw był mały napis „Łączenie…”, potem całe okno, potem lista, i wszystko podskakiwało. Lista ma stałą wysokość, a spóźniona odpowiedź serwera nie maluje już ekranu, z którego się wyszło
+- **Większy napis, gdy nie ma gier:** „Nie ma jeszcze żadnych gier” większą czcionką, z większym opisem, na całej wysokości listy
+- Wdrożenia od 0.64.2 nie wchodziły na stronę, bo w testach padał test bota (koszary): po zmianach z innych czatów bot stawia koszary ok. 8,8 doby, a test czekał 7,5 — test dostał dłuższy czas i wdrożenia znów działają
+- Bot: bez zmian
+
 ## 0.64.6 — wspinaczka po drabinach, schody w kamiennych wieżach, szturm na wieże, łatwiejsze klikanie (2026-10-28)
 
 - **Wchodzenie po drabinie** (`step` w `sim/systems/army.ts`, `CLIMB_TICKS`): przejście z ziemi na pomost wieży albo koronę muru (i z powrotem) trwa chwilę — żołnierz staje przy drabinie i powoli się po niej wspina (schodzi), potem staje od razu na górze. W kamiennej wieży idzie schodami w środku: znika w drzwiach i wychodzi z klatki schodowej na pomoście

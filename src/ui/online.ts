@@ -58,7 +58,9 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   let stopWatch: (() => void) | null = null;
   /** Wyjście z pokoju przy przejściu na inny ekran */
   let leaveRoom: (() => void) | null = null;
-  const cleanup = (): void => { stopWatch?.(); stopWatch = null; leaveRoom?.(); leaveRoom = null; };
+  /** Numer ostatniego otwarcia lobby: wynik spóźnionego zapytania nie maluje już ekranu, z którego gracz wyszedł */
+  let lobbySeq = 0;
+  const cleanup = (): void => { lobbySeq++; stopWatch?.(); stopWatch = null; leaveRoom?.(); leaveRoom = null; };
 
   const msg = (text: string, bad = false): HTMLElement => { const p = el('p', bad ? 'net-msg bad' : 'net-msg', text); p.setAttribute('role', 'status'); return p; };
   const back = (to: () => void = () => { cleanup(); ui.showMain(); }, text = tx('Wróć', 'Back')): HTMLButtonElement => button(text, to, 'menu-btn menu-back');
@@ -417,12 +419,19 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   let filter: MapPresetId | 'all' = 'all';
   async function showOnline(): Promise<void> {
     cleanup();
-    screen(tx('Gra przez sieć', 'Online play'), true, msg(tx('Łączenie…', 'Connecting…')));
-    await restore();
-    const m = me();
-    if (!m) { showLogin(false, tx('Zaloguj się, żeby grać przez sieć.', 'Sign in to play online.'), () => void showOnline()); return; }
-    // wchodzę do listy, więc żaden mój pokój nie jest już aktywny
-    await closeMyStaleRooms();
+    const seq = ++lobbySeq;
+    const title = tx('Gra przez sieć', 'Online play');
+    // od razu pełny układ okna (bez skoku): zalogowany widzi lobby od pierwszej chwili, lista gier doczytuje się w miejscu
+    let m = me();
+    if (!m) {
+      const wait = el('div', 'net-lobby net-wait');
+      wait.append(msg(tx('Łączenie…', 'Connecting…')));
+      screen(title, true, wait, back());
+      await restore();
+      if (seq !== lobbySeq) return;
+      m = me();
+      if (!m) { showLogin(false, tx('Zaloguj się, żeby grać przez sieć.', 'Sign in to play online.'), () => void showOnline()); return; }
+    }
     const wrap = el('div', 'net-lobby');
     // pasek: kim jestem
     const bar = el('div', 'net-bar');
@@ -463,6 +472,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     });
     const draw = async (): Promise<void> => {
       const rooms = (await listRooms()).filter((r) => filter === 'all' || r.preset === filter);
+      if (seq !== lobbySeq) return;
       if (!rooms.length) {
         const empty = el('div', 'net-empty');
         empty.append(el('strong', '', filter === 'all' ? tx('Nie ma jeszcze żadnych gier', 'No games yet') : tx(`Nie ma gier ${modeName(filter)}`, `No ${modeName(filter)} games`)),
@@ -481,9 +491,18 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         return row;
       }));
     };
+    // lista od razu ma swoją wysokość: najpierw napis „Wczytuję gry…”, potem pokoje w tym samym miejscu
+    const loading = el('div', 'net-empty net-loading');
+    loading.append(el('strong', '', tx('Wczytuję gry…', 'Loading games…')));
+    list.replaceChildren(loading);
     wrap.append(bar, create, list);
-    screen(tx('Gra przez sieć', 'Online play'), true, wrap, back());
+    screen(title, true, wrap, back());
+    await restore();
+    // wchodzę do listy, więc żaden mój pokój nie jest już aktywny
+    await closeMyStaleRooms();
+    if (seq !== lobbySeq) return;
     await draw();
+    if (seq !== lobbySeq) return;
     stopWatch = watchRooms(() => void draw());
   }
 

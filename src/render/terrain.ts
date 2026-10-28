@@ -6,6 +6,8 @@ import { TEST } from '../testmode';
 import { cat } from './cat';
 
 /** Kwiaty na łąkach — na razie wyłączone (19.10.2026); `true` przywraca stare kwiatki z models.flower() */
+/** Dywan trawy z kęp (grass.ts): wyłączony na razie (Michał 28.10.2026), ziemia zostaje z teksturą łąki */
+const GRASS = false;
 const FLOWERS = false;
 
 /** Daleki obrazek drzewa liściastego: jesienią rudzieje, zimą szarzeje (bez zwijania korony — obrazek ma pień) */
@@ -683,7 +685,8 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     }
     for (let t = 0; t < w * h; t++) grassLush[t] = d[t]! === 0 ? 0 : Math.max(0, 1 - (d[t]! - 1) / LUSH_R);
   }
-  const grass: GrassField | null = TEST ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), grassLush);
+  // trawa (dywan kęp) wyłączona na razie (28.10.2026, prośba Michała) — wraca po zmianie GRASS na true
+  const grass: GrassField | null = TEST || !GRASS ? null : createGrassField(w, h, corners, grassBase, groundGrassTexture(), grassLush);
   if (grass) group.add(cat(grass.mesh, 'trawa (dywan)'));
   // leśne ścieżki z generatora mapy: wydeptana ziemia, najmocniej tam, gdzie spotykają się dwa pola ścieżki (środek dróżki),
   // słabiej na brzegach, z lekką nierównością — wygląda jak dróżka chodzona od lat, a nie jak wyrysowana droga
