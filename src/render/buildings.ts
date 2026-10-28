@@ -413,20 +413,86 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
   }
 }
 
-/** Stos gruzu po rozbiórce: kamienie, połamane belki i deski rozsypane po działce. */
+/**
+ * Stos gruzu po rozbiórce: kamienie, połamane belki i deski rozsypane po działce. Kawałki „spadają” po kolei
+ * na ziemię albo na to, co już leży (prosta mapa wysokości pod stosem): kamień siada na najwyższym punkcie pod sobą,
+ * belka i deska opierają się o dwa najwyższe punkty po obu stronach środka i przechylają się między nimi.
+ * Nic nie wisi w powietrzu (Michał 28.10.2026).
+ */
 export function rubbleModel(w: number, h: number, seed: number): THREE.Group {
   const g = new THREE.Group();
   const count = Math.round(9 * w * h);
   let s = seed * 9301 + 49297;
   const r = (): number => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
-  for (let i = 0; i < count; i++) {
-    const x = (r() - 0.5) * w * 0.85, z = (r() - 0.5) * h * 0.85;
-    const kind = i % 3;
+  // mapa wysokości pod stosem (siatka co 4 cm, z zapasem na wystające belki)
+  const C = 0.04, pad = 0.6, gw = Math.ceil((w + 2 * pad) / C), gh = Math.ceil((h + 2 * pad) / C);
+  const hm = new Float32Array(gw * gh);
+  const cell = (x: number, z: number): number => {
+    const i = Math.floor((x + w / 2 + pad) / C), j = Math.floor((z + h / 2 + pad) / C);
+    return i < 0 || j < 0 || i >= gw || j >= gh ? -1 : j * gw + i;
+  };
+  const at = (x: number, z: number): number => { const c = cell(x, z); return c < 0 ? 0 : hm[c]!; };
+  const raise = (x: number, z: number, y: number): void => { const c = cell(x, z); if (c >= 0 && hm[c]! < y) hm[c] = y; };
+  // najpierw duże kamienie (podstawa stosu), potem belki, na wierzchu deski
+  const order: number[] = [];
+  for (let i = 0; i < count; i++) order.push(i % 3);
+  order.sort((a, b) => a - b);
+  for (const kind of order) {
+    // kawałek stacza się w dół: z pięciu miejsc, gdzie mógł spaść, wybiera najniższe (stos nie rośnie w wieżę)
+    let x = 0, z = 0, best = Infinity;
+    for (let k = 0; k < 5; k++) {
+      const cx = (r() - 0.5) * w * 0.85, cz = (r() - 0.5) * h * 0.85, hh = at(cx, cz);
+      if (hh < best) { best = hh; x = cx; z = cz; }
+    }
     let m: THREE.Mesh;
-    if (kind === 0) { m = new THREE.Mesh(new THREE.DodecahedronGeometry(0.1 + r() * 0.1, 0), r() > 0.5 ? M.rock : M.rockDark); m.position.set(x, 0.07 + r() * 0.12, z); }
-    else if (kind === 1) { m = new THREE.Mesh(new THREE.BoxGeometry(0.5 + r() * 0.4, 0.06, 0.08), M.woodDark); m.position.set(x, 0.08 + r() * 0.2, z); }
-    else { m = new THREE.Mesh(new THREE.BoxGeometry(0.4 + r() * 0.3, 0.035, 0.16), M.plank); m.position.set(x, 0.05 + r() * 0.15, z); }
-    m.rotation.set((r() - 0.5) * 0.9, r() * 6.3, (r() - 0.5) * 0.9);
+    if (kind === 0) {
+      // kamień: siada na najwyższym miejscu pod sobą, lekko wciśnięty
+      const rad = 0.1 + r() * 0.1;
+      m = new THREE.Mesh(new THREE.DodecahedronGeometry(rad, 0), r() > 0.5 ? M.rock : M.rockDark);
+      let base = 0;
+      for (let a = 0; a < 8; a++) for (const k of [0.3, 0.65]) base = Math.max(base, at(x + Math.cos(a * 0.785) * rad * k, z + Math.sin(a * 0.785) * rad * k));
+      base = Math.max(base, at(x, z));
+      const y = base + rad * 0.8;
+      m.position.set(x, y, z);
+      m.rotation.set(r() * 6.3, r() * 6.3, r() * 6.3);
+      for (let dx = -rad; dx <= rad; dx += C) for (let dz = -rad; dz <= rad; dz += C) {
+        const d2 = (dx * dx + dz * dz) / (rad * rad * 0.7);
+        if (d2 < 1) raise(x + dx, z + dz, y + rad * 0.78 * Math.sqrt(1 - d2));
+      }
+    } else {
+      // belka albo deska: opiera się o najwyższy punkt po każdej stronie środka i przechyla między nimi
+      const beam = kind === 1;
+      const L = beam ? 0.5 + r() * 0.4 : 0.4 + r() * 0.3, T = beam ? 0.06 : 0.035, W = beam ? 0.08 : 0.16;
+      m = new THREE.Mesh(new THREE.BoxGeometry(L, T, W), beam ? M.woodDark : M.plank);
+      const yaw = r() * 6.3, dx = Math.cos(yaw), dz = -Math.sin(yaw), px = Math.sin(yaw), pz = Math.cos(yaw);
+      const n = Math.max(4, Math.ceil(L / C));
+      const prof: number[] = [];
+      for (let i = 0; i <= n; i++) {
+        const t = -L / 2 + (L * i) / n;
+        let top = 0;
+        for (const q of [-W / 2, 0, W / 2]) top = Math.max(top, at(x + dx * t + px * q, z + dz * t + pz * q));
+        prof.push(top);
+      }
+      let iA = 0, iB = n;
+      for (let i = 0; i <= n >> 1; i++) if (prof[i]! > prof[iA]!) iA = i;
+      for (let i = n >> 1; i <= n; i++) if (prof[i]! > prof[iB]!) iB = i;
+      const sA = -L / 2 + (L * iA) / n, sB = -L / 2 + (L * iB) / n;
+      let slope = sB - sA > 1e-3 ? (prof[iB]! - prof[iA]!) / (sB - sA) : 0;
+      slope = Math.max(-0.55, Math.min(0.55, slope));
+      let c = prof[iA]! - slope * sA;
+      // podnieś linię tak, żeby belka nie wchodziła w nic pod sobą (styka się w najwyższym punkcie)
+      let lift = 0;
+      for (let i = 0; i <= n; i++) lift = Math.max(lift, prof[i]! - (c + slope * (-L / 2 + (L * i) / n)));
+      c += lift;
+      const pitch = Math.atan(slope);
+      m.rotation.order = 'YZX';
+      m.rotation.set((r() - 0.5) * 0.12, yaw, pitch);
+      m.position.set(x, c + (T / 2) * Math.cos(pitch) - 0.004, z);
+      for (let i = 0; i <= n; i++) {
+        const t = -L / 2 + (L * i) / n, y = c + slope * t + T;
+        for (const q of [-W / 2, 0, W / 2]) raise(x + dx * t + px * q, z + dz * t + pz * q, y);
+      }
+    }
     m.castShadow = true;
     m.receiveShadow = true;
     g.add(m);

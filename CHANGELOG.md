@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.57.4 — gruzowisko leży na ziemi (2026-10-28)
+
+- **Gruz układa się jak po zawaleniu:** kamienie, belki i deski spadają po kolei na ziemię albo na to, co już leży (mapa wysokości pod stosem). Kamień siada na najwyższym punkcie pod sobą, a belka opiera się o dwa najwyższe punkty po obu stronach środka i przechyla się między nimi. Każdy kawałek stacza się w najniższe z kilku miejsc, więc stos nie rośnie w wieżę. Nic nie wisi w powietrzu i nic nie wchodzi w ziemię. Na spodzie leżą kamienie, na wierzchu deski — wynoszony gruz znika od góry
+- Dotyczy gruzu po rozbiórce i ruin czekających na odbudowę (ten sam model)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.57.3 — pochówek w lesie, gdy nie ma cmentarza (2026-10-28)
 
 - **Bez cmentarza chłopi chowają zmarłych w lesie:** wolny chłop, który zabrał ciało spod twierdzy, nie niesie go już do obozowiska (ani w okolice gruzowiska), tylko na najbliższy skraj lasu — wolne pole trawy tuż pod drzewami, poza drogami. Tam odkłada ciało, kopie dół łopatą (ten sam ruch co leśniczy przy sadzeniu, ok. 6 s) i wraca do obozowiska. Gdy las jest za daleko albo za wodą, zakopuje ciało tam, gdzie stoi, zamiast krążyć z nim po osadzie. Z cmentarzem wszystko po staremu: ciała trafiają na cmentarz
@@ -28,6 +34,7 @@
 - **Ludzie odsuwają się od ognia:** kto nie gasi, a stoi w odległości 2 pól od płonącego budynku, odchodzi kilka pól dalej (w stronę od ognia) i chwilę tam czeka, zanim wróci do roboty. Gaszący z wiadrami podchodzą normalnie, przechodzący drogą idą dalej
 - Bot: bez zmian w decyzjach; jego ludzie odsuwają się od ognia tak samo jak gracza
 - Testy: osmalenie rośnie przy pożarze, zostaje bez naprawy i schodzi z naprawą; człowiek przy płonącej ścianie odchodzi
+
 
 ## 0.56.2 — obozy zbójów na uboczu mapy (2026-10-28)
 
