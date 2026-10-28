@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.60.1 — poprawka: tekstury kopiowane przez JSON (spadki FPS) i błąd pór roku (2026-10-28)
+
+- **Koniec ostrzeżeń „THREE.Texture: Unable to serialize Texture”** (u Michała ×204 w 3 minuty, przy 14 FPS): `Material.clone()` w three.js kopiuje `userData` przez JSON, a w `userData` leżały materiały — oryginał podświetlonego na czerwono budynku (cel ataku) i materiał źródłowy placu budowy. Przy każdej kopii (np. bliźniak do wnętrz w porach roku) three.js zamieniał ich tekstury na obrazki. Oryginały trzymamy teraz poza `userData`, a materiały kopiuje `cloneMaterial` (`src/render/matclone.ts`) — bez JSON, z tymi samymi teksturami
+- **Błąd „Cannot read properties of undefined (reading 'noSeason')”** w porach roku: pusty slot w tablicy materiałów albo materiał bez `userData` wywracał całą klatkę — teraz jest pomijany
+- Test: kopia materiału nie serializuje tekstur i zostawia te same odwołania
+- Bot: bez zmian
+
 ## 0.60.0 — okno wojska w ikonach, mniej zasłania ekran (2026-10-28)
 
 - **Szyk, marsz, postawa i patrol jako ikony** w dwóch krótkich rzędach zamiast wierszy z napisami; okno wojska jest węższe (300 px) i niższe

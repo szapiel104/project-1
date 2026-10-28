@@ -1,3 +1,4 @@
+import { cloneMaterial } from './matclone';
 /**
  * Postacie ze szkieletem z Blendera (tools/models/chars → public/chars/<nazwa>.glb): siatka ze skórą, szkielet
  * i animacje z nagrań ruchu (spoczynek, chód, cios, śmierć).
@@ -201,7 +202,7 @@ export class SkinnedFigures {
     this.team.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('aAnim', this.anim);
     geo.setAttribute('aTeam', this.team);
-    const mat = b.mat.clone();
+    const mat = cloneMaterial(b.mat);
     patchColor(mat, b.bones);
     cloudShade(mat);
     const mesh = new THREE.InstancedMesh(geo, mat, this.max);

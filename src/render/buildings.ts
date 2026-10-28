@@ -1,3 +1,4 @@
+import { cloneMaterial } from './matclone';
 import { named } from './named';
 import * as THREE from 'three';
 import { basketAt, propAt, propGeometryFlat, propMaterial, type PropName } from './props';
@@ -670,7 +671,7 @@ let baseMats: Set<THREE.Material> | null = null;
 function withAo(m: THREE.Material): THREE.Material {
   let c = aoMats.get(m);
   if (!c) {
-    c = m.clone(); (c as THREE.MeshStandardMaterial).vertexColors = true; c.userData = m.userData; aoMats.set(m, c);
+    c = cloneMaterial(m); (c as THREE.MeshStandardMaterial).vertexColors = true; c.userData = m.userData; aoMats.set(m, c);
     // Modele z Blendera składamy z brył, które często stykają się płaszczyznami (belki szachulca na tynku, ciosy na murze,
     // gzyms na koronie): dwie powierzchnie w tym samym miejscu migają przy ruchu kamery (z-fighting). Duże płaszczyzny
     // (tynk, mur, deski, ziemia, strzecha) zostają na swoim miejscu, a detale są o włos bliżej kamery, więc zawsze wygrywają.

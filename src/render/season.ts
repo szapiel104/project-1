@@ -1,3 +1,4 @@
+import { cloneMaterial } from './matclone';
 import * as THREE from 'three';
 
 /**
@@ -206,7 +207,7 @@ function indoorTwin(m: THREE.Material): THREE.Material {
   if (indoor.has(m)) return m;
   let t = twins.get(m);
   if (!t) {
-    t = m.clone();
+    t = cloneMaterial(m);
     t.onBeforeCompile = m.onBeforeCompile;
     t.customProgramCacheKey = m.customProgramCacheKey;
     t.userData = m.userData;
@@ -250,7 +251,7 @@ export function applySeason(root: THREE.Object3D): THREE.Mesh[] {
   const walk = (o: THREE.Object3D, skip: boolean): void => {
     const cat = o.userData.cat as string | undefined;
     // wnętrza budynków (podłogi, sprzęty, sufity sal) są pod dachem: bez śniegu, szronu i pór roku
-    const sk = skip || (!!cat && SKIP.test(cat)) || !!o.userData.noSeason || INSIDE.has(o.name);
+    const sk = skip || (!!cat && SKIP.test(cat)) || !!o.userData?.noSeason || INSIDE.has(o.name);
     const m = o as THREE.Mesh;
     const inside = INSIDE.has(o.name) || (skip && o.userData.seasonInside);
     if (inside) o.userData.seasonInside = true;
@@ -262,8 +263,9 @@ export function applySeason(root: THREE.Object3D): THREE.Mesh[] {
     if (!sk && m.isMesh && m.material) {
       let hit = false;
       for (const mat of Array.isArray(m.material) ? m.material : [m.material]) {
-        if ((mat.transparent && !mat.alphaTest) || mat.userData.noSeason) continue;
-        if (seasonMaterial(mat, (mat.userData.season as SeasonKind | undefined) ?? 'solid')) hit = true;
+        // pusty slot w tablicy materiałów albo materiał bez userData (0.59.3: wywracało całą klatkę)
+        if (!mat || (mat.transparent && !mat.alphaTest) || mat.userData?.noSeason) continue;
+        if (seasonMaterial(mat, (mat.userData?.season as SeasonKind | undefined) ?? 'solid')) hit = true;
       }
       if (hit) changed.push(m);
     }

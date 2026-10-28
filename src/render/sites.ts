@@ -1,3 +1,4 @@
+import { cloneMaterial } from './matclone';
 /**
  * Place budowy (wyniesione z scene.ts, 24.10.2026). Budynek nie rośnie ani się nie rozciąga — wznosi się warstwa
  * po warstwie: model przycięty poziomą płaszczyzną na wysokości postępu, najpierw wykop, potem fundament, mury i dach.
@@ -14,6 +15,9 @@ import type { TerrainView } from './terrain';
 import { pattern } from './textures';
 import { touch } from './touch';
 import { fallHeight, rubbleFalls } from './rubblefall';
+
+/** Przycięty materiał placu budowy → materiał, z którego powstał (do puli kopii) */
+const siteSrc = new WeakMap<THREE.Material, THREE.Material>();
 
 const tmpColor = new THREE.Color();
 
@@ -77,7 +81,8 @@ export class SiteLayer {
         c = pool?.pop();
         // kopia sprzed zmiany oryginału (np. łatka pór roku) nie pasuje: zwalniamy i kopiujemy od nowa
         if (c && c.userData.siteOf !== m.version) { c.dispose(); c = undefined; }
-        if (!c) { c = m.clone(); c.clipShadows = true; c.side = THREE.DoubleSide; c.userData.siteSrc = m; c.userData.siteOf = m.version; }
+        // źródło trzymamy poza userData (materiał w userData kopiował się z teksturami przez JSON przy każdym clone())
+        if (!c) { c = cloneMaterial(m); c.clipShadows = true; c.side = THREE.DoubleSide; siteSrc.set(c, m); c.userData.siteOf = m.version; }
         c.clippingPlanes = [plane];
         clones.set(m, c);
       }
@@ -122,7 +127,7 @@ export class SiteLayer {
     for (const [me, orig] of s.swapped) {
       for (const m of Array.isArray(me.material) ? me.material : [me.material]) if (!done.has(m)) {
         done.add(m);
-        const src = m.userData.siteSrc as THREE.Material | undefined;
+        const src = siteSrc.get(m);
         if (!src) { m.dispose(); continue; }
         let pool = SiteLayer.clipPool.get(src);
         if (!pool) SiteLayer.clipPool.set(src, pool = []);

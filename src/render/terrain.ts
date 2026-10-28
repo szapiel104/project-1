@@ -1,3 +1,4 @@
+import { cloneMaterial } from './matclone';
 import { touch } from './touch';
 import * as THREE from 'three';
 import { propGeometry, propMaterial } from './props';
@@ -1604,7 +1605,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     c2.putImageData(img, 0, 0);
     const mask = new THREE.CanvasTexture(cv);
     mask.channel = 1; // maska używa drugiego zestawu współrzędnych: 0..1 na każdym polu
-    const paveMat = (base as THREE.MeshStandardMaterial).clone();
+    const paveMat = cloneMaterial(base as THREE.MeshStandardMaterial);
     paveMat.vertexColors = true;
     paveMat.color.copy(wood ? PLANK_DRY : PAVE_DRY);
     paveMat.polygonOffset = true;

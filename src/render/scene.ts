@@ -1,3 +1,4 @@
+import { cloneMaterial } from './matclone';
 import { poseOnRoute, routeTime } from './minepath';
 import { PROCESS_TICKS } from '../sim/systems/emergencywood';
 import { mineWalkTicks } from '../data/minewalk';
@@ -1372,7 +1373,7 @@ export class GameRenderer {
         const mesh = o as THREE.Mesh;
         if (!mesh.isMesh) return;
         if (mesh.name === 'base') { mesh.visible = false; return; }
-        const m = (mesh.material as THREE.MeshLambertMaterial).clone();
+        const m = cloneMaterial(mesh.material as THREE.MeshLambertMaterial);
         // pełna bryła (bez prześwitywania siatki i trawy przez ściany); widoczność daje rozjaśnienie niżej
         m.transparent = false; m.opacity = 1; m.depthWrite = true;
         mesh.material = m;
@@ -1602,7 +1603,7 @@ export class GameRenderer {
       const clips = new Map<THREE.Material, THREE.Material>();
       const clip = (m: THREE.Material): THREE.Material => {
         let c = clips.get(m);
-        if (!c) { c = m.clone(); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clips.set(m, c); }
+        if (!c) { c = cloneMaterial(m); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clips.set(m, c); }
         return c;
       };
       let t0 = performance.now(), done = 0;
@@ -3485,6 +3486,7 @@ export class GameRenderer {
   }
   private markV = new THREE.Vector3();
   private hlMats = new Map<THREE.Material, THREE.Material>();
+  private hlOrig = new WeakMap<THREE.Material, THREE.Material>();
   /** Wrogi budynek pod kursorem przy zaznaczonym wojsku: delikatnie czerwienieje (0 = bez podświetlenia) */
   setAttackHighlight(id: number): void {
     if (id === this.hl) return;
@@ -3495,16 +3497,17 @@ export class GameRenderer {
         if (on) {
           let red = this.hlMats.get(m.material);
           if (!red) {
-            red = m.material.clone();
+            red = cloneMaterial(m.material);
             const st = red as THREE.MeshStandardMaterial;
             // głęboka czerwień „do ataku”: barwa przyciemniona ku czerwieni i czerwona poświata (dawniej wychodził pomarańcz)
             if (st.color) st.color = st.color.clone().multiply(new THREE.Color(1, 0.42, 0.38));
             if (st.emissive) { st.emissive = new THREE.Color(0xb3120c); st.emissiveIntensity = 0.6; }
             this.hlMats.set(m.material, red);
-            red.userData.orig = m.material;
+            // oryginał trzymamy poza userData: materiał w userData kopiował się z teksturami przez JSON przy każdym clone()
+            this.hlOrig.set(red, m.material);
           }
           m.material = red;
-        } else if (m.material.userData.orig) m.material = m.material.userData.orig as THREE.Material;
+        } else { const orig = this.hlOrig.get(m.material); if (orig) m.material = orig; }
       });
     };
     if (this.hl) swap(this.hl, false);
