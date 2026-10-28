@@ -47,6 +47,7 @@ Nad grą pracuje kilka czatów naraz, więc:
 ## Szybkie testy, szybki push (Michał 28.10.2026, na zawsze, dla wszystkich czatów)
 - Testy nie mogą zjadać większości czasu (zmiana minuta, testy 9 minut = bez sensu). Po zmianie: `npx tsc --noEmit` + `npm run build` + tylko testy związane ze zmienianymi plikami (`npx vitest run tests/<plik>`), i od razu push. Pełne `npx vitest run` (ok. 4 min) tylko przy dużych zmianach w symulacji.
 - Nie czekać na pełny zestaw testów i nie pytać Michała przed pushem — on sam sprawdza grę po wdrożeniu.
+- **Każda skończona zmiana od razu idzie na produkcję: `git push origin main`** (to jest cała „komenda wdrożenia” — GitHub Actions sam buduje i wystawia grę na GitHub Pages w kilka minut). Nie zostawiać commitów tylko lokalnie i nie czekać, aż zmiana pojawi się na stronie; po pushu po prostu napisać Michałowi, co weszło. Gdy u niego widać starą wersję: Ctrl+F5 (numer wersji jest na ekranie wczytywania).
 
 ## Testy — zawsze w tej kolejności, możliwie tanio
 - **Zasada Michała (18.10.2026, na zawsze, dla wszystkich czatów): grę i modele w przeglądarce testujemy ZAWSZE w pełnej grafice — `?test=1&hd=1` (w podglądzie modeli pełna jakość jest domyślnie). Bez względu na to, co sprawdzasz, nigdy w słabej grafice: tam inaczej wyglądają tekstury, cienie i przezroczystość, więc błędy umykają.**
