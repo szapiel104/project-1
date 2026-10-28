@@ -2210,6 +2210,8 @@ export class GameRenderer {
     const cam = this.cam.camera;
     const { width, height } = g.map;
     const ground = this.view ? this.standY(this.view, w.x, w.z) : 0;
+    // ślady butów także za tym, kto chodzi spacerem (z pierwszej osoby); w skoku stopy nie dotykają śniegu
+    if ((fx || fz) && !w.jy) this.feet.set(-1, [w.x, w.z, ground]);
     // w pomieszczeniu (nie na dziedzińcu): dach znika, widać sufit; przy zamku jego wnętrza są zawsze widoczne
     const kp = this.keepAt(w.x, w.z);
     const inRoom = !!kp && Math.abs(kp[1]) < KEEP_HALF && Math.abs(kp[2]) < KEEP_HALF && 'TKCBLQ1234'.includes(keepRoom(Math.floor(kp[1] + KEEP_HALF), Math.floor(kp[2] + KEEP_HALF)));

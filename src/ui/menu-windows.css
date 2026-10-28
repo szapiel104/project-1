@@ -1,5 +1,5 @@
 /* ===== Okna menu w stylu nowego menu po lewej (Michał 28.10.2026: „ustawienia i jak grać jak inny czat zrobił menu, i postać”) =====
-   Dotyczy okien w prawej części menu głównego i pauzy (.menu:not(.previewing)): Ustawienia, Jak grać, Mój ród (postać),
+   Dotyczy okien w prawej części menu głównego i pauzy (.menu): Ustawienia, Jak grać, Mój ród (postać),
    a przy okazji Nowa gra i Gra przez sieć, żeby wszystko wyglądało jak jedna całość z listą po lewej:
    - bez ciężkiej ramki z narożnikami — półprzezroczysta, ciemna płyta nad pejzażem, cienka złota linia po lewej,
    - nagłówek jak w menu (Cinzel, wersaliki, złota kreska gasnąca w prawo),
@@ -9,9 +9,9 @@
    Kontrast (policzony): napisy #d9c49a na tle ok. #0b0704 — 11,4:1; wybrana pozycja #fff0c8 na czerwieni #7d1a12 — 10,9:1;
    przycisk wtórny #e7d6b2 na #17100a — 13,2:1; ramka przycisku #9a7a2a na #0b0704 — 4,7:1. Fokus klawiatury zawsze widoczny. */
 
-.menu:not(.previewing) .menu-panel,
-.menu:not(.previewing) .menu-panel.wide,
-.menu.book-open:not(.previewing) .menu-panel.book {
+.menu .menu-panel,
+.menu .menu-panel.wide,
+.menu.book-open .menu-panel.book {
   border: 0;
   border-left: 1px solid rgba(154, 122, 42, .55);
   color: #e7d6b2;
@@ -22,11 +22,11 @@
   backdrop-filter: blur(6px);
   box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
 }
-.menu:not(.previewing) .menu-panel::before,
-.menu:not(.previewing) .menu-panel::after { display: none; }
+.menu .menu-panel::before,
+.menu .menu-panel::after { display: none; }
 
 /* nagłówek okna */
-.menu:not(.previewing) .menu-heading {
+.menu .menu-heading {
   text-align: left;
   font-family: 'Cinzel', var(--display);
   font-weight: 700;
@@ -40,18 +40,18 @@
 }
 
 /* ---- spis rozdziałów (Jak grać, Ustawienia) jak lista w menu ---- */
-.menu:not(.previewing) .help-nav { border-right: 1px solid rgba(154, 122, 42, .3); padding-right: 18px; }
-.menu:not(.previewing) .help-toc { gap: clamp(1px, .3vh, 4px); }
-.menu:not(.previewing) .help-toc-group {
+.menu .help-nav { border-right: 1px solid rgba(154, 122, 42, .3); padding-right: 18px; }
+.menu .help-toc { gap: clamp(1px, .3vh, 4px); }
+.menu .help-toc-group {
   margin: 14px 0 6px 6px;
   font-family: 'Cinzel', var(--display);
   font-size: clamp(12px, 1.5vh, 14px);
   letter-spacing: .18em;
   color: #e9c766;
 }
-.menu:not(.previewing) .help-toc-group::after { background: linear-gradient(90deg, rgba(154, 122, 42, .55), transparent); }
-.menu:not(.previewing) .help-toc-group:first-child { margin-top: 2px; }
-.menu:not(.previewing) .help-toc-item {
+.menu .help-toc-group::after { background: linear-gradient(90deg, rgba(154, 122, 42, .55), transparent); }
+.menu .help-toc-group:first-child { margin-top: 2px; }
+.menu .help-toc-item {
   grid-template-columns: 12px 1fr;
   gap: 14px;
   min-height: 42px;
@@ -68,32 +68,32 @@
   transition: color .15s, background .2s, padding .15s;
 }
 /* numer zamieniony na romb jak przy pozycjach menu (liczba zostaje dla czytnika ekranu) */
-.menu:not(.previewing) .help-toc-n {
+.menu .help-toc-n {
   width: 12px; height: 12px;
   font-size: 0; color: transparent;
   border: 1px solid #9a7a2a; background: transparent;
   transform: rotate(45deg) scale(.7); opacity: .55;
   transition: transform .15s, opacity .15s, background .15s;
 }
-.menu:not(.previewing) .help-toc-item:hover,
-.menu:not(.previewing) .help-toc-item:focus-visible,
-.menu:not(.previewing) .help-toc-item[aria-selected='true'] {
+.menu .help-toc-item:hover,
+.menu .help-toc-item:focus-visible,
+.menu .help-toc-item[aria-selected='true'] {
   color: #fff0c8;
   padding-left: 18px;
   background: linear-gradient(90deg, rgba(160, 36, 26, .62), rgba(160, 36, 26, .18) 70%, rgba(160, 36, 26, 0));
   box-shadow: inset 3px 0 0 #e9c766;
   text-shadow: 0 0 14px rgba(255, 170, 60, .5), 0 2px 4px #000;
 }
-.menu:not(.previewing) .help-toc-item[aria-selected='true'] .help-toc-n,
-.menu:not(.previewing) .help-toc-item:hover .help-toc-n,
-.menu:not(.previewing) .help-toc-item:focus-visible .help-toc-n {
+.menu .help-toc-item[aria-selected='true'] .help-toc-n,
+.menu .help-toc-item:hover .help-toc-n,
+.menu .help-toc-item:focus-visible .help-toc-n {
   opacity: 1; transform: rotate(45deg) scale(1); background: #e9c766; border-color: #fff1c2;
 }
-.menu:not(.previewing) .help-toc-item:focus-visible { outline: 2px solid #fff3c4; outline-offset: -2px; }
+.menu .help-toc-item:focus-visible { outline: 2px solid #fff3c4; outline-offset: -2px; }
 
 /* ---- przyciski w oknach ---- */
 /* główny (Zapisz, Do boju, Graj…): czerwona pieczęć jak „Nowa gra” w menu */
-.menu:not(.previewing) .menu-panel .menu-btn {
+.menu .menu-panel .menu-btn {
   font-family: 'Cinzel', var(--display);
   font-weight: 700;
   letter-spacing: .14em;
@@ -106,16 +106,16 @@
   transform: none;
   transition: background .2s, box-shadow .15s;
 }
-.menu:not(.previewing) .menu-panel .menu-btn:hover {
+.menu .menu-panel .menu-btn:hover {
   background: linear-gradient(90deg, #c22d20, #8c1a11 60%, #6a130c);
   box-shadow: inset 4px 0 0 #fff1c2, inset 0 1px 0 rgba(255, 241, 194, .6), inset 0 -1px 0 rgba(233, 199, 102, .4);
   transform: none;
 }
-.menu:not(.previewing) .menu-panel .menu-btn:active { background: linear-gradient(90deg, #7d1a12, #5e110b); transform: none; }
-.menu:not(.previewing) .menu-panel .menu-btn:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
+.menu .menu-panel .menu-btn:active { background: linear-gradient(90deg, #7d1a12, #5e110b); transform: none; }
+.menu .menu-panel .menu-btn:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
 /* wtórne (Wstecz, Przywróć domyślne, Plan na start, Konto i hasło): płaskie, ta sama czcionka */
-.menu:not(.previewing) .menu-panel .menu-back,
-.menu:not(.previewing) .menu-panel .btn-plain {
+.menu .menu-panel .menu-back,
+.menu .menu-panel .btn-plain {
   min-height: 42px;
   font-family: 'Cinzel', var(--display);
   font-weight: 700;
@@ -130,30 +130,30 @@
   transform: none;
   transition: color .15s, background .2s, border-color .15s;
 }
-.menu:not(.previewing) .menu-panel .menu-back:hover,
-.menu:not(.previewing) .menu-panel .btn-plain:hover {
+.menu .menu-panel .menu-back:hover,
+.menu .menu-panel .btn-plain:hover {
   color: #fff0c8;
   border-color: #e9c766;
   background: linear-gradient(90deg, rgba(160, 36, 26, .45), rgba(23, 16, 10, .8));
 }
-.menu:not(.previewing) .menu-panel .menu-back:focus-visible,
-.menu:not(.previewing) .menu-panel .btn-plain:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
+.menu .menu-panel .menu-back:focus-visible,
+.menu .menu-panel .btn-plain:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
 
 /* ---- treść stron ---- */
-.menu:not(.previewing) .help-title {
+.menu .help-title {
   font-family: 'Cinzel', var(--display);
   font-size: clamp(26px, 3.6vh, 36px);
   letter-spacing: .08em;
   color: #fff0c8;
   text-shadow: 0 0 14px rgba(255, 170, 60, .3), 0 2px 4px #000;
 }
-.menu:not(.previewing) .help-pane .help-h { font-family: 'Cinzel', var(--display); letter-spacing: .14em; }
-.menu:not(.previewing) .help-pane .help-tip { background: rgba(17, 12, 7, .8); border-color: rgba(154, 122, 42, .35); border-left-color: #b0261c; }
-.menu:not(.previewing) .help-pane .help-table tr:nth-child(even) td { background: rgba(17, 12, 7, .7); }
+.menu .help-pane .help-h { font-family: 'Cinzel', var(--display); letter-spacing: .14em; }
+.menu .help-pane .help-tip { background: rgba(17, 12, 7, .8); border-color: rgba(154, 122, 42, .35); border-left-color: #b0261c; }
+.menu .help-pane .help-table tr:nth-child(even) td { background: rgba(17, 12, 7, .7); }
 
 /* ---- zakładki (Mój ród, Gra przez sieć, dawne zakładki ustawień) jako napisy z podkreśleniem ---- */
-.menu:not(.previewing) .menu-tabs.top .menu-nav { border-bottom: 1px solid rgba(154, 122, 42, .45); gap: 4px; }
-.menu:not(.previewing) .menu-panel .menu-tabs.top .menu-tab {
+.menu .menu-tabs.top .menu-nav { border-bottom: 1px solid rgba(154, 122, 42, .45); gap: 4px; }
+.menu .menu-panel .menu-tabs.top .menu-tab {
   font-family: 'Cinzel', var(--display);
   font-weight: 700;
   letter-spacing: .14em;
@@ -167,35 +167,108 @@
   margin: 0;
   text-shadow: 0 1px 3px #000;
 }
-.menu:not(.previewing) .menu-panel .menu-tabs.top .menu-tab:hover { color: #ffe7a6; background: linear-gradient(0deg, rgba(160, 36, 26, .35), transparent); }
-.menu:not(.previewing) .menu-panel .menu-tabs.top .menu-tab[aria-selected='true'] {
+.menu .menu-panel .menu-tabs.top .menu-tab:hover { color: #ffe7a6; background: linear-gradient(0deg, rgba(160, 36, 26, .35), transparent); }
+.menu .menu-panel .menu-tabs.top .menu-tab[aria-selected='true'] {
   color: #fff0c8;
   background: linear-gradient(0deg, rgba(160, 36, 26, .55), rgba(160, 36, 26, 0));
   box-shadow: inset 0 -3px 0 #e9c766;
   text-shadow: 0 0 12px rgba(255, 170, 60, .45), 0 1px 3px #000;
 }
-.menu:not(.previewing) .menu-panel .menu-tab:focus-visible { outline: 2px solid #fff3c4; outline-offset: -2px; }
+.menu .menu-panel .menu-tab:focus-visible { outline: 2px solid #fff3c4; outline-offset: -2px; }
 
 /* ---- Mój ród: karta postaci bez starych ramek ---- */
-.menu:not(.previewing) .house-hero {
+.menu .house-hero {
   background: linear-gradient(90deg, rgba(160, 36, 26, .22), rgba(17, 12, 7, .55) 45%, rgba(17, 12, 7, .35));
   border: 0;
   border-left: 3px solid #e9c766;
   box-shadow: inset 0 1px 0 rgba(154, 122, 42, .35), inset 0 -1px 0 rgba(154, 122, 42, .35);
 }
-.menu:not(.previewing) .house-name { font-family: 'Cinzel', var(--display); letter-spacing: .1em; color: #fff0c8; text-shadow: 0 2px 4px #000; }
-.menu:not(.previewing) .house-title { font-family: 'Cinzel', var(--display); letter-spacing: .2em; text-transform: uppercase; color: #e9c766; }
-.menu:not(.previewing) .house-h { font-family: 'Cinzel', var(--display); letter-spacing: .16em; text-transform: uppercase; color: #e9c766; }
-.menu:not(.previewing) .house-stat { background: rgba(17, 12, 7, .6); border-color: rgba(154, 122, 42, .3); }
+.menu .house-name { font-family: 'Cinzel', var(--display); letter-spacing: .1em; color: #fff0c8; text-shadow: 0 2px 4px #000; }
+.menu .house-title { font-family: 'Cinzel', var(--display); letter-spacing: .2em; text-transform: uppercase; color: #e9c766; }
+.menu .house-h { font-family: 'Cinzel', var(--display); letter-spacing: .16em; text-transform: uppercase; color: #e9c766; }
+.menu .house-stat { background: rgba(17, 12, 7, .6); border-color: rgba(154, 122, 42, .3); }
 
 @media (prefers-reduced-motion: reduce) {
-  .menu:not(.previewing) .help-toc-item, .menu:not(.previewing) .help-toc-n,
-  .menu:not(.previewing) .menu-panel .menu-btn, .menu:not(.previewing) .menu-panel .menu-back, .menu:not(.previewing) .menu-panel .btn-plain { transition: none; }
+  .menu .help-toc-item, .menu .help-toc-n,
+  .menu .menu-panel .menu-btn, .menu .menu-panel .menu-back, .menu .menu-panel .btn-plain { transition: none; }
 }
 
 /* spis szerszy (wersaliki z rozstrzeleniem zawijały „Ostrość i krawędzie” na dwie linie) */
-.menu:not(.previewing) .help-book { grid-template-columns: clamp(270px, 23vw, 340px) minmax(0, 1fr); }
-.menu:not(.previewing) .help-toc-item { letter-spacing: .07em; }
+.menu .help-book { grid-template-columns: clamp(270px, 23vw, 340px) minmax(0, 1fr); }
+.menu .help-toc-item { letter-spacing: .07em; }
 /* strona rozdziału na całą wysokość okna: stara reguła .help-text (max-height 520 px z własnym przewijaniem) ucinała
    tekst w połowie okna, a niżej było pusto; przewija się teraz cała strona (.help-pane) */
 .menu-panel.book .help-pane .help-text { max-height: none; overflow: visible; }
+
+/* ===== Nowa gra (Michał 28.10: „nowa gra też w nowym”): kafelki trybu i trudności jak pozycje menu ===== */
+.menu .pick-group legend { font-family: 'Cinzel', var(--display); letter-spacing: .18em; color: #e9c766; }
+.menu .pick-group legend::after { background: linear-gradient(90deg, rgba(154, 122, 42, .55), transparent); }
+.menu .menu-panel .pick {
+  background: rgba(17, 12, 7, .62);
+  border: 1px solid rgba(154, 122, 42, .5);
+  box-shadow: none;
+  transform: none;
+  transition: background .2s, border-color .15s, box-shadow .15s;
+}
+.menu .menu-panel .pick:hover {
+  transform: none;
+  border-color: #e9c766;
+  background: linear-gradient(90deg, rgba(160, 36, 26, .38), rgba(17, 12, 7, .62) 80%);
+}
+.menu .menu-panel .pick:has(input:checked) {
+  background: linear-gradient(90deg, rgba(160, 36, 26, .85), rgba(122, 22, 15, .7) 60%, rgba(94, 17, 11, .55));
+  border-color: #e9c766;
+  box-shadow: inset 3px 0 0 #e9c766;
+}
+.menu .menu-panel .pick-big { font-family: 'Cinzel', var(--display); font-weight: 700; letter-spacing: .08em; color: #f1e4c4; text-shadow: 0 2px 4px #000; }
+.menu .menu-panel .pick-small { color: #cbb68a; }
+.menu .menu-panel .pick:has(input:checked) .pick-big { color: #fff0c8; }
+.menu .menu-panel .pick:has(input:checked) .pick-small { color: #f3dfc4; }
+/* znak wyboru: złoty romb jak przy pozycji menu, zamiast okrągłego „✓” */
+.menu .menu-panel .pick:has(input:checked)::after {
+  content: ''; top: 12px; right: 12px; width: 11px; height: 11px; border-radius: 0;
+  background: #e9c766; border: 1px solid #fff1c2; transform: rotate(45deg);
+}
+.menu .menu-panel .pick:has(input:focus-visible) { outline: 2px solid #fff3c4; outline-offset: 2px; }
+/* przełącznik trybu deweloperskiego i dół okna */
+.menu .menu-panel .dev-switch { border: 1px solid rgba(154, 122, 42, .45); background: rgba(17, 12, 7, .55); }
+.menu .menu-panel .dev-text { font-family: 'Cinzel', var(--display); letter-spacing: .1em; color: #f1e4c4; }
+.menu .menu-panel .dev-hint { color: #cbb68a; }
+.menu .menu-panel .dev-knob { background: #3a2c1c; border: 1px solid #9a7a2a; }
+.menu .menu-panel .dev-switch input:checked + .dev-knob { background: #8c1f18; }
+.menu .menu-panel .newgame-foot { background: none; }
+
+/* ===== pola tekstowe i listy wyboru we wszystkich oknach ===== */
+.menu .menu-panel input:not([type]), .menu .menu-panel input[type='text'], .menu .menu-panel input[type='email'],
+.menu .menu-panel input[type='password'], .menu .menu-panel select, .menu .menu-panel textarea {
+  color: #f1e4c4; background: rgba(9, 6, 3, .75); border: 1px solid rgba(154, 122, 42, .6); border-radius: 0;
+}
+.menu .menu-panel input:focus-visible, .menu .menu-panel select:focus-visible, .menu .menu-panel textarea:focus-visible {
+  outline: 2px solid #fff3c4; outline-offset: 1px; border-color: #e9c766;
+}
+
+/* ===== Gra przez sieć: filtry, lista gier, pusty stan, karty pokoi ===== */
+.menu .net-filter {
+  min-height: 36px; padding: 0 14px;
+  font-family: 'Cinzel', var(--display); font-weight: 700; font-size: clamp(12px, 1.6vh, 14px); letter-spacing: .12em; text-transform: uppercase;
+  color: #d9c49a; background: rgba(17, 12, 7, .6); border: 1px solid rgba(154, 122, 42, .5); text-shadow: 0 1px 3px #000;
+  transition: color .15s, background .2s, border-color .15s;
+}
+.menu .net-filter:hover { color: #fff0c8; border-color: #e9c766; background: linear-gradient(0deg, rgba(160, 36, 26, .4), rgba(17, 12, 7, .6)); }
+.menu .net-filter[aria-selected='true'] {
+  color: #fff0c8; border-color: #e9c766;
+  background: linear-gradient(90deg, rgba(160, 36, 26, .85), rgba(122, 22, 15, .65));
+  box-shadow: inset 0 -2px 0 #e9c766;
+}
+.menu .net-filter:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
+.menu .net-empty { border: 1px dashed rgba(154, 122, 42, .6); background: rgba(17, 12, 7, .5); color: #e7d6b2; }
+.menu .net-empty strong { font-family: 'Cinzel', var(--display); letter-spacing: .1em; text-transform: uppercase; color: #fff0c8; }
+.menu .net-empty span { color: #cbb68a; }
+.menu .net-card, .menu .net-room, .menu .net-roombox {
+  background: rgba(17, 12, 7, .6); border: 1px solid rgba(154, 122, 42, .45); color: #e7d6b2;
+}
+.menu .net-card-text strong, .menu .net-roomtitle, .menu .net-teamname {
+  font-family: 'Cinzel', var(--display); letter-spacing: .08em; color: #fff0c8;
+}
+.menu .net-card-text span, .menu .net-label, .menu .net-record { color: #cbb68a; }
+@media (prefers-reduced-motion: reduce) { .menu .menu-panel .pick, .menu .net-filter { transition: none; } }

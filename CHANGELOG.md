@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.63.6 — Nowa gra i Gra przez sieć w stylu nowego menu, bez encyklopedii modeli w „Jak grać”, ślady w spacerze (2026-10-28)
+
+- **Nowa gra** (`ui/menu-windows.css`, także w układzie z podglądem mapy): kafelki trybu i trudności jak pozycje menu — ciemne, półprzezroczyste, z cienką złotą ramką; wybrany na czerwonym pasie ze złotą krawędzią i złotym rombem zamiast okrągłego „✓”; nazwy w Cinzel, opisy zwykłym pismem; przełącznik trybu deweloperskiego i pole nazwy mapy w tym samym stylu; „Rozpocznij” jak pieczęć z menu
+- **Gra przez sieć:** filtry (Wszystkie, 1 na 1…, Znajomi, Ranking) jako płaskie przyciski w Cinzel, wybrany na czerwonym pasie z złotym podkreśleniem; pusta lista bez jasnego pergaminu — ciemna, z przerywaną złotą ramką; karty pokoi, pole nazwy i lista wyboru ciemne, w tym samym stylu
+- **„Jak grać” bez encyklopedii** (Postacie i zwierzęta, Budynki z podglądem modeli): na to jest osobna strona — Ustawienia → Dla twórców → Podgląd modeli (`modele.html`)
+- **Ślady butów w spacerze:** kto chodzi z pierwszej osoby, też zostawia odciski na śniegu (w skoku nie)
+- Dostępność: fokus klawiatury na kafelkach, filtrach i polach (złota obwódka), kontrast napisów co najmniej 7:1, bez animacji przy `prefers-reduced-motion`
+- Bot: bez zmian (interfejs)
+
 ## 0.63.5 — Ustawienia, Jak grać i Mój ród w stylu nowego menu (2026-10-28)
 
 - **Okna w prawej części menu** (`src/ui/menu-windows.css`, osobny plik, żeby nie wchodzić w `style.css` czatu od menu): bez ciężkiej ramki z narożnikami — półprzezroczysta ciemna płyta nad pejzażem (lekkie rozmycie), cienka złota linia po lewej; nagłówek okna jak w menu (Cinzel, wersaliki, złota kreska gasnąca w prawo)

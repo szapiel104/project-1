@@ -3,7 +3,6 @@ import { me as netMe, onAccount, progress, restore } from '../net/supa';
 import { levelOf, titleOf } from '../data/progress';
 import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
-import { createGallery, GALLERY, type GalleryEntry } from '../render/gallery';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { t, tx, lang, setLang, LANGS } from '../i18n';
 import { HELP_CHAPTERS, type HelpBlock } from './helpText';
@@ -711,41 +710,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     btns[first]!.focus();
   }
 
-  /** Zakładka z modelami: lista po lewej, obracający się model i opis po prawej */
-  function galleryPane(entries: GalleryEntry[]): HTMLElement {
-    const box = el('div', 'gallery');
-    const list = el('div', 'gallery-list');
-    list.setAttribute('role', 'listbox');
-    list.setAttribute('aria-label', tx('Postacie', 'Characters'));
-    const view = el('div', 'gallery-view');
-    const canvas = el('canvas', 'gallery-canvas');
-    canvas.setAttribute('aria-hidden', 'true');
-    const name = el('p', 'gallery-name');
-    const text = el('p', 'gallery-text');
-    view.append(canvas, name, text);
-    box.append(list, view);
-    let g: { show(id: string): void } | null = null;
-    const pick = (e: GalleryEntry, b: HTMLButtonElement): void => {
-      list.querySelectorAll('[aria-selected]').forEach((x) => x.setAttribute('aria-selected', 'false'));
-      b.setAttribute('aria-selected', 'true');
-      name.textContent = e.name; text.textContent = e.text;
-      g?.show(e.id);
-    };
-    let group = '';
-    const first: [GalleryEntry, HTMLButtonElement][] = [];
-    for (const e of entries) {
-      if (e.group !== group) { group = e.group; list.append(el('p', 'gallery-group', group)); }
-      const b = button(e.name, () => pick(e, b), 'gallery-item');
-      b.setAttribute('role', 'option');
-      list.append(b);
-      first.push([e, b]);
-    }
-    // renderer powstaje, gdy płótno jest już na stronie (zna swój rozmiar)
-    requestAnimationFrame(() => { if (!canvas.isConnected) return; g = createGallery(canvas); pick(...first[0]!); });
-    return box;
-  }
-
-  /** „Jak grać” jak księga: duże okno na prawie cały ekran, spis po lewej (nauka gry i encyklopedia), treść po prawej */
+  /** „Jak grać” jak księga: duże okno na prawie cały ekran, spis rozdziałów po lewej, treść po prawej (podgląd modeli jest osobno: Ustawienia → Dla twórców → Podgląd modeli) */
   function showHelp(startArg?: unknown): void {
     // wywoływane też prosto z kliknięcia (wtedy argumentem jest zdarzenie) — liczy się tylko liczba
     const start = typeof startArg === 'number' ? startArg : 0;
@@ -763,8 +728,6 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     };
     const pages: { title: string; group: number; make: () => Node[] }[] = [
       ...HELP_CHAPTERS.map((c) => ({ title: c.title, group: 0, make: () => { const box = el('article', 'help-text'); box.append(el('h2', 'help-title', c.title), ...c.blocks.map(block)); return [box]; } })),
-      { title: tx('Postacie i zwierzęta', 'People and animals'), group: 1, make: () => [galleryPane(GALLERY.people)] },
-      { title: tx('Budynki', 'Buildings'), group: 1, make: () => [galleryPane(GALLERY.buildings)] },
     ];
     const book = el('div', 'help-book');
     const nav = el('nav', 'help-nav');
