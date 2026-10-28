@@ -1,6 +1,7 @@
 import { BUILDINGS } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, type StoreKind } from '../../data/resources';
 import type { Building, GameState } from '../state';
+import { heldAmount } from './emergencywood';
 
 /**
  * Zawartość każdego magazynu osobno (Michał 27.10.2026: okno składu ma pokazywać, co leży właśnie w nim).
@@ -86,6 +87,7 @@ export function syncStock(g: GameState): void {
     const s = b.stock;
     if (s) { const sum = sums.get(b.owner)!; for (let i = 0; i < n; i++) sum[i]! += s[i] ?? 0; }
   }
+  const held = (g.piles ?? []).some((x) => x.held);
   for (const p of g.players) {
     const list = stores.get(p.id);
     if (!list) continue;
@@ -93,7 +95,8 @@ export function syncStock(g: GameState): void {
     for (let r = 0; r < n; r++) {
       const kind = kindOf(r);
       if (!kind) continue;
-      let diff = p.res[r]! - sum[r]!;
+      // deski z biedy przy pniakach (emergencywood.ts) już są w zapasach, ale leżą poza składem — nie rozkładamy ich po magazynach
+      let diff = p.res[r]! - sum[r]! - (held ? heldAmount(g, p.id, r) : 0);
       if (diff < 0) {
         // ubyło (zjedli, zapłacone, rozkradzione): najpierw z magazynów, w których tego leży najwięcej
         const holders = list.filter((b) => (b.stock?.[r] ?? 0) > 0).sort((a, b) => (b.stock![r]! - a.stock![r]!) || a.id - b.id);

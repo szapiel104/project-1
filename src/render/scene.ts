@@ -1,4 +1,5 @@
 import { poseOnRoute, routeTime } from './minepath';
+import { PROCESS_TICKS } from '../sim/systems/emergencywood';
 import { mineWalkTicks } from '../data/minewalk';
 import { named, namedTick, remember } from './named';
 import { mineLevelModel } from './buildings';
@@ -126,6 +127,7 @@ const TORCH_TIP = new THREE.Vector3(0, -0.19 + Math.cos(0.55) * 0.34, Math.sin(0
 const BUCKET_C = new THREE.Vector3(0.15, 0.15, 0.02);
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
 /** Pochodnia łucznika wbita w ziemię: skala pochodni z rąk chłopów (jak w ręce postaci) i wysokość płomienia nad ziemią */
 const TORCH_K = FIG, STICK_TIP = 0.36 * TORCH_K;
 /** Miejsca w zamku z modelu (tools/models/keep.py, układ modelu: środek działki, przód z bramą = +z) */
@@ -655,6 +657,12 @@ export class GameRenderer {
   private loads: Map<number, THREE.InstancedMesh>;
   /** Ścięte drzewa ciągnięte przez drwali: po parze siatek [pień, korona] na każdą odmianę z lasu */
   private logs = new Map<TreeKind, [THREE.InstancedMesh, THREE.InstancedMesh]>();
+  /** Pień leżący na ziemi przy rąbiącym z biedy (emergencywood.ts): ociosany (bez korony), coraz krótszy w trakcie cięcia */
+  private groundLogs = new Map<TreeKind, THREE.InstancedMesh>();
+  private groundM = new THREE.Matrix4();
+  private groundQ = new THREE.Quaternion();
+  private groundP = new THREE.Vector3();
+  private groundS = new THREE.Vector3();
   /** Które drzewo ściął drwal (id ludzika → odmiana), żeby ciągnął to samo, które stało w lesie */
   private felled = new Map<number, TreeKind>();
   private planks: THREE.InstancedMesh;
@@ -928,6 +936,15 @@ export class GameRenderer {
       crown.customDepthMaterial = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking, map: k.cardMat.map, alphaTest: 0.5 });
       for (const m of [trunk, crown]) { m.count = 0; m.frustumCulled = false; m.castShadow = true; this.scene.add(cat(m, 'niesione bale i deski')); }
       this.logs.set(k, [trunk, crown]);
+      // ten sam pień położony płasko wzdłuż osi x, środkiem w zerze i spodem na ziemi (do obróbki przy pniaku)
+      const flat = k.trunk.clone().scale(s, s, s).rotateZ(-Math.PI / 2);
+      flat.computeBoundingBox();
+      const fb = flat.boundingBox!;
+      flat.translate(-(fb.min.x + fb.max.x) / 2, -fb.min.y, -(fb.min.z + fb.max.z) / 2);
+      const ground = new THREE.InstancedMesh(flat, bark, MAX_UNITS);
+      ground.count = 0; ground.frustumCulled = false; ground.castShadow = true; ground.receiveShadow = true;
+      this.scene.add(cat(ground, 'niesione bale i deski'));
+      this.groundLogs.set(k, ground);
     }
     // wiązka desek na ramieniu: kilka cienkich, lekko przesuniętych desek z dwiema przewiązkami
     const plank = plankBundle();
@@ -1128,6 +1145,17 @@ export class GameRenderer {
 
   /** Ustawia kamerę nad wskazanym punktem mapy (w polach); używane też przy testach wyglądu */
   /** Pole mapy na ekranie: piksele w oknie i czy jest przed kamerą */
+  /** Ułamek ticku z ostatniej klatki: położenie między poprzednim a obecnym tickiem (jak rysowane ludziki) */
+  private lastAlpha = 1;
+  /**
+   * Płynne położenie (w polach) chłopa, żołnierza, wilka albo wędrowca — tak, jak jest właśnie narysowany.
+   * Do napisów nad głowami (numery grup, dymki): pozycja z symulacji skacze 10 razy na sekundę, rysunek idzie płynnie.
+   */
+  smoothTile(id: number, px: number, py: number): { x: number; y: number } {
+    const prev = this.prevPos.get(id), a = this.lastAlpha;
+    return { x: (prev ? prev[0] + (px - prev[0]) * a : px) / FP, y: (prev ? prev[1] + (py - prev[1]) * a : py) / FP };
+  }
+
   project(x: number, y: number, lift = 1): { sx: number; sy: number; front: boolean } {
     const g = this.state;
     const v = new THREE.Vector3(x - (g?.map.width ?? 0) / 2, (this.view?.heightAt(x, y) ?? 0) + lift, y - (g?.map.height ?? 0) / 2);
@@ -2176,6 +2204,7 @@ export class GameRenderer {
   frame(realDt: number, alpha: number, paused = false): void {
     // w trakcie kompilacji shaderów w tle nie rysujemy: rysowanie czekałoby na kartę i strona by zamarzła
     if (this.warming || this.held || this.building) return;
+    this.lastAlpha = alpha;
     namedTick();
     // co pół sekundy: wyjątki od granicy kamery przy własnych budynkach poza środkiem mapy (kopalnia pod górami)
     if (this.state && (this.reachTick = (this.reachTick + 1) % 30) === 0) this.updateReach(this.state);
@@ -3244,7 +3273,9 @@ export class GameRenderer {
       if (u.phase !== Phase.WorkingSite || u.timer > 40) continue;
       const tile = (u.py >> 8) * g.map.width + (u.px >> 8);
       if (g.map.tiles[tile] === Terrain.Forest) {
-        const k = 1 - u.timer / 40; view.fell(tile, k * k); // powoli rusza, potem wali się coraz szybciej
+        // z ułamkiem ticku: licznik w symulacji spada 10 razy na sekundę, więc bez tego drzewo waliło się skokami
+        const k = Math.min(1, Math.max(0, 1 - (u.timer - (this.calm ? 0 : this.lastAlpha)) / 40));
+        view.fell(tile, k * k); // powoli rusza, potem wali się coraz szybciej
         const kind = view.treeKindAt(tile);
         if (kind) this.felled.set(u.id, kind); // to samo drzewo potem ciągnie do chaty
       }
@@ -4892,7 +4923,9 @@ export class GameRenderer {
       // drwal z siekierą, kopacz z kilofem: oburęczny zamach, cios z pochyleniem i stuk w chwili trafienia
       const site = u.phase === Phase.WorkingSite && !fishing && u.job ? BUILDINGS[jobs.get(u.job)?.type ?? -1]?.production?.site : undefined;
       // rąbiący z biedy (bez chaty drwala, emergencywood.ts) macha siekierą tak samo jak drwal
-      const chopping = site === Terrain.Forest || (u.phase === Phase.WorkingSite && !!u.chop);
+      // po ścięciu ociosuje i tnie leżący pień przy pniaku: zamach niżej, z mocnym pochyleniem nad pniem
+      const limbing = u.phase === Phase.Working && !!u.chop && !u.job;
+      const chopping = site === Terrain.Forest || (u.phase === Phase.WorkingSite && !!u.chop) || limbing;
       // górnik w grocie kopalni: ten sam zamach kilofem co na złożu, ale stoi już twarzą do ściany (miejsce z modelu)
       const inMine = u.phase === Phase.Working && !!job && job.type === OREMINE_T && !mineWalk;
       const mining = site === Terrain.Stone || site === Terrain.Iron || inMine;
@@ -4911,6 +4944,8 @@ export class GameRenderer {
         const tx = u.px >> 8, ty = u.py >> 8, want = chopping ? Terrain.Forest : site!;
         if (!inMine) for (const [dx, dy] of [[0, 1], [1, 0], [0, -1], [-1, 0], [1, 1], [-1, 1], [1, -1], [-1, -1]] as const)
           if (g.map.tiles[(ty + dy) * width + tx + dx] === want) { t.rotation.set(0, Math.atan2(dx, dy), 0); break; }
+        // przy pniu: stoi zawsze tak samo (pień leży przed nim w poprzek), nie szuka drzewa obok
+        if (limbing) t.rotation.set(0, (u.id * 2.399) % (Math.PI * 2), 0);
         if (drawing >= 0) {
           // ręka w górę za bark (chwyta stylisko), potem kilof zjeżdża przed siebie do pozycji wyjściowej
           const ease = (x: number): number => x * x * (3 - 2 * x);
@@ -4919,12 +4954,12 @@ export class GameRenderer {
         } else if (!this.calm) {
           const ph = mining ? (mineT * 0.85) % 1 : (this.time * 1.15 + (u.id % 11) * 0.173) % 1;
           const ease = (x: number): number => x * x * (3 - 2 * x);
-          const high = chopping ? 2.3 : 2.75;
+          const high = limbing ? 1.75 : chopping ? 2.3 : 2.75;
           if (ph < 0.55) toolArm = -0.35 - ease(ph / 0.55) * high;                    // zamach nad ramię albo nad głowę
           else if (ph < 0.67) toolArm = -0.35 - high + ((ph - 0.55) / 0.12) ** 2 * (high + 0.15); // cios
           else if (ph < 0.77) toolArm = -0.2 - Math.sin(((ph - 0.67) / 0.1) * Math.PI) * 0.15;     // odbicie
           else toolArm = -0.2;
-          toolLean = ph > 0.55 && ph < 0.85 ? Math.sin(((ph - 0.55) / 0.3) * Math.PI) * (mining ? 0.4 : 0.28) : 0.05;
+          toolLean = ph > 0.55 && ph < 0.85 ? Math.sin(((ph - 0.55) / 0.3) * Math.PI) * (mining ? 0.4 : limbing ? 0.5 : 0.28) : limbing ? 0.2 : 0.05;
           // okruchy spod kilofa: raz na cios i tylko gdy kamera stoi tuż obok (spacer przy górniku albo bliskie zbliżenie)
           if (mining && ph > 0.66 && ph < 0.78) {
             const swingNo = Math.floor(mineT * 0.85);
@@ -5245,6 +5280,15 @@ export class GameRenderer {
       t.scale.setScalar(FIG);
       t.updateMatrix();
       for (const [k, pair] of this.logs) for (const m of pair) m.setMatrixAt(i, k === logKind ? t.matrix : ZERO);
+      // pień do obróbki leży przed rąbiącym w poprzek; w miarę cięcia skraca się (odcięte kawałki idą w deski przy pniaku)
+      const groundKind = limbing ? this.felled.get(u.id) ?? this.logKindFor(u.id) : null;
+      if (groundKind) {
+        const yaw = t.rotation.y, left = Math.max(0, Math.min(1, (u.timer - (this.calm ? 0 : alpha)) / PROCESS_TICKS));
+        this.groundP.set(t.position.x + Math.sin(yaw) * 0.5, view.heightAt(t.position.x + Math.sin(yaw) * 0.5 + width / 2, t.position.z + Math.cos(yaw) * 0.5 + height / 2), t.position.z + Math.cos(yaw) * 0.5);
+        this.groundQ.setFromAxisAngle(Y_AXIS, yaw + Math.PI / 2);
+        this.groundM.compose(this.groundP, this.groundQ, this.groundS.set(FIG * (0.35 + 0.65 * left), FIG, FIG));
+      }
+      for (const [k, m] of this.groundLogs) m.setMatrixAt(i, k === groundKind ? this.groundM : ZERO);
       t.scale.setScalar(wood && !log ? FIG : 0);
       t.updateMatrix();
       this.planks.setMatrixAt(i, t.matrix);
@@ -5350,7 +5394,7 @@ export class GameRenderer {
       m.count = loadUsed.get(res) ?? 0;
       touch(m);
     }
-    for (const m of [this.planks, ...[...this.logs.values()].flat()]) {
+    for (const m of [this.planks, ...[...this.logs.values()].flat(), ...this.groundLogs.values()]) {
       m.count = n;
       touch(m);
     }

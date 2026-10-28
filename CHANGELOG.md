@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.59.0 — rąbanie z biedy: pień przy pniaku, deski stosem, płynne padanie drzew i numery grup (2026-10-28)
+
+- **Obróbkę widać:** po ścięciu drzewa chłop ociosuje i tnie leżący przed nim pień (niżej, z pochyleniem nad pniem), a pień w trakcie się skraca
+- **Deski leżą przy pniaku:** bez składu zostają tam prawdziwym stosem i liczą się do zapasów (wcześniej drewno dopisywało się „z powietrza”). Budowniczy przychodzi po nie i nosi ładunki na plac budowy, stos przy tym maleje; gdy stanie skład, magazynier znosi resztę
+- **Budowa przed rąbaniem:** póki stoi zapłacony plac budowy, rąbiący idzie go budować (bywał jedynymi wolnymi rękami i plac stał bez budowniczych)
+- **Drzewo pada płynnie:** przechył liczony z ułamkiem ticku — dotąd drzewo waliło się skokami, 10 razy na sekundę
+- **Numery grup nad oddziałami i dymki nad głowami** idą płynnie za ludźmi (pozycja tak, jak są narysowani, a nie skokami co tick symulacji)
+- Bot: korzysta z tego samego (jego budowniczowie też noszą deski ze stosów)
+- Testy: stos desek przy pniaku; skład stawiany za deski z biedy — budowniczy nosi je ze stosu, stos maleje
 ## 0.58.7 — wilki nie przegryzają murów, mag i łucznik celują w wilka (2026-10-28)
 
 - **Wilk muru nie przegryzie.** Gdy wszyscy są za palisadą, wilk podchodzi pod mur albo bramę, raz go podrapie (najwyżej 1 HP na wilka przez całą noc, nigdy nie zniszczy) i wraca do lasu. Dawniej gryzł co chwilę po 6 HP i potrafił przegryźć palisadę

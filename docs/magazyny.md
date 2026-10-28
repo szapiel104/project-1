@@ -70,8 +70,9 @@ magazynów — żeby na jedno wolne miejsce nie poszło trzech ludzi.
 
 Sytuacja kryzysowa, w której osada sama by się nie podniosła: nie ma żadnego składu na drewno (skład, stodoła) albo chaty drwala, a drewna brakuje nawet na to, czego brak (skład 15, drwal 15). Typowo: pobity bot, któremu zostały sady, spichlerz i zamek.
 
-- Wtedy w dzień pracy **jeden** wolny chłop (a gdy przy ognisku nikogo nie ma — wolny magazynier) idzie do lasu, ścina drzewo i obrabia je przy pniu. Trwa to 30 s na drzewo i daje 5 drewna (drwal w chacie: 12 desek z drzewa, dużo szybciej).
-- Bez składu drewno liczy się od razu do zapasów (leży przy pniu); gdy stanie skład, przejmuje je sam. Gdy skład już stoi, rąbiący zanosi deski do niego.
+- Wtedy w dzień pracy **jeden** wolny chłop (a gdy przy ognisku nikogo nie ma — wolny magazynier) idzie do lasu i ścina drzewo (15 s), a potem przy pniaku ociosuje i tnie leżący pień (15 s; widać pień, który w trakcie się skraca). Z drzewa wychodzi 5 drewna (drwal w chacie: 12 desek z drzewa, dużo szybciej).
+- **Deski leżą naprawdę:** bez składu zostają przy pniaku jako stos (`Pile.held`) i od razu liczą się do zapasów, więc można za nie postawić skład albo drwala. Zapłata za budynek nie zdejmuje desek ze stosu od razu: leżą, dopóki budowniczy nie przyjdzie po ładunek i nie zaniesie go na plac (wtedy stos maleje). Gdy stanie skład, magazynier znosi resztę do niego. Gdy skład już stoi, rąbiący sam zanosi deski do składu.
+- Póki stoi zapłacony plac budowy, nikt nie rąbie z biedy — rąbiący bywa jedynymi wolnymi rękami, więc najpierw buduje to, na co narąbał.
 - Rąbanie kończy się, gdy osada ma i skład, i chatę drwala (wystarczy plac budowy — już zapłacony), gdy drewna starcza na brakujące budynki, gdy chłop dostanie prawdziwą pracę, a także wieczorem (rano wraca, jeśli kryzys trwa).
 - Bot: bez żadnego składu na drewno stawia najpierw skład, dopiero potem drwala (drwal bez składu tylko zrzuca deski pod chatą i staje).
 - Kod: `src/sim/systems/emergencywood.ts` (decyzja co 20 ticków na gracza), test `tests/emergency-wood.test.ts`.

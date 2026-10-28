@@ -20,6 +20,7 @@ import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 export const high = (g: GameState, s: { up?: boolean; px: number; py: number }): boolean => !!s.up || (g.walls[(s.py >> 8) * g.map.width + (s.px >> 8)]! & WALL_TOP) !== 0;
 import { nearStandard, STANDARD_BONUS } from './standards';
 import type { UnitDef } from '../../data/units';
+import { heldTiles } from './emergencywood';
 
 const BARRACKS = buildingIndex('barracks');
 const MAGE_HALLS = new Set([buildingIndex(MAGE_HALL.fire), buildingIndex(MAGE_HALL.water)]);
@@ -1363,7 +1364,8 @@ function sendForMaterial(g: GameState, u: Unit, b: Building): boolean {
   const n = (b.loads ?? 0) - b.haul!;
   b.haul!--;
   const res = siteRes(b, n);
-  if (res < 0 || !hasStoreFor(g, b.owner, res)) { b.delivered = (b.delivered ?? 0) + 1; return false; }
+  // bez składu, ale z deskami z biedy przy pniaku (emergencywood.ts): niesie je stamtąd
+  if (res < 0 || (!hasStoreFor(g, b.owner, res) && !heldTiles(g, b.owner, res).size)) { b.delivered = (b.delivered ?? 0) + 1; return false; }
   u.target = b.id; u.phase = Phase.ToFetch; u.path = []; u.timer = res + 1; u.wait = 0;
   return true;
 }

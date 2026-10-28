@@ -2679,7 +2679,8 @@ function syncGroupTags(): void {
   if (hide) return;
   for (const [n, ids] of groupTagMembers) {
     let x = 0, y = 0, k = 0;
-    for (const id of ids) { const s = byId.get(id); if (s) { x += s.px; y += s.py; k++; } }
+    // położenie tak, jak żołnierze są narysowani (płynnie między tickami), a nie skokami co tick symulacji
+    for (const id of ids) { const s = byId.get(id); if (s) { const at = renderer.smoothTile(s.id, s.px, s.py); x += at.x; y += at.y; k++; } }
     if (!k) continue;
     let tag = groupTags.get(n);
     if (!tag) {
@@ -2690,7 +2691,7 @@ function syncGroupTags(): void {
       document.body.append(tag);
       groupTags.set(n, tag);
     }
-    const p = renderer.project(x / k / 256, y / k / 256);
+    const p = renderer.project(x / k, y / k);
     tag.hidden = !p.front;
     tag.classList.toggle('on', ids.some((id) => chosen.has(id)));
     tag.style.transform = `translate(${Math.round(p.sx)}px, ${Math.round(p.sy - 58)}px) translate(-50%, -100%)`;
@@ -2702,7 +2703,7 @@ function sayLoop(): void {
   if (!bubble.hidden) {
     const u = game.units.find((x) => x.id === sayUnit) ?? game.soldiers.find((x) => x.id === sayUnit);
     if (!u || performance.now() > sayUntil || menu.isOpen()) bubble.hidden = true;
-    else { const p = renderer.project(u.px / 256, u.py / 256); bubble.style.transform = `translate(${p.sx}px, ${p.sy - 40}px) translate(-50%, -100%)`; }
+    else { const at = renderer.smoothTile(u.id, u.px, u.py), p = renderer.project(at.x, at.y); bubble.style.transform = `translate(${p.sx}px, ${p.sy - 40}px) translate(-50%, -100%)`; }
   }
   requestAnimationFrame(sayLoop);
 }

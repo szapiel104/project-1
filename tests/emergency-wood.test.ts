@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { BUILDINGS } from '../src/data/buildings';
+import { BUILDINGS, buildingIndex } from '../src/data/buildings';
 import { RESOURCES, resIndex } from '../src/data/resources';
 import { Terrain } from '../src/data/terrain';
 import { addPeasants, emptyScene, placeReady, setHour } from '../src/sim/emptyscene';
-import { createGame, type GameState } from '../src/sim/state';
+import { createGame, Phase, type GameState } from '../src/sim/state';
+import { placeBuilding } from '../src/sim/systems/placement';
 import { step } from '../src/sim/step';
-import { CHOP_WOOD, woodCrisis } from '../src/sim/systems/emergencywood';
+import { CHOP_WOOD, heldAmount, woodCrisis } from '../src/sim/systems/emergencywood';
 
 const WOOD = resIndex('wood');
 
@@ -81,5 +82,37 @@ describe('rąbanie z biedy — bot', () => {
     }
     expect(storeAt).toBeGreaterThanOrEqual(0);
     expect(cutterAt).toBeGreaterThan(storeAt);
+  });
+});
+
+describe('rąbanie z biedy — deski przy pniaku', () => {
+  it('po ścięciu i obróbce deski leżą stosem przy pniaku i liczą się do zapasów', () => {
+    const g = scene(1);
+    for (let i = 0; i < 4000 && !(g.piles ?? []).some((p) => p.held); i++) run(g, 1);
+    const pile = g.piles!.find((p) => p.held)!;
+    expect(pile.amt).toBe(CHOP_WOOD);
+    expect(pile.res).toBe(WOOD);
+    expect(g.map.tiles[pile.t]).toBe(Terrain.Grass); // przy pniaku ściętego drzewa
+    expect(g.players[0]!.res[WOOD]).toBe(CHOP_WOOD);
+  });
+
+  it('za deski z biedy staje skład: budowniczy nosi je ze stosu, stos znika, a skład rośnie', () => {
+    const g = scene(1);
+    const p = g.players[0]!;
+    p.dev = false; // zwykła budowa z noszeniem materiału
+    for (let i = 0; i < 12000 && p.res[WOOD]! < 15; i++) run(g, 1);
+    expect(p.res[WOOD]).toBeGreaterThanOrEqual(15);
+    const k = g.buildings[0]!, W = g.map.width;
+    const hx = k.door % W, hy = Math.floor(k.door / W);
+    expect(placeBuilding(g, 0, buildingIndex('stockpile'), hx + 5, hy + 3)).toBe(true);
+    const site = g.buildings[g.buildings.length - 1]!;
+    expect(site.build).toBeGreaterThan(0);
+    const before = heldAmount(g, 0, WOOD);
+    expect(before).toBeGreaterThanOrEqual(15); // zapłacone, ale deski jeszcze leżą — ktoś musi je przynieść
+    let fetched = false;
+    for (let i = 0; i < 6000 && site.build > 0; i++) { run(g, 1); if (g.units.some((u) => u.phase === Phase.ToRepair && u.carryRes === WOOD)) fetched = true; }
+    expect(fetched).toBe(true);
+    expect(site.build).toBe(0);
+    expect(heldAmount(g, 0, WOOD)).toBeLessThan(before);
   });
 });

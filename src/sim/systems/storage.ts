@@ -122,6 +122,8 @@ export function takePile(g: GameState, u: Unit): boolean {
   u.target = 0;
   if (!p || p.claim !== u.id) return false;
   const take = Math.min(p.amt, CARRY_MAX);
+  // deski z biedy (emergencywood.ts) już są w zapasach: zdejmujemy je, bo wniesienie do składu doliczy je od nowa
+  if (p.held) { const pl = g.players[p.owner]; if (pl) pl.res[p.res] = Math.max(0, pl.res[p.res]! - take); }
   u.carryRes = p.res; u.carryAmt = take;
   p.amt -= take; p.claim = 0;
   if (p.amt <= 0) list.splice(i, 1);
@@ -205,6 +207,6 @@ export function stalledStep(g: GameState, u: Unit, job: Building | undefined): v
 /** Ile towaru leży pod magazynami gracza (rodzaj → ilość), do okien i skryby */
 export function pilesSummary(g: GameState, owner: number): Map<number, number> {
   const m = new Map<number, number>();
-  for (const p of g.piles ?? []) if (p.owner === owner) m.set(p.res, (m.get(p.res) ?? 0) + p.amt);
+  for (const p of g.piles ?? []) if (p.owner === owner && !p.held) m.set(p.res, (m.get(p.res) ?? 0) + p.amt); // deski z biedy są już w zapasach
   return m;
 }

@@ -10,7 +10,7 @@ import { FP, Phase, playerKeep, storeRoom, type Building, type GameState, type U
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
-import { chopStep } from './emergencywood';
+import { chopStep, heldTiles, takeHeld } from './emergencywood';
 import { mageKindOf } from './plague';
 import { harvestPct } from './storms';
 import { feastDay, goesToPray } from './faith';
@@ -320,7 +320,13 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const kind = res >= 0 ? RESOURCE_DEFS[RESOURCES[res]!].store : null;
       if (!kind || !g.buildings.some((x) => x.id === u.target)) return null;
       const doors = storeDoors(g, u.owner, kind);
-      return doors.size ? (t) => doors.has(t) : null;
+      // bez składu: do stosu desek z biedy przy pniaku (emergencywood.ts)
+      if (!g.buildings.some((b) => b.owner === u.owner && b.door >= 0 && !b.build && BUILDINGS[b.type]!.stores?.includes(kind))) {
+        const piles = heldTiles(g, u.owner, res);
+        if (piles.size) return (t) => piles.has(t);
+      }
+      if (!doors.size) return null;
+      return (t) => doors.has(t);
     }
     case Phase.ToCorpse: {
       const c = g.corpses.find((x) => x.id === u.target);
@@ -524,6 +530,8 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
     }
     case Phase.ToFetch:
       // bierze ładunek ze składu (zapłacony już przy stawianiu budynku) i niesie go na plac
+      // (bez składu: ze stosu desek z biedy, który przy tym maleje)
+      if (!storeAtDoor(g, u.owner, tileOf(g, u), u.timer - 1)) takeHeld(g, u.owner, tileOf(g, u), u.timer - 1, buildingById(g, u.target));
       u.carryRes = u.timer - 1; u.carryAmt = 1; u.timer = 0;
       u.phase = Phase.ToRepair;
       break;

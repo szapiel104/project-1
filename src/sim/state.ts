@@ -195,6 +195,8 @@ export interface Pile {
   claim: number;
   /** Tick odłożenia (do kolejności: najstarszy stos wnoszony pierwszy) */
   at: number;
+  /** Deski z biedy przy pniaku (emergencywood.ts): leżą poza składem, a już liczą się do zapasów gracza */
+  held?: number;
 }
 
 /** Młode drzewko posadzone przez leśniczego. Rośnie (poza zimą), aż stanie się zwykłym polem lasu do wycinki. */
@@ -933,7 +935,7 @@ export function stateHash(g: GameState): number {
   for (const m of g.missiles ?? []) { add(m.to); add(m.unit ? 1 : 0); add(m.dmg); add(m.at); add(m.from); add(m.burn ?? 0); }
   for (const s of g.soldiers) if (s.burn) { add(s.id); add(s.burn); }
   for (const x of g.graves ?? []) { add(x.t); add(x.owner); add(x.at); }
-  for (const x of g.piles ?? []) { add(x.id); add(x.owner); add(x.res); add(x.amt); add(x.store); add(x.t); add(x.claim); }
+  for (const x of g.piles ?? []) { add(x.id); add(x.owner); add(x.res); add(x.amt); add(x.store); add(x.t); add(x.claim); add(x.held ?? 0); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {
     add(p.id); add(p.bot ? 1 : 0); add(p.defeated ? 1 : 0); add(p.left ? 1 : 0); add(p.away ? 1 : 0); add(p.noRock ?? 0); add(p.level); for (const v of Object.values(p.stats)) add(v); add(p.popularity); add(p.popDelta); add(p.rations); add(p.tax); add(p.hungry ? 1 : 0); add(p.famine ?? 0); add(p.revolt ? 1 : 0); add(p.quell ? 1 : 0); add(p.revoltSince ?? 0); add(p.raidAt ?? 0); add(p.raids ?? 0); add(p.tier ?? 0); add(p.lastStrike?.tick ?? 0); add(p.plague ?? 0); add(p.plagueDead ?? 0); add(p.plagueCalm ?? 0);
