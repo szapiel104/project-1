@@ -419,19 +419,21 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
  * belka i deska opierają się o dwa najwyższe punkty po obu stronach środka i przechylają się między nimi.
  * Nic nie wisi w powietrzu (Michał 28.10.2026).
  */
-export function rubbleModel(w: number, h: number, seed: number): THREE.Group {
+export function rubbleModel(w: number, h: number, seed: number, ground?: (x: number, z: number) => number): THREE.Group {
   const g = new THREE.Group();
   const count = Math.round(9 * w * h);
   let s = seed * 9301 + 49297;
   const r = (): number => { s = (s * 9301 + 49297) % 233280; return s / 233280; };
   // mapa wysokości pod stosem (siatka co 4 cm, z zapasem na wystające belki)
   const C = 0.04, pad = 0.6, gw = Math.ceil((w + 2 * pad) / C), gh = Math.ceil((h + 2 * pad) / C);
+  // teren pod stosem (względem jego środka): na pochyłości kawałki leżą na zboczu, a nie na płaskiej podstawce
   const hm = new Float32Array(gw * gh);
+  if (ground) for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) hm[j * gw + i] = ground((i + 0.5) * C - w / 2 - pad, (j + 0.5) * C - h / 2 - pad);
   const cell = (x: number, z: number): number => {
     const i = Math.floor((x + w / 2 + pad) / C), j = Math.floor((z + h / 2 + pad) / C);
     return i < 0 || j < 0 || i >= gw || j >= gh ? -1 : j * gw + i;
   };
-  const at = (x: number, z: number): number => { const c = cell(x, z); return c < 0 ? 0 : hm[c]!; };
+  const at = (x: number, z: number): number => { const c = cell(x, z); return c < 0 ? (ground ? ground(x, z) : 0) : hm[c]!; };
   const raise = (x: number, z: number, y: number): void => { const c = cell(x, z); if (c >= 0 && hm[c]! < y) hm[c] = y; };
   // najpierw duże kamienie (podstawa stosu), potem belki, na wierzchu deski
   const order: number[] = [];
@@ -449,7 +451,7 @@ export function rubbleModel(w: number, h: number, seed: number): THREE.Group {
       // kamień: siada na najwyższym miejscu pod sobą, lekko wciśnięty
       const rad = 0.1 + r() * 0.1;
       m = new THREE.Mesh(new THREE.DodecahedronGeometry(rad, 0), r() > 0.5 ? M.rock : M.rockDark);
-      let base = 0;
+      let base = -Infinity;
       for (let a = 0; a < 8; a++) for (const k of [0.3, 0.65]) base = Math.max(base, at(x + Math.cos(a * 0.785) * rad * k, z + Math.sin(a * 0.785) * rad * k));
       base = Math.max(base, at(x, z));
       const y = base + rad * 0.8;
@@ -469,7 +471,7 @@ export function rubbleModel(w: number, h: number, seed: number): THREE.Group {
       const prof: number[] = [];
       for (let i = 0; i <= n; i++) {
         const t = -L / 2 + (L * i) / n;
-        let top = 0;
+        let top = -Infinity;
         for (const q of [-W / 2, 0, W / 2]) top = Math.max(top, at(x + dx * t + px * q, z + dz * t + pz * q));
         prof.push(top);
       }

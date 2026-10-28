@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { Phase, type GameState } from '../sim/state';
 import { buildWork } from '../sim/systems/placement';
-import { rubbleModel } from './buildings';
+import { rubbleModel, setRubble } from './buildings';
 import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { pattern } from './textures';
@@ -179,22 +179,26 @@ export class SiteLayer {
       if (ruinShown) {
         if (!pile) {
           const fp = footprint(def, b.rot);
-          const p2 = rubbleModel(fp.w, fp.h, b.id);
-          p2.position.copy(mesh.position);
-          p2.scale.set(1, 1.6, 1);
+          const view = this.view, W = this.g.map.width, H = this.g.map.height;
+          const cx = mesh.position.x + W / 2, cz = mesh.position.z + H / 2, y0 = view ? view.heightAt(cx, cz) : mesh.position.y;
+          const p2 = rubbleModel(fp.w, fp.h, b.id, view ? (x, z) => view.heightAt(cx + x, cz + z) - y0 : undefined);
+          p2.position.set(mesh.position.x, y0, mesh.position.z);
           this.layer.add(p2);
           this.ruinPiles.set(b.id, p2);
         }
+        // gruz leży tak, jak spadł (rubbleModel układa go na ziemi) — bez rozciągania w pionie, które podnosiło
+        // kawałki w powietrze; w miarę odbudowy robotnicy zbierają go od góry
         const pl = this.ruinPiles.get(b.id)!;
         pl.visible = k < 0.7;
-        pl.scale.y = 1.6 * (1 - k);
+        setRubble(pl, 1 - k / 0.7);
       } else if (pile) { this.layer.remove(pile); this.ruinPiles.delete(b.id); }
       // najpierw wykop (pierwsze 12% pracy: sama dziura w ziemi), potem fundament, mury i na końcu dach
       const cut = site.base + 0.03 + Math.max(0, (k - 0.12) / 0.88) * (site.top - site.base) * 1.01;
       site.plane.constant = cut;
       mesh.visible = k >= 0.12;
       // wykop: teren działki opada w miarę kopania, fundament go potem zasypuje
-      const want = k < 0.12 ? 0.08 + (k / 0.12) * 0.3 : 0;
+      // ruina: bez wykopu (teren pod gruzem zostaje na miejscu, inaczej gruz wisiał nad dołem)
+      const want = ruinShown ? 0 : k < 0.12 ? 0.08 + (k / 0.12) * 0.3 : 0;
       if (Math.abs((site.dug ?? 0) - want) > 0.02) {
         site.dug = want;
         const fp2 = footprint(def, b.rot);

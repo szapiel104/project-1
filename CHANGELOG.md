@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.58.6 — gruzowisko leży na ziemi naprawdę: także ruiny i zbocza (2026-10-28)
+
+- **Ruina nie lewituje:** gruz ruiny był rozciągany w pionie 1,6 raza (kamienie wysokie, belki odklejone od siebie i wiszące), a teren pod nim opadał jak przy wykopie pod budowę — stos wisiał nad dołem. Teraz ruina dostaje ten sam stos co gruz po rozbiórce, bez rozciągania i bez wykopu; w miarę odbudowy robotnicy zbierają go od góry
+- **Stos leży na prawdziwym terenie:** mapa wysokości pod gruzem zaczyna się od kształtu ziemi, więc na pochyłości kawałki leżą na zboczu, a nie na płaskiej podstawce
+- Sprawdzone testem (płasko i na spadku 25% i 40%): żaden kawałek nie wisi i żaden nie wchodzi w ziemię głębiej niż 3,5 cm
+- Bot: bez zmian (sam wygląd)
+
 ## 0.58.5 — ogień nie razi w oczy (2026-10-28)
 
 - **Płomienie bez przepalenia:** najgorętszy rdzeń ognia świecił prawie trzy razy ponad biel ekranu, więc pochodnie, kosze i pożary wychodziły jako białe, rażące plamy. Teraz rdzeń jest żółtopomarańczowy i tylko lekko ponad biel (wspólny shader `fireGlsl.ts`); małe płomienie dodatkowo o 20% ciemniejsze

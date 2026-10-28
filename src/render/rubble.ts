@@ -40,8 +40,9 @@ export class RubbleLayer {
       alive.add(r.id);
       let pile = this.piles.get(r.id);
       if (!pile) {
-        pile = rubbleModel(r.w, r.h, r.id);
-        pile.position.set(r.x + r.w / 2 - width / 2, view.heightAt(r.x + r.w / 2, r.y + r.h / 2), r.y + r.h / 2 - height / 2);
+        const cx = r.x + r.w / 2, cz = r.y + r.h / 2, y0 = view.heightAt(cx, cz);
+        pile = rubbleModel(r.w, r.h, r.id, (x, z) => view.heightAt(cx + x, cz + z) - y0);
+        pile.position.set(cx - width / 2, y0, cz - height / 2);
         this.scene.add(pile);
         this.piles.set(r.id, pile);
       }
