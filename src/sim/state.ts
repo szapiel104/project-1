@@ -149,6 +149,8 @@ export interface Building {
   build: number;
   /** Budowa: ile ładunków materiału trzeba przynieść ze składu w sumie (0/brak = nie nosi się) */
   loads?: number;
+  /** Przenosiny (relocate.ts): stos materiału ze starego miejsca, z którego robotnicy noszą ładunki na ten plac */
+  from?: number;
   /** Budowa: ile ładunków już leży na placu */
   delivered?: number;
   /** Budowa: ile ładunków jeszcze nikt nie poszedł przynieść */
@@ -237,6 +239,8 @@ export interface Rubble {
   total: number;
   /** Ile ticków nikt go nie wynosi (po RULES.decayTicks gruz rozpada się i znika) */
   idle?: number;
+  /** Przenosiny (relocate.ts): plac budowy w nowym miejscu, na który robotnicy noszą ten stos (nie do składu) */
+  to?: number;
 }
 
 export const enum Phase {

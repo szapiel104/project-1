@@ -1,3 +1,4 @@
+import { orphanStacks } from './relocate';
 import { buildingById } from '../state';
 import { BUILDINGS } from '../../data/buildings';
 import { RULES } from '../../data/rules';
@@ -17,7 +18,9 @@ export function rubbleSystem(g: GameState): void {
     const def = BUILDINGS[buildingById(g, u.job)?.type ?? -1];
     return who === 'keeper' ? !!def?.keepers : !!def?.staff && !def.keepers;
   });
+  orphanStacks(g);
   for (const r of g.rubble) {
+    if (r.to) continue; // stos do przenosin noszą robotnicy nowego placu (relocate.ts), nie do składu
     let busy = 0, keeper = false;
     for (const u of g.units) {
       if (u.phase !== Phase.ToRubble || u.target !== r.id) continue;

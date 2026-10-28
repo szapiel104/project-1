@@ -18,6 +18,7 @@ import { enemyRoad, orderWreck } from './roadwreck';
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
 // 'well' przy polach: latem w suszy sad i pole bez studni obok rodzą o połowę mniej (storms.ts), a studnia przydaje się też do gaszenia pożarów od piorunów
 // 'camp' dwa razy: pierwsze obozowisko stoi od startu, drugie daje miejsca na nowych przybyszów (bez wolnego miejsca przy ognisku nikt nie przychodzi)
+// przenoszenia budynków za rudę (relocate.ts) bot świadomie nie używa: stawia od razu tam, gdzie chce, a ruda idzie mu na wojsko
 // rudera i namiot nie są na liście: bot stawia je tylko na szybko, gdy brak łóżek, a na chatę nie ma drewna (urgent niżej)
 const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine'];
 // druga kopalnia na samym końcu: kosztuje fortunę (BuildingDef.nextCost), więc bot stawia ją dopiero, gdy wszystko inne już stoi

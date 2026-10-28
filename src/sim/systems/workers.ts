@@ -16,6 +16,7 @@ import { harvestPct } from './storms';
 import { feastDay, goesToPray } from './faith';
 import { dropPile, isStore, spareKeeper, stalledStep, takePile } from './storage';
 import { liftCorpse } from './bearers';
+import { moveStack, takeFromStack } from './relocate';
 import { depositAt, freeIn, storeAtDoor, withdrawAt } from './stock';
 
 const RETRY_TICKS = 20;
@@ -318,6 +319,14 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return (t) => { const x = t % w, y = (t - x) / w; const dx = Math.max(b.x - x, 0, x - (b.x + fp.w - 1)), dy = Math.max(b.y - y, 0, y - (b.y + fp.h - 1)); return Math.max(dx, dy) === 1; };
     }
     case Phase.ToFetch: {
+      // przenosiny (relocate.ts): po ładunek do stosu po starym budynku; stos zniknął = ładunek liczy się jako przyniesiony
+      const site = buildingById(g, u.target);
+      if (site?.from) {
+        const r = moveStack(g, site);
+        if (!r) return null;
+        const w = g.map.width;
+        return (t) => { const x = t % w, y = (t - x) / w; return x >= r.x && x < r.x + r.w && y >= r.y && y < r.y + r.h; };
+      }
       // po materiał na budowę: do najbliższego składu, w którym leży ten surowiec
       const res = u.timer - 1;
       const kind = res >= 0 ? RESOURCE_DEFS[RESOURCES[res]!].store : null;
@@ -536,13 +545,16 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.phase = u.job ? Phase.Returning : Phase.Idle;
       break;
     }
-    case Phase.ToFetch:
+    case Phase.ToFetch: {
       // bierze ładunek ze składu (zapłacony już przy stawianiu budynku) i niesie go na plac
       // (bez składu: ze stosu desek z biedy, który przy tym maleje)
-      if (!storeAtDoor(g, u.owner, tileOf(g, u), u.timer - 1)) takeHeld(g, u.owner, tileOf(g, u), u.timer - 1, buildingById(g, u.target));
+      const site = buildingById(g, u.target);
+      if (site && takeFromStack(g, site)) { /* wziął ze stosu po starym budynku (relocate.ts) */ }
+      else if (!storeAtDoor(g, u.owner, tileOf(g, u), u.timer - 1)) takeHeld(g, u.owner, tileOf(g, u), u.timer - 1, buildingById(g, u.target));
       u.carryRes = u.timer - 1; u.carryAmt = 1; u.timer = 0;
       u.phase = Phase.ToRepair;
       break;
+    }
     case Phase.ToPave:
       // przyniesiony materiał idzie w drogę
       u.carryRes = -1; u.carryAmt = 0;

@@ -10,6 +10,7 @@ import { findPath, walkable, wallBetween } from '../path';
 import { hash2 } from '../rng';
 import { FP, Phase, type Building, type Corpse, type GameState, type March, type QueuedMove, type Soldier, type Unit } from '../state';
 import { BUILDINGS, TOWERS, footprint, isTower, towerBonus, workArea } from '../../data/buildings';
+import { moveStack } from './relocate';
 import { buildWork, demolish, enemyNear, maxHp, rebuildCost, restore, ruin } from './placement';
 import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
@@ -1364,6 +1365,11 @@ function sendForMaterial(g: GameState, u: Unit, b: Building): boolean {
   const n = (b.loads ?? 0) - b.haul!;
   b.haul!--;
   const res = siteRes(b, n);
+  // przenosiny: ładunek leży w stosie po starym budynku (relocate.ts), nie w składzie
+  if (b.from) {
+    if (moveStack(g, b)) { u.target = b.id; u.phase = Phase.ToFetch; u.path = []; u.timer = Math.max(0, res) + 1; u.wait = 0; return true; }
+    b.from = undefined;
+  }
   // bez składu, ale z deskami z biedy przy pniaku (emergencywood.ts): niesie je stamtąd
   if (res < 0 || (!hasStoreFor(g, b.owner, res) && !heldTiles(g, b.owner, res).size)) { b.delivered = (b.delivered ?? 0) + 1; return false; }
   u.target = b.id; u.phase = Phase.ToFetch; u.path = []; u.timer = res + 1; u.wait = 0;

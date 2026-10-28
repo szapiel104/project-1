@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.64.0 — przenoszenie budynków za rudę (2026-10-28)
+
+- **Przycisk „Przenieś (N rudy)” w oknie gotowego budynku** (`src/sim/systems/relocate.ts`, rozkaz `relocate`): po kliknięciu podgląd budynku idzie za kursorem jak przy stawianiu (R obraca, zielony = wolno), klik wskazuje nowe miejsce, Esc anuluje
+- **Robotnicy naprawdę go przenoszą:** stary budynek od razu rozbierają na stos materiału na starej działce, na nowym miejscu staje plac budowy, a robotnicy biorą ze stosu ładunek po ładunku (nie ze składu), niosą na plac i stawiają budynek od nowa. Stos maleje na oczach, a gdy zniknie, stara działka jest wolna
+- **Koszt:** tylko ruda za robotę — 10 + 15% sumy kosztu budynku (`RULES.moveBase`, `RULES.movePercent`); materiału nie płaci się drugi raz. Wyłączony budynek zostaje wyłączony po przenosinach
+- Nie przenosi się: twierdzy, dróg, murów, bram, wież, pochodni, dodatków, magazynów (towar w środku) ani kopalni rudy. Nie da się przenieść budowy, ruiny, budynku w ogniu ani pod okiem wroga
+- Gdy plac w nowym miejscu zniknie (np. zniszczy go wróg), resztka stosu zamienia się w zwykły, bezwartościowy gruz do wyniesienia; stos do przenosin nie rozpada się sam, póki plac czeka
+- Opis w „Jak grać” (Rozbiórka i ruiny → Przenoszenie budynku), teksty po polsku i angielsku; test `tests/relocate.test.ts`
+- Bot: świadomie nie używa (stawia od razu tam, gdzie chce; komentarz przy `ORDER`)
+
 ## 0.63.8 — bruzdy w śniegu po ciągniętych pniach i koleiny wozów (2026-10-28)
 
 - **Ciągnięty pień zostawia bruzdę:** drwal, który wlecze ścięte drzewo do chaty, zostawia za sobą szeroką, ciągłą bruzdę tam, gdzie koniec pnia szoruje po śniegu (za jego plecami)

@@ -5,6 +5,7 @@ import { RULES } from '../data/rules';
 import type { GameState } from './state';
 import { economySystem } from './systems/economy';
 import { demolish, placeBuilding, removeRoad } from './systems/placement';
+import { relocate } from './systems/relocate';
 import { wolfSystem } from './systems/wolves';
 import { guardSystem } from './systems/guards';
 import { campSystem } from './systems/minecamp';
@@ -39,6 +40,8 @@ export type Command =
   | { type: 'noop'; player: number }
   | { type: 'build'; player: number; building: string; x: number; y: number; rot?: number }
   | { type: 'demolish'; player: number; id: number }
+  /** Przenosiny budynku `id` za rudę na działkę (x, y) z obrotem rot (relocate.ts) */
+  | { type: 'relocate'; player: number; id: number; x: number; y: number; rot?: number }
   | { type: 'unroad'; player: number; x: number; y: number }
   /** Żołnierze rozkopują wrogą drogę na polu (x, y) */
   | { type: 'wreck'; player: number; ids: number[]; x: number; y: number }
@@ -100,6 +103,9 @@ function apply(g: GameState, c: Command): void {
       break;
     case 'demolish':
       demolish(g, c.player, c.id);
+      break;
+    case 'relocate':
+      if (Number.isInteger(c.id) && Number.isInteger(c.x) && Number.isInteger(c.y)) relocate(g, c.player, c.id, c.x, c.y, Number.isInteger(c.rot) ? ((c.rot! % 4) + 4) % 4 : 0);
       break;
     case 'unroad':
       if (Number.isInteger(c.x) && Number.isInteger(c.y)) removeRoad(g, c.player, c.x, c.y);

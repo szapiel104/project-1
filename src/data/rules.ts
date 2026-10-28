@@ -94,6 +94,9 @@ export const RULES = {
   decayTicks: 3000,
   /** Przy rozbiórce wraca tyle procent kosztu */
   refundPercent: 50,
+  /** Przenosiny budynku (relocate.ts): stała opłata w rudzie plus tyle procent sumy kosztu budynku */
+  moveBase: 10,
+  movePercent: 15,
   /** Kara do popularności za brak miejsc w domach */
   crowdingPenalty: -2,
   /** Racje: ile żywności miesięcznie na 8 chłopów i wpływ na popularność */

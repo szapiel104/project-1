@@ -36,7 +36,7 @@ export function decaySystem(g: GameState): void {
   }
   for (let i = g.rubble.length - 1; i >= 0; i--) {
     const r = g.rubble[i]!;
-    if (busy().has(r.id)) { r.idle = 0; continue; }
+    if (busy().has(r.id) || r.to) { r.idle = 0; continue; } // stos do przenosin czeka na plac (relocate.ts)
     r.idle = (r.idle ?? 0) + EVERY;
     if (r.idle < limit) continue;
     for (let ty = r.y; ty < r.y + r.h; ty++) for (let tx = r.x; tx < r.x + r.w; tx++) g.reserved[ty * g.map.width + tx]!--;

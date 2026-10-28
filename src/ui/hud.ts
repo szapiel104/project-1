@@ -32,6 +32,8 @@ export interface HudEvents {
   /** false = zmiana tempa niedozwolona (gra przez sieć), pasek wraca do poprzedniej wartości */
   onSpeed(speed: number): boolean | void;
   onDemolish(id: number): void;
+  /** Przenosiny budynku za rudę: następny klik na mapie wskazuje nowe miejsce */
+  onRelocate(id: number): void;
   onCloseInfo(): void;
   onRotate(): void;
   onWreck(): void;
@@ -103,7 +105,7 @@ export interface HudView {
 export interface StockInfo { kind: string; here: number; hereUsed: number; used: number; max: number; stores: number; items: { id: string; amount: number }[] }
 /** Skróty na dolnym pasku: koszary, skład, spichlerz */
 export type JumpKind = 'barracks' | 'stockpile' | 'granary';
-export interface BuildingInfo { /** Czyj to budynek: imię gracza albo bota, wróg / sojusznik / twój, kolor drużyny */ owner?: { name: string; rel: 'own' | 'ally' | 'enemy'; color: number }; stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
+export interface BuildingInfo { /** Czyj to budynek: imię gracza albo bota, wróg / sojusznik / twój, kolor drużyny */ owner?: { name: string; rel: 'own' | 'ally' | 'enemy'; color: number }; stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; /** Przenosiny za rudę: koszt i powód blokady (null = wolno) */ move?: { cost: number; why: string | null }; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Twierdza w czasie buntu: ilu stoi pod bramą, ile porcji kosztuje rozdanie chleba, czy jest z czego, czy straż już rozgania tłum */
@@ -648,6 +650,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   demolish.type = 'button';
   const close = el('button', 'btn-plain', t('hud.close'));
   close.type = 'button';
+  const moveBtn = el('button', 'btn-plain', t('hud.relocate'));
+  moveBtn.type = 'button'; moveBtn.hidden = true;
   const trainBtn = el('button', 'btn-main', t('hud.train'));
   trainBtn.type = 'button';
   trainBtn.hidden = true;
@@ -797,7 +801,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const mineBtn = el('button', 'btn-main walk-btn', tx('Wejdź do kopalni', 'Enter the mine')); mineBtn.type = 'button'; mineBtn.hidden = true;
   mineBtn.addEventListener('click', () => events.onEnterMine(infoId));
   areaBtn.addEventListener('click', () => events.onArea(infoId));
-  infoActions.append(areaBtn, demolish, close);
+  infoActions.append(areaBtn, moveBtn, demolish, close);
   // plac budowy: pasek postępu, materiał (przyniesiony / potrzebny, w drodze), robotnicy i co się teraz dzieje
   // warsztat: przepis z ikonami, pracownik z postępem roboty, stan (co blokuje) i liczby
   const prodBox = el('div', 'info-prod');
@@ -835,6 +839,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   info.append(infoName, ownerLine, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
+  moveBtn.addEventListener('click', () => events.onRelocate(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
 
   // ---- dół ekranu: wysuwane panele, a pod nimi pasek budowy ----
@@ -1256,7 +1261,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       infoWorker.hidden = person.lines.length < 2;
       infoWorker.textContent = '';
       person.lines.slice(1).forEach((line, k) => { if (k) infoWorker.append(document.createElement('br')); infoWorker.append(line); });
-      demolish.hidden = true;
+      demolish.hidden = true; moveBtn.hidden = true;
       trainBtn.hidden = true;
       trainNote.hidden = true;
       roster.hidden = true; hideArmy();
@@ -1341,7 +1346,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       armyCtl.setHelp([...counts].map(([n, k]) => `${n} × ${k}`).join(', '), t('hud.orderHint'));
       infoDesc.hidden = true;
       infoWorker.hidden = true;
-      demolish.hidden = true;
+      demolish.hidden = true; moveBtn.hidden = true;
       trainBtn.hidden = true;
       trainNote.hidden = true;
     },
@@ -1527,6 +1532,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         gateState.dataset.shut = String(i.gate.shut);
       }
       demolish.hidden = !i.own || !i.def.buildable;
+      moveBtn.hidden = !(i.own && i.move);
+      if (i.move) {
+        setText(moveBtn, `${t('hud.relocate')} (${i.move.cost} ${tx('rudy', 'ore')})`);
+        moveBtn.disabled = !!i.move.why;
+        moveBtn.title = i.move.why ?? t('hud.relocateTip');
+      }
       setText(demolish, i.ruined ? tx('Porzuć ruinę', 'Abandon the ruins') : t('hud.demolish'));
       areaBtn.hidden = i.area === undefined;
       mineBtn.hidden = !(i.own && i.def.id === 'oremine');

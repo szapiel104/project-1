@@ -30,6 +30,7 @@ import { FOOD_PER_DAY, FOOD_VALUE, GRAIN_PER_DAY, MEALS_PER_DAY, foodTotal, mont
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
 import { buildCost, canAfford, canPlace, doorTile, missingRequirement, maxHp, tileBuildable, ruin } from './sim/systems/placement';
+import { canRelocate, canRelocateTo, movable, relocateCost, type MoveError } from './sim/systems/relocate';
 import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, type JumpKind, type RecruitUnit } from './ui/hud';
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { storeLogistics } from './ui/storePanel';
@@ -99,6 +100,8 @@ let touchTile: TileRef | null = null;
 let selected = 0;
 /** Obrót stawianego budynku: 0..3, co 90° */
 let placeRot = 0;
+/** Przenosiny (relocate.ts): id przenoszonego budynku; podgląd działki jak przy stawianiu, klik wysyła rozkaz przenosin */
+let moveId = 0;
 /** Tryb wyburzania: kliknięcie usuwa budynek, przeciąganie usuwa drogę */
 let wrecking = false;
 
@@ -186,6 +189,7 @@ const hud = createHud(document.getElementById('ui')!, {
     return true;
   },
   onDemolish: (id) => confirmDemolish(id),
+  onRelocate: (id) => startMove(id),
   onCloseInfo: () => { selectUnit(0); select(0); if (chosen.size) chooseSoldiers([], false); },
   onRotate: () => rotate(),
   onWreck: () => setWreck(!wrecking),
@@ -798,6 +802,7 @@ function placeErrorText(error: string, type: number): string {
 
 function pick(id: string | null): void {
   picked = id;
+  moveId = 0;
   touchTile = null;
   hud.setPicked(id);
   canvas.classList.toggle('placing', id !== null);
@@ -807,6 +812,18 @@ function pick(id: string | null): void {
   if (road) hud.toast(t('hud.paintRoad'));
   if (id) select(0);
   updateGhost();
+}
+
+/** Przenosiny: podgląd przenoszonego budynku idzie za kursorem, klik na mapie wskazuje nowe miejsce */
+function startMove(id: number): void {
+  const b = game.buildings.find((x) => x.id === id);
+  const err = b ? canRelocate(game, ME, id) : 'move.cannot';
+  if (!b || err) { hud.toast(t(err ?? 'move.cannot')); play('error'); return; }
+  placeRot = b.rot;
+  pick(BUILDINGS[b.type]!.id);
+  moveId = id;
+  updateGhost();
+  hud.toast(t('move.pick'));
 }
 
 /** Obraca stawiany budynek o 90° w prawo. Drogi i pochodnie są symetryczne, więc ich to nie dotyczy. */
@@ -883,7 +900,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     : undefined;
   const mine = game.players[ME], theirs = game.players[b.owner];
   const owner = theirs ? { name: playerName(b.owner), rel: (b.owner === ME ? 'own' : mine && theirs.team === mine.team ? 'ally' : 'enemy') as 'own' | 'ally' | 'enemy', color: TEAM_COLORS[theirs.team] ?? 0x888888 } : undefined;
-  return { owner, id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, ruined: b.ruined, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
+  return { owner, id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, ruined: b.ruined, move: b.owner === ME && movable(b.type) && !b.ruined && !b.build ? { cost: relocateCost(b.type), why: ((e) => (e ? t(e) : null))(canRelocate(game, ME, b.id)) } : undefined, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: (def.id === 'barracks' || def.id === 'mageFire' || def.id === 'mageWater') && !b.build && !b.ruined ? recruitInfo(b.type).map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     power: !b.build && (def.production || def.staff) && def.id !== 'keep' ? { on: !b.off, worker: b.worker !== 0 } : undefined,
     quarantine: canQuarantine(b) && (game.players[b.owner]?.plague || b.quarantine) ? { on: !!b.quarantine, sick: game.units.filter((u) => u.home === b.id && u.sick && u.phase === 22).length } : undefined,
@@ -964,7 +981,7 @@ function updateGhost(): void {
   // wyjście zawsze przed drzwiami modelu (nie przeskakuje); gdy to pole jest zajęte, podgląd jest czerwony
   const def = BUILDINGS[type]!;
   const door = def.wall || def.gate || def.road || def.line || def.id === 'torch' ? -1 : doorTile(game, o.x, o.y, fp.w, fp.h, placeRot);
-  renderer.setGhost({ ...o, w: fp.w, h: fp.h, ok: canPlace(game, ME, type, o.x, o.y, true, placeRot) === null, id: picked, team: game.players[ME]!.team, rot: placeRot, door });
+  renderer.setGhost({ ...o, w: fp.w, h: fp.h, ok: (moveId ? canRelocateTo(game, ME, moveId, o.x, o.y, placeRot) : canPlace(game, ME, type, o.x, o.y, true, placeRot)) === null, id: picked, team: game.players[ME]!.team, rot: placeRot, door });
 }
 
 renderer.onHover = (tile) => { hoverTile = tile; if (!touchTile) updateGhost(); };
@@ -1153,6 +1170,14 @@ renderer.onClick = (tile, touch) => {
   const type = buildingIndex(picked);
   // stawiamy dokładnie tam, gdzie stoi podgląd (pole z ostatniego ruchu myszy), a nie tam, gdzie trafił klik
   const o = origin(!touch && hoverTile ? hoverTile : tile, type);
+  if (moveId) {
+    const err = canRelocateTo(game, ME, moveId, o.x, o.y, placeRot);
+    if (err) { hud.toast(err.startsWith('move.') ? t(err as MoveError) : placeErrorText(err, type)); play('error'); return; }
+    pending.push({ type: 'relocate', player: ME, id: moveId, x: o.x, y: o.y, rot: placeRot });
+    play('demolish');
+    pick(null);
+    return;
+  }
   const error = canPlace(game, ME, type, o.x, o.y, true, placeRot);
   if (error) { hud.toast(placeErrorText(error, type)); play('error'); return; }
   pending.push({ type: 'build', player: ME, building: picked, x: o.x, y: o.y, rot: placeRot });
