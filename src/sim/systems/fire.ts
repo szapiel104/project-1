@@ -78,11 +78,20 @@ export function fireSystem(g: GameState): void {
     const hit = b.hpWas !== undefined && b.hp < b.hpWas;
     b.hpWas = b.hp;
     // kamień nie płonie: mur kamienny, kamienne bramy i wieże, twierdza
-    if (def.road || b.build || b.ruined || b.type === WELL || STONE.has(b.type)) { b.fire = 0; continue; }
+    if (def.road || b.build || b.ruined || b.type === WELL || STONE.has(b.type)) { b.fire = 0; if (b.ruined || b.build) b.scorch = 0; continue; }
+    // osmalenie zostaje po pożarze i schodzi tylko z naprawą: maleje w miarę, jak inżynier łata budynek, a przy pełnej wytrzymałości znika
+    if (b.scorch && !b.fire) {
+      const low = Math.min(b.scorchHp ?? b.hp, max - 1);
+      if (b.hp >= max) { b.scorch = 0; b.scorchHp = undefined; b.scorchMax = undefined; }
+      else if (b.hp > low) b.scorch = Math.min(b.scorch, Math.floor(((b.scorchMax ?? b.scorch) * (max - b.hp)) / (max - low)));
+    }
     // mur, brama i wieża pękają od ciosów, ale miecz ich nie podpala (drewniane podpali tylko ogień: strzała, czar, piorun)
     if (hit && b.hp < max * 0.6 && !def.wall && !def.gate) b.fire = Math.max(b.fire ?? 0, BURN);
     if (!b.fire) continue;
     b.fire--;
+    // ogień czerni ściany i dach powoli: pełne osmalenie po ok. 100 s palenia
+    b.scorch = Math.min(1000, (b.scorch ?? 0) + 1); b.scorchMax = b.scorch;
+    b.scorchHp = b.hp; // wytrzymałość na koniec palenia: od niej naprawa zaczyna zmywać sadzę
     if (g.tick % 10 === 0 && b.hp > max * 0.15) { b.hp = Math.max(Math.ceil(max * 0.15), b.hp - 1); b.hpWas = b.hp; } // to nie cios wroga: nie rozpala ognia na nowo
   }
   if (g.tick % 5 === 0) {
@@ -101,6 +110,7 @@ export function fireSystem(g: GameState): void {
       for (const u of cands.slice(0, CREW - busy)) { u.bucket = 1; u.fireAt = b.id; u.target = well.id; u.path = []; u.timer = 0; u.wait = 0; }
     }
   }
+  if (g.tick % 10 === 0) stepAway(g);
   // biegną do studni, czerpią, niosą, wylewają, wracają po następne wiadro, aż ogień zgaśnie
   for (const u of g.units) {
     if (!u.bucket) continue;
@@ -129,5 +139,47 @@ export function fireSystem(g: GameState): void {
     const well = nearestWell(g, u.owner, fire);
     if (!well) { release(u); continue; }
     u.target = well.id;
+  }
+}
+
+/** Tyle pól od płonącego budynku nikt (poza gaszącymi) nie stoi */
+const HEAT = 2;
+/** Tyle ticków odsunięty człowiek czeka z dala, zanim wróci do swoich spraw */
+const AWAY = 80;
+
+/**
+ * Ludzie, którzy nie gaszą, odsuwają się od ognia: kto stoi przy płonącym budynku (w odległości HEAT pól od ściany),
+ * odchodzi kilka pól dalej, w stronę od ognia, i chwilę tam zostaje. Gaszący z wiadrami podchodzą normalnie,
+ * a przechodzący drogą idą dalej (nie zatrzymujemy ich w pół kroku).
+ */
+function stepAway(g: GameState): void {
+  const w = g.map.width, h = g.map.height;
+  for (const b of g.buildings) {
+    if (!b.fire) continue;
+    const fp = footprint(BUILDINGS[b.type]!, b.rot);
+    const x0 = b.x - HEAT, y0 = b.y - HEAT, x1 = b.x + fp.w - 1 + HEAT, y1 = b.y + fp.h - 1 + HEAT;
+    const [cx, cy] = center(b);
+    for (const u of g.units) {
+      if (u.bucket || u.path.length || (u.fireAway ?? 0) > g.tick) continue;
+      if (u.phase === Phase.Sleeping || u.phase === Phase.Resting || u.phase === Phase.ToSleep) continue;
+      const ux = u.px >> 8, uy = u.py >> 8;
+      if (ux < x0 || ux > x1 || uy < y0 || uy > y1) continue;
+      // kierunek od środka pożaru; pole docelowe tuż za strefą żaru (pierwsze wolne, lekko skręcając)
+      let ax = ux + 0.5 - cx, ay = uy + 0.5 - cy;
+      const len = Math.hypot(ax, ay) || 1;
+      ax /= len; ay /= len;
+      const reach = Math.max(fp.w, fp.h) / 2 + HEAT + 1.5;
+      let dest = -1;
+      for (const turn of [0, 0.45, -0.45, 0.9, -0.9, 1.6, -1.6]) {
+        const c = Math.cos(turn), sn = Math.sin(turn);
+        const x = Math.round(cx + (ax * c - ay * sn) * reach - 0.5), y = Math.round(cy + (ax * sn + ay * c) * reach - 0.5);
+        if (x < 0 || y < 0 || x >= w || y >= h) continue;
+        if (x >= x0 && x <= x1 && y >= y0 && y <= y1) continue;
+        if (walkable(g, y * w + x, u.owner)) { dest = y * w + x; break; }
+      }
+      if (dest < 0) continue;
+      const path = findPath(g, uy * w + ux, (t) => t === dest, 400, u.owner, dest);
+      if (path && path.length) { u.path = path; u.wait = 0; u.fireAway = g.tick + AWAY; }
+    }
   }
 }

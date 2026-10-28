@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.57.0 — ogień na budynku, osmalenie, ludzie odsuwają się od pożaru (2026-10-28)
+
+- **Ogień siedzi na budynku:** obrys pożaru liczony z działki (pól), a nie z modelu ze snopkami i gratami dookoła; płomienie liżą ściany i połacie dachu (zwężają się ku kalenicy), nad dachem tylko krótkie języki. Dużo słabsza jasność i więcej pomarańczu — w dzień nie ma już bladej, prześwietlonej plamy wylewającej się na podwórko
+- **Wolniej:** płomienie unoszą się spokojniej (pożary, pochodnie, ogniska), gorące miejsca wędrują po dachu wolniej, a pożar rozpala się stopniowo — ok. 15 s od pierwszych języków do pełnego ognia
+- **Osmalenie** (`src/render/scorch.ts`, stan `scorch` w symulacji): póki budynek płonie, na ścianach i dachu przybywa czarnych plam sadzy z zaciekami w górę (pełne po ok. 100 s palenia). Po ugaszeniu zostaje i schodzi dopiero z naprawą — w miarę, jak inżynier łata budynek; przy pełnej wytrzymałości znika. Zapisuje się w stanie gry, więc wszyscy gracze widzą to samo
+- **Ludzie odsuwają się od ognia:** kto nie gasi, a stoi w odległości 2 pól od płonącego budynku, odchodzi kilka pól dalej (w stronę od ognia) i chwilę tam czeka, zanim wróci do roboty. Gaszący z wiadrami podchodzą normalnie, przechodzący drogą idą dalej
+- Bot: bez zmian w decyzjach; jego ludzie odsuwają się od ognia tak samo jak gracza
+- Testy: osmalenie rośnie przy pożarze, zostaje bez naprawy i schodzi z naprawą; człowiek przy płonącej ścianie odchodzi
+
 ## 0.56.2 — obozy zbójów na uboczu mapy (2026-10-28)
 
 - **Obozy zbójów nie stoją już przy zamkach:** nowa wersja generatora map (7) stawia polanę z obozem w lesie przy krańcu mapy, tuż przed górami, co najmniej jedną trzecią mapy od każdego zamku (na 1 na 1 zwykle 70–100 pól), a z możliwych miejsc wybiera najdalsze od zamków. Dotąd obóz stał 26–40 pól od własnego zamku. Mapa dalej jest symetryczna (obie drużyny mają tak samo daleko)

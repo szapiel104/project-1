@@ -55,7 +55,7 @@ void main() {
   float t = t0 + ds * fHash(vec3(gl_FragCoord.xy, fract(time) * 97.0));
   float wl = length(d * vScale); // długość kroku w metrach świata
   float tm = time + vSeed * 20.0;
-  vec2 sway = vec2(fNoise(vec3(tm * 0.8, vSeed * 9.0, 0.5)), fNoise(vec3(4.5, tm * 0.8, vSeed * 7.0))) - 0.5;
+  vec2 sway = vec2(fNoise(vec3(tm * 0.5, vSeed * 9.0, 0.5)), fNoise(vec3(4.5, tm * 0.5, vSeed * 7.0))) - 0.5;
   vec3 col = vec3(0.0);
   float A = 0.0;
   for (int i = 0; i < N; i++) {
@@ -63,7 +63,7 @@ void main() {
     float y = p.y;
     vec2 xz = p.xz - sway * 0.4 * y * y;
     // kłęby szumu unoszą się w górę szybciej niż sam płomień — języki odrywają się od czubka
-    float n = fFbm(vec3(xz * 3.2, y * 2.4 - tm * 2.8) + vSeed * 13.0, 3);
+    float n = fFbm(vec3(xz * 3.2, y * 2.4 - tm * 1.7) + vSeed * 13.0, 3);
     float r = length(xz);
     float R = 0.46 * pow(max(0.0, 1.0 - y), 0.85) * smoothstep(0.0, 0.14, y + 0.03);
     float dist = r - R * (0.45 + 1.0 * n);

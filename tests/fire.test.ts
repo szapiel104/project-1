@@ -52,4 +52,39 @@ describe('pożary', () => {
     for (let i = 0; i < 620; i++) step(g, []);
     expect(house.fire ?? 0).toBe(0);
   });
+  it('płonący budynek się osmala, a sadza schodzi dopiero przy naprawie', () => {
+    const g = createGame(5, '1v1', 1, true);
+    for (const p of g.players) p.bot = false;
+    const house = g.buildings.find((b) => b.owner === 0 && b.type === buildingIndex('house') && !b.build)!;
+    const max = maxHp(house.type);
+    house.hp = Math.floor(max * 0.5); house.hpWas = house.hp; house.fire = 600;
+    let peak = 0, prevS = 0, prevHp = house.hp, prevHp2 = house.hp, wasBurning = true;
+    for (let i = 0; i < 1500; i++) {
+      step(g, []);
+      const s = house.scorch ?? 0;
+      if (house.fire || wasBurning) expect(s).toBeGreaterThanOrEqual(prevS); // pali się: czernieje
+      else if (house.hp <= prevHp2) expect(s).toBe(prevS); // zgaszony, nikt nie naprawia: sadza zostaje (naprawę widać tik później)
+      else expect(s).toBeLessThanOrEqual(prevS); // naprawa zmywa sadzę
+      peak = Math.max(peak, s);
+      wasBurning = !!house.fire; prevS = s; prevHp2 = prevHp; prevHp = house.hp;
+    }
+    expect(peak).toBeGreaterThan(100);
+    if (house.hp >= max) expect(house.scorch ?? 0).toBe(0); // w pełni naprawiony: czysty
+  });
+  it('ludzie, którzy nie gaszą, odsuwają się od ognia', () => {
+    const g = createGame(5, '1v1', 1, true);
+    for (const p of g.players) p.bot = false;
+    const house = g.buildings.find((b) => b.owner === 0 && b.type === buildingIndex('house') && !b.build)!;
+    house.hp = Math.floor(maxHp(house.type) * 0.5); house.hpWas = house.hp; house.fire = 600;
+    // człowiek stoi tuż przy ścianie
+    const u = g.units.find((x) => x.owner === 0)!;
+    const W = g.map.width;
+    let spot = -1;
+    for (let dx = -1; dx <= 3 && spot < 0; dx++) { const t = (house.y - 1) * W + house.x + dx; if (g.map.tiles[t] !== undefined) spot = t; }
+    u.px = ((spot % W) << 8) + 128; u.py = (Math.floor(spot / W) << 8) + 128; u.path = []; u.bucket = 0; u.wait = 0;
+    const near = (): boolean => (u.px >> 8) >= house.x - 2 && (u.px >> 8) <= house.x + 3 && (u.py >> 8) >= house.y - 2 && (u.py >> 8) <= house.y + 3;
+    let away = false;
+    for (let i = 0; i < 120 && !away; i++) { step(g, []); if (!u.bucket && !near()) away = true; if (u.bucket) break; }
+    expect(away || !!u.bucket).toBe(true);
+  });
 });

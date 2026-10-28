@@ -24,6 +24,7 @@ import { Chips } from './chips';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
 import { Blaze, burnBox } from './blaze';
+import { ScorchLayer } from './scorch';
 import { WolfLayer } from './wolves';
 import { ArrowLayer, MAX_ARROWS } from './arrows';
 import { RallyFlags, TowerIcons } from './rally';
@@ -1079,7 +1080,7 @@ export class GameRenderer {
     // nowa mapa: mury, place budowy i obszary liczone od nowa (te same id budynków na nowej mapie dawały ten sam klucz —
     // brama zostawała nieobrócona, a bale palisady stały jak na poprzedniej mapie)
     // nie puste: mapa bez murów (placów budowy, obszarów) ma klucz '', a stare bale i ciosy z poprzedniej mapy muszą zniknąć
-    this.walls.invalidate(); this.wear.invalidate(); this.repairs.invalidate(); this.areaKey = '-';
+    this.walls.invalidate(); this.wear.invalidate(); this.scorch.invalidate(); this.repairs.invalidate(); this.areaKey = '-';
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie (i odrośnięty las)
     this.youngSeen = new Set();
     }
@@ -2192,7 +2193,7 @@ export class GameRenderer {
       T('gruz', () => this.rubble.sync(g, v, dt));
       T('towar pod magazynami', () => this.piles.sync(g, v, this.me, this.time));
       T('światła', () => this.syncLamps(g));
-      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.wear.sync(g, v, this.buildingMeshes); this.repairs.sync(g, v, this.buildingMeshes, this.time, this.calm); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });
+      T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.wear.sync(g, v, this.buildingMeshes); this.scorch.sync(g, this.buildingMeshes); this.repairs.sync(g, v, this.buildingMeshes, this.time, this.calm); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig, this.battleFireFig, this.battleWaterFig, this.mageBodiesFire, this.mageBodiesWater, this.preacherFig]) f.view(cp);
@@ -2390,7 +2391,8 @@ export class GameRenderer {
         for (const ch of fire.children) ch.visible = false;
         const box = (mesh.userData.burnBox as THREE.Box3 | undefined) ?? (mesh.userData.burnBox = burnBox(mesh));
         const heat = (mesh.userData.fireHeat as number | undefined) ?? 1;
-        this.blaze.add(id, box, heat, this.camPos);
+        const bb = g.buildings.find((x) => x.id === id);
+        this.blaze.add(id, box, heat, this.camPos, bb ? footprint(BUILDINGS[bb.type]!, bb.rot) : undefined);
         box.getCenter(w);
         const span = Math.max(box.max.x - box.min.x, box.max.z - box.min.z);
         F.addGlow(w.setY(box.max.y), span * 2.4, (id * 0.193) % 1, (glow * 0.6 + 0.3) * (0.4 + heat * 0.6));
@@ -2646,6 +2648,7 @@ export class GameRenderer {
   private walls = new WallLayer(this.scene);
   /** Pęknięcia i gruz przy rozbitych murach, wieżach i bramach (src/render/damage.ts) */
   private wear = new WearLayer(this.scene);
+  private scorch = new ScorchLayer(this.scene);
   /** Rusztowania przy naprawie (src/render/repairs.ts) */
   private repairs = new RepairLayer(this.buildingLayer);
 

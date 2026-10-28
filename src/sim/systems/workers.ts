@@ -643,6 +643,8 @@ export function workerSystem(g: GameState): void {
     if (u.bucket) { if (u.path.length) move(g, u); continue; }
     // bunt głodowy (prowadzi go unrestSystem): idzie pod bramę twierdzy i stoi, nie pracuje, nie idzie do ogniska
     if (u.riot) { if (u.path.length) move(g, u); continue; }
+    // odsuwa się od płonącego budynku (fireSystem dał mu drogę): idzie i chwilę stoi z dala, potem wraca do swoich spraw
+    if ((u.fireAway ?? 0) > g.tick) { if (u.path.length) move(g, u); continue; }
     // zaraza: gorączkujący rzuca robotę (ładunek przepada) i kładzie się w swojej chacie albo na słomie; nie wstaje rano
     const bedridden = !!u.sick && g.tick >= (u.sickFrom ?? 0);
     if (bedridden && u.phase !== Phase.ToSleep && u.phase !== Phase.Sleeping) {

@@ -99,6 +99,11 @@ export interface Building {
   miss?: number[];
   /** Pożar: ile ticków jeszcze płonie (0/brak = nie płonie); każde wiadro wody skraca go */
   fire?: number;
+  /** Osmalenie po pożarze 0..1000: rośnie, póki budynek płonie, i schodzi dopiero przy naprawie (fire.ts) */
+  scorch?: number;
+  /** Wytrzymałość i osmalenie na koniec palenia — od nich liczy się zmywanie sadzy przy naprawie */
+  scorchHp?: number;
+  scorchMax?: number;
   /** Chata wypalona z zarazy przez maga Płomienia: do tego ticku nikt się w niej nie zaraża (plague.ts) */
   clean?: number;
   /** Kwarantanna (plague.ts): w chacie leżą tylko chorzy, zdrowi śpią gdzie indziej, a zaraza nie wychodzi za drzwi */
@@ -328,6 +333,8 @@ export interface Unit {
   /** Wrogi chłop, z którym ten się właśnie bije (wręcz, kilofem albo maczugą) */
   foeU?: number;
   fled?: number;
+  /** Odsunął się od płonącego budynku: do tego ticku stoi z dala od ognia, zamiast wracać pod płomienie (fire.ts) */
+  fireAway?: number;
   /** Bunt głodowy: 1 = rzucił robotę i stoi pod twierdzą (jego budynek stoi bez rąk do pracy) */
   riot?: number;
   /** Długi bunt: buntownik idzie z tłumem na napad na ten budynek (skład albo spichlerz), potem wraca pod bramę */
