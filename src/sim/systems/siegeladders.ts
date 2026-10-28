@@ -1,4 +1,5 @@
 import { buildingIndex } from '../../data/buildings';
+import { resIndex } from '../../data/resources';
 import { WALL_TOP } from '../../data/keep';
 import { walkable } from '../path';
 import { buildingById, FP, type GameState, type Soldier } from '../state';
@@ -19,6 +20,9 @@ const LADDER_HP = 60;
 /** Po tylu tickach drabina sama się przewraca */
 const LADDER_LIFE = 6000;
 const STONE = buildingIndex('stoneWall');
+const LADDER_RES = resIndex('ladder');
+/** Czy gracz ma w zbrojowni drabinę szturmową (bez niej żołnierz nawet nie idzie pod mur) */
+export const hasLadder = (g: GameState, player: number): boolean => (g.players[player]?.res[LADDER_RES] ?? 0) >= 1;
 
 const isStoneWall = (g: GameState, t: number): boolean => {
   const b = g.occupancy[t] ? buildingById(g, g.occupancy[t]) : undefined;
@@ -83,6 +87,10 @@ export function plantStep(g: GameState, s: Soldier): boolean {
   s.ladderT = (s.ladderT ?? 0) + 1;
   s.path = []; s.goal = -1;
   if (s.ladderT >= PLANT_TICKS) {
+    // drabina ze zbrojowni (robi ją cieśla): bez niej nie ma czego przystawić
+    const p = g.players[s.owner];
+    if (!p || p.res[LADDER_RES]! < 1) { s.ladder = undefined; s.ladderT = undefined; return false; }
+    p.res[LADDER_RES]!--;
     // drabina oparta o mur: (dx, dy) w drabinie to kierunek od muru do stóp
     list.push({ id: g.nextId++, owner: s.owner, wall, dx, dy, at: g.tick, hp: LADDER_HP });
     s.ladder = undefined; s.ladderT = undefined;

@@ -249,6 +249,13 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Czatownia (Michał 28.10.2026, tools/models/lookout.py): najtańsza, licha wieżyczka z żerdzi dla jednego łucznika —
   // na sam początek albo żeby szybko dostawić strzelca przy bramie; niska, więc strzela pole bliżej niż strażnica
   { id: 'lookout', category: 'defense', name: 'b.lookout', w: 1, h: 1, cost: { wood: 8 }, hp: 240, wall: true, buildable: true },
+  // Warsztat cieśli (Michał 28.10.2026, tools/models/carpenter.py): z drewna ze składu robi drabiny szturmowe do zbrojowni —
+  // bez nich wojsko nie przystawi drabiny do wrogiego muru (siegeladders.ts)
+  {
+    id: 'carpenter', category: 'military', name: 'b.carpenter', w: 2, h: 2, cost: { wood: 40 }, buildable: true,
+    workView: 'inside',
+    production: { input: { res: 'wood', amount: 3 }, output: { res: 'ladder', amount: 1 }, site: 'home', workTicks: 180 },
+  },
 ];
 
 /** Mieszkania zwykłych chłopów (chata, rudera, namiot): tu wracają odpocząć i spać, tu bywa kwarantanna. Zamek liczy się osobno */

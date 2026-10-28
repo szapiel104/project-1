@@ -218,6 +218,11 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
     ];
   }).concat([-0.1, 0.12].map((z) => as(tint(new THREE.TorusGeometry(0.026, 0.006, 4, 10).translate(0, 0, z).rotateX(-0.28).translate(0, 0.01, 0), 0x6b5a3c), 'cloth'))),
   // dwa miecze niesione płasko na rękach, głownie w przód, jelce i rękojeści przy niosącym
+  // drabina szturmowa niesiona na ramieniu wzdłuż marszu: dwie żerdzie z korą i szczeble
+  ladder: () => [
+    ...[-0.06, 0.06].map((x) => as(tint(new THREE.CylinderGeometry(0.012, 0.013, 0.8, 6).rotateX(Math.PI / 2).translate(x, 0.01, 0.05), 0x7a5a3a), 'bark')),
+    ...[0, 1, 2, 3, 4].map((k) => as(tint(new THREE.BoxGeometry(0.13, 0.012, 0.016).translate(0, 0.012, -0.27 + k * 0.15), 0xa67f50), 'wood')),
+  ],
   sword: () => [0, 1].flatMap((k) => {
     const x = (k - 0.5) * 0.05, y = 0.01 + k * 0.012;
     return [

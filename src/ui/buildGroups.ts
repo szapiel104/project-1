@@ -21,7 +21,7 @@ export const BUILD_GROUPS: readonly BuildGroup[] = [
   { cat: 'industry', pl: 'Drewno', en: 'Timber', ids: ['woodcutter', 'forester'] },
   { cat: 'industry', pl: 'Góry', en: 'Mountains', ids: ['oremine', 'minecamp'] },
 
-  { cat: 'military', pl: 'Broń i zbroje', en: 'Arms and armour', ids: ['fletcher', 'poleturner', 'smithy', 'armorer'] },
+  { cat: 'military', pl: 'Broń i zbroje', en: 'Arms and armour', ids: ['fletcher', 'poleturner', 'smithy', 'armorer', 'carpenter'] },
   { cat: 'military', pl: 'Wojsko', en: 'Troops', ids: ['armory', 'barracks', 'fieldTent'] },
 
   { cat: 'defense', pl: 'Mury i bramy', en: 'Walls and gates', ids: ['palisade', 'gate', 'stoneWall', 'stoneGate', 'ladder'] },

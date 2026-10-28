@@ -54,6 +54,7 @@ const MINE_LEVEL_MODEL = model('minelevel');
 const FISHER_MODEL = model('fisher');
 const FLETCHER_MODEL = model('fletcher');
 const POLETURNER_MODEL = model('poleturner');
+const CARPENTER_MODEL = model('carpenter');
 const CEMETERY_MODEL = model('cemetery');
 const FORESTER_MODEL = model('forester');
 const FIELD_TENT_MODEL = model('fieldtent');
@@ -1259,6 +1260,13 @@ const BUILDERS: Record<string, Builder> = {
     // z hełmami, kukła z gotową kolczugą, żar pod kominem; przed nim stojaki z kolczugami, beczka z piaskiem i kloc do nitów
     blenderModel(g, ARMORER_MODEL as unknown as BlenderBuilding, flag);
     const p = (ARMORER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  carpenter(g, _team, flag) {
+    // warsztat cieśli z Blendera (tools/models/carpenter.py): w izbie drabina w robocie na dwóch kozłach, piła, świder,
+    // zapas szczebli; przed nim gotowe drabiny szturmowe oparte o stojak i żerdzie pod daszkiem
+    blenderModel(g, CARPENTER_MODEL as unknown as BlenderBuilding, flag);
+    const p = (CARPENTER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   poleturner(g, _team, flag) {

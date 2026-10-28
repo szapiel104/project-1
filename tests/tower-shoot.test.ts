@@ -6,6 +6,7 @@ import { emptyScene, placeReady } from '../src/sim/emptyscene';
 import { spawnPeasant } from '../src/sim/systems/population';
 import { step } from '../src/sim/step';
 import { towerOf } from '../src/sim/systems/army';
+import { resIndex } from '../src/data/resources';
 
 describe('wieża strażnicza', () => {
   it('łucznik na wieży strzela do wroga, który podejdzie na zasięg', () => {
@@ -88,11 +89,14 @@ describe('drabiny oblężnicze (jak w Twierdzy)', () => {
     const wallT = y * W + dx;
     const archer: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('archer'), px: dx * FP + 128, py: y * FP + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
     g.soldiers.push(archer);
+    // drabiny szturmowe w zbrojowni wroga (robi je cieśla); bez nich nie przystawi drabiny
+    g.players[1]!.res[resIndex('ladder')] = 2;
     const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('manatarms'), px: (dx + 1) * FP + 128, py: (y + 2) * FP + 128, path: [], hp: 400, goal: -1, wait: 0, target: archer.id, cd: 0 };
     g.soldiers.push(foe);
     let planted = false;
     for (let i = 0; i < 900 && g.soldiers.some((s) => s.id === archer.id); i++) { step(g, []); if (g.siegeLadders?.length) planted = true; }
     expect(planted).toBe(true);
+    expect(g.players[1]!.res[resIndex('ladder')]).toBe(1);
     expect(g.soldiers.some((s) => s.id === archer.id)).toBe(false);
     void wallT;
     // obrońca na koronie spycha drabinę, przy której nikt nie wchodzi
@@ -101,5 +105,22 @@ describe('drabiny oblężnicze (jak w Twierdzy)', () => {
     g.soldiers.push(def);
     for (let i = 0; i < 200 && g.siegeLadders!.length; i++) step(g, []);
     expect(g.siegeLadders!.length).toBe(0);
+  });
+});
+
+describe('drabiny trzeba zrobić', () => {
+  it('bez drabin w zbrojowni wróg nie przystawi drabiny do muru', () => {
+    const g = createGame(9);
+    emptyScene(g);
+    for (const p of g.players) p.bot = false;
+    const k = playerKeep(g, 0)!, W = g.map.width, dx = k.door % W, dy = (k.door - dx) / W, y = dy + 8;
+    for (let x = dx - 3; x <= dx + 3; x++) placeReady(g, 'stoneWall', x, y);
+    step(g, []);
+    g.players[1]!.res[resIndex('ladder')] = 0;
+    const archer: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('archer'), px: dx * FP + 128, py: y * FP + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
+    const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('manatarms'), px: (dx + 1) * FP + 128, py: (y + 2) * FP + 128, path: [], hp: 400, goal: -1, wait: 0, target: archer.id, cd: 0 };
+    g.soldiers.push(archer, foe);
+    for (let i = 0; i < 300; i++) { g.players[1]!.res[resIndex('ladder')] = 0; step(g, []); }
+    expect(g.siegeLadders?.length ?? 0).toBe(0);
   });
 });

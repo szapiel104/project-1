@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.65.1 — drabiny szturmowe robi cieśla (2026-10-28)
+
+- **Warsztat cieśli** (2×2, 40 drewna, `tools/models/carpenter.py`): cieśla zbija z 3 drewna ze składu drabinę szturmową i odnosi ją do zbrojowni (nowy towar „Drabiny szturmowe”, na pasku przy broni). W izbie drabina w robocie na dwóch kozłach, piła, świder, zapas szczebli; przed warsztatem gotowe drabiny oparte o stojak i żerdzie pod daszkiem. Nazwa i opis po polsku i angielsku
+- **Drabina oblężnicza kosztuje drabinę ze zbrojowni:** żołnierz idzie pod wrogi mur tylko wtedy, gdy jego pan ma w zbrojowni drabinę, i zużywa ją, gdy ją przystawi. Bez drabin wojsko nie wejdzie na mur (dalej może wejść przez wieżę albo rozbić mur)
+- Bot: stawia warsztat cieśli w środku swojej listy budowy (po cechu inżynierów), więc jego wojsko ma drabiny na mury gracza
+- Wdrożenia znów działają: test lecących strzał nie liczył osobnej siatki strzał wbitych w ziemię (zmiana z innego czatu, 0.64.11) i blokował wdrożenie 0.64.11 i 0.65.0
+
 ## 0.65.0 — drabiny oblężnicze, drugie wejście na wieże, mur ze strażnicą (2026-10-28)
 
 - **Drabiny oblężnicze jak w Twierdzy** (`sim/systems/siegeladders.ts`): żołnierz, który chce dosięgnąć obrońcy na koronie muru kamiennego, a nie ma tam przejścia, podchodzi pod mur, przez 3 sekundy przystawia drabinę i wchodzi po niej na górę. Drabina otwiera ten bok muru dla każdego. Obrońcy stojący na koronie przy drabinie spychają ją (ok. 6 s jeden obrońca, kilku szybciej), ale nie wtedy, gdy ktoś po niej wchodzi albo wróg stoi u jej stóp; po 10 minutach sama się przewraca, pada też z murem. Drabiny widać przy murze i zapisują się w zapisie gry

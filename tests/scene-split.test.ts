@@ -80,10 +80,12 @@ describe('strzały (arrows.ts)', () => {
     arrows.fly(false);
     expect(arrows.count).toBe(2);
     expect(arrows.fireN).toBe(1);
-    expect(instanced(scene).every((m) => m.count === 2)).toBe(true);
+    // lecące strzały (bez wbitych: od 0.64.11 strzała po trafieniu zostaje wbita w ziemię — osobna siatka)
+    const flying = (): THREE.InstancedMesh[] => instanced(scene).filter((m) => m.name !== 'stuckArrows');
+    expect(flying().every((m) => m.count === 2)).toBe(true);
     for (let i = 0; i < 30; i++) arrows.fly(false);
     expect(arrows.count).toBe(0);
-    expect(instanced(scene).every((m) => m.count === 0)).toBe(true);
+    expect(flying().every((m) => m.count === 0)).toBe(true);
     expect(MAX_ARROWS).toBe(256);
   });
 });

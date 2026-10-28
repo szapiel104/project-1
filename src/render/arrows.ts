@@ -58,6 +58,7 @@ export class ArrowLayer {
     this.arrowTrail.count = 0; this.arrowTrail.frustumCulled = false; scene.add(this.arrowTrail);
     this.arrowMesh.count = 0; this.arrowMesh.frustumCulled = false; scene.add(this.arrowMesh);
     this.stuckMesh = new THREE.InstancedMesh(this.arrowMesh.geometry, this.arrowMesh.material, MAX_STUCK + MAX_BODY);
+    this.stuckMesh.name = 'stuckArrows'; // strzały wbite w ziemię, ściany i poległych (osobno od lecących)
     this.stuckMesh.count = 0; this.stuckMesh.frustumCulled = false; this.stuckMesh.castShadow = true; scene.add(this.stuckMesh);
   }
 

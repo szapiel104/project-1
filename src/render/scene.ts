@@ -174,7 +174,7 @@ const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 /** Budynki, w których pali się w piecu: z komina idzie dym */
 /** Mała pochodnia zamiast słupa przy wejściu (x, z w układzie budynku, skala): rudera z desek dostaje niski kij przy drzwiach */
 const SMALL_TORCH: Record<string, [number, number, number]> = { shack: [0.7, 0.5, 0.5], shackL: [0.72, -0.02, 0.5] };
-const SMOKY = new Set(['armory', 'house', 'tent', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy', 'armorer']);
+const SMOKY = new Set(['armory', 'house', 'tent', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'carpenter', 'woodcutter', 'smithy', 'armorer']);
 
 /**
  * Renderer: czyta stan symulacji, nigdy go nie zmienia. Samodzielne części obrazu są w osobnych plikach
@@ -5233,7 +5233,7 @@ export class GameRenderer {
         const jid = jt ? BUILDINGS[jt.type]!.id : '';
         if (u.phase === Phase.Working) {
           // tartak i tokarz: piła w drewnie, czasem stuk młotka
-          if (jid === 'woodcutter' || jid === 'poleturner') this.sfxAt(Math.random() < 0.7 ? 'saw' : 'hammer', t.position.x, t.position.z, u.id, 1.3, 0.8);
+          if (jid === 'woodcutter' || jid === 'poleturner' || jid === 'carpenter') this.sfxAt(Math.random() < 0.7 ? 'saw' : 'hammer', t.position.x, t.position.z, u.id, 1.3, 0.8);
           // kowal: metaliczne uderzenia młota
           else if (jid === 'smithy') this.sfxAt('smith', t.position.x, t.position.z, u.id, 1.1, 0.9);
           // płatnerz: drobne, ciche stuknięcia młotka przy nitowaniu kółek
