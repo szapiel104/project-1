@@ -11,6 +11,7 @@ import { beam, rng } from './craft';
 import { model, bytes } from './modelstore';
 import { wheatDepthMat, wheatMat, wheatRow } from './wheat';
 import { addModelBanners, bannerGeometry, bannerMaterial, flagTime } from './banners';
+import { PLANK } from './plank';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const KEEP_MODEL = model('keep');
 const TAVERN_MODEL = model('tavern');
@@ -233,7 +234,9 @@ const inBasket = (contents: THREE.BufferGeometry[]): THREE.BufferGeometry => mer
 const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean; withProp?: PropName | PropName[]; noCode?: boolean }> = {
   wood: {
     tex: 'planks',
-    geo: merge([0, 1, 2].flatMap((layer) => [-0.115, 0.115].map((z) => paint(part(new THREE.BoxGeometry(0.46, 0.07, 0.21), (layer % 2 ? 0.015 : -0.01), -0.1 + layer * 0.088, z), layer === 2 ? 0xe2bf8a : 0xd2ab74)))
+    // deski budulca (render/plank.ts): dziewięć warstw po pięć (wysokość jak
+    // dawny stos, bo warstwy stosów w magazynie stoją co 0,31), ta sama deska co w wiązce chłopa
+    geo: merge([0, 1, 2, 3, 4, 5, 6, 7, 8].flatMap((layer) => [-2, -1, 0, 1, 2].map((i) => paint(part(new THREE.BoxGeometry(PLANK.l, PLANK.t, PLANK.w), (layer % 2 ? 0.015 : -0.01) + ((i * 7 + layer * 3) % 5 - 2) * 0.006, -0.12 + PLANK.t / 2 + layer * (PLANK.t + 0.003), i * (PLANK.w + 0.012)), layer === 8 ? 0xe2bf8a : [0xd2ab74, 0xc89f68, 0xd8b17a][(i + layer) % 3]!)))
       .concat([-0.18, 0.18].map((x) => paint(part(new THREE.BoxGeometry(0.04, 0.03, 0.46), x, -0.135, 0), 0x6b4a2e)))),
   },
   stone: {
@@ -465,7 +468,8 @@ export function rubbleModel(w: number, h: number, seed: number, ground?: (x: num
     } else {
       // belka albo deska: opiera się o najwyższy punkt po każdej stronie środka i przechyla między nimi
       const beam = kind === 1;
-      const L = beam ? 0.5 + r() * 0.4 : 0.4 + r() * 0.3, T = beam ? 0.06 : 0.035, W = beam ? 0.08 : 0.16;
+      // deska = deska budulca (render/plank.ts), ta sama co w magazynie i na budowie
+      const L = beam ? 0.5 + r() * 0.4 : PLANK.l, T = beam ? 0.06 : PLANK.t, W = beam ? 0.08 : PLANK.w;
       m = new THREE.Mesh(new THREE.BoxGeometry(L, T, W), beam ? M.woodDark : M.plank);
       const yaw = r() * 6.3, dx = Math.cos(yaw), dz = -Math.sin(yaw), px = Math.sin(yaw), pz = Math.cos(yaw);
       const n = Math.max(4, Math.ceil(L / C));

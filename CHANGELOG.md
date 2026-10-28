@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.60.5 — jedna deska budulca wszędzie, większy pasek wczytywania (2026-10-28)
+
+- **Jedna deska budulca** (Michał: „taka sama deska, którą nosi wieśniak, leży w magazynie, leci na budowę”): `render/plank.ts` — 0,5 × 0,07, grubość 0,025. Ta sama w wiązce na ramieniu (teraz trzy deski jedna na drugiej), w stosie w magazynie, w stosach pod magazynami, na placu budowy i odbudowy oraz w gruzie (dotąd w gruzie i przy budowie były grube, szerokie deski). Deski, z których zbudowane są same budynki, zostają bez zmian
+- **Ekran wczytywania:** grubszy pasek (26 px zamiast 14), większe romby na końcach, większe i wyraźniejsze napisy pod paskiem (krok, liczniki, szczegóły i lista skończonych kroków), szersza karta
+- Bot: bez zmian (wygląd)
 ## 0.60.4 — gra wstaje także, gdy przeglądarka odmawia grafiki przy pełnych ustawieniach (2026-10-28)
 
 - **Zgłoszenie:** u znajomego (karta RTX 3090, Chrome) gra w ogóle się nie wczytywała — „WebGL creation failed … FEATURE_FAILURE_EGL_NO_CONFIG, Exhausted GL driver options”. Gra prosiła tylko o jeden zestaw ustawień grafiki (mocniejsza karta, wygładzanie krawędzi), a gdy przeglądarka go nie dała, zostawał wieczny ekran wczytywania

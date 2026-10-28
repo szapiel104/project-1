@@ -5,6 +5,7 @@ import { RESOURCES } from '../data/resources';
 import { boxUv } from './peasants';
 import { grayPattern, normal, type Kind } from './textures';
 import { basketAt, propAt, propGeometryFlat, propMaterial, type PropName } from './props';
+import { PLANK } from './plank';
 
 /**
  * Materiał części ładunku: zdjęciowa tekstura w szarości (barwę daje kolor wierzchołków) i mapa nierówności.
@@ -305,12 +306,14 @@ export function carryArms(planks: boolean, swing: number): [number, number] {
 export function plankBundle(): THREE.BufferGeometry {
   const boards: THREE.BufferGeometry[] = [];
   // świeża sosna w kilku odcieniach (ciepły miód do przybrudzonego brązu), bez jasnej żółci
-  ([[-0.045, 0, 0.02, 0xb98a58], [0.045, 0, -0.03, 0xa8794b], [0, 0.03, 0.04, 0xc29462], [-0.045, 0.06, -0.02, 0xae8050], [0.045, 0.06, 0.01, 0xbb8c5a]] as const).forEach(([x, y, z, c]) => {
-    const b = new THREE.BoxGeometry(0.042, 0.018, 0.5); b.translate(x * 0.45, y * 0.75, z); boards.push(as(tint(b, c), 'board'));
+  // trzy deski budulca (render/plank.ts) płasko jedna na drugiej, lekko przesunięte wzdłuż
+  ([[0.002, 0.02, 0xb98a58], [-0.003, -0.03, 0xa8794b], [0.002, 0.035, 0xc29462]] as const).forEach(([x, z, c], i) => {
+    const b = new THREE.BoxGeometry(PLANK.w, PLANK.t, PLANK.l); b.translate(x, i * (PLANK.t + 0.002), z); boards.push(as(tint(b, c), 'board'));
   });
   // sznur owinięty dookoła wiązki (cienki, ciemny), a nie gruba płócienna opaska
+  const tw = PLANK.w + 0.012, th = 3 * PLANK.t + 0.016;
   for (const z of [-0.16, 0.15]) for (const dz of [-0.007, 0.007]) {
-    const tie = new THREE.BoxGeometry(0.092, 0.072, 0.009); tie.translate(0, 0.022, z + dz); boards.push(as(tint(tie, dz < 0 ? 0x5b4632 : 0x4f3d2b), 'rope'));
+    const tie = new THREE.BoxGeometry(tw, th, 0.009); tie.translate(0, PLANK.t + 0.002, z + dz); boards.push(as(tint(tie, dz < 0 ? 0x5b4632 : 0x4f3d2b), 'rope'));
   }
   const plank = assemble(boards)!;
   // wąska wiązka na barku między głową a ręką (bark ±0,135, głowa ±0,054): ręka idzie obok, dłoń przytrzymuje z boku od góry

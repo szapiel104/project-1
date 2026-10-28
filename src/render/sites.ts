@@ -15,6 +15,7 @@ import type { TerrainView } from './terrain';
 import { pattern } from './textures';
 import { touch } from './touch';
 import { fallHeight, rubbleFalls } from './rubblefall';
+import { PLANK } from './plank';
 
 /** Przycięty materiał placu budowy → materiał, z którego powstał (do puli kopii) */
 const siteSrc = new WeakMap<THREE.Material, THREE.Material>();
@@ -269,13 +270,13 @@ export class SiteLayer {
       for (let n = used; n < delivered; n++) {
         const kind = kinds.length ? kinds[n % kinds.length]! : 'wood';
         if (kind === 'wood') {
-          // wiązka: dwie warstwy po trzy deski, warstwy na krzyż
-          const bx = yardX + (wi % 3) * 0.62, by = base + Math.floor(wi / 3) * 0.13;
+          // wiązka: dwie warstwy po trzy deski budulca (render/plank.ts), warstwy na krzyż
+          const bx = yardX + (wi % 3) * 0.62, by = base + Math.floor(wi / 3) * (2 * PLANK.t + 0.01);
           for (let layer = 0; layer < 2; layer++)
             for (let j = 0; j < 3; j++) {
-              const off = (j - 1) * 0.11;
-              if (layer === 0) put(bx, by + 0.0, yardZ + off, 0.5, 0.05, 0.09, 0);
-              else put(bx + off, by + 0.055, yardZ, 0.09, 0.05, 0.5, 0);
+              const off = (j - 1) * (PLANK.w + 0.012);
+              if (layer === 0) put(bx, by, yardZ + off, PLANK.l, PLANK.t, PLANK.w, 0);
+              else put(bx + off, by + PLANK.t + 0.003, yardZ, PLANK.w, PLANK.t, PLANK.l, 0);
             }
           wi++;
         } else {

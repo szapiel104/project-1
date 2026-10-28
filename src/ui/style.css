@@ -1006,23 +1006,23 @@ body.walking #ui, body.walking .scribe, body.walking .scribe-log, body.walking .
   filter: drop-shadow(0 3px 0 #2a1406) drop-shadow(0 0 22px rgba(0, 0, 0, .8)); text-shadow: none; }
 .loading-sub { font-style: italic; font-size: clamp(15px, 2.2vh, 19px); color: #cdb98d; letter-spacing: .04em; }
 .loading-sub::before, .loading-sub::after { content: '❦' / ''; color: #9a7a2a; margin: 0 12px; font-style: normal; }
-#loading .loading-card { width: min(760px, calc(100vw - 48px)); gap: 12px; padding-bottom: clamp(28px, 7vh, 70px); color: #e7d6b2; }
-.loading-tip { text-align: center; min-height: 2.6em; font-size: 17px; font-style: italic; line-height: 1.35; color: #cbb68a; text-shadow: 0 1px 2px #000; }
+#loading .loading-card { width: min(980px, calc(100vw - 64px)); gap: 16px; padding-bottom: clamp(28px, 7vh, 70px); color: #e7d6b2; }
+.loading-tip { text-align: center; min-height: 2.6em; font-size: 21px; font-style: italic; line-height: 1.35; color: #cbb68a; text-shadow: 0 1px 2px #000; }
 .loading-tip:not(:empty)::before { content: 'Rada: '; font-style: normal; font-family: var(--display); font-weight: 700; letter-spacing: .1em; color: #e9c766; }
 :root:lang(en) .loading-tip:not(:empty)::before { content: 'Tip: '; }
 /* pasek: okuta żelazem listwa z rombami na końcach, w środku żarzący się ogień z przesuwającym się blaskiem */
-#loading .loading-bar { position: relative; height: 14px; margin: 0 18px; background: #0b0704; border: 1px solid #9a7a2a;
+#loading .loading-bar { position: relative; height: 26px; margin: 0 26px; background: #0b0704; border: 1px solid #9a7a2a;
   box-shadow: 0 0 0 3px #0b0704, 0 0 0 4px rgba(154, 122, 42, .45), inset 0 2px 5px rgba(0, 0, 0, .9); }
-#loading .loading-bar::before, #loading .loading-bar::after { content: ''; position: absolute; top: 50%; width: 16px; height: 16px; background: linear-gradient(135deg, #f3d78a, #8a5e18);
+#loading .loading-bar::before, #loading .loading-bar::after { content: ''; position: absolute; top: 50%; width: 24px; height: 24px; background: linear-gradient(135deg, #f3d78a, #8a5e18);
   border: 2px solid #0b0704; transform: translateY(-50%) rotate(45deg); }
-#loading .loading-bar::before { left: -22px; } #loading .loading-bar::after { right: -22px; }
+#loading .loading-bar::before { left: -32px; } #loading .loading-bar::after { right: -32px; }
 #loading .loading-bar span { position: relative; overflow: hidden; background: linear-gradient(#ffcf6a, #e2741c 45%, #9c2a0c);
   box-shadow: 0 0 14px rgba(255, 120, 30, .75), inset 0 1px 0 rgba(255, 240, 200, .6); }
-#loading .loading-line { font-size: 15px; letter-spacing: .06em; color: #b9a782; }
+#loading .loading-line { font-size: 20px; letter-spacing: .05em; color: #d2bf96; font-family: var(--display); font-weight: 700; text-shadow: 0 1px 2px #000; }
 #loading .loading-line strong { color: #e9c766; }
 /* szczegóły pod paskiem: co się teraz wczytuje i ile trwa, niżej skończone kroki z czasami (kontrast ok. 7:1 i 6:1 na tle #120a05) */
-#loading .loading-detail { margin: -4px 0 0; min-height: 1.35em; font-size: 14px; line-height: 1.35; color: #c9b48a; text-align: left; font-variant-numeric: tabular-nums; }
-#loading .loading-log { margin: 0; min-height: 1.3em; font-size: 13px; line-height: 1.45; color: #ab9670; text-align: left; font-variant-numeric: tabular-nums; word-spacing: .05em; }
+#loading .loading-detail { margin: -2px 0 0; min-height: 1.35em; font-size: 17px; text-shadow: 0 1px 2px #000; line-height: 1.35; color: #c9b48a; text-align: left; font-variant-numeric: tabular-nums; }
+#loading .loading-log { margin: 0; min-height: 1.3em; font-size: 16px; line-height: 1.5; color: #bba57c; text-shadow: 0 1px 2px #000; text-align: left; font-variant-numeric: tabular-nums; word-spacing: .05em; }
 /* ekran wczytywania bez animowanych ozdób: wątek główny wczytuje grę, więc każda animacja by przycinała — tylko pasek */
 /* nowa gra przy lewej krawędzi: szersze okno, treść na środku wysokości, kafelki z oddechem i miejscem na znaczek wyboru */
 .menu.previewing .menu-panel.wide { width: min(720px, calc(100vw / var(--ui, 1) - 380px)); min-width: min(560px, 100vw); align-content: center; padding: 28px 36px; }

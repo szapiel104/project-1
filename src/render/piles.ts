@@ -12,6 +12,7 @@ import { RESOURCES } from '../data/resources';
 import type { GameState, Pile } from '../sim/state';
 import { assembleParts, beamPiece, boardPiece, groundLoad, loadMaterials } from './loads';
 import type { TerrainView } from './terrain';
+import { PLANK } from './plank';
 
 /** Ile sztuk towaru to jedna „sztuka” na stosie (mniej więcej jeden niesiony ładunek) */
 const UNIT: Record<string, number> = { stone: 10, iron: 7, wheat: 16, flour: 16, bread: 10, apples: 18, fish: 8, gold: 6, crystal: 1, ale: 3, spear: 3, bow: 2, sword: 2, armor: 1 };
@@ -58,19 +59,20 @@ function pallet(): THREE.BufferGeometry[] {
 /** Sztapel desek: warstwy na przemian, z przekładkami, na dwóch podkładach (jak w tartaku) */
 function lumber(layers: number): THREE.BufferGeometry[] {
   const parts: THREE.BufferGeometry[] = [];
-  const L = 0.78, bw = 0.12, bt = 0.034, gap = 0.028;
+  // deska budulca (render/plank.ts), sześć obok siebie w warstwie
+  const L = PLANK.l, bw = PLANK.w, bt = PLANK.t, gap = 0.012, N = 6;
   for (const z of [-0.2, 0.2]) parts.push(beamPiece(L * 0.95, 0.06, 0.07, 0x4e3a28).translate(0, 0.03, z));
   let y = 0.06;
   for (let l = 0; l < layers; l++) {
-    for (let i = 0; i < 4; i++) {
-      const z = -(4 * bw + 3 * gap) / 2 + bw / 2 + i * (bw + gap);
+    for (let i = 0; i < N; i++) {
+      const z = -(N * bw + (N - 1) * gap) / 2 + bw / 2 + i * (bw + gap);
       const tone = [0xc29462, 0xb98a58, 0xae8050, 0xbb8c5a][(i + l) % 4]!;
-      parts.push(boardPiece(L + jitter(l * 7 + i) * 0.04, bt, bw, tone).translate(jitter(l * 3 + i) * 0.03, y + bt / 2, z));
+      parts.push(boardPiece(L, bt, bw, tone).translate(jitter(l * 3 + i) * 0.02, y + bt / 2, z));
     }
     y += bt;
     // przekładki w poprzek (powietrze między warstwami, żeby deski schły)
     if (l < layers - 1) {
-      for (const x of [-0.3, 0, 0.3]) parts.push(beamPiece(0.025, 0.02, 4 * bw + 3 * gap + 0.02, 0x6b5238).translate(x, y + 0.01, 0));
+      for (const x of [-0.2, 0, 0.2]) parts.push(beamPiece(0.025, 0.02, N * bw + (N - 1) * gap + 0.02, 0x6b5238).translate(x, y + 0.01, 0));
       y += 0.02;
     }
   }
