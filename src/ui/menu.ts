@@ -265,52 +265,68 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   wrap.append(account);
   paintAccount();
 
-  /** Pasek na dole: [lewe pozycje] [główna pośrodku] [prawe pozycje]; strzałki w lewo/prawo przechodzą między pozycjami */
+  /**
+   * Menu po lewej, jak w grach (Michał 28.10.2026): pionowa lista pozycji pod herbem — pierwsza na górze („Kontynuuj”
+   * albo „Wróć do gry”), główna wyróżniona czerwoną pieczęcią, na dole wyjście i poddanie. Najechanie albo przejście
+   * klawiszem pokazuje pod listą, co kryje pozycja. Strzałki w górę/dół (i w lewo/prawo) chodzą po liście.
+   */
   let barItems: HTMLButtonElement[] = [];
-  const barBtn = (text: string, onClick: () => void, main = false): HTMLButtonElement => {
-    const b = button(text, onClick, main ? 'bar-item bar-main' : 'bar-item');
+  const hint = el('p', 'menu-hint');
+  hint.setAttribute('aria-hidden', 'true'); // opis i tak jest przy przycisku (aria-description) — czytnik nie czyta dwa razy
+  const barBtn = (text: string, desc: string, onClick: () => void, cls = ''): HTMLButtonElement => {
+    const b = button('', onClick, `bar-item ${cls}`.trim());
     b.dataset.label = text;
+    b.dataset.desc = desc;
+    b.setAttribute('aria-description', desc);
+    const mark = el('span', 'mi-mark'); mark.setAttribute('aria-hidden', 'true');
+    b.append(mark, el('span', 'mi-label', text));
+    const show = (): void => { hint.textContent = desc; };
+    b.addEventListener('pointerenter', show);
+    b.addEventListener('focus', show);
     return b;
   };
   function paintBar(): void {
-    const left = el('div', 'bar-side left'), right = el('div', 'bar-side right');
-    let main: HTMLButtonElement;
+    const list: (HTMLButtonElement | 'gap')[] = [];
     if (inGame) {
-      left.append(barBtn(t('menu.newGame'), showNew), barBtn(t('menu.settings'), showSettings), barBtn(t('menu.howTo'), showHelp));
-      main = barBtn(t('menu.resume'), () => events.onContinue(), true);
-      // w trakcie gry bez „Gry przez sieć” (jest w menu głównym po wyjściu): pasek mieści się też na wąskim ekranie
-      right.append(barBtn(tx('Wyjdź do menu', 'Quit to menu'), () => showQuit()), barBtn(tx('Poddaj się', 'Surrender'), showSurrender));
+      list.push(barBtn(t('menu.resume'), tx('Gra czeka tam, gdzie ją zostawiłeś', 'The game waits where you left it'), () => events.onContinue(), 'bar-main'));
+      list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew));
+      list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
+      list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
+      list.push('gap');
+      list.push(barBtn(tx('Wyjdź do menu', 'Quit to menu'), tx('Zamknij mecz i wróć do menu głównego', 'Close the match and return to the main menu'), () => showQuit()));
+      list.push(barBtn(tx('Poddaj się', 'Surrender'), tx('Koniec meczu porażką — tego nie da się cofnąć', 'End the match in defeat — there is no going back'), showSurrender, 'mi-danger'));
     } else {
-      if (canContinue) left.append(barBtn(t('menu.continue'), () => events.onContinue()));
-      left.append(barBtn(tx('Gra przez sieć', 'Online play'), () => online.showOnline()));
-      main = barBtn(t('menu.newGame'), showNew, true);
-      right.append(barBtn(t('menu.settings'), showSettings), barBtn(t('menu.howTo'), showHelp));
+      if (canContinue) list.push(barBtn(t('menu.continue'), tx('Wróć do swojej osady z ostatniej gry', 'Return to your settlement from the last game'), () => events.onContinue()));
+      list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew, 'bar-main'));
+      list.push(barBtn(tx('Gra przez sieć', 'Online play'), tx('Mecze z innymi graczami: pokoje, drużyny, ranking', 'Matches against other players: rooms, teams, ranking'), () => online.showOnline()));
+      list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
+      list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
     }
-    // złote linie tylko w odstępach między napisami (osobne elementy), więc napisy nie potrzebują ciemnego tła, które by je zasłaniało
-    const line = (cls: string): HTMLElement => { const s = el('span', cls); s.setAttribute('aria-hidden', 'true'); return s; };
-    const lace = (side: HTMLElement, isLeft: boolean): void => {
-      const items = [...side.children];
-      side.replaceChildren();
-      if (isLeft) side.append(line('bar-line'));
-      items.forEach((it) => { if (!isLeft) side.append(line('bar-sep')); side.append(it); if (isLeft) side.append(line('bar-sep')); });
-      if (!isLeft) side.append(line('bar-line'));
-    };
-    lace(left, true); lace(right, false);
-    bar.replaceChildren(left, main, right);
+    const ul = el('ul', 'menu-list');
+    for (const it of list) {
+      const li = el('li', it === 'gap' ? 'mi-gap' : '');
+      if (it === 'gap') li.setAttribute('aria-hidden', 'true'); else li.append(it);
+      ul.append(li);
+    }
+    bar.replaceChildren(ul, hint);
     barItems = [...bar.querySelectorAll<HTMLButtonElement>('.bar-item')];
+    const main = bar.querySelector<HTMLButtonElement>('.bar-main');
+    hint.textContent = main?.dataset.desc ?? '';
+    bar.onpointerleave = (): void => { const f = barItems.find((x) => x === document.activeElement) ?? main; hint.textContent = f?.dataset.desc ?? ''; };
   }
   /** Podświetla pozycję paska, której okno jest otwarte */
   function markBar(heading: string): void {
     for (const b of barItems) {
-      if (b.dataset.label === heading) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+      if (b.dataset.label === heading) { b.setAttribute('aria-current', 'page'); hint.textContent = b.dataset.desc ?? ''; } else b.removeAttribute('aria-current');
     }
   }
   bar.addEventListener('keydown', (e) => {
-    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
+    const next = e.key === 'ArrowDown' || e.key === 'ArrowRight', prev = e.key === 'ArrowUp' || e.key === 'ArrowLeft';
+    if (!next && !prev) return;
     const i = barItems.indexOf(document.activeElement as HTMLButtonElement);
     if (i < 0) return;
     e.preventDefault();
-    barItems[(i + (e.key === 'ArrowRight' ? 1 : barItems.length - 1)) % barItems.length]!.focus();
+    barItems[(i + (next ? 1 : barItems.length - 1)) % barItems.length]!.focus();
   });
   // Esc w otwartym oknie wraca do paska (a nie zamyka całego menu)
   document.addEventListener('keydown', (e) => {
@@ -327,7 +343,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     wrap.classList.remove('sub-open');
     body.replaceChildren();
     paintBar();
-    foot.textContent = inGame ? tx('Esc — wróć do gry · ← → wybór', 'Esc — back to the game · ← → select') : tx(`wersja ${BUILD} · ← → wybór · Enter zatwierdza`, `version ${BUILD} · ← → select · Enter confirms`);
+    foot.textContent = inGame ? tx('Esc — wróć do gry · ↑ ↓ wybór', 'Esc — back to the game · ↑ ↓ select') : tx(`wersja ${BUILD} · ↑ ↓ wybór · Enter zatwierdza`, `version ${BUILD} · ↑ ↓ select · Enter confirms`);
     bar.querySelector<HTMLButtonElement>('.bar-main')?.focus();
   }
 

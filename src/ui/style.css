@@ -1898,3 +1898,72 @@ body.menu-open .devpanel { display: none; }
 .game-tagline-what { font-size: clamp(14px, 1.9vh, 17px); color: #cbb68a; letter-spacing: .03em; text-shadow: 0 1px 3px #000, 0 0 12px #000; }
 .game-tagline-dev { font-family: var(--display); font-weight: 700; font-size: clamp(12px, 1.6vh, 14px); letter-spacing: .14em; text-transform: uppercase; color: #e9c766; text-shadow: 0 1px 3px #000, 0 0 12px #000; }
 .menu.sub-open .game-tagline, .menu.in-game .game-tagline { display: none; }
+
+/* ===== Menu główne po lewej, jak w grach (28.10.2026, menu.ts → paintBar) =====
+   Lewa kolumna: herb, tytuł i opis, pod nimi pionowa lista pozycji (główna w czerwonej pieczęci), pod listą podpowiedź,
+   co kryje wskazana pozycja, na dole wersja i konto. Okna (nowa gra, ustawienia, sieć, jak grać) otwierają się
+   w prawej części, a za nimi widać pejzaż z zamkiem. Rozmiary liczone od wysokości i szerokości okna (clamp),
+   więc mieści się od laptopa 1366×768 po 2560×1440. */
+.menu:not(.previewing) { grid-template-columns: clamp(340px, 31vw, 560px) minmax(0, 1fr); grid-template-rows: auto auto 1fr auto auto;
+  justify-items: stretch; align-items: start; column-gap: clamp(12px, 2vw, 40px);
+  background: linear-gradient(90deg, rgba(6, 3, 1, .9) 0, rgba(6, 3, 1, .72) clamp(340px, 31vw, 560px), rgba(6, 3, 1, .12) calc(clamp(340px, 31vw, 560px) + 260px), rgba(6, 3, 1, 0) 75%); }
+.menu:not(.previewing) .menu-scene::after { top: 0; right: auto; width: calc(clamp(340px, 31vw, 560px) + 6px); height: auto;
+  background: linear-gradient(90deg, rgba(5, 3, 2, .55), rgba(5, 3, 2, .25) 85%, rgba(5, 3, 2, 0)); border-right: 1px solid rgba(154, 122, 42, .35); }
+.menu:not(.previewing) .menu-head { grid-column: 1; grid-row: 1; justify-items: start; text-align: left; padding: clamp(22px, 6vh, 76px) 0 0 clamp(26px, 3.4vw, 68px); transform: none; opacity: 1; }
+.menu:not(.previewing) .menu-crest { display: block; }
+.menu:not(.previewing) .menu-crest svg { width: clamp(52px, 8vh, 88px); }
+.menu:not(.previewing) .menu-title { font-size: clamp(42px, min(7.4vh, 4.4vw), 92px); }
+.menu:not(.previewing) .menu-sub { text-align: left; }
+.menu:not(.previewing) .menu-sub::before { display: none; }
+.menu:not(.previewing) .game-tagline { justify-items: start; text-align: left; max-width: 100%; }
+.menu.sub-open:not(.previewing) .game-tagline { display: grid; }
+/* lista */
+.menu:not(.previewing) .menu-bar { grid-column: 1; grid-row: 2; width: auto; display: grid; gap: 10px; padding: clamp(18px, 4.5vh, 52px) 0 0 clamp(14px, 2.4vw, 50px); }
+.menu-list { list-style: none; margin: 0; padding: 0; display: grid; gap: clamp(2px, .5vh, 6px); }
+.menu-list .mi-gap { height: clamp(6px, 1.6vh, 18px); margin: 0 0 0 30px; width: 60%; background: linear-gradient(90deg, rgba(154, 122, 42, .55), transparent) center / 100% 1px no-repeat; }
+.menu .menu-bar .bar-item { width: min(400px, 100%); min-height: 46px; display: flex; align-items: center; gap: 14px; padding: 8px 18px 8px 12px; margin: 0; text-align: left;
+  background: transparent; border: 0; box-shadow: none; clip-path: none; transform: none; animation: none; filter: none;
+  font-family: 'Cinzel', var(--display); font-weight: 700; font-size: clamp(17px, 2.3vh, 23px); letter-spacing: .12em; text-transform: uppercase; color: #d9c49a;
+  text-shadow: 0 2px 4px #000; transition: color .15s, background .2s, padding .15s; }
+.menu .menu-bar .bar-item::before, .menu .menu-bar .bar-item::after { display: none; }
+.menu .menu-bar .mi-mark { flex: none; width: 12px; height: 12px; border: 1px solid #9a7a2a; transform: rotate(45deg) scale(.7); opacity: .55; transition: transform .15s, opacity .15s, background .15s; }
+.menu .menu-bar .bar-item:hover, .menu .menu-bar .bar-item:focus-visible, .menu .menu-bar .bar-item[aria-current='page'] {
+  color: #fff0c8; padding-left: 18px; background: linear-gradient(90deg, rgba(160, 36, 26, .62), rgba(160, 36, 26, .18) 70%, rgba(160, 36, 26, 0));
+  box-shadow: inset 3px 0 0 #e9c766; text-shadow: 0 0 14px rgba(255, 170, 60, .55), 0 2px 4px #000; transform: none; }
+.menu .menu-bar .bar-item:hover .mi-mark, .menu .menu-bar .bar-item:focus-visible .mi-mark, .menu .menu-bar .bar-item[aria-current='page'] .mi-mark { opacity: 1; transform: rotate(45deg) scale(1); background: #e9c766; border-color: #fff1c2; }
+.menu .menu-bar .bar-item:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
+.menu .menu-bar .bar-item:active { background: linear-gradient(90deg, rgba(120, 24, 16, .8), rgba(120, 24, 16, .2) 70%, rgba(120, 24, 16, 0)); }
+/* główna pozycja: czerwona pieczęć ze złotą krawędzią, większa */
+.menu .menu-bar .bar-main { min-height: clamp(54px, 7vh, 68px); font-size: clamp(22px, 3.1vh, 31px); letter-spacing: .14em; color: #fff0c8; padding-left: 18px;
+  background: linear-gradient(90deg, #9c2219, #6c130d 55%, rgba(67, 9, 5, .55) 85%, rgba(67, 9, 5, 0)); box-shadow: inset 3px 0 0 #e9c766, inset 0 1px 0 rgba(233, 199, 102, .5), inset 0 -1px 0 rgba(233, 199, 102, .35); }
+.menu .menu-bar .bar-main .mi-mark { opacity: 1; background: #e9c766; border-color: #fff1c2; transform: rotate(45deg) scale(.9); }
+.menu .menu-bar .bar-main:hover, .menu .menu-bar .bar-main:focus-visible { padding-left: 24px; background: linear-gradient(90deg, #c22d20, #861910 55%, rgba(82, 11, 6, .6) 85%, rgba(82, 11, 6, 0));
+  box-shadow: inset 4px 0 0 #fff1c2, inset 0 1px 0 rgba(255, 241, 194, .7), inset 0 -1px 0 rgba(233, 199, 102, .5); }
+.menu .menu-bar .mi-danger { color: #e7a99b; }
+.menu .menu-bar .mi-danger:hover, .menu .menu-bar .mi-danger:focus-visible { color: #ffd6cc; }
+.menu-hint { margin: 4px 0 0 12px; min-height: 2.8em; max-width: 380px; font-size: clamp(14px, 1.9vh, 17px); font-style: italic; line-height: 1.4; color: #cfbb92; text-shadow: 0 1px 3px #000; }
+/* wersja i konto na dole lewej kolumny */
+.menu:not(.previewing) .menu-fine { grid-column: 1; grid-row: 4; justify-self: start; padding: 0 0 8px clamp(26px, 3.4vw, 68px); }
+.menu:not(.previewing) > .menu-account { position: static; grid-column: 1; grid-row: 5; justify-self: start; align-self: end; margin: 0 0 clamp(12px, 2.4vh, 26px) clamp(22px, 3vw, 60px); }
+/* okna w prawej części, na środku wysokości */
+.menu:not(.previewing) .menu-panel, .menu:not(.previewing) .menu-panel.wide { grid-column: 2; grid-row: 1 / -1; align-self: center; justify-self: start; margin: 0 clamp(16px, 3vw, 56px) 0 0;
+  max-height: calc(100vh / var(--ui, 1) - 48px); width: min(620px, 100%); }
+.menu:not(.previewing) .menu-panel.wide { width: min(1040px, 100%); }
+/* pauza w trakcie gry: ten sam układ, pod spodem świat, lewa kolumna przyciemniona */
+.menu.in-game:not(.previewing) .menu-title { font-size: clamp(34px, min(6vh, 3.6vw), 64px); }
+.menu.in-game .menu-paused { justify-self: start; }
+@media (prefers-reduced-motion: reduce) { .menu .menu-bar .bar-item, .menu .menu-bar .mi-mark { transition: none; } }
+@media (max-height: 800px) { .menu:not(.previewing) .game-tagline-what { display: none; } .menu:not(.previewing) .menu-crest svg { width: 48px; } }
+.menu:not(.previewing) .menu-bar { grid-template-columns: minmax(0, 1fr); align-items: start; }
+.menu-list > li { display: block; }
+.menu:not(.previewing) .menu-sub::after { display: none; }
+.menu:not(.previewing) .game-tagline-dev { letter-spacing: .1em; }
+.menu .menu-bar .bar-main:focus-visible { outline: 2px solid #fff3c4; outline-offset: -5px; }
+/* okna-księgi (ustawienia, jak grać) w układzie z lewą kolumną: herb i lista zostają, księga zajmuje prawą część */
+.menu.book-open:not(.previewing) .menu-head { display: grid; }
+.menu.book-open:not(.previewing) .menu-panel.book { grid-column: 2; grid-row: 1 / -1; align-self: stretch; justify-self: stretch; margin: clamp(14px, 3vh, 40px) clamp(16px, 2.4vw, 48px) clamp(14px, 3vh, 40px) 0;
+  width: auto; max-width: 1180px; height: auto; max-height: calc(100vh / var(--ui, 1) - 2 * clamp(14px, 3vh, 40px)); }
+/* księga nie wchodzi pod znacznik wersji w prawym górnym rogu; główna pozycja bez złotych linii wychodzących za pieczęć */
+.menu.book-open:not(.previewing) .menu-panel.book { margin-top: 56px; max-height: calc(100vh / var(--ui, 1) - 56px - clamp(14px, 3vh, 40px)); }
+.menu .menu-bar .bar-main { box-shadow: inset 3px 0 0 #e9c766; }
+.menu .menu-bar .bar-main:hover, .menu .menu-bar .bar-main:focus-visible { box-shadow: inset 4px 0 0 #fff1c2; }
