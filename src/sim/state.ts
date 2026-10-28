@@ -293,6 +293,8 @@ export const enum Phase {
   Stalled = 30,
   /** Magazynier (albo czekający pracownik) idzie po towar spod magazynu (`target` = id stosu) */
   ToPile = 31,
+  /** Bez cmentarza: wolny chłop zakopuje ciało na skraju lasu, na polu, na którym stoi (`timer` = ile jeszcze) */
+  Burying = 32,
 }
 
 export interface Unit {

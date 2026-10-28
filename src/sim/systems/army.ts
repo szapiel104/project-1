@@ -1234,7 +1234,7 @@ function graveSystem(g: GameState): void {
   if (g.tick % 10 !== 0) return;
   // wolni chłopi z obozowiska sprzątają ciała na swojej ziemi (najwyżej dwóch naraz na gracza)
   for (const p of g.players) {
-    const busy = g.units.filter((u) => u.owner === p.id && u.job === 0 && (u.phase === Phase.ToCorpse || u.carryRes >= 0)).length;
+    const busy = g.units.filter((u) => u.owner === p.id && u.job === 0 && (u.phase === Phase.ToCorpse || u.phase === Phase.Burying || u.carryRes >= 0)).length;
     if (busy >= 2) continue;
     const u = g.units.find((x) => x.owner === p.id && x.job === 0 && x.phase === Phase.Idle && !x.path.length && x.carryRes < 0);
     const keep = g.buildings.find((b) => b.owner === p.id && b.type === 0);

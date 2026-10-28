@@ -199,6 +199,20 @@ function beside(g: GameState, door: number, owner: number): number {
   return door;
 }
 
+/** Wolne pole trawy tuż pod drzewami (las obok w czterech kierunkach), z dala od dróg: tu chłopi bez cmentarza zakopują ciała */
+function forestEdge(g: GameState, t: number): boolean {
+  const w = g.map.width, x = t % w, tiles = g.map.tiles;
+  if (tiles[t] !== Terrain.Grass || g.occupancy[t] || g.reserved[t] || g.roads[t] || g.roadPlan[t]) return false;
+  return (x > 0 && tiles[t - 1] === Terrain.Forest) || (x < w - 1 && tiles[t + 1] === Terrain.Forest)
+    || tiles[t - w] === Terrain.Forest || tiles[t + w] === Terrain.Forest;
+}
+
+/** Niesie ciało bez cmentarza: odkłada je na ziemię i zaczyna kopać dół tam, gdzie stoi */
+function startBurial(u: Unit): void {
+  u.carryRes = -1; u.carryAmt = 0; u.path = [];
+  u.phase = Phase.Burying; u.timer = RULES.buryTicks;
+}
+
 /** Niesie towar, dla którego gracz nie ma żadnego magazynu (ani baraku górników pod ręką) */
 function noStoreFor(g: GameState, u: Unit): boolean {
   const kind = RESOURCE_DEFS[RESOURCES[u.carryRes]!]?.store;
@@ -242,12 +256,12 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       return keep && keep.door >= 0 ? (t) => t === keep.door : null;
     }
     case Phase.Returning:
-      // wolny chłop z ciałem na ramieniu niesie je na cmentarz, a gdy go nie ma — do obozowiska
+      // wolny chłop z ciałem na ramieniu niesie je na cmentarz, a gdy go nie ma — na skraj lasu, gdzie je zakopie
+      // (Michał 28.10.2026: nie do obozowiska ani na gruzowisko)
       if (!job && u.carryRes === CORPSE) {
         const doors = new Set<number>();
         for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.id === 'cemetery') doors.add(b.door);
-        if (!doors.size) for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.idleSlots) doors.add(b.door);
-        return doors.size ? (t) => doors.has(t) : null;
+        return doors.size ? (t) => doors.has(t) : (t) => forestEdge(g, t);
       }
       return job ? (t) => t === job.door : null;
     case Phase.ToHome:
@@ -397,6 +411,8 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
   const p = g.players[u.owner]!;
   switch (u.phase) {
     case Phase.Returning: {
+      // bez cmentarza ciało zostaje zakopane na skraju lasu (doszedł tam, bo cmentarza nie ma)
+      if (u.carryRes === CORPSE && !u.job && !g.buildings.some((b) => b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.id === 'cemetery')) { startBurial(u); break; }
       if (u.carryRes === CORPSE) { u.carryRes = -1; u.carryAmt = 0; }
       // magazyn pełny, a towar leży pod nim: robotnik czeka w warsztacie, nie robi kolejnego (storage.ts)
       if (prod && u.job && buildingById(g, u.job)?.stall) { u.phase = Phase.Stalled; u.wait = 0; break; }
@@ -673,6 +689,12 @@ export function workerSystem(g: GameState): void {
       u.phase = u.job ? Phase.Returning : Phase.Idle;
       continue;
     }
+    if (u.phase === Phase.Burying) {
+      // kopie dół i zakopuje ciało; potem wraca do obozowiska
+      if (--u.timer > 0) continue;
+      u.phase = Phase.Idle;
+      continue;
+    }
     if (u.phase === Phase.Resting) {
       if (--u.timer <= 0) { u.home = 0; u.phase = u.job ? Phase.Returning : Phase.Idle; }
       continue;
@@ -761,6 +783,10 @@ export function workerSystem(g: GameState): void {
       // pole nieosiągalne (np. za wodą): chata je zapamiętuje, leśniczy wraca i wybierze inne
       if (job) { (job.miss ??= []).push(u.target - 1); if (job.miss.length > 8) job.miss.shift(); }
       u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.wait = RETRY_TICKS;
+    }
+    else if (!path && u.phase === Phase.Returning && u.carryRes === CORPSE && !u.job) {
+      // las za daleko albo za wodą: zakopuje ciało tu, gdzie stoi, zamiast krążyć z nim po osadzie
+      if (forestEdge(g, here) || (g.map.tiles[here] === Terrain.Grass && !g.roads[here])) startBurial(u); else u.wait = RETRY_TICKS;
     }
     else if (!path && (u.phase === Phase.ToPave || u.phase === Phase.ToRoadFetch)) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.timer = 0; u.carryRes = -1; u.carryAmt = 0; u.wait = RETRY_TICKS; } // pole drogi albo skład nieosiągalne
     else u.wait = RETRY_TICKS;

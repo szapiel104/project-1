@@ -1,9 +1,19 @@
 # Dziennik zmian
 
+## 0.57.3 — pochówek w lesie, gdy nie ma cmentarza (2026-10-28)
+
+- **Bez cmentarza chłopi chowają zmarłych w lesie:** wolny chłop, który zabrał ciało spod twierdzy, nie niesie go już do obozowiska (ani w okolice gruzowiska), tylko na najbliższy skraj lasu — wolne pole trawy tuż pod drzewami, poza drogami. Tam odkłada ciało, kopie dół łopatą (ten sam ruch co leśniczy przy sadzeniu, ok. 6 s) i wraca do obozowiska. Gdy las jest za daleko albo za wodą, zakopuje ciało tam, gdzie stoi, zamiast krążyć z nim po osadzie. Z cmentarzem wszystko po staremu: ciała trafiają na cmentarz
+- Zakopujący liczy się do limitu dwóch chłopów sprzątających ciała i nie dołącza w tym czasie do buntu
+- Pomoc „Jak grać” → Polegli: dopisane w obu językach
+- Bot: bez zmian w decyzjach; jego chłopi chowają ciała w lesie tak samo jak gracza
+- Test: ciało spod twierdzy bez cmentarza ląduje w dole na skraju lasu
+- Dalej (osobna partia): mały kopczyk ziemi z krzyżem z dwóch kijów w miejscu pochówku, znikający po kilku dniach
+
 ## 0.57.2 — dziennik błędów: stos także przy ostrzeżeniach (2026-10-28)
 
 - Ostrzeżenia w dzienniku (np. `THREE.Texture: Unable to serialize Texture`, które u Michała pojawia się co ok. 2 s) mają teraz stos wywołań, więc po skopiowaniu dziennika wiadomo, który kod je woła. To ostrzeżenie znaczy, że coś zamienia materiał albo teksturę na JSON — przy teksturach rysowanych na płótnie to kosztowne (kodowanie obrazka do PNG), więc warto znaleźć źródło
 - Bot: bez zmian
+
 ## 0.57.1 — poprawka: pochodnia nie świeci nad gruzem (2026-10-28)
 
 - **Zburzony budynek nie ma już pochodni w powietrzu:** gruz i plac budowy nie zapalają pochodni (`torches.ts`), a rysowanie płomieni i pula świateł pomijają zburzone budynki. Znaczniki pochodni i latarni zapamiętane z dawnego modelu są sprawdzane, czy jeszcze do niego należą i są widoczne — po przebudowie modelu szukamy ich od nowa, zamiast świecić w miejscu odpiętej części
@@ -207,7 +217,6 @@
 - **Ruina muru:** zamiast gładkiej „posadzki” zostaje poszarpany kikut — korona z wyłamanych kamieni, wyrwy na bokach, bez przedpiersia i blanek (wracają pod koniec odbudowy). Wokół ciosy i kamienie; po częstokole kikuty bali, połamane bale, drzazgi i szczapy. Gruzu ubywa w miarę odbudowy. Tak samo gruz wokół ruin bram i wież
 - **Pęknięcia przyklejone do ściany:** naklejka 3 mm przed licem zamiast 12 mm (wcześniej było widać odstęp od muru), na wieżach mniejsze, żeby nie odstawały od zaokrągleń
 - „Jak grać” → Cech inżynierów: dopisane, że odłamane bale i gruz leżą do naprawy
-
 
 ## 0.53.8 — płonący i przymrożeni wyglądają naturalnie (2026-10-27)
 

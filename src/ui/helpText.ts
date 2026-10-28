@@ -302,8 +302,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
       tx('Shift + cyfra zapisuje zaznaczonych jako grupę, sama cyfra ją wybiera, podwójne naciśnięcie pokazuje ją na mapie. Numer grupy wisi nad oddziałem na mapie i widnieje w rogu portretu (wyłączysz go w Ustawienia → Interfejs).',
         'Shift + a number saves the selection as a group, the number alone selects it, and pressing it twice centres the view on it. The group number hangs above the company on the map and sits in the corner of each portrait (you can turn it off under Settings → Interface).'),
       { h: tx('Polegli', 'The fallen') },
-      tx('Ciała zbiera grabarz z cmentarza — tylko na swoim terenie (przycisk w oknie cmentarza pokazuje go na zielono). Przy twierdzy pomagają też wolni ludzie. Po kilku minutach ciała same znikają.',
-        'Bodies are collected by the gravedigger from the cemetery — only within his own grounds (a button in the cemetery window shows them in green). Near the keep, idle peasants help too. After a few minutes the bodies vanish on their own.'),
+      tx('Ciała zbiera grabarz z cmentarza — tylko na swoim terenie (przycisk w oknie cmentarza pokazuje go na zielono). Przy twierdzy pomagają też wolni ludzie — gdy osada nie ma cmentarza, zanoszą ciała na skraj lasu i tam je zakopują. Po kilku minutach ciała same znikają.',
+        'Bodies are collected by the gravedigger from the cemetery — only within his own grounds (a button in the cemetery window shows them in green). Near the keep, idle peasants help too — with no cemetery in the village, they carry the dead to the edge of the woods and bury them there. After a few minutes the bodies vanish on their own.'),
     ],
   },
   {

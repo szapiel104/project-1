@@ -4944,7 +4944,8 @@ export class GameRenderer {
       }
       // układanie drogi wygląda jak budowa: pochylony chłop bije młotkiem w ziemię
       // leśniczy sadzi drzewko: stoi pochylony nad dołkiem i kopie łopatą — wbija pióro w ziemię, podważa i odrzuca ziemię
-      const planting = u.phase === Phase.Planting;
+      // chłop bez cmentarza zakopuje ciało na skraju lasu: kopie łopatą tak samo jak leśniczy
+      const planting = u.phase === Phase.Planting || u.phase === Phase.Burying;
       const hammering = u.phase === Phase.Repairing || u.phase === Phase.Paving;
       let lean = u.phase === Phase.Paving ? 0.35 : planting ? 0.22 : crafting ? 0.18 : toolLean, work = 0;
       if (planting) {

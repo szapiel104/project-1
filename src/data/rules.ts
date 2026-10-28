@@ -66,6 +66,8 @@ export const RULES = {
   saplingTicks: 7200,
   /** Leśniczy: ile ticków sadzi jedno drzewko */
   plantTicks: 60,
+  /** Tyle trwa wykopanie dołu i zakopanie ciała na skraju lasu, gdy osada nie ma cmentarza */
+  buryTicks: 120,
   /** Leśniczy: najwięcej rosnących naraz drzewek na jedną chatę (żeby nie zarósł całej łąki) */
   foresterSaplings: 14,
   /** Ile razy można wydobyć surowiec z jednego pola złoża, zanim się wyczerpie */
