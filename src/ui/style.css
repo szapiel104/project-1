@@ -1010,12 +1010,12 @@ body.walking #ui, body.walking .scribe, body.walking .scribe-log, body.walking .
 .loading-tip { text-align: center; min-height: 2.6em; font-size: 21px; font-style: italic; line-height: 1.35; color: #cbb68a; text-shadow: 0 1px 2px #000; }
 .loading-tip:not(:empty)::before { content: 'Rada: '; font-style: normal; font-family: var(--display); font-weight: 700; letter-spacing: .1em; color: #e9c766; }
 :root:lang(en) .loading-tip:not(:empty)::before { content: 'Tip: '; }
-/* pasek: okuta żelazem listwa z rombami na końcach, w środku żarzący się ogień z przesuwającym się blaskiem */
+/* pasek: okuta żelazem listwa z pionowymi okuciami na końcach, w środku żarzący się ogień z przesuwającym się blaskiem */
 #loading .loading-bar { position: relative; height: 26px; margin: 0 26px; background: #0b0704; border: 1px solid #9a7a2a;
   box-shadow: 0 0 0 3px #0b0704, 0 0 0 4px rgba(154, 122, 42, .45), inset 0 2px 5px rgba(0, 0, 0, .9); }
-#loading .loading-bar::before, #loading .loading-bar::after { content: ''; position: absolute; top: 50%; width: 24px; height: 24px; background: linear-gradient(135deg, #f3d78a, #8a5e18);
-  border: 2px solid #0b0704; transform: translateY(-50%) rotate(45deg); }
-#loading .loading-bar::before { left: -32px; } #loading .loading-bar::after { right: -32px; }
+#loading .loading-bar::before, #loading .loading-bar::after { content: ''; position: absolute; top: 50%; width: 9px; height: 40px; background: linear-gradient(90deg, #8a5e18, #f3d78a 45%, #8a5e18);
+  border: 2px solid #0b0704; border-radius: 1px; transform: translateY(-50%); }
+#loading .loading-bar::before { left: -16px; } #loading .loading-bar::after { right: -16px; }
 #loading .loading-bar span { position: relative; overflow: hidden; background: linear-gradient(#ffcf6a, #e2741c 45%, #9c2a0c);
   box-shadow: 0 0 14px rgba(255, 120, 30, .75), inset 0 1px 0 rgba(255, 240, 200, .6); }
 #loading .loading-line { font-size: 20px; letter-spacing: .05em; color: #d2bf96; font-family: var(--display); font-weight: 700; text-shadow: 0 1px 2px #000; }
@@ -1856,3 +1856,10 @@ body.menu-open .devpanel { display: none; }
 .floaters .info .army-help-body p { margin: 0; font-size: 14px; line-height: 1.4; color: #d9c9a5; }
 .army-help-desc { font-weight: 700; }
 @media (prefers-reduced-motion: reduce) { .army-help-chev { transition: none; } }
+/* właściciel klikniętego budynku: „Wróg · Bot 3” w kolorze drużyny (pasek z lewej), wróg czerwonawy, sojusznik zielonkawy */
+.info-owner { display: flex; align-items: center; gap: 8px; margin: -2px 0 6px; padding: 3px 8px; border-left: 4px solid var(--team, #888); background: rgba(0, 0, 0, .25); font-size: 15px; }
+.info-owner-rel { font-family: var(--display); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; font-size: 12px; padding: 1px 6px; border: 1px solid currentColor; }
+.info-owner[data-rel='enemy'] .info-owner-rel { color: #f08a7a; }
+.info-owner[data-rel='ally'] .info-owner-rel { color: #9fd38a; }
+.info-owner[data-rel='own'] .info-owner-rel { color: #e9c766; }
+.info-owner-name { color: #f1e3c4; font-weight: 700; }

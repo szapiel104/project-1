@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.60.6 — kto to jest: właściciel w oknie budynku, pionowe okucia paska wczytywania (2026-10-28)
+
+- **Cudza twierdza i cudze budynki:** w oknie po prawej pod nazwą jest teraz linijka z właścicielem — „Wróg”, „Sojusznik” albo „Twoje” i imię (gracz z sieci, „Bot 3”, „Gracz 2”), z paskiem w kolorze drużyny. Dotąd po kliknięciu twierdzy wroga nie było widać, czyja jest
+- **Pasek wczytywania:** zamiast rombów na końcach pionowe złote okucia
+- Bot: bez zmian (interfejs)
 ## 0.60.5 — tempo gry najwyżej 3× (2026-10-28)
 
 - **Zdjęte tempo 5×:** przyciski + i − przechodzą tylko przez pauzę, 1×, 2× i 3×; tempo na starcie z ustawień też najwyżej 3×

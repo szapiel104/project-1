@@ -103,7 +103,7 @@ export interface HudView {
 export interface StockInfo { kind: string; here: number; hereUsed: number; used: number; max: number; stores: number; items: { id: string; amount: number }[] }
 /** Skróty na dolnym pasku: koszary, skład, spichlerz */
 export type JumpKind = 'barracks' | 'stockpile' | 'granary';
-export interface BuildingInfo { stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
+export interface BuildingInfo { /** Czyj to budynek: imię gracza albo bota, wróg / sojusznik / twój, kolor drużyny */ owner?: { name: string; rel: 'own' | 'ally' | 'enemy'; color: number }; stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
   /** Twierdza w czasie buntu: ilu stoi pod bramą, ile porcji kosztuje rozdanie chleba, czy jest z czego, czy straż już rozgania tłum */
@@ -638,6 +638,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // okno po prawej zasłaniało minimapę — gdy jest otwarte, minimapa się chowa (CSS: body.info-open)
   new MutationObserver(() => { document.body.classList.toggle('info-open', !info.hidden); if (!info.hidden) requestAnimationFrame(fitInfo); }).observe(info, { attributes: true, attributeFilter: ['hidden'] });
   const infoName = el('p', 'info-name');
+  // kto jest właścicielem klikniętego budynku (zwłaszcza cudzej twierdzy): imię w kolorze drużyny i wróg / sojusznik
+  const ownerLine = el('p', 'info-owner');
+  ownerLine.hidden = true;
   const infoDesc = el('p', 'info-desc');
   const infoWorker = el('p');
   const infoActions = el('div', 'actions');
@@ -829,7 +832,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   storeBox.hidden = true;
   const logiBox = el('div', 'info-logi');
   logiBox.hidden = true;
-  info.append(infoName, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, ownerLine, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -1349,6 +1352,13 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       infoId = i.id;
       roster.hidden = true; hideArmy();
       setText(infoName, t(i.def.name));
+      ownerLine.hidden = !i.owner;
+      if (i.owner) {
+        const rel = i.owner.rel === 'enemy' ? tx('Wróg', 'Enemy') : i.owner.rel === 'ally' ? tx('Sojusznik', 'Ally') : tx('Twoje', 'Yours');
+        ownerLine.dataset.rel = i.owner.rel;
+        ownerLine.style.setProperty('--team', `#${i.owner.color.toString(16).padStart(6, '0')}`);
+        ownerLine.replaceChildren(el('span', 'info-owner-rel', rel), el('span', 'info-owner-name', i.owner.name));
+      }
       hpLine.hidden = i.hp === undefined;
       if (i.hp !== undefined && i.maxHp) { setText(hpText, `${t('hud.hp')}: ${i.hp} / ${i.maxHp}`); hpFill.style.width = `${Math.max(0, (i.hp / i.maxHp) * 100)}%`; hpFill.dataset.low = String(i.hp < i.maxHp * 0.35); }
       setText(infoDesc, t(`d.${i.def.id}`));

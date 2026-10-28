@@ -886,7 +886,9 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
       items: RESOURCES.map((id, i) => ({ id, amount: b.stock?.[i] ?? 0 })).filter((x) => RESOURCE_DEFS[x.id].store === kind && x.amount > 0),
     }))
     : undefined;
-  return { id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, ruined: b.ruined, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
+  const mine = game.players[ME], theirs = game.players[b.owner];
+  const owner = theirs ? { name: playerName(b.owner), rel: (b.owner === ME ? 'own' : mine && theirs.team === mine.team ? 'ally' : 'enemy') as 'own' | 'ally' | 'enemy', color: TEAM_COLORS[theirs.team] ?? 0x888888 } : undefined;
+  return { owner, id: b.id, def, hasWorker: b.worker !== 0, own: b.owner === ME, ruined: b.ruined, canTrain: canTrain(), hp: b.hp, maxHp: maxHp(b.type), stock,
     recruit: (def.id === 'barracks' || def.id === 'mageFire' || def.id === 'mageWater') && !b.build && !b.ruined ? recruitInfo(b.type).map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     power: !b.build && (def.production || def.staff) && def.id !== 'keep' ? { on: !b.off, worker: b.worker !== 0 } : undefined,
     quarantine: canQuarantine(b) && (game.players[b.owner]?.plague || b.quarantine) ? { on: !!b.quarantine, sick: game.units.filter((u) => u.home === b.id && u.sick && u.phase === 22).length } : undefined,
