@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.61.2 — komnata królowej: widać ją z góry, drzwi otwarte (2026-10-28)
+
+- **Po kliknięciu własnej twierdzy** całe piętro donżonu nad komnatą królowej (izba straży, korona z blankami, wieżyczki, dach, komin, chorągiew) znika jak zwykły dach (`shell` w `tools/models/keep.py`), więc widać komnatę z góry. Dotąd było w `base` i zostawało
+- **Drzwi komnaty otwarte szeroko do środka** — skrzydło było uchylone o ok. 20° i zasłaniało wejście
+- Bot: bez zmian (wygląd)
 ## 0.61.1 — gra nie staje przez błąd dźwięku (2026-10-28)
 
 - **Zgłoszenie:** co jakiś czas gra zamarzała na starcie (FPS 0) z błędem `setTargetAtTime … non-finite`. Do szumu deszczu trafiała zepsuta liczba (NaN), przeglądarka rzucała wyjątek w środku pętli klatki i następna klatka już się nie zaczynała
