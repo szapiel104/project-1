@@ -19,7 +19,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
-from towerroof import barrel, quiver_basket, roof, stone_pile  # noqa: E402
+from towerroof import barrel, deck_with_hole, quiver_basket, roof, stairwell, stone_pile  # noqa: E402
 
 
 def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter):
@@ -79,14 +79,10 @@ def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter)
     # więc z daleka jej wierzch przebijał przez deski pomostu 2 cm wyżej i pomost ciemniał. Pod deskami leży zwykły
     # kamień (bez przesunięcia), 3 cm niżej od ich wierzchu, a płyta zostaje tylko z boków i od spodu.
     b.box('base', 'castleDark', 2 * OUT, 0.12, 2 * OUT, 0, DECK - 0.12, 0, top=False, bottom=True)   # płyta chodnika
-    b.box('base', 'castle', 2 * OUT - 0.01, 0.03, 2 * OUT - 0.01, 0, DECK - 0.04, 0)
-    planks = int(2 * (OUT - WALL) / 0.2)
-    for i in range(planks):
-        x = -OUT + WALL + (i + 0.5) * (2 * (OUT - WALL)) / planks
-        b.box('base', 'plank', (2 * (OUT - WALL)) / planks - 0.012, 0.02, 2 * (OUT - WALL), x, DECK, 0)
-    # klapa zejścia na schody w trzonie
-    b.box('base', 'woodDark', 0.34, 0.025, 0.34, -OUT + 0.45, DECK + 0.005, -OUT + 0.45)
-    b.box('base', 'iron', 0.09, 0.02, 0.02, -OUT + 0.45, DECK + 0.03, -OUT + 0.57)
+    # pod deskami kamień, otwór klatki schodowej między polami pomostu (z góry widać schody w głąb wieży)
+    hx, hz = (0.5, -0.5) if name == 'stonetower_big' else (0.0, 0.0)
+    deck_with_hole(b, DECK, OUT, WALL, int(2 * (OUT - WALL) / 0.2), hx, hz, 0.2)
+    lamp = stairwell(b, DECK, hx, hz, 0.2, y0)
 
     # ---------------- przedpiersie z blankami ----------------
     br = bartizan_r
@@ -176,7 +172,7 @@ def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter)
     quiver_basket(b, -0.1, g, DECK + 0.02)
     barrel(b, 0.08, -g, DECK + 0.02)
     stone_pile(b, -g, 0.12, DECK + 0.02, seed=S)
-    stone_pile(b, g - 0.05, -g + 0.1, DECK + 0.02, seed=S + 2)
+    stone_pile(b, g, -g - 0.12, DECK + 0.02, seed=S + 2)
     roof(b, DECK + 0.02, R, post, eave=0.92, rise=0.62 + 0.1 * S)
 
     views = [
@@ -184,11 +180,12 @@ def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter)
         ['pod machikułami', [S + 0.25, 0.3, S + 0.6], [S * 0.5, DECK, S * 0.6], ['base', 'shell'], 18],
         ['pomost łuczników', [0.0, DECK + 0.45, -0.2], [OUT * 0.8, DECK + 0.2, OUT * 0.9], ['base', 'shell'], 16],
         ['pod dachem (z pomostu w górę)', [0.2, DECK + 0.4, 0.4], [0.0, DECK + 1.3, -0.1], ['base', 'shell'], 18],
+        ['w głąb klatki schodowej', [hx + 0.05, DECK + 0.6, hz + 0.25], [hx, y0 + 0.1, hz - 0.05], ['base'], 22],
         ['pomost bez dachu (po kliknięciu)', [OUT + 1.0, DECK + 2.0, OUT + 1.0], [0.0, DECK, 0.0], ['base'], 26],
     ]
     # koksownik w rogu pomostu, z dala od klapy i drzewca (gra go tam stawia)
     brazier = [round(OUT - br * 1.6 - 0.12, 3), DECK, round(OUT - 0.32, 3)]
-    b.save(name, maxe=0.22, rays=16, reach=0.3, extra={'deck': DECK, 'views': views, 'banners': banners, 'brazierAt': brazier, 'openTop': True})
+    b.save(name, maxe=0.22, rays=16, reach=0.3, extra={'deck': DECK, 'views': views, 'banners': banners, 'brazierAt': brazier, 'openTop': True, 'lamps': [lamp]})
 
 
 tower('stonetower_big', S=1.15, DECK=2.95, OUT=1.3, cornices=(1.55,), slits=(0.9, 2.05), bartizan_r=0.24, cones=False, plinth_batter=False)

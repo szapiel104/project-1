@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.64.6 — wspinaczka po drabinach, schody w kamiennych wieżach, szturm na wieże, łatwiejsze klikanie (2026-10-28)
+
+- **Wchodzenie po drabinie** (`step` w `sim/systems/army.ts`, `CLIMB_TICKS`): przejście z ziemi na pomost wieży albo koronę muru (i z powrotem) trwa chwilę — żołnierz staje przy drabinie i powoli się po niej wspina (schodzi), potem staje od razu na górze. W kamiennej wieży idzie schodami w środku: znika w drzwiach i wychodzi z klatki schodowej na pomoście
+- **Wnętrze kamiennych wież** (`tools/models/towerroof.py`): w pomoście baszt jest otwór klatki schodowej z obramieniem, odchyloną klapą obok, szybem z ciosów i stromymi drewnianymi schodami w głąb wieży, na dole podłoga i latarnia. Widać je po kliknięciu wieży (dach znika)
+- **Wejście nie w mur:** stawiana wieża sama obraca się drabiną albo drzwiami na pierwszy wolny bok, gdy front wypada na mur albo budynek; narożne wieże na starcie gry patrzą wejściem do osady
+- **Szturm jak w Twierdzy:** na pomost wejdzie każdy, kto dojdzie do wejścia — wróg, który wedrze się do osady, wspina się po wieży i ścina łuczników wręcz. Z ziemi wręcz dalej ich nie dosięgnie, musi wejść na górę
+- **Łatwiej trafić w wieżę i mur:** kursor nad budynkiem wskazuje ten budynek (promień po bryłach, co 40 ms), a nie ziemię za nim — prawy klik na wysoką wieżę albo koronę muru wysyła tam wojsko
+- Bot: korzysta z tego samego (jego wojsko też wspina się na wieże gracza)
+- Uwaga: test bota „buduje koszary w 7,5 doby” nie przechodzi już na main przed tą zmianą (zmiana z innego czatu), ta wersja tego nie rusza
+
 ## 0.64.5 — krew jako plama, która się rozlewa (2026-10-28)
 
 - **Zgłoszenie (krew okrągła, na śniegu ucięta jak kawałek tortu):** zamiast szarego koła pod poległym jest teraz nieregularna plama z kleksami, smugami w bok i drobnymi bryzgami dookoła. Każda jest inaczej obrócona i rozciągnięta (`src/render/blood.ts`)

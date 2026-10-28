@@ -73,3 +73,59 @@ def stone_pile(b, x, z, deck, seed=0.0):
     for k, (dx, dz, r) in enumerate(pts):
         y = deck + r * 0.7 + (0.07 if k == len(pts) - 1 else 0)
         b.crystal('base', 'stoneDark', x + dx, y, z + dz, r, seed=seed + k * 1.7, sy=0.75, seg=7)
+
+
+def deck_with_hole(b, deck, OUT, WALL, n, cx, cz, half, stone='castle'):
+    """Pomost: kamienna warstwa pod deskami i deski w poprzek, z otworem klatki schodowej (cx, cz, połowa boku half).
+    Deski nad otworem są przecięte, kamień dookoła otworu to cztery płyty (żeby przez otwór było widać schody)."""
+    L = OUT - 0.005
+    x0, x1, z0, z1 = cx - half, cx + half, cz - half, cz + half
+    # kamień 3 cm pod deskami: ramka wokół otworu
+    for (a0, a1, c0, c1) in ((-L, L, -L, z0), (-L, L, z1, L), (-L, x0, z0, z1), (x1, L, z0, z1)):
+        if a1 - a0 > 0.01 and c1 - c0 > 0.01:
+            b.box('base', stone, a1 - a0, 0.03, c1 - c0, (a0 + a1) / 2, deck - 0.04, (c0 + c1) / 2)
+    w = 2 * (OUT - WALL) / n
+    for i in range(n):
+        x = -OUT + WALL + (i + 0.5) * w
+        segs = [(-(OUT - WALL), OUT - WALL)]
+        if x + w / 2 > x0 and x - w / 2 < x1:
+            segs = [(-(OUT - WALL), z0 - 0.005), (z1 + 0.005, OUT - WALL)]
+        for c0, c1 in segs:
+            if c1 - c0 > 0.02:
+                b.box('base', 'plank', w - 0.012, 0.02, c1 - c0, x, deck, (c0 + c1) / 2)
+    # obramienie otworu z ciemnych belek (wystają 5 mm nad deski)
+    for (bw, bd, bx, bz) in ((2 * half + 0.06, 0.03, cx, z0 - 0.015), (2 * half + 0.06, 0.03, cx, z1 + 0.015),
+                             (0.03, 2 * half, x0 - 0.015, cz), (0.03, 2 * half, x1 + 0.015, cz)):
+        b.box('base', 'woodDark', bw, 0.025, bd, bx, deck, bz)
+
+
+def stairwell(b, deck, cx, cz, half, floor_y):
+    """Klatka schodowa pod otworem w pomoście: ściany szybu z ciosów (widać je z góry), podłoga z desek na dole,
+    strome drewniane schody od podłogi do otworu, odchylona klapa obok otworu i latarnia na dole."""
+    x0, x1, z0, z1 = cx - half, cx + half, cz - half, cz + half
+    top = deck - 0.06
+    h = top - floor_y
+    T = 0.03
+    for (bw, bd, bx, bz) in ((2 * half + 2 * T, T, cx, z0 - T / 2), (2 * half + 2 * T, T, cx, z1 + T / 2),
+                             (T, 2 * half, x0 - T / 2, cz), (T, 2 * half, x1 + T / 2, cz)):
+        b.box('base', 'castlePlain', bw, h, bd, bx, floor_y, bz)
+    b.box('base', 'plank', 2 * half, 0.02, 2 * half, cx, floor_y, cz)
+    # schody: dwa policzki od podłogi przy -z do otworu przy +z, stopnie co ~10 cm wysokości
+    sw = half - 0.03
+    for sx in (-1, 1):
+        log(b, 'base', 'woodDark', (cx + sx * sw, floor_y + 0.02, z0 + 0.03), (cx + sx * sw, deck - 0.01, z1 - 0.03), r=0.014, seg=5)
+    n = max(5, int(h / 0.1))
+    for k in range(1, n):
+        f = k / n
+        y = floor_y + 0.02 + (deck - 0.03 - floor_y) * f
+        z = z0 + 0.03 + (z1 - z0 - 0.06) * f
+        b.box('base', 'plank', 2 * sw - 0.02, 0.015, 0.05, cx, y - 0.008, z)
+    # klapa odchylona na deski obok otworu (od strony -x), z okuciem
+    lx = x0 - half - 0.05
+    b.box('base', 'woodDark', 2 * half - 0.03, 0.022, 2 * half - 0.03, lx, deck + 0.02, cz)
+    for zz in (cz - half * 0.5, cz + half * 0.5):
+        b.box('base', 'iron', 2 * half - 0.08, 0.008, 0.03, lx, deck + 0.042, zz)
+    b.prism('base', 'iron', 0.02, 0.02, 0.012, lx + half - 0.06, deck + 0.042, cz, seg=8)
+    # latarnia na dole szybu (świeci zawsze; gra rysuje światło w miejscu znacznika lamps)
+    b.prism('base', 'iron', 0.022, 0.022, 0.05, x1 - 0.05, floor_y + 0.02, z0 + 0.05, seg=6)
+    return [round(x1 - 0.05, 3), round(floor_y + 0.06, 3), round(z0 + 0.05, 3), 'base']

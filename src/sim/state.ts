@@ -386,6 +386,10 @@ export interface Soldier {
   post?: number;
   /** Stoi na wieży: strzela dalej, wręcz nikt go nie dosięgnie */
   up?: boolean;
+  /** Wspina się po drabinie (albo schodami w kamiennej wieży) z ziemi na mur/pomost lub schodzi: ile ticków zostało */
+  climb?: number;
+  /** Pole, na które się wspina (po wspinaczce staje od razu na jego środku) */
+  climbTo?: number;
   /** Kierunek, w który ma patrzeć po dojściu (0–7, co 45°; 0 = na +y) */
   face?: number;
   /** Postawa: 0/brak = atak (goni wroga), 1 = obrona (krótko i wraca), 2 = stój (nie rusza się z miejsca) */
@@ -783,7 +787,10 @@ function devFortify(g: GameState, player: number, walls: DevWalls = 'mix'): void
   const corners: [number, number, number][] = [[x0 + 1, y0 + 1, stoneT], [x1 - 2, y0 + 1, stoneT], [x0 + 1, y1 - 2, woodT], [x1 - 2, y1 - 2, stoneT]];
   if (walls !== 'mix') for (const c of corners) c[2] = walls === 'stone' ? stoneT : woodT;
   for (const [x, y, id] of corners)
-    if (free(x, y) && free(x + 1, y) && free(x, y + 1) && free(x + 1, y + 1)) addBuilding(g, id, player, x, y);
+    if (free(x, y) && free(x + 1, y) && free(x, y + 1) && free(x + 1, y + 1)) {
+      // drabina albo drzwi wieży od strony osady, nie w mur (front: 0 = +y, 1 = +x, 2 = -y, 3 = -x)
+      addBuilding(g, id, player, x, y, y > my ? 2 : 0);
+    }
   // drabiny na kamienne mury od środka osady (inaczej nikt nie wejdzie na koronę)
   const ladders: [number, number][] = walls === 'wood' ? [] : [[mx - 4, y0 + 1], [mx + 4, y0 + 1], [x1 - 1, my - 4], [x1 - 1, my + 4]];
   if (walls === 'stone') ladders.push([mx - 4, y1 - 1], [mx + 4, y1 - 1], [x0 + 1, my - 4], [x0 + 1, my + 4]);

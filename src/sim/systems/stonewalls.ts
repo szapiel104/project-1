@@ -11,7 +11,8 @@ import { buildingById } from '../state';
  *
  * Wieże (Michał 28.10.2026, jak w Twierdzy 2): pomost to też teren, tylko wysoko — każde pole wieży ma bit WALL_TOP.
  * Wchodzi się drabiną drewnianej wieży albo drzwiami kamiennej (od frontu), z przyległego muru kamiennego albo po
- * drabinie gracza przystawionej z boku. Na wieżę wchodzą tylko swoi (jak przez bramę). Każdy żołnierz staje na swoim
+ * drabinie gracza przystawionej z boku. Wejdzie każdy, kto dojdzie do wejścia — także wróg, który wdarł się do osady
+ * (jak w Twierdzy: zetnie łuczników na pomoście). Każdy żołnierz staje na swoim
  * polu, więc im mniejsza wieża, tym mniej się zmieści; stojący na niej strzela dalej (wysokość + premia wieży).
  */
 const STONE = buildingIndex('stoneWall');
@@ -95,7 +96,7 @@ export function stoneWallSystem(g: GameState): void {
     for (const [dx, dy, bit] of SIDES) if (!(ladders & bit) && !isStone(g, b.x + dx, b.y + dy)) bits |= bit;
     g.walls[t] = bits;
   }
-  // pomosty wież: wysoki teren tylko dla swoich, wejście od frontu (drabina albo drzwi), z muru i z drabiny gracza
+  // pomosty wież: wysoki teren dla każdego, kto dojdzie do wejścia — od frontu (drabina albo drzwi), z muru i z drabiny gracza
   for (const b of g.buildings) {
     if (!TOWER_TYPES.has(b.type)) continue;
     const fp = footprint(BUILDINGS[b.type]!, b.rot);
@@ -105,7 +106,7 @@ export function stoneWallSystem(g: GameState): void {
       for (let x = b.x; x < b.x + fp.w; x++) {
         const t = y * w + x;
         if (!live) { g.gates[t] = 0; g.walls[t] = 0; continue; }
-        g.gates[t] = b.owner + 1;
+        g.gates[t] = OPEN_ALL; // jak w Twierdzy: wróg, który wedrze się do środka, wejdzie na wieżę i zetnie łuczników
         let bits = WALL_TOP;
         for (const [dx, dy, bit] of SIDES) {
           const nx = x + dx, ny = y + dy;

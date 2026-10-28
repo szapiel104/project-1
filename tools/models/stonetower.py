@@ -3,7 +3,8 @@ na każdej ścianie, okute drzwi na kamiennych schodkach, u góry wysunięty na 
 z blankami i deskami pomostu, drzewce z chorągwią na rogu.
 
 Łucznicy stoją na pomoście (gra: STONE_TOWER_TOP = DECK). Bryła w grupie 'base'; nad pomostem dach z łupka na słupach
-w grupie 'roof' (towerroof.py), który gra zdejmuje po kliknięciu wieży (openTop) — widać wtedy pomost, klapę zejścia,
+w grupie 'roof' (towerroof.py), który gra zdejmuje po kliknięciu wieży (openTop) — widać wtedy pomost, otwór klatki
+schodowej ze stromymi schodami w głąb wieży (tędy łucznicy wchodzą od drzwi na górę),
 kosz strzał, beczkę z wodą i kamienie do zrzucania. Proporzec stoi na iglicy dachu (grupa 'flagpole').
 
 Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/stonetower.py
@@ -15,7 +16,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 from logs import log  # noqa: E402
-from towerroof import barrel, quiver_basket, roof, stone_pile  # noqa: E402
+from towerroof import barrel, deck_with_hole, quiver_basket, roof, stairwell, stone_pile  # noqa: E402
 
 b = Building()
 
@@ -55,14 +56,9 @@ for side in range(4):
 # więc z daleka jej wierzch przebijał przez deski pomostu 2 cm wyżej i pomost ciemniał. Pod deskami leży zwykły
 # kamień (bez przesunięcia), 3 cm niżej od ich wierzchu, a płyta zostaje tylko z boków i od spodu.
 b.box('base', 'castleDark', 2 * OUT, 0.12, 2 * OUT, 0, DECK - 0.12, 0, top=False, bottom=True)
-b.box('base', 'castle', 2 * OUT - 0.01, 0.03, 2 * OUT - 0.01, 0, DECK - 0.04, 0)
-# deski pomostu w środku przedpiersia
-for i in range(8):
-    x = -OUT + WALL + (i + 0.5) * (2 * (OUT - WALL)) / 8
-    b.box('base', 'plank', (2 * (OUT - WALL)) / 8 - 0.01, 0.02, 2 * (OUT - WALL), x, DECK, 0)
-# klapa zejścia na schody w trzonie
-b.box('base', 'woodDark', 0.3, 0.025, 0.3, -0.35, DECK + 0.005, -0.35)
-b.box('base', 'iron', 0.08, 0.02, 0.02, -0.35, DECK + 0.03, -0.25)
+# pod deskami kamień, w środku pomostu otwór klatki schodowej (z góry widać schody w głąb wieży)
+deck_with_hole(b, DECK, OUT, WALL, 8, 0.0, 0.0, 0.18)
+LAMP = stairwell(b, DECK, 0.0, 0.0, 0.18, 0.3)
 
 # ---------------- przedpiersie z blankami ----------------
 for side in range(4):
@@ -110,7 +106,7 @@ b.box('base', 'stoneDark', 0.52, 0.09, 0.08, 0, 0.19, DZ + 0.12)
 # ---------------- sprzęt łuczników na pomoście (z dala od miejsc łuczników i klapy) ----------------
 quiver_basket(b, 0.6, 0.02, DECK + 0.02)
 barrel(b, 0.05, -0.6, DECK + 0.02)
-stone_pile(b, -0.58, 0.06, DECK + 0.02, seed=1.0)
+stone_pile(b, -0.62, -0.28, DECK + 0.02, seed=1.0)
 
 # ---------------- dach z łupka na słupach (zdejmowany po kliknięciu) ----------------
 APEX = roof(b, DECK + 0.02, OUT + 0.08, OUT - WALL - 0.06, eave=0.88, rise=0.7)
@@ -123,6 +119,7 @@ VIEWS = [
     ['pod machikułami', [0.95, 0.3, 1.3], [0.4, 2.2, 0.5], ['base', 'shell'], 18],
     ['pomost łuczników', [0.0, DECK + 0.45, -0.1], [0.6, DECK + 0.2, 0.7], ['base', 'shell'], 16],
     ['pod dachem (z pomostu w górę)', [0.2, DECK + 0.4, 0.3], [0.0, DECK + 1.3, -0.1], ['base', 'shell'], 18],
+    ['w głąb klatki schodowej', [0.05, DECK + 0.6, 0.25], [0.0, 0.4, -0.05], ['base'], 22],
     ['pomost bez dachu (po kliknięciu)', [1.6, DECK + 1.8, 1.6], [0.0, DECK, 0.0], ['base'], 26],
 ]
-b.save('stonetower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS, 'banners': BANNERS, 'openTop': True})
+b.save('stonetower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS, 'banners': BANNERS, 'openTop': True, 'lamps': [LAMP]})

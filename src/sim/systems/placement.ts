@@ -439,6 +439,12 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
     for (const u of g.units) if (u.target === o.id) { u.target = 0; u.path = []; }
   }
   const b = addBuilding(g, type, player, x, y, rot);
+  // wieża: drabina albo drzwi (front) muszą wychodzić na wolną ziemię — przy murze albo budynku wieża sama obraca się
+  // wejściem na pierwszy wolny bok (wieże są kwadratowe, więc działka się nie zmienia)
+  if (b && isTower(def.id) && def.w === def.h) {
+    const free = (r: number): boolean => { const t = doorTile(g, x, y, def.w, def.h, r); return t >= 0 && g.occupancy[t] === 0 && TERRAIN[g.map.tiles[t] as Terrain].walkable; };
+    for (let k = 0; k < 4; k++) { const r = (rot + k) % 4; if (free(r)) { b.rot = r; break; } }
+  }
   // żołnierze stojący na działce schodzą z niej na najbliższe wolne pole (zamiast stać w środku ścian)
   if (b) {
     const fp = footprint(def, rot), W = g.map.width;

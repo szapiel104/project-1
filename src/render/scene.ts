@@ -15,7 +15,7 @@ import { RULES } from '../data/rules';
 import { loop3d, musicPlaying, play3d, playAt, pluck, setListener, updateLoops, type WorldSound } from '../audio/sfx';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BUILDINGS, NO_TORCH, footprint, isTower, towerBonus, workArea } from '../data/buildings';
+import { BUILDINGS, NO_TORCH, footprint, isStoneTower, isTower, towerBonus, workArea } from '../data/buildings';
 import { crewOf } from '../sim/systems/workers';
 import { mageKindOf } from '../sim/systems/plague';
 import { SpellLayer } from './spells';
@@ -67,7 +67,7 @@ import { BloodStains } from './blood';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, buildingById, type GameState } from '../sim/state';
 import { towerEntry, towerUnder } from '../sim/systems/stonewalls';
 import { GREAT_FLIGHT } from '../sim/systems/greatspell';
-import { fireArrow, peasantWeapon } from '../sim/systems/army';
+import { CLIMB_TICKS, fireArrow, peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
 import { COLD, weatherOf, yearPos } from '../sim/weather';
@@ -1066,7 +1066,17 @@ export class GameRenderer {
     this.matQ = new MaterialQuality(this.renderer.capabilities.getMaxAnisotropy());
     this.envTex = makeEnvironment(this.renderer);
     canvas.addEventListener('pointermove', (e) => {
-      if (e.pointerType !== 'touch') this.hover(this.pick(e));
+      // kursor nad budynkiem (wieża, mur, dach chaty) wskazuje ten budynek, a nie ziemię za nim — łatwiej kliknąć
+      // wieżę albo mur, żeby wysłać na nie wojsko (Michał 28.10.2026); promień po budynkach najwyżej co 40 ms
+      if (e.pointerType !== 'touch') {
+        let tile: TileRef | null = null;
+        if (!this.ghost.visible && !this.painting) {
+          const now = performance.now();
+          if (now - this.hoverPickAt >= 40) { this.hoverPickAt = now; this.hoverPicked = this.pickBuilding(e); }
+          tile = this.hoverPicked;
+        }
+        this.hover(tile ?? this.pick(e));
+      }
       if (this.painting && e.buttons === 1) { const tile = this.pick(e); if (tile) this.onPaint(tile); }
     });
     canvas.addEventListener('pointerleave', () => this.hover(null));
@@ -3952,7 +3962,25 @@ export class GameRenderer {
         px = tp[0]; pz = tp[1];
       } else this.towerPose.delete(s.id);
       if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.55);
-      const y = this.standY(view, px, pz, s.up ? -1 : (s.py >> 8) * width + (s.px >> 8)) + lift;
+      let y = this.standY(view, px, pz, s.up ? -1 : (s.py >> 8) * width + (s.px >> 8)) + lift;
+      // wspinaczka po drabinie na mur albo pomost wieży (i zejście): stoi przy krawędzi pól i powoli wznosi się (opada);
+      // w kamiennej wieży idzie schodami w środku — wtedy go nie widać, dopóki nie wyjdzie na pomost (albo drzwiami na dół)
+      if (s.climb !== undefined && s.climbTo !== undefined && !s.up) {
+        const from = (s.py >> 8) * width + (s.px >> 8), to = s.climbTo, W = width;
+        const upward = (g.walls[to]! & 16) !== 0, top = upward ? to : from;
+        const tb = buildingById(g, g.occupancy[top]);
+        const tid = tb ? BUILDINGS[tb.type]!.id : '';
+        const H = (isTower(tid) ? TOWER_TOP[tid] : undefined) ?? STONE_WALL_TOP;
+        const p = Math.max(0, Math.min(1, 1 - s.climb / CLIMB_TICKS));
+        const ex = ((from % W) + (to % W)) / 2 + 0.5, ez = (Math.floor(from / W) + Math.floor(to / W)) / 2 + 0.5;
+        // przy drabinie po stronie ziemi (drabina stoi przed krawędzią)
+        const gx = upward ? from % W : to % W, gz = upward ? Math.floor(from / W) : Math.floor(to / W);
+        px = ex + (gx + 0.5 - ex) * 0.25; pz = ez + (gz + 0.5 - ez) * 0.25;
+        y = view.heightAt(px, pz) + H * (upward ? p : 1 - p);
+        heading = Math.atan2((top % W) + 0.5 - (gx + 0.5), Math.floor(top / W) + 0.5 - (gz + 0.5));
+        this.facing.set(s.id, heading);
+        if (isStoneTower(tid)) y = -50; // schody w środku kamiennej wieży
+      }
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
       if (walking && !s.up) this.feet.set(s.id, [px, pz, y]); // ślady butów: tam, gdzie naprawdę stoi na ekranie
       { const d = this.drawnAt.get(s.id); if (d) d.copy(t.position); else this.drawnAt.set(s.id, t.position.clone()); }
@@ -5700,6 +5728,9 @@ export class GameRenderer {
     }
     return best;
   }
+
+  private hoverPickAt = 0;
+  private hoverPicked: TileRef | null = null;
 
   private pickBuilding(e: PointerEvent): TileRef | null {
     if (!this.state) return null;

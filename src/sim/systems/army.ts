@@ -686,10 +686,23 @@ function tileOf(g: GameState, s: Soldier): number {
   return (s.py >> 8) * g.map.width + (s.px >> 8);
 }
 
+/** Ile ticków trwa wejście po drabinie (albo schodami kamiennej wieży) na mur lub pomost i zejście z niego */
+export const CLIMB_TICKS = 14;
+
 function step(g: GameState, s: Soldier): void {
   const next = s.path[0]!;
-  if (!walkable(g, next, s.owner)) { s.path = []; return; }
+  if (!walkable(g, next, s.owner)) { s.path = []; s.climb = undefined; return; }
   const w = g.map.width;
+  // przejście między ziemią a koroną muru / pomostem wieży: chwilę się wspina (schodzi), potem staje od razu na górze (dole)
+  const here = (s.py >> 8) * w + (s.px >> 8);
+  if (next !== here && ((g.walls[next]! & WALL_TOP) !== 0) !== ((g.walls[here]! & WALL_TOP) !== 0)) {
+    if (s.climbTo !== next) { s.climbTo = next; s.climb = CLIMB_TICKS; }
+    if (s.climb! > 0) { s.climb!--; return; }
+    s.px = (next % w) * FP + FP / 2; s.py = Math.floor(next / w) * FP + FP / 2;
+    s.path.shift(); s.climb = undefined; s.climbTo = undefined;
+    return;
+  }
+  s.climb = undefined; s.climbTo = undefined;
   const nx = next % w, ny = (next - nx) / w;
   const tx = nx * FP + FP / 2, ty = ny * FP + FP / 2;
   const dx = tx - s.px, dy = ty - s.py;
@@ -1030,7 +1043,8 @@ export function armySystem(g: GameState): void {
           for (const o of grid.get(gy * cw + gx) ?? []) {
             if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner)) continue;
             // wręcz tylko na tym samym poziomie: z ziemi nie sięgnie na mur ani wieżę, z muru nie bije w dół (Michał 27.10.2026)
-            if (!range && (o.up || high(g, o) !== high(g, s))) continue;
+            // wyjątek: obrońca na pomoście wieży — po wieży da się wejść na górę i go zarąbać (jak w Twierdzy)
+            if (!range && (o.up || high(g, o) !== high(g, s)) && !towerUnder(g, tileOf(g, o))) continue;
             if (o.id === s.skip && g.tick < (s.skipUntil ?? 0)) continue; // do tego wroga nie ma przejścia (za murem): na razie inny cel
             let d = gap(s, o);
             // strzelec woli wroga, którego widzi (bez muru ani budynku na linii strzału); zasłoniętego bierze dopiero, gdy nie ma innego
@@ -1089,8 +1103,10 @@ export function armySystem(g: GameState): void {
         // atak w marszu: na widok wroga przerywa marsz (drogę do celu odnajdzie po walce)
         if (s.amove && s.goal >= 0 && (s.path.length > 1 || s.slot)) s.path = [];
         // wręcz: wróg zszedł na mur albo z muru (inny poziom) — nie dosięgnie, szuka innego
-        if (!range && (foe.up || high(g, foe) !== high(g, s))) { s.target = 0; s.path = []; continue; }
-        if (gap(s, foe) <= (range ? range * FP : MELEE) && !s.path.length && (!range || lineOfSight(g, s, foe, high(g, s), high(g, foe)))) {
+        if (!range && (foe.up || high(g, foe) !== high(g, s)) && !towerUnder(g, tileOf(g, foe))) { s.target = 0; s.path = []; continue; }
+        // wręcz tylko na tym samym poziomie: do obrońcy na wieży trzeba najpierw wejść na pomost
+        const level = !!range || high(g, s) === high(g, foe);
+        if (level && gap(s, foe) <= (range ? range * FP : MELEE) && !s.path.length && (!range || lineOfSight(g, s, foe, high(g, s), high(g, foe)))) {
           if (s.cd === 0) {
             // strzelcy nie strzelają równo jak na komendę: każdy naciąga łuk w swoim rytmie (kilka ticków rozrzutu)
             s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
@@ -1127,7 +1143,7 @@ export function armySystem(g: GameState): void {
         // bez szukania drogi: krok na sąsiednie wolne pole najbliżej wroga (tanie nawet przy setkach walczących)
         // już na sąsiednim polu, tylko wróg jest w pół kroku (za daleko na cios): czeka chwilę, aż stanie albo podejdzie,
         // zamiast szukać drogi, której nie ma (i odpuszczać wroga, żeby bić mur)
-        if (!s.path.length && !range) {
+        if (!s.path.length && !range && high(g, s) === high(g, foe)) {
           const a = tileOf(g, s), b = tileOf(g, foe);
           if (Math.max(Math.abs((a % W) - (b % W)), Math.abs(Math.floor(a / W) - Math.floor(b / W))) <= 1) {
             // sam stoi w pół kroku (np. po marszu w szyku): dochodzi na środek swojego pola, wtedy sięga sąsiada
@@ -1144,8 +1160,9 @@ export function armySystem(g: GameState): void {
             budget--;
             const ft = tileOf(g, foe), fx = ft % W, fy = (ft - fx) / W;
             // z ziemi nie podchodzi do wroga po koronie muru (wchodził po drabinie nad wilka za murem i nie miał jak zejść)
-            const low = !high(g, s);
-            const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1 && !(low && (g.walls[t]! & WALL_TOP)), 1500, s.owner, ft, 1);
+            // do wroga na pomoście wieży idzie się przez jej wejście, na górę (wtedy cel też jest na pomoście)
+            const up = !range && !!towerUnder(g, ft) && !high(g, s), low = !high(g, s);
+            const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1 && (up ? (g.walls[t]! & WALL_TOP) !== 0 : !(low && (g.walls[t]! & WALL_TOP))), 1500, s.owner, ft, 1);
             if (p && p.length) s.path = p.slice(0, 8);
             else { s.skip = foe.id; s.skipUntil = g.tick + 150; s.target = 0; }
           }
