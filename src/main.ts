@@ -1544,12 +1544,20 @@ function updateHoverFoe(): void {
       const u = foeIds.size ? renderer.unitAt(mouseX, mouseY, (id) => foeIds.has(id)) : 0;
       if (u) hoverFoe = u;
     }
-    // wilki pod kursorem też można zaatakować
+    // wilki pod kursorem też można zaatakować (każdym wojskiem, także magiem i łucznikiem): odległość kursora od sylwetki
+    // wilka — od łap do grzbietu, z promieniem rosnącym przy zbliżeniu; dawniej jeden punkt metr nad ziemią i stałe 26 px,
+    // więc przy zbliżeniu kursor na wilku nie dawał miecza (28.10.2026)
     for (const w of game.wolves) {
-      const p = renderer.project(w.px / 256, w.py / 256);
-      if (!p.front) continue;
-      const d = (p.sx - mouseX) ** 2 + (p.sy - 10 - mouseY) ** 2;
-      if (d < bd) { bd = d; hoverFoe = w.id; }
+      if (w.hp <= 0) continue;
+      const a = renderer.project(w.px / 256, w.py / 256, 0.05), b = renderer.project(w.px / 256, w.py / 256, 0.75);
+      if (!a.front) continue;
+      const vx = b.sx - a.sx, vy = b.sy - a.sy, len = vx * vx + vy * vy;
+      const k = len > 0 ? Math.max(0, Math.min(1, ((mouseX - a.sx) * vx + (mouseY - a.sy) * vy) / len)) : 0;
+      const d = (a.sx + vx * k - mouseX) ** 2 + (a.sy + vy * k - mouseY) ** 2;
+      const r = Math.max(26, Math.sqrt(len) * 0.9);
+      // odległość przeliczona na skalę 26 px, żeby porównywać uczciwie z żołnierzami obok
+      const n = (d * 26 * 26) / (r * r);
+      if (n < bd) { bd = n; hoverFoe = w.id; }
     }
     if (!hoverFoe && hoverTile) {
       const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);

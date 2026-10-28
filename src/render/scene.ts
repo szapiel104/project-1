@@ -1128,9 +1128,9 @@ export class GameRenderer {
 
   /** Ustawia kamerę nad wskazanym punktem mapy (w polach); używane też przy testach wyglądu */
   /** Pole mapy na ekranie: piksele w oknie i czy jest przed kamerą */
-  project(x: number, y: number): { sx: number; sy: number; front: boolean } {
+  project(x: number, y: number, lift = 1): { sx: number; sy: number; front: boolean } {
     const g = this.state;
-    const v = new THREE.Vector3(x - (g?.map.width ?? 0) / 2, (this.view?.heightAt(x, y) ?? 0) + 1, y - (g?.map.height ?? 0) / 2);
+    const v = new THREE.Vector3(x - (g?.map.width ?? 0) / 2, (this.view?.heightAt(x, y) ?? 0) + lift, y - (g?.map.height ?? 0) / 2);
     v.project(this.cam.camera);
     const r = this.renderer.domElement.getBoundingClientRect();
     return { sx: r.left + ((v.x + 1) / 2) * r.width, sy: r.top + ((1 - v.y) / 2) * r.height, front: v.z < 1 };

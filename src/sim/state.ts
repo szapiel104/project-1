@@ -563,8 +563,10 @@ export interface Wolf {
   target: number;
   cd: number;
   leaving: boolean;
-  /** Id palisady, którą przegryza, gdy ludzie są za murem */
+  /** Id palisady, pod którą stoi, gdy ludzie są za murem (tylko drapie: najwyżej 1 HP na wilka, potem odchodzi) */
   gnaw?: number;
+  /** Ten wilk już raz podrapał mur — drugi raz go nie rusza */
+  scratched?: boolean;
 }
 
 export interface GameState {

@@ -6,7 +6,6 @@ import { WOLF, findPath, walkable } from '../path';
 import { BUILDINGS } from '../../data/buildings';
 import { UNITS } from '../../data/units';
 import { FP, Phase, type GameState, type Wolf } from '../state';
-import { ruin } from './placement';
 
 /**
  * Wilki: nocą z lasu za mapą wychodzi wataha i poluje na ludzi poza osadą. Palisada je zatrzymuje,
@@ -104,12 +103,16 @@ export function wolfSystem(g: GameState): void {
         }
         continue;
       }
-      // obgryza palisadę, przy której stoi
+      // pod murem: wilk muru nie przegryzie (Michał 28.10.2026) — najwyżej raz go podrapie (1 HP na całą noc,
+      // nigdy go nie zniszczy), chwilę poskrobie i wraca do lasu
       if (w.gnaw) {
         const wall = buildingById(g, w.gnaw);
         if (!wall) w.gnaw = 0;
         else if (Math.max(Math.abs((w.px >> 8) - wall.x), Math.abs((w.py >> 8) - wall.y)) <= 1 && !w.path.length) {
-          if (w.cd === 0) { w.cd = BITE; wall.hp -= 6; if (wall.hp <= 0) { ruin(g, wall); w.gnaw = 0; } }
+          if (w.cd === 0) {
+            if (!w.scratched) { w.scratched = true; if (wall.hp > 1) wall.hp -= 1; w.cd = BITE * 3; }
+            else { w.gnaw = 0; w.leaving = true; w.target = 0; }
+          }
           continue;
         }
       }
@@ -122,7 +125,7 @@ export function wolfSystem(g: GameState): void {
         const near = (t: number) => (x: number): boolean => Math.abs((x % width) - (t % width)) <= 1 && Math.abs(Math.floor(x / width) - Math.floor(t / width)) <= 1;
         for (const c of cands.slice(0, 3)) { const p = findPath(g, here, near(c.t), 3000, WOLF); if (p && p.length) { w.path = p; w.gnaw = 0; break; } }
         if (!w.path.length && cands.length) {
-          // wszyscy za palisadą: wataha podchodzi pod najbliższy kawałek muru i go przegryza
+          // wszyscy za palisadą: wilk podchodzi pod najbliższy kawałek muru, raz go podrapie i odchodzi (już podrapał — od razu do lasu)
           let bestWall: (typeof g.buildings)[number] | undefined, bd = Infinity;
           for (const o of g.buildings) {
             const d = BUILDINGS[o.type]!;
@@ -130,7 +133,7 @@ export function wolfSystem(g: GameState): void {
             const dist = (o.x - (w.px >> 8)) ** 2 + (o.y - (w.py >> 8)) ** 2;
             if (dist < bd) { bd = dist; bestWall = o; }
           }
-          if (bestWall) {
+          if (bestWall && !w.scratched) {
             const wall = bestWall;
             const p = findPath(g, here, (x) => Math.max(Math.abs((x % width) - wall.x), Math.abs(Math.floor(x / width) - wall.y)) === 1, 3000, WOLF);
             w.gnaw = wall.id;
