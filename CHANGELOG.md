@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.61.9 — trójwymiarowy dym i para z czarów magów (2026-10-28)
+
+- **Dym z czarów jest prawdziwym kłębem 3D** (`render/spellsmoke.ts`): zamiast szarych, twardych kulek w jednym kolorze każdy kłąb to bryła z trójwymiarowego szumu — postrzępiony, rozwiewający się brzeg, gęstszy środek, wierzch jaśniejszy od spodu (światło z góry), z każdej strony ten sam kształt, nic nie obraca się za kamerą
+- **Kula ognia:** przy trafieniu buchają na boki i w górę kłęby ciemnej sadzy, u młodego kłębu podświetlone od spodu żarem; z wiekiem szarzeją, rosną i rzedną. Dym za lecącą kulą i nad płonącym żołnierzem w tej samej technice
+- **Czar wody:** przy trafieniu bucha jasna, chłodnobiała para (dotąd po czarze wody nie było nic poza kroplami), za lecącą kulą delikatna mgiełka
+- Kłąb wyrasta płynnie (bez wyskakiwania) i na końcu blednie
+- Wydajność: jedna siatka instancji (jedno wywołanie rysowania), najwyżej 260 kłębów, krótki marsz promienia (kłęby są małe na ekranie); bez czarów nic się nie rysuje
+- Bot: bez zmian (wygląd)
+
 ## 0.61.8 — ślady butów na śniegu (2026-10-28)
 
 - **Odciski butów** (`render/footprints.ts`): zimą, gdy leży śnieg, każdy idący chłop i żołnierz zostawia za sobą pojedyncze odciski podeszew — na zmianę lewa i prawa, wzdłuż kierunku marszu, z przodem stopy i obcasem. Odcisk to chłodny cień we wgłębieniu śniegu (nocą ciemnieje razem z resztą). Po ok. 25 s zaczyna blednąć i po ok. 40 s znika; w zamieci szybciej. Gdy śnieg topnieje, znikają razem z nim. Rozmyte wydeptane ścieżki (mapa śladów) zostają jak były — odciski widać dodatkowo z bliska

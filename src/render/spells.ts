@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { SpellSmoke } from './spellsmoke';
 
 /**
  * Czary magów bojowych w locie (tylko wygląd; trafienie liczy symulacja w chwili rzutu, jak przy strzałach).
@@ -6,24 +7,28 @@ import * as THREE from 'three';
  *
  * - Kula ognia: białożółte jądro, pomarańczowy płomień, czerwona poświata rozciągnięta w kierunku lotu (smuga ruchu),
  *   ogon iskier i żarzących się drobin, które opadają i gasną, plus żywy płomień z systemu ognia sceny.
- *   Przy celu: oślepiający błysk, fala uderzeniowa po ziemi, snop iskier na boki i kłąb ciemnego dymu.
+ *   Przy celu: oślepiający błysk, fala uderzeniowa po ziemi, snop iskier na boki i kłęby ciemnego dymu
+ *   (prawdziwe, trójwymiarowe — spellsmoke.ts).
  * - Czar wody: jasne, prawie białe jądro, błękitna kula z wirującą otoczką, ogon kropel i mgiełki.
- *   Przy celu: rozprysk — krople wystrzeliwują w górę i na boki i spadają, po ziemi rozchodzi się krąg wody.
+ *   Przy celu: rozprysk — krople wystrzeliwują w górę i na boki i spadają, po ziemi rozchodzi się krąg wody,
+ *   a w górę bucha jasna para.
  *
  * Wydajność: wszystko na kilku wspólnych siatkach instancji (stała liczba wywołań rysowania, bez nowych obiektów
  * w trakcie gry), cząstki w stałej puli; bez czarów warstwa nic nie rysuje.
  */
 interface Shot { from: THREE.Vector3; to: THREE.Vector3; t: number; fire: boolean; dur: number; seed: number }
 interface Burst { at: THREE.Vector3; t: number; fire: boolean }
-interface Particle { p: THREE.Vector3; v: THREE.Vector3; life: number; max: number; size: number; kind: 0 | 1 | 2 | 3 }
+/** Rodzaj cząstki: 0 iskra, 1 żar, 2 kropla, 3 dym (sadza), 4 para (czar wody) */
+type Kind = 0 | 1 | 2 | 3 | 4;
+interface Particle { p: THREE.Vector3; v: THREE.Vector3; life: number; max: number; size: number; kind: Kind; seed: number }
 
 const MAX = 128;
 /** Najwięcej cząstek naraz (iskry, krople, dym) — stała pula */
 const MAX_P = 900;
 const FIRE = new THREE.Color(0xff6a1a), FIRE_CORE = new THREE.Color(0xfff1c4), FIRE_HALO = new THREE.Color(0xd8320f);
 const WATER = new THREE.Color(0x3d9cff), WATER_CORE = new THREE.Color(0xeefaff), WATER_HALO = new THREE.Color(0x2a6fd6);
-/** Barwy cząstek: iskra ognia, żar (ciemniejszy), kropla wody, dym */
-const P_COLOR = [new THREE.Color(0xffc25a), new THREE.Color(0xff5a14), new THREE.Color(0x9fd8ff), new THREE.Color(0x3a332c)];
+/** Barwy cząstek: iskra ognia, żar (ciemniejszy), kropla wody (dym i parę rysuje spellsmoke.ts) */
+const P_COLOR = [new THREE.Color(0xffc25a), new THREE.Color(0xff5a14), new THREE.Color(0x9fd8ff)];
 const UP = new THREE.Vector3(0, 0, 1);
 /** Języków ognia na płonącym */
 const FLAMES = 9;
@@ -72,7 +77,8 @@ export class SpellLayer {
   private readonly flash: THREE.InstancedMesh;
   private readonly wave: THREE.InstancedMesh;
   private readonly spark: THREE.InstancedMesh;
-  private readonly smoke: THREE.InstancedMesh;
+  /** Dym i para: trójwymiarowe kłęby z szumu (spellsmoke.ts) */
+  private readonly smoke: SpellSmoke;
   /** Przymrożenie czarem wody: kryształki lodu wokół stóp, szron w powietrzu i miękka chłodna poświata */
   private readonly ice: THREE.InstancedMesh;
   /** Miękkie plamy światła (zwrócone do kamery): ciepło płonącego, chłód przymrożonego */
@@ -115,7 +121,7 @@ export class SpellLayer {
     // fala po ziemi: płaski pierścień (obrócony do poziomu przy rysowaniu)
     this.wave = add(new THREE.RingGeometry(0.78, 1, 40), 0.6, MAX);
     this.spark = add(new THREE.IcosahedronGeometry(1, 0), 0.95, MAX_P);
-    this.smoke = add(new THREE.IcosahedronGeometry(1, 1), 0.38, MAX_P, false);
+    this.smoke = new SpellSmoke(scene);
     this.ice = add(new THREE.OctahedronGeometry(1, 0), 0.85, MAX * 6);
     // płaskie kwadraty z miękką teksturą, co klatkę obrócone do kamery (bez twardych brzegów brył)
     this.blob = add(new THREE.PlaneGeometry(1, 1), 0.5, MAX * 2, true, softTexture(false));
@@ -155,9 +161,9 @@ export class SpellLayer {
   private rand(): number { this.rnd = (this.rnd * 16807) % 2147483647; return this.rnd / 2147483647; }
   private jitter(k: number): THREE.Vector3 { return new THREE.Vector3((this.rand() - 0.5) * k, (this.rand() - 0.5) * k, (this.rand() - 0.5) * k); }
 
-  private emit(at: THREE.Vector3, v: THREE.Vector3, life: number, kind: 0 | 1 | 2 | 3, size: number): void {
+  private emit(at: THREE.Vector3, v: THREE.Vector3, life: number, kind: Kind, size: number): void {
     if (this.parts.length >= MAX_P) return;
-    this.parts.push({ p: at.clone(), v, life, max: life, size, kind });
+    this.parts.push({ p: at.clone(), v, life, max: life, size, kind, seed: this.rand() });
   }
 
   /** Klatka: kule lecą prosto w cel, sypią iskrami albo kroplami, przy celu rozbłysk albo rozprysk */
@@ -196,7 +202,7 @@ export class SpellLayer {
         const v = back.clone().add(this.jitter(a.fire ? 1.4 : 1.1));
         this.emit(this.p.clone().addScaledVector(this.d, -this.rand() * 0.15), v, 0.18 + this.rand() * 0.25, a.fire ? (this.rand() < 0.6 ? 0 : 1) : 2, (a.fire ? 0.022 : 0.019) * (0.6 + this.rand() * 0.8));
       }
-      if (a.fire && this.rand() < 0.35) this.emit(this.p, back.clone().multiplyScalar(0.3).add(new THREE.Vector3(0, 0.4, 0)), 0.5, 3, 0.05);
+      if (this.rand() < (a.fire ? 0.35 : 0.2)) this.emit(this.p, back.clone().multiplyScalar(0.3).add(new THREE.Vector3(0, a.fire ? 0.4 : 0.15, 0)), a.fire ? 0.55 : 0.4, a.fire ? 3 : 4, a.fire ? 0.045 : 0.035);
       if (a.fire) {
         const v = this.flameAt[this.flameN] ?? (this.flameAt[this.flameN] = new THREE.Vector3());
         v.copy(this.p).setY(this.p.y - 0.08);
@@ -225,17 +231,24 @@ export class SpellLayer {
     }
 
     // cząstki: iskry i krople lecą, spadają i gasną; dym unosi się, rośnie i blednie
-    let sp = 0, sm = 0;
+    let sp = 0;
+    this.smoke.begin(time);
     const alive: Particle[] = [];
     for (const pt of this.parts) {
       pt.life -= step;
       if (pt.life <= 0) continue;
       alive.push(pt);
       const age = 1 - pt.life / pt.max;
-      if (pt.kind === 3) {
-        pt.v.multiplyScalar(0.96);
+      if (pt.kind >= 3) {
+        // kłąb zwalnia, unosi się, rośnie i rozwiewa; para szybciej rośnie i znika niż sadza
+        const steam = pt.kind === 4;
+        pt.v.multiplyScalar(steam ? 0.94 : 0.96);
+        pt.v.y += (steam ? 0.5 : 0.25) * step;
         pt.p.addScaledVector(pt.v, step);
-        if (sm < MAX_P) { this.put(this.smoke, sm, pt.p, pt.size * (1 + age * 2.2), this.c.copy(P_COLOR[3]!).lerp(new THREE.Color(0x6a625a), age)); sm++; }
+        const grow = 1 + age * (steam ? 2.6 : 2.2);
+        // pełna siła dopiero po chwili (kłąb wyrasta, a nie wyskakuje), na końcu blednie
+        const power = Math.min(1, age * 6) * (1 - age * age);
+        this.smoke.put(pt.p, pt.size * 2.6 * grow, age, pt.seed, steam, power);
       } else {
         pt.v.y -= (pt.kind === 2 ? 6 : 2.2) * step; // krople spadają szybciej niż iskry
         pt.v.multiplyScalar(pt.kind === 2 ? 0.985 : 0.97);
@@ -302,8 +315,9 @@ export class SpellLayer {
     this.frostN = 0; this.burnN = 0;
     this.halo.count = n; this.glow.count = n; this.core.count = n;
     this.flash.count = f; this.wave.count = f;
-    this.spark.count = sp; this.smoke.count = sm;
-    for (const mesh of [this.halo, this.glow, this.core, this.flash, this.wave, this.spark, this.smoke, this.ice, this.blob, this.lick]) {
+    this.spark.count = sp;
+    this.smoke.end();
+    for (const mesh of [this.halo, this.glow, this.core, this.flash, this.wave, this.spark, this.ice, this.blob, this.lick]) {
       mesh.visible = mesh.count > 0;
       if (!mesh.visible) continue;
       mesh.instanceMatrix.needsUpdate = true;
@@ -321,7 +335,13 @@ export class SpellLayer {
       const v = new THREE.Vector3(Math.cos(ang) * out, up, Math.sin(ang) * out);
       this.emit(a.to, v, 0.35 + this.rand() * 0.45, a.fire ? (i % 3 ? 0 : 1) : 2, (a.fire ? 0.03 : 0.028) * (0.6 + this.rand() * 0.9));
     }
-    if (a.fire) for (let i = 0; i < 7; i++) this.emit(a.to.clone().add(this.jitter(0.25)), new THREE.Vector3((this.rand() - 0.5) * 0.4, 0.5 + this.rand() * 0.5, (this.rand() - 0.5) * 0.4), 0.9 + this.rand() * 0.6, 3, 0.07 + this.rand() * 0.05);
+    // kłęby: ciemny dym po kuli ognia, jasna para po czarze wody — buchają na boki i w górę, potem się rozwiewają
+    const puffs = a.fire ? 8 : 6;
+    for (let i = 0; i < puffs; i++) {
+      const ang = (i / puffs) * Math.PI * 2 + this.rand() * 0.6, out = 0.25 + this.rand() * 0.35;
+      this.emit(a.to.clone().add(this.jitter(0.2)), new THREE.Vector3(Math.cos(ang) * out, 0.35 + this.rand() * 0.45, Math.sin(ang) * out),
+        (a.fire ? 1.1 : 0.8) + this.rand() * 0.6, a.fire ? 3 : 4, (a.fire ? 0.075 : 0.065) + this.rand() * 0.04);
+    }
   }
 
   private put(mesh: THREE.InstancedMesh, i: number, at: THREE.Vector3, size: number, color: THREE.Color): void {
