@@ -710,6 +710,9 @@ export class GameRenderer {
   private logs = new Map<TreeKind, [THREE.InstancedMesh, THREE.InstancedMesh]>();
   /** Pień leżący na ziemi przy rąbiącym z biedy (emergencywood.ts): ociosany (bez korony), coraz krótszy w trakcie cięcia */
   private groundLogs = new Map<TreeKind, THREE.InstancedMesh>();
+  /** Ile bali danej odmiany jest w tej klatce (niesione i leżące przy pniaku) — pule mają tylko prawdziwe sztuki */
+  private logN = new Map<TreeKind, number>();
+  private groundN = new Map<TreeKind, number>();
   private groundM = new THREE.Matrix4();
   private groundQ = new THREE.Quaternion();
   private groundP = new THREE.Vector3();
@@ -2311,7 +2314,7 @@ export class GameRenderer {
       T('animacje', () => { this.animate(g, this.calm ? 0 : dt); if (!this.calm) v.animate(this.time); });
       T('las', () => this.syncForest(g, v));
       { const f = this.focusPoint; v.updateGrass(f.x, f.z, this.calm ? 0 : this.time, this.walk ? 0 : this.cam.distance); }
-      if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail); }
+      if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail, !!this.walk); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.rubble.sync(g, v, dt));
       T('groby', () => this.graves.sync(g, v));
@@ -5523,7 +5526,9 @@ export class GameRenderer {
       const logKind = log ? this.felled.get(u.id) ?? this.logKindFor(u.id) : null;
       t.scale.setScalar(FIG);
       t.updateMatrix();
-      for (const [k, pair] of this.logs) for (const m of pair) m.setMatrixAt(i, k === logKind ? t.matrix : ZERO);
+      // tylko niesione bale trafiają do swojej odmiany (wcześniej każda z odmian liczyła wszystkich chłopów z bryłą
+      // ściśniętą do zera — karta przeliczała ok. 400 tys. pustych trójkątów na klatkę, pomiar 28.10.2026)
+      if (logKind) { const pair = this.logs.get(logKind), c = this.logN.get(logKind) ?? 0; if (pair) { for (const m of pair) m.setMatrixAt(c, t.matrix); this.logN.set(logKind, c + 1); } }
       // bruzda w śniegu za ciągniętym pniem: koniec pnia szoruje po ziemi za plecami drwala
       if (logKind && walking) { const bx = cv.sx - Math.sin(heading) * 0.38, by = cv.sy - Math.cos(heading) * 0.38; this.drags.set(u.id, [bx, by, this.standY(view, bx, by, -2), 0]); }
       // pień do obróbki leży przed rąbiącym w poprzek; w miarę cięcia skraca się (odcięte kawałki idą w deski przy pniaku)
@@ -5534,7 +5539,7 @@ export class GameRenderer {
         this.groundQ.setFromAxisAngle(Y_AXIS, yaw + Math.PI / 2);
         this.groundM.compose(this.groundP, this.groundQ, this.groundS.set(FIG * (0.35 + 0.65 * left), FIG, FIG));
       }
-      for (const [k, m] of this.groundLogs) m.setMatrixAt(i, k === groundKind ? this.groundM : ZERO);
+      if (groundKind) { const m = this.groundLogs.get(groundKind), c = this.groundN.get(groundKind) ?? 0; if (m) { m.setMatrixAt(c, this.groundM); this.groundN.set(groundKind, c + 1); } }
       t.scale.setScalar(wood && !log ? FIG : 0);
       t.updateMatrix();
       this.planks.setMatrixAt(i, t.matrix);
@@ -5643,10 +5648,11 @@ export class GameRenderer {
       m.count = loadUsed.get(res) ?? 0;
       touch(m);
     }
-    for (const m of [this.planks, ...[...this.logs.values()].flat(), ...this.groundLogs.values()]) {
-      m.count = n;
-      touch(m);
-    }
+    this.planks.count = n;
+    touch(this.planks);
+    for (const [k, pair] of this.logs) for (const m of pair) { m.count = this.logN.get(k) ?? 0; touch(m); }
+    for (const [k, m] of this.groundLogs) { m.count = this.groundN.get(k) ?? 0; touch(m); }
+    this.logN.clear(); this.groundN.clear();
   }
 
   private resize(): void {

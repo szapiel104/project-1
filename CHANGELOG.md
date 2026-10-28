@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.65.3 — o 43% mniej trójkątów w klatce: pnie i bale (2026-10-28)
+
+- **Pnie drzew z daleka (Michał):** lżejsza wersja pnia (160–360 zamiast 1400–3000 trójkątów) działała, ale włączała się dopiero 18 pól od brzegu kawałka lasu, czyli w praktyce pełne pnie sięgały 30–40 pól. Teraz w zwykłym widoku pełny pień zostaje tylko blisko środka widoku (próg 6). W spacerze, oczami chłopa, zostaje 18 jak dotąd. Pełny model się nie zmienił, upraszczamy tylko z daleka (`render/terrain.ts`)
+- **Niesione i leżące bale:** każda z 8 odmian drzewa liczyła wszystkich chłopów, a tym bez bala dawała bryłę ściśniętą do zera. Karta przeliczała ok. 400 tys. pustych trójkątów na klatkę. Teraz pula ma tylko prawdziwe bale (`render/scene.ts`)
+- Pomiar (osada, kamera 30, `node tools/check/drawcalls.mjs`): **3,0 → 1,7 mln trójkątów** (pnie 1,69 → 0,80 mln), wywołania rysowania 259 → 244. Narzędzie liczy teraz też trójkąty według kategorii (`--cam=` odległość kamery, `--chrome=` własna przeglądarka)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.2 — strzały w ścianach znikają z budynkiem (2026-10-28)
 
 - **Zgłoszenie:** gdy budynek zostanie zniszczony (ruina) albo rozebrany, strzały wbite w jego ściany znikają razem z nim, a nie wiszą w powietrzu (`render/arrows.ts`: strzała pamięta id budynku)

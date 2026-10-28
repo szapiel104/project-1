@@ -1,5 +1,6 @@
 // Spis wywołań rysowania jednej klatki według kategorii (budynki, las, ludzie…) — do szukania, co idzie do karty osobno.
-//   node tools/check/drawcalls.mjs [--url=…] [--build=N] [--ticks=N]
+//   node tools/check/drawcalls.mjs [--url=…] [--build=N] [--ticks=N] [--cam=odległość kamery] [--chrome=ścieżka]
+// Oprócz liczby wywołań liczy też trójkąty według kategorii (obraz i cień osobno) — do szukania, co obciąża kartę.
 // Bez --url: lokalny build (dist/, albo --dist=katalog). Tryb testowy w pełnej grafice (?test=1&hd=1), gracz dostaje surowce i stawia po kilka
 // budynków każdego rodzaju, symulacja idzie N kroków, potem jedna klatka jest liczona wywołanie po wywołaniu.
 import { chromium } from 'playwright-core';
@@ -8,7 +9,7 @@ const arg = (n, d) => { const a = process.argv.find((x) => x.startsWith(`--${n}=
 let base = arg('url', null), srv = null;
 const dist = arg('dist', 'dist');
 if (!base) { srv = await preview({ build: { outDir: dist }, preview: { port: +arg('port', 4199), strictPort: false }, logLevel: 'silent' }); base = srv.resolvedUrls.local[0]; }
-const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
+const b = await chromium.launch({ ...(arg('chrome', null) ? { executablePath: arg('chrome') } : {}), args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const p = await b.newPage({ viewport: { width: 1600, height: 900 } });
 p.on('pageerror', (e) => console.log('PAGEERROR', e.message));
 p.on('console', (m) => { if (m.text().startsWith('[dc]')) console.error(m.text()); });
@@ -17,7 +18,7 @@ await p.goto(base + '?test=1&hd=1', { waitUntil: 'load' });
 log('strona wczytana');
 await p.waitForFunction(() => window.__test && window.__renderer, null, { timeout: 280000 });
 log('gra gotowa');
-const res = await p.evaluate(async ([perType, ticks]) => {
+const res = await p.evaluate(async ([perType, ticks, dist]) => {
   const T = window.__test, R = window.__renderer;
   T.give(99999);
   const ids = ['house', 'woodcutter', 'quarry', 'farm', 'mill', 'bakery', 'well', 'granary', 'storehouse', 'barracks', 'tavern', 'smith', 'tower', 'chapel', 'market', 'stable', 'archery', 'tanner'];
@@ -25,12 +26,12 @@ const res = await p.evaluate(async ([perType, ticks]) => {
   console.log('[dc] budynki postawione'); T.run(ticks); console.log('[dc] symulacja przewinięta');
   const g = T.state ? T.state() : null;
   const keep = window.__renderer.state.buildings.find((x) => x.type === 0 && x.owner === 0);
-  T.at(keep.x + 5, keep.y + 8, 30);
+  T.at(keep.x + 5, keep.y + 8, dist);
   await new Promise((r) => setTimeout(r, 25000));
   console.log('[dc] start pomiaru klatki');
   const gl = R.renderer;
   const orig = gl.renderBufferDirect.bind(gl);
-  const by = new Map();
+  const by = new Map(), tris = new Map();
   const cat = (o) => {
     const names = [];
     for (let q = o; q; q = q.parent) { if (q.userData?.cat) return q.userData.cat + (names.length ? ' / ' + names.reverse().join('/') : ''); if (q.name) names.push(q.name); }
@@ -42,6 +43,12 @@ const res = await p.evaluate(async ([perType, ticks]) => {
     if (object.isInstancedMesh && object.count === 0) zero++;
     const k = (shadow ? '[cień] ' : '') + cat(object) + (object.isInstancedMesh ? ' (inst.)' : '') + (object.isBatchedMesh ? ' (batch)' : '');
     by.set(k, (by.get(k) ?? 0) + 1);
+    // trójkąty tego wywołania: indeksy (albo wierzchołki) w zakresie rysowania × liczba sztuk
+    const idx = geometry.index, pos = geometry.attributes.position;
+    let n = idx ? idx.count : pos ? pos.count : 0;
+    if (group) n = Math.min(n, group.count); else if (geometry.drawRange.count !== Infinity) n = Math.min(n, geometry.drawRange.count);
+    const inst = object.isInstancedMesh ? object.count : 1;
+    tris.set(k, (tris.get(k) ?? 0) + Math.round(n / 3) * inst);
     if (shadow) shadowCalls++; else mainCalls++;
     return orig(camera, scene, geometry, material, object, group);
   };
@@ -65,10 +72,12 @@ const res = await p.evaluate(async ([perType, ticks]) => {
   while (!done && performance.now() - t0 < 60000) await new Promise((r) => setTimeout(r, 200));
   gl.render = render;
   gl.renderBufferDirect = orig;
-  return { passes, zero, calls: gl.info.render.calls, mainCalls, shadowCalls, buildings: window.__renderer.state.buildings.length, top: [...by].sort((a, b) => b[1] - a[1]).slice(0, 40) };
-}, [+arg('build', 3), +arg('ticks', 3000)]);
+  return { passes, zero, calls: gl.info.render.calls, mainCalls, shadowCalls, buildings: window.__renderer.state.buildings.length, top: [...by].sort((a, b) => b[1] - a[1]).slice(0, 40), tris: [...tris].sort((a, b) => b[1] - a[1]).slice(0, 30), triSum: [...tris.values()].reduce((a, b) => a + b, 0) };
+}, [+arg('build', 3), +arg('ticks', 3000), +arg('cam', 30)]);
 log('klatka policzona');
 console.log(res.passes.join('\n')); console.log('wywołania instancji z zerową liczbą sztuk:', res.zero);
 console.log(`budynki: ${res.buildings} · wywołań (main/cień): ${res.mainCalls}/${res.shadowCalls} · info.calls ${res.calls}`);
 for (const [k, n] of res.top) console.log(String(n).padStart(5), k);
+console.log(`\ntrójkąty w klatce (obraz + cień): ${(res.triSum / 1e6).toFixed(2)} mln`);
+for (const [k, n] of res.tris) console.log(String((n / 1e3).toFixed(0) + ' tys.').padStart(12), k);
 await b.close(); await srv?.close();

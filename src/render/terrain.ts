@@ -97,7 +97,7 @@ export interface TerrainView {
   level(x: number, y: number, w: number, h: number, height: number): void;
   /** Poziomy szczegółów wokół punktu (x, z); reach poszerza zasięg, gdy kamera jest daleko */
   /** `detail` (0–1) skraca odległości szczegółów na słabszych poziomach grafiki (1 = pełne) */
-  lod(x: number, z: number, reach: number, detail?: number): void;
+  lod(x: number, z: number, reach: number, detail?: number, walk?: boolean): void;
   /** Roślinność do wspólnych pul na tę klatkę: kawałki w kadrze i w zasięgu mapy cieni */
   cullVegetation(view: THREE.Frustum, shadow: THREE.Frustum | null): void;
   /** Wydeptuje ziemię w narożniku pola (x, y): trawa brązowieje do gołej ziemi, do progu cap */
@@ -1053,11 +1053,15 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // cień korony rzucają te same karty co w obrazie (z wyciętym tłem), więc ma dokładnie kształt drzewa; wcześniej rzucała
   // go prosta bryła-stożek i na ziemi leżały trójkątne kliny zamiast koron
   const kindLod = (k: TreeKind): Lod => ({ near: FOG_SWITCH, farGeo: k.far.geometry, farMat: k.far.material });
-  // pień z bliska pełną bryłą (do kilku tys. trójkątów), dalej lżejszy; cień rzuca prosty graniastosłup w jego miejscu
+  // pień z bliska pełną bryłą (do kilku tys. trójkątów), dalej lżejszy; cień rzuca prosty graniastosłup w jego miejscu.
+  // Próg liczony od brzegu kawałka lasu (16×16 pól), więc „6” to w praktyce pełne pnie do ok. 15–25 pól od środka widoku.
+  // Wcześniej było 18 i pełne pnie sięgały 30–40 pól: 1,7 mln z 3 mln trójkątów klatki (pomiar 28.10.2026,
+  // tools/check/drawcalls.mjs). Z góry różnicy nie widać, korona zasłania pień. W spacerze (oczami chłopa)
+  // zostaje 18 — tam stoi się między drzewami. Upraszczamy tylko wersję z daleka, pełny model się nie zmienia.
   const trunkLods = new Map<TreeKind, Lod>();
   const kindTrunkLodOf = (k: TreeKind): Lod => {
     let l = trunkLods.get(k);
-    if (!l) { const h = k.height * (k.role === 'leaf' ? 0.45 : 0.7); l = { near: 18, farGeo: k.trunkFar, hide: FOG_SWITCH, shadowGeo: new THREE.CylinderGeometry(0.04 * k.height / 3, 0.07 * k.height / 3, h, 5, 1, true).translate(0, h / 2, 0) }; trunkLods.set(k, l); }
+    if (!l) { const h = k.height * (k.role === 'leaf' ? 0.45 : 0.7); l = { near: 6, walkNear: 18, farGeo: k.trunkFar, hide: FOG_SWITCH, shadowGeo: new THREE.CylinderGeometry(0.04 * k.height / 3, 0.07 * k.height / 3, h, 5, 1, true).translate(0, h / 2, 0) }; trunkLods.set(k, l); }
     return l;
   };
   /** odmiana dla drzewa: stała dla miejsca (hash pozycji) */
@@ -1076,7 +1080,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // od kamery, a świerki dalej niż kilkadziesiąt pól przełączają się na prosty model. Liczone co kilka klatek.
   // shadowGeo: prostsza bryła tego samego kształtu, która rzuca cień zamiast pełnego modelu (w obrazie zostaje pełny);
   // cień liczony jest z mapy 4096 px na obszar kilkudziesięciu pól, więc różnicy w kształcie cienia nie widać
-  type Lod = { hide?: number; near?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material; shadowGeo?: THREE.BufferGeometry };
+  type Lod = { hide?: number; near?: number; walkNear?: number; farGeo?: THREE.BufferGeometry; farMat?: THREE.Material; shadowGeo?: THREE.BufferGeometry };
   const lodChunks: { mesh: THREE.InstancedMesh; x: number; z: number; r: number; lod: Lod; near: THREE.BufferGeometry; nearMat: THREE.Material; shadow: boolean; proxy?: THREE.InstancedMesh }[] = [];
   /**
    * Wspólne pule roślinności: zamiast osobnego wywołania rysowania dla każdego kawałka 40×40 (i drugiego w cieniu)
@@ -2102,12 +2106,12 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     noGrass(tile: number, on = true) { builtOn[tile] = on ? 1 : 0; regrass(tile); },
     /** Roślinność do wspólnych pul na tę klatkę (wywołanie tuż przed rysowaniem) */
     cullVegetation(view: THREE.Frustum, shadow: THREE.Frustum | null) { cullVeg(view, shadow); },
-    lod(x: number, z: number, reach: number, detail = 1) {
+    lod(x: number, z: number, reach: number, detail = 1, walk = false) {
       mistFx?.detail(detail);
       for (const c of lodChunks) {
         const d = Math.hypot(c.x - x, c.z - z) - c.r; // od krawędzi kawałka, nie od środka
         if (c.lod.hide !== undefined) c.mesh.visible = d < c.lod.hide * detail + reach;
-        const far = d > (c.lod.near ?? 30) * detail + reach;
+        const far = d > ((walk ? c.lod.walkNear : undefined) ?? c.lod.near ?? 30) * detail + reach;
         // cień z daleka: obrazek drzewa nie rzuca cienia (jak dotąd), krzak z daleka dalej rzuca
         if (c.proxy) c.proxy.visible = c.mesh.visible && !(far && c.lod.farMat);
         if (c.lod.farGeo) {
