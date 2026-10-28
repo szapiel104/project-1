@@ -1,0 +1,201 @@
+/* ===== Okna menu w stylu nowego menu po lewej (Michał 28.10.2026: „ustawienia i jak grać jak inny czat zrobił menu, i postać”) =====
+   Dotyczy okien w prawej części menu głównego i pauzy (.menu:not(.previewing)): Ustawienia, Jak grać, Mój ród (postać),
+   a przy okazji Nowa gra i Gra przez sieć, żeby wszystko wyglądało jak jedna całość z listą po lewej:
+   - bez ciężkiej ramki z narożnikami — półprzezroczysta, ciemna płyta nad pejzażem, cienka złota linia po lewej,
+   - nagłówek jak w menu (Cinzel, wersaliki, złota kreska gasnąca w prawo),
+   - spis rozdziałów jak lista w menu: romb przy pozycji, wybrana i wskazana na czerwonym pasie ze złotą krawędzią,
+   - główny przycisk jak czerwona pieczęć z menu, pozostałe płaskie, w tej samej czcionce,
+   - zakładki „Mój ród” jako napisy z podkreśleniem zamiast kafli.
+   Kontrast (policzony): napisy #d9c49a na tle ok. #0b0704 — 11,4:1; wybrana pozycja #fff0c8 na czerwieni #7d1a12 — 10,9:1;
+   przycisk wtórny #e7d6b2 na #17100a — 13,2:1; ramka przycisku #9a7a2a na #0b0704 — 4,7:1. Fokus klawiatury zawsze widoczny. */
+
+.menu:not(.previewing) .menu-panel,
+.menu:not(.previewing) .menu-panel.wide,
+.menu.book-open:not(.previewing) .menu-panel.book {
+  border: 0;
+  border-left: 1px solid rgba(154, 122, 42, .55);
+  color: #e7d6b2;
+  background:
+    linear-gradient(90deg, rgba(160, 36, 26, .1), rgba(160, 36, 26, 0) 220px),
+    linear-gradient(90deg, rgba(9, 6, 3, .9), rgba(9, 6, 3, .8) 60%, rgba(9, 6, 3, .74));
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .55);
+}
+.menu:not(.previewing) .menu-panel::before,
+.menu:not(.previewing) .menu-panel::after { display: none; }
+
+/* nagłówek okna */
+.menu:not(.previewing) .menu-heading {
+  text-align: left;
+  font-family: 'Cinzel', var(--display);
+  font-weight: 700;
+  font-size: clamp(24px, 3.4vh, 34px);
+  letter-spacing: .16em;
+  color: #fff0c8;
+  text-shadow: 0 0 14px rgba(255, 170, 60, .35), 0 2px 4px #000;
+  padding: 0 0 12px 2px;
+  margin-bottom: 4px;
+  background: linear-gradient(90deg, rgba(233, 199, 102, .8), rgba(154, 122, 42, .35) 40%, transparent) left bottom / 100% 1px no-repeat;
+}
+
+/* ---- spis rozdziałów (Jak grać, Ustawienia) jak lista w menu ---- */
+.menu:not(.previewing) .help-nav { border-right: 1px solid rgba(154, 122, 42, .3); padding-right: 18px; }
+.menu:not(.previewing) .help-toc { gap: clamp(1px, .3vh, 4px); }
+.menu:not(.previewing) .help-toc-group {
+  margin: 14px 0 6px 6px;
+  font-family: 'Cinzel', var(--display);
+  font-size: clamp(12px, 1.5vh, 14px);
+  letter-spacing: .18em;
+  color: #e9c766;
+}
+.menu:not(.previewing) .help-toc-group::after { background: linear-gradient(90deg, rgba(154, 122, 42, .55), transparent); }
+.menu:not(.previewing) .help-toc-group:first-child { margin-top: 2px; }
+.menu:not(.previewing) .help-toc-item {
+  grid-template-columns: 12px 1fr;
+  gap: 14px;
+  min-height: 42px;
+  padding: 6px 12px 6px 12px;
+  font-family: 'Cinzel', var(--display);
+  font-size: clamp(14px, 1.85vh, 17px);
+  font-weight: 700;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  line-height: 1.2;
+  color: #d9c49a;
+  text-shadow: 0 2px 4px #000;
+  border-left: 0;
+  transition: color .15s, background .2s, padding .15s;
+}
+/* numer zamieniony na romb jak przy pozycjach menu (liczba zostaje dla czytnika ekranu) */
+.menu:not(.previewing) .help-toc-n {
+  width: 12px; height: 12px;
+  font-size: 0; color: transparent;
+  border: 1px solid #9a7a2a; background: transparent;
+  transform: rotate(45deg) scale(.7); opacity: .55;
+  transition: transform .15s, opacity .15s, background .15s;
+}
+.menu:not(.previewing) .help-toc-item:hover,
+.menu:not(.previewing) .help-toc-item:focus-visible,
+.menu:not(.previewing) .help-toc-item[aria-selected='true'] {
+  color: #fff0c8;
+  padding-left: 18px;
+  background: linear-gradient(90deg, rgba(160, 36, 26, .62), rgba(160, 36, 26, .18) 70%, rgba(160, 36, 26, 0));
+  box-shadow: inset 3px 0 0 #e9c766;
+  text-shadow: 0 0 14px rgba(255, 170, 60, .5), 0 2px 4px #000;
+}
+.menu:not(.previewing) .help-toc-item[aria-selected='true'] .help-toc-n,
+.menu:not(.previewing) .help-toc-item:hover .help-toc-n,
+.menu:not(.previewing) .help-toc-item:focus-visible .help-toc-n {
+  opacity: 1; transform: rotate(45deg) scale(1); background: #e9c766; border-color: #fff1c2;
+}
+.menu:not(.previewing) .help-toc-item:focus-visible { outline: 2px solid #fff3c4; outline-offset: -2px; }
+
+/* ---- przyciski w oknach ---- */
+/* główny (Zapisz, Do boju, Graj…): czerwona pieczęć jak „Nowa gra” w menu */
+.menu:not(.previewing) .menu-panel .menu-btn {
+  font-family: 'Cinzel', var(--display);
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: #fff0c8;
+  border: 0;
+  background: linear-gradient(90deg, #9c2219, #7a160f 60%, #5e110b);
+  box-shadow: inset 3px 0 0 #e9c766, inset 0 1px 0 rgba(233, 199, 102, .45), inset 0 -1px 0 rgba(233, 199, 102, .25);
+  text-shadow: 0 2px 4px #000;
+  transform: none;
+  transition: background .2s, box-shadow .15s;
+}
+.menu:not(.previewing) .menu-panel .menu-btn:hover {
+  background: linear-gradient(90deg, #c22d20, #8c1a11 60%, #6a130c);
+  box-shadow: inset 4px 0 0 #fff1c2, inset 0 1px 0 rgba(255, 241, 194, .6), inset 0 -1px 0 rgba(233, 199, 102, .4);
+  transform: none;
+}
+.menu:not(.previewing) .menu-panel .menu-btn:active { background: linear-gradient(90deg, #7d1a12, #5e110b); transform: none; }
+.menu:not(.previewing) .menu-panel .menu-btn:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
+/* wtórne (Wstecz, Przywróć domyślne, Plan na start, Konto i hasło): płaskie, ta sama czcionka */
+.menu:not(.previewing) .menu-panel .menu-back,
+.menu:not(.previewing) .menu-panel .btn-plain {
+  min-height: 42px;
+  font-family: 'Cinzel', var(--display);
+  font-weight: 700;
+  font-size: clamp(13px, 1.7vh, 15px);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: #e7d6b2;
+  background: rgba(23, 16, 10, .75);
+  border: 1px solid rgba(154, 122, 42, .85);
+  box-shadow: none;
+  text-shadow: 0 1px 3px #000;
+  transform: none;
+  transition: color .15s, background .2s, border-color .15s;
+}
+.menu:not(.previewing) .menu-panel .menu-back:hover,
+.menu:not(.previewing) .menu-panel .btn-plain:hover {
+  color: #fff0c8;
+  border-color: #e9c766;
+  background: linear-gradient(90deg, rgba(160, 36, 26, .45), rgba(23, 16, 10, .8));
+}
+.menu:not(.previewing) .menu-panel .menu-back:focus-visible,
+.menu:not(.previewing) .menu-panel .btn-plain:focus-visible { outline: 2px solid #fff3c4; outline-offset: 2px; }
+
+/* ---- treść stron ---- */
+.menu:not(.previewing) .help-title {
+  font-family: 'Cinzel', var(--display);
+  font-size: clamp(26px, 3.6vh, 36px);
+  letter-spacing: .08em;
+  color: #fff0c8;
+  text-shadow: 0 0 14px rgba(255, 170, 60, .3), 0 2px 4px #000;
+}
+.menu:not(.previewing) .help-pane .help-h { font-family: 'Cinzel', var(--display); letter-spacing: .14em; }
+.menu:not(.previewing) .help-pane .help-tip { background: rgba(17, 12, 7, .8); border-color: rgba(154, 122, 42, .35); border-left-color: #b0261c; }
+.menu:not(.previewing) .help-pane .help-table tr:nth-child(even) td { background: rgba(17, 12, 7, .7); }
+
+/* ---- zakładki (Mój ród, Gra przez sieć, dawne zakładki ustawień) jako napisy z podkreśleniem ---- */
+.menu:not(.previewing) .menu-tabs.top .menu-nav { border-bottom: 1px solid rgba(154, 122, 42, .45); gap: 4px; }
+.menu:not(.previewing) .menu-panel .menu-tabs.top .menu-tab {
+  font-family: 'Cinzel', var(--display);
+  font-weight: 700;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  font-size: clamp(13px, 1.7vh, 15px);
+  color: #cbb68a;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  border-radius: 0;
+  margin: 0;
+  text-shadow: 0 1px 3px #000;
+}
+.menu:not(.previewing) .menu-panel .menu-tabs.top .menu-tab:hover { color: #ffe7a6; background: linear-gradient(0deg, rgba(160, 36, 26, .35), transparent); }
+.menu:not(.previewing) .menu-panel .menu-tabs.top .menu-tab[aria-selected='true'] {
+  color: #fff0c8;
+  background: linear-gradient(0deg, rgba(160, 36, 26, .55), rgba(160, 36, 26, 0));
+  box-shadow: inset 0 -3px 0 #e9c766;
+  text-shadow: 0 0 12px rgba(255, 170, 60, .45), 0 1px 3px #000;
+}
+.menu:not(.previewing) .menu-panel .menu-tab:focus-visible { outline: 2px solid #fff3c4; outline-offset: -2px; }
+
+/* ---- Mój ród: karta postaci bez starych ramek ---- */
+.menu:not(.previewing) .house-hero {
+  background: linear-gradient(90deg, rgba(160, 36, 26, .22), rgba(17, 12, 7, .55) 45%, rgba(17, 12, 7, .35));
+  border: 0;
+  border-left: 3px solid #e9c766;
+  box-shadow: inset 0 1px 0 rgba(154, 122, 42, .35), inset 0 -1px 0 rgba(154, 122, 42, .35);
+}
+.menu:not(.previewing) .house-name { font-family: 'Cinzel', var(--display); letter-spacing: .1em; color: #fff0c8; text-shadow: 0 2px 4px #000; }
+.menu:not(.previewing) .house-title { font-family: 'Cinzel', var(--display); letter-spacing: .2em; text-transform: uppercase; color: #e9c766; }
+.menu:not(.previewing) .house-h { font-family: 'Cinzel', var(--display); letter-spacing: .16em; text-transform: uppercase; color: #e9c766; }
+.menu:not(.previewing) .house-stat { background: rgba(17, 12, 7, .6); border-color: rgba(154, 122, 42, .3); }
+
+@media (prefers-reduced-motion: reduce) {
+  .menu:not(.previewing) .help-toc-item, .menu:not(.previewing) .help-toc-n,
+  .menu:not(.previewing) .menu-panel .menu-btn, .menu:not(.previewing) .menu-panel .menu-back, .menu:not(.previewing) .menu-panel .btn-plain { transition: none; }
+}
+
+/* spis szerszy (wersaliki z rozstrzeleniem zawijały „Ostrość i krawędzie” na dwie linie) */
+.menu:not(.previewing) .help-book { grid-template-columns: clamp(270px, 23vw, 340px) minmax(0, 1fr); }
+.menu:not(.previewing) .help-toc-item { letter-spacing: .07em; }
+/* strona rozdziału na całą wysokość okna: stara reguła .help-text (max-height 520 px z własnym przewijaniem) ucinała
+   tekst w połowie okna, a niżej było pusto; przewija się teraz cała strona (.help-pane) */
+.menu-panel.book .help-pane .help-text { max-height: none; overflow: visible; }

@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.63.5 — Ustawienia, Jak grać i Mój ród w stylu nowego menu (2026-10-28)
+
+- **Okna w prawej części menu** (`src/ui/menu-windows.css`, osobny plik, żeby nie wchodzić w `style.css` czatu od menu): bez ciężkiej ramki z narożnikami — półprzezroczysta ciemna płyta nad pejzażem (lekkie rozmycie), cienka złota linia po lewej; nagłówek okna jak w menu (Cinzel, wersaliki, złota kreska gasnąca w prawo)
+- **Spis rozdziałów** w Ustawieniach i „Jak grać” jak lista w menu: romb przy pozycji zamiast numerowanego kwadratu, wybrana i wskazana pozycja na czerwonym pasie ze złotą krawędzią, nagłówki grup w tej samej czcionce; spis szerszy, żeby nazwy się nie zawijały
+- **Przyciski:** główny (Zapisz, Do boju, Graj) jak czerwona pieczęć z menu, pozostałe (Wstecz, Przywróć domyślne, Plan na start, Konto i hasło) płaskie, z cienką złotą ramką, w tej samej czcionce
+- **Mój ród (postać):** zakładki jako napisy z podkreśleniem zamiast kafli, karta postaci z czerwono-złotym pasem po lewej, imię i tytuł w Cinzel; Nowa gra i Gra przez sieć dostały to samo tło i przyciski
+- **Poprawka:** w „Jak grać” i Ustawieniach tekst rozdziału kończył się w połowie okna (stary limit wysokości 520 px z własnym przewijaniem), a niżej było pusto — strona wypełnia teraz całe okno i przewija się w całości
+- Dostępność: kontrast policzony (napisy 11,4:1, wybrana pozycja 10,9:1, przycisk wtórny 13,2:1, ramka 4,7:1), widoczny fokus klawiatury na każdej pozycji i przycisku, bez animacji przy `prefers-reduced-motion`
+- Bot: bez zmian (interfejs)
+
 ## 0.63.4 — ślady butów: każdy swoje, na ziemi, bledną zamiast znikać (2026-10-28)
 
 - **Trzech obok siebie = jedne ślady:** odciski liczyły się z położenia w symulacji, a na ekranie gra rozsuwa ludzi idących jednym torem. Teraz biorą miejsce stóp postaci dokładnie tak, jak stoi na ekranie (scena zapisuje je przy rysowaniu chłopów i żołnierzy), więc każdy zostawia swój ślad
