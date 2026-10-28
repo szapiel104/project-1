@@ -773,7 +773,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const towerBox = el('div', 'gate-box');
   const towerState = el('p', 'gate-state');
   const towerBtns = el('div', 'actions');
-  const tSel = el('button', 'btn-main', tx('Zaznacz łuczników', 'Select archers')); tSel.type = 'button';
+  const tSel = el('button', 'btn-main', tx('Zaznacz stojących na wieży', 'Select the men on the tower')); tSel.type = 'button';
   const tDown = el('button', 'btn-main', tx('Zejdźcie z wieży', 'Come down from the tower')); tDown.type = 'button';
   tSel.addEventListener('click', () => events.onSelectGarrison(infoId));
   tDown.addEventListener('click', () => events.onDismount(infoId));
@@ -1503,7 +1503,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       towerBox.hidden = !(i.own && i.garrison !== undefined);
       if (i.garrison !== undefined) {
         const wall = i.def.id === 'stoneWall';
-        setText(towerState, i.garrison ? `${wall ? tx('Na murze', 'On the wall') : tx('Na wieży', 'On the tower')}: ${i.garrison} / ${i.garrisonMax ?? (wall ? 2 : 4)} ${tx('łuczników', 'archers')}` : wall ? tx('Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.', 'No one on the wall. Select archers and right-click the wall — they will climb the ladder.') : tx('Wieża pusta. Zaznacz łuczników i kliknij wieżę prawym przyciskiem.', 'The tower is empty. Select archers and right-click the tower.'));
+        setText(towerState, i.garrison ? `${wall ? tx('Na murze', 'On the wall') : tx('Na wieży', 'On the tower')}: ${i.garrison} / ${i.garrisonMax ?? (wall ? 2 : 4)} ${wall ? tx('łuczników', 'archers') : tx('żołnierzy', 'men')}` : wall ? tx('Nikogo na murze. Zaznacz łuczników i kliknij mur prawym przyciskiem — wejdą po drabinie.', 'No one on the wall. Select archers and right-click the wall — they will climb the ladder.') : tx(`Pomost pusty (miejsca: ${i.garrisonMax ?? 4}). Zaznacz żołnierzy i kliknij wieżę prawym przyciskiem — wejdą od frontu albo z muru i staną na pomoście. Łucznicy strzelają stąd dalej.`, `The platform is empty (room for ${i.garrisonMax ?? 4}). Select men and right-click the tower — they go up at the front or from the wall and stand on the platform. Archers shoot further from up here.`));
         tSel.disabled = tDown.disabled = !i.garrison;
       }
       quarBox.hidden = !(i.own && i.quarantine);

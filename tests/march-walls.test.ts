@@ -70,7 +70,9 @@ describe('marsz w szyku wzdłuż muru kamiennego', () => {
       // drabina na murze (od środka miasta): oddział stawiamy obok niej i każemy iść wzdłuż muru
       const ladder = g.buildings.find((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'ladder')!;
       const along = (g.walls[ladder.y * W + ladder.x - 1]! & WALL_TOP) || (g.walls[ladder.y * W + ladder.x + 1]! & WALL_TOP) ? [0, 1] : [1, 0];
-      const ids = g.soldiers.filter((s) => s.owner === 0 && !s.up).slice(0, 12).map((s) => s.id);
+      step(g, []);
+      // bez łuczników stojących na pomostach wież (oni już są wysoko)
+      const ids = g.soldiers.filter((s) => s.owner === 0 && !s.up && !(g.walls[(s.py >> 8) * W + (s.px >> 8)]! & WALL_TOP)).slice(0, 12).map((s) => s.id);
       // ustawiamy ich ciasno przy drabinie, po stronie miasta
       let k = 0;
       for (const s of g.soldiers) if (ids.includes(s.id)) {

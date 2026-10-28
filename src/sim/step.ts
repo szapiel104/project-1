@@ -220,6 +220,8 @@ export function step(g: GameState, commands: readonly Command[]): void {
   enlistSystem(g);
   stormSystem(g);
   fireSystem(g);
+  // przejścia na murach i pomostach wież muszą być aktualne, zanim wojsko policzy drogi (start gry, wczytanie zapisu)
+  stoneWallSystem(g);
   armySystem(g);
   roadWreckSystem(g);
   banditSystem(g);

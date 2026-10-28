@@ -260,13 +260,14 @@ export const FUEL_SHARE: Readonly<Record<string, number>> = { house: 1, shackL: 
 export const NO_TORCH = new Set(['tent', 'camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp', 'fieldTent', 'mageFire', 'mageWater', 'mageHut']);
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
-/** Wieże z łucznikami: ilu łuczników mieści i o ile pól dalej z niej strzelają (ponad zwykłe +3 z wysokości) */
+/** Wieże: ilu żołnierzy staje na pomoście (każdy na swoim polu, więc tyle, ile pól ma wieża) i o ile pól dalej
+ *  strzela z niej łucznik (ponad zwykłe +3 z wysokości) */
 export const TOWERS: Readonly<Record<string, { room: number; bonus: number }>> = {
-  // czatownia: jeden łucznik, niski pomost (strzela pole bliżej niż ze strażnicy)
+  // czatownia: jeden człowiek, niski pomost (strzela pole bliżej niż ze strażnicy)
   lookout: { room: 1, bonus: -1 },
   watchtower: { room: 4, bonus: 0 },
-  stoneTower: { room: 6, bonus: 1 },
-  stoneTowerBig: { room: 10, bonus: 2 },
+  stoneTower: { room: 4, bonus: 1 },
+  stoneTowerBig: { room: 9, bonus: 2 },
   // wielka wieża: najwyższa, strzela wyraźnie dalej niż duża (Michał 25.10)
   stoneTowerGreat: { room: 16, bonus: 6 },
 };

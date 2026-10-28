@@ -14,6 +14,7 @@ import { moveStack } from './relocate';
 import { buildWork, demolish, enemyNear, maxHp, rebuildCost, restore, ruin } from './placement';
 import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
+import { stoneWallSystem, towerTiles, towerUnder } from './stonewalls';
 import { lineOfSight } from './sight';
 import { collectCorpses, handFor, sendPair } from './bearers';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
@@ -633,25 +634,51 @@ function besideTower(g: GameState, b: Building): number {
   return -1;
 }
 
-/** Wszyscy z wieży schodzą na ziemię obok niej */
-export function orderDismount(g: GameState, player: number, towerId: number): void {
-  for (const s of g.soldiers) if (s.owner === player && s.post === towerId) { leavePost(g, s); s.goal = -1; s.path = []; s.target = 0; s.slot = undefined; }
+/** Wieża, na której pomoście stoi żołnierz (dawne przypisanie z zapisu albo pole wieży pod nogami); 0 = nie stoi na wieży */
+export function towerOf(g: GameState, s: Soldier): number {
+  if (s.up && s.post) return s.post;
+  return towerUnder(g, tileOf(g, s))?.id ?? 0;
 }
 
-/** Ilu łuczników zmieści się na budynku: wieża strażnicza 4, pole muru kamiennego 2 (wchodzą po drabinie) */
+/** Wszyscy z pomostu wieży schodzą na ziemię obok niej (drogą przez wejście) */
+export function orderDismount(g: GameState, player: number, towerId: number): void {
+  const tower = buildingById(g, towerId);
+  const spot = tower ? besideTower(g, tower) : -1;
+  for (const s of g.soldiers) {
+    if (s.owner !== player || towerOf(g, s) !== towerId) continue;
+    leavePost(g, s);
+    s.goal = spot; s.path = []; s.target = 0; s.slot = undefined; s.hold = -1;
+  }
+}
+
+/** Ilu żołnierzy zmieści się na pomoście wieży: każdy stoi na swoim polu (czatownia 1, strażnica 4, wielka baszta 16) */
 export const garrisonRoom = (id: string): number => TOWERS[id]?.room ?? 0;
 
-/** Łucznicy wchodzą na wieżę strażniczą albo mur kamienny; inni żołnierze stają przy nim */
+/**
+ * Rozkaz „na wieżę” (prawy klik na własnej wieży): każdy wybrany żołnierz (nie taran) idzie na wolne pole pomostu
+ * jak na zwykły teren — przez wejście od frontu albo z muru. Kto się nie zmieści, staje przy wieży.
+ */
 export function orderGarrison(g: GameState, player: number, ids: readonly number[], towerId: number): void {
   const tower = buildingById(g, towerId);
-  if (!tower || tower.owner !== player || !garrisonRoom(BUILDINGS[tower.type]!.id) || tower.build) return;
-  let room = garrisonRoom(BUILDINGS[tower.type]!.id) - g.soldiers.filter((s) => s.post === towerId).length;
+  if (!tower || tower.owner !== player || !garrisonRoom(BUILDINGS[tower.type]!.id) || tower.build || tower.ruined) return;
+  // pomost świeżo ukończonej wieży mógł jeszcze nie dostać przejść (system murów liczy je raz na tick)
+  stoneWallSystem(g);
+  const tiles = towerTiles(g, tower);
+  const want = new Set(ids);
+  const busy = new Set<number>();
+  for (const o of g.soldiers) if (o.hp > 0 && !want.has(o.id)) { const t = tileOf(g, o); if (tiles.includes(t)) busy.add(t); if (tiles.includes(o.goal)) busy.add(o.goal); }
   const spot = besideTower(g, tower);
   for (const s of g.soldiers) {
-    if (s.owner !== player || !ids.includes(s.id) || s.post === towerId) continue;
-    const ranged = !!UNITS[s.kind]!.range;
-    if (ranged && room > 0) { leavePost(g, s); s.post = towerId; room--; }
-    s.goal = spot; s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.prey = 0; s.siegeOf = 0; s.slot = undefined; s.wounded = 0;
+    if (s.owner !== player || !want.has(s.id) || s.hp <= 0 || UNITS[s.kind]!.ram) continue;
+    leavePost(g, s);
+    const here = tileOf(g, s);
+    // już stoi na tej wieży: zostaje na swoim polu
+    let t = tiles.includes(here) && !busy.has(here) ? here : tiles.find((x) => !busy.has(x));
+    if (t === undefined) t = spot;
+    else busy.add(t);
+    s.goal = t; s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.prey = 0; s.siegeOf = 0; s.slot = undefined; s.wounded = 0;
+    // pilnuje swojego pola na pomoście (po walce wraca na nie, nie schodzi za wrogiem)
+    if (t !== spot) s.hold = t;
   }
 }
 
@@ -964,22 +991,27 @@ export function armySystem(g: GameState): void {
       if (rate && g.tick % rate === 0) s.hp++;
     }
     if (s.wounded === 2 && s.hp * 100 >= def.hp * HEALED) { s.wounded = 0; if ((s.hold ?? -1) >= 0) { s.goal = s.hold!; s.path = []; } }
-    // wieża: łucznik przy niej wchodzi na górę; gdy wieżę zniszczą, spada na ziemię
+    // dawne przypisanie do wieży (zapisy sprzed 0.64): przenosi go na wolne pole pomostu jak zwykłego żołnierza
     if (s.post) {
       const tower = buildingById(g, s.post);
-      if (!tower || tower.ruined) { s.up = false; s.post = 0; }
-      else if (!s.up && s.goal < 0 && !s.path.length && rectGap(g, tileOf(g, s), tower) <= 1) {
-        const fp = footprint(BUILDINGS[tower.type]!, tower.rot);
-        s.up = true; s.px = tower.x * FP + (fp.w * FP) / 2; s.py = tower.y * FP + (fp.h * FP) / 2;
+      const wasUp = !!s.up;
+      s.up = false; s.post = 0;
+      if (tower && !tower.ruined && !tower.build && wasUp) {
+        const taken = new Set(g.soldiers.filter((o) => o !== s && o.hp > 0).map((o) => tileOf(g, o)));
+        const t = towerTiles(g, tower).find((x) => !taken.has(x));
+        const at = t ?? besideTower(g, tower);
+        if (at >= 0) { s.px = (at % W) * FP + FP / 2; s.py = Math.floor(at / W) * FP + FP / 2; if (t !== undefined) s.hold = t; }
       }
     }
-    const postAt = s.up && s.post ? buildingById(g, s.post) : undefined;
+    // stoi na pomoście wieży: strzela dalej (wysokość +3 i premia wieży) i nie schodzi sam za wrogiem
+    const postAt = towerUnder(g, tileOf(g, s));
+    const perch = !!postAt;
     const range = def.range ? def.range + (high(g, s) ? 3 : 0) + (postAt ? towerBonus(BUILDINGS[postAt.type]!.id) : 0) : 0;
     // obrona i „stój”: bez celu pilnuje miejsca, w którym stoi (np. po rozkazie ataku albo po szkoleniu)
     const stance = s.stance ?? 0;
     if (stance && s.goal < 0 && !s.target && !s.path.length && (s.hold ?? -1) < 0) s.hold = tileOf(g, s);
     // ciężko ranny w walce cofa się za szyk (nie w postawie „stój”, nie z wieży, nie strażnik miejski)
-    if (!s.wounded && s.target && !def.guard && !def.ram && !def.sapper && !def.bandit && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) retreat(g, s, byId);
+    if (!s.wounded && s.target && !def.guard && !def.ram && !def.sapper && !def.bandit && !s.up && !perch && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) retreat(g, s, byId);
     // jak daleko od pilnowanego pola wolno mu odejść za wrogiem
     const leash = stance === 1 ? 6 : stance === 2 ? 0 : Infinity;
     const tooFar = (t: number): boolean => {
@@ -1050,7 +1082,7 @@ export function armySystem(g: GameState): void {
         // nikogo do bicia: wraca do budynku, który oblegał przed walką
         if (!foe && resumeSiege(s) && siege(g, s, def, taken)) continue;
         // ranny na widok wroga od razu ustępuje, zanim dostanie kolejny cios
-        if (foe && !def.guard && !def.bandit && !s.up && !s.post && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) { retreat(g, s, byId); continue; }
+        if (foe && !def.guard && !def.bandit && !s.up && !perch && stance !== 2 && s.hp * 100 <= def.hp * WOUNDED) { retreat(g, s, byId); continue; }
       }
       if (foe) {
         // atak w marszu: na widok wroga przerywa marsz (drogę do celu odnajdzie po walce)
@@ -1086,7 +1118,7 @@ export function armySystem(g: GameState): void {
           }
           continue;
         }
-        if (s.up) continue; // z wieży nie schodzi za wrogiem
+        if (s.up || perch) continue; // z wieży nie schodzi za wrogiem
         if (stance === 2 || tooFar(tileOf(g, foe))) { s.target = 0; foe = undefined; }
       }
       if (foe) {
@@ -1156,12 +1188,12 @@ export function armySystem(g: GameState): void {
             }
             continue;
           }
-          if (!s.up && !s.path.length) { const next = greedy(g, tileOf(g, s), (prey.py >> 8) * W + (prey.px >> 8), taken, s.owner); if (next >= 0) { s.path = [next]; taken.add(next); } }
+          if (!s.up && !perch && !s.path.length) { const next = greedy(g, tileOf(g, s), (prey.py >> 8) * W + (prey.px >> 8), taken, s.owner); if (next >= 0) { s.path = [next]; taken.add(next); } }
           if (s.path.length) { step(g, s); continue; }
         }
       }
       // brak wrogich żołnierzy w pobliżu: bierze się za najbliższy wrogi budynek
-      if (!s.up && !range && !stance && !s.amove && siege(g, s, def, taken)) continue; // obrona i „stój” nie idą same na budynki; łucznicy sami nie strzelają w budynki, tylko na rozkaz
+      if (!s.up && !perch && !range && !stance && !s.amove && siege(g, s, def, taken)) continue; // obrona i „stój” nie idą same na budynki; łucznicy sami nie strzelają w budynki, tylko na rozkaz
     }
     if (s.up) continue;
     // zwarty szyk w marszu: trzyma swoje miejsce obok punktu prowadzącego
@@ -1243,7 +1275,7 @@ export function armySystem(g: GameState): void {
   }
   // polegli zostają na polu jako ciała, aż zabierze je grabarz
   if (g.soldiers.some((s) => s.hp <= 0)) {
-    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false, ...(s.up && s.post ? { post: s.post } : {}) }); // rozbity taran nie zostawia ciała; poległy na wieży albo murze leży na górze
+    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false, ...((() => { const t = towerOf(g, s); return t ? { post: t } : {}; })()) }); // rozbity taran nie zostawia ciała; poległy na wieży albo murze leży na górze
     g.soldiers = g.soldiers.filter((s) => s.hp > 0);
   }
   lookout(g);

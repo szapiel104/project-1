@@ -38,7 +38,7 @@ import { storeNotes } from './ui/storeNotes';
 import { createHpBars } from './ui/hpBars';
 import { usedIn } from './sim/systems/stock';
 import { nextWave } from './sim/systems/bot';
-import { battleMages, garrisonRoom, octant, planFormation, trainsAt } from './sim/systems/army';
+import { battleMages, garrisonRoom, octant, planFormation, towerOf, trainsAt } from './sim/systems/army';
 import { campWatch, prodInfo, sampleMade, siteInfo, watchInfo } from './ui/buildingPanel';
 import { EMPTY, SANDBOX, TEST } from './testmode';
 import { census } from './debug/census';
@@ -223,7 +223,7 @@ const hud = createHud(document.getElementById('ui')!, {
     play('select');
   },
   onDismount: (id) => { pending.push({ type: 'dismount', player: ME, tower: id }); play('rotate'); },
-  onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && s.post === id).map((s) => s.id), false); play('select'); },
+  onSelectGarrison: (id) => { chooseSoldiers(game.soldiers.filter((s) => s.owner === ME && towerOf(game, s) === id).map((s) => s.id), false); play('select'); },
   onGate: (id, open) => { pending.push({ type: 'gate', player: ME, id, open }); play('click'); },
   onPower: (id, on) => { pending.push({ type: 'power', player: ME, id, on }); play('click'); },
   onQuarantine: (id, on) => { pending.push({ type: 'quarantine', player: ME, id, on }); play('click'); },
@@ -904,7 +904,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
     recruit: (def.id === 'barracks' || def.id === 'mageFire' || def.id === 'mageWater') && !b.build && !b.ruined ? recruitInfo(b.type).map((r) => ({ ...r, rally: (b.rally?.[unitIndex(r.id)] ?? -1) >= 0 })) : undefined, gate: def.gate ? { open: b.gateOpen ?? true, shut: !!b.shut } : undefined,
     power: !b.build && (def.production || def.staff) && def.id !== 'keep' ? { on: !b.off, worker: b.worker !== 0 } : undefined,
     quarantine: canQuarantine(b) && (game.players[b.owner]?.plague || b.quarantine) ? { on: !!b.quarantine, sick: game.units.filter((u) => u.home === b.id && u.sick && u.phase === 22).length } : undefined,
-    garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => s.post === b.id && s.up).length : undefined,
+    garrison: garrisonRoom(def.id) ? game.soldiers.filter((s) => towerOf(game, s) === b.id).length : undefined,
     garrisonMax: garrisonRoom(def.id) || undefined,
     prod: b.owner === ME && !b.build && (def.production || def.staff) && !def.keepers ? prodInfo(game, b, (id) => personCard(id)?.name ?? '') : undefined,
     logistics: b.owner === ME ? storeLogistics(game, b, (id) => personCard(id)?.name ?? '') : undefined,
@@ -1345,15 +1345,7 @@ function armyRightClick(amove: boolean, queue = false): void {
   if (b && b.owner === ME && garrisonRoom(BUILDINGS[b.type]!.id) && !b.build) {
     const sent = [...chosen];
     pending.push({ type: 'garrison', player: ME, ids: sent, tower: b.id });
-    // na wieży nie są już częścią oddziału ani grup 1–0: zostają na wieży, póki nie zdejmie się ich z jej okna
-    // (po wykonaniu rozkazu: tylko ci, którzy dostali miejsce na wieży — włócznicy stoją przy niej i zostają w oddziale)
-    setTimeout(() => {
-      const up = sent.filter(onTower);
-      if (!up.length) return;
-      for (const [k, l] of groups) groups.set(k, l.filter((id) => !up.includes(id)));
-      chooseSoldiers([...chosen].filter((id) => !up.includes(id)), false, true);
-      armyBarUpdate();
-    }, 300);
+    // na pomoście stoją jak na zwykłym terenie: dalej należą do oddziału i grup, zaznacza się ich normalnie
     play('rotate');
     shout('move');
     return;
@@ -1611,8 +1603,8 @@ function updateHoverFoe(): void {
   if (!hoverFoe && chosen.size && hoverTile) {
     const b = game.buildings.find((x) => x.id === game.occupancy[hoverTile!.y * game.map.width + hoverTile!.x]);
     if (b && b.owner === ME && !b.build && garrisonRoom(BUILDINGS[b.type]!.id)) {
-      const room = garrisonRoom(BUILDINGS[b.type]!.id) - game.soldiers.filter((s) => s.post === b.id).length;
-      enter = room > 0 && game.soldiers.some((s) => chosen.has(s.id) && !!UNITS[s.kind]!.range && s.post !== b.id);
+      const room = garrisonRoom(BUILDINGS[b.type]!.id) - game.soldiers.filter((s) => towerOf(game, s) === b.id).length;
+      enter = room > 0 && game.soldiers.some((s) => chosen.has(s.id) && !UNITS[s.kind]!.ram && towerOf(game, s) !== b.id);
     }
   }
   canvas.classList.toggle('enter', enter);
@@ -2938,7 +2930,7 @@ const devPanel = createDevPanel(document.body, withResync({
   onFoeAtTower: () => {
     const W = game.map.width;
     const towers = game.buildings.filter((b) => b.owner === ME && isTower(BUILDINGS[b.type]!.id));
-    const manned = towers.find((t) => game.soldiers.some((s) => s.post === t.id && s.up)) ?? towers[0];
+    const manned = towers.find((t) => game.soldiers.some((s) => towerOf(game, s) === t.id)) ?? towers[0];
     if (!manned) { devPanel.placed(tx('Nie masz wieży strażniczej.', 'You have no watchtower.')); return; }
     for (const [dx, dy] of [[6, 0], [-6, 0], [0, 6], [0, -6], [5, 5], [-5, -5]] as const) {
       const tx = manned.x + 1 + dx, ty = manned.y + 1 + dy;

@@ -790,7 +790,11 @@ function devFortify(g: GameState, player: number, walls: DevWalls = 'mix'): void
   const archer = UNITS.findIndex((u) => u.id === 'archer');
   for (const b of g.buildings) {
     if (b.owner !== player || (b.type !== stoneT && b.type !== woodT)) continue;
-    for (let k = 0; k < (b.type === stoneT ? 3 : 2); k++) g.soldiers.push({ id: g.nextId++, owner: player, kind: archer, px: b.x * FP + FP, py: b.y * FP + FP, path: [], hp: UNITS[archer]!.hp, goal: -1, wait: 0, target: 0, cd: 0, post: b.id, up: true });
+    // stoją na polach pomostu jak na zwykłym terenie (wieża 2×2: cztery pola), każdy na swoim
+    for (let k = 0; k < (b.type === stoneT ? 3 : 2); k++) {
+      const tx = b.x + (k % 2), ty = b.y + (k >> 1);
+      g.soldiers.push({ id: g.nextId++, owner: player, kind: archer, px: tx * FP + FP / 2, py: ty * FP + FP / 2, path: [], hp: UNITS[archer]!.hp, goal: -1, wait: 0, target: 0, cd: 0, hold: ty * g.map.width + tx });
+    }
   }
   // dwudziestu włóczników przy twierdzy
   const keep = g.buildings.find((b) => b.owner === player && b.type === 0);

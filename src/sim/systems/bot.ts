@@ -5,7 +5,7 @@ import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
 import { MAGE_CAP, SAPPER, UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
 import { FP, Phase, housing, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
-import { battleMages, orderAttack, orderGarrison, orderMove, train } from './army';
+import { battleMages, garrisonRoom, orderAttack, orderGarrison, orderMove, towerOf, train } from './army';
 import { canAfford, canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
 import { enemyRoad, orderWreck } from './roadwreck';
@@ -234,12 +234,16 @@ export function botSystem(g: GameState): void {
       // ruda musi zostać jeszcze na zwykłych żołnierzy
       const hall = g.buildings.find((b) => b.owner === p.id && !b.build && !b.ruined && (BUILDINGS[b.type]!.id === 'mageFire' || BUILDINGS[b.type]!.id === 'mageWater'));
       if (hall && mine.length >= 6 && battleMages(g, p.id) < botMages(p.level) && p.res[resIndex('gold')]! >= 90) train(g, p.id, hall.id, BUILDINGS[hall.type]!.id);
-      // łucznicy wchodzą na wolne wieże (po dwóch), reszta zostaje do ataku
+      // łucznicy wchodzą na wolne wieże (po dwóch, na czatownię jeden), reszta zostaje do ataku
+      const perched = new Map<number, number>();
+      for (const s of mine) { const t = towerOf(g, s); if (t) perched.set(s.id, t); }
       for (const t of g.buildings) {
-        if (t.owner !== p.id || t.build || !isTower(BUILDINGS[t.type]!.id)) continue;
-        const on = g.soldiers.filter((s) => s.post === t.id).length;
-        if (on >= 2) continue;
-        const free = mine.filter((s) => UNITS[s.kind]!.range && !s.post && s.goal < 0 && !s.target).slice(0, 2 - on);
+        if (t.owner !== p.id || t.build || t.ruined || !isTower(BUILDINGS[t.type]!.id)) continue;
+        const want = Math.min(2, garrisonRoom(BUILDINGS[t.type]!.id));
+        // na wieży albo już w drodze na jej pomost
+        const on = mine.filter((s) => perched.get(s.id) === t.id || (s.goal >= 0 && g.occupancy[s.goal] === t.id)).length;
+        if (on >= want) continue;
+        const free = mine.filter((s) => UNITS[s.kind]!.range && !perched.has(s.id) && s.goal < 0 && !s.target).slice(0, want - on);
         if (free.length) orderGarrison(g, p.id, free.map((s) => s.id), t.id);
       }
     }
@@ -247,7 +251,7 @@ export function botSystem(g: GameState): void {
     if (p.call) {
       const c = p.call;
       p.call = undefined;
-      const field = g.soldiers.filter((s) => fighter(s) && s.owner === p.id && !s.post);
+      const field = g.soldiers.filter((s) => fighter(s) && s.owner === p.id && !towerOf(g, s));
       const n = c.kind === 1 ? Math.ceil(field.length / 2) : field.length;
       if (n && g.tick - c.tick < 2400) orderMove(g, p.id, field.slice(0, n).map((s) => s.id), c.tile, { amove: c.kind !== 2 });
     }
@@ -264,7 +268,7 @@ export function botSystem(g: GameState): void {
       if (foe && army.length >= wave.size && foe.door >= 0) {
         // atak z dwóch stron: połowa idzie pod bramę, połowa obchodzi i uderza z boku; łucznicy z wież zostają
         const w = g.map.width, [kx, ky] = keepCenter(foe), R = (KEEP_SIZE >> 1) + 3;
-        const field = army.filter((s) => !s.post);
+        const field = army.filter((s) => !towerOf(g, s));
         const half = Math.ceil(field.length / 2);
         const side = (g.tick / WAVE_EVERY) % 2 < 1 ? 1 : -1;
         const a = Math.min(g.map.height - 2, Math.max(1, ky + R)) * w + kx;
@@ -275,7 +279,7 @@ export function botSystem(g: GameState): void {
     }
     // wypady: między falami dwóch, trzech żołnierzy poluje na drwali i rybaków wroga poza murami
     if (wave && g.tick >= (LEVELS[p.level] ?? LEVELS[2]!).first / 2 && tk % (THINK * 30) === 0) {
-      const idle = g.soldiers.filter((s) => fighter(s) && s.owner === p.id && !s.post && s.goal < 0 && !s.target);
+      const idle = g.soldiers.filter((s) => fighter(s) && s.owner === p.id && !towerOf(g, s) && s.goal < 0 && !s.target);
       if (idle.length >= 6) {
         const prey = g.units.find((u) => g.players[u.owner]?.team !== p.team && u.job && g.buildings.some((b) => b.id === u.job && ['woodcutter', 'fisher', 'quarry', 'mine', 'oremine'].includes(BUILDINGS[b.type]!.id)));
         if (prey) orderMove(g, p.id, idle.slice(0, 3).map((s) => s.id), (prey.py >> 8) * g.map.width + (prey.px >> 8));
@@ -354,7 +358,7 @@ function sendSappers(g: GameState, p: PlayerState): void {
     if (!r) break;
     orderAttack(g, p.id, [s.id], r.b.id);
     if (r.d >= ESCORT_FROM && armyNear(g, p.team, true, r.x, r.y, SAFE_R) < ESCORT) {
-      const guard = g.soldiers.filter((o) => o.owner === p.id && fighter(o) && !o.post && o.goal < 0 && !o.target).sort((a, b) => a.id - b.id).slice(0, ESCORT);
+      const guard = g.soldiers.filter((o) => o.owner === p.id && fighter(o) && !towerOf(g, o) && o.goal < 0 && !o.target).sort((a, b) => a.id - b.id).slice(0, ESCORT);
       if (guard.length) orderMove(g, p.id, guard.map((o) => o.id), Math.floor(r.y) * g.map.width + Math.floor(r.x), { amove: true });
     }
   }
@@ -442,7 +446,7 @@ function wreckNearby(g: GameState, p: PlayerState): void {
   const keep = playerKeep(g, p.id);
   if (!keep) return;
   const [cx, cy] = keepCenter(keep), W = g.map.width;
-  const free = g.soldiers.filter((s) => s.owner === p.id && s.hp > 0 && !s.post && s.goal < 0 && !s.path.length && !s.target && !s.prey && s.wreck === undefined && !UNITS[s.kind]!.ram && !UNITS[s.kind]!.guard);
+  const free = g.soldiers.filter((s) => s.owner === p.id && s.hp > 0 && !towerOf(g, s) && s.goal < 0 && !s.path.length && !s.target && !s.prey && s.wreck === undefined && !UNITS[s.kind]!.ram && !UNITS[s.kind]!.guard);
   if (free.length < 3) return;
   let best = -1, bd = 30 * 30 + 1;
   for (let y = Math.max(0, cy - 30); y <= Math.min(g.map.height - 1, cy + 30); y++)

@@ -63,7 +63,8 @@ import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { applyCrest, defaultCrest } from './banners';
-import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
+import { FORECOURT, FP, Phase, TICKS_PER_SECOND, buildingById, type GameState } from '../sim/state';
+import { towerEntry, towerUnder } from '../sim/systems/stonewalls';
 import { GREAT_FLIGHT } from '../sim/systems/greatspell';
 import { fireArrow, peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
@@ -3924,6 +3925,15 @@ export class GameRenderer {
           this.facing.set(s.id, heading);
         }
       }
+      // stoi na pomoście drewnianej strażnicy (wszedł jak na teren): pola wieży sięgają aż po nogi z bali,
+      // więc obrazek stoi trochę bliżej środka pomostu, między słupami, a nie w nich
+      if (!tw0 && !s.up) {
+        const tb = towerUnder(g, (s.py >> 8) * width + (s.px >> 8));
+        if (tb && BUILDINGS[tb.type]!.id === 'watchtower') {
+          const fpT = footprint(BUILDINGS[tb.type]!, tb.rot), tcx = tb.x + fpT.w / 2, tcy = tb.y + fpT.h / 2;
+          towerAt = [tcx + (fx - tcx) * 0.76, tcy + (fy - tcy) * 0.76];
+        }
+      }
       // przesunięcie do środka grupy narasta i znika płynnie, więc po dojściu nikt nie „doskakuje” do kolegów
       const want = pull.get(s.id) ?? [0, 0];
       const cur = this.pullNow.get(s.id) ?? [0, 0];
@@ -4584,6 +4594,30 @@ export class GameRenderer {
     for (let i = k; i < this.sickIcons.length; i++) this.sickIcons[i]!.visible = false;
   }
 
+  /** Wejścia na pomosty wież: pole przed drabiną/drzwiami → [kierunek do wieży x, y, wysokość pomostu] (co klatkę) */
+  private towerFeet = new Map<number, [number, number, number]>();
+  private towerFeetAt = -1;
+  private feetOfTowers(g: GameState): Map<number, [number, number, number]> {
+    if (this.towerFeetAt === this.time) return this.towerFeet;
+    this.towerFeetAt = this.time;
+    this.towerFeet.clear();
+    const W = g.map.width;
+    for (const b of g.buildings) {
+      const id = BUILDINGS[b.type]!.id;
+      if (!isTower(id) || b.build || b.ruined) continue;
+      const [out, inner] = towerEntry(g, b);
+      if (out < 0 || (g.walls[out]! & 16)) continue;
+      this.towerFeet.set(out, [(inner % W) - (out % W), Math.floor(inner / W) - Math.floor(out / W), TOWER_TOP[id] ?? WATCH_TOWER_TOP]);
+    }
+    return this.towerFeet;
+  }
+
+  /** Wysokość pomostu wieży, na której polu stoi człowiek (undefined = to nie wieża, tylko np. korona muru) */
+  private towerTopAt(g: GameState, t: number): number | undefined {
+    const b = buildingById(g, g.occupancy[t]);
+    return b && isTower(BUILDINGS[b.type]!.id) ? TOWER_TOP[BUILDINGS[b.type]!.id] ?? WATCH_TOWER_TOP : undefined;
+  }
+
   private standY(view: TerrainView, x: number, y: number, sim = -1): number {
     const k = this.keepAt(x, y);
     let h = view.heightAt(x, y);
@@ -4609,7 +4643,14 @@ export class GameRenderer {
       // u jego stóp — wtedy człowiek podskakiwał na koronę i spadał z powrotem
       const W = g.map.width, t = sim >= 0 ? sim : Math.floor(y) * W + Math.floor(x), tx = t % W, ty = (t - tx) / W;
       if (tx >= 0 && ty >= 0 && tx < W && ty < g.map.height) {
-        if ((g.walls[t]! & 16) && g.gates[t]) return h + STONE_WALL_TOP;
+        // pomost wieży (Michał 28.10.2026: wchodzi się na wieżę jak na teren) albo korona muru
+        if ((g.walls[t]! & 16) && g.gates[t]) return h + (this.towerTopAt(g, t) ?? STONE_WALL_TOP);
+        // przed drabiną albo drzwiami wieży: wspina się na wysokość pomostu
+        const tf = this.feetOfTowers(g).get(t);
+        if (tf) {
+          const off = (x - tx - 0.5) * tf[0] + (y - ty - 0.5) * tf[1];
+          if (off > 0) return h + tf[2] * Math.min(1, off * 2);
+        }
         const lf = this.walls.ladderFeet.get(t);
         if (lf) {
           const off = (x - tx - 0.5) * lf[0] + (y - ty - 0.5) * lf[1];

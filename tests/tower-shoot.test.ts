@@ -5,6 +5,7 @@ import { FP, createGame, playerKeep, population, type Soldier } from '../src/sim
 import { emptyScene, placeReady } from '../src/sim/emptyscene';
 import { spawnPeasant } from '../src/sim/systems/population';
 import { step } from '../src/sim/step';
+import { towerOf } from '../src/sim/systems/army';
 
 describe('wieża strażnicza', () => {
   it('łucznik na wieży strzela do wroga, który podejdzie na zasięg', () => {
@@ -12,10 +13,9 @@ describe('wieża strażnicza', () => {
     for (const p of g.players) p.bot = false;
     const tower = g.buildings.find((b) => b.owner === 0 && b.type === buildingIndex('watchtower'))!;
     expect(tower).toBeTruthy();
-    const archers = g.soldiers.filter((s) => s.owner === 0 && s.post === tower.id);
-    // dojście na wieżę
-    for (let i = 0; i < 300 && !archers.some((s) => s.up); i++) step(g, []);
-    expect(archers.some((s) => s.up)).toBe(true);
+    // łucznicy od startu stoją na polach pomostu (jak na terenie)
+    step(g, []);
+    expect(g.soldiers.some((s) => s.owner === 0 && towerOf(g, s) === tower.id)).toBe(true);
     // wróg staje 7 pól od wieży, w polu, i się nie rusza
     const W = g.map.width;
     let spot = -1;

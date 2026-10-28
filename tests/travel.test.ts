@@ -194,7 +194,8 @@ describe('łucznicy', () => {
     step(g, [{ type: 'garrison', player: 0, ids: [70001], tower: tower!.id }]);
     for (let i = 0; i < 200; i++) step(g, []);
     const a = g.soldiers.find((s) => s.id === 70001)!;
-    expect(a.up).toBe(true);
+    const { towerOf } = await import('../src/sim/systems/army');
+    expect(towerOf(g, a)).toBe(tower!.id);
     // wróg 7 pól dalej: z wieży (zasięg 6+3) trafia, wręcz go nie dosięgną
     g.soldiers.push({ id: 70002, owner: 1, kind: 0, px: a.px + 7 * 256, py: a.py, path: [], hp: 60, goal: -1, wait: 999, target: 0, cd: 0 });
     for (let i = 0; i < 60; i++) step(g, []);

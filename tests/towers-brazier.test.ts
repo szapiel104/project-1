@@ -3,7 +3,7 @@ import { BUILDINGS, buildingIndex, footprint } from '../src/data/buildings';
 import { UNITS } from '../src/data/units';
 import { createGame, FP, type GameState } from '../src/sim/state';
 import { canPlace, placeBuilding } from '../src/sim/systems/placement';
-import { burnFor, FIRE_BONUS, fireArrow, garrisonRoom, hitDamage, orderGarrison } from '../src/sim/systems/army';
+import { burnFor, FIRE_BONUS, fireArrow, garrisonRoom, hitDamage, orderGarrison, towerOf } from '../src/sim/systems/army';
 import { step } from '../src/sim/step';
 
 function game(): GameState {
@@ -36,8 +36,10 @@ function archers(g: GameState, n: number, x: number, y: number): number[] {
 }
 
 it('większe kamienne wieże: 3×3 i 4×4, mieszczą więcej łuczników i strzelają dalej', () => {
-  expect(garrisonRoom('stoneTower')).toBe(6);
-  expect(garrisonRoom('stoneTowerBig')).toBe(10);
+  expect(garrisonRoom('lookout')).toBe(1);
+  expect(garrisonRoom('watchtower')).toBe(4);
+  expect(garrisonRoom('stoneTower')).toBe(4);
+  expect(garrisonRoom('stoneTowerBig')).toBe(9);
   expect(garrisonRoom('stoneTowerGreat')).toBe(16);
   for (const [id, n] of [['stoneTowerBig', 3], ['stoneTowerGreat', 4]] as const) {
     const g = game();
@@ -50,9 +52,8 @@ it('większe kamienne wieże: 3×3 i 4×4, mieszczą więcej łuczników i strze
     const room = garrisonRoom(id);
     const ids = archers(g, room + 2, x, y + n);
     orderGarrison(g, 0, ids, t.id);
-    expect(g.soldiers.filter((s) => s.post === t.id).length).toBe(room);
     for (let i = 0; i < 1500; i++) step(g, []);
-    expect(g.soldiers.filter((s) => s.post === t.id && s.up).length).toBe(room);
+    expect(g.soldiers.filter((s) => towerOf(g, s) === t.id).length).toBe(room);
     expect(footprint(BUILDINGS[type]!, 0).w).toBe(n);
   }
 });
@@ -82,7 +83,7 @@ it('koksownik: tylko na własnym gotowym murze kamiennym albo kamiennej wieży, 
   orderGarrison(g, 0, [id!], t.id);
   for (let i = 0; i < 400; i++) step(g, []);
   const a = g.soldiers.find((s) => s.id === id)!;
-  expect(a.up).toBe(true);
+  expect(towerOf(g, a)).toBe(t.id);
   expect(fireArrow(g, a)).toBe(true);
   const spear = UNITS.findIndex((u) => u.id === 'spearman');
   const foe = { id: g.nextId++, owner: 1, kind: spear, px: a.px, py: a.py + 6 * FP, path: [], hp: UNITS[spear]!.hp, goal: -1, wait: 0, target: 0, cd: 0 };
