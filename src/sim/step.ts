@@ -29,6 +29,7 @@ import { forestSystem } from './systems/forestry';
 import { roadSystem } from './systems/roads';
 import { fireSystem } from './systems/fire';
 import { stoneWallSystem } from './systems/stonewalls';
+import { clearWreck, orderWreck, roadWreckSystem } from './systems/roadwreck';
 import { armySystem, orderAttack, orderMove, orderPatrol, queueMove, clearOrders, QUEUE_MAX, orderStance, train , orderDismount, orderGarrison, enlistSystem, setRally } from './systems/army';
 import { botSystem } from './systems/bot';
 import { banditSystem } from './systems/bandits';
@@ -39,6 +40,8 @@ export type Command =
   | { type: 'build'; player: number; building: string; x: number; y: number; rot?: number }
   | { type: 'demolish'; player: number; id: number }
   | { type: 'unroad'; player: number; x: number; y: number }
+  /** Żołnierze rozkopują wrogą drogę na polu (x, y) */
+  | { type: 'wreck'; player: number; ids: number[]; x: number; y: number }
   | { type: 'setRations'; player: number; level: number }
   | { type: 'setTax'; player: number; level: number }
   | { type: 'train'; player: number; building: number; unit: string }
@@ -101,6 +104,9 @@ function apply(g: GameState, c: Command): void {
     case 'unroad':
       if (Number.isInteger(c.x) && Number.isInteger(c.y)) removeRoad(g, c.player, c.x, c.y);
       break;
+    case 'wreck':
+      if (Array.isArray(c.ids) && Number.isInteger(c.x) && Number.isInteger(c.y)) { const ids = c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)); clearOrders(g, c.player, ids); orderWreck(g, c.player, ids, c.x, c.y); }
+      break;
     case 'dole':
       dole(g, c.player);
       break;
@@ -126,6 +132,7 @@ function apply(g: GameState, c: Command): void {
         if (c.queue === true) queueMove(g, c.player, ids, tile, opts);
         else { clearOrders(g, c.player, ids); orderMove(g, c.player, ids, tile, opts); }
       }
+      if (Array.isArray(c.ids)) clearWreck(g, c.player, c.ids.filter((n) => Number.isInteger(n)));
       break;
     case 'patrol':
       if (Array.isArray(c.ids) && Array.isArray(c.pts)) {
@@ -133,18 +140,21 @@ function apply(g: GameState, c: Command): void {
         const pts = c.pts.slice(0, QUEUE_MAX).filter((p) => Array.isArray(p) && Number.isInteger(p[0]) && Number.isInteger(p[1]) && p[0] >= 0 && p[1] >= 0 && p[0] < W && p[1] < H).map(([x, y]) => y * W + x);
         orderPatrol(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), pts, { form: c.form, amove: c.amove !== false });
       }
+      if (Array.isArray(c.ids)) clearWreck(g, c.player, c.ids.filter((n) => Number.isInteger(n)));
       break;
     case 'stance':
       if (Array.isArray(c.ids)) orderStance(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), c.stance);
       break;
     case 'attack':
       if (Array.isArray(c.ids) && Number.isInteger(c.target)) { const ids = c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)); clearOrders(g, c.player, ids); orderAttack(g, c.player, ids, c.target); }
+      if (Array.isArray(c.ids)) clearWreck(g, c.player, c.ids.filter((n) => Number.isInteger(n)));
       break;
     case 'dismount':
       if (Number.isInteger(c.tower)) orderDismount(g, c.player, c.tower);
       break;
     case 'garrison':
       if (Array.isArray(c.ids) && Number.isInteger(c.tower)) { const ids = c.ids.filter((n) => Number.isInteger(n)); clearOrders(g, c.player, ids); orderGarrison(g, c.player, ids, c.tower); }
+      if (Array.isArray(c.ids)) clearWreck(g, c.player, c.ids.filter((n) => Number.isInteger(n)));
       break;
     case 'gate': {
       const b = buildingById(g, c.id);
@@ -205,6 +215,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   stormSystem(g);
   fireSystem(g);
   armySystem(g);
+  roadWreckSystem(g);
   banditSystem(g);
   migrationSystem(g);
   unrestSystem(g);

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.61.5 — wrogie drogi da się rozkopać (2026-10-28)
+
+- **Drogi mają właściciela** (`roadOwner` w stanie gry i zapisie; stare zapisy — drogi niczyje). Narzędziem rozbiórki zdejmujesz tylko swoje; na cudzej drodze nie położysz swojej
+- **Rozkopywanie** (`sim/systems/roadwreck.ts`): zaznaczone wojsko + prawy klik na wrogiej drodze (pole bez budynku) → żołnierze idą tam i rozkopują ją. Piaskowa 30 ticków pracy jednego żołnierza (3 s), z dyli 60, brukowana 90; praca kilku żołnierzy się sumuje. W trakcie bronią się i biją wrogów w zasięgu, potem wracają do kopania. Nowy rozkaz (marsz, atak, patrol, wieża) zdejmuje kopanie. Taran nie kopie. Wróg może tak samo rozkopać twoje drogi
+- **Bot:** co ok. minutę gry, gdy ma co najmniej trzech wolnych żołnierzy, wysyła dwóch na najbliższą wrogą drogę w promieniu 30 pól od swojego zamku
+- Jak grać → Budowa i drogi: nowy akapit (PL/EN)
 ## 0.61.4 — wersja gry widoczna od razu na ekranie wczytywania (2026-10-28)
 
 - **W prawym górnym rogu ekranu wczytywania** numer wersji i godzina buildu (np. „v0.61.4 · 28.10, 16:20”). Widać je od pierwszej chwili, jeszcze zanim wczyta się kod gry (wpisane w sam `index.html` przy buildzie), i na ekranie wejścia do meczu. Od razu wiadomo, czy przeglądarka ma najnowszą wersję, czy trzeba Ctrl+F5

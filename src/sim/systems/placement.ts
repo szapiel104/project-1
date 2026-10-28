@@ -236,6 +236,8 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     const t = y * width + x;
     if (!TERRAIN[g.map.tiles[t] as Terrain].walkable) return 'place.terrain';
     if (g.occupancy[t] !== 0 || g.roads[t] === def.road || g.roadPlan[t] === def.road) return 'place.occupied';
+    // na cudzej drodze nie kładzie się swojej (wrogą trzeba najpierw rozkopać)
+    if (g.roadOwner[t] && g.roadOwner[t] !== player + 1) return 'place.occupied';
     if (!playerKeep(g, player)) return 'place.far';
     if (enemyLand(g, player, x, y, 1, 1)) return 'place.enemyLand';
     if (checkCost && !canAfford(g, player, def)) return 'place.cost';
@@ -333,7 +335,7 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
   const door = def.wall || def.gate ? -1 : def.id === 'keep' ? (y + KEEP_BED[1]) * g.map.width + x + KEEP_BED[0] : findDoor(g, x, y, fp.w, fp.h, rot, true);
   const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false, hp: maxHp(type), build: 0 };
   for (let ty = y; ty < y + fp.h; ty++)
-    for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; g.roadPlan[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
+    for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; g.roadPlan[ty * g.map.width + tx] = 0; g.roadOwner[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą
   if (door >= 0) g.reserved[door]!++;
   if (def.gate) { b.gateOpen = true; b.shut = false; g.gates[y * g.map.width + x] = owner + 1; }
   openWalk(g, b);
@@ -425,6 +427,7 @@ export function placeBuilding(g: GameState, player: number, type: number, x: num
     const t = y * g.map.width + x;
     if (p.dev && p.instantBuild !== false) { g.roads[t] = def.road; g.roadPlan[t] = 0; }
     else g.roadPlan[t] = def.road;
+    g.roadOwner[t] = player + 1;
     return true;
   }
   // brama / wieża / mur kamienny w miejscu przęseł muru: przęsła znikają bez gruzu (materiał idzie na nowe)
@@ -503,9 +506,12 @@ export function demolish(g: GameState, player: number, id: number, destroyed = f
 export function removeRoad(g: GameState, player: number, x: number, y: number): boolean {
   if (!g.players[player] || x < 0 || y < 0 || x >= g.map.width || y >= g.map.height) return false;
   const t = y * g.map.width + x;
+  // cudzej drogi nie zdejmuje się od ręki: wrogą rozkopują żołnierze (roadwreck.ts), sojuszniczej się nie rusza
+  const own = g.roadOwner[t]!;
+  if (own && own !== player + 1) return false;
   // zaplanowana, jeszcze nieułożona droga: znika plan (koszt przepada jak przy rozbiórce)
-  if (g.roadPlan[t]) { g.roadPlan[t] = 0; return true; }
+  if (g.roadPlan[t]) { g.roadPlan[t] = 0; if (!g.roads[t]) g.roadOwner[t] = 0; return true; }
   if (!g.roads[t]) return false;
-  g.roads[t] = 0;
+  g.roads[t] = 0; g.roadOwner[t] = 0;
   return true;
 }

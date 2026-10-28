@@ -8,6 +8,7 @@ import { FP, Phase, housing, idleCount, keepCenter, keepFront, playerKeep, popul
 import { battleMages, orderAttack, orderGarrison, orderMove, train } from './army';
 import { canAfford, canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
+import { enemyRoad, orderWreck } from './roadwreck';
 
 /**
  * Bot przeciwnik. Działa wewnątrz symulacji, więc jest w pełni deterministyczny i może grać także w meczach sieciowych.
@@ -205,6 +206,8 @@ export function botSystem(g: GameState): void {
       p.res[resIndex('bow')]! += Math.round(p.boost);
       p.res[resIndex('gold')]! += Math.round(15 * p.boost);
     }
+    // wrogie drogi w pobliżu: dwóch wolnych żołnierzy idzie je rozkopać (jak gracz prawym klikiem)
+    if (tk % (THINK * 15) === 0) wreckNearby(g, p);
     // podatek, gdy osada jest zadowolona: złoto na żołd
     p.tax = p.popularity > 70 ? 2 : p.popularity > 55 ? 1 : 0;
     // wojsko: szkoli jednego włócznika naraz, gdy ma broń, rudę i wolnego chłopa
@@ -420,4 +423,26 @@ function fortify(g: GameState, p: PlayerState): void {
     if (p.res[resIndex('wood')]! - reserve < (BUILDINGS[tower]!.cost.wood ?? 0)) return;
     if (canPlace(g, p.id, tower, x, y) === null) { placeBuilding(g, p.id, tower, x, y); return; }
   }
+}
+
+/**
+ * Bot rozkopuje wrogie drogi, które sięgają w okolice jego zamku (do 30 pól): bierze dwóch żołnierzy bez rozkazu
+ * (nie z wieży, nie tarany), najbliższych tej drodze. Gdy cała jego armia jest zajęta, nic nie robi.
+ */
+function wreckNearby(g: GameState, p: PlayerState): void {
+  const keep = playerKeep(g, p.id);
+  if (!keep) return;
+  const [cx, cy] = keepCenter(keep), W = g.map.width;
+  const free = g.soldiers.filter((s) => s.owner === p.id && s.hp > 0 && !s.post && s.goal < 0 && !s.path.length && !s.target && !s.prey && s.wreck === undefined && !UNITS[s.kind]!.ram && !UNITS[s.kind]!.guard);
+  if (free.length < 3) return;
+  let best = -1, bd = 30 * 30 + 1;
+  for (let y = Math.max(0, cy - 30); y <= Math.min(g.map.height - 1, cy + 30); y++)
+    for (let x = Math.max(0, cx - 30); x <= Math.min(W - 1, cx + 30); x++) {
+      const t = y * W + x, d = (x - cx) ** 2 + (y - cy) ** 2;
+      if (d < bd && (g.roads[t] || g.roadPlan[t]) && enemyRoad(g, p.id, t)) { bd = d; best = t; }
+    }
+  if (best < 0) return;
+  const bx = best % W, by = (best - bx) / W;
+  const crew = free.sort((a, b) => ((a.px >> 8) - bx) ** 2 + ((a.py >> 8) - by) ** 2 - (((b.px >> 8) - bx) ** 2 + ((b.py >> 8) - by) ** 2) || a.id - b.id).slice(0, 2);
+  orderWreck(g, p.id, crew.map((s) => s.id), bx, by);
 }

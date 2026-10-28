@@ -17,6 +17,7 @@ import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
+import { enemyRoad } from './sim/systems/roadwreck';
 import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { createGameAsync } from './sim/mapthread';
 import { SimBatch } from './sim/simbatch';
@@ -968,10 +969,12 @@ function updateGhost(): void {
 
 renderer.onHover = (tile) => { hoverTile = tile; if (!touchTile) updateGhost(); };
 
+/** Własna (albo niczyja ze starego zapisu) droga — tylko taką zdejmuje się narzędziem rozbiórki; wrogą rozkopuje wojsko */
+const ownRoad = (tile: { x: number; y: number }): boolean => { const o = game.roadOwner[tile.y * game.map.width + tile.x]!; return !o || o === ME + 1; };
 // malowanie drogi: każde pole pod kursorem przy wciśniętym przycisku dostaje nawierzchnię
 renderer.onPaint = (tile) => {
   if (wrecking) {
-    const kind = game.roads[tile.y * game.map.width + tile.x];
+    const kind = ownRoad(tile) ? game.roads[tile.y * game.map.width + tile.x] : 0;
     if (kind && !pending.some((c) => c.type === 'unroad' && c.x === tile.x && c.y === tile.y)) { pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y }); roadBroken(tile, kind); }
     return;
   }
@@ -1124,7 +1127,7 @@ renderer.onClick = (tile, touch) => {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
     const b = game.buildings.find((x) => x.id === id);
     if (b && b.owner === ME && BUILDINGS[b.type]!.buildable) { pending.push({ type: 'demolish', player: ME, id }); play('demolish'); }
-    else if (game.roads[tile.y * game.map.width + tile.x]) { roadBroken(tile, game.roads[tile.y * game.map.width + tile.x]!); pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y }); }
+    else if (game.roads[tile.y * game.map.width + tile.x] && ownRoad(tile)) { roadBroken(tile, game.roads[tile.y * game.map.width + tile.x]!); pending.push({ type: 'unroad', player: ME, x: tile.x, y: tile.y }); }
     return;
   }
   if (!picked) {
@@ -1302,6 +1305,7 @@ function patrolClick(more: boolean): void {
   setPatrolPick(false);
 }
 
+let wreckHinted = false;
 /** Zwykły prawy klik przy zaznaczonym wojsku: atak na wroga, wejście na wieżę albo marsz (queue: Shift = dopisz do kolejki) */
 function armyRightClick(amove: boolean, queue = false): void {
   if (!chosen.size) return;
@@ -1327,6 +1331,15 @@ function armyRightClick(amove: boolean, queue = false): void {
     }, 300);
     play('rotate');
     shout('move');
+    return;
+  }
+  // wroga droga pod kursorem (bez budynku na niej): oddział idzie ją rozkopać
+  if (!b && !queue && enemyRoad(game, ME, hoverTile.y * game.map.width + hoverTile.x)) {
+    pending.push({ type: 'wreck', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y });
+    renderer.orderMarker(hoverTile);
+    play('rotate');
+    shout('attack');
+    if (!wreckHinted) { wreckHinted = true; hud.toast(tx('Żołnierze rozkopią wrogą drogę. Kamienna schodzi wolniej niż piaskowa; im więcej ludzi, tym szybciej.', 'Your men will tear up the enemy road. Stone takes longer than sand; the more hands, the quicker.')); }
     return;
   }
   pending.push({ type: 'move', player: ME, ids: [...chosen], x: hoverTile.x, y: hoverTile.y, form: armyForm, amove, queue: queue || undefined });

@@ -392,6 +392,9 @@ export interface Soldier {
   grp?: number;
   /** Atak w marszu: idzie na miejsce, ale bije każdego wroga, którego spotka po drodze */
   amove?: boolean;
+  /** Pole wrogiej drogi, którą rozkopuje (roadwreck.ts), i ile ticków już przy niej przepracował */
+  wreck?: number;
+  wreckT?: number;
   /** Wspólne tempo oddziału w marszu (szybkość najwolniejszego), zamiast własnej */
   pace?: number;
   /** Rozbieg: rośnie, gdy idzie, maleje, gdy stoi; po długim rozbiegu pierwszy cios to szarża */
@@ -611,6 +614,8 @@ export interface GameState {
   roads: Uint8Array;
   /** Drogi zaplanowane, jeszcze nie ułożone (rodzaj na polu, 0 = brak): układają je wolni chłopi */
   roadPlan: Uint8Array;
+  /** Czyja droga (także zaplanowana) na polu: numer gracza + 1, 0 = niczyja (stare zapisy). Wróg może ją rozkopać (roadwreck.ts) */
+  roadOwner: Uint8Array;
   rubble: Rubble[];
   /** Towar odłożony pod pełnymi magazynami (brak w starych zapisach) */
   piles?: Pile[];
@@ -638,7 +643,7 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   const size = map.width * map.height;
   const g: GameState = {
     tick: 0, map, rng: new Rng(seed), players: [], buildings: [], units: [], soldiers: [], corpses: [], travelers: [], wolves: [],
-    occupancy: new Int32Array(size), gates: new Uint8Array(size), walls: new Uint8Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size), rubble: [], nextId: 1,
+    occupancy: new Int32Array(size), gates: new Uint8Array(size), walls: new Uint8Array(size), reserved: new Uint8Array(size), cut: [], wear: new Uint8Array(size), roads: new Uint8Array(size), roadPlan: new Uint8Array(size), roadOwner: new Uint8Array(size), rubble: [], nextId: 1,
   };
   const keep = buildingIndex('keep');
   const starts = [...map.starts].sort((a, b) => a.player - b.player);
@@ -866,11 +871,11 @@ export function idleCount(g: GameState, player: number): number {
 /** Plac przed bramą zamku: tyle pól w głąb i w każdą stronę od osi bramy. Nie wolno tu budować (drogi tak). */
 export const FORECOURT = { depth: 3, half: 3 };
 /** Plac przed bramą wyłożony kamienną kostką (zwykła droga brukowana: szybciej się po nim chodzi) */
-export function paveForecourt(g: GameState, k: { x: number; y: number }): void {
+export function paveForecourt(g: GameState, k: { x: number; y: number; owner: number }): void {
   const { width, height } = g.map, gx = k.x + KEEP_GATE[0], y0 = k.y + KEEP_SIZE;
   for (let d = 0; d < FORECOURT.depth; d++) for (let o = -FORECOURT.half; o <= FORECOURT.half; o++) {
     const x = gx + o, y = y0 + d, t = y * width + x;
-    if (x >= 0 && y >= 0 && x < width && y < height && TERRAIN[g.map.tiles[t] as Terrain].walkable) g.roads[t] = 2;
+    if (x >= 0 && y >= 0 && x < width && y < height && TERRAIN[g.map.tiles[t] as Terrain].walkable) { g.roads[t] = 2; g.roadOwner[t] = k.owner + 1; }
   }
 }
 /** Czy pole leży na placu przed bramą któregoś zamku */
@@ -937,7 +942,7 @@ export function stateHash(g: GameState): number {
   add(g.tick); add(g.rng.state); add(g.nextId); add(g.cut.length);
   for (let i = 0; i < g.map.tiles.length; i++) { h ^= g.map.tiles[i]!; h = Math.imul(h, 0x01000193); }
   for (let i = 0; i < g.wear.length; i++) if (g.wear[i]) { add(i); add(g.wear[i]!); }
-  for (let i = 0; i < g.roads.length; i++) { if (g.roads[i]) { add(i); add(g.roads[i]! + 100); } if (g.roadPlan[i]) { add(i); add(g.roadPlan[i]! + 200); } }
+  for (let i = 0; i < g.roads.length; i++) { if (g.roads[i]) { add(i); add(g.roads[i]! + 100); add(g.roadOwner[i]! + 300); } if (g.roadPlan[i]) { add(i); add(g.roadPlan[i]! + 200); } }
   for (const s of g.saplings ?? []) { add(s.t); add(s.owner); add(s.by); add(s.age); }
   for (const m of g.missiles ?? []) { add(m.to); add(m.unit ? 1 : 0); add(m.dmg); add(m.at); add(m.from); add(m.burn ?? 0); }
   for (const s of g.soldiers) if (s.burn) { add(s.id); add(s.burn); }

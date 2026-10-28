@@ -27,7 +27,7 @@ export function emptyScene(g: GameState): void {
   g.map = { ...g.map, tiles, elevation, trails: new Uint8Array(tiles.length) };
   const keeps = g.buildings.filter((b) => BUILDINGS[b.type]!.id === 'keep');
   g.buildings = []; g.units = []; g.soldiers = []; g.corpses = []; g.travelers = []; g.wolves = []; g.cut = []; g.saplings = []; g.rubble = []; g.marches = []; g.graves = [];
-  for (const a of [g.occupancy, g.gates, g.walls, g.reserved, g.wear, g.roads, g.roadPlan]) a.fill(0);
+  for (const a of [g.occupancy, g.gates, g.walls, g.reserved, g.wear, g.roads, g.roadPlan, g.roadOwner]) a.fill(0);
   for (const k of keeps) { addBuilding(g, k.type, k.owner, k.x, k.y, k.rot); paveForecourt(g, k); }
   // bez botów i bez napadów: poziom pokojowy, nikt nie gra za przeciwnika
   for (const p of g.players) { p.bot = false; p.level = 0; p.guards = 0; for (let i = 0; i < p.res.length; i++) p.res[i] = 5000; }
