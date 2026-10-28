@@ -477,6 +477,12 @@ export class GameRenderer {
     this.handFlameN++;
   }
   private handTorches: GearPool;
+  /** Pochodnia łucznika wbita w ziemię: z ręki (x −0,17, wys. 0,35–0,7) przesunięta w bok i w dół, wyższa i lekko pochylona */
+  private fireStick = new THREE.Matrix4().makeTranslation(0.45, -0.52, 0.22).multiply(new THREE.Matrix4().makeRotationZ(-0.18)).multiply(new THREE.Matrix4().makeScale(1, 1.5, 1));
+  private fireStickTip = new THREE.Vector3(-0.17, 0.69, 0.1);
+  /** Płomienie pochodni łuczników przy budynku (palą się też w dzień, jak koksowniki) */
+  private stickFlames: THREE.Vector3[] = [];
+  private stickFlameN = 0;
   /** Brama twierdzy gracza (środek pola przed drzwiami) — buntownicy patrzą w jej stronę; liczone raz na klatkę */
   private riotDoors = new Map<number, [number, number] | null>();
   private riotDoorsAt = -1;
@@ -2318,6 +2324,7 @@ export class GameRenderer {
     const dark = this.night > 0.12;
     if (dark) for (const b of g.buildings) if (b.lit) lit.add(b.id);
     for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
+    for (let i = 0; i < this.stickFlameN; i++) F.add(this.stickFlames[i]!, 0.24, 0.13, (i * 0.531) % 1, Math.max(0.35, glow));
     // koksowniki na murach i wieżach: płoną dniem i nocą (łucznicy maczają w nich strzały)
     for (const [id, m] of this.braziers.meshes) {
       if ((m.position.x - f.x) ** 2 + (m.position.z - f.z) ** 2 > 110 * 110) continue;
@@ -3537,6 +3544,7 @@ export class GameRenderer {
   }
 
   private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
+    this.stickFlameN = 0;
     const { width, height } = g.map;
     const t = this.tmp;
     let n = 0, rings = 0, dots = 0, torches = 0, rams = 0;
@@ -3587,6 +3595,18 @@ export class GameRenderer {
     for (const x of g.soldiers) byId.set(x.id, x);
     const bById = new Map<number, (typeof g.buildings)[number]>();
     for (const b of g.buildings) bById.set(b.id, b);
+    // łucznicy strzelający w budynek: jeden z nich (najniższy numer na ten sam budynek) wbija w ziemię zapaloną pochodnię,
+    // także w dzień, i od niej reszta odpala ogniste strzały — sam łucznik też ma swoją
+    const fireKeeper = new Map<number, number>(), fireTarget = new Set<number>();
+    for (const x of g.soldiers) {
+      const xd = UNITS[x.kind];
+      if (!xd?.range || xd.magic || !x.target || x.hp <= 0 || !bById.has(x.target) || byId.has(x.target)) continue;
+      fireTarget.add(x.id);
+      if (x.path.length) continue;
+      const k = (x.owner << 24) + x.target, was = fireKeeper.get(k);
+      if (was === undefined || x.id < was) fireKeeper.set(k, x.id);
+    }
+    const torchBearers = new Set(fireKeeper.values());
     // chorążowie: po jednym w każdym oddziale (rozkazie) z co najmniej trzema żołnierzami
     const bearers = bearerIds(g);
     // chorąży zniknął z wojska, a w tym miejscu leży jego ciało: padł, więc proporzec pada razem z nim
@@ -3741,7 +3761,7 @@ export class GameRenderer {
         // wysokość celu jak jego obrazek (standY): na koronie muru, na murach zamku i na wieży — strzała leci w człowieka, nie w mur pod nim
         if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : this.standY(view, tx, ty, (foe.py >> 8) * width + (foe.px >> 8)) - view.heightAt(tx, ty) + 0.45; const fd = UNITS[foe.kind]; hit = Math.random() < 0.25 ? 'arrowDirt' : fd?.guard || fd?.id === 'manatarms' ? 'arrowMetal' : 'flesh'; }
         else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = this.standY(view, tx, ty, (victim.py >> 8) * width + (victim.px >> 8)) - view.heightAt(tx, ty) + 0.4; hit = Math.random() < 0.25 ? 'arrowDirt' : 'flesh'; }
-        else { const wd = BUILDINGS[wall!.type]!, fp = footprint(wd, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; hit = (wd.cost.stone ?? 0) > (wd.cost.wood ?? 0) ? 'arrowStone' : 'arrowWood'; }
+        else { const wd = BUILDINGS[wall!.type]!, fp = footprint(wd, wall!.rot); tx = wall!.x + fp.w * (0.25 + Math.random() * 0.5); ty = wall!.y + fp.h * (0.25 + Math.random() * 0.5); th = 0.5 + Math.random() * 0.7; /* rozrzut po ścianach i dachu, nie wszystkie w jeden punkt */ hit = (wd.cost.stone ?? 0) > (wd.cost.wood ?? 0) ? 'arrowStone' : 'arrowWood'; }
         if (s.up && s.post) this.towerIcons.shot(s.post, this.time);
         // cel: pierś narysowanego wroga (pozycja z poprzedniej klatki), a gdy go jeszcze nie ma — wyliczona wysokość
         const seen = foe ? this.drawnAt.get(foe.id) : undefined;
@@ -3752,7 +3772,7 @@ export class GameRenderer {
           this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.copy(aim), udef.magic === 'fire');
           this.playHere('swing', t.position.x, t.position.z, 0.8, t.position.y + 1, udef.magic === 'fire' ? 0.7 : 1.3);
         } else {
-          this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), aim, fireArrow(g, s), hit);
+          this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), aim, fireArrow(g, s) || (!foe && !victim && fireTarget.has(s.id)), hit);
           // puszczenie cięciwy (nagrania 0 A.D.) z miejsca łucznika, także z wieży
           this.playHere('bow', t.position.x, t.position.z, 1, t.position.y + 1);
         }
@@ -3796,6 +3816,12 @@ export class GameRenderer {
       }
       // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
       if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
+      // pochodnia wbita w ziemię obok łucznika, który strzela w budynek (płomień palący się także w dzień)
+      if (torchBearers.has(s.id) && !this.calm && torches < 256) {
+        this.armM.copy(t.matrix).multiply(this.fireStick);
+        this.soldierTorches.setMatrixAt(torches++, this.armM);
+        if (this.stickFlameN < 64) (this.stickFlames[this.stickFlameN++] ??= new THREE.Vector3()).copy(this.fireStickTip).applyMatrix4(this.armM);
+      }
       // zbój z lasu nie ma pana: skóry i brudne płótno zamiast barw drużyny
       const teamC = g.players[s.owner] ? TEAM_COLORS[g.players[s.owner]!.team] ?? 0x888888 : BANDIT_COLOR;
       if (bearers.has(s.id)) this.standards.add(t.matrix, s.owner, teamC, this.crestOf(s.owner));

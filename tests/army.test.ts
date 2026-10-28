@@ -361,6 +361,32 @@ describe('walka z charakterem', () => {
 });
 const UNITS_ATTACK_ARCHER = 7;
 
+describe('łucznicy w budynek', () => {
+  it('strzała w budynek trafia dopiero, gdy doleci, i jest ognista (podpala drewniany budynek)', () => {
+    const g = clearBandits(createGame(7));
+    for (const p of g.players) p.bot = false;
+    g.players[0]!.res[resIndex('wood')] = 500;
+    const at = spot(g, 'house', 6);
+    step(g, [{ type: 'build', player: 0, building: 'house', ...at }]);
+    const h = g.buildings.find((x) => x.type === buildingIndex('house'))!;
+    h.build = 0;
+    // wrogi łucznik dwa pola od chaty, z rozkazem strzelania w nią
+    let tx = h.x - 3, ty = h.y;
+    for (let r = 3; r < 8 && !walkable(g, ty * g.map.width + tx); r++) { tx = h.x - r; }
+    const s: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('archer'), px: tx * FP + 128, py: ty * FP + 128, path: [], hp: 60, goal: -1, wait: 0, target: h.id, cd: 0 };
+    g.soldiers.push(s);
+    const hp0 = h.hp;
+    let shotAt = -1;
+    for (let i = 0; i < 200 && shotAt < 0; i++) { step(g, []); if (g.missiles?.some((m) => m.bld && m.to === h.id)) shotAt = g.tick; }
+    expect(shotAt).toBeGreaterThan(0);
+    expect(s.shot).toBeDefined();
+    expect(h.hp).toBe(hp0); // strzała jeszcze leci
+    for (let i = 0; i < 8; i++) step(g, []);
+    expect(h.hp).toBeLessThan(hp0);
+    expect(h.fire ?? 0).toBeGreaterThan(0);
+  });
+});
+
 describe('wrodzy chłopi', () => {
   it('rozkaz ataku na chłopa wygrywa z wrogim żołnierzem obok: nie przełącza się sam na wojaka', () => {
     const g = clearBandits(createGame(7));

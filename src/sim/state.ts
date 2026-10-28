@@ -427,9 +427,11 @@ export interface Soldier {
  * cel pada wtedy, gdy strzała go dosięgnie (Michał 27.10.2026).
  */
 export interface Missile {
-  /** Cel: id żołnierza albo (gdy `unit`) chłopa */
+  /** Cel: id żołnierza, (gdy `unit`) chłopa albo (gdy `bld`) budynku */
   to: number;
   unit?: boolean;
+  /** Strzała albo czar w budynek: obrażenia i podpalenie dopiero, gdy doleci */
+  bld?: boolean;
   dmg: number;
   /** Tick trafienia */
   at: number;

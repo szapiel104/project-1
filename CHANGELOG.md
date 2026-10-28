@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.56.1 — ogniste strzały w budynki, pochodnia łucznika (2026-10-28)
+
+- **Widać lot strzały w budynek:** łucznik strzelający w budynek (na rozkaz, prawy klik na wrogi budynek) wypuszcza widoczną strzałę, a obrażenia liczą się dopiero, gdy doleci — tak jak przy strzałach w ludzi. Strzały rozkładają się po ścianach i dachu, a nie wbijają w jeden punkt. To samo dla czarów magów w budynki (kula leci, ogień podpala po trafieniu)
+- **Strzały w budynki są ogniste:** gdy łucznicy biorą na cel budynek, jeden z nich (także w dzień) wbija obok siebie w ziemię zapaloną pochodnię i od niej odpala strzały cały oddział. Pięciu łuczników = jedna pochodnia, pięć ognistych strzał; samotny łucznik ma swoją. Każda trafiona drewniana chata zaczyna się palić (gaszą ją ludzie z wiadrami). Kamień (mury kamienne, kamienne wieże, twierdza) nie płonie; drewniane mury i bramy też nie zapalają się od strzał (dostają tylko obrażenia)
+- Bot: korzysta tak samo (jego łucznicy też strzelają w budynki ogniście). Test w `tests/army.test.ts`
+
 ## 0.56.0 — prawdziwy ogień: pożary budynków i płomienie jako bryły 3D (2026-10-28)
 
 - **Pożar budynku to teraz prawdziwy ogień w trzech wymiarach** (`src/render/blaze.ts`): zamiast kilku płaskich płomyków, które obracały się z kamerą, wokół płonącego budynku stoi niewidoczna bryła, przez którą promień z oka zbiera ogień z unoszącego się w górę szumu. Ogień bucha z całego dachu i wychodzi nad nim w języki, liże ściany od zewnątrz, przechyla się z wiatrem, a gorące miejsca wędrują po budynku (część dachu pali się mocniej). Nad płomieniami gęsty, czarny dym. Przy gaszeniu ogień płynnie przygasa razem z siłą pożaru. Z każdej strony i wysokości wygląda tak samo — nic się nie obraca

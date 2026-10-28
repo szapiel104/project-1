@@ -777,6 +777,24 @@ export const burnFor = (dmg: number): number => Math.max(2, Math.round((dmg * FI
  * Pociski w locie: trafienie liczy się w chwili dolecenia (cel pada, gdy strzała go dosięgnie), a płonący po
  * ognistej strzale traci po 1 zdrowia co BURN_EVERY ticków — widać ogień na nim i pasek zdrowia schodzi płynnie.
  */
+/** Ognista strzała w budynek: tyle ticków pożaru dokłada (kula ognia maga — SPELL_BURN); kamień i tak nie płonie (fire.ts) */
+const ARROW_FIRE = 240;
+
+/** Cios albo pocisk w budynek: obrażenia, podpalenie (`fire` ticków), zburzenie. Zwraca true, gdy budynek padł */
+function hitBuilding(g: GameState, b: Building, dmg: number, by: number, fire: number | false): boolean {
+  if (b.ruined) return false;
+  b.hp -= dmg;
+  // ogień podpala budynek (pali się jak od ciosu; gaszą go ludzie z wiadrami albo mag Źródła)
+  if (fire && !BUILDINGS[b.type]!.wall && !BUILDINGS[b.type]!.gate) b.fire = Math.max(b.fire ?? 0, fire);
+  if (b.hp > 0) return false;
+  const keep = BUILDINGS[b.type]!.id === 'keep';
+  const owner = g.players[b.owner];
+  ruin(g, b);
+  const razer = g.players[by]; if (razer) razer.stats.razed++;
+  if (keep && owner) owner.defeated = true;
+  return true;
+}
+
 function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
   const list = g.missiles;
   if (list?.length) {
@@ -784,6 +802,12 @@ function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
     for (const m of list) {
       if (m.at > g.tick) { list[keep++] = m; continue; }
       const k = g.players[m.by];
+      if (m.bld) {
+        const b = buildingById(g, m.to);
+        const shooter = byId.get(m.from);
+        if (b && hitBuilding(g, b, m.dmg, m.by, m.burn ? (m.magic ? SPELL_BURN : ARROW_FIRE) : false) && shooter && shooter.target === b.id) shooter.target = 0;
+        continue;
+      }
       if (m.unit) {
         const u = unitById(g, m.to);
         if (!u) continue;
@@ -1267,18 +1291,14 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
   const reach = def.range ? def.range + (high(g, s) ? 3 : 0) : 1;
   if (rectGap(g, here, b) <= reach && !s.path.length) {
     if (s.cd === 0) {
-      b.hp -= def.attack;
-      s.cd = def.cooldown;
-      // kula ognia podpala budynek (pali się jak od ciosu; gaszą go ludzie z wiadrami albo mag Źródła)
-      if (def.magic === 'fire' && !BUILDINGS[b.type]!.wall && !BUILDINGS[b.type]!.gate) b.fire = Math.max(b.fire ?? 0, SPELL_BURN);
-      if (b.hp <= 0) {
-        const keep = BUILDINGS[b.type]!.id === 'keep';
-        const owner = g.players[b.owner];
-        ruin(g, b);
-        const razer = g.players[s.owner]; if (razer) razer.stats.razed++;
-        s.target = 0;
-        if (keep && owner) owner.defeated = true;
-      }
+      s.cd = def.cooldown + (def.range ? hash2(s.id, g.tick, 0xb1d) % 4 : 0);
+      if (def.range) {
+        // łucznik i mag: pocisk leci do budynku i trafia, gdy doleci (widać lot strzały, jak przy strzale w ludzi).
+        // Łucznicy strzelają w budynki ogniście: jeden z oddziału zapala pochodnię (obraz), od niej odpalają strzały
+        s.shot = g.tick;
+        const ft = Math.max(Math.abs(((b.x + footprint(BUILDINGS[b.type]!, b.rot).w / 2) << 8) - s.px), Math.abs(((b.y + footprint(BUILDINGS[b.type]!, b.rot).h / 2) << 8) - s.py));
+        (g.missiles ??= []).push({ to: b.id, bld: true, dmg: def.attack, at: g.tick + (def.magic ? spellTicks(ft) : ARROW_TICKS), from: s.id, by: s.owner, ...(def.magic === 'water' ? {} : { burn: 1 }), ...(def.magic ? { magic: true } : {}) });
+      } else if (hitBuilding(g, b, def.attack, s.owner, false)) s.target = 0;
     }
     return true;
   }
