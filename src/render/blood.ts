@@ -47,7 +47,7 @@ function splatMask(): THREE.CanvasTexture {
 }
 
 const FRESH = new THREE.Color(0x5e0a06), OLD = new THREE.Color(0x2a130c);
-const col = new THREE.Color(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), s = new THREE.Vector3(), p = new THREE.Vector3();
+const col = new THREE.Color(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), nrm = new THREE.Vector3(), s = new THREE.Vector3(), p = new THREE.Vector3();
 
 export class BloodStains {
   readonly mesh: THREE.InstancedMesh;
@@ -71,13 +71,16 @@ export class BloodStains {
    * Plama pod ciałem: `id` daje własny obrót i kształt, `spread` 0..1 to rozlewanie po upadku, `age` 0..1 rozkład
    * (ciemnieje i jeszcze trochę wsiąka szerzej).
    */
-  add(id: number, x: number, y: number, z: number, spread: number, age: number): void {
+  /** `slope` = nachylenie terenu (dh/dx, dh/dz): plama kładzie się na zboczu, a nie wisi płasko i nie chowa się do połowy w ziemi */
+  add(id: number, x: number, y: number, z: number, spread: number, age: number, slope: [number, number] = [0, 0]): void {
     if (this.n >= this.mesh.instanceMatrix.count) return;
     const r = (id * 0.6180339887) % 1, r2 = (id * 0.7548776662) % 1;
     const grow = 1 - (1 - spread) ** 2; // szybko na początku, potem coraz wolniej
     // mała plama pod ciałem (Michał 28.10.2026: „aż za dużo krwi”): do ok. pół pola, nie kałuża na pół podwórka
     const size = (0.14 + 0.36 * grow) * (0.85 + r2 * 0.3) * (1 + age * 0.12);
     q.setFromAxisAngle(up, r * Math.PI * 2);
+    nrm.set(-slope[0], 1, -slope[1]).normalize();
+    q.premultiply(q2.setFromUnitVectors(up, nrm));
     s.set(size * (0.8 + r * 0.45), 1, size * (1.2 - r * 0.4));
     p.set(x, y, z);
     this.mesh.setMatrixAt(this.n, new THREE.Matrix4().compose(p, q, s));

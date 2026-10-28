@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.64.10 — krew kładzie się na terenie, ślady butów tylko na śniegu (2026-10-28)
+
+- **Krew na zboczu:** plama pod poległym przechyla się razem z terenem (nachylenie liczone z wysokości wokół ciała) i leży 2 cm nad ziemią — wcześniej leżała płasko, więc na pochyłości połowa chowała się w ziemi i plama miała prosto ucięte brzegi. Na pomoście wieży i koronie muru leży płasko
+- **Ślady butów wiosną:** odciski i bruzdy powstają i są widoczne tylko na prawdziwym śniegu (od ok. połowy pokrycia, `footprints.ts`); przy cienkich łatach śniegu, gdy ziemia jest już zielona, nie ma niebieskich śladów na trawie
+- Bot: bez zmian
+
 ## 0.64.9 — mniej krwi pod poległymi (2026-10-28)
 
 - **Zgłoszenie: „aż za dużo krwi”.** Plama pod poległym rozlewa się najwyżej do ok. pół pola (wcześniej ponad całe pole), ma trzy krótkie smugi zamiast sześciu długich i kilkanaście drobnych kropel blisko plamy zamiast czterdziestu rozrzuconych daleko; świeża jest ciemniejsza, mniej jaskrawa (`render/blood.ts`)

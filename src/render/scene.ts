@@ -4245,7 +4245,11 @@ export class GameRenderer {
       }
       // krew wypływa dopiero po upadku i rozlewa się przez ok. 20 s
       const spread = this.calm ? 1 : Math.max(0, Math.min(1, (g.tick + alpha - body.at) / (TICKS_PER_SECOND * 20) - 0.03));
-      this.stains.add(body.id, fx - width / 2, y + 0.015, fy - height / 2, spread, age);
+      // plama kładzie się na terenie: nachylenie z wysokości dookoła, a środek odrobinę nad najwyższym punktem pod nią
+      // (na pomoście wieży albo koronie muru leży płasko)
+      const sb = 0.25, onGround = Math.abs(y - view.heightAt(fx, fy)) < 0.05;
+      const hx = onGround ? (view.heightAt(fx + sb, fy) - view.heightAt(fx - sb, fy)) / (2 * sb) : 0, hz = onGround ? (view.heightAt(fx, fy + sb) - view.heightAt(fx, fy - sb)) / (2 * sb) : 0;
+      this.stains.add(body.id, fx - width / 2, y + 0.02, fy - height / 2, spread, age, [hx, hz]);
       c++;
     }
     this.bodies.finish(sp);
@@ -4456,9 +4460,9 @@ export class GameRenderer {
     if (view && (this.snowNow > 0.01 || this.prints)) {
       this.prints ??= new Footprints(this.scene);
       const walkers: { id: number; x: number; y: number; h: number }[] = [];
-      if (this.snowNow >= 0.1) for (const [id, f] of this.feet) walkers.push({ id, x: f[0], y: f[1], h: f[2] });
+      if (this.snowNow >= 0.45) for (const [id, f] of this.feet) walkers.push({ id, x: f[0], y: f[1], h: f[2] });
       const drags: { id: number; x: number; y: number; h: number; kind: number }[] = [];
-      if (this.snowNow >= 0.1) for (const [id, f] of this.drags) drags.push({ id, x: f[0], y: f[1], h: f[2], kind: f[3] });
+      if (this.snowNow >= 0.45) for (const [id, f] of this.drags) drags.push({ id, x: f[0], y: f[1], h: f[2], kind: f[3] });
       this.feet.clear(); this.drags.clear();
       const c = this.cam.camera.position;
       this.prints.sync(this.snowNow, this.calm ? 0 : dt, this.rain, walkers, w, h, { x: c.x + w / 2, y: c.z + h / 2 }, drags);

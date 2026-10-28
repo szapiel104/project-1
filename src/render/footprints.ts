@@ -93,7 +93,7 @@ class TrackLayer {
       sh.vertexShader = 'attribute float aBorn;\nuniform float uTime;\nvarying float vFade;\n' + sh.vertexShader.replace('#include <begin_vertex>',
         `#include <begin_vertex>\n  float age = uTime - aBorn;\n  vFade = age < 0.0 ? 0.0 : 1.0 - clamp((age - ${HOLD.toFixed(1)}) / ${FADE.toFixed(1)}, 0.0, 1.0);`);
       sh.fragmentShader = 'uniform float uSnow;\nvarying float vFade;\n' + sh.fragmentShader.replace('#include <alphamap_fragment>',
-        `#include <alphamap_fragment>\n  diffuseColor.a *= vFade * ${alpha.toFixed(2)} * smoothstep(0.1, 0.45, uSnow);`);
+        `#include <alphamap_fragment>\n  diffuseColor.a *= vFade * ${alpha.toFixed(2)} * smoothstep(0.45, 0.75, uSnow);`);
     };
     mat.customProgramCacheKey = (): string => name;
     this.mesh = new THREE.InstancedMesh(geo, mat, max);
@@ -121,7 +121,7 @@ class TrackLayer {
   finish(snow: number): void {
     if (this.dirty) { this.mesh.instanceMatrix.needsUpdate = true; this.born.needsUpdate = true; touch(this.mesh); this.dirty = false; }
     this.mesh.count = this.used;
-    this.mesh.visible = this.used > 0 && snow > 0.01;
+    this.mesh.visible = this.used > 0 && snow > 0.45;
   }
   dispose(): void { this.mesh.removeFromParent(); this.mesh.geometry.dispose(); (this.mesh.material as THREE.Material).dispose(); }
 }
@@ -156,7 +156,9 @@ export class Footprints {
     this.clock += dt * (1 + fall * 2);
     const clock = this.clock;
     this.uTime.value = clock;
-    if (snow < 0.1) {
+    // ślady tylko na prawdziwym śniegu: przy cienkich łatach (wiosną, w odwilż) ziemia jest już zielona i niebieskie
+    // odciski na trawie wyglądały źle (Michał 28.10.2026)
+    if (snow < 0.45) {
       // stopniało: nowych nie robimy, a stare znikają razem ze śniegiem (mundur uSnow)
       this.last.clear(); this.lastDrag.clear();
       this.soles.finish(snow); this.furrows.finish(snow);
