@@ -1884,3 +1884,17 @@ body.menu-open .devpanel { display: none; }
 
 /* wersja gry w rogu ekranu wczytywania (Michał 28.10.2026: od razu widać, czy odświeżyć) */
 #loading .loading-ver, .loading-ver { position: absolute; top: 14px; right: 18px; z-index: 3; margin: 0; padding: 6px 12px; font-family: var(--display); font-weight: 700; font-size: 16px; letter-spacing: .05em; color: #e2cfa4; background: rgba(8, 5, 3, .72); border: 1px solid rgba(233, 193, 69, .45); font-variant-numeric: tabular-nums; pointer-events: none; }
+/* ===== Menu główne na pejzażu z ekranu wczytywania (28.10.2026): zamek o zmierzchu pod herbem, na dole ciemna listwa
+   pod paskiem menu; w pauzie w grze i przy podglądzie mapy pejzaż znika (pod spodem widać świat) ===== */
+.menu > .menu-scene { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+.menu-scene .ld-scene { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.menu-scene::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 34%;
+  background: linear-gradient(rgba(11, 7, 4, 0), rgba(11, 7, 4, .78) 38%, #0b0704 72%); }
+.menu.in-game .menu-scene, .menu.previewing .menu-scene { display: none; }
+.menu:not(.in-game):not(.previewing) .menu-sub { color: #dcc79b; text-shadow: 0 1px 3px #000, 0 0 14px #000; }
+
+/* opis gry pod podtytułem (menu i wczytywanie): czym jest gra i że ciągle rośnie — tym samym krojem co podtytuł */
+.game-tagline { margin: 6px 0 0; display: grid; gap: 2px; justify-items: center; text-align: center; max-width: min(760px, 90vw); }
+.game-tagline-what { font-size: clamp(14px, 1.9vh, 17px); color: #cbb68a; letter-spacing: .03em; text-shadow: 0 1px 3px #000, 0 0 12px #000; }
+.game-tagline-dev { font-family: var(--display); font-weight: 700; font-size: clamp(12px, 1.6vh, 14px); letter-spacing: .14em; text-transform: uppercase; color: #e9c766; text-shadow: 0 1px 3px #000, 0 0 12px #000; }
+.menu.sub-open .game-tagline, .menu.in-game .game-tagline { display: none; }

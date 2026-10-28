@@ -1,3 +1,4 @@
+import { gameTagline, loadingScene } from './loadscreen';
 import { me as netMe, onAccount, progress, restore } from '../net/supa';
 import { levelOf, titleOf } from '../data/progress';
 import { createOnline, type OnlineStart } from './online';
@@ -160,7 +161,9 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   // w trakcie gry: napis, że to pauza (żeby nie mylić z menu głównym)
   const paused = el('p', 'menu-paused', tx('Gra wstrzymana', 'Game paused'));
   paused.setAttribute('role', 'status');
-  head.append(crest, title, sub, paused);
+  const tagline = el('div');
+  tagline.innerHTML = gameTagline();
+  head.append(crest, title, sub, ...tagline.childNodes, paused);
   // iskry z ognisk unoszące się z dołu ekranu (sama ozdoba)
   const embers = el('div', 'menu-embers');
   embers.setAttribute('aria-hidden', 'true');
@@ -179,7 +182,12 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   const bar = el('nav', 'menu-bar');
   bar.setAttribute('aria-label', t('menu.title'));
   const foot = el('p', 'menu-fine', '');
-  wrap.append(embers, head, panel, bar, foot);
+  // pejzaż w tle jak na ekranie wczytywania (zamek o zmierzchu, rysowany raz, bez animacji); znika w pauzie w grze
+  // i przy podglądzie mapy w „Nowej grze”, gdzie pod spodem widać świat
+  const scene = el('div', 'menu-scene');
+  scene.setAttribute('aria-hidden', 'true');
+  scene.innerHTML = loadingScene();
+  wrap.append(scene, embers, head, panel, bar, foot);
   root.append(wrap);
 
   let inGame = false;

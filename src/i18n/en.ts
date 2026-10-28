@@ -84,6 +84,8 @@ export const en: Record<TextKey, string> = {
   'help.menu': 'Menu: Esc or the Menu button on the bottom bar. The game is paused while the menu is open',
   'menu.title': 'Game menu',
   'menu.subtitle': 'Build a settlement, feed your people, defend the castle',
+  'menu.tagline': 'A simulation of a medieval settlement and its people, in the spirit of old-school RPGs',
+  'menu.taglineDev': 'Always in the making — no limits',
   'menu.continue': 'Continue',
   'menu.resume': 'Back to the game',
   'menu.newGame': 'New game',

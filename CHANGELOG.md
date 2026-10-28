@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.61.7 — menu główne na pejzażu z ekranu wczytywania, opis gry pod tytułem (2026-10-28)
+
+- **Opis gry pod podtytułem** (menu i wczytywanie): „Symulator średniowiecznej osady i jej ludzi, w duchu dawnych gier RPG” i złotą linijką „Gra jest cały czas rozwijana — bez limitu” (po angielsku też)
+
+- **Menu główne w tym samym stylu co wczytywanie:** pod herbem i tytułem pejzaż o zmierzchu (góry, słońce za przełęczą, zamek z zapalonymi oknami i chorągwią, bór), na dole ciemna listwa pod paskiem menu, iskry zostają
+- Pejzaż rysuje się raz (SVG, bez animacji i bez wpływu na FPS); w pauzie w trakcie gry i przy podglądzie mapy w „Nowej grze” znika, bo pod spodem widać świat
+- Kontrast: podtytuł 10,7:1, stopka z wersją 5:1
+- Bot: bez zmian
 ## 0.61.6 — chorągwie tylko na ważnych budynkach, rudera i namiot do spaceru (2026-10-28)
 
 - **Chorągwie:** zostają tylko na zamku, koszarach, zbrojowni, karczmie, wieżach i bramach, siedzibach magów, kapliczce, kopalni z barakiem, stodole i cechu inżynierów (`FLAG_ON` w `render/buildings.ts`). Chaty, rudery, namioty, warsztaty, magazyny, pola i sady są bez flagi — przy kilkunastu chatach las chorągwi wyglądał dziwnie

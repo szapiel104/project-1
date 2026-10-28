@@ -78,6 +78,8 @@ export const pl = {
   'help.menu': 'Menu: klawisz Esc albo przycisk Menu na dolnej belce. Gdy menu jest otwarte, gra stoi',
   'menu.title': 'Menu gry',
   'menu.subtitle': 'Zbuduj osadę, wykarm ludzi, obroń zamek',
+  'menu.tagline': 'Symulator średniowiecznej osady i jej ludzi, w duchu dawnych gier RPG',
+  'menu.taglineDev': 'Gra jest cały czas rozwijana — bez limitu',
   'menu.continue': 'Kontynuuj',
   'menu.resume': 'Wróć do gry',
   'menu.newGame': 'Nowa gra',
