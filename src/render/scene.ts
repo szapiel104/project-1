@@ -2382,7 +2382,7 @@ export class GameRenderer {
         if (!this.shownIn(mesh, o.parent ?? o)) continue;
         o.getWorldPosition(w);
         if (o.name === 'lightSpot') w.y -= 0.08;
-        F.add(w, 0.22, 0.12, (o.id * 0.419) % 1, glow * 0.7);
+        F.add(w, 0.22, 0.12, (o.id * 0.419) % 1, glow * 0.7, 0.6);
       }
       // kosze ogniowe (brama zamku, wartownia): płoną tylko po zmroku i tylko gdy są widoczne
       if (dark) {
@@ -2406,7 +2406,7 @@ export class GameRenderer {
         if (!shown) continue;
         o.getWorldPosition(w);
         if (o.name === 'campfire') { F.add(w, 0.42, 0.3, (o.id * 0.311) % 1, glow); F.add(w.set(w.x + 0.04, w.y, w.z - 0.03), 0.3, 0.2, (o.id * 0.731) % 1, 0); if (!this.calm) loop3d(`camp${o.id}`, 'campfire', w.x, w.y, w.z); }
-        else F.add(w, 0.16, 0.09, (o.id * 0.419) % 1, 0.5);
+        else F.add(w, 0.11, 0.06, (o.id * 0.419) % 1, glow * 0.5, 0.35); // świeczka, kaganek, latarnia w izbie: mały płomyk i ledwie łuna
       }
       const camp = named(mesh, 'flame');
       if (camp && camp.visible) {
@@ -2426,13 +2426,13 @@ export class GameRenderer {
         this.blaze.add(id, box, heat, this.camPos, bb ? footprint(BUILDINGS[bb.type]!, bb.rot) : undefined);
         box.getCenter(w);
         const span = Math.max(box.max.x - box.min.x, box.max.z - box.min.z);
-        F.addGlow(w.setY(box.max.y), span * 2.4, (id * 0.193) % 1, (glow * 0.6 + 0.3) * (0.4 + heat * 0.6));
+        F.addGlow(w.setY(box.max.y), span * 1.8, (id * 0.193) % 1, (glow * 0.45 + 0.12) * (0.4 + heat * 0.6));
         // trzask pożaru z miejsca budynku: im więcej ognisk na budynku, tym głośniej
         if (!this.calm) loop3d(`fire${id}`, 'fire', mesh.position.x, mesh.position.y + 1, mesh.position.z, Math.min(1, 0.5 + fire.children.length * 0.15));
       }
     }
     if (this.inMine && this.mineLevel) {
-      for (const o of (this.mineLevel.userData.lampSpots as THREE.Object3D[] | undefined) ?? []) { o.getWorldPosition(w); F.add(w, 0.16, 0.09, (o.id * 0.419) % 1, 0.5); }
+      for (const o of (this.mineLevel.userData.lampSpots as THREE.Object3D[] | undefined) ?? []) { o.getWorldPosition(w); F.add(w, 0.13, 0.07, (o.id * 0.419) % 1, 0.4, 0.5); }
     }
     F.end();
     this.blaze.end();
@@ -3130,7 +3130,7 @@ export class GameRenderer {
         if (!box) continue;
         const v = box.getCenter(new THREE.Vector3());
         v.y = box.min.y + (box.max.y - box.min.y) * 0.85;
-        spots.push({ key: 'f' + b.id, v, d: Math.max(0, (v.x - f.x) ** 2 + (v.z - f.z) ** 2 - 8), k: 2.6 });
+        spots.push({ key: 'f' + b.id, v, d: Math.max(0, (v.x - f.x) ** 2 + (v.z - f.z) ** 2 - 8), k: 1.2 });
       }
       const { width, height } = g.map;
       for (const u of g.units) {
@@ -3181,7 +3181,7 @@ export class GameRenderer {
       // bezpiecznik: zepsuta liczba (NaN/∞) w sile światła czerni cały obraz i sama nie zniknie — gasimy lampę i zaczynamy od zera
       if (!Number.isFinite(st.cur) || !Number.isFinite(st.target)) { console.warn('[lampy] zła siła światła', st); st.cur = 0; st.target = 0; st.key = ''; }
       if (st.cur < 0.002) { st.cur = 0; if (!on) st.key = ''; }
-      lamp.intensity = st.cur * st.k * this.night * 13 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
+      lamp.intensity = st.cur * st.k * this.night * 10 * (0.9 + Math.sin(this.time * 9 + i * 2.1) * (this.calm ? 0 : 0.1)) * flicker;
     });
   }
 

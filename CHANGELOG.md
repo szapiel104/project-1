@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.58.5 — ogień nie razi w oczy (2026-10-28)
+
+- **Płomienie bez przepalenia:** najgorętszy rdzeń ognia świecił prawie trzy razy ponad biel ekranu, więc pochodnie, kosze i pożary wychodziły jako białe, rażące plamy. Teraz rdzeń jest żółtopomarańczowy i tylko lekko ponad biel (wspólny shader `fireGlsl.ts`); małe płomienie dodatkowo o 20% ciemniejsze
+- Poświata wokół płomieni o 40% słabsza, a nad płonącym budynkiem dużo słabsza w dzień
+- Światło płonącego budynku nocą o połowę słabsze (nie oblewa już całej okolicy)
+- Do tego: małe płomienie (pochodnie, kosze, ogniska) jeszcze ok. 20% ciemniejsze i z mniejszą, ciaśniejszą łuną, wszystkie lampy nocą o ok. 25% słabsze, łuna nad pożarem mniejsza, sam pożar trochę ciemniejszy
+- **Świeczki i latarnie w izbach** (np. na stole w chatce) nie wyglądają już jak płonący stół: mniejszy płomyk, łuna o 2/3 mniejsza i słabsza, w dzień prawie niewidoczna; latarnie w sztolni i pochodnie w bryłach budynków też z mniejszą łuną
+- Bot: bez zmian (czysto wizualne)
 ## 0.58.4 — prawdziwa pochodnia łucznika, łucznicy strzelają z dalej (2026-10-28)
 
 - **Pochodnia łucznika przy strzelaniu w budynek** to teraz ta sama pochodnia z Blendera co w rękach chłopów: drewniany trzonek z teksturą i owinięta głowica, wbita pionowo w ziemię, wielkości pochodni w ręce (ok. 0,3 pola), z mniejszym płomieniem. Wcześniej był to gładki kij bez tekstury, wyższy niż trzeba

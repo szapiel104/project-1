@@ -80,7 +80,8 @@ void main() {
   A *= vI;
   if (A < 0.01) discard;
   // mieszanie z przemnożoną alfą: ogień świeci, a tło za nim tylko lekko przygasa
-  gl_FragColor = vec4(col * vI, A * 0.45);
+  // jasność stonowana (28.10.2026, „wali po oczach”): płomień pomarańczowy, nie biały, i bez rozlanej łuny
+  gl_FragColor = vec4(col * vI * 0.65, A * 0.4);
 }`;
 
 /** Materiał objętościowego płomienia (wspólny dla puli i pojedynczych siatek) */
@@ -121,7 +122,7 @@ void main() {
   vec2 c = vUv * 2.0 - 1.0;
   float r = length(c);
   float fl = 0.85 + 0.15 * sin(time * 13.0 + vSeed * 40.0) * sin(time * 7.3 + vSeed * 11.0);
-  float a = pow(max(0.0, 1.0 - r), 2.2) * vI * fl;
+  float a = pow(max(0.0, 1.0 - r), 2.5) * vI * fl * 0.42; // poświata miękka, nie oślepia
   if (a < 0.004) discard;
   gl_FragColor = vec4(vec3(1.0, 0.55, 0.18), a);
 }`;
@@ -164,15 +165,16 @@ export class Flames {
 
   begin(time: number): void { this.uni.time.value = time; this.n = 0; }
 
-  /** Płomień: punkt u podstawy, wysokość, szerokość, ziarno (różnicuje ruch), jasność poświaty (0 w dzień, 1 nocą) */
-  add(base: THREE.Vector3, height: number, width: number, seed: number, glow: number): void {
+  /** Płomień: punkt u podstawy, wysokość, szerokość, ziarno (różnicuje ruch), jasność poświaty (0 w dzień, 1 nocą);
+   *  halo — mnożnik łuny (świeczka i latarnia w izbie: mała i słaba, żeby nie wyglądała jak płonący stół) */
+  add(base: THREE.Vector3, height: number, width: number, seed: number, glow: number, halo = 1): void {
     if (this.n >= MAX) return;
     const i = this.n++;
     this.flame.setMatrixAt(i, this.M.compose(this.P.copy(base), this.Q, this.S.set(width, height, width)));
     this.flame.setColorAt(i, this.C.setRGB(seed, 1, 0));
-    const gs = height * 3.2;
+    const gs = height * 2.6 * Math.sqrt(halo);
     this.glow.setMatrixAt(i, this.M.compose(this.P.set(base.x, base.y + height * 0.35, base.z), this.Q, this.S.set(gs, gs, 1)));
-    this.glow.setColorAt(i, this.C.setRGB(seed, 0.12 + glow * 0.35, 0));
+    this.glow.setColorAt(i, this.C.setRGB(seed, (0.12 + glow * 0.35) * halo, 0));
   }
 
   /** Sama poświata (bez płomienia), np. nad płonącym budynkiem, którego ogień rysuje blaze.ts */

@@ -29,7 +29,8 @@ vec3 fRamp(float t) {
   c = mix(c, vec3(1.0, 0.58, 0.1), smoothstep(0.3, 0.6, t));
   c = mix(c, vec3(1.0, 0.8, 0.35), smoothstep(0.62, 0.9, t));
   c = mix(c, vec3(1.0, 0.93, 0.7), smoothstep(0.9, 1.0, t));
-  return c * (0.7 + 2.0 * t * t);
+  // bez przepalenia: najgorętszy rdzeń tylko trochę ponad biel ekranu (wcześniej ×2,7 — płomienie świeciły na biało i raziły)
+  return c * (0.55 + 0.7 * t * t);
 }
 // przecięcie promienia z prostopadłościanem: (wejście, wyjście)
 vec2 fBox(vec3 o, vec3 d, vec3 lo, vec3 hi) {

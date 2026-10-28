@@ -79,7 +79,7 @@ void main() {
     if (ef + es > 0.001) {
       float temp = clamp(dens * (0.95 - 0.55 * clamp(v, 0.0, 1.0)) * (0.35 + 0.8 * n), 0.0, 1.0);
       fireSeen = max(fireSeen, temp);
-      col += T * (fRamp(temp) * ef * 0.3 + vec3(0.03, 0.026, 0.022) * es * (0.4 + fireSeen * 1.5)) * dsm;
+      col += T * (fRamp(temp) * ef * 0.38 + vec3(0.03, 0.026, 0.022) * es * (0.4 + fireSeen * 1.5)) * dsm;
       T *= exp(-(ef * 0.35 + es * 1.1) * dsm);
       if (T < 0.03) break;
     }
