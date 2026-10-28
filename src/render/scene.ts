@@ -69,6 +69,7 @@ import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
 import { COLD, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
+import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
 import { StrategyCamera } from './camera';
 import { proceduralModels, type ModelFactory } from './models';
@@ -4368,6 +4369,8 @@ export class GameRenderer {
   snowForce = -1;
   private trails: SnowTrails | null = null;
   private trailSeen = 0;
+  /** Pojedyncze odciski butów na śniegu przy kamerze (footprints.ts) */
+  private prints: Footprints | null = null;
   /** Ślady na śniegu: ludzie, żołnierze i wilki wydeptują ścieżki, które powoli się zasypują */
   private updateTrails(g: GameState, dt: number): void {
     const { width: w, height: h } = g.map;
@@ -4382,6 +4385,18 @@ export class GameRenderer {
     }
     // śnieg zasypuje ślady: pojedyncze kroki po ok. 45 s, wydeptana ścieżka po ok. 2 min; w opadzie szybciej
     t.update(dt, 2 + this.rain * 8);
+    // odciski butów: chłopi i żołnierze w ruchu (na wieży nikt nie chodzi po śniegu), w pobliżu kamery
+    const view = this.view;
+    if (view && (this.snowNow > 0.01 || this.prints)) {
+      this.prints ??= new Footprints(this.scene);
+      const walkers: { id: number; x: number; y: number }[] = [];
+      if (this.snowNow >= 0.1) {
+        for (const u of g.units) if (u.path.length > 0) walkers.push({ id: u.id, x: u.px / FP, y: u.py / FP });
+        for (const s of g.soldiers) if (s.path.length > 0 && !s.up) walkers.push({ id: s.id, x: s.px / FP, y: s.py / FP });
+      }
+      const c = this.cam.camera.position;
+      this.prints.sync(this.snowNow, this.calm ? 0 : dt, this.rain, walkers, (x, y) => this.standY(view, x, y, -2), w, h, { x: c.x + w / 2, y: c.z + h / 2 });
+    }
   }
   private shiftSeen = 0;
   private seasonScan = 0;

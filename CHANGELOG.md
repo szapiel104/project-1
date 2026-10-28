@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.61.8 — ślady butów na śniegu (2026-10-28)
+
+- **Odciski butów** (`render/footprints.ts`): zimą, gdy leży śnieg, każdy idący chłop i żołnierz zostawia za sobą pojedyncze odciski podeszew — na zmianę lewa i prawa, wzdłuż kierunku marszu, z przodem stopy i obcasem. Odcisk to chłodny cień we wgłębieniu śniegu (nocą ciemnieje razem z resztą). Po ok. 25 s zaczyna blednąć i po ok. 40 s znika; w zamieci szybciej. Gdy śnieg topnieje, znikają razem z nim. Rozmyte wydeptane ścieżki (mapa śladów) zostają jak były — odciski widać dodatkowo z bliska
+- Wydajność: jedna siatka instancji (jedno wywołanie rysowania), najwyżej 4096 odcisków w pierścieniu (nowy zastępuje najstarszy), tylko w promieniu ok. 40 pól od kamery; blednięcie liczy shader, więc co klatkę zmienia się tylko jeden mundur
+- Bot: bez zmian (wygląd)
+
 ## 0.61.7 — menu główne na pejzażu z ekranu wczytywania, opis gry pod tytułem (2026-10-28)
 
 - **Opis gry pod podtytułem** (menu i wczytywanie): „Symulator średniowiecznej osady i jej ludzi, w duchu dawnych gier RPG” i złotą linijką „Gra jest cały czas rozwijana — bez limitu” (po angielsku też)
