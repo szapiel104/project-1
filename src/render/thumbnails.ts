@@ -2,13 +2,14 @@ import * as THREE from 'three';
 import { BUILDINGS } from '../data/buildings';
 import type { ModelFactory } from './models';
 import { Figures } from './peasants';
+import { createRenderer } from './glcontext';
 
 /** Renderuje obrazki budynków do menu z tych samych modeli, które stoją na mapie. Zwraca id → adres obrazka. */
 export function renderThumbnails(models: ModelFactory, teamColor: number, size = 160): Map<string, string> {
   const out = new Map<string, string>();
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true , powerPreference: 'high-performance' });
+    renderer = createRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true }, 'pomocniczy');
   } catch {
     return out; // brak drugiego kontekstu WebGL: menu pokaże same nazwy
   }
@@ -66,7 +67,7 @@ export function renderUnitPortraits(teamColor: number, size = 192): Map<string, 
   const out = new Map<string, string>();
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true , powerPreference: 'high-performance' });
+    renderer = createRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true }, 'pomocniczy');
   } catch {
     return out;
   }

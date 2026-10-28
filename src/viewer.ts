@@ -33,6 +33,7 @@ import { HORSE_MORPH, horseObject } from './render/horse';
 import { watchRenderer } from './debug/errlog';
 import { streamWaterMaterial, waterfallModel } from './render/streams';
 import { mistNoise } from './render/highmist';
+import { createRenderer } from './render/glcontext';
 const RAM_MODEL = model('ram');
 
 const RED = 0xa32a22;
@@ -302,7 +303,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
 
 // ---------- scena ----------
 const canvas = document.getElementById('c') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true , powerPreference: 'high-performance' });
+const renderer = createRenderer({canvas, antialias: true }, 'pomocniczy');
 initKtx(renderer);
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
 renderer.shadowMap.enabled = true;

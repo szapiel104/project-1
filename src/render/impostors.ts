@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { SEASON_U } from './season';
+import { createRenderer } from './glcontext';
 
 /** Część drzewa do sfotografowania: bryła, barwa i tekstura */
 export interface ImpostorPart { geo: THREE.BufferGeometry; color: number; map?: THREE.Texture | null; vertexColors?: boolean; /** karty z przezroczystością (liście, igły) */ alpha?: boolean }
@@ -18,7 +19,7 @@ export function treeImpostor(parts: ImpostorPart[], px = 96): { geometry: THREE.
   const W = r * 2, H = box.max.y * 1.03;
   const fw = Math.max(16, Math.round((px * W) / H)), fh = px;
   let renderer: THREE.WebGLRenderer;
-  try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true , powerPreference: 'high-performance' }); } catch { return null; }
+  try { renderer = createRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true }, 'pomocniczy'); } catch { return null; }
   renderer.setSize(fw, fh, false);
   renderer.setClearColor(0x000000, 0);
   const scene = new THREE.Scene();

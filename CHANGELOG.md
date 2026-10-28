@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.60.4 — gra wstaje także, gdy przeglądarka odmawia grafiki przy pełnych ustawieniach (2026-10-28)
+
+- **Zgłoszenie:** u znajomego (karta RTX 3090, Chrome) gra w ogóle się nie wczytywała — „WebGL creation failed … FEATURE_FAILURE_EGL_NO_CONFIG, Exhausted GL driver options”. Gra prosiła tylko o jeden zestaw ustawień grafiki (mocniejsza karta, wygładzanie krawędzi), a gdy przeglądarka go nie dała, zostawał wieczny ekran wczytywania
+- **Zapasowe próby** (`render/glcontext.ts`, wszystkie okna 3D: gra, podgląd modeli, miniatury, dalekie drzewa): po kolei bez prośby o mocniejszą kartę, bez wygładzania krawędzi, na końcu tryb awaryjny. Które ustawienia się udały, widać w dzienniku błędów („WebGL”)
+- **Gdy przeglądarka nie da grafiki wcale:** zamiast wiecznego wczytywania komunikat po polsku i angielsku, co zrobić — włączyć „Używaj akceleracji grafiki” w ustawieniach Chrome i uruchomić przeglądarkę ponownie, sprawdzić `chrome://gpu`, zaktualizować sterownik albo spróbować innej przeglądarki
+- Bot: bez zmian
 ## 0.60.3 — ciała nie leżą: zbiera je każdy, kto jest pod ręką (2026-10-28)
 
 - **Błąd:** od 0.59.2 po ciało szło się tylko we dwóch, ale szukaliśmy wyłącznie wolnych chłopów przy ognisku. W rozbudowanej osadzie wszyscy pracują, więc nikt nie przychodził, a ciało leżało, aż zgniło (w długiej grze z botami 29 z 32 ciał gniło nieruszone). Do tego tylny niosący szedł do przedniego na skróty, po linii prostej, nawet przez mury

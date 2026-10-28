@@ -5,6 +5,7 @@ import { t, tx } from '../i18n';
 import { buildingModel } from './buildings';
 import { crowParts, WOLF_HIPS, WOLF_TAIL, wolfParts } from './creatures';
 import { Figures } from './peasants';
+import { createRenderer } from './glcontext';
 
 /**
  * Galeria postaci do menu „Jak grać”: te same modele co w grze, obracające się powoli na kawałku łąki.
@@ -30,7 +31,7 @@ const BUILDING_ENTRIES: GalleryEntry[] = BUILDINGS.filter((d) => !d.road).map((d
 export const GALLERY = { people: PEOPLE, buildings: [...BUILDING_ENTRIES].sort((a, b) => Object.values(CATS).indexOf(a.group) - Object.values(CATS).indexOf(b.group)) };
 
 export function createGallery(canvas: HTMLCanvasElement): { show(id: string): void } {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false , powerPreference: 'high-performance' });
+  const renderer = createRenderer({canvas, antialias: true, alpha: false }, 'pomocniczy');
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;

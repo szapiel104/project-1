@@ -20,7 +20,7 @@ if (touchOnly || mobileAgent) {
     <p>${tx('Otwórz ten adres na komputerze.', 'Open this address on a computer.')}</p>
   </div>`;
 } else {
-  void load();
+  load().catch(showFatal);
   // pliki gry zostają w przeglądarce (Service Worker): kolejne wejście startuje bez pobierania
   if ('serviceWorker' in navigator && location.hostname !== 'localhost' && !location.search.includes('test=')) {
     addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(() => { /* bez pamięci podręcznej gra działa jak dotąd */ }); });
@@ -148,4 +148,31 @@ async function load(): Promise<void> {
   console.info('[wczytywanie]', times.map(([t, ms]) => `${t} ${ms} ms`).join(' | '));
   document.getElementById('loading')?.classList.add('done');
   setTimeout(() => document.getElementById('loading')?.remove(), 600);
+}
+
+/**
+ * Gra nie wstała (najczęściej: przeglądarka nie daje grafiki WebGL — wyłączone przyspieszanie sprzętowe, stary albo
+ * zablokowany sterownik karty). Zamiast wiecznego ekranu wczytywania: co się stało i co zrobić.
+ */
+function showFatal(e: unknown): void {
+  console.error(e);
+  const msg = e instanceof Error ? e.message : String(e);
+  const gl = /webgl|context/i.test(msg);
+  const card = document.querySelector('#loading .loading-card') ?? document.getElementById('ui') ?? document.body;
+  const box = document.createElement('div');
+  box.className = 'panel desktop-only';
+  box.setAttribute('role', 'alert');
+  box.innerHTML = gl
+    ? `<p class="info-name">${tx('Przeglądarka nie uruchomiła grafiki 3D', 'Your browser could not start 3D graphics')}</p>
+       <p>${tx('Gra potrzebuje WebGL, a przeglądarka go nie dała (karta graficzna niedostępna albo zablokowana).', 'The game needs WebGL and the browser refused it (graphics card unavailable or blocked).')}</p>
+       <p>${tx('Co zrobić: w Chrome wejdź w Ustawienia → System i włącz „Używaj akceleracji grafiki, gdy jest dostępna”, uruchom przeglądarkę ponownie. Pomaga też aktualizacja sterownika karty graficznej albo inna przeglądarka (Chrome, Edge, Firefox).', 'What to do: in Chrome open Settings → System, turn on “Use graphics acceleration when available” and restart the browser. Updating the graphics driver or trying another browser (Chrome, Edge, Firefox) also helps.')}</p>
+       <p>${tx('Sprawdzenie: otwórz adres chrome://gpu — przy „WebGL” powinno być „Hardware accelerated”.', 'To check: open chrome://gpu — “WebGL” should say “Hardware accelerated”.')}</p>`
+    : `<p class="info-name">${tx('Gra nie wczytała się', 'The game failed to load')}</p>
+       <p>${tx('Odśwież stronę (Ctrl+F5). Jeśli to nie pomoże, wyślij twórcy gry ten opis:', 'Reload the page (Ctrl+F5). If that does not help, send this to the game author:')}</p>`;
+  const detail = document.createElement('pre');
+  detail.style.whiteSpace = 'pre-wrap';
+  detail.style.fontSize = '12px';
+  detail.textContent = msg.slice(0, 600);
+  box.append(detail);
+  card.replaceChildren(box);
 }

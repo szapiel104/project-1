@@ -66,6 +66,7 @@ import { walkable } from './sim/path';
 import { FP } from './sim/state';
 import { unitIndex } from './data/units';
 import { randomTip } from './data/tips';
+import { glFallback } from './render/glcontext';
 
 let ME = 0; // gracz sterowany lokalnie (w grze przez sieć gość ma 1)
 const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -2849,6 +2850,7 @@ fpsTag.addEventListener('click', togglePerf);
 errContext('ekran', () => (titleScreen ? 'tytułowy' : menu.isOpen() ? 'menu' : entering ? 'wczytywanie' : 'gra'));
 errContext('gra', () => (game ? `${net ? 'sieć' : game.players[ME]?.dev ? 'deweloperska' : 'z botami'} ${currentPreset}, tick ${game.tick}, ludzie ${game.units.length}, wojsko ${game.soldiers.length}, budynki ${game.buildings.length}` : ''));
 errContext('wątek symulacji', () => (simMode ? 'tak' : 'nie'));
+errContext('WebGL', () => glFallback || 'zwykły');
 errContext('jakość', () => `${gfx.auto ? 'auto ' : ''}${renderer.quality} · ${renderer.resolution}`);
 errContext('FPS', () => perf.last.fps ?? '?');
 errContext('spacer/kopalnia', () => (renderer.walking ? 'spacer' : renderer.inMineWalk ? 'kopalnia' : ''));

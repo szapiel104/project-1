@@ -100,6 +100,7 @@ import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
 const BATCH_ALSO = /^(torch|lod\d+)$/;
 import { Precompiler } from './precompile';
 import { KEEP_MODEL, RAM_MODEL, SHRINE_SPOTS, CAMP_SEATS, KEEP_SOLID, KEEP_FLOOR, KEEP_WALL, KEEP_HALF, type WalkModel, WALK_MODELS, MINE_SPOTS, OREMINE_T, OREMINE_WALK, MINE_LEVEL, MINE_LEVEL_SPOTS, mineRoute, OREMINE_PROD, inRect, MINE_AT, TAVERN_SEATS, walkFoot, TAVERN_FLOOR } from './walkmodels';
+import { createRenderer } from './glcontext';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 /** Promień (w polach mapy), w którym spacerem widać wnętrza budynków przez drzwi i okna */
 const WALK_SEE_R = 9;
@@ -756,7 +757,7 @@ export class GameRenderer {
   private unitY = new Map<number, number>();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true , powerPreference: 'high-performance' });
+    this.renderer = createRenderer({canvas, antialias: true }, 'gra');
     this.pre = new Precompiler(this.renderer, this.scene);
     initKtx(this.renderer);
     watchRenderer(this.renderer, 'gra');
