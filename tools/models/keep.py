@@ -363,7 +363,10 @@ block(DX0, DX1, DZB, -H + 0.05, WALK - 0.1, 9)          # pas pod tylną ścian�
 for side in (-1, 1):
     b.box('base', 'castleDark', 0.15, 0.64, 0.06, DX0 + RW / 2, WALK, QDZ + side * (DOORW / 2 + 0.02))
 b.box('base', 'woodDark', RW + 0.03, 0.05, DOORW + 0.1, DX0 + RW / 2, WALK + 0.6, QDZ)
-b.box('interior', 'woodDark', 0.035, 0.6, DOORW - 0.04, DX0 + RW + 0.2, WALK + 0.01, QDZ - DOORW / 2 + 0.22, math.pi / 2 - 1.2)
+# skrzydło otwarte szeroko do środka: zawias przy brzegu otworu od strony pola, skrzydło prawie prostopadle do ściany
+# (dawniej obrót o 0,37 rad zostawiał je niemal zamknięte i zasłaniało wejście)
+DLEAF, DOPEN = DOORW - 0.04, 1.45
+b.box('interior', 'woodDark', 0.035, 0.6, DLEAF, DX0 + RW + 0.02 + math.sin(DOPEN) * DLEAF / 2, WALK + 0.01, QDZ - DOORW / 2 + 0.02 + math.cos(DOPEN) * DLEAF / 2, DOPEN)
 # parapety i obramienia okien (wystają 3 cm przed lico), okiennice przy oknach od pola
 for u0, u1, v0, v1 in BACKW:
     b.box('base', 'castleDark', u1 - u0 + 0.08, 0.04, RW + 0.06, (u0 + u1) / 2, v0 - 0.04, DZB + RW / 2)
@@ -373,53 +376,54 @@ for u0, u1, v0, v1 in BACKW:
 for u0, u1, v0, v1 in FRONTW:
     b.box('base', 'castleDark', u1 - u0 + 0.08, 0.04, RW + 0.06, (u0 + u1) / 2, v0 - 0.04, DZF - RW / 2)
     b.box('base', 'castleDark', u1 - u0 + 0.1, 0.05, 0.05, (u0 + u1) / 2, v1, DZF + 0.015)
-# nad komnatą: pełne piętro (strych i izba straży), gzymsy na styku pięter
-b.box('base', 'castle', DW, 3.6 - QY2, DD, 0, QY2, DZ, bottom=False)
-for y in (TOP - 0.06, QY2 - 0.03):
-    b.box('base', 'castleDark', DW + 0.1, 0.07, DD + 0.05, 0, y, DZ - 0.025)
+# nad komnatą: pełne piętro (strych i izba straży), gzymsy na styku pięter. Wszystko nad stropem komnaty w 'shell',
+# żeby po kliknięciu twierdzy (podgląd wnętrza) zdjąć je jak dach i zajrzeć z góry do komnaty królowej
+b.box('shell', 'castle', DW, 3.6 - QY2, DD, 0, QY2, DZ, bottom=False)
+b.box('shell', 'castleDark', DW + 0.1, 0.07, DD + 0.05, 0, TOP - 0.06, DZ - 0.025)
+b.box('shell', 'castleDark', DW + 0.1, 0.07, DD + 0.05, 0, QY2 - 0.03, DZ - 0.025)
 for x in (-0.95, 0.95):   # okna górnej izby od pola i strzelnice w trzonie
-    b.box('base', 'dark', 0.14, 0.3, 0.015, x, 2.95, DZB - 0.008)
-    b.box('base', 'castleDark', 0.22, 0.04, 0.05, x, 2.91, DZB - 0.015)
+    b.box('shell', 'dark', 0.14, 0.3, 0.015, x, 2.95, DZB - 0.008)
+    b.box('shell', 'castleDark', 0.22, 0.04, 0.05, x, 2.91, DZB - 0.015)
     b.box('base', 'dark', 0.05, 0.26, 0.015, x * 0.6, 0.85, DZB - 0.008)
 for sx in (-1, 1):
-    b.box('base', 'dark', 0.015, 0.3, 0.14, sx * (DX1 + 0.008), 2.95, DZ)
+    b.box('shell', 'dark', 0.015, 0.3, 0.14, sx * (DX1 + 0.008), 2.95, DZ)
 # korona: gzyms, wsporniki machikuł z tyłu i z boków, blanki, narożne wieżyczki na kroksztynach
-b.box('base', 'castleDark', DW + 0.14, 0.08, DD + 0.14, 0, 3.6, DZ)
+b.box('shell', 'castleDark', DW + 0.14, 0.08, DD + 0.14, 0, 3.6, DZ)
 n = 14
 for i in range(n):
     x = DX0 + 0.12 + i * (DW - 0.24) / (n - 1)
-    b.box('base', 'castleDark', 0.07, 0.14, 0.085, x, 3.46, DZB + 0.0225)
-    b.box('base', 'castleDark', 0.07, 0.06, 0.05, x, 3.4, DZB + 0.005)
+    b.box('shell', 'castleDark', 0.07, 0.14, 0.085, x, 3.46, DZB + 0.0225)
+    b.box('shell', 'castleDark', 0.07, 0.06, 0.05, x, 3.4, DZB + 0.005)
 for sx in (-1, 1):
     for i in range(6):
         z = DZB + 0.12 + i * (DD - 0.24) / 5
-        b.box('base', 'castleDark', 0.085, 0.14, 0.07, sx * (DX1 - 0.0225), 3.46, z)
-        b.box('base', 'castleDark', 0.05, 0.06, 0.07, sx * (DX1 - 0.005), 3.4, z)
-b.merlons_line('base', 'castle', DX0 + 0.35, DZB + 0.04, DX1 - 0.35, DZB + 0.04, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
-b.merlons_line('base', 'castle', DX0 + 0.35, DZF - 0.04, DX1 - 0.35, DZF - 0.04, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
+        b.box('shell', 'castleDark', 0.085, 0.14, 0.07, sx * (DX1 - 0.0225), 3.46, z)
+        b.box('shell', 'castleDark', 0.05, 0.06, 0.07, sx * (DX1 - 0.005), 3.4, z)
+b.merlons_line('shell', 'castle', DX0 + 0.35, DZB + 0.04, DX1 - 0.35, DZB + 0.04, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
+b.merlons_line('shell', 'castle', DX0 + 0.35, DZF - 0.04, DX1 - 0.35, DZF - 0.04, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
 for sx in (-1, 1):
-    b.merlons_line('base', 'castle', sx * (DX1 - 0.04), DZB + 0.3, sx * (DX1 - 0.04), DZF - 0.3, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
+    b.merlons_line('shell', 'castle', sx * (DX1 - 0.04), DZB + 0.3, sx * (DX1 - 0.04), DZF - 0.3, 3.68, step=0.3, w=0.16, h=0.2, t=0.08)
     for zc in (DZB, DZF):
         tx, tz = sx * (DX1 - 0.02), zc + (0.02 if zc == DZB else -0.02)
-        b.prism('base', 'castleDark', 0.05, 0.2, 0.32, tx, 3.3, tz, seg=12, top=False)      # kroksztyn
-        b.prism('base', 'castle', 0.2, 0.2, 0.52, tx, 3.62, tz, seg=12, top=False)
-        b.prism('base', 'castleDark', 0.215, 0.215, 0.05, tx, 4.14, tz, seg=12)
-        b.prism('base', 'slate', 0.24, 0.0, 0.5, tx, 4.19, tz, seg=12)
-        b.prism('base', 'iron', 0.012, 0.0, 0.14, tx, 4.68, tz, seg=6)
+        b.prism('shell', 'castleDark', 0.05, 0.2, 0.32, tx, 3.3, tz, seg=12, top=False)      # kroksztyn
+        b.prism('shell', 'castle', 0.2, 0.2, 0.52, tx, 3.62, tz, seg=12, top=False)
+        b.prism('shell', 'castleDark', 0.215, 0.215, 0.05, tx, 4.14, tz, seg=12)
+        b.prism('shell', 'slate', 0.24, 0.0, 0.5, tx, 4.19, tz, seg=12)
+        b.prism('shell', 'iron', 0.012, 0.0, 0.14, tx, 4.68, tz, seg=6)
         out_a = math.atan2(sx, -1 if zc == DZB else 1)
-        b.box('base', 'dark', 0.05, 0.2, 0.012, tx + math.sin(out_a) * 0.202, 3.8, tz + math.cos(out_a) * 0.202, out_a)
+        b.box('shell', 'dark', 0.05, 0.2, 0.012, tx + math.sin(out_a) * 0.202, 3.8, tz + math.cos(out_a) * 0.202, out_a)
 # dach dwuspadowy z łupka za blankami, gąsior, komin kominka komnaty, maszt z chorągwią na kalenicy
 RZ0, RZ1, RYB, RRISE = DZB + 0.14, DZF - 0.14, 3.68, 0.85
-b.gable('base', 'slate', DX0 + 0.2, DX1 - 0.2, RZ0, RZ1, RYB, RRISE, along_x=True, over=0.04, end_mat='castle')
+b.gable('shell', 'slate', DX0 + 0.2, DX1 - 0.2, RZ0, RZ1, RYB, RRISE, along_x=True, over=0.04, end_mat='castle')
 sh = 0.035 * math.sin(math.pi / 4)
-b.box('base', 'castleDark', DW - 0.3, 0.07, 0.07, 0, RYB + RRISE - 0.035, DZ - sh, tilt=math.pi / 4)
+b.box('shell', 'castleDark', DW - 0.3, 0.07, 0.07, 0, RYB + RRISE - 0.035, DZ - sh, tilt=math.pi / 4)
 CHX = 1.0
-b.box('base', 'castle', 0.24, 1.05, 0.24, CHX, RYB, DZB + 0.35)
-b.box('base', 'castleDark', 0.3, 0.05, 0.3, CHX, RYB + 1.05, DZB + 0.35)
-b.box('base', 'dark', 0.16, 0.005, 0.16, CHX, RYB + 1.1, DZB + 0.35)
-b.box('base', 'gold', 0.07, 0.12, 0.07, 0, RYB + RRISE - 0.02, DZ)
-b.box('base', 'woodDark', 0.04, 0.9, 0.04, 0, RYB + RRISE, DZ)
-BANNERS.append([0.022, round(RYB + RRISE + 0.68, 3), round(DZ, 3), 0, 0.7, 0.4, 0, 'base'])
+b.box('shell', 'castle', 0.24, 1.05, 0.24, CHX, RYB, DZB + 0.35)
+b.box('shell', 'castleDark', 0.3, 0.05, 0.3, CHX, RYB + 1.05, DZB + 0.35)
+b.box('shell', 'dark', 0.16, 0.005, 0.16, CHX, RYB + 1.1, DZB + 0.35)
+b.box('shell', 'gold', 0.07, 0.12, 0.07, 0, RYB + RRISE - 0.02, DZ)
+b.box('shell', 'woodDark', 0.04, 0.9, 0.04, 0, RYB + RRISE, DZ)
+BANNERS.append([0.022, round(RYB + RRISE + 0.68, 3), round(DZ, 3), 0, 0.7, 0.4, 0, 'shell'])
 
 # ---------------- komnata królowej (wnętrze donżonu) ----------------
 QX0, QX1, QZ0, QZ1 = DX0 + RW, DX1 - RW, DZB + RW, DZF - RW
