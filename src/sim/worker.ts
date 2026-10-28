@@ -7,7 +7,8 @@
  *   { type: 'set', gen, state }        — nowa gra albo wczytany zapis (pełny stan z mapą)
  *   { type: 'run', gen, ticks, cmds }  — policz `ticks` kroków; polecenia gracza trafiają do pierwszego
  * Odpowiedź: { type: 'state', gen, state (bez mapy — mapa zmienia się tylko przez wycinkę, patrz `cut`), ms, ticks }.
- * Używane tylko w grze z botami bez trybu dewelopera i testów (tam stan zmienia też wątek główny).
+ * Używane w grze z botami, także w trybie dewelopera: akcje panelu dewelopera zmieniają stan w wątku głównym, po czym
+ * main.ts (`resyncSim`) wysyła tu stan od nowa. Bez testów (`?test=1`, chyba że `&watek=1`) i bez meczu przez sieć.
  */
 import { Rng } from './rng';
 import type { GameState } from './state';

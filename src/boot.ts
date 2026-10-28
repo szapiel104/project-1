@@ -87,10 +87,25 @@ async function load(): Promise<void> {
   info.step(tx('Tekstury', 'Textures'), `${kinds.length} ${tx('rodzajów', 'kinds')}`);
   // zapamiętane z poprzedniej wizyty wczytują się wszystkie naraz (wcześniej po jednej, każda czekała na poprzednią)
   const restored = await Promise.all(kinds.map((k) => tex.restore(k).catch(() => false)));
+  // pierwsze wejście: brakujące tekstury rysuje kilka wątków w tle naraz, każdy na innym rdzeniu (texworker.ts);
+  // wątek główny rysuje tylko to, czego tam się nie dało (stara przeglądarka, błąd wątku)
+  const toPaint = kinds.filter((k, i) => !restored[i] && tex.needsPaint(k));
+  let inBack = 0;
+  if (toPaint.length) {
+    await step(`${tx('Tekstury', 'Textures')}: ${tx('rysowanie w tle', 'painting in the background')}`);
+    info.detail(`${tx('rysowane w tle', 'painted in the background')}: 0 / ${toPaint.length}`);
+  }
+  const leftover = new Set(await tex.paintInBackground(toPaint, () => {
+    inBack++;
+    info.detail(`${tx('rysowane w tle', 'painted in the background')}: ${inBack} / ${toPaint.length}`);
+    if (fill) fill.style.width = `${Math.round(((done + inBack) / total) * 100)}%`;
+  }).catch(() => toPaint));
   for (let i = 0; i < kinds.length; i++) {
     const kind = kinds[i]!;
     info.detail(`${names[kind] ? tx(...names[kind]!) : kind} · ${tx('z pamięci', 'cached')} ${fromCache}, ${tx('rysowane', 'drawn')} ${drawn} / ${kinds.length}`);
     if (restored[i]) { tex.pattern(kind); tex.bump(kind); done++; fromCache++; continue; }
+    // gotowa z wątku w tle albo zdjęciowa (z pliku, nic do rysowania): bez klatki przerwy
+    if (!leftover.has(kind)) { tex.pattern(kind); tex.bump(kind); done++; if (toPaint.includes(kind)) drawn++; continue; }
     drawn++;
     await step(`${tx('Tekstury', 'Textures')}: ${names[kind] ? tx(...names[kind]!) : kind}`);
     tex.pattern(kind);

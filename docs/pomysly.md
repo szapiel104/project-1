@@ -5,9 +5,9 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 ## Płynność wczytywania i gry — po przeglądzie 26.10.2026 (Claude podpowiada stąd przy „co dalej”)
 - [x] Karta graficzna: gra prosi o mocniejszą kartę (`powerPreference: 'high-performance'`), F3 pokazuje nazwę karty i rdzenie — 28.10.2026 (0.54.5)
 - [ ] **Wątki (przegląd 28.10.2026):** w osobnych wątkach liczą się dziś symulacja (tylko gra z botami bez trybu dewelopera), mapa do podglądu, wersje budynków z daleka i dekodowanie tekstur KTX2. W wątku głównym zostają: rysowanie, interfejs, a w **trybie deweloperskim i w meczu przez sieć także cała symulacja z botami** — to największy niewykorzystany zapas procesora. Kolejność:
-  1. tryb deweloperski w wątku symulacji: akcje panelu dewelopera (daj surowce, przewiń do nocy, postaw jednostki, pożar…) wykonywać na stanie w wątku głównym, gdy wątek nie liczy, i od razu wysyłać stan do wątku (tak jak już robi pauza z poleceniami); test, że akcja nie ginie pod wynikiem z wątku
+  1. [x] (28.10.2026, 0.54.6) tryb deweloperski w wątku symulacji: akcje panelu dewelopera (daj surowce, przewiń do nocy, postaw jednostki, pożar…) wykonywać na stanie w wątku głównym, gdy wątek nie liczy, i od razu wysyłać stan do wątku (tak jak już robi pauza z poleceniami); test, że akcja nie ginie pod wynikiem z wątku
   2. mecz przez sieć w wątku: lockstep (tury, polecenia, `stateHash`) zostaje w wątku głównym, wątek liczy tylko kroki tury — większa zmiana, osobna partia z testem zgodności stanu u dwóch graczy
-  3. pierwsze wejście: rysowanie tekstur z kodu (`textures.ts`) w kilku wątkach naraz (OffscreenCanvas) — dotyczy tylko pierwszej wizyty, potem tekstury są z pamięci
+  3. [x] (28.10.2026, 0.54.6) pierwsze wejście: rysowanie tekstur z kodu (`textures.ts`) w kilku wątkach naraz (OffscreenCanvas) — dotyczy tylko pierwszej wizyty, potem tekstury są z pamięci
 - [ ] Wątek symulacji odsyła po każdej porcji kroków cały stan gry (kopia w wątku głównym). Przy 4 na 4 z dużą armią zmierzyć czas odbioru w F3; jeśli rośnie, wysyłać tylko to, co się zmieniło
 - [x] Pory roku: łatki materiałów dokładane od razu (przed kompilacją), a nie skanem co 3 s — bez drugiej kompilacji na żywo (0.51.12)
 - [x] „Nowa gra”: teren podglądu budowany etapami z przerwą na klatkę, zamiast ~0,7 s zatrzymania strony; to samo przy „Wstecz” (0.51.12)

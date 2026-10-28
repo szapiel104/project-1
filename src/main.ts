@@ -18,6 +18,7 @@ import { seedFromText } from './sim/rng';
 import { deserialize, serialize, type SaveData } from './sim/save';
 import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { createGameAsync } from './sim/mapthread';
+import { SimBatch } from './sim/simbatch';
 import { applyCommands, step, type Command } from './sim/step';
 import { doleCost, rioters } from './sim/systems/unrest';
 import { canQuarantine, magesOf, startPlague } from './sim/systems/plague';
@@ -729,11 +730,12 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   caravanSeen = -1; allies.close(); pings.clear();
   game = loaded ?? (!online && fresh ? fresh : createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true));
   if (EMPTY && !loaded && !online) emptyScene(game);
-  // wątek symulacji: tylko gra z botami bez trybu dewelopera i testów (tam wątek główny też zmienia stan gry)
+  // wątek symulacji: gra z botami, także w trybie dewelopera (akcje panelu dewelopera idą przez resyncSim);
+  // bez testów (tam pomocniki __test zmieniają stan bez resyncSim) i bez meczu przez sieć (lockstep w wątku głównym)
   simGen++; simBusy = false;
   // w testach można wymusić wątek: ?test=1&watek=1 (bez pomocników __test, które zmieniają stan)
   const forceThread = SANDBOX && new URLSearchParams(location.search).has('watek');
-  simMode = !!simThread && !simBroken && !online && (!SANDBOX || forceThread) && (!game.players[ME]?.dev || forceThread);
+  simMode = !!simThread && !simBroken && !online && (!SANDBOX || forceThread);
   if (simMode) simThread!.set(game, simGen);
   // nowa mapa: grupy i zaznaczenie z poprzedniej gry nie mają sensu (przy wczytaniu wracają z zapisu)
   if (!loaded) groups.clear();
@@ -1075,7 +1077,7 @@ renderer.onClick = (tile, touch) => {
     renderer.orderMarker(tile);
     return;
   }
-  if (devSpawn && devAllowed()) { devPlace(tile.x, tile.y, devSpawn.kind, devSpawn.foe, devSpawn.count); return; }
+  if (devSpawn && devAllowed()) { devPlace(tile.x, tile.y, devSpawn.kind, devSpawn.foe, devSpawn.count); resyncSim(); return; }
   if (wrecking) {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
     const b = game.buildings.find((x) => x.id === id);
@@ -1871,9 +1873,30 @@ let acc = 0;
 // na razie tylko na życzenie (?watek=1): w zwykłej grze ludzie sunęli bez animacji, przeskakiwali i przenikali przez zamek
 const simThread = typeof window !== 'undefined' && new URLSearchParams(location.search).has('watek') ? createSimThread() : null;
 let simMode = false, simBusy = false, simGen = 0, simBroken = false, simSent = 0;
+/** Porcja kroków w drodze do wątku: polecenia gracza i liczba kroków (do powtórki, gdy porcję trzeba odrzucić) */
+const simInFlight = new SimBatch();
+/**
+ * Stan gry zmienił się w wątku głównym poza symulacją (panel dewelopera: surowce, przewinięcie czasu, nowe jednostki,
+ * pożar…). Wątek dostaje ten stan od nowa. Porcja kroków, która właśnie się liczy, jest odrzucana (wynik ze starym
+ * numerem `simGen` nie nadpisze zmiany) i liczy się jeszcze raz od nowego stanu, z tymi samymi poleceniami gracza
+ * i tą samą liczbą kroków — nic nie ginie, gra traci najwyżej ułamek sekundy liczenia.
+ */
+function resyncSim(): void {
+  if (!simMode) return;
+  if (simBusy) {
+    const back = simInFlight.cancel();
+    pending = [...back.cmds, ...pending];
+    acc += back.ticks * TICK_MS;
+    simBusy = false;
+  }
+  simInFlight.done();
+  simGen++;
+  simThread!.set(game, simGen);
+}
 function onSimResult(r: SimResult): void {
   if (r.gen !== simGen || !simMode) return;
   simBusy = false;
+  simInFlight.done();
   renderer.snapshot(); // pozycje sprzed porcji kroków: ruch płynny między tickami
   const map = game.map;
   // wycinka lasu i wyczerpane złoża: jedyne zmiany mapy w symulacji — nanosimy je na naszą kopię mapy
@@ -1889,7 +1912,13 @@ function onSimResult(r: SimResult): void {
 if (simThread) {
   simThread.onResult = onSimResult;
   // wątek nie wstał (np. gra złożona w jeden plik) albo padł: dalej liczy wątek główny, od bieżącego stanu
-  simThread.onError = () => { if (simMode) console.warn('Wątek symulacji niedostępny — liczę w wątku głównym'); simMode = false; simBusy = false; simBroken = true; };
+  simThread.onError = () => {
+    if (simMode) console.warn('Wątek symulacji niedostępny — liczę w wątku głównym');
+    // porcja w drodze przepada razem z wątkiem: jej polecenia i kroki liczy teraz wątek główny
+    const back = simInFlight.cancel();
+    pending = [...back.cmds, ...pending]; acc += back.ticks * TICK_MS;
+    simMode = false; simBusy = false; simBroken = true;
+  };
 }
 
 let lastDraw = 0;
@@ -1969,6 +1998,7 @@ function loop(now: number): void {
       acc = n === 6 ? 0 : acc - n * TICK_MS;
       simBusy = true; simSent = now;
       const cmds = pending; pending = [];
+      simInFlight.sent(cmds, n);
       simThread!.run(n, cmds, simGen);
     } else if (simBusy && now - simSent > 3000) {
       // brak odpowiedzi przez 3 s: wątek się zawiesił albo nie wczytał — liczymy dalej sami
@@ -2750,6 +2780,15 @@ window.addEventListener('keydown', (e) => { if (e.key === 'F3') { e.preventDefau
 /** Czeka na klik na mapie: punkt zbiórki koszar */
 let rallyPick: { building: number; kind: number } | null = null;
 let devSpawn: { kind: DevSpawn; foe: boolean; count: number } | null = null;
+/** Każda akcja panelu dewelopera zmienia stan w wątku głównym — po niej stan idzie do wątku symulacji (resyncSim) */
+function withResync<T extends object>(ev: T): T {
+  const out = { ...ev } as Record<string, unknown>;
+  for (const [k, fn] of Object.entries(ev)) {
+    if (typeof fn !== 'function') continue;
+    out[k] = (...args: unknown[]): unknown => { const r = (fn as (...a: unknown[]) => unknown)(...args); resyncSim(); return r; };
+  }
+  return out as T;
+}
 function devAllowed(): boolean { return !net && (SANDBOX || !!game.players[ME]?.dev); }
 const devFoe = (): number => game.players.find((p) => p.team !== game.players[ME]!.team && !p.defeated)?.id ?? -1;
 /** Stawia jednostki wokół pola (x, y): po spirali na przechodnich polach */
@@ -2779,7 +2818,7 @@ function devPlace(x: number, y: number, kind: DevSpawn, foe: boolean, count: num
   devPanel.placed(n ? tx(`Postawiono: ${what} ×${n}${kind === 'wolf' ? '' : foe ? ' (wróg)' : ' (moi)'}. Klikaj dalej albo Esc.`, `Placed: ${what} ×${n}${kind === 'wolf' ? '' : foe ? ' (enemy)' : ' (mine)'}. Keep clicking or press Esc.`) : tx('Tu nie da się postawić — wybierz wolne pole.', 'Cannot place here — pick a free tile.'));
   return n;
 }
-const devPanel = createDevPanel(document.body, {
+const devPanel = createDevPanel(document.body, withResync({
   onWin: () => { if (!endShown) { devPanel.close(); showEnd(true); } },
   onPlace: (sp) => { devSpawn = sp; canvas.classList.toggle('placing', !!sp); },
   onFoeAtTower: () => {
@@ -2832,7 +2871,7 @@ const devPanel = createDevPanel(document.body, {
     if (k) renderer.lookAt(k.x + 1.5, k.y + 1.5, 26);
   },
   onKillFoes: () => { const me = game.players[ME]!; game.soldiers = game.soldiers.filter((s) => game.players[s.owner]?.team === me.team); game.wolves = []; },
-});
+}));
 window.addEventListener('keydown', (e) => {
   if (e.key === 'F9' && devAllowed()) { e.preventDefault(); devPanel.toggle(); return; }
   if (e.key === 'Escape' && rallyPick) { e.preventDefault(); e.stopImmediatePropagation(); rallyPick = null; canvas.classList.remove('placing'); return; }

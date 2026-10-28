@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.54.6 — więcej rdzeni procesora: tryb deweloperski w osobnym wątku, tekstury rysowane naraz (2026-10-28)
+
+- **Tryb deweloperski liczy symulację w osobnym wątku**, tak jak zwykła gra z botami. Dotąd w trybie deweloperskim ekonomia, ścieżki, walka i boty liczyły się na tym samym rdzeniu co rysowanie, więc duża bitwa zabierała klatki. Akcje panelu dewelopera (surowce, przewiń do nocy/dnia, pora roku, postaw jednostki, wróg pod wieżą, pożar, leczenie, usuń wrogów, wygrana) zmieniają stan w wątku głównym i od razu wysyłają go do wątku symulacji (`resyncSim` w `main.ts`). Porcja kroków, która właśnie się liczyła, jest odrzucana i liczona jeszcze raz od nowego stanu, z tymi samymi poleceniami gracza — nic nie ginie (`sim/simbatch.ts`, test `tests/simbatch.test.ts`). Gdy wątek padnie, jego polecenia przejmuje wątek główny (dotąd mogły przepaść)
+- **Pierwsze wejście: tekstury z kodu rysuje kilka wątków naraz**, każdy na innym rdzeniu (`render/texworker.ts`, OffscreenCanvas). Rysunek wychodzi piksel w piksel taki sam jak w wątku głównym (sprawdzone dla wszystkich wzorów; jedyny wyjątek to łupek z drobną różnicą wygładzania krawędzi, ale w zwykłej grze łupek jest ze zdjęcia, rysowany jest tylko w uboższej grafice `?test=1`). Kod wzorów przeniesiony bez zmian do `render/texpaint.ts` (bez three.js), więc wątki są lekkie. Po pierwszym wejściu tekstury i tak są z pamięci przeglądarki
+- Wczytywanie: zdjęciowe tekstury (z plików) nie czekają już każda na klatkę przerwy przy pasku — kilkanaście klatek mniej na ekranie wczytywania
+- Bez zmian: mecz przez sieć nadal liczy w wątku głównym (osobna partia), tryb testowy `?test=1` też (jak dotąd, `&watek=1` wymusza wątek)
+- Bot: bez zmian (ta sama symulacja, tylko w innym wątku)
 ## 0.54.5 — gra prosi o mocniejszą kartę graficzną (2026-10-28)
 
 - **Mocniejsza karta w laptopach z dwiema kartami:** wszystkie okna 3D gry (świat, podgląd modeli, miniatury budynków, dalekie drzewa) proszą przeglądarkę o kartę „wysokiej wydajności” (`powerPreference: 'high-performance'`). W laptopie z kartą wbudowaną w procesor i osobną (np. Intel + NVIDIA) przeglądarka dotąd często zostawała na słabszej, wbudowanej
