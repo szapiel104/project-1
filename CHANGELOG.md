@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.63.7 — Mój ród, konto i karta postaci: duże i czytelne (2026-10-28)
+
+- **Mój ród jak księga** (`ui/house.css`, `online.ts → asBook`): okno na całą prawą część menu, jak „Jak grać”, zamiast wąskiego panelu z drobnym pismem. Po lewej karta postaci: duży herb, romb poziomu, imię (do 44 px) i tytuł, gruby pasek doświadczenia z liczbami, następny tytuł i ile PD brakuje, „Do boju” na całą szerokość. Po prawej zakładki (Przegląd, Kronika bitew, Herb): cztery duże tablice statystyk (liczby do 54 px), droga do korony z większymi rombami, odznaki z dużymi ikonami, opisem i paskiem postępu, tabela „Skąd brać doświadczenie”, kronika bitew i herb z większymi próbkami
+- **Twoje konto jak księga:** dwie kolumny — wizytówka (herb, nick do 38 px, e-mail), bilans dużymi liczbami, ostatnie mecze z wyraźnym wynikiem; po prawej formularze nicku i hasła z dużymi etykietami i polami (48 px)
+- **Karta postaci na dole menu:** większa (do 420 px), czerwono-złoty pas po lewej, nick w Cinzel, tytuł i poziom złotem, gruby pasek PD z liczbami; bez ciężkiej ramki
+- Rozmiary od wysokości okna, więc tak samo czytelnie na laptopie i dużym monitorze; przy wąskim oknie karta postaci wskakuje nad zakładki, konto w jednej kolumnie. Kontrast policzony (tekst 15,6:1, opisy 10,8:1, liczby 17,7:1), fokus klawiatury widoczny
+- Bot: bez zmian (interfejs)
+
 ## 0.63.6 — Nowa gra i Gra przez sieć w stylu nowego menu, bez encyklopedii modeli w „Jak grać”, ślady w spacerze (2026-10-28)
 
 - **Nowa gra** (`ui/menu-windows.css`, także w układzie z podglądem mapy): kafelki trybu i trudności jak pozycje menu — ciemne, półprzezroczyste, z cienką złotą ramką; wybrany na czerwonym pasie ze złotą krawędzią i złotym rombem zamiast okrągłego „✓”; nazwy w Cinzel, opisy zwykłym pismem; przełącznik trybu deweloperskiego i pole nazwy mapy w tym samym stylu; „Rozpocznij” jak pieczęć z menu

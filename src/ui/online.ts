@@ -125,7 +125,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     // --- wizytówka: herb, imię, tytuł, poziom i pasek PD ---
     const hero = el('div', 'house-hero');
     const heroCrest = el('div', 'house-crest');
-    const paintHero = (): void => { heroCrest.innerHTML = crestPreview(crest, 92); };
+    const paintHero = (): void => { heroCrest.innerHTML = crestPreview(crest, 150); };
     const id = el('div', 'house-id');
     id.append(el('h3', 'house-name', m.nick), el('p', 'house-title', titleOf(lv.level)));
     const bar = el('div', 'house-xp');
@@ -326,8 +326,22 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const foot = el('div', 'menu-foot');
     foot.append(button(tx('Konto i hasło', 'Account and password'), () => showAccount(), 'menu-btn menu-back'), back());
     screen(tx('Mój ród', 'My house'), true, box, foot);
+    asBook(box, 'house-book');
     tabBtns[Math.max(0, Math.min(TABS.length - 1, tab))]?.focus();
   }
+
+  /**
+   * Mój ród i konto jak księga (Michał 28.10: „postać i konto mega czytelne”): okno na całą prawą część menu,
+   * jak „Jak grać”, zamiast wąskiego panelu z drobnym pismem. `screen()` zdejmuje te klasy przy każdym innym oknie.
+   */
+  const asBook = (box: HTMLElement, cls: string): void => {
+    const panel = box.closest('.menu-panel');
+    panel?.classList.add('book', cls);
+    panel?.closest('.menu')?.classList.add('book-open');
+    const clear = (): void => { if (!box.isConnected) { panel?.classList.remove(cls); obs.disconnect(); } };
+    const obs = new MutationObserver(clear);
+    if (panel) obs.observe(panel, { childList: true, subtree: true });
+  };
 
   /** Tytuł przy nicku (gdy znamy poziom gracza) */
   const titleChip = (id: string): HTMLElement | null => {
@@ -396,6 +410,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const foot = el('div', 'menu-foot');
     foot.append(out, back());
     screen(tx('Twoje konto', 'Your account'), true, box, foot);
+    asBook(box, 'account-book');
   }
 
   // ---------------- lista gier ----------------

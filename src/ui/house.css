@@ -1,0 +1,187 @@
+/* ===== Mój ród (postać) i Twoje konto jako księga — mega czytelnie (Michał 28.10.2026) =====
+   Okno zajmuje całą prawą część menu, jak „Jak grać” (online.ts → asBook). Mój ród: po lewej karta postaci (duży herb,
+   imię, tytuł, poziom, pasek doświadczenia z liczbami, następny tytuł i „Do boju”), po prawej zakładki z dużymi
+   liczbami i tekstem, który da się przeczytać z kanapy. Konto: dwie kolumny — wizytówka z bilansem i ostatnimi
+   meczami oraz formularze nicku i hasła z dużymi polami.
+   Rozmiary od wysokości okna (clamp), więc tak samo czytelnie na laptopie 1366×768 i na 2560×1440.
+   Kontrast (policzony na tle #0b0704): tekst #f1e4c4 15,6:1, opisy #d3bf96 10,8:1, liczby #fff0c8 17,7:1, złoto #e9c766 11,5:1. */
+
+/* ---- wspólne: treść księgi przewija się w środku, stopka z przyciskami zostaje na dole ---- */
+.menu-panel.house-book .menu-body, .menu-panel.account-book .menu-body { grid-template-rows: auto minmax(0, 1fr) auto; }
+.menu-panel.house-book .menu-foot, .menu-panel.account-book .menu-foot { padding-top: 12px; border-top: 1px solid rgba(154, 122, 42, .35); }
+.menu-panel.house-book .menu-foot .menu-btn, .menu-panel.account-book .menu-foot .menu-btn { min-height: 48px; min-width: 220px; font-size: clamp(14px, 1.8vh, 16px); }
+
+/* =========================== MÓJ RÓD =========================== */
+.menu .menu-panel.house-book .house {
+  min-height: 0; height: 100%;
+  display: grid; grid-template-columns: clamp(300px, 27%, 400px) minmax(0, 1fr); gap: clamp(18px, 2.4vw, 36px);
+}
+
+/* --- karta postaci po lewej --- */
+.menu .house-book .house-hero {
+  align-self: start;
+  grid-template-columns: 1fr; justify-items: center; text-align: center; align-content: start;
+  gap: clamp(10px, 1.6vh, 18px); padding: clamp(18px, 3vh, 30px) clamp(16px, 1.6vw, 26px) clamp(16px, 2.4vh, 24px);
+  background: linear-gradient(180deg, rgba(160, 36, 26, .26), rgba(17, 12, 7, .7) 40%, rgba(17, 12, 7, .55));
+  border: 0; border-top: 3px solid #e9c766;
+  box-shadow: inset 0 0 0 1px rgba(154, 122, 42, .35);
+  max-height: 100%; overflow-y: auto; scrollbar-width: thin; scrollbar-color: #6e5420 transparent;
+}
+.menu .house-book .house-hero .house-crest svg { width: clamp(110px, 17vh, 160px); height: auto; }
+.menu .house-book .house-id { justify-items: center; gap: 8px; width: 100%; }
+.menu .house-book .house-name { font-family: 'Cinzel', var(--display); font-size: clamp(28px, 4.4vh, 44px); letter-spacing: .08em; color: #fff0c8; text-shadow: 0 0 18px rgba(255, 170, 60, .35), 0 2px 4px #000; }
+.menu .house-book .house-title { font-family: 'Cinzel', var(--display); font-size: clamp(16px, 2.2vh, 21px); letter-spacing: .24em; color: #e9c766; }
+/* pasek doświadczenia: gruby, z liczbami pod spodem */
+.menu .house-book .house-xp { width: 100%; height: clamp(14px, 2vh, 20px); margin-top: 6px; }
+.menu .house-book .house-xp-line { justify-content: center; flex-wrap: wrap; gap: 4px 10px; font-size: clamp(15px, 1.9vh, 18px); color: #d3bf96; }
+.menu .house-book .house-xp-line strong { font-family: 'Cinzel', var(--display); font-size: clamp(18px, 2.5vh, 24px); color: #fff0c8; }
+/* poziom: duży romb nad imieniem karty */
+.menu .house-book .house-level { order: -1; width: clamp(84px, 12vh, 112px); height: clamp(84px, 12vh, 112px); margin-bottom: -4px; }
+.menu .house-book .house-hero .house-crest { order: -2; }
+.menu .house-book .house-level-n { font-size: clamp(34px, 5vh, 46px); }
+.menu .house-book .house-level-t { font-size: clamp(11px, 1.5vh, 13px); margin-bottom: clamp(18px, 2.6vh, 26px); }
+/* następny tytuł i Do boju: pod spodem, w kolumnie */
+.menu .house-book .house-goal {
+  grid-column: auto; width: 100%; margin: 6px 0 0; padding: 14px 14px 4px;
+  flex-direction: column; align-items: stretch; gap: 12px;
+  background: none; border-top: 1px solid rgba(154, 122, 42, .45); box-shadow: none;
+}
+.menu .house-book .house-goal-text { flex-direction: column; align-items: center; gap: 4px; font-size: clamp(15px, 1.9vh, 18px); color: #d3bf96; }
+.menu .house-book .house-goal-k { font-family: 'Cinzel', var(--display); font-size: clamp(13px, 1.6vh, 15px); letter-spacing: .2em; color: #e9c766; }
+.menu .house-book .house-goal-text strong { font-family: 'Cinzel', var(--display); font-size: clamp(24px, 3.4vh, 32px); letter-spacing: .1em; color: #fff0c8; }
+.menu .menu-panel.house-book .house-goal .house-play { width: 100%; min-width: 0; align-self: stretch; min-height: clamp(48px, 6.4vh, 58px); font-size: clamp(17px, 2.3vh, 21px); }
+
+/* --- zakładki po prawej --- */
+.menu .house-book .house-tabs .menu-nav { justify-content: flex-start; }
+.menu .house-book .house-tabs { min-height: 0; display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 0; }
+.menu .menu-panel.house-book .menu-tabs.top .menu-tab { min-height: 50px; font-size: clamp(14px, 1.9vh, 17px); letter-spacing: .16em; padding: 6px 18px; }
+.menu .house-book .house-tabs .menu-pane {
+  min-height: 0; overflow-y: auto; padding: clamp(14px, 2.2vh, 22px) 10px 20px 0; gap: clamp(14px, 2vh, 22px);
+  scrollbar-width: thin; scrollbar-color: #6e5420 transparent;
+}
+.menu .house-book .house-h { margin: 10px 0 0; font-family: 'Cinzel', var(--display); font-size: clamp(16px, 2.1vh, 20px); letter-spacing: .18em; color: #e9c766; }
+.menu .house-book .house-h::after { background: linear-gradient(90deg, rgba(154, 122, 42, .7), transparent); }
+
+/* statystyki: cztery duże tablice */
+.menu .house-book .house-stats { gap: clamp(8px, 1vw, 14px); }
+.menu .house-book .house-stat {
+  gap: 6px; padding: clamp(12px, 2vh, 20px) clamp(14px, 1.4vw, 22px);
+  background: linear-gradient(180deg, rgba(160, 36, 26, .16), rgba(17, 12, 7, .7) 70%);
+  border: 1px solid rgba(154, 122, 42, .4); border-top: 3px solid #e9c766;
+}
+.menu .house-book .house-stat dt { font-family: 'Cinzel', var(--display); font-size: clamp(13px, 1.7vh, 16px); letter-spacing: .14em; color: #d3bf96; }
+.menu .house-book .house-stat dd { font-family: 'Cinzel', var(--display); font-size: clamp(34px, 5.4vh, 54px); line-height: 1; color: #fff0c8; text-shadow: 0 0 16px rgba(255, 170, 60, .25), 0 2px 4px #000; }
+
+/* droga do korony: większe romby i podpisy */
+.menu .house-book .house-road { padding: 6px 0 2px; }
+.menu .house-book .house-road::before { top: 24px; height: 3px; background: linear-gradient(90deg, #9a7a2a, #3e2f17); }
+.menu .house-book .house-road-dot { width: 48px; height: 48px; font-family: 'Cinzel', var(--display); font-size: 18px; color: #d3bf96; }
+.menu .house-book .house-road li { gap: 6px; }
+.menu .house-book .house-road li strong { font-family: 'Cinzel', var(--display); font-size: clamp(15px, 2vh, 19px); letter-spacing: .08em; color: #d3bf96; }
+.menu .house-book .house-road li > span:last-child { font-size: clamp(13px, 1.7vh, 16px); color: #b9a782; }
+.menu .house-book .house-road li.now strong { color: #fff0c8; }
+.menu .house-book .house-road li.now > span:last-child { color: #e9c766; }
+
+/* odznaki: duże ikony, nazwa i postęp czytelne */
+.menu .house-book .house-badges { gap: clamp(8px, 1.2vh, 12px); }
+.menu .house-book .house-badge { gap: 16px; padding: clamp(12px, 1.8vh, 18px) 16px; background: rgba(17, 12, 7, .65); border: 1px solid rgba(154, 122, 42, .3); }
+.menu .house-book .house-badge.got { border-color: #9a7a2a; background: linear-gradient(90deg, rgba(160, 110, 30, .22), rgba(17, 12, 7, .7) 60%); }
+.menu .house-book .house-badge-ic { width: 54px; height: 54px; color: #8f7d5f; }
+.menu .house-book .house-badge-ic svg { width: 30px; height: 30px; }
+.menu .house-book .house-badge-txt { gap: 4px; }
+.menu .house-book .house-badge-txt strong { font-family: 'Cinzel', var(--display); font-size: clamp(16px, 2.1vh, 19px); letter-spacing: .06em; color: #f1e4c4; }
+.menu .house-book .house-badge-txt > span:not(.house-badge-bar) { font-size: clamp(14px, 1.9vh, 17px); line-height: 1.35; color: #d3bf96; }
+.menu .house-book .house-badge-bar { height: 7px; margin-top: 6px; background: #1d150c; border: 1px solid #3e2f17; }
+.menu .house-book .house-badge-bar span { background: linear-gradient(90deg, #9c2a0c, #e2741c 60%, #ffcf6a); }
+
+/* skąd brać PD: tabela z dużymi liczbami */
+.menu .house-book .house-how { gap: 0 clamp(18px, 2vw, 36px); }
+.menu .house-book .house-how li { padding: clamp(8px, 1.3vh, 12px) 2px; font-size: clamp(15px, 2vh, 18px); color: #f1e4c4; border-bottom: 1px solid rgba(154, 122, 42, .25); }
+.menu .house-book .house-how li strong { font-family: 'Cinzel', var(--display); font-size: clamp(17px, 2.3vh, 21px); color: #e9c766; }
+.menu .house-book .house-note { font-size: clamp(15px, 1.9vh, 18px); line-height: 1.5; color: #d3bf96; font-style: italic; }
+
+/* kronika bitew */
+.menu .house-book .house-table { font-size: clamp(15px, 2vh, 18px); }
+.menu .house-book .house-table caption { font-family: 'Cinzel', var(--display); font-size: clamp(15px, 2vh, 18px); letter-spacing: .16em; }
+.menu .house-book .house-table th { font-family: 'Cinzel', var(--display); font-size: clamp(13px, 1.7vh, 15px); padding: 10px 12px; color: #d3bf96; }
+.menu .house-book .house-table td { padding: clamp(10px, 1.5vh, 14px) 12px; color: #f1e4c4; }
+.menu .house-book .house-table tbody tr:nth-child(odd) td { background: rgba(17, 12, 7, .7); }
+.menu .house-book .house-empty p { font-size: clamp(16px, 2.1vh, 19px); line-height: 1.55; color: #f1e4c4; }
+/* herb: duże próbki barw i kształtów */
+.menu .house-book .house-arms-prev svg { width: clamp(150px, 24vh, 230px); height: auto; }
+.menu .house-book .house-swatch { width: 42px; height: 42px; }
+.menu .house-book .house-piece { width: 54px; height: 54px; }
+
+/* =========================== TWOJE KONTO =========================== */
+.menu .menu-panel.account-book .net-account { min-height: 0; overflow-y: auto; padding-right: 8px; scrollbar-width: thin; scrollbar-color: #6e5420 transparent; }
+.menu .account-book .net-cols { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: clamp(20px, 3vw, 48px); }
+.menu .account-book .net-col { gap: clamp(12px, 1.8vh, 18px); }
+.menu .account-book .net-card {
+  gap: 20px; padding: clamp(16px, 2.4vh, 24px) 20px;
+  background: linear-gradient(90deg, rgba(160, 36, 26, .26), rgba(17, 12, 7, .7) 55%);
+  border: 0; border-left: 3px solid #e9c766; box-shadow: inset 0 0 0 1px rgba(154, 122, 42, .35);
+}
+.menu .account-book .net-card svg, .menu .account-book .net-card img { width: clamp(76px, 11vh, 104px); height: auto; }
+.menu .account-book .net-card-text { gap: 4px; }
+.menu .account-book .net-card-text strong { font-family: 'Cinzel', var(--display); font-size: clamp(26px, 3.8vh, 38px); letter-spacing: .08em; color: #fff0c8; }
+.menu .account-book .net-card-text span { font-size: clamp(15px, 1.9vh, 18px); color: #d3bf96; overflow-wrap: anywhere; }
+/* bilans: dwie duże liczby */
+.menu .account-book .net-record { font-size: clamp(16px, 2.1vh, 19px); color: #d3bf96; padding: 10px 0; border-bottom: 1px solid rgba(154, 122, 42, .3); }
+.menu .account-book .net-record strong { font-family: 'Cinzel', var(--display); font-size: clamp(28px, 4.2vh, 40px); color: #fff0c8; vertical-align: -3px; margin: 0 2px; }
+/* ostatnie mecze: wiersze z wyraźnym wynikiem */
+.menu .account-book .net-history { max-height: none; gap: 6px; }
+.menu .account-book .net-history li {
+  grid-template-columns: 120px 1fr auto; gap: 12px; padding: 10px 14px;
+  font-size: clamp(15px, 1.9vh, 17px); color: #f1e4c4; background: rgba(17, 12, 7, .65); border-left-width: 4px;
+}
+.menu .account-book .net-history li.won { border-left-color: #6fae54; }
+.menu .account-book .net-history li.won .res { color: #b6e39c; }
+.menu .account-book .net-history li.lost .res { color: #ffab9b; }
+.menu .account-book .net-history .res { font-family: 'Cinzel', var(--display); letter-spacing: .06em; }
+.menu .account-book .net-history .when { color: #d3bf96; }
+.menu .account-book .net-history li.none { color: #d3bf96; font-size: clamp(15px, 1.9vh, 17px); }
+/* formularze nicku i hasła: duże etykiety i pola */
+.menu .account-book .net-inline { gap: 12px; padding: 4px 0 clamp(16px, 2.4vh, 24px); border-bottom: 1px solid rgba(154, 122, 42, .35); }
+.menu .account-book .field { gap: 6px; }
+.menu .account-book .field > label, .menu .account-book .field > span {
+  font-family: 'Cinzel', var(--display); font-weight: 700; font-size: clamp(13px, 1.7vh, 15px); letter-spacing: .14em; text-transform: uppercase; color: #e9c766;
+}
+.menu .account-book .net-inline input { min-height: 48px; font-size: clamp(16px, 2.1vh, 19px); padding: 8px 14px; }
+.menu .account-book .net-inline .menu-btn { min-height: 48px; font-size: clamp(14px, 1.8vh, 16px); }
+.menu .account-book .msg, .menu .account-book .note, .menu .account-book p.hint { font-size: clamp(15px, 1.9vh, 17px); }
+
+/* wąskie okno (laptop przy dużym powiększeniu): karta postaci nad zakładkami, konto w jednej kolumnie */
+@media (max-width: 1180px) {
+  .menu .menu-panel.house-book .house { grid-template-columns: 1fr; overflow-y: auto; }
+  .menu .house-book .house-hero { max-height: none; }
+  .menu .house-book .house-tabs { min-height: 480px; }
+  .menu .account-book .net-cols { grid-template-columns: 1fr; }
+}
+@media (prefers-reduced-motion: reduce) { .menu .house-book .house-xp-fill { transition: none; } }
+
+/* =========================== KARTA POSTACI NA DOLE MENU (Michał 28.10: „postać na dole też popraw”) ===========================
+   Większa i czytelna, w stylu listy menu: czerwono-złoty pas po lewej zamiast ciężkiej ramki, nick w Cinzel, tytuł i poziom
+   złotem, gruby pasek doświadczenia z liczbami. Klik otwiera „Mój ród”. */
+.menu-account .acc-me, .menu-account .acc-guest {
+  width: clamp(300px, 26vw, 420px); gap: 6px 16px; padding: 12px 16px 12px 14px;
+  background: linear-gradient(90deg, rgba(160, 36, 26, .45), rgba(17, 12, 7, .85) 55%, rgba(17, 12, 7, .75));
+  border: 1px solid rgba(154, 122, 42, .55); border-left: 3px solid #e9c766;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, .6);
+}
+.menu-account .acc-me:hover {
+  transform: none; border-color: #e9c766;
+  background: linear-gradient(90deg, rgba(194, 45, 32, .6), rgba(17, 12, 7, .85) 60%, rgba(17, 12, 7, .75));
+  box-shadow: 0 0 24px rgba(255, 150, 50, .25), 0 12px 30px rgba(0, 0, 0, .6);
+}
+.menu-account .acc-me:focus-visible { outline: 2px solid #fff3c4; outline-offset: 3px; }
+.menu-account .acc-seal { width: 64px; height: 70px; }
+.menu-account .acc-seal svg { width: 58px; height: auto; }
+.menu-account .acc-lvl { min-width: 28px; height: 28px; font-size: 15px; }
+.menu-account .acc-text { gap: 3px; line-height: 1.15; }
+.menu-account .acc-nick { font-family: 'Cinzel', var(--display); font-size: clamp(18px, 2.4vh, 22px); letter-spacing: .08em; color: #fff0c8; text-shadow: 0 2px 4px #000; }
+.menu-account .acc-level { font-family: 'Cinzel', var(--display); font-weight: 700; font-size: clamp(12px, 1.6vh, 14px); letter-spacing: .16em; text-transform: uppercase; color: #e9c766; }
+.menu-account .acc-xp { height: 9px; margin-top: 5px; background: #0b0704; border: 1px solid #9a7a2a; }
+.menu-account .acc-xp-fill { background: linear-gradient(90deg, #9c2a0c, #e2741c 55%, #ffcf6a); }
+.menu-account .acc-pd { font-size: clamp(13px, 1.7vh, 15px); color: #d3bf96; font-variant-numeric: tabular-nums; }
+.menu-account .acc-go { color: #e9c766; }
+.menu-account .acc-guest .acc-link { font-family: 'Cinzel', var(--display); font-weight: 700; font-size: 15px; letter-spacing: .1em; }
