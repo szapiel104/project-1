@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.64.1 — na wieże wchodzi się jak na teren, jak w Twierdzy 2 (2026-10-28)
+
+- **Pomost wieży to teren, tylko wysoko** (`sim/systems/stonewalls.ts`): każde pole gotowej wieży (czatownia, strażnica, wszystkie baszty) ma bit `WALL_TOP`, tak jak korona muru kamiennego. Wchodzi się drabiną albo drzwiami od frontu, z przyległego muru kamiennego albo po drabinie gracza przystawionej z boku. Gdy przed frontem stoi mur albo budynek (np. wieża w narożniku palisady), wejście przechodzi na pierwszy wolny bok. Na pomost wchodzą tylko swoi (jak przez bramę), wróg z muru do wieży nie przejdzie
+- **Bez przypisywania łuczników:** prawy klik na wieży wysyła zaznaczonych żołnierzy dowolnego rodzaju (poza taranem) na wolne pola pomostu. Każdy staje na swoim polu, więc im mniejsza wieża, tym mniej się zmieści: czatownia 1, strażnica i baszta 4, duża baszta 9, wielka 16. Kto się nie zmieści, staje przy wieży. Stojący na wieży dalej należą do oddziału i grup 1–0, zaznacza się ich ramką jak innych, a schodzą zwykłym rozkazem marszu albo przyciskiem „Zejdźcie z wieży”
+- **Zasięg z wysokości:** stojący na pomoście strzela jak z muru (+3 pola) plus premia wieży (czatownia −1, kamienne +1/+2/+6), widzi dalej, wręcz z ziemi go nie dosięgną; nie schodzi sam za wrogiem, nie cofa się ranny i nie idzie sam na budynki
+- **Wygląd:** człowiek na pomoście stoi na wysokości pomostu tej wieży, a przed drabiną albo drzwiami wspina się na nią (jak przy drabinie na mur); na drewnianej strażnicy stoi trochę bliżej środka, między nogami z bali. Polegli na pomoście leżą na górze, grabarz znosi ich spod wieży
+- Zapisy sprzed tej wersji: łucznicy przypisani do wieży stają na wolnych polach jej pomostu; na starcie gry z murami łucznicy stoją od razu na pomostach
+- Okno wieży, „Jak grać” i opisy wież po polsku i angielsku mówią o wchodzeniu i miejscach na pomoście
+- Bot: dalej wysyła po dwóch łuczników na każdą wieżę (na czatownię jednego), liczy stojących na pomoście, a nie przypisanych; tych z wieży nie bierze do ataku
+
 ## 0.64.0 — przenoszenie budynków za rudę (2026-10-28)
 
 - **Przycisk „Przenieś (N rudy)” w oknie gotowego budynku** (`src/sim/systems/relocate.ts`, rozkaz `relocate`): po kliknięciu podgląd budynku idzie za kursorem jak przy stawianiu (R obraca, zielony = wolno), klik wskazuje nowe miejsce, Esc anuluje
