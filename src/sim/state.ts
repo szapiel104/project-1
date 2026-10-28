@@ -504,6 +504,10 @@ export interface Corpse {
   taken: boolean;
   /** Poległ na wieży albo na murze (id budynku): ciało leży na górze, grabarz zabiera je spod budynku */
   post?: number;
+  /** Dwaj, którzy po nie idą: [niosący z przodu, pomocnik z tyłu] (bearers.ts) */
+  by?: number[];
+  /** Tick wysłania tej dwójki (gdy utkną, ciało wraca do puli) */
+  since?: number;
 }
 
 /** Leśny grób (osada bez cmentarza): kopczyk z krzyżem na polu `t`; znika po kilku dniach albo pod budynkiem i drogą */
@@ -954,7 +958,7 @@ export function stateHash(g: GameState): number {
   for (const m of g.marches ?? []) { add(m.grp); add(m.px); add(m.py); add(m.dir); add(m.stall); add(m.go ? 1 : 0); add(m.path.length); }
   for (const w of g.wolves) { add(w.id); add(w.px); add(w.py); add(w.hp); }
   for (const t of g.travelers) { add(t.id); add(t.px); add(t.py); add(t.leaving ? 1 : 0); add(t.path.length); }
-  for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); add(c.post ?? 0); }
+  for (const c of g.corpses) { add(c.id); add(c.px); add(c.py); add(c.at); add(c.taken ? 1 : 0); add(c.post ?? 0); for (const b of c.by ?? []) add(b); add(c.since ?? 0); }
   for (const c of g.caravans ?? []) { add(c.id); add(c.px); add(c.py); add(c.amount); add(c.path.length); for (const [r, n] of c.more ?? []) { add(r); add(n); } for (const e of c.escort ?? []) add(e); }
   return h >>> 0;
 }

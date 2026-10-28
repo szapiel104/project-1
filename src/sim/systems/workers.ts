@@ -15,6 +15,7 @@ import { mageKindOf } from './plague';
 import { harvestPct } from './storms';
 import { feastDay, goesToPray } from './faith';
 import { dropPile, isStore, spareKeeper, stalledStep, takePile } from './storage';
+import { liftCorpse } from './bearers';
 import { depositAt, freeIn, storeAtDoor, withdrawAt } from './stock';
 
 const RETRY_TICKS = 20;
@@ -260,7 +261,8 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
     case Phase.Returning:
       // wolny chłop z ciałem na ramieniu niesie je na cmentarz, a gdy go nie ma — na skraj lasu, gdzie je zakopie
       // (Michał 28.10.2026: nie do obozowiska ani na gruzowisko)
-      if (!job && u.carryRes === CORPSE) {
+      // (także robotnik oderwany od roboty do pochówku: najpierw ciało, potem wraca do swojego warsztatu)
+      if (u.carryRes === CORPSE) {
         const doors = new Set<number>();
         for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.id === 'cemetery') doors.add(b.door);
         return doors.size ? (t) => doors.has(t) : (t) => forestEdge(g, t);
@@ -420,8 +422,13 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
   switch (u.phase) {
     case Phase.Returning: {
       // bez cmentarza ciało zostaje zakopane na skraju lasu (doszedł tam, bo cmentarza nie ma)
-      if (u.carryRes === CORPSE && !u.job && !g.buildings.some((b) => b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.id === 'cemetery')) { startBurial(u); break; }
-      if (u.carryRes === CORPSE) { u.carryRes = -1; u.carryAmt = 0; }
+      if (u.carryRes === CORPSE && !g.buildings.some((b) => b.owner === u.owner && b.door >= 0 && BUILDINGS[b.type]!.id === 'cemetery')) { startBurial(u); break; }
+      if (u.carryRes === CORPSE) {
+        u.carryRes = -1; u.carryAmt = 0;
+        // ciało złożone na cmentarzu; kto nie jest grabarzem, wraca do swojej roboty (albo do obozowiska)
+        const own = u.job ? buildingById(g, u.job) : undefined;
+        if (!own || BUILDINGS[own.type]!.id !== 'cemetery') { u.phase = u.job ? Phase.Returning : Phase.Idle; u.path = []; break; }
+      }
       // magazyn pełny, a towar leży pod nim: robotnik czeka w warsztacie, nie robi kolejnego (storage.ts)
       if (prod && u.job && buildingById(g, u.job)?.stall) { u.phase = Phase.Stalled; u.wait = 0; break; }
       if (prod) beginCycle(u, prod); else u.phase = Phase.Idle;
@@ -556,11 +563,8 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       break;
     }
     case Phase.ToCorpse: {
-      // grabarz bierze ciało na ramię i niesie je na cmentarz
-      g.corpses = g.corpses.filter((x) => x.id !== u.target);
-      u.target = 0;
-      u.carryRes = CORPSE; u.carryAmt = 1;
-      u.phase = Phase.Returning;
+      // przy ciele: czeka na drugiego, a gdy obaj są, podnoszą trumnę (bearers.ts)
+      liftCorpse(g, u);
       break;
     }
     case Phase.ToEvening:
@@ -706,7 +710,7 @@ export function workerSystem(g: GameState): void {
       if (--u.timer > 0) continue;
       const t = tileOf(g, u);
       if (u.target !== -1 && !g.graves?.some((x) => x.t === t)) (g.graves ??= []).push({ t, owner: u.owner, at: g.tick });
-      u.phase = Phase.Idle; u.target = 0;
+      u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0;
       continue;
     }
     if (u.phase === Phase.Resting) {
@@ -798,7 +802,7 @@ export function workerSystem(g: GameState): void {
       if (job) { (job.miss ??= []).push(u.target - 1); if (job.miss.length > 8) job.miss.shift(); }
       u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.wait = RETRY_TICKS;
     }
-    else if (!path && u.phase === Phase.Returning && u.carryRes === CORPSE && !u.job) {
+    else if (!path && u.phase === Phase.Returning && u.carryRes === CORPSE) {
       // las za daleko albo za wodą: zakopuje ciało tu, gdzie stoi, zamiast krążyć z nim po osadzie
       if (forestEdge(g, here) || (g.map.tiles[here] === Terrain.Grass && !g.roads[here])) startBurial(u); else u.wait = RETRY_TICKS;
     }

@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.60.3 — ciała nie leżą: zbiera je każdy, kto jest pod ręką (2026-10-28)
+
+- **Błąd:** od 0.59.2 po ciało szło się tylko we dwóch, ale szukaliśmy wyłącznie wolnych chłopów przy ognisku. W rozbudowanej osadzie wszyscy pracują, więc nikt nie przychodził, a ciało leżało, aż zgniło (w długiej grze z botami 29 z 32 ciał gniło nieruszone). Do tego tylny niosący szedł do przedniego na skróty, po linii prostej, nawet przez mury
+- **Teraz każde ciało na ziemi gracza ktoś zabiera** (`collectCorpses` w `sim/systems/bearers.ts`): przy twierdzy (40 pól) i przy każdym jego budynku (10 pól), najstarsze najpierw. Najpierw idą wolni chłopi, a gdy ich brak — dwaj najbliżsi robotnicy odchodzą na chwilę od roboty (drwal, rolnik, rzemieślnik…; nie grabarze, magowie ani kaznodzieja) i po pochówku wracają do swoich warsztatów. Najwyżej dwie takie dwójki naraz na gracza
+- **Obaj idą do ciała swoją drogą** (omijają mury, wchodzą bramą), przy ciele pierwszy czeka na drugiego i dopiero wtedy podnoszą trumnę. Dwójka, która utknęła (zamknięta droga, ktoś ją odwołał), po chwili się rozchodzi, a ciało wraca do kolejki. Grabarz bez drugiego grabarza bierze do pomocy kogoś z okolicy, też robotnika
+- W długiej grze z botami: 17 ciał zebranych, 6 zgniło (te leżały na polach bitwy daleko od osad)
+- Pomoc „Jak grać” → Polegli: dopisane w obu językach
+- Bot: dostaje to samo (jego ludzie zbierają ciała tak samo)
+
 ## 0.60.2 — mniej wywołań rysowania: odbicie wody tylko z wodą w kadrze, puste pule pomijane, budynki z daleka razem (2026-10-28)
 
 - **Odbicie w wodzie liczy się tylko, gdy w kadrze jest woda.** Dotąd w każdej klatce gra rysowała całą scenę drugi raz do tekstury odbicia (na scenie testowej ok. 490 wywołań rysowania, tyle co sam obraz), nawet gdy w kadrze nie było ani kawałka wody. Teraz sprawdza, czy któryś kwadrat 8×8 pól z wodą (z zapasem 2 pól na płyciznę) jest w kadrze; na mapach z morzem przy krawędzi odbicie zostaje zawsze. Obraz wody bez zmian

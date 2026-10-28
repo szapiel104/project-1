@@ -109,4 +109,26 @@ describe('pochówek bez cmentarza (Michał 28.10.2026)', () => {
     expect(g.corpses.find((c) => c.id === 999999)?.taken).toBe(false);
     expect(g.units.some((u) => u.carryRes >= 0 && u.phase !== Phase.Bearing && u.owner === 0 && u.target === 999999)).toBe(false);
   });
+
+  it('gdy wszyscy pracują, ciało zabierają dwaj robotnicy i potem wracają do roboty', () => {
+    const g = clearBandits(createGame(7));
+    g.wolves = [];
+    for (let i = 0; i < 3000; i++) step(g, []); // osada się rozkręca, wolni idą do pracy
+    const workers = g.units.filter((u) => u.owner === 0 && u.job > 0);
+    for (const u of g.units.filter((x) => x.owner === 0 && x.job === 0)) u.job = -1; // żadnych wolnych
+    const keep = playerKeep(g, 0)!;
+    const [fx, fy] = keepFront(keep);
+    g.corpses.push({ id: 999999, owner: 0, kind: -1, px: fx * FP + 128, py: (fy + 3) * FP + 128, at: g.tick, taken: false });
+    const jobs = new Map(workers.map((u) => [u.id, u.job]));
+    const bearers = new Set<number>();
+    for (let i = 0; i < 4000 && g.corpses.some((c) => c.id === 999999); i++) {
+      step(g, []);
+      for (const u of g.units) if (u.target === 999999 || u.phase === Phase.Bearing) bearers.add(u.id);
+    }
+    expect(g.corpses.some((c) => c.id === 999999)).toBe(false);
+    expect(bearers.size).toBe(2);
+    for (let i = 0; i < 1500; i++) step(g, []);
+    for (const id of bearers) { const u = g.units.find((x) => x.id === id); if (u) expect(u.job).toBe(jobs.get(id)); }
+    expect(workers.length).toBeGreaterThan(1);
+  });
 });
