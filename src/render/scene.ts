@@ -92,6 +92,8 @@ import { MaterialQuality, makeEnvironment, msaaSamples, sharpenPass, type AaMode
 import { spearThrust, bowShot, deathKind, swordCombo, axeChop } from './combatanim';
 import { sadMaterial, sickMaterial, noWorkerMaterial } from './marks';
 import { MERGE_IN, BATCH_LAYER, mergeStatic } from './merge';
+/** Nazwane grupy budynku rysowane razem z innymi budynkami tego samego rodzaju (syncBatches): pochodnia, dalekie wersje */
+const BATCH_ALSO = /^(torch|lod\d+)$/;
 import { Precompiler } from './precompile';
 import { KEEP_MODEL, RAM_MODEL, SHRINE_SPOTS, CAMP_SEATS, KEEP_SOLID, KEEP_FLOOR, KEEP_WALL, KEEP_HALF, type WalkModel, WALK_MODELS, MINE_SPOTS, OREMINE_T, OREMINE_WALK, MINE_LEVEL, MINE_LEVEL_SPOTS, mineRoute, OREMINE_PROD, inRect, MINE_AT, TAVERN_SEATS, walkFoot, TAVERN_FLOOR } from './walkmodels';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
@@ -2214,6 +2216,10 @@ export class GameRenderer {
     if (GL_DEBUG) this.tagPasses();
     // nowe modele w scenie (budynki, drzewa, ludzie) dostają filtrowanie tekstur i wygładzanie liści z ustawień
     if (++this.matSweep % 90 === 0) this.matQ.sweep(this.scene);
+    // pule instancji bez ani jednej sztuki (zbóje, tarany, wilki, ładunki, gdy nikt nic nie niesie…) nie idą do karty:
+    // three.js wysyła dla nich polecenie rysowania z zerem sztuk — ok. 1/5 wszystkich wywołań klatki
+    const empties = this.hideEmptyPools();
+    try {
     if (this.gpuProfile && this.profN++ % 15 === 0) { this.profiledRender(); return; }
     const tg = performance.now();
     // odbicie w wodzie (od średniej grafiki w górę, jak poświata)
@@ -2230,6 +2236,24 @@ export class GameRenderer {
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;
     this.dynamicResolution(gpu);
     this.timingFrames++;
+    } finally { for (const m of empties) m.visible = true; }
+  }
+
+  /** Wszystkie pule instancji w scenie (lista odświeżana co 60 klatek — nowe pule powstają rzadko) */
+  private pools: THREE.InstancedMesh[] = [];
+  private poolScan = 0;
+  private emptyHidden: THREE.InstancedMesh[] = [];
+  /** Chowa na czas rysowania pule z zerową liczbą sztuk; zwraca listę do przywrócenia po klatce */
+  private hideEmptyPools(): THREE.InstancedMesh[] {
+    if (this.poolScan-- <= 0) {
+      this.poolScan = 60;
+      this.pools.length = 0;
+      this.scene.traverse((o) => { if ((o as THREE.InstancedMesh).isInstancedMesh) this.pools.push(o as THREE.InstancedMesh); });
+    }
+    const out = this.emptyHidden;
+    out.length = 0;
+    for (const m of this.pools) if (m.visible && m.count === 0) { m.visible = false; out.push(m); }
+    return out;
   }
 
   /** Tryb ?gldebug=1: każde przejście rysowania podpisane w dzienniku błędów (wiadomo, czy błąd jest w cieniach, AO, poświacie…) */
@@ -2492,6 +2516,7 @@ export class GameRenderer {
    * stałe bryły przenosimy tylko na warstwę 1, której kamera nie rysuje. Place budowy (przycinane) zostają po staremu.
    */
   private batches = new Map<string, { mesh: THREE.InstancedMesh; n: number }>();
+  /** Nazwane grupy, których nieruchome siatki też rysujemy razem (poza MERGE_IN): pochodnia przy budynku, dalekie wersje */
   private batchParts = new WeakMap<THREE.Object3D, THREE.Mesh[]>();
   batchOn = !/[?&]razem=0/.test(location.search);   // włączone: 32 budynki, Chrome, hd — 1327 wywołań i 8,8 ms karty (bez: 1650 i 12,5 ms); ?razem=0 wyłącza
   private staticParts(root: THREE.Object3D): THREE.Mesh[] {
@@ -2500,7 +2525,9 @@ export class GameRenderer {
     list = [];
     const walk = (o: THREE.Object3D): void => {
       for (const ch of o.children) {
-        if (ch.name && !MERGE_IN.has(ch.name)) continue;          // wnętrza, ludzie, ogień, ruchome części: po staremu
+        // wnętrza, ludzie, ogień, ruchome części: po staremu; pochodnia (słup i kosz, wspólne siatki) i dalekie wersje
+        // budynków (wspólne dla budynków tego samego rodzaju) też idą razem
+        if (ch.name && !MERGE_IN.has(ch.name) && !BATCH_ALSO.test(ch.name)) continue;
         const m = ch as THREE.Mesh;
         if (m.isMesh && !ch.name && !(m as THREE.InstancedMesh).isInstancedMesh && !Array.isArray(m.material)) {
           const mat = m.material as THREE.Material;
@@ -2839,7 +2866,10 @@ export class GameRenderer {
         const d = Math.max(0, this.lodW.copy(lod.center).applyMatrix4(mesh.matrixWorld).distanceTo(cp) - lod.radius);
         if (!lod.levels.length) {
           // wersje liczą się w tle przy pierwszej potrzebie (raz na rodzaj budynku)
-          if (d > LOD_STEPS[0]! * k * 0.8 && !attachLod(mesh, lod, opts)) waiting++;
+          if (d > LOD_STEPS[0]! * k * 0.8) {
+            if (!attachLod(mesh, lod, opts)) waiting++;
+            else this.batchParts.delete(mesh); // doszły dalekie wersje: lista części do wspólnego rysowania od nowa
+          }
         }
         for (let i = lod.levels.length - 1; i >= 0; i--) {
           const D = lod.levels[i]!.error * k * (i <= lod.level ? 0.9 : 1);
