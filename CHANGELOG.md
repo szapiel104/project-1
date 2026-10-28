@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.54.5 — gra prosi o mocniejszą kartę graficzną (2026-10-28)
+
+- **Mocniejsza karta w laptopach z dwiema kartami:** wszystkie okna 3D gry (świat, podgląd modeli, miniatury budynków, dalekie drzewa) proszą przeglądarkę o kartę „wysokiej wydajności” (`powerPreference: 'high-performance'`). W laptopie z kartą wbudowaną w procesor i osobną (np. Intel + NVIDIA) przeglądarka dotąd często zostawała na słabszej, wbudowanej
+- **F3 pokazuje, na czym gra działa:** nazwę karty graficznej, na której rysuje przeglądarka, i liczbę rdzeni procesora
+- Bot: bez zmian (sama grafika)
 ## 0.54.4 — szybsze wczytywanie: pobieranie równolegle zamiast po kolei (2026-10-28)
 
 - **Wszystko pobiera się od razu, a nie po kolei:** dotąd ekran wczytywania szedł łańcuchem — najpierw tekstury rysowane w przeglądarce, dopiero potem pobieranie modeli, potem kod gry, a duże tekstury KTX2 (teren ok. 10 MB, zdjęciowe tekstury budynków ok. 9 MB) dopiero, gdy gra już powstała. Teraz:

@@ -300,7 +300,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
 
 // ---------- scena ----------
 const canvas = document.getElementById('c') as HTMLCanvasElement;
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true , powerPreference: 'high-performance' });
 initKtx(renderer);
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio));
 renderer.shadowMap.enabled = true;

@@ -2868,6 +2868,8 @@ function showPerf(now: number): void {
   perf.last['jakość'] = renderer.quality;
   perf.last['rozdzielczość'] = renderer.resolution;
   perf.last['wątek symulacji'] = simMode ? 'tak' : 'nie';
+  perf.last['karta graficzna'] = renderer.gpu;
+  perf.last['rdzenie procesora'] = navigator.hardwareConcurrency || '?';
   { const a = audioStats(); perf.last['dźwięki (głosy · pętle · pliki)'] = `${a.voices} · ${a.loops} · ${a.buffers}`; }
   perf.last['budynki z daleka'] = renderer.lodInfo;
   // karta graficzna przejście po przejściu (tylko przy otwartym oknie; mierzona co 15. klatka)

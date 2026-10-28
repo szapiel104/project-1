@@ -30,7 +30,7 @@ const BUILDING_ENTRIES: GalleryEntry[] = BUILDINGS.filter((d) => !d.road).map((d
 export const GALLERY = { people: PEOPLE, buildings: [...BUILDING_ENTRIES].sort((a, b) => Object.values(CATS).indexOf(a.group) - Object.values(CATS).indexOf(b.group)) };
 
 export function createGallery(canvas: HTMLCanvasElement): { show(id: string): void } {
-  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false , powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.toneMapping = THREE.ACESFilmicToneMapping;

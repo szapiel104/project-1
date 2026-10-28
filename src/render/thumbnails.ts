@@ -8,7 +8,7 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
   const out = new Map<string, string>();
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true , powerPreference: 'high-performance' });
   } catch {
     return out; // brak drugiego kontekstu WebGL: menu pokaże same nazwy
   }
@@ -66,7 +66,7 @@ export function renderUnitPortraits(teamColor: number, size = 192): Map<string, 
   const out = new Map<string, string>();
   let renderer: THREE.WebGLRenderer;
   try {
-    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true , powerPreference: 'high-performance' });
   } catch {
     return out;
   }

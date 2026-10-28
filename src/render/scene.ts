@@ -669,7 +669,7 @@ export class GameRenderer {
   private unitY = new Map<number, number>();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: true , powerPreference: 'high-performance' });
     this.pre = new Precompiler(this.renderer, this.scene);
     initKtx(this.renderer);
     watchRenderer(this.renderer, 'gra');
@@ -2893,6 +2893,16 @@ export class GameRenderer {
   private ratioChanged = 0;
   /** Bieżąca rozdzielczość obrazu (do okna wydajności) */
   get resolution(): string { return `${Math.round(this.ratioDyn * 100)}% z ${this.ratioMax}×`; }
+  private gpuName?: string;
+  /** Nazwa karty graficznej, na której rysuje przeglądarka (F3) — po niej widać, czy to osobna karta, czy wbudowana */
+  get gpu(): string {
+    if (this.gpuName === undefined) {
+      const gl = this.renderer.getContext();
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      this.gpuName = String((ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) ?? '?');
+    }
+    return this.gpuName;
+  }
   private applyRatio(): void {
     const ratio = Math.max(0.5, Math.round(this.ratioMax * this.ratioDyn * 20) / 20);
     if (Math.abs(this.renderer.getPixelRatio() - ratio) < 0.01) return;
