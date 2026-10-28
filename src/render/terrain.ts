@@ -393,6 +393,11 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   let wm!: ReturnType<typeof waterMaterial>;
   const reflection = new WaterReflection(WATER_Y);
   let hasWater = false;
+  /** Kwadraty 8×8 pól, w których naprawdę jest woda (głębokość > 0): odbicie liczymy tylko, gdy któryś jest w kadrze */
+  const wetBoxes: THREE.Box3[] = [];
+  /** Woda przy krawędzi obszaru: tafla ciągnie się dalej za mapę (morze po horyzont), więc wtedy odbicie zawsze */
+  let wetEdge = false;
+  const wetFrustum = new THREE.Frustum(), wetM = new THREE.Matrix4();
   let mistFx: HighMist | null = null, streams: Streams | null = null, fxTime = 0;
 
   // Ryby: pływają po małych okręgach tuż pod powierzchnią, co jakiś czas któraś wyskakuje
@@ -595,6 +600,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     }
     const depthData = new Uint16Array(SW * SH);
     let anyWater = false;
+    const WC = 8, wcw = Math.ceil(EW / WC), wet = new Uint8Array(wcw * Math.ceil(EH / WC));
     for (let sy = 0; sy < SH; sy++) {
       const fy = (sy + 0.5) / SS, iy = Math.min(EH - 1, Math.floor(fy)), ty = fy - iy;
       for (let sx = 0; sx < SW; sx++) {
@@ -604,7 +610,11 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         if (tx + ty <= 1) { const c0 = oc[k]!; hh = c0 + (oc[k + 1]! - c0) * tx + (oc[k + CW]! - c0) * ty; }
         else { const c3 = oc[k + CW + 1]!; hh = c3 + (oc[k + CW]! - c3) * (1 - tx) + (oc[k + 1]! - c3) * (1 - ty); }
         const dep = Math.max(-1, Math.min(8, WATER_Y - hh));
-        if (dep > 0) anyWater = true;
+        if (dep > 0) {
+          anyWater = true;
+          wet[Math.floor(fy / WC) * wcw + Math.floor(fx / WC)] = 1;
+          if (sx === 0 || sy === 0 || sx === SW - 1 || sy === SH - 1) wetEdge = true;
+        }
         depthData[sy * SW + sx] = THREE.DataUtils.toHalfFloat(dep);
       }
       if ((sy & 511) === 511) yield; // ok. 2,7 mln próbek: przerwy na klatkę co kilkaset wierszy
@@ -623,6 +633,13 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     const depthTex = new THREE.DataTexture(rg, SW, SH, THREE.RGFormat, THREE.HalfFloatType);
     depthTex.magFilter = THREE.LinearFilter; depthTex.minFilter = THREE.LinearFilter; depthTex.needsUpdate = true;
     hasWater = anyWater;
+    // pola rozszerzonego obszaru (z obrzeżem D) → świat: plansza (0..w) leży w (−w/2..w/2)
+    for (let i = 0; i < wet.length; i++) if (wet[i]) {
+      const cx = i % wcw, cy = (i - cx) / wcw;
+      // z zapasem 2 pól: przejrzystość płycizny liczy się z głębokości rozmytej na ok. 1,5 pola poza linię brzegu
+      const x0 = cx * WC - D - w / 2 - 2, z0 = cy * WC - D - h / 2 - 2;
+      wetBoxes.push(new THREE.Box3(new THREE.Vector3(x0, WATER_Y - 0.2, z0), new THREE.Vector3(x0 + WC + 4, WATER_Y + 0.2, z0 + WC + 4)));
+    }
     wm = waterMaterial(depthTex, EW, EH, reflection.uniforms);
     const waterMat = wm.mat;
     if (TEST) { waterMat.bumpMap = ripples; waterMat.bumpScale = 0.7; }
@@ -1980,7 +1997,18 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     trunkNear,
     animate,
     setSky(c: THREE.Color) { wm.sky.value.copy(c); streams?.setSky(c); },
-    reflectWater(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, on: boolean) { reflection.render(renderer, scene, camera, on && hasWater && !TEST); },
+    reflectWater(renderer: THREE.WebGLRenderer, scene: THREE.Scene, camera: THREE.PerspectiveCamera, on: boolean) {
+      // odbicie to drugie rysowanie prawie całej sceny: liczymy je tylko, gdy w kadrze jest jakakolwiek woda
+      // (wtedy obraz jest ten sam, a bez wody w kadrze nikt odbicia i tak nie zobaczy)
+      let seen = wetEdge;
+      if (!seen && on && hasWater) {
+        camera.updateMatrixWorld();
+        wetFrustum.setFromProjectionMatrix(wetM.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+        for (const b of wetBoxes) if (wetFrustum.intersectsBox(b)) { seen = true; break; }
+      }
+      if (on && hasWater && !seen) return; // tafli nie widać: zostaje odbicie z ostatniej klatki z wodą
+      reflection.render(renderer, scene, camera, on && hasWater && !TEST);
+    },
     setAtmosphere(a: Atmosphere) { mistFx?.update(fxTime, a); },
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
     level(x: number, y: number, fw: number, fh: number, y0: number) {

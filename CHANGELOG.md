@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.60.2 — mniej wywołań rysowania: odbicie wody tylko z wodą w kadrze, puste pule pomijane, budynki z daleka razem (2026-10-28)
+
+- **Odbicie w wodzie liczy się tylko, gdy w kadrze jest woda.** Dotąd w każdej klatce gra rysowała całą scenę drugi raz do tekstury odbicia (na scenie testowej ok. 490 wywołań rysowania, tyle co sam obraz), nawet gdy w kadrze nie było ani kawałka wody. Teraz sprawdza, czy któryś kwadrat 8×8 pól z wodą (z zapasem 2 pól na płyciznę) jest w kadrze; na mapach z morzem przy krawędzi odbicie zostaje zawsze. Obraz wody bez zmian
+- **Puste pule nie idą do karty:** postacie, ładunki, narzędzia, zbóje, tarany, wilki itd. rysowane są jako pule instancji; gdy pula ma zero sztuk, three.js i tak wysyłał polecenie rysowania. Na scenie testowej ok. 1/5 wszystkich wywołań klatki (w obrazie i w odbiciu). Teraz takie pule są na czas klatki chowane (`hideEmptyPools` w `scene.ts`)
+- **Dalekie wersje budynków i pochodnie przy budynkach** rysują się razem dla budynków tego samego rodzaju (jak reszta brył budynku), a nie osobno dla każdego
+- Modele, tekstury i wygląd bez zmian. Zasada „rysowania razem” dla nowych budynków dopisana do `CLAUDE.md`; narzędzie `tools/check/drawcalls.mjs` liczy wywołania jednej klatki według kategorii i przejść
+- Do sprawdzenia w F3: „wywołania rysowania” (przed zmianą u Michała ok. 1040) i FPS
+- Bot: bez zmian (sama grafika)
 ## 0.60.1 — poprawka: tekstury kopiowane przez JSON (spadki FPS) i błąd pór roku (2026-10-28)
 
 - **Koniec ostrzeżeń „THREE.Texture: Unable to serialize Texture”** (u Michała ×204 w 3 minuty, przy 14 FPS): `Material.clone()` w three.js kopiuje `userData` przez JSON, a w `userData` leżały materiały — oryginał podświetlonego na czerwono budynku (cel ataku) i materiał źródłowy placu budowy. Przy każdej kopii (np. bliźniak do wnętrz w porach roku) three.js zamieniał ich tekstury na obrazki. Oryginały trzymamy teraz poza `userData`, a materiały kopiuje `cloneMaterial` (`src/render/matclone.ts`) — bez JSON, z tymi samymi teksturami
