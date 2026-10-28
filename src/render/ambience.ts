@@ -204,7 +204,11 @@ export class Ambience {
       if ((m.position.x - focus.x) ** 2 + (m.position.z - focus.z) ** 2 > 75 * 75) continue;
       if (s.smoke) for (const c of s.fx.chimneys) this.chimneys.push(m.localToWorld(w.copy(c)).clone());
       for (const f of s.fx.fires) this.fires.push({ p: m.localToWorld(w.copy(f)).clone(), big: false });
-      if (s.burning) this.fires.push({ p: m.localToWorld(w.set(0, 1.1, 0)).clone(), big: true });
+      if (s.burning) {
+        // iskry i czarny dym z wierzchu płonącego budynku (obrys liczy blaze.ts przy zapłonie)
+        const box = m.userData.burnBox as THREE.Box3 | undefined;
+        this.fires.push({ p: box ? box.getCenter(w).setY(box.max.y - 0.15).clone() : m.localToWorld(w.set(0, 1.1, 0)).clone(), big: true });
+      }
       for (const o of s.fx.windows) {
         if (gi >= G.n) break;
         m.localToWorld(w.copy(o));

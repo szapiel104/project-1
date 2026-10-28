@@ -23,6 +23,7 @@ import { Clutter } from './clutter';
 import { Chips } from './chips';
 import { Clouds } from './clouds';
 import { Flames, flameSprite } from './flames';
+import { Blaze, burnBox } from './blaze';
 import { WolfLayer } from './wolves';
 import { ArrowLayer, MAX_ARROWS } from './arrows';
 import { RallyFlags, TowerIcons } from './rally';
@@ -535,6 +536,8 @@ export class GameRenderer {
   private clouds = new Clouds();
   /** Żywe płomienie pochodni, ognisk i pożarów */
   private flames = new Flames();
+  private blaze = new Blaze();
+  private camPos = new THREE.Vector3();
   private fxAt = 0;
   private mistLevel = 0;
   private atmoSun = new THREE.Color();
@@ -705,6 +708,7 @@ export class GameRenderer {
     this.scene.add(cat(this.clutter.group, 'graty przy domach'));
     this.scene.add(cat(this.clouds.group, 'chmury'));
     this.scene.add(cat(this.flames.group, 'płomienie'));
+    this.scene.add(cat(this.blaze.group, 'pożary'));
 
     const flat = (geo: THREE.BufferGeometry, color: number, opacity = 1): THREE.Mesh => {
       const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, transparent: opacity < 1, opacity, depthWrite: false }));
@@ -2305,6 +2309,8 @@ export class GameRenderer {
   private syncFlames(g: GameState): void {
     const F = this.flames, w = new THREE.Vector3();
     F.begin(this.calm ? 0 : this.time);
+    this.blaze.begin(this.calm ? 0 : this.time);
+    this.cam.camera.getWorldPosition(this.camPos);
     const glow = Math.min(1, this.night * 1.4);
     const f = this.focusPoint;
     const lit = new Set<number>();
@@ -2373,7 +2379,14 @@ export class GameRenderer {
       }
       const fire = named(mesh, 'fire');
       if (fire && fire.visible) {
-        for (const ch of fire.children) { ch.visible = false; ch.getWorldPosition(w); F.add(w.setY(w.y - 0.1), 0.75, 0.5, (ch.id * 0.193) % 1, glow * 0.6 + 0.3); }
+        // pożar to prawdziwa bryła ognia wokół całego budynku (blaze.ts); tu tylko poświata nad nim
+        for (const ch of fire.children) ch.visible = false;
+        const box = (mesh.userData.burnBox as THREE.Box3 | undefined) ?? (mesh.userData.burnBox = burnBox(mesh));
+        const heat = (mesh.userData.fireHeat as number | undefined) ?? 1;
+        this.blaze.add(id, box, heat, this.camPos);
+        box.getCenter(w);
+        const span = Math.max(box.max.x - box.min.x, box.max.z - box.min.z);
+        F.addGlow(w.setY(box.max.y), span * 2.4, (id * 0.193) % 1, (glow * 0.6 + 0.3) * (0.4 + heat * 0.6));
         // trzask pożaru z miejsca budynku: im więcej ognisk na budynku, tym głośniej
         if (!this.calm) loop3d(`fire${id}`, 'fire', mesh.position.x, mesh.position.y + 1, mesh.position.z, Math.min(1, 0.5 + fire.children.length * 0.15));
       }
@@ -2382,6 +2395,7 @@ export class GameRenderer {
       for (const o of (this.mineLevel.userData.lampSpots as THREE.Object3D[] | undefined) ?? []) { o.getWorldPosition(w); F.add(w, 0.16, 0.09, (o.id * 0.419) % 1, 0.5); }
     }
     F.end();
+    this.blaze.end();
   }
 
   /** Dym, iskry, okna i mgła: źródła odświeżane dwa razy na sekundę, cząstki co klatkę */
@@ -3063,6 +3077,15 @@ export class GameRenderer {
         v.y += 0.45;
         spots.push({ key: 'c' + b.id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 - 2, k: 0.9 });
       }
+      // płonący budynek oświetla wszystko dookoła mocniej niż pochodnia i ma pierwszeństwo w puli świateł
+      for (const b of g.buildings) {
+        if (!(b.fire ?? 0)) continue;
+        const box = this.buildingMeshes.get(b.id)?.userData.burnBox as THREE.Box3 | undefined;
+        if (!box) continue;
+        const v = box.getCenter(new THREE.Vector3());
+        v.y = box.min.y + (box.max.y - box.min.y) * 0.85;
+        spots.push({ key: 'f' + b.id, v, d: Math.max(0, (v.x - f.x) ** 2 + (v.z - f.z) ** 2 - 8), k: 2.6 });
+      }
       const { width, height } = g.map;
       for (const u of g.units) {
         if (u.path.length === 0) continue; // pochodnię niosą ci, którzy idą
@@ -3266,6 +3289,8 @@ export class GameRenderer {
         // pożar trwa tylko po świeżych ciosach; gdy nikt dalej nie atakuje, ogień przygasa i znika (budynek zostaje osmalony)
         fire.visible = (b.fire ?? 0) > 0;
         const heat = Math.min(1, (b.fire ?? 0) / 300); // przy gaszeniu płomienie maleją
+        mesh.userData.fireHeat = heat;
+        if (!fire.visible) mesh.userData.burnBox = undefined; // po pożarze obrys liczymy od nowa (budynek mógł się zmienić)
         fire.children.forEach((f, k) => { const k2 = 0.35 + heat * 0.65; f.scale.set(k2, (0.7 + Math.abs(Math.sin(this.time * 9 + k)) * 0.6 * (0.5 + hurt)) * k2, k2); });
       }
       const def = BUILDINGS[b.type]!;

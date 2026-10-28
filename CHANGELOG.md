@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.56.0 — prawdziwy ogień: pożary budynków i płomienie jako bryły 3D (2026-10-28)
+
+- **Pożar budynku to teraz prawdziwy ogień w trzech wymiarach** (`src/render/blaze.ts`): zamiast kilku płaskich płomyków, które obracały się z kamerą, wokół płonącego budynku stoi niewidoczna bryła, przez którą promień z oka zbiera ogień z unoszącego się w górę szumu. Ogień bucha z całego dachu i wychodzi nad nim w języki, liże ściany od zewnątrz, przechyla się z wiatrem, a gorące miejsca wędrują po budynku (część dachu pali się mocniej). Nad płomieniami gęsty, czarny dym. Przy gaszeniu ogień płynnie przygasa razem z siłą pożaru. Z każdej strony i wysokości wygląda tak samo — nic się nie obraca
+- **Pochodnie, ogniska, kosze, koksowniki, ogniste strzały i kule magów** też są bryłami ognia (ten sam shader, `src/render/fireGlsl.ts`), a nie kartkami zwróconymi do kamery; poświata zostaje okrągła
+- Płonący budynek nocą oświetla otoczenie (pierwszeństwo w puli świateł), iskry i dym idą z jego wierzchu, a nie z wysokości 1,1 nad środkiem
+- Kamera w środku pożaru (spacer): ogień rysuje się od środka, nie znika
+- Bot: bez zmian (czysto wizualne)
+
 ## 0.55.4 — strzała leci w człowieka na murze, rozkaz ataku na chłopa (2026-10-28)
 
 - **Strzały i czary celują w narysowaną postać:** do wroga na koronie muru, na murach zamku albo na wieży strzała leci w pierś postaci (pozycja z obrazka), a nie w ziemię i mur pod nią. Dotąd cel liczył się tylko dla ziemi i wieży, więc do wroga na murze strzała wbijała się w lico muru, choć trafienie i obrażenia liczyły się poprawnie. To samo dla celowania w chłopów (wysokość jak ich postać)
