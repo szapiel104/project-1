@@ -40,6 +40,16 @@ export function graveModel(key: 'grave' | 'coffin' = 'grave'): THREE.Group {
 
 const hash = (t: number): number => { let h = (t * 2654435761) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); return (h ^ (h >>> 12)) >>> 0; };
 
+/** Wierzch krzyża grobu na polu `t` (tam siada kruk, crows.ts): położenie w polach mapy, wysokość nad terenem i obrót grobu */
+export const CROSS_TOP = 0.2, CROSS_Z = -0.21;
+export function graveSpot(t: number, width: number): { fx: number; fy: number; yaw: number } {
+  const x = t % width, y = (t - x) / width, h = hash(t);
+  const fx = x + 0.5 + ((h & 255) / 255 - 0.5) * 0.2, fy = y + 0.5 + (((h >> 8) & 255) / 255 - 0.5) * 0.2;
+  const yaw = ((h >> 16) & 1023) / 1023 * Math.PI * 2;
+  // krzyż stoi w głowach (lokalne -z), obrócony razem z kopczykiem
+  return { fx: fx + Math.sin(yaw) * CROSS_Z, fy: fy + Math.cos(yaw) * CROSS_Z, yaw };
+}
+
 export class GraveLayer {
   private meshes: THREE.InstancedMesh[] = [];
   /** Trumny na noszach niesione przez dwóch chłopów (bearers.ts): pozycje ustawia scene.ts co klatkę */

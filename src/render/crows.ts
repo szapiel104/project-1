@@ -10,6 +10,7 @@ import * as THREE from 'three';
 import { FP, type GameState } from '../sim/state';
 import { cat } from './cat';
 import { crowParts } from './creatures';
+import { CROSS_TOP, graveSpot } from './graves';
 import type { TerrainView } from './terrain';
 import { touch } from './touch';
 
@@ -21,6 +22,12 @@ export class CrowLayer {
   private lastTick = -1;
   private tickAt = 0;
   constructor(private scene: THREE.Scene) {}
+
+  /**
+   * Kruki na krzyżach leśnych grobów (Michał 28.10.2026): co jakiś czas przylatuje jeden i siedzi na krzyżu, rozgląda się;
+   * gdy ktoś podejdzie (albo posiedzi swoje), zrywa się i odlatuje. Najwyżej `GRAVE_CROWS` naraz na całą mapę.
+   */
+  private perch = new Map<number, { st: 'away' | 'in' | 'sit' | 'out'; since: number; until: number; dir: number }>();
 
   private crows: THREE.InstancedMesh | null = null;
   /** Kruki w locie: jedna siatka na klatkę machania skrzydłami (model CC0 z animacją lotu) */
@@ -116,8 +123,59 @@ export class CrowLayer {
         this.crows.setMatrixAt(n++, t.matrix);
       }
     }
+    n = this.graveCrows(g, view, n, flyN);
     this.crows.count = n;
     touch(this.crows);
     this.crowFly.forEach((m, f) => { m.count = flyN[f]!; m.visible = m.count > 0; touch(m); });
+  }
+
+  private graveCrows(g: GameState, view: TerrainView, n: number, flyN: number[]): number {
+    const list = g.graves ?? [];
+    const now = this.time, { width, height } = g.map, t = this.tmp, F = this.crowFly.length;
+    const live = new Set<number>();
+    let busy = 0;
+    for (const p of this.perch.values()) if (p.st !== 'away') busy++;
+    const GRAVE_CROWS = 6, FLY = 4;
+    for (const gr of list) {
+      live.add(gr.t);
+      let p = this.perch.get(gr.t);
+      // nowy grób: pierwszy kruk za pół do półtorej minuty
+      if (!p) { p = { st: 'away', since: now, until: now + 30 + ((gr.t * 0.618) % 1) * 60, dir: (gr.t * 2.399) % 6.283 }; this.perch.set(gr.t, p); }
+      const s = graveSpot(gr.t, width);
+      const px = s.fx * FP, py = s.fy * FP;
+      const near = g.units.some((u) => Math.abs(u.px - px) < 2.5 * FP && Math.abs(u.py - py) < 2.5 * FP)
+        || g.soldiers.some((u) => Math.abs(u.px - px) < 2.5 * FP && Math.abs(u.py - py) < 2.5 * FP);
+      if (this.calm) { if (p.st !== 'sit') continue; }
+      else if (p.st === 'away' && now >= p.until) {
+        if (near || busy >= GRAVE_CROWS) p.until = now + 20;
+        else { p.st = 'in'; p.since = now; p.dir = Math.random() * 6.283; busy++; }
+      } else if (p.st === 'in' && now - p.since >= FLY) { p.st = 'sit'; p.since = now; p.until = now + 25 + Math.random() * 35; }
+      else if (p.st === 'sit' && (near || now >= p.until)) { p.st = 'out'; p.since = now; p.dir += near ? 0 : 0.8; }
+      else if (p.st === 'out' && now - p.since >= FLY + 1) { p.st = 'away'; p.until = now + 60 + Math.random() * 120; busy--; }
+      if (p.st === 'away') continue;
+      const top = view.heightAt(s.fx, s.fy) + CROSS_TOP;
+      if (p.st === 'sit') {
+        // siedzi na wierzchu krzyża, co chwilę obraca głowę w inną stronę
+        const k = Math.floor(now / 3 + gr.t) % 4;
+        t.position.set(s.fx - width / 2, top, s.fy - height / 2);
+        t.rotation.set(0, s.yaw + [0, 0.7, -0.6, 3.1][k]!, 0, 'YXZ');
+        t.scale.setScalar(0.9);
+        t.updateMatrix();
+        if (n < 256) this.crows!.setMatrixAt(n++, t.matrix);
+        continue;
+      }
+      // przylot z daleka po łuku albo odlot (spłoszony: stromo w górę)
+      const k0 = Math.min(1, (now - p.since) / FLY), k = p.st === 'in' ? 1 - k0 : k0, e = k * k;
+      const x = s.fx + Math.cos(p.dir) * e * 26, y = s.fy + Math.sin(p.dir) * e * 26;
+      t.position.set(x - width / 2, top + e * 8 + Math.sin(k * Math.PI) * 1.2, y - height / 2);
+      const away = p.st === 'out';
+      t.rotation.set(away ? -0.3 : 0.2, Math.atan2(away ? Math.cos(p.dir) : -Math.cos(p.dir), away ? Math.sin(p.dir) : -Math.sin(p.dir)), 0, 'YXZ');
+      t.scale.setScalar(1.1);
+      t.updateMatrix();
+      const f = Math.floor((now * 10 + gr.t) % F);
+      if (flyN[f]! < 128) this.crowFly[f]!.setMatrixAt(flyN[f]!++, t.matrix);
+    }
+    for (const k of this.perch.keys()) if (!live.has(k)) this.perch.delete(k);
+    return n;
   }
 }

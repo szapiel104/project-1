@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.64.11 — strzały zostają po bitwie, kruki na krzyżach (2026-10-28)
+
+- **Strzały wbite po bitwie (Michał):** chybiona strzała wbija się skośnie w ziemię za celem, a strzała w budynek zostaje w jego ścianie: celuje w lico bryły, a nie w środek działki. Po 90 s chowa się grotem naprzód i znika, najwyżej 600 naraz (`render/arrows.ts`)
+- **Strzały w poległych:** każda celna strzała w żołnierza albo chłopa zostaje w nim (najwyżej 3 na ciało). Po śmierci sterczą skośnie z tułowia leżącego i znikają razem z ciałem
+- **Kruki na krzyżach leśnych grobów:** co jakiś czas przylatuje kruk, siada na krzyżu i rozgląda się. Gdy ktoś podejdzie albo posiedzi swoje, zrywa się i odlatuje. Najwyżej 6 naraz na mapę (`render/crows.ts`). Krakania na razie nie ma (brak nagrania, wpisane w `docs/pomysly.md`)
+- Reszta propozycji z 28.10 (krew w trakcie walki, las w paczkach, drogi) dopisana do `docs/pomysly.md`
+- Bot: bez zmian (sam wygląd)
+
 ## 0.64.10 — krew kładzie się na terenie, ślady butów tylko na śniegu (2026-10-28)
 
 - **Krew na zboczu:** plama pod poległym przechyla się razem z terenem (nachylenie liczone z wysokości wokół ciała) i leży 2 cm nad ziemią — wcześniej leżała płasko, więc na pochyłości połowa chowała się w ziemi i plama miała prosto ucięte brzegi. Na pomoście wieży i koronie muru leży płasko

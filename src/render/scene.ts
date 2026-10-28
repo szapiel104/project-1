@@ -64,6 +64,7 @@ import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { applyCrest, defaultCrest } from './banners';
 import { BloodStains } from './blood';
+import type { Stick } from './arrows';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, buildingById, type GameState } from '../sim/state';
 import { towerEntry, towerUnder } from '../sim/systems/stonewalls';
 import { GREAT_FLIGHT } from '../sim/systems/greatspell';
@@ -1154,6 +1155,7 @@ export class GameRenderer {
     this.lods.clear();
     this.rubble.clear();
     this.graves.clear();
+    this.arrows.clearStuck();
     this.piles.clear();
     this.prevPos.clear();
     this.facing.clear();
@@ -4014,7 +4016,15 @@ export class GameRenderer {
           this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.copy(aim), udef.magic === 'fire');
           this.playHere('swing', t.position.x, t.position.z, 0.8, t.position.y + 1, udef.magic === 'fire' ? 0.7 : 1.3);
         } else {
-          this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), aim, fireArrow(g, s) || (!foe && !victim && fireTarget.has(s.id)), hit);
+          const from = new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2);
+          // gdzie strzała zostanie po trafieniu (arrows.ts): chybiona w ziemi, w budynku na jego ścianie, inaczej w trafionym
+          let stick: Stick;
+          if (hit === 'arrowDirt') stick = { ground: true };
+          else if (foe) stick = { unit: foe.id };
+          else if (victim && !wolfT) stick = { unit: s.hitting };
+          else if (wall) { stick = { wall: true }; wallFace(wall, from, aim, width, height, view); }
+          else stick = {};
+          this.arrows.shoot(from, aim, fireArrow(g, s) || (!foe && !victim && fireTarget.has(s.id)), hit, stick);
           // puszczenie cięciwy (nagrania 0 A.D.) z miejsca łucznika, także z wieży
           this.playHere('bow', t.position.x, t.position.z, 1, t.position.y + 1);
         }
@@ -4175,6 +4185,7 @@ export class GameRenderer {
     this.banditsFig.finish(bandits);
     this.battleFireFig.finish(0);
     this.battleWaterFig.finish(0);
+    this.arrows.groundAt = (x, z) => view.heightAt(x + width / 2, z + height / 2);
     this.arrows.fly(this.calm);
     this.spells.update(this.calm ? 1 : 1 / 60, this.time, this.cam.camera);
     this.towerIcons.sync(g, this.view, this.time);
@@ -4187,6 +4198,7 @@ export class GameRenderer {
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
     this.stains.begin();
+    this.arrows.beginBodies();
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
     let pc = 0, ac = 0, gc = 0, sp = 0, mc = 0, sc2 = 0, bc = 0;
     for (const body of g.corpses) {
@@ -4249,6 +4261,7 @@ export class GameRenderer {
       // (na pomoście wieży albo koronie muru leży płasko)
       const sb = 0.25, onGround = Math.abs(y - view.heightAt(fx, fy)) < 0.05;
       const hx = onGround ? (view.heightAt(fx + sb, fy) - view.heightAt(fx - sb, fy)) / (2 * sb) : 0, hz = onGround ? (view.heightAt(fx, fy + sb) - view.heightAt(fx, fy - sb)) / (2 * sb) : 0;
+      if (fall >= 1 || this.calm) this.arrows.body(body.id, fx - width / 2, y + sink, fy - height / 2, yaw); // strzały, które w nim utkwiły
       this.stains.add(body.id, fx - width / 2, y + 0.02, fy - height / 2, spread, age, [hx, hz]);
       c++;
     }
@@ -4269,6 +4282,7 @@ export class GameRenderer {
       for (const id of this.fallenBearers) if (!dead.has(id)) this.fallenBearers.delete(id);
     }
     this.stains.end();
+    this.arrows.drawStuck();
     this.rings.count = rings;
     touch(this.rings);
     this.ringsBack.count = rings;
@@ -5782,6 +5796,27 @@ export class GameRenderer {
 /** Grubość płyty łąki w modelu sadu (FLOOR w tools/models/orchard.py) */
 const ORCHARD_FLOOR = 0.05;
 /** Pole mapy, na którym stoi szopa sadu (lewy tylny róg modelu, obrócony razem z budynkiem o rot·90°) */
+/**
+ * Strzała w budynek trafia w jego ścianę, a nie w środek działki: punkt, w którym lot wchodzi w bryłę działki
+ * (zwężonej, bo model zwykle nie sięga jej brzegów). `aim` zostaje przesunięty na to miejsce.
+ */
+function wallFace(b: { x: number; y: number; type: number; rot: number }, from: THREE.Vector3, aim: THREE.Vector3, width: number, height: number, view: TerrainView): void {
+  const fp = footprint(BUILDINGS[b.type]!, b.rot), IN = 0.3;
+  const x0 = b.x + IN - width / 2, x1 = b.x + fp.w - IN - width / 2, z0 = b.y + IN - height / 2, z1 = b.y + fp.h - IN - height / 2;
+  const d = new THREE.Vector3().subVectors(aim, from);
+  let t0 = 0, t1 = 1;
+  for (const [o, v, lo, hi] of [[from.x, d.x, x0, x1], [from.z, d.z, z0, z1]] as const) {
+    if (Math.abs(v) < 1e-6) { if (o < lo || o > hi) return; continue; }
+    let a = (lo - o) / v, c = (hi - o) / v;
+    if (a > c) [a, c] = [c, a];
+    t0 = Math.max(t0, a); t1 = Math.min(t1, c);
+  }
+  if (t0 <= 0 || t0 > t1) return; // strzelec w środku albo lot nie przechodzi przez działkę
+  aim.addScaledVector(d, t0 - 1);
+  // nie niżej niż tuż nad ziemią pod ścianą
+  aim.y = Math.max(aim.y, view.heightAt(aim.x + width / 2, aim.z + height / 2) + 0.15);
+}
+
 function orchardShedTile(bx: number, by: number, rot: number): [number, number] {
   const a = (rot * Math.PI) / 2, c = Math.round(Math.cos(a)), sn = Math.round(Math.sin(a));
   // środek szopy w modelu ≈ (-1, -1) pole od środka; obrót jak mesh.rotation.y: x' = x·cos + z·sin, z' = -x·sin + z·cos

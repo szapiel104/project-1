@@ -61,11 +61,18 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 - **Strach albo łaska (jak w Twierdzy):** budynki grozy na placu (pręgierz, szubienica, klatka) i budynki dobroci (kapliczka Ojca Płomienia, studnia z ławą, ogródek). Przewaga grozy = ludzie pracują szybciej, ale popularność niżej; przewaga dobroci = odwrotnie. Suwak widoczny w rozpisce popularności.
 - **Kapliczka (24.10, partia 1 zrobiona — 0.40.0):** własny model z Blendera (`tools/models/shrine.py`, Michał chciał klimatu kaplicy z Gothica; posąg i nazwa są nasze, bez kopiowania Innosa): posąg Ojca Płomienia w ostrołukowej niszy z czarą wiecznego ognia, świeczniki, ofiarna ruda, klęcznik. Wieczorem co czwarty chłop idzie się modlić (klęczą przy klęczniku, reszta stoi ze spuszczonymi głowami), kapliczka daje +1 do popularności (przy dwóch +2), bot stawia jedną. Kaznodzieja, dzwonek i święto co 7 dni zrobione 25.10 (0.50.0). Dalej: bez kapliczki pogrzeby psują nastroje, procesja przez osadę w święto.
 - **Cmentarz i grabarz:** polegli i zmarli z głodu leżą, dopóki grabarz ich nie zaniesie na cmentarz; ciała przy osadzie ściągają kruki i wilki, a po kilku dniach chorobę.
-  - Bez cmentarza wolni chłopi chowają ciała na skraju lasu (0.57.3), zostaje kopczyk z krzyżem, który psuje nastrój i znika po 3 dniach albo pod budynkiem (0.58.3). Dalej, do wyboru: kruki siadające na krzyżach, wilki rozkopujące świeże groby nocą.
+  - Bez cmentarza wolni chłopi chowają ciała na skraju lasu (0.57.3), zostaje kopczyk z krzyżem, który psuje nastrój i znika po 3 dniach albo pod budynkiem (0.58.3). Kruki siadające na krzyżach zrobione 28.10 (0.64.11). Dalej: wilki rozkopujące świeże groby nocą; głos kruka (krakanie przy zrywaniu się) — w 0 A.D. nie ma nagrania kruka, trzeba znaleźć CC0 (Freesound/OpenGameArt) i dopisać do `CREDITS.md`.
 - **Myśliwy:** chata myśliwego przy lesie — jelenie i dziki w puszczy (mięso jako 4. jedzenie, skóry), myśliwy przepędza wilki z okolicy i odsłania polany ze zbójami.
 - **Złodzieje nocą:** gdy popularność niska, nocą ktoś podkrada ze składu; straż na obchodzie może go złapać i odprowadzić do lochów (pierwsi prawdziwi więźniowie, do pręgierza albo do kopalni jako kara).
 - **Kronika meczu:** po meczu strona kroniki pisana jak przez skrybę — najważniejsze chwile (pierwsza fala, bunt, oblężenie, upadek wroga) z godziną gry; przy grze przez sieć do podejrzenia przez obu graczy.
 - **Wyprawa pana:** pan zamku jako postać na polu bitwy (dowódca: wojsko obok bije mocniej), powiązane z progresją z `progresja.md`; gdy padnie, wraca do zamku ranny na dobę.
+
+## Bitwa i klimat — propozycje z 28.10.2026 (Michał wybrał strzały i kruki, 0.64.11; reszta tutaj na później)
+- **Krew w trakcie walki:** krótki prysk przy trafieniu mieczem albo strzałą, ranny zostawia kilka kropel za sobą, idąc (warstwa `render/blood.ts`).
+- **Strzały wbite w żywych:** dziś strzały tkwią w ciałach poległych, w ziemi i w ścianach (`render/arrows.ts`); w żyjących nie, bo trzeba by je wiązać z ruchem postaci.
+- **Las w większych paczkach (BatchedMesh)** — następny w kolejce (Michał 28.10.2026: „a później ten las”); szczegóły w punkcie 2 planu optymalizacji na górze.
+- **Szybsze szukanie dróg** (punkt 9 planu optymalizacji na górze).
+- Strach albo łaska, myśliwy, złodzieje nocą — opisane niżej w „Nowych pomysłach Claude'a”.
 
 ## Magowie i choroby (Michał, 24.10.2026)
 Zrobione: modele magów ognia i wody (0.40.x, łokcie, kula czaru w dłoni), siedziby 5×5 z dziedzińcem i tania chatka maga (0.42.0), zaraza i magowie przy pracy (0.44.0: `src/sim/systems/plague.ts`, balans w `RULES.plague` / `RULES.mages`).
