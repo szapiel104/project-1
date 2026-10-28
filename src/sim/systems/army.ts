@@ -1,3 +1,4 @@
+import { Buckets } from '../spatial';
 import { buildingById, unitById, dropWorker, storeCapacity, storeUsed } from '../state';
 import { spareKeeper } from './storage';
 import { WALL_TOP } from '../../data/keep';
@@ -894,6 +895,13 @@ export function armySystem(g: GameState): void {
     let list = grid.get(k); if (!list) { list = []; grid.set(k, list); } list.push(o);
     if (!o.path.length) standing.set(t, (standing.get(t) ?? 0) + 1);
   }
+  // kubełki chłopów do szukania wrogiego chłopa w zasięgu wzroku; budowane przy pierwszej potrzebie, od nowa, gdy ktoś
+  // ubył z listy (zabity chłop); w tej pętli chłopi się nie ruszają ani nie dochodzą nowi
+  let unitBuckets: Buckets<Unit> | null = null, unitsAt = -1;
+  const unitsNear = (): Buckets<Unit> => {
+    if (!unitBuckets || unitsAt !== g.units.length) { unitBuckets = new Buckets(g.units, W); unitsAt = g.units.length; }
+    return unitBuckets;
+  };
   // limit drogi szukanej na tick: przy setkach żołnierzy reszta poczeka chwilę, gra się nie zatnie
   budget = 10;
   missileSystem(g, byId);
@@ -1064,10 +1072,15 @@ export function armySystem(g: GameState): void {
         const ordered = s.prey ? unitById(g, s.prey) : undefined;
         if (s.prey && !ordered) s.prey = 0;
         if (ordered) { prey = ordered; best = ((ordered.px - s.px) / FP) ** 2 + ((ordered.py - s.py) / FP) ** 2; }
-        else for (const u of g.units) {
-          if (team(g, u.owner) === team(g, s.owner)) continue;
-          const dx = (u.px - s.px) / FP, dy = (u.py - s.py) / FP, d = dx * dx + dy * dy;
-          if (d < best) { best = d; prey = u; }
+        else {
+          // tylko chłopi z sąsiednich kubełków (wynik jak przy przeglądaniu wszystkich: przy remisie wcześniejszy na liście)
+          const my = team(g, s.owner);
+          let bi = Infinity;
+          unitsNear().near(s.px, s.py, Math.sqrt(best) * FP, (u, i) => {
+            if (team(g, u.owner) === my) return;
+            const dx = (u.px - s.px) / FP, dy = (u.py - s.py) / FP, d = dx * dx + dy * dy;
+            if (d < best || (prey && d === best && i < bi)) { best = d; prey = u; bi = i; }
+          });
         }
         if (prey && prey !== ordered && (stance === 2 || tooFar((prey.py >> 8) * W + (prey.px >> 8))) && (prey.px - s.px) ** 2 + (prey.py - s.py) ** 2 > ((range || 1.5) * FP) ** 2) prey = undefined;
         if (prey) {
@@ -1577,24 +1590,30 @@ function lookout(g: GameState): void {
   if (g.tick % 5 !== 0) return;
   const R = 5 * FP, NEAR = FP + FP / 2;
   const dead: [Unit, number][] = [];
+  // kubełki zamiast przeglądania wszystkich żołnierzy i chłopów przy każdym chłopie (wynik ten sam, remis: wcześniejszy na liście)
+  const W = g.map.width;
+  const foes = new Buckets(g.soldiers, W, 8, (s) => !s.up && !UNITS[s.kind]!.ram);
+  let folk: Buckets<Unit> | null = null;
   for (const u of g.units) {
     u.foe = 0; u.foeU = 0;
     if (u.phase === Phase.Sleeping || u.phase === Phase.Resting) continue;
-    let best: Soldier | undefined, bd = R + 1;
-    for (const s of g.soldiers) {
-      if (s.hp <= 0 || s.up || team(g, s.owner) === team(g, u.owner) || UNITS[s.kind]!.ram) continue;
+    let best: Soldier | undefined, bd = R + 1, bi = Infinity;
+    const myTeam = team(g, u.owner);
+    foes.near(u.px, u.py, R, (s, i) => {
+      if (s.hp <= 0 || team(g, s.owner) === myTeam) return;
       const d = Math.max(Math.abs(s.px - u.px), Math.abs(s.py - u.py));
-      if (d < bd) { bd = d; best = s; }
-    }
+      if (d < bd || (best && d === bd && i < bi)) { bd = d; best = s; bi = i; }
+    });
     if (!best) {
       // wrogi chłop tuż obok (np. drwale dwóch panów w tym samym lesie): odważny staje i okłada go kilofem albo maczugą
       if (!isBrave(u.id)) continue;
-      let foe: Unit | undefined, fd = NEAR + 1;
-      for (const o of g.units) {
-        if (o === u || o.phase === Phase.Sleeping || o.phase === Phase.Resting || team(g, o.owner) === team(g, u.owner)) continue;
+      let foe: Unit | undefined, fd = NEAR + 1, fi = Infinity;
+      folk ??= new Buckets(g.units, W);
+      folk.near(u.px, u.py, NEAR, (o, i) => {
+        if (o === u || o.phase === Phase.Sleeping || o.phase === Phase.Resting || team(g, o.owner) === myTeam) return;
         const d = Math.max(Math.abs(o.px - u.px), Math.abs(o.py - u.py));
-        if (d < fd) { fd = d; foe = o; }
-      }
+        if (d < fd || (foe && d === fd && i < fi)) { fd = d; foe = o; fi = i; }
+      });
       if (!foe) continue;
       u.foeU = foe.id;
       u.wait = Math.max(u.wait, 6);

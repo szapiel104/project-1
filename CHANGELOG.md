@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.54.7 — symulacja szybsza o ok. 30–37% w dużych grach (2026-10-28)
+
+- **Żołnierze i chłopi nie przeglądają już całej mapy w każdym kroku.** Zmierzone profilem na długiej grze 4 na 4: najwięcej czasu symulacji zjadało szukanie wrogiego chłopa przez każdego żołnierza (w każdym kroku po wszystkich chłopach na mapie) i rozglądanie się chłopów (każdy chłop po wszystkich żołnierzach, odważni dodatkowo po wszystkich chłopach). Teraz patrzą tylko na sąsiednie kwadraty mapy (`sim/spatial.ts`, kubełki 8×8 pól — jak już przy szukaniu wrogich żołnierzy)
+- **Wynik gry dokładnie ten sam:** przy remisie odległości wygrywa ten sam chłop albo żołnierz co dawniej (wcześniejszy na liście). Sprawdzone narzędziem `tools/check/simprint.mjs` — cztery długie gry z botami (1v1, 2v2, dwie 4 na 4, po 12–15 tys. kroków) dają identyczny zapis stanu przed i po zmianie
+- Czas tych gier: 4 na 4 10,1 s → 7,2 s i 6,1 s → 3,8 s, 2 na 2 3,2 s → 2,3 s, 1 na 1 1,07 s → 0,88 s. Zysk rośnie z liczbą ludzi i żołnierzy na mapie
+- Ten sam kod liczy u wszystkich graczy w meczu przez sieć, więc mecz online też zyskuje (bez rozjazdu stanu)
+- Najwięcej czasu symulacji bierze teraz szukanie dróg (ok. 1/4, głównie armia, praca chłopów i sprawdzanie, czy budynek nie zamknie przejścia) — to już sam algorytm, dalsze przyspieszanie w osobnej partii
+- Bot: bez zmian (ta sama logika, szybciej liczona)
 ## 0.54.6 — więcej rdzeni procesora: tryb deweloperski w osobnym wątku, tekstury rysowane naraz (2026-10-28)
 
 - **Tryb deweloperski liczy symulację w osobnym wątku**, tak jak zwykła gra z botami. Dotąd w trybie deweloperskim ekonomia, ścieżki, walka i boty liczyły się na tym samym rdzeniu co rysowanie, więc duża bitwa zabierała klatki. Akcje panelu dewelopera (surowce, przewiń do nocy/dnia, pora roku, postaw jednostki, wróg pod wieżą, pożar, leczenie, usuń wrogów, wygrana) zmieniają stan w wątku głównym i od razu wysyłają go do wątku symulacji (`resyncSim` w `main.ts`). Porcja kroków, która właśnie się liczyła, jest odrzucana i liczona jeszcze raz od nowego stanu, z tymi samymi poleceniami gracza — nic nie ginie (`sim/simbatch.ts`, test `tests/simbatch.test.ts`). Gdy wątek padnie, jego polecenia przejmuje wątek główny (dotąd mogły przepaść)

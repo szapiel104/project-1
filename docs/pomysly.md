@@ -3,8 +3,18 @@
 Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (`plan.md`) przenosimy stąd, gdy przychodzi na to kolej.
 
 ## Płynność wczytywania i gry — po przeglądzie 26.10.2026 (Claude podpowiada stąd przy „co dalej”)
+- **Plan optymalizacji z 28.10.2026 (8 punktów, Michał: „zapisz 8 punktów”; kolejność wg zysku):**
+  1. [x] (28.10.2026, 0.54.7 — profil pokazał, że najwięcej brało szukanie wrogiego chłopa przez żołnierzy i rozglądanie się chłopów: kubełki `sim/spatial.ts`, symulacja 4 na 4 szybsza o 30–37%, stan identyczny wg `tools/check/simprint.mjs`; pozostałe drobne z tej linijki — `workerSystem`, `storeCapacity`, `storeDoors`, `idleCount` — w profilu po kilka procent, zostają na później) Logika gospodarki bez przeglądania wszystkiego w kółko: szukanie pracownika (`workerSystem`, `g.units.find` przy każdym budynku), miejsce w magazynach (`storeCapacity`, `roomLeft`), zbiór drzwi magazynów (`storeDoors`), licznik bezczynnych co klatkę (`idleCount`). Wynik gry ten sam (test odcisku stanu)
+  2. [ ] Las w większych paczkach (BatchedMesh): ok. 1200 wywołań rysowania na klatkę + drugie tyle w cieniu → kilka razy mniej, bez zmiany wyglądu; pomiar w F3 przed i po
+  3. [ ] Wątek symulacji odsyła tylko zmiany zamiast całego stanu po każdej porcji kroków (najpierw zmierzyć czas odbioru w F3 przy 4 na 4)
+  4. [ ] Pnie drzew z daleka: ok. 3,2 mln trójkątów w kadrze — sprawdzić, czy daleka wersja pni działa (upraszczamy tylko z daleka)
+  5. [ ] Mecz przez sieć w wątku symulacji (lockstep zostaje w wątku głównym, test zgodności stanu u dwóch graczy)
+  6. [ ] Wczytywanie: krok „Budowanie świata i osady” (ok. 2 s jednym ciągiem) etapami z paskiem
+  7. [ ] Shader cienia nowego rodzaju modelu kompilowany zawczasu (dziś krótkie przycięcie przy pierwszym rzucie cienia)
+  9. [ ] Szukanie dróg (`findPath`/`flood`) to teraz ok. 1/4 czasu symulacji: wołają je armia (ok. 40%), praca chłopów (25%), sprawdzanie przejścia przy stawianiu (`wouldBlock`, 20%) i przybysze; przyspieszanie tylko z identycznymi drogami (simprint)
+  8. [ ] Podział `render/scene.ts` (ok. 5300 linii): ludzie, budynki, światła do osobnych plików
 - [x] Karta graficzna: gra prosi o mocniejszą kartę (`powerPreference: 'high-performance'`), F3 pokazuje nazwę karty i rdzenie — 28.10.2026 (0.54.5)
-- [ ] **Wątki (przegląd 28.10.2026):** w osobnych wątkach liczą się dziś symulacja (tylko gra z botami bez trybu dewelopera), mapa do podglądu, wersje budynków z daleka i dekodowanie tekstur KTX2. W wątku głównym zostają: rysowanie, interfejs, a w **trybie deweloperskim i w meczu przez sieć także cała symulacja z botami** — to największy niewykorzystany zapas procesora. Kolejność:
+- [ ] **Wątki (przegląd 28.10.2026):** w osobnych wątkach liczyły się 28.10 rano symulacja (tylko gra z botami bez trybu dewelopera), mapa do podglądu, wersje budynków z daleka i dekodowanie tekstur KTX2. W wątku głównym zostają: rysowanie, interfejs, a w **trybie deweloperskim i w meczu przez sieć także cała symulacja z botami** — to największy niewykorzystany zapas procesora. Kolejność:
   1. [x] (28.10.2026, 0.54.6) tryb deweloperski w wątku symulacji: akcje panelu dewelopera (daj surowce, przewiń do nocy, postaw jednostki, pożar…) wykonywać na stanie w wątku głównym, gdy wątek nie liczy, i od razu wysyłać stan do wątku (tak jak już robi pauza z poleceniami); test, że akcja nie ginie pod wynikiem z wątku
   2. mecz przez sieć w wątku: lockstep (tury, polecenia, `stateHash`) zostaje w wątku głównym, wątek liczy tylko kroki tury — większa zmiana, osobna partia z testem zgodności stanu u dwóch graczy
   3. [x] (28.10.2026, 0.54.6) pierwsze wejście: rysowanie tekstur z kodu (`textures.ts`) w kilku wątkach naraz (OffscreenCanvas) — dotyczy tylko pierwszej wizyty, potem tekstury są z pamięci
