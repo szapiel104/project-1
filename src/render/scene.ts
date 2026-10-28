@@ -63,6 +63,7 @@ import { RESOURCES, RESOURCE_DEFS } from '../data/resources';
 import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { applyCrest, defaultCrest } from './banners';
+import { BloodStains } from './blood';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, buildingById, type GameState } from '../sim/state';
 import { towerEntry, towerUnder } from '../sim/systems/stonewalls';
 import { GREAT_FLIGHT } from '../sim/systems/greatspell';
@@ -691,7 +692,7 @@ export class GameRenderer {
   private ghostRings!: THREE.InstancedMesh;
   /** Ciała poległych i ciemne plamy pod nimi */
   private bodies: Figures;
-  private stains: THREE.InstancedMesh;
+  private stains: BloodStains;
   /** Migające kropki na polach, do których idą zaznaczeni żołnierze, i fala w miejscu rozkazu */
   private dots: THREE.InstancedMesh;
   private wave: THREE.Mesh;
@@ -876,10 +877,8 @@ export class GameRenderer {
     this.manAtArmsBodies = new Figures(256, this.scene, 'manatarms');
     this.sapperBodies = new Figures(256, this.scene, 'sapper');
     this.banditBodies = new Figures(256, this.scene, 'bandit');
-    this.stains = new THREE.InstancedMesh(new THREE.CircleGeometry(0.32, 14).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x3a1a12, roughness: 1, transparent: true, opacity: 0.7, depthWrite: false }), MAX_UNITS);
-    this.stains.count = 0;
-    this.stains.frustumCulled = false;
-    this.scene.add(this.stains);
+    this.stains = new BloodStains(MAX_UNITS); // krew: nieregularna plama, rozlewa się i ciemnieje (render/blood.ts)
+    this.scene.add(this.stains.mesh);
     this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.13, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false, toneMapped: false, fog: false }), MAX_UNITS);
     this.dots.count = 0;
     this.dots.frustumCulled = false;
@@ -4157,6 +4156,7 @@ export class GameRenderer {
     touch(this.soldierTorches);
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;
+    this.stains.begin();
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
     let pc = 0, ac = 0, gc = 0, sp = 0, mc = 0, sc2 = 0, bc = 0;
     for (const body of g.corpses) {
@@ -4213,8 +4213,9 @@ export class GameRenderer {
           new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw + 0.5, 1.45 * k, 'YXZ')), new THREE.Vector3().setScalar(1.08 * FIG));
         this.standards.add(fallM, body.owner, team, this.crestOf(body.owner));
       }
-      m.compose(new THREE.Vector3(fx - width / 2, y + 0.02, fy - height / 2), new THREE.Quaternion(), sc.set(1 + age * 0.4, 1, 1 + age * 0.4));
-      this.stains.setMatrixAt(c, m);
+      // krew wypływa dopiero po upadku i rozlewa się przez ok. 20 s
+      const spread = this.calm ? 1 : Math.max(0, Math.min(1, (g.tick + alpha - body.at) / (TICKS_PER_SECOND * 20) - 0.03));
+      this.stains.add(body.id, fx - width / 2, y + 0.015, fy - height / 2, spread, age);
       c++;
     }
     this.bodies.finish(sp);
@@ -4233,8 +4234,7 @@ export class GameRenderer {
       const dead = new Set(g.corpses.map((cc) => cc.id));
       for (const id of this.fallenBearers) if (!dead.has(id)) this.fallenBearers.delete(id);
     }
-    this.stains.count = c;
-    touch(this.stains);
+    this.stains.end();
     this.rings.count = rings;
     touch(this.rings);
     this.ringsBack.count = rings;

@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.64.5 — krew jako plama, która się rozlewa (2026-10-28)
+
+- **Zgłoszenie (krew okrągła, na śniegu ucięta jak kawałek tortu):** zamiast szarego koła pod poległym jest teraz nieregularna plama z kleksami, smugami w bok i drobnymi bryzgami dookoła. Każda jest inaczej obrócona i rozciągnięta (`src/render/blood.ts`)
+- **Krew dynamiczna:** wypływa dopiero po upadku i rozlewa się przez ok. 20 s, najpierw szybko, potem coraz wolniej. Świeża jest czerwona i mokro błyszczy, a z rozkładem ciała ciemnieje do brązu
+- Plama leży na wierzchu terenu (przesunięcie głębi), więc śnieg ani zbocze już jej nie ucinają
+- Bot: bez zmian (sam wygląd)
+
 ## 0.64.4 — im większa wieża, tym większy zasięg (2026-10-28)
 
 - **Zasięg łucznika z wieży rośnie z jej wielkością** (`TOWERS` w `data/buildings.ts`): z ziemi 8 pól, z czatowni 10, ze strażnicy 11, z baszty 13 (dawniej 12), z dużej baszty 15 (dawniej 13), z wielkiej 17. Koło zasięgu przy zaznaczonej wieży pokazuje nowe wartości
