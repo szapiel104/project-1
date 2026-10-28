@@ -6,7 +6,7 @@
 - **Interakcja:** najechanie albo przejście klawiszem wysuwa pozycję w prawo, zapala romb i czerwony pas ze złotą krawędzią; pod listą podpowiedź, co kryje wskazana pozycja; otwarte okno ma swoją pozycję podświetloną. Strzałki w górę i w dół (oraz w lewo/prawo) chodzą po liście, Enter wybiera, Esc wraca
 - **Okna** (nowa gra, ustawienia, sieć, jak grać) otwierają się w prawej części ekranu, obok listy — herb i menu zostają na miejscu, za oknem widać pejzaż z zamkiem
 - **Różne ekrany:** szerokość kolumny i wielkość napisów liczone od okna (od 1366×768 po 2560×1440), na niskich ekranach chowa się dłuższy opis; bez przewijania w bok
-- Dostępność: pozycje to przyciski z opisem dla czytnika (`aria-description`), widoczny fokus, cele min. 46 px; kontrast pozycji 10,5:1, podpowiedzi 9,6:1, głównej na czerwieni 9:1
+- Dostępność: pozycje to przyciski z opisem dla czytnika (`aria-description`), widoczny fokus, cele min. 46 px; kontrast pozycji 11,5:1, podpowiedzi 10,4:1, głównej na czerwieni 7:1, „Poddaj się” 9,8:1
 - Bot: bez zmian
 
 ## 0.61.11 — pora roku z menu dewelopera zostaje po wczytaniu (2026-10-28)
