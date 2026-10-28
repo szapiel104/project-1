@@ -9,9 +9,13 @@ it('rudera i namiot: tańsze od chaty, mniej łóżek, liczą się do mieszkań'
   const house = BUILDINGS[buildingIndex('house')]!, shack = BUILDINGS[buildingIndex('shack')]!, tent = BUILDINGS[buildingIndex('tent')]!;
   expect(shack.housing).toBe(4);
   expect(tent.housing).toBe(2);
+  const corner = BUILDINGS[buildingIndex('shackL')]!;
+  expect(corner.housing).toBe(6);
+  expect(corner.cost.wood!).toBeGreaterThan(shack.cost.wood!);
+  expect(corner.cost.wood!).toBeLessThan(house.cost.wood!);
   expect(shack.cost.wood!).toBeLessThan(house.cost.wood!);
   expect(tent.cost.wood!).toBeLessThan(shack.cost.wood!);
-  for (const id of ['house', 'shack', 'tent']) expect(DWELLINGS.has(id)).toBe(true);
+  for (const id of ['house', 'shackL', 'shack', 'tent']) expect(DWELLINGS.has(id)).toBe(true);
 
   const g = createGame(3, '1v1', 1, false);
   const keep = g.buildings.find((b) => b.owner === 0 && b.type === 0)!;

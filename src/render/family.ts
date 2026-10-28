@@ -49,7 +49,7 @@ interface Yard { dx: number; dy: number; fx: number; fy: number; props: Placed[]
 export interface FamilyCtx { time: number; dt: number; calm: boolean; height: (x: number, y: number) => number; fig: number; cam?: { x: number; y: number; h: number }; team: (owner: number) => number }
 
 const MAX = 160;
-const FAMILY_HOMES = new Set(['house', 'shack']);
+const FAMILY_HOMES = new Set(['house', 'shackL', 'shack']);
 const CLOTH = [0xe8e0cc, 0xd8cfb4, 0xb8c4c8, 0xc8a890, 0xe0d8c0, 0xa8b498, 0x9a4a3a, 0x6a7a8a, 0xb89a5a];
 const rand = (): number => Math.random();
 const hashN = (a: number, b: number): number => { let h = (a * 2654435761 + b * 40503) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); return (h ^ (h >>> 12)) >>> 0; };

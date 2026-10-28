@@ -149,6 +149,7 @@ export function botSystem(g: GameState): void {
     // który łata osadę tanimi mieszkaniami, zanim stać go na porządne chaty
     const roofless = !urgent0 && pop >= housing(g, p.id) && !affordable(g, p, buildingIndex('house'));
     const urgent = urgent0 ?? (!roofless ? null
+      : (have.get('shackL') ?? 0) < 2 && affordable(g, p, buildingIndex('shackL')) ? 'shackL'
       : (have.get('shack') ?? 0) < 3 && affordable(g, p, buildingIndex('shack')) ? 'shack'
       : (have.get('tent') ?? 0) < 2 ? 'tent' : null);
     // pełny magazyn (storage.ts): warsztaty stoją, a towar leży pod drzwiami — bot stawia kolejny magazyn tego rodzaju

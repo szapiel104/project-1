@@ -169,7 +169,7 @@ const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 
 /** Budynki, w których pali się w piecu: z komina idzie dym */
 /** Mała pochodnia zamiast słupa przy wejściu (x, z w układzie budynku, skala): rudera z desek dostaje niski kij przy drzwiach */
-const SMALL_TORCH: Record<string, [number, number, number]> = { shack: [0.7, 0.5, 0.5] };
+const SMALL_TORCH: Record<string, [number, number, number]> = { shack: [0.7, 0.5, 0.5], shackL: [0.72, -0.02, 0.5] };
 const SMOKY = new Set(['armory', 'house', 'tent', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy', 'armorer']);
 
 /**
@@ -4666,6 +4666,17 @@ export class GameRenderer {
       const bb = floor.geometry.boundingBox!;
       const idx = Math.max(0, (sleepers.get(u.home) ?? []).indexOf(u.id));
       let hx: number, fxl: number, z: number;
+      // miejsca posłań zapisane w modelu (rudera narożna: dwa skrzydła, posłania pod dwiema ścianami)
+      const bm = this.buildingMeshes.get(u.home)!;
+      const fixed = bm.userData.beds as [number, number, number, number][] | undefined;
+      if (fixed) {
+        if (idx >= fixed.length) { this.bedHidden = true; return null; }
+        const [ax, az, bx, bz] = fixed[idx]!;
+        bm.updateWorldMatrix(true, false);
+        const h = bm.localToWorld(this.bedA.set(ax, bb.max.y, az));
+        const f = bm.localToWorld(this.bedB.set(bx, bb.max.y, bz));
+        return [h.x, h.y, h.z, f.x, f.y, f.z];
+      }
       if (bb.max.x - bb.min.x < 0.9) {
         // namiot: dwa posłania obok siebie, wzdłuż namiotu, głową pod tylną ścianą (w poprzek się nie mieszczą)
         if (idx >= 2) { this.bedHidden = true; return null; }

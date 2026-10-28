@@ -244,12 +244,14 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // ale tylko 4 łóżka; namiot z płachty (tools/models/tent.py) — prawie za darmo, 2 łóżka, na sam początek albo na szybko
   { id: 'shack', category: 'settlement', name: 'b.shack', w: 2, h: 1, cost: { wood: 10 }, housing: 4, buildable: true },
   { id: 'tent', category: 'settlement', name: 'b.tent', w: 1, h: 1, cost: { wood: 3 }, housing: 2, hp: 30, buildable: true },
+  // rudera narożna (tools/models/shackl.py): większa buda z desek w kształcie L z podwórcem w kącie, 6 łóżek — między ruderą a chatą
+  { id: 'shackL', category: 'settlement', name: 'b.shackL', w: 2, h: 2, cost: { wood: 17 }, housing: 6, buildable: true },
 ];
 
 /** Mieszkania zwykłych chłopów (chata, rudera, namiot): tu wracają odpocząć i spać, tu bywa kwarantanna. Zamek liczy się osobno */
-export const DWELLINGS = new Set(['house', 'shack', 'tent']);
+export const DWELLINGS = new Set(['house', 'shackL', 'shack', 'tent']);
 /** Ile opału zjada mieszkanie na dobę w stosunku do chaty: namiot grzeje tylko małe ognisko przed wejściem */
-export const FUEL_SHARE: Readonly<Record<string, number>> = { house: 1, shack: 1, tent: 0.5 };
+export const FUEL_SHARE: Readonly<Record<string, number>> = { house: 1, shackL: 1, shack: 1, tent: 0.5 };
 
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */
 export const NO_TORCH = new Set(['tent', 'camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp', 'fieldTent', 'mageFire', 'mageWater', 'mageHut']);

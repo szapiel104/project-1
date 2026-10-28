@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.61.10 — rudera narożna w kształcie L, 6 łóżek (2026-10-28)
+
+- **Rudera narożna** (2×2, 17 drewna, 6 łóżek — między ruderą a chatą, `tools/models/shackl.py`): buda z krzywych desek w kształcie litery L — długie skrzydło pod tyłem działki i krótsze z lewej, na przód; w kącie między nimi mały udeptany podwórzec, z niego wejście zasłonięte skórą. Dwa płaskie dachy z desek, kamienie na deskach, szczyty z desek. W środku ciemne klepisko, skrzynka, pieniek, garnek, słoma
+- Sześć posłań w miejscach zapisanych w modelu (`beds`): trzy pod tylną ścianą długiego skrzydła, trzy pod lewą krótkiego (`bedSpot` w `scene.ts` czyta je, gdy model je ma)
+- Spacer: wchodzi się z podwórca przez otwór ze skórą do obu skrzydeł; mała pochodnia przy wejściu, bez chorągwi; gospodyni z najwyżej jednym dzieckiem, przy budzie kury albo (rzadko) świnia
+- **Bot:** gdy brakuje łóżek, a na chatę nie ma drewna, najpierw stawia ruderę narożną (najwyżej 2), potem zwykłą ruderę i namiot
+
 ## 0.61.9 — trójwymiarowy dym i para z czarów magów (2026-10-28)
 
 - **Dym z czarów jest prawdziwym kłębem 3D** (`render/spellsmoke.ts`): zamiast szarych, twardych kulek w jednym kolorze każdy kłąb to bryła z trójwymiarowego szumu — postrzępiony, rozwiewający się brzeg, gęstszy środek, wierzch jaśniejszy od spodu (światło z góry), z każdej strony ten sam kształt, nic nie obraca się za kamerą

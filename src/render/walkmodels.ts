@@ -15,6 +15,7 @@ export const TAVERN_MODEL = model('tavern');
 export const HOUSE_MODEL = model('house');
 export const SHACK_MODEL = model('shack');
 export const TENT_MODEL = model('tent');
+export const SHACKL_MODEL = model('shackl');
 export const BARN_MODEL = model('barn');
 export const ORCHARD_MODEL = model('orchard');
 export const FARM_MODEL = model('farm');
@@ -34,7 +35,7 @@ export const KEEP_HALF = KEEP_SIZE / 2;
 /** Budynek z Blendera, do którego wchodzi się spacerem: prostokąty podłogi, przeszkody na swojej wysokości, wysokość posadzki */
 export interface WalkModel { floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] }
 export const TAVERN = TAVERN_MODEL as unknown as WalkModel & { seats: [number, number, number][] };
-export const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, shack: SHACK_MODEL as unknown as WalkModel, tent: TENT_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel, oremine: OREMINE_MODEL as unknown as WalkModel, minecamp: MINECAMP_MODEL as unknown as WalkModel };
+export const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, shack: SHACK_MODEL as unknown as WalkModel, tent: TENT_MODEL as unknown as WalkModel, shackL: SHACKL_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel, oremine: OREMINE_MODEL as unknown as WalkModel, minecamp: MINECAMP_MODEL as unknown as WalkModel };
 /** Kopalnia: miejsca pracy górników w grocie (x, z w układzie modelu, kierunek twarzy) — z tools/models/mine.py */
 export const MINE_SPOTS = (OREMINE_MODEL as unknown as { spots: [number, number, number][] }).spots;
 export const OREMINE_T = BUILDINGS.findIndex((d) => d.id === 'oremine');

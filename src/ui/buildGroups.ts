@@ -8,7 +8,7 @@ import type { CategoryId } from '../data/buildings';
 export interface BuildGroup { cat: CategoryId; pl: string; en: string; ids: readonly string[] }
 
 export const BUILD_GROUPS: readonly BuildGroup[] = [
-  { cat: 'settlement', pl: 'Mieszkania', en: 'Housing', ids: ['tent', 'shack', 'house'] },
+  { cat: 'settlement', pl: 'Mieszkania', en: 'Housing', ids: ['tent', 'shack', 'shackL', 'house'] },
   { cat: 'settlement', pl: 'Życie osady', en: 'Village life', ids: ['camp', 'tavern', 'shrine', 'cemetery', 'well', 'torch'] },
   { cat: 'settlement', pl: 'Składy', en: 'Storage', ids: ['stockpile', 'barn'] },
   { cat: 'settlement', pl: 'Rzemiosło i magia', en: 'Craft and magic', ids: ['engineers', 'mageHut', 'mageFire', 'mageWater'] },

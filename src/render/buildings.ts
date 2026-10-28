@@ -18,6 +18,7 @@ const TAVERN_MODEL = model('tavern');
 const HOUSE_MODEL = model('house');
 const SHACK_MODEL = model('shack');
 const TENT_MODEL = model('tent');
+const SHACKL_MODEL = model('shackl');
 const BARN_MODEL = model('barn');
 const GRANARY_MODEL = model('granary');
 const TORCH_MODEL = model('torch');
@@ -979,6 +980,14 @@ const BUILDERS: Record<string, Builder> = {
     // drzwi; w środku klepisko na 4 posłania, skrzynka i pieniek
     blenderModel(g, SHACK_MODEL as unknown as BlenderBuilding, flag);
     const p = (SHACK_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  shackL(g, _team, flag) {
+    // rudera narożna z Blendera (tools/models/shackl.py): buda w kształcie L z podwórcem w kącie; 6 posłań w miejscach
+    // zapisanych w modelu (`beds` → userData, czyta je scena przy śpiących)
+    blenderModel(g, SHACKL_MODEL as unknown as BlenderBuilding, flag);
+    g.userData.beds = (SHACKL_MODEL as unknown as { beds: [number, number, number, number][] }).beds;
+    const p = (SHACKL_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
   tent(g, _team, flag) {
