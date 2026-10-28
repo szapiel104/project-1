@@ -5,9 +5,9 @@ import { step } from '../src/sim/step';
 
 describe('bot', () => {
   it('buduje osadę, szkoli wojsko i rusza na wroga; wszystko deterministycznie', () => {
-    // ok. 7,5 doby: od 0.47 gospodarka jest wolniejsza (etapy osady, droższe kolejne budynki), od 0.52 część ludzi pracuje
-    // jako magazynierzy, a sady przy pełnym spichlerzu czekają — koszary stają ok. 7 doby
-    const play = (): ReturnType<typeof createGame> => { const g = createGame(11); for (let i = 0; i < 27000; i++) step(g, []); return g; };
+    // ok. 9,4 doby (od 0.64.3 grabarze odpuszczają ciała, do których nie dojdą — tempo osady minimalnie inne): od 0.47 gospodarka jest wolniejsza (etapy osady, droższe kolejne budynki), od 0.52 część ludzi pracuje
+    // jako magazynierzy, a sady przy pełnym spichlerzu czekają — koszary stają ok. 8,8 doby (od 0.64 bot stawia też namioty, rudery i rudery narożne)
+    const play = (): ReturnType<typeof createGame> => { const g = createGame(11); for (let i = 0; i < 34000; i++) step(g, []); return g; };
     const g = play();
     const mine = g.buildings.filter((b) => b.owner === 1).map((b) => BUILDINGS[b.type]!.id);
     expect(mine).toContain('woodcutter');
@@ -15,5 +15,5 @@ describe('bot', () => {
     expect(g.soldiers.filter((s) => s.owner === 1).length + g.corpses.filter((c) => c.owner === 1).length).toBeGreaterThan(0);
     expect(stateHash(play())).toBe(stateHash(g));
     void playerKeep;
-  }, 60000);
+  }, 120000);
 });
