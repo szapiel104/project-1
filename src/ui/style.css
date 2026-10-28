@@ -996,34 +996,6 @@ body.walking #ui, body.walking .scribe, body.walking .scribe-log, body.walking .
 .menu .menu-panel .dev-switch { background: #1a130c; border: 1px solid #3e2f17; color: var(--ink); }
 .menu .menu-panel .dev-switch .dev-hint { color: #b9a782; }
 
-/* ===== Ekran wczytywania w stylu menu: czerń, herb i złoty tytuł, porada, żarzący się pasek na dole ===== */
-#loading { display: grid; grid-template-rows: 1fr auto; place-items: stretch center; overflow: hidden;
-  background: radial-gradient(ellipse 90% 70% at 50% 38%, #2a1a0e 0%, #120a05 55%, #050302 100%); }
-.loading-head { align-self: center; justify-self: center; display: grid; justify-items: center; gap: 4px; text-align: center; }
-.loading-crest svg { width: clamp(70px, 11vh, 110px); height: auto; filter: drop-shadow(0 0 24px rgba(255, 130, 40, .3)) drop-shadow(0 4px 4px #000); }
-#loading .loading-title { font-family: 'Cinzel Decorative', var(--display); font-weight: 900; font-size: clamp(48px, 9vh, 100px); letter-spacing: .06em; line-height: 1;
-  background: linear-gradient(#fff1c2 0%, #e9c766 38%, #9b6d1e 62%, #f3d78a 78%, #8a5e18 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 3px 0 #2a1406) drop-shadow(0 0 22px rgba(0, 0, 0, .8)); text-shadow: none; }
-.loading-sub { font-style: italic; font-size: clamp(15px, 2.2vh, 19px); color: #cdb98d; letter-spacing: .04em; }
-.loading-sub::before, .loading-sub::after { content: '❦' / ''; color: #9a7a2a; margin: 0 12px; font-style: normal; }
-#loading .loading-card { width: min(980px, calc(100vw - 64px)); gap: 16px; padding-bottom: clamp(28px, 7vh, 70px); color: #e7d6b2; }
-.loading-tip { text-align: center; min-height: 2.6em; font-size: 21px; font-style: italic; line-height: 1.35; color: #cbb68a; text-shadow: 0 1px 2px #000; }
-.loading-tip:not(:empty)::before { content: 'Rada: '; font-style: normal; font-family: var(--display); font-weight: 700; letter-spacing: .1em; color: #e9c766; }
-:root:lang(en) .loading-tip:not(:empty)::before { content: 'Tip: '; }
-/* pasek: okuta żelazem listwa z pionowymi okuciami na końcach, w środku żarzący się ogień z przesuwającym się blaskiem */
-#loading .loading-bar { position: relative; height: 26px; margin: 0 26px; background: #0b0704; border: 1px solid #9a7a2a;
-  box-shadow: 0 0 0 3px #0b0704, 0 0 0 4px rgba(154, 122, 42, .45), inset 0 2px 5px rgba(0, 0, 0, .9); }
-#loading .loading-bar::before, #loading .loading-bar::after { content: ''; position: absolute; top: 50%; width: 9px; height: 40px; background: linear-gradient(90deg, #8a5e18, #f3d78a 45%, #8a5e18);
-  border: 2px solid #0b0704; border-radius: 1px; transform: translateY(-50%); }
-#loading .loading-bar::before { left: -16px; } #loading .loading-bar::after { right: -16px; }
-#loading .loading-bar span { position: relative; overflow: hidden; background: linear-gradient(#ffcf6a, #e2741c 45%, #9c2a0c);
-  box-shadow: 0 0 14px rgba(255, 120, 30, .75), inset 0 1px 0 rgba(255, 240, 200, .6); }
-#loading .loading-line { font-size: 20px; letter-spacing: .05em; color: #d2bf96; font-family: var(--display); font-weight: 700; text-shadow: 0 1px 2px #000; }
-#loading .loading-line strong { color: #e9c766; }
-/* szczegóły pod paskiem: co się teraz wczytuje i ile trwa, niżej skończone kroki z czasami (kontrast ok. 7:1 i 6:1 na tle #120a05) */
-#loading .loading-detail { margin: -2px 0 0; min-height: 1.35em; font-size: 17px; text-shadow: 0 1px 2px #000; line-height: 1.35; color: #c9b48a; text-align: left; font-variant-numeric: tabular-nums; }
-#loading .loading-log { margin: 0; min-height: 1.3em; font-size: 16px; line-height: 1.5; color: #bba57c; text-shadow: 0 1px 2px #000; text-align: left; font-variant-numeric: tabular-nums; word-spacing: .05em; }
-/* ekran wczytywania bez animowanych ozdób: wątek główny wczytuje grę, więc każda animacja by przycinała — tylko pasek */
 /* nowa gra przy lewej krawędzi: szersze okno, treść na środku wysokości, kafelki z oddechem i miejscem na znaczek wyboru */
 .menu.previewing .menu-panel.wide { width: min(720px, calc(100vw / var(--ui, 1) - 380px)); min-width: min(560px, 100vw); align-content: center; padding: 28px 36px; }
 .menu.previewing .menu-panel .menu-heading { text-align: left; background-position: left bottom; }
@@ -1863,3 +1835,49 @@ body.menu-open .devpanel { display: none; }
 .info-owner[data-rel='ally'] .info-owner-rel { color: #9fd38a; }
 .info-owner[data-rel='own'] .info-owner-rel { color: #e9c766; }
 .info-owner-name { color: #f1e3c4; font-weight: 700; }
+
+/* ===== Ekran wczytywania (28.10.2026, ui/loadscreen.ts): pejzaż o zmierzchu z zamkiem na wzgórzu, herb i złoty tytuł
+   u góry, okuta listwa na dole — rada, duży procent, żarzący się pasek z karbami i kroki. Bez animacji (wątek główny
+   wczytuje grę), rusza się tylko pasek. Kontrasty na tle listwy (#0b0704): rada 9,6:1, kroki 7,4:1, procent 11:1. ===== */
+#loading { display: grid; grid-template-rows: 1fr auto; place-items: stretch; overflow: hidden; background: #050302; }
+#loading .ld-scene { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; display: block; }
+#loading .loading-head, #loading .loading-card { position: relative; z-index: 1; }
+#loading .loading-head { align-self: start; justify-self: center; margin-top: clamp(36px, 10vh, 130px); display: grid; justify-items: center; gap: 6px; text-align: center; }
+#loading .loading-crest svg { width: clamp(76px, 12vh, 124px); height: auto; filter: drop-shadow(0 0 28px rgba(255, 140, 50, .35)) drop-shadow(0 5px 5px #000); }
+#loading .loading-title { font-family: 'Cinzel Decorative', var(--display); font-weight: 900; font-size: clamp(56px, 10.5vh, 124px); letter-spacing: .06em; line-height: 1;
+  background: linear-gradient(#fff1c2 0%, #e9c766 38%, #9b6d1e 62%, #f3d78a 78%, #8a5e18 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 0 #2a1406) drop-shadow(0 0 26px rgba(0, 0, 0, .9)); text-shadow: none; }
+#loading .loading-sub { font-style: italic; font-size: clamp(16px, 2.3vh, 21px); color: #dcc79b; letter-spacing: .05em; text-shadow: 0 1px 3px #000, 0 0 14px #000; }
+#loading .loading-sub::before, #loading .loading-sub::after { content: '❦' / ''; color: #b08a34; margin: 0 14px; font-style: normal; }
+/* dolna listwa: czerń z złotą żyłką i rombem pośrodku, treść w środkowej kolumnie */
+#loading .loading-card { align-self: end; width: 100%; display: grid; gap: 12px; padding: 26px max(40px, calc((100% - 1120px) / 2)) clamp(22px, 4.5vh, 44px);
+  color: #e7d6b2; text-align: left; background: linear-gradient(rgba(11, 7, 4, .55), #0b0704 38%);
+  border-top: 1px solid #9a7a2a; box-shadow: 0 -1px 0 #050302, 0 -4px 0 rgba(154, 122, 42, .22), 0 -30px 60px rgba(0, 0, 0, .6); }
+#loading .loading-card::before { content: ''; position: absolute; top: -8px; left: 50%; width: 14px; height: 14px; background: linear-gradient(135deg, #f3d78a, #8a5e18); border: 2px solid #0b0704; transform: translateX(-50%) rotate(45deg); }
+#loading .ld-top { display: flex; align-items: flex-end; justify-content: space-between; gap: 32px; }
+#loading .loading-tip { margin: 0; max-width: 68ch; min-height: 2.7em; font-size: 19px; font-style: italic; line-height: 1.4; color: #d6c39b; text-align: left; text-shadow: none; }
+#loading .loading-tip:not(:empty)::before { content: 'Rada: '; font-style: normal; font-family: var(--display); font-weight: 700; letter-spacing: .1em; color: #e9c766; }
+:root:lang(en) #loading .loading-tip:not(:empty)::before { content: 'Tip: '; }
+#loading .ld-pct { margin: 0; flex: none; font-family: 'Cinzel', var(--display); font-weight: 800; font-size: clamp(40px, 6.4vh, 64px); line-height: .9; font-variant-numeric: tabular-nums; letter-spacing: .02em;
+  background: linear-gradient(#fff1c2, #e9c766 45%, #b9882c); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; filter: drop-shadow(0 2px 0 #2a1406); }
+/* pasek: prosta okuta rama (czerń, złota żyłka, ciemny rowek z karbami co 10%), w środku płynne złoto przechodzące
+   w żar, z jasną żarzącą się główką na czubku — bez rombów i skosów na końcach */
+#loading .loading-bar { position: relative; height: 18px; margin: 6px 0 0; padding: 3px; box-sizing: content-box;
+  background: linear-gradient(#2a1d10, #120b05); border: 1px solid #b08a34; border-radius: 2px;
+  box-shadow: 0 0 0 2px #050302, 0 0 0 3px rgba(176, 138, 52, .35), 0 6px 18px rgba(0, 0, 0, .6); }
+#loading .loading-bar::before { content: ''; position: absolute; inset: 3px; border-radius: 1px;
+  background: repeating-linear-gradient(90deg, transparent 0 calc(10% - 1px), rgba(233, 199, 102, .14) calc(10% - 1px) 10%), #070402;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, .95), inset 0 -1px 0 rgba(255, 220, 160, .06); }
+#loading .loading-bar span { display: block; position: relative; z-index: 1; height: 100%; width: 0; border-radius: 1px;
+  background: linear-gradient(90deg, #7a1d08, #c2410f 35%, #ec8a22 70%, #ffd27a), linear-gradient(#fff3d0, transparent);
+  box-shadow: 0 0 10px rgba(255, 130, 40, .55), inset 0 1px 0 rgba(255, 244, 214, .75), inset 0 -2px 3px rgba(80, 18, 4, .55); transition: width .3s ease-out; }
+/* połysk w górnej połowie i żarząca się główka na końcu ognia */
+#loading .loading-bar span::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 45%; background: linear-gradient(rgba(255, 248, 225, .45), rgba(255, 248, 225, 0)); border-radius: 1px 1px 0 0; }
+#loading .loading-bar span::after { content: ''; position: absolute; right: -7px; top: 50%; width: 14px; height: 26px; transform: translateY(-50%);
+  background: radial-gradient(closest-side, #fffbe9, #ffd27a 45%, rgba(255, 150, 40, 0)); filter: blur(.4px); }
+#loading .loading-bar span[style*="width: 0%"]::after, #loading .loading-bar span:not([style])::after { display: none; }
+#loading .loading-line { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; margin: 2px 0 0; font-family: var(--display); font-weight: 700; font-size: 18px; letter-spacing: .05em; color: #e2cfa4; text-shadow: none; }
+#loading .loading-line strong { font-size: 15px; font-weight: 600; letter-spacing: .03em; color: #c9b48a; font-variant-numeric: tabular-nums; }
+#loading .loading-detail { margin: -4px 0 0; min-height: 1.35em; font-size: 15px; line-height: 1.35; color: #c9b48a; text-align: left; font-variant-numeric: tabular-nums; text-shadow: none; }
+#loading .loading-log { margin: 0; min-height: 1.3em; font-size: 14px; line-height: 1.5; color: #b39d74; text-align: left; font-variant-numeric: tabular-nums; word-spacing: .05em; text-shadow: none; }
+@media (prefers-reduced-motion: reduce) { #loading .loading-bar span { transition: none; } #loading { transition: none; } }

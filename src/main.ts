@@ -1,4 +1,5 @@
 import { loadInfo } from './ui/loadinfo';
+import { loadingMarkup, setLoadingProgress } from './ui/loadscreen';
 import { counts as errCounts, entries as errEntries, formatText as errText, onReport, setContext as errContext } from './debug/errlog';
 import { BANDIT_SAY, GUARD_SAY, SAY } from './data/barks';
 import { COLD, SEASON_DAYS, SEASON_NAME, shiftToSeason, weatherOf, yearPos, type Season } from './sim/weather';
@@ -565,12 +566,7 @@ function endOnline(give = true): void {
   setStatus({ where: 'menu' });
 }
 window.addEventListener('beforeunload', () => endOnline(false));
-/** Ekran wczytywania nowej mapy: ten sam układ co przy starcie gry (herb, złoty tytuł, rada, żarzący się pasek) */
-const LOAD_CREST = '<svg viewBox="0 0 120 120" aria-hidden="true"><path d="M18 34 L102 86 M102 34 L18 86" stroke="#5a3a1c" stroke-width="5" stroke-linecap="round"/><path d="M60 12 L96 22 V56 C96 82 78 98 60 108 C42 98 24 82 24 56 V22 Z" fill="#8c1f18" stroke="#e9c145" stroke-width="4"/><path d="M60 18 L90 26 V56 C90 78 75 92 60 101 Z" fill="#6e1711"/><path d="M46 84 V52 h4 v-6 h5 v6 h10 v-6 h5 v6 h4 V84 Z" fill="#e9c145"/></svg>';
-function loadingMarkup(label: string): string {
-  return `<div class="loading-head"><div class="loading-crest">${LOAD_CREST}</div><p class="loading-title">Project‑1</p><p class="loading-sub">${t('menu.subtitle')}</p></div>
-  <div class="loading-card"><p class="loading-tip">${randomTip()}</p><div class="loading-bar"><span style="width:60%"></span></div><p class="loading-line"><span>${label}</span><strong></strong></p></div>`;
-}
+/** Ekran wczytywania nowej mapy: ten sam układ co przy starcie gry (ui/loadscreen.ts) */
 let titleScreen = true;
 /** Trwa wejście do gry za ekranem wczytywania: pętla rysuje świat pod zasłoną, ale symulacja i automat jakości stoją */
 let entering = false;
@@ -588,15 +584,13 @@ function enterGame(label: string, prep?: () => void): void {
   document.getElementById('loading')?.remove();
   const cover = document.createElement('div');
   cover.id = 'loading';
-  cover.innerHTML = loadingMarkup(label);
+  cover.setAttribute('role', 'status');
+  cover.innerHTML = loadingMarkup(label, randomTip());
   document.body.append(cover);
-  const bar = cover.querySelector('.loading-bar span') as HTMLElement;
   const text = cover.querySelector('.loading-line span') as HTMLElement;
-  const pct = cover.querySelector('.loading-line strong') as HTMLElement;
   const info = loadInfo(cover.querySelector('.loading-card'));
   const show = (p: number, what?: string): void => {
-    bar.style.width = `${Math.round(p)}%`;
-    pct.textContent = `${Math.round(p)}%`;
+    setLoadingProgress(cover, p);
     if (what) text.textContent = what;
   };
   show(4);

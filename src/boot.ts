@@ -3,9 +3,10 @@
  * a gra w ogóle się nie wczytuje.
  */
 import './debug/errlog'; // dziennik błędów od pierwszej chwili (window.__errors())
-import { t, tx } from './i18n';
+import { tx } from './i18n';
 import { randomTip } from './data/tips';
 import { loadInfo } from './ui/loadinfo';
+import { loadingMarkup, setLoadingProgress } from './ui/loadscreen';
 
 const touchOnly = matchMedia('(pointer: coarse)').matches && !matchMedia('(any-pointer: fine)').matches;
 const mobileAgent = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent);
@@ -33,15 +34,12 @@ if (touchOnly || mobileAgent) {
  * na końcu budowa świata. Między krokami oddajemy przeglądarce klatkę, żeby pasek się odświeżył.
  */
 async function load(): Promise<void> {
-  const fill = document.getElementById('loading-fill');
+  // pełny ekran wczytywania (pejzaż, herb, listwa z paskiem) w miejsce prostego z index.html
+  const screen = document.getElementById('loading');
+  if (screen) screen.innerHTML = loadingMarkup(tx('Wczytywanie gry…', 'Loading the game…'), randomTip());
   const label = document.getElementById('loading-label');
   const count = document.getElementById('loading-count');
   // porada na czas wczytywania (losowanie to tylko ozdoba ekranu, nie symulacja)
-  const tip = document.getElementById('loading-tip');
-  if (tip) tip.textContent = randomTip();
-  // napisy wpisane w index.html (zanim gra się wczyta) w wybranym języku
-  const sub = document.querySelector('#loading .loading-sub');
-  if (sub) sub.textContent = t('menu.subtitle');
   document.getElementById('game')?.setAttribute('aria-label', tx('Mapa gry', 'Game map'));
   // klatka do odświeżenia paska; w karcie w tle przeglądarka wstrzymuje klatki, więc jest też zapasowy zegar
   const frame = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
@@ -56,7 +54,7 @@ async function load(): Promise<void> {
     last = now; lastText = text;
     if (label) label.textContent = text;
     if (count) count.textContent = `${done} / ${total}`;
-    if (fill) fill.style.width = `${Math.round((done / total) * 100)}%`;
+    if (screen) setLoadingProgress(screen, (done / total) * 100);
     await frame();
   };
   info.step(tx('Silnik gry', 'Game engine'), tx('pobieranie kodu gry i biblioteki 3D', 'downloading the game code and the 3D library'));
@@ -98,7 +96,7 @@ async function load(): Promise<void> {
   const leftover = new Set(await tex.paintInBackground(toPaint, () => {
     inBack++;
     info.detail(`${tx('rysowane w tle', 'painted in the background')}: ${inBack} / ${toPaint.length}`);
-    if (fill) fill.style.width = `${Math.round(((done + inBack) / total) * 100)}%`;
+    if (screen) setLoadingProgress(screen, ((done + inBack) / total) * 100);
   }).catch(() => toPaint));
   for (let i = 0; i < kinds.length; i++) {
     const kind = kinds[i]!;
@@ -146,6 +144,8 @@ async function load(): Promise<void> {
   await step(tx('Gotowe', 'Ready'));
   (window as unknown as { __loadTimes: unknown }).__loadTimes = times;
   console.info('[wczytywanie]', times.map(([t, ms]) => `${t} ${ms} ms`).join(' | '));
+  // ?wczytywanie=1: ekran zostaje na wierzchu (do oglądania i poprawiania jego wyglądu)
+  if (location.search.includes('wczytywanie=')) return;
   document.getElementById('loading')?.classList.add('done');
   setTimeout(() => document.getElementById('loading')?.remove(), 600);
 }

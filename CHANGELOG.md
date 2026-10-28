@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.61.0 — nowy ekran wczytywania (2026-10-28)
+
+- **Pejzaż o zmierzchu** na całym ekranie (`src/ui/loadscreen.ts`, rysowany wektorowo, bez plików do pobrania): góry z zachodzącym za przełęczą słońcem, na wzgórzu zamek z zapalonymi oknami i chorągwią, mgła w dolinie, z przodu ciemny bór
+- **U góry** herb, złoty tytuł i podtytuł; **na dole okuta listwa** z radą, dużym procentem, paskiem i krokami wczytywania
+- **Nowy pasek:** prosta okuta rama ze złotą żyłką (bez rombów i skosów na końcach), ciemny rowek z karbami co 10%, w środku płynne złoto przechodzące w żar, z połyskiem i jasną żarzącą się główką na czubku
+- Ten sam ekran przy starcie strony i przy wejściu do meczu; pasek ma `role="progressbar"` z wartością dla czytnika ekranu
+- Bez animowanych ozdób (wątek główny wczytuje grę) — rusza się tylko pasek; `?wczytywanie=1` zostawia ekran na wierzchu do oglądania
+- Kontrast na listwie: rada 11,6:1, etykieta 13,1:1, procent 12,3:1, kroki 7,6:1; podtytuł na niebie 7,3:1
+- Bot: bez zmian
+
 ## 0.60.6 — kto to jest: właściciel w oknie budynku, pionowe okucia paska wczytywania (2026-10-28)
 
 - **Cudza twierdza i cudze budynki:** w oknie po prawej pod nazwą jest teraz linijka z właścicielem — „Wróg”, „Sojusznik” albo „Twoje” i imię (gracz z sieci, „Bot 3”, „Gracz 2”), z paskiem w kolorze drużyny. Dotąd po kliknięciu twierdzy wroga nie było widać, czyja jest
