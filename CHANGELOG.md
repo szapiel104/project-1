@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.64.9 — mniej krwi pod poległymi (2026-10-28)
+
+- **Zgłoszenie: „aż za dużo krwi”.** Plama pod poległym rozlewa się najwyżej do ok. pół pola (wcześniej ponad całe pole), ma trzy krótkie smugi zamiast sześciu długich i kilkanaście drobnych kropel blisko plamy zamiast czterdziestu rozrzuconych daleko; świeża jest ciemniejsza, mniej jaskrawa (`render/blood.ts`)
+- Bot: bez zmian
+
 ## 0.64.8 — mur łączy się z kamienną wieżą, w ścianie wieży wejście (2026-10-28)
 
 - **Mur dochodzi do wieży:** korona muru kamiennego przy kamiennej wieży (każdej wielkości) ciągnie się aż do ściany trzonu — bez szpary i bez przedpiersia z blankami w poprzek przejścia (`render/walls.ts`)

@@ -22,16 +22,16 @@ function splatMask(): THREE.CanvasTexture {
   // rdzeń kałuży: kilka zlanych kleksów, nie w jednym środku
   for (let i = 0; i < 9; i++) blob(S / 2 + (rnd() - 0.5) * 70, S / 2 + (rnd() - 0.5) * 50, 26 + rnd() * 30, 0.95);
   // smugi: wąskie języki wypływające w bok, zakończone kroplą
-  for (let i = 0; i < 6; i++) {
-    const ang = rnd() * Math.PI * 2, len = 40 + rnd() * 60;
+  for (let i = 0; i < 3; i++) {
+    const ang = rnd() * Math.PI * 2, len = 20 + rnd() * 30;
     for (let k = 0; k <= 8; k++) {
       const t = k / 8, r = (14 - t * 9) * (0.7 + rnd() * 0.5);
       blob(S / 2 + Math.cos(ang) * (30 + t * len), S / 2 + Math.sin(ang) * (30 + t * len), r, 0.9);
     }
   }
   // bryzgi: drobne krople rozrzucone wokół
-  for (let i = 0; i < 40; i++) {
-    const ang = rnd() * Math.PI * 2, d = 55 + rnd() * 65;
+  for (let i = 0; i < 12; i++) {
+    const ang = rnd() * Math.PI * 2, d = 50 + rnd() * 35;
     blob(S / 2 + Math.cos(ang) * d, S / 2 + Math.sin(ang) * d, 2 + rnd() * 5, 0.85);
   }
   // twardszy brzeg: progowanie jasności, żeby plama miała ostry, poszarpany kontur zamiast rozmytej mgiełki
@@ -46,7 +46,7 @@ function splatMask(): THREE.CanvasTexture {
   return tex;
 }
 
-const FRESH = new THREE.Color(0x7a0d08), OLD = new THREE.Color(0x2e140d);
+const FRESH = new THREE.Color(0x5e0a06), OLD = new THREE.Color(0x2a130c);
 const col = new THREE.Color(), q = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), s = new THREE.Vector3(), p = new THREE.Vector3();
 
 export class BloodStains {
@@ -75,7 +75,8 @@ export class BloodStains {
     if (this.n >= this.mesh.instanceMatrix.count) return;
     const r = (id * 0.6180339887) % 1, r2 = (id * 0.7548776662) % 1;
     const grow = 1 - (1 - spread) ** 2; // szybko na początku, potem coraz wolniej
-    const size = (0.25 + 0.95 * grow) * (0.85 + r2 * 0.35) * (1 + age * 0.25);
+    // mała plama pod ciałem (Michał 28.10.2026: „aż za dużo krwi”): do ok. pół pola, nie kałuża na pół podwórka
+    const size = (0.14 + 0.36 * grow) * (0.85 + r2 * 0.3) * (1 + age * 0.12);
     q.setFromAxisAngle(up, r * Math.PI * 2);
     s.set(size * (0.8 + r * 0.45), 1, size * (1.2 - r * 0.4));
     p.set(x, y, z);
