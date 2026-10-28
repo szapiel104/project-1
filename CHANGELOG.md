@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.63.3 — dachy na wieżach zdejmowane kliknięciem, czatownia na jednego łucznika (2026-10-28)
+
+- **Zgłoszenie:** po kliknięciu drewnianej wieży strażniczej dach nie schodził. Gra zdejmowała dach tylko budynkom z wnętrzem, a wieża ma pod dachem sam pomost. Modele wież mają teraz znacznik `openTop` (`blenderModel` → `userData.openTop`, `animateBuilding`), więc po kliknięciu dach, iglica i proporzec znikają i widać pomost z łucznikami
+- **Kamienne wieże z dachem:** baszta, duża i wielka baszta dostały dach czterospadowy z łupka na czterech dębowych słupach z mieczami i oczepami, z krokwiami widocznymi od spodu, kalenicami z kamienia i iglicą z gałką (`tools/models/towerroof.py`). Na małej baszcie dach przykrywa cały pomost, a proporzec przeszedł na iglicę; na dużych dach stoi nad środkiem, między wykuszami. Po kliknięciu dach znika i widać pomost: klapę zejścia, kosze strzał, beczki z wodą i kupki kamieni do zrzucania
+- **Czatownia** (1×1, 8 drewna, 240 PŻ, `tools/models/lookout.py`): najtańsza, licha wieżyczka z czterech krzywych żerdzi na kamieniach, z zastrzałami przywiązanymi łykiem, ciasnym pomostem z nierównych desek, przedpiersiem z wikliny, drabiną z żerdzi i daszkiem ze strzechy (też zdejmowanym kliknięciem). Mieści jednego łucznika, który stoi pośrodku i się rozgląda; niska, więc strzela pole bliżej niż strażnica. Da się ją postawić na murze jak inne wieże. Nazwa i opis po polsku i angielsku
+- Arkusz `inspect.sh`: dach (`roof`), komin, wiatrak i żerdź liczą się teraz razem z `shell`, więc widok „przekrój bez dachów” pokazuje budynek tak, jak gra po kliknięciu
+- Bot: gdy mur i narożne wieże stoją, stawia czatownię przy każdej bramie, od środka
+
 ## 0.63.2 — przycisk „Wyczyść pamięć i wczytaj grę od nowa” w menu (2026-10-28)
 
 - **Odświeżenie gry jednym kliknięciem** (`ui/refresh.ts`): w stopce menu głównego, obok numeru wersji, przycisk wyrejestrowuje pamięć podręczną gry (service worker i jego pliki) i wczytuje stronę od nowa z serwera — bez szukania Ctrl+F5. Zapis gry, konto i ustawienia zostają

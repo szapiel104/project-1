@@ -76,7 +76,7 @@ export class WallLayer {
         if (mesh) mesh.rotation.y = ax >= az ? 0 : Math.PI / 2;
         continue;
       }
-      if (def.id === 'watchtower' && !b.build) {
+      if ((def.id === 'watchtower' || def.id === 'lookout') && !b.build) {
         // mur przechodzi pod wieżą: między nogami wieży stoją bale (albo kamień), żeby było widać, że tędy nie ma przejścia
         const fp = footprint(def, b.rot);
         const inside = (x: number, y: number): boolean => x >= b.x && y >= b.y && x < b.x + fp.w && y < b.y + fp.h;

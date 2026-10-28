@@ -3893,6 +3893,11 @@ export class GameRenderer {
           const side = ((idx % row) - (inRow - 1) / 2) * (big ? 0.3 : 0.32), dist = rr - rank * 0.36;
           towerAt = [tcx + Math.sin(ang) * dist + Math.cos(ang) * side, tcy + Math.cos(ang) * dist - Math.sin(ang) * side];
           if (!foe) { heading = ang; this.facing.set(s.id, heading); }
+        } else if (fpT.w < 2) {
+          // czatownia: jeden łucznik na ciasnym pomoście, stoi pośrodku i powoli się rozgląda
+          towerAt = [tcx, tcy];
+          heading = Math.sin(this.time * 0.15 + s.id) * 1.6;
+          this.facing.set(s.id, heading);
         } else if (big) {
           // bez walki rozchodzą się po pomoście (każdy w swoim miejscu, przodem na zewnątrz), co trzeci przysiada
           const a = idx * 2.39996 + tw.id, r = rr * (0.55 + 0.45 * ((idx * 0.618) % 1));

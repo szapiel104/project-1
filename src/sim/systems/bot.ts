@@ -424,6 +424,13 @@ function fortify(g: GameState, p: PlayerState): void {
     if (p.res[resIndex('wood')]! - reserve < (BUILDINGS[tower]!.cost.wood ?? 0)) return;
     if (canPlace(g, p.id, tower, x, y) === null) { placeBuilding(g, p.id, tower, x, y); return; }
   }
+  // na koniec tania czatownia przy każdej bramie, od środka (jeden łucznik pilnuje wejścia)
+  const lookout = buildingIndex('lookout');
+  for (const [x, y] of [[cx + 1, y0 + 1], [cx - 1, y1 - 1], [x0 + 1, cy + 1], [x1 - 1, cy - 1]] as const) {
+    if (g.occupancy[y * w + x] !== 0) continue;
+    if (p.res[resIndex('wood')]! - reserve < (BUILDINGS[lookout]!.cost.wood ?? 0)) return;
+    if (canPlace(g, p.id, lookout, x, y) === null) { placeBuilding(g, p.id, lookout, x, y); return; }
+  }
 }
 
 /**

@@ -37,6 +37,7 @@ const STONE_TOWER_BIG_MODEL = model('stonetower_big');
 const STONE_TOWER_GREAT_MODEL = model('stonetower_great');
 const BRAZIER_MODEL = model('brazier');
 const WATCH_TOWER_MODEL = model('watchtower');
+const LOOKOUT_MODEL = model('lookout');
 const WELL_MODEL = model('well');
 const SHRINE_MODEL = model('shrine');
 const MAGE_FIRE_MODEL = model('magefire');
@@ -578,7 +579,8 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
     interior.visible = active;
     // budynek bez wnętrza w modelu (np. siedziby magów ognia i wody): pusta grupa — dachu nie zdejmujemy,
     // bo pod nim nic nie ma i zostają same dziurawe mury
-    const hollow = !interior.children.length;
+    // wyjątek: wieże (openTop w modelu) nie mają wnętrza, ale po zdjęciu dachu widać pomost z łucznikami i ich sprzętem
+    const hollow = !interior.children.length && !(model.userData.openTop ?? model.children[0]?.userData.openTop);
     // wszystkie części o tych nazwach (np. twierdza ma kilka warstw „shell”: donżon i bryłę murów z dziedzińcem)
     const parts = (model.userData.lids ??= (() => { const l: THREE.Object3D[] = []; model.traverse((o) => { if (o !== model && ['roof', 'shell', 'chimney', 'spin', 'flagpole'].includes(o.name)) l.push(o); }); return l; })()) as THREE.Object3D[];
     for (const part of parts) part.visible = hollow || !active;
@@ -800,6 +802,8 @@ function blenderModel(g: THREE.Group, model: BlenderBuilding, flag: THREE.Materi
     return new THREE.Mesh(blenderGeo(m.pos, m.ao, model.q, k), withAo(base));
   });
   for (const m of meshes('base')) g.add(m);
+  // wieże: dach zdejmuje się po kliknięciu, choć nie mają grupy wnętrza (pod dachem jest pomost)
+  if ((model as unknown as { openTop?: boolean }).openTop) g.userData.openTop = true;
   const shell = new THREE.Group();
   shell.name = 'shell';
   for (const m of meshes('shell')) shell.add(m);
@@ -1318,6 +1322,11 @@ const BUILDERS: Record<string, Builder> = {
     // na krzyż z oplotami z liny, pomost z przedpiersiem z desek, ławka, kosz strzał, róg alarmowy, strzecha, drabina
     blenderModel(g, WATCH_TOWER_MODEL as unknown as BlenderBuilding, flag);
   },
+  lookout(g, _team, flag) {
+    // Czatownia z Blendera (tools/models/lookout.py): cztery krzywe żerdzie, ciasny pomost dla jednego łucznika,
+    // plecionka z wikliny, drabina i daszek ze strzechy (zdejmowany po kliknięciu)
+    blenderModel(g, LOOKOUT_MODEL as unknown as BlenderBuilding, flag);
+  },
   stoneTower(g, _team, flag) {
     // Kamienna wieża z Blendera (tools/models/stonetower.py): baszta z ciosów, machikuły, blanki, pomost dla łuczników
     blenderModel(g, STONE_TOWER_MODEL as unknown as BlenderBuilding, flag);
@@ -1530,6 +1539,7 @@ export const STONE_TOWER_TOP: number = (STONE_TOWER_MODEL as unknown as { deck?:
 /** Wysokość pomostu każdej wieży (tu stoją łucznicy) — z plików modeli */
 export const TOWER_TOP: Readonly<Record<string, number>> = {
   watchtower: WATCH_TOWER_TOP,
+  lookout: (LOOKOUT_MODEL as unknown as { deck?: number }).deck ?? 1.35,
   stoneTower: STONE_TOWER_TOP,
   stoneTowerBig: (STONE_TOWER_BIG_MODEL as unknown as { deck?: number }).deck ?? 2.95,
   stoneTowerGreat: (STONE_TOWER_GREAT_MODEL as unknown as { deck?: number }).deck ?? 3.55,

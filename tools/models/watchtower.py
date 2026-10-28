@@ -5,7 +5,7 @@ z poręczą, w jednym rogu ławka (tu siada łucznik bez walki), kosz strzał i 
 Nad pomostem dach czterospadowy ze strzechy w dwóch warstwach, na szczycie żerdź z proporcem. Od przodu (+z)
 drabina oparta o krawędź pomostu, wejście przerwą w przedpiersiu między dwoma wyższymi słupkami.
 
-Łucznicy stoją na pomoście (gra: WATCH_TOWER_TOP = DECK). Wieża nie ma wnętrza: wszystko w 'base', dach w 'roof'.
+Łucznicy stoją na pomoście (gra: WATCH_TOWER_TOP = DECK). Wieża nie ma wnętrza: wszystko w 'base', dach w 'roof' (gra zdejmuje go po kliknięciu — openTop).
 Pod wieżą zostaje wolne miejsce między nogami: gdy dochodzi do niej mur, gra stawia tam bale częstokołu.
 
 Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/watchtower.py
@@ -226,9 +226,9 @@ for k in range(n):
     log(b, 'base', 'wood', (LX - 0.155, y, z), (LX + 0.155, y, z), r=0.016, seg=5)
 
 VIEWS = [
-    ['wieża od drabiny (oczy chłopa)', [0.5, 0.5, 2.8], [0, 1.3, 0], ['base', 'roof'], 24],
-    ['pod pomostem', [0.15, 0.35, 0.9], [0.0, DECK, -0.2], ['base', 'roof'], 18],
-    ['na pomoście', [0.25, DECK + 0.5, 0.45], [-0.4, DECK + 0.1, -0.5], ['base', 'roof'], 16],
-    ['pod okapem', [1.25, DECK + 0.25, 1.25], [0.0, EAVE + 0.2, 0.0], ['base', 'roof'], 20],
+    ['wieża od drabiny (oczy chłopa)', [0.5, 0.5, 2.8], [0, 1.3, 0], ['base', 'shell'], 24],
+    ['pod pomostem', [0.15, 0.35, 0.9], [0.0, DECK, -0.2], ['base', 'shell'], 18],
+    ['na pomoście', [0.25, DECK + 0.5, 0.45], [-0.4, DECK + 0.1, -0.5], ['base', 'shell'], 16],
+    ['pod okapem', [1.25, DECK + 0.25, 1.25], [0.0, EAVE + 0.2, 0.0], ['base', 'shell'], 20],
 ]
-b.save('watchtower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS, 'banners': BANNERS})
+b.save('watchtower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS, 'banners': BANNERS, 'openTop': True})

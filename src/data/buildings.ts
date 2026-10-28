@@ -246,6 +246,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'tent', category: 'settlement', name: 'b.tent', w: 1, h: 1, cost: { wood: 3 }, housing: 2, hp: 30, buildable: true },
   // rudera narożna (tools/models/shackl.py): większa buda z desek w kształcie L z podwórcem w kącie, 6 łóżek — między ruderą a chatą
   { id: 'shackL', category: 'settlement', name: 'b.shackL', w: 2, h: 2, cost: { wood: 17 }, housing: 6, buildable: true },
+  // Czatownia (Michał 28.10.2026, tools/models/lookout.py): najtańsza, licha wieżyczka z żerdzi dla jednego łucznika —
+  // na sam początek albo żeby szybko dostawić strzelca przy bramie; niska, więc strzela pole bliżej niż strażnica
+  { id: 'lookout', category: 'defense', name: 'b.lookout', w: 1, h: 1, cost: { wood: 8 }, hp: 240, wall: true, buildable: true },
 ];
 
 /** Mieszkania zwykłych chłopów (chata, rudera, namiot): tu wracają odpocząć i spać, tu bywa kwarantanna. Zamek liczy się osobno */
@@ -259,6 +262,8 @@ export const NO_TORCH = new Set(['tent', 'camp', 'orchard', 'farm', 'cemetery', 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
 /** Wieże z łucznikami: ilu łuczników mieści i o ile pól dalej z niej strzelają (ponad zwykłe +3 z wysokości) */
 export const TOWERS: Readonly<Record<string, { room: number; bonus: number }>> = {
+  // czatownia: jeden łucznik, niski pomost (strzela pole bliżej niż ze strażnicy)
+  lookout: { room: 1, bonus: -1 },
   watchtower: { room: 4, bonus: 0 },
   stoneTower: { room: 6, bonus: 1 },
   stoneTowerBig: { room: 10, bonus: 2 },
@@ -267,7 +272,7 @@ export const TOWERS: Readonly<Record<string, { room: number; bonus: number }>> =
 };
 export const isTower = (id: string): boolean => id in TOWERS;
 /** Kamienne wieże (wszystkie rozmiary) */
-export const isStoneTower = (id: string): boolean => isTower(id) && id !== 'watchtower';
+export const isStoneTower = (id: string): boolean => isTower(id) && id !== 'watchtower' && id !== 'lookout';
 /** O ile dalej strzela łucznik z danej wieży (ponad zwykłe +3 z wysokości): większa wieża jest wyższa */
 export const towerBonus = (id: string): number => TOWERS[id]?.bonus ?? 0;
 /** Na czym można postawić koksownik: mur kamienny i kamienne wieże (drewniana strażnica by się zajęła) */

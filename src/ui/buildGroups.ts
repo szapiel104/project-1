@@ -25,7 +25,7 @@ export const BUILD_GROUPS: readonly BuildGroup[] = [
   { cat: 'military', pl: 'Wojsko', en: 'Troops', ids: ['armory', 'barracks', 'fieldTent'] },
 
   { cat: 'defense', pl: 'Mury i bramy', en: 'Walls and gates', ids: ['palisade', 'gate', 'stoneWall', 'stoneGate', 'ladder'] },
-  { cat: 'defense', pl: 'Wieże i ogień', en: 'Towers and fire', ids: ['watchtower', 'stoneTower', 'stoneTowerBig', 'stoneTowerGreat', 'brazier'] },
+  { cat: 'defense', pl: 'Wieże i ogień', en: 'Towers and fire', ids: ['lookout', 'watchtower', 'stoneTower', 'stoneTowerBig', 'stoneTowerGreat', 'brazier'] },
 
   { cat: 'roads', pl: 'Drogi', en: 'Roads', ids: ['roadSand', 'roadWood', 'roadStone'] },
 ];

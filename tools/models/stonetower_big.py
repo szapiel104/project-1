@@ -5,7 +5,9 @@
   stonetower_great  (4×4 pola, „Wielka baszta”): skarpowany cokół, dwa gzymsy, trzy rzędy strzelnic, ostrołukowy
                     portal, wykusze na rogach pod stożkowymi daszkami z łupka, obszerny pomost.
 
-Łucznicy stoją na pomoście (gra czyta 'deck' z pliku). Wszystko w grupie 'base' (wieża nie ma wnętrza do odkrycia).
+Łucznicy stoją na pomoście (gra czyta 'deck' z pliku). Bryła w grupie 'base'; nad środkiem pomostu, między wykuszami,
+dach z łupka na słupach w grupie 'roof' (towerroof.py), który gra zdejmuje po kliknięciu wieży (openTop) — widać wtedy
+pomost z klapą zejścia, kosze strzał, beczki z wodą i kamienie do zrzucania.
 Koksownik (tools/models/brazier.py) gra stawia na pomoście w rogu 'brazierAt'.
 
 Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/stonetower_big.py
@@ -17,6 +19,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
+from towerroof import barrel, quiver_basket, roof, stone_pile  # noqa: E402
 
 
 def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter):
@@ -165,14 +168,27 @@ def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter)
     b.prism('base', 'gold', 0.04, 0.0, 0.08, PX, pole_y + 0.8, PZ, seg=6)
     banners = [[round(PX + 0.028, 3), round(pole_y + 0.6, 3), round(PZ, 3), 0, 0.4, 0.28, 0, 'base']]
 
+    # ---------------- sprzęt łuczników i dach nad środkiem pomostu (między wykuszami) ----------------
+    R = OUT - 2 * br - 0.05
+    post = R - 0.09
+    g = post + 0.16   # sprzęt tuż za słupami, przy krawędzi dachu
+    quiver_basket(b, g, 0.05, DECK + 0.02)
+    quiver_basket(b, -0.1, g, DECK + 0.02)
+    barrel(b, 0.08, -g, DECK + 0.02)
+    stone_pile(b, -g, 0.12, DECK + 0.02, seed=S)
+    stone_pile(b, g - 0.05, -g + 0.1, DECK + 0.02, seed=S + 2)
+    roof(b, DECK + 0.02, R, post, eave=0.92, rise=0.62 + 0.1 * S)
+
     views = [
-        ['wieża od drzwi (oczy chłopa)', [0.5, 0.5, 2 * S + 1.6], [0, DECK * 0.55, 0], ['base'], 22],
-        ['pod machikułami', [S + 0.25, 0.3, S + 0.6], [S * 0.5, DECK, S * 0.6], ['base'], 18],
-        ['pomost łuczników', [0.0, DECK + 0.45, -0.2], [OUT * 0.8, DECK + 0.2, OUT * 0.9], ['base'], 16],
+        ['wieża od drzwi (oczy chłopa)', [0.5, 0.5, 2 * S + 1.6], [0, DECK * 0.6, 0], ['base', 'shell'], 22],
+        ['pod machikułami', [S + 0.25, 0.3, S + 0.6], [S * 0.5, DECK, S * 0.6], ['base', 'shell'], 18],
+        ['pomost łuczników', [0.0, DECK + 0.45, -0.2], [OUT * 0.8, DECK + 0.2, OUT * 0.9], ['base', 'shell'], 16],
+        ['pod dachem (z pomostu w górę)', [0.2, DECK + 0.4, 0.4], [0.0, DECK + 1.3, -0.1], ['base', 'shell'], 18],
+        ['pomost bez dachu (po kliknięciu)', [OUT + 1.0, DECK + 2.0, OUT + 1.0], [0.0, DECK, 0.0], ['base'], 26],
     ]
     # koksownik w rogu pomostu, z dala od klapy i drzewca (gra go tam stawia)
     brazier = [round(OUT - br * 1.6 - 0.12, 3), DECK, round(OUT - 0.32, 3)]
-    b.save(name, maxe=0.22, rays=16, reach=0.3, extra={'deck': DECK, 'views': views, 'banners': banners, 'brazierAt': brazier})
+    b.save(name, maxe=0.22, rays=16, reach=0.3, extra={'deck': DECK, 'views': views, 'banners': banners, 'brazierAt': brazier, 'openTop': True})
 
 
 tower('stonetower_big', S=1.15, DECK=2.95, OUT=1.3, cornices=(1.55,), slits=(0.9, 2.05), bartizan_r=0.24, cones=False, plinth_batter=False)

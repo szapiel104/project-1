@@ -27,7 +27,7 @@ export function showsWear(type: number): boolean {
 /** Z czego jest budowla: kamień pęka i kruszy się, drewno łupie się i drzazgi lecą pod mur */
 export function wearMaterial(type: number): 'stone' | 'wood' {
   const id = BUILDINGS[type]?.id ?? '';
-  return id === 'palisade' || id === 'gate' || id === 'watchtower' ? 'wood' : 'stone';
+  return id === 'palisade' || id === 'gate' || id === 'watchtower' || id === 'lookout' ? 'wood' : 'stone';
 }
 
 /** Ile odbudowano z ruiny (0 = świeża ruina, 1 = stoi): ruina zaczyna od połowy pracy (placement.ts → ruin) */

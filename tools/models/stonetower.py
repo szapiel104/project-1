@@ -2,7 +2,9 @@
 na każdej ścianie, okute drzwi na kamiennych schodkach, u góry wysunięty na wspornikach (machikuły) chodnik
 z blankami i deskami pomostu, drzewce z chorągwią na rogu.
 
-Łucznicy stoją na pomoście (gra: STONE_TOWER_TOP = DECK). Wszystko w grupie 'base' (wieża nie ma wnętrza do odkrycia).
+Łucznicy stoją na pomoście (gra: STONE_TOWER_TOP = DECK). Bryła w grupie 'base'; nad pomostem dach z łupka na słupach
+w grupie 'roof' (towerroof.py), który gra zdejmuje po kliknięciu wieży (openTop) — widać wtedy pomost, klapę zejścia,
+kosz strzał, beczkę z wodą i kamienie do zrzucania. Proporzec stoi na iglicy dachu (grupa 'flagpole').
 
 Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/stonetower.py
 Układ: środek działki = (0, 0), działka ±1, przód (drzwi) = +z.
@@ -12,6 +14,8 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
+from logs import log  # noqa: E402
+from towerroof import barrel, quiver_basket, roof, stone_pile  # noqa: E402
 
 b = Building()
 
@@ -103,16 +107,22 @@ b.box('base', 'stoneDark', 0.6, 0.1, 0.22, 0, 0.0, DZ + 0.2, bottom=False)
 b.box('base', 'stoneDark', 0.56, 0.09, 0.14, 0, 0.1, DZ + 0.14)
 b.box('base', 'stoneDark', 0.52, 0.09, 0.08, 0, 0.19, DZ + 0.12)
 
-# ---------------- chorągiew na rogu ----------------
-PX, PZ = -OUT + 0.06, -OUT + 0.06
-b.box('base', 'woodDark', 0.045, 0.95, 0.045, PX, DECK + PAR, PZ)
-b.prism('base', 'gold', 0.035, 0.0, 0.07, PX, DECK + PAR + 0.95, PZ, seg=6)
-# chorągiew z herbem rysuje gra (src/render/banners.ts): brzeg przy drzewcu, środek wysokości
-BANNERS = [[round(PX + 0.025, 3), round(DECK + PAR + 0.77, 3), round(PZ, 3), 0, 0.32, 0.22, 0, 'base']]
+# ---------------- sprzęt łuczników na pomoście (z dala od miejsc łuczników i klapy) ----------------
+quiver_basket(b, 0.6, 0.02, DECK + 0.02)
+barrel(b, 0.05, -0.6, DECK + 0.02)
+stone_pile(b, -0.58, 0.06, DECK + 0.02, seed=1.0)
+
+# ---------------- dach z łupka na słupach (zdejmowany po kliknięciu) ----------------
+APEX = roof(b, DECK + 0.02, OUT + 0.08, OUT - WALL - 0.06, eave=0.88, rise=0.7)
+# żerdź z proporcem na iglicy: w osobnej grupie (cienka, daleka wersja by ją zjadła); znika razem z dachem
+log(b, 'flagpole', 'woodDark', (0, APEX + 0.2, 0), (0, APEX + 0.85, 0), r=0.018, seg=6)
+BANNERS = [[0.02, round(APEX + 0.72, 3), 0.0, 0, 0.32, 0.2, 0, 'flagpole']]
 
 VIEWS = [
-    ['wieża od drzwi (oczy chłopa)', [0.4, 0.5, 2.6], [0, 1.3, 0], ['base'], 22],
-    ['pod machikułami', [0.95, 0.3, 1.3], [0.4, 2.2, 0.5], ['base'], 18],
-    ['pomost łuczników', [0.0, DECK + 0.45, -0.1], [0.6, DECK + 0.2, 0.7], ['base'], 16],
+    ['wieża od drzwi (oczy chłopa)', [0.4, 0.5, 2.6], [0, 1.6, 0], ['base', 'shell'], 22],
+    ['pod machikułami', [0.95, 0.3, 1.3], [0.4, 2.2, 0.5], ['base', 'shell'], 18],
+    ['pomost łuczników', [0.0, DECK + 0.45, -0.1], [0.6, DECK + 0.2, 0.7], ['base', 'shell'], 16],
+    ['pod dachem (z pomostu w górę)', [0.2, DECK + 0.4, 0.3], [0.0, DECK + 1.3, -0.1], ['base', 'shell'], 18],
+    ['pomost bez dachu (po kliknięciu)', [1.6, DECK + 1.8, 1.6], [0.0, DECK, 0.0], ['base'], 26],
 ]
-b.save('stonetower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS, 'banners': BANNERS})
+b.save('stonetower', maxe=0.2, rays=16, reach=0.3, extra={'deck': DECK, 'views': VIEWS, 'banners': BANNERS, 'openTop': True})
