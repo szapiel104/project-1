@@ -24,13 +24,14 @@ function graveMaterials(): Record<string, [THREE.Material, number]> {
   const soil = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('soil'), normalMap: normal('soil') });
   const bark = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, map: pattern('bark'), normalMap: normal('bark') });
   const plain = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9 });
-  return (mats = { soil: [soil, 3], bark: [bark, 14], plain: [plain, 1] });
+  const wood = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks'), normalMap: normal('planks') });
+  return (mats = { soil: [soil, 3], bark: [bark, 14], plain: [plain, 1], wood: [wood, 6] });
 }
 
-/** Grób jako zwykła grupa siatek (podgląd modeli) */
-export function graveModel(): THREE.Group {
+/** Grób (albo trumna na noszach: `coffin`) jako zwykła grupa siatek (podgląd modeli) */
+export function graveModel(key: 'grave' | 'coffin' = 'grave'): THREE.Group {
   const g = new THREE.Group(), M = graveMaterials();
-  for (const part of GRAVE.grave ?? []) {
+  for (const part of GRAVE[key] ?? []) {
     const [mat, scale] = M[part.mat] ?? M.plain!;
     g.add(new THREE.Mesh(boxUv(modelGeo(part), scale), mat));
   }
@@ -41,6 +42,9 @@ const hash = (t: number): number => { let h = (t * 2654435761) >>> 0; h ^= h >>>
 
 export class GraveLayer {
   private meshes: THREE.InstancedMesh[] = [];
+  /** Trumny na noszach niesione przez dwóch chłopów (bearers.ts): pozycje ustawia scene.ts co klatkę */
+  private coffins: THREE.InstancedMesh[] = [];
+  private coffinN = 0;
   private o = new THREE.Object3D();
   private key = '';
 
@@ -53,7 +57,24 @@ export class GraveLayer {
       scene.add(cat(m, 'groby w lesie'));
       this.meshes.push(m);
     }
+    for (const part of GRAVE.coffin ?? []) {
+      const [mat, scale] = M[part.mat] ?? M.plain!;
+      const m = new THREE.InstancedMesh(boxUv(modelGeo(part), scale), mat, 64);
+      m.count = 0; m.frustumCulled = false; m.castShadow = true; m.receiveShadow = true;
+      scene.add(cat(m, 'niesione ładunki'));
+      this.coffins.push(m);
+    }
   }
+
+  /** Początek klatki: bez trumien */
+  beginCoffins(): void { this.coffinN = 0; }
+  /** Jedna niesiona trumna (macierz: środek noszy na ziemi, oś z w stronę przedniego niosącego, skala postaci) */
+  coffin(m: THREE.Matrix4): void {
+    if (this.coffinN >= 64) return;
+    for (const c of this.coffins) c.setMatrixAt(this.coffinN, m);
+    this.coffinN++;
+  }
+  endCoffins(): void { for (const c of this.coffins) { c.count = this.coffinN; c.instanceMatrix.needsUpdate = true; } }
 
   clear(): void { for (const m of this.meshes) m.count = 0; this.key = ''; }
 

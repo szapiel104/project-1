@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.59.2 — zmarłego niosą dwaj, w trumnie na noszach (2026-10-28)
+
+- **Koniec z workiem w powietrzu:** ciało nie jest już rysowane jako biały worek przed chłopem. Niosą je dwaj w prostej trumnie z desek z wiekiem, postawionej na dwóch drągach z poprzeczkami (model z Blendera, `coffin` w `tools/models/grave.py`). Obaj trzymają końce drągów opuszczonymi rękami przy biodrach — przedni z dłońmi za sobą, tylny przed sobą — a trumna wisi między nimi
+- **Nikt nie niesie w pojedynkę:** po ciało idzie się tylko we dwóch. Wolny chłop spod twierdzy bierze drugiego wolnego z okolicy; bez drugiego nikt nie rusza i ciało czeka. Pomocnik (`sim/systems/bearers.ts`, faza Bearing) idzie krok w krok za niosącym, a przy pochówku w lesie kopie razem z nim (grób zostaje jeden)
+- **Cmentarz ma dwóch grabarzy:** drugi grabarz pomaga pierwszemu nieść trumnę; gdy jest zajęty, pomaga wolny chłop
+- Opis cmentarza i pomoc „Jak grać” → Polegli: dopisane w obu językach; trumna w podglądzie modeli (grupa „Pochówek”)
+- Bot: bez zmian w decyzjach; jego cmentarze też dostają dwóch grabarzy
+- Testy: pomocnik idzie tuż za niosącym, kopie z nim i wraca wolny; jeden wolny chłop nie niesie ciała sam
+
 ## 0.59.1 — fizyka gruzu: zawalony budynek rozpada się z grawitacją (2026-10-28)
 
 - **Gruz spada naprawdę:** gdy budynek runie (ruina po ataku, pożarze, wilkach) albo zostanie rozebrany, kamienie, belki i deski spadają z wysokości budynku z grawitacją, odbijają się od siebie i od ziemi, przewracają się i leżą tam, gdzie upadły — każde zawalenie wygląda inaczej. Na zboczu gruz zsuwa się po terenie (ziemia w fizyce ma kształt mapy)

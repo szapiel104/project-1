@@ -615,7 +615,7 @@ export function workerSystem(g: GameState): void {
     // a nikogo z ładunkiem w rękach. Stare zadanie (target) się kasuje, żeby nie blokowało go później.
     // Na końcu wolny magazynier: warsztat bez rąk do pracy jest ważniejszy niż wnoszenie towaru spod drzwi.
     const u = g.units.find((x) => x.owner === b.owner && x.job === 0 && x.phase === Phase.Idle && x.carryRes < 0)
-      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && !x.riot && x.phase !== Phase.ToCorpse && !OFF_DUTY.has(x.phase))
+      ?? g.units.find((x) => x.owner === b.owner && x.job === 0 && x.carryRes < 0 && !x.riot && x.phase !== Phase.ToCorpse && x.phase !== Phase.Bearing && !OFF_DUTY.has(x.phase))
       ?? spareKeeper(g, b.owner);
     if (!u) continue;
     u.job = b.id; u.phase = Phase.Returning; u.path = []; u.wait = 0; u.target = 0;
@@ -705,8 +705,8 @@ export function workerSystem(g: GameState): void {
       // kopie dół i zakopuje ciało; zostaje kopczyk z krzyżem (graves.ts), a chłop wraca do obozowiska
       if (--u.timer > 0) continue;
       const t = tileOf(g, u);
-      if (!g.graves?.some((x) => x.t === t)) (g.graves ??= []).push({ t, owner: u.owner, at: g.tick });
-      u.phase = Phase.Idle;
+      if (u.target !== -1 && !g.graves?.some((x) => x.t === t)) (g.graves ??= []).push({ t, owner: u.owner, at: g.tick });
+      u.phase = Phase.Idle; u.target = 0;
       continue;
     }
     if (u.phase === Phase.Resting) {

@@ -297,6 +297,8 @@ export const enum Phase {
   ToPile = 31,
   /** Bez cmentarza: wolny chłop zakopuje ciało na skraju lasu, na polu, na którym stoi (`timer` = ile jeszcze) */
   Burying = 32,
+  /** Pomaga nieść trumnę: idzie za niosącym ciało `target` (bearers.ts) */
+  Bearing = 33,
 }
 
 export interface Unit {

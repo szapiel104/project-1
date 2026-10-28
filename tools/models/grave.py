@@ -142,7 +142,72 @@ for k, ang in enumerate((math.pi / 4, -math.pi / 4)):
     parts.append(Mesh(loop, lambda x, y, z: speck(BAST, x, y, z, 0.12), 'plain'))
 finish('grave', parts, reach=0.05)
 
+# ================= TRUMNA NA NOSZACH =================
+# Prosta trumna z desek (szersza w głowach, węższa w nogach) z wiekiem, postawiona na dwóch drągach z poprzeczkami.
+# Niosą ją dwaj chłopi: przedni (w +z) i tylny trzymają końce drągów opuszczonymi rękami przy biodrach.
+# Drągi w x = ±0,135 i y = 0,27 — tam, gdzie wiszą dłonie postaci (bark x 0,135, y 0,45, ręka 0,185, odchylona o 0,3 rad).
+WOOD = hexc(0x8a6a46)
+WOOD_D = hexc(0x6a4a2c)
+POLE = hexc(0x5e452e)
+POLE_X, POLE_Y, POLE_L = 0.135, 0.27, 0.5
+
+
+def taper(zh, zf, wh, wf, y0, y1):
+    """Bryła o podstawie trapezu: szerokość wh w głowach (z = zh), wf w nogach (z = zf), od y0 do y1 (układ gry)"""
+    bm = bmesh.new()
+    pts = [(-wh / 2, zh), (wh / 2, zh), (wf / 2, zf), (-wf / 2, zf)]
+    lo = [bm.verts.new((x, -z, y0)) for x, z in pts]
+    hi = [bm.verts.new((x, -z, y1)) for x, z in pts]
+    bm.faces.new(lo[::-1])
+    bm.faces.new(hi)
+    for k in range(4):
+        j = (k + 1) % 4
+        bm.faces.new((lo[k], lo[j], hi[j], hi[k]))
+    bmesh.ops.recalc_face_normals(bm, faces=bm.faces)
+    bmesh.ops.split_edges(bm, edges=bm.edges[:])  # ostre krawędzie desek (osobne normalne każdej ściany)
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return bm
+
+
+def bar(sx, sy, sz, move):
+    bm = bmesh.new()
+    bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.scale(bm, vec=(sx, sz, sy), verts=bm.verts)
+    bmesh.ops.split_edges(bm, edges=bm.edges[:])
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    x, y, z = move
+    bmesh.ops.translate(bm, verts=bm.verts, vec=(x, -z, y))
+    return bm
+
+
+def rod(r, length, x, y):
+    """Drąg wzdłuż z gry, zamknięty z obu końców"""
+    bm = bmesh.new()
+    bmesh.ops.create_cone(bm, cap_ends=True, cap_tris=False, segments=8, radius1=r, radius2=r, depth=length)
+    bmesh.ops.rotate(bm, verts=bm.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(math.pi / 2, 3, 'X'))
+    bmesh.ops.translate(bm, verts=bm.verts, vec=(x, 0, y))
+    bmesh.ops.triangulate(bm, faces=bm.faces)
+    return bm
+
+
+parts = []
+ZH, ZF = 0.2, -0.2          # głowy z przodu (+z), nogi z tyłu
+BOT = POLE_Y + 0.008          # dno trumny wpuszczone 2 mm w poprzeczki (nie wisi w powietrzu, nie leży licem w lico)
+parts.append(Mesh(taper(ZH, ZF, 0.19, 0.15, BOT, BOT + 0.07), lambda x, y, z: speck(WOOD, x, y, z, 0.14), 'wood'))
+# wieko: nieco większe od skrzyni (5 mm na stronę), żeby krawędzie nie leżały licem w lico
+parts.append(Mesh(taper(ZH + 0.006, ZF - 0.006, 0.202, 0.162, BOT + 0.068, BOT + 0.082), lambda x, y, z: speck(WOOD_D, x, y, z, 0.12), 'wood'))
+# listwa przez wieko i listwa przy dnie (wystają 6 mm)
+parts.append(Mesh(bar(0.02, 0.008, 0.37, (0, BOT + 0.086, 0)), lambda x, y, z: speck(WOOD_D, x, y, z, 0.1), 'wood'))
+parts.append(Mesh(bar(0.03, 0.008, 0.012, (0, BOT + 0.086, 0.07)), lambda x, y, z: speck(WOOD_D, x, y, z, 0.1), 'wood'))
+# nosze: dwa drągi i dwie poprzeczki pod dnem
+for sx in (-1, 1):
+    parts.append(Mesh(rod(0.0085, POLE_L, sx * POLE_X, POLE_Y), lambda x, y, z: speck(POLE, x, y, z, 0.15), 'bark'))
+for zz in (0.13, -0.13):
+    parts.append(Mesh(bar(POLE_X * 2 + 0.024, 0.012, 0.024, (0, POLE_Y + 0.004, zz)), lambda x, y, z: speck(WOOD_D, x, y, z, 0.1), 'wood'))
+finish('coffin', parts, reach=0.05)
+out['coffin_pole'] = [POLE_X, POLE_Y, POLE_L]
+
 dst = os.path.join(os.path.dirname(__file__), '..', '..', 'src', 'render', 'models', 'grave.json')
 with open(dst, 'w') as f:
     json.dump(out, f, separators=(',', ':'))
-print('grave', {k: sum(len(m['idx']) for m in v) * 3 // 4 // 6 for k, v in out.items()}, os.path.getsize(dst) // 1024, 'KB')
+print('grave', {k: sum(len(m['idx']) for m in v) * 3 // 4 // 6 for k, v in out.items() if k != 'coffin_pole'}, os.path.getsize(dst) // 1024, 'KB')

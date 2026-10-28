@@ -14,6 +14,7 @@ import { buildWork, demolish, enemyNear, maxHp, rebuildCost, restore, ruin } fro
 import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
 import { lineOfSight } from './sight';
+import { addBearer, pickBearer } from './bearers';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 
 /** Żołnierz stoi wysoko: na wieży albo na murach zamku (dalej widzi i strzela, wręcz go nie dosięgną) */
@@ -76,7 +77,7 @@ export function train(g: GameState, player: number, barracksId: number, unit: st
   if (def.magic && battleMages(g, player) >= MAGE_CAP) return false;
   for (const [res, amount] of Object.entries(def.cost)) if (p.res[resIndex(res as ResourceId)]! < amount!) return false;
   // wolny chłop (najlepiej ten, co siedzi przy ognisku) idzie do koszar; w środku dostaje broń i wychodzi żołnierzem
-  const free = g.units.filter((u) => u.owner === player && u.job === 0 && !u.enlist && !u.riot && !u.sick && u.carryRes < 0);
+  const free = g.units.filter((u) => u.owner === player && u.job === 0 && !u.enlist && !u.riot && !u.sick && u.carryRes < 0 && u.phase !== Phase.Bearing);
   // przy ognisku pusto: idzie wolny magazynier (rezerwa, storage.ts) — ale dopiero gdy zapłata jest pewna
   if (!free.length && def.cost && Object.entries(def.cost).every(([res, amount]) => p.res[resIndex(res as ResourceId)]! >= amount!)) { const k = spareKeeper(g, player); if (k) free.push(k); }
   if (!free.length) return false;
@@ -1253,14 +1254,18 @@ function graveSystem(g: GameState): void {
   if (g.tick % 10 !== 0) return;
   // wolni chłopi z obozowiska sprzątają ciała na swojej ziemi (najwyżej dwóch naraz na gracza)
   for (const p of g.players) {
-    const busy = g.units.filter((u) => u.owner === p.id && u.job === 0 && (u.phase === Phase.ToCorpse || u.phase === Phase.Burying || u.carryRes >= 0)).length;
+    const busy = g.units.filter((u) => u.owner === p.id && u.job === 0 && (u.phase === Phase.ToCorpse || u.phase === Phase.Burying || u.phase === Phase.Bearing || u.carryRes >= 0)).length;
     if (busy >= 2) continue;
     const u = g.units.find((x) => x.owner === p.id && x.job === 0 && x.phase === Phase.Idle && !x.path.length && x.carryRes < 0);
     const keep = g.buildings.find((b) => b.owner === p.id && b.type === 0);
     if (!u || !keep) continue;
     const c = g.corpses.find((x) => !x.taken && Math.abs((x.px >> 8) - keepCenter(keep)[0]) + Math.abs((x.py >> 8) - keepCenter(keep)[1]) < 34);
     if (!c) continue;
+    // trumnę niosą zawsze dwaj: bez drugiego wolnego chłopa nikt nie idzie (bearers.ts)
+    const helper = pickBearer(g, u);
+    if (!helper) continue;
     c.taken = true; u.target = c.id; u.phase = Phase.ToCorpse;
+    addBearer(helper, u);
   }
   for (const b of g.buildings) {
     if (b.type !== CEMETERY || !b.worker) continue;
@@ -1276,9 +1281,14 @@ function graveSystem(g: GameState): void {
       if (d < bd) { bd = d; best = c; }
     }
     if (!best) continue;
+    // drugi grabarz z tego cmentarza (stoi bezczynnie), a gdy zajęty — wolny chłop z okolicy; bez pomocnika czeka
+    const mate = (b.crew ?? []).map((id) => unitById(g, id)).find((x) => x && x.phase === Phase.Idle && !x.path.length && x.carryRes < 0);
+    const helper = mate ?? pickBearer(g, u);
+    if (!helper) continue;
     best.taken = true;
     u.target = best.id;
     u.phase = Phase.ToCorpse;
+    addBearer(helper, u);
   }
 }
 

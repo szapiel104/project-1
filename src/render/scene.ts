@@ -35,6 +35,7 @@ import { DustFx } from './dust';
 import { Braziers } from './braziers';
 import { RubbleLayer } from './rubble';
 import { GraveLayer } from './graves';
+import { BEARER_GAP } from '../sim/systems/bearers';
 import { PileLayer } from './piles';
 import { WearLayer } from './damage';
 import { RepairLayer } from './repairs';
@@ -130,6 +131,10 @@ const FIG = 0.76;
 const Y_AXIS = new THREE.Vector3(0, 1, 0);
 /** Pochodnia łucznika wbita w ziemię: skala pochodni z rąk chłopów (jak w ręce postaci) i wysokość płomienia nad ziemią */
 const TORCH_K = FIG, STICK_TIP = 0.36 * TORCH_K;
+/** Znacznik „niesie ciało” w carryRes (jak CORPSE w workers.ts: pierwszy numer poza listą surowców) */
+const CORPSE_LOAD = RESOURCES.length;
+/** Odchylenie rąk niosących trumnę od pionu (rad): przedni ma dłonie za sobą, tylny przed sobą — w końcach drągów */
+const BIER_ARM = 0.3;
 /** Miejsca w zamku z modelu (tools/models/keep.py, układ modelu: środek działki, przód z bramą = +z) */
 const CASTLE = { floorY: 0.15, walkY: 1.71, throneZ: -4.16, seatY: 0.34 };
 /** O ile podnosi się krata bramy zamku (z modelu) */
@@ -551,6 +556,39 @@ export class GameRenderer {
   private rubble = new RubbleLayer(this.scene, this.buildingLayer);
   /** Leśne groby osady bez cmentarza (kopczyk z krzyżem) */
   private graves = new GraveLayer(this.scene);
+  /** Gdzie w tej klatce stoją niosący trumnę: id → [x, y, z, kierunek, wzrost] (do ustawienia noszy między nimi) */
+  private bierPose = new Map<number, [number, number, number, number, number]>();
+  private coffinM = new THREE.Matrix4();
+  private coffinQ = new THREE.Quaternion();
+  private coffinV = new THREE.Vector3();
+  private coffinS = new THREE.Vector3();
+  private static readonly UP = new THREE.Vector3(0, 1, 0);
+
+  /** Trumny na noszach: między przednim (niesie ciało) a tylnym niosącym; bez pomocnika — tuż za przednim */
+  private drawCoffins(g: GameState): void {
+    this.graves.beginCoffins();
+    const helperOf = new Map<number, number>();
+    for (const u of g.units) if (u.phase === Phase.Bearing) helperOf.set(u.target, u.id);
+    for (const u of g.units) {
+      if (u.carryRes !== CORPSE_LOAD || u.phase === Phase.Burying) continue;
+      const p = this.bierPose.get(u.id);
+      if (!p) continue;
+      const hid = helperOf.get(u.id), h = hid !== undefined ? this.bierPose.get(hid) : undefined;
+      let x: number, y: number, z: number, yaw: number, size: number;
+      if (h && Math.hypot(p[0] - h[0], p[2] - h[2]) < 0.8) {
+        x = (p[0] + h[0]) / 2; y = (p[1] + h[1]) / 2; z = (p[2] + h[2]) / 2; size = (p[4] + h[4]) / 2;
+        yaw = Math.atan2(p[0] - h[0], p[2] - h[2]);
+      } else {
+        const half = (BEARER_GAP / FP) / 2;
+        yaw = p[3]; x = p[0] - Math.sin(yaw) * half; y = p[1]; z = p[2] - Math.cos(yaw) * half; size = p[4];
+      }
+      this.coffinQ.setFromAxisAngle(GameRenderer.UP, yaw);
+      this.coffinM.compose(this.coffinV.set(x, y, z), this.coffinQ, this.coffinS.setScalar(FIG * size));
+      this.graves.coffin(this.coffinM);
+    }
+    this.graves.endCoffins();
+    this.bierPose.clear();
+  }
   /** Towar odłożony pod pełnymi magazynami i znak „pełno” nad nimi (piles.ts) */
   private piles = new PileLayer(this.scene);
   /** Koksowniki na murach i wieżach (osobna warstwa: mur kamienny nie ma własnego modelu budynku) */
@@ -4695,8 +4733,11 @@ export class GameRenderer {
       const fy = (prev ? prev[1] + (u.py - prev[1]) * alpha : u.py) / FP;
       // stojący w tym samym miejscu rozstawiają się wokół, żeby nie zlewali się w jednego
       const still = u.path.length === 0;
-      const ox = still && !u.bucket ? (((u.id * 7) % 5) - 2) * 0.17 : 0;
-      const oz = still && !u.bucket ? (((u.id * 11) % 5) - 2) * 0.17 : 0;
+      // trumnę niosą dwaj (bearers.ts): przedni z ciałem i tylny pomocnik; obaj idą dokładnie tam, gdzie każe symulacja
+      // (tylny chwyta drągi dopiero, gdy przedni podniósł trumnę; wcześniej idzie za nim zwyczajnie)
+      const bier = (u.phase === Phase.Bearing && g.units.some((x) => x.id === u.target && x.carryRes === CORPSE_LOAD)) || (u.carryRes === CORPSE_LOAD && u.phase !== Phase.Burying);
+      const ox = still && !u.bucket && !bier ? (((u.id * 7) % 5) - 2) * 0.17 : 0;
+      const oz = still && !u.bucket && !bier ? (((u.id * 11) % 5) - 2) * 0.17 : 0;
       // postać patrzy w stronę marszu; gdy stoi, zachowuje ostatni kierunek
       const next = u.path[0];
       let heading = this.facing.get(u.id) ?? ((u.id * 2.4) % 6.28);
@@ -4709,7 +4750,9 @@ export class GameRenderer {
         this.facing.set(u.id, heading);
       }
       // figura idzie łukiem za pozycją z symulacji i omija innych; patrzy tam, dokąd naprawdę idzie
-      const cv = this.crowd.move(u.id, fx + ox, fy + oz, heading, this.calm, true);
+      const cv = this.crowd.move(u.id, fx + ox, fy + oz, heading, this.calm, !bier);
+      // niosący trumnę nie odbijają w bok przed innymi (rozjechaliby się z noszami)
+      if (bier) { cv.side = 0; cv.sx = cv.x; cv.sy = cv.y; }
       if (cv.speed > 0.3) { heading = cv.heading; this.facing.set(u.id, heading); }
       // gaszący na miejscu: twarzą do studni (czerpie) albo do ognia (wylewa)
       const bucketGoal = u.bucket ? jobs.get(u.bucket === 1 ? u.target : u.fireAt ?? 0) : undefined;
@@ -5202,7 +5245,7 @@ export class GameRenderer {
       const shake = rioting ? Math.sin(this.time * (5.5 + (u.id % 5) * 0.4) + u.id * 1.7) : 0;
       const torchArm = riotTorch ? TORCH_ARM - 0.45 + shake * 0.18 : TORCH_ARM;
       const forkArm = FORK_ARM + shake * 0.28;
-      const torchOn = !robed && (riotTorch || (this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket));
+      const torchOn = !robed && !bier && (riotTorch || (this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket));
       // kopacz w drodze (także sztolnią) ma kilof na plecach; do ręki bierze go dopiero przy złożu, gdy dłoń chwyci stylisko
       const pickOnBack = drawing >= 0 && drawing < PICK_GRAB;
       // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką
@@ -5272,6 +5315,13 @@ export class GameRenderer {
         this.preacherFig.set(0, t.matrix, swing, up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id);
         this.sermon = false;
       }
+      else if (bier) {
+        // ręce opuszczone przy biodrach, dłonie na końcach drągów: przedni trzyma je za sobą, tylny przed sobą
+        const tc = TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888;
+        const arm = u.phase === Phase.Bearing ? -BIER_ARM : BIER_ARM;
+        this.figures.set(i, t.matrix, swing, false, tc, u.id, arm, arm, true);
+        this.bierPose.set(u.id, [t.position.x, t.position.y, t.position.z, heading, this.figures.sizeOf(u.id, tc)]);
+      }
       else this.figures.set(i, t.matrix, panic ? swing * 1.5 : ia?.legs ? ia.legs : swing, !(u.carryRes >= 0 && !log) && !!ia?.up, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888, u.id, carrying ? carryR : hammering || planting ? work : chopping || mining ? toolArm : fighting ? fightArm : crafting ? craftR : flee ? -2.5 + flail : wave ? -2.55 + Math.sin(this.time * 14) * 0.35 : fishing ? FISH_ARM : forkUp ? forkArm : torchOn ? torchArm : u.bucket ? 0 : iaArm, carrying ? carryL : rioting && !fighting ? riotL : planting ? work + 0.08 : drawing >= 0 ? (drawing < PICK_GRAB ? -0.5 : -0.5 + ((drawing - PICK_GRAB) / (1 - PICK_GRAB)) * (toolArm + 0.5)) : chopping || mining ? toolArm : fighting ? (weapon === 'pick' ? fightArm + 0.1 : -0.6) : crafting ? craftL : flee ? -2.5 - flail : wave ? -swing * 0.8 : fishing ? FISH_ARM + 0.15 : ia ? (ia.armL ?? 0.05) : -0.5, carrying || flee || wave || torchOn || forkUp || rioting || (!!u.bucket && walking) || !!ia?.legs, undefined, drawing >= 0 ? (drawing < PICK_GRAB ? 0 : TWO_HAND * (drawing - PICK_GRAB) / (1 - PICK_GRAB)) : chopping || mining ? TWO_HAND : 0);
       if (u.bucket) this.fireCrew(g, u, i, t, view, jobs, heading, still && cv.speed <= 0.3, alpha);
       // z lasu do chaty niesie kłodę, z chaty do składu gotowe deski
@@ -5295,7 +5345,7 @@ export class GameRenderer {
       // każdy surowiec ma własny wygląd: kosz jabłek, bochenki, snop, worek, blok, sztaby;
       // skala jak postać (ludzie są różnego wzrostu), żeby ładunek trafiał w dłonie i u niskiego, i u wysokiego
       const loadSz = u.carryRes >= 0 ? this.figures.sizeOf(u.id, TEAM_COLORS[g.players[u.owner]?.team ?? 0] ?? 0x888888) : 1;
-      const loadMesh = u.carryRes >= 0 ? this.loads.get(u.carryRes) : undefined;
+      const loadMesh = u.carryRes >= 0 && u.carryRes !== CORPSE_LOAD ? this.loads.get(u.carryRes) : undefined; // ciało jedzie w trumnie (drawCoffins)
       if (loadMesh) {
         const j = loadUsed.get(u.carryRes) ?? 0;
         loadUsed.set(u.carryRes, j + 1);
@@ -5380,6 +5430,7 @@ export class GameRenderer {
       k++;
     }
     for (const [id, cart] of this.carts) if (!seenCarts.has(id)) { if (cart.icon) { this.scene.remove(cart.icon); cart.icon.material.dispose(); } this.scene.remove(cart.obj); cart.obj.traverse((o) => (o as THREE.Mesh).geometry?.dispose()); this.carts.delete(id); }
+    this.drawCoffins(g);
     this.drawSappers(loadUsed);
     k = this.castleFolk(g, k);
     this.figures.finish(k);

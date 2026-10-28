@@ -188,7 +188,7 @@ function calmDown(u: Unit): void {
 /** Kto może dołączyć do buntu: nie niesie towaru, nie gasi pożaru, nie idzie do wojska i nie śpi */
 function canJoin(u: Unit, player: number): boolean {
   return u.owner === player && !u.riot && !u.enlist && !u.bucket && u.carryRes < 0
-    && u.phase !== Phase.Sleeping && u.phase !== Phase.ToSleep && u.phase !== Phase.ToCorpse && u.phase !== Phase.Burying;
+    && u.phase !== Phase.Sleeping && u.phase !== Phase.ToSleep && u.phase !== Phase.ToCorpse && u.phase !== Phase.Burying && u.phase !== Phase.Bearing;
 }
 
 export function unrestSystem(g: GameState): void {

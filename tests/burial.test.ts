@@ -70,4 +70,43 @@ describe('pochówek bez cmentarza (Michał 28.10.2026)', () => {
     for (let i = 0; i < 12; i++) step(g, []);
     expect(g.graves.length).toBe(0);
   });
+
+  it('ciało niosą dwaj: pomocnik idzie tuż za niosącym, potem kopie z nim i wraca wolny', () => {
+    const g = clearBandits(createGame(7));
+    g.wolves = [];
+    const keep = playerKeep(g, 0)!;
+    const [fx, fy] = keepFront(keep);
+    g.corpses.push({ id: 999999, owner: 0, kind: -1, px: fx * FP + 128, py: (fy + 3) * FP + 128, at: g.tick, taken: false });
+    let pair = false, close = 0, dug = false, helper = -1;
+    for (let i = 0; i < 4000 && !g.graves?.length; i++) {
+      step(g, []);
+      const h = g.units.find((x) => x.phase === Phase.Bearing);
+      if (h) {
+        helper = h.id;
+        const c = g.units.find((x) => x.id === h.target)!;
+        if (c.carryRes >= 0) { pair = true; if (Math.hypot(c.px - h.px, c.py - h.py) < 0.6 * FP) close++; }
+      }
+      if (helper >= 0 && g.units.some((x) => x.id === helper && x.phase === Phase.Burying)) dug = true;
+    }
+    expect(pair).toBe(true);
+    expect(close).toBeGreaterThan(20);
+    expect(dug).toBe(true);
+    expect(g.graves?.length).toBe(1); // jeden grób, nie dwa
+    for (let i = 0; i < 200; i++) step(g, []);
+    expect(g.units.find((x) => x.id === helper)?.phase).not.toBe(Phase.Bearing);
+  });
+
+  it('w pojedynkę nikt nie niesie: jeden wolny chłop zostawia ciało i czeka na drugiego', () => {
+    const g = clearBandits(createGame(7));
+    g.wolves = [];
+    const keep = playerKeep(g, 0)!;
+    const [fx, fy] = keepFront(keep);
+    // zostaje tylko jeden wolny chłop gracza (reszta dostaje pracę na niby)
+    const free = g.units.filter((u) => u.owner === 0 && u.job === 0);
+    for (const u of free.slice(1)) u.job = -1;
+    g.corpses.push({ id: 999999, owner: 0, kind: -1, px: fx * FP + 128, py: (fy + 3) * FP + 128, at: g.tick, taken: false });
+    for (let i = 0; i < 300; i++) step(g, []);
+    expect(g.corpses.find((c) => c.id === 999999)?.taken).toBe(false);
+    expect(g.units.some((u) => u.carryRes >= 0 && u.phase !== Phase.Bearing && u.owner === 0 && u.target === 999999)).toBe(false);
+  });
 });
