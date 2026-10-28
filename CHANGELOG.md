@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.58.7 — wilki nie przegryzają murów, mag i łucznik celują w wilka (2026-10-28)
+
+- **Wilk muru nie przegryzie.** Gdy wszyscy są za palisadą, wilk podchodzi pod mur albo bramę, raz go podrapie (najwyżej 1 HP na wilka przez całą noc, nigdy nie zniszczy) i wraca do lasu. Dawniej gryzł co chwilę po 6 HP i potrafił przegryźć palisadę
+- **Kursor ataku na wilku:** z zaznaczonym magiem ognia, magiem wody, łucznikiem czy piechotą najechanie na wilka daje miecz, a prawy klik wysyła na niego atak. Dawniej gra łapała tylko jeden punkt metr nad wilkiem w promieniu 26 px, więc przy zbliżeniu kursor na samym wilku nic nie pokazywał. Teraz liczy się cała sylwetka, a promień rośnie z przybliżeniem
+- Opis wilka w „Jak grać” i w galerii poprawiony (PL i EN)
+- Bot: bez zmian (wilki są wspólne, bot nie wydaje rozkazów myszą)
+
 ## 0.58.6 — gruzowisko leży na ziemi naprawdę: także ruiny i zbocza (2026-10-28)
 
 - **Ruina nie lewituje:** gruz ruiny był rozciągany w pionie 1,6 raza (kamienie wysokie, belki odklejone od siebie i wiszące), a teren pod nim opadał jak przy wykopie pod budowę — stos wisiał nad dołem. Teraz ruina dostaje ten sam stos co gruz po rozbiórce, bez rozciągania i bez wykopu; w miarę odbudowy robotnicy zbierają go od góry
