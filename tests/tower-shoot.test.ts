@@ -77,7 +77,7 @@ describe('szturm na wieżę (jak w Twierdzy)', () => {
 });
 
 describe('drabiny oblężnicze (jak w Twierdzy)', () => {
-  it('wróg przystawia drabinę do muru kamiennego, wchodzi na koronę i ścina łucznika; obrońcy spychają drabinę', () => {
+  it('drabiniarz przystawia drabinę do muru, zbrojny wchodzi po niej i ścina łucznika; drabiniarz biegnie po następną do namiotu', () => {
     const g = createGame(9);
     emptyScene(g);
     for (const p of g.players) p.bot = false;
@@ -85,22 +85,28 @@ describe('drabiny oblężnicze (jak w Twierdzy)', () => {
     // odcinek muru kamiennego w poprzek, 8 pól przed bramą
     const y = dy + 8;
     for (let x = dx - 3; x <= dx + 3; x++) expect(placeReady(g, 'stoneWall', x, y)).toBeTruthy();
+    // namiot polowy wroga niedaleko muru: tu drabiniarz bierze nową drabinę
+    let tent: number | null = null;
+    for (let o = 6; o < 14 && !tent; o++) tent = placeReady(g, 'fieldTent', dx + 2, y + o, 0, 1);
+    expect(tent).toBeTruthy();
     step(g, []);
-    const wallT = y * W + dx;
     const archer: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('archer'), px: dx * FP + 128, py: y * FP + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
     g.soldiers.push(archer);
-    // drabiny szturmowe w zbrojowni wroga (robi je cieśla); bez nich nie przystawi drabiny
-    g.players[1]!.res[resIndex('ladder')] = 2;
+    // jedna drabina w zbrojowni wroga (zrobił ją cieśla) i drabiniarz, który niesie swoją
+    g.players[1]!.res[resIndex('ladder')] = 1;
+    const lad: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('ladderman'), px: (dx - 1) * FP + 128, py: (y + 3) * FP + 128, path: [], hp: 45, goal: -1, wait: 0, target: 0, cd: 0 };
     const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('manatarms'), px: (dx + 1) * FP + 128, py: (y + 2) * FP + 128, path: [], hp: 400, goal: -1, wait: 0, target: archer.id, cd: 0 };
-    g.soldiers.push(foe);
+    g.soldiers.push(lad, foe);
     let planted = false;
     for (let i = 0; i < 900 && g.soldiers.some((s) => s.id === archer.id); i++) { step(g, []); if (g.siegeLadders?.length) planted = true; }
     expect(planted).toBe(true);
-    expect(g.players[1]!.res[resIndex('ladder')]).toBe(1);
     expect(g.soldiers.some((s) => s.id === archer.id)).toBe(false);
-    void wallT;
+    // drabiniarz wrócił do namiotu i wziął drabinę ze zbrojowni
+    for (let i = 0; i < 600 && g.players[1]!.res[resIndex('ladder')]! > 0; i++) step(g, []);
+    expect(g.players[1]!.res[resIndex('ladder')]).toBe(0);
+    expect(g.soldiers.find((s) => s.id === lad.id)?.noLadder).toBeUndefined();
     // obrońca na koronie spycha drabinę, przy której nikt nie wchodzi
-    g.soldiers = g.soldiers.filter((s) => s.id !== foe.id);
+    g.soldiers = g.soldiers.filter((s) => s.owner === 0);
     const def: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('spearman'), px: (g.siegeLadders![0]!.wall % W) * FP + 128, py: Math.floor(g.siegeLadders![0]!.wall / W) * FP + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
     g.soldiers.push(def);
     for (let i = 0; i < 200 && g.siegeLadders!.length; i++) step(g, []);
@@ -108,19 +114,19 @@ describe('drabiny oblężnicze (jak w Twierdzy)', () => {
   });
 });
 
-describe('drabiny trzeba zrobić', () => {
-  it('bez drabin w zbrojowni wróg nie przystawi drabiny do muru', () => {
+describe('drabiny stawia tylko drabiniarz', () => {
+  it('zwykły żołnierz nie przystawi drabiny, choć leżą w zbrojowni', () => {
     const g = createGame(9);
     emptyScene(g);
     for (const p of g.players) p.bot = false;
     const k = playerKeep(g, 0)!, W = g.map.width, dx = k.door % W, dy = (k.door - dx) / W, y = dy + 8;
     for (let x = dx - 3; x <= dx + 3; x++) placeReady(g, 'stoneWall', x, y);
     step(g, []);
-    g.players[1]!.res[resIndex('ladder')] = 0;
+    g.players[1]!.res[resIndex('ladder')] = 5;
     const archer: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('archer'), px: dx * FP + 128, py: y * FP + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
     const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('manatarms'), px: (dx + 1) * FP + 128, py: (y + 2) * FP + 128, path: [], hp: 400, goal: -1, wait: 0, target: archer.id, cd: 0 };
     g.soldiers.push(archer, foe);
-    for (let i = 0; i < 300; i++) { g.players[1]!.res[resIndex('ladder')] = 0; step(g, []); }
+    for (let i = 0; i < 300; i++) step(g, []);
     expect(g.siegeLadders?.length ?? 0).toBe(0);
   });
 });

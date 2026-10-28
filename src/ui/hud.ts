@@ -318,7 +318,7 @@ const groupBadge = (card: HTMLElement, n: number | undefined): void => {
   b.textContent = String(n);
   card.append(b);
 };
-const portraitOf = (kind: string | undefined): string => (kind === 'archer' ? ARCHER_PORTRAIT : kind === 'manatarms' ? MANATARMS_PORTRAIT : kind === 'sapper' ? SAPPER_PORTRAIT : PORTRAIT);
+const portraitOf = (kind: string | undefined): string => (kind === 'archer' ? ARCHER_PORTRAIT : kind === 'manatarms' ? MANATARMS_PORTRAIT : kind === 'sapper' || kind === 'ladderman' ? SAPPER_PORTRAIT : PORTRAIT);
 
 export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
   root.replaceChildren();
@@ -675,7 +675,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   rallyRow.append(rallyAll, rallyOff, el('p', 'hint', tx('Rekrut idzie z obozowiska do koszar, wychodzi w zbroi i staje na fladze (bez flagi — przed koszarami).', 'A recruit walks from the camp to the barracks, comes out armoured and stands at the flag (with no flag — outside the barracks).')));
   // taran: wóz z daszkiem i belką z kutą głowicą
   const RAM_PORTRAIT = '<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true"><path d="M5 15l11-7 11 7z" fill="#8a6a44" stroke="#2a1c10"/><rect x="6" y="15" width="20" height="2" fill="#5e4329"/><path d="M8 17v7M24 17v7" stroke="#5e4329" stroke-width="2"/><rect x="3" y="18" width="24" height="3" rx="1.5" fill="#8a5a2b" stroke="#2a1c10"/><path d="M27 17.5l3 1.5v1.5l-3 1.5z" fill="#6a6e76" stroke="#2a1c10"/><circle cx="10" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/><circle cx="22" cy="26" r="3" fill="#6e4a2c" stroke="#2a1c10"/></svg>';
-  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT, manatarms: MANATARMS_PORTRAIT, sapper: SAPPER_PORTRAIT, mageFire: ARCHER_PORTRAIT, mageWater: ARCHER_PORTRAIT };
+  const PORTRAITS: Record<string, string> = { spearman: PORTRAIT, archer: ARCHER_PORTRAIT, ram: RAM_PORTRAIT, manatarms: MANATARMS_PORTRAIT, sapper: SAPPER_PORTRAIT, ladderman: SAPPER_PORTRAIT, mageFire: ARCHER_PORTRAIT, mageWater: ARCHER_PORTRAIT };
   const drawRecruit = (): void => {
     // koszary i siedziby magów mają różne karty: widać tylko te, które szkoli otwarty budynek
     for (const [id, c] of unitCards) c.card.hidden = !lastRecruit.some((r) => r.id === id);

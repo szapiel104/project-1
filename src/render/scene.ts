@@ -169,6 +169,7 @@ const DAY = [
 ];
 const WOOD = RESOURCES.indexOf('wood');
 const ALE = RESOURCES.indexOf('ale');
+const LADDER_RI = RESOURCES.indexOf('ladder');
 const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 
 /** Budynki, w których pali się w piecu: z komina idzie dym */
@@ -3875,7 +3876,7 @@ export class GameRenderer {
       const swing = walking ? Math.sin(st.phase) * 0.5 : 0;
       const udef = UNITS[s.kind]!;
       const ranged = !!udef.range;
-      const striking = !udef.sapper && (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
+      const striking = !udef.sapper && !udef.ladderman && (!!foe || !!wall || !!victim) && !walking && (ranged ? s.cd > udef.cooldown - 8 : s.cd > 6);
       // łucznik na wieży stoi na pomoście
       let lift = s.up ? (s.post ? TOWER_TOP[BUILDINGS[bById.get(s.post)?.type ?? 0]!.id] ?? WATCH_TOWER_TOP : WATCH_TOWER_TOP) : 0;
       // życie na wieży: bez walki każdy zajęty czym innym (oparty o barierkę, siedzi, wypatruje, czwarty pod wieżą);
@@ -4111,7 +4112,7 @@ export class GameRenderer {
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
       // włócznik w walce: włócznia opuszczona na wroga, cofnięcie i pchnięcie fazami według odliczania do ciosu
       const spearPose = !ranged && !udef.ram && (!!foe || !!wall || !!victim) && !walking && !this.calm ? spearThrust(1 - Math.max(0, s.cd - alpha) / udef.cooldown) : undefined;
-      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper && !udef.bandit ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, spearPose);
+      this.spearmen.set(n, !ranged && !udef.guard && !udef.ram && !heavy && !udef.sapper && !udef.ladderman && !udef.bandit ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, spearPose);
       // zbój z puszczy: własny model z toporem (tools/models/bandit.py)
       if (udef.bandit && bandits < 256) {
         // w walce cios toporem idzie fazami według odliczania do następnego ciosu: po trafieniu dociąga cięcie,
@@ -4122,6 +4123,8 @@ export class GameRenderer {
       }
       // saper: postać chłopa w barwach pana z kilofem; rysuje go pula chłopów (syncUnits) w następnej klatce
       if (udef.sapper) this.sapperDraw.push({ m: t.matrix.clone(), swing: legs, walking, work: !!wall && !walking && !s.loot && wall.ruined === true, carry: s.loot ? s.loot - 1 : -1, team: teamC, id: s.id });
+      // drabiniarz: postać sapera, niesie drabinę szturmową oburącz (po przystawieniu idzie z pustymi rękami po następną)
+      else if (udef.ladderman) this.sapperDraw.push({ m: t.matrix.clone(), swing: legs, walking, work: false, carry: s.noLadder ? -1 : LADDER_RI, team: teamC, id: s.id });
       if (udef.ram && rams < 256) {
         // wóz jedzie przodem (głowicą) w stronę marszu; belka cofa się, gdy taran szykuje cios, i wybija się do przodu przy uderzeniu
         // pod budynkiem: głowicą prosto w najbliższy kawałek ściany celu (nie bokiem, jak stanął po drodze)
@@ -4244,7 +4247,7 @@ export class GameRenderer {
       const ud = body.kind >= 0 ? UNITS[body.kind] : undefined;
       // każde ciało rysuje się tylko jednym modelem (wcześniej chłop, strażnik i zbrojny leżeli dodatkowo jako włócznik)
       if (body.kind < 0) { if (pc < MAX_UNITS) this.peasantBodies.set(pc++, m, 0.3, false, rot, body.id, undefined, -0.5, false, legs); }
-      else if (ud?.sapper) { if (sc2 < 256) this.sapperBodies.set(sc2++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
+      else if (ud?.sapper || ud?.ladderman) { if (sc2 < 256) this.sapperBodies.set(sc2++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
       else if (ud?.bandit) { if (bc < 256) this.banditBodies.set(bc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
       else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
       else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }

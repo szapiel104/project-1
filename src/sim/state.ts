@@ -393,6 +393,8 @@ export interface Soldier {
   /** Przystawia drabinę oblężniczą: pole muru * 4 + strona (0 = -y, 1 = +x, 2 = +y, 3 = -x) i ile ticków już ją stawia */
   ladder?: number;
   ladderT?: number;
+  /** Drabiniarz bez drabiny (przystawił ją i biegnie po następną do zamku albo namiotu polowego) */
+  noLadder?: boolean;
   /** Kierunek, w który ma patrzeć po dojściu (0–7, co 45°; 0 = na +y) */
   face?: number;
   /** Postawa: 0/brak = atak (goni wroga), 1 = obrona (krótko i wraca), 2 = stój (nie rusza się z miejsca) */

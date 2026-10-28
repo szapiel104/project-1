@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.65.4 — drabiniarz (2026-10-28)
+
+- **Nowa jednostka: drabiniarz** (z koszar, drabina szturmowa + 6 rudy). Nie walczy — niesie drabinę. Prawy klik na wrogim murze kamiennym: podbiega i przystawia ją; z rozkazem „atak w marszu” albo stojąc blisko wrogiego muru robi to sam. Po drabinie wchodzi na koronę każde wojsko
+- **Po przystawieniu biegnie po następną** do zamku albo do namiotu polowego (który bliżej) i bierze ją ze zbrojowni; gdy drabin nie ma, czeka. Namiot polowy postawiony przy oblężeniu = krótka droga po drabiny
+- Zwykli żołnierze już sami drabin nie przystawiają (tylko wchodzą po stojących). Wygląd: postać sapera z drabiną niesioną oburącz; portret sapera
+- Nazwa, opisy (cieśla, namiot polowy) i pomoc po polsku i angielsku
+- Bot: szkoli do dwóch drabiniarzy, gdy wróg ma mur kamienny, a w zbrojowni leży drabina; idą z falami ataku i sami przystawiają drabiny
+
 ## 0.65.3 — o 43% mniej trójkątów w klatce: pnie i bale (2026-10-28)
 
 - **Pnie drzew z daleka (Michał):** lżejsza wersja pnia (160–360 zamiast 1400–3000 trójkątów) działała, ale włączała się dopiero 18 pól od brzegu kawałka lasu, czyli w praktyce pełne pnie sięgały 30–40 pól. Teraz w zwykłym widoku pełny pień zostaje tylko blisko środka widoku (próg 6). W spacerze, oczami chłopa, zostaje 18 jak dotąd. Pełny model się nie zmienił, upraszczamy tylko z daleka (`render/terrain.ts`)

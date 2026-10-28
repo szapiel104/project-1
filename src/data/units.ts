@@ -39,6 +39,8 @@ export interface UnitDef {
    *  'fire' — kula ognia nie chybia, parzy też stojących tuż obok celu i podpala budynki;
    *  'water' — czar wody odrzuca trafionego o pole i spowalnia go, a bez walki gasi własne płonące budynki */
   magic?: 'fire' | 'water';
+  /** Drabiniarz: nie walczy; niesie drabinę szturmową, przystawia ją do wrogiego muru i wraca po następną (siegeladders.ts) */
+  ladderman?: boolean;
 }
 
 export const UNITS: readonly UnitDef[] = [
@@ -61,6 +63,9 @@ export const UNITS: readonly UnitDef[] = [
   // Kruche (mało zdrowia), ale biją z daleka i nigdy nie chybiają; drodzy w rudzie i jest ich najwyżej 10 na gracza
   { id: 'mageFire', name: 'u.mageFire', cost: { gold: 50, crystal: 1 }, hp: 55, speed: 95, attack: 26, cooldown: 32, sight: 9, range: 7, weapon: 'gold', magic: 'fire' },
   { id: 'mageWater', name: 'u.mageWater', cost: { gold: 45, crystal: 1 }, hp: 65, speed: 95, attack: 15, cooldown: 26, sight: 9, range: 6, weapon: 'gold', magic: 'water' },
+  // Drabiniarz (Michał 28.10.2026, na końcu listy dla starych zapisów): bez broni, niesie drabinę szturmową ze zbrojowni
+  // (robi je cieśla). Przystawia ją do wrogiego muru kamiennego, a potem biegnie po następną do zamku albo do namiotu polowego
+  { id: 'ladderman', name: 'u.ladderman', cost: { ladder: 1, gold: 6 }, hp: 45, speed: 108, attack: 0, cooldown: 14, sight: 10, weapon: 'ladder', ladderman: true },
 ];
 
 /** Najwyżej tylu magów bojowych może mieć jeden gracz (razem obu zakonów, z tymi w drodze do siedziby) */

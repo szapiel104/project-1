@@ -5,10 +5,12 @@ import { walkable } from '../path';
 import { buildingById, FP, type GameState, type Soldier } from '../state';
 
 /**
- * Drabiny oblężnicze jak w Twierdzy (Michał 28.10.2026): żołnierz, który chce dosięgnąć obrońcy na koronie muru
- * kamiennego, a nie ma tam przejścia, podchodzi pod mur, przez chwilę przystawia drabinę i wchodzi po niej na górę.
- * Drabina otwiera ten bok muru dla każdego (jak drabina gracza), aż obrońcy z korony ją zepchną, mur padnie
- * albo sama się przewróci po kilku minutach. Bot używa tego samego (to zwykłe zachowanie żołnierza).
+ * Drabiny oblężnicze jak w Twierdzy (Michał 28.10.2026). Przystawia je drabiniarz (jednostka z koszar, bez broni):
+ * niesie jedną drabinę szturmową ze zbrojowni (robi je cieśla), na rozkaz (prawy klik na wrogim murze) albo sam,
+ * gdy wrogi mur kamienny jest blisko, podchodzi pod niego i przez chwilę ją stawia. Potem biegnie po następną do
+ * zamku albo do namiotu polowego i bierze ją ze zbrojowni (jeśli jest). Drabina otwiera ten bok muru dla każdego
+ * (jak drabina gracza) — po niej wchodzi wojsko — aż obrońcy z korony ją zepchną, mur padnie albo sama się przewróci.
+ * Bot szkoli drabiniarzy i używa ich tak samo.
  */
 
 /** Strony muru: 0 = -y, 1 = +x, 2 = +y, 3 = -x — [dx, dy, bit ściany pola] (bity jak w stonewalls.ts) */
@@ -21,7 +23,7 @@ const LADDER_HP = 60;
 const LADDER_LIFE = 6000;
 const STONE = buildingIndex('stoneWall');
 const LADDER_RES = resIndex('ladder');
-/** Czy gracz ma w zbrojowni drabinę szturmową (bez niej żołnierz nawet nie idzie pod mur) */
+/** Czy gracz ma w zbrojowni drabinę szturmową */
 export const hasLadder = (g: GameState, player: number): boolean => (g.players[player]?.res[LADDER_RES] ?? 0) >= 1;
 
 const isStoneWall = (g: GameState, t: number): boolean => {
@@ -87,10 +89,9 @@ export function plantStep(g: GameState, s: Soldier): boolean {
   s.ladderT = (s.ladderT ?? 0) + 1;
   s.path = []; s.goal = -1;
   if (s.ladderT >= PLANT_TICKS) {
-    // drabina ze zbrojowni (robi ją cieśla): bez niej nie ma czego przystawić
-    const p = g.players[s.owner];
-    if (!p || p.res[LADDER_RES]! < 1) { s.ladder = undefined; s.ladderT = undefined; return false; }
-    p.res[LADDER_RES]!--;
+    // drabinę niesie drabiniarz (wziął ją ze zbrojowni); bez niej nie ma czego przystawić
+    if (s.noLadder) { s.ladder = undefined; s.ladderT = undefined; return false; }
+    s.noLadder = true;
     // drabina oparta o mur: (dx, dy) w drabinie to kierunek od muru do stóp
     list.push({ id: g.nextId++, owner: s.owner, wall, dx, dy, at: g.tick, hp: LADDER_HP });
     s.ladder = undefined; s.ladderT = undefined;
@@ -98,6 +99,82 @@ export function plantStep(g: GameState, s: Soldier): boolean {
     s.px = (foot % g.map.width) * FP + FP / 2; s.py = Math.floor(foot / g.map.width) * FP + FP / 2;
   }
   return true;
+}
+
+const KEEP = 0;
+const TENT = buildingIndex('fieldTent');
+/** Skąd drabiniarz bierze nową drabinę: najbliższy własny zamek albo gotowy namiot polowy (pole przed wejściem) */
+function supplyDoor(g: GameState, s: Soldier): number {
+  const w = g.map.width, sx = s.px >> 8, sy = s.py >> 8;
+  let best = -1, bd = Infinity;
+  for (const b of g.buildings) {
+    if (b.owner !== s.owner || b.build || b.ruined || (b.type !== KEEP && b.type !== TENT) || b.door < 0) continue;
+    const dx = (b.door % w) - sx, dy = Math.floor(b.door / w) - sy, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = b.door; }
+  }
+  return best;
+}
+/** Najbliższe pole wrogiego muru kamiennego w promieniu R pól, pod które da się podejść z drabiną (kod rozkazu albo -1) */
+function wallNear(g: GameState, s: Soldier, R: number): number {
+  const w = g.map.width, h = g.map.height, sx = s.px >> 8, sy = s.py >> 8;
+  const my = team(g, s.owner);
+  let best = -1, bd = Infinity;
+  for (let y = Math.max(0, sy - R); y <= Math.min(h - 1, sy + R); y++)
+    for (let x = Math.max(0, sx - R); x <= Math.min(w - 1, sx + R); x++) {
+      const t = y * w + x;
+      if (!climbableWall(g, t)) continue;
+      const b = buildingById(g, g.occupancy[t]);
+      if (!b || team(g, b.owner) === my) continue;
+      const d = (x - sx) ** 2 + (y - sy) ** 2;
+      if (d >= bd) continue;
+      const code = ladderSpot(g, s, t);
+      if (code < 0) continue;
+      // przy tym boku już stoi drabina: wystarczy jedna
+      const [dx, dy] = LADDER_SIDES[code & 3]!;
+      if ((g.siegeLadders ?? []).some((l) => l.wall === t && l.dx === dx && l.dy === dy)) continue;
+      bd = d; best = code;
+    }
+  return best;
+}
+
+/**
+ * Drabiniarz co tick (gdy akurat nie stawia drabiny): bez drabiny biegnie po nową do zamku albo namiotu polowego;
+ * z drabiną idzie pod wrogi mur wskazany rozkazem albo sam, gdy taki mur jest blisko. Nie walczy.
+ * Zwraca true, gdy w tym ticku tylko czeka (np. na drabinę w zbrojowni).
+ */
+export function ladderStep(g: GameState, s: Soldier): boolean {
+  if (s.ladder !== undefined) return false;
+  const w = g.map.width, here = (s.py >> 8) * w + (s.px >> 8);
+  // drabiniarz nie walczy: cel-żołnierz to tylko kierunek (idzie tam, ale nie bije)
+  const tb = s.target ? buildingById(g, s.target) : undefined;
+  if (s.target && !tb) s.target = 0;
+  if (s.noLadder) {
+    const door = supplyDoor(g, s);
+    if (door < 0) return false;
+    const near = Math.max(Math.abs((door % w) - (here % w)), Math.abs(Math.floor(door / w) - Math.floor(here / w))) <= 1;
+    if (near) {
+      const p = g.players[s.owner];
+      if (p && p.res[LADDER_RES]! >= 1) { p.res[LADDER_RES]!--; s.noLadder = undefined; s.goal = -1; s.path = []; }
+      return true;
+    }
+    if (s.goal < 0 && !s.path.length) s.goal = door;
+    return false;
+  }
+  // rozkaz: prawy klik na wrogim murze kamiennym (rozkaz ataku na budynek)
+  if (tb && tb.type === STONE && !tb.build && !tb.ruined && team(g, tb.owner) !== team(g, s.owner)) {
+    const t = tb.y * w + tb.x;
+    const code = ladderSpot(g, s, t);
+    s.target = 0;
+    if (code >= 0) { s.ladder = code; s.ladderT = 0; s.goal = ladderFoot(g, code); s.path = []; }
+    return false;
+  }
+  if (tb) s.target = 0;
+  // sam: wrogi mur w pobliżu (stoi w miejscu albo idzie z rozkazem „atak w marszu”), co 10 ticków
+  if ((s.goal < 0 || s.amove) && (g.tick + s.id) % 10 === 0) {
+    const code = wallNear(g, s, 7);
+    if (code >= 0) { s.ladder = code; s.ladderT = 0; s.goal = ladderFoot(g, code); s.path = []; s.amove = false; s.slot = undefined; }
+  }
+  return false;
 }
 
 /** Co tick: obrońcy na koronie spychają drabiny, przy których nikt nie wchodzi; drabina pada z murem albo ze starości */

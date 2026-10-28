@@ -15,7 +15,7 @@ import { buildWork, demolish, enemyNear, maxHp, rebuildCost, restore, ruin } fro
 import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
 import { stoneWallSystem, towerTiles, towerUnder } from './stonewalls';
-import { climbableWall, hasLadder, ladderFoot, ladderSpot, plantStep } from './siegeladders';
+import { climbableWall, ladderStep, plantStep } from './siegeladders';
 import { lineOfSight } from './sight';
 import { collectCorpses, free, handFor, release, sendPair } from './bearers';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
@@ -1075,6 +1075,9 @@ export function armySystem(g: GameState): void {
     // taran: nie walczy z ludźmi, tylko podjeżdża pod najbliższą wrogą bramę, mur albo zamek i bije w nie belką
     if (def.ram) {
       if ((s.goal < 0 || s.amove) && siege(g, s, def, taken)) continue;
+    } else if (def.ladderman) {
+      // drabiniarz: nie walczy; niesie drabinę pod wrogi mur, potem biegnie po następną (siegeladders.ts)
+      if (ladderStep(g, s)) continue;
     } else if (def.sapper) {
       // saper nie walczy: rozbiera wrogie ruiny i znosi łup do twierdzy (rozkaz marszu ma pierwszeństwo)
       if (s.goal < 0 && salvageStep(g, s)) continue;
@@ -1170,10 +1173,6 @@ export function armySystem(g: GameState): void {
             const up = !range && (!!towerUnder(g, ft) || climbableWall(g, ft)) && !high(g, s), low = !high(g, s);
             const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1 && (up ? (g.walls[t]! & WALL_TOP) !== 0 : !(low && (g.walls[t]! & WALL_TOP))), 1500, s.owner, ft, 1);
             if (p && p.length) s.path = p.slice(0, 8);
-            else if (up && climbableWall(g, ft) && hasLadder(g, s.owner) && team(g, buildingById(g, g.occupancy[ft])?.owner ?? s.owner) !== team(g, s.owner) && ladderSpot(g, s, ft) >= 0) {
-              // obrońca na murze, a przejścia nie ma: idzie pod mur i przystawia drabinę oblężniczą (jak w Twierdzy)
-              s.ladder = ladderSpot(g, s, ft); s.ladderT = 0; s.goal = ladderFoot(g, s.ladder); s.path = [];
-            }
             else { s.skip = foe.id; s.skipUntil = g.tick + 150; s.target = 0; }
           }
         }

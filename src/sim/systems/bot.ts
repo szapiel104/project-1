@@ -3,6 +3,7 @@ import { canQuarantine, setQuarantine } from './plague';
 import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
 import { MAGE_CAP, SAPPER, UNITS } from '../../data/units';
+const LADDERMAN = UNITS.findIndex((u) => u.id === 'ladderman');
 import { KEEP_SIZE } from '../../data/keep';
 import { FP, Phase, housing, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
 import { battleMages, garrisonRoom, orderAttack, orderGarrison, orderMove, towerOf, train } from './army';
@@ -229,7 +230,12 @@ export function botSystem(g: GameState): void {
         + g.buildings.reduce((n, b) => n + (b.owner === p.id ? (b.enlistQ ?? []).filter((q) => q.k === SAPPER).length : 0), 0);
       const wantSapper = mine.length - sappers >= SAPPER_ARMY && sappers < (foeRuins(g, p).length ? SAPPERS_MAX : SAPPERS_MAX - 1) && p.res[resIndex('gold')]! >= SAPPER_GOLD;
       // zbrojny, gdy w zbrojowni leży miecz i kolczuga (bot stawia kuźnię i płatnerza pod koniec listy budowy)
-      if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantSapper && train(g, p.id, barracks.id, 'sapper')) && !train(g, p.id, barracks.id, 'manatarms') && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
+      // drabiniarze: dwóch przy większym wojsku, gdy wróg ma mury kamienne, a w zbrojowni leży drabina od cieśli
+      const ladderers = mine.filter((s) => UNITS[s.kind]!.ladderman).length + g.units.filter((u) => u.owner === p.id && u.enlist === LADDERMAN + 1).length
+        + g.buildings.reduce((n, b) => n + (b.owner === p.id ? (b.enlistQ ?? []).filter((q) => q.k === LADDERMAN).length : 0), 0);
+      const wantLadder = ladderers < 2 && mine.length >= 5 && p.res[resIndex('ladder')]! >= 1 && foeStoneWalls(g, p);
+      if (wantLadder && train(g, p.id, barracks.id, 'ladderman')) { /* jeden rekrut na tick */ }
+      else if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantSapper && train(g, p.id, barracks.id, 'sapper')) && !train(g, p.id, barracks.id, 'manatarms') && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
       // magowie bojowi: gdy stoi siedziba zakonu i jest już trochę wojska, po jednym naraz, aż do limitu bota;
       // ruda musi zostać jeszcze na zwykłych żołnierzy
       const hall = g.buildings.find((b) => b.owner === p.id && !b.build && !b.ruined && (BUILDINGS[b.type]!.id === 'mageFire' || BUILDINGS[b.type]!.id === 'mageWater'));
@@ -319,6 +325,11 @@ function fullStoreNeed(g: GameState, owner: number): string | null {
     return id;
   }
   return null;
+}
+
+/** Czy któraś wroga drużyna ma gotowy mur kamienny (na niego idą drabiniarze) */
+function foeStoneWalls(g: GameState, p: PlayerState): boolean {
+  return g.buildings.some((b) => !b.build && !b.ruined && BUILDINGS[b.type]!.id === 'stoneWall' && g.players[b.owner]?.team !== p.team);
 }
 
 function foeRuins(g: GameState, p: PlayerState): Building[] {
