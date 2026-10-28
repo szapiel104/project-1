@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.54.8 — dziennik błędów gotowy do wklejenia, poprawka przeciągania (2026-10-28)
+
+- **Błąd `setPointerCapture` (InvalidStateError) naprawiony:** kamera i minimapa przechwytują wskaźnik przy przeciąganiu; gdy przycisk był już puszczony w chwili kliknięcia (kliknięcie wysłane programowo, np. przez rozszerzenie, albo przełączenie okna), przeglądarka rzucała wyjątek. Teraz przeciąganie działa wtedy bez przechwycenia, bez błędu
+- **„Kopiuj dziennik błędów” daje wszystko do naprawy bez dopytywania:** numer wersji i build, adres, przeglądarka i system, ekran i okno, rdzenie, karta graficzna, stan gry (ekran, tryb, mapa, tick, liczba ludzi/wojska/budynków, wątek symulacji, jakość grafiki, FPS, spacer/kopalnia) oraz **pełny stos wywołań** każdego błędu (dotąd tylko 3 linijki)
+- **Mapy źródeł przy każdym wdrożeniu**, ale nie na stronie: build je robi, a wdrożenie odkłada jako artefakt „sourcemaps” w GitHub Actions (30 dni). `node tools/check/stack.mjs dziennik.txt` zamienia pozycje typu `main-XXXX.js:203:50373` na plik i linię w `src/` (np. `src/render/camera.ts:232`), mapy bierze z `dist/` albo ściąga przez `gh`
+- **Błędy WebGL namierzają się same:** po pierwszym błędzie WebGL gra przez 30 s sprawdza każde wywołanie karty graficznej (potem tylko granice przejść rysowania), więc gdy błąd się powtórzy, dziennik pokaże dokładne wywołanie z argumentami i stos — bez ponownego wchodzenia z `?gldebug=1`
+- Zgłoszony błąd `INVALID_VALUE` nie dał się odtworzyć w przeglądarce bez karty graficznej (uboga grafika, `?gldebug=1`: 0 błędów) — prawdopodobnie zależy od pełnej grafiki albo karty; przy następnym wystąpieniu dziennik już pokaże miejsce
+- Bot: bez zmian
 ## 0.54.8 — menu pauzy z podglądem gry, twórcy w zakładce Autorzy (2026-10-28)
 
 - **Menu pod Esc w trakcie gry wyraźnie różni się od menu głównego:** pod spodem widać wstrzymaną osadę (rysowaną na żywo — woda, ogień i niebo się ruszają, symulacja stoi), tło jest tylko lekko przyciemnione, bez iskier i herbu, wokół ekranu złota ramka, a pod nazwą gry napis „Gra wstrzymana” / „Game paused”. Menu główne (start, po wyjściu z gry) bez zmian — zasłania świat jak dotąd. W meczu przez sieć bez zmian (czas leci dalej)

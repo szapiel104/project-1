@@ -227,7 +227,9 @@ export class StrategyCamera {
   };
 
   private onDown = (e: PointerEvent): void => {
-    this.el.setPointerCapture(e.pointerId);
+    // przechwycenie wskaźnika (przeciąganie poza oknem): przeglądarka odmawia, gdy wskaźnik już nie jest wciśnięty
+    // (kliknięcie wysłane programowo, np. przez rozszerzenie, albo puszczony przycisk przy przełączaniu okien) — wtedy bez niego
+    try { this.el.setPointerCapture(e.pointerId); } catch { /* InvalidStateError: nic się nie dzieje, przeciąganie działa w oknie */ }
     this.pointers.set(e.pointerId, { x: e.clientX, y: e.clientY, button: e.button });
     this.dragged = false;
     this.pinch = 0;

@@ -42,7 +42,13 @@ export interface ErrReport {
 }
 
 declare const __BUILD__: string;
+declare const __VERSION__: string;
 const BUILD = typeof __BUILD__ === 'string' ? __BUILD__ : 'dev';
+const VERSION = typeof __VERSION__ === 'string' ? __VERSION__ : 'dev';
+/** Dodatkowe informacje do nagłówka skopiowanego dziennika (tryb gry, jakość, wątek…) — dopisuje je main.ts */
+const context = new Map<string, () => unknown>();
+/** Nazwa karty graficznej (pierwszy pilnowany renderer) */
+let gpuName = '';
 const KEY = 'p1.errlog';
 const MAX = 200;
 const t0 = performance.now();
@@ -68,7 +74,7 @@ function text(v: unknown): string {
 }
 function stackOf(v: unknown): string | undefined {
   const s = v instanceof Error ? v.stack : undefined;
-  return s ? s.split('\n').slice(0, 6).join('\n') : undefined;
+  return s ? s.split('\n').slice(0, 12).join('\n') : undefined;
 }
 
 /** Dopisuje wpis do dziennika (ten sam komunikat tylko zwiększa licznik) */
@@ -81,13 +87,16 @@ export function report(kind: ErrKind, level: ErrLevel, msg: string, stack?: stri
   if (old) { old.count++; old.last = secs(); return; }
   if (items.length >= MAX) return;
   const e: ErrEntry = { kind, level, msg, count: 1, first: secs(), last: secs() };
-  if (stack) e.stack = stack.slice(0, 1200);
+  if (stack) e.stack = stack.slice(0, 2400);
   items.push(e);
   byKey.set(key, e);
   save();
   busy = true;
   try { for (const f of listeners) f(); } catch { /* słuchacz nie może zepsuć dziennika */ } finally { busy = false; }
 }
+
+/** Informacja do nagłówka skopiowanego dziennika (liczona dopiero przy kopiowaniu) */
+export function setContext(name: string, value: () => unknown): void { context.set(name, value); }
 
 /** Komunikat biblioteki, który wiemy, że jest nieszkodliwy — nie trafia do dziennika */
 export function ignore(re: RegExp): void { ignored.push(re); }
@@ -138,7 +147,8 @@ export function install(): void {
       return;
     }
     const where = ev.filename ? ` (${ev.filename.split('/').pop()}:${ev.lineno}:${ev.colno})` : '';
-    report('js', 'error', `${ev.message || text(ev.error)}${where}`, stackOf(ev.error));
+    // bez obiektu błędu (np. błąd z innego okna) zostaje chociaż miejsce wywołania
+    report('js', 'error', `${ev.message || text(ev.error)}${where}`, stackOf(ev.error) ?? (ev.filename ? `    at ${ev.filename}:${ev.lineno}:${ev.colno}` : undefined));
   }, true);
   window.addEventListener('unhandledrejection', (ev) => report('promise', 'error', text(ev.reason), stackOf(ev.reason)));
 
@@ -155,11 +165,30 @@ export function install(): void {
   w.__errors = Object.assign(() => snapshot(), { clear, text: () => formatText() });
 }
 
-/** Dziennik jako zwykły tekst (do skopiowania i wklejenia w czacie) */
+/**
+ * Dziennik jako zwykły tekst — do skopiowania i wklejenia w czacie z Claude'em. Ma wszystko, czego trzeba do naprawy
+ * bez dopytywania: wersję gry (po niej tools/check/stack.mjs bierze mapy źródeł i tłumaczy stos na pliki w src/),
+ * przeglądarkę, kartę graficzną, ekran, stan gry i pełny stos wywołań każdego błędu.
+ */
 export function formatText(): string {
   const s = snapshot();
-  const lines = [`project-1 ${s.build} · ${s.page} · ${s.uptime}s · błędy ${s.errors}, ostrzeżenia ${s.warnings}`];
-  for (const e of s.items) lines.push(`[${e.level} ${e.kind}] ×${e.count} @${e.first}s ${e.msg}${e.stack ? '\n    ' + e.stack.split('\n').slice(1, 4).map((l) => l.trim()).join('\n    ') : ''}`);
+  const nav = typeof navigator !== 'undefined' ? navigator : undefined;
+  const ua = nav?.userAgent ?? '';
+  const browser = (/(Edg|OPR|Chrome|Firefox|Version)\/[\d.]+/.exec(ua)?.[0] ?? ua.slice(0, 60)).replace('Version', 'Safari');
+  const os = /Windows NT [\d.]+|Mac OS X [\d_]+|Linux|Android [\d.]+/.exec(ua)?.[0] ?? '?';
+  const lines = [
+    `project-1 ${VERSION} (build ${s.build}) · ${location.href}`,
+    `${s.uptime}s od otwarcia · błędy ${s.errors}, ostrzeżenia ${s.warnings}`,
+    `przeglądarka: ${browser} · ${os} · ekran ${screen.width}×${screen.height} @${devicePixelRatio}× · okno ${innerWidth}×${innerHeight} · rdzenie ${nav?.hardwareConcurrency ?? '?'}${gpuName ? ` · karta: ${gpuName}` : ''}`,
+  ];
+  const ctx: string[] = [];
+  for (const [k, f] of context) { try { const v = f(); if (v !== undefined && v !== '') ctx.push(`${k}: ${String(v)}`); } catch { /* informacja niedostępna */ } }
+  if (ctx.length) lines.push(ctx.join(' · '));
+  lines.push('');
+  for (const e of s.items) {
+    lines.push(`[${e.level} ${e.kind}] ×${e.count} @${e.first}s${e.last !== e.first ? `–${e.last}s` : ''} ${e.msg}`);
+    if (e.stack) for (const l of e.stack.split('\n')) if (/^\s*at |@/.test(l)) lines.push('    ' + l.trim());
+  }
   if (s.previous) lines.push(`--- poprzednie wejście (${s.previous.at}, ${s.previous.build}) ---`, ...s.previous.items.map((e) => `[${e.level} ${e.kind}] ×${e.count} ${e.msg}`));
   return lines.join('\n');
 }
@@ -173,6 +202,12 @@ export function watchRenderer(renderer: THREE.WebGLRenderer, name = 'gra'): void
   const gl = renderer.getContext();
   const canvas = renderer.domElement;
   renderer.debug.checkShaderErrors = true;
+  if (!gpuName) {
+    try {
+      const ext = gl.getExtension('WEBGL_debug_renderer_info');
+      gpuName = String((ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER)) ?? '');
+    } catch { /* bez nazwy karty */ }
+  }
   renderer.debug.onShaderError = (g, program, vs, fs): void => {
     const log = (sh: WebGLShader): string => (g.getShaderParameter(sh, g.COMPILE_STATUS) ? '' : (g.getShaderInfoLog(sh) ?? '').trim());
     const msg = [g.getProgramInfoLog(program)?.trim(), log(vs) && `VS: ${log(vs)}`, log(fs) && `FS: ${log(fs)}`].filter(Boolean).join(' | ');
@@ -188,12 +223,19 @@ export function watchRenderer(renderer: THREE.WebGLRenderer, name = 'gra'): void
   renderer.render = (scene, camera): void => { lastFrame = performance.now(); frames++; cam = camera; render(scene, camera); };
 
   const GL_NAMES: Record<number, string> = { 0x0500: 'INVALID_ENUM', 0x0501: 'INVALID_VALUE', 0x0502: 'INVALID_OPERATION', 0x0505: 'OUT_OF_MEMORY', 0x0506: 'INVALID_FRAMEBUFFER_OPERATION', 0x9242: 'CONTEXT_LOST_WEBGL' };
-  if (GL_DEBUG) traceGl(gl, name, GL_NAMES);
+  if (GL_DEBUG) traceGl(gl, name, GL_NAMES, GL_PARAM === 'all' ? 0 : 40000);
   const timer = window.setInterval(() => {
     if (!canvas.isConnected) { window.clearInterval(timer); return; }
     if (gl.isContextLost()) return;
     // gl.getError wymusza synchronizację z kartą, więc tylko co kilka sekund
-    for (let i = 0, e = gl.getError(); e && i < 4; i++, e = gl.getError()) report('webgl', 'error', `[${name}] błąd WebGL ${GL_NAMES[e] ?? '0x' + e.toString(16)}${GL_DEBUG ? '' : ' (skąd: otwórz grę z ?gldebug=1)'}`);
+    let glErr = false;
+    for (let i = 0, e = gl.getError(); e && i < 4; i++, e = gl.getError()) {
+      glErr = true;
+      report('webgl', 'error', `[${name}] błąd WebGL ${GL_NAMES[e] ?? '0x' + e.toString(16)} (gdzieś w ostatnich 3 s${traced.has(gl) ? '' : '; namierzanie włączyło się samo — gdy błąd się powtórzy, dziennik pokaże dokładne wywołanie i stos'})`);
+    }
+    // pierwszy błąd GL bez ?gldebug: od teraz każde wywołanie sprawdzane przez 30 s (potem tylko granice przejść), żeby
+    // następny taki sam błąd przyszedł już z miejscem w kodzie — bez proszenia o ponowne wejście z ?gldebug=1
+    if (glErr && !traced.has(gl)) traceGl(gl, name, GL_NAMES, 30000);
     const now = performance.now();
     const visible = document.visibilityState === 'visible' && canvas.offsetParent !== null;
     if (frames && visible && now - lastFrame > 5000) {
@@ -228,7 +270,12 @@ function argText(v: unknown, names: Map<number, string>): string {
   return String(v).slice(0, 40);
 }
 
-function traceGl(gl: WebGLRenderingContext, name: string, errNames: Record<number, string>): void {
+const traced = new WeakSet<object>();
+/** Sprawdzanie błędu po każdym wywołaniu GL przez `fullMs` (0 = zawsze), potem tylko na granicach przejść (glSection) */
+function traceGl(gl: WebGLRenderingContext, name: string, errNames: Record<number, string>, fullMs: number): void {
+  if (traced.has(gl)) return;
+  traced.add(gl);
+  glFull = true;
   const g = gl as unknown as Record<string, unknown>;
   const raw = gl.getError.bind(gl);
   glRaw = raw; glWho = name; glErrNames = errNames;
@@ -246,8 +293,8 @@ function traceGl(gl: WebGLRenderingContext, name: string, errNames: Record<numbe
       return r;
     };
   }
-  if (GL_PARAM !== 'all') setTimeout(() => { glFull = false; report('webgl', 'warn', `[${name}] ?gldebug: koniec sprawdzania każdego wywołania (40 s), dalej tylko granice przejść`); }, 40000);
-  report('webgl', 'warn', `[${name}] tryb ?gldebug=${GL_PARAM || '1'}: każde wywołanie WebGL sprawdzane${GL_PARAM === 'all' ? '' : ' przez 40 s'} (gra wolniejsza)`);
+  if (fullMs) setTimeout(() => { glFull = false; report('webgl', 'warn', `[${name}] namierzanie GL: koniec sprawdzania każdego wywołania (${fullMs / 1000} s), dalej tylko granice przejść`); }, fullMs);
+  report('webgl', 'warn', `[${name}] namierzanie GL${GL_DEBUG ? ` (?gldebug=${GL_PARAM || '1'})` : ' włączone samo po błędzie'}: każde wywołanie WebGL sprawdzane${fullMs ? ` przez ${fullMs / 1000} s` : ''} (gra chwilę wolniejsza)`);
 }
 
 let glPass = '';

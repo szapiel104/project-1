@@ -1,5 +1,5 @@
 import { loadInfo } from './ui/loadinfo';
-import { counts as errCounts, entries as errEntries, formatText as errText, onReport } from './debug/errlog';
+import { counts as errCounts, entries as errEntries, formatText as errText, onReport, setContext as errContext } from './debug/errlog';
 import { BANDIT_SAY, GUARD_SAY, SAY } from './data/barks';
 import { COLD, SEASON_DAYS, SEASON_NAME, shiftToSeason, weatherOf, yearPos, type Season } from './sim/weather';
 import { winterReadiness } from './sim/systems/economy';
@@ -2776,6 +2776,13 @@ const togglePerf = (): void => {
   renderer.gpuProfile = !perfBox.hidden;
 };
 fpsTag.addEventListener('click', togglePerf);
+// nagłówek skopiowanego dziennika błędów: w jakim stanie była gra (żeby naprawa nie wymagała dopytywania)
+errContext('ekran', () => (titleScreen ? 'tytułowy' : menu.isOpen() ? 'menu' : entering ? 'wczytywanie' : 'gra'));
+errContext('gra', () => (game ? `${net ? 'sieć' : game.players[ME]?.dev ? 'deweloperska' : 'z botami'} ${currentPreset}, tick ${game.tick}, ludzie ${game.units.length}, wojsko ${game.soldiers.length}, budynki ${game.buildings.length}` : ''));
+errContext('wątek symulacji', () => (simMode ? 'tak' : 'nie'));
+errContext('jakość', () => `${gfx.auto ? 'auto ' : ''}${renderer.quality} · ${renderer.resolution}`);
+errContext('FPS', () => perf.last.fps ?? '?');
+errContext('spacer/kopalnia', () => (renderer.walking ? 'spacer' : renderer.inMineWalk ? 'kopalnia' : ''));
 window.addEventListener('keydown', (e) => { if (e.key === 'F3') { e.preventDefault(); togglePerf(); } });
 
 // ---- panel dewelopera (F9): stawianie jednostek i wilków, scenki, czas — tylko w grze z botami w trybie dewelopera ----

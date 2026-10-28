@@ -126,7 +126,7 @@ export function createMinimap(host: MinimapHost): { update(g: GameState, me: num
     if (e.button === 2) { host.order(Math.floor(t.x), Math.floor(t.y)); return; }
     if (e.button !== 0) return;
     drag = true;
-    canvas.setPointerCapture(e.pointerId);
+    try { canvas.setPointerCapture(e.pointerId); } catch { /* wskaźnik już puszczony (kliknięcie programowe) — bez przechwycenia */ }
     host.centerOn(t.x, t.y);
   });
   canvas.addEventListener('pointermove', (e) => { if (!drag) return; const t = tileAt(e); if (t) host.centerOn(t.x, t.y); });
