@@ -5,7 +5,7 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 ## Płynność wczytywania i gry — po przeglądzie 26.10.2026 (Claude podpowiada stąd przy „co dalej”)
 - **Plan optymalizacji z 28.10.2026 (8 punktów, Michał: „zapisz 8 punktów”; kolejność wg zysku):**
   1. [x] (28.10.2026, 0.54.7 — profil pokazał, że najwięcej brało szukanie wrogiego chłopa przez żołnierzy i rozglądanie się chłopów: kubełki `sim/spatial.ts`, symulacja 4 na 4 szybsza o 30–37%, stan identyczny wg `tools/check/simprint.mjs`; pozostałe drobne z tej linijki — `workerSystem`, `storeCapacity`, `storeDoors`, `idleCount` — w profilu po kilka procent, zostają na później) Logika gospodarki bez przeglądania wszystkiego w kółko: szukanie pracownika (`workerSystem`, `g.units.find` przy każdym budynku), miejsce w magazynach (`storeCapacity`, `roomLeft`), zbiór drzwi magazynów (`storeDoors`), licznik bezczynnych co klatkę (`idleCount`). Wynik gry ten sam (test odcisku stanu)
-  2. [ ] Las w większych paczkach (BatchedMesh): ok. 1200 wywołań rysowania na klatkę + drugie tyle w cieniu → kilka razy mniej, bez zmiany wyglądu; pomiar w F3 przed i po
+  2. [—] Las w większych paczkach (BatchedMesh) — **nieaktualne (pomiar 28.10.2026, `tools/check/drawcalls.mjs`):** roślinność od 16.10 idzie wspólnymi pulami na rodzaj, cały las (pnie, korony, podszyt, krzewy) to ok. 30 wywołań na klatkę; cała klatka ok. 260 wywołań w obrazie + 22 w cieniu (525 w `info.calls` z odbiciem i kaskadami). Liczba „1200” była sprzed pul. Zapas FPS jest gdzie indziej: trójkąty (punkt 4), szukanie dróg (punkt 9), stan z wątku (punkt 3)
   3. [ ] Wątek symulacji odsyła tylko zmiany zamiast całego stanu po każdej porcji kroków (najpierw zmierzyć czas odbioru w F3 przy 4 na 4)
   4. [ ] Pnie drzew z daleka: ok. 3,2 mln trójkątów w kadrze — sprawdzić, czy daleka wersja pni działa (upraszczamy tylko z daleka)
   5. [ ] Mecz przez sieć w wątku symulacji (lockstep zostaje w wątku głównym, test zgodności stanu u dwóch graczy)
@@ -71,7 +71,7 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 ## Bitwa i klimat — propozycje z 28.10.2026 (Michał wybrał strzały i kruki, 0.64.11; reszta tutaj na później)
 - **Krew w trakcie walki:** krótki prysk przy trafieniu mieczem albo strzałą, ranny zostawia kilka kropel za sobą, idąc (warstwa `render/blood.ts`).
 - **Strzały wbite w żywych:** dziś strzały tkwią w ciałach poległych, w ziemi i w ścianach (`render/arrows.ts`); w żyjących nie, bo trzeba by je wiązać z ruchem postaci.
-- **Las w większych paczkach (BatchedMesh)** — następny w kolejce (Michał 28.10.2026: „a później ten las”); szczegóły w punkcie 2 planu optymalizacji na górze.
+- **Las w większych paczkach** — sprawdzone 28.10: niepotrzebne, las to już tylko ok. 30 wywołań (punkt 2 planu na górze).
 - **Szybsze szukanie dróg** (punkt 9 planu optymalizacji na górze).
 - Strach albo łaska, myśliwy, złodzieje nocą — opisane niżej w „Nowych pomysłach Claude'a”.
 
