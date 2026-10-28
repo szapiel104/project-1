@@ -74,3 +74,36 @@ describe('magowie bojowi', () => {
     expect(b.fire ?? 0).toBeLessThan(600 - 40 - 100);
   });
 });
+
+describe('wielki czar magów', () => {
+  const pack = (g: GameState, x: number, y: number): Soldier[] => [[0, 0], [1, 0], [0, 1], [1, 1]].map(([a, b]) => { const s = soldier(g, 1, 'spearman', x + a!, y + b!); s.stance = 2; return s; });
+
+  it('deszcz ognia: przy kupie wrogów rani i podpala wszystkich w kręgu, potem długie odliczanie', () => {
+    const { g, door } = field();
+    const [x, y] = door;
+    const m = soldier(g, 0, 'mageFire', x, y + 20); m.stance = 2;
+    const foes = pack(g, x, y + 25);
+    for (let i = 0; i < 25 && m.greatShot === undefined; i++) step(g, []);
+    expect(m.greatShot).toBeDefined();
+    expect((m.great ?? 0) - g.tick).toBeGreaterThan(200);
+    for (let i = 0; i < 12; i++) step(g, []);
+    for (const f of foes) expect(f.hp).toBeLessThan(UNITS[unitIndex('spearman')]!.hp);
+    expect(foes.filter((f) => f.burn || f.hp <= 0).length).toBeGreaterThanOrEqual(3);
+  });
+
+  it('lodowy krąg: spowalnia wszystkich w kręgu; pojedynczego wroga mag bije zwykłym czarem', () => {
+    const { g, door } = field();
+    const [x, y] = door;
+    const m = soldier(g, 0, 'mageWater', x, y + 20); m.stance = 2;
+    const foes = pack(g, x, y + 25);
+    for (let i = 0; i < 25 && m.greatShot === undefined; i++) step(g, []);
+    for (let i = 0; i < 12; i++) step(g, []);
+    expect(foes.filter((f) => (f.slow ?? 0) > g.tick + 80).length).toBeGreaterThanOrEqual(3);
+    const { g: g2, door: d2 } = field();
+    const m2 = soldier(g2, 0, 'mageWater', d2[0], d2[1] + 20); m2.stance = 2;
+    const one = soldier(g2, 1, 'spearman', d2[0], d2[1] + 25); one.stance = 2;
+    for (let i = 0; i < 40; i++) step(g2, []);
+    expect(m2.greatShot).toBeUndefined();
+    expect(one.hp).toBeLessThan(UNITS[unitIndex('spearman')]!.hp);
+  });
+});

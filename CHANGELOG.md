@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.63.0 — wielki czar magów: deszcz ognia i lodowy krąg (2026-10-28)
+
+- **Wielki czar** (`sim/systems/greatspell.ts`): gdy co najmniej trzech wrogów stoi w kupie (w kręgu ok. 1,5 pola wokół celu), mag sam rzuca wielki czar zamiast zwykłej kuli; potem 25 s odliczania. Rzucany z ziemi w ziemię — wrogów na wieżach i murach nie sięga
+- **Mag Płomienia — deszcz ognia:** mag wyrzuca w górę snop ognia, z nieba spada pięć dużych ognistych kul (jedna w środek, reszta wokół). Każdy wróg w kręgu traci zdrowie (pełny cios w środku, połowa na brzegu) i zaczyna płonąć
+- **Mag Źródła — lodowy krąg:** duża kula wody rozbija się w środku skupiska, z ziemi wyrastają pierścieniem kolce lodu, stoją chwilę i topnieją z parą. Wrogowie w kręgu idą przez 16 s o połowę wolniej i tracą trochę zdrowia; płonący sojusznicy w kręgu gasną
+- Pomoc („Jak grać” → Magowie bojowi) opisuje wielki czar po polsku i po angielsku
+- Bot: jego magowie rzucają wielki czar na tych samych zasadach (sami, bez rozkazu)
+- Testy: `tests/battle-mages.test.ts` — deszcz ognia rani i podpala kupę wrogów, lodowy krąg spowalnia wszystkich w kręgu, na pojedynczego wroga mag rzuca zwykły czar
+
 ## 0.62.0 — menu główne po lewej, jak w grach (2026-10-28)
 
 - **Lewa kolumna** zamiast paska na dole: herb, tytuł i opis gry, pod nimi pionowa lista pozycji — na górze „Kontynuuj” (albo „Wróć do gry” w pauzie), główna „Nowa gra” w czerwonej pieczęci ze złotą krawędzią, dalej gra przez sieć, ustawienia i „Jak grać”; w pauzie na dole po odstępie „Wyjdź do menu” i „Poddaj się” (czerwonawy)

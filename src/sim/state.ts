@@ -440,6 +440,12 @@ export interface Soldier {
   /** Płonie po ognistej strzale: ile jeszcze zdrowia zabierze ogień (po 1 co kilka ticków) i czyj to ogień */
   burn?: number;
   burnBy?: number;
+  /** Mag: od tego ticku znów może rzucić wielki czar (greatspell.ts) */
+  great?: number;
+  /** Mag: tick ostatniego wielkiego czaru i środek jego kręgu (dla obrazu) */
+  greatShot?: number;
+  greatX?: number;
+  greatY?: number;
 }
 
 /**
@@ -464,6 +470,10 @@ export interface Missile {
   burn?: number;
   /** Czar maga (rozprysk ognia, odrzut wody — spellEffect przy trafieniu) */
   magic?: boolean;
+  /** Wielki czar (greatspell.ts): deszcz ognia albo lodowy krąg w punkcie `gx`, `gy` */
+  great?: 'fire' | 'water';
+  gx?: number;
+  gy?: number;
 }
 
 /** Jeden zaplanowany marsz z kolejki rozkazów (Shift + prawy klik) albo punkt obchodu patrolu */

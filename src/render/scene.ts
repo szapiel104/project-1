@@ -64,6 +64,7 @@ import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { applyCrest, defaultCrest } from './banners';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, type GameState } from '../sim/state';
+import { GREAT_FLIGHT } from '../sim/systems/greatspell';
 import { fireArrow, peasantWeapon } from '../sim/systems/army';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
@@ -260,6 +261,8 @@ export class GameRenderer {
   private lastCd = new Map<number, number>();
   /** Ostatnia chwila strzału każdego strzelca (Soldier.shot), żeby strzała wyleciała raz, w chwili wypuszczenia */
   private lastShot = new Map<number, number>();
+  /** Mag: tick ostatniego wielkiego czaru, który obraz już pokazał */
+  private lastGreat = new Map<number, number>();
   /** Ile ciosów zadał żołnierz (do kombinacji mieczem: cięcie z góry, z lewej, z prawej, obrót) */
   private hits = new Map<number, number>();
   /** Trafienia: kiedy żołnierz ostatnio oberwał (odrzut do tyłu) i ile miał zdrowia */
@@ -3967,6 +3970,17 @@ export class GameRenderer {
           this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), aim, fireArrow(g, s) || (!foe && !victim && fireTarget.has(s.id)), hit);
           // puszczenie cięciwy (nagrania 0 A.D.) z miejsca łucznika, także z wieży
           this.playHere('bow', t.position.x, t.position.z, 1, t.position.y + 1);
+        }
+      }
+      // wielki czar (greatspell.ts): deszcz ognia albo lodowy krąg w miejscu zapisanym przez symulację
+      if (udef.magic && s.greatShot !== undefined && this.lastGreat.get(s.id) !== s.greatShot) {
+        const first = !this.lastGreat.has(s.id) && g.tick - s.greatShot > GREAT_FLIGHT;
+        this.lastGreat.set(s.id, s.greatShot);
+        if (!first && !this.calm && s.greatX !== undefined && s.greatY !== undefined) {
+          const gx = s.greatX / FP, gy = s.greatY / FP;
+          const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
+          this.spells.great(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.set(gx - width / 2, view.heightAt(gx, gy), gy - height / 2), udef.magic === 'fire', GREAT_FLIGHT / TICKS_PER_SECOND);
+          this.playHere('swing', t.position.x, t.position.z, 1, t.position.y + 1, udef.magic === 'fire' ? 0.5 : 1.1);
         }
       }
       if (fired) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);

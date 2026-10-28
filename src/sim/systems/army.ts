@@ -22,6 +22,7 @@ export const high = (g: GameState, s: { up?: boolean; px: number; py: number }):
 import { nearStandard, STANDARD_BONUS } from './standards';
 import type { UnitDef } from '../../data/units';
 import { heldTiles } from './emergencywood';
+import { castGreat, greatImpact, greatReady } from './greatspell';
 
 const BARRACKS = buildingIndex('barracks');
 const MAGE_HALLS = new Set([buildingIndex(MAGE_HALL.fire), buildingIndex(MAGE_HALL.water)]);
@@ -805,6 +806,7 @@ function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
     let keep = 0;
     for (const m of list) {
       if (m.at > g.tick) { list[keep++] = m; continue; }
+      if (m.great) { greatImpact(g, m); continue; }
       const k = g.players[m.by];
       if (m.wolf) {
         const w = g.wolves.find((x) => x.id === m.to);
@@ -1058,6 +1060,8 @@ export function armySystem(g: GameState): void {
           if (s.cd === 0) {
             // strzelcy nie strzelają równo jak na komendę: każdy naciąga łuk w swoim rytmie (kilka ticków rozrzutu)
             s.cd = def.cooldown + (range ? hash2(s.id, g.tick, 0xb0e) % 4 : 0);
+            // wrogowie w kupie, a wielki czar gotowy: mag rzuca deszcz ognia albo lodowy krąg zamiast zwykłej kuli
+            if (def.magic && greatReady(g, s, def, foe)) { castGreat(g, s, def, foe); s.run = 0; continue; }
             if (range) s.shot = g.tick;
             // strzała może chybić; chybiona spada w kłąb walki i może zranić swojego, który stoi tuż przy celu
             let hit: Soldier | undefined = foe;

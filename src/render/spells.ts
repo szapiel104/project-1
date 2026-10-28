@@ -16,8 +16,15 @@ import { SpellSmoke } from './spellsmoke';
  * Wydajność: wszystko na kilku wspólnych siatkach instancji (stała liczba wywołań rysowania, bez nowych obiektów
  * w trakcie gry), cząstki w stałej puli; bez czarów warstwa nic nie rysuje.
  */
-interface Shot { from: THREE.Vector3; to: THREE.Vector3; t: number; fire: boolean; dur: number; seed: number }
-interface Burst { at: THREE.Vector3; t: number; fire: boolean }
+/** `k` = wielkość (1 zwykła kula, więcej przy wielkim czarze); `t` < 0 = czeka (kolejne kule deszczu ognia), `ice` = lodowy krąg przy celu */
+interface Shot { from: THREE.Vector3; to: THREE.Vector3; t: number; fire: boolean; dur: number; seed: number; k: number; ice?: boolean }
+interface Burst { at: THREE.Vector3; t: number; fire: boolean; k: number }
+/** Lodowy krąg: kolce lodu wyrastają z ziemi pierścieniem, stoją chwilę i topnieją */
+interface IceField { at: THREE.Vector3; t: number }
+/** Kolców w lodowym kręgu */
+const ICE_SPIKES = 28;
+/** Lodowy krąg trwa tyle sekund */
+const ICE_LIFE = 2.6;
 /** Rodzaj cząstki: 0 iskra, 1 żar, 2 kropla, 3 dym (sadza), 4 para (czar wody) */
 type Kind = 0 | 1 | 2 | 3 | 4;
 interface Particle { p: THREE.Vector3; v: THREE.Vector3; life: number; max: number; size: number; kind: Kind; seed: number }
@@ -83,6 +90,7 @@ export class SpellLayer {
   private readonly ice: THREE.InstancedMesh;
   /** Miękkie plamy światła (zwrócone do kamery): ciepło płonącego, chłód przymrożonego */
   private readonly blob: THREE.InstancedMesh;
+  private fields: IceField[] = [];
   private frostAt: { p: THREE.Vector3; id: number }[] = [];
   private frostN = 0;
   /** Płonący po ognistej strzale albo kuli ognia: miękkie języki ognia (zwrócone do kamery), żar i dym */
@@ -149,9 +157,32 @@ export class SpellLayer {
   cast(from: THREE.Vector3, to: THREE.Vector3, fire: boolean): void {
     if (this.shots.length >= MAX) return;
     const dist = from.distanceTo(to);
-    this.shots.push({ from: from.clone(), to: to.clone(), t: 0, fire, dur: Math.min(0.62, 0.22 + dist * 0.05), seed: Math.random() * 100 });
+    this.shots.push({ from: from.clone(), to: to.clone(), t: 0, fire, dur: Math.min(0.62, 0.22 + dist * 0.05), seed: Math.random() * 100, k: 1 });
     // błysk w dłoni przy rzucie
     for (let i = 0; i < 6; i++) this.emit(from, this.jitter(0.6), 0.25, fire ? 0 : 2, fire ? 0.035 : 0.03);
+  }
+
+  /**
+   * Wielki czar (greatspell.ts): `from` = dłoń maga, `at` = środek kręgu na ziemi, `flight` = sekundy do uderzenia.
+   * Ogień: mag wyrzuca w górę snop ognia, a z nieba spada pięć dużych kul na krąg (jedna w środek, reszta wokół).
+   * Woda: duża kula leci prosto w środek i przy uderzeniu skuwa ziemię lodowym kręgiem.
+   */
+  great(from: THREE.Vector3, at: THREE.Vector3, fire: boolean, flight: number): void {
+    for (let i = 0; i < 14; i++) this.emit(from, new THREE.Vector3((this.rand() - 0.5) * 0.8, 2 + this.rand() * 2.5, (this.rand() - 0.5) * 0.8), 0.45, fire ? 0 : 2, 0.035);
+    if (!fire) {
+      this.shots.push({ from: from.clone(), to: at.clone().setY(at.y + 0.35), t: 0, fire, dur: Math.max(0.3, flight), seed: Math.random() * 100, k: 1.7, ice: true });
+      return;
+    }
+    const n = 5;
+    for (let i = 0; i < n; i++) {
+      const a = i * 2.4 + this.rand(), r = i === 0 ? 0 : 0.55 + this.rand() * 0.6;
+      const to = new THREE.Vector3(at.x + Math.cos(a) * r, at.y + 0.36, at.z + Math.sin(a) * r); // fala po ziemi rysuje się 0,36 niżej
+      const sky = to.clone().add(new THREE.Vector3(1.2 + this.rand() * 0.6, 7 + this.rand() * 1.5, 0.9));
+      const dur = 0.42;
+      // pierwsza kula w chwili uderzenia z symulacji, kolejne tuż po niej
+      const delay = Math.max(0, flight - dur) + i * 0.11;
+      this.shots.push({ from: sky, to, t: -delay / dur, fire, dur, seed: Math.random() * 100, k: i === 0 ? 1.9 : 1.45 });
+    }
   }
 
   /** Płomienie kul ognia w tej klatce (rysuje je wspólny system ognia sceny) */
@@ -170,7 +201,7 @@ export class SpellLayer {
   update(dt: number, time: number, cam?: THREE.Camera): void {
     if (cam) this.camQ.copy(cam.quaternion);
     // zatrzymany obraz (dt = 1): bez lecących czarów i cząstek
-    if (dt >= 1) { this.shots = []; this.bursts = []; this.parts = []; }
+    if (dt >= 1) { this.shots = []; this.bursts = []; this.parts = []; this.fields = []; }
     const step = Math.min(dt, 0.05);
     const next: Shot[] = [];
     for (const a of this.shots) {
@@ -179,25 +210,27 @@ export class SpellLayer {
       else next.push(a);
     }
     this.shots = next;
-    this.bursts = this.bursts.filter((b) => (b.t += step / (b.fire ? 0.55 : 0.5)) < 1);
+    this.bursts = this.bursts.filter((b) => (b.t += step / ((b.fire ? 0.55 : 0.5) * (0.6 + b.k * 0.4))) < 1);
+    this.fields = this.fields.filter((f) => (f.t += step / ICE_LIFE) < 1);
 
     let n = 0;
     this.flameN = 0;
     for (const a of this.shots) {
+      if (a.t < 0) continue; // kula deszczu ognia jeszcze nie spada
       // prosto od dłoni do celu, bez łuku
       this.p.lerpVectors(a.from, a.to, a.t);
       this.d.subVectors(a.to, a.from).normalize();
       this.q.setFromUnitVectors(UP, this.d);
       const pulse = 1 + Math.sin(time * 38 + a.seed) * 0.1 + Math.sin(time * 23 + a.seed * 2) * 0.06;
-      const big = a.fire ? 1 : 0.92;
+      const big = (a.fire ? 1 : 0.92) * a.k;
       // poświata rozciągnięta wzdłuż lotu (smuga), kula i jasne jądro
       this.putQ(this.halo, n, this.p, 0.2 * big * pulse, 0.2 * big * pulse, 0.42 * big, a.fire ? FIRE_HALO : WATER_HALO);
       this.putQ(this.glow, n, this.p, 0.12 * big * pulse, 0.12 * big * pulse, 0.17 * big, a.fire ? FIRE : WATER);
-      this.putQ(this.core, n, this.p, 0.065 * pulse, 0.065 * pulse, 0.08, a.fire ? FIRE_CORE : WATER_CORE);
+      this.putQ(this.core, n, this.p, 0.065 * pulse * a.k, 0.065 * pulse * a.k, 0.08 * a.k, a.fire ? FIRE_CORE : WATER_CORE);
       n++;
       // ogon: iskry i żar (ogień) albo krople i mgiełka (woda), wyrzucane do tyłu i lekko na boki
       const back = this.d.clone().multiplyScalar(-1.6);
-      const count = a.fire ? 5 : 4;
+      const count = Math.round((a.fire ? 5 : 4) * a.k);
       for (let i = 0; i < count; i++) {
         const v = back.clone().add(this.jitter(a.fire ? 1.4 : 1.1));
         this.emit(this.p.clone().addScaledVector(this.d, -this.rand() * 0.15), v, 0.18 + this.rand() * 0.25, a.fire ? (this.rand() < 0.6 ? 0 : 1) : 2, (a.fire ? 0.022 : 0.019) * (0.6 + this.rand() * 0.8));
@@ -215,11 +248,11 @@ export class SpellLayer {
     for (const b of this.bursts) {
       const k = 1 - b.t;
       const flashK = Math.max(0, 1 - b.t * 2.4); // błysk krótszy niż fala
-      if (flashK > 0) this.put(this.flash, f, b.at, (b.fire ? 0.17 : 0.15) + b.t * 0.32, this.c.copy(b.fire ? FIRE_CORE : WATER_CORE).multiplyScalar(flashK));
+      if (flashK > 0) this.put(this.flash, f, b.at, ((b.fire ? 0.17 : 0.15) + b.t * 0.32) * b.k, this.c.copy(b.fire ? FIRE_CORE : WATER_CORE).multiplyScalar(flashK));
       else this.put(this.flash, f, b.at, 0.0001, this.c.setRGB(0, 0, 0));
       // cel jest ok. 0,4 nad ziemią (pierś) — fala rozchodzi się tuż nad gruntem pod nim
       this.p.copy(b.at).setY(b.at.y - 0.36);
-      this.m.compose(this.p, this.qFlat, this.s.setScalar(0.25 + b.t * (b.fire ? 1.5 : 1.3)));
+      this.m.compose(this.p, this.qFlat, this.s.setScalar((0.25 + b.t * (b.fire ? 1.5 : 1.3)) * b.k));
       this.wave.setMatrixAt(f, this.m);
       this.wave.setColorAt(f, this.c.copy(b.fire ? FIRE : WATER).multiplyScalar(k * k));
       if (b.fire && b.t < 0.45 && this.flameN < 64) {
@@ -262,6 +295,35 @@ export class SpellLayer {
 
     // przymrożeni: drobne kryształki lodu wokół stóp (powoli krążą), szron w powietrzu i miękka chłodna poświata
     let ic = 0, bl = 0;
+    // lodowy krąg: kolce wyrastają od środka na zewnątrz (fala lodu), stoją i topnieją, nad nimi chłodna poświata i para
+    for (const fl of this.fields) {
+      const grow = Math.min(1, fl.t * 7), melt = 1 - Math.max(0, (fl.t - 0.6) / 0.4);
+      for (let j = 0; j < ICE_SPIKES && ic < MAX * 6; j++) {
+        const ring = j % 2, a = (j / ICE_SPIKES) * Math.PI * 2 + ring * 0.11;
+        const r = (0.45 + ring * 0.6) * Math.min(1, fl.t * 7 / (1 + ring * 0.5));
+        const h = (0.22 + ((j * 7) % 5) * 0.05) * grow * melt * (ring ? 0.8 : 1);
+        if (h <= 0.001) continue;
+        this.p.set(fl.at.x + Math.cos(a) * r, fl.at.y + h * 0.4, fl.at.z + Math.sin(a) * r);
+        // kolec odchyla się od środka kręgu
+        this.q.setFromAxisAngle(this.ax.set(-Math.sin(a), 0, Math.cos(a)), 0.35 + ring * 0.2);
+        this.m.compose(this.p, this.q, this.s.set(0.05 * melt + 0.01, h, 0.05 * melt + 0.01));
+        this.ice.setMatrixAt(ic, this.m);
+        this.ice.setColorAt(ic, this.c.setRGB(0.6, 0.86, 1).multiplyScalar(0.7 + melt * 0.3));
+        ic++;
+      }
+      if (bl < MAX * 2) {
+        this.p.copy(fl.at).setY(fl.at.y + 0.3);
+        this.m.compose(this.p, this.camQ, this.s.setScalar(2.4 * grow));
+        this.blob.setMatrixAt(bl, this.m);
+        this.blob.setColorAt(bl, this.c.setRGB(0.25, 0.55, 1).multiplyScalar(0.35 * melt));
+        bl++;
+      }
+      // topniejący lód paruje
+      if (fl.t > 0.55 && this.rand() < 0.25) {
+        const a = this.rand() * Math.PI * 2, r = 0.3 + this.rand() * 0.8;
+        this.emit(new THREE.Vector3(fl.at.x + Math.cos(a) * r, fl.at.y + 0.1, fl.at.z + Math.sin(a) * r), new THREE.Vector3(0, 0.25, 0), 1, 4, 0.05);
+      }
+    }
     for (let k = 0; k < this.frostN; k++) {
       const f = this.frostAt[k]!;
       for (let j = 0; j < 7; j++) {
@@ -327,20 +389,21 @@ export class SpellLayer {
 
   /** Trafienie: rozbłysk, fala po ziemi i snop iskier albo rozprysk kropel */
   private impact(a: Shot): void {
-    if (this.bursts.length < MAX) this.bursts.push({ at: a.to.clone(), t: 0, fire: a.fire });
-    const n = a.fire ? 26 : 30;
+    if (this.bursts.length < MAX) this.bursts.push({ at: a.to.clone(), t: 0, fire: a.fire, k: a.k });
+    if (a.ice && this.fields.length < 16) this.fields.push({ at: a.to.clone().setY(a.to.y - 0.35), t: 0 });
+    const n = Math.round((a.fire ? 26 : 30) * a.k);
     for (let i = 0; i < n; i++) {
-      const ang = this.rand() * Math.PI * 2, out = (a.fire ? 1.6 : 1.2) + this.rand() * 1.8;
+      const ang = this.rand() * Math.PI * 2, out = ((a.fire ? 1.6 : 1.2) + this.rand() * 1.8) * Math.sqrt(a.k);
       const up = a.fire ? 0.6 + this.rand() * 2 : 1.8 + this.rand() * 2.6;
       const v = new THREE.Vector3(Math.cos(ang) * out, up, Math.sin(ang) * out);
       this.emit(a.to, v, 0.35 + this.rand() * 0.45, a.fire ? (i % 3 ? 0 : 1) : 2, (a.fire ? 0.03 : 0.028) * (0.6 + this.rand() * 0.9));
     }
     // kłęby: ciemny dym po kuli ognia, jasna para po czarze wody — buchają na boki i w górę, potem się rozwiewają
-    const puffs = a.fire ? 8 : 6;
+    const puffs = Math.round((a.fire ? 8 : 6) * a.k);
     for (let i = 0; i < puffs; i++) {
-      const ang = (i / puffs) * Math.PI * 2 + this.rand() * 0.6, out = 0.25 + this.rand() * 0.35;
+      const ang = (i / puffs) * Math.PI * 2 + this.rand() * 0.6, out = (0.25 + this.rand() * 0.35) * a.k;
       this.emit(a.to.clone().add(this.jitter(0.2)), new THREE.Vector3(Math.cos(ang) * out, 0.35 + this.rand() * 0.45, Math.sin(ang) * out),
-        (a.fire ? 1.1 : 0.8) + this.rand() * 0.6, a.fire ? 3 : 4, (a.fire ? 0.075 : 0.065) + this.rand() * 0.04);
+        (a.fire ? 1.1 : 0.8) + this.rand() * 0.6, a.fire ? 3 : 4, ((a.fire ? 0.075 : 0.065) + this.rand() * 0.04) * Math.sqrt(a.k));
     }
   }
 
