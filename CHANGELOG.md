@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.57.1 — poprawka: pochodnia nie świeci nad gruzem (2026-10-28)
+
+- **Zburzony budynek nie ma już pochodni w powietrzu:** gruz i plac budowy nie zapalają pochodni (`torches.ts`), a rysowanie płomieni i pula świateł pomijają zburzone budynki. Znaczniki pochodni i latarni zapamiętane z dawnego modelu są sprawdzane, czy jeszcze do niego należą i są widoczne — po przebudowie modelu szukamy ich od nowa, zamiast świecić w miejscu odpiętej części
+- Test: gruz po zburzonym budynku nocą nie ma zapalonej pochodni
+- Bot: bez zmian
+
 ## 0.57.0 — ogień na budynku, osmalenie, ludzie odsuwają się od pożaru (2026-10-28)
 
 - **Ogień siedzi na budynku:** obrys pożaru liczony z działki (pól), a nie z modelu ze snopkami i gratami dookoła; płomienie liżą ściany i połacie dachu (zwężają się ku kalenicy), nad dachem tylko krótkie języki. Dużo słabsza jasność i więcej pomarańczu — w dzień nie ma już bladej, prześwietlonej plamy wylewającej się na podwórko

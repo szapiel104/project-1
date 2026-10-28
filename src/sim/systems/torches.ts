@@ -19,7 +19,8 @@ export function torchSystem(g: GameState): void {
   for (const u of g.units) if (u.phase === Phase.ToLight) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.path = []; }
   const dark = hour >= 20 || hour < 5.5;
   for (const b of g.buildings) {
-    if (b.door < 0) { b.lit = false; continue; }
+    // gruzy i place budowy nie mają pochodni: nie świeci nic, czego nie widać
+    if (b.door < 0 || b.ruined || b.build) { b.lit = false; continue; }
     b.lit = dark && (hour < 5.5 || hour >= torchHour(b.id));
   }
 }

@@ -2323,7 +2323,7 @@ export class GameRenderer {
     const lit = new Set<number>();
     // pochodnia na słupie płonie tylko po zmroku (także gdy cykl dnia jest wyłączony, a symulacja ma noc)
     const dark = this.night > 0.12;
-    if (dark) for (const b of g.buildings) if (b.lit) lit.add(b.id);
+    if (dark) for (const b of g.buildings) if (b.lit && !b.ruined && !b.build) lit.add(b.id);
     for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
     for (let i = 0; i < this.stickFlameN; i++) F.add(this.stickFlames[i]!, 0.24, 0.13, (i * 0.531) % 1, Math.max(0.35, glow));
     // koksowniki na murach i wieżach: płoną dniem i nocą (łucznicy maczają w nich strzały)
@@ -2340,15 +2340,17 @@ export class GameRenderer {
     this.spells.flames().forEach((v, i) => F.add(v, 0.2, 0.13, (i * 0.377) % 1, Math.max(0.5, glow)));
     this.handFlameN = 0;
     this.handFlameTime.value = this.time;
+    const dead = new Set<number>();
+    for (const b of g.buildings) if (b.ruined || b.build) dead.add(b.id);
     for (const [id, mesh] of this.buildingMeshes) {
       if ((mesh.position.x - f.x) ** 2 + (mesh.position.z - f.z) ** 2 > 110 * 110) continue;
+      // gruz po zburzonym budynku: żadnych pochodni, koszy ani latarni z dawnego modelu
+      if (dead.has(id) && !named(mesh, 'fire')?.visible) continue;
       const torchFlame = named(mesh, 'torchflame');
-      if (torchFlame && lit.has(id)) { torchFlame.getWorldPosition(w); w.y -= 0.12; F.add(w, 0.36, 0.2, (id * 0.137) % 1, glow); }
+      if (torchFlame && lit.has(id) && this.shownIn(mesh, torchFlame.parent ?? torchFlame)) { torchFlame.getWorldPosition(w); w.y -= 0.12; F.add(w, 0.36, 0.2, (id * 0.137) % 1, glow); }
       // pochodnie w bryle modelu (baszty bram, ściany zamku): po zmroku żywy ogień jak w pochodni chłopa, tylko gdy widoczne
       if (dark) for (const o of this.lightMarks(mesh)) {
-        let shown = true;
-        for (let p: THREE.Object3D | null = o.parent; p && p !== mesh; p = p.parent) if (!p.visible) { shown = false; break; }
-        if (!shown) continue;
+        if (!this.shownIn(mesh, o.parent ?? o)) continue;
         o.getWorldPosition(w);
         if (o.name === 'lightSpot') w.y -= 0.08;
         F.add(w, 0.22, 0.12, (o.id * 0.419) % 1, glow * 0.7);
@@ -3041,7 +3043,7 @@ export class GameRenderer {
     const on = this.night > 0.15;
     const flicker = this.calm ? 1 : 0.85 + Math.sin(this.time * 11) * 0.08 + Math.sin(this.time * 23.7) * 0.07;
     const lit = new Set<number>();
-    if (on) for (const b of g.buildings) if (b.lit) lit.add(b.id);
+    if (on) for (const b of g.buildings) if (b.lit && !b.ruined && !b.build) lit.add(b.id);
     for (const mesh of this.buildingMeshes.values()) {
       const torch = named(mesh, 'torch');
       if (!torch) continue;
@@ -3063,17 +3065,22 @@ export class GameRenderer {
     if (on && this.frameNo++ % 6 === 0) {
       const f = this.focusPoint;
       const spots: { key: string; v: THREE.Vector3; d: number; k: number }[] = [];
+      // gruzy i place budowy nie świecą (pochodnia zburzonego budynku nie może wisieć w powietrzu)
+      const dead = new Set<number>();
+      for (const b of g.buildings) if (b.ruined || b.build) dead.add(b.id);
       for (const [id, mesh] of this.buildingMeshes) {
         const torch = named(mesh, 'torch');
-        if (!torch || !lit.has(id)) continue;
+        if (!torch || !lit.has(id) || dead.has(id) || !this.shownIn(mesh, torch.parent ?? torch)) continue;
         const v = torch.getWorldPosition(new THREE.Vector3());
         v.y += 1.25;
         spots.push({ key: 'b' + id, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2, k: 1 });
       }
       // pochodnie na bramach i w zamku (w bryle modelu) świecą nocą lekko, słabiej niż pochodnia na słupie
       for (const [id, mesh] of this.buildingMeshes) {
+        if (dead.has(id)) continue;
         const marks = this.lightMarks(mesh);
         for (let k = 0; k < marks.length; k++) {
+          if (!this.shownIn(mesh, marks[k]!.parent ?? marks[k]!)) continue;
           const v = marks[k]!.getWorldPosition(new THREE.Vector3());
           spots.push({ key: 'm' + id + ':' + k, v, d: (v.x - f.x) ** 2 + (v.z - f.z) ** 2 + 1, k: 0.4 });
         }
@@ -3153,8 +3160,16 @@ export class GameRenderer {
   private lightMarkCache = new WeakMap<THREE.Object3D, THREE.Object3D[]>();
   private lightMarks(mesh: THREE.Object3D): THREE.Object3D[] {
     let l = this.lightMarkCache.get(mesh);
+    // model po zburzeniu albo przebudowie odpina stare części: zapamiętane znaczniki, które już do niego nie należą, szukamy od nowa
+    if (l && l.length && !this.shownIn(mesh, l[0]!, true)) l = undefined;
     if (!l) { l = []; mesh.traverse((o) => { if (o.name === 'torchFlame' || o.name === 'lightSpot') l!.push(o); }); this.lightMarkCache.set(mesh, l); }
     return l;
+  }
+  /** Znacznik (pochodnia, latarnia) naprawdę jest w modelu i jest widoczny — a nie wisi po zburzonej części budynku */
+  private shownIn(mesh: THREE.Object3D, o: THREE.Object3D, attachedOnly = false): boolean {
+    let p: THREE.Object3D | null = o;
+    for (; p && p !== mesh; p = p.parent) if (!attachedOnly && !p.visible) return false;
+    return p === mesh && (attachedOnly || mesh.visible);
   }
 
 
