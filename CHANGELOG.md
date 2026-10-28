@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.55.2 — poprawka: gra stawała (0 FPS) po błędzie WebGL (2026-10-28)
+
+- Wprowadzone w 0.54.9 samoczynne namierzanie błędów WebGL po pierwszym błędzie sprawdzało błąd po **każdym** wywołaniu karty graficznej przez 30 s. Każde takie sprawdzenie czeka, aż karta skończy pracę, więc obraz praktycznie stawał (0 FPS). Wycofane: dokładne miejsce błędu WebGL tylko na życzenie, z `?gldebug=1` (jak przed 0.54.9). Reszta rozbudowanego dziennika zostaje
+- Bot: bez zmian
 ## 0.55.1 — gruzowiska bez dymu, porzucone ruiny i gruz znikają po 5 minutach (2026-10-28)
 
 - **Gruzowisko po prostu leży:** kurz nad ruiną i placem budowy unosi się tylko wtedy, gdy ktoś przy nich pracuje (odbudowa albo pokazowa budowa) — wcześniej porzucona ruina dymiła w kółko

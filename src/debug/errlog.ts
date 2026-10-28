@@ -228,14 +228,9 @@ export function watchRenderer(renderer: THREE.WebGLRenderer, name = 'gra'): void
     if (!canvas.isConnected) { window.clearInterval(timer); return; }
     if (gl.isContextLost()) return;
     // gl.getError wymusza synchronizację z kartą, więc tylko co kilka sekund
-    let glErr = false;
-    for (let i = 0, e = gl.getError(); e && i < 4; i++, e = gl.getError()) {
-      glErr = true;
-      report('webgl', 'error', `[${name}] błąd WebGL ${GL_NAMES[e] ?? '0x' + e.toString(16)} (gdzieś w ostatnich 3 s${traced.has(gl) ? '' : '; namierzanie włączyło się samo — gdy błąd się powtórzy, dziennik pokaże dokładne wywołanie i stos'})`);
-    }
-    // pierwszy błąd GL bez ?gldebug: od teraz każde wywołanie sprawdzane przez 30 s (potem tylko granice przejść), żeby
-    // następny taki sam błąd przyszedł już z miejscem w kodzie — bez proszenia o ponowne wejście z ?gldebug=1
-    if (glErr && !traced.has(gl)) traceGl(gl, name, GL_NAMES, 30000);
+    // bez samoczynnego namierzania: sprawdzanie błędu po każdym wywołaniu GL zatrzymuje kartę i gra stawała (0 FPS) —
+    // dokładne miejsce tylko na życzenie, z ?gldebug=1
+    for (let i = 0, e = gl.getError(); e && i < 4; i++, e = gl.getError()) report('webgl', 'error', `[${name}] błąd WebGL ${GL_NAMES[e] ?? '0x' + e.toString(16)} (gdzieś w ostatnich 3 s${GL_DEBUG ? '' : '; dokładne miejsce: otwórz grę z ?gldebug=1 i skopiuj dziennik'})`);
     const now = performance.now();
     const visible = document.visibilityState === 'visible' && canvas.offsetParent !== null;
     if (frames && visible && now - lastFrame > 5000) {
