@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.60.5 — tempo gry najwyżej 3× (2026-10-28)
+
+- **Zdjęte tempo 5×:** przyciski + i − przechodzą tylko przez pauzę, 1×, 2× i 3×; tempo na starcie z ustawień też najwyżej 3×
+- Bot: bez zmian
+
 ## 0.60.5 — jedna deska budulca wszędzie, większy pasek wczytywania (2026-10-28)
 
 - **Jedna deska budulca** (Michał: „taka sama deska, którą nosi wieśniak, leży w magazynie, leci na budowę”): `render/plank.ts` — 0,5 × 0,07, grubość 0,025. Ta sama w wiązce na ramieniu (teraz trzy deski jedna na drugiej), w stosie w magazynie, w stosach pod magazynami, na placu budowy i odbudowy oraz w gruzie (dotąd w gruzie i przy budowie były grube, szerokie deski). Deski, z których zbudowane są same budynki, zostają bez zmian

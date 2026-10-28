@@ -367,7 +367,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         [tx('Obrót i kąt kamery', 'Rotate and tilt camera'), tx('Q / E, przeciąganie prawym przyciskiem (albo Ctrl + lewy); T / G albo PageUp / PageDown', 'Q / E, drag with the right button (or Ctrl + left); T / G or PageUp / PageDown')],
         [tx('Zbliżenie', 'Zoom'), tx('kółko myszy', 'mouse wheel')],
         [tx('Budowa', 'Build'), tx('karta budynku → klik na mapie; R obraca; prawy przycisk albo Esc anuluje', 'building card → click on the map; R rotates; right-click or Esc cancels')],
-        [tx('Tempo', 'Game speed'), tx('+ i − (pauza, 1×, 2×, 3×, 5×)', '+ and − (pause, 1×, 2×, 3×, 5×)')],
+        [tx('Tempo', 'Game speed'), tx('+ i − (pauza, 1×, 2×, 3×)', '+ and − (pause, 1×, 2×, 3×)')],
         [tx('Wojsko', 'Troops'), tx('lewy = zaznacz, prawy = rozkaz, prawy z przeciąganiem = linia frontu', 'left = select, right = order, right-drag = battle line')],
         [tx('Grupy wojska', 'Troop groups'), tx('Shift + cyfra zapisuje, cyfra wybiera, dwa razy = pokaż', 'Shift + number saves, number selects, twice = centre on it')],
         [tx('Oczami chłopa', 'Walk as a peasant'), tx('F przy zaznaczonym; w środku: W A S D, mysz, Shift = bieg, Spacja = skok, F = pochodnia, Esc = wyjście', 'F with someone selected; then W A S D, mouse, Shift = run, Space = jump, F = torch, Esc = exit')],

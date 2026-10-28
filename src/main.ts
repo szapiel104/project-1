@@ -767,7 +767,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
     speed = 1; acc = 0;
   } else if (!loaded) {
     // nowa gra: tempo na starcie z ustawień (Rozgrywka)
-    speed = gfx.startSpeed ?? 1;
+    speed = Math.min(3, gfx.startSpeed ?? 1); // najwyżej 3×
     hud.setSpeed(speed);
   }
   currentPreset = preset;

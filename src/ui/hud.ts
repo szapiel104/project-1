@@ -262,7 +262,8 @@ function icon(id: string): HTMLElement {
   return span;
 }
 
-const SPEEDS = [0, 1, 2, 3, 5];
+// najwyżej 3× (Michał 28.10.2026: 5× zdjęte)
+const SPEEDS = [0, 1, 2, 3];
 
 /** Portret włócznika: twarz pod kapalinem, tunika w barwie drużyny, grot włóczni */
 const PORTRAIT = `<svg viewBox="0 0 32 32" width="34" height="34" aria-hidden="true">
