@@ -19,6 +19,8 @@ export interface SaveData {
   gen?: number;
   preset: MapPresetId;
   tick: number;
+  /** Przesunięcie pory roku (menu dewelopera); brak w starych zapisach — wtedy pora z kalendarza */
+  seasonShift?: number;
   rng: number;
   nextId: number;
   cut: number[];
@@ -56,7 +58,7 @@ function shapeOk(s: string): boolean {
 /** Zapis gry jako zwykłe dane (JSON). Mapy nie zapisujemy: odtwarza się z ziarna. */
 export function serialize(g: GameState, preset: MapPresetId): SaveData {
   return {
-    v: SAVE_VERSION, shape: shape(), seed: g.map.seed, gen: g.map.gen, preset, tick: g.tick, rng: g.rng.state, nextId: g.nextId, cut: [...g.cut], wear: [...g.wear].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
+    v: SAVE_VERSION, shape: shape(), seed: g.map.seed, gen: g.map.gen, preset, tick: g.tick, ...(g.seasonShift ? { seasonShift: g.seasonShift } : {}), rng: g.rng.state, nextId: g.nextId, cut: [...g.cut], wear: [...g.wear].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roads: [...g.roads].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roadPlan: [...g.roadPlan].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
     roadOwner: [...g.roadOwner].flatMap((n, i) => (n ? [[i, n] as [number, number]] : [])),
@@ -85,7 +87,7 @@ export function deserialize(d: SaveData): GameState | null {
     const map = generateMap(d.seed, d.preset, d.gen ?? 1);
     const size = map.width * map.height;
     const g: GameState = {
-      tick: d.tick, map, rng: new Rng(d.rng, true), nextId: d.nextId,
+      tick: d.tick, ...(Number.isFinite(d.seasonShift) && d.seasonShift ? { seasonShift: d.seasonShift } : {}), map, rng: new Rng(d.rng, true), nextId: d.nextId,
       players: d.players.map((p) => {
         const res = new Int32Array(RESOURCES.length); res.set(p.res.slice(0, RESOURCES.length));
         // dawna osobna ruda z kopalni (17.10) wchodzi do waluty — ruda to teraz pieniądz gry

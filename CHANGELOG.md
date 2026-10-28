@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.61.11 — pora roku z menu dewelopera zostaje po wczytaniu (2026-10-28)
+
+- **Zgłoszenie:** po wyjściu z gry z zimą i wczytaniu zapisu zimy nie było. Pora roku ustawiona w menu dewelopera (`seasonShift`) nie trafiała do zapisu, więc po wczytaniu gra wracała do pory z kalendarza. Teraz jest zapisywana i wczytywana (`sim/save.ts`); stare zapisy bez niej działają jak dotąd
+- Bot: bez zmian
+
 ## 0.61.10 — rudera narożna w kształcie L, 6 łóżek (2026-10-28)
 
 - **Rudera narożna** (2×2, 17 drewna, 6 łóżek — między ruderą a chatą, `tools/models/shackl.py`): buda z krzywych desek w kształcie litery L — długie skrzydło pod tyłem działki i krótsze z lewej, na przód; w kącie między nimi mały udeptany podwórzec, z niego wejście zasłonięte skórą. Dwa płaskie dachy z desek, kamienie na deskach, szczyty z desek. W środku ciemne klepisko, skrzynka, pieniek, garnek, słoma
