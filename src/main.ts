@@ -720,6 +720,21 @@ function crestList(): (number | null)[] {
 // konto wczytuje się chwilę po starcie gry, a herb można zmienić w trakcie: flagi na mapie idą za kontem od razu
 onAccount(() => { if (game) renderer.setCrests(crestList()); });
 
+/** Budowa pierwszego świata przy wczytywaniu strony (etapami); undefined = jeszcze nie ruszyła */
+let bootWorld: Promise<boolean> | null | undefined;
+let bootStages = 0;
+let bootProgress: ((stage: number) => void) | null = null;
+/**
+ * Dla boot.ts: czeka, aż teren pierwszego świata się zbuduje (etapami, ok. 20 kroków). `onStage(n)` po każdym etapie.
+ * Gdy budowa się nie uda, świat buduje się jeszcze raz od razu (jak dawniej), żeby gra na pewno wstała.
+ */
+export async function worldReady(onStage?: (stage: number) => void): Promise<void> {
+  bootProgress = onStage ?? null;
+  onStage?.(bootStages);
+  try { if (bootWorld) await bootWorld; }
+  catch (e) { console.error(e); renderer.setState(game, MAP_PRESETS[currentPreset].waterLevel, MAP_PRESETS[currentPreset].rim, ME); }
+  finally { bootProgress = null; bootWorld = null; }
+}
 /** `fresh` = nowa, jeszcze nieruszona gra policzona wcześniej z tymi samymi ustawieniami (mapa z podglądu „Nowej gry”) */
 function start(seedText: string, preset: MapPresetId, loaded?: GameState, level = 2, dev = false, online?: OnlineStart, instant = true, walls: DevWalls = URL_WALLS, fresh?: GameState): void {
   tierSeen = -1;
@@ -754,7 +769,13 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   currentSeedText = seedText;
   pending = [];
   renderer.setCrests(crestList());
-  renderer.setState(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME);
+  // tryb testowy (?test=1) jak dawniej, od razu: pomocniki __test i narzędzia sprawdzające zakładają gotowy świat po imporcie
+  if (bootWorld === undefined && SANDBOX) bootWorld = null;
+  if (bootWorld === undefined) {
+    // pierwszy świat przy wczytywaniu strony: teren etapami z przerwą na klatkę (pasek wczytywania idzie dalej, strona nie
+    // staje na ok. 2 s); boot.ts czeka na worldReady() przed rozgrzewką grafiki. Każdy następny start — od razu, jak dawniej
+    bootWorld = renderer.setStateAsync(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME, () => { bootStages++; bootProgress?.(bootStages); return pauseFrame(); });
+  } else renderer.setState(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME);
   hud.setSeed(seedText, preset);
   pick(null);
   selectedUnit = 0;
@@ -2078,7 +2099,12 @@ const finished = (g: GameState | null): boolean => {
 const restored = finished(loadedGame) ? null : loadedGame;
 if (loadedGame && !restored) { try { localStorage.removeItem(SAVE_KEY); } catch { /* nic */ } }
 const T1 = performance.now();
-if (saved && restored) { start(saved.seedText, saved.data.preset, restored); applyUi(saved.ui); }
+if (saved && restored) {
+  start(saved.seedText, saved.data.preset, restored);
+  // kamera z zapisu dopiero na gotowym terenie (budowa etapami ustawia granice kamery i widok na końcu)
+  const ui = saved.ui;
+  if (bootWorld) void bootWorld.then(() => applyUi(ui), () => applyUi(ui)); else applyUi(ui);
+}
 else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1', undefined, 1, SANDBOX && new URLSearchParams(location.search).has('dev'));
 mark.push(['start świata', Math.round(performance.now() - T1)]);
 console.info('[main]', mark.map(([a, b]) => `${a} ${b} ms`).join(' | '));

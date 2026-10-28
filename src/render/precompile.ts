@@ -45,6 +45,42 @@ export class Precompiler {
     patchAdd();
   }
 
+  /**
+   * Shadery cienia nowego obiektu: three.js kompiluje je dopiero przy pierwszym rzucie cienia, w środku rysowania mapy
+   * cieni — i strona wtedy staje. Tu zlecamy je razem ze zwykłymi (kompilacja w tle karty), na bliźniakach materiałów
+   * cienia rysowanych z tymi samymi ustawieniami co w mapie cieni (cel: mapa cieni słońca). Zwraca bliźniaki, żeby obiekt
+   * czekał w ukryciu także na nie. Obiekt bez rzucania cienia, mapa cieni jeszcze nie narysowana — nic nie robi.
+   */
+  private compileShadow(o: THREE.Object3D): THREE.Material[] {
+    const r = this.renderer;
+    if (!r.shadowMap.enabled) return [];
+    let sun: THREE.DirectionalLight | undefined;
+    this.scene.traverseVisible((x) => { if (!sun && (x as THREE.DirectionalLight).isDirectionalLight && x.castShadow) sun = x as THREE.DirectionalLight; });
+    const target = sun?.shadow.map as THREE.WebGLRenderTarget | null | undefined;
+    if (!sun || !target) return [];
+    // podmiana materiałów na bliźniaki cienia tylko na czas zlecenia kompilacji (synchronicznie, bez rysowania)
+    const swaps: [THREE.Mesh, THREE.Material | THREE.Material[]][] = [];
+    const out = new Set<THREE.Material>();
+    o.traverseVisible((x) => {
+      const mesh = x as THREE.Mesh;
+      if (!mesh.isMesh || !mesh.castShadow || !mesh.material) return;
+      swaps.push([mesh, mesh.material]);
+      mesh.material = Array.isArray(mesh.material) ? mesh.material.map((m) => depthTwin(m, r.shadowMap.type)) : depthTwin(mesh.material, r.shadowMap.type);
+      for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) out.add(m);
+    });
+    if (!swaps.length) return [];
+    const prev = r.getRenderTarget();
+    try {
+      r.setRenderTarget(target);
+      r.compile(o, sun.shadow.camera, this.scene);
+    } catch { /* bez kompilacji zawczasu cień skompiluje się przy rysowaniu, jak dawniej */ }
+    finally {
+      r.setRenderTarget(prev);
+      for (const [mesh, mat] of swaps) mesh.material = mat;
+    }
+    return [...out];
+  }
+
   /** Po pełnej rozgrzewce: wszystko w scenie skompilowane, lista od zera; od teraz pilnujemy nowych obiektów */
   start(): void {
     this.pending.clear();
@@ -109,7 +145,7 @@ export class Precompiler {
         // obiekt chwilowo schowany (np. plac budowy w fazie wykopu): na czas zlecenia widoczny, żeby shadery były gotowe, zanim się pokaże
         const vis = o.visible;
         o.visible = true;
-        e.mats = [...(this.renderer.compile(o, camera, this.scene) as Set<THREE.Material>)];
+        e.mats = [...(this.renderer.compile(o, camera, this.scene) as Set<THREE.Material>), ...this.compileShadow(o)];
         o.visible = vis;
         if (this.ready(e.mats, false)) { this.pending.delete(o); this.done.add(o); continue; }
       }
@@ -120,6 +156,35 @@ export class Precompiler {
 }
 
 const noop = (): void => undefined;
+
+/** Bliźniaki materiałów cienia: dla jednego materiału i rodzaju cienia zawsze ten sam (program kompiluje się raz) */
+const twins = new WeakMap<THREE.Material, Map<number, THREE.MeshDepthMaterial>>();
+const SHADOW_SIDE: Record<number, THREE.Side> = { [THREE.FrontSide]: THREE.BackSide, [THREE.BackSide]: THREE.FrontSide, [THREE.DoubleSide]: THREE.DoubleSide };
+
+/**
+ * Materiał, którym three.js narysuje ten materiał w mapie cieni (kopia logiki `getDepthMaterial` z WebGLShadowMap):
+ * te same ustawienia dają ten sam program karty, więc skompilowany tu shader cienia three.js weźmie gotowy.
+ */
+function depthTwin(m: THREE.Material, shadowType: THREE.ShadowMapType): THREE.MeshDepthMaterial {
+  let byType = twins.get(m);
+  if (!byType) { byType = new Map(); twins.set(m, byType); }
+  let t = byType.get(shadowType);
+  if (!t) { t = new THREE.MeshDepthMaterial(); byType.set(shadowType, t); }
+  const src = m as THREE.Material & { map?: THREE.Texture | null; alphaMap?: THREE.Texture | null; displacementMap?: THREE.Texture | null; displacementScale?: number; displacementBias?: number; wireframe?: boolean; wireframeLinewidth?: number; linewidth?: number };
+  t.visible = m.visible;
+  t.wireframe = !!src.wireframe;
+  t.side = m.shadowSide !== null ? m.shadowSide : shadowType === THREE.VSMShadowMap ? m.side : SHADOW_SIDE[m.side]!;
+  t.alphaMap = src.alphaMap ?? null;
+  t.alphaTest = m.alphaToCoverage ? 0.5 : m.alphaTest;
+  t.map = src.map ?? null;
+  t.clipShadows = m.clipShadows;
+  t.clippingPlanes = m.clippingPlanes;
+  t.clipIntersection = m.clipIntersection;
+  t.displacementMap = src.displacementMap ?? null;
+  t.displacementScale = src.displacementScale ?? 1;
+  t.displacementBias = src.displacementBias ?? 0;
+  return t;
+}
 
 function materialsOf(root: THREE.Object3D): THREE.Material[] {
   const out = new Set<THREE.Material>();

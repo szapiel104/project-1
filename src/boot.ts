@@ -126,9 +126,14 @@ async function load(): Promise<void> {
   done++;
   // miniatury budynków z poprzedniej wizyty (tej samej wersji gry): menu nie rysuje ich od nowa
   await import('./render/thumbcache').then((m) => m.loadThumbs()).catch(() => undefined);
-  info.step(tx('Świat i osada', 'World and settlement'), tx('teren, rzeki, lasy, budynki i mieszkańcy z zapisu — przy tym kroku licznik może na chwilę stanąć, to normalne', 'terrain, rivers, forests, buildings and villagers from the save — the timer may pause for a moment here, that is normal'));
+  info.step(tx('Świat i osada', 'World and settlement'), tx('teren, rzeki, lasy, budynki i mieszkańcy z zapisu — teren buduje się etapami', 'terrain, rivers, forests, buildings and villagers from the save — the terrain is built in stages'));
   await step(tx('Budowanie świata i osady…', 'Building the world and the settlement…'));
   const game = await import('./main');
+  // teren pierwszego świata buduje się etapami (ok. 20 kroków z przerwą na klatkę) — pasek i licznik idą, strona nie staje
+  await game.worldReady((n) => {
+    info.detail(`${tx('teren', 'terrain')}: ${tx('etap', 'stage')} ${n}`);
+    if (count) count.textContent = `${done} / ${total} · ${tx('teren', 'terrain')} ${n}`;
+  });
   info.step(tx('Grafika', 'Graphics'), tx('kompilacja shaderów wszystkich budynków — licznik może na chwilę stanąć', 'compiling shaders for every building — the timer may pause for a moment'));
   await step(tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
   // shadery kompiluje karta w tle, modele próbne budują się partiami — pasek idzie, strona nie zamarza

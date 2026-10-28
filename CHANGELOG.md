@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.55.0 — wczytywanie bez zastoju przy budowie świata, cienie nowych budynków bez przycięcia (2026-10-28)
+
+- **„Budowanie świata i osady” etapami:** przy wejściu na stronę teren pierwszego świata (z zapisu albo nowy) buduje się w ok. 20–25 krokach z przerwą na klatkę, a nie jednym ciągiem (dotąd strona stała ok. 2 s, a pasek ani licznik się nie ruszały). Pod paskiem widać numer etapu terenu. Najdłuższy etap to ok. 0,25 s (pomiar w przeglądarce bez karty graficznej). Kamera z zapisu ustawia się po zbudowaniu terenu, jak dawniej. Tryb testowy `?test=1` buduje świat od razu, jak dotąd (pomocniki `__test` zakładają gotowy świat)
+- **Cień nowego rodzaju obiektu bez przycięcia:** gdy w grze pojawia się coś nowego (pierwsza wieża, brama, plac budowy), gra kompilowała zawczasu tylko zwykłe shadery; shader cienia three.js kompilował przy pierwszym rzucie cienia, w środku rysowania, i obraz stawał na chwilę. Teraz `precompile.ts` zleca karcie także shadery cienia (na „bliźniakach” materiałów cienia ustawionych dokładnie jak w three.js) i obiekt czeka w ukryciu, aż będą gotowe. Sprawdzone w przeglądarce bez okna: przy pierwszym rysowaniu cienia nie dochodzi już żaden nowy program (zwykły materiał, z przezroczystością i przycinany płaszczyzną)
+- Bot: bez zmian
 ## 0.54.10 — większa kamienna brama, sztywne wejście budynku, stawianie bez przycinek (2026-10-28)
 
 - **Kamienna brama dwa razy większa:** przejazd na całą szerokość pola (1,0 zamiast 0,56) i dwa razy wyższy łuk, wyższa korona i baszty (smuklejsze, stoją na skraju sąsiednich przęseł muru), więcej klińców w łuku, wrota z trzema ryglami. Pole w symulacji bez zmian (dalej 1 pole w murze)

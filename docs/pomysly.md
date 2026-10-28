@@ -9,8 +9,8 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
   3. [ ] Wątek symulacji odsyła tylko zmiany zamiast całego stanu po każdej porcji kroków (najpierw zmierzyć czas odbioru w F3 przy 4 na 4)
   4. [ ] Pnie drzew z daleka: ok. 3,2 mln trójkątów w kadrze — sprawdzić, czy daleka wersja pni działa (upraszczamy tylko z daleka)
   5. [ ] Mecz przez sieć w wątku symulacji (lockstep zostaje w wątku głównym, test zgodności stanu u dwóch graczy)
-  6. [ ] Wczytywanie: krok „Budowanie świata i osady” (ok. 2 s jednym ciągiem) etapami z paskiem
-  7. [ ] Shader cienia nowego rodzaju modelu kompilowany zawczasu (dziś krótkie przycięcie przy pierwszym rzucie cienia)
+  6. [x] (28.10.2026, 0.55.0) Wczytywanie: krok „Budowanie świata i osady” (ok. 2 s jednym ciągiem) etapami z paskiem
+  7. [x] (28.10.2026, 0.55.0) Shader cienia nowego rodzaju modelu kompilowany zawczasu (dziś krótkie przycięcie przy pierwszym rzucie cienia)
   9. [ ] Szukanie dróg (`findPath`/`flood`) to teraz ok. 1/4 czasu symulacji: wołają je armia (ok. 40%), praca chłopów (25%), sprawdzanie przejścia przy stawianiu (`wouldBlock`, 20%) i przybysze; przyspieszanie tylko z identycznymi drogami (simprint)
   8. [ ] Podział `render/scene.ts` (ok. 5300 linii): ludzie, budynki, światła do osobnych plików
 - [x] Karta graficzna: gra prosi o mocniejszą kartę (`powerPreference: 'high-performance'`), F3 pokazuje nazwę karty i rdzenie — 28.10.2026 (0.54.5)
@@ -22,9 +22,9 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - [x] Pory roku: łatki materiałów dokładane od razu (przed kompilacją), a nie skanem co 3 s — bez drugiej kompilacji na żywo (0.51.12)
 - [x] „Nowa gra”: teren podglądu budowany etapami z przerwą na klatkę, zamiast ~0,7 s zatrzymania strony; to samo przy „Wstecz” (0.51.12)
 - [x] „Nowa gra” stawała na ok. 0,6–1 s przez generowanie mapy (`createGame`) — zrobione 27.10.2026 (0.54.3): podgląd liczy mapę w osobnym wątku (`sim/mapthread.ts`), a „Graj” bierze gotową mapę z podglądu zamiast liczyć ją drugi raz. Start z zapisu i gra online nadal liczą mapę w wątku głównym (za ekranem wczytywania)
-- [ ] Start gry: krok „Budowanie świata i osady” (1,8–2,4 s jednym ciągiem) podzielić na etapy z paskiem — teren już ma `buildTerrainAsync`, zostaje `start()`/`createGame` i wejście przez `enterGame` (tam `setState` nadal w jednym kawałku)
+- [x] (28.10.2026, 0.55.0: teren pierwszego świata etapami przy wejściu na stronę; „Kontynuuj”/„Nowa gra” przez enterGame dalej jednym kawałkiem pod zasłoną) Start gry: krok „Budowanie świata i osady” (1,8–2,4 s jednym ciągiem) podzielić na etapy z paskiem — teren już ma `buildTerrainAsync`, zostaje `start()`/`createGame` i wejście przez `enterGame` (tam `setState` nadal w jednym kawałku)
 - [ ] Liczba trójkątów 6,5–8,7 mln w kadrze: na RTX 5070 karta liczy klatkę w 6–10 ms, ale na słabszym laptopie (Mikołaj) to pierwsze wąskie gardło — upraszczać tylko wersje z daleka (zasada Michała z 19.10)
-- [ ] Cienie nowych obiektów: shader cienia nowego rodzaju modelu kompiluje się przy pierwszym rzucie cienia (`precompile.ts` łapie tylko zwykłe rysowanie) — rzadkie, małe przycięcie
+- [x] (28.10.2026, 0.55.0) Cienie nowych obiektów: shader cienia nowego rodzaju modelu kompiluje się przy pierwszym rzucie cienia (`precompile.ts` łapie tylko zwykłe rysowanie) — rzadkie, małe przycięcie
 - [ ] Zauważone przy magazynach (27.10, do zmierzenia przy 4 na 4): `storeCapacity` przechodzi po wszystkich budynkach przy każdej dostawie, a `roomLeft` po wszystkich chłopach gracza — licznik pojemności i ładunków w drodze trzymany na gracza (aktualizowany przy postawieniu/zburzeniu i odłożeniu) zdejmie to całkiem
 - [ ] `workerSystem`: przy każdym budynku bez pracownika `g.units.find` po wszystkich chłopach w każdym ticku (O(budynki × chłopi)); lista wolnych chłopów raz na tick wystarczy
 - [ ] `storeDoors` (workers.ts) buduje nowy zbiór drzwi przy każdym szukaniu drogi do magazynu — można trzymać zbiór na gracza i rodzaj, odświeżany przy zmianie budynków
