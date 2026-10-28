@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.58.3 — groby w lesie: kopczyk z krzyżem i gorszy nastrój (2026-10-28)
+
+- **Po pochówku w lesie zostaje grób:** kopczyk świeżej ziemi z grudami i krzyż z dwóch nieokorowanych kijów związanych łykiem, wbity w głowach (nowy model z Blendera `tools/models/grave.py` → `grave.json`, tekstury ziemi i kory; w podglądzie modeli: grupa „Pochówek”). Każdy grób leży trochę inaczej obrócony. Na jednym polu jeden grób, kolejne chłopi kopią obok
+- **Grób znika:** sam po 3 dniach gry (pod koniec kopczyk osiada w ziemię) albo od razu, gdy na tym polu stanie budynek (wystarczy plac budowy) albo droga. Groby nie blokują stawiania
+- **Nastrój:** póki gracz ma groby w lesie, popularność co miesiąc -1, a przy 5 i więcej -2 (nowy składnik „Zmarli pochowani w lesie (brak cmentarza)” w rozpisce popularności). Cmentarz z grabarzem tego oszczędza
+- Stan gry: lista `graves` (zapis, wczytanie i skrót stanu dla gry sieciowej), system `sim/systems/graves.ts`, rysowanie instancjami w `src/render/graves.ts`
+- Pomoc „Jak grać” → Polegli: dopisane w obu językach
+- Bot: bez zmian w decyzjach (cmentarz ma już w kolejce budowy); jego groby psują mu nastrój tak samo
+- Testy: grób powstaje pod drzewami, obniża popularność, przechodzi przez zapis, zarasta po 3 dniach i znika pod nowym budynkiem
+
 ## 0.58.2 — skrót do koszar przenosi kamerę od pierwszego kliknięcia (2026-10-28)
 
 - **Skróty na dolnym pasku (koszary, skład, spichlerz):** po jednym kliknięciu kamera staje tak, że budynek widać obok otwartego okna, a nie pod nim. Kamera przesuwała się już przy pierwszym kliknięciu, ale budynek trafiał na środek ekranu, który zasłania okno budynku, więc wyglądało, jakby nic się nie stało (drugie kliknięcie dawało inne ujęcie i dopiero wtedy było go widać)

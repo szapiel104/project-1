@@ -53,7 +53,7 @@ const hashN = (a: number, b: number): number => { let h = (a * 2654435761 + b * 
 const Y = YARD as unknown as Record<string, ModelMesh[]> & { post_top: number };
 
 /** Współrzędne tekstury z rzutu na płaszczyznę, do której ściana jest najbardziej zwrócona (deski, płótno, ziemia) */
-function boxUv(geo: THREE.BufferGeometry, scale: number): THREE.BufferGeometry {
+export function boxUv(geo: THREE.BufferGeometry, scale: number): THREE.BufferGeometry {
   const p = geo.attributes.position!, n = geo.attributes.normal!;
   const uv = new Float32Array(p.count * 2);
   for (let i = 0; i < p.count; i++) {

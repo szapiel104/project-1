@@ -25,6 +25,7 @@ import { model } from './render/modelstore';
 import { clutterObject } from './render/clutter';
 import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
 import { YARD_KEYS, yardModel } from './render/family';
+import { graveModel } from './render/graves';
 import { Figures, idWithHead, type FigureKind } from './render/peasants';
 import { normal, pattern } from './render/textures';
 import { ANIMAL_AT, animalGeo } from './render/village';
@@ -281,6 +282,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['work-back', tx('kilof na plecach', 'pick on the back'), worker('backPick', 0, false)],
   ]],
   [tx('Narzędzia', 'Tools'), ([['axe', tx('siekiera', 'axe')], ['pick', tx('kilof', 'pick')], ['hammer', tx('młotek', 'hammer')], ['club', tx('maczuga', 'club')], ['fork', tx('widły', 'pitchfork')], ['torch', tx('pochodnia', 'torch')], ['bucket', tx('wiadro', 'bucket')], ['rod', tx('wędka', 'fishing rod')], ['backPick', tx('kilof na plecach', 'pick on the back')], ['beltClub', tx('maczuga u pasa', 'club at the belt')]] as const).map(([k, l]) => [`tool-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, toolPair(k)] as [string, string, Make])],
+  [tx('Pochówek', 'Burial'), [['grave', tx('grób w lesie (kopczyk z krzyżem)', 'woodland grave (mound and cross)'), () => ({ obj: graveModel() })]]],
   [tx('Podwórko', 'Yard'), YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', tx('pranie: ', 'washing: ')), () => ({ obj: yardModel(k) })] as [string, string, Make])],
   [tx('Graty', 'Clutter'), (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: clutterObject(k, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],
   // gotowe modele z paczek (tools/models/props_import.py): z lewej wersja z bliska, z prawej z daleka; ryba w rozmiarze z kosza

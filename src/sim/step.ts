@@ -14,6 +14,7 @@ import { gateSystem } from './systems/gates';
 import { migrationSystem, travelSystem } from './systems/population';
 import { caravanSystem, sendCaravan } from './systems/caravans';
 import { rubbleSystem } from './systems/rubble';
+import { forestGraveSystem } from './systems/graves';
 import { decaySystem } from './systems/decay';
 import { storageSystem } from './systems/storage';
 import { syncStock } from './systems/stock';
@@ -190,6 +191,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   botSystem(g);
   torchSystem(g);
   rubbleSystem(g);
+  forestGraveSystem(g);
   decaySystem(g);
   storageSystem(g);
   roadSystem(g);

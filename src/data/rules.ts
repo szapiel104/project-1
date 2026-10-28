@@ -68,6 +68,10 @@ export const RULES = {
   plantTicks: 60,
   /** Tyle trwa wykopanie dołu i zakopanie ciała na skraju lasu, gdy osada nie ma cmentarza */
   buryTicks: 120,
+  /** Po tylu dniach kopczyk z krzyżem w lesie zarasta i znika */
+  graveDays: 3,
+  /** Groby w lesie psują nastroje (miesięcznie): jeden lub kilka -1, od tylu -2 */
+  graveMany: 5,
   /** Leśniczy: najwięcej rosnących naraz drzewek na jedną chatę (żeby nie zarósł całej łąki) */
   foresterSaplings: 14,
   /** Ile razy można wydobyć surowiec z jednego pola złoża, zanim się wyczerpie */

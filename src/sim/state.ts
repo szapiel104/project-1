@@ -502,6 +502,14 @@ export interface Corpse {
   post?: number;
 }
 
+/** Leśny grób (osada bez cmentarza): kopczyk z krzyżem na polu `t`; znika po kilku dniach albo pod budynkiem i drogą */
+export interface Grave {
+  t: number;
+  owner: number;
+  /** Tick pochówku */
+  at: number;
+}
+
 /** Chłop w drodze: przychodzi spoza mapy do twierdzy albo odchodzi za mapę. Żaden system go nie zatrudnia. */
 export interface Traveler {
   id: number;
@@ -596,6 +604,8 @@ export interface GameState {
   rubble: Rubble[];
   /** Towar odłożony pod pełnymi magazynami (brak w starych zapisach) */
   piles?: Pile[];
+  /** Groby na skraju lasu (brak w starych zapisach) */
+  graves?: Grave[];
   nextId: number;
   /** Oddziały w zwartym marszu */
   marches?: March[];
@@ -920,6 +930,7 @@ export function stateHash(g: GameState): number {
   for (const s of g.saplings ?? []) { add(s.t); add(s.owner); add(s.by); add(s.age); }
   for (const m of g.missiles ?? []) { add(m.to); add(m.unit ? 1 : 0); add(m.dmg); add(m.at); add(m.from); add(m.burn ?? 0); }
   for (const s of g.soldiers) if (s.burn) { add(s.id); add(s.burn); }
+  for (const x of g.graves ?? []) { add(x.t); add(x.owner); add(x.at); }
   for (const x of g.piles ?? []) { add(x.id); add(x.owner); add(x.res); add(x.amt); add(x.store); add(x.t); add(x.claim); }
   for (const r of g.rubble) { add(r.id); add(r.owner); add(r.x); add(r.y); add(r.loads.length); for (const [a, b] of r.loads) { add(a + 1); add(b); } }
   for (const p of g.players) {

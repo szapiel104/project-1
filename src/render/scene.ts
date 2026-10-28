@@ -33,6 +33,7 @@ import { SkyDome } from './sky';
 import { DustFx } from './dust';
 import { Braziers } from './braziers';
 import { RubbleLayer } from './rubble';
+import { GraveLayer } from './graves';
 import { PileLayer } from './piles';
 import { WearLayer } from './damage';
 import { RepairLayer } from './repairs';
@@ -529,6 +530,8 @@ export class GameRenderer {
   private buildingLayer = new THREE.Group();
   /** Gruz i zapadające się budynki (src/render/rubble.ts) */
   private rubble = new RubbleLayer(this.scene, this.buildingLayer);
+  /** Leśne groby osady bez cmentarza (kopczyk z krzyżem) */
+  private graves = new GraveLayer(this.scene);
   /** Towar odłożony pod pełnymi magazynami i znak „pełno” nad nimi (piles.ts) */
   private piles = new PileLayer(this.scene);
   /** Koksowniki na murach i wieżach (osobna warstwa: mur kamienny nie ma własnego modelu budynku) */
@@ -1058,6 +1061,7 @@ export class GameRenderer {
     this.batches.clear();
     this.lods.clear();
     this.rubble.clear();
+    this.graves.clear();
     this.piles.clear();
     this.prevPos.clear();
     this.facing.clear();
@@ -2197,6 +2201,7 @@ export class GameRenderer {
       if (this.lodTick++ % 10 === 0) { const f = this.focusPoint; v.lod(f.x, f.z, this.walk ? 0 : Math.max(0, this.cam.distance - 30) * 0.35, this.walk ? 1 : this.detail); }
       T('drogi', () => this.syncRoads(g, v));
       T('gruz', () => this.rubble.sync(g, v, dt));
+      T('groby', () => this.graves.sync(g, v));
       T('towar pod magazynami', () => this.piles.sync(g, v, this.me, this.time));
       T('światła', () => this.syncLamps(g));
       T('budynki', () => { this.syncAreas(g, v); this.syncBuildings(g, v); this.sites.sync(g, this.view, this.buildingMeshes, { time: this.time, calm: this.calm, lodTick: this.lodTick }); this.walls.sync(g, v, this.buildingMeshes); this.wear.sync(g, v, this.buildingMeshes); this.scorch.sync(g, this.buildingMeshes); this.repairs.sync(g, v, this.buildingMeshes, this.time, this.calm); this.braziers.sync(g, v, this.buildingMeshes); this.gates.sync(g, this.buildingMeshes, dt, this.calm); this.syncStores(g); });

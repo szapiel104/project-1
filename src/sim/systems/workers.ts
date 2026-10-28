@@ -204,6 +204,7 @@ function beside(g: GameState, door: number, owner: number): number {
 function forestEdge(g: GameState, t: number): boolean {
   const w = g.map.width, x = t % w, tiles = g.map.tiles;
   if (tiles[t] !== Terrain.Grass || g.occupancy[t] || g.reserved[t] || g.roads[t] || g.roadPlan[t]) return false;
+  if (g.graves?.some((x) => x.t === t)) return false; // jeden grób na polu
   return (x > 0 && tiles[t - 1] === Terrain.Forest) || (x < w - 1 && tiles[t + 1] === Terrain.Forest)
     || tiles[t - w] === Terrain.Forest || tiles[t + w] === Terrain.Forest;
 }
@@ -693,8 +694,10 @@ export function workerSystem(g: GameState): void {
       continue;
     }
     if (u.phase === Phase.Burying) {
-      // kopie dół i zakopuje ciało; potem wraca do obozowiska
+      // kopie dół i zakopuje ciało; zostaje kopczyk z krzyżem (graves.ts), a chłop wraca do obozowiska
       if (--u.timer > 0) continue;
+      const t = tileOf(g, u);
+      if (!g.graves?.some((x) => x.t === t)) (g.graves ??= []).push({ t, owner: u.owner, at: g.tick });
       u.phase = Phase.Idle;
       continue;
     }
