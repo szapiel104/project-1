@@ -49,6 +49,7 @@ async function load(): Promise<void> {
   let done = 0, total = 3;
   const times: [string, number][] = [];
   let last = performance.now(), lastText = '';
+  const modelsText = tx('Modele…', 'Models…');
   const step = async (text: string): Promise<void> => {
     const now = performance.now();
     if (lastText) times.push([lastText, Math.round(now - last)]);
@@ -61,6 +62,20 @@ async function load(): Promise<void> {
   info.step(tx('Silnik gry', 'Game engine'), tx('pobieranie kodu gry i biblioteki 3D', 'downloading the game code and the 3D library'));
   await step(tx('Wczytywanie silnika gry…', 'Loading the game engine…'));
   const tex = await import('./render/textures');
+  // pobieranie z sieci rusza od razu i idzie w tle, równolegle z rysowaniem tekstur (wcześniej modele czekały na
+  // tekstury, a duże tekstury KTX2 na wszystko inne): modele z Blendera, a z niższym priorytetem tekstury terenu
+  // i zdjęciowe tekstury budynków (prefetch.ts). Kod gry pobiera się od otwarcia strony (modulepreload w index.html).
+  const { loadModels } = await import('./render/modelstore');
+  let modelsDone = 0, modelsAll = 0;
+  const models = loadModels((n, all) => {
+    modelsDone = n; modelsAll = all;
+    if (lastText === modelsText) {
+      if (count) count.textContent = `${done} / ${total} · ${tx('modele', 'models')} ${n}/${all}`;
+      info.detail(`${tx('pobrane modele', 'models downloaded')}: ${n} / ${all}`);
+    }
+  });
+  models.catch(() => undefined); // błąd pokaże się niżej, przy await (bez „nieobsłużonej obietnicy” w międzyczasie)
+  void import('./render/prefetch').then((p) => p.prefetchTextures([...p.basisUrls(), ...p.TERRAIN_FILES.map(p.terrainUrl), ...tex.photoUrls()])).catch(() => undefined);
   const kinds = tex.KINDS();
   total = 2 + kinds.length + 1;
   done = 1;
@@ -70,10 +85,12 @@ async function load(): Promise<void> {
   };
   let fromCache = 0, drawn = 0;
   info.step(tx('Tekstury', 'Textures'), `${kinds.length} ${tx('rodzajów', 'kinds')}`);
-  for (const kind of kinds) {
+  // zapamiętane z poprzedniej wizyty wczytują się wszystkie naraz (wcześniej po jednej, każda czekała na poprzednią)
+  const restored = await Promise.all(kinds.map((k) => tex.restore(k).catch(() => false)));
+  for (let i = 0; i < kinds.length; i++) {
+    const kind = kinds[i]!;
     info.detail(`${names[kind] ? tx(...names[kind]!) : kind} · ${tx('z pamięci', 'cached')} ${fromCache}, ${tx('rysowane', 'drawn')} ${drawn} / ${kinds.length}`);
-    // zapamiętana z poprzedniej wizyty wczytuje się od razu, bez klatki przerwy
-    if (await tex.restore(kind)) { tex.pattern(kind); tex.bump(kind); done++; fromCache++; continue; }
+    if (restored[i]) { tex.pattern(kind); tex.bump(kind); done++; fromCache++; continue; }
     drawn++;
     await step(`${tx('Tekstury', 'Textures')}: ${names[kind] ? tx(...names[kind]!) : kind}`);
     tex.pattern(kind);
@@ -81,13 +98,13 @@ async function load(): Promise<void> {
     done++;
   }
   info.step(tx('Modele', 'Models'), tx('pobieranie modeli budynków, ludzi i zwierząt', 'downloading models of buildings, people and animals'));
-  await step(tx('Modele…', 'Models…'));
-  // modele z Blendera leżą poza kodem gry: pobierają się tu równolegle (za drugim razem z pamięci przeglądarki)
-  const { loadModels } = await import('./render/modelstore');
-  await loadModels((n, all) => {
-    if (count) count.textContent = `${done} / ${total} · ${tx('modele', 'models')} ${n}/${all}`;
-    info.detail(`${tx('pobrane modele', 'models downloaded')}: ${n} / ${all}`);
-  });
+  await step(modelsText);
+  // modele pobierają się od początku wczytywania (wyżej); tu czekamy tylko na resztę, często już są
+  if (modelsAll) {
+    if (count) count.textContent = `${done} / ${total} · ${tx('modele', 'models')} ${modelsDone}/${modelsAll}`;
+    info.detail(`${tx('pobrane modele', 'models downloaded')}: ${modelsDone} / ${modelsAll}`);
+  }
+  await models;
   info.step(tx('Drzewa, trawa i postacie', 'Trees, grass and characters'), tx('pliki z zasobów (las, trawa, strażnik)', 'asset files (forest, grass, guard)'));
   const assets = await import('./render/assets');
   await assets.preloadAssets();

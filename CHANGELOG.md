@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.54.4 — szybsze wczytywanie: pobieranie równolegle zamiast po kolei (2026-10-28)
+
+- **Wszystko pobiera się od razu, a nie po kolei:** dotąd ekran wczytywania szedł łańcuchem — najpierw tekstury rysowane w przeglądarce, dopiero potem pobieranie modeli, potem kod gry, a duże tekstury KTX2 (teren ok. 10 MB, zdjęciowe tekstury budynków ok. 9 MB) dopiero, gdy gra już powstała. Teraz:
+  - **modele** (ok. 6 MB) zaczynają się pobierać na samym początku, w czasie rysowania tekstur,
+  - **kod gry** (ok. 2 MB JavaScriptu z biblioteką 3D) pobiera się od otwarcia strony (`<link rel="modulepreload">` dopisywany do index.html przez `tools/build/preload-main.mjs`); uruchamia się jak dotąd, po modelach,
+  - **tekstury KTX2 i ich dekoder** pobierają się w tle z niższym priorytetem (`src/render/prefetch.ts`), więc gdy gra o nie prosi, są już w pamięci przeglądarki
+- **Tekstury zapamiętane z poprzedniej wizyty** wczytują się wszystkie naraz, a nie po jednej
+- Najwięcej zyska pierwsze wejście i wejście po aktualizacji gry. Przy kolejnych wejściach pliki i tak bierze Service Worker z dysku, więc wcześniejsze pobieranie tekstur się wtedy wyłącza (nie dubluje zapytań)
+- Wygląd, kolejność budowania świata i sam kod wczytywania tekstur bez zmian. Numer wersji tekstur terenu jest teraz w jednym miejscu (`TERRAIN_V` w `prefetch.ts`); test `tests/prefetch.test.ts` pilnuje, żeby lista pobieranych zawczasu tekstur zgadzała się z tym, czego używa teren
+- Bot: bez zmian (samo wczytywanie)
 ## 0.54.3 — menu nie staje przy losowaniu mapy, szybszy start nowej gry (2026-10-27)
 
 - **„Losuj inną mapę” bez zacięcia:** nowa mapa do podglądu (teren, lasy, złoża, twierdze, ok. 150–300 ms liczenia, przy 4 na 4 najdłużej) liczy się teraz w osobnym wątku (`sim/mapworker.ts`, `sim/mapthread.ts`). Menu, kręciołek i przyciski działają w tym czasie normalnie. Szybkie klikanie „Losuj” kilka razy z rzędu nie układa kolejki: pokazuje się tylko ostatnio wylosowana mapa

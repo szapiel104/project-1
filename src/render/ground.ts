@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { TEST } from '../testmode';
 import { loadTexture } from './ktx';
 import { packNormals } from './normalpack';
+import { terrainUrl } from './prefetch';
 
 /**
  * Podłoże jak w nowych silnikach: kilka zdjęciowych warstw (dwie trawy, łąka z ziemią i kamykami, ściółka leśna,
@@ -15,14 +16,13 @@ import { packNormals } from './normalpack';
  * - Skała na stromych zboczach jest rzutowana z boku (bez rozciągniętych smug).
  * Kolor wierzchołka zostaje jako delikatny mnożnik (śnieg, ruda, plamy jasności).
  */
-const base = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/terrain/';
 
 const loader = typeof document !== 'undefined' ? new THREE.TextureLoader() : null;
 const cache = new Map<string, THREE.Texture>();
 function tex(name: string, color: boolean): THREE.Texture {
   let t = cache.get(name);
   if (t) return t;
-  t = loadTexture(base() + name + '.jpg?v=5'); // numer wersji: przeglądarka nie trzyma starego zdjęcia po podmianie; w praktyce .ktx2 (ktx.ts)
+  t = loadTexture(terrainUrl(name)); // numer wersji (TERRAIN_V w prefetch.ts): przeglądarka nie trzyma starego zdjęcia po podmianie; w praktyce .ktx2 (ktx.ts)
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   t.anisotropy = 16;
   if (color) t.colorSpace = THREE.SRGBColorSpace;
