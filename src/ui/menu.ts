@@ -9,6 +9,7 @@ import { t, tx, lang, setLang, LANGS } from '../i18n';
 import { HELP_CHAPTERS, type HelpBlock } from './helpText';
 import type { AaMode } from '../render/postfx';
 import { TIERS } from '../render/autoquality';
+import { hardReload, newerVersion } from './refresh';
 
 /** Ustawienia zapamiętywane w przeglądarce */
 export interface Settings {
@@ -343,7 +344,22 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     wrap.classList.remove('sub-open');
     body.replaceChildren();
     paintBar();
-    foot.textContent = inGame ? tx('Esc — wróć do gry · ↑ ↓ wybór', 'Esc — back to the game · ↑ ↓ select') : tx(`wersja ${BUILD} · ↑ ↓ wybór · Enter zatwierdza`, `version ${BUILD} · ↑ ↓ select · Enter confirms`);
+    if (inGame) foot.textContent = tx('Esc — wróć do gry · ↑ ↓ wybór', 'Esc — back to the game · ↑ ↓ select');
+    else {
+      // przycisk odświeżenia: czyści pamięć podręczną i wczytuje najnowszą wersję (zapis i konto zostają); gdy na serwerze
+      // jest nowsza wersja, przycisk mówi o tym wprost
+      const fresh = button(tx('Wyczyść pamięć i wczytaj grę od nowa', 'Clear cache and reload the game'), () => {
+        fresh.disabled = true; fresh.textContent = tx('Wczytuję najnowszą wersję…', 'Loading the latest version…');
+        void hardReload();
+      }, 'menu-refresh');
+      fresh.title = tx('Pobiera grę od nowa z serwera. Zapis gry, konto i ustawienia zostają.', 'Fetches the game afresh from the server. Your save, account and settings are kept.');
+      foot.replaceChildren(el('span', '', tx(`wersja ${BUILD} · ↑ ↓ wybór · Enter zatwierdza`, `version ${BUILD} · ↑ ↓ select · Enter confirms`)), fresh);
+      void newerVersion().then((v) => {
+        if (!v || !fresh.isConnected || fresh.disabled) return;
+        fresh.classList.add('newer');
+        fresh.textContent = tx(`Jest nowa wersja ${v} — wczytaj`, `New version ${v} is out — load it`);
+      });
+    }
     bar.querySelector<HTMLButtonElement>('.bar-main')?.focus();
   }
 

@@ -1967,3 +1967,14 @@ body.menu-open .devpanel { display: none; }
 .menu.book-open:not(.previewing) .menu-panel.book { margin-top: 56px; max-height: calc(100vh / var(--ui, 1) - 56px - clamp(14px, 3vh, 40px)); }
 .menu .menu-bar .bar-main { box-shadow: inset 3px 0 0 #e9c766; }
 .menu .menu-bar .bar-main:hover, .menu .menu-bar .bar-main:focus-visible { box-shadow: inset 4px 0 0 #fff1c2; }
+
+/* odświeżenie gry w stopce menu (refresh.ts): czyści pamięć podręczną i wczytuje najnowszą wersję */
+.menu-fine { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 16px; }
+.menu-refresh { min-height: 32px; padding: 4px 12px; font: inherit; font-size: 13px; letter-spacing: .06em; color: #e9d7ad; background: rgba(18, 13, 8, .82); border: 1px solid #8a6a26; cursor: pointer; text-shadow: none; }
+.menu-refresh:hover { color: #fff3c4; border-color: #e8c766; background: #2a1f15; }
+.menu-refresh:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.menu-refresh:disabled { cursor: progress; opacity: .8; }
+.menu-refresh.newer { color: #1b140e; background: #e8c766; border-color: #fff3c4; font-weight: 700; }
+.menu-refresh.newer:hover { background: #fff3c4; }
+@media (prefers-reduced-motion: no-preference) { .menu-refresh.newer { animation: menu-refresh-pulse 2.4s ease-in-out infinite; } }
+@keyframes menu-refresh-pulse { 50% { box-shadow: 0 0 0 4px rgba(232, 199, 102, .25); } }

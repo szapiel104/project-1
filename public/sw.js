@@ -14,6 +14,7 @@ self.addEventListener('fetch', (e) => {
   const fonts = url.hostname === 'fonts.googleapis.com' || url.hostname === 'fonts.gstatic.com';
   if (!own && !fonts) return; // Supabase, czat, logowanie: zawsze prosto z sieci
   if (own && url.search.includes('test=')) return;
+  if (own && url.pathname.endsWith('/version.json')) return; // numer wersji zawsze prosto z serwera (przycisk odświeżenia w menu)
   if (req.mode === 'navigate' || url.pathname.endsWith('/') || url.pathname.endsWith('.html')) { e.respondWith(networkFirst(req)); return; }
   if (own && url.pathname.includes('/assets/')) { e.respondWith(cacheFirst(req)); return; }
   e.respondWith(staleWhileRevalidate(req));

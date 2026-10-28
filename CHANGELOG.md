@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.63.2 — przycisk „Wyczyść pamięć i wczytaj grę od nowa” w menu (2026-10-28)
+
+- **Odświeżenie gry jednym kliknięciem** (`ui/refresh.ts`): w stopce menu głównego, obok numeru wersji, przycisk wyrejestrowuje pamięć podręczną gry (service worker i jego pliki) i wczytuje stronę od nowa z serwera — bez szukania Ctrl+F5. Zapis gry, konto i ustawienia zostają
+- **Menu samo sprawdza, czy jest nowsza wersja:** build zapisuje `version.json`, menu porównuje go ze swoją wersją; gdy na serwerze jest nowsza, przycisk robi się złoty i pisze „Jest nowa wersja … — wczytaj” (pulsuje lekko, bez ruchu przy `prefers-reduced-motion`). `sw.js` nie trzyma `version.json` w pamięci
+- W trakcie meczu (pauza) przycisku nie ma, żeby nie przerwać gry
+- Dostępność: prawdziwy przycisk, widoczny fokus klawiatury, wysokość 32 px; kontrast tekstu 13,6:1 (zwykły), 11,1:1 (nowa wersja), 14,5:1 (po najechaniu), ramka 3,8:1
+- Bot: bez zmian (interfejs)
 ## 0.63.1 — ślady butów w dobrą stronę (2026-10-28)
 
 - **Odciski na śniegu były obrócone o 180°** (obcas z przodu): przód podeszwy leży w teksturze u góry, czyli w −z płaszczyzny, a obrót kierował w stronę marszu +z. Teraz palce wskazują kierunek, w którym ktoś szedł (`render/footprints.ts`)

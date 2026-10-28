@@ -9,6 +9,8 @@ import pkg from './package.json' with { type: 'json' };
 const BUILD = new Date().toLocaleString('pl-PL', { timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
 /** Wersja na ekranie wczytywania już w samym HTML (widać ją, zanim wczyta się kod gry) — Michał 28.10.2026 */
 const versionInHtml = { name: 'version-in-html', transformIndexHtml: (html: string) => html.replaceAll('%GAME_VERSION%', `${pkg.version} · ${BUILD}`) };
+/** version.json obok gry: menu porównuje go ze swoją wersją i podpowiada odświeżenie (src/ui/refresh.ts) */
+const versionFile = { name: 'version-file', generateBundle(this: { emitFile: (f: { type: 'asset'; fileName: string; source: string }) => void }) { this.emitFile({ type: 'asset', fileName: 'version.json', source: JSON.stringify({ version: pkg.version, build: BUILD }) }); } };
 
 export default defineConfig(({ mode }) => ({
   base: './',
@@ -17,7 +19,7 @@ export default defineConfig(({ mode }) => ({
   define: { __VERSION__: JSON.stringify(pkg.version), __BUILD__: JSON.stringify(BUILD) },
   // długie symulacje (bot, 10 000 ticków) potrzebują więcej czasu niż domyślne 5 s
   test: { testTimeout: 60000, setupFiles: ['tests/setup/lang.ts', 'tests/setup/models.ts'] },
-  plugins: mode === 'single' ? [versionInHtml, modelPacks(true), viteSingleFile()] : [versionInHtml, modelPacks(false), preloadMain()],
+  plugins: mode === 'single' ? [versionInHtml, modelPacks(true), viteSingleFile()] : [versionInHtml, versionFile, modelPacks(false), preloadMain()],
   build: {
     outDir: mode === 'single' ? 'dist-single' : 'dist',
     chunkSizeWarningLimit: 1200,
