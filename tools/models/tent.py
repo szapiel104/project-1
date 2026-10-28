@@ -13,6 +13,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 from timber import Timber  # noqa: E402
+from logs import log  # noqa: E402
 
 b = Building()
 t = Timber(b, T=0.03)
@@ -122,9 +123,17 @@ FX, FZ = 0.16, ZF + 0.12
 for k in range(6):
     a = 2 * math.pi * k / 6
     b.crystal('base', 'rockDark', FX + math.cos(a) * 0.07, 0.0, FZ + math.sin(a) * 0.055, 0.026, seed=k, sy=0.7)
-b.box('base', 'ash', 0.09, 0.006, 0.07, FX, 0.0, FZ)
-for k in range(2):
-    b.box('base', 'woodDark', 0.1, 0.018, 0.018, FX, 0.008, FZ + (k - 0.5) * 0.03, rot=0.6 - k * 1.2)
+# palenisko: płaska kupka popiołu z węgielkami (nie płyta), na niej trzy nadpalone polana z korą ułożone w gwiazdę,
+# końcami do środka — tam, gdzie się paliło, końce są zwęglone i oprószone popiołem
+b.crystal('base', 'ash', FX, 0.004, FZ, 0.06, seed=2.0, sx=1.15, sy=0.12, sz=0.95, seg=9)
+for k, (dx, dz) in enumerate(((0.02, 0.012), (-0.018, 0.016), (0.004, -0.02))):
+    b.crystal('base', 'dark', FX + dx, 0.008, FZ + dz, 0.011, seed=k + 5, sy=0.5)
+for k in range(3):
+    a = 0.5 + k * 2.1
+    ox, oz = math.cos(a), math.sin(a)
+    # od zewnątrz (na kamieniu, wyżej) do środka (w popiele): lekko pochylone
+    log(b, 'base', 'bark', (FX + ox * 0.085, 0.03, FZ + oz * 0.07), (FX + ox * 0.018, 0.012, FZ + oz * 0.015), r=0.011, r1=0.01, seg=7, ends='wood')
+    log(b, 'base', 'dark', (FX + ox * 0.024, 0.0135, FZ + oz * 0.02), (FX + ox * 0.006, 0.011, FZ + oz * 0.005), r=0.0115, seg=7, ends='ash')
 t.open.append([-0.25, 0.25, ZB + 0.05, ZF + 0.12])
 # spacerem do namiotu wchodzi się tylko od przodu: połacie po bokach i tylna ściana zatrzymują
 for s in (-1, 1):

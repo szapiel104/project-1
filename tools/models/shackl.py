@@ -14,6 +14,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
+from shackparts import backing, door_hide, ridge_cap  # noqa: E402
 from timber import Timber  # noqa: E402
 
 b = Building()
@@ -63,6 +64,8 @@ def wall(axis, at, a0, a1, out, k0, holes=(), skip=(), patch=None):
                 b.box('base', mat, c2 - a2, hgt, PT, off + wob, y, (a2 + c2) / 2, rot=math.pi / 2, roll=tilt)
         y += BH + GAP + jit(row + k0, 4, 0.004)
         row += 1
+    # od środka ciemne deski: przez szpary nie prześwituje niebo
+    backing(b, axis, at + out * (0.035 - 0.006), a0 - 0.02, a1 + 0.02, H1, holes=holes)
     if patch:   # łata z pionowej deski, o włos przed licem
         pa, ph = patch
         d = off + out * (PT + 0.006)
@@ -95,9 +98,7 @@ wall('z', XL, ZB, ZF, -1, 21, skip={5}, patch=(-0.3, 0.5))                   # l
 # belka nad wejściem, płaski kamień progu, skóra zamiast drzwi (odgięta, przewiązana sznurem)
 b.box('base', 'woodDark', DOOR[1] - DOOR[0] + 0.14, 0.05, 0.06, DM, DOOR[2], ZM + 0.035)
 b.box('base', 'rockDark', DOOR[1] - DOOR[0] + 0.02, 0.022, 0.12, DM, 0.0, ZM + 0.1)
-b.box('base', 'hide', 0.11, DOOR[2] - 0.04, 0.012, DOOR[0] + 0.06, 0.04, ZM + 0.075, roll=0.06)
-b.box('base', 'hideDark', DOOR[1] - DOOR[0] - 0.02, 0.07, 0.014, DM, DOOR[2] - 0.075, ZM + 0.078)
-b.box('base', 'rope', 0.13, 0.014, 0.022, DOOR[0] + 0.06, 0.3, ZM + 0.084)
+door_hide(b, DOOR[0], DOOR[1], DOOR[2], ZM + 0.075)
 
 # ---------------- dachy z desek: długie skrzydło (kalenica wzdłuż x), krótkie (kalenica wzdłuż z) ----------------
 OV, W = 0.1, 0.13
@@ -127,11 +128,8 @@ def roof(along, a0, a1, e0, e1, kseed):
             ye = H1 + RISE - RISE * f + lift
             pts = [Pt(a - w / 2, e2, ye), Pt(a + w / 2, e2, ye), Pt(a + w / 2, em, H1 + RISE + 0.012 + lift), Pt(a - w / 2, em, H1 + RISE + 0.012 + lift)]
             b.slope('shell', 'wood' if (k + kseed) % 4 else 'woodDark', pts, mid, t=PT)
-    # deska kalenicowa
-    if along == 'x':
-        b.box('shell', 'woodDark', a1 - a0 + 0.04, 0.03, 0.12, (a0 + a1) / 2, H1 + RISE + 0.03, em)
-    else:
-        b.box('shell', 'woodDark', 0.12, 0.03, a1 - a0 + 0.04, em, H1 + RISE + 0.031, (a0 + a1) / 2)
+    # czapa kalenicy z dwóch desek leżących na połaciach
+    ridge_cap(b, along, a0 - 0.02, a1 + 0.02, em, H1 + RISE + 0.012, RISE, (e1 + OV) - em)
 
 
 roof('x', XL - OV, XR + OV, ZB, ZM, 0)

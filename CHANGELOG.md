@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.64.2 — rudery: wejście, szpary i kalenica; ognisko przy namiocie (2026-10-28)
+
+- **Zgłoszenie (rudera i rudera narożna):** dziwne wejście — pas skóry z boku otworu wyglądał jak deska w kratkę, a jasny sznur jak luźna listwa. Teraz skóra jest zwinięta w rulon pod belką nad wejściem, przewiązana dwoma sznurami do belki, z krótkim fartuchem spod rulonu; przejście wolne (`tools/models/shackparts.py`)
+- **Przez szpary prześwitywało niebo:** od środka ścian obu ruder idzie ciemne deskowanie tuż za licem desek (z otworem na wejście), więc w szparach i w miejscach po brakującej desce widać ciemne drewno
+- **Deska nad dachem latała w powietrzu:** płaską deskę kalenicy zastąpiła czapa z dwóch desek leżących na połaciach, wzdłuż całej kalenicy (rudera, oba dachy rudery narożnej)
+- **Ognisko przed namiotem:** zamiast ciemnej płyty i dwóch kanciastych kloców — płaska kupka popiołu z węgielkami i trzy okrągłe polana z korą ułożone w gwiazdę, ze zwęglonymi końcami w środku
+- Bot: bez zmian
+
 ## 0.64.1 — na wieże wchodzi się jak na teren, jak w Twierdzy 2 (2026-10-28)
 
 - **Pomost wieży to teren, tylko wysoko** (`sim/systems/stonewalls.ts`): każde pole gotowej wieży (czatownia, strażnica, wszystkie baszty) ma bit `WALL_TOP`, tak jak korona muru kamiennego. Wchodzi się drabiną albo drzwiami od frontu, z przyległego muru kamiennego albo po drabinie gracza przystawionej z boku. Gdy przed frontem stoi mur albo budynek (np. wieża w narożniku palisady), wejście przechodzi na pierwszy wolny bok. Na pomost wchodzą tylko swoi (jak przez bramę), wróg z muru do wieży nie przejdzie

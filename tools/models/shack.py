@@ -15,6 +15,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
+from shackparts import backing, door_hide, ridge_cap  # noqa: E402
 from timber import Timber  # noqa: E402
 
 b = Building()
@@ -68,6 +69,8 @@ def boards_x(z, out, x0, x1, skip=(), patch=None, door=None):
             b.box('base', mat, c2 - a2, BH - abs(jit(row, 9, 0.008)), PT, (a2 + c2) / 2, y, zz + jit(row, a, 0.004), roll=tilt)
         y += BH + GAP + jit(row, 4, 0.004)
         row += 1
+    # od środka ciemne deski: przez szpary nie prześwituje niebo
+    backing(b, 'x', z + out * (0.035 - 0.006), x0 - 0.02, x1 + 0.02, H1, holes=[door] if door else ())
     if patch:   # łata: pionowa deska przybita na szparach, o włos przed licem
         px, ph = patch
         b.box('base', 'woodDark', 0.075, ph, PT, px, 0.08, zz + out * (PT + 0.006), roll=jit(3, px, 0.06))
@@ -87,6 +90,7 @@ def boards_z(x, out, z0, z1, skip=(), patch=None):
             b.box('base', mat, c2 - a2, BH - abs(jit(row, 11, 0.008)), PT, xx + jit(row, x, 0.004), y, (a2 + c2) / 2, rot=math.pi / 2, roll=tilt)
         y += BH + GAP + jit(row, 6 + x, 0.004)
         row += 1
+    backing(b, 'z', x + out * (0.035 - 0.006), z0 - 0.02, z1 + 0.02, H1)
     if patch:
         pz, ph = patch
         b.box('base', 'woodDark', 0.075, ph, PT, xx + out * (PT + 0.006), 0.08, pz, rot=math.pi / 2, roll=jit(5, pz, 0.06))
@@ -99,10 +103,8 @@ boards_z(X1, 1, Z0, Z1, patch=(-0.12, 0.46))
 # belka nad wejściem i próg z płaskiego kamienia
 b.box('base', 'woodDark', DOOR[1] - DOOR[0] + 0.14, 0.05, 0.06, DM, DOOR[2], Z1 + 0.035)
 b.box('base', 'rockDark', DOOR[1] - DOOR[0] + 0.02, 0.022, 0.12, DM, 0.0, Z1 + 0.1)
-# skóra zamiast drzwi: zwisa z belki, odgięta na lewo i przewiązana sznurem (przejście wolne)
-b.box('base', 'hide', 0.11, DOOR[2] - 0.04, 0.012, DOOR[0] + 0.06, 0.04, Z1 + 0.075, roll=0.06)
-b.box('base', 'hideDark', DOOR[1] - DOOR[0] - 0.02, 0.07, 0.014, DM, DOOR[2] - 0.075, Z1 + 0.078)
-b.box('base', 'rope', 0.13, 0.014, 0.022, DOOR[0] + 0.06, 0.3, Z1 + 0.084)
+# skóra zamiast drzwi: zwinięta w rulon pod belką i przewiązana sznurami (przejście wolne)
+door_hide(b, DOOR[0], DOOR[1], DOOR[2], Z1 + 0.075)
 
 # ---------------- dach: deski z kalenicy na okap, szczeliny, ciemny podbitek pod spodem ----------------
 OV = 0.1
@@ -127,7 +129,7 @@ for side, ze in ((-1, Z0 - OV), (1, Z1 + OV)):
             pts = [pts[1], pts[0], pts[3], pts[2]]
         b.slope('shell', 'wood' if k % 4 else 'woodDark', pts, mid, t=PT)
 # deska kalenicowa i dwa kamienie przyciskające dach
-b.box('shell', 'woodDark', X1 - X0 + 2 * OV + 0.04, 0.03, 0.12, 0, H1 + RISE + 0.03, zm)
+ridge_cap(b, 'x', X0 - OV - 0.02, X1 + OV + 0.02, zm, H1 + RISE + 0.012, RISE, Z1 + OV - zm)
 for x, z in ((-0.45, Z1 - 0.02), (0.5, Z0 + 0.05)):
     b.crystal('shell', 'rock', x, H1 + RISE * 0.55, z, 0.05, seed=x, sy=0.6)
 # szczyty z desek
