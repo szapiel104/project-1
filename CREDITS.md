@@ -1,3 +1,7 @@
+# Twórcy gry
+- **Michał Szapiel** — twórca gry i założyciel SuroCrave
+- **Mikołaj Szymczak** — najlepszy tester i twórca nowych pomysłów
+
 # Zasoby z zewnątrz
 
 ## Tekstury (CC0)

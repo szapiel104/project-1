@@ -1975,8 +1975,10 @@ function loop(now: number): void {
   // otwarte menu wstrzymuje grę
   // w meczu przez sieć menu nie zatrzymuje czasu — inni gracze grają dalej
   if (menu.isOpen() && !net) {
-    // samo menu zasłania świat w całości (nie rysujemy osady pod spodem); rysujemy tylko podgląd mapy przy nowej grze
+    // menu główne zasłania świat w całości (bez osady pod spodem, tylko podgląd mapy przy nowej grze)
     if (renderer.isPreviewing) { renderer.orbit(elapsed / 1000); renderer.frame(elapsed / 1000, 1); }
+    // menu pauzy w trakcie gry: pod spodem widać wstrzymaną osadę (woda, ogień i niebo dalej żyją), żeby nie mylić go z menu głównym
+    else if (!titleScreen && !gameOver) renderer.frame(elapsed / 1000, 1, true);
     requestAnimationFrame(loop);
     return;
   }

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.54.8 — menu pauzy z podglądem gry, twórcy w zakładce Autorzy (2026-10-28)
+
+- **Menu pod Esc w trakcie gry wyraźnie różni się od menu głównego:** pod spodem widać wstrzymaną osadę (rysowaną na żywo — woda, ogień i niebo się ruszają, symulacja stoi), tło jest tylko lekko przyciemnione, bez iskier i herbu, wokół ekranu złota ramka, a pod nazwą gry napis „Gra wstrzymana” / „Game paused”. Menu główne (start, po wyjściu z gry) bez zmian — zasłania świat jak dotąd. W meczu przez sieć bez zmian (czas leci dalej)
+- Ustawienia → Autorzy: nowa sekcja „Twórcy gry” na górze — Michał Szapiel (twórca gry i założyciel SuroCrave) i Mikołaj Szymczak (najlepszy tester i twórca nowych pomysłów), po polsku i po angielsku. To samo na początku `CREDITS.md`
+- Bot: bez zmian (sam wygląd menu)
+
 ## 0.54.7 — symulacja szybsza o ok. 30–37% w dużych grach (2026-10-28)
 
 - **Żołnierze i chłopi nie przeglądają już całej mapy w każdym kroku.** Zmierzone profilem na długiej grze 4 na 4: najwięcej czasu symulacji zjadało szukanie wrogiego chłopa przez każdego żołnierza (w każdym kroku po wszystkich chłopach na mapie) i rozglądanie się chłopów (każdy chłop po wszystkich żołnierzach, odważni dodatkowo po wszystkich chłopach). Teraz patrzą tylko na sąsiednie kwadraty mapy (`sim/spatial.ts`, kubełki 8×8 pól — jak już przy szukaniu wrogich żołnierzy)

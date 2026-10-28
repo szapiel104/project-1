@@ -157,7 +157,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     <path d="M46 84 V52 h4 v-6 h5 v6 h10 v-6 h5 v6 h4 V84 Z" fill="#e9c145"/>
     <path d="M56 84 v-12 a4 4 0 0 1 8 0 v12z" fill="#6e1711"/>
   </svg>`;
-  head.append(crest, title, sub);
+  // w trakcie gry: napis, że to pauza (żeby nie mylić z menu głównym)
+  const paused = el('p', 'menu-paused', tx('Gra wstrzymana', 'Game paused'));
+  paused.setAttribute('role', 'status');
+  head.append(crest, title, sub, paused);
   // iskry z ognisk unoszące się z dołu ekranu (sama ozdoba)
   const embers = el('div', 'menu-embers');
   embers.setAttribute('aria-hidden', 'true');
@@ -210,7 +213,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     el, button, screen,
     showMain: () => showMain(),
     onStart: (st) => events.onOnlineStart(st),
-    openForJoin: (id) => { inGame = false; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
+    openForJoin: (id) => { inGame = false; wrap.classList.remove('in-game'); wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
     inMatch: () => events.isOnline(),
     preview: (seedText, preset) => { wrap.classList.add('previewing'); events.onPreviewMap(seedText, preset, 2, false); },
     previewEnd: () => { if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); } },
@@ -537,6 +540,14 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       }],
       // autorzy grafiki z paczek (CC BY i CC BY-SA wymagają podpisu w grze; pełna lista w CREDITS.md)
       [tx('Autorzy', 'Credits'), () => [
+        el('h3', 'help-h', tx('Twórcy gry', 'Made by')),
+        el('p', 'help-p', tx(
+          'Michał Szapiel — twórca gry i założyciel SuroCrave.',
+          'Michał Szapiel — creator of the game and founder of SuroCrave.')),
+        el('p', 'help-p', tx(
+          'Mikołaj Szymczak — najlepszy tester i twórca nowych pomysłów.',
+          'Mikołaj Szymczak — our finest tester and the man behind many new ideas.')),
+        el('h3', 'help-h', tx('Grafika z zewnątrz', 'Third-party art')),
         el('p', 'help-p', tx(
           'Koń, pałka wodna i liście na stawie: 0 A.D. © Wildfire Games (wildfiregames.com), licencja CC BY-SA 3.0.',
           'Horse, cattails and pond leaves: 0 A.D. © Wildfire Games (wildfiregames.com), CC BY-SA 3.0 licence.')),
@@ -756,10 +767,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   }
 
   return {
-    open(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); },
-    house(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.showHouse(1); },
-    account(game) { inGame = game; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); if (netMe()) online.showAccount(); else online.showLogin(false); },
-    join(id) { inGame = false; wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
+    open(game) { inGame = game; wrap.classList.toggle('in-game', game); wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); },
+    house(game) { inGame = game; wrap.classList.toggle('in-game', game); wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.showHouse(1); },
+    account(game) { inGame = game; wrap.classList.toggle('in-game', game); wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); if (netMe()) online.showAccount(); else online.showLogin(false); },
+    join(id) { inGame = false; wrap.classList.remove('in-game'); wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); online.join(id); },
     close() { if (wrap.classList.contains('previewing')) { wrap.classList.remove('previewing'); events.onPreviewEnd(); } wrap.hidden = true; document.body.classList.remove('menu-open'); },
     isOpen: () => !wrap.hidden,
     setVolume(v) { volume = v; },
