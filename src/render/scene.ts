@@ -4822,7 +4822,8 @@ export class GameRenderer {
       }
       // drwal z siekierą, kopacz z kilofem: oburęczny zamach, cios z pochyleniem i stuk w chwili trafienia
       const site = u.phase === Phase.WorkingSite && !fishing && u.job ? BUILDINGS[jobs.get(u.job)?.type ?? -1]?.production?.site : undefined;
-      const chopping = site === Terrain.Forest;
+      // rąbiący z biedy (bez chaty drwala, emergencywood.ts) macha siekierą tak samo jak drwal
+      const chopping = site === Terrain.Forest || (u.phase === Phase.WorkingSite && !!u.chop);
       // górnik w grocie kopalni: ten sam zamach kilofem co na złożu, ale stoi już twarzą do ściany (miejsce z modelu)
       const inMine = u.phase === Phase.Working && !!job && job.type === OREMINE_T && !mineWalk;
       const mining = site === Terrain.Stone || site === Terrain.Iron || inMine;

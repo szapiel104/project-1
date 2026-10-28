@@ -19,6 +19,7 @@ import { storageSystem } from './systems/storage';
 import { syncStock } from './systems/stock';
 import { torchSystem } from './systems/torches';
 import { workerSystem } from './systems/workers';
+import { emergencyWoodSystem } from './systems/emergencywood';
 import { plagueSystem, setQuarantine } from './systems/plague';
 import { stormSystem } from './systems/storms';
 import { dole, quell, unrestSystem } from './systems/unrest';
@@ -192,6 +193,7 @@ export function step(g: GameState, commands: readonly Command[]): void {
   decaySystem(g);
   storageSystem(g);
   roadSystem(g);
+  emergencyWoodSystem(g);
   workerSystem(g);
   plagueSystem(g);
   forestSystem(g);

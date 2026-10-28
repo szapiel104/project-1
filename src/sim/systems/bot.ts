@@ -139,7 +139,10 @@ export function botSystem(g: GameState): void {
     const pop = population(g, p.id);
     const feeders = (have.get('orchard') ?? 0) + (have.get('fisher') ?? 0) + (have.get('bakery') ?? 0) * 2;
     // pierwszy drwal przed wszystkim: bez niego drewno się kończy i osada staje (zapas chleba starcza na start)
-    const urgent = !(have.get('woodcutter') ?? 0) ? 'woodcutter' : feeders * 6 < pop + 3 ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
+    // bez żadnego składu na drewno (stodoła i składy zburzone) najpierw skład, potem drwal: drwal bez składu tylko zrzuca deski
+    // pod chatą i staje (storage.ts). Drewno na skład zbiera w razie biedy wolny chłop (emergencywood.ts)
+    const woodStore = (have.get('stockpile') ?? 0) + (have.get('barn') ?? 0) > 0;
+    const urgent = !woodStore ? 'stockpile' : !(have.get('woodcutter') ?? 0) ? 'woodcutter' : feeders * 6 < pop + 3 ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
     // pełny magazyn (storage.ts): warsztaty stoją, a towar leży pod drzwiami — bot stawia kolejny magazyn tego rodzaju
     // (spichlerza nie: pełny spichlerz to po prostu dużo jedzenia, a sady same ruszą, gdy ludzie zjedzą zapas)
     const storeNeed = fullStoreNeed(g, p.id);

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.58.0 — rąbanie z biedy: osada bez składu i drwala nie staje (2026-10-28)
+
+- **Sytuacja kryzysowa:** gdy osada nie ma składu na drewno albo chaty drwala, a drewna brakuje nawet na nie (skład 15, drwal 15), jeden wolny chłop sam idzie do lasu, ścina drzewo i obrabia je przy pniu — wolno (30 s na drzewo, 5 drewna). Bez składu drewno od razu liczy się do zapasów, ze składem chłop zanosi je do niego. Gdy przy ognisku nikogo nie ma, rąbie wolny magazynier
+- Rąbanie kończy się samo, gdy stoi skład i chata drwala (także w budowie) albo drewna starcza; dalej robotę robi drwal. Rąbiący macha siekierą jak drwal
+- **Bot:** bez żadnego składu najpierw stawia skład, potem drwala — pobity bot z samymi sadami, spichlerzem i zamkiem znowu się podnosi
+- Opis w `docs/magazyny.md` („Rąbanie z biedy”), testy w `tests/emergency-wood.test.ts`
 ## 0.57.5 — wilki z prawdziwych nagrań, lżej i rzadziej (2026-10-28)
 
 - **Wycie wilków z nagrań zamiast syntezy.** Dawne wycie, „jipy” i warczenie były składane z tonów i szumu — brzmiały sztucznie. Teraz: trzy frazy prawdziwego wycia (U.S. Fish and Wildlife Service, domena publiczna) i zbiórka watahy europejskich wilków (Retron, Wikimedia Commons, domena publiczna), oczyszczone z szumu i wyrównane

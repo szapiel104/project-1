@@ -10,6 +10,7 @@ import { FP, Phase, playerKeep, storeRoom, type Building, type GameState, type U
 import { CAMP_HOLD, campOf, holdTotal, putInHold } from './minecamp';
 import { mineWalkTicks } from '../../data/minewalk';
 import { plantSapling } from './forestry';
+import { chopStep } from './emergencywood';
 import { mageKindOf } from './plague';
 import { harvestPct } from './storms';
 import { feastDay, goesToPray } from './faith';
@@ -669,6 +670,8 @@ export function workerSystem(g: GameState): void {
     }
     if (!bedridden && !u.path.length && routine(g, u, part) && (u.phase === Phase.Sleeping || u.phase === Phase.Evening)) continue;
     if (u.phase === Phase.Evening || u.phase === Phase.Sleeping) continue;
+    // rąbie z biedy (emergencywood.ts): w drodze krok robi zwykły move niżej
+    if (u.chop && !u.job && chopStep(g, u)) continue;
     const job = u.job ? byId.get(u.job) : undefined;
     const prod = job ? BUILDINGS[job.type]!.production : undefined;
 
