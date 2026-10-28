@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.61.1 — gra nie staje przez błąd dźwięku (2026-10-28)
+
+- **Zgłoszenie:** co jakiś czas gra zamarzała na starcie (FPS 0) z błędem `setTargetAtTime … non-finite`. Do szumu deszczu trafiała zepsuta liczba (NaN), przeglądarka rzucała wyjątek w środku pętli klatki i następna klatka już się nie zaczynała
+- **Bezpiecznik dźwięku** (`audio/guard.ts`): wywołanie parametru dźwięku z NaN albo nieskończonością jest pomijane w jednym miejscu dla całego dźwięku, zamiast zatrzymywać grę; do dziennika błędów idzie ostrzeżenie `[dźwięk]` ze stosem
+- **Pogoda:** zepsuta długość klatki (NaN, ujemna) nie zatruwa już deszczu, zachmurzenia i mgły; gdyby deszcz jednak wyszedł NaN, wraca do pogody z zegara i do dziennika idzie `[pogoda] deszcz NaN`
+- Głośność z ustawień przeglądarki sprawdzana przy wczytaniu (śmieciowy zapis dawał NaN)
+- Bot: bez zmian (dźwięk)
 ## 0.61.0 — nowy ekran wczytywania (2026-10-28)
 
 - **Pejzaż o zmierzchu** na całym ekranie (`src/ui/loadscreen.ts`, rysowany wektorowo, bez plików do pobrania): góry z zachodzącym za przełęczą słońcem, na wzgórzu zamek z zapalonymi oknami i chorągwią, mgła w dolinie, z przodu ciemny bór

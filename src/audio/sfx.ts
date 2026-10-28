@@ -8,6 +8,7 @@
  * pod walkę i krzyki); interfejs → ui; muzyka → music (ściszana pod efekty). Na końcu łagodny kompresor i limiter.
  */
 import { initEngine, play2d, hasKind } from './engine';
+import { installAudioGuard } from './guard';
 import type { WorldSound } from './bank';
 import { BANK_0AD } from './bank.gen';
 export type { WorldSound } from './bank';
@@ -58,7 +59,7 @@ let muted = false;
 
 try {
   const v = localStorage.getItem('project1.volume');
-  if (v !== null) volume = Number(v);
+  if (v !== null && Number.isFinite(Number(v))) volume = Math.max(0, Math.min(1, Number(v)));
   muted = localStorage.getItem('project1.muted') === '1';
 } catch { /* brak dostępu do pamięci przeglądarki */ }
 
@@ -66,6 +67,7 @@ function audio(): AudioContext | null {
   if (ctx) return ctx;
   const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
   if (!AC) return null;
+  installAudioGuard();
   ctx = new AC();
   master = ctx.createGain();
   master.gain.value = muted ? 0 : volume;
@@ -375,6 +377,8 @@ function wolf(c: AudioContext, at: number, pan: number, near = false): void {
  * wrony kraczą co kilkanaście sekund za dnia, wilki rzadko i cicho: nocą raz na kilka minut, przy watasze na mapie co pół minuty–minutę.
  */
 export function nature(night: number, rain: number, paused: boolean, wolvesNear = 0): void {
+  if (!Number.isFinite(night)) night = 0;
+  if (!Number.isFinite(rain)) rain = 0;
   const c = ctx;
   if (!c || muted || c.state !== 'running') return;
   // szumu wiatru nie ma (Michał 27.10.2026: „dziwny dźwięk wiatru” — syntetyczny szum brzmiał sztucznie)

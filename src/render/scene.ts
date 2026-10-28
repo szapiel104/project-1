@@ -1713,6 +1713,8 @@ export class GameRenderer {
     // co ~3 dni pada przez około pół dnia (ten sam zegar deszczu co w symulacji: ludzie na słomie mokną naprawdę)
     const want = g && this.rainOn ? rainAt(g.tick) : 0;
     this.rain += (Math.min(1, want * 1.6) - this.rain) * Math.min(1, dt * 0.5);
+    // raz zepsuta liczba zostałaby na zawsze (jak śnieg niżej) — wraca do pogody z zegara
+    if (!Number.isFinite(this.rain)) { console.warn('[pogoda] deszcz NaN', { dt, tick: g?.tick, want }); this.rain = Number.isFinite(want) ? Math.min(1, want * 1.6) : 0; }
     // pogoda dnia: pogodnie, pochmurno albo mglisto (z ziarna mapy, więc u każdego taka sama); przejścia płynne w ciągu dnia
     const seed = g?.map.seed ?? 1;
     const dayW = (d: number): [number, number] => { const h = Math.sin((Math.floor(d) + seed * 0.013) * 12.9898) * 43758.5453; const v = h - Math.floor(h); return v < 0.45 ? [0.12, 0] : v < 0.8 ? [0.55, 0.15] : [0.35, 0.8]; };
@@ -1720,6 +1722,8 @@ export class GameRenderer {
     const wantCover = Math.max(this.rain, c0 + (c1 - c0) * fr), wantMist = f0 + (f1 - f0) * fr;
     this.cover += (wantCover - this.cover) * Math.min(1, dt * 0.3);
     this.dayMist += (wantMist - this.dayMist) * Math.min(1, dt * 0.3);
+    if (!Number.isFinite(this.cover)) this.cover = 0.3;
+    if (!Number.isFinite(this.dayMist)) this.dayMist = 0;
     this.grade.uniforms.rain!.value = this.rain;
     // po deszczu długo jest mokro: błoto i kałuże schną powoli
     this.wet = Math.max(0, Math.min(1, this.wet + (this.rain > 0.15 ? dt * 0.12 : -dt * 0.003)));
@@ -2259,7 +2263,8 @@ export class GameRenderer {
       setListener(f.x, f.y, f.z, this.walk ? 0 : this.cam.distance, r.x, r.z, !!this.walk);
       updateLoops(paused);
     }
-    const dt = paused ? 0 : realDt;
+    // zepsuta długość klatki (NaN, ujemna) zatrułaby deszcz, mgłę i zachmurzenie na zawsze
+    const dt = paused || !Number.isFinite(realDt) || realDt < 0 ? 0 : realDt;
     this.time += dt;
     this.frameDt = dt;
     this.dust.update(dt);

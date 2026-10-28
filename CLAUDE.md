@@ -44,6 +44,10 @@ Nad grą pracuje kilka czatów naraz, więc:
 - **Potem w grze, na pustej scenie** (`?test=1&pusta=1&model=<id>`, opis niżej): czy skala pasuje do ludzi i budynków obok i czy stoi tam, gdzie trzeba.
 - Budynki dodatkowo przechodzą arkusz `inspect.sh` (punkt 3 niżej).
 
+## Szybkie testy, szybki push (Michał 28.10.2026, na zawsze, dla wszystkich czatów)
+- Testy nie mogą zjadać większości czasu (zmiana minuta, testy 9 minut = bez sensu). Po zmianie: `npx tsc --noEmit` + `npm run build` + tylko testy związane ze zmienianymi plikami (`npx vitest run tests/<plik>`), i od razu push. Pełne `npx vitest run` (ok. 4 min) tylko przy dużych zmianach w symulacji.
+- Nie czekać na pełny zestaw testów i nie pytać Michała przed pushem — on sam sprawdza grę po wdrożeniu.
+
 ## Testy — zawsze w tej kolejności, możliwie tanio
 - **Zasada Michała (18.10.2026, na zawsze, dla wszystkich czatów): grę i modele w przeglądarce testujemy ZAWSZE w pełnej grafice — `?test=1&hd=1` (w podglądzie modeli pełna jakość jest domyślnie). Bez względu na to, co sprawdzasz, nigdy w słabej grafice: tam inaczej wyglądają tekstury, cienie i przezroczystość, więc błędy umykają.**
 - **Zasada Michała (16.10.2026, dla wszystkich czatów tej gry): przeglądarkę (Chrome, Playwright, zrzuty) odpalamy tylko przy GRUBYCH zmianach.** Mniejszych zmian nie sprawdzamy w oknie — to zjada czas; Michał testuje sam. Nowe albo zmienione obiekty sprawdzamy w Blenderze (arkusz `inspect.sh`, podgląd modeli), a wszystko inne tylko `tsc` + `vitest` + `build`. W razie wątpliwości: nie odpalać przeglądarki, napisać Michałowi, co sprawdzić.
