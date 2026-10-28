@@ -913,6 +913,26 @@ function jumpTo(kind: JumpKind): void {
   renderer.lookAt(b.x + d.w / 2, b.y + d.h / 2, 22);
   select(b.id);
   play('select');
+  // okno budynku zasłania środek ekranu (i sam budynek): kamera przesuwa się tak, żeby budynek stał obok okna.
+  // Dawniej przy pierwszym kliknięciu budynek chował się pod oknem i wyglądało, jakby kamera w ogóle nie ruszyła
+  requestAnimationFrame(() => requestAnimationFrame(() => frameBeside(b.x + d.w / 2, b.y + d.h / 2, 22)));
+}
+/** Kamera na punkt mapy, ale tak, żeby wypadł w wolnej części ekranu obok otwartego okna budynku */
+function frameBeside(x: number, y: number, dist: number): void {
+  const panel = document.querySelector<HTMLElement>('.panel.info:not([hidden])');
+  if (!panel) return;
+  const r = panel.getBoundingClientRect(), c = canvas.getBoundingClientRect();
+  if (!r.width || !c.width) return;
+  const right = r.left + r.width / 2 > c.left + c.width / 2;
+  const wantX = right ? (c.left + r.left) / 2 : (r.right + c.right) / 2, wantY = c.top + c.height * 0.45;
+  renderer.lookAt(x, y, dist);
+  const p0 = renderer.project(x, y), pa = renderer.project(x + 1, y), pb = renderer.project(x, y + 1);
+  const ax = pa.sx - p0.sx, ay = pa.sy - p0.sy, bx = pb.sx - p0.sx, by = pb.sy - p0.sy, det = ax * by - ay * bx;
+  if (Math.abs(det) < 1e-6) return;
+  // przesunięcie celu kamery o (u, v) pól przesuwa budynek na ekranie o −(u·a + v·b)
+  const ex = p0.sx - wantX, ey = p0.sy - wantY;
+  const u = (ex * by - ey * bx) / det, v = (ax * ey - ay * ex) / det;
+  renderer.lookAt(x + u, y + v, dist);
 }
 const jumpCount = (kind: JumpKind): number => { const ids = JUMP_IDS[kind]; let n = 0; for (const b of game.buildings) if (b.owner === ME && ids.includes(BUILDINGS[b.type]!.id)) n++; return n; };
 

@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.58.2 — skrót do koszar przenosi kamerę od pierwszego kliknięcia (2026-10-28)
+
+- **Skróty na dolnym pasku (koszary, skład, spichlerz):** po jednym kliknięciu kamera staje tak, że budynek widać obok otwartego okna, a nie pod nim. Kamera przesuwała się już przy pierwszym kliknięciu, ale budynek trafiał na środek ekranu, który zasłania okno budynku, więc wyglądało, jakby nic się nie stało (drugie kliknięcie dawało inne ujęcie i dopiero wtedy było go widać)
+- Bot: bez zmian (dotyczy interfejsu gracza)
+
 ## 0.58.1 — cel ataku na czerwono, większe obrażenia, wilki pod ostrzałem, krótszy cios włócznią (2026-10-28)
 
 - **Miecz nad wrogiem:** kursor z mieczem pojawia się nad całą sylwetką wroga — chłopa, strażnika miejskiego, łucznika, maga — od stóp po głowę, przy każdym zbliżeniu. Dawniej liczył się jeden punkt (u żołnierzy przy pasku nad głową, u chłopów metr nad ziemią), więc kursor na postaci często nie łapał celu
