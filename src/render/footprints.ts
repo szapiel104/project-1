@@ -13,7 +13,8 @@ import * as THREE from 'three';
 import { cat } from './cat';
 import { touch } from './touch';
 
-const MAX = 4096;
+/** Pierścień odcisków: przy kilkudziesięciu idących 4096 starczało na kilka sekund i stare znikały od razu, zanim zbladły */
+const MAX = 24576;
 /** Długość kroku i rozstaw stóp (pola mapy), wymiary odcisku */
 const STEP = 0.085, SPREAD = 0.021, LEN = 0.058, WID = 0.024;
 /** Po ilu sekundach odcisk zaczyna blednąć i ile trwa blednięcie */
@@ -85,9 +86,9 @@ export class Footprints {
 
   /**
    * Klatka: `snow` 0..1 (ile śniegu leży), `dt` w sekundach, `fall` przyspiesza zasypywanie (opad),
-   * `walkers` — idący w polach mapy, `height` — wysokość terenu, `cam` — środek widoku w polach mapy.
+   * `walkers` — idący w polach mapy z wysokością stóp tak, jak stoją na ekranie (`h`, świat), `cam` — środek widoku w polach mapy.
    */
-  sync(snow: number, dt: number, fall: number, walkers: { id: number; x: number; y: number }[], height: (x: number, y: number) => number, W: number, H: number, cam: { x: number; y: number }): void {
+  sync(snow: number, dt: number, fall: number, walkers: { id: number; x: number; y: number; h: number }[], W: number, H: number, cam: { x: number; y: number }): void {
     // w zamieci ślady starzeją się szybciej (czas shadera biegnie dla nich szybciej)
     this.uSnow.value = snow;
     this.clock += dt * (1 + fall * 2);
@@ -102,7 +103,7 @@ export class Footprints {
     let added = false;
     const alive = new Set<number>();
     for (const w of walkers) {
-      if (Math.abs(w.x - cam.x) > 40 || Math.abs(w.y - cam.y) > 40) continue;
+      if (Math.abs(w.x - cam.x) > 30 || Math.abs(w.y - cam.y) > 30) continue;
       alive.add(w.id);
       const p = this.last.get(w.id);
       if (!p) { this.last.set(w.id, { x: w.x, y: w.y, d: 0, side: w.id & 1 }); continue; }
@@ -118,7 +119,7 @@ export class Footprints {
         const sgn = p.side ? 1 : -1;
         p.side ^= 1;
         const fx = bx - uy * SPREAD * sgn, fy = by + ux * SPREAD * sgn;
-        this.put(fx, fy, Math.atan2(ux, uy) + Math.PI, height(fx, fy), W, H, clock); // przód podeszwy leży w teksturze u góry, czyli w -z płaszczyzny: obrót o 180°, żeby palce szły w stronę marszu
+        this.put(fx, fy, Math.atan2(ux, uy) + Math.PI, w.h, W, H, clock); // przód podeszwy leży w teksturze u góry, czyli w -z płaszczyzny: obrót o 180°, żeby palce szły w stronę marszu
         added = true;
       }
       p.x = w.x; p.y = w.y;
@@ -131,6 +132,8 @@ export class Footprints {
 
   private put(x: number, y: number, yaw: number, h: number, W: number, H: number, clock: number): void {
     const i = this.next;
+    // pierścień pełny świeżych odcisków: nowego nie kładziemy, zamiast wycinać jeszcze widoczny (ślad ma zbledną, a nie zniknąć)
+    if (clock - this.born.getX(i) < HOLD + FADE) return;
     this.next = (this.next + 1) % MAX;
     this.used = Math.min(MAX, this.used + 1);
     this.q.setFromAxisAngle(this.up, yaw);

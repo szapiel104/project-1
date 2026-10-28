@@ -3943,6 +3943,7 @@ export class GameRenderer {
       if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.55);
       const y = this.standY(view, px, pz, s.up ? -1 : (s.py >> 8) * width + (s.px >> 8)) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
+      if (walking && !s.up) this.feet.set(s.id, [px, pz, y]); // ślady butów: tam, gdzie naprawdę stoi na ekranie
       { const d = this.drawnAt.get(s.id); if (d) d.copy(t.position); else this.drawnAt.set(s.id, t.position.clone()); }
       // przymrożony czarem wody: lód wokół stóp i chłodna poświata (spells.ts), dopóki czar trwa
       if ((s.slow ?? 0) > g.tick && !this.calm && s.hp > 0) this.spells.frost(t.position, s.id);
@@ -4390,6 +4391,8 @@ export class GameRenderer {
   private trailSeen = 0;
   /** Pojedyncze odciski butów na śniegu przy kamerze (footprints.ts) */
   private prints: Footprints | null = null;
+  /** Stopy idących z ostatniej klatki: [x, y w polach mapy, wysokość stóp w świecie] — tam, gdzie postać stoi na ekranie */
+  private feet = new Map<number, [number, number, number]>();
   /** Ślady na śniegu: ludzie, żołnierze i wilki wydeptują ścieżki, które powoli się zasypują */
   private updateTrails(g: GameState, dt: number): void {
     const { width: w, height: h } = g.map;
@@ -4408,13 +4411,11 @@ export class GameRenderer {
     const view = this.view;
     if (view && (this.snowNow > 0.01 || this.prints)) {
       this.prints ??= new Footprints(this.scene);
-      const walkers: { id: number; x: number; y: number }[] = [];
-      if (this.snowNow >= 0.1) {
-        for (const u of g.units) if (u.path.length > 0) walkers.push({ id: u.id, x: u.px / FP, y: u.py / FP });
-        for (const s of g.soldiers) if (s.path.length > 0 && !s.up) walkers.push({ id: s.id, x: s.px / FP, y: s.py / FP });
-      }
+      const walkers: { id: number; x: number; y: number; h: number }[] = [];
+      if (this.snowNow >= 0.1) for (const [id, f] of this.feet) walkers.push({ id, x: f[0], y: f[1], h: f[2] });
+      this.feet.clear();
       const c = this.cam.camera.position;
-      this.prints.sync(this.snowNow, this.calm ? 0 : dt, this.rain, walkers, (x, y) => this.standY(view, x, y, -2), w, h, { x: c.x + w / 2, y: c.z + h / 2 });
+      this.prints.sync(this.snowNow, this.calm ? 0 : dt, this.rain, walkers, w, h, { x: c.x + w / 2, y: c.z + h / 2 });
     }
   }
   private shiftSeen = 0;
@@ -4882,7 +4883,9 @@ export class GameRenderer {
       const stride = walking ? st.phase : 0;
       if (walking) this.footstep(g, u.id, cv.sx, cv.sy, stride, 0.45);
       let swing = walking ? Math.sin(stride) * 0.55 : 0;
-      t.position.set(cv.sx - width / 2, this.standY(view, cv.sx, cv.sy, (u.py >> 8) * width + (u.px >> 8)) + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
+      const footY = this.standY(view, cv.sx, cv.sy, (u.py >> 8) * width + (u.px >> 8));
+      t.position.set(cv.sx - width / 2, footY + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
+      if (walking) this.feet.set(u.id, [cv.sx, cv.sy, footY]); // ślady butów: miejsce i wysokość stóp z ekranu
       t.rotation.set(0, heading, 0);
       if (walking && tipsy && this.drank.has(u.id)) {
         // zatacza się: znosi go na boki (prostopadle do drogi), kiwa się i kręci głową

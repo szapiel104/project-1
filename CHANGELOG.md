@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.63.4 — ślady butów: każdy swoje, na ziemi, bledną zamiast znikać (2026-10-28)
+
+- **Trzech obok siebie = jedne ślady:** odciski liczyły się z położenia w symulacji, a na ekranie gra rozsuwa ludzi idących jednym torem. Teraz biorą miejsce stóp postaci dokładnie tak, jak stoi na ekranie (scena zapisuje je przy rysowaniu chłopów i żołnierzy), więc każdy zostawia swój ślad
+- **Ślady w powietrzu:** wysokość brała się z innego wyliczenia niż ta, na której stoją nogi (np. przy drogach i na zboczach). Teraz to ta sama wysokość stóp co u postaci
+- **Znikały od razu zamiast blednąć:** przy kilkudziesięciu idących pierścień 4096 odcisków zapełniał się w kilka sekund i najstarsze (jeszcze widoczne) były wycinane. Pierścień większy (24 576), a pełny — nowy odcisk czeka, zamiast wycinać widoczny; każdy ślad zawsze spokojnie blednie (po ok. 25 s, przez 15 s). Promień wokół kamery 30 pól
+- Bot: bez zmian (wygląd)
 ## 0.63.3 — dachy na wieżach zdejmowane kliknięciem, czatownia na jednego łucznika (2026-10-28)
 
 - **Zgłoszenie:** po kliknięciu drewnianej wieży strażniczej dach nie schodził. Gra zdejmowała dach tylko budynkom z wnętrzem, a wieża ma pod dachem sam pomost. Modele wież mają teraz znacznik `openTop` (`blenderModel` → `userData.openTop`, `animateBuilding`), więc po kliknięciu dach, iglica i proporzec znikają i widać pomost z łucznikami
