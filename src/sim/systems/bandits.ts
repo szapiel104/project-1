@@ -13,6 +13,7 @@ import { addBuilding } from './placement';
  * i nie należy do żadnego gracza — jego ludzie są wrogami wszystkich. Za dnia kilku zbójów wychodzi na napad:
  * wybiera chłopa pracującego w lesie (najchętniej drwala), goni go i bije; zabity zostawia ciało, a zbóje
  * zabierają jego panu trochę rudy i drewna do obozu. Kto ucieknie do osady, ten ocalał — za blisko zamku zbóje nie idą.
+ * Od generatora map 7 obóz stoi na uboczu mapy, daleko od zamków, więc zbóje chodzą na napad dalej (raidRange).
  * Obóz rozbity wojskiem oddaje cały łup temu, kto go rozbił; ocalali zbóje uciekają za mapę.
  *
  * Walkę i chodzenie robi system wojska (zbój to zwykły żołnierz bez pana); tu są tylko decyzje: kiedy napad, na kogo,
@@ -110,14 +111,24 @@ function watched(g: GameState, s: Soldier, r: number): boolean {
   return g.soldiers.some((o) => !isBandit(o) && Math.abs(o.px - s.px) < R && Math.abs(o.py - s.py) < R) || g.units.some((u) => Math.abs(u.px - s.px) < R && Math.abs(u.py - s.py) < R);
 }
 
+/** Jak daleko od tego obozu zbóje szukają ofiary: na mapach od generatora 7 obóz stoi na uboczu, więc sięga do skraju
+ * najbliższej osady (odległość do zamku + 12 pól); starsze mapy bez zmian (RAID_RANGE) */
+function raidRange(g: GameState, camp: Building, keeps: Map<number, [number, number]>): number {
+  if (g.map.gen < 7) return RAID_RANGE;
+  const [cx, cy] = centre(camp);
+  let d = Infinity;
+  for (const k of keeps.values()) d = Math.min(d, Math.hypot(k[0] - cx, k[1] - cy));
+  return d === Infinity ? RAID_RANGE : Math.max(RAID_RANGE, Math.round(d) + 12);
+}
+
 /** Ofiara napadu: chłop przy pracy z dala od zamku, przy którym w pobliżu nie ma zbrojnych, w zasięgu obozu; drwale są pierwsi */
 function pickPrey(g: GameState, camp: Building, keeps: Map<number, [number, number]>): Unit | undefined {
-  const [cx, cy] = centre(camp);
+  const [cx, cy] = centre(camp), range = raidRange(g, camp, keeps);
   let best: Unit | undefined, bd = Infinity;
   for (const u of g.units) {
     if (!u.job) continue;
     const x = u.px >> 8, y = u.py >> 8, d = Math.hypot(x - cx, y - cy);
-    if (d > RAID_RANGE) continue;
+    if (d > range) continue;
     const k = keeps.get(u.owner);
     if (k && Math.hypot(x - k[0], y - k[1]) < SAFE_RANGE + 4) continue; // pod samym zamkiem — za blisko
     if (armedNear(g, u, 6) > 0) continue; // przy straży albo wojsku nikt nie napada
@@ -189,7 +200,7 @@ export function banditSystem(g: GameState): void {
     const crew = g.soldiers.filter((s) => s.den === camp.id && s.hp > 0).sort((a, b) => a.id - b.id);
     // nowi zbóje: obóz, który stracił ludzi, co półtorej doby zyskuje jednego (najwyżej do pełnej załogi)
     if (crew.length < DEN_CREW && g.tick - (camp.spawnAt ?? 0) >= REINFORCE) { camp.spawnAt = g.tick; spawnBandit(g, camp, crew.length); }
-    const [cx, cy] = centre(camp);
+    const [cx, cy] = centre(camp), range = raidRange(g, camp, keeps);
     // napad: rano, gdy w obozie jest co najmniej dwóch zdrowych; od piątego dnia idzie ich trzech
     if (raidTime && camp.raidDay !== clock.day && !crew.some((s) => s.raid)) {
       const fit = crew.filter((s) => s.hp * 100 >= UNITS[s.kind]!.hp * 70);
@@ -207,7 +218,7 @@ export function banditSystem(g: GameState): void {
         if ((g.tick + s.id) % 10 !== 0) continue;
         const prey = s.prey ? unitById(g, s.prey) : undefined;
         const x = s.px >> 8, y = s.py >> 8;
-        const far = Math.hypot(x - cx, y - cy) > RAID_RANGE + 8;
+        const far = Math.hypot(x - cx, y - cy) > range + 8;
         const k = prey ? keeps.get(prey.owner) : undefined;
         const safe = !!prey && !!k && Math.hypot((prey.px >> 8) - k[0], (prey.py >> 8) - k[1]) < SAFE_RANGE;
         const hurt = s.hp * 100 < UNITS[s.kind]!.hp * 45;

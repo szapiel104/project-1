@@ -151,9 +151,13 @@ export const denClear = (gen: number): number => (gen >= 6 ? 6.6 : 4.3);
 
 /**
  * Obozy zbójów (generator 5): dla każdej twierdzy drużyny 0 (w 4 na 4 dla dwóch) szukamy w puszczy miejsca
- * 26–40 pól od zamku — daleko od wszystkich zamków, od wody i gór, w gęstym lesie — i wycinamy tam okrągłą
- * polanę. Odbicie środkowe daje obóz po stronie wroga, więc obie drużyny mają tak samo. Same liczby całkowite i hash2.
+ * z dala od wody i gór, w gęstym lesie, i wycinamy tam okrągłą polanę. Odbicie środkowe daje obóz po stronie
+ * wroga, więc obie drużyny mają tak samo. Same liczby całkowite i hash2.
+ * Generator 5–6: 26–40 pól od zamku. Od generatora 7 obóz stoi na uboczu: w paśmie przy krańcu mapy (tuż przed
+ * górami), co najmniej trzecią część mapy od każdego zamku, a z kilku miejsc wygrywa to najdalsze od zamków.
  */
+/** Najmniejsza odległość obozu od każdego zamku na mapie od generatora 7 (pola) */
+export const denAway = (w: number, h: number): number => Math.round(Math.min(w, h) / 3);
 function carveDens(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, starts: StartPosition[], seed: number, preset: MapPreset, river: Uint8Array, gen: number): number[] {
   const DEN_CLEAR = denClear(gen), WIN = gen >= 6 ? 7 : 5;
   const size = w * h, out: number[] = [];
@@ -162,15 +166,20 @@ function carveDens(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, st
   for (const s of own) {
     let best = -1, score = -Infinity;
     // najpierw gęsta puszcza; gdy takiej nie ma (ciasne 4 na 4), wystarczy rzadszy las
-    for (const need of gen >= 6 ? [105, 55] : [70]) {
+    for (const need of gen >= 7 ? [105, 55, 0] : gen >= 6 ? [105, 55] : [70]) {
     if (best >= 0) break;
-    for (let y = s.y - 40; y <= s.y + 40; y += 2)
-      for (let x = s.x - 40; x <= s.x + 40; x += 2) {
+    const far = gen >= 7, away = denAway(w, h);
+    const [y0, y1, x0, x1] = far ? [0, h - 1, 0, w - 1] : [s.y - 40, s.y + 40, s.x - 40, s.x + 40];
+    for (let y = y0; y <= y1; y += 2)
+      for (let x = x0; x <= x1; x += 2) {
         const edge = Math.min(x, y, w - 1 - x, h - 1 - y);
         if (edge < preset.rim + 7) continue;
+        if (far && edge > preset.rim + 22) continue; // ubocze: pas lasu przy krańcu mapy, nie środek
         const d = Math.hypot(x - s.x, y - s.y);
-        if (d < 26 || d > 40) continue;
-        if (starts.some((o) => Math.hypot(x - o.x, y - o.y) < 26)) continue;
+        if (!far && (d < 26 || d > 40)) continue;
+        let near = Infinity;
+        for (const o of starts) near = Math.min(near, Math.hypot(x - o.x, y - o.y));
+        if (near < (far ? away : 26)) continue;
         const mx = w - 1 - x, my = h - 1 - y;
         if (Math.hypot(mx - x, my - y) < 34) continue; // obóz i jego odbicie nie spotkają się na środku mapy
         if (out.some((t) => Math.hypot((t % w) - x, Math.floor(t / w) - y) < 26)) continue;
@@ -181,7 +190,9 @@ function carveDens(tiles: Uint8Array, elev: Uint8Array, w: number, h: number, st
           if (tt === Terrain.Forest) forest++;
         }
         if (bad || forest < need) continue;
-        const sc = forest * 4 - Math.abs(d - 32) * 3 + (hash2(x, y, seed ^ 0x0bad1e) & 15);
+        const sc = far
+          ? near * 6 + forest + (hash2(x, y, seed ^ 0x0bad1e) & 15) // jak najdalej od wszystkich zamków
+          : forest * 4 - Math.abs(d - 32) * 3 + (hash2(x, y, seed ^ 0x0bad1e) & 15);
         if (sc > score) { score = sc; best = y * w + x; }
       }
     }

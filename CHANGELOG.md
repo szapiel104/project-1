@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.56.2 — obozy zbójów na uboczu mapy (2026-10-28)
+
+- **Obozy zbójów nie stoją już przy zamkach:** nowa wersja generatora map (7) stawia polanę z obozem w lesie przy krańcu mapy, tuż przed górami, co najmniej jedną trzecią mapy od każdego zamku (na 1 na 1 zwykle 70–100 pól), a z możliwych miejsc wybiera najdalsze od zamków. Dotąd obóz stał 26–40 pól od własnego zamku. Mapa dalej jest symetryczna (obie drużyny mają tak samo daleko)
+- Zbóje z dalekiego obozu sięgają na napad do skraju najbliższej osady (odległość do zamku + 12 pól), więc napady na drwali i chłopów w lesie zostają; pod sam zamek dalej nie idą
+- Stare zapisy grają na swojej dawnej mapie (generator 6) bez zmian
+- Bot: bez zmian (obozy są neutralne, bot ich nie stawia). Test w `tests/bandits.test.ts`
+
 ## 0.56.1 — ogniste strzały w budynki, pochodnia łucznika (2026-10-28)
 
 - **Widać lot strzały w budynek:** łucznik strzelający w budynek (na rozkaz, prawy klik na wrogi budynek) wypuszcza widoczną strzałę, a obrażenia liczą się dopiero, gdy doleci — tak jak przy strzałach w ludzi. Strzały rozkładają się po ścianach i dachu, a nie wbijają w jeden punkt. To samo dla czarów magów w budynki (kula leci, ogień podpala po trafieniu)

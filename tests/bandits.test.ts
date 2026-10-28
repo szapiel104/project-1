@@ -3,7 +3,7 @@ import { BUILDINGS } from '../src/data/buildings';
 import { resIndex } from '../src/data/resources';
 import { BANDITS, BANDIT_KIND, UNITS, unitIndex } from '../src/data/units';
 import { clockAt } from '../src/sim/clock';
-import { generateMap } from '../src/sim/map';
+import { denAway, generateMap } from '../src/sim/map';
 import { deserialize, serialize } from '../src/sim/save';
 import { createGame, FP, stateHash, type GameState } from '../src/sim/state';
 import { step } from '../src/sim/step';
@@ -24,6 +24,18 @@ describe('zbóje z obozów w puszczy', () => {
     expect(bandits(g).length).toBe(2 * DEN_CREW);
     expect(bandits(g).every((s) => s.kind === BANDIT_KIND && camps(g).some((c) => c.id === s.den))).toBe(true);
     expect(camps(createGame(7, '1v1', 0)).length).toBe(0);
+  });
+
+  it('obozy stoją na uboczu mapy: przy krańcu, daleko od każdego zamku (generator 7)', () => {
+    for (const p of ['1v1', '2v2', '4v4'] as const) for (const seed of [1, 7, 42, 99, 1234]) {
+      const m = generateMap(seed, p);
+      expect(m.dens?.length).toBeGreaterThan(0);
+      for (const d of m.dens!) {
+        const x = d % m.width, y = (d - x) / m.width;
+        for (const s of m.starts) expect(Math.hypot(x - s.x, y - s.y)).toBeGreaterThanOrEqual(denAway(m.width, m.height));
+        expect(Math.min(x, y, m.width - 1 - x, m.height - 1 - y)).toBeLessThanOrEqual(40);
+      }
+    }
   });
 
   it('napad: zbóje gonią samotnego chłopa w lesie, zabijają go i zabierają panu rudę i drewno do obozu', () => {
