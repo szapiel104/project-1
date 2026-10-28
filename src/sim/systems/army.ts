@@ -154,20 +154,20 @@ export function orderAttack(g: GameState, player: number, ids: readonly number[]
   const peasant = unitById(g, target);
   if (peasant) {
     if (team(g, peasant.owner) === team(g, player)) return;
-    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.prey = peasant.id; s.target = 0; s.siegeOf = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.amove = false; s.slot = undefined; s.wounded = 0; }
+    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.prey = peasant.id; s.target = 0; s.hunt = 0; s.siegeOf = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.amove = false; s.slot = undefined; s.wounded = 0; }
     return;
   }
   const wolf = g.wolves.find((w) => w.id === target);
   if (wolf) {
     // polowanie na wilka: idą za nim, aż go dopadną albo ucieknie do lasu
-    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.hunt = wolf.id; s.target = 0; s.siegeOf = 0; s.goal = (wolf.py >> 8) * g.map.width + (wolf.px >> 8); s.path = []; s.wait = 0; s.slot = undefined; s.wounded = 0; }
+    for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.hunt = wolf.id; s.prey = 0; s.target = 0; s.siegeOf = 0; s.goal = (wolf.py >> 8) * g.map.width + (wolf.px >> 8); s.path = []; s.wait = 0; s.slot = undefined; s.wounded = 0; }
     return;
   }
   const foeSoldier = g.soldiers.find((s) => s.id === target);
   const foeBuilding = foeSoldier ? undefined : buildingById(g, target);
   const owner = foeSoldier?.owner ?? foeBuilding?.owner;
   if (owner === undefined || team(g, owner) === team(g, player)) return;
-  for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.target = target; s.siegeOf = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.slot = undefined; s.wounded = 0; }
+  for (const s of g.soldiers) if (s.owner === player && ids.includes(s.id)) { s.target = target; s.prey = 0; s.hunt = 0; s.siegeOf = 0; s.goal = -1; s.path = []; s.wait = 0; s.hold = -1; s.slot = undefined; s.wounded = 0; }
 }
 
 /** Kierunki szyku co 45°: 0 = twarzą na +y, dalej tak jak kąt obrotu figur (kąt = numer × 45°) */
@@ -275,7 +275,9 @@ export function orderMove(g: GameState, player: number, ids: readonly number[], 
     if (spot === undefined || s.owner !== player) continue;
     leavePost(g, s);
     s.goal = spot; s.hold = spot; s.face = face; s.grp = grp;
-    s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.siegeOf = 0;
+    // nowy rozkaz ruchu kasuje wszystkie wcześniejsze cele — też chłopa z rozkazu „bij tego” (dawniej po dojściu
+    // oddział wracał go gonić, np. pod zamek, gdzie się schował — Michał 28.10.2026)
+    s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.siegeOf = 0; s.prey = 0;
     s.amove = !!opts.amove;
     s.pace = slow < fast ? slow : undefined;
     s.slot = march ? slots.get(s.id) : undefined;
@@ -647,7 +649,7 @@ export function orderGarrison(g: GameState, player: number, ids: readonly number
     if (s.owner !== player || !ids.includes(s.id) || s.post === towerId) continue;
     const ranged = !!UNITS[s.kind]!.range;
     if (ranged && room > 0) { leavePost(g, s); s.post = towerId; room--; }
-    s.goal = spot; s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.siegeOf = 0; s.slot = undefined; s.wounded = 0;
+    s.goal = spot; s.path = []; s.wait = 0; s.target = 0; s.hunt = 0; s.prey = 0; s.siegeOf = 0; s.slot = undefined; s.wounded = 0;
   }
 }
 

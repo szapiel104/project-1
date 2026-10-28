@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.59.3 — oddział nie wraca gonić chłopa po nowym rozkazie (2026-10-28)
+
+- **Naprawione „zakodowane” wracanie pod zamek:** rozkaz „bij tego chłopa” zapisywał żołnierzom cel do gonienia aż do skutku, a zwykły rozkaz ruchu go nie kasował. Po dojściu na miejsce oddział (np. łucznicy) wracał więc gonić tego chłopa — zwykle pod wrogi zamek, gdzie chłop się schował — i tam czekał. Teraz każdy nowy rozkaz (ruch, kolejka i patrol, atak na żołnierza, budynek albo wilka, wejście na wieżę) kasuje wcześniejszy cel; atak na chłopa kasuje z kolei pogoń za wilkiem
+- Test `tests/prey-order.test.ts`: łucznicy po rozkazie ataku na chłopa i potem ruchu na drugi koniec mapy stoją tam, gdzie ich wysłano
+- Bot: ta sama poprawka działa dla jego oddziałów (wydaje te same rozkazy)
+
 ## 0.59.2 — zmarłego niosą dwaj, w trumnie na noszach (2026-10-28)
 
 - **Koniec z workiem w powietrzu:** ciało nie jest już rysowane jako biały worek przed chłopem. Niosą je dwaj w prostej trumnie z desek z wiekiem, postawionej na dwóch drągach z poprzeczkami (model z Blendera, `coffin` w `tools/models/grave.py`). Obaj trzymają końce drągów opuszczonymi rękami przy biodrach — przedni z dłońmi za sobą, tylny przed sobą — a trumna wisi między nimi
