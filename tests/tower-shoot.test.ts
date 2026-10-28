@@ -74,3 +74,32 @@ describe('szturm na wieżę (jak w Twierdzy)', () => {
     expect(g.soldiers.some((s) => s.id === archer.id)).toBe(false);
   });
 });
+
+describe('drabiny oblężnicze (jak w Twierdzy)', () => {
+  it('wróg przystawia drabinę do muru kamiennego, wchodzi na koronę i ścina łucznika; obrońcy spychają drabinę', () => {
+    const g = createGame(9);
+    emptyScene(g);
+    for (const p of g.players) p.bot = false;
+    const k = playerKeep(g, 0)!, W = g.map.width, dx = k.door % W, dy = (k.door - dx) / W;
+    // odcinek muru kamiennego w poprzek, 8 pól przed bramą
+    const y = dy + 8;
+    for (let x = dx - 3; x <= dx + 3; x++) expect(placeReady(g, 'stoneWall', x, y)).toBeTruthy();
+    step(g, []);
+    const wallT = y * W + dx;
+    const archer: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('archer'), px: dx * FP + 128, py: y * FP + 128, path: [], hp: 40, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
+    g.soldiers.push(archer);
+    const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('manatarms'), px: (dx + 1) * FP + 128, py: (y + 2) * FP + 128, path: [], hp: 400, goal: -1, wait: 0, target: archer.id, cd: 0 };
+    g.soldiers.push(foe);
+    let planted = false;
+    for (let i = 0; i < 900 && g.soldiers.some((s) => s.id === archer.id); i++) { step(g, []); if (g.siegeLadders?.length) planted = true; }
+    expect(planted).toBe(true);
+    expect(g.soldiers.some((s) => s.id === archer.id)).toBe(false);
+    void wallT;
+    // obrońca na koronie spycha drabinę, przy której nikt nie wchodzi
+    g.soldiers = g.soldiers.filter((s) => s.id !== foe.id);
+    const def: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('spearman'), px: (g.siegeLadders![0]!.wall % W) * FP + 128, py: Math.floor(g.siegeLadders![0]!.wall / W) * FP + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0, stance: 2 };
+    g.soldiers.push(def);
+    for (let i = 0; i < 200 && g.siegeLadders!.length; i++) step(g, []);
+    expect(g.siegeLadders!.length).toBe(0);
+  });
+});

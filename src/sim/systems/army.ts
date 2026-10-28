@@ -15,6 +15,7 @@ import { buildWork, demolish, enemyNear, maxHp, rebuildCost, restore, ruin } fro
 import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
 import { stoneWallSystem, towerTiles, towerUnder } from './stonewalls';
+import { climbableWall, ladderFoot, ladderSpot, plantStep } from './siegeladders';
 import { lineOfSight } from './sight';
 import { collectCorpses, free, handFor, release, sendPair } from './bearers';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
@@ -1021,6 +1022,8 @@ export function armySystem(g: GameState): void {
     // stoi na pomoście wieży: strzela dalej (wysokość +3 i premia wieży) i nie schodzi sam za wrogiem
     const postAt = towerUnder(g, tileOf(g, s));
     const perch = !!postAt;
+    // przystawia drabinę oblężniczą pod murem: przez tę chwilę nic innego nie robi
+    if (plantStep(g, s)) continue;
     const range = def.range ? def.range + (high(g, s) ? 3 : 0) + (postAt ? towerBonus(BUILDINGS[postAt.type]!.id) : 0) : 0;
     // obrona i „stój”: bez celu pilnuje miejsca, w którym stoi (np. po rozkazie ataku albo po szkoleniu)
     const stance = s.stance ?? 0;
@@ -1046,7 +1049,8 @@ export function armySystem(g: GameState): void {
             if (o.hp <= 0 || team(g, o.owner) === team(g, s.owner)) continue;
             // wręcz tylko na tym samym poziomie: z ziemi nie sięgnie na mur ani wieżę, z muru nie bije w dół (Michał 27.10.2026)
             // wyjątek: obrońca na pomoście wieży — po wieży da się wejść na górę i go zarąbać (jak w Twierdzy)
-            if (!range && (o.up || high(g, o) !== high(g, s)) && !towerUnder(g, tileOf(g, o))) continue;
+            // (obrońcę na koronie muru kamiennego też: po drabinie oblężniczej)
+            if (!range && (o.up || high(g, o) !== high(g, s)) && !towerUnder(g, tileOf(g, o)) && !climbableWall(g, tileOf(g, o))) continue;
             if (o.id === s.skip && g.tick < (s.skipUntil ?? 0)) continue; // do tego wroga nie ma przejścia (za murem): na razie inny cel
             let d = gap(s, o);
             // strzelec woli wroga, którego widzi (bez muru ani budynku na linii strzału); zasłoniętego bierze dopiero, gdy nie ma innego
@@ -1105,7 +1109,7 @@ export function armySystem(g: GameState): void {
         // atak w marszu: na widok wroga przerywa marsz (drogę do celu odnajdzie po walce)
         if (s.amove && s.goal >= 0 && (s.path.length > 1 || s.slot)) s.path = [];
         // wręcz: wróg zszedł na mur albo z muru (inny poziom) — nie dosięgnie, szuka innego
-        if (!range && (foe.up || high(g, foe) !== high(g, s)) && !towerUnder(g, tileOf(g, foe))) { s.target = 0; s.path = []; continue; }
+        if (!range && (foe.up || high(g, foe) !== high(g, s)) && !towerUnder(g, tileOf(g, foe)) && !climbableWall(g, tileOf(g, foe))) { s.target = 0; s.path = []; continue; }
         // wręcz tylko na tym samym poziomie: do obrońcy na wieży trzeba najpierw wejść na pomost
         const level = !!range || high(g, s) === high(g, foe);
         if (level && gap(s, foe) <= (range ? range * FP : MELEE) && !s.path.length && (!range || lineOfSight(g, s, foe, high(g, s), high(g, foe)))) {
@@ -1163,9 +1167,13 @@ export function armySystem(g: GameState): void {
             const ft = tileOf(g, foe), fx = ft % W, fy = (ft - fx) / W;
             // z ziemi nie podchodzi do wroga po koronie muru (wchodził po drabinie nad wilka za murem i nie miał jak zejść)
             // do wroga na pomoście wieży idzie się przez jej wejście, na górę (wtedy cel też jest na pomoście)
-            const up = !range && !!towerUnder(g, ft) && !high(g, s), low = !high(g, s);
+            const up = !range && (!!towerUnder(g, ft) || climbableWall(g, ft)) && !high(g, s), low = !high(g, s);
             const p = findPath(g, tileOf(g, s), (t) => Math.max(Math.abs((t % W) - fx), Math.abs(Math.floor(t / W) - fy)) <= 1 && (up ? (g.walls[t]! & WALL_TOP) !== 0 : !(low && (g.walls[t]! & WALL_TOP))), 1500, s.owner, ft, 1);
             if (p && p.length) s.path = p.slice(0, 8);
+            else if (up && climbableWall(g, ft) && team(g, buildingById(g, g.occupancy[ft])?.owner ?? s.owner) !== team(g, s.owner) && ladderSpot(g, s, ft) >= 0) {
+              // obrońca na murze, a przejścia nie ma: idzie pod mur i przystawia drabinę oblężniczą (jak w Twierdzy)
+              s.ladder = ladderSpot(g, s, ft); s.ladderT = 0; s.goal = ladderFoot(g, s.ladder); s.path = [];
+            }
             else { s.skip = foe.id; s.skipUntil = g.tick + 150; s.target = 0; }
           }
         }

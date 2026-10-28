@@ -5,7 +5,7 @@ import { RESOURCES } from '../data/resources';
 import { generateMap } from './map';
 import { Rng } from './rng';
 import { openWalk } from './systems/placement';
-import { applyCut, type Building, type Caravan, type Corpse, type Traveler, type Wolf, type GameState, type March, type Missile, type OrderQueue, type PlayerState, type Pile, type Grave, type Rubble, type Sapling, type Soldier, type Unit } from './state';
+import { applyCut, type Building, type Caravan, type Corpse, type Traveler, type Wolf, type GameState, type March, type Missile, type SiegeLadder, type OrderQueue, type PlayerState, type Pile, type Grave, type Rubble, type Sapling, type Soldier, type Unit } from './state';
 
 /** Zmieniamy przy każdej zmianie kształtu stanu; stary zapis jest wtedy odrzucany zamiast psuć grę. */
 export const SAVE_VERSION = 21;
@@ -45,6 +45,7 @@ export interface SaveData {
   piles?: Pile[];
   graves?: Grave[];
   missiles?: Missile[];
+  siegeLadders?: SiegeLadder[];
 }
 
 const shape = (): string => `${BUILDINGS.length}/${RESOURCES.length}`;
@@ -77,6 +78,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     piles: (g.piles ?? []).map((x) => ({ ...x })),
     graves: (g.graves ?? []).map((x) => ({ ...x })),
     missiles: (g.missiles ?? []).map((x) => ({ ...x })),
+    siegeLadders: (g.siegeLadders ?? []).map((x) => ({ ...x })),
   };
 }
 
@@ -110,6 +112,7 @@ export function deserialize(d: SaveData): GameState | null {
       piles: (d.piles ?? []).map((x) => ({ ...x })),
       graves: (d.graves ?? []).map((x) => ({ ...x })),
       missiles: (d.missiles ?? []).map((x) => ({ ...x })),
+      siegeLadders: (d.siegeLadders ?? []).map((x) => ({ ...x })),
     };
     for (const r of g.rubble) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g.reserved[y * map.width + x]!++;
     for (const [t, n] of d.wear) g.wear[t] = n;

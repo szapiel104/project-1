@@ -30,6 +30,7 @@ import { forestSystem } from './systems/forestry';
 import { roadSystem } from './systems/roads';
 import { fireSystem } from './systems/fire';
 import { stoneWallSystem } from './systems/stonewalls';
+import { siegeLadderSystem } from './systems/siegeladders';
 import { clearWreck, orderWreck, roadWreckSystem } from './systems/roadwreck';
 import { armySystem, orderAttack, orderMove, orderPatrol, queueMove, clearOrders, QUEUE_MAX, orderStance, train , orderDismount, orderGarrison, enlistSystem, setRally } from './systems/army';
 import { botSystem } from './systems/bot';
@@ -220,6 +221,8 @@ export function step(g: GameState, commands: readonly Command[]): void {
   enlistSystem(g);
   stormSystem(g);
   fireSystem(g);
+  // drabiny oblężnicze: obrońcy spychają je z korony, stare się przewracają (siegeladders.ts)
+  siegeLadderSystem(g);
   // przejścia na murach i pomostach wież muszą być aktualne, zanim wojsko policzy drogi (start gry, wczytanie zapisu)
   stoneWallSystem(g);
   armySystem(g);

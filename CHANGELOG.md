@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.65.0 — drabiny oblężnicze, drugie wejście na wieże, mur ze strażnicą (2026-10-28)
+
+- **Drabiny oblężnicze jak w Twierdzy** (`sim/systems/siegeladders.ts`): żołnierz, który chce dosięgnąć obrońcy na koronie muru kamiennego, a nie ma tam przejścia, podchodzi pod mur, przez 3 sekundy przystawia drabinę i wchodzi po niej na górę. Drabina otwiera ten bok muru dla każdego. Obrońcy stojący na koronie przy drabinie spychają ją (ok. 6 s jeden obrońca, kilku szybciej), ale nie wtedy, gdy ktoś po niej wchodzi albo wróg stoi u jej stóp; po 10 minutach sama się przewraca, pada też z murem. Drabiny widać przy murze i zapisują się w zapisie gry
+- **Drugie wejście na wieżę:** gdy przed frontem wieży stanie mur albo budynek i wejście przechodzi na inny bok, po tej stronie stoi teraz druga drabina (strażnica, czatownia), a w kamiennej wieży ciemne drzwi z nadprożem w trzonie
+- **Mur kamienny ze strażnicą i czatownią:** z korony muru prowadzi krótka drabina na pomost drewnianej wieży (bez blanek w poprzek przejścia); żołnierz wspina się po niej z muru na pomost
+- Bot: jego wojsko samo przystawia drabiny do murów gracza, gdy obrońca stoi na koronie, a przejścia nie ma (to samo zachowanie co u gracza)
+
 ## 0.64.11 — strzały zostają po bitwie, kruki na krzyżach (2026-10-28)
 
 - **Strzały wbite po bitwie (Michał):** chybiona strzała wbija się skośnie w ziemię za celem, a strzała w budynek zostaje w jego ścianie: celuje w lico bryły, a nie w środek działki. Po 90 s chowa się grotem naprzód i znika, najwyżej 600 naraz (`render/arrows.ts`)

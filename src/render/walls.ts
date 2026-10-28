@@ -4,11 +4,11 @@
  * Bale stają jeden po drugim w czasie budowy. Wszystko w kilku wspólnych siatkach instancji.
  */
 import * as THREE from 'three';
-import { BUILDINGS, footprint, isStoneTower } from '../data/buildings';
+import { BUILDINGS, footprint, isStoneTower, isTower } from '../data/buildings';
 import type { GameState } from '../sim/state';
 import { buildWork, maxHp } from '../sim/systems/placement';
-import { ladderSides } from '../sim/systems/stonewalls';
-import { STONE_WALL_TOP, palisadeLogs, stoneWallKit } from './buildings';
+import { ladderSides, towerEntry } from '../sim/systems/stonewalls';
+import { STONE_WALL_TOP, TOWER_TOP, palisadeLogs, stoneWallKit } from './buildings';
 import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { normal, pattern } from './textures';
@@ -37,7 +37,9 @@ export class WallLayer {
     // w kluczu też to, czy model już jest: na nowej mapie mur liczy się czasem przed modelami bram, a brama bez obrotu
     // stała wzdłuż muru (po odświeżeniu kolejność była inna i wszystko wracało)
     // stopień zużycia też w kluczu: rozbity częstokół ma złamane i przekrzywione bale
-    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}:${buildingMeshes.has(b.id) ? 1 : 0}:${b.build ? 0 : wearStage(b.hp, maxHp(b.type))}`).join(',');
+    // w kluczu także drabiny oblężnicze i wejścia na wieże (wejście przechodzi na inny bok, gdy przed frontem coś stanie)
+    const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}:${buildingMeshes.has(b.id) ? 1 : 0}:${b.build ? 0 : wearStage(b.hp, maxHp(b.type))}${isTower(BUILDINGS[b.type]!.id) && !b.build ? `:${towerEntry(g, b)[0]}` : ''}`).join(',')
+      + '|' + (g.siegeLadders ?? []).map((l) => `${l.id}`).join(',');
     if (key === this.key) return;
     this.key = key;
     const solid = new Map<number, GameState['buildings'][number]>();
@@ -86,6 +88,42 @@ export class WallLayer {
       const id = BUILDINGS[o.type]!.id;
       return id === 'stoneTower' ? 0.26 : id === 'stoneTowerBig' ? 0.35 : 0.45;
     };
+    /** Obrót drabiny z zestawu muru: drabina stoi od strony (dx, dz) pola, o które się opiera */
+    const ladderRot = (dx: number, dz: number): number => (dz > 0 ? 0 : dz < 0 ? Math.PI : dx > 0 ? Math.PI / 2 : -Math.PI / 2);
+    /** Drabina z zestawu muru oparta o pole (tx, tz) od strony (dx, dz): stopa na wysokości `base`, sięga `h` w górę */
+    const ladderAt = (tx: number, tz: number, dx: number, dz: number, base: number, h: number): void => {
+      if (!this.stoneKit || sn.ladder >= 2048) return;
+      e.set(0, ladderRot(dx, dz), 0); q.setFromEuler(e);
+      M4.compose(p.set(tx + 0.5 - width / 2, base, tz + 0.5 - height / 2), q, sc.set(1, h / STONE_WALL_TOP, 1));
+      this.stoneKit.ladder.setMatrixAt(sn.ladder++, M4);
+    };
+    // drabiny oblężnicze wroga przystawione do muru (sim/systems/siegeladders.ts)
+    for (const l of g.siegeLadders ?? []) {
+      const wx = l.wall % width, wz = Math.floor(l.wall / width);
+      ladderAt(wx, wz, l.dx, l.dy, view.heightAt(wx + 0.5, wz + 0.5) - 0.06, STONE_WALL_TOP);
+      this.ladderFeet.set(l.wall + l.dy * width + l.dx, [-l.dx, -l.dy]);
+    }
+    // wieże z wejściem przeniesionym na inny bok (przed frontem stoi mur albo budynek): tam druga drabina (drewniane)
+    // albo drzwi w trzonie (kamienne)
+    for (const b of walls) {
+      const id = BUILDINGS[b.type]!.id;
+      if (!isTower(id) || b.build || b.ruined) continue;
+      const [out, inner] = towerEntry(g, b);
+      if (out < 0) continue;
+      const ix = inner % width, iz = Math.floor(inner / width), ddx = (out % width) - ix, ddz = Math.floor(out / width) - iz;
+      const r = ((b.rot % 4) + 4) % 4, front = [[0, 1], [1, 0], [0, -1], [-1, 0]][r]!;
+      if (front[0] === ddx && front[1] === ddz) continue;
+      const base = view.heightAt(ix + 0.5 + ddx * 0.5, iz + 0.5 + ddz * 0.5);
+      if (!isStoneTower(id)) { ladderAt(ix, iz, ddx, ddz, base - 0.04, TOWER_TOP[id] ?? 1.9); continue; }
+      if (!this.doorKit || dn.door >= 1024) continue;
+      const gap = id === 'stoneTower' ? 0.26 : id === 'stoneTowerBig' ? 0.35 : 0.45;
+      e.set(0, ladderRot(-ddx, -ddz), 0); q.setFromEuler(e);
+      const fx = ix + 0.5 + ddx * (0.5 - gap + 0.005), fz = iz + 0.5 + ddz * (0.5 - gap + 0.005);
+      M4.compose(p.set(fx - width / 2, base + 0.3, fz - height / 2), q, sc.set(1, 1.3, 1));
+      this.doorKit.door.setMatrixAt(dn.door++, M4);
+      M4.compose(p.set(fx + ddx * 0.01 - width / 2, base + 0.3 + 0.54 * 1.3, fz + ddz * 0.01 - height / 2), q, sc.set(1, 1, 1));
+      this.doorKit.lintel.setMatrixAt(dn.lintel++, M4);
+    }
     const keeps = new Map<number, [number, number]>();
     for (const b of g.buildings) if (b.type === 0) { const fp = footprint(BUILDINGS[0]!, b.rot); keeps.set(b.owner, [b.x + fp.w / 2, b.y + fp.h / 2]); }
     for (const b of walls) {
@@ -171,6 +209,12 @@ export class WallLayer {
             this.doorKit.door.setMatrixAt(dn.door++, M4);
             M4.compose(p.set(fx - dx * 0.01 - width / 2, y0 + STONE_WALL_TOP + 0.54, fz - dz * 0.01 - height / 2), q, sc.set(1, 1, 1));
             this.doorKit.lintel.setMatrixAt(dn.lintel++, M4);
+            continue;
+          }
+          // obok drewniana strażnica albo czatownia: z korony prowadzi na jej pomost krótka drabina, blanek w poprzek nie ma
+          const nb = solid.get((b.y + dz) * width + b.x + dx), nid = nb ? BUILDINGS[nb.type]!.id : '';
+          if (nb && !nb.build && !nb.ruined && (nid === 'watchtower' || nid === 'lookout') && built >= 1) {
+            ladderAt(b.x + dx, b.y + dz, -dx, -dz, y0 + STONE_WALL_TOP, Math.max(0.3, (TOWER_TOP[nid] ?? 1.9) - STONE_WALL_TOP));
             continue;
           }
           if (stoneAt(b.x + dx, b.y + dz) || sn.edge >= 16384) continue;

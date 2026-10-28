@@ -390,6 +390,9 @@ export interface Soldier {
   climb?: number;
   /** Pole, na które się wspina (po wspinaczce staje od razu na jego środku) */
   climbTo?: number;
+  /** Przystawia drabinę oblężniczą: pole muru * 4 + strona (0 = -y, 1 = +x, 2 = +y, 3 = -x) i ile ticków już ją stawia */
+  ladder?: number;
+  ladderT?: number;
   /** Kierunek, w który ma patrzeć po dojściu (0–7, co 45°; 0 = na +y) */
   face?: number;
   /** Postawa: 0/brak = atak (goni wroga), 1 = obrona (krótko i wraca), 2 = stój (nie rusza się z miejsca) */
@@ -460,6 +463,22 @@ export interface Soldier {
  * Strzała albo czar w locie (army.ts): trafienie liczy się dopiero, gdy pocisk doleci (`at`), a nie w chwili strzału —
  * cel pada wtedy, gdy strzała go dosięgnie (Michał 27.10.2026).
  */
+/** Drabina oblężnicza (jak w Twierdzy): wróg przystawia ją do muru kamiennego i wchodzi po niej na koronę */
+export interface SiegeLadder {
+  id: number;
+  /** Kto ją przystawił */
+  owner: number;
+  /** Pole muru, o które jest oparta */
+  wall: number;
+  /** Strona muru, przy której stoi (dx, dy do pola u stóp drabiny) */
+  dx: number;
+  dy: number;
+  /** Tick przystawienia (po pewnym czasie sama się przewraca) */
+  at: number;
+  /** Ile jeszcze wytrzyma spychania przez obrońców z korony */
+  hp: number;
+}
+
 export interface Missile {
   /** Cel: id żołnierza, (gdy `unit`) chłopa albo (gdy `bld`) budynku */
   to: number;
@@ -648,6 +667,8 @@ export interface GameState {
   orders?: OrderQueue[];
   /** Strzały i czary w locie (trafienie przy doleceniu) */
   missiles?: Missile[];
+  /** Drabiny oblężnicze przystawione do murów */
+  siegeLadders?: SiegeLadder[];
 }
 
 /** Poziom trudności botów: 0 pokojowy (tylko się bronią), 1 łatwy, 2 średni, 3 trudny */
@@ -971,6 +992,7 @@ export function stateHash(g: GameState): number {
   for (let i = 0; i < g.wear.length; i++) if (g.wear[i]) { add(i); add(g.wear[i]!); }
   for (let i = 0; i < g.roads.length; i++) { if (g.roads[i]) { add(i); add(g.roads[i]! + 100); add(g.roadOwner[i]! + 300); } if (g.roadPlan[i]) { add(i); add(g.roadPlan[i]! + 200); } }
   for (const s of g.saplings ?? []) { add(s.t); add(s.owner); add(s.by); add(s.age); }
+  for (const l of g.siegeLadders ?? []) { add(l.id); add(l.owner); add(l.wall); add(l.dx * 3 + l.dy); add(l.at); add(l.hp); }
   for (const m of g.missiles ?? []) { add(m.to); add(m.unit ? 1 : 0); add(m.dmg); add(m.at); add(m.from); add(m.burn ?? 0); }
   for (const s of g.soldiers) if (s.burn) { add(s.id); add(s.burn); }
   for (const x of g.graves ?? []) { add(x.t); add(x.owner); add(x.at); }

@@ -3,6 +3,7 @@ import { WALL_TOP } from '../../data/keep';
 import { OPEN_ALL, walkable } from '../path';
 import type { Building, GameState } from '../state';
 import { buildingById } from '../state';
+import { ladderMasks } from './siegeladders';
 
 /**
  * Mur kamienny jak w Twierdzy: korona muru to zwykły teren, tylko wysoko. Wchodzi się i schodzi tylko po drabinach,
@@ -86,6 +87,8 @@ export function ladderSides(g: GameState, b: Building): number {
 /** Ustawia przechodniość korony murów (co tick: mur mógł powstać, zostać zburzony albo dostać sąsiada) */
 export function stoneWallSystem(g: GameState): void {
   const w = g.map.width;
+  // drabiny oblężnicze otwierają bok muru, przy którym stoją (siegeladders.ts)
+  const siege = g.siegeLadders?.length ? ladderMasks(g) : null;
   for (const b of g.buildings) {
     if (b.type !== STONE) continue;
     const t = b.y * w + b.x;
@@ -94,6 +97,7 @@ export function stoneWallSystem(g: GameState): void {
     const ladders = ladderSides(g, b);
     let bits = WALL_TOP;
     for (const [dx, dy, bit] of SIDES) if (!(ladders & bit) && !isStone(g, b.x + dx, b.y + dy)) bits |= bit;
+    if (siege) bits &= ~(siege.get(t) ?? 0);
     g.walls[t] = bits;
   }
   // pomosty wież: wysoki teren dla każdego, kto dojdzie do wejścia — od frontu (drabina albo drzwi), z muru i z drabiny gracza
