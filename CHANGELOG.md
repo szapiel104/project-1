@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.57.5 — wilki z prawdziwych nagrań, lżej i rzadziej (2026-10-28)
+
+- **Wycie wilków z nagrań zamiast syntezy.** Dawne wycie, „jipy” i warczenie były składane z tonów i szumu — brzmiały sztucznie. Teraz: trzy frazy prawdziwego wycia (U.S. Fish and Wildlife Service, domena publiczna) i zbiórka watahy europejskich wilków (Retron, Wikimedia Commons, domena publiczna), oczyszczone z szumu i wyrównane
+- **Lżej:** z daleka wycie jest ciche, przytłumione jak zza lasu i z delikatnym pogłosem; gdy wataha jest na mapie — trochę bliżej i wyraźniej, rzadziej niż dotąd (co 40–80 s zamiast 30–60 s, z szansą na ciszę). Każde odtworzenie ma lekko inną wysokość i stronę
+- **Warczenie przy ataku** z prawdziwych nagrań psów, lekko obniżonych (7 wariantów, bonebrah CC0 i congusbongus CC BY 3.0) zamiast starego, przepuszczonego przez pogłos warknięcia; rzadziej (co ok. 4,5–7,5 s na wilka zamiast 2,6–4,6 s) i ciszej
+- Autorzy: Ustawienia → Dźwięk, `CREDITS.md`, `docs/zasoby.md`
+- Bot: bez zmian (sam dźwięk)
 ## 0.57.4 — gruzowisko leży na ziemi (2026-10-28)
 
 - **Gruz układa się jak po zawaleniu:** kamienie, belki i deski spadają po kolei na ziemię albo na to, co już leży (mapa wysokości pod stosem). Kamień siada na najwyższym punkcie pod sobą, a belka opiera się o dwa najwyższe punkty po obu stronach środka i przechyla się między nimi. Każdy kawałek stacza się w najniższe z kilku miejsc, więc stos nie rośnie w wieżę. Nic nie wisi w powietrzu i nic nie wchodzi w ziemię. Na spodzie leżą kamienie, na wierzchu deski — wynoszony gruz znika od góry
