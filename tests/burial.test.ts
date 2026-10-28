@@ -131,4 +131,17 @@ describe('pochówek bez cmentarza (Michał 28.10.2026)', () => {
     for (const id of bearers) { const u = g.units.find((x) => x.id === id); if (u) expect(u.job).toBe(jobs.get(id)); }
     expect(workers.length).toBeGreaterThan(1);
   });
+
+  it('ciało, po które ktoś idzie, i tak rozkłada się i znika — nie leży bez końca (Michał 28.10.2026)', () => {
+    const g = clearBandits(createGame(7));
+    g.wolves = [];
+    const keep = playerKeep(g, 0)!;
+    const [fx, fy] = keepFront(keep);
+    const [a, b] = g.units.filter((x) => x.owner === 0 && x.job === 0);
+    g.corpses.push({ id: 999998, owner: 0, kind: -1, px: fx * FP + 128, py: (fy + 3) * FP + 128, at: g.tick - 7000, taken: true, by: [a!.id, b!.id], since: g.tick });
+    for (const u of [a!, b!]) { u.phase = Phase.ToCorpse; u.target = 999998; }
+    step(g, []);
+    expect(g.corpses.some((c) => c.id === 999998)).toBe(false);
+    expect(g.units.some((x) => x.phase === Phase.ToCorpse && x.target === 999998)).toBe(false);
+  });
 });

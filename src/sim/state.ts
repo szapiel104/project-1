@@ -525,6 +525,8 @@ export interface Corpse {
   by?: number[];
   /** Tick wysłania tej dwójki (gdy utkną, ciało wraca do puli) */
   since?: number;
+  /** Po nieudanej próbie (dwójka utknęła albo się rozeszła) nikogo nie wysyłamy po nie do tego ticka (bearers.ts) */
+  rest?: number;
 }
 
 /** Leśny grób (osada bez cmentarza): kopczyk z krzyżem na polu `t`; znika po kilku dniach albo pod budynkiem i drogą */

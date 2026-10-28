@@ -16,7 +16,7 @@ import { crewOf, dayPart } from './workers';
 import { robbed } from './bandits';
 import { stoneWallSystem, towerTiles, towerUnder } from './stonewalls';
 import { lineOfSight } from './sight';
-import { collectCorpses, handFor, sendPair } from './bearers';
+import { collectCorpses, free, handFor, release, sendPair } from './bearers';
 import { RESOURCES, RESOURCE_DEFS } from '../../data/resources';
 
 /** Żołnierz stoi wysoko: na wieży albo na murach zamku (dalej widzi i strzela, wręcz go nie dosięgną) */
@@ -1289,7 +1289,12 @@ const ROT_TICKS = 6000;
 
 /** Grabarz z cmentarza idzie po najbliższe ciało w swoim terenie pracy (kwadrat wokół cmentarza), zabiera je i wraca. */
 function graveSystem(g: GameState): void {
-  if (g.corpses.some((c) => g.tick - c.at > ROT_TICKS && !c.taken)) g.corpses = g.corpses.filter((c) => c.taken || g.tick - c.at <= ROT_TICKS);
+  // rozłożone ciało znika, także gdy ktoś akurat po nie idzie — inaczej ciało, do którego nie da się dojść, było
+  // wysyłane w kółko kolejnym dwójkom i leżało bez końca (Michał 28.10.2026: „ciała leżą 20 min i nic”)
+  if (g.corpses.some((c) => g.tick - c.at > ROT_TICKS)) {
+    for (const c of g.corpses) if (g.tick - c.at > ROT_TICKS && c.taken) release(g, c);
+    g.corpses = g.corpses.filter((c) => g.tick - c.at <= ROT_TICKS);
+  }
   if (g.tick % 10 !== 0) return;
   for (const b of g.buildings) {
     if (b.type !== CEMETERY || !b.worker) continue;
@@ -1298,7 +1303,7 @@ function graveSystem(g: GameState): void {
     const a = workArea(b);
     let best: Corpse | undefined, bd = Infinity;
     for (const c of g.corpses) {
-      if (c.taken) continue;
+      if (!free(g, c)) continue;
       const cx = c.px >> 8, cy = c.py >> 8;
       if (a && (cx < a.x0 || cx > a.x1 || cy < a.y0 || cy > a.y1)) continue; // poza terenem: pole bitwy u wroga nie jego sprawa
       const d = Math.abs(c.px - u.px) + Math.abs(c.py - u.py);

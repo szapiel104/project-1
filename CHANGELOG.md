@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.64.3 — poduszki w komnacie pana, ciała nie leżą bez końca (2026-10-28)
+
+- **Zgłoszenie (poduszki u pana):** u królowej leżały dobrze, a u pana były pochylone w złą stronę: licem do wezgłowia, a dolnym brzegiem wbite w siennik. Teraz są oparte o wezgłowie i zwrócone w stronę śpiącego, tak jak u królowej (`tools/models/keep.py`)
+- **Zgłoszenie (ciała leżały po 20 minut):** ciało, do którego dwójka nie mogła dojść, wracało do puli i od razu dostawało kolejną dwójkę. Przez to cały czas było „zajęte” i nigdy się nie rozkładało. Teraz po nieudanej próbie czeka minutę na nową dwójkę (`rest` w `bearers.ts`), a po ok. 10 minutach rozkłada się i znika, nawet jeśli ktoś akurat po nie szedł (`army.ts`)
+- Bot: bez zmian (te same zasady pochówku dla wszystkich)
+
 ## 0.64.2 — rudery: wejście, szpary i kalenica; ognisko przy namiocie (2026-10-28)
 
 - **Zgłoszenie (rudera i rudera narożna):** dziwne wejście — pas skóry z boku otworu wyglądał jak deska w kratkę, a jasny sznur jak luźna listwa. Teraz skóra jest zwinięta w rulon pod belką nad wejściem, przewiązana dwoma sznurami do belki, z krótkim fartuchem spod rulonu; przejście wolne (`tools/models/shackparts.py`)

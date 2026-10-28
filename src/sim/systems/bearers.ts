@@ -22,6 +22,8 @@ const LAND_KEEP = 40, LAND_NEAR = 10;
 const PAIRS = 2;
 /** Dwójka, która przez tyle ticków nie podniosła ciała (zablokowana droga, ktoś ich odwołał), rozchodzi się */
 const STUCK = 1500;
+/** Po nieudanej próbie ciało czeka tyle ticków na kolejną dwójkę (żeby nie wysyłać w kółko tych samych w to samo miejsce) */
+const REST = 600;
 /** Zajęcia, od których można oderwać robotnika do pochówku (wraca potem do swojej roboty) */
 const DROP = new Set<Phase>([Phase.Idle, Phase.Returning, Phase.ToSite, Phase.WorkingSite, Phase.Working, Phase.ToRest, Phase.Resting]);
 const CEMETERY = BUILDINGS.findIndex((b) => b.id === 'cemetery');
@@ -61,10 +63,13 @@ export function sendPair(g: GameState, c: Corpse, a: Unit, b: Unit): void {
 }
 
 /** Ciało wraca do puli (dwójka rozeszła się albo utknęła); kto jeszcze po nie szedł, wraca do swoich zajęć */
-function release(g: GameState, c: Corpse): void {
+export function release(g: GameState, c: Corpse): void {
   for (const u of g.units) if (u.phase === Phase.ToCorpse && u.target === c.id) { u.phase = u.job ? Phase.Returning : Phase.Idle; u.target = 0; u.path = []; }
-  c.taken = false; delete c.by; delete c.since;
+  c.taken = false; delete c.by; delete c.since; c.rest = g.tick + REST;
 }
+
+/** Można już kogoś po nie wysłać: nikt nie idzie i minęła przerwa po nieudanej próbie */
+export const free = (g: GameState, c: Corpse): boolean => !c.taken && (c.rest === undefined || g.tick >= c.rest);
 
 /** Doszedł do ciała: gdy drugi już jest obok, przedni bierze trumnę, a tylny chwyta drągi; inaczej czeka */
 export function liftCorpse(g: GameState, u: Unit): void {
@@ -104,14 +109,14 @@ export function collectCorpses(g: GameState): void {
     const going = g.units.filter((u) => u.phase === Phase.ToCorpse && u.target === c.id).length;
     if (going < 2 || g.tick - (c.since ?? g.tick) > STUCK) release(g, c);
   }
-  if (!g.corpses.some((c) => !c.taken)) return;
+  if (!g.corpses.some((c) => free(g, c))) return;
   for (const p of g.players) {
     let pairs = 0;
     for (const u of g.units) if (u.owner === p.id && (u.phase === Phase.ToCorpse || (u.carryRes === CORPSE && u.phase !== Phase.Burying)) && !(u.job && buildingById(g, u.job)?.type === CEMETERY)) pairs++;
     pairs = Math.ceil(pairs / 2);
     while (pairs < PAIRS) {
       let c: Corpse | undefined;
-      for (const x of g.corpses) if (!x.taken && (!c || x.at < c.at) && onLand(g, p.id, x)) c = x;
+      for (const x of g.corpses) if (free(g, x) && (!c || x.at < c.at) && onLand(g, p.id, x)) c = x;
       if (!c) break;
       const a = handFor(g, p.id, c.px, c.py);
       const b = a && handFor(g, p.id, c.px, c.py, a);

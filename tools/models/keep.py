@@ -902,9 +902,9 @@ b.box('interior', 'woodDark', 0.66, 0.24, 0.045, BX, G + 0.05, BZ1 - 0.02)      
 b.box('interior', 'canvas', 0.64, 0.08, 0.9, BX, G + 0.16, (BZ0 + BZ1) / 2)                              # siennik
 for ox in (-0.15, 0.15):
     # poduszki z lnu: wypchane (niższe brzegi, wyższy środek), oparte o wezgłowie
-    b.box('interior', 'canvas', 0.26, 0.045, 0.15, BX + ox, G + 0.24, BZ0 + 0.16, tilt=-0.25)
-    b.box('interior', 'canvas', 0.22, 0.03, 0.11, BX + ox, G + 0.27, BZ0 + 0.165, tilt=-0.25)
-    b.box('interior', 'canvas', 0.16, 0.015, 0.07, BX + ox, G + 0.293, BZ0 + 0.171, tilt=-0.25)
+    b.box('interior', 'canvas', 0.26, 0.045, 0.15, BX + ox, G + 0.24, BZ0 + 0.16, tilt=0.25)
+    b.box('interior', 'canvas', 0.22, 0.03, 0.11, BX + ox, G + 0.27, BZ0 + 0.165, tilt=0.25)
+    b.box('interior', 'canvas', 0.16, 0.015, 0.07, BX + ox, G + 0.293, BZ0 + 0.171, tilt=0.25)
 b.box('interior', 'flag', 0.7, 0.03, 0.62, BX, G + 0.235, BZ1 - 0.36)                                    # pierzyna
 b.box('interior', 'flag', 0.72, 0.05, 0.09, BX, G + 0.24, BZ1 - 0.66)                                    # wywinięty brzeg
 for s2 in (-1, 1):
