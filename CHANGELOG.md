@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.64.4 — im większa wieża, tym większy zasięg (2026-10-28)
+
+- **Zasięg łucznika z wieży rośnie z jej wielkością** (`TOWERS` w `data/buildings.ts`): z ziemi 8 pól, z czatowni 10, ze strażnicy 11, z baszty 13 (dawniej 12), z dużej baszty 15 (dawniej 13), z wielkiej 17. Koło zasięgu przy zaznaczonej wieży pokazuje nowe wartości
+- **Z wieży widać tak daleko, jak z niej się strzela:** dawniej łucznik na wielkiej baszcie widział tylko 13 pól, więc dalszego zasięgu nie używał; teraz wzrok na pomoście rośnie razem z premią wieży
+- Opisy baszt i „Jak grać” po polsku i angielsku podają nowe zasięgi
+- Bot: bez zmian (korzysta z tych samych wież)
+
 ## 0.64.3 — poduszki w komnacie pana, ciała nie leżą bez końca (2026-10-28)
 
 - **Zgłoszenie (poduszki u pana):** u królowej leżały dobrze, a u pana były pochylone w złą stronę: licem do wezgłowia, a dolnym brzegiem wbite w siennik. Teraz są oparte o wezgłowie i zwrócone w stronę śpiącego, tak jak u królowej (`tools/models/keep.py`)

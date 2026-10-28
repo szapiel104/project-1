@@ -264,12 +264,13 @@ export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => 
  *  strzela z niej łucznik (ponad zwykłe +3 z wysokości) */
 export const TOWERS: Readonly<Record<string, { room: number; bonus: number }>> = {
   // czatownia: jeden człowiek, niski pomost (strzela pole bliżej niż ze strażnicy)
-  lookout: { room: 1, bonus: -1 },
-  watchtower: { room: 4, bonus: 0 },
-  stoneTower: { room: 4, bonus: 1 },
-  stoneTowerBig: { room: 9, bonus: 2 },
+  // im większa (wyższa) wieża, tym dalej sięga strzała (Michał 28.10.2026): łucznik ma 8 pól, z wysokości +3, do tego:
+  lookout: { room: 1, bonus: -1 },      // 10 pól
+  watchtower: { room: 4, bonus: 0 },    // 11
+  stoneTower: { room: 4, bonus: 2 },    // 13
+  stoneTowerBig: { room: 9, bonus: 4 }, // 15
   // wielka wieża: najwyższa, strzela wyraźnie dalej niż duża (Michał 25.10)
-  stoneTowerGreat: { room: 16, bonus: 6 },
+  stoneTowerGreat: { room: 16, bonus: 6 }, // 17
 };
 export const isTower = (id: string): boolean => id in TOWERS;
 /** Kamienne wieże (wszystkie rozmiary) */

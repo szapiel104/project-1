@@ -1021,7 +1021,8 @@ export function armySystem(g: GameState): void {
     };
     // najbliższy wróg w zasięgu wzroku, którego da się dosięgnąć (na wieżę wręcz nie sięgnie, na mur tylko z muru)
     const nearestFoe = (s: Soldier, range: number): Soldier | undefined => {
-      let foe: Soldier | undefined, best = (def.sight + (high(g, s) ? 3 : 0)) * FP + 1;
+      // z wieży widać tak daleko, jak sięga strzała z niej (wysoka baszta widzi i strzela dalej niż strażnica)
+      let foe: Soldier | undefined, best = Math.max(def.sight + (high(g, s) ? 3 : 0) + (postAt ? Math.max(0, towerBonus(BUILDINGS[postAt.type]!.id)) : 0), range) * FP + 1;
       const t = tileOf(g, s), x = t % W, y = (t - x) / W;
       const cx = Math.floor(x / CELL), cy = Math.floor(y / CELL);
       for (let gy = cy - 1; gy <= cy + 1; gy++)
