@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.59.1 — fizyka gruzu: zawalony budynek rozpada się z grawitacją (2026-10-28)
+
+- **Gruz spada naprawdę:** gdy budynek runie (ruina po ataku, pożarze, wilkach) albo zostanie rozebrany, kamienie, belki i deski spadają z wysokości budynku z grawitacją, odbijają się od siebie i od ziemi, przewracają się i leżą tam, gdzie upadły — każde zawalenie wygląda inaczej. Na zboczu gruz zsuwa się po terenie (ziemia w fizyce ma kształt mapy)
+- Silnik fizyki: cannon-es (MIT, wpisany do `CREDITS.md`), wczytywany dopiero przy pierwszym zawaleniu, więc nie wydłuża startu gry. Zawalenie liczy się kilka sekund; gdy wszystko znieruchomieje, świat fizyki znika i leżący gruz nic już nie kosztuje. Naraz najwyżej 6 zawaleń (przy większej bitwie kolejne kładą gruz od razu)
+- Tylko obraz: symulacja nie wie, gdzie leży który kamień, więc mecz przez sieć się nie rozjeżdża. Gruz i ruiny z wczytanego zapisu leżą od razu (bez spadania)
+- Test `tests/rubblefall.test.ts`: po zawaleniu (płasko i na zboczu) żaden kawałek nie wisi w powietrzu, nie wchodzi w ziemię i nie odlatuje poza działkę; w trybie testowym `__test.raze(id)` zawala wybrany budynek
+- Bot: bez zmian (sam wygląd)
+
 ## 0.59.0 — rąbanie z biedy: pień przy pniaku, deski stosem, płynne padanie drzew i numery grup (2026-10-28)
 
 - **Obróbkę widać:** po ścięciu drzewa chłop ociosuje i tnie leżący przed nim pień (niżej, z pochyleniem nad pniem), a pień w trakcie się skraca

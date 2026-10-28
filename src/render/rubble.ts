@@ -6,10 +6,13 @@ import * as THREE from 'three';
 import type { GameState } from '../sim/state';
 import { rubbleModel, setRubble } from './buildings';
 import type { TerrainView } from './terrain';
+import { fallHeight, rubbleFalls } from './rubblefall';
 
 export class RubbleLayer {
   private piles = new Map<number, THREE.Group>();
   private dying: { mesh: THREE.Group; t: number }[] = [];
+  /** Pierwsza klatka po wczytaniu mapy: gruz z zapisu leży od razu, bez spadania */
+  private fresh = true;
   constructor(private scene: THREE.Scene, private buildings: THREE.Group) {}
 
   /** Rozebrany budynek: zapada się w ciągu ok. 1 s i znika z warstwy budynków */
@@ -17,6 +20,8 @@ export class RubbleLayer {
 
   /** Nowa mapa: bez gruzu i zapadających się budynków */
   clear(): void {
+    this.fresh = true;
+    rubbleFalls.clear();
     for (const pile of this.piles.values()) this.scene.remove(pile);
     this.piles.clear();
     for (const d of this.dying) this.buildings.remove(d.mesh);
@@ -41,13 +46,18 @@ export class RubbleLayer {
       let pile = this.piles.get(r.id);
       if (!pile) {
         const cx = r.x + r.w / 2, cz = r.y + r.h / 2, y0 = view.heightAt(cx, cz);
-        pile = rubbleModel(r.w, r.h, r.id, (x, z) => view.heightAt(cx + x, cz + z) - y0);
+        const ground = (x: number, z: number): number => view.heightAt(cx + x, cz + z) - y0;
+        pile = rubbleModel(r.w, r.h, r.id, ground);
         pile.position.set(cx - width / 2, y0, cz - height / 2);
         this.scene.add(pile);
         this.piles.set(r.id, pile);
+        // świeżo rozebrany budynek: gruz spada z jego wysokości (fizyka), z zapisu leży od razu
+        if (!this.fresh) rubbleFalls.drop(pile, r.w, r.h, fallHeight(r.w, r.h), ground);
       }
       setRubble(pile, r.loads.length / r.total);
     }
     for (const [id, pile] of this.piles) if (!alive.has(id)) { this.scene.remove(pile); this.piles.delete(id); }
+    rubbleFalls.step(Math.min(dt, 0.1));
+    this.fresh = false;
   }
 }

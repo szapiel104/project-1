@@ -85,6 +85,9 @@ Worek z płótna: własny model z Blendera (`tools/models/sack.py`, symulacja tk
 - Krzyki, okrzyki i buchnięcie pochodni: Freesound przez [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) — JohnsonBrandEditing, davdud101, Adam_N, Julien Matthey (CC0).
 Pełna lista plików w docs/zasoby.md.
 
+## Fizyka gruzu
+- [cannon-es](https://github.com/pmndrs/cannon-es) — silnik fizyki 3D (MIT, © 2015 Stefan Hedman, © 2020 pmndrs; licencja wymaga zachowania tej informacji). W grze tylko spadanie gruzu zawalonych i rozebranych budynków (`src/render/rubblefall.ts`).
+
 ## Podpis w grze
 Autorzy grafiki na licencjach CC BY i CC BY-SA są wymienieni w grze: Ustawienia → Autorzy; dźwięki i muzyka: Ustawienia → Dźwięk.
 

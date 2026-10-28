@@ -1,7 +1,7 @@
 {
   "name": "project-1",
   "private": true,
-  "version": "0.59.0",
+  "version": "0.59.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.3",
+    "cannon-es": "^0.20.0",
     "n8ao": "^2.0.1",
     "simplex-noise": "^4.0.3",
     "three": "^0.186.1",

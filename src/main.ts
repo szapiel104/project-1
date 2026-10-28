@@ -27,7 +27,7 @@ import { feastDay, preached } from './sim/systems/faith';
 import { FOOD_PER_DAY, FOOD_VALUE, GRAIN_PER_DAY, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
-import { buildCost, canAfford, canPlace, doorTile, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
+import { buildCost, canAfford, canPlace, doorTile, missingRequirement, maxHp, tileBuildable, ruin } from './sim/systems/placement';
 import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, type JumpKind, type RecruitUnit } from './ui/hud';
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { storeLogistics } from './ui/storePanel';
@@ -2285,6 +2285,8 @@ requestAnimationFrame(loop);
   select(id: string | number): number { const b = typeof id === 'number' ? game.buildings.find((x) => x.id === id) : game.buildings.find((x) => x.owner === ME && BUILDINGS[x.type]!.id === id); select(b?.id ?? 0); return b?.id ?? 0; },
   /** Wilk w polu (x, y) */
   wolf(x: number, y: number): void { addWolf(game, x, y); },
+  /** Zawala budynek o tym id w ruinę (gruz spada w fizyce) — do sprawdzania gruzu na pustej scenie */
+  raze(id: number): boolean { const b = game.buildings.find((x) => x.id === id); if (!b) return false; ruin(game, b); refresh(); return true; },
   state: () => game,
   /** Tempo gry (0 = pauza, czas w obrazie stoi) */
   speed(n: number): void { speed = n; hud.setSpeed(n); },

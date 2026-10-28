@@ -13,6 +13,7 @@ import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { pattern } from './textures';
 import { touch } from './touch';
+import { fallHeight, rubbleFalls } from './rubblefall';
 
 const tmpColor = new THREE.Color();
 
@@ -29,6 +30,7 @@ export class SiteLayer {
 
   /** Nowa mapa: bez pokazowych budów, gruzowisk; rusztowania liczą się od nowa */
   reset(): void {
+    this.fresh = true;
     this.quickBuild.clear();
     for (const p of this.ruinPiles.values()) this.layer.remove(p);
     this.ruinPiles.clear();
@@ -52,6 +54,8 @@ export class SiteLayer {
   /** Części modelu, których na placu budowy nie ma (wnętrze z ludźmi, zapasy, dym, ogień, życie) */
   private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'armsfill', 'smoke', 'flame', 'flagcloth', 'bannercloth', 'flagpole']);
   private siteKey = '';
+  /** Pierwsza klatka po wczytaniu mapy: ruiny z zapisu leżą od razu, bez spadania gruzu */
+  private fresh = true;
   /** Bieżąca klatka (ustawiane w sync) */
   private g!: GameState;
   private view: TerrainView | null = null;
@@ -181,10 +185,13 @@ export class SiteLayer {
           const fp = footprint(def, b.rot);
           const view = this.view, W = this.g.map.width, H = this.g.map.height;
           const cx = mesh.position.x + W / 2, cz = mesh.position.z + H / 2, y0 = view ? view.heightAt(cx, cz) : mesh.position.y;
-          const p2 = rubbleModel(fp.w, fp.h, b.id, view ? (x, z) => view.heightAt(cx + x, cz + z) - y0 : undefined);
+          const ground = view ? (x: number, z: number): number => view.heightAt(cx + x, cz + z) - y0 : undefined;
+          const p2 = rubbleModel(fp.w, fp.h, b.id, ground);
           p2.position.set(mesh.position.x, y0, mesh.position.z);
           this.layer.add(p2);
           this.ruinPiles.set(b.id, p2);
+          // budynek właśnie runął: gruz spada z jego wysokości i każdy kawałek ląduje gdzie indziej
+          if (!this.fresh && !this.calm) rubbleFalls.drop(p2, fp.w, fp.h, fallHeight(fp.w, fp.h), ground);
         }
         // gruz leży tak, jak spadł (rubbleModel układa go na ziemi) — bez rozciągania w pionie, które podnosiło
         // kawałki w powietrze; w miarę odbudowy robotnicy zbierają go od góry
@@ -218,6 +225,7 @@ export class SiteLayer {
     // ruina, która się rozpadła albo została rozebrana, zabiera ze sobą gruzowisko
     for (const [id, p] of this.ruinPiles) if (!this.meshes.has(id) || !g.buildings.some((b) => b.id === id)) { this.layer.remove(p); this.ruinPiles.delete(id); }
     this.syncScaffolds(g, scaffolds);
+    this.fresh = false;
   }
 
   /** Rusztowania, pomosty i stosy materiału przy wszystkich placach budowy (dwie siatki instancji) */
