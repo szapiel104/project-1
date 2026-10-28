@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.63.1 — ślady butów w dobrą stronę (2026-10-28)
+
+- **Odciski na śniegu były obrócone o 180°** (obcas z przodu): przód podeszwy leży w teksturze u góry, czyli w −z płaszczyzny, a obrót kierował w stronę marszu +z. Teraz palce wskazują kierunek, w którym ktoś szedł (`render/footprints.ts`)
+- Bot: bez zmian (wygląd)
+
 ## 0.63.0 — wielki czar magów: deszcz ognia i lodowy krąg (2026-10-28)
 
 - **Wielki czar** (`sim/systems/greatspell.ts`): gdy co najmniej trzech wrogów stoi w kupie (w kręgu ok. 1,5 pola wokół celu), mag sam rzuca wielki czar zamiast zwykłej kuli; potem 25 s odliczania. Rzucany z ziemi w ziemię — wrogów na wieżach i murach nie sięga

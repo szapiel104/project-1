@@ -118,7 +118,7 @@ export class Footprints {
         const sgn = p.side ? 1 : -1;
         p.side ^= 1;
         const fx = bx - uy * SPREAD * sgn, fy = by + ux * SPREAD * sgn;
-        this.put(fx, fy, Math.atan2(ux, uy), height(fx, fy), W, H, clock);
+        this.put(fx, fy, Math.atan2(ux, uy) + Math.PI, height(fx, fy), W, H, clock); // przód podeszwy leży w teksturze u góry, czyli w -z płaszczyzny: obrót o 180°, żeby palce szły w stronę marszu
         added = true;
       }
       p.x = w.x; p.y = w.y;
