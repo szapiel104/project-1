@@ -638,6 +638,7 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
 }
 
 type Builder = (g: THREE.Group, team: THREE.Material, flag: THREE.Material) => void;
+const FLAG_ON = new Set(['keep', 'barracks', 'armory', 'tavern', 'watchtower', 'stoneTower', 'stoneTowerBig', 'stoneTowerGreat', 'gate', 'stoneGate', 'mageFire', 'mageWater', 'mageHut', 'shrine', 'oremine', 'minecamp', 'barn', 'engineers']);
 
 /** Chorągiew na drzewcu: płachta z obszyciem i jaskółczym ogonem (herb właściciela dokłada scena — applyCrest),
  *  drzewce z obręczą, złotą gałką i żelaznym grotem; cała grupa nazywa się 'flagpole' — znika, gdy zaglądamy do wnętrza */
@@ -1469,6 +1470,9 @@ export function buildingModel(id: string, teamColor: number): THREE.Group {
     flagMats.set(teamColor, flag);
   }
   (BUILDERS[id] ?? ((gg) => { box(gg, M.wood, 1, 1, 1); }))(g, team, flag);
+  // chorągiew właściciela tylko na budynkach, które coś znaczą w osadzie i w boju (zamek, koszary, zbrojownia, karczma,
+  // wieże, bramy, siedziby magów, kapliczka, kopalnia z barakiem, stodoła) — chaty, warsztaty i magazyny bez niej (Michał 28.10)
+  g.traverse((o) => { if (!FLAG_ON.has(id)) for (const c of o.children.filter((c) => c.name === 'flagpole')) o.remove(c); });
   // gotowy model z paczki zastępuje bryłę z kodu; nasze wnętrze i animowane części zostają
   const def = BUILDINGS.find((d) => d.id === id);
   const asset = def ? assetModel(id, teamColor, def.w, def.h) : null;

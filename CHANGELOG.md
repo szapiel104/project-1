@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.61.6 — chorągwie tylko na ważnych budynkach, rudera i namiot do spaceru (2026-10-28)
+
+- **Chorągwie:** zostają tylko na zamku, koszarach, zbrojowni, karczmie, wieżach i bramach, siedzibach magów, kapliczce, kopalni z barakiem, stodole i cechu inżynierów (`FLAG_ON` w `render/buildings.ts`). Chaty, rudery, namioty, warsztaty, magazyny, pola i sady są bez flagi — przy kilkunastu chatach las chorągwi wyglądał dziwnie
+- **Rudera:** w spacerze da się wejść do środka przez otwór ze skórą (dotąd budynek był pełną bryłą); w środku ciemna, ubita ziemia zamiast jasnego pyłu; zamiast dużej pochodni na słupie przy narożniku niski kij z pochodnią przy drzwiach (`SMALL_TORCH` w `scene.ts`)
+- **Namiot:** w spacerze wchodzi się od przodu, połacie i tył zatrzymują; palenisko przed wejściem zostaje zimne (bez ognia)
+- Bot: bez zmian (wygląd)
+
 ## 0.61.5 — wrogie drogi da się rozkopać (2026-10-28)
 
 - **Drogi mają właściciela** (`roadOwner` w stanie gry i zapisie; stare zapisy — drogi niczyje). Narzędziem rozbiórki zdejmujesz tylko swoje; na cudzej drodze nie położysz swojej

@@ -38,7 +38,7 @@ P = 0.012                 # klepisko
 # ---------------- klepisko (na nim śpią) i ubita ziemia przed wejściem ----------------
 b.box('base', 'soil', X1 - X0 + 0.22, 0.006, Z1 - Z0 + 0.22, 0, 0, 0)
 b.box('base', 'soil', 0.6, 0.004, 0.3, DM, 0, Z1 + 0.22)
-b.box('floor', 'dust', X1 - X0 - 0.16, 0.008, Z1 - Z0 - 0.08, 0, P - 0.006, 0)
+b.box('floor', 'soil', X1 - X0 - 0.16, 0.008, Z1 - Z0 - 0.08, 0, P - 0.006, 0)   # ciemna, ubita ziemia (nie jasny pył)
 
 # ---------------- słupy z okorowanych pni (narożniki i po bokach drzwi) ----------------
 posts = [(X0, Z0), (X1, Z0), (X0, Z1), (X1, Z1), (0.0, Z0), (DOOR[0] - 0.03, Z1), (DOOR[1] + 0.03, Z1)]

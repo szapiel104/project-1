@@ -125,7 +125,11 @@ for k in range(6):
 b.box('base', 'ash', 0.09, 0.006, 0.07, FX, 0.0, FZ)
 for k in range(2):
     b.box('base', 'woodDark', 0.1, 0.018, 0.018, FX, 0.008, FZ + (k - 0.5) * 0.03, rot=0.6 - k * 1.2)
-t.open.append([-0.25, 0.25, ZB + 0.05, ZF - 0.02])
+t.open.append([-0.25, 0.25, ZB + 0.05, ZF + 0.12])
+# spacerem do namiotu wchodzi się tylko od przodu: połacie po bokach i tylna ściana zatrzymują
+for s in (-1, 1):
+    t.block(s * 0.27, s * 0.46, ZB - 0.05, ZF + 0.02)
+t.block(-0.46, 0.46, ZB - 0.1, ZB + 0.03)
 
 VIEWS = [
     ['namiot od wejścia', [0.25, 0.45, 1.5], [0, 0.25, 0], ['base'], 22],

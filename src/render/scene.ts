@@ -167,6 +167,8 @@ const ALE = RESOURCES.indexOf('ale');
 const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 
 /** Budynki, w których pali się w piecu: z komina idzie dym */
+/** Mała pochodnia zamiast słupa przy wejściu (x, z w układzie budynku, skala): rudera z desek dostaje niski kij przy drzwiach */
+const SMALL_TORCH: Record<string, [number, number, number]> = { shack: [0.7, 0.5, 0.5] };
 const SMOKY = new Set(['armory', 'house', 'tent', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy', 'armorer']);
 
 /**
@@ -2923,7 +2925,9 @@ export class GameRenderer {
       // pochodnia na słupie przy wejściu: przy budynkach z drzwiami (nie przy murach, bramach ani drogach)
       if (def.id !== 'torch' && !def.wall && !def.gate && !def.road && def.id !== 'keep' && !NO_TORCH.has(def.id)) {
         const torch = torchModel();
-        torch.position.set(def.w / 2 - 0.08, 0, def.h / 2 - 0.08);
+        const small = SMALL_TORCH[def.id];
+        if (small) { torch.position.set(small[0], 0, small[1]); torch.scale.setScalar(small[2]); }
+        else torch.position.set(def.w / 2 - 0.08, 0, def.h / 2 - 0.08);
         mesh.add(torch);
       }
       this.buildingLayer.add(mesh);
