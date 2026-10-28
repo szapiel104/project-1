@@ -170,7 +170,7 @@ export class WolfLayer {
       this.wolfTails.setMatrixAt(n, this.wolfPart.multiplyMatrices(t.matrix, this.wolfRot));
       this.wolfEyes!.setMatrixAt(n, this.night > 0.2 ? t.matrix : ZERO);
       // warczenie z bliska, kłapnięcie przy ataku
-      if (!this.calm && w.target) this.sfxAt('growl', t.position.x, t.position.z, `w${w.id}`, 2.6 + (w.id % 3), 1.4);
+      if (!this.calm && w.target) this.sfxAt('growl', t.position.x, t.position.z, `w${w.id}`, 4.5 + (w.id % 3) * 1.5, 1);
       this.wolfMarker(n, w, g, t.position.x, t.position.y, t.position.z, view);
       n++;
     }

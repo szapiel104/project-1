@@ -73,7 +73,8 @@ export const DEFS = {
   sheep: D(oad('sheep'), { vol: 0.4, ref: 5, max: 28, voices: 2, pitch: [0.9, 1.15] }),
   horse: D(oad('horse'), { vol: 0.45, ref: 6, max: 30, voices: 2 }),
   hen: D(['hen-0', 'hen-1', 'hen-2', 'hen-3'], { vol: 0.42, ref: 4, max: 22, voices: 2, pitch: [0.92, 1.1] }),
-  growl: D(['wolf'], { vol: 0.65, ref: 6, max: 34, voices: 2, pitch: [0.85, 1] }),
+  // warczenie wilka przy ataku: prawdziwe nagrania psów (OpenGameArt: bonebrah CC0, congusbongus CC BY 3.0), lekko obniżone (28.10.2026)
+  growl: D(['wolf-growl-0', 'wolf-growl-1', 'wolf-growl-2', 'wolf-growl-3', 'wolf-growl-4', 'wolf-growl-5', 'wolf-growl-6'], { vol: 0.5, ref: 5, max: 28, voices: 2, gap: 0.5, pitch: [0.82, 0.95], wet: 0.12 }),
   // ogień i drobiazgi
   torch: D(['torch'], { vol: 0.5, ref: 4, max: 18, voices: 2 }),
   fire: D(oad('fire'), { vol: 0.55, ref: 5, max: 36, roll: 1.3, voices: 8, pitch: [0.97, 1.03], wet: 0.15, bus: 'amb' }),

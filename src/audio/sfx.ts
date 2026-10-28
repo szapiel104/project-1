@@ -29,6 +29,9 @@ const FILES: Partial<Record<Sound, string[]>> = {
 const NATURE = {
   day: ['day-0', 'day-1', 'day-2', 'day-3'], night: ['night-0', 'night-1'], farm: ['farm-0', 'farm-1'],
   bell: ['bell'], horn: ['horn'], thunder: ['thunder-0', 'thunder-1'],
+  // prawdziwe wilki (28.10.2026, w miejsce syntezowanego wycia): wycie — US Fish and Wildlife Service (domena publiczna),
+  // wataha w zbiórce („rallying”) — Retron, Wikimedia Commons (domena publiczna); docs/zasoby.md
+  wolfHowl: ['wolf-howl-0', 'wolf-howl-1', 'wolf-howl-2'], wolfPack: ['wolf-pack-0'],
   // prawdziwy deszcz (0 A.D.) w miejsce syntezowanego szumu
   rain: BANK_0AD.rain.map((n) => `0ad/${n}`),
 };
@@ -333,70 +336,38 @@ function forestEcho(c: AudioContext): ConvolverNode {
   const len = c.sampleRate * 3.2, ir = c.createBuffer(2, len, c.sampleRate);
   for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
   echo = c.createConvolver(); echo.buffer = ir;
-  const g = c.createGain(); g.gain.value = 0.9;
+  const g = c.createGain(); g.gain.value = 0.6;
   echo.connect(g).connect(busGain.amb ?? master!);
   return echo;
 }
 
-/** Szczeknięcia i skowyt: krótkie, wysokie „jip” kilku wilków, jak wataha w pogoni */
-function yips(c: AudioContext, at: number, pan: number): void {
-  const p = c.createStereoPanner(); p.pan.value = pan; p.connect(busGain.amb ?? master!); p.connect(forestEcho(c));
-  const n = 5 + Math.floor(Math.random() * 6);
-  for (let i = 0; i < n; i++) {
-    const t = at + i * (0.12 + Math.random() * 0.2);
-    const o = c.createOscillator(); o.type = 'triangle';
-    const f0 = 600 + Math.random() * 350;
-    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(f0 * (Math.random() < 0.5 ? 1.5 : 0.6), t + 0.12);
-    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.015); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
-    const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1100; f.Q.value = 1.5;
-    o.connect(f).connect(g).connect(p); o.start(t); o.stop(t + 0.18);
-  }
-}
-
-/** Warczenie: niski, chropowaty szum drgający jak oddech zwierzęcia tuż za palisadą */
-function snarl(c: AudioContext, at: number, pan: number): void {
-  if (!noise) return;
-  const p = c.createStereoPanner(); p.pan.value = pan; p.connect(busGain.amb ?? master!);
-  const len = 1.2 + Math.random() * 1.2;
-  const src = c.createBufferSource(); src.buffer = noise; src.loop = true; src.playbackRate.value = 0.4;
-  const f = c.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 170 + Math.random() * 60; f.Q.value = 4;
-  const am = c.createGain(); am.gain.value = 0;
-  const lfo = c.createOscillator(); lfo.frequency.value = 22 + Math.random() * 10; const lg = c.createGain(); lg.gain.value = 0.5; lfo.connect(lg).connect(am.gain);
-  const g = c.createGain(); g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(1.4, at + 0.2); g.gain.setValueAtTime(1.4, at + len * 0.7); g.gain.exponentialRampToValueAtTime(0.001, at + len);
-  src.connect(f).connect(am).connect(g).connect(p);
-  src.start(at); lfo.start(at); src.stop(at + len + 0.05); lfo.stop(at + len + 0.05);
-}
-
+/**
+ * Wilki z prawdziwych nagrań (28.10.2026 — syntezowane wycie, „jipy” i warczenie z szumu brzmiały tragicznie).
+ * Daleko: jedno wycie zza lasu, cicho, bez wysokich tonów i z pogłosem lasu. Blisko (wataha na mapie): wycie albo
+ * zbiórka całej watahy, trochę głośniej i jaśniej. Każde odtworzenie z lekko inną wysokością i stroną.
+ * Gdy nagranie się jeszcze nie wczytało — cisza (bez zastępczej syntezy).
+ */
 function wolf(c: AudioContext, at: number, pan: number, near = false): void {
-  const p = c.createStereoPanner(); p.pan.value = pan;
-  const dry = c.createGain(); dry.gain.value = 0.3;
-  p.connect(dry).connect(busGain.amb ?? master!);
-  p.connect(forestEcho(c));
-  // daleko za lasem: jeden, czasem dwa głosy, cicho; warknięcie tylko gdy wataha jest blisko (27.10.2026 — było za głośno i za często)
-  const voices = 1 + (Math.random() < 0.3 ? 1 : 0);
-  const growl = buffers.get('wolf');
-  if (growl && near && Math.random() < 0.4) {
-    const src = c.createBufferSource(); src.buffer = growl; src.playbackRate.value = 0.75;
-    const g = c.createGain(); g.gain.value = 0.9;
-    src.connect(g).connect(p); src.start(at + 3.5 + Math.random() * 2);
-  }
-  for (let v = 0; v < voices; v++) {
-    const t = at + v * (0.8 + Math.random());
-    const len = 2.6 + Math.random() * 1.2;
-    const base = 300 + Math.random() * 60 + v * 55;
-    const o = c.createOscillator(); o.type = 'triangle';
-    o.frequency.setValueAtTime(base * 0.7, t);
-    o.frequency.exponentialRampToValueAtTime(base * 1.25, t + len * 0.3);
-    o.frequency.setValueAtTime(base * 1.25, t + len * 0.65);
-    o.frequency.exponentialRampToValueAtTime(base * 0.8, t + len);
-    const vib = c.createOscillator(); vib.frequency.value = 5.5; const vg = c.createGain(); vg.gain.value = 6; vib.connect(vg).connect(o.frequency);
-    const f = c.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 900;
-    const g = c.createGain();
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.5);
-    g.gain.setValueAtTime(0.16, t + len * 0.7); g.gain.exponentialRampToValueAtTime(0.001, t + len);
-    o.connect(f).connect(g).connect(p);
-    o.start(t); vib.start(t); o.stop(t + len + 0.05); vib.stop(t + len + 0.05);
-  }
+  const pack = near && Math.random() < 0.4;
+  const buf = pick(pack ? NATURE.wolfPack : NATURE.wolfHowl);
+  if (!buf) return;
+  const out = busGain.amb ?? master!;
+  const src = c.createBufferSource(); src.buffer = buf;
+  src.playbackRate.value = 0.95 + Math.random() * 0.1;
+  // dal: niskie przejście (las zjada górę) i delikatne podcięcie dołu, żeby nie dudniło
+  const lp = c.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = near ? 5200 : 2400; lp.Q.value = 0.5;
+  const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = near ? 160 : 260;
+  const g = c.createGain();
+  const vol = near ? (pack ? 0.3 : 0.34) : 0.2;
+  const len = buf.duration / src.playbackRate.value;
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(vol, at + 0.6);
+  g.gain.setValueAtTime(vol, at + Math.max(0.7, len - 1.5)); g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+  const p = c.createStereoPanner(); p.pan.value = near ? pan : pan * 0.7;
+  src.connect(hp).connect(lp).connect(g).connect(p);
+  const dry = c.createGain(); dry.gain.value = near ? 0.85 : 0.55;
+  const wet = c.createGain(); wet.gain.value = near ? 0.18 : 0.4;
+  p.connect(dry).connect(out); p.connect(wet).connect(forestEcho(c));
+  src.start(at); src.stop(at + len + 0.05);
 }
 
 /**
@@ -424,9 +395,10 @@ export function nature(night: number, rain: number, paused: boolean, wolvesNear 
   if (now > nextWolf) {
     // gdy wataha jest na mapie, słychać ją dużo częściej i bliżej: wycie, ujadanie, warczenie
     const pan = Math.random() * 1.6 - 0.8, pick = Math.random();
-    if (wolvesNear) { if (pick < 0.5) wolf(c, now, pan, true); else if (pick < 0.8) yips(c, now, pan); else snarl(c, now, pan); }
+    // wataha na mapie: wycie albo zbiórka watahy (warczenie przy ataku gra osobno, z miejsca wilka — bank `growl`)
+    if (wolvesNear) { if (pick < 0.7) wolf(c, now, pan, true); }
     else if (night > 0.6 && pick < 0.5) wolf(c, now, pan);
-    nextWolf = now + (wolvesNear ? 30 + Math.random() * 30 : 150 + Math.random() * 150);
+    nextWolf = now + (wolvesNear ? 40 + Math.random() * 40 : 150 + Math.random() * 150);
   }
 }
 

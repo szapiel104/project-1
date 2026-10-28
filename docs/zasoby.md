@@ -17,9 +17,17 @@ Gdy nagranie się nie wczyta, gra odtwarza zastępczy dźwięk syntezowany (src/
 
 Pobrane z indeksu [open-game-sfx-index](https://github.com/Mcamento8/open-game-sfx-index), który przechowuje paczki CC0:
 - plank-0…2, hit-0…2 — Kenney „Impact Sounds” (CC0)
-- clang-0…1, wolf (warknięcie z pogłosem) — „RPG Sound Pack”, artisticdude, OpenGameArt (CC0)
+- clang-0…1 — „RPG Sound Pack”, artisticdude, OpenGameArt (CC0)
+
+## Wilki (28.10.2026, w miejsce syntezowanego wycia i starego warknięcia)
+- wolf-howl-0…2 — „Wolf howls”, U.S. Fish and Wildlife Service, domena publiczna (PD-USGov-FWS) — https://commons.wikimedia.org/wiki/File:Wolf_howls.ogg — pocięte na trzy frazy
+- wolf-pack-0 — „Rallying” (zbiórka watahy europejskich wilków, 2005), Retron, domena publiczna — https://commons.wikimedia.org/wiki/File:Rallying.ogg
+- wolf-growl-0 — „Dog Growl”, bonebrah, OpenGameArt (CC0) — https://opengameart.org/content/dog-growl
+- wolf-growl-1…6 — „Dog growls”, congusbongus, OpenGameArt, CC BY 3.0 (https://creativecommons.org/licenses/by/3.0/) — https://opengameart.org/content/dog-growls
+- Obróbka: mono 32 kHz, filtr górno- i dolnoprzepustowy, lekkie odszumienie, wyrównana głośność, wyciszenie na końcach; w grze warczenie lekko obniżone (głos wilka), wycie z daleka bez wysokich tonów i z pogłosem lasu
+- Usunięte: syntezowane wycie, „jipy” i warczenie z szumu w src/audio/sfx.ts oraz stare warknięcie `wolf.ogg`
 - 28.10.2026 usunięte stare, nieużywane albo piskliwe nagrania: ambience (pętla szumu Kenneya), break, walking, chop, coins, creak-1…3, mine-0…2, smith-0…2, swing-0…2; skrzypienie wrót gra teraz nagrania 0 A.D. (gateOpen)
-Wiatr, deszcz, wrony i wycie wilków są syntezowane w src/audio/sfx.ts.
+Wrony są syntezowane w src/audio/sfx.ts (wiatru już nie ma, deszcz i wilki są z nagrań).
 
 ## Odgłosy natury i wsi (16.10.2026)
 
