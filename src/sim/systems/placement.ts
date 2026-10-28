@@ -63,10 +63,11 @@ export function missingRequirement(g: GameState, player: number, def: BuildingDe
 }
 
 /**
- * Wolne pole przy budynku, którym wchodzą chłopi. Najpierw szuka od frontu (strona zależy od obrotu),
- * od środka krawędzi, a gdy front jest zastawiony, po kolei na pozostałych bokach.
+ * Pole przy budynku, którym wchodzą chłopi: zawsze to samo, przed drzwiami modelu (środek frontu, strona zależy od obrotu).
+ * Gdy jest zastawione, budynku tam nie postawisz (strzałka wejścia nie przeskakuje na inny bok — Michał 28.10.2026).
+ * fallback: tylko przy wstawianiu gotowych układów (osada startowa, stare zapisy) — wtedy szuka dalej po bokach jak dawniej.
  */
-export function findDoor(g: GameState, x: number, y: number, w: number, h: number, rot = 0): number {
+export function findDoor(g: GameState, x: number, y: number, w: number, h: number, rot = 0, fallback = false): number {
   const { width, height } = g.map;
   const mid = (n: number, i: number): number => (i + (n >> 1)) % n;
   const sides: [number, number][][] = [
@@ -80,8 +81,16 @@ export function findDoor(g: GameState, x: number, y: number, w: number, h: numbe
       if (tx < 0 || ty < 0 || tx >= width || ty >= height) continue;
       const t = ty * width + tx;
       if (g.occupancy[t] === 0 && TERRAIN[g.map.tiles[t] as Terrain].walkable) return t;
+      if (!fallback) return -1;
     }
   return -1;
+}
+
+/** Pole przed drzwiami (środek frontu) bez sprawdzania, czy wolne — do strzałki w podglądzie; -1 poza mapą */
+export function doorTile(g: GameState, x: number, y: number, w: number, h: number, rot = 0): number {
+  const r = ((rot % 4) + 4) % 4;
+  const [tx, ty] = r === 0 ? [x + (w >> 1), y + h] : r === 1 ? [x + w, y + (h >> 1)] : r === 2 ? [x + (w >> 1), y - 1] : [x - 1, y + (h >> 1)];
+  return tx < 0 || ty < 0 || tx >= g.map.width || ty >= g.map.height ? -1 : ty * g.map.width + tx;
 }
 
 /** Pola tuż za tylnym bokiem działki (naprzeciw wejścia): tam kopalnia wchodzi w zbocze */
@@ -321,7 +330,7 @@ export function addBuilding(g: GameState, type: number, owner: number, x: number
   const fp = footprint(def, rot);
   // umocnienia nie mają wejścia; brama sama jest przejściem
   // zamek: mieszkańcy idą przez bramę do koszar; inne budynki mają wejście tuż przy ścianie
-  const door = def.wall || def.gate ? -1 : def.id === 'keep' ? (y + KEEP_BED[1]) * g.map.width + x + KEEP_BED[0] : findDoor(g, x, y, fp.w, fp.h, rot);
+  const door = def.wall || def.gate ? -1 : def.id === 'keep' ? (y + KEEP_BED[1]) * g.map.width + x + KEEP_BED[0] : findDoor(g, x, y, fp.w, fp.h, rot, true);
   const b: Building = { id: g.nextId++, type, owner, x, y, rot, door, worker: 0, lit: false, hp: maxHp(type), build: 0 };
   for (let ty = y; ty < y + fp.h; ty++)
     for (let tx = x; tx < x + fp.w; tx++) { g.occupancy[ty * g.map.width + tx] = b.id; g.roads[ty * g.map.width + tx] = 0; g.roadPlan[ty * g.map.width + tx] = 0; } // budynek zastępuje drogę pod sobą

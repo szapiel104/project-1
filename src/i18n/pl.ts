@@ -329,7 +329,7 @@ export const pl = {
   'place.needRock': 'Kopalnię stawia się tyłem do skały: za nią muszą być góry',
   'place.needs': 'Najpierw potrzebny gotowy budynek: {b}',
   'place.needMine': 'Barak górników stawia się przy własnej kopalni (do 10 pól)',
-  'place.noAccess': 'Brak dojścia do budynku',
+  'place.noAccess': 'Wejście zastawione — pole przed drzwiami musi być wolne',
   'place.forecourt': 'Plac przed bramą zamku musi zostać wolny',
   'place.blocks': 'Tu budynek zablokowałby ludziom przejście',
   'place.enemy': 'Wrogie wojsko w pobliżu — tu nie da się budować',

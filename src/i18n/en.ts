@@ -335,7 +335,7 @@ export const en: Record<TextKey, string> = {
   'place.needRock': 'A mine goes with its back to the rock: there must be mountains behind it',
   'place.needs': 'You need a finished {b} first',
   'place.needMine': 'Miners’ barracks go next to your own mine (up to 10 tiles)',
-  'place.noAccess': 'No way to reach the building',
+  'place.noAccess': 'The doorway is blocked — clear the tile in front of the door',
   'place.forecourt': 'The square in front of the castle gate must stay clear',
   'place.blocks': 'A building here would block people’s way',
   'place.enemy': 'Enemy troops nearby — you cannot build here',

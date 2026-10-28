@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.54.10 — większa kamienna brama, sztywne wejście budynku, stawianie bez przycinek (2026-10-28)
+
+- **Kamienna brama dwa razy większa:** przejazd na całą szerokość pola (1,0 zamiast 0,56) i dwa razy wyższy łuk, wyższa korona i baszty (smuklejsze, stoją na skraju sąsiednich przęseł muru), więcej klińców w łuku, wrota z trzema ryglami. Pole w symulacji bez zmian (dalej 1 pole w murze)
+- **Strzałka wejścia nie przeskakuje:** wejście jest zawsze na środku frontu, przed drzwiami modelu (strona wg obrotu). Gdy to pole jest zajęte, budynku tam nie postawisz (czerwony podgląd, komunikat „Wejście zastawione”) — dawniej wejście uciekało na inny bok. Stare zapisy i osada startowa zachowują dawne szukanie po bokach
+- **Stawianie tam, gdzie stoi podgląd:** klik przy budowaniu bierze pole pod podglądem, a nie mur czy dach, w który akurat celował kursor (wcześniej celowanie w mur odrzucało budowę, mimo że podgląd stał na wolnych polach)
+- **Mniej przycinek przy stawianiu i budowie:** wykop i wyrównanie terenu wysyłają na kartę tylko zmienione wiersze pól, nie cały teren (kilka MB za każdym razem); przycięte materiały placów budowy wracają do puli zamiast być zwalniane (shader nie kompiluje się od nowa przy każdej budowie), a ich shadery zlecane są w tle już w fazie wykopu
+- Bot: bez zmian w kolejności budowy; korzysta z tego samego sztywnego wejścia co gracz
 ## 0.54.9 — dziennik błędów gotowy do wklejenia, poprawka przeciągania (2026-10-28)
 
 - **Błąd `setPointerCapture` (InvalidStateError) naprawiony:** kamera i minimapa przechwytują wskaźnik przy przeciąganiu; gdy przycisk był już puszczony w chwili kliknięcia (kliknięcie wysłane programowo, np. przez rozszerzenie, albo przełączenie okna), przeglądarka rzucała wyjątek. Teraz przeciąganie działa wtedy bez przechwycenia, bez błędu

@@ -106,7 +106,11 @@ export class Precompiler {
       if (!e.compiled && compiles < COMPILES_PER_FRAME) {
         compiles++;
         e.compiled = true;
+        // obiekt chwilowo schowany (np. plac budowy w fazie wykopu): na czas zlecenia widoczny, żeby shadery były gotowe, zanim się pokaże
+        const vis = o.visible;
+        o.visible = true;
         e.mats = [...(this.renderer.compile(o, camera, this.scene) as Set<THREE.Material>)];
+        o.visible = vis;
         if (this.ready(e.mats, false)) { this.pending.delete(o); this.done.add(o); continue; }
       }
       if (o.visible) { o.visible = false; hidden.push(o); }

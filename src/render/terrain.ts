@@ -2043,7 +2043,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
             const [dx, dy] = SLOT_OF[k]!;
             pos[(ty * w + tx) * 18 + k * 3 + 1] = corner(tx + dx, ty + dy);
           }
-      attr.needsUpdate = true;
+      // na kartę idą tylko zmienione wiersze pól, nie cały teren (pełne wysłanie kilku MB przycinało grę przy stawianiu)
+      const r0 = Math.max(0, y - 4), r1 = Math.min(h, y + fh + 4);
+      if (r1 > r0) { attr.addUpdateRange(r0 * w * 18, (r1 - r0) * w * 18); attr.needsUpdate = true; }
     },
     dig(x: number, y: number, fw: number, fh: number, depth: number) {
       // wykop pod budowę: narożniki działki opuszczone (środek głębiej, brzeg płycej), tylko w obrazie terenu
@@ -2059,7 +2061,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
             const o = (ty * w + tx) * 18 + k * 3;
             pos[o + 1] = corner(cx, cy) - depth * (inner ? 1 : 0.45);
           }
-      attr.needsUpdate = true;
+      // tylko wiersze działki (wykop zmienia się kilkanaście razy na budowę — pełne wysłanie terenu przycinało)
+      const r0 = Math.max(0, y - 1), r1 = Math.min(h, y + fh + 1);
+      if (r1 > r0) { attr.addUpdateRange(r0 * w * 18, (r1 - r0) * w * 18); attr.needsUpdate = true; }
     },
     updateGrass(x: number, z: number, time: number, camDist?: number) { grass?.update(x, z, time, camDist); },
     grassReach(f: number) { grass?.setReach(f); },

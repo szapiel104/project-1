@@ -18,7 +18,14 @@ const tmpColor = new THREE.Color();
 
 export class SiteLayer {
   /** layer: warstwa budynków (tam stoją gruzowiska i rusztowania); dust: kłąb kurzu nad polem mapy */
-  constructor(private layer: THREE.Group, private dust: (x: number, y: number, stone: boolean, soft?: boolean) => void) {}
+  /** warm: obiekt z nowymi materiałami — scena zleca ich shadery w tle (precompile.ts), zanim plac się pokaże */
+  constructor(private layer: THREE.Group, private dust: (x: number, y: number, stone: boolean, soft?: boolean) => void, private warm: (o: THREE.Object3D) => void = () => undefined) {}
+
+  /**
+   * Przycięte kopie materiałów wracają tu po skończonej budowie i służą następnym placom. Dawniej były zwalniane
+   * (dispose), a z nimi program shadera — każda kolejna budowa kompilowała go od nowa i gra przycinała przy stawianiu.
+   */
+  private static clipPool = new Map<THREE.Material, THREE.Material[]>();
 
   /** Nowa mapa: bez pokazowych budów, gruzowisk; rusztowania liczą się od nowa */
   reset(): void {
@@ -61,7 +68,15 @@ export class SiteLayer {
     const clones = new Map<THREE.Material, THREE.Material>();
     const clip = (m: THREE.Material): THREE.Material => {
       let c = clones.get(m);
-      if (!c) { c = m.clone(); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clones.set(m, c); }
+      if (!c) {
+        const pool = SiteLayer.clipPool.get(m);
+        c = pool?.pop();
+        // kopia sprzed zmiany oryginału (np. łatka pór roku) nie pasuje: zwalniamy i kopiujemy od nowa
+        if (c && c.userData.siteOf !== m.version) { c.dispose(); c = undefined; }
+        if (!c) { c = m.clone(); c.clipShadows = true; c.side = THREE.DoubleSide; c.userData.siteSrc = m; c.userData.siteOf = m.version; }
+        c.clippingPlanes = [plane];
+        clones.set(m, c);
+      }
       return c;
     };
     // wykop pod fundament: ciemna, wilgotna ziemia z ciemniejszym dnem i jaśniejszym, rozkopanym brzegiem
@@ -84,6 +99,7 @@ export class SiteLayer {
     const site = { plane, base: mesh.position.y, top: Math.max(box.max.y, mesh.position.y + 0.5), swapped, clip, pit, rect: [b0.x, b0.y, fp.w, fp.h] as [number, number, number, number] };
     this.sites.set(id, site);
     this.clipNew(mesh, site);
+    this.warm(mesh);
   }
   /** Przycina części modelu, które jeszcze nie są przycięte (np. zapasy dodane później) */
   private clipNew(mesh: THREE.Object3D, site: { swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material }): void {
@@ -100,7 +116,14 @@ export class SiteLayer {
     if (!s) return;
     const done = new Set<THREE.Material>();
     for (const [me, orig] of s.swapped) {
-      for (const m of Array.isArray(me.material) ? me.material : [me.material]) if (!done.has(m)) { done.add(m); m.dispose(); }
+      for (const m of Array.isArray(me.material) ? me.material : [me.material]) if (!done.has(m)) {
+        done.add(m);
+        const src = m.userData.siteSrc as THREE.Material | undefined;
+        if (!src) { m.dispose(); continue; }
+        let pool = SiteLayer.clipPool.get(src);
+        if (!pool) SiteLayer.clipPool.set(src, pool = []);
+        if (pool.length < 4) pool.push(m); else m.dispose();
+      }
       me.material = orig;
       me.userData.siteClip = false;
     }

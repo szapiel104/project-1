@@ -973,7 +973,8 @@ export class GameRenderer {
       // najpierw sprawdzamy, czy kliknięto w człowieka (nie w trybie malowania dróg i wyburzania)
       if (!this.painting) { const id = this.pickUnit(e); if (id) { this.onUnit(id); return; } }
       // kliknięcie w dach albo ścianę liczy się jako kliknięcie w ten budynek, a nie w ziemię za nim
-      const tile = this.pickBuilding(e) ?? this.pick(e);
+      // przy stawianiu budynku liczy się pole pod podglądem (ziemia), nie mur ani dach, w który akurat celuje kursor
+      const tile = (this.ghost.visible ? null : this.pickBuilding(e)) ?? this.pick(e);
       if (tile) this.onClick(tile, e.pointerType === 'touch');
     });
     new ResizeObserver(() => this.resize()).observe(canvas);
@@ -2656,7 +2657,7 @@ export class GameRenderer {
   private burnUntil = new Map<number, number>();
   private builtAt = 0;
   /** Place budowy (src/render/sites.ts) */
-  private sites = new SiteLayer(this.buildingLayer, (x, y, stone, soft) => this.roadDust(x, y, stone, soft));
+  private sites = new SiteLayer(this.buildingLayer, (x, y, stone, soft) => this.roadDust(x, y, stone, soft), (o) => this.pre?.watch(o));
 
   private syncBuildings(g: GameState, view: TerrainView): void {
     if (this.buildingMeshes.size === g.buildings.length && g.buildings.every((b) => this.buildingMeshes.has(b.id))) return;

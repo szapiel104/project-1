@@ -27,7 +27,7 @@ import { feastDay, preached } from './sim/systems/faith';
 import { FOOD_PER_DAY, FOOD_VALUE, GRAIN_PER_DAY, MEALS_PER_DAY, foodTotal, monthlyForecast } from './sim/systems/economy';
 /** Indeksy surowców, które są jedzeniem (jabłka, chleb, ryby) */
 const FOOD_RES_ALL = RESOURCES.map((r, i) => (RESOURCE_DEFS[r].food ? i : -1)).filter((i) => i >= 0);
-import { buildCost, canAfford, canPlace, findDoor, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
+import { buildCost, canAfford, canPlace, doorTile, missingRequirement, maxHp, tileBuildable } from './sim/systems/placement';
 import { createHud, tierNeedText, TIER_NAMES, type BuildingInfo, type HudView, type JumpKind, type RecruitUnit } from './ui/hud';
 import { createScribe, type ScribeAction } from './ui/scribe';
 import { storeLogistics } from './ui/storePanel';
@@ -918,9 +918,9 @@ function updateGhost(): void {
   renderer.setBuildGrid(tile, road ? (x, y) => canPlace(game, ME, type, x, y, false) === null : (x, y) => tileBuildable(game, ME, x, y));
   const fp = footprint(BUILDINGS[type]!, placeRot);
   const o = origin(tile, type);
-  // wyjście liczone tak samo jak przy stawianiu: gdy pole przed frontem jest zajęte, drzwi przechodzą na inny bok
+  // wyjście zawsze przed drzwiami modelu (nie przeskakuje); gdy to pole jest zajęte, podgląd jest czerwony
   const def = BUILDINGS[type]!;
-  const door = def.wall || def.gate || def.road || def.line || def.id === 'torch' ? -1 : findDoor(game, o.x, o.y, fp.w, fp.h, placeRot);
+  const door = def.wall || def.gate || def.road || def.line || def.id === 'torch' ? -1 : doorTile(game, o.x, o.y, fp.w, fp.h, placeRot);
   renderer.setGhost({ ...o, w: fp.w, h: fp.h, ok: canPlace(game, ME, type, o.x, o.y, true, placeRot) === null, id: picked, team: game.players[ME]!.team, rot: placeRot, door });
 }
 
@@ -1106,7 +1106,8 @@ renderer.onClick = (tile, touch) => {
     return;
   }
   const type = buildingIndex(picked);
-  const o = origin(tile, type);
+  // stawiamy dokładnie tam, gdzie stoi podgląd (pole z ostatniego ruchu myszy), a nie tam, gdzie trafił klik
+  const o = origin(!touch && hoverTile ? hoverTile : tile, type);
   const error = canPlace(game, ME, type, o.x, o.y, true, placeRot);
   if (error) { hud.toast(placeErrorText(error, type)); play('error'); return; }
   pending.push({ type: 'build', player: ME, building: picked, x: o.x, y: o.y, rot: placeRot });
