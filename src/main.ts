@@ -421,10 +421,12 @@ function caravanNews(now: number): void {
     const what = `${t(RESOURCE_DEFS[RESOURCES[n.res]!].name).toLowerCase()}: ${n.amount}`;
     if (n.captured) {
       if (n.owner === ME && n.by === BANDITS) hud.toast(tx(`Zbóje z lasu złupili Twój wóz (${what}). Łup leży w ich obozie.`, `Brigands from the wood have plundered your cart (${what}). The haul lies in their camp.`));
+      else if (n.owner === ME && n.to === ME) hud.toast(tx(`Wróg przechwycił wóz z urobkiem Twojej kopalni (${what}).`, `The enemy seized a haul cart from your mine (${what}).`));
       else if (n.owner === ME) hud.toast(tx(`Wróg przechwycił Twój wóz dla: ${playerName(n.to)} (${what}).`, `The enemy seized your cart bound for ${playerName(n.to)} (${what}).`));
       else if (n.by === ME) hud.toast(tx(`Twoi żołnierze przechwycili wóz wroga: +${what}.`, `Your soldiers seized an enemy cart: +${what}.`));
       else if (n.to === ME) hud.toast(tx(`Wróg przechwycił wóz, który jechał do Ciebie od: ${playerName(n.owner)}.`, `The enemy seized a cart sent to you by ${playerName(n.owner)}.`));
-    } else if (n.by === ME && n.owner !== ME) { hud.toast(tx(`${playerName(n.owner)} przysłał Ci wóz: +${what}.`, `${playerName(n.owner)} sent you a cart: +${what}.`)); play('select'); }
+    } else if (n.to === n.owner) continue; // wóz z urobkiem kopalni do własnego zamku — zwykła dostawa, bez komunikatu
+    else if (n.by === ME && n.owner !== ME) { hud.toast(tx(`${playerName(n.owner)} przysłał Ci wóz: +${what}.`, `${playerName(n.owner)} sent you a cart: +${what}.`)); play('select'); }
     else if (n.owner === ME && n.by !== ME) hud.toast(tx(`Wóz dotarł do: ${playerName(n.to)} (${what}).`, `Your cart reached ${playerName(n.to)} (${what}).`));
     else if (n.owner === ME) hud.toast(tx(`Wóz nie dojechał do: ${playerName(n.to)} — ten gracz przegrał albo wyszedł z gry, więc nie miał kto go odebrać. Ładunek wrócił do Twoich zapasów (${what}).`, `Your cart never reached ${playerName(n.to)} — they were defeated or left the game, so no one was there to take it. The load is back in your stores (${what}).`));
   }
