@@ -16,15 +16,15 @@ export const MAX_ARROWS = 256;
 /** Strzały wbite po bitwie (Michał 28.10.2026): najwięcej tyle naraz, każda stoi `STUCK_LIFE` s, w ostatnich
  *  `STUCK_FADE` s chowa się w ziemię albo w ścianę i znika. W ciałach zostają, dopóki leży ciało (najwyżej 3 w jednym). */
 const MAX_STUCK = 600, STUCK_LIFE = 90, STUCK_FADE = 3, MAX_BODY = 512, PER_BODY = 3;
-/** Gdzie wbija się strzała: w ziemię, w ścianę budynku albo w człowieka (id jak id ciała po śmierci) */
-export type Stick = { ground?: boolean; wall?: boolean; unit?: number };
+/** Gdzie wbija się strzała: w ziemię, w ścianę budynku (id budynku) albo w człowieka (id jak id ciała po śmierci) */
+export type Stick = { ground?: boolean; wall?: number; unit?: number };
 
 export class ArrowLayer {
   private arrowMesh: THREE.InstancedMesh;
   private arrowTrail: THREE.InstancedMesh;
   private arrows: { from: THREE.Vector3; to: THREE.Vector3; t: number; fire?: boolean; arc: number; hit?: WorldSound; whoosh?: boolean; stick?: Stick }[] = [];
   /** Wbite w ziemię i ściany: miejsce, obrót (grot w środek), kierunek lotu i chwila wbicia */
-  private stuck: { p: THREE.Vector3; q: THREE.Quaternion; d: THREE.Vector3; at: number }[] = [];
+  private stuck: { p: THREE.Vector3; q: THREE.Quaternion; d: THREE.Vector3; at: number; bld?: number }[] = [];
   /** Ile strzał tkwi w kim (id żołnierza albo chłopa = id jego ciała) i kiedy ostatnio */
   private inBody = new Map<number, { n: number; at: number }>();
   private stuckMesh: THREE.InstancedMesh;
@@ -92,11 +92,11 @@ export class ArrowLayer {
       p.copy(a.to).addScaledVector(d, 0.5 + Math.random() * 0.8);
       p.y = this.groundAt(p.x, p.z);
       p.addScaledVector(d, -0.14); // środek drzewca nad ziemią, grot w ziemi
-    } else if (st.wall) p.copy(a.to).addScaledVector(d, -0.16); // w ścianie: grot w deskach albo w murze
+    } else if (st.wall !== undefined) p.copy(a.to).addScaledVector(d, -0.16); // w ścianie: grot w deskach albo w murze
     else return;
     const m = new THREE.Matrix4().lookAt(p.clone().add(d), p, UP);
     if (this.stuck.length >= MAX_STUCK) this.stuck.shift();
-    this.stuck.push({ p, q: new THREE.Quaternion().setFromRotationMatrix(m), d, at: this.clock });
+    this.stuck.push({ p, q: new THREE.Quaternion().setFromRotationMatrix(m), d, at: this.clock, bld: st.wall });
   }
 
   /** Początek rysowania strzał w ciałach (scene.ts przed pętlą po ciałach) */
@@ -123,9 +123,11 @@ export class ArrowLayer {
   }
 
   /** Koniec klatki: wbite w ziemię i ściany (z chowaniem pod koniec) i w ciała; stare wpisy o trafionych sprzątamy */
-  drawStuck(): void {
+  drawStuck(standing: (id: number) => boolean = () => true): void {
     const now = this.clock;
     while (this.stuck.length && now - this.stuck[0]!.at > STUCK_LIFE) this.stuck.shift();
+    // budynek zburzony (ruina) albo rozebrany: strzały w jego ścianach znikają razem z nim (Michał 28.10.2026)
+    if (this.stuck.some((s) => s.bld !== undefined && !standing(s.bld))) this.stuck = this.stuck.filter((s) => s.bld === undefined || standing(s.bld));
     const m = new THREE.Matrix4(), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1);
     let n = 0;
     for (const s of this.stuck) {

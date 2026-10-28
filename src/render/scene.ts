@@ -4022,7 +4022,7 @@ export class GameRenderer {
           if (hit === 'arrowDirt') stick = { ground: true };
           else if (foe) stick = { unit: foe.id };
           else if (victim && !wolfT) stick = { unit: s.hitting };
-          else if (wall) { stick = { wall: true }; wallFace(wall, from, aim, width, height, view); }
+          else if (wall) { stick = { wall: wall.id }; wallFace(wall, from, aim, width, height, view); }
           else stick = {};
           this.arrows.shoot(from, aim, fireArrow(g, s) || (!foe && !victim && fireTarget.has(s.id)), hit, stick);
           // puszczenie cięciwy (nagrania 0 A.D.) z miejsca łucznika, także z wieży
@@ -4282,7 +4282,7 @@ export class GameRenderer {
       for (const id of this.fallenBearers) if (!dead.has(id)) this.fallenBearers.delete(id);
     }
     this.stains.end();
-    this.arrows.drawStuck();
+    this.arrows.drawStuck((id) => { const b = bById.get(id); return !!b && !b.ruined; });
     this.rings.count = rings;
     touch(this.rings);
     this.ringsBack.count = rings;

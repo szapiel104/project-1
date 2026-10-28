@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.65.2 — strzały w ścianach znikają z budynkiem (2026-10-28)
+
+- **Zgłoszenie:** gdy budynek zostanie zniszczony (ruina) albo rozebrany, strzały wbite w jego ściany znikają razem z nim, a nie wiszą w powietrzu (`render/arrows.ts`: strzała pamięta id budynku)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.1 — drabiny szturmowe robi cieśla (2026-10-28)
 
 - **Warsztat cieśli** (2×2, 40 drewna, `tools/models/carpenter.py`): cieśla zbija z 3 drewna ze składu drabinę szturmową i odnosi ją do zbrojowni (nowy towar „Drabiny szturmowe”, na pasku przy broni). W izbie drabina w robocie na dwóch kozłach, piła, świder, zapas szczebli; przed warsztatem gotowe drabiny oparte o stojak i żerdzie pod daszkiem. Nazwa i opis po polsku i angielsku
