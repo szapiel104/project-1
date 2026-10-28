@@ -262,7 +262,7 @@ export const HELP_CHAPTERS: HelpChapter[] = [
         [tx('Koszt', 'Cost'), tx('1 włócznia + 8 rudy', '1 spear + 8 ore'), tx('1 łuk + 12 rudy', '1 bow + 12 ore'), tx('1 miecz + 1 kolczuga + 20 rudy', '1 sword + 1 mail shirt + 20 ore')],
         [tx('Zdrowie', 'Health'), '60', '40', '110'],
         [tx('Cios', 'Attack'), tx('9 (co 1,2 s)', '9 (every 1.2 s)'), tx('7 (co 2,4 s)', '7 (every 2.4 s)'), tx('13 (co 1,4 s)', '13 (every 1.4 s)')],
-        [tx('Zasięg', 'Range'), tx('wręcz', 'melee'), tx('6 pól', '6 tiles'), tx('wręcz, wolniejszy marsz', 'melee, slower march')],
+        [tx('Zasięg', 'Range'), tx('wręcz', 'melee'), tx('8 pól', '8 tiles'), tx('wręcz, wolniejszy marsz', 'melee, slower march')],
         [tx('Zaleta', 'Strength'), tx('tarcza: strzała z przodu zadaje pół obrażeń; szarża: pierwszy cios po rozbiegu podwójny', 'shield: arrows from the front deal half damage; charge: the first blow after a run-up deals double'), tx('strzela zza szyku; z wieży dalej i celniej', 'shoots from behind the line; further and truer from a tower'), tx('kolczuga: cios wręcz o 35% słabszy, strzała o połowę; miecz z kuźni, kolczuga od płatnerza', 'mail: melee blows deal 35% less, arrows half; sword from the smithy, mail from the armourer')],
       ] },
       { h: tx('Magowie bojowi', 'Battle mages') },

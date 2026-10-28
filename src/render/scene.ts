@@ -126,8 +126,8 @@ const TORCH_TIP = new THREE.Vector3(0, -0.19 + Math.cos(0.55) * 0.34, Math.sin(0
 const BUCKET_C = new THREE.Vector3(0.15, 0.15, 0.02);
 /** Skala ludzi względem budynków i drzew: drzwi chaty mają być wyższe od człowieka */
 const FIG = 0.76;
-/** Pochodnia łucznika wbita w ziemię: powiększenie bryły pochodni z ręki i wysokość płomienia nad ziemią */
-const TORCH_K = 1.25, STICK_TIP = 0.34 * TORCH_K;
+/** Pochodnia łucznika wbita w ziemię: skala pochodni z rąk chłopów (jak w ręce postaci) i wysokość płomienia nad ziemią */
+const TORCH_K = FIG, STICK_TIP = 0.36 * TORCH_K;
 /** Miejsca w zamku z modelu (tools/models/keep.py, układ modelu: środek działki, przód z bramą = +z) */
 const CASTLE = { floorY: 0.15, walkY: 1.71, throneZ: -4.16, seatY: 0.34 };
 /** O ile podnosi się krata bramy zamku (z modelu) */
@@ -486,8 +486,25 @@ export class GameRenderer {
    * (nie jeździ za nim i nie obraca się z naciągiem łuku); klucz = łucznik, `b` = budynek, w który strzela oddział
    */
   private planted = new Map<number, { x: number; y: number; z: number; b: number }>();
-  /** Bryła pochodni z ręki (kij x −0,17, wys. 0,35–0,7) przesunięta stopą do zera i powiększona do ok. 0,45 wysokości */
-  private fireStick = new THREE.Matrix4().makeScale(TORCH_K, TORCH_K, TORCH_K).multiply(new THREE.Matrix4().makeTranslation(0.17, -0.36, -0.1));
+  /**
+   * Wbite pochodnie: ta sama pochodnia z Blendera co w rękach chłopów (drewniany trzonek z teksturą, owinięta głowica),
+   * postawiona pionowo, końcem trzonka trochę w ziemi
+   */
+  private plantedTorches: THREE.InstancedMesh | null = null;
+  private plantedN = 0;
+  private plantTorch(x: number, y: number, z: number): void {
+    if (!this.plantedTorches) {
+      const butt = new THREE.Vector3(0, -0.19 - Math.cos(0.55) * 0.09, -Math.sin(0.55) * 0.09);
+      const geo = propGeometry('torch').clone().translate(-butt.x, -butt.y, -butt.z).applyMatrix4(new THREE.Matrix4().makeRotationX(-0.55))
+        .translate(0, -0.04, 0).scale(TORCH_K, TORCH_K, TORCH_K);
+      this.plantedTorches = new THREE.InstancedMesh(geo, propMaterial('torch'), 64);
+      this.plantedTorches.castShadow = true;
+      this.plantedTorches.frustumCulled = false;
+      this.scene.add(this.plantedTorches);
+    }
+    if (this.plantedN >= 64) return;
+    this.plantedTorches.setMatrixAt(this.plantedN++, this.armM.makeTranslation(x, y, z));
+  }
   /** Płomienie pochodni łuczników przy budynku (palą się też w dzień, jak koksowniki) */
   private stickFlames: THREE.Vector3[] = [];
   private stickFlameN = 0;
@@ -2336,7 +2353,7 @@ export class GameRenderer {
     const dark = this.night > 0.12;
     if (dark) for (const b of g.buildings) if (b.lit && !b.ruined && !b.build) lit.add(b.id);
     for (let i = 0; i < this.handFlameN; i++) F.add(this.handFlames[i]!, 0.2, 0.11, (i * 0.377) % 1, glow * 0.6);
-    for (let i = 0; i < this.stickFlameN; i++) F.add(this.stickFlames[i]!, 0.17, 0.1, (i * 0.531) % 1, Math.max(0.35, glow));
+    for (let i = 0; i < this.stickFlameN; i++) F.add(this.stickFlames[i]!, 0.13, 0.075, (i * 0.531) % 1, Math.max(0.35, glow));
     // koksowniki na murach i wieżach: płoną dniem i nocą (łucznicy maczają w nich strzały)
     for (const [id, m] of this.braziers.meshes) {
       if ((m.position.x - f.x) ** 2 + (m.position.z - f.z) ** 2 > 110 * 110) continue;
@@ -3604,6 +3621,7 @@ export class GameRenderer {
 
   private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
     this.stickFlameN = 0;
+    this.plantedN = 0;
     const { width, height } = g.map;
     const t = this.tmp;
     let n = 0, rings = 0, dots = 0, torches = 0, rams = 0;
@@ -3877,9 +3895,9 @@ export class GameRenderer {
         }
       }
       // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
-      if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
+      if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me && !udef.range)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
       // pochodnia wbita w ziemię obok łucznika, który strzela w budynek (płomień palący się także w dzień)
-      if (torchBearers.has(s.id) && !this.calm && torches < 256) {
+      if (torchBearers.has(s.id) && !this.calm) {
         let pl = this.planted.get(s.id);
         if (!pl || pl.b !== s.target) {
           // pół kroku przed nim i w bok (po prawej, z dala od łuku), stoi na ziemi w tym miejscu
@@ -3887,7 +3905,7 @@ export class GameRenderer {
           pl = { x: fx - width / 2, y: this.standY(view, fx, fz, -2), z: fz - height / 2, b: s.target };
           this.planted.set(s.id, pl);
         }
-        this.soldierTorches.setMatrixAt(torches++, this.armM.makeTranslation(pl.x, pl.y, pl.z).multiply(this.fireStick));
+        this.plantTorch(pl.x, pl.y, pl.z);
         if (this.stickFlameN < 64) (this.stickFlames[this.stickFlameN++] ??= new THREE.Vector3()).set(pl.x, pl.y + STICK_TIP, pl.z);
       }
       // zbój z lasu nie ma pana: skóry i brudne płótno zamiast barw drużyny
@@ -3991,6 +4009,7 @@ export class GameRenderer {
     this.spawnFx.sync(g, view, this.cam.camera, this.calm);
     this.chips.step(1 / 60);
     this.soldierTorches.count = torches;
+    if (this.plantedTorches) { this.plantedTorches.count = this.plantedN; touch(this.plantedTorches); }
     touch(this.soldierTorches);
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)
     let c = 0;

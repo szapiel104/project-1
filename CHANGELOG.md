@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.58.4 — prawdziwa pochodnia łucznika, łucznicy strzelają z dalej (2026-10-28)
+
+- **Pochodnia łucznika przy strzelaniu w budynek** to teraz ta sama pochodnia z Blendera co w rękach chłopów: drewniany trzonek z teksturą i owinięta głowica, wbita pionowo w ziemię, wielkości pochodni w ręce (ok. 0,3 pola), z mniejszym płomieniem. Wcześniej był to gładki kij bez tekstury, wyższy niż trzeba
+- **Łucznicy nocą nie trzymają pochodni** w ręce z łukiem (płaski kij przy łuku wyglądał jak druga, dziwna pochodnia). Nocną pochodnię niosą dalej strażnicy i co piąty żołnierz walczący wręcz
+- **Łucznik strzela z dalej:** zasięg 8 pól zamiast 6, wzrok 10 pól zamiast 8 (z wieży dalej o 3 pola, jak dotąd). Nie musi podchodzić pod sam szyk wroga. Opis w „Jak grać” poprawiony
+- Bot: korzysta tak samo (jego łucznicy też strzelają z 8 pól)
+
 ## 0.58.3 — groby w lesie: kopczyk z krzyżem i gorszy nastrój (2026-10-28)
 
 - **Po pochówku w lesie zostaje grób:** kopczyk świeżej ziemi z grudami i krzyż z dwóch nieokorowanych kijów związanych łykiem, wbity w głowach (nowy model z Blendera `tools/models/grave.py` → `grave.json`, tekstury ziemi i kory; w podglądzie modeli: grupa „Pochówek”). Każdy grób leży trochę inaczej obrócony. Na jednym polu jeden grób, kolejne chłopi kopią obok

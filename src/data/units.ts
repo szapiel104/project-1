@@ -44,7 +44,7 @@ export interface UnitDef {
 export const UNITS: readonly UnitDef[] = [
   { id: 'spearman', name: 'u.spearman', cost: { spear: 1, gold: 8 }, hp: 60, speed: 110, attack: 9, cooldown: 12, sight: 6, weapon: 'spear', shield: true, charge: 200 },
   // Łucznik: słabszy w zwarciu, ale strzela z daleka; z wieży strażniczej widzi i trafia dalej
-  { id: 'archer', name: 'u.archer', cost: { bow: 1, gold: 12 }, hp: 40, speed: 105, attack: 7, cooldown: 24, sight: 8, range: 6, weapon: 'bow' },
+  { id: 'archer', name: 'u.archer', cost: { bow: 1, gold: 12 }, hp: 40, speed: 105, attack: 7, cooldown: 24, sight: 10, range: 8, weapon: 'bow' }, // z daleka: 8 pól (dawniej 6 — musieli podchodzić pod sam szyk)
   // Strażnik miejski z zamku: włócznia, zbroja, nocą pochodnia; obchodzi osadę i stoi na posterunkach (na końcu listy dla starych zapisów)
   { id: 'guard', name: 'u.guard', cost: {}, hp: 70, speed: 100, attack: 8, cooldown: 12, sight: 7, weapon: 'spear', shield: true, guard: true },
   // Taran: wóz z daszkiem i belką z kutą głowicą, pcha go chłop z koszar; wolny, ale rozbija bramy i mury (na końcu listy dla starych zapisów)
