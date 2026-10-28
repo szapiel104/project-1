@@ -45,8 +45,10 @@ Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://g
 - Ground 079 S → `sand.jpg` (plaże nad jeziorami i morzem)
 - W 2K (od 16.10.2026): Grass 001, Grass 004, Ground 015, Ground 044, Rock 022, Rock 026 wraz z mapami normalnych — z paczki cc0-texture-pack (te same tekstury ambientCG przekonwertowane do s&box) dostarczonej przez Michała, zdekodowane z powrotem do JPG; łąka, żwir i piasek dalej w 1K
 
-## Muzyka (CC0)
-RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old Tower Inn”, „Medieval Battle”; nihilocrat — „Peasant Theme”; Tozan — „Medievals 5”. Wszystkie z OpenGameArt na licencji CC0 (szczegóły w docs/zasoby.md). Dziękujemy autorom.
+## Muzyka (OpenGameArt)
+CC0: RandomMind — „Medieval: King's Feast”, „Minstrel Dance”, „The Old Tower Inn”, „Medieval Battle”, „Harvest Season”, „Market Day”, „Rejoicing”, „The Bard's Tale”, „Exploration”, „Lament for a Warrior's Soul”, „Victory Theme”, „Defeat Theme”; nihilocrat — „Peasant Theme”; Tozan — „Medievals 5”, „Medieval 12”; Umplix — „The Lord's Court”, „A Knight's Challenge”; NBJDLukasAbsolute — „Merchants and Sea Salt”; Spring Spring — „Flutenist Dance 2”, „War Theme”; Cethiel — „Lament of the War”; Bobjt — „Winter Courtyard”; Of Far Different Nature — John Dowland, „If my Complaints Could Passions Move” (1597); Eldritch Grim — „Epic March Loop”.
+
+CC BY 3.0 / 4.0 (wymagany podpis): Marcelo Fernandez — „Medieval Rondo”; Yubatake — „Wendale Abbey”, „Mannin Fair”, „Middel Weie”; Pyerye — „The Bard”; Otto Halmén — „Death Is Just Another Path”; Alexandr Zhelanov — „For the King”; Bobjt i TridentKeep — „War: Humans March”; jukeri12 — „Royal Strings”. Licencje: https://creativecommons.org/licenses/by/3.0/ i https://creativecommons.org/licenses/by/4.0/. Pliki przekonwertowane do OGG i wyrównane głośnościowo, bez innych zmian. Szczegóły i odnośniki w docs/zasoby.md. Dziękujemy autorom.
 
 ## Rośliny wodne
 Pałka wodna (`cattails.dae`, `cattails_1.png`, `cattails_2.png`) i kożuch liści na stawie (`pond_lillies_large.dae`, `water_plants_lg.dds`): gra **0 A.D.** © Wildfire Games (https://www.wildfiregames.com/), licencja CC BY-SA 3.0 (http://creativecommons.org/licenses/by-sa/3.0/). Przeniesione bez zmian rysunku skryptem `tools/models/water_plants_0ad.py` (obrót osi, skala do pól, kolor rozlany pod przezroczystymi pikselami) → `src/render/models/waterplants.json`, `public/textures/cc0/oad_*.jpg`; te pliki udostępniamy na tej samej licencji CC BY-SA 3.0.

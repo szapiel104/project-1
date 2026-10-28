@@ -36,8 +36,8 @@ export const DEFS = {
   saw: D(oad('saw'), { vol: 0.42, ref: 6, max: 32, voices: 2 }),
   chisel: D(oad('chisel'), { vol: 0.55, ref: 6, max: 36, voices: 3 }),
   plank: D(['plank-0', 'plank-1', 'plank-2'], { vol: 0.85, ref: 8, max: 48, voices: 3, pitch: [0.85, 1] }),
-  creak: D(['creak-1', 'creak-2', 'creak-3'], { vol: 0.55, ref: 6, max: 30, voices: 2 }),
-  coins: D(['coins'], { vol: 0.5, ref: 6, max: 26, voices: 2 }),
+  // skrzypienie wrót i drzwi: ciężkie drewno z 0 A.D. (stare, piskliwe skrzypnięcia Kenneya usunięte 28.10.2026 — brzmiały jak wiadro)
+  creak: D(oad('gateOpen'), { vol: 0.4, ref: 6, max: 30, voices: 2, pitch: [0.97, 1.05] }),
   // walka
   bow: D(oad('bow'), { vol: 0.55, ref: 8, max: 46, voices: 6, gap: 0.04, pitch: [0.95, 1.06], duck: 0.3, preload: true }),
   arrowfly: D(oad('arrowfly'), { vol: 0.42, ref: 4, max: 20, roll: 1.6, voices: 4, gap: 0.06, pitch: [0.92, 1.12] }),

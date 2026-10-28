@@ -4818,7 +4818,7 @@ export class GameRenderer {
           else if (jid === 'smithy') this.sfxAt('smith', t.position.x, t.position.z, u.id, 1.1, 0.9);
           // płatnerz: drobne, ciche stuknięcia młotka przy nitowaniu kółek
           else if (jid === 'armorer') this.sfxAt('smith', t.position.x, t.position.z, u.id, 0.8, 0.45);
-          else if (jid === 'mill') this.sfxAt('creak', t.position.x, t.position.z, u.id, 3.5, 0.8);
+          // młyn: bez dźwięku — dawne skrzypnięcie drzwi co 3,5 s brzmiało jak skrzypiące wiadro w wiosce (28.10.2026)
         }
       }
       // wilk tuż obok: chłop staje do niego twarzą i macha rękami

@@ -2,8 +2,7 @@
 
 Nagrania w `public/sounds/` pochodzą z darmowych zestawów startowych Kenneya (kenney.nl), wydanych na licencji MIT:
 
-- placement-a…d, removal-a…d, rotate, toggle, ambience — [Starter Kit City Builder](https://github.com/KenneyNL/starter-kit-city-builder) (MIT, © Kenney)
-- break, walking — [Starter Kit 3D Platformer](https://github.com/KenneyNL/starter-kit-3d-platformer) (MIT, © Kenney)
+- placement-a…d, removal-a…d, rotate, toggle — [Starter Kit City Builder](https://github.com/KenneyNL/starter-kit-city-builder) (MIT, © Kenney)
 
 Licencja MIT pozwala używać ich także komercyjnie; wymaga zachowania informacji o prawach autorskich (ten plik).
 Gdy nagranie się nie wczyta, gra odtwarza zastępczy dźwięk syntezowany (src/audio/sfx.ts).
@@ -17,9 +16,9 @@ Gdy nagranie się nie wczyta, gra odtwarza zastępczy dźwięk syntezowany (src/
 ## Dźwięki świata (CC0, bez wymogu podpisu)
 
 Pobrane z indeksu [open-game-sfx-index](https://github.com/Mcamento8/open-game-sfx-index), który przechowuje paczki CC0:
-- chop, creak-1…3, coins — Kenney „RPG Audio” (CC0)
-- mine-0…2, smith-0…2, plank-0…2, hit-0…2 — Kenney „Impact Sounds” (CC0)
-- swing-0…2, clang-0…1, wolf (warknięcie z pogłosem) — „RPG Sound Pack”, artisticdude, OpenGameArt (CC0)
+- plank-0…2, hit-0…2 — Kenney „Impact Sounds” (CC0)
+- clang-0…1, wolf (warknięcie z pogłosem) — „RPG Sound Pack”, artisticdude, OpenGameArt (CC0)
+- 28.10.2026 usunięte stare, nieużywane albo piskliwe nagrania: ambience (pętla szumu Kenneya), break, walking, chop, coins, creak-1…3, mine-0…2, smith-0…2, swing-0…2; skrzypienie wrót gra teraz nagrania 0 A.D. (gateOpen)
 Wiatr, deszcz, wrony i wycie wilków są syntezowane w src/audio/sfx.ts.
 
 ## Odgłosy natury i wsi (16.10.2026)
@@ -68,14 +67,45 @@ Z repozytorium gry [C-Dogs SDL](https://github.com/cxong/cdogs-sdl) (`sounds/cha
 - Zmiany: mono 32 kHz, wyrównana głośność, krótsze wybrzmienie.
 - torch — „JM_FX_Fireball 01”, [Julien Matthey](http://freesound.org/people/Julien%20Matthey/sounds/105016/) (CC0), z C-Dogs SDL (`sounds/fireball.wav`): buchnięcie płomienia przy zapalaniu pochodni w ręce; mono 32 kHz, przycięte wysokie tony, wyciszenie na końcu
 
-## Muzyka (CC0, bez wymogu podpisu) — `public/music/`
-Pobrane przez Michała z OpenGameArt, przekonwertowane do OGG i wyrównane głośnościowo:
+## Muzyka — `public/music/`
+Z OpenGameArt, przekonwertowane do OGG (Vorbis q3, 44,1 kHz) i wyrównane głośnościowo (loudnorm, ok. -19 LUFS; chorał i nocne ciszej), bez innych zmian. Nastrój (dzień, noc, bitwa, menu, koniec meczu) ustawia lista `MUSIC_TRACKS` w src/audio/sfx.ts.
+
+CC0 (bez wymogu podpisu, autorzy i tak w grze):
 - kings-feast.ogg — „Medieval: King's Feast”, RandomMind — https://opengameart.org/content/medieval-kings-feast (menu, dzień)
 - minstrel-dance.ogg — „Medieval: Minstrel Dance”, RandomMind — https://opengameart.org/node/92393 (dzień)
-- old-tower-inn.ogg — „Medieval: The Old Tower Inn”, RandomMind — https://opengameart.org/content/medieval-the-old-tower-inn (noc, menu)
+- old-tower-inn.ogg — „Medieval: The Old Tower Inn”, RandomMind — https://opengameart.org/content/medieval-the-old-tower-inn (menu)
 - battle.ogg — „Medieval Battle”, RandomMind — https://opengameart.org/content/medieval-battle (bitwa)
 - medievals5.ogg — „Medievals 5”, Tozan — https://opengameart.org/content/medievals-5 (noc)
 - peasantry.ogg — „Peasant Theme”, nihilocrat — https://opengameart.org/content/peasant-theme (dzień)
+- harvest-season.ogg — „Medieval: Harvest Season”, RandomMind — https://opengameart.org/content/medieval-harvest-season (dzień, menu)
+- market-day.ogg — „Medieval: Market Day” (pełna wersja), RandomMind — https://opengameart.org/content/medieval-market-day (dzień)
+- rejoicing.ogg — „Medieval: Rejoicing”, RandomMind — https://opengameart.org/content/medieval-rejoicing (dzień)
+- bards-tale.ogg — „Medieval: The Bard's Tale”, RandomMind — https://opengameart.org/content/medieval-the-bards-tale (dzień)
+- exploration.ogg — „Medieval: Exploration”, RandomMind — https://opengameart.org/content/medieval-exploration (dzień, menu)
+- lament-warriors-soul.ogg — „Fantasy: Lament for a Warrior's Soul” (poprawiona wersja), RandomMind — https://opengameart.org/content/fantasy-lament-for-a-warriors-soul (noc)
+- victory.ogg — „Medieval: Victory Theme”, RandomMind — https://opengameart.org/content/medieval-victory-theme (wygrana)
+- defeat.ogg — „Medieval: Defeat Theme”, RandomMind — https://opengameart.org/content/medieval-defeat-theme (porażka)
+- medievals12.ogg — „Medieval 12”, Tozan — https://opengameart.org/content/medieval-12 (dzień)
+- lords-court.ogg — „The Lord's Court”, Umplix — https://opengameart.org/content/the-lords-court (dzień)
+- knights-challenge.ogg — „A Knight's Challenge”, Umplix — https://opengameart.org/content/a-knights-challenge (bitwa)
+- merchants-sea-salt.ogg — „Merchants and Sea Salt”, NBJDLukasAbsolute — https://opengameart.org/content/merchants-and-sea-salt (dzień)
+- flutenist-dance.ogg — „Flutenist Dance 2”, Spring Spring — https://opengameart.org/content/flutenist-dance-2 (dzień)
+- war-theme.ogg — „War Theme” (ver 2), Spring Spring — https://opengameart.org/content/war-theme (bitwa)
+- lament-of-the-war.ogg — „Lament of the War”, Cethiel — https://opengameart.org/content/laments-of-the-war (noc)
+- winter-courtyard.ogg — „Winter Courtyard”, Bobjt — https://opengameart.org/content/winter-courtyard (noc)
+- dowland-complaints.ogg — John Dowland (1597), „If my Complaints Could Passions Move”, wykonanie Of Far Different Nature — https://opengameart.org/content/historic-renaissance-music-from-1597-if-my-complaints-could-passions-move-by-john-dowland (noc, menu)
+- war-march.ogg — „Epic March Loop”, Eldritch Grim — https://opengameart.org/content/epic-march-loop (bitwa)
+
+CC BY (podpis obowiązkowy — jest w grze: Ustawienia → Dźwięk, i w CREDITS.md):
+- medieval-rondo.ogg — „Medieval Rondo”, Marcelo Fernandez (marcelofg55, https://soundcloud.com/marcelo-fernandez3), CC BY 3.0 — https://opengameart.org/content/medieval-rondo (dzień)
+- wendale-abbey.ogg — „Wendale Abbey”, Yubatake, CC BY 4.0 — https://opengameart.org/content/wendale-abbey (noc)
+- mannin-fair.ogg — „Mannin Fair”, Yubatake, CC BY 4.0 — https://opengameart.org/content/mannin-fair (dzień)
+- middel-weie.ogg — „Middel Weie”, Yubatake, CC BY 4.0 — https://opengameart.org/content/middel-weie (dzień, noc)
+- the-bard.ogg — „The Bard”, Pyerye (Alundra), CC BY 3.0 — https://opengameart.org/content/the-bard (dzień)
+- another-path.ogg — „Death Is Just Another Path”, Otto Halmén, CC BY 3.0 — https://opengameart.org/content/death-is-just-another-path (noc)
+- for-the-king.ogg — „For the King”, Alexandr Zhelanov (https://soundcloud.com/alexandr-zhelanov), CC BY 4.0 — https://opengameart.org/content/for-the-king (menu)
+- humans-march.ogg — „War: Humans March”, Bobjt (remiks „theme humans march” TridentKeep), CC BY 3.0 — https://opengameart.org/content/war-humans-march (bitwa)
+- royal-strings.ogg — „Royal Strings”, jukeri12, CC BY 3.0 — https://opengameart.org/content/royal-strings (noc)
 Gdy pliku brak albo nastrój nie ma utworu, gra składa muzykę sama (src/audio/sfx.ts).
 
 ## Kroki (CC0, bez wymogu podpisu)

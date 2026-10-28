@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.55.2 — dużo więcej muzyki średniowiecznej, bez starych skrzypnięć (2026-10-28)
+
+- **Muzyka: 33 utwory zamiast 6.** Doszło 27 darmowych utworów z OpenGameArt (CC0 i CC BY): 16 na dzień (flety, lutnie, piszczałki, rondo, targ, żniwa), 8 na noc (lamenty, chorał mnichów, smyczki, lutniowa pieśń Johna Dowlanda z 1597 r.), 5 na bitwę, kilka do menu. Gra nie powtarza ostatnio granych utworów, dopóki w danym nastroju są inne
+- **Koniec meczu ma własną muzykę:** przy wygranej gra raz utwór zwycięstwa, przy porażce — porażki, potem cisza do menu albo nowej gry (`musicEnd` w `audio/sfx.ts`)
+- Wszystkie pliki przekonwertowane do OGG i wyrównane głośnościowo; chorał „Wendale Abbey” celowo ciszej, jak chciał autor
+- Autorzy: Ustawienia → Dźwięk (po polsku i po angielsku), `CREDITS.md` i `docs/zasoby.md` z odnośnikami i licencjami — autorzy utworów na CC BY są podpisani, jak wymaga licencja
+- **Usunięte stare dźwięki:** piskliwe skrzypnięcie drzwi grane przy młynie co 3,5 s (brzmiało jak skrzypiące wiadro w wiosce) — młyn jest teraz cichy; skrzypienie wrót, kraty i włazu do kopalni gra ciężkie drewno z 0 A.D. zamiast starego nagrania Kenneya; wyłączona stała pętla szumu Kenneya (`ambience`), która grała pod ptakami i świerszczami od początku gry. Skasowane nieużywane pliki: ambience, break, walking, chop, coins, creak-1…3, mine-0…2, smith-0…2, swing-0…2
+- Bot: bez zmian (sama muzyka i dźwięk)
 ## 0.55.2 — poprawka: gra stawała (0 FPS) po błędzie WebGL (2026-10-28)
 
 - Wprowadzone w 0.54.9 samoczynne namierzanie błędów WebGL po pierwszym błędzie sprawdzało błąd po **każdym** wywołaniu karty graficznej przez 30 s. Każde takie sprawdzenie czeka, aż karta skończy pracę, więc obraz praktycznie stawał (0 FPS). Wycofane: dokładne miejsce błędu WebGL tylko na życzenie, z `?gldebug=1` (jak przed 0.54.9). Reszta rozbudowanego dziennika zostaje

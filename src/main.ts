@@ -54,7 +54,7 @@ import { createAllies } from './ui/allies';
 import { createMinimap } from './ui/minimap';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
-import { alarmBell, shrineBell, thunderClap, daySounds, music, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio, audioStats, listenerPos, play3d, type WorldSound } from './audio/sfx';
+import { alarmBell, shrineBell, thunderClap, daySounds, music, musicEnd, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio, audioStats, listenerPos, play3d, type WorldSound } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
 import { WOLF_HP } from './sim/systems/wolves';
@@ -740,6 +740,7 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   tierSeen = -1;
   endShown = false;
   gameOver = false;
+  musicEnd(null);
   endOnline();
   ME = online ? online.me : 0;
   caravanSeen = -1; allies.close(); pings.clear();
@@ -1605,6 +1606,7 @@ let endShown = false;
 let gameOver = false;
 function showEnd(win: boolean): void {
   endShown = true;
+  musicEnd(win);
   speed = 0;
   // mecz przez sieć: wynik trafia do historii i rankingu gracza (kooperacja przeciw botom nie liczy się do rankingu)
   if (netGame && !netGame.coop) void saveResult(netGame.preset, win, Math.floor(game.tick / TICKS_PER_SECOND / 60), netGame.room.id);

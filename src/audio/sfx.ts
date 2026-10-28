@@ -15,7 +15,7 @@ export { play3d, loop3d, updateLoops, setListener, audioStats, preload, listener
 export type Sound = 'babble' | 'click' | 'build' | 'demolish' | 'collapse' | 'error' | 'road' | 'rotate' | 'select';
 
 /** Nagrania dla każdego dźwięku; przy kilku wariantach losujemy jeden, żeby się nie powtarzało. */
-const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
+const FILES: Partial<Record<Sound, string[]>> = {
   click: ['toggle'],
   build: ['placement-a', 'placement-b', 'placement-c', 'placement-d'],
   road: ['placement-a', 'placement-c'],
@@ -23,7 +23,6 @@ const FILES: Partial<Record<Sound | 'ambience', string[]>> = {
   collapse: BANK_0AD.collapse.map((n) => `0ad/${n}`),
   rotate: ['rotate'],
   select: ['placement-b', 'placement-d'],
-  ambience: ['ambience'],
 };
 /** Nagrania świata do teł i pojedynczych zdarzeń (docs/zasoby.md): ptaki za dnia, świerszcze nocą, odgłosy wsi,
  *  kury, dzwon w południe, róg alarmu, grzmot — 0 A.D. (Wildfire Games, CC-BY-SA 3.0) i Freesound (CC0) */
@@ -35,7 +34,6 @@ const NATURE = {
 };
 const buffers = new Map<string, AudioBuffer>();
 const pick = (list: string[]): AudioBuffer | undefined => { const ok = list.filter((n) => buffers.has(n)); return ok.length ? buffers.get(ok[Math.floor(Math.random() * ok.length)]!) : undefined; };
-let ambienceOn = false;
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
@@ -94,7 +92,7 @@ function audio(): AudioContext | null {
     fetch(`sounds/${name}.ogg`)
       .then((r) => (r.ok ? r.arrayBuffer() : Promise.reject(new Error(name))))
       .then((data) => c.decodeAudioData(data))
-      .then((buf) => { buffers.set(name, buf); if (name === 'ambience') startAmbience(); })
+      .then((buf) => { buffers.set(name, buf); })
       .catch(() => { /* zostaje dźwięk syntezowany */ });
   }
   return ctx;
@@ -203,20 +201,6 @@ function rumble(c: AudioContext, at: number, len: number, gain: number, freq: nu
   src.connect(f).connect(g).connect(out ?? master!);
   src.start(at, Math.random() * 0.5);
   src.stop(at + len + 0.05);
-}
-
-/** Szum otoczenia w pętli, cicho pod resztą dźwięków. */
-function startAmbience(): void {
-  const buf = buffers.get('ambience');
-  if (!ctx || !master || !buf || ambienceOn) return;
-  ambienceOn = true;
-  const src = ctx.createBufferSource();
-  src.buffer = buf;
-  src.loop = true;
-  const g = ctx.createGain();
-  g.gain.value = 0.22;
-  src.connect(g).connect(busGain.amb ?? master);
-  src.start();
 }
 
 function sample(c: AudioContext, sound: Sound, t: number): boolean {
@@ -802,6 +786,12 @@ export function music(night: number, danger: boolean, inMenu: boolean, walking =
   const root = night > 0.5 || danger ? 110 : 146.83; // A nocą i w boju, D za dnia
   // bordun gra tylko pod muzyką generowaną; pod utworem z pliku (i w przerwie między utworami) milknie, bo inaczej dwie muzyki grają naraz
   setDrone(c, root, MUSIC_TRACKS.length ? 0 : inMenu ? 0.05 : danger ? 0.09 : 0.06);
+  // koniec meczu: utwór zwycięstwa albo porażki raz, potem cisza (w menu gra już muzyka menu)
+  if (endMood && !inMenu && MUSIC_TRACKS.length) {
+    if (!endStarted) { if (playTracks(c, endMood, false) && trackMood === endMood) endStarted = true; }
+    else if (trackEl && trackMood !== endMood) stopTrack(c);
+    return;
+  }
   if (now < musicNext - 0.2) return;
   const t = Math.max(now, musicNext);
   if (danger && playTracks(c, 'battle', false)) { musicNext = now + 1; return; }
@@ -875,17 +865,58 @@ function newPiece(night: boolean): Piece {
 }
 
 // --- utwory z plików: public/music/<plik>.ogg, nastrój wybiera, kiedy grają; między utworami chwila ciszy ---
-type Mood = 'day' | 'night' | 'battle' | 'menu';
-/** Lista utworów (darmowe, CC0 — źródła w docs/zasoby.md). Pusta lista = muzyka generowana. */
+type Mood = 'day' | 'night' | 'battle' | 'menu' | 'victory' | 'defeat';
+/** Lista utworów (darmowe z OpenGameArt, CC0 i CC BY — autorzy w docs/zasoby.md i w Ustawienia → Dźwięk). Pusta lista = muzyka generowana.
+ *  Gra losuje utwór z nastroju i nie powtarza ostatnich kilku, więc przy ponad trzydziestu utworach rzadko słychać ten sam dwa razy. */
 export const MUSIC_TRACKS: { file: string; moods: Mood[] }[] = [
+  // dzień w osadzie: flety, lutnie, piszczałki, tańce i targ
   { file: 'kings-feast.ogg', moods: ['menu', 'day'] },
   { file: 'minstrel-dance.ogg', moods: ['day'] },
   { file: 'peasantry.ogg', moods: ['day'] },
+  { file: 'harvest-season.ogg', moods: ['day', 'menu'] },
+  { file: 'market-day.ogg', moods: ['day'] },
+  { file: 'rejoicing.ogg', moods: ['day'] },
+  { file: 'bards-tale.ogg', moods: ['day'] },
+  { file: 'exploration.ogg', moods: ['day', 'menu'] },
+  { file: 'medieval-rondo.ogg', moods: ['day'] },
+  { file: 'lords-court.ogg', moods: ['day'] },
+  { file: 'merchants-sea-salt.ogg', moods: ['day'] },
+  { file: 'medievals12.ogg', moods: ['day'] },
+  { file: 'flutenist-dance.ogg', moods: ['day'] },
+  { file: 'mannin-fair.ogg', moods: ['day'] },
+  { file: 'middel-weie.ogg', moods: ['day', 'night'] },
+  { file: 'the-bard.ogg', moods: ['day'] },
   // karczemny utwór tylko w menu: nocą w grze mieszał się z lutnią spod karczmy (27.10.2026)
   { file: 'old-tower-inn.ogg', moods: ['menu'] },
+  { file: 'for-the-king.ogg', moods: ['menu'] },
+  // noc: lamenty, chorał mnichów, smyczki, lutnia Dowlanda (1597)
   { file: 'medievals5.ogg', moods: ['night'] },
+  { file: 'lament-of-the-war.ogg', moods: ['night'] },
+  { file: 'lament-warriors-soul.ogg', moods: ['night'] },
+  { file: 'winter-courtyard.ogg', moods: ['night'] },
+  { file: 'wendale-abbey.ogg', moods: ['night'] },
+  { file: 'dowland-complaints.ogg', moods: ['night', 'menu'] },
+  { file: 'another-path.ogg', moods: ['night'] },
+  { file: 'royal-strings.ogg', moods: ['night'] },
+  // bitwa
   { file: 'battle.ogg', moods: ['battle'] },
+  { file: 'war-theme.ogg', moods: ['battle'] },
+  { file: 'war-march.ogg', moods: ['battle'] },
+  { file: 'knights-challenge.ogg', moods: ['battle'] },
+  { file: 'humans-march.ogg', moods: ['battle'] },
+  // koniec meczu: raz, bez powtórki
+  { file: 'victory.ogg', moods: ['victory'] },
+  { file: 'defeat.ogg', moods: ['defeat'] },
 ];
+/** Ostatnio grane utwory (bez powtórek, dopóki w nastroju są inne) */
+const recentTracks: string[] = [];
+/** Koniec meczu: gra raz utwór zwycięstwa albo porażki, potem cisza aż do menu albo nowej gry */
+let endMood: Mood | null = null, endStarted = false;
+export function musicEnd(win: boolean | null): void {
+  endMood = win === null ? null : win ? 'victory' : 'defeat';
+  endStarted = false;
+  if (ctx && endMood) stopTrack(ctx);
+}
 /** Czy gra teraz utwór z pliku (albo jeszcze wybrzmiewa poprzedni) — lutnia przed karczmą wtedy milknie, żeby nie grały dwie melodie naraz */
 export const musicPlaying = (): boolean => !!trackEl || fading.size > 0;
 let trackEl: HTMLAudioElement | null = null, trackGain: GainNode | null = null, trackMood: Mood | null = null, trackFile = '', trackRestUntil = 0;
@@ -907,7 +938,8 @@ function playTracks(c: AudioContext, mood: Mood, inMenu: boolean): boolean {
   }
   if (fading.size) return true; // stary jeszcze wybrzmiewa
   if (c.currentTime < trackRestUntil) return true;
-  const pick = list.filter((x) => x.file !== trackFile);
+  const keep = Math.min(recentTracks.length, Math.max(0, list.length - 2));
+  const pick = list.filter((x) => x.file !== trackFile && !recentTracks.slice(-keep).includes(x.file));
   const tr = (pick.length ? pick : list)[Math.floor(Math.random() * (pick.length ? pick.length : list.length))]!;
   const el = new Audio(`./music/${tr.file}`);
   el.crossOrigin = 'anonymous';
@@ -918,6 +950,7 @@ function playTracks(c: AudioContext, mood: Mood, inMenu: boolean): boolean {
   el.addEventListener('ended', () => { fading.delete(el); if (trackEl === el) { trackRestUntil = c.currentTime + 15 + Math.random() * 35; trackEl = null; trackGain = null; trackMood = null; } });
   void el.play().catch(() => { fading.delete(el); if (trackEl === el) { trackEl = null; trackGain = null; trackMood = null; } });
   trackEl = el; trackGain = g; trackMood = want; trackFile = tr.file;
+  recentTracks.push(tr.file); if (recentTracks.length > 12) recentTracks.shift();
   return true;
 }
 function stopTrack(c: AudioContext): void {
