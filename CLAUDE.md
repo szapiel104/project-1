@@ -85,6 +85,14 @@ Nad grą pracuje kilka czatów naraz, więc:
 3. **Budynki dodatkowo** arkusz `sh tools/models/inspect.sh <id> /tmp/x.png` (dziury, odwrócone dachy, widoki z ziemi i ze środka) — punkt 3 w Testach.
 4. **Dopiero na końcu w grze**, na pustej scenie: `?test=1&pusta=1&model=<id>` (gotowy budynek na łące, `__test.view('ground-front')` itd.) — czy pasuje skalą do ludzi, terenu i sąsiadów. Nie sprawdzać nowych modeli w zwykłej rozgrywce ani w trybie deweloperskim.
 
+## Rysowanie razem — żeby budynków i rzeczy przybywało, a FPS nie spadał (Michał 28.10.2026, dla wszystkich czatów)
+- Karta graficzna ma zapas; hamuje liczba **wywołań rysowania** (każde to praca procesora). Budynki tego samego rodzaju gra rysuje razem (`syncBatches` w `scene.ts`): jedno wywołanie na parę siatka+materiał dla wszystkich chat, a nie osobno dla każdej. Działa samo dla każdego nowego budynku z Blendera, pod warunkiem że:
+  - nieruchome części leżą w korzeniu modelu albo w grupach `shell`/`roof`/`chimney`/`spin`/`flagpole` (`MERGE_IN` w `merge.ts`), pochodnia w `torch`, dalekie wersje w `lod1`, `lod2`… (`BATCH_ALSO` w `scene.ts`); siatki w tych miejscach **bez nazwy**;
+  - budynki tego samego rodzaju dzielą **te same** geometrie i materiały — nie klonować materiału ani geometrii dla każdego budynku osobno (klon = osobne wywołanie na każdą sztukę). Kolor drużyny, zużycie itp. przez wspólne materiały albo kolory wierzchołków;
+  - ruchome, chowane albo podmieniane części (drzwi, wnętrze, ogień, zapasy, ludzie) w osobnych **nazwanych** grupach — te zostają po staremu.
+- Pule instancji (postacie, ładunki, narzędzia) mogą mieć zero sztuk — gra sama ich wtedy nie rysuje (`hideEmptyPools`). Odbicie w wodzie liczy się tylko z wodą w kadrze.
+- Sprawdzanie: `npm run build && node tools/check/drawcalls.mjs` (przeglądarka bez okna, scena testowa z budynkami, ok. 5 min) — liczba wywołań jednej klatki według kategorii i przejść (scena, odbicie w wodzie, cienie), także puste pule. Po zmianie w rysowaniu budynków porównaj z wersją sprzed (`--dist=<katalog buildu>`).
+
 ## Tekstury — po każdej zmianie obowiązkowo KTX2
 - Gra wczytuje tekstury ze zdjęć jako `.ktx2` (skompresowane dla karty graficznej, `src/render/ktx.ts`); `.jpg` obok to tylko zapas. Dotyczy `public/textures/terrain/` i `public/textures/cc0/`.
 - **Po dodaniu albo podmianie każdego `.jpg` (także mapy normalnych `*_n.jpg`) uruchom:** `node tools/textures/ktx2.mjs public/textures/<folder>/<plik>.jpg` (kilka plików naraz można podać po spacji; bez argumentów przerabia wszystkie, ok. 15 min). Ok. 25 s na teksturę 2K. Bez tego gra pokaże stary `.ktx2` albo weźmie `.jpg`. Wynikowy `.ktx2` commitujemy razem z `.jpg`.

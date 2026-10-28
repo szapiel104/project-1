@@ -2545,7 +2545,6 @@ export class GameRenderer {
    * stałe bryły przenosimy tylko na warstwę 1, której kamera nie rysuje. Place budowy (przycinane) zostają po staremu.
    */
   private batches = new Map<string, { mesh: THREE.InstancedMesh; n: number }>();
-  /** Nazwane grupy, których nieruchome siatki też rysujemy razem (poza MERGE_IN): pochodnia przy budynku, dalekie wersje */
   private batchParts = new WeakMap<THREE.Object3D, THREE.Mesh[]>();
   batchOn = !/[?&]razem=0/.test(location.search);   // włączone: 32 budynki, Chrome, hd — 1327 wywołań i 8,8 ms karty (bez: 1650 i 12,5 ms); ?razem=0 wyłącza
   private staticParts(root: THREE.Object3D): THREE.Mesh[] {

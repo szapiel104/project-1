@@ -1,27 +1,33 @@
 // Spis wywołań rysowania jednej klatki według kategorii (budynki, las, ludzie…) — do szukania, co idzie do karty osobno.
 //   node tools/check/drawcalls.mjs [--url=…] [--build=N] [--ticks=N]
-// Bez --url: lokalny build (dist/). Tryb testowy w pełnej grafice (?test=1&hd=1), gracz dostaje surowce i stawia po kilka
+// Bez --url: lokalny build (dist/, albo --dist=katalog). Tryb testowy w pełnej grafice (?test=1&hd=1), gracz dostaje surowce i stawia po kilka
 // budynków każdego rodzaju, symulacja idzie N kroków, potem jedna klatka jest liczona wywołanie po wywołaniu.
 import { chromium } from 'playwright-core';
 import { preview } from 'vite';
 const arg = (n, d) => { const a = process.argv.find((x) => x.startsWith(`--${n}=`)); return a ? a.split('=')[1] : d; };
 let base = arg('url', null), srv = null;
-if (!base) { srv = await preview({ preview: { port: 4199 }, logLevel: 'silent' }); base = srv.resolvedUrls.local[0]; }
+const dist = arg('dist', 'dist');
+if (!base) { srv = await preview({ build: { outDir: dist }, preview: { port: +arg('port', 4199), strictPort: false }, logLevel: 'silent' }); base = srv.resolvedUrls.local[0]; }
 const b = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const p = await b.newPage({ viewport: { width: 1600, height: 900 } });
 p.on('pageerror', (e) => console.log('PAGEERROR', e.message));
+p.on('console', (m) => { if (m.text().startsWith('[dc]')) console.error(m.text()); });
+const T0 = Date.now(), log = (m) => console.error(`[${Math.round((Date.now() - T0) / 1000)} s] ${m}`);
 await p.goto(base + '?test=1&hd=1', { waitUntil: 'load' });
+log('strona wczytana');
 await p.waitForFunction(() => window.__test && window.__renderer, null, { timeout: 280000 });
+log('gra gotowa');
 const res = await p.evaluate(async ([perType, ticks]) => {
   const T = window.__test, R = window.__renderer;
   T.give(99999);
   const ids = ['house', 'woodcutter', 'quarry', 'farm', 'mill', 'bakery', 'well', 'granary', 'storehouse', 'barracks', 'tavern', 'smith', 'tower', 'chapel', 'market', 'stable', 'archery', 'tanner'];
   for (let k = 0; k < perType; k++) for (const id of ids) { T.give(99999); T.build(id); }
-  T.run(ticks);
+  console.log('[dc] budynki postawione'); T.run(ticks); console.log('[dc] symulacja przewinięta');
   const g = T.state ? T.state() : null;
   const keep = window.__renderer.state.buildings.find((x) => x.type === 0 && x.owner === 0);
   T.at(keep.x + 5, keep.y + 8, 30);
   await new Promise((r) => setTimeout(r, 25000));
+  console.log('[dc] start pomiaru klatki');
   const gl = R.renderer;
   const orig = gl.renderBufferDirect.bind(gl);
   const by = new Map();
@@ -61,6 +67,7 @@ const res = await p.evaluate(async ([perType, ticks]) => {
   gl.renderBufferDirect = orig;
   return { passes, zero, calls: gl.info.render.calls, mainCalls, shadowCalls, buildings: window.__renderer.state.buildings.length, top: [...by].sort((a, b) => b[1] - a[1]).slice(0, 40) };
 }, [+arg('build', 3), +arg('ticks', 3000)]);
+log('klatka policzona');
 console.log(res.passes.join('\n')); console.log('wywołania instancji z zerową liczbą sztuk:', res.zero);
 console.log(`budynki: ${res.buildings} · wywołań (main/cień): ${res.mainCalls}/${res.shadowCalls} · info.calls ${res.calls}`);
 for (const [k, n] of res.top) console.log(String(n).padStart(5), k);

@@ -635,8 +635,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     // pola rozszerzonego obszaru (z obrzeżem D) → świat: plansza (0..w) leży w (−w/2..w/2)
     for (let i = 0; i < wet.length; i++) if (wet[i]) {
       const cx = i % wcw, cy = (i - cx) / wcw;
-      const x0 = cx * WC - D - w / 2, z0 = cy * WC - D - h / 2;
-      wetBoxes.push(new THREE.Box3(new THREE.Vector3(x0, WATER_Y - 0.2, z0), new THREE.Vector3(x0 + WC, WATER_Y + 0.2, z0 + WC)));
+      // z zapasem 2 pól: przejrzystość płycizny liczy się z głębokości rozmytej na ok. 1,5 pola poza linię brzegu
+      const x0 = cx * WC - D - w / 2 - 2, z0 = cy * WC - D - h / 2 - 2;
+      wetBoxes.push(new THREE.Box3(new THREE.Vector3(x0, WATER_Y - 0.2, z0), new THREE.Vector3(x0 + WC + 4, WATER_Y + 0.2, z0 + WC + 4)));
     }
     wm = waterMaterial(depthTex, EW, EH, reflection.uniforms);
     const waterMat = wm.mat;
