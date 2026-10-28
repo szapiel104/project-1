@@ -1,6 +1,7 @@
 import { me, onAccount } from '../net/supa';
 import { avatarSvg } from './avatars';
 import { BUILD_GROUPS } from './buildGroups';
+import { createArmyControls } from './armyControls';
 import { renderLogistics, type StoreLogistics } from './storePanel';
 import { BUILDINGS, CATEGORIES, isTower, type BuildingDef, type CategoryId } from '../data/buildings';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
@@ -722,30 +723,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   armyPanel.hidden = true;
   const kindsRow = el('div', 'army-kinds');
   const kindBtns = new Map<string, { b: HTMLButtonElement; n: HTMLElement }>();
-  const seg = (label: string, items: [string, string][], pick: (i: number) => void): HTMLButtonElement[] => {
-    const wrap = el('div', 'army-row');
-    wrap.append(el('span', 'army-label', label));
-    const group = el('div', 'army-seg');
-    group.setAttribute('role', 'group');
-    group.setAttribute('aria-label', label);
-    const out = items.map(([text, tip], i) => {
-      const b = el('button', 'army-btn', text);
-      b.type = 'button';
-      b.title = tip;
-      b.setAttribute('aria-pressed', 'false');
-      b.addEventListener('click', () => pick(i));
-      group.append(b);
-      return b;
-    });
-    wrap.append(group);
-    armyPanel.append(wrap);
-    return out;
-  };
-  armyPanel.append(kindsRow);
-  const formBtns = seg(tx('Szyk', 'Formation'), [[tx('Linia', 'Line'), tx('Szeroki front, 1–3 szeregi. Łucznicy z tyłu.', 'Wide front, 1–3 ranks. Archers at the rear.')], [tx('Blok', 'Block'), tx('Zwarty kwadrat: trudny do obejścia.', 'A tight square: hard to outflank.')], [tx('Luźno', 'Loose'), tx('Co drugie pole: mniej ofiar od strzał.', 'Every other tile: fewer losses to arrows.')], [tx('Ścisk', 'Packed'), tx('Ramię w ramię: zbity kwadrat, gdy oddział stoi.', 'Shoulder to shoulder: a dense square while the troop stands.')]], (i) => events.onArmyForm(i));
-  const marchBtns = seg(tx('Marsz', 'March'), [[tx('Zwykły', 'Plain'), tx('Idą na miejsce, nie zatrzymując się na wroga.', 'They march to the spot without stopping for the enemy.')], [tx('Z walką', 'Fighting'), tx('Idą na miejsce, ale biją każdego wroga, którego spotkają. Ctrl + prawy klik odwraca wybór dla jednego rozkazu.', 'They march to the spot but strike any enemy they meet. Ctrl + right-click flips the choice for a single order.')]], (i) => events.onArmyMarch(i));
-  const stanceBtns = seg(tx('Postawa', 'Stance'), [[tx('Atak', 'Attack'), tx('Goni każdego wroga, którego zobaczy.', 'Chases every enemy in sight.')], [tx('Obrona', 'Defend'), tx('Walczy w pobliżu swojego miejsca i do niego wraca.', 'Fights near its post and returns to it.')], [tx('Stój', 'Hold'), tx('Nie rusza się z miejsca. Bije tylko tych, których sięgnie.', 'Does not budge. Strikes only those within reach.')]], (i) => events.onArmyStance(i));
-  const [patrolBtn] = seg(tx('Rozkazy', 'Orders'), [[tx('Patrol (P)', 'Patrol (P)'), tx('Kliknij, potem prawy klik na mapie: oddział chodzi tam i z powrotem i bije wrogów po drodze (Shift + prawy klik: więcej punktów). Kolejka marszu: Shift + prawy klik bez patrolu dopisuje kolejny punkt trasy.', 'Click, then right-click on the map: the troop walks there and back, striking foes on the way (Shift + right-click: more waypoints). Marching queue: Shift + right-click without patrol adds another stop to the route.')]], () => events.onArmyPatrol());
+  // szyk, marsz, postawa i patrol jako ikony z dymkami; opis i skróty zwinięte pod spodem (armyControls.ts)
+  const armyCtl = createArmyControls({ form: (i) => events.onArmyForm(i), march: (i) => events.onArmyMarch(i), stance: (i) => events.onArmyStance(i), patrol: () => events.onArmyPatrol() });
+  armyPanel.append(kindsRow, armyCtl.root);
+  armyCtl.help.hidden = true;
+  /** Chowa okno wojska; opis i skróty zwijają się, żeby przy następnym zaznaczeniu znów zajmowały mało miejsca */
+  const hideArmy = (): void => { armyPanel.hidden = true; armyCtl.help.hidden = true; armyCtl.collapse(); info.classList.remove('army-mode'); };
   // brama: jeden duży przycisk otwórz/zamknij i stan pod spodem
   const gateBox = el('div', 'gate-box');
   const gateBtn = el('button', 'btn-main gate-btn');
@@ -845,7 +828,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   storeBox.hidden = true;
   const logiBox = el('div', 'info-logi');
   logiBox.hidden = true;
-  info.append(infoName, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  info.append(infoName, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   close.addEventListener('click', () => events.onCloseInfo());
@@ -1272,7 +1255,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       demolish.hidden = true;
       trainBtn.hidden = true;
       trainNote.hidden = true;
-      roster.hidden = true; armyPanel.hidden = true;
+      roster.hidden = true; hideArmy();
       hpLine.hidden = true;
       recruit.hidden = true;
       towerBox.hidden = true;
@@ -1285,12 +1268,16 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     },
     showArmy(army, ctl) {
       info.hidden = army.length === 0;
-      if (!army.length) { rosterKey = ''; return; }
+      if (!army.length) { rosterKey = ''; hideArmy(); return; }
       infoId = 0;
       setText(infoName, `${t('hud.soldiers')}: ${army.length}`);
       // portrety jak w klasycznych strategiach: hełm na tarczy w barwie drużyny i pasek zdrowia pod spodem
       roster.hidden = false;
+      // nowe zaznaczenie: opis i skróty zwinięte (rozwinięte zostają tylko do odznaczenia)
+      if (armyPanel.hidden) armyCtl.collapse();
       armyPanel.hidden = false;
+      armyCtl.help.hidden = false;
+      info.classList.add('army-mode');
       hpLine.hidden = true;
       recruit.hidden = true;
       towerBox.hidden = true;
@@ -1321,11 +1308,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         setText(kb.n, String(v.n));
       }
       for (const [k, kb] of kindBtns) if (!byKind.has(k)) kb.b.hidden = true;
-      formBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.form ?? 0))));
-      stanceBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.stance ?? -1))));
-      marchBtns.forEach((b, i) => b.setAttribute('aria-pressed', String(i === (ctl?.march ?? 0))));
-      patrolBtn!.setAttribute('aria-pressed', String((ctl?.patrol ?? 0) > 0));
-      setText(patrolBtn!, ctl?.patrol === 2 ? tx('Wskaż punkt…', 'Mark a point…') : ctl?.patrol === 1 ? tx('Na patrolu', 'On patrol') : tx('Patrol (P)', 'Patrol (P)'));
+      armyCtl.update(ctl);
       setText(infoName, `${t('hud.soldiers')}: ${army.length}${ctl?.group ? ` · ${tx('grupa', 'group')} ${ctl.group}` : ''}`);
       // portrety odświeżamy tylko, gdy coś się zmieniło (przebudowa co klatkę gubiła kliknięcia)
       const key = army.slice(0, 24).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}:${u.group ?? 0}`).join() + army.length;
@@ -1350,9 +1333,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
       const counts = new Map<string, number>();
       for (const u of army) counts.set(u.name, (counts.get(u.name) ?? 0) + 1);
-      setText(infoDesc, [...counts].map(([n, k]) => `${n} × ${k}`).join(', '));
-      infoWorker.hidden = false;
-      setText(infoWorker, t('hud.orderHint'));
+      // liczby i skróty siedzą w zwijanym opisie pod portretami, a nie w zawsze widocznych akapitach
+      armyCtl.setHelp([...counts].map(([n, k]) => `${n} × ${k}`).join(', '), t('hud.orderHint'));
+      infoDesc.hidden = true;
+      infoWorker.hidden = true;
       demolish.hidden = true;
       trainBtn.hidden = true;
       trainNote.hidden = true;
@@ -1362,7 +1346,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       info.hidden = !i;
       if (!i) return;
       infoId = i.id;
-      roster.hidden = true; armyPanel.hidden = true;
+      roster.hidden = true; hideArmy();
       setText(infoName, t(i.def.name));
       hpLine.hidden = i.hp === undefined;
       if (i.hp !== undefined && i.maxHp) { setText(hpText, `${t('hud.hp')}: ${i.hp} / ${i.maxHp}`); hpFill.style.width = `${Math.max(0, (i.hp / i.maxHp) * 100)}%`; hpFill.dataset.low = String(i.hp < i.maxHp * 0.35); }

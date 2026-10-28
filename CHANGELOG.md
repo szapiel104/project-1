@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.60.0 — okno wojska w ikonach, mniej zasłania ekran (2026-10-28)
+
+- **Szyk, marsz, postawa i patrol jako ikony** w dwóch krótkich rzędach zamiast wierszy z napisami; okno wojska jest węższe (300 px) i niższe
+- **Dymek po najechaniu** (albo przejściu klawiszem Tab): nazwa grupy i opcji pogrubiona, pod nią opis, jak dotąd w napisach
+- **Opis zaznaczonych i skróty (prawy klik, Shift, cyfry…) zwinięte** pod przyciskiem „Skróty i opis”; można je rozwinąć, a przy każdym nowym zaznaczeniu wojska zwijają się z powrotem
+- Dostępność: przyciski z `aria-pressed` i opisem dla czytnika, rozwijanie jako przycisk z `aria-expanded`, widoczny fokus; kontrast ikon 13,8:1, wciśniętych 9:1, dymka 13,2:1
+- Bot: bez zmian (tylko interfejs gracza)
 ## 0.59.3 — oddział nie wraca gonić chłopa po nowym rozkazie (2026-10-28)
 
 - **Naprawione „zakodowane” wracanie pod zamek:** rozkaz „bij tego chłopa” zapisywał żołnierzom cel do gonienia aż do skutku, a zwykły rozkaz ruchu go nie kasował. Po dojściu na miejsce oddział (np. łucznicy) wracał więc gonić tego chłopa — zwykle pod wrogi zamek, gdzie chłop się schował — i tam czekał. Teraz każdy nowy rozkaz (ruch, kolejka i patrol, atak na żołnierza, budynek albo wilka, wejście na wieżę) kasuje wcześniejszy cel; atak na chłopa kasuje z kolei pogoń za wilkiem
