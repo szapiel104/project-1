@@ -4395,6 +4395,8 @@ export class GameRenderer {
   private prints: Footprints | null = null;
   /** Stopy idących z ostatniej klatki: [x, y w polach mapy, wysokość stóp w świecie] — tam, gdzie postać stoi na ekranie */
   private feet = new Map<number, [number, number, number]>();
+  /** Ciągnięte pnie i dwukółki z ostatniej klatki: [x, y, wysokość ziemi, rodzaj 0 = pień, 1 = wóz] — bruzdy w śniegu */
+  private drags = new Map<number, [number, number, number, number]>();
   /** Ślady na śniegu: ludzie, żołnierze i wilki wydeptują ścieżki, które powoli się zasypują */
   private updateTrails(g: GameState, dt: number): void {
     const { width: w, height: h } = g.map;
@@ -4415,9 +4417,11 @@ export class GameRenderer {
       this.prints ??= new Footprints(this.scene);
       const walkers: { id: number; x: number; y: number; h: number }[] = [];
       if (this.snowNow >= 0.1) for (const [id, f] of this.feet) walkers.push({ id, x: f[0], y: f[1], h: f[2] });
-      this.feet.clear();
+      const drags: { id: number; x: number; y: number; h: number; kind: number }[] = [];
+      if (this.snowNow >= 0.1) for (const [id, f] of this.drags) drags.push({ id, x: f[0], y: f[1], h: f[2], kind: f[3] });
+      this.feet.clear(); this.drags.clear();
       const c = this.cam.camera.position;
-      this.prints.sync(this.snowNow, this.calm ? 0 : dt, this.rain, walkers, w, h, { x: c.x + w / 2, y: c.z + h / 2 });
+      this.prints.sync(this.snowNow, this.calm ? 0 : dt, this.rain, walkers, w, h, { x: c.x + w / 2, y: c.z + h / 2 }, drags);
     }
   }
   private shiftSeen = 0;
@@ -5431,6 +5435,8 @@ export class GameRenderer {
       t.scale.setScalar(FIG);
       t.updateMatrix();
       for (const [k, pair] of this.logs) for (const m of pair) m.setMatrixAt(i, k === logKind ? t.matrix : ZERO);
+      // bruzda w śniegu za ciągniętym pniem: koniec pnia szoruje po ziemi za plecami drwala
+      if (logKind && walking) { const bx = cv.sx - Math.sin(heading) * 0.38, by = cv.sy - Math.cos(heading) * 0.38; this.drags.set(u.id, [bx, by, this.standY(view, bx, by, -2), 0]); }
       // pień do obróbki leży przed rąbiącym w poprzek; w miarę cięcia skraca się (odcięte kawałki idą w deski przy pniaku)
       const groundKind = limbing ? this.felled.get(u.id) ?? this.logKindFor(u.id) : null;
       if (groundKind) {
@@ -5510,6 +5516,8 @@ export class GameRenderer {
       const cx = fx - sx * 0.3, cy = fy - sz * 0.3;
       const cyH = view.heightAt(cx, cy);
       cart.obj.position.set(cx - width / 2, cyH, cy - height / 2);
+      // koleiny w śniegu po kołach dwukółki i ślady chłopa, który ją ciągnie
+      if (moved > 1e-4) { this.drags.set(c.id, [cx, cy, cyH, 1]); this.feet.set(c.id + 0x40000000, [fx, fy, view.heightAt(fx, fy)]); }
       cart.obj.rotation.set(0, cart.heading, 0);
       cart.obj.visible = true;
       if (this.cartIcons >= 0 && c.owner === this.cartIcons) {

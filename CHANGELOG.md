@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.63.8 — bruzdy w śniegu po ciągniętych pniach i koleiny wozów (2026-10-28)
+
+- **Ciągnięty pień zostawia bruzdę:** drwal, który wlecze ścięte drzewo do chaty, zostawia za sobą szeroką, ciągłą bruzdę tam, gdzie koniec pnia szoruje po śniegu (za jego plecami)
+- **Wóz zostawia koleiny:** dwukółka z surowcami (także wóz z urobkiem z kopalni) ciągnie za sobą dwie wąskie koleiny po kołach, a chłop, który ją ciągnie, odciski butów
+- Bruzdy i koleiny bledną tak samo jak odciski butów (po ok. 25 s, przez 15 s), szybciej w zamieci, i znikają razem ze śniegiem. Druga siatka instancji (jedno wywołanie rysowania), tekstura miękkiego pasa z podłużnymi rysami, odcinki co 6 cm zlewają się w jedną linię (`render/footprints.ts` → `TrackLayer`)
+- Bot: bez zmian (wygląd)
+
 ## 0.63.7 — Mój ród, konto i karta postaci: duże i czytelne (2026-10-28)
 
 - **Mój ród jak księga** (`ui/house.css`, `online.ts → asBook`): okno na całą prawą część menu, jak „Jak grać”, zamiast wąskiego panelu z drobnym pismem. Po lewej karta postaci: duży herb, romb poziomu, imię (do 44 px) i tytuł, gruby pasek doświadczenia z liczbami, następny tytuł i ile PD brakuje, „Do boju” na całą szerokość. Po prawej zakładki (Przegląd, Kronika bitew, Herb): cztery duże tablice statystyk (liczby do 54 px), droga do korony z większymi rombami, odznaki z dużymi ikonami, opisem i paskiem postępu, tabela „Skąd brać doświadczenie”, kronika bitew i herb z większymi próbkami

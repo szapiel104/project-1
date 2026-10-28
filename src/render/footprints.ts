@@ -8,6 +8,10 @@
  * Wszystko w jednej siatce instancji (jedno wywołanie rysowania) w pierścieniu MAX odcisków: nowy zastępuje najstarszy.
  * Blednięcie liczy shader z czasu narodzin odcisku (atrybut instancji), więc co klatkę zmienia się tylko jeden mundur.
  * Tylko w pobliżu kamery (dalej odcisków i tak nie widać). Tylko wygląd — symulacja o nich nie wie.
+ *
+ * Bruzdy (Michał 28.10: „ciągnące drzewa niech też zostawiają ślad i wóz”): drwal ciągnący ścięty pień zostawia za sobą
+ * szeroką, ciągłą bruzdę, a dwukółka z surowcami dwie wąskie koleiny po kołach. To druga siatka instancji (własna
+ * tekstura miękkiego pasa z podłużnymi rysami), z tym samym blednięciem co odciski butów.
  */
 import * as THREE from 'three';
 import { cat } from './cat';
@@ -42,40 +46,58 @@ function soleTexture(): THREE.Texture {
   return t;
 }
 
-export class Footprints {
-  private mesh: THREE.InstancedMesh;
+/** Bruzda w śniegu: miękki pas z podłużnymi rysami (pień, koło), lekko wygaszony na obu końcach, żeby kolejne odcinki zlewały się w jedną linię */
+function furrowTexture(): THREE.Texture {
+  const W = 64, H = 128, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d')!;
+  c.filter = 'blur(3px)';
+  c.fillStyle = 'rgba(255,255,255,0.9)';
+  c.fillRect(W * 0.16, -10, W * 0.68, H + 20);
+  c.filter = 'blur(1px)';
+  let seed = 11;
+  const r = (): number => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+  for (let k = 0; k < 7; k++) { c.fillStyle = `rgba(255,255,255,${0.15 + r() * 0.2})`; c.fillRect(W * (0.22 + r() * 0.5), -4, 1 + r() * 2.5, H + 8); }
+  c.filter = 'none';
+  c.globalCompositeOperation = 'destination-in';
+  const g = c.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, 'rgba(0,0,0,0.35)'); g.addColorStop(0.2, 'rgba(0,0,0,1)'); g.addColorStop(0.8, 'rgba(0,0,0,1)'); g.addColorStop(1, 'rgba(0,0,0,0.35)');
+  c.fillStyle = g; c.fillRect(0, 0, W, H);
+  const t = new THREE.CanvasTexture(cv);
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Jedna siatka instancji śladów (odciski albo bruzdy) z czasem narodzin każdej sztuki; blednięcie liczy shader */
+class TrackLayer {
+  readonly mesh: THREE.InstancedMesh;
   private born: THREE.InstancedBufferAttribute;
   private next = 0;
-  /** Zegar śladów (s): biegnie szybciej w opadzie, więc ślady szybciej się zasypują */
-  private clock = 0;
-  private used = 0;
-  private last = new Map<number, { x: number; y: number; d: number; side: number }>();
-  private uTime = { value: 0 };
-  private uSnow = { value: 0 };
+  used = 0;
+  dirty = false;
   private m = new THREE.Matrix4();
   private q = new THREE.Quaternion();
   private v = new THREE.Vector3();
-  private s = new THREE.Vector3(WID, 1, LEN);
+  private s = new THREE.Vector3();
   private up = new THREE.Vector3(0, 1, 0);
-
-  constructor(scene: THREE.Scene) {
+  constructor(scene: THREE.Scene, name: string, map: THREE.Texture, color: number, alpha: number, max: number, uTime: { value: number }, uSnow: { value: number }) {
     const geo = new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2);
-    this.born = new THREE.InstancedBufferAttribute(new Float32Array(MAX).fill(-1e6), 1);
+    this.born = new THREE.InstancedBufferAttribute(new Float32Array(max).fill(-1e6), 1);
     this.born.setUsage(THREE.DynamicDrawUsage);
     geo.setAttribute('aBorn', this.born);
     // chłodny cień we wgłębieniu śniegu; oświetlony jak reszta (nocą ciemny), bez zapisu głębi i z przesunięciem ku kamerze
-    const mat = new THREE.MeshLambertMaterial({ color: 0x6a7c92, alphaMap: soleTexture(), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+    const mat = new THREE.MeshLambertMaterial({ color, alphaMap: map, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
     mat.onBeforeCompile = (sh): void => {
-      sh.uniforms.uTime = this.uTime;
-      sh.uniforms.uSnow = this.uSnow;
+      sh.uniforms.uTime = uTime;
+      sh.uniforms.uSnow = uSnow;
       sh.vertexShader = 'attribute float aBorn;\nuniform float uTime;\nvarying float vFade;\n' + sh.vertexShader.replace('#include <begin_vertex>',
         `#include <begin_vertex>\n  float age = uTime - aBorn;\n  vFade = age < 0.0 ? 0.0 : 1.0 - clamp((age - ${HOLD.toFixed(1)}) / ${FADE.toFixed(1)}, 0.0, 1.0);`);
       sh.fragmentShader = 'uniform float uSnow;\nvarying float vFade;\n' + sh.fragmentShader.replace('#include <alphamap_fragment>',
-        '#include <alphamap_fragment>\n  diffuseColor.a *= vFade * 0.55 * smoothstep(0.1, 0.45, uSnow);');
+        `#include <alphamap_fragment>\n  diffuseColor.a *= vFade * ${alpha.toFixed(2)} * smoothstep(0.1, 0.45, uSnow);`);
     };
-    mat.customProgramCacheKey = (): string => 'footprints';
-    this.mesh = new THREE.InstancedMesh(geo, mat, MAX);
-    this.mesh.name = 'ślady butów';
+    mat.customProgramCacheKey = (): string => name;
+    this.mesh = new THREE.InstancedMesh(geo, mat, max);
+    this.mesh.name = name;
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 1;
     this.mesh.count = 0;
@@ -83,12 +105,52 @@ export class Footprints {
     cat(this.mesh, 'ślady');
     scene.add(this.mesh);
   }
+  /** Sztuka śladu w polach mapy (x, y), obrót wokół pionu, wysokość ziemi, szerokość i długość */
+  put(x: number, y: number, yaw: number, h: number, w: number, l: number, W: number, H: number, clock: number): void {
+    const i = this.next;
+    // pierścień pełny świeżych śladów: nowego nie kładziemy, zamiast wycinać jeszcze widoczny (ślad ma zblednąć, a nie zniknąć)
+    if (clock - this.born.getX(i) < HOLD + FADE) return;
+    this.next = (this.next + 1) % this.mesh.instanceMatrix.count;
+    this.used = Math.min(this.mesh.instanceMatrix.count, this.used + 1);
+    this.q.setFromAxisAngle(this.up, yaw);
+    this.m.compose(this.v.set(x - W / 2, h + 0.004, y - H / 2), this.q, this.s.set(w, 1, l));
+    this.mesh.setMatrixAt(i, this.m);
+    this.born.setX(i, clock);
+    this.dirty = true;
+  }
+  finish(snow: number): void {
+    if (this.dirty) { this.mesh.instanceMatrix.needsUpdate = true; this.born.needsUpdate = true; touch(this.mesh); this.dirty = false; }
+    this.mesh.count = this.used;
+    this.mesh.visible = this.used > 0 && snow > 0.01;
+  }
+  dispose(): void { this.mesh.removeFromParent(); this.mesh.geometry.dispose(); (this.mesh.material as THREE.Material).dispose(); }
+}
+
+/** Odstęp kolejnych odcinków bruzdy, szerokość i długość odcinka; rozstaw kół dwukółki */
+const DRAG_STEP = 0.06, LOG_W = 0.085, RUT_W = 0.026, SEG_L = 0.1, WHEELS = 0.085;
+
+export class Footprints {
+  /** Zegar śladów (s): biegnie szybciej w opadzie, więc ślady szybciej się zasypują */
+  private clock = 0;
+  private soles: TrackLayer;
+  private furrows: TrackLayer;
+  private last = new Map<number, { x: number; y: number; d: number; side: number }>();
+  private lastDrag = new Map<number, { x: number; y: number; d: number }>();
+  private uTime = { value: 0 };
+  private uSnow = { value: 0 };
+
+  constructor(scene: THREE.Scene) {
+    this.soles = new TrackLayer(scene, 'ślady butów', soleTexture(), 0x6a7c92, 0.55, MAX, this.uTime, this.uSnow);
+    this.furrows = new TrackLayer(scene, 'bruzdy w śniegu', furrowTexture(), 0x637690, 0.5, 8192, this.uTime, this.uSnow);
+  }
 
   /**
    * Klatka: `snow` 0..1 (ile śniegu leży), `dt` w sekundach, `fall` przyspiesza zasypywanie (opad),
-   * `walkers` — idący w polach mapy z wysokością stóp tak, jak stoją na ekranie (`h`, świat), `cam` — środek widoku w polach mapy.
+   * `walkers` — idący w polach mapy z wysokością stóp tak, jak stoją na ekranie (`h`, świat),
+   * `drags` — ciągnięte pnie (kind 0, punkt środka pnia przy ziemi) i dwukółki (kind 1, środek osi), `cam` — środek widoku w polach mapy.
    */
-  sync(snow: number, dt: number, fall: number, walkers: { id: number; x: number; y: number; h: number }[], W: number, H: number, cam: { x: number; y: number }): void {
+  sync(snow: number, dt: number, fall: number, walkers: { id: number; x: number; y: number; h: number }[], W: number, H: number, cam: { x: number; y: number },
+    drags: { id: number; x: number; y: number; h: number; kind: number }[] = []): void {
     // w zamieci ślady starzeją się szybciej (czas shadera biegnie dla nich szybciej)
     this.uSnow.value = snow;
     this.clock += dt * (1 + fall * 2);
@@ -96,11 +158,10 @@ export class Footprints {
     this.uTime.value = clock;
     if (snow < 0.1) {
       // stopniało: nowych nie robimy, a stare znikają razem ze śniegiem (mundur uSnow)
-      this.last.clear();
-      this.mesh.visible = this.used > 0 && snow > 0.01;
+      this.last.clear(); this.lastDrag.clear();
+      this.soles.finish(snow); this.furrows.finish(snow);
       return;
     }
-    let added = false;
     const alive = new Set<number>();
     for (const w of walkers) {
       if (Math.abs(w.x - cam.x) > 30 || Math.abs(w.y - cam.y) > 30) continue;
@@ -119,28 +180,36 @@ export class Footprints {
         const sgn = p.side ? 1 : -1;
         p.side ^= 1;
         const fx = bx - uy * SPREAD * sgn, fy = by + ux * SPREAD * sgn;
-        this.put(fx, fy, Math.atan2(ux, uy) + Math.PI, w.h, W, H, clock); // przód podeszwy leży w teksturze u góry, czyli w -z płaszczyzny: obrót o 180°, żeby palce szły w stronę marszu
-        added = true;
+        // przód podeszwy leży w teksturze u góry, czyli w -z płaszczyzny: obrót o 180°, żeby palce szły w stronę marszu
+        this.soles.put(fx, fy, Math.atan2(ux, uy) + Math.PI, w.h, WID, LEN, W, H, clock);
       }
       p.x = w.x; p.y = w.y;
     }
     for (const id of this.last.keys()) if (!alive.has(id)) this.last.delete(id);
-    if (added) { this.mesh.instanceMatrix.needsUpdate = true; this.born.needsUpdate = true; touch(this.mesh); }
-    this.mesh.count = this.used;
-    this.mesh.visible = this.used > 0;
+    // bruzdy: ciągnięty pień (jedna szeroka) i dwukółka (dwie koleiny po bokach osi)
+    const aliveD = new Set<number>();
+    for (const g of drags) {
+      if (Math.abs(g.x - cam.x) > 30 || Math.abs(g.y - cam.y) > 30) continue;
+      aliveD.add(g.id);
+      const p = this.lastDrag.get(g.id);
+      if (!p) { this.lastDrag.set(g.id, { x: g.x, y: g.y, d: 0 }); continue; }
+      const dx = g.x - p.x, dy = g.y - p.y, d = Math.hypot(dx, dy);
+      if (d > 2) { p.x = g.x; p.y = g.y; p.d = 0; continue; }
+      if (d < 1e-4) continue;
+      p.d += d;
+      const ux = dx / d, uy = dy / d, yaw = Math.atan2(ux, uy);
+      while (p.d >= DRAG_STEP) {
+        p.d -= DRAG_STEP;
+        const bx = g.x - ux * p.d, by = g.y - uy * p.d;
+        if (g.kind === 0) this.furrows.put(bx, by, yaw, g.h, LOG_W, SEG_L, W, H, clock);
+        else for (const sgn of [-1, 1]) this.furrows.put(bx - uy * WHEELS * sgn, by + ux * WHEELS * sgn, yaw, g.h, RUT_W, SEG_L, W, H, clock);
+      }
+      p.x = g.x; p.y = g.y;
+    }
+    for (const id of this.lastDrag.keys()) if (!aliveD.has(id)) this.lastDrag.delete(id);
+    this.soles.finish(snow);
+    this.furrows.finish(snow);
   }
 
-  private put(x: number, y: number, yaw: number, h: number, W: number, H: number, clock: number): void {
-    const i = this.next;
-    // pierścień pełny świeżych odcisków: nowego nie kładziemy, zamiast wycinać jeszcze widoczny (ślad ma zbledną, a nie zniknąć)
-    if (clock - this.born.getX(i) < HOLD + FADE) return;
-    this.next = (this.next + 1) % MAX;
-    this.used = Math.min(MAX, this.used + 1);
-    this.q.setFromAxisAngle(this.up, yaw);
-    this.m.compose(this.v.set(x - W / 2, h + 0.004, y - H / 2), this.q, this.s);
-    this.mesh.setMatrixAt(i, this.m);
-    this.born.setX(i, clock);
-  }
-
-  dispose(): void { this.mesh.removeFromParent(); this.mesh.geometry.dispose(); (this.mesh.material as THREE.Material).dispose(); }
+  dispose(): void { this.soles.dispose(); this.furrows.dispose(); }
 }
