@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-## 0.55.2 — dużo więcej muzyki średniowiecznej, bez starych skrzypnięć (2026-10-28)
+## 0.55.3 — dużo więcej muzyki średniowiecznej, bez starych skrzypnięć (2026-10-28)
 
 - **Muzyka: 33 utwory zamiast 6.** Doszło 27 darmowych utworów z OpenGameArt (CC0 i CC BY): 16 na dzień (flety, lutnie, piszczałki, rondo, targ, żniwa), 8 na noc (lamenty, chorał mnichów, smyczki, lutniowa pieśń Johna Dowlanda z 1597 r.), 5 na bitwę, kilka do menu. Gra nie powtarza ostatnio granych utworów, dopóki w danym nastroju są inne
 - **Koniec meczu ma własną muzykę:** przy wygranej gra raz utwór zwycięstwa, przy porażce — porażki, potem cisza do menu albo nowej gry (`musicEnd` w `audio/sfx.ts`)
