@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.64.8 — mur łączy się z kamienną wieżą, w ścianie wieży wejście (2026-10-28)
+
+- **Mur dochodzi do wieży:** korona muru kamiennego przy kamiennej wieży (każdej wielkości) ciągnie się aż do ściany trzonu — bez szpary i bez przedpiersia z blankami w poprzek przejścia (`render/walls.ts`)
+- **Ciemne wejście w ścianie wieży** na wysokości korony muru, z kamiennym nadprożem: tędy żołnierze z muru wchodzą do wieży
+- **Z muru na pomost:** przejście z korony muru na pomost wieży (wyżej) trwa chwilę jak wspinaczka — żołnierz znika w wejściu, idzie schodami w środku i wychodzi na pomost (z pomostu na mur tak samo, w dół)
+- Bot: bez zmian (korzysta z tych samych przejść)
+
 ## 0.64.7 — trawa wyłączona, lobby gry przez sieć bez skakania (2026-10-28)
 
 - **Trawa wyłączona na razie** (prośba Michała): dywan kęp trawy z pobranych zdjęć (`render/grass.ts`) nie jest tworzony (`GRASS = false` w `render/terrain.ts`); łąka zostaje z teksturą ziemi. Kod i atlas zostają — trawa wraca po zmianie flagi

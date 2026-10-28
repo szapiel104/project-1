@@ -3967,16 +3967,18 @@ export class GameRenderer {
       // w kamiennej wieży idzie schodami w środku — wtedy go nie widać, dopóki nie wyjdzie na pomost (albo drzwiami na dół)
       if (s.climb !== undefined && s.climbTo !== undefined && !s.up) {
         const from = (s.py >> 8) * width + (s.px >> 8), to = s.climbTo, W = width;
-        const upward = (g.walls[to]! & 16) !== 0, top = upward ? to : from;
-        const tb = buildingById(g, g.occupancy[top]);
-        const tid = tb ? BUILDINGS[tb.type]!.id : '';
-        const H = (isTower(tid) ? TOWER_TOP[tid] : undefined) ?? STONE_WALL_TOP;
+        // wyżej leży pole wieży (albo korona muru, gdy wchodzi z ziemi na mur); niżej ziemia albo korona muru
+        const tAt = (t: number): string => { const o = buildingById(g, g.occupancy[t]); return o && isTower(BUILDINGS[o.type]!.id) && (g.walls[t]! & 16) ? BUILDINGS[o.type]!.id : ''; };
+        const hOf = (t: number): number => { const id = tAt(t); return id ? TOWER_TOP[id] ?? WATCH_TOWER_TOP : (g.walls[t]! & 16) ? STONE_WALL_TOP : 0; };
+        const upward = hOf(to) > hOf(from), top = upward ? to : from, low = upward ? from : to;
+        const tid = tAt(top);
+        const L = hOf(low), H = hOf(top) - L;
         const p = Math.max(0, Math.min(1, 1 - s.climb / CLIMB_TICKS));
         const ex = ((from % W) + (to % W)) / 2 + 0.5, ez = (Math.floor(from / W) + Math.floor(to / W)) / 2 + 0.5;
         // przy drabinie po stronie ziemi (drabina stoi przed krawędzią)
         const gx = upward ? from % W : to % W, gz = upward ? Math.floor(from / W) : Math.floor(to / W);
         px = ex + (gx + 0.5 - ex) * 0.25; pz = ez + (gz + 0.5 - ez) * 0.25;
-        y = view.heightAt(px, pz) + H * (upward ? p : 1 - p);
+        y = view.heightAt(px, pz) + L + H * (upward ? p : 1 - p);
         heading = Math.atan2((top % W) + 0.5 - (gx + 0.5), Math.floor(top / W) + 0.5 - (gz + 0.5));
         this.facing.set(s.id, heading);
         if (isStoneTower(tid)) y = -50; // schody w środku kamiennej wieży

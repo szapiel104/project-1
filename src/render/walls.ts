@@ -4,11 +4,11 @@
  * Bale stają jeden po drugim w czasie budowy. Wszystko w kilku wspólnych siatkach instancji.
  */
 import * as THREE from 'three';
-import { BUILDINGS, footprint } from '../data/buildings';
+import { BUILDINGS, footprint, isStoneTower } from '../data/buildings';
 import type { GameState } from '../sim/state';
 import { buildWork, maxHp } from '../sim/systems/placement';
 import { ladderSides } from '../sim/systems/stonewalls';
-import { palisadeLogs, stoneWallKit } from './buildings';
+import { STONE_WALL_TOP, palisadeLogs, stoneWallKit } from './buildings';
 import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { normal, pattern } from './textures';
@@ -28,6 +28,8 @@ export class WallLayer {
   /** Pola u stóp drabin na mur kamienny → kierunek do muru (wspinaczka w wyglądzie) */
   readonly ladderFeet = new Map<number, [number, number]>();
   private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
+  /** Mur kamienny dochodzący do kamiennej wieży: przedłużenie korony aż do ściany wieży i ciemne wejście w tej ścianie */
+  private doorKit: { bridge: THREE.InstancedMesh; door: THREE.InstancedMesh; lintel: THREE.InstancedMesh } | null = null;
   /** Częstokół: bale łączą się z sąsiednimi palisadami, bramami i wieżami; brama obraca się w linii muru */
   sync(g: GameState, view: TerrainView, buildingMeshes: Map<number, THREE.Group>): void {
     const { width, height } = g.map;
@@ -61,6 +63,29 @@ export class WallLayer {
       };
       this.stoneKit = { block: mk(k.block, k.mat, 8192), edge: mk(k.edge, k.mat, 16384), ladder: mk(k.ladder, k.wood, 2048) };
     }
+    if (!this.doorKit) {
+      const k = stoneWallKit();
+      const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, label: string): THREE.InstancedMesh => {
+        const m = new THREE.InstancedMesh(geo, mat, 1024);
+        m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(cat(m, label));
+        return m;
+      };
+      const dark = new THREE.MeshStandardMaterial({ color: 0x0a0705, roughness: 1, metalness: 0 });
+      // geometrie w układzie „wejście w ścianie +z”: z = 0 to krawędź pola muru, wieża leży w stronę +z
+      this.doorKit = {
+        bridge: mk(new THREE.BoxGeometry(0.9, STONE_WALL_TOP, 1).translate(0, STONE_WALL_TOP / 2, 0.5), k.mat, 'mur do wieży'),
+        door: mk(new THREE.BoxGeometry(0.34, 0.54, 0.04).translate(0, 0.27, 0), dark, 'wejście z muru do wieży'),
+        lintel: mk(new THREE.BoxGeometry(0.46, 0.08, 0.06).translate(0, 0.04, 0), k.mat, 'nadproże wejścia z muru'),
+      };
+    }
+    const dn = { bridge: 0, door: 0, lintel: 0 };
+    /** Gotowa kamienna wieża na polu (x, y): odległość od krawędzi jej działki do lica trzonu (pole muru → ściana wieży) */
+    const towerGap = (x: number, y: number): number => {
+      const o = solid.get(y * width + x);
+      if (!o || o.build || o.ruined || !isStoneTower(BUILDINGS[o.type]!.id)) return -1;
+      const id = BUILDINGS[o.type]!.id;
+      return id === 'stoneTower' ? 0.26 : id === 'stoneTowerBig' ? 0.35 : 0.45;
+    };
     const keeps = new Map<number, [number, number]>();
     for (const b of g.buildings) if (b.type === 0) { const fp = footprint(BUILDINGS[0]!, b.rot); keeps.set(b.owner, [b.x + fp.w / 2, b.y + fp.h / 2]); }
     for (const b of walls) {
@@ -134,6 +159,20 @@ export class WallLayer {
           if (sn.ladder < 2048) sn.ladder = put(kit.ladder, rot, sn.ladder);
         }
         for (const [dx, dz, rot] of [[0, 1, 0], [0, -1, Math.PI], [1, 0, Math.PI / 2], [-1, 0, -Math.PI / 2]] as const) {
+          // obok kamienna wieża: mur łączy się z nią (korona aż do ściany), a w ścianie wieży ciemne wejście na wysokości korony
+          const gap = built >= 1 && !b.ruined ? towerGap(b.x + dx, b.y + dz) : -1;
+          if (gap >= 0 && this.doorKit && dn.bridge < 1024) {
+            const ex = cx + dx * 0.5, ez = cz + dz * 0.5;
+            e.set(0, rot, 0); q.setFromEuler(e);
+            M4.compose(p.set(ex - width / 2, y0, ez - height / 2), q, sc.set(1, 1, gap + 0.02));
+            this.doorKit.bridge.setMatrixAt(dn.bridge++, M4);
+            const fx = ex + dx * (gap - 0.005), fz = ez + dz * (gap - 0.005);
+            M4.compose(p.set(fx - width / 2, y0 + STONE_WALL_TOP, fz - height / 2), q, sc.set(1, 1, 1));
+            this.doorKit.door.setMatrixAt(dn.door++, M4);
+            M4.compose(p.set(fx - dx * 0.01 - width / 2, y0 + STONE_WALL_TOP + 0.54, fz - dz * 0.01 - height / 2), q, sc.set(1, 1, 1));
+            this.doorKit.lintel.setMatrixAt(dn.lintel++, M4);
+            continue;
+          }
           if (stoneAt(b.x + dx, b.y + dz) || sn.edge >= 16384) continue;
           // ruina: przedpiersie i blanki strącone (leżą w gruzie, damage.ts), wracają dopiero pod koniec odbudowy
           if (b.ruined && ruinRebuilt(b.build, buildWork(b.type)) < 0.95) continue;
@@ -220,6 +259,7 @@ export class WallLayer {
     }
     this.wallShafts.count = n; this.wallTips!.count = n;
     for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; touch(m); }
+    for (const key of ['bridge', 'door', 'lintel'] as const) { const m = this.doorKit[key]; m.count = dn[key]; touch(m); }
     touch(this.wallShafts); touch(this.wallTips!);
   }
 }

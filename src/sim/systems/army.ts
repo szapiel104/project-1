@@ -695,7 +695,9 @@ function step(g: GameState, s: Soldier): void {
   const w = g.map.width;
   // przejście między ziemią a koroną muru / pomostem wieży: chwilę się wspina (schodzi), potem staje od razu na górze (dole)
   const here = (s.py >> 8) * w + (s.px >> 8);
-  if (next !== here && ((g.walls[next]! & WALL_TOP) !== 0) !== ((g.walls[here]! & WALL_TOP) !== 0)) {
+  // (także z korony muru do wieży i z powrotem: pomost wieży jest wyżej niż mur — wchodzi drzwiami w ścianie wieży)
+  const towerStep = next !== here && (g.walls[next]! & WALL_TOP) !== 0 && (g.walls[here]! & WALL_TOP) !== 0 && !towerUnder(g, next) !== !towerUnder(g, here);
+  if (next !== here && (towerStep || ((g.walls[next]! & WALL_TOP) !== 0) !== ((g.walls[here]! & WALL_TOP) !== 0))) {
     if (s.climbTo !== next) { s.climbTo = next; s.climb = CLIMB_TICKS; }
     if (s.climb! > 0) { s.climb!--; return; }
     s.px = (next % w) * FP + FP / 2; s.py = Math.floor(next / w) * FP + FP / 2;
