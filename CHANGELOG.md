@@ -1,6 +1,6 @@
 # Dziennik zmian
 
-## 0.54.8 — dziennik błędów gotowy do wklejenia, poprawka przeciągania (2026-10-28)
+## 0.54.9 — dziennik błędów gotowy do wklejenia, poprawka przeciągania (2026-10-28)
 
 - **Błąd `setPointerCapture` (InvalidStateError) naprawiony:** kamera i minimapa przechwytują wskaźnik przy przeciąganiu; gdy przycisk był już puszczony w chwili kliknięcia (kliknięcie wysłane programowo, np. przez rozszerzenie, albo przełączenie okna), przeglądarka rzucała wyjątek. Teraz przeciąganie działa wtedy bez przechwycenia, bez błędu
 - **„Kopiuj dziennik błędów” daje wszystko do naprawy bez dopytywania:** numer wersji i build, adres, przeglądarka i system, ekran i okno, rdzenie, karta graficzna, stan gry (ekran, tryb, mapa, tick, liczba ludzi/wojska/budynków, wątek symulacji, jakość grafiki, FPS, spacer/kopalnia) oraz **pełny stos wywołań** każdego błędu (dotąd tylko 3 linijki)

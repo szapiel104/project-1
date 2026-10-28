@@ -37,7 +37,7 @@ function fetchArtifacts() {
       const dir = join(CACHE, String(r.id));
       if (existsSync(dir)) continue;
       mkdirSync(dir, { recursive: true });
-      try { execFileSync('gh', ['run', 'download', String(r.id), '-R', REPO, '-n', 'sourcemaps', '-D', dir], { stdio: 'ignore' }); } catch { /* przebieg bez map (sprzed 0.54.8) */ }
+      try { execFileSync('gh', ['run', 'download', String(r.id), '-R', REPO, '-n', 'sourcemaps', '-D', dir], { stdio: 'ignore' }); } catch { /* przebieg bez map (sprzed 0.54.9) */ }
     }
   } catch (e) { console.error('Nie udało się pobrać artefaktów przez gh:', e.message); }
 }
@@ -60,7 +60,7 @@ for (const line of input.split('\n')) {
   const notes = [];
   for (const [, file, l, col] of found) {
     const c = mapFor(file);
-    if (!c) { notes.push(`${file}: brak mapy źródeł (build sprzed 0.54.8 albo starszy niż 8 ostatnich wdrożeń)`); continue; }
+    if (!c) { notes.push(`${file}: brak mapy źródeł (build sprzed 0.54.9 albo starszy niż 8 ostatnich wdrożeń)`); continue; }
     const p = c.originalPositionFor({ line: +l, column: +col - 1 });
     notes.push(p.source ? `${p.source.replace(/^(\.\.\/)+/, '')}:${p.line}:${(p.column ?? 0) + 1}${p.name ? ` (${p.name})` : ''}` : `${file}:${l}:${col} → nie znaleziono`);
   }
