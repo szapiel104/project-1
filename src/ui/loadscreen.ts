@@ -109,9 +109,15 @@ export function loadingScene(): string {
 </svg>`;
 }
 
+declare const __VERSION__: string;
+declare const __BUILD__: string;
+/** Wersja i godzina buildu w rogu ekranu wczytywania — od razu widać, czy przeglądarka ma najnowszą (Ctrl+F5) */
+const VER = `v${typeof __VERSION__ === 'string' ? __VERSION__ : 'dev'}${typeof __BUILD__ === 'string' ? ` · ${__BUILD__}` : ''}`;
+
 /** Cały ekran wczytywania: pejzaż, herb z tytułem i dolna listwa z paskiem (identyfikatory dla boot.ts) */
 export function loadingMarkup(label: string, tip: string): string {
   return `${loadingScene()}
+  <p class="loading-ver">${VER}</p>
   <div class="loading-head"><div class="loading-crest">${CREST}</div><p class="loading-title">Project‑1</p><p class="loading-sub">${t('menu.subtitle')}</p></div>
   <div class="loading-card">
     <div class="ld-top">

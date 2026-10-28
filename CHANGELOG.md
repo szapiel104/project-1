@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.61.4 — wersja gry widoczna od razu na ekranie wczytywania (2026-10-28)
+
+- **W prawym górnym rogu ekranu wczytywania** numer wersji i godzina buildu (np. „v0.61.4 · 28.10, 16:20”). Widać je od pierwszej chwili, jeszcze zanim wczyta się kod gry (wpisane w sam `index.html` przy buildzie), i na ekranie wejścia do meczu. Od razu wiadomo, czy przeglądarka ma najnowszą wersję, czy trzeba Ctrl+F5
+- Bot: bez zmian (interfejs)
+
 ## 0.61.3 — rudera i namiot, rodziny i zwierzęta nie łażą po wodzie, jedno zwierzę na chatę (2026-10-28)
 
 - **Dwa nowe, tańsze mieszkania** (Mieszkania w menu budowy, przed chatą): **Rudera** (2×1, 10 drewna, 4 łóżka) — buda z krzywych, poszarzałych desek na słupach jak szałasy Starego Obozu, ze szparami, przez które prześwituje, płaskim dachem z desek i skórą zamiast drzwi (`tools/models/shack.py`); **Namiot** (1×1, 3 drewna, 2 łóżka, łatwo go zniszczyć) — płachta na żerdzi i dwóch rozwidlonych kijach, kołki i odciągi, słoma w środku, palenisko przed wejściem (`tools/models/tent.py`). Chata zostaje bez zmian (8 łóżek). Chłopi odpoczywają i śpią w każdym z trzech (`DWELLINGS`), kwarantanna działa tak samo, namiot pali połowę opału chaty. Przy ruderze mieszka gospodyni z najwyżej jednym dzieckiem i ma 1–2 rzeczy na podwórku; w namiocie nie ma rodziny ani pochodni. W namiocie dwa posłania wzdłuż, obok siebie
