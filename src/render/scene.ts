@@ -167,7 +167,7 @@ const ALE = RESOURCES.indexOf('ale');
 const FISHER = BUILDINGS.findIndex((b) => b.id === 'fisher');
 
 /** Budynki, w których pali się w piecu: z komina idzie dym */
-const SMOKY = new Set(['armory', 'house', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy', 'armorer']);
+const SMOKY = new Set(['armory', 'house', 'tent', 'bakery', 'brewery', 'tavern', 'keep', 'barracks', 'engineers', 'fletcher', 'poleturner', 'woodcutter', 'smithy', 'armorer']);
 
 /**
  * Renderer: czyta stan symulacji, nigdy go nie zmienia. Samodzielne części obrazu są w osobnych plikach
@@ -2563,7 +2563,7 @@ export class GameRenderer {
           : id === 'bakery' || id === 'brewery' ? busy.has(b.id) || (cold && !!b.worker)
           : id === 'tavern' ? !!b.worker && ((hour >= 17 && hour < 23) || cold)
           : id === 'keep' ? (hour >= 5 && hour < 21) || cold
-          : id === 'house' ? cold && home.has(b.id)
+          : id === 'house' || id === 'tent' ? cold && home.has(b.id)
           : cold && busy.has(b.id);
         list.push({ mesh, fx, smoke, burning: !!fire?.visible });
       }
@@ -4647,6 +4647,15 @@ export class GameRenderer {
       const bb = floor.geometry.boundingBox!;
       const idx = Math.max(0, (sleepers.get(u.home) ?? []).indexOf(u.id));
       let hx: number, fxl: number, z: number;
+      if (bb.max.x - bb.min.x < 0.9) {
+        // namiot: dwa posłania obok siebie, wzdłuż namiotu, głową pod tylną ścianą (w poprzek się nie mieszczą)
+        if (idx >= 2) { this.bedHidden = true; return null; }
+        const x = (bb.min.x + bb.max.x) / 2 + (idx ? 0.11 : -0.11);
+        floor.updateWorldMatrix(true, false);
+        const h = floor.localToWorld(this.bedA.set(x, bb.max.y, bb.min.z + 0.17));
+        const f = floor.localToWorld(this.bedB.set(x, bb.max.y, bb.min.z + 0.17 + L));
+        return [h.x, h.y, h.z, f.x, f.y, f.z];
+      }
       if (bb.max.x - bb.min.x > 1.6) {
         // duża sala (koszary zamku): rzędy posłań w poprzek, kilka kolumn, głowami do ściany
         const m = 0.16, cols = Math.max(1, Math.floor((bb.max.x - bb.min.x - 2 * m) / (L + 0.1)));

@@ -16,6 +16,8 @@ import { PLANK } from './plank';
 const KEEP_MODEL = model('keep');
 const TAVERN_MODEL = model('tavern');
 const HOUSE_MODEL = model('house');
+const SHACK_MODEL = model('shack');
+const TENT_MODEL = model('tent');
 const BARN_MODEL = model('barn');
 const GRANARY_MODEL = model('granary');
 const TORCH_MODEL = model('torch');
@@ -970,6 +972,20 @@ const BUILDERS: Record<string, Builder> = {
     blenderModel(g, HOUSE_MODEL as unknown as BlenderBuilding, flag);
     const p = (HOUSE_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  shack(g, _team, flag) {
+    // rudera z Blendera (tools/models/shack.py): buda z krzywych desek ze szparami, płaski dach z desek, skóra zamiast
+    // drzwi; w środku klepisko na 4 posłania, skrzynka i pieniek
+    blenderModel(g, SHACK_MODEL as unknown as BlenderBuilding, flag);
+    const p = (SHACK_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
+  },
+  tent(g, _team, flag) {
+    // namiot z płachty z Blendera (tools/models/tent.py): płótno na żerdzi i dwóch rozwidlonych kijach, słoma na 2 posłania,
+    // przed wejściem kamienie paleniska; bez pochodni przy wejściu (NO_TORCH)
+    blenderModel(g, TENT_MODEL as unknown as BlenderBuilding, flag);
+    const p = (TENT_MODEL as unknown as { pennant: [number, number, number] }).pennant;
+    pennant(g, flag, p[0], p[1], p[2]);
   },
   stockpile(g, _team, flag) {
     // skład z Blendera (tools/models/stockpile.py): plac z desek na legarach, płot z żerdzi z trzech stron, tablica z karbami,

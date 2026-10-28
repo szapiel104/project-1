@@ -2,17 +2,18 @@ import { touch } from './touch';
 import * as THREE from 'three';
 import { cat } from './cat';
 import { BUILDINGS, footprint } from '../data/buildings';
-import { TERRAIN } from '../data/terrain';
 import { FP, keepFront, type GameState } from '../sim/state';
 import { modelGeo, type ModelMesh } from './peasants';
 import { model } from './modelstore';
+import { dryLand } from './dryland';
+import { henCount, yardAnimal } from './yardanimals';
 import { horseGeometry, horseMaterial, horseWeights } from './horse';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const ANIMALS = model('animals');
 
 /**
  * Zwierzęta w osadzie — tylko w wyglądzie (symulacja ich nie zna, gra przez sieć zostaje zgodna):
- * kury grzebią przy chatach i uciekają przed przechodniami, świnie ryją przy chatach i polach,
+ * kury grzebią przy chatach i uciekają przed przechodniami, świnie ryją przy chatach i polach (każda chata chowa jeden rodzaj: yardAnimal),
  * przy koszarach stoi koń i skubie trawę, a po osadzie biega pies: chodzi za kimś z mieszkańców,
  * a nocą obszczekuje wilki pod palisadą.
  */
@@ -52,6 +53,7 @@ export class Village {
   private pigState = new Map<string, Critter>();
   private dogs = new Map<number, Dog>();
   private keeps: [number, number, number, number][] = [];
+  private ground: (x: number, y: number) => number = () => 1;
   private frame = 0;
   private m = new THREE.Matrix4();
   private p = new THREE.Matrix4();
@@ -92,7 +94,7 @@ export class Village {
     const t = ty * g.map.width + tx;
     // na dziedziniec i do sal zamku zwierzęta nie wchodzą (pole w zamku bywa wolne dla ludzi)
     for (const k of this.keeps) if (x >= k[0] && x < k[1] && y >= k[2] && y < k[3]) return false;
-    return g.occupancy[t] === 0 && TERRAIN[g.map.tiles[t] as keyof typeof TERRAIN]!.walkable;
+    return g.occupancy[t] === 0 && dryLand(g, this.ground, x, y); // nie woda, nie bród, nie zalany brzeg
   }
 
   /** Nowy cel wędrówki w promieniu `r` od domu (pole wolne) */
@@ -128,6 +130,7 @@ export class Village {
 
   sync(g: GameState, ctx: VillageCtx, people: { x: number; y: number; owner: number; moving: boolean; id: number }[]): void {
     this.frame++;
+    this.ground = ctx.height;
     this.keeps = g.buildings.filter((b) => b.type === 0 && !b.ruined).map((b) => { const d = BUILDINGS[0]!; return [b.x, b.x + d.w, b.y, b.y + d.h]; });
     const { width, height } = g.map, dt = ctx.calm ? 0 : Math.min(0.1, ctx.dt), time = ctx.time;
     const W2 = width / 2, H2 = height / 2;
@@ -145,13 +148,13 @@ export class Village {
     for (const b of g.buildings) {
       if (b.build || b.ruined || b.door < 0) continue;
       const id = BUILDINGS[b.type]!.id;
-      const house = id === 'house', farm = id === 'farm';
+      const farm = id === 'farm', beast = yardAnimal(id, b.id);
       const dx = (b.door % width) + 0.5, dy = Math.floor(b.door / width) + 0.5;
       // daleko od kamery zwierząt i tak nie widać: nie liczymy ich i nie rysujemy (stoją, aż kamera wróci)
       if (ctx.cam && Math.hypot(dx - ctx.cam.x, dy - ctx.cam.y) > 36 + ctx.cam.h * 0.4) continue;
       // kury przy chatach: grzebią i dziobią, przed przechodniem uciekają z trzepotem; nocą siedzą w kurniku
-      if (house && !sleep) {
-        const n = 2 + (b.id % 2);
+      if (beast === 'hens' && !sleep) {
+        const n = henCount(b.id);
         for (let k = 0; k < n && hens < MAX_HENS; k++) {
           const key = `${b.id}:${k}`;
           let c = this.hens.get(key);
@@ -175,8 +178,8 @@ export class Village {
           hens++;
         }
       }
-      // świnie: przy co trzeciej chacie jedna, przy polu dwie; ryją w ziemi, nocą leżą na boku
-      const pn = farm ? 2 : house && b.id % 3 === 0 ? 1 : 0;
+      // świnie: przy chacie, która chowa świnię, jedna; przy polu dwie; ryją w ziemi, nocą leżą na boku
+      const pn = farm ? 2 : beast === 'pig' ? 1 : 0;
       for (let k = 0; k < pn && pigs < MAX_PIGS; k++) {
         const key = `${b.id}:${k}`;
         let c = this.pigState.get(key);

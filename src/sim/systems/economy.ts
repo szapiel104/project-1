@@ -1,6 +1,6 @@
 import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
 import { RULES } from '../../data/rules';
-import { BUILDINGS } from '../../data/buildings';
+import { BUILDINGS, FUEL_SHARE } from '../../data/buildings';
 import { housing, population, type GameState, type PlayerState } from '../state';
 import { dayPart } from './workers';
 import { magesOf, ordersQuarrel } from './plague';
@@ -21,7 +21,7 @@ export function fuelNeed(g: GameState, p: PlayerState): number {
   const { chill } = weatherOf(g, rainAt(g.tick));
   if (!chill) return 0;
   let homes = 0;
-  for (const b of g.buildings) if (b.owner === p.id && !b.build && !b.ruined) { const id = BUILDINGS[b.type]!.id; if (id === 'house') homes++; else if (id === 'keep') homes += 2; }
+  for (const b of g.buildings) if (b.owner === p.id && !b.build && !b.ruined) { const id = BUILDINGS[b.type]!.id; if (FUEL_SHARE[id]) homes += FUEL_SHARE[id]!; else if (id === 'keep') homes += 2; }
   return (homes * chill * FUEL_PER_HOUSE_DAY * RULES.monthTicks) / RULES.dayTicks;
 }
 
@@ -41,7 +41,7 @@ export function winterReadiness(g: GameState, p: PlayerState): { days: number; f
   }
   chill /= n;
   let homes = 0;
-  for (const b of g.buildings) if (b.owner === p.id && !b.build && !b.ruined) { const id = BUILDINGS[b.type]!.id; if (id === 'house') homes++; else if (id === 'keep') homes += 2; }
+  for (const b of g.buildings) if (b.owner === p.id && !b.build && !b.ruined) { const id = BUILDINGS[b.type]!.id; if (FUEL_SHARE[id]) homes += FUEL_SHARE[id]!; else if (id === 'keep') homes += 2; }
   const fuel = Math.ceil(homes * chill * FUEL_PER_HOUSE_DAY * SEASON_DAYS);
   const f = monthlyForecast(g, p);
   const perDay = (f.food * RULES.dayTicks) / RULES.monthTicks;

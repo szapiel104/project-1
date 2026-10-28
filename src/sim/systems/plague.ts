@@ -1,4 +1,4 @@
-import { BUILDINGS } from '../../data/buildings';
+import { BUILDINGS, DWELLINGS } from '../../data/buildings';
 import { RULES } from '../../data/rules';
 import { rainAt } from '../clock';
 import { findPath } from '../path';
@@ -227,7 +227,7 @@ function plagueTick(g: GameState): void {
 }
 
 /** Chata, którą wolno zamknąć na kwarantannę (zwykła chata gracza, gotowa) */
-export const canQuarantine = (b: Building): boolean => BUILDINGS[b.type]!.id === 'house' && !b.build && !b.ruined;
+export const canQuarantine = (b: Building): boolean => DWELLINGS.has(BUILDINGS[b.type]!.id) && !b.build && !b.ruined;
 
 /**
  * Kwarantanna chaty: w środku leżą tylko chorzy (inni chorzy idą tu najpierw), zdrowi domownicy szukają łóżka gdzie indziej

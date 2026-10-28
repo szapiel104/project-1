@@ -1,5 +1,5 @@
 import { buildingById } from '../state';
-import { BUILDINGS, footprint, type ProductionDef } from '../../data/buildings';
+import { BUILDINGS, DWELLINGS, footprint, type ProductionDef } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex, type StoreKind } from '../../data/resources';
 import { RULES } from '../../data/rules';
 import { Terrain } from '../../data/terrain';
@@ -21,7 +21,8 @@ import { depositAt, freeIn, storeAtDoor, withdrawAt } from './stock';
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
 export const PAVE_TICKS = 40;
-const HOUSE = BUILDINGS.findIndex((b) => b.id === 'house');
+/** Mieszkania chłopów (chata, rudera, namiot) — numery typów */
+const HOMES = new Set(BUILDINGS.flatMap((b, i) => (DWELLINGS.has(b.id) ? [i] : [])));
 const TAVERN = BUILDINGS.findIndex((b) => b.id === 'tavern');
 /** Wieczór i sen: tych ludzi nikt nie wyciąga do roboty (inaczej wstawaliby w nocy i kładli się od nowa) */
 const OREMINE = BUILDINGS.findIndex((b) => b.id === 'oremine');
@@ -386,7 +387,7 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const restCamp = campOf(g, job);
       if (restCamp) return (t) => t === restCamp.door;
       const doors = new Set<number>();
-      for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && b.type === HOUSE && !b.quarantine) doors.add(b.door);
+      for (const b of g.buildings) if (b.owner === u.owner && b.door >= 0 && HOMES.has(b.type) && !b.quarantine) doors.add(b.door);
       return doors.size ? (t) => doors.has(t) : null;
     }
     case Phase.ToSite: {
@@ -511,7 +512,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.carryRes = -1; u.carryAmt = 0;
       u.phase = u.job ? Phase.Returning : Phase.Idle;
       // co kilka dostaw idzie posiedzieć w chacie, o ile jakaś stoi
-      if (++u.trips >= RULES.restEvery && (g.buildings.some((b) => b.owner === u.owner && b.type === HOUSE) || !!campOf(g, u.job ? buildingById(g, u.job) : undefined))) { u.trips = 0; u.phase = Phase.ToRest; }
+      if (++u.trips >= RULES.restEvery && (g.buildings.some((b) => b.owner === u.owner && HOMES.has(b.type)) || !!campOf(g, u.job ? buildingById(g, u.job) : undefined))) { u.trips = 0; u.phase = Phase.ToRest; }
       break;
     case Phase.ToRubble: {
       const i = g.rubble.findIndex((x) => x.id === u.target);
@@ -576,7 +577,7 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
     case Phase.ToRest: {
       const here = tileOf(g, u);
       const restCamp = campOf(g, u.job ? buildingById(g, u.job) : undefined);
-      const house = restCamp && restCamp.door === here ? restCamp : g.buildings.find((b) => b.owner === u.owner && b.type === HOUSE && b.door === here && !b.quarantine);
+      const house = restCamp && restCamp.door === here ? restCamp : g.buildings.find((b) => b.owner === u.owner && HOMES.has(b.type) && b.door === here && !b.quarantine);
       if (house) { u.home = house.id; u.phase = Phase.Resting; u.timer = RULES.restTicks; }
       else u.phase = u.job ? Phase.Returning : Phase.Idle;
       break;

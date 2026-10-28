@@ -15,6 +15,8 @@ import { Figures, modelGeo, type ModelMesh } from './peasants';
 import { tint } from './loads';
 import { grayPattern, normal, pattern } from './textures';
 import { model } from './modelstore';
+import { dryLand } from './dryland';
+import { yardAnimal } from './yardanimals';
 // modele z Blendera (pobrane wcześniej przez loadModels; same pliki w src/render/models)
 const YARD = model('yard');
 
@@ -47,6 +49,7 @@ interface Yard { dx: number; dy: number; fx: number; fy: number; props: Placed[]
 export interface FamilyCtx { time: number; dt: number; calm: boolean; height: (x: number, y: number) => number; fig: number; cam?: { x: number; y: number; h: number }; team: (owner: number) => number }
 
 const MAX = 160;
+const FAMILY_HOMES = new Set(['house', 'shack']);
 const CLOTH = [0xe8e0cc, 0xd8cfb4, 0xb8c4c8, 0xc8a890, 0xe0d8c0, 0xa8b498, 0x9a4a3a, 0x6a7a8a, 0xb89a5a];
 const rand = (): number => Math.random();
 const hashN = (a: number, b: number): number => { let h = (a * 2654435761 + b * 40503) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x2c1b3c6d); return (h ^ (h >>> 12)) >>> 0; };
@@ -104,6 +107,8 @@ export class Family {
   private members = new Map<string, Member>();
   private yards = new Map<number, Yard>();
   private frame = 0;
+  /** Wysokość terenu z ostatniego `sync` (do sprawdzania, czy pod stopami nie ma wody) */
+  private ground: (x: number, y: number) => number = () => 1;
   private t = new THREE.Object3D();
   private m = new THREE.Matrix4();
   private m2 = new THREE.Matrix4();
@@ -171,13 +176,15 @@ export class Family {
       const t = ty * W + tx, terr = g.map.tiles[t] as Terrain;
       if (tx === dTx && ty === dTy) return false; // drzwi
       if (tx === dTx + Math.round(fx) && ty === dTy + Math.round(fy)) return false; // przejście przed drzwiami
-      return g.occupancy[t] === 0 && !g.roads[t] && !g.reserved[t] && !clutterTaken.has(t) && TERRAIN[terr].walkable && terr !== Terrain.Forest;
+      return g.occupancy[t] === 0 && !g.roads[t] && !g.reserved[t] && !clutterTaken.has(t) && TERRAIN[terr].walkable && terr !== Terrain.Forest
+        && dryLand(g, this.ground, tx + 0.5, ty + 0.5); // balia ani grządka nie stoją w wodzie przy brzegu
     };
     const spots = ring.filter(([tx, ty]) => free(tx, ty));
     // kolejność pól i rzeczy z numeru chaty: każda chata ma inny zestaw i inny układ
     spots.sort((a, b) => hashN(h.id, a[0] * 977 + a[1]) - hashN(h.id, b[0] * 977 + b[1]));
     const pool = [...PROPS].sort((a, b) => hashN(h.id * 7, PROPS.indexOf(a)) - hashN(h.id * 7, PROPS.indexOf(b)));
-    const want = Math.min(spots.length, 2 + (hashN(h.id, 5) % 3));
+    const poor = BUILDINGS[h.type]!.id === 'shack'; // przy ruderze tylko 1–2 rzeczy
+    const want = Math.min(spots.length, (poor ? 1 : 2) + (hashN(h.id, 5) % (poor ? 2 : 3)));
     const props: Placed[] = [];
     for (let i = 0; i < want; i++) {
       const [tx, ty, nx, ny] = spots[i]!, prop = pool[i]!;
@@ -210,11 +217,12 @@ export class Family {
     const dx = m.tx - m.x, dy = m.ty - m.y, d = Math.hypot(dx, dy);
     if (d < 0.04) return 0;
     const st = Math.min(d, speed * dt), nx = m.x + (dx / d) * st, ny = m.y + (dy / d) * st;
-    const free = (x: number, y: number): boolean => { const tx = Math.floor(x), ty = Math.floor(y); return tx >= 0 && ty >= 0 && tx < g.map.width && ty < g.map.height && g.occupancy[ty * g.map.width + tx] === 0; };
+    // tylko po suchym lądzie i polach bez budynków: do wody (także płytkiej przy brzegu) nikt z rodziny nie wchodzi
+    const free = (x: number, y: number): boolean => dryLand(g, this.ground, x, y) && g.occupancy[Math.floor(y) * g.map.width + Math.floor(x)] === 0;
     if (free(nx, ny) || !free(m.x, m.y)) { m.x = nx; m.y = ny; }
     else if (free(nx, m.y)) m.x = nx;
     else if (free(m.x, ny)) m.y = ny;
-    else { m.x = nx; m.y = ny; }
+    else { m.tx = m.x; m.ty = m.y; return 0; } // cel za wodą albo za ścianą: staje i za chwilę wybierze inny
     this.face(m, Math.atan2(dx, dy), dt);
     return st / Math.max(dt, 1e-4);
   }
@@ -228,13 +236,15 @@ export class Family {
 
   sync(g: GameState, ctx: FamilyCtx): void {
     this.frame++;
+    this.ground = ctx.height;
     const dt = ctx.calm ? 0 : Math.min(0.1, ctx.dt), time = ctx.time;
     const { width, height } = g.map, W2 = width / 2, H2 = height / 2;
     const hour = clockAt(g.tick).hour;
     const home = hour >= 22 || hour < 5.5; // noc: wszyscy w domu
     const day = hour >= 6 && hour < 19.5;
     const tph = RULES.dayTicks * Math.max(0.001, dayFraction(Math.min(23.9, hour + 0.1)) - dayFraction(hour)) / 0.1;
-    const houses = g.buildings.filter((b) => BUILDINGS[b.type]!.id === 'house' && !b.build && !b.ruined && b.door >= 0);
+    // rodziny mieszkają w chatach i ruderach; w namiocie (2 łóżka) nie ma gospodyni z dziećmi ani podwórka
+    const houses = g.buildings.filter((b) => FAMILY_HOMES.has(BUILDINGS[b.type]!.id) && !b.build && !b.ruined && b.door >= 0);
     if (time - this.dutyAt > 3) {
       this.dutyAt = time;
       this.duty.clear();
@@ -296,7 +306,7 @@ export class Family {
       const danger = g.wolves.some((w) => w.hp > 0 && Math.abs(w.px / FP - hx) < 9 && Math.abs(w.py / FP - hy) < 9)
         || g.soldiers.some((s) => g.players[s.owner]?.team !== g.players[h.owner]?.team && Math.abs(s.px / FP - hx) < 9 && Math.abs(s.py / FP - hy) < 9);
       if (home || danger) continue;
-      const kids = h.id % 3;
+      const kids = BUILDINGS[h.type]!.id === 'shack' ? Math.min(1, h.id % 3) : h.id % 3; // w ruderze ciasno: najwyżej jedno dziecko
       const team = ctx.team(h.owner);
       for (let k = 0; k <= kids && n < MAX; k++) {
         const woman = k === 0;
@@ -322,7 +332,8 @@ export class Family {
         if (!lighting && woman) {
           // praca przy domu: co kilkanaście sekund inna, tylko taka, do której chata ma rzeczy
           const has = (p: Prop): Placed | undefined => yd.props.find((q) => q.prop === p);
-          const can: Chore[] = ['sweep', 'feed'];
+          // ziarno sypie tylko tam, gdzie chata chowa kury albo świnię
+          const can: Chore[] = yardAnimal(BUILDINGS[h.type]!.id, h.id) === 'none' ? ['sweep'] : ['sweep', 'feed'];
           for (const [c, p] of Object.entries(NEEDS) as [Chore, Prop][]) if (has(p)) can.push(c, c);
           const slot = Math.floor((time + h.id * 3.7) / 16);
           const chore: Chore = day ? can[hashN(h.id, slot) % can.length]! : has('bench') ? 'sit' : 'sweep';

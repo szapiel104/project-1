@@ -240,10 +240,19 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Chatka maga (tools/models/magehut.py): tani punkt dla jednego wędrownego maga — żeby choroby nie wybiły osady,
   // zanim stać ją na wieżę albo sanktuarium. Leczy słabiej i wolniej niż siedziby kręgów.
   { id: 'mageHut', category: 'settlement', name: 'b.mageHut', w: 2, h: 2, cost: { wood: 30, stone: 10 }, hp: 420, staff: true, buildable: true },
+  // Tańsze mieszkania (Michał 28.10.2026): rudera z desek jak szałasy Starego Obozu (tools/models/shack.py) — tania,
+  // ale tylko 4 łóżka; namiot z płachty (tools/models/tent.py) — prawie za darmo, 2 łóżka, na sam początek albo na szybko
+  { id: 'shack', category: 'settlement', name: 'b.shack', w: 2, h: 1, cost: { wood: 10 }, housing: 4, buildable: true },
+  { id: 'tent', category: 'settlement', name: 'b.tent', w: 1, h: 1, cost: { wood: 3 }, housing: 2, hp: 30, buildable: true },
 ];
 
+/** Mieszkania zwykłych chłopów (chata, rudera, namiot): tu wracają odpocząć i spać, tu bywa kwarantanna. Zamek liczy się osobno */
+export const DWELLINGS = new Set(['house', 'shack', 'tent']);
+/** Ile opału zjada mieszkanie na dobę w stosunku do chaty: namiot grzeje tylko małe ognisko przed wejściem */
+export const FUEL_SHARE: Readonly<Record<string, number>> = { house: 1, shack: 1, tent: 0.5 };
+
 /** Budynki bez słupa z pochodnią przy wejściu: obozowisko świeci ogniskiem, sad, pole, cmentarz i studnia nie potrzebują światła */
-export const NO_TORCH = new Set(['camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp', 'fieldTent', 'mageFire', 'mageWater', 'mageHut']);
+export const NO_TORCH = new Set(['tent', 'camp', 'orchard', 'farm', 'cemetery', 'well', 'banditCamp', 'fieldTent', 'mageFire', 'mageWater', 'mageHut']);
 
 export const buildingIndex = (id: string): number => BUILDINGS.findIndex((b) => b.id === id);
 /** Wieże z łucznikami: ilu łuczników mieści i o ile pól dalej z niej strzelają (ponad zwykłe +3 z wysokości) */

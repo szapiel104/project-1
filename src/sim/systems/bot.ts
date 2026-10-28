@@ -4,7 +4,7 @@ import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildin
 import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
 import { MAGE_CAP, SAPPER, UNITS } from '../../data/units';
 import { KEEP_SIZE } from '../../data/keep';
-import { FP, Phase, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
+import { FP, Phase, housing, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
 import { battleMages, orderAttack, orderGarrison, orderMove, train } from './army';
 import { canAfford, canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
@@ -17,6 +17,7 @@ import { Terrain } from '../../data/terrain';
 // kolejność pod koszty z data/buildings.ts: najpierw drewno i jedzenie, kopalnia pod górami zanim cokolwiek z kamienia
 // 'well' przy polach: latem w suszy sad i pole bez studni obok rodzą o połowę mniej (storms.ts), a studnia przydaje się też do gaszenia pożarów od piorunów
 // 'camp' dwa razy: pierwsze obozowisko stoi od startu, drugie daje miejsca na nowych przybyszów (bez wolnego miejsca przy ognisku nikt nie przychodzi)
+// rudera i namiot nie są na liście: bot stawia je tylko na szybko, gdy brak łóżek, a na chatę nie ma drewna (urgent niżej)
 const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine'];
 // druga kopalnia na samym końcu: kosztuje fortunę (BuildingDef.nextCost), więc bot stawia ją dopiero, gdy wszystko inne już stoi
 /** `mageSeat` na liście: siedziba zakonu magów — boty o parzystym numerze stawiają Sanktuarium Źródła, o nieparzystym Wieżę Płomienia;
@@ -142,7 +143,13 @@ export function botSystem(g: GameState): void {
     // bez żadnego składu na drewno (stodoła i składy zburzone) najpierw skład, potem drwal: drwal bez składu tylko zrzuca deski
     // pod chatą i staje (storage.ts). Drewno na skład zbiera w razie biedy wolny chłop (emergencywood.ts)
     const woodStore = (have.get('stockpile') ?? 0) + (have.get('barn') ?? 0) > 0;
-    const urgent = !woodStore ? 'stockpile' : !(have.get('woodcutter') ?? 0) ? 'woodcutter' : feeders * 6 < pop + 3 ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
+    const urgent0 = !woodStore ? 'stockpile' : !(have.get('woodcutter') ?? 0) ? 'woodcutter' : feeders * 6 < pop + 3 ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
+    // brak łóżek, a na chatę nie starcza drewna: na szybko rudera (najwyżej 3), a w biedzie namiot (najwyżej 2) — jak gracz,
+    // który łata osadę tanimi mieszkaniami, zanim stać go na porządne chaty
+    const roofless = !urgent0 && pop >= housing(g, p.id) && !affordable(g, p, buildingIndex('house'));
+    const urgent = urgent0 ?? (!roofless ? null
+      : (have.get('shack') ?? 0) < 3 && affordable(g, p, buildingIndex('shack')) ? 'shack'
+      : (have.get('tent') ?? 0) < 2 ? 'tent' : null);
     // pełny magazyn (storage.ts): warsztaty stoją, a towar leży pod drzwiami — bot stawia kolejny magazyn tego rodzaju
     // (spichlerza nie: pełny spichlerz to po prostu dużo jedzenia, a sady same ruszą, gdy ludzie zjedzą zapas)
     const storeNeed = fullStoreNeed(g, p.id);

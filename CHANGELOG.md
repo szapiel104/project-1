@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.61.3 — rudera i namiot, rodziny i zwierzęta nie łażą po wodzie, jedno zwierzę na chatę (2026-10-28)
+
+- **Dwa nowe, tańsze mieszkania** (Mieszkania w menu budowy, przed chatą): **Rudera** (2×1, 10 drewna, 4 łóżka) — buda z krzywych, poszarzałych desek na słupach jak szałasy Starego Obozu, ze szparami, przez które prześwituje, płaskim dachem z desek i skórą zamiast drzwi (`tools/models/shack.py`); **Namiot** (1×1, 3 drewna, 2 łóżka, łatwo go zniszczyć) — płachta na żerdzi i dwóch rozwidlonych kijach, kołki i odciągi, słoma w środku, palenisko przed wejściem (`tools/models/tent.py`). Chata zostaje bez zmian (8 łóżek). Chłopi odpoczywają i śpią w każdym z trzech (`DWELLINGS`), kwarantanna działa tak samo, namiot pali połowę opału chaty. Przy ruderze mieszka gospodyni z najwyżej jednym dzieckiem i ma 1–2 rzeczy na podwórku; w namiocie nie ma rodziny ani pochodni. W namiocie dwa posłania wzdłuż, obok siebie
+- **Woda:** gospodyni, dzieci, kury i świnie chodzą tylko po suchej ziemi (`render/dryland.ts`): nie wchodzą do wody, na bród ani na zalany brzeg stawu (trawa przy samej wodzie jest wygładzona w dół i bywała już pod taflą). Balia, grządka i reszta podwórka też nie stają w wodzie. Gdy cel jest za wodą, staje i wybiera inny, zamiast iść przez staw
+- **Zwierzęta przy chatach:** każda chata chowa jeden rodzaj (`render/yardanimals.ts`) — mniej więcej 4 na 10 chat ma kury (1–2), 3 na 10 jedną świnię, reszta nic; rudera najwyżej kury, namiot nic. Dotąd przy każdej chacie 2–3 kury plus świnia przy co trzeciej, więc 20 chat dawało stado. Gospodyni sypie ziarno tylko tam, gdzie coś jest
+- Tryb deweloperski: rudera i namiot nie stoją same przy twierdzy (chaty już tam są, a nowe budy przesuwały układ osady testowej)
+- **Bot:** stawia ruderę (najwyżej 3), gdy brakuje łóżek, a na chatę nie ma drewna, a w biedzie namiot (najwyżej 2); zwykłe chaty dalej z listy `ORDER`
 ## 0.61.2 — komnata królowej: widać ją z góry, drzwi otwarte (2026-10-28)
 
 - **Po kliknięciu własnej twierdzy** całe piętro donżonu nad komnatą królowej (izba straży, korona z blankami, wieżyczki, dach, komin, chorągiew) znika jak zwykły dach (`shell` w `tools/models/keep.py`), więc widać komnatę z góry. Dotąd było w `base` i zostawało
