@@ -158,7 +158,8 @@ export function install(): void {
   };
   console.warn = (...a: unknown[]): void => {
     rawWarn(...a);
-    report('console', 'warn', a.map(text).join(' '));
+    // stos też przy ostrzeżeniach: bez niego nie wiadomo, kto je woła (np. „THREE.Texture: Unable to serialize”)
+    report('console', 'warn', a.map(text).join(' '), new Error().stack?.split('\n').slice(2, 12).join('\n'));
   };
 
   const w = window as unknown as { __errors: (() => ErrReport) & { clear: () => void; text: () => string } };

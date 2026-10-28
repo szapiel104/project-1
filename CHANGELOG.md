@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.57.2 — dziennik błędów: stos także przy ostrzeżeniach (2026-10-28)
+
+- Ostrzeżenia w dzienniku (np. `THREE.Texture: Unable to serialize Texture`, które u Michała pojawia się co ok. 2 s) mają teraz stos wywołań, więc po skopiowaniu dziennika wiadomo, który kod je woła. To ostrzeżenie znaczy, że coś zamienia materiał albo teksturę na JSON — przy teksturach rysowanych na płótnie to kosztowne (kodowanie obrazka do PNG), więc warto znaleźć źródło
+- Bot: bez zmian
 ## 0.57.1 — poprawka: pochodnia nie świeci nad gruzem (2026-10-28)
 
 - **Zburzony budynek nie ma już pochodni w powietrzu:** gruz i plac budowy nie zapalają pochodni (`torches.ts`), a rysowanie płomieni i pula świateł pomijają zburzone budynki. Znaczniki pochodni i latarni zapamiętane z dawnego modelu są sprawdzane, czy jeszcze do niego należą i są widoczne — po przebudowie modelu szukamy ich od nowa, zamiast świecić w miejscu odpiętej części
