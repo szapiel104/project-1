@@ -84,6 +84,8 @@ export const RULES = {
   rubbleLoad: 8,
   /** Ilu ludzi naraz wynosi gruz z jednej rozbiórki */
   rubbleHaulers: 2,
+  /** Po tylu tickach bez pracy (5 minut gry) porzucona ruina albo nieuprzątnięty gruz rozpada się i znika */
+  decayTicks: 3000,
   /** Przy rozbiórce wraca tyle procent kosztu */
   refundPercent: 50,
   /** Kara do popularności za brak miejsc w domach */

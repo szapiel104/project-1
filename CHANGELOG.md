@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.55.1 — gruzowiska bez dymu, porzucone ruiny i gruz znikają po 5 minutach (2026-10-28)
+
+- **Gruzowisko po prostu leży:** kurz nad ruiną i placem budowy unosi się tylko wtedy, gdy ktoś przy nich pracuje (odbudowa albo pokazowa budowa) — wcześniej porzucona ruina dymiła w kółko
+- **Rozpad po 5 minutach gry:** ruina, której nikt nie odbudowuje (ani nie niesie na nią materiału, ani nie rozbierają jej saperzy wroga), rozpada się i znika bez gruzu, a działka jest znowu wolna. Stos gruzu po rozbiórce, którego nikt nie wynosi, też znika po 5 minutach — z resztą leżących w nim surowców. Każdy, kto zacznie przy nich pracę, liczy czas od zera (`sim/systems/decay.ts`, `RULES.decayTicks`, test `tests/decay.test.ts`)
+- Bot: ta sama zasada dla jego ruin i gruzu (bez zmian w kolejności budowy)
+
 ## 0.55.0 — wczytywanie bez zastoju przy budowie świata, cienie nowych budynków bez przycięcia (2026-10-28)
 
 - **„Budowanie świata i osady” etapami:** przy wejściu na stronę teren pierwszego świata (z zapisu albo nowy) buduje się w ok. 20–25 krokach z przerwą na klatkę, a nie jednym ciągiem (dotąd strona stała ok. 2 s, a pasek ani licznik się nie ruszały). Pod paskiem widać numer etapu terenu. Najdłuższy etap to ok. 0,25 s (pomiar w przeglądarce bez karty graficznej). Kamera z zapisu ustawia się po zbudowaniu terenu, jak dawniej. Tryb testowy `?test=1` buduje świat od razu, jak dotąd (pomocniki `__test` zakładają gotowy świat)

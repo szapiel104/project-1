@@ -156,6 +156,8 @@ export interface Building {
   shut?: boolean;
   /** Ruina po zniszczeniu: nie działa, a mur w tym miejscu da się przejść, dopóki go nie odbudują */
   ruined?: boolean;
+  /** Ruina: ile ticków nikt przy niej nie pracuje (po RULES.decayTicks rozpada się i znika) */
+  idle?: number;
   /** Ruina czeka na zapłatę za odbudowę (połowa kosztu budynku); dopóki nie zapłacone, nikt jej nie odbudowuje */
   unpaid?: boolean;
   /** Wroga ruina, którą rozbierają saperzy: ładunki, które jeszcze w niej leżą [indeks surowca, ilość] */
@@ -226,6 +228,8 @@ export interface Rubble {
   loads: [number, number][];
   /** Ile ładunków było na początku (żeby stos malał na oczach) */
   total: number;
+  /** Ile ticków nikt go nie wynosi (po RULES.decayTicks gruz rozpada się i znika) */
+  idle?: number;
 }
 
 export const enum Phase {

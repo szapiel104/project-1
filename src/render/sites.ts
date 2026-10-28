@@ -140,6 +140,9 @@ export class SiteLayer {
     const live = new Set<number>();
     const crew = new Set<number>();
     for (const u of g.units) if (u.phase === Phase.Repairing || u.phase === Phase.ToRepair) crew.add(u.target);
+    // kto akurat pracuje przy placu (kurz unosi się tylko wtedy — porzucona ruina czy pusty plac po prostu leżą)
+    const working = new Set<number>();
+    for (const u of g.units) if (u.phase === Phase.WorkingSite || u.phase === Phase.Repairing) working.add(u.target);
     const scaffolds: { b: GameState['buildings'][number]; k: number; cut: number; site: { base: number; top: number } }[] = [];
     for (const b of g.buildings) {
       const mesh = this.meshes.get(b.id);
@@ -199,7 +202,7 @@ export class SiteLayer {
       }
       for (const ch of mesh.children) if (SiteLayer.SITE_HIDE.has(ch.name)) ch.visible = false;
       scaffolds.push({ b, k, cut, site });
-      if (this.calm) continue;
+      if (this.calm || (!working.has(b.id) && qb === undefined)) continue;
       const next = this.dustAt.get(b.id) ?? 0;
       if (this.time > next) {
         const fp = footprint(def, b.rot);
@@ -208,6 +211,8 @@ export class SiteLayer {
       }
     }
     for (const id of [...this.sites.keys()]) if (!live.has(id)) this.endSite(id);
+    // ruina, która się rozpadła albo została rozebrana, zabiera ze sobą gruzowisko
+    for (const [id, p] of this.ruinPiles) if (!this.meshes.has(id) || !g.buildings.some((b) => b.id === id)) { this.layer.remove(p); this.ruinPiles.delete(id); }
     this.syncScaffolds(g, scaffolds);
   }
 
