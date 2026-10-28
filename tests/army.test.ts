@@ -362,6 +362,19 @@ describe('walka z charakterem', () => {
 const UNITS_ATTACK_ARCHER = 7;
 
 describe('wrodzy chłopi', () => {
+  it('rozkaz ataku na chłopa wygrywa z wrogim żołnierzem obok: nie przełącza się sam na wojaka', () => {
+    const g = clearBandits(createGame(7));
+    for (const p of g.players) p.bot = false;
+    const u = g.units.find((x) => x.owner === 1)!;
+    const tx = u.px >> 8, ty = u.py >> 8;
+    const s: Soldier = { id: g.nextId++, owner: 0, kind: unitIndex('archer'), px: (tx + 4) * FP + 128, py: ty * FP + 128, path: [], hp: 60, goal: -1, wait: 0, target: 0, cd: 0 };
+    const foe: Soldier = { id: g.nextId++, owner: 1, kind: unitIndex('spearman'), px: (tx + 6) * FP + 128, py: ty * FP + 128, path: [], hp: 60, goal: -1, wait: 999, target: 0, cd: 0 };
+    g.soldiers.push(s, foe);
+    step(g, [{ type: 'attack', player: 0, ids: [s.id], target: u.id }]);
+    step(g, []);
+    expect(s.prey).toBe(u.id);
+    expect(s.target).toBe(0);
+  });
   it('rozkaz ataku na chłopa: żołnierz go dopada, a chłop ucieka albo się słabo broni', () => {
     const g = clearBandits(createGame(7));
     for (const p of g.players) p.bot = false;

@@ -998,8 +998,12 @@ export function armySystem(g: GameState): void {
         if (foe) { s.siegeOf = s.target; s.target = foe.id; s.path = []; }
         else if (siege(g, s, def, taken)) continue;
       }
+      // chłop wskazany rozkazem gracza ma pierwszeństwo: żołnierz nie odwraca się do najbliższego wrogiego wojaka
+      // (wcześniej rozkaz „bij tego chłopa” przegrywał z samym szukaniem celu i dało się ich bić tylko odruchowo)
+      const hunted = s.prey ? unitById(g, s.prey) : undefined;
+      if (hunted) s.target = 0;
       let foe = s.target ? byId.get(s.target) : undefined;
-      if (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP) {
+      if (!hunted && (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP)) {
         foe = nearestFoe(s, range);
         s.target = foe ? foe.id : 0;
         // nowy cel: łucznik chwilę mierzy (każdy inaczej), więc kilku na wieży nie wypuszcza strzał w tej samej chwili

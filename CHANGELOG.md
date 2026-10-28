@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.55.4 — strzała leci w człowieka na murze, rozkaz ataku na chłopa (2026-10-28)
+
+- **Strzały i czary celują w narysowaną postać:** do wroga na koronie muru, na murach zamku albo na wieży strzała leci w pierś postaci (pozycja z obrazka), a nie w ziemię i mur pod nią. Dotąd cel liczył się tylko dla ziemi i wieży, więc do wroga na murze strzała wbijała się w lico muru, choć trafienie i obrażenia liczyły się poprawnie. To samo dla celowania w chłopów (wysokość jak ich postać)
+- **Ręczny atak na wrogich chłopów działa:** prawy klik na wrogiego chłopa przy zaznaczonym wojsku — żołnierze go gonią i biją, zamiast od razu odwracać się do najbliższego wrogiego wojaka (rozkaz przegrywał z samym szukaniem celu, więc chłopów dało się bić tylko odruchowo). Test w `tests/army.test.ts`
+- **Jaśniejszy komunikat o wozie z surowcami:** zamiast „Sojusznik odpadł — wóz wrócił do zamku (60 × kamień)” jest „Wóz nie dojechał do: [gracz] — ten gracz przegrał albo wyszedł z gry, więc nie miał kto go odebrać. Ładunek wrócił do Twoich zapasów (kamień: 60)”. We wszystkich komunikatach o wozach ładunek zapisany jako „kamień: 60” (po angielsku tak samo)
+- Bot: bez zmian (bot nie wydaje rozkazów na konkretnych chłopów; poprawka grafiki strzał dotyczy też jego łuczników)
 ## 0.55.3 — dużo więcej muzyki średniowiecznej, bez starych skrzypnięć (2026-10-28)
 
 - **Muzyka: 33 utwory zamiast 6.** Doszło 27 darmowych utworów z OpenGameArt (CC0 i CC BY): 16 na dzień (flety, lutnie, piszczałki, rondo, targ, żniwa), 8 na noc (lamenty, chorał mnichów, smyczki, lutniowa pieśń Johna Dowlanda z 1597 r.), 5 na bitwę, kilka do menu. Gra nie powtarza ostatnio granych utworów, dopóki w danym nastroju są inne

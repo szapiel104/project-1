@@ -232,6 +232,8 @@ export class GameRenderer {
   /** Wyjście nowego żołnierza z koszar: złote iskry w górę, błysk i „+1” (tylko wygląd) */
   /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
   private towerPose = new Map<number, [number, number]>();
+  /** Gdzie żołnierz był narysowany w poprzedniej klatce (świat): strzały celują w obrazek, także na wieży, murze i murach zamku */
+  private drawnAt = new Map<number, THREE.Vector3>();
   /** Strzały w locie (src/render/arrows.ts) */
   private arrows = new ArrowLayer(this.scene,
     (kind, at) => this.playHere(kind, at.x, at.z, 1, at.y),
@@ -3571,6 +3573,8 @@ export class GameRenderer {
     this.standards.begin();
     this.sapperDraw = [];
     let bandits = 0;
+    // pozycje poległych i zwolnionych żołnierzy nie wiszą w pamięci (sprzątanie, gdy uzbiera się zapas starych wpisów)
+    if (this.drawnAt.size > g.soldiers.length + 64) { const live = new Set(g.soldiers.map((x) => x.id)); for (const id of this.drawnAt.keys()) if (!live.has(id)) this.drawnAt.delete(id); }
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
       const prev = this.prevPos.get(s.id);
@@ -3694,6 +3698,7 @@ export class GameRenderer {
       if (walking && !s.up) this.footstep(g, s.id, px, pz, st.phase, 0.55);
       const y = this.standY(view, px, pz, s.up ? -1 : (s.py >> 8) * width + (s.px >> 8)) + lift;
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
+      { const d = this.drawnAt.get(s.id); if (d) d.copy(t.position); else this.drawnAt.set(s.id, t.position.clone()); }
       // przymrożony czarem wody: lód wokół stóp i chłodna poświata (spells.ts), dopóki czar trwa
       if ((s.slow ?? 0) > g.tick && !this.calm && s.hp > 0) this.spells.frost(t.position, s.id);
       // płonący po ognistej strzale albo kuli ognia: języki ognia na ubraniu, żar i dym (spells.ts), dopóki ogień nie zgaśnie
@@ -3708,17 +3713,21 @@ export class GameRenderer {
         let tx: number, ty: number, th: number;
         // dźwięk trafienia: w ciało, w zbroję (strażnik, zbrojny), w drewno albo w kamień muru; część strzał wbija się w ziemię obok
         let hit: WorldSound;
-        if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : 0.4; const fd = UNITS[foe.kind]; hit = Math.random() < 0.25 ? 'arrowDirt' : fd?.guard || fd?.id === 'manatarms' ? 'arrowMetal' : 'flesh'; }
-        else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = 0.35; hit = Math.random() < 0.25 ? 'arrowDirt' : 'flesh'; }
+        // wysokość celu jak jego obrazek (standY): na koronie muru, na murach zamku i na wieży — strzała leci w człowieka, nie w mur pod nim
+        if (foe) { tx = foe.px / FP; ty = foe.py / FP; th = foe.up ? 2.3 : this.standY(view, tx, ty, (foe.py >> 8) * width + (foe.px >> 8)) - view.heightAt(tx, ty) + 0.45; const fd = UNITS[foe.kind]; hit = Math.random() < 0.25 ? 'arrowDirt' : fd?.guard || fd?.id === 'manatarms' ? 'arrowMetal' : 'flesh'; }
+        else if (victim) { tx = victim.px / FP; ty = victim.py / FP; th = this.standY(view, tx, ty, (victim.py >> 8) * width + (victim.px >> 8)) - view.heightAt(tx, ty) + 0.4; hit = Math.random() < 0.25 ? 'arrowDirt' : 'flesh'; }
         else { const wd = BUILDINGS[wall!.type]!, fp = footprint(wd, wall!.rot); tx = wall!.x + fp.w / 2; ty = wall!.y + fp.h / 2; th = 0.8; hit = (wd.cost.stone ?? 0) > (wd.cost.wood ?? 0) ? 'arrowStone' : 'arrowWood'; }
         if (s.up && s.post) this.towerIcons.shot(s.post, this.time);
+        // cel: pierś narysowanego wroga (pozycja z poprzedniej klatki), a gdy go jeszcze nie ma — wyliczona wysokość
+        const seen = foe ? this.drawnAt.get(foe.id) : undefined;
+        const aim = seen ? new THREE.Vector3(seen.x, seen.y + 0.95, seen.z) : new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2);
         if (udef.magic) {
           // czar z dłoni: kula ognia albo wody leci do celu (trafienie liczy symulacja, to tylko wygląd)
           const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
-          this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.set(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), udef.magic === 'fire');
+          this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.copy(aim), udef.magic === 'fire');
           this.playHere('swing', t.position.x, t.position.z, 0.8, t.position.y + 1, udef.magic === 'fire' ? 0.7 : 1.3);
         } else {
-          this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), new THREE.Vector3(tx - width / 2, view.heightAt(tx, ty) + th, ty - height / 2), fireArrow(g, s), hit);
+          this.arrows.shoot(new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2), aim, fireArrow(g, s), hit);
           // puszczenie cięciwy (nagrania 0 A.D.) z miejsca łucznika, także z wieży
           this.playHere('bow', t.position.x, t.position.z, 1, t.position.y + 1);
         }
