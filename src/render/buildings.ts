@@ -67,7 +67,7 @@ type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
 /** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone, M.roadWood];
-const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, slate: 1.1, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5 };
+const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, slate: 1.1, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5, burlap: 2.4 }; // płótno drobniej (namioty: duże kratki wyglądały jak wiklina)
 /**
  * Magiczna ruda jak w Gothicu: głęboki granat i fiolet w plamach, gęsto nakrapiany białymi i błękitnymi iskrami.
  * Wzór rysowany raz na płótnie (to nie zdjęciowa tekstura z pattern(), więc KTX2 go nie dotyczy); iskry lekko świecą
@@ -204,6 +204,7 @@ function fillSlots(name: string, x: number, z: number, step = 0.54, cols = 3, ro
       const m = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.3, 0.46), M.wood);
       m.scale.setScalar(scale);
       m.position.set(x + ((i % cols) - (cols - 1) / 2) * step, 0.06 + (0.15 + layer * 0.31) * scale, z + (Math.floor(i / cols) - (rows - 1) / 2) * step);
+      m.userData.y0 = 0.06 + 0.15 * scale; m.userData.layer = layer;
       m.visible = false;
       fill.add(m);
     }
@@ -388,6 +389,18 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
   },
 };
 const pileMats = new Map<string, THREE.MeshStandardMaterial>();
+const pileHeights = new Map<string, number>();
+/** Wysokość jednej porcji (od spodu do wierzchu bryły) — o tyle wyżej leży następna warstwa */
+function pileHeight(id: string, geo: THREE.BufferGeometry): number {
+  let h = pileHeights.get(id);
+  if (h === undefined) {
+    geo.computeBoundingBox();
+    const b = geo.boundingBox!;
+    h = Math.max(0.05, (b.max.y - b.min.y) * 0.98);
+    pileHeights.set(id, h);
+  }
+  return h;
+}
 
 /**
  * Układa w składzie stosy surowców. Każdy surowiec dostaje własne miejsca i rośnie w górę,
@@ -416,6 +429,9 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
       for (let layer = 0; layer < STOCK_LAYERS && items > 0; layer++, items--) {
         const mesh = fill.children[layer * STOCK_SLOTS + slot] as THREE.Mesh;
         if (pile.geo) mesh.geometry = pile.geo;
+        // warstwa leży wprost na niższej (Michał 29.10.2026: „jeden na drugim, a nie przerwa”): co wysokość tej porcji,
+        // a nie co stałe 0,31 — niskie sztaby i deski wisiały wcześniej nad sobą w powietrzu
+        if (typeof mesh.userData.y0 === 'number') mesh.position.y = mesh.userData.y0 + layer * pileHeight(r.id, pile.geo) * mesh.scale.y;
         mesh.material = mat;
         mesh.visible = true;
       }

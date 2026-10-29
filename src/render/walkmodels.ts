@@ -21,6 +21,7 @@ export const ORCHARD_MODEL = model('orchard');
 export const FARM_MODEL = model('farm');
 export const CAMP_MODEL = model('camp');
 export const RAM_MODEL = model('ram');
+export const FIELDTENT_MODEL = model('fieldtent');
 /** Miejsca modlitwy przed kapliczką (układ modelu: środek działki, przód = +z): trzy przy klęczniku, potem dwa rzędy stojących */
 export const SHRINE_SPOTS: [number, number][] = [[-0.2, 0.5], [0.2, 0.5], [0, 0.52], [-0.35, 0.8], [0.35, 0.8], [0, 0.82], [-0.18, 1.05], [0.18, 1.05]];
 export const CAMP_SEATS = (CAMP_MODEL as unknown as { seats: [number, number, number][] }).seats;
@@ -35,7 +36,7 @@ export const KEEP_HALF = KEEP_SIZE / 2;
 /** Budynek z Blendera, do którego wchodzi się spacerem: prostokąty podłogi, przeszkody na swojej wysokości, wysokość posadzki */
 export interface WalkModel { floorY: number; open: [number, number, number, number][]; solid: [number, number, number, number, number, number][] }
 export const TAVERN = TAVERN_MODEL as unknown as WalkModel & { seats: [number, number, number][] };
-export const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, shack: SHACK_MODEL as unknown as WalkModel, tent: TENT_MODEL as unknown as WalkModel, shackL: SHACKL_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel, oremine: OREMINE_MODEL as unknown as WalkModel, minecamp: MINECAMP_MODEL as unknown as WalkModel };
+export const WALK_MODELS: Record<string, WalkModel> = { tavern: TAVERN, house: HOUSE_MODEL as unknown as WalkModel, shack: SHACK_MODEL as unknown as WalkModel, tent: TENT_MODEL as unknown as WalkModel, shackL: SHACKL_MODEL as unknown as WalkModel, barn: BARN_MODEL as unknown as WalkModel, orchard: ORCHARD_MODEL as unknown as WalkModel, farm: FARM_MODEL as unknown as WalkModel, oremine: OREMINE_MODEL as unknown as WalkModel, minecamp: MINECAMP_MODEL as unknown as WalkModel, fieldTent: FIELDTENT_MODEL as unknown as WalkModel };
 /** Kopalnia: miejsca pracy górników w grocie (x, z w układzie modelu, kierunek twarzy) — z tools/models/mine.py */
 export const MINE_SPOTS = (OREMINE_MODEL as unknown as { spots: [number, number, number][] }).spots;
 export const OREMINE_T = BUILDINGS.findIndex((d) => d.id === 'oremine');

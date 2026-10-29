@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.23 — zapasy w magazynach leżą jedne na drugich, namiot polowy poprawiony (2026-10-29)
+
+- **Zgłoszenie (magazyny i spichlerze):** warstwy towaru (sztaby, kamień, deski, worki…) stały co stałe 0,31, więc niskie porcje wisiały nad sobą z przerwą. Teraz każda warstwa leży wprost na niższej — co wysokość tej porcji (`setStockFill` w `render/buildings.ts`)
+- **Zgłoszenie (namiot polowy):** bez prostokąta ubitej ziemi przed wejściem (zostaje tylko pod namiotem); płótno drobniej tkane zamiast dużych kratek jak wiklina (dotyczy całego płótna: namioty, worki, liny); w spacerze kolizje z modelu — da się wejść do namiotu wejściem, obejść ognisko, beczkę i sznur z bandażami, a nie cała działka jest ścianą (`tools/models/fieldtent.py`, `walkmodels.ts`)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.22 — baraki górników nie dają darmowej armii (2026-10-29)
 
 - **Zgłoszenie:** każdy barak górników werbował dwóch strażników kopalni, więc kilka baraków obok siebie dawało całą darmową armię. Teraz straż (dwóch) ma tylko barak, który naprawdę obsługuje kopalnię — najbliższy jej gotowy barak. Pozostałe baraki nie werbują; ich dotychczasowi strażnicy (gdy nie walczą i nie eskortują wozu) wracają do wioski jako chłopi, a przerwane szkolenie oddaje chłopa (`sim/systems/minecamp.ts`)
