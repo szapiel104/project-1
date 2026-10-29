@@ -164,24 +164,25 @@ export class SpellLayer {
 
   /**
    * Wielki czar (greatspell.ts): `from` = dłoń maga, `at` = środek kręgu na ziemi, `flight` = sekundy do uderzenia.
-   * Ogień: mag wyrzuca w górę snop ognia, a z nieba spada pięć dużych kul na krąg (jedna w środek, reszta wokół).
+   * Ogień: mag wyrzuca w górę snop ognia, a z nieba spada siedem dużych kul na krąg (jedna w środek, reszta wokół).
    * Woda: duża kula leci prosto w środek i przy uderzeniu skuwa ziemię lodowym kręgiem.
    */
   great(from: THREE.Vector3, at: THREE.Vector3, fire: boolean, flight: number): void {
     for (let i = 0; i < 14; i++) this.emit(from, new THREE.Vector3((this.rand() - 0.5) * 0.8, 2 + this.rand() * 2.5, (this.rand() - 0.5) * 0.8), 0.45, fire ? 0 : 2, 0.035);
     if (!fire) {
-      this.shots.push({ from: from.clone(), to: at.clone().setY(at.y + 0.35), t: 0, fire, dur: Math.max(0.3, flight), seed: Math.random() * 100, k: 1.7, ice: true });
+      this.shots.push({ from: from.clone(), to: at.clone().setY(at.y + 0.35), t: 0, fire, dur: Math.max(0.3, flight), seed: Math.random() * 100, k: 2.2, ice: true }); // krąg dwóch pól (greatspell.ts)
       return;
     }
-    const n = 5;
+    // siedem kul na krąg dwóch pól (wielki czar mocniejszy od 29.10.2026)
+    const n = 7;
     for (let i = 0; i < n; i++) {
-      const a = i * 2.4 + this.rand(), r = i === 0 ? 0 : 0.55 + this.rand() * 0.6;
+      const a = i * 2.4 + this.rand(), r = i === 0 ? 0 : 0.7 + this.rand() * 1.0;
       const to = new THREE.Vector3(at.x + Math.cos(a) * r, at.y + 0.36, at.z + Math.sin(a) * r); // fala po ziemi rysuje się 0,36 niżej
       const sky = to.clone().add(new THREE.Vector3(1.2 + this.rand() * 0.6, 7 + this.rand() * 1.5, 0.9));
       const dur = 0.42;
       // pierwsza kula w chwili uderzenia z symulacji, kolejne tuż po niej
       const delay = Math.max(0, flight - dur) + i * 0.11;
-      this.shots.push({ from: sky, to, t: -delay / dur, fire, dur, seed: Math.random() * 100, k: i === 0 ? 1.9 : 1.45 });
+      this.shots.push({ from: sky, to, t: -delay / dur, fire, dur, seed: Math.random() * 100, k: i === 0 ? 2.2 : 1.6 });
     }
   }
 

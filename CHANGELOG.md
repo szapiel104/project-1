@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.65.24 — wielki czar magów mocniejszy, przerwa po nim minuta (2026-10-29)
+
+- **Zgłoszenie:** wielki czar maga Płomienia i maga Źródła bije teraz w krąg o promieniu dwóch pól (było półtora), w środku 2,2 raza mocniej od zwykłej kuli (ogień; lód połowę tego — wcześniej lód tylko połowę zwykłej kuli). Deszcz ognia pali dwa razy dłużej, lodowy krąg spowalnia ok. 26 s zamiast 16 s. Po czarze mag odpoczywa minutę (było 25 s). Siedem kul ognia zamiast pięciu i szerszy krąg lodu na obrazie (`sim/systems/greatspell.ts`, `render/spells.ts`); pomoc po polsku i angielsku
+- Bot: jego magowie mają ten sam czar
+
 ## 0.65.23 — zapasy w magazynach leżą jedne na drugich, namiot polowy poprawiony (2026-10-29)
 
 - **Zgłoszenie (magazyny i spichlerze):** warstwy towaru (sztaby, kamień, deski, worki…) stały co stałe 0,31, więc niskie porcje wisiały nad sobą z przerwą. Teraz każda warstwa leży wprost na niższej — co wysokość tej porcji (`setStockFill` w `render/buildings.ts`)
