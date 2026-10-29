@@ -70,7 +70,7 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 - **Wyprawa pana:** pan zamku jako postać na polu bitwy (dowódca: wojsko obok bije mocniej), powiązane z progresją z `progresja.md`; gdy padnie, wraca do zamku ranny na dobę.
 
 ## Bitwa i klimat — propozycje z 28.10.2026 (Michał wybrał strzały i kruki, 0.64.11; reszta tutaj na później)
-- **Krew w trakcie walki — zrobione 29.10.2026 (0.65.7):** prysk przy trafieniu, krople za ciężko rannym (`render/bloodfx.ts`). Dalej: krew na ostrzu i ubraniu rannego, prysk także u chłopów i wilków.
+- **Krew w trakcie walki — zrobione 29.10.2026 (0.65.7):** prysk przy trafieniu, krople za ciężko rannym (`render/bloodfx.ts`). Prysk u chłopów i wilków zrobiony 29.10 (0.65.9). Dalej: krew na ostrzu i ubraniu rannego.
 - **Strzały wbite w żywych:** dziś strzały tkwią w ciałach poległych, w ziemi i w ścianach (`render/arrows.ts`); w żyjących nie, bo trzeba by je wiązać z ruchem postaci.
 - **Las w większych paczkach** — sprawdzone 28.10: niepotrzebne, las to już tylko ok. 30 wywołań (punkt 2 planu na górze).
 - **Szybsze szukanie dróg** (punkt 9 planu optymalizacji na górze).
@@ -126,8 +126,8 @@ Zrobione 16.10 wieczorem: skryba przed zimą — zapowiedź na początku jesieni
 
 Czeka:
 - Zboże i sad: zimą nie rosną (farma i sad stoją), wiosną siew, latem zbiory
-- Rybak zimą łowi mniej (lód przy brzegu)
-- Ludzie zimą chodzą w grubszych ubraniach, para z ust
+- ~~Rybak zimą łowi mniej (lód przy brzegu)~~ — zrobione 29.10 (0.65.9)
+- Ludzie zimą chodzą w grubszych ubraniach (para z ust zrobiona 29.10, 0.65.9)
 
 ## Lista na kolejne partie (12.10.2026) — Claude podpowiada z niej, gdy Michał pyta „co dalej”
 Kierunek: klimat Gothic 1/2 — surowo, brudno, mroczno, żywy świat.

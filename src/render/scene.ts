@@ -28,6 +28,7 @@ import { Flames, flameSprite } from './flames';
 import { Blaze, burnBox } from './blaze';
 import { ScorchLayer } from './scorch';
 import { WolfLayer } from './wolves';
+import { PEASANT_HP, WOLF_HP } from '../sim/systems/wolves';
 import { ArrowLayer, MAX_ARROWS } from './arrows';
 import { RallyFlags, TowerIcons } from './rally';
 import { GateMotion } from './gates';
@@ -65,6 +66,7 @@ import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { applyCrest, defaultCrest } from './banners';
 import { BloodStains } from './blood';
 import { BloodFx } from './bloodfx';
+import { BreathFx } from './breath';
 import type { Stick } from './arrows';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, buildingById, type GameState } from '../sim/state';
 import { towerEntry, towerUnder } from '../sim/systems/stonewalls';
@@ -726,6 +728,7 @@ export class GameRenderer {
   private planks: THREE.InstancedMesh;
   private time = 0;
   private bloodFx!: BloodFx;
+  private breath!: BreathFx;
   private bloodGround: (x: number, z: number) => number = () => 0;
   /** Bez animacji (tylko na życzenie: ?spokoj=1). Systemowe „ogranicz ruch” zatrzymywało wszystkie animacje w grze (ludzie sunęli, bramy stały) */
   private calm = new URLSearchParams(location.search).has('spokoj');
@@ -889,6 +892,7 @@ export class GameRenderer {
     this.banditBodies = new Figures(256, this.scene, 'bandit');
     this.stains = new BloodStains(MAX_UNITS); // krew: nieregularna plama, rozlewa się i ciemnieje (render/blood.ts)
     this.scene.add(this.stains.mesh);
+    this.breath = new BreathFx(this.scene); // para z ust na mrozie (render/breath.ts)
     this.bloodFx = new BloodFx(this.scene); // krew w walce: prysk przy trafieniu, krople za ciężko rannym (render/bloodfx.ts)
     this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.13, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false, toneMapped: false, fog: false }), MAX_UNITS);
     this.dots.count = 0;
@@ -2298,6 +2302,7 @@ export class GameRenderer {
     this.time += dt;
     this.frameDt = dt;
     this.dust.update(dt);
+    this.breath?.update(dt);
     this.updateRain(dt);
     this.skyDome.update({ camera: this.cam.camera, rain: this.rain, cover: this.cover, dayMist: this.dayMist, night: this.night, time: this.time, sunDir: this.sunDir, hour: this.state ? clockAt(this.state.tick).hour : 12 });
     if (this.state) this.setDaylight(this.menuNight ? MENU_HOUR : this.alwaysDay ? 11 : clockAt(this.state.tick).hour);
@@ -2337,7 +2342,7 @@ export class GameRenderer {
       this.syncCrowdSound(g, v);
       T('wojsko', () => { this.syncSoldiers(g, v, alpha); this.placeFoeMark(); });
       T('klimat', () => { this.syncAmbience(g, v, dt); this.syncFlames(g); });
-      T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.forestEyes.sync(g, v, { time: this.time, calm: this.calm, night: this.night }); this.syncVillage(g, v, dt); });
+      T('zwierzęta', () => { this.wolves.sync(g, v, alpha, { time: this.time, calm: this.calm, night: this.night, prevPos: this.prevPos }); this.wolfBlood(g); this.crowLayer.sync(g, v, { time: this.time, calm: this.calm }); this.forestEyes.sync(g, v, { time: this.time, calm: this.calm, night: this.night }); this.syncVillage(g, v, dt); });
       T('budynki razem', () => this.syncBatches());
       T('kadr', () => { this.cullInstances(); this.cullVegetation(v); });
     }
@@ -3723,6 +3728,16 @@ export class GameRenderer {
   /** Żołnierze gracza z położeniem na ekranie (piksele w oknie) */
   /** Położenia wilków w świecie (do pasków zdrowia nad nimi) */
   private get wolfPos(): Map<number, THREE.Vector3> { return this.wolves.wolfPos; }
+  /** Krew wilków: trafiony wilk pryska krwią nisko przy ziemi, ciężko ranny gubi krople (render/bloodfx.ts) */
+  private wolfBlood(g: GameState): void {
+    for (const w of g.wolves) {
+      if (w.hp >= WOLF_HP && !this.bloodFx.knows(w.id)) continue;
+      const p = this.wolfPos.get(w.id);
+      if (!p || w.hp <= 0) continue;
+      const x = p.x + g.map.width / 2, z = p.z + g.map.height / 2;
+      this.bloodFx.track(w.id, w.hp, WOLF_HP, x, p.y, z, (w.id * 2.39996) % (Math.PI * 2), true, this.time, this.bloodGround, 0.12, true);
+    }
+  }
   /** Wilki na ekranie: punkt nad grzbietem i zdrowie */
   wolvesOnScreen(): { id: number; x: number; y: number; hp: number }[] {
     if (!this.state) return [];
@@ -4014,6 +4029,7 @@ export class GameRenderer {
       if (!udef.ram && s.hp > 0 && y > -10) {
         const gy = view.heightAt(px, pz);
         this.bloodFx.track(s.id, s.hp, udef.hp, px, y, pz, heading, walking && y - gy < 0.2, this.time, this.bloodGround);
+        if (!this.calm) this.breath.breathe(s.id, t.position.x, t.position.y + 0.42, t.position.z, heading, this.time, this.camPos, !!foe || (walking && !!s.run));
       }
       if (walking && !s.up) this.feet.set(s.id, [px, pz, y]); // ślady butów: tam, gdzie naprawdę stoi na ekranie
       { const d = this.drawnAt.get(s.id); if (d) d.copy(t.position); else this.drawnAt.set(s.id, t.position.clone()); }
@@ -4520,6 +4536,7 @@ export class GameRenderer {
     if (!g) return;
     if ((this.seasonScan -= dt) <= 0) { this.seasonScan = 3; for (const m of applySeason(this.scene)) this.pre.watch(m); }
     const w = weatherOf(g, this.rain);
+    this.breath?.setTemp(w.temp);
     const p = yearPos(g.tick, g.seasonShift ?? 0);
     const sm = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
     // liście: żółkną od początku jesieni, opadają pod jej koniec, wiosną odrastają
@@ -5012,6 +5029,9 @@ export class GameRenderer {
       const footY = this.standY(view, cv.sx, cv.sy, (u.py >> 8) * width + (u.px >> 8));
       t.position.set(cv.sx - width / 2, footY + (walking ? Math.abs(Math.cos(stride)) * 0.025 : 0), cv.sy - height / 2);
       if (walking) this.feet.set(u.id, [cv.sx, cv.sy, footY]); // ślady butów: miejsce i wysokość stóp z ekranu
+      // krew: chłop raniony przez wilka albo wroga pryska krwią, ciężko ranny gubi krople (render/bloodfx.ts)
+      if ((u.hp ?? PEASANT_HP) < PEASANT_HP || this.bloodFx.knows(u.id)) this.bloodFx.track(u.id, u.hp ?? PEASANT_HP, PEASANT_HP, cv.sx, footY, cv.sy, heading, walking, this.time, this.bloodGround, 0.24, true);
+      if (!this.calm) this.breath.breathe(u.id, t.position.x, footY + 0.4, t.position.z, heading, this.time, this.camPos, false);
       t.rotation.set(0, heading, 0);
       if (walking && tipsy && this.drank.has(u.id)) {
         // zatacza się: znosi go na boki (prostopadle do drogi), kiwa się i kręci głową

@@ -317,7 +317,7 @@ export const en: Record<TextKey, string> = {
   'b.torch': 'Torch',
   'd.torch': 'A torch on a post. At dusk someone has to walk up and light it: idle peasants do it, and when there are none, workers on their way home.',
   'b.fisher': 'Fisherman’s hut',
-  'd.fisher': 'The fisherman fishes from the shore of the nearest water and takes the fish to the granary. Must stand near water.',
+  'd.fisher': 'The fisherman fishes from the shore of the nearest water and takes the fish to the granary. Must stand near water. In winter ice closes in along the shore and he lands but half his catch.',
   'b.barn': 'Barn',
   'd.barn': 'Holds 250 goods (wood, stone, iron, ale) and, separately, 200 grain — wheat and flour. Two storekeepers work here, carrying in whatever the workers left at the door while it was full. Stands by the keep from the start; you can take it down and rebuild it in a better spot.',
   'd.camp': 'A shelter with benches and a campfire for 6 idle peasants. Without free places no new people arrive: give them work or build another camp.',

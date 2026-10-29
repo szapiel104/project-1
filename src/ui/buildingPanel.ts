@@ -13,7 +13,7 @@ import { engineerJob } from '../sim/systems/army';
 import { GUARDS, GUARD_COST } from '../sim/systems/guards';
 import { CAMP_GUARDS, campOf } from '../sim/systems/minecamp';
 import { buildWork, maxHp, rebuildCost, rebuildShort } from '../sim/systems/placement';
-import { crewWanted, MINE_YIELDS } from '../sim/systems/workers';
+import { crewWanted, MINE_YIELDS, siteTicks } from '../sim/systems/workers';
 import { mageKindOf, magesOf, ordersQuarrel, sickCount } from '../sim/systems/plague';
 import type { BuildingInfo } from './hud';
 
@@ -76,7 +76,7 @@ export function prodInfo(game: GameState, b: GameState['buildings'][number], nam
     input: pr.input ? { id: pr.input.res, n: pr.input.amount, name: resName(pr.input.res) } : undefined,
     output: { id: pr.output.res, n: pr.output.amount, name: resName(pr.output.res) },
     alts: undefined as { id: string; n: number; name: string; pct: number }[] | undefined,
-    secs: Math.round((pr.workTicks + (pr.processTicks ?? 0)) / TICKS_PER_SECOND),
+    secs: Math.round((siteTicks(game, pr) + (pr.processTicks ?? 0)) / TICKS_PER_SECOND),
     place,
   } : undefined;
   // pracownik: kto i co robi teraz; postęp roboty w warsztacie albo w terenie
@@ -84,7 +84,7 @@ export function prodInfo(game: GameState, b: GameState['buildings'][number], nam
   if (u) {
     let pct: number | undefined;
     if (pr && u.phase === Phase.Working) { const total = (pr.input ? pr.workTicks : pr.processTicks) ?? pr.workTicks; pct = Math.round(100 * (1 - u.timer / Math.max(1, total))); }
-    else if (pr && u.phase === Phase.WorkingSite) pct = Math.round(100 * (1 - u.timer / Math.max(1, pr.workTicks)));
+    else if (pr && u.phase === Phase.WorkingSite) pct = Math.round(100 * (1 - u.timer / Math.max(1, siteTicks(game, pr))));
     worker = { name: nameOf(u.id), doing: t(`phase.${u.phase}`), pct: pct === undefined ? undefined : Math.max(0, Math.min(100, pct)) };
   }
   // stan: co blokuje robotę (najważniejsze pierwsze)

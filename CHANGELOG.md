@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.65.9 — para z ust zimą, rybak pod lodem, krew chłopów i wilków (2026-10-29)
+
+- **Para z ust:** przy temperaturze poniżej ok. 2°C ludzie i żołnierze co kilka sekund wypuszczają przed siebie mały obłoczek pary; przy mrozie większy, w walce i w biegu częściej. Tylko blisko kamery, jedna wspólna siatka (`render/breath.ts`)
+- **Rybak zimą łowi o połowę mniej:** przy brzegu lód, połów trwa dwa razy dłużej (`siteTicks` w `workers.ts`, okno budynku pokazuje prawdziwy czas). Skryba w zapowiedzi zimy ostrzega o tym, gdy masz rybaka; opis rybaka po polsku i angielsku
+- **Krew u chłopów i wilków:** chłop raniony przez wilka albo wroga i trafiony wilk pryskają kroplami jak żołnierze, ciężko ranni gubią krople, idąc (`render/bloodfx.ts`)
+- Bot: rybak bota też łowi zimą wolniej (ta sama zasada); reszta to sam wygląd
+
 ## 0.65.8 — strażnicy miejscy goją się poza walką (2026-10-29)
 
 - **Zgłoszenie:** strażnik miejski, który nie walczy (bez celu, bez świeżego ciosu, bez wroga ani wilka w promieniu 6 pól), odzyskuje 1 punkt zdrowia co 2 s — od ledwo żywego do pełna w ok. 2 minuty. Nie musi iść do twierdzy, goi się na swoim posterunku i obchodzie

@@ -1,5 +1,6 @@
 /**
- * Krew w trakcie walki (Michał 29.10.2026, pomysł z „Bitwy i klimatu”): przy każdym trafieniu krótki prysk kropli,
+ * Krew w trakcie walki (Michał 29.10.2026, pomysł z „Bitwy i klimatu”): przy każdym trafieniu żołnierza, chłopa albo
+ * wilka krótki prysk kropli,
  * które lecą łukiem w bok i w tył od trafionego i spadają na ziemię jako drobne plamki; ciężko ranny (poniżej
  * połowy zdrowia), idąc, gubi co kawałek kroplę. Plamki ciemnieją i po ok. minucie znikają.
  *
@@ -43,17 +44,25 @@ export class BloodFx {
     scene.add(this.stains.mesh);
   }
 
+  /** Czy ta postać jest już śledzona (zdrowy, ale niedawno ranny — śledzimy dalej, żeby złapać kolejny cios) */
+  knows(id: number): boolean { return this.seen.has(id); }
+
   private rnd(): number { this.seed = (this.seed * 16807) % 2147483647; return this.seed / 2147483647; }
 
   /**
    * Żołnierz w tej klatce: `x, z` na mapie (pola), `y` stopy, `heading` dokąd patrzy. Spadek zdrowia = trafienie.
    * `ground(x, z)` = wysokość terenu (tam spadają krople).
    */
-  track(id: number, hp: number, maxHp: number, x: number, y: number, z: number, heading: number, walking: boolean, time: number, ground: (x: number, z: number) => number): void {
+  track(id: number, hp: number, maxHp: number, x: number, y: number, z: number, heading: number, walking: boolean, time: number, ground: (x: number, z: number) => number, chest = 0.28, wasFull = false): void {
     const tr = this.seen.get(id);
-    if (!tr) { this.seen.set(id, { hp, x, z, walked: 0, seen: this.frame }); return; }
+    if (!tr) {
+      // `wasFull`: chłopa i wilka zaczynamy śledzić dopiero po pierwszym ciosie — wtedy przed chwilą był zdrowy
+      this.seen.set(id, { hp: wasFull ? maxHp : hp, x, z, walked: 0, seen: this.frame });
+      if (!wasFull || hp >= maxHp) return;
+      return this.track(id, hp, maxHp, x, y, z, heading, walking, time, ground, chest);
+    }
     tr.seen = this.frame;
-    if (hp < tr.hp) this.spray(x, y, z, heading, Math.min(1, (tr.hp - hp) / Math.max(1, maxHp) * 4));
+    if (hp < tr.hp) this.spray(x, y + chest, z, heading, Math.min(1, (tr.hp - hp) / Math.max(1, maxHp) * 4));
     tr.hp = hp;
     // ciężko ranny gubi krople: co ok. 0,7 pola drogi (im słabszy, tym częściej)
     const step = Math.hypot(x - tr.x, z - tr.z);
@@ -75,7 +84,7 @@ export class BloodFx {
     for (let i = 0; i < n; i++) {
       if (this.drops.length >= AIR) this.drops.shift();
       const a = heading + Math.PI + (this.rnd() - 0.5) * 2.2, sp = 0.5 + this.rnd() * 0.9 * (0.6 + power);
-      this.drops.push({ x, y: y + 0.28 + this.rnd() * 0.1, z, vx: Math.sin(a) * sp, vy: 0.4 + this.rnd() * 0.9, vz: Math.cos(a) * sp, t: 0, size: 0.008 + this.rnd() * 0.008 });
+      this.drops.push({ x, y: y + this.rnd() * 0.1, z, vx: Math.sin(a) * sp, vy: 0.4 + this.rnd() * 0.9, vz: Math.cos(a) * sp, t: 0, size: 0.008 + this.rnd() * 0.008 });
     }
   }
 

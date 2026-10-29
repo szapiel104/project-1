@@ -311,7 +311,7 @@ export const pl = {
   'b.torch': 'Pochodnia',
   'd.torch': 'Pochodnia na słupie. O zmierzchu ktoś musi do niej podejść i ją zapalić: robią to chłopi bez pracy, a gdy ich brakuje, wracający pracownicy.',
   'b.fisher': 'Chata rybaka',
-  'd.fisher': 'Rybak łowi na brzegu najbliższej wody i odnosi ryby do spichlerza. Musi stać blisko wody.',
+  'd.fisher': 'Rybak łowi na brzegu najbliższej wody i odnosi ryby do spichlerza. Musi stać blisko wody. Zimą przy brzegu jest lód i rybak łowi o połowę mniej.',
   'b.barn': 'Stodoła',
   'd.barn': 'Mieści 250 towarów (drewno, kamień, żelazo, piwo) i osobno 200 zboża — pszenicę i mąkę. Pracuje w niej dwóch magazynierów: wnoszą towar, który robotnicy zostawili pod drzwiami, gdy było pełno. Stoi od początku przy twierdzy; można ją rozebrać i postawić w lepszym miejscu.',
   'd.camp': 'Wiata z ławami i ogniskiem na 6 chłopów bez pracy. Gdy brakuje wolnych miejsc, nowi ludzie nie przychodzą: daj im pracę albo dobuduj obozowisko.',

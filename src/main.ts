@@ -1815,7 +1815,10 @@ function winterNotes(p: (typeof game.players)[number]): void {
     const w = winterReadiness(game, p), short = w.wood < w.fuel, hungry = w.foodDays < SEASON_DAYS;
     const fuel = short ? tx(`drewna na opał za mało: potrzeba ok. ${w.fuel}, w składzie ${w.wood}. Postawcie drwali`, `we lack firewood: about ${w.fuel} is needed and the stockpile holds ${w.wood}. Set woodcutters to work`) : tx(`drewna na opał starczy (potrzeba ok. ${w.fuel}, jest ${w.wood})`, `there is firewood enough (about ${w.fuel} needed, ${w.wood} in store)`);
     const food = hungry ? tx(`, a jedzenia ledwie na ${n(Math.max(0, w.foodDays))} dni — zróbcie zapasy w spichlerzu`, `, and food for barely ${n(Math.max(0, w.foodDays))} days — fill the granary`) : '';
-    scribe.say('winterSoon', tx(`Panie, za ${Math.max(1, Math.round(w.days))} dni zima: ${fuel}${food}.`, `My lord, winter comes in ${Math.max(1, Math.round(w.days))} days: ${fuel}${food}.`), short || hungry);
+    // rybacy zimą łowią o połowę mniej (lód przy brzegu, workers.ts): ostrzeżenie tylko dla tych, którzy mają rybaka
+    const fishers = game.buildings.some((b) => b.owner === p.id && !b.build && !b.ruined && BUILDINGS[b.type]!.id === 'fisher');
+    const ice = fishers ? tx(' Przy brzegu stanie lód — rybacy złowią o połowę mniej.', ' Ice will close in along the shore — the fishermen will land but half their catch.') : '';
+    scribe.say('winterSoon', tx(`Panie, za ${Math.max(1, Math.round(w.days))} dni zima: ${fuel}${food}.`, `My lord, winter comes in ${Math.max(1, Math.round(w.days))} days: ${fuel}${food}.`) + ice, short || hungry);
   }
   if (crossed(0.75)) {
     const w = winterReadiness(game, p);

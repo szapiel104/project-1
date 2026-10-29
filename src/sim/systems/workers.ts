@@ -13,6 +13,14 @@ import { plantSapling } from './forestry';
 import { chopStep, heldTiles, takeHeld } from './emergencywood';
 import { mageKindOf } from './plague';
 import { harvestPct } from './storms';
+import { seasonAt } from '../weather';
+
+/** Ile razy dłużej rybak łowi zimą (lód przy brzegu) */
+export const FISH_WINTER = 2;
+/** Ile ticków trwa robota w terenie teraz (rybak zimą dwa razy dłużej) */
+export function siteTicks(g: GameState, prod: ProductionDef): number {
+  return prod.workTicks * (prod.output.res === 'fish' && seasonAt(g.tick, g.seasonShift ?? 0) === 'winter' ? FISH_WINTER : 1);
+}
 import { feastDay, goesToPray } from './faith';
 import { dropPile, isStore, spareKeeper, stalledStep, takePile } from './storage';
 import { liftCorpse } from './bearers';
@@ -473,7 +481,8 @@ function arrive(g: GameState, u: Unit, prod: ProductionDef | undefined): void {
       u.phase = Phase.Working; u.timer = (prod?.input ? prod.workTicks : prod?.processTicks) ?? prod?.workTicks ?? 0;
       break;
     case Phase.ToSite:
-      u.phase = Phase.WorkingSite; u.timer = prod?.workTicks ?? 0;
+      // rybak zimą łowi o połowę wolniej: przy brzegu lód, ryba schodzi głębiej (Michał 29.10.2026)
+      u.phase = Phase.WorkingSite; u.timer = prod ? siteTicks(g, prod) : 0;
       break;
     case Phase.ToPlant:
       u.phase = Phase.Planting; u.timer = RULES.plantTicks;

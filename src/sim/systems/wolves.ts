@@ -15,7 +15,8 @@ const SPEED = 30;
 const SIGHT = 9;
 const BITE = 20; // ticki między ugryzieniami
 /** Wilk gryzie mocno, ale nie zabija tłumu: chłop wytrzymuje cztery ugryzienia, a po zabiciu wilk długo pożera ofiarę */
-const PEASANT_HP = 30, WOLF_BITE = 8, SOLDIER_BITE = 5, EAT = 300;
+export const PEASANT_HP = 30;
+const WOLF_BITE = 8, SOLDIER_BITE = 5, EAT = 300;
 /** Zdrowie wilka (pasek nad nim); ranny poniżej FLEE_HP ucieka do lasu */
 export const WOLF_HP = 45;
 const FLEE_HP = 15;
