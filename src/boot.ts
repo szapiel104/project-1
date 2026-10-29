@@ -118,7 +118,7 @@ async function load(): Promise<void> {
     info.detail(`${tx('pobrane modele', 'models downloaded')}: ${modelsDone} / ${modelsAll}`);
   }
   await models;
-  info.step(tx('Drzewa, trawa i postacie', 'Trees, grass and characters'), tx('pliki z zasobów (las, trawa, strażnik)', 'asset files (forest, grass, guard)'));
+  info.step(tx('Drzewa i postacie', 'Trees and characters'), tx('pliki z zasobów (las, strażnik)', 'asset files (forest, guard)'));
   const assets = await import('./render/assets');
   await assets.preloadAssets();
   done++;

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.65.14 — ekran wczytywania bez „trawy” (2026-10-29)
+
+- Krok wczytywania „Drzewa, trawa i postacie” nazywa się teraz „Drzewa i postacie” — kępy trawy są wyłączone od 0.64.7 i nic z nich się nie wczytuje. (Tekstura trawy na ziemi zostaje: to zwykła łąka pod nogami.) „Przygotowanie grafiki” to kompilacja shaderów i próbne modele wszystkich budynków, nie trawa
+
 ## 0.65.13 — ludzie nie wchodzą jeden w drugiego (2026-10-29)
 
 - **Zgłoszenie:** gdy kilku chłopów (albo żołnierzy) szło tą samą drogą, symulacja prowadziła ich przez te same punkty i na ekranie szli jeden w drugim. Teraz w wyglądzie każdy, kto jest bliżej niż 0,2 pola od drugiego, odsuwa się od niego (najwyżej o ok. 0,2 pola); dwóch w dokładnie tym samym miejscu rozchodzi się każdy w swoją stronę. Bez sąsiadów odsunięcie powoli wraca do zera (`render/motion.ts`)
