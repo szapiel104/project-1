@@ -256,6 +256,8 @@ export class GameRenderer {
   /** Wyjście nowego żołnierza z koszar: złote iskry w górę, błysk i „+1” (tylko wygląd) */
   /** Miejsce łucznika na wieży w wyglądzie (płynne przejścia między pozami) */
   private towerPose = new Map<number, [number, number]>();
+  /** Na jakim poziomie stał żołnierz w poprzedniej klatce (0 = ziemia, 1 = korona muru, inaczej wieża pod nim: id + 1) */
+  private levelOf = new Map<number, number>();
   /** Gdzie żołnierz był narysowany w poprzedniej klatce (świat): strzały celują w obrazek, także na wieży, murze i murach zamku */
   private drawnAt = new Map<number, THREE.Vector3>();
   /** Strzały w locie (src/render/arrows.ts) */
@@ -3956,7 +3958,14 @@ export class GameRenderer {
       cur[0] += (want[0] - cur[0]) * k; cur[1] += (want[1] - cur[1]) * k;
       this.pullNow.set(s.id, cur);
       // łuki na zakrętach i omijanie mijających się (tylko w wyglądzie); patrzy tam, dokąd idzie
-      const cv = this.crowd.move(s.id, fx + cur[0], fy + cur[1], heading, this.calm || !!s.up, true);
+      // po wejściu na mur lub pomost (i zejściu) symulacja przestawia go o pole: tu też od razu na nowym miejscu,
+      // a nie płynnie z ziemi (wcześniej szedł już na wysokości pomostu, ale jeszcze poza wieżą, i „doskakiwał”)
+      const tileNow = (s.py >> 8) * width + (s.px >> 8);
+      const lvl = (g.walls[tileNow]! & 16) ? (towerUnder(g, tileNow)?.id ?? 0) + 1 : 0;
+      const jumped = this.levelOf.get(s.id) !== undefined && this.levelOf.get(s.id) !== lvl;
+      this.levelOf.set(s.id, lvl);
+      if (jumped) this.towerPose.delete(s.id);
+      const cv = this.crowd.move(s.id, fx + cur[0], fy + cur[1], heading, this.calm || !!s.up || jumped, true);
       if (walking && cv.speed > 0.3) { heading = cv.heading; this.facing.set(s.id, heading); }
       let px = cv.sx, pz = cv.sy;
       if (towerAt) {

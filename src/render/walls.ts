@@ -75,12 +75,14 @@ export class WallLayer {
       const dark = new THREE.MeshStandardMaterial({ color: 0x0a0705, roughness: 1, metalness: 0 });
       // geometrie w układzie „wejście w ścianie +z”: z = 0 to krawędź pola muru, wieża leży w stronę +z
       this.doorKit = {
-        bridge: mk(new THREE.BoxGeometry(0.9, STONE_WALL_TOP, 1).translate(0, STONE_WALL_TOP / 2, 0.5), k.mat, 'mur do wieży'),
+        bridge: mk(k.bridge, k.mat, 'mur do wieży'),
         door: mk(new THREE.BoxGeometry(0.34, 0.54, 0.04).translate(0, 0.27, 0), dark, 'wejście z muru do wieży'),
-        lintel: mk(new THREE.BoxGeometry(0.46, 0.08, 0.06).translate(0, 0.04, 0), k.mat, 'nadproże wejścia z muru'),
+        lintel: mk(k.lintel, k.mat, 'nadproże wejścia z muru'),
       };
     }
     const dn = { bridge: 0, door: 0, lintel: 0 };
+    /** Wejścia z korony muru do kamiennych wież: wieża i bok → położenie lica i wysokości korony przyległych pól */
+    const doors = new Map<string, { tw: GameState['buildings'][number]; dx: number; dz: number; rot: number; face: number; ys: number[]; along: number[] }>();
     /** Gotowa kamienna wieża na polu (x, y): odległość od krawędzi jej działki do lica trzonu (pole muru → ściana wieży) */
     const towerGap = (x: number, y: number): number => {
       const o = solid.get(y * width + x);
@@ -204,11 +206,11 @@ export class WallLayer {
             e.set(0, rot, 0); q.setFromEuler(e);
             M4.compose(p.set(ex - width / 2, y0, ez - height / 2), q, sc.set(1, 1, gap + 0.02));
             this.doorKit.bridge.setMatrixAt(dn.bridge++, M4);
-            const fx = ex + dx * (gap - 0.005), fz = ez + dz * (gap - 0.005);
-            M4.compose(p.set(fx - width / 2, y0 + STONE_WALL_TOP, fz - height / 2), q, sc.set(1, 1, 1));
-            this.doorKit.door.setMatrixAt(dn.door++, M4);
-            M4.compose(p.set(fx - dx * 0.01 - width / 2, y0 + STONE_WALL_TOP + 0.54, fz - dz * 0.01 - height / 2), q, sc.set(1, 1, 1));
-            this.doorKit.lintel.setMatrixAt(dn.lintel++, M4);
+            // wejście: jedno na każdy bok wieży, na środku boku (gruby mur dochodzi do wieży kilkoma polami naraz)
+            const tw = solid.get((b.y + dz) * width + b.x + dx)!, side = `${tw.id}:${dx}:${dz}`;
+            const d = doors.get(side);
+            if (d) { d.ys.push(y0); d.along.push(dx ? cz : cx); }
+            else doors.set(side, { tw, dx, dz, rot, face: dx ? ex + dx * (gap - 0.005) : ez + dz * (gap - 0.005), ys: [y0], along: [dx ? cz : cx] });
             continue;
           }
           // obok drewniana strażnica albo czatownia: z korony prowadzi na jej pomost krótka drabina, blanek w poprzek nie ma
@@ -303,6 +305,18 @@ export class WallLayer {
     }
     this.wallShafts.count = n; this.wallTips!.count = n;
     for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; touch(m); }
+    for (const d of doors.values()) {
+      if (!this.doorKit || dn.door >= 1024) break;
+      // na środku odcinka, którym mur dochodzi do tego boku wieży (gruby mur na środku boku = wejście na środku boku)
+      const avg = (a: number[]): number => a.reduce((m, v) => m + v, 0) / a.length;
+      const y = avg(d.ys) + STONE_WALL_TOP, mid = avg(d.along);
+      const fx = d.dx ? d.face : mid, fz = d.dz ? d.face : mid;
+      e.set(0, d.rot, 0); q.setFromEuler(e);
+      M4.compose(p.set(fx - width / 2, y, fz - height / 2), q, sc.set(1, 1, 1));
+      this.doorKit.door.setMatrixAt(dn.door++, M4);
+      M4.compose(p.set(fx - d.dx * 0.01 - width / 2, y + 0.54, fz - d.dz * 0.01 - height / 2), q, sc.set(1, 1, 1));
+      this.doorKit.lintel.setMatrixAt(dn.lintel++, M4);
+    }
     for (const key of ['bridge', 'door', 'lintel'] as const) { const m = this.doorKit[key]; m.count = dn[key]; touch(m); }
     touch(this.wallShafts); touch(this.wallTips!);
   }

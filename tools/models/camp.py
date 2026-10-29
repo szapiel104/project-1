@@ -11,6 +11,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
+from logs import lash, log  # noqa: E402
 
 b = Building()
 F = 0.0                          # ziemia (teren)
@@ -31,13 +32,45 @@ for k in range(5):   # polana ułożone w stożek, oparte o siebie nad środkiem
 b.prism('base', 'ember', 0.12, 0.08, 0.035, 0, F + 0.02, 0, seg=10)
 
 # ---------------- trójnóg z kociołkiem ----------------
+# trzy okrągłe żerdzie z korą zbiegają się nad ogniem, krzyżują w jednym punkcie (przewiązane liną) i wystają
+# kawałek ponad wiązanie; z wiązania zwisa łańcuch na hak, na nim kociołek z kabłąkiem. Kociołek wisi wysoko,
+# nad płomieniem, który rysuje gra (sięga ok. 0,45 nad ziemię: liże dno) — wcześniej płomień przechodził przez kociołek.
+APEX = (0.0, 0.84, 0.0)
 for k in range(3):
     a = k * 2 * math.pi / 3 + 0.5
-    b.box('base', 'woodDark', 0.025, 0.76, 0.025, math.cos(a) * 0.3, F, math.sin(a) * 0.3, -a + math.pi / 2, tilt=-0.36)
-b.box('base', 'iron', 0.008, 0.2, 0.008, 0, 0.5, 0)
-b.prism('base', 'iron', 0.07, 0.1, 0.06, 0, 0.36, 0, seg=10, top=False)
-b.prism('base', 'iron', 0.1, 0.085, 0.05, 0, 0.42, 0, seg=10)
-b.prism('base', 'dark', 0.08, 0.08, 0.004, 0, 0.47, 0, seg=10)
+    foot = (math.cos(a) * 0.34, F - 0.01, math.sin(a) * 0.34)
+    # przedłużenie za wiązanie: ta sama prosta, 12 cm dalej
+    d = [APEX[i] - foot[i] for i in range(3)]
+    L = math.sqrt(sum(v * v for v in d))
+    top = tuple(APEX[i] + d[i] / L * 0.12 for i in range(3))
+    log(b, 'base', 'bark', foot, top, r=0.016, r1=0.012, seg=6, ends='wood', twist=k)
+lash(b, 'base', (APEX[0], APEX[1] + 0.005, APEX[2]), (0, 1, 0), r=0.03, w=0.04, seg=8)
+# łańcuch: ogniwa na przemian w dwóch płaszczyznach (każde z grubością)
+CH0, CH1 = APEX[1] - 0.02, 0.645
+n = 7
+for k in range(n):
+    y = CH0 - (CH0 - CH1) * (k + 0.5) / n
+    h = (CH0 - CH1) / n * 1.15
+    if k % 2:
+        b.box('base', 'iron', 0.022, h, 0.006, 0, y - h / 2, 0)
+    else:
+        b.box('base', 'iron', 0.006, h, 0.022, 0, y - h / 2, 0)
+# hak i kabłąk kociołka (pałąk z grubością w łuku nad kociołkiem)
+b.box('base', 'iron', 0.008, 0.03, 0.008, 0, CH1 - 0.03, 0)
+POT = 0.47                     # dno kociołka
+RIM = POT + 0.12
+for k in range(7):
+    a0, a1 = math.pi * k / 7, math.pi * (k + 1) / 7
+    p0 = (math.cos(a0) * 0.1, RIM + math.sin(a0) * 0.055, 0.0)
+    p1 = (math.cos(a1) * 0.1, RIM + math.sin(a1) * 0.055, 0.0)
+    log(b, 'base', 'iron', p0, p1, r=0.005, seg=5, ends='iron')
+# kociołek: brzuchaty, okopcony od spodu, z wodą pod krawędzią; uszy kabłąka po bokach
+b.prism('base', 'dark', 0.06, 0.095, 0.05, 0, POT, 0, seg=12)
+b.prism('base', 'iron', 0.095, 0.1, 0.07, 0, POT + 0.05, 0, seg=12)
+b.prism('base', 'iron', 0.1, 0.104, 0.012, 0, RIM - 0.004, 0, seg=12, top=False)
+b.prism('base', 'water', 0.088, 0.088, 0.004, 0, RIM - 0.016, 0, seg=12)
+for sx in (-1, 1):
+    b.box('base', 'iron', 0.012, 0.024, 0.016, sx * 0.104, RIM - 0.022, 0)
 
 # ---------------- stołki na trzech nogach i kłoda ----------------
 SEATS = []

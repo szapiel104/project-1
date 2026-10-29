@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.65.5 — wejścia z muru do wieży, wspinaczka bez doskoku, ognisko w obozowisku (2026-10-29)
+
+- **Zgłoszenie (mur ↔ kamienna wieża):** łącznik muru z wieżą i nadproże wejścia były czarne (bryły bez kolorów wierzchołków przy materiale z cieniem w zagłębieniach) — teraz z kamienia i z teksturą jak reszta muru (`stoneWallKit` → `bridge`, `lintel`). Wejście jest jedno na każdy bok wieży, na środku odcinka, którym dochodzi do niej mur (gruby mur dawał dwa wejścia obok siebie)
+- **Zgłoszenie (wejście do wieży):** po wejściu drzwiami albo po drabinie żołnierz pojawiał się już na wysokości pomostu, ale jeszcze poza wieżą, i dopiero potem „doskakiwał” na swoje miejsce. Przy przejściu ziemia ↔ mur ↔ pomost obraz staje teraz od razu tam, gdzie stoi w symulacji (`scene.ts`, `levelOf`)
+- **Zgłoszenie (ognisko w obozowisku):** trójnóg z okrągłych żerdzi z korą, skrzyżowanych i przewiązanych liną nad ogniem, łańcuch z hakiem, kociołek z kabłąkiem i wodą — wisi wyżej, więc płomień nie przechodzi już przez kociołek (`tools/models/camp.py`)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.4 — drabiniarz (2026-10-28)
 
 - **Nowa jednostka: drabiniarz** (z koszar, drabina szturmowa + 6 rudy). Nie walczy — niesie drabinę. Prawy klik na wrogim murze kamiennym: podbiega i przystawia ją; z rozkazem „atak w marszu” albo stojąc blisko wrogiego muru robi to sam. Po drabinie wchodzi na koronę każde wojsko
