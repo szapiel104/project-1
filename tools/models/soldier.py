@@ -138,14 +138,18 @@ else:
     static.append(Mesh(evaluated(skirt), quilt, 'cloth', dyn='tunic'))
     pouch = sphere('pouch', (-0.06, 0.3, 0.064), (0.022, 0.026, 0.014), seg=8, rings=6)
     static.append(Mesh(evaluated(pouch), LEATHER, 'leather'))
-    # kaptur otwarty na twarz, pelerynka na barkach, ogon kaptura na plecach
-    hood = head.shell('hood', 1.15, lambda x, y, z: (1 - face_hole(x, y, z, 0.72, 0.7)) if y > -0.9 else 0, dyn='tunic',
-                      shade=lambda x, y, z: (0.74,) * 3)
+    # kaptur otwarty na twarz, pelerynka na barkach, ogon kaptura na plecach — z zielonkawej, leśnej wełny, a nie w barwach
+    # pana (Michał 29.10.2026: cały łucznik był jednym czerwonym workiem); barwy pana zostają na przeszywanicy.
+    # Otwór na twarz szerszy, żeby było widać twarz i brodę.
+    HOOD = hexrgb(0x56603a)
+    hood_shade = lambda x, y, z: tuple(c * (0.82 + 0.18 * smooth(-0.6, 0.9, y)) for c in HOOD)
+    hood = head.shell('hood', 1.13, lambda x, y, z: (1 - face_hole(x, y, z, 0.86, 0.84)) if y > -0.9 else 0, dyn=None,
+                      shade=hood_shade)
     static.append(hood)
     cape = lathe('cape', [(0.135, 0.418), (0.13, 0.442), (0.11, 0.468), (0.078, 0.495), (0.05, 0.52), (0.042, 0.54)], seg=18, depth=0.84, subsurf=0)
-    static.append(Mesh(evaluated(cape), lambda x, y, z: (0.5 if y < 0.424 else 0.72,) * 3, 'cloth', dyn='tunic'))
+    static.append(Mesh(evaluated(cape), lambda x, y, z: tuple(c * (0.62 if y < 0.424 else 0.9) for c in HOOD), 'cloth'))
     tail = skin('tail', [(0, 0.62, -0.05), (0, 0.58, -0.09), (0, 0.52, -0.105)], [(0, 1), (1, 2)], [(0.026, 0.022), (0.016, 0.013), (0.006, 0.006)], subsurf=1)
-    static.append(Mesh(evaluated(tail), (0.66,) * 3, 'cloth', dyn='tunic'))
+    static.append(Mesh(evaluated(tail), tuple(c * 0.85 for c in HOOD), 'cloth'))
     # kord w pochwie na prawym biodrze
     sheath = lathe('kord', [(0.008, 0.17), (0.011, 0.19), (0.011, 0.3), (0.013, 0.31)], seg=6, depth=0.55, subsurf=0)
     bm = evaluated(sheath)

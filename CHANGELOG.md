@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.65.27 — łucznik w leśnym kapturze (2026-10-29)
+
+- **Zgłoszenie:** łucznik był od stóp po czubek głowy w barwie pana — kaptur, pelerynka i przeszywanica zlewały się w jeden czerwony worek z małym okienkiem na twarz. Teraz kaptur, pelerynka i ogon kaptura są z zielonkawej, leśnej wełny (ciemniejszej u dołu), otwór na twarz jest szerszy (widać twarz i brodę), a barwy pana zostają na pikowanej przeszywanicy — łucznika w drużynie dalej poznać po barwie tułowia (`tools/models/soldier.py archer`)
+
 ## 0.65.26 — deszcz ognia bez białej plamy, krąg nie wchodzi pod ziemię (2026-10-29)
 
 - **Zgłoszenie (wygląd wielkiego czaru):** siedem spadających kul z prześwietlonym, białym błyskiem i dużymi łunami zlewało się w jedną białą plamę z płaskimi pomarańczowymi owalami. Teraz poświata kul rośnie wolniej niż same kule, błysk przy uderzeniu wielkiego czaru jest mniejszy i pomarańczowy zamiast białego, a łuna ognia czarów mała — widać pojedyncze kule, iskry i dym (`render/spells.ts`, `scene.ts`)
