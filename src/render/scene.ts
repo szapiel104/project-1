@@ -1963,10 +1963,18 @@ export class GameRenderer {
       const stick = new THREE.Mesh(torch, propMaterial('torch'));
       this.handTip.position.set(0, 0.19, 0);
       // płomień jako płaska siatka przypięta do pochodni w kamerze (billboard świata rozciągał się tuż przy oku)
-      const fl = flameSprite(this.handFlameTime, 0.07, 0.15);
-      fl.position.set(0, 0.18, 0);
+      // płonie cała głowica, a nie tylko czubek (Michał 29.10.2026): główny płomień zaczyna się w połowie szmat
+      // i obejmuje je, dookoła trzy mniejsze języki liżą boki głowicy
+      const fl = flameSprite(this.handFlameTime, 0.1, 0.24);
+      fl.position.set(0, 0.1, 0);
       fl.rotation.x = 0.35;
       g.add(stick, this.handTip, fl);
+      for (const [x, z, h, rot] of [[0.028, 0.012, 0.13, 0.2], [-0.026, 0.016, 0.12, -0.25], [0.004, -0.028, 0.11, 0.1]] as const) {
+        const t = flameSprite(this.handFlameTime, 0.05, h);
+        t.position.set(x, 0.075, z);
+        t.rotation.set(0.35, rot, 0);
+        g.add(t);
+      }
       g.rotation.x = -0.35;
       g.position.set(0.22, -0.24, -0.42);
       this.handTorch = g;

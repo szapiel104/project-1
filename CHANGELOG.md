@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.65.16 — pochodnia w spacerze płonie całą głowicą (2026-10-29)
+
+- **Zgłoszenie:** pochodnia wyciągnięta w spacerze (F) paliła się tylko wąskim płomykiem na czubku. Teraz główny płomień zaczyna się w połowie szmat i obejmuje całą głowicę (szerszy i wyższy), a trzy mniejsze języki liżą jej boki
+- Tylko wygląd
+
 ## 0.65.15 — pasek wczytywania gry nie skacze 80 ↔ 81 (2026-10-29)
 
 - **Zgłoszenie:** na końcu wczytywania meczu („Ostatnie przygotowania…”) gra czeka na równe klatki. Liczyła je tylko z rzędu, więc każde pojedyncze szarpnięcie zerowało licznik i pasek skakał 80 → 81 → 80, a wejście ciągnęło się do 12 s. Teraz wystarczy 27 równych z ostatnich 30 klatek, a pasek idzie tylko do przodu (z równych klatek albo z upływu czasu)
