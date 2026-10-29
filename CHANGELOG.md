@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.65.19 — czytelniejsza czcionka (2026-10-29)
+
+- **Zgłoszenie:** tekst w grze (okna, podpowiedzi, skryba, menu) w **Alegreya Sans** zamiast Alegreya — ta sama rodzina liter, ale bez szeryfów i bez przechylenia, wyraźna przy małych rozmiarach i z polskimi znakami. Drobne napisy wersalikami (etykiety, przyciski, nazwy grup, do 16 px) w **Alegreya Sans SC** zamiast Cinzel, który przy małych literach się zlewał. Cinzel zostaje na duże tytuły i nagłówki — klimat RPG zostaje tam, gdzie litery są duże (`src/ui/style.css`, `index.html`)
+
 ## 0.65.18 — rudery bez ubitej ziemi na zewnątrz, okrągłe słomiane kukły (2026-10-29)
 
 - **Zgłoszenie (rudery):** rudera i rudera narożna miały wokół siebie i przed wejściem prostokąt ubitej ziemi (w narożnej także cały podwórzec) — na trawie wyglądało to jak wycięty płat. Klepisko zostaje tylko w środku, pod ścianami (`tools/models/shack.py`, `shackl.py`)
