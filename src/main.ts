@@ -665,17 +665,23 @@ function enterGame(label: string, prep?: () => void): void {
           show(80, tx('Ostatnie przygotowania…', 'Final preparations…'));
           info.step(tx('Równe klatki', 'Steady frames'));
           const t0 = performance.now();
-          let prev = t0, frames = 0, calm = 0;
+          let prev = t0, frames = 0, shown = 80;
           const recent: number[] = [];
+          // ostatnie 30 klatek: równa (true) albo ze skokiem; wystarczy 27 równych z 30 (pojedyncze szarpnięcie,
+          // np. wgranie tekstury, nie zaczyna liczenia od zera — pasek skakał wtedy 80 → 81 → 80, Michał 29.10.2026)
+          const steady: boolean[] = [];
           const watch = (now: number): void => {
             const dt = now - prev; prev = now; frames++;
             recent.push(dt); if (recent.length > 40) recent.shift();
             const typical = [...recent].sort((x, y) => x - y)[Math.floor(recent.length * 0.3)] ?? dt;
-            calm = dt < Math.max(20, typical * 1.5) ? calm + 1 : 0;
-            show(80 + Math.min(19, calm * 0.63), undefined);
-            info.detail(tx(`równe klatki z rzędu: ${calm} / 30 · ostatnia ${Math.round(dt)} ms, typowa ${Math.round(typical)} ms`, `steady frames in a row: ${calm} / 30 · last ${Math.round(dt)} ms, typical ${Math.round(typical)} ms`));
+            steady.push(dt < Math.max(20, typical * 1.5)); if (steady.length > 30) steady.shift();
+            const calm = steady.filter(Boolean).length;
+            // pasek tylko do przodu: z równych klatek albo z upływu czasu (do 12 s), co większe
+            shown = Math.max(shown, 80 + 19 * Math.max(calm / 30, (now - t0) / 12000));
+            show(shown, undefined);
+            info.detail(tx(`równe klatki: ${calm} z ostatnich 30 · ostatnia ${Math.round(dt)} ms, typowa ${Math.round(typical)} ms`, `steady frames: ${calm} of the last 30 · last ${Math.round(dt)} ms, typical ${Math.round(typical)} ms`));
             // najdłużej 12 s: bardzo słaby komputer i tak wejdzie do gry
-            if ((frames >= 30 && calm >= 30) || now - t0 > 12000) finish();
+            if ((frames >= 30 && calm >= 27) || now - t0 > 12000) finish();
             else requestAnimationFrame(watch);
           };
           requestAnimationFrame(watch);

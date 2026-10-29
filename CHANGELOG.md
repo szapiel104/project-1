@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.65.15 — pasek wczytywania gry nie skacze 80 ↔ 81 (2026-10-29)
+
+- **Zgłoszenie:** na końcu wczytywania meczu („Ostatnie przygotowania…”) gra czeka na równe klatki. Liczyła je tylko z rzędu, więc każde pojedyncze szarpnięcie zerowało licznik i pasek skakał 80 → 81 → 80, a wejście ciągnęło się do 12 s. Teraz wystarczy 27 równych z ostatnich 30 klatek, a pasek idzie tylko do przodu (z równych klatek albo z upływu czasu)
+
 ## 0.65.14 — ekran wczytywania bez „trawy” (2026-10-29)
 
 - Krok wczytywania „Drzewa, trawa i postacie” nazywa się teraz „Drzewa i postacie” — kępy trawy są wyłączone od 0.64.7 i nic z nich się nie wczytuje. (Tekstura trawy na ziemi zostaje: to zwykła łąka pod nogami.) „Przygotowanie grafiki” to kompilacja shaderów i próbne modele wszystkich budynków, nie trawa
