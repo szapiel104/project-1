@@ -1311,7 +1311,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // krzaki: z bliska cztery kule po 80 trójkątów, dalej jedna bryła z dwóch prostych kul (40 trójkątów) — krzaków są tysiące
   // krzaki i głazy z Blendera (tools/models/plants.py) w wersji z bliska i z daleka; cień w zagłębieniach w kolorach wierzchołków
   const plantMat = (tex: Parameters<typeof pattern>[0], flat: boolean): THREE.MeshStandardMaterial => new THREE.MeshStandardMaterial({
-    color: 0xffffff, vertexColors: true, flatShading: flat, roughness: 0.95, metalness: 0, map: pattern(tex), bumpMap: bump(tex), bumpScale: 1.2, normalMap: normal(tex) });
+    color: 0xffffff, vertexColors: true, flatShading: flat, roughness: 1, metalness: 0, map: pattern(tex), bumpMap: bump(tex), bumpScale: 1.2, normalMap: normal(tex) });
   const rockMat = plantMat('rock', true), rockFar = models.rockFar();
   // krzaki z Poly Haven (src/render/forest.ts → bushKinds): gęste kępy krzewów na kartach, z daleka obrazki;
   // drżą na wietrze (przy ziemi prawie nic, u góry najwięcej), jesienią rudzieją, zimą gubią liście jak dawniej
@@ -1356,7 +1356,13 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   lilyMat.userData.season = 'leaf';
   plant(lilies, instanced(WP.lilies, 0xffffff, lilies, undefined, false, lilyMat, { hide: 70 }), null, false);
   label = 'kamyki';
-  plant(pebbles, instanced(models.rock(), 0xb8b3a6, pebbles, 'rock', true, rockMat, { ...SMALL_LOD, farGeo: rockFar }), null, false);
+  // trzy odmiany głazu (Michał 29.10.2026: „różne modele kamienia, ładniejsze, nie takie świecące”): ciemniejsza barwa
+  // instancji, matowa skała; każdy kamień dostaje odmianę z miejsca (stałą)
+  void rockFar;
+  const BOULDERS = models.boulders();
+  const pebbleSplit: Item[][] = BOULDERS.map(() => []);
+  for (const it of pebbles) pebbleSplit[hash2(Math.round(it.pos.x * 10) + 31, Math.round(it.pos.z * 10), 0x5eed) % BOULDERS.length]!.push(it);
+  BOULDERS.forEach(([near, far], k) => plant(pebbleSplit[k]!, instanced(near, 0x9a948a, pebbleSplit[k]!, 'rock', true, rockMat, { ...SMALL_LOD, farGeo: far }), null, false));
   label = 'kępy trawy';
   plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {

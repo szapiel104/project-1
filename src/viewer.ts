@@ -267,7 +267,7 @@ const GROUPS: [string, [string, string, Make][]][] = [
       return { obj: m, size: new THREE.Vector3(1.2, 0.1, 1.2) };
     }],
     ['plant-bush', tx('krzak (stary, z kul)', 'bush (old, spheres)'), plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
-    ['plant-rock', tx('głaz (z bliska | z daleka)', 'boulder (near | far)'), plantPair(proceduralModels.rock(), proceduralModels.rockFar(), 0xc4bfb1, 'rock', true)],
+    ...proceduralModels.boulders().map(([near, far], k) => [`plant-boulder${k}`, tx(`głaz polny ${k + 1} (z bliska | z daleka)`, `field boulder ${k + 1} (near | far)`), plantPair(near, far, 0x9a948a, 'rock', true)] as [string, string, Make]),
   ]],
   [tx('W pracy', 'At work'), [
     ['work-hammer', tx('budowniczy z młotkiem (zamach)', 'builder with hammer (swing)'), worker('hammer', -2.1, true)],

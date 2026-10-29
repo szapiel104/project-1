@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.65.25 — trzy odmiany głazów polnych (2026-10-29)
+
+- **Zgłoszenie:** zamiast jednego jasnego, świecącego głazu — trzy odmiany z Blendera (`tools/models/plants.py`, boulder0–2): obły otoczak (bardziej szczegółowy), kanciasty pęknięty blok i duży kamień z mniejszym opartym o bok. Ciemniejsza, matowa skała z ziemistym, wilgotnym spodem i plamami porostów na wierzchu; każdy kamień na mapie dostaje swoją odmianę z miejsca. Z daleka lżejsze wersje jak dotąd. W podglądzie modeli jako „głaz polny 1–3”
+
 ## 0.65.24 — wielki czar magów mocniejszy, przerwa po nim minuta (2026-10-29)
 
 - **Zgłoszenie:** wielki czar maga Płomienia i maga Źródła bije teraz w krąg o promieniu dwóch pól (było półtora), w środku 2,2 raza mocniej od zwykłej kuli (ogień; lód połowę tego — wcześniej lód tylko połowę zwykłej kuli). Deszcz ognia pali dwa razy dłużej, lodowy krąg spowalnia ok. 26 s zamiast 16 s. Po czarze mag odpoczywa minutę (było 25 s). Siedem kul ognia zamiast pięciu i szerszy krąg lodu na obrazie (`sim/systems/greatspell.ts`, `render/spells.ts`); pomoc po polsku i angielsku

@@ -40,6 +40,8 @@ export interface ModelFactory {
   rock(): THREE.BufferGeometry;
   /** Głaz z daleka (ten sam kształt z 20 ścian) */
   rockFar(): THREE.BufferGeometry;
+  /** Trzy odmiany głazu polnego (obły, kanciasty, z mniejszym kamieniem): [z bliska, z daleka] */
+  boulders(): [THREE.BufferGeometry, THREE.BufferGeometry][];
   /** Krzak z daleka (te same kępy z mniejszej liczby ścian) — też jako bryła cienia */
   bushFar(): THREE.BufferGeometry;
   building(id: string, teamColor: number): THREE.Group;
@@ -169,6 +171,10 @@ export const proceduralModels: ModelFactory = {
   },
   rockFar() {
     return plantGeo('rockFar', true, 2.5);
+  },
+  boulders() {
+    // głazy z Blendera (tools/models/plants.py, boulder0–2): ciemniejsze, z ziemistym spodem i porostami na wierzchu
+    return [0, 1, 2].map((k) => [plantGeo(`boulder${k}`, true, 2.5), plantGeo(`boulder${k}Far`, true, 2.5)] as [THREE.BufferGeometry, THREE.BufferGeometry]);
   },
   building: buildingModel,
 };

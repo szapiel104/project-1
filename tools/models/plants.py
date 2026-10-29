@@ -58,6 +58,44 @@ def shade_rock(x, y, z):
     return (k, k * 0.98, k * 0.95)
 
 
+def shade_boulder(x, y, z):
+    """Głaz polny (Michał 29.10.2026: „ładniejsze, nie takie świecące”): ciemniejszy, u dołu ziemisty, przy ziemi
+    i w zagłębieniach ciemny, plamy porostów na wierzchu, ziarno skały"""
+    base = 0.6 + min(0.16, y * 0.45) + (noise(x * 17, y * 17, z * 17) - 0.5) * 0.16
+    if y < 0.05:
+        base *= 0.7 + y * 6          # wilgotny, ziemisty spód
+    r, g, b = base, base * 0.97, base * 0.92
+    if y > 0.12 and noise(x * 5.3, z * 5.3, 1.7) > 0.72:   # porost / mech na górze
+        r, g, b = r * 0.82, g * 0.95, b * 0.72
+    return (r, g, b)
+
+
+def boulder(variant, far):
+    """Trzy odmiany głazu: 0 — obły, otoczak z płaskimi ścianami; 1 — kanciasty, pęknięty blok; 2 — duży kamień
+    z mniejszym opartym o bok. Spód obcięty prawie płasko i lekko wkopany."""
+    parts = []
+    specs = {0: [((0, 0, 0), (0.36, 0.3, 0.24), 3 if not far else 1, 1.0, 0.0)],
+             1: [((0, 0, 0), (0.3, 0.26, 0.3), 2 if not far else 1, 2.6, 1.0)],
+             2: [((0.03, 0, 0), (0.3, 0.26, 0.23), 2 if not far else 1, 1.3, 2.0), ((-0.27, 0.12, -0.02), (0.15, 0.14, 0.12), 1, 1.8, 3.0)]}[variant]
+    for (cx, cy, cz), (rx, ry, rz), sub, sharp, seed in specs:
+        bm = bmesh.new()
+        bmesh.ops.create_icosphere(bm, subdivisions=sub, radius=1.0)
+        for v in bm.verts:
+            x, y, z = v.co.x, v.co.y, v.co.z
+            # kilka nałożonych fal: duże wybrzuszenia i drobniejsze szczerby; `sharp` ścina ściany (kanciasty blok)
+            n = 1 + 0.14 * math.sin(x * 3.1 + seed) * math.cos(y * 2.7 - seed) + 0.08 * math.sin(z * 5.3 + seed * 2) + 0.05 * math.sin((x + y) * 9 + seed)
+            if sharp > 1.5:
+                m = max(abs(x), abs(y), abs(z))
+                x, y, z = x / (m ** 0.55), y / (m ** 0.55), z / (m ** 0.55)
+            v.co.x, v.co.y, v.co.z = cx + x * n * rx, cy + y * n * ry, z * n * rz   # Blender: z = góra
+            if v.co.z < -0.05:
+                v.co.z = -0.05 + (v.co.z + 0.05) * 0.15
+            v.co.z += rz * 0.7
+        bmesh.ops.triangulate(bm, faces=bm.faces)
+        parts.append(Mesh(bm, shade_boulder, 'rock'))
+    return parts
+
+
 def rock(far):
     bm = bmesh.new()
     bmesh.ops.create_icosphere(bm, subdivisions=1 if far else 2, radius=0.34)  # w Blenderze 1 = sam dwudziestościan
@@ -75,6 +113,18 @@ def rock(far):
 
 
 out = {}
+for k in range(3):
+    for far in (False, True):
+        parts = boulder(k, far)
+        bake_ao([(m, (0, 0, 0)) for m in parts], reach=0.12)
+        m0 = parts[0]
+        for m in parts[1:]:
+            base = len(m0.pos)
+            m0.pos += m.pos; m0.nrm += m.nrm; m0.col += m.col
+            m0.idx += [tuple(base + i for i in f) for f in m.idx]
+        m0.idx = [t for f in m0.idx for t in ([f] if len(f) == 3 else [(f[0], f[k2], f[k2 + 1]) for k2 in range(1, len(f) - 1)])]
+        out[f'boulder{k}' + ('Far' if far else '')] = pack(m0)
+        print('głaz', k, 'daleka' if far else 'bliska', len(m0.idx), 'trójkątów')
 for name, fn in (('bush', bush), ('rock', rock)):
     for far in (False, True):
         parts = fn(far)
