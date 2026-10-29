@@ -51,6 +51,11 @@ export class Crowd {
    * Figura `id` ma być w (tx, ty). Zwraca, gdzie ją narysować, dokąd patrzy i jak szybko idzie (pola/s).
    * `solid` = inni ją omijają (stojący też są przeszkodą); `still` = nie odbija w bok.
    */
+  /** Postać od razu w (x, y) (np. wychodzi z klatki schodowej wieży); dalej `move` prowadzi ją płynnie do celu */
+  place(id: number, x: number, y: number, heading: number): void {
+    this.vis.set(id, { x, y, sx: x, sy: y, heading, side: 0, speed: 0, frame: this.frame, solid: true, id, near: 0 });
+  }
+
   move(id: number, tx: number, ty: number, heading: number, calm: boolean, solid = true): Vis {
     let v = this.vis.get(id);
     if (!v || calm || Math.abs(v.x - tx) > 1.5 || Math.abs(v.y - ty) > 1.5) {

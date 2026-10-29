@@ -107,3 +107,21 @@ describe('wielki czar magów', () => {
     expect(one.hp).toBeLessThan(UNITS[unitIndex('spearman')]!.hp);
   });
 });
+
+describe('magowie bez rozkazu', () => {
+  it('magowie wroga pod zamkiem, gdy nie ma już kogo bić, biorą się za budynki (nie stoją bezczynnie)', () => {
+    const g = createGame(5);
+    for (const p of g.players) p.bot = !!p.id;
+    for (let i = 0; i < 100; i++) step(g, []);
+    const k = playerKeep(g, 0)!, W = g.map.width, dx = k.door % W, dy = (k.door - dx) / W + 9;
+    const mages: Soldier[] = [0, 1, 2].map((i) => {
+      const kind = unitIndex(i % 2 ? 'mageFire' : 'mageWater');
+      const s: Soldier = { id: g.nextId++, owner: 1, kind, px: (dx + i - 1) * FP + 128, py: dy * FP + 128, path: [], hp: UNITS[kind]!.hp, goal: -1, wait: 0, target: 0, cd: 0 };
+      g.soldiers.push(s);
+      return s;
+    });
+    let busy = 0;
+    for (let t = 0; t < 900; t++) { step(g, []); if (t > 600) busy += mages.filter((m) => g.soldiers.includes(m) && m.target).length; }
+    expect(busy).toBeGreaterThan(0);
+  });
+});

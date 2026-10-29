@@ -1234,7 +1234,10 @@ export function armySystem(g: GameState): void {
         }
       }
       // brak wrogich żołnierzy w pobliżu: bierze się za najbliższy wrogi budynek
-      if (!s.up && !perch && !range && !stance && !s.amove && siege(g, s, def, taken)) continue; // obrona i „stój” nie idą same na budynki; łucznicy sami nie strzelają w budynki, tylko na rozkaz
+      // obrona i „stój” nie idą same na budynki; łucznicy sami nie strzelają w budynki, tylko na rozkaz.
+      // Magowie tak (Michał 29.10.2026: postawieni magowie wroga „trochę poatakowali i tyle” — stali bezczynnie pod
+      // cudzym zamkiem, gdy wokół nie było już żołnierzy ani chłopów): ogniem i wodą biją w najbliższy wrogi budynek
+      if (!s.up && !perch && (!range || def.magic) && !stance && !s.amove && siege(g, s, def, taken)) continue;
     }
     if (s.up) continue;
     // zwarty szyk w marszu: trzyma swoje miejsce obok punktu prowadzącego

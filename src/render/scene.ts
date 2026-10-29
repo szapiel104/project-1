@@ -3861,7 +3861,13 @@ export class GameRenderer {
     if (this.drawnAt.size > g.soldiers.length + 64) { const live = new Set(g.soldiers.map((x) => x.id)); for (const id of this.drawnAt.keys()) if (!live.has(id)) this.drawnAt.delete(id); }
     for (const s of g.soldiers) {
       if (n >= MAX_UNITS) break;
-      const prev = this.prevPos.get(s.id);
+      let prev = this.prevPos.get(s.id);
+      // wejście na mur/pomost i zejście: symulacja przestawia go o całe pole naraz — bez przejścia między polami
+      // (inaczej przez jeden krok symulacji szedł już na wysokości pomostu, ale jeszcze obok wieży)
+      if (prev) {
+        const t0 = (prev[1] >> 8) * width + (prev[0] >> 8), t1 = (s.py >> 8) * width + (s.px >> 8);
+        if (t0 !== t1 && (((g.walls[t0]! & 16) !== 0) !== ((g.walls[t1]! & 16) !== 0) || towerUnder(g, t0)?.id !== towerUnder(g, t1)?.id)) prev = undefined;
+      }
       const fx = (prev ? prev[0] + (s.px - prev[0]) * alpha : s.px) / FP;
       const fy = (prev ? prev[1] + (s.py - prev[1]) * alpha : s.py) / FP;
       const next = s.path[0];
@@ -3991,7 +3997,14 @@ export class GameRenderer {
       const jumped = this.levelOf.get(s.id) !== undefined && this.levelOf.get(s.id) !== lvl;
       this.levelOf.set(s.id, lvl);
       if (jumped) this.towerPose.delete(s.id);
-      const cv = this.crowd.move(s.id, fx + cur[0], fy + cur[1], heading, this.calm || !!s.up || jumped, true);
+      // wszedł do kamiennej wieży: wychodzi na pomost z klatki schodowej w środku i dopiero idzie na swoje miejsce
+      const intoStone = jumped && lvl > 1 && (() => { const tb = towerUnder(g, tileNow); return tb && isStoneTower(BUILDINGS[tb.type]!.id) ? tb : undefined; })();
+      if (intoStone && !this.calm) {
+        const fpS = footprint(BUILDINGS[intoStone.type]!, intoStone.rot);
+        this.crowd.place(s.id, intoStone.x + fpS.w / 2, intoStone.y + fpS.h / 2, heading);
+        this.towerPose.set(s.id, [intoStone.x + fpS.w / 2, intoStone.y + fpS.h / 2]);
+      }
+      const cv = this.crowd.move(s.id, fx + cur[0], fy + cur[1], heading, this.calm || !!s.up || (jumped && !intoStone), true);
       if (walking && cv.speed > 0.3) { heading = cv.heading; this.facing.set(s.id, heading); }
       let px = cv.sx, pz = cv.sy;
       if (towerAt) {

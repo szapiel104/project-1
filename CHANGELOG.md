@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.11 — magowie nie stoją bezczynnie, wejście na wieżę z klatki schodowej (2026-10-29)
+
+- **Zgłoszenie (magowie):** magowie bez rozkazu (np. postawieni w trybie deweloperskim jako wróg) bili tylko żołnierzy i chłopów w zasięgu wzroku; gdy takich zabrakło, stali bezczynnie choćby pod cudzym zamkiem. Teraz, jak włócznicy, biorą się za najbliższy wrogi budynek (ogniem albo wodą). Łucznicy dalej strzelają w budynki tylko na rozkaz. Postawionych magów wroga nie da się zaznaczyć — to jednostki wroga
+- **Zgłoszenie (wejście na wieżę):** po wejściu drzwiami żołnierz przez jeden krok symulacji był już na wysokości pomostu, ale jeszcze obok wieży, i dopiero wsuwał się na nią. Teraz przy przejściu na mur albo pomost nie ma przejścia między polami, a w kamiennej wieży wychodzi na pomost z klatki schodowej w środku i stamtąd idzie na swoje miejsce
+- Bot: jego magowie po fali też biją w budynki, gdy nie mają kogo bić
+
 ## 0.65.10 — ślady wilków na śniegu (2026-10-29)
 
 - Wilki zostawiają na śniegu odciski łap: poduszka, cztery palce i ślady pazurów, prawie w jednej linii jak w kłusie, krok krótszy niż człowieka. Blakną i znikają jak ślady butów, w zamieci szybciej, a gdy śnieg stopnieje — wszystkie (`render/footprints.ts`, trzecia siatka obok butów i bruzd)
