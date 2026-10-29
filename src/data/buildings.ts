@@ -261,7 +261,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'pigsty', category: 'food', name: 'b.pigsty', w: 3, h: 2, cost: { wood: 35 }, buildable: true,
     workView: 'field',
-    production: { output: { res: 'meat', amount: 8 }, site: 'home', workTicks: 150 },
+    production: { output: { res: 'meat', amount: 3 }, site: 'home', workTicks: 180 },
   },
 ];
 

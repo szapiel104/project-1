@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.66.1 — 29.10.2026
+- Chlew słabszy: daje 3 mięsa co 180 ticków (było 8 co 150). Zmierzone w symulacji: wcześniej jeden chlew karmił ok. 13 ludzi (sad ok. 3), teraz ok. 4–5 — więcej niż sad, bo mięso to 3 porcje, ale nie zastępuje już całej gospodarki jedzeniowej. Bot bez zmian (chlew po piekarni).
+
 ## 0.66.0 — chlew i mięso, popularność za różnorodne jedzenie (2026-10-29)
 
 - **Chlew** (3×2, 35 drewna, w menu przy sadzie i rybaku; `tools/models/pigsty.py`): szopa świniopasa z desek pod strzechą, otwarta od zagrody, pod okapem wędzona szynka i pęto kiełbas; zagroda z plecionki na palach z uchyloną furtką, koryto z kłody z pomyjami, nieregularne kałuże błota, słoma, wiadro, worek żołędzi, widły. Świniopas tuczy świnie i odnosi do spichlerza **mięso** (nowe jedzenie, 8 sztuk co ok. 15 s; syci jak ryba — 3 porcje)
