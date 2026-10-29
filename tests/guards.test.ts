@@ -94,4 +94,21 @@ describe('spanie pod gołym niebem', () => {
     const parts = monthlyForecast(g, g.players[0]!).parts;
     expect(parts.find((x) => x.key === 'rough')!.value).toBeLessThan(0);
   });
+
+  it('strażnik goi się sam, gdy nie walczy, a przy wrogu obok nie', () => {
+    const g = createGame(5);
+    for (const p of g.players) p.bot = false;
+    for (let i = 0; i < 50; i++) step(g, []);
+    const s = guards(g)[0]!;
+    s.hp = 30;
+    for (let i = 0; i < 400; i++) step(g, []);
+    expect(s.hp).toBeGreaterThanOrEqual(45);
+    expect(s.hp).toBeLessThanOrEqual(70);
+    // wróg tuż obok (spętany, żeby nie podszedł): rany się nie goją
+    const t = guards(g)[0]!;
+    t.hp = 30;
+    const foe = { ...t, id: g.nextId++, owner: 1, kind: t.kind, hp: 1000, path: [], goal: -1, target: 0, cd: 0 };
+    for (let i = 0; i < 200; i++) { foe.px = t.px + 3 * 256; foe.py = t.py; foe.hp = 1000; if (!g.soldiers.includes(foe)) g.soldiers.push(foe); step(g, []); if (t.hp <= 0) break; }
+    expect(t.hp).toBeLessThanOrEqual(30);
+  });
 });

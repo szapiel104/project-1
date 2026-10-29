@@ -552,6 +552,17 @@ const HEALED = 90;
 const HEAL_EVERY = 15;
 /** W namiocie polowym z medykiem co tyle ticków (dwa razy szybciej niż pod twierdzą) */
 const TENT_HEAL_EVERY = 7;
+/** Strażnik miejski poza walką odzyskuje 1 punkt zdrowia co tyle ticków (od zera do pełna ok. dwóch minut) */
+const GUARD_HEAL_EVERY = 20;
+/** Tak daleko (w polach) nie może być wroga ani wilka, żeby strażnik się goił */
+const GUARD_CALM_R = 6;
+/** Czy wokół żołnierza nie ma wrogiego wojska ani wilków (strażnik może się goić) */
+function calmAround(g: GameState, s: Soldier): boolean {
+  const R = GUARD_CALM_R * FP, my = g.players[s.owner]?.team ?? s.owner;
+  for (const o of g.soldiers) if (o.hp > 0 && (g.players[o.owner]?.team ?? o.owner) !== my && Math.abs(o.px - s.px) <= R && Math.abs(o.py - s.py) <= R) return false;
+  for (const w of g.wolves) if (w.hp > 0 && Math.abs(w.px - s.px) <= R && Math.abs(w.py - s.py) <= R) return false;
+  return true;
+}
 const KEEP = buildingIndex('keep');
 const FIELD_TENT = buildingIndex('fieldTent');
 
@@ -1006,6 +1017,9 @@ export function armySystem(g: GameState): void {
       for (const b of healList) if (rectGap(g, here, b) <= 3) { const r = b.type === KEEP ? HEAL_EVERY : TENT_HEAL_EVERY; if (!rate || r < rate) rate = r; }
       if (rate && g.tick % rate === 0) s.hp++;
     }
+    // strażnik miejski goi się sam, gdy nie walczy: bez celu, bez świeżego ciosu i bez wroga ani wilka w pobliżu
+    // (Michał 29.10.2026) — do twierdzy się nie leczyć nie chodzi, pilnuje swojego miejsca
+    if (def.guard && s.hp < def.hp && s.hp > 0 && g.tick % GUARD_HEAL_EVERY === 0 && !s.target && !s.prey && s.cd === 0 && calmAround(g, s)) s.hp++;
     if (s.wounded === 2 && s.hp * 100 >= def.hp * HEALED) { s.wounded = 0; if ((s.hold ?? -1) >= 0) { s.goal = s.hold!; s.path = []; } }
     // dawne przypisanie do wieży (zapisy sprzed 0.64): przenosi go na wolne pole pomostu jak zwykłego żołnierza
     if (s.post) {

@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.8 — strażnicy miejscy goją się poza walką (2026-10-29)
+
+- **Zgłoszenie:** strażnik miejski, który nie walczy (bez celu, bez świeżego ciosu, bez wroga ani wilka w promieniu 6 pól), odzyskuje 1 punkt zdrowia co 2 s — od ledwo żywego do pełna w ok. 2 minuty. Nie musi iść do twierdzy, goi się na swoim posterunku i obchodzie
+- Wcześniej strażnicy nie leczyli się wcale (byli wyłączeni z leczenia przy twierdzy i w namiocie polowym)
+- Bot: to samo (jego straż też się goi)
+
 ## 0.65.7 — krew w trakcie walki (2026-10-29)
 
 - **Prysk przy trafieniu:** każdy cios i trafiona strzała wyrzucają kilka kropli z wysokości tułowia, w tył i na boki od trafionego; im mocniejszy cios, tym więcej kropli. Spadają łukiem i zostają na ziemi jako drobne plamki (`render/bloodfx.ts`)
