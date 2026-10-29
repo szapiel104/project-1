@@ -70,7 +70,7 @@ Klimat Gothica: surowo, ale żywo; każdy pomysł to osobna mała partia.
 - **Wyprawa pana:** pan zamku jako postać na polu bitwy (dowódca: wojsko obok bije mocniej), powiązane z progresją z `progresja.md`; gdy padnie, wraca do zamku ranny na dobę.
 
 ## Bitwa i klimat — propozycje z 28.10.2026 (Michał wybrał strzały i kruki, 0.64.11; reszta tutaj na później)
-- **Krew w trakcie walki — zrobione 29.10.2026 (0.65.7):** prysk przy trafieniu, krople za ciężko rannym (`render/bloodfx.ts`). Prysk u chłopów i wilków zrobiony 29.10 (0.65.9). Dalej: krew na ostrzu i ubraniu rannego.
+- **Krew w trakcie walki — zrobione 29.10.2026 (0.65.7):** prysk przy trafieniu, krople za ciężko rannym (`render/bloodfx.ts`). Prysk u chłopów i wilków zrobiony 29.10 (0.65.9). Krew na ostrzu i plamy na ubraniu rannego zrobione 29.10 (0.65.28).
 - **Strzały wbite w żywych:** dziś strzały tkwią w ciałach poległych, w ziemi i w ścianach (`render/arrows.ts`); w żyjących nie, bo trzeba by je wiązać z ruchem postaci.
 - **Las w większych paczkach** — sprawdzone 28.10: niepotrzebne, las to już tylko ok. 30 wywołań (punkt 2 planu na górze).
 - **Szybsze szukanie dróg** (punkt 9 planu optymalizacji na górze).

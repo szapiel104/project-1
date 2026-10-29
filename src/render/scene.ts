@@ -728,6 +728,10 @@ export class GameRenderer {
   private planks: THREE.InstancedMesh;
   private time = 0;
   private bloodFx!: BloodFx;
+  /** Ślady walki na postaciach: numer → [plamy krwi 0–3, krew na ostrzu] (Figures.marks) */
+  private woundMarks = new Map<number, readonly [number, boolean]>();
+  /** Kiedy (czas sceny) żołnierz ostatnio trafił wręcz — od tego krew na ostrzu */
+  private bladeAt = new Map<number, number>();
   private breath!: BreathFx;
   private bloodGround: (x: number, z: number) => number = () => 0;
   /** Bez animacji (tylko na życzenie: ?spokoj=1). Systemowe „ogranicz ruch” zatrzymywało wszystkie animacje w grze (ludzie sunęli, bramy stały) */
@@ -893,7 +897,8 @@ export class GameRenderer {
     this.stains = new BloodStains(MAX_UNITS); // krew: nieregularna plama, rozlewa się i ciemnieje (render/blood.ts)
     this.scene.add(this.stains.mesh);
     this.breath = new BreathFx(this.scene); // para z ust na mrozie (render/breath.ts)
-    this.bloodFx = new BloodFx(this.scene); // krew w walce: prysk przy trafieniu, krople za ciężko rannym (render/bloodfx.ts)
+    this.bloodFx = new BloodFx(this.scene);
+    Figures.marks = (id) => this.woundMarks.get(id); // krew w walce: prysk przy trafieniu, krople za ciężko rannym (render/bloodfx.ts)
     this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.13, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false, toneMapped: false, fog: false }), MAX_UNITS);
     this.dots.count = 0;
     this.dots.frustumCulled = false;
@@ -3784,6 +3789,8 @@ export class GameRenderer {
 
   private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
     this.bloodGround = (x: number, z: number): number => view.heightAt(x, z);
+    if (this.bladeAt.size > 2000) this.bladeAt.clear();
+    if (this.woundMarks.size > 4000) this.woundMarks.clear();
     { const hw = g.map.width / 2, hh = g.map.height / 2; this.spells.ground = (x: number, z: number): number => view.heightAt(x + hw, z + hh); }
     try { this.syncSoldiersInner(g, view, alpha); } finally {
       this.bloodFx.update(Math.min(0.1, this.frameDt || 0.016), this.time, this.bloodGround, g.map.width / 2, g.map.height / 2, this.calm);
@@ -4065,6 +4072,13 @@ export class GameRenderer {
       const pc = this.lastCd.get(s.id) ?? 0;
       const ls = this.lastShot.get(s.id);
       const fired = ranged ? ls !== undefined && (s.shot ?? -1) !== ls : s.cd > pc;
+      // ślady walki na postaci: plamy krwi na ubraniu rannego, krew na ostrzu przez ok. 40 s po ciosie (peasants.ts)
+      if (fired && !ranged && !udef.ram && (foe || victim)) this.bladeAt.set(s.id, this.time);
+      {
+        const frac = s.hp / Math.max(1, udef.hp), lvl = frac < 0.2 ? 3 : frac < 0.38 ? 2 : frac < 0.62 ? 1 : 0;
+        const bl = this.bladeAt.get(s.id), bloody = bl !== undefined && this.time - bl < 40;
+        if (lvl || bloody) this.woundMarks.set(s.id, [lvl, bloody]); else this.woundMarks.delete(s.id);
+      }
       this.lastShot.set(s.id, s.shot ?? -1);
       if (ranged && fired && (foe || wall || victim) && !this.calm && this.arrows.count < MAX_ARROWS) {
         let tx: number, ty: number, th: number;
@@ -5057,6 +5071,7 @@ export class GameRenderer {
       if (walking) this.feet.set(u.id, [cv.sx, cv.sy, footY]); // ślady butów: miejsce i wysokość stóp z ekranu
       // krew: chłop raniony przez wilka albo wroga pryska krwią, ciężko ranny gubi krople (render/bloodfx.ts)
       if ((u.hp ?? PEASANT_HP) < PEASANT_HP || this.bloodFx.knows(u.id)) this.bloodFx.track(u.id, u.hp ?? PEASANT_HP, PEASANT_HP, cv.sx, footY, cv.sy, heading, walking, this.time, this.bloodGround, 0.24, true);
+      { const frac = (u.hp ?? PEASANT_HP) / PEASANT_HP, lvl = frac < 0.25 ? 3 : frac < 0.45 ? 2 : frac < 0.7 ? 1 : 0; if (lvl) this.woundMarks.set(u.id, [lvl, false]); else if (this.woundMarks.has(u.id)) this.woundMarks.delete(u.id); }
       if (!this.calm) this.breath.breathe(u.id, t.position.x, footY + 0.4, t.position.z, heading, this.time, this.camPos, false);
       t.rotation.set(0, heading, 0);
       if (walking && tipsy && this.drank.has(u.id)) {

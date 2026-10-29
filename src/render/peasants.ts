@@ -59,6 +59,9 @@ interface Part {
   elbow?: boolean;
   /** Kula czaru w dłoni maga: widać ją tylko przy czarowaniu (armsUp) */
   orb?: boolean;
+  /** Część rzadko widoczna (krew na ubraniu i ostrzu): rysowana tylko w klatkach, w których ktoś ją ma */
+  opt?: boolean;
+  used?: number;
   /** 0 = wersja z bliska, 1 = uproszczona wersja z daleka */
   lod: 0 | 1;
 }
@@ -217,6 +220,14 @@ export class Figures {
   private viewPos: THREE.Vector3 | null = null;
   /** Od tej odległości od kamery (do kwadratu) postać rysuje się w wersji uproszczonej */
   static FAR2 = 13 * 13;
+  /**
+   * Ślady walki na postaci (Michał 29.10.2026, „ranni po wyglądzie”): dla numeru osoby [ile plam krwi na ubraniu 0–3,
+   * czy ostrze broni jest we krwi]. Ustawia scena co klatkę; brak wpisu = czysta postać.
+   */
+  static marks: (id: number) => readonly [number, boolean] | undefined = () => undefined;
+  /** Ślady bieżącej osoby (w trakcie set) */
+  private wound = 0;
+  private bloody = false;
 
   /** Ręka z bronią prowadzoną fazą ciosu (topór zbója): set(…, pose) ustawia ją i broń w dłoni wprost */
   private weaponArm: Part['rot'] | null = null;
@@ -290,6 +301,37 @@ export class Figures {
       n.setAttribute('color', new THREE.BufferAttribute(arr, 3));
       return n;
     };
+    // plamy krwi na ubraniu rannego: na piersi, niżej na brzuchu i na plecach (pojawiają się po kolei, im ciężej ranny);
+    // tylko z bliska — z daleka plamy i tak nie widać
+    const BLOOD = 0x4a0704;
+    for (const [lvl, x, y, z, rx, ry] of [[1, 0.03, 0.4, 0.074, 0.032, 0.042], [2, -0.038, 0.33, 0.079, 0.036, 0.03], [3, 0.04, 0.43, -0.07, 0.04, 0.05]] as const)
+      { mk(new THREE.SphereGeometry(1, 10, 6).scale(rx, ry, 0.012).translate(x, y, z), BLOOD, new THREE.Vector3(), still, () => this.wound >= lvl, 'cloth'); this.parts[this.parts.length - 1]!.opt = true; }
+    /** Krew na ostrzu: ta sama bryła co broń, trochę grubsza, tylko na końcowej części klingi (ok. 40% od czubka) */
+    const bladeBlood = (geos: THREE.BufferGeometry[]): THREE.BufferGeometry => {
+      const g = mergeGeometries(geos.map((x) => { const n = x.clone(); for (const k of Object.keys(n.attributes)) if (k !== 'position') n.deleteAttribute(k); return n.index ? n.toNonIndexed() : n; }))!;
+      g.computeBoundingBox();
+      const b = g.boundingBox!, size = new THREE.Vector3(), c = new THREE.Vector3();
+      b.getSize(size); b.getCenter(c);
+      const ax = size.x >= size.y && size.x >= size.z ? 0 : size.y >= size.z ? 1 : 2;
+      const lo = b.min.getComponent(ax), hi = b.max.getComponent(ax);
+      // czubek: koniec dalej od chwytu (chwyt w zerze układu broni)
+      const tipHi = Math.abs(hi) >= Math.abs(lo), len = (hi - lo) * 0.4;
+      // przekrój samej klingi przy czubku (bez jelca): wymiary z wierzchołków w tym odcinku
+      // (mierzone na dwa razy dłuższym odcinku — klinga z Blendera ma wierzchołki rzadko, często tylko u nasady i czubka)
+      const from = tipHi ? hi - len * 2 : lo, to = tipHi ? hi : lo + len * 2;
+      const mn = [Infinity, Infinity, Infinity], mx = [-Infinity, -Infinity, -Infinity], pos = g.attributes.position!;
+      for (let i = 0; i < pos.count; i++) {
+        const v = [pos.getX(i), pos.getY(i), pos.getZ(i)];
+        if (v[ax]! < from || v[ax]! > to) continue;
+        for (let k = 0; k < 3; k++) { mn[k] = Math.min(mn[k]!, v[k]!); mx[k] = Math.max(mx[k]!, v[k]!); }
+      }
+      const dims = [0, 1, 2].map((k) => (mx[k]! - mn[k]!) * 1.15 + 0.003);
+      dims[ax] = len * 0.92;
+      const at = [0, 1, 2].map((k) => (mn[k]! + mx[k]!) / 2);
+      at[ax] = tipHi ? hi - len / 2 : lo + len / 2;
+      void c;
+      return new THREE.BoxGeometry(dims[0], dims[1], dims[2]).translate(at[0]!, at[1]!, at[2]!);
+    };
     if (kind === 'guard' || kind === 'manatarms') {
       // Strażnik Starego Obozu (tools/models/guard.py) i zbrojny w pełnej zbroi (tools/models/manatarms.py): ten sam miecz i ruchy
       const M = (kind === 'guard' ? GUARD_MODEL : MANATARMS_MODEL) as FigureModel;
@@ -304,6 +346,10 @@ export class Figures {
       const SW = M as FigureModel & { sword: ModelMesh[]; swordFar: ModelMesh[] };
       for (const lod of [0, 1] as const)
         for (const m of lod ? SW.swordFar : SW.sword) mk(modelGeo(m), 0xffffff, at.clone(), swordArm, always, m.mat as Mat, sword, lod);
+      // krew na klindze po ciosach: przyciemniona czerwień na końcu ostrza (część klingi: najdłuższa siatka miecza)
+      const blade = [...SW.sword].map((m) => modelGeo(m)).sort((a, b) => b.attributes.position!.count - a.attributes.position!.count);
+      mk(bladeBlood([blade.find((g) => { g.computeBoundingBox(); const sz = new THREE.Vector3(); g.boundingBox!.getSize(sz); return Math.max(sz.x, sz.y, sz.z) > 0.15; }) ?? blade[0]!]), 0x5a0805, at.clone(), swordArm, () => this.bloody, 'metal', sword);
+      this.parts[this.parts.length - 1]!.opt = true;
       return;
     }
     if (kind === 'mageFire' || kind === 'mageWater' || kind === 'preacher') {
@@ -372,6 +418,12 @@ export class Figures {
           tinted(new THREE.OctahedronGeometry(1, 0).scale(0.027, 0.085, 0.01).translate(0, 0.66, 0), STEEL),
           tinted(new THREE.CylinderGeometry(0.0105, 0.012, 0.04, 6).translate(0, 0.565, 0), STEEL),
         ])!, 0xffffff, 0.15, sy - 0.09, 0.075, thrustSpear, always, 'metal');
+        // krew na grocie po pchnięciach: dolna część liścia grotu i tulejka przyciemnione na czerwono
+        add(mergeGeometries([
+          new THREE.OctahedronGeometry(1, 0).scale(0.0285, 0.06, 0.0112).translate(0, 0.63, 0),
+          new THREE.CylinderGeometry(0.0112, 0.0125, 0.03, 6).translate(0, 0.575, 0).toNonIndexed(),
+        ].map((x) => (x.index ? x.toNonIndexed() : x)))!, 0x5a0805, 0.15, sy - 0.09, 0.075, thrustSpear, () => this.bloody, 'metal');
+        this.parts[this.parts.length - 1]!.opt = true;
         return;
       }
       // łucznik: lewa ręka trzyma łuk, prawa naciąga cięciwę
@@ -431,11 +483,14 @@ export class Figures {
     const i = far ? this.farN++ : this.nearN++;
     const lod = far ? 1 : 0;
     const look = lookOf(id, tunic, this.muted);
+    const mk = Figures.marks(id);
+    this.wound = mk?.[0] ?? 0; this.bloody = mk?.[1] ?? false;
     this.scaled.copy(base).scale(this.one.setScalar(look.size));
     this.one.setScalar(1);
     for (const p of this.parts) {
       if (p.lod !== lod) continue;
       if (!p.shown(look) || (p.orb && !armsUp)) { p.mesh.setMatrixAt(i, this.none); continue; }
+      if (p.opt) p.used = (p.used ?? 0) + 1;
       const r = pose && p.rot === this.weaponArm ? pose[0] : pose && p.rot === this.weaponRot ? pose[1] : pose && p.rot === this.freeArmRot ? (pose[3] ?? p.rot(0, true)) : work === undefined ? p.rot(swing, armsUp)
         : p.rot === armR ? work : p.rot === armL ? workL : p.rot === legL || p.rot === legR ? (walkLegs ? p.rot(swing, false) : 0) : p.rot(0, false);
       // siedzi: obie nogi wyciągnięte przed siebie
@@ -467,7 +522,8 @@ export class Figures {
     for (const p of this.parts) {
       const n = p.lod ? this.farN : this.nearN;
       p.mesh.count = n;
-      p.mesh.visible = n > 0; // pusta grupa nie kosztuje wywołania rysowania
+      p.mesh.visible = n > 0 && (!p.opt || (p.used ?? 0) > 0); // pusta grupa nie kosztuje wywołania rysowania
+      p.used = 0;
       touch(p.mesh);
       if (p.mesh.instanceColor) touch(p.mesh);
     }

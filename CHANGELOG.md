@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.28 — rannych widać po ubraniu, krew na ostrzu (2026-10-29)
+
+- **Plamy krwi na ubraniu:** żołnierz poniżej ok. 60% zdrowia ma ciemną plamę krwi na piersi, poniżej ok. 38% drugą na brzuchu, a ciężko ranny (poniżej 20%) także na plecach. U chłopów to samo, gdy ranią ich wilki albo wróg. Plamy znikają, gdy rany się zagoją (`render/peasants.ts`, `Figures.marks`)
+- **Krew na ostrzu:** po ciosie wręcz klinga miecza (strażnik miejski, zbrojny) i grot włóczni są przez ok. 40 s przyciemnione na czerwono na końcu ostrza
+- Rysowane tylko z bliska i tylko w klatkach, w których ktoś jest ranny albo ma zakrwawioną broń — bez dodatkowych wywołań rysowania w spokoju. Tylko wygląd; bot bez zmian
+
 ## 0.65.27 — łucznik w leśnym kapturze (2026-10-29)
 
 - **Zgłoszenie:** łucznik był od stóp po czubek głowy w barwie pana — kaptur, pelerynka i przeszywanica zlewały się w jeden czerwony worek z małym okienkiem na twarz. Teraz kaptur, pelerynka i ogon kaptura są z zielonkawej, leśnej wełny (ciemniejszej u dołu), otwór na twarz jest szerszy (widać twarz i brodę), a barwy pana zostają na pikowanej przeszywanicy — łucznika w drużynie dalej poznać po barwie tułowia (`tools/models/soldier.py archer`)
