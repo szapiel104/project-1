@@ -14,6 +14,7 @@ import sys
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
 from timber import Timber  # noqa: E402
+from strawdummy import straw_dummy  # noqa: E402
 
 b = Building()
 t = Timber(b, T=0.08)
@@ -125,16 +126,11 @@ t.open.append([DOOR[0], DOOR[1], Z1 - T - 0.02, Z1 + 0.05])
 # ---------------- plac: kukły, tarcza łucznicza, stojak z włóczniami, koryto, ława, sztandar ----------------
 def dummy(x, z, rot=0.0):
     """Słomiana kukła na palu z poprzeczką i tarczą"""
-    b.box('base', 'woodDark', 0.05, 0.72, 0.05, x, 0.0, z)
+    straw_dummy(b, 'base', x, 0.0, z, rot)
     t.block(x - 0.12, x + 0.12, z - 0.12, z + 0.12, 0, 0.8)
     c, s = math.cos(rot), math.sin(rot)
-    b.box('base', 'woodDark', 0.42, 0.04, 0.04, x, 0.52, z, rot)
-    b.prism('base', 'hay', 0.11, 0.13, 0.3, x, 0.36, z, seg=10)
-    b.prism('base', 'rope', 0.135, 0.135, 0.025, x, 0.5, z, seg=10)
-    b.prism('base', 'hay', 0.08, 0.05, 0.12, x, 0.66, z, seg=8)
-    b.prism('base', 'hay', 0.05, 0.0, 0.05, x, 0.78, z, seg=8)
     # tarcza na lewym ramieniu kukły (do przodu)
-    sx, sz = x - c * 0.16 + s * 0.08, z + s * 0.16 + c * 0.08
+    sx, sz = x - c * 0.16 + s * 0.14, z + s * 0.16 + c * 0.14
     b.box('base', 'wood', 0.18, 0.24, 0.025, sx, 0.34, sz, rot)
     b.box('base', 'iron', 0.05, 0.05, 0.03, sx + s * 0.01, 0.43, sz + c * 0.01, rot)
 dummy(-0.85, 0.5, 0.2)

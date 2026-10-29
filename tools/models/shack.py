@@ -36,9 +36,9 @@ DOOR = (0.2, 0.58, 0.6)   # otwór wejścia (x od, x do, wysokość)
 DM = (DOOR[0] + DOOR[1]) / 2
 P = 0.012                 # klepisko
 
-# ---------------- klepisko (na nim śpią) i ubita ziemia przed wejściem ----------------
-b.box('base', 'soil', X1 - X0 + 0.22, 0.006, Z1 - Z0 + 0.22, 0, 0, 0)
-b.box('base', 'soil', 0.6, 0.004, 0.3, DM, 0, Z1 + 0.22)
+# ---------------- klepisko (na nim śpią) — tylko w środku, pod ścianami (Michał 29.10.2026: ubita ziemia na zewnątrz
+# wokół chaty i przed wejściem wyglądała jak wycięty prostokąt na trawie) ----------------
+b.box('base', 'soil', X1 - X0 - 0.03, 0.006, Z1 - Z0 - 0.03, 0, 0, 0)
 b.box('floor', 'soil', X1 - X0 - 0.16, 0.008, Z1 - Z0 - 0.08, 0, P - 0.006, 0)   # ciemna, ubita ziemia (nie jasny pył)
 
 # ---------------- słupy z okorowanych pni (narożniki i po bokach drzwi) ----------------

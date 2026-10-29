@@ -75,10 +75,9 @@ def wall(axis, at, a0, a1, out, k0, holes=(), skip=(), patch=None):
             b.box('base', 'woodDark', 0.075, ph, PT, d, 0.08, pa, rot=math.pi / 2, roll=jit(5, pa, 0.06))
 
 
-# ---------------- klepisko, ubita ziemia pod budą i na podwórcu ----------------
-b.box('base', 'soil', XR - XL + 0.2, 0.006, ZM - ZB + 0.2, 0, 0, (ZB + ZM) / 2)
-b.box('base', 'soil', XI - XL + 0.2, 0.0055, ZF - ZM + 0.1, (XL + XI) / 2, 0, (ZM + ZF) / 2 + 0.05)
-b.box('base', 'soil', 0.95, 0.004, 1.0, 0.45, 0, 0.45)   # podwórzec
+# ---------------- klepisko tylko w środku (bez ubitej ziemi na zewnątrz i bez podwórca — Michał 29.10.2026) ----------------
+b.box('base', 'soil', XR - XL - 0.03, 0.006, ZM - ZB - 0.03, 0, 0, (ZB + ZM) / 2)
+b.box('base', 'soil', XI - XL - 0.03, 0.0055, ZF - ZM - 0.01, (XL + XI) / 2, 0, (ZM + ZF) / 2 - 0.005)
 b.box('floor', 'soil', XR - XL - 0.12, 0.008, ZM - ZB - 0.08, 0, P - 0.006, (ZB + ZM) / 2)
 b.box('floor', 'soil', XI - XL - 0.1, 0.0085, ZF - ZM, (XL + XI) / 2, P - 0.006, (ZM + ZF) / 2 - 0.02)
 

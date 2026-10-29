@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.18 — rudery bez ubitej ziemi na zewnątrz, okrągłe słomiane kukły (2026-10-29)
+
+- **Zgłoszenie (rudery):** rudera i rudera narożna miały wokół siebie i przed wejściem prostokąt ubitej ziemi (w narożnej także cały podwórzec) — na trawie wyglądało to jak wycięty płat. Klepisko zostaje tylko w środku, pod ścianami (`tools/models/shack.py`, `shackl.py`)
+- **Zgłoszenie (kukły):** kukły do ćwiczeń na dziedzińcu zamku były z dwóch kanciastych worków. Teraz w zamku i przy koszarach stoi okrągła słomiana kukła: pękaty snop przewiązany dwa razy sznurem, źdźbła wystające spod spodu, ramiona owinięte słomą, okrągła głowa związana pod szyją z czubkiem źdźbeł (`tools/models/strawdummy.py`)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.17 — pochodnie w kopalni, kamienna brama bez migania (2026-10-29)
 
 - **Zgłoszenie (kopalnia):** w głębi kopalni płomienie wisiały w powietrzu. Teraz pod każdym jest pochodnia: drewniany trzonek, głowica ze szmat w smole owinięta sznurem; przy ścianach w żelaznym uchwycie wbitym w skałę, na słupkach w żelaznej tulei, przy szybie przywiązana do słupka barierki (`tools/models/minelevel.py`)

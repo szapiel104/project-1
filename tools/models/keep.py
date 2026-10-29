@@ -19,6 +19,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 # [x, y, z, obrót, szerokość, wysokość, rodzaj: 0 = na drzewcu (x,y,z = brzeg przy drzewcu, środek wysokości), 1 = wisząca (x,y,z = środek górnej krawędzi), grupa]
 BANNERS = []
 from building import Building  # noqa: E402
+from strawdummy import straw_dummy  # noqa: E402
 
 ROOT = os.path.join(os.path.dirname(__file__), '..', '..')
 L = json.load(open(os.path.join(ROOT, 'src', 'data', 'keep-layout.json')))
@@ -1058,11 +1059,8 @@ for i in range(4):
     b.box('base', 'wood', 0.6, 0.08, 0.08, cx(1) + 0.05, G + i * 0.08, cz(4) - 0.3 + (i % 2) * 0.02, 0.0)
 block(cx(1) - 0.25, cx(1) + 0.35, cz(4) - 0.38, cz(4) - 0.22)
 for x, z in ((cx(6) + 0.1, cz(6) + 0.1), (cx(6) + 0.1, cz(5) + 0.2)):
-    b.box('base', 'woodDark', 0.05, 0.55, 0.05, x, G, z)
-    b.box('base', 'woodDark', 0.4, 0.05, 0.05, x, G + 0.42, z)
-    b.box('base', 'sack', 0.16, 0.22, 0.12, x, G + 0.3, z)
-    b.box('base', 'sack', 0.11, 0.1, 0.11, x, G + 0.55, z)
-    block(x - 0.12, x + 0.12, z - 0.08, z + 0.08)
+    straw_dummy(b, 'base', x, G, z)
+    block(x - 0.13, x + 0.13, z - 0.13, z + 0.13)
 # pieniek z wbitym toporem przy stosie drewna, obok kilka szczap
 PX, PZ = cx(1) + 0.55, cz(4) - 0.25
 b.prism('base', 'wood', 0.11, 0.1, 0.17, PX, G, PZ, seg=12)
