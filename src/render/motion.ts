@@ -15,6 +15,8 @@ interface Vis {
   heading: number;
   /** Odbicie w bok w polach (+ = w prawo od kierunku marszu) */
   side: number;
+  /** Odsunięcie od sąsiadów stojących albo idących w tym samym miejscu (pola) — żeby nikt nie wchodził w drugiego */
+  ox: number; oy: number;
   speed: number;
   frame: number;
   solid: boolean;
@@ -27,6 +29,10 @@ const CELL = 0.5;
 /** Odległość, przy której mijający się zaczynają się omijać (w polach) */
 const NEAR = 0.32;
 const MAX_SIDE = 0.2;
+/** Bliżej niż tyle (pola) dwie postacie się rozsuwają (Michał 29.10.2026: „10 chłopów jak idzie, to są w sobie”) */
+const SEP = 0.2;
+/** Najdalej tyle odsunięcia od miejsca z symulacji */
+const MAX_PUSH = 0.22;
 
 export class Crowd {
   private vis = new Map<number, Vis>();
@@ -53,14 +59,15 @@ export class Crowd {
    */
   /** Postać od razu w (x, y) (np. wychodzi z klatki schodowej wieży); dalej `move` prowadzi ją płynnie do celu */
   place(id: number, x: number, y: number, heading: number): void {
-    this.vis.set(id, { x, y, sx: x, sy: y, heading, side: 0, speed: 0, frame: this.frame, solid: true, id, near: 0 });
+    this.vis.set(id, { x, y, sx: x, sy: y, heading, side: 0, ox: 0, oy: 0, speed: 0, frame: this.frame, solid: true, id, near: 0 });
   }
 
   move(id: number, tx: number, ty: number, heading: number, calm: boolean, solid = true): Vis {
     let v = this.vis.get(id);
     if (!v || calm || Math.abs(v.x - tx) > 1.5 || Math.abs(v.y - ty) > 1.5) {
       // pierwszy raz, skok (np. wyjście z chaty) albo wyłączone animacje: od razu na miejscu
-      v = { x: tx, y: ty, sx: tx, sy: ty, heading, side: 0, speed: 0, frame: this.frame, solid, id, near: 0 };
+      v = { x: tx, y: ty, sx: tx, sy: ty, heading, side: 0, ox: v?.ox ?? 0, oy: v?.oy ?? 0, speed: 0, frame: this.frame, solid, id, near: 0 };
+      v.sx += v.ox; v.sy += v.oy;
       this.vis.set(id, v);
       return v;
     }
@@ -102,7 +109,35 @@ export class Crowd {
     want = Math.max(-MAX_SIDE, Math.min(MAX_SIDE, want * 0.35));
     v.side += (want - v.side) * (1 - Math.exp(-this.dt * 6));
     const rx = Math.cos(v.heading), ry = -Math.sin(v.heading); // prawa strona
-    v.sx = v.x + rx * v.side; v.sy = v.y + ry * v.side;
+    // rozsuwanie: każdy, kto stoi albo idzie bliżej niż SEP, odpycha (także dwóch w tym samym punkcie, gdy idą
+    // jeden za drugim tą samą drogą z symulacji — wtedy kierunek wybiera para numerów, każdy w swoją stronę)
+    let px = 0, py = 0;
+    if (solid) {
+      const cx = Math.floor(v.sx / CELL), cy = Math.floor(v.sy / CELL);
+      for (let gx = cx - 1; gx <= cx + 1; gx++)
+        for (let gy = cy - 1; gy <= cy + 1; gy++)
+          for (const o of this.grid.get(gx * 4096 + gy) ?? []) {
+            if (o === v || !o.solid) continue;
+            let dx = v.sx - o.sx, dy = v.sy - o.sy;
+            const d = Math.hypot(dx, dy);
+            if (d >= SEP) continue;
+            if (d < 1e-3) {
+              const a = rnd(Math.min(v.id, o.id), Math.max(v.id, o.id)) * Math.PI * 2, sg = v.id > o.id ? 1 : -1;
+              dx = Math.cos(a) * sg; dy = Math.sin(a) * sg;
+            } else { dx /= d; dy /= d; }
+            const f = 1 - d / SEP;
+            px += dx * f; py += dy * f;
+          }
+    }
+    const k2 = 1 - Math.exp(-this.dt * 4);
+    let wx = v.ox + px * 0.06, wy = v.oy + py * 0.06;
+    // bez sąsiadów odsunięcie powoli wraca do zera (stoi tam, gdzie w symulacji)
+    if (!px && !py) { wx = v.ox * (1 - k2 * 0.5); wy = v.oy * (1 - k2 * 0.5); }
+    const L = Math.hypot(wx, wy);
+    if (L > MAX_PUSH) { wx *= MAX_PUSH / L; wy *= MAX_PUSH / L; }
+    v.ox += (wx - v.ox) * Math.min(1, k2 * 3);
+    v.oy += (wy - v.oy) * Math.min(1, k2 * 3);
+    v.sx = v.x + rx * v.side + v.ox; v.sy = v.y + ry * v.side + v.oy;
     v.frame = this.frame;
     v.solid = solid;
     return v;
