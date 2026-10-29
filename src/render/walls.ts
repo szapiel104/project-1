@@ -8,7 +8,7 @@ import { BUILDINGS, footprint, isStoneTower, isTower } from '../data/buildings';
 import type { GameState } from '../sim/state';
 import { buildWork, maxHp } from '../sim/systems/placement';
 import { ladderSides, towerEntry } from '../sim/systems/stonewalls';
-import { STONE_WALL_TOP, TOWER_TOP, palisadeLogs, stoneWallKit } from './buildings';
+import { STONE_WALL_TOP, TOWER_TOP, palisadeLogs, stoneWallKit, towerDoorKit } from './buildings';
 import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { normal, pattern } from './textures';
@@ -29,7 +29,7 @@ export class WallLayer {
   readonly ladderFeet = new Map<number, [number, number]>();
   private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
   /** Mur kamienny dochodzący do kamiennej wieży: przedłużenie korony aż do ściany wieży i ciemne wejście w tej ścianie */
-  private doorKit: { bridge: THREE.InstancedMesh; door: THREE.InstancedMesh; lintel: THREE.InstancedMesh } | null = null;
+  private doorKit: { bridge: THREE.InstancedMesh; door: THREE.InstancedMesh[]; steps: THREE.InstancedMesh[] } | null = null;
   /** Częstokół: bale łączą się z sąsiednimi palisadami, bramami i wieżami; brama obraca się w linii muru */
   sync(g: GameState, view: TerrainView, buildingMeshes: Map<number, THREE.Group>): void {
     const { width, height } = g.map;
@@ -72,15 +72,23 @@ export class WallLayer {
         m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(cat(m, label));
         return m;
       };
-      const dark = new THREE.MeshStandardMaterial({ color: 0x0a0705, roughness: 1, metalness: 0 });
+      const tdk = towerDoorKit();
       // geometrie w układzie „wejście w ścianie +z”: z = 0 to krawędź pola muru, wieża leży w stronę +z
       this.doorKit = {
         bridge: mk(k.bridge, k.mat, 'mur do wieży'),
-        door: mk(new THREE.BoxGeometry(0.34, 0.54, 0.04).translate(0, 0.27, 0), dark, 'wejście z muru do wieży'),
-        lintel: mk(k.lintel, k.mat, 'nadproże wejścia z muru'),
+        // drzwi jak od frontu kamiennej wieży (tools/models/towerdoor.py), obrócone tak, by patrzyły w -z (na mur)
+        door: tdk.door.map((d) => mk(d.geo.clone().rotateY(Math.PI), d.mat, 'drzwi wieży z muru')),
+        steps: tdk.steps.map((d) => mk(d.geo.clone().rotateY(Math.PI), d.mat, 'schodki drzwi wieży')),
       };
     }
-    const dn = { bridge: 0, door: 0, lintel: 0 };
+    const dn = { bridge: 0, door: 0, steps: 0 };
+    /** Drzwi wieży (i schodki przy ziemi) w macierzy M4 */
+    const putDoor = (steps: boolean): void => {
+      if (!this.doorKit || dn.door >= 1024) return;
+      for (const m of this.doorKit.door) m.setMatrixAt(dn.door, M4);
+      dn.door++;
+      if (steps) { for (const m of this.doorKit.steps) m.setMatrixAt(dn.steps, M4); dn.steps++; }
+    };
     /** Wejścia z korony muru do kamiennych wież: wieża i bok → położenie lica i wysokości korony przyległych pól */
     const doors = new Map<string, { tw: GameState['buildings'][number]; dx: number; dz: number; rot: number; face: number; ys: number[]; along: number[] }>();
     /** Gotowa kamienna wieża na polu (x, y): odległość od krawędzi jej działki do lica trzonu (pole muru → ściana wieży) */
@@ -119,12 +127,11 @@ export class WallLayer {
       if (!isStoneTower(id)) { ladderAt(ix, iz, ddx, ddz, base - 0.04, TOWER_TOP[id] ?? 1.9); continue; }
       if (!this.doorKit || dn.door >= 1024) continue;
       const gap = id === 'stoneTower' ? 0.26 : id === 'stoneTowerBig' ? 0.35 : 0.45;
+      // takie same drzwi ze schodkami jak od frontu (próg 0,28 nad ziemią), na licu trzonu
       e.set(0, ladderRot(-ddx, -ddz), 0); q.setFromEuler(e);
-      const fx = ix + 0.5 + ddx * (0.5 - gap + 0.005), fz = iz + 0.5 + ddz * (0.5 - gap + 0.005);
-      M4.compose(p.set(fx - width / 2, base + 0.3, fz - height / 2), q, sc.set(1, 1.3, 1));
-      this.doorKit.door.setMatrixAt(dn.door++, M4);
-      M4.compose(p.set(fx + ddx * 0.01 - width / 2, base + 0.3 + 0.54 * 1.3, fz + ddz * 0.01 - height / 2), q, sc.set(1, 1, 1));
-      this.doorKit.lintel.setMatrixAt(dn.lintel++, M4);
+      const fx = ix + 0.5 + ddx * (0.5 - gap), fz = iz + 0.5 + ddz * (0.5 - gap);
+      M4.compose(p.set(fx - width / 2, base + 0.28, fz - height / 2), q, sc.set(1, 1, 1));
+      putDoor(true);
     }
     const keeps = new Map<number, [number, number]>();
     for (const b of g.buildings) if (b.type === 0) { const fp = footprint(BUILDINGS[0]!, b.rot); keeps.set(b.owner, [b.x + fp.w / 2, b.y + fp.h / 2]); }
@@ -210,7 +217,7 @@ export class WallLayer {
             const tw = solid.get((b.y + dz) * width + b.x + dx)!, side = `${tw.id}:${dx}:${dz}`;
             const d = doors.get(side);
             if (d) { d.ys.push(y0); d.along.push(dx ? cz : cx); }
-            else doors.set(side, { tw, dx, dz, rot, face: dx ? ex + dx * (gap - 0.005) : ez + dz * (gap - 0.005), ys: [y0], along: [dx ? cz : cx] });
+            else doors.set(side, { tw, dx, dz, rot, face: dx ? ex + dx * gap : ez + dz * gap, ys: [y0], along: [dx ? cz : cx] });
             continue;
           }
           // obok drewniana strażnica albo czatownia: z korony prowadzi na jej pomost krótka drabina, blanek w poprzek nie ma
@@ -311,13 +318,14 @@ export class WallLayer {
       const avg = (a: number[]): number => a.reduce((m, v) => m + v, 0) / a.length;
       const y = avg(d.ys) + STONE_WALL_TOP, mid = avg(d.along);
       const fx = d.dx ? d.face : mid, fz = d.dz ? d.face : mid;
+      // drzwi jak od frontu (bez schodków: podłogą jest korona muru), trochę mniejsze — nad nimi zaczynają się wsporniki
       e.set(0, d.rot, 0); q.setFromEuler(e);
-      M4.compose(p.set(fx - width / 2, y, fz - height / 2), q, sc.set(1, 1, 1));
-      this.doorKit.door.setMatrixAt(dn.door++, M4);
-      M4.compose(p.set(fx - d.dx * 0.01 - width / 2, y + 0.54, fz - d.dz * 0.01 - height / 2), q, sc.set(1, 1, 1));
-      this.doorKit.lintel.setMatrixAt(dn.lintel++, M4);
+      M4.compose(p.set(fx - width / 2, y, fz - height / 2), q, sc.setScalar(0.85));
+      putDoor(false);
     }
-    for (const key of ['bridge', 'door', 'lintel'] as const) { const m = this.doorKit[key]; m.count = dn[key]; touch(m); }
+    this.doorKit.bridge.count = dn.bridge; touch(this.doorKit.bridge);
+    for (const m of this.doorKit.door) { m.count = dn.door; touch(m); }
+    for (const m of this.doorKit.steps) { m.count = dn.steps; touch(m); }
     touch(this.wallShafts); touch(this.wallTips!);
   }
 }

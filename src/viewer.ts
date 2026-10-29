@@ -15,7 +15,7 @@ import { BUILDINGS } from './data/buildings';
 import { RESOURCES } from './data/resources';
 import { carryArms, loadGeometry, loadMaterials, ON_SHOULDER, plankBundle } from './render/loads';
 import { lang, t, tx } from './i18n';
-import { buildingModel, isWetMat, isWindowMat, setNight } from './render/buildings';
+import { buildingModel, isWetMat, isWindowMat, setNight, towerDoorKit } from './render/buildings';
 import { attachLod, lodReady, prepareLod, showLod, type BuildingLod } from './render/lod';
 import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
 import { proceduralModels } from './render/models';
@@ -283,6 +283,12 @@ const GROUPS: [string, [string, string, Make][]][] = [
     ['work-back', tx('kilof na plecach', 'pick on the back'), worker('backPick', 0, false)],
   ]],
   [tx('Narzędzia', 'Tools'), ([['axe', tx('siekiera', 'axe')], ['pick', tx('kilof', 'pick')], ['hammer', tx('młotek', 'hammer')], ['club', tx('maczuga', 'club')], ['fork', tx('widły', 'pitchfork')], ['torch', tx('pochodnia', 'torch')], ['bucket', tx('wiadro', 'bucket')], ['rod', tx('wędka', 'fishing rod')], ['backPick', tx('kilof na plecach', 'pick on the back')], ['beltClub', tx('maczuga u pasa', 'club at the belt')]] as const).map(([k, l]) => [`tool-${k}`, `${l} ${tx('(z bliska | z daleka)', '(near | far)')}`, toolPair(k)] as [string, string, Make])],
+  [tx('Części budynków', 'Building parts'), [['towerdoor', tx('drzwi kamiennej wieży (nowe wejście: z muru i przy ziemi)', 'stone tower door (new entrance: from the wall and at ground)'), () => {
+    const g = new THREE.Group(), k = towerDoorKit();
+    for (const d of [...k.door, ...k.steps]) { const m = new THREE.Mesh(d.geo, d.mat); m.castShadow = true; m.receiveShadow = true; g.add(m); }
+    g.position.y = 0.28;
+    return { obj: g };
+  }]]],
   [tx('Pochówek', 'Burial'), [['grave', tx('grób w lesie (kopczyk z krzyżem)', 'woodland grave (mound and cross)'), () => ({ obj: graveModel() })], ['coffin', tx('trumna na noszach', 'coffin on a bier'), () => ({ obj: graveModel('coffin') })]]],
   [tx('Podwórko', 'Yard'), YARD_KEYS.map((k) => [`yard-${k}`, k.replace('cloth_', tx('pranie: ', 'washing: ')), () => ({ obj: yardModel(k) })] as [string, string, Make])],
   [tx('Graty', 'Clutter'), (['barrel', 'sack', 'hay', 'crate', 'trash', 'bucket', 'barrow', 'logs'] as const).map((k) => [`clutter-${k}`, k, () => ({ obj: clutterObject(k, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') })) })] as [string, string, Make])],

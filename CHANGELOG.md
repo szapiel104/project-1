@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.6 — nowe wejścia do kamiennych wież z prawdziwymi drzwiami (2026-10-29)
+
+- **Zgłoszenie:** tam, gdzie powstaje nowe wejście do kamiennej wieży (z korony muru albo przy ziemi, gdy przed frontem coś stoi), stoją teraz takie same drzwi jak od frontu: kamienne obramienie z nadprożem, okute skrzydło z desek z teksturą, kołatka; przy ziemi także kamienne schodki. Wcześniej był tam czarny prostokąt. Model w Blenderze: `tools/models/towerdoor.py`, w podglądzie modeli w grupie „Części budynków”
+- Z korony muru drzwi są o 15% mniejsze (nad nimi zaczynają się wsporniki chodnika)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.5 — wejścia z muru do wieży, wspinaczka bez doskoku, ognisko w obozowisku (2026-10-29)
 
 - **Zgłoszenie (mur ↔ kamienna wieża):** łącznik muru z wieżą i nadproże wejścia były czarne (bryły bez kolorów wierzchołków przy materiale z cieniem w zagłębieniach) — teraz z kamienia i z teksturą jak reszta muru (`stoneWallKit` → `bridge`, `lintel`). Wejście jest jedno na każdy bok wieży, na środku odcinka, którym dochodzi do niej mur (gruby mur dawał dwa wejścia obok siebie)

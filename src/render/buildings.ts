@@ -34,6 +34,7 @@ const BREWERY_MODEL = model('brewery');
 const GATE_MODEL = model('gate');
 const STONE_TOWER_MODEL = model('stonetower');
 const STONE_TOWER_BIG_MODEL = model('stonetower_big');
+const TOWER_DOOR_MODEL = model('towerdoor');
 const STONE_TOWER_GREAT_MODEL = model('stonetower_great');
 const BRAZIER_MODEL = model('brazier');
 const WATCH_TOWER_MODEL = model('watchtower');
@@ -1571,7 +1572,7 @@ export function brazierModel(): THREE.Group {
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }
-export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.BufferGeometry; ladder: THREE.BufferGeometry; bridge: THREE.BufferGeometry; lintel: THREE.BufferGeometry; mat: THREE.Material; wood: THREE.Material } {
+export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.BufferGeometry; ladder: THREE.BufferGeometry; bridge: THREE.BufferGeometry; mat: THREE.Material; wood: THREE.Material } {
   const k = (M.castle.userData.tile as number) || 1;
   const shade = (geo: THREE.BufferGeometry, v: number): THREE.BufferGeometry => {
     const n = geo.getAttribute('position').count, c = new Float32Array(n * 3).fill(v);
@@ -1615,11 +1616,24 @@ export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.Buffe
   const L = TOP + 0.3, lean = -0.3, foot = E + 0.42;
   for (const x of [-0.11, 0.11]) lad.push(shade(new THREE.BoxGeometry(0.035, L, 0.035).translate(0, L / 2, 0).rotateX(lean).translate(x, 0, foot).toNonIndexed(), 0.9));
   for (let y = 0.18; y < L - 0.1; y += 0.2) lad.push(shade(new THREE.BoxGeometry(0.26, 0.025, 0.03).translate(0, y, 0).rotateX(lean).translate(0, 0, foot).toNonIndexed(), 0.75));
-  // łącznik muru z kamienną wieżą (od krawędzi pola muru, +z, do lica wieży) i nadproże wejścia z korony — z kolorem
+  // łącznik muru z kamienną wieżą (od krawędzi pola muru, +z, do lica wieży) — z kolorem
   // wierzchołków i kafelkami tekstury jak reszta muru (bez koloru materiał z cieniem w zagłębieniach rysował je na czarno)
   const bridge = blk(1.0, TOP, 1.0, 0, 0, 0.5, 1);
-  const lintel = blk(0.46, 0.08, 0.06, 0, 0, 0, 0.82);
-  return { block, edge, ladder: mergeGeometries(lad)!, bridge, lintel, mat: withAo(M.castle), wood: withAo(M.wood) };
+  return { block, edge, ladder: mergeGeometries(lad)!, bridge, mat: withAo(M.castle), wood: withAo(M.wood) };
+}
+
+/**
+ * Drzwi kamiennej wieży jako zestaw do rysowania wielu naraz (tools/models/towerdoor.py): siatki z materiałami,
+ * lico ściany w z = 0, drzwi patrzą w +z, próg w y = 0. `steps` = schodki pod drzwi przy ziemi.
+ */
+export function towerDoorKit(): { door: { geo: THREE.BufferGeometry; mat: THREE.Material }[]; steps: { geo: THREE.BufferGeometry; mat: THREE.Material }[] } {
+  const model = TOWER_DOOR_MODEL as unknown as BlenderBuilding;
+  const mats = M as unknown as Record<string, THREE.Material>;
+  const part = (name: string): { geo: THREE.BufferGeometry; mat: THREE.Material }[] => ((model[name] as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
+    const base = mats[m.mat] ?? M.wood;
+    return { geo: blenderGeo(m.pos, m.ao, model.q, (base.userData.tile as number) || 1), mat: withAo(base) };
+  });
+  return { door: part('base'), steps: part('steps') };
 }
 
 /** Mokre budynki w deszczu: dachy, drewno i kamień ciemnieją i łapią połysk (odbicia światła), po deszczu schną */
