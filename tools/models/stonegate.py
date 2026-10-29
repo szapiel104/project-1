@@ -24,7 +24,9 @@ D = 0.5              # połowa grubości muru
 # baszty smuklejsze, stoją na skraju sąsiednich pól (łucznik na środku sąsiedniego przęsła muru stoi tuż obok baszty)
 OW = 0.5             # połowa szerokości przejazdu
 TS = 0.2             # połowa boku baszty
-TX = OW + TS         # oś baszt
+# oś baszt: lico baszty od przejazdu 6 mm przed krawędzią pola — tam kończy się blok sąsiedniego muru (walls.ts)
+# i dwie ściany w jednej płaszczyźnie migały przy ruchu kamery (Michał 29.10.2026)
+TX = OW + TS - 0.006
 TD = 0.66            # połowa głębokości baszty (wystaje przed lico muru)
 SPRING = 1.24        # wezgłowie łuku (dawniej 0,62)
 CROWN = SPRING + OW + 0.3   # wierzch korony nad łukiem — wyżej niż mur (przejazd nie mieści się pod chodnikiem muru)

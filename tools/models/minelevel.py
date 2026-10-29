@@ -15,10 +15,34 @@ import sys
 
 sys.path.insert(0, os.path.dirname(__file__))
 from building import Building  # noqa: E402
+from logs import lash, log  # noqa: E402
 
 b = Building()
 lamps, solid, spots = [], [], []
 G = 'base'
+
+
+def torch(x, y, z, wx=0.0, wz=0.0):
+    """Pochodnia pod płomieniem w punkcie latarni (x, y, z) (Michał 29.10.2026: „pali się sam płomień”): trzonek
+    z drewna, głowica ze szmat w smole owinięta sznurem, czubek tuż pod płomieniem. (wx, wz) = gdzie ściana: wtedy
+    pochodnia odchyla się od niej i trzyma ją żelazny uchwyt z obręczą wbity w skałę."""
+    top = y - 0.015
+    lean = 0.09 if (wx or wz) else 0.0
+    foot = (x + wx * lean, top - 0.36, z + wz * lean)
+    log(b, G, 'woodDark', foot, (x, top - 0.1, z), r=0.013, r1=0.015, seg=6)
+    # głowica: smoła i szmaty, poszarpana na górze, dwa zwoje sznura
+    b.crystal(G, 'dark', x, top - 0.055, z, 0.028, seed=x * 3.1 + z, sx=1.0, sy=1.9, sz=1.0, seg=8)
+    for f in (0.35, 0.75):
+        yy = top - 0.1 + f * 0.08
+        lash(b, G, (x, yy, z), (0, 1, 0), r=0.031, w=0.012, seg=8)
+    if wx or wz:
+        # uchwyt: obręcz wokół trzonka i ramię do ściany
+        ry = top - 0.2
+        rx, rz = x + wx * lean * 0.45, z + wz * lean * 0.45
+        lash(b, G, (rx, ry, rz), (wx * 0.24, 1, wz * 0.24), r=0.022, w=0.016, seg=8, mat='iron')
+        reach = 0.3
+        b.box(G, 'iron', 0.014 if wz else reach, 0.014, reach if wz else 0.014, rx + wx * reach / 2, ry - 0.007, rz + wz * reach / 2)
+
 
 ROOMS = {
     'R1': (-0.7, 0.7, 2.0, 7.0, 1.55),
@@ -193,6 +217,8 @@ for k in range(n):
     b.poly(G, 'rockDark' if k % 2 else 'rock', [(x, y, RZ) for x, y in ring], away=(0, 0.7, 9.0))
 lamps.append([0.42, 1.15, 6.6])
 lamps.append([-0.42, 1.15, 3.6])
+torch(0.42, 1.15, 6.6, 1, 0)
+torch(-0.42, 1.15, 3.6, -1, 0)
 
 # ---------------- hala: filar skalny, wózki, hałdy, rusztowanie pod tylną ścianą ----------------
 def boulder(x, z, r, h, seed):
@@ -249,8 +275,9 @@ for k in range(3):
     b.box(G, 'iron', 0.03, 0.03, 0.2, 4.25, 0.48, -1.6 + k * 0.15)
 # latarnie na słupkach i na stemplach
 for (x, z) in ((-2.8, 0.9), (1.0, 1.4), (3.6, -0.6), (-1.2, -2.6), (0.0, -1.6)):
-    b.box(G, 'woodDark', 0.07, 1.1, 0.07, x, 0, z)
-    b.box(G, 'iron', 0.1, 0.14, 0.1, x, 1.1, z)
+    b.box(G, 'woodDark', 0.07, 0.98, 0.07, x, 0, z)
+    b.prism(G, 'iron', 0.035, 0.032, 0.06, x, 0.96, z, seg=8)        # żelazna tuleja na szczycie słupka
+    torch(x, 1.2, z)
     lamps.append([x, 1.2, z])
     solid.append([x - 0.06, x + 0.06, z - 0.06, z + 0.06])
 
@@ -265,6 +292,8 @@ for x in (5.4, 6.6, 7.8):
     b.box(G, 'woodDark', 0.1, 0.1, 1.4, x, 1.45, 0.7)
 lamps.append([-6.0, 1.2, -1.65])
 lamps.append([6.0, 1.2, 1.25])
+torch(-6.0, 1.2, -1.65, 0, -1)
+torch(6.0, 1.2, 1.25, 0, 1)
 # żyły rudy (połyskujące, wystają 1 cm) na czołach chodników i na ścianach hali
 for (x, y, z, w, h, d) in ((-8.985, 0.6, -1.1, 0.012, 0.5, 0.7), (-8.985, 1.05, -0.8, 0.012, 0.25, 0.4), (8.985, 0.5, 0.7, 0.012, 0.55, 0.8),
                            (8.985, 1.0, 0.5, 0.012, 0.3, 0.4), (-2.0, 0.8, -3.49, 0.8, 0.3, 0.012), (1.0, 1.2, -3.49, 0.6, 0.25, 0.012),
@@ -292,6 +321,7 @@ b.box(G, 'iron', 0.98, 0.05, 0.05, 3.2, 1.55, -4.3)   # wał kołowrotu nad szyb
 b.prism(G, 'rope', 0.012, 0.012, 1.4, 3.05, 0.15, -4.3, seg=6)
 solid.extend([[2.68, 3.72, -4.83, -4.68], [2.68, 2.82, -4.83, -3.78], [3.58, 3.72, -4.83, -3.78]])
 lamps.append([2.75, 1.05, -3.85])
+torch(2.75, 1.05, -3.85)   # przywiązana do narożnego słupka barierki szybu
 
 # ---------------- niższy poziom: rysowany na y = 0, potem przesunięty w dół o LOW ----------------
 mark = {k: len(v) for k, v in b.parts.items()}
@@ -324,8 +354,9 @@ b.box(G, 'wood', 0.5, 0.35, 0.35, 7.8, 0, -6.0)
 b.box(G, 'wood', 0.35, 0.3, 0.35, 7.9, 0.35, -6.0)
 solid2.append([7.5, 8.1, -6.25, -5.75])
 for (x, z) in ((1.0, -6.0), (8.0, -9.6), (2.4, -9.9), (5.2, -6.0), (2.25, -3.3)):
-    b.box(G, 'woodDark', 0.07, 1.1, 0.07, x, 0, z)
-    b.box(G, 'iron', 0.1, 0.14, 0.1, x, 1.1, z)
+    b.box(G, 'woodDark', 0.07, 0.98, 0.07, x, 0, z)
+    b.prism(G, 'iron', 0.035, 0.032, 0.06, x, 0.96, z, seg=8)
+    torch(x, 1.2, z)
     lamps2.append([x, 1.2, z])
     solid2.append([x - 0.06, x + 0.06, z - 0.06, z + 0.06])
 spots2 += [[1.8, -9.95, math.pi], [4.5, -9.95, math.pi], [7.2, -9.95, math.pi], [1.0, -8.0, -HPI], [8.0, -7.5, HPI], [6.0, -7.0, math.pi]]

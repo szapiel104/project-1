@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.17 — pochodnie w kopalni, kamienna brama bez migania (2026-10-29)
+
+- **Zgłoszenie (kopalnia):** w głębi kopalni płomienie wisiały w powietrzu. Teraz pod każdym jest pochodnia: drewniany trzonek, głowica ze szmat w smole owinięta sznurem; przy ścianach w żelaznym uchwycie wbitym w skałę, na słupkach w żelaznej tulei, przy szybie przywiązana do słupka barierki (`tools/models/minelevel.py`)
+- **Zgłoszenie (kamienna brama):** boczne ściany przejazdu migały, bo lico baszty leżało w tej samej płaszczyźnie co koniec bloku sąsiedniego muru. Baszty stoją teraz 6 mm bliżej przejazdu i zasłaniają koniec muru (`tools/models/stonegate.py`)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.16 — pochodnia w spacerze płonie całą głowicą (2026-10-29)
 
 - **Zgłoszenie:** pochodnia wyciągnięta w spacerze (F) paliła się tylko wąskim płomykiem na czubku. Teraz główny płomień zaczyna się w połowie szmat i obejmuje całą głowicę (szerszy i wyższy), a trzy mniejsze języki liżą jej boki
