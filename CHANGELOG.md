@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.26 — deszcz ognia bez białej plamy, krąg nie wchodzi pod ziemię (2026-10-29)
+
+- **Zgłoszenie (wygląd wielkiego czaru):** siedem spadających kul z prześwietlonym, białym błyskiem i dużymi łunami zlewało się w jedną białą plamę z płaskimi pomarańczowymi owalami. Teraz poświata kul rośnie wolniej niż same kule, błysk przy uderzeniu wielkiego czaru jest mniejszy i pomarańczowy zamiast białego, a łuna ognia czarów mała — widać pojedyncze kule, iskry i dym (`render/spells.ts`, `scene.ts`)
+- **Zgłoszenie (krąg za mapą):** fala po ziemi po uderzeniu czaru leżała płasko na wysokości celu i na zboczu wchodziła pod teren. Teraz kładzie się tuż nad najwyższym punktem gruntu pod swoim obwodem
+- Tylko wygląd. Bot: bez zmian
+
 ## 0.65.25 — trzy odmiany głazów polnych (2026-10-29)
 
 - **Zgłoszenie:** zamiast jednego jasnego, świecącego głazu — trzy odmiany z Blendera (`tools/models/plants.py`, boulder0–2): obły otoczak (bardziej szczegółowy), kanciasty pęknięty blok i duży kamień z mniejszym opartym o bok. Ciemniejsza, matowa skała z ziemistym, wilgotnym spodem i plamami porostów na wierzchu; każdy kamień na mapie dostaje swoją odmianę z miejsca. Z daleka lżejsze wersje jak dotąd. W podglądzie modeli jako „głaz polny 1–3”

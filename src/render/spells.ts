@@ -109,6 +109,8 @@ export class SpellLayer {
   private readonly ax = new THREE.Vector3();
   private readonly c = new THREE.Color();
   private rnd = 1;
+  /** Wysokość terenu w punkcie świata (x, z) — fala po ziemi kładzie się nad gruntem, a nie wchodzi pod zbocze */
+  ground: (x: number, z: number) => number = () => -Infinity;
 
   constructor(scene: THREE.Scene) {
     const add = (geo: THREE.BufferGeometry, opacity: number, max: number, additive = true, map?: THREE.Texture): THREE.InstancedMesh => {
@@ -223,7 +225,9 @@ export class SpellLayer {
       this.d.subVectors(a.to, a.from).normalize();
       this.q.setFromUnitVectors(UP, this.d);
       const pulse = 1 + Math.sin(time * 38 + a.seed) * 0.1 + Math.sin(time * 23 + a.seed * 2) * 0.06;
-      const big = (a.fire ? 1 : 0.92) * a.k;
+      // wielki czar: kule większe, ale poświata rośnie wolniej niż kula (siedem nakładających się, prześwietlonych na
+      // biało kul zlewało się w jedną białą plamę — Michał 29.10.2026)
+      const big = (a.fire ? 1 : 0.92) * (a.k > 1 ? a.k ** 0.7 : a.k);
       // poświata rozciągnięta wzdłuż lotu (smuga), kula i jasne jądro
       this.putQ(this.halo, n, this.p, 0.2 * big * pulse, 0.2 * big * pulse, 0.42 * big, a.fire ? FIRE_HALO : WATER_HALO);
       this.putQ(this.glow, n, this.p, 0.12 * big * pulse, 0.12 * big * pulse, 0.17 * big, a.fire ? FIRE : WATER);
@@ -249,11 +253,18 @@ export class SpellLayer {
     for (const b of this.bursts) {
       const k = 1 - b.t;
       const flashK = Math.max(0, 1 - b.t * 2.4); // błysk krótszy niż fala
-      if (flashK > 0) this.put(this.flash, f, b.at, ((b.fire ? 0.17 : 0.15) + b.t * 0.32) * b.k, this.c.copy(b.fire ? FIRE_CORE : WATER_CORE).multiplyScalar(flashK));
+      // błysk wielkiego czaru: mniejszy i pomarańczowy, nie biały (kilka białych naraz prześwietlało cały kadr)
+      const huge = b.k > 1.2;
+      if (flashK > 0) this.put(this.flash, f, b.at, ((b.fire ? 0.17 : 0.15) + b.t * 0.32) * (huge ? b.k ** 0.6 : b.k), this.c.copy(b.fire ? (huge ? FIRE : FIRE_CORE) : WATER_CORE).multiplyScalar(flashK * (huge ? 0.55 : 1)));
       else this.put(this.flash, f, b.at, 0.0001, this.c.setRGB(0, 0, 0));
       // cel jest ok. 0,4 nad ziemią (pierś) — fala rozchodzi się tuż nad gruntem pod nim
       this.p.copy(b.at).setY(b.at.y - 0.36);
-      this.m.compose(this.p, this.qFlat, this.s.setScalar((0.25 + b.t * (b.fire ? 1.5 : 1.3)) * b.k));
+      const wr = (0.25 + b.t * (b.fire ? 1.5 : 1.3)) * b.k;
+      // na zboczu fala nie wchodzi pod ziemię: nad najwyższym punktem gruntu pod jej obwodem
+      let gy = this.ground(this.p.x, this.p.z);
+      for (let j = 0; j < 8; j++) gy = Math.max(gy, this.ground(this.p.x + Math.cos(j * 0.785) * wr, this.p.z + Math.sin(j * 0.785) * wr));
+      if (gy > -1e6) this.p.y = Math.max(this.p.y, gy + 0.04);
+      this.m.compose(this.p, this.qFlat, this.s.setScalar(wr));
       this.wave.setMatrixAt(f, this.m);
       this.wave.setColorAt(f, this.c.copy(b.fire ? FIRE : WATER).multiplyScalar(k * k));
       if (b.fire && b.t < 0.45 && this.flameN < 64) {

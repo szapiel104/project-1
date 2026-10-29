@@ -2507,7 +2507,8 @@ export class GameRenderer {
     // płomyk mały i przygaszony: jasny płomień z poświatą rozlewał się (z daleka strzała wyglądała na większą od człowieka)
     for (let i = 0; i < this.arrows.fireN; i++) F.add(this.arrows.fires[i]!, 0.07, 0.04, (i * 0.531) % 1, glow * 0.35);
     // kule ognia magów w locie i rozbłyski przy celu
-    this.spells.flames().forEach((v, i) => F.add(v, 0.2, 0.13, (i * 0.377) % 1, Math.max(0.5, glow)));
+    // ogień czarów: mała łuna (duże pomarańczowe tarcze łuny przy wielkim czarze wyglądały jak płaskie owale)
+    this.spells.flames().forEach((v, i) => F.add(v, 0.2, 0.13, (i * 0.377) % 1, Math.max(0.5, glow), 0.3));
     this.handFlameN = 0;
     this.handFlameTime.value = this.time;
     const dead = new Set<number>();
@@ -3783,6 +3784,7 @@ export class GameRenderer {
 
   private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
     this.bloodGround = (x: number, z: number): number => view.heightAt(x, z);
+    { const hw = g.map.width / 2, hh = g.map.height / 2; this.spells.ground = (x: number, z: number): number => view.heightAt(x + hw, z + hh); }
     try { this.syncSoldiersInner(g, view, alpha); } finally {
       this.bloodFx.update(Math.min(0.1, this.frameDt || 0.016), this.time, this.bloodGround, g.map.width / 2, g.map.height / 2, this.calm);
     }
