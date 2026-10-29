@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.65.20 — drzewa leśniczych stoją w ziemi (2026-10-29)
+
+- **Zgłoszenie:** drzewa posadzone przez leśniczego stały na ziemi, a nie w niej — korzenie u podstawy pnia leżały nad trawą jak ciemny talerz. Teraz, jak drzewa lasu z mapy, są wpuszczone w ziemię o 4 cm, a na zboczu głębiej (`render/terrain.ts`)
+
 ## 0.65.19 — czytelniejsza czcionka (2026-10-29)
 
 - **Zgłoszenie:** tekst w grze (okna, podpowiedzi, skryba, menu) w **Alegreya Sans** zamiast Alegreya — ta sama rodzina liter, ale bez szeryfów i bez przechylenia, wyraźna przy małych rozmiarach i z polskimi znakami. Drobne napisy wersalikami (etykiety, przyciski, nazwy grup, do 16 px) w **Alegreya Sans SC** zamiast Cinzel, który przy małych literach się zlewał. Cinzel zostaje na duże tytuły i nagłówki — klimat RPG zostaje tam, gdzie litery są duże (`src/ui/style.css`, `index.html`)

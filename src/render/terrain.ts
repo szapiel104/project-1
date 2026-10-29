@@ -1454,6 +1454,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       const pos = new THREE.Vector3(tx + 0.5 + jx + ox, heightAt(tx + 0.5 + jx, ty + 0.5 + jz), ty + 0.5 + jz + oz);
       const qq = new THREE.Quaternion().setFromAxisAngle(yAxis, ((r >>> 24) / 255) * Math.PI * 2);
       const sz = 0.85 + (((r >>> 16) & 255) / 255) * 0.3;   // dorosłe jak zwykłe drzewo w lesie
+      // pień stoi w ziemi, a nie na niej (jak drzewa lasu z mapy): korzenie u podstawy pnia leżały płasko nad trawą
+      // jak ciemny talerz (Michał 29.10.2026); na zboczu głębiej o spadek × promień podstawy
+      pos.y -= 0.04 + slopeOf(tx + 0.5 + jx, ty + 0.5 + jz) * 0.3 * sz;
       y = { kind, i, pos, q: qq, s: new THREE.Vector3(sz, sz * (0.9 + ((r >>> 12) & 15) / 60) * 1.05, sz), k: -1 };
       young.set(tile, y);
       const shade = 0.82 + ((r >>> 20) & 15) / 60;
