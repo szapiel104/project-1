@@ -21,6 +21,8 @@ import { touch } from './touch';
 const MAX = 24576;
 /** Długość kroku i rozstaw stóp (pola mapy), wymiary odcisku */
 const STEP = 0.085, SPREAD = 0.021, LEN = 0.058, WID = 0.024;
+/** Łapy wilka: krok, rozstaw (prawie jedna linia) i wymiary odcisku */
+const PAW_STEP = 0.075, PAW_SPREAD = 0.008, PAW_W = 0.03, PAW_L = 0.032;
 /** Po ilu sekundach odcisk zaczyna blednąć i ile trwa blednięcie */
 const HOLD = 25, FADE = 15;
 
@@ -41,6 +43,27 @@ function soleTexture(): THREE.Texture {
   const r = (): number => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   c.globalCompositeOperation = 'destination-out';
   for (let k = 0; k < 40; k++) { c.fillStyle = `rgba(0,0,0,${0.15 + r() * 0.25})`; c.beginPath(); c.arc(r() * W, r() * H, 1 + r() * 3, 0, Math.PI * 2); c.fill(); }
+  const t = new THREE.CanvasTexture(cv);
+  t.anisotropy = 4;
+  return t;
+}
+
+/** Łapa wilka: duża poduszka śródstopia (trójlistna z tyłu) i cztery owalne palce z przodu, ślady pazurów przed nimi */
+function pawTexture(): THREE.Texture {
+  const W = 64, H = 64, cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  const c = cv.getContext('2d')!;
+  c.filter = 'blur(1.5px)';
+  c.fillStyle = 'rgba(255,255,255,1)';
+  c.beginPath(); c.ellipse(W / 2, H * 0.68, W * 0.2, H * 0.15, 0, 0, Math.PI * 2); c.fill(); // poduszka
+  for (const [x, y] of [[0.3, 0.38], [0.7, 0.38], [0.42, 0.24], [0.58, 0.24]] as const) {
+    c.beginPath(); c.ellipse(W * x, H * y, W * 0.075, H * 0.095, 0, 0, Math.PI * 2); c.fill(); // palce
+  }
+  c.fillStyle = 'rgba(255,255,255,0.6)';
+  for (const [x, y] of [[0.28, 0.23], [0.72, 0.23], [0.42, 0.09], [0.58, 0.09]] as const) {
+    c.beginPath(); c.arc(W * x, H * y, 2, 0, Math.PI * 2); c.fill(); // pazury
+  }
+  c.filter = 'none';
   const t = new THREE.CanvasTexture(cv);
   t.anisotropy = 4;
   return t;
@@ -134,6 +157,7 @@ export class Footprints {
   private clock = 0;
   private soles: TrackLayer;
   private furrows: TrackLayer;
+  private paws: TrackLayer;
   private last = new Map<number, { x: number; y: number; d: number; side: number }>();
   private lastDrag = new Map<number, { x: number; y: number; d: number }>();
   private uTime = { value: 0 };
@@ -142,6 +166,7 @@ export class Footprints {
   constructor(scene: THREE.Scene) {
     this.soles = new TrackLayer(scene, 'ślady butów', soleTexture(), 0x6a7c92, 0.55, MAX, this.uTime, this.uSnow);
     this.furrows = new TrackLayer(scene, 'bruzdy w śniegu', furrowTexture(), 0x637690, 0.5, 8192, this.uTime, this.uSnow);
+    this.paws = new TrackLayer(scene, 'ślady wilków', pawTexture(), 0x6a7c92, 0.55, 8192, this.uTime, this.uSnow);
   }
 
   /**
@@ -150,7 +175,7 @@ export class Footprints {
    * `drags` — ciągnięte pnie (kind 0, punkt środka pnia przy ziemi) i dwukółki (kind 1, środek osi), `cam` — środek widoku w polach mapy.
    */
   sync(snow: number, dt: number, fall: number, walkers: { id: number; x: number; y: number; h: number }[], W: number, H: number, cam: { x: number; y: number },
-    drags: { id: number; x: number; y: number; h: number; kind: number }[] = []): void {
+    drags: { id: number; x: number; y: number; h: number; kind: number }[] = [], wolves: { id: number; x: number; y: number; h: number }[] = []): void {
     // w zamieci ślady starzeją się szybciej (czas shadera biegnie dla nich szybciej)
     this.uSnow.value = snow;
     this.clock += dt * (1 + fall * 2);
@@ -161,32 +186,13 @@ export class Footprints {
     if (snow < 0.45) {
       // stopniało: nowych nie robimy, a stare znikają razem ze śniegiem (mundur uSnow)
       this.last.clear(); this.lastDrag.clear();
-      this.soles.finish(snow); this.furrows.finish(snow);
+      this.soles.finish(snow); this.furrows.finish(snow); this.paws.finish(snow);
       return;
     }
     const alive = new Set<number>();
-    for (const w of walkers) {
-      if (Math.abs(w.x - cam.x) > 30 || Math.abs(w.y - cam.y) > 30) continue;
-      alive.add(w.id);
-      const p = this.last.get(w.id);
-      if (!p) { this.last.set(w.id, { x: w.x, y: w.y, d: 0, side: w.id & 1 }); continue; }
-      const dx = w.x - p.x, dy = w.y - p.y, d = Math.hypot(dx, dy);
-      if (d > 2) { p.x = w.x; p.y = w.y; p.d = 0; continue; } // przeskok (wyszedł z budynku): bez kroków przez pół mapy
-      if (d < 1e-4) continue;
-      p.d += d;
-      const ux = dx / d, uy = dy / d;
-      // tyle kroków, ile zmieściło się w przebytej drodze (cofamy się od bieżącego miejsca)
-      while (p.d >= STEP) {
-        p.d -= STEP;
-        const bx = w.x - ux * p.d, by = w.y - uy * p.d;
-        const sgn = p.side ? 1 : -1;
-        p.side ^= 1;
-        const fx = bx - uy * SPREAD * sgn, fy = by + ux * SPREAD * sgn;
-        // przód podeszwy leży w teksturze u góry, czyli w -z płaszczyzny: obrót o 180°, żeby palce szły w stronę marszu
-        this.soles.put(fx, fy, Math.atan2(ux, uy) + Math.PI, w.h, WID, LEN, W, H, clock);
-      }
-      p.x = w.x; p.y = w.y;
-    }
+    // wilki: łapy prawie w jednej linii (kłus — tylna łapa trafia w ślad przedniej), krok krótszy niż człowieka
+    for (const w of wolves) this.stepPrints(w, cam, alive, this.paws, PAW_STEP, PAW_SPREAD, PAW_W, PAW_L, W, H, clock);
+    for (const w of walkers) this.stepPrints(w, cam, alive, this.soles, STEP, SPREAD, WID, LEN, W, H, clock);
     for (const id of this.last.keys()) if (!alive.has(id)) this.last.delete(id);
     // bruzdy: ciągnięty pień (jedna szeroka) i dwukółka (dwie koleiny po bokach osi)
     const aliveD = new Set<number>();
@@ -211,7 +217,33 @@ export class Footprints {
     for (const id of this.lastDrag.keys()) if (!aliveD.has(id)) this.lastDrag.delete(id);
     this.soles.finish(snow);
     this.furrows.finish(snow);
+    this.paws.finish(snow);
   }
 
-  dispose(): void { this.soles.dispose(); this.furrows.dispose(); }
+  /** Kroki jednego idącego: tyle odcisków, ile zmieściło się w przebytej drodze, na zmianę lewy i prawy */
+  private stepPrints(w: { id: number; x: number; y: number; h: number }, cam: { x: number; y: number }, alive: Set<number>, layer: TrackLayer,
+    step: number, spread: number, wid: number, len: number, W: number, H: number, clock: number): void {
+    if (Math.abs(w.x - cam.x) > 30 || Math.abs(w.y - cam.y) > 30) return;
+    alive.add(w.id);
+    const p = this.last.get(w.id);
+    if (!p) { this.last.set(w.id, { x: w.x, y: w.y, d: 0, side: w.id & 1 }); return; }
+    const dx = w.x - p.x, dy = w.y - p.y, d = Math.hypot(dx, dy);
+    if (d > 2) { p.x = w.x; p.y = w.y; p.d = 0; return; } // przeskok (wyszedł z budynku): bez kroków przez pół mapy
+    if (d < 1e-4) return;
+    p.d += d;
+    const ux = dx / d, uy = dy / d;
+    // tyle kroków, ile zmieściło się w przebytej drodze (cofamy się od bieżącego miejsca)
+    while (p.d >= step) {
+      p.d -= step;
+      const bx = w.x - ux * p.d, by = w.y - uy * p.d;
+      const sgn = p.side ? 1 : -1;
+      p.side ^= 1;
+      const fx = bx - uy * spread * sgn, fy = by + ux * spread * sgn;
+      // przód odcisku leży w teksturze u góry, czyli w -z płaszczyzny: obrót o 180°, żeby palce szły w stronę marszu
+      layer.put(fx, fy, Math.atan2(ux, uy) + Math.PI, w.h, wid, len, W, H, clock);
+    }
+    p.x = w.x; p.y = w.y;
+  }
+
+  dispose(): void { this.soles.dispose(); this.furrows.dispose(); this.paws.dispose(); }
 }

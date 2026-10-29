@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.65.10 — ślady wilków na śniegu (2026-10-29)
+
+- Wilki zostawiają na śniegu odciski łap: poduszka, cztery palce i ślady pazurów, prawie w jednej linii jak w kłusie, krok krótszy niż człowieka. Blakną i znikają jak ślady butów, w zamieci szybciej, a gdy śnieg stopnieje — wszystkie (`render/footprints.ts`, trzecia siatka obok butów i bruzd)
+- Tylko wygląd. Bot: bez zmian
+
 ## 0.65.9 — para z ust zimą, rybak pod lodem, krew chłopów i wilków (2026-10-29)
 
 - **Para z ust:** przy temperaturze poniżej ok. 2°C ludzie i żołnierze co kilka sekund wypuszczają przed siebie mały obłoczek pary; przy mrozie większy, w walce i w biegu częściej. Tylko blisko kamery, jedna wspólna siatka (`render/breath.ts`)

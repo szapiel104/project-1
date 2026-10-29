@@ -4526,7 +4526,10 @@ export class GameRenderer {
       if (this.snowNow >= 0.45) for (const [id, f] of this.drags) drags.push({ id, x: f[0], y: f[1], h: f[2], kind: f[3] });
       this.feet.clear(); this.drags.clear();
       const c = this.cam.camera.position;
-      this.prints.sync(this.snowNow, this.calm ? 0 : dt, this.rain, walkers, w, h, { x: c.x + w / 2, y: c.z + h / 2 }, drags);
+      // wilki: łapy na śniegu tam, gdzie wilk stoi na ekranie (render/wolves.ts)
+      const paws: { id: number; x: number; y: number; h: number }[] = [];
+      if (this.snowNow >= 0.45) for (const v of g.wolves) { const p = this.wolfPos.get(v.id); if (p) paws.push({ id: v.id, x: p.x + w / 2, y: p.z + h / 2, h: p.y }); }
+      this.prints.sync(this.snowNow, this.calm ? 0 : dt, this.rain, walkers, w, h, { x: c.x + w / 2, y: c.z + h / 2 }, drags, paws);
     }
   }
   private shiftSeen = 0;
