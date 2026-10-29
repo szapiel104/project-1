@@ -163,9 +163,25 @@ else:
     static.append(Mesh(turned(quiver, QR, QZ, QAT), lambda x, y, z: hexrgb(0x8a5c34), 'leather'))
     strap = lathe('strap', [(0.108, -0.01), (0.111, 0.0), (0.108, 0.01)], seg=20, depth=0.78, subsurf=0)
     static.append(Mesh(turned(strap, 0.0, -0.62, (0.0, 0.392, 0.0)), hexrgb(0x4a3020), 'leather'))
-    for i, (dx, dz) in enumerate(((0.0, 0.0), (0.016, 0.01), (-0.014, 0.012), (0.008, -0.016), (-0.016, -0.008))):
-        f = sphere(f'flet{i}', (dx, 0.2, dz), (0.007, 0.026, 0.007), seg=6, rings=5)
-        static.append(Mesh(turned(f, QR, QZ, QAT), hexrgb(0xeae3d0) if i % 2 == 0 else hexrgb(0x9a2a20), 'cloth'))
+    # strzały w kołczanie (Michał 29.10.2026: „popraw obiekt strzał, też w kołczanie”): zamiast kulek — drzewca
+    # wystające nad wylot z nasadkami i po trzy cienkie lotki z piór co 120° (jak strzała w locie, tools/models/arrow.py)
+    for i, (dx, dz) in enumerate(((0.0, 0.0), (0.017, 0.01), (-0.015, 0.012), (0.008, -0.017), (-0.017, -0.008))):
+        top = 0.215 + (i % 3) * 0.008
+        sh = lathe(f'shaft{i}', [(0.0, 0.12), (0.0034, 0.12), (0.0034, top), (0.0044, top), (0.0044, top + 0.008), (0.0, top + 0.008)], seg=6, subsurf=0)
+        bm = turned(sh, 0.0, 0.0, (dx, 0.0, dz))
+        bmesh.ops.rotate(bm, verts=bm.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(QR, 3, 'X'))
+        bmesh.ops.rotate(bm, verts=bm.verts, cent=(0, 0, 0), matrix=Matrix.Rotation(-QZ, 3, 'Y'))
+        bmesh.ops.translate(bm, verts=bm.verts, vec=(QAT[0], -QAT[2], QAT[1]))
+        static.append(Mesh(bm, hexrgb(0x9a7448), 'leather'))
+        feather = hexrgb(0xeae3d0) if i % 2 == 0 else hexrgb(0x9a2a20)
+        for k in range(3):
+            a = k * 2 * math.pi / 3 + i * 0.7
+            ca, sa = math.cos(a), math.sin(a)
+            def vane(x, y, z, ca=ca, sa=sa):
+                x, y, z = x * 0.0012, y * 0.021, z * 0.006
+                return (x * ca + z * sa, y, -x * sa + z * ca)
+            v = sphere(f'vane{i}_{k}', (dx + sa * 0.0072, top - 0.026, dz + ca * 0.0072), 1.0, seg=6, rings=4, shape=vane)
+            static.append(Mesh(turned(v, QR, QZ, QAT), feather, 'cloth'))
 
 if not archer:
     finish(kind, static, [leg_m], arms, HIP, SHOULDER, HAND)

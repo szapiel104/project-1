@@ -35,6 +35,7 @@ const GATE_MODEL = model('gate');
 const STONE_TOWER_MODEL = model('stonetower');
 const STONE_TOWER_BIG_MODEL = model('stonetower_big');
 const TOWER_DOOR_MODEL = model('towerdoor');
+const ARROW_MODEL = model('arrow');
 const STONE_TOWER_GREAT_MODEL = model('stonetower_great');
 const BRAZIER_MODEL = model('brazier');
 const WATCH_TOWER_MODEL = model('watchtower');
@@ -1634,6 +1635,27 @@ export function towerDoorKit(): { door: { geo: THREE.BufferGeometry; mat: THREE.
     return { geo: blenderGeo(m.pos, m.ao, model.q, (base.userData.tile as number) || 1), mat: withAo(base) };
   });
   return { door: part('base'), steps: part('steps') };
+}
+
+/** Barwy części strzały (tools/models/arrow.py): drzewce, nasadka, grot, lotki */
+const ARROW_COLORS: Record<string, number> = { wood: 0x9a7448, woodDark: 0x4a3424, iron: 0x70747c, white: 0xe8e0c8, red: 0x9a2a20 };
+/**
+ * Strzała z Blendera jako jedna siatka z barwą w kolorach wierzchołków (wszystkie strzały naraz jednym wywołaniem
+ * rysowania). Leży wzdłuż +z: grot w +z, nasadka w z = 0 (jak dawna strzała z kodu: środek drzewca w zerze).
+ */
+export function arrowGeometry(): THREE.BufferGeometry {
+  const model = ARROW_MODEL as unknown as BlenderBuilding;
+  const parts = ((model.base as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
+    const geo = blenderGeo(m.pos, m.ao, model.q, 1).clone();
+    const c = new THREE.Color(ARROW_COLORS[m.mat] ?? 0x9a7448), col = geo.getAttribute('color') as THREE.BufferAttribute;
+    for (let i = 0; i < col.count; i++) { const v = 0.55 + col.getX(i) * 0.45; col.setXYZ(i, c.r * v, c.g * v, c.b * v); }
+    geo.deleteAttribute('uv');
+    return geo;
+  });
+  const g = mergeGeometries(parts)!;
+  const box = new THREE.Box3().setFromBufferAttribute(g.getAttribute('position') as THREE.BufferAttribute);
+  // pionowo (grot w +y) → wzdłuż +z, środkiem długości w zerze
+  return g.translate(0, -(box.min.y + box.max.y) / 2, 0).rotateX(Math.PI / 2);
 }
 
 /** Mokre budynki w deszczu: dachy, drewno i kamień ciemnieją i łapią połysk (odbicia światła), po deszczu schną */

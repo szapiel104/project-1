@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.21 — nowe, mniejsze strzały (2026-10-29)
+
+- **Zgłoszenie:** strzały były długie jak człowiek i zrobione z trzech brył w kodzie. Nowa strzała z Blendera (`tools/models/arrow.py`): cienkie drzewce, czworoboczny żelazny grot z tulejką, trzy lotki z piór co 120° (jedna czerwona), ciemna nasadka; długość ok. połowy dawnej — do pasa chłopa. Ta sama w locie, wbita w ziemię, w ścianę i w poległych (głębokość wbicia dopasowana); dalej jedna siatka i jedno wywołanie rysowania (`render/arrows.ts`)
+- **Kołczan łucznika:** zamiast kulek z przodu kołczana wystają drzewca z nasadkami i po trzy cienkie lotki (białe i czerwone na zmianę) (`tools/models/soldier.py archer`)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.20 — drzewa leśniczych stoją w ziemi (2026-10-29)
 
 - **Zgłoszenie:** drzewa posadzone przez leśniczego stały na ziemi, a nie w niej — korzenie u podstawy pnia leżały nad trawą jak ciemny talerz. Teraz, jak drzewa lasu z mapy, są wpuszczone w ziemię o 4 cm, a na zboczu głębiej (`render/terrain.ts`)
