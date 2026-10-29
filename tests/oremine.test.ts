@@ -190,6 +190,23 @@ describe('kopalnia pod górami', () => {
       if (h >= 1 && h < 4) slept = [mine.worker, ...(mine.crew ?? [])].some((id) => { const u = g.units.find((x) => x.id === id); return !!u && u.home === camp.id; });
     }
     expect(slept).toBe(true);
+    // drugi barak przy tej samej kopalni nie daje kolejnych darmowych strażników (obsługuje ją tylko najbliższy)
+    p.res[resIndex('spear')] = 10; p.res[resIndex('gold')] = 200; p.res[resIndex('wood')] = 200;
+    let spot2: { x: number; y: number } | null = null;
+    for (let r = 2; r <= 9 && !spot2; r++) for (let dy = -r; dy <= r && !spot2; dy++) for (let dx = -r; dx <= r; dx++) {
+      if (canPlace(g, 0, CAMP_T, mine.x + dx, mine.y + dy, false) === null) { spot2 = { x: mine.x + dx, y: mine.y + dy }; break; }
+    }
+    if (spot2) {
+      step(g, [{ type: 'build', player: 0, building: 'minecamp', x: spot2.x, y: spot2.y }]);
+      for (const b of g.buildings) if (b.type === CAMP_T) b.build = 0; // gotowy od razu
+      for (let i = 0; i < 8; i++) g.units.push({ ...tpl, id: g.nextId++, job: 0, home: 0, phase: Phase.Idle, path: [], carryRes: -1, carryAmt: 0, target: 0, wait: 0, timer: 0, batches: 0, trips: 0 });
+      run(g, 3000);
+      const camps = g.buildings.filter((b) => b.type === CAMP_T && !b.build);
+      expect(camps.length).toBe(2);
+      const second = camps.find((c) => c.id !== camp.id)!;
+      expect(g.soldiers.filter((s) => s.camp === second.id && s.hp > 0).length).toBe(0);
+      expect(g.soldiers.filter((s) => s.camp && s.hp > 0).length).toBeLessThanOrEqual(2);
+    }
   });
 
   it('wróg pod kopalnią: załoga ucieka do zamku i wraca do roboty, gdy wroga już nie ma', () => {

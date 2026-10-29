@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.22 — baraki górników nie dają darmowej armii (2026-10-29)
+
+- **Zgłoszenie:** każdy barak górników werbował dwóch strażników kopalni, więc kilka baraków obok siebie dawało całą darmową armię. Teraz straż (dwóch) ma tylko barak, który naprawdę obsługuje kopalnię — najbliższy jej gotowy barak. Pozostałe baraki nie werbują; ich dotychczasowi strażnicy (gdy nie walczą i nie eskortują wozu) wracają do wioski jako chłopi, a przerwane szkolenie oddaje chłopa (`sim/systems/minecamp.ts`)
+- Okno baraku pokazuje, ilu strażników mu przysługuje, i pisze, gdy barak nie obsługuje żadnej kopalni
+- Bot: ta sama zasada
+
 ## 0.65.21 — nowe, mniejsze strzały (2026-10-29)
 
 - **Zgłoszenie:** strzały były długie jak człowiek i zrobione z trzech brył w kodzie. Nowa strzała z Blendera (`tools/models/arrow.py`): cienkie drzewce, czworoboczny żelazny grot z tulejką, trzy lotki z piór co 120° (jedna czerwona), ciemna nasadka; długość ok. połowy dawnej — do pasa chłopa. Ta sama w locie, wbita w ziemię, w ścianę i w poległych (głębokość wbicia dopasowana); dalej jedna siatka i jedno wywołanie rysowania (`render/arrows.ts`)

@@ -5,6 +5,7 @@ import { GUARD, UNITS } from '../../data/units';
 import { findPath, walkable } from '../path';
 import { FP, Phase, playerKeep, type Building, type GameState, type Soldier } from '../state';
 import { routeTo } from './caravans';
+import { spawnPeasant } from './population';
 
 /**
  * Obóz przy kopalni (jak w Gothic): barak górników stoi przy kopalni. Załoga tej kopalni nocuje w nim i siedzi wieczorem
@@ -45,6 +46,12 @@ export function campOf(g: GameState, mine: Building | undefined): Building | und
     if (d <= CAMP_RANGE && d < bd) { bd = d; best = b; }
   }
   return best;
+}
+
+/** Ilu strażników przysługuje barakowi: dwóch, gdy obsługuje kopalnię (jest jej najbliższym barakiem), inaczej żadnego */
+export function campGuardQuota(g: GameState, camp: Building): number {
+  for (const m of g.buildings) if (m.type === MINE_T && ready(m) && campOf(g, m)?.id === camp.id) return CAMP_GUARDS;
+  return 0;
 }
 
 /** Czy w pobliżu działki (x, y, w×h) stoi własna kopalnia — warunek postawienia baraku */
@@ -119,6 +126,10 @@ export function campSystem(g: GameState): void {
   mineThreats(g);
   if (CAMP_T < 0 || g.tick % 5 !== 0) return;
   const camps = g.buildings.filter((b) => b.type === CAMP_T);
+  // straż ma tylko barak, który naprawdę obsługuje kopalnię (najbliższy jej gotowy barak): pięć baraków obok siebie
+  // przy jednej kopalni nie daje już dziesięciu darmowych strażników (Michał 29.10.2026), tylko dwóch
+  const serving = new Set<number>();
+  for (const m of g.buildings) if (m.type === MINE_T && ready(m)) { const c = campOf(g, m); if (c) serving.add(c.id); }
   const alive = new Set(camps.filter(ready).map((b) => b.id));
   // barak zburzony albo w ruinie: jego strażnicy dołączają do straży miejskiej, a urobek przepada
   for (const s of g.soldiers) if (s.camp && !alive.has(s.camp)) delete s.camp;
@@ -128,6 +139,20 @@ export function campSystem(g: GameState): void {
     const p = g.players[b.owner];
     if (!p || p.defeated) continue;
     const mine = g.soldiers.filter((s) => s.camp === b.id && s.hp > 0).sort((a, c) => a.id - c.id);
+    const quota = serving.has(b.id) ? CAMP_GUARDS : 0;
+    // nadmiarowi strażnicy (barak nie obsługuje żadnej kopalni albo ma już swoich) wracają do wioski jako chłopi —
+    // tylko ci, którzy akurat nie walczą i nie eskortują wozu; szkolenie nowego przerywamy
+    if (mine.length > quota) {
+      const escort = new Set<number>();
+      for (const c of g.caravans ?? []) for (const e of c.escort ?? []) escort.add(e);
+      for (const s of mine.slice(quota).reverse()) {
+        if (s.target || escort.has(s.id)) continue;
+        g.soldiers.splice(g.soldiers.indexOf(s), 1);
+        mine.splice(mine.indexOf(s), 1);
+        spawnPeasant(g, b.owner);
+      }
+    }
+    if (mine.length >= quota && b.recruitAt) { b.recruitAt = 0; spawnPeasant(g, b.owner); } // rekrut wraca do wioski
     // werbunek: wolny chłop z obozowiska idzie na szkolenie (włócznia i żołd jak u straży miejskiej), jeden naraz
     if (b.recruitAt) {
       if (g.tick >= b.recruitAt) {
@@ -137,7 +162,7 @@ export function campSystem(g: GameState): void {
         g.soldiers.push(s);
         mine.push(s);
       }
-    } else if (mine.length < CAMP_GUARDS) {
+    } else if (mine.length < quota) {
       const pay = Object.entries(GUARD_COST).every(([r, n]) => p.res[resIndex(r as ResourceId)]! >= n!);
       // nikogo przy ognisku: rekrutem zostaje wolny magazynier (rezerwa, storage.ts)
       if (pay && !g.units.some((u) => u.owner === b.owner && u.job === 0 && u.phase === Phase.Idle && u.carryRes < 0 && !u.path.length)) spareKeeper(g, b.owner);

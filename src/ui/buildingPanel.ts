@@ -11,7 +11,7 @@ import { lang, t, tx } from '../i18n';
 import { Phase, TICKS_PER_SECOND, storeCapacity, storeRoom, type GameState } from '../sim/state';
 import { engineerJob } from '../sim/systems/army';
 import { GUARDS, GUARD_COST } from '../sim/systems/guards';
-import { CAMP_GUARDS, campOf } from '../sim/systems/minecamp';
+import { campGuardQuota, campOf } from '../sim/systems/minecamp';
 import { buildWork, maxHp, rebuildCost, rebuildShort } from '../sim/systems/placement';
 import { crewWanted, MINE_YIELDS, siteTicks } from '../sim/systems/workers';
 import { mageKindOf, magesOf, ordersQuarrel, sickCount } from '../sim/systems/plague';
@@ -221,7 +221,8 @@ export function campWatch(game: GameState, b: GameState['buildings'][number]): B
   const have = game.soldiers.filter((s) => s.camp === b.id && s.hp > 0).length;
   const training = b.recruitAt ? Math.max(0, Math.ceil((b.recruitAt - game.tick) / TICKS_PER_SECOND)) : 0;
   const parts: string[] = [];
-  if (!training && have < CAMP_GUARDS) {
+  const want = campGuardQuota(game, b);
+  if (!training && have < want) {
     const lack = Object.entries(GUARD_COST).filter(([r, n]) => p.res[resIndex(r as ResourceId)]! < n!).map(([r]) => t(`res.${r}`).toLowerCase());
     parts.push(lack.length ? `${tx('na rekruta brakuje', 'a recruit still needs')}: ${lack.join(', ')}` : tx('czeka na wolnego chłopa z obozowiska', 'waiting for an idle peasant from the camp'));
   }
@@ -230,7 +231,7 @@ export function campWatch(game: GameState, b: GameState['buildings'][number]): B
   const cart = (game.caravans ?? []).find((c) => c.camp === b.id);
   if (cart) parts.push(tx(`wóz w drodze do zamku (eskorta: ${cart.escort?.length ?? 0})`, `cart on its way to the keep (escort: ${cart.escort?.length ?? 0})`));
   const mine = game.buildings.find((m) => BUILDINGS[m.type]!.id === 'oremine' && campOf(game, m)?.id === b.id);
-  if (!mine) parts.push(tx('brak kopalni w zasięgu 10 pól — barak stoi pusty', 'no mine within 10 tiles — the lodge stands empty'));
-  return { have, want: CAMP_GUARDS, training, note: parts.join(' · '), label: tx('Straż kopalni', 'Mine guard') };
+  if (!mine) parts.push(tx('nie obsługuje żadnej kopalni (brak kopalni w zasięgu 10 pól albo bliżej niej stoi inny barak) — bez załogi i bez straży', 'serves no mine (none within 10 tiles, or another lodge stands nearer) — no crew and no guard'));
+  return { have, want, training, note: parts.join(' · '), label: tx('Straż kopalni', 'Mine guard') };
 }
 
