@@ -19,7 +19,17 @@ F = 0.0                          # ziemia (teren)
 # bez podstawki: wydeptaną ziemię wokół ogniska maluje gra na terenie (trawa znika, ziemia ciemnieje)
 
 # ---------------- ognisko: kamienie, popiół, polana, żar ----------------
-b.prism('base', 'ash', 0.24, 0.22, 0.02, 0, F, 0, seg=12)
+# palenisko bez równej tarczy (Michał 29.10.2026: „sztuczne koło”): nierówna kupka popiołu z kilku płaskich
+# grudek, na niej zwęglone kawałki drewna i żarzące się węgle między polanami
+for k, (dx, dz, r) in enumerate(((0.0, 0.0, 0.17), (0.08, 0.05, 0.11), (-0.09, 0.04, 0.1), (0.02, -0.1, 0.1), (-0.05, -0.06, 0.09))):
+    b.crystal('base', 'ash', dx, F + 0.002, dz, r, seed=k * 1.3 + 0.4, sx=1.1, sy=0.1, sz=0.95, seg=9)
+for k in range(9):
+    a = k * 2.39 + 0.3
+    rr = 0.05 + (k % 3) * 0.045
+    b.crystal('base', 'dark', math.cos(a) * rr, F + 0.012, math.sin(a) * rr, 0.016 + (k % 2) * 0.008, seed=k + 3, sy=0.6)
+for k in range(5):
+    a = k * 1.26 + 0.9
+    b.crystal('base', 'ember', math.cos(a) * 0.04, F + 0.016, math.sin(a) * 0.04, 0.014, seed=k + 11, sy=0.55)
 for k in range(10):
     a = k / 10 * 2 * math.pi + 0.2
     r = 0.3
@@ -29,7 +39,6 @@ for k in range(10):
 for k in range(5):   # polana ułożone w stożek, oparte o siebie nad środkiem
     a = k / 5 * 2 * math.pi
     b.box('base', 'bark', 0.05, 0.3, 0.05, math.cos(a) * 0.13, F + 0.01, math.sin(a) * 0.13, -a + math.pi / 2, tilt=-0.6)
-b.prism('base', 'ember', 0.12, 0.08, 0.035, 0, F + 0.02, 0, seg=10)
 
 # ---------------- trójnóg z kociołkiem ----------------
 # trzy okrągłe żerdzie z korą zbiegają się nad ogniem, krzyżują w jednym punkcie (przewiązane liną) i wystają

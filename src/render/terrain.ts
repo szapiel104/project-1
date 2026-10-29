@@ -1914,11 +1914,12 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
               const ax = dx === 1 ? x + 1 : x, ay = dy === 1 ? y + 1 : y;
               const bx = dy !== 0 ? x + 1 : ax, by = dx !== 0 ? y + 1 : ay;
               band(ax, ay, bx, by, dx, dy);
-              const n = 3;
+              // drobniejsze kamienie (Michał 29.10.2026: „za duże te krawężniki”): cztery na bok pola, niskie i wąskie
+              const n = 4;
               for (let k = 0; k < n; k++) {
                 const r = hash2(x * 4 + k, y * 4 + (dx + 1) * 2 + dy + 1, map.seed ^ 0x6b3e);
                 const f = (k + 0.5) / n + (((r & 15) / 15) - 0.5) * 0.03;
-                const inset = 0.075;
+                const inset = 0.045;
                 kerbs.push([ax + (bx - ax) * f - dx * inset, ay + (by - ay) * f - dy * inset, 1 / n - 0.018 - ((r >>> 4) & 7) * 0.004, dx !== 0 ? Math.PI / 2 : 0, r]);
               }
             }
@@ -1926,7 +1927,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         if (kerbs.length) {
           const geo = new RoundedBoxGeometry(1, 1, 1, 2, 0.24);
           const im = new THREE.InstancedMesh(geo, kerbMaterial(), kerbs.length);
-          kerbs.forEach(([kx, ky, len, rot, r], i) => { const hgt = 0.08 + ((r >>> 20) & 7) * 0.007; placeStone(im, i, kx, ky, 0.03 + hgt / 2, len, hgt, 0.13 + ((r >>> 26) & 3) * 0.012, rot + (((r >>> 23) & 7) / 7 - 0.5) * 0.12, 0.1, r); });
+          kerbs.forEach(([kx, ky, len, rot, r], i) => { const hgt = 0.04 + ((r >>> 20) & 7) * 0.004; placeStone(im, i, kx, ky, 0.03 + hgt / 2, len, hgt, 0.075 + ((r >>> 26) & 3) * 0.008, rot + (((r >>> 23) & 7) / 7 - 0.5) * 0.1, 0.06, r); });
           touch(im);
           if (im.instanceColor) touch(im);
           im.castShadow = true;

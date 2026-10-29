@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.65.12 — mniejsze krawężniki bruku, ognisko bez „koła” (2026-10-29)
+
+- **Zgłoszenie (bruk):** krawężniki kamiennej drogi o połowę niższe i węższe, cztery drobniejsze kamienie na bok pola zamiast trzech dużych, bliżej brzegu (`render/terrain.ts`; także ikona drogi w menu budowy)
+- **Zgłoszenie (ognisko w obozowisku):** zamiast równej, okrągłej tarczy popiołu i żaru — nierówna kupka popiołu z kilku płaskich grudek, zwęglone kawałki drewna i żarzące się węgle między polanami (`tools/models/camp.py`)
+- Bot: bez zmian (sam wygląd)
+
 ## 0.65.11 — magowie nie stoją bezczynnie, wejście na wieżę z klatki schodowej (2026-10-29)
 
 - **Zgłoszenie (magowie):** magowie bez rozkazu (np. postawieni w trybie deweloperskim jako wróg) bili tylko żołnierzy i chłopów w zasięgu wzroku; gdy takich zabrakło, stali bezczynnie choćby pod cudzym zamkiem. Teraz, jak włócznicy, biorą się za najbliższy wrogi budynek (ogniem albo wodą). Łucznicy dalej strzelają w budynki tylko na rozkaz. Postawionych magów wroga nie da się zaznaczyć — to jednostki wroga

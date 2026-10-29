@@ -1397,8 +1397,8 @@ const BUILDERS: Record<string, Builder> = {
     for (const side of [0, 1, 2, 3]) {
       for (let k = 0; k < 4; k++) {
         const t = -0.36 + k * 0.24;
-        const [x, z] = side === 0 ? [t, -0.42] : side === 1 ? [t, 0.42] : side === 2 ? [-0.42, t] : [0.42, t];
-        const kb = box(g, M.kerb, side < 2 ? 0.22 : 0.11, 0.08, side < 2 ? 0.11 : 0.22, x, 0.03, z);
+        const [x, z] = side === 0 ? [t, -0.44] : side === 1 ? [t, 0.44] : side === 2 ? [-0.44, t] : [0.44, t];
+        const kb = box(g, M.kerb, side < 2 ? 0.2 : 0.07, 0.045, side < 2 ? 0.07 : 0.2, x, 0.03, z);
         kb.rotation.y = ((k * 7 + side * 3) % 5 - 2) * 0.02;
       }
     }
