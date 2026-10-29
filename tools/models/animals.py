@@ -130,32 +130,47 @@ reset()
 PINK, BACK, BELLY, SNOUT, HOOF, MUD = hexrgb(0xd9a08c), hexrgb(0xc98e7a), hexrgb(0xe8b8a6), hexrgb(0xe8aa98), hexrgb(0x4a3a30), hexrgb(0x6a5040)
 
 
+SPOT = hexrgb(0x5e4338)
+
+
 def pigcol(x, y, z):
     c = mix(PINK, BACK, (y - 0.15) / 0.05) if y > 0.12 else mix(PINK, BELLY, (0.1 - y) / 0.04)
+    # łaciata świnia (Michał 29.10.2026: „świnie trochę podrasuj”): duże ciemne łaty na grzbiecie i zadzie
+    if y > 0.09 and z < 0.13 and math.sin(x * 24 + 1.1) * math.cos(z * 17 - 0.4) + 0.6 * math.sin(z * 31 + y * 20) > 0.35:
+        c = mix(c, SPOT, 0.85)
     if y < 0.045:
         c = mix(c, MUD, 0.7)  # ubłocone racice i nogi
-    return speck(c, x, y, z, 0.06)
+    return speck(c, x, y, z, 0.07)
 
 
-b = skin('pig', [(0, 0.125, -0.13), (0, 0.13, -0.05), (0, 0.125, 0.05), (0, 0.125, 0.11), (0, 0.125, 0.15), (0, 0.115, 0.195)],
-         [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)],
-         [(0.058, 0.058), (0.082, 0.078), (0.078, 0.076), (0.058, 0.056), (0.046, 0.044), (0.026, 0.024)], subsurf=2)
+# tułów: pękaty, beczkowaty, szerszy w zadzie; głowa osobno (masywna, z podgardlem), ryj na przedzie
+b = skin('pig', [(0, 0.125, -0.15), (0, 0.135, -0.07), (0, 0.135, 0.03), (0, 0.128, 0.1), (0, 0.122, 0.135)],
+         [(0, 1), (1, 2), (2, 3), (3, 4)],
+         [(0.062, 0.062), (0.09, 0.084), (0.088, 0.082), (0.068, 0.064), (0.05, 0.05)], subsurf=2)
 parts = [Mesh(evaluated(b), pigcol, 'fur')]
-disk = sphere('snout', (0, 0.115, 0.205), (0.022, 0.02, 0.008), seg=12, rings=8)
-parts.append(Mesh(evaluated(disk), SNOUT, 'fur'))
+head = sphere('phead', (0, 0.128, 0.165), (0.05, 0.052, 0.058), seg=14, rings=10)
+parts.append(Mesh(evaluated(head), pigcol, 'fur'))
+jowl = sphere('pjowl', (0, 0.1, 0.165), (0.045, 0.03, 0.045), seg=12, rings=8)
+parts.append(Mesh(evaluated(jowl), lambda x, y, z: mix(PINK, BELLY, 0.5), 'fur'))
+# ryj: krótki walec z płaskim, wilgotnym talerzem i nozdrzami
+snout = lathe('psnout', [(0.0, 0.0), (0.024, 0.0), (0.026, 0.035), (0.0, 0.036)], seg=12, subsurf=0)
+parts.append(Mesh(rotated(snout, rx=-math.pi / 2, rz=0.0, move=(0.0, 0.118, 0.198)), SNOUT, 'fur'))
 for sx in (-1, 1):
-    n = sphere(f'nostril{sx}', (sx * 0.008, 0.115, 0.212), (0.004, 0.005, 0.002), seg=6, rings=4)
+    n = sphere(f'nostril{sx}', (sx * 0.009, 0.118, 0.2345), (0.005, 0.006, 0.002), seg=6, rings=4)
     parts.append(Mesh(evaluated(n), (0.25, 0.14, 0.12), 'fur'))
-    ear = lathe(f'pear{sx}', [(0.02, 0.0), (0.012, 0.025), (0.002, 0.04)], seg=6, depth=0.35, subsurf=0)
-    parts.append(Mesh(rotated(ear, rx=0.9, rz=sx * 0.3, move=(sx * 0.026, 0.16, 0.135)), BACK, 'fur'))
-    eye = sphere(f'peye{sx}', (sx * 0.024, 0.14, 0.168), 0.004, seg=6, rings=4)
+    # uszy: duże, trójkątne, opadające do przodu na oczy
+    ear = lathe(f'pear{sx}', [(0.026, 0.0), (0.018, 0.03), (0.003, 0.052)], seg=6, depth=0.3, subsurf=0)
+    parts.append(Mesh(rotated(ear, rx=-1.8, rz=sx * 0.45, move=(sx * 0.034, 0.168, 0.168)), BACK, 'fur'))
+    eye = sphere(f'peye{sx}', (sx * 0.03, 0.142, 0.198), 0.0045, seg=6, rings=4)
     parts.append(Mesh(evaluated(eye), (0.06, 0.04, 0.03), 'fur'))
-    for z in (0.07, -0.08):
-        leg = skin(f'pleg{sx}{z}', [(sx * 0.04, 0.09, z), (sx * 0.042, 0.03, z), (sx * 0.042, 0.004, z + 0.004)], [(0, 1), (1, 2)],
-                   [(0.02, 0.022), (0.015, 0.015), (0.014, 0.013)], subsurf=1)
+    for z in (0.085, -0.095):
+        leg = skin(f'pleg{sx}{z}', [(sx * 0.045, 0.09, z), (sx * 0.047, 0.03, z), (sx * 0.047, 0.004, z + 0.004)], [(0, 1), (1, 2)],
+                   [(0.022, 0.024), (0.016, 0.016), (0.015, 0.014)], subsurf=1)
         parts.append(Mesh(evaluated(leg), lambda x, y, z: HOOF if y < 0.014 else pigcol(x, y, z), 'fur'))
-tail = skin('ptail', [(0, 0.135, -0.18), (0.01, 0.15, -0.195), (-0.004, 0.16, -0.19), (0.004, 0.155, -0.18)], [(0, 1), (1, 2), (2, 3)],
-            [(0.005, 0.005), (0.004, 0.004), (0.0035, 0.0035), (0.002, 0.002)], subsurf=1)
+# ogonek zakręcony w sprężynkę
+tail = skin('ptail', [(0, 0.14, -0.185), (0.014, 0.152, -0.205), (0.0, 0.168, -0.212), (-0.012, 0.16, -0.2), (0.0, 0.152, -0.193), (0.008, 0.166, -0.192)],
+            [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)],
+            [(0.0055, 0.0055), (0.0048, 0.0048), (0.0042, 0.0042), (0.0036, 0.0036), (0.003, 0.003), (0.002, 0.002)], subsurf=1)
 parts.append(Mesh(evaluated(tail), PINK, 'fur'))
 bake_ao([(m, (0, 0, 0)) for m in parts], reach=0.05)
 out['pig'] = [pack(merged(parts))]

@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.66.0 — chlew i mięso, popularność za różnorodne jedzenie (2026-10-29)
+
+- **Chlew** (3×2, 35 drewna, w menu przy sadzie i rybaku; `tools/models/pigsty.py`): szopa świniopasa z desek pod strzechą, otwarta od zagrody, pod okapem wędzona szynka i pęto kiełbas; zagroda z plecionki na palach z uchyloną furtką, koryto z kłody z pomyjami, nieregularne kałuże błota, słoma, wiadro, worek żołędzi, widły. Świniopas tuczy świnie i odnosi do spichlerza **mięso** (nowe jedzenie, 8 sztuk co ok. 15 s; syci jak ryba — 3 porcje)
+- **Mięso** z Blendera (`tools/models/meat.py`): na desce szynka z kością, boczek ze słoniną i pęto kiełbasy — tak leży w spichlerzu (warstwami) i tak niesie je chłop; ikona na pasku zapasów
+- **Świnie podrasowane** (`tools/models/animals.py`): pękaty tułów, masywna głowa z podgardlem, ryj z talerzem i nozdrzami, duże uszy opadające na oczy, łaty na grzbiecie, ogonek w sprężynkę. W chlewie cztery chodzą po zagrodzie (od koryta do błota), ryją, chrząkają, nocą leżą (`render/village.ts`)
+- **Różnorodne jedzenie podnosi popularność** (Michał): każdy kolejny rodzaj jedzenia w spichlerzach (jabłka, chleb, ryby, mięso) to +1, najwyżej +3 — o ile ludzie dostają racje. Nowa pozycja w rozpisce popularności, pomoc po polsku i angielsku
+- **Wdrożenie stało od 0.65.21:** test dalekich wersji budynków nie przechodził przez namiot polowy (śledzie odciągów daleko od namiotu) — śledzie bliżej, test zielony
+- Bot: stawia chlew po piekarni i liczy go do żywicieli osady
+
 ## 0.65.28 — rannych widać po ubraniu, krew na ostrzu (2026-10-29)
 
 - **Plamy krwi na ubraniu:** żołnierz poniżej ok. 60% zdrowia ma ciemną plamę krwi na piersi, poniżej ok. 38% drugą na brzuchu, a ciężko ranny (poniżej 20%) także na plecach. U chłopów to samo, gdy ranią ich wilki albo wróg. Plamy znikają, gdy rany się zagoją (`render/peasants.ts`, `Figures.marks`)

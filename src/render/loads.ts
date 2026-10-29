@@ -6,6 +6,7 @@ import { boxUv } from './peasants';
 import { grayPattern, normal, type Kind } from './textures';
 import { basketAt, propAt, propGeometryFlat, propMaterial, type PropName } from './props';
 import { PLANK } from './plank';
+import { coloredModel, MEAT_COLORS } from './buildings';
 
 /**
  * Materiał części ładunku: zdjęciowa tekstura w szarości (barwę daje kolor wierzchołków) i mapa nierówności.
@@ -218,6 +219,8 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
     ];
   }).concat([-0.1, 0.12].map((z) => as(tint(new THREE.TorusGeometry(0.026, 0.006, 4, 10).translate(0, 0, z).rotateX(-0.28).translate(0, 0.01, 0), 0x6b5a3c), 'cloth'))),
   // dwa miecze niesione płasko na rękach, głownie w przód, jelce i rękojeści przy niosącym
+  // porcja mięsa niesiona na rękach (tools/models/meat.py): szynka, boczek i pęto kiełbasy na desce
+  meat: () => [as(coloredModel('meat', MEAT_COLORS).scale(0.6, 0.6, 0.6).translate(0, 0.095, 0), 'plain')],
   // drabina szturmowa niesiona na ramieniu wzdłuż marszu: dwie żerdzie z korą i szczeble
   ladder: () => [
     ...[-0.06, 0.06].map((x) => as(tint(new THREE.CylinderGeometry(0.012, 0.013, 0.8, 6).rotateX(Math.PI / 2).translate(x, 0.01, 0.05), 0x7a5a3a), 'bark')),

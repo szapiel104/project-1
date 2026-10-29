@@ -9,7 +9,7 @@ import { feastDay, preached } from './faith';
 import { rainAt } from '../clock';
 import { COLD, SEASON_DAYS, temperatureAt, weatherOf, yearPos, YEAR_DAYS } from '../weather';
 
-const FOOD_VALUE_OF: Record<string, number> = { apples: 1, bread: 2, fish: 3 };
+const FOOD_VALUE_OF: Record<string, number> = { apples: 1, bread: 2, fish: 3, meat: 3 };
 
 const WOOD = resIndex('wood');
 /** Drewno na opał: na jedną zamieszkaną chatę i dobę przy ok. 0°C (zamek liczy się za dwie); przy mrozie więcej */
@@ -94,6 +94,10 @@ export function monthlyForecast(g: GameState, p: PlayerState): { delta: number; 
   // racje wybrane przez gracza działają na nastroje jak zawsze; gdy jedzenia po prostu zabrakło, ludzie nie obrażają się
   // na pana na długo (to nie on skąpi) — tylko trochę narzekają, a głodni odchodzą od razu (migrationSystem)
   parts.push({ key: 'food', value: fed ? RULES.rations[level]!.effect : Math.max(RULES.rations[level]!.effect, RULES.hungerPenalty), level: RULES.rations[level]!.name });
+  // różnorodne jedzenie (Michał 29.10.2026, jak w Twierdzy): każdy kolejny rodzaj jedzenia w spichlerzach (jabłka, chleb,
+  // ryby, mięso) to +1 do popularności — o ile ludzie w ogóle dostają racje i jest czym ich nakarmić
+  const kinds = FOOD.filter((i) => p.res[i]! > 0).length;
+  parts.push({ key: 'variety', value: fed && level > 0 ? Math.max(0, kinds - 1) : 0 });
   parts.push({ key: 'tax', value: bribed ? tax.effect : RULES.taxes[1].effect, level: bribed ? tax.name : RULES.taxes[1].name });
   // karczmy z karczmarzem i piwem ze składu: wieczory przy kuflu poprawiają nastroje, a sucha karczma złości
   const taverns = g.buildings.filter((b) => b.owner === p.id && !b.build && b.worker && BUILDINGS[b.type]!.id === 'tavern').length;

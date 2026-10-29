@@ -15,7 +15,7 @@ import type { TerrainView } from './terrain';
 import { PLANK } from './plank';
 
 /** Ile sztuk towaru to jedna „sztuka” na stosie (mniej więcej jeden niesiony ładunek) */
-const UNIT: Record<string, number> = { stone: 10, iron: 7, wheat: 16, flour: 16, bread: 10, apples: 18, fish: 8, gold: 6, crystal: 1, ale: 3, spear: 3, bow: 2, sword: 2, armor: 1, ladder: 1 };
+const UNIT: Record<string, number> = { stone: 10, iron: 7, wheat: 16, flour: 16, bread: 10, apples: 18, fish: 8, gold: 6, crystal: 1, ale: 3, spear: 3, bow: 2, sword: 2, armor: 1, ladder: 1, meat: 8 };
 /** Najwięcej sztuk na jednym stosie (dalej stos już nie rośnie, choć towaru przybywa) */
 const MAX_ITEMS = 12;
 const PALLET_W = 0.8, PALLET_D = 0.56, PALLET_H = 0.075;

@@ -118,8 +118,9 @@ PENNANT = [0.0, RH + 0.3, ZF - 0.06]
 # odciągi z liny do śledzi wbitych w ziemię
 for z in (ZB + 0.15, (ZB + ZF) / 2, ZF - 0.15):
     for s in (-1, 1):
-        stick('base', 'rope', (s * (X + OV - 0.02), WH - 0.04, z), (s * 1.38, 0.05, z), 0.006, seg=4)
-        b.box('base', 'woodDark', 0.025, 0.08, 0.025, s * 1.4, 0.0, z, roll=-s * 0.25)
+        # śledzie bliżej namiotu (dalekie wersje modelu gubią cienkie liny: obrys z daleka ma zostać prawie ten sam)
+        stick('base', 'rope', (s * (X + OV - 0.02), WH - 0.04, z), (s * 1.22, 0.05, z), 0.006, seg=4)
+        b.box('base', 'woodDark', 0.025, 0.08, 0.025, s * 1.24, 0.0, z, roll=-s * 0.25)
 for s in (-1, 1):
     stick('base', 'rope', (s * 0.4, roof_y(0.4) - 0.02, ZB - OV + 0.01), (s * 0.4, 0.05, -1.46), 0.006, seg=4)
     b.box('base', 'woodDark', 0.025, 0.08, 0.025, s * 0.4, 0.0, -1.47, tilt=-0.25)

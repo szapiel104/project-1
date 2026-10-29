@@ -21,7 +21,8 @@ import { enemyRoad, orderWreck } from './roadwreck';
 // 'camp' dwa razy: pierwsze obozowisko stoi od startu, drugie daje miejsca na nowych przybyszów (bez wolnego miejsca przy ognisku nikt nie przychodzi)
 // przenoszenia budynków za rudę (relocate.ts) bot świadomie nie używa: stawia od razu tam, gdzie chce, a ruda idzie mu na wojsko
 // rudera i namiot nie są na liście: bot stawia je tylko na szybko, gdy brak łóżek, a na chatę nie ma drewna (urgent niżej)
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'carpenter', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine'];
+// chlew po piekarni: czwarte jedzenie — różnorodność w spichlerzach podnosi popularność (economy.ts), jak u gracza
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'pigsty', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'carpenter', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine'];
 // druga kopalnia na samym końcu: kosztuje fortunę (BuildingDef.nextCost), więc bot stawia ją dopiero, gdy wszystko inne już stoi
 /** `mageSeat` na liście: siedziba zakonu magów — boty o parzystym numerze stawiają Sanktuarium Źródła, o nieparzystym Wieżę Płomienia;
  *  dopiero w grodzie (etap osady jak u gracza, BuildingDef.tier). Stoją w niej uzdrowiciele i szkolą się magowie bojowi.
@@ -141,7 +142,7 @@ export function botSystem(g: GameState): void {
     // najpierw to, czego osada pilnie potrzebuje: jedzenie dla wszystkich (sad karmi ok. 6 ludzi) i drwale,
     // gdy wolni ludzie czekają, a drewna brak na nowe warsztaty (drwal jest tani, a drewno to wąskie gardło)
     const pop = population(g, p.id);
-    const feeders = (have.get('orchard') ?? 0) + (have.get('fisher') ?? 0) + (have.get('bakery') ?? 0) * 2;
+    const feeders = (have.get('orchard') ?? 0) + (have.get('fisher') ?? 0) + (have.get('pigsty') ?? 0) + (have.get('bakery') ?? 0) * 2;
     // pierwszy drwal przed wszystkim: bez niego drewno się kończy i osada staje (zapas chleba starcza na start)
     // bez żadnego składu na drewno (stodoła i składy zburzone) najpierw skład, potem drwal: drwal bez składu tylko zrzuca deski
     // pod chatą i staje (storage.ts). Drewno na skład zbiera w razie biedy wolny chłop (emergencywood.ts)
@@ -200,7 +201,7 @@ export function botSystem(g: GameState): void {
     // umocnienia: gdy osada ma już kilkanaście budynków, otacza się palisadą z bramami i wieżami w narożnikach
     // (dopiero gdy stoją koszary: najpierw gospodarka i wojsko, potem drewno na palisadę)
     // (palisada nie zjada drewna potrzebnego na sady, gdy jedzenia zaczyna brakować)
-    const fed = g.buildings.filter((b) => b.owner === p.id && ['orchard', 'fisher'].includes(BUILDINGS[b.type]!.id)).length * 6 >= population(g, p.id) + 3;
+    const fed = g.buildings.filter((b) => b.owner === p.id && ['orchard', 'fisher', 'pigsty'].includes(BUILDINGS[b.type]!.id)).length * 6 >= population(g, p.id) + 3;
     if (fed && tk % (THINK * 3) === 0 && g.buildings.filter((b) => b.owner === p.id).length >= 12
       && g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'barracks')) placementBatch(() => fortify(g, p));
     // kooperacja: wzmocniony bot co ok. 2 minuty dostaje dostawę broni i rudy (więcej wojska na fale)

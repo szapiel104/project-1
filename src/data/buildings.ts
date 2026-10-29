@@ -256,6 +256,13 @@ export const BUILDINGS: readonly BuildingDef[] = [
     workView: 'inside',
     production: { input: { res: 'wood', amount: 3 }, output: { res: 'ladder', amount: 1 }, site: 'home', workTicks: 180 },
   },
+  // Chlew (Michał 29.10.2026, tools/models/pigsty.py): świniopas tuczy świnie w zagrodzie i odnosi mięso do spichlerza —
+  // czwarte jedzenie (syci jak ryba); każdy kolejny rodzaj jedzenia w spichlerzach podnosi popularność (economy.ts)
+  {
+    id: 'pigsty', category: 'food', name: 'b.pigsty', w: 3, h: 2, cost: { wood: 35 }, buildable: true,
+    workView: 'field',
+    production: { output: { res: 'meat', amount: 8 }, site: 'home', workTicks: 150 },
+  },
 ];
 
 /** Mieszkania zwykłych chłopów (chata, rudera, namiot): tu wracają odpocząć i spać, tu bywa kwarantanna. Zamek liczy się osobno */

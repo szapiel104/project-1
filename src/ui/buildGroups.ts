@@ -13,7 +13,7 @@ export const BUILD_GROUPS: readonly BuildGroup[] = [
   { cat: 'settlement', pl: 'Składy', en: 'Storage', ids: ['stockpile', 'barn'] },
   { cat: 'settlement', pl: 'Rzemiosło i magia', en: 'Craft and magic', ids: ['engineers', 'mageHut', 'mageFire', 'mageWater'] },
 
-  { cat: 'food', pl: 'Z natury', en: 'From the land', ids: ['orchard', 'fisher'] },
+  { cat: 'food', pl: 'Z natury', en: 'From the land', ids: ['orchard', 'fisher', 'pigsty'] },
   { cat: 'food', pl: 'Chleb', en: 'Bread', ids: ['farm', 'mill', 'bakery'] },
   { cat: 'food', pl: 'Piwo', en: 'Ale', ids: ['brewery'] },
   { cat: 'food', pl: 'Spichlerze', en: 'Granaries', ids: ['granary', 'granaryBig'] },

@@ -1,5 +1,5 @@
 // KOLEJNOŚĆ MA ZNACZENIE (indeks w stanie gry i zapisach): nowe surowce dopisujemy na końcu
-export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor', 'crystal', 'ladder'] as const;
+export const RESOURCES = ['wood', 'stone', 'iron', 'wheat', 'flour', 'bread', 'apples', 'gold', 'fish', 'spear', 'bow', 'ale', 'ore', 'sword', 'armor', 'crystal', 'ladder', 'meat'] as const;
 export type ResourceId = (typeof RESOURCES)[number];
 export type StoreKind = 'stockpile' | 'granary' | 'armory' | 'grain';
 
@@ -39,6 +39,8 @@ export const RESOURCE_DEFS: Record<ResourceId, ResourceDef> = {
   crystal: { name: 'res.crystal', color: 0x9a6cff, store: null },
   // drabiny szturmowe od cieśli (z drewna), w zbrojowni; żołnierz bierze jedną, gdy przystawia drabinę do wrogiego muru
   ladder: { name: 'res.ladder', color: 0xa07a48, store: 'armory' },
+  // mięso z chlewa (Michał 29.10.2026): czwarte jedzenie, syci jak ryba; różnorodne jedzenie podnosi popularność
+  meat: { name: 'res.meat', color: 0xa8463a, store: 'granary', food: true },
 };
 
 export const resIndex = (id: ResourceId): number => RESOURCES.indexOf(id);

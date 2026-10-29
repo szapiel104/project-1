@@ -8,7 +8,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { bump, grayPattern, normal, pattern } from './textures';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
-import { model, bytes } from './modelstore';
+import { model, model as model_, bytes } from './modelstore';
 import { wheatDepthMat, wheatMat, wheatRow } from './wheat';
 import { addModelBanners, bannerGeometry, bannerMaterial, flagTime } from './banners';
 import { PLANK } from './plank';
@@ -35,7 +35,6 @@ const GATE_MODEL = model('gate');
 const STONE_TOWER_MODEL = model('stonetower');
 const STONE_TOWER_BIG_MODEL = model('stonetower_big');
 const TOWER_DOOR_MODEL = model('towerdoor');
-const ARROW_MODEL = model('arrow');
 const STONE_TOWER_GREAT_MODEL = model('stonetower_great');
 const BRAZIER_MODEL = model('brazier');
 const WATCH_TOWER_MODEL = model('watchtower');
@@ -57,6 +56,7 @@ const FISHER_MODEL = model('fisher');
 const FLETCHER_MODEL = model('fletcher');
 const POLETURNER_MODEL = model('poleturner');
 const CARPENTER_MODEL = model('carpenter');
+const PIGSTY_MODEL = model('pigsty');
 const CEMETERY_MODEL = model('cemetery');
 const FORESTER_MODEL = model('forester');
 const FIELD_TENT_MODEL = model('fieldtent');
@@ -159,7 +159,9 @@ const M = {
   ore: mat(0x8a4a2c), crust: mat(0xe2b06a),
   // magiczna ruda jak w Gothicu: skała z niebieskawym połyskiem, lekko świeci w ciemnej sztolni (żyły, hałdy, urobek w koszach)
   magicOre: oreMaterial(),
-  cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64, 'burlap'), dust: mat(0xd8d3c6, 'soil'),
+  // chlew (tools/models/pigsty.py) i mięso w spichlerzu: wędzona szynka, kiełbasy, kość, błoto w zagrodzie
+  meat: mat(0x8a3a2c), meatDark: mat(0x5a2418), bone: mat(0xe6dcc2), mud: mat(0x4e3a26, 'soil'),
+    cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64, 'burlap'), dust: mat(0xd8d3c6, 'soil'),
   wattle: mat(0x9a7a4a, 'thatch'),
   // skóry zwierząt na szałasach zbójów (ciemna, wytarta skóra z włosiem; dwa odcienie, żeby płaty się różniły)
   hide: mat(0x7a5a3e, 'burlap'), hideDark: mat(0x58402c, 'burlap'),
@@ -239,6 +241,9 @@ const inBasket = (contents: THREE.BufferGeometry[]): THREE.BufferGeometry => mer
  * `withProp`: kolejne grupy bryły to gotowe modele z paczek (src/render/props.ts) z własnymi teksturami — np. ryby
  * w skrzynce, beczki na legarach; `noCode`: bryła ma same modele z paczek (kosz jabłek, kosz chleba), bez części z kodu.
  */
+/** Barwy porcji mięsa (tools/models/meat.py): szynka, boczek, kiełbasa, kość, deska */
+export const MEAT_COLORS: Record<string, number> = { meat: 0xa04a3a, meatDark: 0x6a2c1c, bone: 0xe6dcc2, white: 0xeadfd0, woodDark: 0x5e4329 };
+let meatPile: THREE.BufferGeometry | null = null;
 const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: boolean; withProp?: PropName | PropName[]; noCode?: boolean }> = {
   wood: {
     tex: 'planks',
@@ -371,6 +376,9 @@ const PILES: Record<string, { geo: THREE.BufferGeometry; tex?: Pattern; metal?: 
       ]),
     ], true)!,
   },
+  // mięso z chlewa (tools/models/meat.py): szynka, boczek i kiełbasa na desce, barwy w kolorach wierzchołków
+  // bryła z modelu powstaje przy pierwszym użyciu (moduł wczytuje siatki z Blendera niżej w pliku)
+  meat: { get geo() { return (meatPile ??= coloredModel('meat', MEAT_COLORS)); } },
   fish: {
     tex: 'planks',
     withProp: 'fish',
@@ -1280,6 +1288,12 @@ const BUILDERS: Record<string, Builder> = {
     const p = (ARMORER_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },
+  pigsty(g, _team, flag) {
+    // chlew z Blendera (tools/models/pigsty.py): szopa świniopasa pod strzechą z szynką pod okapem, zagroda z plecionki,
+    // koryto z pomyjami, kałuże błota; świnie w zagrodzie dokłada render/village.ts (prostokąt `pen` z modelu)
+    blenderModel(g, PIGSTY_MODEL as unknown as BlenderBuilding, flag);
+    g.userData.pen = (PIGSTY_MODEL as unknown as { pen: [number, number, number, number] }).pen;
+  },
   carpenter(g, _team, flag) {
     // warsztat cieśli z Blendera (tools/models/carpenter.py): w izbie drabina w robocie na dwóch kozłach, piła, świder,
     // zapas szczebli; przed nim gotowe drabiny szturmowe oparte o stojak i żerdzie pod daszkiem
@@ -1653,6 +1667,21 @@ export function towerDoorKit(): { door: { geo: THREE.BufferGeometry; mat: THREE.
   return { door: part('base'), steps: part('steps') };
 }
 
+/**
+ * Mały model z Blendera jako jedna siatka z barwą w kolorach wierzchołków (barwa materiału × cień z zagłębień): strzały,
+ * mięso w spichlerzu i w rękach — wszystkie sztuki naraz jednym wywołaniem rysowania, bez tekstur.
+ */
+export function coloredModel(name: string, colors: Record<string, number>, fallback = 0x9a7448): THREE.BufferGeometry {
+  const model = model_(name) as unknown as BlenderBuilding;
+  const parts = ((model.base as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
+    const geo = blenderGeo(m.pos, m.ao, model.q, 1).clone();
+    const c = new THREE.Color(colors[m.mat] ?? fallback), col = geo.getAttribute('color') as THREE.BufferAttribute;
+    for (let i = 0; i < col.count; i++) { const v = 0.55 + col.getX(i) * 0.45; col.setXYZ(i, c.r * v, c.g * v, c.b * v); }
+    geo.deleteAttribute('uv');
+    return geo;
+  });
+  return mergeGeometries(parts)!;
+}
 /** Barwy części strzały (tools/models/arrow.py): drzewce, nasadka, grot, lotki */
 const ARROW_COLORS: Record<string, number> = { wood: 0x9a7448, woodDark: 0x4a3424, iron: 0x70747c, white: 0xe8e0c8, red: 0x9a2a20 };
 /**
@@ -1660,15 +1689,7 @@ const ARROW_COLORS: Record<string, number> = { wood: 0x9a7448, woodDark: 0x4a342
  * rysowania). Leży wzdłuż +z: grot w +z, nasadka w z = 0 (jak dawna strzała z kodu: środek drzewca w zerze).
  */
 export function arrowGeometry(): THREE.BufferGeometry {
-  const model = ARROW_MODEL as unknown as BlenderBuilding;
-  const parts = ((model.base as { mat: string; pos: string; ao: string }[] | undefined) ?? []).map((m) => {
-    const geo = blenderGeo(m.pos, m.ao, model.q, 1).clone();
-    const c = new THREE.Color(ARROW_COLORS[m.mat] ?? 0x9a7448), col = geo.getAttribute('color') as THREE.BufferAttribute;
-    for (let i = 0; i < col.count; i++) { const v = 0.55 + col.getX(i) * 0.45; col.setXYZ(i, c.r * v, c.g * v, c.b * v); }
-    geo.deleteAttribute('uv');
-    return geo;
-  });
-  const g = mergeGeometries(parts)!;
+  const g = coloredModel('arrow', ARROW_COLORS);
   const box = new THREE.Box3().setFromBufferAttribute(g.getAttribute('position') as THREE.BufferAttribute);
   // pionowo (grot w +y) → wzdłuż +z, środkiem długości w zerze
   return g.translate(0, -(box.min.y + box.max.y) / 2, 0).rotateX(Math.PI / 2);

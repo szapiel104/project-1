@@ -25,7 +25,9 @@ export interface VillageCtx { time: number; dt: number; night: number; calm: boo
 interface Critter { x: number; y: number; tx: number; ty: number; wait: number; heading: number; speed: number; seen: number; hx: number; hy: number; flee: number; next: number }
 interface Dog extends Critter { master: number; until: number; bark: number; run: number; stuck: number }
 
-const MAX_HENS = 120, MAX_PIGS = 48, MAX_HORSES = 8, MAX_DOGS = 8;
+/** Zagroda chlewu z modelu (x0, x1, z0, z1 w układzie modelu) */
+const PEN = (model('pigsty') as { pen?: [number, number, number, number] }).pen;
+const MAX_HENS = 120, MAX_PIGS = 96, MAX_HORSES = 8, MAX_DOGS = 8;
 /** Pies na razie wyłączony (decyzja Michała 16.10.2026); kod i model zostają — żeby wrócił, wystarczy true */
 const DOGS_ON = false;
 
@@ -202,6 +204,44 @@ export class Village {
         // co druga świnia ubłocona
         this.pigs.setColorAt(pigs, this.c.setHex((b.id + k) % 2 ? 0xffffff : 0xa08070));
         pigs++;
+      }
+      // chlew: cztery świnie w zagrodzie (prostokąt `pen` z modelu, tools/models/pigsty.py) — ryją, chodzą od koryta
+      // do błota i z powrotem, nocą leżą; po zagrodzie chodzą swobodnie (płot to część budynku, więc bez sprawdzania pól)
+      if (id === 'pigsty' && PEN) {
+        const fp = footprint(BUILDINGS[b.type]!, b.rot), cx = b.x + fp.w / 2, cy = b.y + fp.h / 2;
+        const th = (b.rot * Math.PI) / 2, ct = Math.cos(th), st = Math.sin(th);
+        const toWorld = (lx: number, lz: number): [number, number] => [cx + lx * ct + lz * st, cy - lx * st + lz * ct];
+        const pick = (): [number, number] => toWorld(PEN[0] + rand() * (PEN[1] - PEN[0]), PEN[2] + rand() * (PEN[3] - PEN[2]));
+        for (let k = 0; k < 4 && pigs < MAX_PIGS; k++) {
+          const key = `pen${b.id}:${k}`;
+          let c = this.pigState.get(key);
+          if (!c) {
+            const [hx, hy] = pick();
+            c = { x: hx, y: hy, tx: hx, ty: hy, wait: rand() * 4, heading: rand() * 6.28, speed: 0, seen: 0, hx, hy, flee: 0, next: time + 10 + rand() * 20 };
+            this.pigState.set(key, c);
+          }
+          c.seen = this.frame;
+          let root = 0, lie = 0;
+          if (sleep) lie = 1.35;
+          else if (c.wait > 0) { c.wait -= dt; root = 0.12 + Math.sin(time * 5 + b.id + k) * 0.06; if (c.wait <= 0) { const [tx, ty] = pick(); c.tx = tx; c.ty = ty; } }
+          else {
+            const ddx = c.tx - c.x, ddy = c.ty - c.y, d = Math.hypot(ddx, ddy);
+            if (d < 0.03) c.wait = 2 + rand() * 6;
+            else {
+              const stp = Math.min(d, 0.25 * dt);
+              c.x += (ddx / d) * stp; c.y += (ddy / d) * stp;
+              let a = Math.atan2(ddx, ddy) - c.heading;
+              while (a > Math.PI) a -= Math.PI * 2;
+              while (a < -Math.PI) a += Math.PI * 2;
+              c.heading += a * Math.min(1, dt * 6);
+            }
+          }
+          if (!sleep && time > c.next) { c.next = time + 10 + rand() * 18; ctx.sound('grunt', c.x, c.y); }
+          this.place(c.x - W2, ctx.height(c.x, c.y) + (lie ? 0.05 : 0), c.y - H2, c.heading, root, lie);
+          this.pigs.setMatrixAt(pigs, this.m);
+          this.pigs.setColorAt(pigs, this.c.setHex(k % 2 ? 0xffffff : 0xa08070));
+          pigs++;
+        }
       }
       // koń przy koszarach: uwiązany obok, skubie trawę, macha ogonem, przestępuje
       if (id === 'barracks' && horses < MAX_HORSES) {

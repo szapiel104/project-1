@@ -89,8 +89,8 @@ export const HELP_CHAPTERS: HelpChapter[] = [
   {
     title: tx('Jedzenie', 'Food'),
     blocks: [
-      tx('Jedzeniem są jabłka, ryby i chleb. Pszenica i mąka to dopiero półprodukty. Ludzie jedzą co miesiąc gry (ok. 10 sekund przy tempie 1×). Rodzaje sycą różnie, więc wszystko liczy się w porcjach: jabłko to 1 porcja, chleb 2, ryba 3. Najpierw schodzą jabłka, potem chleb, ryby na końcu.',
-        'Food means apples, fish and bread; wheat and flour are only ingredients. Your people eat every game month (about 10 seconds at 1× speed). Not all food fills a belly alike, so everything is counted in portions: an apple is 1 portion, a loaf 2, a fish 3. Apples go first, then bread, fish last.'),
+      tx('Jedzeniem są jabłka, ryby, chleb i mięso z chlewa. Pszenica i mąka to dopiero półprodukty. Ludzie jedzą co miesiąc gry (ok. 10 sekund przy tempie 1×). Rodzaje sycą różnie, więc wszystko liczy się w porcjach: jabłko to 1 porcja, chleb 2, ryba i mięso po 3. Najpierw schodzą jabłka, potem chleb, ryby i mięso na końcu. Różnorodne jedzenie cieszy ludzi: każdy kolejny rodzaj jedzenia w spichlerzach (np. jabłka i mięso — dwa rodzaje) to +1 do popularności, najwyżej +3 za wszystkie cztery.',
+        'Food means apples, fish, bread and pork from the pigsty; wheat and flour are only ingredients. Your people eat every game month (about 10 seconds at 1× speed). Not all food fills a belly alike, so everything is counted in portions: an apple is 1 portion, a loaf 2, a fish or a cut of meat 3. Apples go first, then bread, fish and meat last. Varied fare gladdens the folk: every further kind of food in your granaries (apples and meat, say — two kinds) is +1 popularity, up to +3 for all four.'),
       { table: [
         [tx('Racje', 'Rations'), tx('Porcji na 8 osób / miesiąc', 'Portions per 8 people / month'), tx('Popularność', 'Popularity')],
         [tx('Brak', 'None'), '0', '−8'],
