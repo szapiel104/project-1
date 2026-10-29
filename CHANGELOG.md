@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.65.7 — krew w trakcie walki (2026-10-29)
+
+- **Prysk przy trafieniu:** każdy cios i trafiona strzała wyrzucają kilka kropli z wysokości tułowia, w tył i na boki od trafionego; im mocniejszy cios, tym więcej kropli. Spadają łukiem i zostają na ziemi jako drobne plamki (`render/bloodfx.ts`)
+- **Krople za rannym:** żołnierz poniżej połowy zdrowia, idąc, gubi co kawałek kroplę — im słabszy, tym gęściej. Na murze i pomoście nie (krople nie lecą przez kamień)
+- Plamki są małe, kładą się na zboczu jak plama pod poległym, ciemnieją i po ok. minucie znikają; naraz najwyżej 700 plamek i 240 kropli w powietrzu. Taran nie krwawi
+- Tylko wygląd: symulacja o tym nie wie, gra przez sieć bez zmian. Bot: bez zmian
+
 ## 0.65.6 — nowe wejścia do kamiennych wież z prawdziwymi drzwiami (2026-10-29)
 
 - **Zgłoszenie:** tam, gdzie powstaje nowe wejście do kamiennej wieży (z korony muru albo przy ziemi, gdy przed frontem coś stoi), stoją teraz takie same drzwi jak od frontu: kamienne obramienie z nadprożem, okute skrzydło z desek z teksturą, kołatka; przy ziemi także kamienne schodki. Wcześniej był tam czarny prostokąt. Model w Blenderze: `tools/models/towerdoor.py`, w podglądzie modeli w grupie „Części budynków”

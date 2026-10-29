@@ -47,7 +47,7 @@ function splatMask(): THREE.CanvasTexture {
 }
 
 const FRESH = new THREE.Color(0x5e0a06), OLD = new THREE.Color(0x2a130c);
-const col = new THREE.Color(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), nrm = new THREE.Vector3(), s = new THREE.Vector3(), p = new THREE.Vector3();
+const M = new THREE.Matrix4(), col = new THREE.Color(), q = new THREE.Quaternion(), q2 = new THREE.Quaternion(), up = new THREE.Vector3(0, 1, 0), nrm = new THREE.Vector3(), s = new THREE.Vector3(), p = new THREE.Vector3();
 
 export class BloodStains {
   readonly mesh: THREE.InstancedMesh;
@@ -87,6 +87,19 @@ export class BloodStains {
     // świeża: czerwona; z czasem ciemnieje do brązu
     col.copy(FRESH).lerp(OLD, Math.min(1, spread * 0.25 + age * 0.9));
     this.mesh.setColorAt(this.n, col);
+    this.n++;
+  }
+
+  /** Mała plamka z kropli (bloodfx.ts): gotowy rozmiar, obrót i rozciągnięcie, `dark` 0..1 = jak bardzo już ściemniała */
+  addSpot(x: number, y: number, z: number, size: number, rot: number, sx: number, sz: number, dark: number, slope: [number, number] = [0, 0]): void {
+    if (this.n >= this.mesh.instanceMatrix.count || size <= 0) return;
+    q.setFromAxisAngle(up, rot);
+    nrm.set(-slope[0], 1, -slope[1]).normalize();
+    q.premultiply(q2.setFromUnitVectors(up, nrm));
+    s.set(size * sx, 1, size * sz);
+    p.set(x, y, z);
+    this.mesh.setMatrixAt(this.n, M.compose(p, q, s));
+    this.mesh.setColorAt(this.n, col.copy(FRESH).lerp(OLD, dark));
     this.n++;
   }
 

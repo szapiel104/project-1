@@ -64,6 +64,7 @@ import { Terrain } from '../data/terrain';
 import { BANDIT_COLOR, TEAM_COLORS } from '../data/teams';
 import { applyCrest, defaultCrest } from './banners';
 import { BloodStains } from './blood';
+import { BloodFx } from './bloodfx';
 import type { Stick } from './arrows';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, buildingById, type GameState } from '../sim/state';
 import { towerEntry, towerUnder } from '../sim/systems/stonewalls';
@@ -724,6 +725,8 @@ export class GameRenderer {
   private felled = new Map<number, TreeKind>();
   private planks: THREE.InstancedMesh;
   private time = 0;
+  private bloodFx!: BloodFx;
+  private bloodGround: (x: number, z: number) => number = () => 0;
   /** Bez animacji (tylko na życzenie: ?spokoj=1). Systemowe „ogranicz ruch” zatrzymywało wszystkie animacje w grze (ludzie sunęli, bramy stały) */
   private calm = new URLSearchParams(location.search).has('spokoj');
   /** Ruch ludzi w wyglądzie: łuki na zakrętach, omijanie się */
@@ -886,6 +889,7 @@ export class GameRenderer {
     this.banditBodies = new Figures(256, this.scene, 'bandit');
     this.stains = new BloodStains(MAX_UNITS); // krew: nieregularna plama, rozlewa się i ciemnieje (render/blood.ts)
     this.scene.add(this.stains.mesh);
+    this.bloodFx = new BloodFx(this.scene); // krew w walce: prysk przy trafieniu, krople za ciężko rannym (render/bloodfx.ts)
     this.dots = new THREE.InstancedMesh(new THREE.CircleGeometry(0.13, 16).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xffe08a, transparent: true, opacity: 0.9, depthWrite: false, depthTest: false, toneMapped: false, fog: false }), MAX_UNITS);
     this.dots.count = 0;
     this.dots.frustumCulled = false;
@@ -3755,6 +3759,13 @@ export class GameRenderer {
   }
 
   private syncSoldiers(g: GameState, view: TerrainView, alpha: number): void {
+    this.bloodGround = (x: number, z: number): number => view.heightAt(x, z);
+    try { this.syncSoldiersInner(g, view, alpha); } finally {
+      this.bloodFx.update(Math.min(0.1, this.frameDt || 0.016), this.time, this.bloodGround, g.map.width / 2, g.map.height / 2, this.calm);
+    }
+  }
+
+  private syncSoldiersInner(g: GameState, view: TerrainView, alpha: number): void {
     this.stickFlameN = 0;
     this.plantedN = 0;
     const { width, height } = g.map;
@@ -3999,6 +4010,11 @@ export class GameRenderer {
         if (isStoneTower(tid)) y = -50; // schody w środku kamiennej wieży
       }
       t.position.set(px - width / 2, y + (walking ? Math.abs(Math.cos(st.phase)) * 0.02 : 0), pz - height / 2);
+      // krew w walce: trafienie (spadek zdrowia) pryska kroplami, ciężko ranny gubi krople, idąc; taran nie krwawi
+      if (!udef.ram && s.hp > 0 && y > -10) {
+        const gy = view.heightAt(px, pz);
+        this.bloodFx.track(s.id, s.hp, udef.hp, px, y, pz, heading, walking && y - gy < 0.2, this.time, this.bloodGround);
+      }
       if (walking && !s.up) this.feet.set(s.id, [px, pz, y]); // ślady butów: tam, gdzie naprawdę stoi na ekranie
       { const d = this.drawnAt.get(s.id); if (d) d.copy(t.position); else this.drawnAt.set(s.id, t.position.clone()); }
       // przymrożony czarem wody: lód wokół stóp i chłodna poświata (spells.ts), dopóki czar trwa
