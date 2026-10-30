@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.67.6 — 30.10.2026
+- **Miniatury budynków w tle.** Po każdej nowej wersji gry pierwsze wejście rysowało od zera obrazki wszystkich budynków do menu budowy — naraz, w środku wczytywania (ok. 2,5 s zamrożonej strony), a po dojściu tekstur zdjęciowych drugi raz, już w grze. Teraz gra startuje bez nich, a obrazki rysują się raz, po starcie, po jednym na wolną chwilę przeglądarki, od razu z teksturami zdjęciowymi; gotowy wskakuje do kart budowy, kategorii i pól magazynów (`hud.setThumb`). Potem jak dawniej z pamięci przeglądarki.
+- Głazy: z powrotem płaskie cieniowanie — gładkie dawało czarne trójkąty na zawiniętych ścianach bryły. Dokładniejsza bryła z bliska zostaje.
+
 ## 0.67.5 — 30.10.2026
 Szybsze wczytywanie, przeglądarka nie zamarza (Michał: „gra przy wczytywaniu zawiesza przeglądarkę, nawet z jednym obiektem”). Pomiar w Chrome na RTX 5070, pusta scena: 16,7 s wczytywania, w tym 9,8 s zamrożonej strony.
 - **Bez rysowania w trakcie wczytywania.** Pętla gry rysowała klatki, zanim skończyła się rozgrzewka — każda kompilowała shadery „na żywo” i strona stała 5–7 s. Teraz pierwszy obraz dopiero po `warmup()` (jak przy nowej grze z menu).

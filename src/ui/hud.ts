@@ -129,6 +129,8 @@ export interface ProdInfo {
 export interface RecruitUnit { id: string; name: string; weapon: string; need?: number; have: number; gear?: { res: string; have: number }; armor?: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean; /** Mag bojowy: ilu już jest i ile wolno (limit na gracza) */ magic?: { have: number; cap: number } }
 
 export interface Hud {
+  /** Gotowa miniatura budynku (rysowana w tle po starcie): wstawia ją w karty budowy, kategorie i pola magazynów */
+  setThumb(id: string, src: string): void;
   /** Pasek czarów zaznaczonych magów (main.ts podpina źródło: chwila gry i zaznaczeni) */
   spells: SpellBar;
   setSeed(text: string, preset: MapPresetId): void;
@@ -481,7 +483,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // obrazek budynku zamiast ogólnej ikonki: od razu widać, który to skład, a który spichlerz; obok bilans na minutę
   const pic = (id: string, fallback: string): HTMLElement => {
     const src = thumbs.get(id);
-    if (!src) return icon(fallback);
+    if (!src) { const i = icon(fallback); i.dataset.thumbFor = id; return i; }   // obrazek dojdzie później (setThumb)
     const img = el('img', 'store-pic'); img.src = src; img.alt = ''; return img;
   };
   const stockTrend = el('span', 'trend'), foodTrend = el('span', 'trend');
@@ -914,7 +916,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   for (const id of CATEGORIES) {
     const b = el('button', 'cat');
     const src = thumbs.get(CAT_ICON[id] ?? '');
-    if (src) { const img = el('img'); img.src = src; img.alt = ''; img.width = 34; img.height = 34; img.draggable = false; b.append(img); }
+    // bez obrazka (miniatury jeszcze się rysują w tle) — puste miejsce, setThumb wstawi go później
+    { const img = el('img'); if (src) img.src = src; else img.hidden = true; img.dataset.thumb = CAT_ICON[id] ?? ''; img.alt = ''; img.width = 34; img.height = 34; img.draggable = false; b.append(img); }
     b.append(el('span', 'cat-name', t(`cat.${id}`)));
     b.type = 'button';
     b.setAttribute('aria-expanded', 'false');
@@ -932,9 +935,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     b.dataset.build = def.id;
     b.setAttribute('aria-pressed', 'false');
     const src = thumbs.get(def.id);
-    if (src) {
+    {
       const img = el('img');
-      img.src = src; img.alt = ''; img.width = 72; img.height = 72; img.draggable = false;
+      if (src) img.src = src; else img.hidden = true;
+      img.dataset.thumb = def.id;
+      img.alt = ''; img.width = 72; img.height = 72; img.draggable = false;
       b.append(img);
     }
     const text = el('span', 'card-text');
@@ -1134,6 +1139,11 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   showCategory(null);
 
   return {
+    setThumb(id, src) {
+      thumbs.set(id, src);
+      root.querySelectorAll<HTMLImageElement>(`img[data-thumb="${id}"]`).forEach((img) => { img.src = src; img.hidden = false; });
+      root.querySelectorAll<HTMLElement>(`[data-thumb-for="${id}"]`).forEach((old) => { const img = el('img', 'store-pic'); img.src = src; img.alt = ''; old.replaceWith(img); });
+    },
     spells: spellBar,
     setArmyBar(v) {
       armyBar.hidden = !v.show;

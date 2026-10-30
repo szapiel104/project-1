@@ -7,11 +7,38 @@ import { createRenderer } from './glcontext';
 /** Renderuje obrazki budynków do menu z tych samych modeli, które stoją na mapie. Zwraca id → adres obrazka. */
 export function renderThumbnails(models: ModelFactory, teamColor: number, size = 160): Map<string, string> {
   const out = new Map<string, string>();
+  const it = thumbSteps(models, teamColor, size, out);
+  while (!it.next().done) { /* wszystko naraz */ }
+  return out;
+}
+
+/**
+ * To samo w tle (Michał 30.10.2026: wczytywanie stało ok. 2,5 s na rysowaniu wszystkich miniatur po każdej nowej
+ * wersji gry): po jednym budynku na wolną chwilę przeglądarki; `onEach(id, obrazek)` od razu po każdym.
+ */
+export async function renderThumbnailsAsync(models: ModelFactory, teamColor: number, size: number, onEach: (id: string, src: string) => void): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const idle = (): Promise<void> => new Promise((ok) => {
+    const ric = (window as unknown as { requestIdleCallback?: (f: () => void, o: { timeout: number }) => void }).requestIdleCallback;
+    if (ric) ric(() => ok(), { timeout: 300 }); else setTimeout(ok, 20);
+  });
+  const it = thumbSteps(models, teamColor, size, out);
+  for (;;) {
+    await idle();
+    const r = it.next();
+    if (r.done) break;
+    if (r.value) onEach(r.value, out.get(r.value)!);
+  }
+  return out;
+}
+
+/** Kroki rysowania miniatur: `yield` po każdym budynku (jego id) */
+function* thumbSteps(models: ModelFactory, teamColor: number, size: number, out: Map<string, string>): Generator<string, void, void> {
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = createRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true }, 'pomocniczy');
   } catch {
-    return out; // brak drugiego kontekstu WebGL: menu pokaże same nazwy
+    return; // brak drugiego kontekstu WebGL: menu pokaże same nazwy
   }
   renderer.setSize(size, size, false);
   renderer.setClearColor(0x000000, 0);
@@ -52,10 +79,10 @@ export function renderThumbnails(models: ModelFactory, teamColor: number, size =
     renderer.render(scene, cam);
     out.set(def.id, renderer.domElement.toDataURL('image/png'));
     scene.remove(model);
+    yield def.id;
   }
   renderer.dispose();
   renderer.forceContextLoss();
-  return out;
 }
 
 /**

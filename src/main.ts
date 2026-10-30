@@ -59,7 +59,7 @@ import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
 import { alarmBell, shrineBell, thunderClap, daySounds, music, musicEnd, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio, audioStats, listenerPos, play3d, type WorldSound } from './audio/sfx';
 import { proceduralModels } from './render/models';
-import { renderThumbnails, renderUnitPortraits } from './render/thumbnails';
+import { renderThumbnailsAsync, renderUnitPortraits } from './render/thumbnails';
 import { WOLF_HP } from './sim/systems/wolves';
 import { cachedThumbs, saveThumbs } from './render/thumbcache';
 import { texturesReady } from './render/textures';
@@ -157,7 +157,9 @@ function loadSave(): { seedText: string; data: SaveData; ui?: UiSave } | null {
 
 // miniatury z poprzedniej wizyty tej samej wersji gry albo rysowane teraz
 const savedThumbs = TEST ? null : cachedThumbs();
-const thumbs: Map<string, string> = TEST ? new Map() : savedThumbs ?? renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288);
+// bez miniatur w pamięci (pierwsze wejście po nowej wersji) gra startuje bez nich, a rysują się w tle po starcie
+// (thumbsLater) — wcześniej rysowanie wszystkich naraz stało ok. 2,5 s w środku wczytywania, a potem drugi raz w grze
+const thumbs: Map<string, string> = TEST ? new Map() : savedThumbs ? new Map(savedThumbs) : new Map();
 // portrety żołnierzy do koszar (rysowane zawsze: dwa szybkie ujęcia, niezależne od zapisanych miniatur budynków)
 if (!TEST) for (const [k, v] of renderUnitPortraits(TEAM_COLORS[0]!)) thumbs.set(k, v);
 const hud = createHud(document.getElementById('ui')!, {
@@ -240,16 +242,14 @@ const hud = createHud(document.getElementById('ui')!, {
   onTrain: (id, n, unit = 'spearman') => { const hall = game.buildings.find((x) => x.id === id)?.type; const k = Math.min(n, recruitInfo(hall).find((u) => u.id === unit)?.max ?? 0); for (let i = 0; i < k; i++) pending.push({ type: 'train', player: ME, building: id, unit }); if (k) play('build'); },
 }, thumbs);
 
-// Miniatury rysują się od razu, a gdy dojdą tekstury zdjęciowe (deski, strzecha, bruk), rysujemy je jeszcze raz w pełnych barwach
-if (!TEST && !savedThumbs) void texturesReady().then(() => {
-  const fresh = renderThumbnails(proceduralModels, TEAM_COLORS[0]!, 288);
-  void saveThumbs(fresh);
-  for (const [id, old] of thumbs) {
-    const src = fresh.get(id);
-    if (!src) continue;
-    document.querySelectorAll<HTMLImageElement>('img').forEach((img) => { if (img.src === old) img.src = src; });
-  }
-});
+/** Miniatury budynków w tle, po starcie gry i dopiero z teksturami zdjęciowymi (deski, strzecha, bruk): raz, w pełnych barwach */
+let thumbsStarted = false;
+function thumbsLater(): void {
+  if (TEST || savedThumbs || thumbsStarted) return;
+  thumbsStarted = true;
+  void texturesReady().then(() => renderThumbnailsAsync(proceduralModels, TEAM_COLORS[0]!, 288, (id, src) => hud.setThumb(id, src)))
+    .then((fresh) => saveThumbs(fresh)).catch((e) => console.error(e));
+}
 
 // Menu główne: przy wejściu do gry osada stoi w tle i powoli się obraca, symulacja czeka
 mark.push(['hud+miniatury', Math.round(performance.now() - T0)]);
@@ -2391,7 +2391,7 @@ document.body.append(badge);
 
 /** Wywoływane z ekranu wczytywania: kompilacja shaderów i pierwsza klatka jeszcze przed menu */
 export async function warmup(onProgress?: (done: number, total: number) => void): Promise<void> {
-  try { await renderer.warmup(onProgress); } finally { renderer.hold(false); }
+  try { await renderer.warmup(onProgress); } finally { renderer.hold(false); thumbsLater(); }
 }
 
 // --- alarmy na mapie: czerwony trójkąt z wykrzyknikiem nad miejscem ataku, a gdy poza ekranem, strzałka przy krawędzi ---
