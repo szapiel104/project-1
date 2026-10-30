@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.69.4 — 30.10.2026
+- Rynek: szuflada przy prawej krawędzi (wysuwa się z prawej), okno budynku (`.panel.info`) przenoszone do niej na czas otwarcia i oddawane po zamknięciu. Model zmniejszony do skali ludzi (lada 0,27 jak stół w karczmie, daszek 0,84/0,68, szyld niżej, worki mniejsze).
+- `defendBuilding` (army.ts): ostrzał lub cios w budynek → bezczynni żołnierze właściciela do 10 pól biorą napastnika na cel (wyjątki jak w `provoked`).
+- Magia a przeszkody: przy trafieniu czaru sprawdzana linia strzału od maga do celu (kula rozbija się, gdy cel zszedł za mur/budynek); krąg wielkiego czaru nie rani za ścianą (`lineOfSight` od środka kręgu).
+
 ## 0.69.3 — 30.10.2026
 - Szyld rynku: zamiast monety bryła rudy (`magicOre`, jak w kopalni i na kapliczce) spłaszczona pionowo na licu deski, obok dwa okruchy (Michał: „ruda w szyldzie, ale pionowo”).
 

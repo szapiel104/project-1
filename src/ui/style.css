@@ -2040,8 +2040,17 @@ body.menu-open .devpanel { display: none; }
 .help-pane .changes-list li::before { content: ''; position: absolute; left: 4px; top: .62em; width: 7px; height: 7px; background: #c99a3a; transform: rotate(45deg); }
 /* okno rynku (marketPanel.ts), druga wersja (Michał: „nieczytelny widok, większe okno”): duże okno na środku,
    kafelki towarów po grupach, duże liczby; sprzedaż zielona, kupno czerwona */
-.market-panel { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -52%); z-index: 30; width: min(1180px, calc(100vw - 48px)); max-height: min(860px, calc(100vh - 160px));
-  padding: 18px 22px 20px; display: grid; grid-template-rows: auto auto 1fr; gap: 10px; box-shadow: 0 10px 40px rgba(0, 0, 0, .7); }
+/* szuflada przyspawana do prawej krawędzi, wysuwa się z prawej (Michał 30.10.2026); od góry do dolnego paska,
+   w środku na górze okno budynku (pracownicy, przenieś, rozbierz), pod nim towary */
+.market-panel { position: fixed; right: 0; top: 0; bottom: 96px; z-index: 30; width: min(820px, calc(100vw - 32px));
+  padding: 16px 18px 18px; display: grid; grid-template-rows: auto auto auto 1fr; gap: 10px; border-right: 0;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, .6); animation: market-in .22s ease-out; }
+@keyframes market-in { from { transform: translateX(100%); } to { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .market-panel { animation: none; } }
+.market-info:empty { display: none; }
+.market-info .panel.info { width: auto; max-width: none; margin: 0; padding: 8px 10px; max-height: 210px; overflow-y: auto;
+  background: rgba(12, 8, 4, .5); border: 1px solid #4a3a1c; box-shadow: none; }
+.market-info .info .info-desc, .market-info .info > p.hint { display: none; }
 .market-panel[hidden] { display: none; }
 .market-head { display: flex; align-items: center; gap: 16px; }
 .market-title { margin: 0; flex: 1; font-family: var(--display); font-size: 32px; letter-spacing: .04em; color: #ffe7a6; text-shadow: 0 2px 3px #000; }
@@ -2053,7 +2062,7 @@ body.menu-open .devpanel { display: none; }
 .market-group-title { margin: 14px 0 8px; font-family: var(--display); font-size: 18px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #e9c766; display: flex; align-items: center; gap: 12px; }
 .market-group-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, #6e5420, transparent); }
 .market-group-title:first-child { margin-top: 0; }
-.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 10px; }
 .market-tile { display: grid; gap: 8px; padding: 10px 12px 12px; background: rgba(12, 8, 4, .55); border: 1px solid #4a3a1c; }
 .market-tile-top { display: flex; align-items: center; gap: 10px; }
 .market-ico { display: grid; place-items: center; width: 40px; height: 40px; background: rgba(255, 220, 150, .07); border: 1px solid #3e2f17; }

@@ -52,7 +52,11 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
     'Sell and buy on the spot, for ore. Buying costs twice what selling fetches, and bought goods go straight into your stores.');
   const body = document.createElement('div');
   body.className = 'market-body';
-  root.append(head, note, body);
+  // okno budynku (pracownicy, wyłącz, przenieś, rozbierz) przenosimy do szuflady rynku, póki jest otwarta — jedno okno
+  // zamiast dwóch (Michał 30.10.2026); po zamknięciu wraca na swoje miejsce
+  const infoSlot = document.createElement('div');
+  infoSlot.className = 'market-info';
+  root.append(head, note, infoSlot, body);
   document.getElementById('ui')?.append(root) ?? document.body.append(root);
 
   type Tile = { have: HTMLElement; btns: { el: HTMLButtonElement; amount: number }[] };
@@ -108,12 +112,25 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
     body.append(h, grid);
   }
 
+  let infoHome: { parent: Node; next: Node | null } | null = null;
+  const adoptInfo = (): void => {
+    const info = document.querySelector<HTMLElement>('.panel.info');
+    if (!info || info.parentElement === infoSlot) return;
+    infoHome = { parent: info.parentNode!, next: info.nextSibling };
+    infoSlot.append(info);
+  };
+  const releaseInfo = (): void => {
+    if (!infoHome) return;
+    const info = infoSlot.querySelector<HTMLElement>('.panel.info');
+    if (info) infoHome.parent.insertBefore(info, infoHome.next && infoHome.next.parentNode === infoHome.parent ? infoHome.next : null);
+    infoHome = null;
+  };
   let key = '';
   let dismissed = 0;
   let shownFor = 0;
   let lastSel = 0;
-  close.addEventListener('click', () => { dismissed = shownFor; root.hidden = true; });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) { dismissed = shownFor; root.hidden = true; } });
+  close.addEventListener('click', () => { dismissed = shownFor; root.hidden = true; releaseInfo(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !root.hidden) { dismissed = shownFor; root.hidden = true; releaseInfo(); } });
   return {
     sync(g, me, selected) {
       // zamknięte krzyżykiem zostaje zamknięte, dopóki gracz nie kliknie rynku od nowa (inny wybór kasuje „zamknięte”)
@@ -121,6 +138,7 @@ export function createMarketPanel(onTrade: (res: number, amount: number) => void
       const b = selected ? g.buildings.find((x) => x.id === selected) : undefined;
       const open = !!b && b.owner === me && !b.build && !b.ruined && BUILDINGS[b.type]!.id === 'market' && dismissed !== selected;
       if (open && root.hidden) { root.hidden = false; shownFor = selected; key = ''; close.focus(); }
+      if (open) adoptInfo(); else releaseInfo();
       if (!open) { root.hidden = true; key = ''; return; }
       const p = g.players[me]!;
       const k = p.res.join(',');

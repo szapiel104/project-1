@@ -1,4 +1,5 @@
 import { FP, type GameState, type Missile, type Soldier } from '../state';
+import { lineOfSight } from './sight';
 import { UNITS, type UnitDef } from '../../data/units';
 
 /**
@@ -60,6 +61,8 @@ export function greatImpact(g: GameState, m: Missile): void {
   const killer = g.players[m.by];
   for (const o of g.soldiers) {
     if (o.hp <= 0 || o.up || gap(o, x, y) > GREAT_R) continue;
+    // krąg nie sięga za mur ani budynek: ognia i lodu nie przenosi przez ścianę (Michał 30.10.2026)
+    if (!lineOfSight(g, { px: x, py: y }, o, false, false)) continue;
     if (team(g, o.owner) === my) {
       if (m.great === 'water' && o.burn) delete o.burn;
       continue;

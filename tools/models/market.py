@@ -30,7 +30,8 @@ def stall(cx, cz, stripe, goods):
     W, D = 1.12, 0.72
     x0, x1 = cx - W / 2, cx + W / 2
     zb, zf = cz - D / 2, cz + D / 2
-    yb, yf = 1.28, 1.02                     # wysokość daszku z tyłu i z przodu
+    # skala do ludzi (chłop ma ok. 0,5 wzrostu): lada w pasie (0,27 — jak stół w karczmie), daszek nad głową
+    yb, yf = 0.84, 0.68                     # wysokość daszku z tyłu i z przodu
     for x in (x0 + 0.04, x1 - 0.04):
         log(b, 'base', 'woodDark', (x, P, zb + 0.04), (x, yb, zb + 0.04), r=0.035, seg=7)
         log(b, 'base', 'woodDark', (x, P, zf - 0.04), (x, yf, zf - 0.04), r=0.035, seg=7)
@@ -50,15 +51,15 @@ def stall(cx, cz, stripe, goods):
     for k in range(n):
         a = x0 - 0.03 + (W + 0.06) * k / n
         mat = 'canvas' if k % 2 == 0 else stripe
-        b.box('base', mat, (W + 0.06) / n - 0.004, 0.09, 0.01, a + (W + 0.06) / n / 2, yf - 0.03 - 0.12, zf + OV + 0.01)
+        b.box('base', mat, (W + 0.06) / n - 0.004, 0.06, 0.01, a + (W + 0.06) / n / 2, yf - 0.03 - 0.08, zf + OV + 0.01)
     # lada: przód z desek, blat z jaśniejszej deski, półka pod spodem
     LZ = zf - 0.12
-    b.box('base', 'wood', W - 0.12, 0.42, 0.05, cx, P, LZ + 0.1)
-    b.box('base', 'plank', W - 0.06, 0.04, 0.34, cx, P + 0.42, LZ)
-    b.box('base', 'woodDark', W - 0.16, 0.025, 0.28, cx, P + 0.16, LZ - 0.02)
+    b.box('base', 'wood', W - 0.12, 0.27, 0.05, cx, P, LZ + 0.1)
+    b.box('base', 'plank', W - 0.06, 0.03, 0.34, cx, P + 0.27, LZ)
+    b.box('base', 'woodDark', W - 0.16, 0.02, 0.28, cx, P + 0.1, LZ - 0.02)
     for x in (cx - W / 2 + 0.1, cx + W / 2 - 0.1):
-        b.box('base', 'woodDark', 0.05, 0.42, 0.05, x, P, LZ - 0.12)
-    goods(cx, P + 0.46, LZ)
+        b.box('base', 'woodDark', 0.05, 0.27, 0.05, x, P, LZ - 0.12)
+    goods(cx, P + 0.3, LZ)
     # tył kramu: skrzynia i worki
     b.box('base', 'wood', 0.24, 0.2, 0.2, cx - 0.3, P, zb + 0.18, rot=0.1)
     b.box('base', 'woodDark', 0.25, 0.02, 0.21, cx - 0.3, P + 0.2, zb + 0.18, rot=0.1)
@@ -79,7 +80,7 @@ def food(cx, y, z):
         a = k * 1.6 + 0.3
         b.apple('base', cx + 0.36 + math.cos(a) * 0.04, y + 0.06, z - 0.02 + math.sin(a) * 0.04, w=0.045, rot=a)
     for dx in (-0.25, 0.0, 0.25):
-        b.sack('base', cx + dx, P, z + 0.3, w=0.16, rot=dx * 3)
+        b.sack('base', cx + dx, P, z + 0.3, w=0.12, rot=dx * 3)
 
 
 def wares(cx, y, z):
@@ -95,7 +96,7 @@ def wares(cx, y, z):
         b.prism('base', 'iron', 0.106, 0.106, 0.022, bx, P + hy, bz, seg=14)
     b.prism('base', 'woodDark', 0.085, 0.085, 0.01, bx, P + 0.26, bz, seg=14)
     for dx in (-0.25, 0.0):
-        b.sack('base', cx + dx, P, z + 0.3, w=0.15, rot=dx * 4 + 0.5)
+        b.sack('base', cx + dx, P, z + 0.3, w=0.12, rot=dx * 4 + 0.5)
 
 
 stall(-0.72, -0.25, 'robeRed', food)
@@ -114,14 +115,14 @@ for (x, z) in ((1.25, -1.15), (1.1, -0.85)):
 
 # ---------------- przód: słup z szyldem (złota moneta na desce) ----------------
 SX, SZ = -0.15, 1.15
-log(b, 'base', 'woodDark', (SX, P, SZ), (SX, 1.25, SZ), r=0.04, seg=8)
-log(b, 'base', 'woodDark', (SX - 0.02, 1.18, SZ), (SX + 0.45, 1.18, SZ), r=0.025, seg=6)   # ramię
-for x in (SX + 0.17, SX + 0.37):
-    b.box('base', 'iron', 0.008, 0.08, 0.008, x, 1.09, SZ)                                  # łańcuszki
-b.box('base', 'plank', 0.32, 0.22, 0.03, SX + 0.27, 0.87, SZ)                               # deska szyldu
+log(b, 'base', 'woodDark', (SX, P, SZ), (SX, 0.86, SZ), r=0.035, seg=8)
+log(b, 'base', 'woodDark', (SX - 0.02, 0.8, SZ), (SX + 0.4, 0.8, SZ), r=0.022, seg=6)   # ramię
+for x in (SX + 0.15, SX + 0.33):
+    b.box('base', 'iron', 0.008, 0.06, 0.008, x, 0.73, SZ)                                  # łańcuszki
+b.box('base', 'plank', 0.28, 0.18, 0.03, SX + 0.25, 0.55, SZ)                               # deska szyldu
 # na desce bryła rudy (waluta gry, ten sam materiał co ruda w kopalni i na kapliczce), spłaszczona i przybita pionowo
 # do lica deski, a obok dwa mniejsze okruchy (Michał 30.10.2026: „ruda w szyldzie, ale pionowo”)
-CX, CY = SX + 0.27, 0.98
+CX, CY = SX + 0.25, 0.64
 b.crystal('base', 'magicOre', CX, CY, SZ + 0.03, 0.068, seed=2.3, sx=1.25, sy=1.05, sz=0.32, seg=7)
 b.crystal('base', 'magicOre', CX - 0.1, CY - 0.05, SZ + 0.026, 0.03, seed=5.1, sx=1.0, sy=0.9, sz=0.35, seg=6)
 b.crystal('base', 'magicOre', CX + 0.1, CY - 0.045, SZ + 0.026, 0.026, seed=7.7, sx=1.0, sy=1.1, sz=0.35, seg=6)

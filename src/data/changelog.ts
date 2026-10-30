@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.4', date: '2026-10-30',
+    pl: [
+      'Rynek wysuwa się z prawej krawędzi ekranu i jest do niej przyklejony; okno budynku (pracownicy, przenieś, rozbierz) jest w nim na górze — jedno okno zamiast dwóch.',
+      'Rynek w skali ludzi: lada na wysokości pasa, daszki tuż nad głową, mniejszy szyld.',
+      'Gdy wróg ostrzeliwuje albo bije budynek, twoi bezczynni żołnierze i magowie w promieniu 10 pól ruszają na napastnika (tak samo u botów).',
+      'Magia nie przelatuje już przez mury i budynki: kula, której cel zdążył schować się za przeszkodą, rozbija się na niej, a wielki czar nie sięga za ścianę.',
+    ],
+    en: [
+      'The market now slides in from the right edge of the screen and stays docked there; the building window (workers, move, dismantle) sits at its top — one window instead of two.',
+      'The market is in scale with folk: the counter at waist height, the awnings just above their heads, a smaller sign.',
+      'When the enemy shoots at or strikes a building, your idle soldiers and mages within 10 tiles go for the attacker (bots do the same).',
+      'Magic no longer passes through walls and buildings: a bolt whose target ducked behind cover shatters on it, and a great spell does not reach past a wall.',
+    ],
+  },
+  {
     v: '0.69.3', date: '2026-10-30',
     pl: ['Na szyldzie rynku wisi teraz bryła rudy z niebieskimi żyłkami (zamiast złotej monety), przybita pionowo do deski.'],
     en: ['The market sign now bears a lump of blue-veined ore (instead of a gold coin), nailed upright to the board.'],

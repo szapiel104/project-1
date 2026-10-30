@@ -884,6 +884,24 @@ function provoked(g: GameState, t: Soldier, shooter: Soldier | undefined): void 
   }
 }
 
+/**
+ * Ktoś bije albo ostrzeliwuje budynek (Michał 30.10.2026: „wrodzy magowie nie atakują maga, który pali budynek —
+ * niech go zabiją”): bezczynni żołnierze właściciela budynku do DEFEND_R pól od niego (także magowie i łucznicy)
+ * biorą napastnika na cel. Te same wyjątki co przy ostrzale (provoked): postawa „stój”, ranni, maszerujący, taran itd.
+ */
+const DEFEND_R = 10;
+function defendBuilding(g: GameState, b: Building, by: Soldier): void {
+  if (by.hp <= 0 || team(g, by.owner) === team(g, b.owner)) return;
+  for (const o of g.soldiers) {
+    if (o.owner !== b.owner || o.hp <= 0 || o.target || o.wounded || o.prey || (o.stance ?? 0) === 2 || (o.goal >= 0 && !o.amove)) continue;
+    const d = UNITS[o.kind]!;
+    if (d.ram || d.sapper || d.ladderman) continue;
+    if (rectGap(g, tileOf(g, o), b) > DEFEND_R) continue;
+    o.target = by.id;
+    o.path = [];
+  }
+}
+
 function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
   const list = g.missiles;
   if (list?.length) {
@@ -915,6 +933,9 @@ function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
       }
       const t = byId.get(m.to);
       if (!t || t.hp <= 0) continue;
+      // czar leci wolniej niż strzała: gdy cel zdążył zejść za mur albo budynek, kula rozbija się na przeszkodzie
+      // (Michał 30.10.2026: „łucznicy nie strzelają przez mury, a magia przelatuje”)
+      if (m.magic) { const c = byId.get(m.from); if (c && c.hp > 0 && !lineOfSight(g, c, t, high(g, c), high(g, t))) continue; }
       t.hp -= m.dmg;
       if (m.burn) t.fireAt = g.tick;
       else if (m.magic) t.frostAt = g.tick;   // czar wody (kula ognia ma burn)
@@ -1446,7 +1467,8 @@ function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): bool
         s.shot = g.tick;
         const ft = Math.max(Math.abs(((b.x + footprint(BUILDINGS[b.type]!, b.rot).w / 2) << 8) - s.px), Math.abs(((b.y + footprint(BUILDINGS[b.type]!, b.rot).h / 2) << 8) - s.py));
         (g.missiles ??= []).push({ to: b.id, bld: true, dmg: def.attack, at: g.tick + (def.magic ? spellTicks(ft) : ARROW_TICKS), from: s.id, by: s.owner, ...(def.magic === 'water' ? {} : { burn: 1 }), ...(def.magic ? { magic: true } : {}) });
-      } else if (hitBuilding(g, b, def.attack, s.owner, false)) s.target = 0;
+        defendBuilding(g, b, s);
+      } else { defendBuilding(g, b, s); if (hitBuilding(g, b, def.attack, s.owner, false)) s.target = 0; }
     }
     return true;
   }
