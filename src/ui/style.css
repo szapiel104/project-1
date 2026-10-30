@@ -166,9 +166,11 @@ button:active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, .6); transform: transl
 .cost-chip .ico { display: inline-grid; line-height: 0; }
 /* koszt na karcie budowy: każdy surowiec na własnej tabliczce — ciemne pole, cienka złota ramka, duża jasna liczba
    i większa ikonka (Michał 30.10.2026: „mega czytelne”); bez zaokrągleń, jak reszta interfejsu */
-.build-cost { gap: 4px 5px; margin-top: 5px; }
-.build-cost .cost-chip { gap: 5px; padding: 2px 7px 2px 5px; background: rgba(12, 8, 4, .78); border: 1px solid #8a6a2c; box-shadow: inset 0 1px 0 rgba(255, 220, 150, .12); color: #fbeac2; font-size: 20px; line-height: 1.15; }
-.build-cost .cost-chip .ico svg { width: 21px; height: 21px; }
+/* (Michał 30.10.2026, drugie podejście): surowce obok siebie w jednym rzędzie, nie jeden pod drugim, i jeszcze większe
+   liczby — tabliczki ciasne, żeby dwie mieściły się w szerokości karty; pod spód schodzi dopiero trzecia albo długa liczba */
+.build-cost { gap: 3px; margin: 5px -4px 0; }
+.build-cost .cost-chip { gap: 2px; padding: 0 4px 0 2px; background: rgba(12, 8, 4, .8); border: 1px solid #8a6a2c; box-shadow: inset 0 1px 0 rgba(255, 220, 150, .12); color: #fff1cc; font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; }
+.build-cost .cost-chip .ico svg { width: 19px; height: 19px; }
 .card.poor .build-cost .cost-chip { color: #ffb4a4; border-color: #a8452f; }
 .card.locked .build-cost .cost-chip { color: var(--ink-soft); border-color: #5a4a30; }
 .card.poor .build-cost { color: var(--bad); font-weight: 700; }

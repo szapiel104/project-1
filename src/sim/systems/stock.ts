@@ -45,6 +45,21 @@ export function freeIn(g: GameState, b: Building, res: number): number {
   return Math.max(0, capOf(b, kind) - usedIn(b, kind));
 }
 
+/**
+ * Magazyny, z których robotnik bierze surowiec `res` na budowę albo drogę: te, w których on leży; gdy żaden go już nie
+ * ma (budowa zapłacona z góry wyczyściła skład), ten, z którego zapłata go zdjęła — nie bliższy, pusty (Michał 30.10.2026)
+ */
+export function fetchStores(g: GameState, owner: number, res: number): Building[] {
+  const kind = kindOf(res);
+  if (!kind) return [];
+  const all = g.buildings.filter((b) => b.owner === owner && b.door >= 0 && !b.build && BUILDINGS[b.type]!.stores?.includes(kind));
+  const has = all.filter((b) => (b.stock?.[res] ?? 0) > 0);
+  if (has.length) return has;
+  let best: Building | undefined, bt = -1;
+  for (const b of all) { const t = b.gave?.[res] ?? -1; if (t > bt) { bt = t; best = b; } }
+  return best ? [best] : all;
+}
+
 /** Magazyn gracza, którego drzwi są na polu `t` i który trzyma ten rodzaj towaru */
 export function storeAtDoor(g: GameState, owner: number, t: number, res: number): Building | undefined {
   const kind = kindOf(res);
@@ -100,7 +115,7 @@ export function syncStock(g: GameState): void {
       if (diff < 0) {
         // ubyło (zjedli, zapłacone, rozkradzione): najpierw z magazynów, w których tego leży najwięcej
         const holders = list.filter((b) => (b.stock?.[r] ?? 0) > 0).sort((a, b) => (b.stock![r]! - a.stock![r]!) || a.id - b.id);
-        for (const b of holders) { if (diff >= 0) break; const take = Math.min(-diff, b.stock![r]!); b.stock![r]! -= take; diff += take; }
+        for (const b of holders) { if (diff >= 0) break; const take = Math.min(-diff, b.stock![r]!); b.stock![r]! -= take; diff += take; (b.gave ??= [])[r] = g.tick; }
       } else if (diff > 0) {
         // przybyło spoza drzwi (zapas startowy, łup, wóz, odbudowa): do magazynów z miejscem, po kolei wg budowy
         for (const b of list) {

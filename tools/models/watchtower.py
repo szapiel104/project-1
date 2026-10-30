@@ -209,21 +209,22 @@ log(b, 'flagpole', 'woodDark', (0, APEX - 0.05, 0), (0, APEX + 0.55, 0), r=0.018
 # proporzec z herbem rysuje gra (src/render/banners.ts): brzeg przy żerdzi, środek wysokości, w grupie żerdzi
 BANNERS = [[0.02, round(APEX + 0.43, 3), 0.0, 0, 0.3, 0.16, 0, 'flagpole']]
 
-# ---------------- drabina od przodu ----------------
+# ---------------- drabina od przodu
+# osobna grupa 'ladder': gra chowa ją, gdy wieża stoi w murze kamiennym (wchodzi się wtedy z korony muru) ----------------
 # oparta o krawędź pomostu w przerwie przedpiersia; żerdzie wystają nad pomost jako uchwyty przy wchodzeniu
 FOOTZ, TOPY = 1.0, DECK + 0.36
 EDGE = OUT + 0.022            # krawędź pomostu, o którą opiera się drabina
 TOPZ = FOOTZ - (FOOTZ - EDGE) * TOPY / (DECK - 0.03)
-b.box('base', 'stoneDark', 0.4, 0.04, 0.12, LX, 0.0, FOOTZ, bottom=False)      # płaski kamień pod stopami drabiny
+b.box('ladder', 'stoneDark', 0.4, 0.04, 0.12, LX, 0.0, FOOTZ, bottom=False)      # płaski kamień pod stopami drabiny
 for sx in (-1, 1):
-    log(b, 'base', 'bark', (LX + sx * 0.14, 0.04, FOOTZ), (LX + sx * 0.14, TOPY, TOPZ), r=0.024, seg=6)
+    log(b, 'ladder', 'bark', (LX + sx * 0.14, 0.04, FOOTZ), (LX + sx * 0.14, TOPY, TOPZ), r=0.024, seg=6)
     # żerdzie przywiązane do słupków wejścia
-    lash(b, 'base', (LX + sx * 0.14, DECK + 0.2, FOOTZ - (FOOTZ - EDGE) * (DECK + 0.2) / (DECK - 0.03)), (0, 1, -0.1), r=0.034, w=0.03)
+    lash(b, 'ladder', (LX + sx * 0.14, DECK + 0.2, FOOTZ - (FOOTZ - EDGE) * (DECK + 0.2) / (DECK - 0.03)), (0, 1, -0.1), r=0.034, w=0.03)
 n = 9
 for k in range(n):
     y = 0.22 + k * (DECK - 0.3) / (n - 1)
     z = FOOTZ - (FOOTZ - EDGE) * y / (DECK - 0.03)
-    log(b, 'base', 'wood', (LX - 0.155, y, z), (LX + 0.155, y, z), r=0.016, seg=5)
+    log(b, 'ladder', 'wood', (LX - 0.155, y, z), (LX + 0.155, y, z), r=0.016, seg=5)
 
 VIEWS = [
     ['wieża od drabiny (oczy chłopa)', [0.5, 0.5, 2.8], [0, 1.3, 0], ['base', 'shell'], 24],

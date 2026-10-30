@@ -177,6 +177,8 @@ export interface Building {
   stall?: number;
   /** Magazyn: ile czego leży w nim samym (indeks = surowiec); suma ze wszystkich magazynów ≤ zapasy gracza (stock.ts) */
   stock?: number[];
+  /** Magazyn: tick, w którym ostatnio ubyło z niego danego towaru bez drzwi (zapłata za budowę) — tam robotnicy idą po materiał, gdy wszystkie składy są puste */
+  gave?: number[];
 }
 
 /**

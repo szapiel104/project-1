@@ -422,10 +422,14 @@ export function setStockFill(model: THREE.Object3D, ratio: number, stock: { id: 
   const shown = ratio <= 0 ? 0 : Math.max(1, Math.round(Math.min(1, ratio) * total));
   for (const child of fill.children) child.visible = false;
   let slot = 0;
-  for (const r of stock) {
-    const pile = PILES[r.id];
-    if (!pile || slot >= STOCK_SLOTS) continue;
-    let items = Math.max(1, Math.round(r.share * shown));
+  // każdy towar, który leży w składzie, dostaje choć jedno miejsce — wcześniej pierwsze na liście (chleb, jabłka) zajmowały
+  // wszystkie, a mięso (ostatnie) nie miało gdzie leżeć i spichlerz z mięsem wyglądał, jakby go nie było (Michał 30.10.2026)
+  const kinds = stock.filter((r) => PILES[r.id]);
+  for (let k = 0; k < kinds.length; k++) {
+    const r = kinds[k]!, pile = PILES[r.id]!;
+    if (slot >= STOCK_SLOTS) break;
+    const room = Math.max(1, STOCK_SLOTS - slot - (kinds.length - 1 - k)) * STOCK_LAYERS;
+    let items = Math.min(room, Math.max(1, Math.round(r.share * shown)));
     let m = pileMats.get(r.id);
     if (!m) {
       m = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: pile.metal ? 0.45 : 0.92, metalness: pile.metal ? 0.6 : 0, map: pile.tex ? pattern(pile.tex) : null, bumpMap: pile.tex ? bump(pile.tex) : null, bumpScale: 1.2 });

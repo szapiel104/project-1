@@ -1003,7 +1003,7 @@ function updateGhost(): void {
   const o = origin(tile, type);
   // wyjście zawsze przed drzwiami modelu (nie przeskakuje); gdy to pole jest zajęte, podgląd jest czerwony
   const def = BUILDINGS[type]!;
-  const door = def.wall || def.gate || def.road || def.line || def.id === 'torch' ? -1 : doorTile(game, o.x, o.y, fp.w, fp.h, placeRot);
+  const door = def.wall || def.gate || def.road || def.line || def.addon || def.id === 'torch' ? -1 : doorTile(game, o.x, o.y, fp.w, fp.h, placeRot);
   renderer.setGhost({ ...o, w: fp.w, h: fp.h, ok: (moveId ? canRelocateTo(game, ME, moveId, o.x, o.y, placeRot) : canPlace(game, ME, type, o.x, o.y, true, placeRot)) === null, id: picked, team: game.players[ME]!.team, rot: placeRot, door });
 }
 
@@ -1112,8 +1112,11 @@ function showPlan(): void {
   const left = new Map<ResourceId, number>();
   for (const res of Object.keys(def.cost) as ResourceId[]) left.set(res, p.res[resIndex(res)]!);
   let count = 0;
+  let why: string | null = null; // powód pierwszego czerwonego pola — w okienku zamiast ogólnego „zajęte” (Michał 30.10.2026)
   plan.tiles = (def.line ? wallLine(plan.start, plan.end) : planLine(plan.start, plan.end)).map(({ x, y }) => {
-    let ok = (!def.road || !game.roads[y * game.map.width + x]) && canPlace(game, ME, type, x, y, false) === null;
+    const err = def.road && game.roads[y * game.map.width + x] ? null : canPlace(game, ME, type, x, y, false);
+    let ok = (!def.road || !game.roads[y * game.map.width + x]) && err === null;
+    if (err && !why) why = err;
     if (ok) for (const [res, n] of Object.entries(def.cost) as [ResourceId, number][]) if ((left.get(res) ?? 0) < n) ok = false;
     if (ok) { for (const [res, n] of Object.entries(def.cost) as [ResourceId, number][]) left.set(res, left.get(res)! - n); count++; }
     return { x, y, ok };
@@ -1127,6 +1130,9 @@ function showPlan(): void {
   planTip.innerHTML = `<strong>${t(def.name)}: ${count} ${lang() === 'en' ? (count === 1 ? 'tile' : 'tiles') : count === 1 ? 'pole' : count % 10 >= 2 && count % 10 <= 4 && (count % 100 < 10 || count % 100 >= 20) ? 'pola' : 'pól'}</strong>`
     + (costs.length ? costs.join('') : `<span>${tx('za darmo', 'free of charge')}</span>`)
     + (bad ? `<span class="bad">${bad} ${tx('poza zasięgiem / zajęte', 'out of reach / taken')}</span>` : '')
+    + (bad && why ? `<span class="bad"><small>${why === 'place.blocks' && (def.line || def.wall)
+      ? tx('Ten odcinek zamknąłby ludzi lub budynki — zostaw przerwę albo postaw tu bramę', 'This stretch would shut people or buildings in — leave a gap or put a gate here')
+      : t(why)}</small></span>` : '')
     + (plan.state === 'wait' ? `<em>${tx('Lewy przycisk — buduj · prawy — anuluj', 'Left click — build · right click — cancel')}</em>` : `<em>${tx('Puść, żeby zobaczyć plan', 'Release to see the plan')}</em>`);
   planTip.hidden = false;
   planTip.style.left = `${mouseX + 18}px`;

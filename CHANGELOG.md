@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.68.4 — 30.10.2026
+- **Po materiał na budowę i drogę robotnicy idą do składu, w którym ten surowiec leży**, a nie do bliższego, pustego (Michał). Gdy zapłata z góry wyczyściła wszystkie składy, idą do tego, z którego zapłata zdjęła towar (`Building.gave`, zapis gry). Test: `tests/fetch-store.test.ts`.
+- Plan muru i palisady: okienko pod kursorem podaje powód czerwonych pól (np. „Ten odcinek zamknąłby ludzi lub budynki — zostaw przerwę albo postaw tu bramę”, głaz, wróg), a nie samo „poza zasięgiem / zajęte”.
+- Drewniana wieża wbudowana w mur kamienny: znika jej własna drabina do ziemi (wbijała się krzywo w mur) i druga drabina z boku; wchodzi się z korony muru. Drabina w modelach `watchtower`/`lookout` w osobnej grupie `ladder`.
+- Spichlerz i skład: każdy towar dostaje na stosach choć jedno miejsce. Mięso (ostatnie na liście) nie mieściło się, gdy chleb i jabłka zajęły wszystkie miejsca, więc było go nie widać.
+- Koksownik: podgląd przy stawianiu to prawdziwy kosz na pomoście wieży albo na chodniku muru, zielony lub czerwony, zamiast wielkiego kwadratu ze strzałką na ziemi.
+- Karty budowy: surowce obok siebie w rzędzie, liczby 24 px; pod spód schodzi dopiero trzecia tabliczka albo długa liczba.
+
 ## 0.68.3 — 30.10.2026
 - Drewniana wieża postawiona obok muru (na jego końcu) nie stoi już na kamiennym bloku muru. Blok albo bale pod wieżą tylko wtedy, gdy mur przechodzi przez wieżę (dochodzi z dwóch przeciwnych stron).
 

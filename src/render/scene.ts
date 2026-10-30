@@ -5,7 +5,7 @@ import { poseOnRoute, routeTime } from './minepath';
 import { PROCESS_TICKS } from '../sim/systems/emergencywood';
 import { mineWalkTicks } from '../data/minewalk';
 import { named, namedTick, remember } from './named';
-import { mineLevelModel } from './buildings';
+import { brazierModel, mineLevelModel } from './buildings';
 import { touch } from './touch';
 import * as THREE from 'three';
 import { initKtx } from './ktx';
@@ -17,7 +17,7 @@ import { RULES } from '../data/rules';
 import { loop3d, musicPlaying, play3d, playAt, pluck, setListener, updateLoops, type WorldSound } from '../audio/sfx';
 import { TEST } from '../testmode';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { BUILDINGS, NO_TORCH, footprint, isStoneTower, isTower, towerBonus, workArea } from '../data/buildings';
+import { BUILDINGS, brazierHost, NO_TORCH, footprint, isStoneTower, isTower, towerBonus, workArea } from '../data/buildings';
 import { crewOf } from '../sim/systems/workers';
 import { mageKindOf } from '../sim/systems/plague';
 import { SpellLayer } from './spells';
@@ -36,7 +36,7 @@ import { RallyFlags, TowerIcons } from './rally';
 import { GateMotion } from './gates';
 import { SkyDome } from './sky';
 import { DustFx } from './dust';
-import { Braziers } from './braziers';
+import { Braziers, placeBrazier } from './braziers';
 import { RubbleLayer } from './rubble';
 import { GraveLayer } from './graves';
 import { BEARER_GAP } from '../sim/systems/bearers';
@@ -1421,6 +1421,23 @@ export class GameRenderer {
       this.ghostDoor.position.set(dx + 0.5 - width / 2, this.view.heightAt(dx + 0.5, dy + 0.5) + 0.1, dy + 0.5 - height / 2);
       this.ghostDoor.visible = true;
     } else this.ghostDoor.visible = false;
+    // koksownik: podgląd prawdziwego kosza tam, gdzie stanie — na pomoście wieży albo na chodniku muru, a nie wielki
+    // kwadrat ze strzałką na ziemi pod wieżą (Michał 30.10.2026)
+    if (g.id === 'brazier') {
+      this.ghost.visible = this.ghostDoor.visible = false;
+      const key = 'brazier';
+      let model = this.ghostModels.get(key);
+      if (!model) { model = brazierModel(); model.traverse((o) => { const mesh = o as THREE.Mesh; if (mesh.isMesh) mesh.material = cloneMaterial(mesh.material as THREE.MeshLambertMaterial); }); this.ghostModels.set(key, model); this.scene.add(model); }
+      const id = this.state.occupancy[g.y * width + g.x];
+      const host = id ? this.state.buildings.find((b) => b.id === id) : undefined;
+      if (host && brazierHost(BUILDINGS[host.type]!.id)) placeBrazier(model, this.state, this.view, host, this.buildingMeshes.get(host.id));
+      else { model.position.set(g.x + 0.5 - width / 2, this.view.heightAt(g.x + 0.5, g.y + 0.5), g.y + 0.5 - height / 2); model.rotation.y = 0; model.scale.setScalar(0.5); }
+      const bad = new THREE.Color(0x7a0f0a), lift = new THREE.Color(0x3a3020).multiplyScalar(0.25 + this.night * 0.75);
+      model.traverse((o) => { const mesh = o as THREE.Mesh; if (mesh.isMesh) (mesh.material as THREE.MeshLambertMaterial).emissive?.copy(g.ok ? lift : bad); });
+      model.visible = true;
+      this.ghostModel = model;
+      return;
+    }
     let top = 0;
     for (let y = g.y; y <= g.y + g.h; y++) for (let x = g.x; x <= g.x + g.w; x++) top = Math.max(top, this.view.heightAt(x, y));
     this.ghost.scale.set(g.w, g.h, 1);

@@ -153,9 +153,25 @@ export class WallLayer {
     }
     // wieże z wejściem przeniesionym na inny bok (przed frontem stoi mur albo budynek): tam druga drabina (drewniane)
     // albo drzwi w trzonie (kamienne)
+    // drewniana wieża wbudowana w mur kamienny (mur przechodzi przez nią): stoi na kamiennym bloku, wchodzi się z korony
+    // muru krótką drabiną — własna drabina wieży do ziemi (w modelu grupa 'ladder') i drabina z boku znikają, bo wbijały
+    // się krzywo w mur (Michał 30.10.2026)
+    const inStone = (b: GameState['buildings'][number]): boolean => {
+      const fp = footprint(BUILDINGS[b.type]!, b.rot);
+      for (let ty = b.y; ty < b.y + fp.h; ty++) if (at(b.x - 1, ty) && at(b.x + fp.w, ty) && (stoneAt(b.x - 1, ty) || stoneAt(b.x + fp.w, ty))) return true;
+      for (let tx = b.x; tx < b.x + fp.w; tx++) if (at(tx, b.y - 1) && at(tx, b.y + fp.h) && (stoneAt(tx, b.y - 1) || stoneAt(tx, b.y + fp.h))) return true;
+      return false;
+    };
+    for (const b of walls) {
+      const id = BUILDINGS[b.type]!.id;
+      if (id !== 'watchtower' && id !== 'lookout') continue;
+      const lad = buildingMeshes.get(b.id)?.getObjectByName('ladder');
+      if (lad) lad.visible = b.build > 0 || b.ruined || !inStone(b);
+    }
     for (const b of walls) {
       const id = BUILDINGS[b.type]!.id;
       if (!isTower(id) || b.build || b.ruined) continue;
+      if (!isStoneTower(id) && inStone(b)) continue;
       const [out, inner] = towerEntry(g, b);
       if (out < 0) continue;
       const ix = inner % width, iz = Math.floor(inner / width), ddx = (out % width) - ix, ddz = Math.floor(out / width) - iz;

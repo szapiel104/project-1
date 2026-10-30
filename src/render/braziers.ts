@@ -24,14 +24,22 @@ export class Braziers {
     const key = list.map((b) => `${b.id}:${buildingMeshes.has(b.id) ? 1 : 0}:${g.occupancy[b.y * g.map.width + b.x - 1] ? 1 : 0}${g.occupancy[(b.y - 1) * g.map.width + b.x] ? 1 : 0}`).join(',');
     if (key === this.key) return;
     this.key = key;
-    const { width, height } = g.map;
     const keep = new Set(list.map((b) => b.id));
     for (const [id, m] of this.meshes) if (!keep.has(id)) { this.layer.remove(m); this.meshes.delete(id); }
     for (const b of list) {
       let m = this.meshes.get(b.id);
       if (!m) { m = brazierModel(); this.meshes.set(b.id, m); this.layer.add(m); }
+      placeBrazier(m, g, view, b, buildingMeshes.get(b.id));
+    }
+  }
+}
+
+/** Ustawia koksownik `m` na budynku `b` (wieża: róg pomostu; mur: chodnik bliżej twierdzy). Też podgląd przy stawianiu. */
+export function placeBrazier(m: THREE.Object3D, g: GameState, view: TerrainView, b: GameState['buildings'][number], host: THREE.Object3D | undefined): void {
+  const { width, height } = g.map;
+  {
+    {
       const def = BUILDINGS[b.type]!;
-      const host = buildingMeshes.get(b.id);
       if (def.id !== 'stoneWall' && host) {
         const [ax, ay, az] = towerBrazierAt(def.id);
         const p = new THREE.Vector3(ax, ay, az).applyAxisAngle(new THREE.Vector3(0, 1, 0), host.rotation.y);

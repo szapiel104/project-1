@@ -25,7 +25,7 @@ import { feastDay, goesToPray } from './faith';
 import { dropPile, isStore, spareKeeper, stalledStep, takePile } from './storage';
 import { liftCorpse } from './bearers';
 import { moveStack, takeFromStack } from './relocate';
-import { depositAt, freeIn, storeAtDoor, withdrawAt } from './stock';
+import { depositAt, fetchStores, freeIn, storeAtDoor, withdrawAt } from './stock';
 
 const RETRY_TICKS = 20;
 /** Ile ticków chłop układa jedno pole drogi */
@@ -341,7 +341,8 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const res = u.timer - 1;
       const kind = res >= 0 ? RESOURCE_DEFS[RESOURCES[res]!].store : null;
       if (!kind || !g.buildings.some((x) => x.id === u.target)) return null;
-      const doors = storeDoors(g, u.owner, kind);
+      // tylko do składu, w którym ten surowiec naprawdę leży — nie do bliższego, pustego (Michał 30.10.2026)
+      const doors = new Set(fetchStores(g, u.owner, res).map((b) => b.door));
       // bez składu: do stosu desek z biedy przy pniaku (emergencywood.ts)
       if (!g.buildings.some((b) => b.owner === u.owner && b.door >= 0 && !b.build && BUILDINGS[b.type]!.stores?.includes(kind))) {
         const piles = heldTiles(g, u.owner, res);
@@ -378,7 +379,7 @@ function goalFor(g: GameState, u: Unit, job: Building | undefined, prod: Product
       const t = u.target - 1, res = u.timer - 1;
       const kind = res >= 0 ? RESOURCE_DEFS[RESOURCES[res]!].store : undefined;
       if (t < 0 || !g.roadPlan[t] || !kind) return null;
-      const doors = storeDoors(g, u.owner, kind);
+      const doors = new Set(fetchStores(g, u.owner, res).map((b) => b.door));
       return doors.size ? (x) => doors.has(x) : null;
     }
     case Phase.ToEvening: {

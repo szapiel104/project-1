@@ -103,19 +103,20 @@ for sx in (-1, 1):
     log(b, 'base', 'bark', (sx * 0.15, DECK - 0.02, IN), (sx * 0.15, DECK + PAR + 0.12, IN), r=0.018, seg=6)
 
 # ---------------- drabina ----------------
+# osobna grupa 'ladder': gra chowa ją, gdy wieża stoi w murze kamiennym (wchodzi się wtedy z korony muru)
 FOOTZ = 0.66
 TOPY = DECK + 0.3
 EDGE = OUT + 0.02
 TOPZ = FOOTZ - (FOOTZ - EDGE) * TOPY / (DECK - 0.03)
 for sx in (-1, 1):
-    b.box('base', 'stoneDark', 0.08, 0.03, 0.08, sx * 0.12, 0.0, FOOTZ, bottom=False)
-    log(b, 'base', 'bark', (sx * 0.12, 0.03, FOOTZ), (sx * 0.12, TOPY, TOPZ), r=0.017, seg=6)
+    b.box('ladder', 'stoneDark', 0.08, 0.03, 0.08, sx * 0.12, 0.0, FOOTZ, bottom=False)
+    log(b, 'ladder', 'bark', (sx * 0.12, 0.03, FOOTZ), (sx * 0.12, TOPY, TOPZ), r=0.017, seg=6)
 for k in range(6):
     y = 0.2 + k * (DECK - 0.28) / 5
     z = FOOTZ - (FOOTZ - EDGE) * y / (DECK - 0.03)
-    log(b, 'base', 'wood', (-0.14, y, z), (0.14, y, z), r=0.012, seg=5)
+    log(b, 'ladder', 'wood', (-0.14, y, z), (0.14, y, z), r=0.012, seg=5)
     for sx in (-1, 1):
-        lash(b, 'base', (sx * 0.12, y, z), (0, 1, -0.3), r=0.024, w=0.018, seg=6)
+        lash(b, 'ladder', (sx * 0.12, y, z), (0, 1, -0.3), r=0.024, w=0.018, seg=6)
 
 # ---------------- na pomoście: kołczan i dzban ----------------
 QX, QZ = 0.2, -0.2
