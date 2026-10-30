@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.68.8 — 30.10.2026
+- Karty budowy szersze (132 → 176 px), tabliczki kosztu z luzem: ikonka 26 px na ciemnym kwadracie, liczba 24 px, odstęp 6 px (Michał: „ciasno, nie mają oddechu, ikonka za mała”).
+
 ## 0.68.7 — 30.10.2026
 - **Ruda głównym celem kopalni** (Michał): wagi kursów kamień 45 × 8, żelazo 25 × 5, ruda 27 × 6, kryształ 3 × 1. Średnio z kursu: kamień 3,6 (dawniej 5,6), żelazo 1,25 (2,3), ruda 1,6 (0,5). Bot korzysta z tej samej kopalni. Test w `oremine.test.ts`: waga rudy co najmniej 20.
 

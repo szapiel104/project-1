@@ -168,9 +168,12 @@ button:active { box-shadow: inset 0 2px 4px rgba(0, 0, 0, .6); transform: transl
    i większa ikonka (Michał 30.10.2026: „mega czytelne”); bez zaokrągleń, jak reszta interfejsu */
 /* (Michał 30.10.2026, drugie podejście): surowce obok siebie w jednym rzędzie, nie jeden pod drugim, i jeszcze większe
    liczby — tabliczki ciasne, żeby dwie mieściły się w szerokości karty; pod spód schodzi dopiero trzecia albo długa liczba */
-.build-cost { gap: 3px; margin: 5px -4px 0; }
-.build-cost .cost-chip { gap: 2px; padding: 0 4px 0 2px; background: rgba(12, 8, 4, .8); border: 1px solid #8a6a2c; box-shadow: inset 0 1px 0 rgba(255, 220, 150, .12); color: #fff1cc; font-size: 24px; font-weight: 800; letter-spacing: -.02em; line-height: 1.12; }
-.build-cost .cost-chip .ico svg { width: 19px; height: 19px; }
+/* trzecie podejście (Michał: „ciasno, nie mają oddechu, ikonka za mała”): tabliczka z luzem w środku, ikonka 26 px na
+   ciemnym kwadracie, liczba 24 px z odstępem; karta szersza (176 px), żeby dwie tabliczki dalej stały obok siebie */
+.build-cost { gap: 6px; margin: 7px -2px 0; }
+.build-cost .cost-chip { gap: 6px; padding: 3px 9px 3px 3px; background: rgba(12, 8, 4, .85); border: 1px solid #8a6a2c; box-shadow: inset 0 1px 0 rgba(255, 220, 150, .12); color: #fff1cc; font-size: 24px; font-weight: 800; line-height: 1; }
+.build-cost .cost-chip .ico { padding: 2px; background: rgba(255, 220, 150, .07); }
+.build-cost .cost-chip .ico svg { width: 26px; height: 26px; }
 .card.poor .build-cost .cost-chip { color: #ffb4a4; border-color: #a8452f; }
 .card.locked .build-cost .cost-chip { color: var(--ink-soft); border-color: #5a4a30; }
 .card.poor .build-cost { color: var(--bad); font-weight: 700; }
@@ -548,7 +551,7 @@ body.walking #ui, body.walking .scribe, body.walking .scribe-log, body.walking .
   color: var(--light); background: rgba(35, 22, 11, .8); border: 1px solid var(--gold-dark); pointer-events: none; }
 .walk-btn { width: 100%; min-height: 44px; }
 /* podglądy budynków w pasku budowania: średnie, żeby nie zasłaniały mapy; karty pogrupowane po funkcji */
-.card { width: 132px; flex: none; padding: 2px 6px 6px; }
+.card { width: 176px; flex: none; padding: 2px 6px 7px; } /* szersza karta: dwie tabliczki kosztu mieszczą się obok siebie z oddechem (Michał 30.10.2026) */
 .card img { width: 112px; height: 112px; margin: -6px 0 -5px; filter: contrast(1.05) drop-shadow(0 0 1px rgba(30, 16, 4, .9)) drop-shadow(0 2px 2px rgba(30, 16, 4, .35)); }
 .card .card-text { font-size: 14px; }
 .card .build-name { font-size: 13px; }
