@@ -19,7 +19,15 @@ const BUILD_HINT = (): Record<StoreKind, string> => ({
   armory: tx('Postaw kolejną zbrojownię albo wyszkol wojsko', 'Build another armoury or train some troops'),
 });
 
-const seen = new WeakMap<GameState, Map<StoreKind, boolean>>();
+/**
+ * Bez zalewu wiadomości (Michał 30.10.2026: co kilka sekund na zmianę „pełna!” i „ma znowu miejsce”, gdy magazynier wnosi
+ * jedną porcję, a warsztat od razu oddaje następną): „pełny” najwyżej raz na FULL_COOLDOWN, a „znowu miejsce” dopiero,
+ * gdy magazyn był wolny bez przerwy przez FREE_HOLD.
+ */
+const FULL_COOLDOWN = 3000; // 5 minut gry
+const FREE_HOLD = 900;      // 1,5 minuty gry
+interface Note { announced: boolean; lastFull: number; freeSince: number }
+const seen = new WeakMap<GameState, Map<StoreKind, Note>>();
 
 export function storeNotes(g: GameState, me: number, scribe: Scribe, showAt: (x: number, y: number) => ScribeAction): void {
   let state = seen.get(g);
@@ -39,8 +47,11 @@ export function storeNotes(g: GameState, me: number, scribe: Scribe, showAt: (x:
   }
   for (const kind of ['stockpile', 'granary', 'grain', 'armory'] as StoreKind[]) {
     const now = stalled.get(kind);
-    const was = state.get(kind) ?? false;
-    if (now && !was) {
+    let st = state.get(kind);
+    if (!st) { st = { announced: false, lastFull: -Infinity, freeSince: -1 }; state.set(kind, st); }
+    if (now) st.freeSince = -1;
+    if (now && !st.announced && g.tick - st.lastFull >= FULL_COOLDOWN) {
+      st.announced = true; st.lastFull = g.tick;
       // magazyn, pod którym leży najwięcej towaru tego rodzaju (tam pokaże przycisk)
       let at: { x: number; y: number } | undefined, most = 0;
       const sum = new Map<number, number>();
@@ -58,12 +69,14 @@ export function storeNotes(g: GameState, me: number, scribe: Scribe, showAt: (x:
         `Panie, ${name.toLowerCase()} ${kind === 'stockpile' || kind === 'granary' ? 'pełny' : 'pełna'}! Pod drzwiami leży: ${what}, a ${who} ${many ? 'czekają' : 'czeka'} bezczynnie. ${BUILD_HINT()[kind]} — magazynierzy wniosą towar, gdy tylko będzie miejsce.`,
         `My lord, ${name.toLowerCase()} is full! The ${what} lies at the door, and the ${who.toLowerCase()} ${many ? 'stand' : 'stands'} idle. ${BUILD_HINT()[kind]} — the storekeepers will carry the goods in as soon as there is room.`,
       ), true, 'scribe', at ? showAt(at.x, at.y) : undefined);
-    } else if (!now && was) {
+    } else if (!now && st.announced) {
+      if (st.freeSince < 0) st.freeSince = g.tick;
+      if (g.tick - st.freeSince < FREE_HOLD) continue;
+      st.announced = false;
       scribe.say(`storeFree-${kind}-${g.tick}`, tx(
         `${STORE_NAME()[kind]} ma znowu miejsce — towar spod drzwi wniesiony, warsztaty wróciły do pracy.`,
         `${STORE_NAME()[kind]} has room again — the goods are carried in and the workshops are back at work.`,
       ));
     }
-    state.set(kind, !!now);
   }
 }

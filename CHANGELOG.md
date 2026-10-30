@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.69.7 — 30.10.2026
+- Skryba o magazynach (`storeNotes.ts`): „pełny” najwyżej raz na 3000 ticków, „znowu miejsce” po 900 tickach bez przerwy wolnego magazynu (wcześniej na zmianę co kilka sekund, gdy magazynier wnosił porcję, a warsztat oddawał kolejną).
+
 ## 0.69.6 — 30.10.2026
 - Wydajność w bitwie (zrzut Michała: 23 FPS, 2810 wywołań, kamyki 521 tys. trójkątów + tyle samo w cieniu): `bakeRubble` zlewa leżący gruz w 2–4 siatki na stos (osobne kawałki tylko na czas spadania, przy wynoszeniu zlewa od nowa); kamyki skali < 0,6 z prostą bryłą i bez cienia.
 - Okno rynku: okno budynku w szufladzie miało `margin-bottom` z `fitInfo` (−688 px) i wchodziło na towary — `margin: 0 !important`; szuflada od 104 px (pod licznikami FPS/Deweloper). Załoga rynku: „kupców”.

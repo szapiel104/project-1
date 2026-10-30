@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.7', date: '2026-10-30',
+    pl: ['Skryba nie zasypuje już kroniki: o pełnym magazynie mówi najwyżej raz na 5 minut gry, a o tym, że znów jest miejsce — dopiero gdy magazyn przez półtorej minuty nie zapchał się ponownie.'],
+    en: ['The scribe no longer floods the chronicle: he reports a full store at most once every 5 game minutes, and that there is room again only once it has stayed clear for a minute and a half.'],
+  },
+  {
     v: '0.69.6', date: '2026-10-30',
     pl: [
       'Płynniej podczas dużych bitew: gruz z rozbitych budynków rysuje się kilkoma kawałkami zamiast kilkudziesięciu na stos, a drobne kamyki na łąkach są prostsze i nie rzucają cienia.',
