@@ -1408,8 +1408,11 @@ export class GameRenderer {
     grid.visible = true;
   }
 
+  /** Wieża, nad którą stoi podgląd koksownika: dach zdjęty, żeby było widać, gdzie kosz stanie (Michał 30.10.2026) */
+  private ghostOpen = 0;
   setGhost(g: Ghost | null): void {
     if (this.ghostModel) this.ghostModel.visible = false;
+    this.ghostOpen = 0;
     if (!g || !this.view || !this.state) { this.ghost.visible = this.ghostDoor.visible = false; return; }
     const { width, height } = this.state.map;
     if (g.door !== undefined && g.door >= 0) {
@@ -1430,6 +1433,7 @@ export class GameRenderer {
       if (!model) { model = brazierModel(); model.traverse((o) => { const mesh = o as THREE.Mesh; if (mesh.isMesh) mesh.material = cloneMaterial(mesh.material as THREE.MeshLambertMaterial); }); this.ghostModels.set(key, model); this.scene.add(model); }
       const id = this.state.occupancy[g.y * width + g.x];
       const host = id ? this.state.buildings.find((b) => b.id === id) : undefined;
+      if (host && brazierHost(BUILDINGS[host.type]!.id)) this.ghostOpen = host.id;
       if (host && brazierHost(BUILDINGS[host.type]!.id)) placeBrazier(model, this.state, this.view, host, this.buildingMeshes.get(host.id));
       else { model.position.set(g.x + 0.5 - width / 2, this.view.heightAt(g.x + 0.5, g.y + 0.5), g.y + 0.5 - height / 2); model.rotation.y = 0; model.scale.setScalar(0.5); }
       const bad = new THREE.Color(0x7a0f0a), lift = new THREE.Color(0x3a3020).multiplyScalar(0.25 + this.night * 0.75);
@@ -3564,7 +3568,7 @@ export class GameRenderer {
       // bo inaczej widać mury bez dachu i szczytów. Kliknięty budynek otwiera się zawsze.
       const cp = this.cam.camera.position, mp = mesh.position;
       const steep = cp.y - mp.y > Math.hypot(cp.x - mp.x, cp.z - mp.z) * 0.85;
-      const open = id === this.selectedId || (working.has(id) && steep);
+      const open = id === this.selectedId || id === this.ghostOpen || (working.has(id) && steep);
       animateBuilding(mesh, this.walk ? inHall : open || inHall, this.time, dt);
       if (this.walk && busy && !inHall) {
         const inn = named(mesh, 'interior'); if (inn) inn.visible = true;

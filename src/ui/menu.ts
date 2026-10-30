@@ -6,6 +6,7 @@ import { avatarSvg } from './avatars';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { t, tx, lang, setLang, LANGS } from '../i18n';
 import { HELP_CHAPTERS, type HelpBlock } from './helpText';
+import { changesBook } from './changesBook';
 import type { AaMode } from '../render/postfx';
 import { TIERS } from '../render/autoquality';
 import { hardReload, newerVersion } from './refresh';
@@ -294,6 +295,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew));
       list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
       list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
+      list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges));
       list.push('gap');
       list.push(barBtn(tx('Wyjdź do menu', 'Quit to menu'), tx('Zamknij mecz i wróć do menu głównego', 'Close the match and return to the main menu'), () => showQuit()));
       list.push(barBtn(tx('Poddaj się', 'Surrender'), tx('Koniec meczu porażką — tego nie da się cofnąć', 'End the match in defeat — there is no going back'), showSurrender, 'mi-danger'));
@@ -303,6 +305,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       list.push(barBtn(tx('Gra przez sieć', 'Online play'), tx('Mecze z innymi graczami: pokoje, drużyny, ranking', 'Matches against other players: rooms, teams, ranking'), () => online.showOnline()));
       list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
       list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
+      list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges));
     }
     const ul = el('ul', 'menu-list');
     for (const it of list) {
@@ -770,6 +773,15 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     panel.classList.add('book'); wrap.classList.add('book-open');
     show(Math.max(0, Math.min(pages.length - 1, start)));
     btns[Math.max(0, Math.min(pages.length - 1, start))]!.focus();
+  }
+
+  /** „Co nowego”: dziennik zmian dla graczy (src/data/changelog.ts), dzień po dniu */
+  function showChanges(): void {
+    const { book, nav, focusFirst } = changesBook();
+    nav.append(back());
+    screen(tx('Co nowego', 'What’s new'), true, book);
+    panel.classList.add('book'); wrap.classList.add('book-open');
+    focusFirst();
   }
 
   return {

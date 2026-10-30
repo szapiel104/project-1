@@ -44,6 +44,11 @@ Nad grą pracuje kilka czatów naraz, więc:
 - **Potem w grze, na pustej scenie** (`?test=1&pusta=1&model=<id>`, opis niżej): czy skala pasuje do ludzi i budynków obok i czy stoi tam, gdzie trzeba.
 - Budynki dodatkowo przechodzą arkusz `inspect.sh` (punkt 3 niżej).
 
+## „Co nowego” w menu — obowiązkowo przy każdej wersji (Michał 30.10.2026, dla wszystkich czatów)
+- Gracz widzi w menu zakładkę „Co nowego” (`src/ui/changesBook.ts`), dane w `src/data/changelog.ts`.
+- **Każda wypuszczona wersja** (podbity `package.json`) dopisuje wpis na górze listy `NEW` w `src/data/changelog.ts`: `{ v, date, pl: [...], en: [...] }` — wypunktowane, co ta wersja dodaje, dla gracza (bez nazw plików i testów), w obu językach. Obok, jak dotąd, wpis w `CHANGELOG.md` dla nas.
+- `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z `package.json` — bez wpisu test nie przejdzie.
+
 ## Szybkie testy, szybki push (Michał 28.10.2026, na zawsze, dla wszystkich czatów)
 - Testy nie mogą zjadać większości czasu (zmiana minuta, testy 9 minut = bez sensu). Po zmianie: `npx tsc --noEmit` + `npm run build` + tylko testy związane ze zmienianymi plikami (`npx vitest run tests/<plik>`), i od razu push. Pełne `npx vitest run` (ok. 4 min) tylko przy dużych zmianach w symulacji.
 - Nie czekać na pełny zestaw testów i nie pytać Michała przed pushem — on sam sprawdza grę po wdrożeniu.

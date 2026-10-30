@@ -1,5 +1,15 @@
 # Dziennik zmian
 
+## 0.68.6 — 30.10.2026
+- **Zakładka „Co nowego” w menu** (Michał): dziennik zmian dla graczy, dzień po dniu, wersja po wersji, punkty po polsku i po angielsku (`src/data/changelog.ts`, okno `src/ui/changesBook.ts`). Wpisano wszystko od 0.54.4 (28.10). Od teraz każda wersja dopisuje tam wpis (zasada w CLAUDE.md, pilnuje `tests/changelog.test.ts`).
+- Niesiony kamień i żelazo to te same modele co na stosach w składzie (blok granitu ze skanu, kute sztaby), a nie szary dwudziestościan i sztaby z kodu.
+- Zapasy startowe: limit 90% pojemności (zamiast 3/4) i tylko przy gotowym magazynie; test kapliczki dostał chleb dla 16 dodanych chłopów.
+
+## 0.68.5 — 30.10.2026
+- **Spichlerz „pełny” od startu** (Michał): na łatwym gra dawała 800 jedzenia (600 chleba + 200 jabłek) przy spichlerzu na 400, na średnim równo 400. Spichlerz był pełny od pierwszej minuty, a nowy zapełniała od razu ta nadwyżka, więc robotnicy stali. Zapasy startowe mieszczą się teraz w magazynach z zapasem miejsca (najwyżej 90% pojemności, także u botów). Test w `tests/storage-second.test.ts`.
+- Kopalnia daje mniej z jednego kursu: kamień 10 → 7, żelazo 7 → 5, ruda 6 → 4 (kryształ bez zmian). Test barak/wóz w `oremine.test.ts` liczy teraz to, co dowieziono, bo w tym czasie kamień schodzi też na naprawy.
+- Koksownik: przy stawianiu na wieży dach wieży znika na czas podglądu, żeby było widać kosz na pomoście.
+
 ## 0.68.4 — 30.10.2026
 - **Po materiał na budowę i drogę robotnicy idą do składu, w którym ten surowiec leży**, a nie do bliższego, pustego (Michał). Gdy zapłata z góry wyczyściła wszystkie składy, idą do tego, z którego zapłata zdjęła towar (`Building.gave`, zapis gry). Test: `tests/fetch-store.test.ts`.
 - Plan muru i palisady: okienko pod kursorem podaje powód czerwonych pól (np. „Ten odcinek zamknąłby ludzi lub budynki — zostaw przerwę albo postaw tu bramę”, głaz, wróg), a nie samo „poza zasięgiem / zajęte”.

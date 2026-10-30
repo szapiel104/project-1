@@ -13,7 +13,7 @@ import { shrineDoors } from '../src/sim/systems/workers';
 /** Gotowa kapliczka przy twierdzy gracza 0 (bez budowy) */
 function withShrine(g: GameState): GameState['buildings'][number] {
   const p = g.players[0]!;
-  p.res[resIndex('wood')] = 500; p.res[resIndex('stone')] = 500;
+  p.res[resIndex('wood')] = 500; p.res[resIndex('stone')] = 500; p.res[resIndex('bread')] = 400; // chleb dla 16 dodanych chłopów do wieczora
   const type = buildingIndex('shrine');
   const [kx, ky] = keepCenter(playerKeep(g, 0)!);
   for (let r = 6; r < RULES.buildRadius; r++)

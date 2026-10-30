@@ -739,6 +739,16 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
     if (!granRight && !placeAt(g, GRAN, s.player, L - 1, Y)) placeNear(g, GRAN, s.player, s.x, s.y);
     if (!placeAt(g, BARN, s.player, granRight ? L - 2 : R, Y)) placeNear(g, BARN, s.player, s.x, s.y);
     placeAt(g, CAMP, s.player, s.x, s.y + (KEEP_SIZE >> 1) + FORECOURT.depth + 2) || placeAt(g, CAMP, s.player, s.x - 1, s.y + (KEEP_SIZE >> 1) + FORECOURT.depth + 2) || placeNear(g, CAMP, s.player, s.x, s.y);
+    // zapasy startowe mieszczą się w magazynach z zapasem miejsca (najwyżej 90% pojemności): wcześniej na łatwym było
+    // 800 jedzenia przy spichlerzu na 400 — spichlerz od startu „pełny”, a nowy zapełniał się nadwyżką (Michał 30.10.2026)
+    if (!dev) {
+      const pl = g.players[g.players.length - 1]!;
+      for (const kind of new Set(RESOURCES.map((r) => RESOURCE_DEFS[r].store).filter((k): k is StoreKind => !!k))) {
+        const cap = Math.floor(storeCapacity(g, s.player, kind) * 0.9), used = storeUsed(pl, kind);
+        if (cap <= 0 || used <= cap) continue; // bez gotowego magazynu (np. spichlerz się nie zmieścił) nic nie ruszamy
+        for (let i = 0; i < RESOURCES.length; i++) if (RESOURCE_DEFS[RESOURCES[i]!].store === kind) res[i] = Math.floor(res[i]! * cap / used);
+      }
+    }
     const extra = (!humans && s.player === 0 ? [4, 2, 0, 0][level] ?? 0 : 0) + (boost ? Math.round((boost - 1) * 8) : 0);
     for (let i = 0; i < RULES.startPeasants + extra; i++) spawnPeasant(g, s.player);
     if (dev && s.player === 0) {

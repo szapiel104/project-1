@@ -170,7 +170,7 @@ describe('kopalnia pod górami', () => {
     const guards = g.soldiers.filter((s) => s.camp === camp.id);
     expect(guards.length).toBe(2);
     // urobek trafia pod barak, a potem wozem do zamku: w składach przybywa kamienia, a wóz miał eskortę
-    const before = p.res[resIndex('stone')]!;
+    const before = p.res[resIndex('stone')]!, gotBefore = p.stats.gathered;
     let sawCart = false, sawEscort = false, sawHold = false;
     for (let i = 0; i < 9000; i++) {
       step(g, []);
@@ -181,7 +181,9 @@ describe('kopalnia pod górami', () => {
     expect(sawHold).toBe(true);
     expect(sawCart).toBe(true);
     expect(sawEscort).toBe(true);
-    expect(p.res[resIndex('stone')]!).toBeGreaterThan(before);
+    // (kamień w tym czasie też schodzi na naprawy i drogi, więc liczymy to, co dowieziono, a nie stan składu)
+    expect(p.stats.gathered).toBeGreaterThan(gotBefore);
+    void before;
     // nocą górnicy śpią w baraku
     let slept = false;
     for (let i = 0; i < RULES.dayTicks && !slept; i++) {

@@ -2029,3 +2029,9 @@ body.menu-open .devpanel { display: none; }
 .rock-panel p { margin: 0; }
 .rock-panel .hint { color: #ffcf9a; }
 .rock-panel button:focus-visible { outline: 2px solid #e9c766; outline-offset: 2px; }
+/* „Co nowego” (changesBook.ts): wersje dnia jako nagłówki jak w poradniku, pod nimi zmiany w punktach ze złotym rombem */
+.changes-book .help-title::first-letter { text-transform: uppercase; }
+.changes-book .help-toc-t::first-letter { text-transform: uppercase; }
+.help-pane .changes-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
+.help-pane .changes-list li { position: relative; padding-left: 22px; font-size: 17px; line-height: 1.5; color: #eadcbc; }
+.help-pane .changes-list li::before { content: ''; position: absolute; left: 4px; top: .62em; width: 7px; height: 7px; background: #c99a3a; transform: rotate(45deg); }

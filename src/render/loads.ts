@@ -12,18 +12,18 @@ import { coloredModel, MEAT_COLORS } from './buildings';
  * Materiał części ładunku: zdjęciowa tekstura w szarości (barwę daje kolor wierzchołków) i mapa nierówności.
  * Owoce, ryby i grudki rudy zostają gładkie; drewno, wiklina, płótno, skórka chleba, kamień i żelazo mają fakturę.
  */
-type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish' | 'basket' | 'apple' | 'bread' | 'barrel' | 'sack';
+type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish' | 'basket' | 'apple' | 'bread' | 'barrel' | 'sack' | 'granite1' | 'granite2' | 'granite3' | 'ingots';
 const MAT_TEX: Record<LoadMat, [Kind | null, number, number, number]> = {
   // [tekstura, gęstość na 1 jednostkę, chropowatość, metaliczność]
   plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], board: [null, 1, 0.8, 0], rope: ['burlap', 14, 1, 0], wicker: ['thatch', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
   crust: ['soil', 7, 0.9, 0], stone: ['rock', 5, 0.95, 0], iron: ['iron', 6, 0.5, 0.55], straw: ['thatch', 6, 0.95, 0], bark: ['bark', 6, 0.95, 0],
   fish: [null, 1, 0.42, 0.08], // ryba z paczki: własne UV i tekstura (src/render/props.ts)
   basket: [null, 1, 0.9, 0], // kosz z paczki: własne UV i tekstura
-  apple: [null, 1, 0.45, 0], bread: [null, 1, 0.85, 0], barrel: [null, 1, 0.75, 0.05], sack: [null, 1, 0.95, 0], // modele z paczek i worek (props.ts)
+  apple: [null, 1, 0.45, 0], bread: [null, 1, 0.85, 0], barrel: [null, 1, 0.75, 0.05], sack: [null, 1, 0.95, 0], granite1: [null, 1, 0.9, 0], granite2: [null, 1, 0.9, 0], granite3: [null, 1, 0.9, 0], ingots: [null, 1, 0.62, 0.12], // modele z paczek i worek (props.ts)
 };
 const matCache = new Map<LoadMat, THREE.MeshStandardMaterial>();
 /** Części z modeli z paczek: mają własne UV i teksturę (src/render/props.ts), nie dostają rzutowanych współrzędnych */
-const PROP_MAT: Partial<Record<LoadMat, PropName>> = { fish: 'fish', basket: 'basket', apple: 'apple', bread: 'bun1', barrel: 'barrel', sack: 'sack' };
+const PROP_MAT: Partial<Record<LoadMat, PropName>> = { fish: 'fish', basket: 'basket', apple: 'apple', bread: 'bun1', barrel: 'barrel', sack: 'sack', granite1: 'granite1', granite2: 'granite2', granite3: 'granite3', ingots: 'ingots' };
 
 /**
  * Słoje świeżo heblowanej deski, rysowane w kodzie (szare, barwę daje kolor wierzchołków): długie, lekko falujące
@@ -177,32 +177,9 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
   flour: () => [as(propAt('sack', 0, -0.15, 0, 0.23, 0.5, false), 'sack')],
   // ciosany blok z kamieniołomu: nieregularna bryła z płaskimi ścianami po ciosaniu, odpryski na krawędziach,
   // barwa szara z jaśniejszymi i ciemniejszymi płatami (płaskie cieniowanie daje ostre ściany jak u prawdziwego kamienia)
-  stone: () => {
-    // (dwudziestościan w three.js nie ma indeksów: każdy trójkąt ma własne wierzchołki; zniekształcenie liczone
-    // z położenia, więc wspólne rogi sąsiednich trójkątów przesuwają się tak samo i bryła zostaje szczelna)
-    const g = new THREE.IcosahedronGeometry(1, 1);
-    const p = g.attributes.position!;
-    const col = new Float32Array(p.count * 3);
-    const c = new THREE.Color();
-    const rnd = (a: number): number => { const j = Math.sin(a) * 43758.5; return j - Math.floor(j); };
-    for (let i = 0; i < p.count; i++) {
-      const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-      // ściany ciosane: punkty dociągnięte do płaszczyzn prostopadłościanu (blok), z drobną nierównością
-      const k = 1 / Math.max(Math.abs(x), Math.abs(y), Math.abs(z));
-      const n = rnd(Math.round(x * 1000) * 12.9 + Math.round(y * 1000) * 78.2 + Math.round(z * 1000) * 37.7);
-      const f = 0.62 + 0.38 * k * 0.72 + (n - 0.5) * 0.12;
-      p.setXYZ(i, x * f * 0.11, y * f * 0.075 + 0.03, z * f * 0.09);
-    }
-    // kolor płatami: każdy trójkąt w jednym odcieniu — wygląda jak różne warstwy skały
-    for (let t = 0; t < p.count; t += 3) {
-      const n = rnd(t * 3.7 + 1.3);
-      c.setHex(n > 0.7 ? 0xc2bdb0 : n > 0.35 ? 0xaaa597 : 0x928d80);
-      for (let v = 0; v < 3; v++) { col[(t + v) * 3] = c.r; col[(t + v) * 3 + 1] = c.g; col[(t + v) * 3 + 2] = c.b; }
-    }
-    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-    g.computeVertexNormals();
-    return [as(g, 'stone')];
-  },
+  // ten sam blok granitu ze skanu co na stosach w składzie (PILES.stone w buildings.ts), tylko mniejszy — wcześniej chłop
+  // niósł szary dwudziestościan, a w składzie leżał zupełnie inny kamień (Michał 30.10.2026)
+  stone: () => (['granite1', 'granite2', 'granite3'] as const).map((n) => as(propAt(n, 0, -0.03, 0, 0.24, 0.2, false), n)),
   // kosz z trzema rybami z paczki (tools/models/props_import.py), leżą na boku W koszu: dwie obok siebie na dnie
   // (dno kosza ok. -0,06, ryba długości 0,2 ma 0,09 wysokości i 0,044 grubości), trzecia na nich, odwrócona łbem w drugą
   // stronę; wierzch trzeciej wystaje trochę ponad brzeg (0,065), żeby z góry było widać, co niesie
@@ -250,22 +227,8 @@ const SHAPES: Record<string, () => THREE.BufferGeometry[]> = {
   // długość 0,28 jak dawna (środek w y = 0,04)
   ale: () => [as(propGeometryFlat('barrel', false).translate(0, -0.5, 0).scale(0.28, 0.28, 0.28).rotateZ(Math.PI / 2).rotateX(0.3).translate(0, 0.04, 0), 'barrel')],
   // sztaby żelaza jak w składzie: trapezowe odlewy (szersze u dołu), dwie na spodzie i jedna na wierzchu, w poprzek rąk
-  iron: () => {
-    // sztaby z kuźni: trapezowe odlewy, stal ciemna z rdzawobrązowymi zaciekami (żelazo bez ochrony szybko rdzewieje)
-    const bar = (x: number, y: number, z: number, seed: number): THREE.BufferGeometry => {
-      const g = new THREE.CylinderGeometry(0.035, 0.055, 0.3, 4, 3).rotateY(Math.PI / 4).scale(1, 0.6, 1).rotateZ(Math.PI / 2).translate(x, y, z);
-      const n = g.index ? g.toNonIndexed() : g;
-      const p = n.attributes.position!, col = new Float32Array(p.count * 3), c = new THREE.Color();
-      for (let t = 0; t < p.count; t += 3) {
-        const r = Math.sin((t + seed * 97) * 12.989) * 43758.5; const v = r - Math.floor(r);
-        c.setHex(v > 0.86 ? 0x5f4433 : v > 0.7 ? 0x4e423a : v > 0.35 ? 0x484a50 : 0x3e4046);
-        for (let k = 0; k < 3; k++) { col[(t + k) * 3] = c.r; col[(t + k) * 3 + 1] = c.g; col[(t + k) * 3 + 2] = c.b; }
-      }
-      n.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      return as(n, 'iron');
-    };
-    return [bar(0, 0, -0.045, 1), bar(0, 0, 0.045, 2), bar(0, 0.05, 0, 3)];
-  },
+  // te same kute sztaby co w składzie (PILES.iron, paczka „Blacksmith Ingots”), w mniejszej skali
+  iron: () => [as(propAt('ingots', 0, -0.03, 0, 0.26, 0.05, false), 'ingots')],
 };
 
 /** Tworzy po jednej siatce instancjonowanej na surowiec. Zwraca indeks surowca → siatka. */

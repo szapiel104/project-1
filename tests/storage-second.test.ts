@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { RESOURCES, resIndex } from '../src/data/resources';
 import { addPeasants, emptyScene, placeReady, setHour } from '../src/sim/emptyscene';
-import { createGame, storeCapacity } from '../src/sim/state';
+import { createGame, storeCapacity, storeUsed } from '../src/sim/state';
 import { step } from '../src/sim/step';
 it('nowy spichlerz: magazynier wnosi do niego stosy spod pełnego (30.10.2026)', () => {
   const g = createGame(11, '1v1', 2, false); emptyScene(g);
@@ -17,3 +17,9 @@ it('nowy spichlerz: magazynier wnosi do niego stosy spod pełnego (30.10.2026)',
   for (let i = 0; i < 2000; i++) t();
   expect(g.piles?.length ?? 0).toBe(0);
 }, 120000);
+it('zapasy startowe mieszczą się w spichlerzu z zapasem miejsca, także na łatwym (30.10.2026)', () => {
+  for (const level of [0, 1, 2, 3]) {
+    const g = createGame(5, '1v1', level, false);
+    for (const p of g.players) expect(storeUsed(p, 'granary')).toBeLessThanOrEqual(storeCapacity(g, p.id, 'granary') * 0.9);
+  }
+});
