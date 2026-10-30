@@ -780,11 +780,21 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   pending = [];
   renderer.setCrests(crestList());
   // tryb testowy (?test=1) jak dawniej, od razu: pomocniki __test i narzędzia sprawdzające zakładają gotowy świat po imporcie
-  if (bootWorld === undefined && SANDBOX) bootWorld = null;
+  // (?test=1&etapy=1: w trybie testowym też etapami — do pomiaru wczytywania tak, jak widzi je gracz)
+  if (bootWorld === undefined && SANDBOX && !new URLSearchParams(location.search).has('etapy')) bootWorld = null;
   if (bootWorld === undefined) {
     // pierwszy świat przy wczytywaniu strony: teren etapami z przerwą na klatkę (pasek wczytywania idzie dalej, strona nie
     // staje na ok. 2 s); boot.ts czeka na worldReady() przed rozgrzewką grafiki. Każdy następny start — od razu, jak dawniej
-    bootWorld = renderer.setStateAsync(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME, () => { bootStages++; bootProgress?.(bootStages); return pauseFrame(); });
+    // czasy etapów (ms między przerwami na klatkę) do sprawdzania w konsoli: window.__worldTimes
+    const stageTimes: number[] = [];
+    (window as unknown as { __worldTimes: number[] }).__worldTimes = stageTimes;
+    let stageAt = performance.now();
+    bootWorld = renderer.setStateAsync(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME, async () => {
+      stageTimes.push(Math.round(performance.now() - stageAt));
+      bootStages++; bootProgress?.(bootStages);
+      await pauseFrame();
+      stageAt = performance.now();
+    });
   } else renderer.setState(game, MAP_PRESETS[preset].waterLevel, MAP_PRESETS[preset].rim, ME);
   hud.setSeed(seedText, preset);
   pick(null);
