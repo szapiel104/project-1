@@ -4019,7 +4019,7 @@ export class GameRenderer {
       const tw = onWall ? undefined : tw0;
       if (onWall) {
         const crew = crews.get(tw0!.id) ?? [s.id], idx = crew.indexOf(s.id);
-        lift = STONE_WALL_TOP;
+        lift = STONE_WALL_TOP + this.walls.levelDelta(view, tw0!.y * width + tw0!.x, width);
         const along = (idx - (crew.length - 1) / 2) * 0.24;
         const wx = !!(g.occupancy[tw0!.y * width + tw0!.x - 1] || g.occupancy[tw0!.y * width + tw0!.x + 1]);
         towerAt = wx ? [tw0!.x + 0.5 + along, tw0!.y + 0.5] : [tw0!.x + 0.5, tw0!.y + 0.5 + along];
@@ -4391,7 +4391,7 @@ export class GameRenderer {
       // poległ na wieży albo na murze: leży na pomoście/chodniku (dopóki budynek stoi), na koronie muru twierdzy — na murze
       const onPost = body.post ? bById.get(body.post) : undefined;
       const postId = onPost && !onPost.ruined ? BUILDINGS[onPost.type]!.id : '';
-      const y = postId ? view.heightAt(fx, fy) + (postId === 'stoneWall' ? STONE_WALL_TOP : TOWER_TOP[postId] ?? WATCH_TOWER_TOP)
+      const y = postId ? view.heightAt(fx, fy) + (postId === 'stoneWall' ? STONE_WALL_TOP + this.walls.levelDelta(view, (body.py >> 8) * width + (body.px >> 8), width) : TOWER_TOP[postId] ?? WATCH_TOWER_TOP)
         : this.standY(view, fx, fy, (body.py >> 8) * width + (body.px >> 8));
       // padanie — każdy pada inaczej (zależnie od numeru ciała): na plecy, na twarz, na bok albo osuwa się na ziemię
       // i dopiero wtedy przewraca na plecy. Przewrót przyspiesza i kończy się małym odbiciem przy ziemi
@@ -4891,7 +4891,7 @@ export class GameRenderer {
       const W = g.map.width, t = sim >= 0 ? sim : Math.floor(y) * W + Math.floor(x), tx = t % W, ty = (t - tx) / W;
       if (tx >= 0 && ty >= 0 && tx < W && ty < g.map.height) {
         // pomost wieży (Michał 28.10.2026: wchodzi się na wieżę jak na teren) albo korona muru
-        if ((g.walls[t]! & 16) && g.gates[t]) return h + (this.towerTopAt(g, t) ?? STONE_WALL_TOP);
+        if ((g.walls[t]! & 16) && g.gates[t]) { const tt = this.towerTopAt(g, t); return h + (tt ?? STONE_WALL_TOP + this.walls.levelDelta(view, t, W)); }
         // przed drabiną albo drzwiami wieży: wspina się na wysokość pomostu
         const tf = this.feetOfTowers(g).get(t);
         if (tf) {

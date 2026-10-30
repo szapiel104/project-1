@@ -1603,7 +1603,7 @@ export function brazierModel(): THREE.Group {
   g.traverse((o) => { if ((o as THREE.Mesh).isMesh) { o.castShadow = true; o.receiveShadow = true; } });
   return g;
 }
-export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.BufferGeometry; ladder: THREE.BufferGeometry; bridge: THREE.BufferGeometry; mat: THREE.Material; wood: THREE.Material } {
+export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.BufferGeometry; ladder: THREE.BufferGeometry; bridge: THREE.BufferGeometry; mat: THREE.Material; wood: THREE.Material; bridgeOf: (len: number) => THREE.BufferGeometry } {
   const k = (M.castle.userData.tile as number) || 1;
   const shade = (geo: THREE.BufferGeometry, v: number): THREE.BufferGeometry => {
     const n = geo.getAttribute('position').count, c = new Float32Array(n * 3).fill(v);
@@ -1650,7 +1650,7 @@ export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.Buffe
   // łącznik muru z kamienną wieżą (od krawędzi pola muru, +z, do lica wieży) — z kolorem
   // wierzchołków i kafelkami tekstury jak reszta muru (bez koloru materiał z cieniem w zagłębieniach rysował je na czarno)
   const bridge = blk(1.0, TOP, 1.0, 0, 0, 0.5, 1);
-  return { block, edge, ladder: mergeGeometries(lad)!, bridge, mat: withAo(M.castle), wood: withAo(M.wood) };
+  return { block, edge, ladder: mergeGeometries(lad)!, bridge, mat: withAo(M.castle), wood: withAo(M.wood), bridgeOf: (len: number) => blk(1.0, TOP - 0.004, len, 0, 0, len / 2, 1) };
 }
 
 /**

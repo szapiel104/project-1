@@ -30,6 +30,22 @@ export class WallLayer {
   private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
   /** Mur kamienny dochodzący do kamiennej wieży: przedłużenie korony aż do ściany wieży i ciemne wejście w tej ścianie */
   private doorKit: { bridge: THREE.InstancedMesh; door: THREE.InstancedMesh[]; steps: THREE.InstancedMesh[] } | null = null;
+  /**
+   * Łączniki muru z wieżą w prawdziwej długości (klucz: długość w setnych, co 5 cm): tekstura w tej samej skali co mur.
+   * Wcześniej jeden blok 1×1 rozciągany do długości szczeliny — kamień był rozmazany (Michał 30.10.2026).
+   */
+  private bridges = new Map<number, { mesh: THREE.InstancedMesh; n: number }>();
+  /** Wyrównany poziom terenu pod polami muru kamiennego (pole → wysokość), zob. wallLevel w sync */
+  private levels = new Map<number, number>();
+  /** O ile korona muru na polu t leży niżej (ujemne) od terenu pod środkiem pola — postacie i ciała na murze */
+  levelDelta(view: TerrainView, t: number, width: number): number {
+    const lv = this.levels.get(t);
+    if (lv === undefined) return 0;
+    const tx = t % width, ty = (t - tx) / width;
+    return lv - view.heightAt(tx + 0.5, ty + 0.5);
+  }
+  private bridgeGeo: ((len: number) => THREE.BufferGeometry) | null = null;
+  private bridgeMat: THREE.Material | null = null;
   /** Częstokół: bale łączą się z sąsiednimi palisadami, bramami i wieżami; brama obraca się w linii muru */
   sync(g: GameState, view: TerrainView, buildingMeshes: Map<number, THREE.Group>): void {
     const { width, height } = g.map;
@@ -45,6 +61,26 @@ export class WallLayer {
     const solid = new Map<number, GameState['buildings'][number]>();
     for (const b of walls) { const fp = footprint(BUILDINGS[b.type]!, b.rot); for (let y = b.y; y < b.y + fp.h; y++) for (let x = b.x; x < b.x + fp.w; x++) solid.set(y * width + x, b); }
     const at = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && solid.has(y * width + x);
+    // teren pod środkiem każdego pola muru kamiennego (do pochylenia korony między sąsiednimi polami, ramp niżej)
+    const ladderWall = (lx: number, ly: number): number => {
+      for (const [ox, oy] of [[0, -1], [1, 0], [0, 1], [-1, 0]] as const) {
+        const o = solid.get((ly + oy) * width + lx + ox);
+        if (o && BUILDINGS[o.type]!.id === 'stoneWall' && !o.build && !o.ruined && o.x === lx + ox && o.y === ly + oy) return (ly + oy) * width + lx + ox;
+      }
+      return -1;
+    };
+    let levels: Map<number, number> | null = null;
+    const SH = new THREE.Matrix4();
+    this.levels = new Map();
+    const wallLevel = (x: number, y: number, cx: number, cz: number): number => {
+      if (!levels) {
+        levels = new Map();
+        const ground = new Map<number, number>();
+        for (const [t, o] of solid) if (BUILDINGS[o.type]!.id === 'stoneWall') { const tx = t % width, ty = (t - tx) / width; const h = view.heightAt(tx + 0.5, ty + 0.5); ground.set(t, h); levels.set(t, h); }
+      }
+      this.levels = levels;
+      return levels.get(y * width + x) ?? view.heightAt(cx, cz);
+    };
     if (!this.wallShafts) {
       const bark = (new THREE.MeshStandardMaterial({ color: 0x7a5a3a, roughness: 0.95, map: pattern('bark'), normalMap: normal('bark') }));
       this.wallShafts = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.1, 1, 7).translate(0, 0.5, 0), bark, 4096);
@@ -72,6 +108,7 @@ export class WallLayer {
         m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(cat(m, label));
         return m;
       };
+      this.bridgeGeo = k.bridgeOf; this.bridgeMat = k.mat;
       const tdk = towerDoorKit();
       // geometrie w układzie „wejście w ścianie +z”: z = 0 to krawędź pola muru, wieża leży w stronę +z
       this.doorKit = {
@@ -82,6 +119,7 @@ export class WallLayer {
       };
     }
     const dn = { bridge: 0, door: 0, steps: 0 };
+    for (const b of this.bridges.values()) b.n = 0;
     /** Drzwi wieży (i schodki przy ziemi) w macierzy M4 */
     const putDoor = (steps: boolean): void => {
       if (!this.doorKit || dn.door >= 1024) return;
@@ -190,10 +228,24 @@ export class WallLayer {
         // mur kamienny jak w Twierdzy: pełny blok na polu, sąsiednie bloki zlewają się w gruby mur; blanki tylko na
         // krawędziach bez sąsiedniego muru kamiennego; co kilka pól drabina od strony twierdzy; w budowie rośnie od ziemi
         const kit = this.stoneKit!;
-        const y0 = view.heightAt(cx, cz) - 0.06, hk = Math.max(0.08, built);
+        // drobne różnice terenu między sąsiednimi polami muru (do 15 cm) wyrównane do najniższego sąsiada: bez cienkich
+        // „schodków” na koronie (Michał 30.10.2026); na stromym zboczu stopnie zostają (pole wchodzi w ziemię najwyżej 15 cm)
+        const gy = wallLevel(b.x, b.y, cx, cz);
+        // pochylnia zamiast schodków (Michał 30.10.2026): krawędź między dwoma polami muru leży w połowie ich wysokości,
+        // a pole pochyla się wzdłuż biegu muru (ściany i blanki zostają pionowe, przesuwa się tylko wysokość)
+        const lvAt = (x: number, y: number): number | undefined => levels?.get(y * width + x);
+        const edge = (dx: number, dz: number): number => { const n = lvAt(b.x + dx, b.y + dz); return n === undefined ? gy : (gy + n) / 2; };
+        const hasX = lvAt(b.x + 1, b.y) !== undefined || lvAt(b.x - 1, b.y) !== undefined, hasZ = lvAt(b.x, b.y + 1) !== undefined || lvAt(b.x, b.y - 1) !== undefined;
+        let kx = 0, kz = 0, mid = gy;
+        if (hasX && !hasZ) { const a = edge(-1, 0), c = edge(1, 0); kx = c - a; mid = (a + c) / 2; }
+        else if (hasZ && !hasX) { const a = edge(0, -1), c = edge(0, 1); kz = c - a; mid = (a + c) / 2; }
+        const wxc = cx - width / 2, wzc = cz - height / 2;
+        SH.set(1, 0, 0, 0, kx, 1, kz, -kx * wxc - kz * wzc, 0, 0, 1, 0, 0, 0, 0, 1);
+        const y0 = mid - 0.06, hk = Math.max(0.08, built);
         const put = (mesh: THREE.InstancedMesh, rotY: number, cnt: number): number => {
           e.set(0, rotY, 0); q.setFromEuler(e);
           M4.compose(p.set(cx - width / 2, y0, cz - height / 2), q, sc.set(1, hk, 1));
+          if (kx || kz) M4.premultiply(SH);
           mesh.setMatrixAt(cnt, M4);
           return cnt + 1;
         };
@@ -202,6 +254,9 @@ export class WallLayer {
         const ls = built >= 1 ? ladderSides(g, b) : 0;
         for (const [bit, dx, dz, rot] of [[1, 0, -1, Math.PI], [2, 1, 0, Math.PI / 2], [4, 0, 1, 0], [8, -1, 0, -Math.PI / 2]] as const) {
           if (!(ls & bit)) continue;
+          // drabina w narożniku dotyka dwóch pól muru: rysujemy ją tylko przy jednym (pierwszym w stałej kolejności:
+          // północ, wschód, południe, zachód), bez dwóch drabin z jednej (Michał 30.10.2026); wejście działa z obu
+          if (ladderWall(b.x + dx, b.y + dz) !== b.y * width + b.x) continue;
           this.ladderFeet.set((b.y + dz) * width + b.x + dx, [-dx, -dz]);
           if (sn.ladder < 2048) sn.ladder = put(kit.ladder, rot, sn.ladder);
         }
@@ -211,8 +266,17 @@ export class WallLayer {
           if (gap >= 0 && this.doorKit && dn.bridge < 1024) {
             const ex = cx + dx * 0.5, ez = cz + dz * 0.5;
             e.set(0, rot, 0); q.setFromEuler(e);
-            M4.compose(p.set(ex - width / 2, y0, ez - height / 2), q, sc.set(1, 1, gap + 0.02));
-            this.doorKit.bridge.setMatrixAt(dn.bridge++, M4);
+            const len = Math.round((gap + 0.02) * 20) * 5;
+            let br = this.bridges.get(len);
+            if (!br && this.bridgeGeo && this.bridgeMat) {
+              const m = new THREE.InstancedMesh(this.bridgeGeo(len / 100), this.bridgeMat, 1024);
+              m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; m.count = 0; this.scene.add(cat(m, 'mur do wieży'));
+              br = { mesh: m, n: 0 };
+              this.bridges.set(len, br);
+            }
+            M4.compose(p.set(ex - width / 2, y0, ez - height / 2), q, sc.set(1, 1, 1));
+            if (br && br.n < 1024) br.mesh.setMatrixAt(br.n++, M4);
+            dn.bridge++;
             // wejście: jedno na każdy bok wieży, na środku boku (gruby mur dochodzi do wieży kilkoma polami naraz)
             const tw = solid.get((b.y + dz) * width + b.x + dx)!, side = `${tw.id}:${dx}:${dz}`;
             const d = doors.get(side);
@@ -323,7 +387,8 @@ export class WallLayer {
       M4.compose(p.set(fx - width / 2, y, fz - height / 2), q, sc.setScalar(0.85));
       putDoor(false);
     }
-    this.doorKit.bridge.count = dn.bridge; touch(this.doorKit.bridge);
+    this.doorKit.bridge.count = 0;
+    for (const b of this.bridges.values()) { b.mesh.count = b.n; b.mesh.visible = b.n > 0; touch(b.mesh); }
     for (const m of this.doorKit.door) { m.count = dn.door; touch(m); }
     for (const m of this.doorKit.steps) { m.count = dn.steps; touch(m); }
     touch(this.wallShafts); touch(this.wallTips!);

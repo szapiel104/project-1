@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.67.16 — 30.10.2026
+Mur kamienny (Michał):
+- **Łącznik muru z wieżą nie jest rozmazany.** Był to jeden blok 1×1 rozciągany do długości szczeliny — kamień rozciągał się razem z nim. Teraz łącznik ma prawdziwą długość (co 5 cm), z kafelkami tekstury w tej samej skali co reszta muru, a jego wierzch leży o włos niżej od korony (bez migotania).
+- **Pochylnie zamiast schodków.** Każde pole muru stało na wysokości terenu pod sobą, więc na spadku sąsiednie pola różniły się o kilka centymetrów i robiły się progi. Teraz pole pochyla się wzdłuż biegu muru: krawędź między dwoma polami leży w połowie ich wysokości, korona i chodnik schodzą płynnie, ściany i blanki zostają pionowe.
+- **Jedna drabina w narożniku.** Drabina postawiona w rogu dotykała dwóch pól muru i każde rysowało swoją — teraz tylko jedno (wejście działa z obu).
+
 ## 0.67.15 — 30.10.2026
 - Mag Płomienia trzyma w dłoni ogień zamiast świecącej kuli: płomień (pomarańczowy z jasnym środkiem), który migocze — każdy mag w swoim rytmie. Widać go przy rzucaniu czarów, leczeniu i paleniu ciał. Mag Źródła zostaje z kulą wody.
 
