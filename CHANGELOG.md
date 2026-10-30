@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.67.10 — 30.10.2026
+- **Stawianie budynku bez przycięcia** (Michał: „czasem przycina na sekundę albo dwie”). Sklejanie nieruchomych części budynku (`mergeStatic`) kopiowało i przeliczało geometrię wszystkich części przy każdym postawionym budynku, a dopiero potem brało gotową wspólną bryłę z pamięci (sad: ok. 0,6 s za każdym razem). Teraz klucz liczy się z samych liczb części i wierzchołków; geometria liczy się tylko raz na rodzaj budynku.
+
 ## 0.67.9 — 30.10.2026
 - Miniatury budynków (rysowane w tle po nowej wersji gry): shadery każdego budynku kompiluje karta w tle przed rysowaniem miniatury — wcześniej kompilowały się naraz i gra przycinała przy każdym nowym rodzaju.
 - Pomiar przycięć przy stawianiu: czas każdego kroku przygotowania budynków w tle w `window.__prewarmSteps`.
