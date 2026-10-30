@@ -507,15 +507,10 @@ export class GameRenderer {
     if ((v.x - f.x) ** 2 + (v.z - f.z) ** 2 > 80 * 80) return;
     this.handFlameN++;
   }
-  private pushHandFlame(m: THREE.Matrix4, x: number): void {
-    if (this.handFlameN >= 400) return;
-    const v = this.handFlames[this.handFlameN] ?? (this.handFlames[this.handFlameN] = new THREE.Vector3());
-    const f = this.focusPoint;
-    v.set(x, 0.69, 0.1).applyMatrix4(m);
-    if ((v.x - f.x) ** 2 + (v.z - f.z) ** 2 > 80 * 80) return;
-    this.handFlameN++;
-  }
+
   private handTorches: GearPool;
+  /** Pochodnie strażników miejskich nocą: ten sam model co u chłopów, w uniesionej lewej ręce (prawa trzyma miecz) */
+  private guardTorches: GearPool;
   /**
    * Pochodnie łuczników wbite w ziemię przy strzelaniu w budynek: miejsce w świecie ustalone raz, gdy łucznik ją wbija
    * (nie jeździ za nim i nie obraca się z naciągiem łuku); klucz = łucznik, `b` = budynek, w który strzela oddział
@@ -967,6 +962,7 @@ export class GameRenderer {
     this.rods = pool('rod');
     // pochodnia w ręce: kij, drut i szmaty ze smołą (płomień dokłada system ognia)
     this.handTorches = pool('torch', 'pochodnie w rękach');
+    this.guardTorches = pool('torch', 'pochodnie strażników');
     this.buckets = pool('bucket');
     const waterMat = new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 });
     this.bucketWater = pool('bucketWater', 'woda w wiadrach', [waterMat, waterMat, waterMat]);
@@ -1997,6 +1993,13 @@ export class GameRenderer {
     if (w.jy) { w.jy += (w.vy ?? 0) * dt; w.vy = (w.vy ?? 0) - 9.5 * dt; if (w.jy <= 0) { w.jy = 0; w.vy = 0; } }
     cam.position.set(MINE_AT.x + m.x, MINE_AT.y + floorY(m.lvl) + 0.46 + Math.min(w.jy ?? 0, 0.5) + Math.sin(w.bob) * 0.015, MINE_AT.z + m.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
+    // pochodnia w ręce przy patrzeniu w dół: podnosi się i przechyla z powrotem do pionu (jak trzymana przy piersi),
+    // zamiast obracać się razem z widokiem i wchodzić w ziemię (Michał 30.10.2026)
+    if (this.handTorch) {
+      const down = Math.max(0, -w.pitch);
+      this.handTorch.position.set(0.22, -0.24 + down * 0.2, -0.42 + down * 0.1);
+      this.handTorch.rotation.x = -0.35 + down * 0.85;
+    }
     // ciepłe światło latarni w dłoni (w sztolni bez niego byłoby czarno między lampami)
     this.roomLight.intensity = this.torchOn ? 0.6 : 1.4; // bez pochodni tylko słaba poświata (ciemno między latarniami)
     this.roomLight.position.set(cam.position.x, cam.position.y + 0.25, cam.position.z);
@@ -2344,6 +2347,13 @@ export class GameRenderer {
     this.roomLight.intensity = inRoom || inTower || inTap ? 3.4 + Math.sin(this.time * 7) * 0.2 : 0;
     this.roomLight.position.set(cam.position.x, cam.position.y + 0.35, cam.position.z);
     cam.rotation.set(w.pitch, w.yaw, 0, 'YXZ');
+    // pochodnia w ręce przy patrzeniu w dół: podnosi się i przechyla z powrotem do pionu (jak trzymana przy piersi),
+    // zamiast obracać się razem z widokiem i wchodzić w ziemię (Michał 30.10.2026)
+    if (this.handTorch) {
+      const down = Math.max(0, -w.pitch);
+      this.handTorch.position.set(0.22, -0.24 + down * 0.2, -0.42 + down * 0.1);
+      this.handTorch.rotation.x = -0.35 + down * 0.85;
+    }
   }
 
   /** `paused` = pauza: kamera dalej się rusza, ale ludzie, zwierzęta, ogień i woda stoją w miejscu */
@@ -2404,7 +2414,7 @@ export class GameRenderer {
       T('budynki z daleka', () => this.updateLods());
       const cp = this.cam.camera.position;
       for (const f of [this.figures, this.spearmen, this.archers, this.guardsFig, this.kings, this.bodies, this.peasantBodies, this.archerBodies, this.guardBodies, this.menAtArms, this.manAtArmsBodies, this.sappersFig, this.sapperBodies, this.banditsFig, this.banditBodies, this.magesFireFig, this.magesWaterFig, this.battleFireFig, this.battleWaterFig, this.mageBodiesFire, this.mageBodiesWater, this.preacherFig]) f.view(cp);
-      for (const t of [this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
+      for (const t of [this.axes, this.picks, this.clubs, this.forks, this.backPicks, this.beltClubs, this.hammers, this.spades, this.rods, this.handTorches, this.guardTorches, this.buckets, this.bucketWater, this.bedrolls]) t.setView(cp);
       this.crowd.begin(dt);
       T('chłopi', () => { this.syncUnits(g, v, alpha); this.placeWorkerPin(); });
       this.syncCrowdSound(g, v);
@@ -3301,6 +3311,7 @@ export class GameRenderer {
       if (flame) flame.visible = false;
     }
     this.handTorches.visible = on;
+    this.guardTorches.visible = on;
     // pochodnia w ręce przy spacerze świeci zawsze, gdy jest zapalona (pierwsza lampa z puli)
     const own = this.walk && this.torchOn ? this.lamps[0]! : null;
     if (own) { this.handTip.getWorldPosition(own.position); own.intensity = (this.night > 0.15 ? 7 : 3) * flicker; }
@@ -4239,8 +4250,15 @@ export class GameRenderer {
           if (!first) this.playHere(blow, t.position.x, t.position.z, 1, t.position.y + 1);
         }
       }
-      // nocą każdy strażnik miejski niesie pochodnię, z wojska co piąty
-      if (torchesOn && (udef.guard || (s.id % 5 === 0 && s.owner === this.me && !udef.range)) && torches < 256) { this.soldierTorches.setMatrixAt(torches++, t.matrix); this.pushHandFlame(t.matrix, -0.17); }
+      // nocą strażnik miejski niesie pochodnię w uniesionej lewej ręce, jak chłopi (Michał 30.10.2026: stara wisiała obok
+      // niego); w walce ręka wraca do miecza, pochodnia zostaje w dłoni. Reszta wojska ma ręce zajęte bronią i tarczą
+      const guardTorch = torchesOn && !!udef.guard && !this.calm;
+      if (guardTorch) {
+        this.armM.makeRotationX(TORCH_ARM).setPosition(-0.135, 0.45, 0);
+        this.armM.premultiply(t.matrix);
+        this.guardTorches.setMatrixAt(torches++, this.armM);
+        this.pushHandFlameAt(this.armM, TORCH_TIP);
+      }
       // pochodnia wbita w ziemię obok łucznika, który strzela w budynek (płomień palący się także w dzień)
       if (torchBearers.has(s.id) && !this.calm) {
         let pl = this.planted.get(s.id);
@@ -4258,7 +4276,7 @@ export class GameRenderer {
       if (bearers.has(s.id)) this.standards.add(t.matrix, s.owner, teamC, this.crestOf(s.owner));
       // każdy rodzaj ma własny model: strażnik miejski (miecz, zbroja Starego Obozu), łucznik, włócznik
       const legs = ia?.legs ? ia.legs : swing;
-      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
+      this.guardsFig.set(n, udef.guard ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose ? [swordPose[0], swordPose[1], 0, guardTorch ? TORCH_ARM : undefined] : guardTorch && !striking ? [legs * 0.55 - 0.15, -0.55, 0, TORCH_ARM] : undefined);
       // mag bojowy: postać swojego zakonu; ręce w górze z kulą w dłoni, gdy szykuje czar (od połowy odliczania do rzutu)
       if (udef.magic) {
         const u = 1 - Math.max(0, s.cd - alpha) / udef.cooldown;
@@ -4368,7 +4386,8 @@ export class GameRenderer {
     this.rallyFlags.sync(g, view, this.me, this.crestOf(this.me), this.time);
     this.spawnFx.sync(g, view, this.cam.camera, this.calm);
     this.chips.step(1 / 60);
-    this.soldierTorches.count = torches;
+    this.soldierTorches.count = 0;
+    this.guardTorches.count = torches;
     this.healOrbs.count = orbs; this.healOrbs.visible = orbs > 0;
     if (orbs) { touch(this.healOrbs); if (this.healOrbs.instanceColor) touch(this.healOrbs); }
     if (this.plantedTorches) { this.plantedTorches.count = this.plantedN; touch(this.plantedTorches); }

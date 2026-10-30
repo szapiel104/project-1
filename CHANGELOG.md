@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.67.17 — 30.10.2026
+- **Strażnik miejski trzyma pochodnię w dłoni** (Michał). Nocą niesie ten sam model pochodni co chłopi, w uniesionej lewej ręce (prawa trzyma miecz), z płomieniem nad głowicą. Wcześniej stara pochodnia wisiała obok niego w powietrzu. Pozostałe wojsko nie nosi pochodni (ręce zajęte bronią i tarczą — stara też wisiała obok).
+- **Spacer: pochodnia nie wchodzi w ziemię.** Przy patrzeniu w dół podnosi się i przechyla z powrotem do pionu, jak trzymana przy piersi, zamiast obracać się razem z widokiem.
+
 ## 0.67.16 — 30.10.2026
 Mur kamienny (Michał):
 - **Łącznik muru z wieżą nie jest rozmazany.** Był to jeden blok 1×1 rozciągany do długości szczeliny — kamień rozciągał się razem z nim. Teraz łącznik ma prawdziwą długość (co 5 cm), z kafelkami tekstury w tej samej skali co reszta muru, a jego wierzch leży o włos niżej od korony (bez migotania).
