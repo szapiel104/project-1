@@ -2038,27 +2038,38 @@ body.menu-open .devpanel { display: none; }
 .help-pane .changes-list { margin: 0; padding: 0; list-style: none; display: grid; gap: 7px; }
 .help-pane .changes-list li { position: relative; padding-left: 22px; font-size: 17px; line-height: 1.5; color: #eadcbc; }
 .help-pane .changes-list li::before { content: ''; position: absolute; left: 4px; top: .62em; width: 7px; height: 7px; background: #c99a3a; transform: rotate(45deg); }
-/* okno rynku (marketPanel.ts): wiersz na towar — nazwa z ikonką, ile masz, sprzedaż (zielona cena) i kupno (czerwona) */
-.market-panel { position: fixed; right: 16px; top: 84px; z-index: 12; width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 220px); padding: 14px 16px 16px; display: grid; grid-template-rows: auto auto 1fr; gap: 8px; }
+/* okno rynku (marketPanel.ts), druga wersja (Michał: „nieczytelny widok, większe okno”): duże okno na środku,
+   kafelki towarów po grupach, duże liczby; sprzedaż zielona, kupno czerwona */
+.market-panel { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -52%); z-index: 30; width: min(1180px, calc(100vw - 48px)); max-height: min(860px, calc(100vh - 160px));
+  padding: 18px 22px 20px; display: grid; grid-template-rows: auto auto 1fr; gap: 10px; box-shadow: 0 10px 40px rgba(0, 0, 0, .7); }
 .market-panel[hidden] { display: none; }
-.market-panel p { margin: 0; }
-.market-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.market-purse { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; font-size: 22px; color: #fff1cc; background: rgba(12, 8, 4, .85); border: 1px solid #8a6a2c; }
-.market-note { font-size: 14px; color: #d9c9a3; }
-.market-rows { overflow-y: auto; display: grid; gap: 4px; padding-right: 4px; scrollbar-width: thin; scrollbar-color: #6e5420 transparent; }
-.market-row { display: grid; grid-template-columns: minmax(110px, 1fr) 52px auto auto; align-items: center; gap: 8px; padding: 4px 6px; background: rgba(12, 8, 4, .45); border: 1px solid #3e2f17; }
-.market-name { display: inline-flex; align-items: center; gap: 6px; font-size: 16px; font-weight: 700; color: #f3e2b0; }
-.market-have { font-size: 18px; font-weight: 800; color: #fff1cc; text-align: right; font-variant-numeric: tabular-nums; }
-.market-group { display: inline-flex; gap: 4px; }
-.market-btn { display: grid; justify-items: center; gap: 1px; min-width: 64px; min-height: 40px; padding: 3px 6px; font: inherit; cursor: pointer; background: #1a130c; border: 1px solid #6e5420; color: #f3e2b0; }
-.market-btn .mb-act { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
-.market-btn .mb-price { display: inline-flex; align-items: center; gap: 2px; font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.market-btn .mb-price svg { width: 16px; height: 16px; }
-.market-btn.sell .mb-price { color: #a8e08a; }
-.market-btn.buy .mb-price { color: #ffb4a4; }
+.market-head { display: flex; align-items: center; gap: 16px; }
+.market-title { margin: 0; flex: 1; font-family: var(--display); font-size: 32px; letter-spacing: .04em; color: #ffe7a6; text-shadow: 0 2px 3px #000; }
+.market-purse { display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 8px; font-size: 28px; color: #fff1cc; background: rgba(12, 8, 4, .9); border: 1px solid #8a6a2c; }
+.market-close { min-width: 44px; min-height: 44px; font-size: 22px; color: #f3e2b0; background: #1a130c; border: 1px solid #6e5420; cursor: pointer; }
+.market-close:hover { border-color: #e9c766; }
+.market-note { margin: 0; font-size: 16px; color: #e0d0aa; }
+.market-body { overflow-y: auto; padding-right: 8px; scrollbar-width: thin; scrollbar-color: #6e5420 transparent; }
+.market-group-title { margin: 14px 0 8px; font-family: var(--display); font-size: 18px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #e9c766; display: flex; align-items: center; gap: 12px; }
+.market-group-title::after { content: ''; flex: 1; height: 1px; background: linear-gradient(90deg, #6e5420, transparent); }
+.market-group-title:first-child { margin-top: 0; }
+.market-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 10px; }
+.market-tile { display: grid; gap: 8px; padding: 10px 12px 12px; background: rgba(12, 8, 4, .55); border: 1px solid #4a3a1c; }
+.market-tile-top { display: flex; align-items: center; gap: 10px; }
+.market-ico { display: grid; place-items: center; width: 40px; height: 40px; background: rgba(255, 220, 150, .07); border: 1px solid #3e2f17; }
+.market-name { flex: 1; font-size: 20px; font-weight: 700; color: #f3e2b0; }
+.market-have { font-size: 24px; font-weight: 800; color: #fff1cc; font-variant-numeric: tabular-nums; }
+.market-have small { font-size: 13px; font-weight: 600; color: #cbb68a; text-transform: uppercase; letter-spacing: .06em; margin-right: 4px; }
+.market-line { display: grid; grid-template-columns: 78px 1fr 1fr; gap: 6px; align-items: stretch; }
+.market-line-label { align-self: center; font-size: 14px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #cbb68a; }
+.market-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 4px 10px; font: inherit; cursor: pointer; background: #1a130c; border: 1px solid #6e5420; color: #f3e2b0; }
+.market-btn .mb-n { font-size: 15px; font-weight: 700; color: #e0d0aa; }
+.market-btn .mb-price { display: inline-flex; align-items: center; gap: 3px; font-size: 21px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.market-line.sell .mb-price { color: #a8e08a; }
+.market-line.buy .mb-price { color: #ffb4a4; }
 .market-btn:hover:not(:disabled) { border-color: #e9c766; background: #2a1f15; }
-.market-btn:focus-visible { outline: 2px solid #e9c766; outline-offset: 2px; }
-.market-btn:disabled { opacity: .4; cursor: not-allowed; }
+.market-btn:focus-visible, .market-close:focus-visible { outline: 2px solid #e9c766; outline-offset: 2px; }
+.market-btn:disabled { opacity: .38; cursor: not-allowed; }
 
 /* „Od etapu: Gród (40 ludzi)” jako złota flaga przypięta w lewym górnym rogu karty, a nie napis pod kosztem (Michał 30.10.2026) */
 .card.locked .build-need { position: absolute; top: 6px; left: -1px; z-index: 1; margin: 0; padding: 3px 14px 3px 7px; font-size: 13px; line-height: 1.2;

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.69.1 — 30.10.2026
+- Okno rynku od nowa (Michał: „nieczytelny widok, większe okno”): na środku, do 1180 px, kafelki towarów w grupach jak magazyny, ikonka 30 px, nazwa 20 px, „masz” 24 px, przyciski 44 px wysokie z ceną 21 px (sprzedaż zielona, kupno czerwona), krzyżyk i Esc zamykają do ponownego kliknięcia rynku.
+
 ## 0.69.0 — 30.10.2026
 - **Rynek** (Michał: „rynek, gdzie mogę handlować wszystkim, sprzedaje się od razu”): budynek 3×3 (60 drewna, 20 kamienia, etap 1), model z Blendera `tools/models/market.py` (dwa kramy pod pasiastymi daszkami, skrzynie, beczki, szyld z monetą). Okno rynku po kliknięciu (`src/ui/marketPanel.ts`): każdy towar, sprzedaż i kupno partiami 5/20, od ręki, za rudę. Ceny w `src/data/market.ts` (wartość za 10 szt., kupno ×2). Rozkaz `trade` (`sim/systems/market.ts`), kupno tylko do wolnego miejsca w magazynach. Bot: rynek w `ORDER` po cieśli, `botTrade` co 10 myśli sprzedaje nadwyżki i dokupuje braki. Test `tests/market.test.ts`.
 - Karty budowy 248 px (cały koszt w jednym rzędzie), napis etapu jako złota flaga w rogu karty.
