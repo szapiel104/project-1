@@ -234,6 +234,14 @@ export class GameRenderer {
   private backPicks!: GearPool;
   private beltClubs!: GearPool;
   private soldierTorches!: THREE.InstancedMesh;
+  /** Kulki leczenia krążące wokół leczonych przez magów (bez cieni, jasne, mieszane addytywnie) */
+  private healOrbs = (() => {
+    const m = new THREE.InstancedMesh(new THREE.SphereGeometry(0.028, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }), 256);
+    m.count = 0; m.visible = false; m.frustumCulled = false; m.userData.noCull = true;
+    return m;
+  })();
+  private orbM = new THREE.Matrix4();
+  private orbC = new THREE.Color();
   private peasantBodies!: Figures;
   /** Polegli łucznicy i strażnicy leżą we własnych zbrojach (nie w zbroi włócznika) */
   private archerBodies!: Figures;
@@ -789,6 +797,7 @@ export class GameRenderer {
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = createRenderer({canvas, antialias: true }, 'gra');
     this.pre = new Precompiler(this.renderer, this.scene);
+    this.scene.add(this.healOrbs);
     Figures.charred = (id) => this.burntBodies.has(id);
     Figures.frozen = (id) => this.frozenBodies.has(id);
     initKtx(this.renderer);
@@ -3860,6 +3869,10 @@ export class GameRenderer {
     const { width, height } = g.map;
     const t = this.tmp;
     let n = 0, rings = 0, dots = 0, torches = 0, rams = 0;
+    // leczeni przez magów (mageheal.ts): kto i jakiej szkoły mag — wokół leczonego krążą świetliste kulki
+    const healers = new Map<number, string>();
+    for (const x of g.soldiers) if (x.healing && x.hp > 0) healers.set(x.healing, UNITS[x.kind]!.magic ?? 'water');
+    let orbs = 0;
     // kliknięta twierdza: pokazujemy, gdzie są jej strażnicy
     const selB = this.selectedId ? g.buildings.find((b) => b.id === this.selectedId) : undefined;
     // kliknięta twierdza: pinezki nad strażą miejską; kliknięty barak górników: nad strażnikami tej kopalni
@@ -4252,6 +4265,18 @@ export class GameRenderer {
         const casting = !!pyreBody || (!!s.healing && !walking) || ((!!foe || !!wall || !!victim) && !walking && (u > 0.45 || u < 0.1));
         (udef.magic === 'fire' ? this.battleFireFig : this.battleWaterFig).set(0, t.matrix, legs, casting, teamC, s.id);
       }
+      // kulki leczenia: dwie małe, świetliste, krążą wokół leczonego na różnych wysokościach (od pasa po głowę)
+      const school = healers.get(s.id);
+      if (school && !this.calm && orbs < 254) {
+        for (let k = 0; k < 2; k++) {
+          const a = this.time * (1.7 + k * 0.4) + s.id * 1.3 + k * Math.PI;
+          const h = 0.32 + 0.2 * (0.5 + 0.5 * Math.sin(this.time * (1.1 + k * 0.5) + s.id + k * 2));
+          this.orbM.makeScale(1, 1, 1).setPosition(t.position.x + Math.cos(a) * 0.2, t.position.y + h, t.position.z + Math.sin(a) * 0.2);
+          this.healOrbs.setMatrixAt(orbs, this.orbM);
+          this.healOrbs.setColorAt(orbs, this.orbC.setHex(school === 'fire' ? 0xffd47a : 0x9ef5d0));
+          orbs++;
+        }
+      }
       this.archers.set(n, ranged && !udef.magic ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined, 0, bowPose && [bowPose[0]!, 0, 0, bowPose[4]!, bowPose[3]!, bowPose[1]!, bowPose[2]!]);
       const heavy = udef.id === 'manatarms';
       this.menAtArms.set(n, heavy ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, undefined, 0, swordPose && [swordPose[0], swordPose[1]]);
@@ -4344,6 +4369,8 @@ export class GameRenderer {
     this.spawnFx.sync(g, view, this.cam.camera, this.calm);
     this.chips.step(1 / 60);
     this.soldierTorches.count = torches;
+    this.healOrbs.count = orbs; this.healOrbs.visible = orbs > 0;
+    if (orbs) { touch(this.healOrbs); if (this.healOrbs.instanceColor) touch(this.healOrbs); }
     if (this.plantedTorches) { this.plantedTorches.count = this.plantedN; touch(this.plantedTorches); }
     touch(this.soldierTorches);
     // ciała: leżą na ziemi, z czasem ciemnieją i zapadają się (rozkład trwa ok. 10 minut gry)

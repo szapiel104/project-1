@@ -65,7 +65,8 @@ export function createHpBars(d: HpBarsDeps): () => void {
     p.textContent = kind === 'heal' ? `+${n}` : `−${n}`;
     // leczenie: prosto nad głową, tylko w górę (bez przesunięcia w bok); obrażenia lekko rozrzucone, żeby się nie nakładały
     const it: Pop = { el: p, key, dx: kind === 'heal' ? -8 : 4 + ((n * 7) % 13) - 6, wx: u.wx, wy: u.wy, wz: u.wz, x: u.x, y: u.y };
-    p.style.transform = `translate(${Math.round(u.x + it.dx)}px, ${Math.round(u.y - 30)}px)`;
+    // położenie przez `translate`, nie `transform`: animacja wyskoku (scale) mnożyła przesunięcie i liczba „dolatywała” z boku
+    p.style.translate = `${Math.round(u.x + it.dx)}px ${Math.round(u.y - 30)}px`;
     layer.append(p);
     live.push(it);
     pops++;
@@ -83,7 +84,7 @@ export function createHpBars(d: HpBarsDeps): () => void {
         x = s.sx; y = s.sy;
       } else { x = it.x; y = it.y; }
       it.el.style.visibility = '';
-      it.el.style.transform = `translate(${Math.round(x + it.dx)}px, ${Math.round(y - 30)}px)`;
+      it.el.style.translate = `${Math.round(x + it.dx)}px ${Math.round(y - 30)}px`;
     }
   };
 

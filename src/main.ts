@@ -57,7 +57,7 @@ import { createAllies } from './ui/allies';
 import { createMinimap } from './ui/minimap';
 import { createMenu, loadSettings, saveSettings, type Settings } from './ui/menu';
 import { AutoQuality, TIERS, TOP_TIER } from './render/autoquality';
-import { alarmBell, shrineBell, thunderClap, daySounds, music, musicEnd, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, warHorn, setBusVolume, setVolume, toggleMute, unlockAudio, audioStats, listenerPos, play3d, type WorldSound } from './audio/sfx';
+import { alarmBell, shrineBell, thunderClap, daySounds, music, musicEnd, getVolume, isMuted, caveSounds, nature, play, setGamePaused, pluck, talk, setBusVolume, setVolume, toggleMute, unlockAudio, audioStats, listenerPos, play3d, type WorldSound } from './audio/sfx';
 import { proceduralModels } from './render/models';
 import { renderThumbnailsAsync, renderUnitPortraits } from './render/thumbnails';
 import { WOLF_HP } from './sim/systems/wolves';
@@ -1941,7 +1941,8 @@ function refresh(): void {
   banditNotes(p);
   winterNotes(p);
   const coming = alarm.dataset.state === 'coming';
-  if (coming && !wasComing) { scribe.say('coming', t('alarm.coming'), true, 'herald'); warHorn(); }
+  // bez rogu wojennego (Michał 30.10.2026: nagranie brzmiało jak podmuch wiatru); pasek ostrzeżenia i skryba zostają
+  if (coming && !wasComing) scribe.say('coming', t('alarm.coming'), true, 'herald');
   // nastroje ludzi wobec wojska
   const mine = game.soldiers.filter((x) => x.owner === ME).length;
   const theirs = game.soldiers.filter((x) => x.owner !== BANDITS).length - mine;

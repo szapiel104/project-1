@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.67.14 — 30.10.2026
+- **Liczby obrażeń i leczenia pojawiają się na miejscu, nad głową**, i idą tylko w górę. Przyczyna „nadlatywania z boku”: animacja wyskoku powiększa liczbę (`scale`), a położenie było w `transform: translate`, więc przeglądarka powiększała też przesunięcie po ekranie — liczba startowała o 25% dalej od rogu ekranu i dopiero potem wracała. Teraz położenie przez właściwość `translate` (zmierzone: „+2” pojawia się nad paskiem leczonego i idzie prosto w górę).
+- **Kulki leczenia:** wokół leczonego przez maga krążą dwie małe świetliste kulki na różnych wysokościach (mag wody — jasnozielono-błękitne, mag ognia — złociste).
+- Bez rogu wojennego przy „wróg nadciąga” (nagranie brzmiało jak podmuch wiatru, także przy stawianiu wroga w panelu dewelopera); pasek ostrzeżenia i skryba zostają.
+
 ## 0.67.13 — 30.10.2026
 - **Rozdzielczość 1,5× zdjęta z ustawień** (Michał). Na monitorze 3440 px „Ostra” liczyła obraz ok. 5160 px szerokości — ponad dwa razy więcej pikseli niż 1× — i to karta graficzna była wąskim gardłem (ok. 26 ms na klatkę przy 189 budynkach). Teraz najwyżej „Ostrzejsza” (1,25×); domyślnie „Normalna”. Zapisane „Ostra” zamienia się na „Ostrzejszą”. Automat jakości też nie wchodzi wyżej niż 1,25×.
 
