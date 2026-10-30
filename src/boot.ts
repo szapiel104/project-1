@@ -132,7 +132,7 @@ async function load(): Promise<void> {
     info.detail(`${tx('teren', 'terrain')}: ${tx('etap', 'stage')} ${n}`);
     if (count) count.textContent = `${done} / ${total} · ${tx('teren', 'terrain')} ${n}`;
   });
-  info.step(tx('Grafika', 'Graphics'), tx('kompilacja shaderów wszystkich budynków — licznik może na chwilę stanąć', 'compiling shaders for every building — the timer may pause for a moment'));
+  info.step(tx('Grafika', 'Graphics'), tx('kompilacja shaderów terenu, osady i cieni (pozostałe budynki dochodzą w tle już w grze)', 'compiling shaders for the land, the settlement and the shadows (other buildings follow in the background once you play)'));
   await step(tx('Przygotowanie grafiki…', 'Preparing the graphics…'));
   // shadery kompiluje karta w tle, modele próbne budują się partiami — pasek idzie, strona nie zamarza
   await game.warmup((n, all) => {

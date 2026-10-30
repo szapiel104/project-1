@@ -78,6 +78,9 @@ const WORDS = ['wilk', 'dab', 'orzel', 'kruk', 'zubr', 'miecz', 'baszta', 'wrota
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const T0 = performance.now();
 const renderer = new GameRenderer(canvas);
+// pierwsze wczytanie strony: nic nie rysujemy do końca rozgrzewki (warmup niżej). Wcześniej pętla gry rysowała klatki
+// już w trakcie wczytywania — każda kompilowała shadery „na żywo” i strona stała 5–7 s (pomiar 30.10.2026)
+renderer.hold(true);
 const mark: [string, number][] = [['renderer', Math.round(performance.now() - T0)]];
 let game: GameState;
 let pending: Command[] = [];
@@ -2387,7 +2390,9 @@ badge.textContent = `${tx('wersja', 'version')} ${__BUILD__}`;
 document.body.append(badge);
 
 /** Wywoływane z ekranu wczytywania: kompilacja shaderów i pierwsza klatka jeszcze przed menu */
-export function warmup(onProgress?: (done: number, total: number) => void): Promise<void> { return renderer.warmup(onProgress); }
+export async function warmup(onProgress?: (done: number, total: number) => void): Promise<void> {
+  try { await renderer.warmup(onProgress); } finally { renderer.hold(false); }
+}
 
 // --- alarmy na mapie: czerwony trójkąt z wykrzyknikiem nad miejscem ataku, a gdy poza ekranem, strzałka przy krawędzi ---
 const alertLayer = document.createElement('div');

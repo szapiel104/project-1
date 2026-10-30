@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.67.5 — 30.10.2026
+Szybsze wczytywanie, przeglądarka nie zamarza (Michał: „gra przy wczytywaniu zawiesza przeglądarkę, nawet z jednym obiektem”). Pomiar w Chrome na RTX 5070, pusta scena: 16,7 s wczytywania, w tym 9,8 s zamrożonej strony.
+- **Bez rysowania w trakcie wczytywania.** Pętla gry rysowała klatki, zanim skończyła się rozgrzewka — każda kompilowała shadery „na żywo” i strona stała 5–7 s. Teraz pierwszy obraz dopiero po `warmup()` (jak przy nowej grze z menu).
+- **Budynki przygotowują się w tle, już w grze.** Wcześniej przed startem gra składała po egzemplarzu każdego budynku (ok. 3,5 s nawet na pustej mapie). Teraz po jednym na wolną chwilę po starcie, poza sceną; budynek postawiony wcześniej i tak czeka w ukryciu na swoje shadery (`precompile.ts`). Czas całości: `window.__prewarmMs`.
+- **Shadery cieni i efektów obrazu przed pierwszą klatką, w tle.** Najpierw klatka bez obiektów (powstaje mapa cieni), potem shadery cienia całej sceny zleca się karcie i czeka na nie z przerwami na klatkę.
+- Pomiar: `?test=1&pusta=1&hd=1&etapy=1` buduje świat etapami jak zwykła gra; czasy w `window.__loadTimes`, `__worldTimes`, `__warmTimes`.
+
 ## 0.67.4 — 30.10.2026
 - Głazy na łąkach nie wiszą już nad ziemią: model podnosił bryłę o 0,7 promienia, spód był ok. 8 cm nad trawą. Teraz stoją na ziemi, wkopane 3 cm (`tools/models/plants.py`).
 - Głazy mniej kanciaste: gładkie cieniowanie (płaskie ściany zostają na skałach złóż i murkach) i dokładniejsza bryła z bliska (320 trójkątów zamiast 80; z daleka bez zmian).

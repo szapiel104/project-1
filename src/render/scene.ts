@@ -1598,7 +1598,7 @@ export class GameRenderer {
    */
   async warmup(onProgress?: (done: number, total: number) => void): Promise<void> {
     this.warming = true;
-    try { await this.warmupInner(onProgress); } finally { this.warming = false; this.pre.start(); }
+    try { await this.warmupInner(onProgress); } finally { this.warming = false; this.pre.start(); void this.prewarmLater().catch((e) => console.error(e)); }
   }
   private warming = false;
   /**
@@ -1627,10 +1627,9 @@ export class GameRenderer {
     finally { this.warming = false; }
   }
   private async warmupInner(onProgress?: (done: number, total: number) => void): Promise<void> {
-    // Pierwszy budynek danego rodzaju (i pierwszy plac budowy, przycięty płaszczyzną) potrzebuje nowych shaderów: karta
-    // kompiluje je w chwili pierwszego rysowania i gra wtedy przycina, a po odświeżeniu już nie (przeglądarka pamięta
-    // skompilowane shadery). Dlatego raz, przy wczytywaniu, stawiamy pod mapą po jednym egzemplarzu każdego budynku —
-    // gotowy i jako plac budowy, z widocznym wnętrzem — kompilujemy wszystko i od razu sprzątamy.
+    // Shadery wszystkiego, co stoi w scenie, kompiluje karta w tle (compileAsync); budynki, których jeszcze nie ma,
+    // przygotowują się dopiero po starcie (prewarmLater). Potem cienie i efekty obrazu (niżej), na końcu pierwsza klatka.
+    void onProgress;
     const pause = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); setTimeout(ok, 60); });
     // czasy kroków do sprawdzania w konsoli: window.__warmTimes
     const times: [string, number][] = [];
@@ -1641,61 +1640,76 @@ export class GameRenderer {
       try { await this.renderer.compileAsync(this.scene, this.cam.camera); }
       catch { this.renderer.compile(this.scene, this.cam.camera); }
     };
-    let probe: THREE.Group | null = null;
-    const batchProbe: [number, THREE.Object3D][] = [];
-    if (!this.prewarmed) {
-      this.prewarmed = true;
-      probe = new THREE.Group();
-      const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), -49);
-      const clips = new Map<THREE.Material, THREE.Material>();
-      const clip = (m: THREE.Material): THREE.Material => {
-        let c = clips.get(m);
-        if (!c) { c = cloneMaterial(m); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clips.set(m, c); }
-        return c;
-      };
-      let t0 = performance.now(), done = 0;
-      for (const def of BUILDINGS) {
-        const m = this.models.building(def.id, TEAM_COLORS[0] ?? 0x888888);
-        m.userData.fx = collectFx(m, isWindowMat);
-        mergeStatic(m, def.id + ':0');
-        m.traverse((o) => {
-          o.visible = true;
-          const me = o as THREE.Mesh;
-          if (me.isMesh) me.castShadow = me.receiveShadow = true;
-        });
-        // plac budowy: ta sama siatka (kopia dzieli geometrię), tylko materiały przycięte płaszczyzną — bez drugiego
-        // budowania modelu od zera (to była połowa czasu rozgrzewania)
-        const site = m.clone(true);
-        site.traverse((o) => {
-          const me = o as THREE.Mesh;
-          if (me.isMesh) me.material = Array.isArray(me.material) ? me.material.map(clip) : clip(me.material);
-        });
-        for (const g of [m, site]) { g.position.set(0, -50, 0); probe.add(g); }
-        batchProbe.push([-1 - batchProbe.length, m], [-2 - batchProbe.length, m]);   // dwa razy: wspólne rysowanie zaczyna się od dwóch sztuk
-        done++;
-        // co ~40 ms przerwa na klatkę: pasek idzie dalej, a przeglądarka nie uznaje karty za zawieszoną
-        if (performance.now() - t0 > 40) { onProgress?.(done, BUILDINGS.length); await pause(); t0 = performance.now(); }
-      }
-      onProgress?.(BUILDINGS.length, BUILDINGS.length);
-      lap('modele próbne');
-      this.scene.add(probe);
-      probe.updateMatrixWorld(true);
-      applySeason(this.scene);   // łatki pór roku przed kompilacją: gra rysuje budynki już z nimi
-      await compile();   // zwykły wariant (budynek rysowany sam: rozbiórka, ?razem=0)
-      lap('shadery');
-      // wspólne rysowanie budynków to inny wariant shaderów (instancjonowanie): też kompilujemy go z góry
-      this.syncBatches(batchProbe);
-      lap('scalanie');
-    }
     this.matQ.sweep(this.scene);
     applySeason(this.scene);   // teren, las i trawa nowej mapy też od razu z łatkami pór roku
     await compile();
     lap('shadery wspólne');
+    // Cienie i efekty obrazu: three.js kompiluje shadery mapy cieni i przejść obrazu (AO, blask…) dopiero przy pierwszym
+    // rysowaniu i wtedy strona stała 1–3,5 s (Michał 30.10.2026). Najpierw jedna klatka bez obiektów (powstaje mapa
+    // cieni, kompilują się lekkie przejścia obrazu), potem shadery cienia całej sceny zleca się karcie w tle i czeka na
+    // nie z przerwami na klatkę (pasek wczytywania się rusza) — dopiero wtedy prawdziwa pierwsza klatka.
+    const hide = this.scene.children.filter((o) => o.visible && !(o as THREE.Light).isLight);
+    for (const o of hide) o.visible = false;
+    try { this.composer.render(); } finally { for (const o of hide) o.visible = true; }
+    lap('efekty obrazu');
+    const shadowMats = this.pre.warm(this.scene, this.cam.camera);
+    for (let k = 0; k < 120 && shadowMats.length && !this.pre.isReady(shadowMats); k++) await pause();
+    lap('shadery cieni');
     this.composer.render();
     lap('pierwsza klatka');
-    if (probe) { this.scene.remove(probe); this.syncBatches(); }
   }
   private prewarmed = false;
+
+  /**
+   * Shadery wszystkich budynków w tle, już po starcie gry (Michał 30.10.2026: wczytywanie za długie — wcześniej gra
+   * przed startem składała po egzemplarzu każdego budynku, ok. 3,5 s nawet na pustej mapie). Po jednym budynku na
+   * przerwę: model gotowy i jako plac budowy (przycięty płaszczyzną) oraz wariant wspólnego rysowania (instancje).
+   * Nic z tego nie trafia do sceny — karta tylko kompiluje programy. Budynek postawiony, zanim przyjdzie jego kolej,
+   * i tak czeka w ukryciu na swoje shadery (precompile.ts), więc niczego nie widać „na żywo”.
+   */
+  private async prewarmLater(): Promise<void> {
+    if (this.prewarmed) return;
+    this.prewarmed = true;
+    const idle = (): Promise<void> => new Promise((ok) => {
+      const ric = (window as unknown as { requestIdleCallback?: (f: () => void, o: { timeout: number }) => void }).requestIdleCallback;
+      if (ric) ric(() => ok(), { timeout: 400 }); else setTimeout(ok, 30);
+    });
+    const plane = new THREE.Plane(new THREE.Vector3(0, -1, 0), -49);
+    const clips = new Map<THREE.Material, THREE.Material>();
+    const clip = (m: THREE.Material): THREE.Material => {
+      let c = clips.get(m);
+      if (!c) { c = cloneMaterial(m); c.clippingPlanes = [plane]; c.clipShadows = true; c.side = THREE.DoubleSide; clips.set(m, c); }
+      return c;
+    };
+    const t0 = performance.now();
+    let waiting: THREE.Material[] = [];
+    for (const def of BUILDINGS) {
+      // nie w trakcie wczytywania nowej mapy ani pełnej rozgrzewki: wtedy czekamy
+      while (this.warming || this.held || this.building) await idle();
+      await idle();
+      // poprzedni budynek jeszcze się kompiluje: nie dokładamy karcie roboty (najwyżej ok. 2 s czekania)
+      for (let k = 0; k < 20 && waiting.length && !this.pre.isReady(waiting); k++) await idle();
+      const m = this.models.building(def.id, TEAM_COLORS[0] ?? 0x888888);
+      m.userData.fx = collectFx(m, isWindowMat);
+      mergeStatic(m, def.id + ':0');
+      m.traverse((o) => { o.visible = true; const me = o as THREE.Mesh; if (me.isMesh) me.castShadow = me.receiveShadow = true; });
+      const site = m.clone(true);
+      site.traverse((o) => { const me = o as THREE.Mesh; if (me.isMesh) me.material = Array.isArray(me.material) ? me.material.map(clip) : clip(me.material); });
+      const probe = new THREE.Group();
+      probe.add(m, site);
+      // wspólne rysowanie budynków tego rodzaju: ten sam materiał w siatce z instancjami (inny wariant shadera)
+      for (const part of this.staticParts(m)) {
+        const im = new THREE.InstancedMesh(part.geometry, part.material as THREE.Material, 1);
+        im.castShadow = part.castShadow; im.receiveShadow = part.receiveShadow;
+        probe.add(im);
+      }
+      probe.position.set(0, -50, 0);
+      probe.updateMatrixWorld(true);
+      applySeason(probe);
+      waiting = this.pre.warm(probe, this.cam.camera);
+    }
+    (window as unknown as { __prewarmMs: number }).__prewarmMs = Math.round(performance.now() - t0);
+  }
 
   /**
    * Wgrywa do karty graficznej wszystkie tekstury sceny z góry. Bez tego three.js wysyła teksturę dopiero przy pierwszym

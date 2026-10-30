@@ -81,6 +81,18 @@ export class Precompiler {
     return [...out];
   }
 
+  /**
+   * Zleca karcie shadery obiektu spoza sceny (zwykłe i cienia), bez rysowania i bez czekania — do przygotowania budynków
+   * w tle po starcie gry (scene.ts, prewarmLater). Zwraca materiały, na które można potem czekać (`isReady`).
+   */
+  warm(o: THREE.Object3D, camera: THREE.Camera): THREE.Material[] {
+    try { return [...(this.renderer.compile(o, camera, this.scene) as Set<THREE.Material>), ...this.compileShadow(o)]; }
+    catch { return []; }
+  }
+
+  /** Czy shadery tych materiałów są już gotowe (bez blokowania: przy równoległej kompilacji pyta kartę, nie czeka) */
+  isReady(mats: THREE.Material[]): boolean { return this.ready(mats, false); }
+
   /** Po pełnej rozgrzewce: wszystko w scenie skompilowane, lista od zera; od teraz pilnujemy nowych obiektów */
   start(): void {
     this.pending.clear();
