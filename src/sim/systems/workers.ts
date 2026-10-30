@@ -37,14 +37,15 @@ const TAVERN = BUILDINGS.findIndex((b) => b.id === 'tavern');
 const OREMINE = BUILDINGS.findIndex((b) => b.id === 'oremine');
 /**
  * Co wychodzi z jednego kursu w kopalni (losowane z ziarna meczu, więc u wszystkich graczy tak samo): wagi i ilości.
- * Ruda (waluta gry, jak w Gothicu; w kodzie 'gold') jest rzadka. Górnicy noszą wszystko: kamień i żelazo do składu,
+ * Ruda (waluta gry, jak w Gothicu; w kodzie 'gold') to główny cel kopalni (Michał 30.10.2026): co czwarty kurs daje rudę,
+ * a kamienia i żelaza mniej niż dawniej (było ich za dużo). Górnicy noszą wszystko: kamień i żelazo do składu,
  * rudę do skarbca w zamku (albo całość pod barak, skąd jedzie wozem). Suma wag = 100.
  * Kurs jest długi (15 s), a urobek z niego większy: górnicy dłużej siedzą w sztolni, więc w środku widać ich więcej naraz.
  */
 export const MINE_YIELDS: { res: 'stone' | 'iron' | 'gold' | 'crystal'; weight: number; amount: number }[] = [
-  { res: 'stone', weight: 56, amount: 7 },
-  { res: 'iron', weight: 33, amount: 5 },
-  { res: 'gold', weight: 8, amount: 4 },
+  { res: 'stone', weight: 45, amount: 8 },
+  { res: 'iron', weight: 25, amount: 5 },
+  { res: 'gold', weight: 27, amount: 6 },
   // kryształ magii z głębokiej galerii: rzadko, po jednym (dla magów bojowych i siedzib zakonów)
   { res: 'crystal', weight: 3, amount: 1 },
 ];

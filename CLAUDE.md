@@ -46,6 +46,7 @@ Nad grą pracuje kilka czatów naraz, więc:
 
 ## „Co nowego” w menu — obowiązkowo przy każdej wersji (Michał 30.10.2026, dla wszystkich czatów)
 - Gracz widzi w menu zakładkę „Co nowego” (`src/ui/changesBook.ts`), dane w `src/data/changelog.ts`.
+- **Zasada Michała (30.10.2026, na zawsze): każda zmiana i każdy commit, który idzie na produkcję, trafia też do „Co nowego”.** Nie ma commitu do gry bez wpisu tam — choćby jednego punktu. Kilka commitów tej samej wersji dopisuje punkty do jej wpisu.
 - **Każda wypuszczona wersja** (podbity `package.json`) dopisuje wpis na górze listy `NEW` w `src/data/changelog.ts`: `{ v, date, pl: [...], en: [...] }` — wypunktowane, co ta wersja dodaje, dla gracza (bez nazw plików i testów), w obu językach. Obok, jak dotąd, wpis w `CHANGELOG.md` dla nas.
 - `tests/changelog.test.ts` pilnuje, że najnowszy wpis ma wersję z `package.json` — bez wpisu test nie przejdzie.
 

@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.68.7 — 30.10.2026
+- **Ruda głównym celem kopalni** (Michał): wagi kursów kamień 45 × 8, żelazo 25 × 5, ruda 27 × 6, kryształ 3 × 1. Średnio z kursu: kamień 3,6 (dawniej 5,6), żelazo 1,25 (2,3), ruda 1,6 (0,5). Bot korzysta z tej samej kopalni. Test w `oremine.test.ts`: waga rudy co najmniej 20.
+
 ## 0.68.6 — 30.10.2026
 - **Zakładka „Co nowego” w menu** (Michał): dziennik zmian dla graczy, dzień po dniu, wersja po wersji, punkty po polsku i po angielsku (`src/data/changelog.ts`, okno `src/ui/changesBook.ts`). Wpisano wszystko od 0.54.4 (28.10). Od teraz każda wersja dopisuje tam wpis (zasada w CLAUDE.md, pilnuje `tests/changelog.test.ts`).
 - Niesiony kamień i żelazo to te same modele co na stosach w składzie (blok granitu ze skanu, kute sztaby), a nie szary dwudziestościan i sztaby z kodu.

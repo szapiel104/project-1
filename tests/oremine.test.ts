@@ -100,7 +100,7 @@ describe('kopalnia pod górami', () => {
 
   it('wagi urobku sumują się do 100, a ruda (waluta) jest rzadka', () => {
     expect(MINE_YIELDS.reduce((a, y) => a + y.weight, 0)).toBe(100);
-    expect(MINE_YIELDS.find((y) => y.res === 'gold')!.weight).toBeLessThan(15);
+    expect(MINE_YIELDS.find((y) => y.res === 'gold')!.weight).toBeGreaterThanOrEqual(20); // ruda to główny cel kopalni (30.10.2026)
     expect(crewWanted({ crew: { per: 5, max: 8 } }, 0)).toBe(1);
     expect(crewWanted({ crew: { per: 5, max: 8 } }, 12)).toBe(3);
     expect(crewWanted(BUILDINGS[MINE]!, 8)).toBe(3);

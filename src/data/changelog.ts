@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.68.7', date: '2026-10-30',
+    pl: [
+      'Kopalnia to przede wszystkim ruda: co czwarty kurs górnika przynosi 6 rudy, a kamienia i żelaza wychodzi mniej niż przed dniem.',
+    ],
+    en: [
+      'The mine is first and foremost for ore now: about one run in four brings back 6 ore, with less stone and iron than before.',
+    ],
+  },
+  {
     v: '0.68.6', date: '2026-10-30',
     pl: [
       'Nowa zakładka „Co nowego” w menu: dzień po dniu, co weszło w każdej wersji gry.',
