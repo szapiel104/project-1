@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.67.12 — 30.10.2026
+- **Jednego leczy najwyżej jeden mag** (Michał: pięciu magów leczyło szóstego naraz, za szybko). Mag, który leczy siebie, nie dostaje pomocy od innych; pozostali biorą kolejnych rannych.
+- Plusy leczenia pojawiają się prosto nad głową leczonego i idą tylko w górę (wcześniej przesunięte w bok, jakby nadlatywały).
+- **Zabity czarem wody leży zamrożony** (lodowo-biały), nie spalony; zwłoki mają znacznik `frozen`.
+- Palenie ciał: bez lecących kul i kręgów — mag stoi z ogniem w uniesionych dłoniach, a ciało samo zajmuje się płomieniem.
+- Wczytywanie: budynki osady, mury i place budowy powstają już w rozgrzewce (klatka bez rysowania), więc ich shadery kompilują się w tle. Wcześniej na mapie z 189 budynkami pierwsza klatka gry tworzyła je 1,3 s, a karta kompilowała ich shadery na żywo jeszcze ok. 1,2 s.
+
 ## 0.67.11 — 30.10.2026
 - **Magowie leczą bez walki** (Michał). Mag Płomienia albo Źródła, który od 6 s nie rzucał czaru i nie widzi wroga, powoli leczy sojuszników do 4 pól obok — po jednym: najbardziej rannego (siebie też), po 2 zdrowia na sekundę, aż wyleczy, potem następnego. Mag stoi zwrócony do leczonego z rękami w górze, nad leczonym idą zielone „+2”. Przy wrogu w pobliżu nie leczy. Działa tak samo u bota. Moduł `src/sim/systems/mageheal.ts`.
 - **Palenie ciał lepiej wygląda.** Mag stoi zwrócony do ciała z rękami w górze i co chwilę ciska w nie ogniem, aż się spali; ciało płonie całe (ogień w trzech miejscach), czernieje i pod koniec zapada się w popiół, zamiast się zmniejszać. Palenie trwa 6 s.

@@ -69,7 +69,7 @@ export function greatImpact(g: GameState, m: Missile): void {
     const full = m.great === 'fire' ? m.dmg * GREAT_POWER : m.dmg * GREAT_POWER_WATER;
     o.hp -= Math.max(1, Math.round(full * (1 - edge * 0.5)));
     if (m.great === 'fire') { o.fireAt = g.tick; if (o.hp > 0) { o.burn = (o.burn ?? 0) + RAIN_BURN; o.burnBy = m.by; } }
-    else if (!UNITS[o.kind]?.ram) o.slow = Math.max(o.slow ?? 0, g.tick + ICE_SLOW);
+    else { o.frostAt = g.tick; if (!UNITS[o.kind]?.ram) o.slow = Math.max(o.slow ?? 0, g.tick + ICE_SLOW); }
     if (o.hp <= 0) { const l = g.players[o.owner]; if (killer) killer.stats.kills++; if (l) l.stats.lost++; }
   }
 }

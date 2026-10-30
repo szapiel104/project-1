@@ -459,6 +459,8 @@ export interface Soldier {
   cremate?: boolean;
   /** Ciało, do którego idzie, żeby je spalić */
   pyreOf?: number;
+  /** Tick ostatniego trafienia czarem wody (pocisk, lodowy krąg): zginie od niego — ciało zamrożone */
+  frostAt?: number;
   /** Mag: kogo właśnie leczy (mageheal.ts) */
   healing?: number;
   /** Tick ostatniego leczenia przez maga (plusy nad nim) */
@@ -558,6 +560,8 @@ export interface Corpse {
   post?: number;
   /** Zginął w ogniu: ciało zwęglone (wygląd) */
   burnt?: boolean;
+  /** Zginął od czaru wody (pocisk, lodowy krąg): ciało zamrożone (wygląd) */
+  frozen?: boolean;
   /** Tick podpalenia przez Maga Płomienia (cremation.ts): płonie i po chwili znika */
   pyre?: number;
   /** Mag, który je pali (stoi przy nim, póki płonie) */

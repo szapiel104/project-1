@@ -783,14 +783,14 @@ export class GameRenderer {
   private unitY = new Map<number, number>();
   /** Ciała spalone w ogniu (z g.corpses co klatkę) */
   private burntBodies = new Set<number>();
+  private frozenBodies = new Set<number>();
   private pyreAt = new THREE.Vector3();
-  /** Kiedy mag palący ciało ostatnio cisnął w nie ogniem (wygląd) */
-  private pyreCastAt = new Map<number, number>();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = createRenderer({canvas, antialias: true }, 'gra');
     this.pre = new Precompiler(this.renderer, this.scene);
     Figures.charred = (id) => this.burntBodies.has(id);
+    Figures.frozen = (id) => this.frozenBodies.has(id);
     initKtx(this.renderer);
     watchRenderer(this.renderer, 'gra');
     watchLoading(THREE.DefaultLoadingManager);
@@ -1647,6 +1647,16 @@ export class GameRenderer {
       try { await this.renderer.compileAsync(this.scene, this.cam.camera); }
       catch { this.renderer.compile(this.scene, this.cam.camera); }
     };
+    // klatka bez rysowania: budynki osady, mury, place budowy i to, co widać z kamery, powstają TERAZ, żeby ich shadery
+    // skompilowały się w tle razem z resztą (30.10.2026: na mapie z 189 budynkami pierwsza prawdziwa klatka tworzyła je
+    // 1,3 s, a karta kompilowała ich shadery na żywo jeszcze 0,8 + 0,4 s)
+    if (this.state && this.view) {
+      const held = this.held;
+      this.warming = false; this.held = false; this.dry = true;
+      try { this.frame(0, 1, true); } catch (e) { console.error(e); } finally { this.dry = false; this.warming = true; this.held = held; }
+      lap('budynki osady');
+      await pause();
+    }
     this.matQ.sweep(this.scene);
     applySeason(this.scene);   // teren, las i trawa nowej mapy też od razu z łatkami pór roku
     await compile();
@@ -3963,19 +3973,12 @@ export class GameRenderer {
         heading = Math.atan2(wall.x + fp.w / 2 - fx, wall.y + fp.h / 2 - fy);
         this.facing.set(s.id, heading);
       }
-      // Mag Płomienia pali ciało (cremation.ts): stoi zwrócony do niego, ręce w górze, z dłoni co chwilę leci ogień
+      // Mag Płomienia pali ciało (cremation.ts): stoi zwrócony do niego, ręce w górze z ogniem w dłoniach
       const pyreBody = s.pyreOf && !walking && !foe ? g.corpses.find((c) => c.id === s.pyreOf && c.pyre !== undefined && c.pyreBy === s.id) : undefined;
       if (pyreBody) {
         heading = Math.atan2((pyreBody.px - s.px) / FP, (pyreBody.py - s.py) / FP);
         this.facing.set(s.id, heading);
-        const last = this.pyreCastAt.get(s.id) ?? -1;
-        if (!this.calm && this.time - last > 0.35) {
-          this.pyreCastAt.set(s.id, this.time);
-          const bx = pyreBody.px / FP, by = pyreBody.py / FP;
-          const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
-          this.spells.cast(this.armV.set(fx - width / 2 + hx, view.heightAt(fx, fy) + 0.5, fy - height / 2 + hz),
-            this.mouth.set(bx - width / 2 + (Math.random() - 0.5) * 0.3, view.heightAt(bx, by) + 0.08, by - height / 2 + (Math.random() - 0.5) * 0.3), true);
-        }
+        // bez lecących kul: ogień w uniesionych dłoniach (poza rzucania), a ciało samo zajmuje się płomieniem (Michał 30.10.2026)
       }
       // mag leczy (mageheal.ts): zwraca się do leczonego (siebie leczy, stojąc jak stał)
       const healed = s.healing && s.healing !== s.id && !walking && !foe ? byId.get(s.healing) : undefined;
@@ -4350,7 +4353,8 @@ export class GameRenderer {
     let pc = 0, ac = 0, gc = 0, sp = 0, mc = 0, sc2 = 0, bc = 0, mf = 0, mw = 0;
     // spaleni w ogniu: zwęglone ciała (Figures.charred w pulach ciał)
     this.burntBodies.clear();
-    for (const body of g.corpses) if (body.burnt) this.burntBodies.add(body.id);
+    this.frozenBodies.clear();
+    for (const body of g.corpses) { if (body.burnt) this.burntBodies.add(body.id); else if (body.frozen) this.frozenBodies.add(body.id); }
     for (const body of g.corpses) {
       if (c >= MAX_UNITS) break;
       if (body.kind === -2) continue; // zabity wilk: rysuje go syncWolves (leży na boku)

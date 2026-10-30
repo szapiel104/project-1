@@ -917,6 +917,7 @@ function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
       if (!t || t.hp <= 0) continue;
       t.hp -= m.dmg;
       if (m.burn) t.fireAt = g.tick;
+      else if (m.magic) t.frostAt = g.tick;   // czar wody (kula ognia ma burn)
       if (m.burn && t.hp > 0) { t.burn = (t.burn ?? 0) + m.burn; t.burnBy = m.by; }
       if (t.hp <= 0) { const l = g.players[t.owner]; if (k && team(g, t.owner) !== team(g, m.by)) k.stats.kills++; if (l) l.stats.lost++; }
       else provoked(g, t, byId.get(m.from));
@@ -1365,7 +1366,7 @@ export function armySystem(g: GameState): void {
   }
   // polegli zostają na polu jako ciała, aż zabierze je grabarz
   if (g.soldiers.some((s) => s.hp <= 0)) {
-    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false, ...(s.burn || g.tick - (s.fireAt ?? -1e9) < 20 ? { burnt: true } : {}), ...((() => { const t = towerOf(g, s); return t ? { post: t } : {}; })()) }); // rozbity taran nie zostawia ciała; poległy na wieży albo murze leży na górze
+    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false, ...(s.burn || g.tick - (s.fireAt ?? -1e9) < 20 ? { burnt: true } : g.tick - (s.frostAt ?? -1e9) < 20 ? { frozen: true } : {}), ...((() => { const t = towerOf(g, s); return t ? { post: t } : {}; })()) }); // rozbity taran nie zostawia ciała; poległy na wieży albo murze leży na górze
     g.soldiers = g.soldiers.filter((s) => s.hp > 0);
   }
   lookout(g);

@@ -204,6 +204,8 @@ export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' |
 
 /** Barwa zwęglonego ciała (mnożona przez teksturę: prawie czarna, z odrobiną brązu) */
 const CHAR = new THREE.Color(0x231c17);
+/** Barwa zamrożonego ciała: szron i lód (jaśniejsza, chłodna) */
+const ICE = new THREE.Color(0xc6e6f7);
 
 export class Figures {
   private parts: Part[] = [];
@@ -230,6 +232,8 @@ export class Figures {
   static marks: (id: number) => readonly [number, boolean] | undefined = () => undefined;
   /** Ciało spalone w ogniu (kula ognia, deszcz ognia, ognista strzała): cała postać zwęglona — tylko pule ciał (`charrable`) */
   static charred: (id: number) => boolean = () => false;
+  /** Ciało zamrożone czarem wody: cała postać lodowo-biała */
+  static frozen: (id: number) => boolean = () => false;
   private charrable = false;
   /**
    * Pula ciał: każda część może zczernieć (kolor instancji także na częściach bez barwy drużyny; reszta zostaje biała,
@@ -504,6 +508,7 @@ export class Figures {
     const mk = Figures.marks(id);
     this.wound = mk?.[0] ?? 0; this.bloody = mk?.[1] ?? false;
     const burnt = this.charrable && Figures.charred(id);
+    const ice = !burnt && this.charrable && Figures.frozen(id);
     this.scaled.copy(base).scale(this.one.setScalar(look.size));
     this.one.setScalar(1);
     for (const p of this.parts) {
@@ -525,6 +530,7 @@ export class Figures {
       this.out.multiplyMatrices(this.scaled, this.local);
       p.mesh.setMatrixAt(i, this.out);
       if (burnt) p.mesh.setColorAt(i, p.color ? this.color.setHex(p.color(look)).lerp(CHAR, 0.85) : this.color.copy(CHAR));
+      else if (ice) p.mesh.setColorAt(i, p.color ? this.color.setHex(p.color(look)).lerp(ICE, 0.7) : this.color.copy(ICE));
       else if (p.color) p.mesh.setColorAt(i, this.color.setHex(p.color(look)));
       else if (this.charrable) p.mesh.setColorAt(i, this.color.setRGB(1, 1, 1));
     }

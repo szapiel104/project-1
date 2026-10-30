@@ -82,3 +82,14 @@ describe('magowie leczą bez walki (30.10.2026)', () => {
     expect(b.hp).toBe(60);
   });
 });
+
+describe('jednego leczy jeden mag (30.10.2026)', () => {
+  it('pięciu magów obok jednego rannego: leczy go tylko jeden', () => {
+    const g = createGame(9); emptyScene(g);
+    const k = playerKeep(g, 0)!, w = g.map.width, x = (k.door % w) - 6, y = Math.floor(k.door / w) + 18;
+    const mages = [0, 1, 2, 3, 4].map((i) => soldier(g, 0, 'mageWater', x + i, y));
+    const a = soldier(g, 0, 'spearman', x + 2, y + 1); a.hp = 20;
+    for (let i = 0; i < 30; i++) step(g, []);
+    expect(mages.filter((m) => m.healing === a.id).length).toBe(1);
+  });
+});

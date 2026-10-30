@@ -63,7 +63,8 @@ export function createHpBars(d: HpBarsDeps): () => void {
     const p = document.createElement('span');
     p.className = `hpdmg${kind ? ` ${kind}` : ''}`;
     p.textContent = kind === 'heal' ? `+${n}` : `−${n}`;
-    const it: Pop = { el: p, key, dx: 4 + ((n * 7) % 13) - 6, wx: u.wx, wy: u.wy, wz: u.wz, x: u.x, y: u.y };
+    // leczenie: prosto nad głową, tylko w górę (bez przesunięcia w bok); obrażenia lekko rozrzucone, żeby się nie nakładały
+    const it: Pop = { el: p, key, dx: kind === 'heal' ? -8 : 4 + ((n * 7) % 13) - 6, wx: u.wx, wy: u.wy, wz: u.wz, x: u.x, y: u.y };
     p.style.transform = `translate(${Math.round(u.x + it.dx)}px, ${Math.round(u.y - 30)}px)`;
     layer.append(p);
     live.push(it);

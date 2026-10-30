@@ -23,9 +23,13 @@ export function healStep(g: GameState, s: Soldier): boolean {
   let t = s.healing ? g.soldiers.find((o) => o.id === s.healing) : undefined;
   const ok = (o: Soldier | undefined): o is Soldier => !!o && o.hp > 0 && o.hp < UNITS[o.kind]!.hp && !UNITS[o.kind]!.ram
     && team(g, o.owner) === my && Math.max(Math.abs(o.px - s.px), Math.abs(o.py - s.py)) <= HEAL_R * FP;
+  // jednego leczy najwyżej jeden mag (Michał 30.10.2026: pięciu magów leczyło szóstego naraz); mag, który leczy siebie,
+  // nie dostaje pomocy od innych
+  const taken = (o: Soldier): boolean => g.soldiers.some((m) => m !== s && m.hp > 0 && m.healing === o.id);
+  if (t && taken(t)) t = undefined;
   if (!ok(t)) {
     t = undefined;
-    for (const o of g.soldiers) if (ok(o) && (!t || hurt(o) < hurt(t) || (hurt(o) === hurt(t) && o.id < t.id))) t = o;
+    for (const o of g.soldiers) if (ok(o) && !taken(o) && (!t || hurt(o) < hurt(t) || (hurt(o) === hurt(t) && o.id < t.id))) t = o;
   }
   if (!t) { s.healing = 0; return false; }
   s.healing = t.id;
