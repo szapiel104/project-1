@@ -1,5 +1,14 @@
 # Dziennik zmian
 
+## 0.67.0 — 30.10.2026
+Balans walki (Michał: „włócznik za mocny, łucznicy i magowie nawalają w niego bez końca”). Mierzone starciami grupa na grupę na pustej łące.
+- **Tarcza nie zatrzymuje czarów.** Wcześniej ścinała o połowę także kulę ognia i czar wody — mag bił włócznika za 13 zamiast 26. Strzały z przodu tarcza osłabia teraz o 1/3 (było o połowę).
+- **Łucznik:** cios 7 → 9, strzał co 2 s (było 2,4 s), celniej z daleka: z pełnego zasięgu trafia ok. 6 na 10 strzał (było ok. 1 na 3). Dwóch łuczników wygrywa z nadbiegającym włócznikiem; 10 łuczników rozbija 5 włóczników prawie bez strat.
+- **Mag ognia:** kula 26 → 36 (co 3,6 s), plus parzenie i odprysk na sąsiadów — zabija łucznika jednym trafieniem, z trzema włócznikami wygrywa sam. **Mag wody:** 15 → 26. Wielki czar bije tyle co dotąd (mnożnik przeliczony).
+- **Zbroja przeciw czarom** łagodzi tylko połowę swojej wartości.
+- **Zbrojny:** zdrowie 110 → 120, cios 13 → 15, zbroja 35% → 30%. Wygrywa z dwoma włócznikami, z łucznikami w polu; przegrywa z magami.
+- **Walka wręcz nie goni bez końca uciekającego rannego**, gdy obok stoi wróg, który walczy — zbrojny gonił szybszego rannego włócznika, a drugi bił go w plecy. Sam jeden uciekający — dalej goniony.
+
 ## 0.66.1 — 29.10.2026
 - Chlew słabszy: daje 3 mięsa co 180 ticków (było 8 co 150). Zmierzone w symulacji: wcześniej jeden chlew karmił ok. 13 ludzi (sad ok. 3), teraz ok. 4–5 — więcej niż sad, bo mięso to 3 porcje, ale nie zastępuje już całej gospodarki jedzeniowej. Bot bez zmian (chlew po piekarni).
 
