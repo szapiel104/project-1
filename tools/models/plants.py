@@ -75,8 +75,8 @@ def boulder(variant, far):
     z mniejszym opartym o bok. Spód obcięty prawie płasko i lekko wkopany."""
     parts = []
     specs = {0: [((0, 0, 0), (0.36, 0.3, 0.24), 3 if not far else 1, 1.0, 0.0)],
-             1: [((0, 0, 0), (0.3, 0.26, 0.3), 2 if not far else 1, 2.6, 1.0)],
-             2: [((0.03, 0, 0), (0.3, 0.26, 0.23), 2 if not far else 1, 1.3, 2.0), ((-0.27, 0.12, -0.02), (0.15, 0.14, 0.12), 1, 1.8, 3.0)]}[variant]
+             1: [((0, 0, 0), (0.3, 0.26, 0.3), 3 if not far else 1, 2.6, 1.0)],
+             2: [((0.03, 0, 0), (0.3, 0.26, 0.23), 3 if not far else 1, 1.3, 2.0), ((-0.27, 0.12, -0.02), (0.15, 0.14, 0.12), 2 if not far else 1, 1.8, 3.0)]}[variant]
     for (cx, cy, cz), (rx, ry, rz), sub, sharp, seed in specs:
         bm = bmesh.new()
         bmesh.ops.create_icosphere(bm, subdivisions=sub, radius=1.0)
@@ -90,7 +90,11 @@ def boulder(variant, far):
             v.co.x, v.co.y, v.co.z = cx + x * n * rx, cy + y * n * ry, z * n * rz   # Blender: z = góra
             if v.co.z < -0.05:
                 v.co.z = -0.05 + (v.co.z + 0.05) * 0.15
-            v.co.z += rz * 0.7
+        # spód na ziemi, lekko wkopany (3 cm). Do 30.10.2026 bryłę podnosiło o 0,7 promienia — spód wisiał ok. 8 cm nad
+        # trawą i głazy „latały” (Michał)
+        low = min(v.co.z for v in bm.verts)
+        for v in bm.verts:
+            v.co.z += -low - 0.03
         bmesh.ops.triangulate(bm, faces=bm.faces)
         parts.append(Mesh(bm, shade_boulder, 'rock'))
     return parts

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.67.4 — 30.10.2026
+- Głazy na łąkach nie wiszą już nad ziemią: model podnosił bryłę o 0,7 promienia, spód był ok. 8 cm nad trawą. Teraz stoją na ziemi, wkopane 3 cm (`tools/models/plants.py`).
+- Głazy mniej kanciaste: gładkie cieniowanie (płaskie ściany zostają na skałach złóż i murkach) i dokładniejsza bryła z bliska (320 trójkątów zamiast 80; z daleka bez zmian).
+
 ## 0.67.3 — 30.10.2026
 - Liczby obrażeń („−N”) przypięte do trafionego w świecie gry: przy ruchu kamery zostają nad nim, zamiast płynąć razem z ekranem. Idą za żołnierzem albo wilkiem, gdy się rusza; gdy padnie albo wyjdzie z kadru, liczba zostaje nad ostatnim miejscem, w którym stał (za kamerą znika).
 

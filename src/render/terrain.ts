@@ -1362,7 +1362,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   const BOULDERS = models.boulders();
   const pebbleSplit: Item[][] = BOULDERS.map(() => []);
   for (const it of pebbles) pebbleSplit[hash2(Math.round(it.pos.x * 10) + 31, Math.round(it.pos.z * 10), 0x5eed) % BOULDERS.length]!.push(it);
-  BOULDERS.forEach(([near, far], k) => plant(pebbleSplit[k]!, instanced(near, 0x9a948a, pebbleSplit[k]!, 'rock', true, rockMat, { ...SMALL_LOD, farGeo: far }), null, false));
+  // głazy gładko cieniowane (Michał 30.10.2026: „kanciaste”) — płaskie ściany zostają na skałach złóż i murkach
+  const boulderMat = plantMat('rock', false);
+  BOULDERS.forEach(([near, far], k) => plant(pebbleSplit[k]!, instanced(near, 0x9a948a, pebbleSplit[k]!, 'rock', true, boulderMat, { ...SMALL_LOD, farGeo: far }), null, false));
   label = 'kępy trawy';
   plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {
