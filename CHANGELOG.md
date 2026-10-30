@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.67.1 — 30.10.2026
+- **Pasek czarów magów jak w grach RPG.** Po zaznaczeniu maga w panelu wojska są dwie ikony: zwykły czar (Kula ognia / Pocisk wody) i wielki czar (Deszcz ognia / Lodowy krąg). Ładujący się czar zasłania ciemna nakładka schodząca jak wskazówka zegara, z licznikiem sekund; gotowy świeci złotą ramką (wielki — łuną ognia albo lodu), w chwili rzutu ikona błyska. Przy kilku magach jednego rodzaju w rogu widać, ilu ma czar gotowy (np. 1/3). Po najechaniu albo Tab — dymek z obrażeniami i czasem odnowienia, po polsku i angielsku. Nowy moduł `src/ui/spellBar.ts`, odświeżany co klatkę.
+
 ## 0.67.0 — 30.10.2026
 Balans walki (Michał: „włócznik za mocny, łucznicy i magowie nawalają w niego bez końca”). Mierzone starciami grupa na grupę na pustej łące.
 - **Tarcza nie zatrzymuje czarów.** Wcześniej ścinała o połowę także kulę ognia i czar wody — mag bił włócznika za 13 zamiast 26. Strzały z przodu tarcza osłabia teraz o 1/3 (było o połowę).

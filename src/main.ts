@@ -1485,6 +1485,12 @@ function groupOfUnit(id: number): number {
   for (const [n, ids] of groups) if (ids.includes(id) && (!best || n < best)) best = n;
   return best;
 }
+// pasek czarów magów: co klatkę zaznaczeni magowie (spellBar.ts), tylko gdy panel wojska jest otwarty
+hud.spells.bind(() => {
+  if (!chosen.size) return null;
+  const mages = game.soldiers.filter((s) => chosen.has(s.id) && UNITS[s.kind]!.magic);
+  return mages.length ? { tick: game.tick, mages } : null;
+});
 function showArmy(): void {
   if (patrolPick && !chosen.size) { patrolPick = null; canvas.classList.remove('placing'); }
   const list = game.soldiers.filter((s) => chosen.has(s.id));

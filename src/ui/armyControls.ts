@@ -9,7 +9,7 @@ import { tx } from '../i18n';
 
 export interface ArmyCtl { form: number; stance: number; march: number; patrol?: number }
 
-interface Item { name: string; tip: string; icon: string }
+export interface Item { name: string; tip: string; icon: string }
 
 // ikony 24×24 rysowane kreską w kolorze tekstu (currentColor), więc wciśnięty przycisk ma je jasne na czerwieni
 const svg = (body: string): string => `<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
@@ -46,7 +46,7 @@ function tip(): HTMLDivElement {
   document.body.append(tipEl);
   return tipEl;
 }
-function showTip(b: HTMLElement, group: string, it: Item): void {
+export function showTip(b: HTMLElement, group: string, it: Item): void {
   const t = tip();
   t.replaceChildren();
   const head = document.createElement('strong');
@@ -60,7 +60,7 @@ function showTip(b: HTMLElement, group: string, it: Item): void {
   const y = r.top - h - 8 >= 8 ? r.top - h - 8 : r.bottom + 8;
   t.style.transform = `translate(${Math.round(x)}px, ${Math.round(y)}px)`;
 }
-const hideTip = (): void => { if (tipEl) tipEl.hidden = true; };
+export const hideTip = (): void => { if (tipEl) tipEl.hidden = true; };
 
 export function createArmyControls(on: { form(i: number): void; march(i: number): void; stance(i: number): void; patrol(): void }): {
   root: HTMLElement; help: HTMLElement; update(ctl: ArmyCtl | undefined): void; setHelp(desc: string, hint: string): void; collapse(): void;

@@ -25,8 +25,8 @@ const RAIN_BURN = 12;
 /** Ile razy mocniej od zwykłego ciosu maga bije wielki czar w środku kręgu (ogień; lód — GREAT_POWER_WATER) */
 // balans 30.10.2026: zwykły czar maga mocniejszy (ogień 26 → 36, woda 15 → 26), więc mnożnik wielkiego czaru niższy —
 // deszcz ognia i lodowy krąg biją tyle co dotąd (ogień ok. 57, woda ok. 17 na trafionego)
-const GREAT_POWER = 1.6;
-const GREAT_POWER_WATER = 0.65;
+export const GREAT_POWER = 1.6;
+export const GREAT_POWER_WATER = 0.65;
 
 const team = (g: GameState, player: number): number => g.players[player]?.team ?? player;
 const gap = (a: { px: number; py: number }, x: number, y: number): number => Math.max(Math.abs(a.px - x), Math.abs(a.py - y));

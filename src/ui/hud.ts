@@ -2,6 +2,7 @@ import { me, onAccount } from '../net/supa';
 import { avatarSvg } from './avatars';
 import { BUILD_GROUPS } from './buildGroups';
 import { createArmyControls } from './armyControls';
+import { createSpellBar, type SpellBar } from './spellBar';
 import { renderLogistics, type StoreLogistics } from './storePanel';
 import { BUILDINGS, CATEGORIES, isTower, type BuildingDef, type CategoryId } from '../data/buildings';
 import { MAP_PRESETS, type MapPresetId } from '../data/maps';
@@ -128,6 +129,8 @@ export interface ProdInfo {
 export interface RecruitUnit { id: string; name: string; weapon: string; need?: number; have: number; gear?: { res: string; have: number }; armor?: number; gold: number; idle: number; max: number; cost: number; hp: number; attack: number; range?: number; rally?: boolean; /** Mag bojowy: ilu już jest i ile wolno (limit na gracza) */ magic?: { have: number; cap: number } }
 
 export interface Hud {
+  /** Pasek czarów zaznaczonych magów (main.ts podpina źródło: chwila gry i zaznaczeni) */
+  spells: SpellBar;
   setSeed(text: string, preset: MapPresetId): void;
   setHash(hash: number): void;
   update(v: HudView): void;
@@ -737,7 +740,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const kindBtns = new Map<string, { b: HTMLButtonElement; n: HTMLElement }>();
   // szyk, marsz, postawa i patrol jako ikony z dymkami; opis i skróty zwinięte pod spodem (armyControls.ts)
   const armyCtl = createArmyControls({ form: (i) => events.onArmyForm(i), march: (i) => events.onArmyMarch(i), stance: (i) => events.onArmyStance(i), patrol: () => events.onArmyPatrol() });
-  armyPanel.append(kindsRow, armyCtl.root);
+  // czary zaznaczonych magów: zwykły i wielki, z odnowieniem jak w grach RPG (spellBar.ts)
+  const spellBar = createSpellBar();
+  armyPanel.append(kindsRow, spellBar.root, armyCtl.root);
   armyCtl.help.hidden = true;
   /** Chowa okno wojska; opis i skróty zwijają się, żeby przy następnym zaznaczeniu znów zajmowały mało miejsca */
   const hideArmy = (): void => { armyPanel.hidden = true; armyCtl.help.hidden = true; armyCtl.collapse(); info.classList.remove('army-mode'); };
@@ -1129,6 +1134,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   showCategory(null);
 
   return {
+    spells: spellBar,
     setArmyBar(v) {
       armyBar.hidden = !v.show;
       if (!v.show) return;
