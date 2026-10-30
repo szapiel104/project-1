@@ -691,6 +691,8 @@ export interface GameState {
   missiles?: Missile[];
   /** Drabiny oblężnicze przystawione do murów */
   siegeLadders?: SiegeLadder[];
+  /** Rozbite głazy (pola), boulders.ts */
+  rocksGone?: number[];
 }
 
 /** Poziom trudności botów: 0 pokojowy (tylko się bronią), 1 łatwy, 2 średni, 3 trudny */

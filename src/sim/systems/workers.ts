@@ -112,7 +112,9 @@ export function findBed(g: GameState, u: Unit): void {
     if (b.owner !== u.owner || !cap || b.door < 0 || b.build || (used.get(b.id) ?? 0) >= cap) continue;
     // kwarantanna: zdrowy tam nie śpi, a chory idzie najpierw do zamkniętej chaty (plague.ts)
     if (b.quarantine && !u.sick) continue;
-    const d = Math.abs((b.door % g.map.width) * FP - u.px) + Math.abs(Math.floor(b.door / g.map.width) * FP - u.py) - (b.quarantine ? 1 << 24 : 0);
+    // zdrowi: najpierw wszystkie wolne chaty, dopiero potem twierdza (Michał 30.10.2026: chłopi spali w zamku przy pustych
+    // chatach); chory jak dawniej pod najbliższy dach — sam w pustej chacie byłby w kwarantannie i zaraza by gasła
+    const d = Math.abs((b.door % g.map.width) * FP - u.px) + Math.abs(Math.floor(b.door / g.map.width) * FP - u.py) - (b.quarantine ? 1 << 24 : 0) + (b.type === 0 && !u.sick ? 1 << 22 : 0);
     if (d < bd) { bd = d; best = b; }
   }
   if (best) { u.home = best.id; u.target = 0; return; }

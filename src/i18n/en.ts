@@ -354,6 +354,7 @@ export const en: Record<TextKey, string> = {
   'place.brazierTaken': 'There is a brazier here already',
   'place.terrain': 'You cannot build here: it needs meadow',
   'place.occupied': 'This spot is taken',
+  'place.rock': 'A boulder lies here — have it broken up first (click the boulder; you need an engineers\' guild)',
   'place.far': 'You no longer have a keep',
   'place.cost': 'Not enough resources',
   'place.needTerrain': 'Too far from the deposit or water',

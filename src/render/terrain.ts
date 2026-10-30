@@ -1,4 +1,5 @@
 import { cloneMaterial } from './matclone';
+import { boulderTiles } from '../sim/systems/boulders';
 import { touch } from './touch';
 import * as THREE from 'three';
 import { propGeometry, propMaterial } from './props';
@@ -810,6 +811,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   };
   const farFromKeeps = (x: number, y: number): boolean => map.starts.every((st) => Math.hypot(st.x - x, st.y - y) > 16);
   const bushes: Item[] = [], pebbles: Item[] = [], flowers: Item[] = [], reeds: Item[] = [], lilies: Item[] = [];
+  const boulders = boulderTiles(map);
   const m = new THREE.Matrix4();
   const q = new THREE.Quaternion();
   const put = (list: Item[], x: number, y: number, n: number, scaleBase: number, spread = 0.7, sx = 0, sz = 0): void => {
@@ -832,6 +834,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     for (let x = 0; x < w; x++) {
       const t = map.tiles[y * w + x] as Terrain;
       const r = hash2(x, y, map.seed);
+      // duży głaz z symulacji (te same pola, które blokują budowę): wielkość z listy, mały rozrzut w polu (kolizja w spacerze)
+      const bsc = boulders.get(y * w + x);
+      if (bsc) put(pebbles, x, y, 10, bsc, 0.25);
       if (t === Terrain.Forest) {
         // las mieszany o różnym wieku: większość zwykłych drzew, sporo młodych, czasem stary olbrzym
         const age = (r >>> 11) % 20;
@@ -927,8 +932,8 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         // kwiaty wyłączone na razie (19.10.2026, prośba Michała) — wrócą z gotowych modeli; włącza się je z powrotem tą flagą
         if (FLOWERS && (r >>> 13) % 15 === 0) { put(flowers, x, y, 7, 1, 0.9); put(flowers, x, y, 8, 0.9, 0.9); if ((r >>> 4) & 1) put(flowers, x, y, 9, 1.1, 0.9); }
         if ((r >>> 16) % 23 === 0) put(bushes, x, y, 4, 0.9 + ((r >>> 20) & 7) / 14, 0.6);
-        if ((r >>> 19) % 31 === 0) put(pebbles, x, y, 5, 0.35 + ((r >>> 24) & 7) / 20, 0.8);
-        if ((r >>> 21) % 173 === 0) put(pebbles, x, y, 10, 1.5, 0.4);
+        // większe głazy na łące liczy teraz symulacja (sim/systems/boulders.ts) — są fizyczne: blokują budowę, mają
+        // kolizję w spacerze i można je rozbić; rysowane przed pętlą z tej samej listy
         // drobne kamyki wystające z darni, częściej tam, gdzie łąka rzadsza
         if ((r >>> 22) % (lush > 0.5 ? 19 : 11) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
         if ((r >>> 25) % 41 === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);

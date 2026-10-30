@@ -1,4 +1,5 @@
 import { releaseCrew } from '../state';
+import { boulderAt } from './boulders';
 import { mineNear } from './minecamp';
 import { BUILDINGS, brazierHost, footprint, isTower, type BuildingDef } from '../../data/buildings';
 import { resIndex, type ResourceId } from '../../data/resources';
@@ -10,7 +11,7 @@ import { FP, inForecourt, Phase, playerKeep, type Building, type GameState } fro
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.brazier' | 'place.brazierTaken' | 'place.needRock' | 'place.needMine' | 'place.needs' | 'place.unknown';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.brazier' | 'place.brazierTaken' | 'place.needRock' | 'place.needMine' | 'place.needs' | 'place.unknown' | 'place.rock';
 
 /** Te budynki zawsze kosztują tyle samo (stawia się ich dużo naraz: linie, drogi, drobne dodatki) */
 const FLAT = new Set(['torch', 'palisade', 'gate', 'stoneWall', 'stoneGate', 'ladder', 'brazier', 'well']);
@@ -236,6 +237,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
     const t = y * width + x;
     if (!TERRAIN[g.map.tiles[t] as Terrain].walkable) return 'place.terrain';
     if (g.occupancy[t] !== 0 || g.roads[t] === def.road || g.roadPlan[t] === def.road) return 'place.occupied';
+    if (boulderAt(g, t)) return 'place.rock';
     // na cudzej drodze nie kładzie się swojej (wrogą trzeba najpierw rozkopać)
     if (g.roadOwner[t] && g.roadOwner[t] !== player + 1) return 'place.occupied';
     if (!playerKeep(g, player)) return 'place.far';
@@ -261,6 +263,7 @@ export function canPlace(g: GameState, player: number, type: number, x: number, 
       if (!TERRAIN[g.map.tiles[t] as Terrain].buildable) return 'place.terrain';
       if (overTiles.has(t)) continue;
       if (g.occupancy[t] !== 0 || g.reserved[t] !== 0) return 'place.occupied';
+      if (boulderAt(g, t)) return 'place.rock';   // głaz: najpierw rozbić (cech inżynierów, boulders.ts)
       if (inForecourt(g, tx, ty)) return 'place.forecourt';
     }
   }

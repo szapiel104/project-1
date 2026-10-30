@@ -38,7 +38,7 @@ for k in range(6):
 for z, y in ((SZ0, H), (SZ1, HF)):
     b.box('base', 'woodDark', SX1 - SX0 + 0.08, 0.05, 0.05, (SX0 + SX1) / 2, y - 0.02, z)
 OV = 0.12
-b.slope('base', 'thatch', [(SX0 - OV, H + 0.04, SZ0 - OV), (SX1 + OV, H + 0.04, SZ0 - OV), (SX1 + OV, HF + 0.07, SZ1 + OV), (SX0 - OV, HF + 0.07, SZ1 + OV)],
+b.slope('roof', 'thatch', [(SX0 - OV, H + 0.04, SZ0 - OV), (SX1 + OV, H + 0.04, SZ0 - OV), (SX1 + OV, HF + 0.07, SZ1 + OV), (SX0 - OV, HF + 0.07, SZ1 + OV)],
         away=((SX0 + SX1) / 2, 0.0, (SZ0 + SZ1) / 2), t=0.05)
 # w środku: gruba warstwa słomy i snopek w kącie
 b.crystal('base', 'hay', (SX0 + SX1) / 2, 0.0, (SZ0 + SZ1) / 2 - 0.05, 0.3, seed=1.0, sx=1.2, sy=0.12, sz=1.4, seg=9)

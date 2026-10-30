@@ -1,4 +1,5 @@
 import { UNITS } from '../data/units';
+import { smashRock } from './systems/boulders';
 import { buildingById, releaseCrew } from './state';
 import { BUILDINGS } from '../data/buildings';
 import { buildingIndex } from '../data/buildings';
@@ -58,6 +59,8 @@ export type Command =
   | { type: 'patrol'; player: number; ids: number[]; pts: [number, number][]; form?: number; amove?: boolean }
   /** 0 atak, 1 obrona, 2 stój */
   | { type: 'stance'; player: number; ids: number[]; stance: number }
+  /** Rozbicie głazu przez cech inżynierów (boulders.ts) */
+  | { type: 'smashRock'; player: number; tile: number }
   /** Mag Płomienia: palenie ciał w pobliżu włączone albo wyłączone (cremation.ts) */
   | { type: 'cremate'; player: number; ids: number[]; on: boolean }
   | { type: 'attack'; player: number; ids: number[]; target: number }
@@ -151,6 +154,9 @@ function apply(g: GameState, c: Command): void {
         orderPatrol(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), pts, { form: c.form, amove: c.amove !== false });
       }
       if (Array.isArray(c.ids)) clearWreck(g, c.player, c.ids.filter((n) => Number.isInteger(n)));
+      break;
+    case 'smashRock':
+      if (Number.isInteger(c.tile)) smashRock(g, c.player, c.tile);
       break;
     case 'cremate':
       if (Array.isArray(c.ids)) for (const s of g.soldiers) if (s.owner === c.player && c.ids.includes(s.id) && UNITS[s.kind]?.magic === 'fire') { s.cremate = !!c.on; if (!c.on && s.pyreOf) { s.pyreOf = 0; s.goal = -1; s.path = []; } }

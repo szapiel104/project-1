@@ -1,4 +1,5 @@
 import { cloneMaterial } from './matclone';
+import { boulderAt } from '../sim/systems/boulders';
 import { PYRE_TICKS } from '../sim/systems/cremation';
 import { poseOnRoute, routeTime } from './minepath';
 import { PROCESS_TICKS } from '../sim/systems/emergencywood';
@@ -761,6 +762,7 @@ export class GameRenderer {
   private storesTick = -1;
   private selectedId = 0;
   private cutSeen = 0;
+  private rocksSeen = 0;
   /** Pola z sadzonkami leśniczych pokazanymi w ostatniej klatce */
   private youngSeen = new Set<number>();
   private roadSum = -1;
@@ -1217,6 +1219,7 @@ export class GameRenderer {
     // nie puste: mapa bez murów (placów budowy, obszarów) ma klucz '', a stare bale i ciosy z poprzedniej mapy muszą zniknąć
     this.walls.invalidate(); this.wear.invalidate(); this.scorch.invalidate(); this.repairs.invalidate(); this.areaKey = '-';
     this.cutSeen = state.cut.length; // wczytana gra ma już polany na mapie (i odrośnięty las)
+    this.rocksSeen = 0;
     this.youngSeen = new Set();
     }
 
@@ -2270,6 +2273,8 @@ export class GameRenderer {
       // poza budynkami z modelem (także przy zamku i w nim): obrys ciała też nie może wejść na zajęte pole ani za ścianę między polami
       if (!this.walkableAt(x, z)) for (const [ox, oz] of RING) if ((ox || oz) && !point(x + ox, z + oz, [[0, 0]])) return false;
       if (this.view && this.view.trunkNear(x, z, BODY * 0.8)) return false;
+      // duży głaz (boulders.ts): kolizja jak z pniem — bryła zajmuje ok. 0,8 pola
+      { const tx = Math.floor(x), tz = Math.floor(z); if (tx >= 0 && tz >= 0 && tx < g.map.width && tz < g.map.height && boulderAt(g, tz * g.map.width + tx) && Math.hypot(x - tx - 0.5, z - tz - 0.5) < 0.4 + BODY) return false; }
       // prawdziwe siatki budynków: promienie na wysokości kolan i oczu, żeby kamera nigdy nie weszła w ścianę ani sprzęt
       return !this.walkTouch(x - W2, z - H2, [feet + 0.3, feet + 0.46], BODY, feet + 0.13);
     };
@@ -3487,6 +3492,8 @@ export class GameRenderer {
       if (e >= 0) view.clear(e);
       else { view.grow(~e, 1); this.youngSeen.delete(~e); }
     }
+    // rozbite głazy (boulders.ts): znikają z terenu (także te z wczytanej gry — licznik zerowany przy nowej mapie)
+    for (const rg = g.rocksGone ?? []; this.rocksSeen < rg.length; this.rocksSeen++) view.clear(rg[this.rocksSeen]!);
     // sadzonki rosną na oczach; te, które zniknęły bez dorośnięcia (np. droga na polu), znikają też z obrazu
     const now = new Set<number>();
     for (const s of g.saplings ?? []) { now.add(s.t); view.grow(s.t, saplingGrowth(s)); }

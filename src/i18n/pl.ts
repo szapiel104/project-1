@@ -348,6 +348,7 @@ export const pl = {
   'place.brazierTaken': 'Tu już stoi koksownik',
   'place.terrain': 'Tu się nie da budować: potrzebna łąka',
   'place.occupied': 'Miejsce jest zajęte',
+  'place.rock': 'Tu leży głaz — najpierw każ go rozbić (kliknij głaz; potrzebny cech inżynierów)',
   'place.far': 'Nie masz już twierdzy',
   'place.cost': 'Za mało surowców',
   'place.needTerrain': 'Za daleko od złoża albo wody',

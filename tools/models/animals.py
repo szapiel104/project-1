@@ -168,7 +168,9 @@ for sx in (-1, 1):
                    [(0.022, 0.024), (0.016, 0.016), (0.015, 0.014)], subsurf=1)
         parts.append(Mesh(evaluated(leg), lambda x, y, z: HOOF if y < 0.014 else pigcol(x, y, z), 'fur'))
 # ogonek zakręcony w sprężynkę
-tail = skin('ptail', [(0, 0.14, -0.185), (0.014, 0.152, -0.205), (0.0, 0.168, -0.212), (-0.012, 0.16, -0.2), (0.0, 0.152, -0.193), (0.008, 0.166, -0.192)],
+# nasada w zadzie: tułów po wygładzeniu kończy się na z = -0,144 (wcześniej ogonek wisiał 4 cm za nim — Michał 30.10.2026)
+TZ = 0.05
+tail = skin('ptail', [(0, 0.14, -0.185 + TZ), (0.014, 0.152, -0.205 + TZ), (0.0, 0.168, -0.212 + TZ), (-0.012, 0.16, -0.2 + TZ), (0.0, 0.152, -0.193 + TZ), (0.008, 0.166, -0.192 + TZ)],
             [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5)],
             [(0.0055, 0.0055), (0.0048, 0.0048), (0.0042, 0.0042), (0.0036, 0.0036), (0.003, 0.003), (0.002, 0.002)], subsurf=1)
 parts.append(Mesh(evaluated(tail), PINK, 'fur'))

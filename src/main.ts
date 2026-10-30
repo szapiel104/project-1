@@ -36,6 +36,8 @@ import { createScribe, type ScribeAction } from './ui/scribe';
 import { storeLogistics } from './ui/storePanel';
 import { storeNotes } from './ui/storeNotes';
 import { createHpBars } from './ui/hpBars';
+import { createRockPanel } from './ui/rockPanel';
+import { boulderAt } from './sim/systems/boulders';
 import { usedIn } from './sim/systems/stock';
 import { nextWave } from './sim/systems/bot';
 import { battleMages, garrisonRoom, octant, planFormation, towerOf, trainsAt } from './sim/systems/army';
@@ -973,6 +975,7 @@ function frameBeside(x: number, y: number, dist: number): void {
 }
 const jumpCount = (kind: JumpKind): number => { const ids = JUMP_IDS[kind]; let n = 0; for (const b of game.buildings) if (b.owner === ME && ids.includes(BUILDINGS[b.type]!.id)) n++; return n; };
 
+const rockPanel = createRockPanel((t) => { pending.push({ type: 'smashRock', player: ME, tile: t }); play('build'); });
 function select(id: number): void {
   if (id && selectedUnit) { selectedUnit = 0; renderer.setUnitSelection(0); }
   selected = id;
@@ -1172,6 +1175,9 @@ renderer.onClick = (tile, touch) => {
     const id = game.occupancy[tile.y * game.map.width + tile.x] ?? 0;
     if (id && id !== selected) play('select');
     select(id === selected ? 0 : id);
+    // głaz na łące (boulders.ts): okienko z przyciskiem „Rozbij”
+    const t = tile.y * game.map.width + tile.x;
+    if (!id && boulderAt(game, t)) { play('select'); rockPanel.show(t); rockPanel.refresh(game, ME); } else rockPanel.show(null);
     return;
   }
   // na ekranie dotykowym pierwsze dotknięcie pokazuje działkę, drugie w tym samym miejscu stawia budynek
@@ -1976,6 +1982,7 @@ function refresh(): void {
   });
   hud.setHash(stateHash(game));
   if (chosen.size) showArmy();
+  rockPanel.refresh(game, ME);
   // koniec gry: zburzona twierdza gracza albo wszystkich wrogów
   const meP = game.players[ME]!;
   const foesLeft = game.players.some((o) => o.team !== meP.team && !o.defeated);

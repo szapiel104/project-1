@@ -45,6 +45,7 @@ export interface SaveData {
   piles?: Pile[];
   graves?: Grave[];
   missiles?: Missile[];
+  rocksGone?: number[];
   siegeLadders?: SiegeLadder[];
 }
 
@@ -78,6 +79,7 @@ export function serialize(g: GameState, preset: MapPresetId): SaveData {
     piles: (g.piles ?? []).map((x) => ({ ...x })),
     graves: (g.graves ?? []).map((x) => ({ ...x })),
     missiles: (g.missiles ?? []).map((x) => ({ ...x })),
+    ...(g.rocksGone?.length ? { rocksGone: [...g.rocksGone] } : {}),
     siegeLadders: (g.siegeLadders ?? []).map((x) => ({ ...x })),
   };
 }
@@ -112,6 +114,7 @@ export function deserialize(d: SaveData): GameState | null {
       piles: (d.piles ?? []).map((x) => ({ ...x })),
       graves: (d.graves ?? []).map((x) => ({ ...x })),
       missiles: (d.missiles ?? []).map((x) => ({ ...x })),
+      ...(d.rocksGone?.length ? { rocksGone: [...d.rocksGone] } : {}),
       siegeLadders: (d.siegeLadders ?? []).map((x) => ({ ...x })),
     };
     for (const r of g.rubble) for (let y = r.y; y < r.y + r.h; y++) for (let x = r.x; x < r.x + r.w; x++) g.reserved[y * map.width + x]!++;

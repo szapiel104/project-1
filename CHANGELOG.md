@@ -1,5 +1,13 @@
 # Dziennik zmian
 
+## 0.68.0 — 30.10.2026
+- **Głazy są fizyczne** (Michał). Duże głazy na łąkach zna teraz symulacja (`src/sim/systems/boulders.ts`, położenie z ziarna mapy — te same u każdego gracza): nie da się na nich postawić budynku ani położyć drogi („Tu leży głaz — najpierw każ go rozbić”), a w spacerze mają kolizję. Kliknięcie głazu otwiera okienko z przyciskiem **Rozbij — 10 rudy** (potrzebny gotowy cech inżynierów): głaz znika, na polu zostaje stos kamienia (8 szt.), który wynoszą magazynierzy, wolni chłopi albo inżynierowie z cechu; potem pole jest wolne. Rozbite głazy w zapisie gry (`rocksGone`). Dawne losowe duże i średnie kamienie z łąki zniknęły (zamiast nich te z symulacji); drobne kamyki w trawie zostają jako ozdoba. Bot głazów nie rozbija — omija je przy stawianiu.
+- **Chłopi najpierw zajmują wolne chaty**, dopiero potem śpią w zamku. Chory jak dawniej idzie pod najbliższy dach (sam w pustej chacie byłby w kwarantannie i zaraza gasła — test zarazy to wychwycił).
+- Karty budowy: koszt w surowcach dużo większy i jaśniejszy (19 px, pogrubiony, większe ikonki).
+- Chlew: po kliknięciu znika dach (strzecha była w grupie `base`, teraz `roof`).
+- Świnia: ogonek przy zadzie (wisiał 4 cm za tułowiem — tułów po wygładzeniu jest krótszy, niż liczył skrypt).
+- Test: nowy spichlerz przejmuje stosy spod pełnego (w zwykłej grze działa; w trybie deweloperskim magazyny mają stałą pojemność milion, więc drugi spichlerz niczego nie zmienia).
+
 ## 0.67.17 — 30.10.2026
 - **Strażnik miejski trzyma pochodnię w dłoni** (Michał). Nocą niesie ten sam model pochodni co chłopi, w uniesionej lewej ręce (prawa trzyma miecz), z płomieniem nad głowicą. Wcześniej stara pochodnia wisiała obok niego w powietrzu. Pozostałe wojsko nie nosi pochodni (ręce zajęte bronią i tarczą — stara też wisiała obok).
 - **Spacer: pochodnia nie wchodzi w ziemię.** Przy patrzeniu w dół podnosi się i przechyla z powrotem do pionu, jak trzymana przy piersi, zamiast obracać się razem z widokiem.
