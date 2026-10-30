@@ -46,7 +46,7 @@ export interface UnitDef {
 export const UNITS: readonly UnitDef[] = [
   { id: 'spearman', name: 'u.spearman', cost: { spear: 1, gold: 8 }, hp: 60, speed: 110, attack: 9, cooldown: 12, sight: 6, weapon: 'spear', shield: true, charge: 200 },
   // Łucznik: słabszy w zwarciu, ale strzela z daleka; z wieży strażniczej widzi i trafia dalej
-  { id: 'archer', name: 'u.archer', cost: { bow: 1, gold: 12 }, hp: 40, speed: 105, attack: 7, cooldown: 24, sight: 10, range: 8, weapon: 'bow' }, // z daleka: 8 pól (dawniej 6 — musieli podchodzić pod sam szyk)
+  { id: 'archer', name: 'u.archer', cost: { bow: 1, gold: 12 }, hp: 40, speed: 105, attack: 9, cooldown: 20, sight: 10, range: 8, weapon: 'bow' }, // z daleka: 8 pól (dawniej 6 — musieli podchodzić pod sam szyk)
   // Strażnik miejski z zamku: włócznia, zbroja, nocą pochodnia; obchodzi osadę i stoi na posterunkach (na końcu listy dla starych zapisów)
   { id: 'guard', name: 'u.guard', cost: {}, hp: 70, speed: 100, attack: 8, cooldown: 12, sight: 7, weapon: 'spear', shield: true, guard: true },
   // Taran: wóz z daszkiem i belką z kutą głowicą, pcha go chłop z koszar; wolny, ale rozbija bramy i mury (na końcu listy dla starych zapisów)
@@ -55,14 +55,14 @@ export const UNITS: readonly UnitDef[] = [
   { id: 'bandit', name: 'u.bandit', cost: {}, hp: 50, speed: 112, attack: 7, cooldown: 14, sight: 7, weapon: 'spear', bandit: true },
   // Zbrojny: ciężka piechota w klimacie Starego Obozu — miecz z kuźni, kolczuga od płatnerza, hełm. Wolniejszy, ale twardy:
   // zbroja zjada część każdego ciosu i większość strzał; bez szarży i bez tarczy (na końcu listy dla starych zapisów)
-  { id: 'manatarms', name: 'u.manatarms', cost: { sword: 1, armor: 1, gold: 20 }, hp: 110, speed: 88, attack: 13, cooldown: 14, sight: 6, weapon: 'sword', gear: 'armor', armor: 35 },
+  { id: 'manatarms', name: 'u.manatarms', cost: { sword: 1, armor: 1, gold: 20 }, hp: 120, speed: 88, attack: 15, cooldown: 14, sight: 6, weapon: 'sword', gear: 'armor', armor: 30 },
   // Saper (inżynier wojskowy): kilof i łom z żelaza, skórzany kaftan; nie walczy, rozbiera wrogie ruiny do gołej ziemi
   // i znosi z nich drewno, kamień i żelazo do własnej twierdzy — wróg musi stawiać od nowa, za pełną cenę (na końcu listy dla starych zapisów)
   { id: 'sapper', name: 'u.sapper', cost: { iron: 2, gold: 10 }, hp: 45, speed: 100, attack: 0, cooldown: 14, sight: 10, weapon: 'iron', sapper: true },
   // Magowie bojowi (na końcu listy dla starych zapisów): mag Płomienia rzuca kulami ognia, mag Źródła czarem wody.
   // Kruche (mało zdrowia), ale biją z daleka i nigdy nie chybiają; drodzy w rudzie i jest ich najwyżej 10 na gracza
-  { id: 'mageFire', name: 'u.mageFire', cost: { gold: 50, crystal: 1 }, hp: 55, speed: 95, attack: 26, cooldown: 32, sight: 9, range: 7, weapon: 'gold', magic: 'fire' },
-  { id: 'mageWater', name: 'u.mageWater', cost: { gold: 45, crystal: 1 }, hp: 65, speed: 95, attack: 15, cooldown: 26, sight: 9, range: 6, weapon: 'gold', magic: 'water' },
+  { id: 'mageFire', name: 'u.mageFire', cost: { gold: 50, crystal: 1 }, hp: 55, speed: 95, attack: 36, cooldown: 36, sight: 9, range: 7, weapon: 'gold', magic: 'fire' },
+  { id: 'mageWater', name: 'u.mageWater', cost: { gold: 45, crystal: 1 }, hp: 65, speed: 95, attack: 26, cooldown: 26, sight: 9, range: 6, weapon: 'gold', magic: 'water' },
   // Drabiniarz (Michał 28.10.2026, na końcu listy dla starych zapisów): bez broni, niesie drabinę szturmową ze zbrojowni
   // (robi je cieśla). Przystawia ją do wrogiego muru kamiennego, a potem biegnie po następną do zamku albo do namiotu polowego
   { id: 'ladderman', name: 'u.ladderman', cost: { ladder: 1, gold: 6 }, hp: 45, speed: 108, attack: 0, cooldown: 14, sight: 10, weapon: 'ladder', ladderman: true },

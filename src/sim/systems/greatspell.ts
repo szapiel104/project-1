@@ -22,8 +22,11 @@ export const GREAT_FLIGHT = 9;
 const ICE_SLOW = 260;
 /** Deszcz ognia: ile ognia (po 1 zdrowia co kilka ticków) zostaje na trafionym */
 const RAIN_BURN = 12;
-/** Ile razy mocniej od zwykłego ciosu maga bije wielki czar w środku kręgu (ogień; lód — połowa tego) */
-const GREAT_POWER = 2.2;
+/** Ile razy mocniej od zwykłego ciosu maga bije wielki czar w środku kręgu (ogień; lód — GREAT_POWER_WATER) */
+// balans 30.10.2026: zwykły czar maga mocniejszy (ogień 26 → 36, woda 15 → 26), więc mnożnik wielkiego czaru niższy —
+// deszcz ognia i lodowy krąg biją tyle co dotąd (ogień ok. 57, woda ok. 17 na trafionego)
+const GREAT_POWER = 1.6;
+const GREAT_POWER_WATER = 0.65;
 
 const team = (g: GameState, player: number): number => g.players[player]?.team ?? player;
 const gap = (a: { px: number; py: number }, x: number, y: number): number => Math.max(Math.abs(a.px - x), Math.abs(a.py - y));
@@ -63,7 +66,7 @@ export function greatImpact(g: GameState, m: Missile): void {
     }
     // bliżej środka mocniej: od pełnego ciosu w środku do połowy na brzegu
     const edge = gap(o, x, y) / GREAT_R;
-    const full = m.great === 'fire' ? m.dmg * GREAT_POWER : m.dmg * GREAT_POWER * 0.5;
+    const full = m.great === 'fire' ? m.dmg * GREAT_POWER : m.dmg * GREAT_POWER_WATER;
     o.hp -= Math.max(1, Math.round(full * (1 - edge * 0.5)));
     if (m.great === 'fire') { if (o.hp > 0) { o.burn = (o.burn ?? 0) + RAIN_BURN; o.burnBy = m.by; } }
     else if (!UNITS[o.kind]?.ram) o.slow = Math.max(o.slow ?? 0, g.tick + ICE_SLOW);

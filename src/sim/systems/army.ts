@@ -800,6 +800,10 @@ function douse(g: GameState, s: Soldier, range: number): boolean {
   return true;
 }
 
+/** Ile procent siły strzały przechodzi przez tarczę trafioną z przodu (balans 30.10.2026: było 50 — włócznik z tarczą
+ *  przyjmował całą salwę łuczników prawie bez strat) */
+export const SHIELD_ARROW = 65;
+
 export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<number, Soldier>, ranged: boolean): number {
   const def = UNITS[s.kind]!, fdef = UNITS[foe.kind]!;
   let dmg = def.attack * 100;
@@ -809,7 +813,8 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
     const d = from < 0 ? 0 : Math.min(Math.abs(from - look), 8 - Math.abs(from - look));
     if (d === 2) dmg = (dmg * 130) / 100;
     else if (d >= 3) dmg = (dmg * 160) / 100;
-    else if (ranged && fdef.shield) dmg = dmg / 2;
+    // tarcza z przodu zatrzymuje ok. 1/3 siły strzały, ale czaru nie zatrzyma
+    else if (ranged && fdef.shield && !def.magic) dmg = (dmg * SHIELD_ARROW) / 100;
   }
   if (!ranged && def.charge && (s.run ?? 0) >= CHARGE_RUN) dmg = (dmg * def.charge) / 100;
   // duch oddziału: przy swoim chorążym żołnierz bije mocniej
@@ -818,7 +823,8 @@ export function hitDamage(g: GameState, s: Soldier, foe: Soldier, byId: Map<numb
   if (fdef.ram) dmg = ranged ? dmg / 6 : dmg / 2;
   // ognista strzała: zwykłe obrażenia przy trafieniu, a premia FIRE_BONUS schodzi z celu płomieniem (burnFor, missiles)
   // zbroja (kolczuga zbrojnego): cios wręcz słabszy o armor %, strzała o półtora raza tyle (najwyżej 75%)
-  if (fdef.armor) dmg = (dmg * (100 - (ranged ? Math.min(75, (fdef.armor * 3) >> 1) : fdef.armor))) / 100;
+  // czar przechodzi przez kolczugę: zbroja łagodzi go tylko o połowę swojej wartości
+  if (fdef.armor) dmg = (dmg * (100 - (def.magic ? fdef.armor >> 1 : ranged ? Math.min(75, (fdef.armor * 3) >> 1) : fdef.armor))) / 100;
   return Math.max(1, Math.round(dmg / 100));
 }
 
@@ -923,7 +929,8 @@ export function fireArrow(g: GameState, s: Soldier): boolean {
 
 /** Czy strzała trafia: im dalej, tym częściej chybia; z wieży celniej (losowanie z numeru strzelca i chwili, takie samo u każdego gracza) */
 export function arrowHits(g: GameState, s: Soldier, dist: number): boolean {
-  const chance = Math.max(30, Math.min(95, 100 - Math.round((dist * 8) / FP) + (high(g, s) ? 20 : 0)));
+  // z 8 pól (pełny zasięg łuku) trafia ok. 6 na 10 strzał, z bliska prawie każdą (do 30.10.2026: 8% mniej na pole — z daleka chybiali 2 na 3)
+  const chance = Math.max(30, Math.min(95, 100 - Math.round((dist * 5) / FP) + (high(g, s) ? 20 : 0)));
   return hash2(s.id, g.tick, 0x5eed) % 100 < chance;
 }
 
@@ -1069,6 +1076,8 @@ export function armySystem(g: GameState): void {
             let d = gap(s, o);
             // strzelec woli wroga, którego widzi (bez muru ani budynku na linii strzału); zasłoniętego bierze dopiero, gdy nie ma innego
             if (range && d <= range * FP && !lineOfSight(g, s, o, high(g, s), high(g, o))) d += 48 * FP;
+            // walczący wręcz woli wroga, który stoi i walczy, od rannego w ucieczce (gonił go bez końca, a drugi bił go w plecy)
+            if (!range && o.wounded) d += 6 * FP;
             if (d < best || (d === best && foe && o.id < foe.id)) { best = d; foe = o; }
           }
         }
@@ -1112,6 +1121,12 @@ export function armySystem(g: GameState): void {
       const hunted = s.prey ? unitById(g, s.prey) : undefined;
       if (hunted) s.target = 0;
       let foe = s.target ? byId.get(s.target) : undefined;
+      // uciekający ranny poza zasięgiem ciosu: wręcz odpuszcza go, gdy obok jest wróg, który stoi i walczy (balans 30.10.2026:
+      // zbrojny gonił bez końca szybszego rannego włócznika, a drugi bił go w plecy); sam jeden uciekający — goni dalej
+      if (!hunted && foe && foe.hp > 0 && !range && foe.wounded && gap(s, foe) > MELEE) {
+        const alt = nearestFoe(s, range);
+        if (alt && !alt.wounded) { foe = alt; s.target = alt.id; s.path = []; }
+      }
       if (!hunted && (!foe || foe.hp <= 0 || gap(s, foe) > 40 * FP)) {
         foe = nearestFoe(s, range);
         s.target = foe ? foe.id : 0;
