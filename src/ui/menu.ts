@@ -65,7 +65,7 @@ export interface Settings {
   sharpen?: number;
 }
 
-export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 2, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true, grass: 1, aa: 'msaa4', aniso: 16, reflections: true, sharpen: 0 };
+export const DEFAULT_SETTINGS: Settings = { ao: 'medium', shadows: 4096, scale: 1, dayNight: true, camSpeed: 1, edgeScroll: true, sfx: 1, ui: 0.8, amb: 0.6, music: 0.45, auto: true, grass: 1, aa: 'msaa4', aniso: 16, reflections: true, sharpen: 0 };
 
 export interface MenuEvents {
   onContinue(): void;
@@ -114,6 +114,8 @@ export function loadSettings(): Settings {
     const raw = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}') as Partial<Settings> & { ao?: unknown };
     // starsze zapisy trzymały cieniowanie jako tak/nie
     if (typeof raw.ao === 'boolean') raw.ao = raw.ao ? 'medium' : 'off';
+    // rozdzielczość 1,5× zdjęta z ustawień (30.10.2026): zapisane „Ostra” i dawne 1,5 → „Ostrzejsza” (1,25×)
+    if (typeof raw.scale === 'number' && raw.scale > 1.25) raw.scale = 1.25;
     return { ...DEFAULT_SETTINGS, ...(raw as Partial<Settings>) };
   } catch { return { ...DEFAULT_SETTINGS }; }
 }
@@ -628,11 +630,11 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       }],
       [tx('Ostrość i krawędzie', 'Sharpness and edges'), () => [
         intro(tx('Tu jest największa różnica w wyglądzie modeli: ostre krawędzie, gładkie liście i wyraźne tekstury.', 'This is where models gain the most: crisp edges, smooth leaves and clear textures.')),
-        choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [1.25, tx('Ostrzejsza (1,25×)', 'Sharper (1.25×)')], [2, t('set.scaleSharp')]], (v) => { settings.scale = v; manual(); }),
+        choice(t('set.scale'), settings.scale, [[0.75, t('set.scaleLow')], [1, t('set.scaleNormal')], [1.25, tx('Ostrzejsza (1,25×)', 'Sharper (1.25×)')]], (v) => { settings.scale = v; manual(); }),
         choice(tx('Wygładzanie krawędzi', 'Anti-aliasing'), settings.aa ?? 'msaa4', [['off', t('set.off')], ['fxaa', 'FXAA'], ['smaa', 'SMAA'], ['msaa2', 'MSAA 2×'], ['msaa4', 'MSAA 4×'], ['msaa8', 'MSAA 8×']], (v) => { settings.aa = v; manual(); }),
         choice(tx('Filtrowanie tekstur', 'Texture filtering'), settings.aniso ?? 16, [[1, tx('Zwykłe', 'Basic')], [4, '4×'], [8, '8×'], [16, '16×']], (v) => { settings.aniso = v; manual(); }),
         choice(tx('Wyostrzenie obrazu', 'Image sharpening'), settings.sharpen ?? 0, [[0, t('set.off')], [0.3, tx('Lekkie', 'Light')], [0.6, tx('Mocne', 'Strong')]], (v) => { settings.sharpen = v; manual(); }),
-        tip(tx('Rozdzielczość kosztuje najwięcej: „Ostra” liczy obraz w 1,5× — na szerokim monitorze (ultrapanorama) to za dużo, tam weź „Ostrzejszą” albo „Normalną”. MSAA 4× to najlepszy wybór, 8× na mocną kartę. Filtrowanie 16× prawie nic nie kosztuje — zostaw. FXAA i SMAA są lżejsze, ale rozmywają; wyostrzenie ma sens tylko z nimi, przy MSAA jest zbędne.', 'Resolution costs the most: “Sharp” renders at 1.5× — too much on a wide (ultrawide) monitor, pick “Sharper” or “Normal” there. MSAA 4× is the best pick, 8× for a strong card. 16× filtering costs next to nothing — leave it. FXAA and SMAA are lighter but blur; sharpening only makes sense with them and is unnecessary with MSAA.')),
+        tip(tx('Rozdzielczość kosztuje najwięcej: „Ostrzejsza” liczy obraz w 1,25× — na szerokim monitorze (ultrapanorama) lepiej „Normalna”. MSAA 4× to najlepszy wybór, 8× na mocną kartę. Filtrowanie 16× prawie nic nie kosztuje — zostaw. FXAA i SMAA są lżejsze, ale rozmywają; wyostrzenie ma sens tylko z nimi, przy MSAA jest zbędne.', 'Resolution costs the most: “Sharper” renders at 1.25× — on a wide (ultrawide) monitor “Normal” is the better pick. MSAA 4× is the best pick, 8× for a strong card. 16× filtering costs next to nothing — leave it. FXAA and SMAA are lighter but blur; sharpening only makes sense with them and is unnecessary with MSAA.')),
       ]],
       [tx('Światło i cienie', 'Light and shadows'), () => [
         intro(tx('Światło decyduje, czy modele wyglądają jak bryły, czy jak płaskie wycinanki.', 'Light decides whether models look solid or like flat cut-outs.')),

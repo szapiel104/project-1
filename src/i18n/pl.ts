@@ -161,7 +161,6 @@ export const pl = {
   'set.scale': 'Rozdzielczość obrazu',
   'set.scaleLow': 'Niższa (szybciej)',
   'set.scaleNormal': 'Normalna',
-  'set.scaleSharp': 'Ostra (1,5×, mocna karta)',
   'set.dayNight': 'Cykl dnia i nocy (wyłączony = zawsze dzień)',
   'set.graphicsHint': 'Gdy gra przycina, najpierw zmniejsz cieniowanie zagłębień, potem cienie i rozdzielczość.',
   'set.controls': 'Sterowanie',

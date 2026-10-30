@@ -1587,7 +1587,8 @@ export class GameRenderer {
     // wygładza krawędzie, trawę i drobne tekstury); wcześniej było przycinane do gęstości ekranu i na 1× nic nie dawało
     const dpr = window.devicePixelRatio || 1;
     // „Ostrzejsza” (1,25): pośredni stopień nadpróbkowania — złoty środek na szerokie monitory (ultrapanorama, 4K na 1×)
-    this.ratioMax = o.scale >= 2 ? Math.max(dpr, Math.min(2, dpr * 1.5)) : o.scale > 1 ? Math.min(2, dpr * o.scale) : Math.min(dpr, o.scale);
+    // najwyżej 1,25× (1,5× zdjęte 30.10.2026 — na szerokim monitorze za ciężkie nawet dla mocnej karty)
+    this.ratioMax = o.scale > 1 ? Math.min(2, dpr * Math.min(1.25, o.scale)) : Math.min(dpr, o.scale);
     this.ratioDyn = 1;
     this.dynRes = !!o.dynRes;
     this.applyRatio();

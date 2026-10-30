@@ -28,10 +28,11 @@ export const TIERS: readonly QualityTier[] = [
   { scale: 0.75, shadows: 0, ao: 'off', grass: 0, detail: 0.55, aa: 'fxaa', reflections: false },
   { scale: 1, shadows: 1024, ao: 'off', grass: 0, detail: 0.65, aa: 'fxaa', reflections: true },
   { scale: 1, shadows: 2048, ao: 'low', grass: 0.8, detail: 0.75, aa: 'smaa', reflections: true },
-  { scale: 1.5, shadows: 2048, ao: 'medium', grass: 1, detail: 0.9, aa: 'msaa2', reflections: true },
-  { scale: 2, shadows: 4096, ao: 'medium', grass: 1, detail: 1, aa: 'msaa4', reflections: true },
+  { scale: 1, shadows: 2048, ao: 'medium', grass: 1, detail: 0.9, aa: 'msaa2', reflections: true },
+  // najwyżej 1,25× (Michał 30.10.2026: 1,5× na szerokim monitorze zabijało nawet mocną kartę)
+  { scale: 1.25, shadows: 4096, ao: 'medium', grass: 1, detail: 1, aa: 'msaa4', reflections: true },
   // Ultra: dokładne cieniowanie zagłębień, miękkie cienie, dalej trawa i szczegóły, MSAA 8×
-  { scale: 2, shadows: 4096, ao: 'high', grass: 1.35, detail: 1.35, soft: true, aa: 'msaa8', reflections: true },
+  { scale: 1.25, shadows: 4096, ao: 'high', grass: 1.35, detail: 1.35, soft: true, aa: 'msaa8', reflections: true },
 ];
 /** Automat nie wchodzi na Ultra (miękkie cienie przebudowują shadery — przy przełączaniu ekran czerniał); Ultra tylko ręcznie */
 export const TOP_TIER = TIERS.length - 2;

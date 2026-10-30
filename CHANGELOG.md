@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.67.13 — 30.10.2026
+- **Rozdzielczość 1,5× zdjęta z ustawień** (Michał). Na monitorze 3440 px „Ostra” liczyła obraz ok. 5160 px szerokości — ponad dwa razy więcej pikseli niż 1× — i to karta graficzna była wąskim gardłem (ok. 26 ms na klatkę przy 189 budynkach). Teraz najwyżej „Ostrzejsza” (1,25×); domyślnie „Normalna”. Zapisane „Ostra” zamienia się na „Ostrzejszą”. Automat jakości też nie wchodzi wyżej niż 1,25×.
+
 ## 0.67.12 — 30.10.2026
 - **Jednego leczy najwyżej jeden mag** (Michał: pięciu magów leczyło szóstego naraz, za szybko). Mag, który leczy siebie, nie dostaje pomocy od innych; pozostali biorą kolejnych rannych.
 - Plusy leczenia pojawiają się prosto nad głową leczonego i idą tylko w górę (wcześniej przesunięte w bok, jakby nadlatywały).
