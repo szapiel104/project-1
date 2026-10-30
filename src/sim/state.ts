@@ -459,6 +459,10 @@ export interface Soldier {
   cremate?: boolean;
   /** Ciało, do którego idzie, żeby je spalić */
   pyreOf?: number;
+  /** Mag: kogo właśnie leczy (mageheal.ts) */
+  healing?: number;
+  /** Tick ostatniego leczenia przez maga (plusy nad nim) */
+  healAt?: number;
   /** Mag: od tego ticku znów może rzucić wielki czar (greatspell.ts) */
   great?: number;
   /** Mag: tick ostatniego wielkiego czaru i środek jego kręgu (dla obrazu) */
@@ -556,6 +560,8 @@ export interface Corpse {
   burnt?: boolean;
   /** Tick podpalenia przez Maga Płomienia (cremation.ts): płonie i po chwili znika */
   pyre?: number;
+  /** Mag, który je pali (stoi przy nim, póki płonie) */
+  pyreBy?: number;
   /** Dwaj, którzy po nie idą: [niosący z przodu, pomocnik z tyłu] (bearers.ts) */
   by?: number[];
   /** Tick wysłania tej dwójki (gdy utkną, ciało wraca do puli) */

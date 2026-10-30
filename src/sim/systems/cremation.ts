@@ -10,7 +10,7 @@ import type { UnitDef } from '../../data/units';
  * pierwszeństwo (army.ts woła to tylko bez wroga). Ciało, po które idą już grabarze albo leżące na wieży — pomija.
  * Bez losowania: wszystko z ticków i pozycji.
  */
-export const PYRE_TICKS = 40;
+export const PYRE_TICKS = 60;
 export const CREMATE_REACH = 12;
 const CAST = 4;
 
@@ -20,6 +20,8 @@ const free = (c: Corpse): boolean => !c.taken && c.pyre === undefined && !c.post
 /** Krok maga z włączonym paleniem (bez wroga w pobliżu). true = w tym ticku rzucił ogień albo czeka na odliczanie przy ciele */
 export function cremateStep(g: GameState, s: Soldier, def: UnitDef): boolean {
   let c = s.pyreOf ? g.corpses.find((x) => x.id === s.pyreOf) : undefined;
+  // ciało, które sam podpalił, jeszcze płonie: stoi przy nim z rękami w górze i podtrzymuje ogień (wygląd, scene.ts)
+  if (c && c.pyre !== undefined) { if (c.pyreBy === s.id) return true; c = undefined; }
   if (c && !free(c)) c = undefined;
   if (!c) {
     s.pyreOf = 0;
@@ -40,10 +42,9 @@ export function cremateStep(g: GameState, s: Soldier, def: UnitDef): boolean {
   if (dist(s, c) <= CAST * FP) {
     s.goal = -1; s.path = []; s.amove = false;
     if (s.cd > 0) return true;
-    c.pyre = g.tick; c.burnt = true; c.taken = true;   // grabarze już po nie nie pójdą
+    c.pyre = g.tick; c.pyreBy = s.id; c.burnt = true; c.taken = true;   // grabarze już po nie nie pójdą
     s.cd = def.cooldown;
     s.shot = g.tick;
-    s.pyreOf = 0;
     return true;
   }
   // idzie do ciała; „atak w marszu”, więc wróg po drodze przerywa marsz jak zwykle

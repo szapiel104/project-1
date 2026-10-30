@@ -784,6 +784,8 @@ export class GameRenderer {
   /** Ciała spalone w ogniu (z g.corpses co klatkę) */
   private burntBodies = new Set<number>();
   private pyreAt = new THREE.Vector3();
+  /** Kiedy mag palący ciało ostatnio cisnął w nie ogniem (wygląd) */
+  private pyreCastAt = new Map<number, number>();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = createRenderer({canvas, antialias: true }, 'gra');
@@ -2328,6 +2330,8 @@ export class GameRenderer {
   frame(realDt: number, alpha: number, paused = false): void {
     // w trakcie kompilacji shaderów w tle nie rysujemy: rysowanie czekałoby na kartę i strona by zamarzła
     if (this.warming || this.held || this.building) return;
+    const f0 = performance.now();
+    this.fparts = {};
     this.lastAlpha = alpha;
     namedTick();
     // co pół sekundy: wyjątki od granicy kamery przy własnych budynkach poza środkiem mapy (kopalnia pod górami)
@@ -2366,7 +2370,7 @@ export class GameRenderer {
     if (this.state && this.view) {
       const g = this.state, v = this.view;
       // każdy etap mierzony osobno: okno wydajności pokazuje, co zjada czas klatki
-      const T = (name: string, fn: () => void): void => { const t0 = performance.now(); fn(); this.timing[name] = (this.timing[name] ?? 0) + performance.now() - t0; };
+      const T = (name: string, fn: () => void): void => { const t0 = performance.now(); fn(); const d = performance.now() - t0; this.timing[name] = (this.timing[name] ?? 0) + d; this.fparts[name] = (this.fparts[name] ?? 0) + d; };
       T('animacje', () => { this.animate(g, this.calm ? 0 : dt); if (!this.calm) v.animate(this.time); });
       T('las', () => this.syncForest(g, v));
       { const f = this.focusPoint; v.updateGrass(f.x, f.z, this.calm ? 0 : this.time, this.walk ? 0 : this.cam.distance); }
@@ -2417,6 +2421,14 @@ export class GameRenderer {
     this.timing['karta graficzna'] = (this.timing['karta graficzna'] ?? 0) + gpu;
     this.dynamicResolution(gpu);
     this.timingFrames++;
+    // wolne klatki (ponad 200 ms) z rozbiciem na etapy: window.__slowFrames (do szukania przycięć w Chrome)
+    const total = performance.now() - f0;
+    if (total > 200) {
+      this.fparts['karta graficzna'] = gpu;
+      const top = Object.entries(this.fparts).filter(([, v]) => v > 20).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([k, v]) => `${k} ${Math.round(v)}`);
+      const list = ((window as unknown as { __slowFrames?: unknown[] }).__slowFrames ??= []);
+      if (list.length < 40) list.push([Math.round(f0), Math.round(total), top.join(', ')]);
+    }
     } finally { for (const m of empties) m.visible = true; }
   }
 
@@ -2676,6 +2688,8 @@ export class GameRenderer {
     return out;
   }
   private timing: Record<string, number> = {};
+  /** Etapy bieżącej klatki (ms) — do zapisu wolnych klatek */
+  private fparts: Record<string, number> = {};
   private timingFrames = 0;
   quality = '';
 
@@ -3949,8 +3963,25 @@ export class GameRenderer {
         heading = Math.atan2(wall.x + fp.w / 2 - fx, wall.y + fp.h / 2 - fy);
         this.facing.set(s.id, heading);
       }
+      // Mag Płomienia pali ciało (cremation.ts): stoi zwrócony do niego, ręce w górze, z dłoni co chwilę leci ogień
+      const pyreBody = s.pyreOf && !walking && !foe ? g.corpses.find((c) => c.id === s.pyreOf && c.pyre !== undefined && c.pyreBy === s.id) : undefined;
+      if (pyreBody) {
+        heading = Math.atan2((pyreBody.px - s.px) / FP, (pyreBody.py - s.py) / FP);
+        this.facing.set(s.id, heading);
+        const last = this.pyreCastAt.get(s.id) ?? -1;
+        if (!this.calm && this.time - last > 0.35) {
+          this.pyreCastAt.set(s.id, this.time);
+          const bx = pyreBody.px / FP, by = pyreBody.py / FP;
+          const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
+          this.spells.cast(this.armV.set(fx - width / 2 + hx, view.heightAt(fx, fy) + 0.5, fy - height / 2 + hz),
+            this.mouth.set(bx - width / 2 + (Math.random() - 0.5) * 0.3, view.heightAt(bx, by) + 0.08, by - height / 2 + (Math.random() - 0.5) * 0.3), true);
+        }
+      }
+      // mag leczy (mageheal.ts): zwraca się do leczonego (siebie leczy, stojąc jak stał)
+      const healed = s.healing && s.healing !== s.id && !walking && !foe ? byId.get(s.healing) : undefined;
+      if (healed) { heading = Math.atan2((healed.px - s.px) / FP, (healed.py - s.py) / FP); this.facing.set(s.id, heading); }
       // po dojściu obraca się w kierunek szyku (płynnie, nie skokiem)
-      if (!walking && !foe && !wall && s.face !== undefined && !s.path.length) {
+      if (!walking && !foe && !wall && !pyreBody && !healed && s.face !== undefined && !s.path.length) {
         let diff = s.face * (Math.PI / 4) - heading;
         while (diff > Math.PI) diff -= Math.PI * 2;
         while (diff < -Math.PI) diff += Math.PI * 2;
@@ -4214,7 +4245,7 @@ export class GameRenderer {
       // mag bojowy: postać swojego zakonu; ręce w górze z kulą w dłoni, gdy szykuje czar (od połowy odliczania do rzutu)
       if (udef.magic) {
         const u = 1 - Math.max(0, s.cd - alpha) / udef.cooldown;
-        const casting = (!!foe || !!wall || !!victim) && !walking && (u > 0.45 || u < 0.1);
+        const casting = !!pyreBody || (!!s.healing && !walking) || ((!!foe || !!wall || !!victim) && !walking && (u > 0.45 || u < 0.1));
         (udef.magic === 'fire' ? this.battleFireFig : this.battleWaterFig).set(0, t.matrix, legs, casting, teamC, s.id);
       }
       this.archers.set(n, ranged && !udef.magic ? t.matrix : ZERO, legs, striking, teamC, s.id, undefined, -0.5, false, towerSit ? -1.45 : undefined, 0, bowPose && [bowPose[0]!, 0, 0, bowPose[4]!, bowPose[3]!, bowPose[1]!, bowPose[2]!]);
@@ -4353,11 +4384,17 @@ export class GameRenderer {
       sc.set(1.05 * FIG * (how === 2 ? flat : 1), 1.05 * FIG, 1.05 * FIG * (how === 2 ? 1 : flat));
       let sink = how === 3 ? -0.21 * 1.05 * FIG * e1 * (1 - e2) : 0;
       // spalane przez Maga Płomienia (cremation.ts): płonie, kurczy się i zapada, po PYRE_TICKS znika z symulacji
+      // spalane przez Maga Płomienia: płonie całe (ogień w trzech miejscach wzdłuż ciała), czernieje i pod koniec
+      // zapada się w popiół (w ziemię), zamiast się zmniejszać (Michał 30.10.2026)
       if (body.pyre !== undefined) {
         const pk = Math.max(0, Math.min(1, (g.tick + alpha - body.pyre) / PYRE_TICKS));
-        sc.multiplyScalar(1 - 0.75 * pk);
-        sink -= 0.05 * pk;
-        if (!this.calm) this.spells.burning(this.pyreAt.set(fx - width / 2, y + 0.08, fy - height / 2), body.id);
+        const ash = Math.max(0, (pk - 0.55) / 0.45);
+        sink -= 0.16 * ash * ash;
+        sc.y *= 1 - 0.5 * ash;                       // spłaszcza się w popiół
+        if (!this.calm && pk < 0.95) {
+          const ax = Math.sin(yaw) * 0.16, az = Math.cos(yaw) * 0.16;
+          for (let k = -1; k <= 1; k++) this.spells.burning(this.pyreAt.set(fx - width / 2 + ax * k, y + 0.06, fy - height / 2 + az * k), body.id * 3 + k + 1);
+        }
       }
       m.compose(new THREE.Vector3(fx - width / 2, y + sink + (0.06 - age * 0.04) * (how === 3 ? e2 : e), fy - height / 2), lay, sc);
       const legs = how === 3 ? -1.45 * e1 * (1 - e2) : undefined;

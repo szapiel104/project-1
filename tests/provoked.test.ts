@@ -62,3 +62,23 @@ describe('palenie ciał przez Maga Płomienia (30.10.2026)', () => {
     expect(g.corpses.some((c) => c.id === 99901)).toBe(false);          // spalone i zniknęło
   });
 });
+
+describe('magowie leczą bez walki (30.10.2026)', () => {
+  it('mag bez wroga powoli leczy rannego obok, po jednym, aż do pełna', () => {
+    const g = createGame(9); emptyScene(g);
+    const k = playerKeep(g, 0)!, w = g.map.width, x = (k.door % w) - 6, y = Math.floor(k.door / w) + 18;
+    const mage = soldier(g, 0, 'mageWater', x, y);
+    const a = soldier(g, 0, 'spearman', x + 2, y); a.hp = 20;
+    const b = soldier(g, 0, 'spearman', x + 3, y); b.hp = 50;
+    for (let i = 0; i < 30; i++) step(g, []);
+    expect(mage.healing).toBe(a.id);                 // najpierw najbardziej ranny
+    expect(b.hp).toBe(50);                            // drugi czeka na swoją kolej
+    const h0 = a.hp;
+    for (let i = 0; i < 50; i++) step(g, []);
+    expect(a.hp - h0).toBeGreaterThan(5);             // powoli (ok. 2 na sekundę)
+    expect(a.hp - h0).toBeLessThan(15);
+    for (let i = 0; i < 600; i++) step(g, []);
+    expect(a.hp).toBe(60);
+    expect(b.hp).toBe(60);
+  });
+});

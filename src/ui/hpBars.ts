@@ -62,7 +62,7 @@ export function createHpBars(d: HpBarsDeps): () => void {
     if (pops > 40) return;
     const p = document.createElement('span');
     p.className = `hpdmg${kind ? ` ${kind}` : ''}`;
-    p.textContent = `−${n}`;
+    p.textContent = kind === 'heal' ? `+${n}` : `−${n}`;
     const it: Pop = { el: p, key, dx: 4 + ((n * 7) % 13) - 6, wx: u.wx, wy: u.wy, wz: u.wz, x: u.x, y: u.y };
     p.style.transform = `translate(${Math.round(u.x + it.dx)}px, ${Math.round(u.y - 30)}px)`;
     layer.append(p);
@@ -86,11 +86,14 @@ export function createHpBars(d: HpBarsDeps): () => void {
     }
   };
 
+  // leczony przez maga przed chwilą (mageheal.ts): wzrost zdrowia pokazuje zielone „+N”
+  const healed = (id: number): boolean => { const g = d.game(); const x = g.soldiers.find((o) => o.id === id); return !!x?.healAt && g.tick - x.healAt < 3; };
   const place = (key: string, u: ScreenUnit, max: number, team: 'own' | 'foe', state: string): void => {
     const ratio = Math.max(0, Math.min(1, u.hp / max));
     const s = barFor(key, ratio, u.hp);
     s.seen = frame;
     if (u.hp < s.last) pop(key, u, Math.round(s.last - u.hp), state);
+    else if (u.hp > s.last && healed(u.id)) pop(key, u, Math.round(u.hp - s.last), 'heal');
     s.last = u.hp;
     // pasek dochodzi do nowej wartości szybko, ale płynnie; jaśniejszy ślad zostaje i dopiero potem znika
     s.hp += (ratio - s.hp) * (reduced ? 1 : 0.3);

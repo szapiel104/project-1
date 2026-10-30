@@ -289,6 +289,7 @@ body.menu-open #ui .bottom, body.menu-open #ui .toast { display: none; }
 .hpdmg { position: absolute; left: 0; top: 0; font: 800 clamp(22px, 1.6vw, 30px)/1 var(--display, serif); color: #ffe2d6; -webkit-text-stroke: 1px #2a0c06; text-shadow: 0 2px 0 #000, 0 0 4px #000, 0 0 8px rgba(0, 0, 0, .7); pointer-events: none; white-space: nowrap; animation: hpdmg 1.2s ease-out forwards; }
 .hpdmg.burn { color: #ffb15a; }
 .hpdmg.frost { color: #bfe6ff; }
+.hpdmg.heal { color: #9dff8a; -webkit-text-stroke-color: #0d2a06; }
 @keyframes hpdmg { 0% { opacity: 1; margin-top: 0; scale: 1.25; } 15% { scale: 1; } 70% { opacity: 1; } 100% { opacity: 0; margin-top: -30px; } }
 @media (prefers-reduced-motion: reduce) { .hpdmg { animation: hpdmg-fade .7s linear forwards; } @keyframes hpdmg-fade { to { opacity: 0; } } }
 .hpbar span[data-low='true'] { background: linear-gradient(#ff8a7a, #b3332a); }

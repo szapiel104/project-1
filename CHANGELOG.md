@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.67.11 — 30.10.2026
+- **Magowie leczą bez walki** (Michał). Mag Płomienia albo Źródła, który od 6 s nie rzucał czaru i nie widzi wroga, powoli leczy sojuszników do 4 pól obok — po jednym: najbardziej rannego (siebie też), po 2 zdrowia na sekundę, aż wyleczy, potem następnego. Mag stoi zwrócony do leczonego z rękami w górze, nad leczonym idą zielone „+2”. Przy wrogu w pobliżu nie leczy. Działa tak samo u bota. Moduł `src/sim/systems/mageheal.ts`.
+- **Palenie ciał lepiej wygląda.** Mag stoi zwrócony do ciała z rękami w górze i co chwilę ciska w nie ogniem, aż się spali; ciało płonie całe (ogień w trzech miejscach), czernieje i pod koniec zapada się w popiół, zamiast się zmniejszać. Palenie trwa 6 s.
+- Pomiar przycięć w grze: klatki dłuższe niż 200 ms zapisują się z rozbiciem na etapy w `window.__slowFrames`.
+
 ## 0.67.10 — 30.10.2026
 - **Stawianie budynku bez przycięcia** (Michał: „czasem przycina na sekundę albo dwie”). Sklejanie nieruchomych części budynku (`mergeStatic`) kopiowało i przeliczało geometrię wszystkich części przy każdym postawionym budynku, a dopiero potem brało gotową wspólną bryłę z pamięci (sad: ok. 0,6 s za każdym razem). Teraz klucz liczy się z samych liczb części i wierzchołków; geometria liczy się tylko raz na rodzaj budynku.
 
