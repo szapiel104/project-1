@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.69.3 — 30.10.2026
+- Szyld rynku: zamiast monety bryła rudy (`magicOre`, jak w kopalni i na kapliczce) spłaszczona pionowo na licu deski, obok dwa okruchy (Michał: „ruda w szyldzie, ale pionowo”).
+
 ## 0.69.2 — 30.10.2026
 - Rynek: kupcy (`staff`, `crew` 1–2) za dnia stoją za ladami kramów (scene.ts, pozycje z układu modelu); „+N/−N” rudy z ikonką nad rynkiem po handlu (`src/ui/worldPops.ts`, wygląd `.hpdmg`); model bez placu z ziemi, płyty pod kramami od ziemi, moneta na szyldzie jako pionowy ośmiokąt z grubością.
 - Dolny pasek: ruda pierwsza i wyróżniona (`.res-ore`), skrót „Rynek” w skrótach budynków, klik w licznik składu = rozpiska towarów i wolnego miejsca.

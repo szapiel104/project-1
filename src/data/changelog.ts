@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.3', date: '2026-10-30',
+    pl: ['Na szyldzie rynku wisi teraz bryła rudy z niebieskimi żyłkami (zamiast złotej monety), przybita pionowo do deski.'],
+    en: ['The market sign now bears a lump of blue-veined ore (instead of a gold coin), nailed upright to the board.'],
+  },
+  {
     v: '0.69.2', date: '2026-10-30',
     pl: [
       'Rynek ma kupców: za dnia jeden (w większej osadzie dwóch) stoi za ladą kramu i zachwala towar.',

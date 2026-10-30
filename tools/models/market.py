@@ -1,6 +1,6 @@
 """Rynek (3×3 pola): plac z ubitej ziemi i kamiennych płyt, na nim dwa kramy pod pasiastymi daszkami z płótna.
 Lewy kram (czerwone pasy) z jedzeniem: jabłka, bochenki, worki zboża. Prawy kram (niebieskie pasy) z towarem:
-deski, sztaby żelaza, beczka piwa. Z tyłu placu skrzynie i beczki kupców, z przodu słup z szyldem — złota moneta
+deski, sztaby żelaza, beczka piwa. Z tyłu placu skrzynie i beczki kupców, z przodu słup z szyldem — bryła rudy
 na desce (tu przychodzi się handlować). Sprzedaż i kupno działają od ręki (sim/systems/market.ts).
 
 Uruchomienie (z katalogu repo):  /tmp/bpyenv/bin/python tools/models/market.py
@@ -119,16 +119,12 @@ log(b, 'base', 'woodDark', (SX - 0.02, 1.18, SZ), (SX + 0.45, 1.18, SZ), r=0.025
 for x in (SX + 0.17, SX + 0.37):
     b.box('base', 'iron', 0.008, 0.08, 0.008, x, 1.09, SZ)                                  # łańcuszki
 b.box('base', 'plank', 0.32, 0.22, 0.03, SX + 0.27, 0.87, SZ)                               # deska szyldu
-# moneta przybita do deski: pionowy ośmiokąt z grubością (przód i tył zamknięte), wystaje 5 mm przed deskę
-CX, CY, R = SX + 0.27, 0.98, 0.075
-z0, z1 = SZ + 0.02, SZ + 0.032
-ring = [(CX + R * math.cos(math.pi / 8 + k * math.pi / 4), CY + R * math.sin(math.pi / 8 + k * math.pi / 4)) for k in range(8)]
-cen = (CX, CY, (z0 + z1) / 2)
-b.poly('base', 'gold', [(x, y, z1) for x, y in ring], away=cen)
-b.poly('base', 'gold', [(x, y, z0) for x, y in ring], away=cen)
-for k in range(8):
-    (xa, ya), (xb, yb) = ring[k], ring[(k + 1) % 8]
-    b.poly('base', 'gold', [(xa, ya, z1), (xb, yb, z1), (xb, yb, z0), (xa, ya, z0)], away=cen)
+# na desce bryła rudy (waluta gry, ten sam materiał co ruda w kopalni i na kapliczce), spłaszczona i przybita pionowo
+# do lica deski, a obok dwa mniejsze okruchy (Michał 30.10.2026: „ruda w szyldzie, ale pionowo”)
+CX, CY = SX + 0.27, 0.98
+b.crystal('base', 'magicOre', CX, CY, SZ + 0.03, 0.068, seed=2.3, sx=1.25, sy=1.05, sz=0.32, seg=7)
+b.crystal('base', 'magicOre', CX - 0.1, CY - 0.05, SZ + 0.026, 0.03, seed=5.1, sx=1.0, sy=0.9, sz=0.35, seg=6)
+b.crystal('base', 'magicOre', CX + 0.1, CY - 0.045, SZ + 0.026, 0.026, seed=7.7, sx=1.0, sy=1.1, sz=0.35, seg=6)
 
 VIEWS = [
     ['rynek (oczy chłopa)', [0.2, 0.5, 2.6], [0, 0.5, -0.2], ['base'], 34],
