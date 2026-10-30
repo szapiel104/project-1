@@ -1264,9 +1264,15 @@ const BUILDERS: Record<string, Builder> = {
     // stodoła z Blendera (tools/models/barn.py): deski na słupach, strzecha z lukarną, wrota otwarte na oścież,
     // w środku puste klepisko, na którym gra układa zapasy składu (stodoła trzyma tylko surowce)
     blenderModel(g, BARN_MODEL as unknown as BlenderBuilding, flag);
-    const goods = fillSlots('fill', 0, 0.05, 0.42);
-    goods.position.y = (BARN_MODEL as unknown as { floorY: number }).floorY;
+    // klepisko na dwie części (Michał 30.10.2026: „stodoła pokazuje worki zboża”): z lewej towary składu, z prawej
+    // snopki zboża i worki mąki (rodzaj 'grain', trzyma go tylko stodoła)
+    const floorY = (BARN_MODEL as unknown as { floorY: number }).floorY;
+    const goods = fillSlots('fill', -0.5, 0.05, 0.4);
+    goods.position.y = floorY;
     g.add(goods);
+    const grain = fillSlots('grainfill', 0.78, 0.05, 0.38, 2, 3, 0.85);
+    grain.position.y = floorY;
+    g.add(grain);
     const p = (BARN_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },

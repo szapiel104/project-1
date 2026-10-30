@@ -42,6 +42,14 @@ function blocks(g: GameState, t: number, aimHigh: boolean, tx: number, ty: numbe
 /** Czy `from` (strzelec) widzi `to` (cel) — patrz opis wyżej */
 export function lineOfSight(g: GameState, from: Spot, to: Spot, shooterHigh: boolean, targetHigh: boolean): boolean {
   if (shooterHigh) return true;
+  return firstBlock(g, from, to, targetHigh) < 0;
+}
+
+/**
+ * Pierwsze pole na linii od `from` do `to`, które zasłania strzał (−1 = czysto). Dla obrazu: kula czaru, której cel
+ * zdążył zejść za przeszkodę, rozbija się na tym polu, a nie przelatuje przez dach (Michał 30.10.2026).
+ */
+export function firstBlock(g: GameState, from: Spot, to: Spot, targetHigh: boolean): number {
   const w = g.map.width;
   let x = from.px >> 8, y = from.py >> 8;
   const tx = to.px >> 8, ty = to.py >> 8;
@@ -54,10 +62,10 @@ export function lineOfSight(g: GameState, from: Spot, to: Spot, shooterHigh: boo
     let mx = 0, my = 0;
     if (e2 > -dy) { err -= dy; mx = sx; }
     if (e2 < dx) { err += dx; my = sy; }
-    if (wallBetween(g, y * w + x, mx, my) && !(targetHigh && x + mx === tx && y + my === ty)) return false;
+    if (wallBetween(g, y * w + x, mx, my) && !(targetHigh && x + mx === tx && y + my === ty)) return (y + my) * w + x + mx;
     x += mx; y += my;
     if (x === tx && y === ty) break;
-    if (blocks(g, y * w + x, targetHigh, tx, ty, postOf)) return false;
+    if (blocks(g, y * w + x, targetHigh, tx, ty, postOf)) return y * w + x;
   }
-  return true;
+  return -1;
 }

@@ -57,7 +57,7 @@ export class SiteLayer {
   readonly sites = new Map<number, { plane: THREE.Plane; base: number; top: number; swapped: [THREE.Mesh, THREE.Material | THREE.Material[]][]; clip: (m: THREE.Material) => THREE.Material; pit: THREE.Mesh; dug?: number; rect: [number, number, number, number] }>();
   private static pitMat: THREE.MeshStandardMaterial | undefined;
   /** Części modelu, których na placu budowy nie ma (wnętrze z ludźmi, zapasy, dym, ogień, życie) */
-  private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'armsfill', 'smoke', 'flame', 'flagcloth', 'bannercloth', 'flagpole']);
+  private static SITE_HIDE = new Set(['interior', 'life', 'fill', 'foodfill', 'armsfill', 'grainfill', 'smoke', 'flame', 'flagcloth', 'bannercloth', 'flagpole']);
   private siteKey = '';
   /** Pierwsza klatka po wczytaniu mapy: ruiny z zapisu leżą od razu, bez spadania gruzu */
   private fresh = true;

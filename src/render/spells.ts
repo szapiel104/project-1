@@ -17,7 +17,7 @@ import { SpellSmoke } from './spellsmoke';
  * w trakcie gry), cząstki w stałej puli; bez czarów warstwa nic nie rysuje.
  */
 /** `k` = wielkość (1 zwykła kula, więcej przy wielkim czarze); `t` < 0 = czeka (kolejne kule deszczu ognia), `ice` = lodowy krąg przy celu */
-interface Shot { from: THREE.Vector3; to: THREE.Vector3; t: number; fire: boolean; dur: number; seed: number; k: number; ice?: boolean }
+interface Shot { from: THREE.Vector3; to: THREE.Vector3; t: number; fire: boolean; dur: number; seed: number; k: number; ice?: boolean; arc?: number }
 interface Burst { at: THREE.Vector3; t: number; fire: boolean; k: number }
 /** Lodowy krąg: kolce lodu wyrastają z ziemi pierścieniem, stoją chwilę i topnieją */
 interface IceField { at: THREE.Vector3; t: number }
@@ -156,10 +156,12 @@ export class SpellLayer {
   }
 
   /** Rzut czaru z dłoni maga (`from`) do celu (`to`), oba w układzie świata */
-  cast(from: THREE.Vector3, to: THREE.Vector3, fire: boolean): void {
+  cast(from: THREE.Vector3, to: THREE.Vector3, fire: boolean, arc = 0): void {
     if (this.shots.length >= MAX) return;
     const dist = from.distanceTo(to);
-    this.shots.push({ from: from.clone(), to: to.clone(), t: 0, fire, dur: Math.min(0.62, 0.22 + dist * 0.05), seed: Math.random() * 100, k: 1 });
+    // arc > 0: na linii lotu stoi budynek albo mur (mag na wieży, cel na murze) — kula przelatuje łukiem nad dachem,
+    // a nie przez ścianę (Michał 30.10.2026: „magia przelatuje przez budynki”)
+    this.shots.push({ from: from.clone(), to: to.clone(), t: 0, fire, dur: Math.min(0.62, 0.22 + dist * 0.05) * (arc ? 1.25 : 1), seed: Math.random() * 100, k: 1, ...(arc ? { arc } : {}) });
     // błysk w dłoni przy rzucie
     for (let i = 0; i < 6; i++) this.emit(from, this.jitter(0.6), 0.25, fire ? 0 : 2, fire ? 0.035 : 0.03);
   }
@@ -222,7 +224,11 @@ export class SpellLayer {
       if (a.t < 0) continue; // kula deszczu ognia jeszcze nie spada
       // prosto od dłoni do celu, bez łuku
       this.p.lerpVectors(a.from, a.to, a.t);
-      this.d.subVectors(a.to, a.from).normalize();
+      if (a.arc) {
+        this.p.y += a.arc * 4 * a.t * (1 - a.t);
+        // kierunek smugi wzdłuż łuku (pochodna)
+        this.d.subVectors(a.to, a.from); this.d.y += a.arc * 4 * (1 - 2 * a.t); this.d.normalize();
+      } else this.d.subVectors(a.to, a.from).normalize();
       this.q.setFromUnitVectors(UP, this.d);
       const pulse = 1 + Math.sin(time * 38 + a.seed) * 0.1 + Math.sin(time * 23 + a.seed * 2) * 0.06;
       // wielki czar: kule większe, ale poświata rośnie wolniej niż kula (siedem nakładających się, prześwietlonych na

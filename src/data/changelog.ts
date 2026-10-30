@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.8', date: '2026-10-30',
+    pl: [
+      'Kula czaru maga z muru albo wieży (albo lecąca w obrońcę na murze) przelatuje łukiem nad dachami, zamiast przez ściany budynków.',
+      'Stodoła pokazuje zboże: z prawej strony klepiska leżą snopki i worki mąki, z lewej towary składu.',
+    ],
+    en: [
+      'A spell cast from a wall or tower (or at a defender on a wall) now arcs over the rooftops instead of flying through the walls of buildings.',
+      'The barn shows its grain: sheaves and sacks of flour lie on the right of the threshing floor, stockpile goods on the left.',
+    ],
+  },
+  {
     v: '0.69.7', date: '2026-10-30',
     pl: ['Skryba nie zasypuje już kroniki: o pełnym magazynie mówi najwyżej raz na 5 minut gry, a o tym, że znów jest miejsce — dopiero gdy magazyn przez półtorej minuty nie zapchał się ponownie.'],
     en: ['The scribe no longer floods the chronicle: he reports a full store at most once every 5 game minutes, and that there is room again only once it has stayed clear for a minute and a half.'],

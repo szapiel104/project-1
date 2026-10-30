@@ -73,7 +73,8 @@ import type { Stick } from './arrows';
 import { FORECOURT, FP, Phase, TICKS_PER_SECOND, buildingById, type GameState } from '../sim/state';
 import { towerEntry, towerUnder } from '../sim/systems/stonewalls';
 import { GREAT_FLIGHT } from '../sim/systems/greatspell';
-import { CLIMB_TICKS, fireArrow, peasantWeapon } from '../sim/systems/army';
+import { CLIMB_TICKS, fireArrow, high, peasantWeapon } from '../sim/systems/army';
+import { firstBlock } from '../sim/systems/sight';
 import { partsGeometry, peasantGear, toolMaterials } from './gear';
 import { clockAt, rainAt } from '../sim/clock';
 import { COLD, weatherOf, yearPos } from '../sim/weather';
@@ -3639,7 +3640,7 @@ export class GameRenderer {
       if (!cap) continue;
       const mesh = this.buildingMeshes.get(b.id);
       if (!mesh) continue;
-      for (const [kind, group] of [['stockpile', 'fill'], ['granary', 'foodfill'], ['armory', 'armsfill']] as const) {
+      for (const [kind, group] of [['stockpile', 'fill'], ['granary', 'foodfill'], ['armory', 'armsfill'], ['grain', 'grainfill']] as const) {
         const max = cap[kind];
         if (!max) continue;
         let here = 0;
@@ -4218,7 +4219,10 @@ export class GameRenderer {
         if (udef.magic) {
           // czar z dłoni: kula ognia albo wody leci do celu (trafienie liczy symulacja, to tylko wygląd)
           const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
-          this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.copy(aim), udef.magic === 'fire');
+          // mag na murze albo wieży (albo cel na murze) strzela ponad budynkami: kula leci łukiem nad dachem, nie przez ścianę
+          const tgt = foe ?? victim;
+          const arc = tgt && firstBlock(g, s, tgt, !!(foe && (foe.up || high(g, foe)))) >= 0 ? 1.5 : 0;
+          this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.copy(aim), udef.magic === 'fire', arc);
           // dźwięk czaru: buchnięcie ognia albo świst wody — nie zamach miecza (Michał 30.10.2026: „jak broń metalowa”)
           if (udef.magic === 'fire') this.playHere('torch', t.position.x, t.position.z, 1, t.position.y + 1, 0.8);
           else this.playHere('arrowfly', t.position.x, t.position.z, 1.1, t.position.y + 1, 0.65);

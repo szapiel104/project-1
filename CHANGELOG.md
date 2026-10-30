@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.69.8 — 30.10.2026
+- Kule czarów: `firstBlock` w `sight.ts` (pierwsze zasłaniające pole na linii; `lineOfSight` z niego korzysta); gdy na linii od maga do celu stoi budynek albo mur (strzał z wysoka albo w cel na murze), kula leci łukiem 1,5 nad prostą (`SpellLayer.cast(..., arc)`).
+- Stodoła: klepisko podzielone — `fill` (skład) z lewej, nowe `grainfill` (zboże, mąka) z prawej, 2×3 miejsca; `syncStores` obsługuje rodzaj `grain`.
+
 ## 0.69.7 — 30.10.2026
 - Skryba o magazynach (`storeNotes.ts`): „pełny” najwyżej raz na 3000 ticków, „znowu miejsce” po 900 tickach bez przerwy wolnego magazynu (wcześniej na zmianę co kilka sekund, gdy magazynier wnosił porcję, a warsztat oddawał kolejną).
 

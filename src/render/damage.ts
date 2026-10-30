@@ -28,7 +28,7 @@ type Kind = 'stone' | 'wood';
 interface Spot { p: THREE.Vector3; n: THREE.Vector3; decal: boolean }
 
 /** Części modelu, na których nie rysujemy pęknięć (wnętrza, ludzie, ogień, znaki, flagi) */
-const SKIP = new Set(['interior', 'life', 'fire', 'flame', 'smoke', 'noworker', 'fill', 'foodfill', 'armsfill', 'flagcloth', 'bannercloth', 'flagpole', 'ceiling']);
+const SKIP = new Set(['interior', 'life', 'fire', 'flame', 'smoke', 'noworker', 'fill', 'foodfill', 'armsfill', 'grainfill', 'flagcloth', 'bannercloth', 'flagpole', 'ceiling']);
 const MAX_DECALS = 1500, MAX_ROCKS = 5000, MAX_SPLINTERS = 3000, MAX_BLOCKS = 1500;
 
 /** Nieregularny kamień: kula z poszarpaną powierzchnią (gładkie cieniowanie, bez kanciastych „wielościanów”) */

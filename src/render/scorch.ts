@@ -13,7 +13,7 @@ import type { GameState } from '../sim/state';
 import { cat } from './cat';
 import { touch } from './touch';
 
-const SKIP = new Set(['interior', 'life', 'fire', 'flame', 'smoke', 'noworker', 'fill', 'foodfill', 'armsfill', 'flagcloth', 'bannercloth', 'flagpole', 'ceiling', 'pożar']);
+const SKIP = new Set(['interior', 'life', 'fire', 'flame', 'smoke', 'noworker', 'fill', 'foodfill', 'armsfill', 'grainfill', 'flagcloth', 'bannercloth', 'flagpole', 'ceiling', 'pożar']);
 const MAX = 2500;
 interface Spot { p: THREE.Vector3; n: THREE.Vector3; roof: boolean }
 
