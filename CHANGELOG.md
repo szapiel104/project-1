@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.68.2 — 30.10.2026
+- **Pracownik płonącego budynku rzuca robotę i gasi** (Michał). Jest pierwszy w ekipie z wiadrami; po zgaszeniu wraca do pracy.
+- **Bez studni wodę noszą z jeziora albo rzeki.** Ekipa biegnie na najbliższy brzeg (do 40 pól od pożaru, jak studnia), nabiera wiadro i wraca. Studnia, gdy jest, ma pierwszeństwo. Działa tak samo u bota. Testy: `tests/fire-crew.test.ts`.
+- Mur w budowie bez brązowych kul: każde pole muru dostawało hałdę ziemi z wykopu wielkości prawie całego pola. Mury, bramy i budowle 1×1 hałdy nie mają.
+- Karty budowy: każdy surowiec kosztu na własnej tabliczce (ciemne pole, cienka złota ramka, liczba 20 px, większa ikonka); czerwona, gdy nie stać.
+
 ## 0.68.1 — 30.10.2026
 - Nocą w grupie pochodnię niesie jeden chłop: kto ma towarzysza z pochodnią do ok. 1,6 pola, idzie przy jego świetle (Michał: czterech idących obok siebie nie potrzebuje czterech pochodni). Mniej płomieni do rysowania. Buntownicy z pochodniami bez zmian.
 

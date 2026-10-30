@@ -3,6 +3,7 @@ import { BUILDINGS, buildingIndex, footprint, isStoneTower } from '../../data/bu
 import { findPath, walkable } from '../path';
 import { FP, Phase, type Building, type GameState, type Unit } from '../state';
 import { maxHp } from './placement';
+import { Terrain } from '../../data/terrain';
 
 /**
  * Pożary i gaszenie.
@@ -48,6 +49,25 @@ function nearestWell(g: GameState, owner: number, fire: Building): Building | un
   }
   return best;
 }
+/**
+ * Bez studni (Michał 30.10.2026): najbliższe pole na brzegu wody (jezioro, rzeka), po którym da się chodzić, do
+ * WELL_RANGE pól od pożaru; -1 gdy wody nie ma. Stamtąd gaszący czerpie wiadrem.
+ */
+function nearestShore(g: GameState, owner: number, fire: Building): number {
+  const [fx, fy] = center(fire), w = g.map.width, h = g.map.height;
+  const water = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < w && y < h && g.map.tiles[y * w + x] === Terrain.Water;
+  let best = -1, bd = WELL_RANGE * WELL_RANGE;
+  const x0 = Math.max(0, Math.floor(fx - WELL_RANGE)), x1 = Math.min(w - 1, Math.ceil(fx + WELL_RANGE));
+  const y0 = Math.max(0, Math.floor(fy - WELL_RANGE)), y1 = Math.min(h - 1, Math.ceil(fy + WELL_RANGE));
+  for (let y = y0; y <= y1; y++)
+    for (let x = x0; x <= x1; x++) {
+      const d = (x + 0.5 - fx) ** 2 + (y + 0.5 - fy) ** 2;
+      if (d >= bd || g.map.tiles[y * w + x] === Terrain.Water || !walkable(g, y * w + x, owner)) continue;
+      if (!(water(x + 1, y) || water(x - 1, y) || water(x, y + 1) || water(x, y - 1))) continue;
+      bd = d; best = y * w + x;
+    }
+  return best;
+}
 /** Miejsce dla gaszącego przy `goal`: wolne pola wokół, najbliższe `other` (drugiemu końcowi trasy), kolejne osoby obok siebie */
 function slotFor(g: GameState, u: Unit, goal: Building, other: Building): number {
   const fp = footprint(BUILDINGS[goal.type]!, goal.rot), w = g.map.width, h = g.map.height;
@@ -67,7 +87,7 @@ function slotFor(g: GameState, u: Unit, goal: Building, other: Building): number
   return tiles[rank % tiles.length]!;
 }
 function release(u: Unit): void {
-  u.bucket = 0; u.fireAt = 0; u.target = 0; u.path = []; u.timer = 0;
+  u.bucket = 0; u.fireAt = 0; u.target = 0; u.path = []; u.timer = 0; u.waterAt = 0;
   u.phase = u.job ? Phase.Returning : Phase.Idle;
 }
 
@@ -99,15 +119,19 @@ export function fireSystem(g: GameState): void {
     for (const b of g.buildings) {
       if (!b.fire) continue;
       const well = nearestWell(g, b.owner, b);
-      if (!well) continue;
+      // bez studni: woda z najbliższego jeziora albo rzeki
+      const shore = well ? -1 : nearestShore(g, b.owner, b);
+      if (!well && shore < 0) continue;
       const busy = g.units.filter((u) => u.bucket && u.fireAt === b.id).length;
       if (busy >= CREW) continue;
       const [fx, fy] = center(b);
-      const cands = g.units.filter((u) => u.owner === b.owner && !u.bucket && !u.enlist && !u.riot && u.carryRes < 0 && u.phase !== Phase.Sleeping && u.phase !== Phase.ToSleep
-        && (u.job === 0 ? u.phase === Phase.Idle || u.phase === Phase.Evening || u.phase === Phase.ToEvening : buildingById(g, u.job)?.type === ENGINEERS)
+      // pracownik płonącego budynku rzuca robotę i gasi pierwszy (Michał 30.10.2026: nie pracuje w ogniu)
+      const own = (u: Unit): boolean => u.job === b.id && u.phase !== Phase.Sleeping && u.phase !== Phase.ToSleep && u.phase !== Phase.Resting;
+      const cands = g.units.filter((u) => u.owner === b.owner && !u.bucket && !u.enlist && !u.riot && u.phase !== Phase.Sleeping && u.phase !== Phase.ToSleep
+        && (own(u) || (u.carryRes < 0 && (u.job === 0 ? u.phase === Phase.Idle || u.phase === Phase.Evening || u.phase === Phase.ToEvening : buildingById(g, u.job)?.type === ENGINEERS)))
         && Math.hypot(u.px / FP - fx, u.py / FP - fy) < 30);
-      cands.sort((a, c) => Math.hypot(a.px / FP - fx, a.py / FP - fy) - Math.hypot(c.px / FP - fx, c.py / FP - fy));
-      for (const u of cands.slice(0, CREW - busy)) { u.bucket = 1; u.fireAt = b.id; u.target = well.id; u.path = []; u.timer = 0; u.wait = 0; }
+      cands.sort((a, c) => (own(c) ? 1 : 0) - (own(a) ? 1 : 0) || Math.hypot(a.px / FP - fx, a.py / FP - fy) - Math.hypot(c.px / FP - fx, c.py / FP - fy));
+      for (const u of cands.slice(0, CREW - busy)) { u.bucket = 1; u.fireAt = b.id; u.target = well ? well.id : 0; u.waterAt = well ? 0 : shore + 1; u.path = []; u.timer = 0; u.wait = 0; u.carryRes = -1; u.carryAmt = 0; }
     }
   }
   if (g.tick % 10 === 0) stepAway(g);
@@ -118,6 +142,18 @@ export function fireSystem(g: GameState): void {
     if (!fire || !fire.fire) { release(u); continue; }
     if (u.wait > 0) continue;
     if (u.path.length) continue; // krok robi system ludzi
+    // czerpanie z jeziora albo rzeki (bez studni): idzie na swoje pole brzegu i nabiera wody
+    if (u.bucket === 1 && u.waterAt) {
+      const dest = u.waterAt - 1, here = tileOf(g, u);
+      if (here !== dest) {
+        const path = findPath(g, here, (t) => t === dest, 3000, u.owner, dest);
+        if (!path || !path.length) { release(u); continue; }
+        u.path = path; continue;
+      }
+      if (++u.timer < DRAW) continue;
+      u.timer = 0; u.bucket = 2;
+      continue;
+    }
     const goal = u.bucket === 1 ? buildingById(g, u.target) : fire;
     if (!goal) { release(u); continue; }
     // każdy z ekipy ma własne miejsce: pola przy studni / przy ogniu od strony drugiego końca, po kolei wg id
@@ -137,8 +173,10 @@ export function fireSystem(g: GameState): void {
     fire.fire = Math.max(0, (fire.fire ?? 0) - SPLASH);
     u.bucket = 1;
     const well = nearestWell(g, u.owner, fire);
-    if (!well) { release(u); continue; }
-    u.target = well.id;
+    if (well) { u.target = well.id; u.waterAt = 0; continue; }
+    const shore = nearestShore(g, u.owner, fire);
+    if (shore < 0) { release(u); continue; }
+    u.target = 0; u.waterAt = shore + 1;
   }
 }
 

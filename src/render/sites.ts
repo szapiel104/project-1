@@ -292,7 +292,8 @@ export class SiteLayer {
       }
       // hałda ziemi z wykopu: rośnie przy kopaniu, potem ją rozgarniają
       const spoil = k < 0.12 ? 0.4 + k * 5 : Math.max(0, 1 - (k - 0.12) * 3);
-      if (spoil > 0.05 && ns < 598) {
+      // mury, bramy i drobne budowle 1×1 bez hałdy (Michał 30.10.2026: wzdłuż muru w budowie stały rzędy brązowych kul)
+      if (spoil > 0.05 && ns < 598 && !def.wall && !def.gate && !def.line && fp.w * fp.h > 1) {
         q.setFromAxisAngle(Y, b.id);
         this.siteStones!.setColorAt(ns, tmpColor.setHex(0x4e3a28));
         this.siteStones!.setMatrixAt(ns++, M4.compose(p.set(x1 + 0.45, base - 0.05, z0 + 0.4), q, sc.set(0.9 * spoil, 0.45 * spoil, 0.7 * spoil)));

@@ -310,6 +310,8 @@ export interface Unit {
   owner: number;
   /** Gaszenie: 1 = idzie do studni (`target` = studnia), 2 = niesie wiadro do pożaru (`target` = płonący budynek) */
   bucket?: number;
+  /** Gaszący bez studni: pole na brzegu jeziora albo rzeki, z którego czerpie wodę (+1; fire.ts) */
+  waterAt?: number;
   /** Płonący budynek, do którego niesie wodę (gdy idzie do studni) */
   fireAt?: number;
   /** Rekrut w drodze do koszar: rodzaj jednostki + 1 (0/brak = zwykły chłop) */
