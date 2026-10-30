@@ -1687,6 +1687,9 @@ export class GameRenderer {
       return c;
     };
     const t0 = performance.now();
+    // czas każdego kroku (budynek: ms) do sprawdzania w konsoli: window.__prewarmSteps
+    const steps: [string, number][] = [];
+    (window as unknown as { __prewarmSteps: unknown }).__prewarmSteps = steps;
     let waiting: THREE.Material[] = [];
     for (const def of BUILDINGS) {
       // nie w trakcie wczytywania nowej mapy ani pełnej rozgrzewki: wtedy czekamy
@@ -1694,6 +1697,7 @@ export class GameRenderer {
       await idle();
       // poprzedni budynek jeszcze się kompiluje: nie dokładamy karcie roboty (najwyżej ok. 2 s czekania)
       for (let k = 0; k < 20 && waiting.length && !this.pre.isReady(waiting); k++) await idle();
+      const ts = performance.now();
       const m = this.models.building(def.id, TEAM_COLORS[0] ?? 0x888888);
       m.userData.fx = collectFx(m, isWindowMat);
       mergeStatic(m, def.id + ':0');
@@ -1712,6 +1716,7 @@ export class GameRenderer {
       probe.updateMatrixWorld(true);
       applySeason(probe);
       waiting = this.pre.warm(probe, this.cam.camera);
+      steps.push([def.id, Math.round(performance.now() - ts)]);
     }
     (window as unknown as { __prewarmMs: number }).__prewarmMs = Math.round(performance.now() - t0);
   }

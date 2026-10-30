@@ -820,6 +820,7 @@ function placeErrorText(error: string, type: number): string {
 }
 
 function pick(id: string | null): void {
+  if (id !== null && buildingIndex(id) < 0) id = null; // nieznana nazwa (np. z pomocnika testów) nie wywraca podglądu stawiania
   picked = id;
   moveId = 0;
   touchTile = null;

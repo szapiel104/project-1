@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.67.9 — 30.10.2026
+- Miniatury budynków (rysowane w tle po nowej wersji gry): shadery każdego budynku kompiluje karta w tle przed rysowaniem miniatury — wcześniej kompilowały się naraz i gra przycinała przy każdym nowym rodzaju.
+- Pomiar przycięć przy stawianiu: czas każdego kroku przygotowania budynków w tle w `window.__prewarmSteps`.
+- Podgląd stawiania nie wywraca się na nieznanej nazwie budynku (błąd „reading 'road'” w dzienniku przy pomiarach).
+
 ## 0.67.8 — 30.10.2026
 - **Mag Płomienia pali ciała** (Michał). W pasku czarów maga ognia nowy przełącznik „Palenie ciał”: włączony — mag bez wroga w pobliżu sam idzie do najbliższego ciała (do 12 pól, swojego i wrogiego, ludzi i wilków), z 4 pól rzuca ogień, ciało płonie, kurczy się i po 4 s znika. Wróg ma pierwszeństwo; ciał, po które idą grabarze albo leżących na wieży, nie rusza; kilku magów nie idzie do jednego ciała. Wyłączony — nie pali. Rozkaz `cremate` przez symulację (gra sieciowa), moduł `src/sim/systems/cremation.ts`. Bot ma palenie włączone u swoich magów ognia.
 - Ustawienia → Grafika: „Trawa” przemianowana na „Szczegóły w oddali” (Niskie / Średnie / Wysokie / Ultra). Trawa jest wyłączona od 0.64.7, a to ustawienie decyduje tylko, z jak daleka budynki, krzaki i drzewa są w pełnej wersji.

@@ -8,7 +8,7 @@ import { createRenderer } from './glcontext';
 export function renderThumbnails(models: ModelFactory, teamColor: number, size = 160): Map<string, string> {
   const out = new Map<string, string>();
   const it = thumbSteps(models, teamColor, size, out);
-  while (!it.next().done) { /* wszystko naraz */ }
+  while (!it.next().done) { /* wszystko naraz (przygotowanie i rysowanie bez czekania) */ }
   return out;
 }
 
@@ -27,13 +27,16 @@ export async function renderThumbnailsAsync(models: ModelFactory, teamColor: num
     await idle();
     const r = it.next();
     if (r.done) break;
+    // krok „przygotowany”: shadery budynku kompiluje karta w tle (bez tego miniatura kompilowała je na raz i gra
+    // przycinała na 0,1–0,8 s przy każdym nowym rodzaju), dopiero potem rysowanie
+    if (typeof r.value === 'object') { try { await r.value.renderer.compileAsync(r.value.scene, r.value.cam); } catch { /* skompiluje się przy rysowaniu */ } continue; }
     if (r.value) onEach(r.value, out.get(r.value)!);
   }
   return out;
 }
 
 /** Kroki rysowania miniatur: `yield` po każdym budynku (jego id) */
-function* thumbSteps(models: ModelFactory, teamColor: number, size: number, out: Map<string, string>): Generator<string, void, void> {
+function* thumbSteps(models: ModelFactory, teamColor: number, size: number, out: Map<string, string>): Generator<string | { renderer: THREE.WebGLRenderer; scene: THREE.Scene; cam: THREE.Camera }, void, void> {
   let renderer: THREE.WebGLRenderer;
   try {
     renderer = createRenderer({antialias: true, alpha: true, preserveDrawingBuffer: true }, 'pomocniczy');
@@ -76,6 +79,7 @@ function* thumbSteps(models: ModelFactory, teamColor: number, size: number, out:
     half *= 1.04;
     cam.left = -half; cam.right = half; cam.top = half; cam.bottom = -half;
     cam.updateProjectionMatrix();
+    yield { renderer, scene, cam };
     renderer.render(scene, cam);
     out.set(def.id, renderer.domElement.toDataURL('image/png'));
     scene.remove(model);
