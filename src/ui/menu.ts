@@ -644,8 +644,9 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         tip(tx('Jasność to nie jakość — zostaw 100%, chyba że monitor jest ciemny; więcej rozjaśnia wszystko i spłaszcza obraz. Odbicia otoczenia są tanie, a modele przestają być płaskie po stronie cienia — zostaw włączone. Cienie i cieniowanie zagłębień kosztują najwięcej ze wszystkich opcji.', 'Brightness is not quality — keep it at 100% unless your monitor is dark; more washes everything out. Environment reflections are cheap and stop models looking flat on the shaded side — leave them on. Shadows and ambient occlusion cost the most of all options.')),
       ]],
       [tx('Świat', 'World'), () => [
-        intro(tx('Trawa, pora dnia i pogoda — klimat wioski.', 'Grass, time of day and weather — the feel of the village.')),
-        choice(tx('Trawa', 'Grass'), settings.grass, [[0, t('set.off')], [0.6, tx('Bliżej kamery', 'Near the camera')], [1, tx('Pełna', 'Full')], [1.35, tx('Daleko (Ultra)', 'Far (Ultra)')]], (v) => { settings.grass = v; manual(); }),
+        intro(tx('Szczegóły w oddali, pora dnia i pogoda — klimat wioski.', 'Distant detail, time of day and weather — the feel of the village.')),
+        // trawa jest wyłączona (terrain.ts, GRASS); to ustawienie decyduje, z jak daleka budynki, krzaki i drzewa są w pełnej wersji
+        choice(tx('Szczegóły w oddali', 'Distant detail'), settings.grass, [[0, tx('Niskie', 'Low')], [0.6, tx('Średnie', 'Medium')], [1, tx('Wysokie', 'High')], [1.35, tx('Ultra', 'Ultra')]], (v) => { settings.grass = v; manual(); }),
         check(t('set.dayNight'), settings.dayNight, (v) => { settings.dayNight = v; save(); }),
         check(tx('Deszcz', 'Rain'), settings.rain ?? true, (v) => { settings.rain = v; save(); }),
         check(tx('Mgła', 'Fog'), settings.fog ?? true, (v) => { settings.fog = v; save(); }),

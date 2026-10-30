@@ -46,3 +46,19 @@ describe('spalone ciała (30.10.2026)', () => {
     expect(c?.burnt).toBeFalsy();
   });
 });
+
+describe('palenie ciał przez Maga Płomienia (30.10.2026)', () => {
+  it('z włączonym paleniem podchodzi i pali ciało (znika), bez niego nie', () => {
+    const g = createGame(9); emptyScene(g);
+    const k = playerKeep(g, 0)!, w = g.map.width, x = (k.door % w) - 6, y = Math.floor(k.door / w) + 18;
+    const mage = soldier(g, 0, 'mageFire', x, y);
+    g.corpses.push({ id: 99901, owner: 1, kind: unitIndex('spearman'), px: (x + 8) * FP + 128, py: (y + 2) * FP + 128, at: g.tick, taken: false });
+    for (let i = 0; i < 100; i++) step(g, []);
+    expect(g.corpses.some((c) => c.id === 99901)).toBe(true);           // wyłączone: ciało leży
+    step(g, [{ type: 'cremate', player: 0, ids: [mage.id], on: true }]);
+    let lit = false;
+    for (let i = 0; i < 400 && g.corpses.some((c) => c.id === 99901); i++) { step(g, []); if (g.corpses.find((c) => c.id === 99901)?.pyre !== undefined) lit = true; }
+    expect(lit).toBe(true);
+    expect(g.corpses.some((c) => c.id === 99901)).toBe(false);          // spalone i zniknęło
+  });
+});

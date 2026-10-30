@@ -72,7 +72,18 @@ function texts(s: School, great: boolean): { name: string; tip: string } {
   };
 }
 
-export interface SpellBar { root: HTMLElement; bind(source: () => { tick: number; mages: readonly Soldier[] } | null): void }
+export interface SpellBar {
+  root: HTMLElement;
+  /** `cremate(on)`: przełącznik „Palenie ciał” Maga Płomienia (main.ts wysyła rozkaz dla zaznaczonych magów ognia) */
+  bind(source: () => { tick: number; mages: readonly Soldier[] } | null, act?: { cremate(on: boolean): void }): void;
+}
+
+// palenie ciał: leżąca postać i płomień nad nią
+const PYRE_ICON = svg(`<rect width="40" height="40" fill="#2a0d05" opacity=".45"/>
+  <path d="M6 31h28" stroke="#6b5136" stroke-width="3" stroke-linecap="round"/><path d="M8 34h24" stroke="#4a3624" stroke-width="2.4" stroke-linecap="round"/>
+  <ellipse cx="22" cy="27" rx="10" ry="3.2" fill="#3a2d22"/><circle cx="10.5" cy="26.5" r="3" fill="#3a2d22"/>
+  <path d="M20 26c-7 0-9-5-7-9 1 2 2 3 3 2-1-4 1-8 4-10 0 3 2 5 4 7 1-1 1-3 0-5 3 2 5 6 4 9-1 4-4 6-8 6z" fill="#ff7a1e"/>
+  <path d="M20 26c-3 0-5-2-4-5 1 1 2 2 3 1 0-2 1-4 3-6 0 2 2 3 3 5 1 3-1 5-5 5z" fill="#ffe08a"/>`);
 
 export function createSpellBar(): SpellBar {
   const root = document.createElement('div');
@@ -81,6 +92,19 @@ export function createSpellBar(): SpellBar {
   root.setAttribute('aria-label', tx('Czary magów', "Mages' spells"));
   root.hidden = true;
   const pairs = new Map<School, Pair>();
+  let act: { cremate(on: boolean): void } | undefined;
+  // przełącznik „Palenie ciał” (tylko przy magach ognia): wciśnięty, gdy wszyscy zaznaczeni magowie ognia palą ciała
+  const pyre = document.createElement('button');
+  pyre.type = 'button';
+  pyre.className = 'spell-slot spell-toggle';
+  pyre.innerHTML = PYRE_ICON;
+  pyre.setAttribute('aria-pressed', 'false');
+  const pyreText = { name: tx('Palenie ciał', 'Burn the dead'), tip: tx('Włączone: mag sam podchodzi do ciał w pobliżu (swoich i wrogich) i je pali — po chwili znikają. Wróg ma pierwszeństwo. Kliknij, żeby włączyć albo wyłączyć.', 'On: the mage walks to bodies nearby (yours and the enemy\'s) and burns them; soon they are gone. Foes come first. Click to turn on or off.') };
+  pyre.setAttribute('aria-label', `${pyreText.name}. ${pyreText.tip}`);
+  const pyreTip = (): void => showTip(pyre, tx('Przełącznik', 'Toggle'), { ...pyreText, icon: '' });
+  pyre.addEventListener('mouseenter', pyreTip); pyre.addEventListener('focus', pyreTip);
+  pyre.addEventListener('mouseleave', hideTip); pyre.addEventListener('blur', hideTip);
+  pyre.addEventListener('click', () => act?.cremate(pyre.getAttribute('aria-pressed') !== 'true'));
 
   const slot = (s: School, great: boolean): Slot => {
     const el = document.createElement('button');
@@ -106,6 +130,7 @@ export function createSpellBar(): SpellBar {
       wrap.className = 'spell-pair';
       p = { wrap, normal: slot(s, false), great: slot(s, true) };
       wrap.append(p.normal.el, p.great.el);
+      if (s === 'fire') wrap.append(pyre);
       root.append(wrap);
       pairs.set(s, p);
     }
@@ -150,6 +175,7 @@ export function createSpellBar(): SpellBar {
           const gl = Math.max(0, (m.great ?? 0) - v.tick); gLeft = Math.min(gLeft, gl); if (gl === 0) gReady++;
         }
         paint(p.normal, nLeft, def.cooldown, nReady, list.length);
+        if (school === 'fire') { const on = list.every((m) => m.cremate); if (pyre.getAttribute('aria-pressed') !== String(on)) pyre.setAttribute('aria-pressed', String(on)); }
         paint(p.great, gLeft, GREAT_CD, gReady, list.length);
       }
     }
@@ -158,5 +184,5 @@ export function createSpellBar(): SpellBar {
     if (root.hidden === show) root.hidden = !show;
   };
   requestAnimationFrame(frame);
-  return { root, bind(src) { source = src; } };
+  return { root, bind(src, a) { source = src; act = a; } };
 }

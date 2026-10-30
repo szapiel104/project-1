@@ -1,4 +1,5 @@
 import { Buckets } from '../spatial';
+import { cremateStep, pyreSystem } from './cremation';
 import { buildingById, unitById, dropWorker, storeCapacity, storeUsed } from '../state';
 import { spareKeeper } from './storage';
 import { WALL_TOP } from '../../data/keep';
@@ -1027,6 +1028,7 @@ export function armySystem(g: GameState): void {
   // limit drogi szukanej na tick: przy setkach żołnierzy reszta poczeka chwilę, gra się nie zatnie
   budget = 10;
   missileSystem(g, byId);
+  pyreSystem(g);
   ordersSystem(g);
   const marches = marchSystem(g);
   const heals = healers(g);
@@ -1118,6 +1120,8 @@ export function armySystem(g: GameState): void {
     // mag Źródła bez wroga w zasięgu wzroku gasi własne płonące budynki w swoim zasięgu (czar co swoje odliczanie)
     if (s.cd === 0 || s.target) s.douse = undefined;
     if (def.magic === 'water' && !s.target && !s.up && s.cd === 0 && !nearestFoe(s, range) && douse(g, s, range)) continue;
+    // Mag Płomienia z włączonym paleniem ciał: bez wroga w pobliżu idzie do najbliższego ciała i je pali (cremation.ts)
+    if (def.magic === 'fire' && s.cremate && !s.target && !s.up && !s.wounded && (s.goal < 0 || s.pyreOf) && !nearestFoe(s, range) && cremateStep(g, s, def)) continue;
     // taran: nie walczy z ludźmi, tylko podjeżdża pod najbliższą wrogą bramę, mur albo zamek i bije w nie belką
     if (def.ram) {
       if ((s.goal < 0 || s.amove) && siege(g, s, def, taken)) continue;

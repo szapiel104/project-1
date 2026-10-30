@@ -455,6 +455,10 @@ export interface Soldier {
   burnBy?: number;
   /** Tick ostatniego trafienia ogniem (kula ognia, odprysk, deszcz ognia, ognista strzała): zginie w nim — ciało spalone */
   fireAt?: number;
+  /** Mag Płomienia: pali ciała w pobliżu (przełącznik w panelu wojska, cremation.ts) */
+  cremate?: boolean;
+  /** Ciało, do którego idzie, żeby je spalić */
+  pyreOf?: number;
   /** Mag: od tego ticku znów może rzucić wielki czar (greatspell.ts) */
   great?: number;
   /** Mag: tick ostatniego wielkiego czaru i środek jego kręgu (dla obrazu) */
@@ -550,6 +554,8 @@ export interface Corpse {
   post?: number;
   /** Zginął w ogniu: ciało zwęglone (wygląd) */
   burnt?: boolean;
+  /** Tick podpalenia przez Maga Płomienia (cremation.ts): płonie i po chwili znika */
+  pyre?: number;
   /** Dwaj, którzy po nie idą: [niosący z przodu, pomocnik z tyłu] (bearers.ts) */
   by?: number[];
   /** Tick wysłania tej dwójki (gdy utkną, ciało wraca do puli) */

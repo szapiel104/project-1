@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.67.8 — 30.10.2026
+- **Mag Płomienia pali ciała** (Michał). W pasku czarów maga ognia nowy przełącznik „Palenie ciał”: włączony — mag bez wroga w pobliżu sam idzie do najbliższego ciała (do 12 pól, swojego i wrogiego, ludzi i wilków), z 4 pól rzuca ogień, ciało płonie, kurczy się i po 4 s znika. Wróg ma pierwszeństwo; ciał, po które idą grabarze albo leżących na wieży, nie rusza; kilku magów nie idzie do jednego ciała. Wyłączony — nie pali. Rozkaz `cremate` przez symulację (gra sieciowa), moduł `src/sim/systems/cremation.ts`. Bot ma palenie włączone u swoich magów ognia.
+- Ustawienia → Grafika: „Trawa” przemianowana na „Szczegóły w oddali” (Niskie / Średnie / Wysokie / Ultra). Trawa jest wyłączona od 0.64.7, a to ustawienie decyduje tylko, z jak daleka budynki, krzaki i drzewa są w pełnej wersji.
+
 ## 0.67.7 — 30.10.2026
 - **Trafiony strzałą albo czarem rusza na strzelca.** Łucznik strzela z 8 pól, a włócznik widzi na 6, więc ostrzeliwany wróg stał i ginął (Michał). Teraz trafiony, który z nikim nie walczy, biegnie na strzelca razem z bezczynnymi towarzyszami do 3 pól obok. Nie ruszają się: postawa „stój”, ranni w odwrocie, maszerujący na rozkaz, taran, saper, drabiniarz. Działa tak samo u bota. Test: `tests/provoked.test.ts`.
 - **Spalone ciała.** Kto zginie od kuli ognia, odprysku, deszczu ognia, ognistej strzały albo dopalając się, leży zwęglony (cała postać prawie czarna). Zwłoki mają znacznik `burnt`.

@@ -2007,3 +2007,8 @@ body.menu-open .devpanel { display: none; }
 .spell-slot.charged::after { background: radial-gradient(circle, rgba(255, 230, 140, .55), rgba(255, 230, 140, 0) 75%); animation-duration: .7s; }
 @keyframes spell-flash { from { opacity: 1; transform: scale(.7); } to { opacity: 0; transform: scale(1.25); } }
 @media (prefers-reduced-motion: reduce) { .spell-slot.cast::after, .spell-slot.charged::after { animation: none; opacity: 0; } }
+/* przełącznik „Palenie ciał”: przygaszony, gdy wyłączony; włączony — złota ramka i jasny */
+.spell-slot.spell-toggle { cursor: pointer; margin-left: 4px; }
+.spell-slot.spell-toggle[aria-pressed="false"] svg { opacity: .45; filter: grayscale(.7); }
+.spell-slot.spell-toggle[aria-pressed="true"] { border-color: #e9c766; box-shadow: inset 0 0 0 1px #0b0704, 0 0 8px rgba(255, 140, 40, .6); }
+.spell-slot.spell-toggle:hover svg { opacity: 1; }

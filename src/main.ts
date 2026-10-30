@@ -1503,6 +1503,12 @@ hud.spells.bind(() => {
   if (!chosen.size) return null;
   const mages = game.soldiers.filter((s) => chosen.has(s.id) && UNITS[s.kind]!.magic);
   return mages.length ? { tick: game.tick, mages } : null;
+}, {
+  // palenie ciał: rozkaz dla zaznaczonych magów ognia (cremation.ts)
+  cremate: (on) => {
+    const ids = game.soldiers.filter((s) => chosen.has(s.id) && s.owner === ME && UNITS[s.kind]!.magic === 'fire').map((s) => s.id);
+    if (ids.length) { pending.push({ type: 'cremate', player: ME, ids, on }); play('select'); }
+  },
 });
 function showArmy(): void {
   if (patrolPick && !chosen.size) { patrolPick = null; canvas.classList.remove('placing'); }

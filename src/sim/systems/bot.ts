@@ -241,6 +241,8 @@ export function botSystem(g: GameState): void {
       // ruda musi zostać jeszcze na zwykłych żołnierzy
       const hall = g.buildings.find((b) => b.owner === p.id && !b.build && !b.ruined && (BUILDINGS[b.type]!.id === 'mageFire' || BUILDINGS[b.type]!.id === 'mageWater'));
       if (hall && mine.length >= 6 && battleMages(g, p.id) < botMages(p.level) && p.res[resIndex('gold')]! >= 90) train(g, p.id, hall.id, BUILDINGS[hall.type]!.id);
+      // magowie ognia bota palą ciała w pobliżu (jak gracz z włączoną ikonką, cremation.ts)
+      for (const s of mine) if (s.cremate === undefined && UNITS[s.kind]!.magic === 'fire') s.cremate = true;
       // łucznicy wchodzą na wolne wieże (po dwóch, na czatownię jeden), reszta zostaje do ataku
       const perched = new Map<number, number>();
       for (const s of mine) { const t = towerOf(g, s); if (t) perched.set(s.id, t); }

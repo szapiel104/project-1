@@ -1,4 +1,5 @@
 import { cloneMaterial } from './matclone';
+import { PYRE_TICKS } from '../sim/systems/cremation';
 import { poseOnRoute, routeTime } from './minepath';
 import { PROCESS_TICKS } from '../sim/systems/emergencywood';
 import { mineWalkTicks } from '../data/minewalk';
@@ -782,6 +783,7 @@ export class GameRenderer {
   private unitY = new Map<number, number>();
   /** Ciała spalone w ogniu (z g.corpses co klatkę) */
   private burntBodies = new Set<number>();
+  private pyreAt = new THREE.Vector3();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = createRenderer({canvas, antialias: true }, 'gra');
@@ -4344,7 +4346,14 @@ export class GameRenderer {
       // rozkład spłaszcza ciało w grubości: u leżącego na boku w osi barków, u reszty przód–tył
       const flat = 1 - age * 0.55;
       sc.set(1.05 * FIG * (how === 2 ? flat : 1), 1.05 * FIG, 1.05 * FIG * (how === 2 ? 1 : flat));
-      const sink = how === 3 ? -0.21 * 1.05 * FIG * e1 * (1 - e2) : 0;
+      let sink = how === 3 ? -0.21 * 1.05 * FIG * e1 * (1 - e2) : 0;
+      // spalane przez Maga Płomienia (cremation.ts): płonie, kurczy się i zapada, po PYRE_TICKS znika z symulacji
+      if (body.pyre !== undefined) {
+        const pk = Math.max(0, Math.min(1, (g.tick + alpha - body.pyre) / PYRE_TICKS));
+        sc.multiplyScalar(1 - 0.75 * pk);
+        sink -= 0.05 * pk;
+        if (!this.calm) this.spells.burning(this.pyreAt.set(fx - width / 2, y + 0.08, fy - height / 2), body.id);
+      }
       m.compose(new THREE.Vector3(fx - width / 2, y + sink + (0.06 - age * 0.04) * (how === 3 ? e2 : e), fy - height / 2), lay, sc);
       const legs = how === 3 ? -1.45 * e1 * (1 - e2) : undefined;
       const team = body.owner >= 0 && !g.players[body.owner] ? BANDIT_COLOR : TEAM_COLORS[g.players[body.owner]?.team ?? 0] ?? 0x888888;
