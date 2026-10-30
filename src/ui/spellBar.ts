@@ -17,29 +17,33 @@ type School = 'fire' | 'water';
 interface Slot { el: HTMLButtonElement; shade: HTMLElement; secs: HTMLElement; badge: HTMLElement; wasReady: boolean; last: number }
 interface Pair { wrap: HTMLElement; normal: Slot; great: Slot }
 
-const svg = (body: string): string => `<svg viewBox="0 0 40 40" width="36" height="36" aria-hidden="true" focusable="false">${body}</svg>`;
-// ikony w kolorze (nie kreską jak rozkazy): ogień pomarańcz i żar, woda błękit i lód
+const svg = (body: string): string => `<svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true" focusable="false">${body}</svg>`;
+let uid = 0;
+/** Pocisk z ogonem (kometa): kula w (x, y), ogon w stronę `rot` stopni; kolory: zewnętrzny ogon, środek ogona, kula, blask */
+function comet(x: number, y: number, k: number, rot: number, c: [string, string, string, string]): string {
+  const id = `sb${uid++}`;
+  return `<defs><radialGradient id="${id}" cx="40%" cy="40%" r="65%"><stop offset="0" stop-color="${c[3]}"/><stop offset=".5" stop-color="${c[2]}"/><stop offset="1" stop-color="${c[0]}"/></radialGradient></defs>
+    <g transform="translate(${x} ${y}) rotate(${rot}) scale(${k})">
+      <path d="M0 -24C5 -15 9 -9 9 -2L-9 -2C-9 -9 -5 -15 0 -24z" fill="${c[0]}" opacity=".9"/>
+      <path d="M0 -17C3 -11 5 -7 5 -2L-5 -2C-5 -7 -3 -11 0 -17z" fill="${c[1]}"/>
+      <circle r="9" fill="url(#${id})"/><circle cx="-3" cy="-3" r="2.6" fill="#fff" opacity=".75"/></g>`;
+}
+const FIRE: [string, string, string, string] = ['#c9360f', '#ffb52e', '#ff8a1f', '#fff3b8'];
+const WATER: [string, string, string, string] = ['#1d5fae', '#8fdcff', '#3fa4e6', '#effcff'];
+// płomień na ziemi (deszcz ognia trafia w cel)
+const FLAME = '<path d="M20 37c-8 0-11-6-8-11 1 3 3 4 4 3-2-5 1-10 5-13 0 4 3 6 5 9 1-2 1-4 0-6 4 3 6 8 4 12-1 4-4 6-10 6z" fill="#ff7a1e"/><path d="M20 37c-4 0-6-3-4-6 1 1 2 2 3 1-1-3 1-5 3-7 0 3 2 4 3 6 1 3-1 6-5 6z" fill="#ffe08a"/>';
+// ramię lodowej gwiazdy (6 razy obrócone)
+const ARM = '<path d="M20 20V7M20 11l-3.5-3M20 11l3.5-3M20 15l-3-2.5M20 15l3-2.5" stroke="#effcff" stroke-width="2" stroke-linecap="round" fill="none"/>';
+// ikony w kolorze (nie kreską jak rozkazy): zwykły czar to pocisk, wielki to deszcz pocisków / lodowy krąg
 const ICON: Record<School, { normal: string; great: string }> = {
   fire: {
-    normal: svg(`<defs><radialGradient id="sbF1" cx="40%" cy="60%" r="60%"><stop offset="0" stop-color="#fff6c2"/><stop offset=".35" stop-color="#ffc23a"/><stop offset=".75" stop-color="#e3561b"/><stop offset="1" stop-color="#7a1d08"/></radialGradient></defs>
-      <path d="M30 6c-4 5-12 7-17 13" stroke="#e86a1e" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
-      <path d="M33 11c-5 3-10 6-14 11" stroke="#ffb02e" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"/>
-      <circle cx="16" cy="25" r="10" fill="url(#sbF1)"/><circle cx="13" cy="23" r="3" fill="#fffbe0" opacity=".85"/>`),
-    great: svg(`<defs><radialGradient id="sbF2" cx="45%" cy="55%" r="60%"><stop offset="0" stop-color="#fff2b0"/><stop offset=".45" stop-color="#ff9c2a"/><stop offset="1" stop-color="#9a2508"/></radialGradient></defs>
-      <rect x="0" y="0" width="40" height="40" fill="#2a0d05" opacity=".35"/>
-      ${[[9, 9, 4], [21, 4, 5], [32, 12, 4]].map(([x, y, r]) => `<path d="M${x! - 5} ${y! - 9}L${x} ${y}" stroke="#ff8a2a" stroke-width="2.4" stroke-linecap="round" opacity=".75"/><circle cx="${x}" cy="${y! + 4}" r="${r}" fill="url(#sbF2)"/>`).join('')}
-      <ellipse cx="20" cy="33" rx="15" ry="4.5" fill="none" stroke="#ff7a1e" stroke-width="2"/>
-      <path d="M10 33c2-6 4-3 5-8 2 4 3 2 5-4 2 5 4 6 5 3 1 4 3 4 5 9z" fill="#ffb43a"/><path d="M15 33c1-3 3-2 4-5 1 3 2 3 4 1 0 2 1 3 2 4z" fill="#fff0a0"/>`),
+    normal: svg(comet(17, 23, 0.9, 45, FIRE)),
+    great: svg(`<rect width="40" height="40" fill="#3a0f05" opacity=".55"/>${comet(9, 11, 0.42, 30, FIRE)}${comet(31, 9, 0.42, 30, FIRE)}${comet(21, 15, 0.5, 30, FIRE)}${FLAME}`),
   },
   water: {
-    normal: svg(`<defs><linearGradient id="sbW1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#e6fbff"/><stop offset=".45" stop-color="#5fc3f0"/><stop offset="1" stop-color="#1b4f9a"/></linearGradient></defs>
-      <path d="M6 30c5-3 8 2 13-1s7-9 14-7" stroke="#8fdcff" stroke-width="2.4" fill="none" stroke-linecap="round" opacity=".8"/>
-      <path d="M20 4c5 7 10 12 10 18a10 10 0 0 1-20 0c0-6 5-11 10-18z" fill="url(#sbW1)"/><path d="M15 20c0-3 2-6 4-8" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" opacity=".8"/>`),
-    great: svg(`<rect x="0" y="0" width="40" height="40" fill="#06203a" opacity=".35"/>
-      <ellipse cx="20" cy="28" rx="16" ry="7" fill="#bfeaff" opacity=".35" stroke="#9fe0ff" stroke-width="2"/>
-      <g stroke="#e9fbff" stroke-width="2.2" stroke-linecap="round"><path d="M20 6v20M11 11l18 10M29 11L11 21"/>
-      <path d="M17 8l3 3 3-3M17 24l3-3 3 3M10 15l4 0-1-4M30 15l-4 0 1-4M10 17l4 0-1 4M30 17l-4 0 1 4" fill="none" stroke-width="1.6"/></g>
-      <circle cx="20" cy="16" r="2.6" fill="#5fc3f0"/>`),
+    normal: svg(comet(17, 23, 0.9, 45, WATER)),
+    great: svg(`<rect width="40" height="40" fill="#06223f" opacity=".55"/><ellipse cx="20" cy="31" rx="16" ry="5" fill="#bfeaff" fill-opacity=".3" stroke="#9fe0ff" stroke-width="1.8"/>
+      <g transform="translate(0 -1)">${[0, 60, 120, 180, 240, 300].map((a) => `<g transform="rotate(${a} 20 20)">${ARM}</g>`).join('')}<circle cx="20" cy="20" r="3" fill="#5fc3f0" stroke="#effcff" stroke-width="1.4"/></g>`),
   },
 };
 

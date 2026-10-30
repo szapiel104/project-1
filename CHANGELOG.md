@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.67.2 — 30.10.2026
+- Pasek czarów magów: wszystkie ikony tej samej wielkości (wielki czar wyróżnia podwójna złota ramka zamiast większego pola) i narysowane od nowa — zwykły czar to pocisk z ogonem (kometa ognia albo wody), Deszcz ognia to spadające kule nad płomieniem, Lodowy krąg to lodowa gwiazda nad zamarzniętym kręgiem (było: kula z kreskami bez sensu).
+
 ## 0.67.1 — 30.10.2026
 - **Pasek czarów magów jak w grach RPG.** Po zaznaczeniu maga w panelu wojska są dwie ikony: zwykły czar (Kula ognia / Pocisk wody) i wielki czar (Deszcz ognia / Lodowy krąg). Ładujący się czar zasłania ciemna nakładka schodząca jak wskazówka zegara, z licznikiem sekund; gotowy świeci złotą ramką (wielki — łuną ognia albo lodu), w chwili rzutu ikona błyska. Przy kilku magach jednego rodzaju w rogu widać, ilu ma czar gotowy (np. 1/3). Po najechaniu albo Tab — dymek z obrażeniami i czasem odnowienia, po polsku i angielsku. Nowy moduł `src/ui/spellBar.ts`, odświeżany co klatkę.
 
