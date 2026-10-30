@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.68.3 — 30.10.2026
+- Drewniana wieża postawiona obok muru (na jego końcu) nie stoi już na kamiennym bloku muru. Blok albo bale pod wieżą tylko wtedy, gdy mur przechodzi przez wieżę (dochodzi z dwóch przeciwnych stron).
+
 ## 0.68.2 — 30.10.2026
 - **Pracownik płonącego budynku rzuca robotę i gasi** (Michał). Jest pierwszy w ekipie z wiadrami; po zgaszeniu wraca do pracy.
 - **Bez studni wodę noszą z jeziora albo rzeki.** Ekipa biegnie na najbliższy brzeg (do 40 pól od pożaru, jak studnia), nabiera wiadro i wraca. Studnia, gdy jest, ma pierwszeństwo. Działa tak samo u bota. Testy: `tests/fire-crew.test.ts`.

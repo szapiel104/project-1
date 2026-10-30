@@ -192,7 +192,9 @@ export class WallLayer {
         const inside = (x: number, y: number): boolean => x >= b.x && y >= b.y && x < b.x + fp.w && y < b.y + fp.h;
         for (let ty = b.y; ty < b.y + fp.h; ty++) for (let tx = b.x; tx < b.x + fp.w; tx++) {
           // rząd albo kolumna wieży, do której z zewnątrz dochodzi mur
-          const rowIn = at(b.x - 1, ty) || at(b.x + fp.w, ty), colIn = at(tx, b.y - 1) || at(tx, b.y + fp.h);
+          // tylko gdy mur przechodzi PRZEZ wieżę (dochodzi z obu przeciwnych stron); wieża postawiona obok, na końcu muru,
+          // stoi na swoich nogach bez kamiennego bloku pod spodem (Michał 30.10.2026)
+          const rowIn = at(b.x - 1, ty) && at(b.x + fp.w, ty), colIn = at(tx, b.y - 1) && at(tx, b.y + fp.h);
           const lk: [boolean, boolean, boolean, boolean] = [
             rowIn && (inside(tx + 1, ty) || at(tx + 1, ty)), rowIn && (inside(tx - 1, ty) || at(tx - 1, ty)),
             colIn && (inside(tx, ty + 1) || at(tx, ty + 1)), colIn && (inside(tx, ty - 1) || at(tx, ty - 1)),
