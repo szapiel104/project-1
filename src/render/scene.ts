@@ -4219,7 +4219,9 @@ export class GameRenderer {
           // czar z dłoni: kula ognia albo wody leci do celu (trafienie liczy symulacja, to tylko wygląd)
           const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
           this.spells.cast(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.copy(aim), udef.magic === 'fire');
-          this.playHere('swing', t.position.x, t.position.z, 0.8, t.position.y + 1, udef.magic === 'fire' ? 0.7 : 1.3);
+          // dźwięk czaru: buchnięcie ognia albo świst wody — nie zamach miecza (Michał 30.10.2026: „jak broń metalowa”)
+          if (udef.magic === 'fire') this.playHere('torch', t.position.x, t.position.z, 1, t.position.y + 1, 0.8);
+          else this.playHere('arrowfly', t.position.x, t.position.z, 1.1, t.position.y + 1, 0.65);
         } else {
           const from = new THREE.Vector3(px - width / 2, y + 0.5, pz - height / 2);
           // gdzie strzała zostanie po trafieniu (arrows.ts): chybiona w ziemi, w budynku na jego ścianie, inaczej w trafionym
@@ -4242,7 +4244,8 @@ export class GameRenderer {
           const gx = s.greatX / FP, gy = s.greatY / FP;
           const hx = Math.sin(heading) * 0.2, hz = Math.cos(heading) * 0.2;
           this.spells.great(this.armV.set(px - width / 2 + hx, y + 0.5, pz - height / 2 + hz), this.mouth.set(gx - width / 2, view.heightAt(gx, gy), gy - height / 2), udef.magic === 'fire', GREAT_FLIGHT / TICKS_PER_SECOND);
-          this.playHere('swing', t.position.x, t.position.z, 1, t.position.y + 1, udef.magic === 'fire' ? 0.5 : 1.1);
+          if (udef.magic === 'fire') this.playHere('fire', t.position.x, t.position.z, 1.2, t.position.y + 1, 0.85);
+          else this.playHere('arrowfly', t.position.x, t.position.z, 1.3, t.position.y + 1, 0.5);
         }
       }
       if (fired) this.hits.set(s.id, (this.hits.get(s.id) ?? 0) + 1);

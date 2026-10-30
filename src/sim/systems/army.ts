@@ -1440,18 +1440,48 @@ function rectGap(g: GameState, t: number, b: Building): number {
 }
 
 /** Oblężenie: podchodzi pod najbliższy wrogi budynek i bije w niego. Zburzona twierdza = gracz odpada. */
+/**
+ * Czy żołnierz stoi już za murami wroga: bliżej jego zamku niż najbliższy fragment jego muru, palisady albo bramy.
+ * Zwraca numer tego wroga albo −1 (wróg bez murów — nie ma czego przełamywać, zostaje zwykłe „najbliższy budynek”).
+ */
+function insideWalls(g: GameState, s: Soldier): number {
+  const sx = s.px >> 8, sy = s.py >> 8;
+  let res = -1, bestKeep = Infinity;
+  for (const k of g.buildings) {
+    if (k.type !== KEEP || k.ruined || team(g, k.owner) === team(g, s.owner)) continue;
+    const cx = k.x + 5.5, cy = k.y + 5.5;
+    const ds = Math.hypot(sx - cx, sy - cy);
+    if (ds > 60 || ds >= bestKeep) continue;
+    let ring = Infinity;
+    for (const o of g.buildings) {
+      if (o.owner !== k.owner || o.ruined) continue;
+      const od = BUILDINGS[o.type]!;
+      if (!od.wall && !od.gate) continue;
+      if (od.id === 'well' || od.id === 'torch') continue;
+      ring = Math.min(ring, Math.hypot(o.x + 0.5 - cx, o.y + 0.5 - cy));
+    }
+    if (ring === Infinity || ds >= ring - 1) continue;
+    bestKeep = ds; res = k.owner;
+  }
+  return res;
+}
+
 function siege(g: GameState, s: Soldier, def: UnitDef, taken: Set<number>): boolean {
   if (s.wait > 0) return false; // odpoczywa po nieudanym podejściu
   const here = tileOf(g, s);
   let b = s.target ? buildingById(g, s.target) : undefined;
   if (!b || b.ruined || team(g, b.owner) === team(g, s.owner)) {
     b = undefined;
-    let best = def.sight + 1;
+    // bot za murami wroga (Michał 30.10.2026): nie bije kolejnych murów, tylko idzie w głąb — najpierw budynki wojska,
+    // potem reszta osady, zamek prawie na końcu, mury na samym końcu
+    const inner = !def.ram && !def.sapper && !def.ladderman && !!g.players[s.owner]?.bot ? insideWalls(g, s) : -1;
+    let best = def.sight + 1 + (inner >= 0 ? 40 : 0);
     for (const o of g.buildings) {
       if (team(g, o.owner) === team(g, s.owner) || BUILDINGS[o.type]!.road || o.ruined) continue;
       // taran woli umocnienia: brama, mur, wieża i zamek są dla niego „bliżej” o 5 pól
       const od = BUILDINGS[o.type]!;
-      const d = rectGap(g, here, o) - (def.ram && (od.wall || od.gate || o.type === KEEP) ? 5 : 0);
+      let d = rectGap(g, here, o) - (def.ram && (od.wall || od.gate || o.type === KEEP) ? 5 : 0);
+      if (inner >= 0 && o.owner === inner) d += od.wall || od.gate ? 60 : o.type === KEEP ? 25 : od.category === 'military' || od.id === 'mageFire' || od.id === 'mageWater' || od.id === 'mageHut' ? -10 : 0;
       if (d < best) { best = d; b = o; }
     }
     s.target = b ? b.id : 0;

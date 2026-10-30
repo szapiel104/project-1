@@ -267,7 +267,9 @@ export class WallLayer {
           mesh.setMatrixAt(cnt, M4);
           return cnt + 1;
         };
-        if (sn.block < 8192) sn.block = put(kit.block, 0, sn.block);
+        // ruina muru kamiennego: bez płaskiego „chodnika” z kamieni (blok 8% wysokości) — leży sam gruz; mur rośnie od nowa
+        // dopiero przy odbudowie (Michał 30.10.2026: „rozwalony mur niech nie ma takiego podłoża”)
+        if (sn.block < 8192 && !(b.ruined && built < 0.1)) sn.block = put(kit.block, 0, sn.block);
         // drabiny postawione przez gracza przy tym polu muru (te same, którymi symulacja wpuszcza na mur)
         const ls = built >= 1 ? ladderSides(g, b) : 0;
         for (const [bit, dx, dz, rot] of [[1, 0, -1, Math.PI], [2, 1, 0, Math.PI / 2], [4, 0, 1, 0], [8, -1, 0, -Math.PI / 2]] as const) {

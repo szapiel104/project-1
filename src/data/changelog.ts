@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.5', date: '2026-10-30',
+    pl: [
+      'Czary brzmią jak czary: kula ognia buchnięciem płomienia, kula wody świstem — bez szczęku miecza.',
+      'Bot, który przedarł się za mury, nie rozbija kolejnych murów: idzie w głąb, najpierw na koszary, zbrojownie i warsztaty broni, potem na resztę osady, zamek prawie na końcu.',
+      'Zburzony mur kamienny nie zostawia płaskiego chodnika z kamieni — leży tylko gruz.',
+    ],
+    en: [
+      'Spells sound like spells: a fireball with a roar of flame, a water bolt with a hiss — no more clash of steel.',
+      'A bot that has broken through your walls no longer batters the next wall: it pushes inward, first to the barracks, armoury and weapon workshops, then the rest of the settlement, the keep almost last.',
+      'A razed stone wall no longer leaves a flat stone path behind — only rubble.',
+    ],
+  },
+  {
     v: '0.69.4', date: '2026-10-30',
     pl: [
       'Rynek wysuwa się z prawej krawędzi ekranu i jest do niej przyklejony; okno budynku (pracownicy, przenieś, rozbierz) jest w nim na górze — jedno okno zamiast dwóch.',
