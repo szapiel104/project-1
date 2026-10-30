@@ -4,7 +4,7 @@
  */
 import * as THREE from 'three';
 import type { GameState } from '../sim/state';
-import { rubbleModel, setRubble } from './buildings';
+import { bakeRubble, rubbleModel, setRubble } from './buildings';
 import type { TerrainView } from './terrain';
 import { fallHeight, rubbleFalls } from './rubblefall';
 
@@ -55,6 +55,7 @@ export class RubbleLayer {
         if (!this.fresh) rubbleFalls.drop(pile, r.w, r.h, fallHeight(r.w, r.h), ground);
       }
       setRubble(pile, r.loads.length / r.total);
+      bakeRubble(pile, rubbleFalls.falling(pile));
     }
     for (const [id, pile] of this.piles) if (!alive.has(id)) { this.scene.remove(pile); this.piles.delete(id); }
     rubbleFalls.step(Math.min(dt, 0.1));

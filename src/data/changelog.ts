@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.6', date: '2026-10-30',
+    pl: [
+      'Płynniej podczas dużych bitew: gruz z rozbitych budynków rysuje się kilkoma kawałkami zamiast kilkudziesięciu na stos, a drobne kamyki na łąkach są prostsze i nie rzucają cienia.',
+      'Okno rynku: część z pracownikami, przenoszeniem i rozbiórką nie nachodzi już na towary, a całe okno zaczyna się pod licznikami w prawym górnym rogu.',
+      'Rynek pisze o swojej załodze „kupców”, a nie „górników”.',
+    ],
+    en: [
+      'Smoother in big battles: rubble from wrecked buildings is drawn in a few pieces instead of dozens per heap, and the small pebbles in the meadows are simpler and cast no shadow.',
+      'Market window: the part with workers, moving and dismantling no longer overlaps the goods, and the whole window starts below the counters in the top-right corner.',
+      'The market now speaks of its crew as “merchants”, not “miners”.',
+    ],
+  },
+  {
     v: '0.69.5', date: '2026-10-30',
     pl: [
       'Czary brzmią jak czary: kula ognia buchnięciem płomienia, kula wody świstem — bez szczęku miecza.',

@@ -2042,14 +2042,20 @@ body.menu-open .devpanel { display: none; }
    kafelki towarów po grupach, duże liczby; sprzedaż zielona, kupno czerwona */
 /* szuflada przyspawana do prawej krawędzi, wysuwa się z prawej (Michał 30.10.2026); od góry do dolnego paska,
    w środku na górze okno budynku (pracownicy, przenieś, rozbierz), pod nim towary */
-.market-panel { position: fixed; right: 0; top: 0; bottom: 96px; z-index: 30; width: min(820px, calc(100vw - 32px));
-  padding: 16px 18px 18px; display: grid; grid-template-rows: auto auto auto 1fr; gap: 10px; border-right: 0;
+.market-panel { position: fixed; right: 0; top: 104px; bottom: 96px; z-index: 30; width: min(820px, calc(100vw - 32px));
+  padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 10px; border-right: 0;
   box-shadow: -10px 0 30px rgba(0, 0, 0, .6); animation: market-in .22s ease-out; }
 @keyframes market-in { from { transform: translateX(100%); } to { transform: none; } }
 @media (prefers-reduced-motion: reduce) { .market-panel { animation: none; } }
 .market-info:empty { display: none; }
-.market-info .panel.info { width: auto; max-width: none; margin: 0; padding: 8px 10px; max-height: 210px; overflow-y: auto;
+.market-head, .market-note, .market-info { flex: none; }
+.market-body { flex: 1 1 auto; min-height: 0; }
+/* okno budynku w szufladzie rynku: zwykły blok w kolumnie (bez własnego położenia i wysokości z okna budynku), ze
+   swoim przewijaniem, żeby nie wchodziło na towary (Michał: „nachodzą na siebie”) */
+.market-info .panel.info { position: static !important; inset: auto !important; transform: none !important; width: auto !important;
+  max-width: none !important; max-height: 240px !important; height: auto !important; overflow-y: auto !important; margin: 0 !important; padding: 8px 10px;
   background: rgba(12, 8, 4, .5); border: 1px solid #4a3a1c; box-shadow: none; }
+.market-info .info .info-name { display: none; }
 .market-info .info .info-desc, .market-info .info > p.hint { display: none; }
 .market-panel[hidden] { display: none; }
 .market-head { display: flex; align-items: center; gap: 16px; }

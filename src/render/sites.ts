@@ -9,7 +9,7 @@ import * as THREE from 'three';
 import { BUILDINGS, footprint } from '../data/buildings';
 import { Phase, type GameState } from '../sim/state';
 import { buildWork } from '../sim/systems/placement';
-import { rubbleModel, setRubble } from './buildings';
+import { bakeRubble, rubbleModel, setRubble } from './buildings';
 import { cat } from './cat';
 import type { TerrainView } from './terrain';
 import { pattern } from './textures';
@@ -204,6 +204,7 @@ export class SiteLayer {
         const pl = this.ruinPiles.get(b.id)!;
         pl.visible = k < 0.7;
         setRubble(pl, 1 - k / 0.7);
+        if (pl.visible) bakeRubble(pl, rubbleFalls.falling(pl));
       } else if (pile) { this.layer.remove(pile); this.ruinPiles.delete(b.id); }
       // najpierw wykop (pierwsze 12% pracy: sama dziura w ziemi), potem fundament, mury i na końcu dach
       const cut = site.base + 0.03 + Math.max(0, (k - 0.12) / 0.88) * (site.top - site.base) * 1.01;

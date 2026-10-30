@@ -1369,7 +1369,13 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   for (const it of pebbles) pebbleSplit[hash2(Math.round(it.pos.x * 10) + 31, Math.round(it.pos.z * 10), 0x5eed) % BOULDERS.length]!.push(it);
   // płaskie ściany jak skały (próba gładkiego cieniowania 30.10.2026 dała czarne trójkąty na zawiniętych ścianach bryły);
   // mniej kanciaste dzięki dokładniejszej bryle z bliska (plants.py)
-  BOULDERS.forEach(([near, far], k) => plant(pebbleSplit[k]!, instanced(near, 0x9a948a, pebbleSplit[k]!, 'rock', true, rockMat, { ...SMALL_LOD, farGeo: far }), null, false));
+  // wydajność (Michał 30.10.2026: lagi w bitwie, kamyki 521 tys. trójkątów w kadrze i drugie tyle w cieniu): drobne kamyki
+  // (skala < 0,6) dostają od razu prostą bryłę i nie rzucają cienia; pełna bryła z cieniem zostaje dla dużych głazów
+  BOULDERS.forEach(([near, far], k) => {
+    const big = pebbleSplit[k]!.filter((it) => it.s.x >= 0.6), small = pebbleSplit[k]!.filter((it) => it.s.x < 0.6);
+    plant(big, instanced(near, 0x9a948a, big, 'rock', true, rockMat, { ...SMALL_LOD, farGeo: far }), null, false);
+    plant(small, instanced(far, 0x9a948a, small, 'rock', false, rockMat, SMALL_LOD), null, false);
+  });
   label = 'kępy trawy';
   plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {

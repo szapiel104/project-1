@@ -545,8 +545,50 @@ export function rubbleModel(w: number, h: number, seed: number, ground?: (x: num
 
 /** Pokazuje tyle gruzu, ile jeszcze zostało do wyniesienia. */
 export function setRubble(model: THREE.Object3D, ratio: number): void {
-  const shown = Math.max(1, Math.ceil(model.children.length * ratio));
-  model.children.forEach((c, i) => { c.visible = i < shown; });
+  const pieces = model.children.filter((c) => c.name !== 'rubbleBaked');
+  const shown = Math.max(1, Math.ceil(pieces.length * ratio));
+  model.userData.shown = shown;
+  const baked = !!model.userData.bakedN;
+  pieces.forEach((c, i) => { c.visible = !baked && i < shown; });
+}
+
+/**
+ * Stos gruzu zlany w jedną siatkę na materiał (Michał 30.10.2026: lagi w bitwie — każdy kawałek gruzu był osobnym
+ * wywołaniem rysowania i cienia, a po rozbitej osadzie leżą setki kawałków). Póki kawałki spadają (fizyka), rysują się
+ * osobno; gdy leżą, zlewamy widoczne w 2–4 siatki. Gdy robotnicy zabiorą część stosu (setRubble), zlewamy od nowa.
+ */
+export function bakeRubble(model: THREE.Object3D, falling: boolean): void {
+  const pieces = model.children.filter((c) => c.name !== 'rubbleBaked') as THREE.Mesh[];
+  const shown = (model.userData.shown as number | undefined) ?? pieces.length;
+  const old = model.children.filter((c) => c.name === 'rubbleBaked') as THREE.Mesh[];
+  if (falling) {
+    if (old.length) { for (const m of old) { model.remove(m); m.geometry.dispose(); } model.userData.bakedN = 0; pieces.forEach((c, i) => { c.visible = i < shown; }); }
+    return;
+  }
+  if (model.userData.bakedN === shown && old.length) return;
+  for (const m of old) { model.remove(m); m.geometry.dispose(); }
+  const by = new Map<THREE.Material, THREE.BufferGeometry[]>();
+  pieces.forEach((c, i) => {
+    if (i >= shown || !c.isMesh) return;
+    c.updateMatrix();
+    let g = c.geometry.index ? c.geometry.toNonIndexed() : c.geometry.clone();
+    g = g.applyMatrix4(c.matrix);
+    for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
+    const mat = c.material as THREE.Material;
+    let l = by.get(mat); if (!l) { l = []; by.set(mat, l); } l.push(g);
+  });
+  for (const [mat, list] of by) {
+    const geo = mergeGeometries(list);
+    for (const g of list) g.dispose();
+    if (!geo) continue;
+    const m = new THREE.Mesh(geo, mat);
+    m.name = 'rubbleBaked';
+    m.userData.merged = true;
+    m.castShadow = true; m.receiveShadow = true;
+    model.add(m);
+  }
+  model.userData.bakedN = shown;
+  pieces.forEach((c) => { c.visible = false; });
 }
 
 /** Noc: okna zaczynają świecić ciepłym światłem. `k` od 0 (dzień) do 1 (środek nocy). */

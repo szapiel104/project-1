@@ -121,7 +121,9 @@ export function prodInfo(game: GameState, b: GameState['buildings'][number], nam
   else if (def.crew) {
     const pop = game.units.filter((x) => x.owner === b.owner).length;
     const have = (b.worker ? 1 : 0) + (b.crew?.length ?? 0), want = crewWanted(def, pop);
-    status = { text: `${tx(`Załoga: ${have} z ${want} górników (1 na ${def.crew.per} mieszkańców, najwyżej ${def.crew.max}).`, `Crew: ${have} of ${want} miners (1 per ${def.crew.per} inhabitants, at most ${def.crew.max}).`)} ${status.text}`, level: have < want && status.level === 'ok' ? 'warn' : status.level };
+    // kto tu pracuje: górnicy w kopalni, kupcy na rynku (Michał 30.10.2026: rynek pisał „górników”)
+    const who = def.id === 'market' ? tx('kupców', 'merchants') : tx('górników', 'miners');
+    status = { text: `${tx(`Załoga: ${have} z ${want} ${who} (1 na ${def.crew.per} mieszkańców, najwyżej ${def.crew.max}).`, `Crew: ${have} of ${want} ${who} (1 per ${def.crew.per} inhabitants, at most ${def.crew.max}).`)} ${status.text}`, level: have < want && status.level === 'ok' ? 'warn' : status.level };
     if (recipe) {
       recipe.place = tx('w sztolni', 'down the mine shaft');
       const sum = MINE_YIELDS.reduce((a, y) => a + y.weight, 0);

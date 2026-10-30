@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.69.6 — 30.10.2026
+- Wydajność w bitwie (zrzut Michała: 23 FPS, 2810 wywołań, kamyki 521 tys. trójkątów + tyle samo w cieniu): `bakeRubble` zlewa leżący gruz w 2–4 siatki na stos (osobne kawałki tylko na czas spadania, przy wynoszeniu zlewa od nowa); kamyki skali < 0,6 z prostą bryłą i bez cienia.
+- Okno rynku: okno budynku w szufladzie miało `margin-bottom` z `fitInfo` (−688 px) i wchodziło na towary — `margin: 0 !important`; szuflada od 104 px (pod licznikami FPS/Deweloper). Załoga rynku: „kupców”.
+
 ## 0.69.5 — 30.10.2026
 - Dźwięk czaru: ogień `torch` (wielki czar `fire`), woda `arrowfly` niżej (zamiast `swing` — szczęk miecza).
 - Bot za murami (`insideWalls` w army.ts: bliżej zamku wroga niż najbliższy jego mur/brama): przy wyborze celu oblężenia mury +60, zamek +25, budynki wojska i siedziby magów −10, zasięg szukania +40.

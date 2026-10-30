@@ -57,6 +57,9 @@ export class RubbleFalls {
   /** Ile zawaleń teraz liczy się w fizyce (okno wydajności) */
   get active(): number { return this.falls.length; }
 
+  /** Czy kawałki tego stosu jeszcze spadają (wtedy nie zlewamy ich w jedną siatkę, bakeRubble) */
+  falling(pile: THREE.Object3D): boolean { return this.falls.some((f) => f.pile === pile); }
+
   /**
    * Zawala stos `pile` (z rubbleModel, współrzędne względem środka działki w × h): kawałki startują z wysokości
    * do `height` nad ziemią, rozrzucone po działce, obrócone i z lekkim pchnięciem na boki, i spadają.
