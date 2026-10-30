@@ -17,6 +17,7 @@ const NEW: ChangeEntry[] = [
       'Rynek bez dziwnego placu z ziemi — kramy stoją na trawie na kamiennych płytach; moneta na szyldzie wisi prosto.',
       'Ruda wyróżniona na dolnym pasku: pierwsza, w złotej ramce, z większą liczbą.',
       'Skrót do rynku obok skrótów koszar, składu i spichlerza; klik w licznik składu pokazuje, co w nim leży i ile miejsca zostało.',
+      'Poprawka wydania: ta wersja za pierwszym razem nie weszła do gry.',
     ],
     en: [
       'The market has merchants: by day one (two in a larger settlement) stands behind a stall and cries his wares.',
@@ -24,6 +25,7 @@ const NEW: ChangeEntry[] = [
       'No more odd earthen square under the market — the stalls stand on stone slabs on the grass, and the coin on the sign hangs true.',
       'Ore stands out on the bottom bar: first, in a gold frame, with a bigger number.',
       'A market shortcut sits beside those for the barracks, stockpile and granary; clicking the stockpile counter shows what lies in it and how much room is left.',
+      'Fixed a stalled release: this version did not reach the game at first.',
     ],
   },
   {
