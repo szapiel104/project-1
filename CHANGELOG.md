@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.67.3 — 30.10.2026
+- Liczby obrażeń („−N”) przypięte do trafionego w świecie gry: przy ruchu kamery zostają nad nim, zamiast płynąć razem z ekranem. Idą za żołnierzem albo wilkiem, gdy się rusza; gdy padnie albo wyjdzie z kadru, liczba zostaje nad ostatnim miejscem, w którym stał (za kamerą znika).
+
 ## 0.67.2 — 30.10.2026
 - Pasek czarów magów: wszystkie ikony tej samej wielkości (wielki czar wyróżnia podwójna złota ramka zamiast większego pola) i narysowane od nowa — zwykły czar to pocisk z ogonem (kometa ognia albo wody), Deszcz ognia to spadające kule nad płomieniem, Lodowy krąg to lodowa gwiazda nad zamarzniętym kręgiem (było: kula z kreskami bez sensu).
 

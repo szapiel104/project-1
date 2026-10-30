@@ -1235,6 +1235,13 @@ export class GameRenderer {
     return { x: (prev ? prev[0] + (px - prev[0]) * a : px) / FP, y: (prev ? prev[1] + (py - prev[1]) * a : py) / FP };
   }
 
+  /** Punkt świata (współrzędne sceny 3D) na ekranie; front = przed kamerą */
+  projectWorld(x: number, y: number, z: number): { sx: number; sy: number; front: boolean } {
+    const v = new THREE.Vector3(x, y, z).project(this.cam.camera);
+    const r = this.renderer.domElement.getBoundingClientRect();
+    return { sx: r.left + ((v.x + 1) / 2) * r.width, sy: r.top + ((1 - v.y) / 2) * r.height, front: v.z < 1 };
+  }
+
   project(x: number, y: number, lift = 1): { sx: number; sy: number; front: boolean } {
     const g = this.state;
     const v = new THREE.Vector3(x - (g?.map.width ?? 0) / 2, (this.view?.heightAt(x, y) ?? 0) + lift, y - (g?.map.height ?? 0) / 2);
@@ -3753,24 +3760,24 @@ export class GameRenderer {
     }
   }
   /** Wilki na ekranie: punkt nad grzbietem i zdrowie */
-  wolvesOnScreen(): { id: number; x: number; y: number; hp: number }[] {
+  wolvesOnScreen(): { id: number; x: number; y: number; hp: number; wx: number; wy: number; wz: number }[] {
     if (!this.state) return [];
-    const out: { id: number; x: number; y: number; hp: number }[] = [];
+    const out: { id: number; x: number; y: number; hp: number; wx: number; wy: number; wz: number }[] = [];
     const r = this.canvas.getBoundingClientRect(), v = new THREE.Vector3();
     for (const w of this.state.wolves) {
       const p = this.wolfPos.get(w.id);
       if (!p) continue;
       v.copy(p).setY(p.y + 0.7).project(this.cam.camera);
       if (v.z > 1) continue;
-      out.push({ id: w.id, hp: w.hp, x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height });
+      out.push({ id: w.id, hp: w.hp, x: r.left + ((v.x + 1) / 2) * r.width, y: r.top + ((1 - v.y) / 2) * r.height, wx: p.x, wy: p.y + 0.7, wz: p.z });
     }
     for (const id of this.wolfPos.keys()) if (!this.state.wolves.some((w) => w.id === id)) this.wolfPos.delete(id);
     return out;
   }
 
-  soldiersOnScreen(player: number): { id: number; x: number; y: number; owner: number; hp: number; feet: number; fx: number }[] {
+  soldiersOnScreen(player: number): { id: number; x: number; y: number; owner: number; hp: number; feet: number; fx: number; wx: number; wy: number; wz: number }[] {
     if (!this.state) return [];
-    const out: { id: number; x: number; y: number; owner: number; hp: number; feet: number; fx: number }[] = [];
+    const out: { id: number; x: number; y: number; owner: number; hp: number; feet: number; fx: number; wx: number; wy: number; wz: number }[] = [];
     const r = this.canvas.getBoundingClientRect();
     const v = new THREE.Vector3();
     for (const s of this.state.soldiers) {
@@ -3781,8 +3788,9 @@ export class GameRenderer {
       if (v.z > 1) continue;
       const x = r.left + ((v.x + 1) / 2) * r.width, y = r.top + ((1 - v.y) / 2) * r.height;
       // stopy: do trafienia kliknięciem w całą sylwetkę (od stóp po pasek zdrowia nad głową), przy każdym zbliżeniu
+      const wy = p.y + this.barLift;
       v.copy(p).project(this.cam.camera);
-      out.push({ id: s.id, owner: s.owner, hp: s.hp, x, y, fx: r.left + ((v.x + 1) / 2) * r.width, feet: r.top + ((1 - v.y) / 2) * r.height });
+      out.push({ id: s.id, owner: s.owner, hp: s.hp, x, y, wx: p.x, wy, wz: p.z, fx: r.left + ((v.x + 1) / 2) * r.width, feet: r.top + ((1 - v.y) / 2) * r.height });
     }
     return out;
   }

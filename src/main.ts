@@ -1632,6 +1632,7 @@ const updateBars = createHpBars({
   soldiers: () => { renderer.barLift = 0.78; const l = renderer.soldiersOnScreen(-1); renderer.barLift = 0.45; return l; },
   wolves: () => renderer.wolvesOnScreen(),
   wolfHp: WOLF_HP,
+  project: (x, y, z) => renderer.projectWorld(x, y, z),
 });
 
 // ---- pasek ostrzeżeń u góry: kiedy wróg wyśle wojsko i czy już nadciąga ----
