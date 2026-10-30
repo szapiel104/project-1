@@ -59,6 +59,8 @@ interface Part {
   elbow?: boolean;
   /** Kula czaru w dłoni maga: widać ją tylko przy czarowaniu (armsUp) */
   orb?: boolean;
+  /** Płomień w dłoni maga ognia: migocze wokół tego punktu (skala w pionie) */
+  flick?: THREE.Vector3;
   /** Część rzadko widoczna (krew na ubraniu i ostrzu): rysowana tylko w klatkach, w których ktoś ją ma */
   opt?: boolean;
   used?: number;
@@ -235,6 +237,7 @@ export class Figures {
   /** Ciało zamrożone czarem wody: cała postać lodowo-biała */
   static frozen: (id: number) => boolean = () => false;
   private charrable = false;
+  private flM = new THREE.Matrix4(); private flS = new THREE.Matrix4(); private flT = new THREE.Matrix4();
   /**
    * Pula ciał: każda część może zczernieć (kolor instancji także na częściach bez barwy drużyny; reszta zostaje biała,
    * czyli bez zmiany). Woła się raz po utworzeniu puli ciał w scene.ts.
@@ -391,8 +394,23 @@ export class Figures {
             mk(modelGeo(m), m.dyn ? DYN[m.dyn] ?? 0xffffff : 0xffffff, new THREE.Vector3(sx * M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), rot,
               m.show ? SHOW[m.show] ?? always : always, m.mat as Mat, { at: at.clone(), rot: el }, lod, true);
       if (kind === 'preacher') return;
+      const sh = new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!);
+      if (kind === 'mageFire') {
+        // Mag Płomienia trzyma w dłoni ogień, nie kulę (Michał 30.10.2026): płomień — zewnętrzny pomarańczowy i jaśniejszy
+        // środek, migocze (flick w set()); widać go tylko przy czarowaniu, leczeniu i paleniu ciał (armsUp)
+        const flame = (r: number, h: number): THREE.BufferGeometry => {
+          const pts = [[0, 0], [r * 0.7, h * 0.08], [r, h * 0.28], [r * 0.85, h * 0.5], [r * 0.45, h * 0.78], [0, h]].map(([x, y]) => new THREE.Vector2(x!, y!));
+          return new THREE.LatheGeometry(pts, 12).translate(M.orb[0]!, M.orb[1]! - h * 0.3, M.orb[2]!);
+        };
+        const o = new THREE.Vector3(M.orb[0]!, M.orb[1]!, M.orb[2]!);
+        mk(flame(0.022, 0.075), 0xff5a14, sh.clone(), calmR, always, 'glow', { at: at.clone(), rot: elbowR });
+        this.parts[this.parts.length - 1]!.flick = o.clone();
+        mk(flame(0.012, 0.045), 0xffe6a0, sh.clone(), calmR, always, 'glow', { at: at.clone(), rot: elbowR });
+        this.parts[this.parts.length - 1]!.flick = o.clone();
+        return;
+      }
       const orb = new THREE.SphereGeometry(0.024, 16, 12).translate(M.orb[0]!, M.orb[1]!, M.orb[2]!);
-      mk(orb, kind === 'mageFire' ? 0xff7a22 : 0x5ab4ff, new THREE.Vector3(M.shoulder[0]!, M.shoulder[1]!, M.shoulder[2]!), calmR, always, 'glow', { at: at.clone(), rot: elbowR });
+      mk(orb, 0x5ab4ff, sh, calmR, always, 'glow', { at: at.clone(), rot: elbowR });
       return;
     }
     if (kind === 'bandit') {
@@ -527,6 +545,12 @@ export class Figures {
       this.local.compose(pose && p.rot === this.weaponRot ? this.gripAt(pose[0], pose[2] ?? 0) : p.pos, this.q, this.one);
       // łuk w dłoni ręki prowadzonej pozą: obrót odwrotny do ręki, więc łuk zostaje pionowo
       if (p.sub) { this.q.setFromEuler(this.e.set(p.elbow ? (pose && p.rot === this.weaponArm && pose[4] !== undefined ? pose[4] : p.sub.rot(swing, armsUp)) : pose && p.rot === this.weaponArm ? pose[1] : pose && pose[3] !== undefined && p.rot === this.freeArmRot ? -pose[3] : p.sub.rot(swing, armsUp), 0, 0, 'XYZ')); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
+      if (p.flick) {
+        // migotanie płomienia: rozciąga się w górę i zwęża, każdy mag w swoim rytmie
+        const f = Math.sin(performance.now() * 0.019 + id * 1.7) * 0.6 + Math.sin(performance.now() * 0.047 + id) * 0.4;
+        this.flM.makeTranslation(p.flick.x, p.flick.y, p.flick.z).multiply(this.flS.makeScale(1 - 0.1 * f, 1 + 0.28 * f, 1 - 0.1 * f)).multiply(this.flT.makeTranslation(-p.flick.x, -p.flick.y, -p.flick.z));
+        this.local.multiply(this.flM);
+      }
       this.out.multiplyMatrices(this.scaled, this.local);
       p.mesh.setMatrixAt(i, this.out);
       if (burnt) p.mesh.setColorAt(i, p.color ? this.color.setHex(p.color(look)).lerp(CHAR, 0.85) : this.color.copy(CHAR));

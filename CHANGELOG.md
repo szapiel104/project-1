@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.67.15 — 30.10.2026
+- Mag Płomienia trzyma w dłoni ogień zamiast świecącej kuli: płomień (pomarańczowy z jasnym środkiem), który migocze — każdy mag w swoim rytmie. Widać go przy rzucaniu czarów, leczeniu i paleniu ciał. Mag Źródła zostaje z kulą wody.
+
 ## 0.67.14 — 30.10.2026
 - **Liczby obrażeń i leczenia pojawiają się na miejscu, nad głową**, i idą tylko w górę. Przyczyna „nadlatywania z boku”: animacja wyskoku powiększa liczbę (`scale`), a położenie było w `transform: translate`, więc przeglądarka powiększała też przesunięcie po ekranie — liczba startowała o 25% dalej od rogu ekranu i dopiero potem wracała. Teraz położenie przez właściwość `translate` (zmierzone: „+2” pojawia się nad paskiem leczonego i idzie prosto w górę).
 - **Kulki leczenia:** wokół leczonego przez maga krążą dwie małe świetliste kulki na różnych wysokościach (mag wody — jasnozielono-błękitne, mag ognia — złociste).
