@@ -780,10 +780,13 @@ export class GameRenderer {
   private unitSpots: { id: number; x: number; z: number }[] = [];
   private selectedUnit = 0;
   private unitY = new Map<number, number>();
+  /** Ciała spalone w ogniu (z g.corpses co klatkę) */
+  private burntBodies = new Set<number>();
 
   constructor(private canvas: HTMLCanvasElement, private models: ModelFactory = proceduralModels) {
     this.renderer = createRenderer({canvas, antialias: true }, 'gra');
     this.pre = new Precompiler(this.renderer, this.scene);
+    Figures.charred = (id) => this.burntBodies.has(id);
     initKtx(this.renderer);
     watchRenderer(this.renderer, 'gra');
     watchLoading(THREE.DefaultLoadingManager);
@@ -885,15 +888,15 @@ export class GameRenderer {
     this.rings = mark(0.195, 0.262, 0xffd34d, 1, 21);
     // straż miejska po kliknięciu twierdzy: czerwone kółka pod strażnikami i tarcza nad głową
     this.guardRings = mark(0.24, 0.33, 0xe0503a, 0.95, 21);
-    this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman');
-    this.peasantBodies = new Figures(MAX_UNITS, this.scene);
-    this.archerBodies = new Figures(512, this.scene, 'archer');
-    this.mageBodiesFire = new Figures(160, this.scene, 'mageFire');
-    this.mageBodiesWater = new Figures(160, this.scene, 'mageWater');
-    this.guardBodies = new Figures(256, this.scene, 'guard');
-    this.manAtArmsBodies = new Figures(256, this.scene, 'manatarms');
-    this.sapperBodies = new Figures(256, this.scene, 'sapper');
-    this.banditBodies = new Figures(256, this.scene, 'bandit');
+    this.bodies = new Figures(MAX_UNITS, this.scene, 'spearman').enableChar();
+    this.peasantBodies = new Figures(MAX_UNITS, this.scene).enableChar();
+    this.archerBodies = new Figures(512, this.scene, 'archer').enableChar();
+    this.mageBodiesFire = new Figures(160, this.scene, 'mageFire').enableChar();
+    this.mageBodiesWater = new Figures(160, this.scene, 'mageWater').enableChar();
+    this.guardBodies = new Figures(256, this.scene, 'guard').enableChar();
+    this.manAtArmsBodies = new Figures(256, this.scene, 'manatarms').enableChar();
+    this.sapperBodies = new Figures(256, this.scene, 'sapper').enableChar();
+    this.banditBodies = new Figures(256, this.scene, 'bandit').enableChar();
     this.stains = new BloodStains(MAX_UNITS); // krew: nieregularna plama, rozlewa się i ciemnieje (render/blood.ts)
     this.scene.add(this.stains.mesh);
     this.breath = new BreathFx(this.scene); // para z ust na mrozie (render/breath.ts)
@@ -4306,7 +4309,10 @@ export class GameRenderer {
     this.stains.begin();
     this.arrows.beginBodies();
     const lay = new THREE.Quaternion(), sc = new THREE.Vector3();
-    let pc = 0, ac = 0, gc = 0, sp = 0, mc = 0, sc2 = 0, bc = 0;
+    let pc = 0, ac = 0, gc = 0, sp = 0, mc = 0, sc2 = 0, bc = 0, mf = 0, mw = 0;
+    // spaleni w ogniu: zwęglone ciała (Figures.charred w pulach ciał)
+    this.burntBodies.clear();
+    for (const body of g.corpses) if (body.burnt) this.burntBodies.add(body.id);
     for (const body of g.corpses) {
       if (c >= MAX_UNITS) break;
       if (body.kind === -2) continue; // zabity wilk: rysuje go syncWolves (leży na boku)
@@ -4351,7 +4357,7 @@ export class GameRenderer {
       else if (ud?.bandit) { if (bc < 256) this.banditBodies.set(bc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
       else if (ud?.guard) { if (gc < 256) this.guardBodies.set(gc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
       else if (ud?.id === 'manatarms') { if (mc < 256) this.manAtArmsBodies.set(mc++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
-      else if (ud?.magic) (ud.magic === 'fire' ? this.mageBodiesFire : this.mageBodiesWater).set(0, m, 0.3, false, team, body.id, undefined, -0.5, false, legs);
+      else if (ud?.magic) { if (ud.magic === 'fire') { if (mf < 160) this.mageBodiesFire.set(mf++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); } else if (mw < 160) this.mageBodiesWater.set(mw++, m, 0.3, false, team, body.id, undefined, -0.5, false, legs); }
       else if (ud?.range) { if (ac < 512) this.archerBodies.set(ac++, m, 0.3, false, rot, body.id, undefined, -0.5, false, legs); }
       else this.bodies.set(sp++, m, 0.3, false, rot, body.id, undefined, -0.5, false, legs);
       // poległy chorąży: drzewce przewraca się na bok razem z nim i proporzec leży na ziemi obok ciała
@@ -4374,8 +4380,8 @@ export class GameRenderer {
     this.bodies.finish(sp);
     this.peasantBodies.finish(pc);
     this.archerBodies.finish(ac);
-    this.mageBodiesFire.finish(0);
-    this.mageBodiesWater.finish(0);
+    this.mageBodiesFire.finish(mf);
+    this.mageBodiesWater.finish(mw);
     this.guardBodies.finish(gc);
     this.manAtArmsBodies.finish(mc);
     this.sapperBodies.finish(sc2);

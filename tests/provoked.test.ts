@@ -1,0 +1,48 @@
+import { describe, expect, it } from 'vitest';
+import { UNITS, unitIndex } from '../src/data/units';
+import { createGame, FP, playerKeep, type GameState, type Soldier } from '../src/sim/state';
+import { step } from '../src/sim/step';
+import { emptyScene } from '../src/sim/emptyscene';
+
+const soldier = (g: GameState, owner: number, kind: string, x: number, y: number): Soldier => {
+  const s: Soldier = { id: g.nextId++, owner, kind: unitIndex(kind), px: x * FP + FP / 2, py: y * FP + FP / 2, path: [], hp: UNITS[unitIndex(kind)]!.hp, goal: -1, wait: 0, target: 0, cd: 0 };
+  g.soldiers.push(s);
+  return s;
+};
+
+describe('odruch na strzały (30.10.2026)', () => {
+  it('trafiony z daleka włócznik i jego towarzysz ruszają na łucznika, którego nie widzą', () => {
+    const g = createGame(9); emptyScene(g);
+    const k = playerKeep(g, 0)!, w = g.map.width, x = (k.door % w) - 6, y = Math.floor(k.door / w) + 18;
+    const archer = soldier(g, 0, 'archer', x, y);
+    // poza wzrokiem włócznika (6 pól), ale w zasięgu łuku (8 pól)
+    const a = soldier(g, 1, 'spearman', x, y + 8), b = soldier(g, 1, 'spearman', x + 1, y + 8);
+    const held = soldier(g, 1, 'spearman', x - 1, y + 8); held.stance = 2;
+    archer.stance = 2;
+    for (let i = 0; i < 120 && (!a.target || !b.target); i++) step(g, []);
+    expect(a.target).toBe(archer.id);
+    expect(b.target).toBe(archer.id);
+    expect(held.target === archer.id && held.py !== (y + 8) * FP + FP / 2).toBe(false); // „stój”: nie biegnie
+    const d0 = Math.abs(a.py - archer.py);
+    for (let i = 0; i < 30; i++) step(g, []);
+    expect(Math.abs(a.py - archer.py)).toBeLessThan(d0); // podbiega
+  });
+});
+
+describe('spalone ciała (30.10.2026)', () => {
+  it('zabity przez maga ognia leży spalony, zabity włócznią — nie', () => {
+    const g = createGame(9); emptyScene(g);
+    const k = playerKeep(g, 0)!, w = g.map.width, x = (k.door % w) - 6, y = Math.floor(k.door / w) + 18;
+    const mage = soldier(g, 0, 'mageFire', x, y); mage.stance = 2;
+    const v = soldier(g, 1, 'archer', x, y + 6); v.stance = 2; v.hp = 10;
+    for (let i = 0; i < 200 && !g.corpses.some((c) => c.id === v.id); i++) step(g, []);
+    expect(g.corpses.find((c) => c.id === v.id)?.burnt).toBe(true);
+    const sp = soldier(g, 0, 'spearman', x + 10, y);
+    const u = soldier(g, 1, 'archer', x + 11, y); u.hp = 5; u.stance = 2;
+    for (let i = 0; i < 200 && !g.corpses.some((c) => c.id === u.id); i++) step(g, []);
+    void sp;
+    const c = g.corpses.find((cc) => cc.id === u.id);
+    expect(c).toBeTruthy();
+    expect(c?.burnt).toBeFalsy();
+  });
+});

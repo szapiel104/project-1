@@ -763,6 +763,7 @@ function spellEffect(g: GameState, s: Soldier, foe: Soldier, byId: Map<number, S
     for (const o of g.soldiers) {
       if (o === foe || o.hp <= 0 || team(g, o.owner) === team(g, s.owner) || gap(o, foe) > FP + FP / 2) continue;
       o.hp -= Math.max(1, def.attack >> 1);
+      o.fireAt = g.tick;
       if (o.hp <= 0) { const k = g.players[s.owner], l = g.players[o.owner]; if (k) k.stats.kills++; if (l) l.stats.lost++; }
     }
     return;
@@ -861,6 +862,26 @@ function hitBuilding(g: GameState, b: Building, dmg: number, by: number, fire: n
   return true;
 }
 
+/**
+ * Odruch na strzałę albo czar (Michał 30.10.2026: „atakuję łucznikami, a wróg nawet nie biegnie”): łucznik strzela
+ * z 8 pól, a włócznik widzi na 6, więc trafiony stał i ginął. Teraz trafiony, który akurat z nikim nie walczy, rusza
+ * na strzelca, a z nim jego bezczynni towarzysze stojący do 3 pól obok. Nie ruszają się: postawa „stój”, ranni
+ * w odwrocie, maszerujący na rozkaz (bez „ataku w marszu”), taran, saper i drabiniarz.
+ */
+function provoked(g: GameState, t: Soldier, shooter: Soldier | undefined): void {
+  if (!shooter || shooter.hp <= 0 || team(g, shooter.owner) === team(g, t.owner)) return;
+  const calm = (o: Soldier): boolean => {
+    const d = UNITS[o.kind]!;
+    return o.hp > 0 && !o.target && !o.wounded && (o.stance ?? 0) !== 2 && (o.goal < 0 || !!o.amove) && !d.ram && !d.sapper && !d.ladderman && !o.prey;
+  };
+  for (const o of g.soldiers) {
+    if (o !== t && (o.owner !== t.owner || gap(o, t) > 3 * FP)) continue;
+    if (!calm(o)) continue;
+    o.target = shooter.id;
+    o.path = [];
+  }
+}
+
 function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
   const list = g.missiles;
   if (list?.length) {
@@ -893,8 +914,10 @@ function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
       const t = byId.get(m.to);
       if (!t || t.hp <= 0) continue;
       t.hp -= m.dmg;
+      if (m.burn) t.fireAt = g.tick;
       if (m.burn && t.hp > 0) { t.burn = (t.burn ?? 0) + m.burn; t.burnBy = m.by; }
       if (t.hp <= 0) { const l = g.players[t.owner]; if (k && team(g, t.owner) !== team(g, m.by)) k.stats.kills++; if (l) l.stats.lost++; }
+      else provoked(g, t, byId.get(m.from));
       const caster = byId.get(m.from);
       if (m.magic && caster) spellEffect(g, caster, t, byId);
     }
@@ -903,7 +926,7 @@ function missileSystem(g: GameState, byId: Map<number, Soldier>): void {
   if (g.tick % BURN_EVERY !== 0) return;
   for (const s of g.soldiers) {
     if (!s.burn || s.hp <= 0) continue;
-    s.hp -= 1; s.burn--;
+    s.hp -= 1; s.burn--; s.fireAt = g.tick;
     if (!s.burn) { delete s.burn; }
     if (s.hp <= 0) { const k = g.players[s.burnBy ?? -1], l = g.players[s.owner]; if (k && team(g, s.owner) !== team(g, s.burnBy ?? -1)) k.stats.kills++; if (l) l.stats.lost++; }
   }
@@ -1334,7 +1357,7 @@ export function armySystem(g: GameState): void {
   }
   // polegli zostają na polu jako ciała, aż zabierze je grabarz
   if (g.soldiers.some((s) => s.hp <= 0)) {
-    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false, ...((() => { const t = towerOf(g, s); return t ? { post: t } : {}; })()) }); // rozbity taran nie zostawia ciała; poległy na wieży albo murze leży na górze
+    for (const s of g.soldiers) if (s.hp <= 0 && !UNITS[s.kind]!.ram) g.corpses.push({ id: s.id, owner: s.owner, kind: s.kind, px: s.px, py: s.py, at: g.tick, taken: false, ...(s.burn || g.tick - (s.fireAt ?? -1e9) < 20 ? { burnt: true } : {}), ...((() => { const t = towerOf(g, s); return t ? { post: t } : {}; })()) }); // rozbity taran nie zostawia ciała; poległy na wieży albo murze leży na górze
     g.soldiers = g.soldiers.filter((s) => s.hp > 0);
   }
   lookout(g);

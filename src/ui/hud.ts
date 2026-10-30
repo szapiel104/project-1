@@ -1338,7 +1338,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       }
       for (const [k, kb] of kindBtns) if (!byKind.has(k)) kb.b.hidden = true;
       armyCtl.update(ctl);
-      setText(infoName, `${t('hud.soldiers')}: ${army.length}${ctl?.group ? ` · ${tx('grupa', 'group')} ${ctl.group}` : ''}`);
+      // jeden rodzaj w zaznaczeniu: jego nazwa i liczba w nawiasie („Mag Płomienia (1)”); kilka rodzajów — „Zaznaczeni żołnierze: N”
+      const only = byKind.size === 1 ? [...byKind.values()][0]! : null;
+      setText(infoName, `${only ? `${only.name} (${army.length})` : `${t('hud.soldiers')}: ${army.length}`}${ctl?.group ? ` · ${tx('grupa', 'group')} ${ctl.group}` : ''}`);
       // portrety odświeżamy tylko, gdy coś się zmieniło (przebudowa co klatkę gubiła kliknięcia)
       const key = army.slice(0, 24).map((u) => `${u.id}:${Math.round((u.hp / u.max) * 20)}:${u.group ?? 0}`).join() + army.length;
       if (key !== rosterKey) {

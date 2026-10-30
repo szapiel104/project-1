@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.67.7 — 30.10.2026
+- **Trafiony strzałą albo czarem rusza na strzelca.** Łucznik strzela z 8 pól, a włócznik widzi na 6, więc ostrzeliwany wróg stał i ginął (Michał). Teraz trafiony, który z nikim nie walczy, biegnie na strzelca razem z bezczynnymi towarzyszami do 3 pól obok. Nie ruszają się: postawa „stój”, ranni w odwrocie, maszerujący na rozkaz, taran, saper, drabiniarz. Działa tak samo u bota. Test: `tests/provoked.test.ts`.
+- **Spalone ciała.** Kto zginie od kuli ognia, odprysku, deszczu ognia, ognistej strzały albo dopalając się, leży zwęglony (cała postać prawie czarna). Zwłoki mają znacznik `burnt`.
+- Polegli magowie: każdy leży osobno (wcześniej wszystkie ciała magów rysowały się w jednym miejscu puli — widać było tylko jedno).
+- Panel wojska: przy jednym rodzaju jednostek nagłówek to jego nazwa z liczbą, np. „Mag Płomienia (1)”; „Zaznaczeni żołnierze: N” tylko przy kilku rodzajach.
+
 ## 0.67.6 — 30.10.2026
 - **Miniatury budynków w tle.** Po każdej nowej wersji gry pierwsze wejście rysowało od zera obrazki wszystkich budynków do menu budowy — naraz, w środku wczytywania (ok. 2,5 s zamrożonej strony), a po dojściu tekstur zdjęciowych drugi raz, już w grze. Teraz gra startuje bez nich, a obrazki rysują się raz, po starcie, po jednym na wolną chwilę przeglądarki, od razu z teksturami zdjęciowymi; gotowy wskakuje do kart budowy, kategorii i pól magazynów (`hud.setThumb`). Potem jak dawniej z pamięci przeglądarki.
 - Głazy: z powrotem płaskie cieniowanie — gładkie dawało czarne trójkąty na zawiniętych ścianach bryły. Dokładniejsza bryła z bliska zostaje.

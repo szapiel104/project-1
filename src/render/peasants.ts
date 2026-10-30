@@ -202,6 +202,9 @@ function lookOf(id: number, tunic: number, muted = false): Look {
 /** Rodzaje postaci z Blendera */
 export type FigureKind = 'peasant' | 'spearman' | 'archer' | 'guard' | 'woman' | 'child' | 'king' | 'manatarms' | 'sapper' | 'bandit' | 'mageFire' | 'mageWater' | 'preacher';
 
+/** Barwa zwęglonego ciała (mnożona przez teksturę: prawie czarna, z odrobiną brązu) */
+const CHAR = new THREE.Color(0x231c17);
+
 export class Figures {
   private parts: Part[] = [];
   private muted: boolean;
@@ -225,6 +228,21 @@ export class Figures {
    * czy ostrze broni jest we krwi]. Ustawia scena co klatkę; brak wpisu = czysta postać.
    */
   static marks: (id: number) => readonly [number, boolean] | undefined = () => undefined;
+  /** Ciało spalone w ogniu (kula ognia, deszcz ognia, ognista strzała): cała postać zwęglona — tylko pule ciał (`charrable`) */
+  static charred: (id: number) => boolean = () => false;
+  private charrable = false;
+  /**
+   * Pula ciał: każda część może zczernieć (kolor instancji także na częściach bez barwy drużyny; reszta zostaje biała,
+   * czyli bez zmiany). Woła się raz po utworzeniu puli ciał w scene.ts.
+   */
+  enableChar(): this {
+    this.charrable = true;
+    for (const p of this.parts) {
+      if (p.color || p.mesh.instanceColor) continue;
+      p.mesh.instanceColor = new THREE.InstancedBufferAttribute(new Float32Array(p.mesh.instanceMatrix.count * 3).fill(1), 3);
+    }
+    return this;
+  }
   /** Ślady bieżącej osoby (w trakcie set) */
   private wound = 0;
   private bloody = false;
@@ -485,6 +503,7 @@ export class Figures {
     const look = lookOf(id, tunic, this.muted);
     const mk = Figures.marks(id);
     this.wound = mk?.[0] ?? 0; this.bloody = mk?.[1] ?? false;
+    const burnt = this.charrable && Figures.charred(id);
     this.scaled.copy(base).scale(this.one.setScalar(look.size));
     this.one.setScalar(1);
     for (const p of this.parts) {
@@ -505,7 +524,9 @@ export class Figures {
       if (p.sub) { this.q.setFromEuler(this.e.set(p.elbow ? (pose && p.rot === this.weaponArm && pose[4] !== undefined ? pose[4] : p.sub.rot(swing, armsUp)) : pose && p.rot === this.weaponArm ? pose[1] : pose && pose[3] !== undefined && p.rot === this.freeArmRot ? -pose[3] : p.sub.rot(swing, armsUp), 0, 0, 'XYZ')); this.local.multiply(this.subM.compose(p.sub.at, this.q, this.one)); }
       this.out.multiplyMatrices(this.scaled, this.local);
       p.mesh.setMatrixAt(i, this.out);
-      if (p.color) p.mesh.setColorAt(i, this.color.setHex(p.color(look)));
+      if (burnt) p.mesh.setColorAt(i, p.color ? this.color.setHex(p.color(look)).lerp(CHAR, 0.85) : this.color.copy(CHAR));
+      else if (p.color) p.mesh.setColorAt(i, this.color.setHex(p.color(look)));
+      else if (this.charrable) p.mesh.setColorAt(i, this.color.setRGB(1, 1, 1));
     }
   }
 

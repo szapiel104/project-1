@@ -453,6 +453,8 @@ export interface Soldier {
   /** Płonie po ognistej strzale: ile jeszcze zdrowia zabierze ogień (po 1 co kilka ticków) i czyj to ogień */
   burn?: number;
   burnBy?: number;
+  /** Tick ostatniego trafienia ogniem (kula ognia, odprysk, deszcz ognia, ognista strzała): zginie w nim — ciało spalone */
+  fireAt?: number;
   /** Mag: od tego ticku znów może rzucić wielki czar (greatspell.ts) */
   great?: number;
   /** Mag: tick ostatniego wielkiego czaru i środek jego kręgu (dla obrazu) */
@@ -546,6 +548,8 @@ export interface Corpse {
   taken: boolean;
   /** Poległ na wieży albo na murze (id budynku): ciało leży na górze, grabarz zabiera je spod budynku */
   post?: number;
+  /** Zginął w ogniu: ciało zwęglone (wygląd) */
+  burnt?: boolean;
   /** Dwaj, którzy po nie idą: [niosący z przodu, pomocnik z tyłu] (bearers.ts) */
   by?: number[];
   /** Tick wysłania tej dwójki (gdy utkną, ciało wraca do puli) */
