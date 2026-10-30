@@ -213,7 +213,7 @@ function paintCost(box: HTMLElement, def: BuildingDef, cost: Partial<Record<Reso
 }
 
 /** Proste ikony surowców (SVG 20x20), rysowane ręcznie w jednym stylu. */
-const ICONS: Record<string, string> = {
+export const ICONS: Record<string, string> = {
   // jedzenie razem: wiklinowy kosz z bochenkiem i jabłkiem (inna ikona niż same jabłka)
   food: '<path d="M4.5 9.5c0-3 2.5-4.5 5.5-4.5s5.5 1.500 5.5 4.500z" fill="#c9843d" stroke="#2a1c10" stroke-width=".9"/><circle cx="13.5" cy="8.6" r="2.4" fill="#d0281f" stroke="#2a1c10" stroke-width=".8"/><path d="M2.5 9.5h15l-2 7.5h-11z" fill="#9a6a34" stroke="#2a1c10"/><path d="M4 12h12M4.6 14.5h10.8M7 9.5l.5 7.500M10 9.5v7.500M13 9.5l-.5 7.500" stroke="#5e3e1c" stroke-width=".8"/>',
   wood: '<rect x="2" y="7" width="16" height="6" rx="3" fill="#8a5a2b" stroke="#2a1c10"/><circle cx="16" cy="10" r="2.6" fill="#d9b27a" stroke="#2a1c10"/><path d="M5 9h6M6 11.5h5" stroke="#5e4329"/>',
@@ -1023,6 +1023,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
 
   // Dwór
   const court = section(t('hud.court'), 'court');
+  // zakładka „Dwór” schowana (Michał 30.10.2026: „do wywalenia”) — racje i podatki ustawia się w oknie popularności
+  sections[sections.length - 1]!.button.hidden = true;
   const mkSelect = (id: string, label: string, options: readonly { name: string }[], onChange: (n: number) => void): HTMLSelectElement => {
     const wrap = el('div', 'field');
     const lab = el('label', '', label);

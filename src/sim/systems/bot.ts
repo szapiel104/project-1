@@ -1,4 +1,5 @@
 import { dole, quell } from './unrest';
+import { botTrade } from './market';
 import { canQuarantine, setQuarantine } from './plague';
 import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
@@ -22,7 +23,7 @@ import { enemyRoad, orderWreck } from './roadwreck';
 // przenoszenia budynków za rudę (relocate.ts) bot świadomie nie używa: stawia od razu tam, gdzie chce, a ruda idzie mu na wojsko
 // rudera i namiot nie są na liście: bot stawia je tylko na szybko, gdy brak łóżek, a na chatę nie ma drewna (urgent niżej)
 // chlew po piekarni: czwarte jedzenie — różnorodność w spichlerzach podnosi popularność (economy.ts), jak u gracza
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'pigsty', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'carpenter', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine'];
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'pigsty', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'carpenter', 'market', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine'];
 // druga kopalnia na samym końcu: kosztuje fortunę (BuildingDef.nextCost), więc bot stawia ją dopiero, gdy wszystko inne już stoi
 /** `mageSeat` na liście: siedziba zakonu magów — boty o parzystym numerze stawiają Sanktuarium Źródła, o nieparzystym Wieżę Płomienia;
  *  dopiero w grodzie (etap osady jak u gracza, BuildingDef.tier). Stoją w niej uzdrowiciele i szkolą się magowie bojowi.
@@ -212,6 +213,8 @@ export function botSystem(g: GameState): void {
     }
     // wrogie drogi w pobliżu: dwóch wolnych żołnierzy idzie je rozkopać (jak gracz prawym klikiem)
     if (tk % (THINK * 15) === 0) wreckNearby(g, p);
+    // rynek: sprzedaje nadwyżki, dokupuje braki (market.ts)
+    if (tk % (THINK * 10) === 0) botTrade(g, p.id);
     // podatek, gdy osada jest zadowolona: złoto na żołd
     p.tax = p.popularity > 70 ? 2 : p.popularity > 55 ? 1 : 0;
     // wojsko: szkoli jednego włócznika naraz, gdy ma broń, rudę i wolnego chłopa

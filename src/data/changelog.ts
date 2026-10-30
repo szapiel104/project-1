@@ -10,6 +10,23 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.0', date: '2026-10-30',
+    pl: [
+      'Nowy budynek: Rynek (3×3, 60 drewna i 20 kamienia, od etapu Osada). Sprzedajesz i kupujesz od ręki każdy towar za rudę — drewno, kamień, żelazo, jedzenie, piwo, broń, drabiny i kryształy.',
+      'Kupno kosztuje dwa razy tyle co sprzedaż, a kupiony towar od razu ląduje w magazynach, jeśli jest w nich miejsce.',
+      'Boty też handlują: sprzedają nadwyżki i dokupują, czego im brakuje.',
+      'Karty budowy jeszcze szersze, cały koszt w jednym rzędzie; „Od etapu…” wisi na karcie jako złota flaga.',
+      'Zniknęła zakładka „Dwór” na dolnym pasku — racje i podatki ustawiasz w oknie popularności.',
+    ],
+    en: [
+      'New building: the Market (3×3, 60 timber and 20 stone, from the Settlement stage). Sell and buy any goods for ore on the spot — timber, stone, iron, food, ale, arms, ladders and crystals.',
+      'Buying costs twice what selling fetches, and bought goods go straight into your stores if there is room.',
+      'Bots trade too: they sell their surplus and buy what they lack.',
+      'Build cards are wider still, with the whole cost on one line; “From stage…” now hangs on the card as a golden pennant.',
+      'The “Court” tab is gone from the bottom bar — set rations and taxes in the popularity window.',
+    ],
+  },
+  {
     v: '0.68.8', date: '2026-10-30',
     pl: [
       'Szersze karty budynków w pasku budowy, a koszty na nich z oddechem: większe ikonki surowców i wyraźne liczby, dwie tabliczki obok siebie.',

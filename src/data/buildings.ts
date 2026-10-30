@@ -231,6 +231,9 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Kapliczka: kamienny posąg Ojca Płomienia w ostrołukowej niszy (tools/models/shrine.py). Wieczorem część ludzi
   // zamiast do karczmy albo do ogniska idzie tu się modlić (workers.ts), a sama kapliczka lekko podnosi popularność
   // (economy.ts: +1, przy dwóch i więcej +2). Bez pracownika, nic nie produkuje.
+  // Rynek (tools/models/market.py, Michał 30.10.2026): sprzedaż i kupno każdego towaru za rudę, od ręki — bez kupców
+  // i wozów. Kupno drożej niż sprzedaż (sim/systems/market.ts, ceny w data/market.ts). Bez pracownika.
+  { id: 'market', category: 'settlement', name: 'b.market', w: 3, h: 3, tier: 1, cost: { wood: 60, stone: 20 }, hp: 900, buildable: true },
   { id: 'shrine', category: 'settlement', name: 'b.shrine', w: 2, h: 2, cost: { wood: 10, stone: 40 }, hp: 700, staff: true, buildable: true },
   // Magowie (tools/models/magefire.py, magewater.py): Wieża Płomienia i Sanktuarium Źródła. Mieszka w nich
   // do trzech magów (załoga rośnie z osadą), którzy leczą zarazę (src/sim/systems/plague.ts). Zakony nie przepadają za sobą, ale współpracują.

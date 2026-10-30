@@ -37,6 +37,7 @@ import { storeLogistics } from './ui/storePanel';
 import { storeNotes } from './ui/storeNotes';
 import { createHpBars } from './ui/hpBars';
 import { createRockPanel } from './ui/rockPanel';
+import { createMarketPanel } from './ui/marketPanel';
 import { boulderAt } from './sim/systems/boulders';
 import { usedIn } from './sim/systems/stock';
 import { nextWave } from './sim/systems/bot';
@@ -975,6 +976,7 @@ function frameBeside(x: number, y: number, dist: number): void {
 }
 const jumpCount = (kind: JumpKind): number => { const ids = JUMP_IDS[kind]; let n = 0; for (const b of game.buildings) if (b.owner === ME && ids.includes(BUILDINGS[b.type]!.id)) n++; return n; };
 
+const marketPanel = createMarketPanel((res, amount) => { pending.push({ type: 'trade', player: ME, res, amount }); play('select'); });
 const rockPanel = createRockPanel((t) => { pending.push({ type: 'smashRock', player: ME, tile: t }); play('build'); });
 function select(id: number): void {
   if (id && selectedUnit) { selectedUnit = 0; renderer.setUnitSelection(0); }
@@ -1989,6 +1991,7 @@ function refresh(): void {
   hud.setHash(stateHash(game));
   if (chosen.size) showArmy();
   rockPanel.refresh(game, ME);
+  marketPanel.sync(game, ME, selected);
   // koniec gry: zburzona twierdza gracza albo wszystkich wrogów
   const meP = game.players[ME]!;
   const foesLeft = game.players.some((o) => o.team !== meP.team && !o.defeated);

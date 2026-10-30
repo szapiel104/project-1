@@ -1,5 +1,6 @@
 import { UNITS } from '../data/units';
 import { smashRock } from './systems/boulders';
+import { trade } from './systems/market';
 import { buildingById, releaseCrew } from './state';
 import { BUILDINGS } from '../data/buildings';
 import { buildingIndex } from '../data/buildings';
@@ -61,6 +62,8 @@ export type Command =
   | { type: 'stance'; player: number; ids: number[]; stance: number }
   /** Rozbicie głazu przez cech inżynierów (boulders.ts) */
   | { type: 'smashRock'; player: number; tile: number }
+  /** Rynek: amount > 0 kupno, < 0 sprzedaż (od ręki, za rudę) */
+  | { type: 'trade'; player: number; res: number; amount: number }
   /** Mag Płomienia: palenie ciał w pobliżu włączone albo wyłączone (cremation.ts) */
   | { type: 'cremate'; player: number; ids: number[]; on: boolean }
   | { type: 'attack'; player: number; ids: number[]; target: number }
@@ -154,6 +157,9 @@ function apply(g: GameState, c: Command): void {
         orderPatrol(g, c.player, c.ids.filter((n) => Number.isInteger(n) && !isGuard(g, n)), pts, { form: c.form, amove: c.amove !== false });
       }
       if (Array.isArray(c.ids)) clearWreck(g, c.player, c.ids.filter((n) => Number.isInteger(n)));
+      break;
+    case 'trade':
+      if (Number.isInteger(c.res) && Number.isInteger(c.amount)) trade(g, c.player, c.res, c.amount);
       break;
     case 'smashRock':
       if (Number.isInteger(c.tile)) smashRock(g, c.player, c.tile);

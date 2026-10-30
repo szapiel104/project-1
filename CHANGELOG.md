@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.69.0 — 30.10.2026
+- **Rynek** (Michał: „rynek, gdzie mogę handlować wszystkim, sprzedaje się od razu”): budynek 3×3 (60 drewna, 20 kamienia, etap 1), model z Blendera `tools/models/market.py` (dwa kramy pod pasiastymi daszkami, skrzynie, beczki, szyld z monetą). Okno rynku po kliknięciu (`src/ui/marketPanel.ts`): każdy towar, sprzedaż i kupno partiami 5/20, od ręki, za rudę. Ceny w `src/data/market.ts` (wartość za 10 szt., kupno ×2). Rozkaz `trade` (`sim/systems/market.ts`), kupno tylko do wolnego miejsca w magazynach. Bot: rynek w `ORDER` po cieśli, `botTrade` co 10 myśli sprzedaje nadwyżki i dokupuje braki. Test `tests/market.test.ts`.
+- Karty budowy 248 px (cały koszt w jednym rzędzie), napis etapu jako złota flaga w rogu karty.
+- Zakładka „Dwór” schowana (racje i podatki są w oknie popularności).
+
 ## 0.68.8 — 30.10.2026
 - Karty budowy szersze (132 → 176 px), tabliczki kosztu z luzem: ikonka 26 px na ciemnym kwadracie, liczba 24 px, odstęp 6 px (Michał: „ciasno, nie mają oddechu, ikonka za mała”).
 

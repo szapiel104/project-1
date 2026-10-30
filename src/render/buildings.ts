@@ -41,6 +41,7 @@ const WATCH_TOWER_MODEL = model('watchtower');
 const LOOKOUT_MODEL = model('lookout');
 const WELL_MODEL = model('well');
 const SHRINE_MODEL = model('shrine');
+const MARKET_MODEL = model('market');
 const MAGE_FIRE_MODEL = model('magefire');
 const MAGE_WATER_MODEL = model('magewater');
 const MAGE_HUT_MODEL = model('magehut');
@@ -1259,6 +1260,11 @@ const BUILDERS: Record<string, Builder> = {
     // kapliczka z Blendera (tools/models/shrine.py): posąg Ojca Płomienia z czarą wiecznego ognia w ostrołukowej niszy,
     // świeczniki, ofiarna ruda i klęcznik; płomień w czarze to znacznik 'flame', świece świecą nocą (lightSpot)
     blenderModel(g, SHRINE_MODEL as unknown as BlenderBuilding, flag);
+  },
+  market(g, _team, flag) {
+    // rynek z Blendera (tools/models/market.py): dwa kramy pod pasiastymi daszkami (jedzenie i towar), skrzynie i beczki
+    // kupców, słup z szyldem — złota moneta na desce
+    blenderModel(g, MARKET_MODEL as unknown as BlenderBuilding, flag);
   },
   well(g, _team, flag) {
     // studnia z Blendera (tools/models/well.py): cembrowina z ciosów na mijankę, wał z liną i korbą, wiadra, daszek z desek, koryto
