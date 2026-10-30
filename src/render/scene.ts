@@ -788,6 +788,8 @@ export class GameRenderer {
   private unitY = new Map<number, number>();
   /** Ciała spalone w ogniu (z g.corpses co klatkę) */
   private burntBodies = new Set<number>();
+  /** Pochodnie chłopów w tej klatce (x, z na zmianę): w grupie niesie ją jeden */
+  private torchSpots: number[] = [];
   private frozenBodies = new Set<number>();
   private pyreAt = new THREE.Vector3();
 
@@ -5109,6 +5111,7 @@ export class GameRenderer {
   }
 
   private syncUnits(g: GameState, view: TerrainView, alpha: number): void {
+    this.torchSpots.length = 0;
     // karczmy z karczmarzem: wieczorem schodzą się do nich ludzie (rytm dnia w symulacji)
     this.taverns.clear();
     this.innDoors.clear();
@@ -5668,7 +5671,14 @@ export class GameRenderer {
       const shake = rioting ? Math.sin(this.time * (5.5 + (u.id % 5) * 0.4) + u.id * 1.7) : 0;
       const torchArm = riotTorch ? TORCH_ARM - 0.45 + shake * 0.18 : TORCH_ARM;
       const forkArm = FORK_ARM + shake * 0.28;
-      const torchOn = !robed && !bier && (riotTorch || (this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket));
+      // w grupie pochodnię niesie jeden (Michał 30.10.2026: czterech idących obok siebie nie potrzebuje czterech pochodni —
+      // to też mniej płomieni i świateł do policzenia); kto ma towarzysza z pochodnią do ok. 1,6 pola, idzie przy jego świetle
+      let torchOn = !robed && !bier && (riotTorch || (this.night > 0.15 && !still && u.carryRes < 0 && !u.bucket));
+      if (torchOn && !riotTorch) {
+        const tp = t.position, spots = this.torchSpots;
+        for (let k = 0; k < spots.length; k += 2) if ((spots[k]! - tp.x) ** 2 + (spots[k + 1]! - tp.z) ** 2 < 2.6) { torchOn = false; break; }
+        if (torchOn) spots.push(tp.x, tp.z);
+      }
       // kopacz w drodze (także sztolnią) ma kilof na plecach; do ręki bierze go dopiero przy złożu, gdy dłoń chwyci stylisko
       const pickOnBack = drawing >= 0 && drawing < PICK_GRAB;
       // siekiera albo kilof w prawej dłoni, obracane w barku razem z ręką

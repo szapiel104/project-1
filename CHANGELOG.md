@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.68.1 — 30.10.2026
+- Nocą w grupie pochodnię niesie jeden chłop: kto ma towarzysza z pochodnią do ok. 1,6 pola, idzie przy jego świetle (Michał: czterech idących obok siebie nie potrzebuje czterech pochodni). Mniej płomieni do rysowania. Buntownicy z pochodniami bez zmian.
+
 ## 0.68.0 — 30.10.2026
 - **Głazy są fizyczne** (Michał). Duże głazy na łąkach zna teraz symulacja (`src/sim/systems/boulders.ts`, położenie z ziarna mapy — te same u każdego gracza): nie da się na nich postawić budynku ani położyć drogi („Tu leży głaz — najpierw każ go rozbić”), a w spacerze mają kolizję. Kliknięcie głazu otwiera okienko z przyciskiem **Rozbij — 10 rudy** (potrzebny gotowy cech inżynierów): głaz znika, na polu zostaje stos kamienia (8 szt.), który wynoszą magazynierzy, wolni chłopi albo inżynierowie z cechu; potem pole jest wolne. Rozbite głazy w zapisie gry (`rocksGone`). Dawne losowe duże i średnie kamienie z łąki zniknęły (zamiast nich te z symulacji); drobne kamyki w trawie zostają jako ozdoba. Bot głazów nie rozbija — omija je przy stawianiu.
 - **Chłopi najpierw zajmują wolne chaty**, dopiero potem śpią w zamku. Chory jak dawniej idzie pod najbliższy dach (sam w pustej chacie byłby w kwarantannie i zaraza gasła — test zarazy to wychwycił).
