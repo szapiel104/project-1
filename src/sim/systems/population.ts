@@ -96,6 +96,13 @@ export function migrationSystem(g: GameState): void {
       // nowi przychodzą tylko wtedy, gdy jest dla nich dach w chacie i wolne miejsce w obozowisku
       if (pop < housing(g, p.id) && idleCount(g, p.id) < idleSlots(g, p.id)) arrive(g, p.id);
     }
-    else if (pop > RULES.minPeasants) removePeasant(g, p.id);
+    else if (pop > RULES.minPeasants) {
+      // poniżej progu ludzie odchodzą tym szybciej, im niższa popularność: przy 0 jeden co 3 s (jak dawniej przy każdej),
+      // przy 45 jeden co pół minuty. Dawniej każdy punkt pod progiem zabierał człowieka co 3 s — osada 26 ludzi topniała
+      // do 4 w minutę po jednym słabszym miesiącu (balans bot kontra bot, 30.10.2026)
+      p.leaveAcc = (p.leaveAcc ?? 0) + (RULES.migrationThreshold - p.popularity);
+      if (p.leaveAcc >= RULES.migrationThreshold) { p.leaveAcc -= RULES.migrationThreshold; removePeasant(g, p.id); }
+    }
+    if (p.popularity >= RULES.migrationThreshold && p.leaveAcc) p.leaveAcc = 0;
   }
 }

@@ -26,6 +26,8 @@ export interface PlayerState {
   /** Zasoby, indeksy jak w RESOURCES */
   res: Int32Array;
   popularity: number;
+  /** Licznik odejść przy popularności poniżej progu (population.ts): im niżej, tym szybciej ludzie odchodzą */
+  leaveAcc?: number;
   /** Ostatnia miesięczna zmiana popularności (do interfejsu) */
   popDelta: number;
   rations: number;

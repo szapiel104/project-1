@@ -1,8 +1,9 @@
 import { dole, quell } from './unrest';
-import { botTrade } from './market';
+import { botTrade, trade } from './market';
 import { canQuarantine, setQuarantine } from './plague';
 import { BUILDINGS, buildingIndex, footprint, isTower } from '../../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, resIndex } from '../../data/resources';
+import { RULES } from '../../data/rules';
 import { MAGE_CAP, SAPPER, UNITS } from '../../data/units';
 const LADDERMAN = UNITS.findIndex((u) => u.id === 'ladderman');
 import { KEEP_SIZE } from '../../data/keep';
@@ -148,7 +149,16 @@ export function botSystem(g: GameState): void {
     // bez żadnego składu na drewno (stodoła i składy zburzone) najpierw skład, potem drwal: drwal bez składu tylko zrzuca deski
     // pod chatą i staje (storage.ts). Drewno na skład zbiera w razie biedy wolny chłop (emergencywood.ts)
     const woodStore = (have.get('stockpile') ?? 0) + (have.get('barn') ?? 0) > 0;
-    const urgent0 = !woodStore ? 'stockpile' : !(have.get('woodcutter') ?? 0) ? 'woodcutter' : feeders * 6 < pop + 3 ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
+    // głód (balans bot kontra bot, 30.10.2026: w 3 z 6 długich gier bot przegrywał z głodu — zapas jedzenia topniał przez
+    // kwadrans przy suszy, a bot liczył sady tylko z liczby ludzi): gdy zapasu zostało na mniej niż ok. 8 minut, stawia
+    // kolejny sad (do 1 na 2 mieszkańców), przy resztkach przechodzi na pół racji, a z rynkiem dokupuje chleb za rudę
+    const food = RESOURCES.reduce((a, r, i) => a + (RESOURCE_DEFS[r].food ? p.res[i]! : 0), 0);
+    const hungry = food < pop * 8 && feeders * 2 < pop;
+    // pół racji tylko przy resztkach i dobrej popularności (pół racji to −4 na miesiąc; dawniej spychało osadę pod próg)
+    if (food < pop * 2 && p.rations > 1 && p.popularity >= 62) p.rations = 1;
+    else if (food > pop * 6 && p.rations < RULES.defaultRations) p.rations = RULES.defaultRations;
+    if (food < pop * 4 && p.res[resIndex('gold')]! >= 60) trade(g, p.id, resIndex('bread'), 20);
+    const urgent0 = !woodStore ? 'stockpile' : !(have.get('woodcutter') ?? 0) ? 'woodcutter' : feeders * 6 < pop + 3 || hungry ? 'orchard' : idleCount(g, p.id) >= 4 && p.res[resIndex('wood')]! < 40 && (have.get('woodcutter') ?? 0) < 4 + Math.floor(pop / 8) ? 'woodcutter' : null;
     // brak łóżek, a na chatę nie starcza drewna: na szybko rudera (najwyżej 3), a w biedzie namiot (najwyżej 2) — jak gracz,
     // który łata osadę tanimi mieszkaniami, zanim stać go na porządne chaty
     const roofless = !urgent0 && pop >= housing(g, p.id) && !affordable(g, p, buildingIndex('house'));

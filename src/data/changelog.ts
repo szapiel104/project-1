@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.9', date: '2026-10-30',
+    pl: [
+      'Przy popularności poniżej 50 ludzie odchodzą stopniowo — tym szybciej, im niższa popularność. Dawniej po jednym słabszym miesiącu osada z 26 ludźmi pustoszała w minutę.',
+      'Bot pilnuje jedzenia: gdy zapas topnieje, stawia kolejne sady, przy resztkach przechodzi na pół racji, a z rynkiem dokupuje chleb.',
+    ],
+    en: [
+      'With popularity below 50, folk now drift away gradually — the lower it falls, the faster they go. Before, a single lean month could empty a settlement of 26 in a minute.',
+      'Bots watch their food: when stores dwindle they plant more orchards, go on half rations when nearly out, and buy bread at the market if they have one.',
+    ],
+  },
+  {
     v: '0.69.8', date: '2026-10-30',
     pl: [
       'Kula czaru maga z muru albo wieży (albo lecąca w obrońcę na murze) przelatuje łukiem nad dachami, zamiast przez ściany budynków.',
