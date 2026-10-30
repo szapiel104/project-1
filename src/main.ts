@@ -38,6 +38,9 @@ import { storeNotes } from './ui/storeNotes';
 import { createHpBars } from './ui/hpBars';
 import { createRockPanel } from './ui/rockPanel';
 import { createMarketPanel } from './ui/marketPanel';
+import { createWorldPops } from './ui/worldPops';
+import { buyPrice, sellPrice } from './data/market';
+import { ICONS } from './ui/hud';
 import { boulderAt } from './sim/systems/boulders';
 import { usedIn } from './sim/systems/stock';
 import { nextWave } from './sim/systems/bot';
@@ -940,7 +943,7 @@ function buildingInfo(b: GameState['buildings'][number]): BuildingInfo {
 /** Skrót z paska: kamera do własnych koszar albo składu i okno budynku; kolejne kliknięcia idą po kolejnych */
 const jumpAt: Record<string, number> = {};
 /** Skróty na dolnym pasku: koszary, składy (mały i duży) i spichlerze (mały i duży) */
-const JUMP_IDS: Record<JumpKind, readonly string[]> = { barracks: ['barracks'], stockpile: ['stockpile', 'barn'], granary: ['granary', 'granaryBig'] };
+const JUMP_IDS: Record<JumpKind, readonly string[]> = { barracks: ['barracks'], stockpile: ['stockpile', 'barn'], granary: ['granary', 'granaryBig'], market: ['market'] };
 function jumpTo(kind: JumpKind): void {
   const ids = JUMP_IDS[kind];
   const list = game.buildings.filter((b) => b.owner === ME && ids.includes(BUILDINGS[b.type]!.id)).sort((a, b) => a.id - b.id);
@@ -976,7 +979,16 @@ function frameBeside(x: number, y: number, dist: number): void {
 }
 const jumpCount = (kind: JumpKind): number => { const ids = JUMP_IDS[kind]; let n = 0; for (const b of game.buildings) if (b.owner === ME && ids.includes(BUILDINGS[b.type]!.id)) n++; return n; };
 
-const marketPanel = createMarketPanel((res, amount) => { pending.push({ type: 'trade', player: ME, res, amount }); play('select'); });
+const worldPops = createWorldPops((x, y, lift) => renderer.project(x, y, lift));
+const marketPanel = createMarketPanel((res, amount) => {
+  pending.push({ type: 'trade', player: ME, res, amount });
+  play('select');
+  // „+N” / „−N” rudy z ikonką nad rynkiem, jak liczby obrażeń (Michał 30.10.2026)
+  const m = game.buildings.find((b) => b.id === selected);
+  const id = RESOURCES[res] as ResourceId;
+  const price = amount < 0 ? sellPrice(id, -amount) : buyPrice(id, amount);
+  if (m) worldPops.add(m.x + 1.5, m.y + 1.5, `${amount < 0 ? '+' : '−'}${price}<svg viewBox="0 0 20 20" aria-hidden="true">${ICONS.gold ?? ''}</svg>`, amount < 0 ? 'gain' : 'spend');
+});
 const rockPanel = createRockPanel((t) => { pending.push({ type: 'smashRock', player: ME, tile: t }); play('build'); });
 function select(id: number): void {
   if (id && selectedUnit) { selectedUnit = 0; renderer.setUnitSelection(0); }
@@ -1978,7 +1990,7 @@ function refresh(): void {
   }
   const clock = clockAt(game.tick);
   hud.update({
-    jumps: { barracks: jumpCount('barracks'), stockpile: jumpCount('stockpile'), granary: jumpCount('granary') },
+    jumps: { barracks: jumpCount('barracks'), stockpile: jumpCount('stockpile'), granary: jumpCount('granary'), market: jumpCount('market') },
     day: clock.day, hour: clock.hour, night: clock.night,
     weather: (() => { const w = weatherOf(game, rainAt(game.tick)); return { season: SEASON_NAME[w.season], temp: w.temp, note: stormAt(game) ? tx('burza', 'storm') : droughtAt(game) ? tx('susza', 'drought') : undefined }; })(),
     res: p.res, trend: resTrend(p.res), pop: population(game, ME), housing: housing(game, ME), popularity: p.popularity, idle: idleCount(game, ME), idleSlots: idleSlots(game, ME),
@@ -2200,6 +2212,7 @@ function loop(now: number): void {
   if (now - perf.since > 1000) showPerf(now);
   updateHoverFoe();
   updateBars();
+  worldPops.update();
   if (steps) updateAlarm();
   requestAnimationFrame(loop);
 }

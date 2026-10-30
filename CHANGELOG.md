@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.69.2 — 30.10.2026
+- Rynek: kupcy (`staff`, `crew` 1–2) za dnia stoją za ladami kramów (scene.ts, pozycje z układu modelu); „+N/−N” rudy z ikonką nad rynkiem po handlu (`src/ui/worldPops.ts`, wygląd `.hpdmg`); model bez placu z ziemi, płyty pod kramami od ziemi, moneta na szyldzie jako pionowy ośmiokąt z grubością.
+- Dolny pasek: ruda pierwsza i wyróżniona (`.res-ore`), skrót „Rynek” w skrótach budynków, klik w licznik składu = rozpiska towarów i wolnego miejsca.
+
 ## 0.69.1 — 30.10.2026
 - Okno rynku od nowa (Michał: „nieczytelny widok, większe okno”): na środku, do 1180 px, kafelki towarów w grupach jak magazyny, ikonka 30 px, nazwa 20 px, „masz” 24 px, przyciski 44 px wysokie z ceną 21 px (sprzedaż zielona, kupno czerwona), krzyżyk i Esc zamykają do ponownego kliknięcia rynku.
 

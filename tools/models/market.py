@@ -18,12 +18,11 @@ from logs import log  # noqa: E402
 reset()
 b = Building()
 
-P = 0.04  # wierzch placu
+P = 0.0  # kramy stoją wprost na trawie (bez placu z ziemi — Michał: „dziwne podłoże”)
 
-# ---------------- plac: ubita ziemia i kamienne płyty pod kramami ----------------
-b.box('base', 'soil', 2.92, P - 0.005, 2.92, 0, 0, 0)
+# ---------------- kamienne płyty pod kramami ----------------
 for sx in (-1, 1):
-    b.box('base', 'castleDark', 1.3, P + 0.012 - (P - 0.005), 0.98, sx * 0.72, P - 0.005, -0.25)
+    b.box('base', 'castleDark', 1.3, 0.03, 0.98, sx * 0.72, 0.0, -0.25)   # płyty pod kramem
 
 
 def stall(cx, cz, stripe, goods):
@@ -120,7 +119,16 @@ log(b, 'base', 'woodDark', (SX - 0.02, 1.18, SZ), (SX + 0.45, 1.18, SZ), r=0.025
 for x in (SX + 0.17, SX + 0.37):
     b.box('base', 'iron', 0.008, 0.08, 0.008, x, 1.09, SZ)                                  # łańcuszki
 b.box('base', 'plank', 0.32, 0.22, 0.03, SX + 0.27, 0.87, SZ)                               # deska szyldu
-b.prism('base', 'gold', 0.075, 0.075, 0.012, SX + 0.27, 0.98, SZ + 0.022, seg=16)            # moneta (stoi pionowo niżej)
+# moneta przybita do deski: pionowy ośmiokąt z grubością (przód i tył zamknięte), wystaje 5 mm przed deskę
+CX, CY, R = SX + 0.27, 0.98, 0.075
+z0, z1 = SZ + 0.02, SZ + 0.032
+ring = [(CX + R * math.cos(math.pi / 8 + k * math.pi / 4), CY + R * math.sin(math.pi / 8 + k * math.pi / 4)) for k in range(8)]
+cen = (CX, CY, (z0 + z1) / 2)
+b.poly('base', 'gold', [(x, y, z1) for x, y in ring], away=cen)
+b.poly('base', 'gold', [(x, y, z0) for x, y in ring], away=cen)
+for k in range(8):
+    (xa, ya), (xb, yb) = ring[k], ring[(k + 1) % 8]
+    b.poly('base', 'gold', [(xa, ya, z1), (xb, yb, z1), (xb, yb, z0), (xa, ya, z0)], away=cen)
 
 VIEWS = [
     ['rynek (oczy chłopa)', [0.2, 0.5, 2.6], [0, 0.5, -0.2], ['base'], 34],

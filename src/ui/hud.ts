@@ -105,7 +105,7 @@ export interface HudView {
 /** Okno magazynu: `here` — pojemność tego budynku, `hereUsed` i `items` — co leży w nim samym; `used`/`max` — suma ze wszystkich `stores` magazynów tego rodzaju */
 export interface StockInfo { kind: string; here: number; hereUsed: number; used: number; max: number; stores: number; items: { id: string; amount: number }[] }
 /** Skróty na dolnym pasku: koszary, skład, spichlerz */
-export type JumpKind = 'barracks' | 'stockpile' | 'granary';
+export type JumpKind = 'barracks' | 'stockpile' | 'granary' | 'market';
 export interface BuildingInfo { /** Czyj to budynek: imię gracza albo bota, wróg / sojusznik / twój, kolor drużyny */ owner?: { name: string; rel: 'own' | 'ally' | 'enemy'; color: number }; stock?: StockInfo[]; /** Magazyn: magazynierzy, towar pod drzwiami i czekające warsztaty (storePanel.ts) */ logistics?: StoreLogistics; id: number; def: BuildingDef; hasWorker: boolean; own: boolean; /** Ruina po zniszczeniu (rozbiórka = porzucenie, bez zwrotu) */ ruined?: boolean; /** Przenosiny za rudę: koszt i powód blokady (null = wolno) */ move?: { cost: number; why: string | null }; canTrain?: boolean; hp?: number; maxHp?: number; gate?: { open: boolean; shut: boolean }; power?: { on: boolean; worker: boolean }; /** Chata w czasie zarazy: zamknięta na kwarantannę i ilu chorych leży w środku */ quarantine?: { on: boolean; sick: number }; garrison?: number;
   /** Twierdza: straż miejska (ilu jest, ilu ma być, ile sekund do końca szkolenia rekruta, czy werbunek stoi i dlaczego) */
   watch?: { have: number; want: number; training: number; note?: string; label?: string }; recruit?: RecruitUnit[]; area?: boolean;
@@ -339,7 +339,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const resTrends: HTMLElement[] = [];
   const resItems: HTMLElement[] = [];
   // ważne zapasy widać zawsze; reszta (półprodukty, broń, poszczególne rodzaje jedzenia) chowa się pod przyciskiem
-  const MAIN_RES: readonly ResourceId[] = ['wood', 'stone', 'gold'];
+  // ruda pierwsza i wyróżniona (Michał 30.10.2026: „najważniejszy surowiec gry, ma się wyróżniać”)
+  const MAIN_RES: readonly ResourceId[] = ['gold', 'wood', 'stone'];
   const FOOD_RES: readonly ResourceId[] = ['apples', 'bread', 'fish'];
   // zbiorczo jedzenie (jabłka + chleb + ryby), gdy reszta jest zwinięta
   const foodSum = el('li', 'res-sum');
@@ -373,6 +374,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     resItems.push(li);
     // dawna osobna ruda z kopalni (17.10) nie ma już kafelka — ruda to waluta (kafelek 'gold')
     if (id === 'ore') { li.hidden = true; continue; }
+    if (id === 'gold') { li.classList.add('res-ore'); li.dataset.tip = tx('Ruda — waluta: żołd, handel na rynku, budowy', 'Ore — the coin of the realm: pay, market trade, building'); }
     resList.append(li);
   }
   // kolejność: drewno, kamień, ruda, jedzenie razem, potem tyle kolejnych zapasów, ile zmieści się w pasku,
@@ -428,15 +430,29 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // rozwijane rozpiski nad dolnym paskiem: klik w koronę = popularność, klik w ludzi = kto co robi
   const report = el('div', 'report panel');
   report.hidden = true;
-  let reportKind: 'popularity' | 'people' | 'army' | 'food' | null = null;
+  let reportKind: 'popularity' | 'people' | 'army' | 'food' | 'stock' | null = null;
+  /** Ostatnie zapasy (do rozpiski składu po kliknięciu w jego licznik) */
+  let lastRes: ArrayLike<number> = [];
+  let lastStockCap = 0;
   let lastReport: HudView['report'];
   const drawReport = (): void => {
     if (!reportKind || !lastReport) { report.hidden = true; return; }
     report.hidden = false;
-    const rows = reportKind === 'popularity' ? lastReport.popularity : reportKind === 'army' ? lastReport.army : reportKind === 'food' ? [] : lastReport.people;
+    const rows = reportKind === 'popularity' ? lastReport.popularity : reportKind === 'army' ? lastReport.army : reportKind === 'food' || reportKind === 'stock' ? [] : lastReport.people;
     const sum = reportKind === 'popularity' ? rows.reduce((n, r) => n + r.value, 0) : 0;
-    report.innerHTML = `<button type="button" class="report-x" aria-label="${t('hud.close')}">×</button><p class="report-title">${reportKind === 'popularity' ? tx('Popularność — co miesiąc', 'Popularity — each month') : reportKind === 'army' ? t('cat.military') : reportKind === 'food' ? tx('Spichlerz — jedzenie', 'Granary — food') : tx('Mieszkańcy', 'Townsfolk')}</p>`;
+    report.innerHTML = `<button type="button" class="report-x" aria-label="${t('hud.close')}">×</button><p class="report-title">${reportKind === 'popularity' ? tx('Popularność — co miesiąc', 'Popularity — each month') : reportKind === 'army' ? t('cat.military') : reportKind === 'food' ? tx('Spichlerz — jedzenie', 'Granary — food') : reportKind === 'stock' ? tx('Skład — towary', 'Stockpile — goods') : tx('Mieszkańcy', 'Townsfolk')}</p>`;
     const list = el('dl', 'report-list');
+    // skład (Michał 30.10.2026: „niech działa logika” przy ikonce składu): co w nim leży i ile miejsca zostało
+    if (reportKind === 'stock') {
+      let used = 0;
+      RESOURCES.forEach((id, i) => {
+        if (RESOURCE_DEFS[id].store !== 'stockpile') return;
+        const n = lastRes[i] ?? 0;
+        used += n;
+        if (n > 0) list.append(el('dt', '', t(RESOURCE_DEFS[id].name)), el('dd', '', num(n)));
+      });
+      list.append(el('dt', 'report-sum', tx('Wolne miejsce', 'Room left')), el('dd', 'report-sum', num(Math.max(0, lastStockCap - used))));
+    }
     if (reportKind === 'food') for (const r of lastReport.food) {
       const dt = el('dt', '', r.label);
       if (r.note) dt.append(el('small', '', ` ${r.note}`));
@@ -451,7 +467,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     if (reportKind === 'popularity') { list.append(el('dt', 'report-sum', tx('Razem', 'Total')), el('dd', `report-sum ${sum > 0 ? 'plus' : sum < 0 ? 'minus' : ''}`, `${sum > 0 ? '+' : ''}${sum}`)); }
     report.append(list);
     // okienko wyskakuje tuż nad przyciskiem, który je otworzył
-    const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : reportKind === 'food' ? foodBox : popBox;
+    const anchor = reportKind === 'popularity' ? popularBox : reportKind === 'army' ? armyBox : reportKind === 'food' ? foodBox : reportKind === 'stock' ? stockBox : popBox;
     // okno ma powiększenie interfejsu (zoom: var(--ui)), więc jego left/bottom liczą się w pikselach powiększonych:
     // pozycję z ekranu dzielimy przez powiększenie, a szerokość okna mnożymy — inaczej wyjeżdża poza ekran
     const r = anchor.getBoundingClientRect();
@@ -464,7 +480,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     if (reportKind === 'food' && lastReport.foodHint) report.append(el('p', 'report-hint', lastReport.foodHint));
     if (reportKind === 'popularity') report.append(el('p', 'report-hint', tx('W górę: większe racje, niższe podatki albo rozdawanie rudy. W dół: małe racje, wysokie podatki, za mało miejsc w chatach. Od 50 przychodzą nowi ludzie, poniżej odchodzą.', 'Up: bigger rations, lower taxes or handing out ore. Down: small rations, high taxes, too few places in the cottages. From 50 new folk arrive; below it they leave.')));
   };
-  const toggleReport = (k: 'popularity' | 'people' | 'army' | 'food'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
+  const toggleReport = (k: 'popularity' | 'people' | 'army' | 'food' | 'stock'): void => { reportKind = reportKind === k ? null : k; drawReport(); };
   for (const [box, k] of [[popularBox, 'popularity'], [popBox, 'people'], [armyBox, 'army']] as const) {
     box.classList.add('clickable');
     box.tabIndex = 0;
@@ -495,6 +511,12 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   foodBox.setAttribute('aria-label', t('hud.granary'));
   foodBox.classList.add('store-box');
   foodBox.append(pic('granary', 'granary'), foodVal, foodTrend);
+  // klik w skład: co w nim leży i ile miejsca zostało
+  stockBox.classList.add('clickable');
+  stockBox.tabIndex = 0;
+  stockBox.setAttribute('role', 'button');
+  stockBox.addEventListener('click', () => toggleReport('stock'));
+  stockBox.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleReport('stock'); } });
   // klik w spichlerz: ile jedzą na dobę i co miesiąc, na ile starczy, ilu ludzi wykarmią gospodarstwa
   foodBox.classList.add('clickable');
   foodBox.tabIndex = 0;
@@ -547,9 +569,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const jumpBarracks = jumpBtn('barracks', 'barracks');
   const jumpStock = jumpBtn('stockpile', 'store');
   const jumpGranary = jumpBtn('granary', 'granary');
+  const jumpMarket = jumpBtn('market', 'store');
   let jumpKey = '';
   const paintJumps = (j: Record<JumpKind, number>): void => {
-    const key = `${j.barracks}:${j.stockpile}:${j.granary}`;
+    const key = `${j.barracks}:${j.stockpile}:${j.granary}:${j.market}`;
     if (key === jumpKey) return;
     jumpKey = key;
     const set = (b: HTMLButtonElement, n: number, name: string, none: string): void => {
@@ -561,8 +584,9 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     set(jumpBarracks, j.barracks, tx('Koszary', 'Barracks'), tx('Nie masz jeszcze koszar', 'You have no barracks yet'));
     set(jumpStock, j.stockpile, tx('Skład', 'Stockpile'), tx('Nie masz jeszcze składu', 'You have no stockpile yet'));
     set(jumpGranary, j.granary, tx('Spichlerz', 'Granary'), tx('Nie masz jeszcze spichlerza', 'You have no granary yet'));
+    set(jumpMarket, j.market, t('b.market'), tx('Nie masz jeszcze rynku', 'You have no market yet'));
   };
-  paintJumps({ barracks: 0, stockpile: 0, granary: 0 });
+  paintJumps({ barracks: 0, stockpile: 0, granary: 0, market: 0 });
   people.append(jumpBox, stockBox, foodBox, popBox, armyBox, idleBox, popularBox);
   // szybkie sterowanie u góry: tempo gry, podatki i racje, każde z przyciskami minus i plus
   const controls = el('div', 'controls');
@@ -1218,6 +1242,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       setText(idleVal, `${v.idle} / ${v.idleSlots}`);
       idleBox.classList.toggle('full', v.idle >= v.idleSlots);
       setText(stockVal, `${short(v.stock)} / ${short(v.stockCap)}`);
+      lastRes = v.res; lastStockCap = v.stockCap;
       // bilans: suma zmian zapasów w składach (towary) i w spichlerzach (jedzenie) z ostatniej minuty gry
       let ds = 0, df = 0;
       RESOURCES.forEach((id, i) => { const d = v.trend[i] ?? 0; const st = RESOURCE_DEFS[id].store; if (st === 'stockpile') ds += d; else if (RESOURCE_DEFS[id].food) df += d; });

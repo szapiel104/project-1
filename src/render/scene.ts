@@ -301,6 +301,8 @@ export class GameRenderer {
   private innDoors = new Map<number, GameState['buildings'][number]>();
   /** Drzwi kapliczek: wieczorem modlący się klęczą przy klęczniku i stoją za nimi ze spuszczonymi głowami */
   private shrineDoors = new Map<number, GameState['buildings'][number]>();
+  /** Rynki po id: kupcy stoją za ladami kramów (Michał 30.10.2026: „ktoś niech stoi w dzień na stoisku”) */
+  private markets = new Map<number, GameState['buildings'][number]>();
   private luteAt = 0;
   /** Kto pił dziś w karczmie (wraca potem chwiejnym krokiem); czyszczone rano */
   private drank = new Set<number>();
@@ -5138,6 +5140,8 @@ export class GameRenderer {
     this.innDoors.clear();
     this.shrineDoors.clear();
     for (const b of g.buildings) if (BUILDINGS[b.type]!.id === 'shrine' && !b.build && !b.ruined && b.door >= 0) this.shrineDoors.set(b.door, b);
+    this.markets.clear();
+    for (const b of g.buildings) if (BUILDINGS[b.type]!.id === 'market' && !b.build && !b.ruined && b.door >= 0) this.markets.set(b.id, b);
     for (const b of g.buildings) if (BUILDINGS[b.type]!.id === 'tavern' && b.worker && !b.build) { if (!this.taverns.has(b.owner)) this.taverns.set(b.owner, b); if (b.door >= 0) this.innDoors.set(b.door, b); }
     const { width, height } = g.map;
     const n = Math.min(g.units.length, MAX_UNITS);
@@ -5322,7 +5326,19 @@ export class GameRenderer {
       // wieczorem w karczmie siedzą ci, którzy przyszli pod jej drzwi (każda karczma osobno)
       const inn = evening ? this.innDoors.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
       const shrine = evening && !inn ? this.shrineDoors.get((u.py >> 8) * width + (u.px >> 8)) : undefined;
-      if (inn) {
+      // kupiec rynku czekający pod drzwiami (za dnia): stoi za ladą swojego kramu, przodem do placu
+      const market = !evening && still && u.job ? this.markets.get(u.job) : undefined;
+      if (market && market.door === (u.py >> 8) * width + (u.px >> 8)) {
+        const mesh = this.buildingMeshes.get(market.id);
+        const turn = (market.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
+        const idx = Math.max(0, crewOf(market).indexOf(u.id)) % 2;
+        // układ modelu (tools/models/market.py): kramy w x = ∓0,72, lada w z ≈ 0, kupiec za nią w z = −0,32
+        const lx = idx ? 0.72 : -0.72, lz = -0.32, wx = lx * cosT + lz * sinT, wz = -lx * sinT + lz * cosT;
+        const mfp = footprint(BUILDINGS[market.type]!, market.rot);
+        t.position.set(market.x + mfp.w / 2 + wx - width / 2, (mesh?.position.y ?? 0) + 0.06, market.y + mfp.h / 2 + wz - height / 2);
+        t.rotation.set(0, turn + (this.calm ? 0 : Math.sin(this.time * 0.5 + u.id) * 0.4), 0);
+        swing = this.calm ? 0 : Math.max(0, Math.sin(this.time * 1.7 + u.id)) * -0.6; // zachwala towar, macha ręką
+      } else if (inn) {
         const mesh = this.buildingMeshes.get(inn.id);
         const turn = (inn.rot * Math.PI) / 2, cosT = Math.cos(turn), sinT = Math.sin(turn);
         // miejsca z modelu karczmy: przy stołach w izbie i na ławach ganku; ostatni to pijak zataczający się przed wejściem

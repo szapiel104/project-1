@@ -2075,3 +2075,13 @@ body.menu-open .devpanel { display: none; }
 .card.locked .build-need { position: absolute; top: 6px; left: -1px; z-index: 1; margin: 0; padding: 3px 14px 3px 7px; font-size: 13px; line-height: 1.2;
   color: #2a1406; background: linear-gradient(#f3d78a, #c99a3a); box-shadow: 0 1px 3px rgba(0, 0, 0, .6);
   clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 50%, 100% 100%, 0 100%); }
+/* rynek: „+N” ruda nad rynkiem po sprzedaży (zielone), „−N” po kupnie (czerwone), z ikonką rudy (worldPops.ts) */
+.hpdmg.pop-trade { display: inline-flex; align-items: center; gap: 4px; animation-duration: 1.6s; }
+.hpdmg.pop-trade svg { width: 28px; height: 28px; filter: drop-shadow(0 1px 1px #000); }
+.hpdmg.pop-trade.gain { color: #b8f59a; -webkit-text-stroke-color: #0d2a06; }
+.hpdmg.pop-trade.spend { color: #ffb4a4; }
+/* ruda — najważniejszy surowiec (Michał 30.10.2026): pierwsza na pasku, złota ramka, większa ikonka i liczba */
+.status .res li.res-ore { padding: 2px 12px 2px 8px; margin-right: 4px; background: linear-gradient(#3a2a12, #1c1308); border: 1px solid #e9c766;
+  box-shadow: inset 0 1px 0 rgba(255, 230, 160, .35), 0 0 0 1px #7a5a1c, 0 0 10px rgba(233, 199, 102, .35); }
+.status .res li.res-ore .ico svg { width: 34px; height: 34px; filter: drop-shadow(0 0 3px rgba(143, 211, 255, .55)); }
+.status .res li.res-ore strong { font-size: 27px; color: #ffe7a6; text-shadow: 0 1px 2px #000; }
