@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.77.2 — 2.11.2026
+- `friends.css`: reset motywu przycisków dla `.fr-name`, `.fr-crest`, `.fr-feed-crest`; siatka kafelka. Migracja `20261102c_social.sql` wykonana.
+
 ## 0.77.1 — 2.11.2026
 - `richNote.ts`: edytor contenteditable + execCommand; zapis jako HTML z białej listy (`cleanRich`), ponowne czyszczenie przy wyświetlaniu; starsze znaczniki dalej działają. Migracja c: limit treści uwagi 12000, skrót w dzwoneczku bez HTML.
 - `menu.ts`: `.menu-topbar` (wersja, Znajomi z licznikiem, dzwoneczek); dzwoneczek zdjęty z karty konta.

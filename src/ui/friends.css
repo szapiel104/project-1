@@ -94,3 +94,19 @@ body.menu-open .build { display: none; }
 .menu .tb-count { padding: 3px 8px; font-size: 12px; color: #effff0; background: #2f6b3a; border: 1px solid #5fae6c; }
 .menu .menu-topbar .bell { margin: 0; }
 .menu .menu-topbar .bell-btn { width: 44px; height: 44px; }
+
+/* przyciski-teksty i przyciski-herby w panelu znajomych bez płytki z motywu (Michał 2.11.2026: „krzywo”) */
+body .menu :is(.fr-name, .fr-crest, .fr-feed-crest), body .soc-x {
+  background-image: none; box-shadow: none; text-shadow: none; filter: none; min-height: 0; letter-spacing: normal; text-transform: none;
+}
+body .menu .fr-name { padding: 0; margin: 0; border: 0; background: none; font: 700 19px/1.2 var(--label, serif); color: #ffe9c2; }
+body .menu .fr-name:hover, body .menu .fr-name:focus-visible { background: none; box-shadow: none; color: #fff; text-decoration: underline; }
+body .menu .fr-crest { background: radial-gradient(circle at 50% 40%, rgba(255, 220, 150, .18), transparent 70%); border: 1px solid rgba(154, 122, 42, .4); }
+body .menu .fr-crest:hover, body .menu .fr-crest:focus-visible { background: radial-gradient(circle at 50% 40%, rgba(255, 220, 150, .3), transparent 70%); box-shadow: none; border-color: #e2c890; }
+body .menu .fr-feed-crest, body .menu .fr-feed-crest:hover { background: none; border: 0; }
+/* kafelek: herb na całą wysokość po lewej, treść i przyciski w jednej kolumnie, wszystko wyrównane do góry */
+.fr-tile { grid-template-columns: 92px minmax(0, 1fr); grid-template-rows: auto 1fr; align-items: start; }
+.fr-crest { grid-row: 1 / span 2; align-self: start; }
+.fr-info { grid-column: 2; }
+.fr-acts { grid-column: 2; align-self: end; }
+.fr-title { text-transform: none; letter-spacing: normal; }

@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.77.2', date: '2026-11-02',
+    pl: ['Kafelki znajomych wyrównane: nick to zwykły napis (bez ramki przycisku), herb po lewej na całą wysokość, opis i przyciski w jednej kolumnie.', 'Znajomi, dzwoneczek, aktywność i historia meczów działają już w bazie.'],
+    en: ['Friend tiles are aligned: the nickname is plain text (no button frame), the coat of arms fills the left side, details and buttons sit in one column.', 'Friends, the bell, activity and match history now work in the database.'],
+  },
+  {
     v: '0.77.1', date: '2026-11-02',
     pl: [
       'Belka w prawym górnym rogu menu, jak w panelach aplikacji: wersja gry, przycisk „Znajomi” z liczbą znajomych w grze i dzwoneczek — powiadomienia rozwijają się w dół, nie uciekają już pod ekran.',
