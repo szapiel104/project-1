@@ -16,7 +16,8 @@ import { lang, t, tx } from './i18n';
 import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
-import { deserialize, serialize, type SaveData } from './sim/save';
+import { deserialize, serialize, SAVE_VERSION, type SaveData } from './sim/save';
+import { readSave, writeSave, type SaveKind, type SaveMeta, type SaveFile } from './saves/store';
 import { enemyRoad } from './sim/systems/roadwreck';
 import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { createGameAsync } from './sim/mapthread';
@@ -156,6 +157,75 @@ function applyUi(ui: UiSave | undefined): void {
 window.addEventListener('pagehide', () => { if (game) save(); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && game) save(); });
 setInterval(() => { if (game) save(); }, 15000);
+
+// ---------------- zapisy gry (src/saves/store.ts): ręczne, autozapisy, szybki zapis, wczytywanie ----------------
+/** Zapisywać można tylko grę z botami w trakcie (nie mecz przez sieć, nie skończoną, nie tryb testowy) */
+const canSaveNow = (): boolean => !!game && !net && !gameOver && !SANDBOX;
+/** Miniatura kadru gracza do kafelka zapisu (JPEG 320×180, wycinek ze środka ekranu) */
+function thumbShot(): string {
+  try {
+    renderer.frame(0, 1, true); // świeża klatka i od razu odczyt (bez preserveDrawingBuffer)
+    const c = document.createElement('canvas'); c.width = 320; c.height = 180;
+    const g2 = c.getContext('2d');
+    if (!g2) return '';
+    const w = canvas.width, h = canvas.height, r = 320 / 180;
+    let sw = w, sh = w / r;
+    if (sh > h) { sh = h; sw = h * r; }
+    g2.drawImage(canvas, (w - sw) / 2, (h - sh) / 2, sw, sh, 0, 0, 320, 180);
+    return c.toDataURL('image/jpeg', 0.72);
+  } catch { return ''; }
+}
+function saveMetaOf(kind: SaveKind, name: string): Omit<SaveMeta, 'id' | 'created' | 'size' | 'owner' | 'where'> {
+  const clk = clockAt(game.tick);
+  const p = game.players[ME]!;
+  return {
+    name, kind, build: typeof __BUILD__ === 'string' ? __BUILD__ : '', v: SAVE_VERSION, preset: currentPreset, seedText: currentSeedText,
+    day: clk.day, hour: Math.floor(clk.hour), people: game.units.filter((u) => u.owner === ME).length, soldiers: game.soldiers.filter((x) => x.owner === ME).length,
+    buildings: game.buildings.filter((b) => b.owner === ME).length, gold: Math.floor(p.res[resIndex('gold')] ?? 0),
+    level: game.players.find((o) => o.id !== ME && o.team !== p.team)?.level, dev: !!p.dev, thumb: thumbShot(),
+  };
+}
+/** Zapis gry do zapisów (przeglądarka + chmura po zalogowaniu) */
+async function saveTo(kind: SaveKind, name: string, replace?: string): Promise<SaveMeta | string> {
+  if (!canSaveNow()) return tx('Teraz nie można zapisać — zapisuje się tylko gra z botami w trakcie.', 'You cannot save now — only a game against bots in progress can be saved.');
+  const ui: UiSave = { groups: [...groups], form: armyForm, march: armyMarch, speed, cam: renderer.camView };
+  const meta = saveMetaOf(kind, name);
+  const r = await writeSave(meta, { seedText: currentSeedText, data: serialize(game, currentPreset), ui }, replace, (ok) => {
+    if (!ok && kind !== 'auto' && netMe()) hud.toast(tx('Zapis jest w tej przeglądarce, ale nie trafił do chmury (brak sieci?) — wyślesz go później z panelu zapisów.', 'The save is in this browser but did not reach the cloud (offline?) — you can upload it later from the saves panel.'));
+  });
+  save(); // „Kontynuuj” też od tego miejsca
+  return r;
+}
+/** Wczytanie zapisu: gra z zapisu za ekranem wczytywania, potem kamera, grupy i tempo jak w chwili zapisu */
+async function loadFrom(id: string): Promise<string | null> {
+  const f: SaveFile | string = await readSave(id);
+  if (typeof f === 'string') return f;
+  if (f.meta.v !== SAVE_VERSION) return tx('Ten zapis pochodzi ze starszej wersji gry i nie pasuje do obecnej.', 'This save comes from an older version of the game and does not fit the current one.');
+  const data = f.game.data as SaveData;
+  const g = deserialize(data);
+  if (!g) return tx('Zapis jest uszkodzony albo nie pasuje do tej wersji gry.', 'The save is damaged or does not fit this version of the game.');
+  enterGame(tx('Wczytywanie zapisu…', 'Loading the saved game…'), () => {
+    start(f.game.seedText, data.preset, g);
+    setStatus({ where: 'solo' });
+    const ui = f.game.ui as UiSave | undefined;
+    if (bootWorld) void bootWorld.then(() => applyUi(ui), () => applyUi(ui)); else applyUi(ui);
+  });
+  return null;
+}
+// autozapis co 3 minuty gry (tylko gdy gra naprawdę szła) — trzy ostatnie, najstarszy zastępowany
+let autoTick = -1;
+setInterval(() => {
+  if (!canSaveNow() || titleScreen || game.tick === autoTick) return;
+  autoTick = game.tick;
+  void saveTo('auto', tx(`Autozapis — dzień ${clockAt(game.tick).day}`, `Autosave — day ${clockAt(game.tick).day}`));
+}, 180_000);
+// szybki zapis: Ctrl+S (jeden, nadpisywany)
+window.addEventListener('keydown', (e) => {
+  if (!(e.ctrlKey || e.metaKey) || e.key.toLowerCase() !== 's') return;
+  e.preventDefault();
+  if (!canSaveNow() || titleScreen) { hud.toast(tx('Szybki zapis działa w grze z botami.', 'Quick save works in a game against bots.')); return; }
+  void saveTo('quick', tx('Szybki zapis', 'Quick save')).then((r) => hud.toast(typeof r === 'string' ? r : tx(`Zapisano (szybki zapis, dzień ${r.day}).`, `Saved (quick save, day ${r.day}).`)));
+});
 
 function loadSave(): { seedText: string; data: SaveData; ui?: UiSave } | null {
   try { return JSON.parse(localStorage.getItem(SAVE_KEY) ?? 'null'); } catch { return null; }
@@ -340,7 +410,7 @@ const menu = createMenu(document.body, {
       game.players[ME]!.defeated = true;
       showEnd(false);
       document.querySelector('.end')?.remove();
-    } else save();
+    } else { save(); if (canSaveNow()) void saveTo('auto', tx(`Autozapis — dzień ${clockAt(game.tick).day}`, `Autosave — day ${clockAt(game.tick).day}`)); }
     // ekran tytułowy: osada w tle, menu jak po uruchomieniu gry; gra z botami czeka pod „Kontynuuj”
     titleScreen = true;
     menu.setCanContinue(!gameOver && !!loadSave());
@@ -354,6 +424,7 @@ const menu = createMenu(document.body, {
     menu.close();
     showEnd(false);
   },
+  saves: { canSave: () => canSaveNow() && !titleScreen, save: (name, replace) => saveTo('manual', name, replace), load: (id) => loadFrom(id) },
   onOnlineStart: (st) => {
     // podgląd mapy z pokoju znika bez wracania do poprzedniej gry: od razu startuje mecz
     previewJob++; previewCover.hidden = true; preview = null; renderer.endPreview();
@@ -810,7 +881,8 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   selectedUnit = 0;
   renderer.setUnitSelection(0);
   select(0);
-  try { history.replaceState(null, '', `#${preset}/${encodeURIComponent(seedText)}`); } catch { /* podgląd bez dostępu do historii */ }
+  // adres strony bez #tryb/ziarno (Michał 2.11.2026: „bez dziwnych linków”) — grę wznawia zapis, nie adres
+  if (location.hash) try { history.replaceState(null, '', location.pathname + location.search); } catch { /* nic */ }
   refresh();
   save();
 }
@@ -2221,8 +2293,6 @@ function loop(now: number): void {
   requestAnimationFrame(loop);
 }
 
-// adres strony może nieść mapę: #tryb/ziarno
-const [hashPreset, hashSeed] = decodeURIComponent(location.hash.slice(1)).split('/');
 hud.setMuted(isMuted());
 hud.setVolume(getVolume());
 const saved = SANDBOX ? null : loadSave(); // test zawsze na świeżej mapie
@@ -2241,12 +2311,20 @@ if (saved && restored) {
   const ui = saved.ui;
   if (bootWorld) void bootWorld.then(() => applyUi(ui), () => applyUi(ui)); else applyUi(ui);
 }
-else start(hashSeed || 'project-1', hashPreset && hashPreset in MAP_PRESETS ? (hashPreset as MapPresetId) : '1v1', undefined, 1, SANDBOX && new URLSearchParams(location.search).has('dev'));
+else start('project-1', '1v1', undefined, 1, SANDBOX && new URLSearchParams(location.search).has('dev'));
 mark.push(['start świata', Math.round(performance.now() - T1)]);
 console.info('[main]', mark.map(([a, b]) => `${a} ${b} ms`).join(' | '));
 menu.setVolume(getVolume());
 menu.setMuted(isMuted());
 menu.setCanContinue(!!(saved && restored));
+// jednorazowo: stary zapis z localStorage (sprzed panelu zapisów) trafia do zapisów jako autozapis, żeby nie zginął
+if (saved && restored && !SANDBOX) {
+  let moved = false;
+  try { moved = localStorage.getItem('p1.savesMoved') === '1'; } catch { /* nic */ }
+  if (!moved) setTimeout(() => {
+    void saveTo('auto', tx('Gra sprzed nowych zapisów', 'Game from before the new saves')).then((r) => { if (typeof r !== 'string') try { localStorage.setItem('p1.savesMoved', '1'); } catch { /* nic */ } });
+  }, 8000);
+}
 if (!SANDBOX) menu.open(false); // w trybie testowym od razu gra
 // link zaproszenia: ?pokoj=<id> — od razu do pokoju znajomego (parametr znika z adresu, żeby odświeżenie nie wracało)
 const invite = new URLSearchParams(location.search).get('pokoj');

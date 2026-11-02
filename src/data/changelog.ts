@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.79.0', date: '2026-11-02',
+    pl: [
+      'Zapisy gry z prawdziwego zdarzenia: „Zapisz grę” i „Wczytaj grę” w menu (w grze z botami) — do 20 zapisów z własną nazwą, 3 autozapisy co 3 minuty i szybki zapis Ctrl+S.',
+      'Każdy zapis to kafelek z miniaturą miejsca, w którym grałeś, datą, mapą, poziomem botów, dniem gry, ludźmi, wojskiem, budynkami i złotem; wczytaj, nadpisz, zmień nazwę, pobierz plik, usuń. Filtr i strony.',
+      'Po zalogowaniu zapisy są też w chmurze Twojego konta — wyczyszczenie przeglądarki ich nie kasuje, a na innym komputerze wystarczy się zalogować. Bez konta zapisy zostają w przeglądarce; można je pobrać jako plik .p1save i wczytać gdzie indziej.',
+      'Adres strony bez „#1v1/…” — grę wznawia zapis, a nie link.',
+    ],
+    en: [
+      'Proper save games: “Save game” and “Load game” in the menu (in games against bots) — up to 20 named saves, 3 autosaves every 3 minutes and a quick save with Ctrl+S.',
+      'Each save is a tile with a thumbnail of where you were playing, the date, map, bot level, game day, people, soldiers, buildings and gold; load, overwrite, rename, download a file, delete. Filter and pages.',
+      'When signed in, saves also live in your account’s cloud — clearing the browser does not erase them, and on another computer you just sign in. Without an account they stay in the browser; you can download them as a .p1save file and load them elsewhere.',
+      'The page address no longer carries “#1v1/…” — a save resumes the game, not a link.',
+    ],
+  },
+  {
     v: '0.78.2', date: '2026-11-02',
     pl: ['Przygotowanie nowych zapisów gry (20 zapisów z miniaturami, autozapisy, folder na dysku) — sam panel wejdzie w kolejnej wersji.'],
     en: ['Groundwork for the new save system (20 saves with thumbnails, autosaves, a folder on disk) — the panel itself comes in the next version.'],

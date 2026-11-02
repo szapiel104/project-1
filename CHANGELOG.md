@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.79.0 — 2.11.2026
+- `src/saves/store.ts` (IndexedDB + gzip, Supabase Storage `saves/<uid>/` z `index.json`, eksport/import `.p1save`, przypisanie do konta), `src/ui/savesPanel.ts`, w `main.ts`: `saveTo`/`loadFrom`, miniatura z kadru, autozapis co 3 min, Ctrl+S, przeniesienie starego zapisu z localStorage; koniec `#tryb/ziarno` w adresie.
+- Migracja `20261102f_saves_storage.sql` (kubeł i zasady dostępu).
+
 ## 0.78.2 — 2.11.2026
 - `src/saves/store.ts`: przechowywanie zapisów (IndexedDB + gzip, folder przez File System Access API, eksport/import `.p1save`); jeszcze niepodpięte.
 

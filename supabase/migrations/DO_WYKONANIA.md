@@ -4,7 +4,7 @@ Michał wykonuje migracje ręcznie: Supabase → projekt „project-1” → SQL
 Każdy czat, który dodaje nową migrację, dopisuje ją tutaj. Po wykonaniu: przenieść do „Wykonane” i dopisać „wykonane DATA” w pierwszej linijce pliku.
 
 ## Czekają (stan 2.11.2026)
-- (nic)
+- `20261102f_saves_storage.sql` — kubeł `saves` w Supabase Storage na zapisy gry (folder na gracza). Bez niego zapisy są tylko w przeglądarce.
 
 ## Wykonane
 - `20261102e_messages.sql` — wykonane 2.11.2026

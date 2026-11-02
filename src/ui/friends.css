@@ -200,3 +200,35 @@ body .mx-hbtn:hover, body .mx-hbtn:focus-visible { background: rgba(255, 230, 18
 body .mx-send { width: 38px; height: 38px; flex: 0 0 auto; display: grid; place-items: center; padding: 0; color: #8fe39a; background: none; background-image: none; border: 0; border-radius: 50%; box-shadow: none; cursor: pointer; }
 body .mx-send:hover, body .mx-send:focus-visible { background: rgba(143, 227, 154, .15); box-shadow: none; }
 @media (max-width: 720px) { .mx-win { width: calc(100vw - 32px); } }
+
+/* ===== Zapisy gry: okno z kafelkami (2.11.2026) ===== */
+.saves { display: grid; gap: 12px; }
+.sv-top { display: grid; gap: 10px; }
+.sv-new { display: flex; flex-wrap: wrap; gap: 8px; }
+.sv-new input { flex: 1 1 260px; min-width: 0; min-height: 44px; padding: 6px 12px; font: inherit; font-size: 16px; color: #fff4dc; background: #241a11; border: 1px solid #9a7838; border-radius: 3px; }
+.sv-new input:focus-visible, .sv-rename:focus-visible { outline: 2px solid #f0c75a; outline-offset: 1px; }
+.sv-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.sv-count { margin-left: auto; font-size: 14px; color: #d8c6a0; }
+.sv-cloud { margin: 0; padding: 8px 12px; font-size: 14px; color: #cfe8c8; background: rgba(40, 80, 44, .25); border: 1px solid rgba(95, 174, 108, .45); }
+.sv-cloud.warn { color: #ffe1b0; background: rgba(120, 80, 20, .25); border-color: rgba(230, 192, 106, .5); }
+body .menu .menu-panel .menu-btn.sv-btn { min-height: 36px; padding: 4px 12px; font-size: 13px; letter-spacing: .04em; }
+body .menu .menu-panel .menu-btn.sv-btn[aria-pressed='true'] { background-image: var(--tone-n-hi); box-shadow: 0 0 0 2px #e2c890, 0 0 0 3px #0e0906; }
+.sv-info:empty { display: none; }
+.sv-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 14px; }
+.sv-empty { grid-column: 1 / -1; padding: 20px; text-align: center; }
+.sv-card { display: grid; grid-template-rows: auto 1fr; overflow: hidden; background: linear-gradient(rgba(60, 44, 28, .6), rgba(24, 17, 10, .7)); border: 1px solid rgba(154, 122, 42, .55); }
+.sv-card.auto, .sv-card.quick { border-style: dashed; }
+.sv-shot { position: relative; aspect-ratio: 16 / 9; background: #120d08; overflow: hidden; }
+.sv-shot img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.sv-noshot { position: absolute; inset: 0; display: grid; place-items: center; font-size: 14px; color: #8f8270; }
+.sv-kind { position: absolute; left: 8px; top: 8px; padding: 2px 8px; font-size: 12px; font-weight: 700; color: #2a1d0c; background: #e6c06a; }
+.sv-kind.auto { color: #f3e7cf; background: #4a3f30; } .sv-kind.quick { color: #effff0; background: #2f6b3a; }
+.sv-where { position: absolute; right: 8px; bottom: 8px; padding: 2px 8px; font-size: 12px; color: #fff4dc; background: rgba(10, 7, 4, .75); }
+.sv-where.local { color: #ffe1b0; }
+.sv-body { display: grid; gap: 6px; padding: 10px 12px 12px; }
+.sv-name { font: 700 18px/1.2 var(--label, serif); color: #ffe9c2; overflow-wrap: anywhere; }
+.sv-rename { min-height: 36px; padding: 4px 10px; font: inherit; font-size: 16px; color: #fff4dc; background: #241a11; border: 1px solid #9a7838; }
+.sv-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; font-size: 14px; color: #e6d6b4; }
+.sv-old { color: #ff8a7a; font-weight: 700; }
+.sv-meta { font-size: 12px; color: #a89a82; }
+.sv-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }

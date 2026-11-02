@@ -1,3 +1,4 @@
+import { me, supa } from '../net/supa';
 import { tx } from '../i18n';
 
 /**
@@ -5,25 +6,28 @@ import { tx } from '../i18n';
  * z miniaturą miejsca, datą i opisem. Tylko gry z botami — mecz przez sieć się nie zapisuje.
  *
  * Gdzie leżą:
- * 1. W bazie przeglądarki (IndexedDB, nie localStorage z limitem ok. 5 MB) — z prośbą do przeglądarki o trwałe
- *    przechowywanie (`navigator.storage.persist`), więc czyszczenie pamięci podręcznej ich nie rusza.
- * 2. Dodatkowo w zwykłym folderze na dysku (Chrome, Edge: wskazujesz np. Dokumenty/Project-1): każdy zapis to plik
- *    `.p1save`. Przeżywa wyczyszczenie wszystkich danych przeglądarki, da się go skopiować na inny komputer
- *    i wczytać stamtąd po wskazaniu folderu. Przeglądarka nie pozwala stronie samej pisać do AppData — folder
- *    wybiera gracz, raz, a potem po każdym uruchomieniu wystarczy jedno kliknięcie „Zezwól”.
- * 3. Eksport i import pojedynczego pliku `.p1save` (każda przeglądarka, także Firefox i Safari).
- * Baza w chmurze (Supabase) zostaje na konta i znajomych — zapisy po kilka MB szybko by ją zapchały.
+ * 1. Zawsze w bazie przeglądarki (IndexedDB — bez limitu ~5 MB jak localStorage), z prośbą o trwałe przechowywanie:
+ *    działa bez konta i bez internetu, natychmiast.
+ * 2. Po zalogowaniu także w chmurze — Supabase Storage (osobny 1 GB plików, nie tabele bazy): folder `<user_id>/`,
+ *    plik `<id>.p1save` na zapis i `index.json` ze spisem (opisy, miniatury). Wyczyszczenie przeglądarki ani inny
+ *    komputer nie kasują zapisów: po zalogowaniu wracają. Zapis spakowany gzipem to kilka–kilkadziesiąt KB.
+ * 3. Eksport i import pojedynczego pliku `.p1save` (kopia, przeniesienie bez konta).
+ * Zapisy są przypisane do konta gry (gość ma osobną pulę), więc na wspólnym komputerze nikt nie nadpisze cudzej gry.
  *
- * Plik `.p1save` = JSON spakowany gzipem: { meta, game }.
+ * Plik `.p1save` = JSON { meta, game } spakowany gzipem.
  */
 export type SaveKind = 'manual' | 'auto' | 'quick';
 export interface SaveMeta {
   id: string;
+  /** konto gry (id z Supabase) albo 'guest' */
+  owner: string;
   name: string;
   kind: SaveKind;
   created: number;
   /** wersja gry, która zapisała */
   build: string;
+  /** wersja kształtu stanu (SAVE_VERSION) — inna = zapis nie pasuje do tej wersji gry */
+  v: number;
   preset: string;
   seedText: string;
   day: number;
@@ -32,40 +36,41 @@ export interface SaveMeta {
   soldiers: number;
   buildings: number;
   gold: number;
-  /** poziom botów 0–3 (gdy znany) */
+  /** poziom botów 0–3 */
   level?: number;
   dev?: boolean;
-  /** miniatura miejsca zapisu (JPEG, ok. 320×180) */
+  /** miniatura miejsca zapisu (JPEG ok. 320×180) */
   thumb: string;
   /** rozmiar spakowanego zapisu w bajtach */
   size?: number;
-  /** zapis tylko w folderze na dysku (nie ma go w bazie przeglądarki) */
-  diskOnly?: boolean;
+  /** gdzie jest: tylko w tej przeglądarce, tylko w chmurze, w obu */
+  where?: 'local' | 'cloud' | 'both';
 }
 export interface SaveGame { seedText: string; data: unknown; ui?: unknown }
 export interface SaveFile { meta: SaveMeta; game: SaveGame }
 
 export const MAX_MANUAL = 20;
 export const MAX_AUTO = 3;
+const BUCKET = 'saves';
+const ownerNow = (): string => me()?.id ?? 'guest';
 
 // ---------------- IndexedDB ----------------
 const DB = 'project1-saves';
 let dbP: Promise<IDBDatabase> | null = null;
 function db(): Promise<IDBDatabase> {
   dbP ??= new Promise((ok, bad) => {
-    const r = indexedDB.open(DB, 1);
+    const r = indexedDB.open(DB, 2);
     r.onupgradeneeded = () => {
       const d = r.result;
       if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'id' });
       if (!d.objectStoreNames.contains('data')) d.createObjectStore('data');
-      if (!d.objectStoreNames.contains('kv')) d.createObjectStore('kv');
     };
     r.onsuccess = () => ok(r.result);
     r.onerror = () => bad(r.error);
   });
   return dbP;
 }
-function tx_<T>(stores: string[], mode: IDBTransactionMode, run: (t: IDBTransaction) => IDBRequest<T> | void): Promise<T | undefined> {
+function idb<T>(stores: string[], mode: IDBTransactionMode, run: (t: IDBTransaction) => IDBRequest<T> | void): Promise<T | undefined> {
   return db().then((d) => new Promise<T | undefined>((ok, bad) => {
     const t = d.transaction(stores, mode);
     const req = run(t);
@@ -74,10 +79,12 @@ function tx_<T>(stores: string[], mode: IDBTransactionMode, run: (t: IDBTransact
     t.onabort = () => bad(t.error ?? new Error('abort'));
   }));
 }
-const kvGet = <T>(k: string): Promise<T | undefined> => tx_<T>(['kv'], 'readonly', (t) => t.objectStore('kv').get(k) as IDBRequest<T>);
-const kvSet = (k: string, v: unknown): Promise<unknown> => tx_(['kv'], 'readwrite', (t) => t.objectStore('kv').put(v, k));
+const localMetas = async (): Promise<SaveMeta[]> => ((await idb<SaveMeta[]>(['meta'], 'readonly', (t) => t.objectStore('meta').getAll() as IDBRequest<SaveMeta[]>).catch(() => [])) ?? []);
+const localBlob = (id: string): Promise<Blob | undefined> => idb<Blob>(['data'], 'readonly', (t) => t.objectStore('data').get(id) as IDBRequest<Blob>);
+const localPut = (m: SaveMeta, blob: Blob): Promise<unknown> => idb(['meta', 'data'], 'readwrite', (t) => { const { where: _w, ...clean } = m; t.objectStore('meta').put(clean); t.objectStore('data').put(blob, m.id); });
+const localDel = (id: string): Promise<unknown> => idb(['meta', 'data'], 'readwrite', (t) => { t.objectStore('meta').delete(id); t.objectStore('data').delete(id); }).catch(() => undefined);
 
-/** Prośba o trwałe przechowywanie (przeglądarka nie usunie zapisów przy braku miejsca ani przy czyszczeniu pamięci podręcznej) */
+/** Prośba o trwałe przechowywanie (przeglądarka nie wyrzuci zapisów sama przy braku miejsca) */
 export async function askPersist(): Promise<boolean> {
   try { return (await navigator.storage?.persisted?.()) || !!(await navigator.storage?.persist?.()); } catch { return false; }
 }
@@ -95,104 +102,67 @@ async function unpack<T>(blob: Blob): Promise<T> {
   return JSON.parse(text) as T;
 }
 
-// ---------------- folder na dysku (File System Access API) ----------------
-interface DirHandle { name: string; queryPermission(o: { mode: string }): Promise<string>; requestPermission(o: { mode: string }): Promise<string>; getFileHandle(n: string, o?: { create?: boolean }): Promise<FileHandleT>; removeEntry(n: string): Promise<void>; values(): AsyncIterable<{ kind: string; name: string; getFile?: () => Promise<File> }> }
-interface FileHandleT { getFile(): Promise<File>; createWritable(): Promise<{ write(b: Blob): Promise<void>; close(): Promise<void> }> }
-export type FolderState = 'unsupported' | 'none' | 'prompt' | 'granted';
-export const folderSupported = (): boolean => typeof (window as unknown as { showDirectoryPicker?: unknown }).showDirectoryPicker === 'function';
-let dir: DirHandle | null = null;
-let dirState: FolderState = folderSupported() ? 'none' : 'unsupported';
-export const folderState = (): FolderState => dirState;
-export const folderName = (): string => dir?.name ?? '';
-/** Po starcie: czy pamiętamy folder i czy mamy do niego prawo (bez pytania gracza) */
-export async function initFolder(): Promise<FolderState> {
-  if (!folderSupported()) return (dirState = 'unsupported');
-  try {
-    dir = (await kvGet<DirHandle>('folder')) ?? null;
-    if (!dir) return (dirState = 'none');
-    const p = await dir.queryPermission({ mode: 'readwrite' });
-    return (dirState = p === 'granted' ? 'granted' : 'prompt');
-  } catch { return (dirState = 'none'); }
-}
-/** Wybór folderu (okno systemowe) — potem wszystkie zapisy z bazy przeglądarki trafiają też do niego */
-export async function pickFolder(): Promise<string | null> {
-  try {
-    const h = await (window as unknown as { showDirectoryPicker(o: unknown): Promise<DirHandle> }).showDirectoryPicker({ id: 'project1-saves', mode: 'readwrite', startIn: 'documents' });
-    dir = h; dirState = 'granted';
-    await kvSet('folder', h);
-    await mirrorAll();
+// ---------------- chmura (Supabase Storage) ----------------
+let cloudOk = true; // false, gdy kubeł jeszcze nie istnieje albo nie ma sieci — wtedy tylko lokalnie
+export const cloudReady = (): boolean => !!me() && cloudOk;
+const path = (uid: string, name: string): string => `${uid}/${name}`;
+async function cloudIndex(uid: string): Promise<SaveMeta[] | null> {
+  const { data, error } = await supa.storage.from(BUCKET).download(path(uid, 'index.json'));
+  if (error) {
+    // brak spisu = nie ma jeszcze zapisów w chmurze; inny błąd (np. brak kubła) = chmura niedostępna
+    const msg = String((error as { message?: string }).message ?? error);
+    if (/not.?found|Object not found|404/i.test(msg)) return [];
+    cloudOk = !/Bucket not found/i.test(msg);
     return null;
-  } catch (e) { return (e as Error).name === 'AbortError' ? '' : (e as Error).message; }
-}
-/** Po ponownym uruchomieniu przeglądarka pyta o zgodę — jedno kliknięcie w menu zapisów */
-export async function reconnectFolder(): Promise<boolean> {
-  if (!dir) return false;
-  try { dirState = (await dir.requestPermission({ mode: 'readwrite' })) === 'granted' ? 'granted' : 'prompt'; } catch { dirState = 'prompt'; }
-  if (dirState === 'granted') await mirrorAll();
-  return dirState === 'granted';
-}
-export async function forgetFolder(): Promise<void> { dir = null; dirState = folderSupported() ? 'none' : 'unsupported'; await kvSet('folder', null); }
-const fileName = (m: SaveMeta): string => `${m.kind === 'manual' ? '' : m.kind === 'auto' ? 'autozapis-' : 'szybki-'}${m.name.replace(/[^\p{L}\p{N} _-]+/gu, '').trim().slice(0, 40).replace(/\s+/g, '-') || 'zapis'}-${m.id}.p1save`;
-async function diskWrite(m: SaveMeta, blob: Blob): Promise<void> {
-  if (!dir || dirState !== 'granted') return;
-  try {
-    // stary plik tego zapisu (np. pod inną nazwą) znika
-    for await (const e of dir.values()) if (e.kind === 'file' && e.name.endsWith(`-${m.id}.p1save`) && e.name !== fileName(m)) await dir.removeEntry(e.name).catch(() => undefined);
-    const fh = await dir.getFileHandle(fileName(m), { create: true });
-    const w = await fh.createWritable(); await w.write(blob); await w.close();
-  } catch (e) { console.warn('[zapisy] folder', e); }
-}
-async function diskDelete(id: string): Promise<void> {
-  if (!dir || dirState !== 'granted') return;
-  try { for await (const e of dir.values()) if (e.kind === 'file' && e.name.endsWith(`-${id}.p1save`)) await dir.removeEntry(e.name); } catch { /* nic */ }
-}
-/** Pliki z folderu (meta z pamięci podręcznej po nazwie i dacie, żeby nie rozpakowywać wszystkich przy każdym otwarciu) */
-async function diskList(): Promise<Map<string, { meta: SaveMeta; file: File }>> {
-  const out = new Map<string, { meta: SaveMeta; file: File }>();
-  if (!dir || dirState !== 'granted') return out;
-  const cache = (await kvGet<Record<string, { t: number; meta: SaveMeta }>>('diskmeta')) ?? {};
-  const next: typeof cache = {};
-  try {
-    for await (const e of dir.values()) {
-      if (e.kind !== 'file' || !e.name.endsWith('.p1save') || !e.getFile) continue;
-      const f = await e.getFile();
-      const hit = cache[e.name];
-      let meta = hit && hit.t === f.lastModified ? hit.meta : null;
-      if (!meta) { try { meta = (await unpack<SaveFile>(f)).meta; } catch { continue; } }
-      next[e.name] = { t: f.lastModified, meta };
-      out.set(meta.id, { meta, file: f });
-    }
-  } catch (e) { console.warn('[zapisy] folder', e); }
-  await kvSet('diskmeta', next);
-  return out;
-}
-/** Wszystkie zapisy z bazy przeglądarki do folderu (po wybraniu albo ponownym połączeniu folderu) */
-async function mirrorAll(): Promise<void> {
-  const metas = (await tx_<SaveMeta[]>(['meta'], 'readonly', (t) => t.objectStore('meta').getAll() as IDBRequest<SaveMeta[]>)) ?? [];
-  const onDisk = await diskList();
-  for (const m of metas) {
-    if (onDisk.has(m.id)) continue;
-    const blob = await tx_<Blob>(['data'], 'readonly', (t) => t.objectStore('data').get(m.id) as IDBRequest<Blob>);
-    if (blob) await diskWrite(m, await pack({ meta: m, game: await unpack<SaveGame>(blob) }));
   }
+  try { return JSON.parse(await data.text()) as SaveMeta[]; } catch { return []; }
+}
+async function cloudSaveIndex(uid: string, list: SaveMeta[]): Promise<void> {
+  const body = new Blob([JSON.stringify(list.map(({ where: _w, ...m }) => m))], { type: 'application/json' });
+  await supa.storage.from(BUCKET).upload(path(uid, 'index.json'), body, { upsert: true, contentType: 'application/json', cacheControl: '0' });
+}
+/** Spis w chmurze zmieniamy po kolei (dwa zapisy naraz nie gubią sobie wpisów) */
+let indexQueue: Promise<unknown> = Promise.resolve();
+const editIndex = (uid: string, f: (l: SaveMeta[]) => SaveMeta[]): Promise<void> => {
+  const job = indexQueue.then(async () => { const cur = await cloudIndex(uid); if (cur) await cloudSaveIndex(uid, f(cur)); });
+  indexQueue = job.catch(() => undefined);
+  return job.catch(() => undefined) as Promise<void>;
+};
+async function cloudPut(m: SaveMeta, file: Blob): Promise<boolean> {
+  const uid = me()?.id;
+  if (!uid || m.owner !== uid || !cloudOk) return false;
+  const { error } = await supa.storage.from(BUCKET).upload(path(uid, `${m.id}.p1save`), file, { upsert: true, contentType: 'application/octet-stream', cacheControl: '0' });
+  if (error) { console.warn('[zapisy] chmura', error); if (/Bucket not found/i.test(error.message)) cloudOk = false; return false; }
+  await editIndex(uid, (l) => [m, ...l.filter((x) => x.id !== m.id)]);
+  return true;
+}
+async function cloudDel(id: string): Promise<void> {
+  const uid = me()?.id;
+  if (!uid || !cloudOk) return;
+  await supa.storage.from(BUCKET).remove([path(uid, `${id}.p1save`)]);
+  await editIndex(uid, (l) => l.filter((x) => x.id !== id));
 }
 
 // ---------------- zapisy ----------------
 const newId = (): string => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 
-/** Lista zapisów: z bazy przeglądarki i z folderu na dysku, od najnowszego */
+/** Zapisy zalogowanego gracza (albo gościa): z tej przeglądarki i z chmury, od najnowszego */
 export async function listSaves(): Promise<SaveMeta[]> {
-  const metas = (await tx_<SaveMeta[]>(['meta'], 'readonly', (t) => t.objectStore('meta').getAll() as IDBRequest<SaveMeta[]>).catch(() => [])) ?? [];
-  const byId = new Map(metas.map((m) => [m.id, m]));
-  for (const [id, d] of await diskList()) if (!byId.has(id)) byId.set(id, { ...d.meta, diskOnly: true });
+  const owner = ownerNow();
+  const local = (await localMetas()).filter((m) => m.owner === owner);
+  const byId = new Map<string, SaveMeta>(local.map((m) => [m.id, { ...m, where: 'local' }]));
+  if (owner !== 'guest') {
+    const cloud = await cloudIndex(owner).catch(() => null);
+    for (const m of cloud ?? []) { const l = byId.get(m.id); byId.set(m.id, l ? { ...l, where: 'both' } : { ...m, where: 'cloud' }); }
+  }
   return [...byId.values()].sort((a, b) => b.created - a.created);
 }
 
 /**
- * Zapis gry. `replace` — nadpisz ten zapis (ten sam slot); autozapis sam zastępuje najstarszy z trzech,
- * szybki zapis jest jeden. Zwraca błąd albo null.
+ * Zapis gry. `replace` — nadpisz ten zapis; autozapis sam zastępuje najstarszy z trzech, szybki zapis jest jeden.
+ * Do chmury idzie w tle (gra nie czeka); `onCloud` mówi, czy się udało.
  */
-export async function writeSave(meta: Omit<SaveMeta, 'id' | 'created' | 'size'>, game: SaveGame, replace?: string): Promise<SaveMeta | string> {
+export async function writeSave(meta: Omit<SaveMeta, 'id' | 'created' | 'size' | 'owner' | 'where'>, game: SaveGame, replace?: string, onCloud?: (ok: boolean) => void): Promise<SaveMeta | string> {
   try {
     void askPersist();
     const all = await listSaves();
@@ -200,15 +170,15 @@ export async function writeSave(meta: Omit<SaveMeta, 'id' | 'created' | 'size'>,
     if (!id && meta.kind === 'quick') id = all.find((m) => m.kind === 'quick')?.id;
     if (!id && meta.kind === 'auto') {
       const autos = all.filter((m) => m.kind === 'auto');
-      if (autos.length >= MAX_AUTO) id = autos[autos.length - 1]!.id; // najstarszy autozapis
+      if (autos.length >= MAX_AUTO) id = autos[autos.length - 1]!.id;
     }
     if (!id && meta.kind === 'manual' && all.filter((m) => m.kind === 'manual').length >= MAX_MANUAL) {
       return tx(`Masz już ${MAX_MANUAL} zapisów — nadpisz albo usuń któryś.`, `You already have ${MAX_MANUAL} saves — overwrite or delete one.`);
     }
     const blob = await pack(game);
-    const m: SaveMeta = { ...meta, id: id ?? newId(), created: Date.now(), size: blob.size };
-    await tx_(['meta', 'data'], 'readwrite', (t) => { t.objectStore('meta').put(m); t.objectStore('data').put(blob, m.id); });
-    if (dirState === 'granted') void pack({ meta: m, game }).then((b) => diskWrite(m, b));
+    const m: SaveMeta = { ...meta, id: id ?? newId(), owner: ownerNow(), created: Date.now(), size: blob.size };
+    await localPut(m, blob);
+    if (m.owner !== 'guest') void pack({ meta: m, game }).then((f) => cloudPut(m, f)).then((ok) => onCloud?.(ok), () => onCloud?.(false));
     return m;
   } catch (e) {
     const msg = (e as Error).message ?? String(e);
@@ -216,55 +186,64 @@ export async function writeSave(meta: Omit<SaveMeta, 'id' | 'created' | 'size'>,
   }
 }
 
-/** Wczytanie zapisu (z bazy przeglądarki albo z pliku w folderze) */
+/** Wczytanie zapisu: z tej przeglądarki, a gdy go tu nie ma — z chmury (i od razu kopia lokalna) */
 export async function readSave(id: string): Promise<SaveFile | string> {
   try {
-    const meta = await tx_<SaveMeta>(['meta'], 'readonly', (t) => t.objectStore('meta').get(id) as IDBRequest<SaveMeta>);
-    const blob = await tx_<Blob>(['data'], 'readonly', (t) => t.objectStore('data').get(id) as IDBRequest<Blob>);
+    const meta = await idb<SaveMeta>(['meta'], 'readonly', (t) => t.objectStore('meta').get(id) as IDBRequest<SaveMeta>);
+    const blob = await localBlob(id);
     if (meta && blob) return { meta, game: await unpack<SaveGame>(blob) };
-    const d = (await diskList()).get(id);
-    if (d) return await unpack<SaveFile>(d.file);
-    return tx('Nie ma już tego zapisu.', 'This save no longer exists.');
+    const uid = me()?.id;
+    if (!uid) return tx('Nie ma już tego zapisu.', 'This save no longer exists.');
+    const { data, error } = await supa.storage.from(BUCKET).download(path(uid, `${id}.p1save`));
+    if (error || !data) return tx('Nie udało się pobrać zapisu z chmury — sprawdź internet.', 'Could not download the save from the cloud — check your connection.');
+    const f = await unpack<SaveFile>(data);
+    void pack(f.game).then((b) => localPut(f.meta, b));
+    return f;
   } catch (e) { return (e as Error).message; }
 }
 
 export async function deleteSave(id: string): Promise<void> {
-  await tx_(['meta', 'data'], 'readwrite', (t) => { t.objectStore('meta').delete(id); t.objectStore('data').delete(id); }).catch(() => undefined);
-  await diskDelete(id);
+  await localDel(id);
+  await cloudDel(id).catch(() => undefined);
 }
 
-export async function renameSave(id: string, name: string): Promise<void> {
-  const meta = await tx_<SaveMeta>(['meta'], 'readonly', (t) => t.objectStore('meta').get(id) as IDBRequest<SaveMeta>);
-  if (!meta) return;
-  const m = { ...meta, name: name.trim().slice(0, 40) || meta.name };
-  await tx_(['meta'], 'readwrite', (t) => t.objectStore('meta').put(m));
-  if (dirState === 'granted') { const f = await readSave(id); if (typeof f !== 'string') await diskWrite(m, await pack({ meta: m, game: f.game })); }
+export async function renameSave(id: string, name: string): Promise<string | null> {
+  const f = await readSave(id);
+  if (typeof f === 'string') return f;
+  const m: SaveMeta = { ...f.meta, name: name.trim().slice(0, 40) || f.meta.name };
+  await localPut(m, await pack(f.game));
+  if (m.owner !== 'guest') await cloudPut(m, await pack({ meta: m, game: f.game }));
+  return null;
 }
 
-/** Plik do pobrania (przeniesienie na inny komputer, kopia) */
+/** Wyślij do chmury zapis, który jest tylko w tej przeglądarce (np. zrobiony przed zalogowaniem albo bez sieci) */
+export async function uploadSave(id: string): Promise<boolean> {
+  const f = await readSave(id);
+  if (typeof f === 'string' || !me()) return false;
+  const m = { ...f.meta, owner: me()!.id };
+  await localPut(m, await pack(f.game));
+  return cloudPut(m, await pack({ meta: m, game: f.game }));
+}
+
+/** Plik do pobrania (kopia, przeniesienie bez konta) */
 export async function exportSave(id: string): Promise<string | null> {
   const f = await readSave(id);
   if (typeof f === 'string') return f;
   const blob = await pack(f);
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = fileName(f.meta);
+  a.download = `${f.meta.name.replace(/[^\p{L}\p{N} _-]+/gu, '').trim().replace(/\s+/g, '-') || 'zapis'}.p1save`;
   document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000);
   return null;
 }
 
-/** Plik .p1save z dysku → nowy zapis ręczny */
+/** Plik .p1save z dysku → nowy zapis ręczny tego konta */
 export async function importSave(file: File): Promise<SaveMeta | string> {
   try {
     const f = await unpack<SaveFile>(file);
     if (!f?.meta || !f.game) return tx('To nie jest zapis Project-1.', 'This is not a Project-1 save.');
-    const { id: _i, created: _c, size: _s, diskOnly: _d, ...rest } = f.meta;
+    const { id: _i, created: _c, size: _s, owner: _o, where: _w, ...rest } = f.meta;
     return await writeSave({ ...rest, kind: 'manual', name: rest.name || file.name.replace(/\.p1save$/, '') }, f.game);
   } catch { return tx('Nie udało się odczytać pliku — to nie jest zapis Project-1.', 'Could not read the file — this is not a Project-1 save.'); }
-}
-
-/** Najnowszy zapis (do „Kontynuuj”) */
-export async function latestSave(): Promise<SaveMeta | null> {
-  return (await listSaves())[0] ?? null;
 }

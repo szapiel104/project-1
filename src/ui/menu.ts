@@ -15,6 +15,8 @@ import { hardReload, newerVersion } from './refresh';
 import { SANDBOX as SANDBOX_MENU } from '../testmode';
 import { testerNotesPane } from './testerNotes';
 import { createBell } from './bell';
+import { savesPanel } from './savesPanel';
+import type { SaveMeta } from '../saves/store';
 import { startSocialToasts } from './socialToasts';
 
 /** Ustawienia zapamiętywane w przeglądarce */
@@ -94,6 +96,8 @@ export interface MenuEvents {
   onPreviewEnd(): void;
   /** Mecz przez sieć się zaczyna: pokój, skład, mój numer gracza i kanał gry */
   onOnlineStart(s: OnlineStart): void;
+  /** Zapisy gry (okno „Zapisz grę” / „Wczytaj grę”) */
+  saves: { canSave(): boolean; save(name: string, replace?: string): Promise<SaveMeta | string>; load(id: string): Promise<string | null> };
 }
 
 export interface Menu {
@@ -355,6 +359,9 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   function notesItem(): HTMLButtonElement {
     return barBtn(tx('Uwagi testera', 'Tester notes'), tx('Napisz, co poprawić albo dodać — administrator zobaczy i oznaczy zrobione', 'Write what to fix or add — the administrator sees it and marks it done'), () => showNotes());
   }
+  function showSaves(mode: 'save' | 'load'): void {
+    screen(mode === 'save' ? tx('Zapisz grę', 'Save game') : tx('Wczytaj grę', 'Load game'), true, savesPanel(mode, { ...events.saves, login: () => online.showLogin(false) }));
+  }
   function showNotes(focus?: number): void {
     screen(tx('Uwagi testera', 'Tester notes'), true, testerNotesPane(inGame ? tx('w trakcie gry', 'during a game') : tx('menu', 'menu'), focus));
   }
@@ -363,6 +370,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     if (inGame) {
       list.push(barBtn(t('menu.resume'), tx('Gra czeka tam, gdzie ją zostawiłeś', 'The game waits where you left it'), () => events.onContinue(), 'bar-main'));
       list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew));
+      if (!events.isOnline()) {
+        list.push(barBtn(tx('Zapisz grę', 'Save game'), tx('Zapis z miniaturą: do 20 zapisów, w przeglądarce i w chmurze konta (Ctrl+S — szybki zapis)', 'A save with a thumbnail: up to 20, in the browser and your account’s cloud (Ctrl+S — quick save)'), () => showSaves('save')));
+        list.push(barBtn(tx('Wczytaj grę', 'Load game'), tx('Twoje zapisy i autozapisy z miniaturami', 'Your saves and autosaves with thumbnails'), () => showSaves('load')));
+      }
       list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
       list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
       list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges));
@@ -373,6 +384,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     } else {
       if (canContinue) list.push(barBtn(t('menu.continue'), tx('Wróć do swojej osady z ostatniej gry', 'Return to your settlement from the last game'), () => events.onContinue()));
       list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew, 'bar-main'));
+      list.push(barBtn(tx('Wczytaj grę', 'Load game'), tx('Twoje zapisy i autozapisy z miniaturami', 'Your saves and autosaves with thumbnails'), () => showSaves('load')));
       list.push(barBtn(tx('Gra przez sieć', 'Online play'), tx('Mecze z innymi graczami: pokoje, drużyny, ranking', 'Matches against other players: rooms, teams, ranking'), () => online.showOnline()));
       if (netMe()) list.push(barBtn(tx('Znajomi', 'Friends'), tx('Kto jest w grze, zaproszenia, szukanie nowych graczy', 'Who is online, requests, finding new players'), () => online.showFriends(0)));
       list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
