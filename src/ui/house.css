@@ -185,3 +185,25 @@
 .menu-account .acc-pd { font-size: clamp(13px, 1.7vh, 15px); color: #d3bf96; font-variant-numeric: tabular-nums; }
 .menu-account .acc-go { color: #e9c766; }
 .menu-account .acc-guest .acc-link { font-family: 'Cinzel', var(--display); font-weight: 700; font-size: 15px; letter-spacing: .1em; }
+
+/* ---------- Administracja (panel kont, tylko dla administratorów) ---------- */
+.admin { display: grid; gap: 12px; }
+.admin-search { display: flex; flex-wrap: wrap; align-items: end; gap: 8px 12px; }
+.admin-search label, .admin-level label, .admin-nick label, .admin-grid label { display: block; font-size: 14px; margin-bottom: 4px; }
+.admin-search label { flex: 1 0 100%; margin: 0; }
+.admin input { min-height: 40px; padding: 6px 10px; font: inherit; font-size: 15px; color: #2a1d0c; background: #f3e7c9; border: 1px solid #8a6a2a; border-radius: 3px; box-sizing: border-box; }
+.admin-search input { flex: 1 1 240px; }
+.admin input:focus-visible, .admin button:focus-visible { outline: 2px solid #f0c75a; outline-offset: 2px; }
+.admin-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-pick { min-height: 36px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; color: #f3e7c9; background: rgba(40, 28, 14, .75); border: 1px solid rgba(154, 122, 42, .6); border-radius: 3px; }
+.admin-pick:hover { background: rgba(90, 62, 24, .9); }
+.admin-card { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(154, 122, 42, .5); background: rgba(20, 14, 8, .35); }
+.admin-level, .admin-nick, .admin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.admin-level label, .admin-nick label { margin: 0 6px 0 0; }
+.admin-level input { width: 90px; text-align: center; }
+.admin-nick input { flex: 1 1 200px; }
+.admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; }
+.admin-grid input { width: 100%; }
+.admin-danger { border-color: #a2412f !important; }
+.admin-loglist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
+.admin-loglist li { padding: 4px 0; border-bottom: 1px solid rgba(154, 122, 42, .25); overflow-wrap: anywhere; }

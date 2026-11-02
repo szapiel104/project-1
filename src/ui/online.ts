@@ -2,12 +2,13 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { TEAM_COLORS } from '../data/teams';
 import { Lockstep } from '../net/lockstep';
 import {
-  addFriend, closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, removeFriend, sendInvite, setStatus, deleteRoom, getRoom, listRooms, myAwards, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
+  addFriend, closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, removeFriend, sendInvite, setStatus, deleteRoom, getRoom, listRooms, myAwards, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, isAdmin, reloadMe, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
   type Invite, type Member, type NetMsg, type OnlinePlayer, type Room, type RoomLink, type Slot,
 } from '../net/supa';
 import { avatarSvg, CHARGE_NAMES, CREST_CHARGES, crestPreview, decodeCrest, DIVISIONS, encodeCrest, TINCTURES, type Crest } from './avatars';
 import { BADGES, levelOf, nextTitle, TITLES, titleOf, titleRank, xpUntil, type BadgeDef } from '../data/progress';
 import { chatLine, cleanChat } from './chat';
+import { adminPane } from './adminPanel';
 import { lang, tx } from '../i18n';
 
 /** Wszystko, czego potrzebuje gra, żeby wystartować mecz przez sieć */
@@ -106,6 +107,11 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     tower: '<path d="M6 21V8h12v13z M6 8V4h2v2h2V4h4v2h2V4h2v4 M10 21v-5h4v5"/>',
     skull: '<path d="M12 3a7 7 0 0 0-7 7c0 3 2 4 2 6v2h10v-2c0-2 2-3 2-6a7 7 0 0 0-7-7z M9 11h.01 M15 11h.01 M10 18v3 M14 18v3"/>',
     crown: '<path d="M3 8l4 4 5-7 5 7 4-4-2 11H5z"/>',
+    hammer: '<path d="M14 4l6 6-3 3-6-6z M12 9L4 17l3 3 8-8"/>',
+    fire: '<path d="M12 3c1 4 6 6 6 11a6 6 0 0 1-12 0c0-3 2-4 3-7 1 2 2 3 3 3 0-3-1-5 0-7z"/>',
+    hourglass: '<path d="M6 3h12 M6 21h12 M7 3c0 5 10 6 10 9s-10 4-10 9 M17 3c0 5-10 6-10 9s10 4 10 9"/>',
+    star: '<path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/>',
+    shield: '<path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z M12 7v10"/>',
   };
   const icon = (k: BadgeDef['icon']): string => `<svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BADGE_ICONS[k]}</svg>`;
   const modeLabel = (mode: string): string => mode === 'online' ? tx('Przez sieć', 'Online') : mode === 'coop' ? tx('Razem przeciw botom', 'Co-op vs bots') : mode.startsWith('bots') ? `${tx('Z botami', 'Vs bots')} · ${LEVELS[Number(mode.slice(4))] ?? ''}` : mode;
@@ -193,7 +199,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         const ic = el('span', 'house-badge-ic'); ic.innerHTML = icon(b.icon);
         const txt = el('div', 'house-badge-txt');
         const [name, desc] = lang() === 'en' ? b.en : b.pl;
-        txt.append(el('strong', '', name), el('span', '', ok ? tx('zdobyta', 'earned') : `${desc} · ${have}/${b.goal}`));
+        const count = b.icon === 'hourglass' ? `${Math.floor(have / 60)}/${b.goal / 60} h` : `${have}/${b.goal}`;
+        txt.append(el('strong', '', name), el('span', '', ok ? tx('zdobyta', 'earned') : `${desc} · ${count}`));
         if (!ok && b.goal > 1) { const pb = el('span', 'house-badge-bar'); const f = el('span', ''); f.style.width = `${Math.round((have / b.goal) * 100)}%`; pb.append(f); txt.append(pb); }
         li.append(ic, txt);
         badges.append(li);
@@ -302,6 +309,8 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     };
 
     const TABS: [string, () => Node[]][] = [[tx('Przegląd', 'Overview'), overview], [tx('Kronika bitew', 'Battle chronicle'), chronicle], [tx('Herb', 'Coat of arms'), arms]];
+    // panel kont tylko dla administratorów (prawa sprawdza i tak baza przy każdej zmianie)
+    if (isAdmin()) TABS.push([tx('Administracja', 'Administration'), () => adminPane(() => void reloadMe().then(() => showHouse(3)))]);
     const show = (i: number): void => {
       tabBtns.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
       pane.replaceChildren(...TABS[i]![1]());

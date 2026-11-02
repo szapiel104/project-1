@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.74.0 — 2.11.2026
+- Migracja `20261102_admins_achievements.sql` (czeka w DO_WYKONANIA): tabele `admins`, `admin_log`, funkcje `admin_find/set_progress/set_nick/grant` (security definer, `is_admin()`), nowe kolumny `player_progress` (razed, built, minutes, online_wins, hard_wins) uzupełnione z `xp_awards`, `award_match` je nalicza.
+- `src/net/admin.ts`, `src/ui/adminPanel.ts` (zakładka tylko dla `isAdmin()`), `BADGES` 8 → 29, `xpAtLevel()`; test `admin-progress.test.ts`.
+
 ## 0.73.7 — 2.11.2026
 - `withAo`: polygonOffset bez factor (0, units −8) — przesunięcie zależne od nachylenia wyciągało przed lico schowane w murze ściany detali (pasek na krawędziach).
 - `parallax.ts`: liczba kroków zależna od kąta (do 2× pod ostrym kątem).

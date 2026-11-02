@@ -23,14 +23,15 @@ export const onAccount = (f: () => void): (() => void) => { accountListeners.add
 const changed = (): void => { for (const f of accountListeners) f(); syncOnline(); };
 
 // ---------------- poziom gracza (PD za mecze; liczy i zapisuje funkcja w bazie award_match) ----------------
-export interface Progress { xp: number; level: number; matches: number; wins: number; kills: number }
+export interface Progress { xp: number; level: number; matches: number; wins: number; kills: number; razed?: number; built?: number; minutes?: number; online_wins?: number; hard_wins?: number }
 let myProgress: Progress | null = null;
 /** Poziom zalogowanego gracza (null: niezalogowany albo baza jeszcze bez tabeli postępu) */
 export const progress = (): Progress | null => myProgress;
 async function loadProgress(): Promise<void> {
   myProgress = null;
   if (!session) return;
-  const { data, error } = await supa.from('player_progress').select('xp,level,matches,wins,kills').eq('user_id', session.user.id).maybeSingle();
+  // `*`: nowe liczniki do osiągnięć (migracja 20261102) są, jeśli baza je już ma — bez nich wybór kolumn kończyłby się błędem
+  const { data, error } = await supa.from('player_progress').select('*').eq('user_id', session.user.id).maybeSingle();
   if (error) return; // tabela jeszcze nie założona — gra działa jak dotąd, bez poziomów
   myProgress = (data as Progress | null) ?? { xp: 0, level: 1, matches: 0, wins: 0, kills: 0 };
 }
@@ -42,7 +43,13 @@ export async function awardMatch(mode: string, s: { won: boolean; minutes: numbe
   if (error || !data) return null;
   const row = (Array.isArray(data) ? data[0] : data) as { gained: number; xp: number; level: number } | undefined;
   if (!row) return null;
-  myProgress = { ...(myProgress ?? { matches: 0, wins: 0, kills: 0 }), xp: row.xp, level: row.level, matches: (myProgress?.matches ?? 0) + 1, wins: (myProgress?.wins ?? 0) + (s.won ? 1 : 0), kills: (myProgress?.kills ?? 0) + s.kills };
+  const was: Progress = myProgress ?? { xp: 0, level: 1, matches: 0, wins: 0, kills: 0 };
+  const m = Math.min(180, Math.max(0, s.minutes));
+  myProgress = {
+    ...was, xp: row.xp, level: row.level, matches: was.matches + 1, wins: was.wins + (s.won ? 1 : 0), kills: was.kills + s.kills,
+    razed: (was.razed ?? 0) + s.razed, built: (was.built ?? 0) + s.built, minutes: (was.minutes ?? 0) + m,
+    online_wins: (was.online_wins ?? 0) + (s.won && mode === 'online' ? 1 : 0), hard_wins: (was.hard_wins ?? 0) + (s.won && mode === 'bots3' ? 1 : 0),
+  };
   changed();
   return { ...row, before };
 }
@@ -67,6 +74,19 @@ export async function levelsOf(ids: string[]): Promise<Map<string, number>> {
   return out;
 }
 
+/** Czy zalogowany gracz jest administratorem kont (tabela `admins`, migracja 20261102). Tylko do pokazania panelu —
+ *  same zmiany sprawdza baza w funkcjach admin_* (bez prawa w `admins` odrzuca je, cokolwiek wyśle przeglądarka). */
+let amAdmin = false;
+export const isAdmin = (): boolean => amAdmin;
+/** Po zmianie własnego konta w panelu administratora: wczytaj na nowo nick i postęp */
+export async function reloadMe(): Promise<void> { await Promise.all([loadNick(), loadProgress(), loadAdmin()]); changed(); }
+async function loadAdmin(): Promise<void> {
+  amAdmin = false;
+  if (!session) return;
+  const { data, error } = await supa.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
+  amAdmin = !error && !!data;
+}
+
 async function loadNick(): Promise<void> {
   if (!session) { myNick = ''; return; }
   const { data } = await supa.from('profiles').select('nick').eq('id', session.user.id).maybeSingle();
@@ -77,7 +97,7 @@ export async function restore(): Promise<void> {
   const { data } = await supa.auth.getSession();
   session = data.session;
   await loadNick();
-  await loadProgress();
+  await Promise.all([loadProgress(), loadAdmin()]);
   changed();
 }
 
@@ -100,7 +120,7 @@ export async function signUp(email: string, password: string, nick: string): Pro
   const { error: e2 } = await supa.from('profiles').insert({ id: session.user.id, nick: n });
   if (e2) return plErr(e2.message);
   myNick = n;
-  await loadProgress();
+  await Promise.all([loadProgress(), loadAdmin()]);
   changed();
   return null;
 }
@@ -116,12 +136,12 @@ export async function signIn(email: string, password: string): Promise<string | 
     await supa.from('profiles').insert({ id: session.user.id, nick: n });
     myNick = n;
   }
-  await loadProgress();
+  await Promise.all([loadProgress(), loadAdmin()]);
   changed();
   return null;
 }
 
-export async function signOut(): Promise<void> { await supa.auth.signOut(); session = null; myNick = ''; myProgress = null; changed(); }
+export async function signOut(): Promise<void> { await supa.auth.signOut(); session = null; myNick = ''; myProgress = null; amAdmin = false; changed(); }
 
 /** Zmiana nicku w profilu (unikalny w bazie) */
 export async function setNick(nick: string): Promise<string | null> {

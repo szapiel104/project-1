@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.74.0', date: '2026-11-02',
+    pl: [
+      'Ponad trzy razy więcej odznak w „Moim rodzie” (29 zamiast 8): za zwycięstwa przez sieć i z najtrudniejszym botem, zburzone i postawione budynki, godziny w bitwach, setki wrogów i każdy tytuł aż do króla.',
+      'Nowe odznaki liczą się także z meczów rozegranych wcześniej.',
+      'Administratorzy kont: w „Moim rodzie” zakładka „Administracja” — wyszukiwanie graczy, dodawanie i odbieranie poziomów, poprawianie liczników, zmiana nicku, nadawanie praw. Każdą zmianę sprawdza serwer i zapisuje w dzienniku.',
+    ],
+    en: [
+      'More than three times as many badges in “My house” (29 instead of 8): for online victories and wins over the hardest bot, buildings razed and raised, hours in battle, hundreds of foes and every rank up to king.',
+      'The new badges also count matches you played before.',
+      'Account administrators: an “Administration” tab in “My house” — find players, grant and take away levels, correct counters, rename, grant rights. The server checks every change and writes it to a log.',
+    ],
+  },
+  {
     v: '0.73.7', date: '2026-11-02',
     pl: [
       'Krawędzie murów i wież nie migają już ciemnym paskiem: części kamiennych ozdób schowane w murze (narożne ciosy, gzymsy) nie przebijają przez lico, gdy patrzysz na ścianę z boku.',
