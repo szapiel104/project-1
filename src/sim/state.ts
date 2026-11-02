@@ -790,6 +790,9 @@ export function createGame(seed: number, preset: keyof typeof MAP_PRESETS = '1v1
   }
   // obozy zbójów na polanach w puszczy (mapy z generatora 5); w grze pokojowej ich nie ma, jak wilków
   if (level > 0) seedBandits(g);
+  // statystyki meczu od zera: budynki postawione przy tworzeniu mapy (osada startowa, miasto trybu deweloperskiego)
+  // nie mogą się liczyć do PD i odznak „postawione budynki” (przegląd poziomów, 2.11.2026)
+  for (const p of g.players) p.stats = { gathered: 0, trained: 0, kills: 0, lost: 0, built: 0, razed: 0 };
   return g;
 }
 

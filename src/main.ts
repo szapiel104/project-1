@@ -52,7 +52,7 @@ import { census } from './debug/census';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
-import { awardMatch, deleteRoom, isTester, matchBegin, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
+import { awardMatch, deleteRoom, flushAwards, isTester, matchBegin, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
 import { forgetMatch, recallMatch, rejoinMatch, rememberMatch, sendState, type MatchMemo } from './net/rejoin';
 import { matchXp, MODE_MULT, xpParts, type MatchMode } from './data/progress';
 import { xpReport } from './ui/xpReport';
@@ -131,16 +131,23 @@ const SAVE_KEY = 'project1.save';
 
 /** Zapis w pamięci przeglądarki, żeby odświeżenie strony nie zaczynało gry od zera. */
 /** Ustawienia gracza, które nie należą do symulacji, ale mają przetrwać odświeżenie strony */
-interface UiSave { groups?: [number, number[]][]; form?: number; march?: number; speed?: number; cam?: { x: number; z: number; dist: number; yaw: number } }
+interface UiSave { groups?: [number, number[]][]; form?: number; march?: number; speed?: number; cam?: { x: number; z: number; dist: number; yaw: number }; match?: string }
+/**
+ * Numer meczu do nagrody PD: losowy przy nowej grze, wędruje w zapisie gry (wczytanie i ponowna wygrana tego samego
+ * meczu nie da drugi raz PD — baza przyznaje nagrodę za numer tylko raz); w meczu przez sieć — numer pokoju.
+ */
+let matchId = '';
+const newMatchId = (): string => { try { return crypto.randomUUID(); } catch { return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`; } };
 
 function save(): void {
   if (SANDBOX || net || gameOver) return; // skończona gra i gra przez sieć nie nadpisuje zapisu; tryb testowy nie nadpisuje prawdziwego zapisu gracza
-  const ui: UiSave = { groups: [...groups], form: armyForm, march: armyMarch, speed, cam: renderer.camView };
+  const ui: UiSave = { groups: [...groups], form: armyForm, march: armyMarch, speed, cam: renderer.camView, match: matchId };
   try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seedText: currentSeedText, data: serialize(game, currentPreset), ui })); } catch { /* brak dostępu do pamięci przeglądarki */ }
 }
 
 /** Po wczytaniu zapisu: grupy, szyk, tryb marszu, tempo i kamera jak przed odświeżeniem */
 function applyUi(ui: UiSave | undefined): void {
+  if (ui?.match) matchId = ui.match;
   if (!ui) return;
   groups.clear();
   for (const [n, ids] of ui.groups ?? []) if (Number.isInteger(n) && n >= 0 && n <= 9 && Array.isArray(ids)) groups.set(n, ids.filter((x) => Number.isInteger(x)));
@@ -188,7 +195,7 @@ function saveMetaOf(kind: SaveKind, name: string): Omit<SaveMeta, 'id' | 'create
 /** Zapis gry do zapisów (przeglądarka + chmura po zalogowaniu) */
 async function saveTo(kind: SaveKind, name: string, replace?: string): Promise<SaveMeta | string> {
   if (!canSaveNow()) return tx('Teraz nie można zapisać — zapisuje się tylko gra z botami w trakcie.', 'You cannot save now — only a game against bots in progress can be saved.');
-  const ui: UiSave = { groups: [...groups], form: armyForm, march: armyMarch, speed, cam: renderer.camView };
+  const ui: UiSave = { groups: [...groups], form: armyForm, march: armyMarch, speed, cam: renderer.camView, match: matchId };
   const meta = saveMetaOf(kind, name);
   const r = await writeSave(meta, { seedText: currentSeedText, data: serialize(game, currentPreset), ui }, replace, (ok) => {
     if (!ok && kind !== 'auto' && netMe()) hud.toast(tx('Zapis jest w tej przeglądarce, ale nie trafił do chmury (brak sieci?) — wyślesz go później z panelu zapisów.', 'The save is in this browser but did not reach the cloud (offline?) — you can upload it later from the saves panel.'));
@@ -807,7 +814,7 @@ function crestList(): (number | null)[] {
   });
 }
 // konto wczytuje się chwilę po starcie gry, a herb można zmienić w trakcie: flagi na mapie idą za kontem od razu
-onAccount(() => { if (game) renderer.setCrests(crestList()); });
+onAccount(() => { if (game) renderer.setCrests(crestList()); void flushAwards(); });
 
 /** Budowa pierwszego świata przy wczytywaniu strony (etapami); undefined = jeszcze nie ruszyła */
 let bootWorld: Promise<boolean> | null | undefined;
@@ -833,6 +840,8 @@ function start(seedText: string, preset: MapPresetId, loaded?: GameState, level 
   endOnline();
   ME = online ? online.me : 0;
   caravanSeen = -1; allies.close(); pings.clear();
+  // nowy mecz = nowy numer; wczytany dostaje swój z zapisu (applyUi), a zapis bez numeru — stały numer z mapy
+  matchId = online ? online.room.id : loaded ? `${seedText}|${preset}|stary-zapis` : newMatchId();
   game = loaded ?? (!online && fresh ? fresh : createGame(seedFromText(seedText), preset, level, dev, online?.humans, instant, walls, online?.coop === true));
   if (EMPTY && !loaded && !online) emptyScene(game);
   // wątek symulacji: gra z botami, także w trybie dewelopera (akcje panelu dewelopera idą przez resyncSim);
@@ -1855,7 +1864,7 @@ function endXp(after: Element, win: boolean, mins: number): void {
     parts: xpParts(stats).filter((x) => x.xp > 0),
     mult: { label: multLabel, value: MODE_MULT[mode] },
     preview: matchXp(stats, mode),
-    award: counts ? awardMatch(mode, stats) : null,
+    award: counts ? awardMatch(mode, stats, matchId || undefined) : null,
     reason,
     action: !netMe() && !SANDBOX ? { label: tx('Zaloguj się', 'Sign in'), run: () => { document.querySelector('.end')?.remove(); menu.account(false); } } : undefined,
     sound: (k) => play(k === 'level' ? 'build' : 'click'),

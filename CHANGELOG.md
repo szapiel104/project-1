@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.79.1 — 2.11.2026 (przegląd poziomów)
+- Migracja `20261102g_award_once.sql`: `xp_awards.match` + unikalny indeks, `award_match(..., p_match)` przyznaje raz na mecz.
+- `main.ts`: `matchId` (nowy mecz losowy, w zapisie `UiSave.match`, online = pokój); `supa.ts`: kolejka nieprzyznanych nagród `p1.pendingAwards` (per konto, 7 dni), `flushAwards` przy zmianie konta.
+- `createGame`: zerowanie `stats` po budowie mapy; `army.ts`: `razed` tylko za budynki wroga. Test `progress-stats.test.ts` (wzory zgodne z SQL).
+
 ## 0.79.0 — 2.11.2026
 - `src/saves/store.ts` (IndexedDB + gzip, Supabase Storage `saves/<uid>/` z `index.json`, eksport/import `.p1save`, przypisanie do konta), `src/ui/savesPanel.ts`, w `main.ts`: `saveTo`/`loadFrom`, miniatura z kadru, autozapis co 3 min, Ctrl+S, przeniesienie starego zapisu z localStorage; koniec `#tryb/ziarno` w adresie.
 - Migracja `20261102f_saves_storage.sql` (kubeł i zasady dostępu).

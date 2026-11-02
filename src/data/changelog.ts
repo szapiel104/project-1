@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.79.1', date: '2026-11-02',
+    pl: [
+      'Uczciwe poziomy: każdy mecz ma swój numer i doświadczenie dostaje się za niego tylko raz — wczytanie zapisu tuż przed zwycięstwem i ponowna wygrana nie dają już drugi raz PD.',
+      'Doświadczenie nie przepada: gdy mecz skończy się bez internetu albo przy wygasłym logowaniu, nagroda czeka i dochodzi przy następnym zalogowaniu.',
+      'Statystyki meczu liczą się od pierwszej minuty: budynki osady startowej (i miasta w trybie deweloperskim) nie wchodzą już do „postawionych budynków”, a zburzenie własnego albo sojuszniczego budynku nie liczy się do „zburzonych”.',
+    ],
+    en: [
+      'Fair levels: every match has its own number and earns experience only once — loading a save just before victory and winning again no longer gives XP twice.',
+      'Experience is not lost: when a match ends without internet or with an expired sign-in, the reward waits and is added at your next sign-in.',
+      'Match statistics start from the first minute: the starting settlement’s buildings (and the developer-mode town) no longer count as “buildings raised”, and destroying your own or an ally’s building does not count as “razed”.',
+    ],
+  },
+  {
     v: '0.79.0', date: '2026-11-02',
     pl: [
       'Zapisy gry z prawdziwego zdarzenia: „Zapisz grę” i „Wczytaj grę” w menu (w grze z botami) — do 20 zapisów z własną nazwą, 3 autozapisy co 3 minuty i szybki zapis Ctrl+S.',

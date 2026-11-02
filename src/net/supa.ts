@@ -35,14 +35,27 @@ async function loadProgress(): Promise<void> {
   if (error) return; // tabela jeszcze nie założona — gra działa jak dotąd, bez poziomów
   myProgress = (data as Progress | null) ?? { xp: 0, level: 1, matches: 0, wins: 0, kills: 0 };
 }
-/** Po meczu: baza liczy PD z wyniku (z limitami) i zwraca, ile przybyło; null, gdy niezalogowany albo błąd */
-export async function awardMatch(mode: string, s: { won: boolean; minutes: number; kills: number; razed: number; built: number }): Promise<{ gained: number; xp: number; level: number; before: number } | null> {
+type MatchStatsIn = { won: boolean; minutes: number; kills: number; razed: number; built: number };
+/**
+ * Po meczu: baza liczy PD z wyniku (z limitami) i zwraca, ile przybyło; null, gdy niezalogowany albo błąd.
+ * `match` — numer meczu: baza nagradza dany mecz tylko raz (wczytany zapis i ponowna wygrana nic nie dają),
+ * więc nieudane zgłoszenie (brak sieci, wygasła sesja) można bezpiecznie ponowić — trafia do kolejki i idzie
+ * przy następnym zalogowaniu albo uruchomieniu gry.
+ */
+export async function awardMatch(mode: string, s: MatchStatsIn, match?: string): Promise<{ gained: number; xp: number; level: number; before: number } | null> {
   if (!session) return null;
   const before = myProgress?.level ?? 1;
-  const { data, error } = await supa.rpc('award_match', { p_mode: mode, p_won: s.won, p_minutes: s.minutes, p_kills: s.kills, p_razed: s.razed, p_built: s.built });
-  if (error || !data) return null;
+  const args = { p_mode: mode, p_won: s.won, p_minutes: s.minutes, p_kills: s.kills, p_razed: s.razed, p_built: s.built };
+  let { data, error } = await supa.rpc('award_match', match ? { ...args, p_match: match } : args);
+  // baza bez migracji 20261102g (stara funkcja bez numeru meczu)
+  if (error && match && /p_match|PGRST202|Could not find the function/i.test(error.message)) ({ data, error } = await supa.rpc('award_match', args));
+  if (error || !data) { if (match) queueAward(mode, s, match); return null; }
   const row = (Array.isArray(data) ? data[0] : data) as { gained: number; xp: number; level: number } | undefined;
   if (!row) return null;
+  dropAward(match);
+  // powtórne zgłoszenie tego samego meczu: baza nic nie dodała — liczników nie ruszamy, tylko wczytujemy je od nowa
+  const repeat = row.gained === 0 && myProgress !== null && row.xp === myProgress.xp;
+  if (repeat) { await loadProgress(); changed(); return { ...row, before }; }
   const was: Progress = myProgress ?? { xp: 0, level: 1, matches: 0, wins: 0, kills: 0 };
   const m = Math.min(180, Math.max(0, s.minutes));
   myProgress = {
@@ -52,6 +65,35 @@ export async function awardMatch(mode: string, s: { won: boolean; minutes: numbe
   };
   changed();
   return { ...row, before };
+}
+
+// ---- kolejka nieprzyznanych nagród (localStorage): mecz skończony bez sieci albo z wygasłą sesją nie przepada ----
+const AWARD_Q = 'p1.pendingAwards';
+interface PendingAward { mode: string; s: MatchStatsIn; match: string; at: number; uid: string }
+const readQ = (): PendingAward[] => { try { return JSON.parse(localStorage.getItem(AWARD_Q) ?? '[]') as PendingAward[]; } catch { return []; } };
+const writeQ = (q: PendingAward[]): void => { try { localStorage.setItem(AWARD_Q, JSON.stringify(q.slice(-20))); } catch { /* nic */ } };
+function queueAward(mode: string, s: MatchStatsIn, match: string): void {
+  const uid = session?.user.id;
+  if (!uid) return;
+  const q = readQ().filter((x) => x.match !== match);
+  q.push({ mode, s, match, at: Date.now(), uid });
+  writeQ(q);
+}
+function dropAward(match?: string): void { if (match) writeQ(readQ().filter((x) => x.match !== match)); }
+let flushing = false;
+/** Ponów nagrody z kolejki (po zalogowaniu i przy starcie gry); każda idzie najwyżej raz dzięki numerowi meczu */
+export async function flushAwards(): Promise<number> {
+  if (!session || flushing) return 0;
+  flushing = true;
+  let n = 0;
+  try {
+    // starsze niż 7 dni przepadają (nie wiadomo już, czyje były)
+    const q = readQ().filter((x) => Date.now() - x.at < 7 * 86_400_000);
+    writeQ(q);
+    // tylko nagrody tego konta (na wspólnym komputerze nikt nie dostanie cudzych PD)
+    for (const a of q.filter((x) => x.uid === session?.user.id)) { const r = await awardMatch(a.mode, a.s, a.match); if (r) n++; }
+  } finally { flushing = false; }
+  return n;
 }
 
 /** Poziomy innych graczy (do tytułu przy nicku w pokoju i rankingu); pamiętane na czas sesji, żeby nie pytać co chwilę */

@@ -859,7 +859,8 @@ function hitBuilding(g: GameState, b: Building, dmg: number, by: number, fire: n
   const keep = BUILDINGS[b.type]!.id === 'keep';
   const owner = g.players[b.owner];
   ruin(g, b);
-  const razer = g.players[by]; if (razer) razer.stats.razed++;
+  // zburzony budynek liczy się tylko wrogowi (nie swój ani sojusznika, np. od własnego ognia)
+  const razer = g.players[by]; if (razer && owner && team(g, b.owner) !== team(g, by)) razer.stats.razed++;
   if (keep && owner) owner.defeated = true;
   return true;
 }
@@ -1735,7 +1736,7 @@ function salvageStep(g: GameState, s: Soldier): boolean {
       if (load) { s.loot = load[0] + 1; s.lootN = load[1]; }
       // ruina rozebrana do gołej ziemi: znika z mapy, zostaje tylko gruz do wyniesienia przez wroga
       if (!b.salvage.length) {
-        const razer = g.players[s.owner]; if (razer) razer.stats.razed++;
+        const razer = g.players[s.owner]; if (razer && team(g, b.owner) !== team(g, s.owner)) razer.stats.razed++;
         demolish(g, b.owner, b.id, true);
         s.target = 0;
       }
