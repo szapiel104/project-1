@@ -92,11 +92,11 @@ const n = (v: number | undefined): number => v ?? 0;
 export const BADGES: BadgeDef[] = [
   // bitwy
   { id: 'first', icon: 'sword', pl: ['Pierwsza bitwa', 'Rozegraj pierwszy mecz'], en: ['First battle', 'Play your first match'], of: (p) => p.matches, goal: 1 },
+  { id: 'win1', icon: 'banner', pl: ['Pierwsze zwycięstwo', 'Wygraj mecz'], en: ['First victory', 'Win a match'], of: (p) => p.wins, goal: 1 },
   { id: 'vet', icon: 'tower', pl: ['Weteran', 'Rozegraj 10 meczów'], en: ['Veteran', 'Play 10 matches'], of: (p) => p.matches, goal: 10 },
   { id: 'm50', icon: 'tower', pl: ['Stary wiarus', 'Rozegraj 50 meczów'], en: ['Old campaigner', 'Play 50 matches'], of: (p) => p.matches, goal: 50 },
   { id: 'm200', icon: 'shield', pl: ['Żelazny pan', 'Rozegraj 200 meczów'], en: ['Iron lord', 'Play 200 matches'], of: (p) => p.matches, goal: 200 },
   // zwycięstwa
-  { id: 'win1', icon: 'banner', pl: ['Pierwsze zwycięstwo', 'Wygraj mecz'], en: ['First victory', 'Win a match'], of: (p) => p.wins, goal: 1 },
   { id: 'win10', icon: 'swords', pl: ['Zdobywca', 'Wygraj 10 meczów'], en: ['Conqueror', 'Win 10 matches'], of: (p) => p.wins, goal: 10 },
   { id: 'win50', icon: 'swords', pl: ['Pogromca zamków', 'Wygraj 50 meczów'], en: ['Bane of castles', 'Win 50 matches'], of: (p) => p.wins, goal: 50 },
   { id: 'win100', icon: 'crown', pl: ['Niezwyciężony', 'Wygraj 100 meczów'], en: ['Undefeated', 'Win 100 matches'], of: (p) => p.wins, goal: 100 },
