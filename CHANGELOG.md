@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.73.1 — 2.11.2026
+- vista.ts: nowy `castle()` (skalny grzbiet z fasetami, mur po zboczu, wieże z gradientem światła i wzorem rzędów `v-courses`, skały przed podstawami), mgła w dolinie, skała na pierwszym planie, ciemniejszy zenit i mocniejsze smugi.
+- Ekran wczytywania: `.loading-card` w stylu okien gry (plaster + brąz, złota listwa).
+- Menu: `.menu-fine` i `.menu-account` na marginesie `--mx`; przycisk „Wyczyść pamięć” schowany, póki nie ma nowszej wersji.
+
 ## 0.73.0 — 2.11.2026
 - vista.ts: identyfikatory gradientów/filtrów z numerem obrazu (wczytywanie + menu w jednym dokumencie; Chrome brał definicje ze schowanego SVG → czarne niebo).
 - parallax.ts: głębia gaśnie pod ostrym kątem (`smoothstep(0.35, 0.75, vt.z)`), mniejsza skala (ashlar 0,016, slate 0,012) — bez smug i migania na blankach.

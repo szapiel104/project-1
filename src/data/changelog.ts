@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.73.1', date: '2026-11-02',
+    pl: [
+      'Zamek na pejzażu stoi naturalnie: mniejszy i dalej, na poszarpanej skale, z murem schodzącym po zboczu, wieżami wrośniętymi w grzbiet i rzędami kamieni na ścianach. Do tego mgła w dolinie, mocniejsze słońce i skała na pierwszym planie.',
+      'Dolny pasek ekranu wczytywania wygląda jak okna w grze: ciepły brąz z fakturą, złota listwa i złote napisy.',
+      'Lewy dół menu wyrównany (wersja i ramka konta w tej samej kolumnie co lista), a przycisk czyszczenia pamięci pojawia się tylko wtedy, gdy na serwerze jest nowsza wersja gry.',
+    ],
+    en: [
+      'The castle in the landscape now sits naturally: smaller and further off, on a jagged crag, with the wall running down the slope, towers rooted in the ridge and courses of stone on the walls. Add mist in the valley, a stronger sun and a rock in the foreground.',
+      'The bottom bar of the loading screen looks like the in-game windows: warm textured brown, a gold rail and gold lettering.',
+      'The lower left of the menu is aligned (version and account box in the same column as the list), and the clear-cache button only appears when a newer version of the game is on the server.',
+    ],
+  },
+  {
     v: '0.73.0', date: '2026-11-02',
     pl: [
       'Pejzaż na ekranie wczytywania i w menu znów ma niebo, góry i dolinę — wcześniej w części przeglądarek zostawał sam zamek na czarnym tle.',

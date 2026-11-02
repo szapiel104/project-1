@@ -357,9 +357,12 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
         void hardReload();
       }, 'menu-refresh');
       fresh.title = tx('Pobiera grę od nowa z serwera. Zapis gry, konto i ustawienia zostają.', 'Fetches the game afresh from the server. Your save, account and settings are kept.');
+      // na co dzień schowany (Michał 2.11.2026: „wywal przycisk o pamięci”) — pokazuje się tylko, gdy na serwerze jest nowsza wersja
+      fresh.hidden = true;
       foot.replaceChildren(el('span', '', tx(`wersja ${BUILD} · ↑ ↓ wybór · Enter zatwierdza`, `version ${BUILD} · ↑ ↓ select · Enter confirms`)), fresh);
       void newerVersion().then((v) => {
         if (!v || !fresh.isConnected || fresh.disabled) return;
+        fresh.hidden = false;
         fresh.classList.add('newer');
         fresh.textContent = tx(`Jest nowa wersja ${v} — wczytaj`, `New version ${v} is out — load it`);
       });

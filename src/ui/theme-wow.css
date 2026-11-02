@@ -277,3 +277,22 @@ button.link-btn, button.link-btn:hover, button.link-btn:focus-visible, button.li
 button.link-btn:hover { color: #fff0c0; }
 button.link-btn:focus-visible { outline: 2px solid #ffd76a; outline-offset: 3px; }
 .menu-account .acc-row, .menu-account .acc-links { align-items: baseline; }
+
+/* lewy dół menu (Michał 2.11.2026: „wyrównaj lewo prawo i padding top”): wersja i ramka konta w jednej kolumnie,
+   ten sam lewy i prawy margines co lista, odstęp nad wersją */
+.menu:not(.previewing) .menu-fine { justify-self: stretch; box-sizing: border-box; margin: 0; padding: 18px var(--mx) 10px; }
+.menu:not(.previewing) > .menu-account { justify-self: stretch; box-sizing: border-box; width: auto; margin: 0 var(--mx) clamp(14px, 2.6vh, 28px); }
+.menu:not(.previewing) > .menu-account > * { max-width: none; }
+
+/* ===== Dolny pasek ekranu wczytywania jak okna w grze (Michał 2.11.2026: „na dole inny styl, chcę jak w grze”) =====
+   ciepły brąz z fakturą, złota listwa u góry, złoty tytuł kroku, pasek w brązowej oprawie */
+#loading .loading-card {
+  background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(#4a3522, #33241a 60%, #24190f);
+  background-size: 420px auto, 100% 100%; background-blend-mode: multiply, normal;
+  border-top: 2px solid #c9a25a; box-shadow: 0 -1px 0 #000, 0 -4px 0 rgba(0, 0, 0, .35), 0 -18px 40px rgba(0, 0, 0, .45); }
+#loading .loading-card::before { background: linear-gradient(135deg, #fff0b8, #d8a840 45%, #7a5418); border-color: #000; }
+#loading .loading-tip { color: #f3e2bc; }
+#loading .loading-tip:not(:empty)::before { color: #ffd100; }
+#loading .loading-line { color: #ffd100; text-shadow: 1px 1px 0 #000; }
+#loading .loading-line strong, #loading .loading-detail, #loading .loading-log { color: #e6d4b0; }
+#loading .loading-bar { background: linear-gradient(#1c140d, #120c07); border: 1px solid #120c08; box-shadow: 0 0 0 1px #5a4630, 0 0 0 2px #0e0906, inset 0 0 0 1px #9a7838, 0 4px 12px rgba(0, 0, 0, .45); }
