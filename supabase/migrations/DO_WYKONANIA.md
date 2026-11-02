@@ -4,10 +4,11 @@ Michał wykonuje migracje ręcznie: Supabase → projekt „project-1” → SQL
 Każdy czat, który dodaje nową migrację, dopisuje ją tutaj. Po wykonaniu: przenieść do „Wykonane” i dopisać „wykonane DATA” w pierwszej linijce pliku.
 
 ## Czekają (stan 2.11.2026)
-- `20261102_admins_achievements.sql` — administratorzy kont (pierwszy: nick `szapiel104`), panel „Administracja” w Moim rodzie i nowe liczniki do osiągnięć (zburzone, postawione, minuty, wygrane przez sieć i z trudnym botem; uzupełniane z historii meczów). Bez niej: brak panelu, nowe odznaki stoją na 0. Po wykonaniu sprawdź: `select * from admins;` — jeśli pusto, Twoje konto ma inny nick niż szapiel104: `insert into admins (user_id) select id from profiles where nick = 'TWÓJ_NICK';`
-- `20261024_results_pending.sql` — ucieczka z meczu przez sieć to porażka w rankingu (0.46.1). Bez niej gra zapisuje wyniki po staremu.
+- (nic)
 
 ## Wykonane
+- `20261024_results_pending.sql` — wykonane 2.11.2026
+- `20261102_admins_achievements.sql` — wykonane 2.11.2026. Konto Michała w grze to `RebaZius` (nie szapiel104); administratora dopisuje Michał ręcznie: `insert into public.admins (user_id) select id from public.profiles where nick = 'RebaZius' on conflict do nothing;`
 - `20261012_rooms_cleanup.sql`
 - `20261013_friends.sql`
 - `20261013_results.sql`

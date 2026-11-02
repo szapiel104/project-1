@@ -79,9 +79,9 @@ alter table public.admins enable row level security;
 -- każdy widzi tylko, czy sam jest administratorem (po tym gra pokazuje panel); zapisu z klienta nie ma
 create policy "administrator widzi siebie" on public.admins for select to authenticated using (user_id = auth.uid());
 
--- pierwszy administrator: konto o nicku szapiel104
+-- pierwszy administrator: konto Michała (w grze nick RebaZius; szapiel104 to nazwa organizacji w Supabase)
 insert into public.admins (user_id)
-select id from public.profiles where lower(nick) = 'szapiel104'
+select id from public.profiles where lower(nick) in ('szapiel104', 'rebazius')
 on conflict do nothing;
 
 create or replace function public.is_admin() returns boolean
