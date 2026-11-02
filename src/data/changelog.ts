@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.12', date: '2026-11-02',
+    pl: [
+      'Menu główne czytelniejsze: lewa kolumna to pełny, ciemny panel, więc napisy nie zlewają się już z pejzażem. Tytuł nie dochodzi do krawędzi, herb, lista, wersja i konto mają jeden równy odstęp od lewej, a pozycje menu są mniejsze i gęstsze, jak w grach MMO.',
+    ],
+    en: [
+      'A clearer main menu: the left column is now a solid dark panel, so the lettering no longer melts into the landscape. The title keeps clear of the edge, the crest, list, version and account share one even left margin, and the menu entries are smaller and tighter, as in MMO games.',
+    ],
+  },
+  {
     v: '0.70.11', date: '2026-11-02',
     pl: [
       'Liście grzybieni na stawach jesienią już nie robią się rudo-pomarańczowymi kwadratami: płowieją miękko, w łatach, jak trawa na brzegu.',

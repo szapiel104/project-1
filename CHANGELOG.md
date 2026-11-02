@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.12 — 2.11.2026
+- Menu główne (Michał, wzór WoW): lewa kolumna `.menu-scene::after` jako pełny ciemny panel z cieniem, zmienne `--col` i `--mx` (jeden lewy margines dla nagłówka, listy, wersji i konta), tytuł mniejszy z zapasem do krawędzi, pozycje i podpowiedź mniejsze i jaśniejsze (style.css, koniec pliku). Sprawdzone zrzutem 1715×1191 i 1366×768.
+
 ## 0.70.11 — 2.11.2026
 - Grzybienie (Michał: „plamy na wodzie zbugowane”): `lilyMat.userData.season` 'leaf' → 'grass'. Jesienna barwa liści drzew losuje się w kratkach ok. 1 m (`sCell`), więc płaski kożuch liści na wodzie dzielił się na rude i pomarańczowe kwadraty.
 

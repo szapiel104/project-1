@@ -2100,3 +2100,25 @@ body.menu-open .devpanel { display: none; }
   box-shadow: inset 0 1px 0 rgba(255, 230, 160, .35), 0 0 0 1px #7a5a1c, 0 0 10px rgba(233, 199, 102, .35); }
 .status .res li.res-ore .ico svg { width: 34px; height: 34px; filter: drop-shadow(0 0 3px rgba(143, 211, 255, .55)); }
 .status .res li.res-ore strong { font-size: 27px; color: #ffe7a6; text-shadow: 0 1px 2px #000; }
+/* lewa kolumna menu głównego jako pełny, ciemny panel (Michał 2.11.2026: „napisy zlewają się z tłem, menu ciężkie,
+   nieczytelne, tytuł dochodzi do kreski, po lewej różne odstępy”). Jeden wspólny margines --mx dla herbu, tytułu,
+   listy, podpowiedzi, wersji i konta; tytuł mniejszy, z zapasem do prawej krawędzi panelu */
+.menu:not(.previewing) { --col: clamp(360px, 32vw, 580px); --mx: clamp(28px, 3.2vw, 64px); grid-template-columns: var(--col) minmax(0, 1fr);
+  background: linear-gradient(90deg, rgba(6, 3, 1, 0) 0, rgba(6, 3, 1, 0) var(--col), rgba(6, 3, 1, .35) var(--col), rgba(6, 3, 1, 0) calc(var(--col) + 280px)); }
+.menu:not(.previewing) .menu-scene::after { width: var(--col); background: linear-gradient(180deg, #120b07 0%, #0d0805 55%, #0a0604 100%);
+  border-right: 1px solid rgba(154, 122, 42, .5); box-shadow: 1px 0 0 rgba(0, 0, 0, .8), 18px 0 48px rgba(0, 0, 0, .55); }
+.menu:not(.previewing) .menu-head { padding: clamp(22px, 6vh, 76px) var(--mx) 0 var(--mx); max-width: 100%; box-sizing: border-box; }
+.menu:not(.previewing) .menu-title { font-size: clamp(38px, min(6.6vh, 3.5vw), 84px); }
+.menu:not(.previewing) .menu-bar { padding: clamp(18px, 4.5vh, 52px) clamp(16px, 1.6vw, 32px) 0 calc(var(--mx) - 12px); }
+.menu:not(.previewing) .menu-fine { padding: 0 0 8px var(--mx); }
+.menu:not(.previewing) > .menu-account { margin-left: var(--mx); }
+.menu:not(.previewing) .menu-bar .bar-item { color: #ecdcb6; }
+.menu:not(.previewing) .menu-hint { color: #d9c7a0; }
+.menu:not(.previewing) .game-tagline-what { color: #d8c49a; }
+.menu.in-game:not(.previewing) .menu-scene::after { background: linear-gradient(180deg, rgba(18, 11, 7, .96), rgba(10, 6, 4, .96)); }
+/* gęściej, jak w interfejsach MMO (Michał 2.11.2026, WoW): ciemny panel, mniejsze, ale wyraźne litery */
+.menu:not(.previewing) .menu-title { font-size: clamp(34px, min(5.8vh, 3.1vw), 72px); }
+.menu:not(.previewing) .menu-bar .bar-item { min-height: 40px; font-size: clamp(15px, 1.95vh, 19px); letter-spacing: .1em; padding-top: 6px; padding-bottom: 6px; }
+.menu:not(.previewing) .menu-bar .bar-main { min-height: clamp(46px, 5.6vh, 56px); font-size: clamp(18px, 2.5vh, 24px); }
+.menu:not(.previewing) .menu-hint { font-size: clamp(13px, 1.7vh, 15px); }
+.menu:not(.previewing) .game-tagline-what { font-size: clamp(13px, 1.7vh, 15px); }
