@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.4 — 2.11.2026
+- Kopalnia z barakiem (Michał: „z barakiem aż za dużo”): `CAMP_YIELD_PCT` 60 — kamień i żelazo na kurs × 0,6 (6 / 5), gdy `campOf(mine)`; ruda i kryształ bez zmian. Gracz i boty tak samo.
+
 ## 0.70.3 — 2.11.2026
 - Kopalnia (Michał: „czy za mało nie daje”): pomiar przy 20 mieszkańcach, kopalnia 44 pola od zamku — bez baraku 80 kamienia / 32 żelaza na 20 min, z barakiem 220 / 100. `MINE_YIELDS`: kamień 5 → 10, żelazo 4 → 8 (ruda 6 bez zmian) — teraz bez baraku 160 / 64, z barakiem ~210 / 104 w 10 min (potem pełna stodoła). Wspólne dla gracza i botów.
 - `tests/oremine.test.ts`: `crewWanted` kopalni przy 8 osobach = 2 (załoga 1 na 5 od 0.69.11).

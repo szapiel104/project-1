@@ -49,6 +49,8 @@ export const MINE_YIELDS: { res: 'stone' | 'iron' | 'gold' | 'crystal'; weight: 
   // kryształ magii z głębokiej galerii: rzadko, po jednym (dla magów bojowych i siedzib zakonów)
   { res: 'crystal', weight: 3, amount: 1 },
 ];
+/** Ile procent kamienia i żelaza na kurs daje górnik, gdy przy kopalni stoi barak górników */
+export const CAMP_YIELD_PCT = 60;
 /** Ilu górników powinna mieć kopalnia przy danej liczbie mieszkańców: 1 + po jednym na każde `per`, najwyżej `max` */
 export function crewWanted(def: { crew?: { per: number; max: number } }, pop: number): number {
   if (!def.crew) return 1;
@@ -764,6 +766,9 @@ export function workerSystem(g: GameState): void {
         let pick = MINE_YIELDS[0]!;
         for (const y of MINE_YIELDS) { pick = y; if ((roll -= y.weight) < 0) break; }
         u.carryRes = resIndex(pick.res); u.carryAmt = pick.amount;
+        // z barakiem górnicy nie chodzą do wioski (urobek wozi wóz), więc kursów jest dużo więcej — kamień i żelazo
+        // na kurs mniejsze (Michał 2.11.2026: „z barakiem aż za dużo”); ruda i kryształ bez zmian
+        if ((pick.res === 'stone' || pick.res === 'iron') && campOf(g, job)) u.carryAmt = Math.round(pick.amount * CAMP_YIELD_PCT / 100);
       }
       // z lasu drwal niesie kłodę najpierw do chaty, tam robi deski i dopiero je odnosi do składu
       if (u.phase === Phase.WorkingSite && prod.processTicks) { u.phase = Phase.ToHome; u.batches = prod.batches ?? 1; }

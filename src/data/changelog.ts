@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.4', date: '2026-11-02',
+    pl: [
+      'Kopalnia z barakiem górników daje mniej kamienia i żelaza na kurs (6 kamienia, 5 żelaza zamiast 10 i 8): górnicy nie chodzą wtedy do wioski, więc kursów jest dużo więcej i urobku było aż za dużo. Ruda bez zmian.',
+    ],
+    en: [
+      'A mine with a miners’ barracks now brings less stone and iron per trip (6 stone, 5 iron instead of 10 and 8): the miners no longer walk to the village, so they make far more trips and the haul was simply too great. Ore is unchanged.',
+    ],
+  },
+  {
     v: '0.70.3', date: '2026-11-02',
     pl: [
       'Kopalnia daje dwa razy więcej: górnik wynosi naraz 10 kamienia (było 5) albo 8 żelaza (było 4). Ruda wypada jak dotąd. Bez baraku górników to ok. 160 kamienia i 65 żelaza na 20 minut, z barakiem ponad dwa razy tyle — warto dostawić skład.',
