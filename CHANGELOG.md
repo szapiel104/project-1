@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.71.1 — 2.11.2026
+- `theme-wow.css` druga wersja (Michał: „jaśniej”, „czerwony zbyt chamski”, „bez opacity”): pełne tło #3e352a→#27221c, przyciski/kafelki/kategorie jako szaro-brązowe gniazda (czerwień tylko przygaszona na `.btn-main`), okna menu z tą samą ramą (bez `backdrop-filter`), ekran wczytywania z pasami pergaminu u góry (`#loading::before`) i u dołu (`.loading-card`).
+
 ## 0.71.0 — 2.11.2026
 - Motyw okien jak w WoW (Michał, wzór interfaceingame.com/games/world-of-warcraft): nowy plik `src/ui/theme-wow.css` ładowany na końcu (index.html) — tylko kolory, ramy, pismo; układ bez zmian. Tło okien `rgba(10,9,8,.9)`, rama z obwódek box-shadow, tytuły #ffd100 w Alegreya Sans SC, przyciski w oknach czerwone z żółtym napisem, dymki granatowe, dolna belka jak pasek akcji, `body` 15 px.
 

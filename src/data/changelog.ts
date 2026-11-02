@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.71.1', date: '2026-11-02',
+    pl: [
+      'Okna jaśniejsze i pełne, bez prześwitywania: ciepły, ciemny brąz z metalową ramą, jak w World of Warcraft. Kafelki budynków, kategorie budowy i przyciski to szaro-brązowe gniazda, wybrane świecą na złoto — bez jaskrawej czerwieni.',
+      'Okna menu (Ustawienia, Jak grać, Co nowego, Nowa gra) mają ten sam wygląd co okna w grze.',
+      'Ekran wczytywania jak w WoW: u góry i u dołu pasy jasnego pergaminu, pośrodku obraz; rada i pasek postępu na dolnym pasie.',
+    ],
+    en: [
+      'Brighter, solid windows with no see-through: warm dark brown with a metal frame, as in World of Warcraft. Building tiles, build categories and buttons are grey-brown slots, and chosen ones glow gold — no more glaring red.',
+      'The menu windows (Settings, How to play, What’s new, New game) share the look of the in-game windows.',
+      'A WoW-style loading screen: bands of light parchment above and below, the picture in between; the tip and progress bar sit on the lower band.',
+    ],
+  },
+  {
     v: '0.71.0', date: '2026-11-02',
     pl: [
       'Nowy wygląd okien w grze, lżejszy, w duchu World of Warcraft: prawie czarne, lekko przejrzyste tło, cienka metalowa rama, złotożółte tytuły, biały tekst i mniejsze, gęstsze pismo.',
