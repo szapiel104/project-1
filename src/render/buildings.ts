@@ -1698,7 +1698,9 @@ export function stoneWallKit(): { block: THREE.BufferGeometry; edge: THREE.Buffe
   const TOP = STONE_WALL_TOP;
   const block = mergeGeometries([
     blk(1.0, 0.18, 1.0, 0, 0, 0, 0.78, false),
-    blk(1.0, TOP - 0.18, 1.0, 0, 0.18, 0, 1, false),
+    // lico kończy się pod chodnikiem: wcześniej oba sięgały do korony i ich boczne ściany leżały w tej samej płaszczyźnie
+    // (pas 2 cm pod blankami migał przy ruchu kamery — Michał 2.11.2026: „mur na krawędziach mruga”)
+    blk(1.0, TOP - 0.2, 1.0, 0, 0.18, 0, 1, false),
     blk(1.0, 0.02, 1.0, 0, TOP - 0.02, 0, 0.88),            // chodnik
   ])!;
   // krawędź: cokół wystający przed lico, gzyms, przedpiersie i trzy blanki

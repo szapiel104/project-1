@@ -46,6 +46,14 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Towar pod drzwiami przy deszczu moknie (zboże i mąka powoli się psują), co dodatkowo zachęca do budowy magazynów
 - Złodzieje nocą (pomysł niżej) najpierw biorą to, co leży pod drzwiami
 
+## Kolejka Michała z 2.11.2026, popołudnie (po kolei, odhaczać datą)
+- [ ] Strzecha wygląda źle (smugi, rozciągnięte źdźbła) — także po dodaniu głębi.
+- [ ] Duże baszty (3×3, 4×4): dziury, prześwituje — brak ścian od drugiej strony.
+- [x] (2.11.2026) Dźwięk klikania w menu straszny — łagodniejszy.
+- [ ] Stodoła: w podglądzie budowy wygląda inaczej niż postawiona; postawiona ma białe płaty przy podstawie.
+- [ ] Mur kamienny miga na krawędziach (blanki, korona, styki pól muru).
+- [ ] Okna menu na całą prawą część — zrobione 0.73.4; pasek grup wojska przy minimapie — zrobione 0.73.4.
+
 ## Kolejka Michała z 2.11.2026 (po kolei, odhaczać datą)
 - [x] (2.11.2026) Pauza: lewa kolumna menu w grze bez tła (przezroczysta) — pełny ciemny panel.
 - [x] (2.11.2026) Kronika w lewy dolny róg nad paskiem budowy (chowa się przy otwartym budowaniu); okna budynków i żołnierzy w prawy górny róg.

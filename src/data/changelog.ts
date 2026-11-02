@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.73.5', date: '2026-11-02',
+    pl: [
+      'Nowy, miękki dźwięk klikania przycisków — ciche, drewniane „tuk” zamiast ostrego trzasku.',
+      'Mur kamienny nie miga już pasem pod blankami: lico muru i chodnik na koronie nie nachodzą na siebie.',
+      'Karta konta w menu ma równy odstęp z lewej i z prawej.',
+    ],
+    en: [
+      'A new, soft button click — a quiet wooden “tock” instead of a sharp snap.',
+      'The stone wall no longer flickers in a band under the battlements: the wall face and the walkway on top no longer overlap.',
+      'The account card in the menu has an even margin left and right.',
+    ],
+  },
+  {
     v: '0.73.4', date: '2026-11-02',
     pl: [
       'Okna menu (Ustawienia, Jak grać, Co nowego, Mój ród) zajmują całą prawą część ekranu, od góry do dołu — więcej się mieści i jest czytelniej.',

@@ -17,7 +17,8 @@ export type Sound = 'babble' | 'click' | 'build' | 'demolish' | 'collapse' | 'er
 
 /** Nagrania dla każdego dźwięku; przy kilku wariantach losujemy jeden, żeby się nie powtarzało. */
 const FILES: Partial<Record<Sound, string[]>> = {
-  click: ['toggle'],
+  // klik przycisków bez nagrania (Michał 2.11.2026: „dźwięk klikania w menu straszny”) — miękkie, drewniane stuknięcie
+  // składane niżej w play(): krótki, nisko strojony ton z szybkim zanikiem, cicho
   build: ['placement-a', 'placement-b', 'placement-c', 'placement-d'],
   road: ['placement-a', 'placement-c'],
   demolish: ['removal-a', 'removal-b', 'removal-c', 'removal-d'],
@@ -249,7 +250,17 @@ export function play(sound: Sound): void {
     return;
   }
   switch (sound) {
-    case 'click':
+    case 'click': {
+      // miękkie „tuk” jak palcem w drewnianą tabliczkę: ton opada z 420 do 240 Hz w 60 ms, przez filtr dolnoprzepustowy
+      const o = c.createOscillator(), f = c.createBiquadFilter(), g = c.createGain();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(420, t); o.frequency.exponentialRampToValueAtTime(240, t + 0.06);
+      f.type = 'lowpass'; f.frequency.value = 1400;
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.16, t + 0.004); g.gain.exponentialRampToValueAtTime(0.0008, t + 0.09);
+      o.connect(f).connect(g).connect(out ?? master!);
+      o.start(t); o.stop(t + 0.11);
+      break;
+    }
     case 'rotate':
     case 'select':
       knock(c, t, 900, 0.05, 0.12);

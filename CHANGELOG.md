@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.73.5 — 2.11.2026
+- Klik przycisków: syntezowane miękkie „tuk” (trójkąt 420→240 Hz, lowpass 1,4 kHz, 90 ms) zamiast nagrania `toggle`.
+- `stoneWallKit`: lico muru do TOP−0,2, bez nakładania na chodnik (boczne ściany w jednej płaszczyźnie migały).
+- Karta konta: `flex: 1` w kolumnie.
+
 ## 0.73.4 — 2.11.2026
 - Okna `.menu-panel.wide` i `.book` rozciągnięte na całą prawą kolumnę menu (theme-wow.css).
 - `.army-groups` fixed: prawy dół obok minimapy (right 250, bottom 140), schowane przy `build-open`.

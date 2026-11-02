@@ -336,3 +336,6 @@ body.info-open .army-groups { right: 16px; }
   grid-column: 2; grid-row: 1 / -1; align-self: stretch; justify-self: stretch; width: auto; max-width: none; height: auto;
   margin: clamp(56px, 7vh, 72px) clamp(16px, 2vw, 32px) clamp(16px, 2.4vh, 28px) 0;
   max-height: calc(100vh / var(--ui, 1) - clamp(56px, 7vh, 72px) - clamp(16px, 2.4vh, 28px)); }
+/* karta konta na pełną szerokość kolumny (równy margines z lewej i z prawej) */
+.menu:not(.previewing) > .menu-account { display: flex; }
+.menu:not(.previewing) > .menu-account > .acc-me, .menu:not(.previewing) > .menu-account > .acc-guest { flex: 1 1 auto; width: 100%; max-width: none; box-sizing: border-box; }
