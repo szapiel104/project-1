@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.71.6', date: '2026-11-02',
+    pl: [
+      'Kamera do ujęć z trybu testowego (przygotowanie nowego ekranu wczytywania z obrazem zamku z gry).',
+    ],
+    en: [
+      'A camera for set-up shots in test mode (groundwork for a new loading screen showing the castle from the game).',
+    ],
+  },
+  {
     v: '0.71.5', date: '2026-11-02',
     pl: [
       'Nowe przyciski: w ciemnej, brązowej oprawie, ze świecącą płytką w środku — pomarańczowe dla głównych działań, przygaszone dla zwykłych, zielone dla sprzedaży na rynku. Po najechaniu rozjarzają się.',

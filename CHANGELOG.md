@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.71.6 — 2.11.2026
+- `__test.cam(x, y, dist, yaw, pitch, lift)` → `renderer.viewAround` (ujęcia do ekranu wczytywania).
+
 ## 0.71.5 — 2.11.2026
 - Przyciski wg wzoru Michała (theme-wow.css): `.btn-main` pomarańczowa świecąca płytka w brązowej oprawie (box-shadow), `.btn-plain` przygaszona, `.btn-danger` czerwona, rynek: sprzedaż zielona, kupno pomarańczowe.
 

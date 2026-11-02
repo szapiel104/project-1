@@ -2377,6 +2377,8 @@ requestAnimationFrame(loop);
   },
   /** Widok na model z `model()`: front, right, back, left, top, near, ground-front, ground-right, ground-back, ground-left, door */
   view(name = 'front'): boolean { return testView(name); },
+  /** Dowolne ujęcie kamery (zrzuty do ekranu wczytywania): środek x, y, odległość, obrót i nachylenie w stopniach, wysokość celu */
+  cam(x: number, y: number, dist: number, yaw = 0, pitch = 20, lift = 0): void { renderer.viewAround(x, y, dist, yaw, pitch, lift); },
   views: () => Object.keys(VIEWS),
   /** Zaznacza budynek (jak kliknięcie): otwiera jego okno; zwraca id albo 0 */
   select(id: string | number): number { const b = typeof id === 'number' ? game.buildings.find((x) => x.id === id) : game.buildings.find((x) => x.owner === ME && BUILDINGS[x.type]!.id === id); select(b?.id ?? 0); return b?.id ?? 0; },
