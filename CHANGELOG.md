@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.72.1 — 2.11.2026
+- Okno `.info` w lewym górnym rogu (Michał), przeciągane za `.info-name`, pozycja w localStorage `p1.infoPos` (hud.ts: `placeInfo`, `fitInfo` liczy wysokość od górnej krawędzi okna do belki).
+- Kronika: `--scribe-bottom` liczone co 400 ms nad `.dock` i `.army-groups`.
+- Wszystkie `button` w stylu płytki (theme-wow.css), wciśnięte (`aria-pressed`/`aria-expanded`) świecą.
+- Ekran wczytywania: obraz `public/loading/castle.jpg` usunięty, wraca rysowany pejzaż.
+
 ## 0.72.0 — 2.11.2026
 - Tekstury zamku (Michał: „nie czuć kamienia”, wzór Twierdza 3 / Krzyżowiec 2): `tools/textures/gen_stone.py` generuje `ashlar` (2048, ciosy w warstwach, krawędzie z szumem, fazowane lico, faktura z `rock.jpg` przesunięta per kamień, fugi ciemne, AO) i `slate` (rzędy płytek, cień u góry płytki, nierówny dolny brzeg) + mapy normalnych; KTX2 przerobione. Źródła w CREDITS.md.
 

@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.1', date: '2026-11-02',
+    pl: [
+      'Okno budynku i wojska stoi teraz w lewym górnym rogu i nie wchodzi na plan na start. Można je przeciągnąć za tytuł w dowolne miejsce — gra zapamięta je po odświeżeniu.',
+      'Kronika stoi nad paskiem grup wojska i nie zasłania już jego cyfr.',
+      'Wszystkie przyciski (Rozwiń, Zwiń, Zamknij, rozkazy wojska i inne) mają jeden wygląd: brązowa oprawa i płytka, a wciśnięty świeci na pomarańczowo.',
+      'Ekran wczytywania wrócił do rysowanego pejzażu (zdjęcie z gry się nie sprawdziło).',
+    ],
+    en: [
+      'The building and army window now sits in the top left corner and no longer covers the opening plan. You can drag it by its title anywhere — the game remembers the spot after a refresh.',
+      'The chronicle sits above the army group bar and no longer hides its numbers.',
+      'Every button (Expand, Collapse, Close, army orders and the rest) shares one look: a bronze frame and plate, glowing orange when pressed.',
+      'The loading screen is back to the painted landscape (the in-game picture did not work out).',
+    ],
+  },
+  {
     v: '0.72.0', date: '2026-11-02',
     pl: [
       'Nowy kamień murów zamku: nieregularne ciosy różnej wielkości z wypukłym, chropowatym licem, każdy innej barwy, i głębokie, ciemne fugi — mur ma wreszcie rzeźbę, a nie płaski, jasny wzór.',

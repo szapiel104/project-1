@@ -647,19 +647,57 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // Okno budynku/wojska rośnie w górę od dołu ekranu: jego wysokość ogranicza miejsce między dolną belką
   // (z otwartą listą budynków też) a znacznikami w prawym górnym rogu (wersja, FPS, deweloper). Liczone z położenia
   // na ekranie, bo pasek budynków i belka mają różną wysokość zależnie od okna i powiększenia interfejsu.
+  // Okno budynku / wojska (Michał 2.11.2026): domyślnie w lewym górnym rogu, da się je przeciągnąć za tytuł, a miejsce
+  // zapamiętuje przeglądarka (localStorage p1.infoPos) — po odświeżeniu stoi tam, gdzie je zostawiono. Wysokość
+  // ograniczona do miejsca nad dolną belką (z otwartą listą budynków też).
+  const POS_KEY = 'p1.infoPos';
+  let infoPos: { x: number; y: number } | null = null;
+  try { const v = JSON.parse(localStorage.getItem(POS_KEY) ?? 'null') as { x: number; y: number } | null; if (v && Number.isFinite(v.x) && Number.isFinite(v.y)) infoPos = v; } catch { /* brak pamięci: domyślne miejsce */ }
+  const uiK = (): number => parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
+  const placeInfo = (): void => {
+    if (!infoPos || info.closest('.market-info')) { info.style.left = ''; info.style.top = ''; return; }
+    const k = uiK(), w = info.offsetWidth || 320;
+    const x = Math.max(0, Math.min(window.innerWidth / k - w - 4, infoPos.x));
+    const y = Math.max(0, Math.min(window.innerHeight / k - 160, infoPos.y));
+    info.style.left = `${x}px`; info.style.top = `${y}px`;
+  };
   const fitInfo = (): void => {
     if (info.hidden || !info.isConnected) return;
-    const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
-    // okno budynku / wojska stoi w prawym górnym rogu pod znacznikami (wersja, FPS, deweloper) i sięga najwyżej do dolnej
-    // belki (Michał 2.11.2026: okna w prawy górny róg, kronika w lewy dolny); w szufladzie rynku liczy się samo
-    if (info.closest('.market-info')) { info.style.maxHeight = ''; return; }
+    const k = uiK();
+    if (info.closest('.market-info')) { info.style.maxHeight = ''; info.style.left = ''; info.style.top = ''; return; }
+    placeInfo();
     const dockEl = root.querySelector<HTMLElement>('.dock');
-    const top = 136 * k;
+    const top = info.getBoundingClientRect().top;
     const bottom = (dockEl ? dockEl.getBoundingClientRect().top : window.innerHeight) - 10 * k;
     const want = `${Math.max(140, Math.floor((bottom - top) / k))}px`;
     if (info.style.maxHeight !== want) info.style.maxHeight = want;
     if (info.style.marginBottom) info.style.marginBottom = '';
   };
+  // przeciąganie za tytuł okna
+  info.addEventListener('pointerdown', (e) => {
+    const head = (e.target as HTMLElement).closest('.info-name');
+    if (!head || e.button !== 0 || info.closest('.market-info')) return;
+    e.preventDefault();
+    const k = uiK(), r = info.getBoundingClientRect();
+    const dx = e.clientX - r.left, dy = e.clientY - r.top;
+    const move = (ev: PointerEvent): void => { infoPos = { x: (ev.clientX - dx) / k, y: (ev.clientY - dy) / k }; fitInfo(); };
+    const up = (): void => {
+      window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+      try { if (infoPos) localStorage.setItem(POS_KEY, JSON.stringify(infoPos)); } catch { /* bez pamięci */ }
+    };
+    window.addEventListener('pointermove', move); window.addEventListener('pointerup', up);
+  });
+  // kronika w lewym dolnym rogu zawsze nad dolną belką i nad paskiem grup wojska (nie zasłania cyfr 1–0)
+  const placeScribe = (): void => {
+    const k = uiK();
+    let top = window.innerHeight;
+    for (const sel of ['.dock', '.army-groups']) {
+      const n = root.querySelector<HTMLElement>(sel) ?? document.querySelector<HTMLElement>(sel);
+      if (n && n.offsetParent !== null) { const r = n.getBoundingClientRect(); if (r.height && r.left < 700 * k) top = Math.min(top, r.top); }
+    }
+    document.documentElement.style.setProperty('--scribe-bottom', `${Math.round((window.innerHeight - top) / k + 8)}px`);
+  };
+  setInterval(placeScribe, 400);
   setInterval(fitInfo, 300);
   window.addEventListener('resize', fitInfo);
   // zapasy w pasku: przelicz po zmianie okna i wielkości interfejsu (oraz raz po wczytaniu czcionek)

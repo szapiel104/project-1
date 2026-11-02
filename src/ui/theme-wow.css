@@ -121,11 +121,16 @@ input, select { background: #120d09; border: 1px solid var(--wow-frame); color: 
   background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#5a4632, #2c2116); background-size: 300px auto, 100% 100%; background-blend-mode: multiply, normal;
   border-color: #a8864a; box-shadow: inset 0 1px 0 rgba(255, 230, 180, .18), inset 0 0 6px rgba(0, 0, 0, .6), 0 0 0 1px #000;
 }
-/* przyciski: metal w złotej obwódce */
-button { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#6a523a, #3a2b1d 60%, #261b11); background-size: 300px auto, 100% 100%; background-blend-mode: multiply, normal;
-  box-shadow: inset 0 1px 0 rgba(255, 230, 180, .25), inset 0 0 0 1px #b8924c, inset 0 -2px 3px rgba(0, 0, 0, .4); }
-button:hover { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#86683f, #4c3822 60%, #301f12); box-shadow: inset 0 1px 0 rgba(255, 240, 200, .35), inset 0 0 0 1px #ffd76a, 0 0 8px rgba(255, 200, 80, .2); }
-button:disabled { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#3a3229, #221c16); box-shadow: inset 0 0 0 1px #5a4a35; }
+/* przyciski: wszędzie jednakowo — ciemna, brązowa oprawa i płytka w środku (wzór Michała); wciśnięty/wybrany świeci */
+button { color: #f3e2bc; text-shadow: 0 1px 1px #000; border: 1px solid #120c08; border-radius: 2px;
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 190, 120, .16), transparent 70%), linear-gradient(#5e2c14, #42200e 55%, #331709);
+  box-shadow: 0 0 0 1px #5a4630, 0 0 0 2px #0e0906, inset 0 0 0 1px #9a5a30, inset 0 1px 0 rgba(255, 210, 160, .22), inset 0 -2px 4px rgba(0, 0, 0, .35); }
+button:hover, button:focus-visible { color: #fff0d0; background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 200, 130, .3), transparent 70%), linear-gradient(#7e3a18, #5a2a10 55%, #44200b);
+  box-shadow: 0 0 0 1px #7a6040, 0 0 0 2px #0e0906, inset 0 0 0 1px #e08a48, 0 0 8px rgba(255, 130, 50, .3); }
+button[aria-pressed='true'], button[aria-expanded='true'], button[aria-current='true'] { color: #fff6e0;
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 220, 140, .45), transparent 70%), linear-gradient(#d84e1a, #a8360e 55%, #82260a);
+  box-shadow: 0 0 0 1px #7a6040, 0 0 0 2px #0e0906, inset 0 0 0 1px #ffc078, inset 0 0 10px rgba(255, 150, 60, .5), 0 0 10px rgba(255, 120, 40, .35); }
+button:disabled { color: #a08a70; text-shadow: none; filter: saturate(.4); }
 .btn-main { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#a3342a, #6c1a12 60%, #4a0f0a); box-shadow: inset 0 1px 0 rgba(255, 210, 160, .3), inset 0 0 0 1px #d9b062; }
 .btn-main:hover { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#c0443a, #84231a 60%, #5a140e); }
 /* kategorie budowy: drewniane tabliczki */
@@ -149,10 +154,13 @@ button:disabled { background-image: url('/textures/cc0/iron.jpg'), linear-gradie
 .cat { font-family: var(--text); font-weight: 700; font-size: 16px; letter-spacing: .01em; text-transform: none; color: var(--wow-gold); text-shadow: 1px 1px 0 #000, 0 0 2px #000; }
 
 /* ===== Układ (Michał 2.11.2026): okna budynków i wojska w prawym górnym rogu, kronika w lewym dolnym nad belką ===== */
-.floaters .info, .floaters .info.army-mode { position: fixed; top: 136px; right: 16px; bottom: auto; margin: 0; pointer-events: auto; overflow-y: auto; }
+.floaters .info, .floaters .info.army-mode { position: fixed; top: 16px; left: 16px; right: auto; bottom: auto; margin: 0; pointer-events: auto; overflow-y: auto; }
+/* okno da się przeciągnąć za tytuł; miejsce zapamiętuje przeglądarka (hud.ts, p1.infoPos) */
+.floaters .info .info-name { cursor: move; user-select: none; touch-action: none; }
+.floaters .info .info-name::after { content: '⠿'; float: right; margin-left: 10px; font-size: 16px; color: rgba(226, 194, 122, .55); }
 .market-info .info { position: static; }
-.scribe { top: auto; bottom: 132px; left: 16px; display: flex; flex-direction: column-reverse; align-items: flex-start; }
-.scribe-log { top: auto; bottom: 186px; max-height: calc(100vh / var(--ui, 1) - 260px); }
+.scribe { top: auto; bottom: var(--scribe-bottom, 132px); left: 16px; display: flex; flex-direction: column-reverse; align-items: flex-start; }
+.scribe-log { top: auto; bottom: calc(var(--scribe-bottom, 132px) + 54px); max-height: calc(100vh / var(--ui, 1) - 260px); }
 body.build-open .scribe, body.build-open .scribe-log { display: none; }
 
 /* ===== Przyciski jak na wzorze od Michała (2.11.2026): ciemna, brązowa oprawa i świecąca płytka w środku =====
@@ -187,12 +195,3 @@ body.build-open .scribe, body.build-open .scribe-log { display: none; }
 .market-line.buy .market-btn:hover:not(:disabled) { background-image: linear-gradient(#e0521c, #ae330e 55%, #86240a); box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #ffc078, 0 0 12px rgba(255, 120, 40, .4); }
 .market-line .market-btn:disabled { filter: saturate(.35) brightness(.75); }
 
-/* ===== Ekran wczytywania z obrazem zamku z gry (Michał 2.11.2026: „nie rysuj, dobierz zdjęcie, epickie”) =====
-   public/loading/castle.jpg — ujęcie twierdzy z gry o zachodzie (pełna grafika), podkręcone filtrami: cieplejsze niebo,
-   poświata nad horyzontem, lekka winieta i blask. Rysowany pejzaż (.ld-scene) schowany. */
-#loading { background: #070504 url('/loading/castle.jpg') center 38% / cover no-repeat; }
-#loading .ld-scene { display: none; }
-#loading::after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
-  background: radial-gradient(ellipse 60% 42% at 50% 22%, rgba(8, 5, 3, .55), rgba(8, 5, 3, 0) 70%),
-    linear-gradient(rgba(8, 5, 3, .35), rgba(8, 5, 3, 0) 30%, rgba(8, 5, 3, 0) 60%, rgba(8, 5, 3, .7) 100%); }
-#loading .loading-head, #loading .loading-card { z-index: 1; }
