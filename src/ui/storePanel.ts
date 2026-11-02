@@ -1,7 +1,7 @@
 import { BUILDINGS } from '../data/buildings';
 import { RESOURCES, RESOURCE_DEFS, type ResourceId, type StoreKind } from '../data/resources';
 import { t, tx } from '../i18n';
-import { Phase, type Building, type GameState } from '../sim/state';
+import { Phase, storeCapacity, storeUsed, type Building, type GameState } from '../sim/state';
 
 /**
  * Okno magazynu: logistyka (storage.ts) — kto tu pracuje i co robi, co leży pod drzwiami, bo nie było miejsca,
@@ -17,6 +17,8 @@ export interface StoreLogistics {
   elsewhere: number;
   /** Warsztaty, które czekają na miejsce w magazynach tego rodzaju */
   waiting: { name: string; res: string }[];
+  /** W magazynach tego rodzaju jest jeszcze miejsce (towar pod drzwiami czeka tylko na magazyniera) */
+  room: boolean;
 }
 
 const resName = (id: string): string => t(RESOURCE_DEFS[id as ResourceId].name).toLowerCase();
@@ -62,7 +64,8 @@ export function storeLogistics(g: GameState, b: Building, nameOf: (unitId: numbe
     const kind = RESOURCE_DEFS[id].store;
     if (kind && kinds.has(kind)) waiting.push({ name: t(BUILDINGS[o.type]!.name), res: resName(id) });
   }
-  return { keepers, want: def.keepers, here: [...sum].map(([id, amount]) => ({ id, amount })), elsewhere, waiting };
+  const room = [...kinds].some((k) => storeCapacity(g, b.owner, k) > storeUsed(g.players[b.owner]!, k));
+  return { room, keepers, want: def.keepers, here: [...sum].map(([id, amount]) => ({ id, amount })), elsewhere, waiting };
 }
 
 const node = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] => {
@@ -90,7 +93,11 @@ export function renderLogistics(s: StoreLogistics, icon: (id: string) => HTMLEle
   if (s.here.length || s.waiting.length || s.elsewhere) {
     const box = node('div', 'logi-block logi-alert');
     const h = node('p', 'logi-head');
-    h.append(icon('alert'), node('strong', '', s.here.length ? tx('Pełno — towar czeka pod drzwiami', 'Full — goods are waiting at the door') : tx('Magazyny tego rodzaju są pełne', 'Stores of this kind are full')));
+    // jest już miejsce: towar spod drzwi tylko czeka, aż magazynier (albo sam robotnik) go wniesie — to nie „pełno”
+    if (s.room && !s.waiting.length) box.classList.remove('logi-alert');
+    h.append(icon(s.room ? 'store' : 'alert'), node('strong', '', s.room
+      ? tx('Towar pod drzwiami — zaraz trafi do środka', 'Goods at the door — on their way inside')
+      : s.here.length ? tx('Pełno — towar czeka pod drzwiami', 'Full — goods are waiting at the door') : tx('Magazyny tego rodzaju są pełne', 'Stores of this kind are full')));
     box.append(h);
     if (s.here.length) {
       const grid = node('div', 'stock-grid');
@@ -111,7 +118,8 @@ export function renderLogistics(s: StoreLogistics, icon: (id: string) => HTMLEle
       p.append(node('strong', '', tx('Czekają na miejsce: ', 'Waiting for room: ')), [...groups].map(([k, n]) => { const [name, res] = k.split('|'); return `${name}${n > 1 ? ` ×${n}` : ''} (${res})`; }).join(', '));
       box.append(p);
     }
-    box.append(node('p', 'logi-tip', tx('Postaw kolejny magazyn albo zużyj zapas. Gdy zwolni się miejsce, magazynierzy wniosą towar spod drzwi, a warsztaty same wrócą do pracy.', 'Build another store or use up the stock. As soon as there is room, the storekeepers carry the goods in and the workshops go back to work on their own.')));
+    if (s.room) box.append(node('p', 'logi-tip', tx('Miejsce już jest. Magazynier wniesie towar, gdy wróci do pracy (w nocy śpi), a jeśli go nie ma — robotnik zrobi to sam.', 'There is room now. The storekeeper will carry the goods in once he is back at work (he sleeps at night); failing him, the worker will do it himself.')));
+    else box.append(node('p', 'logi-tip', tx('Postaw kolejny magazyn albo zużyj zapas. Gdy zwolni się miejsce, magazynierzy wniosą towar spod drzwi, a warsztaty same wrócą do pracy.', 'Build another store or use up the stock. As soon as there is room, the storekeepers carry the goods in and the workshops go back to work on their own.')));
     out.push(box);
   }
   return out;

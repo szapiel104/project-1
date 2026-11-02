@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.8', date: '2026-11-02',
+    pl: [
+      'Skład nie krzyczy już „Pełno”, gdy jest w nim miejsce: warsztat, którego robotnik poszedł spać, przestaje czekać na miejsce od razu, a nie dopiero rano. Towar spod drzwi okno pokazuje spokojnie jako „zaraz trafi do środka”.',
+    ],
+    en: [
+      'The stockpile no longer cries “Full” when there is room in it: a workshop whose worker has gone to bed stops waiting for room at once, not only in the morning. Goods at the door are shown calmly as “on their way inside”.',
+    ],
+  },
+  {
     v: '0.70.7', date: '2026-11-02',
     pl: [
       'Podgląd zleconych budów: gdy masz otwartą listę budowy albo stawiasz budynek, każdy zlecony, jeszcze niezbudowany mur, wieża czy budynek pokazuje się jako półprzezroczysty gotowy model. Łatwo dociągnąć do nich następne odcinki. Po zamknięciu budowy podgląd znika.',

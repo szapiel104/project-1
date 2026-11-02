@@ -131,8 +131,25 @@ export function takePile(g: GameState, u: Unit): boolean {
   return true;
 }
 
+/**
+ * Warsztat „czeka na miejsce”, choć w magazynach już jest miejsce (Michał 2.11.2026: skład 90/300, a okno dalej
+ * „Pełno”): robotnik, który czekał, poszedł spać albo na fajrant i flaga wisiała do rana. Gdy miejsce jest, a robotnik
+ * nie stoi w warsztacie (Stalled — sam sprawdzi i wniesie swój towar), flagę zdejmujemy od razu.
+ */
+function clearStalls(g: GameState): void {
+  const OFF = new Set([Phase.Sleeping, Phase.ToSleep, Phase.Evening, Phase.ToEvening, Phase.Resting, Phase.ToRest]);
+  for (const b of g.buildings) {
+    if (!b.stall) continue;
+    const u = b.worker ? g.units.find((x) => x.id === b.worker) : undefined;
+    // tylko gdy robotnika nie ma albo śpi / ma fajrant — kto jest przy pracy, sam wróci do warsztatu i wniesie swój towar
+    if (u && !OFF.has(u.phase)) continue;
+    if (roomLeft(g, b.owner, b.stall - 1) > 0) b.stall = 0;
+  }
+}
+
 /** Rozdziela stosy między wolnych magazynierów (jeden człowiek na stos) i sprząta po zniknięciu magazynów i tragarzy. */
 export function storageSystem(g: GameState): void {
+  if (g.tick % EVERY === 0) clearStalls(g);
   const list = g.piles;
   if (!list?.length || g.tick % EVERY !== 0) return;
   // tragarz, który rzucił zadanie (wieczór, choroba, śmierć), zwalnia stos dla kogoś innego

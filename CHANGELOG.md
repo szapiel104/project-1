@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.8 — 2.11.2026
+- Skład „Pełno” przy 90/300 (Michał): `clearStalls` w storage.ts co 10 ticków zdejmuje `b.stall`, gdy jest miejsce, a robotnik śpi / ma fajrant / odpoczywa (dotąd flaga wisiała do rana). Okno składu (`storePanel.ts`, pole `room`): przy wolnym miejscu nagłówek „Towar pod drzwiami — zaraz trafi do środka” bez czerwonej ramki.
+
 ## 0.70.7 — 2.11.2026
 - Duchy zleconych budów (Michał): `src/render/siteGhosts.ts` — przy otwartej liście budowy (`hud.buildOpen()`) albo z budynkiem w ręku każdy plac budowy gracza (`b.build > 0`, bez dróg i ruin) dostaje kopię gotowego modelu, przezroczystość 0,2, bez zapisu głębi; wspólne siatki i materiały na rodzaj, najwyżej 600 naraz, reset po zmianie gry.
 - `levy`: zdrowie 40 → 50.
