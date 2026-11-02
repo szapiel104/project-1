@@ -15,13 +15,13 @@ const NEW: ChangeEntry[] = [
       'Trzy kolory przycisków w całej grze: zielony — zapisz, zatwierdź, zacznij; czerwony — usuń, wyrzuć, rozbierz, poddaj się; cała reszta spokojna, neutralna.',
       'Rola testera: tester (i administrator) widzi w menu tryb deweloperski i może otworzyć panel dewelopera (F9) w każdej grze solo.',
       'Uwagi testera: w menu (także w trakcie gry, przez Esc) tester pisze, co poprawić albo dodać; administrator widzi je w „Moim rodzie”, oznacza zrobione i może odpisać, a tester widzi, co już zrobione.',
-      'Panel administratora: przycisk nadawania roli testera, podpowiedź, od którego poziomu jest który tytuł, i ostrzeżenie o niezapisanych zmianach.',
+      'Panel administratora: lista wszystkich graczy z rolami i przyciskami „+/− admin” i „+/− tester” w każdym wierszu, podpowiedź, od którego poziomu jest który tytuł, i ostrzeżenie o niezapisanych zmianach. Twórcy gry nie da się odebrać praw.',
     ],
     en: [
       'Three button colours throughout the game: green — save, confirm, start; red — remove, kick, dismantle, surrender; everything else calm and neutral.',
       'Tester role: testers (and administrators) see developer mode in the menu and can open the developer panel (F9) in any solo game.',
       'Tester notes: in the menu (also mid-game, via Esc) a tester writes what to fix or add; the administrator sees them in “My house”, marks them done and can reply, and the tester sees what is done.',
-      'Admin panel: a button to grant the tester role, a hint at which level each rank begins, and a warning about unsaved changes.',
+      'Admin panel: a list of all players with their roles and “+/− admin” and “+/− tester” buttons on every row, a hint at which level each rank begins, and a warning about unsaved changes. The game’s creator cannot lose his rights.',
     ],
   },
   {

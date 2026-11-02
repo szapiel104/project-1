@@ -4,7 +4,7 @@ Michał wykonuje migracje ręcznie: Supabase → projekt „project-1” → SQL
 Każdy czat, który dodaje nową migrację, dopisuje ją tutaj. Po wykonaniu: przenieść do „Wykonane” i dopisać „wykonane DATA” w pierwszej linijce pliku.
 
 ## Czekają (stan 2.11.2026)
-- `20261102b_testers.sql` — rola testera (pierwszy: SzyMi) i uwagi testerów. Bez niej: tryb deweloperski widzą tylko administratorzy, uwag nie da się wysłać.
+- `20261102b_testers.sql` — rola testera (pierwszy: SzyMi), uwagi testerów, lista wszystkich graczy w panelu, twórca gry RebaZius jako administrator nie do odebrania. Bez niej: tryb deweloperski widzą tylko administratorzy, uwag nie da się wysłać.
 
 ## Wykonane
 - `20261024_results_pending.sql` — wykonane 2.11.2026

@@ -29,11 +29,43 @@ end $$;
 revoke all on function public.admin_tester(uuid, boolean) from public, anon;
 grant execute on function public.admin_tester(uuid, boolean) to authenticated;
 
+-- ---------------- twórca gry: administrator, któremu nie da się odebrać praw (Michał 2.11.2026: „twórca RebaZius
+-- i mu nie można zabrać uprawnień”) ----------------
+alter table public.admins add column if not exists owner boolean not null default false;
+insert into public.admins (user_id, owner) select id, true from public.profiles where lower(nick) = 'rebazius'
+on conflict (user_id) do update set owner = true;
+-- nawet bezpośrednie usunięcie wiersza (np. z SQL Editora przez pomyłkę) jest zablokowane
+create or replace function public.keep_owner() returns trigger language plpgsql as $$
+begin
+  if old.owner then raise exception 'twórcy gry nie można odebrać praw administratora'; end if;
+  if tg_op = 'DELETE' then return old; end if;
+  return new;
+end $$;
+drop trigger if exists admins_keep_owner on public.admins;
+create trigger admins_keep_owner before delete or update of owner on public.admins for each row execute function public.keep_owner();
+
+create or replace function public.admin_grant(p_user uuid, p_on boolean) returns void
+language plpgsql security definer set search_path = public as $$
+begin
+  if not is_admin() then raise exception 'brak uprawnień'; end if;
+  if p_on then
+    if not exists (select 1 from profiles where id = p_user) then raise exception 'nie ma takiego konta'; end if;
+    insert into admins (user_id, added_by) values (p_user, auth.uid()) on conflict do nothing;
+  else
+    if p_user = auth.uid() then raise exception 'nie można odebrać praw samemu sobie'; end if;
+    if exists (select 1 from admins where user_id = p_user and owner) then raise exception 'twórcy gry nie można odebrać praw administratora'; end if;
+    delete from admins where user_id = p_user;
+  end if;
+  insert into admin_log (admin, target, action, detail) values (auth.uid(), p_user, case when p_on then 'grant' else 'revoke' end, null);
+end $$;
+revoke all on function public.admin_grant(uuid, boolean) from public, anon;
+grant execute on function public.admin_grant(uuid, boolean) to authenticated;
+
 -- wyszukiwanie kont: dochodzi kolumna „tester” (zmiana zwracanych kolumn wymaga usunięcia starej wersji)
 drop function if exists public.admin_find(text);
 create function public.admin_find(p_nick text)
 returns table (id uuid, nick text, avatar integer, xp integer, level integer, matches integer, wins integer, kills integer,
-               razed integer, built integer, minutes integer, online_wins integer, hard_wins integer, admin boolean, tester boolean)
+               razed integer, built integer, minutes integer, online_wins integer, hard_wins integer, admin boolean, tester boolean, owner boolean)
 language plpgsql stable security definer set search_path = public as $$
 begin
   if not is_admin() then raise exception 'brak uprawnień'; end if;
@@ -42,13 +74,14 @@ begin
            coalesce(p.xp, 0), coalesce(p.level, 1), coalesce(p.matches, 0), coalesce(p.wins, 0), coalesce(p.kills, 0),
            coalesce(p.razed, 0), coalesce(p.built, 0), coalesce(p.minutes, 0), coalesce(p.online_wins, 0), coalesce(p.hard_wins, 0),
            exists (select 1 from admins a where a.user_id = pr.id),
-           exists (select 1 from testers t where t.user_id = pr.id)
+           exists (select 1 from testers t where t.user_id = pr.id),
+           exists (select 1 from admins a where a.user_id = pr.id and a.owner)
       from profiles pr
       left join player_progress p on p.user_id = pr.id
       left join auth.users u on u.id = pr.id
      where pr.nick ilike '%' || replace(replace(coalesce(p_nick, ''), '%', ''), '_', '\_') || '%'
      order by lower(pr.nick)
-     limit 30;
+     limit 500;   -- pusty tekst = lista wszystkich graczy
 end $$;
 revoke all on function public.admin_find(text) from public, anon;
 grant execute on function public.admin_find(text) to authenticated;

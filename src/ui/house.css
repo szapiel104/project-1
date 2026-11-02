@@ -194,7 +194,7 @@
 .admin input { min-height: 40px; padding: 6px 10px; font: inherit; font-size: 15px; color: #2a1d0c; background: #f3e7c9; border: 1px solid #8a6a2a; border-radius: 3px; box-sizing: border-box; }
 .admin-search input { flex: 1 1 240px; }
 .admin input:focus-visible, .admin button:focus-visible { outline: 2px solid #f0c75a; outline-offset: 2px; }
-.admin-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.admin-list { overflow-x: auto; }
 .admin-pick { min-height: 36px; padding: 6px 12px; font: inherit; font-size: 14px; cursor: pointer; color: #f3e7c9; background: rgba(40, 28, 14, .75); border: 1px solid rgba(154, 122, 42, .6); border-radius: 3px; }
 .admin-pick:hover { background: rgba(90, 62, 24, .9); }
 .admin-card { display: grid; gap: 12px; padding: 14px; border: 1px solid rgba(154, 122, 42, .5); background: rgba(20, 14, 8, .35); }
@@ -219,3 +219,6 @@
 .note-reply { margin: 0; font-style: italic; color: #cfe8c8; }
 .note-state { padding: 2px 8px; font-size: 13px; font-weight: 700; color: #2a1d0c; background: #e6c06a; border-radius: 2px; }
 .note-state.done { color: #effff0; background: #2f6b3a; }
+.admin-table td, .admin-table th { vertical-align: middle; }
+.admin-row-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.menu .admin .admin-row-acts .menu-btn.admin-btn { min-height: 34px; padding: 4px 10px; font-size: 13px; }

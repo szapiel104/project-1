@@ -8,7 +8,7 @@ import { tx } from '../i18n';
  */
 export interface AdminAccount {
   id: string; nick: string; avatar: number; xp: number; level: number; matches: number; wins: number; kills: number;
-  razed: number; built: number; minutes: number; online_wins: number; hard_wins: number; admin: boolean; tester?: boolean;
+  razed: number; built: number; minutes: number; online_wins: number; hard_wins: number; admin: boolean; tester?: boolean; owner?: boolean;
 }
 export type Counters = Pick<AdminAccount, 'xp' | 'matches' | 'wins' | 'kills' | 'razed' | 'built' | 'minutes' | 'online_wins' | 'hard_wins'>;
 export interface AdminLogRow { created_at: string; action: string; target: string | null; detail: Record<string, unknown> | null }

@@ -44,27 +44,62 @@ export function adminPane(onSelfChanged: () => void): Node[] {
   // --- wyszukiwanie ---
   const form = el('form', 'admin-search');
   const id = `admin-q-${Math.random().toString(36).slice(2, 6)}`;
-  const lab = el('label', '', tx('Nick gracza (fragment)', 'Player nickname (part of it)')); lab.htmlFor = id;
+  const lab = el('label', '', tx('Szukaj gracza (puste = wszyscy)', 'Find a player (empty = everyone)')); lab.htmlFor = id;
   const q = el('input'); q.id = id; q.type = 'search'; q.autocomplete = 'off'; q.maxLength = 20;
   const go = el('button', 'menu-btn admin-btn', tx('Szukaj', 'Search')); go.type = 'submit';
   form.append(lab, q, go);
   const note = status();
-  const list = el('ul', 'admin-list');
+  const list = el('div', 'admin-list');
   const edit = el('div', 'admin-edit');
   const logBox = el('div', 'admin-log');
   wrap.append(form, note, list, edit, el('h4', 'house-h', tx('Dziennik zmian', 'Change log')), logBox);
 
+  // lista graczy: od razu wszyscy (pusty tekst), z rolami i szybkimi przyciskami admina i testera w każdym wierszu
   const search = async (): Promise<void> => {
-    say(note, tx('Szukam…', 'Searching…'));
+    say(note, tx('Wczytuję graczy…', 'Loading players…'));
     const rows = await adminFind(q.value);
     if (typeof rows === 'string') { say(note, rows, true); return; }
-    say(note, rows.length ? tx(`Znaleziono kont: ${rows.length}`, `Accounts found: ${rows.length}`) : tx('Brak kont o takim nicku.', 'No account with that nickname.'));
-    list.replaceChildren(...rows.map((a) => {
-      const li = el('li');
-      const b = btn(`${a.nick} · ${tx('poziom', 'level')} ${a.level}${a.admin ? ' · ' + tx('administrator', 'admin') : ''}${a.tester ? ' · ' + tx('tester', 'tester') : ''}`, () => open(a), 'admin-pick');
-      li.append(b);
-      return li;
-    }));
+    say(note, rows.length ? tx(`Graczy: ${rows.length}`, `Players: ${rows.length}`) : tx('Brak kont o takim nicku.', 'No account with that nickname.'));
+    const table = el('table', 'house-table admin-table');
+    const head = el('tr');
+    for (const h of [tx('Gracz', 'Player'), tx('Poziom', 'Level'), tx('Bitwy', 'Battles'), tx('Role', 'Roles'), tx('Działania', 'Actions')]) { const th = el('th', '', h); th.scope = 'col'; head.append(th); }
+    const thead = el('thead'); thead.append(head);
+    const tb = el('tbody');
+    for (const a of rows) tb.append(row(a));
+    table.append(thead, tb);
+    list.replaceChildren(table);
+  };
+  const roles = (a: AdminAccount): string => [a.owner ? tx('twórca', 'creator') : '', a.admin ? tx('administrator', 'admin') : '', a.tester ? tx('tester', 'tester') : ''].filter(Boolean).join(', ') || '—';
+  const row = (a: AdminAccount): HTMLTableRowElement => {
+    const tr = el('tr');
+    const rolesTd = el('td', '', roles(a));
+    const acts = el('td', 'admin-row-acts');
+    const self = a.id === me()?.id;
+    const paint = (): void => {
+      rolesTd.textContent = roles(a);
+      const edit = btn(tx('Edytuj', 'Edit'), () => open(a), 'menu-btn admin-btn');
+      // twórcy i sobie samemu praw administratora odebrać nie można (pilnuje też baza)
+      const locked = a.admin && (a.owner || self);
+      const adm = btn(a.admin ? tx('− admin', '− admin') : tx('+ admin', '+ admin'), async () => {
+        const err = await adminGrant(a.id, !a.admin);
+        if (err) { say(note, `${a.nick}: ${err}`, true); return; }
+        a.admin = !a.admin; say(note, a.admin ? tx(`${a.nick} jest administratorem.`, `${a.nick} is now an admin.`) : tx(`${a.nick} nie jest już administratorem.`, `${a.nick} is no longer an admin.`));
+        paint(); void refreshLog();
+      }, a.admin ? 'menu-btn admin-btn btn-danger' : 'menu-btn admin-btn btn-ok');
+      adm.disabled = locked;
+      if (locked) adm.title = a.owner ? tx('Twórcy gry nie można odebrać praw.', 'The game’s creator cannot lose admin rights.') : tx('Własnych praw nie można odebrać.', 'You cannot revoke your own rights.');
+      const tst = btn(a.tester ? tx('− tester', '− tester') : tx('+ tester', '+ tester'), async () => {
+        const err = await adminTester(a.id, !a.tester);
+        if (err) { say(note, `${a.nick}: ${err}`, true); return; }
+        a.tester = !a.tester; say(note, a.tester ? tx(`${a.nick} jest testerem.`, `${a.nick} is now a tester.`) : tx(`${a.nick} nie jest już testerem.`, `${a.nick} is no longer a tester.`));
+        paint(); void refreshLog();
+        if (self) onSelfChanged();
+      }, a.tester ? 'menu-btn admin-btn btn-danger' : 'menu-btn admin-btn btn-ok');
+      acts.replaceChildren(edit, adm, tst);
+    };
+    paint();
+    tr.append(el('td', '', a.nick), el('td', '', String(levelOf(a.xp).level)), el('td', '', String(a.matches)), rolesTd, acts);
+    return tr;
   };
   form.addEventListener('submit', (e) => { e.preventDefault(); void search(); });
 
@@ -153,8 +188,8 @@ export function adminPane(onSelfChanged: () => void): Node[] {
       void refreshLog();
       grant.className = a.admin ? 'menu-btn admin-btn btn-danger' : 'menu-btn admin-btn';
     }, a.admin ? 'menu-btn admin-btn btn-danger' : 'menu-btn admin-btn');
-    grant.disabled = self && a.admin;
-    if (grant.disabled) grant.title = tx('Własnych praw nie można odebrać.', 'You cannot revoke your own rights.');
+    grant.disabled = a.admin && (self || !!a.owner);
+    if (grant.disabled) grant.title = a.owner ? tx('Twórcy gry nie można odebrać praw.', 'The game’s creator cannot lose admin rights.') : tx('Własnych praw nie można odebrać.', 'You cannot revoke your own rights.');
 
     // rola testera: tryb deweloperski w menu i panel F9 w grze solo
     const tLabel = (): string => (a.tester ? tx('Odbierz rolę testera', 'Remove tester role') : tx('Nadaj rolę testera', 'Make tester'));
@@ -195,6 +230,7 @@ export function adminPane(onSelfChanged: () => void): Node[] {
     logBox.replaceChildren(ul);
   };
   void refreshLog();
+  void search();
   setTimeout(() => q.focus(), 0);
   return [wrap];
 }
