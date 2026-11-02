@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.73.3', date: '2026-11-02',
+    pl: [
+      'Ekran wczytywania spokojniejszy: pod herbem został sam tytuł, a na dole tylko rada, procent, pasek i jedna linijka, co się teraz wczytuje.',
+    ],
+    en: [
+      'A calmer loading screen: only the title remains under the arms, and at the bottom just the tip, the percentage, the bar and a single line on what is loading now.',
+    ],
+  },
+  {
     v: '0.73.2', date: '2026-11-02',
     pl: [
       'Epickie chmury na pejzażu: wielkie, kłębiaste cumulusy po bokach i mniejsze w głębi, z jasnym wierzchem i złoto-różowym spodem od zachodu, a nisko nad górami pomarańczowe smugi.',

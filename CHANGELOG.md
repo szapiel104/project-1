@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.73.3 — 2.11.2026
+- Wczytywanie: schowane `.loading-sub`, `.game-tagline`, `.loading-detail`, `.loading-log`, licznik kroków (theme-wow.css).
+
 ## 0.73.2 — 2.11.2026
 - vista.ts: `cumulus()` — chmury z kłębów w rzędach, jeden gradient na chmurę (userSpaceOnUse; wcześniej każdy kłąb miał własny i wychodziły bańki), cień, rozświetlenie, smugi `v-streak` nad górami.
 - Tytuł wczytywania: mocniejszy gradient złota, `-webkit-text-stroke`, poświata (style.css).
