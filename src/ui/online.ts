@@ -11,6 +11,7 @@ import { chatLine, cleanChat } from './chat';
 import { adminPane } from './adminPanel';
 import { adminNotesPane } from './testerNotes';
 import { friendsView } from './friendsView';
+import { openProfileModal } from './playerProfile';
 import { friendLists, inviteToGame } from '../net/social';
 import { lang, tx } from '../i18n';
 
@@ -56,7 +57,7 @@ const seats = (preset: string): number => (MAP_PRESETS[preset as MapPresetId]?.s
 const modeName = (preset: string): string => MODES.find(([id]) => id === preset)?.[1] ?? preset;
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(tab?: number, note?: number): void; showFriends(tab?: number, profile?: string): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
+export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(tab?: number, note?: number): void; showFriends(tab?: number, profile?: string, chat?: string): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
   const { el, button, screen } = ui;
   const inMatch = (): boolean => ui.inMatch();
   let stopWatch: (() => void) | null = null;
@@ -522,10 +523,12 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   }
 
   // ---------------- znajomi ----------------
-  async function showFriends(tab = 0, profile?: string): Promise<void> {
+  /** Profil gracza w okienku nad rankingiem albo pokojem (bez wychodzenia z pokoju) */
+  const profileModal = (id: string): void => openProfileModal(id, { el, button, shield }, (who) => void showFriends(1, undefined, who));
+  async function showFriends(tab = 0, profile?: string, chat?: string): Promise<void> {
     cleanup();
     const m = me();
-    if (!m) { showLogin(false, '', () => void showFriends(tab, profile)); return; }
+    if (!m) { showLogin(false, '', () => void showFriends(tab, profile, chat)); return; }
     const view = friendsView({
       el, button, shield,
       join: (id) => void join(id),
@@ -540,7 +543,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         enterRoom(res);
         return null;
       },
-    }, tab, profile);
+    }, tab, profile, chat);
     screen(tx('Znajomi', 'Friends'), true, view.node, back());
     const offP = onPresence(() => view.redraw());
     stopWatch = () => { offP(); view.stop(); };
@@ -581,7 +584,9 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     rows.forEach((x, i) => {
       const tr = el('tr', x.user_id === m?.id ? 'me' : '');
       const who = el('td', 'who');
-      who.append(shield(x.avatar, 22), el('span', '', x.nick));
+      const nb = button(x.nick, () => profileModal(x.user_id), 'fr-name fr-name-sm');
+      nb.title = tx(`Profil: ${x.nick}`, `Profile: ${x.nick}`);
+      who.append(shield(x.avatar, 22), nb);
       const tc = titleChip(x.user_id); if (tc) who.append(tc);
       tr.append(el('td', 'pos', String(i + 1)), who, el('td', '', String(x.wins)), el('td', '', String(x.losses)), el('td', '', String(x.games)));
       tbody.append(tr);
@@ -734,7 +739,9 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
           if (i % 2 !== team) return;
           const row = el('div', `net-slot ${s.kind}`);
           if (s.kind === 'human') {
-            row.append(shield(s.avatar, 30), el('strong', '', s.nick + (s.id === room.host ? tx(' (gospodarz)', ' (host)') : '') + (s.id === m.id ? tx(' — Ty', ' — you') : '')));
+            const nb = button(s.nick + (s.id === room.host ? tx(' (gospodarz)', ' (host)') : '') + (s.id === m.id ? tx(' — Ty', ' — you') : ''), () => profileModal(s.id), 'fr-name fr-name-sm');
+            nb.title = tx(`Profil: ${s.nick}`, `Profile: ${s.nick}`);
+            row.append(shield(s.avatar, 30), nb);
             const tc = titleChip(s.id);
             if (tc) row.append(tc);
             else void levelsOf([s.id]).then((got) => { if (got.has(s.id)) paint(); }); // poziom dociągnięty z bazy: odśwież raz
@@ -844,5 +851,5 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     enterRoom(room);
   }
 
-  return { showOnline: () => void showOnline(), showAccount, showHouse: (tab = 0, note?: number) => showHouse(tab, note), showFriends: (tab = 0, profile?: string) => void showFriends(tab, profile), showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
+  return { showOnline: () => void showOnline(), showAccount, showHouse: (tab = 0, note?: number) => showHouse(tab, note), showFriends: (tab = 0, profile?: string, chat?: string) => void showFriends(tab, profile, chat), showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
 }

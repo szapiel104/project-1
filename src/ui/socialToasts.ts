@@ -1,4 +1,5 @@
-import { befriend, dropNotice, onFreshNotice, type Notice } from '../net/social';
+import { befriend, dropNotice, onFreshNotice, playerById, type Notice } from '../net/social';
+import { onMessage } from '../net/messages';
 import { noticeMark, noticeText } from './noticeText';
 import { avatarSvg } from './avatars';
 import { tx } from '../i18n';
@@ -14,6 +15,8 @@ export interface ToastActions {
   friends(tab: number): void;
   adminNotes(id?: number): void;
   myNotes(id?: number): void;
+  /** Rozmowa ze znajomym */
+  chat(id: string): void;
   /** true w meczu przez sieć */
   quiet(): boolean;
   sound?(): void;
@@ -31,6 +34,30 @@ export function startSocialToasts(go: ToastActions): void {
     b.addEventListener('click', run);
     return b;
   };
+  // wiadomość od znajomego: okienko z treścią i „Odpowiedz” (gdy rozmowa z nim jest właśnie otwarta — bez okienka)
+  onMessage((m) => {
+    if (go.quiet() || document.querySelector('.fr-chat-head')?.getAttribute('data-with') === m.from_id) return;
+    void playerById(m.from_id).then((p) => {
+      const t = document.createElement('div');
+      t.className = 'soc-toast panel message';
+      const av = document.createElement('span'); av.className = 'net-shield'; av.innerHTML = avatarSvg(p?.avatar ?? 0, 38);
+      const mark = document.createElement('span'); mark.className = 'soc-mark'; mark.textContent = '✉'; mark.setAttribute('aria-hidden', 'true');
+      const body = document.createElement('div'); body.className = 'soc-body';
+      const text = document.createElement('span'); text.className = 'soc-text';
+      const who = document.createElement('strong'); who.textContent = `${p?.nick ?? '?'}: `;
+      text.append(who, document.createTextNode(m.body.length > 160 ? m.body.slice(0, 160) + '…' : m.body));
+      const acts = document.createElement('div'); acts.className = 'soc-acts';
+      const close = (): void => { t.classList.add('out'); setTimeout(() => t.remove(), 250); };
+      acts.append(btn(tx('Odpowiedz', 'Reply'), () => { close(); go.chat(m.from_id); }, 'btn-ok soc-btn'));
+      const x = btn('✕', close, 'soc-x'); x.setAttribute('aria-label', tx('Zamknij', 'Close'));
+      body.append(text, acts);
+      t.append(av, mark, body, x);
+      stack.prepend(t);
+      while (stack.children.length > 4) stack.lastElementChild?.remove();
+      go.sound?.();
+      setTimeout(close, 10_000);
+    });
+  });
   onFreshNotice((n: Notice) => {
     if (n.kind === 'invite' || go.quiet()) return;
     const t = document.createElement('div');

@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.78.0 — 2.11.2026
+- Migracja `20261102e_messages.sql`: `messages` (RLS: tylko do znajomych, odbiorca zmienia tylko `read`, wyzwalacz blokuje resztę), realtime.
+- `src/net/messages.ts`, czat i lista rozmów w `friendsView.ts`, profil wydzielony do `playerProfile.ts` (`profileCard`, `openProfileModal`) — nick w rankingu i w pokoju otwiera okno profilu; okienko nowej wiadomości w `socialToasts.ts`.
+
 ## 0.77.4 — 2.11.2026
 - Migracja `20261102d_seen_backfill.sql`: uzupełnienie `last_seen`/`last_played`/`avatar`, `note_notify` i `admin_note` bez wyjątku dla autora.
 

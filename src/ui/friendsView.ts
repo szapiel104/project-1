@@ -1,7 +1,9 @@
-import { befriend, friendLists, noticesNow, onNotices, playerById, playerMatches, recentPlayers, searchPlayers, statsOf, unfriend, type FriendLists, type Notice, type Player, type Stats } from '../net/social';
-import { onlinePlayers, type OnlinePlayer } from '../net/supa';
-import { BADGES, levelOf, titleOf } from '../data/progress';
-import { modeText, noticeText } from './noticeText';
+import { befriend, friendLists, noticesNow, onNotices, recentPlayers, searchPlayers, statsOf, unfriend, type FriendLists, type Notice, type Player, type Stats } from '../net/social';
+import { conversation, conversations, markRead, onMessage, onMessages, sendMessage, unreadAll, unreadFrom, type Message } from '../net/messages';
+import { profileCard } from './playerProfile';
+import { me, onlinePlayers, type OnlinePlayer } from '../net/supa';
+import { levelOf, titleOf } from '../data/progress';
+import { noticeText } from './noticeText';
 import { lang, tx } from '../i18n';
 
 /**
@@ -52,7 +54,7 @@ export function whereText(p: Player, o: OnlinePlayer | undefined): string {
 const PER_PAGE = 12;
 const ACTIVITY = new Set<Notice['kind']>(['friend_match', 'friend_level', 'friend_accept', 'friend_badge']);
 
-export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string): { node: HTMLElement; redraw(): void; stop(): void } {
+export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string, startChat?: string): { node: HTMLElement; redraw(): void; stop(): void } {
   const { el, button } = d;
   const wrap = el('div', 'net-friends friends-steam');
   const summary = el('div', 'fr-summary');
@@ -65,9 +67,12 @@ export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string)
   let lists: FriendLists = { friends: [], incoming: [], outgoing: [] };
   let stats = new Map<string, Stats>();
   const tabBtns: HTMLButtonElement[] = [];
-  const TABS = 4;
+  const TABS = 5;
+  // zakładki: 0 znajomi, 1 wiadomości, 2 aktywność, 3 zaproszenia, 4 szukaj
+  let chatWith: string | null = startChat ?? null;
+  if (startChat) tab = 1;
   for (let i = 0; i < TABS; i++) {
-    const b = button('', () => { tab = i; profileOf = null; page = 0; paint(true); }, 'menu-tab');
+    const b = button('', () => { tab = i; profileOf = null; chatWith = null; page = 0; paint(true); }, 'menu-tab');
     b.setAttribute('role', 'tab'); b.setAttribute('aria-controls', pane.id);
     tabBtns.push(b); nav.append(b);
   }
@@ -149,6 +154,8 @@ export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string)
     const acts: HTMLElement[] = [];
     if (o?.where === 'room' && o.roomId) acts.push(button(tx('Dołącz', 'Join'), () => d.join(o.roomId!), 'menu-btn btn-ok fr-btn'));
     if (!o || o.where !== 'game') acts.push(quick(tx('Zaproś do gry', 'Invite to a game'), tx('Zaproszono ✓', 'Invited ✓'), () => d.invite(p), 'menu-btn btn-ok fr-btn'));
+    const n = unreadFrom(p.id);
+    acts.push(button(n ? tx(`Napisz · ${n} nowe`, `Message · ${n} new`) : tx('Napisz', 'Message'), () => openChat(p.id), n ? 'menu-btn btn-ok fr-btn fr-hot' : 'menu-btn fr-btn'));
     acts.push(button(tx('Profil', 'Profile'), () => openProfile(p.id), 'menu-btn fr-btn'));
     acts.push(confirmBtn('✕', tx('Usunąć?', 'Remove?'), () => { move(p, 'none'); say(tx(`Usunięto ${p.nick} ze znajomych.`, `Removed ${p.nick} from friends.`)); paint(true); void unfriend(p.id); }, 'menu-btn btn-danger fr-btn fr-x'));
     (acts[acts.length - 1] as HTMLElement).setAttribute('aria-label', tx(`Usuń ${p.nick} ze znajomych`, `Remove ${p.nick} from friends`));
@@ -258,86 +265,112 @@ export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string)
 
   // ---------- profil gracza ----------
   const openProfile = (id: string): void => { profileOf = id; paint(true); };
-  const profileView = (id: string): Node[] => {
-    const box = el('div', 'fr-profile');
-    const back = button(tx('← Wróć', '← Back'), () => { profileOf = null; paint(true); }, 'menu-btn fr-btn fr-back');
-    box.append(back, el('p', 'net-msg', tx('Wczytuję profil…', 'Loading the profile…')));
-    void (async () => {
-      const p = [...lists.friends, ...lists.incoming, ...lists.outgoing].find((x) => x.id === id) ?? await playerById(id);
-      const st = (await statsOf([id])).get(id);
+  // ---------- wiadomości ----------
+  const openChat = (id: string): void => { chatWith = id; profileOf = null; tab = 1; paint(true); };
+  let appendMsg: ((m: Message) => void) | null = null;
+  const fmtTime = (iso: string): string => new Date(iso).toLocaleString(lang() === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  const messagesTab = (): Node[] => {
+    const box = el('div', 'fr-convs');
+    box.append(el('p', 'net-msg', tx('Wczytuję rozmowy…', 'Loading conversations…')));
+    void conversations().then((last) => {
       if (!box.isConnected) return;
-      if (!p) { box.replaceChildren(back, el('p', 'net-msg bad', tx('Nie ma takiego gracza.', 'No such player.'))); return; }
-      if (st) stats.set(id, st);
-      const s: Stats = st ?? { xp: 0, level: 1, matches: 0, wins: 0, kills: 0 };
-      const lv = levelOf(s.xp);
-      const o = online(id);
-      const hero = el('div', 'fr-hero');
-      const crest = el('div', 'fr-hero-crest'); crest.append(d.shield(o?.avatar ?? p.avatar, 132));
-      const id2 = el('div', 'fr-hero-id');
-      const bar = el('div', 'house-xp'); const fill = el('span', 'house-xp-fill'); fill.style.width = `${Math.round((lv.into / lv.need) * 100)}%`; bar.append(fill);
-      id2.append(el('h3', 'fr-hero-name', p.nick), el('p', 'fr-hero-title', `${titleOf(lv.level)} · ${tx('poziom', 'level')} ${lv.level}`), bar,
-        el('p', 'fr-hero-xp', `${lv.into} / ${lv.need} ${tx('PD do następnego poziomu', 'XP to the next level')}`), statusDot(p), el('p', 'fr-where', whereText(p, o)));
-      const acts = el('div', 'fr-acts');
-      acts.append(...(relation(id) === 'friend' ? friendActs(p).filter((b) => b.textContent !== tx('Profil', 'Profile')) : relationActs(p).filter((b) => b.textContent !== tx('Profil', 'Profile'))));
-      id2.append(acts);
-      hero.append(crest, id2);
-      // statystyki
-      const dl = el('dl', 'house-stats fr-stats');
-      const rate = s.matches ? `${Math.round((s.wins / s.matches) * 100)}%` : '—';
-      const hours = s.minutes ? `${Math.floor(s.minutes / 60)} h ${s.minutes % 60} min` : '—';
-      for (const [k, v] of [[tx('Bitwy', 'Battles'), String(s.matches)], [tx('Zwycięstwa', 'Victories'), String(s.wins)], [tx('Skuteczność', 'Win rate'), rate],
-        [tx('Wygrane przez sieć', 'Online wins'), String(s.online_wins ?? 0)], [tx('Pokonani wrogowie', 'Foes slain'), String(s.kills)], [tx('Zburzone budynki', 'Buildings razed'), String(s.razed ?? 0)],
-        [tx('Postawione budynki', 'Buildings raised'), String(s.built ?? 0)], [tx('Czas w bitwach', 'Time in battle'), hours]] as const) {
-        const c = el('div', 'house-stat'); c.append(el('dt', '', k), el('dd', '', v)); dl.append(c);
+      const meId = me()?.id;
+      // najpierw rozmowy (od najnowszej), potem znajomi, z którymi jeszcze nie pisałeś
+      const withMsg = lists.friends.filter((p) => last.has(p.id)).sort((a, b) => last.get(b.id)!.created_at.localeCompare(last.get(a.id)!.created_at));
+      const rest = lists.friends.filter((p) => !last.has(p.id));
+      if (!lists.friends.length) { box.replaceChildren(el('p', 'net-msg fr-empty', tx('Pisać można do znajomych — najpierw dodaj kogoś w „Szukaj graczy”.', 'You can message friends — add someone in “Find players” first.'))); return; }
+      const ul = el('ul', 'fr-conv-list');
+      for (const p of [...withMsg, ...rest]) {
+        const m = last.get(p.id);
+        const n = unreadFrom(p.id);
+        const li = el('li');
+        const b = button('', () => openChat(p.id), `fr-conv${n ? ' hot' : ''}`);
+        const txt = el('span', 'fr-conv-txt');
+        txt.append(el('strong', '', p.nick), el('span', 'fr-conv-last', m ? `${m.from_id === meId ? tx('Ty: ', 'You: ') : ''}${m.body}` : tx('Napisz pierwszą wiadomość', 'Write the first message')));
+        b.append(d.shield(online(p.id)?.avatar ?? p.avatar, 40), txt, el('span', 'fr-conv-when', m ? ago(m.created_at) : ''));
+        if (n) b.append(el('span', 'fr-conv-n', String(n)));
+        li.append(b);
+        ul.append(li);
       }
-      // odznaki
-      const bs = { ...s, level: lv.level };
-      const got = BADGES.filter((b) => b.of(bs) >= b.goal);
-      const badges = el('ul', 'fr-badges');
-      for (const b of BADGES) {
-        const ok = b.of(bs) >= b.goal;
-        const li = el('li', ok ? 'fr-badge got' : 'fr-badge', lang() === 'en' ? b.en[0] : b.pl[0]);
-        li.title = lang() === 'en' ? b.en[1] : b.pl[1];
-        badges.append(li);
-      }
-      // mecze
-      const matchBox = el('div', 'fr-matches');
-      matchBox.append(el('p', 'net-msg', tx('Wczytuję mecze…', 'Loading matches…')));
-      box.replaceChildren(back, hero, el('h4', 'house-h', tx('Statystyki', 'Statistics')), dl,
-        el('h4', 'house-h', tx(`Odznaki · ${got.length} z ${BADGES.length}`, `Badges · ${got.length} of ${BADGES.length}`)), badges,
-        el('h4', 'house-h', tx('Ostatnie bitwy', 'Recent battles')), matchBox);
-      const ms = await playerMatches(id, 15);
-      if (!matchBox.isConnected) return;
-      if (typeof ms === 'string') { matchBox.replaceChildren(el('p', 'net-msg', ms)); return; }
-      if (!ms.length) { matchBox.replaceChildren(el('p', 'net-msg', tx('Jeszcze bez bitew.', 'No battles yet.'))); return; }
-      const table = el('table', 'house-table');
-      const tr0 = el('tr');
-      for (const h of [tx('Kiedy', 'When'), tx('Rodzaj', 'Type'), tx('Wynik', 'Result'), tx('Czas', 'Time'), tx('Wrogowie', 'Foes'), tx('Zburzone', 'Razed'), tx('PD', 'XP')]) { const th = el('th', '', h); th.scope = 'col'; tr0.append(th); }
-      const th0 = el('thead'); th0.append(tr0);
-      const tb = el('tbody');
-      for (const m of ms) {
-        const tr = el('tr');
-        tr.append(el('td', '', ago(m.created_at)), el('td', '', modeText(m.mode)), el('td', m.won ? 'won' : 'lost', m.won ? tx('Zwycięstwo', 'Victory') : tx('Porażka', 'Defeat')),
-          el('td', '', `${m.minutes} min`), el('td', '', String(m.kills)), el('td', '', String(m.razed)), el('td', 'xp', `+${m.xp}`));
-        tb.append(tr);
-      }
-      table.append(th0, tb);
-      matchBox.replaceChildren(table);
-    })();
+      box.replaceChildren(ul);
+    });
     return [box];
   };
+  const chatView = (id: string): Node[] => {
+    const p = lists.friends.find((x) => x.id === id) ?? lists.incoming.find((x) => x.id === id) ?? lists.outgoing.find((x) => x.id === id);
+    const head = el('div', 'fr-chat-head'); head.dataset.with = id;
+    const back = button(tx('← Rozmowy', '← Conversations'), () => { chatWith = null; appendMsg = null; paint(true); }, 'menu-btn fr-btn');
+    const who = el('button', 'fr-name', p?.nick ?? '…'); who.type = 'button'; who.addEventListener('click', () => openProfile(id));
+    head.append(back, d.shield(online(id)?.avatar ?? p?.avatar ?? 0, 40), who);
+    if (p) head.append(statusDot(p));
+    const log = el('div', 'fr-chat-log'); log.setAttribute('role', 'log'); log.setAttribute('aria-live', 'polite');
+    const meId = me()?.id;
+    let lastDay = '';
+    const bubble = (m: Message): void => {
+      const day = new Date(m.created_at).toDateString();
+      if (day !== lastDay) { lastDay = day; log.append(el('div', 'fr-chat-day', new Date(m.created_at).toLocaleDateString(lang() === 'en' ? 'en-GB' : 'pl-PL', { weekday: 'long', day: 'numeric', month: 'long' }))); }
+      const mine = m.from_id === meId;
+      const b = el('div', `fr-msg ${mine ? 'mine' : 'theirs'}`);
+      b.append(el('span', 'fr-msg-body', m.body), el('span', 'fr-msg-when', fmtTime(m.created_at)));
+      log.append(b);
+      log.scrollTop = log.scrollHeight;
+    };
+    appendMsg = (m) => { bubble(m); void markRead(id); };
+    const form = el('form', 'fr-chat-form');
+    const iid = `${pane.id}-chat`;
+    const lab = el('label', 'sr-only', tx('Wiadomość', 'Message')); lab.htmlFor = iid;
+    const input = el('textarea', 'fr-chat-input'); input.id = iid; input.rows = 2; input.maxLength = 1000;
+    input.placeholder = tx('Napisz wiadomość… (Enter — wyślij, Shift+Enter — nowa linia)', 'Write a message… (Enter — send, Shift+Enter — new line)');
+    const send = el('button', 'menu-btn btn-ok fr-btn', tx('Wyślij', 'Send')); send.type = 'submit';
+    const err = el('p', 'net-msg bad fr-chat-err'); err.setAttribute('role', 'status');
+    form.append(lab, input, send);
+    const go = async (): Promise<void> => {
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = ''; err.textContent = '';
+      // od razu w rozmowie (szary dymek), po zapisie w bazie — prawdziwy
+      const temp: Message = { id: -Date.now(), from_id: meId ?? '', to_id: id, body: text, read: false, created_at: new Date().toISOString() };
+      bubble(temp);
+      const pending = log.lastElementChild as HTMLElement; pending.classList.add('pending');
+      const r = await sendMessage(id, text);
+      if (typeof r === 'string') { pending.classList.add('failed'); err.textContent = r; input.value = text; return; }
+      pending.classList.remove('pending');
+    };
+    form.addEventListener('submit', (e) => { e.preventDefault(); void go(); });
+    input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void go(); } });
+    log.append(el('p', 'net-msg', tx('Wczytuję rozmowę…', 'Loading the conversation…')));
+    void conversation(id).then((ms) => {
+      log.replaceChildren();
+      if (typeof ms === 'string') { log.append(el('p', 'net-msg', ms)); return; }
+      if (!ms.length) log.append(el('p', 'net-msg fr-empty', tx('Jeszcze nic nie napisaliście. Zacznij rozmowę!', 'Nothing written yet. Start the conversation!')));
+      for (const m of ms) bubble(m);
+      void markRead(id);
+    });
+    setTimeout(() => input.focus(), 0);
+    return [head, log, err, form];
+  };
 
+  const profileView = (id: string): Node[] => {
+    const back = button(tx('← Wróć', '← Back'), () => { profileOf = null; paint(true); }, 'menu-btn fr-btn fr-back');
+    const known = [...lists.friends, ...lists.incoming, ...lists.outgoing].find((x) => x.id === id);
+    const card = profileCard(id, { el, button, shield: d.shield }, (p) => {
+      const acts = relation(id) === 'friend' ? friendActs(p) : relationActs(p);
+      return acts.filter((b) => b.textContent !== tx('Profil', 'Profile'));
+    }, known);
+    return [back, card];
+  };
   // ---------- rysowanie ----------
   const paintTabs = (): void => {
     const on = lists.friends.filter((p) => online(p.id)).length;
     const act = noticesNow().filter((n) => ACTIVITY.has(n.kind) && !n.read).length;
     const names = [
       tx(`Znajomi · ${lists.friends.length}`, `Friends · ${lists.friends.length}`),
+      unreadAll() ? tx(`Wiadomości · ${unreadAll()} nowe`, `Messages · ${unreadAll()} new`) : tx('Wiadomości', 'Messages'),
       act ? tx(`Aktywność · ${act} nowe`, `Activity · ${act} new`) : tx('Aktywność', 'Activity'),
       lists.incoming.length ? tx(`Zaproszenia · ${lists.incoming.length}`, `Requests · ${lists.incoming.length}`) : tx('Zaproszenia', 'Requests'),
       tx('Szukaj graczy', 'Find players'),
     ];
-    names.forEach((n, i) => { tabBtns[i]!.textContent = n; tabBtns[i]!.setAttribute('aria-selected', String(i === tab && !profileOf)); tabBtns[i]!.tabIndex = i === tab ? 0 : -1; });
+    names.forEach((n, i) => { tabBtns[i]!.textContent = n; tabBtns[i]!.setAttribute('aria-selected', String(i === tab && !profileOf)); tabBtns[i]!.classList.toggle('fr-tab-hot', i === 1 && unreadAll() > 0); tabBtns[i]!.tabIndex = i === tab ? 0 : -1; });
     summary.replaceChildren(
       el('span', 'fr-sum', tx(`W grze: ${on}`, `Online: ${on}`)),
       el('span', 'fr-sum', tx(`Znajomych: ${lists.friends.length}`, `Friends: ${lists.friends.length}`)),
@@ -348,8 +381,8 @@ export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string)
   const paint = (full: boolean): void => {
     paintTabs();
     const typing = pane.contains(document.activeElement) && (document.activeElement as HTMLElement).tagName === 'INPUT';
-    if (!full && (tab === 3 || typing || profileOf)) return;
-    pane.replaceChildren(...(profileOf ? profileView(profileOf) : tab === 0 ? friendsTab() : tab === 1 ? activityTab() : tab === 2 ? requestsTab() : searchTab()));
+    if (!full && (tab === 4 || typing || profileOf || chatWith)) return;
+    pane.replaceChildren(...(profileOf ? profileView(profileOf) : chatWith ? chatView(chatWith) : tab === 0 ? friendsTab() : tab === 1 ? messagesTab() : tab === 2 ? activityTab() : tab === 3 ? requestsTab() : searchTab()));
   };
   let seq = 0;
   const load = async (full: boolean): Promise<void> => {
@@ -363,9 +396,12 @@ export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string)
   nav.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
     e.preventDefault(); e.stopPropagation();
-    tab = (tab + (e.key === 'ArrowRight' ? 1 : TABS - 1)) % TABS; profileOf = null; page = 0; paint(true); tabBtns[tab]!.focus();
+    tab = (tab + (e.key === 'ArrowRight' ? 1 : TABS - 1)) % TABS; profileOf = null; chatWith = null; page = 0; paint(true); tabBtns[tab]!.focus();
   });
-  const offN = onNotices(() => { if (tab === 1 && !profileOf) paint(true); else paintTabs(); });
+  const offN = onNotices(() => { if (tab === 2 && !profileOf && !chatWith) paint(true); else paintTabs(); });
+  // nowa wiadomość: otwarta rozmowa dopisuje ją od razu, lista rozmów się odświeża, liczniki na zakładce i kafelkach też
+  const offM = onMessage((msg) => { if (chatWith === msg.from_id) appendMsg?.(msg); else if (tab === 1 && !profileOf && !chatWith) paint(true); });
+  const offU = onMessages(() => { paintTabs(); if (tab === 0 && !profileOf && !chatWith && !(pane.contains(document.activeElement) && (document.activeElement as HTMLElement).tagName === 'INPUT')) paint(true); });
   void load(true);
-  return { node: wrap, redraw: () => void load(false), stop: offN };
+  return { node: wrap, redraw: () => void load(false), stop: () => { offN(); offM(); offU(); } };
 }

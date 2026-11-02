@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.78.0', date: '2026-11-02',
+    pl: [
+      'Wiadomości do znajomych: nowa zakładka „Wiadomości” w panelu znajomych z listą rozmów (ostatnia wiadomość, kiedy, ile nowych), czat z dymkami, dniami i godzinami, Enter wysyła, Shift+Enter — nowa linia. Wiadomość pojawia się u znajomego od razu.',
+      'Nowa wiadomość: okienko w rogu ekranu z treścią i przyciskiem „Odpowiedz” (w menu i w grze z botami), licznik na belce przy „Znajomi”, na zakładce i na kafelku znajomego („Napisz · 2 nowe”).',
+      'Profil każdego gracza z rankingu i z pokoju gry: klik w nick otwiera okno z herbem, poziomem, statystykami, odznakami i bitwami — bez wychodzenia z pokoju; stamtąd też „Dodaj do znajomych” albo „Napisz”.',
+    ],
+    en: [
+      'Messages to friends: a new “Messages” tab in the friends panel with a list of conversations (last message, when, how many new), a chat with bubbles, days and times, Enter sends, Shift+Enter adds a line. The message reaches your friend at once.',
+      'New message: a pop-up in the corner with the text and a “Reply” button (in the menu and in games against bots), a counter on the bar next to “Friends”, on the tab and on the friend’s tile (“Message · 2 new”).',
+      'Every player’s profile from the ranking and the game room: clicking a nickname opens a window with their coat of arms, level, statistics, badges and battles — without leaving the room; from there you can also “Add friend” or “Message”.',
+    ],
+  },
+  {
     v: '0.77.4', date: '2026-11-02',
     pl: ['Znajomi: „był” i „grał” widać także u graczy, którzy nie wchodzili od aktualizacji (z ostatniego logowania i ostatniego meczu).', 'Nowa uwaga testera trafia do dzwoneczka każdego administratora, także gdy dodał ją sam; „zrobione” dostaje autor zawsze.'],
     en: ['Friends: “seen” and “played” now also show for players who have not logged in since the update (from their last sign-in and last match).', 'A new tester note reaches every administrator’s bell, even when they wrote it themselves; the author always gets “done”.'],
