@@ -1,5 +1,6 @@
 import { gameTagline, loadingScene } from './loadscreen';
-import { isTester, me as netMe, onAccount, progress, restore } from '../net/supa';
+import { isTester, me as netMe, onAccount, onlinePlayers, onPresence, progress, restore } from '../net/supa';
+import { friendLists, noticesNow, onNotices } from '../net/social';
 import { levelOf, titleOf } from '../data/progress';
 import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
@@ -290,7 +291,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       const go = el('span', 'acc-go'); go.setAttribute('aria-hidden', 'true'); go.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M9 5l7 7-7 7"/></svg>';
       who.append(seal, txt, go);
       who.addEventListener('click', () => online.showHouse());
-      account.append(who, bell);
+      account.append(who);
     } else {
       const box = el('div', 'acc-guest');
       box.append(el('strong', 'acc-nick', tx('Gość', 'Guest')), el('span', 'acc-level', tx('Zaloguj się, by zbierać poziomy i tytuły', 'Sign in to earn levels and ranks')));
@@ -304,6 +305,28 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   onAccount(() => { paintAccount(); if (panel.hidden) paintBar(); });
   void restore();
   wrap.append(account);
+  // belka w prawym górnym rogu jak w panelach aplikacji (Michał 2.11.2026): wersja, znajomi z liczbą w grze, dzwoneczek
+  const topbar = el('div', 'menu-topbar');
+  const ver = el('span', 'tb-ver', tx(`wersja ${BUILD}`, `version ${BUILD}`));
+  const friendsTb = button('', () => online.showFriends(0), 'tb-btn tb-friends');
+  let friendIds = new Set<string>();
+  const paintTop = (): void => {
+    const m = netMe();
+    topbar.hidden = !m;
+    const on = onlinePlayers().filter((o) => friendIds.has(o.id)).length;
+    const ico = el('span', 'tb-ico'); ico.setAttribute('aria-hidden', 'true');
+    ico.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.6c2.7 0 4.7 1.6 5.5 4.6"/></svg>';
+    friendsTb.replaceChildren(ico, el('span', '', tx('Znajomi', 'Friends')));
+    if (on) friendsTb.append(el('span', 'tb-count', tx(`${on} w grze`, `${on} online`)));
+    friendsTb.setAttribute('aria-label', on ? tx(`Znajomi — ${on} w grze`, `Friends — ${on} online`) : tx('Znajomi', 'Friends'));
+  };
+  const loadFriendIds = (): void => { void friendLists().then((l) => { friendIds = new Set(l.friends.map((p) => p.id)); paintTop(); }); };
+  topbar.append(ver, friendsTb, bell);
+  wrap.append(topbar);
+  onPresence(paintTop);
+  onAccount(loadFriendIds);
+  onNotices(() => { if (noticesNow().some((n) => !n.read && (n.kind === 'friend_accept'))) loadFriendIds(); });
+  loadFriendIds();
   paintAccount();
 
   /**

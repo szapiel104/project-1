@@ -172,6 +172,22 @@ end $$;
 revoke all on function public.player_matches(uuid, integer) from public, anon;
 grant execute on function public.player_matches(uuid, integer) to authenticated;
 
+-- uwagi testerów z edytora (formatowanie zapisane jako oczyszczony HTML): limit długości większy niż 2000 znaków tekstu
+alter table public.tester_notes drop constraint if exists tester_notes_body_check;
+alter table public.tester_notes add constraint tester_notes_body_check check (char_length(body) between 3 and 12000);
+-- skrót w dzwoneczku bez znaczników HTML
+create or replace function public.note_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare av integer;
+begin
+  select avatar into av from profiles where id = new.author;
+  insert into notifications (user_id, kind, from_id, from_nick, from_avatar, payload)
+  select a.user_id, 'note', new.author, new.nick, coalesce(av, 0),
+         jsonb_build_object('note', new.id, 'text', left(btrim(regexp_replace(regexp_replace(new.body, '<[^>]*>', ' ', 'g'), '\s+', ' ', 'g')), 120))
+    from admins a where a.user_id <> new.author;
+  return new;
+end $$;
+
 -- dzwoneczek odświeża się na żywo
 do $$ begin
   alter publication supabase_realtime add table public.notifications;

@@ -232,17 +232,25 @@
 .notes-page { font-size: 14px; color: #e6d6b4; }
 .note.focus { outline: 2px solid #f0c75a; outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-/* edytor uwag: pasek formatowania, podgląd, treść z pogrubieniami i kolorami */
-.rich-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; background: rgba(20, 14, 8, .45); border: 1px solid #9a7838; border-bottom: 0; }
-.rich-bar + .note-area { border-top-left-radius: 0; border-top-right-radius: 0; }
+/* edytor uwag (jak w Wordzie): pasek narzędzi, pole z widocznym formatowaniem, licznik znaków */
+.rich-editor { display: grid; border: 1px solid #9a7838; background: #241a11; }
+.rich-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 6px; background: rgba(20, 14, 8, .6); border-bottom: 1px solid rgba(154, 122, 42, .6); }
 .rich-tool { min-width: 36px; min-height: 36px; padding: 0 8px; font: 700 16px/1 Georgia, serif; color: #f6ecd6; background: #43382a; border: 1px solid #8f7a55; border-radius: 2px; cursor: pointer; }
 .rich-tool:hover { background: #5c4f3c; }
+.rich-tool[aria-pressed='true'] { color: #2a1d0c; background: #e6c06a; border-color: #ffd76a; }
 .rich-tool:focus-visible { outline: 2px solid #f0c75a; outline-offset: 1px; }
+.rich-sep { width: 1px; height: 26px; margin: 0 4px; background: rgba(226, 200, 144, .35); }
 .rich-color { display: grid; place-items: center; }
 .rich-swatch { display: block; width: 18px; height: 18px; border: 1px solid #0e0906; }
-.rich-preview { padding: 10px 12px; border: 1px dashed rgba(226, 200, 144, .5); background: rgba(20, 14, 8, .3); }
-.rich-preview-label { display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #d8c6a0; }
-.rich p { margin: 0 0 4px; }
+.rich-swatch.rich-mark { display: grid; place-items: center; font: 700 12px/1 sans-serif; color: #fff4dc; background: #7a5a12; }
+.rich-area { min-height: 150px; max-height: 420px; overflow: auto; padding: 10px 12px; font-size: 16px; line-height: 1.5; color: #fff4dc; outline: none; overflow-wrap: anywhere; }
+.rich-area:focus { box-shadow: inset 0 0 0 2px #f0c75a; }
+.rich-area.empty::before { content: attr(data-placeholder); color: #a89a82; pointer-events: none; }
+.rich-foot { display: flex; justify-content: space-between; gap: 10px; padding: 4px 10px; font-size: 12px; color: #d8c6a0; border-top: 1px solid rgba(154, 122, 42, .35); }
+.rich-foot .bad { color: #ff8a7a; font-weight: 700; }
+.rich p, .rich div { margin: 0 0 4px; }
 .rich p.rich-gap { height: 6px; margin: 0; }
-.rich ul, .rich ol { margin: 2px 0 6px; padding-left: 22px; }
-.rich .rich-h { display: block; margin: 4px 0; font-size: 17px; color: #ffd76a; }
+.rich ul, .rich ol { margin: 2px 0 6px; padding-left: 24px; }
+.rich h3 { margin: 6px 0 4px; font-size: 18px; color: #ffd76a; }
+.rich blockquote { margin: 4px 0; padding: 4px 12px; border-left: 3px solid #e6c06a; color: #e6d6b4; background: rgba(0, 0, 0, .2); }
+.rich mark { color: inherit; padding: 0 2px; }

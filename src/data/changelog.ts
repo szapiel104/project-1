@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.77.1', date: '2026-11-02',
+    pl: [
+      'Belka w prawym górnym rogu menu, jak w panelach aplikacji: wersja gry, przycisk „Znajomi” z liczbą znajomych w grze i dzwoneczek — powiadomienia rozwijają się w dół, nie uciekają już pod ekran.',
+      'Edytor uwag testera jak w Wordzie: pogrubienie, kursywa, podkreślenie i kolory widać od razu w polu (bez znaczników). Do tego przekreślenie, nagłówek, cytat, listy, pięć kolorów, zakreślacz, czyszczenie formatowania, cofnij i ponów, licznik znaków i wysyłanie Ctrl+Enter.',
+    ],
+    en: [
+      'A bar in the top-right corner of the menu, like in app dashboards: the game version, a “Friends” button with how many friends are online, and the bell — notifications open downwards instead of slipping off the screen.',
+      'The tester notes editor works like a word processor: bold, italic, underline and colours show straight away in the box (no markers). Plus strikethrough, heading, quote, lists, five colours, a highlighter, clear formatting, undo and redo, a character counter and sending with Ctrl+Enter.',
+    ],
+  },
+  {
     v: '0.77.0', date: '2026-11-02',
     pl: [
       'Nowy, duży panel znajomych: kafelki z dużym herbem, poziomem i tytułem, kolorowa kropka (dostępny, w grze, offline), gdzie jest i kiedy grał ostatnio, krótkie statystyki; filtr po nicku, „W grze / Offline”, sortowanie i strony.',

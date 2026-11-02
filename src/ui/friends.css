@@ -81,3 +81,16 @@ body .menu .menu-panel .menu-btn.fr-btn.fr-done { filter: none; opacity: 1; colo
 @keyframes soc-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .soc-toast { animation: none; transition: none; } }
 @media (max-width: 720px) { .fr-hero { grid-template-columns: 1fr; } .fr-grid { grid-template-columns: 1fr; } }
+
+/* belka w prawym górnym rogu menu: wersja, znajomi, dzwoneczek (jak w panelach aplikacji) */
+body.menu-open .build { display: none; }
+.menu .menu-topbar { position: absolute; z-index: 40; top: 12px; right: 16px; display: flex; align-items: center; gap: 8px; }
+.menu .menu-topbar[hidden] { display: none; }
+.menu .tb-ver { padding: 6px 10px; font-size: 13px; color: #e6d6b4; background: rgba(20, 14, 8, .7); border: 1px solid rgba(154, 122, 42, .5); }
+.menu .tb-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 14px; font: 700 14px/1 var(--label, sans-serif); letter-spacing: .04em; color: #f6ecd6;
+  background-image: var(--tone-n); border: 1px solid #120c08; border-radius: 2px; box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #a8916a; cursor: pointer; }
+.menu .tb-btn:hover { background-image: var(--tone-n-hi); color: #fff; }
+.menu .tb-btn:focus-visible, .menu .bell-btn:focus-visible { outline: 2px solid #f0c75a; outline-offset: 3px; }
+.menu .tb-count { padding: 3px 8px; font-size: 12px; color: #effff0; background: #2f6b3a; border: 1px solid #5fae6c; }
+.menu .menu-topbar .bell { margin: 0; }
+.menu .menu-topbar .bell-btn { width: 44px; height: 44px; }

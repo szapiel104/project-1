@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.77.1 — 2.11.2026
+- `richNote.ts`: edytor contenteditable + execCommand; zapis jako HTML z białej listy (`cleanRich`), ponowne czyszczenie przy wyświetlaniu; starsze znaczniki dalej działają. Migracja c: limit treści uwagi 12000, skrót w dzwoneczku bez HTML.
+- `menu.ts`: `.menu-topbar` (wersja, Znajomi z licznikiem, dzwoneczek); dzwoneczek zdjęty z karty konta.
+
 ## 0.77.0 — 2.11.2026
 - `friendsView.ts` od nowa: zakładki Znajomi / Aktywność / Zaproszenia / Szukaj, kafelki, profil (statystyki, odznaki, `player_matches`), przyciski natychmiastowe.
 - `socialToasts.ts` (okienka z `onFreshNotice`), `noticeText.ts` (wspólna treść dla dzwoneczka i okienek), `friends.css`.
