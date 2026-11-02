@@ -2,6 +2,7 @@
 
 ## 0.72.8 — 2.11.2026
 - Menu i logowanie jaśniej (theme-wow.css): lewa kolumna i `.menu-panel` z teksturą plaster na brązie, pola #2a1e13, `.menu-btn` jako płytki (główny pomarańczowy, `.menu-back` przygaszony). Sprawdzone zrzutem 1600×900.
+- Wdrożenia 0.72.4–0.72.8 padały na `tests/scene-split.test.ts` (nowe siatki duchów w walls.ts zmieniły kolejność InstancedMesh) — test pomija siatki „podgląd budowy”. Od teraz po pushu sprawdzamy wynik GitHub Actions.
 
 ## 0.72.7 — 2.11.2026
 - Pejzaż wczytywania i menu: nowy moduł `src/ui/vista.ts` (SVG: niebo, chmury, 3 pasma gór ze śniegiem z gradientu, dolina z rzeką, zamek na skale, smugi światła, świerki z oświetlonym brzegiem, ziarno); stary rysunek usunięty z loadscreen.ts.

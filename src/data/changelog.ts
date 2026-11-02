@@ -13,9 +13,11 @@ const NEW: ChangeEntry[] = [
     v: '0.72.8', date: '2026-11-02',
     pl: [
       'Menu i logowanie jaśniejsze: lewa kolumna i okna menu z ciepłego, średniego brązu z fakturą zamiast prawie czerni, jaśniejsze pola do wpisywania, a przyciski jak w grze — pomarańczowy główny i przygaszony „Wróć”.',
+      'Wersje 0.72.4–0.72.7 nie trafiły wcześniej na stronę (zatrzymał je test) — teraz wchodzą wszystkie naraz: duchy częstokołu, głębia kamienia, nowe okno budynku, jasny pejzaż.',
     ],
     en: [
       'A brighter menu and sign-in: the left column and menu windows in a warm mid brown with texture instead of near-black, lighter input fields, and buttons as in the game — an orange main one and a muted “Back”.',
+      'Versions 0.72.4–0.72.7 had not reached the site (a test held them back) — they all arrive now: palisade previews, stone depth, the new building window, the bright landscape.',
     ],
   },
   {

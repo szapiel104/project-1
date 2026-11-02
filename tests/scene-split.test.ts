@@ -184,8 +184,8 @@ describe('mury, koksowniki, place budowy (walls.ts, braziers.ts, sites.ts)', () 
     g.buildings.find((b) => b.id === sw)!.brazier = 1;
     const scene = new THREE.Scene(), walls = new WallLayer(scene);
     walls.sync(g, view, new Map());
-    // kolejność siatek: trzony bali, czubki bali, bloki muru, blanki, drabiny
-    const [shafts, tips, blocks, edges] = instanced(scene).map((m) => m.count);
+    // kolejność siatek: trzony bali, czubki bali, (duchy bali), bloki muru, blanki, drabiny (duchy budowy w walls.ts pomijamy)
+    const [shafts, tips, blocks, edges] = instanced(scene).filter((m) => !m.name.includes('podgląd budowy') && !(m.userData.cat ?? '').includes('podgląd budowy')).map((m) => m.count);
     expect(shafts).toBeGreaterThanOrEqual(9); // po kilka bali na każde z 3 pól palisady
     expect(tips).toBe(shafts);
     expect(blocks).toBe(2); // dwa pola muru kamiennego
