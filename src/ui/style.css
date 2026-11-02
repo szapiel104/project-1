@@ -2122,3 +2122,9 @@ body.menu-open .devpanel { display: none; }
 .menu:not(.previewing) .menu-bar .bar-main { min-height: clamp(46px, 5.6vh, 56px); font-size: clamp(18px, 2.5vh, 24px); }
 .menu:not(.previewing) .menu-hint { font-size: clamp(13px, 1.7vh, 15px); }
 .menu:not(.previewing) .game-tagline-what { font-size: clamp(13px, 1.7vh, 15px); }
+/* pauza w grze: świat w tle, a lewa kolumna jako pełny ciemny panel (w grze nie ma .menu-scene, więc tło idzie na samo
+   .menu); 0.70.12 przez pomyłkę zostawiło ją przezroczystą (Michał 2.11.2026: „pauza rozwalona”) */
+.menu.in-game:not(.previewing) {
+  background: linear-gradient(90deg, #130c08 0, #0d0805 calc(var(--col) - 1px), rgba(154, 122, 42, .6) calc(var(--col) - 1px), rgba(154, 122, 42, .6) var(--col), rgba(6, 3, 1, .45) var(--col), rgba(6, 3, 1, 0) calc(var(--col) + 280px));
+  box-shadow: none;
+}

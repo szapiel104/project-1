@@ -5862,7 +5862,9 @@ export class GameRenderer {
       st.phase += Math.min(0.5, Math.hypot(fx - st.x, fy - st.y)) * 7.5;
       st.x = fx; st.y = fy;
       const heading = Math.atan2(tr.tx / FP - fx, tr.ty / FP - fy);
-      const y = view.heightAt(fx, fy);
+      // jak zwykli chłopi: posadzka dziedzińca, most i mury liczą się ponad terenem (Michał 2.11.2026: nowi chłopi szli
+      // przez dziedziniec po pas w kamieniu — sam teren leży tam niżej niż bruk zamku)
+      const y = this.standY(view, fx, fy);
       t.position.set(fx - width / 2, y + (this.calm ? 0 : Math.abs(Math.cos(st.phase)) * 0.025), fy - height / 2);
       t.rotation.set(tr.leaving ? 0.12 : 0, heading, 0, 'YXZ'); // odchodzący idzie ze spuszczoną głową
       t.scale.setScalar(FIG);

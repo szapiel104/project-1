@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.71.4 — 2.11.2026
+- Układ: `.floaters .info` fixed w prawym górnym rogu (top 136 px), `fitInfo` liczy wysokość do belki; `.scribe` w lewym dolnym rogu (column-reverse), chowa się przy `body.build-open` (theme-wow.css).
+- Pauza: tło lewej kolumny na `.menu.in-game` (w grze nie ma `.menu-scene`). Romby ramy wewnątrz, `.panel { overflow-x: hidden }` — bez poziomego suwaka.
+- Bruk: pionowy bok nawierzchni od strony trawy (terrain.ts, od +4,5 cm do −3 cm).
+- Wędrowcy (nowi chłopi) stoją na `standY` zamiast `heightAt` — nie toną w posadzce dziedzińca.
+
 ## 0.71.3 — 2.11.2026
 - `theme-wow.css`: tekstury z `public/textures/cc0` (plaster, planks, iron) barwione `background-blend-mode: multiply` — okna, belka, sloty, przyciski, kategorie, kafelki; złota rama z rombami (`.panel::before/::after`); `.build-name` i `.cat` 16 px złote z cieniem 1 px. Pasy pergaminu na ekranie wczytywania wycofane. Kolory ciemniejsze i cieplejsze (Michał: „za szare, za jasne”).
 

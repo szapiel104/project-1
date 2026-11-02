@@ -650,19 +650,15 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   const fitInfo = (): void => {
     if (info.hidden || !info.isConnected) return;
     const k = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ui')) || 1;
-    const r = info.getBoundingClientRect();
-    if (!r.height) return;
-    // okno stoi na dolnej belce (bez przerwy), także gdy w tym samym rzędzie jest pasek grup wojska
+    // okno budynku / wojska stoi w prawym górnym rogu pod znacznikami (wersja, FPS, deweloper) i sięga najwyżej do dolnej
+    // belki (Michał 2.11.2026: okna w prawy górny róg, kronika w lewy dolny); w szufladzie rynku liczy się samo
+    if (info.closest('.market-info')) { info.style.maxHeight = ''; return; }
     const dockEl = root.querySelector<HTMLElement>('.dock');
-    if (dockEl) {
-      const mb = parseFloat(info.style.marginBottom || '0') || 0;
-      const rowBottom = r.bottom + mb * k;
-      const want = Math.round((rowBottom - (dockEl.getBoundingClientRect().top + 2 * k)) / k);
-      if (Math.abs(want - mb) >= 1) { info.style.marginBottom = `${want}px`; requestAnimationFrame(fitInfo); return; }
-    }
-    const top = 136 * k; // pod przyciskiem „Deweloper” (top 92 + 34 px w skali interfejsu) z małym zapasem
-    const want = `${Math.max(140, Math.floor((r.bottom - top) / k))}px`;
+    const top = 136 * k;
+    const bottom = (dockEl ? dockEl.getBoundingClientRect().top : window.innerHeight) - 10 * k;
+    const want = `${Math.max(140, Math.floor((bottom - top) / k))}px`;
     if (info.style.maxHeight !== want) info.style.maxHeight = want;
+    if (info.style.marginBottom) info.style.marginBottom = '';
   };
   setInterval(fitInfo, 300);
   window.addEventListener('resize', fitInfo);

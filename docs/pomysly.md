@@ -46,6 +46,15 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Towar pod drzwiami przy deszczu moknie (zboże i mąka powoli się psują), co dodatkowo zachęca do budowy magazynów
 - Złodzieje nocą (pomysł niżej) najpierw biorą to, co leży pod drzwiami
 
+## Kolejka Michała z 2.11.2026 (po kolei, odhaczać datą)
+- [ ] Pauza: lewa kolumna menu w grze bez tła (przezroczysta) — pełny ciemny panel.
+- [ ] Kronika w lewy dolny róg nad paskiem budowy (chowa się przy otwartym budowaniu); okna budynków i żołnierzy w prawy górny róg.
+- [ ] Kamienna droga: krawężniki lewitują i nie mają boku — osadzić w ziemi.
+- [ ] Nowi chłopi pojawiają się wpół w ziemi — mają przychodzić normalnie.
+- [ ] Ekran wczytywania: zamiast rysowanego pejzażu epicka grafika (render zamku z gry o zachodzie, filtry), w duchu WoW.
+- [ ] Motyw WoW (`src/ui/theme-wow.css`) sprawdzić we wszystkich oknach: budynki, ludzie, budowanie, Ustawienia, Jak grać, Co nowego; czytelne napisy.
+- [ ] Potem: tekstury kamienia murów i zamku, dachów (bez lustrzanych łusek) — żeby „czuć kamień”; wzór Twierdza 3, Twierdza: Krzyżowiec 2 (nieregularny ciosany kamień z głębią, ciemne fugi, mech/zabrudzenia u dołu).
+
 ## Zgłoszone przez Michała
 
 - **Progresja gracza (16.10.2026):** postać pana na zamku z poziomami i doświadczeniem (także za przegrane), drzewko umiejętności, tytuły, herb, nagrody na start, ranking, wyzwania, sezony, później świat/rody (MMO). Cały plan i partie: `docs/progresja.md`.

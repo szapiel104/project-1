@@ -1742,6 +1742,32 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
             else { uv2.push(plank ? qx / 1.2 : qx / 2.5, plank ? qy / 1.2 : qy / 2.5); uvMask.push(u, v); col3.push(shade.r, shade.g, shade.b); }
           }
         }
+      // Bok bruku (Michał 2.11.2026: „nie ma go na boku, plus trochę lewituje”): nawierzchnia leży 4,5 cm nad gruntem,
+      // więc na krawędzi drogi od strony trawy stawiamy pionową ściankę z tego samego kamienia, sięgającą 3 cm pod ziemię.
+      // Obie strony ścianki (dwie kolejności wierzchołków), bo gra nie rysuje tylnych ścian.
+      if (!soft && !plank) {
+        const paved = (nx: number, ny: number): boolean => nx >= 0 && ny >= 0 && nx < w && ny < h && roads[ny * w + nx] === kind;
+        const TOP = 0.045, LOW = -0.03;
+        const side = (ax: number, ay: number, bx: number, by: number): void => {
+          const ha = heightAt(ax, ay), hb = heightAt(bx, by);
+          const q = [[ax, ay, ha + TOP, 0, 1], [bx, by, hb + TOP, 1, 1], [ax, ay, ha + LOW, 0, 0], [ax, ay, ha + LOW, 0, 0], [bx, by, hb + TOP, 1, 1], [bx, by, hb + LOW, 1, 0]] as const;
+          for (const order of [[0, 1, 2, 3, 4, 5], [0, 2, 1, 3, 5, 4]]) for (const i of order) {
+            const [qx, qy, qh, u, v] = q[i]!;
+            p3.push(qx + ox, qh, qy + oz);
+            uv2.push((qx + qy) / 2.5, (qh * 4) / 2.5);
+            uvMask.push(u, v * 0.12);
+            col3.push(0.36, 0.35, 0.33);
+          }
+        };
+        for (let y = 0; y < h; y++)
+          for (let x = 0; x < w; x++) {
+            if (!paved(x, y)) continue;
+            if (!paved(x - 1, y)) side(x, y, x, y + 1);
+            if (!paved(x + 1, y)) side(x + 1, y, x + 1, y + 1);
+            if (!paved(x, y - 1)) side(x, y, x + 1, y);
+            if (!paved(x, y + 1)) side(x, y + 1, x + 1, y + 1);
+          }
+      }
       // Rów liczony od strony trawy: każde pole bez bruku dostaje pas wzdłuż boków, którymi dotyka bruku.
       // Gdy bruk jest z dwóch stron (wewnętrzny róg), pasy schodzą się na ukos; przy zewnętrznym rogu bruku
       // rów zakręca łukiem. Dzięki temu nic się nie nakłada nawet wokół pojedynczego pola trawy.

@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.71.4', date: '2026-11-02',
+    pl: [
+      'Okna budynków i wojska stoją teraz w prawym górnym rogu, a kronika w lewym dolnym, nad dolną belką. Przy otwartym budowaniu kronika się chowa.',
+      'Pauza znów ma ciemny panel po lewej, a okna nie pokazują już poziomego suwaka.',
+      'Kamienna droga ma bok: nie wisi nad trawą jak płyta, tylko schodzi kamieniem do ziemi.',
+      'Nowi chłopi idący przez dziedziniec zamku nie brną już po pas w bruku.',
+    ],
+    en: [
+      'Building and army windows now sit in the top right corner, and the chronicle in the bottom left, above the bottom bar. While you build, the chronicle steps aside.',
+      'The pause screen has its dark left panel again, and windows no longer show a sideways scroll bar.',
+      'The stone road has a side: it no longer hovers over the grass like a slab, but runs down into the ground in stone.',
+      'Newcomers crossing the castle courtyard no longer wade waist-deep through the cobbles.',
+    ],
+  },
+  {
     v: '0.71.3', date: '2026-11-02',
     pl: [
       'Interfejs z teksturami jak w World of Warcraft: okna z ciemnego, ciepłego kamienia w złotej ramie z rombami w rogach, dolna belka i kategorie budowy z drewna, sloty zapasów i przyciski z kutego metalu.',
