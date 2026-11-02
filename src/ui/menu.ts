@@ -1,7 +1,7 @@
 import { gameTagline, loadingScene } from './loadscreen';
 import { isTester, me as netMe, onAccount, onlinePlayers, onPresence, progress, restore } from '../net/supa';
 import { friendLists, noticesNow, onNotices } from '../net/social';
-import { onMessages, unreadAll } from '../net/messages';
+import { createMessengerButton, openChat } from './messenger';
 import { levelOf, titleOf } from '../data/progress';
 import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
@@ -269,7 +269,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     friends: (tab) => reveal(() => online.showFriends(tab)),
     adminNotes: (id) => reveal(() => online.showHouse(4, id)),
     myNotes: (id) => reveal(() => showNotes(id)),
-    chat: (id) => reveal(() => online.showFriends(1, undefined, id)),
+    chat: (id) => openChat(id),
     quiet: () => events.isOnline() && inGame,
   });
   const paintAccount = (): void => {
@@ -320,15 +320,12 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     ico.innerHTML = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.6 3.4-5.5 6.5-5.5s5.7 1.9 6.5 5.5"/><circle cx="17" cy="9" r="2.6"/><path d="M16 14.6c2.7 0 4.7 1.6 5.5 4.6"/></svg>';
     friendsTb.replaceChildren(ico, el('span', '', tx('Znajomi', 'Friends')));
     if (on) friendsTb.append(el('span', 'tb-count', tx(`${on} w grze`, `${on} online`)));
-    const msgs = unreadAll();
-    if (msgs) friendsTb.append(el('span', 'tb-count tb-msg', `✉ ${msgs}`));
     friendsTb.setAttribute('aria-label', on ? tx(`Znajomi — ${on} w grze`, `Friends — ${on} online`) : tx('Znajomi', 'Friends'));
   };
   const loadFriendIds = (): void => { void friendLists().then((l) => { friendIds = new Set(l.friends.map((p) => p.id)); paintTop(); }); };
-  topbar.append(ver, friendsTb, bell);
+  topbar.append(ver, friendsTb, createMessengerButton(() => online.showFriends(1)), bell);
   wrap.append(topbar);
   onPresence(paintTop);
-  onMessages(paintTop);
   onAccount(loadFriendIds);
   onNotices(() => { if (noticesNow().some((n) => !n.read && (n.kind === 'friend_accept'))) loadFriendIds(); });
   loadFriendIds();

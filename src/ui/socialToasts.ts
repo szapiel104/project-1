@@ -1,5 +1,6 @@
 import { befriend, dropNotice, onFreshNotice, playerById, type Notice } from '../net/social';
 import { onMessage } from '../net/messages';
+import { chatOpenWith } from './messenger';
 import { noticeMark, noticeText } from './noticeText';
 import { avatarSvg } from './avatars';
 import { tx } from '../i18n';
@@ -36,7 +37,7 @@ export function startSocialToasts(go: ToastActions): void {
   };
   // wiadomość od znajomego: okienko z treścią i „Odpowiedz” (gdy rozmowa z nim jest właśnie otwarta — bez okienka)
   onMessage((m) => {
-    if (go.quiet() || document.querySelector('.fr-chat-head')?.getAttribute('data-with') === m.from_id) return;
+    if (go.quiet() || chatOpenWith(m.from_id)) return;
     void playerById(m.from_id).then((p) => {
       const t = document.createElement('div');
       t.className = 'soc-toast panel message';

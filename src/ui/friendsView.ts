@@ -1,6 +1,7 @@
 import { befriend, friendLists, noticesNow, onNotices, recentPlayers, searchPlayers, statsOf, unfriend, type FriendLists, type Notice, type Player, type Stats } from '../net/social';
 import { conversation, conversations, markRead, onMessage, onMessages, sendMessage, unreadAll, unreadFrom, type Message } from '../net/messages';
 import { profileCard } from './playerProfile';
+import { openChat as openFloat } from './messenger';
 import { me, onlinePlayers, type OnlinePlayer } from '../net/supa';
 import { levelOf, titleOf } from '../data/progress';
 import { noticeText } from './noticeText';
@@ -266,7 +267,8 @@ export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string,
   // ---------- profil gracza ----------
   const openProfile = (id: string): void => { profileOf = id; paint(true); };
   // ---------- wiadomości ----------
-  const openChat = (id: string): void => { chatWith = id; profileOf = null; tab = 1; paint(true); };
+  // rozmowa otwiera się w okienku w rogu jak w Messengerze (panel znajomych zostaje pod spodem)
+  const openChat = (id: string): void => { openFloat(id, [...lists.friends, ...lists.incoming, ...lists.outgoing].find((x) => x.id === id)); };
   let appendMsg: ((m: Message) => void) | null = null;
   const fmtTime = (iso: string): string => new Date(iso).toLocaleString(lang() === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   const messagesTab = (): Node[] => {

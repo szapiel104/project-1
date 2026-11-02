@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.78.1 — 2.11.2026
+- `src/ui/messenger.ts`: ikonka na `.menu-topbar`, lista rozmów, okienka `.mx-win` w `.mx-dock` (do 3). Panel znajomych, profil i okienko powiadomienia otwierają rozmowę w okienku. Migracja `20261102e_messages.sql` wykonana.
+
 ## 0.78.0 — 2.11.2026
 - Migracja `20261102e_messages.sql`: `messages` (RLS: tylko do znajomych, odbiorca zmienia tylko `read`, wyzwalacz blokuje resztę), realtime.
 - `src/net/messages.ts`, czat i lista rozmów w `friendsView.ts`, profil wydzielony do `playerProfile.ts` (`profileCard`, `openProfileModal`) — nick w rankingu i w pokoju otwiera okno profilu; okienko nowej wiadomości w `socialToasts.ts`.

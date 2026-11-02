@@ -12,6 +12,7 @@ import { adminPane } from './adminPanel';
 import { adminNotesPane } from './testerNotes';
 import { friendsView } from './friendsView';
 import { openProfileModal } from './playerProfile';
+import { openChat } from './messenger';
 import { friendLists, inviteToGame } from '../net/social';
 import { lang, tx } from '../i18n';
 
@@ -524,7 +525,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
 
   // ---------------- znajomi ----------------
   /** Profil gracza w okienku nad rankingiem albo pokojem (bez wychodzenia z pokoju) */
-  const profileModal = (id: string): void => openProfileModal(id, { el, button, shield }, (who) => void showFriends(1, undefined, who));
+  const profileModal = (id: string): void => openProfileModal(id, { el, button, shield }, (who) => openChat(who));
   async function showFriends(tab = 0, profile?: string, chat?: string): Promise<void> {
     cleanup();
     const m = me();

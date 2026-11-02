@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.78.1', date: '2026-11-02',
+    pl: [
+      'Wiadomości jak w Messengerze: ikonka dymka na belce obok dzwoneczka z licznikiem nowych wiadomości, pod nią lista rozmów z wyszukiwarką, kropką „dostępny” i ostatnią wiadomością.',
+      'Rozmowa otwiera się w okienku w prawym dolnym rogu — nad menu i nad grą, bez wychodzenia z tego, co robisz. Do trzech okienek naraz, każde można zwinąć do paska (Esc) i zamknąć; okrągłe dymki, Enter wysyła, pole rośnie z tekstem.',
+    ],
+    en: [
+      'Messages like Messenger: a chat icon on the bar next to the bell with a count of new messages, and under it a list of conversations with a search box, an “online” dot and the last message.',
+      'A conversation opens in a small window in the bottom-right corner — over the menu and over the game, without leaving what you are doing. Up to three windows at once, each can be minimised (Esc) or closed; round bubbles, Enter sends, the box grows with the text.',
+    ],
+  },
+  {
     v: '0.78.0', date: '2026-11-02',
     pl: [
       'Wiadomości do znajomych: nowa zakładka „Wiadomości” w panelu znajomych z listą rozmów (ostatnia wiadomość, kiedy, ile nowych), czat z dymkami, dniami i godzinami, Enter wysyła, Shift+Enter — nowa linia. Wiadomość pojawia się u znajomego od razu.',
