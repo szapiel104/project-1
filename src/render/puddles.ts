@@ -18,9 +18,10 @@
 import * as THREE from 'three';
 import type { GameState } from '../sim/state';
 import type { TerrainView } from './terrain';
+import { Terrain } from '../data/terrain';
 import { cat } from './cat';
 
-const MAX = 1024;
+const MAX = 3072;
 const SEG = 20; // wierzchołki na obwodzie
 const RINGS = 4; // pierścienie od środka do brzegu (siatka idzie za terenem)
 /** Najmniejsza wysokość nad terenem; reszta odstępu od drogi robi przesunięcie ku kamerze w shaderze */
@@ -124,7 +125,7 @@ export class PuddleLayer {
     u.uWet!.value = wet; u.uRain!.value = rain; u.uTime!.value = time;
     this.mesh.visible = wet > 0.03;
     if (!this.mesh.visible) return;
-    const key = `${roadSum}|${g.map.width}x${g.map.height}|${g.map.seed}`;
+    const key = `${roadSum}|${g.buildings.length}|${g.map.width}x${g.map.height}|${g.map.seed}`;
     if (key === this.key && view === this.viewRef) return;
     this.key = key; this.viewRef = view;
     this.build(g, view);
@@ -136,10 +137,18 @@ export class PuddleLayer {
     const pos: number[] = [], pd: number[] = [], idx: number[] = [];
     const road = (x: number, y: number): boolean => x >= 0 && y >= 0 && x < width && y < height && g.roads[y * width + x] === 1;
     let n = 0;
-    for (let t = 0; t < g.roads.length && n < MAX; t++) {
-      if (g.roads[t] !== 1) continue;
+    // kałuże nie tylko na drogach gruntowych (Michał 2.11.2026: „kałuże wszędzie”): co któreś płaskie pole łąki,
+    // ziemi czy ścieżki też, tylko rzadziej i mniejsze (bez lasu, wody, gór, budynków i bruku)
+    const cand: number[] = [];
+    for (let t = 0; t < g.roads.length; t++) {
+      if (g.roads[t] === 1) { if ((((t * 2654435761) >>> 0) % 3) === 0) cand.push(t); continue; }
+      if (g.roads[t] || g.occupancy[t] || g.map.tiles[t] !== Terrain.Grass) continue;
+      if ((((t * 2246822519) >>> 0) % 23) === 0) cand.push(t);
+    }
+    for (const t of cand) {
+      if (n >= MAX) break;
+      const onRoad = g.roads[t] === 1;
       const hsh = (t * 2654435761) >>> 0;
-      if (hsh % 3 !== 0) continue;
       const tx = t % width, ty = Math.floor(t / width);
       const cx = tx + 0.5 + (((hsh >>> 8) & 255) / 255 - 0.5) * 0.3, cy = ty + 0.5 + (((hsh >>> 16) & 255) / 255 - 0.5) * 0.3;
       const slope = Math.hypot(view.heightAt(cx + 0.35, cy) - view.heightAt(cx - 0.35, cy), view.heightAt(cx, cy + 0.35) - view.heightAt(cx, cy - 0.35)) / 0.7;
@@ -148,7 +157,8 @@ export class PuddleLayer {
       const alongX = road(tx - 1, ty) || road(tx + 1, ty), alongY = road(tx, ty - 1) || road(tx, ty + 1);
       const yaw = alongX && !alongY ? 0 : alongY && !alongX ? Math.PI / 2 : (hsh & 63) / 10;
       const wob = (((hsh >>> 4) & 15) / 15 - 0.5) * 0.5;
-      const len = 0.34 + ((hsh >>> 12) & 15) / 60, wid = 0.2 + ((hsh >>> 20) & 15) / 80;
+      const sz = onRoad ? 1 : 0.75;
+      const len = (0.34 + ((hsh >>> 12) & 15) / 60) * sz, wid = (0.2 + ((hsh >>> 20) & 15) / 80) * sz;
       const seed = ((hsh >>> 24) & 255) / 255;
       const cs = Math.cos(yaw + wob), sn = Math.sin(yaw + wob);
       const base = n * per;

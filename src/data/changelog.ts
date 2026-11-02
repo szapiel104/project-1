@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.10', date: '2026-11-02',
+    pl: [
+      'Licznik „jedzenie razem” na dolnym pasku liczy całe jedzenie, także mięso (wcześniej tylko jabłka, chleb i ryby).',
+      'Pasek ostrzeżeń „wróg ma teraz…” liczy tylko jego wojsko — bez strażników miejskich, strażników kopalni i poległych.',
+      'Ognisko dymi cienką, przejrzystą smużką zamiast wielkiej białej kuli.',
+      'Po deszczu kałuże stoją nie tylko na drogach gruntowych, ale i na płaskich kawałkach łąki (rzadziej i mniejsze).',
+    ],
+    en: [
+      'The “total food” counter on the bottom bar now counts all food, meat included (before, only apples, bread and fish).',
+      'The warning bar’s “the enemy now has…” counts only his fighting men — not town guards, mine guards or the fallen.',
+      'A campfire now gives off a thin, light wisp of smoke instead of a great white ball.',
+      'After rain, puddles lie not only on dirt roads but also on flat patches of meadow (fewer and smaller).',
+    ],
+  },
+  {
     v: '0.69.9', date: '2026-10-30',
     pl: [
       'Przy popularności poniżej 50 ludzie odchodzą stopniowo — tym szybciej, im niższa popularność. Dawniej po jednym słabszym miesiącu osada z 26 ludźmi pustoszała w minutę.',

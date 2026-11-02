@@ -244,7 +244,7 @@ export class Ambience {
           this.sparks.emit(f.p.x + (Math.random() - 0.5) * (f.big ? 0.8 : 0.12), f.p.y + 0.15, f.p.z + (Math.random() - 0.5) * (f.big ? 0.8 : 0.12),
             (Math.random() - 0.5) * 0.4, 0.8 + Math.random() * 0.9, (Math.random() - 0.5) * 0.4, 0.9 + Math.random() * 1.1, Math.random());
         if (Math.random() < step / (f.big ? 0.12 : 0.9))
-          this.smoke.emit(f.p.x, f.p.y + 0.3, f.p.z, 0.06, f.big ? 0.7 : 0.3, 0.02, f.big ? 5 : 4, f.big ? 1 : 0);
+          this.smoke.emit(f.p.x, f.p.y + 0.3, f.p.z, 0.06, f.big ? 0.7 : 0.3, 0.02, f.big ? 5 : 3.2, f.big ? 1 : 0.5);
       }
     }
     // --- dym: rośnie, rzednie, znosi go wiatr; nocą ciemny z ciepłym podświetleniem u wylotu
@@ -256,10 +256,12 @@ export class Ambience {
       // wiatr łapie dym dopiero, gdy ten wzniesie się nad dach — przy wylocie komina idzie prosto w górę
       S.vel[i * 3] = S.vel[i * 3]! + dt * 0.06 * Math.min(1, a * 4); S.vel[i * 3 + 2] = S.vel[i * 3 + 2]! + dt * 0.02 * Math.min(1, a * 4);
       S.pos[i * 3] = S.pos[i * 3]! + S.vel[i * 3]! * dt; S.pos[i * 3 + 1] = S.pos[i * 3 + 1]! + S.vel[i * 3 + 1]! * dt * (1 - a * 0.5); S.pos[i * 3 + 2] = S.pos[i * 3 + 2]! + S.vel[i * 3 + 2]! * dt;
-      const black = S.base[i]!; // 1 = dym z pożaru, gęsty i czarny
-      // smuga zaczyna się wąsko (szerokość wylotu) i rośnie z wysokością, żeby kłąb nie wchodził w dach obok komina
-      S.size[i] = (0.16 + a * a * (black ? 2.6 : 1.6) + a * 0.3) * (1 + o.rain * 0.3);
-      S.alpha[i] = Math.min(1, a * 8) * (1 - a) * (black ? 0.7 : 0.42);
+      const kind = S.base[i]!; // 1 = dym z pożaru, gęsty i czarny; 0,5 = lekki dymek ogniska
+      const black = kind === 1 ? 1 : 0, light = kind === 0.5;
+      // smuga zaczyna się wąsko (szerokość wylotu) i rośnie z wysokością, żeby kłąb nie wchodził w dach obok komina;
+      // ognisko: cienka, przejrzysta smużka (Michał 2.11.2026: przy ognisku wisiała wielka biała kula)
+      S.size[i] = (0.16 + a * a * (black ? 2.6 : light ? 0.6 : 1.6) + a * (light ? 0.15 : 0.3)) * (1 + o.rain * 0.3);
+      S.alpha[i] = Math.min(1, a * 8) * (1 - a) * (black ? 0.7 : light ? 0.16 : 0.42);
       const g = black ? 0.12 : 0.62 - night * 0.42;
       const warm = night * Math.max(0, 1 - a * 5) * 0.5;
       S.tint[i * 3] = g + warm; S.tint[i * 3 + 1] = g + warm * 0.45; S.tint[i * 3 + 2] = g + 0.02;

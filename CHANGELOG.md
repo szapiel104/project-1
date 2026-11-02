@@ -1,5 +1,11 @@
 # Dziennik zmian
 
+## 0.69.10 — 2.11.2026
+- `FOOD_RES` w hud.ts z flag `food` (mięso i nowe jedzenie w sumie jedzenia i podpowiedzi).
+- Pasek ostrzeżeń: „wróg ma teraz” bez `guard`, `camp` i `hp ≤ 0` (pokazywał 6 — straż miejską bota).
+- Dym ogniska (ambience.ts): rodzaj 0,5 — mniejszy przyrost (0,6 zamiast 1,6), przezroczystość 0,16, krótsze życie.
+- Kałuże (puddles.ts): oprócz dróg gruntowych co 23. płaskie pole trawy bez budynku i drogi, rozmiar 0,75; klucz przebudowy z liczbą budynków; najwyżej 3072.
+
 ## 0.69.9 — 30.10.2026
 - Balans bot kontra bot (6 długich gier: w połowie jedna strona spadała do 4 ludzi i przegrywała). Przyczyna: odejścia przy popularności < 50 — jeden człowiek co 3 s bez względu na to, jak nisko; po spadku do 43 osada 26 → 4 w minutę. Teraz `leaveAcc` (population.ts): odejście co (50 / (50 − popularność)) × 3 s.
 - Bot (`bot.ts`): zapas jedzenia < 8 min → kolejny sad (do 1 na 2 mieszkańców); < 2 min i popularność ≥ 62 → pół racji, powrót przy zapasie; z rynkiem i rudą ≥ 60 dokupuje 20 chleba przy zapasie < 4 min.

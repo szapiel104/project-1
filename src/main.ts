@@ -1717,9 +1717,11 @@ function updateAlarm(): void {
   }
   alarm.removeAttribute('tabindex'); alarm.removeAttribute('title');
   const w = nextWave(game.tick, enemies[0]!.level);
-  if (!w) { alarm.dataset.state = 'calm'; alarm.innerHTML = `<strong>${t('alarm.peace')}</strong><span>${t('alarm.has')} ${foes.length}</span>`; return; }
+  if (!w) { alarm.dataset.state = 'calm'; alarm.innerHTML = `<strong>${t('alarm.peace')}</strong><span>${t('alarm.has')} ${foes.filter((s) => s.hp > 0 && !UNITS[s.kind]?.guard && !s.camp).length}</span>`; return; }
   const secs = Math.max(0, Math.round((w.at - game.tick) / TICKS_PER_SECOND));
-  const army = foes.length;
+  // wojsko wroga bez strażników miejskich i strażników kopalni (nie chodzą na wyprawy) i bez poległych — wcześniej licznik
+  // pokazywał 6, choć wróg nie miał ani jednego żołnierza, bo liczył jego straż (Michał 2.11.2026)
+  const army = foes.filter((s) => s.hp > 0 && !UNITS[s.kind]?.guard && !s.camp).length;
   alarm.dataset.state = secs < 60 ? 'soon' : 'calm';
   alarm.innerHTML = `<strong>${t('alarm.next')} ${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}</strong><span>${t('alarm.wave')} ${w.size} · ${t('alarm.has')} ${army}</span>`;
 }

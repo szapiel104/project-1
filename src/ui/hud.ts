@@ -341,7 +341,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   // ważne zapasy widać zawsze; reszta (półprodukty, broń, poszczególne rodzaje jedzenia) chowa się pod przyciskiem
   // ruda pierwsza i wyróżniona (Michał 30.10.2026: „najważniejszy surowiec gry, ma się wyróżniać”)
   const MAIN_RES: readonly ResourceId[] = ['gold', 'wood', 'stone'];
-  const FOOD_RES: readonly ResourceId[] = ['apples', 'bread', 'fish'];
+  // całe jedzenie (także mięso i każde nowe jedzenie z flagą `food`), a nie tylko pierwsze trzy (Michał 2.11.2026)
+  const FOOD_RES: readonly ResourceId[] = RESOURCES.filter((id) => RESOURCE_DEFS[id].food);
   // zbiorczo jedzenie (jabłka + chleb + ryby), gdy reszta jest zwinięta
   const foodSum = el('li', 'res-sum');
   const foodSumVal = el('strong', '', '0');
