@@ -78,6 +78,7 @@ export function friendsView(d: FriendsDeps, startTab = 0): { node: HTMLElement; 
     const e = await f();
     if (e) { say(e, true); return; }
     say(ok);
+    pane.dataset.tab = ''; // wymuś przerysowanie także zakładki szukania (przycisk „Dodaj” → „zaproszony”)
     void draw();
   };
 

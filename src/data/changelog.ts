@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.76.2', date: '2026-11-02',
+    pl: ['Znajomi: po wysłaniu zaproszenia z wyszukiwarki przycisk od razu zmienia się na „zaproszony” (wcześniej zostawał „Dodaj do znajomych”, choć zaproszenie poszło).'],
+    en: ['Friends: after sending a request from the search, the button turns into “request sent” straight away (it used to stay “Add friend” although the request went out).'],
+  },
+  {
     v: '0.76.1', date: '2026-11-02',
     pl: [
       'Edytor uwag testera: pogrubienie, kursywa, podkreślenie, nagłówek, listy punktowane i numerowane, cztery kolory tekstu, nowe linie Enterem i skróty Ctrl+B/I/U — z podglądem na żywo. Administrator widzi uwagi z tym samym formatowaniem.',

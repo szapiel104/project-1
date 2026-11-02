@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.76.2 — 2.11.2026
+- `friendsView`: po akcji wymuszone przerysowanie zakładki szukania.
+
 ## 0.76.1 — 2.11.2026
 - `src/ui/richNote.ts`: znaczniki (**, *, __, [kolor]…[/kolor], listy, #) rysowane jako węzły DOM bez innerHTML; pasek formatowania i podgląd w uwagach testera.
 
