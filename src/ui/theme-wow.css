@@ -268,3 +268,12 @@ body .menu .menu-panel .menu-btn:not(.menu-back):not(.menu-link) { color: #ffe9c
 body .menu .menu-panel .menu-btn:hover, body .menu .menu-panel .menu-btn:focus-visible { color: #fff6e0; box-shadow: 0 0 0 1px #7a6040, 0 0 0 2px #0e0906, inset 0 0 0 1px #ffc078, 0 0 10px rgba(255, 130, 50, .35); }
 body .menu .menu-panel :is(input:not([type]), input[type='text'], input[type='email'], input[type='password'], select, textarea) { background: #2a1e13; border: 1px solid #a8864a; color: #fff4dc; }
 body .menu .menu-panel { background-image: url('/textures/cc0/plaster.jpg'), radial-gradient(ellipse at 50% 0%, #6a5034, #44321f 55%, #2e2015); }
+
+/* przyciski-odnośniki („Zaloguj się · Załóż konto”, „zarejestruj”, „Usuń”): bez płytki, także po najechaniu i z fokusem
+   (Michał 2.11.2026: „ten guest krzywy” — „Zaloguj się” dostawał ramkę płytki i wychodził z linii) */
+button.link-btn, button.link-btn:hover, button.link-btn:focus-visible, button.link-btn[aria-pressed='true'] {
+  background: none; background-image: none; border: 0; box-shadow: none; min-height: 0; padding: 0; filter: none;
+  color: #ffd76a; text-decoration: underline; text-underline-offset: 3px; text-shadow: 0 1px 1px #000; }
+button.link-btn:hover { color: #fff0c0; }
+button.link-btn:focus-visible { outline: 2px solid #ffd76a; outline-offset: 3px; }
+.menu-account .acc-row, .menu-account .acc-links { align-items: baseline; }

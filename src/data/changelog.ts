@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.9', date: '2026-11-02',
+    pl: [
+      'Ramka konta w menu („Gość · Zaloguj się · Załóż konto”) znów prosta: odnośniki nie dostają już ramki przycisku i stoją w jednej linii.',
+    ],
+    en: [
+      'The account box in the menu (“Guest · Sign in · Create account”) is straight again: the links no longer get a button frame and sit on one line.',
+    ],
+  },
+  {
     v: '0.72.8', date: '2026-11-02',
     pl: [
       'Menu i logowanie jaśniejsze: lewa kolumna i okna menu z ciepłego, średniego brązu z fakturą zamiast prawie czerni, jaśniejsze pola do wpisywania, a przyciski jak w grze — pomarańczowy główny i przygaszony „Wróć”.',

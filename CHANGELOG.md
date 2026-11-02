@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.72.9 — 2.11.2026
+- `button.link-btn` bez płytki we wszystkich stanach (hover, focus) — „Zaloguj się” w ramce konta nie wychodzi z linii.
+
 ## 0.72.8 — 2.11.2026
 - Menu i logowanie jaśniej (theme-wow.css): lewa kolumna i `.menu-panel` z teksturą plaster na brązie, pola #2a1e13, `.menu-btn` jako płytki (główny pomarańczowy, `.menu-back` przygaszony). Sprawdzone zrzutem 1600×900.
 - Wdrożenia 0.72.4–0.72.8 padały na `tests/scene-split.test.ts` (nowe siatki duchów w walls.ts zmieniły kolejność InstancedMesh) — test pomija siatki „podgląd budowy”. Od teraz po pushu sprawdzamy wynik GitHub Actions.
