@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.73.4 — 2.11.2026
+- Okna `.menu-panel.wide` i `.book` rozciągnięte na całą prawą kolumnę menu (theme-wow.css).
+- `.army-groups` fixed: prawy dół obok minimapy (right 250, bottom 140), schowane przy `build-open`.
+
 ## 0.73.3 — 2.11.2026
 - Wczytywanie: schowane `.loading-sub`, `.game-tagline`, `.loading-detail`, `.loading-log`, licznik kroków (theme-wow.css).
 

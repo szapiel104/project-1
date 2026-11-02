@@ -324,3 +324,15 @@ button.link-btn:focus-visible { outline: 2px solid #ffd76a; outline-offset: 3px;
    herb i tytuł bez podtytułów; na dole rada, procent, pasek i jedna linijka z tym, co się teraz wczytuje */
 #loading .loading-sub, #loading .game-tagline, #loading .loading-detail, #loading .loading-log, #loading .loading-line strong { display: none; }
 #loading .loading-line { justify-content: center; font-size: 15px; letter-spacing: .08em; opacity: .9; }
+
+/* ===== Pasek grup wojska (1–0) w prawym dolnym rogu, od minimapy w lewo (Michał 2.11.2026) =====
+   kronika zostaje sama w lewym dolnym rogu; przy otwartej liście budowy pasek się chowa jak minimapa */
+.army-groups { position: fixed; right: 250px; bottom: 140px; z-index: 55; }
+body.build-open .army-groups { display: none; }
+body.info-open .army-groups { right: 16px; }
+
+/* ===== Okna menu na całą prawą część (Michał 2.11.2026: „ustawienia, Mój ród itd. na całą szerokość i wysokość”) ===== */
+.menu:not(.previewing) .menu-panel.wide, .menu.book-open:not(.previewing) .menu-panel.book {
+  grid-column: 2; grid-row: 1 / -1; align-self: stretch; justify-self: stretch; width: auto; max-width: none; height: auto;
+  margin: clamp(56px, 7vh, 72px) clamp(16px, 2vw, 32px) clamp(16px, 2.4vh, 28px) 0;
+  max-height: calc(100vh / var(--ui, 1) - clamp(56px, 7vh, 72px) - clamp(16px, 2.4vh, 28px)); }

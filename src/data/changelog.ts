@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.73.4', date: '2026-11-02',
+    pl: [
+      'Okna menu (Ustawienia, Jak grać, Co nowego, Mój ród) zajmują całą prawą część ekranu, od góry do dołu — więcej się mieści i jest czytelniej.',
+      'Pasek grup wojska (1–0) przeniesiony do prawego dolnego rogu, tuż na lewo od minimapy; kronika ma lewy dolny róg dla siebie.',
+    ],
+    en: [
+      'Menu windows (Settings, How to play, What’s new, My house) fill the whole right side of the screen, top to bottom — more fits and it reads better.',
+      'The army group bar (1–0) has moved to the bottom right, just left of the minimap; the chronicle has the bottom left to itself.',
+    ],
+  },
+  {
     v: '0.73.3', date: '2026-11-02',
     pl: [
       'Ekran wczytywania spokojniejszy: pod herbem został sam tytuł, a na dole tylko rada, procent, pasek i jedna linijka, co się teraz wczytuje.',
