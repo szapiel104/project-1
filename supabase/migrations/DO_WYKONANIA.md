@@ -4,9 +4,10 @@ Michał wykonuje migracje ręcznie: Supabase → projekt „project-1” → SQL
 Każdy czat, który dodaje nową migrację, dopisuje ją tutaj. Po wykonaniu: przenieść do „Wykonane” i dopisać „wykonane DATA” w pierwszej linijce pliku.
 
 ## Czekają (stan 2.11.2026)
-- `20261102c_social.sql` — znajomi jak na Steamie (zaproszenia z akceptacją, „ostatnio w grze”, „ostatnio grał”), dzwoneczek powiadomień (znajomi, zaproszenia do gry, uwagi testerów), aktywność znajomych (wygrał / przegrał bitwę, nowy poziom), historia meczów w profilu znajomego. Bez niej: dzwoneczek i aktywność puste, zaproszenia do gry tylko na żywo, profil bez meczów.
+- (nic)
 
 ## Wykonane
+- `20261102c_social.sql` — wykonane 2.11.2026
 - `20261102b_testers.sql` — wykonane 2.11.2026 (RebaZius: administrator i twórca, SzyMi: tester)
 - `20261024_results_pending.sql` — wykonane 2.11.2026
 - `20261102_admins_achievements.sql` — wykonane 2.11.2026. Konto Michała w grze to `RebaZius` (nie szapiel104); administratora dopisuje Michał ręcznie: `insert into public.admins (user_id) select id from public.profiles where nick = 'RebaZius' on conflict do nothing;`
