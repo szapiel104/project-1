@@ -197,3 +197,16 @@ body.build-open .scribe, body.build-open .scribe-log { display: none; }
 
 /* przy otwartym oknie budynku/wojska wiadomości kroniki się zwijają (zostaje przycisk „Kronika”), żeby nie wchodziły na okno */
 body.info-open .scribe-toasts { display: none; }
+
+/* ===== Karty budynków bez tekstury (Michał 2.11.2026: „tekstura na teksturze, mało czytelne”) =====
+   gładka, ciemna karta z cienką brązową ramką, duży obrazek budynku na jaśniejszym, gładkim tle, wyraźny napis;
+   tekstura zostaje tylko na pasie pod kartami */
+.card, .card:hover, .card[aria-pressed='true'], .card.poor, .card.locked, .card.poor:hover, .card.locked:hover { background-image: none; background-blend-mode: normal; }
+.card { background-color: #17110c; border: 1px solid #6b5332; box-shadow: none; }
+.card img { background: radial-gradient(ellipse at 50% 55%, rgba(255, 236, 200, .16), rgba(255, 236, 200, 0) 70%); width: 120px; height: 120px; filter: contrast(1.08) saturate(1.1) drop-shadow(0 2px 3px rgba(0, 0, 0, .6)); }
+.card:hover { background-color: #241a11; border-color: #d9b062; box-shadow: 0 0 0 1px #d9b062; }
+.card[aria-pressed='true'] { background-color: #3a2410; border-color: #ffd76a; box-shadow: 0 0 0 1px #ffd76a, 0 0 12px rgba(255, 180, 60, .35); }
+.card.poor, .card.locked { background-color: #241210; border-color: #7a3a2c; }
+.card.poor:hover, .card.locked:hover { background-color: #2e1712; border-color: #b05a46; }
+.card .build-name { font-size: 17px; color: #ffd100; text-shadow: 0 1px 2px #000; }
+.card .build-cost .cost-chip { background: #0d0a07; border-color: #5a4630; }

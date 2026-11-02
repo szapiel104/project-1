@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.72.3 — 2.11.2026
+- Karty budynków bez tekstury (theme-wow.css): gładkie tło #17110c, obrazek 120 px z jasną poświatą, nazwa 17 px.
+
 ## 0.72.2 — 2.11.2026
 - `fitInfo`: dół okna nad `.scribe`, gdy na siebie zachodzą; `body.info-open .scribe-toasts` schowane.
 

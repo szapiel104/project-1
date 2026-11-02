@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.3', date: '2026-11-02',
+    pl: [
+      'Karty budynków w budowaniu są gładkie, bez tekstury: ciemna karta, większy i wyraźniejszy obrazek budynku na jaśniejszym tle, złota nazwa. Wybrana karta świeci na złoto, a te, których nie postawisz, są delikatnie czerwone.',
+    ],
+    en: [
+      'Building cards in the build list are plain, with no texture: a dark card, a larger and sharper picture of the building on a lighter backdrop, and a gold name. The chosen card glows gold, and those you cannot raise are faintly red.',
+    ],
+  },
+  {
     v: '0.72.2', date: '2026-11-02',
     pl: [
       'Okno budynku lub wojska nie wchodzi już na kronikę: przy otwartym oknie wiadomości kroniki się zwijają (zostaje przycisk „Kronika”), a okno kończy się nad nim.',
