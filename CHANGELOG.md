@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.72.0 — 2.11.2026
+- Tekstury zamku (Michał: „nie czuć kamienia”, wzór Twierdza 3 / Krzyżowiec 2): `tools/textures/gen_stone.py` generuje `ashlar` (2048, ciosy w warstwach, krawędzie z szumem, fazowane lico, faktura z `rock.jpg` przesunięta per kamień, fugi ciemne, AO) i `slate` (rzędy płytek, cień u góry płytki, nierówny dolny brzeg) + mapy normalnych; KTX2 przerobione. Źródła w CREDITS.md.
+
 ## 0.71.7 — 2.11.2026
 - Ekran wczytywania: `public/loading/castle.jpg` (zrzut z gry w pełnej grafice przez `__test.cam`, godz. 18:45, obróbka w PIL: gamma, ciepłe niebo, poświata, winieta, blask; 1600 px, 150 KB), tło `#loading`, `.ld-scene` schowane, wczytywany z wyprzedzeniem (`preload` w index.html).
 

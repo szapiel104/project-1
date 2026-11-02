@@ -11,8 +11,6 @@ Zdjęciowe tekstury bruku, desek i tynku (`public/textures/cc0/`) pochodzą z [a
 - Plaster 007 → `plaster.jpg`, `plaster_n.jpg`
 
 Dalsze tekstury ambientCG (CC0), z paczki ambientcg_1024 dostarczonej przez Michała:
-- Roofing Tiles 005 → `slate.jpg` (łupek na wieżach zamku)
-- Bricks 091 → `ashlar.jpg` (mury zamku)
 - Bricks 076 A → `bricks.jpg` (kamienne podmurówki)
 - Fabric 011 → `burlap.jpg` (płótno worków i flag)
 - Grass 004 → `grass.jpg` (trawa)
@@ -93,3 +91,6 @@ Autorzy grafiki na licencjach CC BY i CC BY-SA są wymienieni w grze: Ustawienia
 
 ## Nazwy i świat gry
 Zakony, bóstwa, miejsca i postacie w grze są nasze (np. Zakon Płomienia, Bractwo Źródła, Ojciec Płomienia). Gra nie używa nazw, postaci ani grafiki z innych gier.
+
+## Własne (generator w repo)
+- `ashlar.jpg` / `ashlar_n.jpg` (mury zamku) i `slate.jpg` / `slate_n.jpg` (łupek dachów) — `tools/textures/gen_stone.py` (2.11.2026): ciosy i płytki liczone w Pythonie, faktura lica z `rock.jpg` (Poly Haven / ambientCG, CC0).

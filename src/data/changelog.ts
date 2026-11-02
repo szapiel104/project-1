@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.0', date: '2026-11-02',
+    pl: [
+      'Nowy kamień murów zamku: nieregularne ciosy różnej wielkości z wypukłym, chropowatym licem, każdy innej barwy, i głębokie, ciemne fugi — mur ma wreszcie rzeźbę, a nie płaski, jasny wzór.',
+      'Nowy łupek na dachach wież: rzędy zachodzących na siebie płytek z nierównym dolnym brzegiem i cieniem pod spodem, zamiast rozmytych łusek.',
+    ],
+    en: [
+      'New stone for the castle walls: irregular blocks of different sizes with a bulging, rough face, each a slightly different shade, set with deep dark joints — at last the wall has real relief instead of a flat, pale pattern.',
+      'New slate on the tower roofs: rows of overlapping tiles with uneven lower edges and a shadow beneath, instead of blurry scales.',
+    ],
+  },
+  {
     v: '0.71.7', date: '2026-11-02',
     pl: [
       'Nowy ekran wczytywania: zamiast rysowanego pejzażu prawdziwy obraz twierdzy z gry o zachodzie słońca, z górami i lasem w tle, podkręcony filtrami.',
