@@ -66,6 +66,20 @@ describe('kopalnia pod górami', () => {
     expect(back).toEqual([4 * g.map.width + 5, 4 * g.map.width + 6, 4 * g.map.width + 7]);
   });
 
+  it('wolno mieć jedną kopalnię; po zburzeniu (ruina) można postawić nową', () => {
+    const g = createGame(3);
+    const at = rockSpot(g);
+    step(g, [{ type: 'build', player: 0, building: 'oremine', x: at.x, y: at.y, rot: at.rot }]);
+    const mine = g.buildings.find((b) => b.type === MINE)!;
+    expect(mine).toBeDefined();
+    // druga — choćby na innym miejscu — odpada, także gdy pierwsza dopiero się buduje
+    expect(canPlace(g, 0, MINE, 1, 1, false)).toBe('place.limit');
+    // przeciwnik ma własny limit
+    expect(canPlace(g, 1, MINE, 1, 1, false)).not.toBe('place.limit');
+    mine.ruined = true;
+    expect(canPlace(g, 0, MINE, 1, 1, false)).not.toBe('place.limit');
+  });
+
   it('załoga rośnie z wioską, kopie w środku i nosi kamień, żelazo i rudę do składu', () => {
     const g = createGame(3);
     const at = rockSpot(g);

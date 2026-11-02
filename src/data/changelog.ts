@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.5', date: '2026-11-02',
+    pl: [
+      'Wolno mieć tylko jedną kopalnię. Drugiej nie postawisz, dopóki pierwsza stoi (albo się buduje); gdy wróg ją zburzy, możesz od razu postawić nową. Boty i sojusznicy mają tę samą zasadę.',
+    ],
+    en: [
+      'Only one mine is allowed. You cannot sink a second while the first stands (or is being built); should the enemy destroy it, you may raise a new one at once. Bots and allies follow the same rule.',
+    ],
+  },
+  {
     v: '0.70.4', date: '2026-11-02',
     pl: [
       'Kopalnia z barakiem górników daje mniej kamienia i żelaza na kurs (6 kamienia, 5 żelaza zamiast 10 i 8): górnicy nie chodzą wtedy do wioski, więc kursów jest dużo więcej i urobku było aż za dużo. Ruda bez zmian.',

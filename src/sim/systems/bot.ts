@@ -9,7 +9,7 @@ const LADDERMAN = UNITS.findIndex((u) => u.id === 'ladderman');
 import { KEEP_SIZE } from '../../data/keep';
 import { FP, Phase, housing, idleCount, keepCenter, keepFront, playerKeep, population, type Building, type GameState, type PlayerState, type Soldier } from '../state';
 import { battleMages, garrisonRoom, orderAttack, orderGarrison, orderMove, towerOf, train } from './army';
-import { canAfford, canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
+import { atLimit, canAfford, canPlace, missingRequirement, placeBuilding, placementBatch } from './placement';
 import { Terrain } from '../../data/terrain';
 import { enemyRoad, orderWreck } from './roadwreck';
 
@@ -24,7 +24,7 @@ import { enemyRoad, orderWreck } from './roadwreck';
 // przenoszenia budynków za rudę (relocate.ts) bot świadomie nie używa: stawia od razu tam, gdzie chce, a ruda idzie mu na wojsko
 // rudera i namiot nie są na liście: bot stawia je tylko na szybko, gdy brak łóżek, a na chatę nie ma drewna (urgent niżej)
 // chlew po piekarni: czwarte jedzenie — różnorodność w spichlerzach podnosi popularność (economy.ts), jak u gracza
-const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'pigsty', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'carpenter', 'market', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine'];
+const ORDER = ['woodcutter', 'orchard', 'woodcutter', 'house', 'oremine', 'woodcutter', 'orchard', 'woodcutter', 'house', 'stockpile', 'armory', 'poleturner', 'barracks', 'camp', 'camp', 'house', 'farm', 'well', 'mill', 'orchard', 'bakery', 'pigsty', 'fletcher', 'house', 'brewery', 'tavern', 'minecamp', 'woodcutter', 'forester', 'cemetery', 'mageHut', 'engineers', 'carpenter', 'market', 'shrine', 'house', 'camp', 'fletcher', 'house', 'house', 'woodcutter', 'smithy', 'farm', 'bakery', 'armorer', 'mageSeat', 'oremine']; // druga „oremine” = odbudowa po zburzeniu (wolno mieć jedną, maxCount)
 // druga kopalnia na samym końcu: kosztuje fortunę (BuildingDef.nextCost), więc bot stawia ją dopiero, gdy wszystko inne już stoi
 /** `mageSeat` na liście: siedziba zakonu magów — boty o parzystym numerze stawiają Sanktuarium Źródła, o nieparzystym Wieżę Płomienia;
  *  dopiero w grodzie (etap osady jak u gracza, BuildingDef.tier). Stoją w niej uzdrowiciele i szkolą się magowie bojowi.
@@ -186,6 +186,8 @@ export function botSystem(g: GameState): void {
       const type = buildingIndex(id);
       // drzewko budowy: bez gotowego wymaganego budynku (np. karczma bez browaru) bot buduje dalej wg listy i wraca tu później
       if (missingRequirement(g, p.id, BUILDINGS[type]!)) continue;
+      // limit sztuk (kopalnia tylko jedna): drugi wpis na liście działa jak odbudowa, gdy pierwsza leży w ruinie
+      if (atLimit(g, p.id, type)) continue;
       if (id === 'minecamp') {
         // barak: przy własnej kopalni (pierścienie wokół niej); bez kopalni bot go pomija
         const mine = g.buildings.find((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'oremine' && !b.ruined);
@@ -411,6 +413,7 @@ function waitingFor(g: GameState, p: PlayerState): number | null {
     if ((have.get(id) ?? 0) >= want.get(id)!) continue;
     const type = buildingIndex(id);
     if (missingRequirement(g, p.id, BUILDINGS[type]!)) continue;
+    if (atLimit(g, p.id, type)) continue;
     if (id === 'minecamp' && !g.buildings.some((b) => b.owner === p.id && BUILDINGS[b.type]!.id === 'oremine' && !b.ruined)) continue;
     if (BUILDINGS[type]!.needsRock && (p.noRock ?? 0) > g.tick) continue;
     return type;

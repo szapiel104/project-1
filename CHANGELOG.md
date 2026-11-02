@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.5 — 2.11.2026
+- Jedna kopalnia na gracza (Michał): `maxCount` w `BuildingDef` (oremine: 1), `atLimit` w placement.ts (budowy się liczą, ruiny nie), błąd `place.limit`; przenoszenie (`relocate`) bez limitu. Bot pomija pozycję z listy przy limicie — druga „oremine” w `ORDER` = odbudowa po ruinie. Test w `oremine.test.ts`.
+
 ## 0.70.4 — 2.11.2026
 - Kopalnia z barakiem (Michał: „z barakiem aż za dużo”): `CAMP_YIELD_PCT` 60 — kamień i żelazo na kurs × 0,6 (6 / 5), gdy `campOf(mine)`; ruda i kryształ bez zmian. Gracz i boty tak samo.
 

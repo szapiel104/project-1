@@ -42,6 +42,9 @@ export interface BuildingDef {
   crew?: { per: number; max: number };
   /** Barak przy kopalni: tyle miejsc do spania dla załogi pobliskiej kopalni (nie liczy się do mieszkań wioski) */
   beds?: number;
+  /** Najwyżej tyle takich budynków naraz u jednego gracza (licząc budowy, bez ruin) — np. jedna kopalnia (Michał 2.11.2026).
+   *  Gdy wróg ją zburzy, można postawić nową */
+  maxCount?: number;
   /** Drzewko budowy: ten budynek da się postawić dopiero, gdy gracz ma gotowy (dokończony, nie zburzony) budynek o tym id */
   requires?: string;
   /** Etap osady potrzebny do postawienia (0 wioska — od razu, 1 osada, 2 gród, 3 miasto; progi ludności w RULES.tiers).
@@ -189,7 +192,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Tania w budowie, ale załoga rośnie z wioską (1 górnik na 4 mieszkańców, do 8) — to ludzie są kosztem.
   // Wytrzymała, ale wróg może ją zburzyć; otocz ją murem i wieżami jak osobny obóz. Zastępuje kamieniołom i kopalnię żelaza.
   {
-    id: 'oremine', category: 'industry', name: 'b.oremine', w: 3, h: 3, cost: { wood: 30 }, hp: 3000, buildable: true,
+    id: 'oremine', category: 'industry', name: 'b.oremine', w: 3, h: 3, cost: { wood: 30 }, hp: 3000, maxCount: 1, buildable: true,
     // druga i każda następna kopalnia kosztuje fortunę (Michał 25.10): pierwsza tanio, żeby było z czego żyć
     nextCost: { wood: 300, stone: 300, iron: 60, gold: 400 },
     workView: 'inside', needsRock: true, crew: { per: 5, max: 6 },

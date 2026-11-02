@@ -11,7 +11,7 @@ import { FP, inForecourt, Phase, playerKeep, type Building, type GameState } fro
 /** Powód, dla którego nie da się budować (klucz tłumaczenia), albo null gdy wolno. */
 export type PlaceError =
   | 'place.outside' | 'place.terrain' | 'place.occupied' | 'place.far'
-  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.brazier' | 'place.brazierTaken' | 'place.needRock' | 'place.needMine' | 'place.needs' | 'place.unknown' | 'place.rock';
+  | 'place.cost' | 'place.needTerrain' | 'place.noAccess' | 'place.blocks' | 'place.enemy' | 'place.enemyLand' | 'place.forecourt' | 'place.ladder' | 'place.brazier' | 'place.brazierTaken' | 'place.needRock' | 'place.needMine' | 'place.needs' | 'place.unknown' | 'place.rock' | 'place.limit';
 
 /** Te budynki zawsze kosztują tyle samo (stawia się ich dużo naraz: linie, drogi, drobne dodatki) */
 const FLAT = new Set(['torch', 'palisade', 'gate', 'stoneWall', 'stoneGate', 'ladder', 'brazier', 'well']);
@@ -225,10 +225,21 @@ export function tileBuildable(g: GameState, player: number, x: number, y: number
   return !enemyLand(g, player, x, y, 1, 1);
 }
 
-export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true, rot = 0): PlaceError | null {
+/** Gracz ma już tyle budynków tego rodzaju, ile wolno (`maxCount`; budowy się liczą, ruiny nie) */
+export function atLimit(g: GameState, player: number, type: number): boolean {
+  const max = BUILDINGS[type]?.maxCount;
+  if (!max) return false;
+  let n = 0;
+  for (const b of g.buildings) if (b.owner === player && b.type === type && !b.ruined && ++n >= max) return true;
+  return false;
+}
+
+/** `limit` = false przy przenoszeniu istniejącego budynku (sam siebie nie liczy jako drugi) */
+export function canPlace(g: GameState, player: number, type: number, x: number, y: number, checkCost = true, rot = 0, limit = true): PlaceError | null {
   const def = BUILDINGS[type];
   if (!def || !def.buildable || def.legacy || !g.players[player]) return 'place.unknown';
   if (missingRequirement(g, player, def)) return 'place.needs';
+  if (limit && atLimit(g, player, type)) return 'place.limit';
   const { w: fw, h: fh } = footprint(def, rot);
   const { width, height } = g.map;
   if (x < 0 || y < 0 || x + fw > width || y + fh > height) return 'place.outside';

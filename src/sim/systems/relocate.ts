@@ -50,7 +50,7 @@ export function canRelocate(g: GameState, player: number, id: number): MoveError
 export function canRelocateTo(g: GameState, player: number, id: number, x: number, y: number, rot: number): MoveError | PlaceError | null {
   const err = canRelocate(g, player, id);
   if (err) return err;
-  return canPlace(g, player, buildingById(g, id)!.type, x, y, false, rot);
+  return canPlace(g, player, buildingById(g, id)!.type, x, y, false, rot, false);
 }
 
 /** Stos materiału z rozebranego budynku, który czeka na tragarzy nowego placu */
