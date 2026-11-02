@@ -1,5 +1,9 @@
 import { addNote, listNotes, markNote, type Note } from '../net/notes';
 import { lang, tx } from '../i18n';
+import { renderRich, richToolbar } from './richNote';
+
+/** Treść uwagi z formatowaniem (pogrubienia, kolory, listy) — bezpiecznie, bez wklejania HTML */
+const body = (text: string): HTMLElement => { const d = document.createElement('div'); d.className = 'note-body rich'; d.append(renderRich(text)); return d; };
 
 /**
  * Uwagi testerów (Michał 2.11.2026): tester wpisuje w menu (także w trakcie gry, przez Esc), co dodać albo zmienić;
@@ -110,12 +114,12 @@ export function testerNotesPane(place: string, focusId?: number): HTMLElement {
     'Write what to fix, add, or what is broken. The note goes to the administrator; once it is done, you will see “done” here and get a notification.')));
   const id = `note-${Math.random().toString(36).slice(2, 6)}`;
   const lab = el('label', '', tx('Twoja uwaga', 'Your note')); lab.htmlFor = id;
-  const area = el('textarea', 'note-area'); area.id = id; area.rows = 4; area.maxLength = 2000;
+  const area = el('textarea', 'note-area'); area.id = id; area.rows = 6; area.maxLength = 2000;
   area.placeholder = tx('Np. drwal stoi w miejscu, gdy las jest daleko…', 'E.g. the woodcutter stands idle when the forest is far…');
   const msgP = status();
   const browser = notesList(() => listNotes(true, 500), (n) => {
     const li = el('li', n.status === 'done' ? 'note done' : 'note'); li.dataset.note = String(n.id);
-    li.append(noteHead(n, false), el('p', 'note-body', n.body));
+    li.append(noteHead(n, false), body(n.body));
     if (n.reply) li.append(el('p', 'note-reply', `${tx('Odpowiedź', 'Reply')}: ${n.reply}`));
     return li;
   }, false, focusId);
@@ -126,12 +130,13 @@ export function testerNotesPane(place: string, focusId?: number): HTMLElement {
     const err = await addNote(text, place, BUILD);
     send.disabled = false;
     if (err) { say(msgP, err, true); return; }
-    area.value = '';
+    area.value = ''; area.dispatchEvent(new Event('input'));
     say(msgP, tx('Wysłane — dzięki!', 'Sent — thank you!'));
     browser.refresh();
   }, 'menu-btn admin-btn btn-ok');
   const row = el('div', 'admin-actions'); row.append(send, msgP);
-  wrap.append(lab, area, row, el('h4', 'house-h', tx('Twoje uwagi', 'Your notes')), browser.node);
+  const rich = richToolbar(area);
+  wrap.append(lab, rich.bar, area, rich.preview, row, el('h4', 'house-h', tx('Twoje uwagi', 'Your notes')), browser.node);
   if (focusId === undefined) setTimeout(() => area.focus(), 0);
   return wrap;
 }
@@ -154,7 +159,7 @@ export function adminNotesPane(focusId?: number): Node[] {
       refresh();
     }, done ? 'menu-btn admin-btn' : 'menu-btn admin-btn btn-ok');
     const row = el('div', 'admin-nick'); row.append(rl, reply, act);
-    li.append(noteHead(n, true), el('p', 'note-body', n.body), row, msgP);
+    li.append(noteHead(n, true), body(n.body), row, msgP);
     return li;
   }, true, focusId);
   wrap.append(browser.node);

@@ -232,3 +232,17 @@
 .notes-page { font-size: 14px; color: #e6d6b4; }
 .note.focus { outline: 2px solid #f0c75a; outline-offset: 2px; }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+/* edytor uwag: pasek formatowania, podgląd, treść z pogrubieniami i kolorami */
+.rich-bar { display: flex; flex-wrap: wrap; gap: 4px; padding: 6px; background: rgba(20, 14, 8, .45); border: 1px solid #9a7838; border-bottom: 0; }
+.rich-bar + .note-area { border-top-left-radius: 0; border-top-right-radius: 0; }
+.rich-tool { min-width: 36px; min-height: 36px; padding: 0 8px; font: 700 16px/1 Georgia, serif; color: #f6ecd6; background: #43382a; border: 1px solid #8f7a55; border-radius: 2px; cursor: pointer; }
+.rich-tool:hover { background: #5c4f3c; }
+.rich-tool:focus-visible { outline: 2px solid #f0c75a; outline-offset: 1px; }
+.rich-color { display: grid; place-items: center; }
+.rich-swatch { display: block; width: 18px; height: 18px; border: 1px solid #0e0906; }
+.rich-preview { padding: 10px 12px; border: 1px dashed rgba(226, 200, 144, .5); background: rgba(20, 14, 8, .3); }
+.rich-preview-label { display: block; margin-bottom: 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .08em; color: #d8c6a0; }
+.rich p { margin: 0 0 4px; }
+.rich p.rich-gap { height: 6px; margin: 0; }
+.rich ul, .rich ol { margin: 2px 0 6px; padding-left: 22px; }
+.rich .rich-h { display: block; margin: 4px 0; font-size: 17px; color: #ffd76a; }

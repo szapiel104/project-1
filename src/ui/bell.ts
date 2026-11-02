@@ -2,6 +2,7 @@ import { befriend, dropNotice, markRead, noticesNow, onNotices, unfriend, unread
 import { ago } from './friendsView';
 import { avatarSvg } from './avatars';
 import { tx } from '../i18n';
+import { plainRich } from './richNote';
 
 /**
  * Dzwoneczek z powiadomieniami w menu (Michał 2.11.2026): zaproszenia do znajomych (przyjmij / odrzuć), przyjęte
@@ -45,8 +46,8 @@ export function createBell(go: BellActions): HTMLElement {
       case 'friend_request': return tx(`${n.from_nick} chce zostać Twoim znajomym`, `${n.from_nick} wants to be your friend`);
       case 'friend_accept': return tx(`${n.from_nick} przyjął zaproszenie — jesteście znajomymi`, `${n.from_nick} accepted — you are now friends`);
       case 'invite': return tx(`${n.from_nick} zaprasza Cię do gry „${n.payload?.name ?? ''}”`, `${n.from_nick} invites you to the game “${n.payload?.name ?? ''}”`);
-      case 'note': return tx(`Nowa uwaga od ${n.from_nick}: „${n.payload?.text ?? ''}”`, `New note from ${n.from_nick}: “${n.payload?.text ?? ''}”`);
-      case 'note_done': return tx(`Twoja uwaga jest zrobiona: „${n.payload?.text ?? ''}”`, `Your note is done: “${n.payload?.text ?? ''}”`);
+      case 'note': return tx(`Nowa uwaga od ${n.from_nick}: „${plainRich(n.payload?.text ?? '')}”`, `New note from ${n.from_nick}: “${plainRich(n.payload?.text ?? '')}”`);
+      case 'note_done': return tx(`Twoja uwaga jest zrobiona: „${plainRich(n.payload?.text ?? '')}”`, `Your note is done: “${plainRich(n.payload?.text ?? '')}”`);
     }
   };
   const acts = (n: Notice): HTMLElement[] => {

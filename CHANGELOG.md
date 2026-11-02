@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.76.1 — 2.11.2026
+- `src/ui/richNote.ts`: znaczniki (**, *, __, [kolor]…[/kolor], listy, #) rysowane jako węzły DOM bez innerHTML; pasek formatowania i podgląd w uwagach testera.
+
 ## 0.76.0 — 2.11.2026
 - Migracja `20261102c_social.sql`: `profiles.last_seen/last_played/avatar` + `seen()`, odrzucanie zaproszeń (polityka delete dla `friend_id`), `notifications` (realtime) z wyzwalaczami przy `friends` i `tester_notes`, `notify_invite`, `admin_note` z powiadomieniem.
 - `src/net/social.ts`, `src/ui/friendsView.ts` (zakładki: znajomi, zaproszenia, szukaj), `src/ui/bell.ts`; uwagi testerów: `notesList` z filtrami i stronami.

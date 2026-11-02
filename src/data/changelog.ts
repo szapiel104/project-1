@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.76.1', date: '2026-11-02',
+    pl: [
+      'Edytor uwag testera: pogrubienie, kursywa, podkreślenie, nagłówek, listy punktowane i numerowane, cztery kolory tekstu, nowe linie Enterem i skróty Ctrl+B/I/U — z podglądem na żywo. Administrator widzi uwagi z tym samym formatowaniem.',
+    ],
+    en: [
+      'Tester notes editor: bold, italic, underline, heading, bulleted and numbered lists, four text colours, new lines with Enter and Ctrl+B/I/U shortcuts — with a live preview. The administrator sees notes with the same formatting.',
+    ],
+  },
+  {
     v: '0.76.0', date: '2026-11-02',
     pl: [
       'Znajomi jak na Steamie: zaproszenia do znajomych z przyjmowaniem i odrzucaniem, szukanie graczy po nicku i lista ostatnio aktywnych, przy każdym znajomym — czy jest w grze, gdzie (menu, pokój, mecz) i kiedy był albo grał ostatnio.',
