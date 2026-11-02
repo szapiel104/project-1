@@ -47,10 +47,10 @@ Tu trafia wszystko nowe, co nie należy do bieżącej partii. Do planu etapów (
 - Złodzieje nocą (pomysł niżej) najpierw biorą to, co leży pod drzwiami
 
 ## Kolejka Michała z 2.11.2026, popołudnie (po kolei, odhaczać datą)
-- [ ] Strzecha wygląda źle (smugi, rozciągnięte źdźbła) — także po dodaniu głębi.
-- [ ] Duże baszty (3×3, 4×4): dziury, prześwituje — brak ścian od drugiej strony.
+- [x] (2.11.2026, 0.73.6: nowa tekstura warstw pęczków) Strzecha wygląda źle (smugi, rozciągnięte źdźbła) — także po dodaniu głębi.
+- [x] (2.11.2026, 0.73.6: ściany wykuszy z grubością) Duże baszty (3×3, 4×4): dziury, prześwituje — brak ścian od drugiej strony.
 - [x] (2.11.2026) Dźwięk klikania w menu straszny — łagodniejszy.
-- [ ] Stodoła: w podglądzie budowy wygląda inaczej niż postawiona; postawiona ma białe płaty przy podstawie.
+- [x] (2.11.2026, 0.73.6: stodoła nie zdejmuje dachu) Stodoła: w podglądzie budowy wygląda inaczej niż postawiona; postawiona ma białe płaty przy podstawie.
 - [ ] Mur kamienny miga na krawędziach (blanki, korona, styki pól muru).
 - [ ] Okna menu na całą prawą część — zrobione 0.73.4; pasek grup wojska przy minimapie — zrobione 0.73.4.
 

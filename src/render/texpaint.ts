@@ -3,7 +3,7 @@
  * Ten sam kod rysuje w wątku głównym (textures.ts, zapas) i w wątkach w tle (texworker.ts) — na zwykłym płótnie
  * i na OffscreenCanvas wychodzi ten sam obraz. Przeniesione z textures.ts 28.10.2026 bez zmian w rysunkach.
  */
-export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic' | 'slate' | 'burlap' | 'wool' | 'iron' | 'mail';
+export type Kind = 'bricks' | 'planks' | 'thatch' | 'plaster' | 'tiles' | 'grass' | 'leaves' | 'needles' | 'bark' | 'soil' | 'window' | 'water' | 'ashlar' | 'cobble' | 'rock' | 'dressed' | 'organic' | 'slate' | 'burlap' | 'wool' | 'iron' | 'mail' | 'straw';
 /** Płótno 2D: zwykłe (strona) albo OffscreenCanvas (wątek w tle) — wzory używają tylko wspólnej części */
 export type Ctx2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
@@ -50,9 +50,9 @@ function masonry(c: Ctx2D, n: number, r: () => number, rows: number): void {
   }
 }
 
-type Painted = Exclude<Kind, 'wool' | 'iron' | 'mail'>;
+type Painted = Exclude<Kind, 'wool' | 'iron' | 'mail' | 'straw'>;
 /** Zdjęciowe tekstury postaci bez własnego rysunku: w trybie testowym zastępuje je podobny wzór z kodu */
-const PAINT_AS: Record<Exclude<Kind, Painted>, Painted> = { wool: 'burlap', iron: 'rock', mail: 'rock' };
+const PAINT_AS: Record<Exclude<Kind, Painted>, Painted> = { wool: 'burlap', iron: 'rock', mail: 'rock', straw: 'thatch' };
 export const painter = (k: Kind): Painted => (k in PAINT_AS ? PAINT_AS[k as Exclude<Kind, Painted>] : (k as Painted));
 export const PAINT: Record<Painted, (c: Ctx2D, n: number, r: () => number) => void> = {
   rock(c, n, r) {

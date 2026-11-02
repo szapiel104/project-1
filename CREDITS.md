@@ -26,7 +26,8 @@ Trawa: kępy z [Poly Haven](https://polyhaven.com) (CC0) — [Grass Medium 01](h
 
 Krzaki: [Searsia Lucida](https://polyhaven.com/a/searsia_lucida) z [Poly Haven](https://polyhaven.com) (CC0) — kilka krzewów zsuniętych w kępę, liście przyciemnione do zieleni, sfotografowane w Blenderze skryptem `tools/models/bushes_polyhaven.py` na karty i obrazek z daleka → `src/render/models/bushes.json` i `public/textures/cc0/pv_bush_*.jpg`.
 
-Strzecha: [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) z Poly Haven (CC0) → `thatch.jpg`; mapa normalnych liczona z mapy przemieszczeń.
+Słoma (siano, kosze, plecionki): [Thatch Roof Angled](https://polyhaven.com/a/thatch_roof_angled) z Poly Haven (CC0) → `straw.jpg`; mapa normalnych liczona z mapy przemieszczeń.
+Strzecha na dachach: własna, `tools/textures/gen_stone.py thatch` (warstwy pęczków ze strzępiastym brzegiem) → `thatch.jpg`, `thatch_n.jpg`, `thatch_h.jpg`.
 Dla tekstur bez mapy normalnych mapa jest liczona z jasności obrazu.
 
 Pierwsze trzy pobrane przez repozytorium [null3d-engine/sample-assets](https://github.com/null3d-engine/sample-assets). Zmiany: kolor zamieniony na odcienie szarości i rozjaśniony (barwę nadaje materiał w grze).

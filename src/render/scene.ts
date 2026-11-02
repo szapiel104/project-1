@@ -976,7 +976,7 @@ export class GameRenderer {
     const waterMat = new THREE.MeshStandardMaterial({ color: 0x4f8fb8, roughness: 0.2, metalness: 0.1 });
     this.bucketWater = pool('bucketWater', 'woda w wiadrach', [waterMat, waterMat, waterMat]);
     // posłanie: rozrzucona wiązka słomy z wałkiem pod głowę i kawałkiem zgrzebnego koca na nogach
-    const straw = new THREE.MeshStandardMaterial({ color: 0xd6b56a, roughness: 1, map: pattern('thatch'), vertexColors: true });
+    const straw = new THREE.MeshStandardMaterial({ color: 0xd6b56a, roughness: 1, map: pattern('straw'), vertexColors: true });
     // wymiary pod leżącą postać (ok. 0,48 długości): siennik, wałek pod głową, koc na nogach
     const bed = mergeGeometries([
       tint(new THREE.BoxGeometry(0.2, 0.025, 0.58).translate(0, 0.0125, 0), 0xffffff),

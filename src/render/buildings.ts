@@ -69,7 +69,7 @@ type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
 /** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone, M.roadWood];
-const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.42, dressed: 0.55, slate: 0.8, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5, burlap: 2.4 }; // płótno drobniej (namioty: duże kratki wyglądały jak wiklina)
+const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.42, dressed: 0.55, slate: 0.8, bricks: 0.9, planks: 1.1, thatch: 0.9, straw: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5, burlap: 2.4 }; // płótno drobniej (namioty: duże kratki wyglądały jak wiklina)
 /**
  * Magiczna ruda jak w Gothicu: głęboki granat i fiolet w plamach, gęsto nakrapiany białymi i błękitnymi iskrami.
  * Wzór rysowany raz na płótnie (to nie zdjęciowa tekstura z pattern(), więc KTX2 go nie dotyczy); iskry lekko świecą
@@ -149,7 +149,7 @@ const M = {
   steel: new THREE.MeshStandardMaterial({ color: 0xaeb3b8, roughness: 0.32, metalness: 0.85, flatShading: true }),
   plank: mat(0xd9b27a, 'planks'),
   orchardGrass: mat(0x86b54a, 'grass'), bark: mat(0x7a5a3a, 'bark'), leafLight: mat(0x7fb548, 'leaves'),
-  appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'thatch'), bread: mat(0xa8652c),
+  appleGreen: mat(0xa9c23f), basket: mat(0xb08a4e, 'straw'), bread: mat(0xa8652c),
   ember: new THREE.MeshBasicMaterial({ color: 0xff8a2a }),
   // czarna czeluść (wyjście ze sztolni ginące w mroku): bez światła i odbić, zawsze smoliście czarna
   void: new THREE.MeshBasicMaterial({ color: 0x000000 }),
@@ -162,14 +162,14 @@ const M = {
   // miniatury dróg w menu: te same barwy co na mapie (ciepła szarość bruku, ubita ziemia)
   pathDirt: mat(0xa8865a, 'soil'), pathCobble: mat(0x9e968a, 'cobble'), kerb: mat(0x8c867c, 'rock'),
   trousers: mat(0x5a4632), skin: mat(0xe2bd94), gold: mat(0xe9c145),
-  hay: mat(0xe0c466, 'thatch'),
+  hay: mat(0xe0c466, 'straw'),
   ore: mat(0x8a4a2c), crust: mat(0xe2b06a),
   // magiczna ruda jak w Gothicu: skała z niebieskawym połyskiem, lekko świeci w ciemnej sztolni (żyły, hałdy, urobek w koszach)
   magicOre: oreMaterial(),
   // chlew (tools/models/pigsty.py) i mięso w spichlerzu: wędzona szynka, kiełbasy, kość, błoto w zagrodzie
   meat: mat(0x8a3a2c), meatDark: mat(0x5a2418), bone: mat(0xe6dcc2), mud: mat(0x4e3a26, 'soil'),
     cut: mat(0xe6dfcf, 'dressed'), cutDark: mat(0xc9c1ae, 'dressed'), rope: mat(0xb89a64, 'burlap'), dust: mat(0xd8d3c6, 'soil'),
-  wattle: mat(0x9a7a4a, 'thatch'),
+  wattle: mat(0x9a7a4a, 'straw'),
   // skóry zwierząt na szałasach zbójów (ciemna, wytarta skóra z włosiem; dwa odcienie, żeby płaty się różniły)
   hide: mat(0x7a5a3e, 'burlap'), hideDark: mat(0x58402c, 'burlap'),
   // płótno namiotu polowego: jasny, zgrzebny len i ciemniejsze, zabłocone pasy i koce
@@ -660,7 +660,10 @@ export function animateBuilding(model: THREE.Object3D, active: boolean, time: nu
     // budynek bez wnętrza w modelu (np. siedziby magów ognia i wody): pusta grupa — dachu nie zdejmujemy,
     // bo pod nim nic nie ma i zostają same dziurawe mury
     // wyjątek: wieże (openTop w modelu) nie mają wnętrza, ale po zdjęciu dachu widać pomost z łucznikami i ich sprzętem
-    const hollow = !interior.children.length && !(model.userData.openTop ?? model.children[0]?.userData.openTop);
+    // stodoła zostaje pod dachem (Michał 2.11.2026: „stodoła inaczej wygląda na podglądzie, a inaczej bez” —
+    // po zdjęciu strzechy zostawały gołe ściany i białe bloki kamienia na klepisku); zapasy widać przez otwarte wrota
+    const keep = model.userData.keepRoof ?? model.children[0]?.userData.keepRoof;
+    const hollow = keep || (!interior.children.length && !(model.userData.openTop ?? model.children[0]?.userData.openTop));
     // wszystkie części o tych nazwach (np. twierdza ma kilka warstw „shell”: donżon i bryłę murów z dziedzińcem)
     const parts = (model.userData.lids ??= (() => { const l: THREE.Object3D[] = []; model.traverse((o) => { if (o !== model && ['roof', 'shell', 'chimney', 'spin', 'flagpole'].includes(o.name)) l.push(o); }); return l; })()) as THREE.Object3D[];
     for (const part of parts) part.visible = hollow || !active;
@@ -1273,6 +1276,7 @@ const BUILDERS: Record<string, Builder> = {
     // stodoła z Blendera (tools/models/barn.py): deski na słupach, strzecha z lukarną, wrota otwarte na oścież,
     // w środku puste klepisko, na którym gra układa zapasy składu (stodoła trzyma tylko surowce)
     blenderModel(g, BARN_MODEL as unknown as BlenderBuilding, flag);
+    g.userData.keepRoof = true;
     // klepisko na dwie części (Michał 30.10.2026: „stodoła pokazuje worki zboża”): z lewej towary składu, z prawej
     // snopki zboża i worki mąki (rodzaj 'grain', trzyma go tylko stodoła)
     const floorY = (BARN_MODEL as unknown as { floorY: number }).floorY;

@@ -181,7 +181,7 @@ export class Clutter {
     const woodMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.9, map: pattern('planks') });
     const WOODEN = new Set<Kind>(['crate', 'barrow', 'logs']);
     // siano dostaje teksturę strzechy (źdźbła), reszta gratów gładkie barwy
-    const hayMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('thatch'), bumpMap: bump('thatch'), bumpScale: 1.2 });
+    const hayMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 1, map: pattern('straw'), bumpMap: bump('straw'), bumpScale: 1.2 });
     for (const k of ALL) {
       const ready = models(k);
       if (ready) {

@@ -15,8 +15,8 @@ import { coloredModel, MEAT_COLORS } from './buildings';
 type LoadMat = 'plain' | 'wood' | 'board' | 'rope' | 'wicker' | 'cloth' | 'crust' | 'stone' | 'iron' | 'straw' | 'bark' | 'fish' | 'basket' | 'apple' | 'bread' | 'barrel' | 'sack' | 'granite1' | 'granite2' | 'granite3' | 'ingots';
 const MAT_TEX: Record<LoadMat, [Kind | null, number, number, number]> = {
   // [tekstura, gęstość na 1 jednostkę, chropowatość, metaliczność]
-  plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], board: [null, 1, 0.8, 0], rope: ['burlap', 14, 1, 0], wicker: ['thatch', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
-  crust: ['soil', 7, 0.9, 0], stone: ['rock', 5, 0.95, 0], iron: ['iron', 6, 0.5, 0.55], straw: ['thatch', 6, 0.95, 0], bark: ['bark', 6, 0.95, 0],
+  plain: [null, 1, 0.9, 0], wood: ['planks', 5, 0.85, 0], board: [null, 1, 0.8, 0], rope: ['burlap', 14, 1, 0], wicker: ['straw', 9, 0.95, 0], cloth: ['burlap', 9, 1, 0],
+  crust: ['soil', 7, 0.9, 0], stone: ['rock', 5, 0.95, 0], iron: ['iron', 6, 0.5, 0.55], straw: ['straw', 6, 0.95, 0], bark: ['bark', 6, 0.95, 0],
   fish: [null, 1, 0.42, 0.08], // ryba z paczki: własne UV i tekstura (src/render/props.ts)
   basket: [null, 1, 0.9, 0], // kosz z paczki: własne UV i tekstura
   apple: [null, 1, 0.45, 0], bread: [null, 1, 0.85, 0], barrel: [null, 1, 0.75, 0.05], sack: [null, 1, 0.95, 0], granite1: [null, 1, 0.9, 0], granite2: [null, 1, 0.9, 0], granite3: [null, 1, 0.9, 0], ingots: [null, 1, 0.62, 0.12], // modele z paczek i worek (props.ts)

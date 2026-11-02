@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.73.6', date: '2026-11-02',
+    pl: [
+      'Nowa strzecha na dachach: warstwy pęczków słomy ze strzępiastym, ocienionym brzegiem zamiast płaskiej, jednolitej słomy.',
+      'Duże i wielkie wieże kamienne: ściany narożnych wykuszy mają teraz grubość — od strony pomostu nic już nie prześwituje.',
+      'Stodoła wygląda tak samo jak w podglądzie budowy: nie zdejmuje strzechy, gdy pracują w niej ludzie (bez gołych ścian i bloków na klepisku).',
+    ],
+    en: [
+      'New roof thatch: layered bundles of straw with a ragged, shaded edge instead of flat, uniform straw.',
+      'Large and great stone towers: the corner turret walls now have thickness — nothing shows through from the walkway.',
+      'The barn looks the same as in the build preview: it keeps its thatch while people work inside (no bare walls and blocks on the floor).',
+    ],
+  },
+  {
     v: '0.73.5', date: '2026-11-02',
     pl: [
       'Nowy, miękki dźwięk klikania przycisków — ciche, drewniane „tuk” zamiast ostrego trzasku.',

@@ -79,7 +79,7 @@ def shot(path, eye, target, groups, lens=24):
     sc.render.filepath = path
     bpy.ops.render.render(write_still=True)
 
-OUT, IN, ROOM = ('base', 'shell', 'leafL', 'leafR'), ('base', 'interior', 'floor'), ('base', 'interior', 'floor', 'ceiling')
+OUT, IN, ROOM = ('base', 'shell', 'roof', 'leafL', 'leafR'), ('base', 'interior', 'floor'), ('base', 'interior', 'floor', 'ceiling')
 views = []
 # odległość kamery z rozmiaru budynku
 xs = []

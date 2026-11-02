@@ -107,8 +107,9 @@ def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter)
             b.prism('base', 'castleDark', 0.05, br, 0.42, cx, DECK - 0.54, cz, seg=seg, top=False)
             # ściana wieżyczki, wyższa od przedpiersia
             th = PAR + 0.3
-            b.prism('base', 'castle', br, br, th, cx, DECK - 0.12, cz, seg=seg, top=False)
-            b.prism('base', 'castleDark', br + 0.02, br + 0.02, 0.04, cx, DECK - 0.12 + th - 0.05, cz, seg=seg, top=False)
+            # z grubością: od strony pomostu też ściana (Michał 2.11.2026: „dziury prześwitujące w basztach”)
+            b.tube('base', 'castle', br, br - 0.06, th, cx, DECK - 0.12, cz, seg=seg)
+            b.tube('base', 'castleDark', br + 0.02, br - 0.055, 0.04, cx, DECK - 0.12 + th - 0.05 + 0.006, cz, seg=seg)
             # podłoga wieżyczki (wierzch, na wysokości pomostu)
             b.prism('base', 'plank', br - 0.05, br - 0.05, 0.02, cx, DECK - 0.005, cz, seg=seg)
             # strzelnice w wieżyczce: patrzą na zewnątrz, po bokach narożnika
@@ -178,8 +179,8 @@ def tower(name, S, DECK, OUT, cornices, slits, bartizan_r, cones, plinth_batter)
     views = [
         ['wieża od drzwi (oczy chłopa)', [0.5, 0.5, 2 * S + 1.6], [0, DECK * 0.6, 0], ['base', 'shell'], 22],
         ['pod machikułami', [S + 0.25, 0.3, S + 0.6], [S * 0.5, DECK, S * 0.6], ['base', 'shell'], 18],
-        ['pomost łuczników', [0.0, DECK + 0.45, -0.2], [OUT * 0.8, DECK + 0.2, OUT * 0.9], ['base', 'shell'], 16],
-        ['pod dachem (z pomostu w górę)', [0.2, DECK + 0.4, 0.4], [0.0, DECK + 1.3, -0.1], ['base', 'shell'], 18],
+        ['pomost łuczników', [0.0, DECK + 0.45, -0.2], [OUT * 0.8, DECK + 0.2, OUT * 0.9], ['base', 'shell', 'roof'], 16],
+        ['pod dachem (z pomostu w górę)', [0.2, DECK + 0.4, 0.4], [0.0, DECK + 1.3, -0.1], ['base', 'shell', 'roof'], 18],
         ['w głąb klatki schodowej', [hx + 0.05, DECK + 0.6, hz + 0.25], [hx, y0 + 0.1, hz - 0.05], ['base'], 22],
         ['pomost bez dachu (po kliknięciu)', [OUT + 1.0, DECK + 2.0, OUT + 1.0], [0.0, DECK, 0.0], ['base'], 26],
     ]

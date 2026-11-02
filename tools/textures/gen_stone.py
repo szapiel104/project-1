@@ -213,9 +213,63 @@ def slate():
     print('slate', N, 'mean', round(float(col.mean()), 3))
 
 
+def aniso_noise(n, sx, sy, seed):
+    """Bezszwowy szum wydłużony: sx, sy — skale w poprzek i wzdłuż (źdźbła: wąskie w x, długie w y)"""
+    r = np.random.default_rng(seed)
+    f = np.fft.fft2(r.standard_normal((n, n)))
+    ky = np.fft.fftfreq(n)[:, None]
+    kx = np.fft.fftfreq(n)[None, :]
+    out = np.real(np.fft.ifft2(f * np.exp(-(kx * sx) ** 2 - (ky * sy) ** 2)))
+    out -= out.min()
+    return out / out.max()
+
+
+def thatch():
+    """Strzecha (Michał 2.11.2026: „strzecha nie wygląda dobrze”): nie jednolita słoma, tylko warstwy pęczków jak na
+    prawdziwym dachu — każdy rząd zwisa nad następnym, dolny brzeg strzępiasty i w cieniu, w rzędzie widać osobne
+    wiązki (jaśniejsze i ciemniejsze), źdźbła wzdłuż spadku dachu (pion tekstury) i lekko pochylone."""
+    row_h = 256                                   # 8 warstw na teksturę
+    rows = N // row_h
+    yy, xx = np.mgrid[0:N, 0:N]
+    straw = aniso_noise(N, 1.6, 60, 301) ** 1.6          # pojedyncze źdźbła
+    straw2 = aniso_noise(N, 3.0, 90, 302)
+    clump = aniso_noise(N, 40, 300, 303)          # wiązki
+    rag = aniso_noise(N, 5.0, 8, 304)             # strzępiasty brzeg
+    big = fbm(N, 260, 305, 3)                     # plamy wyblaknięcia i mchu
+    height = np.zeros((N, N))
+    col = np.zeros((N, N))
+    for k, r in enumerate(list(range(rows - 1, -1, -1)) + [rows - 1]):   # od dołu: wyższa warstwa przykrywa niższą
+        y0 = r * row_h
+        sub = (yy - y0) % N                       # 0 u góry warstwy
+        # dolny brzeg warstwy: nierówny i postrzępiony, zwisa ok. 40 px nad następną
+        edge = row_h + 40 + (rag - 0.5) * 70 + (clump - 0.5) * 50
+        inside = (sub < edge) & (sub >= 0)
+        t = sub / edge
+        h = 0.25 + 0.75 * t                       # warstwa narasta ku dolnemu brzegowi
+        layer = inside & (sub >= row_h) if k == rows else inside   # na koniec zwis ostatniej warstwy na pierwszą
+        height = np.where(layer, h + (straw - 0.5) * 0.12, height)
+        c = (0.3 + 0.7 * straw) * (0.65 + 0.5 * clump) * (0.75 + 0.25 * straw2)
+        c = c * (0.3 + 0.7 * np.clip(t * 1.5, 0, 1) ** 0.8)         # góra warstwy w cieniu poprzedniej
+        col = np.where(layer, c, col)
+    # cień pod zwisającym brzegiem (spadek wysokości), plamy wieku
+    ao = ndimage.gaussian_filter(height, (10, 3), mode='wrap')
+    col = col * (0.7 + 0.3 * np.clip(1 - (ao - height) * 4, 0, 1))
+    col = col * (0.8 + 0.3 * big)
+    col = col / col.mean() * 0.7
+    col = np.clip(col, 0, 1)
+    Image.fromarray((col * 255).astype(np.uint8)).save(OUT + 'thatch.jpg', quality=90)
+    Image.fromarray(normal_map(ndimage.gaussian_filter(height, 1.0, mode='wrap'), 5.0)).save(OUT + 'thatch_n.jpg', quality=92)
+    hh = ndimage.gaussian_filter(height, 1.0, mode='wrap')
+    hh = (hh - hh.min()) / (hh.max() - hh.min())
+    Image.fromarray((hh * 255).astype(np.uint8)).save(OUT + 'thatch_h.jpg', quality=92)
+    print('thatch', N, 'mean', round(float(col.mean()), 3))
+
+
 if __name__ == '__main__':
     which = sys.argv[1:] or ['ashlar', 'slate']
     if 'ashlar' in which:
         ashlar()
     if 'slate' in which:
         slate()
+    if 'thatch' in which:
+        thatch()

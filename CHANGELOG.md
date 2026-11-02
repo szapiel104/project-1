@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.73.6 — 2.11.2026
+- Strzecha: własny generator `gen_stone.py thatch` (warstwy, zwis, cień, mapa wysokości); stara tekstura jako `straw` dla siana, koszy, plecionek i ładunków.
+- `Building.tube()` (rura z grubością); wykusze w `stonetower_big.py` z niej; `inspect_building.py` pokazuje grupę `roof`.
+- Stodoła: `userData.keepRoof` — `animateBuilding` nie zdejmuje dachu.
+
 ## 0.73.5 — 2.11.2026
 - Klik przycisków: syntezowane miękkie „tuk” (trójkąt 420→240 Hz, lowpass 1,4 kHz, 90 ms) zamiast nagrania `toggle`.
 - `stoneWallKit`: lico muru do TOP−0,2, bez nakładania na chodnik (boczne ściany w jednej płaszczyźnie migały).

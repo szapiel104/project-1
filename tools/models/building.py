@@ -182,6 +182,21 @@ class Building:
         if y > 0.005 and r0 > 1e-6:
             self.poly(group, mat, list(reversed(lo)))  # spód, gdy nie stoi na ziemi
 
+    def tube(self, group, mat, r, ri, h, x=0.0, y=0.0, z=0.0, seg=12):
+        """Rura z grubością (ściana wieżyczki, obręcz): lico zewnętrzne, wewnętrzne (widać je z pomostu) i pierścień
+        na wierzchu. Sam `prism(top=False)` ma tylko lico zewnętrzne, a od środka znika (gra nie rysuje tylnych ścian)."""
+        ring = lambda rr, yy: [(x + math.sin(2 * math.pi * k / seg) * rr, yy, z + math.cos(2 * math.pi * k / seg) * rr) for k in range(seg)]
+        lo, hi, ilo, ihi = ring(r, y), ring(r, y + h), ring(ri, y), ring(ri, y + h)
+        for k in range(seg):
+            k2 = (k + 1) % seg
+            a = 2 * math.pi * (k + 0.5) / seg
+            far = (x + math.sin(a) * (r + 5), y + h / 2, z + math.cos(a) * (r + 5))
+            self.poly(group, mat, [lo[k], lo[k2], hi[k2], hi[k]], away=(x, y + h / 2, z))
+            self.poly(group, mat, [ilo[k2], ilo[k], ihi[k], ihi[k2]], away=far)
+            self.poly(group, mat, [hi[k], hi[k2], ihi[k2], ihi[k]], away=(x, y - 5, z))
+            if y > 0.005:
+                self.poly(group, mat, [lo[k2], lo[k], ilo[k], ilo[k2]], away=(x, y + h + 5, z))
+
     def pyramid(self, group, mat, w, d, h, x=0.0, y=0.0, z=0.0):
         a, b = w / 2, d / 2
         base = [(x - a, y, z + b), (x + a, y, z + b), (x + a, y, z - b), (x - a, y, z - b)]

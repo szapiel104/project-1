@@ -120,7 +120,7 @@ export async function restore(kind: Kind): Promise<boolean> {
  * Zdjęciowe tekstury CC0 (ambientCG, Poly Haven) — w odcieniach szarości,
  * żeby barwę nadawał materiał, plus mapy normalnych dające prawdziwą rzeźbę: bruk, deski, tynk.
  */
-const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster', thatch: 'thatch', slate: 'slate', ashlar: 'ashlar', bricks: 'bricks', burlap: 'burlap', grass: 'grass', soil: 'soil', rock: 'rock', bark: 'bark', wool: 'wool', iron: 'iron', mail: 'mail' };
+const PHOTO: Partial<Record<Kind, string>> = { cobble: 'cobble', planks: 'planks', plaster: 'plaster', thatch: 'thatch', slate: 'slate', ashlar: 'ashlar', bricks: 'bricks', burlap: 'burlap', grass: 'grass', soil: 'soil', rock: 'rock', bark: 'bark', wool: 'wool', iron: 'iron', mail: 'mail', straw: 'straw' };
 const photoBase = (): string => ((import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? './') + 'textures/cc0/';
 /** Adresy wszystkich zdjęciowych tekstur (kolor i mapa normalnych) — do wcześniejszego pobrania (prefetch.ts) */
 export const photoUrls = (): string[] => Object.values(PHOTO).flatMap((f) => [`${photoBase()}${f}.jpg`, `${photoBase()}${f}_n.jpg`]);
