@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.73.0', date: '2026-11-02',
+    pl: [
+      'Pejzaż na ekranie wczytywania i w menu znów ma niebo, góry i dolinę — wcześniej w części przeglądarek zostawał sam zamek na czarnym tle.',
+      'Mury już nie mrugają i nie „pływają”: głębia kamienia jest łagodniejsza i gaśnie, gdy patrzysz na ścianę pod ostrym kątem.',
+      'Głębię mają też strzechy, dachy i ściany z desek, bruk i cegła — nie tylko kamień zamku i łupek.',
+    ],
+    en: [
+      'The landscape on the loading screen and in the menu has its sky, mountains and valley back — in some browsers only the castle remained, on black.',
+      'Walls no longer flicker or “swim”: the stone depth is gentler and fades when you look at a wall at a steep angle.',
+      'Thatch, plank roofs and walls, cobbles and brick have depth too — not just the castle stone and slate.',
+    ],
+  },
+  {
     v: '0.72.9', date: '2026-11-02',
     pl: [
       'Ramka konta w menu („Gość · Zaloguj się · Załóż konto”) znów prosta: odnośniki nie dostają już ramki przycisku i stoją w jednej linii.',

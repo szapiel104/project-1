@@ -82,7 +82,16 @@ function castle(): string {
   </g>`;
 }
 
+/** Kolejny numer obrazu: każdy pejzaż ma własne identyfikatory gradientów i filtrów. Ekran wczytywania i menu mają
+ *  dwa naraz w dokumencie; przy wspólnych „v-sky” itd. Chrome brał definicje z obrazu już schowanego (display: none)
+ *  i niebo, góry i dolina wychodziły czarne (Michał 2.11.2026: „zbugowane”). */
+let instance = 0;
+
 export function vistaScene(): string {
+  return paint().replace(/v-([a-z0-9]+)/g, `v${++instance}-$1`);
+}
+
+function paint(): string {
   const r = rng(5);
   const far = ridge(101, 560, 250, 14, 7), mid = ridge(203, 600, 200, 12, 6), near = ridge(307, 650, 160, 10, 6);
   let clouds = '';

@@ -150,7 +150,7 @@ export function normal(kind: Kind): THREE.Texture | null {
 }
 
 /** Mapy wysokości do głębi (parallax.ts) — zwykły JPG bez KTX2 (kompresja ETC1S robi schodki na łagodnych spadkach) */
-const HEIGHTS: Partial<Record<Kind, string>> = { ashlar: 'ashlar', slate: 'slate' };
+const HEIGHTS: Partial<Record<Kind, string>> = { ashlar: 'ashlar', slate: 'slate', thatch: 'thatch', planks: 'planks', cobble: 'cobble', bricks: 'bricks' };
 const heights = new Map<Kind, THREE.Texture>();
 export function heightMap(kind: Kind): THREE.Texture | null {
   const f = HEIGHTS[kind];

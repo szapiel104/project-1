@@ -123,8 +123,10 @@ const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9), bumpScale: tex === 'ashlar' ? 0.9 : tex === 'dressed' ? 0.7 : tex === 'cobble' ? 1.6 : 1.4 });
   m.userData.tile = (tex && TILE[tex]) || 0;
   // kamień murów i łupek: prawdziwa głębia (fugi chowają się za licami) — parallax.ts
-  const hm = tex === 'ashlar' || tex === 'slate' ? heightMap(tex) : null;
-  if (hm) { applyParallax(m, hm, tex === 'ashlar' ? 0.035 : 0.025); m.normalScale.set(1.6, 1.6); }
+  // strzecha, deski (dachy z gontu i desek), bruk i cegła też: mapa wysokości z jasności zdjęcia (gen w CHANGELOG 0.73.0)
+  const POM: Partial<Record<string, number>> = { ashlar: 0.016, slate: 0.012, thatch: 0.014, planks: 0.008, cobble: 0.012, bricks: 0.012 };
+  const hm = tex && POM[tex] ? heightMap(tex) : null;
+  if (hm) { applyParallax(m, hm, POM[tex!]!); m.normalScale.set(1.6, 1.6); }
   return m;
 };
 

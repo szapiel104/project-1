@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.73.0 — 2.11.2026
+- vista.ts: identyfikatory gradientów/filtrów z numerem obrazu (wczytywanie + menu w jednym dokumencie; Chrome brał definicje ze schowanego SVG → czarne niebo).
+- parallax.ts: głębia gaśnie pod ostrym kątem (`smoothstep(0.35, 0.75, vt.z)`), mniejsza skala (ashlar 0,016, slate 0,012) — bez smug i migania na blankach.
+- Mapy wysokości z jasności zdjęć: `thatch_h`, `planks_h`, `cobble_h`, `bricks_h` (rozmycie 1,2 + 12 px, percentyle 2–98) i parallax na tych materiałach.
+
 ## 0.72.9 — 2.11.2026
 - `button.link-btn` bez płytki we wszystkich stanach (hover, focus) — „Zaloguj się” w ramce konta nie wychodzi z linii.
 

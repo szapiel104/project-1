@@ -35,10 +35,13 @@ vec2 pomUv(vec2 uv0) {
   T *= k; B *= k;
   vec3 V = normalize(vViewPosition);
   vec3 vt = vec3(dot(V, T), dot(V, B), dot(V, N));
-  if (vt.z <= 0.05) return uv0;
+  // pod ostrym kątem (ściana widziana prawie z boku) głębia słabnie do zera: inaczej wzór się rozciąga w smugi
+  // i krawędzie małych brył (blanki, gzymsy) migają (Michał 2.11.2026: „mury mrugają, nachodzą na siebie”)
+  float fade = smoothstep(0.35, 0.75, vt.z);
+  if (fade <= 0.0) return uv0;
   const int STEPS = ${steps};
   float layer = 1.0 / float(STEPS);
-  vec2 delta = vt.xy / max(vt.z, 0.25) * uPomScale * layer;
+  vec2 delta = vt.xy / max(vt.z, 0.5) * uPomScale * fade * layer;
   vec2 uv = uv0;
   float cur = 0.0;
   float depth = 1.0 - textureGrad(uPomHeight, uv, s0, s1).r;
