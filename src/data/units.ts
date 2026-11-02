@@ -70,7 +70,7 @@ export const UNITS: readonly UnitDef[] = [
   { id: 'ladderman', name: 'u.ladderman', cost: { ladder: 1, gold: 6 }, hp: 45, speed: 108, attack: 0, cooldown: 14, sight: 10, weapon: 'ladder', ladderman: true },
   // Pospolite ruszenie (Michał 2.11.2026, na końcu listy dla starych zapisów): chłop z kilofem, szkolony w koszarach
   // za samą rudę, bez broni ze zbrojowni. Słaby i bez tarczy, ale tani — na szybko, gdy brakuje włóczni i łuków
-  { id: 'levy', name: 'u.levy', cost: { gold: 5 }, hp: 50, speed: 102, attack: 6, cooldown: 14, sight: 6, weapon: 'gold', levy: true },
+  { id: 'levy', name: 'u.levy', cost: { gold: 5 }, hp: 30, speed: 102, attack: 6, cooldown: 14, sight: 6, weapon: 'gold', levy: true },
 ];
 
 /** Najwyżej tylu magów bojowych może mieć jeden gracz (razem obu zakonów, z tymi w drodze do siedziby) */

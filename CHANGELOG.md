@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.9 — 2.11.2026
+- `levy`: zdrowie 50 → 30 (Michał: chłopa ma się kłaść szybciej).
+
 ## 0.70.8 — 2.11.2026
 - Skład „Pełno” przy 90/300 (Michał): `clearStalls` w storage.ts co 10 ticków zdejmuje `b.stall`, gdy jest miejsce, a robotnik śpi / ma fajrant / odpoczywa (dotąd flaga wisiała do rana). Okno składu (`storePanel.ts`, pole `room`): przy wolnym miejscu nagłówek „Towar pod drzwiami — zaraz trafi do środka” bez czerwonej ramki.
 

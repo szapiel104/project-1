@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.9', date: '2026-11-02',
+    pl: [
+      'Chłop z kilofem pada szybciej: 30 zdrowia (było 40, na chwilę 50). To tania, słaba jednostka — liczy się masa.',
+    ],
+    en: [
+      'The levied peasant falls more quickly: 30 health (was 40, briefly 50). He is a cheap, weak soldier — it is numbers that count.',
+    ],
+  },
+  {
     v: '0.70.8', date: '2026-11-02',
     pl: [
       'Skład nie krzyczy już „Pełno”, gdy jest w nim miejsce: warsztat, którego robotnik poszedł spać, przestaje czekać na miejsce od razu, a nie dopiero rano. Towar spod drzwi okno pokazuje spokojnie jako „zaraz trafi do środka”.',
