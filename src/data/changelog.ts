@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.77.4', date: '2026-11-02',
+    pl: ['Znajomi: „był” i „grał” widać także u graczy, którzy nie wchodzili od aktualizacji (z ostatniego logowania i ostatniego meczu).', 'Nowa uwaga testera trafia do dzwoneczka każdego administratora, także gdy dodał ją sam; „zrobione” dostaje autor zawsze.'],
+    en: ['Friends: “seen” and “played” now also show for players who have not logged in since the update (from their last sign-in and last match).', 'A new tester note reaches every administrator’s bell, even when they wrote it themselves; the author always gets “done”.'],
+  },
+  {
     v: '0.77.3', date: '2026-11-02',
     pl: ['Zakładki okien (Mój ród, Znajomi, ustawienia) zwykłą, czytelną czcionką zamiast drobnych wersalików.', 'Spokojniejszy nagłówek menu: tytuł, podtytuł, opis w równych wierszach i mała plakietka o rozwoju gry.'],
     en: ['Window tabs (My house, Friends, settings) in the plain, readable text font instead of small capitals.', 'A calmer menu header: title, subtitle, an evenly wrapped description and a small badge about ongoing development.'],

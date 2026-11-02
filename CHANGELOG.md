@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.77.4 — 2.11.2026
+- Migracja `20261102d_seen_backfill.sql`: uzupełnienie `last_seen`/`last_played`/`avatar`, `note_notify` i `admin_note` bez wyjątku dla autora.
+
 ## 0.77.3 — 2.11.2026
 - theme-wow.css: `.menu-tab` czcionką `--text`; nagłówek menu (`.game-tagline-*`) uproszczony.
 

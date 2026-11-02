@@ -46,7 +46,7 @@ export function whereText(p: Player, o: OnlinePlayer | undefined): string {
   const parts: string[] = [];
   if (p.last_seen) parts.push(tx(`był ${ago(p.last_seen)}`, `seen ${ago(p.last_seen)}`));
   if (p.last_played) parts.push(tx(`grał ${ago(p.last_played)}`, `played ${ago(p.last_played)}`));
-  return parts.join(' · ') || tx('poza grą', 'offline');
+  return parts.join(' · ') || tx('jeszcze nie grał', 'not played yet');
 }
 
 const PER_PAGE = 12;

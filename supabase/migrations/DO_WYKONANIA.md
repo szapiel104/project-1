@@ -4,7 +4,7 @@ Michał wykonuje migracje ręcznie: Supabase → projekt „project-1” → SQL
 Każdy czat, który dodaje nową migrację, dopisuje ją tutaj. Po wykonaniu: przenieść do „Wykonane” i dopisać „wykonane DATA” w pierwszej linijce pliku.
 
 ## Czekają (stan 2.11.2026)
-- (nic)
+- `20261102d_seen_backfill.sql` — „był / grał” dla starszych kont, uwagi testera w dzwoneczku także dla autora-administratora.
 
 ## Wykonane
 - `20261102c_social.sql` — wykonane 2.11.2026
