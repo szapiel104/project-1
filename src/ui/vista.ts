@@ -111,10 +111,43 @@ export function vistaScene(): string {
 function paint(): string {
   const r = rng(5);
   const far = ridge(101, 560, 250, 14, 7), mid = ridge(203, 600, 200, 12, 6), near = ridge(307, 650, 160, 10, 6);
+  // chmury (Michał 2.11.2026: „bardziej epickie”): wielkie kłębiaste cumulusy po bokach kadru i mniejsze w głębi —
+  // każdy z dziesiątek kłębów, jasny wierzch, złoto-różowy spód od zachodzącego słońca, ciemniejszy cień pod spodem
+  // i rozświetlona krawędź od strony słońca; nisko nad górami smugi pierzastych chmur w pomarańczu
+  const cumulus = (cx: number, base: number, w: number, h: number, seed: number, op = 1): string => {
+    const q = rng(seed);
+    const puffs: [number, number, number][] = [];
+    const rows = 5;
+    for (let k = 0; k < rows; k++) {
+      const t = k / (rows - 1), rowW = w * (1 - t * 0.72), y = base - h * t * 0.85;
+      const n = Math.max(2, Math.round(9 * (1 - t * 0.7)));
+      for (let i = 0; i < n; i++) {
+        const x = cx - rowW / 2 + (rowW * (i + 0.5)) / n + (q() - 0.5) * rowW * 0.08;
+        puffs.push([x, y - q() * h * 0.08, (h * (0.22 + q() * 0.14)) * (1 - t * 0.35)]);
+      }
+    }
+    const circ = (dx: number, dy: number, ks: number): string => puffs.map(([x, y, rr]) => `<circle cx="${f1(x + dx)}" cy="${f1(y + dy)}" r="${f1(rr * ks)}"/>`).join('');
+    const flat = `<ellipse cx="${f1(cx)}" cy="${f1(base + h * 0.06)}" rx="${f1(w * 0.52)}" ry="${f1(h * 0.16)}"/>`;
+    // jeden gradient na całą chmurę (w układzie sceny): z osobnym na każdy kłąb każda kula miała własne światło i chmura
+    // wyglądała jak kiść baniek
+    const top = base - h * 1.05, gid = `v-cum${seed}`;
+    return `<linearGradient id="${gid}" gradientUnits="userSpaceOnUse" x1="0" y1="${f1(top)}" x2="0" y2="${f1(base + h * 0.2)}"><stop offset="0" stop-color="#fffaf2"/><stop offset=".5" stop-color="#f9e8d8"/><stop offset=".8" stop-color="#eebc98"/><stop offset="1" stop-color="#d98a5e"/></linearGradient>
+    <g opacity="${op}">
+      <g fill="#6e5e7e" opacity=".45" filter="url(#v-cs)">${circ(8, h * 0.12, 1)}${flat}</g>
+      <g fill="url(#${gid})" filter="url(#v-cb)">${circ(0, 0, 1)}${flat}</g>
+      <g fill="#ffffff" opacity=".45" filter="url(#v-cs)">${circ(-w * 0.04, -h * 0.08, 0.5)}</g>
+    </g>`;
+  };
   let clouds = '';
-  for (let i = 0; i < 14; i++) {
-    const x = r() * 1700 - 50, y = 60 + r() * 260, w = 180 + r() * 320, h = 26 + r() * 40;
-    clouds += `<g opacity="${(0.55 + r() * 0.4).toFixed(2)}"><ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(w / 2)}" ry="${f1(h / 2)}" fill="url(#v-cloud)"/><ellipse cx="${f1(x + w * 0.15)}" cy="${f1(y - h * 0.35)}" rx="${f1(w * 0.28)}" ry="${f1(h * 0.45)}" fill="url(#v-cloud)"/></g>`;
+  clouds += cumulus(170, 300, 520, 300, 11, 0.95);
+  clouds += cumulus(1480, 250, 560, 320, 12, 0.95);
+  clouds += cumulus(560, 190, 260, 120, 13, 0.8);
+  clouds += cumulus(1060, 150, 300, 130, 14, 0.75);
+  clouds += cumulus(820, 90, 180, 70, 15, 0.6);
+  let streaks = '';
+  for (let i = 0; i < 9; i++) {
+    const x = r() * 1600, y = 330 + r() * 130, w = 220 + r() * 360;
+    streaks += `<ellipse cx="${f1(x)}" cy="${f1(y)}" rx="${f1(w / 2)}" ry="${f1(4 + r() * 6)}" fill="url(#v-streak)" opacity="${(0.45 + r() * 0.4).toFixed(2)}"/>`;
   }
   let birds = '';
   for (let i = 0; i < 9; i++) {
@@ -129,6 +162,10 @@ function paint(): string {
     <radialGradient id="v-sun" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(820 540) scale(720 360)">
       <stop offset="0" stop-color="#fff4d6" stop-opacity=".95"/><stop offset=".18" stop-color="#ffd38a" stop-opacity=".7"/><stop offset=".55" stop-color="#ffa860" stop-opacity=".22"/><stop offset="1" stop-color="#ff9a50" stop-opacity="0"/>
     </radialGradient>
+    <linearGradient id="v-cum" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fffaf2"/><stop offset=".45" stop-color="#f8e6d6"/><stop offset=".8" stop-color="#eab694"/><stop offset="1" stop-color="#d7845a"/></linearGradient>
+    <linearGradient id="v-streak" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#ffb070" stop-opacity="0"/><stop offset=".5" stop-color="#ffc890"/><stop offset="1" stop-color="#ffb070" stop-opacity="0"/></linearGradient>
+    <filter id="v-cb" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="1.6"/></filter>
+    <filter id="v-cs" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="5"/></filter>
     <linearGradient id="v-cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f4f0ea" stop-opacity=".9"/><stop offset=".6" stop-color="#e8c8b0"/><stop offset="1" stop-color="#ffb47a"/></linearGradient>
     <linearGradient id="v-far" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ea2c0"/><stop offset="1" stop-color="#c9b8b0"/></linearGradient>
     <linearGradient id="v-mid" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6a7ea4"/><stop offset="1" stop-color="#a59a9c"/></linearGradient>
@@ -152,7 +189,8 @@ function paint(): string {
   </defs>
   <rect width="1600" height="900" fill="url(#v-sky)"/>
   <rect width="1600" height="900" fill="url(#v-sun)"/>
-  <g filter="url(#v-soft)">${clouds}</g>
+  <g filter="url(#v-soft)" opacity=".9">${streaks}</g>
+  ${clouds}
   <circle cx="820" cy="520" r="44" fill="#fff6dc" opacity=".9" filter="url(#v-blur2)"/>
   <!-- smugi światła zza gór -->
   <g opacity="1.25"><path d="M820 520 L520 0 L640 0 Z M820 520 L760 0 L860 0 Z M820 520 L980 0 L1100 0 Z M820 520 L1220 0 L1320 0 Z" fill="url(#v-ray)"/></g>

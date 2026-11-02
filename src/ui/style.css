@@ -2128,3 +2128,10 @@ body.menu-open .devpanel { display: none; }
   background: linear-gradient(90deg, #130c08 0, #0d0805 calc(var(--col) - 1px), rgba(154, 122, 42, .6) calc(var(--col) - 1px), rgba(154, 122, 42, .6) var(--col), rgba(6, 3, 1, .45) var(--col), rgba(6, 3, 1, 0) calc(var(--col) + 280px));
   box-shadow: none;
 }
+
+/* tytuł na ekranie wczytywania bardziej epicki (Michał 2.11.2026: „napis też”): grubsze złoto z wyraźnym fazowaniem,
+   ciemny obrys, ciepła poświata i ozdobne kreski z rombami po bokach podtytułu */
+#loading .loading-title { letter-spacing: .08em; background: linear-gradient(#fffbe6 0%, #ffe28a 22%, #e8b440 46%, #8a5414 52%, #c98a28 60%, #ffd56a 80%, #fff1b8 100%);
+  -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; -webkit-text-stroke: 1.5px rgba(42, 20, 6, .85);
+  filter: drop-shadow(0 4px 0 #2a1406) drop-shadow(0 0 18px rgba(255, 170, 60, .45)) drop-shadow(0 8px 24px rgba(0, 0, 0, .7)); }
+#loading .loading-crest svg { filter: drop-shadow(0 0 30px rgba(255, 190, 90, .55)) drop-shadow(0 6px 6px #000); }

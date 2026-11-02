@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.73.2 — 2.11.2026
+- vista.ts: `cumulus()` — chmury z kłębów w rzędach, jeden gradient na chmurę (userSpaceOnUse; wcześniej każdy kłąb miał własny i wychodziły bańki), cień, rozświetlenie, smugi `v-streak` nad górami.
+- Tytuł wczytywania: mocniejszy gradient złota, `-webkit-text-stroke`, poświata (style.css).
+- Karta konta w menu w stylu okien (theme-wow.css): plaster + brąz, złota rama z rombami, herb w kręgu, poziom w złotym kamieniu, pasek PD.
+
 ## 0.73.1 — 2.11.2026
 - vista.ts: nowy `castle()` (skalny grzbiet z fasetami, mur po zboczu, wieże z gradientem światła i wzorem rzędów `v-courses`, skały przed podstawami), mgła w dolinie, skała na pierwszym planie, ciemniejszy zenit i mocniejsze smugi.
 - Ekran wczytywania: `.loading-card` w stylu okien gry (plaster + brąz, złota listwa).

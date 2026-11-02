@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.73.2', date: '2026-11-02',
+    pl: [
+      'Epickie chmury na pejzażu: wielkie, kłębiaste cumulusy po bokach i mniejsze w głębi, z jasnym wierzchem i złoto-różowym spodem od zachodu, a nisko nad górami pomarańczowe smugi.',
+      'Bardziej epicki napis „Project-1” na ekranie wczytywania: grubsze, fazowane złoto z ciemnym obrysem i ciepłą poświatą.',
+      'Nowa karta konta w menu: płyta jak okna gry w złotej ramie z rombami, herb w złotym kręgu, poziom w złotym kamieniu i pasek doświadczenia jak w WoW.',
+    ],
+    en: [
+      'Epic clouds in the landscape: great billowing cumulus at the sides and smaller ones beyond, bright on top and gold-pink underneath from the sunset, with orange streaks low over the mountains.',
+      'A more epic “Project-1” title on the loading screen: thicker, bevelled gold with a dark outline and a warm glow.',
+      'A new account card in the menu: a plate like the game windows in a gold frame with diamonds, the arms in a gold ring, the level in a gold stone and a WoW-style experience bar.',
+    ],
+  },
+  {
     v: '0.73.1', date: '2026-11-02',
     pl: [
       'Zamek na pejzażu stoi naturalnie: mniejszy i dalej, na poszarpanej skale, z murem schodzącym po zboczu, wieżami wrośniętymi w grzbiet i rzędami kamieni na ścianach. Do tego mgła w dolinie, mocniejsze słońce i skała na pierwszym planie.',
