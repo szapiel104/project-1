@@ -39,14 +39,16 @@ vec2 pomUv(vec2 uv0) {
   // i krawędzie małych brył (blanki, gzymsy) migają (Michał 2.11.2026: „mury mrugają, nachodzą na siebie”)
   float fade = smoothstep(0.35, 0.75, vt.z);
   if (fade <= 0.0) return uv0;
-  const int STEPS = ${steps};
-  float layer = 1.0 / float(STEPS);
+  // więcej kroków pod ostrzejszym kątem: mniej „schodków” warstw, które pełzały po licu przy obrocie
+  const int MAXSTEPS = ${steps * 2};
+  int steps = int(mix(float(MAXSTEPS), float(${steps}), vt.z));
+  float layer = 1.0 / float(steps);
   vec2 delta = vt.xy / max(vt.z, 0.5) * uPomScale * fade * layer;
   vec2 uv = uv0;
   float cur = 0.0;
   float depth = 1.0 - textureGrad(uPomHeight, uv, s0, s1).r;
-  for (int i = 0; i < STEPS; i++) {
-    if (cur >= depth) break;
+  for (int i = 0; i < MAXSTEPS; i++) {
+    if (cur >= depth || i >= steps) break;
     uv -= delta;
     depth = 1.0 - textureGrad(uPomHeight, uv, s0, s1).r;
     cur += layer;

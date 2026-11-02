@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.73.7 — 2.11.2026
+- `withAo`: polygonOffset bez factor (0, units −8) — przesunięcie zależne od nachylenia wyciągało przed lico schowane w murze ściany detali (pasek na krawędziach).
+- `parallax.ts`: liczba kroków zależna od kąta (do 2× pod ostrym kątem).
+
 ## 0.73.6 — 2.11.2026
 - Strzecha: własny generator `gen_stone.py thatch` (warstwy, zwis, cień, mapa wysokości); stara tekstura jako `straw` dla siana, koszy, plecionek i ładunków.
 - `Building.tube()` (rura z grubością); wykusze w `stonetower_big.py` z niej; `inspect_building.py` pokazuje grupę `roof`.

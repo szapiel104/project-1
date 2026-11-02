@@ -772,7 +772,10 @@ function withAo(m: THREE.Material): THREE.Material {
     // gzyms na koronie): dwie powierzchnie w tym samym miejscu migają przy ruchu kamery (z-fighting). Duże płaszczyzny
     // (tynk, mur, deski, ziemia, strzecha) zostają na swoim miejscu, a detale są o włos bliżej kamery, więc zawsze wygrywają.
     baseMats ??= new Set<THREE.Material>([M.plaster, M.stone, M.castle, M.castlePlain, M.plank, M.soil, M.thatch, M.thatchDark, M.slate, M.roadWood, M.roadStone, M.roadSand, M.pathCobble, M.pathDirt, M.cut, M.turf, M.orchardGrass]);
-    if (!baseMats.has(m)) { c.polygonOffset = true; c.polygonOffsetFactor = -1; c.polygonOffsetUnits = -4; }
+    // Tylko stałe przesunięcie (units), bez zależnego od nachylenia (factor): factor −1 przy ścianie widzianej z boku
+    // wyciągał przed lico także części detali schowane w murze (wierzch ciosu narożnika, gzymsu wchodzącego w trzon) —
+    // na każdej krawędzi muru i wieży migał wtedy ciemny pasek (Michał 2.11.2026: „na krawędzi muru mruga”).
+    if (!baseMats.has(m)) { c.polygonOffset = true; c.polygonOffsetFactor = 0; c.polygonOffsetUnits = -8; }
   }
   return c;
 }

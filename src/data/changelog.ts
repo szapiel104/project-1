@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.73.7', date: '2026-11-02',
+    pl: [
+      'Krawędzie murów i wież nie migają już ciemnym paskiem: części kamiennych ozdób schowane w murze (narożne ciosy, gzymsy) nie przebijają przez lico, gdy patrzysz na ścianę z boku.',
+      'Głębia kamienia liczona dokładniej pod ostrym kątem — wzór nie pełznie po murze przy obracaniu kamery.',
+    ],
+    en: [
+      'Wall and tower edges no longer flicker with a dark stripe: the parts of stone trim hidden inside the wall (corner quoins, cornices) no longer poke through the face when you look at it from the side.',
+      'Stone depth is computed more finely at steep angles — the pattern no longer crawls across the wall as the camera turns.',
+    ],
+  },
+  {
     v: '0.73.6', date: '2026-11-02',
     pl: [
       'Nowa strzecha na dachach: warstwy pęczków słomy ze strzępiastym, ocienionym brzegiem zamiast płaskiej, jednolitej słomy.',
