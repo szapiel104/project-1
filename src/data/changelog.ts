@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.2', date: '2026-11-02',
+    pl: [
+      'Okno budynku lub wojska nie wchodzi już na kronikę: przy otwartym oknie wiadomości kroniki się zwijają (zostaje przycisk „Kronika”), a okno kończy się nad nim.',
+    ],
+    en: [
+      'The building or army window no longer runs into the chronicle: while it is open the chronicle messages fold away (the “Chronicle” button stays), and the window ends above it.',
+    ],
+  },
+  {
     v: '0.72.1', date: '2026-11-02',
     pl: [
       'Okno budynku i wojska stoi teraz w lewym górnym rogu i nie wchodzi na plan na start. Można je przeciągnąć za tytuł w dowolne miejsce — gra zapamięta je po odświeżeniu.',

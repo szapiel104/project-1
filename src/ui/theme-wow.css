@@ -195,3 +195,5 @@ body.build-open .scribe, body.build-open .scribe-log { display: none; }
 .market-line.buy .market-btn:hover:not(:disabled) { background-image: linear-gradient(#e0521c, #ae330e 55%, #86240a); box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #ffc078, 0 0 12px rgba(255, 120, 40, .4); }
 .market-line .market-btn:disabled { filter: saturate(.35) brightness(.75); }
 
+/* przy otwartym oknie budynku/wojska wiadomości kroniki się zwijają (zostaje przycisk „Kronika”), żeby nie wchodziły na okno */
+body.info-open .scribe-toasts { display: none; }

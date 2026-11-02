@@ -668,7 +668,10 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
     placeInfo();
     const dockEl = root.querySelector<HTMLElement>('.dock');
     const top = info.getBoundingClientRect().top;
-    const bottom = (dockEl ? dockEl.getBoundingClientRect().top : window.innerHeight) - 10 * k;
+    // dół: nad dolną belką i nad przyciskiem kroniki w lewym dolnym rogu (gdy okno stoi po lewej, nie wchodzi na kronikę)
+    let bottom = (dockEl ? dockEl.getBoundingClientRect().top : window.innerHeight) - 10 * k;
+    const sb = document.querySelector<HTMLElement>('.scribe');
+    if (sb && sb.offsetParent !== null) { const r = sb.getBoundingClientRect(), ir = info.getBoundingClientRect(); if (r.height && r.left < ir.right && r.right > ir.left) bottom = Math.min(bottom, r.top - 8 * k); }
     const want = `${Math.max(140, Math.floor((bottom - top) / k))}px`;
     if (info.style.maxHeight !== want) info.style.maxHeight = want;
     if (info.style.marginBottom) info.style.marginBottom = '';

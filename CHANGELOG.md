@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.72.2 — 2.11.2026
+- `fitInfo`: dół okna nad `.scribe`, gdy na siebie zachodzą; `body.info-open .scribe-toasts` schowane.
+
 ## 0.72.1 — 2.11.2026
 - Okno `.info` w lewym górnym rogu (Michał), przeciągane za `.info-name`, pozycja w localStorage `p1.infoPos` (hud.ts: `placeInfo`, `fitInfo` liczy wysokość od górnej krawędzi okna do belki).
 - Kronika: `--scribe-bottom` liczone co 400 ms nad `.dock` i `.army-groups`.
