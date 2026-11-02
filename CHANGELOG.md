@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.77.3 — 2.11.2026
+- theme-wow.css: `.menu-tab` czcionką `--text`; nagłówek menu (`.game-tagline-*`) uproszczony.
+
 ## 0.77.2 — 2.11.2026
 - `friends.css`: reset motywu przycisków dla `.fr-name`, `.fr-crest`, `.fr-feed-crest`; siatka kafelka. Migracja `20261102c_social.sql` wykonana.
 

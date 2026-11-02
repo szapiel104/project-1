@@ -401,3 +401,14 @@ body .menu .menu-panel .menu-btn:hover, body .menu .menu-panel .menu-btn:focus-v
 .friends-steam .friends-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .friends-steam .net-friend.busy .net-tag { background: #2f6b3a; color: #effff0; }
 .friends-pane { display: grid; gap: 8px; }
+
+/* ===== Czytelniej (Michał 2.11.2026) =====
+   zakładki okien zwykłą czcionką tekstu zamiast wersalików Cinzel, a nagłówek menu spokojniej: tytuł, podtytuł,
+   opis w równych wierszach i mała plakietka „w ciągłym rozwoju” zamiast trzeciego krzyczącego wiersza */
+body .menu .menu-panel .menu-tab { font-family: var(--text); font-variant: normal; text-transform: none; letter-spacing: .01em; font-size: 16px; font-weight: 600; }
+body .menu .menu-panel .menu-tab[aria-selected='true'] { font-weight: 700; }
+.menu:not(.previewing) .menu-sub { margin-top: 8px; font-size: clamp(16px, 2vh, 19px); color: #ecd9ae; }
+.menu:not(.previewing) .game-tagline { gap: 10px; margin-top: 10px; max-width: 440px; }
+.menu:not(.previewing) .game-tagline-what { font-size: 15px; line-height: 1.45; letter-spacing: 0; color: #dcc9a0; text-wrap: balance; }
+.menu:not(.previewing) .game-tagline-dev { justify-self: start; padding: 3px 10px; font-family: var(--text); font-weight: 700; font-size: 13px; letter-spacing: .02em; text-transform: none;
+  color: #2a1d0c; background: #e6c06a; border: 1px solid #ffd76a; text-shadow: none; }

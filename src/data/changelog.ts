@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.77.3', date: '2026-11-02',
+    pl: ['Zakładki okien (Mój ród, Znajomi, ustawienia) zwykłą, czytelną czcionką zamiast drobnych wersalików.', 'Spokojniejszy nagłówek menu: tytuł, podtytuł, opis w równych wierszach i mała plakietka o rozwoju gry.'],
+    en: ['Window tabs (My house, Friends, settings) in the plain, readable text font instead of small capitals.', 'A calmer menu header: title, subtitle, an evenly wrapped description and a small badge about ongoing development.'],
+  },
+  {
     v: '0.77.2', date: '2026-11-02',
     pl: ['Kafelki znajomych wyrównane: nick to zwykły napis (bez ramki przycisku), herb po lewej na całą wysokość, opis i przyciski w jednej kolumnie.', 'Znajomi, dzwoneczek, aktywność i historia meczów działają już w bazie.'],
     en: ['Friend tiles are aligned: the nickname is plain text (no button frame), the coat of arms fills the left side, details and buttons sit in one column.', 'Friends, the bell, activity and match history now work in the database.'],
