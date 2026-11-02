@@ -56,7 +56,7 @@ const seats = (preset: string): number => (MAP_PRESETS[preset as MapPresetId]?.s
 const modeName = (preset: string): string => MODES.find(([id]) => id === preset)?.[1] ?? preset;
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(tab?: number, note?: number): void; showFriends(tab?: number): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
+export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(tab?: number, note?: number): void; showFriends(tab?: number, profile?: string): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
   const { el, button, screen } = ui;
   const inMatch = (): boolean => ui.inMatch();
   let stopWatch: (() => void) | null = null;
@@ -522,10 +522,10 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   }
 
   // ---------------- znajomi ----------------
-  async function showFriends(tab = 0): Promise<void> {
+  async function showFriends(tab = 0, profile?: string): Promise<void> {
     cleanup();
     const m = me();
-    if (!m) { showLogin(false, '', () => void showFriends(tab)); return; }
+    if (!m) { showLogin(false, '', () => void showFriends(tab, profile)); return; }
     const view = friendsView({
       el, button, shield,
       join: (id) => void join(id),
@@ -540,9 +540,10 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
         enterRoom(res);
         return null;
       },
-    }, tab);
-    screen(tx('Znajomi', 'Friends'), true, view.node, back(() => void showOnline(), tx('Wróć do listy gier', 'Back to game list')));
-    stopWatch = onPresence(() => view.redraw());
+    }, tab, profile);
+    screen(tx('Znajomi', 'Friends'), true, view.node, back());
+    const offP = onPresence(() => view.redraw());
+    stopWatch = () => { offP(); view.stop(); };
   }
 
   // zaproszenie od znajomego: okienko w rogu ekranu, w menu i w grze z botami (w meczu przez sieć nie przeszkadzamy)
@@ -843,5 +844,5 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     enterRoom(room);
   }
 
-  return { showOnline: () => void showOnline(), showAccount, showHouse: (tab = 0, note?: number) => showHouse(tab, note), showFriends: (tab = 0) => void showFriends(tab), showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
+  return { showOnline: () => void showOnline(), showAccount, showHouse: (tab = 0, note?: number) => showHouse(tab, note), showFriends: (tab = 0, profile?: string) => void showFriends(tab, profile), showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
 }

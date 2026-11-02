@@ -32,7 +32,7 @@ create policy "odrzucam zaproszenie do znajomych" on public.friends for delete t
 create table if not exists public.notifications (
   id bigint generated always as identity primary key,
   user_id uuid not null references auth.users on delete cascade,
-  kind text not null check (kind in ('friend_request', 'friend_accept', 'invite', 'note', 'note_done')),
+  kind text not null check (kind in ('friend_request', 'friend_accept', 'invite', 'note', 'note_done', 'friend_match', 'friend_level', 'friend_badge')),
   from_id uuid references auth.users on delete cascade,
   from_nick text not null default '',
   from_avatar integer not null default 0,
@@ -114,6 +114,63 @@ begin
 end $$;
 revoke all on function public.admin_note(bigint, boolean, text) from public, anon;
 grant execute on function public.admin_note(bigint, boolean, text) to authenticated;
+
+-- ---------------- aktywność znajomych (Michał 2.11.2026: „znajomy osiągnął poziom, wygrał, przegrał mecz — mam to
+-- w powiadomieniach i wyświetla się od razu”) ----------------
+-- znajomi = obie strony się dodały
+create or replace function public.mutual_friends(p_user uuid) returns setof uuid
+language sql stable security definer set search_path = public as $$
+  select f.friend_id from friends f where f.user_id = p_user
+     and exists (select 1 from friends g where g.user_id = f.friend_id and g.friend_id = p_user)
+$$;
+revoke all on function public.mutual_friends(uuid) from public, anon;
+
+-- po każdym rozegranym meczu (award_match zapisuje xp_awards): znajomi dostają „wygrał / przegrał mecz”
+create or replace function public.match_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare n text; av integer;
+begin
+  if new.minutes < 3 then return new; end if;   -- krótkie próby nie zaśmiecają powiadomień
+  select nick, avatar into n, av from profiles where id = new.user_id;
+  insert into notifications (user_id, kind, from_id, from_nick, from_avatar, payload)
+  select fid, 'friend_match', new.user_id, coalesce(n, ''), coalesce(av, 0),
+         jsonb_build_object('won', new.won, 'mode', new.mode, 'minutes', new.minutes, 'kills', new.kills, 'razed', new.razed, 'xp', new.xp)
+    from mutual_friends(new.user_id) fid;
+  return new;
+end $$;
+drop trigger if exists xp_awards_notify on public.xp_awards;
+create trigger xp_awards_notify after insert on public.xp_awards for each row execute function public.match_notify();
+
+-- nowy poziom: znajomi dostają „osiągnął poziom N”
+create or replace function public.level_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare n text; av integer;
+begin
+  if new.level <= old.level then return new; end if;
+  select nick, avatar into n, av from profiles where id = new.user_id;
+  insert into notifications (user_id, kind, from_id, from_nick, from_avatar, payload)
+  select fid, 'friend_level', new.user_id, coalesce(n, ''), coalesce(av, 0), jsonb_build_object('level', new.level)
+    from mutual_friends(new.user_id) fid;
+  return new;
+end $$;
+drop trigger if exists progress_level_notify on public.player_progress;
+create trigger progress_level_notify after update of level on public.player_progress for each row execute function public.level_notify();
+
+-- profil gracza: liczniki postępu widzą wszyscy zalogowani (tabela player_progress), a ostatnie mecze — sam gracz,
+-- jego znajomi i administrator
+create or replace function public.player_matches(p_user uuid, p_limit integer default 15)
+returns table (mode text, won boolean, minutes integer, kills integer, razed integer, built integer, xp integer, created_at timestamptz)
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if auth.uid() is null then raise exception 'nie zalogowano'; end if;
+  if not (p_user = auth.uid() or is_admin() or p_user in (select mutual_friends(auth.uid()))) then
+    raise exception 'mecze widzą tylko znajomi';
+  end if;
+  return query select a.mode, a.won, a.minutes, a.kills, a.razed, a.built, a.xp, a.created_at
+    from xp_awards a where a.user_id = p_user order by a.created_at desc limit greatest(1, least(coalesce(p_limit, 15), 50));
+end $$;
+revoke all on function public.player_matches(uuid, integer) from public, anon;
+grant execute on function public.player_matches(uuid, integer) to authenticated;
 
 -- dzwoneczek odświeża się na żywo
 do $$ begin

@@ -13,6 +13,7 @@ import { hardReload, newerVersion } from './refresh';
 import { SANDBOX as SANDBOX_MENU } from '../testmode';
 import { testerNotesPane } from './testerNotes';
 import { createBell } from './bell';
+import { startSocialToasts } from './socialToasts';
 
 /** Ustawienia zapamiętywane w przeglądarce */
 export interface Settings {
@@ -253,6 +254,20 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     join: (id) => online.join(id),
     adminNotes: (id) => online.showHouse(4, id),
     myNotes: (id) => showNotes(id),
+    profile: (id) => online.showFriends(0, id),
+  });
+  /** Okno menu otwarte z powiadomienia także w trakcie gry (gra z botami czeka pod menu jak po Esc) */
+  const reveal = (f: () => void): void => {
+    // menu schowane = trwa gra: otwieramy je jak po Esc (z „Wróć do gry”)
+    if (wrap.hidden) { inGame = true; wrap.classList.add('in-game'); wrap.hidden = false; document.body.classList.add('menu-open'); showMain(); }
+    f();
+  };
+  startSocialToasts({
+    profile: (id) => reveal(() => online.showFriends(0, id)),
+    friends: (tab) => reveal(() => online.showFriends(tab)),
+    adminNotes: (id) => reveal(() => online.showHouse(4, id)),
+    myNotes: (id) => reveal(() => showNotes(id)),
+    quiet: () => events.isOnline() && inGame,
   });
   const paintAccount = (): void => {
     const m = netMe();

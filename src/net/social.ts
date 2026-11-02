@@ -7,7 +7,7 @@ import { tx } from '../i18n';
  * i „ostatnio grał”, powiadomienia z dzwoneczkiem (na żywo) i zaproszenia do gry, które zostają też po wyjściu z gry.
  */
 export interface Player { id: string; nick: string; avatar: number; last_seen: string | null; last_played: string | null }
-export interface Notice { id: number; kind: 'friend_request' | 'friend_accept' | 'invite' | 'note' | 'note_done'; from_id: string | null; from_nick: string; from_avatar: number; payload: { room?: string; name?: string; note?: number; text?: string } | null; read: boolean; created_at: string }
+export interface Notice { id: number; kind: 'friend_request' | 'friend_accept' | 'invite' | 'note' | 'note_done' | 'friend_match' | 'friend_level' | 'friend_badge'; from_id: string | null; from_nick: string; from_avatar: number; payload: { room?: string; name?: string; note?: number; text?: string; won?: boolean; mode?: string; minutes?: number; kills?: number; razed?: number; xp?: number; level?: number } | null; read: boolean; created_at: string }
 
 const COLS = 'id,nick,avatar,last_seen,last_played';
 /** Profile graczy; przed migracją (bez nowych kolumn) — sam nick */
@@ -78,6 +78,9 @@ export async function inviteToGame(toId: string, roomId: string, roomName: strin
 // ---------------- powiadomienia ----------------
 let notices: Notice[] = [];
 const noticeSubs = new Set<() => void>();
+/** Nowe powiadomienie, które przyszło przed chwilą (do okienka w rogu ekranu) */
+const freshSubs = new Set<(n: Notice) => void>();
+export const onFreshNotice = (f: (n: Notice) => void): (() => void) => { freshSubs.add(f); return () => freshSubs.delete(f); };
 export const noticesNow = (): Notice[] => notices;
 export const unread = (): number => notices.filter((n) => !n.read).length;
 export const onNotices = (f: () => void): (() => void) => { noticeSubs.add(f); return () => noticeSubs.delete(f); };
@@ -119,7 +122,10 @@ function sync(): void {
   void loadNotices();
   if (!m) return;
   live = supa.channel(`notices:${m.id}`)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${m.id}` }, () => void loadNotices())
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${m.id}` }, (e) => {
+      if (e.eventType === 'INSERT' && e.new) for (const f of freshSubs) f(e.new as Notice);
+      void loadNotices();
+    })
     .subscribe();
   seen();
   beat = setInterval(seen, 60_000);
@@ -127,4 +133,27 @@ function sync(): void {
 if (typeof window !== 'undefined') {
   onAccount(sync);
   onStatus(seen);
+}
+
+// ---------------- profil gracza: poziom, liczniki, ostatnie mecze ----------------
+export interface Stats { xp: number; level: number; matches: number; wins: number; kills: number; razed?: number; built?: number; minutes?: number; online_wins?: number; hard_wins?: number }
+/** Liczniki postępu wielu graczy naraz (poziom na kafelkach znajomych) */
+export async function statsOf(ids: string[]): Promise<Map<string, Stats>> {
+  const out = new Map<string, Stats>();
+  if (!ids.length) return out;
+  const { data, error } = await supa.from('player_progress').select('*').in('user_id', ids);
+  if (error) return out;
+  for (const r of (data as (Stats & { user_id: string })[] | null) ?? []) out.set(r.user_id, r);
+  return out;
+}
+export interface Match { mode: string; won: boolean; minutes: number; kills: number; razed: number; built: number; xp: number; created_at: string }
+/** Ostatnie mecze gracza (widzi sam gracz, jego znajomi i administrator) */
+export async function playerMatches(id: string, limit = 15): Promise<Match[] | string> {
+  const { data, error } = await supa.rpc('player_matches', { p_user: id, p_limit: limit });
+  if (error) return /tylko znajomi/.test(error.message) ? tx('Mecze widzą tylko znajomi.', 'Only friends can see matches.') : /PGRST20|Could not find/.test(error.message) ? tx('Historia meczów będzie po aktualizacji bazy.', 'Match history comes with the database update.') : error.message;
+  return (data as Match[] | null) ?? [];
+}
+export async function playerById(id: string): Promise<Player | null> {
+  const ps = await profiles((c) => supa.from('profiles').select(c).eq('id', id));
+  return ps[0] ?? null;
 }

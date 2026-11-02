@@ -10,6 +10,23 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.77.0', date: '2026-11-02',
+    pl: [
+      'Nowy, duży panel znajomych: kafelki z dużym herbem, poziomem i tytułem, kolorowa kropka (dostępny, w grze, offline), gdzie jest i kiedy grał ostatnio, krótkie statystyki; filtr po nicku, „W grze / Offline”, sortowanie i strony.',
+      'Profil gracza: duży herb, tytuł, poziom z paskiem PD, osiem statystyk (bitwy, zwycięstwa, skuteczność, wygrane przez sieć, wrogowie, zburzone i postawione budynki, czas w bitwach), wszystkie odznaki i ostatnie bitwy znajomego.',
+      'Zakładka „Aktywność”: kto z Twoich znajomych wygrał albo przegrał bitwę (z rodzajem meczu, czasem, wrogami i PD) i kto wszedł na nowy poziom.',
+      'Powiadomienia od razu w rogu ekranu — w menu i w grze z botami: znajomy wygrał, przegrał, nowy poziom, zaproszenie do znajomych (z przyciskiem „Przyjmij”), nowa uwaga testera.',
+      'Wszystko reaguje od razu: „Dodaj do znajomych” zmienia się w „Wysłano ✓”, „Przyjmij” w „Znajomy ✓”; usuwanie ze znajomych z potwierdzeniem; wyniki wyszukiwania pojawiają się w trakcie pisania.',
+    ],
+    en: [
+      'A new, large friends panel: tiles with a big coat of arms, level and rank, a coloured dot (online, in game, offline), where they are and when they last played, short statistics; filter by nickname, “Online / Offline”, sorting and pages.',
+      'Player profile: big coat of arms, rank, level with an XP bar, eight statistics (battles, victories, win rate, online wins, foes, buildings razed and raised, time in battle), all badges and a friend’s recent battles.',
+      'An “Activity” tab: which of your friends won or lost a battle (with the match type, time, foes and XP) and who reached a new level.',
+      'Notifications appear in the corner at once — in the menu and in games against bots: a friend won, lost, reached a level, a friend request (with an “Accept” button), a new tester note.',
+      'Everything reacts at once: “Add friend” turns into “Sent ✓”, “Accept” into “Friend ✓”; removing a friend asks for confirmation; search results appear as you type.',
+    ],
+  },
+  {
     v: '0.76.2', date: '2026-11-02',
     pl: ['Znajomi: po wysłaniu zaproszenia z wyszukiwarki przycisk od razu zmienia się na „zaproszony” (wcześniej zostawał „Dodaj do znajomych”, choć zaproszenie poszło).'],
     en: ['Friends: after sending a request from the search, the button turns into “request sent” straight away (it used to stay “Add friend” although the request went out).'],

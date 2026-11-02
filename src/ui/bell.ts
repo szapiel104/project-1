@@ -2,7 +2,7 @@ import { befriend, dropNotice, markRead, noticesNow, onNotices, unfriend, unread
 import { ago } from './friendsView';
 import { avatarSvg } from './avatars';
 import { tx } from '../i18n';
-import { plainRich } from './richNote';
+import { noticeText } from './noticeText';
 
 /**
  * Dzwoneczek z powiadomieniami w menu (Michał 2.11.2026): zaproszenia do znajomych (przyjmij / odrzuć), przyjęte
@@ -14,6 +14,8 @@ export interface BellActions {
   join(roomId: string): void;
   adminNotes(id?: number): void;
   myNotes(id?: number): void;
+  /** Profil gracza (z aktywności znajomych) */
+  profile(id: string): void;
 }
 
 const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] => {
@@ -41,15 +43,7 @@ export function createBell(go: BellActions): HTMLElement {
 
   const close = (): void => { panel.hidden = true; open.setAttribute('aria-expanded', 'false'); };
   const leave = (f: () => void) => (): void => { close(); f(); };
-  const text = (n: Notice): string => {
-    switch (n.kind) {
-      case 'friend_request': return tx(`${n.from_nick} chce zostać Twoim znajomym`, `${n.from_nick} wants to be your friend`);
-      case 'friend_accept': return tx(`${n.from_nick} przyjął zaproszenie — jesteście znajomymi`, `${n.from_nick} accepted — you are now friends`);
-      case 'invite': return tx(`${n.from_nick} zaprasza Cię do gry „${n.payload?.name ?? ''}”`, `${n.from_nick} invites you to the game “${n.payload?.name ?? ''}”`);
-      case 'note': return tx(`Nowa uwaga od ${n.from_nick}: „${plainRich(n.payload?.text ?? '')}”`, `New note from ${n.from_nick}: “${plainRich(n.payload?.text ?? '')}”`);
-      case 'note_done': return tx(`Twoja uwaga jest zrobiona: „${plainRich(n.payload?.text ?? '')}”`, `Your note is done: “${plainRich(n.payload?.text ?? '')}”`);
-    }
-  };
+  const text = noticeText;
   const acts = (n: Notice): HTMLElement[] => {
     const id = n.from_id ?? '';
     switch (n.kind) {
@@ -61,6 +55,7 @@ export function createBell(go: BellActions): HTMLElement {
       case 'invite': return n.payload?.room ? [btn(tx('Dołącz', 'Join'), leave(() => { void dropNotice(n.id); go.join(n.payload!.room!); }), 'menu-btn btn-ok bell-act')] : [];
       case 'note': return [btn(tx('Przejdź do uwag', 'Open notes'), leave(() => go.adminNotes(n.payload?.note)), 'menu-btn bell-act')];
       case 'note_done': return [btn(tx('Moje uwagi', 'My notes'), leave(() => go.myNotes(n.payload?.note)), 'menu-btn bell-act')];
+      case 'friend_match': case 'friend_level': case 'friend_badge': return n.from_id ? [btn(tx('Profil', 'Profile'), leave(() => go.profile(n.from_id!)), 'menu-btn bell-act')] : [];
     }
   };
   const paint = (): void => {

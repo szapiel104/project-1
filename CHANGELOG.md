@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.77.0 — 2.11.2026
+- `friendsView.ts` od nowa: zakładki Znajomi / Aktywność / Zaproszenia / Szukaj, kafelki, profil (statystyki, odznaki, `player_matches`), przyciski natychmiastowe.
+- `socialToasts.ts` (okienka z `onFreshNotice`), `noticeText.ts` (wspólna treść dla dzwoneczka i okienek), `friends.css`.
+- Migracja `20261102c_social.sql` rozszerzona: `mutual_friends`, wyzwalacze `match_notify` (xp_awards) i `level_notify` (player_progress), `player_matches`.
+
 ## 0.76.2 — 2.11.2026
 - `friendsView`: po akcji wymuszone przerysowanie zakładki szukania.
 
