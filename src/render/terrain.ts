@@ -2043,6 +2043,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     setSun(dir: THREE.Vector3, color: THREE.Color, golden: number) { wm.sunDir.value.copy(dir).normalize(); wm.sunCol.value.copy(color).multiplyScalar(dir.y > 0 ? 0.6 + golden * 0.8 : 0); },
     level(x: number, y: number, fw: number, fh: number, y0: number) {
       streams?.blocked(x, y, fw, fh);
+      mistFx?.clearAt(x + fw / 2 + ox, y + fh / 2 + oz, Math.max(fw, fh) / 2 + 3);
       levelLock ??= new Uint8Array((w + 1) * (h + 1));
       const lock = levelLock;
       const rockCorner = (cx: number, cy: number): boolean => {

@@ -5040,13 +5040,15 @@ export class GameRenderer {
       let hx: number, fxl: number, z: number;
       // miejsca posłań zapisane w modelu (rudera narożna: dwa skrzydła, posłania pod dwiema ścianami)
       const bm = this.buildingMeshes.get(u.home)!;
-      const fixed = bm.userData.beds as [number, number, number, number][] | undefined;
+      const fixed = bm.userData.beds as number[][] | undefined;
       if (fixed) {
         if (idx >= fixed.length) { this.bedHidden = true; return null; }
-        const [ax, az, bx, bz] = fixed[idx]!;
+        // piąta liczba (jeśli jest): wysokość posłania w modelu — prycza z siennikiem stoi nad podłogą (barak górników)
+        const [ax, az, bx, bz, by] = fixed[idx]!;
+        const y = by ?? bb.max.y;
         bm.updateWorldMatrix(true, false);
-        const h = bm.localToWorld(this.bedA.set(ax, bb.max.y, az));
-        const f = bm.localToWorld(this.bedB.set(bx, bb.max.y, bz));
+        const h = bm.localToWorld(this.bedA.set(ax!, y, az!));
+        const f = bm.localToWorld(this.bedB.set(bx!, y, bz!));
         return [h.x, h.y, h.z, f.x, f.y, f.z];
       }
       if (bb.max.x - bb.min.x < 0.9) {

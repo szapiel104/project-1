@@ -192,7 +192,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
     id: 'oremine', category: 'industry', name: 'b.oremine', w: 3, h: 3, cost: { wood: 30 }, hp: 3000, buildable: true,
     // druga i każda następna kopalnia kosztuje fortunę (Michał 25.10): pierwsza tanio, żeby było z czego żyć
     nextCost: { wood: 300, stone: 300, iron: 60, gold: 400 },
-    workView: 'inside', needsRock: true, crew: { per: 4, max: 8 },
+    workView: 'inside', needsRock: true, crew: { per: 5, max: 6 },
     production: { output: { res: 'stone', amount: 10 }, site: 'home', workTicks: 150 },
   },
   // Barak górników: stawiany przy kopalni (do 10 pól). Załoga nocuje tu i siedzi wieczorem przy ognisku zamiast wracać
@@ -231,10 +231,10 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Kapliczka: kamienny posąg Ojca Płomienia w ostrołukowej niszy (tools/models/shrine.py). Wieczorem część ludzi
   // zamiast do karczmy albo do ogniska idzie tu się modlić (workers.ts), a sama kapliczka lekko podnosi popularność
   // (economy.ts: +1, przy dwóch i więcej +2). Bez pracownika, nic nie produkuje.
-  // Rynek (tools/models/market.py, Michał 30.10.2026): sprzedaż i kupno każdego towaru za rudę, od ręki — bez kupców
+  // Rynek (tools/models/market.py, Michał 30.10.2026; pierwszy za darmo — Michał 2.11.2026, kolejne za 60 drewna i 20 kamienia): sprzedaż i kupno każdego towaru za rudę, od ręki — bez kupców
   // i wozów. Kupno drożej niż sprzedaż (sim/systems/market.ts, ceny w data/market.ts). Kupcy (1–2) stoją za dnia za ladami kramów
   // (scene.ts); handel działa także bez nich.
-  { id: 'market', category: 'settlement', name: 'b.market', w: 3, h: 3, tier: 1, cost: { wood: 60, stone: 20 }, hp: 900, staff: true, crew: { per: 15, max: 2 }, buildable: true },
+  { id: 'market', category: 'settlement', name: 'b.market', w: 3, h: 3, tier: 1, cost: {}, nextCost: { wood: 60, stone: 20 }, hp: 900, staff: true, crew: { per: 15, max: 2 }, buildable: true },
   { id: 'shrine', category: 'settlement', name: 'b.shrine', w: 2, h: 2, cost: { wood: 10, stone: 40 }, hp: 700, staff: true, buildable: true },
   // Magowie (tools/models/magefire.py, magewater.py): Wieża Płomienia i Sanktuarium Źródła. Mieszka w nich
   // do trzech magów (załoga rośnie z osadą), którzy leczą zarazę (src/sim/systems/plague.ts). Zakony nie przepadają za sobą, ale współpracują.

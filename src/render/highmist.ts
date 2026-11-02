@@ -260,6 +260,12 @@ export interface HighMist {
   update(time: number, a: Atmosphere): void;
   /** Słabsza grafika = jedna warstwa mgły zamiast trzech */
   detail(d: number): void;
+  /**
+   * Plac pod budynek wyrównał teren (terrain.level): opar planszy znika nad nim i wokół. Inaczej płachta liczona
+   * z pierwotnej rzeźby leżała pod podsypanym placem i ziemia przebijała ją ostrą, kanciastą krawędzią
+   * (Michał 2.11.2026: „mgła na zniesieniach błąd”). (x, z) — świat, r — promień w polach.
+   */
+  clearAt(x: number, z: number, r: number): void;
   dispose(): void;
 }
 
@@ -474,6 +480,22 @@ export function buildHighMist(g: HeightGrid, board: { cx: number; cz: number; hw
   return {
     group,
     noise,
+    clearAt(x: number, z: number, r: number) {
+      const at = drapeGeo.getAttribute('aV') as THREE.BufferAttribute | undefined;
+      if (!at) return;
+      let hit = false;
+      for (let j = 0; j < BH; j++) for (let i = 0; i < BW; i++) {
+        const wx = g.x0 + (i + bi0) * g.step, wz = g.z0 + (j + bj0) * g.step;
+        const d = Math.max(Math.abs(wx - x), Math.abs(wz - z));
+        if (d > r + g.step * 2) continue;
+        const k = j * BW + i;
+        // w środku zero, na brzegu łagodne przejście przez dwa węzły
+        const f = Math.min(1, Math.max(0, (d - r) / (g.step * 2)));
+        const v = at.getX(k) * f;
+        if (v !== at.getX(k)) { at.setX(k, v); hit = true; }
+      }
+      if (hit) at.needsUpdate = true;
+    },
     addSpray(points: THREE.Vector3[]) {
       for (const p of points)
         for (let k = 0; k < 5; k++)

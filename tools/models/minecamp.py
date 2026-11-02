@@ -103,9 +103,11 @@ chimneys.append([CX, round(H1 + RISE + 0.36, 3), CZ])
 # ---------------- izba: prycze ze słomą pod bocznymi ścianami (po 4), stół z ławą, kilofy, piecyk ----------------
 BED_L, BED_W = 0.5, 0.2
 z_rows = [Z0 + LOG + 0.06 + (Z1 - Z0 - 2 * LOG - 0.16) * (k + 0.5) / 4 for k in range(4)]
+BEDS = []   # miejsca śpiących na pryczach: [głowa x, z, stopy x, z, wysokość siennika] (Michał 2.11.2026: spali obok łóżek)
 for x, s in ((FX0, 1), (FX1, -1)):
     cx = x + s * BED_L / 2
     for z in z_rows:
+        BEDS.append([round(x + s * 0.06, 3), round(z, 3), round(x + s * (BED_L - 0.04), 3), round(z, 3), round(P + 0.085, 3)])
         b.box('interior', 'woodDark', BED_L, 0.06, BED_W, cx, P, z)             # rama pryczy
         b.box('interior', 'hay', BED_L - 0.04, 0.025, BED_W - 0.03, cx, P + 0.06, z)   # siennik
     solid.append([min(x, x + s * BED_L), max(x, x + s * BED_L), Z0, Z1 - 0.12, 0, 0.12])
@@ -157,5 +159,5 @@ VIEWS = [
     ['ognisko', [-0.1, 0.4, 1.5], [-0.55, 0.1, 0.78], OUT, 18],
 ]
 b.save('minecamp', maxe=0.22, rays=16, reach=0.3, extra={
-    'solid': solid, 'open': open_, 'floorY': P, 'chimneys': chimneys, 'lamps': lamps, 'campfires': fires, 'lights': lights,
+    'solid': solid, 'open': open_, 'floorY': P, 'beds': BEDS, 'chimneys': chimneys, 'lamps': lamps, 'campfires': fires, 'lights': lights,
     'pennant': [round(X1 - 0.05, 3), round(H1 + RISE - 0.1, 3), round(Z0 + 0.1, 3)], 'views': VIEWS})

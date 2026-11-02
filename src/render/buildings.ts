@@ -1558,6 +1558,8 @@ const BUILDERS: Record<string, Builder> = {
     // barak górników z Blendera (tools/models/minecamp.py): chata z bali, prycze ze słomą (tu śpi załoga kopalni), stół,
     // kilofy i latarnia, piecyk; przed nim ognisko z kłodami i kosze z urobkiem czekającym na wóz
     blenderModel(g, MINECAMP_MODEL as unknown as BlenderBuilding, flag);
+    // śpiący górnicy leżą na pryczach (miejsca z modelu), a nie na podłodze między nimi
+    g.userData.beds = (MINECAMP_MODEL as unknown as { beds?: number[][] }).beds;
     const p = (MINECAMP_MODEL as unknown as { pennant: [number, number, number] }).pennant;
     pennant(g.getObjectByName('shell') as THREE.Group, flag, p[0], p[1], p[2]);
   },

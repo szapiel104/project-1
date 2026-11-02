@@ -1,5 +1,12 @@
 # Dziennik zmian
 
+## 0.69.11 — 2.11.2026
+- Barak górników: posłania z modelu (`beds` w minecamp.py, piąta liczba = wysokość siennika), `bedSpot` w scene.ts obsługuje wysokość.
+- Mgła w dolinach: `HighMist.clearAt` zeruje opar nad placem wyrównanym w `terrain.level` (płachta liczona z pierwotnej rzeźby leżała pod podsypanym placem).
+- Kopalnia: kamień 45 × 5, żelazo 25 × 4 (ruda 27 × 6, kryształ bez zmian); załoga 1 na 5 osób, najwyżej 6; „Jak grać” poprawione (też ruda „co czwarty kurs”).
+- `saplingTicks` 7200 → 3600.
+- Rynek: pierwszy za darmo (`cost: {}`), kolejne `nextCost` 60 drewna + 20 kamienia.
+
 ## 0.69.10 — 2.11.2026
 - `FOOD_RES` w hud.ts z flag `food` (mięso i nowe jedzenie w sumie jedzenia i podpowiedzi).
 - Pasek ostrzeżeń: „wróg ma teraz” bez `guard`, `camp` i `hp ≤ 0` (pokazywał 6 — straż miejską bota).

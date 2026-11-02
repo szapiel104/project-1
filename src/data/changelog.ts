@@ -10,6 +10,23 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.69.11', date: '2026-11-02',
+    pl: [
+      'Górnicy w baraku śpią na pryczach, a nie na podłodze między nimi.',
+      'Mgła w dolinach znika nad wyrównanym placem pod budynek — bez ostrej, kanciastej krawędzi, przez którą przebijała ziemia.',
+      'Kopalnia daje mniej kamienia i żelaza (z kursu 5 kamienia albo 4 żelaza), a załoga rośnie wolniej: górnik na każde 5 osób, najwyżej 6. Ruda bez zmian.',
+      'Drzewko leśniczego dorasta w jeden dzień gry zamiast dwóch — drwale szybciej dostają je pod topór.',
+      'Pierwszy rynek jest za darmo; każdy kolejny kosztuje 60 drewna i 20 kamienia.',
+    ],
+    en: [
+      'Miners in the barracks now sleep on their bunks, not on the floor between them.',
+      'Valley mist now clears over levelled building plots — no more hard, jagged edge with the ground poking through.',
+      'The mine yields less stone and iron (5 stone or 4 iron per run), and its crew grows slower: one miner per 5 folk, at most 6. Ore unchanged.',
+      'A forester’s sapling now grows in one game day instead of two — the woodcutters get to it sooner.',
+      'Your first market is free; each further one costs 60 timber and 20 stone.',
+    ],
+  },
+  {
     v: '0.69.10', date: '2026-11-02',
     pl: [
       'Licznik „jedzenie razem” na dolnym pasku liczy całe jedzenie, także mięso (wcześniej tylko jabłka, chleb i ryby).',
