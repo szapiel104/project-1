@@ -9,6 +9,7 @@ import { avatarSvg, CHARGE_NAMES, CREST_CHARGES, crestPreview, decodeCrest, DIVI
 import { BADGES, levelOf, nextTitle, TITLES, titleOf, titleRank, xpUntil, type BadgeDef } from '../data/progress';
 import { chatLine, cleanChat } from './chat';
 import { adminPane } from './adminPanel';
+import { adminNotesPane } from './testerNotes';
 import { lang, tx } from '../i18n';
 
 /** Wszystko, czego potrzebuje gra, żeby wystartować mecz przez sieć */
@@ -310,7 +311,10 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
 
     const TABS: [string, () => Node[]][] = [[tx('Przegląd', 'Overview'), overview], [tx('Kronika bitew', 'Battle chronicle'), chronicle], [tx('Herb', 'Coat of arms'), arms]];
     // panel kont tylko dla administratorów (prawa sprawdza i tak baza przy każdej zmianie)
-    if (isAdmin()) TABS.push([tx('Administracja', 'Administration'), () => adminPane(() => void reloadMe().then(() => showHouse(3)))]);
+    if (isAdmin()) {
+      TABS.push([tx('Administracja', 'Administration'), () => adminPane(() => void reloadMe().then(() => showHouse(3)))]);
+      TABS.push([tx('Uwagi testerów', 'Tester notes'), adminNotesPane]);
+    }
     const show = (i: number): void => {
       tabBtns.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
       pane.replaceChildren(...TABS[i]![1]());

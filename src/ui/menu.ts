@@ -1,5 +1,5 @@
 import { gameTagline, loadingScene } from './loadscreen';
-import { me as netMe, onAccount, progress, restore } from '../net/supa';
+import { isTester, me as netMe, onAccount, progress, restore } from '../net/supa';
 import { levelOf, titleOf } from '../data/progress';
 import { createOnline, type OnlineStart } from './online';
 import { avatarSvg } from './avatars';
@@ -10,6 +10,8 @@ import { changesBook } from './changesBook';
 import type { AaMode } from '../render/postfx';
 import { TIERS } from '../render/autoquality';
 import { hardReload, newerVersion } from './refresh';
+import { SANDBOX as SANDBOX_MENU } from '../testmode';
+import { testerNotesPane } from './testerNotes';
 
 /** Ustawienia zapamiętywane w przeglądarce */
 export interface Settings {
@@ -126,6 +128,18 @@ export function saveSettings(s: Settings): void {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(s)); } catch { /* nic */ }
 }
 
+/**
+ * Trzy kolory przycisków w całej grze (Michał 2.11.2026): zielony — zapisz / zatwierdź / zacznij, czerwony — usuń,
+ * wyrzuć, poddaj się, a cała reszta neutralna. Kolor wynika z napisu, chyba że przycisk ma już klasę btn-ok / btn-danger.
+ */
+const OK = /^(zapisz|save|zaloguj|log in|sign in|załóż konto|create account|utwórz|create|rozpocznij|start|do boju|to battle|dołącz|join|dodaj|add|rozegraj|fight|zatwierdź|confirm|graj|play)/i;
+const DANGER = /^(usuń|remove|delete|wyrzuć|kick|tak, poddaję|yes, i (yield|surrender)|wyjdź z pokoju|leave the room|wyzeruj|reset|odbierz|revoke)/i;
+export function buttonTone(text: string, cls = ''): string {
+  if (/\b(btn-ok|btn-danger|admin-btn|menu-link)\b/.test(cls)) return '';
+  const tt = text.trim();
+  return OK.test(tt) ? ' btn-ok' : DANGER.test(tt) ? ' btn-danger' : '';
+}
+
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''): HTMLElementTagNameMap[K] {
   const e = document.createElement(tag);
   if (cls) e.className = cls;
@@ -202,7 +216,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   const manual = (): void => { settings.auto = false; save(); };
 
   const button = (text: string, onClick: () => void, cls = 'menu-btn'): HTMLButtonElement => {
-    const b = el('button', cls, text);
+    const b = el('button', cls + buttonTone(text, cls), text);
     b.type = 'button';
     b.addEventListener('click', onClick);
     return b;
@@ -263,7 +277,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       account.append(box);
     }
   };
-  onAccount(paintAccount);
+  // po zalogowaniu dochodzą pozycje zależne od roli (Uwagi testera) — pasek rysuje się od nowa, gdy okno jest zamknięte
+  onAccount(() => { paintAccount(); if (panel.hidden) paintBar(); });
   void restore();
   wrap.append(account);
   paintAccount();
@@ -288,6 +303,11 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     b.addEventListener('focus', show);
     return b;
   };
+  /** Uwagi testera (tylko rola tester albo administrator): co poprawić i dodać; stan „zrobione” wraca od administratora */
+  function notesItem(): HTMLButtonElement {
+    return barBtn(tx('Uwagi testera', 'Tester notes'), tx('Napisz, co poprawić albo dodać — administrator zobaczy i oznaczy zrobione', 'Write what to fix or add — the administrator sees it and marks it done'),
+      () => screen(tx('Uwagi testera', 'Tester notes'), false, testerNotesPane(inGame ? tx('w trakcie gry', 'during a game') : tx('menu', 'menu'))));
+  }
   function paintBar(): void {
     const list: (HTMLButtonElement | 'gap')[] = [];
     if (inGame) {
@@ -296,6 +316,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
       list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
       list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges));
+      if (isTester()) list.push(notesItem());
       list.push('gap');
       list.push(barBtn(tx('Wyjdź do menu', 'Quit to menu'), tx('Zamknij mecz i wróć do menu głównego', 'Close the match and return to the main menu'), () => showQuit()));
       list.push(barBtn(tx('Poddaj się', 'Surrender'), tx('Koniec meczu porażką — tego nie da się cofnąć', 'End the match in defeat — there is no going back'), showSurrender, 'mi-danger'));
@@ -306,6 +327,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
       list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
       list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges));
+      if (isTester()) list.push(notesItem());
     }
     const ul = el('ul', 'menu-list');
     for (const it of list) {
@@ -452,6 +474,8 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
     const devBox = el('input');
     devBox.type = 'checkbox'; devBox.setAttribute('role', 'switch');
     devBox.addEventListener('change', () => { dev = devBox.checked; instLab.hidden = !dev; wallLab.hidden = !dev; preview(); });
+    // tylko testerzy i administratorzy (rola w bazie, Michał 2.11.2026); w trybie testowym ?test zawsze
+    devLab.hidden = !isTester() && !SANDBOX_MENU;
     devLab.append(devBox, el('span', 'dev-knob'), el('span', 'dev-text', tx('Tryb deweloperski', 'Developer mode')), el('span', 'dev-hint', tx('miasto w murach, wojsko, pełne zapasy', 'walled town, army, full supplies')));
     // w trybie deweloperskim: budynki od razu gotowe albo zwykła budowa (robotnicy noszą materiał, rusztowania)
     let instant = true;

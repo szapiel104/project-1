@@ -204,6 +204,18 @@
 .admin-nick input { flex: 1 1 200px; }
 .admin-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px 14px; }
 .admin-grid input { width: 100%; }
-.admin-danger { border-color: #a2412f !important; }
+
 .admin-loglist { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; font-size: 14px; }
 .admin-loglist li { padding: 4px 0; border-bottom: 1px solid rgba(154, 122, 42, .25); overflow-wrap: anywhere; }
+.menu .admin .menu-btn.admin-btn { min-height: 40px; }
+/* uwagi testerów */
+.notes .note-area { width: 100%; min-height: 96px; padding: 8px 10px; font: inherit; font-size: 15px; color: #fff4dc; background: #241a11; border: 1px solid #9a7838; border-radius: 3px; box-sizing: border-box; resize: vertical; }
+.note-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.note { padding: 10px 12px; border: 1px solid rgba(154, 122, 42, .45); background: rgba(20, 14, 8, .35); display: grid; gap: 6px; }
+.note.done { opacity: .8; }
+.note-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 14px; }
+.note-when { color: #d8c6a0; }
+.note-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-reply { margin: 0; font-style: italic; color: #cfe8c8; }
+.note-state { padding: 2px 8px; font-size: 13px; font-weight: 700; color: #2a1d0c; background: #e6c06a; border-radius: 2px; }
+.note-state.done { color: #effff0; background: #2f6b3a; }

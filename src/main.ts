@@ -51,7 +51,7 @@ import { census } from './debug/census';
 import { createSimThread, type SimResult } from './sim/simthread';
 import { addPeasants, addWolf, emptyScene, placeReady, removeReady, setHour } from './sim/emptyscene';
 import { Lockstep, TURN } from './net/lockstep';
-import { awardMatch, deleteRoom, matchBegin, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
+import { awardMatch, deleteRoom, isTester, matchBegin, me as netMe, onAccount, saveResult, setStatus } from './net/supa';
 import { forgetMatch, recallMatch, rejoinMatch, rememberMatch, sendState, type MatchMemo } from './net/rejoin';
 import { matchXp, MODE_MULT, xpParts, type MatchMode } from './data/progress';
 import { xpReport } from './ui/xpReport';
@@ -2976,7 +2976,8 @@ function withResync<T extends object>(ev: T): T {
   }
   return out as T;
 }
-function devAllowed(): boolean { return !net && (SANDBOX || !!game.players[ME]?.dev); }
+/** Panel dewelopera: tryb testowy, gra w trybie deweloperskim albo tester/administrator w każdej grze solo (bez sieci) */
+function devAllowed(): boolean { return !net && (SANDBOX || !!game.players[ME]?.dev || isTester()); }
 const devFoe = (): number => game.players.find((p) => p.team !== game.players[ME]!.team && !p.defeated)?.id ?? -1;
 /** Stawia jednostki wokół pola (x, y): po spirali na przechodnich polach */
 function devPlace(x: number, y: number, kind: DevSpawn, foe: boolean, count: number): number {

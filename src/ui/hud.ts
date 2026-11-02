@@ -726,7 +726,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   close.type = 'button';
   const moveBtn = el('button', 'btn-plain', t('hud.relocate'));
   moveBtn.type = 'button'; moveBtn.hidden = true;
-  const trainBtn = el('button', 'btn-main', t('hud.train'));
+  const trainBtn = el('button', 'btn-main btn-ok', t('hud.train'));
   trainBtn.type = 'button';
   trainBtn.hidden = true;
   trainBtn.addEventListener('click', () => events.onTrain(infoId, 1));
@@ -764,7 +764,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
         const stats = el('span', 'unit-stats');
         const needs = el('div', 'unit-needs');
         const btns = el('div', 'unit-btns');
-        const mk = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n, r.id)); btns.append(b); return b; };
+        const mk = (n: number, label: string): HTMLButtonElement => { const b = el('button', 'btn-main btn-ok', label); b.type = 'button'; b.addEventListener('click', () => events.onTrain(infoId, n, r.id)); btns.append(b); return b; };
         const b1 = mk(1, '+1'), b5 = mk(5, '+5'), bAll = mk(999, tx('+ wszyscy', '+ all'));
         // flaga zbiórki tylko dla tego rodzaju: klik i wskazanie miejsca na mapie
         const flag = el('button', 'unit-flag', tx('⚑ Flaga zbiórki', '⚑ Rally flag'));
@@ -1050,7 +1050,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
 
   const buildFoot = el('div', 'buildfoot');
   const buildHint = el('p', 'hint');
-  const cancel = el('button', 'btn-main', t('hud.cancel'));
+  const cancel = el('button', 'btn-danger', t('hud.cancel'));
   cancel.type = 'button';
   cancel.hidden = true;
   cancel.addEventListener('click', () => events.onPickBuilding(null));
@@ -1061,7 +1061,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   footButtons.append(turn, cancel);
   buildFoot.append(buildHint, footButtons);
   // wyburzanie: osobny tryb, w którym klikanie usuwa budynki, a przeciąganie drogi
-  const wreck = el('button', 'btn-main wreck', t('hud.wreck'));
+  const wreck = el('button', 'btn-danger wreck', t('hud.wreck'));
   wreck.type = 'button';
   wreck.setAttribute('aria-pressed', 'false');
   wreck.addEventListener('click', () => events.onWreck());
@@ -1137,7 +1137,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   for (const id of Object.keys(MAP_PRESETS)) mode.append(new Option(id, id));
   modeWrap.append(modeLabel, mode);
   const formActions = el('div', 'actions');
-  const gen = el('button', 'btn-main', t('hud.generate'));
+  const gen = el('button', 'btn-main btn-ok', t('hud.generate'));
   gen.type = 'submit';
   const rnd = el('button', 'btn-plain', t('hud.newMap'));
   rnd.type = 'button';

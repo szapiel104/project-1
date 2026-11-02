@@ -1,5 +1,10 @@
 # Dziennik zmian
 
+## 0.75.0 — 2.11.2026
+- Przyciski: `.btn-ok` (zielony), `.btn-danger` (czerwony), reszta neutralna (`.btn-main`, `.btn-plain`, `.menu-btn`); `buttonTone()` w menu.ts dobiera kolor z napisu.
+- Migracja `20261102b_testers.sql`: `testers`, `is_tester()`, `admin_tester`, `admin_find` z kolumną `tester`, `tester_notes` + `admin_note`.
+- `isTester()` w supa.ts; `devAllowed()` w main.ts przepuszcza testera w grze solo; przełącznik trybu deweloperskiego tylko dla testerów; `src/net/notes.ts`, `src/ui/testerNotes.ts`.
+
 ## 0.74.0 — 2.11.2026
 - Migracja `20261102_admins_achievements.sql` (czeka w DO_WYKONANIA): tabele `admins`, `admin_log`, funkcje `admin_find/set_progress/set_nick/grant` (security definer, `is_admin()`), nowe kolumny `player_progress` (razed, built, minutes, online_wins, hard_wins) uzupełnione z `xp_awards`, `award_match` je nalicza.
 - `src/net/admin.ts`, `src/ui/adminPanel.ts` (zakładka tylko dla `isAdmin()`), `BADGES` 8 → 29, `xpAtLevel()`; test `admin-progress.test.ts`.

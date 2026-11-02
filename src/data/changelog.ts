@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.75.0', date: '2026-11-02',
+    pl: [
+      'Trzy kolory przycisków w całej grze: zielony — zapisz, zatwierdź, zacznij; czerwony — usuń, wyrzuć, rozbierz, poddaj się; cała reszta spokojna, neutralna.',
+      'Rola testera: tester (i administrator) widzi w menu tryb deweloperski i może otworzyć panel dewelopera (F9) w każdej grze solo.',
+      'Uwagi testera: w menu (także w trakcie gry, przez Esc) tester pisze, co poprawić albo dodać; administrator widzi je w „Moim rodzie”, oznacza zrobione i może odpisać, a tester widzi, co już zrobione.',
+      'Panel administratora: przycisk nadawania roli testera, podpowiedź, od którego poziomu jest który tytuł, i ostrzeżenie o niezapisanych zmianach.',
+    ],
+    en: [
+      'Three button colours throughout the game: green — save, confirm, start; red — remove, kick, dismantle, surrender; everything else calm and neutral.',
+      'Tester role: testers (and administrators) see developer mode in the menu and can open the developer panel (F9) in any solo game.',
+      'Tester notes: in the menu (also mid-game, via Esc) a tester writes what to fix or add; the administrator sees them in “My house”, marks them done and can reply, and the tester sees what is done.',
+      'Admin panel: a button to grant the tester role, a hint at which level each rank begins, and a warning about unsaved changes.',
+    ],
+  },
+  {
     v: '0.74.0', date: '2026-11-02',
     pl: [
       'Ponad trzy razy więcej odznak w „Moim rodzie” (29 zamiast 8): za zwycięstwa przez sieć i z najtrudniejszym botem, zburzone i postawione budynki, godziny w bitwach, setki wrogów i każdy tytuł aż do króla.',

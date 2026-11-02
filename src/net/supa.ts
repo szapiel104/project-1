@@ -80,11 +80,18 @@ let amAdmin = false;
 export const isAdmin = (): boolean => amAdmin;
 /** Po zmianie własnego konta w panelu administratora: wczytaj na nowo nick i postęp */
 export async function reloadMe(): Promise<void> { await Promise.all([loadNick(), loadProgress(), loadAdmin()]); changed(); }
+/** Tester (tabela `testers`, migracja 20261102b) albo administrator: widzi tryb deweloperski i panel F9 w grze solo */
+let amTester = false;
+export const isTester = (): boolean => amTester || amAdmin;
 async function loadAdmin(): Promise<void> {
-  amAdmin = false;
+  amAdmin = false; amTester = false;
   if (!session) return;
-  const { data, error } = await supa.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle();
-  amAdmin = !error && !!data;
+  const [a, t] = await Promise.all([
+    supa.from('admins').select('user_id').eq('user_id', session.user.id).maybeSingle(),
+    supa.from('testers').select('user_id').eq('user_id', session.user.id).maybeSingle(),
+  ]);
+  amAdmin = !a.error && !!a.data;
+  amTester = !t.error && !!t.data;
 }
 
 async function loadNick(): Promise<void> {
@@ -141,7 +148,7 @@ export async function signIn(email: string, password: string): Promise<string | 
   return null;
 }
 
-export async function signOut(): Promise<void> { await supa.auth.signOut(); session = null; myNick = ''; myProgress = null; amAdmin = false; changed(); }
+export async function signOut(): Promise<void> { await supa.auth.signOut(); session = null; myNick = ''; myProgress = null; amAdmin = false; amTester = false; changed(); }
 
 /** Zmiana nicku w profilu (unikalny w bazie) */
 export async function setNick(nick: string): Promise<string | null> {

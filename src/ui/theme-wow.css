@@ -339,3 +339,39 @@ body.info-open .army-groups { right: 16px; }
 /* karta konta na pełną szerokość kolumny (równy margines z lewej i z prawej) */
 .menu:not(.previewing) > .menu-account { display: flex; }
 .menu:not(.previewing) > .menu-account > .acc-me, .menu:not(.previewing) > .menu-account > .acc-guest { flex: 1 1 auto; width: 100%; max-width: none; box-sizing: border-box; }
+
+/* ===== Trzy kolory przycisków w całej grze (Michał 2.11.2026: „zielony zapisz, czerwony usuń, a trzeci neutralny”) =====
+   neutralny — każdy zwykły przycisk (.btn-main, .btn-plain, przyciski menu), zielony — .btn-ok (zapisz, zatwierdź, zacznij,
+   szkol), czerwony — .btn-danger (usuń, wyrzuć, rozbierz, anuluj budowę, poddaj się). menu.ts dobiera kolor z napisu. */
+:root {
+  --tone-n: radial-gradient(ellipse at 50% 0%, rgba(255, 235, 200, .14), transparent 70%), linear-gradient(#5a4c39, #43382a 55%, #342b20);
+  --tone-n-hi: radial-gradient(ellipse at 50% 0%, rgba(255, 235, 200, .24), transparent 70%), linear-gradient(#6c5c45, #524433 55%, #3e3326);
+  --tone-ok: radial-gradient(ellipse at 50% 0%, rgba(200, 255, 190, .28), transparent 70%), linear-gradient(#3f8f4a, #2c6e35 55%, #1f5427);
+  --tone-ok-hi: radial-gradient(ellipse at 50% 0%, rgba(210, 255, 200, .4), transparent 70%), linear-gradient(#4ea95a, #378442 55%, #276331);
+  --tone-bad: radial-gradient(ellipse at 50% 0%, rgba(255, 200, 180, .25), transparent 70%), linear-gradient(#a8372b, #7e2219 55%, #5e160f);
+  --tone-bad-hi: radial-gradient(ellipse at 50% 0%, rgba(255, 210, 190, .38), transparent 70%), linear-gradient(#c4453a, #962b20 55%, #701b13);
+}
+.btn-main, .btn-plain, body .menu .menu-panel .menu-btn, body .menu .menu-panel .menu-btn:not(.menu-back):not(.menu-link) {
+  color: #f6ecd6; text-shadow: 0 1px 1px #000; background-image: var(--tone-n);
+  box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #a8916a, inset 0 1px 0 rgba(255, 240, 210, .25);
+}
+.btn-main:hover, .btn-main:focus-visible, .btn-plain:hover, .btn-plain:focus-visible,
+body .menu .menu-panel .menu-btn:hover, body .menu .menu-panel .menu-btn:focus-visible {
+  color: #fffaf0; background-image: var(--tone-n-hi);
+  box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #e2c890, 0 0 8px rgba(255, 220, 160, .25);
+}
+.btn-ok, body .menu .menu-panel .menu-btn.btn-ok:not(.menu-link) {
+  color: #effff0; text-shadow: 0 1px 1px #062a0c; background-image: var(--tone-ok);
+  box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #8ad894, inset 0 1px 0 rgba(220, 255, 220, .35);
+}
+.btn-ok:hover, .btn-ok:focus-visible, body .menu .menu-panel .menu-btn.btn-ok:hover, body .menu .menu-panel .menu-btn.btn-ok:focus-visible {
+  color: #fff; background-image: var(--tone-ok-hi); box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #b8f0be, 0 0 10px rgba(120, 220, 130, .35);
+}
+.btn-danger, body .menu .menu-panel .menu-btn.btn-danger:not(.menu-link) {
+  color: #fff0ec; text-shadow: 0 1px 1px #2a0400; background-image: var(--tone-bad);
+  box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #ec8a74, inset 0 1px 0 rgba(255, 220, 210, .3);
+}
+.btn-danger:hover, .btn-danger:focus-visible, body .menu .menu-panel .menu-btn.btn-danger:hover, body .menu .menu-panel .menu-btn.btn-danger:focus-visible {
+  color: #fff; background-image: var(--tone-bad-hi); box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #ffb8a4, 0 0 10px rgba(230, 90, 70, .35);
+}
+:is(.btn-main, .btn-plain, .btn-ok, .btn-danger):disabled, body .menu .menu-panel .menu-btn:disabled { color: #b4a68e; text-shadow: none; filter: saturate(.35) brightness(.8); }
