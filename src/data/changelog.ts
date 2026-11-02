@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.10', date: '2026-11-02',
+    pl: [
+      'Podgląd zleconego muru kamiennego stoi już tak jak prawdziwy mur: pełna, przezroczysta bryła na swoim polu, łącząca się z sąsiednimi odcinkami (wcześniej odcinki wisiały krzywo obok).',
+    ],
+    en: [
+      'The preview of an ordered stone wall now stands just like the real wall: a full see-through block on its own tile, joining the neighbouring stretches (before, the pieces hung askew beside it).',
+    ],
+  },
+  {
     v: '0.70.9', date: '2026-11-02',
     pl: [
       'Chłop z kilofem pada szybciej: 30 zdrowia (było 40, na chwilę 50). To tania, słaba jednostka — liczy się masa.',

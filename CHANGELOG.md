@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.10 — 2.11.2026
+- Duch muru kamiennego (Michał: „mur źle odwrócony”): model `stoneWall` z fabryki stał inaczej niż mur z klocków walls.ts. Mury liniowe wyjęte z `siteGhosts.ts`; walls.ts rysuje zlecone odcinki osobnym `ghostBlock` (ta sama geometria `block`, ta sama macierz co gotowy mur, skala 1, przezroczystość 0,2), `ghostOwner` w kluczu. Częstokół bez ducha.
+
 ## 0.70.9 — 2.11.2026
 - `levy`: zdrowie 50 → 30 (Michał: chłopa ma się kłaść szybciej).
 

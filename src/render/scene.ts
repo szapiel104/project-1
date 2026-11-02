@@ -1418,7 +1418,7 @@ export class GameRenderer {
   /** Zlecone budowy jako duchy (siteGhosts.ts): właściciel, którego place pokazać, albo −1 */
   private siteGhosts!: SiteGhosts;
   private siteGhostOwner = -1;
-  setSiteGhosts(owner: number): void { this.siteGhostOwner = owner; }
+  setSiteGhosts(owner: number): void { this.siteGhostOwner = owner; this.walls.ghostOwner = owner; }
   setGhost(g: Ghost | null): void {
     if (this.ghostModel) this.ghostModel.visible = false;
     this.ghostOpen = 0;

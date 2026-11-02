@@ -11,7 +11,8 @@ import type { ModelFactory } from './models';
  * i wieże już zlecone, i dało się do nich dociągnąć następne. Po zamknięciu budowy duchy znikają.
  *
  * Duch to kopia wzoru (wspólne siatki i materiały wszystkich duchów danego rodzaju), ustawiona tak jak prawdziwa
- * siatka budynku w scenie (pozycja i obrót). Drogi i ruiny w odbudowie nie dostają ducha.
+ * siatka budynku w scenie (pozycja i obrót). Drogi i ruiny w odbudowie nie dostają ducha; mury liniowe (mur kamienny,
+ * częstokół) rysuje walls.ts ze swoich klocków (`ghostOwner`), bo pojedynczy model odcinka stał inaczej niż mur w grze.
  */
 const OPACITY = 0.2;
 /** Najwięcej duchów naraz (długie zlecenia murów): dalsze po prostu się nie pokazują */
@@ -66,7 +67,7 @@ export class SiteGhosts {
     }
     if (owner < 0) { this.group.visible = false; return; }
     this.group.visible = true;
-    const sites = g.buildings.filter((b) => b.owner === owner && b.build > 0 && !b.ruined && !BUILDINGS[b.type]!.road && meshes.has(b.id)).slice(0, MAX_GHOSTS);
+    const sites = g.buildings.filter((b) => b.owner === owner && b.build > 0 && !b.ruined && !BUILDINGS[b.type]!.road && !BUILDINGS[b.type]!.line && meshes.has(b.id)).slice(0, MAX_GHOSTS);
     const key = sites.map((b) => b.id).join(',');
     if (key === this.key) return;
     this.key = key;

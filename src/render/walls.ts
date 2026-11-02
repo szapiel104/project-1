@@ -28,6 +28,10 @@ export class WallLayer {
   /** Pola u stóp drabin na mur kamienny → kierunek do muru (wspinaczka w wyglądzie) */
   readonly ladderFeet = new Map<number, [number, number]>();
   private stoneKit: { block: THREE.InstancedMesh; edge: THREE.InstancedMesh; ladder: THREE.InstancedMesh } | null = null;
+  /** Duchy zleconych odcinków muru kamiennego (siteGhosts.ts robi to samo dla reszty budynków): pełna wysokość,
+   *  przezroczyste, póki gracz buduje. `ghostOwner` = gracz, którego budowy pokazać, −1 = schowane */
+  ghostOwner = -1;
+  private ghostBlock: THREE.InstancedMesh | null = null;
   /** Mur kamienny dochodzący do kamiennej wieży: przedłużenie korony aż do ściany wieży i ciemne wejście w tej ścianie */
   private doorKit: { bridge: THREE.InstancedMesh; door: THREE.InstancedMesh[]; steps: THREE.InstancedMesh[] } | null = null;
   /**
@@ -55,7 +59,7 @@ export class WallLayer {
     // stopień zużycia też w kluczu: rozbity częstokół ma złamane i przekrzywione bale
     // w kluczu także drabiny oblężnicze i wejścia na wieże (wejście przechodzi na inny bok, gdy przed frontem coś stanie)
     const key = walls.map((b) => `${b.id}:${b.build ? Math.ceil((1 - b.build / buildWork(b.type)) * 16) : 99}:${buildingMeshes.has(b.id) ? 1 : 0}:${b.build ? 0 : wearStage(b.hp, maxHp(b.type))}${isTower(BUILDINGS[b.type]!.id) && !b.build ? `:${towerEntry(g, b)[0]}` : ''}`).join(',')
-      + '|' + (g.siegeLadders ?? []).map((l) => `${l.id}`).join(',');
+      + '|' + (g.siegeLadders ?? []).map((l) => `${l.id}`).join(',') + '|' + this.ghostOwner;
     if (key === this.key) return;
     this.key = key;
     const solid = new Map<number, GameState['buildings'][number]>();
@@ -100,7 +104,13 @@ export class WallLayer {
         return m;
       };
       this.stoneKit = { block: mk(k.block, k.mat, 8192), edge: mk(k.edge, k.mat, 16384), ladder: mk(k.ladder, k.wood, 2048) };
+      const gm = (k.mat as THREE.Material).clone();
+      gm.transparent = true; gm.opacity = 0.2; gm.depthWrite = false;
+      this.ghostBlock = new THREE.InstancedMesh(k.block, gm, 4096);
+      this.ghostBlock.frustumCulled = false; this.ghostBlock.count = 0; this.ghostBlock.renderOrder = 20;
+      this.scene.add(cat(this.ghostBlock, 'mury kamienne (podgląd budowy)'));
     }
+    let gn = 0;
     if (!this.doorKit) {
       const k = stoneWallKit();
       const mk = (geo: THREE.BufferGeometry, mat: THREE.Material, label: string): THREE.InstancedMesh => {
@@ -270,6 +280,12 @@ export class WallLayer {
         // ruina muru kamiennego: bez płaskiego „chodnika” z kamieni (blok 8% wysokości) — leży sam gruz; mur rośnie od nowa
         // dopiero przy odbudowie (Michał 30.10.2026: „rozwalony mur niech nie ma takiego podłoża”)
         if (sn.block < 8192 && !(b.ruined && built < 0.1)) sn.block = put(kit.block, 0, sn.block);
+        // zlecony, niedokończony odcinek: przezroczysta pełna bryła, póki gracz buduje (Michał 2.11.2026)
+        if (b.build && !b.ruined && b.owner === this.ghostOwner && this.ghostBlock && gn < 4096) {
+          M4.compose(p.set(cx - width / 2, y0, cz - height / 2), q.identity(), sc.set(1, 1, 1));
+          if (kx || kz) M4.premultiply(SH);
+          this.ghostBlock.setMatrixAt(gn++, M4);
+        }
         // drabiny postawione przez gracza przy tym polu muru (te same, którymi symulacja wpuszcza na mur)
         const ls = built >= 1 ? ladderSides(g, b) : 0;
         for (const [bit, dx, dz, rot] of [[1, 0, -1, Math.PI], [2, 1, 0, Math.PI / 2], [4, 0, 1, 0], [8, -1, 0, -Math.PI / 2]] as const) {
@@ -396,6 +412,7 @@ export class WallLayer {
     }
     this.wallShafts.count = n; this.wallTips!.count = n;
     for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; touch(m); }
+    if (this.ghostBlock) { this.ghostBlock.count = gn; touch(this.ghostBlock); }
     for (const d of doors.values()) {
       if (!this.doorKit || dn.door >= 1024) break;
       // na środku odcinka, którym mur dochodzi do tego boku wieży (gruby mur na środku boku = wejście na środku boku)
