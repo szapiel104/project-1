@@ -249,7 +249,10 @@ export function botSystem(g: GameState): void {
         + g.buildings.reduce((n, b) => n + (b.owner === p.id ? (b.enlistQ ?? []).filter((q) => q.k === LADDERMAN).length : 0), 0);
       const wantLadder = ladderers < 2 && mine.length >= 5 && p.res[resIndex('ladder')]! >= 1 && foeStoneWalls(g, p);
       if (wantLadder && train(g, p.id, barracks.id, 'ladderman')) { /* jeden rekrut na tick */ }
-      else if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantSapper && train(g, p.id, barracks.id, 'sapper')) && !train(g, p.id, barracks.id, 'manatarms') && !(wantArcher && train(g, p.id, barracks.id, 'archer'))) train(g, p.id, barracks.id, UNITS[0]!.id);
+      else if (!(wantRam && train(g, p.id, barracks.id, 'ram')) && !(wantSapper && train(g, p.id, barracks.id, 'sapper')) && !train(g, p.id, barracks.id, 'manatarms') && !(wantArcher && train(g, p.id, barracks.id, 'archer')) && !train(g, p.id, barracks.id, UNITS[0]!.id)) {
+        // bez włóczni, łuków i mieczy: chłopi z kilofami za rudę (pospolite ruszenie), gdy rudy jest dość na resztę
+        if (p.res[resIndex('gold')]! >= 60) train(g, p.id, barracks.id, 'levy');
+      }
       // magowie bojowi: gdy stoi siedziba zakonu i jest już trochę wojska, po jednym naraz, aż do limitu bota;
       // ruda musi zostać jeszcze na zwykłych żołnierzy
       const hall = g.buildings.find((b) => b.owner === p.id && !b.build && !b.ruined && (BUILDINGS[b.type]!.id === 'mageFire' || BUILDINGS[b.type]!.id === 'mageWater'));

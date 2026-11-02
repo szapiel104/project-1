@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.0', date: '2026-11-02',
+    pl: [
+      'Nowa jednostka w koszarach: chłop z kilofem. Kosztuje tylko 5 rudy (bez broni ze zbrojowni), bije kilofem, jest słaby i bez tarczy, ale można go wystawić od ręki.',
+      'Bot też sięga po chłopów z kilofami, gdy brakuje mu włóczni, łuków i mieczy, a ma rudę.',
+    ],
+    en: [
+      'A new unit in the barracks: the levied peasant with a pick. He costs only 5 ore (no arms from the armoury), fights with his pick, and is weak and shieldless, but can be raised on the spot.',
+      'Bots also raise levied peasants when they lack spears, bows and swords but have ore.',
+    ],
+  },
+  {
     v: '0.69.11', date: '2026-11-02',
     pl: [
       'Górnicy w baraku śpią na pryczach, a nie na podłodze między nimi.',

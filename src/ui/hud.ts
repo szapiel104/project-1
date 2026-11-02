@@ -325,7 +325,7 @@ const groupBadge = (card: HTMLElement, n: number | undefined): void => {
   b.textContent = String(n);
   card.append(b);
 };
-const portraitOf = (kind: string | undefined): string => (kind === 'archer' ? ARCHER_PORTRAIT : kind === 'manatarms' ? MANATARMS_PORTRAIT : kind === 'sapper' || kind === 'ladderman' ? SAPPER_PORTRAIT : PORTRAIT);
+const portraitOf = (kind: string | undefined): string => (kind === 'archer' ? ARCHER_PORTRAIT : kind === 'manatarms' ? MANATARMS_PORTRAIT : kind === 'sapper' || kind === 'ladderman' || kind === 'levy' ? SAPPER_PORTRAIT : PORTRAIT);
 
 export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<string, string> = new Map()): Hud {
   root.replaceChildren();

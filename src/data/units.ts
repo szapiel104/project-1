@@ -41,6 +41,8 @@ export interface UnitDef {
   magic?: 'fire' | 'water';
   /** Drabiniarz: nie walczy; niesie drabinę szturmową, przystawia ją do wrogiego muru i wraca po następną (siegeladders.ts) */
   ladderman?: boolean;
+  /** Pospolite ruszenie: chłop z kilofem za samą rudę (wygląd jak saper, w walce macha kilofem) */
+  levy?: boolean;
 }
 
 export const UNITS: readonly UnitDef[] = [
@@ -66,6 +68,9 @@ export const UNITS: readonly UnitDef[] = [
   // Drabiniarz (Michał 28.10.2026, na końcu listy dla starych zapisów): bez broni, niesie drabinę szturmową ze zbrojowni
   // (robi je cieśla). Przystawia ją do wrogiego muru kamiennego, a potem biegnie po następną do zamku albo do namiotu polowego
   { id: 'ladderman', name: 'u.ladderman', cost: { ladder: 1, gold: 6 }, hp: 45, speed: 108, attack: 0, cooldown: 14, sight: 10, weapon: 'ladder', ladderman: true },
+  // Pospolite ruszenie (Michał 2.11.2026, na końcu listy dla starych zapisów): chłop z kilofem, szkolony w koszarach
+  // za samą rudę, bez broni ze zbrojowni. Słaby i bez tarczy, ale tani — na szybko, gdy brakuje włóczni i łuków
+  { id: 'levy', name: 'u.levy', cost: { gold: 5 }, hp: 40, speed: 102, attack: 6, cooldown: 14, sight: 6, weapon: 'gold', levy: true },
 ];
 
 /** Najwyżej tylu magów bojowych może mieć jeden gracz (razem obu zakonów, z tymi w drodze do siedziby) */

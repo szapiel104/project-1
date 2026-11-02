@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.0 — 2.11.2026
+- Pospolite ruszenie (Michał): jednostka `levy` w koszarach — 5 rudy, 40 HP, cios 6 co 14 ticków, bez tarczy; wygląd sapera z kilofem (`sapperDraw` z `fight`), portret sapera. Bot: gdy nie wyszkoli włócznika ani nikogo innego, a ma ≥ 60 rudy. Test `tests/levy.test.ts`.
+
 ## 0.69.11 — 2.11.2026
 - Barak górników: posłania z modelu (`beds` w minecamp.py, piąta liczba = wysokość siennika), `bedSpot` w scene.ts obsługuje wysokość.
 - Mgła w dolinach: `HighMist.clearAt` zeruje opar nad placem wyrównanym w `terrain.level` (płachta liczona z pierwotnej rzeźby leżała pod podsypanym placem).

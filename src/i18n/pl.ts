@@ -300,7 +300,7 @@ export const pl = {
   'd.shrine': 'Kamienny posąg Ojca Płomienia ze świecami. Przy kapliczce służy kaznodzieja: o zmierzchu dzwoni i mówi kazanie, a na modlitwę przychodzi wtedy dwa razy więcej ludzi. Kapliczka podnosi popularność (+1, przy dwóch +2), kazanie o 1 więcej, a co siedem dni jest święto: wieczorem pod kapliczkę idzie cała osada, a ludzie przez cały dzień są w lepszym nastroju (+2).',
   'd.cemetery': 'Dwaj grabarze zbierają ciała poległych z pola bitwy, niosą je w trumnie na noszach i chowają tutaj. Bez nich ciała leżą i gniją albo trafiają do grobów w lesie.',
   'u.spearman': 'Włócznik',
-  'u.archer': 'Łucznik', 'u.guard': 'Strażnik', 'u.ram': 'Taran', 'u.bandit': 'Zbój', 'u.manatarms': 'Zbrojny', 'u.sapper': 'Saper', 'u.ladderman': 'Drabiniarz', 'u.mageFire': 'Mag Płomienia', 'u.mageWater': 'Mag Źródła',
+  'u.archer': 'Łucznik', 'u.guard': 'Strażnik', 'u.ram': 'Taran', 'u.bandit': 'Zbój', 'u.manatarms': 'Zbrojny', 'u.sapper': 'Saper', 'u.ladderman': 'Drabiniarz', 'u.levy': 'Chłop z kilofem', 'u.mageFire': 'Mag Płomienia', 'u.mageWater': 'Mag Źródła',
   'hud.train': 'Szkol włócznika',
   'hud.trainCost': '1 włócznia, 8 rudy, 1 wolny chłop',
   'hud.trainNo': 'Brakuje włóczni, rudy albo wolnego chłopa',

@@ -306,7 +306,7 @@ export const en: Record<TextKey, string> = {
   'd.shrine': 'A stone likeness of the Father of Flame, lit with candles. A preacher serves at the shrine: at dusk he rings the bell and gives his sermon, and twice as many folk come to pray. A shrine lifts popularity (+1, or +2 with two), the sermon adds 1 more, and every seventh day is a feast: of an evening the whole settlement gathers at the shrine, and folk are in better spirits all day (+2).',
   'd.cemetery': 'Two gravediggers gather the fallen from the battlefield, bear them here in a coffin on a bier and lay them to rest. Without them the bodies lie and rot, or end up in graves in the woods.',
   'u.spearman': 'Spearman',
-  'u.archer': 'Archer', 'u.guard': 'Guard', 'u.ram': 'Battering ram', 'u.bandit': 'Brigand', 'u.manatarms': 'Man-at-arms', 'u.sapper': 'Sapper', 'u.ladderman': 'Ladderman', 'u.mageFire': 'Mage of the Flame', 'u.mageWater': 'Mage of the Spring',
+  'u.archer': 'Archer', 'u.guard': 'Guard', 'u.ram': 'Battering ram', 'u.bandit': 'Brigand', 'u.manatarms': 'Man-at-arms', 'u.sapper': 'Sapper', 'u.ladderman': 'Ladderman', 'u.levy': 'Levied peasant', 'u.mageFire': 'Mage of the Flame', 'u.mageWater': 'Mage of the Spring',
   'hud.train': 'Train a spearman',
   'hud.trainCost': '1 spear, 8 ore, 1 idle peasant',
   'hud.trainNo': 'Not enough spears, ore or idle peasants',
