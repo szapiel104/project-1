@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.1', date: '2026-11-02',
+    pl: [
+      'Kamienne wieże, baszty i kamienna brama kosztują teraz sam kamień — bez drewna (i bez żelaza przy wielkiej baszcie), jak kamienny mur.',
+    ],
+    en: [
+      'Stone towers, keeps and the stone gate now cost stone alone — no timber (and no iron for the great tower), just like the stone wall.',
+    ],
+  },
+  {
     v: '0.70.0', date: '2026-11-02',
     pl: [
       'Nowa jednostka w koszarach: chłop z kilofem. Kosztuje tylko 5 rudy (bez broni ze zbrojowni), bije kilofem, jest słaby i bez tarczy, ale można go wystawić od ręki.',

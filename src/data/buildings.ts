@@ -176,14 +176,14 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Drabina na mur kamienny: stawiasz ją na polu tuż przy murze; tędy Twoi ludzie wchodzą na mur i z niego schodzą
   { id: 'ladder', category: 'defense', name: 'b.ladder', w: 1, h: 1, cost: { wood: 3 }, hp: 120, wall: true, buildable: true },
   // Kamienna wieża: jak strażnica, ale z kamienia — wytrzymalsza, mieści sześciu łuczników, z wyższego pomostu strzelają dalej
-  { id: 'stoneTower', category: 'defense', name: 'b.stoneTower', w: 2, h: 2, tier: 1, cost: { stone: 80, wood: 15 }, hp: 2400, wall: true, buildable: true },
+  { id: 'stoneTower', category: 'defense', name: 'b.stoneTower', w: 2, h: 2, tier: 1, cost: { stone: 90 }, hp: 2400, wall: true, buildable: true },
   // Zbrojownia: tu włóczniarz i łuczarz odnoszą gotową broń, stąd biorą ją koszary i straż
   { id: 'armory', category: 'military', name: 'b.armory', w: 2, h: 2, cost: { wood: 45, stone: 30 }, stores: ['armory'], capacity: { armory: 60 }, staff: true, keepers: 1, buildable: true },
   // duży spichlerz: kamienna podmurówka, piętro z szachulca, dach z łupka — trzy razy więcej miejsca za kamień
   // (na końcu listy: typ budynku w zapisach gry to numer na tej liście, więc nowe budynki dopisujemy na końcu)
   { id: 'granaryBig', category: 'food', name: 'b.granaryBig', w: 3, h: 3, tier: 2, cost: { wood: 110, stone: 100 }, stores: ['granary'], capacity: { granary: 1200 }, staff: true, keepers: 2, buildable: true },
   // kamienna brama w murze: baszty z ciosów, łukowy przejazd, okute wrota; wytrzymalsza od drewnianej
-  { id: 'stoneGate', category: 'defense', name: 'b.stoneGate', w: 1, h: 1, tier: 1, cost: { stone: 25, wood: 10 }, hp: 1600, gate: true, buildable: true },
+  { id: 'stoneGate', category: 'defense', name: 'b.stoneGate', w: 1, h: 1, tier: 1, cost: { stone: 30 }, hp: 1600, gate: true, buildable: true },
   // Kopalnia (jak w Gothic): jedna sztolnia wbita w zbocze gór — stawiana tylko tyłem do skały. Z jednej kopalni idzie
   // kamień, żelazo i (rzadko) rudę — walutę; co wyjdzie z danego kursu, losuje symulacja (workers.ts, MINE_YIELDS).
   // Tania w budowie, ale załoga rośnie z wioską (1 górnik na 4 mieszkańców, do 8) — to ludzie są kosztem.
@@ -223,8 +223,8 @@ export const BUILDINGS: readonly BuildingDef[] = [
   },
   // Większe kamienne wieże: im większa baszta, tym więcej łuczników mieści i tym wyżej stoją (dalej strzelają).
   // Jak zwykła kamienna wieża stają na wolnym polu albo wprost na swoim murze.
-  { id: 'stoneTowerBig', category: 'defense', name: 'b.stoneTowerBig', w: 3, h: 3, tier: 2, cost: { stone: 170, wood: 35 }, hp: 3800, wall: true, buildable: true },
-  { id: 'stoneTowerGreat', category: 'defense', name: 'b.stoneTowerGreat', w: 4, h: 4, tier: 3, cost: { stone: 300, wood: 60, iron: 20 }, hp: 5600, wall: true, buildable: true },
+  { id: 'stoneTowerBig', category: 'defense', name: 'b.stoneTowerBig', w: 3, h: 3, tier: 2, cost: { stone: 190 }, hp: 3800, wall: true, buildable: true },
+  { id: 'stoneTowerGreat', category: 'defense', name: 'b.stoneTowerGreat', w: 4, h: 4, tier: 3, cost: { stone: 340 }, hp: 5600, wall: true, buildable: true },
   // Koksownik: żelazny kosz z żarem stawiany na murze kamiennym albo na kamiennej wieży (nie zajmuje pola).
   // Łucznicy na murze i wieżach do 2 pól od niego maczają strzały w ogniu — ognista strzała rani mocniej (army.ts, FIRE_BONUS).
   { id: 'brazier', category: 'defense', name: 'b.brazier', w: 1, h: 1, tier: 1, cost: { iron: 2, stone: 4 }, addon: true, buildable: true },

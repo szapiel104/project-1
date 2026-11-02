@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.1 — 2.11.2026
+- Kamienne budowle obronne tylko za kamień (Michał): `stoneTower` 90, `stoneGate` 30, `stoneTowerBig` 190, `stoneTowerGreat` 340 (wcześniej z drewnem, wielka też z żelazem).
+
 ## 0.70.0 — 2.11.2026
 - Pospolite ruszenie (Michał): jednostka `levy` w koszarach — 5 rudy, 40 HP, cios 6 co 14 ticków, bez tarczy; wygląd sapera z kilofem (`sapperDraw` z `fight`), portret sapera. Bot: gdy nie wyszkoli włócznika ani nikogo innego, a ma ≥ 60 rudy. Test `tests/levy.test.ts`.
 
