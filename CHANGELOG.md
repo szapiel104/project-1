@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.78.2 — 2.11.2026
+- `src/saves/store.ts`: przechowywanie zapisów (IndexedDB + gzip, folder przez File System Access API, eksport/import `.p1save`); jeszcze niepodpięte.
+
 ## 0.78.1 — 2.11.2026
 - `src/ui/messenger.ts`: ikonka na `.menu-topbar`, lista rozmów, okienka `.mx-win` w `.mx-dock` (do 3). Panel znajomych, profil i okienko powiadomienia otwierają rozmowę w okienku. Migracja `20261102e_messages.sql` wykonana.
 

@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.78.2', date: '2026-11-02',
+    pl: ['Przygotowanie nowych zapisów gry (20 zapisów z miniaturami, autozapisy, folder na dysku) — sam panel wejdzie w kolejnej wersji.'],
+    en: ['Groundwork for the new save system (20 saves with thumbnails, autosaves, a folder on disk) — the panel itself comes in the next version.'],
+  },
+  {
     v: '0.78.1', date: '2026-11-02',
     pl: [
       'Wiadomości jak w Messengerze: ikonka dymka na belce obok dzwoneczka z licznikiem nowych wiadomości, pod nią lista rozmów z wyszukiwarką, kropką „dostępny” i ostatnią wiadomością.',
