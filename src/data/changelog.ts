@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.4', date: '2026-11-02',
+    pl: [
+      'Podgląd zleconych budów obejmuje też częstokół: przy otwartym budowaniu niepostawione bale widać jako przezroczyste, pełnej wysokości.',
+    ],
+    en: [
+      'The preview of ordered works now covers the palisade too: while the build list is open, logs not yet raised show as see-through, at full height.',
+    ],
+  },
+  {
     v: '0.72.3', date: '2026-11-02',
     pl: [
       'Karty budynków w budowaniu są gładkie, bez tekstury: ciemna karta, większy i wyraźniejszy obrazek budynku na jaśniejszym tle, złota nazwa. Wybrana karta świeci na złoto, a te, których nie postawisz, są delikatnie czerwone.',

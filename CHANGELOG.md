@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.72.4 — 2.11.2026
+- walls.ts: `ghostLogs` — duchy niepostawionych bali częstokołu (przezroczystość 0,22) dla `ghostOwner`.
+
 ## 0.72.3 — 2.11.2026
 - Karty budynków bez tekstury (theme-wow.css): gładkie tło #17110c, obrazek 120 px z jasną poświatą, nazwa 17 px.
 

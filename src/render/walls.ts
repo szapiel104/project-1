@@ -32,6 +32,7 @@ export class WallLayer {
    *  przezroczyste, póki gracz buduje. `ghostOwner` = gracz, którego budowy pokazać, −1 = schowane */
   ghostOwner = -1;
   private ghostBlock: THREE.InstancedMesh | null = null;
+  private ghostLogs: THREE.InstancedMesh | null = null;
   /** Mur kamienny dochodzący do kamiennej wieży: przedłużenie korony aż do ściany wieży i ciemne wejście w tej ścianie */
   private doorKit: { bridge: THREE.InstancedMesh; door: THREE.InstancedMesh[]; steps: THREE.InstancedMesh[] } | null = null;
   /**
@@ -90,9 +91,14 @@ export class WallLayer {
       this.wallShafts = new THREE.InstancedMesh(new THREE.CylinderGeometry(1, 1.1, 1, 7).translate(0, 0.5, 0), bark, 4096);
       this.wallTips = new THREE.InstancedMesh(new THREE.ConeGeometry(1, 1, 7).translate(0, 0.5, 0), bark, 4096);
       for (const m of [this.wallShafts, this.wallTips]) { m.castShadow = true; m.receiveShadow = true; m.frustumCulled = false; this.scene.add(cat(m, 'palisada')); }
+      // duchy niepostawionych bali częstokołu (podgląd budowy, jak ghostBlock muru kamiennego)
+      const gm = bark.clone(); gm.transparent = true; gm.opacity = 0.22; gm.depthWrite = false;
+      this.ghostLogs = new THREE.InstancedMesh(this.wallShafts.geometry, gm, 4096);
+      this.ghostLogs.frustumCulled = false; this.ghostLogs.count = 0; this.ghostLogs.renderOrder = 20;
+      this.scene.add(cat(this.ghostLogs, 'palisada (podgląd budowy)'));
     }
     const M4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), p = new THREE.Vector3(), sc = new THREE.Vector3();
-    let n = 0;
+    let n = 0, gl = 0;
     const sn = { block: 0, edge: 0, ladder: 0 };
     this.ladderFeet.clear();
     const stoneAt = (x: number, y: number): boolean => { const o = solid.get(y * width + x); return !!o && BUILDINGS[o.type]!.id === 'stoneWall'; };
@@ -360,6 +366,11 @@ export class WallLayer {
       for (let li = 0; li < logs.length; li++) {
         const log = logs[li]!;
         if (n >= 4096) break;
+        if (li >= shown && b.build && !b.ruined && b.owner === this.ghostOwner && this.ghostLogs && gl < 4096) {
+          const gx = cx + log.x, gz = cz + log.z;
+          M4.compose(p.set(gx - width / 2, view.heightAt(gx, gz) - 0.05, gz - height / 2), q.identity(), sc.set(log.r, log.h * 0.92 + log.r * 2, log.r));
+          this.ghostLogs.setMatrixAt(gl++, M4);
+        }
         if (li >= shown) {
           // miejsce na kolejny bal: wbity kołek znacznikowy
           if (li === shown) {
@@ -413,6 +424,7 @@ export class WallLayer {
     this.wallShafts.count = n; this.wallTips!.count = n;
     for (const key of ['block', 'edge', 'ladder'] as const) { const m = this.stoneKit[key]; m.count = sn[key]; touch(m); }
     if (this.ghostBlock) { this.ghostBlock.count = gn; touch(this.ghostBlock); }
+    if (this.ghostLogs) { this.ghostLogs.count = gl; touch(this.ghostLogs); }
     for (const d of doors.values()) {
       if (!this.doorKit || dn.door >= 1024) break;
       // na środku odcinka, którym mur dochodzi do tego boku wieży (gruby mur na środku boku = wejście na środku boku)
