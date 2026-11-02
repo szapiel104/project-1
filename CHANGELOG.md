@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.70.6 — 2.11.2026
+- Fałszywy alarm przy wczytaniu zapisu (Michał): `hpBefore` w main.ts (wykrywanie uderzeń w budynki) trzymało HP z poprzedniej gry pod tymi samymi `id` — po zmianie obiektu `game` czyścimy mapę i przez 5 s nie podnosimy alarmów (tylko zapis stanu).
+
 ## 0.70.5 — 2.11.2026
 - Jedna kopalnia na gracza (Michał): `maxCount` w `BuildingDef` (oremine: 1), `atLimit` w placement.ts (budowy się liczą, ruiny nie), błąd `place.limit`; przenoszenie (`relocate`) bez limitu. Bot pomija pozycję z listy przy limicie — druga „oremine” w `ORDER` = odbudowa po ruinie. Test w `oremine.test.ts`.
 

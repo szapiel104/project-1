@@ -2441,8 +2441,14 @@ type Alert = { x: number; y: number; until: number; kind: 'wolf' | 'enemy'; el: 
 const alerts: Alert[] = [];
 let lastAlarmBell = -1e9;
 const hpBefore = new Map<number, number>();
+// Michał 2.11.2026: przy wczytaniu zapisu czasem dzwonił alarm. hpBefore trzymało życie budynków z poprzedniej gry
+// (te same numery budynków, inne budynki) — po zmianie gry zaczynamy od zera i przez pierwsze sekundy tylko zapisujemy
+// stan, bez alarmów (gra się rozkręca, kamera dopiero ustawia)
+let alertGame: GameState | undefined;
+let alertQuietUntil = 0;
 function raiseAlert(x: number, y: number, kind: Alert['kind']): void {
   const now = performance.now();
+  if (now < alertQuietUntil) return;
   const near = alerts.find((a) => Math.abs(a.x - x) < 8 && Math.abs(a.y - y) < 8);
   if (near) { near.until = now + 4000; near.x = x; near.y = y; return; }
   const el = document.createElement('button');
@@ -2459,6 +2465,7 @@ function raiseAlert(x: number, y: number, kind: Alert['kind']): void {
   if (performance.now() - lastAlarmBell > 60000) { alarmBell(); lastAlarmBell = performance.now(); }
 }
 function scanAttacks(): void {
+  if (game !== alertGame) { alertGame = game; hpBefore.clear(); alertQuietUntil = performance.now() + 5000; }
   const mineAt: [number, number][] = [];
   for (const u of game.units) if (u.owner === ME) mineAt.push([u.px / 256, u.py / 256]);
   for (const s of game.soldiers) if (s.owner === ME) mineAt.push([s.px / 256, s.py / 256]);

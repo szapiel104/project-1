@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.6', date: '2026-11-02',
+    pl: [
+      'Wczytanie zapisanej gry nie bije już na alarm bez powodu: gra myliła budynki z poprzedniej rozgrywki z twoimi i brała to za atak.',
+    ],
+    en: [
+      'Loading a saved game no longer sounds the alarm for no reason: the game mistook buildings from the previous match for yours and took it for an attack.',
+    ],
+  },
+  {
     v: '0.70.5', date: '2026-11-02',
     pl: [
       'Wolno mieć tylko jedną kopalnię. Drugiej nie postawisz, dopóki pierwsza stoi (albo się buduje); gdy wróg ją zburzy, możesz od razu postawić nową. Boty i sojusznicy mają tę samą zasadę.',
