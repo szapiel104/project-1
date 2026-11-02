@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.8', date: '2026-11-02',
+    pl: [
+      'Menu i logowanie jaśniejsze: lewa kolumna i okna menu z ciepłego, średniego brązu z fakturą zamiast prawie czerni, jaśniejsze pola do wpisywania, a przyciski jak w grze — pomarańczowy główny i przygaszony „Wróć”.',
+    ],
+    en: [
+      'A brighter menu and sign-in: the left column and menu windows in a warm mid brown with texture instead of near-black, lighter input fields, and buttons as in the game — an orange main one and a muted “Back”.',
+    ],
+  },
+  {
     v: '0.72.7', date: '2026-11-02',
     pl: [
       'Nowy, jasny pejzaż na ekranie wczytywania i w menu: złota godzina, niebo od błękitu do złota, podświetlone chmury, pasma ośnieżonych gór w mgiełce, dolina z rzeką, zamek na skale w słońcu, smugi światła i ptaki.',

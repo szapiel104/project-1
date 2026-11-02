@@ -241,3 +241,30 @@ body.info-open .scribe-toasts { display: none; }
 .info p, .info .hint, .info .logi-note { font-size: 14px; line-height: 1.4; }
 .info .actions { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; padding-top: 4px; border-top: 1px solid rgba(138, 109, 59, .45); }
 .info .actions button { min-height: 36px; font-size: 14px; }
+
+/* jaśniej (Michał 2.11.2026: „logowanie i reszta za ciemno, nie wiadomo, co to jest”): lewa kolumna menu i okna menu
+   z ciepłego, średniego brązu z fakturą zamiast prawie czerni */
+:root { --wow-bg-top: #46331f; --wow-bg-bot: #2a1d12; }
+.menu:not(.previewing) .menu-scene::after {
+  background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(180deg, #4a3522 0%, #33241a 55%, #24190f 100%);
+  background-size: 420px auto, 100% 100%; background-blend-mode: multiply, normal;
+  border-right: 2px solid #b8924c; box-shadow: 1px 0 0 #000, 4px 0 0 rgba(0, 0, 0, .4), 18px 0 48px rgba(0, 0, 0, .45); }
+.menu.in-game:not(.previewing) { background: linear-gradient(90deg, #3a2a1c 0, #2a1d12 calc(var(--col) - 2px), #b8924c calc(var(--col) - 2px), #b8924c var(--col), rgba(6, 3, 1, .35) var(--col), rgba(6, 3, 1, 0) calc(var(--col) + 280px)); }
+.menu .menu-bar .bar-item { color: #f6e8c8; }
+.menu-hint, .menu:not(.previewing) .menu-hint { color: #f0dcb4; }
+.menu .menu-panel input, .menu .menu-panel select { background: #1c140d; border-color: #9a7838; color: #fff4dc; }
+body .menu .menu-panel, body .menu .menu-panel.wide, body .menu.book-open .menu-panel.book {
+  background-color: transparent;
+  background-image: url('/textures/cc0/plaster.jpg'), radial-gradient(ellipse at 50% 0%, #5a432b, #3a2a1c 55%, #2a1d12);
+  background-size: 380px auto, 100% 100%; background-blend-mode: multiply, normal; }
+body .menu .menu-panel :is(input, select) { background: #241a11; border: 1px solid #9a7838; color: #fff4dc; box-shadow: inset 0 2px 4px rgba(0, 0, 0, .45); }
+/* przyciski okien menu w tym samym stylu co w grze: główny pomarańczowa płytka, reszta przygaszona */
+body .menu .menu-panel .menu-btn { font-family: var(--label); font-weight: 700; letter-spacing: .08em; color: #f3e2bc; text-shadow: 0 1px 1px #000; border: 1px solid #120c08; border-radius: 2px;
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 190, 120, .16), transparent 70%), linear-gradient(#5e2c14, #42200e 55%, #331709);
+  box-shadow: 0 0 0 1px #5a4630, 0 0 0 2px #0e0906, inset 0 0 0 1px #9a5a30, inset 0 1px 0 rgba(255, 210, 160, .22); }
+body .menu .menu-panel .menu-btn:not(.menu-back):not(.menu-link) { color: #ffe9c2; text-shadow: 0 1px 1px #3a0e00, 0 0 6px rgba(255, 160, 80, .45);
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 200, 110, .35), transparent 70%), linear-gradient(#c4441a, #962a0c 55%, #741d07);
+  box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #ff9a4a, inset 0 0 10px rgba(255, 120, 40, .45), inset 0 1px 0 rgba(255, 230, 170, .6); }
+body .menu .menu-panel .menu-btn:hover, body .menu .menu-panel .menu-btn:focus-visible { color: #fff6e0; box-shadow: 0 0 0 1px #7a6040, 0 0 0 2px #0e0906, inset 0 0 0 1px #ffc078, 0 0 10px rgba(255, 130, 50, .35); }
+body .menu .menu-panel :is(input:not([type]), input[type='text'], input[type='email'], input[type='password'], select, textarea) { background: #2a1e13; border: 1px solid #a8864a; color: #fff4dc; }
+body .menu .menu-panel { background-image: url('/textures/cc0/plaster.jpg'), radial-gradient(ellipse at 50% 0%, #6a5034, #44321f 55%, #2e2015); }
