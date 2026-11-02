@@ -12,6 +12,7 @@ import { TIERS } from '../render/autoquality';
 import { hardReload, newerVersion } from './refresh';
 import { SANDBOX as SANDBOX_MENU } from '../testmode';
 import { testerNotesPane } from './testerNotes';
+import { createBell } from './bell';
 
 /** Ustawienia zapamiętywane w przeglądarce */
 export interface Settings {
@@ -246,6 +247,13 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   });
   /** Tabliczka konta w lewym dolnym rogu: herb z poziomem, nick, tytuł i pasek PD; klik otwiera „Mój ród” */
   const account = el('div', 'menu-account');
+  // dzwoneczek powiadomień przy karcie konta (znajomi, zaproszenia do gry, uwagi testerów)
+  const bell = createBell({
+    friends: (tab) => online.showFriends(tab),
+    join: (id) => online.join(id),
+    adminNotes: (id) => online.showHouse(4, id),
+    myNotes: (id) => showNotes(id),
+  });
   const paintAccount = (): void => {
     const m = netMe();
     account.replaceChildren();
@@ -267,7 +275,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       const go = el('span', 'acc-go'); go.setAttribute('aria-hidden', 'true'); go.innerHTML = '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="square"><path d="M9 5l7 7-7 7"/></svg>';
       who.append(seal, txt, go);
       who.addEventListener('click', () => online.showHouse());
-      account.append(who);
+      account.append(who, bell);
     } else {
       const box = el('div', 'acc-guest');
       box.append(el('strong', 'acc-nick', tx('Gość', 'Guest')), el('span', 'acc-level', tx('Zaloguj się, by zbierać poziomy i tytuły', 'Sign in to earn levels and ranks')));
@@ -305,8 +313,10 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   };
   /** Uwagi testera (tylko rola tester albo administrator): co poprawić i dodać; stan „zrobione” wraca od administratora */
   function notesItem(): HTMLButtonElement {
-    return barBtn(tx('Uwagi testera', 'Tester notes'), tx('Napisz, co poprawić albo dodać — administrator zobaczy i oznaczy zrobione', 'Write what to fix or add — the administrator sees it and marks it done'),
-      () => screen(tx('Uwagi testera', 'Tester notes'), false, testerNotesPane(inGame ? tx('w trakcie gry', 'during a game') : tx('menu', 'menu'))));
+    return barBtn(tx('Uwagi testera', 'Tester notes'), tx('Napisz, co poprawić albo dodać — administrator zobaczy i oznaczy zrobione', 'Write what to fix or add — the administrator sees it and marks it done'), () => showNotes());
+  }
+  function showNotes(focus?: number): void {
+    screen(tx('Uwagi testera', 'Tester notes'), true, testerNotesPane(inGame ? tx('w trakcie gry', 'during a game') : tx('menu', 'menu'), focus));
   }
   function paintBar(): void {
     const list: (HTMLButtonElement | 'gap')[] = [];
@@ -324,6 +334,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
       if (canContinue) list.push(barBtn(t('menu.continue'), tx('Wróć do swojej osady z ostatniej gry', 'Return to your settlement from the last game'), () => events.onContinue()));
       list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew, 'bar-main'));
       list.push(barBtn(tx('Gra przez sieć', 'Online play'), tx('Mecze z innymi graczami: pokoje, drużyny, ranking', 'Matches against other players: rooms, teams, ranking'), () => online.showOnline()));
+      if (netMe()) list.push(barBtn(tx('Znajomi', 'Friends'), tx('Kto jest w grze, zaproszenia, szukanie nowych graczy', 'Who is online, requests, finding new players'), () => online.showFriends(0)));
       list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
       list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
       list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges));

@@ -4,7 +4,7 @@ Michał wykonuje migracje ręcznie: Supabase → projekt „project-1” → SQL
 Każdy czat, który dodaje nową migrację, dopisuje ją tutaj. Po wykonaniu: przenieść do „Wykonane” i dopisać „wykonane DATA” w pierwszej linijce pliku.
 
 ## Czekają (stan 2.11.2026)
-- (nic)
+- `20261102c_social.sql` — znajomi jak na Steamie (zaproszenia z akceptacją, „ostatnio w grze”, „ostatnio grał”), dzwoneczek powiadomień (znajomi, zaproszenia do gry, uwagi testerów). Bez niej: dzwoneczek pusty, zaproszenia do gry tylko na żywo.
 
 ## Wykonane
 - `20261102b_testers.sql` — wykonane 2.11.2026 (RebaZius: administrator i twórca, SzyMi: tester)

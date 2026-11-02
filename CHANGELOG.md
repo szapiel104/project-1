@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.76.0 — 2.11.2026
+- Migracja `20261102c_social.sql`: `profiles.last_seen/last_played/avatar` + `seen()`, odrzucanie zaproszeń (polityka delete dla `friend_id`), `notifications` (realtime) z wyzwalaczami przy `friends` i `tester_notes`, `notify_invite`, `admin_note` z powiadomieniem.
+- `src/net/social.ts`, `src/ui/friendsView.ts` (zakładki: znajomi, zaproszenia, szukaj), `src/ui/bell.ts`; uwagi testerów: `notesList` z filtrami i stronami.
+
 ## 0.75.0 — 2.11.2026
 - Przyciski: `.btn-ok` (zielony), `.btn-danger` (czerwony), reszta neutralna (`.btn-main`, `.btn-plain`, `.menu-btn`); `buttonTone()` w menu.ts dobiera kolor z napisu.
 - Migracja `20261102b_testers.sql`: `testers`, `is_tester()`, `admin_tester`, `admin_find` z kolumną `tester`, `tester_notes` + `admin_note`.

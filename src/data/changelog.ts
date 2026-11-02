@@ -10,6 +10,21 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.76.0', date: '2026-11-02',
+    pl: [
+      'Znajomi jak na Steamie: zaproszenia do znajomych z przyjmowaniem i odrzucaniem, szukanie graczy po nicku i lista ostatnio aktywnych, przy każdym znajomym — czy jest w grze, gdzie (menu, pokój, mecz) i kiedy był albo grał ostatnio.',
+      'Zaproś znajomego do gry jednym przyciskiem (powstaje pokój, a zaproszenie czeka na niego także, gdy go nie ma) albo dołącz do pokoju, w którym czeka.',
+      'Dzwoneczek powiadomień przy karcie konta w menu: zaproszenia do znajomych i do gry, przyjęte zaproszenia, nowe uwagi testerów (dla administratora, z przejściem prosto do uwagi) i zrobione uwagi (dla testera).',
+      'Okno uwag testera szersze, z filtrami (stan, autor, szukanie w treści) i stronami.',
+    ],
+    en: [
+      'Friends like on Steam: friend requests you accept or decline, finding players by nickname and a list of recently active ones, and for each friend — whether they are online, where (menu, room, match) and when they were last online or last played.',
+      'Invite a friend to a game with one button (a room is created and the invitation waits for them even when they are away) or join the room where they are waiting.',
+      'A notification bell next to the account card in the menu: friend requests and game invitations, accepted requests, new tester notes (for the administrator, jumping straight to the note) and finished notes (for the tester).',
+      'The tester notes window is wider, with filters (state, author, text search) and pages.',
+    ],
+  },
+  {
     v: '0.75.0', date: '2026-11-02',
     pl: [
       'Trzy kolory przycisków w całej grze: zielony — zapisz, zatwierdź, zacznij; czerwony — usuń, wyrzuć, rozbierz, poddaj się; cała reszta spokojna, neutralna.',

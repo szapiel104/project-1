@@ -222,3 +222,13 @@
 .admin-table td, .admin-table th { vertical-align: middle; }
 .admin-row-acts { display: flex; flex-wrap: wrap; gap: 6px; }
 .menu .admin .admin-row-acts .menu-btn.admin-btn { min-height: 34px; padding: 4px 10px; font-size: 13px; }
+.notes-browser { display: grid; gap: 10px; }
+.notes-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.notes-bar input[type='search'] { flex: 1 1 220px; }
+.notes-bar select { min-height: 40px; padding: 6px 10px; font: inherit; font-size: 15px; color: #fff4dc; background: #241a11; border: 1px solid #9a7838; border-radius: 3px; }
+.notes-seg { display: inline-flex; gap: 4px; }
+.menu .admin .notes-seg .menu-btn.admin-btn[aria-pressed='true'] { background-image: var(--tone-n-hi); box-shadow: 0 0 0 2px #e2c890, 0 0 0 3px #0e0906; }
+.notes-pager { display: flex; align-items: center; justify-content: center; gap: 12px; }
+.notes-page { font-size: 14px; color: #e6d6b4; }
+.note.focus { outline: 2px solid #f0c75a; outline-offset: 2px; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -403,8 +403,14 @@ function syncOnline(): void {
   inboxCh.subscribe();
 }
 
+/** Gdzie jestem teraz (menu, pokój, mecz) — do „ostatnio grał” w social.ts */
+export const myStatus = (): Status => status;
+const statusSubs = new Set<() => void>();
+export const onStatus = (f: () => void): (() => void) => { statusSubs.add(f); return () => statusSubs.delete(f); };
 export function setStatus(st: Status): void {
+  const was = status.where;
   status = st;
+  if (was !== st.where) for (const f of statusSubs) f();
   const m = me();
   if (m && onlineCh) void onlineCh.track({ id: m.id, nick: m.nick, avatar: m.avatar, ...status });
 }

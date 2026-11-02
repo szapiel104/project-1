@@ -2,14 +2,16 @@ import { MAP_PRESETS, type MapPresetId } from '../data/maps';
 import { TEAM_COLORS } from '../data/teams';
 import { Lockstep } from '../net/lockstep';
 import {
-  addFriend, closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, removeFriend, sendInvite, setStatus, deleteRoom, getRoom, listRooms, myAwards, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, isAdmin, reloadMe, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
-  type Invite, type Member, type NetMsg, type OnlinePlayer, type Room, type RoomLink, type Slot,
+  closeMyStaleRooms, createRoom, listFriends, onInvite, onlinePlayers, onPresence, setStatus, deleteRoom, getRoom, listRooms, myAwards, myRecord, myResults, ranking, me, progress, levelsOf, knownLevel, restore, roomLink, isAdmin, reloadMe, setAvatar, setNick, setPassword, signIn, signOut, signUp, updateRoom, watchRooms,
+  type Invite, type Member, type NetMsg, type Room, type RoomLink, type Slot,
 } from '../net/supa';
 import { avatarSvg, CHARGE_NAMES, CREST_CHARGES, crestPreview, decodeCrest, DIVISIONS, encodeCrest, TINCTURES, type Crest } from './avatars';
 import { BADGES, levelOf, nextTitle, TITLES, titleOf, titleRank, xpUntil, type BadgeDef } from '../data/progress';
 import { chatLine, cleanChat } from './chat';
 import { adminPane } from './adminPanel';
 import { adminNotesPane } from './testerNotes';
+import { friendsView } from './friendsView';
+import { friendLists, inviteToGame } from '../net/social';
 import { lang, tx } from '../i18n';
 
 /** Wszystko, czego potrzebuje gra, żeby wystartować mecz przez sieć */
@@ -54,7 +56,7 @@ const seats = (preset: string): number => (MAP_PRESETS[preset as MapPresetId]?.s
 const modeName = (preset: string): string => MODES.find(([id]) => id === preset)?.[1] ?? preset;
 const hex = (n: number): string => `#${n.toString(16).padStart(6, '0')}`;
 
-export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(tab?: number): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
+export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void; showHouse(tab?: number, note?: number): void; showFriends(tab?: number): void; showLogin(register?: boolean): void; join(id: string): void; leave(): void } {
   const { el, button, screen } = ui;
   const inMatch = (): boolean => ui.inMatch();
   let stopWatch: (() => void) | null = null;
@@ -121,7 +123,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     return d.toLocaleDateString(lang() === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'short' }) + ', ' + d.toLocaleTimeString(lang() === 'en' ? 'en-GB' : 'pl-PL', { hour: '2-digit', minute: '2-digit' });
   };
 
-  function showHouse(tab = 0): void {
+  function showHouse(tab = 0, noteFocus?: number): void {
     cleanup();
     const m = me();
     if (!m) { showLogin(false, '', () => showHouse(tab)); return; }
@@ -313,7 +315,7 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     // panel kont tylko dla administratorów (prawa sprawdza i tak baza przy każdej zmianie)
     if (isAdmin()) {
       TABS.push([tx('Administracja', 'Administration'), () => adminPane(() => void reloadMe().then(() => showHouse(3)))]);
-      TABS.push([tx('Uwagi testerów', 'Tester notes'), adminNotesPane]);
+      TABS.push([tx('Uwagi testerów', 'Tester notes'), () => adminNotesPane(noteFocus)]);
     }
     const show = (i: number): void => {
       tabBtns.forEach((b, k) => { b.setAttribute('aria-selected', String(k === i)); b.tabIndex = k === i ? 0 : -1; });
@@ -520,59 +522,27 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
   }
 
   // ---------------- znajomi ----------------
-  const where = (o: OnlinePlayer | undefined): string => {
-    if (!o) return tx('poza grą', 'offline');
-    if (o.where === 'room') return tx(`w pokoju „${o.roomName ?? ''}”`, `in room “${o.roomName ?? ''}”`);
-    if (o.where === 'game') return tx('w meczu przez sieć', 'in an online match');
-    if (o.where === 'solo') return tx('gra z botami', 'playing against bots');
-    return tx('w menu', 'in the menu');
-  };
-  async function showFriends(): Promise<void> {
+  async function showFriends(tab = 0): Promise<void> {
     cleanup();
     const m = me();
-    if (!m) { showLogin(false, '', () => void showFriends()); return; }
-    const wrap = el('div', 'net-friends');
-    const add = el('form', 'net-create');
-    const nick = el('input'); nick.placeholder = tx('Nick znajomego', "Friend's nickname"); nick.maxLength = 20; nick.setAttribute('aria-label', tx('Nick znajomego', "Friend's nickname")); nick.autocomplete = 'off';
-    const addBtn = el('button', 'menu-btn', tx('Dodaj', 'Add')); addBtn.type = 'submit';
-    add.append(nick, addBtn);
-    const note = msg('');
-    const list = el('div', 'net-list');
-    const draw = async (): Promise<void> => {
-      const { mine, addedMe } = await listFriends();
-      const on = onlinePlayers();
-      const row = (p: { id: string; nick: string }, mineList: boolean): HTMLElement => {
-        const o = on.find((x) => x.id === p.id);
-        const r = el('div', `net-room net-friend${o ? ' on' : ''}`);
-        const info = el('div', 'net-room-info');
-        info.append(el('strong', '', p.nick), el('span', '', where(o)));
-        r.append(shield(o?.avatar ?? 0, 30), info, el('span', o ? 'net-tag' : 'net-tag off', o ? tx('w grze', 'online') : 'offline'));
-        if (o?.where === 'room' && o.roomId) r.append(button(tx('Dołącz', 'Join'), () => void join(o.roomId!), 'menu-btn net-join'));
-        if (mineList) r.append(button(tx('Usuń', 'Remove'), async () => { await removeFriend(p.id); void draw(); }, 'link-btn'));
-        else r.append(button(tx('Dodaj też', 'Add back'), async () => { await addFriend(p.nick); void draw(); }, 'menu-btn net-join'));
-        return r;
-      };
-      const out: Node[] = [];
-      out.push(el('p', 'net-label', tx(`Twoi znajomi (${mine.length})`, `Your friends (${mine.length})`)));
-      if (mine.length) out.push(...mine.map((p) => row(p, true)));
-      else out.push(msg(tx('Nikogo jeszcze nie dodałeś. Wpisz nick znajomego powyżej.', "You haven't added anyone yet. Type a friend's nickname above.")));
-      if (addedMe.length) { out.push(el('p', 'net-label', tx('Dodali Cię do znajomych', 'Added you as a friend'))); out.push(...addedMe.map((p) => row(p, false))); }
-      list.replaceChildren(...out);
-    };
-    add.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      if (!nick.value.trim()) return;
-      addBtn.disabled = true;
-      const err = await addFriend(nick.value);
-      addBtn.disabled = false;
-      note.textContent = err ?? tx(`Dodano: ${nick.value.trim()}.`, `Added: ${nick.value.trim()}.`); note.classList.toggle('bad', !!err);
-      if (!err) nick.value = '';
-      void draw();
-    });
-    wrap.append(add, note, list);
-    screen(tx('Znajomi', 'Friends'), true, wrap, back(() => void showOnline(), tx('Wróć do listy gier', 'Back to game list')));
-    await draw();
-    stopWatch = onPresence(() => void draw());
+    if (!m) { showLogin(false, '', () => void showFriends(tab)); return; }
+    const view = friendsView({
+      el, button, shield,
+      join: (id) => void join(id),
+      // zaproszenie do gry: nowy pokój (1 na 1, do zmiany w pokoju) i zaproszenie do niego — na żywo i w dzwoneczku
+      invite: async (p) => {
+        const seed = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
+        const name = tx(`Gra ${m.nick}`, `${m.nick}'s game`);
+        const res = await createRoom(name, '1v1', seed);
+        if (typeof res === 'string') return res;
+        const err = await inviteToGame(p.id, res.id, res.name);
+        if (err) return err;
+        enterRoom(res);
+        return null;
+      },
+    }, tab);
+    screen(tx('Znajomi', 'Friends'), true, view.node, back(() => void showOnline(), tx('Wróć do listy gier', 'Back to game list')));
+    stopWatch = onPresence(() => view.redraw());
   }
 
   // zaproszenie od znajomego: okienko w rogu ekranu, w menu i w grze z botami (w meczu przez sieć nie przeszkadzamy)
@@ -696,16 +666,23 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     // zaproszenia dla znajomych, którzy są teraz w grze
     const friendBox = el('div', 'room-friends');
     const paintFriends = async (): Promise<void> => {
-      const { mine } = await listFriends();
+      const { friends } = await friendLists();
       const on = onlinePlayers();
       const here = new Set(slots.filter((x) => x.kind === 'human').map((x) => (x as { id: string }).id));
-      const avail = mine.map((f) => on.find((o) => o.id === f.id)).filter((o): o is OnlinePlayer => !!o && !here.has(o.id));
+      // znajomi poza pokojem: najpierw ci w grze; zaproszenie trafia też do dzwoneczka, więc można zaprosić i nieobecnych
+      const avail = friends.filter((f) => !here.has(f.id)).sort((a, b) => Number(!!on.find((o) => o.id === b.id)) - Number(!!on.find((o) => o.id === a.id)));
       friendBox.replaceChildren();
-      if (!avail.length) { if (mine.length) friendBox.append(el('span', 'net-msg', tx('Żaden z Twoich znajomych nie jest teraz w grze.', 'None of your friends are online right now.'))); return; }
-      friendBox.append(el('span', 'net-label', tx('Zaproś:', 'Invite:')));
-      for (const o of avail) {
-        const b = button(o.nick, async () => { b.disabled = true; await sendInvite(o.id, room.id, room.name); b.textContent = `${o.nick} ✓`; }, 'net-filter');
-        b.prepend(shield(o.avatar, 18));
+      if (!avail.length) return;
+      friendBox.append(el('span', 'net-label', tx('Zaproś znajomego:', 'Invite a friend:')));
+      for (const f of avail) {
+        const o = on.find((x) => x.id === f.id);
+        const b = button(o ? f.nick : `${f.nick} (offline)`, async () => {
+          b.disabled = true;
+          const err = await inviteToGame(f.id, room.id, room.name);
+          b.textContent = err ? `${f.nick} ✗` : `${f.nick} ✓`;
+          if (err) b.title = err;
+        }, 'net-filter');
+        b.prepend(shield(o?.avatar ?? f.avatar, 18));
         friendBox.append(b);
       }
     };
@@ -866,5 +843,5 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     enterRoom(room);
   }
 
-  return { showOnline: () => void showOnline(), showAccount, showHouse: (tab = 0) => showHouse(tab), showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
+  return { showOnline: () => void showOnline(), showAccount, showHouse: (tab = 0, note?: number) => showHouse(tab, note), showFriends: (tab = 0) => void showFriends(tab), showLogin: (register = false) => showLogin(register), join: (id) => void join(id), leave };
 }
