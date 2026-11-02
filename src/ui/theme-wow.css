@@ -111,3 +111,8 @@ input, select { background: #1a1713; border: 1px solid var(--wow-frame); color: 
 #loading .loading-line strong, #loading .loading-detail { color: #4a3216; }
 #loading .loading-log { color: #5a3f1e; }
 #loading .loading-bar { background: linear-gradient(#2a2117, #14100b); border-color: #3d2a12; box-shadow: 0 0 0 1px #d9b77a, 0 0 0 3px #3d2a12, 0 4px 10px rgba(0, 0, 0, .4); }
+
+/* budynek, którego nie da się teraz postawić (brak surowców albo wymaganego budynku): delikatnie czerwony,
+   reszta kafelków neutralna (Michał 2.11.2026: „czerwone tylko to, czego nie mogę zbudować”) */
+.card.poor, .card.locked { background: linear-gradient(#4a2b25, #2f1c18); box-shadow: inset 0 1px 0 rgba(255, 220, 200, .08), inset 0 0 0 1px #7a3f33; }
+.card.poor:hover, .card.locked:hover { background: linear-gradient(#573229, #38211c); box-shadow: inset 0 0 0 1px #a8574a; }

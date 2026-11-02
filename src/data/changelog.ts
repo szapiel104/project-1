@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.71.2', date: '2026-11-02',
+    pl: [
+      'W budowaniu czerwone są już tylko budynki, których teraz nie postawisz (brakuje surowców albo wymaganego budynku) — i to delikatnie. Reszta kafelków i kategorie są neutralne.',
+    ],
+    en: [
+      'In the build list only the buildings you cannot raise just now (short of materials or a required building) are red — and only faintly. The other tiles and the categories are neutral.',
+    ],
+  },
+  {
     v: '0.71.1', date: '2026-11-02',
     pl: [
       'Okna jaśniejsze i pełne, bez prześwitywania: ciepły, ciemny brąz z metalową ramą, jak w World of Warcraft. Kafelki budynków, kategorie budowy i przyciski to szaro-brązowe gniazda, wybrane świecą na złoto — bez jaskrawej czerwieni.',

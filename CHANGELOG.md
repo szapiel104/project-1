@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.71.2 — 2.11.2026
+- Budowa: `.card.poor` i `.card.locked` z delikatnie czerwonym tłem (theme-wow.css), reszta neutralna.
+
 ## 0.71.1 — 2.11.2026
 - `theme-wow.css` druga wersja (Michał: „jaśniej”, „czerwony zbyt chamski”, „bez opacity”): pełne tło #3e352a→#27221c, przyciski/kafelki/kategorie jako szaro-brązowe gniazda (czerwień tylko przygaszona na `.btn-main`), okna menu z tą samą ramą (bez `backdrop-filter`), ekran wczytywania z pasami pergaminu u góry (`#loading::before`) i u dołu (`.loading-card`).
 
