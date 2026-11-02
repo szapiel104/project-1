@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.7', date: '2026-11-02',
+    pl: [
+      'Podgląd zleconych budów: gdy masz otwartą listę budowy albo stawiasz budynek, każdy zlecony, jeszcze niezbudowany mur, wieża czy budynek pokazuje się jako półprzezroczysty gotowy model. Łatwo dociągnąć do nich następne odcinki. Po zamknięciu budowy podgląd znika.',
+      'Chłop z kilofem jest odrobinę wytrzymalszy: 50 zdrowia zamiast 40, więc strażnicy nie kładą go tak szybko.',
+    ],
+    en: [
+      'A preview of ordered works: while the build list is open or you are placing a building, every ordered but unfinished wall, tower or building shows as a see-through finished model, so it is easy to carry the next stretch on from it. Close the build list and the preview is gone.',
+      'The levied peasant is a touch hardier: 50 health instead of 40, so guards do not cut him down quite so quickly.',
+    ],
+  },
+  {
     v: '0.70.6', date: '2026-11-02',
     pl: [
       'Wczytanie zapisanej gry nie bije już na alarm bez powodu: gra myliła budynki z poprzedniej rozgrywki z twoimi i brała to za atak.',

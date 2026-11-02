@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.70.7 — 2.11.2026
+- Duchy zleconych budów (Michał): `src/render/siteGhosts.ts` — przy otwartej liście budowy (`hud.buildOpen()`) albo z budynkiem w ręku każdy plac budowy gracza (`b.build > 0`, bez dróg i ruin) dostaje kopię gotowego modelu, przezroczystość 0,2, bez zapisu głębi; wspólne siatki i materiały na rodzaj, najwyżej 600 naraz, reset po zmianie gry.
+- `levy`: zdrowie 40 → 50.
+
 ## 0.70.6 — 2.11.2026
 - Fałszywy alarm przy wczytaniu zapisu (Michał): `hpBefore` w main.ts (wykrywanie uderzeń w budynki) trzymało HP z poprzedniej gry pod tymi samymi `id` — po zmianie obiektu `game` czyścimy mapę i przez 5 s nie podnosimy alarmów (tylko zapis stanu).
 

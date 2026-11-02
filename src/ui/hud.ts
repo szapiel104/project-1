@@ -139,6 +139,8 @@ export interface Hud {
   setPicked(id: string | null): void;
   /** Chowa otwartą listę budynków (Esc); zwraca true, gdy była otwarta */
   closeBuild(): boolean;
+  /** Lista budynków (budowa) jest otwarta */
+  buildOpen(): boolean;
   showInfo(info: BuildingInfo | null): void;
   /** Karta mieszkańca: imię i kilka wierszy opisu */
   showPerson(person: { name: string; lines: string[]; walk?: boolean } | null): void;
@@ -1285,6 +1287,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       if (wreck.getAttribute('aria-pressed') !== 'true') buildFoot.hidden = picked === null;
       syncPicker();
     },
+    buildOpen() { return category !== null; },
     closeBuild() {
       if (category === null) return false;
       showCategory(null);

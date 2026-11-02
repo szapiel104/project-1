@@ -2208,6 +2208,8 @@ function loop(now: number): void {
   if (steps) { refresh(); updateGhost(); }
   perf.ui += performance.now() - tu;
   const tr = performance.now();
+  // zlecone budowy jako półprzezroczyste duchy, póki gracz buduje (lista budowy otwarta albo budynek w ręku)
+  renderer.setSiteGhosts(picked || hud.buildOpen() ? ME : -1);
   renderer.frame(elapsed / 1000, speed ? Math.min(1, acc / TICK_MS) : 1, speed === 0);
   perf.render += performance.now() - tr;
   perf.frames++; perf.worst = Math.max(perf.worst, elapsed);

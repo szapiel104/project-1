@@ -1,4 +1,5 @@
 import { cloneMaterial } from './matclone';
+import { SiteGhosts } from './siteGhosts';
 import { boulderAt } from '../sim/systems/boulders';
 import { PYRE_TICKS } from '../sim/systems/cremation';
 import { poseOnRoute, routeTime } from './minepath';
@@ -861,6 +862,7 @@ export class GameRenderer {
       for (const m of [fill, edge, tip]) { m.renderOrder = 22; this.ghostDoor.add(m); }
       this.ghostDoor.visible = false;
       this.scene.add(this.ghostDoor);
+      this.siteGhosts = new SiteGhosts(this.scene, this.models);
     }
     // podgląd planowanej drogi: zielone pola da się wybudować, czerwone nie
     this.plan = new THREE.InstancedMesh(new THREE.PlaneGeometry(0.92, 0.92).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.55, depthWrite: false }), 512);
@@ -1413,6 +1415,10 @@ export class GameRenderer {
 
   /** Wieża, nad którą stoi podgląd koksownika: dach zdjęty, żeby było widać, gdzie kosz stanie (Michał 30.10.2026) */
   private ghostOpen = 0;
+  /** Zlecone budowy jako duchy (siteGhosts.ts): właściciel, którego place pokazać, albo −1 */
+  private siteGhosts!: SiteGhosts;
+  private siteGhostOwner = -1;
+  setSiteGhosts(owner: number): void { this.siteGhostOwner = owner; }
   setGhost(g: Ghost | null): void {
     if (this.ghostModel) this.ghostModel.visible = false;
     this.ghostOpen = 0;
@@ -2397,6 +2403,7 @@ export class GameRenderer {
     namedTick();
     // co pół sekundy: wyjątki od granicy kamery przy własnych budynkach poza środkiem mapy (kopalnia pod górami)
     if (this.state && (this.reachTick = (this.reachTick + 1) % 30) === 0) this.updateReach(this.state);
+    if (this.state && this.siteGhosts) this.siteGhosts.sync(this.state, this.siteGhostOwner, this.buildingMeshes);
     if (this.walk && this.state) this.stepWalk(realDt); else this.cam.update(realDt);
     {
       // słuch: w widoku z góry ucho w punkcie, na który patrzy kamera (wyżej przy oddaleniu), w spacerze w oczach postaci
