@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.70.2 — 2.11.2026
+- Jedzenie (Michał: 4 sady + 3 chlewy, a głód): pomiar — sadownik 65% czasu chodzi (sad ~18 pól od spichlerza), realnie ~1/7 nominalnej wydajności. Sad 18 → 30 jabłek na kurs, chlew 3 → 6 mięsa.
+- Pojemności: spichlerz 400 → 600, skład 200 → 300, stodoła (towary) 250 → 400; opisy i „Jak grać” poprawione, `tests/economy.test.ts` z nowymi liczbami.
+
 ## 0.70.1 — 2.11.2026
 - Kamienne budowle obronne tylko za kamień (Michał): `stoneTower` 90, `stoneGate` 30, `stoneTowerBig` 190, `stoneTowerGreat` 340 (wcześniej z drewnem, wielka też z żelazem).
 

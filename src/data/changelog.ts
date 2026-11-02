@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.2', date: '2026-11-02',
+    pl: [
+      'Więcej jedzenia: sadownik zbiera naraz 30 jabłek (było 18), a świniopas odnosi 6 porcji mięsa (było 3). Sady leżące dalej od spichlerza wreszcie wyżywią wioskę — wcześniej większość czasu schodziła na chodzenie.',
+      'Większe magazyny: spichlerz mieści 600 jedzenia (było 400), skład 300 towarów (było 200), a stodoła 400 (było 250) — kamień i żelazo z kopalni nie zapychają ich już po kilku minutach.',
+    ],
+    en: [
+      'More food: the orchard keeper now picks 30 apples at a time (was 18), and the swineherd brings in 6 portions of meat (was 3). Orchards set further from the granary can at last feed the village — before, most of the day went on walking.',
+      'Bigger stores: a granary holds 600 food (was 400), a stockpile 300 goods (was 200), and the barn 400 (was 250) — stone and iron from the mine no longer choke them within minutes.',
+    ],
+  },
+  {
     v: '0.70.1', date: '2026-11-02',
     pl: [
       'Kamienne wieże, baszty i kamienna brama kosztują teraz sam kamień — bez drewna (i bez żelaza przy wielkiej baszcie), jak kamienny mur.',

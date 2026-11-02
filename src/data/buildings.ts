@@ -84,8 +84,8 @@ export interface BuildingDef {
 export const BUILDINGS: readonly BuildingDef[] = [
   { id: 'keep', name: 'b.keep', w: 11, h: 11, cost: {}, housing: 12, hp: 15000, buildable: false },
   { id: 'house', category: 'settlement', name: 'b.house', w: 2, h: 2, cost: { wood: 25 }, housing: 8, buildable: true },
-  { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 15 }, stores: ['stockpile'], capacity: { stockpile: 200 }, staff: true, keepers: 1, buildable: true },
-  { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 25 }, stores: ['granary'], capacity: { granary: 400 }, staff: true, keepers: 1, buildable: true },
+  { id: 'stockpile', category: 'settlement', name: 'b.stockpile', w: 2, h: 2, cost: { wood: 15 }, stores: ['stockpile'], capacity: { stockpile: 300 }, staff: true, keepers: 1, buildable: true },
+  { id: 'granary', category: 'food', name: 'b.granary', w: 2, h: 2, cost: { wood: 25 }, stores: ['granary'], capacity: { granary: 600 }, staff: true, keepers: 1, buildable: true },
   {
     id: 'woodcutter', category: 'industry', name: 'b.woodcutter', w: 2, h: 2, cost: { wood: 15 }, buildable: true,
     workView: 'inside',
@@ -104,7 +104,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'orchard', category: 'food', name: 'b.orchard', w: 3, h: 3, cost: { wood: 20 }, buildable: true,
     workView: 'field',
-    production: { output: { res: 'apples', amount: 18 }, site: 'home', workTicks: 80 },
+    production: { output: { res: 'apples', amount: 30 }, site: 'home', workTicks: 80 },
   },
   {
     id: 'farm', category: 'food', name: 'b.farm', w: 3, h: 3, cost: { wood: 30 }, buildable: true,
@@ -126,7 +126,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   // Obozowisko stoi od początku przy twierdzy: tu czekają chłopi bez pracy. Ma limit miejsc, więc bez wolnego miejsca nowi nie przyjdą
   { id: 'camp', category: 'settlement', name: 'b.camp', w: 2, h: 2, cost: { wood: 20 }, idleSlots: 6, buildable: true },
   // Stodoła stoi od początku obok twierdzy i mieści zapasy startowe; można ją rozebrać i postawić gdzie indziej
-  { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 40 }, stores: ['stockpile', 'grain'], capacity: { stockpile: 250, grain: 200 }, staff: true, keepers: 2, buildable: true },
+  { id: 'barn', category: 'settlement', name: 'b.barn', w: 3, h: 2, cost: { wood: 40 }, stores: ['stockpile', 'grain'], capacity: { stockpile: 400, grain: 200 }, staff: true, keepers: 2, buildable: true },
   {
     id: 'fisher', category: 'food', name: 'b.fisher', w: 2, h: 2, cost: { wood: 50, gold: 20 }, buildable: true,
     needsTerrain: { terrain: Terrain.Water, radius: 7 },
@@ -265,7 +265,7 @@ export const BUILDINGS: readonly BuildingDef[] = [
   {
     id: 'pigsty', category: 'food', name: 'b.pigsty', w: 3, h: 2, cost: { wood: 35 }, buildable: true,
     workView: 'field',
-    production: { output: { res: 'meat', amount: 3 }, site: 'home', workTicks: 180 },
+    production: { output: { res: 'meat', amount: 6 }, site: 'home', workTicks: 180 },
   },
 ];
 

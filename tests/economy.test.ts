@@ -286,7 +286,7 @@ describe('pojemność składów', () => {
     const g = createGame(5);
     const p = g.players[0]!;
     const cap = storeCapacity(g, 0, 'stockpile');
-    expect(cap).toBe(250);
+    expect(cap).toBe(400);
     p.res[resIndex('bread')] = 250; // jedzenia na cały test: głodny drwal stanąłby z buntownikami pod bramą
     step(g, [build(g, 'woodcutter')]);
     p.res[resIndex('wood')] = cap - storeUsed(p, 'stockpile') + p.res[resIndex('wood')]! - 3; // zostają 3 wolne miejsca
@@ -296,20 +296,20 @@ describe('pojemność składów', () => {
     run(g, 1500, [build(g, 'stockpile')]);
     for (const b of g.buildings) b.build = 0;
     run(g, 1500);
-    expect(storeCapacity(g, 0, 'stockpile')).toBe(450);
+    expect(storeCapacity(g, 0, 'stockpile')).toBe(700);
     expect(storeUsed(p, 'stockpile')).toBeGreaterThan(cap);
   });
 
   it('spichlerz ma osobny limit na żywność', () => {
     const g = createGame(5);
     // stodoła trzyma tylko towary, jedzenie mieści startowy spichlerz
-    expect(storeCapacity(g, 0, 'granary')).toBe(400);
+    expect(storeCapacity(g, 0, 'granary')).toBe(600);
     step(g, [{ type: 'demolish', player: 0, id: g.buildings.find((b) => b.owner === 0 && BUILDINGS[b.type]!.id === 'granary')!.id }]);
     expect(storeCapacity(g, 0, 'granary')).toBe(0);
     step(g, [build(g, 'barn')]);
     step(g, [build(g, 'granary')]);
     for (const b of g.buildings) b.build = 0; // budowa skończona
-    expect(storeCapacity(g, 0, 'granary')).toBe(400);
+    expect(storeCapacity(g, 0, 'granary')).toBe(600);
   });
 });
 
