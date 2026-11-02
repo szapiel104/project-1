@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.71.3 — 2.11.2026
+- `theme-wow.css`: tekstury z `public/textures/cc0` (plaster, planks, iron) barwione `background-blend-mode: multiply` — okna, belka, sloty, przyciski, kategorie, kafelki; złota rama z rombami (`.panel::before/::after`); `.build-name` i `.cat` 16 px złote z cieniem 1 px. Pasy pergaminu na ekranie wczytywania wycofane. Kolory ciemniejsze i cieplejsze (Michał: „za szare, za jasne”).
+
 ## 0.71.2 — 2.11.2026
 - Budowa: `.card.poor` i `.card.locked` z delikatnie czerwonym tłem (theme-wow.css), reszta neutralna.
 

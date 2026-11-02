@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.71.3', date: '2026-11-02',
+    pl: [
+      'Interfejs z teksturami jak w World of Warcraft: okna z ciemnego, ciepłego kamienia w złotej ramie z rombami w rogach, dolna belka i kategorie budowy z drewna, sloty zapasów i przyciski z kutego metalu.',
+      'Napisy czytelniejsze: nazwy budynków i kategorii większe, złote, pełnymi literami, z ostrym cieniem.',
+      'Ekran wczytywania wrócił do dawnego wyglądu.',
+    ],
+    en: [
+      'A textured interface as in World of Warcraft: windows of dark, warm stone in a gold frame with diamonds at the corners, the bottom bar and build categories of wood, stock slots and buttons of wrought metal.',
+      'Clearer lettering: building and category names are larger, gold, in full letters with a crisp shadow.',
+      'The loading screen is back to its former look.',
+    ],
+  },
+  {
     v: '0.71.2', date: '2026-11-02',
     pl: [
       'W budowaniu czerwone są już tylko budynki, których teraz nie postawisz (brakuje surowców albo wymaganego budynku) — i to delikatnie. Reszta kafelków i kategorie są neutralne.',

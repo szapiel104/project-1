@@ -1,5 +1,5 @@
 /* ===== Interfejs w duchu World of Warcraft (Michał 2.11.2026) =====
-   Wzór: interfaceingame.com/games/world-of-warcraft. Druga wersja po uwagach („jaśniejsze kolory”, „czerwony zbyt
+   Wzór: interfaceingame.com/games/world-of-warcraft. Trzecia wersja (Michał: „za szare, za jasne”) — ciemny, ciepły brąz i złota rama; druga po uwagach („jaśniejsze kolory”, „czerwony zbyt
    chamski”):
    - okna z ciepłego, ciemnego brązu/szarości (nie czerń), pełne (bez przejrzystości), cienka metalowa rama z jaśniejszą żyłką;
    - tytuły złotożółte małymi kapitalikami, tekst jasny, pismo mniejsze i gęstsze;
@@ -12,12 +12,12 @@
   --ink-soft: #c4bba6;
   --gold: #ffd100;
   --wow-gold: #ffd100;
-  --wow-frame: #7a6744;
-  --wow-frame-hi: #b39a66;
-  --wow-bg-top: #3e352a;
-  --wow-bg-bot: #27221c;
-  --wow-slot-top: #4a4034;
-  --wow-slot-bot: #2e2820;
+  --wow-frame: #8a6d3b;
+  --wow-frame-hi: #c9a25a;
+  --wow-bg-top: #2b2119;
+  --wow-bg-bot: #19130e;
+  --wow-slot-top: #3e3024;
+  --wow-slot-bot: #241a12;
   --good: #4fe04f;
   --bad: #ff5a4a;
 }
@@ -40,27 +40,27 @@ body { font-size: 15px; }
 /* przyciski: gniazda jak w WoW, bez czerwieni */
 button { color: var(--ink); background: linear-gradient(var(--wow-slot-top), var(--wow-slot-bot)); border: 1px solid #000; border-radius: 2px;
   box-shadow: inset 0 1px 0 rgba(255, 240, 210, .14), inset 0 0 0 1px var(--wow-frame); text-shadow: 1px 1px 0 #000; }
-button:hover { color: var(--wow-gold); background: linear-gradient(#5a4e3f, #383026); box-shadow: inset 0 1px 0 rgba(255, 240, 210, .2), inset 0 0 0 1px var(--wow-frame-hi); }
-button:disabled { color: #8f877a; background: linear-gradient(#3a352e, #2a2621); box-shadow: inset 0 0 0 1px #4f473b; }
+button:hover { color: var(--wow-gold); background: linear-gradient(#4c3b2b, #2e2218); box-shadow: inset 0 1px 0 rgba(255, 240, 210, .2), inset 0 0 0 1px var(--wow-frame-hi); }
+button:disabled { color: #8f8270; background: linear-gradient(#2c241c, #1e1813); box-shadow: inset 0 0 0 1px #4a3c2b; }
 /* jeden główny przycisk w oknie: przygaszona czerwień ze złotą żyłką */
 .btn-main { color: var(--wow-gold); background: linear-gradient(#7c231b, #5a1812); box-shadow: inset 0 1px 0 rgba(255, 210, 150, .2), inset 0 0 0 1px #a8853f; }
 .btn-main:hover { color: #fff; background: linear-gradient(#943026, #6b1d15); box-shadow: inset 0 0 0 1px #ffd76a; }
 
 /* kategorie budowy na dolnej belce i kafelki budynków */
 .cat, .toolbar .cat { color: var(--ink); background: linear-gradient(var(--wow-slot-top), var(--wow-slot-bot)); box-shadow: inset 0 1px 0 rgba(255, 240, 210, .14), inset 0 0 0 1px var(--wow-frame); }
-.cat:hover { color: var(--wow-gold); background: linear-gradient(#5a4e3f, #383026); }
-.cat[aria-expanded='true'] { color: var(--wow-gold); background: linear-gradient(#5f5030, #3a3020); box-shadow: inset 0 0 0 1px var(--wow-gold), 0 0 10px rgba(255, 209, 0, .25); }
-.card { color: var(--ink); background: linear-gradient(#433a2f, #2c261f); border: 1px solid #000; box-shadow: inset 0 1px 0 rgba(255, 240, 210, .1), inset 0 0 0 1px #5e5039; }
-.card:hover { color: var(--wow-gold); background: linear-gradient(#524737, #352e25); border-color: #000; box-shadow: inset 0 0 0 1px var(--wow-frame-hi); }
-.card[aria-pressed='true'] { color: #fff; background: linear-gradient(#5c4c2c, #3a301d); border-color: #000; box-shadow: inset 0 0 0 1px var(--wow-gold), 0 0 10px rgba(255, 209, 0, .3); }
+.cat:hover { color: var(--wow-gold); background: linear-gradient(#4c3b2b, #2e2218); }
+.cat[aria-expanded='true'] { color: var(--wow-gold); background: linear-gradient(#5a4322, #33250f); box-shadow: inset 0 0 0 1px var(--wow-gold), 0 0 10px rgba(255, 209, 0, .25); }
+.card { color: var(--ink); background: linear-gradient(#34281d, #1f1711); border: 1px solid #000; box-shadow: inset 0 1px 0 rgba(255, 240, 210, .08), inset 0 0 0 1px #5c4629; }
+.card:hover { color: var(--wow-gold); background: linear-gradient(#433325, #281e15); border-color: #000; box-shadow: inset 0 0 0 1px var(--wow-frame-hi); }
+.card[aria-pressed='true'] { color: #fff; background: linear-gradient(#5a4322, #33250f); border-color: #000; box-shadow: inset 0 0 0 1px var(--wow-gold), 0 0 10px rgba(255, 209, 0, .3); }
 .card.locked { opacity: .75; }
 
 /* dolna belka jak pasek akcji */
-.dock { background: linear-gradient(#3b342b, #26211b 55%, #1a1713); border-top: 1px solid var(--wow-frame-hi);
+.dock { background: linear-gradient(#2e241a, #1c150f 55%, #120d09); border-top: 1px solid var(--wow-frame-hi);
   box-shadow: 0 -1px 0 #000, 0 -2px 0 var(--wow-frame), 0 -10px 22px rgba(0, 0, 0, .45); }
-.status { background: linear-gradient(#2a251f, #1c1915); border-top: 1px solid #4a4032; }
+.status { background: linear-gradient(#1c1610, #120d09); border-top: 1px solid #45351f; }
 .res li, .people > div, .clock, .stepper {
-  background: linear-gradient(#3a3229, #241f19); border-color: var(--wow-frame);
+  background: linear-gradient(#30251b, #1b140e); border-color: var(--wow-frame);
   box-shadow: inset 0 1px 0 rgba(255, 240, 210, .08), 0 0 0 1px #000; border-radius: 2px;
 }
 
@@ -71,7 +71,7 @@ button:disabled { color: #8f877a; background: linear-gradient(#3a352e, #2a2621);
 }
 
 /* pola i fokus */
-input, select { background: #1a1713; border: 1px solid var(--wow-frame); color: var(--ink); border-radius: 2px; }
+input, select { background: #120d09; border: 1px solid var(--wow-frame); color: var(--ink); border-radius: 2px; }
 :is(button, input, select):focus-visible { outline: 2px solid var(--wow-gold); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(255, 209, 0, .22); }
 .report-list .plus { color: var(--good); }
 .report-list .minus { color: var(--bad); }
@@ -86,33 +86,62 @@ input, select { background: #1a1713; border: 1px solid var(--wow-frame); color: 
 .menu .menu-heading { color: var(--wow-gold); font-family: var(--label); letter-spacing: .06em; text-shadow: 1px 1px 0 #000;
   background: linear-gradient(90deg, rgba(179, 154, 102, .75), rgba(179, 154, 102, .2) 55%, transparent) left bottom / 100% 1px no-repeat; }
 
-/* ===== ekran wczytywania jak w WoW: u góry i u dołu pasy jasnego pergaminu z ornamentem, pośrodku obraz ===== */
-#loading::before { content: ''; position: absolute; left: 0; right: 0; top: 0; height: clamp(64px, 12vh, 140px); z-index: 1; pointer-events: none;
-  background:
-    repeating-linear-gradient(90deg, rgba(110, 72, 26, .1) 0 2px, transparent 2px 9px),
-    radial-gradient(ellipse at 30% 40%, rgba(255, 238, 190, .5), transparent 60%),
-    radial-gradient(ellipse at 75% 70%, rgba(120, 80, 30, .25), transparent 55%),
-    linear-gradient(#cfa967, #b78d4c 60%, #a37a3c);
-  border-bottom: 2px solid #3d2a12; box-shadow: 0 1px 0 #d9b77a, 0 3px 0 #2a1c0b, 0 8px 18px rgba(0, 0, 0, .55); }
-#loading .loading-head { margin-top: clamp(10px, 3vh, 40px); z-index: 2; }
-#loading .loading-card {
-  color: #2e1d0b; text-shadow: none;
-  background:
-    repeating-linear-gradient(90deg, rgba(110, 72, 26, .1) 0 2px, transparent 2px 9px),
-    radial-gradient(ellipse at 20% 30%, rgba(255, 238, 190, .55), transparent 60%),
-    radial-gradient(ellipse at 80% 80%, rgba(120, 80, 30, .25), transparent 55%),
-    linear-gradient(#cfa967, #b78d4c 60%, #a37a3c);
-  border-top: 2px solid #3d2a12; box-shadow: 0 -1px 0 #d9b77a, 0 -3px 0 #2a1c0b, 0 -10px 24px rgba(0, 0, 0, .55); }
-#loading .loading-card::before { display: none; }
-#loading .loading-tip { color: #2e1d0b; font-size: 17px; }
-#loading .loading-tip:not(:empty)::before { color: #8a1d10; }
-#loading .ld-pct { background: linear-gradient(#5a3a12, #2e1d0b); -webkit-background-clip: text; background-clip: text; filter: drop-shadow(0 1px 0 rgba(255, 238, 190, .6)); }
-#loading .loading-line { color: #3a2610; font-size: 16px; }
-#loading .loading-line strong, #loading .loading-detail { color: #4a3216; }
-#loading .loading-log { color: #5a3f1e; }
-#loading .loading-bar { background: linear-gradient(#2a2117, #14100b); border-color: #3d2a12; box-shadow: 0 0 0 1px #d9b77a, 0 0 0 3px #3d2a12, 0 4px 10px rgba(0, 0, 0, .4); }
+/* ekran wczytywania: zostaje dawny (pasy pergaminu z 0.71.1 wycofane — Michał: „nie ma tak ładnie”) */
 
 /* budynek, którego nie da się teraz postawić (brak surowców albo wymaganego budynku): delikatnie czerwony,
    reszta kafelków neutralna (Michał 2.11.2026: „czerwone tylko to, czego nie mogę zbudować”) */
-.card.poor, .card.locked { background: linear-gradient(#4a2b25, #2f1c18); box-shadow: inset 0 1px 0 rgba(255, 220, 200, .08), inset 0 0 0 1px #7a3f33; }
+.card.poor, .card.locked { background: linear-gradient(#3e2219, #261410); box-shadow: inset 0 1px 0 rgba(255, 220, 200, .08), inset 0 0 0 1px #7a3f33; }
 .card.poor:hover, .card.locked:hover { background: linear-gradient(#573229, #38211c); box-shadow: inset 0 0 0 1px #a8574a; }
+
+/* ===== Tekstury jak w WoW (Michał 2.11.2026: „mają być tekstury, nie wszystko szare”) =====
+   Szare zdjęcia z gry (public/textures/cc0) barwione mnożeniem przez ciepły kolor: okna — kamień/tynk w ciemnym brązie,
+   belka i kategorie — drewno, sloty i przyciski — kuty metal; złota rama z rombami w rogach. */
+.panel, .menu .menu-panel, .menu .menu-panel.wide, .menu.book-open .menu-panel.book, .alarm, .end-panel {
+  background-color: transparent;
+  background-image: url('/textures/cc0/plaster.jpg'), radial-gradient(ellipse at 50% 0%, #5a432b, #33251a 55%, #1f160f);
+  background-size: 380px auto, 100% 100%;
+  background-blend-mode: multiply, normal;
+  box-shadow: inset 0 0 0 1px #e2c27a, inset 0 0 0 2px #5a4020, inset 0 0 0 3px #0e0a06, inset 0 0 36px rgba(0, 0, 0, .55),
+    0 0 0 1px #000, 0 0 0 3px #9a7838, 0 0 0 4px #000, 0 12px 28px rgba(0, 0, 0, .55);
+}
+.panel::before, .panel::after { display: block; content: ''; position: absolute; top: -7px; width: 12px; height: 12px; border: 1px solid #000; border-radius: 0;
+  background: linear-gradient(135deg, #fff0b8, #d8a840 45%, #7a5418); transform: rotate(45deg); box-shadow: 0 0 4px rgba(0, 0, 0, .7); pointer-events: none; z-index: 2; }
+.panel::before { left: -7px; }
+.panel::after { right: -7px; }
+.info-name { padding: 2px 0 7px; background: linear-gradient(90deg, rgba(226, 194, 122, .75), rgba(226, 194, 122, .15) 70%, transparent) left bottom / 100% 1px no-repeat; border-bottom: 0; }
+
+/* dolna belka: drewno ze złotą listwą */
+.dock { background-image: url('/textures/cc0/planks.jpg'), linear-gradient(#6a4526, #3c2614 60%, #24170c); background-size: 520px auto, 100% 100%; background-blend-mode: multiply, normal;
+  border-top: 2px solid #c9a25a; box-shadow: 0 -1px 0 #000, 0 -3px 0 #5a4020, 0 -12px 26px rgba(0, 0, 0, .5); }
+.status { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#3a2c1e, #1d150d); background-size: 420px auto, 100% 100%; background-blend-mode: multiply, normal; border-top: 1px solid #7a5c2c; }
+/* sloty zapasów i liczniki: kuty metal w brązowej oprawie */
+.res li, .people > div, .clock, .stepper {
+  background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#5a4632, #2c2116); background-size: 300px auto, 100% 100%; background-blend-mode: multiply, normal;
+  border-color: #a8864a; box-shadow: inset 0 1px 0 rgba(255, 230, 180, .18), inset 0 0 6px rgba(0, 0, 0, .6), 0 0 0 1px #000;
+}
+/* przyciski: metal w złotej obwódce */
+button { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#6a523a, #3a2b1d 60%, #261b11); background-size: 300px auto, 100% 100%; background-blend-mode: multiply, normal;
+  box-shadow: inset 0 1px 0 rgba(255, 230, 180, .25), inset 0 0 0 1px #b8924c, inset 0 -2px 3px rgba(0, 0, 0, .4); }
+button:hover { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#86683f, #4c3822 60%, #301f12); box-shadow: inset 0 1px 0 rgba(255, 240, 200, .35), inset 0 0 0 1px #ffd76a, 0 0 8px rgba(255, 200, 80, .2); }
+button:disabled { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#3a3229, #221c16); box-shadow: inset 0 0 0 1px #5a4a35; }
+.btn-main { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#a3342a, #6c1a12 60%, #4a0f0a); box-shadow: inset 0 1px 0 rgba(255, 210, 160, .3), inset 0 0 0 1px #d9b062; }
+.btn-main:hover { background-image: url('/textures/cc0/iron.jpg'), linear-gradient(#c0443a, #84231a 60%, #5a140e); }
+/* kategorie budowy: drewniane tabliczki */
+.cat, .toolbar .cat { background-image: url('/textures/cc0/planks.jpg'), linear-gradient(#7a522c, #4a3018 60%, #2e1d0e); background-size: 360px auto, 100% 100%; background-blend-mode: multiply, normal;
+  box-shadow: inset 0 1px 0 rgba(255, 230, 180, .25), inset 0 0 0 1px #b8924c, inset 0 -2px 3px rgba(0, 0, 0, .45); }
+.cat:hover { background-image: url('/textures/cc0/planks.jpg'), linear-gradient(#94663a, #5a3a1e 60%, #382310); }
+.cat[aria-expanded='true'] { background-image: url('/textures/cc0/planks.jpg'), linear-gradient(#a8783a, #6a4520 60%, #42290f); box-shadow: inset 0 0 0 1px #ffd76a, 0 0 12px rgba(255, 200, 80, .35); }
+/* kafelki budynków: kamienne płytki */
+.card { background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(#5a4430, #2e2218); background-size: 300px auto, 100% 100%; background-blend-mode: multiply, normal;
+  box-shadow: inset 0 1px 0 rgba(255, 230, 180, .14), inset 0 0 0 1px #7a5c34, inset 0 0 12px rgba(0, 0, 0, .45); }
+.card:hover { background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(#6e543a, #3a2b1e); box-shadow: inset 0 0 0 1px #d9b062, inset 0 0 12px rgba(0, 0, 0, .35); }
+.card[aria-pressed='true'] { background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(#8a6a34, #4a3516); box-shadow: inset 0 0 0 2px #ffd76a, 0 0 12px rgba(255, 209, 0, .35); }
+.card.poor, .card.locked { background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(#5e3226, #331812); box-shadow: inset 0 0 0 1px #8a4535, inset 0 0 12px rgba(0, 0, 0, .45); }
+
+/* czytelne napisy jak w WoW: złote, pełne litery (nie drobne kapitaliki), ostry cień 1 px zamiast rozmytej poświaty */
+.card .build-name { font-family: var(--text); font-weight: 700; font-size: 16px; letter-spacing: .01em; text-transform: none; font-variant: normal;
+  color: var(--wow-gold); text-shadow: 1px 1px 0 #000, 0 0 2px #000; }
+.card.poor .build-name, .card.locked .build-name { color: #e8c8b8; }
+.card .build-cost .cost-chip, .card .build-cost { font-size: 15px; text-shadow: 1px 1px 0 #000; }
+.card-group-name { font-family: var(--text); font-weight: 700; font-size: 14px; letter-spacing: .03em; color: var(--wow-gold); text-shadow: 1px 1px 0 #000; }
+.cat { font-family: var(--text); font-weight: 700; font-size: 16px; letter-spacing: .01em; text-transform: none; color: var(--wow-gold); text-shadow: 1px 1px 0 #000, 0 0 2px #000; }
