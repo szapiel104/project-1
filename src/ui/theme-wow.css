@@ -1,0 +1,76 @@
+/* ===== Interfejs w grze w duchu World of Warcraft (Michał 2.11.2026) =====
+   Wzór: interfaceingame.com/games/world-of-warcraft — okna lżejsze niż nasza dawna „ciężka skóra”:
+   - tło okna prawie czarne, lekko przejrzyste (świat prześwituje), bez plam i gradientów pergaminu;
+   - rama z ciemnego brązu/metalu: czarna linia, brązowa żyłka, wewnętrzny cień — cienka, nie gruba belka;
+   - tytuły złotożółte (#ffd100) małymi kapitalikami, tekst biały, mniejsze pismo, gęściej;
+   - przyciski w oknach czerwone z żółtym napisem i złotą obwódką; podpowiedzi granatowe ze srebrną ramką;
+   - dolna belka i kafelki zapasów jak sloty paska akcji: ciemne gniazda z metalową obwódką.
+   Plik ładowany na końcu (index.html), nadpisuje tylko kolory, ramy i rozmiary pisma — bez zmian układu. */
+:root {
+  --ink: #f1ebdd;
+  --ink-soft: #b9b09c;
+  --gold: #ffd100;
+  --wow-gold: #ffd100;
+  --wow-frame: #5d4f37;
+  --wow-frame-hi: #9c8458;
+  --wow-bg: rgba(10, 9, 8, .9);
+  --wow-slot: #0d0c0a;
+  --good: #3fe03f;
+  --bad: #ff4b3e;
+}
+body { font-size: 15px; }
+
+/* okna */
+.panel, .alarm, .invite-toast, .end-panel {
+  background: linear-gradient(rgba(34, 30, 25, .55), rgba(0, 0, 0, 0) 90px), var(--wow-bg);
+  border: 1px solid #000; border-image: none; border-radius: 3px;
+  box-shadow: inset 0 0 0 1px var(--wow-frame), inset 0 0 0 2px #15110b, inset 0 0 24px rgba(0, 0, 0, .55),
+    0 0 0 2px #2b241a, 0 0 0 3px var(--wow-frame), 0 0 0 4px #000, 0 10px 26px rgba(0, 0, 0, .55);
+}
+.info-name, .report-title, .unit-name, .confirm-title, .market-title, .market-group-title {
+  color: var(--wow-gold); font-family: var(--label); font-weight: 700; letter-spacing: .04em; text-shadow: 1px 1px 0 #000;
+}
+.info-name { font-size: 19px; border-bottom-color: rgba(156, 132, 88, .45); }
+.info .hint, .info p, .hint { color: var(--ink-soft); }
+.info { font-size: 15px; }
+
+/* przyciski w oknach: czerwone, żółty napis, złota obwódka (jak „Accept”, „Train” w WoW) */
+.panel button, .alarm button, .end-panel button {
+  color: var(--wow-gold); font-family: var(--label); font-weight: 700; letter-spacing: .03em; text-shadow: 1px 1px 0 #000;
+  background: linear-gradient(#9b1410, #6b0907 55%, #4a0504); border: 1px solid #000; border-radius: 2px;
+  box-shadow: inset 0 0 0 1px #b88a35, inset 0 1px 0 rgba(255, 210, 120, .35);
+}
+.panel button:hover, .alarm button:hover, .end-panel button:hover { color: #fff; background: linear-gradient(#c11c16, #870c09 55%, #5c0705); box-shadow: inset 0 0 0 1px #ffd76a, 0 0 8px rgba(255, 200, 80, .25); }
+.panel button:disabled, .end-panel button:disabled { color: #8b8478; background: linear-gradient(#3a3631, #24211d); box-shadow: inset 0 0 0 1px #4b4439; text-shadow: none; }
+.panel button[aria-pressed='true'] { color: #fff; box-shadow: inset 0 0 0 1px #ffd76a, inset 0 0 10px rgba(255, 200, 80, .35); }
+
+/* dolna belka jak pasek akcji */
+.dock { background: linear-gradient(#26221d, #141210 55%, #0b0a09); border-top: 1px solid var(--wow-frame-hi);
+  box-shadow: 0 -1px 0 #000, 0 -2px 0 var(--wow-frame), 0 -10px 22px rgba(0, 0, 0, .5); }
+.status { background: linear-gradient(#11100e, #090807); border-top: 1px solid #2c271f; }
+.res li, .people > div, .clock, .stepper {
+  background: linear-gradient(#1b1915, var(--wow-slot)); border-color: var(--wow-frame);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .06), 0 0 0 1px #000; border-radius: 2px;
+}
+button { color: var(--ink); background: linear-gradient(#2c2823, #1a1814 60%, #12100e); border-color: #000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .08), inset 0 0 0 1px var(--wow-frame); }
+button:hover { color: var(--wow-gold); background: linear-gradient(#3a352e, #23201b 60%, #181612); box-shadow: inset 0 0 0 1px var(--wow-frame-hi); }
+
+/* kafelki budynków: sloty z obwódką; wybrany świeci na złoto zamiast czerwonej płyty */
+.card { color: var(--ink); background: linear-gradient(#1c1a16, #100f0d); border: 1px solid #000; box-shadow: inset 0 0 0 1px #3e3527; }
+.card:hover { color: var(--wow-gold); background: linear-gradient(#27231d, #15130f); border-color: #000; box-shadow: inset 0 0 0 1px var(--wow-frame-hi); }
+.card[aria-pressed='true'] { color: #fff; background: linear-gradient(#2e2618, #17130c); border-color: #000; box-shadow: inset 0 0 0 1px var(--wow-gold), 0 0 10px rgba(255, 209, 0, .3); }
+.btn-main, .cat { color: var(--wow-gold); background: linear-gradient(#9b1410, #6b0907 55%, #4a0504); box-shadow: inset 0 0 0 1px #b88a35, inset 0 0 0 2px #2a0303; }
+.btn-main:hover, .cat:hover { color: #fff; background: linear-gradient(#c11c16, #870c09 55%, #5c0705); }
+
+/* podpowiedzi jak dymki przedmiotów w WoW: granat, srebrna ramka, biały tekst */
+.say, .res li[data-tip]:hover::after, .tip, [role='tooltip'] {
+  background: rgba(6, 8, 22, .94); color: #fff; border: 1px solid #8f939c; border-radius: 4px;
+  box-shadow: inset 0 0 0 1px #20232c, 0 4px 14px rgba(0, 0, 0, .6);
+}
+
+/* pola i fokus */
+input, select { background: #070706; border: 1px solid var(--wow-frame); color: var(--ink); border-radius: 2px; }
+:is(button, input, select):focus-visible { outline: 2px solid var(--wow-gold); outline-offset: 2px; box-shadow: 0 0 0 4px rgba(255, 209, 0, .22); }
+.report-list .plus { color: var(--good); }
+.report-list .minus { color: var(--bad); }

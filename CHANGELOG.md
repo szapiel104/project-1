@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.71.0 — 2.11.2026
+- Motyw okien jak w WoW (Michał, wzór interfaceingame.com/games/world-of-warcraft): nowy plik `src/ui/theme-wow.css` ładowany na końcu (index.html) — tylko kolory, ramy, pismo; układ bez zmian. Tło okien `rgba(10,9,8,.9)`, rama z obwódek box-shadow, tytuły #ffd100 w Alegreya Sans SC, przyciski w oknach czerwone z żółtym napisem, dymki granatowe, dolna belka jak pasek akcji, `body` 15 px.
+
 ## 0.70.12 — 2.11.2026
 - Menu główne (Michał, wzór WoW): lewa kolumna `.menu-scene::after` jako pełny ciemny panel z cieniem, zmienne `--col` i `--mx` (jeden lewy margines dla nagłówka, listy, wersji i konta), tytuł mniejszy z zapasem do krawędzi, pozycje i podpowiedź mniejsze i jaśniejsze (style.css, koniec pliku). Sprawdzone zrzutem 1715×1191 i 1366×768.
 

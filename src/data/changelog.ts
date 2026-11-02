@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.71.0', date: '2026-11-02',
+    pl: [
+      'Nowy wygląd okien w grze, lżejszy, w duchu World of Warcraft: prawie czarne, lekko przejrzyste tło, cienka metalowa rama, złotożółte tytuły, biały tekst i mniejsze, gęstsze pismo.',
+      'Przyciski w oknach są czerwone z żółtym napisem, podpowiedzi granatowe ze srebrną ramką, a dolny pasek i zapasy wyglądają jak sloty paska akcji. Wybrany budynek świeci na złoto.',
+    ],
+    en: [
+      'A new, lighter look for the in-game windows, in the spirit of World of Warcraft: a near-black, slightly see-through background, a thin metal frame, gold-yellow titles, white text and smaller, tighter lettering.',
+      'Window buttons are red with yellow lettering, tooltips navy with a silver edge, and the bottom bar and stocks look like action-bar slots. The chosen building glows gold.',
+    ],
+  },
+  {
     v: '0.70.12', date: '2026-11-02',
     pl: [
       'Menu główne czytelniejsze: lewa kolumna to pełny, ciemny panel, więc napisy nie zlewają się już z pejzażem. Tytuł nie dochodzi do krawędzi, herb, lista, wersja i konto mają jeden równy odstęp od lewej, a pozycje menu są mniejsze i gęstsze, jak w grach MMO.',
