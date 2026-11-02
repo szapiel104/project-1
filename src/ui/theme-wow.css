@@ -210,3 +210,34 @@ body.info-open .scribe-toasts { display: none; }
 .card.poor:hover, .card.locked:hover { background-color: #2e1712; border-color: #b05a46; }
 .card .build-name { font-size: 17px; color: #ffd100; text-shadow: 0 1px 2px #000; }
 .card .build-cost .cost-chip { background: #0d0a07; border-color: #5a4630; }
+
+/* ===== Okno budynku / jednostki / człowieka jak w WoW (Michał 2.11.2026: „mało czytelne, wszystko naćkane”) =====
+   - nagłówek: ciemny pas przez całą szerokość, złoty tytuł, z prawej „i” (opis) i ✕ (zamknij); za pas okno się przeciąga;
+   - każda część (stan, towary, ludzie, produkcja, budowa) w osobnym, ciemnym polu z cienką ramką i jednym tytułem;
+   - opis budynku schowany pod „i” (człowiek ma opis zawsze), na dole tylko przyciski działań w równym rzędzie;
+   - spokojne odstępy, tekst 14 px, liczby duże. */
+.floaters .info { width: min(380px, calc(100vw / var(--ui, 1) - 32px)); padding: 0 0 12px; gap: 10px; }
+.floaters .info > :not(.info-head) { margin-left: 14px; margin-right: 14px; }
+.info-head { display: flex; align-items: center; gap: 6px; padding: 9px 10px 9px 14px; cursor: move; user-select: none; touch-action: none;
+  background: linear-gradient(#3a2a1a, #21170e); border-bottom: 1px solid #8a6d3b; box-shadow: inset 0 -1px 0 #000, 0 2px 6px rgba(0, 0, 0, .35); }
+.info-head .info-name { flex: 1; min-width: 0; margin: 0; padding: 0; background: none; border: 0; cursor: move; font-size: 19px; line-height: 1.15; }
+.floaters .info .info-name::after { content: none; }
+.info-ibtn { flex: none; width: 28px; height: 28px; min-height: 0; padding: 0; display: grid; place-items: center; font: 700 15px/1 var(--text); cursor: pointer; }
+.info-desc-btn { font-family: Georgia, serif; font-style: italic; }
+.info.is-person .info-desc-btn { display: none; }
+.info:not(.desc-open):not(.is-person) .info-desc { display: none; }
+.info-desc { padding: 8px 10px; background: rgba(0, 0, 0, .25); border-left: 2px solid #8a6d3b; font-size: 14px; line-height: 1.45; color: #e6dcc6; }
+.info .actions button:last-child:not(:first-child) { display: none; } /* „Zamknij” jest teraz krzyżykiem w nagłówku */
+.info-owner { padding: 4px 8px; background: rgba(0, 0, 0, .22); border: 0; font-size: 14px; }
+.hp-line { font-size: 13px; color: #d8cbb0; gap: 3px; }
+/* sekcje */
+.info :is(.power-row-box, .info-stock, .info-logi, .info-prod, .info-site, .gate-box, .army-box, .recruit, .roster) {
+  padding: 8px 10px 10px; background: rgba(8, 6, 4, .45); border: 1px solid #4e3d25; border-bottom: 1px solid #4e3d25; border-radius: 2px;
+  box-shadow: inset 0 1px 0 rgba(255, 230, 180, .05); }
+.info :is(.stock-head, .logi-head, .prod-head, .stock-head2) { font-family: var(--label); font-weight: 700; font-size: 15px; letter-spacing: .04em; color: #ffd100; text-shadow: 1px 1px 0 #000; margin: 0 0 6px; }
+.info :is(.stock-head, .logi-head, .prod-head, .stock-head2) :is(span, small):last-child { font-family: var(--text); font-size: 13px; letter-spacing: 0; color: #c9bba0; text-shadow: none; }
+.info .stock-item { background: #0f0b08; border-color: #5a4630; }
+.info .stock-item strong { font-size: 20px; color: #fff3d6; }
+.info p, .info .hint, .info .logi-note { font-size: 14px; line-height: 1.4; }
+.info .actions { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 8px; padding-top: 4px; border-top: 1px solid rgba(138, 109, 59, .45); }
+.info .actions button { min-height: 36px; font-size: 14px; }

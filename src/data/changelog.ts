@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.6', date: '2026-11-02',
+    pl: [
+      'Okno budynku, wojska i człowieka uporządkowane jak w WoW: ciemny pasek z tytułem, przyciskiem „i” (opis) i krzyżykiem do zamykania; każda część (stan, towary, ludzie, produkcja) w osobnym polu z jednym złotym tytułem; opis budynku schowany pod „i”, a na dole tylko przyciski działań.',
+    ],
+    en: [
+      'The building, army and person window is tidied up WoW-style: a dark title bar with an “i” (description) button and a cross to close; each part (state, goods, people, production) in its own box with a single gold heading; the building description tucked under “i”, and only the action buttons along the bottom.',
+    ],
+  },
+  {
     v: '0.72.5', date: '2026-11-02',
     pl: [
       'Kamień zamku i wież ma prawdziwą głębię: fugi są wpuszczone, a wypukłe lica ciosów zasłaniają je pod kątem jak w prawdziwym murze. Ciosy są przy tym większe, a łupek na dachach dostał tę samą głębię.',

@@ -678,7 +678,8 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   };
   // przeciąganie za tytuł okna
   info.addEventListener('pointerdown', (e) => {
-    const head = (e.target as HTMLElement).closest('.info-name');
+    const head = (e.target as HTMLElement).closest('.info-head');
+    if ((e.target as HTMLElement).closest('button')) return;
     if (!head || e.button !== 0 || info.closest('.market-info')) return;
     e.preventDefault();
     const k = uiK(), r = info.getBoundingClientRect();
@@ -911,7 +912,20 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
   storeBox.hidden = true;
   const logiBox = el('div', 'info-logi');
   logiBox.hidden = true;
-  info.append(infoName, ownerLine, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
+  // nagłówek okna jak w WoW: tytuł na ciemnym pasku, z prawej „i” (opis) i krzyżyk; za pasek okno się przeciąga
+  const infoHead = el('div', 'info-head');
+  const descBtn = el('button', 'info-ibtn info-desc-btn', 'i');
+  descBtn.type = 'button';
+  descBtn.title = tx('Pokaż opis', 'Show the description');
+  descBtn.setAttribute('aria-label', tx('Opis budynku', 'Description'));
+  descBtn.addEventListener('click', () => { const on = !info.classList.contains('desc-open'); info.classList.toggle('desc-open', on); descBtn.setAttribute('aria-pressed', String(on)); });
+  const xBtn = el('button', 'info-ibtn info-x', '✕');
+  xBtn.type = 'button';
+  xBtn.title = t('hud.close');
+  xBtn.setAttribute('aria-label', t('hud.close'));
+  xBtn.addEventListener('click', () => events.onCloseInfo());
+  infoHead.append(infoName, descBtn, xBtn);
+  info.append(infoHead, ownerLine, hpLine, riotBox, gateBox, powerBox, quarBox, towerBox, watchState, walkBtn, mineBtn, recruit, armyPanel, roster, armyCtl.help, siteBox, prodBox, storeBox, logiBox, infoDesc, infoWorker, trainBtn, trainNote, infoActions);
   let infoId = 0;
   demolish.addEventListener('click', () => events.onDemolish(infoId));
   moveBtn.addEventListener('click', () => events.onRelocate(infoId));
@@ -1345,6 +1359,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       if (!person) return;
       infoId = 0;
       setText(infoName, person.name);
+      info.classList.add('is-person');
       setText(infoDesc, person.lines[0] ?? '');
       infoWorker.hidden = person.lines.length < 2;
       infoWorker.textContent = '';
@@ -1444,6 +1459,7 @@ export function createHud(root: HTMLElement, events: HudEvents, thumbs: Map<stri
       walkBtn.hidden = true;
       info.hidden = !i;
       if (!i) return;
+      info.classList.remove('is-person');
       infoId = i.id;
       roster.hidden = true; hideArmy();
       setText(infoName, t(i.def.name));
