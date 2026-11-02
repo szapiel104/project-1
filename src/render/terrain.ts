@@ -1358,7 +1358,10 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   reedMats.forEach((m, i) => plant(reedSplit[i]!, instanced(WP.reeds, 0xffffff, reedSplit[i]!, undefined, false, m, { hide: 70 }), null, false));
   // zdjęcie z południa jest jasne: przyciemnione do mętnej wody wokół, matowe (bez odblasku słońca)
   const lilyMat = new THREE.MeshStandardMaterial({ map: WP.lilyTex, color: 0x7f8a72, alphaTest: 0.35, alphaToCoverage: true, roughness: 0.85, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 });
-  lilyMat.userData.season = 'leaf';
+  // jesień jak trawa (płowieje miękko, w łatach), a nie jak korony drzew: barwa liści drzew losuje się w kratkach
+  // ~1 m (każde drzewo inaczej), więc na płaskim kożuchu grzybieni wychodziły rude i pomarańczowe kwadraty
+  // (Michał 2.11.2026: „plamy na wodzie dziwne, zbugowane”)
+  lilyMat.userData.season = 'grass';
   plant(lilies, instanced(WP.lilies, 0xffffff, lilies, undefined, false, lilyMat, { hide: 70 }), null, false);
   label = 'kamyki';
   // trzy odmiany głazu (Michał 29.10.2026: „różne modele kamienia, ładniejsze, nie takie świecące”): ciemniejsza barwa

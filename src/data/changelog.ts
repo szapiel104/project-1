@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.11', date: '2026-11-02',
+    pl: [
+      'Liście grzybieni na stawach jesienią już nie robią się rudo-pomarańczowymi kwadratami: płowieją miękko, w łatach, jak trawa na brzegu.',
+    ],
+    en: [
+      'Water-lily leaves on the ponds no longer turn into rust and orange squares in autumn: they fade softly, in patches, like the grass on the bank.',
+    ],
+  },
+  {
     v: '0.70.10', date: '2026-11-02',
     pl: [
       'Podgląd zleconego muru kamiennego stoi już tak jak prawdziwy mur: pełna, przezroczysta bryła na swoim polu, łącząca się z sąsiednimi odcinkami (wcześniej odcinki wisiały krzywo obok).',
