@@ -43,8 +43,8 @@ const OREMINE = BUILDINGS.findIndex((b) => b.id === 'oremine');
  * Kurs jest długi (15 s), a urobek z niego większy: górnicy dłużej siedzą w sztolni, więc w środku widać ich więcej naraz.
  */
 export const MINE_YIELDS: { res: 'stone' | 'iron' | 'gold' | 'crystal'; weight: number; amount: number }[] = [
-  { res: 'stone', weight: 45, amount: 5 },
-  { res: 'iron', weight: 25, amount: 4 },
+  { res: 'stone', weight: 45, amount: 10 },
+  { res: 'iron', weight: 25, amount: 8 },
   { res: 'gold', weight: 27, amount: 6 },
   // kryształ magii z głębokiej galerii: rzadko, po jednym (dla magów bojowych i siedzib zakonów)
   { res: 'crystal', weight: 3, amount: 1 },

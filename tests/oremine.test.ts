@@ -103,7 +103,7 @@ describe('kopalnia pod górami', () => {
     expect(MINE_YIELDS.find((y) => y.res === 'gold')!.weight).toBeGreaterThanOrEqual(20); // ruda to główny cel kopalni (30.10.2026)
     expect(crewWanted({ crew: { per: 5, max: 8 } }, 0)).toBe(1);
     expect(crewWanted({ crew: { per: 5, max: 8 } }, 12)).toBe(3);
-    expect(crewWanted(BUILDINGS[MINE]!, 8)).toBe(3);
+    expect(crewWanted(BUILDINGS[MINE]!, 8)).toBe(2);
     expect(crewWanted({ crew: { per: 5, max: 8 } }, 500)).toBe(8);
   });
 

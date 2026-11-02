@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.70.3 — 2.11.2026
+- Kopalnia (Michał: „czy za mało nie daje”): pomiar przy 20 mieszkańcach, kopalnia 44 pola od zamku — bez baraku 80 kamienia / 32 żelaza na 20 min, z barakiem 220 / 100. `MINE_YIELDS`: kamień 5 → 10, żelazo 4 → 8 (ruda 6 bez zmian) — teraz bez baraku 160 / 64, z barakiem ~210 / 104 w 10 min (potem pełna stodoła). Wspólne dla gracza i botów.
+- `tests/oremine.test.ts`: `crewWanted` kopalni przy 8 osobach = 2 (załoga 1 na 5 od 0.69.11).
+
 ## 0.70.2 — 2.11.2026
 - Jedzenie (Michał: 4 sady + 3 chlewy, a głód): pomiar — sadownik 65% czasu chodzi (sad ~18 pól od spichlerza), realnie ~1/7 nominalnej wydajności. Sad 18 → 30 jabłek na kurs, chlew 3 → 6 mięsa.
 - Pojemności: spichlerz 400 → 600, skład 200 → 300, stodoła (towary) 250 → 400; opisy i „Jak grać” poprawione, `tests/economy.test.ts` z nowymi liczbami.

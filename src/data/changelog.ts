@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.70.3', date: '2026-11-02',
+    pl: [
+      'Kopalnia daje dwa razy więcej: górnik wynosi naraz 10 kamienia (było 5) albo 8 żelaza (było 4). Ruda wypada jak dotąd. Bez baraku górników to ok. 160 kamienia i 65 żelaza na 20 minut, z barakiem ponad dwa razy tyle — warto dostawić skład.',
+      'Boty i sojusznicy kopią na tych samych zasadach.',
+    ],
+    en: [
+      'The mine yields twice as much: a miner brings out 10 stone at a time (was 5) or 8 iron (was 4). Ore turns up as before. Without a miners’ barracks that is about 160 stone and 65 iron every 20 minutes, with one more than twice that — worth building another stockpile.',
+      'Bots and allies dig by the very same rules.',
+    ],
+  },
+  {
     v: '0.70.2', date: '2026-11-02',
     pl: [
       'Więcej jedzenia: sadownik zbiera naraz 30 jabłek (było 18), a świniopas odnosi 6 porcji mięsa (było 3). Sady leżące dalej od spichlerza wreszcie wyżywią wioskę — wcześniej większość czasu schodziła na chodzenie.',
