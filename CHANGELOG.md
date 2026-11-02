@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.72.5 — 2.11.2026
+- Głębia kamienia (Michał: „nie mają 3D głębi”): `src/render/parallax.ts` — parallax occlusion mapping (14 kroków, styczne z pochodnych, `textureGrad`) na materiałach `ashlar` i `slate` (też w kopiach `withAo`); mapy wysokości `ashlar_h.jpg`, `slate_h.jpg` z `gen_stone.py` (zwykły JPG, `heightMap()` w textures.ts). `normalScale` 1,6. Ciosy większe: TILE ashlar 0,8 → 0,42, slate 1,1 → 0,8.
+
 ## 0.72.4 — 2.11.2026
 - walls.ts: `ghostLogs` — duchy niepostawionych bali częstokołu (przezroczystość 0,22) dla `ghostOwner`.
 

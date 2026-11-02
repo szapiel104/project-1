@@ -143,6 +143,9 @@ def ashlar():
     gray = (col * 255).astype(np.uint8)
     Image.fromarray(gray).convert('RGB').save(OUT + 'ashlar.jpg', quality=90)
     Image.fromarray(normal_map(height, 7.0)).save(OUT + 'ashlar_n.jpg', quality=92)
+    hh = ndimage.gaussian_filter(height, 1.0, mode='wrap')
+    hh = (hh - hh.min()) / (hh.max() - hh.min())
+    Image.fromarray((hh * 255).astype(np.uint8)).save(OUT + 'ashlar_h.jpg', quality=92)  # głębia (parallax.ts)
     print('ashlar', N, 'stones', nlab, 'mean', round(float(col.mean()), 3))
 
 
@@ -204,6 +207,9 @@ def slate():
     col = np.clip(col, 0, 1)
     Image.fromarray((col * 255).astype(np.uint8)).convert('RGB').save(OUT + 'slate.jpg', quality=90)
     Image.fromarray(normal_map(ndimage.gaussian_filter(height, 1.2, mode='wrap'), 6.0)).save(OUT + 'slate_n.jpg', quality=92)
+    hh = ndimage.gaussian_filter(height, 1.0, mode='wrap')
+    hh = (hh - hh.min()) / (hh.max() - hh.min())
+    Image.fromarray((hh * 255).astype(np.uint8)).save(OUT + 'slate_h.jpg', quality=92)
     print('slate', N, 'mean', round(float(col.mean()), 3))
 
 

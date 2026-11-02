@@ -5,7 +5,8 @@ import { basketAt, propAt, propGeometryFlat, propMaterial, type PropName } from 
 import { assetModel } from './assets';
 import { BUILDINGS } from '../data/buildings';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { bump, grayPattern, normal, pattern } from './textures';
+import { bump, grayPattern, heightMap, normal, pattern } from './textures';
+import { applyParallax } from './parallax';
 import { boxUv, modelGeo } from './peasants';
 import { beam, rng } from './craft';
 import { model, model as model_, bytes } from './modelstore';
@@ -68,7 +69,7 @@ type Pattern = Parameters<typeof pattern>[0];
 /** Materiał fizyczny: wzór, wypukłość z tego samego wzoru i matowa, chropowata powierzchnia. */
 /** Ile razy wzór powtarza się na jednostkę długości (jedno pole mapy). Dzięki temu kamień ma tę samą wielkość na małej i dużej ścianie. */
 export const roadMaterials = (): THREE.MeshStandardMaterial[] => [M.roadSand, M.roadStone, M.roadWood];
-const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.8, dressed: 0.55, slate: 1.1, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5, burlap: 2.4 }; // płótno drobniej (namioty: duże kratki wyglądały jak wiklina)
+const TILE: Partial<Record<Pattern, number>> = { cobble: 1,  ashlar: 0.42, dressed: 0.55, slate: 0.8, bricks: 0.9, planks: 1.1, thatch: 0.9, tiles: 1.2, plaster: 0.9, soil: 0.7, bark: 1.5, burlap: 2.4 }; // płótno drobniej (namioty: duże kratki wyglądały jak wiklina)
 /**
  * Magiczna ruda jak w Gothicu: głęboki granat i fiolet w plamach, gęsto nakrapiany białymi i błękitnymi iskrami.
  * Wzór rysowany raz na płótnie (to nie zdjęciowa tekstura z pattern(), więc KTX2 go nie dotyczy); iskry lekko świecą
@@ -121,6 +122,9 @@ const mat = (color: number, tex?: Pattern): THREE.MeshStandardMaterial => {
   const nm = tex ? normal(tex) : null;
   const m = new THREE.MeshStandardMaterial({ color, flatShading: true, roughness: 0.92, metalness: 0, map: tex ? pattern(tex) : null, bumpMap: tex ? bump(tex) : null, normalMap: nm, normalScale: new THREE.Vector2(0.9, 0.9), bumpScale: tex === 'ashlar' ? 0.9 : tex === 'dressed' ? 0.7 : tex === 'cobble' ? 1.6 : 1.4 });
   m.userData.tile = (tex && TILE[tex]) || 0;
+  // kamień murów i łupek: prawdziwa głębia (fugi chowają się za licami) — parallax.ts
+  const hm = tex === 'ashlar' || tex === 'slate' ? heightMap(tex) : null;
+  if (hm) { applyParallax(m, hm, tex === 'ashlar' ? 0.035 : 0.025); m.normalScale.set(1.6, 1.6); }
   return m;
 };
 
@@ -756,6 +760,9 @@ function withAo(m: THREE.Material): THREE.Material {
   let c = aoMats.get(m);
   if (!c) {
     c = cloneMaterial(m); (c as THREE.MeshStandardMaterial).vertexColors = true; c.userData = m.userData; aoMats.set(m, c);
+    // kopia materiału nie przenosi wstawek do shadera: głębię kamienia dokładamy jeszcze raz
+    const pom = m.userData.parallax as { height: THREE.Texture; scale: number; steps: number } | undefined;
+    if (pom) applyParallax(c as THREE.MeshStandardMaterial, pom.height, pom.scale, pom.steps);
     // Modele z Blendera składamy z brył, które często stykają się płaszczyznami (belki szachulca na tynku, ciosy na murze,
     // gzyms na koronie): dwie powierzchnie w tym samym miejscu migają przy ruchu kamery (z-fighting). Duże płaszczyzny
     // (tynk, mur, deski, ziemia, strzecha) zostają na swoim miejscu, a detale są o włos bliżej kamery, więc zawsze wygrywają.

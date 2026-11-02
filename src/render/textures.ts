@@ -149,6 +149,24 @@ export function normal(kind: Kind): THREE.Texture | null {
   return n;
 }
 
+/** Mapy wysokości do głębi (parallax.ts) — zwykły JPG bez KTX2 (kompresja ETC1S robi schodki na łagodnych spadkach) */
+const HEIGHTS: Partial<Record<Kind, string>> = { ashlar: 'ashlar', slate: 'slate' };
+const heights = new Map<Kind, THREE.Texture>();
+export function heightMap(kind: Kind): THREE.Texture | null {
+  const f = HEIGHTS[kind];
+  if (!f || typeof document === 'undefined' || TEST) return null;
+  let h = heights.get(kind);
+  if (!h) {
+    let done = (): void => {};
+    loading.push(new Promise<void>((r) => { done = r; }));
+    h = new THREE.TextureLoader().load(`${photoBase()}${f}_h.jpg`, () => done(), undefined, () => done());
+    h.wrapS = h.wrapT = THREE.RepeatWrapping;
+    h.colorSpace = THREE.NoColorSpace;
+    heights.set(kind, h);
+  }
+  return h;
+}
+
 export function pattern(kind: Kind): THREE.Texture | null {
   let t = cache.get(kind);
   if (t) return t;

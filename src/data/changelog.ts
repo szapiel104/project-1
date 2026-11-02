@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.5', date: '2026-11-02',
+    pl: [
+      'Kamień zamku i wież ma prawdziwą głębię: fugi są wpuszczone, a wypukłe lica ciosów zasłaniają je pod kątem jak w prawdziwym murze. Ciosy są przy tym większe, a łupek na dachach dostał tę samą głębię.',
+    ],
+    en: [
+      'The stone of the keep and towers has real depth now: the joints are sunk, and the bulging faces of the blocks hide them at an angle as in a real wall. The blocks are also larger, and the roof slate has gained the same depth.',
+    ],
+  },
+  {
     v: '0.72.4', date: '2026-11-02',
     pl: [
       'Podgląd zleconych budów obejmuje też częstokół: przy otwartym budowaniu niepostawione bale widać jako przezroczyste, pełnej wysokości.',
