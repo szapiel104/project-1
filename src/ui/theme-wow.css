@@ -186,3 +186,13 @@ body.build-open .scribe, body.build-open .scribe-log { display: none; }
 .market-line.buy .market-btn { color: #ffe9c2; background-image: linear-gradient(#b03c16, #84240a 55%, #661b06); box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #ff9a4a, inset 0 0 10px rgba(255, 120, 40, .35); }
 .market-line.buy .market-btn:hover:not(:disabled) { background-image: linear-gradient(#e0521c, #ae330e 55%, #86240a); box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #ffc078, 0 0 12px rgba(255, 120, 40, .4); }
 .market-line .market-btn:disabled { filter: saturate(.35) brightness(.75); }
+
+/* ===== Ekran wczytywania z obrazem zamku z gry (Michał 2.11.2026: „nie rysuj, dobierz zdjęcie, epickie”) =====
+   public/loading/castle.jpg — ujęcie twierdzy z gry o zachodzie (pełna grafika), podkręcone filtrami: cieplejsze niebo,
+   poświata nad horyzontem, lekka winieta i blask. Rysowany pejzaż (.ld-scene) schowany. */
+#loading { background: #070504 url('/loading/castle.jpg') center 38% / cover no-repeat; }
+#loading .ld-scene { display: none; }
+#loading::after { content: ''; position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background: radial-gradient(ellipse 60% 42% at 50% 22%, rgba(8, 5, 3, .55), rgba(8, 5, 3, 0) 70%),
+    linear-gradient(rgba(8, 5, 3, .35), rgba(8, 5, 3, 0) 30%, rgba(8, 5, 3, 0) 60%, rgba(8, 5, 3, .7) 100%); }
+#loading .loading-head, #loading .loading-card { z-index: 1; }

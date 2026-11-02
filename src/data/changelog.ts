@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.71.7', date: '2026-11-02',
+    pl: [
+      'Nowy ekran wczytywania: zamiast rysowanego pejzażu prawdziwy obraz twierdzy z gry o zachodzie słońca, z górami i lasem w tle, podkręcony filtrami.',
+    ],
+    en: [
+      'A new loading screen: instead of a drawn landscape, a real picture of the keep from the game at sunset, with mountains and forest behind, enhanced with filters.',
+    ],
+  },
+  {
     v: '0.71.6', date: '2026-11-02',
     pl: [
       'Kamera do ujęć z trybu testowego (przygotowanie nowego ekranu wczytywania z obrazem zamku z gry).',

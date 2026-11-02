@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.71.7 — 2.11.2026
+- Ekran wczytywania: `public/loading/castle.jpg` (zrzut z gry w pełnej grafice przez `__test.cam`, godz. 18:45, obróbka w PIL: gamma, ciepłe niebo, poświata, winieta, blask; 1600 px, 150 KB), tło `#loading`, `.ld-scene` schowane, wczytywany z wyprzedzeniem (`preload` w index.html).
+
 ## 0.71.6 — 2.11.2026
 - `__test.cam(x, y, dist, yaw, pitch, lift)` → `renderer.viewAround` (ujęcia do ekranu wczytywania).
 
