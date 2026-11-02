@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.72.7 — 2.11.2026
+- Pejzaż wczytywania i menu: nowy moduł `src/ui/vista.ts` (SVG: niebo, chmury, 3 pasma gór ze śniegiem z gradientu, dolina z rzeką, zamek na skale, smugi światła, świerki z oświetlonym brzegiem, ziarno); stary rysunek usunięty z loadscreen.ts.
+
 ## 0.72.6 — 2.11.2026
 - Okno `.info`: nagłówek `.info-head` (tytuł, „i” = `desc-open`, ✕), przeciąganie za nagłówek, opis schowany (poza kartą człowieka `.is-person`), sekcje w polach, „Zamknij” w akcjach schowane (theme-wow.css).
 

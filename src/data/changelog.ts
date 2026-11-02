@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.72.7', date: '2026-11-02',
+    pl: [
+      'Nowy, jasny pejzaż na ekranie wczytywania i w menu: złota godzina, niebo od błękitu do złota, podświetlone chmury, pasma ośnieżonych gór w mgiełce, dolina z rzeką, zamek na skale w słońcu, smugi światła i ptaki.',
+    ],
+    en: [
+      'A new, bright landscape on the loading screen and in the menu: golden hour, a sky from blue to gold, sunlit clouds, ranges of snowy mountains in the haze, a valley with a river, the castle on its crag in the sun, shafts of light and birds.',
+    ],
+  },
+  {
     v: '0.72.6', date: '2026-11-02',
     pl: [
       'Okno budynku, wojska i człowieka uporządkowane jak w WoW: ciemny pasek z tytułem, przyciskiem „i” (opis) i krzyżykiem do zamykania; każda część (stan, towary, ludzie, produkcja) w osobnym polu z jednym złotym tytułem; opis budynku schowany pod „i”, a na dole tylko przyciski działań.',
