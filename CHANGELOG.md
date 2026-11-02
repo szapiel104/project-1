@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.71.5 — 2.11.2026
+- Przyciski wg wzoru Michała (theme-wow.css): `.btn-main` pomarańczowa świecąca płytka w brązowej oprawie (box-shadow), `.btn-plain` przygaszona, `.btn-danger` czerwona, rynek: sprzedaż zielona, kupno pomarańczowe.
+
 ## 0.71.4 — 2.11.2026
 - Układ: `.floaters .info` fixed w prawym górnym rogu (top 136 px), `fitInfo` liczy wysokość do belki; `.scribe` w lewym dolnym rogu (column-reverse), chowa się przy `body.build-open` (theme-wow.css).
 - Pauza: tło lewej kolumny na `.menu.in-game` (w grze nie ma `.menu-scene`). Romby ramy wewnątrz, `.panel { overflow-x: hidden }` — bez poziomego suwaka.

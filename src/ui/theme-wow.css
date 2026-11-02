@@ -154,3 +154,35 @@ button:disabled { background-image: url('/textures/cc0/iron.jpg'), linear-gradie
 .scribe { top: auto; bottom: 132px; left: 16px; display: flex; flex-direction: column-reverse; align-items: flex-start; }
 .scribe-log { top: auto; bottom: 186px; max-height: calc(100vh / var(--ui, 1) - 260px); }
 body.build-open .scribe, body.build-open .scribe-log { display: none; }
+
+/* ===== Przyciski jak na wzorze od Michała (2.11.2026): ciemna, brązowa oprawa i świecąca płytka w środku =====
+   pomarańczowy — główne działanie (.btn-main), zielony — „na plus” (sprzedaż na rynku), przygaszony — zwykłe (.btn-plain) */
+.btn-main, .btn-plain, .btn-danger, .market-line .market-btn {
+  font-family: var(--label); font-weight: 700; letter-spacing: .06em; border: 1px solid #120c08; border-radius: 2px; transition: background .12s, box-shadow .12s, color .12s;
+}
+.btn-main {
+  color: #ffe9c2; text-shadow: 0 1px 1px #3a0e00, 0 0 6px rgba(255, 160, 80, .45);
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 200, 110, .35), transparent 70%), linear-gradient(#c4441a, #962a0c 55%, #741d07);
+  box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #ff9a4a, inset 0 0 10px rgba(255, 120, 40, .45), inset 0 1px 0 rgba(255, 230, 170, .6);
+}
+.btn-main:hover, .btn-main:focus-visible {
+  color: #fff6e0; background-image: radial-gradient(ellipse at 50% 0%, rgba(255, 220, 140, .5), transparent 70%), linear-gradient(#ec5a1e, #be3810 55%, #8e260a);
+  box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #ffc078, inset 0 0 14px rgba(255, 150, 60, .6), 0 0 12px rgba(255, 120, 40, .45);
+}
+.btn-main:disabled { color: #c9a98a; text-shadow: none; background-image: linear-gradient(#6a3a24, #4a2414); box-shadow: 0 0 0 2px #3a2d20, 0 0 0 3px #0e0906, inset 0 0 0 1px #8a5a3a; }
+.btn-plain {
+  color: #f0dcb4; text-shadow: 0 1px 1px #000;
+  background-image: linear-gradient(#6a3014, #4a200c 55%, #3a1808);
+  box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #a8582a, inset 0 0 8px rgba(0, 0, 0, .4), inset 0 1px 0 rgba(255, 200, 140, .25);
+}
+.btn-plain:hover, .btn-plain:focus-visible { color: #fff0d0; background-image: linear-gradient(#8a3c18, #62290e 55%, #4a1f0a); box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #e08040, 0 0 8px rgba(255, 120, 40, .3); }
+.btn-danger { color: #ffd8cc; background-image: linear-gradient(#8a1a12, #5e0f0a); box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #d0503a; }
+.market-line.sell .market-btn {
+  color: #f4ffc8; text-shadow: 0 1px 1px #1a2400;
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(230, 255, 140, .3), transparent 70%), linear-gradient(#7c9a14, #56700a 55%, #3e5206);
+  box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #d8f04a, inset 0 0 10px rgba(200, 240, 60, .35);
+}
+.market-line.sell .market-btn:hover:not(:disabled) { background-image: radial-gradient(ellipse at 50% 0%, rgba(240, 255, 160, .45), transparent 70%), linear-gradient(#a2c41a, #6e900c 55%, #4e6808); box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #f0ff80, 0 0 12px rgba(200, 240, 60, .4); }
+.market-line.buy .market-btn { color: #ffe9c2; background-image: linear-gradient(#b03c16, #84240a 55%, #661b06); box-shadow: 0 0 0 2px #4d3b28, 0 0 0 3px #0e0906, inset 0 0 0 1px #ff9a4a, inset 0 0 10px rgba(255, 120, 40, .35); }
+.market-line.buy .market-btn:hover:not(:disabled) { background-image: linear-gradient(#e0521c, #ae330e 55%, #86240a); box-shadow: 0 0 0 2px #6a5236, 0 0 0 3px #0e0906, inset 0 0 0 1px #ffc078, 0 0 12px rgba(255, 120, 40, .4); }
+.market-line .market-btn:disabled { filter: saturate(.35) brightness(.75); }

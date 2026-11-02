@@ -10,6 +10,15 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.71.5', date: '2026-11-02',
+    pl: [
+      'Nowe przyciski: w ciemnej, brązowej oprawie, ze świecącą płytką w środku — pomarańczowe dla głównych działań, przygaszone dla zwykłych, zielone dla sprzedaży na rynku. Po najechaniu rozjarzają się.',
+    ],
+    en: [
+      'New buttons: set in a dark bronze frame with a glowing plate inside — orange for the main actions, muted for the ordinary ones, green for selling at the market. They flare up when you point at them.',
+    ],
+  },
+  {
     v: '0.71.4', date: '2026-11-02',
     pl: [
       'Okna budynków i wojska stoją teraz w prawym górnym rogu, a kronika w lewym dolnym, nad dolną belką. Przy otwartym budowaniu kronika się chowa.',
