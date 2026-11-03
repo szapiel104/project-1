@@ -98,3 +98,61 @@
 .hover-card kbd { padding: 1px 6px; font: 700 12.5px/1.4 var(--text, sans-serif); color: #fff4dc; background: #0d0a07; border: 1px solid #6e5420; border-bottom-width: 2px; border-radius: 3px; }
 .hover-card .build-cost { font-size: 17px; }
 .hover-card .build-cost .cost-chip .ico svg { width: 26px; height: 26px; }
+
+/* ===== Pergamin jak w „Jak grać” (Michał 3.11.2026): karty budowy, kafelki koszar i karty z opisami ===== */
+:root { --parch-bg: #eddcb5; --parch-ink: #2a1b0c; --parch-soft: #5c4224; --parch-red: #8a1f14; --parch-line: rgba(138, 100, 50, .45);
+  --parch-img: radial-gradient(ellipse at 50% 40%, rgba(255, 250, 232, .75), rgba(255, 250, 232, 0) 70%), linear-gradient(rgba(246, 232, 200, .62), rgba(246, 232, 200, .62)), url('/textures/cc0/plaster.jpg'); }
+
+/* karty budowy */
+#ui .card, #ui .card:hover, #ui .card[aria-pressed='true'], #ui .card.poor, #ui .card.locked, #ui .card.poor:hover, #ui .card.locked:hover {
+  background-color: var(--parch-bg); background-image: var(--parch-img); background-size: 100% 100%, auto, 360px auto; background-blend-mode: normal, normal, multiply;
+  border: 1px solid #120c08; border-radius: 2px; box-shadow: 0 0 0 2px #6e5226, inset 0 0 22px rgba(120, 78, 28, .35); }
+#ui .card .build-name { color: var(--parch-red); font-weight: 800; text-shadow: none; }
+#ui .card img { background: none; filter: drop-shadow(0 3px 3px rgba(60, 35, 10, .45)); }
+#ui .card:hover { box-shadow: 0 0 0 2px #e2b75a, 0 0 12px rgba(255, 200, 90, .45), inset 0 0 22px rgba(120, 78, 28, .25); }
+#ui .card[aria-pressed='true'] { box-shadow: 0 0 0 3px #f0cf72, 0 0 16px rgba(255, 190, 70, .6), inset 0 0 0 2px var(--parch-red); }
+#ui .card.poor .build-name { color: #a8281f; }
+#ui .card.poor img { filter: grayscale(.7) sepia(.3) opacity(.7); }
+#ui .card.locked img { filter: grayscale(1) sepia(.35) brightness(.85) opacity(.55); }
+#ui .card.locked .build-name { color: var(--parch-soft); }
+#ui .card-group-name { color: #ffd76a; }
+
+/* kafelki koszar */
+.rt-tile { background-color: var(--parch-bg); background-image: var(--parch-img); background-size: 100% 100%, auto, 300px auto; background-blend-mode: normal, normal, multiply;
+  box-shadow: 0 0 0 2px #6e5226, 0 0 0 3px #0b0704, inset 0 0 22px rgba(120, 78, 28, .4); }
+.rt-tile:hover, .rt-tile:focus-visible { box-shadow: 0 0 0 2px #f0cf72, 0 0 0 3px #0b0704, 0 0 16px rgba(255, 190, 80, .5), inset 0 0 22px rgba(120, 78, 28, .3); }
+.rt-pic.full img { filter: drop-shadow(0 4px 4px rgba(60, 35, 10, .5)); }
+.rt-pic svg { filter: drop-shadow(0 2px 2px rgba(60, 35, 10, .4)); }
+.rt-name { color: var(--parch-red); text-shadow: none; background: linear-gradient(rgba(246, 232, 200, .5), rgba(232, 214, 176, .95)); border-top: 1px solid var(--parch-line); }
+.rt-tile.cant .rt-pic { filter: grayscale(.9) sepia(.3) opacity(.55); }
+.rt-tile.cant .rt-name { color: var(--parch-soft); }
+.rt-flag { color: var(--parch-red); text-shadow: 0 1px 0 rgba(255, 240, 200, .9); }
+
+/* karta z opisem po najechaniu: strona z księgi */
+.hover-card { color: var(--parch-ink); background-color: var(--parch-bg); background-image: var(--parch-img); background-size: 100% 100%, auto, 420px auto; background-blend-mode: normal, normal, multiply;
+  border: 1px solid #120c08; box-shadow: 0 0 0 2px #6e5226, 0 0 0 3px #0b0704, inset 0 0 30px rgba(120, 78, 28, .35), 0 14px 30px rgba(0, 0, 0, .6); }
+.hover-card .hc-name { font-family: 'Cinzel', var(--display); font-weight: 800; color: var(--parch-red); }
+.hover-card .hc-pic { border-color: #6e5226; background: #2a1d10; }
+.hover-card .hc-sub, .hover-card .hc-can { color: #2f6a28; }
+.hover-card .hc-sub.no, .hover-card .hc-can.no { color: #a8281f; }
+.hover-card .hc-desc { color: var(--parch-ink); }
+.hover-card .hc-table th { color: #fff1c8; background: #5a2a14; border-bottom: 0; }
+.hover-card .hc-table td { border-bottom-color: var(--parch-line); }
+.hover-card .hc-table td.num { color: var(--parch-ink); }
+.hover-card .hc-table td.have { color: var(--parch-soft); }
+.hover-card .hc-res { color: var(--parch-ink); }
+.hover-card .hc-res svg { filter: drop-shadow(0 0 1px rgba(0, 0, 0, .6)); }
+.hover-card .hc-table tr.short td, .hover-card .hc-table tr.short td.have { color: #a8281f; font-weight: 800; }
+.hover-card .hc-stat { background: rgba(255, 248, 228, .6); border-color: var(--parch-line); }
+.hover-card .hc-stat span { color: var(--parch-soft); }
+.hover-card .hc-stat strong { color: var(--parch-red); }
+.hover-card .hc-flag { color: var(--parch-red); }
+.hover-card .hc-keys { color: var(--parch-soft); border-top-color: var(--parch-line); }
+.hover-card kbd { color: #fff4dc; background: #3a2414; border-color: #1a0f07; }
+.hover-card .hc-cost { border-color: var(--parch-line); }
+.hover-card .build-cost { color: var(--parch-ink); }
+.hover-card .build-cost .cost-chip { color: #fff4dc; background: #3a2414; border-color: #1a0f07; }
+/* opis budynku w jego oknie: wstawka z pergaminu */
+#ui .info .info-desc:not(:empty) { padding: 10px 12px; font-size: 15px; line-height: 1.5; color: var(--parch-ink); text-shadow: none;
+  background-color: var(--parch-bg); background-image: var(--parch-img); background-size: 100% 100%, auto, 360px auto; background-blend-mode: normal, normal, multiply;
+  border: 1px solid #120c08; border-left: 4px solid var(--parch-red); box-shadow: 0 0 0 1px #6e5226, inset 0 0 18px rgba(120, 78, 28, .3); }

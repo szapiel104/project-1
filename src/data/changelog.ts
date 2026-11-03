@@ -34,11 +34,13 @@ const NEW: ChangeEntry[] = [
       'Koszary: większe kafelki, postać na cały kafelek (włócznik już nie jest malutki), duża tabliczka „×4” z liczbą, ilu możesz wyszkolić.',
       'Karta po najechaniu większa i czytelniejsza: koszt jako tabelka „potrzeba / masz” z nazwami, siła w osobnych polach i dokładnie, czego brakuje.',
       'W koszarach karta szczegółów staje obok okna i nie zasłania innych jednostek.',
+      'Karty budowy, kafelki koszar i opisy po najechaniu na pergaminie jak w „Jak grać” — czytelniej i w klimacie.',
     ],
     en: [
       'Barracks: larger tiles, the soldier fills the tile (the spearman is no longer tiny), a big “×4” plate with how many you can train.',
       'The hover card is larger and clearer: cost as a “needed / you have” table with names, strength in separate boxes and exactly what is missing.',
       'In the barracks the details card sits beside the window and no longer covers other units.',
+      'Build cards, barracks tiles and hover descriptions on parchment like in “How to play” — clearer and in keeping.',
     ],
   },
   {
