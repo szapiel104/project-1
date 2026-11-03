@@ -63,7 +63,8 @@ export class GpuPost {
       const nrm = sp.getTextureNode('normal'), dep = sp.getTextureNode('depth');
       const normal = sample((uv: any) => unpackRGBToNormal(nrm.sample(uv)));
       const aoN = fx.ao(dep, normal, this.camera);
-      aoN.resolutionScale = o.ao === 'high' ? 1 : 0.5;
+      // pół rozdzielczości zawsze (odszumianie i tak wygładza): pełna przy 4K kosztowała kartę więcej niż cała scena
+      aoN.resolutionScale = 0.5;
       aoN.radius.value = 1.6;
       aoN.distanceFallOff.value = 0.6;
       aoN.samples.value = o.ao === 'high' ? 16 : o.ao === 'low' ? 8 : 12;

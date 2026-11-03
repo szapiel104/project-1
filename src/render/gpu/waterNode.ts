@@ -19,10 +19,12 @@ export const REFLECT_LAYER = 3;
  * Co jakiś czas (nowe obiekty w scenie): wszystko na warstwę odbicia poza tym, czego w tafli i tak nie widać
  * albo co kosztuje bez efektu (lista jak w WebGL-owym waterReflect.ts, plus ślady i kałuże).
  */
+/** Drobiazgi płaskie albo małe, których w odbiciu i tak nie widać — każdy to osobne składanie i rysowanie w lustrze */
+const NO_REFLECT = /^(ślady|kałuże|kruki|niesione|ryby|osmalenia|siatka budowy|uszkodzenia|graty|rodziny|postacie|wilki|tarany|wozy|drogi|śnieg|kamyki|kępy|kwiaty|zwierzęta|groby|poświata|budowy|naprawy|strzały|narzędzia)/;
 export function markReflect(scene: THREE.Object3D, skip: Set<string>): void {
   scene.traverse((o) => {
     const c = o.userData.cat as string | undefined;
-    if ((c && (skip.has(c) || c.startsWith('ślady') || c.startsWith('kałuże') || c.endsWith(' (cień)'))) || o.userData.noReflect) o.layers.disable(REFLECT_LAYER);
+    if ((c && (skip.has(c) || NO_REFLECT.test(c) || c.endsWith(' (cień)'))) || o.userData.noReflect) o.layers.disable(REFLECT_LAYER);
     else o.layers.enable(REFLECT_LAYER);
   });
 }

@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.3', date: '2026-11-03',
+    pl: ['Płynniejsza gra na nowym silniku: odbicie w wodzie pomija drobiazgi, których w tafli i tak nie widać, a cieniowanie zagłębień liczy się w połowie rozdzielczości.'],
+    en: ['Smoother play on the new engine: water reflections skip small things you could not see in them anyway, and ambient occlusion is computed at half resolution.'],
+  },
+  {
     v: '0.94.2', date: '2026-11-03',
     pl: ['Świat nie kończy się kwadratem: za krawędzią mapy ciągną się dalej te same góry, lasy, łąki, jeziora i rzeki co na mapie (a nie równy pas puszczy dookoła), pustynia za mapą to dalej pustynia.'],
     en: ['The world no longer ends in a square: past the map edge the same mountains, forests, meadows, lakes and rivers carry on (instead of an even band of woodland all around), and a desert stays a desert beyond the map.'],

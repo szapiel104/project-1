@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.3 — 2026-11-03
+- WebGPU: lustro wody bez drobiazgów (`NO_REFLECT` w gpu/waterNode.ts: ślady, kruki, ładunki, postacie, wilki, drogi, graty…), GTAO zawsze w ½ rozdzielczości.
+
 ## 0.94.2 — 2026-11-03
 - Teren za planszą z generatora mapy: `terrainSampler` w sim/map.ts (te same szumy co pierwsze przejście generateMap; tylko do rysowania, symulacja i zapisy bez zmian), w terrain.ts wysokość, warstwy (ściółka, skała, piach) i las za mapą z próbnika; rzeka płynie dalej za krawędź (do 16 pól); dalekie pasma i masywy z zaszumioną odległością.
 
