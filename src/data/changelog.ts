@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.93.3', date: '2026-11-03',
+    pl: ['Dziennik błędów (F3) pokazuje czasy poszczególnych etapów wczytywania.'],
+    en: ['The error log (F3) now shows how long each loading stage took.'],
+  },
+  {
     v: '0.93.2', date: '2026-11-03',
     pl: ['Krótsze „Przygotowanie grafiki” na nowym silniku (liczy się tylko faktyczna praca, bez czekania).'],
     en: ['Shorter "Preparing the graphics" on the new engine (only real work counts, no idle waiting).'],

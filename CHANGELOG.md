@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.93.3 — 2026-11-03
+- Dziennik błędów: kontekst „wczytywanie” z czasami etapów z boot.ts (pomiary z karty w tle są zawyżone — Chrome dławi rAF i timery).
+
 ## 0.93.2 — 2026-11-03
 - WebGPU: budżet klatki liczy tylko czas `NodeBuilder.build()` (wcześniej całe `_renderObjectDirect`, więc zwykłe rysowanie zjadało budżet i rozgrzewka dobijała do limitu 12 s); `window.__gpuStat()`.
 
