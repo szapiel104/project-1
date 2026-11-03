@@ -38,6 +38,7 @@ import { buildStreams, type Streams } from './streams';
 const WATERFALLS = false;
 import { buildRockGeometry, rockDisplacer } from './rockmesh';
 import { rockMaterial, rocks0ad } from './rocks0ad';
+import { desertPlants, plantMaterial, type PlantKind } from './desert0ad';
 
 const HEIGHT_SCALE = 0.03;
 const smoothstep = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -922,6 +923,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   type Item = { m: THREE.Matrix4; shade: number; tile: number; pos: THREE.Vector3; q: THREE.Quaternion; s: THREE.Vector3; frost?: number };
   const FROST = new THREE.Color(0xdfe7ea);
   const pines: Item[] = [], leafy: Item[] = [], rocks: Item[] = [], ores: Item[] = [], tufts: Item[] = [];
+  // pustynia (0 A.D., src/render/desert0ad.ts): uschnięte palmy, suche krzewy, trawy; palmy przy wodzie dla ozdoby
+  const DESERT = map.biome === 'desert';
+  const dDead: Item[] = [], dBush: Item[] = [], dGrass: Item[] = [], dPalm: Item[] = [];
   const ferns: Item[] = [], deadwood: Item[] = [];
   // młode jodły w podroście (gotowy model z Poly Haven): w głębi lasu pod starymi drzewami, rzadziej na skraju
   const firs: Item[] = [];
@@ -1109,6 +1113,16 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
         // drobne kamyki wystające z darni, częściej tam, gdzie łąka rzadsza
         if ((r >>> 22) % Math.max(3, Math.round((lush > 0.5 ? 19 : 11) * V.pebble)) === 0) put(pebbles, x, y, 12, 0.12 + ((r >>> 26) & 7) / 40, 0.95);
         if ((r >>> 25) % 41 === 0) put(pebbles, x, y, 14, 0.1 + ((r >>> 3) & 7) / 50, 0.95);
+      }
+      if (DESERT && t === Terrain.Grass && !map.trails?.[y * w + x]) {
+        // pustynia: suche trawy wszędzie po trochu, z rzadka krzew albo uschnięta palma, przy wodzie zielone palmy (oaza)
+        if ((r >>> 12) % 4 === 0) put(dGrass, x, y, 72, 0.7 + ((r >>> 22) & 7) / 12, 0.95);
+        if (farFromKeeps(x, y)) {
+          const k = (r >>> 3) % 131;
+          if (k === 0) put(dDead, x, y, 70, 0.8 + ((r >>> 20) & 7) / 14, 0.6);
+          else if (k < 6) put(dBush, x, y, 71, 0.8 + ((r >>> 20) & 7) / 10, 0.9);
+          if (nearW && (r >>> 26) % 3 === 0) put(dPalm, x, y, 73, 0.75 + ((r >>> 20) & 7) / 20, 0.7);
+        }
       }
     }
   }
@@ -1415,6 +1429,30 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     });
   };
   const trunkItems = new Set<Item>([...pines, ...leafy]);
+  /** Rośliny pustyni z 0 A.D.: odmiana (kształt i tekstura) stała dla miejsca; jedna pula na parę kształt+tekstura */
+  const plantDesert = (list: Item[], kinds: PlantKind[], salt: number, shadow: boolean, stump: boolean): void => {
+    if (!list.length) return;
+    const all = desertPlants();
+    const pool = kinds.flatMap((k) => all.filter((p) => p.kind === k).flatMap((p) => p.tex.map((tx) => ({ p, tx }))));
+    if (!pool.length) return;
+    const split = new Map<number, Item[]>();
+    for (const it of list) {
+      const i = hash2(Math.round(it.pos.x * 10) + salt * 101, Math.round(it.pos.z * 10), 0xd35e) % pool.length;
+      (split.get(i) ?? split.set(i, []).get(i)!).push(it);
+    }
+    for (const [i, sub] of split) {
+      const { p, tx } = pool[i]!;
+      const mat = plantMaterial(tx);
+      if (!mat.userData.wind) {
+        mat.userData.wind = true;
+        // palma kołysze koroną wysoko nad pniem, krzaki i trawy całe (wiatr rośnie z kwadratem wysokości)
+        if (p.kind === 'palm' || p.kind === 'deadpalm') windCrown(mat, 0.012, `wind-oad-${tx}`, 1.6);
+        else windCrown(mat, 0.06, `wind-oad-${tx}`, 0.02);
+      }
+      label = p.kind === 'palm' || p.kind === 'deadpalm' ? 'drzewa: palmy' : 'roślinność pustyni';
+      plant(sub, instanced(p.geo, 0xffffff, sub, undefined, shadow, mat, undefined, 16), null, stump);
+    }
+  };
   label = 'drzewa: pnie';
   /** drzewa jednej roli rozdzielone na odmiany: pień (bryła) i korona (karty), każda odmiana osobną pulą */
   const plantKinds = (list: Item[], ks: TreeKind[], salt: number, stump = true): void => {
@@ -1426,8 +1464,12 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     }
   };
   label = 'drzewa: korony';
-  plantKinds(pines, CONIFERS, 1);
-  plantKinds(leafy, LEAFS, 2);
+  // pustynia: drzewa w oazach to palmy daktylowe (co siódma uschnięta), z tymi samymi polami i ścinaniem co las
+  if (DESERT) plantDesert([...pines, ...leafy], ['palm', 'palm', 'palm', 'palm', 'palm', 'palm', 'deadpalm'], 3, true, true);
+  else {
+    plantKinds(pines, CONIFERS, 1);
+    plantKinds(leafy, LEAFS, 2);
+  }
   yield;
   // Puszcza za krawędzią mapy: nikt tam nie dojdzie ani nie zetnie drzew (to tylko tło).
   // Las wchodzi na zbocza aż pod granicę lasu; wyżej drzewa rzedną, są niższe i oszronione, nad nimi tylko skała i śnieg.
@@ -1568,6 +1610,12 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
     // barwa instancji jasna (0xe6e0d6): skała ma kolor w zdjęciu; drobne odcienie z `shade` każdego kamienia
     plant(big, instanced(r.geo, 0xe6e0d6, big, undefined, true, mat, SMALL_LOD), null, false);
     plant(small, instanced(r.geo, 0xe6e0d6, small, undefined, false, mat, SMALL_LOD), null, false);
+  }
+  if (DESERT) {
+    plantDesert(dPalm, ['palm'], 5, true, false);
+    plantDesert(dDead, ['deadpalm'], 6, true, false);
+    plantDesert(dBush, ['bush', 'drybush', 'desertplant'], 7, false, false);
+    plantDesert(dGrass, ['grass', 'grass', 'drybush'], 8, false, false);
   }
   label = 'kępy trawy';
   plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);

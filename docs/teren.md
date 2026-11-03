@@ -59,7 +59,8 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
 - [ ] (stare) **Modele skał i głazów** z prawdziwych skanów (paczki CC0/CC-BY z GitHuba, np. 0 A.D. jak trzciny) — kilka
   kształtów: głaz, płyta, ściana skalna, rumosz; dopiero z nimi wracają skałki i ładne urwiska.
 
-## Zaległe — robimy po WebGPU (Michał 3.11.2026, 12:56: „najpierw WebGPU, potem to, co da efekty”)
+## Zaległe — robimy po WebGPU
+- [x] 0.94.0: roślinność pustyni z 0 A.D. (palmy w oazach jako las, uschnięte palmy, krzewy, suche trawy). (Michał 3.11.2026, 12:56: „najpierw WebGPU, potem to, co da efekty”)
 - [ ] **Pustynia: palmy, suche krzewy, przesuszone trawy** z 0 A.D. (repozytorium github.com/0ad/0ad, CC BY-SA 3.0):
   palmy `meshes/gaia/palm_date_new_{1..6}.dae` (tekstury `palm_date_new_1/2.png` + `_norm`), uschnięte `palm_dead_{1..5}`
   (`palm_dead.png`), krzewy `bush_dese_a_{1,2}` (`bush_dese_a.dds`, suche `bush_dese_dry_{a,b,c}.dds`),

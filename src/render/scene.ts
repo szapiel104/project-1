@@ -2930,7 +2930,8 @@ export class GameRenderer {
       let b = this.batches.get(key);
       if (!b || b.mesh.instanceMatrix.count < list.length) {
         if (b) { this.buildingLayer.remove(b.mesh); b.mesh.dispose(); }
-        const im = new THREE.InstancedMesh(m0.geometry, m0.material as THREE.Material, Math.max(4, list.length * 2));
+        // z zapasem: każde powiększenie puli to na WebGPU nowe składanie materiału (~35 ms), a pamięci to prawie nie kosztuje
+        const im = new THREE.InstancedMesh(m0.geometry, m0.material as THREE.Material, Math.max(this.gpu_ ? 32 : 4, list.length * (this.gpu_ ? 3 : 2)));
         im.castShadow = m0.castShadow; im.receiveShadow = m0.receiveShadow;
         im.userData.noCull = true;
         b = { mesh: im, n: 0 };

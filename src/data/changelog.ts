@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.0', date: '2026-11-03',
+    pl: ['Pustynia ożywa: w oazach rosną palmy daktylowe (można je ścinać na drewno jak las), między wydmami stoją uschnięte palmy i suche krzewy, a piach porastają kępy wysuszonej trawy. Palmy i krzaki kołyszą się na wietrze.', 'Mniej przycięć, gdy na mapie przybywa budynków.'],
+    en: ['The desert comes alive: date palms grow in the oases (you can fell them for wood like a forest), dead palms and dry shrubs stand among the dunes, and tufts of parched grass cover the sand. Palms and shrubs sway in the wind.', 'Less stutter as more buildings appear on the map.'],
+  },
+  {
     v: '0.93.8', date: '2026-11-03',
     pl: ['Wracają cienie chmur sunące po ziemi, dachach i drzewach (liczone jednym przejściem na cały obraz).'],
     en: ['Cloud shadows drifting over the ground, roofs and trees are back (computed in a single pass over the whole image).'],

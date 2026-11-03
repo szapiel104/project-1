@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.0 — 2026-11-03
+- Roślinność pustyni z 0 A.D. (`tools/models/desert_0ad.py` → `src/render/models/desert0ad.json`, `src/render/desert0ad.ts`): drzewa lasu na pustyni = palmy daktylowe (co siódma uschnięta, ścinanie jak las), ozdobnie uschnięte palmy, krzewy, suche trawy, palmy przy wodzie; wiatr. Bot: bez zmian (drewno z palm jak z lasu). CREDITS.md uzupełnione.
+- WebGPU: pule wspólnego rysowania budynków z zapasem (mniej składań przy rozbudowie).
+
 ## 0.93.8 — 2026-11-03
 - WebGPU: cienie chmur w `gpu/postNode.ts` (położenie w świecie z bufora głębi, maska z sharedNoise, `CLOUD_U` z ground.ts) zamiast łatki cloudShade w każdym materiale.
 
