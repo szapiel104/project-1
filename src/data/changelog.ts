@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.88.1', date: '2026-11-03',
+    pl: ['Mur i zamek: kamienie z jednej partii — tylko lekkie różnice jasności zamiast szachownicy jasnych i ciemnych bloków, jaśniejsza zaprawa, spokojniejsza faktura.'],
+    en: ['Walls and castle: stones from one quarry — only slight differences in shade instead of a chequerboard of light and dark blocks, lighter mortar, calmer texture.'],
+  },
+  {
     v: '0.88.0', date: '2026-11-03',
     pl: [
       'Nowa kraina: Pustynia — piach i łagodne wydmy, stoliwa z urwiskami, zielone oazy przy jeziorkach i rzece (tylko tam rośnie las), po dwa gaje przy każdym zamku. Gorąco: susza latem, śnieg prawie nigdy.',

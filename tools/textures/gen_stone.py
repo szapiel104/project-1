@@ -132,7 +132,8 @@ def ashlar():
     mortar = fbm(N, 3, 71, 3)
     height = np.where(inside, height, 0.05 + 0.06 * mortar)
     # kolor: jasność kamienia 0,55..1, lekki spadek po licu (jak kamień z innej partii), plamy, ziarno, wgłębienia
-    tone = rng.uniform(0.55, 1.0, nlab)
+    # Michał 3.11.2026: „raz jasny, raz ciemny to źle” — kamienie z jednej partii, różnice jasności tylko lekkie
+    tone = rng.uniform(0.88, 1.0, nlab)
     gxy = (gx[lab] * (xx % 400) / 400 + gy[lab] * (yy % 400) / 400) * 0.04
     stain = fbm(N, 120, 83, 4)
     rock = photo('rock')
@@ -140,20 +141,20 @@ def ashlar():
     offx = rng.integers(0, R, nlab)
     offy = rng.integers(0, R, nlab)
     det = rock[(yy + offy[lab]) % R, (xx + offx[lab]) % R]
-    det = 1 + (det - 1) * 0.55
+    det = 1 + (det - 1) * 0.4
     blotch = fbm(N, 45, 87, 4)
-    col = tone[lab] * det * (0.8 + 0.2 * mid) * (0.68 + 0.32 * stain) * (0.8 + 0.2 * blotch) * (0.88 + 0.12 * grain) * (1 - pits * 0.35) + gxy
+    col = tone[lab] * det * (0.9 + 0.1 * mid) * (0.86 + 0.14 * stain) * (0.9 + 0.1 * blotch) * (0.9 + 0.1 * grain) * (1 - pits * 0.25) + gxy * 0.5
     # krawędzie lekko wytarte (jaśniejsze) tuż przy fazie, odpryski jaśniejsze (świeży kamień), zagłębienia ciemne
     # bryła: środek lica jaśniejszy, ku krawędziom ciemnieje (kamień wypukły, światło z góry); odpryski jaśniejsze
     pillow = np.clip(d / 45.0, 0, 1) ** 0.7
-    col = col * (0.62 + 0.38 * pillow) + chips * 0.06
+    col = col * (0.8 + 0.2 * pillow) + chips * 0.04
     ao = ndimage.gaussian_filter(height, 7, mode='wrap')
     col *= 0.78 + 0.22 * np.clip(height * 1.2 + 0.1, 0, 1)
     col *= 0.82 + 0.18 * np.clip(ao * 1.6, 0, 1)
     col = col * (0.56 / col[inside].mean())                          # średnia jasność lica jak w v1 (barwę daje materiał)
     # zaprawa: piaskowa, wgłębiona, w cieniu krawędzi kamieni (nie czarna)
     shadow = np.clip(1 - ndimage.gaussian_filter(inside.astype(float), 2.5, mode='wrap') * 0.6, 0.4, 1)
-    col = np.where(inside, col, (0.26 + 0.1 * mortar) * shadow)
+    col = np.where(inside, col, (0.36 + 0.08 * mortar) * shadow)
     col = np.clip(col, 0, 1)
     Image.fromarray((col * 255).astype(np.uint8)).convert('RGB').save(OUT + 'ashlar.jpg', quality=92)
     Image.fromarray(normal_map(ndimage.gaussian_filter(height, 0.7, mode='wrap') + 0.6 * np.sqrt(np.clip(d / 45.0, 0, 1)), 11.0)).save(OUT + 'ashlar_n.jpg', quality=92)
