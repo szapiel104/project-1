@@ -49,26 +49,27 @@ export class GpuPost {
     this.built = key;
     const { TSL } = gpuMods!;
     const T = TSL as any;
-    const { pass, mrt, output, normalView, directionToColor, colorToDirection, sample, vec2, vec3, vec4, float, dot, mix,
+    const { pass, mrt, output, normalView, packNormalToRGB, unpackRGBToNormal, sample, vec2, vec3, vec4, float, dot, mix,
       smoothstep, pow, max, min, clamp, sqrt, screenUV, renderOutput, convertToTexture } = T;
     const fx = gpuMods!.FX as any;
     const o = this.opts;
     const msaa = o.ao === 'off' && o.aa.startsWith('msaa') ? 4 : 0;
     const sp = pass(this.scene, this.camera, { samples: msaa });
-    if (o.ao !== 'off') sp.setMRT(mrt({ output, normal: directionToColor(normalView) }));
+    if (o.ao !== 'off') sp.setMRT(mrt({ output, normal: packNormalToRGB(normalView) }));
     const col = sp.getTextureNode('output');
     let c: any = col.rgb;
     if (o.ao !== 'off') {
       const nrm = sp.getTextureNode('normal'), dep = sp.getTextureNode('depth');
-      const normal = sample((uv: any) => colorToDirection(nrm.sample(uv)));
+      const normal = sample((uv: any) => unpackRGBToNormal(nrm.sample(uv)));
       const aoN = fx.ao(dep, normal, this.camera);
       aoN.resolutionScale = o.ao === 'high' ? 1 : 0.5;
       aoN.radius.value = 1.6;
       aoN.distanceFallOff.value = 0.6;
       aoN.samples.value = o.ao === 'high' ? 16 : o.ao === 'low' ? 8 : 12;
-      let aoT: any = aoN.getTextureNode();
-      if (o.ao !== 'low') aoT = fx.denoise(aoT, dep, normal, this.camera);
-      const a = pow(aoT.sample(screenUV).r, 2.2); // siła jak intensity 2.2 w N8AO
+      const aoT: any = aoN.getTextureNode();
+      // odszumianie liczy się w miejscu (węzeł w tym samym przejściu), bez osobnej tekstury
+      const raw = o.ao !== 'low' ? fx.denoise(aoT, dep, normal, this.camera).r : aoT.sample(screenUV).r;
+      const a = pow(raw, 2.2); // siła jak intensity 2.2 w N8AO
       c = c.mul(mix(vec3(0.0103, 0.0060, 0.0030), vec3(1), a)); // ciepły brąz w zagłębieniach (0x1a120a w liniowym)
     }
     c = clamp(c, 0, 40);

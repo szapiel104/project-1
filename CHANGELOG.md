@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.91.2 — 2026-11-03
+- WebGPU: `compileAsync` wisiało na materiałach GLSL (wczytywanie stało na 95%) — `compileBg()` chowa je przed kompilacją i czeka najwyżej 6 s; rozgrzewka budynków po starcie przez `compileAsync(probe, cam, scene)`.
+- WebGPU partia 1: efekty obrazu w TSL (`src/render/gpu/postNode.ts`): GTAO + odszumianie, poświata, tone mapping, gradacja (kopia `grade`), FXAA/SMAA, wyostrzenie (kopia `sharpenPass`). Przy wyjątku gra rysuje samą scenę; `?bezefektow=1` wyłącza.
+
 ## 0.91.1 — 2026-11-03
 - WebGPU: `compileAsync` wisiało na materiałach GLSL (wczytywanie stało na 95%) — `compileBg()` chowa je przed kompilacją i czeka najwyżej 6 s; rozgrzewka budynków po starcie przez `compileAsync(probe, cam, scene)`.
 - WebGPU partia 1: efekty obrazu w TSL (`src/render/gpu/postNode.ts`): GTAO + odszumianie, poświata, tone mapping, gradacja (kopia `grade`), FXAA/SMAA, wyostrzenie (kopia `sharpenPass`). Przy wyjątku gra rysuje samą scenę; `?bezefektow=1` wyłącza.
