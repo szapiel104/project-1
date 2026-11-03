@@ -111,28 +111,51 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
         : tx('Chmura zapisów jest chwilowo niedostępna — zapisy są tylko w tej przeglądarce.', 'Cloud saves are unavailable right now — saves are only in this browser.');
     }
   };
+  /** Ikonki w statystykach kafelka (rysowane, bez emoji) */
+  const ICO: Record<string, string> = {
+    day: '<circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',
+    people: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c.7-3.4 3.1-5.2 6-5.2s5.3 1.8 6 5.2"/><circle cx="17" cy="9" r="2.4"/><path d="M16 14.4c2.6 0 4.4 1.5 5 4.6"/>',
+    army: '<path d="M14.5 3.5l6 6-9 9-2 0 0-2z M5 14l5 5 M3 17l4 4"/>',
+    houses: '<path d="M3 20V10l6-5 6 5v10z M15 20v-7l3-2.5 3 2.5v7 M7 20v-5h4v5"/>',
+    gold: '<ellipse cx="12" cy="7" rx="7" ry="3"/><path d="M5 7v5c0 1.7 3.1 3 7 3s7-1.3 7-3V7 M5 12v5c0 1.7 3.1 3 7 3s7-1.3 7-3v-5"/>',
+    more: '<circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/>',
+    cloud: '<path d="M7 18h10a4 4 0 0 0 .6-8 6 6 0 0 0-11.4 1.6A3.3 3.3 0 0 0 7 18z"/>',
+    device: '<rect x="3" y="4" width="18" height="12" rx="1"/><path d="M8 20h8M12 16v4"/>',
+  };
+  const svg = (k: string, size = 18): string => `<svg viewBox="0 0 24 24" width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICO[k]}</svg>`;
+  /** Menu „⋯” z rzadszymi działaniami (przycisk z aria-expanded, Esc zamyka, strzałki przechodzą po pozycjach) */
+  const moreMenu = (items: [string, () => void, boolean?][], label: string): HTMLElement => {
+    const wrap = el('div', 'sv-more');
+    const open = el('button', 'sv-more-btn'); open.type = 'button';
+    open.innerHTML = svg('more', 20);
+    open.setAttribute('aria-haspopup', 'menu'); open.setAttribute('aria-expanded', 'false'); open.setAttribute('aria-label', label);
+    const list = el('div', 'sv-menu'); list.setAttribute('role', 'menu'); list.hidden = true;
+    const close = (focus = false): void => { list.hidden = true; open.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', outside, true); if (focus) open.focus(); };
+    const outside = (e: Event): void => { if (!wrap.contains(e.target as Node)) close(); };
+    const btns = items.map(([text, run, danger]) => {
+      const b = el('button', danger ? 'sv-mi danger' : 'sv-mi', text); b.type = 'button'; b.setAttribute('role', 'menuitem');
+      b.addEventListener('click', () => { close(); run(); });
+      return b;
+    });
+    list.append(...btns);
+    open.addEventListener('click', () => {
+      const show = list.hidden;
+      list.hidden = !show; open.setAttribute('aria-expanded', String(show));
+      if (show) { document.addEventListener('click', outside, true); btns[0]?.focus(); }
+    });
+    wrap.addEventListener('keydown', (e) => {
+      if (list.hidden) return;
+      const i = btns.indexOf(document.activeElement as HTMLButtonElement);
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
+      else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); btns[(i + (e.key === 'ArrowDown' ? 1 : btns.length - 1)) % btns.length]!.focus(); }
+    });
+    wrap.append(open, list);
+    return wrap;
+  };
   const card = (m: SaveMeta): HTMLElement => {
     const c = el('article', `sv-card ${m.kind}`);
-    const shot = el('div', 'sv-shot');
-    if (m.thumb) { const img = el('img'); img.src = m.thumb; img.alt = ''; img.loading = 'lazy'; shot.append(img); }
-    else shot.append(el('span', 'sv-noshot', tx('bez podglądu', 'no preview')));
-    const tag = el('span', `sv-kind ${m.kind}`, KIND(m.kind)); shot.append(tag);
-    const where = el('span', `sv-where ${m.where ?? 'local'}`, m.where === 'both' ? tx('☁ chmura + przeglądarka', '☁ cloud + browser') : m.where === 'cloud' ? tx('☁ w chmurze', '☁ in the cloud') : tx('tylko ta przeglądarka', 'this browser only'));
-    shot.append(where);
-    const body = el('div', 'sv-body');
-    const title = el('strong', 'sv-name', m.name);
-    const facts = el('ul', 'sv-facts');
-    const lv = m.level !== undefined ? `${tx('boty', 'bots')}: ${LEVELS()[m.level] ?? m.level}` : '';
-    for (const f of [
-      `${when(m.created)}`,
-      `${MODE(m.preset)}${lv ? ' · ' + lv : ''}${m.dev ? tx(' · deweloperski', ' · developer') : ''}`,
-      tx(`dzień ${m.day}, godz. ${m.hour}:00`, `day ${m.day}, ${m.hour}:00`),
-      tx(`ludzie ${m.people} · wojsko ${m.soldiers} · budynki ${m.buildings} · złoto ${m.gold}`, `people ${m.people} · soldiers ${m.soldiers} · buildings ${m.buildings} · gold ${m.gold}`),
-    ]) facts.append(el('li', '', f));
-    if (m.v !== SAVE_VERSION) facts.append(el('li', 'sv-old', tx('ze starszej wersji gry — może się nie wczytać', 'from an older version — may not load')));
-    const meta = el('span', 'sv-meta', `${tx('wersja', 'version')} ${m.build}${m.size ? ' · ' + kb(m.size) : ''}`);
-    const acts = el('div', 'sv-acts');
-    const load = btn(tx('Wczytaj', 'Load'), () => {
+    c.setAttribute('aria-label', m.name);
+    const doLoad = (): void => {
       void confirmDialog({
         title: tx(`Wczytać „${m.name}”?`, `Load “${m.name}”?`), image: m.thumb || undefined,
         text: go.canSave() ? tx('Obecna gra zostanie zamknięta — to, czego nie zapisałeś, przepadnie.', 'The current game will close — anything you have not saved will be lost.') : tx(`Dzień ${m.day}, ${MODE(m.preset)}, zapisano ${when(m.created)}.`, `Day ${m.day}, ${MODE(m.preset)}, saved ${when(m.created)}.`),
@@ -142,31 +165,69 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
         load.disabled = true; say(tx('Wczytuję zapis…', 'Loading the save…'));
         void go.load(m.id).then((e) => { load.disabled = false; if (e) say(e, true); });
       });
-    }, 'menu-btn btn-ok sv-btn');
-    acts.append(load);
-    if (mode === 'save' && m.kind === 'manual') acts.append(btn(tx('Nadpisz', 'Overwrite'), () => {
+    };
+    // kadr: klik w obrazek też wczytuje; na obrazku rodzaj zapisu i gdzie leży, na dole nazwa i data
+    const shot = el('button', 'sv-shot'); shot.type = 'button';
+    shot.setAttribute('aria-label', tx(`Wczytaj „${m.name}”`, `Load “${m.name}”`));
+    if (m.thumb) { const img = el('img'); img.src = m.thumb; img.alt = ''; img.loading = 'lazy'; shot.append(img); }
+    else shot.append(el('span', 'sv-noshot', tx('bez podglądu', 'no preview')));
+    shot.append(el('span', `sv-kind ${m.kind}`, KIND(m.kind)));
+    const where = el('span', `sv-where ${m.where ?? 'local'}`);
+    where.innerHTML = svg(m.where === 'local' || !m.where ? 'device' : 'cloud', 15);
+    where.append(m.where === 'both' ? tx('chmura', 'cloud') : m.where === 'cloud' ? tx('tylko chmura', 'cloud only') : tx('ta przeglądarka', 'this browser'));
+    where.title = m.where === 'both' ? tx('W chmurze konta i w tej przeglądarce', 'In your account’s cloud and in this browser') : m.where === 'cloud' ? tx('Tylko w chmurze konta', 'Only in your account’s cloud') : tx('Tylko w tej przeglądarce', 'Only in this browser');
+    shot.append(where);
+    const cap = el('span', 'sv-cap');
+    const title = el('strong', 'sv-name', m.name);
+    cap.append(title, el('span', 'sv-when', when(m.created)));
+    shot.append(cap);
+    shot.addEventListener('click', doLoad);
+    // opis: tryb i boty jednym wierszem, a liczby w równym rzędzie z ikonkami
+    const body = el('div', 'sv-body');
+    const lv = m.level !== undefined ? `${tx('boty', 'bots')} ${LEVELS()[m.level] ?? m.level}` : '';
+    const sub = el('p', 'sv-sub', [MODE(m.preset), lv, m.dev ? tx('deweloperski', 'developer') : ''].filter(Boolean).join(' · '));
+    const stats = el('dl', 'sv-stats');
+    for (const [k, v, label] of [
+      ['day', `${m.day}`, tx(`dzień · ${m.hour}:00`, `day · ${m.hour}:00`)], ['people', `${m.people}`, tx('ludzie', 'people')], ['army', `${m.soldiers}`, tx('wojsko', 'army')],
+      ['houses', `${m.buildings}`, tx('budynki', 'buildings')], ['gold', `${m.gold}`, tx('złoto', 'gold')],
+    ] as const) {
+      const d = el('div', 'sv-stat');
+      const dt = el('dt'); dt.innerHTML = svg(k); dt.append(el('span', '', label));
+      d.append(dt, el('dd', '', v));
+      stats.append(d);
+    }
+    body.append(sub, stats);
+    if (m.v !== SAVE_VERSION) body.append(el('p', 'sv-old', tx('Ze starszej wersji gry — może się nie wczytać.', 'From an older version of the game — may not load.')));
+    // działania: duże „Wczytaj”, reszta w menu „⋯”
+    const acts = el('div', 'sv-acts');
+    const load = btn(tx('Wczytaj', 'Load'), doLoad, 'menu-btn btn-ok sv-btn sv-load');
+    const overwrite = (): void => {
       void confirmDialog({ title: tx(`Nadpisać „${m.name}”?`, `Overwrite “${m.name}”?`), image: m.thumb || undefined, text: tx('Ten zapis zostanie zastąpiony obecną grą. Tego nie da się cofnąć.', 'This save will be replaced with the current game. This cannot be undone.'), ok: tx('Nadpisz', 'Overwrite'), tone: 'danger' }).then((yes) => {
         if (!yes) return;
         say(tx('Zapisuję…', 'Saving…'));
         void go.save(m.name, m.id).then((r) => { if (typeof r === 'string') say(r, true); else { say(tx(`Nadpisano „${r.name}”.`, `Overwrote “${r.name}”.`)); go.changed?.(); void refresh(); } });
       });
-    }));
-    acts.append(btn(tx('Zmień nazwę', 'Rename'), () => {
-      const input = el('input', 'sv-rename'); input.value = m.name; input.maxLength = 40; input.setAttribute('aria-label', tx('Nowa nazwa', 'New name'));
-      const done = (): void => { const v = input.value.trim(); if (v && v !== m.name) void renameSave(m.id, v).then((e) => { if (e) say(e, true); void refresh(); }); else input.replaceWith(title); };
-      input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); done(); } if (e.key === 'Escape') { e.preventDefault(); input.replaceWith(title); } });
-      input.addEventListener('blur', done);
-      title.replaceWith(input); input.focus(); input.select();
-    }));
-    acts.append(btn(tx('Pobierz plik', 'Download'), () => void exportSave(m.id).then((e) => { if (e) say(e, true); })));
-    if (me() && m.where === 'local') acts.append(btn(tx('Wyślij do chmury', 'Upload to cloud'), () => void uploadSave(m.id).then((ok) => { say(ok ? tx('Zapis jest w chmurze.', 'The save is in the cloud.') : tx('Nie udało się wysłać — sprawdź internet.', 'Upload failed — check your connection.'), !ok); void refresh(); })));
-    acts.append(btn(tx('Usuń', 'Delete'), () => {
+    };
+    const rename = (): void => {
+      void confirmDialog({ title: tx('Zmień nazwę zapisu', 'Rename the save'), ok: tx('Zapisz nazwę', 'Save name'), input: { label: tx('Nowa nazwa', 'New name'), value: m.name } }).then((v) => {
+        if (v === null || v === m.name) return;
+        void renameSave(m.id, v).then((e) => { if (e) say(e, true); else say(tx(`Nowa nazwa: „${v}”.`, `New name: “${v}”.`)); void refresh(); });
+      });
+    };
+    const del = (): void => {
       void confirmDialog({ title: tx(`Usunąć „${m.name}”?`, `Delete “${m.name}”?`), image: m.thumb || undefined, text: m.where !== 'local' ? tx('Zapis zniknie z tej przeglądarki i z chmury. Tego nie da się cofnąć.', 'The save will be removed from this browser and the cloud. This cannot be undone.') : tx('Zapis zniknie z tej przeglądarki. Tego nie da się cofnąć.', 'The save will be removed from this browser. This cannot be undone.'), ok: tx('Usuń', 'Delete'), tone: 'danger' }).then((yes) => {
         if (!yes) return;
         void deleteSave(m.id).then(() => { say(tx(`Usunięto „${m.name}”.`, `Deleted “${m.name}”.`)); go.changed?.(); void refresh(); });
       });
-    }, 'menu-btn btn-danger sv-btn'));
-    body.append(title, facts, meta, acts);
+    };
+    const items: [string, () => void, boolean?][] = [];
+    if (mode === 'save' && m.kind === 'manual' && go.canSave()) items.push([tx('Nadpisz obecną grą', 'Overwrite with this game'), overwrite]);
+    items.push([tx('Zmień nazwę', 'Rename'), rename]);
+    items.push([tx('Pobierz plik .p1save', 'Download .p1save file'), () => void exportSave(m.id).then((e) => { if (e) say(e, true); })]);
+    if (me() && m.where === 'local') items.push([tx('Wyślij do chmury', 'Upload to cloud'), () => void uploadSave(m.id).then((ok) => { say(ok ? tx('Zapis jest w chmurze.', 'The save is in the cloud.') : tx('Nie udało się wysłać — sprawdź internet.', 'Upload failed — check your connection.'), !ok); void refresh(); })]);
+    items.push([tx('Usuń zapis', 'Delete save'), del, true]);
+    acts.append(load, moreMenu(items, tx(`Więcej działań: ${m.name}`, `More actions: ${m.name}`)));
+    body.append(acts, el('span', 'sv-meta', `${tx('wersja gry', 'game version')} ${m.build}${m.size ? ' · ' + kb(m.size) : ''}`));
     c.append(shot, body);
     return c;
   };

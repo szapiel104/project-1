@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.79.6 — 3.11.2026
+- `savesPanel`: kafelek od nowa (kadr jako przycisk z nazwą i datą, `dl.sv-stats` z ikonkami SVG, menu „⋯” z `role=menu`, zmiana nazwy w okienku).
+
 ## 0.79.5 — 3.11.2026
 - `confirmDialog`: kolejność [działanie][Anuluj], fokus na „Anuluj” przy `tone: 'danger'`, Enter działa na przycisk z fokusem.
 

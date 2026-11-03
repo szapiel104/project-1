@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.79.6', date: '2026-11-03',
+    pl: ['Nowy wygląd kafelków zapisów: nazwa i data na kadrze z gry, tryb i boty w jednym wierszu, ludzie, wojsko, budynki, złoto i dzień jako liczby z ikonkami, jedno duże „Wczytaj” (albo klik w kadr), a rzadsze działania — nadpisz, zmień nazwę, pobierz plik, wyślij do chmury, usuń — w menu „⋯”.'],
+    en: ['A new look for save tiles: name and date on the game picture, mode and bots on one line, people, army, buildings, gold and day as numbers with icons, one big “Load” (or click the picture), and the rarer actions — overwrite, rename, download, upload to cloud, delete — in a “⋯” menu.'],
+  },
+  {
     v: '0.79.5', date: '2026-11-03',
     pl: ['Okienka z pytaniem: przycisk działania po lewej, „Anuluj” po prawej (jak w Windowsie i Steamie); przy usuwaniu i nadpisywaniu wyróżniony jest „Anuluj”, więc przypadkowy Enter niczego nie skasuje.'],
     en: ['Confirmation dialogs: the action button on the left, “Cancel” on the right (as in Windows and Steam); when deleting or overwriting, “Cancel” is focused, so an accidental Enter deletes nothing.'],
