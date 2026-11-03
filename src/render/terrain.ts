@@ -537,8 +537,9 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       group.add(cat(rock, 'teren — skała'));
     }
   }
-  // gęstsza siatka terenu przy kamerze (groundDetail.ts); ?teren=rzadki — sama plansza (do porównań)
-  const detail = TEST || (typeof location !== 'undefined' && new URLSearchParams(location.search).get('teren') === 'rzadki')
+  // gęstsza siatka terenu przy kamerze (groundDetail.ts) — na razie tylko pod ?teren=gesty: w 0.94.13 łata była jaśniejsza
+  // od planszy i mrugała przy pożarach (Michał 3.11.2026: „jak coś płonie, to mruga kwadrat”)
+  const detail = TEST || (typeof location === 'undefined' || new URLSearchParams(location.search).get('teren') !== 'gesty')
     ? null : new GroundDetail({ w, h, ox, oz, geo, rock: isRockTile }, ground.material);
   const groundDetail = detail;
   if (detail) {

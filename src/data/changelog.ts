@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.15', date: '2026-11-03',
+    pl: ['Gęstsza siatka terenu przy kamerze wyłączona do poprawki: jej kwadrat był jaśniejszy od reszty ziemi i mrugał przy pożarach.'],
+    en: ['The denser terrain mesh near the camera is switched off until fixed: its square was brighter than the rest of the ground and flickered during fires.'],
+  },
+  {
     v: '0.94.14', date: '2026-11-03',
     pl: [
       'Naprawiony błąd z 0.94.12: dolna połowa ekranu wyglądała jak pod wodą, a gra mocno zwalniała. Widok spod wody włącza się już tylko pod wodą.',

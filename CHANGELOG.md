@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.15 — 2026-11-03
+- `groundDetail.ts` tylko pod `?teren=gesty` (łata jaśniejsza od planszy i mrugała przy pożarach — do zbadania).
+
 ## 0.94.14 — 2026-11-03
 - WebGPU post: macierze kamery sceny jako własne uniformy (`camPos`, `camWorld`, `camProjInv`) — wbudowane `cameraPosition`/`cameraWorldMatrix` w przejściu obrazu dotyczą kamery prostokąta na cały ekran. Przez to 0.94.12 liczyło widok spod wody na pół ekranu (i zawsze, stąd spadek FPS), a cienie chmur były w złych miejscach.
 - Zmiana AO/wygładzania/blasku: 6 s dużego budżetu składania (nowy kontekst rysowania = wszystkie materiały od nowa).
