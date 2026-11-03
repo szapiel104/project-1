@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.93.2 — 2026-11-03
+- WebGPU: budżet klatki liczy tylko czas `NodeBuilder.build()` (wcześniej całe `_renderObjectDirect`, więc zwykłe rysowanie zjadało budżet i rozgrzewka dobijała do limitu 12 s); `window.__gpuStat()`.
+
 ## 0.93.1 — 2026-11-03
 - WebGPU: `requiredLimits` z adaptera (ziemia z cieniami i ClusteredLighting miała 17 tekstur > 16 domyślnych). Wiatr w koronach i flagi: `gpu/deformNode.ts` (positionNode dopięty do zwykłego materiału, klucz w `userData.gpuKey`).
 

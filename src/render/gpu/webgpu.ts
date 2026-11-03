@@ -111,11 +111,19 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
       const ro = this._objects.get(object, material, scene, camera, lightsNode, this._currentRenderContext, clipping, passId);
       if (this._nodes.get(ro).nodeBuilderState === undefined && !this._nodes.nodeBuilderCache.has(this._nodes.getForRenderCacheKey(ro))) { gpuDeferredCount++; return; }
     }
-    const t = performance.now();
     direct.call(this, object, material, scene, camera, lightsNode, group, clipping, passId);
-    const dt = performance.now() - t;
-    if (dt > 1) buildSpent += dt;
   };
+  // do budżetu liczy się tylko samo składanie materiału (wcześniej całe rysowanie obiektu — budżet zjadało zwykłe
+  // rysowanie i nowe obiekty dochodziły po kilka na klatkę, przez co przygotowanie grafiki trwało 12 s)
+  const nodes = R._nodes as unknown as { _createNodeBuilder(ro: unknown, m: unknown): { build(): unknown } };
+  const create = nodes._createNodeBuilder.bind(nodes);
+  nodes._createNodeBuilder = (ro: unknown, m: unknown) => {
+    const b = create(ro, m);
+    const build = b.build.bind(b);
+    b.build = () => { const t = performance.now(); try { return build(); } finally { buildSpent += performance.now() - t; } };
+    return b;
+  };
+  (window as unknown as { __gpuStat: () => unknown }).__gpuStat = () => ({ deferred: gpuDeferredCount, pending: gpuPendingCount, spent: buildSpent });
   const shim = r as unknown as Record<string, unknown>;
   shim.capabilities = { getMaxAnisotropy: () => 16, maxSamples: 4, isWebGL2: true };
   shim.localClippingEnabled = true;

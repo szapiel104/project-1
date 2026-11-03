@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.93.2', date: '2026-11-03',
+    pl: ['Krótsze „Przygotowanie grafiki” na nowym silniku (liczy się tylko faktyczna praca, bez czekania).'],
+    en: ['Shorter "Preparing the graphics" on the new engine (only real work counts, no idle waiting).'],
+  },
+  {
     v: '0.93.1', date: '2026-11-03',
     pl: ['Naprawione znikanie ziemi na nowym silniku (gra prosi kartę graficzną o jej pełne możliwości).', 'Wraca wiatr w koronach drzew i falowanie flag oraz chorągwi.'],
     en: ['Fixed the ground disappearing on the new engine (the game now asks the graphics card for its full capabilities).', 'Wind in the treetops and waving flags and banners are back.'],
