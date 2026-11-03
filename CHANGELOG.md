@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.93.1 — 2026-11-03
+- WebGPU: `requiredLimits` z adaptera (ziemia z cieniami i ClusteredLighting miała 17 tekstur > 16 domyślnych). Wiatr w koronach i flagi: `gpu/deformNode.ts` (positionNode dopięty do zwykłego materiału, klucz w `userData.gpuKey`).
+
 ## 0.93.0 — 2026-11-03
 - WebGPU: `renderer.lighting = ClusteredLighting(256)` (Forward+, compute; WebGL2-backend: DynamicLighting) — kod materiału niezależny od liczby PointLight (13 pochodni mnożyło kod i przebudowy). `?swiatla=zwykle` wyłącza.
 

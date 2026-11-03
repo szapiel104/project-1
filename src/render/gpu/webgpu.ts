@@ -43,7 +43,23 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
     import('three/examples/jsm/tsl/display/BloomNode.js'),
   ]);
   gpuMods = { W, TSL, FX: { ao: ao.ao, denoise: dn.denoise, fxaa: fx.fxaa, smaa: sm.smaa, bloom: bl.bloom } };
-  const r = new W.WebGPURenderer({ canvas, antialias: true, forceWebGL: FORCE_GL, powerPreference: 'high-performance' });
+  // limity urządzenia: tyle, ile karta naprawdę ma (domyślne 16 tekstur na shader nie starcza ziemi z cieniami
+  // i oświetleniem klastrowym — 0.93.0 gubiło przez to ziemię)
+  let requiredLimits: Record<string, number> | undefined;
+  try {
+    const gpu = (navigator as unknown as { gpu?: { requestAdapter(o?: unknown): Promise<{ limits: Record<string, number> } | null> } }).gpu;
+    const ad = !FORCE_GL && gpu ? await gpu.requestAdapter({ powerPreference: 'high-performance' }) : null;
+    if (ad) {
+      requiredLimits = {};
+      for (const k of ['maxSampledTexturesPerShaderStage', 'maxSamplersPerShaderStage', 'maxStorageBuffersPerShaderStage', 'maxStorageTexturesPerShaderStage',
+        'maxUniformBuffersPerShaderStage', 'maxUniformBufferBindingSize', 'maxStorageBufferBindingSize', 'maxBufferSize', 'maxColorAttachmentBytesPerSample',
+        'maxVertexAttributes', 'maxVertexBuffers', 'maxInterStageShaderVariables', 'maxComputeWorkgroupStorageSize']) {
+        const v = ad.limits[k];
+        if (typeof v === 'number') requiredLimits[k] = v;
+      }
+    }
+  } catch { requiredLimits = undefined; }
+  const r = new W.WebGPURenderer({ canvas, antialias: true, forceWebGL: FORCE_GL, powerPreference: 'high-performance', requiredLimits } as ConstructorParameters<typeof W.WebGPURenderer>[0]);
   await r.init();
   const backend = (r as unknown as { backend: { isWebGPUBackend?: boolean } }).backend;
   gpuBackend = backend.isWebGPUBackend ? 'WebGPU' : 'WebGL2 (WebGPURenderer)';
@@ -68,7 +84,12 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const blank = (): string => '';
   // (to samo z onBeforeCompile: three.js wlicza jego kod do klucza materiału, a na WebGPU go nie wywołuje)
   const noop = (): void => undefined;
-  Object.defineProperty(THREE.Material.prototype, 'customProgramCacheKey', { configurable: true, get: () => blank, set: () => undefined });
+  // (wyjątek: materiał z węzłami dopiętymi na WebGPU — wiatr, flagi — niesie własny klucz w userData.gpuKey)
+  Object.defineProperty(THREE.Material.prototype, 'customProgramCacheKey', {
+    configurable: true,
+    get(this: THREE.Material) { const k = this.userData?.gpuKey as string | undefined; return k ? () => k : blank; },
+    set: () => undefined,
+  });
   Object.defineProperty(THREE.Material.prototype, 'onBeforeCompile', { configurable: true, get: () => noop, set: () => undefined });
   // Programy karty (potoki) zawsze w tle: three.js domyślnie woła createRenderPipeline synchronicznie, a wtedy proces
   // grafiki Chrome'a — wspólny dla wszystkich kart — stoi na czas kompilacji (Michał 3.11.2026: „zawiesza całą

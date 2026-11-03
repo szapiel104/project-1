@@ -28,6 +28,7 @@ import { bump, normal, pattern } from './textures';
 import { cloudShade, groundGrassTexture, groundMaterial, waterMaterial, waveNormals, WATER_Y } from './ground';
 import { gpuMods } from './gpu/webgpu';
 import { waterNodeMaterial } from './gpu/waterNode';
+import { windNode } from './gpu/deformNode';
 import { WaterReflection } from './waterReflect';
 import { SHADOW_LAYER, shadowProxyMaterial } from './shadowlayer';
 import { createGrassField, type GrassField } from './grass';
@@ -1200,6 +1201,7 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
       if (cards) sh.fragmentShader = sh.fragmentShader.replace('#include <alphatest_fragment>', 'diffuseColor.a = (diffuseColor.a - 0.5) / max(fwidth(diffuseColor.a), 1e-4) + 0.5;\n#include <alphatest_fragment>');
     };
     m.customProgramCacheKey = () => key;
+    windNode(m, amp, base, key, windTime); // WebGPU: ten sam wiatr w węzłach (gpu/deformNode.ts); na WebGL nic nie robi
     // cień korony kołysze się razem z nią (inaczej po koronie wędrują jasne pasy w miejscach, gdzie cień „został”)
     const depth = new THREE.MeshDepthMaterial({ depthPacking: THREE.RGBADepthPacking });
     // karty rzucają cień tylko tam, gdzie są liście i igły (ta sama maska co w obrazie), a nie całymi prostokątami

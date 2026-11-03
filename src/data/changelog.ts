@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.93.1', date: '2026-11-03',
+    pl: ['Naprawione znikanie ziemi na nowym silniku (gra prosi kartę graficzną o jej pełne możliwości).', 'Wraca wiatr w koronach drzew i falowanie flag oraz chorągwi.'],
+    en: ['Fixed the ground disappearing on the new engine (the game now asks the graphics card for its full capabilities).', 'Wind in the treetops and waving flags and banners are back.'],
+  },
+  {
     v: '0.93.0', date: '2026-11-03',
     pl: ['Nowe oświetlenie od pochodni, ognisk i okien: liczone na karcie graficznej, więc świateł może być bardzo dużo bez spadku płynności, a zapalanie pochodni o zmroku nie przycina gry.'],
     en: ['New lighting from torches, campfires and windows: computed on the graphics card, so there can be very many lights without losing smoothness, and lighting torches at dusk no longer makes the game stutter.'],

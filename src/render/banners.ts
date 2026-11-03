@@ -4,6 +4,7 @@
  * Obraz płachty rysujemy raz na płótnie (canvas) na parę barwa + herb; płótno faluje w shaderze,
  * więc każda flaga łopocze miękko, a nie obraca się sztywno jak deska.
  */
+import { flagWaveNode, hangWaveNode } from './gpu/deformNode';
 import * as THREE from 'three';
 import { avatarSvg, CREST_CHARGES, DIVISIONS, encodeCrest } from '../ui/avatars';
 import { normal, texturesReady } from './textures';
@@ -198,6 +199,7 @@ function addWave(m: THREE.MeshStandardMaterial): void {
       }`);
   };
   m.customProgramCacheKey = (): string => 'flagwave1';
+  flagWaveNode(m, FLAG_LEN, flagTime); // WebGPU: ta sama fala w węzłach
 }
 
 /** Wisząca chorągiew tylko lekko oddycha na wietrze: odstaje od ściany (+z) coraz bardziej ku dołowi, nigdy w mur */
@@ -213,6 +215,7 @@ function addHangWave(m: THREE.MeshStandardMaterial): void {
       }`);
   };
   m.customProgramCacheKey = (): string => 'flaghang1';
+  hangWaveNode(m, flagTime); // WebGPU: ta sama fala w węzłach
 }
 
 const mats = new Map<string, THREE.MeshStandardMaterial>();
