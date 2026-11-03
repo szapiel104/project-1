@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.16 — 2026-11-03
+- WebGPU: najwyżej 3 potoki karty w kompilacji naraz (`MAX_PENDING` w `Pipelines.updateForRender`); obiekt bez potoku czeka klatkę. Proces grafiki Chrome'a jest wspólny dla wszystkich kart — przy kilkudziesięciu kompilacjach naraz stawał film w innym oknie.
+
 ## 0.94.15 — 2026-11-03
 - `groundDetail.ts` tylko pod `?teren=gesty` (łata jaśniejsza od planszy i mrugała przy pożarach — do zbadania).
 

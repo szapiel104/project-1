@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.16', date: '2026-11-03',
+    pl: ['Wczytywanie gry na nowym silniku nie zatrzymuje już filmu ani innych kart: karta graficzna kompiluje najwyżej kilka shaderów naraz zamiast kilkudziesięciu.'],
+    en: ['Loading the game on the new engine no longer freezes a video or other tabs: the graphics card compiles at most a few shaders at once instead of dozens.'],
+  },
+  {
     v: '0.94.15', date: '2026-11-03',
     pl: ['Gęstsza siatka terenu przy kamerze wyłączona do poprawki: jej kwadrat był jaśniejszy od reszty ziemi i mrugał przy pożarach.'],
     en: ['The denser terrain mesh near the camera is switched off until fixed: its square was brighter than the rest of the ground and flickered during fires.'],

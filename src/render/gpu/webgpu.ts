@@ -111,7 +111,16 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   // dopóki potok nie jest gotowy (Pipelines.isReady) — obiekt pojawia się klatkę czy dwie później, nic nie staje.
   const pipes = (r as unknown as { _pipelines: { updateForRender(ro: unknown): void; getForRender(ro: unknown, p: unknown): unknown } })._pipelines;
   const sink = { push(p: Promise<unknown>): void { gpuPendingCount++; void p.finally(() => { gpuPendingCount--; }); } };
-  pipes.updateForRender = function (ro: unknown): void { this.getForRender(ro, sink); };
+  // Najwyżej kilka programów naraz: proces grafiki Chrome'a jest wspólny dla wszystkich kart i okien, a kompilacja
+  // shadera (na Windows przez D3D) zajmuje go na dziesiątki ms — przy kilkudziesięciu naraz stawał film w innym oknie
+  // (Michał 3.11.2026). Obiekt, dla którego nie starczyło miejsca, czeka klatkę (jak przy budżecie składania niżej).
+  // Tylko pierwszy potok obiektu: obiekt z gotowym potokiem zawsze dostaje aktualizację.
+  const MAX_PENDING = 3;
+  const pd = pipes as unknown as { get(o: unknown): { pipeline?: unknown } };
+  pipes.updateForRender = function (ro: unknown): void {
+    if (gpuPendingCount >= MAX_PENDING && pd.get(ro).pipeline === undefined) { gpuDeferredCount++; return; }
+    this.getForRender(ro, sink);
+  };
   // Budżet składania materiałów na klatkę: three.js składa każdy nowy wariant (i każdą pulę instancji) na procesorze,
   // ok. 12 ms sztuka. Gdy budżet tej klatki się skończył, obiekt z nowym, jeszcze niezłożonym wariantem czeka do
   // następnej klatki (pojawia się chwilę później) — gra nie staje, ani przy wczytywaniu, ani w trakcie.
