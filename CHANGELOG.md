@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.81.0 — 3.11.2026
+- Pokój v2 (`.rm-*` w online.ts/friends.css), ranking v2 (`.rk-*`), ikony menu (`menuIcons.ts`), dzwoneczek: 7 dni wstecz (`NOTICE_DAYS`), nowe/przeczytane osobno; friendsView: zakładki od razu.
+- Boty: bez zmian (zmiany tylko w interfejsie sieciowym).
+
 ## 0.80.2 — 3.11.2026
 - Lobby: `.lob-form-row` jako siatka (nazwa / tryb + przycisk).
 

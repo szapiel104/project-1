@@ -412,3 +412,37 @@ body .menu .menu-panel .menu-tab[aria-selected='true'] { font-weight: 700; }
 .menu:not(.previewing) .game-tagline-what { font-size: 15px; line-height: 1.45; letter-spacing: 0; color: #dcc9a0; text-wrap: balance; }
 .menu:not(.previewing) .game-tagline-dev { justify-self: start; padding: 3px 10px; font-family: var(--text); font-weight: 700; font-size: 13px; letter-spacing: .02em; text-transform: none;
   color: #2a1d0c; background: #e6c06a; border: 1px solid #ffd76a; text-shadow: none; }
+
+/* Menu po lewej — czytelniej (Michał 3.11.2026): zwykła, wyraźna czcionka bez kapitalików, ikona przy każdej pozycji,
+   większe pola do kliknięcia i opis pod listą bez kursywy */
+body .menu:not(.previewing) .menu-bar .bar-item { font-family: var(--text); font-variant: normal; text-transform: none; letter-spacing: .01em; font-weight: 700;
+  font-size: clamp(17px, 2.2vh, 21px); min-height: clamp(42px, 5.2vh, 50px); gap: 14px; padding: 6px 18px 6px 14px; color: #f3e4c2; text-shadow: 0 1px 2px #000, 0 0 6px rgba(0, 0, 0, .7); border-radius: 3px; }
+body .menu:not(.previewing) .menu-bar .mi-icon { width: 26px; height: 26px; display: grid; place-items: center; border: 0; background: none; transform: none; opacity: .85; color: #e2c27a; }
+body .menu:not(.previewing) .menu-bar .bar-item:hover .mi-icon, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible .mi-icon,
+body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'] .mi-icon { background: none; transform: none; opacity: 1; color: #fff1c2; }
+body .menu:not(.previewing) .menu-bar .bar-item:hover, body .menu:not(.previewing) .menu-bar .bar-item:focus-visible { color: #fff6de; background: linear-gradient(90deg, rgba(226, 194, 122, .2), rgba(226, 194, 122, .06) 70%, transparent); }
+body .menu:not(.previewing) .menu-bar .bar-item[aria-current='page'] { color: #fff6de; background: linear-gradient(90deg, rgba(226, 194, 122, .28), rgba(226, 194, 122, .08) 70%, transparent); box-shadow: inset 3px 0 0 #e2c27a; }
+body .menu:not(.previewing) .menu-bar .bar-main { font-size: clamp(20px, 2.7vh, 26px); min-height: clamp(50px, 6.4vh, 60px); letter-spacing: .02em; color: #fff4d8; }
+body .menu:not(.previewing) .menu-bar .bar-main .mi-icon { color: #fff1c2; opacity: 1; }
+body .menu:not(.previewing) .menu-bar .bar-main .mi-icon svg { width: 26px; height: 26px; }
+body .menu:not(.previewing) .menu-bar .mi-danger, body .menu:not(.previewing) .menu-bar .mi-danger .mi-icon { color: #f0a594; }
+body .menu:not(.previewing) .menu-hint { font-style: normal; font-size: clamp(14px, 1.8vh, 16px); color: #e8d6ae; margin-left: 14px; padding-left: 12px; border-left: 2px solid rgba(226, 194, 122, .5); }
+
+/* Dzwoneczek: nowe i przeczytane wyraźnie inaczej, przeczytane z ostatnich 7 dni niżej (Michał 3.11.2026) */
+.menu .bell-panel { display: flex; flex-direction: column; overflow: hidden; padding: 0; width: min(440px, calc(100vw - 32px)); }
+.menu .bell-head { margin: 0; padding: 12px 14px; border-bottom: 1px solid rgba(154, 122, 42, .45); }
+.menu .bell-head strong { display: inline-flex; align-items: center; gap: 8px; }
+.menu .bell-count { min-width: 22px; height: 22px; padding: 0 6px; box-sizing: border-box; font: 700 12px/22px var(--text); color: #fff; text-align: center; background: #b8261a; border-radius: 11px; }
+.menu .bell-scroll { overflow: auto; padding: 4px 12px 12px; }
+.menu .bell-sec { margin: 10px 2px 6px; font: 700 12px/1.2 var(--text); letter-spacing: .08em; text-transform: uppercase; color: #c9b383; }
+.menu .bell-top { display: flex; align-items: flex-start; gap: 8px; }
+.menu .bell-dot { flex: none; width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: #ffcf4a; box-shadow: 0 0 8px rgba(255, 200, 70, .8); }
+.menu .bell-item { border-radius: 4px; }
+.menu .bell-item.new { border-color: rgba(255, 207, 74, .75); background: linear-gradient(90deg, rgba(120, 82, 24, .55), rgba(70, 48, 18, .4)); box-shadow: inset 3px 0 0 #ffcf4a; }
+.menu .bell-item.new .bell-text { font-weight: 700; color: #fff4d8; }
+.menu .bell-item.new .bell-when { color: #ffd76a; }
+.menu .bell-item:not(.new) { border-color: rgba(154, 122, 42, .22); background: rgba(10, 7, 4, .35); }
+.menu .bell-item:not(.new) .bell-text { color: #cdbb98; }
+.menu .bell-item:not(.new) .bell-when { color: #9d8c6c; }
+.menu .bell-item:not(.new) .net-shield { opacity: .7; filter: saturate(.6); }
+.menu .bell-empty { margin: 10px 2px; }

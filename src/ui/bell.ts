@@ -1,4 +1,4 @@
-import { befriend, dropNotice, markRead, noticesNow, onNotices, unfriend, unread, type Notice } from '../net/social';
+import { NOTICE_DAYS, befriend, dropNotice, markRead, noticesNow, onNotices, unfriend, unread, type Notice } from '../net/social';
 import { ago } from './friendsView';
 import { avatarSvg } from './avatars';
 import { tx } from '../i18n';
@@ -52,11 +52,27 @@ export function createBell(go: BellActions): HTMLElement {
         btn(tx('Odrzuć', 'Decline'), () => void unfriend(id).then(() => dropNotice(n.id)), 'menu-btn btn-danger bell-act'),
       ];
       case 'friend_accept': return [btn(tx('Znajomi', 'Friends'), leave(() => go.friends(0)), 'menu-btn bell-act')];
-      case 'invite': return n.payload?.room ? [btn(tx('Dołącz', 'Join'), leave(() => { void dropNotice(n.id); go.join(n.payload!.room!); }), 'menu-btn btn-ok bell-act')] : [];
+      case 'invite': return n.payload?.room ? [btn(tx('Dołącz', 'Join'), leave(() => go.join(n.payload!.room!)), 'menu-btn btn-ok bell-act')] : [];
       case 'note': return [btn(tx('Przejdź do uwag', 'Open notes'), leave(() => go.adminNotes(n.payload?.note)), 'menu-btn bell-act')];
       case 'note_done': return [btn(tx('Moje uwagi', 'My notes'), leave(() => go.myNotes(n.payload?.note)), 'menu-btn bell-act')];
       case 'friend_match': case 'friend_level': case 'friend_badge': return n.from_id ? [btn(tx('Profil', 'Profile'), leave(() => go.profile(n.from_id!)), 'menu-btn bell-act')] : [];
     }
+  };
+  /** Nieprzeczytane w chwili otwarcia — zostają wyróżnione, dopóki okno jest otwarte (choć już oznaczone w bazie) */
+  let fresh = new Set<number>();
+  const item = (n: Notice, isNew: boolean): HTMLElement => {
+    const li = el('li', isNew ? 'bell-item new' : 'bell-item');
+    const av = el('span', 'net-shield'); av.innerHTML = avatarSvg(n.from_avatar, 30);
+    const body = el('div', 'bell-body');
+    const top = el('div', 'bell-top');
+    if (isNew) { const dot = el('span', 'bell-dot'); dot.title = tx('Nowe', 'New'); top.append(dot); }
+    top.append(el('span', 'bell-text', text(n)));
+    body.append(top, el('span', 'bell-when', (isNew ? tx('nowe · ', 'new · ') : '') + ago(n.created_at)));
+    const row = el('div', 'bell-acts'); row.append(...acts(n), btn('✕', () => void dropNotice(n.id), 'link-btn bell-x'));
+    (row.lastChild as HTMLElement).setAttribute('aria-label', tx('Usuń powiadomienie', 'Remove notification'));
+    body.append(row);
+    li.append(av, body);
+    return li;
   };
   const paint = (): void => {
     const k = unread();
@@ -65,27 +81,31 @@ export function createBell(go: BellActions): HTMLElement {
     open.setAttribute('aria-label', k ? tx(`Powiadomienia: ${k} nowych`, `Notifications: ${k} new`) : tx('Powiadomienia', 'Notifications'));
     if (panel.hidden) return;
     const list = noticesNow();
+    const isNew = (n: Notice): boolean => !n.read || fresh.has(n.id);
+    const news = list.filter(isNew);
+    const old = list.filter((n) => !isNew(n));
     const head = el('div', 'bell-head');
-    head.append(el('strong', '', tx('Powiadomienia', 'Notifications')), btn(tx('Znajomi', 'Friends'), leave(() => go.friends(0)), 'link-btn'));
-    const ul = el('ul', 'bell-list');
-    if (!list.length) ul.append(el('li', 'bell-empty', tx('Nic nowego.', 'Nothing new.')));
-    for (const n of list) {
-      const li = el('li', n.read ? 'bell-item' : 'bell-item new');
-      const av = el('span', 'net-shield'); av.innerHTML = avatarSvg(n.from_avatar, 30);
-      const body = el('div', 'bell-body');
-      body.append(el('span', 'bell-text', text(n)), el('span', 'bell-when', ago(n.created_at)));
-      const row = el('div', 'bell-acts'); row.append(...acts(n), btn('✕', () => void dropNotice(n.id), 'link-btn bell-x'));
-      (row.lastChild as HTMLElement).setAttribute('aria-label', tx('Usuń powiadomienie', 'Remove notification'));
-      body.append(row);
-      li.append(av, body);
-      ul.append(li);
-    }
-    panel.replaceChildren(head, ul);
+    const ht = el('strong', '', tx('Powiadomienia', 'Notifications'));
+    if (news.length) ht.append(el('span', 'bell-count', String(news.length)));
+    head.append(ht, btn(tx('Znajomi', 'Friends'), leave(() => go.friends(0)), 'link-btn'));
+    const box = el('div', 'bell-scroll');
+    if (!list.length) box.append(el('p', 'bell-empty', tx(`Brak powiadomień z ostatnich ${NOTICE_DAYS} dni.`, `No notifications from the last ${NOTICE_DAYS} days.`)));
+    const section = (title: string, rows: Notice[], nw: boolean): void => {
+      if (!rows.length) return;
+      box.append(el('h4', 'bell-sec', title));
+      const ul = el('ul', 'bell-list');
+      for (const n of rows) ul.append(item(n, nw));
+      box.append(ul);
+    };
+    section(tx('Nowe', 'New'), news, true);
+    section(tx(`Wcześniej · ostatnie ${NOTICE_DAYS} dni`, `Earlier · last ${NOTICE_DAYS} days`), old, false);
+    panel.replaceChildren(head, box);
   };
   open.addEventListener('click', (e) => {
     e.stopPropagation();
     panel.hidden = !panel.hidden;
     open.setAttribute('aria-expanded', String(!panel.hidden));
+    fresh = new Set(noticesNow().filter((n) => !n.read).map((n) => n.id));
     paint();
     if (!panel.hidden) setTimeout(() => void markRead(), 1500);
   });

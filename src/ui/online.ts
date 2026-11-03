@@ -679,26 +679,62 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const rows = await ranking();
     await levelsOf(rows.map((x) => x.user_id));
     const m = me();
-    const table = el('table', 'net-ranking');
-    const thead = el('thead');
-    const hr = el('tr');
-    for (const h of ['#', tx('Gracz', 'Player'), tx('Wygrane', 'Wins'), tx('Porażki', 'Losses'), tx('Mecze', 'Matches')]) hr.append(el('th', '', h));
-    thead.append(hr);
-    const tbody = el('tbody');
-    rows.forEach((x, i) => {
-      const tr = el('tr', x.user_id === m?.id ? 'me' : '');
-      const who = el('td', 'who');
-      const nb = button(x.nick, () => profileModal(x.user_id), 'fr-name fr-name-sm');
-      nb.title = tx(`Profil: ${x.nick}`, `Profile: ${x.nick}`);
-      who.append(shield(x.avatar, 22), nb);
-      const tc = titleChip(x.user_id); if (tc) who.append(tc);
-      tr.append(el('td', 'pos', String(i + 1)), who, el('td', '', String(x.wins)), el('td', '', String(x.losses)), el('td', '', String(x.games)));
-      tbody.append(tr);
-    });
-    table.append(thead, tbody);
-    const body = rows.length ? table : msg(tx('Ranking jest pusty — zagraj pierwszy mecz przez sieć.', 'The ranking is empty — play the first online match.'));
-    const wrap = el('div', 'net-rankwrap');
-    wrap.append(body);
+    // Ranking, wersja 2 (Michał 3.11.2026: „ranking o wiele ładniejszy”): podium trzech najlepszych, Twoje miejsce
+    // na wierzchu, pod spodem lista z paskiem skuteczności (procent wygranych)
+    const rate = (x: { wins: number; games: number }): number => (x.games ? Math.round((x.wins / x.games) * 100) : 0);
+    const wrap = el('div', 'rk');
+    if (!rows.length) {
+      const e = el('div', 'lob-empty');
+      e.append(el('strong', '', tx('Ranking jest pusty', 'The ranking is empty')), el('span', '', tx('Zagraj pierwszy mecz przez sieć, a Twój herb stanie na podium.', 'Play the first online match and your arms will stand on the podium.')));
+      wrap.append(e);
+    } else {
+      const podium = el('div', 'rk-podium');
+      for (const i of [1, 0, 2]) {
+        const x = rows[i];
+        if (!x) continue;
+        const c = el('button', `rk-step p${i + 1}${x.user_id === m?.id ? ' me' : ''}`); c.type = 'button';
+        c.setAttribute('aria-label', tx(`Miejsce ${i + 1}: ${x.nick}, wygrane ${x.wins}. Otwórz profil`, `Place ${i + 1}: ${x.nick}, wins ${x.wins}. Open profile`));
+        c.addEventListener('click', () => profileModal(x.user_id));
+        const medal = el('span', 'rk-medal', String(i + 1));
+        const tc = titleChip(x.user_id);
+        c.append(medal, shield(x.avatar, i === 0 ? 76 : 60), el('strong', 'rk-nick', x.nick));
+        if (tc) c.append(tc);
+        c.append(el('span', 'rk-score', tx(`${x.wins} wygranych · ${rate(x)}%`, `${x.wins} wins · ${rate(x)}%`)));
+        const base = el('span', 'rk-base', i === 0 ? tx('Mistrz', 'Champion') : i === 1 ? tx('Drugie', 'Second') : tx('Trzecie', 'Third'));
+        c.append(base);
+        podium.append(c);
+      }
+      wrap.append(podium);
+      const myIdx = m ? rows.findIndex((x) => x.user_id === m.id) : -1;
+      const mine = el('div', 'rk-me');
+      if (myIdx >= 0) {
+        const x = rows[myIdx]!;
+        mine.append(el('span', 'rk-me-pos', `#${myIdx + 1}`), el('span', 'rk-me-t', tx(`Twoje miejsce · ${x.wins} wygranych, ${x.losses} porażek, skuteczność ${rate(x)}%`, `Your place · ${x.wins} wins, ${x.losses} losses, ${rate(x)}% win rate`)));
+      } else mine.append(el('span', 'rk-me-t', m ? tx('Nie ma Cię jeszcze w rankingu — wygraj mecz przez sieć.', 'You are not ranked yet — win an online match.') : tx('Zaloguj się i zagraj przez sieć, żeby trafić do rankingu.', 'Sign in and play online to get ranked.')));
+      wrap.append(mine);
+      const table = el('table', 'rk-table');
+      const thead = el('thead');
+      const hr = el('tr');
+      for (const [h, c] of [['#', 'pos'], [tx('Gracz', 'Player'), ''], [tx('Wygrane', 'Wins'), 'num'], [tx('Porażki', 'Losses'), 'num'], [tx('Mecze', 'Matches'), 'num'], [tx('Skuteczność', 'Win rate'), 'rate']] as const) hr.append(el('th', c, h));
+      thead.append(hr);
+      const tbody = el('tbody');
+      rows.forEach((x, i) => {
+        const tr = el('tr', `${x.user_id === m?.id ? 'me' : ''}${i < 3 ? ' top' : ''}`);
+        const who = el('td', 'who');
+        const nb = button(x.nick, () => profileModal(x.user_id), 'fr-name fr-name-sm');
+        nb.title = tx(`Profil: ${x.nick}`, `Profile: ${x.nick}`);
+        who.append(shield(x.avatar, 28), nb);
+        const tc = titleChip(x.user_id); if (tc) who.append(tc);
+        const rt = el('td', 'rate');
+        const bar = el('span', 'rk-bar'); const fill = el('span', 'rk-fill'); fill.style.width = `${rate(x)}%`; bar.append(fill);
+        rt.append(bar, el('span', 'rk-pct', `${rate(x)}%`));
+        tr.append(el('td', `pos p${i + 1}`, String(i + 1)), who, el('td', 'num win', String(x.wins)), el('td', 'num', String(x.losses)), el('td', 'num', String(x.games)), rt);
+        tbody.append(tr);
+      });
+      table.append(thead, tbody);
+      const tw = el('div', 'rk-tablewrap'); tw.append(table);
+      wrap.append(tw);
+    }
     screen(tx('Ranking', 'Ranking'), true, wrap, back(() => void showOnline(), tx('Wróć do listy gier', 'Back to game list')));
   }
 
@@ -734,17 +770,23 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     slots = fresh(seats(preset));
     if (host) slots[0] = { kind: 'human', ...self };
 
-    const box = el('div', 'net-roombox');
-    const head = el('div', 'net-roomhead');
-    const teams = el('div', 'net-teams');
+    // Pokój, wersja 2 (Michał 3.11.2026: „to mega popraw”, „zaproś znajomego i wygląd”): po lewej nagłówek, ustawienia
+    // jako przełączniki i dwie drużyny; po prawej zapraszanie znajomych (jednym klikiem) i czat pokoju
+    const box = el('div', 'rm');
+    const mainCol = el('div', 'rm-main');
+    const side = el('aside', 'rm-side');
+    const head = el('div', 'rm-head');
+    const settings = el('div', 'rm-set');
+    const teams = el('div', 'rm-teams');
     const note = msg(host ? tx('Czekasz na graczy. Wolne miejsca możesz obsadzić botami albo zostawić — przy starcie zajmą je boty.', 'Waiting for players. Fill empty seats with bots or leave them — bots will take them when the match starts.') : tx('Wybierz wolne miejsce. Mecz rozpocznie gospodarz.', 'Pick an empty seat. The host will start the match.'));
     const foot = el('div', 'menu-foot');
-    const start = button(tx('Rozpocznij mecz', 'Start match'), () => doStart(), 'menu-btn');
+    const start = button(tx('Rozpocznij mecz', 'Start match'), () => doStart(), 'menu-btn btn-ok rm-start');
     start.hidden = !host;
-    const leave = button(tx('Wyjdź z pokoju', 'Leave room'), () => { cleanup(); void showOnline(); }, 'menu-btn menu-back');
+    const leave = button(tx('Wyjdź z pokoju', 'Leave room'), () => { cleanup(); void showOnline(); }, 'menu-btn menu-back btn-danger');
+    foot.classList.add('rm-foot');
     foot.append(leave, start);
     // czat pokoju
-    const chatBox = el('div', 'room-chat');
+    const chatBox = el('div', 'room-chat rm-chat');
     const chatLog = el('div', 'room-chat-log');
     chatLog.setAttribute('role', 'log');
     chatLog.setAttribute('aria-live', 'polite');
@@ -752,8 +794,10 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
     const chatIn = el('input'); chatIn.maxLength = 200; chatIn.placeholder = tx('Napisz do pokoju…', 'Message the room…'); chatIn.setAttribute('aria-label', tx('Wiadomość czatu', 'Chat message')); chatIn.autocomplete = 'off';
     const chatSend = el('button', 'menu-btn', tx('Wyślij', 'Send')); chatSend.type = 'submit';
     chatForm.append(chatIn, chatSend);
-    chatBox.append(chatLog, chatForm);
+    chatLog.append(el('p', 'rm-chat-empty', tx('Tu pojawią się wiadomości graczy w pokoju.', 'Messages from players in the room will appear here.')));
+    chatBox.append(el('h3', 'rm-h', tx('Czat pokoju', 'Room chat')), chatLog, chatForm);
     const addChat = (who: Member, text: string): void => {
+      chatLog.querySelector('.rm-chat-empty')?.remove();
       chatLog.append(chatLine({ who, text }, who.id === m.id));
       while (chatLog.children.length > 50) chatLog.firstElementChild!.remove();
       chatLog.scrollTop = chatLog.scrollHeight;
@@ -767,39 +811,57 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       chatIn.value = '';
     });
     // zaproszenie: link otwiera grę od razu w tym pokoju
-    const invite = button(tx('Kopiuj link zaproszenia', 'Copy invite link'), async () => {
+    const LINK_T = tx('Kopiuj link do pokoju', 'Copy room link');
+    const invite = button(LINK_T, async () => {
       const url = `${location.origin}${location.pathname}?pokoj=${room.id}`;
       try { await navigator.clipboard.writeText(url); invite.textContent = tx('Skopiowano — wyślij znajomemu', 'Copied — send it to a friend'); }
       catch { prompt(tx('Skopiuj link zaproszenia:', 'Copy the invite link:'), url); }
-      setTimeout(() => { invite.textContent = tx('Kopiuj link zaproszenia', 'Copy invite link'); }, 2500);
-    }, 'link-btn net-invite');
-    // zaproszenia dla znajomych, którzy są teraz w grze
-    const friendBox = el('div', 'room-friends');
+      setTimeout(() => { invite.textContent = LINK_T; }, 2500);
+    }, 'menu-btn rm-link');
+    // zaproszenia dla znajomych: w grze na górze; zaproszenie trafia też do dzwoneczka, więc można zaprosić i nieobecnych
+    const invited = new Set<string>();
+    const friendBox = el('div', 'rm-friends');
+    const inviteBox = el('section', 'rm-card rm-invite');
+    const ih = el('div', 'rm-card-h');
+    ih.append(el('h3', 'rm-h', tx('Zaproś znajomych', 'Invite friends')), button(tx('Znajomi →', 'Friends →'), () => void showFriends(0), 'link-btn'));
+    inviteBox.append(ih, friendBox, invite);
     const paintFriends = async (): Promise<void> => {
       const { friends } = await friendLists();
       const on = onlinePlayers();
       const here = new Set(slots.filter((x) => x.kind === 'human').map((x) => (x as { id: string }).id));
-      // znajomi poza pokojem: najpierw ci w grze; zaproszenie trafia też do dzwoneczka, więc można zaprosić i nieobecnych
-      const avail = friends.filter((f) => !here.has(f.id)).sort((a, b) => Number(!!on.find((o) => o.id === b.id)) - Number(!!on.find((o) => o.id === a.id)));
+      const avail = friends.filter((f) => !here.has(f.id)).sort((a, b) => Number(!!on.find((o) => o.id === b.id)) - Number(!!on.find((o) => o.id === a.id)) || (b.last_seen ?? '').localeCompare(a.last_seen ?? ''));
       friendBox.replaceChildren();
-      if (!avail.length) return;
-      friendBox.append(el('span', 'net-label', tx('Zaproś znajomego:', 'Invite a friend:')));
-      for (const f of avail) {
-        const o = on.find((x) => x.id === f.id);
-        const b = button(o ? f.nick : `${f.nick} (offline)`, async () => {
-          b.disabled = true;
-          const err = await inviteToGame(f.id, room.id, room.name);
-          b.textContent = err ? `${f.nick} ✗` : `${f.nick} ✓`;
-          if (err) b.title = err;
-        }, 'net-filter');
-        b.prepend(shield(o?.avatar ?? f.avatar, 18));
-        friendBox.append(b);
+      if (!avail.length) {
+        friendBox.append(el('p', 'rm-empty', friends.length ? tx('Wszyscy Twoi znajomi są już w tym pokoju.', 'All your friends are already in this room.') : tx('Nie masz jeszcze znajomych — dodaj ich w „Znajomych” albo wyślij link do pokoju.', 'No friends yet — add some in “Friends” or send the room link.')));
+        return;
       }
+      for (const f of avail.slice(0, 8)) {
+        const o = on.find((x) => x.id === f.id);
+        const r = el('div', `rm-person${o ? '' : ' off'}`);
+        const av = el('button', 'lob-av'); av.type = 'button'; av.setAttribute('aria-label', tx(`Profil: ${f.nick}`, `Profile: ${f.nick}`));
+        av.append(shield(o?.avatar ?? f.avatar, 34), el('span', `mx-dot ${o ? (o.where === 'menu' ? 'on' : 'busy') : 'off'}`));
+        av.addEventListener('click', () => profileModal(f.id));
+        const t = el('div', 'lob-person-t');
+        t.append(el('strong', '', f.nick), el('span', '', whereText(f, o)));
+        const done = invited.has(f.id);
+        const b = button(done ? tx('Zaproszono ✓', 'Invited ✓') : tx('Zaproś', 'Invite'), async () => {
+          b.disabled = true; b.textContent = tx('Zaproszono ✓', 'Invited ✓');
+          const err = await inviteToGame(f.id, room.id, room.name);
+          if (err) { b.disabled = false; b.textContent = tx('Zaproś', 'Invite'); note.textContent = err; note.classList.add('bad'); return; }
+          invited.add(f.id);
+        }, `menu-btn lob-mini ${done ? '' : 'btn-ok'}`);
+        b.disabled = done;
+        r.append(av, t, b);
+        friendBox.append(r);
+      }
+      if (avail.length > 8) friendBox.append(el('p', 'rm-empty', tx(`…i jeszcze ${avail.length - 8} w „Znajomych”`, `…and ${avail.length - 8} more in “Friends”`)));
     };
     void paintFriends();
     const offPresence = onPresence(() => void paintFriends());
     setStatus({ where: 'room', roomId: room.id, roomName: room.name });
-    box.append(head, teams, note, invite, friendBox, chatBox);
+    mainCol.append(head, settings, teams, note);
+    side.append(inviteBox, chatBox);
+    box.append(mainCol, side);
 
     const publish = (): void => {
       if (!host) return;
@@ -808,62 +870,96 @@ export function createOnline(ui: Ui): { showOnline(): void; showAccount(): void;
       const guests = humans.filter((s) => s.id !== m.id).map((s) => s.nick);
       void updateRoom(room.id, { preset, seed, guest_nick: `${humans.length}/${slots.length}${guests.length ? ` · ${guests.join(', ')}` : ''}` });
     };
+    /** Przełącznik z kilku opcji (gospodarz) — jak „Tryb” w lobby */
+    let humansKey = '';
+    const seg = (label: string, opts: [string, string][], value: string, change: (v: string) => void): HTMLElement => {
+      const g = el('div', 'rm-field');
+      const gid = `rm-${Math.random().toString(36).slice(2, 7)}`;
+      const l = el('span', 'rm-label', label); l.id = gid;
+      const row = el('div', 'rm-seg'); row.setAttribute('role', 'radiogroup'); row.setAttribute('aria-labelledby', gid);
+      for (const [v, text] of opts) {
+        const b = button(text, () => change(v), 'lob-chip rm-chip');
+        b.setAttribute('role', 'radio'); b.setAttribute('aria-checked', String(v === value));
+        row.append(b);
+      }
+      g.append(l, row);
+      return g;
+    };
     const paint = (): void => {
       head.replaceChildren();
-      const title = el('div', 'net-roomtitle');
-      title.append(el('strong', '', room.name), el('span', '', `${tx('mapa', 'map')} ${seed}`));
-      head.append(title);
+      const humansIn = slots.filter((s) => s.kind === 'human').length;
+      const free = slots.filter((s, i) => s.kind === 'open' && humanSeat(i)).length;
+      const badge = el('span', 'rm-mode', modeName(preset));
+      const title = el('div', 'rm-title');
+      const sub = el('div', 'rm-sub');
+      sub.append(el('span', '', `${tx('Mapa', 'Map')}: ${seed}`));
       // gospodarz losuje mapę; wszyscy w pokoju widzą ją za panelem
-      if (host) head.append(button(tx('Losuj inną mapę', 'Roll another map'), () => {
+      if (host) sub.append(button(tx('↻ Losuj inną mapę', '↻ Roll another map'), () => {
         seed = `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 900 + 100)}`;
         paint(); publish(); showMap();
-      }, 'link-btn net-reroll'));
+      }, 'link-btn rm-reroll'));
+      title.append(el('strong', '', room.name), sub);
+      const stat = el('div', `rm-status${free ? '' : ' full'}`);
+      stat.append(el('strong', '', `${humansIn}/${slots.length}`), el('span', '', free ? tx(`wolne: ${free}`, `free: ${free}`) : tx('komplet', 'full')));
+      head.append(badge, title, stat);
+      settings.replaceChildren();
       if (host) {
-        const ms = el('select'); ms.setAttribute('aria-label', tx('Tryb', 'Mode'));
-        for (const [id, label] of MODES) { const o = el('option', '', label); o.value = id; ms.append(o); }
-        ms.value = preset;
-        ms.addEventListener('change', () => { preset = ms.value as MapPresetId; slots = fresh(seats(preset), slots); paint(); publish(); showMap(); });
-        const ls = el('select'); ls.setAttribute('aria-label', tx('Poziom botów', 'Bot difficulty'));
-        LEVELS.forEach((n, i) => { const o = el('option', '', `${tx('Boty', 'Bots')}: ${n}`); o.value = String(i); ls.append(o); });
-        ls.value = String(level);
-        ls.addEventListener('change', () => { level = Number(ls.value); publish(); });
-        const cs = el('select'); cs.setAttribute('aria-label', tx('Rodzaj gry', 'Game type'));
-        for (const [v, label] of [['0', tx('Rywalizacja', 'Versus')], ['1', tx('Razem przeciw botom', 'Co-op against bots')]] as const) { const o = el('option', '', label); o.value = v; cs.append(o); }
-        cs.value = coop ? '1' : '0';
-        cs.addEventListener('change', () => { coop = cs.value === '1'; slots = fresh(seats(preset), slots); paint(); publish(); });
-        head.append(ms, cs, ls);
-      } else head.append(el('span', 'net-chip', modeName(preset)), el('span', 'net-chip', coop ? tx('Razem przeciw botom', 'Co-op against bots') : tx('Rywalizacja', 'Versus')), el('span', 'net-chip', `${tx('Boty', 'Bots')}: ${LEVELS[level]}`));
+        settings.append(
+          seg(tx('Tryb', 'Mode'), MODES.map(([id, l]) => [id, l]), preset, (v) => { preset = v as MapPresetId; slots = fresh(seats(preset), slots); paint(); publish(); showMap(); }),
+          seg(tx('Rodzaj gry', 'Game type'), [['0', tx('Rywalizacja', 'Versus')], ['1', tx('Razem przeciw botom', 'Co-op vs bots')]], coop ? '1' : '0', (v) => { coop = v === '1'; slots = fresh(seats(preset), slots); paint(); publish(); }),
+          seg(tx('Boty', 'Bots'), LEVELS.map((n, i) => [String(i), n]), String(level), (v) => { level = Number(v); paint(); publish(); }),
+        );
+      } else {
+        for (const [k, v] of [[tx('Tryb', 'Mode'), modeName(preset)], [tx('Rodzaj gry', 'Game type'), coop ? tx('Razem przeciw botom', 'Co-op vs bots') : tx('Rywalizacja', 'Versus')], [tx('Boty', 'Bots'), LEVELS[level] ?? '']] as const) {
+          const g = el('div', 'rm-field'); g.append(el('span', 'rm-label', k), el('span', 'rm-val', v)); settings.append(g);
+        }
+      }
       teams.replaceChildren();
       for (const team of [0, 1]) {
-        const col = el('div', 'net-team');
-        const h = el('p', 'net-teamname', coop ? (team === 0 ? tx('Drużyna graczy', 'Players') : tx('Wzmocnione boty', 'Reinforced bots')) : `${tx('Drużyna', 'Team')} ${team + 1}`);
-        h.style.setProperty('--team', hex(TEAM_COLORS[team] ?? 0x888888));
-        col.append(h);
+        const col = el('section', 'rm-team');
+        col.style.setProperty('--team', hex(TEAM_COLORS[team] ?? 0x888888));
+        const mine = slots.filter((_s, i) => i % 2 === team);
+        const th = el('div', 'rm-team-h');
+        th.append(el('span', 'rm-team-flag'), el('h3', '', coop ? (team === 0 ? tx('Drużyna graczy', 'Players') : tx('Wzmocnione boty', 'Reinforced bots')) : `${tx('Drużyna', 'Team')} ${team + 1}`),
+          el('span', 'rm-team-n', `${mine.filter((x) => x.kind !== 'open').length}/${mine.length}`));
+        col.append(th);
         slots.forEach((s, i) => {
           if (i % 2 !== team) return;
-          const row = el('div', `net-slot ${s.kind}`);
+          const row = el('div', `rm-slot ${s.kind}${s.kind === 'human' && s.id === m.id ? ' me' : ''}`);
+          const who = el('div', 'rm-who');
           if (s.kind === 'human') {
-            const nb = button(s.nick + (s.id === room.host ? tx(' (gospodarz)', ' (host)') : '') + (s.id === m.id ? tx(' — Ty', ' — you') : ''), () => profileModal(s.id), 'fr-name fr-name-sm');
+            const nb = button(s.nick, () => profileModal(s.id), 'fr-name rm-nick');
             nb.title = tx(`Profil: ${s.nick}`, `Profile: ${s.nick}`);
-            row.append(shield(s.avatar, 30), nb);
+            const tags = el('div', 'rm-tags');
+            if (s.id === room.host) tags.append(el('span', 'rm-tag host', tx('gospodarz', 'host')));
+            if (s.id === m.id) tags.append(el('span', 'rm-tag you', tx('Ty', 'you')));
             const tc = titleChip(s.id);
-            if (tc) row.append(tc);
+            if (tc) tags.append(tc);
             else void levelsOf([s.id]).then((got) => { if (got.has(s.id)) paint(); }); // poziom dociągnięty z bazy: odśwież raz
+            who.append(nb, tags);
+            row.append(shield(s.avatar, 38), who);
+          } else if (s.kind === 'bot') {
+            who.append(el('strong', 'rm-botname', tx('Bot', 'Bot')), el('span', 'rm-botlv', coop && !humanSeat(i) ? `${LEVELS[level]} · ${tx('wzmocniony', 'reinforced')}` : LEVELS[level] ?? ''));
+            row.append(el('span', 'rm-ico bot', '⚙'), who);
+          } else {
+            who.append(el('strong', '', tx('Wolne miejsce', 'Empty seat')), el('span', 'rm-botlv', host ? tx('przy starcie zajmie je bot', 'a bot takes it at the start') : tx('możesz tu usiąść', 'you can sit here')));
+            row.append(el('span', 'rm-ico open', '+'), who);
           }
-          else if (s.kind === 'bot') row.append(el('span', 'net-bot', '⚙'), el('strong', '', coop && !humanSeat(i) ? `Bot (${LEVELS[level]}, ${tx('wzmocniony', 'reinforced')})` : `Bot (${LEVELS[level]})`));
-          else row.append(el('span', 'net-open', '+'), el('span', '', tx('Wolne miejsce', 'Empty seat')));
-          const act = el('div', 'net-slot-act');
-          if (host && s.kind === 'open') act.append(button(tx('Dodaj bota', 'Add bot'), () => { slots[i] = { kind: 'bot' }; paint(); publish(); }, 'link-btn'));
-          if (host && s.kind === 'bot' && humanSeat(i)) act.append(button(tx('Usuń bota', 'Remove bot'), () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
-          if (host && s.kind === 'human' && s.id !== m.id) act.append(button(tx('Wyrzuć', 'Kick'), () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'link-btn'));
+          const act = el('div', 'rm-act');
           if (s.kind === 'open' && humanSeat(i)) {
-            act.append(button(tx('Usiądź tutaj', 'Sit here'), () => { if (host) { seat(m.id, i); } else link.send({ k: 'seat', id: m.id, slot: i }); }, 'link-btn'));
+            act.append(button(tx('Usiądź', 'Sit here'), () => { if (host) { seat(m.id, i); } else link.send({ k: 'seat', id: m.id, slot: i }); }, 'menu-btn lob-mini'));
           }
+          if (host && s.kind === 'open') act.append(button(tx('+ Bot', '+ Bot'), () => { slots[i] = { kind: 'bot' }; paint(); publish(); }, 'menu-btn lob-mini'));
+          if (host && s.kind === 'bot' && humanSeat(i)) act.append(button(tx('Usuń bota', 'Remove bot'), () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'menu-btn lob-mini btn-danger'));
+          if (host && s.kind === 'human' && s.id !== m.id) act.append(button(tx('Wyrzuć', 'Kick'), () => { slots[i] = { kind: 'open' }; paint(); publish(); }, 'menu-btn lob-mini btn-danger'));
           row.append(act);
           col.append(row);
         });
         teams.append(col);
       }
+      // lista do zapraszania odświeża się, gdy ktoś wejdzie albo wyjdzie z pokoju
+      const hk = slots.map((x) => (x.kind === 'human' ? x.id : '')).join(',');
+      if (hk !== humansKey) { humansKey = hk; void paintFriends(); }
       start.disabled = !slots.some((s) => s.kind === 'human');
     };
     /** Gospodarz przesadza gracza na wolne miejsce */

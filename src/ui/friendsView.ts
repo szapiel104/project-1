@@ -404,6 +404,9 @@ export function friendsView(d: FriendsDeps, startTab = 0, startProfile?: string,
   // nowa wiadomość: otwarta rozmowa dopisuje ją od razu, lista rozmów się odświeża, liczniki na zakładce i kafelkach też
   const offM = onMessage((msg) => { if (chatWith === msg.from_id) appendMsg?.(msg); else if (tab === 1 && !profileOf && !chatWith) paint(true); });
   const offU = onMessages(() => { paintTabs(); if (tab === 0 && !profileOf && !chatWith && !(pane.contains(document.activeElement) && (document.activeElement as HTMLElement).tagName === 'INPUT')) paint(true); });
+  // od razu zakładki z napisami i „wczytuję” zamiast pustych ramek, zanim przyjdzie lista z bazy (Michał 3.11.2026)
+  paintTabs();
+  pane.replaceChildren(el('p', 'fr-loading', tx('Wczytuję znajomych…', 'Loading friends…')));
   void load(true);
   return { node: wrap, redraw: () => void load(false), stop: () => { offN(); offM(); offU(); } };
 }

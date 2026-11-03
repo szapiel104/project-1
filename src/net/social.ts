@@ -76,6 +76,8 @@ export async function inviteToGame(toId: string, roomId: string, roomName: strin
 }
 
 // ---------------- powiadomienia ----------------
+/** Ile dni wstecz dzwoneczek pokazuje powiadomienia (także przeczytane) */
+export const NOTICE_DAYS = 7;
 let notices: Notice[] = [];
 const noticeSubs = new Set<() => void>();
 /** Nowe powiadomienie, które przyszło przed chwilą (do okienka w rogu ekranu) */
@@ -87,7 +89,9 @@ export const onNotices = (f: () => void): (() => void) => { noticeSubs.add(f); r
 const ping = (): void => { for (const f of noticeSubs) f(); };
 export async function loadNotices(): Promise<void> {
   if (!me()) { notices = []; ping(); return; }
-  const { data, error } = await supa.from('notifications').select('*').order('created_at', { ascending: false }).limit(40);
+  // przeczytane też zostają na liście — z ostatnich 7 dni (Michał 3.11.2026)
+  const since = new Date(Date.now() - NOTICE_DAYS * 864e5).toISOString();
+  const { data, error } = await supa.from('notifications').select('*').gte('created_at', since).order('created_at', { ascending: false }).limit(120);
   notices = error ? [] : ((data as Notice[] | null) ?? []);
   ping();
 }

@@ -10,6 +10,25 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.81.0', date: '2026-11-03',
+    pl: [
+      'Nowy pokój gry: duży nagłówek z trybem, mapą i licznikiem miejsc, ustawienia jako przełączniki (tryb, rodzaj gry, boty), drużyny w kartach z kolorem.',
+      'W pokoju lista znajomych z „Zaproś” jednym kliknięciem (kto w grze — na górze) i czat pokoju obok.',
+      'Nowy ranking: podium trzech najlepszych, Twoje miejsce na wierzchu i pasek skuteczności przy każdym graczu.',
+      'Menu po lewej czytelniejsze: wyraźna czcionka, ikona przy każdej pozycji, większe pola.',
+      'Dzwoneczek pokazuje też przeczytane powiadomienia z ostatnich 7 dni; nowe są wyróżnione złotem i kropką.',
+      'Znajomi: od razu zakładki z napisami i „Wczytuję…” zamiast pustych ramek.',
+    ],
+    en: [
+      'New game room: a large header with the mode, map and seat count, settings as toggles (mode, game type, bots), teams in coloured cards.',
+      'The room lists your friends with a one-click “Invite” (those online on top) and the room chat beside it.',
+      'New ranking: a podium for the top three, your place up front and a win-rate bar for every player.',
+      'Clearer menu on the left: a plain readable font, an icon for every entry, larger targets.',
+      'The bell also shows read notifications from the last 7 days; new ones stand out in gold with a dot.',
+      'Friends: tabs with labels and “Loading…” right away instead of empty frames.',
+    ],
+  },
+  {
     v: '0.80.2', date: '2026-11-03',
     pl: ['Lobby: „Własna gra” w dwóch równych wierszach — nazwa na całą szerokość, pod nią tryb i „Załóż grę”; przycisk już się nie łamie.'],
     en: ['Lobby: “Custom game” in two even rows — the name across the full width, below it the mode and “Create game”; the button no longer wraps.'],

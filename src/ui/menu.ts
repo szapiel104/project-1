@@ -1,3 +1,4 @@
+import { menuIcon, type MenuIcon } from './menuIcons';
 import { gameTagline, loadingScene } from './loadscreen';
 import { isTester, me as netMe, onAccount, onlinePlayers, onPresence, progress, restore } from '../net/supa';
 import { friendLists, noticesNow, onNotices } from '../net/social';
@@ -343,12 +344,12 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   let barItems: HTMLButtonElement[] = [];
   const hint = el('p', 'menu-hint');
   hint.setAttribute('aria-hidden', 'true'); // opis i tak jest przy przycisku (aria-description) — czytnik nie czyta dwa razy
-  const barBtn = (text: string, desc: string, onClick: () => void, cls = ''): HTMLButtonElement => {
+  const barBtn = (text: string, desc: string, onClick: () => void, cls = '', icon: MenuIcon = 'play'): HTMLButtonElement => {
     const b = button('', onClick, `bar-item ${cls}`.trim());
     b.dataset.label = text;
     b.dataset.desc = desc;
     b.setAttribute('aria-description', desc);
-    const mark = el('span', 'mi-mark'); mark.setAttribute('aria-hidden', 'true');
+    const mark = el('span', 'mi-mark mi-icon'); mark.setAttribute('aria-hidden', 'true'); mark.innerHTML = menuIcon(icon);
     b.append(mark, el('span', 'mi-label', text));
     const show = (): void => { hint.textContent = desc; };
     b.addEventListener('pointerenter', show);
@@ -357,7 +358,7 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   };
   /** Uwagi testera (tylko rola tester albo administrator): co poprawić i dodać; stan „zrobione” wraca od administratora */
   function notesItem(): HTMLButtonElement {
-    return barBtn(tx('Uwagi testera', 'Tester notes'), tx('Napisz, co poprawić albo dodać — administrator zobaczy i oznaczy zrobione', 'Write what to fix or add — the administrator sees it and marks it done'), () => showNotes());
+    return barBtn(tx('Uwagi testera', 'Tester notes'), tx('Napisz, co poprawić albo dodać — administrator zobaczy i oznaczy zrobione', 'Write what to fix or add — the administrator sees it and marks it done'), () => showNotes(), '', 'notes');
   }
   function showSaves(mode: 'save' | 'load'): void {
     screen(mode === 'save' ? tx('Zapisz grę', 'Save game') : tx('Wczytaj grę', 'Load game'), true, savesPanel(mode, { ...events.saves, login: () => online.showLogin(false) }));
@@ -368,28 +369,28 @@ export function createMenu(root: HTMLElement, events: MenuEvents): Menu {
   function paintBar(): void {
     const list: (HTMLButtonElement | 'gap')[] = [];
     if (inGame) {
-      list.push(barBtn(t('menu.resume'), tx('Gra czeka tam, gdzie ją zostawiłeś', 'The game waits where you left it'), () => events.onContinue(), 'bar-main'));
-      list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew));
+      list.push(barBtn(t('menu.resume'), tx('Gra czeka tam, gdzie ją zostawiłeś', 'The game waits where you left it'), () => events.onContinue(), 'bar-main', 'resume'));
+      list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew, '', 'new'));
       if (!events.isOnline()) {
-        list.push(barBtn(tx('Zapisz grę', 'Save game'), tx('Zapis z miniaturą: do 20 zapisów, w przeglądarce i w chmurze konta (Ctrl+S — szybki zapis)', 'A save with a thumbnail: up to 20, in the browser and your account’s cloud (Ctrl+S — quick save)'), () => showSaves('save')));
-        list.push(barBtn(tx('Wczytaj grę', 'Load game'), tx('Twoje zapisy i autozapisy z miniaturami', 'Your saves and autosaves with thumbnails'), () => showSaves('load')));
+        list.push(barBtn(tx('Zapisz grę', 'Save game'), tx('Zapis z miniaturą: do 20 zapisów, w przeglądarce i w chmurze konta (Ctrl+S — szybki zapis)', 'A save with a thumbnail: up to 20, in the browser and your account’s cloud (Ctrl+S — quick save)'), () => showSaves('save'), '', 'save'));
+        list.push(barBtn(tx('Wczytaj grę', 'Load game'), tx('Twoje zapisy i autozapisy z miniaturami', 'Your saves and autosaves with thumbnails'), () => showSaves('load'), '', 'load'));
       }
-      list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
-      list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
-      list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges));
+      list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings, '', 'settings'));
+      list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp, '', 'help'));
+      list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges, '', 'news'));
       if (isTester()) list.push(notesItem());
       list.push('gap');
-      list.push(barBtn(tx('Wyjdź do menu', 'Quit to menu'), tx('Zamknij mecz i wróć do menu głównego', 'Close the match and return to the main menu'), () => showQuit()));
-      list.push(barBtn(tx('Poddaj się', 'Surrender'), tx('Koniec meczu porażką — tego nie da się cofnąć', 'End the match in defeat — there is no going back'), showSurrender, 'mi-danger'));
+      list.push(barBtn(tx('Wyjdź do menu', 'Quit to menu'), tx('Zamknij mecz i wróć do menu głównego', 'Close the match and return to the main menu'), () => showQuit(), '', 'quit'));
+      list.push(barBtn(tx('Poddaj się', 'Surrender'), tx('Koniec meczu porażką — tego nie da się cofnąć', 'End the match in defeat — there is no going back'), showSurrender, 'mi-danger', 'flag'));
     } else {
-      if (canContinue) list.push(barBtn(t('menu.continue'), tx('Wróć do swojej osady z ostatniej gry', 'Return to your settlement from the last game'), () => events.onContinue()));
-      list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew, 'bar-main'));
-      list.push(barBtn(tx('Wczytaj grę', 'Load game'), tx('Twoje zapisy i autozapisy z miniaturami', 'Your saves and autosaves with thumbnails'), () => showSaves('load')));
-      list.push(barBtn(tx('Gra przez sieć', 'Online play'), tx('Mecze z innymi graczami: pokoje, drużyny, ranking', 'Matches against other players: rooms, teams, ranking'), () => online.showOnline()));
-      if (netMe()) list.push(barBtn(tx('Znajomi', 'Friends'), tx('Kto jest w grze, zaproszenia, szukanie nowych graczy', 'Who is online, requests, finding new players'), () => online.showFriends(0)));
-      list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings));
-      list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp));
-      list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges));
+      if (canContinue) list.push(barBtn(t('menu.continue'), tx('Wróć do swojej osady z ostatniej gry', 'Return to your settlement from the last game'), () => events.onContinue(), '', 'resume'));
+      list.push(barBtn(t('menu.newGame'), tx('Wybierz mapę, tryb i poziom trudności', 'Pick a map, a mode and the difficulty'), showNew, 'bar-main', 'new'));
+      list.push(barBtn(tx('Wczytaj grę', 'Load game'), tx('Twoje zapisy i autozapisy z miniaturami', 'Your saves and autosaves with thumbnails'), () => showSaves('load'), '', 'load'));
+      list.push(barBtn(tx('Gra przez sieć', 'Online play'), tx('Mecze z innymi graczami: pokoje, drużyny, ranking', 'Matches against other players: rooms, teams, ranking'), () => online.showOnline(), '', 'online'));
+      if (netMe()) list.push(barBtn(tx('Znajomi', 'Friends'), tx('Kto jest w grze, zaproszenia, szukanie nowych graczy', 'Who is online, requests, finding new players'), () => online.showFriends(0), '', 'friends'));
+      list.push(barBtn(t('menu.settings'), tx('Grafika, dźwięk, interfejs i sterowanie', 'Graphics, sound, interface and controls'), showSettings, '', 'settings'));
+      list.push(barBtn(t('menu.howTo'), tx('Poradnik: osada, gospodarka, wojsko', 'A guide: settlement, economy, warfare'), showHelp, '', 'help'));
+      list.push(barBtn(tx('Co nowego', 'What’s new'), tx('Dziennik zmian: co weszło w kolejnych wersjach gry', 'Changelog: what each version of the game brought'), showChanges, '', 'news'));
       if (isTester()) list.push(notesItem());
     }
     const ul = el('ul', 'menu-list');
