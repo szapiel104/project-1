@@ -84,11 +84,20 @@ export class GpuPost {
     }
     // cienie chmur sunące po ziemi: jedno przejście na cały obraz — położenie w świecie z bufora głębi, maska z szumu
     // (jak cloudShade w ground.ts dla WebGL), niebo bez zmian
+    // UWAGA: w przejściu obrazu węzły cameraPosition / cameraWorldMatrix / cameraProjectionMatrixInverse dotyczą kamery
+    // prostokąta na cały ekran, nie kamery sceny — macierze kamery sceny podajemy sami (0.94.12 liczyło z tego
+    // „wodę” na pół ekranu, a cienie chmur leżały w złych miejscach; Michał 3.11.2026: „problem z cieniami”, 10 FPS)
+    const cam = this.camera;
+    const Wm = gpuMods!.W as any;
+    const camPos = T.uniform(new Wm.Vector3()).onFrameUpdate(() => new Wm.Vector3().setFromMatrixPosition(cam.matrixWorld));
+    const camWorld = T.uniform(new Wm.Matrix4()).onFrameUpdate(() => cam.matrixWorld);
+    const camProjInv = T.uniform(new Wm.Matrix4()).onFrameUpdate(() => cam.projectionMatrixInverse);
+    const sceneCam = { pos: camPos, world: camWorld, projInv: camProjInv };
     {
       const dep = sp.getTextureNode('depth');
       const dv = dep.sample(screenUV).r;
-      const vp = T.getViewPosition(screenUV, dv, T.cameraProjectionMatrixInverse);
-      const wpos = T.cameraWorldMatrix.mul(T.vec4(vp, 1)).xyz;
+      const vp = T.getViewPosition(screenUV, dv, camProjInv);
+      const wpos = camWorld.mul(T.vec4(vp, 1)).xyz;
       const cT = T.uniform(0).onFrameUpdate(() => CLOUD_U.cloudT.value), cK = T.uniform(0).onFrameUpdate(() => CLOUD_U.cloudK.value);
       const cuv = wpos.xz.div(70).add(vec2(0.006, 0.0035).mul(cT));
       const nz = T.texture(sharedNoise(), cuv).r.mul(0.65).add(T.texture(sharedNoise(), cuv.mul(2.3).add(0.37)).g.mul(0.35));
@@ -96,7 +105,7 @@ export class GpuPost {
       c = c.mul(float(1).sub(ccm.mul(0.55)));
     }
     // pod wodą: nurkowanie (gpu/underwaterNode.ts) — linia wody, załamanie, toń, kaustyki, promienie słońca
-    c = underwater(T, { col, dep: sp.getTextureNode('depth'), c, night: this.u.night, sun: this.u.sun });
+    c = underwater(T, { col, dep: sp.getTextureNode('depth'), c, night: this.u.night, sun: this.u.sun, cam: sceneCam });
     c = clamp(c, 0, 40);
     if (o.bloom) c = c.add(fx.bloom(vec4(c, 1), 0.18, 0.45, 1.6).rgb);
     // tone mapping i sRGB jawnie z renderera: bez tego węzeł brał je z kontekstu przejścia, a FXAA/SMAA liczą obraz

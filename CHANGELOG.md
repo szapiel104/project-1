@@ -1,5 +1,9 @@
 # Dziennik zmian
 
+## 0.94.14 — 2026-11-03
+- WebGPU post: macierze kamery sceny jako własne uniformy (`camPos`, `camWorld`, `camProjInv`) — wbudowane `cameraPosition`/`cameraWorldMatrix` w przejściu obrazu dotyczą kamery prostokąta na cały ekran. Przez to 0.94.12 liczyło widok spod wody na pół ekranu (i zawsze, stąd spadek FPS), a cienie chmur były w złych miejscach.
+- Zmiana AO/wygładzania/blasku: 6 s dużego budżetu składania (nowy kontekst rysowania = wszystkie materiały od nowa).
+
 ## 0.94.13 — 2026-11-03
 - Teren: `render/groundDetail.ts` — łata 64×64 pól w siatce 3×3 na pole jedzie za kamerą (co 8 pól, odświeżenie po zmianach planszy najwyżej co 2 s); Catmull–Rom przez narożniki planszy, przycięty do wysokości narożników pola, przy brzegu łaty i przy skale wygasa do zwykłych trójkątów (bez szpar). Plansza dostała indeks, który pomija pola pod łatą; klikanie liczone po całej planszy (`raycastWhole`). `heightAt` przy kamerze z łaty. Wyłączenie: `?teren=rzadki`. Test: `tests/groundDetail.test.ts`.
 

@@ -209,6 +209,8 @@ export class GameRenderer {
   private aaMode: string = 'off';
   private gpuStart = 0;
   private lastPresentAt = 0;
+  private gpuFxKey = '';
+  private gpuBoostUntil = 0;
   /** Obraz klatki: efekty obrazu (WebGL) albo — na WebGPU, zanim efekty dostaną bliźniaki w TSL — prosto scena */
   private present(): void {
     if (!this.gpu_) { this.composer.render(); return; }
@@ -221,7 +223,12 @@ export class GameRenderer {
     // na sekundę i zamek „nie wczytywał się” przez pół minuty (3.11.2026)
     const nowT = performance.now(), gap = this.lastPresentAt ? nowT - this.lastPresentAt : 0;
     this.lastPresentAt = nowT;
-    const base = this.warming ? 45 : nowT - this.gpuStart < 20000 ? 14 : 6;
+    // zmiana ustawień grafiki (AO, wygładzanie) to na WebGPU nowy kontekst rysowania i składanie wszystkich materiałów
+    // od nowa — przez kilka sekund duży budżet, inaczej budynki znikały na długo (Michał 3.11.2026: „zmiana grafiki
+    // i wszystko rozwala i nie wraca prawie”)
+    const fxKey = `${this.ao.enabled}|${this.aoMode}|${this.aaMode}|${this.bloom.enabled}`;
+    if (fxKey !== this.gpuFxKey) { if (this.gpuFxKey) this.gpuBoostUntil = nowT + 6000; this.gpuFxKey = fxKey; }
+    const base = this.warming || nowT < this.gpuBoostUntil ? 45 : nowT - this.gpuStart < 20000 ? 14 : 6;
     gpuFrameBudget(gap > 100 ? Math.max(base, Math.min(gap * 0.5, 400)) : base);
     // po błędzie efektów obrazu: sama scena, a po 3 s (najwyżej trzy razy) nowa próba — przyczyna bywa chwilowa
     if (this.gpuPostFailed) {

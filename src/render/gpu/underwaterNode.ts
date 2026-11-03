@@ -22,20 +22,23 @@ export interface UnderwaterIn {
   night: any;
   /** Kierunek do słońca (świat), znormalizowany */
   sun: any;
+  /** Kamera sceny (w przejściu obrazu wbudowane węzły kamery dotyczą prostokąta na cały ekran) */
+  cam: { pos: any; world: any; projInv: any };
 }
 
 export function underwater(T: any, i: UnderwaterIn): any {
   // liczone tylko, gdy kamera jest przy tafli albo pod nią (warunek wspólny dla całej klatki — karta pomija resztę)
   return T.Fn(() => {
     const out = T.vec3(i.c).toVar();
-    T.If(T.cameraPosition.y.lessThan(WATER_Y + 0.4), () => { out.assign(underwaterBody(T, i)); });
+    T.If(i.cam.pos.y.lessThan(WATER_Y + 0.4), () => { out.assign(underwaterBody(T, i)); });
     return out;
   })();
 }
 
 function underwaterBody(T: any, i: UnderwaterIn): any {
   const { vec2, vec3, vec4, float, mix, max, min, abs, pow, exp, sin, clamp, smoothstep, length, normalize, dot, texture,
-    screenUV, cameraPosition, cameraWorldMatrix, cameraProjectionMatrixInverse, getViewPosition, time, Loop } = T;
+    screenUV, getViewPosition, time, Loop } = T;
+  const cameraPosition = i.cam.pos, cameraWorldMatrix = i.cam.world, cameraProjectionMatrixInverse = i.cam.projInv;
   const noise: THREE.Texture = sharedNoise();
   const W = float(WATER_Y);
   const t = time;

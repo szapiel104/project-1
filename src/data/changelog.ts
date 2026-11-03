@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.14', date: '2026-11-03',
+    pl: [
+      'Naprawiony błąd z 0.94.12: dolna połowa ekranu wyglądała jak pod wodą, a gra mocno zwalniała. Widok spod wody włącza się już tylko pod wodą.',
+      'Cienie chmur na nowym silniku leżą tam, gdzie trzeba.',
+      'Po zmianie ustawień grafiki budynki wracają po chwili, a nie po długim czasie.',
+    ],
+    en: [
+      'Fixed a 0.94.12 bug: the lower half of the screen looked as if under water and the game slowed down badly. The underwater view now only appears under water.',
+      'Cloud shadows on the new engine fall where they should.',
+      'After changing graphics settings, buildings come back after a moment rather than after a long wait.',
+    ],
+  },
+  {
     v: '0.94.13', date: '2026-11-03',
     pl: ['Gładszy teren przy kamerze: wokół widoku ziemia ma trzy razy gęstszą siatkę i łagodnie zaokrąglone pagórki zamiast płaskich, kanciastych trójkątów — najbardziej widać to w spacerze i na zboczach. Ludzie i zwierzęta chodzą po tym, co widać.'],
     en: ['Smoother ground near the camera: around the view the terrain has a mesh three times denser and gently rounded hills instead of flat, angular triangles — most visible in walking view and on slopes. People and animals walk on what you see.'],
