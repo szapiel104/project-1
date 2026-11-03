@@ -83,6 +83,7 @@ import { applySeason, SEASON_U, SnowTrails } from './season';
 import { Snowfall } from './snowfall';
 import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { GpuPost } from './gpu/postNode';
+import { makeGpuEnvironment } from './gpu/envNode';
 import { markReflect } from './gpu/waterNode';
 import { SKIP as REFLECT_SKIP } from './waterReflect';
 import { Footprints } from './footprints';
@@ -243,7 +244,7 @@ export class GameRenderer {
   private smaa!: SMAAPass;
   private sharpen!: ShaderPass;
   private matQ!: MaterialQuality;
-  private envTex!: THREE.Texture;
+  private envTex?: THREE.Texture;
   /** Odbicia otoczenia (mapa otoczenia jak w podglądzie modeli) */
   private envOn = true;
   /** Bieżące MSAA (próbki × 2 + AO), -1 = jeszcze nie ustawione */
@@ -1160,7 +1161,7 @@ export class GameRenderer {
     this.composer.addPass(this.sharpen);
     this.matQ = new MaterialQuality(this.renderer.capabilities.getMaxAnisotropy());
     // mapa otoczenia przez PMREM z WebGL — na WebGPU dojdzie bliźniak (docs/webgpu.md, partia 1)
-    if (!this.gpu_) this.envTex = makeEnvironment(this.renderer);
+    this.envTex = this.gpu_ ? makeGpuEnvironment(this.renderer) ?? undefined : makeEnvironment(this.renderer);
     canvas.addEventListener('pointermove', (e) => {
       // kursor nad budynkiem (wieża, mur, dach chaty) wskazuje ten budynek, a nie ziemię za nim — łatwiej kliknąć
       // wieżę albo mur, żeby wysłać na nie wojsko (Michał 28.10.2026); promień po budynkach najwyżej co 40 ms
@@ -6094,7 +6095,7 @@ export class GameRenderer {
     this.sharpen.uniforms.amount!.value = sharpen;
     this.sharpenTexel();
     this.envOn = reflections;
-    this.scene.environment = reflections && !this.gpu_ ? this.envTex : null;
+    this.scene.environment = reflections ? this.envTex ?? null : null;
     this.matQ.set(aniso, samples > 0);
     this.matQ.sweep(this.scene);
   }

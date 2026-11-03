@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.94.4 — 2026-11-03
+- WebGPU: mapa otoczenia `gpu/envNode.ts` (PMREM z kopuły w węzłach, bliźniak makeEnvironment), `scene.environment` także na WebGPU.
+
 ## 0.94.3 — 2026-11-03
 - WebGPU: lustro wody bez drobiazgów (`NO_REFLECT` w gpu/waterNode.ts: ślady, kruki, ładunki, postacie, wilki, drogi, graty…), GTAO zawsze w ½ rozdzielczości.
 

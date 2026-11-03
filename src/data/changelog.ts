@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.94.4', date: '2026-11-03',
+    pl: ['Na nowym silniku wraca odbicie nieba w metalu, szybach, kałużach i mokrych kamieniach.'],
+    en: ['On the new engine, metal, windows, puddles and wet stone reflect the sky again.'],
+  },
+  {
     v: '0.94.3', date: '2026-11-03',
     pl: ['Płynniejsza gra na nowym silniku: odbicie w wodzie pomija drobiazgi, których w tafli i tak nie widać, a cieniowanie zagłębień liczy się w połowie rozdzielczości.'],
     en: ['Smoother play on the new engine: water reflections skip small things you could not see in them anyway, and ambient occlusion is computed at half resolution.'],

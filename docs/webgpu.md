@@ -61,4 +61,4 @@ kwadratu, większa mapa 1 na 1.
 - Cienie chmur: na WebGPU jedno przejście w postNode.ts (0.93.8), na WebGL dalej cloudShade.
 - Ślady na śniegu w ziemi (uTrail) i jesienne łaty na ziemi — tylko GLSL.
 - Parallax (applyParallax) — tylko GLSL.
-- Mapa otoczenia (PMREM) i odbicia w kałużach — tylko WebGL.
+- Mapa otoczenia: na WebGPU od 0.94.4 (gpu/envNode.ts).
