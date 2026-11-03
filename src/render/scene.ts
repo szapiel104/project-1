@@ -81,7 +81,7 @@ import { clockAt, rainAt } from '../sim/clock';
 import { COLD, seasonAt, weatherOf, yearPos } from '../sim/weather';
 import { applySeason, SEASON_U, SnowTrails } from './season';
 import { Snowfall } from './snowfall';
-import { gpuBackend, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
+import { gpuBackend, gpuDeferredCount, gpuFrameBudget, gpuPending, hideGlslMaterials, takeGpuRenderer } from './gpu/webgpu';
 import { GpuPost } from './gpu/postNode';
 import { Footprints } from './footprints';
 import { maxHp } from '../sim/systems/placement';
@@ -206,6 +206,7 @@ export class GameRenderer {
   private present(): void {
     if (!this.gpu_) { this.composer.render(); return; }
     if (this.gpuScan++ % 60 === 0) hideGlslMaterials(this.scene);
+    gpuFrameBudget(this.warming ? 45 : 6); // ms składania materiałów na klatkę (reszta w kolejnych klatkach)
     if (this.gpuPostFailed) { this.renderer.render(this.scene, this.cam.camera); return; }
     try {
       if (!this.gpuPost) this.gpuPost = new GpuPost(this.renderer, this.scene, this.cam.camera);
@@ -1774,43 +1775,22 @@ export class GameRenderer {
   /**
    * WebGPU: three.js składa każdy nowy wariant materiału na procesorze (ok. 12 ms) i robi to w klatce, w której obiekt
    * pierwszy raz się rysuje. Wszystko naraz zamrażało całą przeglądarkę na kilkanaście sekund (Michał 3.11.2026).
-   * Tu scena odsłania się porcjami: w każdej klatce tylko tyle nowych obiektów, ile mieści się w ok. 60 ms, a między
-   * klatkami przeglądarka oddycha (pasek wczytywania się rusza, inne karty działają).
+   * Tu każda klatka ma budżet składania (gpu/webgpu.ts, gpuFrameBudget): obiekty, na które nie starczyło czasu,
+   * czekają do następnej klatki, a przeglądarka między klatkami oddycha (pasek się rusza, inne karty działają).
    */
   private async warmGpu(onProgress?: (done: number, total: number) => void): Promise<void> {
     hideGlslMaterials(this.scene);
-    const items: THREE.Object3D[] = [];
-    this.scene.traverseVisible((o) => {
-      const m = o as THREE.Mesh;
-      if ((m.isMesh || (o as THREE.Points).isPoints || (o as THREE.Sprite).isSprite || (o as THREE.Line).isLine) && o !== this.scene) items.push(o);
-    });
-    for (const o of items) o.visible = false;
-    // przerwa dla przeglądarki bez czekania na klatkę ekranu (inne karty i pasek dostają czas od razu)
-    const yieldNow = (): Promise<void> => new Promise((ok) => { const ch = new MessageChannel(); ch.port1.onmessage = () => ok(); ch.port2.postMessage(0); });
-    // koszt pustej klatki (efekty obrazu, cienie) mierzymy osobno: porcję dobieramy tylko do kosztu NOWYCH wariantów
-    let base = Infinity;
-    for (let k = 0; k < 2; k++) { const t = performance.now(); this.present(); base = Math.min(base, performance.now() - t); }
-    let i = 0, chunk = 16, shown = 0;
-    try {
-      while (i < items.length) {
-        const end = Math.min(items.length, i + chunk);
-        for (let k = i; k < end; k++) items[k]!.visible = true;
-        i = end;
-        const t0 = performance.now();
-        this.present();
-        const work = performance.now() - t0 - base;
-        chunk = work < 20 ? Math.min(2000, chunk * 4) : work > 120 ? Math.max(2, chunk >> 1) : chunk;
-        if (i - shown > items.length / 40 || i === items.length) { shown = i; onProgress?.(i, items.length); await new Promise<void>((ok) => requestAnimationFrame(() => ok())); }
-        else await yieldNow();
-      }
-    } finally { for (const o of items) o.visible = true; }
-    this.present();
-    // programy karty kompilują się w tle: czekamy, aż będą gotowe (najwyżej 20 s), żeby gra nie startowała z dziurami
+    // klatki z budżetem składania (present → gpuFrameBudget): każda składa ok. 45 ms nowych wariantów, resztę odkłada;
+    // kończymy, gdy nic już nie czeka (albo po 12 s — wtedy reszta dochodzi w grze, po kilka ms na klatkę)
     const t0 = performance.now();
-    while (gpuPending() > 0 && performance.now() - t0 < 20000) {
-      onProgress?.(items.length, items.length);
-      await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
+    let first = -1;
+    for (;;) {
       this.present();
+      const left = gpuDeferredCount + gpuPending();
+      if (first < 0) first = Math.max(1, left);
+      onProgress?.(Math.max(0, first - left), first);
+      if (left === 0 || performance.now() - t0 > 12000) break;
+      await new Promise<void>((ok) => requestAnimationFrame(() => ok()));
     }
   }
 

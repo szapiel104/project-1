@@ -17,6 +17,11 @@ const FORCE_GL = q?.get('webgpu') === 'gl';
 let ready: THREE.WebGLRenderer | null = null;
 /** Moduły three/webgpu i three/tsl (tylko z flagą) — bliźniaki materiałów biorą je stąd, bez statycznego importu */
 export let gpuMods: { W: typeof import('three/webgpu'); TSL: typeof import('three/tsl'); FX: Record<string, unknown> } | null = null;
+let buildBudget = Infinity, buildSpent = 0;
+/** Obiekty pominięte w ostatniej klatce, bo ich materiał czeka na złożenie */
+export let gpuDeferredCount = 0;
+/** Początek klatki: budżet składania materiałów w ms (w grze mały, przy wczytywaniu większy) */
+export function gpuFrameBudget(ms: number): void { buildBudget = ms; buildSpent = 0; gpuDeferredCount = 0; }
 /** Ile programów karty kompiluje się teraz w tle (rozgrzewka czeka, aż spadnie do zera) */
 export let gpuPendingCount = 0;
 export const gpuPending = (): number => gpuPendingCount;
@@ -59,6 +64,24 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   const pipes = (r as unknown as { _pipelines: { updateForRender(ro: unknown): void; getForRender(ro: unknown, p: unknown): unknown } })._pipelines;
   const sink = { push(p: Promise<unknown>): void { gpuPendingCount++; void p.finally(() => { gpuPendingCount--; }); } };
   pipes.updateForRender = function (ro: unknown): void { this.getForRender(ro, sink); };
+  // Budżet składania materiałów na klatkę: three.js składa każdy nowy wariant (i każdą pulę instancji) na procesorze,
+  // ok. 12 ms sztuka. Gdy budżet tej klatki się skończył, obiekt z nowym, jeszcze niezłożonym wariantem czeka do
+  // następnej klatki (pojawia się chwilę później) — gra nie staje, ani przy wczytywaniu, ani w trakcie.
+  const R = r as unknown as {
+    _renderObjectDirect: (...a: unknown[]) => void; _objects: { get(...a: unknown[]): unknown }; _currentRenderContext: unknown;
+    _nodes: { get(ro: unknown): { nodeBuilderState?: unknown }; nodeBuilderCache: Map<unknown, unknown>; getForRenderCacheKey(ro: unknown): unknown };
+  };
+  const direct = R._renderObjectDirect;
+  R._renderObjectDirect = function (this: typeof R, object: unknown, material: unknown, scene: unknown, camera: unknown, lightsNode: unknown, group: unknown, clipping: unknown, passId: unknown): void {
+    if (buildSpent >= buildBudget) {
+      const ro = this._objects.get(object, material, scene, camera, lightsNode, this._currentRenderContext, clipping, passId);
+      if (this._nodes.get(ro).nodeBuilderState === undefined && !this._nodes.nodeBuilderCache.has(this._nodes.getForRenderCacheKey(ro))) { gpuDeferredCount++; return; }
+    }
+    const t = performance.now();
+    direct.call(this, object, material, scene, camera, lightsNode, group, clipping, passId);
+    const dt = performance.now() - t;
+    if (dt > 1) buildSpent += dt;
+  };
   const shim = r as unknown as Record<string, unknown>;
   shim.capabilities = { getMaxAnisotropy: () => 16, maxSamples: 4, isWebGL2: true };
   shim.localClippingEnabled = true;

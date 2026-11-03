@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.7', date: '2026-11-03',
+    pl: ['Szybsze wczytywanie: gra startuje, gdy najważniejsza grafika jest gotowa, a resztę dokłada w kolejnych klatkach, po kawałku, bez przycięć.', 'Wracają chmury na niebie (miękko gasną przy górach) i padający śnieg.'],
+    en: ['Faster loading: the game starts once the essential graphics are ready and adds the rest bit by bit over the next frames, without stutter.', 'Clouds are back in the sky (fading softly against the mountains), and so is falling snow.'],
+  },
+  {
     v: '0.92.6', date: '2026-11-03',
     pl: ['Naprawione zawieszanie całej przeglądarki przy wczytywaniu (95%): grafika kompiluje się w tle, a gra i inne karty działają w tym czasie normalnie.'],
     en: ['Fixed the whole browser freezing while loading (95%): graphics now compile in the background, and the game and other tabs keep running meanwhile.'],

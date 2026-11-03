@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.7 — 2026-11-03
+- WebGPU: budżet składania materiałów na klatkę (`gpuFrameBudget`, opakowanie `_renderObjectDirect`: obiekt z niezłożonym wariantem czeka do następnej klatki; 45 ms przy wczytywaniu, 6 ms w grze), `warmGpu` kończy, gdy nic nie czeka (do 12 s). Chmury `gpu/cloudNode.ts` (miękkie przy scenie), śnieg `snowSprite` w `gpu/pointsNode.ts`.
+
 ## 0.92.6 — 2026-11-03
 - WebGPU: `Pipelines.updateForRender` przekazuje obietnice → potoki zawsze przez `createRenderPipelineAsync` (obiekt rysowany dopiero po `isReady`); synchroniczne createRenderPipeline blokowało proces GPU Chrome'a (zawieszenie wszystkich kart). `warmGpu` czeka na `gpuPending() == 0` (do 20 s).
 

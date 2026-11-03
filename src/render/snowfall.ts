@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { gpuMods } from './gpu/webgpu';
+import { snowSprite } from './gpu/pointsNode';
 
 /**
  * Padający śnieg (Michał 3.11.2026: „śnieg u nas nie pada”). Przy mrozie opad z zegara pogody to śnieg zamiast
@@ -78,6 +80,12 @@ export class Snowfall {
       vertexShader: VERT, fragmentShader: FRAG, transparent: true, depthWrite: false, fog: true,
     });
     this.points = new THREE.Points(geo, this.mat);
+    // WebGPU: płatki jako czworokąty z instancji (gpu/pointsNode.ts), te same pokrętła
+    if (gpuMods) {
+      const sp = snowSprite(seed, n);
+      this.points = sp as unknown as THREE.Points;
+      this.mat = sp.material as unknown as THREE.ShaderMaterial;
+    }
     this.points.frustumCulled = false;
     this.points.visible = false;
     this.points.renderOrder = 3;

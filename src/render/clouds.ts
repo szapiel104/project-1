@@ -1,5 +1,7 @@
 import { touch } from './touch';
 import * as THREE from 'three';
+import { gpuMods } from './gpu/webgpu';
+import { cloudNode } from './gpu/cloudNode';
 
 /**
  * Chmury jako prawdziwe obiekty na niebie nad mapą: każda to grono kłębów, które powoli płynie z wiatrem,
@@ -99,6 +101,8 @@ export class Clouds {
     this.mesh.renderOrder = 5;
     for (let i = 0; i < this.mesh.count; i++) this.mesh.setColorAt(i, new THREE.Color(0, 0, 0));
     this.mesh.count = 0;
+    // WebGPU: kłęby w węzłach (gpu/cloudNode.ts), miękko przy górach i drzewach; te same pokrętła
+    if (gpuMods) { this.mat = cloudNode(this.mat.uniforms.map!.value as THREE.Texture, this.mesh) as unknown as THREE.ShaderMaterial; this.mesh.material = this.mat; }
     const soft = document.createElement('canvas'); soft.width = soft.height = 64;
     const sx = soft.getContext('2d')!;
     const g = sx.createRadialGradient(32, 32, 0, 32, 32, 32); g.addColorStop(0, 'rgba(255,255,255,1)'); g.addColorStop(0.5, 'rgba(255,255,255,0.6)'); g.addColorStop(1, 'rgba(255,255,255,0)');
