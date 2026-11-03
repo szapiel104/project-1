@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.87.4', date: '2026-11-03',
+    pl: [
+      'Menu główne: herb i nazwa gry w jednej linii, bez opisów pod listą pozycji.',
+      'Ekran wczytywania: rada jako czytelna karta ze złotą etykietą „Rada” — zwykłe pismo, bez kursywy, pogrubienia i cienia; spokojniejszy napis postępu.',
+    ],
+    en: [
+      'Main menu: the crest and the game’s name on one line, no descriptions under the menu entries.',
+      'Loading screen: the tip as a clear card with a gold “Tip” label — plain lettering, no italics, bold or shadow; a calmer progress line.',
+    ],
+  },
+  {
     v: '0.87.3', date: '2026-11-03',
     pl: [
       'Nowe kamienie murów i zamku: prostokątne ciosy różnej wielkości z obtłuczonymi krawędziami, wypukłe lica z fakturą, wgłębione fugi z zaprawy zamiast czarnych falujących kresek.',

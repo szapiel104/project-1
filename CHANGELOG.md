@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.87.4 — 3.11.2026
+- `src/ui/menuhead.css`: herb + tytuł w jednym rzędzie, `.menu-hint` schowany, rada na ekranie wczytywania jako karta. Boty: bez zmian.
+
 ## 0.87.3 — 3.11.2026
 - `gen_stone.py` v2 (ashlar, slate) + KTX2; `newgame.css`: selektor `.menu.previewing .menu-panel.wide.parch` (wcześniej przegrywał ze style.css). Boty: bez zmian.
 
