@@ -55,7 +55,8 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
   wydmach, kamieniste płaskowyże, oazy z wodą i zielenią przy jeziorkach, prawie bez lasu (drewno z oaz), gorąco i susza.
   Do zrobienia: piasek jako główna warstwa ziemi (bez trawy), wydmy w rzeźbie, roślinność pustynna z paczek (palmy,
   suche krzewy), mniej wody, zasady drewna dla botów i gracza (żeby gra była grywalna).
-- [ ] **Modele skał i głazów** z prawdziwych skanów (paczki CC0/CC-BY z GitHuba, np. 0 A.D. jak trzciny) — kilka
+- [x] 0.89.0 **Modele skał i głazów** (0 A.D.: 23 kształty, zdjęciowa skała) — dalej: skałki na łąkach z tych modeli, palmy na pustynię.
+- [ ] (stare) **Modele skał i głazów** z prawdziwych skanów (paczki CC0/CC-BY z GitHuba, np. 0 A.D. jak trzciny) — kilka
   kształtów: głaz, płyta, ściana skalna, rumosz; dopiero z nimi wracają skałki i ładne urwiska.
 
 ## Uwagi do sprawdzenia

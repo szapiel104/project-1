@@ -95,3 +95,5 @@ Zakony, bóstwa, miejsca i postacie w grze są nasze (np. Zakon Płomienia, Brac
 
 ## Własne (generator w repo)
 - `ashlar.jpg` / `ashlar_n.jpg` (mury zamku) i `slate.jpg` / `slate_n.jpg` (łupek dachów) — `tools/textures/gen_stone.py` (2.11.2026, wersja 2: 3.11.2026): ciosy i płytki liczone w Pythonie, faktura lica z `rock.jpg` (Poly Haven / ambientCG, CC0).
+
+Głazy i skały (`stone_granite_la_*`, `stone_granite_me_*`, `stone_granite_sm_*`, `stone_granite_boulder_*`, `stone_furrowed_0*`) z teksturami `stone_temperate_01`, `stone_sahara_01`, `stonequarry_desert` (kolor i mapy normalnych): gra **0 A.D.** © Wildfire Games (https://play0ad.com, https://github.com/0ad/0ad), licencja [CC BY-SA 3.0](http://creativecommons.org/licenses/by-sa/3.0/). Przeniesione bez zmian siatek i rysunku skryptem `tools/models/rocks_0ad.py` (obrót osi, skala do pól) → `src/render/models/rocks0ad.json`, `public/textures/cc0/oad_stone_*.jpg`; nasza wersja jest na tej samej licencji (3.11.2026).

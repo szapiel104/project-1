@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.89.0 — 3.11.2026
+- `tools/models/rocks_0ad.py` → `src/render/models/rocks0ad.json` + `public/textures/cc0/oad_stone_*.jpg` (0 A.D., CC BY-SA 3.0, `CREDITS.md`); `src/render/rocks0ad.ts` (geometrie, materiały z mapą normalnych); `terrain.ts`: wszystkie głazy i kamyki (także z symulacji i rumowisk) z tych modeli wg wielkości, na pustyni tekstura Sahary i skały bruzdowane; podgląd modeli: grupa „skała 0 A.D.”. Boty: bez zmian.
+
 ## 0.88.2 — 3.11.2026
 - „Nowa gra”: kolumny `.ng-col` w menu.ts, klasa `ng-dock` i pasek na dole w `newgame.css`. Boty: bez zmian.
 

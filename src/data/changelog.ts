@@ -10,6 +10,17 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.89.0', date: '2026-11-03',
+    pl: [
+      'Nowe kamienie i głazy z gry 0 A.D.: 23 różne kształty (duże i średnie bloki granitu, małe kamienie, okrągłe głazy) ze zdjęciową skałą i prawdziwą fakturą — zamiast trzech gładkich brył.',
+      'Na pustyni skała ma piaskowy odcień, a na stoliwach i przy skałach stoją wysokie, bruzdowane skały.',
+    ],
+    en: [
+      'New stones and boulders from 0 A.D.: 23 different shapes (large and medium granite blocks, small stones, round boulders) with photographic rock and real surface detail — instead of three smooth lumps.',
+      'In the desert the rock turns sandy, and tall furrowed rocks stand on the mesas and by the cliffs.',
+    ],
+  },
+  {
     v: '0.88.2', date: '2026-11-03',
     pl: ['„Nowa gra” jako pergaminowy pasek na dole ekranu: tryb i poziom, kraina i nazwa mapy, opcje i przyciski w trzech kolumnach — nad nim widać całą mapę z lotu ptaka.'],
     en: ['“New game” as a parchment bar along the bottom of the screen: mode and difficulty, land and map name, options and buttons in three columns — the whole map is visible from above.'],

@@ -21,6 +21,7 @@ import { partsGeometry, toolGeometry, toolMaterials } from './render/gear';
 import { proceduralModels } from './render/models';
 import { fernTexture, leafTexture, needleTexture } from './render/foliage';
 import { bushKinds, treeKinds, waterPlants } from './render/forest';
+import { rockMaterial, rocks0ad } from './render/rocks0ad';
 import { model } from './render/modelstore';
 import { clutterObject } from './render/clutter';
 import { crowParts, wolfParts, WOLF_HIPS, WOLF_TAIL } from './render/creatures';
@@ -267,6 +268,8 @@ const GROUPS: [string, [string, string, Make][]][] = [
       return { obj: m, size: new THREE.Vector3(1.2, 0.1, 1.2) };
     }],
     ['plant-bush', tx('krzak (stary, z kul)', 'bush (old, spheres)'), plantPair(proceduralModels.bush(), proceduralModels.bushFar(), 0x4f8a36, 'leaves', false)],
+    // głazy i skały z 0 A.D. (render/rocks0ad.ts) — te, które leżą na mapie
+    ...rocks0ad().map((r): [string, string, Make] => [`rock-${r.name}`, tx(`skała 0 A.D.: ${r.name}`, `0 A.D. rock: ${r.name}`), () => ({ obj: new THREE.Mesh(r.geo, rockMaterial(r.tex)) })]),
     ...proceduralModels.boulders().map(([near, far], k) => [`plant-boulder${k}`, tx(`głaz polny ${k + 1} (z bliska | z daleka)`, `field boulder ${k + 1} (near | far)`), plantPair(near, far, 0x9a948a, 'rock', true)] as [string, string, Make]),
   ]],
   [tx('W pracy', 'At work'), [

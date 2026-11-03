@@ -32,6 +32,7 @@ import { createGrassField, type GrassField } from './grass';
 import { buildHighMist, type Atmosphere, type HighMist } from './highmist';
 import { buildStreams, type Streams } from './streams';
 import { buildRockGeometry, rockDisplacer } from './rockmesh';
+import { rockMaterial, rocks0ad } from './rocks0ad';
 
 const HEIGHT_SCALE = 0.03;
 const smoothstep = (a: number, b: number, x: number): number => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -1528,21 +1529,34 @@ function* terrainSteps(map: GameMap, models: ModelFactory, waterLevel: number): 
   // trzy odmiany głazu (Michał 29.10.2026: „różne modele kamienia, ładniejsze, nie takie świecące”): ciemniejsza barwa
   // instancji, matowa skała; każdy kamień dostaje odmianę z miejsca (stałą)
   void rockFar;
-  const BOULDERS = models.boulders();
-  const pebbleSplit: Item[][] = BOULDERS.map(() => []);
-  // dawny pojedynczy model „rock” (jeden kształt powtarzany w kółko) zastąpiony trzema odmianami głazu: rumowisko pod
-  // górami, wychodnie na wzgórzach i skały na polach kamienia biorą te same głazy co łąka
+  // głazy z gry 0 A.D. (src/render/rocks0ad.ts, Michał 3.11.2026: „różne wersje kamieni”, „tekstury jak z taniej gry”):
+  // 23 kształty ze zdjęciową skałą; rodzaj według wielkości kamienia (duże bloki, średnie, małe, okrągłe głazy),
+  // odmiana stała dla miejsca. Na pustyni skała z Sahary, a wysokie bruzdowane skały stoją na stoliwach i skałkach.
   pebbles.push(...rocks.splice(0));
-  for (const it of pebbles) pebbleSplit[hash2(Math.round(it.pos.x * 10) + 31, Math.round(it.pos.z * 10), 0x5eed) % BOULDERS.length]!.push(it);
-  // płaskie ściany jak skały (próba gładkiego cieniowania 30.10.2026 dała czarne trójkąty na zawiniętych ścianach bryły);
-  // mniej kanciaste dzięki dokładniejszej bryle z bliska (plants.py)
-  // wydajność (Michał 30.10.2026: lagi w bitwie, kamyki 521 tys. trójkątów w kadrze i drugie tyle w cieniu): drobne kamyki
-  // (skala < 0,6) dostają od razu prostą bryłę i nie rzucają cienia; pełna bryła z cieniem zostaje dla dużych głazów
-  BOULDERS.forEach(([near, far], k) => {
-    const big = pebbleSplit[k]!.filter((it) => it.s.x >= 0.6), small = pebbleSplit[k]!.filter((it) => it.s.x < 0.6);
-    plant(big, instanced(near, 0x9a948a, big, 'rock', true, rockMat, { ...SMALL_LOD, farGeo: far }), null, false);
-    plant(small, instanced(far, 0x9a948a, small, 'rock', false, rockMat, SMALL_LOD), null, false);
-  });
+  const ROCKS = rocks0ad();
+  const byKind = (k: string): typeof ROCKS => ROCKS.filter((r) => r.kind === k);
+  const desert = map.biome === 'desert';
+  const kindOf = (it: Item): typeof ROCKS => {
+    const s = it.s.x, h = hash2(Math.round(it.pos.x * 10) + 31, Math.round(it.pos.z * 10), 0x5eed);
+    if (desert && s >= 0.95 && h % 5 === 0) return byKind('furrowed');
+    if (s >= 1.1) return h % 3 === 0 ? byKind('boulder') : byKind('large');
+    if (s >= 0.6) return h % 3 === 0 ? byKind('boulder') : byKind('medium');
+    return h % 2 ? byKind('small') : byKind('medium');
+  };
+  const rockSplit = new Map<(typeof ROCKS)[number], Item[]>(ROCKS.map((r) => [r, []]));
+  for (const it of pebbles) {
+    const list = kindOf(it);
+    rockSplit.get(list[hash2(Math.round(it.pos.z * 10) - 7, Math.round(it.pos.x * 10), 0x0a0c) % list.length]!)!.push(it);
+  }
+  // wydajność (Michał 30.10.2026: lagi w bitwie): drobne kamyki (skala < 0,6) bez cienia; pełny cień tylko duże
+  for (const [r, list] of rockSplit) {
+    if (!list.length) continue;
+    const mat = rockMaterial(desert && r.tex === 'temperate' ? 'sahara' : r.tex);
+    const big = list.filter((it) => it.s.x >= 0.6), small = list.filter((it) => it.s.x < 0.6);
+    // barwa instancji jasna (0xe6e0d6): skała ma kolor w zdjęciu; drobne odcienie z `shade` każdego kamienia
+    plant(big, instanced(r.geo, 0xe6e0d6, big, undefined, true, mat, SMALL_LOD), null, false);
+    plant(small, instanced(r.geo, 0xe6e0d6, small, undefined, false, mat, SMALL_LOD), null, false);
+  }
   label = 'kępy trawy';
   plant(tufts, instanced(grassCards(), 0xffffff, tufts, undefined, false, grassMat, SMALL_LOD), null, false);
   {
