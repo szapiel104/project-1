@@ -1,6 +1,7 @@
 import { deleteSave, exportSave, importSave, listSaves, MAX_AUTO, MAX_MANUAL, renameSave, uploadSave, cloudReady, type SaveMeta } from '../saves/store';
 import { me } from '../net/supa';
 import { SAVE_VERSION } from '../sim/save';
+import { confirmDialog } from './confirmDialog';
 import { lang, tx } from '../i18n';
 
 /**
@@ -14,6 +15,8 @@ export interface SavesActions {
   load(id: string): Promise<string | null>;
   /** login, gdy gość chce zapisów w chmurze */
   login(): void;
+  /** po usunięciu albo dodaniu zapisu (np. „Kontynuuj” w menu) */
+  changed?(): void;
 }
 const PER_PAGE = 8;
 
@@ -26,14 +29,6 @@ const el = <K extends keyof HTMLElementTagNameMap>(tag: K, cls = '', text = ''):
 const btn = (text: string, run: () => void, cls = 'menu-btn sv-btn'): HTMLButtonElement => {
   const b = el('button', cls, text); b.type = 'button';
   b.addEventListener('click', run);
-  return b;
-};
-const confirmBtn = (label: string, sure: string, run: () => void, cls: string): HTMLButtonElement => {
-  let armed = false;
-  const b = btn(label, () => {
-    if (!armed) { armed = true; b.textContent = sure; setTimeout(() => { armed = false; if (b.isConnected && !b.disabled) b.textContent = label; }, 3500); return; }
-    b.disabled = true; run();
-  }, cls);
   return b;
 };
 const when = (t: number): string => new Date(t).toLocaleString(lang() === 'en' ? 'en-GB' : 'pl-PL', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -61,13 +56,18 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       if (!go.canSave()) { say(tx('Teraz nie można zapisać — zapisuje się tylko gra z botami w trakcie.', 'You cannot save now — only a game against bots in progress can be saved.'), true); return; }
+      const def = name.value.trim() || tx(`Zapis ${new Date().toLocaleDateString('pl-PL')}`, `Save ${new Date().toLocaleDateString('en-GB')}`);
+      void confirmDialog({ title: tx('Zapisać grę?', 'Save the game?'), text: tx('Powstanie nowy zapis z miniaturą obecnego widoku.', 'A new save with a thumbnail of the current view will be created.'), ok: tx('Zapisz', 'Save'), input: { label: tx('Nazwa zapisu', 'Save name'), value: def } }).then((nm) => {
+      if (nm === null) return;
       ok.disabled = true; say(tx('Zapisuję…', 'Saving…'));
-      void go.save(name.value.trim() || tx(`Zapis ${new Date().toLocaleDateString('pl-PL')}`, `Save ${new Date().toLocaleDateString('en-GB')}`)).then((r) => {
+      void go.save(nm).then((r) => {
         ok.disabled = false;
         if (typeof r === 'string') { say(r, true); return; }
         name.value = '';
         say(tx(`Zapisano „${r.name}”.`, `Saved “${r.name}”.`));
+        go.changed?.();
         void refresh();
+      });
       });
     });
     top.append(form);
@@ -133,14 +133,24 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
     const meta = el('span', 'sv-meta', `${tx('wersja', 'version')} ${m.build}${m.size ? ' · ' + kb(m.size) : ''}`);
     const acts = el('div', 'sv-acts');
     const load = btn(tx('Wczytaj', 'Load'), () => {
-      load.disabled = true; say(tx('Wczytuję zapis…', 'Loading the save…'));
-      void go.load(m.id).then((e) => { load.disabled = false; if (e) say(e, true); });
+      void confirmDialog({
+        title: tx(`Wczytać „${m.name}”?`, `Load “${m.name}”?`), image: m.thumb || undefined,
+        text: go.canSave() ? tx('Obecna gra zostanie zamknięta — to, czego nie zapisałeś, przepadnie.', 'The current game will close — anything you have not saved will be lost.') : tx(`Dzień ${m.day}, ${MODE(m.preset)}, zapisano ${when(m.created)}.`, `Day ${m.day}, ${MODE(m.preset)}, saved ${when(m.created)}.`),
+        ok: tx('Wczytaj', 'Load'),
+      }).then((yes) => {
+        if (!yes) return;
+        load.disabled = true; say(tx('Wczytuję zapis…', 'Loading the save…'));
+        void go.load(m.id).then((e) => { load.disabled = false; if (e) say(e, true); });
+      });
     }, 'menu-btn btn-ok sv-btn');
     acts.append(load);
-    if (mode === 'save' && m.kind === 'manual') acts.append(confirmBtn(tx('Nadpisz', 'Overwrite'), tx('Nadpisać?', 'Overwrite?'), () => {
-      say(tx('Zapisuję…', 'Saving…'));
-      void go.save(m.name, m.id).then((r) => { if (typeof r === 'string') say(r, true); else { say(tx(`Nadpisano „${r.name}”.`, `Overwrote “${r.name}”.`)); void refresh(); } });
-    }, 'menu-btn sv-btn'));
+    if (mode === 'save' && m.kind === 'manual') acts.append(btn(tx('Nadpisz', 'Overwrite'), () => {
+      void confirmDialog({ title: tx(`Nadpisać „${m.name}”?`, `Overwrite “${m.name}”?`), image: m.thumb || undefined, text: tx('Ten zapis zostanie zastąpiony obecną grą. Tego nie da się cofnąć.', 'This save will be replaced with the current game. This cannot be undone.'), ok: tx('Nadpisz', 'Overwrite'), tone: 'danger' }).then((yes) => {
+        if (!yes) return;
+        say(tx('Zapisuję…', 'Saving…'));
+        void go.save(m.name, m.id).then((r) => { if (typeof r === 'string') say(r, true); else { say(tx(`Nadpisano „${r.name}”.`, `Overwrote “${r.name}”.`)); go.changed?.(); void refresh(); } });
+      });
+    }));
     acts.append(btn(tx('Zmień nazwę', 'Rename'), () => {
       const input = el('input', 'sv-rename'); input.value = m.name; input.maxLength = 40; input.setAttribute('aria-label', tx('Nowa nazwa', 'New name'));
       const done = (): void => { const v = input.value.trim(); if (v && v !== m.name) void renameSave(m.id, v).then((e) => { if (e) say(e, true); void refresh(); }); else input.replaceWith(title); };
@@ -150,8 +160,11 @@ export function savesPanel(mode: 'save' | 'load', go: SavesActions): HTMLElement
     }));
     acts.append(btn(tx('Pobierz plik', 'Download'), () => void exportSave(m.id).then((e) => { if (e) say(e, true); })));
     if (me() && m.where === 'local') acts.append(btn(tx('Wyślij do chmury', 'Upload to cloud'), () => void uploadSave(m.id).then((ok) => { say(ok ? tx('Zapis jest w chmurze.', 'The save is in the cloud.') : tx('Nie udało się wysłać — sprawdź internet.', 'Upload failed — check your connection.'), !ok); void refresh(); })));
-    acts.append(confirmBtn(tx('Usuń', 'Delete'), tx('Na pewno?', 'Sure?'), () => {
-      void deleteSave(m.id).then(() => { say(tx(`Usunięto „${m.name}”.`, `Deleted “${m.name}”.`)); void refresh(); });
+    acts.append(btn(tx('Usuń', 'Delete'), () => {
+      void confirmDialog({ title: tx(`Usunąć „${m.name}”?`, `Delete “${m.name}”?`), image: m.thumb || undefined, text: m.where !== 'local' ? tx('Zapis zniknie z tej przeglądarki i z chmury. Tego nie da się cofnąć.', 'The save will be removed from this browser and the cloud. This cannot be undone.') : tx('Zapis zniknie z tej przeglądarki. Tego nie da się cofnąć.', 'The save will be removed from this browser. This cannot be undone.'), ok: tx('Usuń', 'Delete'), tone: 'danger' }).then((yes) => {
+        if (!yes) return;
+        void deleteSave(m.id).then(() => { say(tx(`Usunięto „${m.name}”.`, `Deleted “${m.name}”.`)); go.changed?.(); void refresh(); });
+      });
     }, 'menu-btn btn-danger sv-btn'));
     body.append(title, facts, meta, acts);
     c.append(shot, body);

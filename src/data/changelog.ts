@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.79.3', date: '2026-11-03',
+    pl: [
+      'Zapisy: wczytanie, nadpisanie, usunięcie i nowy zapis pytają w okienku (z miniaturą zapisu); przy nowym zapisie od razu wpisujesz nazwę — koniec z przypadkowymi zapisami po każdym kliknięciu.',
+      '„Kontynuuj” w menu wczytuje najnowszy zapis z listy i znika, gdy nie ma żadnego zapisu — usunięta gra już nie wraca.',
+      'Większe, czytelniejsze opisy na kafelkach zapisów.',
+    ],
+    en: [
+      'Saves: loading, overwriting, deleting and a new save now ask in a dialog (with the save’s thumbnail); for a new save you type the name right there — no more accidental saves on every click.',
+      '“Continue” in the menu loads the newest save from the list and disappears when there are no saves — a deleted game no longer comes back.',
+      'Larger, more readable details on the save tiles.',
+    ],
+  },
+  {
     v: '0.79.2', date: '2026-11-03',
     pl: ['Cisza przy wczytywaniu: bełkot skryby (dźwięk „gadającej osoby”) nie odzywa się już pod ekranem ładowania ani w menu — tylko w trakcie gry.'],
     en: ['Quiet while loading: the scribe’s babble (the “talking person” sound) no longer plays under the loading screen or in the menu — only during play.'],

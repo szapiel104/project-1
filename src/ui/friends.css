@@ -232,3 +232,23 @@ body .menu .menu-panel .menu-btn.sv-btn[aria-pressed='true'] { background-image:
 .sv-old { color: #ff8a7a; font-weight: 700; }
 .sv-meta { font-size: 12px; color: #a89a82; }
 .sv-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+
+/* ===== Okienko z pytaniem (wczytaj, nadpisz, usuń, zapisz) ===== */
+.cd-back { position: fixed; z-index: 120; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .6); }
+.cd-box { width: min(460px, 100%); display: grid; gap: 12px; padding: 20px; box-sizing: border-box; color: #f3e7cf;
+  background-color: #2a1e14; background-image: url('/textures/cc0/plaster.jpg'), linear-gradient(#4a3826, #2a1e14); background-size: 380px auto, 100% 100%; background-blend-mode: multiply, normal;
+  border: 1px solid #120c08; box-shadow: 0 0 0 2px #8a6a3a, 0 0 0 3px #0e0906, 0 20px 40px rgba(0, 0, 0, .6); animation: soc-in .15s ease-out; }
+.cd-title { margin: 0; font: 700 22px/1.2 var(--label, serif); color: #ffd76a; }
+.cd-img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid rgba(154, 122, 42, .55); }
+.cd-text { margin: 0; font-size: 16px; line-height: 1.45; color: #f3e7cf; }
+.cd-label { font-size: 14px; font-weight: 700; color: #e6d6b4; }
+.cd-input { min-height: 44px; padding: 6px 12px; font: inherit; font-size: 16px; color: #fff4dc; background: #241a11; border: 1px solid #9a7838; border-radius: 3px; }
+.cd-input:focus-visible, .cd-btn:focus-visible { outline: 2px solid #f0c75a; outline-offset: 2px; }
+.cd-acts { display: flex; justify-content: flex-end; gap: 10px; margin-top: 4px; }
+.cd-btn { min-height: 44px; min-width: 120px; padding: 6px 16px; font-size: 15px; cursor: pointer; }
+@media (prefers-reduced-motion: reduce) { .cd-box { animation: none; } }
+/* kafelki zapisów: większe, czytelniejsze opisy */
+.sv-name { font-size: 20px; }
+.sv-facts { gap: 4px; font-size: 16px; line-height: 1.35; }
+.sv-meta { font-size: 13px; color: #c2b394; }
+.sv-kind, .sv-where { font-size: 13px; padding: 3px 9px; }

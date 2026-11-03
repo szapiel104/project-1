@@ -97,7 +97,7 @@ export interface MenuEvents {
   /** Mecz przez sieć się zaczyna: pokój, skład, mój numer gracza i kanał gry */
   onOnlineStart(s: OnlineStart): void;
   /** Zapisy gry (okno „Zapisz grę” / „Wczytaj grę”) */
-  saves: { canSave(): boolean; save(name: string, replace?: string): Promise<SaveMeta | string>; load(id: string): Promise<string | null> };
+  saves: { canSave(): boolean; save(name: string, replace?: string): Promise<SaveMeta | string>; load(id: string): Promise<string | null>; changed?(): void };
 }
 
 export interface Menu {

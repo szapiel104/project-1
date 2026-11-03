@@ -17,7 +17,7 @@ import { GameRenderer, type TileRef } from './render/scene';
 import { clockAt, rainAt } from './sim/clock';
 import { seedFromText } from './sim/rng';
 import { deserialize, serialize, SAVE_VERSION, type SaveData } from './sim/save';
-import { readSave, writeSave, type SaveKind, type SaveMeta, type SaveFile } from './saves/store';
+import { listSaves, readSave, writeSave, type SaveKind, type SaveMeta, type SaveFile } from './saves/store';
 import { enemyRoad } from './sim/systems/roadwreck';
 import { applyCut, TICKS_PER_SECOND, createGame, housing, idleCount, idleSlots, playerKeep, population, stateHash, storeCapacity, storeUsed, type DevWalls, type GameState } from './sim/state';
 import { createGameAsync } from './sim/mapthread';
@@ -200,9 +200,12 @@ async function saveTo(kind: SaveKind, name: string, replace?: string): Promise<S
   const r = await writeSave(meta, { seedText: currentSeedText, data: serialize(game, currentPreset), ui }, replace, (ok) => {
     if (!ok && kind !== 'auto' && netMe()) hud.toast(tx('Zapis jest w tej przeglądarce, ale nie trafił do chmury (brak sieci?) — wyślesz go później z panelu zapisów.', 'The save is in this browser but did not reach the cloud (offline?) — you can upload it later from the saves panel.'));
   });
-  save(); // „Kontynuuj” też od tego miejsca
+  refreshContinue();
   return r;
 }
+/** „Kontynuuj” w menu tylko wtedy, gdy jest jakiś zapis tego konta (przeglądarka albo chmura) */
+function refreshContinue(): void { void listSaves().then((l) => menu.setCanContinue(l.length > 0), () => menu.setCanContinue(false)); }
+onAccount(() => refreshContinue());
 /** Wczytanie zapisu: gra z zapisu za ekranem wczytywania, potem kamera, grupy i tempo jak w chwili zapisu */
 async function loadFrom(id: string): Promise<string | null> {
   const f: SaveFile | string = await readSave(id);
@@ -354,7 +357,12 @@ const menu = createMenu(document.body, {
   // z ekranu tytułowego (zapis wczytany przy starcie) wchodzimy przez ekran wczytywania, a powrót z pauzy jest od razu
   onContinue: () => {
     if (!titleScreen) { menu.close(); if (!net) setStatus({ where: 'solo' }); return; }
-    enterGame(tx('Wczytywanie zapisu…', 'Loading the saved game…'), () => { if (!net) setStatus({ where: 'solo' }); });
+    // „Kontynuuj” = najnowszy zapis z listy zapisów (Michał 3.11.2026: usunięty zapis nie może dalej wracać z ukrytej kopii)
+    void listSaves().then((l) => {
+      const last = l[0];
+      if (!last) { menu.setCanContinue(false); return; }
+      void loadFrom(last.id).then((e) => { if (e) hud.toast(e); });
+    });
   },
   // podgląd nowej mapy: generujemy ją obok bieżącej gry i pokazujemy z lotu ptaka; bieżąca gra czeka nietknięta
   onPreviewMap: (seedText, preset, level, dev, walls) => {
@@ -420,7 +428,7 @@ const menu = createMenu(document.body, {
     } else { save(); if (canSaveNow()) void saveTo('auto', tx(`Autozapis — dzień ${clockAt(game.tick).day}`, `Autosave — day ${clockAt(game.tick).day}`)); }
     // ekran tytułowy: osada w tle, menu jak po uruchomieniu gry; gra z botami czeka pod „Kontynuuj”
     titleScreen = true;
-    menu.setCanContinue(!gameOver && !!loadSave());
+    refreshContinue();
     menu.open(false);
   },
   onSurrender: () => {
@@ -431,7 +439,7 @@ const menu = createMenu(document.body, {
     menu.close();
     showEnd(false);
   },
-  saves: { canSave: () => canSaveNow() && !titleScreen, save: (name, replace) => saveTo('manual', name, replace), load: (id) => loadFrom(id) },
+  saves: { canSave: () => canSaveNow() && !titleScreen, save: (name, replace) => saveTo('manual', name, replace), load: (id) => loadFrom(id), changed: () => refreshContinue() },
   onOnlineStart: (st) => {
     // podgląd mapy z pokoju znika bez wracania do poprzedniej gry: od razu startuje mecz
     previewJob++; previewCover.hidden = true; preview = null; renderer.endPreview();
@@ -2327,7 +2335,7 @@ mark.push(['start świata', Math.round(performance.now() - T1)]);
 console.info('[main]', mark.map(([a, b]) => `${a} ${b} ms`).join(' | '));
 menu.setVolume(getVolume());
 menu.setMuted(isMuted());
-menu.setCanContinue(!!(saved && restored));
+refreshContinue();
 // jednorazowo: stary zapis z localStorage (sprzed panelu zapisów) trafia do zapisów jako autozapis, żeby nie zginął
 if (saved && restored && !SANDBOX) {
   let moved = false;

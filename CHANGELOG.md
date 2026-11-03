@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.79.3 — 3.11.2026
+- `src/ui/confirmDialog.ts` (okienko z pytaniem, opcjonalne pole i miniatura); `savesPanel` używa go do wczytaj/nadpisz/usuń/zapisz. `onContinue` wczytuje najnowszy zapis (`listSaves()[0]`), `refreshContinue()` po zapisie, usunięciu i zmianie konta.
+
 ## 0.79.2 — 3.11.2026
 - `main.ts`: `play('babble')` skryby pomijany przy `titleScreen`, `entering`, `#loading` i otwartym menu.
 
