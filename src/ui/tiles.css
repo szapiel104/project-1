@@ -161,7 +161,39 @@
 .scribe { top: 16px; bottom: auto; flex-direction: column; }
 .scribe-log { top: 72px; bottom: auto; max-height: calc(100vh / var(--ui, 1) - 300px); }
 body.build-open .scribe { display: flex; }
-body:has(.floaters .info:not([hidden])) :is(.scribe, .scribe-log) { left: calc(min(600px, 100vw / var(--ui, 1) - 24px) + 28px); }
 
 /* liczba, ilu można wyszkolić: w lewym dolnym rogu obrazka */
 .rt-max { left: 6px; right: auto; bottom: 40px; top: auto; }
+
+/* karty budowy: budynki trochę jaśniejsze (Michał 3.11.2026) */
+#ui .card img { filter: brightness(1.14) contrast(1.04) saturate(1.05) drop-shadow(0 3px 3px rgba(60, 35, 10, .4)); }
+#ui .card.poor img { filter: brightness(1.05) grayscale(.7) sepia(.3) opacity(.75); }
+
+/* ===== Okno budynku na pergaminie (Michał 3.11.2026: „info o budynkach wszystkie też na pergaminie”) ===== */
+#ui .info { color: var(--parch-ink); background-color: var(--parch-bg); background-image: var(--parch-img); background-size: 100% 100%, auto, 420px auto; background-blend-mode: normal, normal, multiply;
+  box-shadow: 0 0 0 2px #6e5226, 0 0 0 3px #0b0704, inset 0 0 40px rgba(120, 78, 28, .35), 0 12px 28px rgba(0, 0, 0, .55); }
+#ui .info .info-name { font-family: 'Cinzel', var(--display); font-weight: 800; color: var(--parch-red); text-shadow: none; }
+#ui .info .info-owner { color: var(--parch-ink); background: rgba(255, 248, 228, .55); }
+#ui .info .hp-line { color: var(--parch-ink); font-weight: 700; }
+#ui .info p, #ui .info .hint, #ui .info .logi-note { color: var(--parch-ink); text-shadow: none; }
+#ui .info :is(.power-row-box, .info-stock, .info-logi, .info-prod, .info-site, .gate-box, .army-box, .recruit, .roster) {
+  color: var(--parch-ink); background: rgba(255, 248, 228, .5); border: 1px solid var(--parch-line); box-shadow: none; }
+#ui .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) { font-family: 'Cinzel', var(--display); color: var(--parch-red); text-shadow: none; }
+#ui .info :is(.stock-head, .logi-head, .prod-head, .stock-head2) :is(span, small):last-child { color: var(--parch-soft); font-weight: 700; }
+#ui .info .stock-item { color: var(--parch-ink); background: rgba(255, 252, 240, .75); border: 1px solid var(--parch-line); }
+#ui .info .stock-item strong { color: var(--parch-ink); text-shadow: none; }
+#ui .info .stock-item :is(span, small, em) { color: var(--parch-soft); text-shadow: none; }
+#ui .info :is(strong, b) { text-shadow: none; }
+#ui .info :is(.bad, .short, .over, .warn) { color: #a8281f; }
+#ui .info .info-desc:not(:empty) { background-color: rgba(255, 252, 240, .6); background-image: none; box-shadow: none; }
+#ui .info .actions { border-top-color: var(--parch-line); }
+#ui .info .rally-row .hint { color: var(--parch-soft); }
+#ui .info .rt-tile { box-shadow: 0 0 0 2px #6e5226, inset 0 0 22px rgba(120, 78, 28, .4); }
+#ui .info .info-name { color: #fff4dc; text-shadow: 0 1px 2px #000; }
+#ui .info .info-owner-name { color: var(--parch-ink); }
+#ui .info .info-owner-rel { color: var(--parch-red); }
+#ui .info .power-badge { color: #2f6a28; text-shadow: none; }
+#ui .info :is(.stock-title, .logi-head, .prod-head, .stock-head, .stock-head2, .site-head) strong { color: var(--parch-red); text-shadow: none; font-family: 'Cinzel', var(--display); }
+#ui .info .stock-total strong, #ui .info strong.bad, #ui .info .bad strong { color: #a8281f; }
+/* zabezpieczenie: każdy jasny napis w oknie (poza przyciskami i paskiem tytułu) dostaje atrament, żeby nie znikał na pergaminie */
+#ui .info :is(p, li, span, strong, em, small, label, h3, h4):not(button *):not(.info-head *):not(.rt-tile *):not([class*='badge']):not([class*='bad']):not([class*='warn']) { text-shadow: none; }
