@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.92.3 — 2026-11-03
+- WebGPU: zwykłe materiały mają wspólny `customProgramCacheKey` i pusty `onBeforeCompile` (różne klucze starych łatek mnożyły drogie składanie node materiałów ~12 ms/wariant); rozgrzewka `warmGpu()` odsłania scenę porcjami (budżet klatki ok. 60–90 ms, przerwy na rAF) — koniec zamrażania przeglądarki. Postacie: `gpu/skinNode.ts` (kości z tekstury, mieszanie klatek, barwy drużyny, cień z positionNode).
+
 ## 0.92.2 — 2026-11-03
 - WebGPU: `gpu/pointsNode.ts` (pule cząstek ambience jako Sprite z count, atrybuty → InstancedBufferAttribute na tych samych tablicach), `gpu/fireNode.ts` (flameNode/flameGlowNode/blazeNode: Loop/Break w TSL, szum 3D 64³ z tekstury zamiast fHash), gwiazdy addytywnie + ukryte za dnia.
 

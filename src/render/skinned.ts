@@ -14,6 +14,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { cat } from './cat';
 import { cloudShade } from './ground';
+import { gpuMods } from './gpu/webgpu';
+import { skinnedNode } from './gpu/skinNode';
 
 export type Clip = 'idle' | 'walk' | 'attack' | 'death';
 /** Animacje zapętlone (ostatnia klatka = pierwsza); reszta zatrzymuje się na końcu */
@@ -210,7 +212,9 @@ export class SkinnedFigures {
     mesh.frustumCulled = false;
     mesh.castShadow = true;
     mesh.receiveShadow = true;
-    mesh.customDepthMaterial = depthMaterial(b.bones);
+    // WebGPU: ruch kości w węzłach (gpu/skinNode.ts); cień z tej samej pozy, bez osobnego materiału głębi
+    if (gpuMods) mesh.material = skinnedNode(b.mat, b.bones, mesh);
+    else mesh.customDepthMaterial = depthMaterial(b.bones);
     this.scene.add(cat(mesh, this.label));
     this.mesh = mesh;
     if (b.torch) {
@@ -220,6 +224,7 @@ export class SkinnedFigures {
       tg.setAttribute('aAnim', this.tAnim);
       tg.setAttribute('aTeam', new THREE.InstancedBufferAttribute(new Float32Array(this.max * 3), 3));
       const tm = new THREE.InstancedMesh(tg, mat, this.max);
+      if (gpuMods) tm.material = skinnedNode(b.mat, b.bones, tm);
       tm.count = 0;
       tm.frustumCulled = false;
       tm.castShadow = false;

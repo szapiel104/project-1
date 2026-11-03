@@ -41,6 +41,14 @@ export async function prepareGpu(canvas: HTMLCanvasElement): Promise<void> {
   gpuBackend = backend.isWebGPUBackend ? 'WebGPU' : 'WebGL2 (WebGPURenderer)';
   console.info(`[webgpu] renderer gotowy: ${gpuBackend}`);
   // zgodność z miejscami, które pytają WebGLRenderer o rzeczy, których WebGPURenderer nie ma
+  // Klucze programów ze starych łatek GLSL (onBeforeCompile, customProgramCacheKey: „ground-v4”, „wind-<drzewo>”…)
+  // na WebGPU nic nie zmieniają, a każdy osobny klucz to osobne, drogie składanie materiału (ok. 12 ms) — wszystkie
+  // zwykłe materiały dostają jeden wspólny klucz (materiały węzłowe mają własny i zostają bez zmian)
+  const blank = (): string => '';
+  // (to samo z onBeforeCompile: three.js wlicza jego kod do klucza materiału, a na WebGPU go nie wywołuje)
+  const noop = (): void => undefined;
+  Object.defineProperty(THREE.Material.prototype, 'customProgramCacheKey', { configurable: true, get: () => blank, set: () => undefined });
+  Object.defineProperty(THREE.Material.prototype, 'onBeforeCompile', { configurable: true, get: () => noop, set: () => undefined });
   const shim = r as unknown as Record<string, unknown>;
   shim.capabilities = { getMaxAnisotropy: () => 16, maxSamples: 4, isWebGL2: true };
   shim.localClippingEnabled = true;

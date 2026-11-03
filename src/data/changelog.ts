@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.92.3', date: '2026-11-03',
+    pl: ['Wczytywanie nie zamraża już przeglądarki: grafika przygotowuje się porcjami, pasek się rusza, a inne karty działają normalnie. Mniej wariantów do przygotowania, więc trwa to krócej.', 'Ludzie i żołnierze znowu się ruszają (chodzą, walczą, padają) i noszą barwy swojego pana.'],
+    en: ['Loading no longer freezes the browser: graphics are prepared in small portions, the bar keeps moving and other tabs keep working. Fewer variants to prepare, so it is quicker too.', 'People and soldiers move again (walk, fight, fall) and wear their lord’s colours.'],
+  },
+  {
     v: '0.92.2', date: '2026-11-03',
     pl: ['Wraca dym z kominów, iskry nad ogniskami i blask okien nocą.', 'Wraca ogień: płomienie pochodni i ognisk oraz pożary budynków — liczone kilka razy taniej niż wcześniej.', 'Za dnia na niebie nie widać już czarnych kropek.'],
     en: ['Chimney smoke, sparks over campfires and glowing windows at night are back.', 'Fire is back: torch and campfire flames and burning buildings — now several times cheaper to draw.', 'No more black dots in the daytime sky.'],

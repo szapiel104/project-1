@@ -1758,6 +1758,7 @@ export class GameRenderer {
     // rysowaniu i wtedy strona stała 1–3,5 s (Michał 30.10.2026). Najpierw jedna klatka bez obiektów (powstaje mapa
     // cieni, kompilują się lekkie przejścia obrazu), potem shadery cienia całej sceny zleca się karcie w tle i czeka na
     // nie z przerwami na klatkę (pasek wczytywania się rusza) — dopiero wtedy prawdziwa pierwsza klatka.
+    if (this.gpu_) { await this.warmGpu(onProgress); lap('potoki WebGPU porcjami'); return; }
     const hide = this.scene.children.filter((o) => o.visible && !(o as THREE.Light).isLight);
     for (const o of hide) o.visible = false;
     try { this.present(); } finally { for (const o of hide) o.visible = true; }
@@ -1769,6 +1770,39 @@ export class GameRenderer {
     lap('pierwsza klatka');
   }
   private prewarmed = false;
+
+  /**
+   * WebGPU: three.js składa każdy nowy wariant materiału na procesorze (ok. 12 ms) i robi to w klatce, w której obiekt
+   * pierwszy raz się rysuje. Wszystko naraz zamrażało całą przeglądarkę na kilkanaście sekund (Michał 3.11.2026).
+   * Tu scena odsłania się porcjami: w każdej klatce tylko tyle nowych obiektów, ile mieści się w ok. 60 ms, a między
+   * klatkami przeglądarka oddycha (pasek wczytywania się rusza, inne karty działają).
+   */
+  private async warmGpu(onProgress?: (done: number, total: number) => void): Promise<void> {
+    hideGlslMaterials(this.scene);
+    const items: THREE.Object3D[] = [];
+    this.scene.traverseVisible((o) => {
+      const m = o as THREE.Mesh;
+      if ((m.isMesh || (o as THREE.Points).isPoints || (o as THREE.Sprite).isSprite || (o as THREE.Line).isLine) && o !== this.scene) items.push(o);
+    });
+    for (const o of items) o.visible = false;
+    const frameNext = (): Promise<void> => new Promise((ok) => { requestAnimationFrame(() => setTimeout(ok, 0)); });
+    let i = 0, chunk = 4;
+    try {
+      while (i < items.length) {
+        const end = Math.min(items.length, i + chunk);
+        for (let k = i; k < end; k++) items[k]!.visible = true;
+        i = end;
+        const t0 = performance.now();
+        this.present();
+        const dt = performance.now() - t0;
+        // porcja dopasowuje się do kosztu: tanie (już złożone warianty) idą szybko, drogie po kilka
+        chunk = dt < 25 ? Math.min(400, chunk * 2) : dt > 90 ? Math.max(1, chunk >> 1) : chunk;
+        onProgress?.(i, items.length);
+        await frameNext();
+      }
+    } finally { for (const o of items) o.visible = true; }
+    this.present();
+  }
 
   /**
    * Shadery wszystkich budynków w tle, już po starcie gry (Michał 30.10.2026: wczytywanie za długie — wcześniej gra
