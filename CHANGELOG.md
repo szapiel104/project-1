@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.93.5 — 2026-11-03
+- WebGPU: kałuże i ślady na śniegu `gpu/groundFxNode.ts` (colorNode/roughnessNode/normalNode/vertexNode i opacityNode doklejone do zwykłych materiałów).
+
 ## 0.93.4 — 2026-11-03
 - WebGPU: pory roku `gpu/seasonNode.ts` (colorNode/roughnessNode dopięte w seasonMaterial; liście: wiosna/lato/jesień/zima, bryły: śnieg i szron), śnieg też w ziemi (`groundNodeMaterial(..., SEASON_U)`) i trawie. Ślady na śniegu i łaty jesienne na ziemi — jeszcze tylko GLSL (Rozjazdy).
 

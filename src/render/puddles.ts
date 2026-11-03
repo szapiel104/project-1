@@ -20,6 +20,7 @@ import type { GameState } from '../sim/state';
 import type { TerrainView } from './terrain';
 import { Terrain } from '../data/terrain';
 import { cat } from './cat';
+import { puddleNode } from './gpu/groundFxNode';
 
 const MAX = 3072;
 const SEG = 20; // wierzchołki na obwodzie
@@ -100,6 +101,7 @@ const material = (): THREE.MeshStandardMaterial => {
   }`);
   };
   m.customProgramCacheKey = () => 'puddles-v2';
+  puddleNode(m, u); // WebGPU: ta sama kałuża w węzłach
   return m;
 };
 

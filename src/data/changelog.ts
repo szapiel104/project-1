@@ -10,6 +10,11 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.93.5', date: '2026-11-03',
+    pl: ['Wracają kałuże w deszczu (z kręgami od kropel, wysychają od brzegów) i ślady stóp na śniegu, które z czasem zasypuje.'],
+    en: ['Rain puddles are back (with ripples from raindrops, drying from the edges), along with footprints in the snow that slowly fill in.'],
+  },
+  {
     v: '0.93.4', date: '2026-11-03',
     pl: ['Wracają pory roku na nowym silniku: śnieg na dachach, ziemi i trawie zimą, szron, wiosenna zieleń, rude korony jesienią i gołe drzewa zimą.'],
     en: ['Seasons are back on the new engine: snow on roofs, ground and grass in winter, frost, fresh spring green, russet treetops in autumn and bare trees in winter.'],

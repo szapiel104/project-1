@@ -13,6 +13,7 @@
  * szeroką, ciągłą bruzdę, a dwukółka z surowcami dwie wąskie koleiny po kołach. To druga siatka instancji (własna
  * tekstura miękkiego pasa z podłużnymi rysami), z tym samym blednięciem co odciski butów.
  */
+import { footprintNode } from './gpu/groundFxNode';
 import * as THREE from 'three';
 import { cat } from './cat';
 import { touch } from './touch';
@@ -119,6 +120,7 @@ class TrackLayer {
         `#include <alphamap_fragment>\n  diffuseColor.a *= vFade * ${alpha.toFixed(2)} * smoothstep(0.45, 0.75, uSnow);`);
     };
     mat.customProgramCacheKey = (): string => name;
+    footprintNode(mat, map, alpha, HOLD, FADE, uTime, uSnow); // WebGPU: to samo w węzłach
     this.mesh = new THREE.InstancedMesh(geo, mat, max);
     this.mesh.name = name;
     this.mesh.frustumCulled = false;
