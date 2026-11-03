@@ -47,6 +47,10 @@ nowy wygląd mapy = nowy numer generatora (`MAP_GEN`), stare zapisy dostają daw
 - [ ] **Góry: pojedyncze, dziwne iglice zamiast pasma.** Masywy przy krańcach łączyć w ciągłe pasma (szum grzbietowy
   w dużej skali, wygładzanie pojedynczych pól gór), bez samotnych szpikulców.
 - [ ] **Morze za mapą „popsute”** (płaska beżowa tafla w oddali, zwłaszcza na stepie) — sprawdzić wodę za mapą i mgłę.
+- [ ] **Pełna pustynia** (Michał 11:33: „brakuje mi kompletnych pustyń”): piąta kraina — cała mapa w piachu i
+  wydmach, kamieniste płaskowyże, oazy z wodą i zielenią przy jeziorkach, prawie bez lasu (drewno z oaz), gorąco i susza.
+  Do zrobienia: piasek jako główna warstwa ziemi (bez trawy), wydmy w rzeźbie, roślinność pustynna z paczek (palmy,
+  suche krzewy), mniej wody, zasady drewna dla botów i gracza (żeby gra była grywalna).
 - [ ] **Modele skał i głazów** z prawdziwych skanów (paczki CC0/CC-BY z GitHuba, np. 0 A.D. jak trzciny) — kilka
   kształtów: głaz, płyta, ściana skalna, rumosz; dopiero z nimi wracają skałki i ładne urwiska.
 
