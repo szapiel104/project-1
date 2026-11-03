@@ -319,3 +319,59 @@ body .cd-x:hover, body .cd-x:focus-visible { color: #fff; background: rgba(255, 
 .cd-text.warn { padding: 8px 12px; color: #ffd8cc; background: rgba(168, 55, 43, .18); border-left: 3px solid #ec8a74; }
 .cd-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .cd-btn { width: 100%; min-height: 46px; font-size: 15px; letter-spacing: .05em; text-transform: none; font-variant: normal; }
+
+/* ===== Lobby gry przez sieć (3.11.2026): szybkie działania, otwarte gry, znajomi z boku ===== */
+.lob { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 18px; align-items: start; }
+.lob-main { display: grid; gap: 14px; min-width: 0; }
+.lob-quick { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.lob-card { display: grid; gap: 12px; align-content: space-between; padding: 14px; background: linear-gradient(rgba(60, 44, 28, .6), rgba(24, 17, 10, .7)); border: 1px solid rgba(154, 122, 42, .5); }
+.lob-card.fast { border-color: rgba(95, 174, 108, .7); background: linear-gradient(rgba(40, 80, 44, .45), rgba(24, 17, 10, .75)); }
+.lob-card-h { display: flex; gap: 12px; align-items: flex-start; }
+.lob-ico { flex: 0 0 auto; width: 46px; height: 46px; display: grid; place-items: center; color: #ffd76a; background: rgba(255, 215, 106, .1); border: 1px solid rgba(230, 192, 106, .4); border-radius: 50%; }
+.lob-card.fast .lob-ico { color: #b8f0be; background: rgba(143, 227, 154, .12); border-color: rgba(143, 227, 154, .5); }
+.lob-card-t h3 { margin: 0; font: 700 18px/1.2 var(--text, sans-serif); color: #fff4dc; text-transform: none; letter-spacing: 0; }
+.lob-card-t p { margin: 4px 0 0; font-size: 14px; line-height: 1.4; color: #d8c6a0; }
+.lob-form { display: grid; gap: 8px; }
+.lob-form input, .lob-side input[type='search'] { min-height: 42px; width: 100%; box-sizing: border-box; padding: 6px 12px; font: inherit; font-size: 15px; color: #fff4dc; background: #241a11; border: 1px solid #9a7838; border-radius: 3px; }
+.lob-form input:focus-visible, .lob-side input:focus-visible { outline: 2px solid #f0c75a; outline-offset: 1px; }
+.lob-seg, .lob-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+body .menu .lob-chip { min-height: 36px; padding: 4px 12px; font: 600 14px/1 var(--text, sans-serif); letter-spacing: 0; text-transform: none; color: #e6d6b4; background: rgba(20, 14, 8, .5); background-image: none; border: 1px solid rgba(154, 122, 42, .5); border-radius: 18px; box-shadow: none; text-shadow: none; cursor: pointer; }
+body .menu .lob-chip:hover { color: #fff; border-color: #e2c890; }
+body .menu .lob-chip[aria-checked='true'], body .menu .lob-chip[aria-selected='true'] { color: #2a1d0c; background: #e6c06a; border-color: #ffd76a; }
+body .menu .lob-chip:focus-visible { outline: 2px solid #f0c75a; outline-offset: 2px; }
+body .menu .menu-panel .menu-btn.lob-btn { width: 100%; min-height: 42px; font-size: 14px; }
+.lob-list-h { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.lob-h { margin: 0; font: 700 19px/1.2 var(--text, sans-serif); color: #ffd76a; text-transform: none; letter-spacing: 0; }
+.lob-count { font-size: 14px; color: #cdbb96; }
+.lob-list-h .lob-filters { margin-left: auto; }
+.lob-rooms { display: grid; gap: 8px; }
+.lob-room { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto 140px; gap: 14px; align-items: center; padding: 10px 12px; background: rgba(20, 14, 8, .45); border: 1px solid rgba(154, 122, 42, .4); border-left: 4px solid #4fbf5f; }
+.lob-room.busy { border-left-color: #e6c06a; opacity: .85; }
+.lob-mode { display: grid; place-items: center; min-height: 48px; font: 700 15px/1.1 var(--text, sans-serif); text-align: center; color: #2a1d0c; background: #e6c06a; }
+.lob-room-info { display: grid; gap: 2px; min-width: 0; }
+.lob-room-info strong { font-size: 16px; color: #ffe9c2; overflow-wrap: anywhere; }
+.lob-room-info span { font-size: 14px; color: #d8c6a0; }
+.lob-room-meta { display: grid; justify-items: end; gap: 4px; }
+.lob-seats { font-size: 13px; color: #e6d6b4; }
+.lob-empty { display: grid; gap: 6px; place-items: center; padding: 36px 16px; text-align: center; border: 1px dashed rgba(154, 122, 42, .5); background: rgba(20, 14, 8, .3); }
+.lob-empty strong { font: 700 18px/1.2 var(--text, sans-serif); color: #fff4dc; }
+.lob-empty span { max-width: 460px; font-size: 15px; color: #d8c6a0; }
+.lob-side { display: grid; gap: 10px; padding: 14px; background: rgba(20, 14, 8, .45); border: 1px solid rgba(154, 122, 42, .45); position: sticky; top: 0; }
+.lob-side-h { display: flex; align-items: center; justify-content: space-between; }
+.lob-found:empty { display: none; }
+.lob-found { display: grid; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid rgba(154, 122, 42, .3); }
+.lob-friends { display: grid; gap: 6px; }
+.lob-sub, .lob-hint { margin: 0; font-size: 13px; color: #cdbb96; }
+.lob-person { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px; border-radius: 4px; }
+.lob-person:hover { background: rgba(255, 230, 180, .06); }
+body .menu .lob-av { position: relative; padding: 0; background: none; background-image: none; border: 0; box-shadow: none; cursor: pointer; }
+.lob-person-t { display: grid; min-width: 0; }
+.lob-person-t strong { font-size: 15px; color: #ffe9c2; }
+.lob-person-t span { font-size: 12.5px; color: #cdbb96; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lob-person-a { display: flex; gap: 4px; align-items: center; }
+body .menu .menu-panel .menu-btn.lob-mini { min-height: 32px; padding: 2px 10px; font-size: 12.5px; letter-spacing: .03em; }
+body .menu .lob-icon-btn { width: 32px; height: 32px; display: grid; place-items: center; padding: 0; color: #f3e7cf; background: rgba(255, 230, 180, .08); background-image: none; border: 1px solid rgba(154, 122, 42, .5); border-radius: 50%; box-shadow: none; cursor: pointer; }
+body .menu .lob-icon-btn:hover, body .menu .lob-icon-btn:focus-visible { color: #fff; border-color: #e2c890; }
+body .menu .lob-req { width: 100%; min-height: 38px; padding: 6px 10px; font: 700 14px/1.2 var(--text, sans-serif); color: #2a1d0c; background: #e6c06a; background-image: none; border: 1px solid #ffd76a; box-shadow: none; text-transform: none; letter-spacing: 0; cursor: pointer; }
+@media (max-width: 1100px) { .lob { grid-template-columns: 1fr; } .lob-side { position: static; } }
+@media (max-width: 640px) { .lob-room { grid-template-columns: 60px minmax(0, 1fr); } .lob-room-meta { justify-items: start; } }

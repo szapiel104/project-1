@@ -1,5 +1,8 @@
 # Dziennik zmian
 
+## 0.80.0 — 3.11.2026
+- `online.ts` `showOnline`: nowe lobby (`.lob`): szybkie działania, lista pokojów `.lob-room`, panel znajomych z zaproszeniem/dołączeniem/czatem i wyszukiwarką; CSS w `friends.css`.
+
 ## 0.79.7 — 3.11.2026
 - `confirmDialog`: `icon`, `caption`, `facts`, krzyżyk; nowy CSS okienka.
 

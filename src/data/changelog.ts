@@ -10,6 +10,19 @@ export type { ChangeEntry } from './changelogTypes';
  */
 const NEW: ChangeEntry[] = [
   {
+    v: '0.80.0', date: '2026-11-03',
+    pl: [
+      'Nowe okno „Gra przez sieć”: na górze trzy szybkie działania — „Graj teraz” (pokój 1 na 1 od ręki), własna gra z nazwą i trybem do kliknięcia, ranking.',
+      'Lista otwartych gier jako czytelne wiersze: duży znaczek trybu, nazwa, gospodarz, ilu graczy z ilu, stan i „Dołącz”; filtry trybów jako przełączniki.',
+      'Z boku znajomi: kto jest w grze, „Zaproś” (od razu zakłada pokój i wysyła zaproszenie), „Dołącz”, gdy czeka w pokoju, dymek „Napisz”, zaproszenia do znajomych i szukanie graczy po nicku z „Dodaj”.',
+    ],
+    en: [
+      'A new “Online play” window: three quick actions at the top — “Play now” (a 1 vs 1 room right away), a custom game with a name and clickable mode, the ranking.',
+      'Open games as clear rows: a big mode badge, name, host, how many players of how many, status and “Join”; mode filters as toggles.',
+      'Friends on the side: who is online, “Invite” (opens a room and sends the invitation at once), “Join” when they wait in a room, a “Message” bubble, friend requests and finding players by nickname with “Add”.',
+    ],
+  },
+  {
     v: '0.79.7', date: '2026-11-03',
     pl: ['Nowe okienka z pytaniem: ikonka działania, czytelny tytuł, kadr z datą zapisu, liczby (dzień, ludzie, wojsko, budynki, złoto), ostrzeżenie na czerwonym tle przy nieodwracalnych działaniach i dwa równe, duże przyciski; krzyżyk w rogu.'],
     en: ['New confirmation dialogs: an action icon, a readable title, the picture with the save date, numbers (day, people, army, buildings, gold), a red warning for irreversible actions and two equal, large buttons; a close cross in the corner.'],
